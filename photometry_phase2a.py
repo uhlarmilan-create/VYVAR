@@ -13,6 +13,7 @@ Postup:
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 from pathlib import Path
@@ -1400,10 +1401,9 @@ def run_phase2a(
 
     sat_limit_resolved = float(sat_limit_adu) if sat_limit_adu is not None else _sat_limit_peak_adu()
 
-    # Field map PNG (raz pre celé pole)
+    # Field map PNG (raz pre celé pole) — vždy; UI potrebuje mapu aj bez PNG kriviek
     field_map_path = output_dir / "field_map.png"
-    if _save_png:
-        save_field_map_png(field_map_path, Path(masterstar_fits_path), at_df, comp_df)
+    save_field_map_png(field_map_path, Path(masterstar_fits_path), at_df, comp_df)
 
     summary_rows: list[dict[str, Any]] = []
     n_lc = 0
@@ -1531,6 +1531,17 @@ def run_phase2a(
             src_files,
         )
 
+        # Kvalita comp pre UI (tabuľka „Porovnávacie hviezdy“)
+        _cq_path = lc_dir / f"comp_quality_{target_cid}.json"
+        try:
+            _cq_payload = {
+                _normalize_gaia_id(cid): str(info.get("quality", ""))
+                for cid, info in comp_quality.items()
+            }
+            _cq_path.write_text(json.dumps(_cq_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
         lc_png = lc_dir / f"lightcurve_{target_cid}.png"
         if _save_png:
             save_lightcurve_png(
@@ -1558,20 +1569,19 @@ def run_phase2a(
             except Exception:
                 pass
 
-        # Per-target field map s číslovanými comp hviezdami
-        if _save_png:
-            try:
-                _id_col_comp = "target_catalog_id" if "target_catalog_id" in comp_df.columns else "catalog_id"
-                _target_comp = comp_df[comp_df[_id_col_comp].apply(_normalize_gaia_id) == target_cid].copy()
-                _fm_target_path = lc_dir / f"field_map_{target_cid}.png"
-                save_target_field_map_png(
-                    _fm_target_path,
-                    Path(masterstar_fits_path),
-                    target_row,
-                    _target_comp,
-                )
-            except Exception:
-                pass
+        # Per-target field map s číslovanými comp hviezdami — vždy (UI)
+        try:
+            _id_col_comp = "target_catalog_id" if "target_catalog_id" in comp_df.columns else "catalog_id"
+            _target_comp = comp_df[comp_df[_id_col_comp].apply(_normalize_gaia_id) == target_cid].copy()
+            _fm_target_path = lc_dir / f"field_map_{target_cid}.png"
+            save_target_field_map_png(
+                _fm_target_path,
+                Path(masterstar_fits_path),
+                target_row,
+                _target_comp,
+            )
+        except Exception:
+            pass
 
         # Summary riadok
         finite_calib = mag_calib[np.isfinite(mag_calib)]

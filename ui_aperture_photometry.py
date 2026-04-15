@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import html
+import json
 import logging
 import math
 from pathlib import Path
@@ -209,12 +211,13 @@ def _render_target_detail(
 
                 if go is not None:
                     fig = go.Figure()
+                    # Svetlé pozadie + výrazné farby bodov (čitateľné aj v tmavom Streamlit)
                     flag_colors_plotly = {
-                        "normal": "#1a1a2e",
-                        "outlier_hi": "#ff6b35",
-                        "outlier_lo": "#7b2d8b",
-                        "saturated": "#aaaaaa",
-                        "no_data": "#cccccc",
+                        "normal": "#2563eb",
+                        "outlier_hi": "#ea580c",
+                        "outlier_lo": "#9333ea",
+                        "saturated": "#64748b",
+                        "no_data": "#94a3b8",
                     }
 
                     if "flag" not in lc_df.columns:
@@ -231,27 +234,43 @@ def _render_target_detail(
                             if "err" in sub.columns
                             else None
                         )
+                        err_kwargs: dict = {}
+                        if err is not None:
+                            err_kwargs = dict(
+                                array=err,
+                                visible=True,
+                                color=color,
+                                thickness=1,
+                                width=2,
+                            )
                         fig.add_trace(
                             go.Scatter(
                                 x=sub["bjd"],
                                 y=sub["mag_calib"],
-                                error_y=(
-                                    dict(array=err, visible=True)
-                                    if err is not None
-                                    else None
-                                ),
+                                error_y=err_kwargs if err_kwargs else None,
                                 mode="markers",
-                                marker=dict(color=color, size=5),
+                                marker=dict(color=color, size=7, line=dict(width=0.5, color="#ffffff")),
                                 name=flag,
                             )
                         )
 
                     fig.update_layout(
-                        yaxis=dict(autorange="reversed", title="mag_calib"),
-                        xaxis=dict(title="BJD (TDB)"),
+                        paper_bgcolor="#f1f5f9",
+                        plot_bgcolor="#ffffff",
+                        font=dict(color="#0f172a", size=12),
+                        yaxis=dict(
+                            autorange="reversed",
+                            title="mag_calib",
+                            gridcolor="#cbd5e1",
+                            zerolinecolor="#94a3b8",
+                        ),
+                        xaxis=dict(
+                            title="BJD (TDB)",
+                            gridcolor="#e2e8f0",
+                        ),
                         height=350,
-                        margin=dict(l=40, r=20, t=20, b=40),
-                        legend=dict(orientation="h", y=1.1),
+                        margin=dict(l=40, r=20, t=36, b=40),
+                        legend=dict(orientation="h", y=1.12, font=dict(size=11)),
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
@@ -306,8 +325,22 @@ def _render_target_detail(
 
         if not target_comps.empty:
             st.markdown("**Porovnávacie hviezdy**")
-            header = "| # | mag | B-V | p2p RMS | Vizier |\n|:---|:---|:---|:---|:---|\n"
-            body_lines: list[str] = []
+            cq_path = lc_dir / f"comp_quality_{catalog_id}.json"
+            quality_by_cid: dict[str, str] = {}
+            if cq_path.exists():
+                try:
+                    quality_by_cid = json.loads(cq_path.read_text(encoding="utf-8"))
+                except Exception:  # noqa: BLE001
+                    quality_by_cid = {}
+
+            def _row_bg(q: str) -> str:
+                if q == "good":
+                    return "background-color:rgba(34,197,94,0.35);"
+                if q == "suspect":
+                    return "background-color:rgba(234,179,8,0.28);"
+                return ""
+
+            rows_html: list[str] = []
             for i, (_, row) in enumerate(target_comps.iterrows(), 1):
                 ra_c = _float_coord_row(row, "ra_deg", "ra")
                 dec_c = _float_coord_row(row, "dec_deg", "dec")
@@ -316,6 +349,11 @@ def _render_target_detail(
                 if bv_c is None or (isinstance(bv_c, float) and not math.isfinite(bv_c)):
                     bv_c = row.get("bp_rp")
                 rms_c = row.get("comp_rms")
+                cid_c = _normalize_gaia_id(row.get("catalog_id", ""))
+                q = str(quality_by_cid.get(cid_c, "")).lower()
+                stav = {"good": "good", "suspect": "suspect", "excluded": "excluded"}.get(
+                    q, "—"
+                )
 
                 viz_c = (
                     f"https://vizier.cds.unistra.fr/viz-bin/VizieR?"
@@ -324,10 +362,39 @@ def _render_target_detail(
                 mag_str = _fmt_opt_num(mag_c, ".3f")
                 bv_str = _fmt_opt_num(bv_c, ".3f")
                 rms_str = _fmt_opt_num(rms_c, ".4f")
-                body_lines.append(
-                    f"| C{i:02d} | {mag_str} | {bv_str} | {rms_str} | [↗]({viz_c}) |\n"
+                bg = _row_bg(q)
+                rows_html.append(
+                    "<tr style=\""
+                    + bg
+                    + "\">"
+                    f"<td>C{i:02d}</td>"
+                    f"<td>{html.escape(mag_str)}</td>"
+                    f"<td>{html.escape(bv_str)}</td>"
+                    f"<td>{html.escape(rms_str)}</td>"
+                    f"<td>{html.escape(stav)}</td>"
+                    f"<td><a href=\"{html.escape(viz_c)}\" target=\"_blank\" rel=\"noopener noreferrer\">↗</a></td>"
+                    "</tr>"
                 )
-            st.markdown(header + "".join(body_lines), unsafe_allow_html=False)
+
+            thead = (
+                "<thead><tr>"
+                "<th>#</th><th>mag</th><th>B-V</th><th>p2p RMS</th>"
+                "<th>stav</th><th>Vizier</th>"
+                "</tr></thead>"
+            )
+            table_html = (
+                "<table style=\"width:100%;border-collapse:collapse;font-size:0.95rem;\">"
+                + thead
+                + "<tbody>"
+                + "".join(rows_html)
+                + "</tbody></table>"
+            )
+            st.markdown(table_html, unsafe_allow_html=True)
+            if not quality_by_cid:
+                st.caption(
+                    "Stav (good / suspect / excluded) sa zobrazí po ďalšom behu Fázy 2A "
+                    "(súbor comp_quality_*.json)."
+                )
 
 
 # ---------------------------------------------------------------------------
