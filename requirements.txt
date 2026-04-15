@@ -1,0 +1,14 @@
+streamlit
+pandas
+numpy
+psutil
+scipy
+astropy
+photutils
+astroscrappy
+pillow
+plotly
+astroquery
+astroalign
+reproject
+pytest

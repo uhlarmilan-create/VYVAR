@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+.env.*
+
+# Lokálne dáta / výstupy (veľké alebo citlivé)
+*.sqlite3
+*.db
+Archive/
+CalibrationLibrary/
+
+# FITS a podobné (veľké binárne súbory)
+*.fits
+*.fit
+*.fts
+
+# Veľké cache/indexy (necommitovať)
+*.pkl
+
+# IDE / nástroje
+.idea/
+.vscode/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Lokálne hard-copy exporty
+hard_copy_*.patch
+hard_copy_*.bundle
