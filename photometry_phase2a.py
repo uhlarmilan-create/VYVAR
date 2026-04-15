@@ -843,7 +843,7 @@ def airmass_detrend_lc(
 
     # Guard: fyzikálne nereálny slope → preskočiť detrending
     # Hustejšie polia s farebným diferenciálom môžu mať vyšší slope.
-    _MAX_REALISTIC_SLOPE = 2.0
+    _MAX_REALISTIC_SLOPE = 5.0
     if abs(slope) > _MAX_REALISTIC_SLOPE:
         logging.warning(
             "[FÁZA 2A] Airmass slope=%.3f mag/airmass prekračuje fyzikálny limit "
@@ -1599,6 +1599,11 @@ def run_phase2a(
     summary_csv = output_dir / "photometry_summary.csv"
     pd.DataFrame(summary_rows).to_csv(summary_csv, index=False)
     logging.info(f"[FÁZA 2A] Hotovo: {n_lc} svetelných kriviek → {output_dir}")
+    logging.info(
+        f"[FÁZA 2A] Targety bez comp hviezd: "
+        f"{len(at_df) - n_lc}/{len(at_df)} "
+        f"(žiadne vhodné comp podľa aktuálnych filtrov)"
+    )
 
     return {
         "n_targets": len(at_df),
