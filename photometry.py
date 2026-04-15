@@ -639,19 +639,19 @@ def select_comparison_stars_per_target(
     *,
     fwhm_px: float = 3.7,
     max_dist_deg: float = 1.5,
-    max_mag_diff: float = 0.5,
+    max_mag_diff: float = 3.0,  # uvoľni — stabilita (RMS) je dôležitejšia ako farba/mag
     max_bv_diff: float = 0.50,
     n_comp_min: int = 3,
     n_comp_max: int = 5,
     max_comp_rms: float = 0.05,
     min_dist_arcsec: float = 30.0,
-    min_frames_frac: float = 0.5,
+    min_frames_frac: float = 0.3,
     rms_outlier_sigma: float = 3.0,
     exclude_gaia_nss: bool = True,
     exclude_gaia_extobj: bool = True,
     max_psf_chi2: float = 3.0,
     max_fwhm_factor: float = 1.5,
-    isolation_radius_px: float = 25.0,
+    isolation_radius_px: float = 0.0,
     flux_col: str = "dao_flux",
 ) -> pd.DataFrame:
     """Fáza 1: Pre jeden target vyber najstabilnejšie porovnávacie hviezdy.
@@ -868,7 +868,9 @@ def select_comparison_stars_per_target(
         return pd.DataFrame()
 
     # Identifikátory kandidátov
-    id_col = "catalog_id" if "catalog_id" in candidates.columns else "name"
+    # ``catalog_id`` býva v CSV často uložené ako float (scientific) a môže stratiť presnosť;
+    # ``name`` obsahuje presný identifikátor (Gaia ID ako string alebo DET_*). Preferuj preto ``name``.
+    id_col = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
     cand_ids = set(candidates[id_col].astype(str).str.strip())
 
     # ── Krok 2: Načítaj flux z per-frame CSV ──
@@ -897,7 +899,10 @@ def select_comparison_stars_per_target(
             actual_flux_col = flux_col if flux_col in header.columns else "flux"
             if actual_flux_col not in use_cols:
                 use_cols.append(actual_flux_col)
-            name_col = "catalog_id" if "catalog_id" in header.columns else "name"
+            # Per-frame CSV: ``catalog_id`` môže byť NaN (najmä keď sa join MASTERSTAR robí len pre matchnuté riadky),
+            # ale ``name`` typicky obsahuje stabilný identifikátor (Gaia ID ako string alebo DET_*).
+            # Preferuj preto ``name`` ak existuje.
+            name_col = "name" if "name" in header.columns else ("catalog_id" if "catalog_id" in header.columns else "name")
             if "mag" not in use_cols and "mag" in header.columns:
                 use_cols.append("mag")
             if "psf_chi2" in header.columns and "psf_chi2" not in use_cols:
@@ -1170,87 +1175,18 @@ def select_comparison_stars_per_target(
             break  # Neprekroč minimum
         active = new_active
 
-    # ── Krok 5: Combined score ranking ──
-    # Váhy: RMS=0.35, ΔMag=0.20, ΔB-V=0.15, vzdialenosť=0.10, crowding=0.20
-    W_RMS, W_DMAG, W_DBV, W_DIST, W_CROWD = 0.35, 0.20, 0.15, 0.10, 0.20
+    # ── Krok 5: Finálny výber ──
+    # Cieľ: čo najnižší RMS scatter (AIJ prístup). Ostatné metriky (Δmag, ΔB-V, vzdialenosť)
+    # môžu byť v hustom poli zavádzajúce a môžu vyhodiť najstabilnejšiu comp hviezdu.
+    scored = sorted(active.items(), key=lambda x: float(x[1]))
+    # Preferuj Gaia-matched (číselné ID) pred DET_* ak máme dostatok možností.
+    scored_non_det = [(cid, rms) for cid, rms in scored if not str(cid).startswith("DET")]
+    scored_det = [(cid, rms) for cid, rms in scored if str(cid).startswith("DET")]
 
-    id_col_cand = "catalog_id" if "catalog_id" in candidates.columns else "name"
-    target_mag = float(target.get("mag", float("nan")))
-    target_bv = float(target.get("b_v", float("nan")))
-
-    # Zozbieraj hodnoty pre normalizáciu len z active kandidátov
-    active_set = set(active.keys())
-    active_cands = candidates[candidates[id_col_cand].astype(str).str.strip().isin(active_set)].copy()
-
-    cid_list = active_cands[id_col_cand].astype(str).str.strip().tolist()
-    rms_vals = np.asarray([active.get(c, float("nan")) for c in cid_list], dtype=np.float64)
-    dist_vals = pd.to_numeric(
-        active_cands.get("_dist_deg", pd.Series(dtype=float)), errors="coerce"
-    ).to_numpy(dtype=np.float64)
-    mag_vals = pd.to_numeric(
-        active_cands.get("mag", active_cands.get("_mag", pd.Series(dtype=float))), errors="coerce"
-    ).to_numpy(dtype=np.float64)
-    bv_vals = pd.to_numeric(active_cands.get("b_v", pd.Series(dtype=float)), errors="coerce").to_numpy(
-        dtype=np.float64
-    )
-
-    def _norm_robust(arr: np.ndarray, scale: float) -> np.ndarray:
-        """Robustná penalizácia: tanh(|hodnota| / scale).
-
-        Oproti min-max: extrém jedného kandidáta nezmáčkne zvyšok; chýbajúce hodnoty = max. penalizácia.
-        """
-        return np.where(
-            np.isfinite(arr),
-            np.tanh(np.abs(arr) / max(float(scale), 1e-9)),
-            1.0,
-        )
-
-    norm_rms = _norm_robust(rms_vals, scale=0.020)
-    norm_dist = _norm_robust(dist_vals, scale=0.5)
-
-    if math.isfinite(target_mag):
-        dmag_vals = np.abs(mag_vals - target_mag)
-    else:
-        dmag_vals = np.zeros(len(mag_vals))
-    norm_dmag = _norm_robust(dmag_vals, scale=0.5)
-
-    if math.isfinite(target_bv):
-        dbv_vals = np.where(
-            np.isfinite(bv_vals),
-            np.abs(bv_vals - target_bv),
-            float("nan"),
-        )
-        norm_dbv = np.where(
-            np.isfinite(dbv_vals),
-            np.tanh(dbv_vals / 0.20),
-            0.5,
-        )
-    else:
-        norm_dbv = np.zeros(len(bv_vals))
-
-    # Crowding penalizácia — contamination index z okolia isolation_radius_px
-    cont_vals = np.asarray([contamination_map.get(c, 0.0) for c in cid_list], dtype=np.float64)
-    # Rank-based normalizácia crowdingu: 0.0 = najmenej crowded, 1.0 = najviac.
-    # Funguje v hustom aj riedkom poli — relativizuje crowding voči ostatným
-    # kandidátom v danom targete, nie voči absolútnej hodnote.
-    # Hviezdy s rovnakým contamination dostanú rovnaké skóre.
-    if len(cont_vals) > 1 and float(np.max(cont_vals)) > float(np.min(cont_vals)):
-        _cont_order = np.argsort(np.argsort(cont_vals))  # rank každého prvku
-        norm_crowd = _cont_order / float(len(cont_vals) - 1)
-    else:
-        norm_crowd = np.zeros(len(cont_vals))  # všetci rovnaký crowding → nulová penalizácia
-
-    scores = (
-        W_RMS * norm_rms
-        + W_DMAG * norm_dmag
-        + W_DBV * norm_dbv
-        + W_DIST * norm_dist
-        + W_CROWD * norm_crowd
-    )
-
-    # Zoraď podľa score ASC
-    scored = sorted(zip(cid_list, scores.tolist()), key=lambda x: x[1])
-    selected_ids = [cid for cid, _ in scored[:n_comp_max]]
+    selected_ids = [cid for cid, _ in scored_non_det[:n_comp_max]]
+    if len(selected_ids) < n_comp_min:
+        need = n_comp_min - len(selected_ids)
+        selected_ids.extend([cid for cid, _ in scored_det[: max(0, need)]])
 
     if len(selected_ids) < n_comp_min:
         logging.warning(
@@ -1260,8 +1196,10 @@ def select_comparison_stars_per_target(
         return pd.DataFrame()
 
     # Zostav výstupný DataFrame
-    score_map = {cid: sc for cid, sc in scored}
+    score_map = {cid: float(sc) for cid, sc in scored}
     result_rows = []
+    id_col_cand = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
+    target_bv = float(target.get("b_v", float("nan")))
     for cid in selected_ids:
         row = candidates[candidates[id_col_cand].astype(str).str.strip() == cid]
         if row.empty:
@@ -1312,19 +1250,19 @@ def run_phase0_and_phase1(
     edge_margin_px: int = 50,
     match_radius_arcsec: float = 15.0,
     max_dist_deg: float = 1.5,
-    max_mag_diff: float = 0.5,
+    max_mag_diff: float = 3.0,
     max_bv_diff: float = 0.50,
     n_comp_min: int = 3,
     n_comp_max: int = 5,
     max_comp_rms: float = 0.05,
     min_dist_arcsec: float = 30.0,
-    min_frames_frac: float = 0.5,
+    min_frames_frac: float = 0.3,
     rms_outlier_sigma: float = 3.0,
     exclude_gaia_nss: bool = True,
     exclude_gaia_extobj: bool = True,
     max_psf_chi2: float = 3.0,
     max_fwhm_factor: float = 1.5,
-    isolation_radius_px: float = 25.0,
+    isolation_radius_px: float = 0.0,
     flux_col: str = "dao_flux",
 ) -> dict[str, Any]:
     """Spusti Fázu 0 + Fázu 1 a uloží výstupy.

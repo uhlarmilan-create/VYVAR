@@ -510,6 +510,12 @@ def read_flux_from_csv(
         base["hjd"] = float(row_csv.get("hjd_mid", float("nan")))
         base["jd"] = float(row_csv.get("jd_mid", float("nan")))
 
+        # Airmass fallback: ak frame_times nebolo dostupné, čítaj priamo z CSV riadku
+        if not math.isfinite(am_frame):
+            am_csv = float(row_csv.get("airmass", float("nan")))
+            if math.isfinite(am_csv):
+                base["airmass"] = am_csv
+
         # dao_flux — sky-subtrahovaný flux z DAO fotometrie
         flux = float(row_csv.get("dao_flux", float("nan")))
         if not math.isfinite(flux):
@@ -740,7 +746,17 @@ def ensemble_normalize(
         )
         if comp_vals.size == 0 or not math.isfinite(target_mag_inst[i]):
             continue
-        ens_med = float(np.median(comp_vals))
+        # Flux-weighted ensemble: comp_vals sú mag_inst → konvertuj na relatívny flux,
+        # spriemeruj a späť na mag. Jasnejšie comp majú väčšiu váhu (AIJ-like).
+        comp_fluxes = np.asarray(
+            [10 ** (-0.4 * m) for m in comp_vals if math.isfinite(m)],
+            dtype=np.float64,
+        )
+        if comp_fluxes.size > 0:
+            ens_flux_sum = float(np.sum(comp_fluxes))
+            ens_med = float(-2.5 * math.log10(ens_flux_sum / comp_fluxes.size))
+        else:
+            ens_med = float(np.median(comp_vals))
         ensemble_scatter[i] = float(np.std(comp_vals)) if comp_vals.size > 1 else 0.0
         delta_mag[i] = target_mag_inst[i] - ens_med
         mag_calib[i] = delta_mag[i] + cat_offset
@@ -757,7 +773,7 @@ def detect_outliers(
     mag_calib: np.ndarray,
     flags_saturated: np.ndarray,
     *,
-    outlier_sigma: float = 5.0,
+    outlier_sigma: float = 3.0,
 ) -> list[str]:
     """Krok 5: Outlier detekcia v svetelnej krivke.
 
@@ -826,8 +842,8 @@ def airmass_detrend_lc(
     slope, intercept = float(coeffs[0]), float(coeffs[1])
 
     # Guard: fyzikálne nereálny slope → preskočiť detrending
-    # Reálna atmosferická extinkcia je max ~0.8 mag/airmass pre zlé podmienky
-    _MAX_REALISTIC_SLOPE = 0.8
+    # Hustejšie polia s farebným diferenciálom môžu mať vyšší slope.
+    _MAX_REALISTIC_SLOPE = 2.0
     if abs(slope) > _MAX_REALISTIC_SLOPE:
         logging.warning(
             "[FÁZA 2A] Airmass slope=%.3f mag/airmass prekračuje fyzikálny limit "
@@ -1246,7 +1262,7 @@ def run_phase2a(
     annulus_inner_fwhm: float = 4.0,
     annulus_outer_fwhm: float = 6.0,
     sat_limit_adu: float | None = None,
-    outlier_sigma: float = 5.0,
+    outlier_sigma: float = 3.0,
     stability_sigma: float = 3.0,
     force_aperture_px: float | None = None,
 ) -> dict[str, Any]:
@@ -1475,17 +1491,23 @@ def run_phase2a(
         src_files = target_frames["source_file"].tolist()
         sat_flags = (target_frames["flag"] == "saturated").to_numpy(dtype=bool)
 
-        # Krok 5: Outlier detekcia
-        out_flags = detect_outliers(mag_calib, sat_flags, outlier_sigma=outlier_sigma)
-
         # Airmass detrending (ak je dosť bodov a airmass k dispozícii)
         if "airmass" in target_frames.columns:
             airmass_arr = target_frames["airmass"].to_numpy(dtype=float)
         else:
             airmass_arr = np.full_like(bjd, float("nan"), dtype=float)
-        am_detrended, am_slope, _ = airmass_detrend_lc(mag_calib, airmass_arr, out_flags)
+
+        # Najprv detrend na airmass iba podľa saturácie/NaN (outliere detekujeme až po detrende).
+        base_flags = [
+            "saturated" if bool(sat_flags[i]) else ("normal" if math.isfinite(mag_calib[i]) else "no_data")
+            for i in range(len(mag_calib))
+        ]
+        am_detrended, am_slope, _ = airmass_detrend_lc(mag_calib, airmass_arr, base_flags)
         mag_calib_raw = mag_calib.copy()
         mag_calib = am_detrended
+
+        # Krok 5: Outlier detekcia (po detrendingu) — outliere pri airmass trende inak nafukujú MAD.
+        out_flags = detect_outliers(mag_calib, sat_flags, outlier_sigma=outlier_sigma)
 
         # Krok 6: Uloženie výstupov
         lc_csv = lc_dir / f"lightcurve_{target_cid}.csv"
