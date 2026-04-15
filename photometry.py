@@ -889,6 +889,9 @@ def select_comparison_stars_per_target(
     psf_chi2_map: dict[str, list[float]] = {cid: [] for cid in cand_ids}
     fwhm_map: dict[str, list[float]] = {cid: [] for cid in cand_ids}
     frame_fwhm_medians: list[float] = []  # mediánový FWHM všetkých hviezd per snímka
+    # Saturácia naprieč framami: peak_max_adu > saturate_limit_adu_85pct
+    peak_over_map: dict[str, int] = {cid: 0 for cid in cand_ids}
+    peak_total_map: dict[str, int] = {cid: 0 for cid in cand_ids}
 
     for csv_path in per_frame_csv_paths:
         try:
@@ -909,10 +912,35 @@ def select_comparison_stars_per_target(
                 use_cols.append("psf_chi2")
             if "fwhm_estimate_px" in header.columns and "fwhm_estimate_px" not in use_cols:
                 use_cols.append("fwhm_estimate_px")
+            if "peak_max_adu" in header.columns and "peak_max_adu" not in use_cols:
+                use_cols.append("peak_max_adu")
+            if (
+                "saturate_limit_adu_85pct" in header.columns
+                and "saturate_limit_adu_85pct" not in use_cols
+            ):
+                use_cols.append("saturate_limit_adu_85pct")
 
             df = pd.read_csv(csv_path, usecols=use_cols, low_memory=False)
             df[name_col] = _normalize_id_series(df[name_col])
             df[actual_flux_col] = pd.to_numeric(df[actual_flux_col], errors="coerce")
+            if "peak_max_adu" in df.columns:
+                df["peak_max_adu"] = pd.to_numeric(df["peak_max_adu"], errors="coerce")
+            if "saturate_limit_adu_85pct" in df.columns:
+                df["saturate_limit_adu_85pct"] = pd.to_numeric(
+                    df["saturate_limit_adu_85pct"], errors="coerce"
+                )
+
+            # Saturácia naprieč framami (nezávisle od flux>0):
+            # peak_max_adu > saturate_limit_adu_85pct
+            if "peak_max_adu" in df.columns and "saturate_limit_adu_85pct" in df.columns:
+                for _, _row in df[df[name_col].isin(cand_ids)].iterrows():
+                    _cid = str(_row[name_col])
+                    peak = float(_row.get("peak_max_adu", float("nan")))
+                    limit = float(_row.get("saturate_limit_adu_85pct", float("nan")))
+                    if math.isfinite(peak) and math.isfinite(limit) and limit > 0:
+                        peak_total_map[_cid] = int(peak_total_map.get(_cid, 0)) + 1
+                        if peak > limit:
+                            peak_over_map[_cid] = int(peak_over_map.get(_cid, 0)) + 1
 
             # Zbieraj psf_chi2 a fwhm_estimate_px pre Filter B
             if "psf_chi2" in df.columns:
@@ -992,6 +1020,21 @@ def select_comparison_stars_per_target(
             continue
 
     min_frames = max(3, int(n_frames_loaded * min_frames_frac))
+
+    # Filter SAT: vylúč kandidátov, ktorí sú nad 85% sat limitu vo viac než 10% framov
+    _sat_rejected: set[str] = set()
+    for cid in list(flux_map.keys()):
+        total = int(peak_total_map.get(cid, 0) or 0)
+        over = int(peak_over_map.get(cid, 0) or 0)
+        if total >= 10 and total > 0 and (float(over) / float(total)) > 0.10:
+            flux_map.pop(cid, None)
+            _sat_rejected.add(cid)
+            logging.info(
+                f"[FÁZA 1] Saturácia filter: vylúčený {cid} "
+                f"({over}/{total} framov nad 85% limitom)"
+            )
+    if _sat_rejected:
+        logging.info(f"[FÁZA 1] Celkom vylúčených kvôli saturácii: {len(_sat_rejected)}")
 
     # Filter B: PSF chi² a FWHM blend detekcia
     _global_fwhm_med = float(np.median(frame_fwhm_medians)) if frame_fwhm_medians else float("nan")
