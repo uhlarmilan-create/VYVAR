@@ -87,9 +87,11 @@ class AppConfig:
     aperture_photometry_enabled: bool = True
     #: Opt-in ePSF fitting on per-frame catalogs (adds ``psf_*`` columns; requires ``masterstar_epsf.fits``).
     psf_photometry_enabled: bool = False
-    aperture_fwhm_factor: float = 1.7
-    annulus_inner_fwhm: float = 3.4
-    annulus_outer_fwhm: float = 6.5
+    # NOTE: These are in units of **Gaussian FWHM** (not moment-FWHM).
+    # Aperture/annulus radii are computed as factor × fwhm_gaussian_px.
+    aperture_fwhm_factor: float = 2.75
+    annulus_inner_fwhm: float = 5.5
+    annulus_outer_fwhm: float = 10.5
     #: Top ``p`` %% brightest by ``peak_max_adu`` checked for FWHM non-linearity vs field median.
     nonlinearity_peak_percentile: float = 20.0
     nonlinearity_fwhm_ratio: float = 1.25
@@ -360,16 +362,16 @@ class AppConfig:
         try:
             self.aperture_fwhm_factor = float(data.get("aperture_fwhm_factor", self.aperture_fwhm_factor))
             if not math.isfinite(self.aperture_fwhm_factor) or self.aperture_fwhm_factor <= 0:
-                self.aperture_fwhm_factor = 1.7
+                self.aperture_fwhm_factor = 2.75
         except (TypeError, ValueError):
-            self.aperture_fwhm_factor = 1.7
+            self.aperture_fwhm_factor = 2.75
         self.aperture_fwhm_factor = max(0.5, min(6.0, float(self.aperture_fwhm_factor)))
         try:
             self.annulus_inner_fwhm = float(data.get("annulus_inner_fwhm", self.annulus_inner_fwhm))
             self.annulus_outer_fwhm = float(data.get("annulus_outer_fwhm", self.annulus_outer_fwhm))
         except (TypeError, ValueError):
-            self.annulus_inner_fwhm = 4.0
-            self.annulus_outer_fwhm = 6.0
+            self.annulus_inner_fwhm = 5.5
+            self.annulus_outer_fwhm = 10.5
         if self.annulus_outer_fwhm <= self.annulus_inner_fwhm:
             self.annulus_outer_fwhm = self.annulus_inner_fwhm + 1.0
         try:

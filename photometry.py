@@ -26,6 +26,8 @@ _PHASE_USECOLS_PERFRAME: list[str] = [
     "bjd_tdb_mid",
     "flux",
     "dao_flux",
+    "noise_floor_adu",
+    "aperture_r_px",
     "is_usable",
     "is_saturated",
     "is_noisy",
@@ -365,6 +367,14 @@ def _fwhm_moment_at(arr: np.ndarray, xc: float, yc: float, *, half: int = 6) -> 
     return float(fwhm) if math.isfinite(fwhm) else float("nan")
 
 
+def _moment_to_gaussian_fwhm(moment_fwhm_px: float) -> float:
+    """Convert moment-FWHM proxy to Gaussian FWHM (empirical calibration)."""
+    MOMENT_TO_GAUSSIAN = 0.47
+    if not (math.isfinite(moment_fwhm_px) and moment_fwhm_px > 0):
+        return float("nan")
+    return float(moment_fwhm_px) * float(MOMENT_TO_GAUSSIAN)
+
+
 
 def enhance_catalog_dataframe_aperture_bpm(
     df: pd.DataFrame,
@@ -399,20 +409,26 @@ def enhance_catalog_dataframe_aperture_bpm(
     if "dao_flux" not in out.columns:
         out["dao_flux"] = flux_raw
 
-    fwhm_per = np.array([_fwhm_moment_at(arr, float(x[i]), float(y[i])) for i in range(n)], dtype=np.float64)
+    fwhm_per = np.array(
+        [_fwhm_moment_at(arr, float(x[i]), float(y[i])) for i in range(n)],
+        dtype=np.float64,
+    )
     out["fwhm_estimate_px"] = fwhm_per
 
-    fwhm_med = float(np.nanmedian(fwhm_per[np.isfinite(fwhm_per) & (fwhm_per > 0)]))
-    if not math.isfinite(fwhm_med) or fwhm_med <= 0:
-        fwhm_med = float("nan")
+    fwhm_moment_med = float(np.nanmedian(fwhm_per[np.isfinite(fwhm_per) & (fwhm_per > 0)]))
+    if not math.isfinite(fwhm_moment_med) or fwhm_moment_med <= 0:
+        fwhm_moment_med = float("nan")
 
-    if aperture_enabled and math.isfinite(fwhm_med) and fwhm_med > 0:
+    fwhm_gaussian = _moment_to_gaussian_fwhm(fwhm_moment_med)
+    out["fwhm_gaussian_px"] = float(fwhm_gaussian) if math.isfinite(fwhm_gaussian) else float("nan")
+
+    if aperture_enabled and math.isfinite(fwhm_gaussian) and fwhm_gaussian > 0:
         try:
             # Lokálna implementácia: sky-subtracted flux cez CircularAperture + CircularAnnulus.
             from photutils.aperture import CircularAnnulus, CircularAperture
             from photutils.aperture import aperture_photometry as _aphot
 
-            fw = float(fwhm_med)
+            fw = float(fwhm_gaussian)
             r_ap = max(0.5, float(aperture_fwhm_factor) * fw)
             r_in = max(r_ap + 0.5, float(annulus_inner_fwhm) * fw)
             r_out = max(r_in + 0.5, float(annulus_outer_fwhm) * fw)
@@ -471,11 +487,11 @@ def enhance_catalog_dataframe_aperture_bpm(
     ratio = float(nonlinearity_fwhm_ratio)
     likely_nl = np.zeros(n, dtype=bool)
     for i in range(n):
-        if not (math.isfinite(fwhm_per[i]) and math.isfinite(fwhm_med) and fwhm_med > 0):
+        if not (math.isfinite(fwhm_per[i]) and math.isfinite(fwhm_moment_med) and fwhm_moment_med > 0):
             continue
         if not (math.isfinite(peak[i]) and math.isfinite(thr_pk) and peak[i] >= thr_pk):
             continue
-        if fwhm_per[i] > ratio * fwhm_med:
+        if fwhm_per[i] > ratio * fwhm_moment_med:
             likely_nl[i] = True
     out["likely_nonlinear"] = likely_nl
 
@@ -639,8 +655,8 @@ def select_comparison_stars_per_target(
     *,
     fwhm_px: float = 3.7,
     max_dist_deg: float = 1.5,
-    max_mag_diff: float = 3.0,  # uvoľni — stabilita (RMS) je dôležitejšia ako farba/mag
-    max_bv_diff: float = 0.50,
+    max_mag_diff: float = 0.25,  # ±0.25 mag od targetu
+    max_bv_diff: float = 0.15,  # ±0.15 B-V od targetu
     n_comp_min: int = 3,
     n_comp_max: int = 5,
     max_comp_rms: float = 0.05,
@@ -651,7 +667,7 @@ def select_comparison_stars_per_target(
     exclude_gaia_extobj: bool = True,
     max_psf_chi2: float = 3.0,
     max_fwhm_factor: float = 1.5,
-    isolation_radius_px: float = 0.0,
+    isolation_radius_px: float = 25.0,
     flux_col: str = "dao_flux",
 ) -> pd.DataFrame:
     """Fáza 1: Pre jeden target vyber najstabilnejšie porovnávacie hviezdy.
@@ -892,6 +908,8 @@ def select_comparison_stars_per_target(
     # Saturácia naprieč framami: peak_max_adu > saturate_limit_adu_85pct
     peak_over_map: dict[str, int] = {cid: 0 for cid in cand_ids}
     peak_total_map: dict[str, int] = {cid: 0 for cid in cand_ids}
+    # Skutočný 5σ SNR (median cez framy)
+    snr_map: dict[str, list[float]] = {cid: [] for cid in cand_ids}
 
     for csv_path in per_frame_csv_paths:
         try:
@@ -997,6 +1015,19 @@ def select_comparison_stars_per_target(
                 raw_flux = float(row[actual_flux_col])
                 if not math.isfinite(raw_flux) or raw_flux <= 0:
                     continue
+
+                # Skutočný 5σ SNR:
+                # SNR = dao_flux / sqrt(dao_flux + noise_floor_adu * aperture_area)
+                flux_snr = float(row.get("dao_flux", raw_flux))
+                sky = float(row.get("noise_floor_adu", 0.0))
+                r_ap = float(row.get("aperture_r_px", 7.0))
+                area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
+                if math.isfinite(flux_snr) and flux_snr > 0 and math.isfinite(sky) and math.isfinite(area):
+                    denom = flux_snr + max(0.0, sky) * area
+                    if denom > 0:
+                        snr = flux_snr / math.sqrt(denom)
+                        if math.isfinite(snr):
+                            snr_map[cid].append(float(snr))
                 # Normalizácia voči mediánu hviezd rovnakej jasnosti
                 if bin_meds:
                     mag_num = (
@@ -1035,6 +1066,20 @@ def select_comparison_stars_per_target(
             )
     if _sat_rejected:
         logging.info(f"[FÁZA 1] Celkom vylúčených kvôli saturácii: {len(_sat_rejected)}")
+
+    # Filter SNR: vylúč kandidátov s median SNR < 5σ
+    _snr_rejected: set[str] = set()
+    for cid in list(flux_map.keys()):
+        snrs = snr_map.get(cid, [])
+        if len(snrs) >= 5:
+            snr_median = float(np.median(np.asarray(snrs, dtype=np.float64)))
+            if math.isfinite(snr_median) and snr_median < 5.0:
+                flux_map.pop(cid, None)
+                _snr_rejected.add(cid)
+                logging.info(
+                    f"[FÁZA 1] SNR filter: vylúčený {cid} "
+                    f"(median SNR={snr_median:.1f} < 5)"
+                )
 
     # Filter B: PSF chi² a FWHM blend detekcia
     _global_fwhm_med = float(np.median(frame_fwhm_medians)) if frame_fwhm_medians else float("nan")
@@ -1100,6 +1145,12 @@ def select_comparison_stars_per_target(
         else:
             _ms_flux_all = np.ones(len(ms_reset))
 
+        _ms_mag_all = (
+            pd.to_numeric(ms_reset[_mag_col_ms], errors="coerce").to_numpy(dtype=np.float64)
+            if _mag_col_ms
+            else np.full(len(ms_reset), np.nan, dtype=np.float64)
+        )
+
         # Lookup: catalog_id → riadok index v ms_reset
         _cid_to_idx: dict[str, int] = {}
         for _ri, _rrow in ms_reset.iterrows():
@@ -1128,6 +1179,12 @@ def select_comparison_stars_per_target(
                 & np.isfinite(_ms_flux_all)
                 & (_ms_flux_all > 0)
             )
+            # Zahrnúť len susedov do 3 mag od kandidáta
+            mag_cand = float(_ms_mag_all[_ci]) if _ci < len(_ms_mag_all) else float("nan")
+            if math.isfinite(mag_cand):
+                _neighbor_mask = _neighbor_mask & (
+                    ~np.isfinite(_ms_mag_all) | ((_ms_mag_all - mag_cand) <= 3.0)
+                )
             if not np.any(_neighbor_mask):
                 contamination_map[_cid] = 0.0
                 continue
@@ -1219,12 +1276,24 @@ def select_comparison_stars_per_target(
         active = new_active
 
     # ── Krok 5: Finálny výber ──
-    # Cieľ: čo najnižší RMS scatter (AIJ prístup). Ostatné metriky (Δmag, ΔB-V, vzdialenosť)
-    # môžu byť v hustom poli zavádzajúce a môžu vyhodiť najstabilnejšiu comp hviezdu.
-    scored = sorted(active.items(), key=lambda x: float(x[1]))
+    # Score: stabilita (RMS) + vzdialenosť + izolácia (contamination)
+    # (nižší = lepší kandidát)
+    id_col_cand = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
+    score_map: dict[str, float] = {}
+    for cid, rms in active.items():
+        row = candidates[candidates[id_col_cand].astype(str).str.strip() == cid]
+        if row.empty:
+            continue
+        dist_deg = float(row.iloc[0].get("_dist_deg", float("nan")))
+        dist_score = (dist_deg * 3600.0 / 600.0) if math.isfinite(dist_deg) else 1.0
+        contamination = float(contamination_map.get(cid, 0.0)) if contamination_map else 0.0
+        rms_score = float(rms)
+        score_map[cid] = rms_score * 0.5 + dist_score * 0.3 + contamination * 0.2
+
+    scored = sorted(score_map.items(), key=lambda x: float(x[1]))
     # Preferuj Gaia-matched (číselné ID) pred DET_* ak máme dostatok možností.
-    scored_non_det = [(cid, rms) for cid, rms in scored if not str(cid).startswith("DET")]
-    scored_det = [(cid, rms) for cid, rms in scored if str(cid).startswith("DET")]
+    scored_non_det = [(cid, sc) for cid, sc in scored if not str(cid).startswith("DET")]
+    scored_det = [(cid, sc) for cid, sc in scored if str(cid).startswith("DET")]
 
     selected_ids = [cid for cid, _ in scored_non_det[:n_comp_max]]
     if len(selected_ids) < n_comp_min:
@@ -1239,9 +1308,7 @@ def select_comparison_stars_per_target(
         return pd.DataFrame()
 
     # Zostav výstupný DataFrame
-    score_map = {cid: float(sc) for cid, sc in scored}
     result_rows = []
-    id_col_cand = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
     target_bv = float(target.get("b_v", float("nan")))
     for cid in selected_ids:
         row = candidates[candidates[id_col_cand].astype(str).str.strip() == cid]
@@ -1293,8 +1360,8 @@ def run_phase0_and_phase1(
     edge_margin_px: int = 50,
     match_radius_arcsec: float = 15.0,
     max_dist_deg: float = 1.5,
-    max_mag_diff: float = 3.0,
-    max_bv_diff: float = 0.50,
+    max_mag_diff: float = 0.25,
+    max_bv_diff: float = 0.15,
     n_comp_min: int = 3,
     n_comp_max: int = 5,
     max_comp_rms: float = 0.05,
@@ -1305,7 +1372,7 @@ def run_phase0_and_phase1(
     exclude_gaia_extobj: bool = True,
     max_psf_chi2: float = 3.0,
     max_fwhm_factor: float = 1.5,
-    isolation_radius_px: float = 0.0,
+    isolation_radius_px: float = 25.0,
     flux_col: str = "dao_flux",
 ) -> dict[str, Any]:
     """Spusti Fázu 0 + Fázu 1 a uloží výstupy.
