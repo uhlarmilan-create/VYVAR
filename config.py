@@ -85,6 +85,8 @@ class AppConfig:
 
     #: Use ``photutils`` circular aperture + annulus sky (replaces DAO ``flux`` in sidecar CSV when enabled).
     aperture_photometry_enabled: bool = True
+    #: Fáza 2A: ukladať PNG (lightcurve, cutout, field map). ``False`` = len CSV + summary; UI používa Plotly z CSV.
+    save_lightcurve_png: bool = False
     #: Opt-in ePSF fitting on per-frame catalogs (adds ``psf_*`` columns; requires ``masterstar_epsf.fits``).
     psf_photometry_enabled: bool = False
     # NOTE: These are in units of **Gaussian FWHM** (not moment-FWHM).
@@ -358,6 +360,7 @@ class AppConfig:
                 self.qc_max_background_rms = None
 
         self.aperture_photometry_enabled = bool(data.get("aperture_photometry_enabled", self.aperture_photometry_enabled))
+        self.save_lightcurve_png = bool(data.get("save_lightcurve_png", self.save_lightcurve_png))
         self.psf_photometry_enabled = bool(data.get("psf_photometry_enabled", self.psf_photometry_enabled))
         try:
             self.aperture_fwhm_factor = float(data.get("aperture_fwhm_factor", self.aperture_fwhm_factor))
@@ -559,6 +562,7 @@ class AppConfig:
                 else None
             ),
             "aperture_photometry_enabled": bool(self.aperture_photometry_enabled),
+            "save_lightcurve_png": bool(self.save_lightcurve_png),
             "psf_photometry_enabled": bool(self.psf_photometry_enabled),
             "aperture_fwhm_factor": float(self.aperture_fwhm_factor),
             "annulus_inner_fwhm": float(self.annulus_inner_fwhm),

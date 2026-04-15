@@ -1265,6 +1265,7 @@ def run_phase2a(
     outlier_sigma: float = 3.0,
     stability_sigma: float = 3.0,
     force_aperture_px: float | None = None,
+    cfg: AppConfig | None = None,
 ) -> dict[str, Any]:
     """Hlavný wrapper pre Fázu 2A.
 
@@ -1279,6 +1280,8 @@ def run_phase2a(
     output_dir = Path(output_dir)
     lc_dir = output_dir / "lightcurves"
     lc_dir.mkdir(parents=True, exist_ok=True)
+    _cfg = cfg or AppConfig()
+    _save_png = bool(_cfg.save_lightcurve_png)
 
     # Načítaj vstupy
     at_df = pd.read_csv(active_targets_csv, low_memory=False)
@@ -1399,7 +1402,8 @@ def run_phase2a(
 
     # Field map PNG (raz pre celé pole)
     field_map_path = output_dir / "field_map.png"
-    save_field_map_png(field_map_path, Path(masterstar_fits_path), at_df, comp_df)
+    if _save_png:
+        save_field_map_png(field_map_path, Path(masterstar_fits_path), at_df, comp_df)
 
     summary_rows: list[dict[str, Any]] = []
     n_lc = 0
@@ -1528,43 +1532,46 @@ def run_phase2a(
         )
 
         lc_png = lc_dir / f"lightcurve_{target_cid}.png"
-        save_lightcurve_png(
-            lc_png,
-            bjd,
-            mag_calib,
-            err,
-            out_flags,
-            target_name,
-            comp_quality,
-            delta_mag_mode=False,
-            delta_mag=delta_mag,
-        )
+        if _save_png:
+            save_lightcurve_png(
+                lc_png,
+                bjd,
+                mag_calib,
+                err,
+                out_flags,
+                target_name,
+                comp_quality,
+                delta_mag_mode=False,
+                delta_mag=delta_mag,
+            )
 
         cutout_png = lc_dir / f"cutout_{target_cid}.png"
-        try:
-            save_cutout_png(
-                cutout_png,
-                Path(masterstar_fits_path),
-                float(target_row["x"]),
-                float(target_row["y"]),
-                target_name,
-            )
-        except Exception:
-            pass
+        if _save_png:
+            try:
+                save_cutout_png(
+                    cutout_png,
+                    Path(masterstar_fits_path),
+                    float(target_row["x"]),
+                    float(target_row["y"]),
+                    target_name,
+                )
+            except Exception:
+                pass
 
         # Per-target field map s číslovanými comp hviezdami
-        try:
-            _id_col_comp = "target_catalog_id" if "target_catalog_id" in comp_df.columns else "catalog_id"
-            _target_comp = comp_df[comp_df[_id_col_comp].apply(_normalize_gaia_id) == target_cid].copy()
-            _fm_target_path = lc_dir / f"field_map_{target_cid}.png"
-            save_target_field_map_png(
-                _fm_target_path,
-                Path(masterstar_fits_path),
-                target_row,
-                _target_comp,
-            )
-        except Exception:
-            pass
+        if _save_png:
+            try:
+                _id_col_comp = "target_catalog_id" if "target_catalog_id" in comp_df.columns else "catalog_id"
+                _target_comp = comp_df[comp_df[_id_col_comp].apply(_normalize_gaia_id) == target_cid].copy()
+                _fm_target_path = lc_dir / f"field_map_{target_cid}.png"
+                save_target_field_map_png(
+                    _fm_target_path,
+                    Path(masterstar_fits_path),
+                    target_row,
+                    _target_comp,
+                )
+            except Exception:
+                pass
 
         # Summary riadok
         finite_calib = mag_calib[np.isfinite(mag_calib)]

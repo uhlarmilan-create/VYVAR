@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import streamlit as st
@@ -108,8 +109,42 @@ def _phase2a_timestamp(output_dir: Path | None) -> str:
 def _load_summary(output_dir: Path) -> pd.DataFrame:
     p = output_dir / "photometry_summary.csv"
     if p.exists():
-        return pd.read_csv(p)
+        return pd.read_csv(p, low_memory=False)
     return pd.DataFrame()
+
+
+def _float_coord_row(row: pd.Series, *keys: str) -> float:
+    for k in keys:
+        if k not in row.index:
+            continue
+        v = row.get(k)
+        if v is None or (isinstance(v, float) and not math.isfinite(v)):
+            continue
+        if isinstance(v, str) and not v.strip():
+            continue
+        try:
+            f = float(v)
+            if math.isfinite(f):
+                return f
+        except (TypeError, ValueError):
+            continue
+    return 0.0
+
+
+def _fmt_opt_num(v: Any, fmt: str, empty: str = "—") -> str:
+    if v is None:
+        return empty
+    if isinstance(v, float) and not math.isfinite(v):
+        return empty
+    s = str(v).strip()
+    if s.lower() in ("", "nan", "none"):
+        return empty
+    if s == "—":
+        return empty
+    try:
+        return format(float(v), fmt)
+    except (TypeError, ValueError):
+        return empty
 
 
 # ---------------------------------------------------------------------------
@@ -121,93 +156,112 @@ def _render_target_detail(
     target_row: pd.Series,
     output_dir: Path,
     show_outliers: bool,
+    comp_df: pd.DataFrame | None = None,
 ) -> None:
-    """Zobraz lightcurve PNG + field map PNG pre jeden target."""
+    """Interaktívna krivka (Plotly z CSV), field map PNG, metriky, odkazy Vizier/VSX."""
+    from photometry_phase2a import _normalize_gaia_id
+
     catalog_id = str(target_row.get("catalog_id", ""))
     vsx_name = str(target_row.get("vsx_name", catalog_id))
+    ra_target = _float_coord_row(target_row, "ra_deg", "ra")
+    dec_target = _float_coord_row(target_row, "dec_deg", "dec")
+
+    at_path = output_dir / "active_targets.csv"
+    if (ra_target == 0.0 and dec_target == 0.0) or (
+        not math.isfinite(ra_target) or not math.isfinite(dec_target)
+    ):
+        if at_path.exists():
+            try:
+                at_df = pd.read_csv(at_path, low_memory=False)
+                if "catalog_id" in at_df.columns:
+                    cid_norm = _normalize_gaia_id(catalog_id)
+                    at_df = at_df.copy()
+                    at_df["_nid"] = at_df["catalog_id"].apply(_normalize_gaia_id)
+                    hit = at_df[at_df["_nid"] == cid_norm]
+                    if not hit.empty:
+                        r0 = hit.iloc[0]
+                        ra_target = _float_coord_row(r0, "ra_deg", "ra")
+                        dec_target = _float_coord_row(r0, "dec_deg", "dec")
+            except Exception:  # noqa: BLE001
+                pass
+
     lc_dir = output_dir / "lightcurves"
+    lc_csv = lc_dir / f"lightcurve_{catalog_id}.csv"
 
     col_lc, col_map = st.columns([3, 2])
 
     with col_lc:
         st.markdown(f"**Svetelná krivka — {vsx_name}**")
-        lc_png = lc_dir / f"lightcurve_{catalog_id}.png"
-        if lc_png.exists():
-            st.image(str(lc_png), use_container_width=True)
-        else:
-            st.info("PNG svetelnej krivky neexistuje. Spusti Fázu 2A.")
-
-        lc_csv = lc_dir / f"lightcurve_{catalog_id}.csv"
         if lc_csv.exists():
-            try:
-                lc_df = pd.read_csv(lc_csv)
-                if not show_outliers and "flag" in lc_df.columns:
-                    lc_df = lc_df[lc_df["flag"] == "normal"]
+            lc_df = pd.read_csv(lc_csv, low_memory=False)
+            if not show_outliers and "flag" in lc_df.columns:
+                lc_df = lc_df[lc_df["flag"] == "normal"]
 
-                if (
-                    not lc_df.empty
-                    and "bjd" in lc_df.columns
-                    and "mag_calib" in lc_df.columns
-                ):
-                    try:
-                        import plotly.graph_objects as go
-                    except Exception:  # noqa: BLE001
-                        go = None  # type: ignore[assignment]
+            if (
+                not lc_df.empty
+                and "bjd" in lc_df.columns
+                and "mag_calib" in lc_df.columns
+            ):
+                try:
+                    import plotly.graph_objects as go
+                except Exception:  # noqa: BLE001
+                    go = None  # type: ignore[assignment]
 
-                    if go is not None:
-                        fig = go.Figure()
-                        flag_colors_plotly = {
-                            "normal": "#1a1a2e",
-                            "outlier_hi": "#ff6b35",
-                            "outlier_lo": "#7b2d8b",
-                            "saturated": "#aaaaaa",
-                            "no_data": "#cccccc",
-                        }
+                if go is not None:
+                    fig = go.Figure()
+                    flag_colors_plotly = {
+                        "normal": "#1a1a2e",
+                        "outlier_hi": "#ff6b35",
+                        "outlier_lo": "#7b2d8b",
+                        "saturated": "#aaaaaa",
+                        "no_data": "#cccccc",
+                    }
 
-                        if "flag" not in lc_df.columns:
-                            lc_df = lc_df.assign(flag="normal")
+                    if "flag" not in lc_df.columns:
+                        lc_df = lc_df.assign(flag="normal")
 
-                        for flag, color in flag_colors_plotly.items():
-                            sub = lc_df[lc_df["flag"] == flag].dropna(
-                                subset=["bjd", "mag_calib"]
-                            )
-                            if sub.empty:
-                                continue
-                            err = (
-                                sub["err"].fillna(0).tolist()
-                                if "err" in sub.columns
-                                else None
-                            )
-                            fig.add_trace(
-                                go.Scatter(
-                                    x=sub["bjd"],
-                                    y=sub["mag_calib"],
-                                    error_y=(
-                                        dict(array=err, visible=True)
-                                        if err is not None
-                                        else None
-                                    ),
-                                    mode="markers",
-                                    marker=dict(color=color, size=5),
-                                    name=flag,
-                                )
-                            )
-
-                        fig.update_layout(
-                            yaxis=dict(autorange="reversed", title="mag_calib"),
-                            xaxis=dict(title="BJD (TDB)"),
-                            height=350,
-                            margin=dict(l=40, r=20, t=20, b=40),
-                            legend=dict(orientation="h", y=1.1),
+                    for flag, color in flag_colors_plotly.items():
+                        sub = lc_df[lc_df["flag"] == flag].dropna(
+                            subset=["bjd", "mag_calib"]
                         )
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.caption("Interaktívny graf nedostupný (plotly nie je nainštalovaný).")
-            except Exception as e:  # noqa: BLE001
-                st.caption(f"Interaktívny graf nedostupný: {e}")
+                        if sub.empty:
+                            continue
+                        err = (
+                            sub["err"].fillna(0).tolist()
+                            if "err" in sub.columns
+                            else None
+                        )
+                        fig.add_trace(
+                            go.Scatter(
+                                x=sub["bjd"],
+                                y=sub["mag_calib"],
+                                error_y=(
+                                    dict(array=err, visible=True)
+                                    if err is not None
+                                    else None
+                                ),
+                                mode="markers",
+                                marker=dict(color=color, size=5),
+                                name=flag,
+                            )
+                        )
+
+                    fig.update_layout(
+                        yaxis=dict(autorange="reversed", title="mag_calib"),
+                        xaxis=dict(title="BJD (TDB)"),
+                        height=350,
+                        margin=dict(l=40, r=20, t=20, b=40),
+                        legend=dict(orientation="h", y=1.1),
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.caption("Interaktívny graf nedostupný (plotly nie je nainštalovaný).")
+            else:
+                st.info("V CSV chýbajú stĺpce bjd / mag_calib alebo súbor je prázdny.")
+        else:
+            st.info("Lightcurve CSV neexistuje. Spusti Fázu 2A.")
 
     with col_map:
-        st.markdown("**Field map**")
         fm_png = lc_dir / f"field_map_{catalog_id}.png"
         if fm_png.exists():
             st.image(str(fm_png), use_container_width=True)
@@ -219,16 +273,61 @@ def _render_target_detail(
             else:
                 st.info("Field map neexistuje.")
 
-        rms = target_row.get("lc_rms")
-        n_comp = target_row.get("n_good_comp")
-        ap = target_row.get("aperture_px")
-        cols = st.columns(3)
-        if rms is not None:
-            cols[0].metric("lc_rms", f"{float(rms):.4f}")
-        if n_comp is not None:
-            cols[1].metric("good comp", int(n_comp))
-        if ap is not None:
-            cols[2].metric("apertura", f"{float(ap):.1f}px")
+    rms = target_row.get("lc_rms")
+    n_comp = target_row.get("n_good_comp")
+    ap = target_row.get("aperture_px")
+    cols = st.columns(3)
+    if rms is not None and pd.notna(rms):
+        cols[0].metric("lc_rms", f"{float(rms):.4f}")
+    if n_comp is not None and pd.notna(n_comp):
+        cols[1].metric("good comp", int(n_comp))
+    if ap is not None and pd.notna(ap):
+        cols[2].metric("apertura", f"{float(ap):.1f}px")
+
+    st.markdown("**Premenná hviezda**")
+    vizier_url = (
+        f"https://vizier.cds.unistra.fr/viz-bin/VizieR?"
+        f"&-c={ra_target:.6f}{dec_target:+.6f}&-c.rs=5"
+    )
+    vsx_url = (
+        f"https://www.aavso.org/vsx/index.php?view=search.top"
+        f"&RA={ra_target:.5f}&Dec={dec_target:.5f}&radiusUnit=deg&radius=0.01"
+    )
+    st.markdown(
+        f"**{vsx_name}** &nbsp; "
+        f"[Vizier]({vizier_url}) &nbsp; "
+        f"[VSX]({vsx_url})"
+    )
+
+    if comp_df is not None and not comp_df.empty and "target_catalog_id" in comp_df.columns:
+        comp_work = comp_df.copy()
+        comp_work["_tcid"] = comp_work["target_catalog_id"].apply(_normalize_gaia_id)
+        target_comps = comp_work[comp_work["_tcid"] == _normalize_gaia_id(catalog_id)].copy()
+
+        if not target_comps.empty:
+            st.markdown("**Porovnávacie hviezdy**")
+            header = "| # | mag | B-V | p2p RMS | Vizier |\n|:---|:---|:---|:---|:---|\n"
+            body_lines: list[str] = []
+            for i, (_, row) in enumerate(target_comps.iterrows(), 1):
+                ra_c = _float_coord_row(row, "ra_deg", "ra")
+                dec_c = _float_coord_row(row, "dec_deg", "dec")
+                mag_c = row.get("mag")
+                bv_c = row.get("b_v")
+                if bv_c is None or (isinstance(bv_c, float) and not math.isfinite(bv_c)):
+                    bv_c = row.get("bp_rp")
+                rms_c = row.get("comp_rms")
+
+                viz_c = (
+                    f"https://vizier.cds.unistra.fr/viz-bin/VizieR?"
+                    f"&-c={ra_c:.6f}{dec_c:+.6f}&-c.rs=2"
+                )
+                mag_str = _fmt_opt_num(mag_c, ".3f")
+                bv_str = _fmt_opt_num(bv_c, ".3f")
+                rms_str = _fmt_opt_num(rms_c, ".4f")
+                body_lines.append(
+                    f"| C{i:02d} | {mag_str} | {bv_str} | {rms_str} | [↗]({viz_c}) |\n"
+                )
+            st.markdown(header + "".join(body_lines), unsafe_allow_html=False)
 
 
 # ---------------------------------------------------------------------------
@@ -314,6 +413,7 @@ def render_aperture_photometry(
                         detrended_aligned_dir=dt_dir,
                         output_dir=output_dir,
                         fwhm_px=fwhm_px,
+                        cfg=cfg,
                     )
                     st.success(
                         f"✅ Hotovo: {result['n_lightcurves']} svetelných kriviek "
@@ -333,9 +433,41 @@ def render_aperture_photometry(
         return
 
     summary_df = _load_summary(output_dir)
+    comp_df = pd.DataFrame()
+    if comp_csv is not None and Path(comp_csv).exists():
+        comp_df = pd.read_csv(comp_csv, low_memory=False)
+
     if summary_df.empty:
-        st.warning("photometry_summary.csv je prázdny.")
+        st.info("Zatiaľ žiadne výsledky.")
         return
+
+    name_col = "vsx_name" if "vsx_name" in summary_df.columns else "catalog_id"
+    fill_series = (
+        summary_df["catalog_id"]
+        if "catalog_id" in summary_df.columns
+        else pd.Series([""] * len(summary_df), index=summary_df.index)
+    )
+    names = summary_df[name_col].fillna(fill_series).astype(str).tolist()
+    selected = st.selectbox(
+        "Vyber premennú hviezdu:",
+        names,
+        key="phase2a_target_select",
+    )
+    mask = summary_df[name_col].fillna(fill_series).astype(str) == str(selected)
+    if not bool(mask.any()):
+        st.warning("Vybraný target sa nenašiel v summary.")
+        return
+    target_row = summary_df.loc[mask].iloc[0]
+
+    show_outliers = st.toggle(
+        "Zobraziť outlier a saturated body",
+        value=True,
+        key="phase2a_show_outliers",
+    )
+
+    _render_target_detail(target_row, output_dir, show_outliers, comp_df=comp_df)
+
+    st.divider()
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Svetelné krivky", len(summary_df))
@@ -345,25 +477,3 @@ def render_aperture_photometry(
         c3.metric("RMS < 0.05 mag", good)
     if "n_good_comp" in summary_df.columns:
         c4.metric("Avg good comp", f"{summary_df['n_good_comp'].mean():.1f}")
-
-    st.divider()
-
-    show_outliers = st.toggle(
-        "Zobraziť outlier a saturated body",
-        value=True,
-        key="phase2a_show_outliers",
-    )
-
-    name_col = "vsx_name" if "vsx_name" in summary_df.columns else "catalog_id"
-    target_options = summary_df[name_col].fillna(summary_df["catalog_id"]).tolist()
-
-    selected_idx = st.selectbox(
-        "Vyber premennú hviezdu:",
-        options=range(len(target_options)),
-        format_func=lambda i: target_options[i],
-        key="phase2a_target_select",
-    )
-
-    st.divider()
-    _render_target_detail(summary_df.iloc[int(selected_idx)], output_dir, show_outliers)
-
