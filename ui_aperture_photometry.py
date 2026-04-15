@@ -254,23 +254,30 @@ def _render_target_detail(
                             )
                         )
 
+                    _axis_title = dict(font=dict(color="#000000", size=13))
                     fig.update_layout(
                         paper_bgcolor="#f1f5f9",
                         plot_bgcolor="#ffffff",
-                        font=dict(color="#0f172a", size=12),
+                        font=dict(color="#000000", size=12),
                         yaxis=dict(
                             autorange="reversed",
-                            title="mag_calib",
+                            title=dict(text="mag_calib", **_axis_title),
+                            tickfont=dict(color="#000000", size=12),
                             gridcolor="#cbd5e1",
                             zerolinecolor="#94a3b8",
                         ),
                         xaxis=dict(
-                            title="BJD (TDB)",
+                            title=dict(text="BJD (TDB)", **_axis_title),
+                            tickfont=dict(color="#000000", size=12),
                             gridcolor="#e2e8f0",
                         ),
                         height=350,
                         margin=dict(l=40, r=20, t=36, b=40),
-                        legend=dict(orientation="h", y=1.12, font=dict(size=11)),
+                        legend=dict(
+                            orientation="h",
+                            y=1.12,
+                            font=dict(size=11, color="#000000"),
+                        ),
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
