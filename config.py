@@ -88,8 +88,8 @@ class AppConfig:
     #: Opt-in ePSF fitting on per-frame catalogs (adds ``psf_*`` columns; requires ``masterstar_epsf.fits``).
     psf_photometry_enabled: bool = False
     aperture_fwhm_factor: float = 1.7
-    annulus_inner_fwhm: float = 4.0
-    annulus_outer_fwhm: float = 6.0
+    annulus_inner_fwhm: float = 3.4
+    annulus_outer_fwhm: float = 6.5
     #: Top ``p`` %% brightest by ``peak_max_adu`` checked for FWHM non-linearity vs field median.
     nonlinearity_peak_percentile: float = 20.0
     nonlinearity_fwhm_ratio: float = 1.25

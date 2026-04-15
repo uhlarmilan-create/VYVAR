@@ -389,9 +389,15 @@ def enhance_catalog_dataframe_aperture_bpm(
     if n == 0:
         return out
 
-    dao_flux = pd.to_numeric(out.get("flux"), errors="coerce").to_numpy(dtype=np.float64)
+    # Pôvodný DAO flux z detect_stars_and_match_catalog (historicky v stĺpci ``flux``).
+    # Pre ďalšie fázy chceme mať konzistentne:
+    # - ``flux_raw``: pôvodný flux (čo prišlo z DAO bloku)
+    # - ``dao_flux``: sky-subtrahovaný flux (po aperturnej fotometrii, ak je zapnutá)
+    flux_raw = pd.to_numeric(out.get("flux"), errors="coerce").to_numpy(dtype=np.float64)
+    if "flux_raw" not in out.columns:
+        out["flux_raw"] = flux_raw
     if "dao_flux" not in out.columns:
-        out["dao_flux"] = dao_flux
+        out["dao_flux"] = flux_raw
 
     fwhm_per = np.array([_fwhm_moment_at(arr, float(x[i]), float(y[i])) for i in range(n)], dtype=np.float64)
     out["fwhm_estimate_px"] = fwhm_per
@@ -403,7 +409,8 @@ def enhance_catalog_dataframe_aperture_bpm(
     if aperture_enabled and math.isfinite(fwhm_med) and fwhm_med > 0:
         try:
             # Lokálna implementácia: sky-subtracted flux cez CircularAperture + CircularAnnulus.
-            from photutils.aperture import CircularAnnulus, CircularAperture, aperture_photometry
+            from photutils.aperture import CircularAnnulus, CircularAperture
+            from photutils.aperture import aperture_photometry as _aphot
 
             fw = float(fwhm_med)
             r_ap = max(0.5, float(aperture_fwhm_factor) * fw)
@@ -419,27 +426,40 @@ def enhance_catalog_dataframe_aperture_bpm(
                 fill = float(np.nanmedian(d)) if np.any(np.isfinite(d)) else 0.0
                 d = np.where(np.isfinite(d), d, fill)
 
-            phot = aperture_photometry(d, [ap, an])
-            sum_cols = [c for c in phot.colnames if str(c).startswith("aperture_sum")]
-            if len(sum_cols) >= 2:
-                sum_ap = np.asarray(phot[sum_cols[0]], dtype=np.float64)
-                sum_an = np.asarray(phot[sum_cols[1]], dtype=np.float64)
-                area_ap = float(ap.area)
-                area_an = float(an.area)
-                if area_an > 0:
-                    sky_pp = sum_an / area_an
-                    out["flux"] = (sum_ap - sky_pp * area_ap).astype(np.float64)
-                    out["aperture_r_px"] = float(r_ap)
-                    out["sky_annulus_r_in_px"] = float(r_in)
-                    out["sky_annulus_r_out_px"] = float(r_out)
-                else:
-                    out["flux"] = dao_flux
-            else:
-                out["flux"] = dao_flux
+            # Len aperture sum (annulus sky cez medián pixelov, nie sum/area).
+            phot_ap = _aphot(d, ap)
+            sum_ap = np.asarray(phot_ap["aperture_sum"], dtype=np.float64)
+            area_ap = float(ap.area)
+
+            sky_pp_arr = np.zeros(n, dtype=np.float64)
+            ann_masks = an.to_mask(method="center")
+            if not isinstance(ann_masks, (list, tuple)):
+                ann_masks = [ann_masks]
+            for i, amask in enumerate(ann_masks):
+                try:
+                    ann_img = amask.to_image(d.shape)
+                    sky_pixels = d[ann_img > 0]
+                    if sky_pixels.size >= 5:
+                        sky_pp_arr[i] = float(np.median(sky_pixels))
+                    else:
+                        sky_pp_arr[i] = float(np.median(d))
+                except Exception:  # noqa: BLE001
+                    sky_pp_arr[i] = float(np.median(d))
+
+            flux_arr = sum_ap - sky_pp_arr * area_ap
+            out["flux"] = flux_arr.astype(np.float64)
+            out["dao_flux"] = out["flux"]
+            out["aperture_r_px"] = float(r_ap)
+            out["sky_annulus_r_in_px"] = float(r_in)
+            out["sky_annulus_r_out_px"] = float(r_out)
+            # Uložíme sky_pp per hviezda (nie globálna konštanta)
+            out["noise_floor_adu"] = sky_pp_arr.astype(np.float64)
         except Exception:  # noqa: BLE001
-            out["flux"] = dao_flux
+            out["dao_flux"] = flux_raw
+            out["flux"] = flux_raw
     else:
-        out["flux"] = dao_flux
+        out["dao_flux"] = flux_raw
+        out["flux"] = flux_raw
 
     peak = pd.to_numeric(out.get("peak_max_adu"), errors="coerce").to_numpy(dtype=np.float64)
     finite_pk = peak[np.isfinite(peak)]
@@ -779,6 +799,28 @@ def select_comparison_stars_per_target(
             f"[FÁZA 1] Target {target_cid}: Filter A celkom vylúčil {_rej_a_total} kandidátov "
             f"({_n_before_a} → {_n_after_a})"
         )
+
+    # Zahrň DET hviezdy (bez Gaia ID) ak majú snr50_ok a nie sú saturované.
+    # Tieto môžu byť stabilné comp hviezdy aj bez katalógového záznamu.
+    det_mask = (
+        ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index)))
+        .astype(str)
+        .str.startswith("DET")
+        & ms["_dist_deg"].le(max_dist_deg)
+        & ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
+        & ~_bool_col(ms.get("likely_saturated", pd.Series(False, index=ms.index)))
+        & _bool_col(ms.get("snr50_ok", pd.Series(False, index=ms.index)))
+        & ~_bool_col(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
+    )
+    if target_cid:
+        det_mask &= (
+            ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).astype(str)
+            != target_cid
+        )
+    if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0:
+        det_mask &= ms["_dist_deg"].ge(float(min_dist_arcsec) / 3600.0)
+
+    cand_mask = cand_mask | det_mask
 
     candidates = ms[cand_mask].copy()
 
