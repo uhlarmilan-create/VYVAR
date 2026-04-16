@@ -2340,7 +2340,7 @@ def select_comparison_stars_per_target(
     *,
     csv_cache: dict[str, pd.DataFrame] | None = None,
     fwhm_px: float = 3.7,
-    max_dist_deg: float = 0.5,
+    max_dist_deg: float = 1.0,
     max_mag_diff: float = 0.25,  # ±0.25 mag od targetu
     max_bv_diff: float = 0.15,  # ±0.15 B-V od targetu
     n_comp_min: int = 3,
@@ -3211,7 +3211,7 @@ def run_phase0_and_phase1(
     frame_h_px: int = 1397,
     edge_margin_px: int = 50,
     match_radius_arcsec: float = 15.0,
-    max_dist_deg: float = 0.5,
+    max_dist_deg: float = 1.0,
     max_mag_diff: float = 0.25,
     max_bv_diff: float = 0.15,
     n_comp_min: int = 3,
