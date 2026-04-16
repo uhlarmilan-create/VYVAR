@@ -83,9 +83,12 @@ def _load_fwhm(cfg: "AppConfig", draft_id: int | None) -> float:
         )
         if ms.exists():
             with astrofits.open(ms, memmap=False) as hdul:
-                v = float(hdul[0].header.get("VY_FWHM", 3.7))
-                if 1.0 < v < 15.0:
-                    return round(v, 3)
+                for key in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN", "VY_FWHM"):
+                    v = hdul[0].header.get(key)
+                    if v is not None:
+                        fv = float(v)
+                        if 0.5 < fv < 30.0:
+                            return round(fv, 3)
     except Exception:  # noqa: BLE001
         pass
     return 3.7

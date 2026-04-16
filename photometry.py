@@ -367,15 +367,6 @@ def _fwhm_moment_at(arr: np.ndarray, xc: float, yc: float, *, half: int = 6) -> 
     return float(fwhm) if math.isfinite(fwhm) else float("nan")
 
 
-def _moment_to_gaussian_fwhm(moment_fwhm_px: float) -> float:
-    """Convert moment-FWHM proxy to Gaussian FWHM (empirical calibration)."""
-    MOMENT_TO_GAUSSIAN = 0.47
-    if not (math.isfinite(moment_fwhm_px) and moment_fwhm_px > 0):
-        return float("nan")
-    return float(moment_fwhm_px) * float(MOMENT_TO_GAUSSIAN)
-
-
-
 def enhance_catalog_dataframe_aperture_bpm(
     df: pd.DataFrame,
     data: np.ndarray,
@@ -419,10 +410,47 @@ def enhance_catalog_dataframe_aperture_bpm(
     if not math.isfinite(fwhm_moment_med) or fwhm_moment_med <= 0:
         fwhm_moment_med = float("nan")
 
-    fwhm_gaussian = _moment_to_gaussian_fwhm(fwhm_moment_med)
-    out["fwhm_gaussian_px"] = float(fwhm_gaussian) if math.isfinite(fwhm_gaussian) else float("nan")
+    # Prefer Gaussian FWHM from FITS header (precise 2D fit on MASTERSTAR).
+    fwhm_gaussian: float | None = None
+    if hdr is not None:
+        for _key in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
+            _val = hdr.get(_key)
+            if _val is None:
+                continue
+            try:
+                _v = float(_val)
+                if 0.5 < _v < 30.0:
+                    fwhm_gaussian = _v
+                    break
+            except (TypeError, ValueError):
+                pass
 
-    if aperture_enabled and math.isfinite(fwhm_gaussian) and fwhm_gaussian > 0:
+    if fwhm_gaussian is None:
+        # Fallback: moment → Gaussian (only if VY_FWHM_GAUSS is not in the header).
+        MOMENT_TO_GAUSSIAN = 0.619
+        if math.isfinite(fwhm_moment_med) and fwhm_moment_med > 0:
+            fwhm_gaussian = fwhm_moment_med * MOMENT_TO_GAUSSIAN
+        else:
+            fwhm_gaussian = float("nan")
+        logging.debug(
+            f"[PHOT] VY_FWHM_GAUSS nenájdené v hlavičke, "
+            f"fallback moment×{MOMENT_TO_GAUSSIAN}: {fwhm_gaussian:.3f}px"
+        )
+    else:
+        logging.debug(f"[PHOT] Gaussian FWHM z hlavičky: {fwhm_gaussian:.3f}px")
+
+    # Sanity check: if computed aperture is out of a reasonable range, fallback to moment median directly.
+    r_ap_test = float(aperture_fwhm_factor) * float(fwhm_gaussian) if math.isfinite(float(fwhm_gaussian)) else float("nan")
+    if not math.isfinite(r_ap_test) or r_ap_test < 3.0 or r_ap_test > 20.0:
+        fwhm_gaussian = float(fwhm_moment_med)
+        logging.warning(
+            f"[PHOT] Gaussian FWHM fallback na moment: {fwhm_gaussian:.2f}px "
+            f"(r_ap={r_ap_test:.2f}px mimo rozsahu)"
+        )
+
+    out["fwhm_gaussian_px"] = float(fwhm_gaussian) if math.isfinite(float(fwhm_gaussian)) else float("nan")
+
+    if aperture_enabled and math.isfinite(float(fwhm_gaussian)) and float(fwhm_gaussian) > 0:
         try:
             # Lokálna implementácia: sky-subtracted flux cez CircularAperture + CircularAnnulus.
             from photutils.aperture import CircularAnnulus, CircularAperture
@@ -840,41 +868,66 @@ def select_comparison_stars_per_target(
 
     candidates = ms[cand_mask].copy()
 
-    # Ak po hard filtri nedostatok kandidátov — uvoľni B-V filter a skús znova
-    if len(candidates) < n_comp_min and math.isfinite(target_bv_pre):
-        logging.warning(
-            f"[FÁZA 1] Target {target_cid}: len {len(candidates)} po B-V filtri "
-            f"(ΔB-V<={max_bv_diff:.2f}) — uvoľňujem na 1.5×{max_bv_diff:.2f}"
+    # Hierarchický fallback pre Δmag a ΔB-V (aby sme nestratili comp hviezdy)
+    _mag_steps = [float(max_mag_diff), 0.5, 1.0, 2.0, 3.0]
+    _bv_steps: list[float] = [float(max_bv_diff), 0.30, 0.5, float("inf")]
+    _used_mag = float(max_mag_diff)
+    _used_bv = float(max_bv_diff)
+
+    # Základný mask bez Δmag/ΔB-V (tie sa aplikujú per krok)
+    _base_mask = (
+        ms["_dist_deg"].le(max_dist_deg)
+        & _bool_col(ms.get("is_usable", pd.Series(True, index=ms.index)))
+        & ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
+        & ~_bool_col(ms.get("is_noisy", pd.Series(False, index=ms.index)))
+        & ~_bool_col(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
+        & ~_bool_col(ms.get("likely_saturated", pd.Series(False, index=ms.index)))
+    )
+    if target_cid:
+        _base_mask &= (
+            ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).astype(str) != target_cid
         )
-        relaxed_bv = max_bv_diff * 1.5
+    if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0:
+        _base_mask &= ms["_dist_deg"].ge(float(min_dist_arcsec) / 3600.0)
+
+    # Priprav si numerické _mag/_bv pre retry kroky
+    if "_mag" not in ms.columns:
+        ms["_mag"] = pd.to_numeric(ms.get("mag", ms.get("phot_g_mean_mag")), errors="coerce")
+    if "_bv" not in ms.columns:
         ms["_bv"] = pd.to_numeric(ms.get("b_v", pd.Series(dtype=float)), errors="coerce")
-        bv_known_mask = ms["_bv"].notna()
-        relaxed_mask = (
-            ms["_dist_deg"].le(max_dist_deg)
-            & _bool_col(ms.get("is_usable", pd.Series(True, index=ms.index)))
-            & ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
-            & ~_bool_col(ms.get("is_noisy", pd.Series(False, index=ms.index)))
-            & ~_bool_col(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
-            & ~_bool_col(ms.get("likely_saturated", pd.Series(False, index=ms.index)))
-        )
-        if target_cid:
-            relaxed_mask &= (
-                ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).astype(str) != target_cid
+
+    for _mag_try in _mag_steps:
+        for _bv_try in _bv_steps:
+            if len(candidates) >= n_comp_min:
+                break
+            if _mag_try == float(max_mag_diff) and _bv_try == float(max_bv_diff):
+                continue
+            _bv_lbl = f"{_bv_try:.2f}" if math.isfinite(_bv_try) else "inf"
+            logging.warning(
+                f"[FÁZA 1] Target {target_cid}: len {len(candidates)} kandidátov "
+                f"— uvoľňujem Δmag≤{_mag_try:.2f}, ΔB-V≤{_bv_lbl}"
             )
-        if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0:
-            min_dist_deg = float(min_dist_arcsec) / 3600.0
-            relaxed_mask &= ms["_dist_deg"].ge(min_dist_deg)
-        if math.isfinite(mag_t):
-            if "_mag" not in ms.columns:
-                ms["_mag"] = pd.to_numeric(ms.get("mag", ms.get("phot_g_mean_mag")), errors="coerce")
-            relaxed_mask &= ms["_mag"].sub(mag_t).abs().le(max_mag_diff)
-        bv_relaxed_filter = ~bv_known_mask | ms["_bv"].sub(target_bv_pre).abs().le(relaxed_bv)
-        relaxed_mask &= bv_relaxed_filter
-        candidates = ms[relaxed_mask].copy()
-        logging.warning(
-            f"[FÁZA 1] Target {target_cid}: po relaxácii B-V na {relaxed_bv:.2f} "
-            f"dostupných {len(candidates)} kandidátov"
-        )
+
+            _cand_mask2 = _base_mask.copy()
+            if math.isfinite(mag_t) and math.isfinite(_mag_try):
+                _cand_mask2 &= ms["_mag"].sub(mag_t).abs().le(float(_mag_try))
+            if math.isfinite(target_bv_pre) and math.isfinite(_bv_try) and float(_bv_try) < float("inf"):
+                bv_known = ms["_bv"].notna()
+                _cand_mask2 &= ~bv_known | ms["_bv"].sub(target_bv_pre).abs().le(float(_bv_try))
+
+            # DET hviezdy ponechaj ako fallback (nezávisle od Δmag/ΔB-V)
+            _cand_mask2 = _cand_mask2 | det_mask
+
+            candidates = ms[_cand_mask2].copy()
+            _used_mag = float(_mag_try)
+            _used_bv = float(_bv_try)
+        if len(candidates) >= n_comp_min:
+            break
+
+    logging.info(
+        f"[FÁZA 1] Target {target_cid}: {len(candidates)} kandidátov "
+        f"(Δmag≤{_used_mag:.2f}, ΔB-V≤{_used_bv if math.isfinite(_used_bv) else float('inf')})"
+    )
 
     if len(candidates) < n_comp_min:
         logging.warning(
@@ -1233,16 +1286,35 @@ def select_comparison_stars_per_target(
         if math.isfinite(rms):
             rms_map[cid] = rms
 
+    # Zoradené RMS pre fallback kroky
+    sorted_rms_map: dict[str, float] = dict(sorted(rms_map.items(), key=lambda kv: float(kv[1])))
+
     # Tvrdý RMS limit — odmietni nestabilné hviezdy bez ohľadu na ranking
     if math.isfinite(max_comp_rms) and max_comp_rms > 0:
         n_before = len(rms_map)
-        rms_map = {cid: rms for cid, rms in rms_map.items() if rms <= max_comp_rms}
+        rms_map = {cid: rms for cid, rms in sorted_rms_map.items() if rms <= max_comp_rms}
         n_rejected = n_before - len(rms_map)
         if n_rejected > 0:
             logging.info(
                 f"[FÁZA 1] Target {target_cid}: tvrdý RMS filter (>{max_comp_rms:.3f}) "
                 f"odmietol {n_rejected} kandidátov, zostáva {len(rms_map)}"
             )
+
+    # Fallback na uvoľnený RMS limit ak stále <n_comp_min
+    if len(rms_map) < n_comp_min and math.isfinite(max_comp_rms) and max_comp_rms > 0:
+        _good: dict[str, float] = dict(rms_map)
+        _rms_fallback_steps = [float(max_comp_rms), 0.08, 0.15]
+        for _rms_limit in _rms_fallback_steps:
+            _good = {cid: rms for cid, rms in sorted_rms_map.items() if rms <= float(_rms_limit)}
+            if len(_good) >= n_comp_min:
+                if float(_rms_limit) > float(max_comp_rms):
+                    logging.warning(
+                        f"[FÁZA 1] Target {target_cid}: RMS fallback "
+                        f"max_comp_rms {float(max_comp_rms):.3f} → {float(_rms_limit):.3f}, "
+                        f"nájdených {len(_good)} comp"
+                    )
+                break
+        rms_map = _good
 
     if len(rms_map) < n_comp_min:
         logging.warning(

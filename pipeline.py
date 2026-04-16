@@ -8501,6 +8501,40 @@ def generate_masterstar_and_catalog(
         f"MASTERSTAR katalóg: {Path(csv_path).name} — {len(df_final)} riadkov "
         f"(DAO + katalóg na celom poli; žiadne orezanie podľa vzdialenosti od stredu snímku)."
     )
+    # Gaussian FWHM (2D fit) → FITS header for universal per-frame aperture scaling.
+    try:
+        from photometry_phase2a import measure_fwhm_from_masterstar
+
+        _ms_path = Path(masterstar_fits)
+        if "mag" in df_final.columns:
+            _star_pos = df_final[["x", "y", "mag"]].dropna()
+        elif "phot_g_mean_mag" in df_final.columns:
+            _star_pos = (
+                df_final[["x", "y", "phot_g_mean_mag"]]
+                .dropna()
+                .rename(columns={"phot_g_mean_mag": "mag"})
+            )
+        else:
+            _star_pos = df_final[["x", "y"]].dropna()
+        with fits.open(_ms_path, memmap=False) as _hint_hdul:
+            _vy_fwhm_hint = float(_hint_hdul[0].header.get("VY_FWHM", 3.5))
+        _gaussian_fwhm = measure_fwhm_from_masterstar(
+            _ms_path,
+            _star_pos,
+            dao_fwhm_hint=_vy_fwhm_hint,
+            n_stars=30,
+        )
+        with fits.open(_ms_path, mode="update", memmap=False) as _hdul:
+            _hdul[0].header["VY_FWHM_GAUSS"] = (
+                round(float(_gaussian_fwhm), 4),
+                "Gaussian FWHM [px] z 2D fit na MASTERSTAR",
+            )
+            _hdul.flush()
+        logging.info(
+            f"[MASTERSTAR] VY_FWHM_GAUSS={float(_gaussian_fwhm):.3f}px uložené do hlavičky"
+        )
+    except Exception as _e:
+        logging.warning(f"[MASTERSTAR] Gaussian FWHM fit zlyhal: {_e}")
     # Small flush pause: UI may read CSV immediately after this returns.
     time.sleep(0.5)
     # Drop stale pre-optimizer dataframe to avoid accidental reuse ("ghost rows").
