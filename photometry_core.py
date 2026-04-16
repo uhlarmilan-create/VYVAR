@@ -1587,6 +1587,7 @@ import json
 import logging
 import math
 import random
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -2273,6 +2274,7 @@ def select_comparison_stars_per_target(
     masterstars_df: pd.DataFrame,
     per_frame_csv_paths: list[Path],
     *,
+    csv_cache: dict[str, pd.DataFrame] | None = None,
     fwhm_px: float = 3.7,
     max_dist_deg: float = 0.5,
     max_mag_diff: float = 0.25,  # ±0.25 mag od targetu
@@ -2547,41 +2549,49 @@ def select_comparison_stars_per_target(
     # Skutočný 5σ SNR (median cez framy)
     snr_map: dict[str, list[float]] = {cid: [] for cid in cand_ids}
 
-    # ── CSV cache: jedno načítanie na snímku (select_* sa volá per target v rámci Fázy 1)
-    _csv_cache: dict[str, pd.DataFrame] = {}
-    for _csv_path in per_frame_csv_paths:
-        try:
-            _hdr = pd.read_csv(_csv_path, nrows=0)
-            _use_cols = [c for c in avail_cols if c in _hdr.columns]
-            _actual_flux = flux_col if flux_col in _hdr.columns else "flux"
-            if _actual_flux not in _use_cols:
-                _use_cols.append(_actual_flux)
-            _name_col = "name" if "name" in _hdr.columns else ("catalog_id" if "catalog_id" in _hdr.columns else "name")
-            if "mag" not in _use_cols and "mag" in _hdr.columns:
-                _use_cols.append("mag")
-            if "psf_chi2" in _hdr.columns and "psf_chi2" not in _use_cols:
-                _use_cols.append("psf_chi2")
-            if "fwhm_estimate_px" in _hdr.columns and "fwhm_estimate_px" not in _use_cols:
-                _use_cols.append("fwhm_estimate_px")
-            if "peak_max_adu" in _hdr.columns and "peak_max_adu" not in _use_cols:
-                _use_cols.append("peak_max_adu")
-            if "saturate_limit_adu_85pct" in _hdr.columns and "saturate_limit_adu_85pct" not in _use_cols:
-                _use_cols.append("saturate_limit_adu_85pct")
-            _df0 = pd.read_csv(_csv_path, usecols=_use_cols, low_memory=False)
-            _df0[_name_col] = _normalize_id_series(_df0[_name_col])
-            _df0[_actual_flux] = pd.to_numeric(_df0[_actual_flux], errors="coerce")
-            if "peak_max_adu" in _df0.columns:
-                _df0["peak_max_adu"] = pd.to_numeric(_df0["peak_max_adu"], errors="coerce")
-            if "saturate_limit_adu_85pct" in _df0.columns:
-                _df0["saturate_limit_adu_85pct"] = pd.to_numeric(
-                    _df0["saturate_limit_adu_85pct"], errors="coerce"
+    # ── CSV cache: ak príde zvonka (Fáza 1 shared), použi ju; inak vybuduj lokálne
+    if csv_cache is None:
+        csv_cache = {}
+        for _csv_path in per_frame_csv_paths:
+            try:
+                _hdr = pd.read_csv(_csv_path, nrows=0)
+                _use_cols = [c for c in avail_cols if c in _hdr.columns]
+                _actual_flux = flux_col if flux_col in _hdr.columns else "flux"
+                if _actual_flux not in _use_cols:
+                    _use_cols.append(_actual_flux)
+                _name_col = (
+                    "name"
+                    if "name" in _hdr.columns
+                    else ("catalog_id" if "catalog_id" in _hdr.columns else "name")
                 )
-            _csv_cache[str(_csv_path)] = _df0
-        except Exception:  # noqa: BLE001
-            continue
+                if "mag" not in _use_cols and "mag" in _hdr.columns:
+                    _use_cols.append("mag")
+                if "psf_chi2" in _hdr.columns and "psf_chi2" not in _use_cols:
+                    _use_cols.append("psf_chi2")
+                if "fwhm_estimate_px" in _hdr.columns and "fwhm_estimate_px" not in _use_cols:
+                    _use_cols.append("fwhm_estimate_px")
+                if "peak_max_adu" in _hdr.columns and "peak_max_adu" not in _use_cols:
+                    _use_cols.append("peak_max_adu")
+                if (
+                    "saturate_limit_adu_85pct" in _hdr.columns
+                    and "saturate_limit_adu_85pct" not in _use_cols
+                ):
+                    _use_cols.append("saturate_limit_adu_85pct")
+                _df0 = pd.read_csv(_csv_path, usecols=_use_cols, low_memory=False)
+                _df0[_name_col] = _normalize_id_series(_df0[_name_col])
+                _df0[_actual_flux] = pd.to_numeric(_df0[_actual_flux], errors="coerce")
+                if "peak_max_adu" in _df0.columns:
+                    _df0["peak_max_adu"] = pd.to_numeric(_df0["peak_max_adu"], errors="coerce")
+                if "saturate_limit_adu_85pct" in _df0.columns:
+                    _df0["saturate_limit_adu_85pct"] = pd.to_numeric(
+                        _df0["saturate_limit_adu_85pct"], errors="coerce"
+                    )
+                csv_cache[str(_csv_path)] = _df0
+            except Exception:  # noqa: BLE001
+                continue
 
     for csv_path in per_frame_csv_paths:
-        df = _csv_cache.get(str(csv_path))
+        df = csv_cache.get(str(csv_path))
         if df is None or df.empty:
             continue
         try:
@@ -3209,11 +3219,65 @@ def run_phase0_and_phase1(
     all_comp_rows: list[pd.DataFrame] = []
     targets_without_comps: list[str] = []
 
+    # Načítaj CSV cache raz pre všetky targety (zabráni 81× opakovaniu I/O).
+    _needed_cols = [
+        "catalog_id",
+        "name",
+        "dao_flux",
+        "flux",
+        "noise_floor_adu",
+        "peak_max_adu",
+        "saturate_limit_adu_85pct",
+        "fwhm_estimate_px",
+        "psf_chi2",
+        "aperture_r_px",
+        "is_usable",
+        "is_saturated",
+        "is_noisy",
+        "snr50_ok",
+        "vsx_known_variable",
+        "likely_saturated",
+        "mag",
+        "bjd_tdb_mid",
+        "hjd_mid",
+        "jd_mid",
+        "airmass",
+    ]
+    if flux_col not in _needed_cols:
+        _needed_cols.append(flux_col)
+    logging.info("[FÁZA 1] Načítavam CSV cache...")
+    _t_cache0 = time.time()
+    shared_csv_cache: dict[str, pd.DataFrame] = {}
+    for _p in csv_paths:
+        try:
+            _hdr = pd.read_csv(_p, nrows=0)
+            _cols = [c for c in _needed_cols if c in _hdr.columns]
+            _df0 = pd.read_csv(_p, usecols=_cols, low_memory=False)
+            _name_col = (
+                "name"
+                if "name" in _df0.columns
+                else ("catalog_id" if "catalog_id" in _df0.columns else "name")
+            )
+            if _name_col in _df0.columns:
+                _df0[_name_col] = _normalize_id_series(_df0[_name_col])
+            for _num_col in ("flux", "dao_flux", "peak_max_adu", "saturate_limit_adu_85pct", "psf_chi2", "fwhm_estimate_px"):
+                if _num_col in _df0.columns:
+                    _df0[_num_col] = pd.to_numeric(_df0[_num_col], errors="coerce")
+            shared_csv_cache[str(_p)] = _df0
+        except Exception:  # noqa: BLE001
+            continue
+    logging.info(
+        f"[FÁZA 1] CSV cache: {len(shared_csv_cache)} súborov "
+        f"({time.time() - _t_cache0:.1f}s)"
+    )
+
+    _t_phase1 = time.time()
     for _, target_row in active.iterrows():
         comps = select_comparison_stars_per_target(
             target_row,
             ms_df,
             csv_paths,
+            csv_cache=shared_csv_cache,
             fwhm_px=fwhm_px,
             max_dist_deg=max_dist_deg,
             max_mag_diff=max_mag_diff,
@@ -3229,6 +3293,7 @@ def run_phase0_and_phase1(
             max_psf_chi2=max_psf_chi2,
             max_fwhm_factor=max_fwhm_factor,
             isolation_radius_px=isolation_radius_px,
+            flux_col=flux_col,
         )
         if comps.empty:
             targets_without_comps.append(str(target_row.get("catalog_id", "")))
@@ -3242,6 +3307,7 @@ def run_phase0_and_phase1(
         f"[FÁZA 1] Uložené: {comp_csv} "
         f"({len(comp_df)} riadkov, {len(all_comp_rows)} targetov s porovnávačkami)"
     )
+    logging.info(f"[FÁZA 1] Čas (comp selection): {time.time() - _t_phase1:.1f}s")
 
     # ── Suspected variables ──
     # Hviezdy s vysokým RMS (>3σ nad mediánom) ktoré nie sú VSX ani active targets
