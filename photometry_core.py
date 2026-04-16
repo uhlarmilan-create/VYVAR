@@ -2547,42 +2547,46 @@ def select_comparison_stars_per_target(
     # Skutočný 5σ SNR (median cez framy)
     snr_map: dict[str, list[float]] = {cid: [] for cid in cand_ids}
 
-    for csv_path in per_frame_csv_paths:
+    # ── CSV cache: jedno načítanie na snímku (select_* sa volá per target v rámci Fázy 1)
+    _csv_cache: dict[str, pd.DataFrame] = {}
+    for _csv_path in per_frame_csv_paths:
         try:
-            # Zisti dostupné stĺpce v súbore
-            header = pd.read_csv(csv_path, nrows=0)
-            use_cols = [c for c in avail_cols if c in header.columns]
-            # Flux stĺpec — preferuj dao_flux, fallback na flux
-            actual_flux_col = flux_col if flux_col in header.columns else "flux"
-            if actual_flux_col not in use_cols:
-                use_cols.append(actual_flux_col)
-            # Per-frame CSV: ``catalog_id`` môže byť NaN (najmä keď sa join MASTERSTAR robí len pre matchnuté riadky),
-            # ale ``name`` typicky obsahuje stabilný identifikátor (Gaia ID ako string alebo DET_*).
-            # Preferuj preto ``name`` ak existuje.
-            name_col = "name" if "name" in header.columns else ("catalog_id" if "catalog_id" in header.columns else "name")
-            if "mag" not in use_cols and "mag" in header.columns:
-                use_cols.append("mag")
-            if "psf_chi2" in header.columns and "psf_chi2" not in use_cols:
-                use_cols.append("psf_chi2")
-            if "fwhm_estimate_px" in header.columns and "fwhm_estimate_px" not in use_cols:
-                use_cols.append("fwhm_estimate_px")
-            if "peak_max_adu" in header.columns and "peak_max_adu" not in use_cols:
-                use_cols.append("peak_max_adu")
-            if (
-                "saturate_limit_adu_85pct" in header.columns
-                and "saturate_limit_adu_85pct" not in use_cols
-            ):
-                use_cols.append("saturate_limit_adu_85pct")
-
-            df = pd.read_csv(csv_path, usecols=use_cols, low_memory=False)
-            df[name_col] = _normalize_id_series(df[name_col])
-            df[actual_flux_col] = pd.to_numeric(df[actual_flux_col], errors="coerce")
-            if "peak_max_adu" in df.columns:
-                df["peak_max_adu"] = pd.to_numeric(df["peak_max_adu"], errors="coerce")
-            if "saturate_limit_adu_85pct" in df.columns:
-                df["saturate_limit_adu_85pct"] = pd.to_numeric(
-                    df["saturate_limit_adu_85pct"], errors="coerce"
+            _hdr = pd.read_csv(_csv_path, nrows=0)
+            _use_cols = [c for c in avail_cols if c in _hdr.columns]
+            _actual_flux = flux_col if flux_col in _hdr.columns else "flux"
+            if _actual_flux not in _use_cols:
+                _use_cols.append(_actual_flux)
+            _name_col = "name" if "name" in _hdr.columns else ("catalog_id" if "catalog_id" in _hdr.columns else "name")
+            if "mag" not in _use_cols and "mag" in _hdr.columns:
+                _use_cols.append("mag")
+            if "psf_chi2" in _hdr.columns and "psf_chi2" not in _use_cols:
+                _use_cols.append("psf_chi2")
+            if "fwhm_estimate_px" in _hdr.columns and "fwhm_estimate_px" not in _use_cols:
+                _use_cols.append("fwhm_estimate_px")
+            if "peak_max_adu" in _hdr.columns and "peak_max_adu" not in _use_cols:
+                _use_cols.append("peak_max_adu")
+            if "saturate_limit_adu_85pct" in _hdr.columns and "saturate_limit_adu_85pct" not in _use_cols:
+                _use_cols.append("saturate_limit_adu_85pct")
+            _df0 = pd.read_csv(_csv_path, usecols=_use_cols, low_memory=False)
+            _df0[_name_col] = _normalize_id_series(_df0[_name_col])
+            _df0[_actual_flux] = pd.to_numeric(_df0[_actual_flux], errors="coerce")
+            if "peak_max_adu" in _df0.columns:
+                _df0["peak_max_adu"] = pd.to_numeric(_df0["peak_max_adu"], errors="coerce")
+            if "saturate_limit_adu_85pct" in _df0.columns:
+                _df0["saturate_limit_adu_85pct"] = pd.to_numeric(
+                    _df0["saturate_limit_adu_85pct"], errors="coerce"
                 )
+            _csv_cache[str(_csv_path)] = _df0
+        except Exception:  # noqa: BLE001
+            continue
+
+    for csv_path in per_frame_csv_paths:
+        df = _csv_cache.get(str(csv_path))
+        if df is None or df.empty:
+            continue
+        try:
+            name_col = "name" if "name" in df.columns else ("catalog_id" if "catalog_id" in df.columns else "name")
+            actual_flux_col = flux_col if flux_col in df.columns else "flux"
 
             # Saturácia naprieč framami (nezávisle od flux>0):
             # peak_max_adu > saturate_limit_adu_85pct
