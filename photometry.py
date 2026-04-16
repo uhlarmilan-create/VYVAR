@@ -379,6 +379,7 @@ def enhance_catalog_dataframe_aperture_bpm(
     nonlinearity_peak_percentile: float,
     nonlinearity_fwhm_ratio: float,
     master_dark_path: Path | str | None,
+    gaussian_fwhm_px_override: float | None = None,
 ) -> pd.DataFrame:
     """Replace DAO ``flux`` with aperture photometry when enabled; add linearity/BPM flags."""
     out = df.copy()
@@ -410,8 +411,9 @@ def enhance_catalog_dataframe_aperture_bpm(
     if not math.isfinite(fwhm_moment_med) or fwhm_moment_med <= 0:
         fwhm_moment_med = float("nan")
 
-    # Prefer Gaussian FWHM from FITS header (precise 2D fit on MASTERSTAR).
+    # Prefer Gaussian FWHM: frame FITS header, then MASTERSTAR value (per export), else moment×0.619.
     fwhm_gaussian: float | None = None
+    _fwhm_from_frame_hdr = False
     if hdr is not None:
         for _key in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
             _val = hdr.get(_key)
@@ -421,23 +423,33 @@ def enhance_catalog_dataframe_aperture_bpm(
                 _v = float(_val)
                 if 0.5 < _v < 30.0:
                     fwhm_gaussian = _v
+                    _fwhm_from_frame_hdr = True
                     break
             except (TypeError, ValueError):
                 pass
 
+    if fwhm_gaussian is None and gaussian_fwhm_px_override is not None:
+        try:
+            _ov = float(gaussian_fwhm_px_override)
+            if math.isfinite(_ov) and 0.5 < _ov < 30.0:
+                fwhm_gaussian = _ov
+        except (TypeError, ValueError):
+            pass
+
     if fwhm_gaussian is None:
-        # Fallback: moment → Gaussian (only if VY_FWHM_GAUSS is not in the header).
         MOMENT_TO_GAUSSIAN = 0.619
         if math.isfinite(fwhm_moment_med) and fwhm_moment_med > 0:
             fwhm_gaussian = fwhm_moment_med * MOMENT_TO_GAUSSIAN
         else:
             fwhm_gaussian = float("nan")
         logging.debug(
-            f"[PHOT] VY_FWHM_GAUSS nenájdené v hlavičke, "
+            f"[PHOT] VY_FWHM_GAUSS nenájdené v hlavičke snímky ani z MASTERSTAR, "
             f"fallback moment×{MOMENT_TO_GAUSSIAN}: {fwhm_gaussian:.3f}px"
         )
+    elif _fwhm_from_frame_hdr:
+        logging.debug(f"[PHOT] Gaussian FWHM z hlavičky snímky: {fwhm_gaussian:.3f}px")
     else:
-        logging.debug(f"[PHOT] Gaussian FWHM z hlavičky: {fwhm_gaussian:.3f}px")
+        logging.debug(f"[PHOT] Gaussian FWHM z MASTERSTAR (VY_FWHM_GAUSS): {fwhm_gaussian:.3f}px")
 
     # Sanity check: if computed aperture is out of a reasonable range, fallback to moment median directly.
     r_ap_test = float(aperture_fwhm_factor) * float(fwhm_gaussian) if math.isfinite(float(fwhm_gaussian)) else float("nan")

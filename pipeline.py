@@ -98,6 +98,11 @@ def _apply_aperture_catalog_enhancements_from_st(
     mdp = st.get("master_dark_path") or ""
     mdp = str(mdp).strip() or None
     try:
+        _go = st.get("gaussian_fwhm_px_override")
+        try:
+            _go_f = float(_go) if _go is not None else None
+        except (TypeError, ValueError):
+            _go_f = None
         return enhance_catalog_dataframe_aperture_bpm(
             df,
             data,
@@ -109,6 +114,7 @@ def _apply_aperture_catalog_enhancements_from_st(
             nonlinearity_peak_percentile=float(st.get("nonlinearity_peak_percentile", 20.0)),
             nonlinearity_fwhm_ratio=float(st.get("nonlinearity_fwhm_ratio", 1.25)),
             master_dark_path=mdp,
+            gaussian_fwhm_px_override=_go_f,
         )
     except Exception:  # noqa: BLE001
         return df
@@ -6858,6 +6864,28 @@ def export_per_frame_catalogs(
             "Per-frame catalog lock requested, but masterstars_full_match.csv is missing or invalid."
         )
 
+    _gauss_override: float | None = None
+    try:
+        if masterstar_fits is not None:
+            _ms_gauss = Path(masterstar_fits)
+            if _ms_gauss.is_file():
+                with fits.open(_ms_gauss, memmap=False) as _gfh:
+                    _ghdr = _gfh[0].header
+                    for _gk in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
+                        _gv = _ghdr.get(_gk)
+                        if _gv is None:
+                            continue
+                        try:
+                            _gfv = float(_gv)
+                            if math.isfinite(_gfv) and 0.5 < _gfv < 30.0:
+                                _gauss_override = _gfv
+                                break
+                        except (TypeError, ValueError):
+                            pass
+    except Exception:  # noqa: BLE001
+        _gauss_override = None
+    _ap_st["gaussian_fwhm_px_override"] = _gauss_override
+
     cfg_for_workers = app_config if app_config is not None else AppConfig()
     _dao_fw_export = (
         float(dao_fwhm_px)
@@ -7196,6 +7224,7 @@ def export_per_frame_catalogs(
             "database_path": str(Path(_cfg_ap.database_path).resolve()),
             "draft_id": int(draft_id) if draft_id is not None else None,
             "equipment_id": int(equipment_id) if equipment_id is not None else None,
+            "gaussian_fwhm_px_override": _gauss_override,
         }
 
     if use_parallel_mp and use_ram_inputs and work_ram is not None:
