@@ -737,27 +737,47 @@ def ensemble_normalize(
     )
 
     for i in range(n_frames):
-        comp_vals = np.asarray(
-            [
-                comp_mag_inst[cid][i]
-                for cid in good_ids
-                if cid in comp_mag_inst and math.isfinite(comp_mag_inst[cid][i])
-            ],
-            dtype=np.float64,
-        )
-        if comp_vals.size == 0 or not math.isfinite(target_mag_inst[i]):
+        comp_pairs: list[tuple[str, float]] = []
+        for cid in good_ids:
+            if cid not in comp_mag_inst:
+                continue
+            try:
+                mv = float(comp_mag_inst[cid][i])
+            except Exception:  # noqa: BLE001
+                continue
+            if math.isfinite(mv):
+                comp_pairs.append((cid, mv))
+
+        if (not comp_pairs) or not math.isfinite(target_mag_inst[i]):
             continue
-        # Flux-weighted ensemble: comp_vals sú mag_inst → konvertuj na relatívny flux,
-        # spriemeruj a späť na mag. Jasnejšie comp majú väčšiu váhu (AIJ-like).
-        comp_fluxes = np.asarray(
-            [10 ** (-0.4 * m) for m in comp_vals if math.isfinite(m)],
-            dtype=np.float64,
-        )
-        if comp_fluxes.size > 0:
-            ens_flux_sum = float(np.sum(comp_fluxes))
-            ens_med = float(-2.5 * math.log10(ens_flux_sum / comp_fluxes.size))
+
+        comp_vals = np.asarray([m for _, m in comp_pairs], dtype=np.float64)
+
+        # Váhovaný ensemble podľa 1/rms²: stabilnejšia comp = väčšia váha.
+        comp_fluxes_list: list[float] = [10 ** (-0.4 * m) for _, m in comp_pairs]
+        weights: list[float] = []
+        for cid, _ in comp_pairs:
+            rms_val = float(comp_rms_map.get(cid, float("inf")))
+            if math.isfinite(rms_val) and rms_val > 0:
+                w = 1.0 / (rms_val ** 2)
+            else:
+                w = 1.0
+            weights.append(float(w))
+
+        w_arr = np.asarray(weights, dtype=np.float64)
+        f_arr = np.asarray(comp_fluxes_list, dtype=np.float64)
+        w_sum = float(np.sum(w_arr))
+        if math.isfinite(w_sum) and w_sum > 0:
+            w_arr = w_arr / w_sum
+        else:
+            w_arr = np.full_like(w_arr, 1.0 / float(len(w_arr)))
+
+        ens_flux_weighted = float(np.sum(w_arr * f_arr))
+        if math.isfinite(ens_flux_weighted) and ens_flux_weighted > 0:
+            ens_med = float(-2.5 * math.log10(ens_flux_weighted))
         else:
             ens_med = float(np.median(comp_vals))
+
         ensemble_scatter[i] = float(np.std(comp_vals)) if comp_vals.size > 1 else 0.0
         delta_mag[i] = target_mag_inst[i] - ens_med
         mag_calib[i] = delta_mag[i] + cat_offset

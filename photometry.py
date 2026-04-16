@@ -698,7 +698,7 @@ def select_comparison_stars_per_target(
     max_mag_diff: float = 0.25,  # ±0.25 mag od targetu
     max_bv_diff: float = 0.15,  # ±0.15 B-V od targetu
     n_comp_min: int = 3,
-    n_comp_max: int = 5,
+    n_comp_max: int = 7,
     max_comp_rms: float = 0.05,
     min_dist_arcsec: float = 30.0,
     min_frames_frac: float = 0.3,
@@ -944,6 +944,71 @@ def select_comparison_stars_per_target(
     if len(candidates) < n_comp_min:
         logging.warning(
             f"[FÁZA 1] Target {target_cid}: len {len(candidates)} kandidátov "
+            f"< n_comp_min={n_comp_min} — preskakujem."
+        )
+        return pd.DataFrame()
+
+    # Izolácia v aperture — hard filter (pred RMS výpočtom)
+    # Kandidát nesmie mať významného suseda priamo v jeho apertúre (r < r_ap).
+    # r_ap ≈ aperture_fwhm_factor × Gaussian FWHM (ak fwhm_px dostupné), inak 7 px.
+    _r_ap_iso = 7.0
+    try:
+        _fw = float(fwhm_px)
+        if math.isfinite(_fw) and _fw > 0:
+            _r_ap_iso = float(2.75 * _fw)
+    except (TypeError, ValueError):
+        _r_ap_iso = 7.0
+    if not (math.isfinite(_r_ap_iso) and _r_ap_iso > 0):
+        _r_ap_iso = 7.0
+
+    try:
+        ms_arr_x = pd.to_numeric(ms.get("x", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
+        ms_arr_y = pd.to_numeric(ms.get("y", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
+        if "_mag" in ms.columns:
+            ms_arr_mag = pd.to_numeric(ms["_mag"], errors="coerce").to_numpy(dtype=float)
+        else:
+            ms_arr_mag = pd.to_numeric(ms.get("mag", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
+
+        _iso_rejected: set[Any] = set()
+        for idx, crow in candidates.iterrows():
+            cx = float(crow.get("x", float("nan")))
+            cy = float(crow.get("y", float("nan")))
+            cmag = float(crow.get("_mag", float("nan"))) if "_mag" in candidates.columns else float("nan")
+            if not (math.isfinite(cx) and math.isfinite(cy) and math.isfinite(cmag)):
+                continue
+
+            dists = np.sqrt((ms_arr_x - cx) ** 2 + (ms_arr_y - cy) ** 2)
+            in_ap = (dists < float(_r_ap_iso)) & (dists > 1e-6)
+            if not bool(np.any(in_ap)):
+                continue
+
+            neighbor_mags = ms_arr_mag[in_ap]
+            significant = neighbor_mags[
+                np.isfinite(neighbor_mags) & (np.abs(neighbor_mags - cmag) < 3.0)
+            ]
+            if int(significant.size) > 0:
+                _iso_rejected.add(idx)
+                try:
+                    _cid_dbg = str(crow.get("catalog_id", crow.get("name", ""))).strip()
+                except Exception:  # noqa: BLE001
+                    _cid_dbg = ""
+                logging.debug(
+                    f"[FÁZA 1] Izolácia (aperture): vylúčený {_cid_dbg or idx} "
+                    f"— sused v {_r_ap_iso:.1f}px (mag kontrast <3)"
+                )
+
+        if _iso_rejected:
+            candidates = candidates[~candidates.index.isin(_iso_rejected)]
+            logging.info(
+                f"[FÁZA 1] Aperture izolácia: vylúčených {len(_iso_rejected)} kandidátov "
+                f"(r_ap={_r_ap_iso:.2f}px)"
+            )
+    except Exception as _iso_exc:  # noqa: BLE001
+        logging.warning(f"[FÁZA 1] Aperture izolácia preskočená (chyba): {_iso_exc!s}")
+
+    if len(candidates) < n_comp_min:
+        logging.warning(
+            f"[FÁZA 1] Target {target_cid}: po aperture izolácii len {len(candidates)} kandidátov "
             f"< n_comp_min={n_comp_min} — preskakujem."
         )
         return pd.DataFrame()
@@ -1379,10 +1444,26 @@ def select_comparison_stars_per_target(
     scored_non_det = [(cid, sc) for cid, sc in scored if not str(cid).startswith("DET")]
     scored_det = [(cid, sc) for cid, sc in scored if str(cid).startswith("DET")]
 
-    selected_ids = [cid for cid, _ in scored_non_det[:n_comp_max]]
-    if len(selected_ids) < n_comp_min:
-        need = n_comp_min - len(selected_ids)
-        selected_ids.extend([cid for cid, _ in scored_det[: max(0, need)]])
+    # Dynamický výber 3–7 comp:
+    # - prvé 3 vždy
+    # - 4.–7. len ak comp_rms <= median(rms prvých 3) × 1.5
+    selected_ids: list[str] = []
+    sorted_ids = [cid for cid, _ in scored_non_det] + [cid for cid, _ in scored_det]
+    for cid in sorted_ids:
+        if len(selected_ids) >= 7:
+            break
+        if len(selected_ids) < 3:
+            selected_ids.append(cid)
+            continue
+        rms_so_far = [float(active.get(x, float("nan"))) for x in selected_ids[:3]]
+        rms_so_far = [x for x in rms_so_far if math.isfinite(x) and x > 0]
+        if not rms_so_far:
+            selected_ids.append(cid)
+            continue
+        rms_median = float(np.median(np.asarray(rms_so_far, dtype=np.float64)))
+        r_c = float(active.get(cid, float("nan")))
+        if math.isfinite(r_c) and r_c <= rms_median * 1.5:
+            selected_ids.append(cid)
 
     if len(selected_ids) < n_comp_min:
         logging.warning(
@@ -1447,7 +1528,7 @@ def run_phase0_and_phase1(
     max_mag_diff: float = 0.25,
     max_bv_diff: float = 0.15,
     n_comp_min: int = 3,
-    n_comp_max: int = 5,
+    n_comp_max: int = 7,
     max_comp_rms: float = 0.05,
     min_dist_arcsec: float = 30.0,
     min_frames_frac: float = 0.3,
