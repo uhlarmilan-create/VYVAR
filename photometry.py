@@ -694,13 +694,13 @@ def select_comparison_stars_per_target(
     per_frame_csv_paths: list[Path],
     *,
     fwhm_px: float = 3.7,
-    max_dist_deg: float = 1.5,
+    max_dist_deg: float = 0.5,
     max_mag_diff: float = 0.25,  # ±0.25 mag od targetu
     max_bv_diff: float = 0.15,  # ±0.15 B-V od targetu
     n_comp_min: int = 3,
     n_comp_max: int = 7,
     max_comp_rms: float = 0.05,
-    min_dist_arcsec: float = 30.0,
+    min_dist_arcsec: float = 60.0,
     min_frames_frac: float = 0.3,
     rms_outlier_sigma: float = 3.0,
     exclude_gaia_nss: bool = True,
@@ -742,7 +742,7 @@ def select_comparison_stars_per_target(
             Default 0.05 mag (50 ppt) — štandardná fotometrická stabilita.
         min_dist_arcsec: Minimálna vzdialenosť comp hviezdy od targetu v oblúkových
             sekundách. Zabraňuje PSF overlap pri veľmi blízkych hviezdach.
-            Default 30 arcsec (~10px pri typickom scale 3 arcsec/px).
+            Default 60 arcsec (ochrana aj proti lokálnym artefaktom okolo targetu).
 
     Returns:
         DataFrame s porovnávacími hviezdami pre tento target, zoradený podľa RMS ASC.
@@ -998,11 +998,18 @@ def select_comparison_stars_per_target(
                 )
 
         if _iso_rejected:
-            candidates = candidates[~candidates.index.isin(_iso_rejected)]
-            logging.info(
-                f"[FÁZA 1] Aperture izolácia: vylúčených {len(_iso_rejected)} kandidátov "
-                f"(r_ap={_r_ap_iso:.2f}px)"
-            )
+            _cand_after = int(len(candidates) - len(_iso_rejected))
+            if _cand_after >= int(n_comp_min):
+                candidates = candidates[~candidates.index.isin(_iso_rejected)]
+                logging.info(
+                    f"[FÁZA 1] Aperture izolácia: vylúčených {len(_iso_rejected)} kandidátov "
+                    f"(r_ap={_r_ap_iso:.2f}px)"
+                )
+            else:
+                logging.warning(
+                    f"[FÁZA 1] Aperture izolácia: vylúčených {len(_iso_rejected)} kandidátov, "
+                    f"ale zostalo by len {_cand_after} < n_comp_min={int(n_comp_min)} — preskakujem izoláciu pre tento target."
+                )
     except Exception as _iso_exc:  # noqa: BLE001
         logging.warning(f"[FÁZA 1] Aperture izolácia preskočená (chyba): {_iso_exc!s}")
 
@@ -1434,7 +1441,18 @@ def select_comparison_stars_per_target(
         if row.empty:
             continue
         dist_deg = float(row.iloc[0].get("_dist_deg", float("nan")))
-        dist_score = (dist_deg * 3600.0 / 600.0) if math.isfinite(dist_deg) else 1.0
+        # Preferuj optimálnu vzdialenosť (nie "čím bližšie tým lepšie"):
+        # príliš blízko → lokálne artefakty (optika/flat/gradients) korelujú s targetom,
+        # príliš ďaleko → iná atmosférická bunka.
+        # Default optimum: ~150 px at ~9.7"/px ≈ 1455" (~24 arcmin).
+        # This helps avoid local/optical artifacts near the target while staying within the same airmass cell.
+        optimal_dist_arcsec = 1455.0
+        dist_arcsec = float(dist_deg) * 3600.0 if math.isfinite(dist_deg) else float("nan")
+        dist_score = (
+            abs(dist_arcsec - optimal_dist_arcsec) / optimal_dist_arcsec
+            if math.isfinite(dist_arcsec) and optimal_dist_arcsec > 0
+            else 1.0
+        )
         contamination = float(contamination_map.get(cid, 0.0)) if contamination_map else 0.0
         rms_score = float(rms)
         score_map[cid] = rms_score * 0.5 + dist_score * 0.3 + contamination * 0.2
@@ -1524,13 +1542,13 @@ def run_phase0_and_phase1(
     frame_h_px: int = 1397,
     edge_margin_px: int = 50,
     match_radius_arcsec: float = 15.0,
-    max_dist_deg: float = 1.5,
+    max_dist_deg: float = 0.5,
     max_mag_diff: float = 0.25,
     max_bv_diff: float = 0.15,
     n_comp_min: int = 3,
     n_comp_max: int = 7,
     max_comp_rms: float = 0.05,
-    min_dist_arcsec: float = 30.0,
+    min_dist_arcsec: float = 60.0,
     min_frames_frac: float = 0.3,
     rms_outlier_sigma: float = 3.0,
     exclude_gaia_nss: bool = True,
