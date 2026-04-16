@@ -1223,6 +1223,7 @@ def run_phase2a(
     *,
     annulus_inner_fwhm: float = 4.0,
     annulus_outer_fwhm: float = 6.0,
+    aperture_fwhm_factor: float | None = None,
     sat_limit_adu: float | None = None,
     outlier_sigma: float = 3.0,
     stability_sigma: float = 3.0,
@@ -1231,9 +1232,9 @@ def run_phase2a(
 ) -> dict[str, Any]:
     """Hlavný wrapper pre Fázu 2A.
 
-    FWHM pre globálnu fixnú apertúru (faktor × FWHM) sa meria 2D Gaussian fitom na MASTERSTAR
-    (``measure_fwhm_from_masterstar``). Parameter ``fwhm_px`` sa použije len ako záložný
-    odhad veľkosti fit okna, ak v hlavičke MASTERSTAR chýba alebo je neplatný ``VY_FWHM``.
+    Globálny FWHM pre apertúru: prednostne ``VY_FWHM_GAUSS`` / ``VY_FWHM_GAUSSIAN`` z hlavičky
+    MASTERSTAR; inak 2D Gaussian fit (``measure_fwhm_from_masterstar``) s nápovedou z argumentu
+    ``fwhm_px``. Apertúrny polomer = ``aperture_fwhm_factor × FWHM`` (predvolene z ``cfg``).
 
     Returns:
         dict: n_targets, n_frames, n_lightcurves, summary_csv, field_map_png
@@ -1244,6 +1245,17 @@ def run_phase2a(
     lc_dir.mkdir(parents=True, exist_ok=True)
     _cfg = cfg or AppConfig()
     _save_png = bool(_cfg.save_lightcurve_png)
+    if aperture_fwhm_factor is not None:
+        try:
+            _apt_fw = float(aperture_fwhm_factor)
+            if not math.isfinite(_apt_fw) or _apt_fw <= 0:
+                _apt_fw = float(_cfg.aperture_fwhm_factor)
+            else:
+                _apt_fw = max(0.5, min(6.0, _apt_fw))
+        except (TypeError, ValueError):
+            _apt_fw = float(_cfg.aperture_fwhm_factor)
+    else:
+        _apt_fw = float(_cfg.aperture_fwhm_factor)
 
     # Načítaj vstupy
     at_df = pd.read_csv(active_targets_csv, low_memory=False)
@@ -1357,25 +1369,40 @@ def run_phase2a(
         ignore_index=True,
     ).drop_duplicates("catalog_id")
 
-    _fallback_hint = float(fwhm_px) if math.isfinite(fwhm_px) and fwhm_px > 0 else 3.5
-    _dao_hint = _fallback_hint
+    # Čítaj Gaussian FWHM priamo z MASTERSTAR hlavičky
+    # VY_FWHM_GAUSS = presný 2D Gaussian fit na 4074 hviezdach
+    # VY_FWHM = DAO moment odhad (menej presný, len fallback)
+    _gauss_fwhm = None
     try:
         with astrofits.open(Path(masterstar_fits_path), memmap=False) as _hdul:
             hdr = _hdul[0].header
-            if "VY_FWHM" in hdr:
-                v = float(hdr["VY_FWHM"])
-                if not (math.isfinite(v) and v > 0):
-                    _dao_hint = _fallback_hint
-                else:
-                    _dao_hint = v
-    except Exception:
-        _dao_hint = _fallback_hint
+            for _key in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
+                _v = hdr.get(_key)
+                if _v is not None:
+                    _fv = float(_v)
+                    if 0.5 < _fv < 30.0:
+                        _gauss_fwhm = _fv
+                        logging.info(
+                            f"[FÁZA 2A] FWHM z hlavičky {_key}: {_gauss_fwhm:.3f}px"
+                        )
+                        break
+    except Exception as _e:
+        logging.warning(f"[FÁZA 2A] Nemôžem čítať FWHM z hlavičky: {_e}")
 
-    fwhm_px = measure_fwhm_from_masterstar(
-        Path(masterstar_fits_path),
-        all_stars,
-        dao_fwhm_hint=_dao_hint,
-    )
+    if _gauss_fwhm is not None:
+        fwhm_px = _gauss_fwhm
+    else:
+        # Fallback: fit na hviezdy (pomalší, menej presný pre malý výber)
+        _fallback_hint = float(fwhm_px) if math.isfinite(fwhm_px) and fwhm_px > 0 else 3.5
+        fwhm_px = measure_fwhm_from_masterstar(
+            Path(masterstar_fits_path),
+            all_stars,
+            dao_fwhm_hint=_fallback_hint,
+        )
+        logging.warning(
+            f"[FÁZA 2A] VY_FWHM_GAUSS chýba v hlavičke → "
+            f"fallback fit: {fwhm_px:.3f}px"
+        )
 
     if force_aperture_px is not None and force_aperture_px > 0:
         # Fixná apertura pre všetky hviezdy — debug/kalibrácia
@@ -1391,7 +1418,7 @@ def run_phase2a(
             Path(masterstar_fits_path),
             all_stars,
             fwhm_px,
-            aperture_fwhm_factor=2.0,
+            aperture_fwhm_factor=_apt_fw,
             annulus_inner_fwhm=annulus_inner_fwhm,
             annulus_outer_fwhm=annulus_outer_fwhm,
         )
