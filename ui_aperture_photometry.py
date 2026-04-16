@@ -310,6 +310,7 @@ def _render_target_detail(
         cols[0].metric("lc_rms", f"{float(rms):.4f}")
     if n_comp is not None and pd.notna(n_comp):
         cols[1].metric("good comp", int(n_comp))
+        cols[1].caption("good + suspect (ensemble)")
     if ap is not None and pd.notna(ap):
         cols[2].metric("apertura", f"{float(ap):.1f}px")
 

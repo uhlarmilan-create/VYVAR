@@ -630,14 +630,20 @@ def ensemble_normalize(
             p2p_thr = float(t)
             break
 
-    good_all = [cid for cid, q in comp_quality.items() if q["quality"] == "good"]
-    good_sorted = sorted(
-        good_all,
-        key=lambda c: float(comp_rms_map.get(c, float("inf"))),
+    # Ensemble: good aj suspect (1/rms² ich down-weightuje); excluded nie.
+    usable_all = [
+        cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")
+    ]
+    usable_sorted = sorted(
+        usable_all,
+        key=lambda c: (
+            0 if comp_quality[c].get("quality") == "good" else 1,
+            float(comp_rms_map.get(c, float("inf"))),
+        ),
     )
 
     selected: list[str] = []
-    for cid in good_sorted:
+    for cid in usable_sorted:
         if len(selected) >= n_comp_max:
             break
         p2p = float(comp_quality[cid].get("rms_p2p", float("nan")))
@@ -647,19 +653,6 @@ def ensemble_normalize(
             selected.append(cid)
         elif not math.isfinite(p2p_thr):
             selected.append(cid)
-
-    if len(selected) < n_comp_min:
-        suspect_sorted = sorted(
-            [cid for cid, q in comp_quality.items() if q["quality"] == "suspect"],
-            key=lambda c: float(comp_rms_map.get(c, float("inf"))),
-        )
-        for cid in suspect_sorted:
-            if len(selected) >= n_comp_min:
-                break
-            if cid not in selected:
-                selected.append(cid)
-            if len(selected) >= n_comp_max:
-                break
 
     good_ids = selected[:n_comp_max]
     if not good_ids:
@@ -673,7 +666,7 @@ def ensemble_normalize(
     # Pre jasné hviezdy s veľkým PSF môže byť systematický offset
     # → riešenie je v apertúre na MASTERSTAR (faktor × FWHM), nie tu
     logging.debug(
-        f"[FÁZA 2A] Ensemble: {len(good_ids)} good comp, "
+        f"[FÁZA 2A] Ensemble: {len(good_ids)} comps (good+suspect), "
         f"catalog_mag median={cat_offset:.3f}"
     )
 
@@ -1624,7 +1617,9 @@ def run_phase2a(
 
         # Summary riadok
         finite_calib = mag_calib[np.isfinite(mag_calib)]
-        n_good_comp = sum(1 for q in comp_quality.values() if q["quality"] == "good")
+        n_good_comp = sum(
+            1 for q in comp_quality.values() if q.get("quality") in ("good", "suspect")
+        )
         n_out = sum(1 for f in out_flags if f.startswith("outlier"))
         n_sat = sum(1 for f in out_flags if f == "saturated")
 
@@ -1648,7 +1643,7 @@ def run_phase2a(
         n_lc += 1
         logging.info(
             f"[FÁZA 2A] {target_name}: {len(bjd)} snímok, "
-            f"{n_good_comp} good comp, lc_rms={summary_rows[-1]['lc_rms']:.4f}"
+            f"{n_good_comp} usable comp (good+suspect), lc_rms={summary_rows[-1]['lc_rms']:.4f}"
         )
 
     # Uloži summary
