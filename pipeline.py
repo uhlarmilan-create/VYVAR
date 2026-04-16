@@ -28,6 +28,12 @@ from astropy.wcs import FITSFixedWarning
 import pandas as pd
 
 from config import AppConfig, load_config_json
+from vyvar_alignment_frame import (
+    _alignment_compute_one_frame,
+    _alignment_detect_xy,
+    _astrometry_align_mp_init,
+    _astrometry_align_mp_task,
+)
 from database import (
     DraftTechnicalMetadataError,
     VyvarDatabase,
@@ -9418,13 +9424,6 @@ def _astrometry_align_impl_body(
     extra_platesolve_results: list[dict[str, Any]] = []
 
     try:
-        from astropy.stats import sigma_clipped_stats
-        from photutils.background import Background2D, MedianBackground
-        from photutils.detection import DAOStarFinder
-    except Exception as exc:  # noqa: BLE001
-        raise RuntimeError(f"photutils required for star detection/alignment: {exc}") from exc
-
-    try:
         import astroalign  # type: ignore
     except Exception as exc:  # noqa: BLE001
         raise RuntimeError(f"astroalign required for frame registration: {exc}") from exc
@@ -9438,215 +9437,6 @@ def _astrometry_align_impl_body(
     ) -> None:
         _ = (hdr_mut, data_mut, label, dao_fwhm_px_frame)
         return
-
-    def _as_alignment_points(sources: Any, *, label: str) -> np.ndarray:
-        """Normalize astroalign inputs to ``Nx2`` float array.
-
-        Accepts photutils table-like objects (``xcentroid``, ``ycentroid``) and plain array-like inputs.
-        """
-        pts: np.ndarray
-        try:
-            # photutils/astropy table path
-            if hasattr(sources, "colnames") and "xcentroid" in getattr(sources, "colnames", []) and "ycentroid" in getattr(sources, "colnames", []):
-                pts = np.transpose((sources["xcentroid"], sources["ycentroid"]))  # type: ignore[index]
-            elif hasattr(sources, "dtype") and getattr(sources.dtype, "names", None):  # structured ndarray
-                names = set(getattr(sources.dtype, "names") or ())
-                if "xcentroid" in names and "ycentroid" in names:
-                    pts = np.transpose((sources["xcentroid"], sources["ycentroid"]))  # type: ignore[index]
-                else:
-                    arr = np.asarray(sources, dtype=np.float64)
-                    pts = arr.reshape((-1, 2)) if arr.ndim == 1 and arr.size % 2 == 0 else arr
-            else:
-                arr = np.asarray(sources, dtype=np.float64)
-                pts = arr.reshape((-1, 2)) if arr.ndim == 1 and arr.size % 2 == 0 else arr
-        except Exception:  # noqa: BLE001
-            pts = np.zeros((0, 2), dtype=np.float32)
-        if pts.ndim != 2:
-            pts = np.zeros((0, 2), dtype=np.float32)
-        elif pts.shape[1] > 2:
-            pts = np.asarray(pts[:, :2], dtype=np.float64)
-        elif pts.shape[1] < 2:
-            pts = np.zeros((0, 2), dtype=np.float32)
-        pts = np.asarray(pts, dtype=np.float32)
-        log_event(
-            f"DEBUG: Alignment vstup ({label}) type: {type(sources).__name__} a shape: {tuple(pts.shape)}"
-        )
-        return pts
-
-    def _detect_xy(
-        img: np.ndarray,
-        want_max: int,
-        *,
-        det_sigma: float,
-        fwhm_px: float,
-        label: str = "",
-    ) -> np.ndarray:
-        if int(want_max) <= 0:
-            return np.zeros((0, 2), dtype=np.float32)
-        data = np.ascontiguousarray(img, dtype=np.float32)
-        data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32, copy=False)
-        sky_pixels = data[data > 10.0]
-        if sky_pixels.size > 0:
-            m = float(np.nanmedian(sky_pixels))
-        else:
-            m = float(np.nanmedian(data))
-        data -= np.float32(m)
-        data = np.clip(data, -100.0, None).astype(np.float32, copy=False)
-        _frame_name = label or "frame"
-        log_event(
-            f"🚨 [ALIGNMENT] Frame: {_frame_name} | Offset Removed: {m:.2f} | Final Mean: {np.nanmean(data):.4f}"
-        )
-        arr = data
-        finite = np.isfinite(data)
-        if not np.any(finite):
-            return np.zeros((0, 2), dtype=np.float32)
-        # Diagnostics before background subtraction.
-        try:
-            _vals = arr[finite].astype(np.float64, copy=False)
-            _mean = float(np.mean(_vals)) if _vals.size else 0.0
-            _std = float(np.std(_vals)) if _vals.size else 0.0
-            _max = float(np.max(_vals)) if _vals.size else 0.0
-            _nm = label or "frame"
-            log_event(
-                f"DEBUG: Image stats pre {_nm} - Mean: {_mean:.6g}, Std: {_std:.6g}, Max: {_max:.6g}"
-            )
-        except Exception:  # noqa: BLE001
-            pass
-        # Robust background subtraction to suppress slow gradients.
-        arr_bg = arr
-        used_bg_sub = False
-        try:
-            _h, _w = int(arr.shape[0]), int(arr.shape[1])
-            _bx = max(16, min(50, _w))
-            _by = max(16, min(50, _h))
-            bkg = Background2D(
-                arr,
-                box_size=(_by, _bx),
-                filter_size=(3, 3),
-                bkg_estimator=MedianBackground(),
-            )
-            arr_bg = np.asarray(arr - bkg.background, dtype=np.float32)
-            used_bg_sub = True
-        except Exception:  # noqa: BLE001
-            arr_bg = arr
-            used_bg_sub = False
-        # Clip negatives after subtraction as DAO thresholding expects positive signal above sky.
-        arr_bg = np.nan_to_num(arr_bg, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32, copy=False)
-        _med_bg = float(np.nanmedian(arr_bg))
-        _std_bg = float(np.nanstd(arr_bg))
-        _floor_bg = _med_bg - 3.0 * _std_bg if np.isfinite(_std_bg) and _std_bg > 0 else _med_bg
-        arr_bg = np.clip(arr_bg, _floor_bg, None).astype(np.float32, copy=False)
-        _, med, clipped_std = sigma_clipped_stats(arr_bg[np.isfinite(arr_bg)], sigma=3.0, maxiters=5)
-        clipped_std = float(clipped_std) if np.isfinite(clipped_std) else 0.0
-        if clipped_std <= 0:
-            clipped_std = 1.0
-        if clipped_std < 1e-6:
-            _nm = label or "frame"
-            log_event(
-                f"DEBUG: Image stats pre {_nm} - podozrivo nízke Std po BG ({clipped_std:.3e}); "
-                "background subtraction môže byť príliš agresívna."
-            )
-        data = np.nan_to_num((arr_bg - float(med)).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
-        sig = max(0.5, min(20.0, float(det_sigma)))
-        threshold = float(sig) * float(clipped_std)
-        _nm = label or "frame"
-        try:
-            data_chk = np.asarray(data, dtype=np.float32)
-            nan_count = int(np.isnan(data_chk).sum())
-            inf_count = int(np.isinf(data_chk).sum())
-            min_val = float(np.min(data_chk))
-            max_val = float(np.max(data_chk))
-            mean_val = float(np.mean(data_chk))
-            log_event(f"[DEBUG DATA CHECK] Súbor: {_nm}")
-            log_event(f"[DEBUG DATA CHECK] Stats -> Min: {min_val:.4f}, Max: {max_val:.4f}, Mean: {mean_val:.4f}")
-            log_event(f"[DEBUG DATA CHECK] Bad Pixels -> NaNs: {nan_count}, Infs: {inf_count}")
-            log_event(f"[DEBUG DATA CHECK] Current Threshold in use: {threshold:.2f}")
-        except Exception:  # noqa: BLE001
-            pass
-        log_event(
-            f"DEBUG: Používam FWHM={float(fwhm_px):.2f} a Sigma={float(sig):.2f} (z alignment det_sigma) pre detekciu."
-        )
-        log_event(f"DEBUG: Threshold set to {threshold:.2f} (using clipped_std={clipped_std:.2f})")
-        fw = max(1.2, float(fwhm_px))
-        # Aggressive fallback: lower threshold by 0.2 down to 0.5 sigma.
-        sig_try: list[float] = []
-        s_cur = float(sig)
-        while s_cur >= 0.5 - 1e-9:
-            ss = max(float(s_cur), 0.5)
-            if not any(abs(ss - t) < 1e-9 for t in sig_try):
-                sig_try.append(ss)
-            s_cur -= 0.2
-        def _run_dao_on(img_in: np.ndarray, sigma_list: list[float], *, nm: str) -> tuple[Any, float, int]:
-            _best_tbl = None
-            _best_n = -1
-            _best_sigma = float(sigma_list[0] if sigma_list else sig)
-            _used_sigma = _best_sigma
-            for idx_s, s in enumerate(sigma_list):
-                if idx_s > 0:
-                    log_event(f"Skúšam znížiť threshold na {float(s):.2f} pre {nm}...")
-                finder = DAOStarFinder(
-                    fwhm=fw,
-                    threshold=max(float(s) * float(clipped_std), 1e-6),
-                    brightest=None,
-                    **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
-                )
-                _tbl_try = finder(img_in)
-                _n_try = int(len(_tbl_try)) if _tbl_try is not None else 0
-                if _n_try > _best_n:
-                    _best_n = _n_try
-                    _best_tbl = _tbl_try
-                    _best_sigma = float(s)
-                if _tbl_try is not None and _n_try >= 50:
-                    _used_sigma = float(s)
-                    return _tbl_try, _used_sigma, _n_try
-            return _best_tbl, _best_sigma, max(0, _best_n)
-
-        _nm = label or "frame"
-        tbl, used_sigma, best_n = _run_dao_on(data, sig_try, nm=_nm)
-        # If no stars with BG-subtracted image, retry without BG subtraction (median-only).
-        if (tbl is None or best_n <= 0) and used_bg_sub:
-            _med_r = float(np.nanmedian(arr))
-            _std_r = float(np.nanstd(arr))
-            _floor_r = _med_r - 3.0 * _std_r if np.isfinite(_std_r) and _std_r > 0 else _med_r
-            arr_raw2 = np.nan_to_num((arr - _med_r).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
-            arr_raw2 = np.clip(arr_raw2, _floor_r - _med_r, None).astype(np.float32, copy=False)
-            log_event(f"DEBUG: {_nm} - fallback bez background subtraction (median-only).")
-            tbl2, used_sigma2, best_n2 = _run_dao_on(arr_raw2, sig_try, nm=_nm)
-            if best_n2 > best_n:
-                tbl, used_sigma, best_n = tbl2, used_sigma2, best_n2
-        if float(used_sigma) < float(sig) - 1e-9:
-            log_event(
-                f"Detekcia hviezd: Použité FWHM={fw:.2f}, Sigma={float(used_sigma):.2f} (fallback z {float(sig):.2f})"
-            )
-        if tbl is None or len(tbl) == 0:
-            log_event(
-                f"DEBUG: Snímka {_nm} - pokus o detekciu s extrémnou citlivosťou (threshold=1.0)"
-            )
-            try:
-                finder_ext = DAOStarFinder(
-                    fwhm=5.0,
-                    threshold=max(1.0 * float(clipped_std), 1e-6),
-                    brightest=None,
-                    **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
-                )
-                tbl_ext = finder_ext(data)
-                if tbl_ext is not None and len(tbl_ext) > 0:
-                    tbl = tbl_ext
-            except Exception:  # noqa: BLE001
-                pass
-        if tbl is None or len(tbl) == 0:
-            return np.zeros((0, 2), dtype=np.float32)
-        k = int(min(len(tbl), int(want_max)))
-        # brightest k without full sort when DAO returns huge tables (faster + less RAM)
-        if len(tbl) > k:
-            flux_np = np.asarray(tbl["flux"], dtype=np.float64)
-            take = np.argpartition(flux_np, -k)[-k:]
-            tbl = tbl[take]
-        tbl.sort("flux")
-        tbl = tbl[::-1]
-        x = np.asarray(tbl["xcentroid"], dtype=np.float32)
-        y = np.asarray(tbl["ycentroid"], dtype=np.float32)
-        return np.stack([x, y], axis=1)
 
     # Adaptive alignment star budget:
     # - if STAR_COUNT > 1000 → use top 300 brightest
@@ -9663,12 +9453,13 @@ def _astrometry_align_impl_body(
         )
     except Exception:  # noqa: BLE001
         pass
-    ref_xy_all = _detect_xy(
+    ref_xy_all = _alignment_detect_xy(
         data_to_detect,
         int(max(100, max_detected_stars)),
         det_sigma=_align_det_sigma,
         fwhm_px=_align_fwhm_ref,
         label=ref_fp.name,
+        log_sink=None,
     )
     n_ref = int(len(ref_xy_all))
     if n_ref > 1000:
@@ -9771,304 +9562,50 @@ def _astrometry_align_impl_body(
         _align_star_cap,
     )
 
-    def _run_astroalign_points(
-        *,
-        source_pts: Any,
-        target_pts: Any,
-        image_source: np.ndarray,
-        image_target: np.ndarray,
-        max_control_points: int,
-    ) -> tuple[np.ndarray | None, str | None]:
-        try:
-            src = np.array(source_pts, dtype="float32")
-            tgt = np.array(target_pts, dtype="float32")
-            if src.ndim != 2 or src.shape[1] != 2:
-                return None, f"Nesprávny formát source bodov: shape={tuple(src.shape)}"
-            if tgt.ndim != 2 or tgt.shape[1] != 2:
-                return None, f"Nesprávny formát target bodov: shape={tuple(tgt.shape)}"
-            if src.shape == (0, 2) or tgt.shape == (0, 2):
-                return None, "Alignment nemôže začať, prázdne súradnice!"
-            if len(src) < 10 or len(tgt) < 10:
-                return None, "Insufficient stars"
-            mcp = max(12, min(int(max_control_points), int(min(len(src), len(tgt)))))
-            t, _ = astroalign.find_transform(
-                source=np.asarray(src, dtype=np.float32),
-                target=np.asarray(tgt, dtype=np.float32),
-                max_control_points=mcp,
-            )
-            aligned_data, _ = astroalign.apply_transform(t, image_source, image_target)
-            return _as_fits_float32_image(aligned_data), None
-        except Exception as e:  # noqa: BLE001
-            return None, str(e)
-
     n_written_align = 1
-    def _load_masterstar_catalog_points_for_frame(hdr_frame: fits.Header, *, shape_hw: tuple[int, int]) -> np.ndarray:
-        try:
-            ms_csv = Path(platesolve_dir) / "masterstars.csv"
-            if not ms_csv.is_file():
-                return np.zeros((0, 2), dtype=np.float32)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", FITSFixedWarning)
-                w = WCS(hdr_frame)
-            if not getattr(w, "has_celestial", False):
-                return np.zeros((0, 2), dtype=np.float32)
-            mdf = pd.read_csv(ms_csv)
-            if "ra_deg" not in mdf.columns or "dec_deg" not in mdf.columns:
-                return np.zeros((0, 2), dtype=np.float32)
-            ra = pd.to_numeric(mdf["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
-            de = pd.to_numeric(mdf["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
-            ok = np.isfinite(ra) & np.isfinite(de)
-            if not np.any(ok):
-                return np.zeros((0, 2), dtype=np.float32)
-            sky = SkyCoord(ra=ra[ok] * u.deg, dec=de[ok] * u.deg, frame="icrs")
-            xp, yp = w.world_to_pixel(sky)
-            xy = np.stack([np.asarray(xp, dtype=np.float32), np.asarray(yp, dtype=np.float32)], axis=1)
-            h, wpx = int(shape_hw[0]), int(shape_hw[1])
-            inb = (
-                np.isfinite(xy[:, 0])
-                & np.isfinite(xy[:, 1])
-                & (xy[:, 0] >= 0)
-                & (xy[:, 1] >= 0)
-                & (xy[:, 0] < float(wpx))
-                & (xy[:, 1] < float(h))
-            )
-            xy = xy[inb]
-            if len(xy) > int(_align_star_cap):
-                xy = xy[: int(_align_star_cap)]
-            return np.asarray(xy, dtype=np.float32)
-        except Exception:  # noqa: BLE001
-            return np.zeros((0, 2), dtype=np.float32)
-
+    n_align_workers = max(1, min(32, int(getattr(_cfg_align, "alignment_workers", 1))))
+    align_tasks: list[tuple[str, int]] = []
     for frame_index_1based, fp in enumerate(files, start=1):
         if fp == ref_fp:
             continue
-        with fits.open(fp, memmap=False) as hdul:
-            hdr = hdul[0].header.copy()
-            data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
-        is_flipped = False
-        try:
-            if rotation_ref_angle_deg is not None:
-                a_i = wcs_rotation_angle_deg(hdr)
-                if a_i is not None:
-                    diff = circular_angle_diff_deg(float(a_i), float(rotation_ref_angle_deg))
-                    if diff > 175.0:
-                        is_flipped = True
-                        rotation_flip_frame_indices_1based.append(int(frame_index_1based))
-                        if rotation_flip_first_index_1based is None:
-                            rotation_flip_first_index_1based = int(frame_index_1based)
-                        if not _flip_logged:
-                            log_event(
-                                f"Physical rotation change detected at frame index {int(frame_index_1based)}. "
-                                "Adjusting alignment strategy."
-                            )
-                            _flip_logged = True
-        except Exception:  # noqa: BLE001
-            is_flipped = False
-        fw_i = dao_detection_fwhm_pixels(hdr, configured_fallback=_fb_align)
-        data_to_detect = np.asarray(data, dtype=np.float32)
-        try:
-            log_event(
-                "DEBUG: Data stats for alignment - "
-                f"Min: {np.min(data_to_detect):.2f}, "
-                f"Max: {np.max(data_to_detect):.2f}, "
-                f"Mean: {np.mean(data_to_detect):.2f}, "
-                f"NaN count: {np.isnan(data_to_detect).sum()}"
-            )
-        except Exception:  # noqa: BLE001
-            pass
+        align_tasks.append((str(fp.resolve()), int(frame_index_1based)))
 
-        _attempts = [
-            {"dao_sigma": 3.5, "max_stars": 200},
-            {"dao_sigma": 2.5, "max_stars": 300},
-            {"dao_sigma": 2.0, "max_stars": 400},
-            {"dao_sigma": 1.5, "max_stars": 500},
-        ]
-        aligned_data: np.ndarray | None = None
-        aligned_method = "astroalign"
-        xy_used = np.zeros((0, 2), dtype=np.float32)
-        _attempt_ok = False
+    _align_ctx: dict[str, Any] = {
+        "ref_data": ref_data,
+        "ref_hdr": ref_hdr.copy(),
+        "ref_fp_name": ref_fp.name,
+        "fixed_target_pts": np.copy(fixed_target_pts).astype(np.float32, copy=False),
+        "reference_list": list(REFERENCE_LIST),
+        "has_ref_wcs": ref_wcs_obj is not None,
+        "platesolve_dir": str(platesolve_dir),
+        "align_star_cap": int(_align_star_cap),
+        "min_detected_stars": int(min_detected_stars),
+        "max_detected_stars": int(max_detected_stars),
+        "fb_align": float(_fb_align),
+        "rotation_ref_angle_deg": rotation_ref_angle_deg,
+    }
 
-        for i_att, att in enumerate(_attempts, start=1):
-            dao_sig = float(att["dao_sigma"])
-            max_st = int(att["max_stars"])
-            try:
-                xy = _detect_xy(
-                    data_to_detect,
-                    int(max(100, max_st)),
-                    det_sigma=dao_sig,
-                    fwhm_px=fw_i,
-                    label=fp.name,
-                )
-            except Exception:
-                xy = np.zeros((0, 2), dtype=np.float32)
-
-            if len(xy) == 0:
-                xy_ms = _load_masterstar_catalog_points_for_frame(hdr, shape_hw=tuple(data.shape))
-                if len(xy_ms) > 0:
-                    xy = np.asarray(xy_ms[:max_st], dtype=np.float32)
-                    log_event(
-                        f"DEBUG: {fp.name} attempt {i_att} - DAO=0, používam fallback MASTERSTAR katalóg ({len(xy)} bodov)."
-                    )
-                else:
-                    log_event(f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami")
-                    continue
-
-            if len(xy) < int(min_detected_stars):
-                log_event(f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami")
-                continue
-
-            try:
-                aligned_data = None
-                aligned_method = "astroalign"
-                if ref_wcs_obj is not None and _has_valid_wcs(hdr):
-                    try:
-                        from reproject import reproject_interp  # type: ignore
-
-                        with warnings.catch_warnings():
-                            warnings.simplefilter("ignore", FITSFixedWarning)
-                            w_i = WCS(hdr)
-                        if getattr(w_i, "has_celestial", False):
-                            aligned_data, _foot = reproject_interp(
-                                (np.asarray(data, dtype=np.float32), w_i.celestial),
-                                ref_wcs_obj.celestial,
-                                shape_out=ref_data.shape,
-                            )
-                            aligned_data = _as_fits_float32_image(aligned_data)
-                            aligned_method = "wcs_reproject"
-                    except Exception:  # noqa: BLE001
-                        aligned_data = None
-
-                if aligned_data is None:
-                    log_event(
-                        f"DEBUG: Alignment detekcia {fp.name} (attempt {i_att}) - DAO hviezd(source)={len(xy)}, "
-                        f"DAO hviezd(target_ref)={len(fixed_target_pts)}"
-                    )
-                    if fixed_target_pts.shape[0] == 0:
-                        raise Exception(
-                            "FATÁLNA CHYBA: Referenčné body boli vymazané z pamäte pred štartom alignmentu!"
-                        )
-                    current_target = np.array(REFERENCE_LIST, dtype="float32")
-                    n_fit = int(min(len(current_target), len(xy)))
-                    xy_fit = _as_alignment_points(xy[:n_fit], label="source")
-                    ref_fit = _as_alignment_points(current_target[:n_fit], label="target")
-                    n_fit = int(min(len(xy_fit), len(ref_fit)))
-                    if n_fit > 0:
-                        xy_fit = np.asarray(xy_fit[:n_fit], dtype=np.float32)
-                        ref_fit = np.asarray(ref_fit[:n_fit], dtype=np.float32)
-                    mcp = max(12, min(max_st, n_fit))
-                    aligned_data, aa_err = _run_astroalign_points(
-                        source_pts=xy_fit,
-                        target_pts=ref_fit,
-                        image_source=data,
-                        image_target=ref_data,
-                        max_control_points=mcp,
-                    )
-                    if aligned_data is None:
-                        raise RuntimeError(str(aa_err or "astroalign failed"))
-
-                # Guard: detect silently failed constant frames (often from bad transform).
-                try:
-                    arr_check = np.asarray(aligned_data, dtype=np.float32)
-                    finite_chk = arr_check[np.isfinite(arr_check)]
-                    if finite_chk.size:
-                        samp = finite_chk[: min(10_000, int(finite_chk.size))]
-                        n_unique = int(len(np.unique(samp)))
-                    else:
-                        n_unique = 0
-                    if n_unique <= 3:
-                        print(
-                            f"WARNING: {fp.name} aligned frame je konštantný (n_unique={n_unique}), "
-                            f"pokus {i_att} zlyhol"
-                        )
-                        aligned_data = None
-                        continue
-                except Exception:  # noqa: BLE001
-                    pass
-
-                # Validate: reject "black/empty" aligned results (near-zero mean + low variance).
-                m_al = float(np.nanmean(aligned_data)) if aligned_data is not None else float("nan")
-                s_al = float(np.nanstd(aligned_data)) if aligned_data is not None else float("nan")
-                if math.isfinite(m_al) and math.isfinite(s_al) and (m_al < 50.0) and (s_al < 20.0):
-                    log_event(f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami")
-                    aligned_data = None
-                    continue
-                if float(np.nansum(np.abs(aligned_data))) < 1.0:
-                    log_event(f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami")
-                    aligned_data = None
-                    continue
-
-                xy_used = np.asarray(xy, dtype=np.float32)
-                _attempt_ok = True
-                break
-            except Exception:
-                aligned_data = None
-                log_event(f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami")
-                continue
-
-        if not _attempt_ok or aligned_data is None:
-            # Final fallback: identity (do not destroy frame). Still never write black/empty frames.
-            m_id = float(np.nanmean(data_to_detect)) if data_to_detect is not None else float("nan")
-            s_id = float(np.nanstd(data_to_detect)) if data_to_detect is not None else float("nan")
-            if math.isfinite(m_id) and math.isfinite(s_id) and (m_id < 50.0) and (s_id < 20.0):
+    def _flush_one_alignment(res: dict[str, Any]) -> None:
+        nonlocal n_written_align, _flip_logged, rotation_flip_first_index_1based
+        idx = int(res["frame_index_1based"])
+        fp = Path(res["fp"])
+        if bool(res.get("is_flipped", False)):
+            rotation_flip_frame_indices_1based.append(idx)
+            if rotation_flip_first_index_1based is None:
+                rotation_flip_first_index_1based = idx
+            if not _flip_logged:
                 log_event(
-                    f"ERROR: alignment zlyhal pre {fp.name}, identity nepoužitá (black frame guard), preskakujem."
+                    f"Physical rotation change detected at frame index {idx}. "
+                    "Adjusting alignment strategy."
                 )
-                star_counts.append(
-                    {
-                        "file": fp.name,
-                        "frame_index": int(frame_index_1based),
-                        "detected_stars": int(len(xy_used)),
-                        "aligned": False,
-                        "reason": "alignment_failed_black_guard",
-                        "is_flipped": bool(is_flipped),
-                    }
-                )
-                continue
-            aligned_data = _as_fits_float32_image(data_to_detect)
-            aligned_method = "identity"
-            hdr["VYALGOK"] = (False, "Alignment failed; identity fallback used")
-            hdr["VY_ALGN"] = (False, "Not aligned to reference (identity fallback)")
-            hdr["VY_REF"] = (ref_fp.name[:60], "Reference frame for alignment")
-            hdr["VYALGM"] = (aligned_method[:30], "Alignment method (astroalign or WCS reprojection)")
-            log_event(f"ERROR: alignment zlyhal pre {fp.name}, použitá identity")
-            # Write identity frame (still keep its original WCS; do not strip/copy reference WCS).
-            fp_rel = fp.relative_to(detrended_root)
-            out_fp = aligned_root / fp_rel
-            _ensure_parent_dirs_for_aligned_fits(out_fp)
-            n_written_align += 1
-            _prog(
-                f"detrended_aligned/lights: "
-                f"{'RAM — zarovnanie' if use_ram_handoff else 'zapisujem FITS'} "
-                f"{fp.name} ({n_written_align}/{n_files})…"
-            )
-            if use_ram_handoff:
-                aligned_ram_buffer.append((fp_rel.as_posix(), hdr.copy(), np.copy(aligned_data)))
-            else:
-                fits.writeto(out_fp, aligned_data, header=hdr, overwrite=True)
-            aligned_files.append(out_fp)
-            star_counts.append(
-                {
-                    "file": fp.name,
-                    "frame_index": int(frame_index_1based),
-                    "detected_stars": int(len(xy_used)),
-                    "aligned": False,
-                    "reason": "identity_fallback",
-                    "alignment_method": aligned_method,
-                    "is_flipped": bool(is_flipped),
-                }
-            )
-            continue
-
-        # propagate reference WCS to aligned file (incl. RADESYS / SIP via shared key set)
-        strip_celestial_wcs_keys(hdr)
-        for k, v in ref_hdr.items():
-            if header_key_is_celestial_wcs(k):
-                hdr[k] = v
-        hdr["VYALGOK"] = (True, "Aligned to reference (passed black frame guard)")
-        hdr["VY_ALGN"] = (True, "Aligned to reference")
-        hdr["VY_REF"] = (ref_fp.name[:60], "Reference frame for alignment")
-        hdr["VYALGM"] = (aligned_method[:30], "Alignment method (astroalign or WCS reprojection)")
-        _maybe_refine_aligned(hdr, aligned_data, fp.name, dao_fwhm_px_frame=fw_i)
+                _flip_logged = True
+        if res.get("kind") == "failed_skip":
+            star_counts.append(res["star_count"])
+            return
+        hdr_out = res["hdr"]
+        aligned_data = res["aligned_data"]
+        fw_i = float(res["fw_i"])
+        _maybe_refine_aligned(hdr_out, aligned_data, fp.name, dao_fwhm_px_frame=fw_i)
         fp_rel = fp.relative_to(detrended_root)
         out_fp = aligned_root / fp_rel
         _ensure_parent_dirs_for_aligned_fits(out_fp)
@@ -10079,20 +9616,42 @@ def _astrometry_align_impl_body(
             f"{fp.name} ({n_written_align}/{n_files})…"
         )
         if use_ram_handoff:
-            aligned_ram_buffer.append((fp_rel.as_posix(), hdr.copy(), np.copy(aligned_data)))
+            aligned_ram_buffer.append((fp_rel.as_posix(), hdr_out.copy(), np.copy(aligned_data)))
         else:
-            fits.writeto(out_fp, aligned_data, header=hdr, overwrite=True)
+            fits.writeto(out_fp, aligned_data, header=hdr_out, overwrite=True)
         aligned_files.append(out_fp)
-        star_counts.append(
-            {
-                "file": fp.name,
-                "frame_index": int(frame_index_1based),
-                "detected_stars": int(len(xy_used)),
-                "aligned": True,
-                "alignment_method": aligned_method,
-                "is_flipped": bool(is_flipped),
-            }
-        )
+        star_counts.append(res["star_count"])
+
+    if n_align_workers > 1 and len(align_tasks) > 1:
+        _mp_ctx: dict[str, Any] = {
+            "ref_data": np.ascontiguousarray(np.copy(_align_ctx["ref_data"])),
+            "ref_hdr": _align_ctx["ref_hdr"].copy(),
+            "ref_fp_name": _align_ctx["ref_fp_name"],
+            "fixed_target_pts": np.copy(_align_ctx["fixed_target_pts"]).astype(np.float32, copy=False),
+            "reference_list": list(_align_ctx["reference_list"]),
+            "has_ref_wcs": bool(_align_ctx["has_ref_wcs"]),
+            "platesolve_dir": str(_align_ctx["platesolve_dir"]),
+            "align_star_cap": int(_align_ctx["align_star_cap"]),
+            "min_detected_stars": int(_align_ctx["min_detected_stars"]),
+            "max_detected_stars": int(_align_ctx["max_detected_stars"]),
+            "fb_align": float(_align_ctx["fb_align"]),
+            "rotation_ref_angle_deg": _align_ctx["rotation_ref_angle_deg"],
+        }
+        with ProcessPoolExecutor(
+            max_workers=n_align_workers,
+            initializer=_astrometry_align_mp_init,
+            initargs=(_mp_ctx,),
+        ) as pool:
+            raw_list = list(pool.map(_astrometry_align_mp_task, align_tasks, chunksize=1))
+        for res in raw_list:
+            for ln in res.get("log_events", ()):
+                log_event(ln)
+            res_flush = {k: v for k, v in res.items() if k != "log_events"}
+            _flush_one_alignment(res_flush)
+    else:
+        for fp_s, idx in align_tasks:
+            res = _alignment_compute_one_frame(Path(fp_s), int(idx), _align_ctx, None)
+            _flush_one_alignment(res)
 
     n_aligned = int(sum(1 for r in star_counts if r.get("aligned")))
     n_failed_align = int(sum(1 for r in star_counts if not bool(r.get("aligned"))))

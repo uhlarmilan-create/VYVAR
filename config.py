@@ -151,6 +151,8 @@ class AppConfig:
 
     #: Process workers for per-frame catalog CSV during plate-solve step 3 (DAO + match per FITS). Env ``VYVAR_PER_FRAME_CSV_WORKERS`` overrides.
     per_frame_csv_workers: int = 1
+    #: Process workers for frame alignment (``astroalign`` / WCS ``reproject_interp``) in step 3 (1–32). Default 1 = sequential.
+    alignment_workers: int = 1
     #: Per-frame catalog matching: max sep [arcsec] for matching detections to the fixed master reference / cone catalog.
     #: Default is intentionally looser (20") so it works at coarse plate scales (~10"/px) and small residuals.
     per_frame_catalog_match_sep_arcsec: float = 20.0
@@ -261,6 +263,12 @@ class AppConfig:
             )
         except (TypeError, ValueError):
             self.per_frame_csv_workers = 1
+        try:
+            self.alignment_workers = max(
+                1, min(32, int(data.get("alignment_workers", self.alignment_workers)))
+            )
+        except (TypeError, ValueError):
+            self.alignment_workers = 1
         _pfm = data.get(
             "per_frame_catalog_match_sep_arcsec",
             self.per_frame_catalog_match_sep_arcsec,
@@ -541,6 +549,7 @@ class AppConfig:
             ),
             "qc_preprocess_workers": int(self.qc_preprocess_workers),
             "per_frame_csv_workers": int(self.per_frame_csv_workers),
+            "alignment_workers": int(self.alignment_workers),
             "per_frame_catalog_match_sep_arcsec": float(self.per_frame_catalog_match_sep_arcsec),
             "per_frame_mp_reserve_ram_gb": float(self.per_frame_mp_reserve_ram_gb),
             "alignment_max_stars": int(self.alignment_max_stars),
