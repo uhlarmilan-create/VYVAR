@@ -350,6 +350,26 @@ def _render_target_detail(
                     return "background-color:rgba(234,179,8,0.28);"
                 return ""
 
+            def _tier_badge(v: object) -> str:
+                s = str(v or "").strip()
+                if not s:
+                    return "—"
+                key = s.split("_", 1)[0].upper()  # TIER1 / TIER2 / ...
+                bg = {
+                    "TIER1": "rgba(34,197,94,0.25)",   # green
+                    "TIER2": "rgba(59,130,246,0.25)",  # blue
+                    "TIER3": "rgba(234,179,8,0.25)",   # yellow
+                    "TIER4": "rgba(239,68,68,0.25)",   # red
+                }.get(key, "rgba(148,163,184,0.25)")
+                fg = {
+                    "TIER4": "rgba(127,29,29,1.0)",
+                }.get(key, "rgba(15,23,42,1.0)")
+                return (
+                    "<span style=\"display:inline-block;padding:2px 6px;border-radius:999px;"
+                    f"background-color:{bg};color:{fg};font-weight:600;font-size:0.85rem;\">"
+                    f"{html.escape(key)}</span>"
+                )
+
             rows_html: list[str] = []
             for i, (_, row) in enumerate(target_comps.iterrows(), 1):
                 ra_c = _float_coord_row(row, "ra_deg", "ra")
@@ -359,6 +379,7 @@ def _render_target_detail(
                 if bv_c is None or (isinstance(bv_c, float) and not math.isfinite(bv_c)):
                     bv_c = row.get("bp_rp")
                 rms_c = row.get("comp_rms")
+                tier_c = row.get("comp_tier")
                 cid_c = _normalize_gaia_id(row.get("catalog_id", ""))
                 q = str(quality_by_cid.get(cid_c, "")).lower()
                 stav = {"good": "good", "suspect": "suspect", "excluded": "excluded"}.get(
@@ -381,6 +402,7 @@ def _render_target_detail(
                     f"<td>{html.escape(mag_str)}</td>"
                     f"<td>{html.escape(bv_str)}</td>"
                     f"<td>{html.escape(rms_str)}</td>"
+                    f"<td>{_tier_badge(tier_c)}</td>"
                     f"<td>{html.escape(stav)}</td>"
                     f"<td><a href=\"{html.escape(viz_c)}\" target=\"_blank\" rel=\"noopener noreferrer\">↗</a></td>"
                     "</tr>"
@@ -389,7 +411,7 @@ def _render_target_detail(
             thead = (
                 "<thead><tr>"
                 "<th>#</th><th>mag</th><th>B-V</th><th>p2p RMS</th>"
-                "<th>stav</th><th>Vizier</th>"
+                "<th>tier</th><th>stav</th><th>Vizier</th>"
                 "</tr></thead>"
             )
             table_html = (

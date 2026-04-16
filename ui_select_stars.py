@@ -181,6 +181,7 @@ def _render_comparison_tab(comp_df: pd.DataFrame) -> None:
             "mag",
             "b_v",
             "bp_rp",
+            "comp_tier",
             "_dist_deg",
             "comp_rms",
             "comp_n_frames",
@@ -196,8 +197,24 @@ def _render_comparison_tab(comp_df: pd.DataFrame) -> None:
     if "_dist_deg" in display.columns:
         display = display.rename(columns={"_dist_deg": "dist_deg"})
         display["dist_deg"] = display["dist_deg"].round(4)
+    if "comp_tier" in display.columns:
+        def _tier_css(v: object) -> str:
+            s = str(v or "").strip()
+            key = s.split("_", 1)[0].upper()
+            return {
+                "TIER1": "background-color:rgba(34,197,94,0.25);font-weight:600;",
+                "TIER2": "background-color:rgba(59,130,246,0.25);font-weight:600;",
+                "TIER3": "background-color:rgba(234,179,8,0.25);font-weight:600;",
+                "TIER4": "background-color:rgba(239,68,68,0.25);font-weight:600;color:rgba(127,29,29,1.0);",
+            }.get(key, "")
 
-    st.dataframe(display, use_container_width=True, hide_index=True)
+        st.dataframe(
+            display.style.applymap(_tier_css, subset=["comp_tier"]),
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.dataframe(display, use_container_width=True, hide_index=True)
 
     # RMS histogram
     if "comp_rms" in sub.columns and len(sub) > 1:

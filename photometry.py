@@ -878,15 +878,8 @@ def select_comparison_stars_per_target(
 
     cand_mask = cand_mask | det_mask
 
-    candidates = ms[cand_mask].copy()
-
-    # Hierarchický fallback pre Δmag a ΔB-V (aby sme nestratili comp hviezdy)
-    _mag_steps = [float(max_mag_diff), 0.5, 1.0, 2.0, 3.0]
-    _bv_steps: list[float] = [float(max_bv_diff), 0.30, 0.5, float("inf")]
-    _used_mag = float(max_mag_diff)
-    _used_bv = float(max_bv_diff)
-
-    # Základný mask bez Δmag/ΔB-V (tie sa aplikujú per krok)
+    # Base mask for tiered Δmag/ΔB-V selection (keeps all non-photometric filters).
+    # NOTE: cand_mask already includes many filters + DET; we rebuild explicitly for clarity.
     _base_mask = (
         ms["_dist_deg"].le(max_dist_deg)
         & _bool_col(ms.get("is_usable", pd.Series(True, index=ms.index)))
@@ -901,49 +894,24 @@ def select_comparison_stars_per_target(
         )
     if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0:
         _base_mask &= ms["_dist_deg"].ge(float(min_dist_arcsec) / 3600.0)
+    if exclude_gaia_nss and "gaia_nss" in ms.columns:
+        _base_mask &= ~_bool_col(ms["gaia_nss"])
+    if exclude_gaia_extobj:
+        for _ext_col in ("gaia_qso", "gaia_gal"):
+            if _ext_col in ms.columns:
+                _base_mask &= ~_bool_col(ms[_ext_col])
 
-    # Priprav si numerické _mag/_bv pre retry kroky
+    # Prepare numeric mag/BV once (used by tiers)
     if "_mag" not in ms.columns:
         ms["_mag"] = pd.to_numeric(ms.get("mag", ms.get("phot_g_mean_mag")), errors="coerce")
     if "_bv" not in ms.columns:
         ms["_bv"] = pd.to_numeric(ms.get("b_v", pd.Series(dtype=float)), errors="coerce")
 
-    for _mag_try in _mag_steps:
-        for _bv_try in _bv_steps:
-            if len(candidates) >= n_comp_min:
-                break
-            if _mag_try == float(max_mag_diff) and _bv_try == float(max_bv_diff):
-                continue
-            _bv_lbl = f"{_bv_try:.2f}" if math.isfinite(_bv_try) else "inf"
-            logging.warning(
-                f"[FÁZA 1] Target {target_cid}: len {len(candidates)} kandidátov "
-                f"— uvoľňujem Δmag≤{_mag_try:.2f}, ΔB-V≤{_bv_lbl}"
-            )
-
-            _cand_mask2 = _base_mask.copy()
-            if math.isfinite(mag_t) and math.isfinite(_mag_try):
-                _cand_mask2 &= ms["_mag"].sub(mag_t).abs().le(float(_mag_try))
-            if math.isfinite(target_bv_pre) and math.isfinite(_bv_try) and float(_bv_try) < float("inf"):
-                bv_known = ms["_bv"].notna()
-                _cand_mask2 &= ~bv_known | ms["_bv"].sub(target_bv_pre).abs().le(float(_bv_try))
-
-            # DET hviezdy ponechaj ako fallback (nezávisle od Δmag/ΔB-V)
-            _cand_mask2 = _cand_mask2 | det_mask
-
-            candidates = ms[_cand_mask2].copy()
-            _used_mag = float(_mag_try)
-            _used_bv = float(_bv_try)
-        if len(candidates) >= n_comp_min:
-            break
-
-    logging.info(
-        f"[FÁZA 1] Target {target_cid}: {len(candidates)} kandidátov "
-        f"(Δmag≤{_used_mag:.2f}, ΔB-V≤{_used_bv if math.isfinite(_used_bv) else float('inf')})"
-    )
-
-    if len(candidates) < n_comp_min:
+    # Start with a broad candidate set (emergency tier) for one-pass per-frame metrics.
+    candidates_pre = ms[_base_mask | det_mask].copy()
+    if len(candidates_pre) < n_comp_min:
         logging.warning(
-            f"[FÁZA 1] Target {target_cid}: len {len(candidates)} kandidátov "
+            f"[FÁZA 1] Target {target_cid}: len {len(candidates_pre)} kandidátov "
             f"< n_comp_min={n_comp_min} — preskakujem."
         )
         return pd.DataFrame()
@@ -968,63 +936,14 @@ def select_comparison_stars_per_target(
             ms_arr_mag = pd.to_numeric(ms["_mag"], errors="coerce").to_numpy(dtype=float)
         else:
             ms_arr_mag = pd.to_numeric(ms.get("mag", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
-
-        _iso_rejected: set[Any] = set()
-        for idx, crow in candidates.iterrows():
-            cx = float(crow.get("x", float("nan")))
-            cy = float(crow.get("y", float("nan")))
-            cmag = float(crow.get("_mag", float("nan"))) if "_mag" in candidates.columns else float("nan")
-            if not (math.isfinite(cx) and math.isfinite(cy) and math.isfinite(cmag)):
-                continue
-
-            dists = np.sqrt((ms_arr_x - cx) ** 2 + (ms_arr_y - cy) ** 2)
-            in_ap = (dists < float(_r_ap_iso)) & (dists > 1e-6)
-            if not bool(np.any(in_ap)):
-                continue
-
-            neighbor_mags = ms_arr_mag[in_ap]
-            significant = neighbor_mags[
-                np.isfinite(neighbor_mags) & (np.abs(neighbor_mags - cmag) < 3.0)
-            ]
-            if int(significant.size) > 0:
-                _iso_rejected.add(idx)
-                try:
-                    _cid_dbg = str(crow.get("catalog_id", crow.get("name", ""))).strip()
-                except Exception:  # noqa: BLE001
-                    _cid_dbg = ""
-                logging.debug(
-                    f"[FÁZA 1] Izolácia (aperture): vylúčený {_cid_dbg or idx} "
-                    f"— sused v {_r_ap_iso:.1f}px (mag kontrast <3)"
-                )
-
-        if _iso_rejected:
-            _cand_after = int(len(candidates) - len(_iso_rejected))
-            if _cand_after >= int(n_comp_min):
-                candidates = candidates[~candidates.index.isin(_iso_rejected)]
-                logging.info(
-                    f"[FÁZA 1] Aperture izolácia: vylúčených {len(_iso_rejected)} kandidátov "
-                    f"(r_ap={_r_ap_iso:.2f}px)"
-                )
-            else:
-                logging.warning(
-                    f"[FÁZA 1] Aperture izolácia: vylúčených {len(_iso_rejected)} kandidátov, "
-                    f"ale zostalo by len {_cand_after} < n_comp_min={int(n_comp_min)} — preskakujem izoláciu pre tento target."
-                )
     except Exception as _iso_exc:  # noqa: BLE001
         logging.warning(f"[FÁZA 1] Aperture izolácia preskočená (chyba): {_iso_exc!s}")
-
-    if len(candidates) < n_comp_min:
-        logging.warning(
-            f"[FÁZA 1] Target {target_cid}: po aperture izolácii len {len(candidates)} kandidátov "
-            f"< n_comp_min={n_comp_min} — preskakujem."
-        )
-        return pd.DataFrame()
 
     # Identifikátory kandidátov
     # ``catalog_id`` býva v CSV často uložené ako float (scientific) a môže stratiť presnosť;
     # ``name`` obsahuje presný identifikátor (Gaia ID ako string alebo DET_*). Preferuj preto ``name``.
-    id_col = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
-    cand_ids = set(candidates[id_col].astype(str).str.strip())
+    id_col = "name" if "name" in candidates_pre.columns else ("catalog_id" if "catalog_id" in candidates_pre.columns else "name")
+    cand_ids = set(candidates_pre[id_col].astype(str).str.strip())
 
     # ── Krok 2: Načítaj flux z per-frame CSV ──
     # Načítaj len potrebné stĺpce — úspora 78 % pamäte
@@ -1407,12 +1326,104 @@ def select_comparison_stars_per_target(
         )
         return pd.DataFrame()
 
+    # ------------------------------------------------------------------
+    # Adaptive tier selection (Δmag/ΔB-V) based on how many GOOD comp remain
+    # ------------------------------------------------------------------
+    TIERS = [
+        {"key": "TIER1", "mag": 0.25, "bv": 0.15, "name": "TIER1_ideal"},
+        {"key": "TIER2", "mag": 0.50, "bv": 0.30, "name": "TIER2_standard"},
+        {"key": "TIER3", "mag": 1.00, "bv": 0.50, "name": "TIER3_relaxed"},
+        {"key": "TIER4", "mag": 2.00, "bv": float("inf"), "name": "TIER4_emergency"},
+    ]
+
+    def _apply_aperture_isolation_safe(cands: pd.DataFrame) -> pd.DataFrame:
+        """Apply aperture isolation; if it would drop below n_comp_min, keep original."""
+        if cands.empty:
+            return cands
+        try:
+            ms_arr_x2 = ms_arr_x
+            ms_arr_y2 = ms_arr_y
+            ms_arr_mag2 = ms_arr_mag
+        except Exception:  # noqa: BLE001
+            return cands
+
+        rej: set[Any] = set()
+        for idx2, crow2 in cands.iterrows():
+            cx2 = float(crow2.get("x", float("nan")))
+            cy2 = float(crow2.get("y", float("nan")))
+            cm2 = float(crow2.get("_mag", float("nan"))) if "_mag" in cands.columns else float("nan")
+            if not (math.isfinite(cx2) and math.isfinite(cy2) and math.isfinite(cm2)):
+                continue
+            d2 = np.sqrt((ms_arr_x2 - cx2) ** 2 + (ms_arr_y2 - cy2) ** 2)
+            in_ap2 = (d2 < float(_r_ap_iso)) & (d2 > 1e-6)
+            if not bool(np.any(in_ap2)):
+                continue
+            nm2 = ms_arr_mag2[in_ap2]
+            sig2 = nm2[np.isfinite(nm2) & (np.abs(nm2 - cm2) < 3.0)]
+            if int(sig2.size) > 0:
+                rej.add(idx2)
+        if not rej:
+            return cands
+        after = int(len(cands) - len(rej))
+        if after >= int(n_comp_min):
+            return cands[~cands.index.isin(rej)]
+        return cands
+
+    selected_tier: str | None = None
+    used_tier: dict[str, Any] | None = None
+    candidates = pd.DataFrame()
+
+    # At this point we only have the hard RMS filter map (`rms_map`).
+    # Use it to evaluate tiers; the iterative ensemble filtering happens later.
+    active_keys = set(rms_map.keys())
+    for tier in TIERS:
+        _mask = _base_mask.copy()
+        if math.isfinite(mag_t):
+            # If mag is known, enforce tier; if mag is unknown, keep as fallback.
+            _mask &= ms["_mag"].isna() | ms["_mag"].sub(mag_t).abs().le(float(tier["mag"]))
+        if math.isfinite(target_bv_pre) and math.isfinite(float(tier["bv"])) and float(tier["bv"]) < float("inf"):
+            bv_known = ms["_bv"].notna()
+            _mask &= ~bv_known | ms["_bv"].sub(target_bv_pre).abs().le(float(tier["bv"]))
+
+        _cands = ms[_mask | det_mask].copy()
+        if _cands.empty:
+            continue
+        _cands = _apply_aperture_isolation_safe(_cands)
+
+        id_col_t = "name" if "name" in _cands.columns else ("catalog_id" if "catalog_id" in _cands.columns else "name")
+        ids_t = set(_cands[id_col_t].astype(str).str.strip())
+        good_count = int(len([cid for cid in active_keys if cid in ids_t]))
+        if good_count >= int(n_comp_min):
+            selected_tier = str(tier["key"])
+            used_tier = dict(tier)
+            candidates = _cands
+            break
+
+    if selected_tier is None or used_tier is None or candidates.empty:
+        logging.warning(f"[FÁZA 1] {target_cid}: žiadny tier nedal ≥{n_comp_min} comp")
+        return pd.DataFrame()
+
+    logging.info(
+        f"[FÁZA 1] {target_cid}: {str(used_tier.get('name', selected_tier))} "
+        f"(Δmag≤{float(used_tier['mag']):.2f}, ΔB-V≤{used_tier['bv']}, "
+        f"target={len(candidates)} cand)"
+    )
+
     # ── Krok 4: Iteratívny ensemble filter (robustný MAD) ──
     # Prah = median + k × (MAD / 0.6745)
     # MAD / 0.6745 = konzistentný estimátor σ robustný voči outlierom
     # k = rms_outlier_sigma (default 3.0)
     _MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
-    active = dict(rms_map)
+    # Restrict to selected tier IDs before ensemble outlier filtering.
+    id_col_cand = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
+    tier_ids = set(candidates[id_col_cand].astype(str).str.strip())
+    active = {cid: rms for cid, rms in rms_map.items() if cid in tier_ids}
+    if len(active) < n_comp_min:
+        logging.warning(
+            f"[FÁZA 1] {target_cid}: {selected_tier} má len {len(active)} comp po RMS filtre "
+            f"< n_comp_min={n_comp_min}."
+        )
+        return pd.DataFrame()
     for _iter in range(10):
         if len(active) <= n_comp_min:
             break
@@ -1434,7 +1445,6 @@ def select_comparison_stars_per_target(
     # ── Krok 5: Finálny výber ──
     # Score: stabilita (RMS) + vzdialenosť + izolácia (contamination)
     # (nižší = lepší kandidát)
-    id_col_cand = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
     score_map: dict[str, float] = {}
     for cid, rms in active.items():
         row = candidates[candidates[id_col_cand].astype(str).str.strip() == cid]
@@ -1503,6 +1513,7 @@ def select_comparison_stars_per_target(
         r["comp_n_frames"] = len(flux_map.get(cid, []))
         r["target_catalog_id"] = target_cid
         r["target_vsx_name"] = str(target.get("vsx_name", ""))
+        r["comp_tier"] = selected_tier
         result_rows.append(r)
 
     if not result_rows:
