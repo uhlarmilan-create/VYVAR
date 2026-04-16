@@ -314,6 +314,12 @@ def _render_target_detail(
     if ap is not None and pd.notna(ap):
         cols[2].metric("apertura", f"{float(ap):.1f}px")
 
+    _am_d = target_row.get("am_detrended")
+    if _am_d is not None and pd.notna(_am_d):
+        _am_on = str(_am_d).strip().lower() in ("true", "1", "yes")
+        if not _am_on:
+            st.caption("bez detrend (signál zachovaný)")
+
     st.markdown("**Premenná hviezda**")
     vizier_url = (
         f"https://vizier.cds.unistra.fr/viz-bin/VizieR?"
