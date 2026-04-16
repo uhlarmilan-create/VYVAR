@@ -350,67 +350,6 @@ def compute_optimal_apertures(
 # ---------------------------------------------------------------------------
 
 
-def _measure_flux_median_sky(
-    data: np.ndarray,
-    xc: float,
-    yc: float,
-    r_ap: float,
-    r_in: float,
-    r_out: float,
-    *,
-    neighbor_positions: list[tuple[float, float]] | None = None,
-    neighbor_r_excl: float | None = None,
-) -> tuple[float, float, float]:
-    """Zmeraj sky-subtracted flux s mediánovým sky.
-
-    Susedné hviezdy v sky annuluse sú maskované (ako AIJ 'Remove stars from background').
-
-    Args:
-        neighbor_positions: Zoznam (x, y) susedných hviezd ktoré treba maskovať v sky.
-        neighbor_r_excl: Polomer maskovania susedov (px). Default = r_ap.
-
-    Returns:
-        (flux_sky_sub, sky_pp, aperture_area)
-    """
-    from photutils.aperture import CircularAnnulus, CircularAperture, aperture_photometry
-
-    h, w = data.shape
-    if not (r_out < xc < w - r_out and r_out < yc < h - r_out):
-        return float("nan"), float("nan"), float("nan")
-
-    pos = np.array([[xc, yc]])
-    ap = CircularAperture(pos, r=r_ap)
-    ann = CircularAnnulus(pos, r_in=r_in, r_out=r_out)
-
-    # Sky pixely z annulusu (vždy v súradniciach plného rastra — multiply() môže vrátiť len výrez)
-    ann_mask = _aperture_to_mask_single(ann)
-    ann_on = ann_mask.to_image(data.shape) > 0
-    sky_pixels = data[ann_on].copy()
-
-    # Maskuj susedné hviezdy v sky annuluse
-    if neighbor_positions and sky_pixels.size > 0:
-        _excl_r = neighbor_r_excl if neighbor_r_excl is not None else r_ap
-        yy, xx = np.mgrid[0:h, 0:w]
-        neighbor_full = np.zeros((h, w), dtype=bool)
-        for nx_pos, ny_pos in neighbor_positions:
-            neighbor_full |= (xx - nx_pos) ** 2 + (yy - ny_pos) ** 2 <= _excl_r**2
-        valid = ann_on & ~neighbor_full
-        sky_pixels_masked = data[valid]
-        if sky_pixels_masked.size >= 5:
-            sky_pixels = sky_pixels_masked
-
-    if sky_pixels.size < 5:
-        return float("nan"), float("nan"), float("nan")
-
-    sky_pp = float(np.median(sky_pixels))
-
-    phot = aperture_photometry(data, ap)
-    raw_flux = float(phot["aperture_sum"][0])
-    flux_sub = raw_flux - sky_pp * float(ap.area)
-
-    return flux_sub, sky_pp, float(ap.area)
-
-
 def _flux_to_mag(flux: float) -> float:
     """Inštrumentálna magnitúda z flux."""
     if not math.isfinite(flux) or flux <= 0:
