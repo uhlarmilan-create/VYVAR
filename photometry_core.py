@@ -819,38 +819,6 @@ def airmass_detrend_lc(
         f"am_ref={am_ref:.3f}, n_points={int(mask.sum())}"
     )
 
-    # Guard: ak detrending ZHORŠIL variáciu → vráť pôvodnú krivku (napr. U-tvar vs lineárny fit).
-    # Std na celej ``mask`` môže zostať podobná (outlierové body ešte pred krokom 5); preto
-    # porovnávame MAD-jadro fitovaných bodov — zodpovedá jadru krivky po outlieroch.
-    idx_fit = np.flatnonzero(mask)
-    mag_fit = mag_calib[mask]
-    guard_mask = mask
-    if mag_fit.size >= 10:
-        med_g = float(np.median(mag_fit))
-        sig_g = _mad_sigma(np.asarray(mag_fit, dtype=float))
-        if math.isfinite(sig_g) and sig_g > 0:
-            tight = np.abs(np.asarray(mag_fit, dtype=float) - med_g) < (3.5 * sig_g)
-            if int(np.count_nonzero(tight)) >= 8:
-                guard_mask = np.zeros_like(mask, dtype=bool)
-                guard_mask[idx_fit[tight]] = True
-
-    original_std = float(np.nanstd(mag_calib[guard_mask]))
-    detrended_std = float(np.nanstd(detrended[guard_mask]))
-    if (
-        math.isfinite(original_std)
-        and math.isfinite(detrended_std)
-        and original_std > 0
-        and detrended_std > original_std * 1.05
-    ):
-        logging.warning(
-            "[FÁZA 2A] Detrending zhoršil krivku "
-            "(std %.4f → %.4f, slope=%.4f). Vraciam pôvodnú.",
-            original_std,
-            detrended_std,
-            slope,
-        )
-        return mag_calib.copy(), float("nan"), float("nan")
-
     return detrended, slope, intercept
 
 
