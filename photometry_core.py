@@ -821,6 +821,58 @@ def airmass_detrend_lc(
     return detrended, slope, intercept
 
 
+def _comp_airmass_slope(
+    comp_mag_inst: dict[str, np.ndarray],
+    airmass: np.ndarray,
+    flags: list[str],
+    mag_calib: np.ndarray,
+    *,
+    min_points: int = 10,
+    max_slope_abs: float = 5.0,
+) -> float | None:
+    """Medián lineárnych sklonov mag_inst(comp) vs airmass (deg=1).
+
+    Rovnaká maska bodov ako v ``airmass_detrend_lc`` (``flags`` + konečný
+    ``mag_calib`` targetu + airmass), aby sa comp fitoval len na frameoch,
+    kde je kalibrovaná krivka targetu použiteľná.
+
+    Returns:
+        Medián kladných/negatívnych sklonov s ``|s| < max_slope_abs``, alebo
+        ``None`` ak nie je dosť dát alebo žiadny comp neprešiel.
+    """
+    mask = np.array(
+        [
+            f == "normal" and math.isfinite(float(m)) and math.isfinite(float(am))
+            for f, m, am in zip(flags, mag_calib, airmass)
+        ],
+        dtype=bool,
+    )
+    if int(mask.sum()) < min_points:
+        return None
+    am_fit = np.asarray(airmass[mask], dtype=float)
+    n = len(flags)
+    slopes: list[float] = []
+    for _cid, mag_arr in comp_mag_inst.items():
+        m = np.asarray(mag_arr, dtype=float)
+        if m.shape[0] != n:
+            continue
+        m_fit = m[mask]
+        valid = np.isfinite(m_fit) & np.isfinite(am_fit)
+        if int(valid.sum()) < min_points:
+            continue
+        am_v = am_fit[valid]
+        m_v = m_fit[valid]
+        try:
+            s = float(np.polyfit(am_v, m_v, 1)[0])
+        except (np.linalg.LinAlgError, TypeError, ValueError):
+            continue
+        if math.isfinite(s) and abs(s) < max_slope_abs:
+            slopes.append(s)
+    if not slopes:
+        return None
+    return float(np.median(np.asarray(slopes, dtype=float)))
+
+
 # ---------------------------------------------------------------------------
 # KROK 6: Výstup — lightcurve CSV
 # ---------------------------------------------------------------------------
@@ -1538,9 +1590,47 @@ def run_phase2a(
             "saturated" if bool(sat_flags[i]) else ("normal" if math.isfinite(mag_calib[i]) else "no_data")
             for i in range(len(mag_calib))
         ]
-        am_detrended, am_slope, _ = airmass_detrend_lc(mag_calib, airmass_arr, base_flags)
         mag_calib_raw = mag_calib.copy()
-        mag_calib = am_detrended
+        comp_slope = _comp_airmass_slope(
+            comp_lc,
+            airmass_arr,
+            base_flags,
+            mag_calib,
+            min_points=10,
+            max_slope_abs=5.0,
+        )
+        if comp_slope is not None and abs(comp_slope) < 5.0:
+            fit_mask = np.array(
+                [
+                    f == "normal"
+                    and math.isfinite(float(m))
+                    and math.isfinite(float(am))
+                    for f, m, am in zip(base_flags, mag_calib, airmass_arr)
+                ],
+                dtype=bool,
+            )
+            am_ref = (
+                float(np.median(airmass_arr[fit_mask]))
+                if int(fit_mask.sum()) > 0
+                else float(np.nanmedian(airmass_arr))
+            )
+            am_slope = comp_slope
+            finite_am = np.isfinite(mag_calib) & np.isfinite(airmass_arr)
+            am_detrended = mag_calib.copy()
+            am_detrended[finite_am] = mag_calib[finite_am] - comp_slope * (
+                airmass_arr[finite_am] - am_ref
+            )
+            mag_calib = am_detrended
+            logging.info(
+                "[FÁZA 2A] Airmass detrend z COMP: slope=%.4f mag/am, am_ref=%.3f",
+                comp_slope,
+                am_ref,
+            )
+        else:
+            am_detrended, am_slope, _ = airmass_detrend_lc(
+                mag_calib, airmass_arr, base_flags
+            )
+            mag_calib = am_detrended
 
         # Krok 5: Outlier detekcia (po detrendingu) — outliere pri airmass trende inak nafukujú MAD.
         out_flags = detect_outliers(mag_calib, sat_flags, outlier_sigma=outlier_sigma)
