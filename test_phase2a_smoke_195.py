@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -100,6 +101,7 @@ _p()
 _p("=== Spúšťam Fázu 2A ===")
 from photometry_phase2a import run_phase2a
 
+_t2 = time.time()
 result = run_phase2a(
     masterstar_fits_path=MASTERSTAR_PATH,
     active_targets_csv=ACTIVE_TARGETS_CSV,
@@ -109,6 +111,8 @@ result = run_phase2a(
     output_dir=OUTPUT_DIR,
     fwhm_px=_vy_fwhm,
 )
+_t3 = time.time()
+_p(f"Fáza 2A čas: {_t3 - _t2:.1f}s")
 
 _p(f"  n_targets:     {result['n_targets']}")
 _p(f"  n_frames:      {result['n_frames']}")

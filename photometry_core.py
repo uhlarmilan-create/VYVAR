@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import time
 from pathlib import Path
 from typing import Any
 
@@ -41,10 +42,12 @@ def _build_csv_lookup(
     2. Záložný: riadky s numerickými x,y pre nearest-neighbor match (plné stĺpce CSV).
     """
     id_map: dict[str, pd.Series] = {}
-    for _, row in csv_df.iterrows():
-        cid = _normalize_gaia_id(row.get(id_col, ""))
+    _id_series = csv_df[id_col]
+    for i in range(len(csv_df)):
+        cid = _normalize_gaia_id(_id_series.iloc[i])
         if cid:
-            id_map[cid] = row
+            id_map[cid] = csv_df.iloc[i]
+    # Plná kópia: NN fallback musí vrátiť Series so všetkými stĺpcami (dao_flux, časy, …).
     xy_df = csv_df.copy()
     xy_df["_cid_norm"] = xy_df[id_col].apply(_normalize_gaia_id)
     xy_df["x"] = pd.to_numeric(xy_df["x"], errors="coerce")
@@ -367,6 +370,8 @@ def read_flux_from_csv(
     star_xy: dict[str, tuple[float, float]] | None = None,
     xy_tol_px: float = 50.0,
     frame_times: dict[str, Any] | None = None,
+    csv_df: pd.DataFrame | None = None,
+    lookup: tuple[dict[str, pd.Series], pd.DataFrame] | None = None,
 ) -> pd.DataFrame:
     """Krok 2: Načítaj flux z per-frame CSV (dao_flux).
 
@@ -377,20 +382,29 @@ def read_flux_from_csv(
     Returns:
         DataFrame: catalog_id, bjd, hjd, jd, airmass, mag_inst, err,
                    aperture_r_px, sky_pp, flag, source_file
+
+    Args:
+        lookup: Voliteľný výstup z ``_build_csv_lookup`` pre zdieľaný ``csv_df``
+            (Fáza 2A — jedna výstavba lookupu na snímku namiesto 1× na target).
     """
-    try:
-        csv_df = pd.read_csv(frame_csv_path, low_memory=False)
-    except Exception as exc:
-        logging.warning(f"[FÁZA 2A] Nemôžem čítať CSV {frame_csv_path}: {exc}")
+    if csv_df is None:
+        try:
+            csv_df = pd.read_csv(frame_csv_path, low_memory=False)
+        except Exception as exc:
+            logging.warning(f"[FÁZA 2A] Nemôžem čítať CSV {frame_csv_path}: {exc}")
+            return pd.DataFrame()
+
+    if csv_df.empty:
         return pd.DataFrame()
 
     _sat_lim = float(sat_limit_adu) if sat_limit_adu is not None else _sat_limit_peak_adu()
     source_file = frame_csv_path.name
 
-    # Normalizuj catalog_id
     id_col = "catalog_id" if "catalog_id" in csv_df.columns else "name"
-    csv_df["_cid"] = csv_df[id_col].apply(_normalize_gaia_id)
-    id_map, xy_df_lookup = _build_csv_lookup(csv_df, id_col)
+    if lookup is not None:
+        id_map, xy_df_lookup = lookup
+    else:
+        id_map, xy_df_lookup = _build_csv_lookup(csv_df, id_col)
 
     # Airmass z frame_times
     am_frame = float("nan")
@@ -1250,12 +1264,58 @@ def run_phase2a(
     n_frames = len(csv_files)
     logging.info(f"[FÁZA 2A] {len(at_df)} targetov, {n_frames} snímok (CSV only)")
 
+    # Načítaj CSV cache raz pre celú Fázu 2A (read_flux_from_csv per target inak 82× na target).
+    logging.info("[FÁZA 2A] Načítavam CSV cache...")
+    _t_cache = time.time()
+    _phase2a_csv_cache: dict[str, pd.DataFrame] = {}
+    _needed_cols_2a = [
+        "catalog_id",
+        "name",
+        "bjd_tdb_mid",
+        "hjd_mid",
+        "jd_mid",
+        "dao_flux",
+        "noise_floor_adu",
+        "aperture_r_px",
+        "peak_max_adu",
+        "airmass",
+        "x",
+        "y",
+    ]
+    for _csv_path in csv_files:
+        try:
+            _hdr = pd.read_csv(_csv_path, nrows=0)
+            _cols = [c for c in _needed_cols_2a if c in _hdr.columns]
+            if not _cols:
+                continue
+            _phase2a_csv_cache[str(_csv_path)] = pd.read_csv(
+                _csv_path, usecols=_cols, low_memory=False
+            )
+        except Exception:  # noqa: BLE001
+            continue
+    logging.info(
+        f"[FÁZA 2A] CSV cache: {len(_phase2a_csv_cache)} súborov "
+        f"({time.time() - _t_cache:.1f}s)"
+    )
+
+    # Lookup (id_map + xy_df) raz na snímku — inak _build_csv_lookup 82× na target.
+    _phase2a_lookup_cache: dict[str, tuple[dict[str, pd.Series], pd.DataFrame]] = {}
+    for _cp in csv_files:
+        _key = str(_cp)
+        _df_lu = _phase2a_csv_cache.get(_key)
+        if _df_lu is None or _df_lu.empty:
+            continue
+        _id_col_lu = "catalog_id" if "catalog_id" in _df_lu.columns else "name"
+        _phase2a_lookup_cache[_key] = _build_csv_lookup(_df_lu, _id_col_lu)
+
     # Čas + airmass z prvého platného riadku každého per-frame CSV (podľa stem FITS)
     frame_time_lookup: dict[str, dict[str, float]] = {}
     for csv_path in csv_files:
         stem = csv_path.stem
+        _csv_tmp = _phase2a_csv_cache.get(str(csv_path))
+        if _csv_tmp is None or _csv_tmp.empty:
+            continue
         try:
-            _csv_tmp = pd.read_csv(csv_path, low_memory=False)
             for col_bjd, col_hjd, col_jd in (("bjd_tdb_mid", "hjd_mid", "jd_mid"),):
                 if not all(c in _csv_tmp.columns for c in (col_bjd, col_hjd, col_jd)):
                     continue
@@ -1277,7 +1337,7 @@ def run_phase2a(
                     "airmass": am_val,
                 }
                 break
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     # Krok 1: Globálna fixná apertúra — všetky hviezdy (target + comp), faktor × FWHM
@@ -1388,6 +1448,9 @@ def run_phase2a(
         frame_results: list[pd.DataFrame] = []
         for csv_path in csv_files:
             _ft = frame_time_lookup.get(csv_path.stem)
+            _key_csv = str(csv_path)
+            _cached_df = _phase2a_csv_cache.get(_key_csv)
+            _lookup_row = _phase2a_lookup_cache.get(_key_csv)
 
             df_frame = read_flux_from_csv(
                 csv_path,
@@ -1397,6 +1460,8 @@ def run_phase2a(
                 star_xy=star_xy,
                 xy_tol_px=50.0,
                 frame_times=_ft,
+                csv_df=_cached_df,
+                lookup=_lookup_row,
             )
             if not df_frame.empty:
                 frame_results.append(df_frame)
@@ -1587,7 +1652,6 @@ import json
 import logging
 import math
 import random
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
