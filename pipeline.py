@@ -9323,6 +9323,7 @@ def _astrometry_align_impl_body(
             f"`{ap / 'processed' / 'lights'}` alebo staršie `{ap / 'detrended' / 'lights'}`)."
         )
 
+    _t_step3_start = time.time()
     n_files = len(files)
     ref_fp, ref_star_scores = _pick_reference_frame_by_star_count(files)
     # Read reference once (no lock during solve step).
@@ -9346,6 +9347,7 @@ def _astrometry_align_impl_body(
     _masterstar_built = False
     _cat_info_root: dict[str, Any] = {}
     _ps_root = platesolve_dir.parent
+    _t_platesolve = time.time()
     if build_masterstar_and_catalogs:
         _prog("platesolve/MASTERSTAR: build mean stack + plate-solve + katalógy…")
         _cat_info_root = generate_masterstar_and_catalog(
@@ -9403,6 +9405,9 @@ def _astrometry_align_impl_body(
         with fits.open(ref_fp, memmap=False) as hdul:
             ref_hdr = hdul[0].header.copy()
             ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+
+    print(f"  Plate solve: {time.time() - _t_platesolve:.1f}s")
+    _t_align = time.time()
 
     _align_fwhm_ref = float(_fb_align)
 
@@ -10113,6 +10118,9 @@ def _astrometry_align_impl_body(
     rep_path = platesolve_dir / "alignment_report.csv"
     pd.DataFrame(star_counts).to_csv(rep_path, index=False)
 
+    print(f"  Zarovnanie: {time.time() - _t_align:.1f}s")
+    _t_csv = time.time()
+
     # If we aligned in RAM, flush aligned FITS to disk before MASTERSTAR (needs files on disk).
     _ram_flushed_before_masterstar = False
     if use_ram_handoff and aligned_ram_buffer and build_masterstar_and_catalogs:
@@ -10237,6 +10245,9 @@ def _astrometry_align_impl_body(
         )
 
     _assert_alignment_produced_fits(aligned_root)
+
+    print(f"  Per-frame CSV: {time.time() - _t_csv:.1f}s")
+    print(f"CELKOM krok 3 ({obs_group_key or detrended_root.name}): {time.time() - _t_step3_start:.1f}s")
 
     LOGGER.info(
         "Astrometria dokončená: zarovnané %s / %s snímok; per-frame CSV: %s; MASTERSTAR: %s; RAM handoff: %s",
