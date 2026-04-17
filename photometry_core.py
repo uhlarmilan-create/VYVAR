@@ -2172,7 +2172,14 @@ def enhance_catalog_dataframe_aperture_bpm(
                     ann_img = amask.to_image(d.shape)
                     sky_pixels = d[ann_img > 0]
                     if sky_pixels.size >= 5:
-                        sky_pp_arr[i] = float(np.median(sky_pixels))
+                        # Sigma clip: odstráň pixely > median + 2σ (hviezdy v annuluse)
+                        sky_med = float(np.median(sky_pixels))
+                        sky_std = float(np.std(sky_pixels))
+                        clipped = sky_pixels[sky_pixels < sky_med + 2.0 * sky_std]
+                        if clipped.size >= 5:
+                            sky_pp_arr[i] = float(np.median(clipped))
+                        else:
+                            sky_pp_arr[i] = sky_med
                     else:
                         sky_pp_arr[i] = float(np.median(d))
                 except Exception:  # noqa: BLE001
