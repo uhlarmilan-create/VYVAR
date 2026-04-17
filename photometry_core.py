@@ -2104,11 +2104,10 @@ def enhance_catalog_dataframe_aperture_bpm(
     if not math.isfinite(fwhm_moment_med) or fwhm_moment_med <= 0:
         fwhm_moment_med = float("nan")
 
-    # Gaussian FWHM pre apertúru: prednostne z ``VY_FWHM`` (DAO) v hlavičke MASTERSTAR,
-    # čo je mediánová hodnota z celého runu (stabilná). Fallback: per-frame moment×0.619.
-    MOMENT_TO_GAUSSIAN = 0.619
-    DAO_TO_GAUSSIAN = 1.0 / 1.5  # ~0.667
+    DAO_TO_GAUSSIAN = 1.0 / 1.5  # 0.667 — fyzikálne odvodené, setup-nezávislé
     fwhm_gaussian: float | None = None
+
+    # Override pre testovanie
     if gaussian_fwhm_px_override is not None:
         try:
             _ov = float(gaussian_fwhm_px_override)
@@ -2117,37 +2116,27 @@ def enhance_catalog_dataframe_aperture_bpm(
         except (TypeError, ValueError):
             pass
 
-    if fwhm_gaussian is None:
-        vy_fwhm_dao: float | None = None
-        if hdr is not None:
-            _v = hdr.get("VY_FWHM", None)
-            if _v is not None:
-                try:
-                    vy_fwhm_dao = float(_v)
-                except (TypeError, ValueError):
-                    vy_fwhm_dao = None
+    # Priorita 1: VY_FWHM z FITS hlavičky (DAO mediánový FWHM z celého runu)
+    if fwhm_gaussian is None and hdr is not None:
+        try:
+            _vy = hdr.get("VY_FWHM", None)
+            if _vy is not None:
+                _vy_f = float(_vy)
+                if math.isfinite(_vy_f) and 0.5 < _vy_f < 30.0:
+                    fwhm_gaussian = _vy_f * DAO_TO_GAUSSIAN
+                    logging.debug(
+                        f"[PHOT] FWHM z VY_FWHM (DAO): {_vy_f:.3f}px × {DAO_TO_GAUSSIAN:.3f} = {fwhm_gaussian:.3f}px"
+                    )
+        except (TypeError, ValueError):
+            pass
 
-        if vy_fwhm_dao is not None and math.isfinite(vy_fwhm_dao) and vy_fwhm_dao > 0:
-            fwhm_gaussian = float(vy_fwhm_dao) * DAO_TO_GAUSSIAN
-            logging.debug(
-                "[PHOT] FWHM z VY_FWHM (DAO): %.3fpx × %.3f = %.3fpx",
-                float(vy_fwhm_dao),
-                float(DAO_TO_GAUSSIAN),
-                float(fwhm_gaussian),
-            )
+    # Fallback: moment FWHM z aktuálnej snímky
+    if fwhm_gaussian is None:
+        if math.isfinite(fwhm_moment_med) and fwhm_moment_med > 0:
+            fwhm_gaussian = fwhm_moment_med * 0.619
+            logging.debug(f"[PHOT] FWHM fallback moment×0.619: {fwhm_gaussian:.3f}px")
         else:
-            if math.isfinite(fwhm_moment_med) and fwhm_moment_med > 0:
-                fwhm_gaussian = fwhm_moment_med * MOMENT_TO_GAUSSIAN
-            else:
-                fwhm_gaussian = float("nan")
-            logging.debug(
-                "[PHOT] FWHM fallback moment: %.3f × %.3f = %.3fpx",
-                float(fwhm_moment_med) if math.isfinite(fwhm_moment_med) else float("nan"),
-                float(MOMENT_TO_GAUSSIAN),
-                float(fwhm_gaussian) if math.isfinite(float(fwhm_gaussian)) else float("nan"),
-            )
-    else:
-        logging.debug(f"[PHOT] Gaussian FWHM z gaussian_fwhm_px_override: {fwhm_gaussian:.3f}px")
+            fwhm_gaussian = float("nan")
 
     # Sanity check: if computed aperture is out of a reasonable range, fallback to moment median directly.
     r_ap_test = float(aperture_fwhm_factor) * float(fwhm_gaussian) if math.isfinite(float(fwhm_gaussian)) else float("nan")
