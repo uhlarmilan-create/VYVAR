@@ -8539,20 +8539,29 @@ def generate_masterstar_and_catalog(
         f"(DAO + katalóg na celom poli; žiadne orezanie podľa vzdialenosti od stredu snímku)."
     )
     # Gaussian FWHM (2D fit) → hlavička; VY_FWHM je DAO odhad, nie moment FWHM — nepoužívaj 0.619.
+    masterstars_df = df_final
+    if (
+        masterstars_df is None
+        or len(masterstars_df) == 0
+        or "x" not in masterstars_df.columns
+        or "y" not in masterstars_df.columns
+    ):
+        masterstars_df = df_out
     try:
         from photometry_phase2a import measure_fwhm_from_masterstar
 
         _ms_path = Path(masterstar_fits)
-        if "mag" in df_final.columns:
-            _star_pos = df_final[["x", "y", "mag"]].dropna()
-        elif "phot_g_mean_mag" in df_final.columns:
+        if "mag" in masterstars_df.columns:
+            _star_pos = masterstars_df[["x", "y", "mag"]].dropna().head(50)
+        elif "phot_g_mean_mag" in masterstars_df.columns:
             _star_pos = (
-                df_final[["x", "y", "phot_g_mean_mag"]]
+                masterstars_df[["x", "y", "phot_g_mean_mag"]]
                 .dropna()
                 .rename(columns={"phot_g_mean_mag": "mag"})
+                .head(50)
             )
         else:
-            _star_pos = df_final[["x", "y"]].dropna()
+            _star_pos = masterstars_df[["x", "y"]].dropna().head(50)
         with fits.open(_ms_path, memmap=False) as _hint_hdul:
             _vy_hint = _hint_hdul[0].header.get("VY_FWHM", 3.5)
             _vy_fwhm_hint = float(_vy_hint) if _vy_hint is not None else 3.5
@@ -8571,8 +8580,8 @@ def generate_masterstar_and_catalog(
         logging.info(
             f"[MASTERSTAR] VY_FWHM_GAUSS={float(_gaussian_fwhm):.3f}px uložené do hlavičky (2D fit)"
         )
-    except Exception as _e:
-        logging.warning(f"[MASTERSTAR] Gaussian FWHM fit / zápis VY_FWHM_GAUSS zlyhal: {_e}")
+    except Exception as e:
+        log_event(f"[ERROR] VY_FWHM_GAUSS fit ZLYHAL: {e}\n{traceback.format_exc()}")
     # Small flush pause: UI may read CSV immediately after this returns.
     time.sleep(0.5)
     # Drop stale pre-optimizer dataframe to avoid accidental reuse ("ghost rows").
