@@ -2104,24 +2104,11 @@ def enhance_catalog_dataframe_aperture_bpm(
     if not math.isfinite(fwhm_moment_med) or fwhm_moment_med <= 0:
         fwhm_moment_med = float("nan")
 
-    # Prefer Gaussian FWHM: frame FITS header (VY_FWHM_GAUSS = 2D fit z MASTERSTAR), override, else moment×0.619.
+    # Gaussian FWHM: vždy moment→Gaussian (0.619) z aktuálnej snímky. Nečítame VY_FWHM_* z per-frame
+    # FITS — hodnoty v hlavičke môžu byť zastaralé a spôsobujú nestabilnú apertúru.
+    MOMENT_TO_GAUSSIAN = 0.619
     fwhm_gaussian: float | None = None
-    _fwhm_from_frame_hdr = False
-    if hdr is not None:
-        for _key in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
-            _val = hdr.get(_key)
-            if _val is None:
-                continue
-            try:
-                _v = float(_val)
-                if 0.5 < _v < 30.0:
-                    fwhm_gaussian = _v
-                    _fwhm_from_frame_hdr = True
-                    break
-            except (TypeError, ValueError):
-                pass
-
-    if fwhm_gaussian is None and gaussian_fwhm_px_override is not None:
+    if gaussian_fwhm_px_override is not None:
         try:
             _ov = float(gaussian_fwhm_px_override)
             if math.isfinite(_ov) and 0.5 < _ov < 30.0:
@@ -2130,19 +2117,15 @@ def enhance_catalog_dataframe_aperture_bpm(
             pass
 
     if fwhm_gaussian is None:
-        MOMENT_TO_GAUSSIAN = 0.619
         if math.isfinite(fwhm_moment_med) and fwhm_moment_med > 0:
             fwhm_gaussian = fwhm_moment_med * MOMENT_TO_GAUSSIAN
         else:
             fwhm_gaussian = float("nan")
         logging.debug(
-            f"[PHOT] VY_FWHM_GAUSS nenájdené v hlavičke snímky ani z MASTERSTAR, "
-            f"fallback moment×{MOMENT_TO_GAUSSIAN}: {fwhm_gaussian:.3f}px"
+            f"[PHOT] Gaussian FWHM = moment×{MOMENT_TO_GAUSSIAN}: {fwhm_gaussian:.3f}px"
         )
-    elif _fwhm_from_frame_hdr:
-        logging.debug(f"[PHOT] Gaussian FWHM z hlavičky snímky: {fwhm_gaussian:.3f}px")
     else:
-        logging.debug(f"[PHOT] Gaussian FWHM z MASTERSTAR (VY_FWHM_GAUSS): {fwhm_gaussian:.3f}px")
+        logging.debug(f"[PHOT] Gaussian FWHM z gaussian_fwhm_px_override: {fwhm_gaussian:.3f}px")
 
     # Sanity check: if computed aperture is out of a reasonable range, fallback to moment median directly.
     r_ap_test = float(aperture_fwhm_factor) * float(fwhm_gaussian) if math.isfinite(float(fwhm_gaussian)) else float("nan")
