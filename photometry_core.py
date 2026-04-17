@@ -4,7 +4,9 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 import time
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +15,7 @@ import pandas as pd
 from astropy.io import fits as astrofits
 
 from config import AppConfig
+from gaia_catalog_id import normalize_gaia_source_id
 
 _MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
 
@@ -23,14 +26,37 @@ _MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
 
 
 def _normalize_gaia_id(x: Any) -> str:
-    """Normalizuj Gaia ID na string integer."""
+    """Normalizuj Gaia ID na string integer.
+
+    Pandas často načíta veľké Gaia ID ako float64 → ``str`` môže byť vedecká notácia
+    a ``int(float(...))`` stráca presnosť. Pre textové vstupy preferujeme ``Decimal``.
+    """
+    if x is None:
+        return ""
+    if isinstance(x, (bool, np.bool_)):
+        return ""
+    if isinstance(x, (int, np.integer)):
+        return str(int(x))
+    if isinstance(x, float):
+        if not math.isfinite(x):
+            return ""
+        # Celé čísla v bezpečnom rozsahu float64
+        if x.is_integer() and abs(x) < 2**53:
+            return str(int(x))
+        try:
+            return str(int(Decimal(str(x))))
+        except (InvalidOperation, ValueError, OverflowError):
+            return str(x).strip()
     s = str(x).strip()
     if not s or s.lower() in ("nan", "none", ""):
         return ""
     try:
-        return str(int(float(s)))
-    except (ValueError, TypeError):
-        return s
+        return str(int(Decimal(s)))
+    except (InvalidOperation, ValueError, TypeError, OverflowError):
+        try:
+            return str(int(float(s)))
+        except (ValueError, TypeError, OverflowError):
+            return s
 
 
 def _build_csv_lookup(
@@ -40,16 +66,33 @@ def _build_csv_lookup(
     """Vytvorí dva lookup mechanizmy:
     1. Primárny: dict {normalized_id → row}
     2. Záložný: riadky s numerickými x,y pre nearest-neighbor match (plné stĺpce CSV).
+
+    Proc CSV z pipeline má ``catalog_id`` často ako float / vedeckú notáciu (strata presnosti),
+    zatiaľ čo ``name`` obsahuje presný Gaia ``source_id`` — indexujeme oboje (``setdefault``),
+    aby Fáza 2A netrafila NN na suseda namiesto správnej porovnávačky.
     """
     id_map: dict[str, pd.Series] = {}
     _id_series = csv_df[id_col]
     for i in range(len(csv_df)):
+        row = csv_df.iloc[i]
+        if "name" in csv_df.columns:
+            raw_name = row.get("name")
+            if raw_name is not None and str(raw_name).strip():
+                nk = normalize_gaia_source_id(raw_name)
+                if nk and re.fullmatch(r"\d{12,22}", nk):
+                    id_map.setdefault(nk, row)
         cid = _normalize_gaia_id(_id_series.iloc[i])
         if cid:
-            id_map[cid] = csv_df.iloc[i]
+            id_map.setdefault(cid, row)
     # Plná kópia: NN fallback musí vrátiť Series so všetkými stĺpcami (dao_flux, časy, …).
     xy_df = csv_df.copy()
-    xy_df["_cid_norm"] = xy_df[id_col].apply(_normalize_gaia_id)
+    if "name" in xy_df.columns:
+        _nk = xy_df["name"].map(normalize_gaia_source_id)
+        _is_gaia_name = _nk.map(lambda s: bool(s and re.fullmatch(r"\d{12,22}", s)))
+        _cid_from_col = xy_df[id_col].map(_normalize_gaia_id)
+        xy_df["_cid_norm"] = _nk.where(_is_gaia_name, _cid_from_col)
+    else:
+        xy_df["_cid_norm"] = xy_df[id_col].apply(_normalize_gaia_id)
     xy_df["x"] = pd.to_numeric(xy_df["x"], errors="coerce")
     xy_df["y"] = pd.to_numeric(xy_df["y"], errors="coerce")
     return id_map, xy_df.dropna(subset=["x", "y"])
@@ -630,9 +673,15 @@ def ensemble_normalize(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Krok 4: Ensemble normalizácia per snímka.
 
-    mag_calib = mag_inst(target) - weighted_median(mag_inst(good_comp))
-              + median(catalog_mag(good_comp))
-    delta_mag  = mag_inst(target) - weighted_median(mag_inst(good_comp))
+    ``mag_ensemble`` = ``-2.5*log10(sum 10**(-0.4*m_comp))`` (súčet fluxov ako AIJ ``tot_C_cnts``).
+
+    ``delta_mag = mag_inst(target) - mag_ensemble`` (tvar voči súčtu fluxov ako AIJ).
+
+    ``mag_calib`` musí mať iný zeropoint ako samotný ``median(katalóg)``: súčet fluxov dáva
+    ``m_ensemble = -2.5 log10(Σ F_i)``, čo pri n comps zhruba zodpovedá ``m_i - 2.5 log10(n)``
+    pri podobných ``m_i`` — pripočítanie len ``median(cat)`` by posunulo krivku o ~``2.5 log10(n)``
+    mag. Preto ``mag_calib = mag_inst(target) + median_j(cat_mag_j - mag_inst_j)`` (klasický
+    diferenciálny posun); ``delta_mag`` ostáva oproti ``mag_ensemble`` z AIJ súčtu.
 
     Výber comps: zoradenie podľa ``comp_rms`` (Fáza 1), prvých ``n_comp_min`` vždy;
     ďalšie len ak ``rms_p2p`` < ``p2p_threshold`` z stability; max ``n_comp_max``.
@@ -654,7 +703,7 @@ def ensemble_normalize(
             p2p_thr = float(t)
             break
 
-    # Ensemble: good aj suspect (1/rms² ich down-weightuje); excluded nie.
+    # Ensemble: good aj suspect; excluded nie. (RMS sa používa na výber poradia, nie na váhu fluxu.)
     usable_all = [
         cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")
     ]
@@ -684,14 +733,9 @@ def ensemble_normalize(
 
     cat_mags = np.asarray([comp_catalog_mag.get(cid, float("nan")) for cid in good_ids])
     cat_offset = float(np.nanmedian(cat_mags))
-    # cat_offset = medián katalógových mag porovnávačiek
-    # Toto je referenčná úroveň pre mag_calib — ensemble normalizácia
-    # predpokladá že target aj comp majú rovnaký aperture fraction (EE)
-    # Pre jasné hviezdy s veľkým PSF môže byť systematický offset
-    # → riešenie je v apertúre na MASTERSTAR (faktor × FWHM), nie tu
     logging.debug(
         f"[FÁZA 2A] Ensemble: {len(good_ids)} comps (good+suspect), "
-        f"catalog_mag median={cat_offset:.3f}"
+        f"catalog_mag median={cat_offset:.3f} (mag_calib zeropoint = median(cat−inst) per frame)"
     )
 
     for i in range(n_frames):
@@ -724,7 +768,18 @@ def ensemble_normalize(
 
         ensemble_scatter[i] = float(np.std(comp_vals)) if comp_vals.size > 1 else 0.0
         delta_mag[i] = target_mag_inst[i] - ens_med
-        mag_calib[i] = delta_mag[i] + cat_offset
+
+        # Zeropoint: median(cat − inst) na comps — zladí absolútnu mag s katalógom.
+        # ``delta_mag + median(cat)`` by bolo nesúladné s ``ens_med`` zo súčtu fluxov (−2.5 log ΣF).
+        zp_offs: list[float] = []
+        for cid_j, m_j in comp_pairs:
+            cm_j = float(comp_catalog_mag.get(cid_j, float("nan")))
+            if math.isfinite(cm_j) and math.isfinite(m_j):
+                zp_offs.append(cm_j - m_j)
+        if zp_offs:
+            mag_calib[i] = target_mag_inst[i] + float(np.nanmedian(np.asarray(zp_offs, dtype=np.float64)))
+        else:
+            mag_calib[i] = delta_mag[i] + cat_offset
 
     return mag_calib, delta_mag, ensemble_scatter
 
@@ -1412,8 +1467,9 @@ def run_phase2a(
     if force_aperture_px is not None and force_aperture_px > 0:
         # Fixná apertura pre všetky hviezdy — debug/kalibrácia
         apertures_px = {
-            str(row.get("catalog_id", "")): float(force_aperture_px)
+            _normalize_gaia_id(row.get("catalog_id", "")): float(force_aperture_px)
             for _, row in all_stars.iterrows()
+            if _normalize_gaia_id(row.get("catalog_id", ""))
         }
         logging.info(
             f"[FÁZA 2A] FORCE apertura: {force_aperture_px:.2f}px pre všetky hviezdy"
@@ -1469,7 +1525,13 @@ def run_phase2a(
             logging.warning(f"[FÁZA 2A] Target {target_name}: žiadne comp hviezdy")
             continue
 
-        comp_ids = [str(c) for c in target_comps["catalog_id"].tolist() if str(c).strip()]
+        comp_ids: list[str] = []
+        _seen_comp: set[str] = set()
+        for c in target_comps["catalog_id"].tolist():
+            nc = _normalize_gaia_id(c)
+            if nc and nc not in _seen_comp:
+                _seen_comp.add(nc)
+                comp_ids.append(nc)
         all_ids = [target_cid] + comp_ids
 
         # Katalógové magnitúdy comp hviezd
