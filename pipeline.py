@@ -6905,6 +6905,13 @@ def export_per_frame_catalogs(
     except Exception:  # noqa: BLE001
         _gauss_override = None
     _ap_st["gaussian_fwhm_px_override"] = _gauss_override
+    if _gauss_override is not None:
+        log_event(
+            f"[PHOT] gaussian_fwhm_px_override = {float(_gauss_override):.4f}px "
+            "(z VY_FWHM alebo VY_FWHM_GAUSS)"
+        )
+    else:
+        log_event("[PHOT] gaussian_fwhm_px_override = None → fallback na moment×0.619 per frame")
 
     cfg_for_workers = app_config if app_config is not None else AppConfig()
     _dao_fw_export = (

@@ -1465,6 +1465,12 @@ def run_phase2a(
     for _, target_row in at_df.iterrows():
         target_cid = _normalize_gaia_id(target_row.get("catalog_id", ""))
         target_name = str(target_row.get("vsx_name", target_cid))
+        logging.info(
+            f"[FÁZA 2A] Spúšťam: target={target_name}, "
+            f"frames={len(csv_files)}, "
+            f"apertura={_apt_fw * float(fwhm_px):.2f}px "
+            f"(FWHM={float(fwhm_px):.3f}px × {_apt_fw:.2f})"
+        )
 
         # Comp hviezdy pre tento target
         if "target_catalog_id" in comp_df.columns:
@@ -1667,9 +1673,14 @@ def run_phase2a(
             }
         )
         n_lc += 1
+        lc_rms = float(summary_rows[-1]["lc_rms"])
+        r_ap = float(apertures_px.get(target_cid, float("nan")))
         logging.info(
-            f"[FÁZA 2A] {target_name}: {len(bjd)} snímok, "
-            f"{n_good_comp} usable comp (good+suspect), lc_rms={summary_rows[-1]['lc_rms']:.4f}"
+            f"[FÁZA 2A] {target_name}: "
+            f"lc_rms={lc_rms:.4f}, "
+            f"n_comp={n_good_comp}, "
+            f"apertura={r_ap:.2f}px, "
+            f"am_slope={float(am_slope):.4f} mag/am"
         )
 
     # Uloži summary
@@ -2124,9 +2135,14 @@ def enhance_catalog_dataframe_aperture_bpm(
                 _vy_f = float(_vy)
                 if math.isfinite(_vy_f) and 0.5 < _vy_f < 30.0:
                     fwhm_gaussian = _vy_f * DAO_TO_GAUSSIAN
-                    logging.debug(
-                        f"[PHOT] FWHM z VY_FWHM (DAO): {_vy_f:.3f}px × {DAO_TO_GAUSSIAN:.3f} = {fwhm_gaussian:.3f}px"
-                    )
+                    # Viditeľný log len raz (inak 82× za run).
+                    if not bool(getattr(enhance_catalog_dataframe_aperture_bpm, "_did_log_fwhm", False)):
+                        logging.info(
+                            f"[PHOT] FWHM z VY_FWHM (DAO): {_vy_f:.3f}px × {DAO_TO_GAUSSIAN:.3f} = "
+                            f"{float(fwhm_gaussian):.3f}px → apertura = "
+                            f"{float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
+                        )
+                        setattr(enhance_catalog_dataframe_aperture_bpm, "_did_log_fwhm", True)
         except (TypeError, ValueError):
             pass
 
@@ -2134,7 +2150,13 @@ def enhance_catalog_dataframe_aperture_bpm(
     if fwhm_gaussian is None:
         if math.isfinite(fwhm_moment_med) and fwhm_moment_med > 0:
             fwhm_gaussian = fwhm_moment_med * 0.619
-            logging.debug(f"[PHOT] FWHM fallback moment×0.619: {fwhm_gaussian:.3f}px")
+            # Viditeľný log len raz (inak 82× za run).
+            if not bool(getattr(enhance_catalog_dataframe_aperture_bpm, "_did_log_fwhm", False)):
+                logging.info(
+                    f"[PHOT] FWHM fallback moment×0.619: {fwhm_gaussian:.3f}px → "
+                    f"apertura = {float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
+                )
+                setattr(enhance_catalog_dataframe_aperture_bpm, "_did_log_fwhm", True)
         else:
             fwhm_gaussian = float("nan")
 
