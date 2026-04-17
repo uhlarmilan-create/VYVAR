@@ -62,7 +62,7 @@ def _lookup_star_in_csv(
     ref_x: float | None,
     ref_y: float | None,
     *,
-    xy_tol_px: float = 8.0,
+    xy_tol_px: float = 15.0,
 ) -> pd.Series | None:
     """Hľadaj hviezdu v CSV — primárne cez ID, fallback cez x,y."""
     if cid in id_map:
@@ -76,19 +76,28 @@ def _lookup_star_in_csv(
     dx = xy_df["x"].to_numpy(dtype=np.float64) - float(ref_x)
     dy = xy_df["y"].to_numpy(dtype=np.float64) - float(ref_y)
     dists = np.sqrt(dx * dx + dy * dy)
-    j = int(np.argmin(dists))
-    if float(dists[j]) <= float(xy_tol_px):
-        _hit = xy_df.iloc[j]
-        _mid = str(_hit.get("_cid_norm", ""))
-        logging.debug(
-            "[FÁZA 2A] CSV NN fallback ok: requested_cid=%s matched_csv_id=%s dist_px=%.2f tol=%.1f",
-            cid,
-            _mid,
-            float(dists[j]),
-            float(xy_tol_px),
-        )
-        return _hit
-    return None
+    tol = float(xy_tol_px)
+    if "dao_flux" in xy_df.columns:
+        flux_arr = pd.to_numeric(xy_df["dao_flux"], errors="coerce").to_numpy(dtype=np.float64)
+        candidate = np.isfinite(dists) & (dists <= tol) & np.isfinite(flux_arr) & (flux_arr > 0.0)
+    else:
+        candidate = np.isfinite(dists) & (dists <= tol)
+    if not candidate.any():
+        return None
+    dist_masked = np.where(candidate, dists, np.inf)
+    j = int(np.argmin(dist_masked))
+    if not math.isfinite(float(dists[j])) or float(dists[j]) > tol:
+        return None
+    _hit = xy_df.iloc[j]
+    _mid = str(_hit.get("_cid_norm", ""))
+    logging.debug(
+        "[FÁZA 2A] CSV NN fallback ok: requested_cid=%s matched_csv_id=%s dist_px=%.2f tol=%.1f",
+        cid,
+        _mid,
+        float(dists[j]),
+        tol,
+    )
+    return _hit
 
 
 def _sat_limit_peak_adu(cfg: AppConfig | None = None) -> float:
@@ -368,7 +377,7 @@ def read_flux_from_csv(
     *,
     sat_limit_adu: float | None = None,
     star_xy: dict[str, tuple[float, float]] | None = None,
-    xy_tol_px: float = 8.0,
+    xy_tol_px: float = 15.0,
     frame_times: dict[str, Any] | None = None,
     csv_df: pd.DataFrame | None = None,
     lookup: tuple[dict[str, pd.Series], pd.DataFrame] | None = None,
@@ -446,6 +455,21 @@ def read_flux_from_csv(
         if row_csv is None:
             rows.append(base)
             continue
+
+        # XY fallback (nie priamy ID hit): odmietni príliš jasnú hviezdu (zlá NN zhoda).
+        if cid not in id_map:
+            fallback_flux = float(row_csv.get("dao_flux", float("nan")))
+            if math.isfinite(fallback_flux) and fallback_flux > 0:
+                fallback_mag = _flux_to_mag(fallback_flux)
+                if math.isfinite(fallback_mag) and fallback_mag > -8.0:
+                    logging.warning(
+                        "[FÁZA 2A] XY fallback wrong star: cid=%s, fallback_mag=%.2f > -8.0, "
+                        "nastavujem NaN",
+                        cid,
+                        fallback_mag,
+                    )
+                    rows.append(base)
+                    continue
 
         # Časové značky
         base["bjd"] = float(row_csv.get("bjd_tdb_mid", float("nan")))
@@ -1479,7 +1503,7 @@ def run_phase2a(
                 apertures_px,
                 sat_limit_adu=sat_limit_resolved,
                 star_xy=star_xy,
-                xy_tol_px=8.0,
+                xy_tol_px=18.0,
                 frame_times=_ft,
                 csv_df=_cached_df,
                 lookup=_lookup_row,
