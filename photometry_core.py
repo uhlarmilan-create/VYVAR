@@ -1250,8 +1250,9 @@ def run_phase2a(
 ) -> dict[str, Any]:
     """Hlavný wrapper pre Fázu 2A.
 
-    Globálny FWHM pre apertúru: ``VY_FWHM_GAUSS`` z hlavičky, inak ``VY_FWHM``×0.619,
-    inak 2D Gaussian fit (``measure_fwhm_from_masterstar``) s nápovedou z ``fwhm_px``.
+    Globálny FWHM pre apertúru: ``VY_FWHM_GAUSS`` (2D fit z pipeline), inak ``VY_FWHM``
+    (DAO, pre apertúru porovnateľné s Gaussian FWHM), inak 2D Gaussian fit
+    (``measure_fwhm_from_masterstar``) s nápovedou z ``fwhm_px``.
     Apertúrny polomer = ``aperture_fwhm_factor × FWHM`` (predvolene z ``cfg``).
 
     Returns:
@@ -1387,7 +1388,7 @@ def run_phase2a(
         ignore_index=True,
     ).drop_duplicates("catalog_id")
 
-    # Priorita: 1. VY_FWHM_GAUSS (Gaussian), 2. VY_FWHM × 0.619, 3. fit fallback
+    # Priorita: 1. VY_FWHM_GAUSS (2D fit v hlavičke), 2. VY_FWHM (DAO), 3. fit fallback
     _fwhm_from_header: float | None = None
     try:
         with astrofits.open(Path(masterstar_fits_path), memmap=False) as _hdul:
@@ -1396,15 +1397,17 @@ def run_phase2a(
             vy_fwhm_dao = hdr.get("VY_FWHM", None)
             if vy_fwhm_gauss is not None:
                 _fvg = float(vy_fwhm_gauss)
-                if 0.5 < _fvg < 15.0:
+                if 0.5 < _fvg < 30.0:
                     _fwhm_from_header = _fvg
-                    logging.info(f"[FÁZA 2A] FWHM z VY_FWHM_GAUSS: {_fwhm_from_header:.3f} px")
+                    logging.info(
+                        f"[FÁZA 2A] FWHM z VY_FWHM_GAUSS (2D fit): {_fwhm_from_header:.3f} px"
+                    )
             if _fwhm_from_header is None and vy_fwhm_dao is not None:
                 _fvd = float(vy_fwhm_dao)
                 if 0.5 < _fvd < 30.0:
-                    _fwhm_from_header = _fvd * 0.619
+                    _fwhm_from_header = _fvd
                     logging.info(
-                        f"[FÁZA 2A] FWHM z VY_FWHM × 0.619: {_fwhm_from_header:.3f} px"
+                        f"[FÁZA 2A] FWHM z VY_FWHM (DAO): {_fwhm_from_header:.3f} px"
                     )
     except Exception as _e:
         logging.warning(f"[FÁZA 2A] Nemôžem čítať FWHM z hlavičky: {_e}")
@@ -2101,7 +2104,7 @@ def enhance_catalog_dataframe_aperture_bpm(
     if not math.isfinite(fwhm_moment_med) or fwhm_moment_med <= 0:
         fwhm_moment_med = float("nan")
 
-    # Prefer Gaussian FWHM: frame FITS header, then MASTERSTAR value (per export), else moment×0.619.
+    # Prefer Gaussian FWHM: frame FITS header (VY_FWHM_GAUSS = 2D fit z MASTERSTAR), override, else moment×0.619.
     fwhm_gaussian: float | None = None
     _fwhm_from_frame_hdr = False
     if hdr is not None:
