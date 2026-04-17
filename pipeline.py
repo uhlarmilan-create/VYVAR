@@ -6890,6 +6890,16 @@ def export_per_frame_catalogs(
                                 break
                         except (TypeError, ValueError):
                             pass
+                    # Ak VY_FWHM_GAUSS chýba, použi VY_FWHM (DAO) × 0.667 (DAO→Gaussian)
+                    if _gauss_override is None:
+                        _vy = _ghdr.get("VY_FWHM")
+                        if _vy is not None:
+                            try:
+                                _vyf = float(_vy)
+                                if math.isfinite(_vyf) and 0.5 < _vyf < 30.0:
+                                    _gauss_override = _vyf * (1.0 / 1.5)
+                            except (TypeError, ValueError):
+                                pass
     except Exception:  # noqa: BLE001
         _gauss_override = None
     _ap_st["gaussian_fwhm_px_override"] = _gauss_override
