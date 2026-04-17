@@ -6879,25 +6879,27 @@ def export_per_frame_catalogs(
             if _ms_gauss.is_file():
                 with fits.open(_ms_gauss, memmap=False) as _gfh:
                     _ghdr = _gfh[0].header
-                    for _gk in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
-                        _gv = _ghdr.get(_gk)
-                        if _gv is None:
-                            continue
+                    # PRIORITA 1: VY_FWHM (DAO) × 0.667 — vždy aktuálne, vypočítané z dát
+                    _vy = _ghdr.get("VY_FWHM")
+                    if _vy is not None:
                         try:
-                            _gfv = float(_gv)
-                            if math.isfinite(_gfv) and 0.5 < _gfv < 30.0:
-                                _gauss_override = _gfv
-                                break
+                            _vyf = float(_vy)
+                            if math.isfinite(_vyf) and 0.5 < _vyf < 30.0:
+                                _gauss_override = _vyf * (1.0 / 1.5)
                         except (TypeError, ValueError):
                             pass
-                    # Ak VY_FWHM_GAUSS chýba, použi VY_FWHM (DAO) × 0.667 (DAO→Gaussian)
+
+                    # PRIORITA 2: VY_FWHM_GAUSS — len ak VY_FWHM chýba
                     if _gauss_override is None:
-                        _vy = _ghdr.get("VY_FWHM")
-                        if _vy is not None:
+                        for _gk in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
+                            _gv = _ghdr.get(_gk)
+                            if _gv is None:
+                                continue
                             try:
-                                _vyf = float(_vy)
-                                if math.isfinite(_vyf) and 0.5 < _vyf < 30.0:
-                                    _gauss_override = _vyf * (1.0 / 1.5)
+                                _gfv = float(_gv)
+                                if math.isfinite(_gfv) and 0.5 < _gfv < 30.0:
+                                    _gauss_override = _gfv
+                                    break
                             except (TypeError, ValueError):
                                 pass
     except Exception:  # noqa: BLE001
