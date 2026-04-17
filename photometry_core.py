@@ -2104,9 +2104,10 @@ def enhance_catalog_dataframe_aperture_bpm(
     if not math.isfinite(fwhm_moment_med) or fwhm_moment_med <= 0:
         fwhm_moment_med = float("nan")
 
-    # Gaussian FWHM: vždy moment→Gaussian (0.619) z aktuálnej snímky. Nečítame VY_FWHM_* z per-frame
-    # FITS — hodnoty v hlavičke môžu byť zastaralé a spôsobujú nestabilnú apertúru.
+    # Gaussian FWHM pre apertúru: prednostne z ``VY_FWHM`` (DAO) v hlavičke MASTERSTAR,
+    # čo je mediánová hodnota z celého runu (stabilná). Fallback: per-frame moment×0.619.
     MOMENT_TO_GAUSSIAN = 0.619
+    DAO_TO_GAUSSIAN = 1.0 / 1.5  # ~0.667
     fwhm_gaussian: float | None = None
     if gaussian_fwhm_px_override is not None:
         try:
@@ -2117,13 +2118,34 @@ def enhance_catalog_dataframe_aperture_bpm(
             pass
 
     if fwhm_gaussian is None:
-        if math.isfinite(fwhm_moment_med) and fwhm_moment_med > 0:
-            fwhm_gaussian = fwhm_moment_med * MOMENT_TO_GAUSSIAN
+        vy_fwhm_dao: float | None = None
+        if hdr is not None:
+            _v = hdr.get("VY_FWHM", None)
+            if _v is not None:
+                try:
+                    vy_fwhm_dao = float(_v)
+                except (TypeError, ValueError):
+                    vy_fwhm_dao = None
+
+        if vy_fwhm_dao is not None and math.isfinite(vy_fwhm_dao) and vy_fwhm_dao > 0:
+            fwhm_gaussian = float(vy_fwhm_dao) * DAO_TO_GAUSSIAN
+            logging.debug(
+                "[PHOT] FWHM z VY_FWHM (DAO): %.3fpx × %.3f = %.3fpx",
+                float(vy_fwhm_dao),
+                float(DAO_TO_GAUSSIAN),
+                float(fwhm_gaussian),
+            )
         else:
-            fwhm_gaussian = float("nan")
-        logging.debug(
-            f"[PHOT] Gaussian FWHM = moment×{MOMENT_TO_GAUSSIAN}: {fwhm_gaussian:.3f}px"
-        )
+            if math.isfinite(fwhm_moment_med) and fwhm_moment_med > 0:
+                fwhm_gaussian = fwhm_moment_med * MOMENT_TO_GAUSSIAN
+            else:
+                fwhm_gaussian = float("nan")
+            logging.debug(
+                "[PHOT] FWHM fallback moment: %.3f × %.3f = %.3fpx",
+                float(fwhm_moment_med) if math.isfinite(fwhm_moment_med) else float("nan"),
+                float(MOMENT_TO_GAUSSIAN),
+                float(fwhm_gaussian) if math.isfinite(float(fwhm_gaussian)) else float("nan"),
+            )
     else:
         logging.debug(f"[PHOT] Gaussian FWHM z gaussian_fwhm_px_override: {fwhm_gaussian:.3f}px")
 
