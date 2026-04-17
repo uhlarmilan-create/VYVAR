@@ -711,28 +711,14 @@ def ensemble_normalize(
 
         comp_vals = np.asarray([m for _, m in comp_pairs], dtype=np.float64)
 
-        # Váhovaný ensemble podľa 1/rms²: stabilnejšia comp = väčšia váha.
+        # Priamy súčet fluxov — rovnaká metóda ako AIJ (tot_C_cnts = C2+C3+C4).
+        # Váhovaný priemer 1/rms² deformuje extinkčný slope ensemble → záporný slope.
         comp_fluxes_list: list[float] = [10 ** (-0.4 * m) for _, m in comp_pairs]
-        weights: list[float] = []
-        for cid, _ in comp_pairs:
-            rms_val = float(comp_rms_map.get(cid, float("inf")))
-            if math.isfinite(rms_val) and rms_val > 0:
-                w = 1.0 / (rms_val ** 2)
-            else:
-                w = 1.0
-            weights.append(float(w))
-
-        w_arr = np.asarray(weights, dtype=np.float64)
         f_arr = np.asarray(comp_fluxes_list, dtype=np.float64)
-        w_sum = float(np.sum(w_arr))
-        if math.isfinite(w_sum) and w_sum > 0:
-            w_arr = w_arr / w_sum
-        else:
-            w_arr = np.full_like(w_arr, 1.0 / float(len(w_arr)))
 
-        ens_flux_weighted = float(np.sum(w_arr * f_arr))
-        if math.isfinite(ens_flux_weighted) and ens_flux_weighted > 0:
-            ens_med = float(-2.5 * math.log10(ens_flux_weighted))
+        ens_flux_sum = float(np.sum(f_arr))
+        if math.isfinite(ens_flux_sum) and ens_flux_sum > 0:
+            ens_med = float(-2.5 * math.log10(ens_flux_sum))
         else:
             ens_med = float(np.median(comp_vals))
 
