@@ -62,7 +62,7 @@ def _lookup_star_in_csv(
     ref_x: float | None,
     ref_y: float | None,
     *,
-    xy_tol_px: float = 50.0,
+    xy_tol_px: float = 8.0,
 ) -> pd.Series | None:
     """Hľadaj hviezdu v CSV — primárne cez ID, fallback cez x,y."""
     if cid in id_map:
@@ -368,7 +368,7 @@ def read_flux_from_csv(
     *,
     sat_limit_adu: float | None = None,
     star_xy: dict[str, tuple[float, float]] | None = None,
-    xy_tol_px: float = 50.0,
+    xy_tol_px: float = 8.0,
     frame_times: dict[str, Any] | None = None,
     csv_df: pd.DataFrame | None = None,
     lookup: tuple[dict[str, pd.Series], pd.DataFrame] | None = None,
@@ -1479,7 +1479,7 @@ def run_phase2a(
                 apertures_px,
                 sat_limit_adu=sat_limit_resolved,
                 star_xy=star_xy,
-                xy_tol_px=50.0,
+                xy_tol_px=8.0,
                 frame_times=_ft,
                 csv_df=_cached_df,
                 lookup=_lookup_row,
