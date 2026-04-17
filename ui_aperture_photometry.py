@@ -162,6 +162,8 @@ def _render_target_detail(
     output_dir: Path,
     show_outliers: bool,
     comp_df: pd.DataFrame | None = None,
+    *,
+    show_detrended: bool = True,
 ) -> None:
     """Interaktívna krivka (Plotly z CSV), field map PNG, metriky, odkazy Vizier/VSX."""
     from photometry_phase2a import _normalize_gaia_id
@@ -202,10 +204,15 @@ def _render_target_detail(
             if not show_outliers and "flag" in lc_df.columns:
                 lc_df = lc_df[lc_df["flag"] == "normal"]
 
+            y_col = "mag_calib" if show_detrended else "mag_calib_raw"
+            y_label = (
+                "mag_calib (detrend)" if show_detrended else "mag_calib_raw (bez detrend)"
+            )
+
             if (
                 not lc_df.empty
                 and "bjd" in lc_df.columns
-                and "mag_calib" in lc_df.columns
+                and y_col in lc_df.columns
             ):
                 try:
                     import plotly.graph_objects as go
@@ -228,7 +235,7 @@ def _render_target_detail(
 
                     for flag, color in flag_colors_plotly.items():
                         sub = lc_df[lc_df["flag"] == flag].dropna(
-                            subset=["bjd", "mag_calib"]
+                            subset=["bjd", y_col]
                         )
                         if sub.empty:
                             continue
@@ -249,7 +256,7 @@ def _render_target_detail(
                         fig.add_trace(
                             go.Scatter(
                                 x=sub["bjd"],
-                                y=sub["mag_calib"],
+                                y=sub[y_col],
                                 error_y=err_kwargs if err_kwargs else None,
                                 mode="markers",
                                 marker=dict(color=color, size=7, line=dict(width=0.5, color="#ffffff")),
@@ -264,7 +271,7 @@ def _render_target_detail(
                         font=dict(color="#000000", size=12),
                         yaxis=dict(
                             autorange="reversed",
-                            title=dict(text="mag_calib", **_axis_title),
+                            title=dict(text=y_label, **_axis_title),
                             tickfont=dict(color="#000000", size=12),
                             gridcolor="#cbd5e1",
                             zerolinecolor="#94a3b8",
@@ -286,7 +293,9 @@ def _render_target_detail(
                 else:
                     st.caption("Interaktívny graf nedostupný (plotly nie je nainštalovaný).")
             else:
-                st.info("V CSV chýbajú stĺpce bjd / mag_calib alebo súbor je prázdny.")
+                st.info(
+                    f"V CSV chýbajú stĺpce bjd / {y_col} alebo súbor je prázdny."
+                )
         else:
             st.info("Lightcurve CSV neexistuje. Spusti Fázu 2A.")
 
@@ -565,13 +574,27 @@ def render_aperture_photometry(
         return
     target_row = summary_df.loc[mask].iloc[0]
 
-    show_outliers = st.toggle(
-        "Zobraziť outlier a saturated body",
-        value=True,
-        key="phase2a_show_outliers",
-    )
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        show_detrended = st.toggle(
+            "Airmass detrend",
+            value=True,
+            key="toggle_am_detrend",
+        )
+    with col2:
+        show_outliers = st.toggle(
+            "Zobraziť outlier a saturated body",
+            value=True,
+            key="phase2a_show_outliers",
+        )
 
-    _render_target_detail(target_row, output_dir, show_outliers, comp_df=comp_df)
+    _render_target_detail(
+        target_row,
+        output_dir,
+        show_outliers,
+        comp_df=comp_df,
+        show_detrended=show_detrended,
+    )
 
     st.divider()
 
