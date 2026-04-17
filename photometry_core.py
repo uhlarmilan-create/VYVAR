@@ -1250,9 +1250,9 @@ def run_phase2a(
 ) -> dict[str, Any]:
     """Hlavný wrapper pre Fázu 2A.
 
-    Globálny FWHM pre apertúru: prednostne ``VY_FWHM`` (DAO) z hlavičky MASTERSTAR;
-    inak 2D Gaussian fit (``measure_fwhm_from_masterstar``) s nápovedou z argumentu
-    ``fwhm_px``. Apertúrny polomer = ``aperture_fwhm_factor × FWHM`` (predvolene z ``cfg``).
+    Globálny FWHM pre apertúru: ``VY_FWHM_GAUSS`` z hlavičky, inak ``VY_FWHM``×0.619,
+    inak 2D Gaussian fit (``measure_fwhm_from_masterstar``) s nápovedou z ``fwhm_px``.
+    Apertúrny polomer = ``aperture_fwhm_factor × FWHM`` (predvolene z ``cfg``).
 
     Returns:
         dict: n_targets, n_frames, n_lightcurves, summary_csv, field_map_png
@@ -1387,25 +1387,30 @@ def run_phase2a(
         ignore_index=True,
     ).drop_duplicates("catalog_id")
 
-    # FWHM pre apertúru: VY_FWHM = DAO odhad (konzistentný medzi runmi, vhodný pre apertúru).
-    # Fallback: 2D Gaussian fit na MASTERSTAR (môže sa líšiť od DAO pri úzkom poli hviezd).
-    _vy_fwhm_hdr: float | None = None
+    # Priorita: 1. VY_FWHM_GAUSS (Gaussian), 2. VY_FWHM × 0.619, 3. fit fallback
+    _fwhm_from_header: float | None = None
     try:
         with astrofits.open(Path(masterstar_fits_path), memmap=False) as _hdul:
             hdr = _hdul[0].header
-            _v = hdr.get("VY_FWHM")
-            if _v is not None:
-                _fv = float(_v)
-                if 0.5 < _fv < 30.0:
-                    _vy_fwhm_hdr = _fv
+            vy_fwhm_gauss = hdr.get("VY_FWHM_GAUSS", None)
+            vy_fwhm_dao = hdr.get("VY_FWHM", None)
+            if vy_fwhm_gauss is not None:
+                _fvg = float(vy_fwhm_gauss)
+                if 0.5 < _fvg < 15.0:
+                    _fwhm_from_header = _fvg
+                    logging.info(f"[FÁZA 2A] FWHM z VY_FWHM_GAUSS: {_fwhm_from_header:.3f} px")
+            if _fwhm_from_header is None and vy_fwhm_dao is not None:
+                _fvd = float(vy_fwhm_dao)
+                if 0.5 < _fvd < 30.0:
+                    _fwhm_from_header = _fvd * 0.619
                     logging.info(
-                        f"[FÁZA 2A] FWHM z hlavičky VY_FWHM (DAO): {_vy_fwhm_hdr:.3f}px"
+                        f"[FÁZA 2A] FWHM z VY_FWHM × 0.619: {_fwhm_from_header:.3f} px"
                     )
     except Exception as _e:
         logging.warning(f"[FÁZA 2A] Nemôžem čítať FWHM z hlavičky: {_e}")
 
-    if _vy_fwhm_hdr is not None:
-        fwhm_px = _vy_fwhm_hdr
+    if _fwhm_from_header is not None:
+        fwhm_px = _fwhm_from_header
     else:
         _fallback_hint = float(fwhm_px) if math.isfinite(fwhm_px) and fwhm_px > 0 else 3.5
         fwhm_px = measure_fwhm_from_masterstar(
@@ -1413,10 +1418,7 @@ def run_phase2a(
             all_stars,
             dao_fwhm_hint=_fallback_hint,
         )
-        logging.warning(
-            f"[FÁZA 2A] VY_FWHM chýba v hlavičke → "
-            f"fallback fit: {fwhm_px:.3f}px"
-        )
+        logging.info(f"[FÁZA 2A] FWHM z Gaussian fit: {fwhm_px:.3f} px")
 
     if force_aperture_px is not None and force_aperture_px > 0:
         # Fixná apertura pre všetky hviezdy — debug/kalibrácia

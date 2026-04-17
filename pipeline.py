@@ -2013,8 +2013,16 @@ def build_masterstar_from_detrended(
         with fits.open(output_fits, mode="update", memmap=False) as h:
             hdr = h[0].header
             # Vždy prepíš VY_FWHM hodnotou z auto výpočtu (médian sady)
-            hdr["VY_FWHM"] = (float(_fwhm_auto), "FWHM [pix] auto z medianu processed FITS")
-            log_event(f"MASTERSTAR: VY_FWHM = {_fwhm_auto:.3f} px zapísaný do FITS.")
+            vy_fwhm = float(_fwhm_auto)
+            hdr["VY_FWHM"] = (vy_fwhm, "FWHM [pix] auto z medianu processed FITS")
+            log_event(f"MASTERSTAR: VY_FWHM = {vy_fwhm:.3f} px zapísaný do FITS.")
+            # Gaussian FWHM = VY_FWHM × 0.619 (moment→Gaussian konverzia)
+            # Toto je univerzálne — nezávisí od setup-u
+            vy_fwhm_gauss = vy_fwhm * 0.619
+            hdr["VY_FWHM_GAUSS"] = (
+                round(vy_fwhm_gauss, 4),
+                "Gaussian FWHM px (0.619 x VY_FWHM)",
+            )
 
             # Ak má processed FITS platný ASTAP WCS (CD matica, izotropná),
             # zachovaj ho — VYVAR solver bude refinovať od tohto dobrého základu.
@@ -8536,40 +8544,29 @@ def generate_masterstar_and_catalog(
         f"MASTERSTAR katalóg: {Path(csv_path).name} — {len(df_final)} riadkov "
         f"(DAO + katalóg na celom poli; žiadne orezanie podľa vzdialenosti od stredu snímku)."
     )
-    # Gaussian FWHM (2D fit) → FITS header for universal per-frame aperture scaling.
+    # VY_FWHM_GAUSS = VY_FWHM × 0.619 (rovnaká konverzia ako pri vytvorení MASTERSTAR).
     try:
-        from photometry_phase2a import measure_fwhm_from_masterstar
-
         _ms_path = Path(masterstar_fits)
-        if "mag" in df_final.columns:
-            _star_pos = df_final[["x", "y", "mag"]].dropna()
-        elif "phot_g_mean_mag" in df_final.columns:
-            _star_pos = (
-                df_final[["x", "y", "phot_g_mean_mag"]]
-                .dropna()
-                .rename(columns={"phot_g_mean_mag": "mag"})
-            )
-        else:
-            _star_pos = df_final[["x", "y"]].dropna()
-        with fits.open(_ms_path, memmap=False) as _hint_hdul:
-            _vy_fwhm_hint = float(_hint_hdul[0].header.get("VY_FWHM", 3.5))
-        _gaussian_fwhm = measure_fwhm_from_masterstar(
-            _ms_path,
-            _star_pos,
-            dao_fwhm_hint=_vy_fwhm_hint,
-            n_stars=30,
-        )
+        _glog = None
         with fits.open(_ms_path, mode="update", memmap=False) as _hdul:
-            _hdul[0].header["VY_FWHM_GAUSS"] = (
-                round(float(_gaussian_fwhm), 4),
-                "Gaussian FWHM [px] z 2D fit na MASTERSTAR",
-            )
+            _hdr = _hdul[0].header
+            _vy = _hdr.get("VY_FWHM")
+            if _vy is not None:
+                _fv = float(_vy)
+                if 0.5 < _fv < 30.0:
+                    _gauss_hdr = round(_fv * 0.619, 4)
+                    _hdr["VY_FWHM_GAUSS"] = (
+                        _gauss_hdr,
+                        "Gaussian FWHM px (0.619 x VY_FWHM)",
+                    )
+                    _glog = _gauss_hdr
             _hdul.flush()
-        logging.info(
-            f"[MASTERSTAR] VY_FWHM_GAUSS={float(_gaussian_fwhm):.3f}px uložené do hlavičky"
-        )
+        if _glog is not None:
+            logging.info(
+                f"[MASTERSTAR] VY_FWHM_GAUSS={float(_glog):.4f}px (0.619×VY_FWHM) v hlavičke"
+            )
     except Exception as _e:
-        logging.warning(f"[MASTERSTAR] Gaussian FWHM fit zlyhal: {_e}")
+        logging.warning(f"[MASTERSTAR] VY_FWHM_GAUSS zápis zlyhal: {_e}")
     # Small flush pause: UI may read CSV immediately after this returns.
     time.sleep(0.5)
     # Drop stale pre-optimizer dataframe to avoid accidental reuse ("ghost rows").
