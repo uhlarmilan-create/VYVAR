@@ -439,7 +439,7 @@ def render_quality_dashboard(
     key_sky = f"vyvar_qdash_plot_sky_{did}"
 
     st.slider(
-        "FWHM limit (px) — rovnaký prah ako **Apply Calibration & Detrending** (0 = bez filtra FWHM)",
+        "FWHM limit (px) — rovnaký prah ako **MAKE MASTERSTAR** / detrend (0 = bez filtra FWHM)",
         min_value=0.0,
         max_value=100.0,
         step=0.05,

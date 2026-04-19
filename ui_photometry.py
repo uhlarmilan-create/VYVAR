@@ -45,17 +45,9 @@ def render_photometry_dashboard(cfg: AppConfig) -> None:
     if ann_out <= ann_in:
         st.warning("Vonkajší annulus musí byť väčší ako vnútorný — pri uložení sa upraví automaticky.")
 
-    st.markdown("---")
-    st.subheader("Saturácia")
-    pfs = float(cfg.photometry_fallback_saturate_adu) if cfg.photometry_fallback_saturate_adu is not None else 0.0
-    photometry_fb_sat = st.number_input(
-        "Fallback SATURATE (ADU), ak v FITS chýba",
-        min_value=0.0,
-        max_value=1.0e9,
-        value=pfs,
-        step=1.0,
-        key="vyvar_photometry_fallback_saturate_adu",
-        help="0 = vypnuté. Typicky 65535 pre 16-bit; 16383 pre 14-bit v 16-bit kontajneri.",
+    st.caption(
+        "Prah saturácie: kľúčové slová v FITS (`SATURATE`, `MAXLIN`, …), `DATAMAX` / `MAXPIX`, "
+        "prípadne `EQUIPMENTS.SATURATE_ADU` pri drafte so zariadením — nie globálny `config.json`."
     )
 
     st.markdown("---")
@@ -95,9 +87,6 @@ def render_photometry_dashboard(cfg: AppConfig) -> None:
         cfg.annulus_outer_fwhm = float(max(1.5, min(12.0, ann_out)))
         if cfg.annulus_outer_fwhm <= cfg.annulus_inner_fwhm:
             cfg.annulus_outer_fwhm = cfg.annulus_inner_fwhm + 1.0
-        cfg.photometry_fallback_saturate_adu = (
-            float(photometry_fb_sat) if float(photometry_fb_sat) > 0 else None
-        )
         cfg.nonlinearity_peak_percentile = float(max(0.0, min(50.0, nl_pct)))
         cfg.nonlinearity_fwhm_ratio = float(max(1.01, min(3.0, nl_ratio)))
         cfg.bpm_dark_mad_sigma = float(max(2.0, min(12.0, bpm_sigma)))

@@ -143,14 +143,10 @@ def _lookup_star_in_csv(
     return _hit
 
 
-def _sat_limit_peak_adu(cfg: AppConfig | None = None) -> float:
-    """Hranica peak_max_adu pre saturáciu — zladená s pipeline (fallback × saturate_limit_fraction)."""
-    c = cfg or AppConfig()
-    fb = c.photometry_fallback_saturate_adu
-    frac = max(0.0, min(1.0, float(c.saturate_limit_fraction)))
-    if fb is not None and math.isfinite(float(fb)) and float(fb) > 0:
-        return float(fb) * frac
-    return 65535.0 * frac
+def _sat_limit_peak_adu(cfg: AppConfig | None = None) -> float | None:
+    """Hranica peak_max_adu z configu (voliteľné). Bez globálneho fallbacku — saturácia z FITS/DB v pipeline."""
+    _ = cfg
+    return None
 
 
 def _mad_sigma(arr: np.ndarray) -> float:
@@ -449,7 +445,11 @@ def read_flux_from_csv(
     if csv_df.empty:
         return pd.DataFrame()
 
-    _sat_lim = float(sat_limit_adu) if sat_limit_adu is not None else _sat_limit_peak_adu()
+    _lim_raw = sat_limit_adu if sat_limit_adu is not None else _sat_limit_peak_adu()
+    if _lim_raw is None or (isinstance(_lim_raw, float) and not math.isfinite(_lim_raw)):
+        _sat_lim = float("inf")
+    else:
+        _sat_lim = float(_lim_raw)
     source_file = frame_csv_path.name
 
     id_col = "catalog_id" if "catalog_id" in csv_df.columns else "name"
@@ -544,7 +544,7 @@ def read_flux_from_csv(
 
         # Saturácia
         peak = float(row_csv.get("peak_max_adu", float("nan")))
-        is_sat = math.isfinite(peak) and peak > _sat_lim
+        is_sat = math.isfinite(peak) and math.isfinite(_sat_lim) and peak > _sat_lim
 
         if flux <= 0:
             base["flag"] = "no_data"
@@ -1288,6 +1288,7 @@ def run_phase2a(
     stability_sigma: float = 3.0,
     force_aperture_px: float | None = None,
     cfg: AppConfig | None = None,
+    progress_cb: Any = None,
 ) -> dict[str, Any]:
     """Hlavný wrapper pre Fázu 2A.
 
@@ -1303,6 +1304,11 @@ def run_phase2a(
     output_dir = Path(output_dir)
     lc_dir = output_dir / "lightcurves"
     lc_dir.mkdir(parents=True, exist_ok=True)
+
+    def _p2(msg: str) -> None:
+        if progress_cb is not None:
+            progress_cb(str(msg))
+
     _cfg = cfg or AppConfig()
     _save_png = bool(_cfg.save_lightcurve_png)
     if aperture_fwhm_factor is not None:
@@ -1335,6 +1341,7 @@ def run_phase2a(
     # Len CSV — bez FITS (flux sa číta z dao_flux v CSV)
     n_frames = len(csv_files)
     logging.info(f"[FÁZA 2A] {len(at_df)} targetov, {n_frames} snímok (CSV only)")
+    _p2(f"Fáza 2A: {len(at_df)} cieľov, {n_frames} snímok — načítavam CSV cache…")
 
     # Načítaj CSV cache raz pre celú Fázu 2A (read_flux_from_csv per target inak 82× na target).
     logging.info("[FÁZA 2A] Načítavam CSV cache...")
@@ -1369,6 +1376,7 @@ def run_phase2a(
         f"[FÁZA 2A] CSV cache: {len(_phase2a_csv_cache)} súborov "
         f"({time.time() - _t_cache:.1f}s)"
     )
+    _p2(f"Fáza 2A: cache {len(_phase2a_csv_cache)} CSV — výpočet FWHM / apertúr…")
 
     # Lookup (id_map + xy_df) raz na snímku — inak _build_csv_lookup 82× na target.
     _phase2a_lookup_cache: dict[str, tuple[dict[str, pd.Series], pd.DataFrame]] = {}
@@ -1464,6 +1472,8 @@ def run_phase2a(
         )
         logging.info(f"[FÁZA 2A] FWHM z Gaussian fit: {fwhm_px:.3f} px")
 
+    _p2(f"Fáza 2A: FWHM={float(fwhm_px):.3f} px — mapa poľa a svetelné krivky…")
+
     if force_aperture_px is not None and force_aperture_px > 0:
         # Fixná apertura pre všetky hviezdy — debug/kalibrácia
         apertures_px = {
@@ -1494,7 +1504,7 @@ def run_phase2a(
         except (KeyError, TypeError, ValueError):
             pass
 
-    sat_limit_resolved = float(sat_limit_adu) if sat_limit_adu is not None else _sat_limit_peak_adu()
+    sat_limit_resolved = sat_limit_adu if sat_limit_adu is not None else _sat_limit_peak_adu()
 
     # Field map PNG (raz pre celé pole) — vždy; UI potrebuje mapu aj bez PNG kriviek
     field_map_path = output_dir / "field_map.png"
@@ -1504,9 +1514,14 @@ def run_phase2a(
     n_lc = 0
 
     # Per target loop
-    for _, target_row in at_df.iterrows():
+    _nt = int(len(at_df))
+    for ti, (_, target_row) in enumerate(at_df.iterrows(), start=1):
         target_cid = _normalize_gaia_id(target_row.get("catalog_id", ""))
         target_name = str(target_row.get("vsx_name", target_cid))
+        if progress_cb is not None and (
+            ti == 1 or ti == _nt or (_nt > 1 and ti % max(1, _nt // 12) == 0)
+        ):
+            _p2(f"Fáza 2A: cieľ {ti}/{_nt}: {target_name[:50]}")
         logging.info(
             f"[FÁZA 2A] Spúšťam: target={target_name}, "
             f"frames={len(csv_files)}, "
@@ -1740,6 +1755,7 @@ def run_phase2a(
         f"{len(at_df) - n_lc}/{len(at_df)} "
         f"(žiadne vhodné comp podľa aktuálnych filtrov)"
     )
+    _p2(f"Fáza 2A hotovo: {n_lc} kriviek z {n_frames} snímok → {output_dir.name}")
 
     return {
         "n_targets": len(at_df),
@@ -3345,6 +3361,7 @@ def run_phase0_and_phase1(
     max_fwhm_factor: float = 1.5,
     isolation_radius_px: float = 25.0,
     flux_col: str = "dao_flux",
+    progress_cb: Any = None,
 ) -> dict[str, Any]:
     """Spusti Fázu 0 + Fázu 1 a uloží výstupy.
 
@@ -3362,7 +3379,12 @@ def run_phase0_and_phase1(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    def _p(msg: str) -> None:
+        if progress_cb is not None:
+            progress_cb(str(msg))
+
     # ── FÁZA 0 ──
+    _p("Fáza 0: výber aktívnych cieľov z VSX…")
     logging.info("[FÁZA 0] Výber aktívnych cieľov...")
     active = select_active_targets(
         variable_targets_csv,
@@ -3375,6 +3397,7 @@ def run_phase0_and_phase1(
     active_csv = output_dir / "active_targets.csv"
     active.to_csv(active_csv, index=False)
     logging.info(f"[FÁZA 0] Uložené: {active_csv} ({len(active)} cieľov)")
+    _p(f"Fáza 0 hotová: {len(active)} aktívnych cieľov")
 
     if active.empty:
         return {
@@ -3390,6 +3413,7 @@ def run_phase0_and_phase1(
     csv_paths = sorted(per_frame_csv_dir.rglob("*.csv"))
     # Vylúč výstupné súbory (active_targets, comparison_stars atď.)
     csv_paths = [p for p in csv_paths if p.stem.startswith("proc_") or p.stem.startswith("ali_")]
+    _p(f"Fáza 1: načítavam {len(csv_paths)} per-frame CSV do cache…")
     logging.info(f"[FÁZA 1] Načítavam flux z {len(csv_paths)} per-frame CSV súborov...")
 
     ms_df = pd.read_csv(masterstars_csv, low_memory=False)
@@ -3453,9 +3477,16 @@ def run_phase0_and_phase1(
         f"[FÁZA 1] CSV cache: {len(shared_csv_cache)} súborov "
         f"({time.time() - _t_cache0:.1f}s)"
     )
+    _p(f"Fáza 1: cache {len(shared_csv_cache)} súborov — výber porovnávačiek ({len(active)} cieľov)…")
 
     _t_phase1 = time.time()
-    for _, target_row in active.iterrows():
+    n_act0 = int(len(active))
+    for idx, (_, target_row) in enumerate(active.iterrows(), start=1):
+        if progress_cb is not None and (
+            idx == 1 or idx == n_act0 or (n_act0 > 1 and idx % max(1, n_act0 // 12) == 0)
+        ):
+            _tid = str(target_row.get("vsx_name") or target_row.get("catalog_id", ""))[:48]
+            _p(f"Fáza 1: cieľ {idx}/{n_act0}: {_tid}")
         comps = select_comparison_stars_per_target(
             target_row,
             ms_df,
@@ -3494,6 +3525,7 @@ def run_phase0_and_phase1(
 
     # ── Suspected variables ──
     # Hviezdy s vysokým RMS (>3σ nad mediánom) ktoré nie sú VSX ani active targets
+    _p("Fáza 1: suspected variables (nové kandidáty)…")
     suspected_csv = output_dir / "suspected_variables.csv"
     _write_suspected_variables(
         ms_df=ms_df,
@@ -3504,6 +3536,7 @@ def run_phase0_and_phase1(
         outlier_sigma=3.0,
     )
 
+    _p(f"Fáza 0+1 hotovo: {int(len(active))} cieľov, {int(len(comp_df))} párov porovnávačiek")
     return {
         "n_active_targets": int(len(active)),
         "n_comparison_pairs": int(len(comp_df)),

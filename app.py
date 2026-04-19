@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 import html
 import math
-import os
 import re
 from pathlib import Path
 from typing import Any
@@ -31,6 +30,272 @@ from utils import generate_session_id
 
 # MASTERSTAR: DB fallback (top % FWHM) when explicit UI paths fail to map; no session/UI control.
 _DEFAULT_MASTERSTAR_SELECTION_PCT = 10.0
+
+
+def _vyvar_execute_preprocess_pending(
+    *,
+    pending: dict[str, Any],
+    ap: Path,
+    pipeline: AstroPipeline,
+    progress_cb: Any,
+) -> None:
+    from pipeline import (
+        calibrated_paths_for_draft_apply_filters,
+        estimate_archive_memory_profile,
+        preprocess_calibrated_to_processed,
+    )
+
+    ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
+    cal = ap_root / "calibrated" / "lights"
+    noncal = ap_root / "non_calibrated" / "lights"
+    proc_root = ap_root / "processed" / "lights"
+    _dqf = pending.get("quality_filter_draft_id")
+    _fwhm_lim = float(pending.get("fwhm_limit_px") or 0.0)
+    p1: list[Path] = []
+    source_dir = cal
+
+    _pp_kw = dict(
+        background_method=str(pending.get("background_method", "background2d")),
+        poly_order=int(pending.get("poly_order", 2)),
+        lacosmic_sigclip=float(pending.get("sigclip", 4.5)),
+        lacosmic_objlim=float(pending.get("objlim", 5.0)),
+        enable_lacosmic=bool(pending.get("enable_lacosmic", False)),
+        enable_background_flattening=bool(
+            pending.get("enable_background_flattening", False)
+        ),
+        reject_fwhm_px=(float(_fwhm_lim) if float(_fwhm_lim) > 0.0 else None),
+        reject_elongation=None,
+        temporal_sigma_clip=False,
+        temporal_sigma=6.0,
+        temporal_min_frames=5,
+        use_gpu_if_available=False,
+        inject_pointing_ra_deg=pending.get("inject_pointing_ra_deg"),
+        inject_pointing_dec_deg=pending.get("inject_pointing_dec_deg"),
+        inject_pointing_only_if_missing=False,
+    )
+
+    if _dqf is not None:
+        try:
+            drow = pipeline.db.fetch_obs_draft_by_id(int(_dqf)) or {}
+            d_is_cal = int(drow.get("IS_CALIBRATED") or 0)
+            if d_is_cal == 0 and noncal.exists():
+                source_dir = noncal
+        except Exception:  # noqa: BLE001
+            pass
+    if source_dir == cal and (not cal.exists()) and noncal.exists():
+        source_dir = noncal
+
+    if _dqf is not None:
+        p1, _p_unused = calibrated_paths_for_draft_apply_filters(
+            ap_root,
+            pipeline.db,
+            int(_dqf),
+            fwhm_max_px=_fwhm_lim,
+            source_dir=source_dir,
+        )
+        if not p1:
+            _why = ["IS_REJECTED=0"]
+            if _fwhm_lim > 0:
+                _why.append("FWHM ≤ limit alebo FWHM je NULL")
+            raise FileNotFoundError(
+                "QC filter: žiadne snímky spĺňajúce " + ", ".join(_why) + "."
+            )
+        dfs_pp: list[pd.DataFrame] = []
+        tot_pp = len(p1)
+        off_pp = 0
+
+        def _pcb_pp(off0: int):
+            def _inner(i: int, _t: int, msg: str) -> None:
+                if progress_cb is not None:
+                    progress_cb(off0 + i, max(tot_pp, 1), msg)
+
+            return _inner
+
+        if p1:
+            if not source_dir.exists():
+                raise FileNotFoundError("Missing source lights directory for preprocess filter.")
+            dfs_pp.append(
+                preprocess_calibrated_to_processed(
+                    calibrated_root=source_dir,
+                    processed_root=proc_root,
+                    only_paths=p1,
+                    progress_cb=_pcb_pp(off_pp),
+                    db=pipeline.db,
+                    draft_id=(int(_dqf) if _dqf is not None else None),
+                    **_pp_kw,
+                )
+            )
+            off_pp += len(p1)
+        df = pd.concat(dfs_pp, ignore_index=True) if dfs_pp else pd.DataFrame()
+    else:
+        if not source_dir.exists():
+            raise FileNotFoundError("Missing source lights directory. Run calibration/import first.")
+        if _fwhm_lim > 0:
+            log_event(
+                f"Detrend: draft_id chýba — FWHM limit sa neaplikuje z DB; spracúvam všetky FITS v {source_dir}."
+            )
+        df = preprocess_calibrated_to_processed(
+            calibrated_root=source_dir,
+            processed_root=proc_root,
+            progress_cb=progress_cb,
+            db=pipeline.db,
+            draft_id=None,
+            **_pp_kw,
+        )
+    try:
+        if not df.empty:
+            proc_root.mkdir(parents=True, exist_ok=True)
+            df.to_csv(proc_root / "qc_metrics.csv", index=False)
+    except Exception:  # noqa: BLE001
+        pass
+    out2 = pipeline.quick_preprocess_last_import(archive_path=ap_root, run=False)
+    st.session_state["vyvar_memory_profile"] = estimate_archive_memory_profile(ap_root)
+    st.session_state["vyvar_last_qc_suggestions"] = out2.get("qc_suggestions", {})
+    st.session_state["vyvar_last_job_output"] = out2
+    st.session_state["vyvar_status_calibrated"] = bool(source_dir.exists())
+    try:
+        rej_pp = (
+            int((df["status"].astype(str).str.startswith("rejected")).sum())
+            if not df.empty and "status" in df.columns
+            else 0
+        )
+        _root_pp = str(proc_root)
+        st.session_state["vyvar_last_job_summary"] = {
+            "kind": "preprocess",
+            "rows": int(len(df)),
+            "rejected": rej_pp,
+            "root": _root_pp,
+        }
+    except Exception:  # noqa: BLE001
+        st.session_state["vyvar_last_job_summary"] = None
+    else:
+        st.session_state.pop("vyvar_staged_preprocess_job", None)
+        st.session_state.pop("vyvar_staged_processing_hash", None)
+        _ph_done = pending.get("processing_hash")
+        _dqf_done = pending.get("quality_filter_draft_id")
+        if _dqf_done is not None and _ph_done:
+            try:
+                pipeline.db.record_qc_processing_apply(
+                    int(_dqf_done),
+                    str(_ph_done),
+                    overwrite=bool(pending.get("overwrite_qc_processing")),
+                )
+                pipeline.db.update_obs_draft_status(int(_dqf_done), "PROCESSED")
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Zápis QC snapshotu / stavu draftu zlyhal: {exc}")
+
+
+def _vyvar_execute_platesolve_pending(
+    *,
+    pending: dict[str, Any],
+    ap: Path,
+    pipeline: AstroPipeline,
+    progress_cb: Any,
+) -> None:
+    from pipeline import astrometry_align_and_build_masterstar, estimate_archive_memory_profile
+
+    st.session_state["vyvar_memory_profile"] = estimate_archive_memory_profile(ap)
+    _fwhm_ui = float(
+        st.session_state.get(
+            "dao_fwhm_px",
+            pending.get("dao_fwhm_px", getattr(pipeline.config, "sips_dao_fwhm_px", 2.5)),
+        )
+    )
+    _sigma_ui = float(
+        st.session_state.get(
+            "dao_threshold_sigma",
+            pending.get(
+                "dao_threshold_sigma",
+                getattr(pipeline.config, "sips_dao_threshold_sigma", 3.5),
+            ),
+        )
+    )
+    pipeline.config.sips_dao_fwhm_px = _fwhm_ui
+    pipeline.config.sips_dao_threshold_sigma = _sigma_ui
+    _cfg_run = pipeline.config
+    try:
+        _cfg_run.sips_dao_fwhm_px = float(
+            pending.get("dao_fwhm_px", st.session_state.get("dao_fwhm_px", _cfg_run.sips_dao_fwhm_px))
+        )
+    except (TypeError, ValueError):
+        pass
+    try:
+        _cfg_run.sips_dao_threshold_sigma = float(
+            pending.get(
+                "dao_threshold_sigma",
+                st.session_state.get("dao_threshold_sigma", _cfg_run.sips_dao_threshold_sigma),
+            )
+        )
+    except (TypeError, ValueError):
+        pass
+    _peq = pending.get("id_equipment")
+    _draft_ps = pending.get("draft_id")
+    _ms_pct_job = pending.get("masterstar_selection_pct")
+    try:
+        _ms_pct_job_f = (
+            float(_ms_pct_job)
+            if _ms_pct_job is not None
+            else float(_DEFAULT_MASTERSTAR_SELECTION_PCT)
+        )
+    except (TypeError, ValueError):
+        _ms_pct_job_f = float(_DEFAULT_MASTERSTAR_SELECTION_PCT)
+    _plan_ps = st.session_state.get("vyvar_last_import_plan")
+    _md_ps = (
+        Path(_plan_ps.dark_master)
+        if _plan_ps and getattr(_plan_ps, "dark_master", None)
+        else None
+    )
+    if _md_ps is not None and not _md_ps.exists():
+        _md_ps = None
+    outp = astrometry_align_and_build_masterstar(
+        archive_path=ap,
+        app_config=_cfg_run,
+        astrometry_api_key=(str(pending.get("astrometry_api_key", "")).strip() or None),
+        max_control_points=int(pending.get("max_control_points", 180)),
+        min_detected_stars=int(pending.get("min_detected_stars", 100)),
+        max_detected_stars=int(pending.get("max_detected_stars", 500)),
+        platesolve_backend=str(pending.get("platesolve_backend", "vyvar")),
+        plate_solve_fov_deg=float(pending.get("plate_solve_fov_deg", 1.0)),
+        max_extra_platesolve=int(pending.get("max_extra_platesolve", 0)),
+        catalog_match_max_sep_arcsec=float(
+            pending.get("catalog_match_max_sep_arcsec", 25.0)
+        ),
+        saturate_level_fraction=float(pending.get("saturate_level_fraction", 0.999)),
+        max_catalog_rows=int(pending.get("max_catalog_rows", 12000)),
+        n_comparison_stars=int(pending.get("n_comparison_stars", 150)),
+        faintest_mag_limit=(
+            None
+            if pending.get("faintest_mag_limit") is None
+            else float(pending["faintest_mag_limit"])
+        ),
+        dao_threshold_sigma=float(
+            pending.get(
+                "dao_threshold_sigma",
+                st.session_state.get("dao_threshold_sigma", 3.5),
+            )
+        ),
+        id_equipment=int(_peq) if _peq is not None else None,
+        draft_id=int(_draft_ps) if _draft_ps is not None else None,
+        catalog_local_gaia_only=True,
+        build_masterstar_and_catalogs=bool(
+            pending.get("build_masterstar_and_catalogs", False)
+        ),
+        ram_align_and_catalog=True,
+        progress_cb=progress_cb,
+        masterstar_candidate_paths=list(pending.get("masterstar_candidate_paths") or []),
+        masterstar_selection_pct=_ms_pct_job_f,
+        master_dark_path=_md_ps,
+    )
+    st.session_state["vyvar_last_job_output"] = outp
+    st.session_state["vyvar_last_job_summary"] = {
+        "kind": "platesolve",
+        "aligned": int(outp.get("aligned_frames", 0)),
+        "input": int(outp.get("input_frames", 0)),
+        "masterstar_built": bool(outp.get("build_masterstar_and_catalogs")),
+        "per_frame_csv": int(outp.get("per_frame_catalogs_written") or 0),
+        "ram_align_handoff": bool(outp.get("ram_align_handoff_used")),
+    }
+
 
 _VYVAR_FOOTER_CSS = """
 <style>
@@ -646,6 +911,7 @@ def render_live_view(
         ap = Path(pending.get("archive_path", "")) if pending.get("archive_path") else None
         _hide_inline_job_status = str(pending.get("kind") or "").strip().lower() in {
             "platesolve",
+            "make_masterstar",
             "masterstar_catalog_only",
         }
         progress_bar = None if _hide_inline_job_status else st.progress(0, text="Starting…")
@@ -802,150 +1068,29 @@ def render_live_view(
                         st.session_state.pop("vyvar_observation_processing_hash", None)
 
                 elif pending.get("kind") == "preprocess":
-                    from pipeline import (
-                        calibrated_paths_for_draft_apply_filters,
-                        estimate_archive_memory_profile,
-                        preprocess_calibrated_to_processed,
+                    _vyvar_execute_preprocess_pending(
+                        pending=pending, ap=ap, pipeline=pipeline, progress_cb=_cb
                     )
 
-                    ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
-                    cal = ap_root / "calibrated" / "lights"
-                    noncal = ap_root / "non_calibrated" / "lights"
-                    proc_root = ap_root / "processed" / "lights"
-                    _dqf = pending.get("quality_filter_draft_id")
-                    _fwhm_lim = float(pending.get("fwhm_limit_px") or 0.0)
-                    p1: list[Path] = []
-                    source_dir = cal
-
-                    _pp_kw = dict(
-                        background_method=str(pending.get("background_method", "background2d")),
-                        poly_order=int(pending.get("poly_order", 2)),
-                        lacosmic_sigclip=float(pending.get("sigclip", 4.5)),
-                        lacosmic_objlim=float(pending.get("objlim", 5.0)),
-                        enable_lacosmic=bool(pending.get("enable_lacosmic", False)),
-                        enable_background_flattening=bool(
-                            pending.get("enable_background_flattening", False)
-                        ),
-                        reject_fwhm_px=(float(_fwhm_lim) if float(_fwhm_lim) > 0.0 else None),
-                        reject_elongation=None,
-                        temporal_sigma_clip=False,
-                        temporal_sigma=6.0,
-                        temporal_min_frames=5,
-                        use_gpu_if_available=False,
-                        inject_pointing_ra_deg=pending.get("inject_pointing_ra_deg"),
-                        inject_pointing_dec_deg=pending.get("inject_pointing_dec_deg"),
-                        inject_pointing_only_if_missing=False,
+                elif pending.get("kind") == "make_masterstar":
+                    _vyvar_execute_preprocess_pending(
+                        pending=pending, ap=ap, pipeline=pipeline, progress_cb=_cb
                     )
-
-                    if _dqf is not None:
-                        try:
-                            drow = pipeline.db.fetch_obs_draft_by_id(int(_dqf)) or {}
-                            d_is_cal = int(drow.get("IS_CALIBRATED") or 0)
-                            if d_is_cal == 0 and noncal.exists():
-                                source_dir = noncal
-                        except Exception:  # noqa: BLE001
-                            pass
-                    if source_dir == cal and (not cal.exists()) and noncal.exists():
-                        source_dir = noncal
-
-                    if _dqf is not None:
-                        p1, _p_unused = calibrated_paths_for_draft_apply_filters(
-                            ap_root,
-                            pipeline.db,
-                            int(_dqf),
-                            fwhm_max_px=_fwhm_lim,
-                            source_dir=source_dir,
-                        )
-                        if not p1:
-                            _why = ["IS_REJECTED=0"]
-                            if _fwhm_lim > 0:
-                                _why.append("FWHM ≤ limit alebo FWHM je NULL")
-                            raise FileNotFoundError(
-                                "QC filter: žiadne snímky spĺňajúce " + ", ".join(_why) + "."
-                            )
-                        dfs_pp: list[pd.DataFrame] = []
-                        tot_pp = len(p1)
-                        off_pp = 0
-
-                        def _pcb_pp(off0: int):
-                            def _inner(i: int, _t: int, msg: str) -> None:
-                                if _cb is not None:
-                                    _cb(off0 + i, max(tot_pp, 1), msg)
-
-                            return _inner
-
-                        if p1:
-                            if not source_dir.exists():
-                                raise FileNotFoundError("Missing source lights directory for preprocess filter.")
-                            dfs_pp.append(
-                                preprocess_calibrated_to_processed(
-                                    calibrated_root=source_dir,
-                                    processed_root=proc_root,
-                                    only_paths=p1,
-                                    progress_cb=_pcb_pp(off_pp),
-                                    db=pipeline.db,
-                                    draft_id=(int(_dqf) if _dqf is not None else None),
-                                    **_pp_kw,
-                                )
-                            )
-                            off_pp += len(p1)
-                        df = pd.concat(dfs_pp, ignore_index=True) if dfs_pp else pd.DataFrame()
-                    else:
-                        if not source_dir.exists():
-                            raise FileNotFoundError("Missing source lights directory. Run calibration/import first.")
-                        if _fwhm_lim > 0:
-                            log_event(
-                                f"Apply: draft_id chýba — FWHM limit sa neaplikuje z DB; spracúvam všetky FITS v {source_dir}."
-                            )
-                        df = preprocess_calibrated_to_processed(
-                            calibrated_root=source_dir,
-                            processed_root=proc_root,
-                            progress_cb=_cb,
-                            db=pipeline.db,
-                            draft_id=None,
-                            **_pp_kw,
-                        )
-                    try:
-                        if not df.empty:
-                            proc_root.mkdir(parents=True, exist_ok=True)
-                            df.to_csv(proc_root / "qc_metrics.csv", index=False)
-                    except Exception:  # noqa: BLE001
-                        pass
-                    out2 = pipeline.quick_preprocess_last_import(archive_path=ap_root, run=False)
-                    st.session_state["vyvar_memory_profile"] = estimate_archive_memory_profile(ap_root)
-                    st.session_state["vyvar_last_qc_suggestions"] = out2.get("qc_suggestions", {})
-                    st.session_state["vyvar_last_job_output"] = out2
-                    st.session_state["vyvar_status_calibrated"] = bool(source_dir.exists())
-                    try:
-                        rej_pp = (
-                            int((df["status"].astype(str).str.startswith("rejected")).sum())
-                            if not df.empty and "status" in df.columns
-                            else 0
-                        )
-                        _root_pp = str(proc_root)
-                        st.session_state["vyvar_last_job_summary"] = {
-                            "kind": "preprocess",
-                            "rows": int(len(df)),
-                            "rejected": rej_pp,
-                            "root": _root_pp,
-                        }
-                    except Exception:  # noqa: BLE001
-                        st.session_state["vyvar_last_job_summary"] = None
-                    else:
-                        st.session_state.pop("vyvar_staged_preprocess_job", None)
-                        st.session_state.pop("vyvar_staged_processing_hash", None)
-                        _ph_done = pending.get("processing_hash")
-                        _dqf_done = pending.get("quality_filter_draft_id")
-                        if _dqf_done is not None and _ph_done:
-                            try:
-                                pipeline.db.record_qc_processing_apply(
-                                    int(_dqf_done),
-                                    str(_ph_done),
-                                    overwrite=bool(pending.get("overwrite_qc_processing")),
-                                )
-                                pipeline.db.update_obs_draft_status(int(_dqf_done), "PROCESSED")
-                            except Exception as exc:  # noqa: BLE001
-                                st.error(f"Zápis QC snapshotu / stavu draftu zlyhal: {exc}")
+                    _pp_job_summary = st.session_state.get("vyvar_last_job_summary")
+                    _vyvar_execute_platesolve_pending(
+                        pending=pending, ap=ap, pipeline=pipeline, progress_cb=_cb
+                    )
+                    _ps_job_summary = st.session_state.get("vyvar_last_job_summary")
+                    if isinstance(_ps_job_summary, dict):
+                        _merged = dict(_ps_job_summary)
+                        _merged["kind"] = "make_masterstar"
+                        if isinstance(_pp_job_summary, dict):
+                            _merged["preprocess_summary"] = {
+                                k: _pp_job_summary.get(k)
+                                for k in ("rows", "rejected", "root")
+                                if k in _pp_job_summary
+                            }
+                        st.session_state["vyvar_last_job_summary"] = _merged
 
                 elif pending.get("kind") == "quality_analysis":
                     from pipeline import run_quality_analysis
@@ -970,109 +1115,9 @@ def render_live_view(
                     st.session_state["vyvar_status_analyzed"] = True
 
                 elif pending.get("kind") == "platesolve":
-                    from pipeline import astrometry_align_and_build_masterstar, estimate_archive_memory_profile
-
-                    st.session_state["vyvar_memory_profile"] = estimate_archive_memory_profile(ap)
-                    _fwhm_ui = float(
-                        st.session_state.get(
-                            "dao_fwhm_px",
-                            pending.get("dao_fwhm_px", getattr(pipeline.config, "sips_dao_fwhm_px", 2.5)),
-                        )
+                    _vyvar_execute_platesolve_pending(
+                        pending=pending, ap=ap, pipeline=pipeline, progress_cb=_cb
                     )
-                    _sigma_ui = float(
-                        st.session_state.get(
-                            "dao_threshold_sigma",
-                            pending.get(
-                                "dao_threshold_sigma",
-                                getattr(pipeline.config, "sips_dao_threshold_sigma", 3.5),
-                            ),
-                        )
-                    )
-                    pipeline.config.sips_dao_fwhm_px = _fwhm_ui
-                    pipeline.config.sips_dao_threshold_sigma = _sigma_ui
-                    _cfg_run = pipeline.config
-                    try:
-                        _cfg_run.sips_dao_fwhm_px = float(
-                            pending.get("dao_fwhm_px", st.session_state.get("dao_fwhm_px", _cfg_run.sips_dao_fwhm_px))
-                        )
-                    except (TypeError, ValueError):
-                        pass
-                    try:
-                        _cfg_run.sips_dao_threshold_sigma = float(
-                            pending.get(
-                                "dao_threshold_sigma",
-                                st.session_state.get("dao_threshold_sigma", _cfg_run.sips_dao_threshold_sigma),
-                            )
-                        )
-                    except (TypeError, ValueError):
-                        pass
-                    _peq = pending.get("id_equipment")
-                    _draft_ps = pending.get("draft_id")
-                    _ms_pct_job = pending.get("masterstar_selection_pct")
-                    try:
-                        _ms_pct_job_f = (
-                            float(_ms_pct_job)
-                            if _ms_pct_job is not None
-                            else float(_DEFAULT_MASTERSTAR_SELECTION_PCT)
-                        )
-                    except (TypeError, ValueError):
-                        _ms_pct_job_f = float(_DEFAULT_MASTERSTAR_SELECTION_PCT)
-                    _plan_ps = st.session_state.get("vyvar_last_import_plan")
-                    _md_ps = (
-                        Path(_plan_ps.dark_master)
-                        if _plan_ps and getattr(_plan_ps, "dark_master", None)
-                        else None
-                    )
-                    if _md_ps is not None and not _md_ps.exists():
-                        _md_ps = None
-                    outp = astrometry_align_and_build_masterstar(
-                        archive_path=ap,
-                        app_config=_cfg_run,
-                        astrometry_api_key=(str(pending.get("astrometry_api_key", "")).strip() or None),
-                        max_control_points=int(pending.get("max_control_points", 180)),
-                        min_detected_stars=int(pending.get("min_detected_stars", 100)),
-                        max_detected_stars=int(pending.get("max_detected_stars", 500)),
-                        platesolve_backend=str(pending.get("platesolve_backend", "vyvar")),
-                        plate_solve_fov_deg=float(pending.get("plate_solve_fov_deg", 1.0)),
-                        max_extra_platesolve=int(pending.get("max_extra_platesolve", 0)),
-                        catalog_match_max_sep_arcsec=float(
-                            pending.get("catalog_match_max_sep_arcsec", 25.0)
-                        ),
-                        saturate_level_fraction=float(pending.get("saturate_level_fraction", 0.999)),
-                        max_catalog_rows=int(pending.get("max_catalog_rows", 12000)),
-                        n_comparison_stars=int(pending.get("n_comparison_stars", 150)),
-                        faintest_mag_limit=(
-                            None
-                            if pending.get("faintest_mag_limit") is None
-                            else float(pending["faintest_mag_limit"])
-                        ),
-                        dao_threshold_sigma=float(
-                            pending.get(
-                                "dao_threshold_sigma",
-                                st.session_state.get("dao_threshold_sigma", 3.5),
-                            )
-                        ),
-                        id_equipment=int(_peq) if _peq is not None else None,
-                        draft_id=int(_draft_ps) if _draft_ps is not None else None,
-                        catalog_local_gaia_only=True,
-                        build_masterstar_and_catalogs=bool(
-                            pending.get("build_masterstar_and_catalogs", False)
-                        ),
-                        ram_align_and_catalog=True,
-                        progress_cb=_cb,
-                        masterstar_candidate_paths=list(pending.get("masterstar_candidate_paths") or []),
-                        masterstar_selection_pct=_ms_pct_job_f,
-                        master_dark_path=_md_ps,
-                    )
-                    st.session_state["vyvar_last_job_output"] = outp
-                    st.session_state["vyvar_last_job_summary"] = {
-                        "kind": "platesolve",
-                        "aligned": int(outp.get("aligned_frames", 0)),
-                        "input": int(outp.get("input_frames", 0)),
-                        "masterstar_built": bool(outp.get("build_masterstar_and_catalogs")),
-                        "per_frame_csv": int(outp.get("per_frame_catalogs_written") or 0),
-                        "ram_align_handoff": bool(outp.get("ram_align_handoff_used")),
-                    }
 
                 elif pending.get("kind") == "masterstar_catalog_only":
                     from pipeline import (
@@ -1392,7 +1437,7 @@ def render_live_view(
     st.markdown("**QC vstupy (Krok 2)**")
     st.caption(
         "Po **Analyze** (automaticky po importe) sa doplní FWHM a stred poľa z `OBS_FILES`. "
-        "**FWHM limit** nastav posuvníkom v záložke **Quality Dashboard**; **Apply** používa ten istý prah spolu s RA/DE."
+        "**FWHM limit** nastav posuvníkom v záložke **Quality Dashboard**; **MAKE MASTERSTAR** používa ten istý prah spolu s RA/DE."
     )
     _q1, _q2, _q3 = st.columns(3)
     with _q1:
@@ -1413,7 +1458,7 @@ def render_live_view(
             key=_ra_key,
             on_change=ui_components.persist_draft_center_on_change,
             args=(pipeline.db, st.session_state.get("vyvar_last_draft_id")),
-            help="Stred poľa v stupňoch (ICRS). Po Analyze medián z DB; upraviteľné pred Apply.",
+            help="Stred poľa v stupňoch (ICRS). Po Analyze medián z DB; upraviteľné pred MAKE MASTERSTAR.",
         )
     with _q3:
         st.number_input(
@@ -1448,7 +1493,7 @@ def render_live_view(
 
     with st.expander("Advanced preprocessing (optional tuning)", expanded=False):
         st.caption(
-            "L.A.Cosmic a model pozadia pri **Apply**. Výber snímok: `OBS_FILES` (IS_REJECTED + FWHM limit)."
+            "L.A.Cosmic a model pozadia pri **MAKE MASTERSTAR**. Výber snímok: `OBS_FILES` (IS_REJECTED + FWHM limit)."
         )
         enable_lacosmic = st.checkbox(
             "Enable L.A.Cosmic (AstroScrappy)",
@@ -1475,9 +1520,10 @@ def render_live_view(
     st.markdown("**Pre-processing**")
     st.caption(
         "**Analyze** sa spúšťa automaticky po **Create Archive & Do Calibration** (QC v RAM → metriky do `OBS_FILES`). "
-        "**Apply** — **IS_REJECTED=0** a **FWHM ≤ limit** (ak limit > 0); zápis `/processed/lights`. "
+        "**MAKE MASTERSTAR** — najprv detrend (`/calibrated` → `/processed/lights`, **IS_REJECTED=0**, **FWHM ≤ limit** ak limit > 0), "
+        "potom **VYVAR** plate solve (Gaia DR3), zarovnanie a sidecar CSV v `detrended_aligned/lights/`. "
         "**Quality Dashboard**: FWHM posuvník, grafy, manuálne zamietnutie. "
-        "Workerov: **Settings → QC / Preprocessing** alebo `VYVAR_QC_PREPROCESS_WORKERS`."
+        "Paralelizmus: automaticky (CPU/RAM) alebo env `VYVAR_PARALLEL_WORKERS` (legacy QC/per-frame env tiež)."
     )
     _rt = ui_calibration.draft_runtime_status(
         pipeline.db,
@@ -1493,79 +1539,6 @@ def render_live_view(
         st.markdown(f"**Analyzed:** {'Yes' if _rt_an else 'No'}")
     with _s2:
         st.markdown(f"**Calibrated:** {'Yes' if _rt_cal else 'No'}")
-    if st.button(
-        "Apply Calibration & Detrending",
-        type="primary",
-        help="Zápis do /processed/lights. S draft_id: IS_REJECTED=0, FWHM podľa limitu v Quality Dashboard (0 = filter FWHM vyp.).",
-    ):
-        ap = Path(archive_path_override) if archive_path_override else None
-        if ap is None:
-            st.warning("Please provide an archive path (or Import to Archive first).")
-        else:
-            def _sess_float(key: str) -> float:
-                try:
-                    return float(st.session_state.get(key, float("nan")))
-                except (TypeError, ValueError):
-                    return float("nan")
-
-            _did = st.session_state.get("vyvar_last_draft_id")
-            _ira_ui = _sess_float(_ra_key)
-            _ide_ui = _sess_float(_de_key)
-            from pipeline import resolve_preprocess_target_coordinates
-
-            _ira, _ide = resolve_preprocess_target_coordinates(
-                db=pipeline.db,
-                draft_id=(int(_did) if _did is not None else None),
-                ui_ra_deg=_ira_ui,
-                ui_dec_deg=_ide_ui,
-            )
-            _coords_ok = (
-                _ira is not None
-                and _ide is not None
-                and math.isfinite(float(_ira))
-                and math.isfinite(float(_ide))
-            )
-            if not _coords_ok:
-                st.warning(
-                    "Center RA/DE nie sú platné — vyplň polia vyššie alebo počkaj na dokončenie QC analýzy po importe "
-                    "(medián do `OBS_FILES`)."
-                )
-            else:
-                _rfw_ui = float(st.session_state.get("fwhm_threshold", 0.0))
-                _rfw = float(_rfw_ui) if _rfw_ui > 0.0 else 0.0
-                if _rfw_ui > 0.0:
-                    log_event(f"DEBUG: Apply FWHM limit (strict): UI={_rfw_ui:.3f} px")
-                _pending_core = {
-                    "kind": "preprocess",
-                    "label": "Pre-processing running…",
-                    "archive_path": str(ap),
-                    "background_method": str(background_method),
-                    "poly_order": int(poly_order),
-                    "sigclip": float(sigclip),
-                    "objlim": float(objlim),
-                    "enable_lacosmic": bool(enable_lacosmic),
-                    "enable_background_flattening": bool(enable_background_flattening),
-                    "fwhm_limit_px": _rfw,
-                    "inject_pointing_ra_deg": _ira,
-                    "inject_pointing_dec_deg": _ide,
-                    "quality_filter_draft_id": (int(_did) if _did is not None else None),
-                }
-                _did_int = int(_did) if _did is not None else None
-                _ph = None
-                if _did_int is not None:
-                    try:
-                        from pipeline import generate_observation_hash
-
-                        _ph = generate_observation_hash(pipeline.db, _did_int)
-                        st.session_state["vyvar_observation_processing_hash"] = _ph
-                    except Exception:  # noqa: BLE001
-                        _ph = None
-                _j = {**_pending_core}
-                if _did_int is not None and _ph:
-                    _j["processing_hash"] = _ph
-                    _j["overwrite_qc_processing"] = True
-                st.session_state["vyvar_pending_job"] = _j
-                st.rerun()
 
     # MASTERSTAR kandidát sa nastavuje v FITS QA (tlačidlo "Použiť ako MASTERSTAR")
     _draft_step3 = st.session_state.get("vyvar_last_draft_id")
@@ -1586,24 +1559,12 @@ def render_live_view(
             pass
 
     st.markdown("---")
-    st.subheader("Plate Solving & Star Catalog")
+    st.subheader("MAKE MASTERSTAR")
     st.caption(
-        "Krok 3: **VYVAR** plate solve (lokálna Gaia DR3), zarovnanie, sidecar CSV v `detrended_aligned/lights/`. "
-        "Hlavné tlačidlo nižšie robí plný krok 3 na všetkých snímkoch. **Auto**: ak VYVAR zlyhá, Astrometry.net (API kľúč neskôr)."
+        "Jeden krok: detrend na `/processed/lights`, potom **VYVAR** plate solve (lokálna Gaia DR3), zarovnanie "
+        "a sidecar CSV v `detrended_aligned/lights/`. **Referenčný MASTERSTAR** vyber v **FITS QA** "
+        "(najlepší snímok → uloží sa do draftu / session)."
     )
-    ps_backend = st.radio(
-        "Režim riešenia WCS",
-        options=[
-            "VYVAR (lokálna Gaia DR3)",
-            "Auto: VYVAR → Astrometry.net (Online Fallback)",
-        ],
-        index=0,
-        horizontal=True,
-    )
-    _backend_map = {
-        "VYVAR (lokálna Gaia DR3)": "vyvar",
-        "Auto: VYVAR → Astrometry.net (Online Fallback)": "auto",
-    }
     try:
         from pipeline import get_auto_fov
 
@@ -1673,7 +1634,11 @@ def render_live_view(
 
     col_ps_go = st.columns([1])[0]
     with col_ps_go:
-        if st.button("3) Plate solve + zarovnanie + per-frame CSV", type="primary"):
+        if st.button(
+            "MAKE MASTERSTAR",
+            type="primary",
+            help="Detrend (/processed/lights) + plate solve + zarovnanie + per-frame CSV. Referenčný snímok z FITS QA.",
+        ):
             ap = Path(archive_path_override) if archive_path_override else None
             if ap is None:
                 st.warning("Please provide an archive path (or Import to Archive first).")
@@ -1690,26 +1655,70 @@ def render_live_view(
                 except Exception:
                     st.error("❌ Gaia DR3 databáza nenájdená. Prosím, nastavte cestu v Settings.")
                     return
-                from pipeline import _archive_preprocess_lights_root
 
-                if not _iter_vyvar_fits_under(_archive_preprocess_lights_root(ap)):
-                    _db_ms_exists = bool(_db_masterstar_path and Path(_db_masterstar_path).is_file())
-                    if not _db_ms_exists:
-                        st.warning(
-                            f"V **`{ap / 'processed' / 'lights'}`** (alebo staršie `{ap / 'detrended' / 'lights'}`) nie sú žiadne FITS. "
-                            "Krok 3 očakáva už spracované svetlá (kozmické lúče, pozadie…). "
-                            "Najprv spusti **Apply Calibration & Detrending** na tom istom archíve (po kroku **Analyze**)."
-                        )
+                def _sess_float_ms(key: str) -> float:
+                    try:
+                        return float(st.session_state.get(key, float("nan")))
+                    except (TypeError, ValueError):
+                        return float("nan")
+
+                _did = st.session_state.get("vyvar_last_draft_id")
+                _ira_ui = _sess_float_ms(_ra_key)
+                _ide_ui = _sess_float_ms(_de_key)
+                from pipeline import resolve_preprocess_target_coordinates
+
+                _ira, _ide = resolve_preprocess_target_coordinates(
+                    db=pipeline.db,
+                    draft_id=(int(_did) if _did is not None else None),
+                    ui_ra_deg=_ira_ui,
+                    ui_dec_deg=_ide_ui,
+                )
+                _coords_ok = (
+                    _ira is not None
+                    and _ide is not None
+                    and math.isfinite(float(_ira))
+                    and math.isfinite(float(_ide))
+                )
+                if not _coords_ok:
+                    st.warning(
+                        "Center RA/DE nie sú platné — vyplň polia vyššie alebo počkaj na dokončenie QC analýzy po importe "
+                        "(medián do `OBS_FILES`)."
+                    )
                 else:
-                    st.session_state["vyvar_pending_job"] = {
-                        "kind": "platesolve",
-                        "label": "Plate solving running…",
+                    _rfw_ui = float(st.session_state.get("fwhm_threshold", 0.0))
+                    _rfw = float(_rfw_ui) if _rfw_ui > 0.0 else 0.0
+                    if _rfw_ui > 0.0:
+                        log_event(f"DEBUG: MAKE MASTERSTAR FWHM limit (strict): UI={_rfw_ui:.3f} px")
+                    _did_int = int(_did) if _did is not None else None
+                    _ph = None
+                    if _did_int is not None:
+                        try:
+                            from pipeline import generate_observation_hash
+
+                            _ph = generate_observation_hash(pipeline.db, _did_int)
+                            st.session_state["vyvar_observation_processing_hash"] = _ph
+                        except Exception:  # noqa: BLE001
+                            _ph = None
+
+                    _j_ms: dict[str, Any] = {
+                        "kind": "make_masterstar",
+                        "label": "MAKE MASTERSTAR running…",
                         "archive_path": str(ap),
+                        "background_method": str(background_method),
+                        "poly_order": int(poly_order),
+                        "sigclip": float(sigclip),
+                        "objlim": float(objlim),
+                        "enable_lacosmic": bool(enable_lacosmic),
+                        "enable_background_flattening": bool(enable_background_flattening),
+                        "fwhm_limit_px": _rfw,
+                        "inject_pointing_ra_deg": _ira,
+                        "inject_pointing_dec_deg": _ide,
+                        "quality_filter_draft_id": (_did_int if _did_int is not None else None),
                         "max_control_points": int(max_ctrl),
                         "min_detected_stars": int(min_stars),
                         "max_detected_stars": int(max_stars),
                         "astrometry_api_key": "",
-                        "platesolve_backend": str(_backend_map.get(ps_backend, "vyvar")),
+                        "platesolve_backend": "vyvar",
                         "plate_solve_fov_deg": float(plate_fov_ui),
                         "max_extra_platesolve": int(max_extra_ps),
                         "catalog_match_max_sep_arcsec": float(cat_match_arc),
@@ -1723,14 +1732,14 @@ def render_live_view(
                         "draft_id": st.session_state.get("vyvar_last_draft_id"),
                         "catalog_local_gaia_only": True,
                         "build_masterstar_and_catalogs": True,
-                        "ram_align_catalog": True,
-                        "masterstar_candidate_paths": (
-                            _ms_paths if _build_ms else []
-                        ),
+                        "masterstar_candidate_paths": (_ms_paths if _build_ms else []),
                         "masterstar_selection_pct": float(_DEFAULT_MASTERSTAR_SELECTION_PCT),
                     }
+                    if _did_int is not None and _ph:
+                        _j_ms["processing_hash"] = _ph
+                        _j_ms["overwrite_qc_processing"] = True
+                    st.session_state["vyvar_pending_job"] = _j_ms
                     st.rerun()
-    # Krok 3 obsahuje celý flow: MASTERSTAR build → plate solve → alignment → per-frame CSV.
 
 
 def _iter_vyvar_fits_under(root: Path) -> list[Path]:
@@ -1786,6 +1795,8 @@ def main() -> None:
 
     vyvar_init_footer_state_if_missing()
     vyvar_footer_ph = st.empty()
+    st.session_state["vyvar_ui_rerender_footer"] = lambda: _vyvar_render_fixed_footer_into(vyvar_footer_ph)
+    _vyvar_render_fixed_footer_into(vyvar_footer_ph)
 
     page = st.sidebar.radio(
         "Navigation",
@@ -1861,7 +1872,12 @@ def main() -> None:
         ui_database_explorer.render_database_explorer(pipeline=pipeline)
     else:
         st.subheader("Settings")
-        st.caption("Edit paths and calibration validity. Values persist in `config.json`.")
+        st.caption(
+            "Edit paths and calibration validity. Values persist in `config.json`. "
+            "Paralelizmus (QC, preprocess, alignment, per-frame katalóg, voliteľná kalibrácia MP) je jednotný — "
+            "automaticky z CPU a RAM; env `VYVAR_PARALLEL_WORKERS` prepíše všetko, legacy `VYVAR_QC_PREPROCESS_WORKERS` "
+            "a `VYVAR_PER_FRAME_CSV_WORKERS` sa berú ako minimum, ak novší kľúč nie je nastavený."
+        )
 
         archive_root = st.text_input("Archive path", value=str(cfg.archive_root))
         calib_root = st.text_input("CalibrationLibrary path", value=str(cfg.calibration_library_root))
@@ -1922,14 +1938,6 @@ def main() -> None:
             value=str(getattr(cfg, "vsx_local_db_path", "") or ""),
             key="vyvar_vsx_local_db_path",
         )
-        if st.button("...", key="vyvar_pick_default_vsx_db"):
-            try:
-                _g = str(gaia_db_path or "").strip()
-                if _g:
-                    _p = Path(_g).expanduser().resolve()
-                    st.session_state["vyvar_vsx_local_db_path"] = str(_p.parent / "vyvar_vsx_local.db")
-            except Exception:  # noqa: BLE001
-                pass
         col_v1, col_v2 = st.columns([1, 3])
         with col_v1:
             if st.button("🔍 Test Connection", key="vyvar_test_vsx_local_db"):
@@ -1973,37 +1981,6 @@ def main() -> None:
             step=0.05,
         )
 
-        st.markdown("---")
-        st.subheader("QC / Preprocessing (paralelne)")
-        _ncpu = os.cpu_count()
-        _ncpu_s = str(_ncpu) if _ncpu is not None else "neznámy"
-        st.caption(
-            "Počet **logických procesorov** na tomto PC (Python `os.cpu_count()`): "
-            f"**{_ncpu_s}** — typicky daj workerov toľko, koľko máš jadier (alebo menej, ak šetríš RAM). "
-            "Hodnota sa ukladá do `config.json`. Ak je nastavená premenná prostredia `VYVAR_QC_PREPROCESS_WORKERS`, má prednosť."
-        )
-        qc_workers_save = st.number_input(
-            "Paralelné workery (Analyze / Preprocess)",
-            min_value=1,
-            max_value=32,
-            value=int(cfg.qc_preprocess_workers),
-            step=1,
-            help="1 = sekvenčne. Max 32 je horný limit v kóde.",
-        )
-        st.caption(
-            "Krok 3 (per-frame katalógové CSV): samostatné workery nižšie. Premenná `VYVAR_PER_FRAME_CSV_WORKERS` "
-            "má prednosť pred `per_frame_csv_workers` v config."
-        )
-        per_frame_csv_workers_save = st.number_input(
-            "Paralelné workery (krok 3 — DAO + CSV vedľa FITS)",
-            min_value=1,
-            max_value=32,
-            value=int(cfg.per_frame_csv_workers),
-            step=1,
-            help="Každý snímok: čítanie FITS, DAO, zhoda s Gaia/masterstars, zápis CSV. 4–8 často zrýchli druhú "
-            "polovicu kroku 3 oproti 1; viac workerov = viac RAM naraz.",
-        )
-
         if st.button("Save Settings", type="primary"):
             cfg.archive_root = Path(archive_root)
             cfg.calibration_library_root = Path(calib_root)
@@ -2014,8 +1991,6 @@ def main() -> None:
             cfg.gaia_db_path = str(gaia_db_path).strip()
             cfg.vsx_local_db_path = str(vsx_db_path).strip()
             cfg.vsx_variable_targets_mag_limit = float(vsx_mag_limit_save)
-            cfg.qc_preprocess_workers = int(max(1, min(32, int(qc_workers_save))))
-            cfg.per_frame_csv_workers = int(max(1, min(32, int(per_frame_csv_workers_save))))
             from config import save_config_json  # local import to avoid cycles
 
             save_config_json(cfg.project_root, cfg.to_json())

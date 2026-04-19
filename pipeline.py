@@ -73,6 +73,7 @@ from utils import (
     fits_header_has_celestial_wcs,
     header_key_is_celestial_wcs,
     iter_fits_paths_recursive,
+    masterstar_wcs_quality,
     maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel,
     normalize_telescope_focal_mm_for_plate_scale,
     plate_scale_arcsec_per_pixel,
@@ -84,11 +85,6 @@ from vyvar_platesolver import (
     _fits_header_parse_dec_deg,
     _fits_header_parse_ra_deg,
     pointing_hint_from_header as _pointing_hint_from_header,
-)
-from vyvar_astrometry_wsl import (
-    is_wsl_available,
-    masterstar_wcs_quality,
-    solve_field_wsl,
 )
 
 
@@ -233,25 +229,38 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _pipeline_ui_info(msg: str) -> None:
-    """Show an info line in Streamlit when available; always record via :func:`log_event`."""
+    """Log always; during a long job route to the bottom footer instead of ``st.info``."""
+    log_event(msg)
     try:
         import streamlit as st
 
+        fs = st.session_state.get("vyvar_footer_state")
+        if isinstance(fs, dict) and fs.get("running"):
+            st.session_state["vyvar_footer_state"] = {**fs, "status_detail": str(msg)[:800]}
+            _fn = st.session_state.get("vyvar_ui_rerender_footer")
+            if callable(_fn):
+                _fn()
+                return
         st.info(msg)
     except Exception:  # noqa: BLE001
         pass
-    log_event(msg)
 
 
 def _pipeline_ui_error(msg: str) -> None:
-    """Show an error line in Streamlit when available; always record via :func:`log_event`."""
+    """Log always; mirror text to footer during a running job, then ``st.error``."""
+    log_event(msg)
     try:
         import streamlit as st
 
+        fs = st.session_state.get("vyvar_footer_state")
+        if isinstance(fs, dict) and fs.get("running"):
+            st.session_state["vyvar_footer_state"] = {**fs, "status_detail": str(msg)[:800]}
+            _fn = st.session_state.get("vyvar_ui_rerender_footer")
+            if callable(_fn):
+                _fn()
         st.error(msg)
     except Exception:  # noqa: BLE001
         pass
-    log_event(msg)
 
 
 def _ensure_parent_dirs_for_aligned_fits(out_path: Path) -> None:
@@ -3508,7 +3517,9 @@ def _effective_saturation_limit(
     fallback_adu: float | None,
     equipment_saturate_adu: float | None = None,
 ) -> tuple[float | None, str]:
-    """Resolve saturation ceiling: header keywords → DATAMAX → equipment DB → BITPIX guess → config fallback."""
+    """Resolve saturation ceiling: header keywords → ``EQUIPMENTS`` / caller ``equipment_saturate_adu`` →
+    ``DATAMAX`` / ``MAXPIX`` → BITPIX guess → optional ``fallback_adu`` (call sites typically pass ``None``).
+    """
     import math
 
     lim = _saturate_limit_adu_from_header(hdr)
@@ -4203,8 +4214,7 @@ def _annotate_masterstars_flux_zones(
     except (TypeError, ValueError):
         nf = None
 
-    # Saturation: convert equipment limit to per-frame-equivalent for stacked MASTERSTAR.
-    # MASTERSTAR is a mean stack; a single-frame saturation level corresponds to ~sat / n_stack in the stack.
+    # Saturation: scale equipment limit by n_stack when a stacked reference is used (typical MASTERSTAR is one copied frame → n_stack=1).
     ns = int(n_stack) if n_stack is not None else 1
     ns = max(1, ns)
 
@@ -4764,12 +4774,6 @@ def detect_stars_match_master_reference(
         bfac = 1
 
     _fb_sat = fallback_saturate_adu
-    if _fb_sat is None:
-        try:
-            _cfg_sat = AppConfig()
-            _fb_sat = getattr(_cfg_sat, "photometry_fallback_saturate_adu", None)
-        except Exception:  # noqa: BLE001
-            _fb_sat = None
 
     sat_limit, sat_limit_src = _effective_saturation_limit(
         hdr, fallback_adu=_fb_sat, equipment_saturate_adu=equipment_saturate_adu
@@ -5185,8 +5189,8 @@ def detect_stars_and_match_catalog(
     below ``median + k × σ`` of the frame (sigma-clipped stats). Lower **k** keeps more faint detections
     (MASTERSTAR / ``config.json`` / DAO-STARS typicky **2.0–3.5**); higher **k** čistí šum pred matchom.
 
-    Saturation: (1) ``peak_max_adu`` vs resolved ceiling from header / ``EQUIPMENTS.SATURATE_ADU`` (before BITPIX)
-    / ``AppConfig.photometry_fallback_saturate_adu``; (2) **plateau core** — many pixels in the central 3×3
+    Saturation: (1) ``peak_max_adu`` vs resolved ceiling from FITS keywords / ``EQUIPMENTS.SATURATE_ADU`` (before BITPIX);
+    (2) **plateau core** — many pixels in the central 3×3
     near the local maximum (flat-top clipping, similar to a saturated radial profile). Row flags:
     ``saturated_from_peak``, ``saturated_plateau``, ``likely_saturated`` (OR), ``photometry_ok`` (not OR).
     """
@@ -5222,12 +5226,6 @@ def detect_stars_and_match_catalog(
     except Exception:  # noqa: BLE001
         _gaia_db_path = None
     _fb_sat = fallback_saturate_adu
-    if _fb_sat is None:
-        try:
-            _cfg_sat = AppConfig()
-            _fb_sat = getattr(_cfg_sat, "photometry_fallback_saturate_adu", None)
-        except Exception:  # noqa: BLE001
-            _fb_sat = None
     try:
         _cfg_cap = int(AppConfig().catalog_query_max_rows)
     except Exception:  # noqa: BLE001
@@ -6667,8 +6665,8 @@ def export_per_frame_catalogs(
     ``<platesolve_dir>/per_frame_catalog_index.csv`` lists every file and CSV path.
 
     **Performance:** each frame still runs DAO + catalog match + disk CSV write (dominant cost for many lights).
-    Parallelism: ``per_frame_csv_workers`` from ``app_config`` / ``config.json`` or env
-    ``VYVAR_PER_FRAME_CSV_WORKERS`` (env wins). When ``>1``, uses ``ProcessPoolExecutor`` (``spawn``); the
+    Parallelism: jednotný počet z ``app_config`` / env (``VYVAR_PARALLEL_WORKERS`` alebo legacy env, pozri
+    :func:`_vyvar_parallel_worker_count`). When ``>1``, uses ``ProcessPoolExecutor`` (``spawn``); the
     parent prefetches Gaia cone. Worker count is capped using ``psutil`` and
     ``per_frame_mp_reserve_ram_gb``. RAM handoff ``aligned_ram`` uses the same process pool with serialized
     headers + float32 pixels. Lower ``max_catalog_rows`` in the UI to reduce DAO work per file.
@@ -6928,8 +6926,8 @@ def export_per_frame_catalogs(
     )
     if n_workers > 1 and total > 1:
         LOGGER.info(
-            "Per-frame catalog: up to %s process worker(s); per_frame_csv_workers / env; "
-            "RAM cap: per_frame_mp_reserve_ram_gb + psutil",
+            "Per-frame catalog: up to %s process worker(s); jednotný parallel count + RAM cap (psutil); "
+            "env VYVAR_PARALLEL_WORKERS / legacy",
             n_workers,
         )
 
@@ -7665,7 +7663,7 @@ def generate_masterstar_and_catalog(
         if not masterstar_fits.is_file():
             raise FileNotFoundError(
                 f"MASTERSTAR plate-solve: v {platesolve_dir} chýba súbor {_ms_name}. "
-                "Najprv v sekcii Masterstar spusti mean / average / copy."
+                "Najprv spusti **MAKE MASTERSTAR** na archíve alebo vytvor MASTERSTAR inak (FITS QA → referenčný snímok)."
             )
         _match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
         if _match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
@@ -8231,22 +8229,6 @@ def generate_masterstar_and_catalog(
                 f"MASTERSTAR plate-solve zamietnutý: anizotropná mierka po retry ratio={scale_ratio2:.2f} (>{_aniso_thr})."
             )
 
-    # --- astrometry.net (WSL) fallback ak je VYVAR WCS „zlý“ (pomer mierky / odchýlka od očakávanej) ---
-    _anet_cfg = str(getattr(_cfg_ms, "astrometry_net_wsl_cfg", "") or "").strip() or "/home/uhlar/.config/astrometry.cfg"
-    _anet_enabled = bool(getattr(_cfg_ms, "astrometry_net_enabled", True))
-    _anet_to = int(getattr(_cfg_ms, "astrometry_net_timeout_sec", 180) or 180)
-    _anet_to = max(30, min(3600, _anet_to))
-    try:
-        _anet_scale_err = float(getattr(_cfg_ms, "astrometry_net_scale_err_pct", 15.0))
-    except (TypeError, ValueError):
-        _anet_scale_err = 15.0
-    _anet_scale_err = max(1.0, min(80.0, _anet_scale_err))
-    try:
-        _anet_radius = float(getattr(_cfg_ms, "astrometry_net_radius_deg", 3.0))
-    except (TypeError, ValueError):
-        _anet_radius = 3.0
-    _anet_radius = max(0.1, min(30.0, _anet_radius))
-
     _exp_scale_apx: float | None = None
     if _exp_arc is not None:
         try:
@@ -8292,51 +8274,11 @@ def generate_masterstar_and_catalog(
                 _se_s = str(_se)
             log_event(
                 f"MASTERSTAR WCS kvalita: zlá (ratio={_rq_s}, scale_err={_se_s}%) — "
-                "skúšam astrometry.net WSL fallback."
+                "pokračujem bez externého plate-solve (očakáva sa FITS metadáta / budúci blind solver)."
             )
     except Exception as _wq_exc:  # noqa: BLE001
         log_event(f"MASTERSTAR WCS check failed: {_wq_exc}")
         _wcs_ok = False
-
-    if not _wcs_ok and _anet_enabled:
-        if is_wsl_available():
-            if _mra is None or _mde is None or (not math.isfinite(float(_mra))) or (not math.isfinite(float(_mde))):
-                log_event("MASTERSTAR: astrometry.net WSL preskočený — chýba RA/Dec hint.")
-            else:
-                log_event("MASTERSTAR: spúšťam astrometry.net WSL solve-field...")
-                _ans = solve_field_wsl(
-                    fits_path=masterstar_fits,
-                    ra_hint_deg=float(_mra),
-                    dec_hint_deg=float(_mde),
-                    scale_arcsec_per_px=float(_exp_scale_apx),
-                    scale_err_pct=float(_anet_scale_err),
-                    radius_deg=float(_anet_radius),
-                    wsl_cfg=_anet_cfg,
-                    timeout_sec=int(_anet_to),
-                    anisotropy_max_ratio=float(_aniso_thr),
-                )
-                if _ans.get("success"):
-                    solve_meta["astrometry_net_wsl_fallback"] = True
-                    _sx_a = _ans.get("scale_x_arcsec")
-                    _sy_a = _ans.get("scale_y_arcsec")
-                    try:
-                        _sxa = float(_sx_a) if _sx_a is not None else float("nan")
-                        _sya = float(_sy_a) if _sy_a is not None else float("nan")
-                        log_event(
-                            "MASTERSTAR: astrometry.net WSL OK "
-                            f"(scale={_sxa:.3f}x{_sya:.3f} arcsec/px)"
-                        )
-                    except (TypeError, ValueError):
-                        log_event("MASTERSTAR: astrometry.net WSL OK (scale detail N/A)")
-                    with fits.open(masterstar_fits, memmap=False) as hdul:
-                        hdr = hdul[0].header.copy()
-                        data = np.array(hdul[0].data, dtype=np.float32, copy=True)
-                else:
-                    log_event(f"MASTERSTAR: astrometry.net WSL FAILED: {_ans.get('error', 'unknown')}")
-        else:
-            log_event("MASTERSTAR: WSL/solve-field nie je dostupný — skip astrometry.net fallback.")
-    elif not _wcs_ok:
-        log_event("MASTERSTAR: astrometry.net disabled v config — pokračujem so zlým WCS.")
 
     try:
         _pscale_adj = _try_rescale_masterstar_linear_wcs_to_expected_plate_scale(
@@ -8724,11 +8666,25 @@ def generate_masterstar_and_catalog(
                                 return float("nan")
                             return math.floor((float(v) / float(step)) + 0.5) * float(step)
 
-                        # Saturation threshold for MASTERSTAR
+                        # Saturation threshold for MASTERSTAR (FITS + EQUIPMENTS; no global config fallback)
                         sat_limit = det_meta.get("saturate_limit_adu")
                         if sat_limit is None:
-                            sat_limit = _saturate_limit_adu_from_header(hdr) or getattr(_cfg_ms, "photometry_fallback_saturate_adu", 65535.0)
-                        sat_thr = float(sat_limit) * float(saturate_level_fraction)
+                            _eq_sat_ms = equipment_saturate_adu
+                            if _eq_sat_ms is None and equipment_id is not None:
+                                _eq_sat_ms = _equipment_saturate_adu_from_db(equipment_id)
+                            sat_limit, _ = _effective_saturation_limit(
+                                hdr,
+                                fallback_adu=None,
+                                equipment_saturate_adu=_eq_sat_ms,
+                            )
+                        if (
+                            sat_limit is not None
+                            and math.isfinite(float(sat_limit))
+                            and float(sat_limit) > 0
+                        ):
+                            sat_thr = float(sat_limit) * float(saturate_level_fraction)
+                        else:
+                            sat_thr = float("inf")
 
                         rows_ms: list[dict[str, Any]] = []
                         det_ok = det.iloc[np.where(ok)[0]].reset_index(drop=True)
@@ -9355,8 +9311,8 @@ def _astrometry_align_impl_body(
             pass
     if not files:
         raise FileNotFoundError(
-            f"Chýbajú FITS v {detrended_root}. Krok 3 číta len **spracované** snímky. "
-            "Najprv spusti **Apply Calibration & Detrending** po kroku **Analyze** (zápis do "
+            f"Chýbajú FITS v {detrended_root}. Plate solve číta len **spracované** snímky. "
+            "Najprv spusti **MAKE MASTERSTAR** po kroku **Analyze** (zápis do "
             f"`{ap / 'processed' / 'lights'}` alebo staršie `{ap / 'detrended' / 'lights'}`)."
         )
 
@@ -9386,7 +9342,7 @@ def _astrometry_align_impl_body(
     _ps_root = platesolve_dir.parent
     _t_platesolve = time.time()
     if build_masterstar_and_catalogs:
-        _prog("platesolve/MASTERSTAR: build mean stack + plate-solve + katalógy…")
+        _prog("platesolve/MASTERSTAR: referenčný snímok + plate-solve + katalógy…")
         _cat_info_root = generate_masterstar_and_catalog(
             archive_path=ap,
             max_catalog_rows=int(max_catalog_rows),
@@ -9594,7 +9550,7 @@ def _astrometry_align_impl_body(
     )
 
     n_written_align = 1
-    n_align_workers = max(1, min(32, int(getattr(_cfg_align, "alignment_workers", 1))))
+    n_align_workers = _vyvar_parallel_worker_count(_cfg_align)
     align_tasks: list[tuple[str, int]] = []
     for frame_index_1based, fp in enumerate(files, start=1):
         if fp == ref_fp:
@@ -9964,8 +9920,8 @@ def astrometry_align_and_build_masterstar(
     log_event(f"Alignment input root: {det_top}")
     if not files_all:
         raise FileNotFoundError(
-            f"Chýbajú FITS v {det_top}. Krok 3 číta len **spracované** snímky. "
-            "Najprv spusti **Apply Calibration & Detrending** po kroku **Analyze** (zápis z "
+            f"Chýbajú FITS v {det_top}. Plate solve číta len **spracované** snímky. "
+            "Najprv spusti **MAKE MASTERSTAR** po kroku **Analyze** (zápis z "
             f"`{ap / 'calibrated' / 'lights'}` → `{ap / 'processed' / 'lights'}` alebo staršie `{ap / 'detrended' / 'lights'}`)."
         )
     job_list: list[dict[str, Any]] = []
@@ -11056,7 +11012,7 @@ def calibrate_lights_to_calibrated(
     ``F_norm = flat / median(flat)``. Raw linearity keywords (SATURATE, DATAMAX, …) are dropped when any
     calibration is applied so headers stay consistent with the stored float image.
 
-    Parallelism uses ``max_workers`` or ``pipeline_config.qc_preprocess_workers`` only when environment
+    Parallelism uses ``max_workers`` or auto ``pipeline_config.qc_preprocess_workers`` only when environment
     variable ``VYVAR_CALIBRATE_MP`` is set to ``1``/``true`` (default is sequential for clearer tracebacks).
     """
     import numpy as np
@@ -11967,22 +11923,48 @@ def _qc_fwhm_elongation(
         return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
 
 
-def _vyvar_qc_preprocess_workers() -> int:
-    """Parallel workers for analyze / preprocess / combined.
+def _vyvar_parallel_worker_count(app_config: AppConfig | None = None) -> int:
+    """Jednotný počet workerov pre QC, preprocess, combined, alignment seed, per-frame CSV seed, calibrate MP.
 
-    Precedence: non-empty ``VYVAR_QC_PREPROCESS_WORKERS`` env → ``qc_preprocess_workers`` in ``config.json`` → 1.
+    Prednosť: ``VYVAR_PARALLEL_WORKERS`` → (ak sú obe) minimum z legacy ``VYVAR_QC_PREPROCESS_WORKERS`` a
+    ``VYVAR_PER_FRAME_CSV_WORKERS`` → ``app_config.qc_preprocess_workers`` (už zjednotené) → host auto z ``config``.
     """
-    env_raw = os.environ.get("VYVAR_QC_PREPROCESS_WORKERS")
-    if env_raw is not None and str(env_raw).strip() != "":
+    u = os.environ.get("VYVAR_PARALLEL_WORKERS")
+    if u is not None and str(u).strip() != "":
         try:
-            return max(1, min(32, int(str(env_raw).strip())))
+            return max(1, min(32, int(str(u).strip())))
         except ValueError:
             pass
+    legacy: list[int] = []
+    for key in ("VYVAR_QC_PREPROCESS_WORKERS", "VYVAR_PER_FRAME_CSV_WORKERS"):
+        raw = os.environ.get(key)
+        if raw is not None and str(raw).strip() != "":
+            try:
+                legacy.append(max(1, min(32, int(str(raw).strip()))))
+            except ValueError:
+                pass
+    if legacy:
+        return int(min(legacy))
+    if app_config is not None:
+        try:
+            return max(1, min(32, int(app_config.qc_preprocess_workers)))
+        except (TypeError, ValueError):
+            pass
+    from config import recommended_vyvar_parallel_workers
+
     data = load_config_json(Path(__file__).resolve().parent)
     try:
-        return max(1, min(32, int(data.get("qc_preprocess_workers", 1))))
+        res_gb = float(data.get("per_frame_mp_reserve_ram_gb", 1.5))
+        if not math.isfinite(res_gb) or res_gb < 0:
+            res_gb = 1.5
     except (TypeError, ValueError):
-        return 1
+        res_gb = 1.5
+    return int(recommended_vyvar_parallel_workers(reserve_ram_gb=res_gb))
+
+
+def _vyvar_qc_preprocess_workers() -> int:
+    """Parallel workers for analyze / preprocess / combined (see :func:`_vyvar_parallel_worker_count`)."""
+    return _vyvar_parallel_worker_count(None)
 
 
 def _estimate_catalog_frame_hw(
@@ -12035,25 +12017,10 @@ def _vyvar_cap_mp_workers_for_catalog(
 def _vyvar_per_frame_csv_workers(app_config: AppConfig | None = None) -> int:
     """Process workers for plate-solve step 3 per-frame catalog (DAO + match + CSV).
 
-    Precedence: non-empty ``VYVAR_PER_FRAME_CSV_WORKERS`` env → ``app_config.per_frame_csv_workers`` →
-    ``per_frame_csv_workers`` in ``config.json`` → 1.
+    Rovnaký základ ako QC/alignment (see :func:`_vyvar_parallel_worker_count`); ďalší strop podľa skutočnej veľkosti
+    snímku rieši ``_vyvar_cap_mp_workers_for_catalog``.
     """
-    env_raw = os.environ.get("VYVAR_PER_FRAME_CSV_WORKERS")
-    if env_raw is not None and str(env_raw).strip() != "":
-        try:
-            return max(1, min(32, int(str(env_raw).strip())))
-        except ValueError:
-            pass
-    if app_config is not None:
-        try:
-            return max(1, min(32, int(app_config.per_frame_csv_workers)))
-        except (TypeError, ValueError):
-            pass
-    data = load_config_json(Path(__file__).resolve().parent)
-    try:
-        return max(1, min(32, int(data.get("per_frame_csv_workers", 1))))
-    except (TypeError, ValueError):
-        return 1
+    return _vyvar_parallel_worker_count(app_config)
 
 
 def _analyze_calibrated_qc_one(
@@ -12365,8 +12332,8 @@ def preprocess_calibrated_to_processed(
     Optional ``inject_pointing_*``: write ``VYTARGRA`` / ``VYTARGDE`` (deg ICRS) into saved FITS headers
     for plate-solve hints when the frame has no celestial WCS yet (see ``vyvar_platesolver.pointing_hint_from_header``).
 
-    Parallelism: integer ``qc_preprocess_workers`` in ``config.json`` (Settings UI) or non-empty env
-    ``VYVAR_QC_PREPROCESS_WORKERS`` (env wins). ``>1`` defaults to ``ProcessPoolExecutor`` (true CPU
+    Parallelism: auto worker count from host CPU (capped) or non-empty env
+    ``VYVAR_PARALLEL_WORKERS`` / legacy env (pozri :func:`_vyvar_parallel_worker_count`). ``>1`` defaults to ``ProcessPoolExecutor`` (true CPU
     parallelism); set env ``VYVAR_PARALLEL_BACKEND=thread`` to use threads. Peak RAM scales roughly with
     the number of workers times per-frame working set.
     """
@@ -12436,7 +12403,7 @@ def preprocess_calibrated_to_processed(
     n_workers = _vyvar_qc_preprocess_workers()
     if n_workers > 1 and total > 1:
         LOGGER.info(
-            "VYVAR preprocess: VYVAR_QC_PREPROCESS_WORKERS=%s (paralelne; ~%s× RAM na snímok oproti 1 vláknu)",
+            "VYVAR preprocess: parallel_workers=%s (paralelne; ~%s× RAM na snímok oproti 1 vláknu)",
             n_workers,
             n_workers,
         )
@@ -12536,7 +12503,7 @@ def analyze_calibrated_qc(
 
     If ``max_frames`` is None, every light FITS under ``calibrated_root`` is analyzed.
 
-    Parallelism: ``qc_preprocess_workers`` in ``config.json`` or env ``VYVAR_QC_PREPROCESS_WORKERS`` (env wins);
+    Parallelism: jednotný počet workerov (auto CPU/RAM alebo env, pozri :func:`_vyvar_parallel_worker_count`);
     integer ``>1`` uses a process pool by default (``VYVAR_PARALLEL_BACKEND=thread`` for threads).
     """
     calibrated_root = Path(calibrated_root)
@@ -12555,7 +12522,7 @@ def analyze_calibrated_qc(
     n_workers = _vyvar_qc_preprocess_workers()
     if n_workers > 1 and total > 1:
         LOGGER.info(
-            "VYVAR QC analyze: VYVAR_QC_PREPROCESS_WORKERS=%s (paralelne; ~%s× RAM na snímok oproti 1 vláknu)",
+            "VYVAR QC analyze: parallel_workers=%s (paralelne; ~%s× RAM na snímok oproti 1 vláknu)",
             n_workers,
             n_workers,
         )
@@ -12625,7 +12592,7 @@ def analyze_preprocess_calibrated_combined(
     """One FITS read per light: full QC (as Analyze) plus detrended output (as Preprocess).
 
     Skips the duplicate disk read that occurs when running Analyze and Preprocess as two separate steps.
-    Honors ``qc_preprocess_workers`` in ``config.json`` or env ``VYVAR_QC_PREPROCESS_WORKERS`` (env wins).
+    Honors jednotný počet workerov (auto alebo env, pozri :func:`_vyvar_parallel_worker_count`).
     Defaults to process-based parallelism unless ``VYVAR_PARALLEL_BACKEND=thread``.
     """
     calibrated_root = Path(calibrated_root)
@@ -12646,7 +12613,7 @@ def analyze_preprocess_calibrated_combined(
     n_workers = _vyvar_qc_preprocess_workers()
     if n_workers > 1 and total > 1:
         LOGGER.info(
-            "VYVAR combined: VYVAR_QC_PREPROCESS_WORKERS=%s (paralelne; ~%s× RAM na snímok oproti 1 vláknu)",
+            "VYVAR combined: parallel_workers=%s (paralelne; ~%s× RAM na snímok oproti 1 vláknu)",
             n_workers,
             n_workers,
         )

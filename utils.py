@@ -9,6 +9,7 @@ import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from secrets import token_hex
+from typing import Any
 
 import numpy as np
 import astropy.units as u
@@ -533,6 +534,37 @@ def astrometry_net_scale_bounds_arcsec_per_pix(scale_arcsec_per_px: float) -> tu
         if hi <= lo:
             hi = min(180.0, lo * 1.25)
     return float(lo), float(hi)
+
+
+def masterstar_wcs_quality(
+    wcs: WCS,
+    expected_scale_arcsec: float,
+    *,
+    anisotropy_limit: float | None = None,
+) -> dict[str, Any]:
+    """Heuristic WCS sanity vs expected plate scale [arcsec/pix] (MASTERSTAR diagnostics)."""
+    _aniso_default = 1.3
+    try:
+        pm = wcs.pixel_scale_matrix
+        sx = abs(pm[0, 0]) * 3600
+        sy = abs(pm[1, 1]) * 3600
+        ratio = max(sx, sy) / max(min(sx, sy), 0.001)
+        mean_scale = (sx + sy) / 2.0
+        scale_err = abs(mean_scale - expected_scale_arcsec) / max(expected_scale_arcsec, 1e-9) * 100.0
+        _lim = float(anisotropy_limit) if anisotropy_limit is not None else float(_aniso_default)
+        if not math.isfinite(_lim) or _lim <= 0:
+            _lim = float(_aniso_default)
+        ok = ratio <= _lim and scale_err < 20.0
+        return {
+            "ok": ok,
+            "ratio": ratio,
+            "scale_x": sx,
+            "scale_y": sy,
+            "mean_scale": mean_scale,
+            "scale_err_pct": scale_err,
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "ratio": 999.0, "error": str(exc)}
 
 
 def maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel(

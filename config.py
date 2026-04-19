@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,35 @@ def load_config_json(project_root: Path) -> dict[str, Any]:
 def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
     path = config_json_path(project_root)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def recommended_vyvar_parallel_workers(*, reserve_ram_gb: float = 1.5) -> int:
+    """Jednotný počet workerov pre QC, preprocess, combined, per-frame CSV (základ pred RAM stropom), alignment, calibrate MP.
+
+    Berie minimum z CPU-heuristiky a odhadu podľa voľnej RAM (rovnaký odhad pamäte ako pri per-frame exporte),
+    aby jedna hodnota bola bezpečná v celom workflow.
+    """
+    n = os.cpu_count()
+    if n is None or n < 1:
+        n = 4
+    if n <= 1:
+        cpu_cap = 1
+    else:
+        cpu_cap = max(1, min(32, min(n - 1, 16, max(1, n // 2))))
+    h, wpx = 2048, 2048
+    per_worker = max(int(h * wpx * 4 * 3), 1)
+    try:
+        import psutil
+
+        reserve = int(max(0.0, float(reserve_ram_gb)) * (1024**3))
+        avail = int(psutil.virtual_memory().available) - reserve
+        if avail <= 0:
+            ram_cap = 1
+        else:
+            ram_cap = max(1, min(32, avail // per_worker))
+    except Exception:
+        ram_cap = 32
+    return max(1, min(32, min(cpu_cap, ram_cap)))
 
 
 @dataclass(slots=True)
@@ -79,10 +109,6 @@ class AppConfig:
     #: After a cone query, keep at most this many catalog rows (brightest by ``mag``) to avoid RAM/CPU freeze.
     catalog_query_max_rows: int = 15_000
 
-    #: If FITS has no ``SATURATE`` / ``MAXLIN`` / …, use this ceiling (ADU-like units) for ``likely_saturated``.
-    #: Typical binned 16-bit OSC: 65535. Set to 0 or omit in JSON to disable fallback (float stacks in e⁻ may need a different value).
-    photometry_fallback_saturate_adu: float | None = 65535.0
-
     #: Use ``photutils`` circular aperture + annulus sky (replaces DAO ``flux`` in sidecar CSV when enabled).
     aperture_photometry_enabled: bool = True
     #: Fáza 2A: ukladať PNG (lightcurve, cutout, field map). ``False`` = len CSV + summary; UI používa Plotly z CSV.
@@ -127,16 +153,6 @@ class AppConfig:
     #: Pri ``force_apply`` SIP: zamietnuť ak ``rms_sip > rms_linear * ratio``. ``None`` = bez stráže (pôvodné správanie).
     masterstar_sip_force_rms_guard_ratio: float | None = 1.15
 
-    #: Ak je True a WCS po VYVAR solve zlý (anizotropia / scale), skús ``solve-field`` v WSL (astrometry.net).
-    astrometry_net_enabled: bool = True
-    #: Cesta k ``astrometry.cfg`` vo WSL (Ubuntu), napr. ``/home/user/.config/astrometry.cfg``.
-    astrometry_net_wsl_cfg: str = "/home/uhlar/.config/astrometry.cfg"
-    #: Timeout [s] pre ``wsl solve-field`` pri MASTERSTAR fallback.
-    astrometry_net_timeout_sec: int = 180
-    #: Rozsah mierky pre ``solve-field --scale-low/--scale-high`` (± % okolo očakávanej mierky).
-    astrometry_net_scale_err_pct: float = 15.0
-    #: Polomer hintu pre ``solve-field --radius`` [deg].
-    astrometry_net_radius_deg: float = 3.0
     #: Pomer sx/sy (arcsec/px) — nad týmto sa považuje WCS za príliš anizotropný (VYVAR retry / diagnostika).
     platesolve_anisotropy_threshold: float = 1.3
 
@@ -145,19 +161,16 @@ class AppConfig:
     #: JSON key: ``force_pixel_size``; omit or null to use header only.
     force_pixel_size_um: float | None = None
 
-    #: Parallel workers for calibrated QC analyze / detrend preprocess / combined step (1–32). Persisted in ``config.json``.
-    #: Environment variable ``VYVAR_QC_PREPROCESS_WORKERS`` overrides this when set.
+    #: Paralelizmus (QC, preprocess, combined, základ per-frame CSV, alignment, calibrate MP): jedna hodnota
+    #: počítaná v ``__post_init__``; nie v ``config.json``. Runtime override: ``VYVAR_PARALLEL_WORKERS`` alebo legacy env v pipeline.
     qc_preprocess_workers: int = 1
-
-    #: Process workers for per-frame catalog CSV during plate-solve step 3 (DAO + match per FITS). Env ``VYVAR_PER_FRAME_CSV_WORKERS`` overrides.
     per_frame_csv_workers: int = 1
-    #: Process workers for frame alignment (``astroalign`` / WCS ``reproject_interp``) in step 3 (1–32). Default 1 = sequential.
     alignment_workers: int = 1
     #: Per-frame catalog matching: max sep [arcsec] for matching detections to the fixed master reference / cone catalog.
     #: Default is intentionally looser (20") so it works at coarse plate scales (~10"/px) and small residuals.
     per_frame_catalog_match_sep_arcsec: float = 20.0
 
-    #: Reserve this much RAM (GB) when capping ``per_frame_csv_workers`` via ``psutil`` (parallel catalog export).
+    #: Reserve this much RAM (GB) when capping paralelného exportu katalógov cez ``psutil`` (nad rámec jednotného ``_pw``).
     per_frame_mp_reserve_ram_gb: float = 1.5
 
     #: Frame alignment (``astroalign`` + DAO positions): max brightest sources offered as control points per frame.
@@ -234,12 +247,6 @@ class AppConfig:
             )
         except (TypeError, ValueError):
             self.catalog_query_max_rows = 15_000
-        _pfs = data.get("photometry_fallback_saturate_adu", 65535.0)
-        if _pfs is None or _pfs == "":
-            self.photometry_fallback_saturate_adu = None
-        else:
-            _pv = float(_pfs)
-            self.photometry_fallback_saturate_adu = _pv if _pv > 0 else None
 
         _fps = data.get("force_pixel_size", self.force_pixel_size_um)
         if _fps is None or _fps == "":
@@ -251,24 +258,6 @@ class AppConfig:
             except (TypeError, ValueError):
                 self.force_pixel_size_um = None
 
-        try:
-            self.qc_preprocess_workers = max(
-                1, min(32, int(data.get("qc_preprocess_workers", self.qc_preprocess_workers)))
-            )
-        except (TypeError, ValueError):
-            self.qc_preprocess_workers = 1
-        try:
-            self.per_frame_csv_workers = max(
-                1, min(32, int(data.get("per_frame_csv_workers", self.per_frame_csv_workers)))
-            )
-        except (TypeError, ValueError):
-            self.per_frame_csv_workers = 1
-        try:
-            self.alignment_workers = max(
-                1, min(32, int(data.get("alignment_workers", self.alignment_workers)))
-            )
-        except (TypeError, ValueError):
-            self.alignment_workers = 1
         _pfm = data.get(
             "per_frame_catalog_match_sep_arcsec",
             self.per_frame_catalog_match_sep_arcsec,
@@ -290,6 +279,13 @@ class AppConfig:
                 self.per_frame_mp_reserve_ram_gb = 1.5
         except (TypeError, ValueError):
             self.per_frame_mp_reserve_ram_gb = 1.5
+
+        _pw = int(
+            recommended_vyvar_parallel_workers(reserve_ram_gb=float(self.per_frame_mp_reserve_ram_gb))
+        )
+        self.qc_preprocess_workers = _pw
+        self.per_frame_csv_workers = _pw
+        self.alignment_workers = _pw
 
         try:
             self.alignment_max_stars = max(
@@ -485,33 +481,6 @@ class AppConfig:
             except (TypeError, ValueError):
                 self.masterstar_sip_force_rms_guard_ratio = 1.15
 
-        self.astrometry_net_enabled = bool(data.get("astrometry_net_enabled", self.astrometry_net_enabled))
-        _acfg = data.get("astrometry_net_wsl_cfg", self.astrometry_net_wsl_cfg)
-        self.astrometry_net_wsl_cfg = str(_acfg or "").strip() or "/home/uhlar/.config/astrometry.cfg"
-        try:
-            self.astrometry_net_timeout_sec = max(
-                30, min(3600, int(data.get("astrometry_net_timeout_sec", self.astrometry_net_timeout_sec)))
-            )
-        except (TypeError, ValueError):
-            self.astrometry_net_timeout_sec = 180
-        try:
-            self.astrometry_net_scale_err_pct = float(
-                data.get("astrometry_net_scale_err_pct", self.astrometry_net_scale_err_pct)
-            )
-            if not math.isfinite(self.astrometry_net_scale_err_pct):
-                self.astrometry_net_scale_err_pct = 15.0
-        except (TypeError, ValueError):
-            self.astrometry_net_scale_err_pct = 15.0
-        self.astrometry_net_scale_err_pct = max(1.0, min(80.0, float(self.astrometry_net_scale_err_pct)))
-        try:
-            self.astrometry_net_radius_deg = float(
-                data.get("astrometry_net_radius_deg", self.astrometry_net_radius_deg)
-            )
-            if not math.isfinite(self.astrometry_net_radius_deg):
-                self.astrometry_net_radius_deg = 3.0
-        except (TypeError, ValueError):
-            self.astrometry_net_radius_deg = 3.0
-        self.astrometry_net_radius_deg = max(0.1, min(30.0, float(self.astrometry_net_radius_deg)))
         try:
             self.platesolve_anisotropy_threshold = float(
                 data.get("platesolve_anisotropy_threshold", self.platesolve_anisotropy_threshold)
@@ -539,17 +508,9 @@ class AppConfig:
             "vsx_local_db_path": str(self.vsx_local_db_path or ""),
             "vsx_variable_targets_mag_limit": float(self.vsx_variable_targets_mag_limit),
             "catalog_query_max_rows": int(self.catalog_query_max_rows),
-            "photometry_fallback_saturate_adu": (
-                float(self.photometry_fallback_saturate_adu)
-                if self.photometry_fallback_saturate_adu is not None
-                else None
-            ),
             "force_pixel_size": (
                 float(self.force_pixel_size_um) if self.force_pixel_size_um is not None else None
             ),
-            "qc_preprocess_workers": int(self.qc_preprocess_workers),
-            "per_frame_csv_workers": int(self.per_frame_csv_workers),
-            "alignment_workers": int(self.alignment_workers),
             "per_frame_catalog_match_sep_arcsec": float(self.per_frame_catalog_match_sep_arcsec),
             "per_frame_mp_reserve_ram_gb": float(self.per_frame_mp_reserve_ram_gb),
             "alignment_max_stars": int(self.alignment_max_stars),
@@ -613,11 +574,6 @@ class AppConfig:
                 if self.masterstar_sip_force_rms_guard_ratio is not None
                 else None
             ),
-            "astrometry_net_enabled": bool(self.astrometry_net_enabled),
-            "astrometry_net_wsl_cfg": str(self.astrometry_net_wsl_cfg or ""),
-            "astrometry_net_timeout_sec": int(self.astrometry_net_timeout_sec),
-            "astrometry_net_scale_err_pct": float(self.astrometry_net_scale_err_pct),
-            "astrometry_net_radius_deg": float(self.astrometry_net_radius_deg),
             "platesolve_anisotropy_threshold": float(self.platesolve_anisotropy_threshold),
         }
 

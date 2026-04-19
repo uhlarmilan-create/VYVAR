@@ -517,27 +517,35 @@ def render_aperture_photometry(
             st.error(f"❌ Chýbajú súbory: {', '.join(missing)}")
         else:
             from photometry_phase2a import run_phase2a
+            from vyvar_ui_status import vyvar_footer_idle, vyvar_footer_running
 
-            with st.spinner("Prebieha Fáza 2A — aperturná fotometria..."):
-                try:
-                    result = run_phase2a(
-                        masterstar_fits_path=ms_fits,
-                        active_targets_csv=at_csv,
-                        comparison_stars_csv=comp_csv,
-                        per_frame_csv_dir=pf_dir,
-                        detrended_aligned_dir=dt_dir,
-                        output_dir=output_dir,
-                        fwhm_px=fwhm_px,
-                        cfg=cfg,
-                    )
-                    st.success(
-                        f"✅ Hotovo: {result['n_lightcurves']} svetelných kriviek "
-                        f"z {result['n_frames']} snímok."
-                    )
-                    st.rerun()
-                except Exception as exc:  # noqa: BLE001
-                    st.error(f"❌ Chyba: {exc}")
-                    logging.exception("Fáza 2A zlyhala")
+            try:
+                vyvar_footer_running("Fáza 2A", "Štartujem aperturnú fotometriu…")
+
+                def _p2a_ui(msg: str) -> None:
+                    vyvar_footer_running("Fáza 2A", msg)
+
+                result = run_phase2a(
+                    masterstar_fits_path=ms_fits,
+                    active_targets_csv=at_csv,
+                    comparison_stars_csv=comp_csv,
+                    per_frame_csv_dir=pf_dir,
+                    detrended_aligned_dir=dt_dir,
+                    output_dir=output_dir,
+                    fwhm_px=fwhm_px,
+                    cfg=cfg,
+                    progress_cb=_p2a_ui,
+                )
+                st.success(
+                    f"✅ Hotovo: {result['n_lightcurves']} svetelných kriviek "
+                    f"z {result['n_frames']} snímok."
+                )
+                st.rerun()
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"❌ Chyba: {exc}")
+                logging.exception("Fáza 2A zlyhala")
+            finally:
+                vyvar_footer_idle()
             return
 
     if not exists:

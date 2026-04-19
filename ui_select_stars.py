@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from photometry import run_phase0_and_phase1
+from vyvar_ui_status import vyvar_footer_idle, vyvar_footer_running
 
 if TYPE_CHECKING:
     from config import AppConfig
@@ -341,28 +342,35 @@ def render_select_stars(
 
     # ── Spustenie jobu ──
     if should_run:
-        with st.spinner("Prebieha Fáza 0+1 — výber cieľov a porovnávačiek..."):
-            try:
-                result = run_phase0_and_phase1(
-                    variable_targets_csv=vt_csv,
-                    masterstars_csv=ms_csv,
-                    per_frame_csv_dir=per_frame_dir,
-                    output_dir=output_dir,
-                    fwhm_px=fwhm_px,
+        try:
+            vyvar_footer_running("Fáza 0+1", "Štartujem výber cieľov a porovnávačiek…")
+
+            def _phase01_ui(msg: str) -> None:
+                vyvar_footer_running("Fáza 0+1", msg)
+
+            result = run_phase0_and_phase1(
+                variable_targets_csv=vt_csv,
+                masterstars_csv=ms_csv,
+                per_frame_csv_dir=per_frame_dir,
+                output_dir=output_dir,
+                fwhm_px=fwhm_px,
+                progress_cb=_phase01_ui,
+            )
+            st.success(
+                f"✅ Hotovo: {result['n_active_targets']} premenných, "
+                f"{result['n_comparison_pairs']} porovnávacích párov."
+            )
+            if result.get("targets_without_comps"):
+                st.warning(
+                    f"⚠️ {len(result['targets_without_comps'])} cieľov bez porovnávačiek: "
+                    f"{', '.join(result['targets_without_comps'][:5])}"
                 )
-                st.success(
-                    f"✅ Hotovo: {result['n_active_targets']} premenných, "
-                    f"{result['n_comparison_pairs']} porovnávacích párov."
-                )
-                if result.get("targets_without_comps"):
-                    st.warning(
-                        f"⚠️ {len(result['targets_without_comps'])} cieľov bez porovnávačiek: "
-                        f"{', '.join(result['targets_without_comps'][:5])}"
-                    )
-                st.rerun()
-            except Exception as exc:  # noqa: BLE001
-                st.error(f"❌ Chyba: {exc}")
-                logging.exception("Select Stars Fáza 0+1 zlyhala")
+            st.rerun()
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"❌ Chyba: {exc}")
+            logging.exception("Select Stars Fáza 0+1 zlyhala")
+        finally:
+            vyvar_footer_idle()
         return
 
     # ── Zobraz výsledky ──

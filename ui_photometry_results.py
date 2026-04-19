@@ -525,7 +525,7 @@ def _load_per_frame_sidecars(pipeline: Any, draft_id: int | None) -> pd.DataFram
     if not all_csvs:
         st.info(
             "Nenašli sa per-frame katalógové CSV. "
-            "Spusti Krok 3 (Plate solve + zarovnanie + per-frame CSV) v VARSTREM tabe."
+            "Spusti **MAKE MASTERSTAR** v záložke VAR-STREM."
         )
         return None
 
@@ -739,7 +739,7 @@ def render_aperture_results(pipeline: Any, draft_id: int | None) -> None:
     if comp_df.empty:
         st.warning(
             "comparison_stars.csv nie je k dispozícii — "
-            "spusti Krok 3 (Plate solve + katalóg)."
+            "spusti **MAKE MASTERSTAR** (plate solve + katalóg)."
         )
     elif var_df.empty:
         st.info(
@@ -965,7 +965,7 @@ def render_psf_results(pipeline: Any, draft_id: int | None) -> None:
     if comp_df.empty:
         st.warning(
             "comparison_stars.csv nie je k dispozícii — "
-            "spusti Krok 3 (Plate solve + katalóg)."
+            "spusti **MAKE MASTERSTAR** (plate solve + katalóg)."
         )
     elif var_df.empty:
         st.info(

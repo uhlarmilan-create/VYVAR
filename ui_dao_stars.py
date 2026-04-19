@@ -10,7 +10,7 @@ from config import AppConfig, save_config_json
 def render_dao_stars_dashboard(cfg: AppConfig) -> None:
     st.subheader("DAO-STARS")
     st.caption(
-        "**MASTERSTAR** (mean / average / copy → potom **MASTERSTARS**): dva prahy detekcie a rozsah **SIP** pri plate-solve. "
+        "**MASTERSTAR** referenčný snímok sa vyberá vo **FITS QA**; tu sú prahy detekcie a rozsah **SIP** pri plate-solve. "
         "Ukladá sa do **config.json**."
     )
 

@@ -129,7 +129,7 @@ def render_masterstar_selection_qc(
         f"v priečinku je spolu **{_total_proc}** FITS."
     )
     st.caption(
-        "Poradie určuje rovnaká logika ako pri tlačidlách **mean / average / copy** (astroalign + výber podľa kvality)."
+        "Poradie zodpovedá výberu vo **FITS QA** a metrikám kvality (FWHM a pod.), nie starým režimom skladania snímok."
     )
 
     cand_resolved = [str(p.resolve()) if p.exists() else str(p) for p in ranked]
@@ -139,7 +139,7 @@ def render_masterstar_selection_qc(
         show = pd.DataFrame({"Súbor (processed)": [p.name for p in ranked]})
         st.dataframe(show, use_container_width=True, hide_index=True)
     else:
-        st.warning("V `processed/lights` nie sú žiadne FITS — spusti **Apply** po kalibrácii.")
+        st.warning("V `processed/lights` nie sú žiadne FITS — spusti **MAKE MASTERSTAR** po kalibrácii.")
 
     return {
         "masterstar_candidate_paths": cand_resolved,
@@ -161,7 +161,7 @@ def render_photometric_grid_qa(*, pipeline: AstroPipeline, draft_id: int | None)
         st.error(str(exc))
         return
     if not rows:
-        st.info("MASTER_SOURCES je prázdne. Najprv vytvor MASTERSTAR (Krok 3).")
+        st.info("MASTER_SOURCES je prázdne. Najprv spusti **MAKE MASTERSTAR** v VAR-STREM.")
         return
     df = pd.DataFrame(rows)
     # Normalize cols

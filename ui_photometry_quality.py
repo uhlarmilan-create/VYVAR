@@ -88,7 +88,7 @@ def render_photometry_quality_diagnostic(*, pipeline: Any, draft_id: int | None)
     per_frame_root = ap / "detrended_aligned" / "lights"
 
     if not ms_path.is_file():
-        st.warning(f"Nenašiel som `{ms_path}`. Spusť Krok 3 (Plate solve + zarovnanie + per-frame CSV).")
+        st.warning(f"Nenašiel som `{ms_path}`. Spusti **MAKE MASTERSTAR** v záložke VAR-STREM.")
         return
 
     ms = _read_csv_cached(str(ms_path))
