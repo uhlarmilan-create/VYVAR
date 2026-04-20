@@ -294,15 +294,106 @@ def _first_fits_in_dir(folder: Path) -> Path | None:
     return files[0] if files else None
 
 
+_LIGHT_IMAGETYP = frozenset(
+    {
+        "light",
+        "light frame",
+        "lights",
+        "object",
+        "science",
+    }
+)
+
+
+def is_light_frame(header: Any) -> bool:
+    """Return True if primary header ``IMAGETYP`` denotes a science/light frame (exact token set)."""
+    try:
+        val = str(header.get("IMAGETYP", "")).strip().lower()
+    except Exception:
+        val = ""
+    return val in _LIGHT_IMAGETYP
+
+
 def _classify_imagetyp(value: Any) -> str:
-    t = str(value or "").lower()
-    if "light" in t:
-        return "light"
+    t = str(value or "").strip().lower()
     if "dark" in t:
         return "dark"
     if "flat" in t:
         return "flat"
+    if t in _LIGHT_IMAGETYP or "light" in t:
+        return "light"
     return "unknown"
+
+
+def _find_lights_subdirectory(session_root: Path) -> Path | None:
+    """Return ``Lights`` / ``lights`` child if present (case-insensitive folder name)."""
+    if not session_root.is_dir():
+        return None
+    return next(
+        (d for d in session_root.iterdir() if d.is_dir() and d.name.lower() == "lights"),
+        None,
+    )
+
+
+def _imaging_kind_for_file(fp: Path, db: VyvarDatabase | None) -> str:
+    """Classify one FITS as light/dark/flat/unknown using header cache or primary header."""
+    try:
+        st = fp.stat()
+    except OSError:
+        return "unknown"
+    if db is not None:
+        row = db.fits_header_cache_get_if_fresh(fp, file_size=int(st.st_size), mtime=float(st.st_mtime))
+        if row is not None:
+            return _classify_imagetyp(str(row.get("IMAGETYP") or ""))
+    try:
+        with fits.open(fp, memmap=False) as hdul:
+            hdr = hdul[0].header
+        imagetyp_raw = str(
+            hdr.get("IMAGETYP") or hdr.get("FRAME") or hdr.get("IMTYPE") or ""
+        )
+        return _classify_imagetyp(imagetyp_raw)
+    except Exception:  # noqa: BLE001
+        return "unknown"
+
+
+def _list_top_level_light_fits(source_dir: Path, db: VyvarDatabase | None = None) -> list[Path]:
+    """FITS directly under ``source_dir`` whose IMAGETYP classifies as light (non-recursive)."""
+    out: list[Path] = []
+    if not source_dir.is_dir():
+        return out
+    for fp in sorted(source_dir.iterdir(), key=lambda p: str(p).casefold()):
+        if not fp.is_file() or not path_suffix_is_fits(fp):
+            continue
+        if _imaging_kind_for_file(fp, db) == "light":
+            out.append(fp)
+    return out
+
+
+def _resolve_session_lights(
+    root: Path, *, db: VyvarDatabase | None = None
+) -> tuple[Path, list[Path]]:
+    """Resolve light FITS: prefer case-insensitive ``lights`` subfolder, else top-level light frames in ``root``.
+
+    Returns:
+        (container_dir, fits_paths) — ``container_dir`` is the ``lights`` folder or ``root`` for flat layout.
+
+    Raises:
+        FileNotFoundError: if neither yields light FITS.
+    """
+    if not root.exists() or not root.is_dir():
+        raise FileNotFoundError(f"Session root missing or not a directory: {root}")
+    lights_sub = _find_lights_subdirectory(root)
+    if lights_sub is not None:
+        files = _list_fits_files(lights_sub)
+        if files:
+            return lights_sub, files
+    files = _list_top_level_light_fits(root, db=db)
+    if files:
+        return root, files
+    raise FileNotFoundError(
+        "No light frames: add a 'lights' folder with FITS, or place OBJECT/science/light "
+        f"IMAGETYP FITS directly under: {root}"
+    )
 
 
 def _collect_fits_by_type(
@@ -317,14 +408,6 @@ def _collect_fits_by_type(
     seen: set[str] = set()
     pending_cache: list[tuple[Path, int, float, dict[str, Any], str, str | None]] = []
     _force_phys: float | None = None
-    try:
-        _cfp = AppConfig().force_pixel_size_um
-        if _cfp is not None:
-            _cfpv = float(_cfp)
-            if _cfpv > 0 and math.isfinite(_cfpv):
-                _force_phys = _cfpv
-    except Exception:  # noqa: BLE001
-        _force_phys = None
     for fp in source_root.rglob("*"):
         if not fp.is_file():
             continue
@@ -2012,16 +2095,9 @@ def plan_session_import(
 ) -> dict[str, Any]:
     """Plan import without writing to DB (used by Streamlit UI)."""
     root = Path(session_root)
-    lights_dir = root / "lights"
+    lights_dir, lights_files = _resolve_session_lights(root, db=db)
     darks_dir = root / "darks"
     flats_dir = root / "flats"
-
-    if not lights_dir.exists() or not lights_dir.is_dir():
-        raise FileNotFoundError(f"Missing 'lights' subdirectory under: {root}")
-
-    lights_files = _list_fits_files(lights_dir)
-    if not lights_files:
-        raise FileNotFoundError(f"'lights' contains no FITS files: {lights_dir}")
 
     first_light = lights_files[0]
     metadata = extract_fits_metadata(first_light, db=db)
@@ -2180,16 +2256,9 @@ def import_session(
     - Create OBSERVATION record and write import log columns (paths + imported timestamp).
     """
     root = Path(session_root)
-    lights_dir = root / "lights"
+    lights_dir, lights_files = _resolve_session_lights(root, db=pipeline.db)
     darks_dir = root / "darks"
     flats_dir = root / "flats"
-
-    if not lights_dir.exists() or not lights_dir.is_dir():
-        raise FileNotFoundError(f"Missing 'lights' subdirectory under: {root}")
-
-    lights_files = _list_fits_files(lights_dir)
-    if not lights_files:
-        raise FileNotFoundError(f"'lights' contains no FITS files: {lights_dir}")
 
     first_light = lights_files[0]
     metadata = extract_fits_metadata(first_light, db=pipeline.db, app_config=pipeline.config)

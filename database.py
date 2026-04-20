@@ -3036,14 +3036,23 @@ class VyvarDatabase:
         draft_id: int,
         updates: list[tuple[int, int]],
     ) -> None:
-        """``updates`` = list of (row_id, is_rejected 0/1)."""
+        """``updates`` = list of (row_id, is_rejected 0/1).
+
+        Uses a short-lived connection so this stays valid when Streamlit
+        ``data_editor`` ``on_change`` runs on a worker thread (not the thread
+        that created ``self.conn``).
+        """
         did = int(draft_id)
-        for rid, rej in updates:
-            self.conn.execute(
-                "UPDATE OBS_FILES SET IS_REJECTED = ? WHERE ID = ? AND DRAFT_ID = ?;",
-                (1 if int(rej) else 0, int(rid), did),
-            )
-        self.conn.commit()
+        con = sqlite3.connect(self.db_path)
+        try:
+            for rid, rej in updates:
+                con.execute(
+                    "UPDATE OBS_FILES SET IS_REJECTED = ? WHERE ID = ? AND DRAFT_ID = ?;",
+                    (1 if int(rej) else 0, int(rid), did),
+                )
+            con.commit()
+        finally:
+            con.close()
 
     def _normalize_obs_file_path_key(self, p: str | Path) -> str:
         try:

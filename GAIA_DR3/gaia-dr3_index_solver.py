@@ -1,19 +1,12 @@
 """
-VYVAR — Blind Solver Index Builder
-===================================
+VYVAR — Blind Solver Index Builder (High Performance)
+====================================================
 Generuje gaia_triangles.pkl z lokálnej Gaia DR3 SQLite databázy.
-
-Spustenie:
-    python build_gaia_blind_index.py
-
-Výstup:
-    C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\gaia_triangles.pkl
-
-Požiadavky:
-    pip install numpy scipy pandas tqdm
+Optimalizované pre hlboké katalógy (mag 13.5+) a nízku spotrebu RAM.
 """
 
 import sqlite3
+import sys
 import numpy as np
 import pandas as pd
 from scipy.spatial import KDTree
@@ -22,195 +15,159 @@ import pickle
 import os
 import time
 import math
+from tqdm import tqdm
 
 # ─── KONFIGURÁCIA ─────────────────────────────────────────────────────────────
 
 DB_PATH    = r"C:\ASTRO\python\VYVAR\GAIA_DR3\vyvar_gaia_dr3.db"
 OUTPUT_PKL = r"C:\ASTRO\python\VYVAR\GAIA_DR3\gaia_triangles.pkl"
 
-MAG_LIMIT       = 12.0   # Hviezdy jasnejšie ako táto hodnota idú do indexu
-K_NEIGHBORS     = 7      # Počet susedov (vrátane samotnej hviezdy) → C(6,3)=20 trojuholníkov
-MIN_RATIO       = 0.15   # Minimálny pomer L1/L3 (filtruje príliš štíhle trojuholníky)
-TOLERANCE_UPPER = 0.005  # Horná tolerancia pri vyhľadávaní (použiješ v solveri)
+MAG_LIMIT       = 14.0  # Hĺbka katalógu
+K_NEIGHBORS     = 8     # 5 susedov = 10 kombinácií na hviezdu (ideálny pomer rýchlosť/presnosť)
+MIN_RATIO       = 0.15  # Filtruje "ihlicové" trojuholníky
+# Euklidovská tolerancia v normalizovanom 3D priestore (r1,r2 v [0,1], log_L3_norm v [0,1])
+TOLERANCE_UPPER = 0.002
 
 # ─── POMOCNÉ FUNKCIE ──────────────────────────────────────────────────────────
 
-def angular_distance_approx(p1, p2):
-    """
-    Aproximatívna uhlová vzdialenosť v stupňoch (ra_adj, dec) priestore.
-    Presná pre malé uhly (< 20°).
-    """
-    return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
-
-
 def triangle_hash(p0, p1, p2):
+    """3D hash: tvar (L1/L3, L2/L3) + log10 fyzickej veľkosti L3 v arcsekundách.
+
+    p0/p1/p2 sú body v 3D kartézskych súradniciach na jednotkovej sfére.
+    Euklidovská vzdialenosť medzi bodmi je pre malé uhly ~ θ (v radiánoch),
+    preto L3 prepočítame na arcsekundy cez radians → degrees → arcsec.
     """
-    Vypočíta trojuholníkový hash (L1/L3, L2/L3) invariantný voči
-    rotácii, mierke a posunu.
-
-    Vstup: tri body v (ra_adj, dec) priestore.
-    Výstup: (r1, r2) tuple alebo None ak je trojuholník degenerovaný.
-    """
-    d01 = angular_distance_approx(p0, p1)
-    d12 = angular_distance_approx(p1, p2)
-    d02 = angular_distance_approx(p0, p2)
-
-    sides = sorted([d01, d12, d02])  # [L1, L2, L3], L1 ≤ L2 ≤ L3
-
+    d01 = math.sqrt((p0[0] - p1[0]) ** 2 + (p0[1] - p1[1]) ** 2 + (p0[2] - p1[2]) ** 2)
+    d12 = math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2)
+    d02 = math.sqrt((p0[0] - p2[0]) ** 2 + (p0[1] - p2[1]) ** 2 + (p0[2] - p2[2]) ** 2)
+    sides = sorted([d01, d12, d02])
     L1, L2, L3 = sides
-    if L3 < 1e-7:
-        return None  # Degenerovaný (hviezdy na rovnakom mieste)
-
-    r1 = L1 / L3
-    r2 = L2 / L3
-
+    if L3 < 1e-8:
+        return None
+    r1, r2 = L1 / L3, L2 / L3
     if r1 < MIN_RATIO:
-        return None  # Príliš štíhly trojuholník → nestabilný hash
-
-    return (r1, r2)
-
+        return None
+    # d ≈ θ (rad) pre malé uhly (na jednotkovej sfére)
+    L3_arcsec = L3 * (180.0 / math.pi) * 3600.0
+    if L3_arcsec < 0.1:
+        return None
+    log_L3 = math.log10(L3_arcsec)
+    return (float(r1), float(r2), float(log_L3))
 
 # ─── HLAVNÁ FUNKCIA ───────────────────────────────────────────────────────────
 
-def build_blind_index(db_path: str, output_pkl: str):
-    print("=" * 60)
-    print("  VYVAR Blind Solver — Index Builder")
-    print("=" * 60)
+def build_blind_index():
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
 
-    # 1. Načítanie hviezd z DB
-    if not os.path.exists(db_path):
-        print(f"❌  Databáza nenájdená: {db_path}")
+    print(f"{'='*60}\n VYVAR Blind Solver — Index Builder (Optimized)\n{'='*60}")
+
+    if not os.path.exists(DB_PATH):
+        print(f"❌ Databáza nenájdená: {DB_PATH}")
         return
 
-    print(f"\n📂  Načítavam hviezdy (g_mag ≤ {MAG_LIMIT}) z:\n    {db_path}")
+    # 1. Načítanie dát
     t0 = time.time()
-
-    conn = sqlite3.connect(db_path)
-    df = pd.read_sql_query(
-        f"SELECT ra, dec, g_mag FROM gaia_dr3 WHERE g_mag <= {MAG_LIMIT} ORDER BY g_mag",
-        conn,
-    )
+    conn = sqlite3.connect(DB_PATH)
+    query = f"SELECT ra, dec FROM gaia_dr3 WHERE g_mag <= {MAG_LIMIT}"
+    df = pd.read_sql_query(query, conn)
     conn.close()
-
+    
     n_stars = len(df)
-    print(f"✅  Načítaných hviezd: {n_stars:,}  ({time.time()-t0:.1f}s)")
+    print(f"✅ Načítaných {n_stars:,} hviezd za {time.time()-t0:.1f}s")
 
-    if n_stars < 10:
-        print("❌  Príliš málo hviezd. Skontroluj DB a MAG_LIMIT.")
-        return
+    # 2. Projekcia súradníc pre KDTree susedov
+    # 3D kartézske súradnice na jednotkovej sfére eliminujú RA wrap-around (0°/360°).
+    ra_rad = np.radians(df["ra"].values)
+    dec_rad = np.radians(df["dec"].values)
+    x = np.cos(dec_rad) * np.cos(ra_rad)
+    y = np.cos(dec_rad) * np.sin(ra_rad)
+    z = np.sin(dec_rad)
+    coords_search = np.column_stack([x, y, z]).astype(np.float64)
+    coords_real = df[["ra", "dec"]].values.astype(np.float32)
 
-    # 2. Príprava súradníc
-    # ra_adj kompenzuje zužovanie poludníkov smerom k pólu
-    df["ra_adj"] = df["ra"] * np.cos(np.radians(df["dec"]))
-
-    coords_search = df[["ra_adj", "dec"]].to_numpy(dtype=np.float64)   # Pre KDTree susedov
-    coords_real   = df[["ra",     "dec"]].to_numpy(dtype=np.float32)   # Pre metadata (ukladáme)
-
-    # 3. Stavba KDTree pre hľadanie susedov
-    print(f"\n🌳  Staviam KDTree pre {n_stars:,} hviezd...")
-    t1 = time.time()
+    # 3. KDTree pre susedov
+    print("🌳 Staviam KDTree susedov...")
     neighbor_tree = KDTree(coords_search)
-    print(f"✅  KDTree hotový ({time.time()-t1:.1f}s)")
 
-    # 4. Generovanie trojuholníkov
-    print(f"\n🔺  Generujem trojuholníky (k={K_NEIGHBORS-1} susedov)...")
-    print(f"    Odhadovaný počet trojuholníkov: ~{n_stars * 20 // 3:,}")
+    # 4. Vektorizované hľadanie susedov (Extrémne rýchle)
+    print(f"🔍 Hľadám {K_NEIGHBORS} najbližších susedov pre každú hviezdu...")
+    _, all_indices = neighbor_tree.query(coords_search, k=K_NEIGHBORS)
 
-    hashes_list   = []
+    # 5. Generovanie hashov
+    hashes_list = []
     metadata_list = []
-    seen_combos   = set()
-
-    t2 = time.time()
-    report_every = max(1, n_stars // 20)  # Výpis každých 5%
-
-    # Pokus o tqdm, ak nie je dostupný, ide bez neho
-    try:
-        from tqdm import tqdm
-        iterator = tqdm(range(n_stars), desc="Hviezdy", unit="⭐")
-    except ImportError:
-        iterator = range(n_stars)
-
-    for i in iterator:
-        _, indices = neighbor_tree.query(coords_search[i], k=K_NEIGHBORS)
-
-        for combo in itertools.combinations(sorted(indices.tolist()), 3):
-            if combo in seen_combos:
+    
+    # Predvypočítané kombinácie indexov (napr. 0,1,2; 0,1,3...)
+    combos = list(itertools.combinations(range(K_NEIGHBORS), 3))
+    
+    print(f"🔺 Generujem trojuholníky...")
+    # NEPOUŽÍVAME seen_combos set -> šetríme gigabajty RAM a CPU čas
+    for i in tqdm(range(n_stars)):
+        neighbor_idx = all_indices[i]
+        
+        for c in combos:
+            # i_tri obsahuje indexy 3 hviezd v hlavnom poli
+            i_tri = neighbor_idx[list(c)]
+            
+            # Aby sme minimalizovali duplicity bez set(), 
+            # spracujeme trojuholník len vtedy, ak 'i' je najmenší z jeho indexov
+            if i != np.min(i_tri):
                 continue
-            seen_combos.add(combo)
-
-            p = coords_search[list(combo)]
+                
+            p = coords_search[i_tri]
             h = triangle_hash(p[0], p[1], p[2])
-            if h is None:
-                continue
 
-            hashes_list.append(h)
-            # Stred trojuholníka v skutočných RA/Dec súradniciach
-            metadata_list.append(coords_real[list(combo)].mean(axis=0))
+            if h:
+                hashes_list.append(h)
+                # 8 hodnôt: [ra_centroid, dec_centroid, ra_A, dec_A, ra_B, dec_B, ra_C, dec_C]
+                cr = coords_real[i_tri]
+                metadata_list.append(
+                    [
+                        float(cr[:, 0].mean()),
+                        float(cr[:, 1].mean()),
+                        float(cr[0, 0]),
+                        float(cr[0, 1]),
+                        float(cr[1, 0]),
+                        float(cr[1, 1]),
+                        float(cr[2, 0]),
+                        float(cr[2, 1]),
+                    ]
+                )
 
-        # Progress bez tqdm
-        if not hasattr(iterator, '__tqdm__') and (i % report_every == 0):
-            pct = 100 * i / n_stars
-            elapsed = time.time() - t2
-            eta = (elapsed / max(i, 1)) * (n_stars - i)
-            print(f"    {pct:5.1f}%  trojuholníkov: {len(hashes_list):,}  ETA: {eta:.0f}s")
-
-    elapsed_gen = time.time() - t2
-    n_triangles = len(hashes_list)
-    print(f"\n✅  Trojuholníkov vygenerovaných: {n_triangles:,}  ({elapsed_gen:.1f}s)")
-
-    if n_triangles == 0:
-        print("❌  Žiadne trojuholníky. Skontroluj parametre.")
-        return
-
-    # 5. Konverzia na numpy arrays
-    print("\n🔢  Konvertujem na numpy arrays...")
-    hashes_arr   = np.array(hashes_list,   dtype=np.float32)
+    # 6. Finálna štruktúra: 3D hash (r1, r2, log_L3_norm) + metadata (8): ra_c,dec_c, …
+    print(f"🔢 Konvertujem {len(hashes_list):,} trojuholníkov...")
+    hashes_arr = np.array(hashes_list, dtype=np.float32)
     metadata_arr = np.array(metadata_list, dtype=np.float32)
 
-    mem_mb = (hashes_arr.nbytes + metadata_arr.nbytes) / 1024**2
-    print(f"    Pamäť arrays: {mem_mb:.1f} MB")
+    log_L3_min = float(hashes_arr[:, 2].min())
+    log_L3_max = float(hashes_arr[:, 2].max())
+    log_L3_range = max(log_L3_max - log_L3_min, 1e-6)
+    hashes_arr[:, 2] = (hashes_arr[:, 2] - log_L3_min) / log_L3_range
 
-    # 6. Stavba finálneho KDTree pre hľadanie
-    print("🌳  Staviam finálny KDTree na hashoch...")
-    t3 = time.time()
+    print("🌳 Staviam finálny 3D Hash-Tree (normalizovaný log L3)...")
     hash_tree = KDTree(hashes_arr)
-    print(f"✅  Hash KDTree hotový ({time.time()-t3:.1f}s)")
 
     # 7. Uloženie
     index_data = {
-        "tree":          hash_tree,
-        "metadata":      metadata_arr,   # shape (N, 2): [ra, dec] stredu trojuholníka
-        "mag_limit":     MAG_LIMIT,
-        "k_neighbors":   K_NEIGHBORS,
-        "min_ratio":     MIN_RATIO,
-        "tolerance":     TOLERANCE_UPPER,
-        "n_stars":       n_stars,
-        "n_triangles":   n_triangles,
+        "tree": hash_tree,
+        "metadata": metadata_arr,
+        "mag_limit": MAG_LIMIT,
+        "tolerance": TOLERANCE_UPPER,
+        "hash_dim": 3,
+        "log_L3_min": log_L3_min,
+        "log_L3_max": log_L3_max,
     }
 
-    os.makedirs(os.path.dirname(output_pkl), exist_ok=True)
-    print(f"\n💾  Ukladám do:\n    {output_pkl}")
-    t4 = time.time()
-    with open(output_pkl, "wb") as f:
+    with open(OUTPUT_PKL, "wb") as f:
         pickle.dump(index_data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    size_mb = os.path.getsize(output_pkl) / 1024**2
-    total   = time.time() - t0
-
-    print(f"✅  Hotovo!")
-    print()
-    print("=" * 60)
-    print(f"  📊  Hviezd v indexe:      {n_stars:>10,}")
-    print(f"  🔺  Trojuholníkov:         {n_triangles:>10,}")
-    print(f"  📦  Veľkosť súboru:        {size_mb:>9.1f} MB")
-    print(f"  ⏱️   Celkový čas:           {total:>9.1f} s")
-    print("=" * 60)
-    print()
-    print("ℹ️   Ďalší krok: použij tento index v solve_completely_blind()")
-    print(f"    Tolerancia pri vyhľadávaní: distance_upper_bound={TOLERANCE_UPPER}")
-
-
-# ─── VSTUPNÝ BOD ──────────────────────────────────────────────────────────────
+    total_time = time.time() - t0
+    print(f"{'='*60}\n✅ HOTOVO! Súbor: {os.path.basename(OUTPUT_PKL)}\n"
+          f"⏱️ Čas: {total_time:.1f}s | Trojuholníky: {len(hashes_arr):,}\n{'='*60}")
 
 if __name__ == "__main__":
-    build_blind_index(DB_PATH, OUTPUT_PKL)
+    build_blind_index()

@@ -12,7 +12,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from config import AppConfig
+from config import AppConfig, save_config_json
 from database import DraftTechnicalMetadataError
 from infolog import clear_log, ensure_infolog_logging, get_lines, log_event, last_job_snapshot
 from importer import smart_import_session, smart_scan_source
@@ -604,7 +604,10 @@ def render_live_view(
         # Mandatory validation: at least one Light found in the whole tree
         lights_bad = any(r.type == "Lights" and r.status in ("missing", "empty") for r in plan.scan_rows)
         if lights_bad:
-            st.error("Missing 'lights' directory! Import aborted.")
+            st.error(
+                "Nenašli sa žiadne light snímky (žiadny priečinok lights/Lights ani FITS s IMAGETYP "
+                "light/object/science v koreňovom adresári). Import zrušený."
+            )
 
         st.markdown("---")
         _banner_draft_id = (
@@ -1568,9 +1571,14 @@ def render_live_view(
     try:
         from pipeline import get_auto_fov
 
+        _did_fov = st.session_state.get("vyvar_last_draft_id")
+        _eq_fov = st.session_state.get("vyvar_last_import_equipment_id")
         _auto_fov = get_auto_fov(
             archive_path=Path(str(archive_path_override).strip()) if archive_path_override else None,
             masterstar_path=Path(_db_masterstar_path) if _db_masterstar_path else None,
+            database_path=cfg.database_path,
+            equipment_id=int(_eq_fov) if _eq_fov is not None else None,
+            draft_id=int(_did_fov) if _did_fov is not None else None,
         )
     except Exception:  # noqa: BLE001
         _auto_fov = None
@@ -1673,73 +1681,76 @@ def render_live_view(
                     ui_ra_deg=_ira_ui,
                     ui_dec_deg=_ide_ui,
                 )
-                _coords_ok = (
-                    _ira is not None
-                    and _ide is not None
-                    and math.isfinite(float(_ira))
-                    and math.isfinite(float(_ide))
-                )
-                if not _coords_ok:
-                    st.warning(
-                        "Center RA/DE nie sú platné — vyplň polia vyššie alebo počkaj na dokončenie QC analýzy po importe "
-                        "(medián do `OBS_FILES`)."
+                try:
+                    _coords_ok = (
+                        _ira is not None
+                        and _ide is not None
+                        and math.isfinite(float(_ira))
+                        and math.isfinite(float(_ide))
+                        and not (abs(float(_ira)) < 1e-9 and abs(float(_ide)) < 1e-9)
                     )
-                else:
-                    _rfw_ui = float(st.session_state.get("fwhm_threshold", 0.0))
-                    _rfw = float(_rfw_ui) if _rfw_ui > 0.0 else 0.0
-                    if _rfw_ui > 0.0:
-                        log_event(f"DEBUG: MAKE MASTERSTAR FWHM limit (strict): UI={_rfw_ui:.3f} px")
-                    _did_int = int(_did) if _did is not None else None
-                    _ph = None
-                    if _did_int is not None:
-                        try:
-                            from pipeline import generate_observation_hash
+                except (TypeError, ValueError):
+                    _coords_ok = False
+                if not _coords_ok:
+                    st.info(
+                        "Bez platného stredu RA/Dec (draft, UI alebo 0/0) sa do processed FITS nevpíše VYTARG; "
+                        "plate-solve použije **súradnice z hlavičky** referenčného snímku alebo **blind solver**."
+                    )
+                _rfw_ui = float(st.session_state.get("fwhm_threshold", 0.0))
+                _rfw = float(_rfw_ui) if _rfw_ui > 0.0 else 0.0
+                if _rfw_ui > 0.0:
+                    log_event(f"DEBUG: MAKE MASTERSTAR FWHM limit (strict): UI={_rfw_ui:.3f} px")
+                _did_int = int(_did) if _did is not None else None
+                _ph = None
+                if _did_int is not None:
+                    try:
+                        from pipeline import generate_observation_hash
 
-                            _ph = generate_observation_hash(pipeline.db, _did_int)
-                            st.session_state["vyvar_observation_processing_hash"] = _ph
-                        except Exception:  # noqa: BLE001
-                            _ph = None
+                        _ph = generate_observation_hash(pipeline.db, _did_int)
+                        st.session_state["vyvar_observation_processing_hash"] = _ph
+                    except Exception:  # noqa: BLE001
+                        _ph = None
 
-                    _j_ms: dict[str, Any] = {
-                        "kind": "make_masterstar",
-                        "label": "MAKE MASTERSTAR running…",
-                        "archive_path": str(ap),
-                        "background_method": str(background_method),
-                        "poly_order": int(poly_order),
-                        "sigclip": float(sigclip),
-                        "objlim": float(objlim),
-                        "enable_lacosmic": bool(enable_lacosmic),
-                        "enable_background_flattening": bool(enable_background_flattening),
-                        "fwhm_limit_px": _rfw,
-                        "inject_pointing_ra_deg": _ira,
-                        "inject_pointing_dec_deg": _ide,
-                        "quality_filter_draft_id": (_did_int if _did_int is not None else None),
-                        "max_control_points": int(max_ctrl),
-                        "min_detected_stars": int(min_stars),
-                        "max_detected_stars": int(max_stars),
-                        "astrometry_api_key": "",
-                        "platesolve_backend": "vyvar",
-                        "plate_solve_fov_deg": float(plate_fov_ui),
-                        "max_extra_platesolve": int(max_extra_ps),
-                        "catalog_match_max_sep_arcsec": float(cat_match_arc),
-                        "saturate_level_fraction": float(sat_level),
-                        "max_catalog_rows": int(max_cat_rows),
-                        "n_comparison_stars": 150,
-                        "faintest_mag_limit": faintest_mag_limit_auto,
-                        "dao_threshold_sigma": float(_dao_sigma_default),
-                        "dao_fwhm_px": float(_dao_fwhm_default),
-                        "id_equipment": int(platesolve_equipment_id),
-                        "draft_id": st.session_state.get("vyvar_last_draft_id"),
-                        "catalog_local_gaia_only": True,
-                        "build_masterstar_and_catalogs": True,
-                        "masterstar_candidate_paths": (_ms_paths if _build_ms else []),
-                        "masterstar_selection_pct": float(_DEFAULT_MASTERSTAR_SELECTION_PCT),
-                    }
-                    if _did_int is not None and _ph:
-                        _j_ms["processing_hash"] = _ph
-                        _j_ms["overwrite_qc_processing"] = True
-                    st.session_state["vyvar_pending_job"] = _j_ms
-                    st.rerun()
+                _j_ms: dict[str, Any] = {
+                    "kind": "make_masterstar",
+                    "label": "MAKE MASTERSTAR running…",
+                    "archive_path": str(ap),
+                    "background_method": str(background_method),
+                    "poly_order": int(poly_order),
+                    "sigclip": float(sigclip),
+                    "objlim": float(objlim),
+                    "enable_lacosmic": bool(enable_lacosmic),
+                    "enable_background_flattening": bool(enable_background_flattening),
+                    "fwhm_limit_px": _rfw,
+                    "inject_pointing_ra_deg": (float(_ira) if _coords_ok else None),
+                    "inject_pointing_dec_deg": (float(_ide) if _coords_ok else None),
+                    "quality_filter_draft_id": (_did_int if _did_int is not None else None),
+                    "max_control_points": int(max_ctrl),
+                    "min_detected_stars": int(min_stars),
+                    "max_detected_stars": int(max_stars),
+                    "astrometry_api_key": "",
+                    "platesolve_backend": "vyvar",
+                    "plate_solve_fov_deg": float(plate_fov_ui),
+                    "max_extra_platesolve": int(max_extra_ps),
+                    "catalog_match_max_sep_arcsec": float(cat_match_arc),
+                    "saturate_level_fraction": float(sat_level),
+                    "max_catalog_rows": int(max_cat_rows),
+                    "n_comparison_stars": 150,
+                    "faintest_mag_limit": faintest_mag_limit_auto,
+                    "dao_threshold_sigma": float(_dao_sigma_default),
+                    "dao_fwhm_px": float(_dao_fwhm_default),
+                    "id_equipment": int(platesolve_equipment_id),
+                    "draft_id": st.session_state.get("vyvar_last_draft_id"),
+                    "catalog_local_gaia_only": True,
+                    "build_masterstar_and_catalogs": True,
+                    "masterstar_candidate_paths": (_ms_paths if _build_ms else []),
+                    "masterstar_selection_pct": float(_DEFAULT_MASTERSTAR_SELECTION_PCT),
+                }
+                if _did_int is not None and _ph:
+                    _j_ms["processing_hash"] = _ph
+                    _j_ms["overwrite_qc_processing"] = True
+                st.session_state["vyvar_pending_job"] = _j_ms
+                st.rerun()
 
 
 def _iter_vyvar_fits_under(root: Path) -> list[Path]:
@@ -1873,31 +1884,14 @@ def main() -> None:
     else:
         st.subheader("Settings")
         st.caption(
-            "Edit paths and calibration validity. Values persist in `config.json`. "
-            "Paralelizmus (QC, preprocess, alignment, per-frame katalóg, voliteľná kalibrácia MP) je jednotný — "
-            "automaticky z CPU a RAM; env `VYVAR_PARALLEL_WORKERS` prepíše všetko, legacy `VYVAR_QC_PREPROCESS_WORKERS` "
-            "a `VYVAR_PER_FRAME_CSV_WORKERS` sa berú ako minimum, ak novší kľúč nie je nastavený."
+            "Hodnoty sa ukladajú do `config.json`. Paralelizmus (QC, preprocess, alignment, per-frame katalóg) je "
+            "jednotný — odvodený z CPU a RAM; `VYVAR_PARALLEL_WORKERS` prepíše predvolený počet workerov."
         )
 
-        archive_root = st.text_input("Archive path", value=str(cfg.archive_root))
-        calib_root = st.text_input("CalibrationLibrary path", value=str(cfg.calibration_library_root))
-        db_path = st.text_input("SQLite DB path", value=str(cfg.database_path))
-
-        st.markdown("---")
-        st.subheader("Calibration Validity")
-
-        new_dark = st.slider(
-            "MasterDark Validity (days)",
-            min_value=1,
-            max_value=3650,
-            value=int(cfg.masterdark_validity_days),
-        )
-        new_flat = st.slider(
-            "MasterFlat Validity (days)",
-            min_value=1,
-            max_value=3650,
-            value=int(cfg.masterflat_validity_days),
-        )
+        st.markdown("### Cesty a knižnica")
+        archive_root = st.text_input("archive_root", value=str(cfg.archive_root))
+        calib_root = st.text_input("calibration_library_root", value=str(cfg.calibration_library_root))
+        db_path = st.text_input("database_path", value=str(cfg.database_path))
 
         st.markdown("---")
         st.subheader("🌌 GAIA DR3 (VYVAR Local Catalog)")
@@ -1930,6 +1924,13 @@ def main() -> None:
                     st.error(str(exc))
         with col_g2:
             st.caption("Očakáva sa SQLite DB s tabuľkou `gaia_dr3` a indexmi `idx_ra`, `idx_dec`.")
+
+        blind_index_path = st.text_input(
+            "BLIND_INDEX_PATH (.pkl)",
+            value=str(getattr(cfg, "blind_index_path", "") or ""),
+            key="vyvar_blind_index_path",
+        )
+        st.caption("Cesta k súboru gaia_triangles.pkl (generovaný skriptom build_gaia_blind_index.py)")
 
         st.markdown("---")
         st.subheader("VSX lokálna databáza")
@@ -1973,12 +1974,88 @@ def main() -> None:
             help="Premenné hviezdy jasnejšie ako tento limit sa zapíšu do variable_targets.csv",
         )
 
-        plate_solve_fov_save = st.number_input(
-            "Predvolený priemer poľa ° (fallback, ak auto-FOV zlyhá)",
-            min_value=0.05,
-            max_value=30.0,
-            value=float(cfg.plate_solve_fov_deg),
-            step=0.05,
+        st.markdown("---")
+        st.markdown("### Kalibrácia")
+        new_dark = st.slider(
+            "masterdark_validity_days",
+            min_value=1,
+            max_value=3650,
+            value=int(cfg.masterdark_validity_days),
+        )
+        new_flat = st.slider(
+            "masterflat_validity_days",
+            min_value=1,
+            max_value=3650,
+            value=int(cfg.masterflat_validity_days),
+        )
+        _cln_none = st.checkbox(
+            "calibration_library_native_binning: čítať z každého master FITS (JSON null)",
+            value=cfg.calibration_library_native_binning is None,
+            key="vyvar_settings_cl_bin_null",
+        )
+        new_cl_bin = st.number_input(
+            "calibration_library_native_binning (1–16, ak nie je „z FITS“)",
+            min_value=1,
+            max_value=16,
+            value=int(cfg.calibration_library_native_binning or 1),
+            disabled=bool(_cln_none),
+            key="vyvar_settings_cl_bin",
+        )
+
+        st.markdown("---")
+        st.markdown("### QC")
+        qc_after_cal = st.checkbox(
+            "qc_after_calibrate_enabled",
+            value=bool(cfg.qc_after_calibrate_enabled),
+            help="Po kalibrácii: QC metriky (HFR, hviezdy, pozadie) na každom flatovanom light snímku.",
+        )
+        st.caption(
+            "Prah ``qc_max_background_rms`` je pokročilý — ostáva len v ``config.json`` (väčšinou ``null``); tu sa nenastavuje."
+        )
+        qc_hfr = st.slider("qc_max_hfr", min_value=0.5, max_value=20.0, value=float(cfg.qc_max_hfr), step=0.1)
+        qc_stars = st.slider("qc_min_stars", min_value=0, max_value=500, value=int(cfg.qc_min_stars), step=1)
+        cosmic_on = st.checkbox("cosmic_clean_enabled", value=bool(cfg.cosmic_clean_enabled))
+        cosmic_sig = st.slider("cosmic_sigclip", min_value=2.0, max_value=12.0, value=float(cfg.cosmic_sigclip), step=0.1)
+        cosmic_obj = st.slider("cosmic_objlim", min_value=1.0, max_value=20.0, value=float(cfg.cosmic_objlim), step=0.25)
+
+        st.markdown("---")
+        st.markdown("### Fotometria")
+        ap_fwhm = st.slider(
+            "aperture_fwhm_factor",
+            min_value=0.5,
+            max_value=6.0,
+            value=float(cfg.aperture_fwhm_factor),
+            step=0.1,
+        )
+        ann_in = st.slider(
+            "annulus_inner_fwhm",
+            min_value=1.0,
+            max_value=10.0,
+            value=float(cfg.annulus_inner_fwhm),
+            step=0.25,
+        )
+        ann_out = st.slider(
+            "annulus_outer_fwhm",
+            min_value=1.5,
+            max_value=12.0,
+            value=float(cfg.annulus_outer_fwhm),
+            step=0.25,
+        )
+        if ann_out <= ann_in:
+            st.warning("annulus_outer_fwhm musí byť väčší ako annulus_inner_fwhm — pri uložení sa upraví.")
+        nl_pct = st.slider(
+            "nonlinearity_peak_percentile",
+            min_value=0.0,
+            max_value=50.0,
+            value=float(cfg.nonlinearity_peak_percentile),
+            step=0.5,
+        )
+        nl_ratio = st.slider(
+            "nonlinearity_fwhm_ratio",
+            min_value=1.01,
+            max_value=3.0,
+            value=float(cfg.nonlinearity_fwhm_ratio),
+            step=0.01,
         )
 
         if st.button("Save Settings", type="primary"):
@@ -1987,18 +2064,33 @@ def main() -> None:
             cfg.database_path = Path(db_path)
             cfg.masterdark_validity_days = int(new_dark)
             cfg.masterflat_validity_days = int(new_flat)
-            cfg.plate_solve_fov_deg = float(plate_solve_fov_save)
+            cfg.calibration_library_native_binning = None if _cln_none else int(new_cl_bin)
             cfg.gaia_db_path = str(gaia_db_path).strip()
+            cfg.blind_index_path = str(blind_index_path).strip()
             cfg.vsx_local_db_path = str(vsx_db_path).strip()
             cfg.vsx_variable_targets_mag_limit = float(vsx_mag_limit_save)
-            from config import save_config_json  # local import to avoid cycles
+            cfg.qc_max_hfr = float(qc_hfr)
+            cfg.qc_min_stars = int(qc_stars)
+            cfg.qc_after_calibrate_enabled = bool(qc_after_cal)
+            cfg.cosmic_clean_enabled = bool(cosmic_on)
+            cfg.cosmic_sigclip = float(cosmic_sig)
+            cfg.cosmic_objlim = float(cosmic_obj)
+            cfg.aperture_fwhm_factor = float(max(0.5, min(6.0, ap_fwhm)))
+            cfg.annulus_inner_fwhm = float(max(1.0, min(10.0, ann_in)))
+            cfg.annulus_outer_fwhm = float(max(1.5, min(12.0, ann_out)))
+            if cfg.annulus_outer_fwhm <= cfg.annulus_inner_fwhm:
+                cfg.annulus_outer_fwhm = cfg.annulus_inner_fwhm + 1.0
+            cfg.nonlinearity_peak_percentile = float(max(0.0, min(50.0, nl_pct)))
+            cfg.nonlinearity_fwhm_ratio = float(max(1.01, min(3.0, nl_ratio)))
 
             save_config_json(cfg.project_root, cfg.to_json())
             cfg.ensure_base_dirs()
             st.success("Saved to config.json. Reloading UI…")
             st.rerun()
 
-        st.caption("Note: DB-backed settings were replaced by config.json for these fields.")
+        st.caption(
+            "Plate-solve FOV, mierka z arcsec/px a per-frame match sep sa odvodzujú z **FITS + DB** (nie sú v JSON)."
+        )
 
     _vyvar_render_fixed_footer_into(vyvar_footer_ph)
 

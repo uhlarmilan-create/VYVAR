@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from photometry import run_phase0_and_phase1
+from platesolve_ui_paths import default_bundle_dir, masterstars_csv_in_dir
 from vyvar_ui_status import vyvar_footer_idle, vyvar_footer_running
 
 if TYPE_CHECKING:
@@ -22,58 +23,64 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
-def _find_required_csvs(cfg: "AppConfig", draft_id: int | None) -> dict[str, Path | None]:
-    """Nájdi vstupné CSV súbory potrebné pre Fázu 0+1."""
+def _find_phase01_setups(cfg: "AppConfig", draft_id: int | None) -> dict[str, dict[str, Path | None]]:
+    """Všetky platesolve setupy s ``per_frame_catalog_index.csv`` a cesty pre Fázu 0+1."""
     if draft_id is None:
         return {}
     try:
         archive = Path(cfg.archive_root)
         draft_dir = archive / "Drafts" / f"draft_{int(draft_id):06d}"
         ps_dir = draft_dir / "platesolve"
-
-        # Nájdi observation group subdir
-        obs_group_dir: Path | None = None
-        for subdir in sorted(ps_dir.iterdir()):
-            if subdir.is_dir() and (subdir / "per_frame_catalog_index.csv").exists():
-                obs_group_dir = subdir
-                break
-
-        if obs_group_dir is None:
+        aligned_root = draft_dir / "detrended_aligned" / "lights"
+        if not ps_dir.is_dir():
             return {}
 
-        # Per-frame CSV adresár (aligned lights)
-        aligned_root = draft_dir / "detrended_aligned" / "lights"
-        per_frame_dir: Path | None = None
-        if aligned_root.exists():
-            for subdir in sorted(aligned_root.iterdir()):
-                if subdir.is_dir():
-                    per_frame_dir = subdir
-                    break
+        out: dict[str, dict[str, Path | None]] = {}
 
-        return {
-            "variable_targets_csv": obs_group_dir / "variable_targets.csv",
-            "masterstars_csv": ps_dir / "masterstars_full_match.csv",
-            "per_frame_csv_dir": per_frame_dir,
-            "output_dir": obs_group_dir / "photometry",
-        }
+        def _add_setup(obs_group_dir: Path) -> None:
+            name = obs_group_dir.name
+            per_frame_dir = (aligned_root / name) if (aligned_root / name).is_dir() else None
+            ms_csv = masterstars_csv_in_dir(obs_group_dir)
+            out[name] = {
+                "variable_targets_csv": obs_group_dir / "variable_targets.csv",
+                "masterstars_csv": ms_csv,
+                "per_frame_csv_dir": per_frame_dir,
+                "output_dir": obs_group_dir / "photometry",
+                "obs_group_dir": obs_group_dir,
+                "masterstar_fits": obs_group_dir / "MASTERSTAR.fits",
+            }
+
+        for subdir in sorted(ps_dir.iterdir()):
+            if subdir.is_dir() and (subdir / "per_frame_catalog_index.csv").is_file():
+                _add_setup(subdir)
+
+        return out
     except Exception:  # noqa: BLE001
         return {}
 
 
-def _load_fwhm_from_masterstar(cfg: "AppConfig", draft_id: int | None) -> float:
+def _default_setup_name(setups: dict[str, dict[str, Path | None]], cfg: "AppConfig", draft_id: int) -> str:
+    if not setups:
+        return ""
+    ps = Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}" / "platesolve"
+    pick = default_bundle_dir(ps)
+    if pick is not None and pick.name in setups:
+        return pick.name
+    r_first = next((k for k in sorted(setups) if k.upper().startswith("R_")), None)
+    return r_first or sorted(setups)[0]
+
+
+def _load_fwhm_from_masterstar(masterstar_fits: Path | None) -> float:
     """Načítaj VY_FWHM z MASTERSTAR.fits hlavičky."""
-    if draft_id is None:
+    if masterstar_fits is None or not masterstar_fits.is_file():
         return 3.7
     try:
         from astropy.io import fits as astrofits
 
-        archive = Path(cfg.archive_root)
-        ms_fits = archive / "Drafts" / f"draft_{int(draft_id):06d}" / "platesolve" / "MASTERSTAR.fits"
-        if ms_fits.exists():
-            with astrofits.open(ms_fits, memmap=False) as hdul:
-                v = float(hdul[0].header.get("VY_FWHM", 3.7))
-                if 1.0 < v < 15.0:
-                    return round(v, 3)
+        with astrofits.open(masterstar_fits, memmap=False) as hdul:
+            v = float(hdul[0].header.get("VY_FWHM", 3.7))
+            if 1.0 < v < 15.0:
+                return round(v, 3)
     except Exception:  # noqa: BLE001
         pass
     return 3.7
@@ -126,13 +133,15 @@ def _render_targets_tab(active_df: pd.DataFrame) -> None:
 
     display = active_df[show_cols].copy()
     if "mag" in display.columns:
-        display["mag"] = display["mag"].round(3)
+        display["mag"] = pd.to_numeric(display["mag"], errors="coerce").round(3)
     if "match_dist_arcsec" in display.columns:
-        display["match_dist_arcsec"] = display["match_dist_arcsec"].round(2)
+        display["match_dist_arcsec"] = pd.to_numeric(
+            display["match_dist_arcsec"], errors="coerce"
+        ).round(2)
     if "ra_deg" in display.columns:
-        display["ra_deg"] = display["ra_deg"].round(5)
+        display["ra_deg"] = pd.to_numeric(display["ra_deg"], errors="coerce").round(5)
     if "dec_deg" in display.columns:
-        display["dec_deg"] = display["dec_deg"].round(5)
+        display["dec_deg"] = pd.to_numeric(display["dec_deg"], errors="coerce").round(5)
 
     st.dataframe(display, use_container_width=True, hide_index=True)
 
@@ -194,10 +203,10 @@ def _render_comparison_tab(comp_df: pd.DataFrame) -> None:
     display = sub[show_cols].copy()
     for col in ("mag", "b_v", "bp_rp", "comp_rms"):
         if col in display.columns:
-            display[col] = display[col].round(4)
+            display[col] = pd.to_numeric(display[col], errors="coerce").round(4)
     if "_dist_deg" in display.columns:
         display = display.rename(columns={"_dist_deg": "dist_deg"})
-        display["dist_deg"] = display["dist_deg"].round(4)
+        display["dist_deg"] = pd.to_numeric(display["dist_deg"], errors="coerce").round(4)
     if "comp_tier" in display.columns:
         def _tier_css(v: object) -> str:
             s = str(v or "").strip()
@@ -253,10 +262,11 @@ def _render_suspected_tab(suspected_df: pd.DataFrame) -> None:
     display = suspected_df[show_cols].copy()
     for col in ("mag", "comp_rms", "ra_deg", "dec_deg"):
         if col in display.columns:
-            display[col] = display[col].round(4)
+            display[col] = pd.to_numeric(display[col], errors="coerce").round(4)
 
+    sort_col = "comp_rms" if "comp_rms" in display.columns else display.columns[0]
     st.dataframe(
-        display.sort_values("comp_rms", ascending=False),
+        display.sort_values(sort_col, ascending=False, na_position="last"),
         use_container_width=True,
         hide_index=True,
     )
@@ -281,18 +291,33 @@ def render_select_stars(
         st.info("Žiadny aktívny draft. Najprv spusti platesolve.")
         return
 
-    # Nájdi vstupné súbory
-    paths = _find_required_csvs(cfg, draft_id)
-    if not paths:
+    setups = _find_phase01_setups(cfg, draft_id)
+    if not setups:
         st.warning(
             "Nenájdené vstupné súbory. Najprv spusti platesolve (Fáza plate-solve musí byť dokončená)."
         )
         return
 
+    setup_names = sorted(setups)
+    if len(setup_names) > 1:
+        default_nm = _default_setup_name(setups, cfg, int(draft_id))
+        sel_ix = setup_names.index(default_nm) if default_nm in setup_names else 0
+        chosen = st.selectbox(
+            "Filter / skupina (platesolve):",
+            options=setup_names,
+            index=sel_ix,
+            key="select_stars_platesolve_setup",
+        )
+    else:
+        chosen = setup_names[0]
+        st.caption(f"Platesolve setup: **{chosen}**")
+
+    paths = setups[chosen]
     vt_csv = paths.get("variable_targets_csv")
     ms_csv = paths.get("masterstars_csv")
     per_frame_dir = paths.get("per_frame_csv_dir")
     output_dir = paths.get("output_dir")
+    ms_fits = paths.get("masterstar_fits")
 
     # Skontroluj či vstupné súbory existujú
     missing = []
@@ -307,8 +332,31 @@ def render_select_stars(
         st.error(f"Chýbajú súbory: {', '.join(missing)}")
         return
 
-    fwhm_px = _load_fwhm_from_masterstar(cfg, draft_id)
+    fwhm_px = _load_fwhm_from_masterstar(ms_fits if isinstance(ms_fits, Path) else None)
     exists = _results_exist(output_dir)
+
+    with st.expander("Pravidlá výberu porovnávacích hviezd (Fáza 1) — z `config.json`", expanded=False):
+        st.markdown(
+            "Účinné hodnoty z **AppConfig** (kľúče v zátvorkách). Pri riedkom poli typicky zväčši "
+            "**`phase01_comparison_max_mag_diff`** a **`phase01_comparison_max_dist_deg`**, prípadne "
+            "zvýš **`phase01_comparison_max_comp_rms`** alebo zníž **`phase01_comparison_min_frames_frac`**. "
+            "Pri **jasných cieľoch** (napr. R~9 mag) nastav **`phase01_comparison_max_mag_diff_bright_floor`** "
+            "(min. |Δmag| pás; ``0`` vypne) a prípadne **`phase01_comparison_mag_bright_threshold`**."
+        )
+        st.code(
+            f"max_dist_deg = {cfg.phase01_comparison_max_dist_deg}\n"
+            f"max_mag_diff = {cfg.phase01_comparison_max_mag_diff}\n"
+            f"mag_bright_threshold = {cfg.phase01_comparison_mag_bright_threshold}\n"
+            f"max_mag_diff_bright_floor = {cfg.phase01_comparison_max_mag_diff_bright_floor}\n"
+            f"max_bv_diff = {cfg.phase01_comparison_max_bv_diff}\n"
+            f"n_comp_min / max = {cfg.phase01_comparison_n_comp_min} / {cfg.phase01_comparison_n_comp_max}\n"
+            f"max_comp_rms = {cfg.phase01_comparison_max_comp_rms}\n"
+            f"min_dist_arcsec = {cfg.phase01_comparison_min_dist_arcsec}\n"
+            f"min_frames_frac = {cfg.phase01_comparison_min_frames_frac}\n"
+            f"exclude_gaia_nss = {cfg.phase01_comparison_exclude_gaia_nss}\n"
+            f"exclude_gaia_extobj = {cfg.phase01_comparison_exclude_gaia_extobj}",
+            language="text",
+        )
 
     run_again = False
     first_run = False
@@ -354,6 +402,18 @@ def render_select_stars(
                 per_frame_csv_dir=per_frame_dir,
                 output_dir=output_dir,
                 fwhm_px=fwhm_px,
+                max_dist_deg=float(cfg.phase01_comparison_max_dist_deg),
+                max_mag_diff=float(cfg.phase01_comparison_max_mag_diff),
+                mag_bright_threshold=float(cfg.phase01_comparison_mag_bright_threshold),
+                max_mag_diff_bright_floor=float(cfg.phase01_comparison_max_mag_diff_bright_floor),
+                max_bv_diff=float(cfg.phase01_comparison_max_bv_diff),
+                n_comp_min=int(cfg.phase01_comparison_n_comp_min),
+                n_comp_max=int(cfg.phase01_comparison_n_comp_max),
+                max_comp_rms=float(cfg.phase01_comparison_max_comp_rms),
+                min_dist_arcsec=float(cfg.phase01_comparison_min_dist_arcsec),
+                min_frames_frac=float(cfg.phase01_comparison_min_frames_frac),
+                exclude_gaia_nss=bool(cfg.phase01_comparison_exclude_gaia_nss),
+                exclude_gaia_extobj=bool(cfg.phase01_comparison_exclude_gaia_extobj),
                 progress_cb=_phase01_ui,
             )
             st.success(

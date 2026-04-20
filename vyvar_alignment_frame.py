@@ -543,6 +543,46 @@ def _alignment_compute_one_frame(
             )
             continue
 
+    # Fallback: if astroalign failed and identity would be used, try a simple WCS-based shift (dx, dy)
+    # computed from CRVAL mapping between frame and reference WCS. This avoids producing constant frames.
+    if (not _attempt_ok or aligned_data is None) and ref_wcs_obj is not None and _hdr_has_wcs(hdr):
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FITSFixedWarning)
+                wcs_frame = WCS(hdr)
+            if getattr(wcs_frame, "has_celestial", False) and getattr(ref_wcs_obj, "has_celestial", False):
+                crval_frame = wcs_frame.wcs.crval  # [ra, dec]
+                px_ref = ref_wcs_obj.all_world2pix([[crval_frame[0], crval_frame[1]]], 0)[0]
+                crpix_ref = ref_wcs_obj.wcs.crpix  # [x, y]
+                dx = float(crpix_ref[0] - px_ref[0])
+                dy = float(crpix_ref[1] - px_ref[1])
+                naxis2, naxis1 = int(ref_data.shape[0]), int(ref_data.shape[1])
+                if abs(dx) < naxis1 * 0.5 and abs(dy) < naxis2 * 0.5:
+                    from scipy.ndimage import shift as ndimage_shift
+
+                    shifted = ndimage_shift(
+                        np.asarray(data, dtype=np.float32),
+                        shift=[dy, dx],  # (y, x)
+                        mode="constant",
+                        cval=0.0,
+                        order=1,
+                        prefilter=False,
+                    )
+                    shifted = _as_fits_float32_image(shifted)
+                    # Sanity: avoid constant/empty frames.
+                    finite_chk = shifted[np.isfinite(shifted)]
+                    n_unique = int(len(np.unique(finite_chk[: min(10_000, int(finite_chk.size))]))) if finite_chk.size else 0
+                    if n_unique > 3 and float(np.nansum(np.abs(shifted))) >= 1.0:
+                        aligned_data = shifted
+                        aligned_method = "wcs_shift"
+                        _attempt_ok = True
+                        _alignment_emit_log(
+                            log_sink,
+                            f"INFO: WCS alignment fallback: dx={dx:.1f}px dy={dy:.1f}px pre {fp.name}",
+                        )
+        except Exception as _we:  # noqa: BLE001
+            _alignment_emit_log(log_sink, f"WARNING: WCS alignment fallback zlyhal: {_we}")
+
     if not _attempt_ok or aligned_data is None:
         m_id = float(np.nanmean(data_to_detect)) if data_to_detect is not None else float("nan")
         s_id = float(np.nanstd(data_to_detect)) if data_to_detect is not None else float("nan")

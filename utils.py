@@ -422,6 +422,29 @@ def plate_scale_arcsec_per_pixel(*, pixel_pitch_um: float, focal_length_mm: floa
     return (float(pixel_pitch_um) / float(foc_n)) * PLATE_SCALE_ARCSEC_PER_UM_OVER_MM
 
 
+def plate_solve_fov_deg_diagonal_from_scale(naxis1: int, naxis2: int, arcsec_per_px: float) -> float | None:
+    """Chip diagonal field diameter [deg]: ``hypot(nx, ny) * arcsec_per_px / 3600``."""
+    if naxis1 <= 0 or naxis2 <= 0:
+        return None
+    if not math.isfinite(arcsec_per_px) or arcsec_per_px <= 0:
+        return None
+    diag_px = math.hypot(float(naxis1), float(naxis2))
+    out = diag_px * float(arcsec_per_px) / 3600.0
+    return float(out) if math.isfinite(out) and out > 0 else None
+
+
+def per_frame_catalog_match_sep_arcsec_for_scale(
+    arcsec_per_px: float | None,
+    *,
+    floor_arcsec: float = 3.0,
+    fallback_arcsec: float = 20.0,
+) -> float:
+    """~2.5 px matching tolerance in arcseconds; ``fallback_arcsec`` when scale is unknown."""
+    if arcsec_per_px is None or not math.isfinite(arcsec_per_px) or arcsec_per_px <= 0:
+        return float(fallback_arcsec)
+    return max(float(floor_arcsec), float(arcsec_per_px) * 2.5)
+
+
 def get_optimal_params(
     *,
     focal_length_mm: float | None,

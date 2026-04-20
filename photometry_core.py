@@ -2346,6 +2346,33 @@ def enhance_catalog_dataframe_aperture_bpm(
     return out
 
 
+def _phase0_effective_frame_hw_px(
+    vt: pd.DataFrame,
+    ms: pd.DataFrame,
+    *,
+    frame_w_px: int,
+    frame_h_px: int,
+    edge_margin_px: int,
+) -> tuple[int, int]:
+    """``frame_w_px`` / ``frame_h_px`` z volania alebo väčšie — podľa max. x,y v VT a masterstars.
+
+    Predvolené 2082×1397 často nezodpovedajú veľkému čipu; inak sa VSX ciele s veľkými pixelmi
+    (napr. DY Peg) vylúčia ešte pred cross-matchom, **bez** ohľadu na ``vsx_type`` (žiadny filter na SXPHE).
+    """
+    xs: list[float] = []
+    ys: list[float] = []
+    for df in (vt, ms):
+        if "x" in df.columns and "y" in df.columns:
+            xs.extend(pd.to_numeric(df["x"], errors="coerce").dropna().astype(float).tolist())
+            ys.extend(pd.to_numeric(df["y"], errors="coerce").dropna().astype(float).tolist())
+    if not xs or not ys:
+        return int(frame_w_px), int(frame_h_px)
+    em = int(edge_margin_px)
+    need_w = int(math.ceil(float(max(xs)))) + em + 2
+    need_h = int(math.ceil(float(max(ys)))) + em + 2
+    return max(int(frame_w_px), need_w), max(int(frame_h_px), need_h)
+
+
 def select_active_targets(
     variable_targets_csv: Path,
     masterstars_csv: Path,
@@ -2358,10 +2385,11 @@ def select_active_targets(
     """Fáza 0: Filtruj VSX premenné → active_targets.
 
     Pravidlá:
-    - Hviezda musí byť v snímke (x, y v medziach s okrajom)
+    - Hviezda musí byť v snímke (x, y v medziach s okrajom; šírka/výška sa zväčší z dát ak treba)
     - Musí byť nájdená v masterstars_full_match.csv (cross-match < match_radius_arcsec)
     - masterstars záznam musí mať is_usable=True
     - Nesmie byť saturovaná (is_saturated=False)
+    - **Žiadny filter na ``vsx_type``** (SXPHE, DSCT, … sa nevyhadzujú samé o sebe).
 
     Returns:
         DataFrame s active targets — stĺpce z variable_targets + pridané zo masterstars:
@@ -2380,12 +2408,24 @@ def select_active_targets(
         if col in ms.columns:
             ms[col] = _bool_col(ms[col])
 
+    fw, fh = _phase0_effective_frame_hw_px(
+        vt, ms, frame_w_px=int(frame_w_px), frame_h_px=int(frame_h_px), edge_margin_px=int(edge_margin_px)
+    )
+    if fw != int(frame_w_px) or fh != int(frame_h_px):
+        logging.info(
+            "[FÁZA 0] Rozmer čipu zväčšený z %s×%s na %s×%s px (max x,y z variable_targets/masterstars + okraj)",
+            int(frame_w_px),
+            int(frame_h_px),
+            fw,
+            fh,
+        )
+
     # Filter: v snímke s okrajom
     vt["x"] = pd.to_numeric(vt["x"], errors="coerce")
     vt["y"] = pd.to_numeric(vt["y"], errors="coerce")
     in_frame = (
-        vt["x"].between(edge_margin_px, frame_w_px - edge_margin_px)
-        & vt["y"].between(edge_margin_px, frame_h_px - edge_margin_px)
+        vt["x"].between(edge_margin_px, fw - edge_margin_px)
+        & vt["y"].between(edge_margin_px, fh - edge_margin_px)
     )
     vt_in = vt[in_frame].copy()
 
@@ -2476,7 +2516,7 @@ def select_comparison_stars_per_target(
     csv_cache: dict[str, pd.DataFrame] | None = None,
     fwhm_px: float = 3.7,
     max_dist_deg: float = 1.0,
-    max_mag_diff: float = 0.25,  # ±0.25 mag od targetu
+    max_mag_diff: float = 0.25,  # ±0.25 mag od targetu (základ; pri jasnom ciele viď ``mag_tol`` nižšie)
     max_bv_diff: float = 0.15,  # ±0.15 B-V od targetu
     n_comp_min: int = 3,
     n_comp_max: int = 7,
@@ -2486,6 +2526,8 @@ def select_comparison_stars_per_target(
     rms_outlier_sigma: float = 3.0,
     exclude_gaia_nss: bool = True,
     exclude_gaia_extobj: bool = True,
+    mag_bright_threshold: float = 12.0,
+    max_mag_diff_bright_floor: float = 0.0,
     max_psf_chi2: float = 3.0,
     max_fwhm_factor: float = 1.5,
     isolation_radius_px: float = 25.0,
@@ -2524,6 +2566,9 @@ def select_comparison_stars_per_target(
         min_dist_arcsec: Minimálna vzdialenosť comp hviezdy od targetu v oblúkových
             sekundách. Zabraňuje PSF overlap pri veľmi blízkych hviezdach.
             Default 60 arcsec (ochrana aj proti lokálnym artefaktom okolo targetu).
+        mag_bright_threshold: Hranica ``mag`` cieľa (rovnaký systém ako ``target["mag"]``),
+            pod ktorou sa uplatní ``max_mag_diff_bright_floor`` (typicky jasné hviezdy ~9 mag).
+        max_mag_diff_bright_floor: Minimálna šírka |Δmag| pri jasných cieľoch; ``0`` vypne.
 
     Returns:
         DataFrame s porovnávacími hviezdami pre tento target, zoradený podľa RMS ASC.
@@ -2553,6 +2598,25 @@ def select_comparison_stars_per_target(
     mag_t = float(target.get("mag", float("nan")))
     target_cid = str(target.get("catalog_id", ""))
 
+    mag_tol = float(max_mag_diff)
+    if (
+        math.isfinite(mag_t)
+        and float(max_mag_diff_bright_floor) > 0.0
+        and mag_t < float(mag_bright_threshold)
+    ):
+        mag_tol = max(mag_tol, float(max_mag_diff_bright_floor))
+        if mag_tol > float(max_mag_diff):
+            logging.debug(
+                "[FÁZA 1] Target %s: jasný cieľ (mag=%.2f < %.2f) → |Δmag| pás "
+                "max(%.3f, floor %.3f) = %.3f",
+                target_cid or "?",
+                mag_t,
+                float(mag_bright_threshold),
+                float(max_mag_diff),
+                float(max_mag_diff_bright_floor),
+                mag_tol,
+            )
+
     # ── Krok 1: Filter kandidátov ──
     ms["_dist_deg"] = ms.apply(
         lambda r: _angular_distance_deg(
@@ -2580,10 +2644,10 @@ def select_comparison_stars_per_target(
         min_dist_deg = float(min_dist_arcsec) / 3600.0
         cand_mask &= ms["_dist_deg"].ge(min_dist_deg)
 
-    # Hard filter: |ΔMag| <= max_mag_diff
+    # Hard filter: |ΔMag| <= mag_tol (základ max_mag_diff; pri jasnom ciele zväčší floor)
     if math.isfinite(mag_t):
         ms["_mag"] = pd.to_numeric(ms.get("mag", ms.get("phot_g_mean_mag")), errors="coerce")
-        cand_mask &= ms["_mag"].sub(mag_t).abs().le(max_mag_diff)
+        cand_mask &= ms["_mag"].sub(mag_t).abs().le(mag_tol)
 
     # Hard filter: |ΔB-V| <= max_bv_diff (len ak poznáme B-V targetu aj kandidáta)
     target_bv_pre = float(target.get("b_v", float("nan")))
@@ -3173,7 +3237,8 @@ def select_comparison_stars_per_target(
         _mask = _base_mask.copy()
         if math.isfinite(mag_t):
             # If mag is known, enforce tier; if mag is unknown, keep as fallback.
-            _mask &= ms["_mag"].isna() | ms["_mag"].sub(mag_t).abs().le(float(tier["mag"]))
+            _tier_dm = max(float(tier["mag"]), float(mag_tol))
+            _mask &= ms["_mag"].isna() | ms["_mag"].sub(mag_t).abs().le(_tier_dm)
         if math.isfinite(target_bv_pre) and math.isfinite(float(tier["bv"])) and float(tier["bv"]) < float("inf"):
             bv_known = ms["_bv"].notna()
             _mask &= ~bv_known | ms["_bv"].sub(target_bv_pre).abs().le(float(tier["bv"]))
@@ -3189,6 +3254,8 @@ def select_comparison_stars_per_target(
         if good_count >= int(n_comp_min):
             selected_tier = str(tier["key"])
             used_tier = dict(tier)
+            if math.isfinite(mag_t):
+                used_tier["mag"] = max(float(tier["mag"]), float(mag_tol))
             candidates = _cands
             break
 
@@ -3357,6 +3424,8 @@ def run_phase0_and_phase1(
     rms_outlier_sigma: float = 3.0,
     exclude_gaia_nss: bool = True,
     exclude_gaia_extobj: bool = True,
+    mag_bright_threshold: float = 12.0,
+    max_mag_diff_bright_floor: float = 0.0,
     max_psf_chi2: float = 3.0,
     max_fwhm_factor: float = 1.5,
     isolation_radius_px: float = 25.0,
@@ -3455,11 +3524,11 @@ def run_phase0_and_phase1(
     logging.info("[FÁZA 1] Načítavam CSV cache...")
     _t_cache0 = time.time()
     shared_csv_cache: dict[str, pd.DataFrame] = {}
-    for _p in csv_paths:
+    for _csv_path in csv_paths:
         try:
-            _hdr = pd.read_csv(_p, nrows=0)
+            _hdr = pd.read_csv(_csv_path, nrows=0)
             _cols = [c for c in _needed_cols if c in _hdr.columns]
-            _df0 = pd.read_csv(_p, usecols=_cols, low_memory=False)
+            _df0 = pd.read_csv(_csv_path, usecols=_cols, low_memory=False)
             _name_col = (
                 "name"
                 if "name" in _df0.columns
@@ -3470,7 +3539,7 @@ def run_phase0_and_phase1(
             for _num_col in ("flux", "dao_flux", "peak_max_adu", "saturate_limit_adu_85pct", "psf_chi2", "fwhm_estimate_px"):
                 if _num_col in _df0.columns:
                     _df0[_num_col] = pd.to_numeric(_df0[_num_col], errors="coerce")
-            shared_csv_cache[str(_p)] = _df0
+            shared_csv_cache[str(_csv_path)] = _df0
         except Exception:  # noqa: BLE001
             continue
     logging.info(
@@ -3504,6 +3573,8 @@ def run_phase0_and_phase1(
             rms_outlier_sigma=rms_outlier_sigma,
             exclude_gaia_nss=exclude_gaia_nss,
             exclude_gaia_extobj=exclude_gaia_extobj,
+            mag_bright_threshold=mag_bright_threshold,
+            max_mag_diff_bright_floor=max_mag_diff_bright_floor,
             max_psf_chi2=max_psf_chi2,
             max_fwhm_factor=max_fwhm_factor,
             isolation_radius_px=isolation_radius_px,

@@ -12,6 +12,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from platesolve_ui_paths import default_bundle_dir, masterstars_csv_in_dir
+
 
 def _platesolve_dir_with_comparison(archive: Path) -> Path:
     ps_root = archive / "platesolve"
@@ -81,8 +83,14 @@ def render_photometry_quality_diagnostic(*, pipeline: Any, draft_id: int | None)
 
     ps_root = ap / "platesolve"
     ps_setup = _platesolve_dir_with_comparison(ap)
-    ms_path = ps_root / "masterstars_full_match.csv"
-    ms_fits_path = ps_root / "MASTERSTAR.fits"
+    ms_dir = ps_setup
+    if masterstars_csv_in_dir(ms_dir) is None or not (ms_dir / "MASTERSTAR.fits").is_file():
+        alt = default_bundle_dir(ps_root)
+        if alt is not None:
+            ms_dir = alt
+    _ms_csv = masterstars_csv_in_dir(ms_dir)
+    ms_path = _ms_csv if _ms_csv is not None else (ps_root / "masterstars_full_match.csv")
+    ms_fits_path = ms_dir / "MASTERSTAR.fits"
     cs_path = ps_setup / "comparison_stars.csv"
     idx_path = ps_setup / "per_frame_catalog_index.csv"
     per_frame_root = ap / "detrended_aligned" / "lights"

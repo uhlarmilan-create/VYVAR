@@ -101,6 +101,9 @@ class AppConfig:
     #: Path to local Gaia DR3 SQLite database (must contain table ``gaia_dr3`` with indexes on ra/dec).
     gaia_db_path: str = ""
 
+    #: Path to blind plate-solve triangle hash index (``gaia_triangles.pkl``, from ``build_gaia_blind_index.py``).
+    blind_index_path: str = r"C:\ASTRO\python\VYVAR\GAIA_DR3\gaia_triangles.pkl"
+
     #: Path to local VSX subset SQLite (table ``vsx_data``: oid, ra_deg, dec_deg, …) for variable-star flags.
     vsx_local_db_path: str = ""
     #: VSX export for variable_targets.csv: keep stars with mag_max <= limit (or unknown mag_max).
@@ -134,6 +137,8 @@ class AppConfig:
     masterstar_log_astroalign: bool = True
     #: After astrometry optimizer mirror-orientation warning, log an extra hint line.
     masterstar_optimizer_mirror_extra_log: bool = True
+    #: Enable verbose debug logs for plate solving / blind solver / hint plumbing.
+    debug_platesolver: bool = False
     #: VYVAR plate-solve na MASTERSTAR: max. SIP stupeň (2–5). Solver skúša **nadol** po ``masterstar_platesolve_sip_min_order`` (napr. 5→4→3).
     masterstar_platesolve_sip_max_order: int = 5
     #: Najnižší SIP stupeň pri páde vyšších (typicky 3; nie menej ako 2).
@@ -156,20 +161,11 @@ class AppConfig:
     #: Pomer sx/sy (arcsec/px) — nad týmto sa považuje WCS za príliš anizotropný (VYVAR retry / diagnostika).
     platesolve_anisotropy_threshold: float = 1.3
 
-    #: If set (> 0), overrides physical pixel pitch [µm] read from FITS (native 1×1 sensor pixel, before binning).
-    #: Effective pitch for plate solve / WCS is still ``force_pixel_size * binning`` in :func:`extract_fits_metadata`.
-    #: JSON key: ``force_pixel_size``; omit or null to use header only.
-    force_pixel_size_um: float | None = None
-
     #: Paralelizmus (QC, preprocess, combined, základ per-frame CSV, alignment, calibrate MP): jedna hodnota
     #: počítaná v ``__post_init__``; nie v ``config.json``. Runtime override: ``VYVAR_PARALLEL_WORKERS`` alebo legacy env v pipeline.
     qc_preprocess_workers: int = 1
     per_frame_csv_workers: int = 1
     alignment_workers: int = 1
-    #: Per-frame catalog matching: max sep [arcsec] for matching detections to the fixed master reference / cone catalog.
-    #: Default is intentionally looser (20") so it works at coarse plate scales (~10"/px) and small residuals.
-    per_frame_catalog_match_sep_arcsec: float = 20.0
-
     #: Reserve this much RAM (GB) when capping paralelného exportu katalógov cez ``psutil`` (nad rámec jednotného ``_pw``).
     per_frame_mp_reserve_ram_gb: float = 1.5
 
@@ -186,6 +182,24 @@ class AppConfig:
     #: DAOStarFinder threshold = this × background RMS (SIPS “standard deviation count” ≈ 2.5).
     #: Pre hlboký MASTERSTAR / široké pole niekedy **0.25–1.0** (viac špičiek); používa sa aj pri VYVAR plate solve, ak volanie neprebije ``dao_threshold_sigma``.
     sips_dao_threshold_sigma: float = 3.5
+
+    #: Fáza 0+1 — výber porovnávacích hviezd (``photometry_core.select_comparison_stars_per_target``).
+    #: Pri **riedkom poli** zväčši ``phase01_comparison_max_mag_diff`` / ``phase01_comparison_max_dist_deg``,
+    #: prípadne zníž ``phase01_comparison_min_frames_frac`` alebo zvýš ``phase01_comparison_max_comp_rms`` (slabší filter stability).
+    #: Pri **jasných cieľoch** (``mag`` < ``phase01_comparison_mag_bright_threshold``) sa použije aspoň
+    #: ``phase01_comparison_max_mag_diff_bright_floor`` ako minimálny |Δmag| pás (``0`` = vypnuté).
+    phase01_comparison_max_dist_deg: float = 1.0
+    phase01_comparison_max_mag_diff: float = 0.25
+    phase01_comparison_mag_bright_threshold: float = 12.0
+    phase01_comparison_max_mag_diff_bright_floor: float = 1.25
+    phase01_comparison_max_bv_diff: float = 0.15
+    phase01_comparison_n_comp_min: int = 3
+    phase01_comparison_n_comp_max: int = 7
+    phase01_comparison_max_comp_rms: float = 0.05
+    phase01_comparison_min_dist_arcsec: float = 60.0
+    phase01_comparison_min_frames_frac: float = 0.3
+    phase01_comparison_exclude_gaia_nss: bool = True
+    phase01_comparison_exclude_gaia_extobj: bool = True
 
     #: Post-calibration QC on each calibrated light (metrics + pass/fail vs limits).
     qc_after_calibrate_enabled: bool = True
@@ -211,13 +225,8 @@ class AppConfig:
         self.masterdark_validity_days = int(data.get("masterdark_validity_days", 60))
         self.masterflat_validity_days = int(data.get("masterflat_validity_days", 200))
 
-        _fov = data.get("plate_solve_fov_deg", 1.0)
-        try:
-            self.plate_solve_fov_deg = float(_fov)
-            if not math.isfinite(self.plate_solve_fov_deg) or self.plate_solve_fov_deg <= 0:
-                self.plate_solve_fov_deg = 1.0
-        except (TypeError, ValueError):
-            self.plate_solve_fov_deg = 1.0
+        # ``plate_solve_fov_deg`` is no longer read from JSON — resolved from FITS + DB (see ``resolve_plate_solve_fov_deg_hint``).
+        self.plate_solve_fov_deg = 1.0
         # Migration: GAIA_DB_PATH supersedes legacy catalog settings.
         _cln_raw = data.get("calibration_library_native_binning", self.calibration_library_native_binning)
         if _cln_raw is None:
@@ -230,6 +239,13 @@ class AppConfig:
                 self.calibration_library_native_binning = 1
 
         self.gaia_db_path = str(data.get("gaia_db_path", data.get("GAIA_DB_PATH", "")) or "").strip()
+
+        _blind_default = self.blind_index_path
+        self.blind_index_path = str(
+            data.get("blind_index_path", data.get("BLIND_INDEX_PATH", "")) or ""
+        ).strip()
+        if not self.blind_index_path:
+            self.blind_index_path = str(_blind_default or "").strip()
 
         self.vsx_local_db_path = str(
             data.get("vsx_local_db_path", data.get("VSX_LOCAL_DB_PATH", "")) or ""
@@ -248,29 +264,6 @@ class AppConfig:
         except (TypeError, ValueError):
             self.catalog_query_max_rows = 15_000
 
-        _fps = data.get("force_pixel_size", self.force_pixel_size_um)
-        if _fps is None or _fps == "":
-            self.force_pixel_size_um = None
-        else:
-            try:
-                _fv = float(_fps)
-                self.force_pixel_size_um = _fv if _fv > 0 and math.isfinite(_fv) else None
-            except (TypeError, ValueError):
-                self.force_pixel_size_um = None
-
-        _pfm = data.get(
-            "per_frame_catalog_match_sep_arcsec",
-            self.per_frame_catalog_match_sep_arcsec,
-        )
-        try:
-            self.per_frame_catalog_match_sep_arcsec = float(_pfm)
-            if (
-                not math.isfinite(self.per_frame_catalog_match_sep_arcsec)
-                or self.per_frame_catalog_match_sep_arcsec <= 0
-            ):
-                self.per_frame_catalog_match_sep_arcsec = 20.0
-        except (TypeError, ValueError):
-            self.per_frame_catalog_match_sep_arcsec = 20.0
         try:
             self.per_frame_mp_reserve_ram_gb = float(
                 data.get("per_frame_mp_reserve_ram_gb", self.per_frame_mp_reserve_ram_gb)
@@ -415,6 +408,7 @@ class AppConfig:
         self.masterstar_optimizer_mirror_extra_log = bool(
             data.get("masterstar_optimizer_mirror_extra_log", self.masterstar_optimizer_mirror_extra_log)
         )
+        self.debug_platesolver = bool(data.get("debug_platesolver", self.debug_platesolver))
         try:
             self.masterstar_platesolve_sip_max_order = int(
                 data.get("masterstar_platesolve_sip_max_order", self.masterstar_platesolve_sip_max_order)
@@ -458,9 +452,7 @@ class AppConfig:
                 return None
             return max(lo, min(hi, v))
 
-        self.masterstar_platesolve_expected_arcsec_per_px = _opt_pos_float(
-            "masterstar_platesolve_expected_arcsec_per_px", 0.01, 120.0
-        )
+        self.masterstar_platesolve_expected_arcsec_per_px = None
         self.masterstar_platesolve_prewrite_rms_max_px = _opt_pos_float(
             "masterstar_platesolve_prewrite_rms_max_px", 1.0, 80.0
         )
@@ -491,6 +483,41 @@ class AppConfig:
             self.platesolve_anisotropy_threshold = 1.3
         self.platesolve_anisotropy_threshold = max(1.01, min(5.0, float(self.platesolve_anisotropy_threshold)))
 
+        def _f01(key: str, default: float, lo: float, hi: float) -> None:
+            try:
+                v = float(data.get(key, getattr(self, key)))
+                if not math.isfinite(v):
+                    raise ValueError
+                setattr(self, key, max(lo, min(hi, v)))
+            except (TypeError, ValueError, AttributeError):
+                setattr(self, key, float(default))
+
+        def _i01(key: str, default: int, lo: int, hi: int) -> None:
+            try:
+                v = int(data.get(key, getattr(self, key)))
+                setattr(self, key, max(lo, min(hi, v)))
+            except (TypeError, ValueError, AttributeError):
+                setattr(self, key, int(default))
+
+        _f01("phase01_comparison_max_dist_deg", 1.0, 0.05, 10.0)
+        _f01("phase01_comparison_max_mag_diff", 0.25, 0.05, 5.0)
+        _f01("phase01_comparison_mag_bright_threshold", 12.0, 6.0, 18.0)
+        _f01("phase01_comparison_max_mag_diff_bright_floor", 1.25, 0.0, 4.0)
+        _f01("phase01_comparison_max_bv_diff", 0.15, 0.02, 3.0)
+        _i01("phase01_comparison_n_comp_min", 3, 2, 12)
+        _i01("phase01_comparison_n_comp_max", 7, 3, 20)
+        if int(self.phase01_comparison_n_comp_max) < int(self.phase01_comparison_n_comp_min):
+            self.phase01_comparison_n_comp_max = int(self.phase01_comparison_n_comp_min)
+        _f01("phase01_comparison_max_comp_rms", 0.05, 0.01, 0.5)
+        _f01("phase01_comparison_min_dist_arcsec", 60.0, 0.0, 600.0)
+        _f01("phase01_comparison_min_frames_frac", 0.3, 0.05, 0.95)
+        self.phase01_comparison_exclude_gaia_nss = bool(
+            data.get("phase01_comparison_exclude_gaia_nss", self.phase01_comparison_exclude_gaia_nss)
+        )
+        self.phase01_comparison_exclude_gaia_extobj = bool(
+            data.get("phase01_comparison_exclude_gaia_extobj", self.phase01_comparison_exclude_gaia_extobj)
+        )
+
     def to_json(self) -> dict[str, Any]:
         return {
             "archive_root": str(self.archive_root),
@@ -498,20 +525,16 @@ class AppConfig:
             "database_path": str(self.database_path),
             "masterdark_validity_days": int(self.masterdark_validity_days),
             "masterflat_validity_days": int(self.masterflat_validity_days),
-            "plate_solve_fov_deg": float(self.plate_solve_fov_deg),
             "calibration_library_native_binning": (
                 None
                 if self.calibration_library_native_binning is None
                 else int(self.calibration_library_native_binning)
             ),
             "gaia_db_path": str(self.gaia_db_path or ""),
+            "blind_index_path": str(self.blind_index_path or ""),
             "vsx_local_db_path": str(self.vsx_local_db_path or ""),
             "vsx_variable_targets_mag_limit": float(self.vsx_variable_targets_mag_limit),
             "catalog_query_max_rows": int(self.catalog_query_max_rows),
-            "force_pixel_size": (
-                float(self.force_pixel_size_um) if self.force_pixel_size_um is not None else None
-            ),
-            "per_frame_catalog_match_sep_arcsec": float(self.per_frame_catalog_match_sep_arcsec),
             "per_frame_mp_reserve_ram_gb": float(self.per_frame_mp_reserve_ram_gb),
             "alignment_max_stars": int(self.alignment_max_stars),
             "alignment_detection_sigma": float(self.alignment_detection_sigma),
@@ -549,11 +572,6 @@ class AppConfig:
             "masterstar_platesolve_sip_min_order": int(self.masterstar_platesolve_sip_min_order),
             "masterstar_dao_threshold_sigma": float(self.masterstar_dao_threshold_sigma),
             "masterstar_prematch_peak_sigma_floor": float(self.masterstar_prematch_peak_sigma_floor),
-            "masterstar_platesolve_expected_arcsec_per_px": (
-                float(self.masterstar_platesolve_expected_arcsec_per_px)
-                if self.masterstar_platesolve_expected_arcsec_per_px is not None
-                else None
-            ),
             "masterstar_platesolve_prewrite_rms_max_px": (
                 float(self.masterstar_platesolve_prewrite_rms_max_px)
                 if self.masterstar_platesolve_prewrite_rms_max_px is not None
@@ -575,6 +593,20 @@ class AppConfig:
                 else None
             ),
             "platesolve_anisotropy_threshold": float(self.platesolve_anisotropy_threshold),
+            "phase01_comparison_max_dist_deg": float(self.phase01_comparison_max_dist_deg),
+            "phase01_comparison_max_mag_diff": float(self.phase01_comparison_max_mag_diff),
+            "phase01_comparison_mag_bright_threshold": float(self.phase01_comparison_mag_bright_threshold),
+            "phase01_comparison_max_mag_diff_bright_floor": float(
+                self.phase01_comparison_max_mag_diff_bright_floor
+            ),
+            "phase01_comparison_max_bv_diff": float(self.phase01_comparison_max_bv_diff),
+            "phase01_comparison_n_comp_min": int(self.phase01_comparison_n_comp_min),
+            "phase01_comparison_n_comp_max": int(self.phase01_comparison_n_comp_max),
+            "phase01_comparison_max_comp_rms": float(self.phase01_comparison_max_comp_rms),
+            "phase01_comparison_min_dist_arcsec": float(self.phase01_comparison_min_dist_arcsec),
+            "phase01_comparison_min_frames_frac": float(self.phase01_comparison_min_frames_frac),
+            "phase01_comparison_exclude_gaia_nss": bool(self.phase01_comparison_exclude_gaia_nss),
+            "phase01_comparison_exclude_gaia_extobj": bool(self.phase01_comparison_exclude_gaia_extobj),
         }
 
     # Backward-compatible alias (some callers expect to_dict()).

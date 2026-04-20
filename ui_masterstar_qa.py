@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from platesolve_ui_paths import cone_csv_path, default_bundle_dir, masterstars_csv_in_dir, platesolve_bundle_dirs
+
 
 @st.cache_data(show_spinner="Načítavam VSX z lokálnej databázy…")
 def _cached_msqa_vsx_chip_table(
@@ -88,18 +90,42 @@ def render_masterstar_qa() -> None:
         return
 
     ap_path = Path(ap.strip())
-    fits_path_ms = ap_path / "platesolve" / "MASTERSTAR.fits"
-    csv_path_ms = ap_path / "platesolve" / "masterstars_full_match.csv"
-    if not csv_path_ms.is_file():
-        csv_path_ms = ap_path / "platesolve" / "masterstars.csv"
+    ps_root = ap_path / "platesolve"
+    bundles = platesolve_bundle_dirs(ps_root)
+    if not bundles:
+        st.warning(
+            f"V `{ps_root}` nie je žiadny kompletný MASTERSTAR balík "
+            "(``MASTERSTAR.fits`` + ``masterstars_full_match.csv`` / ``masterstars.csv`` v ``platesolve/`` alebo v ``platesolve/<filter>/``). "
+            "V kroku 3 zapni MASTERSTAR a spusti, alebo použi **Len MASTERSTAR**."
+        )
+        return
+
+    if len(bundles) > 1:
+        names = [p.name for p in bundles]
+        pref = default_bundle_dir(ps_root)
+        pref_nm = pref.name if pref is not None else names[0]
+        ix = names.index(pref_nm) if pref_nm in names else 0
+        pick_nm = st.selectbox(
+            "Filter / skupina (platesolve):",
+            options=names,
+            index=ix,
+            key="vyvar_msqa_platesolve_setup",
+        )
+        setup_dir = ps_root / pick_nm
+    else:
+        setup_dir = bundles[0]
+        st.caption(f"Platesolve setup: **{setup_dir.name}**")
+
+    fits_path_ms = setup_dir / "MASTERSTAR.fits"
+    csv_path_ms = masterstars_csv_in_dir(setup_dir)
     if not fits_path_ms.is_file():
         st.warning(
             f"Chýba `{fits_path_ms}`. V kroku 3 zapni MASTERSTAR a spusti, alebo použi **Len MASTERSTAR**."
         )
         return
 
-    if not csv_path_ms.is_file():
-        st.warning(f"Chýba `{csv_path_ms}`. Spusti tvorbu MASTERSTAR katalógu.")
+    if csv_path_ms is None or not csv_path_ms.is_file():
+        st.warning(f"Chýba masterstars CSV v `{setup_dir}`. Spusti tvorbu MASTERSTAR katalógu.")
         return
 
     try:
@@ -209,7 +235,7 @@ def render_masterstar_qa() -> None:
             "**VSX** (nižšie) = žlté štvorce z lokálnej SQLite. "
             "**Reprojekcia** = world_to_pixel(ra_deg,dec_deg) z CSV (test WCS vs uložené nebeské súradnice); **merané x,y** = centroidy z CSV pred prepísaním."
         )
-        cone_path_ui = ap_path / "platesolve" / "field_catalog_cone.csv"
+        cone_path_ui = cone_csv_path(setup_dir)
         has_field_cat = cone_path_ui.is_file()
         use_meas_xy = st.checkbox(
             "DAO/MATCH z meraných x,y v CSV (nie reprojekcia ra/dec)",

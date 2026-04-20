@@ -1,6 +1,6 @@
 """VYVAR plate solving: ICRS hints from FITS/UI and optional in-process solver (local Gaia DR3).
 
-RA/Dec must come from headers (``VY_TARG*``, object keywords, …) or mandatory user input.
+RA/Dec come from the FITS header (``VY_TARG*``, object keywords, …) or, if missing, from the in-process blind solver.
 The optional ``solve_wcs_with_local_gaia`` path matches DAO detections to a local Gaia DR3 cone/box and
 fits a **TAN** (gnomonic / tangent-plane) WCS via ``fit_wcs_from_points``, then optionally **SIP**
 (Simple Imaging Polynomial) distortion up to 3rd order so wide-field optics match Gaia DR3 across the
@@ -56,6 +56,50 @@ __all__ = [
 ]
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _get_masterstar_wcs_parity(masterstar_fits_path: Path) -> str | None:
+    """Detect WCS parity from MASTERSTAR.fits.
+
+    Returns:
+        Preferred mirror orientation from MASTERSTAR (VY_MIRR) if available; otherwise
+        "native" for positive determinant, "mirror_x" for negative determinant, or None.
+    """
+    try:
+        import numpy as np
+        from astropy.io import fits as _fits
+        from astropy.wcs import WCS
+
+        with _fits.open(str(masterstar_fits_path), memmap=False) as hdul:
+            hdr = hdul[0].header
+            vy_mirr = hdr.get("VY_MIRR", None)
+            if vy_mirr is not None:
+                v = str(vy_mirr).strip()
+                if v in {"native", "mirror_x", "mirror_y", "mirror_xy"}:
+                    log_event(f"INFO: MASTERSTAR preferred mirror z VY_MIRR={v}")
+                    return v
+            wcs = WCS(hdr)
+        det: float | None = None
+        try:
+            pc = wcs.wcs.get_pc()
+            det = float(pc[0][0] * pc[1][1] - pc[0][1] * pc[1][0])
+        except Exception:  # noqa: BLE001
+            try:
+                pm = getattr(wcs, "pixel_scale_matrix", None)
+                if pm is not None:
+                    det = float(np.linalg.det(np.asarray(pm, dtype=float)))
+            except Exception:  # noqa: BLE001
+                det = None
+        if det is None or (not math.isfinite(float(det))):
+            return None
+        if float(det) < 0:
+            log_event(f"INFO: MASTERSTAR WCS parity = mirror (det={float(det):.2e})")
+            return "mirror_x"
+        log_event(f"INFO: MASTERSTAR WCS parity = native (det={float(det):.2e})")
+        return "native"
+    except Exception as e:  # noqa: BLE001
+        log_event(f"WARNING: Nemôžem zistiť WCS paritu z MASTERSTAR: {e}")
+        return None
 
 
 class PointingRequiredError(ValueError):
@@ -1293,8 +1337,8 @@ def _maybe_repair_masterstar_anisotropic_plate_scale(
 def solve_wcs_with_local_gaia(
     fits_path: Path | str,
     *,
-    hint_ra_deg: float | None,
-    hint_dec_deg: float | None,
+    hint_ra_deg: float | None,  # ignored: hints from FITS header or blind solver only (API compat)
+    hint_dec_deg: float | None,  # ignored
     fov_diameter_deg: float,
     gaia_db_path: Path | str,
     dao_threshold_sigma: float = 3.5,
@@ -1308,6 +1352,7 @@ def solve_wcs_with_local_gaia(
     expected_plate_scale_arcsec_per_px: float | None = None,
     max_catalog_rows: int | None = None,
     faintest_mag_limit: float | None = None,
+    preferred_mirror: str | None = None,
     masterstar_prewrite_rms_max_px: float | None = None,
     masterstar_prewrite_relaxed_rms_max_px: float | None = None,
     masterstar_nn_refine_max_rms_px: float | None = None,
@@ -1316,10 +1361,12 @@ def solve_wcs_with_local_gaia(
 ) -> dict[str, Any]:
     """Plate-solve by matching DAO stars to **local Gaia DR3** (SQLite); writes WCS into the FITS primary HDU.
 
-    Očakáva platné hinty RA/Dec (``VY_TARG*``, ``RA``/``DEC``, …) a **platnú mierku** v hlavičke alebo v
-    argumentoch: FOCALLEN+PIXSIZE alebo SECPIX/PIXSCALE/SCALE. Parameter
-    ``expected_plate_scale_arcsec_per_px`` môže byť nastavený aj pre ``MASTERSTAR.fits`` (prepíše odvodzovanie
-    z hlavičky, ak je zadaný).
+    **RA/Dec:** najprv z FITS hlavičky (``VY_TARG*``, ``RA``/``DEC``, …); ak chýbajú, spustí sa **blind**
+    trojuholníkový solver (``blind_index_path``). Argumenty ``hint_ra_deg`` / ``hint_dec_deg`` sa ignorujú
+    (zostávajú len kvôli kompatibilite volania).
+
+    **Mierka:** FOCALLEN+PIXSIZE alebo SECPIX/PIXSCALE/SCALE v hlavičke alebo argument
+    ``expected_plate_scale_arcsec_per_px`` (napr. MASTERSTAR).
 
     ``fit_wcs_from_points(..., projection=\"TAN\")`` len zostaví **lineárny** TAN; SIP sa dopočíta po zhode hviezd.
     """
@@ -1327,6 +1374,8 @@ def solve_wcs_with_local_gaia(
     from photutils.detection import DAOStarFinder
 
     from database import query_local_gaia
+
+    _ = (hint_ra_deg, hint_dec_deg)  # reserved for API compatibility; see docstring
 
     fp = Path(fits_path).resolve()
     if not fp.is_file():
@@ -1373,44 +1422,104 @@ def solve_wcs_with_local_gaia(
     naxis1 = int(hdr0.get("NAXIS1", 0) or 0) or w
     naxis2 = int(hdr0.get("NAXIS2", 0) or 0) or h
 
-    # 1) Self-correction for hints (when caller passes None)
-    if hint_ra_deg is None or hint_dec_deg is None:
-        ra_h, dec_h, _src = pointing_hint_from_header(hdr0)
-        hint_ra_deg = ra_h
-        hint_dec_deg = dec_h
-
-    # 2) MASTERSTAR-first: trust coordinates embedded in MASTERSTAR.fits over any UI/global settings
+    # RA/Dec: FITS header first, then blind solver (caller hint_ra_deg / hint_dec_deg are not used).
     ra0: float | None = None
     de0: float | None = None
-    if hint_ra_deg is not None:
-        try:
-            _r = float(hint_ra_deg)
-            if math.isfinite(_r):
-                ra0 = _r
-        except (TypeError, ValueError):
-            pass
-    if hint_dec_deg is not None:
-        try:
-            _d = float(hint_dec_deg)
-            if math.isfinite(_d):
-                de0 = _d
-        except (TypeError, ValueError):
-            pass
+    _coord_src = ""
 
-    _coord_src = "UI/args"
-    if _is_masterstar:
-        ra_m, de_m, src_m = pointing_hint_from_header(hdr0)
-        if ra_m is not None and de_m is not None:
-            ra0, de0 = ra_m, de_m
-            _coord_src = f"MASTERSTAR header ({src_m})"
+    ra_h, dec_h, src_h = pointing_hint_from_header(hdr0)
+    # Optional debug: trace why hint is missing (per-frame should have VYTARG* injected).
+    try:
+        if bool(getattr(AppConfig(), "debug_platesolver", False)):
+            _vra = hdr0.get("VYTARGRA")
+            _vde = hdr0.get("VYTARGDE")
+            _ra_kw = hdr0.get("RA")
+            _de_kw = hdr0.get("DEC", hdr0.get("DE"))
+            _cr1 = hdr0.get("CRVAL1")
+            _cr2 = hdr0.get("CRVAL2")
+            log_event(
+                "DEBUG: pointing_hint_from_header="
+                f"(ra={ra_h}, dec={dec_h}, src={src_h}); "
+                f"hdr[VYTARGRA]={_vra} hdr[VYTARGDE]={_vde} "
+                f"hdr[RA]={_ra_kw} hdr[DEC/DE]={_de_kw} "
+                f"hdr[CRVAL1]={_cr1} hdr[CRVAL2]={_cr2}"
+            )
+    except Exception:  # noqa: BLE001
+        pass
+    if ra_h is not None and dec_h is not None:
+        try:
+            _rf, _df = float(ra_h), float(dec_h)
+            if math.isfinite(_rf) and math.isfinite(_df):
+                ra0, de0 = _rf, _df
+                _coord_src = f"FITS header ({src_h})"
+                log_event(f"INFO: Solver hint z FITS hlavičky: RA={ra0:.4f} Dec={de0:.4f}")
+        except (TypeError, ValueError):
+            ra0, de0 = None, None
+
+    _blind_plate_scale: float | None = None
+    if expected_plate_scale_arcsec_per_px is not None:
+        try:
+            _bps = float(expected_plate_scale_arcsec_per_px)
+            if math.isfinite(_bps) and _bps > 0:
+                _blind_plate_scale = _bps
+        except (TypeError, ValueError):
+            pass
+    _blind_fov_deg: float | None = None
+    try:
+        _bfd = float(fov_diameter_deg)
+        if math.isfinite(_bfd) and _bfd > 0:
+            _blind_fov_deg = _bfd
+    except (TypeError, ValueError):
+        pass
+
     if ra0 is None or de0 is None:
-        ra_h2, dec_h2, src_h2 = pointing_hint_from_header(hdr0)
-        if ra_h2 is not None and dec_h2 is not None:
-            ra0, de0 = ra_h2, dec_h2
-            _coord_src = f"header ({src_h2})"
+        try:
+            if bool(getattr(AppConfig(), "debug_platesolver", False)):
+                log_event(
+                    f"DEBUG: entering blind-solver fallback (ra0={ra0}, de0={de0}, src={src_h}); "
+                    f"VYTARGRA={hdr0.get('VYTARGRA')} VYTARGDE={hdr0.get('VYTARGDE')}"
+                )
+        except Exception:  # noqa: BLE001
+            pass
+        log_event("INFO: FITS nemá RA/Dec — spúšťam blind solver.")
+        try:
+            _blind_idx = getattr(AppConfig(), "blind_index_path", None)
+            if _blind_idx and Path(str(_blind_idx)).is_file():
+                from vyvar_blind_solver import find_blind_hint
 
-    if ra0 is None or de0 is None or not (math.isfinite(float(ra0)) and math.isfinite(float(de0))):
-        return {"solved": False, "reason": "VYVAR solver: neplatný RA/Dec hint (missing/invalid)."}
+                _, _bmed, _bstd = sigma_clipped_stats(data, sigma=3.0)
+                _bfinder = DAOStarFinder(fwhm=3.0, threshold=5.0 * _bstd)
+                _bsrcs = _bfinder(data - _bmed)
+                if _bsrcs is not None and len(_bsrcs) >= 3:
+                    _bdf = _bsrcs.to_pandas().rename(
+                        columns={"xcentroid": "x", "ycentroid": "y"}
+                    )
+                    if "peak" in _bdf.columns and "flux" not in _bdf.columns:
+                        _bdf["flux"] = _bdf["peak"]
+                    elif "flux" not in _bdf.columns:
+                        _bdf["flux"] = 1.0
+                    _bdf = _bdf.sort_values("flux", ascending=False)
+                    _blind = find_blind_hint(
+                        _bdf,
+                        _blind_idx,
+                        n_top=30,
+                        distance_upper_bound=0.005,
+                        min_votes=3,
+                        plate_scale_arcsec_per_px=_blind_plate_scale,
+                        fov_deg=_blind_fov_deg,
+                    )
+                    if _blind:
+                        ra0, de0 = float(_blind[0]), float(_blind[1])
+                        _coord_src = "blind solver (triangle index)"
+                        log_event(f"INFO: Blind solver hint: RA={ra0:.4f} Dec={de0:.4f}")
+        except Exception as _be:  # noqa: BLE001
+            log_event(f"WARNING: Blind solver exception: {_be}")
+
+    if ra0 is None or de0 is None:
+        return {
+            "solved": False,
+            "reason": "VYVAR solver: FITS nemá RA/Dec a blind solver nenašiel zhodu.",
+        }
 
     log_event(f"INFO: Solver using center hint from {_coord_src}: RA={float(ra0)}, Dec={float(de0)}.")
 
@@ -1571,6 +1680,13 @@ def solve_wcs_with_local_gaia(
         _scale_arcsec = plate_scale_arcsec_per_pixel(pixel_pitch_um=float(_f_um), focal_length_mm=float(_f_mm_u))
     except Exception:  # noqa: BLE001
         _scale_arcsec = None
+    if (
+        _scale_arcsec is None
+        or (not math.isfinite(float(_scale_arcsec)))
+        or float(_scale_arcsec) <= 0.0
+    ):
+        if _exp_scale is not None and math.isfinite(float(_exp_scale)) and float(_exp_scale) > 0.0:
+            _scale_arcsec = float(_exp_scale)
     if _scale_arcsec is not None and math.isfinite(float(_scale_arcsec)):
         log_event(
             f"INFO: Starting solve with Scale={float(_scale_arcsec):.3f} arcsec/px "
@@ -1654,27 +1770,37 @@ def solve_wcs_with_local_gaia(
     else:
         _fov_area_deg2 = 1.0
     _mag_cap: float | None = 15.8
-    if _foc_mm is not None and math.isfinite(float(_foc_mm)) and float(_foc_mm) > 0:
-        # Dynamický mag cap: cieľ je ~50–200 jasných hviezd vo FOV
-        # Odhad hustoty: g<11.5 ~1/deg², g<13 ~10/deg², g<15 ~100/deg² (orientačne pri b~60°)
-        # Galaktický pás (b~0°) je hustejší — konzervatívnejšie prahy podľa plochy FOV
-        if _fov_area_deg2 > 5.0:
-            _mag_cap = 11.5
-        elif _fov_area_deg2 > 0.5:
-            _mag_cap = 13.0
-        elif _fov_area_deg2 > 0.05:
-            _mag_cap = 15.0
+    _focal_for_mag: float | None = None
+    if _foc_mm is not None:
+        try:
+            _fv = float(_foc_mm)
+            if math.isfinite(_fv) and _fv > 0:
+                _focal_for_mag = float(_fv)
+        except (TypeError, ValueError):
+            _focal_for_mag = None
+
+    # Dynamický mag cap (per-frame aj MASTERSTAR): malé FOV + dlhé ohnisko potrebuje hlbší katalóg.
+    if _focal_for_mag is not None:
+        focal = float(_focal_for_mag)
+        if focal >= 800:
+            _mag_cap = min(float(max_cat_mag), 15.8)
+        elif focal >= 400:
+            _mag_cap = min(float(max_cat_mag), 14.5)
         else:
-            _gmax_db = float(get_gaia_db_max_g_mag(root))
-            _mag_cap = float(_gmax_db) if _gmax_db > 0.0 else 16.0
-        log_event(
-            f"VYVAR platesolve: dynamický mag_cap={float(_mag_cap):.1f} "
-            f"(FOV≈{_fov_area_deg2:.3f} deg², focal={float(_foc_mm):.0f}mm)"
-        )
+            _mag_cap = min(float(max_cat_mag), 13.0)
     else:
-        log_event(
-            f"VYVAR platesolve: applying Gaia mag cap g<={float(_mag_cap):.1f} (focal={_foc_mm}mm)."
-        )
+        # Neznáme ohnisko → konzervatívne podľa FOV plochy
+        if _fov_area_deg2 < 2.0:
+            _mag_cap = min(float(max_cat_mag), 15.0)
+        elif _fov_area_deg2 < 10.0:
+            _mag_cap = min(float(max_cat_mag), 13.5)
+        else:
+            _mag_cap = min(float(max_cat_mag), 12.0)
+
+    log_event(
+        f"INFO: Dynamický mag_cap={float(_mag_cap):.1f} "
+        f"(FOV={_fov_area_deg2:.3f} deg², focal={_foc_mm}mm)"
+    )
     if _fov_area_deg2 < 10.0:
         # Pre všetky zostavy: obmedzí kužeľ na FOV+20 % (nie veľký default ~7°+)
         _sc_fov: float | None = float(_exp_scale) if _exp_scale is not None else None
@@ -1760,6 +1886,13 @@ def solve_wcs_with_local_gaia(
         _scale_arcsec = plate_scale_arcsec_per_pixel(pixel_pitch_um=float(_f_um), focal_length_mm=float(_f_mm_u))
     except Exception:  # noqa: BLE001
         _scale_arcsec = None
+    if (
+        _scale_arcsec is None
+        or (not math.isfinite(float(_scale_arcsec)))
+        or float(_scale_arcsec) <= 0.0
+    ):
+        if _exp_scale is not None and math.isfinite(float(_exp_scale)) and float(_exp_scale) > 0.0:
+            _scale_arcsec = float(_exp_scale)
     if _scale_arcsec is not None and math.isfinite(float(_scale_arcsec)) and float(_scale_arcsec) > 0:
         _fov_x_deg = (float(naxis1) * float(_scale_arcsec)) / 3600.0
         _fov_y_deg = (float(naxis2) * float(_scale_arcsec)) / 3600.0
@@ -1902,9 +2035,18 @@ def solve_wcs_with_local_gaia(
     _probe_rate0 = float(probe0["match_rate"])
     # Slabý native match: vždy otestovať zrkadlá. MASTERSTAR: vždy porovnať (rohy / parity),
     # lebo vysoký globálny match_rate ešte nemusí znamenať správnu orientáciu pixel↔sky.
-    _mirror_sweep = bool(_probe_rate0 < 0.10) or bool(_is_masterstar)
+    _preferred = str(preferred_mirror or "").strip().lower() or None
+    if _preferred not in {"native", "mirror_x", "mirror_y", "mirror_xy"}:
+        _preferred = None
+
+    # If caller hints the expected parity/orientation (from MASTERSTAR WCS), try it first and allow early exit.
+    # This is especially important when the field is mirrored (det<0) and the naive sweep can pick a wrong axis.
+    _mirror_sweep = bool(_probe_rate0 < 0.10) or bool(_is_masterstar) or bool(_preferred and _preferred != "native")
     if _mirror_sweep:
-        for name, fx, fy in (("mirror_x", True, False), ("mirror_y", False, True), ("mirror_xy", True, True)):
+        mirrors = [("mirror_x", True, False), ("mirror_y", False, True), ("mirror_xy", True, True)]
+        if _preferred and _preferred != "native":
+            mirrors = sorted(mirrors, key=lambda t: (0 if t[0] == _preferred else 1))
+        for name, fx, fy in mirrors:
             xs_t, ys_t = _mirror_detections_xy(
                 xs_native,
                 ys_native,
@@ -1928,7 +2070,20 @@ def solve_wcs_with_local_gaia(
                 expected_scale_rel_tol_override=None,
             )
             if pr is not None:
+                try:
+                    log_event(f"Mirror probe {name}: match_rate={float(pr.get('match_rate', 0.0)) * 100.0:.1f}%")
+                except Exception:  # noqa: BLE001
+                    pass
                 ori_candidates.append((name, fx, fy, pr))
+                if _preferred and name == _preferred:
+                    try:
+                        if float(pr.get("match_rate", 0.0) or 0.0) > 0.50:
+                            log_event(
+                                f"INFO: Preferred mirror '{name}' potvrdený ({float(pr.get('match_rate', 0.0)) * 100.0:.1f}%) — skracujem probe."
+                            )
+                            break
+                    except Exception:  # noqa: BLE001
+                        pass
 
     _best_name, best_fx, best_fy, best = max(
         ori_candidates,
@@ -2402,6 +2557,15 @@ def solve_wcs_with_local_gaia(
         f"rms={float(_rms_px):.2f}px hint_vs_solved={_hint_sep_deg:.3f}deg"
     )
 
+    # Hint separation guard: per-frame solutions can be offset from the initial hint (cropped frames, imperfect center).
+    # MASTERSTAR should remain stricter to prevent wrong-field solves.
+    hint_sep_limit = 0.15 if _is_masterstar else 0.50
+    _hint_sep_bad = math.isfinite(float(_hint_sep_deg)) and float(_hint_sep_deg) > float(hint_sep_limit)
+    log_event(
+        f"INFO: hint_sep guard: {float(_hint_sep_deg):.3f}deg "
+        f"(limit={float(hint_sep_limit):.2f}deg, is_masterstar={bool(_is_masterstar)})"
+    )
+
     _sip_reason = str(sip_meta.get("reason", "") or "").strip().lower()
     if (not bool(sip_meta.get("sip_applied", False))) and _sip_reason == "ill_conditioned":
         log_event(
@@ -2436,7 +2600,7 @@ def solve_wcs_with_local_gaia(
             f"ale match_rate={_match_rate * 100.0:.1f}% — akceptujem do {_rms_relaxed_cap:.0f} px pred ďalšími krokmi."
         )
         sip_meta["prewrite_rms_relaxed_for_masterstar"] = True
-    _invalid = (_match_rate < 0.02) or (not math.isfinite(float(_rms_px))) or _rms_bad
+    _invalid = (_match_rate < 0.02) or (not math.isfinite(float(_rms_px))) or _rms_bad or bool(_hint_sep_bad)
     if _invalid:
         return {
             "solved": False,

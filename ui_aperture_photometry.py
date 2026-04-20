@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from config import AppConfig
     from pipeline import AstroPipeline
 
+from platesolve_ui_paths import default_bundle_dir
+
 
 # ---------------------------------------------------------------------------
 # Pomocné funkcie
@@ -23,75 +25,76 @@ if TYPE_CHECKING:
 
 
 def _find_phase2a_paths(cfg: "AppConfig", draft_id: int | None) -> dict[str, Path | None]:
-    """Nájdi všetky cesty potrebné pre Fázu 2A."""
+    """Return all available filter/setup groups for Phase 2A.
+
+    Returns:
+        Dict keyed by setup_name (e.g. ``R_60_1``) with a nested dict of paths.
+    """
     if draft_id is None:
         return {}
     try:
         archive = Path(cfg.archive_root)
         draft_dir = archive / "Drafts" / f"draft_{int(draft_id):06d}"
         ps_dir = draft_dir / "platesolve"
+        aligned_root = draft_dir / "detrended_aligned" / "lights"
 
-        obs_group_dir: Path | None = None
-        for subdir in sorted(ps_dir.iterdir()):
-            if subdir.is_dir() and (subdir / "per_frame_catalog_index.csv").exists():
-                obs_group_dir = subdir
-                break
-        if obs_group_dir is None:
+        result: dict[str, dict[str, Path | None]] = {}
+        if not ps_dir.exists():
             return {}
 
-        aligned_root = draft_dir / "detrended_aligned" / "lights"
-        per_frame_dir: Path | None = None
-        detrended_dir: Path | None = None
-        if aligned_root.exists():
-            for subdir in sorted(aligned_root.iterdir()):
-                if subdir.is_dir():
-                    per_frame_dir = subdir
-                    detrended_dir = subdir
-                    break
+        for subdir in sorted(ps_dir.iterdir()):
+            if not subdir.is_dir():
+                continue
+            if not (subdir / "per_frame_catalog_index.csv").exists():
+                continue
+            setup_name = subdir.name  # napr. "R_60_1"
 
-        photometry_dir = obs_group_dir / "photometry"
+            per_frame_dir = (aligned_root / setup_name) if (aligned_root / setup_name).exists() else None
+            photometry_dir = subdir / "photometry"
 
-        return {
-            "masterstar_fits": ps_dir / "MASTERSTAR.fits",
-            "active_targets_csv": photometry_dir / "active_targets.csv",
-            "comparison_stars_csv": photometry_dir / "comparison_stars_per_target.csv",
-            "per_frame_csv_dir": per_frame_dir,
-            "detrended_aligned_dir": detrended_dir,
-            # Fáza 2A zapisuje:
-            # - photometry_summary.csv do output_dir priamo
-            # - lightcurve CSV/PNG + per-target field_map do output_dir / "lightcurves"
-            # - globálny field_map.png do output_dir priamo
-            "output_dir": photometry_dir,
-            "photometry_dir": photometry_dir,
-        }
+            result[str(setup_name)] = {
+                "setup_name": subdir,
+                "masterstar_fits": subdir / "MASTERSTAR.fits",
+                "active_targets_csv": photometry_dir / "active_targets.csv",
+                "comparison_stars_csv": photometry_dir / "comparison_stars_per_target.csv",
+                "per_frame_csv_dir": per_frame_dir,
+                "detrended_aligned_dir": per_frame_dir,
+                "output_dir": photometry_dir,
+                "photometry_dir": photometry_dir,
+                "obs_group_dir": subdir,
+            }
+        return result  # type: ignore[return-value]
     except Exception:  # noqa: BLE001
         return {}
 
 
-def _load_fwhm(cfg: "AppConfig", draft_id: int | None) -> float:
-    if draft_id is None:
+def _load_fwhm(masterstar_fits: Path | None) -> float:
+    if masterstar_fits is None or not masterstar_fits.is_file():
         return 3.7
     try:
         from astropy.io import fits as astrofits
 
-        ms = (
-            Path(cfg.archive_root)
-            / "Drafts"
-            / f"draft_{int(draft_id):06d}"
-            / "platesolve"
-            / "MASTERSTAR.fits"
-        )
-        if ms.exists():
-            with astrofits.open(ms, memmap=False) as hdul:
-                for key in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN", "VY_FWHM"):
-                    v = hdul[0].header.get(key)
-                    if v is not None:
-                        fv = float(v)
-                        if 0.5 < fv < 30.0:
-                            return round(fv, 3)
+        with astrofits.open(masterstar_fits, memmap=False) as hdul:
+            for key in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN", "VY_FWHM"):
+                v = hdul[0].header.get(key)
+                if v is not None:
+                    fv = float(v)
+                    if 0.5 < fv < 30.0:
+                        return round(fv, 3)
     except Exception:  # noqa: BLE001
         pass
     return 3.7
+
+
+def _fallback_masterstar_fits(cfg: "AppConfig", draft_id: int | None) -> Path | None:
+    if draft_id is None:
+        return None
+    ps = Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}" / "platesolve"
+    d = default_bundle_dir(ps)
+    if d is None:
+        return None
+    p = d / "MASTERSTAR.fits"
+    return p if p.is_file() else None
 
 
 def _phase2a_results_exist(output_dir: Path | None) -> bool:
@@ -464,13 +467,27 @@ def render_aperture_photometry(
         st.info("Žiadny aktívny draft.")
         return
 
-    paths = _find_phase2a_paths(cfg, draft_id)
-    if not paths:
+    all_setups = _find_phase2a_paths(cfg, draft_id)
+    if not all_setups:
         st.warning("Nenájdené vstupné súbory.")
         return
 
+    setup_options = list(all_setups.keys())
+    selected_setup = st.selectbox(
+        "Filter / skupina:",
+        options=setup_options,
+        key="phase2a_setup_select",
+    )
+    paths = all_setups.get(str(selected_setup)) or {}
+    if not paths:
+        st.warning("Vybraný setup nemá platné cesty.")
+        return
+
     output_dir = paths.get("output_dir")
-    fwhm_px = _load_fwhm(cfg, draft_id)
+    ms_for_fwhm = paths.get("masterstar_fits")
+    if not (isinstance(ms_for_fwhm, Path) and ms_for_fwhm.is_file()):
+        ms_for_fwhm = _fallback_masterstar_fits(cfg, draft_id)
+    fwhm_px = _load_fwhm(ms_for_fwhm)
 
     at_csv = paths.get("active_targets_csv")
     comp_csv = paths.get("comparison_stars_csv")
@@ -581,6 +598,10 @@ def render_aperture_photometry(
         st.warning("Vybraný target sa nenašiel v summary.")
         return
     target_row = summary_df.loc[mask].iloc[0]
+    try:
+        catalog_id = str(target_row.get("catalog_id", ""))
+    except Exception:
+        catalog_id = ""
 
     col1, col2 = st.columns([1, 3])
     with col1:
@@ -596,13 +617,78 @@ def render_aperture_photometry(
             key="phase2a_show_outliers",
         )
 
-    _render_target_detail(
-        target_row,
-        output_dir,
-        show_outliers,
-        comp_df=comp_df,
-        show_detrended=show_detrended,
+    show_all_filters = st.checkbox(
+        "Zobraziť všetky filtre v jednom grafe",
+        value=False,
+        key="phase2a_show_all_filters",
     )
+
+    if show_all_filters and catalog_id:
+        try:
+            import plotly.graph_objects as go  # type: ignore
+
+            fig = go.Figure()
+            FILTER_COLORS = {"R": "red", "V": "green", "B": "blue", "I": "darkred"}
+
+            for setup_name, p in all_setups.items():
+                obs_dir = p.get("obs_group_dir")
+                if obs_dir is None:
+                    continue
+                lc_dir = Path(obs_dir) / "photometry" / "lightcurves"
+                lc_csv = lc_dir / f"lightcurve_{catalog_id}.csv"
+                if not lc_csv.exists():
+                    continue
+                lc_df = pd.read_csv(lc_csv, low_memory=False)
+
+                filter_letter = setup_name[0] if setup_name else "?"
+                color = FILTER_COLORS.get(filter_letter, "gray")
+
+                x_col = "bjd_tdb_mid" if "bjd_tdb_mid" in lc_df.columns else ("bjd_tdb" if "bjd_tdb" in lc_df.columns else lc_df.columns[0])
+                y_col = "mag_calib" if "mag_calib" in lc_df.columns else ("mag_calib_raw" if "mag_calib_raw" in lc_df.columns else lc_df.columns[1])
+                err_col = "mag_err" if "mag_err" in lc_df.columns else None
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=lc_df[x_col],
+                        y=lc_df[y_col],
+                        mode="markers+lines",
+                        name=str(setup_name),
+                        marker=dict(color=color, size=4),
+                        line=dict(color=color, width=0.5),
+                        error_y=dict(
+                            type="data",
+                            array=(lc_df[err_col].tolist() if err_col is not None else None),
+                            visible=bool(err_col is not None),
+                        ),
+                    )
+                )
+
+            fig.update_layout(
+                title=f"Svetelné krivky — {catalog_id}",
+                xaxis_title="BJD (TDB)",
+                yaxis_title="mag (calib)",
+                yaxis_autorange="reversed",
+                legend_title="Filter",
+                height=500,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as exc:  # noqa: BLE001
+            st.warning(f"Overlay graf zlyhal: {exc}")
+            _render_target_detail(
+                target_row,
+                output_dir,
+                show_outliers,
+                comp_df=comp_df,
+                show_detrended=show_detrended,
+            )
+    else:
+        _render_target_detail(
+            target_row,
+            output_dir,
+            show_outliers,
+            comp_df=comp_df,
+            show_detrended=show_detrended,
+        )
 
     st.divider()
 

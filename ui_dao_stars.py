@@ -74,8 +74,8 @@ def render_dao_stars_dashboard(cfg: AppConfig) -> None:
         )
 
     st.caption(
-        "**Rozšírené limity solvera** (očakávaná mierka „/px“, RMS pred zápisom, NN refine) ostávajú v **config.json** "
-        "(`masterstar_platesolve_expected_arcsec_per_px`, `…_prewrite_rms_max_px`, …) — bežne nechaj **null** / predvolené."
+        "Očakávaná mierka plate-solve sa odvodzuje **automaticky z DB** (EQUIPMENTS + TELESCOPE + binning z FITS). "
+        "Technické RMS limity solvera ostávajú v **config.json** (predvolené / null)."
     )
 
     c1, c2 = st.columns(2)

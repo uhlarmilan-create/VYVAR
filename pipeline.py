@@ -76,7 +76,9 @@ from utils import (
     masterstar_wcs_quality,
     maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel,
     normalize_telescope_focal_mm_for_plate_scale,
+    per_frame_catalog_match_sep_arcsec_for_scale,
     plate_scale_arcsec_per_pixel,
+    plate_solve_fov_deg_diagonal_from_scale,
     strip_celestial_wcs_keys,
     wcs_distortion_log_suffix,
     wcs_rotation_angle_deg,
@@ -717,7 +719,7 @@ def resolve_preprocess_target_coordinates(
     """Resolve preprocess target coordinates with DB-first priority.
 
     Priority:
-    1) ``OBS_DRAFT.CENTEROFFIELDRA/DE`` (when ``draft_id`` exists and values are finite, non-zero pair)
+    1) ``OBS_DRAFT.CENTEROFFIELDRA/DE`` (finite pair; **0/0** sa považuje za nevyplnené — pokračuje sa ďalej)
     2) UI values
     3) median RA/DE from draft light rows
     """
@@ -736,7 +738,7 @@ def resolve_preprocess_target_coordinates(
                         )
                         return float(ra_f), float(de_f)
                     log_event(
-                        "WARNING: OBS_DRAFT center coordinates are 0.0/0.0; falling back to UI/median values."
+                        "DEBUG: OBS_DRAFT center is 0/0 — beriem ako nevyplnené; skúšam UI, potom medián z OBS_FILES."
                     )
         except Exception:  # noqa: BLE001
             pass
@@ -2359,6 +2361,60 @@ def _header_focal_length_mm(header: fits.Header) -> float | None:
     return None
 
 
+def resolve_plate_solve_fov_deg_hint(
+    hdr: fits.Header,
+    h: int,
+    w: int,
+    *,
+    database_path: Path | str | None = None,
+    equipment_id: int | None = None,
+    draft_id: int | None = None,
+) -> float | None:
+    """Estimate plate-solve FOV diameter [deg] along chip diagonal (optics from header, else DB scale + NAXIS)."""
+    if h <= 0 or w <= 0:
+        return None
+    f_mm = _header_focal_length_mm(hdr)
+    p_um = _db_header_pixel_native_um_mean(hdr)
+    if f_mm is not None and p_um is not None and f_mm > 0 and p_um > 0:
+        diag_mm = math.hypot(float(w) * float(p_um) * 0.001, float(h) * float(p_um) * 0.001)
+        rad = 2.0 * math.atan2(0.5 * diag_mm, float(f_mm))
+        if math.isfinite(rad) and rad > 0:
+            return float(rad * 180.0 / math.pi)
+
+    dbp = str(database_path or "").strip()
+    if not dbp:
+        return None
+    try:
+        db = VyvarDatabase(Path(dbp))
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        eq = int(equipment_id) if equipment_id is not None else None
+        tel: int | None = None
+        if draft_id is not None:
+            dr = db.fetch_obs_draft_by_id(int(draft_id))
+            if dr is not None:
+                if eq is None and dr.get("ID_EQUIPMENTS") is not None:
+                    eq = int(dr["ID_EQUIPMENTS"])
+                if dr.get("ID_TELESCOPE") is not None:
+                    tel = int(dr["ID_TELESCOPE"])
+        xb, yb = fits_binning_xy_from_header(hdr)
+        bin_b = max(1, int(xb), int(yb))
+        sc = compute_plate_scale_from_db(eq, tel, db.conn, binning=bin_b)
+        if sc is None or not math.isfinite(float(sc)) or float(sc) <= 0:
+            return None
+        nx = int(hdr.get("NAXIS1", w) or w)
+        ny = int(hdr.get("NAXIS2", h) or h)
+        return plate_solve_fov_deg_diagonal_from_scale(nx, ny, float(sc))
+    except Exception:  # noqa: BLE001
+        return None
+    finally:
+        try:
+            db.conn.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def _db_header_pixel_native_um_mean(header: fits.Header) -> float | None:
     """Pixel pitch [µm] (native, unbinned) from FITS header (best-effort).
 
@@ -2382,12 +2438,19 @@ def _db_header_pixel_native_um_mean(header: fits.Header) -> float | None:
     return float(sum(vals) / float(len(vals)))
 
 
-def get_auto_fov(*, archive_path: Path | None = None, masterstar_path: Path | None = None) -> float | None:
+def get_auto_fov(
+    *,
+    archive_path: Path | None = None,
+    masterstar_path: Path | None = None,
+    database_path: Path | str | None = None,
+    equipment_id: int | None = None,
+    draft_id: int | None = None,
+) -> float | None:
     """Auto field diameter [deg] (diagonal) for plate solving.
 
     Priority:
-    - From FITS header: FOCALLEN/FOCLEN + pixel pitch (PIXSIZE/XPIXSZ) + NAXIS => diagonal FOV
-    - Else, from WCS after a successful solve: angular separation of opposite corners
+    - Header optics (focal + pixel) or DB plate-scale × NAXIS diagonal
+    - Else WCS corners (after a successful solve)
     """
     import numpy as np
     import astropy.units as u
@@ -2408,14 +2471,17 @@ def get_auto_fov(*, archive_path: Path | None = None, masterstar_path: Path | No
         return None
     h, w = int(data.shape[0]), int(data.shape[1])
 
-    # Try optics-based FOV.
-    f_mm = _header_focal_length_mm(hdr)
-    p_um = _db_header_pixel_native_um_mean(hdr)
-    if f_mm is not None and p_um is not None and f_mm > 0 and p_um > 0 and w > 0 and h > 0:
-        diag_mm = math.hypot(float(w) * float(p_um) * 0.001, float(h) * float(p_um) * 0.001)
-        rad = 2.0 * math.atan2(0.5 * diag_mm, float(f_mm))
-        if math.isfinite(rad) and rad > 0:
-            return float(rad * 180.0 / math.pi)
+    _dbp = str(database_path or "").strip()
+    if not _dbp:
+        try:
+            _dbp = str(AppConfig().database_path)
+        except Exception:  # noqa: BLE001
+            _dbp = ""
+    _hint = resolve_plate_solve_fov_deg_hint(
+        hdr, h, w, database_path=_dbp or None, equipment_id=equipment_id, draft_id=draft_id
+    )
+    if _hint is not None and math.isfinite(_hint) and _hint > 0:
+        return float(_hint)
 
     # Fall back to WCS-based FOV (after solve).
     try:
@@ -2761,6 +2827,45 @@ def _plate_solve_input_bundle(
     return out
 
 
+def compute_plate_scale_from_db(
+    equipment_id: int | None,
+    telescope_id: int | None,
+    db_conn: Any,
+    *,
+    binning: int = 1,
+) -> float | None:
+    """Vypočíta plate scale [arcsec/px] z EQUIPMENTS a TELESCOPE tabuliek.
+
+    Formula: plate_scale = (pixel_um * binning) / focal_mm * 206.265
+    """
+    try:
+        pixel_um = None
+        focal_mm = None
+        bx = max(1, int(binning))
+        if equipment_id is not None:
+            row = db_conn.execute(
+                "SELECT PIXELSIZE FROM EQUIPMENTS WHERE ID = ?",
+                (int(equipment_id),),
+            ).fetchone()
+            if row is not None and row[0] is not None:
+                pixel_um = float(row[0])
+
+        if telescope_id is not None:
+            row = db_conn.execute(
+                "SELECT FOCAL FROM TELESCOPE WHERE ID = ?",
+                (int(telescope_id),),
+            ).fetchone()
+            if row is not None and row[0] is not None and float(row[0]) > 0:
+                focal_mm = float(row[0])
+
+        if pixel_um and focal_mm:
+            scale = (pixel_um * bx) / focal_mm * 206.265
+            return round(scale, 4)
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
 def _try_rescale_masterstar_linear_wcs_to_expected_plate_scale(
     fits_path: Path,
     *,
@@ -3074,12 +3179,7 @@ def _solve_wcs_external(
                 "solved": False,
                 "reason": "VYVAR solver: v Settings nastav cestu k lokálnej Gaia DR3 SQLite DB (gaia_db_path).",
             }
-        if hint_ra_deg is None or hint_dec_deg is None:
-            return {
-                "solved": False,
-                "reason": "VYVAR solver: chýba RA/Dec hint (VYTARGRA/VYTARGDE v hlavičke alebo zadanie v UI / preprocess).",
-            }
-        from vyvar_platesolver import solve_wcs_with_local_gaia
+        from vyvar_platesolver import solve_wcs_with_local_gaia, _get_masterstar_wcs_parity
 
         b = bundle or _plate_solve_input_bundle(
             fits_path,
@@ -3087,9 +3187,141 @@ def _solve_wcs_external(
             equipment_id=equipment_id,
             draft_id=draft_id,
         )
+        _is_masterstar = fp_solve.name.strip().upper() == "MASTERSTAR.FITS"
+        hint_ra = hint_ra_deg
+        hint_dec = hint_dec_deg
         _em = b.get("meta") or {}
         eff_um = b.get("eff_um")
         exp_scale = b.get("expected_arcsec_per_px")
+
+        # Per-frame solve MUST NOT invoke blind solver.
+        # VYVAR platesolver takes RA/Dec from FITS header (VYTARG*/RA/DEC/WCS); caller hint args are not used.
+        # Therefore, for non-MASTERSTAR frames we inject pointing hint from MASTERSTAR WCS (CRVAL1/2).
+        # Mirror orientation hint:
+        # - MASTERSTAR: can be hinted from MASTERSTAR header (VY_MIRR) to speed/robustify the sweep.
+        # - per-frame: do NOT inherit from MASTERSTAR; frames may have different orientation.
+        preferred_mirror: str | None = None
+        if (not _is_masterstar) and (hint_ra is None or hint_dec is None):
+            try:
+                # Načítaj center z MASTERSTAR.fits (má platný WCS po plate solve)
+                masterstar_path: Path | None = None
+                _fp_here = Path(fits_path)
+                # Guess setup name from parent folder (e.g. processed/lights/R_60_1/*.fits or detrended_aligned/lights/V_60_1/*.fits)
+                _setup_guess = ""
+                try:
+                    _setup_guess = str(_fp_here.parent.name or "").strip()
+                except Exception:  # noqa: BLE001
+                    _setup_guess = ""
+                _candidate = _fp_here
+                for _lvl in range(6):  # max 6 úrovní hore
+                    _candidate = _candidate.parent
+                    # New (multi-filter): prefer per-setup MASTERSTAR in platesolve/<setup>/MASTERSTAR.fits
+                    _ms_path_setup = (
+                        (_candidate / "platesolve" / _setup_guess / "MASTERSTAR.fits")
+                        if _setup_guess
+                        else None
+                    )
+                    # Back-compat: old location platesolve/MASTERSTAR.fits (single-setup drafts)
+                    _ms_path_root = _candidate / "platesolve" / "MASTERSTAR.fits"
+                    _ms_path = _ms_path_setup if _ms_path_setup is not None else _ms_path_root
+                    try:
+                        if bool(getattr(AppConfig(), "debug_platesolver", False)):
+                            log_event(
+                                "DEBUG: MASTERSTAR search "
+                                f"lvl={_lvl} setup={_setup_guess!r} "
+                                f"setup_path={_ms_path_setup} exists_setup={_ms_path_setup.is_file() if _ms_path_setup is not None else False} "
+                                f"root_path={_ms_path_root} exists_root={_ms_path_root.is_file()}"
+                            )
+                    except Exception:  # noqa: BLE001
+                        pass
+                    # Prefer setup MASTERSTAR if it exists, else root
+                    if _ms_path_setup is not None and _ms_path_setup.is_file():
+                        masterstar_path = _ms_path_setup
+                        break
+                    if _ms_path_root.is_file():
+                        masterstar_path = _ms_path_root
+                        break
+                if masterstar_path is not None and masterstar_path.is_file():
+                    from astropy.io import fits as _fits
+
+                    with _fits.open(masterstar_path, memmap=False) as _hdul:
+                        _mhdr = _hdul[0].header
+                        _ms_ra = _mhdr.get("CRVAL1")
+                        _ms_dec = _mhdr.get("CRVAL2")
+                        if _ms_ra is not None and _ms_dec is not None:
+                            hint_ra = float(_ms_ra)
+                            hint_dec = float(_ms_dec)
+                            log_event(
+                                f"INFO: Per-frame hint z MASTERSTAR CRVAL: RA={hint_ra:.4f} Dec={hint_dec:.4f}"
+                            )
+                    # Do not set preferred_mirror for per-frame solves here.
+            except Exception as _e:  # noqa: BLE001
+                log_event(f"WARNING: Per-frame hint z MASTERSTAR zlyhal: {_e}")
+
+        # Fallback: if MASTERSTAR hint is missing, try OBS_DRAFT center (can be 0/0).
+        if (not _is_masterstar) and (hint_ra is None or hint_dec is None) and draft_id is not None:
+            try:
+                _db_hint = _vyvar_open_database(cfg_u)
+                if _db_hint is not None:
+                    try:
+                        drow = _db_hint.fetch_obs_draft_by_id(int(draft_id)) or {}
+                        ra_db = drow.get("CENTEROFFIELDRA")
+                        de_db = drow.get("CENTEROFFIELDDE")
+                        if ra_db is not None and de_db is not None:
+                            ra_f = float(ra_db)
+                            de_f = float(de_db)
+                            if math.isfinite(ra_f) and math.isfinite(de_f) and not (
+                                abs(ra_f) < 1e-9 and abs(de_f) < 1e-9
+                            ):
+                                hint_ra = float(ra_f)
+                                hint_dec = float(de_f)
+                                log_event(
+                                    f"INFO: Per-frame hint z OBS_DRAFT center: RA={hint_ra:.4f} Dec={hint_dec:.4f}"
+                                )
+                    finally:
+                        try:
+                            _db_hint.conn.close()
+                        except Exception:  # noqa: BLE001
+                            pass
+            except Exception:  # noqa: BLE001
+                pass
+
+        _db_ps = _vyvar_open_database(cfg_u)
+        _auto_ps: float | None = None
+        if _db_ps is not None:
+            try:
+                _eq_ps = equipment_id
+                _tel_ps: int | None = None
+                if draft_id is not None:
+                    _drp = _db_ps.fetch_obs_draft_by_id(int(draft_id))
+                    if _drp:
+                        if _eq_ps is None and _drp.get("ID_EQUIPMENTS") is not None:
+                            _eq_ps = int(_drp["ID_EQUIPMENTS"])
+                        if _drp.get("ID_TELESCOPE") is not None:
+                            _tel_ps = int(_drp["ID_TELESCOPE"])
+                _bx = max(1, int(_em.get("binning", 1) or 1))
+                _auto_ps = compute_plate_scale_from_db(
+                    int(_eq_ps) if _eq_ps is not None else None,
+                    _tel_ps,
+                    _db_ps.conn,
+                    binning=_bx,
+                )
+            except Exception:  # noqa: BLE001
+                _auto_ps = None
+            finally:
+                try:
+                    _db_ps.conn.close()
+                except Exception:  # noqa: BLE001
+                    pass
+        exp_scale = _auto_ps or exp_scale or None
+        if _auto_ps is not None:
+            log_event(
+                f"INFO: Plate scale z DB (Equipment+Telescope): {_auto_ps:.4f} arcsec/px"
+            )
+        elif _is_masterstar:
+            log_event(
+                "WARNING: Plate scale z DB nedostupná — solver odvodí mierku z FITS alebo None"
+            )
         _bx = max(1, int(_em.get("binning", 1) or 1))
         _pix = _em.get("pixel_size_um_physical")
         _foc_mm = b.get("focal_mm")
@@ -3099,28 +3331,56 @@ def _solve_wcs_external(
         log_event(
             f"SOLVER INPUT: Focal={_foc_s}mm, Pixel={_pix_s}um, Bin={_bx}x -> Effective Pixel={_eff_s}um"
         )
-        _calc = b.get("expected_arcsec_per_px")
-        if _calc is not None and _foc_mm is not None and eff_um is not None:
+        if exp_scale is not None and _foc_mm is not None and eff_um is not None:
             log_event(
-                f"PLATE SOLVING: Mierka nastavená na {float(_calc):.3f} arcsec/px "
+                f"PLATE SOLVING: Mierka nastavená na {float(exp_scale):.3f} arcsec/px "
                 f"(vypočítané z {float(_foc_mm)}mm a {float(eff_um)}um)"
             )
-        elif _calc is not None:
-            log_event(f"PLATE SOLVING: Mierka nastavená na {float(_calc):.3f} arcsec/px")
+        elif exp_scale is not None:
+            log_event(f"PLATE SOLVING: Mierka nastavená na {float(exp_scale):.3f} arcsec/px")
+
+        try:
+            if bool(getattr(AppConfig(), "debug_platesolver", False)):
+                log_event(
+                    f"DEBUG: _try_vyvar hint_ra={hint_ra} hint_dec={hint_dec} is_masterstar={_is_masterstar}"
+                )
+        except Exception:  # noqa: BLE001
+            pass
+
+        # Ensure per-frame images have VYTARGRA/VYTARGDE in FITS header so vyvar_platesolver
+        # can avoid blind solving (it reads hints from the header, not from caller args).
+        if (not _is_masterstar) and hint_ra is not None and hint_dec is not None:
+            try:
+                with fits.open(fp_solve, mode="update", memmap=False) as hdul:
+                    h0 = hdul[0].header
+                    if "VYTARGRA" not in h0 or "VYTARGDE" not in h0:
+                        h0["VYTARGRA"] = (float(hint_ra), "VYVAR plate-solve hint RA [deg] ICRS")
+                        h0["VYTARGDE"] = (float(hint_dec), "VYVAR plate-solve hint Dec [deg] ICRS")
+                        hdul.flush()
+                log_event(f"INFO: Per-frame VYTARG zapísaný: RA={float(hint_ra):.4f} Dec={float(hint_dec):.4f}")
+            except Exception as e:  # noqa: BLE001
+                log_event(f"WARNING: Per-frame VYTARG zápis zlyhal: {e}")
 
         _no_sip = os.environ.get("VYVAR_PLATE_SOLVE_NO_SIP", "").strip().lower() in {"1", "true", "yes", "on"}
-        _is_masterstar = fp_solve.name.strip().upper() == "MASTERSTAR.FITS"
+        # For MASTERSTAR only: hint mirror orientation from its own header (VY_MIRR) / parity.
+        if _is_masterstar:
+            try:
+                preferred_mirror = _get_masterstar_wcs_parity(Path(fp_solve))
+            except Exception:  # noqa: BLE001
+                preferred_mirror = None
+
         return _finalize_plate_solve_result(
             solve_wcs_with_local_gaia(
                 fp_solve,
-                hint_ra_deg=float(hint_ra_deg),
-                hint_dec_deg=float(hint_dec_deg),
+                hint_ra_deg=float(hint_ra) if hint_ra is not None else None,
+                hint_dec_deg=float(hint_dec) if hint_dec is not None else None,
                 fov_diameter_deg=float(plate_solve_fov_deg),
                 gaia_db_path=Path(gaia_db),
                 enable_sip=not _no_sip,
                 effective_pixel_um=eff_um,
                 focal_length_mm=float(_foc_mm) if _foc_mm is not None else None,
                 expected_plate_scale_arcsec_per_px=exp_scale,
+                preferred_mirror=preferred_mirror,
                 max_catalog_rows=100000 if _is_masterstar else None,
                 faintest_mag_limit=18.0 if _is_masterstar else None,
             )
@@ -4551,6 +4811,56 @@ def write_photometry_plan_files(
     }
 
 
+def _sync_comparison_stars_across_setups(platesolve_root: Path) -> None:
+    """Copy comparison_stars.csv from a reference setup to all other setup dirs under platesolve/.
+
+    Reference preference:
+    - first setup containing 'R_' in its name with comparison_stars.csv
+    - else first setup (sorted) that has comparison_stars.csv
+    """
+    try:
+        root = Path(platesolve_root)
+        if not root.is_dir():
+            return
+        setup_dirs = [
+            d
+            for d in root.iterdir()
+            if d.is_dir() and (d / "per_frame_catalog_index.csv").exists()
+        ]
+        if len(setup_dirs) < 2:
+            return
+        ref_dir: Path | None = None
+        for d in setup_dirs:
+            if "R_" in d.name and (d / "comparison_stars.csv").exists():
+                ref_dir = d
+                break
+        if ref_dir is None:
+            for d in sorted(setup_dirs, key=lambda p: p.name.casefold()):
+                if (d / "comparison_stars.csv").exists():
+                    ref_dir = d
+                    break
+        if ref_dir is None:
+            return
+        ref_comp = ref_dir / "comparison_stars.csv"
+        if not ref_comp.is_file():
+            return
+        import shutil
+
+        for d in setup_dirs:
+            if d == ref_dir:
+                continue
+            target_comp = d / "comparison_stars.csv"
+            try:
+                shutil.copy2(ref_comp, target_comp)
+                log_event(
+                    f"INFO: Comparison stars skopírované z {ref_dir.name} → {d.name}"
+                )
+            except Exception:  # noqa: BLE001
+                pass
+    except Exception:  # noqa: BLE001
+        return
+
+
 def _dao_auto_binning_factor(h: int, w: int) -> int:
     """2×2 mean binning for DAO on large chips (~4× fewer pixels); skipped below ~5 MP."""
     mp = float(int(h) * int(w)) / 1_000_000.0
@@ -5152,6 +5462,9 @@ def detect_stars_and_match_catalog(
     catalog_local_gaia_only: bool | None = None,
     catalog_kd_pack: tuple[Any, "np.ndarray"] | None = None,
     plate_solve_fov_deg: float | None = None,
+    fov_database_path: Path | str | None = None,
+    fov_equipment_id: int | None = None,
+    fov_draft_id: int | None = None,
     prematch_peak_sigma_floor: float = 10.0,
     frame_name: str = "",
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
@@ -5206,6 +5519,18 @@ def detect_stars_and_match_catalog(
     arr = np.asarray(data, dtype=np.float32)
     h, wpx = arr.shape
     _fov_hint = plate_solve_fov_deg
+    if _fov_hint is None:
+        try:
+            _fov_hint = resolve_plate_solve_fov_deg_hint(
+                hdr,
+                int(h),
+                int(wpx),
+                database_path=fov_database_path,
+                equipment_id=fov_equipment_id,
+                draft_id=fov_draft_id,
+            )
+        except Exception:  # noqa: BLE001
+            _fov_hint = None
     if _fov_hint is None:
         try:
             _fov_hint = float(AppConfig().plate_solve_fov_deg)
@@ -6413,6 +6738,9 @@ def _export_per_frame_run_catalog_core(
                 catalog_local_gaia_only=export_cat_local,
                 catalog_kd_pack=kd_pack,
                 plate_solve_fov_deg=st.get("plate_solve_fov_deg"),
+                fov_database_path=st.get("database_path"),
+                fov_equipment_id=int(st["equipment_id"]) if st.get("equipment_id") is not None else None,
+                fov_draft_id=int(st["draft_id"]) if st.get("draft_id") is not None else None,
                 frame_name=fname,
             )
         except Exception as exc:  # noqa: BLE001
@@ -6739,10 +7067,33 @@ def export_per_frame_catalogs(
     meta_path = _field_catalog_cone_meta_path(field_cat_path)
     cat_df: pd.DataFrame | None = None
 
-    _pfov_res: float | None = plate_solve_fov_deg
+    _pfov_res: float | None = None
+    try:
+        _pf0 = float(plate_solve_fov_deg) if plate_solve_fov_deg is not None else float("nan")
+        if math.isfinite(_pf0) and _pf0 > 0:
+            _pfov_res = _pf0
+    except (TypeError, ValueError):
+        _pfov_res = None
+    if _pfov_res is None and files:
+        try:
+            _rf0 = files[0]
+            with fits.open(_rf0, memmap=False) as _h0:
+                _hd0 = _h0[0].header.copy()
+                _ar0 = np.asarray(_h0[0].data)
+            if _ar0.ndim == 2:
+                _pfov_res = resolve_plate_solve_fov_deg_hint(
+                    _hd0,
+                    int(_ar0.shape[0]),
+                    int(_ar0.shape[1]),
+                    database_path=_cfg_ap.database_path,
+                    equipment_id=int(equipment_id) if equipment_id is not None else None,
+                    draft_id=int(draft_id) if draft_id is not None else None,
+                )
+        except Exception:  # noqa: BLE001
+            _pfov_res = None
     if _pfov_res is None:
         try:
-            _pfov_res = float((app_config or AppConfig()).plate_solve_fov_deg)
+            _pfov_res = float(_cfg_ap.plate_solve_fov_deg)
         except Exception:  # noqa: BLE001
             _pfov_res = None
 
@@ -7098,6 +7449,9 @@ def export_per_frame_catalogs(
                     catalog_local_gaia_only=_export_cat_local,
                     catalog_kd_pack=kd_cell[0] if kd_cell else None,
                     plate_solve_fov_deg=_pfov_res,
+                    fov_database_path=_cfg_ap.database_path,
+                    fov_equipment_id=int(equipment_id) if equipment_id is not None else None,
+                    fov_draft_id=int(draft_id) if draft_id is not None else None,
                 )
             except Exception as exc:  # noqa: BLE001
                 return {"file": fname, "status": f"error: {exc}", "csv": ""}
@@ -8066,16 +8420,63 @@ def generate_masterstar_and_catalog(
     log_event(
         f"MASTERSTAR: SIP skúšanie {_sip_ms}→…→{_sip_lo} (config max/min plate-solve SIP)."
     )
-    _exp_arc = getattr(_cfg_ms, "masterstar_platesolve_expected_arcsec_per_px", None)
-    if _exp_arc is not None:
+    try:
+        _xb_ms, _yb_ms = fits_binning_xy_from_header(hdr)
+        _bin_ms = max(1, int(_xb_ms), int(_yb_ms))
+    except Exception:  # noqa: BLE001
+        _bin_ms = 1
+
+    _eq_ms = int(equipment_id) if equipment_id is not None else None
+    _tel_ms: int | None = None
+    _auto_scale_ms: float | None = None
+    _db_scale = _vyvar_open_database(_cfg_ms)
+    if _db_scale is not None:
         try:
-            _ea = float(_exp_arc)
-            if math.isfinite(_ea) and _ea > 0:
-                log_event(
-                    f"MASTERSTAR: očakávaná mierka z config masterstar_platesolve_expected_arcsec_per_px = {_ea:.4f} arcsec/px."
-                )
+            if draft_id is not None:
+                _dr_ms = _db_scale.fetch_obs_draft_by_id(int(draft_id))
+                if _dr_ms is not None:
+                    if _eq_ms is None and _dr_ms.get("ID_EQUIPMENTS") is not None:
+                        _eq_ms = int(_dr_ms["ID_EQUIPMENTS"])
+                    if _dr_ms.get("ID_TELESCOPE") is not None:
+                        _tel_ms = int(_dr_ms["ID_TELESCOPE"])
+            _auto_scale_ms = compute_plate_scale_from_db(
+                _eq_ms, _tel_ms, _db_scale.conn, binning=_bin_ms
+            )
+        except Exception:  # noqa: BLE001
+            _auto_scale_ms = None
+        finally:
+            try:
+                _db_scale.conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+    if _auto_scale_ms is not None:
+        log_event(
+            f"INFO: Plate scale z DB (Equipment+Telescope): {_auto_scale_ms:.4f} arcsec/px"
+        )
+    else:
+        log_event(
+            "WARNING: Plate scale z DB nedostupná — solver odvodí mierku z FITS alebo None"
+        )
+
+    _plate_scale_ms = _auto_scale_ms or None
+    _fov_ms_solve = resolve_plate_solve_fov_deg_hint(
+        hdr,
+        int(data.shape[0]),
+        int(data.shape[1]),
+        database_path=_cfg_ms.database_path,
+        equipment_id=_eq_ms,
+        draft_id=int(draft_id) if draft_id is not None else None,
+    )
+    if _fov_ms_solve is None:
+        try:
+            _pf_ms = float(plate_solve_fov_deg)
+            if math.isfinite(_pf_ms) and _pf_ms > 0:
+                _fov_ms_solve = _pf_ms
         except (TypeError, ValueError):
-            _exp_arc = None
+            pass
+    if _fov_ms_solve is None:
+        _fov_ms_solve = float(getattr(_cfg_ms, "plate_solve_fov_deg", 1.0))
     _prms = getattr(_cfg_ms, "masterstar_platesolve_prewrite_rms_max_px", None)
     _prms_r = getattr(_cfg_ms, "masterstar_platesolve_prewrite_relaxed_rms_max_px", None)
     _nnrms = getattr(_cfg_ms, "masterstar_platesolve_nn_refine_max_rms_px", None)
@@ -8096,7 +8497,7 @@ def generate_masterstar_and_catalog(
             faintest_mag_limit=18.0,
             dao_threshold_sigma=float(_dao_sigma_eff),
             expected_plate_scale_arcsec_per_px=(
-                float(_exp_arc) if _exp_arc is not None else None
+                float(_plate_scale_ms) if _plate_scale_ms is not None else None
             ),
             masterstar_prewrite_rms_max_px=float(_prms) if _prms is not None else None,
             masterstar_prewrite_relaxed_rms_max_px=float(_prms_r) if _prms_r is not None else None,
@@ -8132,7 +8533,7 @@ def generate_masterstar_and_catalog(
         solve_meta = _run_masterstar_vyvar_solve(
             enable_sip=True,
             sip_max_order=int(_sip_ms),
-            fov_deg=float(plate_solve_fov_deg),
+            fov_deg=float(_fov_ms_solve),
             max_rows=int(_ms_vyvar_max_rows),
         )
     if not isinstance(solve_meta, dict) or not bool(solve_meta.get("solved", False)):
@@ -8198,7 +8599,7 @@ def generate_masterstar_and_catalog(
         solve_meta2 = _run_masterstar_vyvar_solve(
             enable_sip=False,
             sip_max_order=0,
-            fov_deg=float(plate_solve_fov_deg) * 1.25,
+            fov_deg=float(_fov_ms_solve) * 1.25,
             max_rows=int(max(_ms_vyvar_max_rows, 30000)),
         )
         if not isinstance(solve_meta2, dict) or not bool(solve_meta2.get("solved", False)):
@@ -8230,9 +8631,9 @@ def generate_masterstar_and_catalog(
             )
 
     _exp_scale_apx: float | None = None
-    if _exp_arc is not None:
+    if _plate_scale_ms is not None:
         try:
-            _ea2 = float(_exp_arc)
+            _ea2 = float(_plate_scale_ms)
             if math.isfinite(_ea2) and _ea2 > 0:
                 _exp_scale_apx = float(_ea2)
         except (TypeError, ValueError):
@@ -8325,18 +8726,35 @@ def generate_masterstar_and_catalog(
     log_event(f"MASTERSTAR levels: noise_floor(min)={_ms_min:.2f}, saturation_proxy(max)={_ms_max:.2f}")
 
     platesolve_dir.mkdir(parents=True, exist_ok=True)
-    _fov_job = float(plate_solve_fov_deg)
+    _fov_job: float | None = None
+    try:
+        _fj = float(plate_solve_fov_deg)
+        if math.isfinite(_fj) and _fj > 0:
+            _fov_job = _fj
+    except (TypeError, ValueError):
+        _fov_job = None
+    if _fov_job is None:
+        _fov_job = resolve_plate_solve_fov_deg_hint(
+            hdr,
+            int(data.shape[0]),
+            int(data.shape[1]),
+            database_path=_cfg_ms.database_path,
+            equipment_id=int(equipment_id) if equipment_id is not None else None,
+            draft_id=int(draft_id) if draft_id is not None else None,
+        )
+    if _fov_job is None:
+        _fov_job = float(getattr(_cfg_ms, "plate_solve_fov_deg", 1.0))
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FITSFixedWarning)
             _w_pre = WCS(hdr)
         if _w_pre.has_celestial:
             _, _r_cat_need = _effective_field_catalog_cone_radius_deg(
-                _w_pre, int(data.shape[0]), int(data.shape[1]), _fov_job, fits_header=hdr
+                _w_pre, int(data.shape[0]), int(data.shape[1]), float(_fov_job), fits_header=hdr
             )
             _invalidate_field_catalog_cone_cache_if_needed(
                 platesolve_dir / "field_catalog_cone.csv",
-                plate_solve_fov_deg=_fov_job,
+                plate_solve_fov_deg=float(_fov_job),
                 effective_radius_deg=float(_r_cat_need),
             )
     except Exception as exc:  # noqa: BLE001
@@ -8364,7 +8782,10 @@ def generate_masterstar_and_catalog(
         dao_fwhm_px=_ms_fwhm,
         equipment_saturate_adu=equipment_saturate_adu,
         catalog_local_gaia_only=catalog_local_gaia_only,
-        plate_solve_fov_deg=float(plate_solve_fov_deg),
+        plate_solve_fov_deg=float(_fov_job),
+        fov_database_path=_cfg_ms.database_path,
+        fov_equipment_id=int(equipment_id) if equipment_id is not None else None,
+        fov_draft_id=int(draft_id) if draft_id is not None else None,
         prematch_peak_sigma_floor=float(
             getattr(_cfg_ms, "masterstar_prematch_peak_sigma_floor", 3.2)
         ),
@@ -8568,6 +8989,11 @@ def generate_masterstar_and_catalog(
         n_comparison_stars=int(n_comparison_stars),
         require_non_variable=bool(require_non_variable_comparisons),
     )
+    # Multi-filter support: keep comparison stars consistent across platesolve/<setup>/ folders.
+    try:
+        _sync_comparison_stars_across_setups(Path(platesolve_dir).parent)
+    except Exception:  # noqa: BLE001
+        pass
 
     out: dict[str, Any] = {
         "masterstar_fits": str(masterstar_fits),
@@ -9266,12 +9692,7 @@ def _astrometry_align_impl_body(
     _fb_align = float(getattr(_cfg_align, "sips_dao_fwhm_px", 2.5))
     if not math.isfinite(_fb_align) or _fb_align <= 0:
         _fb_align = 2.5
-    try:
-        _pfov_align = float(plate_solve_fov_deg)
-        if not math.isfinite(_pfov_align) or _pfov_align <= 0:
-            _pfov_align = None
-    except (TypeError, ValueError):
-        _pfov_align = None
+    _pfov_align: float | None = None
     if build_masterstar_and_catalogs:
         LOGGER.info("Astrometria + MASTERSTAR + per-frame CSV: archív %s", ap)
     else:
@@ -9284,16 +9705,6 @@ def _astrometry_align_impl_body(
             "(minimum pre robustný počiatočný cross-match)."
         )
 
-    # Per-frame catalogs: use a tighter matching radius (default 3") independent of MASTERSTAR.
-    per_frame_match_sep = float(
-        job.get(
-            "per_frame_catalog_match_sep_arcsec",
-            getattr(_cfg_align, "per_frame_catalog_match_sep_arcsec", 3.0),
-        )
-        or 3.0
-    )
-    if not math.isfinite(per_frame_match_sep) or per_frame_match_sep <= 0:
-        per_frame_match_sep = 3.0
     _cat_loc_only = bool(catalog_local_gaia_only) if catalog_local_gaia_only is not None else True
     if _cat_loc_only:
         LOGGER.info("Katalóg: režim lokálny Gaia (SQLite)")
@@ -9323,6 +9734,59 @@ def _astrometry_align_impl_body(
     with fits.open(ref_fp, memmap=False) as hdul:
         ref_hdr = hdul[0].header.copy()
         ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+    _rh, _rw = int(ref_data.shape[0]), int(ref_data.shape[1])
+    try:
+        _pf_try = float(plate_solve_fov_deg)
+        if math.isfinite(_pf_try) and _pf_try > 0:
+            _pfov_align = _pf_try
+    except (TypeError, ValueError):
+        _pfov_align = None
+    if _pfov_align is None:
+        _pfov_align = resolve_plate_solve_fov_deg_hint(
+            ref_hdr,
+            _rh,
+            _rw,
+            database_path=_cfg_align.database_path,
+            equipment_id=int(id_equipment) if id_equipment is not None else None,
+            draft_id=int(draft_id) if draft_id is not None else None,
+        )
+    if _pfov_align is None:
+        _pfov_align = float(getattr(_cfg_align, "plate_solve_fov_deg", 1.0))
+
+    _scale_pf: float | None = None
+    _db_pf = _vyvar_open_database(_cfg_align)
+    if _db_pf is not None:
+        try:
+            _eq_pf = int(id_equipment) if id_equipment is not None else None
+            _tel_pf: int | None = None
+            if draft_id is not None:
+                _dr_pf = _db_pf.fetch_obs_draft_by_id(int(draft_id))
+                if _dr_pf is not None:
+                    if _eq_pf is None and _dr_pf.get("ID_EQUIPMENTS") is not None:
+                        _eq_pf = int(_dr_pf["ID_EQUIPMENTS"])
+                    if _dr_pf.get("ID_TELESCOPE") is not None:
+                        _tel_pf = int(_dr_pf["ID_TELESCOPE"])
+            _xb_pf, _yb_pf = fits_binning_xy_from_header(ref_hdr)
+            _bin_pf = max(1, int(_xb_pf), int(_yb_pf))
+            _scale_pf = compute_plate_scale_from_db(_eq_pf, _tel_pf, _db_pf.conn, binning=_bin_pf)
+        except Exception:  # noqa: BLE001
+            _scale_pf = None
+        finally:
+            try:
+                _db_pf.conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+    _j_psep = job.get("per_frame_catalog_match_sep_arcsec")
+    if _j_psep is not None:
+        try:
+            per_frame_match_sep = float(_j_psep)
+        except (TypeError, ValueError):
+            per_frame_match_sep = per_frame_catalog_match_sep_arcsec_for_scale(_scale_pf)
+    else:
+        per_frame_match_sep = per_frame_catalog_match_sep_arcsec_for_scale(_scale_pf)
+    if not math.isfinite(per_frame_match_sep) or per_frame_match_sep <= 0:
+        per_frame_match_sep = per_frame_catalog_match_sep_arcsec_for_scale(_scale_pf)
+
     has_wcs = _has_valid_wcs(ref_hdr)
     solve_steps = 0 if has_wcs else 1
     master_steps = 1 if build_masterstar_and_catalogs else 0
@@ -9335,11 +9799,13 @@ def _astrometry_align_impl_body(
         prog_i[0] += 1
         progress_cb(prog_i[0], global_total, msg)
 
-    # --- MASTERSTAR build + plate-solve (root platesolve/) before alignment ---
-    # Goal: one-button Step 3 flow. Always build MASTERSTAR in platesolve/ (root), not in platesolve/<setup>/.
+    # --- MASTERSTAR build + plate-solve (per-setup platesolve/) before alignment ---
+    # IMPORTANT (multi-filter): each setup must have its own MASTERSTAR + catalogs, otherwise
+    # R/V/B runs overwrite each other (MASTERSTAR.fits, masterstars_full_match.csv, VY_MIRR, …)
+    # and reference/per-frame astrometry becomes unstable.
     _masterstar_built = False
     _cat_info_root: dict[str, Any] = {}
-    _ps_root = platesolve_dir.parent
+    _ps_root = platesolve_dir
     _t_platesolve = time.time()
     if build_masterstar_and_catalogs:
         _prog("platesolve/MASTERSTAR: referenčný snímok + plate-solve + katalógy…")
@@ -9350,7 +9816,7 @@ def _astrometry_align_impl_body(
             source_root=detrended_root,
             platesolve_dir=_ps_root,
             platesolve_backend=platesolve_backend,
-            plate_solve_fov_deg=float(plate_solve_fov_deg),
+            plate_solve_fov_deg=float(_pfov_align),
             catalog_match_max_sep_arcsec=float(_catalog_match_sep_eff),
             saturate_level_fraction=float(saturate_level_fraction),
             n_comparison_stars=int(n_comparison_stars),
@@ -9379,13 +9845,40 @@ def _astrometry_align_impl_body(
 
     if not has_wcs:
         _prog("Plate solve referencie (môže chvíľu trvať)…")
+        # If MASTERSTAR was built for this setup and has a valid WCS, reuse it for the
+        # reference frame instead of re-solving (per-frame solving can be less stable on some filters).
+        try:
+            if build_masterstar_and_catalogs and isinstance(_cat_info_root, dict):
+                _ms_fp = _cat_info_root.get("masterstar_fits")
+                if _ms_fp:
+                    _ms_path = Path(str(_ms_fp)).resolve()
+                    if _ms_path.is_file():
+                        with fits.open(_ms_path, memmap=False) as _ms_hdul:
+                            _ms_hdr = _ms_hdul[0].header.copy()
+                        if _has_valid_wcs(_ms_hdr):
+                            _apply_wcs_header_to_fits(ref_fp, _ms_hdr)
+                            with fits.open(ref_fp, memmap=False) as hdul:
+                                ref_hdr = hdul[0].header.copy()
+                                ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+                            has_wcs = True
+                            log_event(
+                                f"INFO: Reference WCS prevzaté z MASTERSTAR ({_ms_path.name}) — skip plate-solve referencie."
+                            )
+        except Exception as _wcs_copy_exc:  # noqa: BLE001
+            # Fall back to normal reference plate-solve.
+            try:
+                log_event(f"DEBUG: Reference WCS copy from MASTERSTAR failed: {_wcs_copy_exc}")
+            except Exception:  # noqa: BLE001
+                pass
+
+    if not has_wcs:
         # Solve reference file in-place (no open handle on Windows).
         _hra, _hdec, _ = _pointing_hint_from_header(ref_hdr)
         solve = _solve_wcs_external(
             ref_fp,
             backend=platesolve_backend,
             astrometry_api_key=astrometry_api_key,
-            plate_solve_fov_deg=float(plate_solve_fov_deg),
+            plate_solve_fov_deg=float(_pfov_align),
             hint_ra_deg=_hra,
             hint_dec_deg=_hdec,
             app_config=_cfg_align,
@@ -9402,7 +9895,15 @@ def _astrometry_align_impl_body(
     print(f"  Plate solve: {time.time() - _t_platesolve:.1f}s")
     _t_align = time.time()
 
-    _align_fwhm_ref = float(_fb_align)
+    # Use the same FWHM rule as per-frame alignment (VY_FWHM / header), not only ``sips_dao_fwhm_px``.
+    # A fixed ~2.5 px kernel on the reference while sources use ~5 px yields different brightest-N
+    # orderings → bogus point pairs → astroalign "triangles exhausted" and identity/no_wcs cascades.
+    _raw_ref_fw = dao_detection_fwhm_pixels(ref_hdr, configured_fallback=_fb_align)
+    try:
+        _fwv = float(_raw_ref_fw) if _raw_ref_fw is not None else float("nan")
+    except (TypeError, ValueError):
+        _fwv = float("nan")
+    _align_fwhm_ref = float(_fwv) if math.isfinite(_fwv) and _fwv > 0 else float(_fb_align)
 
     hint_center = _wcs_field_center_radec_deg(ref_fp)
     hint_ra: float | None = hint_center[0] if hint_center else None
@@ -9688,8 +10189,7 @@ def _astrometry_align_impl_body(
     use_master_fast = False
 
     if build_masterstar_and_catalogs:
-        # Use root platesolve/ artifacts built before alignment. Keep platesolve/<setup>/ clean
-        # (no MASTERSTAR.fits or masterstars_full_match.csv here).
+        # Use per-setup platesolve/ artifacts built before alignment.
         cat_info = dict(_cat_info_root or {})
         try:
             ms_csv = Path(str((cat_info.get("masterstars_csv") or (_ps_root / "masterstars_full_match.csv")))).resolve()
@@ -9700,20 +10200,16 @@ def _astrometry_align_impl_body(
         except Exception:  # noqa: BLE001
             ms_fits = Path(str(cat_info.get("masterstar_fits") or (_ps_root / "MASTERSTAR.fits")))
 
-        # Copy comparison/variable lists into platesolve/<setup>/ for UI consistency.
+        # comparison_stars.csv / variable_targets.csv are produced in this setup directory already.
         try:
-            _src_comp = _ps_root / "comparison_stars.csv"
-            _src_var = _ps_root / "variable_targets.csv"
-            _dst_comp = platesolve_dir / "comparison_stars.csv"
-            _dst_var = platesolve_dir / "variable_targets.csv"
-            if _src_comp.is_file():
-                shutil.copy2(_src_comp, _dst_comp)
-                cat_info["comparison_stars_csv"] = str(_dst_comp)
-            if _src_var.is_file():
-                shutil.copy2(_src_var, _dst_var)
-                cat_info["variable_targets_csv"] = str(_dst_var)
-        except Exception as _cp_lists:  # noqa: BLE001
-            log_event(f"platesolve/<setup>: copy comp/vars failed (nekritické): {_cp_lists}")
+            _comp = platesolve_dir / "comparison_stars.csv"
+            _var = platesolve_dir / "variable_targets.csv"
+            if _comp.is_file():
+                cat_info["comparison_stars_csv"] = str(_comp)
+            if _var.is_file():
+                cat_info["variable_targets_csv"] = str(_var)
+        except Exception:  # noqa: BLE001
+            pass
 
         # Masterstar lock for Step 3: per-frame catalogs must use one fixed reference list.
         use_master_fast = True
@@ -9749,7 +10245,7 @@ def _astrometry_align_impl_body(
             aligned_target_dir=aligned_root,
             defer_disk_writes=True,
             app_config=_catalog_app_cfg,
-            plate_solve_fov_deg=float(plate_solve_fov_deg),
+            plate_solve_fov_deg=float(_pfov_align),
             master_dark_path=_master_dark_bpm_path,
             draft_id=draft_id,
             equipment_id=id_equipment,
@@ -9784,7 +10280,7 @@ def _astrometry_align_impl_body(
             catalog_local_gaia_only=_cat_loc_only,
             progress_cb=_cat_prog if progress_cb is not None else None,
             app_config=_catalog_app_cfg,
-            plate_solve_fov_deg=float(plate_solve_fov_deg),
+            plate_solve_fov_deg=float(_pfov_align),
             master_dark_path=_master_dark_bpm_path,
             draft_id=draft_id,
             equipment_id=id_equipment,
@@ -12389,7 +12885,7 @@ def preprocess_calibrated_to_processed(
         ra_is_zero, de_is_zero = False, False
     if ra_is_zero and de_is_zero:
         log_event(
-            "WARNING: Preprocess got target RA/DE = 0.0/0.0; using median coordinates from draft frames as fallback."
+            "DEBUG: Preprocess target RA/DE = 0/0 — skúšam medián z hlavičiek snímok; inak zostane bez VYTARG (plate-solve: FITS alebo blind)."
         )
         fb_ra, fb_de = _median_pointing_from_headers(fits_files)
         if fb_ra is not None and fb_de is not None:
@@ -13082,7 +13578,7 @@ def extract_fits_metadata(
     - binning (XBINNING / BINNING)
     - binning_y (YBINNING, default same as binning)
     - naxis1, naxis2
-    - pixel_size_um_physical (native pitch from header, or ``force_pixel_size`` from config)
+    - pixel_size_um_physical (native pitch from header / DB merge)
     - pixel_size_um_header (**effective** pitch [µm] = physical × binning for plate solve / WCS)
     - effective_pixel_um_plate_scale (native mean × XBINNING; solver / plate scale)
     - focal_length [mm]: ``FOCALLEN`` v hlavičke ak je; inak ``EQUIPMENTS.FOCAL`` (ak je) alebo ``TELESCOPE.FOCAL``
@@ -13132,14 +13628,6 @@ def extract_fits_metadata(
                 _fpu = v
         except (TypeError, ValueError):
             _fpu = None
-    if _fpu is None and cfg.force_pixel_size_um is not None:
-        try:
-            cfpv = float(cfg.force_pixel_size_um)
-            if cfpv > 0 and math.isfinite(cfpv):
-                _fpu = cfpv
-        except (TypeError, ValueError):
-            pass
-
     with fits.open(fp, memmap=False) as hdul:
         header = hdul[0].header
     meta = fits_metadata_from_primary_header(header, force_physical_pixel_um=_fpu)
@@ -13189,14 +13677,18 @@ def scan_usb_folder(path: Path | str) -> pd.DataFrame:
     root = Path(path)
     rows: list[dict[str, Any]] = []
 
+    _light_tokens = frozenset(
+        {"light", "light frame", "lights", "object", "science"},
+    )
+
     def _classify(text: str) -> str:
-        t = (text or "").lower()
-        if "light" in t:
-            return "Lights"
+        t = (text or "").strip().lower()
         if "dark" in t:
             return "Darks"
         if "flat" in t:
             return "Flats"
+        if t in _light_tokens or "light" in t:
+            return "Lights"
         return "Unknown"
 
     def _fits_files(folder: Path) -> list[Path]:
