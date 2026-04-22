@@ -2385,7 +2385,9 @@ def select_active_targets(
     """Fáza 0: Filtruj VSX premenné → active_targets.
 
     Pravidlá:
-    - Hviezda musí byť v snímke (x, y v medziach s okrajom; šírka/výška sa zväčší z dát ak treba)
+    - Hviezda musí byť v snímke (``x,y`` aspoň ``edge_margin_px`` od okraja efektívneho poľa; to isté číslo
+      ako ``chip_interior_margin_px`` vo Fáze 0+1 — jednotné s porovnávačkami a suspected).
+    - Šírka/výška sa zväčší z dát ak treba
     - Musí byť nájdená v masterstars_full_match.csv (cross-match < match_radius_arcsec)
     - masterstars záznam musí mať is_usable=True
     - Nesmie byť saturovaná (is_saturated=False)
@@ -2532,6 +2534,9 @@ def select_comparison_stars_per_target(
     max_fwhm_factor: float = 1.5,
     isolation_radius_px: float = 25.0,
     flux_col: str = "dao_flux",
+    chip_fw: int | None = None,
+    chip_fh: int | None = None,
+    chip_interior_margin_px: int = 0,
 ) -> pd.DataFrame:
     """Fáza 1: Pre jeden target vyber najstabilnejšie porovnávacie hviezdy.
 
@@ -2569,6 +2574,8 @@ def select_comparison_stars_per_target(
         mag_bright_threshold: Hranica ``mag`` cieľa (rovnaký systém ako ``target["mag"]``),
             pod ktorou sa uplatní ``max_mag_diff_bright_floor`` (typicky jasné hviezdy ~9 mag).
         max_mag_diff_bright_floor: Minimálna šírka |Δmag| pri jasných cieľoch; ``0`` vypne.
+        chip_fw / chip_fh / chip_interior_margin_px: spolu orežú kandidátov na comp hviezdy
+            blízko okraja čipu (rovnaká logika ako Fáza 0 a suspected). ``chip_interior_margin_px=0`` = vypnuté.
 
     Returns:
         DataFrame s porovnávacími hviezdami pre tento target, zoradený podľa RMS ASC.
@@ -2638,6 +2645,21 @@ def select_comparison_stars_per_target(
     # Vylúč samotný target
     if target_cid:
         cand_mask &= ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).astype(str) != target_cid
+
+    # Jednotný vnútorný okraj čipu (premenné / comp / suspected rovnaké pravidlá)
+    _cm = int(chip_interior_margin_px)
+    if (
+        _cm > 0
+        and chip_fw is not None
+        and chip_fh is not None
+        and int(chip_fw) > 2 * _cm
+        and int(chip_fh) > 2 * _cm
+        and "x" in ms.columns
+        and "y" in ms.columns
+    ):
+        _xn = pd.to_numeric(ms["x"], errors="coerce")
+        _yn = pd.to_numeric(ms["y"], errors="coerce")
+        cand_mask &= _xn.between(_cm, int(chip_fw) - _cm) & _yn.between(_cm, int(chip_fh) - _cm)
 
     # Hard filter: minimálna vzdialenosť od targetu
     if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0:
@@ -3411,7 +3433,7 @@ def run_phase0_and_phase1(
     fwhm_px: float = 3.7,
     frame_w_px: int = 2082,
     frame_h_px: int = 1397,
-    edge_margin_px: int = 50,
+    chip_interior_margin_px: int = 100,
     match_radius_arcsec: float = 15.0,
     max_dist_deg: float = 1.0,
     max_mag_diff: float = 0.25,
@@ -3444,6 +3466,10 @@ def run_phase0_and_phase1(
           n_active_targets, n_comparison_pairs,
           active_targets_csv, comparison_stars_csv, suspected_variables_csv,
           targets_without_comps (list catalog_id)
+
+    Args:
+        chip_interior_margin_px: Min. počet pixelov od okraja čipu pre **všetky** kroky Fázy 0+1
+            (aktívne ciele, porovnávačky, suspected). ``0`` = bez priestorového orezania.
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -3460,7 +3486,7 @@ def run_phase0_and_phase1(
         masterstars_csv,
         frame_w_px=frame_w_px,
         frame_h_px=frame_h_px,
-        edge_margin_px=edge_margin_px,
+        edge_margin_px=int(chip_interior_margin_px),
         match_radius_arcsec=match_radius_arcsec,
     )
     active_csv = output_dir / "active_targets.csv"
@@ -3548,6 +3574,15 @@ def run_phase0_and_phase1(
     )
     _p(f"Fáza 1: cache {len(shared_csv_cache)} súborov — výber porovnávačiek ({len(active)} cieľov)…")
 
+    _vt_chip = pd.read_csv(variable_targets_csv, low_memory=False)
+    _fw_chip, _fh_chip = _phase0_effective_frame_hw_px(
+        _vt_chip,
+        ms_df,
+        frame_w_px=int(frame_w_px),
+        frame_h_px=int(frame_h_px),
+        edge_margin_px=int(chip_interior_margin_px),
+    )
+
     _t_phase1 = time.time()
     n_act0 = int(len(active))
     for idx, (_, target_row) in enumerate(active.iterrows(), start=1):
@@ -3579,6 +3614,9 @@ def run_phase0_and_phase1(
             max_fwhm_factor=max_fwhm_factor,
             isolation_radius_px=isolation_radius_px,
             flux_col=flux_col,
+            chip_fw=_fw_chip,
+            chip_fh=_fh_chip,
+            chip_interior_margin_px=int(chip_interior_margin_px),
         )
         if comps.empty:
             targets_without_comps.append(str(target_row.get("catalog_id", "")))
@@ -3598,13 +3636,24 @@ def run_phase0_and_phase1(
     # Hviezdy s vysokým RMS (>3σ nad mediánom) ktoré nie sú VSX ani active targets
     _p("Fáza 1: suspected variables (nové kandidáty)…")
     suspected_csv = output_dir / "suspected_variables.csv"
+    _active_ids: set[str] = set()
+    for _ax in active["catalog_id"].tolist():
+        _nx = _normalize_id_value(_ax)
+        if _nx:
+            _active_ids.add(_nx)
+
+    _margin_sus: int | None = None if int(chip_interior_margin_px) <= 0 else int(chip_interior_margin_px)
+
     _write_suspected_variables(
         ms_df=ms_df,
         csv_paths=csv_paths,
-        active_target_ids=set(active["catalog_id"].astype(str)),
+        active_target_ids=_active_ids,
         output_path=suspected_csv,
         min_frames_frac=min_frames_frac,
         outlier_sigma=3.0,
+        interior_fw=_fw_chip,
+        interior_fh=_fh_chip,
+        interior_margin_px=_margin_sus,
     )
 
     _p(f"Fáza 0+1 hotovo: {int(len(active))} cieľov, {int(len(comp_df))} párov porovnávačiek")
@@ -3627,11 +3676,17 @@ def _write_suspected_variables(
     flux_col: str = "dao_flux",
     min_frames_frac: float = 0.5,
     outlier_sigma: float = 3.0,
+    interior_fw: int | None = None,
+    interior_fh: int | None = None,
+    interior_margin_px: int | None = None,
 ) -> None:
     """Detekuj hviezdy s vysokým RMS scatter ktoré nie sú v VSX — suspected new variables.
 
     Zapíše suspected_variables.csv s kolumnami:
     catalog_id, ra_deg, dec_deg, mag, comp_rms, n_frames, zone
+
+    Ak sú zadané ``interior_*``, vyhodí sa pool aj per-frame body pri okrajoch čipu
+    (rovnaký okraj ako pri aktívnych cieľoch a porovnávačkách vo ``run_phase0_and_phase1``).
     """
     # Usable hviezdy ktoré nie sú VSX ani active targets
     ms = ms_df.copy()
@@ -3647,7 +3702,34 @@ def _write_suspected_variables(
         & ~_bool_col(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
     )
     pool = ms[base_mask].copy()
-    pool_ids = set(pool[id_col].astype(str).str.strip()) - active_target_ids
+    pool["_nid"] = pool[id_col].map(_normalize_id_value)
+    pool = pool[pool["_nid"] != ""].drop_duplicates(subset=["_nid"], keep="first")
+
+    _m = int(interior_margin_px) if interior_margin_px is not None else 0
+    _fw = int(interior_fw) if interior_fw is not None else 0
+    _fh = int(interior_fh) if interior_fh is not None else 0
+    if (
+        _m > 0
+        and _fw > 2 * _m
+        and _fh > 2 * _m
+        and "x" in pool.columns
+        and "y" in pool.columns
+    ):
+        _xn = pd.to_numeric(pool["x"], errors="coerce")
+        _yn = pd.to_numeric(pool["y"], errors="coerce")
+        _ok = _xn.between(_m, _fw - _m) & _yn.between(_m, _fh - _m)
+        _n_pool0 = int(len(pool))
+        pool = pool[_ok].copy()
+        logging.info(
+            "[SUSPECTED] Orezanie okrajov (rovnaké ako Fáza 0/1, MASTERSTAR x,y): %s → %s hviezd (margin %s px, pole %s×%s)",
+            _n_pool0,
+            len(pool),
+            _m,
+            _fw,
+            _fh,
+        )
+
+    pool_ids = set(pool["_nid"]) - active_target_ids
 
     if not pool_ids:
         pd.DataFrame().to_csv(output_path, index=False)
@@ -3665,10 +3747,17 @@ def _write_suspected_variables(
             use = [name_c, actual_flux]
             if "mag" in header.columns and "mag" not in use:
                 use.append("mag")
+            _use_xy = _m > 0 and _fw > 2 * _m and _fh > 2 * _m
+            if _use_xy and "x" in header.columns and "y" in header.columns:
+                use.extend([c for c in ("x", "y") if c not in use])
             df = pd.read_csv(csv_path, usecols=use, low_memory=False)
             df[name_c] = _normalize_id_series(df[name_c])
             df[actual_flux] = pd.to_numeric(df[actual_flux], errors="coerce")
             sub = df[df[name_c].isin(pool_ids) & df[actual_flux].gt(0)]
+            if _use_xy and "x" in sub.columns and "y" in sub.columns:
+                _xs = pd.to_numeric(sub["x"], errors="coerce")
+                _ys = pd.to_numeric(sub["y"], errors="coerce")
+                sub = sub[_xs.between(_m, _fw - _m) & _ys.between(_m, _fh - _m)]
             if sub.empty:
                 continue
 
@@ -3695,17 +3784,34 @@ def _write_suspected_variables(
                 bin_meds = {}
 
             n_frames += 1
+            # Jedna vzorka na hviezdu na snímok (CSV môže mať duplicitné riadky).
+            _agg: dict[str, dict[str, float]] = {}
             for _, row in sub.iterrows():
                 cid = str(row[name_c])
+                if cid not in pool_ids:
+                    continue
                 raw_flux = float(row[actual_flux])
                 if not math.isfinite(raw_flux) or raw_flux <= 0:
                     continue
+                mag_num = (
+                    float(row.get("_mag_num", float("nan")))
+                    if "_mag_num" in row.index
+                    else float("nan")
+                )
+                ent = _agg.setdefault(cid, {"fluxes": [], "mags": []})
+                ent["fluxes"].append(raw_flux)
+                if math.isfinite(mag_num):
+                    ent["mags"].append(mag_num)
+            for cid, ent in _agg.items():
+                fluxes = ent["fluxes"]
+                if not fluxes:
+                    continue
+                raw_flux = float(np.median(np.asarray(fluxes, dtype=np.float64)))
+                if not math.isfinite(raw_flux) or raw_flux <= 0:
+                    continue
+                mags = ent["mags"]
+                mag_num = float(np.median(np.asarray(mags, dtype=np.float64))) if mags else float("nan")
                 if bin_meds:
-                    mag_num = (
-                        float(row.get("_mag_num", float("nan")))
-                        if "_mag_num" in row.index
-                        else float("nan")
-                    )
                     b = int(mag_num / 0.5) if math.isfinite(mag_num) else -1
                     norm_med = bin_meds.get(b)
                     if norm_med is None:
@@ -3771,11 +3877,13 @@ def _write_suspected_variables(
         return
 
     rows = []
-    pool_idx = pool.set_index(pool[id_col].astype(str).str.strip())
+    pool_idx = pool.set_index("_nid", drop=False)
     for cid, rms in sorted(suspected.items(), key=lambda x: -x[1]):
         if cid not in pool_idx.index:
             continue
         r = pool_idx.loc[cid]
+        if isinstance(r, pd.DataFrame):
+            r = r.iloc[0]
         rows.append(
             {
                 "catalog_id": cid,

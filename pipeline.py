@@ -80,6 +80,7 @@ from utils import (
     plate_scale_arcsec_per_pixel,
     plate_solve_fov_deg_diagonal_from_scale,
     strip_celestial_wcs_keys,
+    strip_vendor_platesolve_metadata,
     wcs_distortion_log_suffix,
     wcs_rotation_angle_deg,
 )
@@ -1892,6 +1893,28 @@ def _masterstar_aligned_stack_combine(
     return out
 
 
+def _strip_external_platesolve_header(hdr: fits.Header) -> None:
+    """Drop celestial WCS and common third-party plate-solve keywords (ASTAP, astrometry.net, …).
+
+    VYVAR must establish astrometry via :func:`vyvar_platesolver.solve_wcs_with_local_gaia` only.
+    """
+    strip_celestial_wcs_keys(hdr)
+    strip_vendor_platesolve_metadata(hdr)
+    for _k in (
+        "WCSAXES",
+        "WCSDIM",
+        "CROTA1",
+        "CROTA2",
+        "WCSNAME",
+        "VY_PSOLV",
+        "VY_SIPRF",
+    ):
+        try:
+            del hdr[_k]
+        except KeyError:
+            pass
+
+
 def build_masterstar_from_detrended(
     *,
     detrended_root: Path,
@@ -2029,28 +2052,11 @@ def build_masterstar_from_detrended(
             log_event(f"MASTERSTAR: VY_FWHM = {vy_fwhm:.3f} px zapísaný do FITS.")
             # VY_FWHM_GAUSS sa doplní po plate-solve (2D Gaussian fit na MASTERSTAR).
 
-            # Ak má processed FITS platný ASTAP WCS (CD matica, izotropná),
-            # zachovaj ho — VYVAR solver bude refinovať od tohto dobrého základu.
-            _has_cd = all(k in hdr for k in ("CD1_1", "CD1_2", "CD2_1", "CD2_2"))
-            _pltsolvd = bool(hdr.get("PLTSOLVD", False))
-            if _has_cd and _pltsolvd:
-                try:
-                    _sx = abs(hdr["CD1_1"]) * 3600
-                    _sy = abs(hdr["CD2_2"]) * 3600
-                    _ratio = max(_sx, _sy) / max(min(_sx, _sy), 0.001)
-                    if _ratio < 1.3 and 7.0 < _sx < 13.0 and 7.0 < _sy < 13.0:
-                        log_event(
-                            f"MASTERSTAR: processed FITS má dobrý ASTAP WCS "
-                            f"(sx={_sx:.3f} sy={_sy:.3f} ratio={_ratio:.3f}) — "
-                            "zachovávam CD maticu pre solver."
-                        )
-                    else:
-                        log_event(
-                            f"MASTERSTAR: ASTAP WCS anizotropný alebo mimo rozsahu "
-                            f"(sx={_sx:.3f} sy={_sy:.3f}) — solver použije vlastné riešenie."
-                        )
-                except Exception:  # noqa: BLE001
-                    pass
+            _strip_external_platesolve_header(hdr)
+            log_event(
+                "MASTERSTAR: z MASTERSTAR kópie odstránený externý WCS/plate-solve metadata "
+                "(ASTAP, astrometry.net, …) — astrometriu nastaví výhradne VYVAR Gaia solver."
+            )
 
             h.flush()
     except Exception as _exc:  # noqa: BLE001
@@ -4655,9 +4661,14 @@ def write_photometry_plan_files(
         "vsx_period",
         "x",
         "y",
+        "mag",
+        "zone",
+        "gaia_match_arcsec",
+        "vsx_mag_max",
     ]
     vsx_out = pd.DataFrame(columns=var_cols)
     _vsx_n_cone = 0
+    _vsx_diag: dict[str, Any] = {}
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FITSFixedWarning)
@@ -4676,21 +4687,25 @@ def write_photometry_plan_files(
             except Exception:  # noqa: BLE001
                 _vsx_p3 = None
             vsx_df = _query_vsx_local(center=center, radius_deg=float(radius_deg), vsx_db_path=_vsx_p3)
-            _vsx_n_cone = int(len(vsx_df)) if vsx_df is not None else 0
+            n_vsx_in_cone = int(len(vsx_df)) if vsx_df is not None else 0
+            _vsx_n_cone = n_vsx_in_cone
             try:
                 mag_limit = float(getattr(AppConfig(), "vsx_variable_targets_mag_limit", 13.0) or 13.0)
             except Exception:  # noqa: BLE001
                 mag_limit = 13.0
+            mag_filter_applied = False
             if (
                 vsx_df is not None
                 and not vsx_df.empty
                 and "mag_max" in vsx_df.columns
                 and mag_limit is not None
-                and float(mag_limit) > 0
+                and float(mag_limit) > 0.0
             ):
                 mm = pd.to_numeric(vsx_df["mag_max"], errors="coerce")
                 vsx_df = vsx_df[mm.isna() | (mm <= float(mag_limit))].copy()
-                _vsx_n_cone = int(len(vsx_df))
+                mag_filter_applied = True
+
+            n_vsx_after_mag = int(len(vsx_df)) if vsx_df is not None else 0
 
             # Gaia cross-id from MASTERSTAR catalog (within 10 arcsec).
             ga = df.copy()
@@ -4718,8 +4733,13 @@ def write_photometry_plan_files(
                     in_frame = (v["x"] >= -50.0) & (v["y"] >= -50.0) & (v["x"] <= float(wpx) + 50.0) & (v["y"] <= float(h) + 50.0)
                     v = v.loc[in_frame].copy()
 
+                n_vsx_in_frame = int(len(v))
+
                 # Nearest Gaia match for catalog_id.
                 cat_id_out = [""] * int(len(v))
+                mag_out: list[float] = [float("nan")] * int(len(v))
+                zone_out: list[str] = [""] * int(len(v))
+                sep_out: list[float] = [float("nan")] * int(len(v))
                 if len(v) > 0 and len(ga) > 0:
                     vcoo = SkyCoord(
                         ra=v["ra_deg"].astype(float).to_numpy() * u.deg,
@@ -4735,7 +4755,21 @@ def write_photometry_plan_files(
                     max_sep = 10.0 * u.arcsec
                     for i in range(len(v)):
                         if 0 <= int(idx[i]) < len(ga) and sep2d[i] <= max_sep:
-                            cat_id_out[i] = str(ga.iloc[int(idx[i])]["catalog_id"])
+                            gro = ga.iloc[int(idx[i])]
+                            cat_id_out[i] = str(gro["catalog_id"])
+                            sep_out[i] = float(sep2d[i].to(u.arcsec).value)
+                            try:
+                                _mg = gro.get("mag")
+                                mag_out[i] = float(_mg) if _mg is not None and str(_mg).strip() != "" else float("nan")
+                            except (TypeError, ValueError):
+                                mag_out[i] = float("nan")
+                            if not math.isfinite(mag_out[i]):
+                                mag_out[i] = float("nan")
+                            try:
+                                zr = gro.get("zone")
+                                zone_out[i] = str(zr).strip().lower() if zr is not None else ""
+                            except Exception:  # noqa: BLE001
+                                zone_out[i] = ""
 
                 # Period column varies by VSX schema.
                 _pcol = None
@@ -4759,6 +4793,9 @@ def write_photometry_plan_files(
                     else:
                         notes.append(t0)
 
+                _mmx = pd.to_numeric(v.get("mag_max"), errors="coerce") if "mag_max" in v.columns else pd.Series(
+                    [float("nan")] * len(v), dtype=float
+                )
                 vsx_out = pd.DataFrame(
                     {
                         "name": vname,
@@ -4773,18 +4810,69 @@ def write_photometry_plan_files(
                         "vsx_period": v["vsx_period"].to_numpy(),
                         "x": pd.to_numeric(v.get("x"), errors="coerce"),
                         "y": pd.to_numeric(v.get("y"), errors="coerce"),
+                        "mag": np.asarray(mag_out, dtype=float),
+                        "zone": zone_out,
+                        "gaia_match_arcsec": np.asarray(sep_out, dtype=float),
+                        "vsx_mag_max": _mmx.to_numpy(dtype=float),
                     }
                 )
+                n_gaia_ok = int(sum(1 for c in cat_id_out if str(c).strip()))
+                _zone_hist: dict[str, int] = {}
+                n_phase0_hint = 0
+                for i in range(len(zone_out)):
+                    if not str(cat_id_out[i]).strip():
+                        continue
+                    z = str(zone_out[i]).strip().lower()
+                    _zone_hist[z] = int(_zone_hist.get(z, 0)) + 1
+                    if z in ("linear", "noisy1"):
+                        n_phase0_hint += 1
+                _vsx_diag = {
+                    "vsx_rows_in_cone_before_mag_filter": int(n_vsx_in_cone),
+                    "vsx_rows_after_mag_filter": int(n_vsx_after_mag),
+                    "vsx_variable_targets_mag_limit": float(mag_limit),
+                    "vsx_mag_cutoff_disabled": bool(float(mag_limit) <= 0.0),
+                    "vsx_mag_filter_applied": bool(mag_filter_applied),
+                    "vsx_rows_after_in_frame_margin": int(n_vsx_in_frame),
+                    "vsx_rows_written_csv": int(len(vsx_out)),
+                    "gaia_matches_within_10arcsec": int(n_gaia_ok),
+                    "masterstars_zone_counts_among_gaia_matched": _zone_hist,
+                    "phase0_active_targets_hint_count": int(n_phase0_hint),
+                    "phase0_note_sk": (
+                        "Fáza 0 (`select_active_targets`) ponechá len zhody s masterstars v zóne "
+                        "`linear` alebo `noisy1` (vylúči saturated / noisy2 / noisy3) a v okrajoch snímky."
+                    ),
+                }
+                _vsx_n_cone = int(n_vsx_after_mag)
     except Exception as _vsx_exc:  # noqa: BLE001
         log_event(f"variable_targets.csv (VSX export) preskočený: {_vsx_exc!s}")
         vsx_out = pd.DataFrame(columns=var_cols)
 
     # Always overwrite (even if it exists) so UI sees current field cone.
     vsx_out.to_csv(var_path, index=False)
-    log_event(
-        f"variable_targets.csv (VSX export): cone={_vsx_n_cone} → zapísané={int(len(vsx_out))} "
-        f"({var_path.name})"
-    )
+    if _vsx_diag:
+        _mag_leg = (
+            "mag filter vypnutý (limit≤0)"
+            if bool(_vsx_diag.get("vsx_mag_cutoff_disabled"))
+            else (
+                f"po mag≤{_vsx_diag.get('vsx_variable_targets_mag_limit')}="
+                f"{_vsx_diag.get('vsx_rows_after_mag_filter')} (filter="
+                f"{'áno' if _vsx_diag.get('vsx_mag_filter_applied') else 'nie'})"
+            )
+        )
+        log_event(
+            "variable_targets.csv (VSX): "
+            f"VSX v kuželi pred mag={_vsx_diag.get('vsx_rows_in_cone_before_mag_filter')} → "
+            f"{_mag_leg} → "
+            f"v ráme={_vsx_diag.get('vsx_rows_after_in_frame_margin')} → "
+            f"Gaia≤10″={_vsx_diag.get('gaia_matches_within_10arcsec')} → "
+            f"CSV={int(len(vsx_out))}. "
+            f"Odhad pre Fázu 0 (linear|noisy1): {_vsx_diag.get('phase0_active_targets_hint_count')}."
+        )
+    else:
+        log_event(
+            f"variable_targets.csv (VSX export): cone={_vsx_n_cone} → zapísané={int(len(vsx_out))} "
+            f"({var_path.name})"
+        )
 
     plan_path = ps / "photometry_plan.json"
     plan = {
@@ -4794,6 +4882,7 @@ def write_photometry_plan_files(
         "masterstars": str(masterstars_csv),
         "masterstar_fits": str(masterstar_fits),
         "comparison_selection": cmeta,
+        "variable_targets_diagnostics": _vsx_diag,
         "next_steps": [
             "Fill variable_targets.csv with programme stars (catalog IDs / coordinates).",
             "Use comparison_stars.csv comp_id / catalog_id to tie ensemble photometry on detrended_aligned frames.",
@@ -8206,21 +8295,62 @@ def generate_masterstar_and_catalog(
                     except Exception:  # noqa: BLE001
                         pass
 
+        # Build MASTERSTAR with best-of-N fallback: try a few top candidates if build/selection is brittle.
+        try:
+            _best_n = int(float(getattr(_cfg_stack, "masterstar_best_of_n", 10)))
+        except (TypeError, ValueError):
+            _best_n = 10
+        _best_n = max(1, min(25, int(_best_n)))
+        _cand_all = [Path(p) for p in (only_ms_paths or []) if Path(p).is_file()]
+        # If UI/DB mapping yields too few candidates (common when user manually selects one frame),
+        # expand from disk to enable best-of-N robustness.
+        try:
+            if len(_cand_all) < max(2, _best_n):
+                _disk_more = _disk_stack_fallback_paths(Path(detrended_root), max_frames=max(8, _best_n * 2))
+                for p in _disk_more:
+                    if p not in _cand_all and p.is_file():
+                        _cand_all.append(p)
+        except Exception:  # noqa: BLE001
+            pass
+        if not _cand_all:
+            raise FileNotFoundError(f"MASTERSTAR: v {detrended_root} nie sú žiadne FITS pre výber.")
+        _cand_singletons = _cand_all[:_best_n]
+
         _db_ms_build: VyvarDatabase | None = None
         if draft_id is not None:
             _db_ms_build = _vyvar_open_database(_cfg_stack)
-        # Dočasná inicializácia pre prípad že cleanup nezmazal všetky referencie
-        # masterstar_build_mode a masterstar_stack_n sú deprecated — hardcoded copy
         try:
-            info = build_masterstar_from_detrended(
-                detrended_root=detrended_root,
-                output_fits=masterstar_fits,
-                only_paths=only_ms_paths,
-                fwhm_fallback_px=float(_ms_fwhm_fb),
-                app_config=_cfg_stack,
-                draft_id=draft_id,
-                db=_db_ms_build,
-            )
+            last_exc: Exception | None = None
+            info = {}
+            # Try pool first (as before), then single best-of-N frames.
+            attempt_lists: list[tuple[str, list[Path]]] = [("pool", _cand_all)]
+            for i, p in enumerate(_cand_singletons, start=1):
+                attempt_lists.append((f"single_{i:02d}_of_{len(_cand_singletons):02d}", [p]))
+            for label, paths_try in attempt_lists:
+                try:
+                    log_event(f"MASTERSTAR build attempt: {label} (n={len(paths_try)})")
+                    info = build_masterstar_from_detrended(
+                        detrended_root=detrended_root,
+                        output_fits=masterstar_fits,
+                        only_paths=paths_try,
+                        fwhm_fallback_px=float(_ms_fwhm_fb),
+                        app_config=_cfg_stack,
+                        draft_id=draft_id,
+                        db=_db_ms_build,
+                    )
+                    # Update selection metadata for traceability.
+                    ms_selection_meta = dict(ms_selection_meta or {})
+                    ms_selection_meta["best_of_n"] = int(_best_n)
+                    ms_selection_meta["build_attempt"] = str(label)
+                    ms_selection_meta["build_only_paths"] = [str(p.name) for p in paths_try]
+                    last_exc = None
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    last_exc = exc
+                    log_event(f"MASTERSTAR build attempt failed: {label}: {exc!s}")
+                    continue
+            if last_exc is not None:
+                raise last_exc
         finally:
             if _db_ms_build is not None:
                 try:
@@ -8274,116 +8404,13 @@ def generate_masterstar_and_catalog(
             out_fast["masterstar_path_store_error"] = str(exc)
         return out_fast
 
-    # Solve WCS (MASTERSTAR): always force VYVAR local solver.
-    # Ak processed FITS (reference snímka) má dobrý ASTAP WCS (izotropná CD matica),
-    # injektujeme ho do MASTERSTAR pred solverom — solver refinuje od dobrého základu.
-    if _selected_ref_path is not None and _selected_ref_path.is_file():
-        try:
-            with fits.open(_selected_ref_path, memmap=False) as _href:
-                _rh = _href[0].header
-                _ref_pltsolvd = bool(_rh.get("PLTSOLVD", False))
-                _ref_has_cd = all(k in _rh for k in ("CD1_1", "CD1_2", "CD2_1", "CD2_2"))
-                if _ref_pltsolvd and _ref_has_cd:
-                    _sx = abs(float(_rh["CD1_1"])) * 3600
-                    _sy = abs(float(_rh["CD2_2"])) * 3600
-                    _ratio = max(_sx, _sy) / max(min(_sx, _sy), 0.001)
-                    if _ratio < 1.1 and 7.0 < _sx < 13.0:
-                        with fits.open(masterstar_fits, mode="update", memmap=False) as _hms:
-                            _hmh = _hms[0].header
-                            for _k in (
-                                "CD1_1",
-                                "CD1_2",
-                                "CD2_1",
-                                "CD2_2",
-                                "CRVAL1",
-                                "CRVAL2",
-                                "CRPIX1",
-                                "CRPIX2",
-                                "CTYPE1",
-                                "CTYPE2",
-                                "CUNIT1",
-                                "CUNIT2",
-                                "EQUINOX",
-                                "RADESYS",
-                            ):
-                                if _k in _rh:
-                                    _hmh[_k] = _rh[_k]
-                            for _k in (
-                                "PC1_1",
-                                "PC1_2",
-                                "PC2_1",
-                                "PC2_2",
-                                "CDELT1",
-                                "CDELT2",
-                                "WCSAXES",
-                                "CROTA1",
-                                "CROTA2",
-                            ):
-                                if _k in _hmh:
-                                    del _hmh[_k]
-                            _hms.flush()
-                        log_event(
-                            f"MASTERSTAR: ASTAP WCS z {_selected_ref_path.name} "
-                            f"(sx={_sx:.3f} sy={_sy:.3f} ratio={_ratio:.3f}) "
-                            "injected ako štartovací WCS pre VYVAR solver."
-                        )
-        except Exception as _wcs_inj_exc:  # noqa: BLE001
-            log_event(f"MASTERSTAR: ASTAP WCS inject zlyhal (nekritické): {_wcs_inj_exc!s}")
+    # Solve WCS (MASTERSTAR): výhradne VYVAR lokálny Gaia solver (žiadny ASTAP / astrometry.net).
 
     with fits.open(masterstar_fits, memmap=False) as hdul:
         hdr = hdul[0].header.copy()
         data = np.array(hdul[0].data, dtype=np.float32, copy=True)
 
     _cfg_ms = app_config or AppConfig()
-    _mra, _mde, _ = _pointing_hint_from_header(hdr)
-    if hint_ra_deg is not None and hint_dec_deg is not None:
-        try:
-            _hra_ov = float(hint_ra_deg)
-            _hde_ov = float(hint_dec_deg)
-            if math.isfinite(_hra_ov) and math.isfinite(_hde_ov):
-                _mra, _mde = _hra_ov, _hde_ov
-                log_event(
-                    "MASTERSTAR: hint_ra_deg / hint_dec_deg z volania prepisujú hint z FITS "
-                    "(druhý MASTERSTAR / detrended aligned)."
-                )
-        except (TypeError, ValueError):
-            pass
-    try:
-        _hint_sep_thr = float(getattr(_cfg_ms, "masterstar_solver_use_draft_median_if_hint_sep_deg", 1.0))
-    except (TypeError, ValueError):
-        _hint_sep_thr = 1.0
-    if not math.isfinite(_hint_sep_thr) or _hint_sep_thr < 0:
-        _hint_sep_thr = 1.0
-    if draft_id is not None:
-        _dbc_hint = _vyvar_open_database(_cfg_ms)
-        if _dbc_hint is not None:
-            try:
-                med_ra, med_de = draft_median_pointing_icrs_deg(_dbc_hint, int(draft_id))
-                if med_ra is not None and med_de is not None:
-                    if _mra is None or _mde is None:
-                        _mra, _mde = med_ra, med_de
-                        log_event(
-                            "MASTERSTAR solve: používam medián RA/Dec z OBS_FILES (hlavička bez spoľahlivého hintu)."
-                        )
-                    else:
-                        sc_h = SkyCoord(ra=float(_mra) * u.deg, dec=float(_mde) * u.deg, frame="icrs")
-                        sc_d = SkyCoord(ra=float(med_ra) * u.deg, dec=float(med_de) * u.deg, frame="icrs")
-                        sep = float(sc_h.separation(sc_d).deg)
-                        if sep > float(_hint_sep_thr):
-                            log_event(
-                                f"MASTERSTAR solve: hint vs draft median = {sep:.3f}° > {_hint_sep_thr}° "
-                                "— používam draft medián z OBS_FILES."
-                            )
-                            _mra, _mde = med_ra, med_de
-                        elif sep > 0.05:
-                            log_event(
-                                f"MASTERSTAR solve: hint vs draft median = {sep:.3f}° (skontrolujte pointing)."
-                            )
-            finally:
-                try:
-                    _dbc_hint.conn.close()
-                except Exception:  # noqa: BLE001
-                    pass
 
     try:
         _dao_sigma_eff = float(getattr(_cfg_ms, "masterstar_dao_threshold_sigma", 1.8))
@@ -8460,6 +8487,74 @@ def generate_masterstar_and_catalog(
         )
 
     _plate_scale_ms = _auto_scale_ms or None
+    # Pull more complete optics hints (focal + effective pixel) from DB/FITS.
+    # This is critical when FITS headers lack FOCALLEN/PIXSIZE and the solver would otherwise
+    # overestimate FOV / cone radius and fail triangle matching.
+    _bundle = _plate_solve_input_bundle(
+        Path(masterstar_fits),
+        app_config=_cfg_ms,
+        equipment_id=_eq_ms,
+        draft_id=int(draft_id) if draft_id is not None else None,
+    )
+    _eff_um = _bundle.get("eff_um")
+    _foc_mm = _bundle.get("focal_mm")
+    _expected_bundle = _bundle.get("expected_arcsec_per_px")
+    try:
+        if _expected_bundle is not None and math.isfinite(float(_expected_bundle)) and float(_expected_bundle) > 0:
+            _plate_scale_ms = float(_expected_bundle)
+    except (TypeError, ValueError):
+        pass
+
+    _mra, _mde, _ = _pointing_hint_from_header(hdr)
+    if hint_ra_deg is not None and hint_dec_deg is not None:
+        try:
+            _hra_ov = float(hint_ra_deg)
+            _hde_ov = float(hint_dec_deg)
+            if math.isfinite(_hra_ov) and math.isfinite(_hde_ov):
+                _mra, _mde = _hra_ov, _hde_ov
+                log_event(
+                    "MASTERSTAR: hint_ra_deg / hint_dec_deg z volania prepisujú hint z FITS "
+                    "(druhý MASTERSTAR / detrended aligned)."
+                )
+        except (TypeError, ValueError):
+            pass
+    try:
+        _hint_sep_thr = float(getattr(_cfg_ms, "masterstar_solver_use_draft_median_if_hint_sep_deg", 1.0))
+    except (TypeError, ValueError):
+        _hint_sep_thr = 1.0
+    if not math.isfinite(_hint_sep_thr) or _hint_sep_thr < 0:
+        _hint_sep_thr = 1.0
+    if draft_id is not None:
+        _dbc_hint = _vyvar_open_database(_cfg_ms)
+        if _dbc_hint is not None:
+            try:
+                med_ra, med_de = draft_median_pointing_icrs_deg(_dbc_hint, int(draft_id))
+                if med_ra is not None and med_de is not None:
+                    if _mra is None or _mde is None:
+                        _mra, _mde = med_ra, med_de
+                        log_event(
+                            "MASTERSTAR solve: používam medián RA/Dec z OBS_FILES (hlavička bez spoľahlivého hintu)."
+                        )
+                    else:
+                        sc_h = SkyCoord(ra=float(_mra) * u.deg, dec=float(_mde) * u.deg, frame="icrs")
+                        sc_d = SkyCoord(ra=float(med_ra) * u.deg, dec=float(med_de) * u.deg, frame="icrs")
+                        sep = float(sc_h.separation(sc_d).deg)
+                        if sep > float(_hint_sep_thr):
+                            log_event(
+                                f"MASTERSTAR solve: hint vs draft median = {sep:.3f}° > {_hint_sep_thr}° "
+                                "— používam draft medián z OBS_FILES."
+                            )
+                            _mra, _mde = med_ra, med_de
+                        elif sep > 0.05:
+                            log_event(
+                                f"MASTERSTAR solve: hint vs draft median = {sep:.3f}° (skontrolujte pointing)."
+                            )
+            finally:
+                try:
+                    _dbc_hint.conn.close()
+                except Exception:  # noqa: BLE001
+                    pass
+
     _fov_ms_solve = resolve_plate_solve_fov_deg_hint(
         hdr,
         int(data.shape[0]),
@@ -8496,6 +8591,8 @@ def generate_masterstar_and_catalog(
             max_catalog_rows=int(max_rows),
             faintest_mag_limit=18.0,
             dao_threshold_sigma=float(_dao_sigma_eff),
+            effective_pixel_um=float(_eff_um) if _eff_um is not None else None,
+            focal_length_mm=float(_foc_mm) if _foc_mm is not None else None,
             expected_plate_scale_arcsec_per_px=(
                 float(_plate_scale_ms) if _plate_scale_ms is not None else None
             ),
@@ -8505,37 +8602,12 @@ def generate_masterstar_and_catalog(
             masterstar_sip_min_order=int(_sip_lo),
         )
 
-    # Ak injektovaný ASTAP WCS je dobrý (izotropný, ratio<1.05),
-    # preskočíme VYVAR solver a použijeme ASTAP WCS priamo.
-    _skip_vyvar_solve = False
-    if _selected_ref_path is not None and _selected_ref_path.is_file():
-        try:
-            with fits.open(_selected_ref_path, memmap=False) as _href_chk:
-                _rh_chk = _href_chk[0].header
-                if (bool(_rh_chk.get("PLTSOLVD", False))
-                        and all(k in _rh_chk for k in ("CD1_1", "CD2_2"))):
-                    _sx_chk = abs(float(_rh_chk["CD1_1"])) * 3600
-                    _sy_chk = abs(float(_rh_chk["CD2_2"])) * 3600
-                    _ratio_chk = max(_sx_chk, _sy_chk) / max(min(_sx_chk, _sy_chk), 0.001)
-                    if _ratio_chk < 1.05 and 7.0 < _sx_chk < 13.0:
-                        _skip_vyvar_solve = True
-                        log_event(
-                            f"MASTERSTAR: ASTAP WCS ratio={_ratio_chk:.3f} — "
-                            "preskakujem VYVAR solver, používam ASTAP WCS priamo."
-                        )
-        except Exception:
-            pass
-
-    if _skip_vyvar_solve:
-        # Použijem ASTAP WCS ako finálny — simulujeme úspešný solve result
-        solve_meta = {"solved": True, "match_rate": 0.95, "skipped_vyvar": True}
-    else:
-        solve_meta = _run_masterstar_vyvar_solve(
-            enable_sip=True,
-            sip_max_order=int(_sip_ms),
-            fov_deg=float(_fov_ms_solve),
-            max_rows=int(_ms_vyvar_max_rows),
-        )
+    solve_meta = _run_masterstar_vyvar_solve(
+        enable_sip=True,
+        sip_max_order=int(_sip_ms),
+        fov_deg=float(_fov_ms_solve),
+        max_rows=int(_ms_vyvar_max_rows),
+    )
     if not isinstance(solve_meta, dict) or not bool(solve_meta.get("solved", False)):
         raise RuntimeError(
             "MASTERSTAR plate-solve zlyhal. "
@@ -13357,6 +13429,8 @@ def scan_calibrated_lights_pointing(
 
     If ``max_files`` is None, all light FITS under the tree are scanned.
     """
+    from astropy.wcs import WCS
+
     root = Path(calibrated_root)
     files = _iter_light_fits(root)
     if max_files is not None:
@@ -13365,11 +13439,121 @@ def scan_calibrated_lights_pointing(
     n_wcs = 0
     n_hint = 0
     n_missing = 0
+
+    def _wcs_center_from_header(h: fits.Header) -> tuple[float | None, float | None]:
+        try:
+            if not _has_valid_wcs(h):
+                return None, None
+            nax1 = int(h.get("NAXIS1") or 0)
+            nax2 = int(h.get("NAXIS2") or 0)
+            if nax1 <= 0 or nax2 <= 0:
+                return None, None
+            w = WCS(h, relax=True)
+            cx = 0.5 * float(nax1)
+            cy = 0.5 * float(nax2)
+            ra, dec = w.celestial.all_pix2world([cx], [cy], 0)
+            ra0 = float(ra[0]) % 360.0
+            de0 = float(dec[0])
+            if math.isfinite(ra0) and math.isfinite(de0) and (-90.0 <= de0 <= 90.0):
+                return ra0, de0
+        except Exception:  # noqa: BLE001
+            return None, None
+        return None, None
+
+    def _jd_from_header(h: fits.Header) -> float | None:
+        try:
+            meta = fits_metadata_from_primary_header(h)
+            jd = meta.get("jd_start")
+            if jd is None:
+                return None
+            jd_f = float(jd)
+            if math.isfinite(jd_f) and jd_f > 0:
+                return jd_f
+        except Exception:  # noqa: BLE001
+            return None
+        return None
+
+    def _detect_segments_from_wcs_centers(
+        _rows: list[dict[str, Any]],
+        *,
+        break_arcmin: float = 10.0,
+        min_segment_size: int = 12,
+    ) -> dict[str, Any] | None:
+        try:
+            import numpy as np
+            from astropy.coordinates import SkyCoord
+            import astropy.units as u
+
+            pts: list[tuple[int, float, float, float]] = []
+            for idx, r in enumerate(_rows):
+                ra = r.get("wcs_center_ra_deg")
+                de = r.get("wcs_center_dec_deg")
+                jd = r.get("jd")
+                if ra is None or de is None or jd is None:
+                    continue
+                ra_f = float(ra)
+                de_f = float(de)
+                jd_f = float(jd)
+                if math.isfinite(ra_f) and math.isfinite(de_f) and math.isfinite(jd_f) and jd_f > 0:
+                    pts.append((idx, jd_f, ra_f, de_f))
+            if len(pts) < max(20, 2 * int(min_segment_size)):
+                return None
+            pts = sorted(pts, key=lambda t: t[1])
+            coords = [SkyCoord(ra=ra * u.deg, dec=de * u.deg, frame="icrs") for _, _, ra, de in pts]
+            break_positions: list[int] = []
+            seps_arcmin: list[float] = []
+            for i in range(1, len(coords)):
+                s = float(coords[i - 1].separation(coords[i]).arcminute)
+                seps_arcmin.append(s)
+                if math.isfinite(s) and s >= float(break_arcmin):
+                    break_positions.append(i)
+            if not break_positions:
+                return None
+            cuts = [0] + break_positions + [len(pts)]
+            segments: list[dict[str, Any]] = []
+            for a, b in zip(cuts[:-1], cuts[1:], strict=False):
+                seg = pts[a:b]
+                if len(seg) < int(min_segment_size):
+                    continue
+                ras = np.asarray([p[2] for p in seg], dtype=np.float64)
+                des = np.asarray([p[3] for p in seg], dtype=np.float64)
+                ang = np.deg2rad(ras)
+                x = np.nanmedian(np.cos(ang))
+                y = np.nanmedian(np.sin(ang))
+                ra_med = float((math.degrees(math.atan2(y, x)) + 360.0) % 360.0)
+                de_med = float(np.nanmedian(des))
+                segments.append(
+                    {
+                        "segment_id": int(len(segments)),
+                        "n": int(len(seg)),
+                        "jd_min": float(min(p[1] for p in seg)),
+                        "jd_max": float(max(p[1] for p in seg)),
+                        "median_ra_deg": ra_med,
+                        "median_dec_deg": de_med,
+                        "member_row_indices": [int(p[0]) for p in seg],
+                    }
+                )
+            if len(segments) < 2:
+                return None
+            return {
+                "detected": True,
+                "method": "wcs_center_change_point",
+                "break_arcmin": float(break_arcmin),
+                "min_segment_size": int(min_segment_size),
+                "n_points_used": int(len(pts)),
+                "breaks_on_sorted_points": [int(x) for x in break_positions],
+                "segments": segments,
+                "sep_arcmin_max": float(max(seps_arcmin)) if seps_arcmin else None,
+            }
+        except Exception:  # noqa: BLE001
+            return None
     for fp in files:
         with fits.open(fp, memmap=False) as hdul:
             h = hdul[0].header
         hwcs = _has_valid_wcs(h)
         ha, hd, hs = _pointing_hint_from_header(h)
+        wra, wde = _wcs_center_from_header(h)
+        jd = _jd_from_header(h)
         da, dd, ds = ha, hd, hs
         if hwcs:
             n_wcs += 1
@@ -13384,11 +13568,15 @@ def scan_calibrated_lights_pointing(
                 "hint_ra_deg": ha,
                 "hint_dec_deg": hd,
                 "hint_source": hs,
+                "wcs_center_ra_deg": wra,
+                "wcs_center_dec_deg": wde,
+                "jd": jd,
                 "display_ra_deg": da,
                 "display_dec_deg": dd,
                 "display_source": ds,
             }
         )
+    seg = _detect_segments_from_wcs_centers(rows)
     return {
         "calibrated_root": str(root.resolve()),
         "n_files_scanned": len(rows),
@@ -13396,6 +13584,7 @@ def scan_calibrated_lights_pointing(
         "n_has_object_hint_no_wcs": n_hint,
         "n_no_pointing_hint": n_missing,
         "rows": rows,
+        "pointing_segments": seg,
     }
 
 

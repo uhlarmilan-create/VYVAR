@@ -438,15 +438,46 @@ def render_quality_dashboard(
     key_fwhm = f"vyvar_qdash_plot_fwhm_{did}"
     key_sky = f"vyvar_qdash_plot_sky_{did}"
 
-    st.slider(
-        "FWHM limit (px) — rovnaký prah ako **MAKE MASTERSTAR** / detrend (0 = bez filtra FWHM)",
-        min_value=0.0,
-        max_value=100.0,
-        step=0.05,
-        key="fwhm_threshold",
-        help="Posun mení `fwhm_threshold` v session (pre-processing / výber snímok).",
+    st.markdown("#### FWHM limit (px)")
+    st.caption("Rovnaký prah ako **MAKE MASTERSTAR** / detrend. Vypnuté = 0 (bez filtra).")
+    fwhm_enabled = st.toggle(
+        "Zapnúť FWHM filter",
+        value=bool(float(st.session_state.get("fwhm_threshold", 0.0)) > 0.0),
+        key="vyvar_qdash_fwhm_enable",
+        help="Ak je vypnuté, FWHM limit sa nastaví na 0 (žiadny filter).",
     )
+    _cur_raw = float(st.session_state.get("fwhm_threshold", 0.0))
+    if _cur_raw > 0:
+        st.session_state["vyvar_qdash_last_fwhm_nonzero"] = float(_cur_raw)
+    _base = float(st.session_state.get("vyvar_qdash_last_fwhm_nonzero") or 0.0)
+    if not math.isfinite(_base) or _base <= 0:
+        _med = pd.to_numeric(df["FWHM"], errors="coerce").dropna()
+        _base = float(_med.median()) if len(_med) else 4.0
+    _base = max(0.05, float(_base))
+    _pct = 0.15
+    _lo = max(0.0, float(_base * (1.0 - _pct)))
+    _hi = float(_base * (1.0 + _pct))
+    slider_lo: float | None = None
+    slider_hi: float | None = None
+    if fwhm_enabled:
+        st.slider(
+            "FWHM limit",
+            min_value=float(_lo),
+            max_value=float(_hi),
+            value=float(min(max(_cur_raw if _cur_raw > 0 else _base, _lo), _hi)),
+            step=0.01,
+            key="fwhm_threshold",
+            help="Posuvník je ±15% okolo poslednej použitej hodnoty (kvôli pohodliu).",
+        )
+        slider_lo = float(_lo)
+        slider_hi = float(_hi)
+    else:
+        st.session_state["fwhm_threshold"] = 0.0
+
     fwhm_limit_raw = float(st.session_state.get("fwhm_threshold", 0.0))
+    # Pre graf a filtre: 0 = bez limitu (žiadna červená čiara, žiadne rozťahovanie osi).
+    fwhm_limit_plot = float(fwhm_limit_raw) if fwhm_limit_raw > 0.0 else None
+    # Pre zvyšok UI (reject indikácia) potrebujeme číslo; None -> veľké číslo.
     fwhm_limit = float(fwhm_limit_raw if fwhm_limit_raw > 0.0 else 99.0)
     st.session_state["fwhm_limit"] = float(fwhm_limit)
     st.session_state["vyvar_ui_reject_fwhm"] = float(fwhm_limit)
@@ -455,7 +486,63 @@ def render_quality_dashboard(
         log_event(f"FWHM threshold (px) changed to {float(fwhm_limit_raw):.2f}")
         st.session_state["vyvar_last_logged_fwhm_limit"] = float(fwhm_limit_raw)
 
-    # --- MASTERSTAR kandidáti ---
+    fig_f = go.Figure()
+    _add_fwhm_traces_with_limit(fig_f, df, fwhm_limit_px=float(fwhm_limit_plot or 0.0))
+    if not fig_f.data:
+        fig_f.add_annotation(
+            text="Žiadne body vo FWHM grafe (skontrolujte FILTER / dáta v OBS_FILES).",
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
+        )
+    if fwhm_limit_plot is not None and math.isfinite(float(fwhm_limit_plot)):
+        fig_f.add_hline(y=float(fwhm_limit_plot), line_dash="dash", line_color="red")
+    try:
+        _job = st.session_state.get("vyvar_last_job_output") or {}
+        _flip_i = _job.get("rotation_flip_first_index_1based")
+        if _flip_i is not None:
+            fi = int(_flip_i)
+            if 1 <= fi <= int(len(df)):
+                fig_f.add_vline(
+                    x=fi,
+                    line_width=2,
+                    line_dash="dot",
+                    line_color="orange",
+                    annotation_text="Meridian flip / 180° rotácia",
+                    annotation_position="top left",
+                )
+    except Exception:  # noqa: BLE001
+        pass
+    fig_f.update_layout(
+        title="FWHM — červená čiara = limit z posuvníka vyššie; zelená ≤ limit, červená > limit",
+        xaxis_title=X_AXIS_FRAME_TITLE,
+        yaxis_title="FWHM (px)",
+        height=420,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+    )
+    # Pri zapnutom FWHM filtri drž Y-os v rozsahu slideru (±15%).
+    if slider_lo is not None and slider_hi is not None and slider_hi > slider_lo:
+        fig_f.update_yaxes(range=[float(slider_lo), float(slider_hi)])
+    st.plotly_chart(
+        fig_f, key=key_fwhm, on_select="rerun", selection_mode="points", use_container_width=True
+    )
+
+    fig_s = go.Figure()
+    _add_traces_by_filter(fig_s, df, y_col="SKY_LEVEL", y_hover_label="Sky level")
+    fig_s.update_layout(
+        title="Background sky level (podľa filtra; červená = auto-outlier)",
+        xaxis_title=X_AXIS_FRAME_TITLE,
+        yaxis_title="SKY_LEVEL",
+        height=420,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+    )
+    st.plotly_chart(
+        fig_s, key=key_sky, on_select="rerun", selection_mode="points", use_container_width=True
+    )
+
+    # --- MASTERSTAR kandidáti (presunuté pod Sky graf) ---
     _ms_eligible = df[df["IS_REJECTED"] == 0].copy()
     if fwhm_limit_raw > 0.0:
         _ms_eligible = _ms_eligible[
@@ -470,7 +557,7 @@ def render_quality_dashboard(
         st.markdown("#### Navrhované snímky pre MASTERSTAR")
         st.caption(
             "VYVAR zoradil snímky podľa skóre (FWHM 45 %, elongácia 30 %, počet hviezd 15 %, sky 10 %). "
-            "Skontroluj náhľad kliknutím na bod v grafe a potvrď výber tlačidlom nižšie."
+            "Systém automaticky predvyberie TOP1, ale nič sa neuloží bez potvrdenia."
         )
         _cand_df = pd.DataFrame(
             {
@@ -500,68 +587,53 @@ def render_quality_dashboard(
                 "Skóre": st.column_config.NumberColumn("Skóre", format="%.3f"),
             },
         )
+
+        _opts = [str(p) for p in _cand_df["Filename"].tolist()]
+        _paths = [str(p) for p in _top5["_preview"].tolist()]
+        _paths_by_name = dict(zip(_opts, _paths))
+        _db_paths_by_name = dict(zip(_opts, [str(p) for p in _top5["FILE_PATH"].tolist()]))
+        _default_name = str(_opts[0]) if _opts else ""
+        pick_name = st.selectbox(
+            "Predvybraný MASTERSTAR kandidát (z tabuľky):",
+            options=_opts,
+            index=0,
+            key="vyvar_qdash_ms_pick_name",
+        )
         st.session_state["vyvar_ms_candidates"] = [str(p) for p in _top5["FILE_PATH"].values]
         st.session_state["vyvar_ms_candidate_top1_path"] = str(_top5["FILE_PATH"].iloc[0])
+
+        _pick_preview = _paths_by_name.get(str(pick_name), "")
+        if _pick_preview and Path(_pick_preview).is_file():
+            try:
+                png_b = quicklook_preview_png_bytes(_pick_preview)
+                st.image(png_b, caption=f"Náhľad (auto): {Path(_pick_preview).name}", use_container_width=True)
+            except Exception:  # noqa: BLE001
+                pass
+
+        if st.button(
+            "Potvrdiť výber MASTERSTAR",
+            key="vyvar_qdash_confirm_masterstar",
+            type="primary",
+            help="Zapíše vybranú snímku ako MASTERSTAR pre tento draft (DB).",
+        ):
+            p_db = _db_paths_by_name.get(str(pick_name), "")
+            if p_db:
+                try:
+                    _db2 = VyvarDatabase(db.db_path)
+                    try:
+                        _db2.set_obs_draft_masterstar_path(int(did), str(p_db))
+                    finally:
+                        _db2.conn.close()
+                except Exception:  # noqa: BLE001
+                    pass
+                log_event(f"MASTERSTAR potvrdený z tabuľky: {Path(p_db).name}")
+                st.success(f"Nastavené: `{Path(p_db).name}` bude použitý ako MASTERSTAR.")
     else:
         st.info("Žiadne vhodné snímky pre MASTERSTAR (skontroluj FWHM limit alebo IS_REJECTED).")
         st.session_state["vyvar_ms_candidates"] = []
         st.session_state["vyvar_ms_candidate_top1_path"] = ""
     st.markdown("---")
     # --- koniec MASTERSTAR kandidáti ---
-
-    fig_f = go.Figure()
-    _add_fwhm_traces_with_limit(fig_f, df, fwhm_limit_px=float(fwhm_limit))
-    if not fig_f.data:
-        fig_f.add_annotation(
-            text="Žiadne body vo FWHM grafe (skontrolujte FILTER / dáta v OBS_FILES).",
-            xref="paper",
-            yref="paper",
-            x=0.5,
-            y=0.5,
-            showarrow=False,
-        )
-    _thr_line = float(fwhm_limit)
-    if math.isfinite(_thr_line):
-        fig_f.add_hline(y=_thr_line, line_dash="dash", line_color="red")
-    try:
-        _job = st.session_state.get("vyvar_last_job_output") or {}
-        _flip_i = _job.get("rotation_flip_first_index_1based")
-        if _flip_i is not None:
-            fi = int(_flip_i)
-            if 1 <= fi <= int(len(df)):
-                fig_f.add_vline(
-                    x=fi,
-                    line_width=2,
-                    line_dash="dot",
-                    line_color="orange",
-                    annotation_text="Meridian flip / 180° rotácia",
-                    annotation_position="top left",
-                )
-    except Exception:  # noqa: BLE001
-        pass
-    fig_f.update_layout(
-        title="FWHM — červená čiara = limit z posuvníka vyššie; zelená ≤ limit, červená > limit",
-        xaxis_title=X_AXIS_FRAME_TITLE,
-        yaxis_title="FWHM (px)",
-        height=420,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02),
-    )
-    st.plotly_chart(
-        fig_f, key=key_fwhm, on_select="rerun", selection_mode="points", use_container_width=True
-    )
-
-    fig_s = go.Figure()
-    _add_traces_by_filter(fig_s, df, y_col="SKY_LEVEL", y_hover_label="Sky level")
-    fig_s.update_layout(
-        title="Background sky level (podľa filtra; červená = auto-outlier)",
-        xaxis_title=X_AXIS_FRAME_TITLE,
-        yaxis_title="SKY_LEVEL",
-        height=420,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02),
-    )
-    st.plotly_chart(
-        fig_s, key=key_sky, on_select="rerun", selection_mode="points", use_container_width=True
-    )
 
     df["RA"] = pd.to_numeric(df["RA"], errors="coerce")
     df["DE"] = pd.to_numeric(df["DE"], errors="coerce")

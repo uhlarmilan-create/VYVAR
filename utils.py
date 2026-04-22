@@ -94,6 +94,21 @@ def strip_celestial_wcs_keys(hdr: fits.Header) -> None:
                 pass
 
 
+# Leftovers from ASTAP / other tools — not part of the FITS WCS standard; safe to drop after VYVAR solve.
+_VENDOR_PLATESOLVE_METADATA_KEYS: tuple[str, ...] = (
+    "PLTSOLVD",  # ASTAP: plate-solved flag
+)
+
+
+def strip_vendor_platesolve_metadata(hdr: fits.Header) -> None:
+    """Remove third-party plate-solve tool keywords (does **not** remove celestial WCS keys)."""
+    for _k in _VENDOR_PLATESOLVE_METADATA_KEYS:
+        try:
+            del hdr[_k]
+        except KeyError:
+            pass
+
+
 def header_key_is_celestial_wcs(k: str) -> bool:
     """True if FITS keyword ``k`` belongs to the celestial WCS block we strip/copy."""
     return any(k.startswith(p) for p in _CELESTIAL_WCS_PREFIXES)
@@ -532,8 +547,13 @@ def catalog_cone_radius_deg_from_optics(
         fov_y_deg = (float(hpx) * float(sc)) / 3600.0
         # Required formula: radius = 0.5 * hypot(FOV_x, FOV_y) * padding.
         r = 0.5 * float(math.hypot(fov_x_deg, fov_y_deg)) * float(margin)
-        dyn_floor = max(r_floor, min(6.0, 600.0 / f_mm))
-        return float(max(0.08, max(r, dyn_floor)))
+        # Dynamic floor: wide-field (short focal) needs a larger Gaia cone by default,
+        # but narrow-field optics must not be forced to the global MIN_GAIA_CONE_RADIUS_DEG (3.5°),
+        # otherwise the catalog becomes too large and triangle matching becomes intractable.
+        #
+        # For long focal lengths: floor ~ (600 / focal_mm) deg, with a small absolute minimum.
+        dyn_floor = max(0.08, min(float(r_floor), 600.0 / f_mm))
+        return float(max(0.08, max(r, float(dyn_floor))))
     fb = max(0.05, float(fov_diameter_fallback_deg))
     return float(max(r_floor, fb * 0.65))
 

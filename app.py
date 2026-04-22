@@ -23,13 +23,23 @@ import ui_dao_stars as ui_dao_stars
 import ui_photometry as ui_photometry
 import ui_masterstar_qa as ui_masterstar_qa
 import ui_select_stars as ui_select_stars
+import ui_suspected_lightcurves as ui_suspected_lightcurves
 import ui_quality_dashboard as ui_quality_dashboard
 import ui_components as ui_components
+from platesolve_ui_paths import resolve_draft_directory
 from ui_aperture_photometry import render_aperture_photometry
 from utils import generate_session_id
 
 # MASTERSTAR: DB fallback (top % FWHM) when explicit UI paths fail to map; no session/UI control.
 _DEFAULT_MASTERSTAR_SELECTION_PCT = 10.0
+
+
+def _vyvar_effective_draft_dir_override() -> Path | None:
+    raw = st.session_state.get("vyvar_draft_dir_override")
+    if not raw:
+        return None
+    p = Path(str(raw)).expanduser()
+    return p.resolve() if p.is_dir() else None
 
 
 def _vyvar_execute_preprocess_pending(
@@ -1824,6 +1834,47 @@ def main() -> None:
     )
 
     if page == "Pipeline":
+        st.subheader("Draft")
+        st.caption(
+            "Zadaj absolútnu cestu k priečinku ``draft_XXXXXX`` (musí obsahovať ``platesolve/``) "
+            "alebo len číslo draftu z archívu. Použije sa v záložkách Select Stars, Aperture Photometry "
+            "a LightCurves — Suspected. Prázdne pole + „Načítať draft“ zruší override."
+        )
+        dcol1, dcol2, dcol3 = st.columns([4, 1, 1])
+        with dcol1:
+            draft_path_inp = st.text_input(
+                "Cesta alebo číslo draftu",
+                key="vyvar_draft_path_field",
+                placeholder=r"napr. C:\...\Archive\Drafts\draft_000229 alebo 229",
+            )
+        with dcol2:
+            apply_draft = st.button("Načítať draft", key="vyvar_draft_path_apply", type="primary")
+        with dcol3:
+            _cur = st.session_state.get("vyvar_last_draft_id")
+            st.caption(f"ID: **{_cur}**" if _cur is not None else "ID: —")
+        if apply_draft:
+            s = (draft_path_inp or "").strip()
+            if not s:
+                st.session_state.pop("vyvar_draft_dir_override", None)
+                st.info("Override draftu vymazaný — používa sa umiestnenie z konfigurácie archívu.")
+                st.rerun()
+            else:
+                ddir, parsed_id, err = resolve_draft_directory(
+                    s, archive_root=Path(cfg.archive_root)
+                )
+                if err:
+                    st.error(err)
+                elif ddir is not None:
+                    st.session_state["vyvar_draft_dir_override"] = str(ddir)
+                    if parsed_id is not None:
+                        st.session_state["vyvar_last_draft_id"] = int(parsed_id)
+                    st.success(f"Draft načítaný: {ddir}")
+                    st.rerun()
+        ov = _vyvar_effective_draft_dir_override()
+        if ov is not None:
+            st.caption(f"Aktívny override: `{ov}`")
+
+        _draft_ov = ov
         tabs = st.tabs(
             [
                 "VAR-STREM",
@@ -1831,6 +1882,7 @@ def main() -> None:
                 "MASTERSTAR QA",
                 "Select Stars",
                 "Aperture Photometry",
+                "LightCurves — Suspected",
                 "Infolog",
             ]
         )
@@ -1844,20 +1896,34 @@ def main() -> None:
                 archive_text="",
             )
         with tabs[2]:
-            ui_masterstar_qa.render_masterstar_qa()
+            ui_masterstar_qa.render_masterstar_qa(
+                cfg=cfg,
+                draft_id=st.session_state.get("vyvar_last_draft_id"),
+                pipeline=pipeline,
+                draft_dir_override=_draft_ov,
+            )
         with tabs[3]:
             ui_select_stars.render_select_stars(
                 cfg=cfg,
                 draft_id=st.session_state.get("vyvar_last_draft_id"),
                 pipeline=pipeline,
+                draft_dir_override=_draft_ov,
             )
         with tabs[4]:
             render_aperture_photometry(
                 cfg=cfg,
                 draft_id=st.session_state.get("vyvar_last_draft_id"),
                 pipeline=pipeline,
+                draft_dir_override=_draft_ov,
             )
         with tabs[5]:
+            ui_suspected_lightcurves.render_suspected_lightcurves(
+                cfg=cfg,
+                draft_id=st.session_state.get("vyvar_last_draft_id"),
+                pipeline=pipeline,
+                draft_dir_override=_draft_ov,
+            )
+        with tabs[6]:
             render_infolog()
     elif page == "Calibration Library":
         import ui_calibration_library as ui_calibration_library
@@ -1967,11 +2033,11 @@ def main() -> None:
 
         vsx_mag_limit_save = st.number_input(
             "Mag limit pre Variable Targets export (VSX)",
-            min_value=5.0,
+            min_value=0.0,
             max_value=21.0,
             value=float(getattr(cfg, "vsx_variable_targets_mag_limit", 13.0) or 13.0),
             step=0.5,
-            help="Premenné hviezdy jasnejšie ako tento limit sa zapíšu do variable_targets.csv",
+            help="Zachová VSX riadky s mag_max ≤ limit (alebo bez mag_max v DB). Hodnota 0 = bez mag. rezu (všetky v kuželi).",
         )
 
         st.markdown("---")

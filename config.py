@@ -106,7 +106,8 @@ class AppConfig:
 
     #: Path to local VSX subset SQLite (table ``vsx_data``: oid, ra_deg, dec_deg, …) for variable-star flags.
     vsx_local_db_path: str = ""
-    #: VSX export for variable_targets.csv: keep stars with mag_max <= limit (or unknown mag_max).
+    #: VSX export for variable_targets.csv: keep stars with ``mag_max`` <= limit (or unknown ``mag_max``).
+    #: Set to ``<= 0`` to disable this cutoff (export all VSX rows in the field cone).
     vsx_variable_targets_mag_limit: float = 13.0
 
     #: After a cone query, keep at most this many catalog rows (brightest by ``mag``) to avoid RAM/CPU freeze.
@@ -201,6 +202,11 @@ class AppConfig:
     phase01_comparison_exclude_gaia_nss: bool = True
     phase01_comparison_exclude_gaia_extobj: bool = True
 
+    #: Jednotný vnútorný okraj čipu (px) pre **celú Fázu 0+1**: aktívne premenné, porovnávacie hviezdy aj suspected.
+    #: Hviezdy s ``x,y`` bližšie ako tento počet pixelov od okraja referenčného poľa sa neberú (zmierňuje artefakty
+    #: pri zarovnaní / posune poľa / okrajoch). ``0`` = vypnuté (celý čip). Predvolene 100 px.
+    phase01_chip_interior_margin_px: int = 100
+
     #: Post-calibration QC on each calibrated light (metrics + pass/fail vs limits).
     qc_after_calibrate_enabled: bool = True
     qc_max_hfr: float = 5.0
@@ -253,8 +259,9 @@ class AppConfig:
         _vml = data.get("vsx_variable_targets_mag_limit", self.vsx_variable_targets_mag_limit)
         try:
             self.vsx_variable_targets_mag_limit = float(_vml)
-            if not math.isfinite(self.vsx_variable_targets_mag_limit) or self.vsx_variable_targets_mag_limit <= 0:
+            if not math.isfinite(self.vsx_variable_targets_mag_limit):
                 self.vsx_variable_targets_mag_limit = 13.0
+            # ``<= 0`` = žiadny mag. rez VSX (export všetkých v kuželi); ``> 0`` = max ``mag_max`` z VSX.
         except (TypeError, ValueError):
             self.vsx_variable_targets_mag_limit = 13.0
         try:
@@ -518,6 +525,15 @@ class AppConfig:
             data.get("phase01_comparison_exclude_gaia_extobj", self.phase01_comparison_exclude_gaia_extobj)
         )
 
+        _chip_m = data.get("phase01_chip_interior_margin_px")
+        if _chip_m is None and "phase01_suspected_interior_margin_px" in data:
+            _chip_m = data.get("phase01_suspected_interior_margin_px")
+        if _chip_m is not None and _chip_m != "":
+            try:
+                self.phase01_chip_interior_margin_px = max(0, min(2000, int(_chip_m)))
+            except (TypeError, ValueError):
+                self.phase01_chip_interior_margin_px = 100
+
     def to_json(self) -> dict[str, Any]:
         return {
             "archive_root": str(self.archive_root),
@@ -607,6 +623,7 @@ class AppConfig:
             "phase01_comparison_min_frames_frac": float(self.phase01_comparison_min_frames_frac),
             "phase01_comparison_exclude_gaia_nss": bool(self.phase01_comparison_exclude_gaia_nss),
             "phase01_comparison_exclude_gaia_extobj": bool(self.phase01_comparison_exclude_gaia_extobj),
+            "phase01_chip_interior_margin_px": int(self.phase01_chip_interior_margin_px),
         }
 
     # Backward-compatible alias (some callers expect to_dict()).

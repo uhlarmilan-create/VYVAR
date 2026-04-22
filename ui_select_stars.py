@@ -23,13 +23,23 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
-def _find_phase01_setups(cfg: "AppConfig", draft_id: int | None) -> dict[str, dict[str, Path | None]]:
+def _find_phase01_setups(
+    cfg: "AppConfig",
+    draft_id: int | None,
+    *,
+    draft_dir_override: Path | None = None,
+) -> dict[str, dict[str, Path | None]]:
     """Všetky platesolve setupy s ``per_frame_catalog_index.csv`` a cesty pre Fázu 0+1."""
-    if draft_id is None:
+    if draft_id is None and draft_dir_override is None:
         return {}
     try:
         archive = Path(cfg.archive_root)
-        draft_dir = archive / "Drafts" / f"draft_{int(draft_id):06d}"
+        if draft_dir_override is not None and draft_dir_override.is_dir():
+            draft_dir = draft_dir_override.resolve()
+        elif draft_id is not None:
+            draft_dir = (archive / "Drafts" / f"draft_{int(draft_id):06d}").resolve()
+        else:
+            return {}
         ps_dir = draft_dir / "platesolve"
         aligned_root = draft_dir / "detrended_aligned" / "lights"
         if not ps_dir.is_dir():
@@ -59,11 +69,22 @@ def _find_phase01_setups(cfg: "AppConfig", draft_id: int | None) -> dict[str, di
         return {}
 
 
-def _default_setup_name(setups: dict[str, dict[str, Path | None]], cfg: "AppConfig", draft_id: int) -> str:
+def _default_setup_name(
+    setups: dict[str, dict[str, Path | None]],
+    cfg: "AppConfig",
+    draft_id: int,
+    *,
+    draft_dir_override: Path | None = None,
+) -> str:
     if not setups:
         return ""
-    ps = Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}" / "platesolve"
-    pick = default_bundle_dir(ps)
+    if draft_dir_override is not None:
+        ps = draft_dir_override / "platesolve"
+    elif draft_id > 0:
+        ps = Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}" / "platesolve"
+    else:
+        ps = Path()
+    pick = default_bundle_dir(ps) if ps.is_dir() else None
     if pick is not None and pick.name in setups:
         return pick.name
     r_first = next((k for k in sorted(setups) if k.upper().startswith("R_")), None)
@@ -234,6 +255,28 @@ def _render_comparison_tab(comp_df: pd.DataFrame) -> None:
         st.bar_chart(rms_df["RMS"])
 
 
+def _sanitize_suspected_variables_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Odstráni poškodené / hlavičkové riadky zo starších CSV alebo zlých joinov."""
+    if df.empty or "catalog_id" not in df.columns:
+        return df
+    from photometry_core import _normalize_id_value
+
+    s = df.copy()
+    nid = s["catalog_id"].map(_normalize_id_value)
+    ok = nid.astype(str).str.len() > 0
+    ok &= ~nid.astype(str).str.lower().isin(("none", "nan", "catalog_id", "name"))
+    if "comp_rms" in s.columns:
+        cr = pd.to_numeric(s["comp_rms"], errors="coerce")
+        ok &= cr.notna() & cr.lt(500.0) & cr.gt(0.0)
+    if "n_frames" in s.columns:
+        nf = pd.to_numeric(s["n_frames"], errors="coerce")
+        ok &= nf.notna() & nf.le(500_000) & nf.ge(1)
+    if "zone" in s.columns:
+        zt = s["zone"].astype(str)
+        ok &= ~zt.str.contains(r"catalog_id.*linear", case=False, na=False, regex=True)
+    return s.loc[ok].reset_index(drop=True)
+
+
 def _render_suspected_tab(suspected_df: pd.DataFrame) -> None:
     """Tab: Suspected new variables."""
     if suspected_df.empty:
@@ -281,17 +324,19 @@ def render_select_stars(
     cfg: "AppConfig",
     draft_id: int | None,
     pipeline: "AstroPipeline",
+    *,
+    draft_dir_override: Path | None = None,
 ) -> None:
     """Hlavná funkcia pre Select Stars tab."""
     _ = pipeline
     st.header("Select Stars")
     st.caption("Fáza 0+1: Výber aktívnych premenných hviezd a porovnávacích hviezd.")
 
-    if draft_id is None:
-        st.info("Žiadny aktívny draft. Najprv spusti platesolve.")
+    if draft_id is None and draft_dir_override is None:
+        st.info("Žiadny aktívny draft. Najprv spusti platesolve alebo načítaj draft vyššie.")
         return
 
-    setups = _find_phase01_setups(cfg, draft_id)
+    setups = _find_phase01_setups(cfg, draft_id, draft_dir_override=draft_dir_override)
     if not setups:
         st.warning(
             "Nenájdené vstupné súbory. Najprv spusti platesolve (Fáza plate-solve musí byť dokončená)."
@@ -300,7 +345,12 @@ def render_select_stars(
 
     setup_names = sorted(setups)
     if len(setup_names) > 1:
-        default_nm = _default_setup_name(setups, cfg, int(draft_id))
+        default_nm = _default_setup_name(
+            setups,
+            cfg,
+            int(draft_id) if draft_id is not None else 0,
+            draft_dir_override=draft_dir_override,
+        )
         sel_ix = setup_names.index(default_nm) if default_nm in setup_names else 0
         chosen = st.selectbox(
             "Filter / skupina (platesolve):",
@@ -341,7 +391,14 @@ def render_select_stars(
             "**`phase01_comparison_max_mag_diff`** a **`phase01_comparison_max_dist_deg`**, prípadne "
             "zvýš **`phase01_comparison_max_comp_rms`** alebo zníž **`phase01_comparison_min_frames_frac`**. "
             "Pri **jasných cieľoch** (napr. R~9 mag) nastav **`phase01_comparison_max_mag_diff_bright_floor`** "
-            "(min. |Δmag| pás; ``0`` vypne) a prípadne **`phase01_comparison_mag_bright_threshold`**."
+            "(min. |Δmag| pás; ``0`` vypne) a prípadne **`phase01_comparison_mag_bright_threshold`**. "
+            "**Okraj čipu (jednotné pre premenné, porovnávačky aj suspected):** "
+            "``phase01_chip_interior_margin_px`` — px od okraja; ``0`` = vypnuté."
+        )
+        _chip_line = (
+            f"phase01_chip_interior_margin_px = 0  # žiadne priestorové orezanie"
+            if int(cfg.phase01_chip_interior_margin_px) <= 0
+            else f"phase01_chip_interior_margin_px = {int(cfg.phase01_chip_interior_margin_px)}"
         )
         st.code(
             f"max_dist_deg = {cfg.phase01_comparison_max_dist_deg}\n"
@@ -354,7 +411,8 @@ def render_select_stars(
             f"min_dist_arcsec = {cfg.phase01_comparison_min_dist_arcsec}\n"
             f"min_frames_frac = {cfg.phase01_comparison_min_frames_frac}\n"
             f"exclude_gaia_nss = {cfg.phase01_comparison_exclude_gaia_nss}\n"
-            f"exclude_gaia_extobj = {cfg.phase01_comparison_exclude_gaia_extobj}",
+            f"exclude_gaia_extobj = {cfg.phase01_comparison_exclude_gaia_extobj}\n"
+            f"{_chip_line}",
             language="text",
         )
 
@@ -374,6 +432,8 @@ def render_select_stars(
             )
         with col2:
             st.caption(f"FWHM: {fwhm_px} px | Per-frame dir: {per_frame_dir.name if per_frame_dir else '?'}")
+        if len(setup_names) > 1:
+            st.caption("Tlačidlo spustí Fázu **0+1 pre všetky** filtre / setupy naraz.")
     else:
         st.info("Fáza 0+1 ešte nebehala pre tento draft.")
         col1, col2 = st.columns(2)
@@ -385,6 +445,8 @@ def render_select_stars(
             )
         with col2:
             st.caption(f"FWHM: {fwhm_px} px")
+        if len(setup_names) > 1:
+            st.caption("Tlačidlo spustí Fázu **0+1 pre všetky** filtre / setupy naraz.")
 
     should_run = (exists and run_again) or (not exists and first_run)
 
@@ -396,36 +458,80 @@ def render_select_stars(
             def _phase01_ui(msg: str) -> None:
                 vyvar_footer_running("Fáza 0+1", msg)
 
-            result = run_phase0_and_phase1(
-                variable_targets_csv=vt_csv,
-                masterstars_csv=ms_csv,
-                per_frame_csv_dir=per_frame_dir,
-                output_dir=output_dir,
-                fwhm_px=fwhm_px,
-                max_dist_deg=float(cfg.phase01_comparison_max_dist_deg),
-                max_mag_diff=float(cfg.phase01_comparison_max_mag_diff),
-                mag_bright_threshold=float(cfg.phase01_comparison_mag_bright_threshold),
-                max_mag_diff_bright_floor=float(cfg.phase01_comparison_max_mag_diff_bright_floor),
-                max_bv_diff=float(cfg.phase01_comparison_max_bv_diff),
-                n_comp_min=int(cfg.phase01_comparison_n_comp_min),
-                n_comp_max=int(cfg.phase01_comparison_n_comp_max),
-                max_comp_rms=float(cfg.phase01_comparison_max_comp_rms),
-                min_dist_arcsec=float(cfg.phase01_comparison_min_dist_arcsec),
-                min_frames_frac=float(cfg.phase01_comparison_min_frames_frac),
-                exclude_gaia_nss=bool(cfg.phase01_comparison_exclude_gaia_nss),
-                exclude_gaia_extobj=bool(cfg.phase01_comparison_exclude_gaia_extobj),
-                progress_cb=_phase01_ui,
-            )
-            st.success(
-                f"✅ Hotovo: {result['n_active_targets']} premenných, "
-                f"{result['n_comparison_pairs']} porovnávacích párov."
-            )
-            if result.get("targets_without_comps"):
-                st.warning(
-                    f"⚠️ {len(result['targets_without_comps'])} cieľov bez porovnávačiek: "
-                    f"{', '.join(result['targets_without_comps'][:5])}"
+            setups_to_run = list(setup_names)
+            errors: list[str] = []
+            last_result: dict | None = None
+            n_ok = 0
+            for nm in setups_to_run:
+                pth = setups[nm]
+                _vt = pth.get("variable_targets_csv")
+                _ms = pth.get("masterstars_csv")
+                _pf = pth.get("per_frame_csv_dir")
+                _out = pth.get("output_dir")
+                _msfits = pth.get("masterstar_fits")
+                miss: list[str] = []
+                if _vt is None or not _vt.exists():
+                    miss.append("variable_targets.csv")
+                if _ms is None or not _ms.exists():
+                    miss.append("masterstars_full_match.csv")
+                if _pf is None or not _pf.exists():
+                    miss.append("per-frame CSV adresár (detrended_aligned)")
+                if miss:
+                    errors.append(f"{nm}: chýba {', '.join(miss)}")
+                    continue
+                _fwhm = _load_fwhm_from_masterstar(_msfits if isinstance(_msfits, Path) else None)
+                try:
+                    _phase01_ui(f"Fáza 0+1: {nm} …")
+                    last_result = run_phase0_and_phase1(
+                        variable_targets_csv=_vt,
+                        masterstars_csv=_ms,
+                        per_frame_csv_dir=_pf,
+                        output_dir=_out,
+                        fwhm_px=_fwhm,
+                        max_dist_deg=float(cfg.phase01_comparison_max_dist_deg),
+                        max_mag_diff=float(cfg.phase01_comparison_max_mag_diff),
+                        mag_bright_threshold=float(cfg.phase01_comparison_mag_bright_threshold),
+                        max_mag_diff_bright_floor=float(cfg.phase01_comparison_max_mag_diff_bright_floor),
+                        max_bv_diff=float(cfg.phase01_comparison_max_bv_diff),
+                        n_comp_min=int(cfg.phase01_comparison_n_comp_min),
+                        n_comp_max=int(cfg.phase01_comparison_n_comp_max),
+                        max_comp_rms=float(cfg.phase01_comparison_max_comp_rms),
+                        min_dist_arcsec=float(cfg.phase01_comparison_min_dist_arcsec),
+                        min_frames_frac=float(cfg.phase01_comparison_min_frames_frac),
+                        exclude_gaia_nss=bool(cfg.phase01_comparison_exclude_gaia_nss),
+                        exclude_gaia_extobj=bool(cfg.phase01_comparison_exclude_gaia_extobj),
+                        chip_interior_margin_px=int(cfg.phase01_chip_interior_margin_px),
+                        progress_cb=_phase01_ui,
+                    )
+                    n_ok += 1
+                except Exception as exc_nm:  # noqa: BLE001
+                    errors.append(f"{nm}: {exc_nm}")
+                    logging.exception("Select Stars Fáza 0+1 zlyhala pre %s", nm)
+
+            if n_ok == len(setups_to_run) and not errors and last_result is not None:
+                st.success(
+                    f"✅ Hotovo pre všetky filtre ({len(setups_to_run)}): posledný blok "
+                    f"{last_result['n_active_targets']} premenných, "
+                    f"{last_result['n_comparison_pairs']} párov."
                 )
-            st.rerun()
+                if last_result.get("targets_without_comps"):
+                    st.warning(
+                        f"⚠️ {len(last_result['targets_without_comps'])} cieľov bez porovnávačiek "
+                        f"(posledný setup): {', '.join(last_result['targets_without_comps'][:5])}"
+                    )
+            elif n_ok > 0:
+                st.success(f"✅ Fáza 0+1: {n_ok}/{len(setups_to_run)} setupov úspešne.")
+                if last_result and last_result.get("targets_without_comps"):
+                    st.warning(
+                        f"⚠️ {len(last_result['targets_without_comps'])} cieľov bez porovnávačiek "
+                        f"(posledný úspešný setup): {', '.join(last_result['targets_without_comps'][:5])}"
+                    )
+            if errors:
+                (st.error if n_ok == 0 else st.warning)(
+                    "Problémy pri niektorých filtroch:\n" + "\n".join(errors)
+                )
+            if n_ok:
+                st.rerun()
         except Exception as exc:  # noqa: BLE001
             st.error(f"❌ Chyba: {exc}")
             logging.exception("Select Stars Fáza 0+1 zlyhala")
@@ -442,6 +548,7 @@ def render_select_stars(
         comp_df = pd.read_csv(output_dir / "comparison_stars_per_target.csv")
         suspected_path = output_dir / "suspected_variables.csv"
         suspected_df = pd.read_csv(suspected_path) if suspected_path.exists() else pd.DataFrame()
+        suspected_df = _sanitize_suspected_variables_df(suspected_df)
     except Exception as exc:  # noqa: BLE001
         st.error(f"Chyba pri načítaní výsledkov: {exc}")
         return

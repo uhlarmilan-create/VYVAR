@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 from pathlib import Path
 from warnings import catch_warnings, simplefilter
 
@@ -12,6 +13,8 @@ import pandas as pd
 import streamlit as st
 
 from platesolve_ui_paths import cone_csv_path, default_bundle_dir, masterstars_csv_in_dir, platesolve_bundle_dirs
+from config import AppConfig
+from pipeline import AstroPipeline
 
 
 @st.cache_data(show_spinner="Načítavam VSX z lokálnej databázy…")
@@ -71,7 +74,31 @@ def _cached_msqa_vsx_chip_table(
     return vdf
 
 
-def render_masterstar_qa() -> None:
+def _infer_setup_name_from_masterstar_candidate_path(p: Path) -> str | None:
+    """Infer setup name (e.g. R_60_1) from a selected MASTERSTAR candidate light frame path."""
+    try:
+        parts = [pp for pp in p.parts]
+        for i in range(len(parts) - 1):
+            if parts[i].lower() == "lights":
+                cand = parts[i + 1]
+                if re.fullmatch(r"[A-Za-z]+_\d+_\d+", cand):
+                    return cand
+        # Fallback: any segment that looks like SETUP
+        for seg in parts:
+            if re.fullmatch(r"[A-Za-z]+_\d+_\d+", seg):
+                return seg
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+def render_masterstar_qa(
+    *,
+    cfg: AppConfig,
+    draft_id: int | None,
+    pipeline: AstroPipeline,
+    draft_dir_override: Path | None = None,
+) -> None:
     if st.session_state.pop("vyvar_masterstar_qa_force_refresh", False):
         st.rerun()
     st.subheader("MASTERSTARS Diagnostic")
@@ -80,10 +107,17 @@ def render_masterstar_qa() -> None:
         "promítať cez WCS z **MASTERSTAR.fits** — počty záznamov, match rate a kontrola polomeru Gaia dotazu."
     )
 
-    last_res = st.session_state.get("vyvar_last_import_result")
+    # Draft root: prefer explicit override from Pipeline page, else archive_root/draft_id.
     default_ap = ""
-    if last_res and getattr(last_res, "archive_path", None):
-        default_ap = str(last_res.archive_path)
+    if draft_dir_override is not None and draft_dir_override.is_dir():
+        default_ap = str(draft_dir_override.resolve())
+    elif draft_id is not None:
+        default_ap = str((Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}").resolve())
+    else:
+        last_res = st.session_state.get("vyvar_last_import_result")
+        if last_res and getattr(last_res, "archive_path", None):
+            default_ap = str(last_res.archive_path)
+
     ap = st.text_input("Cesta k archívu (draft)", value=default_ap, key="vyvar_masterstar_ap")
     if not ap.strip():
         st.info("Zadaj cestu k archívu, napr. `.../Archive/Drafts/draft_000029`.")
@@ -100,9 +134,26 @@ def render_masterstar_qa() -> None:
         )
         return
 
+    # If Quality Dashboard selected a MASTERSTAR candidate, prefer that setup here.
+    preferred_setup: str | None = None
+    masterstar_candidate_path: Path | None = None
+    if draft_id is not None:
+        try:
+            mp = pipeline.db.get_obs_draft_masterstar_path(int(draft_id))
+            if mp:
+                masterstar_candidate_path = Path(str(mp))
+                preferred_setup = _infer_setup_name_from_masterstar_candidate_path(masterstar_candidate_path)
+        except Exception:  # noqa: BLE001
+            preferred_setup = None
+
+    if masterstar_candidate_path is not None and masterstar_candidate_path.is_file():
+        st.caption(f"MASTERSTAR vybraný v Quality Dashboard: `{masterstar_candidate_path.name}`")
+        if preferred_setup:
+            st.caption(f"Preferovaný platesolve setup: **{preferred_setup}**")
+
     if len(bundles) > 1:
         names = [p.name for p in bundles]
-        pref = default_bundle_dir(ps_root)
+        pref = default_bundle_dir(ps_root, preferred_name=preferred_setup)
         pref_nm = pref.name if pref is not None else names[0]
         ix = names.index(pref_nm) if pref_nm in names else 0
         pick_nm = st.selectbox(

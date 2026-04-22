@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 
@@ -67,3 +68,52 @@ def default_bundle_dir(ps_root: Path, *, preferred_name: str | None = None) -> P
 
 def cone_csv_path(setup_dir: Path) -> Path:
     return setup_dir / "field_catalog_cone.csv"
+
+
+def parse_draft_id_from_text(text: str) -> int | None:
+    """Extract ``draft_000229`` / ``draft-229`` style id from free text or a path."""
+    s = (text or "").strip().strip('"').strip("'")
+    if not s:
+        return None
+    if s.isdigit():
+        return int(s)
+    m = re.search(r"draft[_-]?(\d{1,8})(?:\D|$)", s, flags=re.IGNORECASE)
+    if m:
+        return int(m.group(1))
+    return None
+
+
+def resolve_draft_directory(
+    text: str,
+    *,
+    archive_root: Path,
+) -> tuple[Path | None, int | None, str]:
+    """Resolve a user-supplied draft folder or id.
+
+    Returns ``(draft_dir, draft_id, error_message)``. ``error_message`` is empty on success.
+    ``draft_dir`` is the directory that should contain a ``platesolve/`` subfolder.
+    """
+    s = (text or "").strip().strip('"').strip("'")
+    if not s:
+        return None, None, ""
+
+    archive_root = Path(archive_root)
+    draft_id = parse_draft_id_from_text(s)
+
+    p = Path(s).expanduser()
+    if p.is_dir():
+        ps = p / "platesolve"
+        if ps.is_dir():
+            if draft_id is None:
+                m = re.search(r"draft[_-]?(\d{1,8})", p.name, flags=re.IGNORECASE)
+                draft_id = int(m.group(1)) if m else None
+            return p.resolve(), draft_id, ""
+        return None, draft_id, f"Pod adresárom nie je ``platesolve/``: {p}"
+
+    if draft_id is not None:
+        cand = (archive_root / "Drafts" / f"draft_{int(draft_id):06d}").resolve()
+        if cand.is_dir() and (cand / "platesolve").is_dir():
+            return cand, draft_id, ""
+        return None, draft_id, f"Draft {draft_id} neexistuje v archíve: {cand}"
+
+    return None, None, "Zadaj celú cestu k priečinku ``draft_XXXXXX`` alebo číslo draftu."

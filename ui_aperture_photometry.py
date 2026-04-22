@@ -24,17 +24,27 @@ from platesolve_ui_paths import default_bundle_dir
 # ---------------------------------------------------------------------------
 
 
-def _find_phase2a_paths(cfg: "AppConfig", draft_id: int | None) -> dict[str, Path | None]:
+def _find_phase2a_paths(
+    cfg: "AppConfig",
+    draft_id: int | None,
+    *,
+    draft_dir_override: Path | None = None,
+) -> dict[str, Path | None]:
     """Return all available filter/setup groups for Phase 2A.
 
     Returns:
         Dict keyed by setup_name (e.g. ``R_60_1``) with a nested dict of paths.
     """
-    if draft_id is None:
+    if draft_id is None and draft_dir_override is None:
         return {}
     try:
         archive = Path(cfg.archive_root)
-        draft_dir = archive / "Drafts" / f"draft_{int(draft_id):06d}"
+        if draft_dir_override is not None and draft_dir_override.is_dir():
+            draft_dir = draft_dir_override.resolve()
+        elif draft_id is not None:
+            draft_dir = archive / "Drafts" / f"draft_{int(draft_id):06d}"
+        else:
+            return {}
         ps_dir = draft_dir / "platesolve"
         aligned_root = draft_dir / "detrended_aligned" / "lights"
 
@@ -86,10 +96,18 @@ def _load_fwhm(masterstar_fits: Path | None) -> float:
     return 3.7
 
 
-def _fallback_masterstar_fits(cfg: "AppConfig", draft_id: int | None) -> Path | None:
-    if draft_id is None:
+def _fallback_masterstar_fits(
+    cfg: "AppConfig",
+    draft_id: int | None,
+    *,
+    draft_dir_override: Path | None = None,
+) -> Path | None:
+    if draft_id is None and draft_dir_override is None:
         return None
-    ps = Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}" / "platesolve"
+    if draft_dir_override is not None:
+        ps = draft_dir_override / "platesolve"
+    else:
+        ps = Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}" / "platesolve"
     d = default_bundle_dir(ps)
     if d is None:
         return None
@@ -457,17 +475,19 @@ def render_aperture_photometry(
     cfg: "AppConfig",
     draft_id: int | None,
     pipeline: "AstroPipeline",
+    *,
+    draft_dir_override: Path | None = None,
 ) -> None:
     """Hlavná funkcia pre Aperture Photometry tab."""
     _ = pipeline
     st.header("Aperture Photometry")
     st.caption("Fáza 2A: Aperturná fotometria premenných hviezd.")
 
-    if draft_id is None:
-        st.info("Žiadny aktívny draft.")
+    if draft_id is None and draft_dir_override is None:
+        st.info("Žiadny aktívny draft. Načítaj draft vyššie alebo spusti VAR-STREM.")
         return
 
-    all_setups = _find_phase2a_paths(cfg, draft_id)
+    all_setups = _find_phase2a_paths(cfg, draft_id, draft_dir_override=draft_dir_override)
     if not all_setups:
         st.warning("Nenájdené vstupné súbory.")
         return
@@ -486,7 +506,7 @@ def render_aperture_photometry(
     output_dir = paths.get("output_dir")
     ms_for_fwhm = paths.get("masterstar_fits")
     if not (isinstance(ms_for_fwhm, Path) and ms_for_fwhm.is_file()):
-        ms_for_fwhm = _fallback_masterstar_fits(cfg, draft_id)
+        ms_for_fwhm = _fallback_masterstar_fits(cfg, draft_id, draft_dir_override=draft_dir_override)
     fwhm_px = _load_fwhm(ms_for_fwhm)
 
     at_csv = paths.get("active_targets_csv")
@@ -507,6 +527,8 @@ def render_aperture_photometry(
             )
         with col2:
             st.caption(f"FWHM: {fwhm_px} px")
+        if len(setup_options) > 1:
+            st.caption("Tlačidlo spustí Fázu **2A pre všetky** filtre / setupy naraz.")
     else:
         st.info("Fáza 2A ešte nebehala.")
         col1, col2 = st.columns(2)
@@ -516,54 +538,89 @@ def render_aperture_photometry(
             )
         with col2:
             st.caption(f"FWHM: {fwhm_px} px")
+        if len(setup_options) > 1:
+            st.caption("Tlačidlo spustí Fázu **2A pre všetky** filtre / setupy naraz.")
 
     if run_btn:
-        ms_fits = paths.get("masterstar_fits")
-        pf_dir = paths.get("per_frame_csv_dir")
-        dt_dir = paths.get("detrended_aligned_dir")
+        from photometry_core import run_phase2a
+        from vyvar_ui_status import vyvar_footer_idle, vyvar_footer_running
 
-        missing: list[str] = []
-        if ms_fits is None or not ms_fits.exists():
-            missing.append("MASTERSTAR.fits")
-        if pf_dir is None or not pf_dir.exists():
-            missing.append("per-frame CSV adresár")
-        if dt_dir is None or not dt_dir.exists():
-            missing.append("detrended_aligned adresár")
+        try:
+            vyvar_footer_running("Fáza 2A", "Štartujem aperturnú fotometriu (všetky filtre)…")
 
-        if missing:
-            st.error(f"❌ Chýbajú súbory: {', '.join(missing)}")
-        else:
-            from photometry_phase2a import run_phase2a
-            from vyvar_ui_status import vyvar_footer_idle, vyvar_footer_running
+            def _p2a_ui(msg: str) -> None:
+                vyvar_footer_running("Fáza 2A", msg)
 
-            try:
-                vyvar_footer_running("Fáza 2A", "Štartujem aperturnú fotometriu…")
+            errors: list[str] = []
+            last_result: dict | None = None
+            n_ok = 0
+            for nm in setup_options:
+                p = all_setups.get(str(nm)) or {}
+                ms_fits = p.get("masterstar_fits")
+                pf_dir = p.get("per_frame_csv_dir")
+                dt_dir = p.get("detrended_aligned_dir")
+                out_d = p.get("output_dir")
+                at_p = p.get("active_targets_csv")
+                co_p = p.get("comparison_stars_csv")
+                ms_ff = ms_fits
+                if not (isinstance(ms_ff, Path) and ms_ff.is_file()):
+                    ms_ff = _fallback_masterstar_fits(cfg, draft_id, draft_dir_override=draft_dir_override)
+                _fw = _load_fwhm(ms_ff if isinstance(ms_ff, Path) else None)
 
-                def _p2a_ui(msg: str) -> None:
-                    vyvar_footer_running("Fáza 2A", msg)
+                missing: list[str] = []
+                if ms_ff is None or not Path(ms_ff).exists():
+                    missing.append("MASTERSTAR.fits")
+                if pf_dir is None or not pf_dir.exists():
+                    missing.append("per-frame CSV adresár")
+                if dt_dir is None or not dt_dir.exists():
+                    missing.append("detrended_aligned adresár")
+                if at_p is None or not at_p.exists() or co_p is None or not co_p.exists():
+                    missing.append("Fáza 0+1 výstupy (active_targets / comparison)")
 
-                result = run_phase2a(
-                    masterstar_fits_path=ms_fits,
-                    active_targets_csv=at_csv,
-                    comparison_stars_csv=comp_csv,
-                    per_frame_csv_dir=pf_dir,
-                    detrended_aligned_dir=dt_dir,
-                    output_dir=output_dir,
-                    fwhm_px=fwhm_px,
-                    cfg=cfg,
-                    progress_cb=_p2a_ui,
-                )
+                if missing:
+                    errors.append(f"{nm}: {', '.join(missing)}")
+                    continue
+
+                try:
+                    _p2a_ui(f"Fáza 2A: {nm} …")
+                    last_result = run_phase2a(
+                        masterstar_fits_path=Path(ms_ff),
+                        active_targets_csv=Path(at_p),
+                        comparison_stars_csv=Path(co_p),
+                        per_frame_csv_dir=Path(pf_dir),
+                        detrended_aligned_dir=Path(dt_dir),
+                        output_dir=Path(out_d),
+                        fwhm_px=_fw,
+                        cfg=cfg,
+                        progress_cb=_p2a_ui,
+                    )
+                    n_ok += 1
+                except Exception as exc_nm:  # noqa: BLE001
+                    errors.append(f"{nm}: {exc_nm}")
+                    logging.exception("Fáza 2A zlyhala pre %s", nm)
+
+            if n_ok == len(setup_options) and not errors and last_result is not None:
                 st.success(
-                    f"✅ Hotovo: {result['n_lightcurves']} svetelných kriviek "
-                    f"z {result['n_frames']} snímok."
+                    f"✅ Hotovo pre všetky filtre ({len(setup_options)}): "
+                    f"{last_result['n_lightcurves']} kriviek z {last_result['n_frames']} snímok (posledný setup)."
                 )
+            elif n_ok > 0 and last_result is not None:
+                st.success(
+                    f"✅ Fáza 2A: {n_ok}/{len(setup_options)} setupov OK "
+                    f"(posledný: {last_result['n_lightcurves']} kriviek)."
+                )
+            if errors:
+                (st.error if n_ok == 0 else st.warning)(
+                    "Problémy pri niektorých filtroch:\n" + "\n".join(errors)
+                )
+            if n_ok:
                 st.rerun()
-            except Exception as exc:  # noqa: BLE001
-                st.error(f"❌ Chyba: {exc}")
-                logging.exception("Fáza 2A zlyhala")
-            finally:
-                vyvar_footer_idle()
-            return
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"❌ Chyba: {exc}")
+            logging.exception("Fáza 2A zlyhala")
+        finally:
+            vyvar_footer_idle()
+        return
 
     if not exists:
         return

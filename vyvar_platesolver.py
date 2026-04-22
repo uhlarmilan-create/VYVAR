@@ -43,6 +43,7 @@ from utils import (
     normalize_telescope_focal_mm_for_plate_scale,
     plate_scale_arcsec_per_pixel,
     strip_celestial_wcs_keys,
+    strip_vendor_platesolve_metadata,
 )
 
 __all__ = [
@@ -179,7 +180,7 @@ def pointing_hint_from_header(header: fits.Header) -> tuple[float | None, float 
     """Field-center RA/Dec in degrees for hints when WCS is not yet solved.
 
     Returns ``(ra_deg, dec_deg, source)`` where source is ``VY_TARG``, ``RA_DEC_deg``, ``OBJCTRA_DEC_hms``,
-    or ``none``. CRVAL is intentionally not used — the FITS is expected to carry explicit target keywords.
+    or ``none``.
     """
     vy1 = _fits_header_pick(header, "VYTARGRA", "VY_TARGRA")
     vy2 = _fits_header_pick(header, "VYTARGDE", "VY_TARGDEC")
@@ -192,17 +193,14 @@ def pointing_hint_from_header(header: fits.Header) -> tuple[float | None, float 
         except (TypeError, ValueError):
             pass
 
-    # 2) RA/DEC as floats in degrees (do not interpret HMS here)
-    rv = _fits_header_pick(header, "RA")
-    dv = _fits_header_pick(header, "DEC")
-    if rv is not None and dv is not None:
-        try:
-            r = float(str(rv).strip())
-            d = float(str(dv).strip())
-            if math.isfinite(r) and math.isfinite(d):
-                return r, d, "RA_DEC_deg"
-        except (TypeError, ValueError):
-            pass
+    # 2) Common target keys: allow degrees or HMS/DMS strings.
+    # Many capture apps store RA/DEC as sexagesimal strings even when the keyword is "RA".
+    rv = _fits_header_pick(header, "RA", "OBJRA", "TELRA", "MNT_RA", "MOUNT_RA")
+    dv = _fits_header_pick(header, "DEC", "OBJDEC", "TELDEC", "MNT_DEC", "MOUNT_DEC")
+    ra = _fits_header_parse_ra_deg(rv)
+    dec = _fits_header_parse_dec_deg(dv)
+    if ra is not None and dec is not None:
+        return ra, dec, "RA_DEC"
 
     # 3) OBJCTRA/OBJCTDEC as HMS/DMS strings
     rv = _fits_header_pick(header, "OBJCTRA")
@@ -211,6 +209,19 @@ def pointing_hint_from_header(header: fits.Header) -> tuple[float | None, float 
     dec = _fits_header_parse_dec_deg(dv)
     if ra is not None and dec is not None:
         return ra, dec, "OBJCTRA_DEC_hms"
+
+    # 4) If the FITS already carries a celestial WCS, CRVAL often encodes the approximate field center.
+    # We treat this only as a weak hint (not as an "accepted solve").
+    try:
+        cr1 = header.get("CRVAL1")
+        cr2 = header.get("CRVAL2")
+        if cr1 is not None and cr2 is not None:
+            r = float(cr1)
+            d = float(cr2)
+            if math.isfinite(r) and math.isfinite(d):
+                return r, d, "CRVAL"
+    except (TypeError, ValueError):
+        pass
 
     return None, None, "none"
 
@@ -1034,7 +1045,10 @@ def _gaia_triangle_greedy_orientation_probe(
         else 0.08  # striktnejší — zamietne 13.7% odchýlku
     )
     ang_tol_rad = 0.08
-    best: tuple[float, tuple[int, int, int], tuple[int, int, int]] | None = None
+    # Keep a small set of best triangle candidates by ratio error. This reduces the chance that a
+    # single lucky-but-wrong triangle dominates the solution (common in dense fields).
+    best_k = 25
+    candidates: list[tuple[float, tuple[int, int, int], tuple[int, int, int]]] = []
 
     for ia, ib, ic in itertools.combinations(idx_img, 3):
         si = _triangle_sorted_sides_pixel(xs[ia], ys[ia], xs[ib], ys[ib], xs[ic], ys[ic])
@@ -1072,36 +1086,79 @@ def _gaia_triangle_greedy_orientation_probe(
             err = dr1 + dr2
             trip_cat = tuple(sorted((ca, cb, cc)))
             trip_img = (ia, ib, ic)
-            if best is None or err < best[0]:
-                best = (err, trip_img, trip_cat)
+            if len(candidates) < best_k:
+                candidates.append((err, trip_img, trip_cat))
+            else:
+                # replace worst
+                iw = max(range(len(candidates)), key=lambda i: candidates[i][0])
+                if err < candidates[iw][0]:
+                    candidates[iw] = (err, trip_img, trip_cat)
 
-    if best is None:
+    if not candidates:
         return None
-
-    _, trip_img, trip_cat = best
-    ii = list(trip_img)
-    cc = list(trip_cat)
-
-    wcs_init = None
+    # Evaluate candidates: build TAN for each and pick best by match_rate (then RMS).
+    candidates = sorted(candidates, key=lambda t: t[0])
+    wcs_init_best: WCS | None = None
     best_rms = float("inf")
-    for perm in itertools.permutations((0, 1, 2), 3):
-        px = np.array([xs[ii[0]], xs[ii[1]], xs[ii[2]]], dtype=np.float64)
-        py = np.array([ys[ii[0]], ys[ii[1]], ys[ii[2]]], dtype=np.float64)
-        ra_l = [float(cat_df.iloc[cc[perm[0]]]["ra_deg"]), float(cat_df.iloc[cc[perm[1]]]["ra_deg"]), float(cat_df.iloc[cc[perm[2]]]["ra_deg"])]
-        de_l = [float(cat_df.iloc[cc[perm[0]]]["dec_deg"]), float(cat_df.iloc[cc[perm[1]]]["dec_deg"]), float(cat_df.iloc[cc[perm[2]]]["dec_deg"])]
-        world = SkyCoord(ra=np.array(ra_l) * u.deg, dec=np.array(de_l) * u.deg, frame="icrs")
+    best_rate = -1.0
+    best_pairs: tuple[Any, Any, Any, Any] | None = None
+    for _, trip_img, trip_cat in candidates:
+        ii = list(trip_img)
+        cc = list(trip_cat)
+        wcs_init = None
+        rms0 = float("inf")
+        for perm in itertools.permutations((0, 1, 2), 3):
+            px = np.array([xs[ii[0]], xs[ii[1]], xs[ii[2]]], dtype=np.float64)
+            py = np.array([ys[ii[0]], ys[ii[1]], ys[ii[2]]], dtype=np.float64)
+            ra_l = [
+                float(cat_df.iloc[cc[perm[0]]]["ra_deg"]),
+                float(cat_df.iloc[cc[perm[1]]]["ra_deg"]),
+                float(cat_df.iloc[cc[perm[2]]]["ra_deg"]),
+            ]
+            de_l = [
+                float(cat_df.iloc[cc[perm[0]]]["dec_deg"]),
+                float(cat_df.iloc[cc[perm[1]]]["dec_deg"]),
+                float(cat_df.iloc[cc[perm[2]]]["dec_deg"]),
+            ]
+            world = SkyCoord(ra=np.array(ra_l) * u.deg, dec=np.array(de_l) * u.deg, frame="icrs")
+            try:
+                w_try = fit_wcs_from_points((px, py), world, projection="TAN")
+                pxp, pyp = w_try.all_world2pix(ra_l, de_l, 0)
+                rms = float(np.sqrt(np.mean((pxp - px) ** 2 + (pyp - py) ** 2)))
+            except Exception:  # noqa: BLE001
+                continue
+            if rms < rms0:
+                rms0 = rms
+                wcs_init = w_try
+        if wcs_init is None:
+            continue
+
+        # Coarse greedy match on full cat
         try:
-            w_try = fit_wcs_from_points((px, py), world, projection="TAN")
-            pxp, pyp = w_try.all_world2pix(ra_l, de_l, 0)
-            rms = float(np.sqrt(np.mean((pxp - px) ** 2 + (pyp - py) ** 2)))
+            ra_all0 = cat_df["ra_deg"].to_numpy(dtype=np.float64)
+            de_all0 = cat_df["dec_deg"].to_numpy(dtype=np.float64)
+            max_px_coarse0 = max(18.0, min(42.0, 0.014 * float(math.hypot(float(w), float(h)))))
+            px_m, py_m, pra_m, pde_m = _greedy_match_pairs_pixel_wcs(
+                wcs_init,
+                ra_all0,
+                de_all0,
+                xs,
+                ys,
+                max_px=max_px_coarse0,
+            )
+            rate0 = float(len(px_m)) / float(max(1, int(n_img)))
         except Exception:  # noqa: BLE001
             continue
-        if rms < best_rms:
-            best_rms = rms
-            wcs_init = w_try
+        if (rate0 > best_rate + 1e-9) or (abs(rate0 - best_rate) < 1e-9 and rms0 < best_rms):
+            best_rate = float(rate0)
+            best_rms = float(rms0)
+            wcs_init_best = wcs_init
+            best_pairs = (px_m, py_m, pra_m, pde_m)
 
-    if wcs_init is None:
+    if wcs_init_best is None or best_pairs is None:
         return None
+    wcs_init = wcs_init_best
+    pairs_x, pairs_y, pairs_ra, pairs_de = best_pairs
 
     try:
         px_all0, py_all0 = wcs_init.all_world2pix(
@@ -1135,6 +1192,7 @@ def _gaia_triangle_greedy_orientation_probe(
                 max_px_coarse = m
         except (TypeError, ValueError):
             pass
+    # Re-match on cropped catalog if it was reduced above.
     pairs_x, pairs_y, pairs_ra, pairs_de = _greedy_match_pairs_pixel_wcs(
         wcs_init,
         ra_all,
@@ -1337,8 +1395,8 @@ def _maybe_repair_masterstar_anisotropic_plate_scale(
 def solve_wcs_with_local_gaia(
     fits_path: Path | str,
     *,
-    hint_ra_deg: float | None,  # ignored: hints from FITS header or blind solver only (API compat)
-    hint_dec_deg: float | None,  # ignored
+    hint_ra_deg: float | None,
+    hint_dec_deg: float | None,
     fov_diameter_deg: float,
     gaia_db_path: Path | str,
     dao_threshold_sigma: float = 3.5,
@@ -1361,9 +1419,9 @@ def solve_wcs_with_local_gaia(
 ) -> dict[str, Any]:
     """Plate-solve by matching DAO stars to **local Gaia DR3** (SQLite); writes WCS into the FITS primary HDU.
 
-    **RA/Dec:** najprv z FITS hlavičky (``VY_TARG*``, ``RA``/``DEC``, …); ak chýbajú, spustí sa **blind**
-    trojuholníkový solver (``blind_index_path``). Argumenty ``hint_ra_deg`` / ``hint_dec_deg`` sa ignorujú
-    (zostávajú len kvôli kompatibilite volania).
+    **RA/Dec:** najprv z FITS hlavičky (``VY_TARG*``, ``RA``/``DEC``, …); ak chýbajú, použije sa hint z argumentov
+    ``hint_ra_deg`` / ``hint_dec_deg``; ak stále chýba, spustí sa **blind** trojuholníkový solver
+    (``blind_index_path``).
 
     **Mierka:** FOCALLEN+PIXSIZE alebo SECPIX/PIXSCALE/SCALE v hlavičke alebo argument
     ``expected_plate_scale_arcsec_per_px`` (napr. MASTERSTAR).
@@ -1375,7 +1433,8 @@ def solve_wcs_with_local_gaia(
 
     from database import query_local_gaia
 
-    _ = (hint_ra_deg, hint_dec_deg)  # reserved for API compatibility; see docstring
+    _caller_hint_ra = hint_ra_deg
+    _caller_hint_dec = hint_dec_deg
 
     fp = Path(fits_path).resolve()
     if not fp.is_file():
@@ -1422,12 +1481,49 @@ def solve_wcs_with_local_gaia(
     naxis1 = int(hdr0.get("NAXIS1", 0) or 0) or w
     naxis2 = int(hdr0.get("NAXIS2", 0) or 0) or h
 
-    # RA/Dec: FITS header first, then blind solver (caller hint_ra_deg / hint_dec_deg are not used).
+    # Derive a reliable FOV diameter from optics when available. This protects against a wrong
+    # config/UI `fov_diameter_deg` (often a wide default like 7°) which would break blind hints
+    # and Gaia cone sizing for narrow-field telescopes.
+    fov_diameter_deg_eff = float(fov_diameter_deg)
+    try:
+        if effective_pixel_um is not None and focal_length_mm is not None:
+            _eff_um0 = float(effective_pixel_um)
+            _foc0 = float(focal_length_mm)
+            if math.isfinite(_eff_um0) and _eff_um0 > 0 and math.isfinite(_foc0) and _foc0 > 0:
+                _sc0 = plate_scale_arcsec_per_pixel(pixel_pitch_um=float(_eff_um0), focal_length_mm=float(_foc0))
+                if _sc0 is not None and math.isfinite(float(_sc0)) and float(_sc0) > 0:
+                    _diag = plate_solve_fov_deg_diagonal_from_scale(int(naxis1), int(naxis2), float(_sc0))
+                    if _diag is not None and math.isfinite(float(_diag)) and float(_diag) > 0:
+                        # Use diagonal FOV as a robust scale for "full-frame" solve.
+                        # If caller FOV is wildly different, override it.
+                        _diag_eff = float(_diag)
+                        try:
+                            _caller = float(fov_diameter_deg)
+                        except (TypeError, ValueError):
+                            _caller = float("nan")
+                        if (not math.isfinite(_caller)) or (_caller <= 0) or (_caller > _diag_eff * 3.0) or (_caller < _diag_eff / 3.0):
+                            fov_diameter_deg_eff = _diag_eff
+                            log_event(
+                                f"INFO: FOV override from optics: caller={_caller if math.isfinite(_caller) else 'n/a'}° "
+                                f"→ diag_from_optics={_diag_eff:.3f}° (F={_foc0:g}mm, Px_eff={_eff_um0:g}µm)."
+                            )
+    except Exception:  # noqa: BLE001
+        pass
+
+    # RA/Dec: FITS header first, then caller hint, then blind solver.
     ra0: float | None = None
     de0: float | None = None
     _coord_src = ""
 
     ra_h, dec_h, src_h = pointing_hint_from_header(hdr0)
+    if (ra_h is None or dec_h is None) and (_caller_hint_ra is not None) and (_caller_hint_dec is not None):
+        try:
+            _rr = float(_caller_hint_ra)
+            _dd = float(_caller_hint_dec)
+            if math.isfinite(_rr) and math.isfinite(_dd):
+                ra_h, dec_h, src_h = _rr, _dd, "caller_hint"
+        except (TypeError, ValueError):
+            pass
     # Optional debug: trace why hint is missing (per-frame should have VYTARG* injected).
     try:
         if bool(getattr(AppConfig(), "debug_platesolver", False)):
@@ -1466,7 +1562,7 @@ def solve_wcs_with_local_gaia(
             pass
     _blind_fov_deg: float | None = None
     try:
-        _bfd = float(fov_diameter_deg)
+        _bfd = float(fov_diameter_deg_eff)
         if math.isfinite(_bfd) and _bfd > 0:
             _blind_fov_deg = _bfd
     except (TypeError, ValueError):
@@ -1600,11 +1696,13 @@ def solve_wcs_with_local_gaia(
         )
 
     _exp_scale: float | None = None
+    _exp_scale_from_expected_arg = False
     if expected_plate_scale_arcsec_per_px is not None:
         try:
             _es = float(expected_plate_scale_arcsec_per_px)
             if math.isfinite(_es) and _es > 0:
                 _exp_scale = _es
+                _exp_scale_from_expected_arg = True
                 if _is_masterstar:
                     log_event(
                         f"MASTERSTAR: očakávaná mierka z config/UI = {_es:.4f} arcsec/px "
@@ -1655,10 +1753,18 @@ def solve_wcs_with_local_gaia(
                 "expected plate scale z konfigurácie."
             ),
         }
-    log_event(
-        f"VYVAR platesolve: očakávaná mierka z pixel×ohnisko ≈ {_exp_scale:.3f} arcsec/px — "
-        "filtrujem trojuholníky mimo tejto mierky (proti 10× omylom zhody)."
-    )
+    _coord_src_l2 = str(_coord_src or "").strip().lower()
+    _hint_is_blind = "blind solver" in _coord_src_l2
+    if _hint_is_blind:
+        log_event(
+            f"VYVAR platesolve: očakávaná mierka ≈ {_exp_scale:.3f} arcsec/px — "
+            "blind hint: mierku použijem len ako slabý hint; pri slabom matchi povolím fallback bez scale filtra."
+        )
+    else:
+        log_event(
+            f"VYVAR platesolve: očakávaná mierka z pixel×ohnisko ≈ {_exp_scale:.3f} arcsec/px — "
+            "filtrujem trojuholníky mimo tejto mierky (proti 10× omylom zhody)."
+        )
 
     _xbin = 1
     try:
@@ -1672,7 +1778,7 @@ def solve_wcs_with_local_gaia(
         binning=int(_xbin),
         naxis1=int(naxis1),
         naxis2=int(naxis2),
-        fov_diameter_deg=float(fov_diameter_deg),
+        fov_diameter_deg=float(fov_diameter_deg_eff),
     )
     _f_um = float(_ep_um) if _ep_um is not None else 0.0
     _f_mm_u = float(_foc_mm) if _foc_mm is not None else 0.0
@@ -1728,7 +1834,25 @@ def solve_wcs_with_local_gaia(
                     cone_r = max(float(cone_r), float(cone_diag))
     except Exception:  # noqa: BLE001
         pass
-    cone_r = max(float(cone_r), float(MIN_GAIA_CONE_RADIUS_DEG))
+    # Global minimum cone radius is only needed when optics are unknown; for narrow-field optics it is harmful
+    # (explodes Gaia rows and makes triangle matching intractable).
+    _min_cone = float(MIN_GAIA_CONE_RADIUS_DEG)
+    try:
+        if (
+            _scale_arcsec is not None
+            and math.isfinite(float(_scale_arcsec))
+            and float(_scale_arcsec) > 0
+            and _foc_mm is not None
+            and math.isfinite(float(_foc_mm))
+            and float(_foc_mm) > 0
+            and _ep_um is not None
+            and math.isfinite(float(_ep_um))
+            and float(_ep_um) > 0
+        ):
+            _min_cone = 0.08
+    except Exception:  # noqa: BLE001
+        _min_cone = float(MIN_GAIA_CONE_RADIUS_DEG)
+    cone_r = max(float(cone_r), float(_min_cone))
     required_corners_radius = catalog_cone_radius_deg_from_optics(
         naxis1=naxis1,
         naxis2=naxis2,
@@ -1738,9 +1862,22 @@ def solve_wcs_with_local_gaia(
         fov_diameter_fallback_deg=float(fov_diameter_deg),
     )
     cone_r = max(float(cone_r), float(required_corners_radius))
+    # FOV fallback from caller/config can be wildly wrong (e.g. default 7°) and must not override
+    # optics-derived cone when we have a plausible focal length + pixel pitch.
     _r_fov = catalog_cone_radius_from_fov_diameter_deg(float(fov_diameter_deg))
-    if _r_fov > 0:
-        cone_r = max(float(cone_r), _r_fov)
+    _has_optics = (
+        _scale_arcsec is not None
+        and math.isfinite(float(_scale_arcsec))
+        and float(_scale_arcsec) > 0
+        and _foc_mm is not None
+        and math.isfinite(float(_foc_mm))
+        and float(_foc_mm) > 0
+        and _ep_um is not None
+        and math.isfinite(float(_ep_um))
+        and float(_ep_um) > 0
+    )
+    if (not bool(_has_optics)) and _r_fov > 0:
+        cone_r = max(float(cone_r), float(_r_fov))
     try:
         cone_r = max(float(cone_r), float(_opt.get("search_radius", 0.0)))
     except Exception:  # noqa: BLE001
@@ -1801,7 +1938,12 @@ def solve_wcs_with_local_gaia(
         f"INFO: Dynamický mag_cap={float(_mag_cap):.1f} "
         f"(FOV={_fov_area_deg2:.3f} deg², focal={_foc_mm}mm)"
     )
-    if _fov_area_deg2 < 10.0:
+    _hint_is_blind_cone = "blind solver" in str(_coord_src or "").strip().lower()
+    # If expected scale came from DB/config (expected_plate_scale_arcsec_per_px) and hint is blind,
+    # avoid clipping the Gaia cone to an (often wrong) FOV derived from that scale.
+    _allow_cone_clip_to_fov = not (bool(_hint_is_blind_cone) and bool(_exp_scale_from_expected_arg))
+
+    if _fov_area_deg2 < 10.0 and bool(_allow_cone_clip_to_fov):
         # Pre všetky zostavy: obmedzí kužeľ na FOV+20 % (nie veľký default ~7°+)
         _sc_fov: float | None = float(_exp_scale) if _exp_scale is not None else None
         if (
@@ -1835,7 +1977,8 @@ def solve_wcs_with_local_gaia(
             de_min = de0f - float(cone_r)
             de_max = de0f + float(cone_r)
     # VŽDY obmedz cone_r na FOV+20% ak je _exp_scale k dispozícii; potom SQL box (RA šírka podľa |dec|)
-    if _exp_scale is not None and naxis1 is not None and naxis2 is not None:
+    # (but skip this when blind hint + expected scale from DB/config).
+    if bool(_allow_cone_clip_to_fov) and _exp_scale is not None and naxis1 is not None and naxis2 is not None:
         _fov_x_deg = float(naxis1) * float(_exp_scale) / 3600.0
         _fov_y_deg = float(naxis2) * float(_exp_scale) / 3600.0
         _fov_r_deg = 0.5 * math.hypot(_fov_x_deg, _fov_y_deg) * 1.2
@@ -1846,6 +1989,10 @@ def solve_wcs_with_local_gaia(
         ra_max = ra0f + float(cone_r) / math.cos(math.radians(abs(de0f)))
         de_min = de0f - float(cone_r)
         de_max = de0f + float(cone_r)
+    elif (not bool(_allow_cone_clip_to_fov)) and _exp_scale is not None:
+        log_event(
+            f"VYVAR platesolve: vynechávam cone_r clip na FOV+20% (blind hint + expected scale z DB/config môže byť nesprávna)."
+        )
     rows_g = query_local_gaia(
         root,
         ra_min=ra_min,
@@ -1882,6 +2029,29 @@ def solve_wcs_with_local_gaia(
         return {"solved": False, "reason": f"VYVAR solver: v Gaia výreze málo hviezd ({len(cat_df)})."}
 
     cat_df_cone_full = cat_df.sort_values("mag", na_position="last").reset_index(drop=True)
+    # Brighter catalog subset for triangle matching to reduce ambiguity.
+    cat_df_tri = cat_df_cone_full
+    try:
+        tri_cap_default = 13.5 if (_foc_mm is not None and math.isfinite(float(_foc_mm)) and float(_foc_mm) >= 800.0) else 12.5
+    except Exception:  # noqa: BLE001
+        tri_cap_default = 13.5
+    try:
+        tri_cap = float(getattr(AppConfig(), "platesolve_triangle_mag_cap", tri_cap_default))
+    except (TypeError, ValueError):
+        tri_cap = float(tri_cap_default)
+    if not math.isfinite(tri_cap) or tri_cap <= 0:
+        tri_cap = float(tri_cap_default)
+    try:
+        if "mag" in cat_df_cone_full.columns:
+            mm = pd.to_numeric(cat_df_cone_full["mag"], errors="coerce")
+            cand = cat_df_cone_full[(mm.notna()) & (mm <= float(tri_cap))].copy()
+            if len(cand) >= 24:
+                cat_df_tri = cand.sort_values("mag", na_position="last").reset_index(drop=True)
+                log_event(
+                    f"VYVAR platesolve: triangle catalog mag_cap={float(tri_cap):.1f} → {len(cat_df_tri)} hviezd (z {_n_cat_raw})."
+                )
+    except Exception:  # noqa: BLE001
+        cat_df_tri = cat_df_cone_full
     try:
         _scale_arcsec = plate_scale_arcsec_per_pixel(pixel_pitch_um=float(_f_um), focal_length_mm=float(_f_mm_u))
     except Exception:  # noqa: BLE001
@@ -2012,7 +2182,7 @@ def solve_wcs_with_local_gaia(
     # Ignore CROTA: triangle matching is rotation-invariant by construction.
 
     probe0 = _gaia_triangle_greedy_orientation_probe(
-        cat_df,
+        cat_df_tri,
         xs_native,
         ys_native,
         naxis1=int(naxis1),
@@ -2030,6 +2200,43 @@ def solve_wcs_with_local_gaia(
             "solved": False,
             "reason": "VYVAR solver: nenašiel som zhodný trojuholník (skús iný FOV alebo presnejší RA/Dec).",
         }
+    # If we only have a blind hint, the DB/config plate scale can be wrong (common after equipment DB edits).
+    # When the initial probe match is weak, retry without scale filtering / with wide scale tolerance.
+    try:
+        _probe_rate0 = float(probe0.get("match_rate", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        _probe_rate0 = 0.0
+    _coord_src_l3 = str(_coord_src or "").strip().lower()
+    _hint_is_blind2 = "blind solver" in _coord_src_l3
+    if _hint_is_blind2 and _probe_rate0 < 0.06:
+        log_event(
+            f"INFO: Blind hint + weak initial probe ({_probe_rate0 * 100.0:.1f}%) — retry triangle probe "
+            "bez scale filtra (wide tolerance)."
+        )
+        probe_relaxed = _gaia_triangle_greedy_orientation_probe(
+            cat_df_tri,
+            xs_native,
+            ys_native,
+            naxis1=int(naxis1),
+            naxis2=int(naxis2),
+            w=float(w),
+            h=float(h),
+            simple_mode=bool(_simple_mode),
+            exp_scale=None,
+            silent_catalog_crop_log=False,
+            max_px_coarse_override=None,
+            expected_scale_rel_tol_override=1.0,
+        )
+        if probe_relaxed is not None:
+            try:
+                _pr2 = float(probe_relaxed.get("match_rate", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                _pr2 = 0.0
+            if _pr2 > _probe_rate0 + 0.02:
+                log_event(
+                    f"INFO: Relaxed probe improved match_rate {(_probe_rate0 * 100.0):.1f}% → {(_pr2 * 100.0):.1f}%."
+                )
+                probe0 = probe_relaxed
 
     ori_candidates: list[tuple[str, bool, bool, dict[str, Any]]] = [("native", False, False, probe0)]
     _probe_rate0 = float(probe0["match_rate"])
@@ -2150,7 +2357,7 @@ def solve_wcs_with_local_gaia(
     pairs_de = np.asarray(pairs_de, dtype=np.float64).tolist()
     _n_pairs_post_orientation = int(len(pairs_x))
 
-    # One-shot global offset search (coarse): if initial pairing is very weak, test +/- 1-2 arcmin RA/Dec shifts.
+    # One-shot global offset search (coarse): if initial pairing is very weak, test +/- arcmin RA/Dec shifts.
     _initial_match_rate = float(len(pairs_x)) / float(max(1, int(n_img)))
     _coarse_offset_px: float | None = None
     if _initial_match_rate < 0.10:
@@ -2162,8 +2369,17 @@ def solve_wcs_with_local_gaia(
                 best_n = base_n
                 best_dxdy: tuple[float, float] | None = None
                 cos_dec = max(1e-6, abs(math.cos(math.radians(float(de0)))))
-                for d_ra_m in (-2.0, -1.0, 1.0, 2.0):
-                    for d_de_m in (-2.0, -1.0, 1.0, 2.0):
+                # Expand search to handle manual re-center after meridian flip.
+                # Keep it bounded to limit false matches.
+                _max_off_m = 12.0 if _is_masterstar else 6.0
+                _steps = [1.0, 2.0, 3.0, 5.0, float(_max_off_m)]
+                deltas: list[float] = []
+                for s in _steps:
+                    if s not in deltas:
+                        deltas.append(float(s))
+                delta_grid = [-d for d in reversed(deltas)] + deltas
+                for d_ra_m in delta_grid:
+                    for d_de_m in delta_grid:
                         ra_try = ra_all + (float(d_ra_m) / 60.0) / cos_dec
                         de_try = np.clip(de_all + (float(d_de_m) / 60.0), -89.999999, 89.999999)
                         px_t, py_t, pra_t, pde_t = _greedy_match_pairs_pixel_wcs(
@@ -2372,7 +2588,11 @@ def solve_wcs_with_local_gaia(
                         )
             except Exception:  # noqa: BLE001
                 pass
-        if not _cd_rescaled_any and _exp_scale is not None:
+        # Rescale-to-expected is helpful when the expected scale comes from FITS optics;
+        # but can be harmful when the expected scale comes from DB/config and the hint is blind.
+        _hint_is_blind_cd = "blind solver" in str(_coord_src or "").strip().lower()
+        _allow_expected_cd_rescale = not (bool(_hint_is_blind_cd) and bool(_exp_scale_from_expected_arg))
+        if (not _cd_rescaled_any) and (_exp_scale is not None) and bool(_allow_expected_cd_rescale):
             w_adj, _cd_rescaled = maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel(
                 wcs_final, float(_exp_scale)
             )
@@ -2382,6 +2602,11 @@ def solve_wcs_with_local_gaia(
                 log_event(
                     f"VYVAR WCS: CD/PC škálované podľa optickej mierky {float(_exp_scale):.3f} arcsec/px"
                 )
+        elif (not _cd_rescaled_any) and (_exp_scale is not None) and (not bool(_allow_expected_cd_rescale)):
+            log_event(
+                f"VYVAR WCS: vynechávam CD/PC škálovanie podľa očakávanej mierky {float(_exp_scale):.3f} arcsec/px "
+                "(blind hint + expected scale z DB/config môže byť nesprávna)."
+            )
 
     # Critical: if match rate is low but solution is not rejected, force SIP4 refit to fix edge residuals.
     # This intentionally ignores any legacy CDELT/CROTA in the incoming header: we refit distortion from Gaia pairs.
@@ -2557,13 +2782,36 @@ def solve_wcs_with_local_gaia(
         f"rms={float(_rms_px):.2f}px hint_vs_solved={_hint_sep_deg:.3f}deg"
     )
 
-    # Hint separation guard: per-frame solutions can be offset from the initial hint (cropped frames, imperfect center).
-    # MASTERSTAR should remain stricter to prevent wrong-field solves.
-    hint_sep_limit = 0.15 if _is_masterstar else 0.50
+    # Hint separation guard: adapt to hint source + field size.
+    # - Strong hint (mount/object header): keep strict.
+    # - Weak hint (blind solver): allow larger separation, but only when match metrics are strong.
+    try:
+        _fov_d = float(fov_diameter_deg)
+        _fov_r = 0.5 * _fov_d if math.isfinite(_fov_d) and _fov_d > 0 else None
+    except (TypeError, ValueError):
+        _fov_r = None
+    _coord_src_l = str(_coord_src or "").strip().lower()
+    _hint_is_weak = "blind solver" in _coord_src_l
+    # Base limits (deg)
+    _base_strict = 0.15 if _is_masterstar else 0.50
+    _base_relaxed = 0.50 if _is_masterstar else 1.00
+    if _fov_r is not None:
+        # Allow up to ~35% of FOV radius for weak hints, but cap to prevent wrong-field solves.
+        _rel_by_fov = max(_base_relaxed, min(1.50, 0.35 * float(_fov_r)))
+        _strict_by_fov = max(_base_strict, min(0.50, 0.20 * float(_fov_r)))
+    else:
+        _rel_by_fov = _base_relaxed
+        _strict_by_fov = _base_strict
+    hint_sep_limit = float(_rel_by_fov if _hint_is_weak else _strict_by_fov)
+    # Anti-false-solve: only relax hint guard when match is reasonably strong.
+    _relax_ok = (float(_match_rate) >= (0.20 if _is_masterstar else 0.10)) and (int(_matched_n) >= (20 if _is_masterstar else 12))
+    if _hint_is_weak and not _relax_ok:
+        hint_sep_limit = float(_base_strict)
     _hint_sep_bad = math.isfinite(float(_hint_sep_deg)) and float(_hint_sep_deg) > float(hint_sep_limit)
     log_event(
         f"INFO: hint_sep guard: {float(_hint_sep_deg):.3f}deg "
-        f"(limit={float(hint_sep_limit):.2f}deg, is_masterstar={bool(_is_masterstar)})"
+        f"(limit={float(hint_sep_limit):.2f}deg, is_masterstar={bool(_is_masterstar)}, "
+        f"hint_src={_coord_src or 'unknown'}, relax_ok={bool(_relax_ok)})"
     )
 
     _sip_reason = str(sip_meta.get("reason", "") or "").strip().lower()
@@ -2876,6 +3124,7 @@ def solve_wcs_with_local_gaia(
                 h_w["VY_PLTS"] = hdr0["VY_PLTS"]
             if "VY_PLATESCALE" in hdr0:
                 h_w["VY_PLATESCALE"] = hdr0["VY_PLATESCALE"]
+            strip_vendor_platesolve_metadata(h_w)
             hdul_w.flush()
             _hdr_written = h_w.copy()
             _data_written = np.asarray(hdul_w[0].data, dtype=np.float32)
