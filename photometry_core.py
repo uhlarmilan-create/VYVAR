@@ -16,6 +16,7 @@ from astropy.io import fits as astrofits
 
 from config import AppConfig
 from gaia_catalog_id import normalize_gaia_source_id
+from jd_axis_format import jd_axis_title, jd_series_relative
 
 _MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
 
@@ -978,12 +979,14 @@ def save_lightcurve_png(
     )
     fig.suptitle(f"VYVAR — {target_name}", fontsize=11, fontweight="bold")
 
+    bjd_plot_all, bjd_axis_int = jd_series_relative(bjd)
+
     # Svetelná krivka
     for flag, color in flag_colors.items():
         mask = np.array([f == flag for f in flags])
         if not mask.any():
             continue
-        bjd_f = bjd[mask]
+        bjd_f = bjd_plot_all[mask]
         y_f = y_data[mask]
         err_f = err[mask]
         valid = np.isfinite(y_f)
@@ -1002,7 +1005,7 @@ def save_lightcurve_png(
             alpha=0.85,
         )
 
-    ax_lc.set_xlabel("BJD (TDB)", fontsize=9)
+    ax_lc.set_xlabel(jd_axis_title("BJD (TDB)", bjd_axis_int), fontsize=9)
     ax_lc.set_ylabel(y_label, fontsize=9)
     ax_lc.invert_yaxis()
     ax_lc.grid(True, alpha=0.3, linewidth=0.5)

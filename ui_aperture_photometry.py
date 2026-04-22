@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from config import AppConfig
     from pipeline import AstroPipeline
 
+from jd_axis_format import jd_axis_title, jd_series_relative
 from platesolve_ui_paths import default_bundle_dir
 
 
@@ -242,6 +243,8 @@ def _render_target_detail(
 
                 if go is not None:
                     fig = go.Figure()
+                    bjd_num = pd.to_numeric(lc_df["bjd"], errors="coerce")
+                    _, bjd_x_off = jd_series_relative(bjd_num)
                     # Svetlé pozadie + výrazné farby bodov (čitateľné aj v tmavom Streamlit)
                     flag_colors_plotly = {
                         "normal": "#2563eb",
@@ -274,14 +277,22 @@ def _render_target_detail(
                                 thickness=1,
                                 width=2,
                             )
+                        x_raw = pd.to_numeric(sub["bjd"], errors="coerce").to_numpy(dtype=float)
+                        x_plot = x_raw - float(bjd_x_off) if bjd_x_off is not None else x_raw
                         fig.add_trace(
                             go.Scatter(
-                                x=sub["bjd"],
+                                x=x_plot,
                                 y=sub[y_col],
                                 error_y=err_kwargs if err_kwargs else None,
                                 mode="markers",
                                 marker=dict(color=color, size=7, line=dict(width=0.5, color="#ffffff")),
                                 name=flag,
+                                customdata=x_raw,
+                                hovertemplate=(
+                                    "<b>%{fullData.name}</b><br>BJD=%{customdata:.6f}<br>"
+                                    + y_label
+                                    + "=%{y:.4f}<extra></extra>"
+                                ),
                             )
                         )
 
@@ -298,7 +309,7 @@ def _render_target_detail(
                             zerolinecolor="#94a3b8",
                         ),
                         xaxis=dict(
-                            title=dict(text="BJD (TDB)", **_axis_title),
+                            title=dict(text=jd_axis_title("BJD (TDB)", bjd_x_off), **_axis_title),
                             tickfont=dict(color="#000000", size=12),
                             gridcolor="#e2e8f0",
                         ),
@@ -687,6 +698,8 @@ def render_aperture_photometry(
             fig = go.Figure()
             FILTER_COLORS = {"R": "red", "V": "green", "B": "blue", "I": "darkred"}
 
+            x_series_for_offset: list[pd.Series] = []
+            trace_specs: list[tuple[str, pd.DataFrame, str, str, str | None, str]] = []
             for setup_name, p in all_setups.items():
                 obs_dir = p.get("obs_group_dir")
                 if obs_dir is None:
@@ -703,13 +716,21 @@ def render_aperture_photometry(
                 x_col = "bjd_tdb_mid" if "bjd_tdb_mid" in lc_df.columns else ("bjd_tdb" if "bjd_tdb" in lc_df.columns else lc_df.columns[0])
                 y_col = "mag_calib" if "mag_calib" in lc_df.columns else ("mag_calib_raw" if "mag_calib_raw" in lc_df.columns else lc_df.columns[1])
                 err_col = "mag_err" if "mag_err" in lc_df.columns else None
+                x_series_for_offset.append(pd.to_numeric(lc_df[x_col], errors="coerce"))
+                trace_specs.append((str(setup_name), lc_df, x_col, y_col, err_col, color))
 
+            combined_x = pd.concat(x_series_for_offset, ignore_index=True) if x_series_for_offset else pd.Series(dtype=float)
+            _, overlay_x_off = jd_series_relative(combined_x)
+
+            for setup_name, lc_df, x_col, y_col, err_col, color in trace_specs:
+                x_raw = pd.to_numeric(lc_df[x_col], errors="coerce").to_numpy(dtype=float)
+                x_plot = x_raw - float(overlay_x_off) if overlay_x_off is not None else x_raw
                 fig.add_trace(
                     go.Scatter(
-                        x=lc_df[x_col],
+                        x=x_plot,
                         y=lc_df[y_col],
                         mode="markers+lines",
-                        name=str(setup_name),
+                        name=setup_name,
                         marker=dict(color=color, size=4),
                         line=dict(color=color, width=0.5),
                         error_y=dict(
@@ -717,12 +738,16 @@ def render_aperture_photometry(
                             array=(lc_df[err_col].tolist() if err_col is not None else None),
                             visible=bool(err_col is not None),
                         ),
+                        customdata=x_raw,
+                        hovertemplate=(
+                            "<b>%{fullData.name}</b><br>BJD=%{customdata:.6f}<br>mag=%{y:.4f}<extra></extra>"
+                        ),
                     )
                 )
 
             fig.update_layout(
                 title=f"Svetelné krivky — {catalog_id}",
-                xaxis_title="BJD (TDB)",
+                xaxis_title=jd_axis_title("BJD (TDB)", overlay_x_off),
                 yaxis_title="mag (calib)",
                 yaxis_autorange="reversed",
                 legend_title="Filter",

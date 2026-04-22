@@ -71,22 +71,10 @@ class AppConfig:
     masterdark_validity_days: int = 60
     masterflat_validity_days: int = 200
 
-    # Processing defaults
-    sigma_clip_sigma: float = 3.0
-    sigma_clip_maxiters: int = 5
-
-    #: **Deprecated (unused):** CalibrationLibrary masters in ``importer`` use plain **mean** (dark) and
-    #: **median** (flat) over frames — no sigma-clipping. Keys kept for older ``config.json`` files only.
-    stacking_sigma: float = 3.0
-    stacking_iters: int = 5
-
     #: After (light−dark)/flat: optional L.A.Cosmic (``astroscrappy``) in calibration step.
     cosmic_clean_enabled: bool = True
     cosmic_sigclip: float = 4.5
     cosmic_objlim: float = 5.0
-    background_box_size: tuple[int, int] = (64, 64)
-    background_filter_size: tuple[int, int] = (3, 3)
-    max_live_targets: int = 10
 
     #: Estimated field diameter in degrees for VYVAR Gaia plate solve (used as **minimum** hint only).
     #: The actual Gaia kužeľ pre celý čip sa odvodzuje z FOCALLEN+PIXSIZE+NAXIS (pozri ``catalog_cone_radius_deg_from_optics``
@@ -134,7 +122,7 @@ class AppConfig:
     masterstar_solver_use_draft_median_if_hint_sep_deg: float = 1.0
     #: Saturation safety fraction applied to equipment_saturate_adu before classifying MASTERSTAR zones.
     saturate_limit_fraction: float = 0.85
-    #: Log astroalign stack summary (frames / reference index).
+    #: Log zarovnanie (astroalign): referenčný rámec a počty kontrolných bodov.
     masterstar_log_astroalign: bool = True
     #: After astrometry optimizer mirror-orientation warning, log an extra hint line.
     masterstar_optimizer_mirror_extra_log: bool = True
@@ -148,8 +136,6 @@ class AppConfig:
     masterstar_dao_threshold_sigma: float = 1.8
     #: Pred matchom s Gaia: ponechať detekcie s peakom aspoň ``median + k×σ`` (nižšie = viac slabých hviezd).
     masterstar_prematch_peak_sigma_floor: float = 3.2
-    #: Ak zadané (> 0), MASTERSTAR plate-solve použije túto mierku [arcsec/pix] namiesto odvodzovania len z FOCALLEN×PIXSIZE v hlavičke (filter trojuholníkov / hint).
-    masterstar_platesolve_expected_arcsec_per_px: float | None = None
     #: MASTERSTAR: horná hranica px RMS pred zápisom WCS (pred relaxáciou). ``None`` = predvolené 14 px.
     masterstar_platesolve_prewrite_rms_max_px: float | None = None
     #: MASTERSTAR: pri dobrom match_rate akceptovať RMS až do tejto hodnoty [px]. ``None`` = 22 px.
@@ -162,11 +148,9 @@ class AppConfig:
     #: Pomer sx/sy (arcsec/px) — nad týmto sa považuje WCS za príliš anizotropný (VYVAR retry / diagnostika).
     platesolve_anisotropy_threshold: float = 1.3
 
-    #: Paralelizmus (QC, preprocess, combined, základ per-frame CSV, alignment, calibrate MP): jedna hodnota
+    #: Paralelizmus (QC, preprocess, combined, per-frame CSV, alignment, calibrate MP): jedna hodnota
     #: počítaná v ``__post_init__``; nie v ``config.json``. Runtime override: ``VYVAR_PARALLEL_WORKERS`` alebo legacy env v pipeline.
     qc_preprocess_workers: int = 1
-    per_frame_csv_workers: int = 1
-    alignment_workers: int = 1
     #: Reserve this much RAM (GB) when capping paralelného exportu katalógov cez ``psutil`` (nad rámec jednotného ``_pw``).
     per_frame_mp_reserve_ram_gb: float = 1.5
 
@@ -284,8 +268,6 @@ class AppConfig:
             recommended_vyvar_parallel_workers(reserve_ram_gb=float(self.per_frame_mp_reserve_ram_gb))
         )
         self.qc_preprocess_workers = _pw
-        self.per_frame_csv_workers = _pw
-        self.alignment_workers = _pw
 
         try:
             self.alignment_max_stars = max(
@@ -322,15 +304,6 @@ class AppConfig:
                 self.sips_dao_threshold_sigma = 3.5
         except (TypeError, ValueError):
             self.sips_dao_threshold_sigma = 3.5
-
-        try:
-            self.stacking_sigma = float(data.get("stacking_sigma", self.stacking_sigma))
-        except (TypeError, ValueError):
-            self.stacking_sigma = 3.0
-        try:
-            self.stacking_iters = max(1, int(data.get("stacking_iters", self.stacking_iters)))
-        except (TypeError, ValueError):
-            self.stacking_iters = 5
 
         self.cosmic_clean_enabled = bool(data.get("cosmic_clean_enabled", self.cosmic_clean_enabled))
         try:
@@ -459,7 +432,6 @@ class AppConfig:
                 return None
             return max(lo, min(hi, v))
 
-        self.masterstar_platesolve_expected_arcsec_per_px = None
         self.masterstar_platesolve_prewrite_rms_max_px = _opt_pos_float(
             "masterstar_platesolve_prewrite_rms_max_px", 1.0, 80.0
         )
@@ -557,8 +529,6 @@ class AppConfig:
             "qc_dao_detection_sigma": float(self.qc_dao_detection_sigma),
             "sips_dao_fwhm_px": float(self.sips_dao_fwhm_px),
             "sips_dao_threshold_sigma": float(self.sips_dao_threshold_sigma),
-            "stacking_sigma": float(self.stacking_sigma),
-            "stacking_iters": int(self.stacking_iters),
             "cosmic_clean_enabled": bool(self.cosmic_clean_enabled),
             "cosmic_sigclip": float(self.cosmic_sigclip),
             "cosmic_objlim": float(self.cosmic_objlim),

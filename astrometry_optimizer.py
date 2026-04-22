@@ -1102,35 +1102,3 @@ def optimize_masterstar_matches(
     n_match = int(df.get("catalog_id", pd.Series([""] * len(df))).fillna("").astype(str).str.strip().ne("").sum())
     log_event(f"Astrometry optimizer: wrote {out_path} ({n_match}/{n_all} catalog-matched).")
     return out_path
-
-
-def generate_filtered_masterstars(
-    masterstars_csv: str | Path,
-    masterstar_fits: str | Path,
-    gaia_db_path: str | Path,
-    output_csv: str | Path | None = None,
-) -> Path:
-    """Compatibility wrapper requested by older calls."""
-    return optimize_masterstar_matches(
-        masterstars_csv=masterstars_csv,
-        masterstar_fits=masterstar_fits,
-        gaia_db_path=gaia_db_path,
-        output_csv=output_csv,
-    )
-
-
-def optimize_masterstars_astrometry(
-    *,
-    masterstars_csv: str | Path,
-    masterstar_fits: str | Path,
-    gaia_db_path: str | Path,
-    output_csv: str | Path | None = None,
-) -> Path:
-    """Compatibility alias: optimize one specific MASTERSTAR configuration in-place."""
-    return optimize_masterstar_matches(
-        masterstars_csv=masterstars_csv,
-        masterstar_fits=masterstar_fits,
-        gaia_db_path=gaia_db_path,
-        output_csv=output_csv,
-    )
-

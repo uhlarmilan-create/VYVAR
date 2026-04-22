@@ -15,7 +15,7 @@ import streamlit as st
 from database import VyvarDatabase
 from infolog import log_event
 from importer import quicklook_preview_png_bytes
-from pipeline import _resolve_light_fits_for_quality_inspection
+from pipeline import _resolve_light_fits_for_quality_inspection, resolve_obs_file_to_processed_fits
 from ui_components import DRAFT_CENTER_DE_STATE_KEY, DRAFT_CENTER_RA_STATE_KEY
 
 X_AXIS_FRAME_TITLE = "Číslo snímky (Frame Index)"
@@ -71,6 +71,34 @@ _FILTER_LINE_COLORS = (
     "#FF6692",
     "#B6E880",
 )
+
+
+def _masterstar_candidate_path_for_job(archive: Path | None, path_any: str) -> str:
+    """Cesta pre MAKE MASTERSTAR: vždy preferuj ``processed/lights/…/proc_*.fits`` (nie raw/calibrated preview)."""
+
+    def _has_raw_seg(pp: Path) -> bool:
+        try:
+            parts = pp.resolve().parts
+        except OSError:
+            parts = pp.parts
+        return any(seg.casefold() in {"raw", "non_calibrated"} for seg in parts)
+
+    p = (path_any or "").strip()
+    if not p:
+        return ""
+    if archive is None or not archive.is_dir():
+        return p
+    for key in (p, Path(p).name):
+        try:
+            hit = resolve_obs_file_to_processed_fits(archive, str(key))
+        except Exception:  # noqa: BLE001
+            hit = None
+        if hit is not None and hit.is_file() and not _has_raw_seg(hit):
+            return str(hit.resolve())
+    if _has_raw_seg(Path(p)):
+        log_event(f"MASTERSTAR UI: nepodarilo namapať z RAW/non_cal na processed — `{Path(p).name}`.")
+        return ""
+    return p
 
 
 def _preview_path_from_plotly_state(state: Any) -> str | None:
@@ -600,7 +628,9 @@ def render_quality_dashboard(
             key="vyvar_qdash_ms_pick_name",
         )
         st.session_state["vyvar_ms_candidates"] = [str(p) for p in _top5["FILE_PATH"].values]
-        st.session_state["vyvar_ms_candidate_top1_path"] = str(_top5["FILE_PATH"].iloc[0])
+        st.session_state["vyvar_ms_candidate_top1_path"] = _masterstar_candidate_path_for_job(
+            ap, str(_top5["FILE_PATH"].iloc[0])
+        )
 
         _pick_preview = _paths_by_name.get(str(pick_name), "")
         if _pick_preview and Path(_pick_preview).is_file():
@@ -618,14 +648,18 @@ def render_quality_dashboard(
         ):
             p_db = _db_paths_by_name.get(str(pick_name), "")
             if p_db:
+                p_job = _masterstar_candidate_path_for_job(ap, str(p_db))
                 try:
                     _db2 = VyvarDatabase(db.db_path)
                     try:
-                        _db2.set_obs_draft_masterstar_path(int(did), str(p_db))
+                        _db2.set_obs_draft_masterstar_path(int(did), p_job or str(p_db))
                     finally:
                         _db2.conn.close()
                 except Exception:  # noqa: BLE001
                     pass
+                if p_job:
+                    st.session_state["vyvar_masterstar_candidate_paths"] = [p_job]
+                    st.session_state["vyvar_ms_candidate_top1_path"] = p_job
                 log_event(f"MASTERSTAR potvrdený z tabuľky: {Path(p_db).name}")
                 st.success(f"Nastavené: `{Path(p_db).name}` bude použitý ako MASTERSTAR.")
     else:
@@ -723,12 +757,13 @@ def render_quality_dashboard(
             type="primary",
             help="Uloží cestu tejto snímky ako MASTERSTAR kandidáta pre plate-solving.",
         ):
-            st.session_state["vyvar_masterstar_candidate_paths"] = [p_sel]
-            st.session_state["vyvar_ms_candidate_top1_path"] = p_sel
+            p_job = _masterstar_candidate_path_for_job(ap, str(p_sel))
+            st.session_state["vyvar_masterstar_candidate_paths"] = [p_job or str(p_sel)]
+            st.session_state["vyvar_ms_candidate_top1_path"] = p_job or str(p_sel)
             try:
                 _db2 = VyvarDatabase(db.db_path)
                 try:
-                    _db2.set_obs_draft_masterstar_path(int(did), str(p_sel))
+                    _db2.set_obs_draft_masterstar_path(int(did), p_job or str(p_sel))
                 finally:
                     _db2.conn.close()
             except Exception:  # noqa: BLE001

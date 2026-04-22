@@ -76,6 +76,17 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
             else:
                 return None
 
+        # DATE-OBS often carries only the calendar date; TIME-OBS then holds UT of exposure start.
+        if ("T" not in s.upper()) and len(s) >= 10 and s[4:5] == "-" and s[7:8] == "-":
+            to_raw = header.get("TIME-OBS")
+            if to_raw is not None:
+                to = str(to_raw).strip().replace(" ", "")
+                if to:
+                    try:
+                        t_start = Time(f"{s[:10]}T{to}", format="isot", scale="utc")
+                    except Exception:
+                        pass
+
         exptime = 0.0
         for key in ("EXPTIME", "EXPOSURE"):
             if key not in header:
@@ -101,6 +112,10 @@ def compute_hjd_bjd(
     site_lon: float,
     site_elev_m: float = 0.0,
 ) -> tuple[float | None, float | None]:
+    """Heliocentric / barycentric Julian Date at mid-exposure (astropy ``light_travel_time`` added to UTC / TDB).
+
+    ``bjd_tdb_mid`` is the JD number of the TDB instant ``t.tdb + ltt_bary`` (geometric Roemer correction to the SSB).
+    """
     try:
         location = EarthLocation(
             lat=site_lat * u.deg,
@@ -111,7 +126,7 @@ def compute_hjd_bjd(
         target = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
 
         ltt_helio = t.light_travel_time(target, "heliocentric")
-        hjd = float((t.utc + ltt_helio).jd)
+        hjd = float((t + ltt_helio).jd)
 
         ltt_bary = t.light_travel_time(target, "barycentric")
         bjd = float((t.tdb + ltt_bary).jd)

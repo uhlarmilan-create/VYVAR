@@ -7,6 +7,14 @@ import streamlit as st
 from config import AppConfig, save_config_json
 
 
+def _detail_help(title: str, *, phase: str, used_in: str, compute: str | None = None) -> None:
+    with st.expander(f"❓ {title}", expanded=False):
+        st.markdown(f"**Fáza / proces:** {phase}")
+        st.markdown(f"**Kde a ako sa používa:** {used_in}")
+        if compute:
+            st.markdown(f"**Odvodenie / výpočet:** {compute}")
+
+
 def render_dao_stars_dashboard(cfg: AppConfig) -> None:
     st.subheader("DAO-STARS")
     st.caption(
@@ -29,6 +37,13 @@ def render_dao_stars_dashboard(cfg: AppConfig) -> None:
         value=min(max(cur_sf, 0.5), 6.0),
         step=0.1,
         key="vyvar_dao_stars_prematch_k",
+        help="SNR filter pred párovaním s Gaia: peak > median + k×σ lokálneho pozadia.",
+    )
+    _detail_help(
+        "masterstar_prematch_peak_sigma_floor",
+        phase="MASTERSTAR — predzáber detekcií pred Gaia match.",
+        used_in="Zníži počet slabých artefaktov pred spatial matching; ovplyvňuje rýchlosť a stabilitu prematch kroku.",
+        compute="Pre každý peak: porovnanie k median + k×σ v okolí (štandardná sigma-referencia).",
     )
 
     st.markdown("#### DAO prah (plate-solve + katalóg)")
@@ -43,6 +58,13 @@ def render_dao_stars_dashboard(cfg: AppConfig) -> None:
         value=min(max(cur_ds, 0.1), 6.0),
         step=0.05,
         key="vyvar_dao_stars_dao_sigma",
+        help="DAOStarFinder: threshold = k × RMS šumu snímku.",
+    )
+    _detail_help(
+        "masterstar_dao_threshold_sigma",
+        phase="MASTERSTAR plate-solve a tvorba katalógu hviezd.",
+        used_in="Rovnaká citlivosť ide do solvera aj do zoznamu hviezd pre WCS / katalóg; nižšie k = viac kandidátov.",
+        compute="DAO prah v násobkoch lokálneho RMS (photutils DAOStarFinder).",
     )
 
     st.info(
@@ -72,6 +94,12 @@ def render_dao_stars_dashboard(cfg: AppConfig) -> None:
             value=_cur_lo,
             key="vyvar_dao_sip_min",
         )
+    _detail_help(
+        "masterstar_platesolve_sip_max_order / min_order",
+        phase="MASTERSTAR — SIP distorzia pri riešení WCS (Astrometry.net / solve-field).",
+        used_in="Solver skúša rády SIP od max po min, kým RMS a validita vyhovujú; vyšší rád = flexibilnejší model, riziko pretlakovanie.",
+        compute="Iterácia rádu polynómu SIP v solveri; limity RMS môžu byť v `config.json` (`masterstar_platesolve_prewrite_*`).",
+    )
 
     st.caption(
         "Očakávaná mierka plate-solve sa odvodzuje **automaticky z DB** (EQUIPMENTS + TELESCOPE + binning z FITS). "

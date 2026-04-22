@@ -13,6 +13,7 @@ import streamlit as st
 from plotly.subplots import make_subplots
 
 from infolog import log_event
+from jd_axis_format import jd_axis_title, jd_series_relative
 
 _SKIP_CSV_NAMES = frozenset(
     {
@@ -441,11 +442,17 @@ def _plot_light_curve(
         fig.update_layout(title=title)
         return fig
 
+    t_num = pd.to_numeric(lc_df[time_col], errors="coerce")
+    t_rel, t_off = jd_series_relative(t_num)
+    t_cd = t_num.to_numpy(dtype=float)
+    x_short = time_col.upper().replace("_", " ")
+    _hover_t = f"{x_short}=%{{customdata:.6f}}<br>Magnitúda=%{{y:.4f}}<extra></extra>"
+
     if show_errorbars and err_col in lc_df.columns:
         err_vals = pd.to_numeric(lc_df[err_col], errors="coerce").fillna(0.0).tolist()
         fig.add_trace(
             go.Scatter(
-                x=lc_df[time_col],
+                x=t_rel,
                 y=lc_df[mag_col],
                 error_y=dict(
                     type="data",
@@ -458,23 +465,27 @@ def _plot_light_curve(
                 marker=dict(color="#ff6b6b", size=6),
                 line=dict(color="#ff6b6b", width=1),
                 name="VAR",
+                customdata=t_cd,
+                hovertemplate=_hover_t,
             )
         )
     else:
         fig.add_trace(
             go.Scatter(
-                x=lc_df[time_col],
+                x=t_rel,
                 y=lc_df[mag_col],
                 mode="markers+lines",
                 marker=dict(color="#ff6b6b", size=6),
                 line=dict(color="#ff6b6b", width=1),
                 name="VAR",
+                customdata=t_cd,
+                hovertemplate=_hover_t,
             )
         )
 
     fig.update_layout(
         title=title,
-        xaxis_title=time_col.upper().replace("_", " "),
+        xaxis_title=jd_axis_title(x_short, t_off),
         yaxis_title="Magnitúda",
         yaxis=dict(autorange="reversed"),
         hovermode="x unified",
@@ -654,6 +665,12 @@ def _series_for_star(combined: pd.DataFrame, cid: str, *, mag_col: str, flux_col
     return sub
 
 
+def _jd_plot_x_and_raw(s: pd.DataFrame, xcol: str, jd_off: int | None) -> tuple[np.ndarray, np.ndarray]:
+    raw = pd.to_numeric(s[xcol], errors="coerce").to_numpy(dtype=float)
+    rel = raw - float(jd_off) if jd_off is not None else raw
+    return rel, raw
+
+
 def render_aperture_results(pipeline: Any, draft_id: int | None) -> None:
     st.subheader("Aperture Photometry — Results")
     combined = _load_per_frame_sidecars(pipeline, draft_id)
@@ -692,6 +709,9 @@ def render_aperture_results(pipeline: Any, draft_id: int | None) -> None:
         ),
         "_jd_sort",
     )
+    _, ap_jd_off = jd_series_relative(pd.to_numeric(combined[xcol], errors="coerce"))
+    ap_x_title = jd_axis_title("JD", ap_jd_off)
+    ap_hover = "JD=%{customdata:.6f}<extra></extra>"
     for lab in sel:
         cc = cmap.get(lab)
         if not cc:
@@ -699,30 +719,36 @@ def render_aperture_results(pipeline: Any, draft_id: int | None) -> None:
         s = _series_for_star(combined, cc, mag_col="aperture_mag", flux_col="aperture_flux")
         if s.empty:
             continue
+        x_rel, x_raw = _jd_plot_x_and_raw(s, xcol, ap_jd_off)
         fig.add_trace(
             go.Scatter(
-                x=s[xcol],
+                x=x_rel,
                 y=s[ycol],
                 mode="lines+markers",
                 name=lab,
                 line=dict(width=1, color="rgba(128,128,128,0.8)"),
                 marker=dict(size=4),
+                customdata=x_raw,
+                hovertemplate=ap_hover,
             )
         )
     ts = _series_for_star(combined, tgt_cid, mag_col="aperture_mag", flux_col="aperture_flux")
     if not ts.empty:
+        x_rel, x_raw = _jd_plot_x_and_raw(ts, xcol, ap_jd_off)
         fig.add_trace(
             go.Scatter(
-                x=ts[xcol],
+                x=x_rel,
                 y=ts[ycol],
                 mode="lines+markers",
                 name=tlab,
                 line=dict(width=3, color="red"),
                 marker=dict(size=7),
+                customdata=x_raw,
+                hovertemplate=ap_hover,
             )
         )
     fig.update_layout(
-        xaxis_title="JD",
+        xaxis_title=ap_x_title,
         yaxis_title=ycol,
         hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
@@ -811,29 +837,35 @@ def render_aperture_results(pipeline: Any, draft_id: int | None) -> None:
                 st.plotly_chart(fig_lc, use_container_width=True)
 
                 with st.expander("Zero point stabilita comp ensemblu", expanded=False):
+                    _, zp_off = jd_series_relative(pd.to_numeric(lc_df[_time_col], errors="coerce"))
+                    zp_x, zp_raw = _jd_plot_x_and_raw(lc_df, _time_col, zp_off)
                     fig_zp = go.Figure()
                     fig_zp.add_trace(
                         go.Scatter(
-                            x=lc_df[_time_col],
+                            x=zp_x,
                             y=lc_df["zero_point"],
                             mode="markers+lines",
                             marker=dict(color="#4ecdc4", size=5),
                             name="ZP",
+                            customdata=zp_raw,
+                            hovertemplate="Čas=%{customdata:.6f}<extra></extra>",
                         )
                     )
                     fig_zp.add_trace(
                         go.Scatter(
-                            x=lc_df[_time_col],
+                            x=zp_x,
                             y=lc_df["ensemble_zp_std"],
                             mode="markers",
                             marker=dict(color="#ffe66d", size=4),
                             name="ZP scatter",
+                            customdata=zp_raw,
+                            hovertemplate="Čas=%{customdata:.6f}<extra></extra>",
                         )
                     )
                     fig_zp.update_layout(
                         title="Zero point (ZP = catalog_mag - instrumental_mag ensemblu)",
                         yaxis_title="ZP [mag]",
-                        xaxis_title=_time_col.upper().replace("_", " "),
+                        xaxis_title=jd_axis_title(_time_col.upper().replace("_", " "), zp_off),
                         margin=dict(l=50, r=20, t=40, b=40),
                     )
                     st.plotly_chart(fig_zp, use_container_width=True)
@@ -898,6 +930,9 @@ def render_psf_results(pipeline: Any, draft_id: int | None) -> None:
         ),
         "_jd_sort",
     )
+    _, psf_jd_off = jd_series_relative(pd.to_numeric(combined[xcol], errors="coerce"))
+    psf_x_title = jd_axis_title("JD", psf_jd_off)
+    psf_hover = "JD=%{customdata:.6f}<extra></extra>"
 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.08, row_heights=[0.62, 0.38])
     for lab in sel:
@@ -907,28 +942,34 @@ def render_psf_results(pipeline: Any, draft_id: int | None) -> None:
         s = _series_for_star(combined, cc, mag_col="psf_mag", flux_col="psf_flux")
         if s.empty:
             continue
+        x_rel, x_raw = _jd_plot_x_and_raw(s, xcol, psf_jd_off)
         fig.add_trace(
             go.Scatter(
-                x=s[xcol],
+                x=x_rel,
                 y=s["psf_mag"],
                 mode="lines+markers",
                 name=lab,
                 line=dict(width=1, color="rgba(128,128,128,0.8)"),
                 marker=dict(size=4),
+                customdata=x_raw,
+                hovertemplate=psf_hover,
             ),
             row=1,
             col=1,
         )
     ts = _series_for_star(combined, tgt_cid, mag_col="psf_mag", flux_col="psf_flux")
     if not ts.empty:
+        x_rel, x_raw = _jd_plot_x_and_raw(ts, xcol, psf_jd_off)
         fig.add_trace(
             go.Scatter(
-                x=ts[xcol],
+                x=x_rel,
                 y=ts["psf_mag"],
                 mode="lines+markers",
                 name=tlab,
                 line=dict(width=3, color="red"),
                 marker=dict(size=7),
+                customdata=x_raw,
+                hovertemplate=psf_hover,
             ),
             row=1,
             col=1,
@@ -939,13 +980,16 @@ def render_psf_results(pipeline: Any, draft_id: int | None) -> None:
         chi = pd.to_numeric(ts["psf_chi2"], errors="coerce")
         bad = chi > 5.0
         colors = ["red" if bool(b) else "royalblue" for b in bad.fillna(False).tolist()]
+        x_rel_chi, x_raw_chi = _jd_plot_x_and_raw(ts, xcol, psf_jd_off)
         fig.add_trace(
             go.Scatter(
-                x=ts[xcol],
+                x=x_rel_chi,
                 y=chi,
                 mode="markers",
                 name="PSF χ² (target)",
                 marker=dict(size=8, color=colors),
+                customdata=x_raw_chi,
+                hovertemplate=psf_hover,
             ),
             row=2,
             col=1,
@@ -954,7 +998,7 @@ def render_psf_results(pipeline: Any, draft_id: int | None) -> None:
     fig.update_layout(hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.05, x=0))
     fig.update_yaxes(title_text="psf_mag", row=1, col=1)
     fig.update_yaxes(title_text="psf_chi2", row=2, col=1)
-    fig.update_xaxes(title_text="JD", row=2, col=1)
+    fig.update_xaxes(title_text=psf_x_title, row=2, col=1)
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
@@ -1049,60 +1093,80 @@ def render_psf_results(pipeline: Any, draft_id: int | None) -> None:
                         time_col=_time_col,
                         weighted=_weighted,
                     )
+                    _cmp_t_parts = []
+                    if not lc_ap.empty:
+                        _cmp_t_parts.append(pd.to_numeric(lc_ap[_time_col], errors="coerce"))
+                    if not lc_df.empty:
+                        _cmp_t_parts.append(pd.to_numeric(lc_df[_time_col], errors="coerce"))
+                    _cmp_t = pd.concat(_cmp_t_parts, ignore_index=True) if _cmp_t_parts else pd.Series(dtype=float)
+                    _, cmp_off = jd_series_relative(_cmp_t)
+                    cmp_hover = "Čas=%{customdata:.6f}<extra></extra>"
                     fig_cmp = go.Figure()
                     if not lc_ap.empty:
+                        xa, xar = _jd_plot_x_and_raw(lc_ap, _time_col, cmp_off)
                         fig_cmp.add_trace(
                             go.Scatter(
-                                x=lc_ap[_time_col],
+                                x=xa,
                                 y=lc_ap["cal_mag"],
                                 mode="markers",
                                 name="Aperture",
                                 marker=dict(color="#4ecdc4", size=5, symbol="circle"),
+                                customdata=xar,
+                                hovertemplate=cmp_hover,
                             )
                         )
                     if not lc_df.empty:
+                        xp, xpr = _jd_plot_x_and_raw(lc_df, _time_col, cmp_off)
                         fig_cmp.add_trace(
                             go.Scatter(
-                                x=lc_df[_time_col],
+                                x=xp,
                                 y=lc_df["cal_mag"],
                                 mode="markers",
                                 name="PSF",
                                 marker=dict(color="#ff6b6b", size=5, symbol="diamond"),
+                                customdata=xpr,
+                                hovertemplate=cmp_hover,
                             )
                         )
                     fig_cmp.update_layout(
                         title="Aperture vs PSF — diferenciálna magnitúda",
                         yaxis=dict(autorange="reversed"),
                         yaxis_title="Magnitúda",
-                        xaxis_title=_time_col.upper().replace("_", " "),
+                        xaxis_title=jd_axis_title(_time_col.upper().replace("_", " "), cmp_off),
                         hovermode="x unified",
                     )
                     st.plotly_chart(fig_cmp, use_container_width=True)
 
                 with st.expander("Zero point stabilita comp ensemblu", expanded=False):
+                    _, zp_off_psf = jd_series_relative(pd.to_numeric(lc_df[_time_col], errors="coerce"))
+                    zp_xp, zp_rawp = _jd_plot_x_and_raw(lc_df, _time_col, zp_off_psf)
                     fig_zp = go.Figure()
                     fig_zp.add_trace(
                         go.Scatter(
-                            x=lc_df[_time_col],
+                            x=zp_xp,
                             y=lc_df["zero_point"],
                             mode="markers+lines",
                             marker=dict(color="#4ecdc4", size=5),
                             name="ZP",
+                            customdata=zp_rawp,
+                            hovertemplate="Čas=%{customdata:.6f}<extra></extra>",
                         )
                     )
                     fig_zp.add_trace(
                         go.Scatter(
-                            x=lc_df[_time_col],
+                            x=zp_xp,
                             y=lc_df["ensemble_zp_std"],
                             mode="markers",
                             marker=dict(color="#ffe66d", size=4),
                             name="ZP scatter",
+                            customdata=zp_rawp,
+                            hovertemplate="Čas=%{customdata:.6f}<extra></extra>",
                         )
                     )
                     fig_zp.update_layout(
                         title="Zero point (ZP = catalog_mag - instrumental_mag ensemblu)",
                         yaxis_title="ZP [mag]",
-                        xaxis_title=_time_col.upper().replace("_", " "),
+                        xaxis_title=jd_axis_title(_time_col.upper().replace("_", " "), zp_off_psf),
                         margin=dict(l=50, r=20, t=40, b=40),
                     )
                     st.plotly_chart(fig_zp, use_container_width=True)
@@ -1467,14 +1531,33 @@ def render_variable_detection(pipeline: Any, draft_id: int | None) -> None:
         "_jd_sort",
     )
     if not ts.empty:
+        _, vdet_off = jd_series_relative(pd.to_numeric(ts[xcol], errors="coerce"))
+        xv, xr = _jd_plot_x_and_raw(ts, xcol, vdet_off)
+        vdet_xtitle = jd_axis_title("JD", vdet_off)
         fa = go.Figure(
-            go.Scatter(x=ts[xcol], y=ts["aperture_mag"], mode="lines+markers", name="aperture_mag")
+            go.Scatter(
+                x=xv,
+                y=ts["aperture_mag"],
+                mode="lines+markers",
+                name="aperture_mag",
+                customdata=xr,
+                hovertemplate="JD=%{customdata:.6f}<extra></extra>",
+            )
         )
-        fa.update_layout(yaxis_autorange="reversed", title="Aperture magnitude")
+        fa.update_layout(yaxis_autorange="reversed", title="Aperture magnitude", xaxis_title=vdet_xtitle)
         st.plotly_chart(fa, use_container_width=True)
         if ts["psf_mag"].notna().any():
-            fp = go.Figure(go.Scatter(x=ts[xcol], y=ts["psf_mag"], mode="lines+markers", name="psf_mag"))
-            fp.update_layout(yaxis_autorange="reversed", title="PSF magnitude")
+            fp = go.Figure(
+                go.Scatter(
+                    x=xv,
+                    y=ts["psf_mag"],
+                    mode="lines+markers",
+                    name="psf_mag",
+                    customdata=xr,
+                    hovertemplate="JD=%{customdata:.6f}<extra></extra>",
+                )
+            )
+            fp.update_layout(yaxis_autorange="reversed", title="PSF magnitude", xaxis_title=vdet_xtitle)
             st.plotly_chart(fp, use_container_width=True)
 
     msel = ms[ms["catalog_id_key"] == sel_cid]

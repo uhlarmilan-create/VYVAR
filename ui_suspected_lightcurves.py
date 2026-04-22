@@ -13,6 +13,7 @@ import pandas as pd
 import streamlit as st
 
 from gaia_catalog_id import normalize_gaia_source_id
+from jd_axis_format import jd_axis_title, jd_series_relative
 from photometry_core import _flux_to_mag, _normalize_gaia_id
 from ui_aperture_photometry import _find_phase2a_paths
 from ui_select_stars import _sanitize_suspected_variables_df
@@ -148,20 +149,25 @@ def render_suspected_lightcurves(
     try:
         import plotly.graph_objects as go  # type: ignore
 
+        t_raw = pd.to_numeric(lc_df["bjd_tdb_mid"], errors="coerce")
+        t_rel, t_off = jd_series_relative(t_raw)
+        t_cd = t_raw.to_numpy(dtype=float)
         fig = go.Figure(
             data=[
                 go.Scatter(
-                    x=lc_df["bjd_tdb_mid"],
+                    x=t_rel,
                     y=lc_df["mag_inst"],
                     mode="markers",
                     name="mag_inst",
                     marker=dict(size=5),
+                    customdata=t_cd,
+                    hovertemplate="BJD=%{customdata:.6f}<br>mag_inst=%{y:.4f}<extra></extra>",
                 )
             ]
         )
         fig.update_layout(
             title=f"Suspected — {cid} ({chosen})",
-            xaxis_title="BJD (TDB mid)",
+            xaxis_title=jd_axis_title("BJD (TDB mid)", t_off),
             yaxis_title="mag_inst (inštrumentálna)",
             yaxis_autorange="reversed",
             height=480,
@@ -169,7 +175,12 @@ def render_suspected_lightcurves(
         st.plotly_chart(fig, use_container_width=True)
     except Exception as exc:  # noqa: BLE001
         st.warning(f"Plotly: {exc}")
-        st.line_chart(lc_df.set_index("bjd_tdb_mid")["mag_inst"])
+        t_raw = pd.to_numeric(lc_df["bjd_tdb_mid"], errors="coerce")
+        t_rel, t_off = jd_series_relative(t_raw)
+        if t_off is not None:
+            st.line_chart(lc_df.assign(_xrel=t_rel).set_index("_xrel")["mag_inst"])
+        else:
+            st.line_chart(lc_df.set_index("bjd_tdb_mid")["mag_inst"])
 
     with st.expander("Surové body (CSV)", expanded=False):
         st.dataframe(lc_df, use_container_width=True, hide_index=True)

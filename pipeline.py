@@ -1707,6 +1707,36 @@ def _iter_fits_recursive(root: Path) -> list[Path]:
     return iter_fits_paths_recursive(root)
 
 
+def _path_segments_forbidden_for_masterstar_physical_source(p: Path) -> bool:
+    """``True`` ak resolved cesta vyzerá ako archívny RAW / non_calibrated (nie zdroj pre MASTERSTAR kópiu)."""
+    try:
+        parts = Path(p).resolve().parts
+    except OSError:
+        parts = Path(p).parts
+    bad = {"raw", "non_calibrated"}
+    return any(seg.casefold() in bad for seg in parts)
+
+
+def _path_is_under_tree(root: Path, p: Path) -> bool:
+    try:
+        Path(p).resolve().relative_to(Path(root).resolve())
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def _pick_preferred_masterstar_basename_hit(hits: list[Path]) -> Path | None:
+    """Pri viacerých zhodách basename zvoľ radšej ``proc_*.fits`` (spracovaný snímok)."""
+    if not hits:
+        return None
+    clean = [h for h in hits if not _path_segments_forbidden_for_masterstar_physical_source(h)]
+    if not clean:
+        return None
+    proc_first = [h for h in clean if h.name.casefold().startswith("proc_")]
+    use = proc_first if proc_first else clean
+    return sorted(use, key=lambda x: str(x).casefold())[0]
+
+
 def _header_vy_fwhm_px(hdr: fits.Header | None) -> float | None:
     """Measured QC FWHM from ``VY_FWHM`` if present and sane."""
     if hdr is None or "VY_FWHM" not in hdr:
@@ -1743,47 +1773,6 @@ def _obs_fwhm_basename_map_from_db(db: VyvarDatabase, draft_id: int) -> dict[str
     return out
 
 
-def _pick_masterstar_reference_index(
-    files: list[Path],
-    *,
-    fwhm_by_basename: dict[str, float] | None = None,
-) -> int:
-    """Choose reference frame: lowest ``VY_FWHM`` among inputs (header, then DB map), else index 0."""
-    if len(files) <= 1:
-        return 0
-    best_i = 0
-    best_f = float("inf")
-    found_any = False
-    _fb = fwhm_by_basename or {}
-    for i, fp in enumerate(files):
-        try:
-            with fits.open(fp, memmap=False) as h:
-                v = _header_vy_fwhm_px(h[0].header)
-            if v is None:
-                _n = fp.name.casefold()
-                vv = _fb.get(_n)
-                if vv is None and _n.startswith("proc_"):
-                    vv = _fb.get(_n[5:])
-                if vv is None and not _n.startswith("proc_"):
-                    vv = _fb.get(f"proc_{_n}")
-                if vv is not None and math.isfinite(vv) and vv > 0:
-                    v = float(vv)
-            if v is not None and math.isfinite(v) and v > 0:
-                found_any = True
-                if v < best_f:
-                    best_f = float(v)
-                    best_i = i
-        except Exception:  # noqa: BLE001
-            continue
-    if found_any:
-        log_event(
-            f"MASTERSTAR: referenčná snímka = najlepší VY_FWHM → index {best_i} ({files[best_i].name})."
-        )
-        return best_i
-    log_event("MASTERSTAR: VY_FWHM v hlavičkách chýba — referencia = prvá snímka v zozname (index 0).")
-    return 0
-
-
 def _sort_masterstar_paths_by_fwhm(
     files: list[Path],
     *,
@@ -1812,85 +1801,6 @@ def _sort_masterstar_paths_by_fwhm(
         scored.append((score, str(fp).casefold(), fp))
     scored.sort(key=lambda t: (t[0], t[1]))
     return [p for _, _, p in scored]
-
-
-def _masterstar_aligned_stack_combine(
-    files: list[Path],
-    *,
-    ref_idx: int,
-    max_control_points: int,
-    detection_sigma: float,
-    combine: str,
-    log_astroalign: bool = True,
-) -> "np.ndarray":
-    """``astroalign.register`` na referenciu, potom ``nanmean`` alebo ``nanmedian`` pozdĺž osi snímok."""
-    import numpy as np
-
-    try:
-        import astroalign as aa  # type: ignore
-    except Exception as exc:
-        raise RuntimeError(f"astroalign required for MASTERSTAR stack: {exc}") from exc
-
-    n = len(files)
-    if n == 0:
-        raise ValueError("MASTERSTAR: no input files")
-    ref_idx = int(ref_idx)
-    if ref_idx < 0 or ref_idx >= n:
-        raise ValueError(f"MASTERSTAR: invalid ref_idx {ref_idx} for {n} files")
-    if n == 1:
-        with fits.open(files[0], memmap=False) as hdul:
-            return np.asarray(_as_fits_float32_image(hdul[0].data), dtype=np.float32)
-
-    with fits.open(files[ref_idx], memmap=False) as hdul:
-        ref_data = np.asarray(_as_fits_float32_image(hdul[0].data), dtype=np.float32)
-    if ref_data.ndim != 2:
-        raise ValueError("MASTERSTAR: referenčná snímka nie je 2D")
-    h0, w0 = int(ref_data.shape[0]), int(ref_data.shape[1])
-
-    for fp in files:
-        with fits.open(fp, memmap=False) as hdul:
-            a = np.asarray(hdul[0].data)
-        if a.ndim != 2 or int(a.shape[0]) != h0 or int(a.shape[1]) != w0:
-            raise ValueError(
-                f"MASTERSTAR: očakávaný jednotný rozmer {w0}×{h0}, neplatné: {fp.name} → {getattr(a, 'shape', None)}"
-            )
-
-    mcp = int(max(12, min(int(max_control_points), 50)))
-    det = float(detection_sigma)
-    if not math.isfinite(det) or det <= 0:
-        det = 5.0
-
-    layers: list[np.ndarray] = []
-    for i, fp in enumerate(files):
-        if i == ref_idx:
-            layers.append(np.copy(ref_data))
-            continue
-        with fits.open(fp, memmap=False) as hdul:
-            data = np.asarray(_as_fits_float32_image(hdul[0].data), dtype=np.float32)
-        try:
-            aligned, _footprint = aa.register(
-                data,
-                ref_data,
-                fill_value=np.nan,
-                max_control_points=mcp,
-                detection_sigma=det,
-            )
-        except Exception as exc:
-            raise RuntimeError(f"astroalign.register zlyhal pre {fp.name}: {exc}") from exc
-        layers.append(np.asarray(aligned, dtype=np.float32))
-
-    cube = np.stack(layers, axis=0)
-    c = str(combine).strip().lower()
-    if c == "median":
-        out = np.nanmedian(cube, axis=0).astype(np.float32)
-    else:
-        out = np.nanmean(cube, axis=0).astype(np.float32)
-    if log_astroalign:
-        log_event(
-            f"MASTERSTAR stack: {n} snímok, ref_idx={ref_idx}, combine={c} "
-            f"({'nanmedian' if c == 'median' else 'nanmean'})."
-        )
-    return out
 
 
 def _strip_external_platesolve_header(hdr: fits.Header) -> None:
@@ -1931,14 +1841,21 @@ def build_masterstar_from_detrended(
     import numpy as np
 
     root = Path(detrended_root).resolve()
-    all_fits = _iter_fits_recursive(root)
+    all_fits = [
+        fp
+        for fp in _iter_fits_recursive(root)
+        if _path_is_under_tree(root, fp) and not _path_segments_forbidden_for_masterstar_physical_source(fp)
+    ]
     files = _filter_light_paths_maybe(all_fits, only_paths)
     if not files and only_paths is not None:
         remapped: list[Path] = []
         seen_r: set[str] = set()
         for op in only_paths:
             hit = _resolve_best_effort_path_under(root, str(op))
-            if hit is None:
+            if hit is None or not _path_is_under_tree(root, hit):
+                continue
+            if _path_segments_forbidden_for_masterstar_physical_source(hit):
+                log_event(f"MASTERSTAR: mapovanie zahodilo RAW/non_cal cestu → {hit}")
                 continue
             try:
                 rk = str(hit.resolve()).casefold()
@@ -1964,9 +1881,28 @@ def build_masterstar_from_detrended(
                 f"v strome {len(all_fits)} FITS celkom)."
             )
     if not files:
-        # Candidate paths did not match any files on disk: small deterministic batch from the tree.
-        log_event("MASTERSTAR: výber kandidátov sa nezhoduje so súbormi na disku — beriem prvých N FITS ako kandidátov.")
-        batch = sorted(_iter_fits_recursive(root), key=lambda p: str(p).casefold())
+        if only_paths is not None:
+            try:
+                _want = ", ".join(Path(str(x)).name for x in only_paths[:8])
+            except Exception:  # noqa: BLE001
+                _want = str(only_paths)
+            msg = (
+                f"MASTERSTAR: explicitný výber sa nezhoduje so súbormi pod {root}: {_want}"
+                + (" …" if len(list(only_paths)) > 8 else "")
+            )
+            log_event(msg)
+            raise FileNotFoundError(msg)
+        # Celý strom (bez filtra kandidátov): deterministický malý batch z disku.
+        log_event("MASTERSTAR: bez filtra kandidátov — beriem prvých N FITS z priečinka.")
+        batch = sorted(
+            (
+                fp
+                for fp in _iter_fits_recursive(root)
+                if _path_is_under_tree(root, fp)
+                and not _path_segments_forbidden_for_masterstar_physical_source(fp)
+            ),
+            key=lambda p: str(p).casefold(),
+        )
         if batch:
             n_take = max(1, min(8, len(batch)))
             files = batch[:n_take]
@@ -1996,11 +1932,23 @@ def build_masterstar_from_detrended(
     _cfg_ms = app_config or AppConfig()
 
     reference_path = Path(sorted_files[0])
+    if _path_segments_forbidden_for_masterstar_physical_source(
+        reference_path
+    ) or not _path_is_under_tree(root, reference_path):
+        raise FileNotFoundError(
+            f"MASTERSTAR: odmietnutý zdroj mimo ``processed`` stromu alebo z RAW/non_calibrated: {reference_path}"
+        )
     if not reference_path.exists():
         log_event(f"❌ MASTERSTAR FAIL: Reference file {reference_path} not found.")
-        fallback_hits = [x for x in _iter_fits_recursive(root) if x.name == reference_path.name]
+        fallback_hits = [
+            x
+            for x in _iter_fits_recursive(root)
+            if x.name == reference_path.name
+            and _path_is_under_tree(root, x)
+            and not _path_segments_forbidden_for_masterstar_physical_source(x)
+        ]
         if fallback_hits:
-            reference_path = fallback_hits[0]
+            reference_path = _pick_preferred_masterstar_basename_hit(fallback_hits) or fallback_hits[0]
             log_event(f"✅ MASTERSTAR fallback reference found: {reference_path}")
         else:
             raise FileNotFoundError(f"MASTERSTAR reference file not found: {reference_path}")
@@ -2017,10 +1965,11 @@ def build_masterstar_from_detrended(
         raise ValueError(f"MASTERSTAR: neviem načítať referenčný FITS: {exc}") from exc
 
     shutil.copy2(reference_path, output_fits)
-    log_event(
-        f"MASTERSTAR: čistá kópia → {output_fits} "
-        f"(zdroj {reference_path.name}, kandidátov {len(files)}; najlepší podľa VY_FWHM)."
-    )
+    if len(files) <= 1:
+        _ms_pick_msg = "jediný kandidát"
+    else:
+        _ms_pick_msg = f"kandidátov {len(files)}; najlepší podľa VY_FWHM"
+    log_event(f"MASTERSTAR: čistá kópia → {output_fits} (zdroj {reference_path.name}, {_ms_pick_msg}).")
 
     # Auto FWHM: médian VY_FWHM zo všetkých processed FITS v root sade
     _all_processed = list(_iter_fits_recursive(root))
@@ -2144,18 +2093,30 @@ def _resolve_best_effort_path_under(root: Path, raw_path: str) -> Path | None:
         try:
             rel = p.resolve().relative_to(root.resolve())
             cand = (root / rel).resolve()
-            if cand.is_file():
+            if (
+                cand.is_file()
+                and _path_is_under_tree(root, cand)
+                and not _path_segments_forbidden_for_masterstar_physical_source(cand)
+            ):
                 return cand
         except Exception:  # noqa: BLE001
             pass
     # If relative, try directly.
     cand2 = (root / p).resolve()
-    if cand2.is_file():
+    if (
+        cand2.is_file()
+        and _path_is_under_tree(root, cand2)
+        and not _path_segments_forbidden_for_masterstar_physical_source(cand2)
+    ):
         return cand2
     # Explicit processed-name fallback in the same folder (e.g. Light_066.fits -> proc_Light_066.fits).
     try:
         cand2_proc = cand2.with_name(_safe_proc_name(cand2.name)).resolve()
-        if cand2_proc.is_file():
+        if (
+            cand2_proc.is_file()
+            and _path_is_under_tree(root, cand2_proc)
+            and not _path_segments_forbidden_for_masterstar_physical_source(cand2_proc)
+        ):
             return cand2_proc
     except Exception:  # noqa: BLE001
         pass
@@ -2175,8 +2136,9 @@ def _resolve_best_effort_path_under(root: Path, raw_path: str) -> Path | None:
             or xn.endswith(_name_cf)
             or xn_noproc.endswith(_name_noproc)
         ):
-            hits.append(x)
-    return hits[0] if hits else None
+            if not _path_segments_forbidden_for_masterstar_physical_source(x):
+                hits.append(x)
+    return _pick_preferred_masterstar_basename_hit(hits)
 
 
 def resolve_obs_file_to_processed_fits(
@@ -2199,7 +2161,10 @@ def resolve_obs_file_to_processed_fits(
     root = resolve_masterstar_input_root(ap, setup_name=setup_name)
     if not root.exists():
         return None
-    return _resolve_best_effort_path_under(root, str(obs_file_path))
+    hit = _resolve_best_effort_path_under(root, str(obs_file_path))
+    if hit is None or _path_segments_forbidden_for_masterstar_physical_source(hit):
+        return None
+    return hit
 
 
 def list_best_processed_light_paths_for_masterstar(
@@ -4121,6 +4086,20 @@ def _vectorized_star_saturation_columns(
     }
 
 
+_VYVAR_TIME_JD_CSV_COLS = ("jd_mid", "hjd_mid", "bjd_tdb_mid")
+
+
+def _vyvar_df_round_time_jd_for_csv(df: pd.DataFrame) -> pd.DataFrame:
+    """Round geocentric/heliocentric/barycentric JD columns to six decimals for stable CSV / spreadsheet display."""
+    cols = [c for c in _VYVAR_TIME_JD_CSV_COLS if c in df.columns]
+    if not cols:
+        return df
+    out = df.copy()
+    for c in cols:
+        out[c] = pd.to_numeric(out[c], errors="coerce").round(6)
+    return out
+
+
 def _vyvar_df_to_csv(df: pd.DataFrame, path: Path | str) -> None:
     """Write sidecar / index CSV. Optional PyArrow writer; else pandas (``to_csv`` has no ``engine='c'`` for write)."""
     p = Path(path)
@@ -4129,6 +4108,7 @@ def _vyvar_df_to_csv(df: pd.DataFrame, path: Path | str) -> None:
     if "catalog_id" in df.columns:
         export_df = df.copy()
         export_df["catalog_id"] = catalog_id_series_for_masterstars_export(df)
+    export_df = _vyvar_df_round_time_jd_for_csv(export_df)
     try:
         import pyarrow as pa  # type: ignore[import-not-found]
         import pyarrow.csv as pacsv  # type: ignore[import-not-found]
@@ -8081,6 +8061,7 @@ def generate_masterstar_and_catalog(
     masterstars_csv_basename: str = "masterstars_full_match.csv",
     masterstar_fits_only: bool = False,
     masterstar_skip_build: bool = False,
+    masterstar_platesolve_only: bool = False,
     hint_ra_deg: float | None = None,
     hint_dec_deg: float | None = None,
 ) -> dict[str, Any]:
@@ -8088,6 +8069,7 @@ def generate_masterstar_and_catalog(
 
     Ak je ``masterstar_fits_only=True``, po zostavení FITS v ``platesolve/`` sa skončí (žiadny plate-solve ani CSV).
     Ak je ``masterstar_skip_build=True``, preskočí sa build z processed — použije sa existujúci ``MASTERSTAR.fits`` v ``platesolve/`` a beží solver + katalóg.
+    Ak je ``masterstar_platesolve_only=True``, po úspešnom plate-solve a úprave mierky WCS sa skončí (bez DAO CSV, ``masterstars_full_match.csv``, fotometrického plánu a zápisu MASTER_SOURCES).
     """
     max_catalog_rows = max(int(max_catalog_rows), 100000)
     import numpy as np
@@ -8182,18 +8164,57 @@ def generate_masterstar_and_catalog(
         masterstar_fits = Path(platesolve_dir) / _ms_name
         only_ms_paths: list[Path] | None = None
         ms_selection_meta: dict[str, Any] = {}
+        #: When True, ``masterstar_candidate_paths`` mapped to disk — do not append unrelated FITS
+        #: for "best-of-N" pool (that would override a deliberate single-frame pick in the UI).
+        explicit_ui_masterstar_paths = False
 
         def _map_qc_paths_to_disk(raw_paths: list[str]) -> list[Path]:
+            """Map UI / DB paths onto ``processed/lights`` FITS (``proc_*.fits``).
+
+            Skúsi najprv priamy match pod ``detrended_root``, potom :func:`resolve_obs_file_to_processed_fits`
+            (kalibrovaný / raw / relatívna cesta z ``OBS_FILES``).
+            """
+
+            def _mapped_hit_ok(hit: Path) -> bool:
+                if not hit.is_file() or _path_segments_forbidden_for_masterstar_physical_source(hit):
+                    return False
+                pl = ap / "processed" / "lights"
+                if pl.is_dir():
+                    try:
+                        hit.resolve().relative_to(pl.resolve())
+                        return True
+                    except ValueError:
+                        return False
+                return _path_is_under_tree(Path(detrended_root), hit)
+
             out: list[Path] = []
             for rp in raw_paths:
-                hit = _resolve_best_effort_path_under(Path(detrended_root), str(rp))
-                if hit is not None:
+                s = str(rp).strip()
+                if not s:
+                    continue
+                hit = _resolve_best_effort_path_under(Path(detrended_root), s)
+                if hit is not None and _mapped_hit_ok(hit):
                     out.append(hit)
+                    continue
+                try:
+                    hit2 = resolve_obs_file_to_processed_fits(ap, s, setup_name=setup_name)
+                except Exception:  # noqa: BLE001
+                    hit2 = None
+                if hit2 is not None and _mapped_hit_ok(hit2):
+                    out.append(hit2)
             return out
 
         def _disk_stack_fallback_paths(input_dir: Path, *, max_frames: int = 8) -> list[Path]:
             """When QC paths / DB mapping fail: sigma-median stack a small batch from disk (deterministic order)."""
-            all_on_disk = sorted(_iter_fits_recursive(input_dir), key=lambda p: str(p).casefold())
+            all_on_disk = sorted(
+                (
+                    fp
+                    for fp in _iter_fits_recursive(input_dir)
+                    if _path_is_under_tree(input_dir, fp)
+                    and not _path_segments_forbidden_for_masterstar_physical_source(fp)
+                ),
+                key=lambda p: str(p).casefold(),
+            )
             if not all_on_disk:
                 return []
             n = max(1, min(int(max_frames), len(all_on_disk)))
@@ -8212,16 +8233,20 @@ def generate_masterstar_and_catalog(
             mapped = _map_qc_paths_to_disk(cand_paths)
             if mapped:
                 only_ms_paths = mapped
+                explicit_ui_masterstar_paths = True
                 ms_selection_meta = {
                     "source": "ui_paths",
                     "requested": int(len(cand_paths)),
                     "mapped_found": int(len(mapped)),
+                    "explicit_ui_lock": True,
                 }
             else:
-                log_event(
-                    "MASTERSTAR: žiadna z ciest z UI sa nenašla pod zadaným koreňom; skúšam výber z DB (draft + % top)…"
+                raise FileNotFoundError(
+                    "MASTERSTAR: z UI/job prišli explicitné cesty k referenčnému snímku, ale žiadna sa nenašla "
+                    f"ako ``processed/lights/…/proc_*.fits`` (koreň výberu: {Path(detrended_root).resolve()}). "
+                    "Skontroluj preprocess, archív a výber vo FITS QA (potvrď znovu po **Create Archive & Do Calibration**). "
+                    f"Požadované ({len(cand_paths)}): " + "; ".join(cand_paths[:6]) + (" …" if len(cand_paths) > 6 else "")
                 )
-                ms_selection_meta = {"source": "ui_paths", "requested": int(len(cand_paths)), "mapped_found": 0}
 
         if only_ms_paths is None and draft_id is not None:
             _db_ms = _vyvar_open_database(app_config or AppConfig())
@@ -8302,10 +8327,11 @@ def generate_masterstar_and_catalog(
             _best_n = 10
         _best_n = max(1, min(25, int(_best_n)))
         _cand_all = [Path(p) for p in (only_ms_paths or []) if Path(p).is_file()]
-        # If UI/DB mapping yields too few candidates (common when user manually selects one frame),
-        # expand from disk to enable best-of-N robustness.
+        # If UI/DB mapping yields too few candidates, expand from disk for best-of-N robustness —
+        # but never when the user explicitly passed ``masterstar_candidate_paths`` (would replace e.g.
+        # a single chosen frame with unrelated lights and pick lowest VY_FWHM among them).
         try:
-            if len(_cand_all) < max(2, _best_n):
+            if not explicit_ui_masterstar_paths and len(_cand_all) < max(2, _best_n):
                 _disk_more = _disk_stack_fallback_paths(Path(detrended_root), max_frames=max(8, _best_n * 2))
                 for p in _disk_more:
                     if p not in _cand_all and p.is_file():
@@ -8764,6 +8790,44 @@ def generate_masterstar_and_catalog(
         log_event(f"WCS PLATE SCALE: neočakávaná chyba — {exc!s}")
         _pscale_adj = {"rescaled": False, "error": str(exc)}
     solve_meta["wcs_plate_scale_adjustment"] = _pscale_adj
+
+    if masterstar_platesolve_only:
+        _cfg_early = app_config or AppConfig()
+        try:
+            _ms_out_early = str(Path(masterstar_fits).resolve())
+        except OSError:
+            _ms_out_early = str(masterstar_fits)
+        log_event(
+            f"ONLY MASTER (test): plate-solve + úprava mierky WCS hotové → {_ms_out_early} "
+            "(preskakujem DAO export, masterstars CSV, fotometrický plán, MASTER_SOURCES)."
+        )
+        out_ps: dict[str, Any] = {
+            "masterstar_fits": _ms_out_early,
+            "masterstars_csv": "",
+            "frames_used": int(info.get("frames_used", 0)),
+            "masterstar_selection": ms_selection_meta or None,
+            "masterstar_build_info": info,
+            "n_raw_dao": 0,
+            "detected_stars": 0,
+            "catalog_matched": 0,
+            "catalog_rows": 0,
+            "catalog_match_max_sep_arcsec": float(_match_sep_eff),
+            "solve": solve_meta,
+            "masterstar_platesolve_only": True,
+            "comparison_stars_csv": "",
+            "variable_targets_csv": "",
+            "photometry_plan_json": "",
+        }
+        try:
+            if draft_id is not None:
+                _db_early = VyvarDatabase(Path(_cfg_early.database_path))
+                try:
+                    _db_early.set_obs_draft_masterstar_path(int(draft_id), _ms_out_early)
+                finally:
+                    _db_early.conn.close()
+        except Exception as exc:  # noqa: BLE001
+            out_ps["masterstar_path_store_error"] = str(exc)
+        return out_ps
 
     # _cfg_ms / _dao_sigma_eff už vyššie (rovnaké DAO σ pre plate solve aj katalóg).
     _ms_fwhm = float(getattr(_cfg_ms, "sips_dao_fwhm_px", 2.5))

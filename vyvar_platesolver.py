@@ -1599,7 +1599,6 @@ def solve_wcs_with_local_gaia(
                         _bdf,
                         _blind_idx,
                         n_top=30,
-                        distance_upper_bound=0.005,
                         min_votes=3,
                         plate_scale_arcsec_per_px=_blind_plate_scale,
                         fov_deg=_blind_fov_deg,

@@ -19,8 +19,6 @@ from importer import smart_import_session, smart_scan_source
 from pipeline import AstroPipeline, scan_usb_folder
 import ui_calibration as ui_calibration
 import ui_database_explorer as ui_database_explorer
-import ui_dao_stars as ui_dao_stars
-import ui_photometry as ui_photometry
 import ui_masterstar_qa as ui_masterstar_qa
 import ui_select_stars as ui_select_stars
 import ui_suspected_lightcurves as ui_suspected_lightcurves
@@ -926,6 +924,7 @@ def render_live_view(
             "platesolve",
             "make_masterstar",
             "masterstar_catalog_only",
+            "only_masterstar_platesolve",
         }
         progress_bar = None if _hide_inline_job_status else st.progress(0, text="Starting…")
         _status_ctx: Any = (
@@ -1132,14 +1131,15 @@ def render_live_view(
                         pending=pending, ap=ap, pipeline=pipeline, progress_cb=_cb
                     )
 
-                elif pending.get("kind") == "masterstar_catalog_only":
+                elif pending.get("kind") in ("masterstar_catalog_only", "only_masterstar_platesolve"):
                     from pipeline import (
                         _equipment_saturate_adu_from_db,
                         estimate_archive_memory_profile,
                         generate_masterstar_and_catalog,
                     )
 
-                    _ms_fits_only = bool(pending.get("masterstar_fits_only"))
+                    _pls_only_job = pending.get("kind") == "only_masterstar_platesolve"
+                    _ms_fits_only = bool(pending.get("masterstar_fits_only")) and not _pls_only_job
                     _ms_skip_build = bool(pending.get("masterstar_skip_build"))
                     if _ms_fits_only:
                         log_event(
@@ -1150,6 +1150,11 @@ def render_live_view(
                         log_event(
                             "— MASTERSTAR platesolve + katalóg: vstup = existujúci platesolve/MASTERSTAR.fits "
                             f"(skip build z processed), draft_id={pending.get('draft_id')!r}."
+                        )
+                    elif _pls_only_job:
+                        log_event(
+                            "— ONLY MASTER: build (ak treba) + VYVAR plate-solve — bez katalógov a zarovnania "
+                            f"(draft_id={pending.get('draft_id')!r})."
                         )
 
                     st.session_state["vyvar_memory_profile"] = estimate_archive_memory_profile(ap)
@@ -1219,6 +1224,25 @@ def render_live_view(
                     )
                     if _md_mc is not None and not _md_mc.exists():
                         _md_mc = None
+                    _md_job = pending.get("master_dark_path")
+                    if _md_job:
+                        try:
+                            _mj = Path(str(_md_job).strip())
+                            if _mj.is_file():
+                                _md_mc = _mj
+                        except Exception:  # noqa: BLE001
+                            pass
+                    _hint_ra_j = pending.get("inject_pointing_ra_deg")
+                    _hint_de_j = pending.get("inject_pointing_dec_deg")
+                    _hint_ra: float | None = None
+                    _hint_de: float | None = None
+                    try:
+                        if _hint_ra_j is not None and math.isfinite(float(_hint_ra_j)):
+                            _hint_ra = float(_hint_ra_j)
+                        if _hint_de_j is not None and math.isfinite(float(_hint_de_j)):
+                            _hint_de = float(_hint_de_j)
+                    except (TypeError, ValueError):
+                        pass
                     outp = generate_masterstar_and_catalog(
                         archive_path=ap,
                         max_catalog_rows=int(pending.get("max_catalog_rows", 12000)),
@@ -1258,10 +1282,16 @@ def render_live_view(
                         master_dark_path=_md_mc,
                         masterstar_fits_only=bool(_ms_fits_only),
                         masterstar_skip_build=bool(pending.get("masterstar_skip_build")),
+                        masterstar_platesolve_only=bool(_pls_only_job),
+                        hint_ra_deg=_hint_ra,
+                        hint_dec_deg=_hint_de,
                     )
+                    if isinstance(outp, dict):
+                        outp = dict(outp)
+                        outp["job_kind"] = str(pending.get("kind") or "masterstar_catalog_only")
                     st.session_state["vyvar_last_job_output"] = outp
                     st.session_state["vyvar_last_job_summary"] = {
-                        "kind": "masterstar_catalog_only",
+                        "kind": str(pending.get("kind") or "masterstar_catalog_only"),
                         "masterstar_fits": str(outp.get("masterstar_fits", "")),
                         "catalog_matched": int(outp.get("catalog_matched", 0)),
                     }
@@ -1269,7 +1299,11 @@ def render_live_view(
                     if _msf:
                         st.session_state["vyvar_db_masterstar_path"] = _msf
                     st.session_state["vyvar_masterstar_qa_force_refresh"] = True
-                    if _ms_fits_only:
+                    if _pls_only_job:
+                        log_event(
+                            f"✅ ONLY MASTER hotové (len plate-solve): {_msf or outp.get('masterstar_fits')}"
+                        )
+                    elif _ms_fits_only:
                         log_event(
                             f"✅ MASTERSTAR FITS dokončené [{pending.get('masterstar_ui_action', '?')}]: {_msf or outp.get('masterstar_fits')} "
                             "(plate-solve a katalóg preskočené)."
@@ -1576,7 +1610,9 @@ def render_live_view(
     st.caption(
         "Jeden krok: detrend na `/processed/lights`, potom **VYVAR** plate solve (lokálna Gaia DR3), zarovnanie "
         "a sidecar CSV v `detrended_aligned/lights/`. **Referenčný MASTERSTAR** vyber v **FITS QA** "
-        "(najlepší snímok → uloží sa do draftu / session)."
+        "(najlepší snímok → uloží sa do draftu / session). "
+        "**ONLY MASTER** — len zostavenie `MASTERSTAR.fits` + plate-solve (bez preprocessu, bez zarovnania a CSV); "
+        "vyžaduje už existujúce `processed/lights` a rovnaký výber kandidáta ako pri plnom kroku."
     )
     try:
         from pipeline import get_auto_fov
@@ -1649,8 +1685,85 @@ def render_live_view(
         _db_top1 = str(st.session_state.get("vyvar_ms_candidate_top1_path") or "").strip()
         if _db_top1 and Path(_db_top1).is_file():
             _ms_paths = [_db_top1]
+    if not _ms_paths:
+        _did_ms = st.session_state.get("vyvar_last_draft_id")
+        _ap_ms = Path(str(archive_path_override).strip()) if archive_path_override else None
+        if _did_ms is not None and _ap_ms is not None and _ap_ms.is_dir():
+            try:
+                from pipeline import resolve_obs_file_to_processed_fits
 
-    col_ps_go = st.columns([1])[0]
+                _p_draft = pipeline.db.get_obs_draft_masterstar_path(int(_did_ms))
+                if _p_draft:
+                    _hit = resolve_obs_file_to_processed_fits(_ap_ms, str(_p_draft).strip())
+                    if _hit is not None and _hit.is_file():
+                        _ms_paths = [str(_hit.resolve())]
+                    elif Path(_p_draft).is_file():
+                        _ms_paths = [str(Path(_p_draft).resolve())]
+            except Exception:  # noqa: BLE001
+                pass
+
+    col_ps_go, col_ps_only = st.columns(2)
+
+    def _gaia_db_ok_for_masterstar() -> bool:
+        try:
+            from database import validate_gaia_db_schema
+
+            _gdb = str(getattr(cfg, "gaia_db_path", "") or "").strip()
+            ok, msg = validate_gaia_db_schema(_gdb)
+            if not ok:
+                st.error("❌ Gaia DR3 databáza nenájdená. Prosím, nastavte cestu v Settings.")
+                st.caption(f"Detail: {msg}")
+                return False
+        except Exception:
+            st.error("❌ Gaia DR3 databáza nenájdená. Prosím, nastavte cestu v Settings.")
+            return False
+        return True
+
+    def _masterstar_pointing_and_hash() -> tuple[Any, Any, bool, int | None, str | None]:
+        def _sess_float_ms(key: str) -> float:
+            try:
+                return float(st.session_state.get(key, float("nan")))
+            except (TypeError, ValueError):
+                return float("nan")
+
+        _did = st.session_state.get("vyvar_last_draft_id")
+        _ira_ui = _sess_float_ms(_ra_key)
+        _ide_ui = _sess_float_ms(_de_key)
+        from pipeline import resolve_preprocess_target_coordinates
+
+        _ira, _ide = resolve_preprocess_target_coordinates(
+            db=pipeline.db,
+            draft_id=(int(_did) if _did is not None else None),
+            ui_ra_deg=_ira_ui,
+            ui_dec_deg=_ide_ui,
+        )
+        try:
+            _coords_ok = (
+                _ira is not None
+                and _ide is not None
+                and math.isfinite(float(_ira))
+                and math.isfinite(float(_ide))
+                and not (abs(float(_ira)) < 1e-9 and abs(float(_ide)) < 1e-9)
+            )
+        except (TypeError, ValueError):
+            _coords_ok = False
+        if not _coords_ok:
+            st.info(
+                "Bez platného stredu RA/Dec (draft, UI alebo 0/0) sa do processed FITS nevpíše VYTARG; "
+                "plate-solve použije **súradnice z hlavičky** referenčného snímku alebo **blind solver**."
+            )
+        _did_int = int(_did) if _did is not None else None
+        _ph = None
+        if _did_int is not None:
+            try:
+                from pipeline import generate_observation_hash
+
+                _ph = generate_observation_hash(pipeline.db, _did_int)
+                st.session_state["vyvar_observation_processing_hash"] = _ph
+            except Exception:  # noqa: BLE001
+                _ph = None
+        return _ira, _ide, _coords_ok, _did_int, _ph
+
     with col_ps_go:
         if st.button(
             "MAKE MASTERSTAR",
@@ -1660,66 +1773,14 @@ def render_live_view(
             ap = Path(archive_path_override) if archive_path_override else None
             if ap is None:
                 st.warning("Please provide an archive path (or Import to Archive first).")
+            elif not _gaia_db_ok_for_masterstar():
+                pass
             else:
-                try:
-                    from database import validate_gaia_db_schema
-
-                    _gdb = str(getattr(cfg, "gaia_db_path", "") or "").strip()
-                    ok, msg = validate_gaia_db_schema(_gdb)
-                    if not ok:
-                        st.error("❌ Gaia DR3 databáza nenájdená. Prosím, nastavte cestu v Settings.")
-                        st.caption(f"Detail: {msg}")
-                        return
-                except Exception:
-                    st.error("❌ Gaia DR3 databáza nenájdená. Prosím, nastavte cestu v Settings.")
-                    return
-
-                def _sess_float_ms(key: str) -> float:
-                    try:
-                        return float(st.session_state.get(key, float("nan")))
-                    except (TypeError, ValueError):
-                        return float("nan")
-
-                _did = st.session_state.get("vyvar_last_draft_id")
-                _ira_ui = _sess_float_ms(_ra_key)
-                _ide_ui = _sess_float_ms(_de_key)
-                from pipeline import resolve_preprocess_target_coordinates
-
-                _ira, _ide = resolve_preprocess_target_coordinates(
-                    db=pipeline.db,
-                    draft_id=(int(_did) if _did is not None else None),
-                    ui_ra_deg=_ira_ui,
-                    ui_dec_deg=_ide_ui,
-                )
-                try:
-                    _coords_ok = (
-                        _ira is not None
-                        and _ide is not None
-                        and math.isfinite(float(_ira))
-                        and math.isfinite(float(_ide))
-                        and not (abs(float(_ira)) < 1e-9 and abs(float(_ide)) < 1e-9)
-                    )
-                except (TypeError, ValueError):
-                    _coords_ok = False
-                if not _coords_ok:
-                    st.info(
-                        "Bez platného stredu RA/Dec (draft, UI alebo 0/0) sa do processed FITS nevpíše VYTARG; "
-                        "plate-solve použije **súradnice z hlavičky** referenčného snímku alebo **blind solver**."
-                    )
+                _ira, _ide, _coords_ok, _did_int, _ph = _masterstar_pointing_and_hash()
                 _rfw_ui = float(st.session_state.get("fwhm_threshold", 0.0))
                 _rfw = float(_rfw_ui) if _rfw_ui > 0.0 else 0.0
                 if _rfw_ui > 0.0:
                     log_event(f"DEBUG: MAKE MASTERSTAR FWHM limit (strict): UI={_rfw_ui:.3f} px")
-                _did_int = int(_did) if _did is not None else None
-                _ph = None
-                if _did_int is not None:
-                    try:
-                        from pipeline import generate_observation_hash
-
-                        _ph = generate_observation_hash(pipeline.db, _did_int)
-                        st.session_state["vyvar_observation_processing_hash"] = _ph
-                    except Exception:  # noqa: BLE001
-                        _ph = None
 
                 _j_ms: dict[str, Any] = {
                     "kind": "make_masterstar",
@@ -1760,6 +1821,59 @@ def render_live_view(
                     _j_ms["processing_hash"] = _ph
                     _j_ms["overwrite_qc_processing"] = True
                 st.session_state["vyvar_pending_job"] = _j_ms
+                st.rerun()
+
+    with col_ps_only:
+        if st.button(
+            "ONLY MASTER",
+            type="secondary",
+            help="Bez preprocessu a zarovnania: z ``/processed/lights`` zostaví ``platesolve/MASTERSTAR.fits``, "
+            "spustí výhradne VYVAR plate-solve (Gaia DR3) a skončí — bez CSV katalógu a per-frame krokov. Na testy.",
+        ):
+            ap = Path(archive_path_override) if archive_path_override else None
+            if ap is None:
+                st.warning("Please provide an archive path (or Import to Archive first).")
+            elif not _gaia_db_ok_for_masterstar():
+                pass
+            else:
+                _ira, _ide, _coords_ok, _did_int, _ph = _masterstar_pointing_and_hash()
+                _plan_om = st.session_state.get("vyvar_last_import_plan")
+                _md_om = (
+                    Path(_plan_om.dark_master)
+                    if _plan_om and getattr(_plan_om, "dark_master", None)
+                    else None
+                )
+                if _md_om is not None and not _md_om.exists():
+                    _md_om = None
+                _j_om: dict[str, Any] = {
+                    "kind": "only_masterstar_platesolve",
+                    "label": "ONLY MASTER (plate-solve)…",
+                    "archive_path": str(ap),
+                    "astrometry_api_key": "",
+                    "platesolve_backend": "vyvar",
+                    "plate_solve_fov_deg": float(plate_fov_ui),
+                    "catalog_match_max_sep_arcsec": float(cat_match_arc),
+                    "saturate_level_fraction": float(sat_level),
+                    "max_catalog_rows": int(max_cat_rows),
+                    "n_comparison_stars": 150,
+                    "faintest_mag_limit": faintest_mag_limit_auto,
+                    "dao_threshold_sigma": float(_dao_sigma_default),
+                    "dao_fwhm_px": float(_dao_fwhm_default),
+                    "id_equipment": int(platesolve_equipment_id),
+                    "draft_id": st.session_state.get("vyvar_last_draft_id"),
+                    "catalog_local_gaia_only": True,
+                    "masterstar_candidate_paths": (_ms_paths if _build_ms else []),
+                    "masterstar_selection_pct": float(_DEFAULT_MASTERSTAR_SELECTION_PCT),
+                    "masterstar_fits_only": False,
+                    "masterstar_skip_build": False,
+                    "inject_pointing_ra_deg": (float(_ira) if _coords_ok else None),
+                    "inject_pointing_dec_deg": (float(_ide) if _coords_ok else None),
+                }
+                if _md_om is not None:
+                    _j_om["master_dark_path"] = str(_md_om)
+                if _did_int is not None and _ph:
+                    _j_om["processing_hash"] = _ph
+                st.session_state["vyvar_pending_job"] = _j_om
                 st.rerun()
 
 
@@ -1824,9 +1938,6 @@ def main() -> None:
         options=[
             "Pipeline",
             "Calibration Library",
-            "DAO-STARS",
-            "Photometry",
-            "Photometry Quality",
             "Database Explorer",
             "Settings",
         ],
@@ -1838,7 +1949,8 @@ def main() -> None:
         st.caption(
             "Zadaj absolútnu cestu k priečinku ``draft_XXXXXX`` (musí obsahovať ``platesolve/``) "
             "alebo len číslo draftu z archívu. Použije sa v záložkách Select Stars, Aperture Photometry "
-            "a LightCurves — Suspected. Prázdne pole + „Načítať draft“ zruší override."
+            "a LightCurves — Suspected. Prázdne pole + „Načítať draft“ zruší override. "
+            "**DAO-STARS**, **Fotometria** a **Fotometria — diagnostika** sú v **Nastavenia → Nástroje**."
         )
         dcol1, dcol2, dcol3 = st.columns([4, 1, 1])
         with dcol1:
@@ -1934,228 +2046,15 @@ def main() -> None:
             flat_validity_days=int(cfg.masterflat_validity_days),
             db=pipeline.db,
         )
-    elif page == "DAO-STARS":
-        ui_dao_stars.render_dao_stars_dashboard(cfg)
-    elif page == "Photometry":
-        ui_photometry.render_photometry_dashboard(cfg)
-    elif page == "Photometry Quality":
-        from ui_photometry_quality import render_photometry_quality_diagnostic
-
-        render_photometry_quality_diagnostic(
-            pipeline=pipeline,
-            draft_id=st.session_state.get("vyvar_last_draft_id"),
-        )
     elif page == "Database Explorer":
         ui_database_explorer.render_database_explorer(pipeline=pipeline)
-    else:
-        st.subheader("Settings")
-        st.caption(
-            "Hodnoty sa ukladajú do `config.json`. Paralelizmus (QC, preprocess, alignment, per-frame katalóg) je "
-            "jednotný — odvodený z CPU a RAM; `VYVAR_PARALLEL_WORKERS` prepíše predvolený počet workerov."
-        )
+    elif page == "Settings":
+        import ui_settings
 
-        st.markdown("### Cesty a knižnica")
-        archive_root = st.text_input("archive_root", value=str(cfg.archive_root))
-        calib_root = st.text_input("calibration_library_root", value=str(cfg.calibration_library_root))
-        db_path = st.text_input("database_path", value=str(cfg.database_path))
-
-        st.markdown("---")
-        st.subheader("🌌 GAIA DR3 (VYVAR Local Catalog)")
-        gaia_db_path = st.text_input(
-            "GAIA_DB_PATH (SQLite .db)",
-            value=str(getattr(cfg, "gaia_db_path", "") or ""),
-        )
-        st.session_state["GAIA_DB_PATH"] = str(gaia_db_path).strip()
-        col_g1, col_g2 = st.columns([1, 3])
-        with col_g1:
-            if st.button("🔍 Test Connection", key="vyvar_test_gaia_db"):
-                try:
-                    import sqlite3
-                    from pathlib import Path as _P
-
-                    p = _P(str(gaia_db_path).strip())
-                    if not p.is_file() or p.suffix.lower() != ".db":
-                        raise FileNotFoundError("GAIA_DB_PATH musí byť existujúci .db súbor.")
-                    con = sqlite3.connect(str(p))
-                    try:
-                        cur = con.execute(
-                            "SELECT name FROM sqlite_master WHERE type='table' AND name='gaia_dr3' LIMIT 1;"
-                        )
-                        if cur.fetchone() is None:
-                            raise ValueError("V DB chýba tabuľka `gaia_dr3`.")
-                    finally:
-                        con.close()
-                    st.success("OK: DB existuje a tabuľka `gaia_dr3` je dostupná.")
-                except Exception as exc:  # noqa: BLE001
-                    st.error(str(exc))
-        with col_g2:
-            st.caption("Očakáva sa SQLite DB s tabuľkou `gaia_dr3` a indexmi `idx_ra`, `idx_dec`.")
-
-        blind_index_path = st.text_input(
-            "BLIND_INDEX_PATH (.pkl)",
-            value=str(getattr(cfg, "blind_index_path", "") or ""),
-            key="vyvar_blind_index_path",
-        )
-        st.caption("Cesta k súboru gaia_triangles.pkl (generovaný skriptom build_gaia_blind_index.py)")
-
-        st.markdown("---")
-        st.subheader("VSX lokálna databáza")
-        vsx_db_path = st.text_input(
-            "VSX_LOCAL_DB_PATH (SQLite .db, tabuľka `vsx_data`)",
-            value=str(getattr(cfg, "vsx_local_db_path", "") or ""),
-            key="vyvar_vsx_local_db_path",
-        )
-        col_v1, col_v2 = st.columns([1, 3])
-        with col_v1:
-            if st.button("🔍 Test Connection", key="vyvar_test_vsx_local_db"):
-                try:
-                    from database import validate_vsx_local_db_schema
-
-                    ok, code = validate_vsx_local_db_schema(str(vsx_db_path).strip())
-                    if not ok:
-                        _msgs = {
-                            "missing_file": "Súbor neexistuje alebo cesta je prázdna.",
-                            "missing_table_vsx_data": "V DB chýba tabuľka `vsx_data`.",
-                        }
-                        if str(code).startswith("missing_columns:"):
-                            st.error(f"Chýbajú stĺpce: {code.split(':', 1)[1]} (potrebné: oid, ra_deg, dec_deg).")
-                        else:
-                            st.error(_msgs.get(str(code), str(code)))
-                    else:
-                        st.success("OK: súbor existuje, tabuľka `vsx_data` má požadované stĺpce.")
-                except Exception as exc:  # noqa: BLE001
-                    st.error(str(exc))
-        with col_v2:
-            st.caption(
-                "SQLite z importu VizieR B/vsx/vsx (stĺpce oid, name, ra_deg, dec_deg, var_type, mag_max, mag_min). "
-                "Použitie v pipeline sa riadi touto cestou."
-            )
-
-        vsx_mag_limit_save = st.number_input(
-            "Mag limit pre Variable Targets export (VSX)",
-            min_value=0.0,
-            max_value=21.0,
-            value=float(getattr(cfg, "vsx_variable_targets_mag_limit", 13.0) or 13.0),
-            step=0.5,
-            help="Zachová VSX riadky s mag_max ≤ limit (alebo bez mag_max v DB). Hodnota 0 = bez mag. rezu (všetky v kuželi).",
-        )
-
-        st.markdown("---")
-        st.markdown("### Kalibrácia")
-        new_dark = st.slider(
-            "masterdark_validity_days",
-            min_value=1,
-            max_value=3650,
-            value=int(cfg.masterdark_validity_days),
-        )
-        new_flat = st.slider(
-            "masterflat_validity_days",
-            min_value=1,
-            max_value=3650,
-            value=int(cfg.masterflat_validity_days),
-        )
-        _cln_none = st.checkbox(
-            "calibration_library_native_binning: čítať z každého master FITS (JSON null)",
-            value=cfg.calibration_library_native_binning is None,
-            key="vyvar_settings_cl_bin_null",
-        )
-        new_cl_bin = st.number_input(
-            "calibration_library_native_binning (1–16, ak nie je „z FITS“)",
-            min_value=1,
-            max_value=16,
-            value=int(cfg.calibration_library_native_binning or 1),
-            disabled=bool(_cln_none),
-            key="vyvar_settings_cl_bin",
-        )
-
-        st.markdown("---")
-        st.markdown("### QC")
-        qc_after_cal = st.checkbox(
-            "qc_after_calibrate_enabled",
-            value=bool(cfg.qc_after_calibrate_enabled),
-            help="Po kalibrácii: QC metriky (HFR, hviezdy, pozadie) na každom flatovanom light snímku.",
-        )
-        st.caption(
-            "Prah ``qc_max_background_rms`` je pokročilý — ostáva len v ``config.json`` (väčšinou ``null``); tu sa nenastavuje."
-        )
-        qc_hfr = st.slider("qc_max_hfr", min_value=0.5, max_value=20.0, value=float(cfg.qc_max_hfr), step=0.1)
-        qc_stars = st.slider("qc_min_stars", min_value=0, max_value=500, value=int(cfg.qc_min_stars), step=1)
-        cosmic_on = st.checkbox("cosmic_clean_enabled", value=bool(cfg.cosmic_clean_enabled))
-        cosmic_sig = st.slider("cosmic_sigclip", min_value=2.0, max_value=12.0, value=float(cfg.cosmic_sigclip), step=0.1)
-        cosmic_obj = st.slider("cosmic_objlim", min_value=1.0, max_value=20.0, value=float(cfg.cosmic_objlim), step=0.25)
-
-        st.markdown("---")
-        st.markdown("### Fotometria")
-        ap_fwhm = st.slider(
-            "aperture_fwhm_factor",
-            min_value=0.5,
-            max_value=6.0,
-            value=float(cfg.aperture_fwhm_factor),
-            step=0.1,
-        )
-        ann_in = st.slider(
-            "annulus_inner_fwhm",
-            min_value=1.0,
-            max_value=10.0,
-            value=float(cfg.annulus_inner_fwhm),
-            step=0.25,
-        )
-        ann_out = st.slider(
-            "annulus_outer_fwhm",
-            min_value=1.5,
-            max_value=12.0,
-            value=float(cfg.annulus_outer_fwhm),
-            step=0.25,
-        )
-        if ann_out <= ann_in:
-            st.warning("annulus_outer_fwhm musí byť väčší ako annulus_inner_fwhm — pri uložení sa upraví.")
-        nl_pct = st.slider(
-            "nonlinearity_peak_percentile",
-            min_value=0.0,
-            max_value=50.0,
-            value=float(cfg.nonlinearity_peak_percentile),
-            step=0.5,
-        )
-        nl_ratio = st.slider(
-            "nonlinearity_fwhm_ratio",
-            min_value=1.01,
-            max_value=3.0,
-            value=float(cfg.nonlinearity_fwhm_ratio),
-            step=0.01,
-        )
-
-        if st.button("Save Settings", type="primary"):
-            cfg.archive_root = Path(archive_root)
-            cfg.calibration_library_root = Path(calib_root)
-            cfg.database_path = Path(db_path)
-            cfg.masterdark_validity_days = int(new_dark)
-            cfg.masterflat_validity_days = int(new_flat)
-            cfg.calibration_library_native_binning = None if _cln_none else int(new_cl_bin)
-            cfg.gaia_db_path = str(gaia_db_path).strip()
-            cfg.blind_index_path = str(blind_index_path).strip()
-            cfg.vsx_local_db_path = str(vsx_db_path).strip()
-            cfg.vsx_variable_targets_mag_limit = float(vsx_mag_limit_save)
-            cfg.qc_max_hfr = float(qc_hfr)
-            cfg.qc_min_stars = int(qc_stars)
-            cfg.qc_after_calibrate_enabled = bool(qc_after_cal)
-            cfg.cosmic_clean_enabled = bool(cosmic_on)
-            cfg.cosmic_sigclip = float(cosmic_sig)
-            cfg.cosmic_objlim = float(cosmic_obj)
-            cfg.aperture_fwhm_factor = float(max(0.5, min(6.0, ap_fwhm)))
-            cfg.annulus_inner_fwhm = float(max(1.0, min(10.0, ann_in)))
-            cfg.annulus_outer_fwhm = float(max(1.5, min(12.0, ann_out)))
-            if cfg.annulus_outer_fwhm <= cfg.annulus_inner_fwhm:
-                cfg.annulus_outer_fwhm = cfg.annulus_inner_fwhm + 1.0
-            cfg.nonlinearity_peak_percentile = float(max(0.0, min(50.0, nl_pct)))
-            cfg.nonlinearity_fwhm_ratio = float(max(1.01, min(3.0, nl_ratio)))
-
-            save_config_json(cfg.project_root, cfg.to_json())
-            cfg.ensure_base_dirs()
-            st.success("Saved to config.json. Reloading UI…")
-            st.rerun()
-
-        st.caption(
-            "Plate-solve FOV, mierka z arcsec/px a per-frame match sep sa odvodzujú z **FITS + DB** (nie sú v JSON)."
+        ui_settings.render_settings_dashboard(
+            cfg,
+            pipeline,
+            draft_dir_override=_vyvar_effective_draft_dir_override(),
         )
 
     _vyvar_render_fixed_footer_into(vyvar_footer_ph)

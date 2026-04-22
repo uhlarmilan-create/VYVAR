@@ -56,7 +56,6 @@ def find_blind_hint(
     index_path: str | Path,
     *,
     n_top: int = 30,
-    distance_upper_bound: float = 0.004,
     min_votes: int = 3,
     plate_scale_arcsec_per_px: float | None = None,
     fov_deg: float | None = None,
@@ -67,7 +66,6 @@ def find_blind_hint(
         dao_stars: DataFrame so stĺpcami x, y, flux — zoradený flux desc.
         index_path: Cesta k gaia_triangles.pkl.
         n_top: Koľko najjasnejších hviezd použiť (default 30).
-        distance_upper_bound: Horná hranica v 2D hash KDTree (legacy; index hash_dim=3 ju ignoruje).
         min_votes: Minimálny počet hlasov v najlepšom klastri (default 3).
         plate_scale_arcsec_per_px: Nutné pre hash_dim=3 — L3 z px do ″ a normalizácia log L3.
         fov_deg: Priemer poľa [deg]; odfiltruje L3 väčšie ako ~0.9×FOV (v arcsekundách).
