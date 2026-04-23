@@ -2806,6 +2806,28 @@ def solve_wcs_with_local_gaia(
     _relax_ok = (float(_match_rate) >= (0.20 if _is_masterstar else 0.10)) and (int(_matched_n) >= (20 if _is_masterstar else 12))
     if _hint_is_weak and not _relax_ok:
         hint_sep_limit = float(_base_strict)
+    # MASTERSTAR-only conservative escape hatch:
+    # If the solve QA is excellent but the header hint is off (common with stale VY_TARG),
+    # widen the hint guard just enough to accept this specific solution.
+    if (
+        _is_masterstar
+        and (not _hint_is_weak)
+        and _relax_ok
+        and math.isfinite(float(_hint_sep_deg))
+        and (float(_hint_sep_deg) > float(hint_sep_limit))
+        and (float(_match_rate) >= 0.985)
+        and (int(_matched_n) >= 120)
+        and math.isfinite(float(_rms_px))
+        and (float(_rms_px) <= 1.10)
+    ):
+        _old_lim = float(hint_sep_limit)
+        _new_lim = min(1.20, max(_old_lim, float(_hint_sep_deg) + 0.06))
+        if _new_lim > _old_lim:
+            hint_sep_limit = float(_new_lim)
+            log_event(
+                f"VYVAR MASTERSTAR: hint_sep limit widened {_old_lim:.2f}→{hint_sep_limit:.2f}deg "
+                f"(excellent QA; hint_vs_solved={float(_hint_sep_deg):.3f}deg)"
+            )
     _hint_sep_bad = math.isfinite(float(_hint_sep_deg)) and float(_hint_sep_deg) > float(hint_sep_limit)
     log_event(
         f"INFO: hint_sep guard: {float(_hint_sep_deg):.3f}deg "

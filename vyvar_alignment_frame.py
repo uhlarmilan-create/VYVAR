@@ -411,7 +411,37 @@ def _alignment_compute_one_frame(
     aligned_data: np.ndarray | None = None
     aligned_method = "astroalign"
     xy_used = np.zeros((0, 2), dtype=np.float32)
+    # Keep best available detection across attempts so that non-astroalign fallbacks
+    # (phase correlation / WCS shift) still report a meaningful detected star count.
+    xy_best = np.zeros((0, 2), dtype=np.float32)
     _attempt_ok = False
+
+    def _n_unique_spread_sample(arr_in: np.ndarray, *, max_samples: int = 10_000) -> int:
+        """Count unique values on a spread sample across the whole frame.
+
+        NOTE: Using the first N finite pixels is biased toward borders (often constant due to padding),
+        which can incorrectly mark a valid aligned frame as 'constant'.
+        """
+        try:
+            a = np.asarray(arr_in, dtype=np.float32)
+            flat = a.ravel()
+            if flat.size == 0:
+                return 0
+            finite = np.isfinite(flat)
+            if not np.any(finite):
+                return 0
+            idx_all = np.flatnonzero(finite)
+            n = int(min(int(max_samples), int(idx_all.size)))
+            if n <= 0:
+                return 0
+            if idx_all.size <= n:
+                samp = flat[idx_all]
+            else:
+                take = np.linspace(0, idx_all.size - 1, num=n, dtype=np.int64)
+                samp = flat[idx_all[take]]
+            return int(len(np.unique(samp)))
+        except Exception:  # noqa: BLE001
+            return 0
 
     for i_att, att in enumerate(_attempts, start=1):
         dao_sig = float(att["dao_sigma"])
@@ -449,6 +479,9 @@ def _alignment_compute_one_frame(
                 log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami"
             )
             continue
+        # Track best detection even if transform fails / produces constant frame.
+        if len(xy) > len(xy_best):
+            xy_best = np.asarray(xy, dtype=np.float32)
 
         try:
             aligned_data = None
@@ -502,12 +535,7 @@ def _alignment_compute_one_frame(
 
             try:
                 arr_check = np.asarray(aligned_data, dtype=np.float32)
-                finite_chk = arr_check[np.isfinite(arr_check)]
-                if finite_chk.size:
-                    samp = finite_chk[: min(10_000, int(finite_chk.size))]
-                    n_unique = int(len(np.unique(samp)))
-                else:
-                    n_unique = 0
+                n_unique = _n_unique_spread_sample(arr_check, max_samples=10_000)
                 if n_unique <= 3:
                     _alignment_emit_log(
                         log_sink,
@@ -545,6 +573,64 @@ def _alignment_compute_one_frame(
 
     # Fallback: if astroalign failed and identity would be used, try a simple WCS-based shift (dx, dy)
     # computed from CRVAL mapping between frame and reference WCS. This avoids producing constant frames.
+    #
+    # Additionally, if the frame has no usable WCS (common before per-frame plate-solve),
+    # try a pure image-based translation estimate via phase correlation.
+    if not _attempt_ok or aligned_data is None:
+        try:
+            # Work on roughly zero-mean images to stabilize correlation.
+            src = np.asarray(data, dtype=np.float32)
+            ref = np.asarray(ref_data, dtype=np.float32)
+            if src.shape == ref.shape and src.size > 0:
+                src0 = src - np.nanmedian(src)
+                ref0 = ref - np.nanmedian(ref)
+                # Reduce edge influence (detrending/shift can create borders).
+                win_y = np.hanning(src0.shape[0]).astype(np.float32)
+                win_x = np.hanning(src0.shape[1]).astype(np.float32)
+                win = (win_y[:, None] * win_x[None, :]).astype(np.float32)
+                src0 = np.nan_to_num(src0, nan=0.0, posinf=0.0, neginf=0.0) * win
+                ref0 = np.nan_to_num(ref0, nan=0.0, posinf=0.0, neginf=0.0) * win
+
+                # Prefer skimage if available; fallback to a minimal FFT-based estimate.
+                shift_yx: tuple[float, float] | None = None
+                try:
+                    from skimage.registration import phase_cross_correlation  # type: ignore
+
+                    shift, _error, _phasediff = phase_cross_correlation(ref0, src0, upsample_factor=10)
+                    shift_yx = (float(shift[0]), float(shift[1]))  # (y, x)
+                except Exception:  # noqa: BLE001
+                    shift_yx = None
+
+                if shift_yx is not None:
+                    dy, dx = shift_yx
+                    naxis2, naxis1 = int(ref.shape[0]), int(ref.shape[1])
+                    if abs(dx) < naxis1 * 0.5 and abs(dy) < naxis2 * 0.5:
+                        from scipy.ndimage import shift as ndimage_shift
+
+                        cval = float(np.nanmedian(src))
+                        shifted = ndimage_shift(
+                            np.asarray(src, dtype=np.float32),
+                            shift=[dy, dx],  # (y, x) bringing src toward ref
+                            mode="nearest",
+                            cval=cval,
+                            order=1,
+                            prefilter=False,
+                        )
+                        shifted = _as_fits_float32_image(shifted)
+                        n_unique = _n_unique_spread_sample(shifted, max_samples=10_000)
+                        if n_unique > 3 and float(np.nansum(np.abs(shifted))) >= 1.0:
+                            aligned_data = shifted
+                            aligned_method = "phase_correlation"
+                            _attempt_ok = True
+                            _alignment_emit_log(
+                                log_sink,
+                                f"INFO: Phase-correlation alignment fallback: dx={dx:.1f}px dy={dy:.1f}px pre {fp.name}",
+                            )
+                    if len(xy_used) == 0 and len(xy_best) > 0:
+                        xy_used = np.asarray(xy_best, dtype=np.float32)
+        except Exception as _pe:  # noqa: BLE001
+            _alignment_emit_log(log_sink, f"WARNING: Phase-correlation fallback zlyhal: {_pe}")
+
     if (not _attempt_ok or aligned_data is None) and ref_wcs_obj is not None and _hdr_has_wcs(hdr):
         try:
             with warnings.catch_warnings():
@@ -563,15 +649,14 @@ def _alignment_compute_one_frame(
                     shifted = ndimage_shift(
                         np.asarray(data, dtype=np.float32),
                         shift=[dy, dx],  # (y, x)
-                        mode="constant",
-                        cval=0.0,
+                        mode="nearest",
+                        cval=float(np.nanmedian(data)),
                         order=1,
                         prefilter=False,
                     )
                     shifted = _as_fits_float32_image(shifted)
                     # Sanity: avoid constant/empty frames.
-                    finite_chk = shifted[np.isfinite(shifted)]
-                    n_unique = int(len(np.unique(finite_chk[: min(10_000, int(finite_chk.size))]))) if finite_chk.size else 0
+                    n_unique = _n_unique_spread_sample(shifted, max_samples=10_000)
                     if n_unique > 3 and float(np.nansum(np.abs(shifted))) >= 1.0:
                         aligned_data = shifted
                         aligned_method = "wcs_shift"
@@ -580,6 +665,8 @@ def _alignment_compute_one_frame(
                             log_sink,
                             f"INFO: WCS alignment fallback: dx={dx:.1f}px dy={dy:.1f}px pre {fp.name}",
                         )
+                        if len(xy_used) == 0 and len(xy_best) > 0:
+                            xy_used = np.asarray(xy_best, dtype=np.float32)
         except Exception as _we:  # noqa: BLE001
             _alignment_emit_log(log_sink, f"WARNING: WCS alignment fallback zlyhal: {_we}")
 

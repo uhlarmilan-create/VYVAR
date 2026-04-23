@@ -9,8 +9,10 @@ import math
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 import pandas as pd
 import streamlit as st
+from urllib.parse import quote_plus
 
 if TYPE_CHECKING:
     from config import AppConfig
@@ -23,6 +25,50 @@ from platesolve_ui_paths import default_bundle_dir
 # ---------------------------------------------------------------------------
 # Pomocné funkcie
 # ---------------------------------------------------------------------------
+
+
+@st.cache_data(show_spinner=False)
+def _cached_read_csv(path_s: str) -> pd.DataFrame:
+    return pd.read_csv(path_s, low_memory=False)
+
+
+def _airmass_column(df: pd.DataFrame) -> str | None:
+    for c in ("airmass", "air_mass", "AIRMASS", "am"):
+        if c in df.columns:
+            return c
+    return None
+
+
+def _ut_tick_labels_from_jd(jd_vals: "list[float]") -> list[str]:
+    """Format JD-like values (BJD/HJD/JD) to UT HH:MM labels."""
+    try:
+        from astropy.time import Time
+    except Exception:  # noqa: BLE001
+        # Fallback: HH:MM from fractional day (approx; ignores leap seconds).
+        out_f: list[str] = []
+        for jd in jd_vals:
+            try:
+                x = float(jd)
+                if not math.isfinite(x):
+                    out_f.append("")
+                    continue
+                # JD starts at noon; shift by +0.5 to get civil day fraction.
+                frac = (x + 0.5) % 1.0
+                mins = int(round(frac * 24.0 * 60.0)) % (24 * 60)
+                hh = mins // 60
+                mm = mins % 60
+                out_f.append(f"{hh:02d}:{mm:02d}")
+            except Exception:  # noqa: BLE001
+                out_f.append("")
+        return out_f
+    out: list[str] = []
+    for jd in jd_vals:
+        try:
+            t = Time(float(jd), format="jd", scale="tdb").utc
+            out.append(t.to_datetime().strftime("%H:%M"))
+        except Exception:  # noqa: BLE001
+            out.append("")
+    return out
 
 
 def _find_phase2a_paths(
@@ -186,6 +232,7 @@ def _render_target_detail(
     comp_df: pd.DataFrame | None = None,
     *,
     show_detrended: bool = True,
+    show_airmass: bool = False,
 ) -> None:
     """Interaktívna krivka (Plotly z CSV), field map PNG, metriky, odkazy Vizier/VSX."""
     from photometry_phase2a import _normalize_gaia_id
@@ -222,7 +269,7 @@ def _render_target_detail(
     with col_lc:
         st.markdown(f"**Svetelná krivka — {vsx_name}**")
         if lc_csv.exists():
-            lc_df = pd.read_csv(lc_csv, low_memory=False)
+            lc_df = _cached_read_csv(str(lc_csv))
             if not show_outliers and "flag" in lc_df.columns:
                 lc_df = lc_df[lc_df["flag"] == "normal"]
 
@@ -296,6 +343,73 @@ def _render_target_detail(
                             )
                         )
 
+                    # Optional AIRMASS overlay (right axis).
+                    am_col = _airmass_column(lc_df)
+                    if bool(show_airmass) and am_col is not None:
+                        am = pd.to_numeric(lc_df[am_col], errors="coerce")
+                        ok_am = am.notna() & bjd_num.notna()
+                        if bool(ok_am.any()):
+                            x_raw_am = bjd_num[ok_am].to_numpy(dtype=float)
+                            x_plot_am = x_raw_am - float(bjd_x_off) if bjd_x_off is not None else x_raw_am
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=x_plot_am,
+                                    y=am[ok_am].to_numpy(dtype=float),
+                                    mode="lines",
+                                    name="AIR MASS",
+                                    yaxis="y2",
+                                    line=dict(color="rgba(56,189,248,0.85)", width=2),
+                                    hovertemplate="AIRMASS=%{y:.3f}<extra></extra>",
+                                )
+                            )
+
+                    # Secondary X axis on top: UT (HH:MM) labels.
+                    # Tick *positions* must be in the same units as the plotted x (BJD offset),
+                    # but labels should come from JD when available (closest to "UT time").
+                    x_ticks = []
+                    ut_text = []
+                    try:
+                        bjd_arr = pd.to_numeric(lc_df.get("bjd"), errors="coerce").to_numpy(dtype=float)
+                        jd_arr = (
+                            pd.to_numeric(lc_df.get("jd"), errors="coerce").to_numpy(dtype=float)
+                            if "jd" in lc_df.columns
+                            else None
+                        )
+                        hjd_arr = (
+                            pd.to_numeric(lc_df.get("hjd"), errors="coerce").to_numpy(dtype=float)
+                            if "hjd" in lc_df.columns
+                            else None
+                        )
+                        ok = np.isfinite(bjd_arr)
+                        if int(np.count_nonzero(ok)) >= 2:
+                            bjd_ok = bjd_arr[ok]
+                            # Evenly spaced indices over the *sorted by time* array.
+                            order = np.argsort(bjd_ok)
+                            bjd_ok = bjd_ok[order]
+                            n_ticks = 6
+                            idx = np.linspace(0, bjd_ok.size - 1, num=n_ticks, dtype=int).tolist()
+                            bjd_ticks = [float(bjd_ok[i]) for i in idx]
+                            x_ticks = [
+                                (bt - float(bjd_x_off)) if bjd_x_off is not None else bt for bt in bjd_ticks
+                            ]
+
+                            # Build UT labels from JD at nearest BJD positions.
+                            if jd_arr is not None and int(np.count_nonzero(np.isfinite(jd_arr))) >= 2:
+                                # Map back to original row indices for label pick.
+                                row_idx_ok = np.flatnonzero(ok)[order]
+                                pick_rows = [int(row_idx_ok[i]) for i in idx]
+                                jd_ticks_for_label = [float(jd_arr[r]) for r in pick_rows]
+                                ut_text = _ut_tick_labels_from_jd(jd_ticks_for_label)
+                            elif hjd_arr is not None and int(np.count_nonzero(np.isfinite(hjd_arr))) >= 2:
+                                row_idx_ok = np.flatnonzero(ok)[order]
+                                pick_rows = [int(row_idx_ok[i]) for i in idx]
+                                hjd_ticks_for_label = [float(hjd_arr[r]) for r in pick_rows]
+                                ut_text = _ut_tick_labels_from_jd(hjd_ticks_for_label)
+                            else:
+                                ut_text = _ut_tick_labels_from_jd(bjd_ticks)
+                    except Exception:  # noqa: BLE001
+                        x_ticks, ut_text = [], []
+
                     _axis_title = dict(font=dict(color="#000000", size=13))
                     fig.update_layout(
                         paper_bgcolor="#f1f5f9",
@@ -308,13 +422,35 @@ def _render_target_detail(
                             gridcolor="#cbd5e1",
                             zerolinecolor="#94a3b8",
                         ),
+                        yaxis2=dict(
+                            title=dict(text="airmass", **_axis_title),
+                            tickfont=dict(color="#000000", size=12),
+                            overlaying="y",
+                            side="right",
+                            showgrid=False,
+                        ),
                         xaxis=dict(
                             title=dict(text=jd_axis_title("BJD (TDB)", bjd_x_off), **_axis_title),
                             tickfont=dict(color="#000000", size=12),
                             gridcolor="#e2e8f0",
                         ),
+                        xaxis2=dict(
+                            overlaying="x",
+                            side="top",
+                            anchor="y",
+                            position=1.0,
+                            title=dict(text="UT (HH:MM)", **_axis_title),
+                            tickfont=dict(color="#000000", size=12),
+                            showticklabels=True,
+                            ticks="outside",
+                            tickmode="array",
+                            tickvals=x_ticks,
+                            ticktext=ut_text,
+                            showgrid=False,
+                            automargin=True,
+                        ),
                         height=350,
-                        margin=dict(l=40, r=20, t=36, b=40),
+                        margin=dict(l=40, r=50, t=70, b=40),
                         legend=dict(
                             orientation="h",
                             y=1.12,
@@ -366,10 +502,21 @@ def _render_target_detail(
         f"https://vizier.cds.unistra.fr/viz-bin/VizieR?"
         f"&-c={ra_target:.6f}{dec_target:+.6f}&-c.rs=5"
     )
-    vsx_url = (
-        f"https://www.aavso.org/vsx/index.php?view=search.top"
-        f"&RA={ra_target:.5f}&Dec={dec_target:.5f}&radiusUnit=deg&radius=0.01"
-    )
+    vsx_url = ""
+    try:
+        nm = str(vsx_name or "").strip()
+    except Exception:  # noqa: BLE001
+        nm = ""
+    if nm and nm != catalog_id:
+        # Prefer name search (more user-friendly than coordinate form).
+        # VSX supports HTTP GET queries via view=results.get with ident=<name>.
+        # Spec: https://www.aavso.org/direct-web-query-vsxvsp
+        vsx_url = f"https://www.aavso.org/vsx/index.php?view=results.get&ident={quote_plus(nm)}"
+    else:
+        vsx_url = (
+            f"https://www.aavso.org/vsx/index.php?view=results.get&coords="
+            f"{quote_plus(f'{ra_target:.5f} {dec_target:+.5f}')}&format=d&size=0.01"
+        )
     st.markdown(
         f"**{vsx_name}** &nbsp; "
         f"[Vizier]({vizier_url}) &nbsp; "
@@ -671,12 +818,17 @@ def render_aperture_photometry(
     except Exception:
         catalog_id = ""
 
-    col1, col2 = st.columns([1, 3])
+    col1, col2, col3 = st.columns([1, 2, 2])
     with col1:
         show_detrended = st.toggle(
             "Airmass detrend",
             value=True,
             key="toggle_am_detrend",
+        )
+        show_airmass = st.toggle(
+            "Zobraziť airmass v grafe",
+            value=True,
+            key="toggle_show_airmass",
         )
     with col2:
         show_outliers = st.toggle(
@@ -684,6 +836,22 @@ def render_aperture_photometry(
             value=True,
             key="phase2a_show_outliers",
         )
+    with col3:
+        preload_all = st.toggle(
+            "Načítať všetky krivky do pamäte",
+            value=False,
+            key="phase2a_preload_all_curves",
+        )
+
+    if preload_all:
+        lc_dir = output_dir / "lightcurves"
+        if lc_dir.is_dir():
+            with st.spinner("Načítavam lightcurves do pamäte…"):
+                try:
+                    for p in sorted(lc_dir.glob("lightcurve_*.csv")):
+                        _ = _cached_read_csv(str(p))
+                except Exception:  # noqa: BLE001
+                    pass
 
     show_all_filters = st.checkbox(
         "Zobraziť všetky filtre v jednom grafe",
@@ -762,6 +930,7 @@ def render_aperture_photometry(
                 show_outliers,
                 comp_df=comp_df,
                 show_detrended=show_detrended,
+                show_airmass=show_airmass,
             )
     else:
         _render_target_detail(
@@ -770,6 +939,7 @@ def render_aperture_photometry(
             show_outliers,
             comp_df=comp_df,
             show_detrended=show_detrended,
+            show_airmass=show_airmass,
         )
 
     st.divider()

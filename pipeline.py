@@ -431,21 +431,36 @@ def _archive_preprocess_lights_root(ap: Path | str) -> Path:
 
 
 def resolve_masterstar_input_root(archive_path: Path | str, setup_name: str | None = None) -> Path:
-    """Pick MASTERSTAR input root under ``processed/lights[/setup_name]`` with robust fallback."""
+    """Pick MASTERSTAR input root under ``processed/lights[/setup_name]`` with robust fallback.
+
+    If ``processed/lights`` does not exist yet (e.g. right after calibration / during QA preview),
+    fall back to ``calibrated/lights`` so UI can still map/preview frames without forcing a preprocess run.
+    """
     ap = Path(archive_path).expanduser()
-    base = ap / "processed" / "lights"
-    if setup_name:
-        cand = base / str(setup_name).strip()
-        if cand.is_dir() and _iter_fits_recursive(cand):
-            return cand
-    if base.is_dir():
-        subdirs = sorted([d for d in base.iterdir() if d.is_dir()], key=lambda p: p.name.casefold())
-        for sd in subdirs:
-            if _iter_fits_recursive(sd):
-                return sd
-        if _iter_fits_recursive(base):
-            return base
-    return base
+    processed = ap / "processed" / "lights"
+    calibrated = ap / "calibrated" / "lights"
+
+    def _pick_under(base: Path) -> Path | None:
+        if setup_name:
+            cand = base / str(setup_name).strip()
+            if cand.is_dir() and _iter_fits_recursive(cand):
+                return cand
+        if base.is_dir():
+            subdirs = sorted([d for d in base.iterdir() if d.is_dir()], key=lambda p: p.name.casefold())
+            for sd in subdirs:
+                if _iter_fits_recursive(sd):
+                    return sd
+            if _iter_fits_recursive(base):
+                return base
+        return None
+
+    hit = _pick_under(processed)
+    if hit is not None:
+        return hit
+    hit = _pick_under(calibrated)
+    if hit is not None:
+        return hit
+    return processed
 
 
 def _inspection_jd_from_header(hdr: fits.Header) -> float | None:
@@ -5177,7 +5192,7 @@ def detect_stars_match_master_reference(
         "n_matched": 0,
         "n_matched_before_mag_limit": 0,
         "catalog_rows": int(len(master_df)),
-        "catalog_match_mode": ("master_reference_pixel" if match_mode == "pixel" else "master_reference_sky"),
+        "catalog_match_mode": ("master_reference_pixel" if match_mode.startswith("pixel") else "master_reference_sky"),
         "n_likely_saturated": 0,
         "n_saturated_from_peak": 0,
         "n_saturated_plateau": 0,
@@ -5218,50 +5233,98 @@ def detect_stars_match_master_reference(
     peak_dao = np.asarray(tbl["peak"], dtype=np.float64) if "peak" in tbl.colnames else np.full(n, np.nan)
 
     match_thr = float(match_sep_arcsec)
+
+    def _pixel_nn_match(*, dist_thr_px: float) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
+        """Pixel-space NN match against MASTERSTAR x/y.
+
+        Returns: (icomp, sep_arr, oix)
+        - icomp: indices into the *filtered* master_xy array (as from KDTree query)
+        - sep_arr: distance in px (NaN when unmatched)
+        - oix: mapping from filtered master_xy indices back to m_valid row indices
+        """
+        ic: np.ndarray
+        sep: np.ndarray
+        ox: np.ndarray | None
+        if "x" not in m_valid.columns or "y" not in m_valid.columns:
+            ic = np.zeros(n, dtype=np.int64)
+            sep = np.full(n, np.nan, dtype=np.float64)
+            ox = None
+            return ic, sep, ox
+        try:
+            from scipy.spatial import cKDTree  # type: ignore
+
+            mx = pd.to_numeric(m_valid["x"], errors="coerce").to_numpy(dtype=np.float64)
+            my = pd.to_numeric(m_valid["y"], errors="coerce").to_numpy(dtype=np.float64)
+            okxy = np.isfinite(mx) & np.isfinite(my)
+            mx2 = mx[okxy]
+            my2 = my[okxy]
+            ox = np.nonzero(okxy)[0].astype(np.int64)
+            if mx2.size == 0:
+                ic = np.zeros(n, dtype=np.int64)
+                sep = np.full(n, np.nan, dtype=np.float64)
+                return ic, sep, ox
+            master_xy = np.column_stack([mx2, my2])
+            det_xy = np.column_stack([np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)])
+            tree = cKDTree(master_xy)
+            dist_px, idx = tree.query(det_xy, distance_upper_bound=float(dist_thr_px))
+            ic = np.asarray(idx, dtype=np.int64)
+            sep = np.asarray(dist_px, dtype=np.float64)  # px
+            sep[~np.isfinite(sep)] = np.nan
+            return ic, sep, ox
+        except Exception:  # noqa: BLE001
+            ic = np.zeros(n, dtype=np.int64)
+            sep = np.full(n, np.nan, dtype=np.float64)
+            ox = None
+            return ic, sep, ox
+
     icomp: np.ndarray | None = None
     sep_arcsec_arr: np.ndarray
     oix: np.ndarray | None = None
     ra_deg: np.ndarray
     dec_deg: np.ndarray
+
+    # Robust strategy:
+    # - If celestial WCS exists, try sky-match first (arcsec threshold).
+    # - If sky-match looks suspiciously bad (e.g. WCS offset), fall back to pixel match.
+    # - If no WCS, use pixel match directly.
     if getattr(wcs_obj, "has_celestial", False):
         ra_deg, dec_deg = _all_pix2world_icrs_deg(wcs_obj, x, y)
         det_coords = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
-        idx, sep2d, _ = det_coords.match_to_catalog_sky(master_coords)
-        sep_arcsec_arr = np.asarray(sep2d.to_value(u.arcsec), dtype=np.float64)
-        icomp = np.asarray(idx, dtype=np.int64)
-        oix = None
-        match_mode = "sky"
+        idx_sky, sep2d, _ = det_coords.match_to_catalog_sky(master_coords)
+        sep_sky = np.asarray(sep2d.to_value(u.arcsec), dtype=np.float64)
+        ic_sky = np.asarray(idx_sky, dtype=np.int64)
+
+        # Heuristic: if typical nearest-neighbor sep is far above the threshold,
+        # the WCS is likely offset (e.g. wrong reference grid / flip / stale solve).
+        med_sep = float(np.nanmedian(sep_sky)) if np.isfinite(np.nanmedian(sep_sky)) else float("inf")
+        if (not np.isfinite(med_sep)) or (med_sep > max(30.0, match_thr * 3.0)):
+            ic_px, sep_px, oix_px = _pixel_nn_match(dist_thr_px=float(6.0))
+            # Prefer pixel match if it yields any finite distances.
+            if int(np.count_nonzero(np.isfinite(sep_px))) > 0:
+                icomp = ic_px
+                sep_arcsec_arr = sep_px  # px (kept numeric for mask)
+                oix = oix_px
+                match_mode = "pixel_fallback_bad_wcs"
+                ra_deg = np.full(n, np.nan, dtype=np.float64)
+                dec_deg = np.full(n, np.nan, dtype=np.float64)
+            else:
+                icomp = ic_sky
+                sep_arcsec_arr = sep_sky
+                oix = None
+                match_mode = "sky"
+        else:
+            icomp = ic_sky
+            sep_arcsec_arr = sep_sky
+            oix = None
+            match_mode = "sky"
     else:
-        # Fallback for frames without WCS: pixel NN match with a loose threshold (15 px).
         match_mode = "pixel_fallback_no_wcs"
         ra_deg = np.full(n, np.nan, dtype=np.float64)
         dec_deg = np.full(n, np.nan, dtype=np.float64)
-        if "x" in m_valid.columns and "y" in m_valid.columns:
-            try:
-                from scipy.spatial import cKDTree  # type: ignore
-
-                mx = pd.to_numeric(m_valid["x"], errors="coerce").to_numpy(dtype=np.float64)
-                my = pd.to_numeric(m_valid["y"], errors="coerce").to_numpy(dtype=np.float64)
-                okxy = np.isfinite(mx) & np.isfinite(my)
-                mx = mx[okxy]
-                my = my[okxy]
-                # Keep a parallel index map into m_valid
-                oix = np.nonzero(okxy)[0].astype(np.int64)
-                master_xy = np.column_stack([mx, my])
-                det_xy = np.column_stack([np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)])
-                tree = cKDTree(master_xy)
-                dist_px, idx = tree.query(det_xy, distance_upper_bound=float(15.0))
-                icomp = np.asarray(idx, dtype=np.int64)
-                sep_arcsec_arr = np.asarray(dist_px, dtype=np.float64)  # pixels (no WCS); keep numeric for mask
-                sep_arcsec_arr[~np.isfinite(sep_arcsec_arr)] = np.nan
-            except Exception:  # noqa: BLE001
-                icomp = np.zeros(n, dtype=np.int64)
-                sep_arcsec_arr = np.full(n, np.nan, dtype=np.float64)
-                oix = None
-        else:
-            icomp = np.zeros(n, dtype=np.int64)
-            sep_arcsec_arr = np.full(n, np.nan, dtype=np.float64)
-            oix = None
+        ic_px, sep_px, oix_px = _pixel_nn_match(dist_thr_px=float(15.0))
+        icomp = ic_px
+        sep_arcsec_arr = sep_px  # px (kept numeric for mask)
+        oix = oix_px
 
     pmax_arr = _box_peaks_at_centroids(arr, x, y)
     _sat_block = _vectorized_star_saturation_columns(
@@ -5279,11 +5342,12 @@ def detect_stars_match_master_reference(
     det_str = np.array([f"DET_{i:04d}" for i in idx_det], dtype=object)
     finite_sep = np.isfinite(sep_arcsec_arr)
     icomp_a = icomp if icomp is not None else np.zeros(n, dtype=np.int64)
-    if match_mode == "pixel_fallback_no_wcs" and oix is not None:
+    if match_mode in ("pixel_fallback_no_wcs", "pixel_fallback_bad_wcs") and oix is not None:
         ok_ix = (icomp_a >= 0) & (icomp_a < int(len(oix)))
         cat_row = np.full(n, -1, dtype=np.int64)
         cat_row[ok_ix] = oix[icomp_a[ok_ix]]
-        matched = finite_sep & ok_ix & (sep_arcsec_arr <= float(15.0)) & (cat_row >= 0)
+        thr_px = float(15.0) if match_mode == "pixel_fallback_no_wcs" else float(6.0)
+        matched = finite_sep & ok_ix & (sep_arcsec_arr <= thr_px) & (cat_row >= 0)
         # For output semantics, keep match_sep_arcsec as NaN when unmatched (already handled).
     else:
         cat_row = np.clip(icomp_a.astype(np.int64, copy=False), 0, max(nm_m - 1, 0))
@@ -5440,7 +5504,7 @@ def detect_stars_match_master_reference(
         "n_matched_before_mag_limit": n_matched_before_mag,
         "n_matched": n_matched_final,
         "catalog_rows": int(len(master_df)),
-        "catalog_match_mode": ("master_reference_pixel" if match_mode == "pixel" else "master_reference_sky"),
+        "catalog_match_mode": ("master_reference_pixel" if match_mode.startswith("pixel") else "master_reference_sky"),
         "n_likely_saturated": n_sat,
         "n_saturated_from_peak": n_sat_pk,
         "n_saturated_plateau": n_sat_pl,
@@ -9975,37 +10039,59 @@ def _astrometry_align_impl_body(
         )
         _masterstar_built = True
 
+        # Prefer MASTERSTAR as the canonical alignment reference when available.
+        # This guarantees that:
+        # - the output pixel grid matches MASTERSTAR (no WCS/data grid mismatch),
+        # - per-frame matching against masterstars_full_match.csv works reliably.
+        try:
+            _ms_fp = _cat_info_root.get("masterstar_fits") if isinstance(_cat_info_root, dict) else None
+            if _ms_fp:
+                _ms_path = Path(str(_ms_fp)).resolve()
+                if _ms_path.is_file():
+                    with fits.open(_ms_path, memmap=False) as hdul:
+                        ref_hdr = hdul[0].header.copy()
+                        ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+                    ref_fp = _ms_path
+                    has_wcs = _has_valid_wcs(ref_hdr)
+                    log_event(f"INFO: Alignment reference set to MASTERSTAR: {ref_fp.name}")
+        except Exception as _ms_ref_exc:  # noqa: BLE001
+            try:
+                log_event(f"DEBUG: Using MASTERSTAR as alignment reference failed: {_ms_ref_exc}")
+            except Exception:  # noqa: BLE001
+                pass
+
     _prog(
         f"detrended_aligned/lights: pripravujem zarovnanie ({n_files} snímok z {detrended_root.name}/…)…"
     )
 
-    if not has_wcs:
-        _prog("Plate solve referencie (môže chvíľu trvať)…")
-        # If MASTERSTAR was built for this setup and has a valid WCS, reuse it for the
-        # reference frame instead of re-solving (per-frame solving can be less stable on some filters).
+    # If MASTERSTAR was built for this setup and has a valid WCS, prefer it as the canonical
+    # WCS for detrended_aligned products. Some frames already carry a WCS that can be offset by
+    # arcminutes from MASTERSTAR; using it would break per-frame Gaia matching (master_reference_sky).
+    if build_masterstar_and_catalogs and isinstance(_cat_info_root, dict):
         try:
-            if build_masterstar_and_catalogs and isinstance(_cat_info_root, dict):
-                _ms_fp = _cat_info_root.get("masterstar_fits")
-                if _ms_fp:
-                    _ms_path = Path(str(_ms_fp)).resolve()
-                    if _ms_path.is_file():
-                        with fits.open(_ms_path, memmap=False) as _ms_hdul:
-                            _ms_hdr = _ms_hdul[0].header.copy()
-                        if _has_valid_wcs(_ms_hdr):
-                            _apply_wcs_header_to_fits(ref_fp, _ms_hdr)
-                            with fits.open(ref_fp, memmap=False) as hdul:
-                                ref_hdr = hdul[0].header.copy()
-                                ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
-                            has_wcs = True
-                            log_event(
-                                f"INFO: Reference WCS prevzaté z MASTERSTAR ({_ms_path.name}) — skip plate-solve referencie."
-                            )
+            _ms_fp = _cat_info_root.get("masterstar_fits")
+            if _ms_fp:
+                _ms_path = Path(str(_ms_fp)).resolve()
+                if _ms_path.is_file():
+                    with fits.open(_ms_path, memmap=False) as _ms_hdul:
+                        _ms_hdr = _ms_hdul[0].header.copy()
+                    if _has_valid_wcs(_ms_hdr):
+                        _apply_wcs_header_to_fits(ref_fp, _ms_hdr)
+                        with fits.open(ref_fp, memmap=False) as hdul:
+                            ref_hdr = hdul[0].header.copy()
+                            ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+                        has_wcs = True
+                        log_event(
+                            f"INFO: Reference WCS prevzaté z MASTERSTAR ({_ms_path.name}) — použijem MASTERSTAR WCS pre alignment aj per-frame match."
+                        )
         except Exception as _wcs_copy_exc:  # noqa: BLE001
-            # Fall back to normal reference plate-solve.
             try:
                 log_event(f"DEBUG: Reference WCS copy from MASTERSTAR failed: {_wcs_copy_exc}")
             except Exception:  # noqa: BLE001
                 pass
+
+    if not has_wcs:
+        _prog("Plate solve referencie (môže chvíľu trvať)…")
 
     if not has_wcs:
         # Solve reference file in-place (no open handle on Windows).
@@ -10142,7 +10228,12 @@ def _astrometry_align_impl_body(
         f"detrended_aligned/lights: {'RAM — referencia' if use_ram_handoff else 'zapisujem FITS'} "
         f"{ref_fp.name} (1/{n_files})"
     )
-    ref_rel = ref_fp.relative_to(detrended_root)
+    try:
+        ref_rel = ref_fp.relative_to(detrended_root)
+    except Exception:  # noqa: BLE001
+        # Reference can live outside detrended_root (e.g. MASTERSTAR in platesolve/…).
+        # In that case, store it at the aligned root top-level.
+        ref_rel = Path(ref_fp.name)
     ref_out = aligned_root / ref_rel
     _ensure_parent_dirs_for_aligned_fits(ref_out)
     with fits.open(ref_fp, memmap=False) as hdul:
@@ -10230,7 +10321,10 @@ def _astrometry_align_impl_body(
         aligned_data = res["aligned_data"]
         fw_i = float(res["fw_i"])
         _maybe_refine_aligned(hdr_out, aligned_data, fp.name, dao_fwhm_px_frame=fw_i)
-        fp_rel = fp.relative_to(detrended_root)
+        try:
+            fp_rel = fp.relative_to(detrended_root)
+        except Exception:  # noqa: BLE001
+            fp_rel = Path(fp.name)
         out_fp = aligned_root / fp_rel
         _ensure_parent_dirs_for_aligned_fits(out_fp)
         n_written_align += 1
@@ -10557,97 +10651,42 @@ def astrometry_align_and_build_masterstar(
             f"`{ap / 'calibrated' / 'lights'}` → `{ap / 'processed' / 'lights'}` alebo staršie `{ap / 'detrended' / 'lights'}`)."
         )
     job_list: list[dict[str, Any]] = []
-    # Prefer explicit per-file ID_SCANNING groups from OBS_FILES when draft has >1 scanning configuration.
-    _scan_groups_used = False
-    if draft_id is not None:
-        try:
-            _db_scan = VyvarDatabase(Path((app_config or AppConfig()).database_path))
-            try:
-                rows_q = _db_scan.fetch_draft_light_rows_for_quality(int(draft_id))
-            finally:
-                _db_scan.conn.close()
-            sid_set = sorted(
+    # Group strictly by real folder structure under processed/detrended lights.
+    # DO NOT create scan_<id> subfolders: users expect platesolve/ + detrended_aligned/ to mirror
+    # processed/lights/<setup_name>/ layout (as in older drafts like draft_000231).
+    groups = _partition_detrended_by_subfolder(files_all, det_top)
+    for gkey in sorted(groups.keys()):
+        gfs = groups[gkey]
+        if not gfs:
+            continue
+        _setup_name = Path(gkey).name if gkey else ""
+        if _setup_name:
+            log_event(
+                f"Alignment subgroup detected: setup_name={_setup_name} "
+                f"(input={det_top / gkey}, files={len(gfs)})"
+            )
+        if gkey:
+            job_list.append(
                 {
-                    int(r.get("ID_SCANNING") or 0)
-                    for r in rows_q
-                    if int(r.get("ID_SCANNING") or 0) > 0
+                    "gkey": gkey,
+                    "scanning_id": None,
+                    "detrended_root": det_top / gkey,
+                    "aligned_root": ali_top / gkey,
+                    "platesolve_dir": ps_top / gkey,
+                    "files": gfs,
                 }
             )
-            if len(sid_set) > 1:
-                map_sid: dict[int, list[Path]] = {int(s): [] for s in sid_set}
-                known = {str(p.resolve()): p for p in files_all}
-                for rr in rows_q:
-                    sid = int(rr.get("ID_SCANNING") or 0)
-                    if sid <= 0:
-                        continue
-                    rp = str(rr.get("FILE_PATH") or "").strip()
-                    if not rp:
-                        continue
-                    hit = _resolve_best_effort_path_under(det_top, rp)
-                    if hit is None:
-                        continue
-                    key = str(hit.resolve())
-                    hp = known.get(key)
-                    if hp is not None:
-                        map_sid[sid].append(hp)
-                for sid in sid_set:
-                    fs = sorted({str(x.resolve()): x for x in map_sid.get(sid, [])}.values(), key=lambda p: str(p))
-                    if not fs:
-                        continue
-                    skey = f"scan_{int(sid)}"
-                    job_list.append(
-                        {
-                            "gkey": skey,
-                            "scanning_id": int(sid),
-                            "detrended_root": det_top,
-                            "aligned_root": ali_top / skey,
-                            "platesolve_dir": ps_top / skey,
-                            "files": fs,
-                        }
-                    )
-                _scan_groups_used = len(job_list) > 0
-                if _scan_groups_used:
-                    log_event(
-                        f"Astrometria: Draft {int(draft_id)} obsahuje viac ID_SCANNING "
-                        f"({', '.join(str(s) for s in sid_set)}); spracovanie beží samostatne po konfiguráciách."
-                    )
-        except Exception as exc:  # noqa: BLE001
-            log_event(f"Astrometria: ID_SCANNING grouping fallback na folder grouping ({exc!s}).")
-
-    if not _scan_groups_used:
-        groups = _partition_detrended_by_subfolder(files_all, det_top)
-        for gkey in sorted(groups.keys()):
-            gfs = groups[gkey]
-            if not gfs:
-                continue
-            _setup_name = Path(gkey).name if gkey else ""
-            if _setup_name:
-                log_event(
-                    f"Alignment subgroup detected: setup_name={_setup_name} "
-                    f"(input={det_top / gkey}, files={len(gfs)})"
-                )
-            if gkey:
-                job_list.append(
-                    {
-                        "gkey": gkey,
-                        "scanning_id": None,
-                        "detrended_root": det_top / gkey,
-                        "aligned_root": ali_top / gkey,
-                        "platesolve_dir": ps_top / gkey,
-                        "files": gfs,
-                    }
-                )
-            else:
-                job_list.append(
-                    {
-                        "gkey": "",
-                        "scanning_id": None,
-                        "detrended_root": det_top,
-                        "aligned_root": ali_top,
-                        "platesolve_dir": ps_top,
-                        "files": gfs,
-                    }
-                )
+        else:
+            job_list.append(
+                {
+                    "gkey": "",
+                    "scanning_id": None,
+                    "detrended_root": det_top,
+                    "aligned_root": ali_top,
+                    "platesolve_dir": ps_top,
+                    "files": gfs,
+                }
+            )
     if len(job_list) > 1:
         log_event(
             "Astrometria: viacero pod-pozorovaní (podpriečinky v processed|detrended/lights) — "
