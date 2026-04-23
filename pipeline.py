@@ -9417,7 +9417,8 @@ def generate_masterstar_and_catalog(
                             else float("nan")
                         )
                         import numpy as _np
-                        from photometry import bad_columns_for_light_frame
+                        # photometry.py is legacy; use the merged core module.
+                        from photometry_core import bad_columns_for_light_frame
 
                         _thr_nl = float("nan")
                         _peaks_nl: list[float] = []

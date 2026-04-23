@@ -461,6 +461,7 @@ def read_flux_from_csv(
 
     # Airmass z frame_times
     am_frame = float("nan")
+    flip_frame: bool | None = None
     if frame_times:
         try:
             _am = float(frame_times.get("airmass", float("nan")))
@@ -468,6 +469,18 @@ def read_flux_from_csv(
                 am_frame = _am
         except (TypeError, ValueError):
             pass
+        try:
+            _fl = frame_times.get("is_flipped", None)
+            if isinstance(_fl, bool):
+                flip_frame = _fl
+            elif _fl is not None:
+                s = str(_fl).strip().lower()
+                if s in ("true", "1", "yes", "y"):
+                    flip_frame = True
+                elif s in ("false", "0", "no", "n"):
+                    flip_frame = False
+        except Exception:  # noqa: BLE001
+            flip_frame = None
 
     rows: list[dict] = []
 
@@ -479,6 +492,7 @@ def read_flux_from_csv(
             "hjd": float("nan"),
             "jd": float("nan"),
             "airmass": am_frame,
+            "is_flipped": flip_frame,
             "mag_inst": float("nan"),
             "err": float("nan"),
             "aperture_r_px": apertures_px.get(cid, float("nan")),
@@ -862,13 +876,14 @@ def airmass_detrend_lc(
     coeffs = np.polyfit(am_fit, mag_fit, 1)
     slope, intercept = float(coeffs[0]), float(coeffs[1])
 
-    # Guard: fyzikálne nereálny slope → preskočiť detrending
-    # Hustejšie polia s farebným diferenciálom môžu mať vyšší slope.
-    _MAX_REALISTIC_SLOPE = 5.0
-    if abs(slope) > _MAX_REALISTIC_SLOPE:
+    # Guard: podozrivý airmass trend → preskočiť detrending.
+    # Typická extinkcia býva ~0.1–0.3 mag/airmass (závisí od filtra a podmienok).
+    # Viac než ~1–1.5 mag/airmass je spravidla mrak/technický problém, nie atmosférická extinkcia.
+    _MAX_REALISTIC_SLOPE = 1.5
+    if (not math.isfinite(slope)) or slope < 0 or abs(slope) > _MAX_REALISTIC_SLOPE:
         logging.warning(
-            "[FÁZA 2A] Airmass slope=%.3f mag/airmass prekračuje fyzikálny limit "
-            "(%.1f). Detrending preskočený — krivka zostáva neupravená.",
+            "[FÁZA 2A] Airmass detrend preskočený: slope=%.3f mag/airmass mimo limitov "
+            "(0..%.1f). Krivka zostáva neupravená.",
             slope,
             _MAX_REALISTIC_SLOPE,
         )
@@ -888,6 +903,70 @@ def airmass_detrend_lc(
     return detrended, slope, intercept
 
 
+def airmass_detrend_lc_piecewise(
+    mag_calib: np.ndarray,
+    airmass: np.ndarray,
+    flags: list[str],
+    segment: np.ndarray,
+    *,
+    min_points: int = 10,
+) -> tuple[np.ndarray, dict[int, tuple[float, float]]]:
+    """Piecewise linear airmass detrending split by a segment id (e.g. meridian flip).
+
+    For each segment s, fit on normal points:
+        mag_calib = a_s * airmass + b_s
+    and apply correction within that segment:
+        mag' = mag - a_s * (airmass - median(airmass_fit_s))
+
+    Returns:
+        detrended_mag, {seg_id: (slope, intercept)} for fitted segments only.
+    """
+    detrended = mag_calib.copy()
+    fitted: dict[int, tuple[float, float]] = {}
+    if segment is None or len(segment) != len(mag_calib):
+        return detrended, fitted
+    seg_vals = pd.Series(segment).dropna().unique().tolist()
+    # Only handle small number of segments deterministically.
+    try:
+        seg_ids = sorted(int(x) for x in seg_vals)[:4]
+    except Exception:  # noqa: BLE001
+        seg_ids = [0, 1]
+
+    for seg_id in seg_ids:
+        mask = np.array(
+            [
+                (int(seg) == int(seg_id))
+                and (f == "normal")
+                and math.isfinite(float(m))
+                and math.isfinite(float(am))
+                for seg, f, m, am in zip(segment, flags, mag_calib, airmass)
+            ],
+            dtype=bool,
+        )
+        if int(mask.sum()) < min_points:
+            continue
+        am_fit = airmass[mask]
+        mag_fit = mag_calib[mask]
+        coeffs = np.polyfit(am_fit, mag_fit, 1)
+        slope, intercept = float(coeffs[0]), float(coeffs[1])
+        # Reuse same realism constraints as the single-fit detrend.
+        _MAX_REALISTIC_SLOPE = 1.5
+        if (not math.isfinite(slope)) or slope < 0 or abs(slope) > _MAX_REALISTIC_SLOPE:
+            logging.warning(
+                "[FÁZA 2A] Piecewise airmass detrend seg=%s preskočený: slope=%.3f mimo limitov (0..%.1f).",
+                seg_id,
+                slope,
+                _MAX_REALISTIC_SLOPE,
+            )
+            continue
+        am_ref = float(np.median(am_fit))
+        finite_mask = np.isfinite(mag_calib) & np.isfinite(airmass) & (segment.astype(int) == int(seg_id))
+        detrended[finite_mask] = mag_calib[finite_mask] - slope * (airmass[finite_mask] - am_ref)
+        fitted[int(seg_id)] = (slope, intercept)
+
+    return detrended, fitted
+
+
 # ---------------------------------------------------------------------------
 # KROK 6: Výstup — lightcurve CSV
 # ---------------------------------------------------------------------------
@@ -899,6 +978,7 @@ def save_lightcurve_csv(
     hjd: np.ndarray,
     jd: np.ndarray,
     airmass: np.ndarray,
+    is_flipped: np.ndarray | None,
     mag_inst: np.ndarray,
     mag_calib_raw: np.ndarray,
     mag_calib: np.ndarray,
@@ -918,6 +998,7 @@ def save_lightcurve_csv(
             "hjd": hjd,
             "jd": jd,
             "airmass": airmass,
+            "is_flipped": (is_flipped if is_flipped is not None else np.full_like(bjd, False, dtype=bool)),
             "mag_inst": np.round(mag_inst, 6),
             "mag_calib_raw": np.round(mag_calib_raw, 6),
             "mag_calib": np.round(mag_calib, 6),
@@ -1391,7 +1472,8 @@ def run_phase2a(
         _id_col_lu = "catalog_id" if "catalog_id" in _df_lu.columns else "name"
         _phase2a_lookup_cache[_key] = _build_csv_lookup(_df_lu, _id_col_lu)
 
-    # Čas + airmass z prvého platného riadku každého per-frame CSV (podľa stem FITS)
+    # Čas + airmass (+ flip flag z alignment_report) z prvého platného riadku každého per-frame CSV
+    # (podľa stem FITS).
     frame_time_lookup: dict[str, dict[str, float]] = {}
     for csv_path in csv_files:
         stem = csv_path.stem
@@ -1422,6 +1504,26 @@ def run_phase2a(
                 break
         except Exception:  # noqa: BLE001
             pass
+
+    # Propagate meridian-flip / rotation-change flag from alignment_report.csv when present.
+    try:
+        align_rep = Path(masterstar_fits_path).resolve().parent / "alignment_report.csv"
+        if align_rep.is_file():
+            rep = pd.read_csv(align_rep, low_memory=False)
+            if "file" in rep.columns and "is_flipped" in rep.columns:
+                for _, r in rep.iterrows():
+                    fn = str(r.get("file", "")).strip()
+                    if not fn:
+                        continue
+                    stem = Path(fn).stem
+                    if stem not in frame_time_lookup:
+                        continue
+                    try:
+                        frame_time_lookup[stem]["is_flipped"] = bool(r.get("is_flipped", False))
+                    except Exception:  # noqa: BLE001
+                        frame_time_lookup[stem]["is_flipped"] = False
+    except Exception:  # noqa: BLE001
+        pass
 
     # Krok 1: Globálna fixná apertúra — všetky hviezdy (target + comp), faktor × FWHM
     _at_cols = [c for c in ("catalog_id", "x", "y", "mag") if c in at_df.columns]
@@ -1630,13 +1732,37 @@ def run_phase2a(
             airmass_arr = target_frames["airmass"].to_numpy(dtype=float)
         else:
             airmass_arr = np.full_like(bjd, float("nan"), dtype=float)
+        flip_arr = (
+            target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+            if "is_flipped" in target_frames.columns
+            else np.zeros_like(bjd, dtype=bool)
+        )
 
         # Najprv detrend na airmass iba podľa saturácie/NaN (outliere detekujeme až po detrende).
         base_flags = [
             "saturated" if bool(sat_flags[i]) else ("normal" if math.isfinite(mag_calib[i]) else "no_data")
             for i in range(len(mag_calib))
         ]
-        mag_cal_am, am_slope, _ = airmass_detrend_lc(mag_calib, airmass_arr, base_flags)
+        # Meridian flip can introduce a piecewise trend (different extinction/systematics per side).
+        # If flip is present, fit slopes separately on each side to avoid V-shaped residuals.
+        am_slope = float("nan")
+        am_slope_pre = float("nan")
+        am_slope_post = float("nan")
+        am_piecewise = False
+        if bool(np.any(flip_arr)) and bool(np.any(~flip_arr)):
+            seg = np.where(flip_arr, 1, 0).astype(int)
+            mag_cal_am, seg_fits = airmass_detrend_lc_piecewise(mag_calib, airmass_arr, base_flags, seg)
+            if 0 in seg_fits or 1 in seg_fits:
+                am_piecewise = True
+                if 0 in seg_fits:
+                    am_slope_pre = float(seg_fits[0][0])
+                if 1 in seg_fits:
+                    am_slope_post = float(seg_fits[1][0])
+                # Keep legacy am_slope as the median of fitted slopes (for UI summary).
+                slopes = [float(v[0]) for v in seg_fits.values() if math.isfinite(float(v[0]))]
+                am_slope = float(np.median(slopes)) if slopes else float("nan")
+        if not am_piecewise:
+            mag_cal_am, am_slope, _ = airmass_detrend_lc(mag_calib, airmass_arr, base_flags)
         mag_calib_raw = mag_calib.copy()
         mag_calib = mag_cal_am
 
@@ -1651,6 +1777,7 @@ def run_phase2a(
             hjd,
             jd,
             airmass_arr,
+            flip_arr,
             target_lc,
             mag_calib_raw,
             mag_calib,
@@ -1733,6 +1860,9 @@ def run_phase2a(
                 "lc_median_mag": float(np.median(finite_calib)) if len(finite_calib) > 0 else float("nan"),
                 "aperture_px": float(apertures_px.get(target_cid, float("nan"))),
                 "am_slope": am_slope,
+                "am_slope_pre": am_slope_pre,
+                "am_slope_post": am_slope_post,
+                "am_piecewise": bool(am_piecewise),
                 "am_detrended": bool(math.isfinite(am_slope)),
                 "lc_csv": str(lc_csv),
                 "lc_png": str(lc_png),
