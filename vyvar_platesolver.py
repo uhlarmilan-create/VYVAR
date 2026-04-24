@@ -2010,7 +2010,10 @@ def solve_wcs_with_local_gaia(
     # Color index as a stand-in (optional)
     if "bp_rp" not in cat_df.columns:
         cat_df["bp_rp"] = None
-    cat_df["b_v"] = pd.to_numeric(cat_df.get("bp_rp"), errors="coerce")
+    # Gaia provides BP-RP; keep B-V separate (do not overwrite with BP-RP).
+    if "b_v" not in cat_df.columns:
+        cat_df["b_v"] = float("nan")
+    cat_df["bp_rp"] = pd.to_numeric(cat_df.get("bp_rp"), errors="coerce")
     # Filter by magnitude if available (deeper for MASTERSTAR diagnostic step).
     _ = max_cat_mag
     _ = faintest_mag_limit
@@ -2714,7 +2717,10 @@ def solve_wcs_with_local_gaia(
             _dfa["catalog"] = "GAIA_DR3"
             if "bp_rp" not in _dfa.columns:
                 _dfa["bp_rp"] = None
-            _dfa["b_v"] = pd.to_numeric(_dfa.get("bp_rp"), errors="coerce")
+            # Gaia provides BP-RP; keep B-V separate (do not overwrite with BP-RP).
+            if "b_v" not in _dfa.columns:
+                _dfa["b_v"] = float("nan")
+            _dfa["bp_rp"] = pd.to_numeric(_dfa.get("bp_rp"), errors="coerce")
             _dfa = _dfa.sort_values("mag", na_position="last").reset_index(drop=True)
             cat_df_assoc = _dfa
             log_event(

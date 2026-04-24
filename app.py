@@ -20,12 +20,11 @@ from pipeline import AstroPipeline, scan_usb_folder
 import ui_calibration as ui_calibration
 import ui_database_explorer as ui_database_explorer
 import ui_masterstar_qa as ui_masterstar_qa
-import ui_select_stars as ui_select_stars
-import ui_suspected_lightcurves as ui_suspected_lightcurves
 import ui_quality_dashboard as ui_quality_dashboard
 import ui_components as ui_components
 from platesolve_ui_paths import resolve_draft_directory
 from ui_aperture_photometry import render_aperture_photometry
+from ui_variability import render_variability_dashboard
 from utils import generate_session_id
 
 # MASTERSTAR: DB fallback (top % FWHM) when explicit UI paths fail to map; no session/UI control.
@@ -1948,8 +1947,8 @@ def main() -> None:
         st.subheader("Draft")
         st.caption(
             "Zadaj absolútnu cestu k priečinku ``draft_XXXXXX`` (musí obsahovať ``platesolve/``) "
-            "alebo len číslo draftu z archívu. Použije sa v záložkách Select Stars, Aperture Photometry "
-            "a LightCurves — Suspected. Prázdne pole + „Načítať draft“ zruší override. "
+            "alebo len číslo draftu z archívu. Použije sa v záložkách FITS QA, MASTERSTAR QA "
+            "a Aperture Photometry. Prázdne pole + „Načítať draft“ zruší override. "
             "**DAO-STARS**, **Fotometria** a **Fotometria — diagnostika** sú v **Nastavenia → Nástroje**."
         )
         dcol1, dcol2, dcol3 = st.columns([4, 1, 1])
@@ -1992,9 +1991,8 @@ def main() -> None:
                 "VAR-STREM",
                 "FITS QA",
                 "MASTERSTAR QA",
-                "Select Stars",
                 "Aperture Photometry",
-                "LightCurves — Suspected",
+                "🔍 Variabilita",
                 "Infolog",
             ]
         )
@@ -2015,27 +2013,20 @@ def main() -> None:
                 draft_dir_override=_draft_ov,
             )
         with tabs[3]:
-            ui_select_stars.render_select_stars(
-                cfg=cfg,
-                draft_id=st.session_state.get("vyvar_last_draft_id"),
-                pipeline=pipeline,
-                draft_dir_override=_draft_ov,
-            )
-        with tabs[4]:
             render_aperture_photometry(
                 cfg=cfg,
                 draft_id=st.session_state.get("vyvar_last_draft_id"),
                 pipeline=pipeline,
                 draft_dir_override=_draft_ov,
             )
-        with tabs[5]:
-            ui_suspected_lightcurves.render_suspected_lightcurves(
-                cfg=cfg,
+        with tabs[4]:
+            render_variability_dashboard(
+                pipeline,
+                cfg,
                 draft_id=st.session_state.get("vyvar_last_draft_id"),
-                pipeline=pipeline,
                 draft_dir_override=_draft_ov,
             )
-        with tabs[6]:
+        with tabs[5]:
             render_infolog()
     elif page == "Calibration Library":
         import ui_calibration_library as ui_calibration_library

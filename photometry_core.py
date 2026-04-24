@@ -23,6 +23,43 @@ _MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
 
 
 # ---------------------------------------------------------------------------
+# Color transforms
+# ---------------------------------------------------------------------------
+
+
+def bp_rp_to_bv(bp_rp: float | None) -> float:
+    """
+    Transformácia Gaia BP-RP farebného indexu na Johnson B-V.
+
+    Zdroj: Riello et al. 2021 (Gaia EDR3 photometric calibration)
+            Evans et al. 2018 (Gaia DR2 passbands)
+
+    Vzorec: B-V = 0.0850 + 0.9447*(BP-RP) - 0.1019*(BP-RP)^2
+
+    Platnosť: 0.1 <= BP-RP <= 2.5
+              (mimo tohto rozsahu je extrapolácia nespoľahlivá)
+    Presnosť: ~±0.05 mag pre väčšinu hviezd hlavnej postupnosti
+              Horšia pre extrémne červené hviezdy (M typ, BP-RP > 2.5)
+              a extrémne modré hviezdy (OB typ, BP-RP < 0.1)
+
+    Returns:
+        float: vypočítané B-V
+        float("nan"): ak bp_rp je None, NaN, alebo mimo rozsahu
+    """
+    if bp_rp is None:
+        return float("nan")
+    try:
+        val = float(bp_rp)
+    except (TypeError, ValueError):
+        return float("nan")
+    if not math.isfinite(val):
+        return float("nan")
+    if not (0.1 <= val <= 2.5):
+        return float("nan")
+    return 0.0850 + 0.9447 * val - 0.1019 * (val**2)
+
+
+# ---------------------------------------------------------------------------
 # Pomocné funkcie
 # ---------------------------------------------------------------------------
 
@@ -3140,6 +3177,12 @@ def select_active_targets(
     result = pd.DataFrame(matched_rows)
     if "catalog_id" in result.columns:
         result["catalog_id"] = result["catalog_id"].apply(_gaia_id_str)
+    # Transform BP-RP -> B-V for targets (diagnostics/UI), keep bp_rp unchanged.
+    try:
+        if "bp_rp" in result.columns:
+            result["b_v"] = pd.to_numeric(result["bp_rp"], errors="coerce").apply(bp_rp_to_bv)
+    except Exception:  # noqa: BLE001
+        pass
     n_lin = int((result["zone_flag"] == "linear").sum())
     n_n1 = int((result["zone_flag"] == "noisy1").sum())
     n_n2 = int((result["zone_flag"] == "noisy2").sum())
@@ -3318,9 +3361,18 @@ def select_comparison_stars_per_target(
         cand_mask &= ms["_mag"].sub(mag_t).abs().le(mag_tol)
 
     # Hard filter: |ΔB-V| <= max_bv_diff (len ak poznáme B-V targetu aj kandidáta)
-    target_bv_pre = float(target.get("b_v", float("nan")))
+    # B-V compute from Gaia BP-RP (Riello 2021) when possible; don't reuse BP-RP as B-V.
+    try:
+        target_bv_pre = float(pd.to_numeric(target.get("b_v"), errors="coerce"))
+    except Exception:  # noqa: BLE001
+        target_bv_pre = float("nan")
     if math.isfinite(target_bv_pre) and math.isfinite(max_bv_diff):
-        ms["_bv"] = pd.to_numeric(ms.get("b_v", pd.Series(dtype=float)), errors="coerce")
+        if "_bv" not in ms.columns:
+            ms["_bv"] = pd.to_numeric(ms.get("bp_rp", pd.Series(dtype=float)), errors="coerce").apply(bp_rp_to_bv)
+            # If explicit b_v exists and is finite, keep it as higher priority.
+            if "b_v" in ms.columns:
+                _bv_raw = pd.to_numeric(ms.get("b_v"), errors="coerce")
+                ms["_bv"] = ms["_bv"].where(~_bv_raw.notna(), _bv_raw)
         bv_known_mask = ms["_bv"].notna()
         bv_filter = ~bv_known_mask | ms["_bv"].sub(target_bv_pre).abs().le(max_bv_diff)
         cand_mask &= bv_filter
@@ -4036,6 +4088,22 @@ def select_comparison_stars_per_target(
         if row.empty:
             continue
         r = row.iloc[0].to_dict()
+        # If the upstream catalog filled B-V with Gaia BP-RP (common bug/fallback),
+        # keep them separate in outputs: treat B-V as unknown rather than duplicating BP-RP.
+        try:
+            bv0 = float(pd.to_numeric(r.get("b_v"), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            bv0 = float("nan")
+        try:
+            bprp0 = float(pd.to_numeric(r.get("bp_rp"), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            bprp0 = float("nan")
+        try:
+            src0 = str(r.get("catalog", "") or "").strip().upper()
+        except Exception:  # noqa: BLE001
+            src0 = ""
+        if src0 == "GAIA_DR3" and math.isfinite(bv0) and math.isfinite(bprp0) and abs(bv0 - bprp0) < 1e-9:
+            r["b_v"] = float("nan")
         r["comp_rms"] = active.get(cid, float("nan"))
         r["comp_score"] = score_map.get(cid, float("nan"))
         r["comp_n_frames"] = len(flux_map.get(cid, []))
@@ -4055,6 +4123,12 @@ def select_comparison_stars_per_target(
         )
 
     out = pd.DataFrame(result_rows).sort_values("comp_score").reset_index(drop=True)
+    # Ensure B-V is computed from BP-RP for output (comparison_stars_per_target.csv).
+    try:
+        if "bp_rp" in out.columns:
+            out["b_v"] = pd.to_numeric(out["bp_rp"], errors="coerce").apply(bp_rp_to_bv)
+    except Exception:  # noqa: BLE001
+        pass
     if "b_v" in out.columns and math.isfinite(target_bv):
         out_bv = pd.to_numeric(out["b_v"], errors="coerce")
         dbv_out = (out_bv - target_bv).abs()
@@ -4272,6 +4346,17 @@ def run_phase0_and_phase1(
     comp_df = pd.concat(all_comp_rows, ignore_index=True) if all_comp_rows else pd.DataFrame()
     comp_csv = output_dir / "comparison_stars_per_target.csv"
     comp_df.to_csv(comp_csv, index=False)
+    try:
+        if not comp_df.empty and "bp_rp" in comp_df.columns:
+            bv_series = pd.to_numeric(comp_df["bp_rp"], errors="coerce").apply(bp_rp_to_bv)
+            n_bv_computed = int(bv_series.notna().sum())
+            n_bv_nan = int(bv_series.isna().sum())
+            log_event(
+                "B-V z Gaia BP-RP (Riello 2021): "
+                f"vypočítaných={n_bv_computed}, mimo rozsahu/NaN={n_bv_nan}"
+            )
+    except Exception:  # noqa: BLE001
+        pass
     logging.info(
         f"[FÁZA 1] Uložené: {comp_csv} "
         f"({len(comp_df)} riadkov, {len(all_comp_rows)} targetov s porovnávačkami)"
@@ -4310,6 +4395,112 @@ def run_phase0_and_phase1(
         "comparison_stars_csv": str(comp_csv),
         "suspected_variables_csv": str(suspected_csv),
         "targets_without_comps": targets_without_comps,
+    }
+
+
+def run_full_photometry_pipeline(
+    *,
+    masterstar_fits_path: Path,
+    variable_targets_csv: Path,
+    masterstars_csv: Path,
+    per_frame_csv_dir: Path,
+    detrended_aligned_dir: Path,
+    output_dir: Path,
+    cfg: AppConfig | None = None,
+    progress_cb: Any = None,
+) -> dict[str, Any]:
+    """Jedno-krokový wrapper: Fáza 0+1 + Fáza 2A ako jeden celok.
+
+    UI to používa ako jednu akciu „RUN Aperture Photometry“ pre daný obs_group.
+    """
+    _cfg = cfg or AppConfig()
+
+    def _p(msg: str) -> None:
+        if progress_cb is not None:
+            progress_cb(str(msg))
+
+    # FWHM: prefer header (VY_FWHM_GAUSS/VY_FWHM), inak default z configu.
+    fwhm_px = float(getattr(_cfg, "sips_dao_fwhm_px", 3.7) or 3.7)
+    try:
+        from astropy.io import fits as astrofits  # noqa: PLC0415
+
+        ms = Path(masterstar_fits_path)
+        if ms.is_file():
+            with astrofits.open(ms, memmap=False) as hdul:
+                hdr = hdul[0].header
+                for key in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN", "VY_FWHM"):
+                    v = hdr.get(key)
+                    if v is None:
+                        continue
+                    fv = float(v)
+                    if 0.5 < fv < 30.0:
+                        fwhm_px = fv
+                        break
+    except Exception:  # noqa: BLE001
+        pass
+
+    # ── FÁZA 0+1 ──
+    _p("Fáza 0+1: select targets + comparison stars…")
+    p01 = run_phase0_and_phase1(
+        variable_targets_csv=Path(variable_targets_csv),
+        masterstars_csv=Path(masterstars_csv),
+        per_frame_csv_dir=Path(per_frame_csv_dir),
+        output_dir=Path(output_dir),
+        fwhm_px=float(fwhm_px),
+        frame_w_px=int(getattr(_cfg, "frame_width_px", 2082) or 2082),
+        frame_h_px=int(getattr(_cfg, "frame_height_px", 1397) or 1397),
+        chip_interior_margin_px=int(getattr(_cfg, "phase01_chip_interior_margin_px", 100) or 100),
+        match_radius_arcsec=float(getattr(_cfg, "phase01_match_radius_arcsec", 15.0) or 15.0),
+        max_dist_deg=float(getattr(_cfg, "phase01_comparison_max_dist_deg", 1.0) or 1.0),
+        max_mag_diff=float(getattr(_cfg, "phase01_comparison_max_mag_diff", 0.25) or 0.25),
+        max_bv_diff=float(getattr(_cfg, "phase01_comparison_max_bv_diff", 0.15) or 0.15),
+        n_comp_min=int(getattr(_cfg, "phase01_comparison_n_comp_min", 3) or 3),
+        n_comp_max=int(getattr(_cfg, "phase01_comparison_n_comp_max", 7) or 7),
+        max_comp_rms=float(getattr(_cfg, "phase01_comparison_max_comp_rms", 0.05) or 0.05),
+        min_dist_arcsec=float(getattr(_cfg, "phase01_comparison_min_dist_arcsec", 60.0) or 60.0),
+        min_frames_frac=float(getattr(_cfg, "phase01_comparison_min_frames_frac", 0.3) or 0.3),
+        rms_outlier_sigma=float(getattr(_cfg, "phase01_comparison_rms_outlier_sigma", 3.0) or 3.0),
+        exclude_gaia_nss=bool(getattr(_cfg, "phase01_exclude_gaia_nss", True)),
+        exclude_gaia_extobj=bool(getattr(_cfg, "phase01_exclude_gaia_extobj", True)),
+        mag_bright_threshold=float(getattr(_cfg, "phase01_comparison_mag_bright_threshold", 12.0) or 12.0),
+        max_mag_diff_bright_floor=float(
+            getattr(_cfg, "phase01_comparison_max_mag_diff_bright_floor", 0.0) or 0.0
+        ),
+        max_psf_chi2=float(getattr(_cfg, "phase01_comparison_max_psf_chi2", 3.0) or 3.0),
+        max_fwhm_factor=float(getattr(_cfg, "phase01_comparison_max_fwhm_factor", 1.5) or 1.5),
+        isolation_radius_px=float(getattr(_cfg, "phase01_comparison_isolation_radius_px", 25.0) or 25.0),
+        flux_col=str(getattr(_cfg, "phase01_flux_col", "dao_flux") or "dao_flux"),
+        progress_cb=progress_cb,
+    )
+
+    active_targets_csv = Path(str(p01.get("active_targets_csv") or ""))
+    comparison_stars_csv = Path(str(p01.get("comparison_stars_csv") or ""))
+    if not active_targets_csv.is_file() or not comparison_stars_csv.is_file():
+        return {
+            "phase01": p01,
+            "phase2a": None,
+            "output_dir": str(Path(output_dir)),
+            "error": "Fáza 0+1 nevygenerovala active_targets/comparison_stars CSV.",
+        }
+
+    # ── FÁZA 2A ──
+    _p("Fáza 2A: aperture photometry + lightcurves…")
+    p2a = run_phase2a(
+        masterstar_fits_path=Path(masterstar_fits_path),
+        active_targets_csv=active_targets_csv,
+        comparison_stars_csv=comparison_stars_csv,
+        per_frame_csv_dir=Path(per_frame_csv_dir),
+        detrended_aligned_dir=Path(detrended_aligned_dir),
+        output_dir=Path(output_dir),
+        fwhm_px=float(fwhm_px),
+        cfg=_cfg,
+        progress_cb=progress_cb,
+    )
+
+    return {
+        "phase01": p01,
+        "phase2a": p2a,
+        "output_dir": str(Path(output_dir)),
     }
 
 
@@ -4561,6 +4752,7 @@ __all__ = [
     "select_active_targets",
     "select_comparison_stars_per_target",
     "run_phase0_and_phase1",
+    "run_full_photometry_pipeline",
     # photometry_phase2a (legacy)
     "measure_fwhm_from_masterstar",
     "compute_optimal_apertures",

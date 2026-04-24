@@ -61,6 +61,20 @@ def _ut_tick_labels_from_jd(jd_vals: "list[float]") -> list[str]:
             except Exception:  # noqa: BLE001
                 out_f.append("")
         return out_f
+
+
+def _latest_report_pdf(draft_dir: Path, obs_group: str) -> Path | None:
+    """Return latest matching VYVAR report PDF for given obs_group."""
+    try:
+        d = Path(draft_dir) / "platesolve" / str(obs_group)
+        pat = f"VYVAR_report_{str(obs_group)}_*.pdf"
+        candidates = list(d.glob(pat))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0.0, reverse=True)
+        return candidates[0]
+    except Exception:  # noqa: BLE001
+        return None
     out: list[str] = []
     for jd in jd_vals:
         try:
@@ -190,7 +204,14 @@ def _enrich_summary_with_zone_flags(
     summary_df: pd.DataFrame,
     active_targets_csv: Path | None,
 ) -> pd.DataFrame:
-    """Doplní ``zone_flag`` / ``skip_photometry`` z ``active_targets.csv`` (badge v UI, aj starší summary)."""
+    """Doplní target meta z ``active_targets.csv`` (badge v UI, aj starší summary).
+
+    Enriches:
+      - zone_flag
+      - skip_photometry
+      - vsx_type
+      - bp_rp
+    """
     out = summary_df.copy()
     if "zone_flag" not in out.columns:
         out["zone_flag"] = ""
@@ -198,6 +219,10 @@ def _enrich_summary_with_zone_flags(
         out["zone_flag"] = out["zone_flag"].fillna("").astype(str)
     if "skip_photometry" not in out.columns:
         out["skip_photometry"] = False
+    if "vsx_type" not in out.columns:
+        out["vsx_type"] = ""
+    if "bp_rp" not in out.columns:
+        out["bp_rp"] = float("nan")
     if active_targets_csv is None or not Path(active_targets_csv).is_file():
         return out
     try:
@@ -208,6 +233,8 @@ def _enrich_summary_with_zone_flags(
             return out
         zf_by: dict[str, str] = {}
         sk_by: dict[str, bool] = {}
+        vt_by: dict[str, str] = {}
+        bp_by: dict[str, float] = {}
         for _, r in at.iterrows():
             k = str(_normalize_gaia_id(r.get("catalog_id"))).strip()
             if not k:
@@ -221,6 +248,16 @@ def _enrich_summary_with_zone_flags(
                     if isinstance(_v, (bool, np.bool_))
                     else str(_v).strip().lower() in ("1", "true", "yes", "t")
                 )
+            if "vsx_type" in at.columns:
+                vt_by[k] = str(r.get("vsx_type", "") or "").strip()
+            if "bp_rp" in at.columns:
+                v = pd.to_numeric(r.get("bp_rp"), errors="coerce")
+                try:
+                    fv = float(v)
+                except Exception:  # noqa: BLE001
+                    fv = float("nan")
+                if math.isfinite(fv):
+                    bp_by[k] = float(fv)
         cids = out["catalog_id"].map(_normalize_gaia_id)
         n = len(out)
         if zf_by:
@@ -243,6 +280,26 @@ def _enrich_summary_with_zone_flags(
                         else str(v0).strip().lower() in ("1", "true", "yes", "t")
                     )
             out["skip_photometry"] = sk_list
+        if vt_by:
+            prev_vt = out["vsx_type"].tolist() if n else []
+            out["vsx_type"] = [
+                vt_by.get(str(cids.iloc[i] or "").strip(), str(prev_vt[i] if i < len(prev_vt) else ""))
+                for i in range(n)
+            ]
+        if bp_by:
+            prev_bp = pd.to_numeric(out["bp_rp"], errors="coerce").tolist() if n else []
+            bp_list: list[float] = []
+            for i in range(n):
+                ck = str(cids.iloc[i] or "").strip()
+                if ck in bp_by:
+                    bp_list.append(float(bp_by[ck]))
+                else:
+                    v0 = prev_bp[i] if i < len(prev_bp) else float("nan")
+                    try:
+                        bp_list.append(float(v0))
+                    except Exception:  # noqa: BLE001
+                        bp_list.append(float("nan"))
+            out["bp_rp"] = pd.to_numeric(bp_list, errors="coerce")
     except Exception:  # noqa: BLE001
         return out
     return out
@@ -628,6 +685,32 @@ def _render_target_detail(
         f"[Vizier]({vizier_url}) &nbsp; "
         f"[VSX]({vsx_url})"
     )
+    # Extra meta (if available in enriched summary).
+    vt = str(target_row.get("vsx_type", "") or "").strip()
+    zf = str(target_row.get("zone_flag", "") or "").strip().lower()
+    bp = target_row.get("bp_rp")
+    bp_s = _fmt_opt_num(bp, ".3f")
+    if vt or zf or bp_s:
+        badge = ""
+        if zf == "linear":
+            badge = "🟢 linear"
+        elif zf in ("noisy1", "noisy2"):
+            badge = f"🟡 {zf}"
+        elif zf == "noisy3":
+            badge = "🟠 noisy3"
+        elif zf == "saturated":
+            badge = "🔴 saturated"
+        elif zf:
+            badge = f"⚪ {zf}"
+        parts = []
+        if vt:
+            parts.append(f"vsx_type: **{vt}**")
+        if badge:
+            parts.append(f"zone_flag: {badge}")
+        if bp_s and bp_s != "—":
+            parts.append(f"bp_rp: **{bp_s}**")
+        if parts:
+            st.caption(" | ".join(parts))
 
     if comp_df is not None and not comp_df.empty and "target_catalog_id" in comp_df.columns:
         comp_work = comp_df.copy()
@@ -676,9 +759,11 @@ def _render_target_detail(
                 ra_c = _float_coord_row(row, "ra_deg", "ra")
                 dec_c = _float_coord_row(row, "dec_deg", "dec")
                 mag_c = row.get("mag")
-                bv_c = row.get("b_v")
-                if bv_c is None or (isinstance(bv_c, float) and not math.isfinite(bv_c)):
-                    bv_c = row.get("bp_rp")
+                # Important: keep B-V and BP-RP separate (do not fallback between them).
+                bv_c = pd.to_numeric(row.get("b_v"), errors="coerce")
+                bp_c = pd.to_numeric(row.get("bp_rp"), errors="coerce")
+                dist_deg_c = row.get("_dist_deg")
+                nfr_c = row.get("comp_n_frames")
                 rms_c = row.get("comp_rms")
                 tier_c = row.get("comp_tier")
                 cid_c = _normalize_gaia_id(row.get("catalog_id", ""))
@@ -693,6 +778,9 @@ def _render_target_detail(
                 )
                 mag_str = _fmt_opt_num(mag_c, ".3f")
                 bv_str = _fmt_opt_num(bv_c, ".3f")
+                bp_str = _fmt_opt_num(bp_c, ".3f")
+                dist_str = _fmt_opt_num(dist_deg_c, ".6f")
+                nfr_str = _fmt_opt_num(nfr_c, ".0f")
                 rms_str = _fmt_opt_num(rms_c, ".4f")
                 bg = _row_bg(q)
                 rows_html.append(
@@ -702,6 +790,9 @@ def _render_target_detail(
                     f"<td>C{i:02d}</td>"
                     f"<td>{html.escape(mag_str)}</td>"
                     f"<td>{html.escape(bv_str)}</td>"
+                    f"<td>{html.escape(bp_str)}</td>"
+                    f"<td>{html.escape(dist_str)}</td>"
+                    f"<td>{html.escape(nfr_str)}</td>"
                     f"<td>{html.escape(rms_str)}</td>"
                     f"<td>{_tier_badge(tier_c)}</td>"
                     f"<td>{html.escape(stav)}</td>"
@@ -711,7 +802,7 @@ def _render_target_detail(
 
             thead = (
                 "<thead><tr>"
-                "<th>#</th><th>mag</th><th>B-V</th><th>p2p RMS</th>"
+                "<th>#</th><th>mag</th><th>B-V</th><th>bp_rp</th><th>dist_deg</th><th>comp_n_frames</th><th>p2p RMS</th>"
                 "<th>tier</th><th>stav</th><th>Vizier</th>"
                 "</tr></thead>"
             )
@@ -728,6 +819,7 @@ def _render_target_detail(
                     "Stav (good / suspect / excluded) sa zobrazí po ďalšom behu Fázy 2A "
                     "(súbor comp_quality_*.json)."
                 )
+            st.caption("B-V vypočítané z Gaia BP-RP (Riello et al. 2021, ±0.05 mag)")
 
 
 # ---------------------------------------------------------------------------
@@ -745,11 +837,17 @@ def render_aperture_photometry(
     """Hlavná funkcia pre Aperture Photometry tab."""
     _ = pipeline
     st.header("Aperture Photometry")
-    st.caption("Fáza 2A: Aperturná fotometria premenných hviezd.")
+    st.caption("Fáza 0+1 + Fáza 2A ako jeden neoddeliteľný krok.")
 
     if draft_id is None and draft_dir_override is None:
         st.info("Žiadny aktívny draft. Načítaj draft vyššie alebo spusti VAR-STREM.")
         return
+
+    # Draft dir for PDF reports and fallbacks.
+    if draft_dir_override is not None and Path(draft_dir_override).is_dir():
+        draft_dir = Path(draft_dir_override).resolve()
+    else:
+        draft_dir = (Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}").resolve()
 
     all_setups = _find_phase2a_paths(cfg, draft_id, draft_dir_override=draft_dir_override)
     if not all_setups:
@@ -757,8 +855,32 @@ def render_aperture_photometry(
         return
 
     setup_options = list(all_setups.keys())
+
+    def _detect_obs_groups() -> list[str]:
+        """Obs_groups from detrended_aligned/lights/{obs_group}/ (proc_*.csv)."""
+        try:
+            if draft_dir_override is not None and draft_dir_override.is_dir():
+                draft_dir = draft_dir_override.resolve()
+            else:
+                draft_dir = Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}"
+            root = draft_dir / "detrended_aligned" / "lights"
+            if not root.is_dir():
+                return []
+            out: list[str] = []
+            for d in sorted(root.iterdir()):
+                if not d.is_dir():
+                    continue
+                if any(d.glob("proc_*.csv")):
+                    out.append(d.name)
+            return out
+        except Exception:  # noqa: BLE001
+            return []
+
+    detected = _detect_obs_groups()
+    run_groups = [g for g in detected if g in setup_options] if detected else setup_options
+
     selected_setup = st.selectbox(
-        "Filter / skupina:",
+        "Platesolve setup:",
         options=setup_options,
         key="phase2a_setup_select",
     )
@@ -773,125 +895,175 @@ def render_aperture_photometry(
         ms_for_fwhm = _fallback_masterstar_fits(cfg, draft_id, draft_dir_override=draft_dir_override)
     fwhm_px = _load_fwhm(ms_for_fwhm)
 
-    at_csv = paths.get("active_targets_csv")
-    comp_csv = paths.get("comparison_stars_csv")
-    if at_csv is None or not at_csv.exists() or comp_csv is None or not comp_csv.exists():
-        st.error("❌ Najprv spusti Fázu 0+1 (Select Stars).")
-        return
-
     exists = _phase2a_results_exist(output_dir)
 
-    if exists:
-        ts = _phase2a_timestamp(output_dir)
-        st.success(f"✅ Fáza 2A prebehla: {ts}")
-        col1, col2 = st.columns(2)
-        with col1:
-            run_btn = st.button(
-                "🔄 Prepočítať Fázu 2A", key="phase2a_run", type="secondary"
-            )
-        with col2:
-            st.caption(f"FWHM: {fwhm_px} px")
-        if len(setup_options) > 1:
-            st.caption("Tlačidlo spustí Fázu **2A pre všetky** filtre / setupy naraz.")
-    else:
-        st.info("Fáza 2A ešte nebehala.")
-        col1, col2 = st.columns(2)
-        with col1:
-            run_btn = st.button(
-                "▶ Spustiť Fázu 2A", key="phase2a_run_first", type="primary"
-            )
-        with col2:
-            st.caption(f"FWHM: {fwhm_px} px")
-        if len(setup_options) > 1:
-            st.caption("Tlačidlo spustí Fázu **2A pre všetky** filtre / setupy naraz.")
+    # Header/status line + global run button.
+    col_info, col_run = st.columns([3, 2])
+    with col_info:
+        st.markdown(f"**Platesolve setup:** `{selected_setup}` &nbsp; | &nbsp; **FWHM:** `{float(fwhm_px):.3f}px`")
+        if exists:
+            ts = _phase2a_timestamp(output_dir)
+            st.success(f"✅ Prebehlo: {ts}")
+        else:
+            st.warning("⚠️ Nespustené")
+
+        # Always show PDF download if it already exists (even after rerun).
+        pdf_latest = _latest_report_pdf(draft_dir, str(selected_setup))
+        if pdf_latest is not None and pdf_latest.exists():
+            try:
+                with open(pdf_latest, "rb") as f:
+                    st.download_button(
+                        label=f"📥 Stiahnuť PDF správu ({selected_setup})",
+                        data=f.read(),
+                        file_name=pdf_latest.name,
+                        mime="application/pdf",
+                        key=f"pdf_dl_hdr_{selected_setup}",
+                    )
+            except Exception:  # noqa: BLE001
+                pass
+    with col_run:
+        run_btn = st.button("🔄 RUN Aperture Photometry", key="phase2a_run_full", type="primary")
+
+    with st.expander("Stav setupov", expanded=False):
+        for nm in setup_options:
+            p = all_setups.get(str(nm)) or {}
+            out_d = p.get("output_dir")
+            if _phase2a_results_exist(out_d):
+                st.success(f"✅ {nm}: {_phase2a_timestamp(out_d)}")
+            else:
+                st.warning(f"⚠️ {nm}: nespustené")
 
     if run_btn:
-        from photometry_core import run_phase2a
+        from photometry_core import run_full_photometry_pipeline
         from vyvar_ui_status import vyvar_footer_idle, vyvar_footer_running
 
         try:
-            vyvar_footer_running("Fáza 2A", "Štartujem aperturnú fotometriu (všetky filtre)…")
-
-            def _p2a_ui(msg: str) -> None:
-                vyvar_footer_running("Fáza 2A", msg)
-
+            total = len(run_groups)
+            if total <= 0:
+                st.warning("Nenájdené žiadne obs_group v detrended_aligned/lights.")
+                return
+            vyvar_footer_running("Aperture Photometry", f"Štartujem ({total} setups)…")
+            prog = st.progress(0, text="Starting…")
+            lines_ph = st.empty()
+            statuses: dict[str, str] = {}
             errors: list[str] = []
-            last_result: dict | None = None
             n_ok = 0
-            for nm in setup_options:
+
+            def _render_lines() -> None:
+                lines = [statuses.get(g, f"{g} …") for g in run_groups]
+                lines_ph.markdown("\n".join(lines))
+
+            for i, nm in enumerate(run_groups, start=1):
+                statuses[nm] = f"{nm} ██████ …"
+                _render_lines()
+                prog.progress(int(round(100 * (i - 1) / max(total, 1))), text=f"{nm}: spúšťam…")
+                vyvar_footer_running("Aperture Photometry", f"{nm}: Fáza 0+1 + 2A…")
+
                 p = all_setups.get(str(nm)) or {}
-                ms_fits = p.get("masterstar_fits")
-                pf_dir = p.get("per_frame_csv_dir")
-                dt_dir = p.get("detrended_aligned_dir")
-                out_d = p.get("output_dir")
-                at_p = p.get("active_targets_csv")
-                co_p = p.get("comparison_stars_csv")
-                ms_ff = ms_fits
-                if not (isinstance(ms_ff, Path) and ms_ff.is_file()):
-                    ms_ff = _fallback_masterstar_fits(cfg, draft_id, draft_dir_override=draft_dir_override)
-                _fw = _load_fwhm(ms_ff if isinstance(ms_ff, Path) else None)
-
-                missing: list[str] = []
-                if ms_ff is None or not Path(ms_ff).exists():
-                    missing.append("MASTERSTAR.fits")
-                if pf_dir is None or not pf_dir.exists():
-                    missing.append("per-frame CSV adresár")
-                if dt_dir is None or not dt_dir.exists():
-                    missing.append("detrended_aligned adresár")
-                if at_p is None or not at_p.exists() or co_p is None or not co_p.exists():
-                    missing.append("Fáza 0+1 výstupy (active_targets / comparison)")
-
-                if missing:
-                    errors.append(f"{nm}: {', '.join(missing)}")
-                    continue
-
                 try:
-                    _p2a_ui(f"Fáza 2A: {nm} …")
-                    last_result = run_phase2a(
-                        masterstar_fits_path=Path(ms_ff),
-                        active_targets_csv=Path(at_p),
-                        comparison_stars_csv=Path(co_p),
-                        per_frame_csv_dir=Path(pf_dir),
-                        detrended_aligned_dir=Path(dt_dir),
-                        output_dir=Path(out_d),
-                        fwhm_px=_fw,
+                    ms_fits = Path(p.get("masterstar_fits")) if p.get("masterstar_fits") else None
+                    og_dir = Path(p.get("obs_group_dir")) if p.get("obs_group_dir") else None
+                    ms_csv = (og_dir / "masterstars_full_match.csv") if og_dir is not None else None
+                    vt_csv = (og_dir / "variable_targets.csv") if og_dir is not None else None
+                    pf_dir = Path(p.get("per_frame_csv_dir")) if p.get("per_frame_csv_dir") else None
+                    dt_dir = Path(p.get("detrended_aligned_dir")) if p.get("detrended_aligned_dir") else None
+                    out_d = Path(p.get("output_dir")) if p.get("output_dir") else None
+
+                    missing: list[str] = []
+                    if ms_fits is None or not ms_fits.exists():
+                        missing.append("MASTERSTAR.fits")
+                    if ms_csv is None or not ms_csv.exists():
+                        missing.append("masterstars_full_match.csv")
+                    if vt_csv is None or not vt_csv.exists():
+                        missing.append("variable_targets.csv")
+                    if pf_dir is None or not pf_dir.exists():
+                        missing.append("per-frame CSV adresár")
+                    if dt_dir is None or not dt_dir.exists():
+                        missing.append("detrended_aligned adresár")
+                    if out_d is None:
+                        missing.append("output_dir")
+                    if missing:
+                        raise FileNotFoundError(", ".join(missing))
+
+                    def _cb(msg: str) -> None:
+                        vyvar_footer_running("Aperture Photometry", f"{nm}: {msg}")
+
+                    _ = run_full_photometry_pipeline(
+                        masterstar_fits_path=ms_fits,
+                        variable_targets_csv=vt_csv,
+                        masterstars_csv=ms_csv,
+                        per_frame_csv_dir=pf_dir,
+                        detrended_aligned_dir=dt_dir,
+                        output_dir=out_d,
                         cfg=cfg,
-                        progress_cb=_p2a_ui,
+                        progress_cb=_cb,
                     )
                     n_ok += 1
-                except Exception as exc_nm:  # noqa: BLE001
-                    errors.append(f"{nm}: {exc_nm}")
-                    logging.exception("Fáza 2A zlyhala pre %s", nm)
+                    statuses[nm] = f"{nm} ████████████ ✓"
 
-            if n_ok == len(setup_options) and not errors and last_result is not None:
-                st.success(
-                    f"✅ Hotovo pre všetky filtre ({len(setup_options)}): "
-                    f"{last_result['n_lightcurves']} kriviek z {last_result['n_frames']} snímok (posledný setup)."
-                )
-            elif n_ok > 0 and last_result is not None:
-                st.success(
-                    f"✅ Fáza 2A: {n_ok}/{len(setup_options)} setupov OK "
-                    f"(posledný: {last_result['n_lightcurves']} kriviek)."
-                )
+                    # PDF report (optional)
+                    try:
+                        from photometry_report import generate_photometry_report
+
+                        pdf_path = generate_photometry_report(
+                            draft_dir=draft_dir,
+                            obs_group=str(nm),
+                            output_pdf=None,
+                        )
+                        if pdf_path is not None:
+                            st.success(f"📄 PDF uložené: {Path(pdf_path).name}")
+                            try:
+                                st.session_state.setdefault("vyvar_pdf_paths", {})[str(nm)] = str(pdf_path)
+                            except Exception:  # noqa: BLE001
+                                pass
+                            with open(pdf_path, "rb") as f:
+                                st.download_button(
+                                    label=f"📥 Stiahnuť {Path(pdf_path).name}",
+                                    data=f.read(),
+                                    file_name=Path(pdf_path).name,
+                                    mime="application/pdf",
+                                    key=f"pdf_download_{nm}",
+                                )
+                    except Exception as _pdf_exc:  # noqa: BLE001
+                        st.warning(f"PDF sa nepodarilo vygenerovať: {_pdf_exc}")
+                except Exception as exc_nm:  # noqa: BLE001
+                    statuses[nm] = f"{nm} ███████ ✗"
+                    errors.append(f"{nm}: {exc_nm}")
+                _render_lines()
+                prog.progress(int(round(100 * i / max(total, 1))), text=f"{nm}: hotovo")
+
+            if n_ok:
+                st.success(f"Hotovo — {n_ok} setups spracovaných")
             if errors:
                 (st.error if n_ok == 0 else st.warning)(
-                    "Problémy pri niektorých filtroch:\n" + "\n".join(errors)
+                    "Problémy pri niektorých setupoch:\n" + "\n".join(errors)
                 )
-            if n_ok:
-                st.rerun()
+            vyvar_footer_idle()
+            st.rerun()
         except Exception as exc:  # noqa: BLE001
             st.error(f"❌ Chyba: {exc}")
-            logging.exception("Fáza 2A zlyhala")
+            logging.exception("RUN Aperture Photometry zlyhal")
         finally:
-            vyvar_footer_idle()
+            try:
+                vyvar_footer_idle()
+            except Exception:  # noqa: BLE001
+                pass
         return
 
     if not exists:
+        st.warning(
+            f"⚠️ Fotometria nebola spustená pre **{selected_setup}**.\n\n"
+            "Klikni **RUN Aperture Photometry**."
+        )
         return
 
     if output_dir is None:
         st.warning("Output adresár nie je dostupný.")
         return
+
+    # Phase01 artifacts (generated by full pipeline and used for UI enrich/table).
+    at_csv = paths.get("active_targets_csv")
+    comp_csv = paths.get("comparison_stars_csv")
 
     summary_df = _load_summary(output_dir)
     comp_df = pd.DataFrame()
@@ -1045,11 +1217,49 @@ def render_aperture_photometry(
 
     st.divider()
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Svetelné krivky", len(summary_df))
-    if "lc_rms" in summary_df.columns:
-        c2.metric("Median lc_rms", f"{summary_df['lc_rms'].median():.4f}")
-        good = int((summary_df["lc_rms"] < 0.05).sum())
+    c1, c2, c3, c4, c5, c6, c7, c8 = st.columns(8)
+    c1.metric("Svetelné krivky", int(len(summary_df)))
+
+    rms_cur = pd.to_numeric(summary_df.get("lc_rms"), errors="coerce")
+    if rms_cur.notna().any():
+        c2.metric("Median lc_rms", f"{float(rms_cur.median()):.4f}")
+        good = int((rms_cur < 0.05).sum())
         c3.metric("RMS < 0.05 mag", good)
-    if "n_good_comp" in summary_df.columns:
-        c4.metric("Avg good comp", f"{summary_df['n_good_comp'].mean():.1f}")
+    else:
+        c2.metric("Median lc_rms", "—")
+        c3.metric("RMS < 0.05 mag", "—")
+
+    ngc = pd.to_numeric(summary_df.get("n_good_comp"), errors="coerce")
+    c4.metric("Avg good comp", f"{float(ngc.mean()):.1f}" if ngc.notna().any() else "—")
+
+    # Cross-setup metrics (based on existing photometry_summary.csv files).
+    done_setups = 0
+    frames: list[pd.DataFrame] = []
+    for nm in setup_options:
+        p = all_setups.get(str(nm)) or {}
+        out_d = p.get("output_dir")
+        if not _phase2a_results_exist(out_d):
+            continue
+        done_setups += 1
+        try:
+            df0 = _load_summary(Path(out_d)) if out_d is not None else pd.DataFrame()
+        except Exception:  # noqa: BLE001
+            df0 = pd.DataFrame()
+        if df0 is None or df0.empty:
+            continue
+        at_p = p.get("active_targets_csv")
+        df0 = _enrich_summary_with_zone_flags(df0, Path(at_p) if at_p is not None else None)
+        frames.append(df0)
+
+    c5.metric("Setups", int(done_setups))
+    all_df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    if not all_df.empty:
+        rms_all = pd.to_numeric(all_df.get("lc_rms"), errors="coerce")
+        c6.metric("Best lc_rms", f"{float(rms_all.min()):.4f}" if rms_all.notna().any() else "—")
+        c7.metric("Worst lc_rms", f"{float(rms_all.max()):.4f}" if rms_all.notna().any() else "—")
+        bp_all = pd.to_numeric(all_df.get("bp_rp"), errors="coerce")
+        c8.metric("Avg bp_rp", f"{float(bp_all.mean()):.3f}" if bp_all.notna().any() else "—")
+    else:
+        c6.metric("Best lc_rms", "—")
+        c7.metric("Worst lc_rms", "—")
+        c8.metric("Avg bp_rp", "—")

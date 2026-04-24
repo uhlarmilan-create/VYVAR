@@ -3609,7 +3609,7 @@ def _query_gaia_local(
             df0["rp_mag"], errors="coerce"
         )
     df = df0.rename(
-        columns={"source_id": "catalog_id", "ra": "ra_deg", "dec": "dec_deg", "g_mag": "mag", "bp_rp": "b_v"}
+        columns={"source_id": "catalog_id", "ra": "ra_deg", "dec": "dec_deg", "g_mag": "mag", "bp_rp": "bp_rp"}
     )
     df["catalog"] = "GAIA_DR3"
     # Great-circle cone cut (query box is square; LIMIT is isotropic in mag, not in radius).
@@ -3629,9 +3629,12 @@ def _query_gaia_local(
         m = pd.to_numeric(df["mag"], errors="coerce")
         df = df[(m.notna()) & (m <= float(max_mag))].copy()
     df = df.reset_index(drop=True)
-    if "b_v" in df.columns and "bp_rp" not in df.columns:
+    # Gaia provides BP-RP; do not map it into B-V (different color index).
+    if "b_v" not in df.columns:
         df = df.copy()
-        df["bp_rp"] = pd.to_numeric(df["b_v"], errors="coerce")
+        df["b_v"] = np.nan
+    if "bp_rp" in df.columns:
+        df["bp_rp"] = pd.to_numeric(df["bp_rp"], errors="coerce")
     return _catalog_df_cap_brightest_by_mag(df, max_rows=_cap_out)
 
 
@@ -4641,6 +4644,15 @@ def write_photometry_plan_files(
         n_comp=int(n_comparison_stars),
         require_non_variable=bool(require_non_variable),
     )
+    # B-V from Gaia BP-RP (Riello 2021). Keep bp_rp unchanged.
+    try:
+        from photometry_core import bp_rp_to_bv  # local import (avoid import cycles)
+
+        if "bp_rp" in comp_df.columns:
+            comp_df = comp_df.copy()
+            comp_df["b_v"] = pd.to_numeric(comp_df["bp_rp"], errors="coerce").apply(bp_rp_to_bv)
+    except Exception:  # noqa: BLE001
+        pass
     comp_path = ps / "comparison_stars.csv"
     comp_df.to_csv(comp_path, index=False)
 

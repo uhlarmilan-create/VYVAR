@@ -12,3 +12,4 @@ astroquery
 astroalign
 reproject
 pytest
+reportlab
