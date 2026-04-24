@@ -90,6 +90,9 @@ from vyvar_platesolver import (
     pointing_hint_from_header as _pointing_hint_from_header,
 )
 
+# Aperturná fotometria Fáz 0–2A (active_targets.csv, zone_flag, skip_photometry) je v ``photometry_core``
+# — ``run_phase0_and_phase1`` / ``run_phase2a``, nie v tomto súbore.
+
 
 def _apply_aperture_catalog_enhancements_from_st(
     df: pd.DataFrame,
@@ -4659,6 +4662,8 @@ def write_photometry_plan_files(
         "mag",
         "zone",
         "gaia_match_arcsec",
+        "gaia_match_quality",
+        "gaia_match_source",
         "vsx_mag_max",
     ]
     vsx_out = pd.DataFrame(columns=var_cols)
@@ -4735,6 +4740,8 @@ def write_photometry_plan_files(
                 mag_out: list[float] = [float("nan")] * int(len(v))
                 zone_out: list[str] = [""] * int(len(v))
                 sep_out: list[float] = [float("nan")] * int(len(v))
+                quality_out: list[str] = [""] * int(len(v))
+                source_out: list[str] = [""] * int(len(v))
                 if len(v) > 0 and len(ga) > 0:
                     vcoo = SkyCoord(
                         ra=v["ra_deg"].astype(float).to_numpy() * u.deg,
@@ -4754,6 +4761,18 @@ def write_photometry_plan_files(
                             cat_id_out[i] = str(gro["catalog_id"])
                             sep_out[i] = float(sep2d[i].to(u.arcsec).value)
                             try:
+                                s0 = float(sep_out[i])
+                            except Exception:  # noqa: BLE001
+                                s0 = float("nan")
+                            if math.isfinite(s0):
+                                if s0 < 3.0:
+                                    quality_out[i] = "good"
+                                elif s0 <= 7.0:
+                                    quality_out[i] = "uncertain"
+                                else:
+                                    quality_out[i] = "poor"
+                            source_out[i] = "masterstars"
+                            try:
                                 _mg = gro.get("mag")
                                 mag_out[i] = float(_mg) if _mg is not None and str(_mg).strip() != "" else float("nan")
                             except (TypeError, ValueError):
@@ -4765,6 +4784,147 @@ def write_photometry_plan_files(
                                 zone_out[i] = str(zr).strip().lower() if zr is not None else ""
                             except Exception:  # noqa: BLE001
                                 zone_out[i] = ""
+
+                # FALLBACK: VSX → Gaia DR3 direct lookup for unresolved catalog_id
+                try:
+                    gaia_db = str(getattr(AppConfig(), "gaia_db_path", "") or "").strip()
+                except Exception:  # noqa: BLE001
+                    gaia_db = ""
+                unresolved_idx = [i for i in range(len(v)) if not str(cat_id_out[i] or "").strip()]
+                fb_resolved = 0
+                fb_unresolved = int(len(unresolved_idx))
+                fb_good = 0
+                fb_uncertain = 0
+                fb_poor = 0
+                if gaia_db and unresolved_idx:
+                    # Cache per VSX coord (avoid repeated SQL if duplicates).
+                    gaia_cache: dict[tuple[float, float], pd.DataFrame] = {}
+
+                    def _norm_gaia_id(x: Any) -> str:
+                        s = str(x or "").strip()
+                        if not s or s.lower() in ("nan", "none"):
+                            return ""
+                        try:
+                            return str(int(float(s)))
+                        except Exception:  # noqa: BLE001
+                            return s
+
+                    for i in unresolved_idx:
+                        try:
+                            vsx_ra = float(v.iloc[i]["ra_deg"])
+                            vsx_dec = float(v.iloc[i]["dec_deg"])
+                        except Exception:  # noqa: BLE001
+                            continue
+                        if not (math.isfinite(vsx_ra) and math.isfinite(vsx_dec)):
+                            continue
+                        key = (float(vsx_ra), float(vsx_dec))
+                        if key not in gaia_cache:
+                            rdeg = 0.00833  # 30 arcsec
+                            try:
+                                rows = query_local_gaia(
+                                    gaia_db,
+                                    ra_min=float(vsx_ra) - rdeg,
+                                    ra_max=float(vsx_ra) + rdeg,
+                                    dec_min=float(vsx_dec) - rdeg,
+                                    dec_max=float(vsx_dec) + rdeg,
+                                    mag_limit=20.0,
+                                    max_rows=2000,
+                                )
+                            except Exception:  # noqa: BLE001
+                                rows = []
+                            gdf = pd.DataFrame(rows) if rows else pd.DataFrame()
+                            gaia_cache[key] = gdf
+                        gdf = gaia_cache.get(key)
+                        if gdf is None or gdf.empty:
+                            continue
+
+                        # Coordinates columns (schema: ra/dec; fallback to ra_deg/dec_deg if present).
+                        ra_col = "ra" if "ra" in gdf.columns else ("ra_deg" if "ra_deg" in gdf.columns else "")
+                        dec_col = "dec" if "dec" in gdf.columns else ("dec_deg" if "dec_deg" in gdf.columns else "")
+                        if not ra_col or not dec_col:
+                            continue
+                        ra_c = pd.to_numeric(gdf[ra_col], errors="coerce").to_numpy(dtype=float)
+                        dec_c = pd.to_numeric(gdf[dec_col], errors="coerce").to_numpy(dtype=float)
+                        ok = np.isfinite(ra_c) & np.isfinite(dec_c)
+                        if not bool(np.any(ok)):
+                            continue
+                        ra_c = ra_c[ok]
+                        dec_c = dec_c[ok]
+                        sub = gdf.loc[gdf.index[ok]].copy()
+
+                        vsx_coord = SkyCoord(ra=float(vsx_ra) * u.deg, dec=float(vsx_dec) * u.deg, frame="icrs")
+                        cand_coords = SkyCoord(ra=ra_c * u.deg, dec=dec_c * u.deg, frame="icrs")
+                        seps = vsx_coord.separation(cand_coords).arcsec
+                        sub["_sep_arcsec"] = np.asarray(seps, dtype=float)
+                        sub20 = sub[pd.to_numeric(sub["_sep_arcsec"], errors="coerce") < 20.0].copy()
+                        if sub20.empty:
+                            continue
+
+                        best = None
+                        # Mag preference when VSX mag_max is known.
+                        vsx_m = float("nan")
+                        try:
+                            vsx_m = float(pd.to_numeric(v.iloc[i].get("mag_max"), errors="coerce"))
+                        except Exception:  # noqa: BLE001
+                            vsx_m = float("nan")
+                        gmag_col = "g_mag" if "g_mag" in sub20.columns else ("phot_g_mean_mag" if "phot_g_mean_mag" in sub20.columns else "")
+                        if math.isfinite(vsx_m) and gmag_col:
+                            gm = pd.to_numeric(sub20[gmag_col], errors="coerce")
+                            good_mag = (gm.notna()) & ((gm - float(vsx_m)).abs() < 2.0)
+                            sub_mag = sub20.loc[good_mag].copy()
+                            if not sub_mag.empty:
+                                best = sub_mag.sort_values("_sep_arcsec", ascending=True).iloc[0]
+                        if best is None:
+                            best = sub20.sort_values("_sep_arcsec", ascending=True).iloc[0]
+
+                        # Gaia ID (prefer catalog_id if present, else source_id)
+                        raw_id = best.get("catalog_id", None) if isinstance(best, dict) else best.get("catalog_id", None)
+                        if raw_id is None or str(raw_id).strip() == "":
+                            raw_id = best.get("source_id", None)
+                        gid = _norm_gaia_id(raw_id)
+                        if not gid:
+                            continue
+
+                        cat_id_out[i] = gid
+                        try:
+                            sep_val = float(best.get("_sep_arcsec", float("nan")))
+                        except Exception:  # noqa: BLE001
+                            sep_val = float("nan")
+                        sep_out[i] = sep_val
+                        if math.isfinite(sep_val):
+                            if sep_val < 3.0:
+                                quality_out[i] = "good"
+                                fb_good += 1
+                            elif sep_val <= 7.0:
+                                quality_out[i] = "uncertain"
+                                fb_uncertain += 1
+                            else:
+                                quality_out[i] = "poor"
+                                fb_poor += 1
+                        source_out[i] = "gaia_dr3_direct"
+                        fb_resolved += 1
+
+                # Mark remaining unresolved with explicit source + log.
+                if unresolved_idx:
+                    for i in unresolved_idx:
+                        if str(cat_id_out[i] or "").strip():
+                            continue
+                        source_out[i] = "no_match"
+                        try:
+                            vsx_name0 = str(v.iloc[i].get("name", "") or "").strip()
+                            vsx_ra = float(v.iloc[i]["ra_deg"])
+                            vsx_dec = float(v.iloc[i]["dec_deg"])
+                            log_event(
+                                f"VSX no Gaia match: {vsx_name0} ra={vsx_ra:.4f} dec={vsx_dec:.4f} — hviezda nebude sledovaná"
+                            )
+                        except Exception:  # noqa: BLE001
+                            pass
+
+                if unresolved_idx:
+                    log_event(
+                        f"VSX→Gaia fallback DR3: resolved={int(fb_resolved)} unresolved={int(fb_unresolved)} "
+                        f"(good={int(fb_good)} uncertain={int(fb_uncertain)} poor={int(fb_poor)})"
+                    )
 
                 # Period column varies by VSX schema.
                 _pcol = None
@@ -4808,19 +4968,19 @@ def write_photometry_plan_files(
                         "mag": np.asarray(mag_out, dtype=float),
                         "zone": zone_out,
                         "gaia_match_arcsec": np.asarray(sep_out, dtype=float),
+                        "gaia_match_quality": quality_out,
+                        "gaia_match_source": source_out,
                         "vsx_mag_max": _mmx.to_numpy(dtype=float),
                     }
                 )
                 n_gaia_ok = int(sum(1 for c in cat_id_out if str(c).strip()))
                 _zone_hist: dict[str, int] = {}
-                n_phase0_hint = 0
+                n_phase0_hint = int(n_gaia_ok)
                 for i in range(len(zone_out)):
                     if not str(cat_id_out[i]).strip():
                         continue
                     z = str(zone_out[i]).strip().lower()
                     _zone_hist[z] = int(_zone_hist.get(z, 0)) + 1
-                    if z in ("linear", "noisy1"):
-                        n_phase0_hint += 1
                 _vsx_diag = {
                     "vsx_rows_in_cone_before_mag_filter": int(n_vsx_in_cone),
                     "vsx_rows_after_mag_filter": int(n_vsx_after_mag),
@@ -4833,8 +4993,10 @@ def write_photometry_plan_files(
                     "masterstars_zone_counts_among_gaia_matched": _zone_hist,
                     "phase0_active_targets_hint_count": int(n_phase0_hint),
                     "phase0_note_sk": (
-                        "Fáza 0 (`select_active_targets`) ponechá len zhody s masterstars v zóne "
-                        "`linear` alebo `noisy1` (vylúči saturated / noisy2 / noisy3) a v okrajoch snímky."
+                        "Fáza 0 (`select_active_targets` v photometry_core.py): všetky zóny z masterstars "
+                        "prejdú do active_targets.csv s `zone_flag`; saturované majú `skip_photometry=True` "
+                        "a Fáza 2A ich nefotometruje (pozri `run_phase2a`). Vylúčené sú len prázdny "
+                        "`catalog_id` a ciele mimo snímky (okrajový filter)."
                     ),
                 }
                 _vsx_n_cone = int(n_vsx_after_mag)
@@ -4861,7 +5023,7 @@ def write_photometry_plan_files(
             f"v ráme={_vsx_diag.get('vsx_rows_after_in_frame_margin')} → "
             f"Gaia≤10″={_vsx_diag.get('gaia_matches_within_10arcsec')} → "
             f"CSV={int(len(vsx_out))}. "
-            f"Odhad pre Fázu 0 (linear|noisy1): {_vsx_diag.get('phase0_active_targets_hint_count')}."
+            f"Odhad VSX s Gaia ID (Fáza 0 potom cross-match na masterstars): {_vsx_diag.get('phase0_active_targets_hint_count')}."
         )
     else:
         log_event(

@@ -13,9 +13,10 @@ import pandas as pd
 from astropy.io import fits
 
 # ── KONFIGURÁCIA ── upravuj podľa potreby ──────────────────────────
-DRAFT_ID = 246
+DRAFT_ID = 248
 ARCHIVE_ROOT = Path(r"C:\ASTRO\python\VYVAR\Archive")
 OBS_GROUP = "NoFilter_60_2"
+USE_SANDBOX = True
 OVERSAMPLING = 2
 MIN_STARS = 15
 DRY_RUN = False  # True = len vypíše čo by spravil, nezapíše CSV
@@ -35,13 +36,33 @@ PSF_COMP_CHI2_MAX = 20.0  # COMP — prísnejší prah
 MIN_COMP_SEPARATION_PX = 3 * 3.2  # ~10 px = 3× FWHM (crowding filter)
 # Krok 5: štyri COMP hviezdy pre frame-wise ZP z psf_summary (med_psf_flux).
 COMP_CALIB_CATALOG_IDS: tuple[str, ...] = (
-    "1587333807097571840",
-    "1590371693301404160",
-    "1494998749038318848",
-    "1507256551341724160",
+    "1496835173974894848",
+    "1499921468754586112",
+    "1498311264039176192",
+    "1497439905370466816",
 )
 PSF_CAL_MAG_ZP_OFFSET = 20.0  # arbitrárny offset pre relatívnu krivku (mag)
 # ──────────────────────────────────────────────────────────────────
+
+# Cielené VAR hviezdy pre tento test (ak neprázdne, nahradí variable_targets.csv v step_2_load_targets)
+PSF_TARGET_OVERRIDE: list[dict[str, Any]] = [
+    {
+        "catalog_id": 1498486880958321200,
+        "vsx_name": "CSS_J140918.7+423422",
+        "vsx_type": "EW",
+        "x": 265.155,
+        "y": 177.707,
+        "note": "Slabá EW mag=12.75 — hlavný PSF test",
+    },
+    {
+        "catalog_id": 1497418258735289300,
+        "vsx_name": "FU CVn",
+        "vsx_type": "EW",
+        "x": 1444.436,
+        "y": 641.743,
+        "note": "EW mag=11.0 — porovnanie s draft 247",
+    },
+]
 
 # Jediné povolené importy z projektu:
 from astropy.table import Table  # noqa: E402
@@ -557,6 +578,14 @@ def _comp_catalog_sat_peak(comp_df: pd.DataFrame) -> tuple[dict[str, float], dic
 def _cid_key(v: Any) -> str:
     if v is None:
         return ""
+    if isinstance(v, (bool, np.bool_)):
+        return ""
+    # Preserve precision for huge Gaia IDs (float conversion loses digits).
+    if isinstance(v, (int, np.integer)):
+        try:
+            return str(int(v))
+        except Exception:  # noqa: BLE001
+            return str(v).strip()
     if isinstance(v, float) and math.isnan(v):
         return ""
     s = str(v).strip()
@@ -619,9 +648,10 @@ def _paths() -> dict[str, Path]:
     epsf_meta = ps_dir / "masterstar_epsf_meta.json"
     variable_targets = ps_dir / "variable_targets.csv"
     comparison_stars = ps_dir / "comparison_stars.csv"
-    epsf_data_dir = draft_dir / "epsf_data" / "lights" / OBS_GROUP
+    # Per-frame CSV from pipeline is stored under detrended_aligned (proc_*.csv).
+    epsf_data_dir = draft_dir / "detrended_aligned" / "lights" / OBS_GROUP
     # Sandbox output lives under epsf_data/ to avoid touching production directories.
-    output_psf_dir = draft_dir / "epsf_data" / "psf_results"
+    output_psf_dir = (draft_dir / "epsf_data" / "psf_results") if bool(USE_SANDBOX) else (draft_dir / "psf_results")
     return {
         "draft_dir": draft_dir,
         "ps_dir": ps_dir,
@@ -699,20 +729,35 @@ def step_2_load_targets() -> tuple[pd.DataFrame, pd.DataFrame]:
     var_path = p["variable_targets"]
     comp_path = p["comparison_stars"]
 
-    if not var_path.is_file():
-        raise FileNotFoundError(f"Missing variable_targets.csv: {var_path}")
     if not comp_path.is_file():
         raise FileNotFoundError(f"Missing comparison_stars.csv: {comp_path}")
 
-    var_df = pd.read_csv(var_path, low_memory=False)
     comp_df = pd.read_csv(comp_path, low_memory=False)
+
+    if PSF_TARGET_OVERRIDE:
+        var_df = pd.DataFrame(PSF_TARGET_OVERRIDE)
+        var_df["role"] = "VAR"
+        print(f"PSF_TARGET_OVERRIDE aktívny: {len(var_df)} cielených VAR hviezd")
+        for _, r in var_df.iterrows():
+            try:
+                nm = str(r.get("vsx_name", "") or "").strip()
+                vt = str(r.get("vsx_type", "") or "").strip()
+                x = float(r.get("x"))
+                y = float(r.get("y"))
+                note = str(r.get("note", "") or "").strip()
+                print(f"  🎯 {nm} ({vt}) x={x:.1f} y={y:.1f} — {note}")
+            except Exception:  # noqa: BLE001
+                pass
+        print()
+    else:
+        if not var_path.is_file():
+            raise FileNotFoundError(f"Missing variable_targets.csv: {var_path}")
+        var_df = pd.read_csv(var_path, low_memory=False)
 
     if "catalog_id" in var_df.columns:
         var_df = var_df.copy()
         var_df["catalog_id"] = var_df["catalog_id"].map(_cid_key)
         var_df = var_df[var_df["catalog_id"].astype(str).str.strip() != ""]
-    if "zone" in var_df.columns:
-        var_df = var_df[var_df["zone"].astype(str).str.strip().str.lower() == "linear"]
     var_df = var_df.reset_index(drop=True)
 
     if "is_usable" in comp_df.columns:
@@ -1066,6 +1111,25 @@ def step_3_run_psf_on_frames(
                 f"chi2 med (VAR/COMP/all): {chi_var_med:.2f} / {chi_comp_med:.2f} / {chi_med:.2f}"
             )
 
+            # Per-VAR diagnostics (requested for quick comparisons)
+            try:
+                var_rows = res[res["role"] == "VAR"].copy()
+                if not var_rows.empty:
+                    var_rows["_chi"] = pd.to_numeric(var_rows["psf_chi2"], errors="coerce")
+                    var_rows["_ok"] = var_rows["psf_fit_ok"].fillna(False).astype(bool)
+                    var_rows["_nm"] = var_rows["name"].astype(str)
+                    # stable order by name then catalog_id
+                    var_rows = var_rows.sort_values(["_nm", "catalog_id"])
+                    for _, vr in var_rows.iterrows():
+                        nm = str(vr.get("_nm", "")).strip()
+                        cid = _cid_key(vr.get("catalog_id"))
+                        ok = bool(vr.get("_ok", False))
+                        chi_v = vr.get("_chi", float("nan"))
+                        chi_s = f"{float(chi_v):.2f}" if pd.notna(chi_v) and math.isfinite(float(chi_v)) else "nan"
+                        print(f"    VAR {nm} ({cid}): fit_ok={ok} chi2={chi_s}")
+            except Exception:  # noqa: BLE001
+                pass
+
             if DRY_RUN:
                 comp_rows = res[res["role"].astype(str).str.upper() == "COMP"].copy()
                 comp_rows["_xc"] = pd.to_numeric(comp_rows["psf_chi2"], errors="coerce")
@@ -1350,7 +1414,7 @@ def step_5_calibrate_lightcurve() -> None:
         return -2.5 * math.log10(fcal) + float(PSF_CAL_MAG_ZP_OFFSET)
 
     if DRY_RUN:
-        print("[DRY_RUN] neukladám lightcurves/*.csv ani MN_Boo_psf_cal.png")
+        print("[DRY_RUN] neukladám lightcurves/*.csv ani *_psf_cal.png")
 
     if not DRY_RUN:
         lc_dir = out_dir / "lightcurves"
@@ -1409,68 +1473,55 @@ def step_5_calibrate_lightcurve() -> None:
     if DRY_RUN or not frame_rows:
         return
 
-    # Plot len pre MN Boo (pevný názov súboru).
-    mn_rows = [t for t in frame_rows if t[2] == mn_cid]
-    mn_lc = []
-    for stem, bjd, _c, raw_fl, n_comp, zp, chi2, fit_ok in mn_rows:
-        if not math.isfinite(zp) or zp <= 0:
-            continue
-        if math.isfinite(raw_fl) and raw_fl > 0:
-            fcal = raw_fl / zp
-            mag = _mag_cal(fcal)
-        else:
-            fcal = float("nan")
-            mag = float("nan")
-        mn_lc.append(
-            {
-                "bjd_tdb_mid": bjd,
-                "psf_flux_raw": raw_fl,
-                "psf_flux_cal": fcal,
-                "psf_mag_cal": mag,
-            }
-        )
-    if not mn_lc:
-        print("MN Boo: žiadne kalibrované body — plot preskočený.")
-        return
-
+    # Plot pre VAR hviezdy (override-friendly).
     try:
         import matplotlib.pyplot as plt  # noqa: PLC0415
     except Exception as exc:  # noqa: BLE001
         print(f"matplotlib nedostupné ({exc}) — plot preskočený.")
         return
 
-    plot_df = pd.DataFrame(mn_lc).sort_values("bjd_tdb_mid", na_position="last")
-    bjd = plot_df["bjd_tdb_mid"].to_numpy(dtype=float)
-    raw = plot_df["psf_flux_raw"].to_numpy(dtype=float)
-    cal = plot_df["psf_flux_cal"].to_numpy(dtype=float)
-    mag = plot_df["psf_mag_cal"].to_numpy(dtype=float)
+    # Prefer názvy z PSF_TARGET_OVERRIDE, inak z name_by_cid, inak samotné ID.
+    override_name_by_cid: dict[str, str] = {}
+    try:
+        for d in PSF_TARGET_OVERRIDE:
+            cid0 = _cid_key(d.get("catalog_id"))
+            if cid0:
+                override_name_by_cid[cid0] = str(d.get("vsx_name", "") or "").strip()
+    except Exception:  # noqa: BLE001
+        override_name_by_cid = {}
 
-    med_raw = float(np.nanmedian(raw[np.isfinite(raw) & (raw > 0)])) if np.any(np.isfinite(raw) & (raw > 0)) else float("nan")
-    med_cal = float(np.nanmedian(cal[np.isfinite(cal) & (cal > 0)])) if np.any(np.isfinite(cal) & (cal > 0)) else float("nan")
-    if math.isfinite(med_raw) and math.isfinite(med_cal) and med_cal > 0:
-        cal_scaled = cal * (med_raw / med_cal)
-    else:
-        cal_scaled = cal
+    for cid in sorted(var_catalog_ids):
+        fp = lc_dir / f"{cid}_psf_cal.csv"
+        if not fp.is_file():
+            continue
+        try:
+            df = pd.read_csv(fp, low_memory=False)
+        except Exception:  # noqa: BLE001
+            continue
+        if df.empty:
+            continue
+        bjd = pd.to_numeric(df.get("bjd_tdb_mid"), errors="coerce").to_numpy(dtype=float)
+        mag = pd.to_numeric(df.get("psf_mag_cal"), errors="coerce").to_numpy(dtype=float)
+        okm = np.isfinite(bjd) & np.isfinite(mag)
+        if not bool(np.any(okm)):
+            continue
 
-    fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(10, 6), sharex=True, gridspec_kw={"height_ratios": [1.1, 1], "hspace": 0.08})
-    ax0.plot(bjd, raw, "b.", ms=3, alpha=0.7, label="psf_flux_raw")
-    ax0.plot(bjd, cal_scaled, "g.", ms=3, alpha=0.7, label="psf_flux_cal (škálovaná)")
-    ax0.set_ylabel("Flux (ADU)")
-    ax0.legend(loc="best", fontsize=8)
-    ax0.grid(True, alpha=0.3)
-    ax0.set_title("MN Boo — PSF kalibrovaná krivka")
+        nm = override_name_by_cid.get(cid) or name_by_cid.get(cid) or cid
+        nm_file = str(nm).strip().replace(" ", "_").replace("/", "_").replace(":", "_")
 
-    okm = np.isfinite(mag) & np.isfinite(bjd)
-    ax1.plot(bjd[okm], mag[okm], "k.", ms=3, alpha=0.7)
-    ax1.set_xlabel("BJD_TDB (mid)")
-    ax1.set_ylabel("psf_mag_cal")
-    ax1.invert_yaxis()
-    ax1.grid(True, alpha=0.3)
+        fig = plt.figure(figsize=(10, 4))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(bjd[okm], mag[okm], "k.", ms=3, alpha=0.7)
+        ax.set_xlabel("BJD_TDB (mid)")
+        ax.set_ylabel("psf_mag_cal")
+        ax.invert_yaxis()
+        ax.grid(True, alpha=0.3)
+        ax.set_title(f"{nm} — PSF kalibrovaná krivka")
 
-    plot_fp = lc_dir / "MN_Boo_psf_cal.png"
-    fig.savefig(plot_fp, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    print(f"✓ plot: {plot_fp}")
+        plot_fp = lc_dir / f"{nm_file}_psf_cal.png"
+        fig.savefig(plot_fp, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"✓ plot: {plot_fp}")
 
 
 def main() -> int:
@@ -1522,6 +1573,13 @@ def main() -> int:
         return 0
 
     var_df, comp_df = step_2_load_targets()
+
+    # Special mode: --frames 0 means "skip PSF fitting, run only calibration"
+    # (useful when *_psf.csv + psf_summary.csv already exist and you only want step 5 outputs).
+    if args.frames is not None and int(args.frames) == 0:
+        print("[--frames 0] Preskakujem krok 3+4, spúšťam len krok 5 (kalibrácia).")
+        step_5_calibrate_lightcurve()
+        return 0
 
     if args.frames:
         print(f"[--frames {args.frames}] Obmedzujem na prvých {args.frames} framov")

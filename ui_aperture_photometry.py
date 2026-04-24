@@ -186,6 +186,99 @@ def _load_summary(output_dir: Path) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def _enrich_summary_with_zone_flags(
+    summary_df: pd.DataFrame,
+    active_targets_csv: Path | None,
+) -> pd.DataFrame:
+    """Doplní ``zone_flag`` / ``skip_photometry`` z ``active_targets.csv`` (badge v UI, aj starší summary)."""
+    out = summary_df.copy()
+    if "zone_flag" not in out.columns:
+        out["zone_flag"] = ""
+    else:
+        out["zone_flag"] = out["zone_flag"].fillna("").astype(str)
+    if "skip_photometry" not in out.columns:
+        out["skip_photometry"] = False
+    if active_targets_csv is None or not Path(active_targets_csv).is_file():
+        return out
+    try:
+        from photometry_phase2a import _normalize_gaia_id
+
+        at = pd.read_csv(active_targets_csv, low_memory=False)
+        if at.empty or "catalog_id" not in at.columns or "catalog_id" not in out.columns:
+            return out
+        zf_by: dict[str, str] = {}
+        sk_by: dict[str, bool] = {}
+        for _, r in at.iterrows():
+            k = str(_normalize_gaia_id(r.get("catalog_id"))).strip()
+            if not k:
+                continue
+            if "zone_flag" in at.columns:
+                zf_by[k] = str(r.get("zone_flag", "") or "").strip()
+            if "skip_photometry" in at.columns:
+                _v = r.get("skip_photometry", False)
+                sk_by[k] = (
+                    bool(_v)
+                    if isinstance(_v, (bool, np.bool_))
+                    else str(_v).strip().lower() in ("1", "true", "yes", "t")
+                )
+        cids = out["catalog_id"].map(_normalize_gaia_id)
+        n = len(out)
+        if zf_by:
+            out["zone_flag"] = [
+                zf_by.get(str(cids.iloc[i] or "").strip(), str(out["zone_flag"].iloc[i] or ""))
+                for i in range(n)
+            ]
+        if sk_by:
+            sk_list: list[bool] = []
+            prev_sk = out["skip_photometry"].tolist() if n else []
+            for i in range(n):
+                ck = str(cids.iloc[i] or "").strip()
+                if ck in sk_by:
+                    sk_list.append(bool(sk_by[ck]))
+                else:
+                    v0 = prev_sk[i] if i < len(prev_sk) else False
+                    sk_list.append(
+                        bool(v0)
+                        if isinstance(v0, (bool, np.bool_))
+                        else str(v0).strip().lower() in ("1", "true", "yes", "t")
+                    )
+            out["skip_photometry"] = sk_list
+    except Exception:  # noqa: BLE001
+        return out
+    return out
+
+
+def _phase2a_target_choice_label(row: pd.Series) -> str:
+    """Text pre selectbox Fázy 2A — názov + badge podľa ``zone_flag`` / ``skip_photometry``."""
+    vsx = str(row.get("vsx_name", "") or "").strip()
+    cid = str(row.get("catalog_id", "") or "").strip()
+    base = vsx if vsx else cid
+    if not base:
+        base = "(bez mena)"
+    zf = str(row.get("zone_flag", "") or "").strip().lower()
+    sk = row.get("skip_photometry", False)
+    sk_b = (
+        bool(sk)
+        if isinstance(sk, (bool, np.bool_))
+        else str(sk).strip().lower() in ("1", "true", "yes", "t")
+    )
+    if sk_b or zf == "saturated":
+        badge = "🔴 saturated — fotometria nedostupná"
+    elif zf == "linear":
+        badge = "🟢 linear"
+    elif zf in ("noisy1", "noisy2"):
+        badge = f"🟡 {zf}"
+    elif zf == "noisy3":
+        badge = "🟠 noisy3"
+    elif zf == "neznáma_zóna":
+        badge = "⚪ neznáma zóna"
+    elif zf:
+        badge = f"⚪ {zf}"
+    else:
+        return base
+    return f"{base}  {badge}"
+
+
 def _float_coord_row(row: pd.Series, *keys: str) -> float:
     for k in keys:
         if k not in row.index:
@@ -465,7 +558,20 @@ def _render_target_detail(
                     f"V CSV chýbajú stĺpce bjd / {y_col} alebo súbor je prázdny."
                 )
         else:
-            st.info("Lightcurve CSV neexistuje. Spusti Fázu 2A.")
+            _sk = target_row.get("skip_photometry", False)
+            _sk_b = (
+                bool(_sk)
+                if isinstance(_sk, (bool, np.bool_))
+                else str(_sk).strip().lower() in ("1", "true", "yes", "t")
+            )
+            _zf_lc = str(target_row.get("zone_flag", "") or "").strip().lower()
+            if _sk_b or _zf_lc == "saturated":
+                st.info(
+                    "Fotometria pre tento cieľ bola preskočená (saturovaná hviezda v masterstars — "
+                    "meranie by nebolo spoľahlivé; pozícia a mapa poľa sú v zozname cieľov)."
+                )
+            else:
+                st.info("Lightcurve CSV neexistuje. Spusti Fázu 2A.")
 
     with col_map:
         fm_png = lc_dir / f"field_map_{catalog_id}.png"
@@ -796,23 +902,18 @@ def render_aperture_photometry(
         st.info("Zatiaľ žiadne výsledky.")
         return
 
-    name_col = "vsx_name" if "vsx_name" in summary_df.columns else "catalog_id"
-    fill_series = (
-        summary_df["catalog_id"]
-        if "catalog_id" in summary_df.columns
-        else pd.Series([""] * len(summary_df), index=summary_df.index)
-    )
-    names = summary_df[name_col].fillna(fill_series).astype(str).tolist()
-    selected = st.selectbox(
+    at_path_for_zf = Path(at_csv) if at_csv is not None else None
+    summary_df = _enrich_summary_with_zone_flags(summary_df, at_path_for_zf)
+
+    _n_sum = int(len(summary_df))
+    _idx_opts = list(range(_n_sum))
+    _sel_i = st.selectbox(
         "Vyber premennú hviezdu:",
-        names,
+        options=_idx_opts,
+        format_func=lambda i: _phase2a_target_choice_label(summary_df.iloc[int(i)]),
         key="phase2a_target_select",
     )
-    mask = summary_df[name_col].fillna(fill_series).astype(str) == str(selected)
-    if not bool(mask.any()):
-        st.warning("Vybraný target sa nenašiel v summary.")
-        return
-    target_row = summary_df.loc[mask].iloc[0]
+    target_row = summary_df.iloc[int(_sel_i)]
     try:
         catalog_id = str(target_row.get("catalog_id", ""))
     except Exception:

@@ -16,6 +16,7 @@ from astropy.io import fits as astrofits
 
 from config import AppConfig
 from gaia_catalog_id import normalize_gaia_source_id
+from infolog import log_event
 from jd_axis_format import jd_axis_title, jd_series_relative
 
 _MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
@@ -800,6 +801,271 @@ def ensemble_normalize(
 
 
 # ---------------------------------------------------------------------------
+# Color term (BP-RP) — globálny shift na noc
+# ---------------------------------------------------------------------------
+
+
+def fit_color_term_c1(
+    comp_mag_inst: dict[str, np.ndarray],
+    comp_catalog_mag: dict[str, float],
+    comp_bp_rp: dict[str, float],
+    comp_quality: dict[str, dict],
+    *,
+    min_comp: int = 5,
+    sigma_clip_sigma: float = 3.0,
+) -> tuple[float, float, int]:
+    """
+    Fituje color term koeficient c1 z COMP hviezd.
+
+    Pre každú good/suspect COMP hviezdu:
+      x_i = bp_rp_i - median(bp_rp všetkých použitých COMP)
+      y_i = median(cat_mag_i - inst_mag_i)  [cez všetky framy]
+
+    Lineárny fit: y = c1 * x + ZP_offset
+
+    Returns: (c1, c1_stderr, n_comp_used)
+    Pri chybe alebo málo COMP: (0.0, nan, 0)
+    """
+    try:
+        min_comp_i = int(min_comp)
+    except Exception:  # noqa: BLE001
+        min_comp_i = 5
+    min_comp_i = max(2, min_comp_i)
+
+    usable = [cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")]
+    xs: list[float] = []
+    ys: list[float] = []
+    bp_vals: list[float] = []
+
+    for cid in usable:
+        bp = float(comp_bp_rp.get(cid, float("nan")))
+        if not math.isfinite(bp):
+            continue
+        if cid not in comp_mag_inst:
+            continue
+        inst = np.asarray(comp_mag_inst[cid], dtype=np.float64)
+        finite = inst[np.isfinite(inst)]
+        if finite.size < min_comp_i:
+            continue
+        cat = float(comp_catalog_mag.get(cid, float("nan")))
+        if not math.isfinite(cat):
+            continue
+        y = float(np.nanmedian(cat - finite))
+        if not math.isfinite(y):
+            continue
+        bp_vals.append(bp)
+        ys.append(y)
+        # x will be centered later once we know bp median
+
+    n0 = len(ys)
+    if n0 < min_comp_i:
+        return 0.0, float("nan"), 0
+
+    bp_med = float(np.median(np.asarray(bp_vals, dtype=np.float64)))
+    for bp in bp_vals:
+        xs.append(float(bp) - bp_med)
+
+    x = np.asarray(xs, dtype=np.float64)
+    y = np.asarray(ys, dtype=np.float64)
+
+    # Initial fit for sigma clipping
+    try:
+        p0 = np.polyfit(x, y, 1)
+        c1_init = float(p0[0])
+        zp_init = float(p0[1])
+    except Exception:  # noqa: BLE001
+        return 0.0, float("nan"), 0
+
+    resid = y - (c1_init * x + zp_init)
+    sig = _mad_sigma(resid)
+    if not math.isfinite(sig) or sig <= 0:
+        # No robust scatter estimate → keep all
+        mask = np.ones_like(resid, dtype=bool)
+    else:
+        mask = np.abs(resid) <= float(sigma_clip_sigma) * float(sig)
+
+    n_removed = int((~mask).sum())
+    x_cl = x[mask]
+    y_cl = y[mask]
+    if x_cl.size < min_comp_i:
+        return 0.0, float("nan"), 0
+
+    try:
+        coeffs, cov = np.polyfit(x_cl, y_cl, 1, cov=True)
+        c1 = float(coeffs[0])
+        c1_stderr = float(math.sqrt(float(cov[0, 0]))) if cov is not None else float("nan")
+    except Exception:  # noqa: BLE001
+        return 0.0, float("nan"), 0
+
+    bp_min = float(np.min(np.asarray(bp_vals, dtype=np.float64)))
+    bp_max = float(np.max(np.asarray(bp_vals, dtype=np.float64)))
+    logging.info(
+        "[COLOR TERM] c1=%.4f ± %.4f, bp_rp_range=[%.2f, %.2f], n_comp=%s, sigma_clip_removed=%s",
+        c1,
+        c1_stderr,
+        bp_min,
+        bp_max,
+        int(x_cl.size),
+        int(n_removed),
+    )
+    return c1, c1_stderr, int(x_cl.size)
+
+
+def apply_color_term(
+    mag_calib: np.ndarray,
+    target_bp_rp: float,
+    comp_bp_rp: dict[str, float],
+    comp_quality: dict[str, dict],
+    c1: float,
+) -> tuple[np.ndarray, float, float]:
+    """
+    Aplikuje color term korekciu na kalibrovanú krivku.
+
+    Vzorec:
+      bp_rp_comp_med = median(bp_rp použitých COMP)
+      ct_correction  = c1 * (target_bp_rp - bp_rp_comp_med)
+      mag_calib_ct   = mag_calib + ct_correction
+
+    Returns: (mag_calib_ct, ct_correction, bp_rp_comp_med)
+    """
+    if mag_calib is None:
+        return np.asarray([], dtype=np.float64), 0.0, float("nan")
+    base = np.asarray(mag_calib, dtype=np.float64)
+    if (not math.isfinite(float(c1))) or float(c1) == 0.0 or (not math.isfinite(float(target_bp_rp))):
+        return base.copy(), 0.0, float("nan")
+
+    usable = [cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")]
+    bps = [
+        float(comp_bp_rp.get(cid, float("nan")))
+        for cid in usable
+        if math.isfinite(float(comp_bp_rp.get(cid, float("nan"))))
+    ]
+    if not bps:
+        return base.copy(), 0.0, float("nan")
+    bp_med = float(np.median(np.asarray(bps, dtype=np.float64)))
+    corr = float(c1) * (float(target_bp_rp) - float(bp_med))
+    out = base + float(corr)
+    logging.info(
+        "[COLOR TERM] target bp_rp=%.3f, comp_med bp_rp=%.3f, correction=%+.4f mag",
+        float(target_bp_rp),
+        float(bp_med),
+        float(corr),
+    )
+    return out, float(corr), float(bp_med)
+
+
+def should_apply_color_term(
+    obs_group: str,
+    c1: float,
+    c1_stderr: float,
+    n_comp: int,
+    *,
+    min_comp_for_ct: int = 10,
+    max_stderr_ratio: float = 0.5,
+) -> tuple[bool, str]:
+    """
+    Auto-rozhodnutie či aplikovať color term korekciu.
+
+    Returns: (apply: bool, reason: str)
+    reason = krátky popis prečo sa CT aplikuje alebo nie
+    """
+    filter_raw = str(obs_group or "").split("|")[0].strip()
+    filter_norm = filter_raw.lower().strip()
+
+    no_filter_names = {
+        "nofilter",
+        "no_filter",
+        "no filter",
+        "clear",
+        "clr",
+        "cl",
+        "none",
+        "lum",
+        "luminance",
+        "",
+    }
+    if filter_norm in no_filter_names:
+        return False, f"NoFilter/Clear ({filter_raw}) — CT nie je potrebný"
+
+    broadband_filters = {
+        # Johnson-Cousins
+        "b",
+        "v",
+        "r",
+        "i",
+        "u",
+        # Cousins
+        "rc",
+        "ic",
+        "vc",
+        "bc",
+        # Sloan
+        "g",
+        "z",
+        "g'",
+        "r'",
+        "i'",
+        "u'",
+        "z'",
+        "sloan_g",
+        "sloan_r",
+        "sloan_i",
+        "sloan_u",
+        "sloan_z",
+        # Variácie zo softvérov (NINA, APT, SGP, PRISM)
+        "johnson_b",
+        "johnson_v",
+        "johnson_r",
+        "johnson_i",
+        "cousins_r",
+        "cousins_i",
+    }
+
+    is_broadband = filter_norm in broadband_filters
+    if not is_broadband:
+        for prefix in ("b", "v", "r", "i", "u", "g", "z"):
+            if filter_norm.startswith(prefix) and len(filter_norm) <= 8:
+                is_broadband = True
+                break
+
+    if not is_broadband:
+        return False, f"Neznámy filter ({filter_raw}) — CT preskočený"
+
+    try:
+        n_comp_i = int(n_comp)
+    except Exception:  # noqa: BLE001
+        n_comp_i = 0
+    if n_comp_i < int(min_comp_for_ct):
+        return (
+            False,
+            (
+                f"Filter {filter_raw} — CT preskočený: "
+                f"málo COMP ({n_comp_i} < {int(min_comp_for_ct)})"
+            ),
+        )
+
+    if not (float(c1) != 0.0 and abs(float(c1)) > 1e-6):
+        return False, f"Filter {filter_raw} — CT preskočený: c1 ≈ 0"
+
+    stderr_ratio = abs(float(c1_stderr) / float(c1)) if float(c1) != 0.0 else float("inf")
+    if not math.isfinite(stderr_ratio):
+        return False, f"Filter {filter_raw} — CT nespoľahlivý: stderr/c1=NaN"
+    if float(stderr_ratio) > float(max_stderr_ratio):
+        return (
+            False,
+            (
+                f"Filter {filter_raw} — CT nespoľahlivý: "
+                f"stderr/c1={stderr_ratio:.2f} > {float(max_stderr_ratio):.2f}"
+            ),
+        )
+
+    return True, (
+        f"Filter {filter_raw} — CT aplikovaný: "
+        f"c1={float(c1):+.4f} ± {float(c1_stderr):.4f} "
+        f"(stderr/c1={stderr_ratio:.2f}, n_comp={n_comp_i})"
+    )
+
+# ---------------------------------------------------------------------------
 # KROK 5: Outlier detekcia
 # ---------------------------------------------------------------------------
 
@@ -982,6 +1248,7 @@ def save_lightcurve_csv(
     mag_inst: np.ndarray,
     mag_calib_raw: np.ndarray,
     mag_calib: np.ndarray,
+    mag_calib_ct: np.ndarray | None,
     delta_mag: np.ndarray,
     err: np.ndarray,
     aperture_r_px: np.ndarray,
@@ -989,9 +1256,31 @@ def save_lightcurve_csv(
     source_files: list[str],
     *,
     method: str = "aperture",
+    ct_correction: float | None = None,
+    ct_c1: float | None = None,
+    ct_bp_rp_target: float | None = None,
+    ct_bp_rp_comp_med: float | None = None,
+    ct_n_comp: int | None = None,
+    ct_ok: bool | None = None,
 ) -> None:
     """Uloží lightcurve CSV."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    n = int(len(bjd))
+    if mag_calib_ct is None:
+        mag_calib_ct_arr = np.asarray(mag_calib, dtype=np.float64).copy()
+    else:
+        mag_calib_ct_arr = np.asarray(mag_calib_ct, dtype=np.float64)
+        if len(mag_calib_ct_arr) != n:
+            mag_calib_ct_arr = np.asarray(mag_calib, dtype=np.float64).copy()
+
+    def _fill_scalar(v: float | None, default: float) -> np.ndarray:
+        vv = float(v) if v is not None else float(default)
+        return np.full(n, vv, dtype=np.float64)
+
+    def _fill_bool(v: bool | None) -> np.ndarray:
+        vb = bool(v) if v is not None else False
+        return np.full(n, vb, dtype=bool)
+
     df = pd.DataFrame(
         {
             "bjd": bjd,
@@ -1002,6 +1291,13 @@ def save_lightcurve_csv(
             "mag_inst": np.round(mag_inst, 6),
             "mag_calib_raw": np.round(mag_calib_raw, 6),
             "mag_calib": np.round(mag_calib, 6),
+            "mag_calib_ct": np.round(mag_calib_ct_arr, 6),
+            "ct_correction": np.round(_fill_scalar(ct_correction, float("nan")), 6),
+            "ct_c1": np.round(_fill_scalar(ct_c1, float("nan")), 6),
+            "ct_bp_rp_target": np.round(_fill_scalar(ct_bp_rp_target, float("nan")), 6),
+            "ct_bp_rp_comp_med": np.round(_fill_scalar(ct_bp_rp_comp_med, float("nan")), 6),
+            "ct_n_comp": np.full(n, int(ct_n_comp) if ct_n_comp is not None else -1, dtype=int),
+            "ct_ok": _fill_bool(ct_ok),
             "delta_mag": np.round(delta_mag, 6),
             "err": np.round(err, 6),
             "aperture_r_px": np.round(aperture_r_px, 3),
@@ -1395,6 +1691,8 @@ def run_phase2a(
 
     _cfg = cfg or AppConfig()
     _save_png = bool(_cfg.save_lightcurve_png)
+    # Obs_group / filter name for decisions (e.g. color term). Prefer FITS header, fallback to directory name.
+    obs_group = str(Path(per_frame_csv_dir).name)
     if aperture_fwhm_factor is not None:
         try:
             _apt_fw = float(aperture_fwhm_factor)
@@ -1417,8 +1715,48 @@ def run_phase2a(
             if col in df.columns:
                 df[col] = df[col].apply(_normalize_gaia_id)
 
+    def _coerce_skip_photometry(df: pd.DataFrame) -> pd.Series:
+        if "skip_photometry" in df.columns:
+
+            def _to_b(x: Any) -> bool:
+                if isinstance(x, (bool, np.bool_)):
+                    return bool(x)
+                s = str(x).strip().lower()
+                return s in ("1", "true", "yes", "t")
+
+            return df["skip_photometry"].map(_to_b).fillna(False).astype(bool)
+        if "zone_flag" in df.columns:
+            zf = df["zone_flag"].astype(str).str.strip().str.lower()
+            return zf.eq("saturated").astype(bool)
+        return pd.Series(False, index=df.index, dtype=bool)
+
+    at_df["skip_photometry"] = _coerce_skip_photometry(at_df)
+
     if "x" not in comp_df.columns or "y" not in comp_df.columns:
         raise ValueError("comparison_stars_per_target.csv musí obsahovať stĺpce x, y pre Fázu 2A")
+
+    # BP-RP pre targety: načítaj z masterstars_full_match.csv v platesolve dir (pri MASTERSTAR.fits).
+    target_bp_rp_by_cid: dict[str, float] = {}
+    try:
+        ms_full = Path(masterstar_fits_path).resolve().parent / "masterstars_full_match.csv"
+        if ms_full.is_file():
+            ms_df0 = pd.read_csv(ms_full, low_memory=False, usecols=["catalog_id", "bp_rp"])
+            ms_df0 = ms_df0.copy()
+            ms_df0["catalog_id"] = ms_df0["catalog_id"].apply(_normalize_gaia_id)
+            ms_df0["bp_rp"] = pd.to_numeric(ms_df0["bp_rp"], errors="coerce")
+            for _, r in ms_df0.iterrows():
+                cid0 = str(r.get("catalog_id") or "").strip()
+                if not cid0:
+                    continue
+                v0 = r.get("bp_rp")
+                try:
+                    vv = float(v0)
+                except Exception:  # noqa: BLE001
+                    continue
+                if math.isfinite(vv):
+                    target_bp_rp_by_cid[cid0] = float(vv)
+    except Exception:  # noqa: BLE001
+        target_bp_rp_by_cid = {}
 
     # Nájdi per-frame CSV (FITS sa nepoužíva)
     csv_files = sorted(Path(per_frame_csv_dir).glob("proc_*.csv"))
@@ -1526,9 +1864,11 @@ def run_phase2a(
         pass
 
     # Krok 1: Globálna fixná apertúra — všetky hviezdy (target + comp), faktor × FWHM
+    # Ciele so skip_photometry (saturované) nepatria do výpočtu apertúr / FWHM z targetov.
     _at_cols = [c for c in ("catalog_id", "x", "y", "mag") if c in at_df.columns]
     _comp_cols = [c for c in ("catalog_id", "x", "y", "mag") if c in comp_df.columns]
-    _at_part = at_df[_at_cols].copy()
+    _at_use = at_df.loc[~at_df["skip_photometry"], _at_cols].copy() if _at_cols else at_df.iloc[0:0].copy()
+    _at_part = _at_use.copy()
     _comp_part = comp_df[_comp_cols].drop_duplicates("catalog_id").copy()
     if "mag" not in _at_part.columns:
         _at_part["mag"] = float("nan")
@@ -1547,6 +1887,14 @@ def run_phase2a(
     try:
         with astrofits.open(Path(masterstar_fits_path), memmap=False) as _hdul:
             hdr = _hdul[0].header
+            try:
+                _obsg = hdr.get("VY_OBSG", None) or hdr.get("OBSG", None) or hdr.get("FILTER", None)
+                if _obsg is not None:
+                    _s = str(_obsg).strip()
+                    if _s:
+                        obs_group = _s
+            except Exception:  # noqa: BLE001
+                pass
             vy_fwhm_gauss = hdr.get("VY_FWHM_GAUSS", None)
             vy_fwhm_dao = hdr.get("VY_FWHM", None)
             if vy_fwhm_gauss is not None:
@@ -1623,10 +1971,41 @@ def run_phase2a(
     for ti, (_, target_row) in enumerate(at_df.iterrows(), start=1):
         target_cid = _normalize_gaia_id(target_row.get("catalog_id", ""))
         target_name = str(target_row.get("vsx_name", target_cid))
+        _sp = target_row.get("skip_photometry", False)
+        if isinstance(_sp, (bool, np.bool_)):
+            skip_photo = bool(_sp)
+        else:
+            skip_photo = str(_sp).strip().lower() in ("1", "true", "yes", "t")
         if progress_cb is not None and (
             ti == 1 or ti == _nt or (_nt > 1 and ti % max(1, _nt // 12) == 0)
         ):
             _p2(f"Fáza 2A: cieľ {ti}/{_nt}: {target_name[:50]}")
+        _zf_row = str(target_row.get("zone_flag", "")).strip()
+        if skip_photo:
+            logging.info(f"[FÁZA 2A] Preskakujem fotometriu (saturovaný cieľ): {target_name}")
+            summary_rows.append(
+                {
+                    "catalog_id": target_cid,
+                    "vsx_name": target_name,
+                    "zone_flag": _zf_row,
+                    "skip_photometry": True,
+                    "n_frames": 0,
+                    "n_good_comp": 0,
+                    "n_outliers": 0,
+                    "n_saturated": 0,
+                    "lc_rms": float("nan"),
+                    "lc_median_mag": float("nan"),
+                    "aperture_px": float("nan"),
+                    "am_slope": float("nan"),
+                    "am_slope_pre": float("nan"),
+                    "am_slope_post": float("nan"),
+                    "am_piecewise": False,
+                    "am_detrended": False,
+                    "lc_csv": "",
+                    "lc_png": "",
+                }
+            )
+            continue
         logging.info(
             f"[FÁZA 2A] Spúšťam: target={target_name}, "
             f"frames={len(csv_files)}, "
@@ -1717,6 +2096,77 @@ def run_phase2a(
             n_comp_max=10,
         )
 
+        # ── Color term (BP-RP) ──
+        # Načítaj BP-RP pre target (z masterstars_full_match.csv).
+        target_bp_rp = float(target_bp_rp_by_cid.get(target_cid, float("nan")))
+        # BP-RP pre COMP hviezdy (z comparison_stars_per_target.csv; ak chýba, preskočíme).
+        comp_bp_rp: dict[str, float] = {}
+        if "bp_rp" in target_comps.columns:
+            for _, rr in target_comps.iterrows():
+                cidc = _normalize_gaia_id(rr.get("catalog_id", ""))
+                if not cidc:
+                    continue
+                v = pd.to_numeric(rr.get("bp_rp"), errors="coerce")
+                try:
+                    fv = float(v)
+                except Exception:  # noqa: BLE001
+                    fv = float("nan")
+                if math.isfinite(fv):
+                    comp_bp_rp[cidc] = float(fv)
+        else:
+            logging.warning("[COLOR TERM] comparison_stars.csv nemá stĺpec bp_rp — pokračujem bez color term")
+
+        c1 = 0.0
+        c1_stderr = float("nan")
+        ct_n_comp = 0
+        mag_calib_ct = mag_calib.copy()
+        ct_corr = 0.0
+        bp_rp_comp_med = float("nan")
+        ct_ok = False
+        if comp_bp_rp:
+            c1, c1_stderr, ct_n_comp = fit_color_term_c1(
+                comp_lc,
+                comp_catalog_mag,
+                comp_bp_rp,
+                comp_quality,
+                min_comp=5,
+                sigma_clip_sigma=3.0,
+            )
+            apply_ct, ct_reason = should_apply_color_term(
+                obs_group=obs_group,
+                c1=c1,
+                c1_stderr=c1_stderr,
+                n_comp=ct_n_comp,
+            )
+            log_event(f"[COLOR TERM] {ct_reason}")
+            if apply_ct:
+                mag_calib_ct, ct_corr, bp_rp_comp_med = apply_color_term(
+                    mag_calib,
+                    target_bp_rp,
+                    comp_bp_rp,
+                    comp_quality,
+                    c1,
+                )
+                ct_ok = (
+                    bool(math.isfinite(float(target_bp_rp)))
+                    and float(c1) != 0.0
+                    and math.isfinite(float(bp_rp_comp_med))
+                )
+            else:
+                mag_calib_ct = mag_calib.copy()
+                ct_corr = 0.0
+                bp_rp_comp_med = float("nan")
+                ct_ok = False
+        else:
+            # No comp BP-RP available (or missing column)
+            ct_ok = False
+            c1 = 0.0
+            c1_stderr = float("nan")
+            ct_n_comp = 0
+            mag_calib_ct = mag_calib.copy()
+            ct_corr = 0.0
+            bp_rp_comp_med = float("nan")
+
         # Časové hodnoty targetu
         target_frames = all_frames[all_frames["catalog_id"] == target_cid]
         bjd = target_frames["bjd"].to_numpy(dtype=float)
@@ -1781,11 +2231,18 @@ def run_phase2a(
             target_lc,
             mag_calib_raw,
             mag_calib,
+            (mag_calib_ct if bool(ct_ok) else mag_calib),
             delta_mag,
             err,
             ap_arr,
             out_flags,
             src_files,
+            ct_correction=(float(ct_corr) if bool(ct_ok) else float("nan")),
+            ct_c1=(float(c1) if bool(ct_ok) else float("nan")),
+            ct_bp_rp_target=(float(target_bp_rp) if bool(ct_ok) else float("nan")),
+            ct_bp_rp_comp_med=(float(bp_rp_comp_med) if bool(ct_ok) else float("nan")),
+            ct_n_comp=(int(ct_n_comp) if bool(ct_ok) else None),
+            ct_ok=bool(ct_ok),
         )
 
         # Kvalita comp pre UI (tabuľka „Porovnávacie hviezdy“)
@@ -1852,6 +2309,8 @@ def run_phase2a(
             {
                 "catalog_id": target_cid,
                 "vsx_name": target_name,
+                "zone_flag": str(target_row.get("zone_flag", "")).strip(),
+                "skip_photometry": False,
                 "n_frames": len(bjd),
                 "n_good_comp": n_good_comp,
                 "n_outliers": n_out,
@@ -2506,6 +2965,22 @@ def _phase0_effective_frame_hw_px(
     return max(int(frame_w_px), need_w), max(int(frame_h_px), need_h)
 
 
+def _active_target_zone_flag(ms_row: pd.Series, zone_val_raw: str) -> str:
+    """Mapovanie masterstars ``zone`` (+ legacy ``is_saturated``) na ``zone_flag`` pre active_targets."""
+    z = str(zone_val_raw or "").strip().lower()
+    if z in ("linear", "noisy1", "noisy2", "noisy3", "saturated"):
+        return z
+    try:
+        sat = bool(ms_row.get("is_saturated", False))
+    except Exception:  # noqa: BLE001
+        sat = False
+    if sat:
+        return "saturated"
+    if not z:
+        return "neznáma_zóna"
+    return z
+
+
 def select_active_targets(
     variable_targets_csv: Path,
     masterstars_csv: Path,
@@ -2522,14 +2997,15 @@ def select_active_targets(
       ako ``chip_interior_margin_px`` vo Fáze 0+1 — jednotné s porovnávačkami a suspected).
     - Šírka/výška sa zväčší z dát ak treba
     - Musí byť nájdená v masterstars_full_match.csv (cross-match < match_radius_arcsec)
-    - masterstars záznam musí mať is_usable=True
-    - Nesmie byť saturovaná (is_saturated=False)
+    - ``catalog_id`` z masterstars musí byť neprázdny (inak sa cieľ vynechá).
+    - **Žiadny filter na zónu** (linear / noisy / saturated všetky prejdú); kvalita je v ``zone_flag``,
+      saturované ciele majú ``skip_photometry=True`` pre Fázu 2A.
     - **Žiadny filter na ``vsx_type``** (SXPHE, DSCT, … sa nevyhadzujú samé o sebe).
 
     Returns:
         DataFrame s active targets — stĺpce z variable_targets + pridané zo masterstars:
         [name, catalog_id, ra_deg, dec_deg, vsx_name, vsx_type, vsx_period,
-         x, y, mag, b_v, bp_rp, snr50_ok, is_usable, zone]
+         x, y, mag, b_v, bp_rp, snr50_ok, is_usable, zone, zone_flag, skip_photometry, match_dist_arcsec]
     """
     vt = pd.read_csv(variable_targets_csv, low_memory=False)
     ms = pd.read_csv(masterstars_csv, low_memory=False)
@@ -2572,6 +3048,17 @@ def select_active_targets(
 
     ms_arr = ms[["ra_deg", "dec_deg"]].to_numpy(dtype=float)
 
+    def _gaia_id_str(x: Any) -> str:
+        s = str(x).strip()
+        if s in ("", "nan"):
+            return ""
+        try:
+            return str(int(float(s)))
+        except Exception:  # noqa: BLE001
+            return s
+
+    out_of_frame = int(len(vt) - int(in_frame.sum()))
+    no_catalog_id = 0
     matched_rows: list[dict] = []
     for _, vrow in vt_in.iterrows():
         ra_v = float(vrow["ra_deg"])
@@ -2588,17 +3075,17 @@ def select_active_targets(
         if best_dist_arcsec > match_radius_arcsec:
             continue
         ms_row = ms.iloc[best_idx]
-        zone_val = str(ms_row.get("zone", "")).strip().lower()
-        # Zahrnúť: linear (plne použiteľná) + noisy1 (slabší signál, možná premenná)
-        # Vylúčiť: saturated, noisy2, noisy3, prázdna zóna
-        if zone_val in ("noisy2", "noisy3", "saturated", ""):
+        zone_val_raw = str(ms_row.get("zone", "")).strip()
+        zone_flag = _active_target_zone_flag(ms_row, zone_val_raw)
+        cid_raw = str(ms_row.get("catalog_id", ms_row.get("name", ""))).strip()
+        catalog_id_norm = _normalize_gaia_id(ms_row.get("catalog_id", ms_row.get("name")))
+        if not catalog_id_norm:
+            # Fallback na textový reťazec ak _normalize vráti prázdny ale máme nečíselný id
+            catalog_id_norm = _gaia_id_str(cid_raw)
+        if not catalog_id_norm:
+            no_catalog_id += 1
             continue
-        if zone_val not in ("linear", "noisy1"):
-            # Fallback pre staré CSV bez noisy sub-kategórií
-            if not bool(ms_row.get("is_usable", False)):
-                continue
-            if bool(ms_row.get("is_saturated", False)):
-                continue
+        skip_ph = zone_flag == "saturated"
         rec = {
             "name": vrow.get("name", ""),
             "vsx_name": vrow.get("vsx_name", ""),
@@ -2609,7 +3096,7 @@ def select_active_targets(
             "dec_deg": dec_v,
             "x": float(vrow["x"]),
             "y": float(vrow["y"]),
-            "catalog_id": str(ms_row.get("catalog_id", ms_row.get("name", ""))).strip(),
+            "catalog_id": catalog_id_norm,
             "mag": float(ms_row.get("mag", float("nan"))),
             "b_v": float(ms_row.get("b_v", float("nan"))),
             "bp_rp": float(ms_row.get("bp_rp", float("nan"))),
@@ -2617,28 +3104,54 @@ def select_active_targets(
             "zone": str(ms_row.get("zone", "")),
             "is_usable": bool(ms_row.get("is_usable", False)),
             "match_dist_arcsec": best_dist_arcsec,
+            "zone_flag": zone_flag,
+            "skip_photometry": bool(skip_ph),
         }
         matched_rows.append(rec)
 
+    _empty_cols = [
+        "name",
+        "vsx_name",
+        "vsx_type",
+        "vsx_period",
+        "priority",
+        "ra_deg",
+        "dec_deg",
+        "x",
+        "y",
+        "catalog_id",
+        "mag",
+        "b_v",
+        "bp_rp",
+        "snr50_ok",
+        "zone",
+        "is_usable",
+        "match_dist_arcsec",
+        "zone_flag",
+        "skip_photometry",
+    ]
     if not matched_rows:
-        return pd.DataFrame()
+        log_event(
+            "select_active_targets: linear=0 noisy1=0 noisy2=0 noisy3=0 saturated=0 "
+            f"no_catalog_id={no_catalog_id} out_of_frame={out_of_frame}"
+        )
+        return pd.DataFrame(columns=_empty_cols)
 
     result = pd.DataFrame(matched_rows)
-    # Zabezpeč string formát Gaia ID v output CSV
     if "catalog_id" in result.columns:
-        def _gaia_id_str(x: Any) -> str:
-            s = str(x).strip()
-            if s in ("", "nan"):
-                return ""
-            try:
-                return str(int(float(s)))
-            except Exception:  # noqa: BLE001
-                return s
-
         result["catalog_id"] = result["catalog_id"].apply(_gaia_id_str)
+    n_lin = int((result["zone_flag"] == "linear").sum())
+    n_n1 = int((result["zone_flag"] == "noisy1").sum())
+    n_n2 = int((result["zone_flag"] == "noisy2").sum())
+    n_n3 = int((result["zone_flag"] == "noisy3").sum())
+    n_sat = int((result["zone_flag"] == "saturated").sum())
+    log_event(
+        f"select_active_targets: linear={n_lin} noisy1={n_n1} noisy2={n_n2} noisy3={n_n3} "
+        f"saturated={n_sat} no_catalog_id={no_catalog_id} out_of_frame={out_of_frame}"
+    )
     logging.info(
         f"[FÁZA 0] active_targets: {len(result)} / {len(vt)} VSX hviezd "
-        f"(in_frame={int(in_frame.sum())}, matched+usable={len(result)})"
+        f"(in_frame={int(in_frame.sum())}, matched={len(result)})"
     )
     return result.reset_index(drop=True)
 
@@ -3590,7 +4103,7 @@ def run_phase0_and_phase1(
     """Spusti Fázu 0 + Fázu 1 a uloží výstupy.
 
     Výstupy (uložené do output_dir):
-      active_targets.csv              — filtrované VSX ciele
+      active_targets.csv              — VSX ciele + ``zone_flag`` / ``skip_photometry`` (saturované)
       comparison_stars_per_target.csv — porovnávacie hviezdy pre každý cieľ
       suspected_variables.csv         — kandidáti na nové premenné (vysoký RMS, nie VSX)
 
