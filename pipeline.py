@@ -39,6 +39,7 @@ from database import (
     VyvarDatabase,
     _db_to_float as _to_float_db,
     query_local_gaia,
+    query_local_gaia_by_source_ids,
     query_local_vsx,
 )
 from time_utils import _header_float as _header_float_tu
@@ -50,7 +51,7 @@ from photometry import (
     vsx_is_known_variable_top3_per_bin,
 )
 from fits_suffixes import FITS_SUFFIXES_LOWER, path_suffix_is_fits
-from gaia_catalog_id import catalog_id_series_for_masterstars_export
+from gaia_catalog_id import catalog_id_series_for_masterstars_export, normalize_gaia_source_id
 from infolog import log_event, log_exception
 from calibration import (
     CALIBRATION_LIBRARY_NATIVE_BINNING,
@@ -8271,6 +8272,63 @@ def _refine_masterstar_wcs_gaia_sky_match_infile(
     return {"refined": False, "reason": "gaia_refine_removed"}
 
 
+def _fill_masterstars_gaia_matched_bp_rp_from_local_db(
+    df: pd.DataFrame,
+    *,
+    gaia_db_path: str,
+) -> tuple[pd.DataFrame, int, int]:
+    """Doplň ``bp_rp`` / ``b_v`` z lokálnej Gaia SQLite pre ``GAIA_MATCHED`` bez farby v masterstars CSV.
+
+    Frame-wide Gaia dotaz (``ORDER BY g_mag LIMIT``) často vynechá už omatchované hviezdy na snímke;
+    táto dávka ide priamo podľa ``source_id``.
+    """
+    if df is None or getattr(df, "empty", True):
+        return df, 0, 0
+    need = {"catalog_id", "bp_rp", "source_type"}
+    if not need.issubset(df.columns):
+        return df, 0, 0
+
+    st_ok = df["source_type"].astype(str).str.strip().eq("GAIA_MATCHED")
+    bpr = pd.to_numeric(df["bp_rp"], errors="coerce")
+    gid = df["catalog_id"].map(normalize_gaia_source_id)
+    gid_ok = gid.ne("")
+    mask = st_ok & bpr.isna() & gid_ok
+    n_missing = int(mask.sum())
+    if n_missing <= 0:
+        return df, 0, 0
+
+    gdb = str(gaia_db_path or "").strip()
+    try:
+        gdb_ok = bool(gdb) and Path(gdb).is_file()
+    except OSError:
+        gdb_ok = False
+    if not gdb_ok:
+        return df, 0, n_missing
+
+    from photometry_core import bp_rp_to_bv
+
+    out = df.copy()
+    if "b_v" not in out.columns:
+        out["b_v"] = np.nan
+
+    sub_idx = out.index[mask]
+    keys_series = gid.loc[sub_idx]
+    uniq_keys = sorted({k for k in keys_series.tolist() if k})
+    if not uniq_keys:
+        return out, 0, n_missing
+
+    gaia_map = query_local_gaia_by_source_ids(gdb, uniq_keys)
+    bprp_raw = keys_series.map(lambda k: (gaia_map.get(k) or {}).get("bp_rp"))
+    bprp_num = pd.to_numeric(bprp_raw, errors="coerce")
+    fill_ok = bprp_num.notna()
+    to_fill = bprp_num.index[fill_ok]
+    if len(to_fill) > 0:
+        out.loc[to_fill, "bp_rp"] = bprp_num.loc[to_fill].astype(float)
+        out.loc[to_fill, "b_v"] = out.loc[to_fill, "bp_rp"].apply(bp_rp_to_bv)
+    n_filled = int(fill_ok.sum())
+    return out, n_filled, n_missing
+
+
 def generate_masterstar_and_catalog(
     *,
     archive_path: Path,
@@ -8661,7 +8719,7 @@ def generate_masterstar_and_catalog(
             if draft_id is not None:
                 _db_ms = VyvarDatabase(Path(_cfg_fast.database_path))
                 try:
-                    _db_ms.set_obs_draft_masterstar_path(int(draft_id), _ms_out)
+                    _db_ms.set_obs_draft_masterstar_fits_path(int(draft_id), _ms_out)
                 finally:
                     _db_ms.conn.close()
         except Exception as exc:  # noqa: BLE001
@@ -9060,7 +9118,7 @@ def generate_masterstar_and_catalog(
             if draft_id is not None:
                 _db_early = VyvarDatabase(Path(_cfg_early.database_path))
                 try:
-                    _db_early.set_obs_draft_masterstar_path(int(draft_id), _ms_out_early)
+                    _db_early.set_obs_draft_masterstar_fits_path(int(draft_id), _ms_out_early)
                 finally:
                     _db_early.conn.close()
         except Exception as exc:  # noqa: BLE001
@@ -9270,6 +9328,13 @@ def generate_masterstar_and_catalog(
     try:
         cid = df_final.get("catalog_id", pd.Series([""] * len(df_final))).fillna("").astype(str).str.strip()
         df_final["source_type"] = np.where(cid.ne(""), "GAIA_MATCHED", "DAO_ONLY")
+        _gdb_fill = str(getattr(_cfg_ms, "gaia_db_path", "") or "").strip()
+        df_final, _n_bp_fill, _n_bp_miss = _fill_masterstars_gaia_matched_bp_rp_from_local_db(
+            df_final,
+            gaia_db_path=_gdb_fill,
+        )
+        if _n_bp_miss > 0:
+            log_event(f"masterstars bp_rp fallback: {_n_bp_fill}/{_n_bp_miss} doplnených z Gaia DB")
         _vyvar_df_to_csv(df_final, csv_path)
     except Exception as exc:  # noqa: BLE001
         log_event(f"MASTERSTAR source_type annotate failed: {exc!s}")
@@ -9949,7 +10014,7 @@ def generate_masterstar_and_catalog(
         if draft_id is not None:
             _db_ms = VyvarDatabase(Path(_cfg_ms.database_path))
             try:
-                _db_ms.set_obs_draft_masterstar_path(int(draft_id), str(Path(masterstar_fits).resolve()))
+                _db_ms.set_obs_draft_masterstar_fits_path(int(draft_id), str(Path(masterstar_fits).resolve()))
             finally:
                 _db_ms.conn.close()
     except Exception as exc:  # noqa: BLE001

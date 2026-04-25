@@ -30,7 +30,12 @@ from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
 from astropy.wcs import WCS
 
-from database import get_gaia_db_max_g_mag, query_local_gaia
+from database import get_gaia_db_max_g_mag, query_local_gaia, query_local_gaia_by_source_ids
+from gaia_catalog_id import (
+    catalog_id_series_for_masterstars_export,
+    masterstar_row_gaia_key,
+    normalize_gaia_source_id,
+)
 from infolog import log_event
 from utils import strip_celestial_wcs_keys
 
@@ -115,16 +120,8 @@ def _apply_wcs_pc_parity_flip_to_primary(fits_path: Path, *, set_vy_optpf: bool 
 
 
 def _norm_id(v: Any) -> str:
-    s = str(v).strip()
-    if not s or s.lower() in {"nan", "none"}:
-        return ""
-    try:
-        fv = float(s)
-        if np.isfinite(fv) and abs(fv - round(fv)) < 1e-9:
-            return str(int(round(fv)))
-    except Exception:  # noqa: BLE001
-        pass
-    return s
+    """Gaia ``source_id`` / ``catalog_id`` key for joins (``float64``/CSV float must not round large IDs)."""
+    return normalize_gaia_source_id(v)
 
 
 def _poly_features(xn: np.ndarray, yn: np.ndarray) -> np.ndarray:
@@ -199,6 +196,67 @@ def _gaia_for_field(
     gdf = pd.DataFrame(rows)
     gdf["source_id"] = gdf.get("source_id").astype(str)
     return gdf
+
+
+def _backfill_bp_rp_from_gdf_and_db(
+    df: pd.DataFrame,
+    gdf: pd.DataFrame,
+    gmap: dict[str, int],
+    gaia_db_path: str | Path,
+) -> None:
+    """Fill NaN ``bp_rp`` for catalog-matched rows.
+
+    The optimizer's field Gaia query uses a sky rectangle + ``ORDER BY g_mag LIMIT``, so many
+    ``catalog_id`` values from DAO matching are absent from ``gdf``. ``_write_match`` only sets
+    colors for newly assigned pairs — existing rows keep empty ``bp_rp``. This pass copies from
+    ``gdf`` when the id is present, then batch-looks up remaining ids in SQLite by ``source_id``.
+    """
+    if df.empty or "catalog_id" not in df.columns:
+        return
+    if "bp_rp" not in df.columns:
+        df["bp_rp"] = np.nan
+    for i in range(len(df)):
+        sid = _norm_id(masterstar_row_gaia_key(df.iloc[i]))
+        if not sid or sid not in gmap:
+            continue
+        cur = pd.to_numeric(df.at[i, "bp_rp"], errors="coerce")
+        if pd.notna(cur) and np.isfinite(float(cur)):
+            continue
+        j = int(gmap[sid])
+        row = gdf.iloc[j]
+        v = pd.to_numeric(row.get("bp_rp"), errors="coerce")
+        if pd.isna(v) or not np.isfinite(float(v)):
+            bpm = pd.to_numeric(row.get("bp_mag"), errors="coerce")
+            rpm = pd.to_numeric(row.get("rp_mag"), errors="coerce")
+            if pd.notna(bpm) and pd.notna(rpm):
+                v = float(bpm) - float(rpm)
+        if pd.notna(v) and np.isfinite(float(v)):
+            df.at[i, "bp_rp"] = float(v)
+    missing: list[str] = []
+    for i in range(len(df)):
+        sid = _norm_id(masterstar_row_gaia_key(df.iloc[i]))
+        if not sid:
+            continue
+        cur = pd.to_numeric(df.at[i, "bp_rp"], errors="coerce")
+        if pd.notna(cur) and np.isfinite(float(cur)):
+            continue
+        missing.append(sid)
+    if not missing:
+        return
+    got = query_local_gaia_by_source_ids(gaia_db_path, missing)
+    for i in range(len(df)):
+        sid = _norm_id(masterstar_row_gaia_key(df.iloc[i]))
+        if not sid:
+            continue
+        cur = pd.to_numeric(df.at[i, "bp_rp"], errors="coerce")
+        if pd.notna(cur) and np.isfinite(float(cur)):
+            continue
+        ent = got.get(sid)
+        if not ent:
+            continue
+        bpr = ent.get("bp_rp")
+        if bpr is not None and math.isfinite(float(bpr)):
+            df.at[i, "bp_rp"] = float(bpr)
 
 
 def optimize_masterstar_matches(
@@ -1086,6 +1144,11 @@ def optimize_masterstar_matches(
     except Exception as exc:  # noqa: BLE001
         log_event(f"Astrometry optimizer global shift correction skipped: {exc!s}")
 
+    try:
+        _backfill_bp_rp_from_gdf_and_db(df, gdf, gmap, gaia_db_path)
+    except Exception as exc:  # noqa: BLE001
+        log_event(f"Astrometry optimizer bp_rp backfill skipped: {exc!s}")
+
     if "phot_g_mean_mag" not in df.columns:
         if "mag" in df.columns:
             df["phot_g_mean_mag"] = pd.to_numeric(df["mag"], errors="coerce")
@@ -1097,7 +1160,11 @@ def optimize_masterstar_matches(
         else:
             df["bp_rp"] = np.nan
 
-    df.to_csv(out_path, index=False)
+    export_df = df
+    if "catalog_id" in df.columns:
+        export_df = df.copy()
+        export_df["catalog_id"] = catalog_id_series_for_masterstars_export(export_df)
+    export_df.to_csv(out_path, index=False)
     n_all = int(len(df))
     n_match = int(df.get("catalog_id", pd.Series([""] * len(df))).fillna("").astype(str).str.strip().ne("").sum())
     log_event(f"Astrometry optimizer: wrote {out_path} ({n_match}/{n_all} catalog-matched).")

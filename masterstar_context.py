@@ -42,7 +42,7 @@ def resolve_masterstar_fits_path(
     """Resolve ``MASTERSTAR.fits`` for the active draft (DB path, else platesolve default bundle)."""
     if draft_id is not None and db is not None:
         try:
-            raw = db.get_obs_draft_masterstar_path(int(draft_id))
+            raw = db.get_obs_draft_masterstar_source_path(int(draft_id))
         except Exception:  # noqa: BLE001
             raw = None
         if raw:

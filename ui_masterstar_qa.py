@@ -139,7 +139,7 @@ def render_masterstar_qa(
     masterstar_candidate_path: Path | None = None
     if draft_id is not None:
         try:
-            mp = pipeline.db.get_obs_draft_masterstar_path(int(draft_id))
+            mp = pipeline.db.get_obs_draft_masterstar_source_path(int(draft_id))
             if mp:
                 masterstar_candidate_path = Path(str(mp))
                 preferred_setup = _infer_setup_name_from_masterstar_candidate_path(masterstar_candidate_path)

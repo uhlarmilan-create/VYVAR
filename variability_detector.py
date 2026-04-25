@@ -51,6 +51,7 @@ def load_field_flux_matrix(
     flux_col: str = "dao_flux",
     zone_filter: list[str] | None = None,
     min_frames_frac: float = 0.5,
+    config: dict[str, Any] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
     """
     Načíta všetky proc_*.csv a zostaví pivot tabuľku.
@@ -62,6 +63,12 @@ def load_field_flux_matrix(
       bjd_array:      array of bjd_tdb_mid per frame column order (NaN if missing)
     """
     per_frame_dir = Path(per_frame_dir)
+    cfg = config or {}
+    try:
+        min_frames_frac = float(cfg.get("variability_min_frames_frac", min_frames_frac))
+    except Exception:  # noqa: BLE001
+        pass
+
     if zone_filter is None:
         zone_filter = ["linear", "noisy1"]
 
@@ -87,6 +94,7 @@ def load_field_flux_matrix(
         "bjd_tdb_mid",
         "photometry_ok",
         "edge_safe_10px",
+        "edge_fail",
         "snr50_ok",
         "is_saturated",
         "likely_saturated",
@@ -121,6 +129,11 @@ def load_field_flux_matrix(
             sub = sub[~sub["is_saturated"].fillna(False).astype(bool)]
         if "likely_saturated" in sub.columns:
             sub = sub[~sub["likely_saturated"].fillna(False).astype(bool)]
+        if "edge_fail" in sub.columns:
+            n0 = int(len(sub))
+            sub = sub[~sub["edge_fail"].fillna(False).astype(bool)]
+            n1 = int(len(sub))
+            logging.info("[VARIABILITY] edge_fail filter: vyradených %s meraní", int(n0 - n1))
 
         if "zone" in sub.columns:
             sub["zone"] = sub["zone"].fillna("").astype(str).str.strip()
@@ -232,6 +245,8 @@ def compute_rms_variability(
     *,
     sigma_threshold: float = 3.0,
     vsx_targets_csv: Path | None = None,
+    config: dict[str, Any] | None = None,
+    comp_rms_map: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     RMS metóda — pre každú hviezdu vypočíta relatívnu RMS.
@@ -243,18 +258,66 @@ def compute_rms_variability(
     flux0 = flux_matrix.apply(pd.to_numeric, errors="coerce")
     n_frames_used = flux0.notna().sum(axis=1)
 
-    # Sigma clipping per star before RMS (MAD-based, 5σ).
+    cfg = config or {}
+    try:
+        sigma_threshold = float(cfg.get("variability_sigma_threshold", sigma_threshold))
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        sigma_clip = float(cfg.get("variability_sigma_clip", 5.0))
+    except Exception:  # noqa: BLE001
+        sigma_clip = 5.0
+    try:
+        min_points_rms = int(cfg.get("variability_min_points_rms", 20))
+    except Exception:  # noqa: BLE001
+        min_points_rms = 20
+    try:
+        p85_filter = int(cfg.get("variability_p85_filter", 85))
+    except Exception:  # noqa: BLE001
+        p85_filter = 85
+    try:
+        slope_floor = float(cfg.get("variability_slope_floor", 0.02))
+    except Exception:  # noqa: BLE001
+        slope_floor = 0.02
+    try:
+        smoothness_max = float(cfg.get("variability_smoothness_max", 0.80))
+    except Exception:  # noqa: BLE001
+        smoothness_max = 0.80
+    try:
+        mag_limit = float(cfg.get("variability_mag_limit", 14.5))
+    except Exception:  # noqa: BLE001
+        mag_limit = 14.5
+    try:
+        min_frames = int(cfg.get("variability_min_frames", 30))
+    except Exception:  # noqa: BLE001
+        min_frames = 30
+    try:
+        min_rms_pct = float(cfg.get("variability_min_rms_pct", 1.5))
+    except Exception:  # noqa: BLE001
+        min_rms_pct = 1.5
+    try:
+        clip_ratio_min = float(cfg.get("variability_clip_ratio_min", 0.80))
+    except Exception:  # noqa: BLE001
+        clip_ratio_min = 0.80
+    try:
+        min_amplitude_mag = float(cfg.get("variability_min_amplitude_mag", 0.01))
+    except Exception:  # noqa: BLE001
+        min_amplitude_mag = 0.01
+
+    # Sigma clipping per star before RMS (MAD-based).
     rms_map: dict[str, float] = {}
     n_used_map: dict[str, int] = {}
     mean_clean_map: dict[str, float] = {}
     smooth_map: dict[str, float] = {}
+    amplitude_map: dict[str, float] = {}
     for cid, row in flux0.iterrows():
         vals = pd.to_numeric(row, errors="coerce").dropna().to_numpy(dtype=float)
-        if vals.size < 20:
+        if vals.size < int(min_points_rms):
             rms_map[str(cid)] = float("nan")
             n_used_map[str(cid)] = int(vals.size)
             mean_clean_map[str(cid)] = float("nan")
             smooth_map[str(cid)] = float("nan")
+            amplitude_map[str(cid)] = float("nan")
             continue
         med = float(np.median(vals))
         mad = float(np.median(np.abs(vals - med)))
@@ -262,13 +325,14 @@ def compute_rms_variability(
         if not (math.isfinite(sigma_mad) and sigma_mad > 0):
             vals_clean = vals
         else:
-            mask = np.abs(vals - med) < 5.0 * sigma_mad
+            mask = np.abs(vals - med) < float(sigma_clip) * sigma_mad
             vals_clean = vals[mask]
-        if vals_clean.size < 20:
+        if vals_clean.size < int(min_points_rms):
             rms_map[str(cid)] = float("nan")
             n_used_map[str(cid)] = int(vals_clean.size)
             mean_clean_map[str(cid)] = float("nan")
             smooth_map[str(cid)] = float("nan")
+            amplitude_map[str(cid)] = float("nan")
             continue
         mu = float(np.mean(vals_clean))
         sig = float(np.std(vals_clean))
@@ -284,10 +348,21 @@ def compute_rms_variability(
             total_rms = float(np.std(vals_clean))
             smooth_map[str(cid)] = (p2p_rms / total_rms) if (math.isfinite(total_rms) and total_rms > 0) else float("nan")
 
+        # Amplitúda = p95 - p05 z mag hodnôt (robustný odhad peak-to-peak)
+        flux_arr = vals_clean
+        flux_arr = flux_arr[np.isfinite(flux_arr) & (flux_arr > 0)]
+        if flux_arr.size >= 10:
+            mag_arr = -2.5 * np.log10(flux_arr)
+            amplitude = float(np.percentile(mag_arr, 95) - np.percentile(mag_arr, 5))
+        else:
+            amplitude = float("nan")
+        amplitude_map[str(cid)] = amplitude
+
     rms_pct = pd.Series(rms_map)
     n_frames_used_clean = pd.Series(n_used_map).astype(int)
     mean_flux_norm_clean = pd.Series(mean_clean_map)
     smoothness_ratio = pd.Series(smooth_map)
+    amplitude_mag = pd.Series(amplitude_map)
 
     out = pd.DataFrame(
         {
@@ -297,6 +372,7 @@ def compute_rms_variability(
             "n_frames_used_clean": pd.to_numeric(n_frames_used_clean, errors="coerce").astype(int),
             "mean_flux_norm_clean": pd.to_numeric(mean_flux_norm_clean, errors="coerce"),
             "smoothness_ratio": pd.to_numeric(smoothness_ratio, errors="coerce"),
+            "amplitude_mag": pd.to_numeric(amplitude_mag, errors="coerce"),
         }
     ).set_index("catalog_id", drop=False)
 
@@ -350,9 +426,9 @@ def compute_rms_variability(
     field_mag = field_mag[ok].astype(float)
     field_rms = field_rms[ok].astype(float)
 
-    # Remove top 15% RMS as potential variables (field calibration).
+    # Remove top tail RMS as potential variables (field calibration).
     if len(field_rms) >= 20:
-        p85 = float(np.nanpercentile(field_rms.to_numpy(dtype=float), 85))
+        p85 = float(np.nanpercentile(field_rms.to_numpy(dtype=float), float(p85_filter)))
         keep = field_rms < p85
         field_mag = field_mag[keep]
         field_rms = field_rms[keep]
@@ -364,11 +440,26 @@ def compute_rms_variability(
         try:
             x = field_mag.to_numpy(dtype=float)
             y = np.log10(np.clip(field_rms.to_numpy(dtype=float), 1e-6, np.inf))
-            b, a = np.polyfit(x, y, 1)  # y = b*x + a
+            # Broeg 2005: optional weights for defining the noise floor.
+            w_fit = None
+            try:
+                if comp_rms_map:
+                    ids_fit = field_mag.index.astype(str).tolist()
+                    w_arr = np.ones(len(ids_fit), dtype=float)
+                    for i, cid in enumerate(ids_fit):
+                        rv = comp_rms_map.get(str(cid))
+                        if rv is not None and math.isfinite(float(rv)) and float(rv) > 1e-4:
+                            w_arr[i] = 1.0 / (float(rv) ** 2)
+                    if np.isfinite(w_arr).any() and float(np.nanmax(w_arr)) > 0:
+                        w_fit = w_arr / float(np.nanmax(w_arr))
+            except Exception:  # noqa: BLE001
+                w_fit = None
+
+            b, a = np.polyfit(x, y, 1, w=w_fit)  # y = b*x + a
             # Constrain to minimal physical slope (noise grows with mag).
             if not math.isfinite(b):
-                b = 0.02
-            b = max(float(b), 0.02)
+                b = float(slope_floor)
+            b = max(float(b), float(slope_floor))
             mag_all = pd.to_numeric(out.get("mag"), errors="coerce").to_numpy(dtype=float)
             fit_all = a + b * mag_all
             expected_vals = np.power(10.0, fit_all)
@@ -399,11 +490,11 @@ def compute_rms_variability(
     # 1) clipping ratio
     ratio = pd.to_numeric(out["n_frames_used_clean"], errors="coerce") / pd.to_numeric(out["n_frames_used"], errors="coerce")
     out["clip_ratio"] = ratio
-    ok_clip = ratio >= 0.80
+    ok_clip = ratio >= float(clip_ratio_min)
 
     # 2) minimum RMS above envelope floor
     env = pd.to_numeric(out["upper_envelope_rms_pct"], errors="coerce")
-    thr = np.maximum(env.to_numpy(dtype=float), 1.5)
+    thr = np.maximum(env.to_numpy(dtype=float), float(min_rms_pct))
     ok_min_rms = pd.to_numeric(out["rms_pct"], errors="coerce").to_numpy(dtype=float) > thr
 
     # 3) SNR + mean flux_norm clean
@@ -411,14 +502,19 @@ def compute_rms_variability(
     if "snr50_ok" in out.columns:
         ok_snr = out["snr50_ok"].fillna(False).astype(bool)
     ok_mean = pd.to_numeric(out["mean_flux_norm_clean"], errors="coerce") > 0.001
-    ok_smooth = pd.to_numeric(out["smoothness_ratio"], errors="coerce") < 0.80
+    ok_smooth = pd.to_numeric(out["smoothness_ratio"], errors="coerce") < float(smoothness_max)
 
     out["is_variable_candidate"] = out["is_variable_candidate"] & ok_clip & ok_min_rms & ok_snr & ok_mean & ok_smooth
 
+    # 4) minimum robust amplitude in magnitudes
+    out["is_variable_candidate"] = out["is_variable_candidate"] & (
+        pd.to_numeric(out.get("amplitude_mag"), errors="coerce") >= float(min_amplitude_mag)
+    )
+
     # Final candidate quality filters
     out["mag"] = pd.to_numeric(out.get("mag"), errors="coerce")
-    out["is_variable_candidate"] = out["is_variable_candidate"] & (out["mag"].notna()) & (out["mag"] <= 14.5)
-    out["is_variable_candidate"] = out["is_variable_candidate"] & (pd.to_numeric(out["n_frames_used"], errors="coerce") >= 30)
+    out["is_variable_candidate"] = out["is_variable_candidate"] & (out["mag"].notna()) & (out["mag"] <= float(mag_limit))
+    out["is_variable_candidate"] = out["is_variable_candidate"] & (pd.to_numeric(out["n_frames_used"], errors="coerce") >= int(min_frames))
 
     # Standard columns
     for c in (
@@ -451,6 +547,7 @@ def compute_rms_variability(
             "rms_pct",
             "expected_rms_pct",
             "variability_score",
+            "amplitude_mag",
             "is_variable_candidate",
             "vsx_known_variable",
             "gaia_dr3_variable_catalog",
@@ -475,10 +572,21 @@ def compute_vdi(
     metadata: pd.DataFrame,
     *,
     min_frames: int = 20,
+    config: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
     """
     VDI (Variability Detection Index) — počet prechodov cez median.
     """
+    cfg = config or {}
+    try:
+        min_frames = int(cfg.get("variability_min_frames", min_frames))
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        vdi_z_thr = float(cfg.get("variability_vdi_z_threshold", 3.0))
+    except Exception:  # noqa: BLE001
+        vdi_z_thr = 3.0
+
     if flux_matrix.empty:
         return pd.DataFrame()
 
@@ -524,9 +632,12 @@ def compute_vdi(
         meta.index = meta.index.astype(str)
         out = out.set_index("catalog_id").join(meta, how="left").reset_index()
 
-    out["is_variable_candidate"] = pd.to_numeric(out["vdi_z_score"], errors="coerce") > 3.0
+    # Premenné hviezdy majú NÍZKE VDI (málo prechodov cez medián)
+    # → negatívne z-score → kandidát ak z < -threshold
+    out["is_variable_candidate"] = pd.to_numeric(out["vdi_z_score"], errors="coerce") < -float(vdi_z_thr)
     if "mag" not in out.columns:
         out["mag"] = np.nan
-    out = out.sort_values("vdi_z_score", ascending=False, na_position="last").reset_index(drop=True)
+    # Najlepší kandidáti majú najnižšie (najnegatívnejšie) z-score
+    out = out.sort_values("vdi_z_score", ascending=True, na_position="last").reset_index(drop=True)
     return out[["catalog_id", "mag", "vdi_score", "vdi_z_score", "is_variable_candidate", "n_frames_used"]]
 

@@ -56,5 +56,18 @@
   "phase01_comparison_min_frames_frac": 0.2,
   "phase01_comparison_exclude_gaia_nss": true,
   "phase01_comparison_exclude_gaia_extobj": true,
-  "phase01_chip_interior_margin_px": 100
+  "phase01_chip_interior_margin_px": 100,
+  "variability_min_frames": 30,
+  "variability_min_frames_frac": 0.5,
+  "variability_sigma_clip": 5.0,
+  "variability_p85_filter": 85,
+  "variability_slope_floor": 0.02,
+  "variability_sigma_threshold": 3.0,
+  "variability_smoothness_max": 0.8,
+  "variability_mag_limit": 14.5,
+  "variability_min_rms_pct": 1.5,
+  "variability_min_amplitude_mag": 0.01,
+  "variability_clip_ratio_min": 0.8,
+  "variability_vdi_z_threshold": 3.0,
+  "variability_min_points_rms": 20
 }

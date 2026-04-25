@@ -755,6 +755,17 @@ def _render_target_detail(
                 )
 
             rows_html: list[str] = []
+            # Relative weights for display (normalize to max=1.0 within this target).
+            w_num = (
+                pd.to_numeric(target_comps.get("comp_weight"), errors="coerce")
+                if "comp_weight" in target_comps.columns
+                else pd.Series([], dtype=float)
+            )
+            try:
+                w_valid = w_num[np.isfinite(w_num.to_numpy(dtype=float)) & (w_num.to_numpy(dtype=float) > 0)]
+                max_w = float(w_valid.max()) if int(w_valid.size) > 0 else float("nan")
+            except Exception:  # noqa: BLE001
+                max_w = float("nan")
             for i, (_, row) in enumerate(target_comps.iterrows(), 1):
                 ra_c = _float_coord_row(row, "ra_deg", "ra")
                 dec_c = _float_coord_row(row, "dec_deg", "dec")
@@ -765,6 +776,7 @@ def _render_target_detail(
                 dist_deg_c = row.get("_dist_deg")
                 nfr_c = row.get("comp_n_frames")
                 rms_c = row.get("comp_rms")
+                w_c = pd.to_numeric(row.get("comp_weight"), errors="coerce")
                 tier_c = row.get("comp_tier")
                 cid_c = _normalize_gaia_id(row.get("catalog_id", ""))
                 q = str(quality_by_cid.get(cid_c, "")).lower()
@@ -782,6 +794,11 @@ def _render_target_detail(
                 dist_str = _fmt_opt_num(dist_deg_c, ".6f")
                 nfr_str = _fmt_opt_num(nfr_c, ".0f")
                 rms_str = _fmt_opt_num(rms_c, ".4f")
+                wrel_str = (
+                    f"{float(w_c) / max_w:.3f}"
+                    if np.isfinite(pd.to_numeric(w_c, errors="coerce")) and float(pd.to_numeric(w_c, errors="coerce")) > 0 and np.isfinite(max_w) and max_w > 0
+                    else "—"
+                )
                 bg = _row_bg(q)
                 rows_html.append(
                     "<tr style=\""
@@ -794,6 +811,7 @@ def _render_target_detail(
                     f"<td>{html.escape(dist_str)}</td>"
                     f"<td>{html.escape(nfr_str)}</td>"
                     f"<td>{html.escape(rms_str)}</td>"
+                    f"<td title=\"Relatívna váha 1/σ² (Broeg 2005)\">{html.escape(wrel_str)}</td>"
                     f"<td>{_tier_badge(tier_c)}</td>"
                     f"<td>{html.escape(stav)}</td>"
                     f"<td><a href=\"{html.escape(viz_c)}\" target=\"_blank\" rel=\"noopener noreferrer\">↗</a></td>"
@@ -803,6 +821,7 @@ def _render_target_detail(
             thead = (
                 "<thead><tr>"
                 "<th>#</th><th>mag</th><th>B-V</th><th>bp_rp</th><th>dist_deg</th><th>comp_n_frames</th><th>p2p RMS</th>"
+                "<th title=\"Relatívna váha 1/σ² (Broeg 2005)\">w (rel)</th>"
                 "<th>tier</th><th>stav</th><th>Vizier</th>"
                 "</tr></thead>"
             )

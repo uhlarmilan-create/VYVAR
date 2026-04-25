@@ -8,10 +8,11 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from astropy.io import fits
 
+from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from utils import normalize_telescope_focal_mm_for_plate_scale
 
@@ -180,6 +181,91 @@ def query_local_gaia(
         return rows
     finally:
         conn.close()
+
+
+def _normalize_gaia_source_id_for_sql(v: Any) -> int | None:
+    s = normalize_gaia_source_id(v)
+    if not s or not s.isdigit():
+        return None
+    try:
+        return int(s)
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def query_local_gaia_by_source_ids(
+    db_path: str | Path,
+    source_ids: Iterable[Any],
+    *,
+    batch_size: int = 500,
+) -> dict[str, dict[str, Any]]:
+    """Fetch ``bp_rp`` / magnitudes for specific Gaia ``source_id`` rows (no sky box, no LIMIT sort).
+
+    Used when a frame-wide Gaia query (rectangle + ``ORDER BY g_mag LIMIT``) omits stars that are
+    already catalog-matched on the image — those stars still need ``bp_rp`` for photometry / color terms.
+    """
+    p = Path(db_path).expanduser().resolve()
+    if not p.is_file():
+        raise FileNotFoundError(f"Gaia DB not found: {p}")
+    try:
+        bs = max(50, min(2000, int(batch_size)))
+    except (TypeError, ValueError):
+        bs = 500
+    ids_u: list[int] = []
+    seen: set[int] = set()
+    for raw in source_ids:
+        sid = _normalize_gaia_source_id_for_sql(raw)
+        if sid is None or sid in seen:
+            continue
+        seen.add(sid)
+        ids_u.append(sid)
+    if not ids_u:
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    conn = sqlite3.connect(str(p))
+    conn.row_factory = sqlite3.Row
+    try:
+        cur_cols = conn.execute("PRAGMA table_info('gaia_dr3');")
+        cols = {str(r[1]).strip().lower() for r in cur_cols.fetchall()}
+        sel_parts = ["source_id"]
+        for c in ("bp_rp", "g_mag", "bp_mag", "rp_mag"):
+            if c in cols:
+                sel_parts.append(c)
+        if "source_id" not in cols:
+            return {}
+        sel = ", ".join(sel_parts)
+        for i0 in range(0, len(ids_u), bs):
+            chunk = ids_u[i0 : i0 + bs]
+            ph = ",".join("?" * len(chunk))
+            q = f"SELECT {sel} FROM gaia_dr3 WHERE source_id IN ({ph});"
+            for row in conn.execute(q, chunk):
+                d = dict(row)
+                sid0 = d.get("source_id")
+                key = normalize_gaia_source_id(sid0)
+                if not key:
+                    continue
+                bpr = d.get("bp_rp")
+                if bpr is None and "bp_mag" in d and "rp_mag" in d:
+                    try:
+                        bpm = float(d["bp_mag"])
+                        rpm = float(d["rp_mag"])
+                        if math.isfinite(bpm) and math.isfinite(rpm):
+                            bpr = bpm - rpm
+                    except (TypeError, ValueError):
+                        bpr = None
+                out[key] = {
+                    "bp_rp": float(bpr) if bpr is not None and math.isfinite(float(bpr)) else None,
+                    "g_mag": float(d["g_mag"])
+                    if d.get("g_mag") is not None and math.isfinite(float(d["g_mag"]))
+                    else None,
+                }
+    finally:
+        conn.close()
+    try:
+        log_event(f"GAIA SQL by source_id: fetched {len(out)} / {len(ids_u)} unique ids (batched).")
+    except Exception:  # noqa: BLE001
+        pass
+    return out
 
 
 def validate_gaia_db_schema(db_path: str | Path) -> tuple[bool, str]:
@@ -1247,6 +1333,53 @@ class VyvarDatabase:
             v = row[0] if len(row) > 0 else None
         s = str(v).strip() if v is not None else ""
         return s or None
+
+    # ------------------------------------------------------------------
+    # MASTERSTAR selection vs MASTERSTAR product (separate persistence)
+    # ------------------------------------------------------------------
+    def set_obs_draft_masterstar_source_path(self, draft_id: int, source_path: str | None) -> None:
+        """Persist the *selected source frame* for MASTERSTAR (usually a processed light FITS).
+
+        Stored in ``OBS_DRAFT.MASTERSTAR_PATH`` only (does NOT overwrite ``MASTERSTAR_FITS_PATH``).
+        """
+        _p = (str(source_path).strip() if source_path is not None else "") or None
+        cur = self.conn.execute(
+            "UPDATE OBS_DRAFT SET MASTERSTAR_PATH = ? WHERE ID = ?;",
+            (_p, int(draft_id)),
+        )
+        if cur.rowcount == 0:
+            raise ValueError(f"Draft '{draft_id}' not found for MASTERSTAR source update.")
+        self.conn.commit()
+
+    def get_obs_draft_masterstar_source_path(self, draft_id: int) -> str | None:
+        """Return persisted MASTERSTAR *source* (selected frame) path for a draft."""
+        cur = self.conn.execute(
+            "SELECT MASTERSTAR_PATH FROM OBS_DRAFT WHERE ID = ?;",
+            (int(draft_id),),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return None
+        try:
+            v = row["MASTERSTAR_PATH"]
+        except Exception:  # noqa: BLE001
+            v = row[0] if len(row) > 0 else None
+        s = str(v).strip() if v is not None else ""
+        return s or None
+
+    def set_obs_draft_masterstar_fits_path(self, draft_id: int, fits_path: str | None) -> None:
+        """Persist the produced MASTERSTAR.fits path for a draft.
+
+        Stored in ``OBS_DRAFT.MASTERSTAR_FITS_PATH`` only (does NOT overwrite ``MASTERSTAR_PATH``).
+        """
+        _p = (str(fits_path).strip() if fits_path is not None else "") or None
+        cur = self.conn.execute(
+            "UPDATE OBS_DRAFT SET MASTERSTAR_FITS_PATH = ? WHERE ID = ?;",
+            (_p, int(draft_id)),
+        )
+        if cur.rowcount == 0:
+            raise ValueError(f"Draft '{draft_id}' not found for MASTERSTAR FITS path update.")
+        self.conn.commit()
 
     def qc_processing_run_exists(self, processing_hash: str) -> bool:
         cur = self.conn.execute(

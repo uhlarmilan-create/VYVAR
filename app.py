@@ -1691,7 +1691,7 @@ def render_live_view(
             try:
                 from pipeline import resolve_obs_file_to_processed_fits
 
-                _p_draft = pipeline.db.get_obs_draft_masterstar_path(int(_did_ms))
+                _p_draft = pipeline.db.get_obs_draft_masterstar_source_path(int(_did_ms))
                 if _p_draft:
                     _hit = resolve_obs_file_to_processed_fits(_ap_ms, str(_p_draft).strip())
                     if _hit is not None and _hit.is_file():

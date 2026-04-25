@@ -32,11 +32,13 @@ def _cached_load_matrix(
     per_frame_dir_s: str,
     flux_col: str,
     min_frames_frac: float,
+    cfg_dict: dict[str, Any],
 ) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
     return load_field_flux_matrix(
         Path(per_frame_dir_s),
         flux_col=flux_col,
         min_frames_frac=min_frames_frac,
+        config=cfg_dict,
     )
 
 
@@ -87,6 +89,224 @@ def _raw_lightcurve_from_frames(per_frame_dir: Path, catalog_id: str, flux_col: 
     return out
 
 
+def _edge_ok_from_masterstar(
+    masterstar_fits: Path,
+    stars_df: pd.DataFrame,
+    cfg_dict: dict[str, Any],
+) -> pd.Series:
+    """
+    Per-star edge safety (annulus-aware, best-effort).
+
+    Uses MASTERSTAR dimensions and margin ~= outer annulus radius in px.
+    If FITS/header missing, returns True for all rows.
+    """
+    if stars_df is None or stars_df.empty:
+        return pd.Series(dtype=bool)
+    if not masterstar_fits.exists():
+        return pd.Series(True, index=stars_df.index)
+
+    try:
+        from astropy.io import fits as astrofits
+    except Exception:
+        return pd.Series(True, index=stars_df.index)
+
+    nx = ny = None
+    fwhm_px = float("nan")
+    try:
+        with astrofits.open(masterstar_fits, memmap=False) as hdul:
+            hdr = hdul[0].header
+            data = hdul[0].data
+        try:
+            fwhm_px = float(hdr.get("VY_FWHM", float("nan")))
+        except Exception:
+            fwhm_px = float("nan")
+        try:
+            if data is not None and hasattr(data, "shape") and len(data.shape) >= 2:
+                ny, nx = int(data.shape[-2]), int(data.shape[-1])
+        except Exception:
+            nx = ny = None
+    except Exception:
+        nx = ny = None
+
+    # Base margin (same spirit as phase01 interior margin)
+    try:
+        base_margin = float(cfg_dict.get("phase01_chip_interior_margin_px", 100))
+    except Exception:
+        base_margin = 100.0
+
+    # Annulus-aware margin: outer annulus radius in px + small guard
+    try:
+        ann_outer_fwhm = float(cfg_dict.get("annulus_outer_fwhm", 9.0))
+    except Exception:
+        ann_outer_fwhm = 9.0
+    ann_margin = float(ann_outer_fwhm) * float(fwhm_px) + 5.0 if np.isfinite(fwhm_px) else float("nan")
+
+    margin = float(base_margin)
+    if np.isfinite(ann_margin):
+        margin = max(float(margin), float(ann_margin))
+
+    x = pd.to_numeric(stars_df.get("x"), errors="coerce")
+    y = pd.to_numeric(stars_df.get("y"), errors="coerce")
+    ok = np.isfinite(x) & np.isfinite(y)
+    if nx is not None and ny is not None and nx > 0 and ny > 0 and np.isfinite(margin) and margin >= 0:
+        ok = ok & (x >= margin) & (x <= float(nx) - margin) & (y >= margin) & (y <= float(ny) - margin)
+
+    return ok.fillna(False).astype(bool)
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def _render_field_image_with_candidate(
+    masterstar_fits_path_s: str,
+    *,
+    x: float,
+    y: float,
+    label: str,
+    percentile_lo: float = 5.0,
+    percentile_hi: float = 99.5,
+) -> bytes | None:
+    """Render MASTERSTAR FITS as PNG and mark candidate at (x,y)."""
+    try:
+        from astropy.io import fits as astrofits
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from io import BytesIO
+    except Exception:
+        return None
+
+    p = Path(masterstar_fits_path_s)
+    if not p.exists():
+        return None
+
+    try:
+        with astrofits.open(p, memmap=False) as hdul:
+            data = np.asarray(hdul[0].data, dtype=np.float64)
+    except Exception:
+        return None
+
+    if data.size == 0:
+        return None
+
+    ok = np.isfinite(data)
+    if not ok.any():
+        return None
+    try:
+        vmin = float(np.percentile(data[ok], float(percentile_lo)))
+        vmax = float(np.percentile(data[ok], float(percentile_hi)))
+    except Exception:
+        vmin, vmax = float("nan"), float("nan")
+
+    fig, ax = plt.subplots(figsize=(11.5, 7.0), dpi=140)
+    ax.imshow(
+        data,
+        origin="lower",
+        cmap="gray",
+        vmin=vmin if np.isfinite(vmin) else None,
+        vmax=vmax if np.isfinite(vmax) else None,
+        aspect="equal",
+    )
+    ax.scatter([float(x)], [float(y)], s=140, facecolors="none", edgecolors="#ff3333", linewidths=2.0)
+    ax.scatter([float(x)], [float(y)], s=18, c="#ff3333", alpha=0.95)
+    ax.text(float(x) + 18, float(y), str(label)[:24], color="#ff3333", fontsize=9, va="center")
+    ax.set_title("Hviezdne pole (MASTERSTAR) — vyznačený kandidát", fontsize=11)
+    ax.axis("off")
+
+    buf = BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    return buf.read()
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def _render_field_image_with_candidates(
+    masterstar_fits_path_s: str,
+    cand_xy_label: list[tuple[float, float, str]],
+    *,
+    selected_xy: tuple[float, float] | None = None,
+    selected_label: str = "",
+    percentile_lo: float = 5.0,
+    percentile_hi: float = 99.5,
+) -> bytes | None:
+    """Render MASTERSTAR FITS as PNG and mark ONLY candidate stars."""
+    try:
+        from astropy.io import fits as astrofits
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from io import BytesIO
+    except Exception:
+        return None
+
+    p = Path(masterstar_fits_path_s)
+    if not p.exists():
+        return None
+
+    try:
+        with astrofits.open(p, memmap=False) as hdul:
+            data = np.asarray(hdul[0].data, dtype=np.float64)
+    except Exception:
+        return None
+
+    if data.size == 0:
+        return None
+
+    ok = np.isfinite(data)
+    if not ok.any():
+        return None
+    try:
+        vmin = float(np.percentile(data[ok], float(percentile_lo)))
+        vmax = float(np.percentile(data[ok], float(percentile_hi)))
+    except Exception:
+        vmin, vmax = float("nan"), float("nan")
+
+    fig, ax = plt.subplots(figsize=(11.5, 7.0), dpi=140)
+    ax.imshow(
+        data,
+        origin="lower",
+        cmap="gray",
+        vmin=vmin if np.isfinite(vmin) else None,
+        vmax=vmax if np.isfinite(vmax) else None,
+        aspect="equal",
+    )
+
+    # Candidates: red circles (no comps/targets)
+    if cand_xy_label:
+        xs = [float(t[0]) for t in cand_xy_label]
+        ys = [float(t[1]) for t in cand_xy_label]
+        ax.scatter(xs, ys, s=110, facecolors="none", edgecolors="#ff3333", linewidths=1.8, alpha=0.95)
+
+        # Add a few labels (avoid clutter on dense fields)
+        for (cx, cy, lab) in cand_xy_label[:25]:
+            try:
+                ax.text(float(cx) + 16, float(cy), str(lab)[:18], color="#ff3333", fontsize=7, va="center")
+            except Exception:
+                continue
+
+    # Selected candidate highlight (yellow)
+    if selected_xy is not None:
+        try:
+            sx, sy = float(selected_xy[0]), float(selected_xy[1])
+            if np.isfinite(sx) and np.isfinite(sy):
+                ax.scatter([sx], [sy], s=190, facecolors="none", edgecolors="#ffd54a", linewidths=2.6)
+                ax.scatter([sx], [sy], s=26, c="#ffd54a", alpha=0.95)
+                if selected_label:
+                    ax.text(sx + 16, sy, str(selected_label)[:22], color="#ffd54a", fontsize=9, va="center")
+        except Exception:
+            pass
+
+    ax.set_title("Hviezdne pole (MASTERSTAR) — vyznačení iba kandidáti", fontsize=11)
+    ax.axis("off")
+
+    buf = BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    return buf.read()
+
+
 def render_variability_dashboard(
     pipeline: "AstroPipeline",
     cfg: "AppConfig",
@@ -125,14 +345,24 @@ def render_variability_dashboard(
 
     flux_source = st.radio("Flux zdroj:", options=["dao_flux", "psf_flux"], horizontal=True, key="var_flux_source")
     method = st.radio("Metóda:", options=["RMS", "VDI", "Obe"], horizontal=True, key="var_method")
+    cfg_dict = cfg.to_dict()
     sigma_thr = st.slider(
         "Sigma prah (RMS score):",
         min_value=2.0,
         max_value=4.0,
-        value=3.0,
+        value=float(cfg_dict.get("variability_sigma_threshold", 3.0)),
         step=0.1,
         key="var_sigma_thr",
         help="3.0 = konzervatívne (~12 kandidátov), 2.5 = balans, 2.0 = exploratívne",
+    )
+    mag_limit = st.slider(
+        "Mag limit (RMS kandidáti):",
+        min_value=10.0,
+        max_value=20.0,
+        value=float(cfg_dict.get("variability_mag_limit", 14.5)),
+        step=0.1,
+        key="var_mag_limit",
+        help="Kandidáti fainter než tento limit sa z RMS kandidátov vyradia.",
     )
     min_frames_pct = st.slider("Min framov (%):", min_value=20, max_value=80, value=50, step=5, key="var_min_frames_pct")
 
@@ -145,33 +375,59 @@ def render_variability_dashboard(
     if run:
         try:
             with st.spinner("Načítavam flux maticu…"):
+                cfg_run = dict(cfg_dict)
+                cfg_run["variability_min_frames_frac"] = float(min_frames_pct) / 100.0
                 fm, meta, _bjd = _cached_load_matrix(
                     str(per_frame_dir),
                     flux_source,
                     float(min_frames_pct) / 100.0,
+                    cfg_run,
                 )
             comp_ids = _read_comp_catalog_ids(platesolve_dir)
+            comp_rms_map: dict[str, float] = {}
+            comp_csv = platesolve_dir / "photometry" / "comparison_stars_per_target.csv"
+            if comp_csv.exists():
+                try:
+                    comp_df = pd.read_csv(comp_csv, low_memory=False)
+                    if "catalog_id" in comp_df.columns and "comp_rms" in comp_df.columns:
+                        for _, row in comp_df.iterrows():
+                            cid = str(row.get("catalog_id", "")).strip()
+                            rms = float(pd.to_numeric(row.get("comp_rms"), errors="coerce"))
+                            if cid and np.isfinite(rms) and rms > 1e-4:
+                                if cid not in comp_rms_map or rms < comp_rms_map[cid]:
+                                    comp_rms_map[cid] = float(rms)
+                except Exception:
+                    comp_rms_map = {}
             results: dict[str, Any] = {
                 "flux_matrix": fm,
                 "metadata": meta,
                 "comp_ids": comp_ids,
                 "obs_group": str(obs_group),
                 "flux_col": flux_source,
+                "comp_rms_map": comp_rms_map,
             }
 
             if method in ("RMS", "Obe"):
                 with st.spinner("Počítam RMS variabilitu…"):
+                    cfg_run = dict(cfg_dict)
+                    cfg_run["variability_sigma_threshold"] = float(sigma_thr)
+                    cfg_run["variability_mag_limit"] = float(mag_limit)
+                    cfg_run["variability_min_frames_frac"] = float(min_frames_pct) / 100.0
                     rms_df = compute_rms_variability(
                         fm,
                         meta,
                         comp_ids,
                         sigma_threshold=float(sigma_thr),
                         vsx_targets_csv=(platesolve_dir / "variable_targets.csv"),
+                        config=cfg_run,
+                        comp_rms_map=comp_rms_map,
                     )
                 results["rms_df"] = rms_df
             if method in ("VDI", "Obe"):
                 with st.spinner("Počítam VDI…"):
-                    vdi_df = compute_vdi(fm, meta, min_frames=30)
+                    cfg_run = dict(cfg_dict)
+                    cfg_run["variability_min_frames"] = int(cfg_run.get("variability_min_frames", 30))
+                    vdi_df = compute_vdi(fm, meta, min_frames=30, config=cfg_run)
                 results["vdi_df"] = vdi_df
 
             st.session_state["var_results"] = results
@@ -227,8 +483,13 @@ def render_variability_dashboard(
         work["vsx_known_variable"] = work["vsx_known_variable"].fillna(False).astype(bool)
         work["gaia_dr3_variable_catalog"] = work["gaia_dr3_variable_catalog"].fillna(False).astype(bool)
 
+        # Per-star edge filter (annulus-aware) — avoid false candidates near chip border
+        masterstar_fits = platesolve_dir / "MASTERSTAR.fits"
+        edge_ok = _edge_ok_from_masterstar(masterstar_fits, work, cfg_dict)
+        work["edge_ok"] = edge_ok.reindex(work.index).fillna(False).astype(bool)
+
         comp_mask = (~work["vsx_known_variable"]) & (work["is_variable_candidate_rms"] == False)
-        cand_mask = (work["is_candidate_combined"] == True) & (~work["vsx_known_variable"])
+        cand_mask = (work["is_candidate_combined"] == True) & (~work["vsx_known_variable"]) & (work["edge_ok"] == True)
         vsx_mask = work["vsx_known_variable"]
         gaia_mask = work["gaia_dr3_variable_catalog"]
 
@@ -327,6 +588,7 @@ def render_variability_dashboard(
         m4.metric("Kombinovaných", f"{n_combined}")
         st.caption(f"Known VSX: {n_vsx} | Gaia variable: {n_gaia}")
 
+        # Keep only edge-safe candidates in the candidate table
         cand = work.loc[cand_mask].copy()
         cand["Vizier"] = [
             _vizier_link(float(pd.to_numeric(r.get("ra_deg"), errors="coerce")), float(pd.to_numeric(r.get("dec_deg"), errors="coerce")))
@@ -441,9 +703,7 @@ def render_variability_dashboard(
                     else:
                         st.info("Všetky vybrané hviezdy už sú v variable_targets.csv")
 
-        # ---- Light curve section (cached) ----
-        st.subheader("📈 Light curve kandidáta")
-
+        # ---- Candidate pick (shared for map + light curve) ----
         candidate_options = {
             f"{row.get('vsx_name', str(row.catalog_id)) or str(row.catalog_id)} "
             f"(mag={float(pd.to_numeric(row.mag, errors='coerce')):.2f}, "
@@ -451,13 +711,57 @@ def render_variability_dashboard(
             f"{row.get('detection_method','—')})": str(row.catalog_id)
             for _, row in candidates_df.iterrows()
         }
+        selected_cid = ""
+        selected_label_lc = ""
         if candidate_options:
-            selected_label = st.selectbox(
+            selected_label_lc = st.selectbox(
                 "Vyber kandidáta:",
                 options=list(candidate_options.keys()),
                 key="var_lc_select2",
             )
-            selected_cid = candidate_options[selected_label]
+            selected_cid = str(candidate_options.get(selected_label_lc, ""))
+        elif not candidates_df.empty and "catalog_id" in candidates_df.columns:
+            selected_cid = str(candidates_df["catalog_id"].iloc[0])
+
+        # ---- Field map ----
+        st.subheader("🗺️ Hviezdne pole (vyznačení kandidáti)")
+        try:
+            selected_row = results_df[results_df["catalog_id"].astype(str) == str(selected_cid)].iloc[0]
+            cx = float(pd.to_numeric(selected_row.get("x"), errors="coerce"))
+            cy = float(pd.to_numeric(selected_row.get("y"), errors="coerce"))
+            _sel_name = str(selected_row.get("vsx_name", "") or "").strip()
+            selected_label_map = _sel_name if _sel_name else str(selected_cid)
+        except Exception:
+            cx, cy = float("nan"), float("nan")
+            selected_label_map = str(selected_cid)
+        masterstar_fits = platesolve_dir / "MASTERSTAR.fits"
+        if masterstar_fits.exists():
+            cand_rows = work.loc[cand_mask].copy()
+            cand_rows["x"] = pd.to_numeric(cand_rows.get("x"), errors="coerce")
+            cand_rows["y"] = pd.to_numeric(cand_rows.get("y"), errors="coerce")
+            cand_rows = cand_rows[np.isfinite(cand_rows["x"]) & np.isfinite(cand_rows["y"])].copy()
+            cand_xy_label: list[tuple[float, float, str]] = []
+            for _, rr in cand_rows.iterrows():
+                lab = str(rr.get("vsx_name", "") or rr.get("catalog_id", ""))
+                if not lab:
+                    lab = str(rr.get("catalog_id", ""))
+                cand_xy_label.append((float(rr["x"]), float(rr["y"]), lab))
+
+            png_bytes = _render_field_image_with_candidates(
+                str(masterstar_fits),
+                cand_xy_label,
+                selected_xy=(float(cx), float(cy)) if (np.isfinite(cx) and np.isfinite(cy)) else None,
+                selected_label=str(selected_label_map),
+            )
+            if png_bytes:
+                st.image(png_bytes, use_container_width=True)
+            else:
+                st.info("Nepodarilo sa vykresliť pole z MASTERSTAR.fits (chýba astropy/matplotlib?).")
+        else:
+            st.info("Pole nie je k dispozícii (chýba `MASTERSTAR.fits`).")
+
+        st.subheader("📈 Light curve kandidáta")
+        if selected_cid:
 
             @st.cache_data(ttl=300, show_spinner=False)
             def load_candidate_lc(per_frame_dir_s: str, catalog_id: str, flux_col_in: str = "dao_flux") -> pd.DataFrame:
@@ -507,7 +811,7 @@ def render_variability_dashboard(
                     )
                 )
                 fig2.update_layout(
-                    title=f"Raw light curve — {selected_label}",
+                    title=f"Raw light curve — {selected_label_lc or str(selected_cid)}",
                     xaxis_title="BJD - BJD0",
                     yaxis_title="mag_inst (nekalibrovaná)",
                     yaxis_autorange="reversed",
@@ -524,4 +828,6 @@ def render_variability_dashboard(
                 c4.metric("Median mag", f"{lc_df.mag_inst.median():.3f}")
             else:
                 st.warning("Light curve nie je k dispozícii pre túto hviezdu.")
+        else:
+            st.info("Nie sú dostupní kandidáti pre zobrazenie light curve.")
 

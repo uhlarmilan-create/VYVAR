@@ -191,6 +191,21 @@ class AppConfig:
     #: pri zarovnaní / posune poľa / okrajoch). ``0`` = vypnuté (celý čip). Predvolene 100 px.
     phase01_chip_interior_margin_px: int = 100
 
+    # Variability Detection
+    variability_min_frames: int = 30
+    variability_min_frames_frac: float = 0.50
+    variability_sigma_clip: float = 5.0
+    variability_p85_filter: int = 85
+    variability_slope_floor: float = 0.02
+    variability_sigma_threshold: float = 3.0
+    variability_smoothness_max: float = 0.80
+    variability_mag_limit: float = 14.5
+    variability_min_rms_pct: float = 1.5
+    variability_min_amplitude_mag: float = 0.01
+    variability_clip_ratio_min: float = 0.80
+    variability_vdi_z_threshold: float = 3.0
+    variability_min_points_rms: int = 20
+
     #: Post-calibration QC on each calibrated light (metrics + pass/fail vs limits).
     qc_after_calibrate_enabled: bool = True
     qc_max_hfr: float = 5.0
@@ -506,6 +521,49 @@ class AppConfig:
             except (TypeError, ValueError):
                 self.phase01_chip_interior_margin_px = 100
 
+        # Variability Detection
+        try:
+            self.variability_min_frames = max(
+                1, int(data.get("variability_min_frames", self.variability_min_frames))
+            )
+        except (TypeError, ValueError):
+            self.variability_min_frames = 30
+        try:
+            self.variability_min_frames_frac = float(
+                data.get("variability_min_frames_frac", self.variability_min_frames_frac)
+            )
+        except (TypeError, ValueError):
+            self.variability_min_frames_frac = 0.50
+        self.variability_min_frames_frac = max(0.05, min(0.99, float(self.variability_min_frames_frac)))
+
+        def _vfloat(key: str, default: float, lo: float, hi: float) -> None:
+            try:
+                v = float(data.get(key, getattr(self, key)))
+                if not math.isfinite(v):
+                    raise ValueError
+                setattr(self, key, max(lo, min(hi, v)))
+            except (TypeError, ValueError, AttributeError):
+                setattr(self, key, float(default))
+
+        def _vint(key: str, default: int, lo: int, hi: int) -> None:
+            try:
+                v = int(data.get(key, getattr(self, key)))
+                setattr(self, key, max(lo, min(hi, v)))
+            except (TypeError, ValueError, AttributeError):
+                setattr(self, key, int(default))
+
+        _vfloat("variability_sigma_clip", 5.0, 1.0, 20.0)
+        _vint("variability_p85_filter", 85, 50, 99)
+        _vfloat("variability_slope_floor", 0.02, 0.0, 1.0)
+        _vfloat("variability_sigma_threshold", 3.0, 0.5, 20.0)
+        _vfloat("variability_smoothness_max", 0.80, 0.05, 1.0)
+        _vfloat("variability_mag_limit", 14.5, 0.0, 30.0)
+        _vfloat("variability_min_rms_pct", 1.5, 0.0, 100.0)
+        _vfloat("variability_min_amplitude_mag", 0.01, 0.0, 10.0)
+        _vfloat("variability_clip_ratio_min", 0.80, 0.0, 1.0)
+        _vfloat("variability_vdi_z_threshold", 3.0, 0.0, 50.0)
+        _vint("variability_min_points_rms", 20, 5, 10_000)
+
     def to_json(self) -> dict[str, Any]:
         return {
             "archive_root": str(self.archive_root),
@@ -594,6 +652,19 @@ class AppConfig:
             "phase01_comparison_exclude_gaia_nss": bool(self.phase01_comparison_exclude_gaia_nss),
             "phase01_comparison_exclude_gaia_extobj": bool(self.phase01_comparison_exclude_gaia_extobj),
             "phase01_chip_interior_margin_px": int(self.phase01_chip_interior_margin_px),
+            "variability_min_frames": int(self.variability_min_frames),
+            "variability_min_frames_frac": float(self.variability_min_frames_frac),
+            "variability_sigma_clip": float(self.variability_sigma_clip),
+            "variability_p85_filter": int(self.variability_p85_filter),
+            "variability_slope_floor": float(self.variability_slope_floor),
+            "variability_sigma_threshold": float(self.variability_sigma_threshold),
+            "variability_smoothness_max": float(self.variability_smoothness_max),
+            "variability_mag_limit": float(self.variability_mag_limit),
+            "variability_min_rms_pct": float(self.variability_min_rms_pct),
+            "variability_min_amplitude_mag": float(self.variability_min_amplitude_mag),
+            "variability_clip_ratio_min": float(self.variability_clip_ratio_min),
+            "variability_vdi_z_threshold": float(self.variability_vdi_z_threshold),
+            "variability_min_points_rms": int(self.variability_min_points_rms),
         }
 
     # Backward-compatible alias (some callers expect to_dict()).

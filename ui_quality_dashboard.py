@@ -347,6 +347,7 @@ def render_quality_dashboard(
         return
 
     did = int(draft_id)
+
     def _stage_center_update(ra_val: Any, de_val: Any) -> None:
         """Stage center updates for app-level apply before widgets instantiate."""
         try:
@@ -380,6 +381,25 @@ def render_quality_dashboard(
     st.caption("**Center RA/DE** uprav v paneli VARSTREM (Krok 2).")
 
     df = pd.DataFrame(rows)
+    # Auto default pre FWHM slider — len pri prvom otvorení dashboardu pre daný draft
+    # (nič sa neukladá do súborov; len session state).
+    _auto_seed_key = f"vyvar_qdash_fwhm_auto_seed_done_{did}"
+    if not bool(st.session_state.get(_auto_seed_key, False)):
+        try:
+            cur_thr = float(st.session_state.get("fwhm_threshold", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            cur_thr = 0.0
+        if not (math.isfinite(cur_thr) and cur_thr > 0.0):
+            try:
+                _fwhm_vals = pd.to_numeric(df.get("FWHM"), errors="coerce").dropna().to_numpy(dtype=float)
+                _fwhm_vals = _fwhm_vals[np.isfinite(_fwhm_vals) & (_fwhm_vals > 0)]
+                if int(_fwhm_vals.size) >= 5:
+                    _median = float(np.median(_fwhm_vals))
+                    auto_limit = round(float(_median * 1.05), 2)
+                    st.session_state["fwhm_threshold"] = float(auto_limit)
+            except Exception:  # noqa: BLE001
+                pass
+        st.session_state[_auto_seed_key] = True
     try:
         _ra_cur = float(st.session_state.get(DRAFT_CENTER_RA_STATE_KEY, 0.0))
         _de_cur = float(st.session_state.get(DRAFT_CENTER_DE_STATE_KEY, 0.0))
@@ -482,27 +502,26 @@ def render_quality_dashboard(
         _med = pd.to_numeric(df["FWHM"], errors="coerce").dropna()
         _base = float(_med.median()) if len(_med) else 4.0
     _base = max(0.05, float(_base))
-    _pct = 0.15
-    _lo = max(0.0, float(_base * (1.0 - _pct)))
-    _hi = float(_base * (1.0 + _pct))
     slider_lo: float | None = None
     slider_hi: float | None = None
+    # Slider MUSÍ byť pred grafom a graf sa musí generovať v tom istom scope.
     if fwhm_enabled:
-        st.slider(
-            "FWHM limit",
-            min_value=float(_lo),
-            max_value=float(_hi),
-            value=float(min(max(_cur_raw if _cur_raw > 0 else _base, _lo), _hi)),
-            step=0.01,
-            key="fwhm_threshold",
-            help="Posuvník je ±15% okolo poslednej použitej hodnoty (kvôli pohodliu).",
+        fwhm_limit_raw = float(
+            st.slider(
+                "FWHM limit",
+                min_value=0.0,
+                max_value=15.0,
+                value=float(st.session_state.get("fwhm_threshold", 5.5)),
+                step=0.05,
+                key="fwhm_limit_slider",
+                help="Posuvník sa aplikuje okamžite na graf (červená čiara + farby bodov).",
+            )
         )
-        slider_lo = float(_lo)
-        slider_hi = float(_hi)
+        # OK: toto nie je key widgetu, takže session_state môžeme aktualizovať.
+        st.session_state["fwhm_threshold"] = float(fwhm_limit_raw)
     else:
+        fwhm_limit_raw = 0.0
         st.session_state["fwhm_threshold"] = 0.0
-
-    fwhm_limit_raw = float(st.session_state.get("fwhm_threshold", 0.0))
     # Pre graf a filtre: 0 = bez limitu (žiadna červená čiara, žiadne rozťahovanie osi).
     fwhm_limit_plot = float(fwhm_limit_raw) if fwhm_limit_raw > 0.0 else None
     # Pre zvyšok UI (reject indikácia) potrebujeme číslo; None -> veľké číslo.
@@ -525,8 +544,8 @@ def render_quality_dashboard(
             y=0.5,
             showarrow=False,
         )
-    if fwhm_limit_plot is not None and math.isfinite(float(fwhm_limit_plot)):
-        fig_f.add_hline(y=float(fwhm_limit_plot), line_dash="dash", line_color="red")
+    if fwhm_limit_raw > 0.0 and math.isfinite(float(fwhm_limit_raw)):
+        fig_f.add_hline(y=float(fwhm_limit_raw), line_dash="dash", line_color="red")
     try:
         _job = st.session_state.get("vyvar_last_job_output") or {}
         _flip_i = _job.get("rotation_flip_first_index_1based")
@@ -550,9 +569,18 @@ def render_quality_dashboard(
         height=420,
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
     )
-    # Pri zapnutom FWHM filtri drž Y-os v rozsahu slideru (±15%).
-    if slider_lo is not None and slider_hi is not None and slider_hi > slider_lo:
-        fig_f.update_yaxes(range=[float(slider_lo), float(slider_hi)])
+    # Osa Y podľa dát (kvôli čitateľnosti pri úzkom seeingu)
+    try:
+        _fwhm_series = pd.to_numeric(df.get("FWHM"), errors="coerce").dropna()
+        _fwhm_arr = _fwhm_series.to_numpy(dtype=float)
+        _fwhm_arr = _fwhm_arr[np.isfinite(_fwhm_arr)]
+        if int(_fwhm_arr.size) >= 2:
+            _fwhm_min = float(np.min(_fwhm_arr)) * 0.95
+            _fwhm_max = float(np.max(_fwhm_arr)) * 1.10
+            if math.isfinite(_fwhm_min) and math.isfinite(_fwhm_max) and _fwhm_max > _fwhm_min:
+                fig_f.update_yaxes(range=[float(_fwhm_min), float(_fwhm_max)])
+    except Exception:  # noqa: BLE001
+        pass
     st.plotly_chart(
         fig_f, key=key_fwhm, on_select="rerun", selection_mode="points", use_container_width=True
     )
@@ -652,7 +680,7 @@ def render_quality_dashboard(
                 try:
                     _db2 = VyvarDatabase(db.db_path)
                     try:
-                        _db2.set_obs_draft_masterstar_path(int(did), p_job or str(p_db))
+                        _db2.set_obs_draft_masterstar_source_path(int(did), p_job or str(p_db))
                     finally:
                         _db2.conn.close()
                 except Exception:  # noqa: BLE001
@@ -763,7 +791,7 @@ def render_quality_dashboard(
             try:
                 _db2 = VyvarDatabase(db.db_path)
                 try:
-                    _db2.set_obs_draft_masterstar_path(int(did), p_job or str(p_sel))
+                    _db2.set_obs_draft_masterstar_source_path(int(did), p_job or str(p_sel))
                 finally:
                     _db2.conn.close()
             except Exception:  # noqa: BLE001

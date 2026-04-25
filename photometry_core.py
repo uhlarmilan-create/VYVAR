@@ -15,6 +15,7 @@ import pandas as pd
 from astropy.io import fits as astrofits
 
 from config import AppConfig
+from database import query_local_gaia, query_local_gaia_by_source_ids
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from jd_axis_format import jd_axis_title, jd_series_relative
@@ -534,6 +535,10 @@ def read_flux_from_csv(
             "mag_inst": float("nan"),
             "err": float("nan"),
             "aperture_r_px": apertures_px.get(cid, float("nan")),
+            "x": float("nan"),
+            "y": float("nan"),
+            "sky_annulus_r_out_px": float("nan"),
+            "edge_fail": False,
             "sky_pp": float("nan"),
             "flux_raw": float("nan"),
             "flag": "no_data",
@@ -607,6 +612,18 @@ def read_flux_from_csv(
         # Inštrumentálna magnitúda
         base["mag_inst"] = _flux_to_mag(flux)
 
+        # Geometry (for per-frame annulus-aware edge checks)
+        try:
+            base["x"] = float(pd.to_numeric(row_csv.get("x"), errors="coerce"))
+            base["y"] = float(pd.to_numeric(row_csv.get("y"), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            base["x"] = float("nan")
+            base["y"] = float("nan")
+        try:
+            base["sky_annulus_r_out_px"] = float(pd.to_numeric(row_csv.get("sky_annulus_r_out_px"), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            base["sky_annulus_r_out_px"] = float("nan")
+
         # Chyba — fotónový šum + sky šum
         r_ap = base["aperture_r_px"]
         area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
@@ -628,6 +645,7 @@ def read_flux_from_csv(
 def check_comparison_stability(
     comp_lc: dict[str, np.ndarray],
     *,
+    comp_rms_map: dict[str, float] | None = None,
     n_comp_min: int = 3,
     outlier_sigma: float = 3.0,
 ) -> dict[str, dict]:
@@ -654,6 +672,17 @@ def check_comparison_stability(
         diff = np.diff(finite)
         rms_p2p = float(np.std(diff) / math.sqrt(2)) if len(diff) > 1 else float("nan")
         result[cid] = {"rms_p2p": rms_p2p, "lc_rms": lc_rms, "quality": "good"}
+
+    # Ak hviezda má comp_rms≈0 z Phase 1 → označ ako suspect (pravdepodobný isolated-bin normalizačný artefakt).
+    if comp_rms_map:
+        for cid in result:
+            try:
+                phase1_rms = float(comp_rms_map.get(cid, float("nan")))
+            except Exception:  # noqa: BLE001
+                phase1_rms = float("nan")
+            if math.isfinite(phase1_rms) and phase1_rms < 1e-6:
+                result[cid]["quality"] = "suspect"
+                result[cid]["note"] = "comp_rms≈0 (isolated bin)"
 
     # MAD filter na rms_p2p
     valid_p2p = np.asarray(
@@ -822,14 +851,28 @@ def ensemble_normalize(
         ensemble_scatter[i] = float(np.std(comp_vals)) if comp_vals.size > 1 else 0.0
         delta_mag[i] = target_mag_inst[i] - ens_med
 
-        # Zeropoint: median(cat − inst) na comps — zladí absolútnu mag s katalógom.
+        # Zeropoint: weighted mean(cat − inst) on comps to align absolute mag to catalog.
+        # Vážený ZP podľa Broeg, Fernández & Neuhäuser (2005), Astron. Nachr. 326, 134
+        # — w_i = 1/σ_i²
         # ``delta_mag + median(cat)`` by bolo nesúladné s ``ens_med`` zo súčtu fluxov (−2.5 log ΣF).
         zp_offs: list[float] = []
+        zp_vals: list[float] = []
+        weights: list[float] = []
         for cid_j, m_j in comp_pairs:
             cm_j = float(comp_catalog_mag.get(cid_j, float("nan")))
             if math.isfinite(cm_j) and math.isfinite(m_j):
-                zp_offs.append(cm_j - m_j)
-        if zp_offs:
+                d = float(cm_j - m_j)
+                zp_offs.append(d)
+                rms_j = float(comp_rms_map.get(cid_j, float("nan")))
+                if math.isfinite(rms_j) and rms_j > 1e-6:
+                    zp_vals.append(d)
+                    weights.append(1.0 / (rms_j**2))
+        if weights:
+            w = np.asarray(weights, dtype=np.float64)
+            z = np.asarray(zp_vals, dtype=np.float64)
+            mag_calib[i] = target_mag_inst[i] + float(np.sum(w * z) / np.sum(w))
+        elif zp_offs:
+            # fallback to median if we don't have usable RMS weights
             mag_calib[i] = target_mag_inst[i] + float(np.nanmedian(np.asarray(zp_offs, dtype=np.float64)))
         else:
             mag_calib[i] = delta_mag[i] + cat_offset
@@ -1769,6 +1812,19 @@ def run_phase2a(
 
     at_df["skip_photometry"] = _coerce_skip_photometry(at_df)
 
+    # Chip dims for edge checks (best effort): start from static x/y maxima, refine from per-frame CSVs later if needed.
+    chip_fw: int | None = None
+    chip_fh: int | None = None
+    try:
+        xm = float(pd.to_numeric(pd.concat([at_df.get("x", pd.Series(dtype=float)), comp_df.get("x", pd.Series(dtype=float))]), errors="coerce").max())
+        ym = float(pd.to_numeric(pd.concat([at_df.get("y", pd.Series(dtype=float)), comp_df.get("y", pd.Series(dtype=float))]), errors="coerce").max())
+        if math.isfinite(xm) and xm > 0:
+            chip_fw = int(math.ceil(xm)) + 2
+        if math.isfinite(ym) and ym > 0:
+            chip_fh = int(math.ceil(ym)) + 2
+    except Exception:  # noqa: BLE001
+        chip_fw, chip_fh = None, None
+
     if "x" not in comp_df.columns or "y" not in comp_df.columns:
         raise ValueError("comparison_stars_per_target.csv musí obsahovať stĺpce x, y pre Fázu 2A")
 
@@ -2100,6 +2156,55 @@ def run_phase2a(
                 lookup=_lookup_row,
             )
             if not df_frame.empty:
+                # Refine chip dims from this frame if still unknown.
+                if (chip_fw is None or chip_fh is None) and ("x" in df_frame.columns and "y" in df_frame.columns):
+                    try:
+                        _xm = float(pd.to_numeric(df_frame["x"], errors="coerce").max())
+                        _ym = float(pd.to_numeric(df_frame["y"], errors="coerce").max())
+                    except Exception:  # noqa: BLE001
+                        _xm, _ym = float("nan"), float("nan")
+                    if chip_fw is None and math.isfinite(_xm) and _xm > 0:
+                        chip_fw = int(math.ceil(_xm)) + 2
+                    if chip_fh is None and math.isfinite(_ym) and _ym > 0:
+                        chip_fh = int(math.ceil(_ym)) + 2
+
+                # Target edge check (annulus-aware): invalidate this frame for target if annulus spills outside chip.
+                if chip_fw is not None and chip_fh is not None and int(chip_fw) > 0 and int(chip_fh) > 0:
+                    tmask = df_frame["catalog_id"].astype(str).str.strip().eq(target_cid)
+                    if bool(tmask.any()):
+                        tr = df_frame.loc[tmask].iloc[0]
+                        try:
+                            x_t = float(pd.to_numeric(tr.get("x"), errors="coerce"))
+                            y_t = float(pd.to_numeric(tr.get("y"), errors="coerce"))
+                        except Exception:  # noqa: BLE001
+                            x_t, y_t = float("nan"), float("nan")
+                        try:
+                            r_out_t = float(pd.to_numeric(tr.get("sky_annulus_r_out_px", 30.0), errors="coerce"))
+                        except Exception:  # noqa: BLE001
+                            r_out_t = 30.0
+                        if not (math.isfinite(r_out_t) and r_out_t > 0):
+                            r_out_t = 30.0
+                        if math.isfinite(x_t) and math.isfinite(y_t):
+                            edge_ok = (
+                                (x_t - r_out_t >= 0)
+                                and (x_t + r_out_t <= float(chip_fw))
+                                and (y_t - r_out_t >= 0)
+                                and (y_t + r_out_t <= float(chip_fh))
+                            )
+                            if not edge_ok:
+                                df_frame = df_frame.copy()
+                                df_frame.loc[tmask, "mag_inst"] = float("nan")
+                                df_frame.loc[tmask, "flag"] = "edge_fail"
+                                if "edge_fail" in df_frame.columns:
+                                    df_frame.loc[tmask, "edge_fail"] = True
+                                logging.info(
+                                    "[TARGET EDGE] %s: frame %s vyradený — annulus mimo čip (x=%.0f, y=%.0f, r_out=%.1fpx)",
+                                    str(target_name),
+                                    str(csv_path.name),
+                                    float(x_t),
+                                    float(y_t),
+                                    float(r_out_t),
+                                )
                 frame_results.append(df_frame)
 
         if not frame_results:
@@ -2118,6 +2223,7 @@ def run_phase2a(
         # Krok 3: Stability check
         comp_quality = check_comparison_stability(
             comp_lc,
+            comp_rms_map=comp_rms_map,
             n_comp_min=3,
             outlier_sigma=stability_sigma,
         )
@@ -3134,7 +3240,13 @@ def select_active_targets(
             "x": float(vrow["x"]),
             "y": float(vrow["y"]),
             "catalog_id": catalog_id_norm,
-            "mag": float(ms_row.get("mag", float("nan"))),
+            # Prefer image-matched magnitude; fallback to Gaia G if masterstars carries it.
+            "mag": float(
+                pd.to_numeric(
+                    ms_row.get("mag", ms_row.get("phot_g_mean_mag", float("nan"))),
+                    errors="coerce",
+                )
+            ),
             "b_v": float(ms_row.get("b_v", float("nan"))),
             "bp_rp": float(ms_row.get("bp_rp", float("nan"))),
             "snr50_ok": bool(ms_row.get("snr50_ok", False)),
@@ -3199,6 +3311,70 @@ def select_active_targets(
     return result.reset_index(drop=True)
 
 
+def _enrich_target_bp_rp_from_gaia_db(target: pd.Series, *, gaia_db_path: str) -> pd.Series:
+    """Doplň ``bp_rp`` / ``b_v`` pre jeden active target z lokálnej Gaia DB (``source_id`` = ``catalog_id``).
+
+    Rovnaký princíp ako ``_fill_masterstars_gaia_matched_bp_rp_from_local_db`` v ``pipeline.py``:
+    priamy dotaz podľa ``source_id``, nie frame-wide LIMIT box.
+    """
+    out = target.copy()
+    vsx = str(out.get("vsx_name", "") or "").strip() or str(out.get("name", "") or "").strip() or "?"
+
+    def _fscalar(key: str) -> float:
+        try:
+            v = float(pd.to_numeric(out.get(key), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            return float("nan")
+        return v if math.isfinite(v) else float("nan")
+
+    bpr_f = _fscalar("bp_rp")
+    if math.isfinite(bpr_f):
+        bv2 = bp_rp_to_bv(bpr_f)
+        if math.isfinite(bv2):
+            out["b_v"] = bv2
+        return out
+
+    gid = normalize_gaia_source_id(out.get("catalog_id"))
+    if not gid:
+        log_event(f"TARGET bp_rp chýba: {vsx} — TIER filter bez B-V")
+        return out
+
+    gdb = str(gaia_db_path or "").strip()
+    try:
+        gp = Path(gdb).expanduser().resolve()
+        gdb_ok = bool(gdb) and gp.is_file()
+    except OSError:
+        gdb_ok = False
+    if not gdb_ok:
+        log_event(f"TARGET bp_rp chýba: {vsx} — TIER filter bez B-V")
+        return out
+
+    try:
+        gmap = query_local_gaia_by_source_ids(gp, [gid])
+    except Exception as exc:  # noqa: BLE001
+        log_event(f"TARGET bp_rp chýba: {vsx} — Gaia DB: {exc!s}")
+        return out
+
+    row = gmap.get(gid) or {}
+    bpr_db = row.get("bp_rp")
+    try:
+        bpr_nf = float(bpr_db) if bpr_db is not None else float("nan")
+    except (TypeError, ValueError):
+        bpr_nf = float("nan")
+    if not math.isfinite(bpr_nf):
+        log_event(f"TARGET bp_rp chýba: {vsx} — TIER filter bez B-V")
+        return out
+
+    out["bp_rp"] = bpr_nf
+    bv_new = bp_rp_to_bv(bpr_nf)
+    out["b_v"] = bv_new if math.isfinite(bv_new) else float("nan")
+    if math.isfinite(bv_new):
+        log_event(f"TARGET bp_rp fallback: {vsx} bp_rp={bpr_nf:.3f} b_v={bv_new:.3f} (z Gaia DB)")
+    else:
+        log_event(f"TARGET bp_rp fallback: {vsx} bp_rp={bpr_nf:.3f} b_v=NaN (mimo B-V transform, z Gaia DB)")
+    return out
+
+
 def select_comparison_stars_per_target(
     target: pd.Series,
     masterstars_df: pd.DataFrame,
@@ -3226,6 +3402,7 @@ def select_comparison_stars_per_target(
     chip_fw: int | None = None,
     chip_fh: int | None = None,
     chip_interior_margin_px: int = 0,
+    edge_bad_frame_frac_max: float = 0.10,
 ) -> pd.DataFrame:
     """Fáza 1: Pre jeden target vyber najstabilnejšie porovnávacie hviezdy.
 
@@ -3291,8 +3468,50 @@ def select_comparison_stars_per_target(
 
     ra_t = float(target["ra_deg"])
     dec_t = float(target["dec_deg"])
-    mag_t = float(target.get("mag", float("nan")))
+    # Target magnitude for Δmag tiers: prefer ``mag``; fallback to Gaia G-like columns if present.
+    mag_t = float(
+        pd.to_numeric(
+            target.get(
+                "mag",
+                target.get(
+                    "phot_g_mean_mag",
+                    target.get("g_mag", target.get("gaia_g_mag", float("nan"))),
+                ),
+            ),
+            errors="coerce",
+        )
+    )
     target_cid = str(target.get("catalog_id", ""))
+
+    # Jednotný B-V targetu: explicit ``b_v``, inak z ``bp_rp`` (Riello 2021). Ak stále NaN → TIER len podľa mag.
+    try:
+        target_bv_pre = float(pd.to_numeric(target.get("b_v"), errors="coerce"))
+    except Exception:  # noqa: BLE001
+        target_bv_pre = float("nan")
+    t_bp_tgt = float(pd.to_numeric(target.get("bp_rp"), errors="coerce"))
+    if not math.isfinite(target_bv_pre) and math.isfinite(t_bp_tgt):
+        target_bv_pre = bp_rp_to_bv(t_bp_tgt)
+    if not math.isfinite(target_bv_pre):
+        _vnm = str(target.get("vsx_name", "") or target.get("name", "") or "").strip() or (target_cid or "?")
+        log_event(f"TARGET {_vnm} nemá B-V → TIER filter len podľa mag")
+
+    TIER_DEFS: list[tuple[str, float, float]] = [
+        ("TIER1", 0.25, 0.15),
+        ("TIER2", 0.50, 0.30),
+        ("TIER3", 1.00, 0.50),
+        ("TIER4", 2.00, float("inf")),
+    ]
+
+    def _individual_tier(delta_mag: float, delta_bv: float) -> str:
+        for nm, mag_limit, bv_limit in TIER_DEFS:
+            mag_ok = math.isfinite(float(delta_mag)) and float(delta_mag) <= float(mag_limit)
+            # If BV delta is not finite (target/comp unknown), skip the BV gate.
+            bv_ok = (math.isfinite(float(delta_bv)) and float(delta_bv) <= float(bv_limit)) or not math.isfinite(
+                float(delta_bv)
+            )
+            if mag_ok and bv_ok:
+                return str(nm)
+        return "TIER4"
 
     mag_tol = float(max_mag_diff)
     if (
@@ -3362,10 +3581,6 @@ def select_comparison_stars_per_target(
 
     # Hard filter: |ΔB-V| <= max_bv_diff (len ak poznáme B-V targetu aj kandidáta)
     # B-V compute from Gaia BP-RP (Riello 2021) when possible; don't reuse BP-RP as B-V.
-    try:
-        target_bv_pre = float(pd.to_numeric(target.get("b_v"), errors="coerce"))
-    except Exception:  # noqa: BLE001
-        target_bv_pre = float("nan")
     if math.isfinite(target_bv_pre) and math.isfinite(max_bv_diff):
         if "_bv" not in ms.columns:
             ms["_bv"] = pd.to_numeric(ms.get("bp_rp", pd.Series(dtype=float)), errors="coerce").apply(bp_rp_to_bv)
@@ -3531,6 +3746,12 @@ def select_comparison_stars_per_target(
     peak_total_map: dict[str, int] = {cid: 0 for cid in cand_ids}
     # Skutočný 5σ SNR (median cez framy)
     snr_map: dict[str, list[float]] = {cid: [] for cid in cand_ids}
+    # Edge/annulus safety: count frames where sky annulus would spill outside chip
+    edge_bad_map: dict[str, int] = {cid: 0 for cid in cand_ids}
+    edge_total_map: dict[str, int] = {cid: 0 for cid in cand_ids}
+    _chip_w_eff: int | None = int(chip_fw) if chip_fw is not None else None
+    _chip_h_eff: int | None = int(chip_fh) if chip_fh is not None else None
+    _edge_log_done = False
 
     # ── CSV cache: ak príde zvonka (Fáza 1 shared), použi ju; inak vybuduj lokálne
     if csv_cache is None:
@@ -3580,6 +3801,34 @@ def select_comparison_stars_per_target(
         try:
             name_col = "name" if "name" in df.columns else ("catalog_id" if "catalog_id" in df.columns else "name")
             actual_flux_col = flux_col if flux_col in df.columns else "flux"
+
+            # If chip dims were not provided by caller, estimate conservatively from per-frame CSVs.
+            if (_chip_w_eff is None or _chip_h_eff is None) and ("x" in df.columns and "y" in df.columns):
+                try:
+                    _xmax = float(pd.to_numeric(df["x"], errors="coerce").max())
+                    _ymax = float(pd.to_numeric(df["y"], errors="coerce").max())
+                except Exception:  # noqa: BLE001
+                    _xmax, _ymax = float("nan"), float("nan")
+                if math.isfinite(_xmax) and _xmax > 0:
+                    _chip_w_eff = max(int(_chip_w_eff or 0), int(math.ceil(_xmax)) + 2)
+                if math.isfinite(_ymax) and _ymax > 0:
+                    _chip_h_eff = max(int(_chip_h_eff or 0), int(math.ceil(_ymax)) + 2)
+
+            have_edge_cols = (
+                "x" in df.columns
+                and "y" in df.columns
+                and "sky_annulus_r_out_px" in df.columns
+                and _chip_w_eff is not None
+                and _chip_h_eff is not None
+                and int(_chip_w_eff) > 0
+                and int(_chip_h_eff) > 0
+            )
+            if have_edge_cols and not _edge_log_done:
+                logging.info(
+                    f"[EDGE CHECK] chip={int(_chip_w_eff)}x{int(_chip_h_eff)}px, "
+                    "annulus outer použitý per-frame z sky_annulus_r_out_px"
+                )
+                _edge_log_done = True
 
             # Saturácia naprieč framami (nezávisle od flux>0):
             # peak_max_adu > saturate_limit_adu_85pct
@@ -3649,6 +3898,22 @@ def select_comparison_stars_per_target(
                 if not math.isfinite(raw_flux) or raw_flux <= 0:
                     continue
 
+                # Edge-safe per frame (annulus-aware): only when x/y + sky_annulus_r_out_px + chip dims are known.
+                if have_edge_cols:
+                    try:
+                        x0 = float(pd.to_numeric(row.get("x"), errors="coerce"))
+                        y0 = float(pd.to_numeric(row.get("y"), errors="coerce"))
+                        r_out = float(pd.to_numeric(row.get("sky_annulus_r_out_px"), errors="coerce"))
+                    except Exception:  # noqa: BLE001
+                        x0, y0, r_out = float("nan"), float("nan"), float("nan")
+                    if math.isfinite(x0) and math.isfinite(y0) and math.isfinite(r_out) and r_out > 0:
+                        edge_total_map[cid] = int(edge_total_map.get(cid, 0)) + 1
+                        w = float(int(_chip_w_eff))
+                        h = float(int(_chip_h_eff))
+                        ok = (x0 - r_out >= 0.0) and (x0 + r_out <= w) and (y0 - r_out >= 0.0) and (y0 + r_out <= h)
+                        if not ok:
+                            edge_bad_map[cid] = int(edge_bad_map.get(cid, 0)) + 1
+
                 # Skutočný 5σ SNR:
                 # SNR = dao_flux / sqrt(dao_flux + noise_floor_adu * aperture_area)
                 flux_snr = float(row.get("dao_flux", raw_flux))
@@ -3699,6 +3964,30 @@ def select_comparison_stars_per_target(
             )
     if _sat_rejected:
         logging.info(f"[FÁZA 1] Celkom vylúčených kvôli saturácii: {len(_sat_rejected)}")
+
+    # Filter EDGE: vylúč kandidátov, ktorých sky annulus často vyčnieva mimo čip
+    _edge_rejected: set[str] = set()
+    try:
+        bad_thr = float(edge_bad_frame_frac_max)
+    except (TypeError, ValueError):
+        bad_thr = 0.10
+    if not math.isfinite(bad_thr) or bad_thr < 0:
+        bad_thr = 0.10
+    # Apply only when we actually collected edge stats for that star (edge_total_map > 0).
+    for cid in list(flux_map.keys()):
+        total_e = int(edge_total_map.get(cid, 0) or 0)
+        bad_e = int(edge_bad_map.get(cid, 0) or 0)
+        if total_e > 0:
+            bad_frac = float(bad_e) / float(total_e) if total_e > 0 else 0.0
+            if bad_frac > bad_thr:
+                flux_map.pop(cid, None)
+                _edge_rejected.add(cid)
+                logging.info(
+                    f"[FÁZA 1] Edge/annulus filter: vylúčený {cid} "
+                    f"({bad_e}/{total_e} framov mimo čip, frac={bad_frac:.2f} > {bad_thr:.2f})"
+                )
+    if _edge_rejected:
+        logging.info(f"[FÁZA 1] Celkom vylúčených kvôli edge/annulus: {len(_edge_rejected)}")
 
     # Filter SNR: vylúč kandidátov s median SNR < 5σ
     _snr_rejected: set[str] = set()
@@ -3866,6 +4155,26 @@ def select_comparison_stars_per_target(
         if math.isfinite(rms):
             rms_map[cid] = rms
 
+    # Detekuj "isolated bin" artefakty:
+    # ak comp_rms vyjde nereálne nízke (typicky ~0), ale hviezda má veľa meraní,
+    # je to často dôsledok normalizácie v príliš riedkom brightness bine (norm_med ≈ raw_flux).
+    ISOLATED_BIN_RMS_FLOOR = 1e-4  # 0.1 mmag
+    ISOLATED_BIN_MIN_FRAMES = 50
+    for cid in list(rms_map.keys()):
+        try:
+            rms_v = float(rms_map.get(cid, float("nan")))
+        except Exception:  # noqa: BLE001
+            rms_v = float("nan")
+        nfr = int(len(flux_map.get(cid, [])))
+        if math.isfinite(rms_v) and rms_v < float(ISOLATED_BIN_RMS_FLOOR) and nfr >= int(ISOLATED_BIN_MIN_FRAMES):
+            rms_map.pop(cid, None)
+            logging.warning(
+                "[COMP SELECT] %s: comp_rms < %.1e pri %d framoch → isolated bin artefakt → vyradená z COMP",
+                str(cid),
+                float(ISOLATED_BIN_RMS_FLOOR),
+                int(nfr),
+            )
+
     # Zoradené RMS pre fallback kroky
     sorted_rms_map: dict[str, float] = dict(sorted(rms_map.items(), key=lambda kv: float(kv[1])))
 
@@ -4023,14 +4332,23 @@ def select_comparison_stars_per_target(
         active = new_active
 
     # ── Krok 5: Finálny výber ──
-    # Score: stabilita (RMS) + vzdialenosť + izolácia (contamination)
-    # (nižší = lepší kandidát)
+    # comp_score — nižšie = lepší kandidát
+    #
+    # Literatúra pre comp_score:
+    # - Broeg, Fernández & Neuhäuser (2005): Astron. Nachr. 326, 134
+    #   DOI: 10.1002/asna.200410350
+    # - Young, A.T. (1967): AJ 72, 747 — scintilačný šum
+    # - Hardie, R.H. (1962): in Astronomical Techniques (Stars & Stellar Systems vol. II)
+    #   — color term korekcie pri diferenciálnej fotometrii
+    # - AAVSO CCD Photometry Guide (2023), kap. 5.5 a 6
+    #   https://www.aavso.org/ccd-photometry-guide
     score_map: dict[str, float] = {}
     for cid, rms in active.items():
         row = candidates[candidates[id_col_cand].astype(str).str.strip() == cid]
         if row.empty:
             continue
-        dist_deg = float(row.iloc[0].get("_dist_deg", float("nan")))
+        r0 = row.iloc[0]
+        dist_deg = float(r0.get("_dist_deg", float("nan")))
         # Preferuj optimálnu vzdialenosť (nie "čím bližšie tým lepšie"):
         # príliš blízko → lokálne artefakty (optika/flat/gradients) korelujú s targetom,
         # príliš ďaleko → iná atmosférická bunka.
@@ -4044,8 +4362,43 @@ def select_comparison_stars_per_target(
             else 1.0
         )
         contamination = float(contamination_map.get(cid, 0.0)) if contamination_map else 0.0
-        rms_score = float(rms)
-        score_map[cid] = rms_score * 0.5 + dist_score * 0.3 + contamination * 0.2
+
+        comp_rms = float(rms) if math.isfinite(float(rms)) else 1.0
+        # Floor pre numerické artefakty (napr. comp_rms = 3e-16 z floating point)
+        # Reálny fotometrický RMS nemôže byť pod ~0.001 mag pre ground-based
+        comp_rms_floored = max(comp_rms, 1e-4)
+        # delta_mag / delta_bv use same mag/BV sources as tier logic (mag_t, target_bv_pre, ms["_mag"], ms["_bv"]).
+        try:
+            comp_mag = float(pd.to_numeric(r0.get("_mag", r0.get("mag", r0.get("phot_g_mean_mag"))), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            comp_mag = float("nan")
+        delta_mag_c = abs(comp_mag - mag_t) if (math.isfinite(comp_mag) and math.isfinite(mag_t)) else float("nan")
+
+        try:
+            comp_bv = float(pd.to_numeric(r0.get("_bv", r0.get("b_v")), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            comp_bv = float("nan")
+        delta_bv_c = (
+            abs(comp_bv - target_bv_pre)
+            if (math.isfinite(comp_bv) and math.isfinite(target_bv_pre))
+            else float("nan")
+        )
+
+        # Normalizácie 0..1 (missing -> 0.0, i.e. don't punish for missing info)
+        norm_delta_mag = min(delta_mag_c / 2.0, 1.0) if math.isfinite(delta_mag_c) else 0.0
+        norm_delta_bv = min(delta_bv_c / 1.0, 1.0) if math.isfinite(delta_bv_c) else 0.0
+
+        comp_score = (
+            0.50 * comp_rms_floored
+            + 0.20 * float(dist_score)
+            + 0.15 * float(norm_delta_mag)
+            + 0.10 * float(norm_delta_bv)
+            + 0.05 * float(contamination)
+        )
+        # Ensure score is always finite.
+        if not math.isfinite(float(comp_score)):
+            comp_score = float("inf")
+        score_map[cid] = float(comp_score)
 
     scored = sorted(score_map.items(), key=lambda x: float(x[1]))
     # Preferuj Gaia-matched (číselné ID) pred DET_* ak máme dostatok možností.
@@ -4082,7 +4435,6 @@ def select_comparison_stars_per_target(
 
     # Zostav výstupný DataFrame
     result_rows = []
-    target_bv = float(target.get("b_v", float("nan")))
     for cid in selected_ids:
         row = candidates[candidates[id_col_cand].astype(str).str.strip() == cid]
         if row.empty:
@@ -4109,7 +4461,37 @@ def select_comparison_stars_per_target(
         r["comp_n_frames"] = len(flux_map.get(cid, []))
         r["target_catalog_id"] = target_cid
         r["target_vsx_name"] = str(target.get("vsx_name", ""))
-        r["comp_tier"] = selected_tier
+        # Per-comp-star tier: strictest tier this star individually satisfies.
+        try:
+            comp_mag = float(pd.to_numeric(r.get("_mag", r.get("mag", r.get("phot_g_mean_mag"))), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            comp_mag = float("nan")
+        delta_mag = abs(comp_mag - mag_t) if math.isfinite(comp_mag) and math.isfinite(mag_t) else float("nan")
+
+        comp_bv = float("nan")
+        try:
+            comp_bv = float(pd.to_numeric(r.get("b_v", r.get("_bv")), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            comp_bv = float("nan")
+        if not math.isfinite(comp_bv) and math.isfinite(bprp0):
+            comp_bv = bp_rp_to_bv(bprp0)
+
+        delta_bv = (
+            abs(comp_bv - target_bv_pre)
+            if math.isfinite(comp_bv) and math.isfinite(target_bv_pre)
+            else float("nan")
+        )
+        r["comp_tier"] = _individual_tier(delta_mag, delta_bv)
+        # Broeg 2005 weight proxy for ZP: w = 1/σ² (σ ~= comp_rms from Phase 1)
+        rms_val = r.get("comp_rms", float("nan"))
+        try:
+            rms_f = float(pd.to_numeric(rms_val, errors="coerce"))
+        except Exception:  # noqa: BLE001
+            rms_f = float("nan")
+        if math.isfinite(rms_f) and rms_f > 1e-6:
+            r["comp_weight"] = 1.0 / (rms_f**2)
+        else:
+            r["comp_weight"] = float("nan")
         result_rows.append(r)
 
     if not result_rows:
@@ -4129,9 +4511,9 @@ def select_comparison_stars_per_target(
             out["b_v"] = pd.to_numeric(out["bp_rp"], errors="coerce").apply(bp_rp_to_bv)
     except Exception:  # noqa: BLE001
         pass
-    if "b_v" in out.columns and math.isfinite(target_bv):
+    if "b_v" in out.columns and math.isfinite(target_bv_pre):
         out_bv = pd.to_numeric(out["b_v"], errors="coerce")
-        dbv_out = (out_bv - target_bv).abs()
+        dbv_out = (out_bv - target_bv_pre).abs()
         bv_info = f"ΔB-V median={float(dbv_out.median()):.3f} max={float(dbv_out.max()):.3f}"
     else:
         bv_info = "ΔB-V N/A"
@@ -4294,6 +4676,9 @@ def run_phase0_and_phase1(
     )
     _p(f"Fáza 1: cache {len(shared_csv_cache)} súborov — výber porovnávačiek ({len(active)} cieľov)…")
 
+    _cfg_gaia_targets = AppConfig()
+    _gaia_db_targets = str(getattr(_cfg_gaia_targets, "gaia_db_path", "") or "").strip()
+
     _vt_chip = pd.read_csv(variable_targets_csv, low_memory=False)
     _fw_chip, _fh_chip = _phase0_effective_frame_hw_px(
         _vt_chip,
@@ -4305,14 +4690,19 @@ def run_phase0_and_phase1(
 
     _t_phase1 = time.time()
     n_act0 = int(len(active))
-    for idx, (_, target_row) in enumerate(active.iterrows(), start=1):
+    for i_num, (active_idx, target_row) in enumerate(active.iterrows(), start=1):
         if progress_cb is not None and (
-            idx == 1 or idx == n_act0 or (n_act0 > 1 and idx % max(1, n_act0 // 12) == 0)
+            i_num == 1 or i_num == n_act0 or (n_act0 > 1 and i_num % max(1, n_act0 // 12) == 0)
         ):
             _tid = str(target_row.get("vsx_name") or target_row.get("catalog_id", ""))[:48]
-            _p(f"Fáza 1: cieľ {idx}/{n_act0}: {_tid}")
+            _p(f"Fáza 1: cieľ {i_num}/{n_act0}: {_tid}")
+        tr_enriched = _enrich_target_bp_rp_from_gaia_db(target_row, gaia_db_path=_gaia_db_targets)
+        if "bp_rp" in active.columns:
+            active.loc[active_idx, "bp_rp"] = tr_enriched.get("bp_rp", active.loc[active_idx, "bp_rp"])
+        if "b_v" in active.columns:
+            active.loc[active_idx, "b_v"] = tr_enriched.get("b_v", active.loc[active_idx, "b_v"])
         comps = select_comparison_stars_per_target(
-            target_row,
+            tr_enriched,
             ms_df,
             csv_paths,
             csv_cache=shared_csv_cache,
@@ -4339,11 +4729,167 @@ def run_phase0_and_phase1(
             chip_interior_margin_px=int(chip_interior_margin_px),
         )
         if comps.empty:
-            targets_without_comps.append(str(target_row.get("catalog_id", "")))
+            targets_without_comps.append(str(tr_enriched.get("catalog_id", "")))
         else:
             all_comp_rows.append(comps)
 
+    try:
+        active.to_csv(active_csv, index=False)
+        logging.info("[FÁZA 0–1] active_targets.csv prepísané po doplnení bp_rp/b_v targetov (Gaia DB).")
+    except Exception as exc:  # noqa: BLE001
+        log_event(f"active_targets.csv zápis po Fáze 1 zlyhal: {exc!s}")
+
     comp_df = pd.concat(all_comp_rows, ignore_index=True) if all_comp_rows else pd.DataFrame()
+
+    # Fallback: doplň bp_rp pre COMP hviezdy bez Gaia farby pomocou lokálnej Gaia DB (sky-box okolo RA/Dec).
+    try:
+        if (
+            not comp_df.empty
+            and "bp_rp" in comp_df.columns
+            and "ra_deg" in comp_df.columns
+            and "dec_deg" in comp_df.columns
+        ):
+            cfg = AppConfig()
+            gaia_db_path = str(getattr(cfg, "gaia_db_path", "") or "").strip() or None
+
+            bp_nan = pd.to_numeric(comp_df["bp_rp"], errors="coerce").isna()
+            ra_ok = pd.to_numeric(comp_df["ra_deg"], errors="coerce").apply(lambda v: math.isfinite(float(v)))
+            dec_ok = pd.to_numeric(comp_df["dec_deg"], errors="coerce").apply(lambda v: math.isfinite(float(v)))
+            needs = comp_df[bp_nan & ra_ok & dec_ok].copy()
+
+            n_nan = int(len(needs))
+            n_found = 0
+            if n_nan > 0 and gaia_db_path:
+                if "gaia_bp_rp_source" not in comp_df.columns:
+                    comp_df["gaia_bp_rp_source"] = ""
+
+                # Magnitude column for matching Gaia photometry (prefer "mag", fallback to "phot_g_mean_mag").
+                mag_col = "mag" if "mag" in comp_df.columns else ("phot_g_mean_mag" if "phot_g_mean_mag" in comp_df.columns else None)
+
+                radius_deg = 0.001  # ~3.6 arcsec
+                for i, row in needs.iterrows():
+                    ra0 = float(pd.to_numeric(row.get("ra_deg"), errors="coerce"))
+                    dec0 = float(pd.to_numeric(row.get("dec_deg"), errors="coerce"))
+                    if not (math.isfinite(ra0) and math.isfinite(dec0)):
+                        continue
+
+                    mag_comp = float("nan")
+                    if mag_col is not None:
+                        try:
+                            mag_comp = float(pd.to_numeric(row.get(mag_col), errors="coerce"))
+                        except Exception:  # noqa: BLE001
+                            mag_comp = float("nan")
+                    if not math.isfinite(mag_comp):
+                        continue
+
+                    dec_min = max(-90.0, dec0 - radius_deg)
+                    dec_max = min(90.0, dec0 + radius_deg)
+
+                    # Handle RA wrap at 0/360 for tiny windows.
+                    ra_min = ra0 - radius_deg
+                    ra_max = ra0 + radius_deg
+                    gaia_rows: list[dict[str, Any]] = []
+                    if ra_min < 0.0:
+                        gaia_rows.extend(
+                            query_local_gaia(
+                                ra_min=360.0 + ra_min,
+                                ra_max=360.0,
+                                dec_min=dec_min,
+                                dec_max=dec_max,
+                                db_path=gaia_db_path,
+                                mag_limit=max(20.0, mag_comp + 2.0),
+                                max_rows=200,
+                            )
+                        )
+                        gaia_rows.extend(
+                            query_local_gaia(
+                                ra_min=0.0,
+                                ra_max=ra_max,
+                                dec_min=dec_min,
+                                dec_max=dec_max,
+                                db_path=gaia_db_path,
+                                mag_limit=max(20.0, mag_comp + 2.0),
+                                max_rows=200,
+                            )
+                        )
+                    elif ra_max > 360.0:
+                        gaia_rows.extend(
+                            query_local_gaia(
+                                ra_min=ra_min,
+                                ra_max=360.0,
+                                dec_min=dec_min,
+                                dec_max=dec_max,
+                                db_path=gaia_db_path,
+                                mag_limit=max(20.0, mag_comp + 2.0),
+                                max_rows=200,
+                            )
+                        )
+                        gaia_rows.extend(
+                            query_local_gaia(
+                                ra_min=0.0,
+                                ra_max=ra_max - 360.0,
+                                dec_min=dec_min,
+                                dec_max=dec_max,
+                                db_path=gaia_db_path,
+                                mag_limit=max(20.0, mag_comp + 2.0),
+                                max_rows=200,
+                            )
+                        )
+                    else:
+                        gaia_rows = query_local_gaia(
+                            ra_min=ra_min,
+                            ra_max=ra_max,
+                            dec_min=dec_min,
+                            dec_max=dec_max,
+                            db_path=gaia_db_path,
+                            mag_limit=max(20.0, mag_comp + 2.0),
+                            max_rows=200,
+                        )
+
+                    if not gaia_rows:
+                        continue
+
+                    best = None
+                    best_d = float("inf")
+                    for gr in gaia_rows:
+                        try:
+                            g_mag = float(gr.get("g_mag"))
+                        except Exception:  # noqa: BLE001
+                            g_mag = float("nan")
+                        if not (math.isfinite(g_mag) and abs(g_mag - mag_comp) < 1.0):
+                            continue
+                        try:
+                            ra_g = float(gr.get("ra"))
+                            dec_g = float(gr.get("dec"))
+                        except Exception:  # noqa: BLE001
+                            continue
+                        if not (math.isfinite(ra_g) and math.isfinite(dec_g)):
+                            continue
+                        d = _angular_distance_deg(ra0, dec0, ra_g, dec_g)
+                        if math.isfinite(d) and d < best_d:
+                            best_d = d
+                            best = gr
+
+                    if best is None:
+                        continue
+                    bprp = best.get("bp_rp")
+                    try:
+                        bprp_f = float(bprp)
+                    except Exception:  # noqa: BLE001
+                        bprp_f = float("nan")
+                    if not math.isfinite(bprp_f):
+                        continue
+
+                    comp_df.loc[i, "bp_rp"] = bprp_f
+                    comp_df.loc[i, "gaia_bp_rp_source"] = "gaia_db_fallback"
+                    comp_df.loc[i, "b_v"] = bp_rp_to_bv(bprp_f)
+                    n_found += 1
+
+            if n_nan > 0:
+                log_event(f"COMP bp_rp fallback: {n_found}/{n_nan} hviezd doplnených z Gaia DB")
+    except Exception:  # noqa: BLE001
+        pass
+
     comp_csv = output_dir / "comparison_stars_per_target.csv"
     comp_df.to_csv(comp_csv, index=False)
     try:
