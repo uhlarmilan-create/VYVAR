@@ -11,6 +11,8 @@ venv/
 # Lokálne dáta / výstupy (veľké alebo citlivé)
 *.sqlite3
 *.db
+*.db-shm
+*.db-wal
 Archive/
 CalibrationLibrary/
 

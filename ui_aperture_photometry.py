@@ -6,6 +6,7 @@ import html
 import json
 import logging
 import math
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -64,25 +65,21 @@ def _ut_tick_labels_from_jd(jd_vals: "list[float]") -> list[str]:
 
 
 def _latest_report_pdf(draft_dir: Path, obs_group: str) -> Path | None:
-    """Return latest matching VYVAR report PDF for given obs_group."""
+    """Return newest PDF report for this setup (``report_{setup}.pdf`` or legacy glob)."""
     try:
-        d = Path(draft_dir) / "platesolve" / str(obs_group)
+        d = Path(draft_dir) / "platesolve" / str(obs_group) / "photometry"
+        primary = d / f"report_{str(obs_group)}.pdf"
+        if primary.exists():
+            return primary
+        legacy_dir = Path(draft_dir) / "platesolve" / str(obs_group)
         pat = f"VYVAR_report_{str(obs_group)}_*.pdf"
-        candidates = list(d.glob(pat))
+        candidates = list(legacy_dir.glob(pat))
         if not candidates:
             return None
         candidates.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0.0, reverse=True)
         return candidates[0]
     except Exception:  # noqa: BLE001
         return None
-    out: list[str] = []
-    for jd in jd_vals:
-        try:
-            t = Time(float(jd), format="jd", scale="tdb").utc
-            out.append(t.to_datetime().strftime("%H:%M"))
-        except Exception:  # noqa: BLE001
-            out.append("")
-    return out
 
 
 def _find_phase2a_paths(
@@ -857,6 +854,9 @@ def render_aperture_photometry(
     _ = pipeline
     st.header("Aperture Photometry")
     st.caption("Fáza 0+1 + Fáza 2A ako jeden neoddeliteľný krok.")
+    st.session_state.setdefault("var_analysis_done", False)
+    st.session_state.setdefault("var_analysis_timestamp", None)
+    st.session_state.setdefault("pdf_ready", False)
 
     if draft_id is None and draft_dir_override is None:
         st.info("Žiadny aktívny draft. Načítaj draft vyššie alebo spusti VAR-STREM.")
@@ -916,30 +916,79 @@ def render_aperture_photometry(
 
     exists = _phase2a_results_exist(output_dir)
 
+    if st.session_state.get("pdf_ready"):
+        _ps = Path(draft_dir) / "platesolve" / str(selected_setup) / "photometry"
+        _ps.mkdir(parents=True, exist_ok=True)
+        with st.spinner("Generujem PDF správu…"):
+            from pdf_report import generate_report
+
+            _draft_lbl = Path(str(draft_dir).rstrip("/\\")).name
+            try:
+                _did = int(str(_draft_lbl).split("draft_", 1)[1])
+                _draft_id_str = f"draft_{_did:06d}"
+            except Exception:  # noqa: BLE001
+                _draft_id_str = _draft_lbl
+            pdf_path = generate_report(
+                photometry_dir=str(_ps.resolve()),
+                setup_name=str(selected_setup),
+                draft_id=_draft_id_str,
+                var_results=st.session_state.get("var_results"),
+                candidates=st.session_state.get("var_candidates"),
+                crossmatch_bullets=st.session_state.get("var_catalog_bullets", {}),
+                accepted_periods=st.session_state.get("accepted_period", {}),
+                variability_timestamp=st.session_state.get("var_analysis_timestamp"),
+            )
+        if pdf_path and Path(pdf_path).exists():
+            st.success("PDF report generated.")
+            with open(pdf_path, "rb") as f:
+                st.download_button(
+                    label="Download PDF report",
+                    data=f.read(),
+                    file_name=Path(pdf_path).name,
+                    mime="application/pdf",
+                    key=f"pdf_gen_dl_{selected_setup}",
+                )
+        else:
+            st.warning("PDF report could not be generated (missing data or reportlab).")
+        st.session_state["pdf_ready"] = False
+
     # Header/status line + global run button.
     col_info, col_run = st.columns([3, 2])
     with col_info:
         st.markdown(f"**Platesolve setup:** `{selected_setup}` &nbsp; | &nbsp; **FWHM:** `{float(fwhm_px):.3f}px`")
         if exists:
-            ts = _phase2a_timestamp(output_dir)
-            st.success(f"✅ Prebehlo: {ts}")
+            p2a_ts = _phase2a_timestamp(output_dir)
+            if st.session_state.get("var_analysis_done"):
+                vts = str(st.session_state.get("var_analysis_timestamp") or "")
+                st.success(f"Prebehlo: {vts} — Variability Detection dokončená automaticky")
+                st.caption(f"Fáza 2A (fotometria): {p2a_ts}")
+            else:
+                st.success(f"✅ Prebehlo: {p2a_ts}")
+            if st.session_state.get("var_analysis_done"):
+                if st.button(
+                    "Generovať PDF správu",
+                    type="primary",
+                    use_container_width=True,
+                    key=f"vyvar_gen_pdf_{selected_setup}",
+                ):
+                    st.session_state["pdf_ready"] = True
+                    st.rerun()
+            # Always show PDF download if it already exists (even after rerun).
+            pdf_latest = _latest_report_pdf(draft_dir, str(selected_setup))
+            if pdf_latest is not None and pdf_latest.exists():
+                try:
+                    with open(pdf_latest, "rb") as f:
+                        st.download_button(
+                            label=f"Download PDF report ({selected_setup})",
+                            data=f.read(),
+                            file_name=pdf_latest.name,
+                            mime="application/pdf",
+                            key=f"pdf_dl_hdr_{selected_setup}",
+                        )
+                except Exception:  # noqa: BLE001
+                    pass
         else:
             st.warning("⚠️ Nespustené")
-
-        # Always show PDF download if it already exists (even after rerun).
-        pdf_latest = _latest_report_pdf(draft_dir, str(selected_setup))
-        if pdf_latest is not None and pdf_latest.exists():
-            try:
-                with open(pdf_latest, "rb") as f:
-                    st.download_button(
-                        label=f"📥 Stiahnuť PDF správu ({selected_setup})",
-                        data=f.read(),
-                        file_name=pdf_latest.name,
-                        mime="application/pdf",
-                        key=f"pdf_dl_hdr_{selected_setup}",
-                    )
-            except Exception:  # noqa: BLE001
-                pass
     with col_run:
         run_btn = st.button("🔄 RUN Aperture Photometry", key="phase2a_run_full", type="primary")
 
@@ -1057,6 +1106,45 @@ def render_aperture_photometry(
                 (st.error if n_ok == 0 else st.warning)(
                     "Problémy pri niektorých setupoch:\n" + "\n".join(errors)
                 )
+            if len(errors) == 0 and n_ok == total and n_ok > 0:
+                st.info("Fáza 2A dokončená — spúšťam Variability Detection…")
+                try:
+                    from ui_variability import run_variability_detection_session
+
+                    setup_for_var = str(
+                        st.session_state.get("var_obs_group")
+                        or st.session_state.get("phase2a_setup_select")
+                        or selected_setup
+                    )
+                    flux_col_v = str(st.session_state.get("var_flux_source", "dao_flux"))
+                    min_pct_v = int(st.session_state.get("var_min_frames_pct", 50))
+                    cfg_dct = cfg.to_dict()
+                    sigma_v = float(
+                        st.session_state.get("var_sigma_thr", cfg_dct.get("variability_sigma_threshold", 3.0))
+                    )
+                    mag_v = float(
+                        st.session_state.get("var_mag_limit", cfg_dct.get("variability_mag_limit", 14.5))
+                    )
+                    results_v, n_cand_v, var_sig_v = run_variability_detection_session(
+                        cfg=cfg,
+                        draft_dir=draft_dir,
+                        obs_group=setup_for_var,
+                        flux_col=flux_col_v,
+                        min_frames_pct=min_pct_v,
+                        sigma_thr=sigma_v,
+                        mag_limit=mag_v,
+                    )
+                    st.session_state["var_results"] = results_v
+                    st.session_state["_var_run_sig"] = var_sig_v
+                    st.session_state["var_catalog_bullets"] = {}
+                    st.session_state["var_obs_group"] = setup_for_var
+                    st.session_state["var_analysis_done"] = True
+                    st.session_state["var_analysis_timestamp"] = datetime.now().strftime("%d.%m.%Y %H:%M")
+                    st.session_state["pdf_ready"] = False
+                    st.session_state["var_candidate_count_autorun"] = int(n_cand_v)
+                except Exception as _v_exc:  # noqa: BLE001
+                    logging.exception("Auto Variability Detection po 2A zlyhala")
+                    st.warning(f"Variability Detection sa nepodarila spustiť automaticky: {_v_exc}")
             vyvar_footer_idle()
             st.rerun()
         except Exception as exc:  # noqa: BLE001

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +15,13 @@ def generate_photometry_report(
     draft_dir: Path,
     obs_group: str,
     output_pdf: Path | None,
+    *,
+    var_results: dict[str, Any] | None = None,
+    candidates: list[str] | None = None,
+    crossmatch_bullets: dict[str, str] | None = None,
+    accepted_periods: dict[str, float] | None = None,
+    variability_timestamp: str | None = None,
+    report_draft_label: str | None = None,
 ) -> Path | None:
     """
     Generuje PDF správu pre jednu noc pozorovania.
@@ -24,7 +32,7 @@ def generate_photometry_report(
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4, landscape
-        from reportlab.lib.units import cm
+        from reportlab.lib.units import cm, mm
         from reportlab.lib.utils import ImageReader
         from reportlab.pdfgen import canvas
         from reportlab.platypus import Table, TableStyle
@@ -34,6 +42,12 @@ def generate_photometry_report(
 
     draft_dir = Path(draft_dir)
     obs_group = str(obs_group)
+    _var_results = var_results
+    _candidates_set = {str(x).strip() for x in (candidates or []) if str(x).strip()}
+    _crossmatch_bullets = dict(crossmatch_bullets or {})
+    _accepted_periods = dict(accepted_periods or {})
+    _variability_ts = str(variability_timestamp or "").strip()
+    _report_draft_lbl = str(report_draft_label or "").strip() or str(draft_dir.name)
 
     platesolve_dir = draft_dir / "platesolve" / obs_group
     photometry_dir = platesolve_dir / "photometry"
@@ -76,6 +90,8 @@ def generate_photometry_report(
         comp_df["_tcid"] = comp_df["target_catalog_id"].map(_norm_cid)
     elif "catalog_id" in comp_df.columns:
         comp_df["_tcid"] = comp_df["catalog_id"].map(_norm_cid)
+
+    _candidates_norm = {_norm_cid(str(x)) for x in _candidates_set if str(x).strip()}
 
     # Join metadata (vsx_type, bp_rp) into summary for report ordering/labels.
     if not at_df.empty and "_cid" in at_df.columns and "_cid" in summary_df.columns:
@@ -281,18 +297,76 @@ def generate_photometry_report(
     FI_W = USE_W - LC_W - GAP_W
 
     NOTE_TXT = (
-        "B-V vypočítané z Gaia BP-RP (Riello et al. 2021, ±0.05 mag) | "
-        "Váhy COMP: w = 1/σ² — Broeg, Fernández & Neuhäuser, Astron. Nachr. 326, 134 (2005)"
+        "B-V from Gaia BP–RP (Riello et al. 2021, ±0.05 mag) | "
+        "COMP weights: w = 1/σ² — Broeg, Fernández & Neuhäuser, Astron. Nachr. 326, 134 (2005)"
     )
 
     def _page_footer(c: "canvas.Canvas") -> None:
         try:
             c.setFont("Helvetica", 9)
             c.setFillColor(colors.HexColor("#1a1a2e"))
-            c.drawRightString(PAGE_W - M_RIGHT, 0.45 * cm, f"Strana {c.getPageNumber()}")
+            left_txt = f"VYVAR — {_report_draft_lbl} — {obs_group}"
+            c.drawString(M_LEFT, 0.45 * cm, left_txt)
+            c.drawRightString(PAGE_W - M_RIGHT, 0.45 * cm, f"Page {c.getPageNumber()}")
             c.setFillColor(colors.black)
         except Exception:
             pass
+
+    def _variability_cover_metrics() -> dict[str, Any] | None:
+        """Build counts from ``var_results`` for the cover page (same merge logic as the variability UI)."""
+        vr = _var_results
+        if not vr:
+            return None
+        rms_df = vr.get("rms_df")
+        if not isinstance(rms_df, pd.DataFrame) or rms_df.empty:
+            return None
+        work = rms_df.copy()
+        vdi_df = vr.get("vdi_df")
+        if isinstance(vdi_df, pd.DataFrame) and not vdi_df.empty:
+            work = work.merge(
+                vdi_df[["catalog_id", "vdi_score", "vdi_z_score", "is_variable_candidate"]],
+                on="catalog_id",
+                how="left",
+                suffixes=("_rms", "_vdi"),
+            )
+            work = work.rename(columns={"is_variable_candidate": "is_variable_candidate_vdi"})
+        else:
+            work["vdi_score"] = np.nan
+            work["vdi_z_score"] = np.nan
+            work["is_variable_candidate_vdi"] = False
+        if "is_variable_candidate" in work.columns and "is_variable_candidate_rms" not in work.columns:
+            work = work.rename(columns={"is_variable_candidate": "is_variable_candidate_rms"})
+        work["is_variable_candidate_rms"] = work["is_variable_candidate_rms"].fillna(False).astype(bool)
+        work["is_variable_candidate_vdi"] = work["is_variable_candidate_vdi"].fillna(False).astype(bool)
+        work["is_candidate_combined"] = work["is_variable_candidate_rms"] | work["is_variable_candidate_vdi"]
+        work["vsx_known_variable"] = work["vsx_known_variable"].fillna(False).astype(bool)
+        n_combined_edge = 0
+        try:
+            from config import AppConfig
+            from ui_variability import count_edge_safe_combined_candidates
+
+            cfg_d = AppConfig().to_dict()
+            n_combined_edge = int(
+                count_edge_safe_combined_candidates(
+                    rms_df,
+                    vdi_df if isinstance(vdi_df, pd.DataFrame) else pd.DataFrame(),
+                    platesolve_dir,
+                    cfg_d,
+                )
+            )
+        except Exception:  # noqa: BLE001
+            n_combined_edge = int((work["is_candidate_combined"] & ~work["vsx_known_variable"]).sum())
+        n_all = int(len(work))
+        n_rms = int((work["is_variable_candidate_rms"] & ~work["vsx_known_variable"]).sum())
+        n_vdi = int((work["is_variable_candidate_vdi"] & ~work["vsx_known_variable"]).sum())
+        n_vsx = int(work["vsx_known_variable"].sum())
+        return {
+            "n_all": n_all,
+            "n_rms": n_rms,
+            "n_vdi": n_vdi,
+            "n_combined": n_combined_edge,
+            "n_vsx": n_vsx,
+        }
 
     def _draw_image_fit(
         c: "canvas.Canvas",
@@ -339,7 +413,7 @@ def generate_photometry_report(
             )
         c.setFont("Helvetica-Bold", 22)
         c.setFillColor(C_TITLE)
-        c.drawString(M_LEFT, y - 0.6 * cm, "VYVAR — Správa fotometrie")
+        c.drawString(M_LEFT, y - 0.6 * cm, "VYVAR — Photometry report")
         c.setFillColor(colors.black)
 
         y -= 1.4 * cm
@@ -348,20 +422,20 @@ def generate_photometry_report(
         y -= 0.6 * cm
         c.drawString(M_LEFT, y, f"Setup:     {obs_group}")
         y -= 0.6 * cm
-        c.drawString(M_LEFT, y, f"Dátum:     {obs_date_human}")
+        c.drawString(M_LEFT, y, f"Observation date:     {obs_date_human}")
         y -= 0.6 * cm
-        c.drawString(M_LEFT, y, f"Vygenerované: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
+        c.drawString(M_LEFT, y, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
         y -= 1.0 * cm
         # Metrics block
         c.setFont("Helvetica-Bold", 12)
         c.setFillColor(C_TITLE)
-        c.drawString(M_LEFT, y, "Súhrnné metriky")
+        c.drawString(M_LEFT, y, "Summary metrics")
         c.setFillColor(colors.black)
         y -= 0.6 * cm
 
         rows = [
-            ("Svetelné krivky", f"{n_lc:d}"),
+            ("Light curves", f"{n_lc:d}"),
             ("Median lc_rms", f"{med_rms:.4f}" if np.isfinite(med_rms) else "—"),
             ("RMS < 0.05 mag", f"{rms_lt_005:d}"),
             ("Avg good comp", f"{avg_good_comp:.2f}" if np.isfinite(avg_good_comp) else "—"),
@@ -384,26 +458,49 @@ def generate_photometry_report(
         fwhm_txt = f"{fwhm_px:.3f}px" if np.isfinite(fwhm_px) else "—"
         ap_txt = f"{aperture_px:.2f}px" if np.isfinite(aperture_px) else "—"
         c.setFont("Helvetica", 11)
-        c.drawString(M_LEFT, y, f"FWHM: {fwhm_txt}   |   Apertura: {ap_txt}")
+        c.drawString(M_LEFT, y, f"FWHM: {fwhm_txt}   |   Aperture: {ap_txt}")
 
         # Methods / references
         y -= 1.0 * cm
         c.setFont("Helvetica-Bold", 12)
         c.setFillColor(C_TITLE)
-        c.drawString(M_LEFT, y, "Metódy")
+        c.drawString(M_LEFT, y, "Methods")
         c.setFillColor(colors.black)
         y -= 0.6 * cm
         c.setFont("Helvetica", 9)
-        c.drawString(M_LEFT, y, "Ensemble fotometria: vážený ZP výpočet w_i = 1/σ_i²")
+        c.drawString(M_LEFT, y, "Ensemble photometry: weighted ZP w_i = 1/σ_i²")
         y -= 0.45 * cm
         c.setFont("Helvetica", 8)
         c.drawString(
             M_LEFT,
             y,
-            "Referencia: Broeg, Ch., Fernández, M., Neuhäuser, R. (2005). "
+            "Reference: Broeg, Ch., Fernández, M., Neuhäuser, R. (2005). "
             "\"A new algorithm for differential photometry: computing an optimum artificial comparison star.\" "
             "Astronomische Nachrichten, 326(2), 134–143. DOI: 10.1002/asna.200410350",
         )
+
+        y -= 1.0 * cm
+        c.setFont("Helvetica-Bold", 12)
+        c.setFillColor(C_TITLE)
+        c.drawString(M_LEFT, y, "Variability Detection results")
+        c.setFillColor(colors.black)
+        y -= 0.6 * cm
+        c.setFont("Helvetica", 10)
+        vm = _variability_cover_metrics()
+        if vm is None:
+            c.drawString(M_LEFT, y, "Variability Detection was not run for this draft")
+        else:
+            ts = _variability_ts or "—"
+            for label, val in (
+                ("Analyzed stars", f"{vm['n_all']}"),
+                ("RMS candidates", f"{vm['n_rms']}"),
+                ("VDI candidates", f"{vm['n_vdi']}"),
+                ("Combined candidates", f"{vm['n_combined']}"),
+                ("Known VSX in field", f"{vm['n_vsx']}"),
+                ("Analysis timestamp", ts),
+            ):
+                c.drawString(M_LEFT, y, f"{label}: {val}")
+                y -= 0.5 * cm
 
         _page_footer(c)
         c.showPage()
@@ -628,7 +725,7 @@ def generate_photometry_report(
             ax1.axhline(y=float(fwhm_limit), color="#c0392b", linestyle="--", linewidth=1.3)
         ax1.set_xlabel("Frame Index")
         ax1.set_ylabel("FWHM (px)")
-        ax1.set_title("FWHM — zelená ≤ limit, červená > limit")
+        ax1.set_title("FWHM — green ≤ limit, red > limit")
         ax1.grid(True, alpha=0.25)
 
         # Sky plot: prefer DB flag (REJECTED_AUTO) if available, else robust outlier visualization.
@@ -649,7 +746,7 @@ def generate_photometry_report(
         ax2.scatter(x, sky, c=col2, s=20)
         ax2.set_xlabel("Frame Index")
         ax2.set_ylabel("Sky level (ADU)")
-        ax2.set_title("Background sky level (podľa filtra; červená = auto-outlier)")
+        ax2.set_title("Background sky level (red = auto-outlier)")
         ax2.grid(True, alpha=0.25)
 
         buf = BytesIO()
@@ -673,7 +770,7 @@ def generate_photometry_report(
         y0 = PAGE_H - M_TOP - 1.6 * cm - plots_h - 0.6 * cm
         c.setFont("Helvetica-Bold", 11)
         c.setFillColor(colors.black)
-        c.drawString(M_LEFT, y0, "Masterstar referenčný snímok")
+        c.drawString(M_LEFT, y0, "Masterstar reference frame")
         y0 -= 0.45 * cm
         c.setFont("Helvetica", 9)
         c.setFillColor(colors.HexColor("#333333"))
@@ -686,20 +783,20 @@ def generate_photometry_report(
                 c.drawString(
                     M_LEFT,
                     y0,
-                    f"Použitý snímok: {used_fn}  (Frame {used_fr}, FWHM={float(used_fwhm):.2f}, Score={float(used_sc):.3f})",
+                    f"Used frame: {used_fn}  (Frame {used_fr}, FWHM={float(used_fwhm):.2f}, Score={float(used_sc):.3f})",
                 )
             else:
-                c.drawString(M_LEFT, y0, f"Použitý snímok: {used_fn}  (Frame {used_fr})")
+                c.drawString(M_LEFT, y0, f"Used frame: {used_fn}  (Frame {used_fr})")
         else:
-            c.drawString(M_LEFT, y0, "Použitý snímok: — (nedá sa inferovať z dostupných metadát)")
+            c.drawString(M_LEFT, y0, "Used frame: — (could not infer from available metadata)")
         c.setFillColor(colors.black)
         y0 -= 0.7 * cm
 
         c.setFont("Helvetica-Bold", 11)
-        c.drawString(M_LEFT, y0, "Top 5 kandidátov pre Masterstar")
+        c.drawString(M_LEFT, y0, "Top 5 Masterstar candidates")
         y0 -= 0.4 * cm
 
-        headers = ["Poradie", "Frame", "Filename", "FWHM", "Elongácia", "Hviezdy", "Sky", "Skóre"]
+        headers = ["Rank", "Frame", "Filename", "FWHM", "Elongation", "Stars", "Sky", "Score"]
         rows: list[list[str]] = [headers]
         for i in range(len(top5)):
             r = top5.iloc[i]
@@ -823,10 +920,149 @@ def generate_photometry_report(
             )
         return out
 
+    bullets_by_cid = {_norm_cid(str(k)): str(v) for k, v in _crossmatch_bullets.items()}
+
+    def _is_sparse_star_data(sd: dict[str, Any]) -> bool:
+        lc_rms = float(pd.to_numeric(sd.get("lc_rms"), errors="coerce"))
+        lc_path = str(sd.get("lc_img") or "")
+        lc_ok = bool(lc_path) and Path(lc_path).is_file()
+        comp_ok = bool(sd.get("comp_rows"))
+        return (not np.isfinite(lc_rms)) and (not lc_ok) and (not comp_ok)
+
+    def _draw_compact_star_block(c: "canvas.Canvas", sd: dict[str, Any], y_top: float, block_h: float) -> None:
+        bottom = y_top - block_h
+        yy = y_top - 0.35 * cm
+        vsx_name = str(sd.get("vsx_name", "") or "")
+        vsx_type = str(sd.get("vsx_type", "") or "")
+        zone_flag = str(sd.get("zone_flag", "") or "")
+        c.setFont("Helvetica-Bold", 11)
+        c.setFillColor(colors.black)
+        c.drawString(M_LEFT, yy, f"{vsx_name}  |  {vsx_type}  |  {zone_flag}")
+        yy -= 0.55 * cm
+        lc_rms = float(pd.to_numeric(sd.get("lc_rms"), errors="coerce"))
+        good_comp = int(pd.to_numeric(sd.get("good_comp"), errors="coerce") or 0)
+        ap_px = float(pd.to_numeric(sd.get("aperture_px"), errors="coerce"))
+        rms_txt = f"{lc_rms:.4f}" if np.isfinite(lc_rms) else "—"
+        ap_txt = f"{ap_px:.1f}px" if np.isfinite(ap_px) else "—"
+        c.setFont("Helvetica", 8)
+        c.setFillColor(colors.HexColor("#444444"))
+        c.drawString(
+            M_LEFT,
+            yy,
+            f"lc_rms: {rms_txt}  |  good comp: {good_comp:d}  |  aperture: {ap_txt}  |  Vizier VSX",
+        )
+        yy -= 0.45 * cm
+        n_sat = int(pd.to_numeric(sd.get("n_saturated"), errors="coerce") or 0)
+        reason = ""
+        if n_sat > 0:
+            reason = " — saturated / outlier-dominated"
+        elif str(sd.get("skip_reason", "") or "").strip():
+            reason = f" — {str(sd.get('skip_reason')).strip()}"
+        c.setFont("Helvetica", 8)
+        c.drawString(M_LEFT, yy, f"Light curve not available{reason}.")
+        c.setStrokeColor(colors.HexColor("#cccccc"))
+        c.setLineWidth(0.6)
+        c.line(M_LEFT, bottom + 0.15 * cm, PAGE_W - M_RIGHT, bottom + 0.15 * cm)
+
+    def draw_compact_stars_page(c: "canvas.Canvas", stars: list[dict[str, Any]]) -> None:
+        c.setPageSize(landscape(A4))
+        ns = max(1, len(stars))
+        gap = 0.35 * cm
+        avail = PAGE_H - M_TOP - M_BOTTOM - 0.5 * cm
+        per = min(120.0 * mm, (avail - gap * (ns - 1)) / float(ns))
+        y_cur = PAGE_H - M_TOP
+        for sd in stars:
+            _draw_compact_star_block(c, sd, y_cur, float(per))
+            y_cur -= float(per) + gap
+        _page_footer(c)
+        c.showPage()
+
+    def _draw_catalog_crossmatch_block(
+        c: "canvas.Canvas", *, cid_key: str, is_cand: bool, y_top: float
+    ) -> float:
+        if not is_cand or cid_key not in bullets_by_cid:
+            return y_top
+        y = y_top
+        c.setFont("Helvetica-Bold", 11)
+        c.setFillColor(C_TITLE)
+        c.drawString(M_LEFT, y - 0.35 * cm, "Catalog crossmatch")
+        c.setFillColor(colors.black)
+        y -= 0.62 * cm
+        txt = str(bullets_by_cid.get(cid_key, "") or "").strip()
+        c.setFont("Helvetica", 8)
+        if txt:
+            for ln in txt.splitlines():
+                s = ln.strip()
+                if s:
+                    c.drawString(M_LEFT, y - 0.26 * cm, s[:200])
+                    y -= 0.30 * cm
+        else:
+            c.drawString(
+                M_LEFT,
+                y - 0.28 * cm,
+                "No catalog match found — potential new variable",
+            )
+            y -= 0.38 * cm
+        return y
+
+    def _draw_tess_block(c: "canvas.Canvas", cid_key: str, y_top: float) -> float:
+        tess_dir = photometry_dir / "_tess" / cid_key
+        jpath = tess_dir / "result.json"
+        if not jpath.is_file():
+            return y_top
+        try:
+            summary = json.loads(jpath.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            return y_top
+        y = y_top
+        c.setFont("Helvetica-Bold", 11)
+        c.setFillColor(C_TITLE)
+        c.drawString(M_LEFT, y - 0.35 * cm, "TESS analysis")
+        c.setFillColor(colors.black)
+        y -= 0.65 * cm
+        nsec = int(summary.get("total_sectors_found") or 0)
+        p = float(pd.to_numeric(summary.get("period_consensus"), errors="coerce"))
+        p2 = float(pd.to_numeric(summary.get("period_2p_consensus"), errors="coerce"))
+        pt = f"{p:.6f}" if np.isfinite(p) else "—"
+        p2t = f"{p2:.6f}" if np.isfinite(p2) else "—"
+        c.setFont("Helvetica", 9)
+        c.drawString(M_LEFT, y - 0.30 * cm, f"Sectors found: {nsec}  |  Period: {pt} d  |  2P: {p2t} d")
+        y -= 0.52 * cm
+        plot_p: Path | None = None
+        plot_2p: Path | None = None
+        for sec in summary.get("sectors") or []:
+            pp = sec.get("plot_phased_p_path")
+            p2path = sec.get("plot_phased_2p_path")
+            if pp and Path(str(pp)).is_file():
+                plot_p = Path(str(pp))
+                if p2path and Path(str(p2path)).is_file():
+                    plot_2p = Path(str(p2path))
+                break
+        img_w, img_h = 85.0 * mm, 70.0 * mm
+        gap_img = 0.45 * cm
+        if plot_p is not None:
+            _draw_image_fit(c, plot_p, M_LEFT, y, img_w, img_h)
+            if plot_2p is not None:
+                _draw_image_fit(c, plot_2p, M_LEFT + img_w + gap_img, y, img_w, img_h)
+            y -= img_h + 0.35 * cm
+        ap_f = float(pd.to_numeric(_accepted_periods.get(cid_key), errors="coerce"))
+        if not np.isfinite(ap_f):
+            for ak, av in _accepted_periods.items():
+                if _norm_cid(str(ak)) == cid_key:
+                    ap_f = float(pd.to_numeric(av, errors="coerce"))
+                    break
+        if np.isfinite(ap_f):
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(M_LEFT, y - 0.30 * cm, f"Accepted period: {ap_f:.6f} d")
+            y -= 0.52 * cm
+        return y
+
     def draw_star_page(c: "canvas.Canvas", star_data: dict[str, Any]) -> None:
         c.setPageSize(landscape(A4))
 
         y_cursor = PAGE_H - M_TOP
+        cid_key = _norm_cid(str(star_data.get("catalog_id", "") or ""))
+        is_cand = cid_key in _candidates_norm
 
         vsx_name = str(star_data.get("vsx_name", "") or "")
         vsx_type = str(star_data.get("vsx_type", "") or "")
@@ -844,43 +1080,43 @@ def generate_photometry_report(
         c.drawString(M_LEFT, y_cursor - 0.6 * cm, title)
         y_cursor -= TITLE_H
 
-        # Metrics
         lc_rms = float(pd.to_numeric(star_data.get("lc_rms"), errors="coerce"))
         good_comp = int(pd.to_numeric(star_data.get("good_comp"), errors="coerce") or 0)
         ap_px = float(pd.to_numeric(star_data.get("aperture_px"), errors="coerce"))
         rms_txt = f"{lc_rms:.4f}" if np.isfinite(lc_rms) else "—"
         ap_txt = f"{ap_px:.1f}px" if np.isfinite(ap_px) else "—"
-        metrics = f"lc_rms: {rms_txt}   |   good comp: {good_comp:d}   |   apertura: {ap_txt}   |   Vizier   VSX"
+        metrics = f"lc_rms: {rms_txt}   |   good comp: {good_comp:d}   |   aperture: {ap_txt}   |   Vizier VSX"
         c.setFont("Helvetica", 9)
         c.setFillColor(colors.HexColor("#666666"))
         c.drawString(M_LEFT, y_cursor - 0.35 * cm, metrics)
         c.setFillColor(colors.black)
         y_cursor -= METRICS_H
 
-        # Separator
         c.setStrokeColor(colors.HexColor("#cccccc"))
         c.setLineWidth(0.8)
         c.line(M_LEFT, y_cursor, PAGE_W - M_RIGHT, y_cursor)
-        y_cursor -= (SEP_H + 0.1 * cm)
+        y_cursor -= SEP_H + 0.1 * cm
 
-        # -----------------------------------------------------------------
-        # Dynamic graph height so COMP table never overflows the page.
-        # -----------------------------------------------------------------
         comp_rows = star_data.get("comp_rows") or []
+        tess_json = photometry_dir / "_tess" / cid_key / "result.json"
+        tess_extra_h = 0.0
+        if tess_json.is_file():
+            tess_extra_h = 2.2 * cm + 70.0 * mm + 0.6 * cm
+        cm_extra_h = 0.0
+        if is_cand and cid_key in bullets_by_cid:
+            cm_extra_h = 1.0 * cm + 0.35 * cm * 4
+
         n_comp_rows = int(len(comp_rows))
         ROW_H = 0.55 * cm
         HEADER_H = 0.60 * cm
-        TABLE_MARGIN = 0.5 * cm  # space above table
-        NOTE_H = 0.4 * cm  # note + footer reserve
-
+        TABLE_MARGIN = 0.25 * cm
+        NOTE_H = 0.45 * cm
         table_h_needed = HEADER_H + n_comp_rows * ROW_H + NOTE_H + TABLE_MARGIN
-        FIXED_TOP = 1.5 * cm  # title + metrics + separator (approx)
-        # Graph height available between top block and table block.
-        graph_h = PAGE_H - M_TOP - FIXED_TOP - table_h_needed - M_BOTTOM
-        graph_h = max(graph_h, 6.0 * cm)
-        graph_h = min(graph_h, 15.0 * cm)
+        FIXED_TOP = 1.45 * cm
+        graph_cap = 90.0 * mm
+        graph_h = PAGE_H - M_TOP - FIXED_TOP - table_h_needed - M_BOTTOM - tess_extra_h - cm_extra_h
+        graph_h = float(np.clip(graph_h, 50.0 * mm, graph_cap))
 
-        # Graphic section: lightcurve + field image
         lc_x = M_LEFT
         fi_x = M_LEFT + LC_W + GAP_W
         y_top = y_cursor
@@ -892,24 +1128,23 @@ def generate_photometry_report(
         else:
             c.setFont("Helvetica", 9)
             c.setFillColor(colors.HexColor("#333333"))
-            c.drawString(lc_x + 1.0 * cm, y_top - graph_h / 2.0, "Svetelná krivka nie je k dispozícii")
+            c.drawString(lc_x + 0.5 * cm, y_top - graph_h * 0.5, "Light curve not available")
             c.setFillColor(colors.black)
 
         if fi_img and Path(fi_img).exists():
             _draw_image_fit(c, Path(fi_img), fi_x, y_top, FI_W, graph_h)
 
-        # Place the table immediately under the graph box (no extra whitespace).
         y_cursor = y_top - graph_h
+        y_cursor = _draw_catalog_crossmatch_block(c, cid_key=cid_key, is_cand=is_cand, y_top=y_cursor)
+        y_cursor = _draw_tess_block(c, cid_key, y_cursor)
 
-        # Separator
         c.setStrokeColor(colors.HexColor("#cccccc"))
         c.setLineWidth(0.8)
         c.line(M_LEFT, y_cursor, PAGE_W - M_RIGHT, y_cursor)
-        y_cursor -= (SEP_H + 0.05 * cm)
+        y_cursor -= SEP_H + 0.05 * cm
 
-        # COMP table
         if comp_rows:
-            headers = ["#", "mag", "B-V", "BP-RP", "dist_deg", "n_frames", "p2p RMS", "w (rel)", "tier", "stav"]
+            headers = ["#", "mag", "B-V", "BP-RP", "dist_deg", "n_frames", "p2p RMS", "w (rel)", "tier", "status"]
             table_data = [headers] + comp_rows
             col_widths = [1.2 * cm, 1.8 * cm, 1.6 * cm, 1.8 * cm, 2.2 * cm, 2.0 * cm, 2.2 * cm, 1.8 * cm, 2.0 * cm, 2.0 * cm]
             row_heights = [0.55 * cm] * len(table_data)
@@ -928,7 +1163,6 @@ def generate_photometry_report(
                     ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
                 ]
             )
-            # Row background based on stav (last col)
             for i in range(1, len(table_data)):
                 stav = str(table_data[i][-1] or "").strip().lower()
                 if stav == "good":
@@ -940,17 +1174,16 @@ def generate_photometry_report(
                 style.add("BACKGROUND", (0, i), (-1, i), bg)
             t.setStyle(style)
 
-            t_w, t_h = t.wrap(USE_W, y_cursor - M_BOTTOM)
+            _, t_h = t.wrap(USE_W, y_cursor - M_BOTTOM)
             table_y = y_cursor - TABLE_MARGIN
             t.drawOn(c, M_LEFT, table_y - t_h)
             y_cursor = table_y - t_h - 0.1 * cm
         else:
             c.setFont("Helvetica", 9)
             c.setFillColor(colors.HexColor("#333333"))
-            c.drawString(M_LEFT, y_cursor - 0.4 * cm, "COMP tabuľka nie je k dispozícii")
+            c.drawString(M_LEFT, y_cursor - 0.4 * cm, "Comparison star table not available")
             c.setFillColor(colors.black)
 
-        # Note
         c.setFont("Helvetica-Oblique", 6)
         c.setFillColor(colors.HexColor("#666666"))
         c.drawString(M_LEFT, M_BOTTOM + 0.2 * cm, NOTE_TXT)
@@ -964,7 +1197,7 @@ def generate_photometry_report(
         y = PAGE_H - M_TOP
         c.setFont("Helvetica-Bold", 14)
         c.setFillColor(C_TITLE)
-        c.drawString(M_LEFT, y - 0.5 * cm, "Súhrn všetkých hviezd (zoradené podľa lc_rms)")
+        c.drawString(M_LEFT, y - 0.5 * cm, "Summary of all stars (sorted by lc_rms)")
         c.setFillColor(colors.black)
         y -= 1.0 * cm
 
@@ -1028,7 +1261,7 @@ def generate_photometry_report(
                 y2 = PAGE_H - M_TOP
                 c.setFont("Helvetica-Bold", 14)
                 c.setFillColor(C_TITLE)
-                c.drawString(M_LEFT, y2 - 0.5 * cm, "Súhrn všetkých hviezd (zoradené podľa lc_rms) — pokračovanie")
+                c.drawString(M_LEFT, y2 - 0.5 * cm, "Summary of all stars (sorted by lc_rms) — continued")
                 c.setFillColor(colors.black)
                 y = y2 - 1.0 * cm
         c.showPage()
@@ -1042,7 +1275,9 @@ def generate_photometry_report(
     # 2) QA page (optional; only if qc_metrics.csv exists)
     _draw_qa_page(c)
 
-    # 3) Stars pages
+    # 3) Star pages (compact batches for targets without LC/COMP)
+    sparse_buf: list[dict[str, Any]] = []
+
     for _, row in summary_df.iterrows():
         try:
             cid = str(row.get("_cid", "") or _norm_cid(row.get("catalog_id", "")))
@@ -1078,6 +1313,7 @@ def generate_photometry_report(
                         break
             field_img_jpg = _prepare_jpeg(Path(field_img), cache_dir / f"field_{cid}.jpg", max_side_px=1400, quality=70) if field_img else None
 
+            n_sat = int(pd.to_numeric(row.get("n_saturated"), errors="coerce") or 0)
             star_data = {
                 "catalog_id": cid,
                 "vsx_name": vsx_name,
@@ -1087,14 +1323,27 @@ def generate_photometry_report(
                 "lc_rms": row.get("lc_rms", float("nan")),
                 "good_comp": row.get("n_good_comp", 0),
                 "aperture_px": row.get("aperture_px", float("nan")),
+                "n_saturated": n_sat,
                 "lc_img": str(lc_img) if lc_img is not None else "",
                 "field_img": str(field_img_jpg) if field_img_jpg is not None else "",
                 "comp_rows": _comp_rows_for_target(cid),
             }
-            draw_star_page(c, star_data)
+            if _is_sparse_star_data(star_data):
+                sparse_buf.append(star_data)
+                if len(sparse_buf) >= 2:
+                    draw_compact_stars_page(c, list(sparse_buf[:2]))
+                    sparse_buf = sparse_buf[2:]
+            else:
+                if sparse_buf:
+                    draw_compact_stars_page(c, list(sparse_buf))
+                    sparse_buf = []
+                draw_star_page(c, star_data)
         except Exception as exc_star:  # noqa: BLE001
-            logging.warning("PDF: preskakujem hviezdu (%s): %s", row.get("vsx_name", ""), exc_star)
+            logging.warning("PDF: skip star (%s): %s", row.get("vsx_name", ""), exc_star)
             continue
+
+    if sparse_buf:
+        draw_compact_stars_page(c, list(sparse_buf))
 
     # 4) Summary page
     _draw_summary_page(c)

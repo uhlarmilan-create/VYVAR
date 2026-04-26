@@ -39,6 +39,23 @@ def _vyvar_effective_draft_dir_override() -> Path | None:
     return p.resolve() if p.is_dir() else None
 
 
+def _vyvar_reset_variability_session_state() -> None:
+    """Pri načítaní nového draftu zruš variabilitu / TESS / PDF stav v session."""
+    st.session_state["var_analysis_done"] = False
+    st.session_state["var_analysis_timestamp"] = None
+    st.session_state["pdf_ready"] = False
+    st.session_state["tess_results"] = {}
+    st.session_state["accepted_period"] = {}
+    st.session_state["accepted_period_msg"] = {}
+    st.session_state.pop("crossmatch_result", None)
+    st.session_state["selected_for_export"] = []
+    st.session_state.pop("var_results", None)
+    st.session_state.pop("_var_run_sig", None)
+    st.session_state["var_catalog_bullets"] = {}
+    st.session_state.pop("var_candidate_count_autorun", None)
+    st.session_state.pop("var_candidates", None)
+
+
 def _vyvar_execute_preprocess_pending(
     *,
     pending: dict[str, Any],
@@ -1967,6 +1984,7 @@ def main() -> None:
             s = (draft_path_inp or "").strip()
             if not s:
                 st.session_state.pop("vyvar_draft_dir_override", None)
+                _vyvar_reset_variability_session_state()
                 st.info("Override draftu vymazaný — používa sa umiestnenie z konfigurácie archívu.")
                 st.rerun()
             else:
@@ -1979,6 +1997,7 @@ def main() -> None:
                     st.session_state["vyvar_draft_dir_override"] = str(ddir)
                     if parsed_id is not None:
                         st.session_state["vyvar_last_draft_id"] = int(parsed_id)
+                    _vyvar_reset_variability_session_state()
                     st.success(f"Draft načítaný: {ddir}")
                     st.rerun()
         ov = _vyvar_effective_draft_dir_override()
