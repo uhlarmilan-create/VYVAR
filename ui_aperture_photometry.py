@@ -75,7 +75,7 @@ def _airmass_column(df: pd.DataFrame) -> str | None:
 def _ut_tick_labels_from_jd(jd_vals: "list[float]") -> list[str]:
     """Format JD-like values (BJD/HJD/JD) to UT HH:MM labels."""
     try:
-        from astropy.time import Time
+        pass
     except Exception:  # noqa: BLE001
         # Fallback: HH:MM from fractional day (approx; ignores leap seconds).
         out_f: list[str] = []

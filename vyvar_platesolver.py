@@ -2834,7 +2834,7 @@ def _solve_wcs_build_catalog(
         de_max = de0f + float(cone_r)
     elif (not bool(_allow_cone_clip_to_fov)) and _exp_scale is not None:
         log_event(
-            f"VYVAR platesolve: vynechávam cone_r clip na FOV+20% (blind hint + expected scale z DB/config môže byť nesprávna)."
+            "VYVAR platesolve: vynechávam cone_r clip na FOV+20% (blind hint + expected scale z DB/config môže byť nesprávna)."
         )
     rows_g = query_local_gaia(
         root,
@@ -3555,7 +3555,6 @@ def solve_wcs_with_local_gaia(
     from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
 
-    from database import query_local_gaia
 
     _caller_hint_ra = hint_ra_deg
     _caller_hint_dec = hint_dec_deg

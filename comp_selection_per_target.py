@@ -22,7 +22,6 @@ from photometry_core import (
     _PHASE_USECOLS_PERFRAME,
     _bool_col,
     _enrich_comp_bp_rp,
-    _is_catalog_only,
     _normalize_gaia_id,
     _normalize_id_series,
     _normalize_id_value,
@@ -244,8 +243,8 @@ def _resolve_target_color_for_comp_selection(
                                     g_teff = float("nan")
                 finally:
                     con.close()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            log_event(f"[COMP] Gaia BP-RP lookup failed for {target_cid}: {exc}")
 
     if not math.isfinite(t_bp_tgt) and math.isfinite(g_bp_rp):
         t_bp_tgt = float(g_bp_rp)
@@ -1528,19 +1527,6 @@ def _score_comp_candidates_broeg(
         if row.empty:
             continue
         r0 = row.iloc[0]
-        dist_deg = float(r0.get("_dist_deg", float("nan")))
-        # Preferuj optimálnu vzdialenosť (nie "čím bližšie tým lepšie"):
-        # príliš blízko → lokálne artefakty (optika/flat/gradients) korelujú s targetom,
-        # príliš ďaleko → iná atmosférická bunka.
-        # Default optimum: ~150 px at ~9.7"/px ≈ 1455" (~24 arcmin).
-        # This helps avoid local/optical artifacts near the target while staying within the same airmass cell.
-        optimal_dist_arcsec = 1455.0
-        dist_arcsec = float(dist_deg) * 3600.0 if math.isfinite(dist_deg) else float("nan")
-        dist_score = (
-            abs(dist_arcsec - optimal_dist_arcsec) / optimal_dist_arcsec
-            if math.isfinite(dist_arcsec) and optimal_dist_arcsec > 0
-            else 1.0
-        )
         contamination = float(contamination_map.get(cid, 0.0)) if contamination_map else 0.0
         if not math.isfinite(contamination) or contamination < 0.0:
             contamination = 0.0
@@ -1947,10 +1933,6 @@ def _assemble_comp_selection_result_rows(
         r["comp_rms"] = active.get(cid, float("nan"))
         r["comp_score"] = score_map.get(cid, float("nan"))
         # Ranking columns (new selection philosophy)
-        try:
-            rms_f2 = float(pd.to_numeric(r.get("comp_rms"), errors="coerce"))
-        except Exception:  # noqa: BLE001
-            rms_f2 = float("nan")
         try:
             _cont_v = contamination_map.get(cid) if contamination_map else None
             r["contamination_idx"] = (

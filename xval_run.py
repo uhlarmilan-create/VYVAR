@@ -28,7 +28,7 @@ FITS-only (photutils vs sep, no VYVAR comparison):
 Deps: numpy pandas scipy astropy photutils astroquery matplotlib ; sep optional.
 """
 from __future__ import annotations
-import argparse, glob, json, warnings
+import argparse, warnings
 from pathlib import Path
 import numpy as np
 import pandas as pd

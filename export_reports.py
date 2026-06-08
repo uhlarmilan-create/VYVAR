@@ -28,10 +28,8 @@ from report_methods import (
     varastro_export_path,
 )
 from check_star_kmag import (
-    compute_check_ensemble_mag_calib,
     kmag_values_for_export,
     resolve_proc_csv_dir,
-    save_check_kmag_sidecar,
     select_check_star,
 )
 from photometry_core import parse_comp_quality_json_map

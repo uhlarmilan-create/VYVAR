@@ -7,9 +7,6 @@ Usage:
     Then type your task and press Enter.
 """
 import anthropic
-import os
-import time
-import subprocess
 from pathlib import Path
 from datetime import datetime
 
@@ -158,9 +155,9 @@ Iteration: {iteration}
 After completing this task, write your results to CURSOR_RESULT.md
 """
             write_file(TASK_FILE, task_content)
-            print(f"\n📋 Cursor task zapísaný do CURSOR_TASK.md")
-            print(f"   → Otvor CURSOR_TASK.md v Cursore a spusti task")
-            print(f"   → Keď Cursor skončí a zapíše CURSOR_RESULT.md, stlač Enter")
+            print("\n📋 Cursor task zapísaný do CURSOR_TASK.md")
+            print("   → Otvor CURSOR_TASK.md v Cursore a spusti task")
+            print("   → Keď Cursor skončí a zapíše CURSOR_RESULT.md, stlač Enter")
 
             cursor_result = wait_for_cursor_result()
             log(f"✅ Cursor výsledok prijatý ({len(cursor_result)} znakov)")
@@ -174,7 +171,7 @@ After completing this task, write your results to CURSOR_RESULT.md
 
         elif rtype == "NEED_DECISION":
             log("❓ NEED_DECISION → čakám na Milana")
-            print(f"\n❓ Claude potrebuje tvoje rozhodnutie:")
+            print("\n❓ Claude potrebuje tvoje rozhodnutie:")
             print(f"   {content}")
             decision = input("Tvoja odpoveď: ").strip()
             log(f"Milan rozhodol: {decision}")
@@ -187,7 +184,7 @@ After completing this task, write your results to CURSOR_RESULT.md
 
         elif rtype == "DONE":
             log("✅ DONE")
-            print(f"\n✅ Hotovo!")
+            print("\n✅ Hotovo!")
             print(f"\n{content}")
             break
 

@@ -10,7 +10,7 @@ import textwrap
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -24,6 +24,10 @@ from report_methods import (
     pdf_report_path,
     report_title as method_report_title,
 )
+
+if TYPE_CHECKING:
+    from reportlab.pdfgen import canvas
+    from reportlab.platypus import Paragraph
 
 # Gaia ID musí byť str — float64 stráca cifry
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
@@ -168,7 +172,6 @@ class _PhotometryReportBuilder:
         photometry_method: str = "aperture",
         active_methods: list[str] | None = None,
     ) -> None:
-        from reportlab.lib.units import cm, mm
 
         self._colors = colors_mod
         self.cm = cm_mod
@@ -182,18 +185,6 @@ class _PhotometryReportBuilder:
         self.Paragraph = paragraph_mod
         self.ParagraphStyle = paragraph_style_mod
         self.TA_LEFT = ta_left_mod
-        colors = self._colors
-        cm = self.cm
-        mm = self.mm
-        landscape = self.landscape
-        A4 = self.A4
-        canvas = self.canvas
-        ImageReader = self.ImageReader
-        Table = self.Table
-        TableStyle = self.TableStyle
-        Paragraph = self.Paragraph
-        ParagraphStyle = self.ParagraphStyle
-        TA_LEFT = self.TA_LEFT
         self.draft_dir = Path(draft_dir)
         self.obs_group = str(obs_group)
         self.output_pdf = Path(output_pdf) if output_pdf is not None else None
@@ -4868,8 +4859,6 @@ class _PhotometryReportBuilder:
         c.showPage()
 
     def build_pdf(self) -> Path:
-        from reportlab.lib.pagesizes import landscape, A4
-        from reportlab.pdfgen import canvas
 
         self._overflow_violations.clear()
 

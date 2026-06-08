@@ -2791,3 +2791,16 @@ A1 pre-vote L3 ratio gate; A2 verify WCS scale gate; A3 FOV bounds; gnomonic sid
 fallback re-enabled under gates. Wide diag (`scripts/diagnose_blind_solver_wide.py`): **0 votes &lt;2°**,
 nearest ~11–20°, flat≈gnomonic at edge sample — distortion not dominant; **wide index/triangle
 correspondence** still the blocker. Newton spot-check OK post-change.
+
+---
+
+## Session 2026-06-08 — audit campaign + trust_flag_core Phase 2
+
+- F841 triage finished: all flagged locals (`dist_score`, `rms_f2`, `c1_stderr@7141`, `lc_df`)
+  are dead/redundant, none are real bugs; ranking sort confirmed correct (sorts by `comp_rms`).
+  Automated lint layer essentially exhausted/cosmetic.
+- Phase 2 manual audit of `trust_flag_core.py`: findings A–F (see `docs/VYVAR_AUDIT_FINDINGS.md`).
+  Headline: un-evaluated target defaults to GREEN (A); missing check-star = no penalty (B);
+  check-star scatter uses ddof=0 (C).
+- Recorded language rule in PROCESS (Cursor↔Claude English; Milan↔Claude SK/CZ).
+- Open items moved to ROADMAP (`NEXT SESSION` section).

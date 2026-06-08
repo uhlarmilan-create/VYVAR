@@ -14,9 +14,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.visualization import ZScaleInterval
 
-import math
 
-from config import AppConfig
 from database import DraftTechnicalMetadataError, VyvarDatabase
 from fits_suffixes import path_suffix_is_fits
 from infolog import log_event

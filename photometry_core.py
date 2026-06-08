@@ -6,9 +6,9 @@ import json
 import logging
 import math
 import os
+import random
 import re
 import time
-from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import AbstractSet, Any, Sequence
 from dataclasses import dataclass, field
@@ -7129,7 +7129,6 @@ def _phase2a_process_one_target(
                 comp_bp_rp[cidc] = float(fv)
 
     c1 = 0.0
-    c1_stderr = float("nan")
     ct_n_comp = 0
     mag_calib_ct = mag_calib.copy()
     ct_corr = 0.0
@@ -7138,7 +7137,6 @@ def _phase2a_process_one_target(
     _group_ct = state.group_color_term
     if state.apply_color_term and _group_ct is not None and _group_ct.apply_gate:
         c1 = float(_group_ct.c1)
-        c1_stderr = float(_group_ct.c1_stderr)
         ct_n_comp = int(_group_ct.n_comp)
         _ct_in_range = _check_color_term_extrapolation(
             target_bp_rp=float(target_bp_rp),
@@ -7783,7 +7781,7 @@ def _phase2a_finalize_exports(
                 n_export_skip += 1
                 continue
             try:
-                lc_df = pd.read_csv(lc_csv, low_memory=False)
+                pd.read_csv(lc_csv, low_memory=False)
             except Exception:  # noqa: BLE001
                 continue
 
@@ -8000,28 +7998,18 @@ def run_phase2a(
         proc_frame_store=proc_frame_store,
     )
     at_df = state.at_df
-    comp_df = state.comp_df
     _comp_index = state._comp_index
-    target_bp_rp_by_cid = state.target_bp_rp_by_cid
     csv_files = state.csv_files
     n_frames = state.n_frames
     _phase2a_csv_cache = state._phase2a_csv_cache
     _phase2a_lookup_cache = state._phase2a_lookup_cache
-    frame_time_lookup = state.frame_time_lookup
     fwhm_px = state.fwhm_px
-    apertures_px = state.apertures_px
-    star_xy = state.star_xy
-    chip_fw = state.chip_fw
-    chip_fh = state.chip_fh
     _ms_header = state._ms_header
     _ms_data = state._ms_data
     _flux_matrix = state._flux_matrix
     _all_lc_ids_list = state._all_lc_ids_list
     field_map_path = state.field_map_path
-    obs_group = state.obs_group
     _gain_phot = state._gain_phot
-    _rn_phot = state._rn_phot
-    sat_limit_resolved = state.sat_limit_resolved
     _aligned_dir_2a = state._aligned_dir_2a
     _cfg = state._cfg
     _nt = state._nt
@@ -8141,17 +8129,6 @@ def run_phase2a(
 # ======================================================================
 # photometry.py (zlúčené do photometry_core)
 # ======================================================================
-
-import json
-import logging
-import math
-import random
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
-
-import numpy as np
-import pandas as pd
 
 from utils import (
     fits_binning_xy_from_header,

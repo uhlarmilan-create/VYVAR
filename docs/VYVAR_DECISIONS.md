@@ -257,6 +257,14 @@ VYVAR colour terms are relative to Gaia G → corrected magnitude is G-reference
 Johnson/Sloan. AAVSO-standard B/V/Rc requires a standard catalog (APASS) or a documented
 G→standard transform — to resolve before science submission.
 
+### Comp selection — proximity tie-break reverted (2026-06-08)
+
+`dist_score` removed from `comp_selection_per_target.py`: the proximity tie-break was
+deliberately reverted (Broeg 2005; Henden & Kaitchuck 1982; AAVSO CCD Guide) — proximity
+belongs as a **gate**, not a ranking criterion — so the orphaned local and its
+`optimal_dist_arcsec` helper were removed. Final comp ranking sorts by `comp_rms`
+(`out.sort_values(["comp_rms", "catalog_id"], …)`).
+
 ## Blind plate-solve — rig prior (2026-06-04)
 
 Telescope + camera are always known in VYVAR → **plate scale and FOV are legitimate priors**, not

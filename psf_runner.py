@@ -76,7 +76,6 @@ from photutils.psf import ImagePSF, PSFPhotometry  # noqa: E402
 from psf_photometry import build_epsf_model  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
 from config import AppConfig  # noqa: E402
-from infolog import log_event  # noqa: E402
 
 
 def _force_utf8_stdout() -> None:

@@ -5,7 +5,6 @@ Uses Photutils EPSFBuilder / PSFPhotometry. Does not import ``pipeline`` (avoid 
 
 from __future__ import annotations
 
-import inspect
 import json
 import logging
 import math
@@ -25,7 +24,6 @@ from photutils.psf import (
     EPSFStars,
     ImagePSF,
     IterativePSFPhotometry,
-    MoffatPSF,
     PSFPhotometry,
     SourceGrouper,
     extract_stars,

@@ -11,6 +11,28 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
+## NEXT SESSION — open items
+
+1. **trust_flag_core fixes** — Finding A (un-evaluated → RED/UNKNOWN + warn on missing id) and
+   Finding B (soft note when check-star scatter is nan). Needs spec + unit tests; guard via
+   trust-output baseline, not photometry SHA.
+2. **trust_flag_core Finding C** — decide ddof=0 vs ddof=1 for check-star scatter; record in
+   DECISIONS.
+3. **Phase 2 manual audit continues:** `comp_qa_core.py` → `calibration.py` → `database.py` →
+   `vyvar_platesolver.py`.
+4. **F841 `g_teff` / `gaia_teff`** — deferred (benign); optional later cleanup.
+5. **Phase C — catalog rebuild mechanics:** deepening mag (full-sky 16.5) requires clearing
+   `strip_progress` OR building to a new DB then swapping `GAIA_DB_PATH`; PKL rebuild only for
+   DEC (southern) expansion. ("k tomuto sa vrátime")
+6. **INSTALL-MANUAL** — install manual + installer for a new user (incl. catalog build via the
+   2 GAIA scripts), tied to TODO-9 (Lenovo T460) + TODO-LIB (Cython `.pyd` package).
+7. **Open question** — `ui_photometry_results.py` + `ui_suspected_lightcurves.py` are disconnected
+   from `app.py`: intent vs regression? Decide.
+8. *(optional)* **"new selection philosophy" ranking review** — sort by `comp_rms` @2089
+   confirmed correct; broader read optional.
+
+---
+
 ## HIGH
 
 - **Canonical pre-cal proc-CSV resolution.** One source-of-truth pattern for per-frame `proc_*`

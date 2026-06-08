@@ -1,13 +1,14 @@
-CURSOR RESULT — 2026-06-08 19:18 UTC
+CURSOR RESULT — 2026-06-08 20:39 UTC
 
 What I did
-Completed pre-Cursor root cleanup phase: created gitignored `sandbox/` + `tmp/`, moved state docs to `docs/`, relocated scratch artifacts off tracked root, updated CLAUDE/orchestrator/generators/script default paths, consolidated GAIA build scripts (B1/B2/A), verified import + pytest.
+Session close: F841 batch 2 dead-local cleanup + audit/trust documentation updates; verified tests, photometry SHA, PDF overflow; committed and pushed.
 
 ## Output / findings
-- **Structure:** `docs/VYVAR_*.md` + `docs/config_schema.md`; scratch → `tmp/`; helpers → `sandbox/` (`_merge_vyvar_state.py`, `variables.py`, `tools/`)
-- **Kept in root:** `orchestrator/`, `CURSOR_RESULT.md`, `ui_photometry_results.py`, `ui_suspected_lightcurves.py`, all core `.py` modules
-- **`.gitignore`:** `/sandbox/`, `/tmp/`
-- **Verification:** `python -c "import app"` OK; **174 passed, 6 skipped** (`pytest tests/`)
+- **Code:** removed `dist_score` + proximity orphan block (`comp_selection_per_target.py`); removed `rms_f2`; removed redundant `c1_stderr@7141`; preserved `lc_df` read-guard as bare `pd.read_csv(...)` skip.
+- **Docs:** `VYVAR_AUDIT_FINDINGS` (trust_flag_core A–F), `VYVAR_AUDIT_LEDGER` batch 2, `VYVAR_DECISIONS` (dist_score), `VYVAR_PROCESS` (language rule), `VYVAR_JOURNAL`, `VYVAR_ROADMAP` (NEXT SESSION).
+- **pytest:** 174 passed, 6 skipped
+- **Byte-identity draft_000366:** OK — SHA-256 `ad12325d262e913dc57fa0e805e07c2115aec5005268c704177d7fb72856aa69` (284 artifacts, unchanged)
+- **PDF overflow draft_000366:** 0 violations (160 pages)
 
 ## Errors (if any)
 None.

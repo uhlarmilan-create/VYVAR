@@ -101,7 +101,6 @@ def compute_global_pool_rms_map(
     _chip_h_eff: int | None = int(chip_fh) if chip_fh is not None else None
     _edge_log_done = False
     n_frames_loaded = 0
-    avail_cols = _POOL_USECOLS.copy()
 
     for csv_path in sort_per_frame_csv_paths(per_frame_csv_paths, csv_cache):
         df = csv_cache.get(str(csv_path))

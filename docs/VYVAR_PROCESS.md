@@ -88,3 +88,6 @@ carried `psf_flux`).
 - **Cursor** implements and commits/pushes on the Windows dev repo (`C:\ASTRO\python\VYVAR\`).
 - Each step is **verified before commit** (numbers reproduced, byte-identity / bounded-diff
   checked, overflow 0), and the commit message states what changed and why.
+- **Language:** Cursor ↔ Claude communication and all handoff artifacts (`CURSOR_TASK.md`,
+  specs, code, commit messages, project docs) are in **English**. Milan ↔ Claude conversation
+  is in **Czech/Slovak**.

@@ -80,13 +80,11 @@ from utils import (
     astrometry_net_scale_bounds_arcsec_per_pix,
     catalog_cone_radius_deg_from_optics,
     catalog_cone_radius_from_fov_diameter_deg,
-    circular_angle_diff_deg,
     dao_detection_fwhm_pixels,
     effective_astrometry_net_tweak_order,
     effective_binned_pixel_pitch_um,
     fits_binning_xy_from_header,
     fits_header_has_celestial_wcs,
-    header_key_is_celestial_wcs,
     iter_fits_paths_recursive as _iter_fits_recursive,
     masterstar_wcs_quality,
     maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel,
@@ -12262,7 +12260,7 @@ def _astrometry_align_impl_body(
     extra_platesolve_results: list[dict[str, Any]] = []
 
     try:
-        import astroalign  # type: ignore
+        pass  # type: ignore
     except Exception as exc:  # noqa: BLE001
         raise RuntimeError(f"astroalign required for frame registration: {exc}") from exc
 

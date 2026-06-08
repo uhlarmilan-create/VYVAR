@@ -433,7 +433,7 @@ def render_select_stars(
             "``phase01_chip_interior_margin_px`` — px from edge; ``0`` = off."
         )
         _chip_line = (
-            f"phase01_chip_interior_margin_px = 0  # no spatial clipping"
+            "phase01_chip_interior_margin_px = 0  # no spatial clipping"
             if int(cfg.phase01_chip_interior_margin_px) <= 0
             else f"phase01_chip_interior_margin_px = {int(cfg.phase01_chip_interior_margin_px)}"
         )
