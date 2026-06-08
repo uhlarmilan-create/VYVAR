@@ -50,7 +50,7 @@ deferred (benign).
 | `pytest tests` | **174 passed, 6 skipped** |
 | Photometry byte-identity (`draft_000366`, 284 artifacts) | **OK** — SHA-256 `ad12325d262e913dc57fa0e805e07c2115aec5005268c704177d7fb72856aa69` unchanged |
 | PDF overflow (`draft_000366`) | **0** violations (160 pages) |
-| commit | *(filled after push)* |
+| commit | `10b81fa` |
 
 ## Ďalšie kroky (Fáza 1 pokračovanie)
 

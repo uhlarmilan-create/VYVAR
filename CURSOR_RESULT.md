@@ -14,4 +14,4 @@ Session close: F841 batch 2 dead-local cleanup + audit/trust documentation updat
 None.
 
 ## Files changed
-See commit (pending push).
+See commit `10b81fa` (pushed).
