@@ -1,0 +1,65 @@
+{
+  "started_utc": "2026-06-03T17:54:05.893336+00:00",
+  "source_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Chi_and_H",
+  "field_db": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3_chiandh_field.db",
+  "field_center": [
+    35.15,
+    57.13
+  ],
+  "equipment_ids": {
+    "camera_id": 2,
+    "telescope_id": 2,
+    "location_id": 1,
+    "camera_status": "reused",
+    "telescope_status": "reused",
+    "location_status": "reused"
+  },
+  "VYVAR_CT_PROTOTYPE": "1",
+  "skip_processed_directory": true,
+  "psf_photometry_enabled": false,
+  "gaia_max_g": 19.499977111816406,
+  "night_run_success": false,
+  "draft_id": 369,
+  "draft_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000369",
+  "errors": [
+    "MASTERSTAR plate-solve zlyhal. Back-end returned: {'solved': False, 'reason': 'VYVAR solver: Gaia query v okol\u00ed hintu vr\u00e1til 0 hviezd.'}. Cannot safely continue with photometry / source extraction."
+  ],
+  "warnings": [],
+  "phase_timings": {
+    "config": 0.0,
+    "smart_scan_source": 0.1666884422302246,
+    "smart_import_session": 0.441241979598999,
+    "calibration": 3.800600051879883,
+    "memory_profile": 0.1161341667175293,
+    "ram_qc": 15.891233921051025,
+    "pointing_scan": 0.16857600212097168,
+    "auto_fwhm": 0.003001689910888672,
+    "masterstar_resolve": 0.0454864501953125,
+    "preprocess_prep": 0.007819175720214844,
+    "preprocess": 46.34876084327698,
+    "total": 78.47323822975159
+  },
+  "n_lightcurves": 0,
+  "masterstar_stats": {
+    "setups": [
+      "B_20_2"
+    ],
+    "plate_scale_arcsec_px_median": null,
+    "fwhm_px_median": 3.795807306061219,
+    "n_detected": 0,
+    "n_matched": 0,
+    "faintest_matched_mag": null
+  },
+  "ct_prototype_csv": null,
+  "calibrated_setups": [
+    "B_20_2",
+    "L_20_2",
+    "R_20_2",
+    "V_20_2"
+  ],
+  "platesolve_setups": [
+    "B_20_2"
+  ],
+  "config_restored": true,
+  "finished_utc": "2026-06-03T17:55:24.391737+00:00"
+}

@@ -1,0 +1,24 @@
+{
+  "started_utc": "2026-06-03T17:47:05.951530+00:00",
+  "center_ra_deg": 35.15,
+  "center_dec_deg": 57.13,
+  "cone_radius_deg": 0.75,
+  "mag_limit_initial": 19.5,
+  "mag_limit_cap": 19.5,
+  "out_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3_chiandh_field.db",
+  "cone_query": {
+    "method": "adql_minimal",
+    "mag_limit_used": 19.5,
+    "row_count": 63138,
+    "capped": false,
+    "faintest_g": 19.499977111816406
+  },
+  "field_db": {
+    "path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3_chiandh_field.db",
+    "inserted": 63138,
+    "row_count": 63138,
+    "faintest_g": 19.499977111816406,
+    "max_g": 19.499977111816406
+  },
+  "finished_utc": "2026-06-03T17:53:53.949407+00:00"
+}

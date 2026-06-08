@@ -1,0 +1,106 @@
+{
+  "draft_id": 364,
+  "setup": "Luminance_180_2",
+  "n_isolated_g12_16": 669,
+  "n_stars_valid_ge5_fixed": 667,
+  "n_stars_valid_ge5_free": 666,
+  "summary_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000364\\diagnostics\\forced_photometry_pal7\\d364_fixed_vs_free_position_g12_16.csv",
+  "per_star_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000364\\diagnostics\\forced_photometry_pal7\\d364_fixed_vs_free_position_per_star.csv",
+  "bin_table": [
+    {
+      "mag_bin": "12-13",
+      "psf_mode": "fixed",
+      "N": 21,
+      "median_rms_aperture": 0.026515434568710416,
+      "median_rms_psf": 0.04629846679407218,
+      "median_ratio_psf_aper": 1.5087662800389572,
+      "median_pos_residual_rms_px": 0.7381924262780607
+    },
+    {
+      "mag_bin": "13-14",
+      "psf_mode": "fixed",
+      "N": 61,
+      "median_rms_aperture": 0.021749585514556365,
+      "median_rms_psf": 0.04376209351634798,
+      "median_ratio_psf_aper": 1.9314646403941906,
+      "median_pos_residual_rms_px": 0.6156640867205068
+    },
+    {
+      "mag_bin": "14-15",
+      "psf_mode": "fixed",
+      "N": 162,
+      "median_rms_aperture": 0.016295353990148274,
+      "median_rms_psf": 0.04236823855767305,
+      "median_ratio_psf_aper": 2.603144827818341,
+      "median_pos_residual_rms_px": 0.6128219316659751
+    },
+    {
+      "mag_bin": "15-16",
+      "psf_mode": "fixed",
+      "N": 423,
+      "median_rms_aperture": 0.018428538732305134,
+      "median_rms_psf": 0.04284689205829903,
+      "median_ratio_psf_aper": 2.2640359644048456,
+      "median_pos_residual_rms_px": 0.619776254974016
+    },
+    {
+      "mag_bin": "12-16",
+      "psf_mode": "fixed",
+      "N": 667,
+      "median_rms_aperture": 0.01811484645645418,
+      "median_rms_psf": 0.0429525999850403,
+      "median_ratio_psf_aper": 2.3259957002393428,
+      "median_pos_residual_rms_px": 0.6275575311160437
+    },
+    {
+      "mag_bin": "12-13",
+      "psf_mode": "free",
+      "N": 21,
+      "median_rms_aperture": 0.026515434568710416,
+      "median_rms_psf": 0.04629846679407218,
+      "median_ratio_psf_aper": 1.5087662800389572,
+      "median_pos_residual_rms_px": 0.7381924262780607
+    },
+    {
+      "mag_bin": "13-14",
+      "psf_mode": "free",
+      "N": 60,
+      "median_rms_aperture": 0.020763969579297208,
+      "median_rms_psf": 0.043376337786143804,
+      "median_ratio_psf_aper": 2.0741309036901336,
+      "median_pos_residual_rms_px": 0.6156640867205068
+    },
+    {
+      "mag_bin": "14-15",
+      "psf_mode": "free",
+      "N": 162,
+      "median_rms_aperture": 0.016295353990148274,
+      "median_rms_psf": 0.04236823855767305,
+      "median_ratio_psf_aper": 2.603144827818341,
+      "median_pos_residual_rms_px": 0.6128219316659751
+    },
+    {
+      "mag_bin": "15-16",
+      "psf_mode": "free",
+      "N": 423,
+      "median_rms_aperture": 0.018428538732305134,
+      "median_rms_psf": 0.04284689205829903,
+      "median_ratio_psf_aper": 2.2640359644048456,
+      "median_pos_residual_rms_px": 0.619776254974016
+    },
+    {
+      "mag_bin": "12-16",
+      "psf_mode": "free",
+      "N": 666,
+      "median_rms_aperture": 0.01810807374583369,
+      "median_rms_psf": 0.04294123353765474,
+      "median_ratio_psf_aper": 2.3300235757842973,
+      "median_pos_residual_rms_px": 0.6275575311160437
+    }
+  ],
+  "g12_16_fixed_ratio": 2.3259957002393428,
+  "g12_16_free_ratio": 2.3300235757842973,
+  "g12_16_median_pos_residual_rms_px": 0.6275575311160437,
+  "verdict": "PSF does not beat aperture on full isolated G12-16 even with FREE positions (FREE psf/aper=2.33, FIXED=2.33); DAO win likely selection on detected subset",
+  "psf_flag_in_config": false
+}

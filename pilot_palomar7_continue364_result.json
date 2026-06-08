@@ -1,0 +1,91 @@
+{
+  "draft_id": 364,
+  "started_utc": "2026-05-31T14:50:14.048066+00:00",
+  "pointing_ra_deg": 272.68,
+  "pointing_dec_deg": -7.21,
+  "preprocess_sec": 2.8187599182128906,
+  "processed_counts": {
+    "Luminance_180_2": {
+      "proc_fits": 10,
+      "proc_csv": 0
+    },
+    "Luminance_60_2": {
+      "proc_fits": 12,
+      "proc_csv": 0
+    }
+  },
+  "psf_flag_original": false,
+  "platesolve_sec": 3601.3139736652374,
+  "platesolve_out_keys": [
+    "ram_align_handoff_used",
+    "detrended_input_root",
+    "detrended_files_used",
+    "reference_frame",
+    "reference_star_counts",
+    "reference_hint_ra_dec_deg",
+    "extra_platesolve",
+    "alignment_max_control_points_used",
+    "alignment_max_stars_cap",
+    "alignment_detection_sigma",
+    "aligned_root",
+    "aligned_frames",
+    "input_frames",
+    "alignment_report_csv",
+    "rotation_ref_angle_deg",
+    "rotation_flip_frame_indices_1based",
+    "rotation_flip_first_index_1based",
+    "build_masterstar_and_catalogs",
+    "masterstar_built",
+    "masterstar_fits",
+    "masterstars_csv",
+    "catalog_match_max_sep_arcsec",
+    "saturate_level_fraction",
+    "saturate_limit_adu",
+    "saturate_limit_source",
+    "max_catalog_rows",
+    "faintest_mag_limit",
+    "per_frame_catalog_dir",
+    "per_frame_catalog_index_csv",
+    "per_frame_catalogs_written",
+    "comparison_stars_csv",
+    "variable_targets_csv",
+    "photometry_plan_json",
+    "n_comparison_stars_requested",
+    "comparison_selection",
+    "id_equipment",
+    "equipment_saturate_adu_resolved",
+    "catalog_local_gaia_only",
+    "observation_group_key",
+    "scanning_id",
+    "observation_subgroup_reports"
+  ],
+  "setups": [
+    "Luminance_180_2",
+    "Luminance_60_2"
+  ],
+  "photometry": {
+    "Luminance_180_2": {
+      "sec": 11.360705375671387,
+      "keys": [
+        "phase01",
+        "phase2a",
+        "sysrem",
+        "output_dir",
+        "proc_frame_store"
+      ]
+    },
+    "Luminance_60_2": {
+      "sec": 12.02940583229065,
+      "keys": [
+        "phase01",
+        "phase2a",
+        "sysrem",
+        "output_dir",
+        "proc_frame_store"
+      ]
+    }
+  },
+  "psf_flag_restored": true,
+  "psf_flag_after_restore": false,
+  "finished_utc": "2026-05-31T15:50:41.572918+00:00"
+}

@@ -1,0 +1,67 @@
+# Python
+_tmp*.py
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+.env.*
+
+# Lokálne dáta / výstupy (veľké alebo citlivé)
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+/Archive/
+CalibrationLibrary/
+
+# FITS a podobné (veľké binárne súbory)
+*.fits
+*.fit
+*.fts
+
+# Veľké cache/indexy (necommitovať)
+*.pkl
+
+# IDE / nástroje
+.idea/
+.vscode/
+.cursor/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Lokálne hard-copy exporty
+hard_copy_*.patch
+hard_copy_*.bundle
+
+# Verify logs and temp extracts
+*.log
+*_verify_console.txt
+tmpp/
+_p2a_*/
+_comp_sel_*/
+scripts/_alg*_verify_*.py
+scripts/_*_verify_*.py
+_comp_sel_body.txt
+_p2a_body_indented.txt
+_p2a_extract.txt
+
+# Scratch / console captures
+*_diag.png
+_comp_refs_output.txt
+_grep_photometry_core_calls.txt
+app_head_test.txt
+diff_cursor.txt
+photometry_dir_*.txt
+*_console.txt
+
+# Secrets (never commit)
+orchestrator/api_key.txt
+**/api_key.txt

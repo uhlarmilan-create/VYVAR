@@ -1,0 +1,5 @@
+catalog_load_s,cone_n_cat,dec,draft,early_exit_cand_idx,early_exit_fired,elapsed_s,id,max_false_n_matched,n_matched,plate_scale,ra,rig,sep_deg,status,tier,total_s,truth_dec,truth_near_n_matched,truth_near_sep_deg,truth_ra,verify_mag_limit,verify_s,winner_fraction
+248.172,,57.1371,draft_000380,-1,False,362.96,380_B,59,,1.3,35.3258,newton,0.1606,HIT,fine,362.96,57.14,59,0.01,35.03,14.0,113.563,
+0.0,,57.1357,draft_000375,-1,False,121.74,375_B,60,,1.293,34.9494,newton,0.1225,HIT,fine,121.74,57.133,60,0.0871,35.175,14.0,120.891,
+0.0,,11.8051,draft_000368,-1,False,45.13,368_Blue,48,,2.03,132.8327,newton,0.035,HIT,fine,45.13,11.810062943809,48,0.001,132.79732102796,14.0,44.438,
+0.0,5287,50.2463,draft_000365,78,True,278.59,365_wide,22,95,9.55,241.3604,wide,0.1242,HIT,wide,278.59,50.29571,95,0.1242,241.53869,14.0,277.765,0.3958333333333333

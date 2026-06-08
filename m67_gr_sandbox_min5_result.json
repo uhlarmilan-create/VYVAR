@@ -1,0 +1,52 @@
+{
+  "draft_id": 368,
+  "started_utc": "2026-06-03T16:35:17.557117+00:00",
+  "phase01_ct_min_comp_override": 5,
+  "max_stderr_ratio": 0.5,
+  "filters": [
+    "Green",
+    "Red"
+  ],
+  "photometry": {
+    "Green_240_1": {
+      "n_lightcurves": 8,
+      "n_targets": 28
+    },
+    "Green_60_1": {
+      "n_lightcurves": 23,
+      "n_targets": 28
+    },
+    "Red_240_1": {
+      "n_lightcurves": 7,
+      "n_targets": 28
+    },
+    "Red_60_1": {
+      "n_lightcurves": 26,
+      "n_targets": 27
+    }
+  },
+  "summary": {
+    "min_comp_for_ct": 5,
+    "by_filter": {
+      "Green": {
+        "ct_ok_unique_targets": 4,
+        "ct_ok_catalog_ids": [
+          "604917629355042176",
+          "604921512005266048",
+          "604922164840316672",
+          "604923367432823808"
+        ],
+        "proto_gate_pass": 9
+      },
+      "Red": {
+        "ct_ok_unique_targets": 2,
+        "ct_ok_catalog_ids": [
+          "598694664123868416",
+          "604917663716360576"
+        ],
+        "proto_gate_pass": 3
+      }
+    }
+  },
+  "finished_utc": "2026-06-03T16:37:32.468251+00:00"
+}

@@ -1,0 +1,372 @@
+﻿=== ROOT FILES ===
+  .gitignore                                              0.8 KB     3.3 days
+  _audit_issues.py                                        3.9 KB     0.3 days
+  _comp_refs_output.txt                                   5.1 KB     4.5 days
+  _comp_sel_body.txt                                     81.5 KB     6.2 days
+  _debug_blend_check.py                                   3.7 KB    12.2 days
+  _debug_blend_rerun.py                                  10.3 KB    12.0 days
+  _draft343_run_config.json                               5.0 KB     0.4 days
+  _grep_photometry_core_calls.txt                         3.8 KB     4.5 days
+  _p2a_body_indented.txt                                 26.2 KB     5.5 days
+  _p2a_extract.txt                                       24.2 KB     5.5 days
+  _tmp_call_sites.py                                      1.4 KB     0.2 days
+  _tmp_cand336.py                                         2.0 KB     0.2 days
+  _tmp_cand336b.py                                        4.2 KB     0.2 days
+  _tmp_comp336.py                                         1.5 KB     0.2 days
+  _tmp_comp_csv.py                                        0.5 KB     0.2 days
+  _tmp_comp_refs.py                                       1.1 KB     0.2 days
+  _tmp_comp_select_test.py                                1.2 KB     0.2 days
+  _tmp_comp_stars.py                                      0.9 KB     0.2 days
+  _tmp_comp_test_both.py                                  3.4 KB     0.2 days
+  _tmp_cv_cvn.py                                          1.8 KB     0.2 days
+  _tmp_db_query.py                                        4.9 KB     0.2 days
+  _tmp_draft_compare.py                                   1.1 KB     0.2 days
+  _tmp_drafts.py                                          1.3 KB     0.2 days
+  _tmp_eq_tel.py                                          0.3 KB     0.2 days
+  _tmp_field_plan_json.py                                 0.7 KB     0.2 days
+  _tmp_gaia_frame_check.py                                1.0 KB     0.2 days
+  _tmp_gcp336.py                                          2.9 KB     0.2 days
+  _tmp_infolog335.py                                      1.1 KB     0.2 days
+  _tmp_infolog_slice.py                                   0.5 KB     0.2 days
+  _tmp_ms336.py                                           0.7 KB     0.2 days
+  _tmp_phot_335.py                                        0.9 KB     0.2 days
+  _tmp_proc_csv.py                                        1.0 KB     0.2 days
+  _tmp_test_pass2_phase_a.py                              5.3 KB     0.2 days
+  _tmp_test_phase_b.py                                    3.3 KB     0.2 days
+  _tmp_vt_cols.py                                         0.5 KB     0.2 days
+  alg2_savgol_verify_console.txt                       5569.3 KB     5.3 days
+  alg2_savgol_verify_disabled.log                      1354.5 KB     5.3 days
+  alg2_savgol_verify_enabled.log                       1114.8 KB     5.3 days
+  alg3_adaptive_verify_console.txt                     3025.4 KB     5.3 days
+  alg3_tempbin_verify.log                              1354.5 KB     5.3 days
+  alg3_tempbin_verify_console.txt                      3018.9 KB     5.3 days
+  alg4_democratic_verify_console.txt                   5584.3 KB     5.3 days
+  alg4_democratic_verify_disabled.log                  1354.5 KB     5.3 days
+  alg4_democratic_verify_enabled.log                   1116.9 KB     5.3 days
+  alg5_pytics_verify.log                               1363.3 KB     5.3 days
+  alg5_pytics_verify_console.txt                       1363.3 KB     5.3 days
+  app.py                                                130.4 KB     3.4 days
+  app_head_test.txt                                     118.2 KB     4.5 days
+  astrometry_optimizer.py                                54.8 KB     7.1 days
+  calibration.py                                         20.4 KB     4.9 days
+  catalog_crossmatch.py                                  22.7 KB     7.1 days
+  CHANGELOG.md                                            2.7 KB     7.0 days
+  CITATIONS.bib                                           2.7 KB     7.0 days
+  CLAUDE.md                                               0.5 KB     0.0 days
+  comp_pool_rms.py                                       16.6 KB     4.2 days
+  comp_selection_per_target.py                           96.3 KB     3.3 days
+  complete_draft341.log                                 183.2 KB     4.1 days
+  complete_draft341_console.txt                        2050.7 KB     4.1 days
+  config.json                                             5.0 KB     0.2 days
+  config.py                                              62.6 KB     0.3 days
+  cq1_krok_a_verify.log                                 126.2 KB     5.5 days
+  cq1_krok_a_verify_console.txt                         803.7 KB     5.5 days
+  cq1_krok_ab_verify.log                                126.2 KB     5.5 days
+  cq1_krok_ab_verify_console.txt                        568.4 KB     5.5 days
+  cq1_krok_abc_verify.log                               126.2 KB     5.5 days
+  cq1_krok_abc_verify_console.txt                       568.4 KB     5.5 days
+  cq1_krok_b_verify.log                                 126.2 KB     5.5 days
+  cq1_krok_b_verify_console.txt                         568.4 KB     5.5 days
+  cq3_night_run.log                                    1127.3 KB     6.2 days
+  cq3_night_run2.log                                   1270.5 KB     6.2 days
+  cq4_krok_abc_verify.log                               126.8 KB     5.4 days
+  cq4_krok_abc_verify_console.txt                       570.3 KB     5.4 days
+  crossmatch_runner.py                                   11.2 KB     7.1 days
+  CURSOR_RESULT.md                                        0.1 KB     0.0 days
+  database.py                                           149.7 KB     3.4 days
+  debug_qc.py                                             1.9 KB    57.8 days
+  diagnose_crowding_filters.py                            7.1 KB    41.4 days
+  diagnose_ensemble.py                                    6.8 KB     8.2 days
+  diagnose_flux.py                                        5.1 KB     8.2 days
+  diff_cursor.txt                                        92.6 KB     4.5 days
+  dilution.py                                            12.2 KB     3.3 days
+  draft_321_night_run.log                              1218.5 KB     6.1 days
+  epsf_overlay_BO_CVn_preview.png                        34.8 KB     5.1 days
+  epsf_tab_verify_screenshot.png                        141.8 KB     5.1 days
+  export_reports.py                                      34.3 KB     3.3 days
+  fits_suffixes.py                                        0.3 KB    57.8 days
+  gaia_catalog_id.py                                      4.7 KB     7.1 days
+  generate_report_303.py                                  1.9 KB     9.2 days
+  hard_copy_phase2a_csv_only.bundle                     825.0 KB    40.4 days
+  hard_copy_phase2a_csv_only.patch                      385.9 KB    40.4 days
+  hrd_analysis.py                                        23.3 KB     7.1 days
+  importer.py                                            71.6 KB     3.4 days
+  infolog.py                                              4.6 KB     7.0 days
+  jd_axis_format.py                                       1.4 KB    33.0 days
+  lunar_context.py                                        5.1 KB     3.4 days
+  masterstar_context.py                                   6.4 KB    30.1 days
+  masterstar_qa_plot.py                                  15.2 KB     4.2 days
+  masterstar_wcs_dao_diagnostic.py                       11.6 KB    52.1 days
+  night_run.py                                           34.6 KB     4.5 days
+  optics_selection.py                                     7.9 KB     4.5 days
+  pdf_debug_draft316.log                               5441.0 KB     6.3 days
+  pdf_regen_verify.log                                    1.0 KB     6.3 days
+  pdf_report.py                                           2.1 KB    27.5 days
+  perf8_night_run.log                                  1236.7 KB     6.2 days
+  perf9_todo23_verify.log                              1368.7 KB     5.4 days
+  perf9_todo23_verify_console.txt                      3053.9 KB     5.4 days
+  photometry.py                                           0.1 KB    38.5 days
+  photometry_core.py                                    431.0 KB     0.3 days
+  photometry_dir_321.txt                                208.4 KB     4.5 days
+  photometry_dir_335.txt                                  4.7 KB     4.5 days
+  photometry_phase2a.py                                   0.2 KB    38.5 days
+  photometry_report.py                                  175.5 KB     3.3 days
+  pipeline.py                                           662.0 KB     0.3 days
+  platesolve_ui_paths.py                                  4.0 KB    33.9 days
+  plot_top_candidates_lightcurves.py                      3.0 KB    13.2 days
+  proc_frame_store.py                                     6.9 KB     6.3 days
+  process.pptx                                          455.9 KB    46.4 days
+  psf_full_run_console.log                              112.2 KB    32.0 days
+  psf_photometry.py                                      19.7 KB     5.2 days
+  psf_runner.py                                          62.1 KB     7.1 days
+  README.md                                               2.2 KB     7.0 days
+  requirements.txt                                        0.1 KB    29.2 days
+  run_smoothness_report.py                                2.0 KB     7.1 days
+  simulate_night_run.log                               3193.7 KB     0.1 days
+  simulate_night_run.py                                   5.2 KB     6.4 days
+  simulate_night_run_draft341.log                       187.8 KB     4.1 days
+  simulate_night_run_draft341_console.txt               695.8 KB     4.1 days
+  simulate_night_run_draft342.log                       417.8 KB     4.0 days
+  simulate_night_run_draft342_console.txt              1976.9 KB     4.0 days
+  simulate_night_run_draft346.log                         3.2 KB     0.3 days
+  simulate_night_run_draft348.log                      2550.7 KB     0.1 days
+  simulate_night_run_perf10.log                        1176.7 KB     6.2 days
+  simulate_night_run_verify.log                        1246.6 KB     6.3 days
+  smoke_test_bprp_tier.py                                 5.6 KB    13.2 days
+  tess_runner.py                                          9.0 KB     9.0 days
+  tess_verify.py                                         56.5 KB    11.1 days
+  time_utils.py                                           9.8 KB     3.4 days
+  todo44_verify.log                                    1354.6 KB     5.2 days
+  todo44_verify_console.txt                            3025.5 KB     5.2 days
+  todo8_epsf_verify_report.txt                            0.6 KB     5.2 days
+  todo8_final_verify.log                               1368.1 KB     5.1 days
+  todo8_final_verify_live.log                          3118.4 KB     5.1 days
+  todo8_final_verify_report.json                          0.8 KB     5.1 days
+  todo8_run1.log                                       1439.8 KB     5.2 days
+  todo8_run1_psf_off.log                               2082.9 KB     5.2 days
+  todo8_run2.log                                       2215.1 KB     5.2 days
+  todo8_run2_only.txt                                  4838.7 KB     5.2 days
+  todo8_run2_phase2a.log                               1020.7 KB     5.2 days
+  todo8_run2_preflight.log                                0.0 KB     5.2 days
+  todo8_run2_psf_on.log                                1836.6 KB     5.2 days
+  todo8_run2_rerun.log                                 1368.0 KB     5.2 days
+  todo8_run2_rerun_live.log                            3140.3 KB     5.2 days
+  todo8_verify_console.txt                             3197.5 KB     5.2 days
+  todo8_verify_live.log                                8471.1 KB     5.2 days
+  todo8_verify_report.json                                0.9 KB     5.2 days
+  ui_aperture_photometry.py                              75.2 KB     3.4 days
+  ui_calibration.py                                      10.5 KB     7.1 days
+  ui_calibration_library.py                              15.2 KB     7.1 days
+  ui_components.py                                        7.7 KB     7.1 days
+  ui_dao_stars.py                                        10.9 KB     8.3 days
+  ui_database_explorer.py                                14.3 KB     7.1 days
+  ui_epsf_dashboard.py                                   13.4 KB     5.1 days
+  ui_finalization.py                                     20.3 KB     7.1 days
+  ui_hrd.py                                               7.7 KB     7.1 days
+  ui_masterstar_qa.py                                    31.8 KB     4.2 days
+  ui_photometry.py                                        3.2 KB     8.4 days
+  ui_photometry_quality.py                               15.5 KB     7.1 days
+  ui_photometry_results.py                               59.9 KB     7.1 days
+  ui_quality_dashboard.py                                42.7 KB     7.1 days
+  ui_select_stars.py                                     23.5 KB     7.1 days
+  ui_settings.py                                         38.7 KB     5.2 days
+  ui_suspected_lightcurves.py                             8.1 KB     6.4 days
+  ui_variability.py                                      89.6 KB     5.3 days
+  utils.py                                               24.1 KB     4.9 days
+  validate_lc_crossval.py                                20.7 KB     7.4 days
+  variability_detector.py                                30.3 KB     6.3 days
+  variables.py                                           20.6 KB   572.0 days
+  vyvar.sqlite3                                       19472.0 KB     0.1 days
+  vyvar_alignment_frame.py                               32.6 KB    12.5 days
+  vyvar_blind_solver.py                                  12.1 KB    33.0 days
+  vyvar_platesolver.py                                  147.3 KB     5.2 days
+  VYVAR_STATE.md                                          5.2 KB     0.0 days
+  vyvar_ui_status.py                                      2.6 KB    13.3 days
+
+=== SUBDIRECTORIES ===
+  __pycache__                       66 files  (0 .py)
+  Archive                         8526 files  (0 .py)
+  CalibrationLibrary                 6 files  (0 .py)
+  docs                               1 files  (0 .py)
+  GAIA_DR3                          10 files  (6 .py)
+  img                                1 files  (0 .py)
+  orchestrator                       1 files  (1 .py)
+  scripts                           82 files  (60 .py)
+  tests                             32 files  (15 .py)
+  tmpp                               6 files  (2 .py)
+  tools                              3 files  (3 .py)
+  VSX                                4 files  (1 .py)
+
+=== CANDIDATE CLEANUP FILES (root *.py) ===
+  _audit_issues.py                                   <- cleanup candidate
+  _debug_blend_check.py                              <- cleanup candidate
+  _debug_blend_rerun.py                              <- cleanup candidate
+  _tmp_call_sites.py                                 <- cleanup candidate
+  _tmp_cand336.py                                    <- cleanup candidate
+  _tmp_cand336b.py                                   <- cleanup candidate
+  _tmp_comp336.py                                    <- cleanup candidate
+  _tmp_comp_csv.py                                   <- cleanup candidate
+  _tmp_comp_refs.py                                  <- cleanup candidate
+  _tmp_comp_select_test.py                           <- cleanup candidate
+  _tmp_comp_stars.py                                 <- cleanup candidate
+  _tmp_comp_test_both.py                             <- cleanup candidate
+  _tmp_cv_cvn.py                                     <- cleanup candidate
+  _tmp_db_query.py                                   <- cleanup candidate
+  _tmp_draft_compare.py                              <- cleanup candidate
+  _tmp_drafts.py                                     <- cleanup candidate
+  _tmp_eq_tel.py                                     <- cleanup candidate
+  _tmp_field_plan_json.py                            <- cleanup candidate
+  _tmp_gaia_frame_check.py                           <- cleanup candidate
+  _tmp_gcp336.py                                     <- cleanup candidate
+  _tmp_infolog335.py                                 <- cleanup candidate
+  _tmp_infolog_slice.py                              <- cleanup candidate
+  _tmp_ms336.py                                      <- cleanup candidate
+  _tmp_phot_335.py                                   <- cleanup candidate
+  _tmp_proc_csv.py                                   <- cleanup candidate
+  _tmp_test_pass2_phase_a.py                         <- cleanup candidate
+  _tmp_test_phase_b.py                               <- cleanup candidate
+  _tmp_vt_cols.py                                    <- cleanup candidate
+  app.py                                            
+  astrometry_optimizer.py                           
+  calibration.py                                    
+  catalog_crossmatch.py                             
+  comp_pool_rms.py                                  
+  comp_selection_per_target.py                      
+  config.py                                         
+  crossmatch_runner.py                              
+  database.py                                       
+  debug_qc.py                                       
+  diagnose_crowding_filters.py                      
+  diagnose_ensemble.py                              
+  diagnose_flux.py                                  
+  dilution.py                                       
+  export_reports.py                                 
+  fits_suffixes.py                                  
+  gaia_catalog_id.py                                
+  generate_report_303.py                            
+  hrd_analysis.py                                   
+  importer.py                                       
+  infolog.py                                        
+  jd_axis_format.py                                 
+  lunar_context.py                                  
+  masterstar_context.py                             
+  masterstar_qa_plot.py                             
+  masterstar_wcs_dao_diagnostic.py                  
+  night_run.py                                      
+  optics_selection.py                               
+  pdf_report.py                                     
+  photometry.py                                     
+  photometry_core.py                                
+  photometry_phase2a.py                             
+  photometry_report.py                              
+  pipeline.py                                       
+  platesolve_ui_paths.py                            
+  plot_top_candidates_lightcurves.py                
+  proc_frame_store.py                               
+  psf_photometry.py                                 
+  psf_runner.py                                     
+  run_smoothness_report.py                          
+  simulate_night_run.py                             
+  smoke_test_bprp_tier.py                            <- cleanup candidate
+  tess_runner.py                                    
+  tess_verify.py                                    
+  time_utils.py                                     
+  ui_aperture_photometry.py                         
+  ui_calibration.py                                 
+  ui_calibration_library.py                         
+  ui_components.py                                  
+  ui_dao_stars.py                                   
+  ui_database_explorer.py                           
+  ui_epsf_dashboard.py                              
+  ui_finalization.py                                
+  ui_hrd.py                                         
+  ui_masterstar_qa.py                               
+  ui_photometry.py                                  
+  ui_photometry_quality.py                          
+  ui_photometry_results.py                          
+  ui_quality_dashboard.py                           
+  ui_select_stars.py                                
+  ui_settings.py                                    
+  ui_suspected_lightcurves.py                       
+  ui_variability.py                                 
+  utils.py                                          
+  validate_lc_crossval.py                           
+  variability_detector.py                           
+  variables.py                                      
+  vyvar_alignment_frame.py                          
+  vyvar_blind_solver.py                             
+  vyvar_platesolver.py                              
+  vyvar_ui_status.py                                
+
+=== scripts/ DIR ===
+  _alg2_savgol_verify_draft321.py                         3.4 KB     5.3 days
+  _alg3_comp_hub_diagnostic.py                           10.6 KB     0.2 days
+  _alg3_tempbin_verify_draft321.py                        3.5 KB     5.3 days
+  _alg4_democratic_verify_draft321.py                     4.5 KB     5.3 days
+  _alg5_pytics_verify_draft321.py                         3.1 KB     5.3 days
+  _audit_draft343_db.py                                   2.8 KB     0.2 days
+  _comp_consistency_diag.py                               3.3 KB     0.1 days
+  _complete_draft341_photometry.py                        2.9 KB     0.2 days
+  _dao_count_draft343.py                                  0.9 KB     0.2 days
+  _debug_fk343.py                                         1.3 KB     0.2 days
+  _diag_catalog_only_sep.py                               2.5 KB     0.2 days
+  _draft343_night_run.log                               672.3 KB     3.2 days
+  _draft343_run_config.json                               5.0 KB     3.2 days
+  _draft344_night_run.log                               893.7 KB     0.4 days
+  _fix_location_jirny.py                                  0.3 KB     0.2 days
+  _fwhm_analysis.py                                       4.9 KB    13.2 days
+  _gs11_aperture_diagnostic.py                            1.3 KB     0.2 days
+  _gs11_phase1_only.py                                    4.7 KB     0.2 days
+  _gs11_revalidate_draft342.py                            3.1 KB     0.2 days
+  _gs11_validate_step_b.py                                4.2 KB     0.2 days
+  _integration_test_todos.py                              6.8 KB     7.1 days
+  _phase2a_only_draft307.py                               3.0 KB     8.2 days
+  _platesolve_test_v842.py                                3.2 KB     0.2 days
+  _reexport_phase2a_draft307.py                           6.0 KB     8.2 days
+  _rerun_phase01_draft343.py                              1.3 KB     0.2 days
+  _root_audit.py                                          1.9 KB     0.0 days
+  _root_audit_output.txt                                 14.2 KB    -0.0 days
+  _simulate_night_run_draft343.py                         2.4 KB     0.2 days
+  _smoke_phase2a_draft298.py                              1.8 KB    11.2 days
+  _smoke_run_draft287.py                                  3.0 KB    13.2 days
+  _todo44_verify_draft321.py                              5.7 KB     5.2 days
+  _todo8_epsf_final_verify_draft321.py                    7.4 KB     5.2 days
+  _todo8_epsf_verify_draft321.py                          8.0 KB     5.2 days
+  _validate_draft343.py                                  10.6 KB     0.2 days
+  audit_vyvar.ps1                                         3.7 KB    47.0 days
+  benchmark_pipeline.py                                   9.1 KB     7.0 days
+  build_comp_selection_module.py                          2.2 KB     6.2 days
+  build_lc_from_fits_aperture.py                         17.7 KB     6.9 days
+  compare_psf_vs_dao_rms_comp.py                          6.1 KB     8.2 days
+  cross_val_report_20260522.md                            2.8 KB     3.2 days
+  cross_val_results_20260522.csv                          1.3 KB     3.2 days
+  cross_validate_draft342.py                             43.9 KB     3.3 days
+  diag_bo_cvn_comp_quality_mtime.py                       1.3 KB    26.3 days
+  diag_bo_cvn_comp_quality_vs_csv.py                      1.4 KB    26.3 days
+  diag_bo_cvn_comp_vs_summary.py                          1.5 KB    13.2 days
+  diagnose_masterstar_wcs_dao.py                          2.2 KB    52.1 days
+  fix_alignment_report_detected_stars.py                  2.8 KB    32.3 days
+  fix_comp_selection.py                                   5.4 KB     6.2 days
+  force_aperture_r_px.py                                 10.4 KB     6.8 days
+  gen_comp_selection.py                                  15.3 KB     6.2 days
+  install_vyvar_crossval_lenovo.sh                        1.6 KB     8.1 days
+  lc_trend_diagnostic.py                                 11.2 KB     0.2 days
+  patch_accumulate.py                                    11.1 KB     6.2 days
+  patch_orchestrator.py                                  13.4 KB     6.2 days
+  plot_bo_sips_vyvar_compare.py                           5.5 KB     6.8 days
+  plot_lc_variants_draft311.py                            7.6 KB     6.9 days
+  plot_mn_boo_psf_lightcurve.py                           3.3 KB    32.0 days
+  repair_catalog_ids.py                                   8.0 KB    26.9 days
+  run_draft_000244_align_and_photometry.py                5.6 KB    32.3 days
+  smoke_export_draft_000279.py                           10.3 KB    12.5 days
+  smoke_test_draft283.py                                  4.1 KB    25.1 days
+  solver_audit.txt                                       71.3 KB    11.0 days
+  test_airmass_order.py                                   4.4 KB     6.9 days
+  test_aperture_sweep.py                                 10.1 KB     6.9 days
+  test_auto_crossmatch_tess_draft_000279.py               3.5 KB    13.2 days
+  test_border_bbox.py                                     1.1 KB    25.1 days
+  test_phase2a_force_aperture.py                          3.6 KB     6.9 days
+  validate_aavso_export.py                               12.7 KB     5.5 days
+  validate_photometry_crossval.py                         6.4 KB     8.1 days
+  vyvar.sqlite3                                         184.0 KB     3.2 days
+  vyvar_audit.txt                                        66.9 KB    47.0 days

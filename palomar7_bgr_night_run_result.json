@@ -1,0 +1,51 @@
+{
+  "started_utc": "2026-06-03T08:41:54.594961+00:00",
+  "n_source_fits": 48,
+  "source_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\palomar7\\BGR_all",
+  "field_db": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3_pal7_field.db",
+  "equipment_ids": {
+    "camera_id": 3,
+    "camera_status": "reused",
+    "telescope_id": 4,
+    "telescope_status": "reused",
+    "location_id": 3,
+    "location_status": "reused"
+  },
+  "VYVAR_CT_PROTOTYPE": "1",
+  "gaia_max_g": 19.999996185302734,
+  "night_run_success": false,
+  "draft_id": 367,
+  "draft_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000367",
+  "errors": [
+    "MASTERSTAR: z UI/job pri\u0161li explicitn\u00e9 cesty k referen\u010dn\u00e9mu sn\u00edmku, ale \u017eiadna sa nena\u0161la ako ``processed/lights/\u2026/proc_*.fits`` (kore\u0148 v\u00fdberu: C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000367\\processed\\lights\\Blue_180_2). Skontroluj preprocess, arch\u00edv a v\u00fdber vo FITS QA (potvr\u010f znovu po **Create Archive & Do Calibration**). Po\u017eadovan\u00e9 (1): C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000367\\non_calibrated\\lights\\Red_60_2\\CHI-1-CMOS_2024-07-30T00-43-54_Palomar_7_Red_60s_454441_cal.fits"
+  ],
+  "warnings": [],
+  "phase_timings": {
+    "config": 0.0,
+    "smart_scan_source": 0.3928699493408203,
+    "smart_import_session": 0.8908276557922363,
+    "calibration": 8.484810829162598,
+    "memory_profile": 0.08830380439758301,
+    "ram_qc": 20.770060539245605,
+    "pointing_scan": 0.6052448749542236,
+    "auto_fwhm": 0.0,
+    "masterstar_resolve": 0.08143377304077148,
+    "preprocess_prep": 0.001999378204345703,
+    "preprocess": 25.58219337463379,
+    "total": 66.28251552581787
+  },
+  "n_lightcurves": 0,
+  "masterstar_stats": {
+    "setups": [
+      "Blue_180_2"
+    ],
+    "plate_scale_arcsec_px_median": null,
+    "fwhm_px_median": null,
+    "n_detected": 0,
+    "n_matched": 0,
+    "faintest_matched_mag": null
+  },
+  "ct_prototype_csv": null,
+  "config_restored": true,
+  "finished_utc": "2026-06-03T08:43:00.898866+00:00"
+}

@@ -1,0 +1,12 @@
+{
+  "utc": "2026-06-05T10:42:11.335159+00:00",
+  "n_fields": 4,
+  "n_tested": 4,
+  "n_hit": 4,
+  "hit_rate": 1.0,
+  "median_sep_deg": 0.12335,
+  "p90_sep_deg": 0.14968,
+  "mode": "auto",
+  "verify_mag_limit": 14.0,
+  "csv": "C:\\ASTRO\\python\\VYVAR\\validation\\mag_ab\\blind_solve_mag14_20260605T100716Z.csv"
+}

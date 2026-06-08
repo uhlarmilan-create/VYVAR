@@ -1,0 +1,59 @@
+{
+  "draft_id": 375,
+  "summary_csv": "C:\\ASTRO\\python\\VYVAR\\ct_summary_chiandh_BVR.csv",
+  "targets_csv": "C:\\ASTRO\\python\\VYVAR\\ct_targets_chiandh_BVR.csv",
+  "summaries": [
+    {
+      "filter": "B",
+      "c1": -1.092182418764027,
+      "c1_stderr": 0.013063761689529859,
+      "stderr_ratio": 0.01196115361783018,
+      "n_comp": 143,
+      "comp_bp_rp_min": 0.2167568206787109,
+      "comp_bp_rp_max": 2.634158134460449,
+      "resid_rms": 0.053417602893542145,
+      "comp_scatter_pre": 0.37874489854762466,
+      "comp_scatter_post": 0.05325894452988327,
+      "n_in_range": 23,
+      "n_ct_ok": 23,
+      "n_red_giant_blocked": 5,
+      "gate_apply": true,
+      "gate_reason": "Filter B \u2014 CT aplikovan\u00fd: c1=-1.0922 \u00b1 0.0131 (stderr/c1=0.01, n_comp=143)"
+    },
+    {
+      "filter": "V",
+      "c1": -0.39663687720501006,
+      "c1_stderr": 0.010013891008255931,
+      "stderr_ratio": 0.0252469994187657,
+      "n_comp": 133,
+      "comp_bp_rp_min": 0.2167568206787109,
+      "comp_bp_rp_max": 2.6443185806274414,
+      "resid_rms": 0.057991895117138106,
+      "comp_scatter_pre": 0.20832406083095137,
+      "comp_scatter_post": 0.05783226804530983,
+      "n_in_range": 24,
+      "n_ct_ok": 24,
+      "n_red_giant_blocked": 5,
+      "gate_apply": true,
+      "gate_reason": "Filter V \u2014 CT aplikovan\u00fd: c1=-0.3966 \u00b1 0.0100 (stderr/c1=0.03, n_comp=133)"
+    },
+    {
+      "filter": "Rc",
+      "c1": -0.026349762920341916,
+      "c1_stderr": 0.009601373806563155,
+      "stderr_ratio": 0.364381791046436,
+      "n_comp": 140,
+      "comp_bp_rp_min": 0.2167568206787109,
+      "comp_bp_rp_max": 2.6443185806274414,
+      "resid_rms": 0.06398760802571109,
+      "comp_scatter_pre": 0.06562187634000703,
+      "comp_scatter_post": 0.06390127892482536,
+      "n_in_range": 24,
+      "n_ct_ok": 24,
+      "n_red_giant_blocked": 5,
+      "gate_apply": true,
+      "gate_reason": "Filter Rc \u2014 CT aplikovan\u00fd: c1=-0.0263 \u00b1 0.0096 (stderr/c1=0.36, n_comp=140)"
+    }
+  ],
+  "n_target_rows": 86
+}

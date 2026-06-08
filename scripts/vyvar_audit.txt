@@ -1,0 +1,1258 @@
+﻿============================================================
+VYVAR AUDIT - 04/08/2026 19:38:38
+============================================================
+
+### SUBORY ###
+
+Name                             Length LastWriteTime        
+----                             ------ -------------        
+app.py                           104262 4/8/2026 1:18:34 PM  
+astrometry_optimizer.py           54634 4/8/2026 3:54:49 PM  
+calibration.py                    21014 4/3/2026 9:22:17 AM  
+config.py                         30499 4/8/2026 2:36:13 PM  
+database.py                      143473 4/8/2026 8:36:14 AM  
+debug_qc.py                        1930 3/28/2026 10:12:41 PM
+fits_suffixes.py                    332 3/28/2026 10:01:51 PM
+gaia_catalog_id.py                 2331 4/3/2026 6:00:34 PM  
+importer.py                       90511 4/5/2026 4:12:46 PM  
+infolog.py                         2817 3/31/2026 5:25:45 PM 
+masterstar_qa_plot.py             13903 4/4/2026 2:22:52 PM  
+masterstar_wcs_dao_diagnostic.py  11918 4/3/2026 6:08:29 PM  
+photometry.py                     19212 4/4/2026 6:51:03 PM  
+pipeline.py                      583003 4/8/2026 3:26:46 PM  
+psf_photometry.py                 14962 4/8/2026 8:36:14 AM  
+time_utils.py                      7634 4/5/2026 2:46:48 PM  
+ui_calibration.py                 10726 4/1/2026 5:12:12 PM  
+ui_calibration_library.py         15760 4/3/2026 8:23:07 AM  
+ui_components.py                   7728 4/4/2026 12:41:23 PM 
+ui_dao_stars.py                    5140 4/8/2026 3:09:07 PM  
+ui_database_explorer.py           14868 4/3/2026 8:34:01 AM  
+ui_finalization.py                20234 4/5/2026 4:13:07 PM  
+ui_masterstar_qa.py               16916 4/4/2026 6:51:08 PM  
+ui_photometry.py                   3847 4/4/2026 1:45:54 PM  
+ui_photometry_quality.py          15515 4/8/2026 2:04:28 PM  
+ui_photometry_results.py          56362 4/8/2026 8:36:14 AM  
+ui_quality_dashboard.py           19731 4/3/2026 12:19:13 PM 
+utils.py                          22601 4/3/2026 12:56:51 PM 
+vyvar_platesolver.py             113388 4/6/2026 12:33:09 AM 
+
+
+
+### FUNKCIE A TRIEDY ###
+
+--- app.py ---
+  L88: def _vyvar_apply_smart_plan_flat_fallbacks(plan: Any) -> None:
+  L122: def _vyvar_guess_filename_from_progress(msg: str) -> str:
+  L131: def vyvar_init_footer_state_if_missing() -> None:
+  L143: def _vyvar_footer_set(
+  L166: def _vyvar_render_fixed_footer_into(placeholder: Any) -> None:
+  L213: def _vyvar_try_enqueue_masterstar_processed(
+  L282: def render_live_view(
+  L1836: def _iter_vyvar_fits_under(root: Path) -> list[Path]:
+  L1846: def render_infolog() -> None:
+  L1873: def render_photometry_light_curve(pipeline: AstroPipeline) -> None:
+  L1922: def render_archive() -> None:
+  L1928: def main() -> None:
+
+--- astrometry_optimizer.py ---
+  L50: def _optimizer_parity_flip_already_in_fits(fits_path: Path) -> bool:
+  L68: def _first_existing_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
+  L75: def _apply_wcs_pc_parity_flip_to_primary(fits_path: Path, *, set_vy_optpf: bool = True) -> bool:
+  L117: def _norm_id(v: Any) -> str:
+  L130: def _poly_features(xn: np.ndarray, yn: np.ndarray) -> np.ndarray:
+  L136: def _fit_poly_model(x: np.ndarray, y: np.ndarray, dx: np.ndarray, dy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+  L151: def _eval_poly(model: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+  L159: def _gaia_for_field(
+  L204: def optimize_masterstar_matches(
+  L400: def _is_unmatched_row(row_idx: int) -> bool:
+  L403: def _write_match(row_idx: int, picked_idx: int, sep_arcsec: float) -> None:
+  L418: def _refit_displacement_from_all_matches() -> None:
+  L445: def _match_bright_anchor_stars() -> int:
+  L481: def _rematch_pass(*, adaptive_edges: bool, center_base_arcsec: float) -> int:
+  L521: def _refit_wcs_sip5_once(*, tag: str) -> dict[str, Any]:
+  L1107: def generate_filtered_masterstars(
+  L1122: def optimize_masterstars_astrometry(
+
+--- calibration.py ---
+  L37: class MasterResamplingError(ValueError):
+  L41: class ProcessedMasterResult(NamedTuple):
+  L55: def _parse_master_header_datetime(raw: object) -> datetime | None:
+  L79: def get_master_age_days(file_path: str | Path) -> float:
+  L101: def read_master_binning_from_header(header: fits.Header) -> int:
+  L111: def read_master_binning_from_fits(path: str | Path) -> int:
+  L118: def infer_spatial_block_factor(master_shape: tuple[int, int], light_shape: tuple[int, int]) -> int | None:
+  L141: def infer_spatial_upscale_factor(master_shape: tuple[int, int], light_shape: tuple[int, int]) -> int | None:
+  L167: def align_resampled_master_to_light_shape(
+  L202: def resample_master_to_light_binning(
+  L261: def _flat_saved_unnormalized(hdr: fits.Header) -> bool:
+  L272: def _valid_bayer_pattern_4(s: str | None) -> str | None:
+  L285: def _db_equipment_suggests_osc(db: VyvarDatabase | None, equipment_id: int | None) -> bool:
+  L312: def normalize_flat_master(
+  L417: def get_processed_master(
+  L516: def _norm_light_path_key(p: Path) -> str:
+  L523: def filter_light_paths_for_calibration_db(
+
+--- config.py ---
+  L12: def config_json_path(project_root: Path) -> Path:
+  L16: def load_config_json(project_root: Path) -> dict[str, Any]:
+  L26: def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
+  L32: class AppConfig:
+  L175: def __post_init__(self) -> None:
+  L473: def to_json(self) -> dict[str, Any]:
+  L567: def to_dict(self) -> dict[str, Any]:
+  L570: def ensure_base_dirs(self) -> None:
+
+--- database.py ---
+  L24: def get_gaia_db_max_g_mag(db_path: str | Path) -> float:
+  L66: def query_local_gaia(
+  L185: def validate_gaia_db_schema(db_path: str | Path) -> tuple[bool, str]:
+  L208: def validate_vsx_local_db_schema(db_path: str | Path) -> tuple[bool, str]:
+  L231: def _vsx_ra_intervals_deg(ra_min: float, ra_max: float) -> list[tuple[float, float]]:
+  L248: def query_local_vsx(
+  L344: class DraftTechnicalMetadataError(RuntimeError):
+  L347: def __init__(self, draft_id: int) -> None:
+  L355: def _db_fits_pixel_raw_to_micrometres(value: float) -> float:
+  L367: def _db_to_float(value: Any, default: float = 0.0) -> float:
+  L374: def _db_pick_header(header: fits.Header, *keys: str, default: Any = None) -> Any:
+  L381: def _db_xbinning_strict(header: fits.Header) -> int:
+  L392: def _db_ybinning_header(header: fits.Header, x_fallback: int) -> int:
+  L403: def _db_focal_plausible_mm(mm: float) -> bool:
+  L407: def _db_header_focal_length_mm(header: fits.Header) -> float | None:
+  L424: def _db_header_pixel_native_um_mean(header: fits.Header) -> float | None:
+  L442: def fits_header_cache_row_to_meta(row: sqlite3.Row) -> dict[str, Any]:
+  L486: def _fits_header_cache_pack_row(
+  L543: class VyvarDatabase:
+  L546: def __init__(self, db_path: str | Path) -> None:
+  L557: def _enable_foreign_keys(self) -> None:
+  L560: def _create_tables(self) -> None:
+  L671: def _ensure_final_data_view(self) -> None:
+  L697: def _ensure_master_sources_table(self) -> None:
+  L768: def replace_master_sources_for_draft(self, draft_id: int, rows: list[dict[str, Any]]) -> int:
+  L833: def fetch_master_sources_for_draft(self, draft_id: int) -> list[dict[str, Any]]:
+  L849: def update_master_source_safety(
+  L875: def sql_expr_active_is_true(column_ref: str) -> str:
+  L888: def count_final_data_for_equipment_id(self, equipment_id: int) -> int:
+  L897: def count_final_data_for_telescope_id(self, telescope_id: int) -> int:
+  L906: def count_references_to_location_id(self, location_id: int) -> int:
+  L920: def count_references_to_scanning_id(self, scanning_id: int) -> int:
+  L935: def normalize_active_db_value(raw: Any) -> int:
+  L960: def _coerce_sql_param(self, table: str, col: str, raw: Any) -> Any:
+  L982: def apply_main_table_editor_save(
+  L1130: def _ensure_qc_processing_tables(self) -> None:
+  L1164: def fetch_obs_draft_by_id(self, draft_id: int) -> dict[str, Any] | None:
+  L1169: def update_obs_draft_center(self, draft_id: int, center_ra_deg: float, center_de_deg: float) -> None:
+  L1184: def update_obs_draft_status_panel_values(
+  L1219: def set_obs_draft_masterstar_path(self, draft_id: int, masterstar_path: str | None) -> None:
+  L1235: def get_obs_draft_masterstar_path(self, draft_id: int) -> str | None:
+  L1251: def qc_processing_run_exists(self, processing_hash: str) -> bool:
+  L1258: def delete_qc_processing_run_by_hash(self, processing_hash: str) -> None:
+  L1265: def record_qc_processing_apply(
+  L1355: def update_obs_draft_status(self, draft_id: int, status: str) -> None:
+  L1362: def count_obs_files(self) -> int:
+  L1367: def maintenance_delete_obs_files_for_processed_drafts(self) -> int:
+  L1385: def maintenance_nuke_obs_files_and_drafts_preserve_qc_snapshots(self) -> tuple[int, int]:
+  L1405: def _ensure_fits_header_cache_table(self) -> None:
+  L1438: def fits_header_cache_file_key(path: str | Path) -> str:
+  L1441: def fits_header_cache_get_if_fresh(
+  L1463: def fits_header_cache_try_meta(self, path: str | Path) -> dict[str, Any] | None:
+  L1475: def fits_header_cache_try_filter(self, path: str | Path) -> str | None:
+  L1490: def fits_header_cache_upsert_batch(
+  L1534: def fits_header_cache_upsert_one(
+  L1546: def _ensure_calibration_library_table(self) -> None:
+  L1571: def _migrate_calibration_library_scope_columns(self) -> None:
+  L1581: def register_calibration_library_entry(
+  L1639: def delete_calibration_library_entry_by_path(self, file_path: str | Path) -> int:
+  L1646: def calibration_library_path_tag_map(self) -> dict[str, dict[str, Any]]:
+  L1675: def find_best_calibration_library_path(
+  L1785: def fetch_obs_draft_telescope_equipment(self, draft_id: int) -> dict[str, Any] | None:
+  L1805: def _normalize_calibration_library_filter_name(flt: str | None) -> str:
+  L1811: def calibration_library_has_flat_for_filter(self, filter_name: str | None) -> bool:
+  L1824: def _ensure_obs_files_draft_column(self) -> None:
+  L1852: def _ensure_obs_files_qc_columns(self) -> None:
+  L1868: def _ensure_obs_files_quality_inspection_columns(self) -> None:
+  L1892: def _ensure_obs_files_observation_group_key(self) -> None:
+  L1900: def _ensure_obs_files_scanning_and_calibration_columns(self) -> None:
+  L1915: def _ensure_photometry_light_curve_table(self) -> None:
+  L1942: def replace_photometry_light_curve_for_draft(
+  L1981: def fetch_photometry_light_curve_for_draft(self, draft_id: int) -> list[dict[str, Any]]:
+  L1993: def _ensure_scanning_gain_column(self) -> None:
+  L2002: def _ensure_obs_draft_masterstar_path_column(self) -> None:
+  L2012: def _ensure_obs_draft_status_panel_columns(self) -> None:
+  L2022: def _ensure_active_columns(self) -> None:
+  L2041: def _normalize_telescope_active_to_binary(self) -> None:
+  L2050: def _ensure_equipments_saturate_adu_column(self) -> None:
+  L2059: def _ensure_equipments_cosmic_columns(self) -> None:
+  L2069: def _ensure_equipments_focal_column(self) -> None:
+  L2077: def _ensure_settings_table(self) -> None:
+  L2088: def _seed_default_settings(self) -> None:
+  L2099: def get_setting_int(self, key: str, default: int) -> int:
+  L2109: def set_setting(self, key: str, value: str) -> None:
+  L2117: def _ensure_observation_import_columns(self) -> None:
+  L2136: def initialize_database(self) -> None:
+  L2162: def _ensure_obs_files_indexes(self) -> None:
+  L2173: def _jd_to_yyyymmdd(jd: float) -> str:
+  L2195: def generate_hashtag(
+  L2213: def insert_equipment(
+  L2231: def get_equipment_saturation_adu(self, equipment_id: int) -> float | None:
+  L2249: def get_equipment_pixel_size_um(self, equipment_id: int) -> float | None:
+  L2271: def get_equipment_focal_mm(self, equipment_id: int) -> float | None:
+  L2301: def get_equipment_cosmic_params(self, equipment_id: int) -> tuple[float | None, float | None]:
+  L2322: def get_telescope_focal_mm(self, telescope_id: int | None = None) -> float | None:
+  L2352: def get_combined_metadata(self, file_path: str | Path, draft_id: int) -> dict[str, Any]:
+  L2463: def insert_telescope(
+  L2480: def insert_location(
+  L2497: def insert_scanning(
+  L2515: def find_or_create_scanning_id(self, metadata: dict[str, Any]) -> int:
+  L2556: def insert_observation(
+  L2618: def add_observation(self, data_dict: dict[str, Any]) -> str:
+  L2641: def get_equipments(self, *, active_only: bool = False) -> list[dict[str, Any]]:
+  L2653: def get_telescopes(self, *, active_only: bool = False) -> list[dict[str, Any]]:
+  L2665: def get_observation_metadata(self, hashtag: str) -> dict[str, Any] | None:
+  L2708: def update_observation_import_log(
+  L2745: def insert_observation_files(self, observation_id: str, files: list[dict[str, Any]]) -> None:
+  L2773: def count_obs_files_for_observation(self, observation_id: str) -> int:
+  L2780: def count_obs_files_for_draft(self, draft_id: int) -> int:
+  L2787: def insert_draft_files(self, draft_id: int, files: list[dict[str, Any]]) -> None:
+  L2815: def update_obs_file_qc_by_raw_light_path(
+  L2889: def fetch_draft_light_rows_for_quality(self, draft_id: int) -> list[dict[str, Any]]:
+  L2905: def fetch_draft_scanning_ids(self, draft_id: int) -> list[int]:
+  L2918: def update_obs_file_calibration_state_by_raw_light_path(
+  L2956: def update_obs_file_quality_by_id(
+  L3029: def bulk_update_obs_file_is_rejected(
+  L3043: def _normalize_obs_file_path_key(self, p: str | Path) -> str:
+  L3049: def fetch_light_file_paths_not_rejected_for_draft(self, draft_id: int) -> set[str]:
+  L3066: def fetch_light_file_paths_not_rejected_for_observation(self, observation_id: str) -> set[str]:
+  L3083: def create_draft(self, data: dict[str, Any]) -> int:
+  L3106: def update_draft_import_log(
+  L3143: def finalize_draft(self, draft_id: int, *, ra_deg: float, dec_deg: float) -> str:
+  L3197: def finalize_draft_to_observation(
+  L3328: def _migrate_comp_library_tables(self) -> None:
+  L3390: def _haversine_deg(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
+  L3397: def find_matching_field(
+  L3426: def register_or_update_field(
+  L3503: def upsert_comp_star_library(
+  L3675: def get_comp_stars_for_field(
+  L3700: def close(self) -> None:
+
+--- debug_qc.py ---
+  L11: def main() -> int:
+
+--- fits_suffixes.py ---
+  L11: def path_suffix_is_fits(path: Path) -> bool:
+
+--- gaia_catalog_id.py ---
+  L13: def normalize_gaia_source_id(val) -> str:
+  L47: def normalize_gaia_source_id_series(s: pd.Series) -> pd.Series:
+  L51: def masterstar_row_gaia_key(row: pd.Series) -> str:
+  L62: def catalog_id_series_for_masterstars_export(df: pd.DataFrame) -> pd.Series:
+
+--- importer.py ---
+  L28: class ImportResult:
+  L39: class CalibrationStatus:
+  L50: class MasterGenerationResult:
+  L57: class SmartScanRow:
+  L65: def observation_group_key(filter_name: str, exposure_s: float, binning: int) -> str:
+  L76: def observation_group_folder_name(group_key: str) -> str:
+  L83: def _calibration_library_search_roots(calibration_library_root: Path) -> list[Path]:
+  L102: class SmartImportPlan:
+  L127: def _list_fits_files(folder: Path) -> list[Path]:
+  L144: def _is_empty_or_missing(folder: Path) -> bool:
+  L148: def _mtime_utc(path: Path) -> datetime:
+  L153: def _parse_date_obs(value: Any) -> datetime | None:
+  L170: def _fits_capture_date_yyyymmdd(path: Path) -> str:
+  L183: def _earliest_capture_datetime_utc(files: list[Path]) -> datetime | None:
+  L208: def _filter_name_for_calibration_library_flat(flt: str | None) -> str:
+  L216: def _register_master_path_in_calibration_library(
+  L249: def _sanitize_token(value: Any) -> str:
+  L257: def _format_exp_seconds(exposure: float) -> str:
+  L263: def _format_temp(temp: float) -> str:
+  L268: def _format_temp_deg_for_name(temp: float) -> str:
+  L275: def _looks_like_master(fp: Path) -> bool:
+  L292: def _first_fits_in_dir(folder: Path) -> Path | None:
+  L297: def _classify_imagetyp(value: Any) -> str:
+  L308: def _collect_fits_by_type(
+  L376: def _read_filter(fp: Path, db: VyvarDatabase | None = None) -> str:
+  L392: def _master_kind_matches(fp: Path, kind: str) -> bool:
+  L420: def _sanitize_filter_folder(name: str) -> str:
+  L472: def _safe_copy2(src: Path, dst: Path) -> None:
+  L483: def _sanitize_windows_filename(name: str) -> str:
+  L526: def _dst_path_with_length_limit(dst_dir: Path, original_name: str, *, max_path_len: int = 240) -> Path:
+  L547: def _params_string(meta: dict[str, Any], *, include_filter: bool) -> str:
+  L557: def _find_matching_master_in_library(
+  L655: def _age_days(path: Path) -> int | None:
+  L664: def _find_best_masterflat_for_filter(
+  L770: def _write_master_to_library(
+  L860: def _find_existing_master_for_raw_set(
+  L900: def smart_scan_source(
+  L1118: def _scan_cal(kind: str, files: list[Path]) -> tuple[SmartScanRow, str | None, bool]:
+  L1236: def generate_master_dark_from_source_dir(
+  L1289: def generate_master_flat_from_source_dir(
+  L1342: def _copy_fits_folder(src: Path, dst: Path) -> int:
+  L1351: def smart_import_session(
+  L1531: def quicklook_preview_png_bytes(fits_path: str | Path) -> bytes:
+  L1568: def _to_float32_frame(data: np.ndarray) -> np.ndarray:
+  L1578: def _apply_binning_frame(arr: np.ndarray, bin_factor: int) -> np.ndarray:
+  L1596: def _combine_stack_mean(stack: np.ndarray) -> np.ndarray:
+  L1612: def _combine_stack_median(stack: np.ndarray) -> np.ndarray:
+  L1629: def _stack_calibration_frames(
+  L1671: def _combine_block(block: np.ndarray) -> np.ndarray:
+  L1715: def _generate_master_dark(
+  L1729: def _generate_master_flat(
+  L1743: def generate_and_archive_masters(
+  L1915: def get_calibration_status(
+  L2005: def plan_session_import(
+  L2083: def _find_best_calibration_file(
+  L2164: def import_session(
+  L2310: def import_source_to_archive(
+  L2422: def check_known_field(
+
+--- infolog.py ---
+  L22: def _handler_already_attached() -> bool:
+  L27: def log_event(message: str) -> None:
+  L35: def log_gaia_query(ra: float, dec: float, calculated_radius: float) -> None:
+  L40: def log_exception(prefix: str, exc: BaseException) -> None:
+  L48: def get_lines() -> list[str]:
+  L53: def clear_log() -> None:
+  L58: def last_job_snapshot(obj: Any) -> None:
+  L69: class InfologHandler(logging.Handler):
+  L72: def emit(self, record: logging.LogRecord) -> None:
+  L81: def ensure_infolog_logging() -> None:
+
+--- masterstar_qa_plot.py ---
+  L15: def downsample_array_2d(arr: np.ndarray, max_side: int) -> tuple[np.ndarray, float, float]:
+  L29: def percentile_stretch_rgb(data: np.ndarray, p_lo: float, p_hi: float) -> np.ndarray:
+  L48: def build_starfield_qa_png_mapping(
+  L218: def build_msqa_vsx_plotly_figure(
+  L297: def msqa_prepare_vsx_plotly_series(
+
+--- masterstar_wcs_dao_diagnostic.py ---
+  L16: def resolve_paths_from_archive(archive_root: Path | str) -> tuple[Path, Path, Path | None]:
+  L29: def _load_wcs_from_fits(fits_path: Path):
+  L43: def _world_to_pix_xy(w, ra_deg: np.ndarray, dec_deg: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+  L61: def _stats_lines(dx: np.ndarray, dy: np.ndarray, label: str) -> list[str]:
+  L85: def _worst_table_lines(ms: pd.DataFrame, cols: list[str], n: int) -> list[str]:
+  L98: def run_masterstar_wcs_dao_diagnostic(
+
+--- photometry.py ---
+  L23: class StressTestResult:
+  L29: def _iter_fits_recursive(root: Path) -> list[Path]:
+  L42: def stress_test_relative_rms_from_sidecars(
+  L112: def vsx_is_known_variable_top3_per_bin(
+  L168: def common_field_intersection_bbox_px(
+  L221: def recommended_aperture_by_color(
+  L254: def dark_bpm_json_path(master_dark_fits: Path | str) -> Path:
+  L260: def compute_dark_column_bpm(
+  L309: def write_dark_bpm_json(
+  L328: def bad_columns_for_light_frame(
+  L357: def _fwhm_moment_at(arr: np.ndarray, xc: float, yc: float, *, half: int = 6) -> float:
+  L393: def aperture_flux_annulus_background(
+  L449: def enhance_catalog_dataframe_aperture_bpm(
+
+--- pipeline.py ---
+  L51: def _apply_aperture_catalog_enhancements_from_st(
+  L79: def _fits_header_positive_float(hdr: fits.Header, *keys: str) -> float | None:
+  L92: def _frame_gain_readnoise_for_error_map(
+  L116: def _per_frame_noise_error_map(data: Any, hdr: fits.Header, *, db: VyvarDatabase | None, equipment_id: int | None):
+  L127: def _apply_psf_catalog_enhancements_from_st(
+  L143: def _fill_psf_nan() -> None:
+  L218: def _vyvar_calibrate_multiprocessing_enabled() -> bool:
+  L224: def _cfg_calibration_library_native_binning(cfg: Any) -> int | None:
+  L239: def _log_calibration_io_preflight(
+  L306: def _pipeline_ui_info(msg: str) -> None:
+  L317: def _pipeline_ui_error(msg: str) -> None:
+  L328: def _ensure_parent_dirs_for_aligned_fits(out_path: Path) -> None:
+  L333: def _assert_alignment_produced_fits(aligned_root: Path) -> None:
+  L343: def _match_and_crop_pair(a: "np.ndarray", b: "np.ndarray") -> tuple["np.ndarray", "np.ndarray"]:
+  L356: def _safe_filter_token(text: str) -> str:
+  L363: def observation_group_key_from_metadata(meta: dict[str, Any]) -> str:
+  L374: def _iter_light_fits(lights_root: Path) -> list[Path]:
+  L379: def _filter_light_paths_maybe(
+  L387: def _norm(p: Path) -> str:
+  L423: def _archive_raw_to_calibrated_light(
+  L451: def _resolve_light_fits_for_quality_inspection(archive: Path, raw_fp: Path | str) -> Path | None:
+  L466: def _resolve_draft_light_raw_path(archive: Path, file_path: Path | str) -> Path | None:
+  L483: def _archive_preprocess_lights_root(ap: Path | str) -> Path:
+  L492: def resolve_masterstar_input_root(archive_path: Path | str, setup_name: str | None = None) -> Path:
+  L510: def _inspection_jd_from_header(hdr: fits.Header) -> float | None:
+  L552: def _exposure_sec_from_header(hdr: fits.Header) -> float | None:
+  L567: def _quality_inspection_dao_metrics(fp: Path) -> dict[str, Any]:
+  L589: def _dao_star_table_mean_roundness(tbl: Any) -> float | None:
+  L609: def _quality_inspection_dao_metrics_array(
+  L720: def draft_median_pointing_icrs_deg(db: VyvarDatabase, draft_id: int) -> tuple[float | None, float | None]:
+  L745: def resolve_preprocess_target_coordinates(
+  L802: def _estimate_fov_deg_from_header(hdr: fits.Header) -> float | None:
+  L832: def _estimate_fov_deg_from_fits_path(fp: Path) -> float | None:
+  L843: def _icrs_offset_arcmin(
+  L857: def sync_obs_files_drift_arcmin_for_draft(
+  L919: def generate_observation_hash(db: VyvarDatabase, draft_id: int) -> str:
+  L966: def run_quality_analysis(
+  L1102: def run_draft_ram_calibration_qc_to_obs_files(
+  L1146: def _dark_np_for_path(p: Path | None, light_binning: int) -> Any:
+  L1351: def calibrated_paths_for_draft_not_rejected(
+  L1380: def calibrated_paths_for_draft_apply_filters(
+  L1546: def first_calibrated_light_fits_under_archive(archive_path: Path | str) -> Path | None:
+  L1559: def format_memory_bytes(n: float | int) -> str:
+  L1574: def _as_fits_float32_image(data: Any) -> "np.ndarray":
+  L1581: def _fits_primary_pixel_count(header: fits.Header) -> int:
+  L1598: def _available_system_ram_bytes() -> tuple[int | None, str]:
+  L1608: def estimate_memory_from_fits_headers(
+  L1642: def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
+  L1720: def _cupy_available() -> bool:
+  L1730: def _iter_fits_recursive(root: Path) -> list[Path]:
+  L1735: def _header_vy_fwhm_px(hdr: fits.Header | None) -> float | None:
+  L1748: def _obs_fwhm_basename_map_from_db(db: VyvarDatabase, draft_id: int) -> dict[str, float]:
+  L1771: def _backfill_vyfwhm_headers_on_disk(
+  L1804: def _pick_masterstar_reference_index(
+  L1845: def _sort_masterstar_paths_by_fwhm(
+  L1875: def _masterstar_aligned_stack_combine(
+  L1954: def build_masterstar_from_detrended(
+  L2186: def _update_masterstar_obs_file_status(
+  L2242: def _resolve_best_effort_path_under(root: Path, raw_path: str) -> Path | None:
+  L2292: def resolve_obs_file_to_processed_fits(
+  L2315: def list_best_processed_light_paths_for_masterstar(
+  L2353: def get_masterstar_candidate_rows(
+  L2436: def get_masterstar_candidates(draft_id: int, percentage: float, *, db: VyvarDatabase) -> list[str]:
+  L2444: def _vyvar_open_database(cfg: AppConfig) -> VyvarDatabase | None:
+  L2451: def _fits_pixel_raw_to_micrometres(value: float) -> float:
+  L2463: def _header_focal_length_mm(header: fits.Header) -> float | None:
+  L2480: def get_auto_fov(*, archive_path: Path | None = None, masterstar_path: Path | None = None) -> float | None:
+  L2537: def _focal_mm_plausible(mm: float) -> bool:
+  L2541: def _resolve_focal_mm_for_plate_scale(
+  L2587: def _merge_equipment_pixel_into_metadata(meta: dict[str, Any], db: VyvarDatabase, equipment_id: int) -> None:
+  L2629: def _recompute_effective_pixel_from_physical(meta: dict[str, Any]) -> None:
+  L2648: def _header_pick_first(header: fits.Header, *keys: str, default: Any = None) -> Any:
+  L2655: def _enrich_calibration_metadata_from_header(
+  L2664: def _to_f(value: Any, default: float = 0.0) -> float:
+  L2714: def _apply_draft_combined_to_pipeline_meta(meta: dict[str, Any], comb: dict[str, Any]) -> None:
+  L2761: def _log_calibration_metadata_diagnostic(filename: str, metadata: dict[str, Any]) -> None:
+  L2771: def _plate_solve_input_bundle(
+  L2859: def _try_rescale_masterstar_linear_wcs_to_expected_plate_scale(
+  L2921: def _solve_wcs_solve_field_cli(
+  L3017: def _try_solve_wcs_astrometry_net_or_local_cli(
+  L3041: def _solve_wcs_astrometry_net(
+  L3102: def _apply_wcs_header_to_fits(fits_path: Path, wcs_hdr: fits.Header) -> None:
+  L3119: def _solve_wcs_external(
+  L3139: def _finalize_plate_solve_result(r: dict[str, Any]) -> dict[str, Any]:
+  L3164: def _try_vyvar(*, bundle: dict[str, Any] | None = None) -> dict[str, Any]:
+  L3250: def _has_valid_wcs(header: fits.Header) -> bool:
+  L3254: def _wcs_astrometry_nearly_identical(wa: WCS, wb: WCS, rtol: float = 1e-6) -> bool:
+  L3272: def _bin2d_mean(arr: "np.ndarray", factor: int) -> "np.ndarray":
+  L3288: def _dao_star_count_from_array(arr: "np.ndarray", *, fwhm_px: float = 3.0) -> int:
+  L3319: def _pick_reference_frame_by_star_count(files: list[Path]) -> tuple[Path, dict[str, int]]:
+  L3347: def _wcs_field_center_radec_deg(fits_path: Path) -> tuple[float, float] | None:
+  L3368: def _catalog_df_cap_brightest_by_mag(df: pd.DataFrame, max_rows: int | None = None) -> pd.DataFrame:
+  L3388: def _query_gaia_local(
+  L3484: def _query_vsx_local(
+  L3553: def _saturate_limit_adu_from_header(hdr: fits.Header) -> float | None:
+  L3569: def _infer_sat_limit_from_bitpix(hdr: fits.Header) -> float | None:
+  L3591: def _equipment_saturate_adu_from_db(equipment_id: int | None) -> float | None:
+  L3609: def _effective_saturation_limit(
+  L3649: def _box_peak_max_adu(data: "np.ndarray", x: float, y: float, half: int = 3) -> float:
+  L3666: def _box_peaks_at_centroids(
+  L3707: def _icrs_deg_to_unitxyz(ra_deg: "np.ndarray", dec_deg: "np.ndarray") -> "np.ndarray":
+  L3717: def _chord_to_arcsec(dist_chord: "np.ndarray") -> "np.ndarray":
+  L3726: def build_ucac_catalog_kdtree(cat_df: pd.DataFrame) -> tuple[Any, "np.ndarray"] | None:
+  L3749: def nearest_sky_nn_kdtree(
+  L3775: def _saturated_core_plateau(
+  L3813: def _star_saturation_flags(
+  L3851: def _all_pix2world_icrs_deg(wcs_obj: WCS, x: "np.ndarray", y: "np.ndarray") -> tuple["np.ndarray", "np.ndarray"]:
+  L3866: def _saturated_core_plateau_vectorized(
+  L3899: def _vectorized_star_saturation_columns(
+  L3951: def _vyvar_df_to_csv(df: pd.DataFrame, path: Path | str) -> None:
+  L3968: def _fits_header_first_positive_float(hdr: fits.Header, keys: tuple[str, ...]) -> float | None:
+  L3981: def _gaia_catalog_cone_radius_optics_floor_deg(
+  L4022: def _field_center_and_radius_from_wcs(w: WCS, h: int, wpx: int) -> tuple[SkyCoord, float]:
+  L4063: def _effective_field_catalog_cone_radius_deg(
+  L4105: def _invalidate_field_catalog_cone_cache_if_needed(
+  L4151: def _field_catalog_cone_meta_path(field_catalog_csv: Path) -> Path:
+  L4155: def _write_field_catalog_cone_meta(
+  L4180: def select_comparison_stars_spatial_grid(
+  L4280: def _annotate_masterstars_flux_zones(
+  L4354: def write_photometry_plan_files(
+  L4595: def _dao_auto_binning_factor(h: int, w: int) -> int:
+  L4603: def _mean_bin2d_for_dao(data0: "np.ndarray", factor: int) -> tuple["np.ndarray", int]:
+  L4618: def _dao_xy_binned_to_full(x: "np.ndarray", y: "np.ndarray", f: int) -> tuple["np.ndarray", "np.ndarray"]:
+  L4628: def _prefilter_dao_table_brightest(tbl: Any, keep_top: int) -> Any:
+  L4640: def _dao_spatial_flux_cap_row_indices(
+  L4694: def detect_stars_match_master_reference(
+  L5134: def _merge_platesolve_gaia_pairs_into_masterstars_df(
+  L5180: def detect_stars_and_match_catalog(
+  L6099: def _vyvar_parallel_use_processes() -> bool:
+  L6106: def _vyvar_parallel_pool(max_workers: int):
+  L6116: def _icrs_center_radius_from_hdr_data(
+  L6143: def _export_first_icrs_center_radius(
+  L6172: def _prefetch_export_shared_catalog_for_process_pool(
+  L6263: def _init_export_per_frame_worker(state: dict[str, Any]) -> None:
+  L6286: def _export_per_frame_run_catalog_core(
+  L6574: def _export_per_frame_disk_worker_task(fp_str: str) -> dict[str, Any]:
+  L6595: def _export_per_frame_ram_worker_task(
+  L6629: def export_per_frame_catalogs(
+  L6817: def _refresh_shared_cat_kdtree() -> None:
+  L6942: def _append_deferred_csv(p: Path, df: pd.DataFrame) -> None:
+  L6945: def _ensure_cone_and_variables(
+  L7003: def _run_one_catalog(base_path: Path, hdr: fits.Header, data: np.ndarray) -> dict[str, Any]:
+  L7148: def _process_frame(fp: Path) -> dict[str, Any]:
+  L7160: def _process_ram_item(item: tuple[str, fits.Header, Any]) -> dict[str, Any]:
+  L7168: def _catalog_worker_state() -> dict[str, Any]:
+  L7367: def validate_comparison_ensemble_flatness(
+  L7495: def _apply_wcs_tan_fragment_to_header(h: fits.Header, wh: fits.Header, history_note: str) -> None:
+  L7509: def _gaia_sky_match_wcs_fragment(
+  L7542: def _refine_masterstar_wcs_gaia_sky_match_infile(
+  L7569: def generate_masterstar_and_catalog(
+  L7987: def _run_masterstar_vyvar_solve(*, enable_sip: bool, sip_max_order: int, fov_deg: float, max_rows: int) -> dict[str, Any]:
+  L8940: def _partition_detrended_by_subfolder(files: list[Path], detrended_root: Path) -> dict[str, list[Path]]:
+  L8962: def _merge_astrometry_group_reports(rows: list[dict[str, Any]]) -> dict[str, Any]:
+  L8989: def _astrometry_align_impl_body(
+  L9112: def _prog(msg: str) -> None:
+  L9212: def _maybe_refine_aligned(
+  L9218: def _as_alignment_points(sources: Any, *, label: str) -> np.ndarray:
+  L9252: def _detect_xy(
+  L9550: def _run_astroalign_points(
+  L9581: def _load_masterstar_catalog_points_for_frame(hdr_frame: fits.Header, *, shape_hw: tuple[int, int]) -> np.ndarray:
+  L9951: def _cat_prog(i: int, tot: int, msg: str) -> None:
+  L10080: def astrometry_align_and_build_masterstar(
+  L10298: def _header_positive_float(hdr: fits.Header, *keys: str) -> float | None:
+  L10312: def _resolve_cosmic_gain_readnoise(
+  L10362: def _satlevel_electrons_from_header(hdr: fits.Header, gain: float) -> float | None:
+  L10371: def _db_for_cosmic(db: VyvarDatabase | None, db_path: str | Path | None) -> VyvarDatabase | None:
+  L10382: def _db_for_calibration_tasks(
+  L10402: def _cosmic_pack_from_config(
+  L10420: def _qc_pack_from_config(
+  L10457: def _qc_center_crop_for_stars(data: "np.ndarray", max_side: int = 1000) -> "np.ndarray":
+  L10474: def _half_flux_radius_in_cutout(cut: "np.ndarray", xc: float, yc: float) -> float:
+  L10494: def _mean_hfr_bright_stars_dao(
+  L10557: def _post_calibration_qc_eval(
+  L10631: def _maybe_cosmic_clean_calibrated_frame(
+  L10647: def _strip_raw_linearity_header_keywords(hdr: fits.Header) -> None:
+  L10669: def _vy_calib_status_numeric(flags: str) -> int:
+  L10679: def _hdr_vy_cflag_str(hdr: fits.Header) -> str:
+  L10688: def _calibration_flags(
+  L10708: def _calibration_type_from_flags(flags: str) -> str:
+  L10723: def _calibrate_one_light_apply_masters_in_ram(
+  L10921: def _calibrate_one_light_disk(
+  L11022: def _init_calibrate_batch_worker(initargs: tuple[str | None, int | None]) -> None:
+  L11039: def _calibrate_batch_process_one(
+  L11107: def _has_usable_master_dark(path: Path | None) -> bool:
+  L11111: def _has_any_usable_master_flat(masterflat_by_filter: dict[str, Path | None] | None) -> bool:
+  L11120: def _passthrough_lights_to_calibrated(
+  L11211: def calibrate_lights_to_calibrated(
+  L11303: def _dark_np_for_path(p: Path | None, light_binning: int) -> Any:
+  L11406: def _one_sequential(i: int, src: Path, dst: Path) -> None:
+  L11614: def _safe_proc_name(original_name: str) -> str:
+  L11623: def _fit_background_poly2d(data: "np.ndarray", order: int) -> "np.ndarray":
+  L11696: def _background2d_mesh_box_size(shape: tuple[int, ...]) -> int:
+  L11703: def _background_subtract(
+  L11744: def _remove_cosmics_lacosmic(
+  L11785: def _estimate_dao_fwhm_guess(img2: "np.ndarray", std: float) -> float:
+  L11823: def _qc_fwhm_elongation(
+  L11841: def _maybe_flip(sign_img: "np.ndarray", std_val: float) -> "np.ndarray":
+  L12155: def _vyvar_qc_preprocess_workers() -> int:
+  L12173: def _estimate_catalog_frame_hw(
+  L12197: def _vyvar_cap_mp_workers_for_catalog(
+  L12220: def _vyvar_per_frame_csv_workers(app_config: AppConfig | None = None) -> int:
+  L12244: def _analyze_calibrated_qc_one(
+  L12283: def _preprocess_calibrated_one(
+  L12394: def _analyze_preprocess_combined_one(
+  L12519: def preprocess_calibrated_to_processed(
+  L12582: def _median_pointing_from_headers(files: Sequence[Path]) -> tuple[float | None, float | None]:
+  L12706: def analyze_calibrated_qc(
+  L12788: def analyze_preprocess_calibrated_combined(
+  L12915: def _qc_suggest_thresholds(df: "pd.DataFrame") -> dict[str, float | int | None]:
+  L12933: def _robust_suggest(x: "np.ndarray", k: float) -> float | None:
+  L12964: def _apply_temporal_sigma_clip_in_place(
+  L13073: def scan_calibrated_lights_pointing(
+  L13124: def _parse_fits_binning_int(raw: Any, default: int = 1) -> int:
+  L13132: def _log_effective_pixel_pitch(meta: dict[str, Any], *, filepath: str = "") -> None:
+  L13150: def fits_metadata_from_primary_header(
+  L13162: def _pick(*keys: str, default: Any = None) -> Any:
+  L13168: def _to_float(value: Any, default: float = 0.0) -> float:
+  L13176: def _parse_ra_deg(value: Any) -> float:
+  L13197: def _parse_dec_deg(value: Any) -> float:
+  L13323: def extract_fits_metadata(
+  L13434: def scan_usb_folder(path: Path | str) -> pd.DataFrame:
+  L13455: def _classify(text: str) -> str:
+  L13465: def _fits_files(folder: Path) -> list[Path]:
+  L13542: class AstroPipeline:
+  L13545: def __init__(self, config: AppConfig | None = None) -> None:
+  L13549: def calibrate(self, session_path: Path | str) -> Any:
+  L13558: def quick_calibrate_last_import(
+  L13619: def calibrate_batch(
+  L13812: def quick_preprocess_last_import(
+  L13898: def quick_analyze_last_import(
+  L13937: def align(self, session_path: Path | str) -> Any:
+  L13942: def photometry(self, session_path: Path | str) -> Any:
+  L13948: def _first_fits_file(session_path: Path | str) -> Path:
+  L13959: def prepare_observation_from_session(
+  L13992: def create_observation_from_payload(self, payload: dict[str, Any]) -> str:
+
+--- psf_photometry.py ---
+  L29: def _clamp_fwhm_px(v: float) -> float:
+  L33: def _median_fwhm_obs_files(db: VyvarDatabase, draft_id: int) -> float | None:
+  L54: def get_epsf_fwhm_from_context(
+  L82: def _to_odd_cutout(n: int) -> int:
+  L89: def _scalar_is_explicit_false(v: Any) -> bool:
+  L105: def _scalar_is_explicit_true(v: Any) -> bool:
+  L121: def _norm_catalog_id(v: Any) -> str:
+  L149: def _fit_shape_for_cutout(cutout_size: int) -> tuple[int, int]:
+  L157: def build_epsf_model(
+  L180: def _csv_catalog_id_cell(raw: Any) -> str:
+  L285: def psf_photometry_stars(
+
+--- time_utils.py ---
+  L19: def _warn_once(key: str, message: str) -> None:
+  L26: def _clamp_lat(v: float) -> float:
+  L30: def _clamp_lon(v: float) -> float:
+  L39: def _clamp_elev(v: float) -> float:
+  L43: def _header_float(hdr: fits.Header, key: str) -> float | None:
+  L55: def mid_exposure_jd(header: fits.Header) -> float | None:
+  L96: def compute_hjd_bjd(
+  L124: def resolve_observer_location(
+  L168: def _parse_objctradec(ra_s: str, dec_s: str) -> tuple[float | None, float | None]:
+  L183: def resolve_target_coordinates(
+  L222: def compute_time_columns(
+
+--- ui_calibration.py ---
+  L17: def render_calibration_equipment_header(
+  L76: def render_calibration_library_flat_warnings(db: VyvarDatabase, plan: Any) -> None:
+  L96: def _read_bin_safe(p: str | Path | None) -> int | None:
+  L108: def build_master_calibration_files_dataframe(plan: Any) -> pd.DataFrame:
+  L171: def _group_keys_by_filter_exp(plan: Any) -> dict[tuple[str, float], list[str]]:
+  L184: def _count_calibrated_fits(archive_path: Path, group_keys: list[str]) -> int:
+  L197: def _plate_solve_ok_for_groups(archive_path: Path, group_keys: list[str]) -> bool:
+  L213: def _preview_calibration_status(plan: Any, gks: list[str]) -> str:
+  L227: def build_multi_observation_status_dataframe(
+  L268: def draft_runtime_status(
+
+--- ui_calibration_library.py ---
+  L17: def _iter_master_fits(root: Path) -> list[Path]:
+  L26: def _parse_kind_from_name(path: Path, header: fits.Header) -> str | None:
+  L36: def _date_text(header: fits.Header, path: Path) -> str:
+  L43: def _status_for_age(age_days: float, limit_days: int) -> str:
+  L52: def _status_style(v: Any) -> str:
+  L63: def _equipment_telescope_labels(tags: dict[str, Any] | None) -> tuple[str, str]:
+  L78: def _build_rows(
+  L141: def _df_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
+  L147: def _row_delete_label(row: dict[str, Any], library_root: Path) -> str:
+  L156: def _render_master_delete_block(
+  L194: def _delete_paths(paths: list[Path], db: VyvarDatabase | None) -> tuple[int, list[str]]:
+  L209: def render_calibration_library_dashboard(
+
+--- ui_components.py ---
+  L25: def persist_draft_center_on_change(
+  L77: def render_masterstar_selection_qc(
+  L152: def render_photometric_grid_qa(*, pipeline: AstroPipeline, draft_id: int | None) -> None:
+
+--- ui_dao_stars.py ---
+  L10: def render_dao_stars_dashboard(cfg: AppConfig) -> None:
+
+--- ui_database_explorer.py ---
+  L16: def _row_active_for_style(row: pd.Series, col: str = "ACTIVE") -> bool:
+  L33: def _render_universal_main_table(
+  L116: def render_database_explorer(pipeline: AstroPipeline) -> None:
+
+--- ui_finalization.py ---
+  L16: def _copy_finalization_files(
+  L68: def _draft_scan_row(db: Any, draft_id: int) -> dict[str, Any] | None:
+  L84: def _draft_location_name(db: Any, draft_id: int) -> str:
+  L104: def _n_light_frames(db: Any, draft_id: int) -> int:
+  L120: def _csv_nonempty(path: Path) -> bool:
+  L130: def render_finalization(
+  L389: def render_known_field_banner(
+
+--- ui_masterstar_qa.py ---
+  L16: def _cached_msqa_vsx_chip_table(
+  L72: def render_masterstar_qa() -> None:
+
+--- ui_photometry.py ---
+  L10: def render_photometry_dashboard(cfg: AppConfig) -> None:
+
+--- ui_photometry_quality.py ---
+  L16: def _platesolve_dir_with_comparison(archive: Path) -> Path:
+  L27: def _read_csv_cached(path: str) -> pd.DataFrame:
+  L32: def _read_fits_image_cached(path: str) -> tuple[np.ndarray, dict[str, Any]]:
+  L42: def _bool_series(df: pd.DataFrame, col: str) -> pd.Series:
+  L58: def _catalog_id_key(s: pd.Series) -> pd.Series:
+  L67: def render_photometry_quality_diagnostic(*, pipeline: Any, draft_id: int | None) -> None:
+  L185: def _draw_circles(mask: pd.Series, *, outline: tuple[int, int, int], r: float, width: int = 2) -> None:
+  L193: def _draw_dots(mask: pd.Series, *, fill: tuple[int, int, int], r: float) -> None:
+  L201: def _draw_squares(mask: pd.Series, *, outline: tuple[int, int, int], s: float, width: int = 2) -> None:
+
+--- ui_photometry_results.py ---
+  L41: def _draft_archive_path(pipeline: Any, draft_id: int | None) -> Path | None:
+  L59: def _cid_key(v: Any) -> str:
+  L75: def _to_bool(v: Any) -> bool:
+  L86: def _jd_from_fits_header(path: Path) -> float | None:
+  L134: def _collect_per_frame_csv_paths(archive: Path) -> list[Path]:
+  L159: def _normalize_sidecar_dataframe(df: pd.DataFrame, csv_path: Path) -> pd.DataFrame:
+  L243: def _load_comp_and_targets(
+  L276: def _compute_differential_mag(
+  L430: def _plot_light_curve(
+  L486: def _load_per_frame_sidecars(pipeline: Any, draft_id: int | None) -> pd.DataFrame | None:
+  L551: def _platesolve_dir(archive: Path, combined: pd.DataFrame | None = None) -> Path:
+  L573: def _read_optional_csv(path: Path) -> pd.DataFrame | None:
+  L582: def _target_options(archive: Path, combined: pd.DataFrame) -> tuple[list[str], dict[str, str]]:
+  L611: def _comparison_options(archive: Path, combined: pd.DataFrame, *, max_opts: int = 10) -> tuple[list[str], dict[str, str]]:
+  L641: def _series_for_star(combined: pd.DataFrame, cid: str, *, mag_col: str, flux_col: str) -> pd.DataFrame:
+  L657: def render_aperture_results(pipeline: Any, draft_id: int | None) -> None:
+  L859: def render_psf_results(pipeline: Any, draft_id: int | None) -> None:
+  L1134: def render_comp_validation(pipeline: Any, draft_id: int | None) -> None:
+  L1196: def _verdict(r: pd.Series) -> str:
+  L1258: def render_variable_detection(pipeline: Any, draft_id: int | None) -> None:
+
+--- ui_quality_dashboard.py ---
+  L35: def _preview_path_from_plotly_state(state: Any) -> str | None:
+  L57: def _coerce_editor_df(raw: Any) -> pd.DataFrame:
+  L65: def _make_is_rejected_persist_handler(draft_id: int, editor_key: str, db: VyvarDatabase):
+  L66: def _on_change() -> None:
+  L85: def _jd_and_utc_strings(jd_val: Any) -> tuple[str, str]:
+  L99: def _prepare_hover_time_fields(df: pd.DataFrame) -> pd.DataFrame:
+  L113: def _add_traces_by_filter(
+  L162: def _add_fwhm_traces_with_limit(
+  L235: def render_quality_dashboard(
+  L261: def _stage_center_update(ra_val: Any, de_val: Any) -> None:
+
+--- utils.py ---
+  L27: def iter_fits_paths_recursive(root: Path | str) -> list[Path]:
+  L86: def strip_celestial_wcs_keys(hdr: fits.Header) -> None:
+  L96: def header_key_is_celestial_wcs(k: str) -> bool:
+  L101: def fits_header_has_celestial_wcs(header: fits.Header) -> bool:
+  L112: def wcs_distortion_log_suffix(header: fits.Header) -> str:
+  L129: def wcs_rotation_angle_deg(header: fits.Header) -> float | None:
+  L152: def circular_angle_diff_deg(a_deg: float, b_deg: float) -> float:
+  L160: def robust_stacking(
+  L243: def mean_stacking(
+  L305: def effective_binned_pixel_pitch_um(*, base_pixel_um_1x1: float, binning: int) -> float:
+  L315: def fits_binning_xy_from_header(header: fits.Header) -> tuple[int, int]:
+  L317: def _one(raw: object, default: int = 1) -> int:
+  L328: def normalize_telescope_focal_mm_for_plate_scale(raw_mm: float) -> tuple[float, bool]:
+  L359: def effective_astrometry_net_tweak_order() -> int:
+  L376: def dao_detection_fwhm_pixels(header: fits.Header | None, *, configured_fallback: float | None) -> float | None:
+  L401: def catalog_cone_radius_from_fov_diameter_deg(fov_diameter_deg: float) -> float:
+  L409: def plate_scale_arcsec_per_pixel(*, pixel_pitch_um: float, focal_length_mm: float) -> float | None:
+  L424: def get_optimal_params(
+  L481: def catalog_cone_radius_deg_from_optics(
+  L517: def astrometry_net_scale_bounds_arcsec_per_pix(scale_arcsec_per_px: float) -> tuple[float, float]:
+  L538: def maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel(
+  L591: def estimate_field_diameter_deg_diagonal(
+  L607: def generate_session_id(ts: datetime | None = None, random_bytes: int = 3) -> str:
+  L615: def session_paths(archive_root: Path, session_id: str) -> dict[str, Path]:
+  L626: def ensure_session_dirs(archive_root: Path, session_id: str) -> dict[str, Path]:
+
+--- vyvar_platesolver.py ---
+  L61: class PointingRequiredError(ValueError):
+  L66: class ResolvedPointing:
+  L77: def _fits_header_pick(header: fits.Header, *keys: str) -> Any:
+  L84: def _fits_header_parse_ra_deg(value: Any) -> float | None:
+  L112: def _fits_header_parse_dec_deg(value: Any) -> float | None:
+  L134: def pointing_hint_from_header(header: fits.Header) -> tuple[float | None, float | None, str]:
+  L174: def parse_user_ra_string_to_deg(text: str) -> float:
+  L227: def parse_user_dec_string_to_deg(text: str) -> float:
+  L279: def resolve_pointing_for_vyvar(
+  L305: def _triangle_sorted_sides_pixel(xa: float, ya: float, xb: float, yb: float, xc: float, yc: float) -> tuple[float, float, float]:
+  L313: def _triangle_sorted_sides_arcsec(c0: SkyCoord, c1: SkyCoord, c2: SkyCoord) -> tuple[float, float, float]:
+  L321: def _ratios(s1: float, s2: float, s3: float) -> tuple[float, float] | None:
+  L327: def _scale_consistent(s_img: tuple[float, float, float], s_arc: tuple[float, float, float], rtol: float) -> bool:
+  L333: def _empirical_median_plate_scale_arcsec_per_px(
+  L370: def _triangle_angles_sorted_from_sides(s1: float, s2: float, s3: float) -> tuple[float, float, float] | None:
+  L376: def _ang(opposite: float, u: float, v: float) -> float | None:
+  L394: def _linear_tan_predict_pixels(wcs_obj: WCS, ra_deg: np.ndarray, dec_deg: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+  L401: def _wcs_pixel_rms_linear(wcs_obj: WCS, x_obs: np.ndarray, y_obs: np.ndarray, world: SkyCoord) -> float:
+  L406: def _wcs_pixel_rms_full(wcs_obj: WCS, x_obs: np.ndarray, y_obs: np.ndarray, world: SkyCoord) -> float:
+  L411: def _filter_catalog_to_fov(df: pd.DataFrame, *, naxis1: int, naxis2: int) -> pd.DataFrame:
+  L421: def _sip_uv_term_indices(max_order: int, min_total_degree: int = 2) -> list[tuple[int, int]]:
+  L433: def _sip_fill_ab(coefx: np.ndarray, coefy: np.ndarray, idxs: list[tuple[int, int]], max_order: int) -> tuple[np.ndarray, np.ndarray]:
+  L443: def _fit_sip_on_matches(
+  L570: def _fit_sip_on_matches_masterstar_try_orders(
+  L613: def _fit_sip_for_solver(
+  L647: def _ransac_fit_wcs_tan(
+  L685: def _greedy_match_pairs_pixel_wcs(
+  L758: def _greedy_pixel_nn_one_to_one(
+  L828: def _refine_wcs_tan_nn_gaia(
+  L888: def _log_wcs_orientation_header_hints(wcs_obj: WCS, hdr: fits.Header) -> None:
+  L932: def _mirror_detections_xy(
+  L950: def _gaia_triangle_greedy_orientation_probe(
+  L1127: def _fits_header_strip_sip(hdr: fits.Header) -> fits.Header:
+  L1146: def _wcs_linear_without_sip(wcs_in: WCS) -> WCS | None:
+  L1160: def _equalize_wcs_cd_axes_to_target_arcsec(
+  L1211: def _maybe_repair_masterstar_anisotropic_plate_scale(
+  L1301: def solve_wcs_with_local_gaia(
+
+### IMPORTY ###
+
+--- app.py ---
+  from config import AppConfig
+  from database import DraftTechnicalMetadataError
+  from infolog import clear_log, ensure_infolog_logging, get_lines, log_event, last_job_snapshot
+  from importer import smart_import_session, smart_scan_source
+  from pipeline import AstroPipeline, scan_usb_folder
+  from utils import generate_session_id
+
+--- astrometry_optimizer.py ---
+  from database import get_gaia_db_max_g_mag, query_local_gaia
+  from infolog import log_event
+  from utils import strip_celestial_wcs_keys
+
+--- calibration.py ---
+  from database import VyvarDatabase
+  from infolog import log_event
+
+--- database.py ---
+  from infolog import log_event
+  from utils import normalize_telescope_focal_mm_for_plate_scale
+
+--- importer.py ---
+  from config import AppConfig
+  from database import DraftTechnicalMetadataError, VyvarDatabase
+  from infolog import log_event
+  from pipeline import extract_fits_metadata, fits_metadata_from_primary_header
+  from utils import plate_scale_arcsec_per_pixel
+
+--- photometry.py ---
+  from utils import fits_binning_xy_from_header
+
+--- pipeline.py ---
+  from config import AppConfig, load_config_json
+  from database import DraftTechnicalMetadataError, VyvarDatabase, query_local_gaia, query_local_vsx
+  from photometry import (
+  from infolog import log_event, log_exception
+  from calibration import (
+  from utils import (
+  from vyvar_platesolver import (
+
+--- psf_photometry.py ---
+  from database import VyvarDatabase
+  from infolog import log_event
+
+--- time_utils.py ---
+  from database import VyvarDatabase
+  from infolog import log_event
+
+--- ui_calibration.py ---
+  from calibration import read_master_binning_from_fits
+  from database import VyvarDatabase
+  from importer import observation_group_folder_name
+
+--- ui_calibration_library.py ---
+  from calibration import get_master_age_days, read_master_binning_from_header
+  from database import VyvarDatabase
+  from importer import generate_master_dark_from_source_dir, generate_master_flat_from_source_dir
+
+--- ui_components.py ---
+  from pipeline import (
+  from infolog import log_event
+
+--- ui_dao_stars.py ---
+  from config import AppConfig, save_config_json
+
+--- ui_database_explorer.py ---
+  from database import VyvarDatabase
+  from importer import quicklook_preview_png_bytes
+  from pipeline import AstroPipeline
+
+--- ui_finalization.py ---
+  from infolog import log_event
+
+--- ui_photometry.py ---
+  from config import AppConfig, save_config_json
+
+--- ui_photometry_results.py ---
+  from infolog import log_event
+
+--- ui_quality_dashboard.py ---
+  from database import VyvarDatabase
+  from infolog import log_event
+  from importer import quicklook_preview_png_bytes
+  from pipeline import _resolve_light_fits_for_quality_inspection
+
+--- vyvar_platesolver.py ---
+  from config import AppConfig
+  from database import get_gaia_db_max_g_mag
+  from infolog import log_event, log_gaia_query
+  from utils import (
+
+### DUPLICITNE FUNKCIE ###
+
+DUPLIKAT: main
+  app.py : L1928
+  debug_qc.py : L11
+
+DUPLIKAT: _iter_fits_recursive
+  photometry.py : L29
+  pipeline.py : L1730
+
+### CONFIG.JSON ###
+{
+  "archive_root": "C:\\ASTRO\\python\\VYVAR\\Archive",
+  "calibration_library_root": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary",
+  "database_path": "C:\\ASTRO\\python\\VYVAR\\vyvar.sqlite3",
+  "masterdark_validity_days": 60,
+  "masterflat_validity_days": 524,
+  "plate_solve_fov_deg": 1.0,
+  "calibration_library_native_binning": 1,
+  "gaia_db_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3.db",
+  "vsx_local_db_path": "C:\\ASTRO\\python\\VYVAR\\VSX\\vyvar_vsx_local.db",
+  "vsx_variable_targets_mag_limit": 12.0,
+  "catalog_query_max_rows": 15000,
+  "photometry_fallback_saturate_adu": 65535.0,
+  "force_pixel_size": null,
+  "qc_preprocess_workers": 16,
+  "per_frame_csv_workers": 6,
+  "per_frame_catalog_match_sep_arcsec": 20.0,
+  "per_frame_mp_reserve_ram_gb": 1.5,
+  "alignment_max_stars": 200,
+  "alignment_detection_sigma": 5.0,
+  "qc_dao_detection_sigma": 5.0,
+  "sips_dao_fwhm_px": 2.5,
+  "sips_dao_threshold_sigma": 3.5,
+  "stacking_sigma": 3.0,
+  "stacking_iters": 5,
+  "cosmic_clean_enabled": true,
+  "cosmic_sigclip": 4.5,
+  "cosmic_objlim": 5.0,
+  "qc_after_calibrate_enabled": true,
+  "qc_max_hfr": 5.0,
+  "qc_min_stars": 10,
+  "qc_max_background_rms": null,
+  "aperture_photometry_enabled": true,
+  "psf_photometry_enabled": false,
+  "aperture_fwhm_factor": 1.7,
+  "annulus_inner_fwhm": 4.0,
+  "annulus_outer_fwhm": 6.0,
+  "nonlinearity_peak_percentile": 20.0,
+  "nonlinearity_fwhm_ratio": 1.25,
+  "bpm_dark_mad_sigma": 5.0,
+  "masterstar_skip_global_background_subtract": true,
+  "masterstar_n_stack": 1,
+  "masterstar_backfill_vyfwhm_from_db": true,
+  "masterstar_solver_use_draft_median_if_hint_sep_deg": 1.0,
+  "masterstar_log_astroalign": true,
+  "masterstar_optimizer_mirror_extra_log": true,
+  "masterstar_platesolve_sip_max_order": 4,
+  "masterstar_platesolve_sip_min_order": 3,
+  "masterstar_dao_threshold_sigma": 0.65,
+  "masterstar_prematch_peak_sigma_floor": 2.0,
+  "masterstar_platesolve_expected_arcsec_per_px": null,
+  "masterstar_platesolve_prewrite_rms_max_px": null,
+  "masterstar_platesolve_prewrite_relaxed_rms_max_px": null,
+  "masterstar_platesolve_nn_refine_max_rms_px": null,
+  "masterstar_sip_force_rms_guard_ratio": 1.15
+}
+
+### TODO / FIXME / HACK ###
+  app.py:249: st.session_state["vyvar_pending_job"] = {
+  app.py:662: st.session_state["vyvar_pending_job"] = {
+  app.py:701: pending = st.session_state.get("vyvar_pending_job")
+  app.py:702: if pending:
+  app.py:706: "process": str(pending.get("label") or pending.get("kind") or "úloha"),
+  app.py:715: ap = Path(pending.get("archive_path", "")) if pending.get("archive_path") else None
+  app.py:716: _hide_inline_job_status = str(pending.get("kind") or "").strip().lower() in {
+  app.py:724: else st.status(pending.get("label", "Running…"), expanded=False)
+  app.py:730: log_event(f"— Spúšťam: {pending.get('kind')} — {ap}")
+  app.py:742: "process": str(pending.get("label") or pending.get("kind") or "úloha"),
+  app.py:751: if pending.get("kind") == "analyze":
+  app.py:768: _draft_a = pending.get("draft_id")
+  app.py:773: _eq_a = pending.get("equipment_id")
+  app.py:810: pending.get("roundness_reject_above")
+  app.py:811: if pending.get("roundness_reject_above") is not None
+  app.py:873: elif pending.get("kind") == "preprocess":
+  app.py:884: _dqf = pending.get("quality_filter_draft_id")
+  app.py:885: _fwhm_lim = float(pending.get("fwhm_limit_px") or 0.0)
+  app.py:890: background_method=str(pending.get("background_method", "background2d")),
+  app.py:891: poly_order=int(pending.get("poly_order", 2)),
+  app.py:892: lacosmic_sigclip=float(pending.get("sigclip", 4.5)),
+  app.py:893: lacosmic_objlim=float(pending.get("objlim", 5.0)),
+  app.py:894: enable_lacosmic=bool(pending.get("enable_lacosmic", False)),
+  app.py:896: pending.get("enable_background_flattening", False)
+  app.py:904: inject_pointing_ra_deg=pending.get("inject_pointing_ra_deg"),
+  app.py:905: inject_pointing_dec_deg=pending.get("inject_pointing_dec_deg"),
+  app.py:1006: _ph_done = pending.get("processing_hash")
+  app.py:1007: _dqf_done = pending.get("quality_filter_draft_id")
+  app.py:1013: overwrite=bool(pending.get("overwrite_qc_processing")),
+  app.py:1019: elif pending.get("kind") == "quality_analysis":
+  app.py:1022: _qd = int(pending["draft_id"])
+  app.py:1023: _rna_q = pending.get("roundness_reject_above")
+  app.py:1041: elif pending.get("kind") == "platesolve":
+  app.py:1048: pending.get("dao_fwhm_px", getattr(pipeline.config, "sips_dao_fwhm_px", 2.5)),
+  app.py:1054: pending.get(
+  app.py:1065: pending.get("dao_fwhm_px", st.session_state.get("dao_fwhm_px", _cfg_run.sips_dao_fwhm_px))
+  app.py:1071: pending.get(
+  app.py:1078: _peq = pending.get("id_equipment")
+  app.py:1079: _draft_ps = pending.get("draft_id")
+  app.py:1080: _ms_pct_job = pending.get("masterstar_selection_pct")
+  app.py:1100: astrometry_api_key=(str(pending.get("astrometry_api_key", "")).strip() or None),
+  app.py:1101: max_control_points=int(pending.get("max_control_points", 180)),
+  app.py:1102: min_detected_stars=int(pending.get("min_detected_stars", 100)),
+  app.py:1103: max_detected_stars=int(pending.get("max_detected_stars", 500)),
+  app.py:1104: platesolve_backend=str(pending.get("platesolve_backend", "vyvar")),
+  app.py:1105: plate_solve_fov_deg=float(pending.get("plate_solve_fov_deg", 1.0)),
+  app.py:1106: max_extra_platesolve=int(pending.get("max_extra_platesolve", 0)),
+  app.py:1108: pending.get("catalog_match_max_sep_arcsec", 25.0)
+  app.py:1110: saturate_level_fraction=float(pending.get("saturate_level_fraction", 0.999)),
+  app.py:1111: max_catalog_rows=int(pending.get("max_catalog_rows", 12000)),
+  app.py:1112: n_comparison_stars=int(pending.get("n_comparison_stars", 150)),
+  app.py:1115: if pending.get("faintest_mag_limit") is None
+  app.py:1116: else float(pending["faintest_mag_limit"])
+  app.py:1119: pending.get(
+  app.py:1128: pending.get("build_masterstar_and_catalogs", False)
+  app.py:1132: masterstar_candidate_paths=list(pending.get("masterstar_candidate_paths") or []),
+  app.py:1146: elif pending.get("kind") == "masterstar_catalog_only":
+  app.py:1153: _ms_fits_only = bool(pending.get("masterstar_fits_only"))
+  app.py:1154: _ms_skip_build = bool(pending.get("masterstar_skip_build"))
+  app.py:1157: f"— MASTERSTAR (len FITS, bez solve): ui_action={pending.get('masterstar_ui_action')!r}, "
+  app.py:1158: f"build_mode={pending.get('masterstar_build_mode')!r}, "
+  app.py:1159: f"stack_n={pending.get('masterstar_stack_n')!r} — zápis do platesolve/…"
+  app.py:1164: f"(skip build z processed), draft_id={pending.get('draft_id')!r}."
+  app.py:1171: pending.get("dao_fwhm_px", getattr(pipeline.config, "sips_dao_fwhm_px", 2.5)),
+  app.py:1177: pending.get(
+  app.py:1188: pending.get("dao_fwhm_px", st.session_state.get("dao_fwhm_px", _cfg_run.sips_dao_fwhm_px))
+  app.py:1194: pending.get(
+  app.py:1201: _peq_ms = pending.get("id_equipment")
+  app.py:1202: _draft_ms = pending.get("draft_id")
+  app.py:1203: _ms_pct_mc = pending.get("masterstar_selection_pct")
+  app.py:1212: _ms_bm = pending.get("masterstar_build_mode")
+  app.py:1213: _ms_sn_raw = pending.get("masterstar_stack_n")
+  app.py:1242: max_catalog_rows=int(pending.get("max_catalog_rows", 12000)),
+  app.py:1243: astrometry_api_key=(str(pending.get("astrometry_api_key", "")).strip() or None),
+  app.py:1244: platesolve_backend=str(pending.get("platesolve_backend", "vyvar")),
+  app.py:1246: pending.get("plate_solve_fov_deg", 1.0)
+  app.py:1249: pending.get("catalog_match_max_sep_arcsec", 25.0)
+  app.py:1251: saturate_level_fraction=float(pending.get("saturate_level_fraction", 0.999)),
+  app.py:1252: n_comparison_stars=int(pending.get("n_comparison_stars", 150)),
+  app.py:1255: if pending.get("faintest_mag_limit") is None
+  app.py:1256: else float(pending["faintest_mag_limit"])
+  app.py:1259: pending.get(
+  app.py:1269: masterstar_candidate_paths=pending.get("masterstar_candidate_paths"),
+  app.py:1272: str(pending.get("setup_name")).strip()
+  app.py:1273: if pending.get("setup_name") is not None
+  app.py:1280: masterstar_skip_build=bool(pending.get("masterstar_skip_build")),
+  app.py:1294: f"✅ MASTERSTAR FITS dokončené [{pending.get('masterstar_ui_action', '?')}]: {_msf or outp.get('masterstar_fits')} "
+  app.py:1312: "process": str(pending.get("label") or pending.get("kind") or "úloha"),
+  app.py:1332: "process": str(pending.get("label") or pending.get("kind") or "úloha"),
+  app.py:1352: "process": str(pending.get("label") or pending.get("kind") or "úloha"),
+  app.py:1361: # Clear pending job and rerun into the normal UI view.
+  app.py:1362: st.session_state.pop("vyvar_pending_job", None)
+  app.py:1385: _pending_ra = st.session_state.get("vyvar_pending_center_ra")
+  app.py:1386: _pending_de = st.session_state.get("vyvar_pending_center_de")
+  app.py:1388: if _pending_ra is not None and math.isfinite(float(_pending_ra)):
+  app.py:1389: st.session_state[_ra_key] = float(_pending_ra)
+  app.py:1390: st.session_state["center_ra"] = float(_pending_ra)
+  app.py:1394: if _pending_de is not None and math.isfinite(float(_pending_de)):
+  app.py:1395: st.session_state[_de_key] = float(_pending_de)
+  app.py:1396: st.session_state["center_de"] = float(_pending_de)
+  app.py:1399: st.session_state.pop("vyvar_pending_center_ra", None)
+  app.py:1400: st.session_state.pop("vyvar_pending_center_de", None)
+  app.py:1616: _pending_core = {
+  app.py:1641: _j = {**_pending_core}
+  app.py:1645: st.session_state["vyvar_pending_job"] = _j
+  app.py:1803: st.session_state["vyvar_pending_job"] = {
+  importer.py:318: pending_cache: list[tuple[Path, int, float, dict[str, Any], str, str | None]] = []
+  importer.py:363: pending_cache.append(
+  importer.py:369: if db is not None and pending_cache:
+  importer.py:370: db.fits_header_cache_upsert_batch(pending_cache)
+  importer.py:1485: "calib_type": "RAW_PENDING_CALIBRATION" if is_draft else "MASTER_PIPELINE",
+  pipeline.py:13573: # Accept both draft root (.../draft_xxx) and direct non_calibrated path (.../draft_xxx/non_calibrated).
+  ui_quality_dashboard.py:265: st.session_state["vyvar_pending_center_ra"] = float(ra_val)
+  ui_quality_dashboard.py:268: st.session_state["vyvar_pending_center_de"] = float(de_val)
+
+### DLHE FUNKCIE (viac ako 100 riadkov) ###
+  app.py :: render_live_view :: 1553 riadkov :: L282
+  astrometry_optimizer.py :: optimize_masterstar_matches :: 902 riadkov :: L204
+  calibration.py :: normalize_flat_master :: 104 riadkov :: L312
+  database.py :: query_local_gaia :: 118 riadkov :: L66
+  database.py :: query_local_vsx :: 106 riadkov :: L248
+  importer.py :: _find_best_masterflat_for_filter :: 105 riadkov :: L664
+  importer.py :: smart_scan_source :: 335 riadkov :: L900
+  importer.py :: smart_import_session :: 179 riadkov :: L1351
+  importer.py :: generate_and_archive_masters :: 171 riadkov :: L1743
+  importer.py :: import_session :: 145 riadkov :: L2164
+  importer.py :: import_source_to_archive :: 111 riadkov :: L2310
+  masterstar_qa_plot.py :: build_starfield_qa_png_mapping :: 169 riadkov :: L48
+  pipeline.py :: _quality_inspection_dao_metrics_array :: 110 riadkov :: L609
+  pipeline.py :: run_quality_analysis :: 135 riadkov :: L966
+  pipeline.py :: run_draft_ram_calibration_qc_to_obs_files :: 248 riadkov :: L1102
+  pipeline.py :: calibrated_paths_for_draft_apply_filters :: 165 riadkov :: L1380
+  pipeline.py :: build_masterstar_from_detrended :: 231 riadkov :: L1954
+  pipeline.py :: _solve_wcs_external :: 130 riadkov :: L3119
+  pipeline.py :: write_photometry_plan_files :: 240 riadkov :: L4354
+  pipeline.py :: detect_stars_match_master_reference :: 439 riadkov :: L4694
+  pipeline.py :: detect_stars_and_match_catalog :: 918 riadkov :: L5180
+  pipeline.py :: _export_per_frame_run_catalog_core :: 287 riadkov :: L6286
+  pipeline.py :: export_per_frame_catalogs :: 737 riadkov :: L6629
+  pipeline.py :: validate_comparison_ensemble_flatness :: 127 riadkov :: L7367
+  pipeline.py :: generate_masterstar_and_catalog :: 1370 riadkov :: L7569
+  pipeline.py :: _astrometry_align_impl_body :: 1090 riadkov :: L8989
+  pipeline.py :: astrometry_align_and_build_masterstar :: 217 riadkov :: L10080
+  pipeline.py :: _calibrate_one_light_apply_masters_in_ram :: 197 riadkov :: L10723
+  pipeline.py :: calibrate_lights_to_calibrated :: 402 riadkov :: L11211
+  pipeline.py :: _qc_fwhm_elongation :: 331 riadkov :: L11823
+  pipeline.py :: _preprocess_calibrated_one :: 110 riadkov :: L12283
+  pipeline.py :: _analyze_preprocess_combined_one :: 124 riadkov :: L12394
+  pipeline.py :: preprocess_calibrated_to_processed :: 186 riadkov :: L12519
+  pipeline.py :: analyze_preprocess_calibrated_combined :: 126 riadkov :: L12788
+  pipeline.py :: _apply_temporal_sigma_clip_in_place :: 108 riadkov :: L12964
+  pipeline.py :: fits_metadata_from_primary_header :: 172 riadkov :: L13150
+  pipeline.py :: extract_fits_metadata :: 110 riadkov :: L13323
+  psf_photometry.py :: build_epsf_model :: 127 riadkov :: L157
+  ui_finalization.py :: render_finalization :: 258 riadkov :: L130
+  ui_photometry_results.py :: _compute_differential_mag :: 153 riadkov :: L276
+  ui_photometry_results.py :: render_aperture_results :: 201 riadkov :: L657
+  ui_photometry_results.py :: render_psf_results :: 274 riadkov :: L859
+  ui_photometry_results.py :: render_comp_validation :: 123 riadkov :: L1134
+  vyvar_platesolver.py :: _fit_sip_on_matches :: 126 riadkov :: L443
+  vyvar_platesolver.py :: _gaia_triangle_greedy_orientation_probe :: 176 riadkov :: L950
+
+### VYVAR_PLATESOLVER.PY (prvy 100 riadkov) ###
+"""VYVAR plate solving: ICRS hints from FITS/UI and optional in-process solver (local Gaia DR3).
+
+RA/Dec must come from headers (``VY_TARG*``, object keywords, â€¦) or mandatory user input.
+The optional ``solve_wcs_with_local_gaia`` path matches DAO detections to a local Gaia DR3 cone/box and
+fits a **TAN** (gnomonic / tangent-plane) WCS via ``fit_wcs_from_points``, then optionally **SIP**
+(Simple Imaging Polynomial) distortion up to 3rd order so wide-field optics match Gaia DR3 across the
+full chipâ€”not only near the centre (pure CD+CRPIX is only linear on the tangent plane).
+"""
+
+from __future__ import annotations
+
+import itertools
+import logging
+import math
+import numbers
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import astropy.units as u
+import numpy as np
+import pandas as pd
+from astropy.coordinates import Angle, SkyCoord
+from astropy.io import fits
+from astropy.wcs import WCS, Sip
+from astropy.wcs.utils import fit_wcs_from_points
+
+from config import AppConfig
+from database import get_gaia_db_max_g_mag
+from infolog import log_event, log_gaia_query
+from utils import (
+    MIN_GAIA_CONE_RADIUS_DEG,
+    catalog_cone_radius_deg_from_optics,
+    catalog_cone_radius_from_fov_diameter_deg,
+    dao_detection_fwhm_pixels,
+    effective_binned_pixel_pitch_um,
+    estimate_field_diameter_deg_diagonal,
+    fits_header_has_celestial_wcs,
+    fits_binning_xy_from_header,
+    get_optimal_params,
+    maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel,
+    normalize_telescope_focal_mm_for_plate_scale,
+    plate_scale_arcsec_per_pixel,
+    strip_celestial_wcs_keys,
+)
+
+__all__ = [
+    "PointingRequiredError",
+    "ResolvedPointing",
+    "parse_user_dec_string_to_deg",
+    "parse_user_ra_string_to_deg",
+    "pointing_hint_from_header",
+    "resolve_pointing_for_vyvar",
+    "solve_wcs_with_local_gaia",
+]
+
+LOGGER = logging.getLogger(__name__)
+
+
+class PointingRequiredError(ValueError):
+    """Raised when neither FITS header nor user text provides a valid RA/Dec pair."""
+
+
+@dataclass(frozen=True)
+class ResolvedPointing:
+    """Field center in ICRS degrees and where it came from."""
+
+    ra_icrs_deg: float
+    dec_icrs_deg: float
+    source: str
+
+
+_DECIMAL_HDR_RE = re.compile(r"^[-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?$")
+
+
+def _fits_header_pick(header: fits.Header, *keys: str) -> Any:
+    for key in keys:
+        if key in header and header[key] not in (None, ""):
+            return header[key]
+    return None
+
+
+def _fits_header_parse_ra_deg(value: Any) -> float | None:
+    """RA in degrees (ICRS-style); HMS strings allowed."""
+    if value is None:
+        return None
+    if isinstance(value, numbers.Real):
+        x = float(value)
+        return x if math.isfinite(x) else None
+    s = str(value).strip()
+    if not s or s.upper() in {"NAN", "NONE"}:
+        return None
+    if _DECIMAL_HDR_RE.fullmatch(s):
+        try:
+            x = float(s)
+            return x if math.isfinite(x) else None
+        except ValueError:
+            return None
+    try:
+
+### PIPELINE.PY (prvy 50 riadkov) ###
+"""Core processing pipeline for FITS observations."""
+
+from __future__ import annotations
+
+import contextlib
+import json
+import logging
+import pickle
+import math
+import multiprocessing
+import numbers
+import os
+import re
+import shutil
+import subprocess
+import time
+import traceback
+import warnings
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from pathlib import Path
+from typing import Any, Callable, Sequence
+
+import astropy.units as u
+from astropy.coordinates import Angle
+from astropy.io import fits
+from astropy.time import Time
+from astropy.coordinates import SkyCoord
+from astropy.wcs import WCS
+from astropy.wcs import FITSFixedWarning
+import pandas as pd
+
+from config import AppConfig, load_config_json
+from database import DraftTechnicalMetadataError, VyvarDatabase, query_local_gaia, query_local_vsx
+from photometry import (
+    common_field_intersection_bbox_px,
+    enhance_catalog_dataframe_aperture_bpm,
+    recommended_aperture_by_color,
+    stress_test_relative_rms_from_sidecars,
+    vsx_is_known_variable_top3_per_bin,
+)
+from fits_suffixes import FITS_SUFFIXES_LOWER, path_suffix_is_fits
+from gaia_catalog_id import catalog_id_series_for_masterstars_export
+from infolog import log_event, log_exception
+from calibration import (
+    CALIBRATION_LIBRARY_NATIVE_BINNING,
+    filter_light_paths_for_calibration_db,
+    get_processed_master,
+)
+
+
+
+=== AUDIT DOKONCENY ===

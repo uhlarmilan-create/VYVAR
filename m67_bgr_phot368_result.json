@@ -1,0 +1,336 @@
+{
+  "draft_id": 368,
+  "started_utc": "2026-06-03T15:42:41.089763+00:00",
+  "presel": [
+    {
+      "obs_group": "Blue_240_1",
+      "comp_min": 0.5397787094116211,
+      "comp_max": 2.056389808654785,
+      "n_comp": 150,
+      "n_in_range_candidates": 1561,
+      "n_out_range_candidates": 24,
+      "n_variable_targets_written": 30,
+      "n_in_range_written": 25,
+      "n_red_giant_written": 5,
+      "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_240_1\\variable_targets.csv"
+    },
+    {
+      "obs_group": "Blue_60_1",
+      "comp_min": 0.5397787094116211,
+      "comp_max": 2.056389808654785,
+      "n_comp": 150,
+      "n_in_range_candidates": 1563,
+      "n_out_range_candidates": 23,
+      "n_variable_targets_written": 30,
+      "n_in_range_written": 25,
+      "n_red_giant_written": 5,
+      "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_60_1\\variable_targets.csv"
+    },
+    {
+      "obs_group": "Green_240_1",
+      "comp_min": 0.5397787094116211,
+      "comp_max": 2.056389808654785,
+      "n_comp": 150,
+      "n_in_range_candidates": 1562,
+      "n_out_range_candidates": 23,
+      "n_variable_targets_written": 30,
+      "n_in_range_written": 25,
+      "n_red_giant_written": 5,
+      "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_240_1\\variable_targets.csv"
+    },
+    {
+      "obs_group": "Green_60_1",
+      "comp_min": 0.5397787094116211,
+      "comp_max": 2.056389808654785,
+      "n_comp": 150,
+      "n_in_range_candidates": 1565,
+      "n_out_range_candidates": 23,
+      "n_variable_targets_written": 30,
+      "n_in_range_written": 25,
+      "n_red_giant_written": 5,
+      "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_60_1\\variable_targets.csv"
+    },
+    {
+      "obs_group": "Red_240_1",
+      "comp_min": 0.5397787094116211,
+      "comp_max": 2.056389808654785,
+      "n_comp": 150,
+      "n_in_range_candidates": 1562,
+      "n_out_range_candidates": 23,
+      "n_variable_targets_written": 30,
+      "n_in_range_written": 25,
+      "n_red_giant_written": 5,
+      "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_240_1\\variable_targets.csv"
+    },
+    {
+      "obs_group": "Red_60_1",
+      "comp_min": -0.1020040512084961,
+      "comp_max": 2.056389808654785,
+      "n_comp": 150,
+      "n_in_range_candidates": 1572,
+      "n_out_range_candidates": 23,
+      "n_variable_targets_written": 30,
+      "n_in_range_written": 25,
+      "n_red_giant_written": 5,
+      "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_60_1\\variable_targets.csv"
+    }
+  ],
+  "photometry": {
+    "Blue_240_1": {
+      "phase01": {
+        "n_active_targets": 28,
+        "n_comparison_pairs": 176,
+        "active_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_240_1\\photometry\\active_targets.csv",
+        "comparison_stars_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_240_1\\photometry\\comparison_stars_per_target.csv",
+        "suspected_variables_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_240_1\\photometry\\suspected_variables.csv",
+        "targets_without_comps": [],
+        "field_density_h_star_per_mpx": 992.5925925925925,
+        "field_density_class": "normal",
+        "field_density_adaptive_applied": false,
+        "field_density_n_stars": 3216,
+        "cfg_effective_for_photometry": "AppConfig(project_root=WindowsPath('C:/ASTRO/python/VYVAR'), masterdark_validity_days=80, masterflat_validity_days=524, plate_solve_fov_deg=1.0, calibration_library_native_binning=1, gaia_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\vyvar_gaia_dr3_m67_field.db', blind_index_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\gaia_triangles.pkl', vsx_local_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\VSX\\\\vyvar_vsx_local_v2.db', vsx_variable_targets_mag_limit=14.5, catalog_query_max_rows=15000, aperture_photometry_enabled=True, save_lightcurve_png=False, phase2a_airmass_before_outlier=False, sysrem_enabled=False, sysrem_n_iter=3, comp_qa_enabled=True, trust_flag_enabled=True, observer_name='Milan Uhlar', observer_code='UMIA', aavso_observer_code='UMIA', varastro_observer_name='Milan Uhlar', aavso_filter_map={}, observer_location_id=2, observer_lat=50.1121658, observer_lon=14.6982547, observer_alt_m=275.0, observer_location_name='Jirny', export_arcsec_per_px=1.3, psf_photometry_enabled=False, psf_spatial_order=0, psf_chi2_threshold=50.0, psf_grouper_enabled=False, psf_group_sep_fwhm=1.5, psf_neighbor_include_fwhm=3.0, psf_spatial_enabled=False, psf_spatial_grid='3x3', psf_spatial_min_stars_per_cell=25, psf_quality_fallback_enabled=True, psf_adaptive_enabled=False, psf_adaptive_resolve_fwhm=2.0, psf_adaptive_snr_lo=15.0, moffat_chi2_limit=50.0, skip_processed_directory=False, qc_fwhm_limit=8.0, qc_elong_limit=1.8, epsf_min_stars=30, photometry_mode='both', aperture_fwhm_factor=1.9, aperture_fwhm_factor_small=1.5, aperture_fwhm_factor_medium=2.5, aperture_fwhm_factor_large=4.0, aperture_variable_factor=1.0, aperture_comp_factor=1.1, catalog_only_n_comps=5, annulus_inner_fwhm=4.75, annulus_outer_fwhm=9.0, nonlinearity_peak_percentile=20.0, nonlinearity_fwhm_ratio=1.25, bpm_dark_mad_sigma=5.0, masterstar_solver_use_draft_median_if_hint_sep_deg=1.0, saturate_limit_fraction=0.85, masterstar_log_astroalign=True, masterstar_optimizer_mirror_extra_log=True, debug_platesolver=False, masterstar_platesolve_sip_max_order=4, masterstar_platesolve_sip_min_order=3, masterstar_dao_threshold_sigma=2.1, masterstar_prematch_peak_sigma_floor=1.8, masterstar_use_best_frame_fwhm=True, masterstar_dao_pass2_sigma=1.9, masterstar_platesolve_prewrite_rms_max_px=30.0, masterstar_platesolve_prewrite_relaxed_rms_max_px=35.0, masterstar_platesolve_nn_refine_max_rms_px=None, masterstar_sip_force_rms_guard_ratio=1.15, platesolve_anisotropy_threshold=1.3, qc_preprocess_workers=8, per_frame_mp_reserve_ram_gb=1.5, alignment_max_stars=160, alignment_detection_sigma=5.0, qc_dao_detection_sigma=5.0, sips_dao_fwhm_px=2.5, sips_dao_threshold_sigma=3.5, phase01_comparison_max_dist_deg=1.5, phase01_comparison_fov_fraction=0.75, phase01_comparison_max_mag_diff=1.5, phase01_comparison_mag_bright_threshold=12.75, phase01_comparison_max_mag_diff_bright_floor=1.5, phase01_comparison_max_mag_diff_absolute=3.0, phase01_comparison_n_comp_min=3, phase01_comparison_n_comp_max=8, phase01_comparison_max_comp_rms=0.1, phase01_comparison_min_dist_arcsec=60.0, phase01_comparison_rms_bin_mag=0.001, phase01_comparison_proximity_tiebreak=False, phase01_comparison_min_frames_frac=0.2, phase01_comparison_exclude_gaia_nss=True, phase01_comparison_exclude_gaia_extobj=True, comp_max_delta_bprp=0.79, comp_tier1_bprp_limit=0.15, comp_tier2_bprp_limit=0.3, comp_tier3_bprp_limit=0.55, comp_tier4_bprp_limit=1.1, comp_tier1_weight=1.0, comp_tier2_weight=0.85, comp_tier3_weight=0.5, comp_tier4_weight=0.25, comp_contamination_penalty_k=3.0, phase01_tier1_mag=0.5, phase01_tier2_mag=1.0, phase01_tier3_mag=1.5, phase01_tier4_mag=2.0, phase01_plate_scale_arcsec_per_px=1.3, plate_scale_arcsec_per_px=1.3, phase01_match_radius_arcsec=10.0, phase01_ct_min_comp=7, phase01_ct_extrapolation_tol=0.0, phase01_flux_col='dao_flux', temporal_binning_enabled=True, temporal_bin_window=0, savgol_detrend_enabled=False, savgol_window_frac=0.5, savgol_polyorder=2, democratic_detrend_enabled=False, democratic_sg_window_frac=0.5, pytics_enabled=True, pytics_n_iter=5, comp_max_slope_mmag_hr=5.0, gs11_dilution_enabled=False, gs11_dilution_aperture_arcsec=0.0, gs11_dilution_mag_limit_delta=5.0, gs11_comp_max_dilution=0.9, gs11_comp_suspect_dilution=0.98, gs11_target_min_dilution=0.5, aperture_correction_enabled=True, aperture_correction_min_ref_stars=3, aperture_correction_max_contamination=0.15, aperture_correction_max_scatter_mag=0.03, cog_aperture_correction_enabled=False, cog_ref_fwhm=4.5, cog_min_stars=8, cog_isolation_fwhm=6.0, cog_snr_min=50.0, cog_sat_frac=0.85, cog_ladder_step_px=0.5, cog_ac_factor_max=5.0, gain=1.0, read_noise=10.0, masterstar_best_of_n=10, sky_adu_fallback=1581.6, phase01_comparison_max_psf_chi2=50.0, phase01_comparison_max_fwhm_factor=1.5, phase01_comparison_isolation_radius_px=25.0, phase01_comparison_rms_outlier_sigma=3.0, frame_width_px=2082, frame_height_px=1397, phase01_chip_interior_margin_px=50, variability_min_frames=30, variability_min_frames_frac=0.5, variability_sigma_clip=5.0, variability_p85_filter=85, variability_slope_floor=0.02, variability_sigma_threshold=2.3, variability_comp_floor_factor=1.5, variability_smoothness_max=0.8, variability_mag_limit=14.5, variability_min_rms_pct=1.5, variability_min_amplitude_mag=0.01, variability_clip_ratio_min=0.8, variability_vdi_z_threshold=3.0, variability_min_points_rms=20, tess_enabled=False, field_density_sparse_threshold=300.0, field_density_dense_threshold=1000.0, field_density_adaptive_enabled=True, crowding_classifier_enabled=False, crowding_blend_tighten_threshold=0.04, crowding_comp_availability_loosen_count=500.0, crowding_tighten_min_fwhm_px=3.0, global_comp_pool_enabled=True, qc_after_calibrate_enabled=True, dao_qc_in_calibrate=True, qc_max_hfr=5.0, qc_min_stars=10, qc_max_background_rms=None, auto_fwhm_enabled=True, auto_fwhm_k_factor=1.5, auto_fwhm_k_min=1.0, auto_fwhm_k_max=4.0, archive_root=WindowsPath('C:/ASTRO/python/VYVAR/Archive'), calibration_library_root=WindowsPath('C:/ASTRO/python/VYVAR/CalibrationLibrary'), database_path=WindowsPath('C:/ASTRO/python/VYVAR/vyvar.sqlite3'))",
+        "proc_store": "<proc_frame_store.ProcFrameStore object at 0x0000020593105DC0>"
+      },
+      "phase2a": {
+        "n_targets": 28,
+        "n_frames": 15,
+        "n_lightcurves": 7,
+        "summary_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_240_1\\photometry\\photometry_summary.csv",
+        "summary_report_pdf": "",
+        "field_map_png": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_240_1\\photometry\\field_map.png",
+        "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_240_1\\photometry",
+        "lunar_context": {
+          "lunar_phase_pct": 69.77708492665771,
+          "lunar_separation_deg": 76.00287328878203,
+          "lunar_altitude_deg": 63.51866569720948,
+          "lunar_age_days": 9.29372775637567,
+          "lunar_risk": "MEDIUM",
+          "lunar_risk_reason": "Moon 76\u00b0 from field, 70% illuminated, 64\u00b0 altitude",
+          "moon_ra_deg": 205.882908807338,
+          "moon_dec_deg": -10.690791316970438,
+          "field_center_source": "MASTERSTAR_CRVAL",
+          "jd_mid": 2460418.3941815277
+        }
+      },
+      "sysrem": null,
+      "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_240_1\\photometry",
+      "proc_frame_store": "<proc_frame_store.ProcFrameStore object at 0x0000020593105DC0>",
+      "elapsed_sec": 31.452550411224365,
+      "n_lightcurves": 7
+    },
+    "Blue_60_1": {
+      "phase01": {
+        "n_active_targets": 29,
+        "n_comparison_pairs": 188,
+        "active_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_60_1\\photometry\\active_targets.csv",
+        "comparison_stars_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_60_1\\photometry\\comparison_stars_per_target.csv",
+        "suspected_variables_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_60_1\\photometry\\suspected_variables.csv",
+        "targets_without_comps": [],
+        "field_density_h_star_per_mpx": 942.9012345679012,
+        "field_density_class": "normal",
+        "field_density_adaptive_applied": false,
+        "field_density_n_stars": 3055,
+        "cfg_effective_for_photometry": "AppConfig(project_root=WindowsPath('C:/ASTRO/python/VYVAR'), masterdark_validity_days=80, masterflat_validity_days=524, plate_solve_fov_deg=1.0, calibration_library_native_binning=1, gaia_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\vyvar_gaia_dr3_m67_field.db', blind_index_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\gaia_triangles.pkl', vsx_local_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\VSX\\\\vyvar_vsx_local_v2.db', vsx_variable_targets_mag_limit=14.5, catalog_query_max_rows=15000, aperture_photometry_enabled=True, save_lightcurve_png=False, phase2a_airmass_before_outlier=False, sysrem_enabled=False, sysrem_n_iter=3, comp_qa_enabled=True, trust_flag_enabled=True, observer_name='Milan Uhlar', observer_code='UMIA', aavso_observer_code='UMIA', varastro_observer_name='Milan Uhlar', aavso_filter_map={}, observer_location_id=2, observer_lat=50.1121658, observer_lon=14.6982547, observer_alt_m=275.0, observer_location_name='Jirny', export_arcsec_per_px=1.3, psf_photometry_enabled=False, psf_spatial_order=0, psf_chi2_threshold=50.0, psf_grouper_enabled=False, psf_group_sep_fwhm=1.5, psf_neighbor_include_fwhm=3.0, psf_spatial_enabled=False, psf_spatial_grid='3x3', psf_spatial_min_stars_per_cell=25, psf_quality_fallback_enabled=True, psf_adaptive_enabled=False, psf_adaptive_resolve_fwhm=2.0, psf_adaptive_snr_lo=15.0, moffat_chi2_limit=50.0, skip_processed_directory=False, qc_fwhm_limit=8.0, qc_elong_limit=1.8, epsf_min_stars=30, photometry_mode='both', aperture_fwhm_factor=1.9, aperture_fwhm_factor_small=1.5, aperture_fwhm_factor_medium=2.5, aperture_fwhm_factor_large=4.0, aperture_variable_factor=1.0, aperture_comp_factor=1.1, catalog_only_n_comps=5, annulus_inner_fwhm=4.75, annulus_outer_fwhm=9.0, nonlinearity_peak_percentile=20.0, nonlinearity_fwhm_ratio=1.25, bpm_dark_mad_sigma=5.0, masterstar_solver_use_draft_median_if_hint_sep_deg=1.0, saturate_limit_fraction=0.85, masterstar_log_astroalign=True, masterstar_optimizer_mirror_extra_log=True, debug_platesolver=False, masterstar_platesolve_sip_max_order=4, masterstar_platesolve_sip_min_order=3, masterstar_dao_threshold_sigma=2.1, masterstar_prematch_peak_sigma_floor=1.8, masterstar_use_best_frame_fwhm=True, masterstar_dao_pass2_sigma=1.9, masterstar_platesolve_prewrite_rms_max_px=30.0, masterstar_platesolve_prewrite_relaxed_rms_max_px=35.0, masterstar_platesolve_nn_refine_max_rms_px=None, masterstar_sip_force_rms_guard_ratio=1.15, platesolve_anisotropy_threshold=1.3, qc_preprocess_workers=8, per_frame_mp_reserve_ram_gb=1.5, alignment_max_stars=160, alignment_detection_sigma=5.0, qc_dao_detection_sigma=5.0, sips_dao_fwhm_px=2.5, sips_dao_threshold_sigma=3.5, phase01_comparison_max_dist_deg=1.5, phase01_comparison_fov_fraction=0.75, phase01_comparison_max_mag_diff=1.5, phase01_comparison_mag_bright_threshold=12.75, phase01_comparison_max_mag_diff_bright_floor=1.5, phase01_comparison_max_mag_diff_absolute=3.0, phase01_comparison_n_comp_min=3, phase01_comparison_n_comp_max=8, phase01_comparison_max_comp_rms=0.1, phase01_comparison_min_dist_arcsec=60.0, phase01_comparison_rms_bin_mag=0.001, phase01_comparison_proximity_tiebreak=False, phase01_comparison_min_frames_frac=0.2, phase01_comparison_exclude_gaia_nss=True, phase01_comparison_exclude_gaia_extobj=True, comp_max_delta_bprp=0.79, comp_tier1_bprp_limit=0.15, comp_tier2_bprp_limit=0.3, comp_tier3_bprp_limit=0.55, comp_tier4_bprp_limit=1.1, comp_tier1_weight=1.0, comp_tier2_weight=0.85, comp_tier3_weight=0.5, comp_tier4_weight=0.25, comp_contamination_penalty_k=3.0, phase01_tier1_mag=0.5, phase01_tier2_mag=1.0, phase01_tier3_mag=1.5, phase01_tier4_mag=2.0, phase01_plate_scale_arcsec_per_px=1.3, plate_scale_arcsec_per_px=1.3, phase01_match_radius_arcsec=10.0, phase01_ct_min_comp=7, phase01_ct_extrapolation_tol=0.0, phase01_flux_col='dao_flux', temporal_binning_enabled=True, temporal_bin_window=0, savgol_detrend_enabled=False, savgol_window_frac=0.5, savgol_polyorder=2, democratic_detrend_enabled=False, democratic_sg_window_frac=0.5, pytics_enabled=True, pytics_n_iter=5, comp_max_slope_mmag_hr=5.0, gs11_dilution_enabled=False, gs11_dilution_aperture_arcsec=0.0, gs11_dilution_mag_limit_delta=5.0, gs11_comp_max_dilution=0.9, gs11_comp_suspect_dilution=0.98, gs11_target_min_dilution=0.5, aperture_correction_enabled=True, aperture_correction_min_ref_stars=3, aperture_correction_max_contamination=0.15, aperture_correction_max_scatter_mag=0.03, cog_aperture_correction_enabled=False, cog_ref_fwhm=4.5, cog_min_stars=8, cog_isolation_fwhm=6.0, cog_snr_min=50.0, cog_sat_frac=0.85, cog_ladder_step_px=0.5, cog_ac_factor_max=5.0, gain=1.0, read_noise=10.0, masterstar_best_of_n=10, sky_adu_fallback=1581.6, phase01_comparison_max_psf_chi2=50.0, phase01_comparison_max_fwhm_factor=1.5, phase01_comparison_isolation_radius_px=25.0, phase01_comparison_rms_outlier_sigma=3.0, frame_width_px=2082, frame_height_px=1397, phase01_chip_interior_margin_px=50, variability_min_frames=30, variability_min_frames_frac=0.5, variability_sigma_clip=5.0, variability_p85_filter=85, variability_slope_floor=0.02, variability_sigma_threshold=2.3, variability_comp_floor_factor=1.5, variability_smoothness_max=0.8, variability_mag_limit=14.5, variability_min_rms_pct=1.5, variability_min_amplitude_mag=0.01, variability_clip_ratio_min=0.8, variability_vdi_z_threshold=3.0, variability_min_points_rms=20, tess_enabled=False, field_density_sparse_threshold=300.0, field_density_dense_threshold=1000.0, field_density_adaptive_enabled=True, crowding_classifier_enabled=False, crowding_blend_tighten_threshold=0.04, crowding_comp_availability_loosen_count=500.0, crowding_tighten_min_fwhm_px=3.0, global_comp_pool_enabled=True, qc_after_calibrate_enabled=True, dao_qc_in_calibrate=True, qc_max_hfr=5.0, qc_min_stars=10, qc_max_background_rms=None, auto_fwhm_enabled=True, auto_fwhm_k_factor=1.5, auto_fwhm_k_min=1.0, auto_fwhm_k_max=4.0, archive_root=WindowsPath('C:/ASTRO/python/VYVAR/Archive'), calibration_library_root=WindowsPath('C:/ASTRO/python/VYVAR/CalibrationLibrary'), database_path=WindowsPath('C:/ASTRO/python/VYVAR/vyvar.sqlite3'))",
+        "proc_store": "<proc_frame_store.ProcFrameStore object at 0x00000205930AD760>"
+      },
+      "phase2a": {
+        "n_targets": 29,
+        "n_frames": 6,
+        "n_lightcurves": 28,
+        "summary_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_60_1\\photometry\\photometry_summary.csv",
+        "summary_report_pdf": "",
+        "field_map_png": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_60_1\\photometry\\field_map.png",
+        "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_60_1\\photometry",
+        "lunar_context": {
+          "lunar_phase_pct": 14.716639962715023,
+          "lunar_separation_deg": 92.52816136064395,
+          "lunar_altitude_deg": -52.07762297984152,
+          "lunar_age_days": 3.700808580495269,
+          "lunar_risk": "LOW",
+          "lunar_risk_reason": "Moon below horizon (-52\u00b0 altitude)",
+          "moon_ra_deg": 222.00892710570594,
+          "moon_dec_deg": -16.16922462002427,
+          "field_center_source": "MASTERSTAR_CRVAL",
+          "jd_mid": 2460435.344084682
+        }
+      },
+      "sysrem": null,
+      "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Blue_60_1\\photometry",
+      "proc_frame_store": "<proc_frame_store.ProcFrameStore object at 0x00000205930AD760>",
+      "elapsed_sec": 30.897575855255127,
+      "n_lightcurves": 28
+    },
+    "Green_240_1": {
+      "phase01": {
+        "n_active_targets": 28,
+        "n_comparison_pairs": 124,
+        "active_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_240_1\\photometry\\active_targets.csv",
+        "comparison_stars_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_240_1\\photometry\\comparison_stars_per_target.csv",
+        "suspected_variables_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_240_1\\photometry\\suspected_variables.csv",
+        "targets_without_comps": [],
+        "field_density_h_star_per_mpx": 1071.6049382716049,
+        "field_density_class": "dense",
+        "field_density_adaptive_applied": true,
+        "field_density_n_stars": 3472,
+        "cfg_effective_for_photometry": "AppConfig(project_root=WindowsPath('C:/ASTRO/python/VYVAR'), masterdark_validity_days=80, masterflat_validity_days=524, plate_solve_fov_deg=1.0, calibration_library_native_binning=1, gaia_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\vyvar_gaia_dr3_m67_field.db', blind_index_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\gaia_triangles.pkl', vsx_local_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\VSX\\\\vyvar_vsx_local_v2.db', vsx_variable_targets_mag_limit=14.5, catalog_query_max_rows=15000, aperture_photometry_enabled=True, save_lightcurve_png=False, phase2a_airmass_before_outlier=False, sysrem_enabled=False, sysrem_n_iter=3, comp_qa_enabled=True, trust_flag_enabled=True, observer_name='Milan Uhlar', observer_code='UMIA', aavso_observer_code='UMIA', varastro_observer_name='Milan Uhlar', aavso_filter_map={}, observer_location_id=2, observer_lat=50.1121658, observer_lon=14.6982547, observer_alt_m=275.0, observer_location_name='Jirny', export_arcsec_per_px=1.3, psf_photometry_enabled=False, psf_spatial_order=0, psf_chi2_threshold=50.0, psf_grouper_enabled=False, psf_group_sep_fwhm=1.5, psf_neighbor_include_fwhm=3.0, psf_spatial_enabled=False, psf_spatial_grid='3x3', psf_spatial_min_stars_per_cell=25, psf_quality_fallback_enabled=True, psf_adaptive_enabled=False, psf_adaptive_resolve_fwhm=2.0, psf_adaptive_snr_lo=15.0, moffat_chi2_limit=50.0, skip_processed_directory=False, qc_fwhm_limit=8.0, qc_elong_limit=1.8, epsf_min_stars=30, photometry_mode='both', aperture_fwhm_factor=1.9, aperture_fwhm_factor_small=1.5, aperture_fwhm_factor_medium=2.5, aperture_fwhm_factor_large=4.0, aperture_variable_factor=1.0, aperture_comp_factor=1.1, catalog_only_n_comps=5, annulus_inner_fwhm=5.75, annulus_outer_fwhm=9.0, nonlinearity_peak_percentile=20.0, nonlinearity_fwhm_ratio=1.25, bpm_dark_mad_sigma=5.0, masterstar_solver_use_draft_median_if_hint_sep_deg=1.0, saturate_limit_fraction=0.85, masterstar_log_astroalign=True, masterstar_optimizer_mirror_extra_log=True, debug_platesolver=False, masterstar_platesolve_sip_max_order=4, masterstar_platesolve_sip_min_order=3, masterstar_dao_threshold_sigma=2.1, masterstar_prematch_peak_sigma_floor=1.8, masterstar_use_best_frame_fwhm=True, masterstar_dao_pass2_sigma=1.9, masterstar_platesolve_prewrite_rms_max_px=30.0, masterstar_platesolve_prewrite_relaxed_rms_max_px=35.0, masterstar_platesolve_nn_refine_max_rms_px=None, masterstar_sip_force_rms_guard_ratio=1.15, platesolve_anisotropy_threshold=1.3, qc_preprocess_workers=8, per_frame_mp_reserve_ram_gb=1.5, alignment_max_stars=160, alignment_detection_sigma=5.0, qc_dao_detection_sigma=5.0, sips_dao_fwhm_px=2.5, sips_dao_threshold_sigma=3.5, phase01_comparison_max_dist_deg=1.5, phase01_comparison_fov_fraction=0.75, phase01_comparison_max_mag_diff=1.5, phase01_comparison_mag_bright_threshold=12.75, phase01_comparison_max_mag_diff_bright_floor=1.5, phase01_comparison_max_mag_diff_absolute=3.0, phase01_comparison_n_comp_min=3, phase01_comparison_n_comp_max=8, phase01_comparison_max_comp_rms=0.08, phase01_comparison_min_dist_arcsec=90.0, phase01_comparison_rms_bin_mag=0.001, phase01_comparison_proximity_tiebreak=False, phase01_comparison_min_frames_frac=0.2, phase01_comparison_exclude_gaia_nss=True, phase01_comparison_exclude_gaia_extobj=True, comp_max_delta_bprp=0.64, comp_tier1_bprp_limit=0.15, comp_tier2_bprp_limit=0.3, comp_tier3_bprp_limit=0.55, comp_tier4_bprp_limit=1.1, comp_tier1_weight=1.0, comp_tier2_weight=0.85, comp_tier3_weight=0.5, comp_tier4_weight=0.25, comp_contamination_penalty_k=3.0, phase01_tier1_mag=0.5, phase01_tier2_mag=1.0, phase01_tier3_mag=1.5, phase01_tier4_mag=2.0, phase01_plate_scale_arcsec_per_px=1.3, plate_scale_arcsec_per_px=1.3, phase01_match_radius_arcsec=10.0, phase01_ct_min_comp=7, phase01_ct_extrapolation_tol=0.0, phase01_flux_col='dao_flux', temporal_binning_enabled=True, temporal_bin_window=0, savgol_detrend_enabled=False, savgol_window_frac=0.5, savgol_polyorder=2, democratic_detrend_enabled=False, democratic_sg_window_frac=0.5, pytics_enabled=True, pytics_n_iter=5, comp_max_slope_mmag_hr=5.0, gs11_dilution_enabled=False, gs11_dilution_aperture_arcsec=0.0, gs11_dilution_mag_limit_delta=5.0, gs11_comp_max_dilution=0.9, gs11_comp_suspect_dilution=0.98, gs11_target_min_dilution=0.5, aperture_correction_enabled=True, aperture_correction_min_ref_stars=3, aperture_correction_max_contamination=0.15, aperture_correction_max_scatter_mag=0.03, cog_aperture_correction_enabled=False, cog_ref_fwhm=4.5, cog_min_stars=8, cog_isolation_fwhm=6.0, cog_snr_min=50.0, cog_sat_frac=0.85, cog_ladder_step_px=0.5, cog_ac_factor_max=5.0, gain=1.0, read_noise=10.0, masterstar_best_of_n=10, sky_adu_fallback=1581.6, phase01_comparison_max_psf_chi2=50.0, phase01_comparison_max_fwhm_factor=1.5, phase01_comparison_isolation_radius_px=25.0, phase01_comparison_rms_outlier_sigma=3.0, frame_width_px=2082, frame_height_px=1397, phase01_chip_interior_margin_px=50, variability_min_frames=30, variability_min_frames_frac=0.5, variability_sigma_clip=5.0, variability_p85_filter=85, variability_slope_floor=0.02, variability_sigma_threshold=2.3, variability_comp_floor_factor=1.5, variability_smoothness_max=0.8, variability_mag_limit=14.5, variability_min_rms_pct=1.5, variability_min_amplitude_mag=0.01, variability_clip_ratio_min=0.8, variability_vdi_z_threshold=3.0, variability_min_points_rms=20, tess_enabled=False, field_density_sparse_threshold=300.0, field_density_dense_threshold=1000.0, field_density_adaptive_enabled=True, crowding_classifier_enabled=False, crowding_blend_tighten_threshold=0.04, crowding_comp_availability_loosen_count=500.0, crowding_tighten_min_fwhm_px=3.0, global_comp_pool_enabled=True, qc_after_calibrate_enabled=True, dao_qc_in_calibrate=True, qc_max_hfr=5.0, qc_min_stars=10, qc_max_background_rms=None, auto_fwhm_enabled=True, auto_fwhm_k_factor=1.5, auto_fwhm_k_min=1.0, auto_fwhm_k_max=4.0, archive_root=WindowsPath('C:/ASTRO/python/VYVAR/Archive'), calibration_library_root=WindowsPath('C:/ASTRO/python/VYVAR/CalibrationLibrary'), database_path=WindowsPath('C:/ASTRO/python/VYVAR/vyvar.sqlite3'))",
+        "proc_store": "<proc_frame_store.ProcFrameStore object at 0x000002059B6520C0>"
+      },
+      "phase2a": {
+        "n_targets": 28,
+        "n_frames": 18,
+        "n_lightcurves": 8,
+        "summary_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_240_1\\photometry\\photometry_summary.csv",
+        "summary_report_pdf": "",
+        "field_map_png": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_240_1\\photometry\\field_map.png",
+        "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_240_1\\photometry",
+        "lunar_context": {
+          "lunar_phase_pct": 69.69661654063557,
+          "lunar_separation_deg": 76.00271970130756,
+          "lunar_altitude_deg": 65.43136726610736,
+          "lunar_age_days": 9.285495465066708,
+          "lunar_risk": "MEDIUM",
+          "lunar_risk_reason": "Moon 76\u00b0 from field, 70% illuminated, 65\u00b0 altitude",
+          "moon_ra_deg": 205.87436889534354,
+          "moon_dec_deg": -10.687559232881242,
+          "field_center_source": "MASTERSTAR_CRVAL",
+          "jd_mid": 2460418.3850109493
+        }
+      },
+      "sysrem": null,
+      "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_240_1\\photometry",
+      "proc_frame_store": "<proc_frame_store.ProcFrameStore object at 0x000002059B6520C0>",
+      "elapsed_sec": 28.800661087036133,
+      "n_lightcurves": 8
+    },
+    "Green_60_1": {
+      "phase01": {
+        "n_active_targets": 28,
+        "n_comparison_pairs": 162,
+        "active_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_60_1\\photometry\\active_targets.csv",
+        "comparison_stars_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_60_1\\photometry\\comparison_stars_per_target.csv",
+        "suspected_variables_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_60_1\\photometry\\suspected_variables.csv",
+        "targets_without_comps": [],
+        "field_density_h_star_per_mpx": 968.2098765432098,
+        "field_density_class": "normal",
+        "field_density_adaptive_applied": false,
+        "field_density_n_stars": 3137,
+        "cfg_effective_for_photometry": "AppConfig(project_root=WindowsPath('C:/ASTRO/python/VYVAR'), masterdark_validity_days=80, masterflat_validity_days=524, plate_solve_fov_deg=1.0, calibration_library_native_binning=1, gaia_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\vyvar_gaia_dr3_m67_field.db', blind_index_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\gaia_triangles.pkl', vsx_local_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\VSX\\\\vyvar_vsx_local_v2.db', vsx_variable_targets_mag_limit=14.5, catalog_query_max_rows=15000, aperture_photometry_enabled=True, save_lightcurve_png=False, phase2a_airmass_before_outlier=False, sysrem_enabled=False, sysrem_n_iter=3, comp_qa_enabled=True, trust_flag_enabled=True, observer_name='Milan Uhlar', observer_code='UMIA', aavso_observer_code='UMIA', varastro_observer_name='Milan Uhlar', aavso_filter_map={}, observer_location_id=2, observer_lat=50.1121658, observer_lon=14.6982547, observer_alt_m=275.0, observer_location_name='Jirny', export_arcsec_per_px=1.3, psf_photometry_enabled=False, psf_spatial_order=0, psf_chi2_threshold=50.0, psf_grouper_enabled=False, psf_group_sep_fwhm=1.5, psf_neighbor_include_fwhm=3.0, psf_spatial_enabled=False, psf_spatial_grid='3x3', psf_spatial_min_stars_per_cell=25, psf_quality_fallback_enabled=True, psf_adaptive_enabled=False, psf_adaptive_resolve_fwhm=2.0, psf_adaptive_snr_lo=15.0, moffat_chi2_limit=50.0, skip_processed_directory=False, qc_fwhm_limit=8.0, qc_elong_limit=1.8, epsf_min_stars=30, photometry_mode='both', aperture_fwhm_factor=1.9, aperture_fwhm_factor_small=1.5, aperture_fwhm_factor_medium=2.5, aperture_fwhm_factor_large=4.0, aperture_variable_factor=1.0, aperture_comp_factor=1.1, catalog_only_n_comps=5, annulus_inner_fwhm=4.75, annulus_outer_fwhm=9.0, nonlinearity_peak_percentile=20.0, nonlinearity_fwhm_ratio=1.25, bpm_dark_mad_sigma=5.0, masterstar_solver_use_draft_median_if_hint_sep_deg=1.0, saturate_limit_fraction=0.85, masterstar_log_astroalign=True, masterstar_optimizer_mirror_extra_log=True, debug_platesolver=False, masterstar_platesolve_sip_max_order=4, masterstar_platesolve_sip_min_order=3, masterstar_dao_threshold_sigma=2.1, masterstar_prematch_peak_sigma_floor=1.8, masterstar_use_best_frame_fwhm=True, masterstar_dao_pass2_sigma=1.9, masterstar_platesolve_prewrite_rms_max_px=30.0, masterstar_platesolve_prewrite_relaxed_rms_max_px=35.0, masterstar_platesolve_nn_refine_max_rms_px=None, masterstar_sip_force_rms_guard_ratio=1.15, platesolve_anisotropy_threshold=1.3, qc_preprocess_workers=8, per_frame_mp_reserve_ram_gb=1.5, alignment_max_stars=160, alignment_detection_sigma=5.0, qc_dao_detection_sigma=5.0, sips_dao_fwhm_px=2.5, sips_dao_threshold_sigma=3.5, phase01_comparison_max_dist_deg=1.5, phase01_comparison_fov_fraction=0.75, phase01_comparison_max_mag_diff=1.5, phase01_comparison_mag_bright_threshold=12.75, phase01_comparison_max_mag_diff_bright_floor=1.5, phase01_comparison_max_mag_diff_absolute=3.0, phase01_comparison_n_comp_min=3, phase01_comparison_n_comp_max=8, phase01_comparison_max_comp_rms=0.1, phase01_comparison_min_dist_arcsec=60.0, phase01_comparison_rms_bin_mag=0.001, phase01_comparison_proximity_tiebreak=False, phase01_comparison_min_frames_frac=0.2, phase01_comparison_exclude_gaia_nss=True, phase01_comparison_exclude_gaia_extobj=True, comp_max_delta_bprp=0.79, comp_tier1_bprp_limit=0.15, comp_tier2_bprp_limit=0.3, comp_tier3_bprp_limit=0.55, comp_tier4_bprp_limit=1.1, comp_tier1_weight=1.0, comp_tier2_weight=0.85, comp_tier3_weight=0.5, comp_tier4_weight=0.25, comp_contamination_penalty_k=3.0, phase01_tier1_mag=0.5, phase01_tier2_mag=1.0, phase01_tier3_mag=1.5, phase01_tier4_mag=2.0, phase01_plate_scale_arcsec_per_px=1.3, plate_scale_arcsec_per_px=1.3, phase01_match_radius_arcsec=10.0, phase01_ct_min_comp=7, phase01_ct_extrapolation_tol=0.0, phase01_flux_col='dao_flux', temporal_binning_enabled=True, temporal_bin_window=0, savgol_detrend_enabled=False, savgol_window_frac=0.5, savgol_polyorder=2, democratic_detrend_enabled=False, democratic_sg_window_frac=0.5, pytics_enabled=True, pytics_n_iter=5, comp_max_slope_mmag_hr=5.0, gs11_dilution_enabled=False, gs11_dilution_aperture_arcsec=0.0, gs11_dilution_mag_limit_delta=5.0, gs11_comp_max_dilution=0.9, gs11_comp_suspect_dilution=0.98, gs11_target_min_dilution=0.5, aperture_correction_enabled=True, aperture_correction_min_ref_stars=3, aperture_correction_max_contamination=0.15, aperture_correction_max_scatter_mag=0.03, cog_aperture_correction_enabled=False, cog_ref_fwhm=4.5, cog_min_stars=8, cog_isolation_fwhm=6.0, cog_snr_min=50.0, cog_sat_frac=0.85, cog_ladder_step_px=0.5, cog_ac_factor_max=5.0, gain=1.0, read_noise=10.0, masterstar_best_of_n=10, sky_adu_fallback=1581.6, phase01_comparison_max_psf_chi2=50.0, phase01_comparison_max_fwhm_factor=1.5, phase01_comparison_isolation_radius_px=25.0, phase01_comparison_rms_outlier_sigma=3.0, frame_width_px=2082, frame_height_px=1397, phase01_chip_interior_margin_px=50, variability_min_frames=30, variability_min_frames_frac=0.5, variability_sigma_clip=5.0, variability_p85_filter=85, variability_slope_floor=0.02, variability_sigma_threshold=2.3, variability_comp_floor_factor=1.5, variability_smoothness_max=0.8, variability_mag_limit=14.5, variability_min_rms_pct=1.5, variability_min_amplitude_mag=0.01, variability_clip_ratio_min=0.8, variability_vdi_z_threshold=3.0, variability_min_points_rms=20, tess_enabled=False, field_density_sparse_threshold=300.0, field_density_dense_threshold=1000.0, field_density_adaptive_enabled=True, crowding_classifier_enabled=False, crowding_blend_tighten_threshold=0.04, crowding_comp_availability_loosen_count=500.0, crowding_tighten_min_fwhm_px=3.0, global_comp_pool_enabled=True, qc_after_calibrate_enabled=True, dao_qc_in_calibrate=True, qc_max_hfr=5.0, qc_min_stars=10, qc_max_background_rms=None, auto_fwhm_enabled=True, auto_fwhm_k_factor=1.5, auto_fwhm_k_min=1.0, auto_fwhm_k_max=4.0, archive_root=WindowsPath('C:/ASTRO/python/VYVAR/Archive'), calibration_library_root=WindowsPath('C:/ASTRO/python/VYVAR/CalibrationLibrary'), database_path=WindowsPath('C:/ASTRO/python/VYVAR/vyvar.sqlite3'))",
+        "proc_store": "<proc_frame_store.ProcFrameStore object at 0x00000205CB2667B0>"
+      },
+      "phase2a": {
+        "n_targets": 28,
+        "n_frames": 6,
+        "n_lightcurves": 23,
+        "summary_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_60_1\\photometry\\photometry_summary.csv",
+        "summary_report_pdf": "",
+        "field_map_png": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_60_1\\photometry\\field_map.png",
+        "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_60_1\\photometry",
+        "lunar_context": {
+          "lunar_phase_pct": 14.73840309765349,
+          "lunar_separation_deg": 92.52600304105802,
+          "lunar_altitude_deg": -51.78370849386833,
+          "lunar_age_days": 3.7036948427132454,
+          "lunar_risk": "LOW",
+          "lunar_risk_reason": "Moon below horizon (-52\u00b0 altitude)",
+          "moon_ra_deg": 222.00652272159905,
+          "moon_dec_deg": -16.16851847587214,
+          "field_center_source": "MASTERSTAR_CRVAL",
+          "jd_mid": 2460435.341512384
+        }
+      },
+      "sysrem": null,
+      "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green_60_1\\photometry",
+      "proc_frame_store": "<proc_frame_store.ProcFrameStore object at 0x00000205CB2667B0>",
+      "elapsed_sec": 26.36197853088379,
+      "n_lightcurves": 23
+    },
+    "Red_240_1": {
+      "phase01": {
+        "n_active_targets": 28,
+        "n_comparison_pairs": 141,
+        "active_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_240_1\\photometry\\active_targets.csv",
+        "comparison_stars_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_240_1\\photometry\\comparison_stars_per_target.csv",
+        "suspected_variables_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_240_1\\photometry\\suspected_variables.csv",
+        "targets_without_comps": [
+          "598895398010754432"
+        ],
+        "field_density_h_star_per_mpx": 1137.037037037037,
+        "field_density_class": "dense",
+        "field_density_adaptive_applied": true,
+        "field_density_n_stars": 3684,
+        "cfg_effective_for_photometry": "AppConfig(project_root=WindowsPath('C:/ASTRO/python/VYVAR'), masterdark_validity_days=80, masterflat_validity_days=524, plate_solve_fov_deg=1.0, calibration_library_native_binning=1, gaia_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\vyvar_gaia_dr3_m67_field.db', blind_index_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\gaia_triangles.pkl', vsx_local_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\VSX\\\\vyvar_vsx_local_v2.db', vsx_variable_targets_mag_limit=14.5, catalog_query_max_rows=15000, aperture_photometry_enabled=True, save_lightcurve_png=False, phase2a_airmass_before_outlier=False, sysrem_enabled=False, sysrem_n_iter=3, comp_qa_enabled=True, trust_flag_enabled=True, observer_name='Milan Uhlar', observer_code='UMIA', aavso_observer_code='UMIA', varastro_observer_name='Milan Uhlar', aavso_filter_map={}, observer_location_id=2, observer_lat=50.1121658, observer_lon=14.6982547, observer_alt_m=275.0, observer_location_name='Jirny', export_arcsec_per_px=1.3, psf_photometry_enabled=False, psf_spatial_order=0, psf_chi2_threshold=50.0, psf_grouper_enabled=False, psf_group_sep_fwhm=1.5, psf_neighbor_include_fwhm=3.0, psf_spatial_enabled=False, psf_spatial_grid='3x3', psf_spatial_min_stars_per_cell=25, psf_quality_fallback_enabled=True, psf_adaptive_enabled=False, psf_adaptive_resolve_fwhm=2.0, psf_adaptive_snr_lo=15.0, moffat_chi2_limit=50.0, skip_processed_directory=False, qc_fwhm_limit=8.0, qc_elong_limit=1.8, epsf_min_stars=30, photometry_mode='both', aperture_fwhm_factor=1.9, aperture_fwhm_factor_small=1.5, aperture_fwhm_factor_medium=2.5, aperture_fwhm_factor_large=4.0, aperture_variable_factor=1.0, aperture_comp_factor=1.1, catalog_only_n_comps=5, annulus_inner_fwhm=5.75, annulus_outer_fwhm=9.0, nonlinearity_peak_percentile=20.0, nonlinearity_fwhm_ratio=1.25, bpm_dark_mad_sigma=5.0, masterstar_solver_use_draft_median_if_hint_sep_deg=1.0, saturate_limit_fraction=0.85, masterstar_log_astroalign=True, masterstar_optimizer_mirror_extra_log=True, debug_platesolver=False, masterstar_platesolve_sip_max_order=4, masterstar_platesolve_sip_min_order=3, masterstar_dao_threshold_sigma=2.1, masterstar_prematch_peak_sigma_floor=1.8, masterstar_use_best_frame_fwhm=True, masterstar_dao_pass2_sigma=1.9, masterstar_platesolve_prewrite_rms_max_px=30.0, masterstar_platesolve_prewrite_relaxed_rms_max_px=35.0, masterstar_platesolve_nn_refine_max_rms_px=None, masterstar_sip_force_rms_guard_ratio=1.15, platesolve_anisotropy_threshold=1.3, qc_preprocess_workers=8, per_frame_mp_reserve_ram_gb=1.5, alignment_max_stars=160, alignment_detection_sigma=5.0, qc_dao_detection_sigma=5.0, sips_dao_fwhm_px=2.5, sips_dao_threshold_sigma=3.5, phase01_comparison_max_dist_deg=1.5, phase01_comparison_fov_fraction=0.75, phase01_comparison_max_mag_diff=1.5, phase01_comparison_mag_bright_threshold=12.75, phase01_comparison_max_mag_diff_bright_floor=1.5, phase01_comparison_max_mag_diff_absolute=3.0, phase01_comparison_n_comp_min=3, phase01_comparison_n_comp_max=8, phase01_comparison_max_comp_rms=0.08, phase01_comparison_min_dist_arcsec=90.0, phase01_comparison_rms_bin_mag=0.001, phase01_comparison_proximity_tiebreak=False, phase01_comparison_min_frames_frac=0.2, phase01_comparison_exclude_gaia_nss=True, phase01_comparison_exclude_gaia_extobj=True, comp_max_delta_bprp=0.64, comp_tier1_bprp_limit=0.15, comp_tier2_bprp_limit=0.3, comp_tier3_bprp_limit=0.55, comp_tier4_bprp_limit=1.1, comp_tier1_weight=1.0, comp_tier2_weight=0.85, comp_tier3_weight=0.5, comp_tier4_weight=0.25, comp_contamination_penalty_k=3.0, phase01_tier1_mag=0.5, phase01_tier2_mag=1.0, phase01_tier3_mag=1.5, phase01_tier4_mag=2.0, phase01_plate_scale_arcsec_per_px=1.3, plate_scale_arcsec_per_px=1.3, phase01_match_radius_arcsec=10.0, phase01_ct_min_comp=7, phase01_ct_extrapolation_tol=0.0, phase01_flux_col='dao_flux', temporal_binning_enabled=True, temporal_bin_window=0, savgol_detrend_enabled=False, savgol_window_frac=0.5, savgol_polyorder=2, democratic_detrend_enabled=False, democratic_sg_window_frac=0.5, pytics_enabled=True, pytics_n_iter=5, comp_max_slope_mmag_hr=5.0, gs11_dilution_enabled=False, gs11_dilution_aperture_arcsec=0.0, gs11_dilution_mag_limit_delta=5.0, gs11_comp_max_dilution=0.9, gs11_comp_suspect_dilution=0.98, gs11_target_min_dilution=0.5, aperture_correction_enabled=True, aperture_correction_min_ref_stars=3, aperture_correction_max_contamination=0.15, aperture_correction_max_scatter_mag=0.03, cog_aperture_correction_enabled=False, cog_ref_fwhm=4.5, cog_min_stars=8, cog_isolation_fwhm=6.0, cog_snr_min=50.0, cog_sat_frac=0.85, cog_ladder_step_px=0.5, cog_ac_factor_max=5.0, gain=1.0, read_noise=10.0, masterstar_best_of_n=10, sky_adu_fallback=1581.6, phase01_comparison_max_psf_chi2=50.0, phase01_comparison_max_fwhm_factor=1.5, phase01_comparison_isolation_radius_px=25.0, phase01_comparison_rms_outlier_sigma=3.0, frame_width_px=2082, frame_height_px=1397, phase01_chip_interior_margin_px=50, variability_min_frames=30, variability_min_frames_frac=0.5, variability_sigma_clip=5.0, variability_p85_filter=85, variability_slope_floor=0.02, variability_sigma_threshold=2.3, variability_comp_floor_factor=1.5, variability_smoothness_max=0.8, variability_mag_limit=14.5, variability_min_rms_pct=1.5, variability_min_amplitude_mag=0.01, variability_clip_ratio_min=0.8, variability_vdi_z_threshold=3.0, variability_min_points_rms=20, tess_enabled=False, field_density_sparse_threshold=300.0, field_density_dense_threshold=1000.0, field_density_adaptive_enabled=True, crowding_classifier_enabled=False, crowding_blend_tighten_threshold=0.04, crowding_comp_availability_loosen_count=500.0, crowding_tighten_min_fwhm_px=3.0, global_comp_pool_enabled=True, qc_after_calibrate_enabled=True, dao_qc_in_calibrate=True, qc_max_hfr=5.0, qc_min_stars=10, qc_max_background_rms=None, auto_fwhm_enabled=True, auto_fwhm_k_factor=1.5, auto_fwhm_k_min=1.0, auto_fwhm_k_max=4.0, archive_root=WindowsPath('C:/ASTRO/python/VYVAR/Archive'), calibration_library_root=WindowsPath('C:/ASTRO/python/VYVAR/CalibrationLibrary'), database_path=WindowsPath('C:/ASTRO/python/VYVAR/vyvar.sqlite3'))",
+        "proc_store": "<proc_frame_store.ProcFrameStore object at 0x00000205CB265400>"
+      },
+      "phase2a": {
+        "n_targets": 28,
+        "n_frames": 18,
+        "n_lightcurves": 7,
+        "summary_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_240_1\\photometry\\photometry_summary.csv",
+        "summary_report_pdf": "",
+        "field_map_png": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_240_1\\photometry\\field_map.png",
+        "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_240_1\\photometry",
+        "lunar_context": {
+          "lunar_phase_pct": 69.61292770527439,
+          "lunar_separation_deg": 75.98840729823759,
+          "lunar_altitude_deg": 67.21238294357923,
+          "lunar_age_days": 9.276940257396792,
+          "lunar_risk": "MEDIUM",
+          "lunar_risk_reason": "Moon 76\u00b0 from field, 70% illuminated, 67\u00b0 altitude",
+          "moon_ra_deg": 205.86549552606925,
+          "moon_dec_deg": -10.684200675079255,
+          "field_center_source": "MASTERSTAR_CRVAL",
+          "jd_mid": 2460418.375481655
+        }
+      },
+      "sysrem": null,
+      "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_240_1\\photometry",
+      "proc_frame_store": "<proc_frame_store.ProcFrameStore object at 0x00000205CB265400>",
+      "elapsed_sec": 28.882781982421875,
+      "n_lightcurves": 7
+    },
+    "Red_60_1": {
+      "phase01": {
+        "n_active_targets": 27,
+        "n_comparison_pairs": 160,
+        "active_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_60_1\\photometry\\active_targets.csv",
+        "comparison_stars_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_60_1\\photometry\\comparison_stars_per_target.csv",
+        "suspected_variables_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_60_1\\photometry\\suspected_variables.csv",
+        "targets_without_comps": [],
+        "field_density_h_star_per_mpx": 974.3827160493827,
+        "field_density_class": "normal",
+        "field_density_adaptive_applied": false,
+        "field_density_n_stars": 3157,
+        "cfg_effective_for_photometry": "AppConfig(project_root=WindowsPath('C:/ASTRO/python/VYVAR'), masterdark_validity_days=80, masterflat_validity_days=524, plate_solve_fov_deg=1.0, calibration_library_native_binning=1, gaia_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\vyvar_gaia_dr3_m67_field.db', blind_index_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\GAIA_DR3\\\\gaia_triangles.pkl', vsx_local_db_path='C:\\\\ASTRO\\\\python\\\\VYVAR\\\\VSX\\\\vyvar_vsx_local_v2.db', vsx_variable_targets_mag_limit=14.5, catalog_query_max_rows=15000, aperture_photometry_enabled=True, save_lightcurve_png=False, phase2a_airmass_before_outlier=False, sysrem_enabled=False, sysrem_n_iter=3, comp_qa_enabled=True, trust_flag_enabled=True, observer_name='Milan Uhlar', observer_code='UMIA', aavso_observer_code='UMIA', varastro_observer_name='Milan Uhlar', aavso_filter_map={}, observer_location_id=2, observer_lat=50.1121658, observer_lon=14.6982547, observer_alt_m=275.0, observer_location_name='Jirny', export_arcsec_per_px=1.3, psf_photometry_enabled=False, psf_spatial_order=0, psf_chi2_threshold=50.0, psf_grouper_enabled=False, psf_group_sep_fwhm=1.5, psf_neighbor_include_fwhm=3.0, psf_spatial_enabled=False, psf_spatial_grid='3x3', psf_spatial_min_stars_per_cell=25, psf_quality_fallback_enabled=True, psf_adaptive_enabled=False, psf_adaptive_resolve_fwhm=2.0, psf_adaptive_snr_lo=15.0, moffat_chi2_limit=50.0, skip_processed_directory=False, qc_fwhm_limit=8.0, qc_elong_limit=1.8, epsf_min_stars=30, photometry_mode='both', aperture_fwhm_factor=1.9, aperture_fwhm_factor_small=1.5, aperture_fwhm_factor_medium=2.5, aperture_fwhm_factor_large=4.0, aperture_variable_factor=1.0, aperture_comp_factor=1.1, catalog_only_n_comps=5, annulus_inner_fwhm=4.75, annulus_outer_fwhm=9.0, nonlinearity_peak_percentile=20.0, nonlinearity_fwhm_ratio=1.25, bpm_dark_mad_sigma=5.0, masterstar_solver_use_draft_median_if_hint_sep_deg=1.0, saturate_limit_fraction=0.85, masterstar_log_astroalign=True, masterstar_optimizer_mirror_extra_log=True, debug_platesolver=False, masterstar_platesolve_sip_max_order=4, masterstar_platesolve_sip_min_order=3, masterstar_dao_threshold_sigma=2.1, masterstar_prematch_peak_sigma_floor=1.8, masterstar_use_best_frame_fwhm=True, masterstar_dao_pass2_sigma=1.9, masterstar_platesolve_prewrite_rms_max_px=30.0, masterstar_platesolve_prewrite_relaxed_rms_max_px=35.0, masterstar_platesolve_nn_refine_max_rms_px=None, masterstar_sip_force_rms_guard_ratio=1.15, platesolve_anisotropy_threshold=1.3, qc_preprocess_workers=8, per_frame_mp_reserve_ram_gb=1.5, alignment_max_stars=160, alignment_detection_sigma=5.0, qc_dao_detection_sigma=5.0, sips_dao_fwhm_px=2.5, sips_dao_threshold_sigma=3.5, phase01_comparison_max_dist_deg=1.5, phase01_comparison_fov_fraction=0.75, phase01_comparison_max_mag_diff=1.5, phase01_comparison_mag_bright_threshold=12.75, phase01_comparison_max_mag_diff_bright_floor=1.5, phase01_comparison_max_mag_diff_absolute=3.0, phase01_comparison_n_comp_min=3, phase01_comparison_n_comp_max=8, phase01_comparison_max_comp_rms=0.1, phase01_comparison_min_dist_arcsec=60.0, phase01_comparison_rms_bin_mag=0.001, phase01_comparison_proximity_tiebreak=False, phase01_comparison_min_frames_frac=0.2, phase01_comparison_exclude_gaia_nss=True, phase01_comparison_exclude_gaia_extobj=True, comp_max_delta_bprp=0.79, comp_tier1_bprp_limit=0.15, comp_tier2_bprp_limit=0.3, comp_tier3_bprp_limit=0.55, comp_tier4_bprp_limit=1.1, comp_tier1_weight=1.0, comp_tier2_weight=0.85, comp_tier3_weight=0.5, comp_tier4_weight=0.25, comp_contamination_penalty_k=3.0, phase01_tier1_mag=0.5, phase01_tier2_mag=1.0, phase01_tier3_mag=1.5, phase01_tier4_mag=2.0, phase01_plate_scale_arcsec_per_px=1.3, plate_scale_arcsec_per_px=1.3, phase01_match_radius_arcsec=10.0, phase01_ct_min_comp=7, phase01_ct_extrapolation_tol=0.0, phase01_flux_col='dao_flux', temporal_binning_enabled=True, temporal_bin_window=0, savgol_detrend_enabled=False, savgol_window_frac=0.5, savgol_polyorder=2, democratic_detrend_enabled=False, democratic_sg_window_frac=0.5, pytics_enabled=True, pytics_n_iter=5, comp_max_slope_mmag_hr=5.0, gs11_dilution_enabled=False, gs11_dilution_aperture_arcsec=0.0, gs11_dilution_mag_limit_delta=5.0, gs11_comp_max_dilution=0.9, gs11_comp_suspect_dilution=0.98, gs11_target_min_dilution=0.5, aperture_correction_enabled=True, aperture_correction_min_ref_stars=3, aperture_correction_max_contamination=0.15, aperture_correction_max_scatter_mag=0.03, cog_aperture_correction_enabled=False, cog_ref_fwhm=4.5, cog_min_stars=8, cog_isolation_fwhm=6.0, cog_snr_min=50.0, cog_sat_frac=0.85, cog_ladder_step_px=0.5, cog_ac_factor_max=5.0, gain=1.0, read_noise=10.0, masterstar_best_of_n=10, sky_adu_fallback=1581.6, phase01_comparison_max_psf_chi2=50.0, phase01_comparison_max_fwhm_factor=1.5, phase01_comparison_isolation_radius_px=25.0, phase01_comparison_rms_outlier_sigma=3.0, frame_width_px=2082, frame_height_px=1397, phase01_chip_interior_margin_px=50, variability_min_frames=30, variability_min_frames_frac=0.5, variability_sigma_clip=5.0, variability_p85_filter=85, variability_slope_floor=0.02, variability_sigma_threshold=2.3, variability_comp_floor_factor=1.5, variability_smoothness_max=0.8, variability_mag_limit=14.5, variability_min_rms_pct=1.5, variability_min_amplitude_mag=0.01, variability_clip_ratio_min=0.8, variability_vdi_z_threshold=3.0, variability_min_points_rms=20, tess_enabled=False, field_density_sparse_threshold=300.0, field_density_dense_threshold=1000.0, field_density_adaptive_enabled=True, crowding_classifier_enabled=False, crowding_blend_tighten_threshold=0.04, crowding_comp_availability_loosen_count=500.0, crowding_tighten_min_fwhm_px=3.0, global_comp_pool_enabled=True, qc_after_calibrate_enabled=True, dao_qc_in_calibrate=True, qc_max_hfr=5.0, qc_min_stars=10, qc_max_background_rms=None, auto_fwhm_enabled=True, auto_fwhm_k_factor=1.5, auto_fwhm_k_min=1.0, auto_fwhm_k_max=4.0, archive_root=WindowsPath('C:/ASTRO/python/VYVAR/Archive'), calibration_library_root=WindowsPath('C:/ASTRO/python/VYVAR/CalibrationLibrary'), database_path=WindowsPath('C:/ASTRO/python/VYVAR/vyvar.sqlite3'))",
+        "proc_store": "<proc_frame_store.ProcFrameStore object at 0x000002059DD97BC0>"
+      },
+      "phase2a": {
+        "n_targets": 27,
+        "n_frames": 6,
+        "n_lightcurves": 26,
+        "summary_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_60_1\\photometry\\photometry_summary.csv",
+        "summary_report_pdf": "",
+        "field_map_png": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_60_1\\photometry\\field_map.png",
+        "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_60_1\\photometry",
+        "lunar_context": {
+          "lunar_phase_pct": 14.758022815475641,
+          "lunar_separation_deg": 92.52207893038408,
+          "lunar_altitude_deg": -51.506172125542044,
+          "lunar_age_days": 3.7062953310589553,
+          "lunar_risk": "LOW",
+          "lunar_risk_reason": "Moon below horizon (-52\u00b0 altitude)",
+          "moon_ra_deg": 222.00435633510892,
+          "moon_dec_deg": -16.167882200485774,
+          "field_center_source": "MASTERSTAR_CRVAL",
+          "jd_mid": 2460435.3391947225
+        }
+      },
+      "sysrem": null,
+      "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red_60_1\\photometry",
+      "proc_frame_store": "<proc_frame_store.ProcFrameStore object at 0x000002059DD97BC0>",
+      "elapsed_sec": 29.927018880844116,
+      "n_lightcurves": 26
+    }
+  },
+  "finished_utc": "2026-06-03T15:45:38.012061+00:00",
+  "ct_prototype_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\ct_prototype.csv"
+}

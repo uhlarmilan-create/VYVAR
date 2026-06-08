@@ -1,0 +1,277 @@
+{
+  "match_stats": {
+    "setup": "Luminance_180_2",
+    "n_detected": 21524,
+    "n_matched": 11189,
+    "faintest_matched_g": 17.999794006347656,
+    "cone_n": 7601,
+    "cone_faintest_g": 17.999794006347656
+  },
+  "epsf_meta": {
+    "fwhm_px": 6.223664731944165,
+    "cutout_size": 31,
+    "oversampling": 2,
+    "spatial_order": 0,
+    "smoothing_kernel": "quadratic",
+    "fit_shape": [
+      15,
+      15
+    ],
+    "epsf_qc": {
+      "epsf_fwhm_native_px": 5.0,
+      "epsf_vs_input_fwhm_ratio": 0.803,
+      "epsf_nan_fraction": 0.0,
+      "epsf_asymmetry": 0.0021
+    },
+    "epsf_norm_factor": 0.10466,
+    "epsf_sum_native": 1.0,
+    "phase2_moffat_centroids_used": 0,
+    "isolation_radius_px": 18.670994195832495,
+    "plate_scale_arcsec_px": 0.38877948438356,
+    "n_stars_used": 100,
+    "n_stars_after_join": 102,
+    "draft_id": 364,
+    "created_utc": "2026-05-31T18:14:00Z"
+  },
+  "epsf_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000364\\platesolve\\Luminance_180_2\\masterstar_epsf.fits",
+  "fwhm_px": 6.223664731944165,
+  "part_b_note": "",
+  "mag_bin_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000364\\diagnostics\\psf_aperture_pal7_deep\\d364_aperture_vs_psf_by_mag.csv",
+  "per_star_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000364\\diagnostics\\psf_aperture_pal7_deep\\d364_aperture_vs_psf_per_star.csv",
+  "crowding_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000364\\diagnostics\\psf_aperture_pal7_deep\\d364_aperture_vs_psf_crowding.csv",
+  "mag_bin_table": [
+    {
+      "mag_bin": "<12",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": "12-13",
+      "N": 12,
+      "median_rms_aperture": 0.05560234237552678,
+      "median_rms_psf": 0.05109635074324952,
+      "median_ratio_psf_aper": 0.7420319018401786
+    },
+    {
+      "mag_bin": "13-14",
+      "N": 38,
+      "median_rms_aperture": 0.05978485048570795,
+      "median_rms_psf": 0.05281895609489773,
+      "median_ratio_psf_aper": 0.9128700249112742
+    },
+    {
+      "mag_bin": "14-15",
+      "N": 53,
+      "median_rms_aperture": 0.061607902975764024,
+      "median_rms_psf": 0.057192902988986036,
+      "median_ratio_psf_aper": 0.9774059442478991
+    },
+    {
+      "mag_bin": "15-16",
+      "N": 32,
+      "median_rms_aperture": 0.07664455350404167,
+      "median_rms_psf": 0.06295945807522069,
+      "median_ratio_psf_aper": 0.8383850215936093
+    },
+    {
+      "mag_bin": "16-17",
+      "N": 8,
+      "median_rms_aperture": 0.07662302466271048,
+      "median_rms_psf": 0.06149636598225812,
+      "median_ratio_psf_aper": 0.841611318678483
+    },
+    {
+      "mag_bin": "17-18",
+      "N": 1,
+      "median_rms_aperture": 0.04478838623243633,
+      "median_rms_psf": 0.04294990322036742,
+      "median_ratio_psf_aper": 0.9589517915977636
+    },
+    {
+      "mag_bin": "18-19",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": "19-20",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": ">20",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    }
+  ],
+  "crowding_table": [
+    {
+      "mag_bin": "<12",
+      "crowding_class": "crowded",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": "<12",
+      "crowding_class": "isolated",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": "12-13",
+      "crowding_class": "crowded",
+      "N": 1,
+      "median_rms_aperture": 0.07616042543473903,
+      "median_rms_psf": 0.0775794556192855,
+      "median_ratio_psf_aper": 1.018632119981557
+    },
+    {
+      "mag_bin": "12-13",
+      "crowding_class": "isolated",
+      "N": 11,
+      "median_rms_aperture": 0.053206102440491926,
+      "median_rms_psf": 0.04637406760832037,
+      "median_ratio_psf_aper": 0.6616394939013336
+    },
+    {
+      "mag_bin": "13-14",
+      "crowding_class": "crowded",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": "13-14",
+      "crowding_class": "isolated",
+      "N": 38,
+      "median_rms_aperture": 0.05978485048570795,
+      "median_rms_psf": 0.05281895609489773,
+      "median_ratio_psf_aper": 0.9128700249112742
+    },
+    {
+      "mag_bin": "14-15",
+      "crowding_class": "crowded",
+      "N": 6,
+      "median_rms_aperture": 0.05510512729056542,
+      "median_rms_psf": 0.0705991315336895,
+      "median_ratio_psf_aper": 1.3666773397195264
+    },
+    {
+      "mag_bin": "14-15",
+      "crowding_class": "isolated",
+      "N": 47,
+      "median_rms_aperture": 0.06200053463387201,
+      "median_rms_psf": 0.05555821479158072,
+      "median_ratio_psf_aper": 0.9576187288318496
+    },
+    {
+      "mag_bin": "15-16",
+      "crowding_class": "crowded",
+      "N": 13,
+      "median_rms_aperture": 0.0761938352660648,
+      "median_rms_psf": 0.05871615688186786,
+      "median_ratio_psf_aper": 0.7832654682246617
+    },
+    {
+      "mag_bin": "15-16",
+      "crowding_class": "isolated",
+      "N": 19,
+      "median_rms_aperture": 0.07709527174201856,
+      "median_rms_psf": 0.06707408957455642,
+      "median_ratio_psf_aper": 0.8687414548779097
+    },
+    {
+      "mag_bin": "16-17",
+      "crowding_class": "crowded",
+      "N": 8,
+      "median_rms_aperture": 0.07662302466271048,
+      "median_rms_psf": 0.06149636598225812,
+      "median_ratio_psf_aper": 0.841611318678483
+    },
+    {
+      "mag_bin": "16-17",
+      "crowding_class": "isolated",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": "17-18",
+      "crowding_class": "crowded",
+      "N": 1,
+      "median_rms_aperture": 0.04478838623243633,
+      "median_rms_psf": 0.04294990322036742,
+      "median_ratio_psf_aper": 0.9589517915977636
+    },
+    {
+      "mag_bin": "17-18",
+      "crowding_class": "isolated",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": "18-19",
+      "crowding_class": "crowded",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": "18-19",
+      "crowding_class": "isolated",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": "19-20",
+      "crowding_class": "crowded",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": "19-20",
+      "crowding_class": "isolated",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": ">20",
+      "crowding_class": "crowded",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    },
+    {
+      "mag_bin": ">20",
+      "crowding_class": "isolated",
+      "N": 0,
+      "median_rms_aperture": NaN,
+      "median_rms_psf": NaN,
+      "median_ratio_psf_aper": NaN
+    }
+  ],
+  "n_stars_analyzed": 144
+}

@@ -1,0 +1,227 @@
+{
+  "draft_id": 368,
+  "started_utc": "2026-06-03T16:58:24.537808+00:00",
+  "min_comp_for_ct": 7,
+  "max_stderr_ratio": 0.5,
+  "merge_specs": {
+    "Green": [
+      "Green_240_1",
+      "Green_60_1"
+    ],
+    "Red": [
+      "Red_240_1",
+      "Red_60_1"
+    ]
+  },
+  "setups": {
+    "Green": {
+      "merged_name": "Green",
+      "src_240": "Green_240_1",
+      "src_60": "Green_60_1",
+      "n_frames_240": 18,
+      "n_frames_60": 6,
+      "n_frames_merged": 24,
+      "masterstar_fits": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green\\MASTERSTAR.fits",
+      "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green\\variable_targets.csv",
+      "masterstars_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green\\masterstars_full_match.csv",
+      "per_frame_csv_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\detrended_aligned\\lights\\Green",
+      "detrended_aligned_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\detrended_aligned\\lights\\Green",
+      "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Green\\photometry"
+    },
+    "Red": {
+      "merged_name": "Red",
+      "src_240": "Red_240_1",
+      "src_60": "Red_60_1",
+      "n_frames_240": 18,
+      "n_frames_60": 6,
+      "n_frames_merged": 24,
+      "masterstar_fits": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red\\MASTERSTAR.fits",
+      "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red\\variable_targets.csv",
+      "masterstars_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red\\masterstars_full_match.csv",
+      "per_frame_csv_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\detrended_aligned\\lights\\Red",
+      "detrended_aligned_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\detrended_aligned\\lights\\Red",
+      "output_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000368\\platesolve\\Red\\photometry"
+    }
+  },
+  "photometry": {
+    "Green": {
+      "n_lightcurves": 26,
+      "n_targets": 28,
+      "target_patch": {
+        "n_patched_targets": 20,
+        "n_rescued_from_60s_active": 16,
+        "n_rescued_from_per_frame_unsat": 4
+      }
+    },
+    "Red": {
+      "n_lightcurves": 28,
+      "n_targets": 28,
+      "target_patch": {
+        "n_patched_targets": 21,
+        "n_rescued_from_60s_active": 7,
+        "n_rescued_from_per_frame_unsat": 14
+      }
+    }
+  },
+  "saturation_audit": {
+    "Green": {
+      "n_comps_any_frame": 3596,
+      "n_whole_star_saturated_masterstar": 92,
+      "n_rescued_by_merge_lt5_to_ge5": 119,
+      "n_rescued_whole_star_flag_but_ge5_per_frame": 76,
+      "n_would_lose_if_whole_star_drop": 29,
+      "sample_rescued_merge": [
+        "607997632006122112",
+        "604965969210966272",
+        "605008682661424384",
+        "604959410796572544",
+        "598883131584116096",
+        "604737824843446912",
+        "604976002255351296",
+        "598947448719301248"
+      ],
+      "sample_rescued_per_frame_sat": [
+        "605008682661424384",
+        "598899211941691648",
+        "607989080726947840",
+        "604921958681906176",
+        "604713459494948352",
+        "604918591427681024",
+        "604917594995372544",
+        "604972501857011840"
+      ]
+    },
+    "Red": {
+      "n_comps_any_frame": 3784,
+      "n_whole_star_saturated_masterstar": 65,
+      "n_rescued_by_merge_lt5_to_ge5": 105,
+      "n_rescued_whole_star_flag_but_ge5_per_frame": 49,
+      "n_would_lose_if_whole_star_drop": 17,
+      "sample_rescued_merge": [
+        "604965969210966272",
+        "598882130856416896",
+        "607999349993028096",
+        "607997430143366784",
+        "604984592189188608",
+        "604976002255351296",
+        "598894569081905920",
+        "598893538289731584"
+      ],
+      "sample_rescued_per_frame_sat": [
+        "605008682661424384",
+        "598899211941691648",
+        "607989080726947840",
+        "604713459494948352",
+        "604918591427681024",
+        "604950683423073024",
+        "598895398010754432",
+        "604921512005266048"
+      ]
+    }
+  },
+  "analysis": {
+    "Green": {
+      "merged_obs_group": "Green",
+      "merged_frame_count": 24,
+      "n_usable_comps_ge5_frames": 3459,
+      "comp_bp_rp_baseline": {
+        "comp_bp_rp_min": 0.7033138275146484,
+        "comp_bp_rp_max": 0.7902507781982422,
+        "comp_bp_rp_width": 0.08693695068359375,
+        "n_comp_rows": 109
+      },
+      "in_range_presel_n": 19,
+      "n_comp_ge7_in_range": 4,
+      "n_comp_distribution_in_range": {
+        "0": 1,
+        "5": 1,
+        "6": 11,
+        "7": 3,
+        "8": 1
+      },
+      "ct_ok_merged_min7": 0,
+      "ct_ok_catalog_ids": [],
+      "reference_ct_ok_min7_split": 0,
+      "reference_ct_ok_min5_split": 4,
+      "newly_passing_detail": [],
+      "proto_gate_pass_in_range": 0,
+      "saturation_audit": {
+        "n_comps_any_frame": 3596,
+        "n_whole_star_saturated_masterstar": 92,
+        "n_rescued_by_merge_lt5_to_ge5": 119,
+        "n_rescued_whole_star_flag_but_ge5_per_frame": 76,
+        "n_would_lose_if_whole_star_drop": 29,
+        "sample_rescued_merge": [
+          "607997632006122112",
+          "604965969210966272",
+          "605008682661424384",
+          "604959410796572544",
+          "598883131584116096",
+          "604737824843446912",
+          "604976002255351296",
+          "598947448719301248"
+        ],
+        "sample_rescued_per_frame_sat": [
+          "605008682661424384",
+          "598899211941691648",
+          "607989080726947840",
+          "604921958681906176",
+          "604713459494948352",
+          "604918591427681024",
+          "604917594995372544",
+          "604972501857011840"
+        ]
+      }
+    },
+    "Red": {
+      "merged_obs_group": "Red",
+      "merged_frame_count": 24,
+      "n_usable_comps_ge5_frames": 3672,
+      "comp_bp_rp_baseline": {
+        "comp_bp_rp_min": 0.6187305450439453,
+        "comp_bp_rp_max": 1.4009180068969729,
+        "comp_bp_rp_width": 0.7821874618530276,
+        "n_comp_rows": 31
+      },
+      "in_range_presel_n": 22,
+      "n_comp_ge7_in_range": 0,
+      "n_comp_distribution_in_range": {
+        "0": 9
+      },
+      "ct_ok_merged_min7": 0,
+      "ct_ok_catalog_ids": [],
+      "reference_ct_ok_min7_split": 0,
+      "reference_ct_ok_min5_split": 2,
+      "newly_passing_detail": [],
+      "proto_gate_pass_in_range": 0,
+      "saturation_audit": {
+        "n_comps_any_frame": 3784,
+        "n_whole_star_saturated_masterstar": 65,
+        "n_rescued_by_merge_lt5_to_ge5": 105,
+        "n_rescued_whole_star_flag_but_ge5_per_frame": 49,
+        "n_would_lose_if_whole_star_drop": 17,
+        "sample_rescued_merge": [
+          "604965969210966272",
+          "598882130856416896",
+          "607999349993028096",
+          "607997430143366784",
+          "604984592189188608",
+          "604976002255351296",
+          "598894569081905920",
+          "598893538289731584"
+        ],
+        "sample_rescued_per_frame_sat": [
+          "605008682661424384",
+          "598899211941691648",
+          "607989080726947840",
+          "604713459494948352",
+          "604918591427681024",
+          "604950683423073024",
+          "598895398010754432",
+          "604921512005266048"
+        ]
+      }
+    }
+  },
+  "finished_utc": "2026-06-03T17:00:12.628784+00:00"
+}

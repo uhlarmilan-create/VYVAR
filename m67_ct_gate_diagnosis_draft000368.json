@@ -1,0 +1,96 @@
+{
+  "draft_id": 368,
+  "min_comp_ct": 7,
+  "max_stderr_ratio": 0.5,
+  "per_target_csv": "C:\\ASTRO\\python\\VYVAR\\m67_ct_gate_diagnosis_draft000368.csv",
+  "n_rows": 120,
+  "group_meta": [
+    {
+      "obs_group": "Green_240_1",
+      "filter": "Green",
+      "n_frames": 18,
+      "comp_pool_n": 149,
+      "comp_bp_rp_min": 0.5397787094116211,
+      "comp_bp_rp_max": 2.056389808654785,
+      "comp_bp_rp_width": 1.516611099243164,
+      "comp_saturated_count": 0
+    },
+    {
+      "obs_group": "Green_60_1",
+      "filter": "Green",
+      "n_frames": 6,
+      "comp_pool_n": 149,
+      "comp_bp_rp_min": 0.5397787094116211,
+      "comp_bp_rp_max": 2.056389808654785,
+      "comp_bp_rp_width": 1.516611099243164,
+      "comp_saturated_count": 0
+    },
+    {
+      "obs_group": "Red_240_1",
+      "filter": "Red",
+      "n_frames": 18,
+      "comp_pool_n": 149,
+      "comp_bp_rp_min": 0.5397787094116211,
+      "comp_bp_rp_max": 2.056389808654785,
+      "comp_bp_rp_width": 1.516611099243164,
+      "comp_saturated_count": 0
+    },
+    {
+      "obs_group": "Red_60_1",
+      "filter": "Red",
+      "n_frames": 6,
+      "comp_pool_n": 150,
+      "comp_bp_rp_min": -0.1020040512084961,
+      "comp_bp_rp_max": 2.056389808654785,
+      "comp_bp_rp_width": 2.1583938598632812,
+      "comp_saturated_count": 0
+    }
+  ],
+  "by_filter": {
+    "Green": {
+      "n_targets": 60,
+      "gate_buckets_all": {
+        "b_count": 24,
+        "a_fit_starved": 22,
+        "d_extrapolation": 14
+      },
+      "gate_buckets_in_range_presel": {
+        "b_count": 24,
+        "a_fit_starved": 10,
+        "d_extrapolation": 4
+      },
+      "ct_ok_true": 0,
+      "gate_would_pass_min7": 2
+    },
+    "Red": {
+      "n_targets": 60,
+      "gate_buckets_all": {
+        "a_fit_starved": 24,
+        "b_count": 18,
+        "d_extrapolation": 15,
+        "c_stderr": 3
+      },
+      "gate_buckets_in_range_presel": {
+        "b_count": 18,
+        "d_extrapolation": 5,
+        "a_fit_starved": 4,
+        "c_stderr": 3
+      },
+      "ct_ok_true": 0,
+      "gate_would_pass_min7": 0
+    }
+  },
+  "in_range_presel_only": {
+    "Green": {
+      "b_count": 24,
+      "a_fit_starved": 10,
+      "d_extrapolation": 4
+    },
+    "Red": {
+      "b_count": 18,
+      "d_extrapolation": 5,
+      "a_fit_starved": 4,
+      "c_stderr": 3
+    }
+  }
+}

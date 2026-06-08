@@ -1,0 +1,11 @@
+test_id,name,passed,metric,threshold,n_compared,details,warnings
+T01,Astrometry,True,2.955857780762017e-13,2.0,135,astroalign round-trip median 0.000 arcsec (0.000 px),
+T02,Aperture flux,True,0.03228234559403642,0.035,90,median |d_mag| = 32.28 mmag,
+T03,Sky background,True,11.88275146484375,20.0,60,median |d_sky| = 11.88 ADU (VYVAR annulus vs noise_floor_adu),
+T04,FWHM / seeing,True,0.7573708928137917,1.5,3,median |d_FWHM| = 0.757 px,
+T05,Differential LC,True,0.003665456934367005,0.06,3,median |d_lc_rms| = 3.67 mmag (10 frames),
+T06,BJD/HJD,True,4.023313522338867e-05,1.0,10,frame-level BJD: max |d_BJD| = 0.0000 s (10 frames),"TODO-BJD-PERTARGET: VYVAR BJD uses field-center coords, not per-target RA/Dec. Max LTT error ~12s for 2-deg field radius. Negligible for periods >0.01d.; Measured median per-star LTT offset vs frame BJD: 0.8 s"
+T07,Airmass,True,0.011337526926416985,0.05,120,median |d_airmass| = 0.0113,
+T08,Plate scale,True,0.0,2.0,1,"VYVAR config=1.3000 arcsec/px; WCS PC/CD=9.7681 (ignored, matches _resolve_plate_scale_arcsec_per_px)",WCS PC/CD scale 9.768 arcsec/px outside 0.3-5.0; VYVAR uses config override
+T09,Comp stability,True,0.01836027200582406,0.055,10,median |d_comp_rms| = 18.36 mmag,
+T10,Variability agreement,True,0.75,0.7,4,agreement 75.0% (3/4),ROT/noisy stars may disagree by design

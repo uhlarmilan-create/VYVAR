@@ -1,0 +1,371 @@
+[
+  {
+    "rel": "blind_index_build.py",
+    "name": "blind_index_build.py",
+    "bytes": 11426,
+    "mb": 0.01,
+    "mtime": "2026-06-08 10:13",
+    "sha256_8": "b4d68096",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\build_gaia_blind_index.py",
+      "GAIA_DR3\\gaia-dr3_index_solver.py",
+      "scripts\\blind_density_runbook.py"
+    ],
+    "ref_n": 4
+  },
+  {
+    "rel": "blind_index_cells.py",
+    "name": "blind_index_cells.py",
+    "bytes": 1500,
+    "mb": 0.0,
+    "mtime": "2026-06-04 08:25",
+    "sha256_8": "73fb798b",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json"
+    ],
+    "ref_n": 1
+  },
+  {
+    "rel": "blind_index_series.json",
+    "name": "blind_index_series.json",
+    "bytes": 1006,
+    "mb": 0.0,
+    "mtime": "2026-06-04 17:34",
+    "sha256_8": "4e3563bf",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "VYVAR_JOURNAL.md",
+      "VYVAR_PARAMS.md",
+      "VYVAR_ROADMAP.md",
+      "VYVAR_STATE.md",
+      "config.json",
+      "config.py",
+      "scripts\\build_blind_index_series.py"
+    ],
+    "ref_n": 8
+  },
+  {
+    "rel": "build_gaia_blind_index.py",
+    "name": "build_gaia_blind_index.py",
+    "bytes": 1099,
+    "mb": 0.0,
+    "mtime": "2026-06-04 08:52",
+    "sha256_8": "9925e106",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\gaia-dr3_index_solver.py",
+      "config.py",
+      "config_schema.md",
+      "scripts\\solver_audit.txt",
+      "ui_settings.py",
+      "vyvar_blind_solver.py"
+    ],
+    "ref_n": 7
+  },
+  {
+    "rel": "gaia-dr3_index_solver.py",
+    "name": "gaia-dr3_index_solver.py",
+    "bytes": 1257,
+    "mb": 0.0,
+    "mtime": "2026-06-04 08:52",
+    "sha256_8": "4f1067dc",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\build_gaia_blind_index.py",
+      "scripts\\solver_audit.txt"
+    ],
+    "ref_n": 3
+  },
+  {
+    "rel": "gaia-dr3_make.py",
+    "name": "gaia-dr3_make.py",
+    "bytes": 4523,
+    "mb": 0.0,
+    "mtime": "2026-04-02 12:34",
+    "sha256_8": "919eb201",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json"
+    ],
+    "ref_n": 1
+  },
+  {
+    "rel": "gaia-dr3_make_v2.py",
+    "name": "gaia-dr3_make_v2.py",
+    "bytes": 3050,
+    "mb": 0.0,
+    "mtime": "2026-04-24 20:49",
+    "sha256_8": "ba53ed27",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json"
+    ],
+    "ref_n": 1
+  },
+  {
+    "rel": "gaia-dr3_make_v3.py",
+    "name": "gaia-dr3_make_v3.py",
+    "bytes": 7051,
+    "mb": 0.01,
+    "mtime": "2026-05-16 23:20",
+    "sha256_8": "70360d1c",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json"
+    ],
+    "ref_n": 1
+  },
+  {
+    "rel": "gaia_dr3_make_fast.py",
+    "name": "gaia_dr3_make_fast.py",
+    "bytes": 20030,
+    "mb": 0.02,
+    "mtime": "2026-04-25 06:59",
+    "sha256_8": "ded12837",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json"
+    ],
+    "ref_n": 1
+  },
+  {
+    "rel": "gaia_triangles.pkl",
+    "name": "gaia_triangles.pkl",
+    "bytes": 1406291841,
+    "mb": 1341.14,
+    "mtime": "2026-06-04 10:18",
+    "sha256_8": "35619b96",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\blind_index_build.py",
+      "GAIA_DR3\\build_gaia_blind_index.py",
+      "GAIA_DR3\\gaia-dr3_index_solver.py",
+      "VYVAR_PARAMS.md",
+      "config.json",
+      "config.py",
+      "config_schema.md",
+      "m67_bgr_phot368_result.json",
+      "pilot_palomar7_result.json",
+      "scripts\\_draft343_run_config.json",
+      "scripts\\blind_density_runbook.py",
+      "scripts\\blind_index_regression.py",
+      "scripts\\build_blind_index_series.py",
+      "scripts\\diagnose_blind_solver_380.py",
+      "ui_settings.py",
+      "vyvar_blind_solver.py"
+    ],
+    "ref_n": 17
+  },
+  {
+    "rel": "gaia_triangles.pkl.bak_mag14_premdensity",
+    "name": "gaia_triangles.pkl.bak_mag14_premdensity",
+    "bytes": 5192882920,
+    "mb": 4952.32,
+    "mtime": "2026-04-20 10:43",
+    "sha256_8": "e89fb93f",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json"
+    ],
+    "ref_n": 1
+  },
+  {
+    "rel": "gaia_triangles_fine.pkl",
+    "name": "gaia_triangles_fine.pkl",
+    "bytes": 1406291841,
+    "mb": 1341.14,
+    "mtime": "2026-06-04 10:18",
+    "sha256_8": "35619b96",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\blind_index_series.json",
+      "VYVAR_JOURNAL.md",
+      "scripts\\build_blind_index_series.py"
+    ],
+    "ref_n": 4
+  },
+  {
+    "rel": "gaia_triangles_mag14.pkl",
+    "name": "gaia_triangles_mag14.pkl",
+    "bytes": 1406291841,
+    "mb": 1341.14,
+    "mtime": "2026-06-04 10:18",
+    "sha256_8": "35619b96",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "VYVAR_JOURNAL.md",
+      "scripts\\blind_index_regression.py",
+      "scripts\\build_blind_index_series.py"
+    ],
+    "ref_n": 4
+  },
+  {
+    "rel": "gaia_triangles_test.pkl",
+    "name": "gaia_triangles_test.pkl",
+    "bytes": 3104163953,
+    "mb": 2960.36,
+    "mtime": "2026-06-04 09:29",
+    "sha256_8": "72df4330",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\gaia-dr3_index_solver.py",
+      "scripts\\blind_density_runbook.py"
+    ],
+    "ref_n": 3
+  },
+  {
+    "rel": "gaia_triangles_wide.pkl",
+    "name": "gaia_triangles_wide.pkl",
+    "bytes": 706509280,
+    "mb": 673.78,
+    "mtime": "2026-06-04 17:34",
+    "sha256_8": "d179f7c4",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\blind_index_series.json",
+      "scripts\\build_blind_index_series.py",
+      "scripts\\diagnose_blind_solver_wide.py",
+      "scripts\\diagnose_wide_true_triangle_shape.py"
+    ],
+    "ref_n": 5
+  },
+  {
+    "rel": "vyvar_gaia_dr3.db",
+    "name": "vyvar_gaia_dr3.db",
+    "bytes": 10066063360,
+    "mb": 9599.75,
+    "mtime": "2026-04-28 12:59",
+    "sha256_8": "d7eb163c",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\blind_index_build.py",
+      "GAIA_DR3\\build_gaia_blind_index.py",
+      "GAIA_DR3\\gaia-dr3_index_solver.py",
+      "GAIA_DR3\\gaia-dr3_make.py",
+      "VYVAR_PARAMS.md",
+      "VYVAR_STATE.md",
+      "chiandh_continue375_result.json",
+      "config.json",
+      "pilot_palomar7_deep_gaia_ab_result.json",
+      "pilot_palomar7_result.json",
+      "scripts\\_draft343_run_config.json",
+      "scripts\\blind_density_runbook.py",
+      "scripts\\build_blind_index_series.py",
+      "scripts\\chiandh_allfilters_overnight.py",
+      "scripts\\chiandh_continue375_solve.py",
+      "scripts\\cross_validate_draft342.py",
+      "scripts\\vyvar_audit.txt",
+      "tests\\test_dilution.py"
+    ],
+    "ref_n": 19
+  },
+  {
+    "rel": "vyvar_gaia_dr3_chiandh_field.db",
+    "name": "vyvar_gaia_dr3_chiandh_field.db",
+    "bytes": 11190272,
+    "mb": 10.67,
+    "mtime": "2026-06-03 19:53",
+    "sha256_8": "5e8d69c6",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\vyvar_gaia_dr3_chiandh_field_build.json",
+      "chiandh_bvr_night_run_result.json",
+      "scripts\\chiandh_build_field_db.py",
+      "scripts\\chiandh_continue_bvr_phot.py",
+      "scripts\\chiandh_inject_platesolve_phot.py",
+      "scripts\\chiandh_night_run_bvr.py",
+      "scripts\\chiandh_resume_draft369.py"
+    ],
+    "ref_n": 8
+  },
+  {
+    "rel": "vyvar_gaia_dr3_chiandh_field_build.json",
+    "name": "vyvar_gaia_dr3_chiandh_field_build.json",
+    "bytes": 735,
+    "mb": 0.0,
+    "mtime": "2026-06-03 19:53",
+    "sha256_8": "8d633379",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "scripts\\chiandh_build_field_db.py"
+    ],
+    "ref_n": 2
+  },
+  {
+    "rel": "vyvar_gaia_dr3_m67_field.db",
+    "name": "vyvar_gaia_dr3_m67_field.db",
+    "bytes": 1855488,
+    "mb": 1.77,
+    "mtime": "2026-06-03 16:04",
+    "sha256_8": "e8be89d4",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\vyvar_gaia_dr3_m67_field_build.json",
+      "m67_bgr_phot368_result.json",
+      "m67_lrgb_night_run_result.json",
+      "scripts\\m67_continue368_bgr_phot.py",
+      "scripts\\m67_continue368_gr_merge_sandbox.py",
+      "scripts\\m67_continue368_gr_sandbox.py",
+      "scripts\\m67_night_run_lrgb.py"
+    ],
+    "ref_n": 8
+  },
+  {
+    "rel": "vyvar_gaia_dr3_m67_field_build.json",
+    "name": "vyvar_gaia_dr3_m67_field_build.json",
+    "bytes": 697,
+    "mb": 0.0,
+    "mtime": "2026-06-03 16:04",
+    "sha256_8": "a48737b1",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json"
+    ],
+    "ref_n": 1
+  },
+  {
+    "rel": "vyvar_gaia_dr3_pal7_field.db",
+    "name": "vyvar_gaia_dr3_pal7_field.db",
+    "bytes": 11546624,
+    "mb": 11.01,
+    "mtime": "2026-06-03 10:41",
+    "sha256_8": "24ed54b9",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "VYVAR_JOURNAL.md",
+      "palomar7_bgr_continue367_result.json",
+      "palomar7_bgr_night_run_result.json",
+      "palomar7_field_db_rebuild.json",
+      "pilot_palomar7_deep_gaia_ab_result.json",
+      "scripts\\forced_photometry_pal7.py",
+      "scripts\\palomar7_build_field_db.py",
+      "scripts\\palomar7_continue367_bgr.py",
+      "scripts\\palomar7_night_run_bgr.py",
+      "scripts\\palomar7_photometry_180_bgr.py",
+      "scripts\\pilot_palomar7_deep_gaia_ab.py",
+      "scripts\\smoke_psf_gated_364.py"
+    ],
+    "ref_n": 13
+  },
+  {
+    "rel": "vyvar_gaia_dr3_v1.db",
+    "name": "vyvar_gaia_dr3_v1.db",
+    "bytes": 8176144384,
+    "mb": 7797.38,
+    "mtime": "2026-04-02 16:29",
+    "sha256_8": "901fd567",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json"
+    ],
+    "ref_n": 1
+  },
+  {
+    "rel": "vyvar_gaia_dr3_v3.db",
+    "name": "vyvar_gaia_dr3_v3.db",
+    "bytes": 8192,
+    "mb": 0.01,
+    "mtime": "2026-05-18 18:54",
+    "sha256_8": "3678fa65",
+    "refs": [
+      "GAIA_DR3\\_hash_cache.json",
+      "GAIA_DR3\\gaia-dr3_make_v3.py",
+      "VYVAR_JOURNAL.md"
+    ],
+    "ref_n": 3
+  }
+]

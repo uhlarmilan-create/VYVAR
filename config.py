@@ -1,0 +1,1833 @@
+"""Project configuration for the variable-star processing system."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import copy
+import json
+import logging
+import math
+import os
+from pathlib import Path
+from typing import Any
+
+
+def config_json_path(project_root: Path) -> Path:
+    return project_root / "config.json"
+
+
+def load_config_json(project_root: Path) -> dict[str, Any]:
+    path = config_json_path(project_root)
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
+    path = config_json_path(project_root)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def recommended_vyvar_parallel_workers(*, reserve_ram_gb: float = 1.5) -> int:
+    """Jednotný počet workerov pre QC, preprocess, combined, per-frame CSV (základ pred RAM stropom), alignment, calibrate MP.
+
+    Berie minimum z CPU-heuristiky a odhadu podľa voľnej RAM (rovnaký odhad pamäte ako pri per-frame exporte),
+    aby jedna hodnota bola bezpečná v celom workflow.
+    """
+    n = os.cpu_count()
+    if n is None or n < 1:
+        n = 4
+    if n <= 1:
+        cpu_cap = 1
+    else:
+        cpu_cap = max(1, min(32, min(n - 1, 16, max(1, n // 2))))
+    h, wpx = 2048, 2048
+    per_worker = max(int(h * wpx * 4 * 3), 1)
+    try:
+        import psutil
+
+        reserve = int(max(0.0, float(reserve_ram_gb)) * (1024**3))
+        avail = int(psutil.virtual_memory().available) - reserve
+        if avail <= 0:
+            ram_cap = 1
+        else:
+            ram_cap = max(1, min(32, avail // per_worker))
+    except Exception:
+        ram_cap = 32
+    return max(1, min(32, min(cpu_cap, ram_cap)))
+
+
+@dataclass(slots=True)
+class AppConfig:
+    """Central application config.
+
+    SQLite schema is intentionally not defined yet.
+    """
+
+    project_root: Path = field(default_factory=lambda: Path(__file__).resolve().parent)
+
+    # Calibration validity defaults (days)
+    masterdark_validity_days: int = 80
+    masterflat_validity_days: int = 524
+
+    #: Estimated field diameter in degrees for VYVAR Gaia plate solve (used as **minimum** hint only).
+    #: The actual Gaia kužeľ pre celý čip sa odvodzuje z FOCALLEN+PIXSIZE+NAXIS (pozri ``catalog_cone_radius_deg_from_optics``
+    #: v ``utils.py`` a ``solve_wcs_with_local_gaia`` v ``vyvar_platesolver.py``); táto hodnota len zaručí spodnú hranicu.
+    plate_solve_fov_deg: float = 1.0
+
+    #: When applying masters from CalibrationLibrary, assume this **sensor** binning in the stored FITS
+    #: (typically ``1`` = full resolution). Lights with ``XBINNING`` 2×2 are matched in RAM (temporary resample).
+    #: JSON ``null``: read ``XBINNING`` from each master FITS (e.g. Bin2 library files with 2×2 lights).
+    calibration_library_native_binning: int | None = 1
+
+    #: Path to local Gaia DR3 SQLite database (must contain table ``gaia_dr3`` with indexes on ra/dec).
+    gaia_db_path: str = ""
+
+    #: Path to blind plate-solve triangle hash index (``gaia_triangles.pkl``, from ``build_gaia_blind_index.py``).
+    blind_index_path: str = r"C:\ASTRO\python\VYVAR\GAIA_DR3\gaia_triangles.pkl"
+    #: JSON manifest of density tiers (``blind_index_series.json``); used when ``blind_index_select_mode`` is auto/series_all.
+    blind_index_series: str = r"C:\ASTRO\python\VYVAR\GAIA_DR3\blind_index_series.json"
+    #: ``auto`` = scale-aware tier order + verify; ``series_all`` = all tiers; ``single`` = ``blind_index_path`` only.
+    blind_index_select_mode: str = "auto"
+    #: Blind solver: geometric verification of top-N vote candidates (astrometry.net-style).
+    blind_verify_enabled: bool = True
+    blind_verify_top_n: int = 15
+    blind_verify_match_tol_px: float = 2.5
+    blind_verify_min_matches: int = 12
+    blind_verify_min_fraction: float = 0.15
+    #: In-memory bright Gaia + KDTree for blind verify (one load per solve).
+    blind_verify_inmemory_catalog: bool = True
+    #: G-band limit for verify in-memory catalog (default matches wide index depth).
+    verify_mag_limit: float = 14.0
+    #: Stop verify sweep once an accepted candidate reaches this many matches (see also early floor).
+    blind_verify_early_accept: int = 30
+    #: Minimum matches before early-exit (``max(early_accept, min_matches * 6)`` if unset here).
+    blind_verify_early_floor: int = 0
+    #: Early-exit when accepted candidate fraction ≥ this (0 = use absolute ``early_floor`` only).
+    blind_verify_early_fraction: float = 0.20
+    #: Cheap pre-filter: skip full greedy match if fewer than this many rough hits.
+    blind_prefilter_min: int = 4
+    #: Brightest central stars used for blind image kNN triangles (matches index local kNN).
+    blind_img_star_budget: int = 80
+    #: Image star pick: ``per_cell`` (mirror index SPC/cell) or ``central`` (legacy rig-prior cone).
+    blind_img_select_mode: str = "per_cell"
+    #: When True, use known plate scale / FOV as hard gates (pre-vote ratio + verify WCS scale).
+    blind_use_rig_prior: bool = True
+    #: Allowed fractional deviation |L3_img/L3_cat - 1| and |fitted_scale/known - 1| (rig prior).
+    blind_scale_tol_frac: float = 0.10
+    #: DBSCAN vote clusters: minimum members to emit a verify candidate (wide truth ~11).
+    blind_cluster_min_votes: int = 4
+    #: DBSCAN neighborhood radius in degrees (haversine); default matches CLUSTER_RADIUS_DEG.
+    blind_cluster_eps_deg: float = 1.0
+    #: DBSCAN min_samples (core point threshold).
+    blind_cluster_min_samples: int = 3
+    #: Also verify DBSCAN clusters with vote count <= min_votes + span (truth-sized clumps).
+    blind_cluster_vote_span: int = 12
+    #: Max verify candidates from the vote-span band (shape-coherent, not count-dominant).
+    blind_cluster_coherence_cap: int = 25
+
+    #: Path to local VSX subset SQLite (table ``vsx_data``: oid, ra_deg, dec_deg, …) for variable-star flags.
+    vsx_local_db_path: str = ""
+    #: VSX export for variable_targets.csv: keep stars with ``mag_max`` <= limit (or unknown ``mag_max``).
+    #: Set to ``<= 0`` to disable this cutoff (export all VSX rows in the field cone).
+    vsx_variable_targets_mag_limit: float = 14.5
+
+    #: After a cone query, keep at most this many catalog rows (brightest by ``mag``) to avoid RAM/CPU freeze.
+    catalog_query_max_rows: int = 15_000
+
+    #: Use ``photutils`` circular aperture + annulus sky (replaces DAO ``flux`` in sidecar CSV when enabled).
+    aperture_photometry_enabled: bool = True
+    #: Fáza 2A: ukladať PNG (lightcurve, cutout, field map). ``False`` = len CSV + summary; UI používa Plotly z CSV.
+    save_lightcurve_png: bool = False
+    #: Diagnostic only: ``True`` = pre-TODO-29 order (airmass fit → outlier detect). Default ``False`` keeps outlier → airmass.
+    phase2a_airmass_before_outlier: bool = False
+    #: TODO-35: SysRem (Tamuz et al. 2005) on exported ``lightcurve_*.csv`` after Phase 2A.
+    sysrem_enabled: bool = False
+    sysrem_n_iter: int = 3
+    #: Post–Phase 2A comp-star LOO QA (Sokolovsky locus); metadata only, no photometry changes.
+    comp_qa_enabled: bool = True
+    #: Post–Phase 2A trust flag (GREEN/YELLOW/RED); metadata + report/export notes only.
+    trust_flag_enabled: bool = True
+    # Export reports (AAVSO + VAR.ASTRO.CZ)
+    observer_name: str = "Unknown Observer"
+    observer_code: str = ""
+    #: Legacy mirrors — synced from ``observer_*`` in ``__post_init__`` (kept for older callers).
+    aavso_observer_code: str = "UMIA"
+    varastro_observer_name: str = "Milan Uhlar"
+    #: User overrides: filter/setup name (uppercase key) → AAVSO FILT code (e.g. ``"MYLUM": "CV"``).
+    aavso_filter_map: dict[str, str] = field(default_factory=dict)
+    # Observer location — used for BJD, airmass, lunar context
+    observer_location_id: int = 2  # FK to LOCATION table; 0 = unset
+    observer_lat: float = 50.1121658  # degrees N
+    observer_lon: float = 14.6982547  # degrees E
+    observer_alt_m: float = 275.0  # metres above sea level
+    observer_location_name: str = ""  # display name; filled from DB on load when id > 0
+    #: Fallback pixel scale (arcsec/px) for export headers if FITS/WCS is unavailable.
+    export_arcsec_per_px: float = 1.3
+    #: Opt-in ePSF fitting on per-frame catalogs (adds ``psf_*`` columns; requires ``masterstar_epsf.fits``).
+    psf_photometry_enabled: bool = False
+    #: ePSF spatial variation order when photutils EPSFBuilder supports it:
+    #: 0 = single global ePSF (default; sufficient for well-corrected optics).
+    #: 1 = linear spatial variation (better for Newton/fast optics with field coma).
+    #: 2 = quadratic (rarely needed for ground-based amateur setups).
+    #: Note: per-set spatial_order planned for TODO-MULTISET.
+    psf_spatial_order: int = 0
+    #: Reduced χ² cutoff for PSF fit acceptance (``psf_fit_ok``).
+    psf_chi2_threshold: float = 50.0
+    #: PSF crowded-field joint-fit (SourceGrouper). Default OFF → production unchanged.
+    #: When enabled, each PSF target is fit jointly with its close neighbours so a
+    #: bright neighbour does not corrupt a faint blended target.
+    psf_grouper_enabled: bool = False
+    #: SourceGrouper min_separation, in units of FWHM_px (sources closer than this group).
+    psf_group_sep_fwhm: float = 1.5
+    #: Neighbour inclusion radius for joint-fit init params, in units of FWHM_px.
+    psf_neighbor_include_fwhm: float = 3.0
+    #: Spatially-varying ePSF (GriddedPSFModel). Default OFF → single global ePSF.
+    #: When enabled, ePSFs are built per detector-region cell and interpolated by (x,y),
+    #: which matters on wide fields where the PSF varies (coma / field curvature at edges).
+    psf_spatial_enabled: bool = False
+    #: Grid layout "NxM" (columns × rows) of detector regions for the spatial ePSF.
+    psf_spatial_grid: str = "3x3"
+    #: Minimum isolated stars per cell; cells below this fall back to the global ePSF (flagged).
+    psf_spatial_min_stars_per_cell: int = 25
+    #: When a per-star PSF fit is graded ``bad``, do not emit its PSF flux as usable —
+    #: fall back to aperture for that star (sets ``psf_quality_fallback``). Default ON: a bad
+    #: PSF fit must never silently become the reported value (the RMS-20.4 lesson).
+    psf_quality_fallback_enabled: bool = True
+    #: Per-star/per-frame adaptive flux selector (aperture vs PSF). Default OFF → production
+    #: stays pure-aperture. When ON, defaults to aperture and switches to PSF only with
+    #: positive evidence AND good PSF quality (see _select_flux_method_row).
+    psf_adaptive_enabled: bool = False
+    #: A blend is "resolvable" (→ prefer PSF) only if the nearest neighbour is at least this
+    #: many FWHM away (fit well-conditioned). At 9.77″/px this rarely fires (blends merge).
+    psf_adaptive_resolve_fwhm: float = 2.0
+    #: Faint-star threshold: below this SNR a good PSF (local background) can beat a
+    #: contaminated aperture annulus → prefer PSF.
+    psf_adaptive_snr_lo: float = 15.0
+    #: Reduced χ² cutoff for Moffat2D (Step 1) fit acceptance (``moffat_fit_ok``).
+    moffat_chi2_limit: float = 50.0
+    #: When True, QC headers are written on ``calibrated/lights`` FITS in-place; ``processed/`` is not created.
+    skip_processed_directory: bool = False
+    #: In-place QC reject threshold for estimated FWHM [pix] (``skip_processed_directory`` path).
+    qc_fwhm_limit: float = 8.0
+    #: In-place QC reject threshold for elongation a/b (``skip_processed_directory`` path).
+    qc_elong_limit: float = 1.8
+    #: Minimum clean stars required to build the ePSF model.
+    epsf_min_stars: int = 30
+    #: Per-frame photometry routing: ``aperture``, ``epsf``, or ``both``.
+    photometry_mode: str = "both"
+    # NOTE: These are in units of **Gaussian FWHM** (not moment-FWHM).
+    # Aperture/annulus radii are computed as factor × fwhm_gaussian_px.
+    #: Legacy single aperture factor — used where multi-aperture (B+C) is not active.
+    aperture_fwhm_factor: float = 1.9
+    #: Multi-aperture (Method B+C foundation): small / medium / large radii as FWHM multiples.
+    aperture_fwhm_factor_small: float = 1.5
+    aperture_fwhm_factor_medium: float = 2.5
+    aperture_fwhm_factor_large: float = 4.0
+    #: TODO-44: Role-aware scale on SNR-optimal radius (SIPS-style); 1.0 = no change.
+    aperture_variable_factor: float = 1.0
+    aperture_comp_factor: float = 1.1
+    #: Phase 2A ``catalog_only`` targets: nearest comp stars from masterstars when Phase 1 assigned none.
+    catalog_only_n_comps: int = 5
+    annulus_inner_fwhm: float = 4.75
+    annulus_outer_fwhm: float = 9.0
+    #: Top ``p`` %% brightest by ``peak_max_adu`` checked for FWHM non-linearity vs field median.
+    nonlinearity_peak_percentile: float = 20.0
+    nonlinearity_fwhm_ratio: float = 1.25
+    #: Master-dark column BPM: MAD multiplier for ``*_dark_bpm.json`` (see ``importer``).
+    bpm_dark_mad_sigma: float = 5.0
+
+    #: If plate-solve hint RA/Dec vs draft median separation exceeds this (deg), use draft median for solver.
+    masterstar_solver_use_draft_median_if_hint_sep_deg: float = 1.0
+    #: Saturation safety fraction applied to equipment_saturate_adu before classifying MASTERSTAR zones.
+    saturate_limit_fraction: float = 0.85
+    #: Log zarovnanie (astroalign): referenčný rámec a počty kontrolných bodov.
+    masterstar_log_astroalign: bool = True
+    #: After astrometry optimizer mirror-orientation warning, log an extra hint line.
+    masterstar_optimizer_mirror_extra_log: bool = True
+    #: Enable verbose debug logs for plate solving / blind solver / hint plumbing.
+    debug_platesolver: bool = False
+    #: VYVAR plate-solve na MASTERSTAR: max. SIP stupeň (2–5). Solver skúša **nadol** po ``masterstar_platesolve_sip_min_order`` (napr. 5→4→3).
+    masterstar_platesolve_sip_max_order: int = 4
+    #: Najnižší SIP stupeň pri páde vyšších (typicky 3; nie menej ako 2).
+    masterstar_platesolve_sip_min_order: int = 3
+    #: DAOStarFinder threshold = σ×RMS len pre MASTERSTAR katalóg (hlbšia detekcia; cieľ viac tisíc hviezd).
+    masterstar_dao_threshold_sigma: float = 2.1
+    #: Pred matchom s Gaia: ponechať detekcie s peakom aspoň ``median + k×σ`` (nižšie = viac slabých hviezd).
+    masterstar_prematch_peak_sigma_floor: float = 1.8
+    #: MASTERSTAR katalóg: DAO FWHM z najlepšieho zdrojového snímku (``best_frame_fwhm_px``), nie médian ``VY_FWHM`` v hlavičke.
+    masterstar_use_best_frame_fwhm: bool = True
+    #: MASTERSTAR DAO pass 2: lokálny prah v σ pri cielených Gaia pozíciách bez DAO zhody (min. 1.5 v kóde).
+    masterstar_dao_pass2_sigma: float = 1.9
+    #: MASTERSTAR: horná hranica px RMS pred zápisom WCS (pred relaxáciou). ``None`` = predvolené 14 px.
+    masterstar_platesolve_prewrite_rms_max_px: float | None = 30.0
+    #: MASTERSTAR: pri dobrom match_rate akceptovať RMS až do tejto hodnoty [px]. ``None`` = 22 px.
+    masterstar_platesolve_prewrite_relaxed_rms_max_px: float | None = 35.0
+    #: MASTERSTAR: NN WCS refine sa aplikuje len ak RMS ≤ tejto hodnote [px]. ``None`` = 7.5 px.
+    masterstar_platesolve_nn_refine_max_rms_px: float | None = None
+    #: Pri ``force_apply`` SIP: zamietnuť ak ``rms_sip > rms_linear * ratio``. ``None`` = bez stráže (pôvodné správanie).
+    masterstar_sip_force_rms_guard_ratio: float | None = 1.15
+
+    #: Pomer sx/sy (arcsec/px) — nad týmto sa považuje WCS za príliš anizotropný (VYVAR retry / diagnostika).
+    platesolve_anisotropy_threshold: float = 1.3
+
+    #: Paralelizmus (QC, preprocess, combined, per-frame CSV, alignment, calibrate MP): jedna hodnota
+    #: počítaná v ``__post_init__``; nie v ``config.json``. Runtime override: ``VYVAR_PARALLEL_WORKERS`` alebo legacy env v pipeline.
+    qc_preprocess_workers: int = 1
+    #: Reserve this much RAM (GB) when capping paralelného exportu katalógov cez ``psutil`` (nad rámec jednotného ``_pw``).
+    per_frame_mp_reserve_ram_gb: float = 1.5
+
+    #: Frame alignment (``astroalign`` + DAO positions): max brightest sources offered as control points per frame.
+    alignment_max_stars: int = 160
+    #: DAOStarFinder threshold multiplier vs sigma-clipped background RMS (higher = fewer, more significant peaks).
+    alignment_detection_sigma: float = 5.0
+    #: Same recipe as QC HFR star detection (``_mean_hfr_bright_stars_dao`` first pass: ``threshold = qc_dao_detection_sigma × std``).
+    #: Used for frame alignment DAO so it tracks QC-style sensitivity.
+    qc_dao_detection_sigma: float = 5.0
+
+    #: DAOStarFinder FWHM (pixels) tuned for SIPS-like centroid search (aperture ~13 → ~4–5 px FWHM).
+    sips_dao_fwhm_px: float = 2.5
+    #: DAOStarFinder threshold = this × background RMS (SIPS “standard deviation count” ≈ 2.5).
+    #: Pre hlboký MASTERSTAR / široké pole niekedy **0.25–1.0** (viac špičiek); používa sa aj pri VYVAR plate solve, ak volanie neprebije ``dao_threshold_sigma``.
+    sips_dao_threshold_sigma: float = 3.5
+
+    #: Fáza 0+1 — výber porovnávacích hviezd (``photometry_core.select_comparison_stars_per_target``).
+    #: Pri **riedkom poli** zväčši ``phase01_comparison_max_mag_diff`` / ``phase01_comparison_max_dist_deg``,
+    #: prípadne zníž ``phase01_comparison_min_frames_frac`` alebo zvýš ``phase01_comparison_max_comp_rms`` (slabší filter stability).
+    #: Pri **jasných cieľoch** (``mag`` < ``phase01_comparison_mag_bright_threshold``) sa použije aspoň
+    #: ``phase01_comparison_max_mag_diff_bright_floor`` ako minimálny |Δmag| pás (``0`` = vypnuté).
+    # FOV-based comp distance: if plate_scale is known, search within a fraction of half-diagonal.
+    phase01_comparison_max_dist_deg: float = 1.5
+    phase01_comparison_fov_fraction: float = 0.75
+    phase01_comparison_max_mag_diff: float = 1.5
+    phase01_comparison_mag_bright_threshold: float = 12.75
+    phase01_comparison_max_mag_diff_bright_floor: float = 1.5
+    #: Absolútny strop pre adaptívne uvoľňovanie |Δmag| pri výbere porovnávačiek.
+    #: Nikdy nejdeme vyššie (ochrana pred miešaním úplne iných jasností).
+    phase01_comparison_max_mag_diff_absolute: float = 3.0
+    phase01_comparison_n_comp_min: int = 3
+    phase01_comparison_n_comp_max: int = 8
+    phase01_comparison_max_comp_rms: float = 0.1
+    phase01_comparison_min_dist_arcsec: float = 60.0
+    #: RMS bin width (mag) for comp tie-break within a colour tier (~1 mmag default).
+    phase01_comparison_rms_bin_mag: float = 0.001
+    #: When True, sort by binned RMS then ``dist_deg`` among near-equal-stability comps (off by default).
+    phase01_comparison_proximity_tiebreak: bool = False
+    phase01_comparison_min_frames_frac: float = 0.2
+    phase01_comparison_exclude_gaia_nss: bool = True
+    phase01_comparison_exclude_gaia_extobj: bool = True
+    #: Max |ΔBP-RP| v efektívnom farebnom priestore (hard filter pri výbere comp).
+    comp_max_delta_bprp: float = 0.79
+    #: Tier limity |ΔBP-RP| (Gaia BP-RP ako primárny farebný filter pri výbere comp).
+    comp_tier1_bprp_limit: float = 0.15
+    comp_tier2_bprp_limit: float = 0.3
+    comp_tier3_bprp_limit: float = 0.55
+    comp_tier4_bprp_limit: float = 1.10
+    #: Tier váhy pre ensemble/AC (multiplikátor k Broeg 1/σ²).
+    comp_tier1_weight: float = 1.00
+    comp_tier2_weight: float = 0.85
+    comp_tier3_weight: float = 0.50
+    comp_tier4_weight: float = 0.25
+    #: Exponential contamination penalty in comp score: score *= exp(-k * contamination_idx).
+    comp_contamination_penalty_k: float = 3.0
+    # Tier mag/BV limits (config-driven, replaces hardcoded tuples)
+    phase01_tier1_mag: float = 0.50
+    phase01_tier2_mag: float = 1.00
+    phase01_tier3_mag: float = 1.50
+    phase01_tier4_mag: float = 2.00
+    phase01_plate_scale_arcsec_per_px: float = 1.3
+    #: Plate scale (arcsec/px) for Phase 2A metadata, GS11, dilution; Set 1 default 1.3.
+    plate_scale_arcsec_per_px: float = 1.3
+    #: Fáza 0: minimum cross-match radius VSX → masterstars (arcsec); used with max(5× plate_scale, this).
+    phase01_match_radius_arcsec: float = 10.0
+    #: Fáza 2A: minimum number of comps used in color-term fit before applying CT (``should_apply_color_term``).
+    phase01_ct_min_comp: int = 7
+    #: Fáza 2A: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear).
+    apply_color_term: str = "auto"
+    #: Fáza 2A: BP-RP tolerance (mag) when testing target vs comp range before applying CT (0 = strict).
+    phase01_ct_extrapolation_tol: float = 0.0
+    #: Column name used for flux in Phase 1 comp selection (dao_flux = aperture DAO; psf_flux = ePSF).
+    phase01_flux_col: str = "dao_flux"
+
+    #: ALG-3: Temporal binning of comp ensemble before stability/PyTICS (Broeg-Bischoff & Dreizler 2023 MNRAS).
+    temporal_binning_enabled: bool = True
+    temporal_bin_window: int = 0  # 0 = auto-optimize among [3,5,7,9,11]
+
+    #: ALG-2: Savitzky-Golay detrend after airmass (opt-in; Aigrain & Irwin 2004 MNRAS).
+    savgol_detrend_enabled: bool = False
+    savgol_window_frac: float = 0.5  # was 0.3 — more conservative
+    savgol_polyorder: int = 2
+
+    #: ALG-4: Democratic Detrender ensemble detrend (Caballero-Nieves et al. 2026 arXiv:2411.09753v2).
+    democratic_detrend_enabled: bool = False
+    democratic_sg_window_frac: float = 0.5
+
+    #: ALG-5: PyTICS iterative comp intercalibration after stability check (Marconi et al. 2026 RASTI).
+    pytics_enabled: bool = True
+    pytics_n_iter: int = 5
+
+    #: Fáza 2A: exclude comparison stars with |linear slope| above this (mmag/hr) in stability check.
+    comp_max_slope_mmag_hr: float = 5.0
+
+    # GS11 — Flux dilution correction
+    gs11_dilution_enabled: bool = False
+    gs11_dilution_aperture_arcsec: float = 0.0
+    gs11_dilution_mag_limit_delta: float = 5.0
+    gs11_comp_max_dilution: float = 0.90
+    gs11_comp_suspect_dilution: float = 0.98
+    gs11_target_min_dilution: float = 0.50
+
+    #: Aperture correction (Method B): reserved for future pipeline; off by default.
+    aperture_correction_enabled: bool = True
+    aperture_correction_min_ref_stars: int = 3
+    aperture_correction_max_contamination: float = 0.15
+
+    aperture_correction_max_scatter_mag: float = 0.03
+
+    #: Per-frame curve-of-growth aperture correction (puts every star on a common
+    #: ref-radius enclosed-flux scale). Distinct from aperture_correction_* (Method B,
+    #: flux_large/flux_small). Default OFF — validate before enabling in production.
+    cog_aperture_correction_enabled: bool = False
+    #: COG reference radius in FWHM units (where the curve of growth flattens).
+    cog_ref_fwhm: float = 4.5
+    #: Minimum number of COG stars required per frame; else cog_ok=False (no correction).
+    cog_min_stars: int = 8
+    #: COG-star isolation radius in FWHM units (no neighbour within this distance).
+    cog_isolation_fwhm: float = 6.0
+    #: COG-star minimum Howell SNR.
+    cog_snr_min: float = 50.0
+    #: COG-star saturation guard: reject if peak > sat_frac * saturate_limit_adu.
+    cog_sat_frac: float = 0.85
+    #: COG radius-ladder step (px).
+    cog_ladder_step_px: float = 0.5
+    #: Maximum allowed per-star ac_factor (safety clamp).
+    cog_ac_factor_max: float = 5.0
+
+    #: CCD gain (e-/ADU) — used in noise model / SNR estimates.
+    gain: float = 1.0
+    #: CCD read noise (e-) — used in noise model.
+    read_noise: float = 10.0
+
+    #: MASTERSTAR: stack N frames and pick best N for ePSF/catalog build.
+    masterstar_best_of_n: int = 10
+
+    #: Fallback sky background level (ADU) when no sky estimate is available.
+    sky_adu_fallback: float = 1581.6
+
+    #: Aperture correction: reject comp stars with scatter above this (mag).
+    #: Phase 1 comp gate: max reduced chi2 for PSF fit acceptance in comp selection.
+    phase01_comparison_max_psf_chi2: float = 50.0
+    #: Phase 1 comp gate: reject comps with FWHM > this factor × field median FWHM.
+    phase01_comparison_max_fwhm_factor: float = 1.5
+    #: Phase 1 comp gate: minimum isolation radius (px) — reject comps with neighbour closer than this.
+    phase01_comparison_isolation_radius_px: float = 25.0
+    #: Phase 1 comp stability: sigma for outlier rejection in RMS stability check.
+    phase01_comparison_rms_outlier_sigma: float = 3.0
+
+    #: Sensor frame dimensions in pixels (used when FITS NAXIS1/2 unavailable).
+    frame_width_px: int = 2082
+    frame_height_px: int = 1397
+
+    #: Jednotný vnútorný okraj čipu (px) pre **celú Fázu 0+1**: aktívne premenné, porovnávacie hviezdy aj suspected.
+    #: Hviezdy s ``x,y`` bližšie ako tento počet pixelov od okraja referenčného poľa sa neberú (zmierňuje artefakty
+    #: pri zarovnaní / posune poľa / okrajoch). ``0`` = vypnuté (celý čip). Predvolene 50 px.
+    phase01_chip_interior_margin_px: int = 50
+
+    # Variability Detection
+    variability_min_frames: int = 30
+    variability_min_frames_frac: float = 0.50
+    variability_sigma_clip: float = 5.0
+    variability_p85_filter: int = 85
+    variability_slope_floor: float = 0.02
+    variability_sigma_threshold: float = 2.3
+    #: Upper envelope floor = comp P90 rms_pct per mag bin × this factor (TODO-26).
+    variability_comp_floor_factor: float = 1.5
+    variability_smoothness_max: float = 0.80
+    variability_mag_limit: float = 14.5
+    variability_min_rms_pct: float = 1.5
+    variability_min_amplitude_mag: float = 0.01
+    variability_clip_ratio_min: float = 0.80
+    variability_vdi_z_threshold: float = 3.0
+    variability_min_points_rms: int = 20
+
+    #: ``True`` = sťahovanie/analýza TESS FFI cez lightkurve (TessCut), UI + ``tess_runner`` + pipeline hook.
+    #: ``False`` = vypnuté — žiadne sťahovanie; log ``[TESS] preskočené``. Zapnúť: ``"tess_enabled": true`` v ``config.json``.
+    tess_enabled: bool = False
+
+    #: Hustota poľa (hviezd/Mpx z DAO na MASTERSTAR): prahy a adaptívne úpravy Fázy 0+1 / apertúry (baseline = JSON).
+    field_density_sparse_threshold: float = 300.0
+    field_density_dense_threshold: float = 1000.0
+    field_density_adaptive_enabled: bool = True
+    #: [CROWDING-CLASSIFIER] Replace the detection/scale-locked stars/Mpx classifier with
+    #: detection-independent ``crowding_index`` signals. Default OFF (stars/Mpx fallback).
+    #: Decouples the two concerns the legacy single class conflated:
+    #:   LOOSEN keys on comp AVAILABILITY (few usable catalog comps in FOV), not density;
+    #:   TIGHTEN keys on real BLEND_FRAC (contamination @ measured depth), not stars/Mpx.
+    crowding_classifier_enabled: bool = False
+    #: blend_frac (neighbours within 1×FWHM @ measured depth) at/above which to TIGHTEN comps.
+    crowding_blend_tighten_threshold: float = 0.04
+    #: usable catalog comps in FOV (Gaia stars ≤ effective limit) below which to LOOSEN comps.
+    crowding_comp_availability_loosen_count: float = 500.0
+    #: SAMPLING GATE for the blend-TIGHTEN branch. Tighten ONLY when the PSF is resolved
+    #: (FWHM_px ≥ this). On under-sampled fields (wide rig, FWHM≈2.6 px) the comp-RMS
+    #: 0.08–0.10 tail is the field floor (scintillation/undersampling), NOT resolvable
+    #: contamination, so max_comp_rms tightening cuts good comps and thins the ensemble
+    #: (verified on 360: −19 comps, +3.5 mmag LC scatter). FWHM≥3 px ≈ "well sampled"
+    #: (Nyquist is 2 px; PSF-fit/deblend guidance wants ≳3 px) — only there does a high
+    #: comp-RMS mean real contamination, so tighten pays off (e.g. the Newton cluster).
+    crowding_tighten_min_fwhm_px: float = 3.0
+    #: ``True`` = jeden globálny comp pool (safe_bbox + RMS) pred per-target výberom; ``False`` = legacy.
+    global_comp_pool_enabled: bool = True
+
+    #: Post-calibration QC on each calibrated light (metrics + pass/fail vs limits).
+    qc_after_calibrate_enabled: bool = True
+    #: PERF-10: DAO QC (FWHM/sky/star_count) during calibration; skips RAM QC pass when True.
+    dao_qc_in_calibrate: bool = True
+    qc_max_hfr: float = 5.0
+    qc_min_stars: int = 10
+    #: If set, fail when sigma-clipped sky RMS exceeds this (same units as calibrated image).
+    qc_max_background_rms: float | None = None
+
+    #: FITS QA dashboard: odvodzovať predvolený FWHM limit z MAD (median + k×σ_MAD).
+    auto_fwhm_enabled: bool = True
+    auto_fwhm_k_factor: float = 1.5
+    auto_fwhm_k_min: float = 1.0
+    auto_fwhm_k_max: float = 4.0
+
+    # Paths derived from config.json (must stay after all init=True fields for dataclass(slots=True)).
+    archive_root: Path = field(init=False)
+    calibration_library_root: Path = field(init=False)
+    database_path: Path = field(init=False)
+
+    def __post_init__(self) -> None:
+        data = load_config_json(self.project_root)
+
+        self.archive_root = Path(data.get("archive_root", str(self.project_root / "Archive")))
+        self.calibration_library_root = Path(
+            data.get("calibration_library_root", str(self.project_root / "CalibrationLibrary"))
+        )
+        self.database_path = Path(data.get("database_path", str(self.project_root / "vyvar.sqlite3")))
+
+        self.masterdark_validity_days = int(data.get("masterdark_validity_days", 60))
+        self.masterflat_validity_days = int(data.get("masterflat_validity_days", 200))
+
+        # ``plate_solve_fov_deg`` is no longer read from JSON — resolved from FITS + DB (see ``resolve_plate_solve_fov_deg_hint``).
+        self.plate_solve_fov_deg = 1.0
+        # Migration: GAIA_DB_PATH supersedes legacy catalog settings.
+        _cln_raw = data.get("calibration_library_native_binning", self.calibration_library_native_binning)
+        if _cln_raw is None:
+            self.calibration_library_native_binning = None
+        else:
+            try:
+                _cln = int(_cln_raw)
+                self.calibration_library_native_binning = max(1, min(16, _cln))
+            except (TypeError, ValueError):
+                self.calibration_library_native_binning = 1
+
+        self.gaia_db_path = str(data.get("gaia_db_path", data.get("GAIA_DB_PATH", "")) or "").strip()
+
+        _blind_default = self.blind_index_path
+        self.blind_index_path = str(
+            data.get("blind_index_path", data.get("BLIND_INDEX_PATH", "")) or ""
+        ).strip()
+        if not self.blind_index_path:
+            self.blind_index_path = str(_blind_default or "").strip()
+        _series_default = self.blind_index_series
+        self.blind_index_series = str(
+            data.get("blind_index_series", data.get("BLIND_INDEX_SERIES", "")) or ""
+        ).strip()
+        if not self.blind_index_series:
+            self.blind_index_series = str(_series_default or "").strip()
+        _mode = str(data.get("blind_index_select_mode", self.blind_index_select_mode) or "auto")
+        _mode = _mode.strip().lower()
+        self.blind_index_select_mode = (
+            _mode if _mode in ("auto", "series_all", "single") else "auto"
+        )
+        self.blind_verify_enabled = bool(data.get("blind_verify_enabled", self.blind_verify_enabled))
+        try:
+            self.blind_verify_top_n = int(data.get("blind_verify_top_n", self.blind_verify_top_n))
+        except (TypeError, ValueError):
+            self.blind_verify_top_n = 15
+        self.blind_verify_top_n = max(1, min(50, int(self.blind_verify_top_n)))
+        try:
+            self.blind_verify_match_tol_px = float(
+                data.get("blind_verify_match_tol_px", self.blind_verify_match_tol_px)
+            )
+        except (TypeError, ValueError):
+            self.blind_verify_match_tol_px = 2.5
+        self.blind_verify_match_tol_px = max(0.5, min(20.0, float(self.blind_verify_match_tol_px)))
+        try:
+            self.blind_verify_min_matches = int(
+                data.get("blind_verify_min_matches", self.blind_verify_min_matches)
+            )
+        except (TypeError, ValueError):
+            self.blind_verify_min_matches = 12
+        self.blind_verify_min_matches = max(3, min(200, int(self.blind_verify_min_matches)))
+        try:
+            self.blind_verify_min_fraction = float(
+                data.get("blind_verify_min_fraction", self.blind_verify_min_fraction)
+            )
+        except (TypeError, ValueError):
+            self.blind_verify_min_fraction = 0.30
+        self.blind_verify_min_fraction = max(0.05, min(0.95, float(self.blind_verify_min_fraction)))
+        self.blind_verify_inmemory_catalog = bool(
+            data.get("blind_verify_inmemory_catalog", self.blind_verify_inmemory_catalog)
+        )
+        try:
+            self.verify_mag_limit = float(data.get("verify_mag_limit", self.verify_mag_limit))
+        except (TypeError, ValueError):
+            self.verify_mag_limit = 14.0
+        self.verify_mag_limit = max(8.0, min(18.0, float(self.verify_mag_limit)))
+        try:
+            self.blind_verify_early_accept = int(
+                data.get("blind_verify_early_accept", self.blind_verify_early_accept)
+            )
+        except (TypeError, ValueError):
+            self.blind_verify_early_accept = 30
+        self.blind_verify_early_accept = max(8, min(200, int(self.blind_verify_early_accept)))
+        try:
+            self.blind_verify_early_floor = int(
+                data.get("blind_verify_early_floor", self.blind_verify_early_floor)
+            )
+        except (TypeError, ValueError):
+            self.blind_verify_early_floor = 0
+        self.blind_verify_early_floor = max(0, min(200, int(self.blind_verify_early_floor)))
+        try:
+            self.blind_verify_early_fraction = float(
+                data.get("blind_verify_early_fraction", self.blind_verify_early_fraction)
+            )
+        except (TypeError, ValueError):
+            self.blind_verify_early_fraction = 0.20
+        self.blind_verify_early_fraction = max(0.0, min(0.95, float(self.blind_verify_early_fraction)))
+        try:
+            self.blind_prefilter_min = int(data.get("blind_prefilter_min", self.blind_prefilter_min))
+        except (TypeError, ValueError):
+            self.blind_prefilter_min = 4
+        self.blind_prefilter_min = max(2, min(20, int(self.blind_prefilter_min)))
+        try:
+            self.blind_img_star_budget = int(
+                data.get("blind_img_star_budget", self.blind_img_star_budget)
+            )
+        except (TypeError, ValueError):
+            self.blind_img_star_budget = 80
+        self.blind_img_star_budget = max(10, min(500, int(self.blind_img_star_budget)))
+        _bism = str(data.get("blind_img_select_mode", self.blind_img_select_mode)).strip().lower()
+        self.blind_img_select_mode = (
+            "central" if _bism in ("central", "legacy", "rig_prior") else "per_cell"
+        )
+        self.blind_use_rig_prior = bool(
+            data.get("blind_use_rig_prior", self.blind_use_rig_prior)
+        )
+        try:
+            self.blind_scale_tol_frac = float(
+                data.get("blind_scale_tol_frac", self.blind_scale_tol_frac)
+            )
+        except (TypeError, ValueError):
+            self.blind_scale_tol_frac = 0.10
+        self.blind_scale_tol_frac = max(0.02, min(0.50, float(self.blind_scale_tol_frac)))
+        try:
+            self.blind_cluster_min_votes = int(
+                data.get("blind_cluster_min_votes", self.blind_cluster_min_votes)
+            )
+        except (TypeError, ValueError):
+            self.blind_cluster_min_votes = 4
+        self.blind_cluster_min_votes = max(2, min(50, int(self.blind_cluster_min_votes)))
+        try:
+            self.blind_cluster_eps_deg = float(
+                data.get("blind_cluster_eps_deg", self.blind_cluster_eps_deg)
+            )
+        except (TypeError, ValueError):
+            self.blind_cluster_eps_deg = 1.0
+        if not math.isfinite(self.blind_cluster_eps_deg) or self.blind_cluster_eps_deg <= 0:
+            self.blind_cluster_eps_deg = 1.0
+        self.blind_cluster_eps_deg = max(0.1, min(5.0, float(self.blind_cluster_eps_deg)))
+        try:
+            self.blind_cluster_min_samples = int(
+                data.get("blind_cluster_min_samples", self.blind_cluster_min_samples)
+            )
+        except (TypeError, ValueError):
+            self.blind_cluster_min_samples = 3
+        self.blind_cluster_min_samples = max(2, min(20, int(self.blind_cluster_min_samples)))
+        try:
+            self.blind_cluster_vote_span = int(
+                data.get("blind_cluster_vote_span", self.blind_cluster_vote_span)
+            )
+        except (TypeError, ValueError):
+            self.blind_cluster_vote_span = 12
+        self.blind_cluster_vote_span = max(0, min(50, int(self.blind_cluster_vote_span)))
+        try:
+            self.blind_cluster_coherence_cap = int(
+                data.get("blind_cluster_coherence_cap", self.blind_cluster_coherence_cap)
+            )
+        except (TypeError, ValueError):
+            self.blind_cluster_coherence_cap = 50
+        self.blind_cluster_coherence_cap = max(5, min(200, int(self.blind_cluster_coherence_cap)))
+
+        self.vsx_local_db_path = str(
+            data.get("vsx_local_db_path", data.get("VSX_LOCAL_DB_PATH", "")) or ""
+        ).strip()
+        _vml = data.get("vsx_variable_targets_mag_limit", self.vsx_variable_targets_mag_limit)
+        try:
+            self.vsx_variable_targets_mag_limit = float(_vml)
+            if not math.isfinite(self.vsx_variable_targets_mag_limit):
+                self.vsx_variable_targets_mag_limit = 13.0
+            # ``<= 0`` = žiadny mag. rez VSX (export všetkých v kuželi); ``> 0`` = max ``mag_max`` z VSX.
+        except (TypeError, ValueError):
+            self.vsx_variable_targets_mag_limit = 13.0
+        try:
+            self.catalog_query_max_rows = max(
+                1000, min(500_000, int(data.get("catalog_query_max_rows", self.catalog_query_max_rows)))
+            )
+        except (TypeError, ValueError):
+            self.catalog_query_max_rows = 15_000
+
+        try:
+            self.per_frame_mp_reserve_ram_gb = float(
+                data.get("per_frame_mp_reserve_ram_gb", self.per_frame_mp_reserve_ram_gb)
+            )
+            if not math.isfinite(self.per_frame_mp_reserve_ram_gb) or self.per_frame_mp_reserve_ram_gb < 0:
+                self.per_frame_mp_reserve_ram_gb = 1.5
+        except (TypeError, ValueError):
+            self.per_frame_mp_reserve_ram_gb = 1.5
+
+        _pw = int(
+            recommended_vyvar_parallel_workers(reserve_ram_gb=float(self.per_frame_mp_reserve_ram_gb))
+        )
+        self.qc_preprocess_workers = _pw
+
+        try:
+            self.alignment_max_stars = max(
+                10, min(5000, int(data.get("alignment_max_stars", self.alignment_max_stars)))
+            )
+        except (TypeError, ValueError):
+            self.alignment_max_stars = 200
+        try:
+            self.alignment_detection_sigma = float(
+                data.get("alignment_detection_sigma", self.alignment_detection_sigma)
+            )
+            if not math.isfinite(self.alignment_detection_sigma) or self.alignment_detection_sigma <= 0:
+                self.alignment_detection_sigma = 5.0
+        except (TypeError, ValueError):
+            self.alignment_detection_sigma = 5.0
+        try:
+            self.qc_dao_detection_sigma = float(data.get("qc_dao_detection_sigma", self.qc_dao_detection_sigma))
+            if not math.isfinite(self.qc_dao_detection_sigma) or self.qc_dao_detection_sigma <= 0:
+                self.qc_dao_detection_sigma = 5.0
+        except (TypeError, ValueError):
+            self.qc_dao_detection_sigma = 5.0
+        try:
+            self.sips_dao_fwhm_px = float(data.get("sips_dao_fwhm_px", self.sips_dao_fwhm_px))
+            if not math.isfinite(self.sips_dao_fwhm_px) or self.sips_dao_fwhm_px <= 0:
+                self.sips_dao_fwhm_px = 2.5
+        except (TypeError, ValueError):
+            self.sips_dao_fwhm_px = 2.5
+        self.sips_dao_fwhm_px = max(1.0, min(8.0, float(self.sips_dao_fwhm_px)))
+        try:
+            self.sips_dao_threshold_sigma = float(
+                data.get("sips_dao_threshold_sigma", self.sips_dao_threshold_sigma)
+            )
+            if not math.isfinite(self.sips_dao_threshold_sigma) or self.sips_dao_threshold_sigma <= 0:
+                self.sips_dao_threshold_sigma = 3.5
+        except (TypeError, ValueError):
+            self.sips_dao_threshold_sigma = 3.5
+
+        self.qc_after_calibrate_enabled = bool(
+            data.get("qc_after_calibrate_enabled", self.qc_after_calibrate_enabled)
+        )
+        self.dao_qc_in_calibrate = bool(
+            data.get("dao_qc_in_calibrate", self.dao_qc_in_calibrate)
+        )
+        try:
+            self.qc_max_hfr = float(data.get("qc_max_hfr", self.qc_max_hfr))
+        except (TypeError, ValueError):
+            self.qc_max_hfr = 5.0
+        try:
+            self.qc_min_stars = max(0, int(data.get("qc_min_stars", self.qc_min_stars)))
+        except (TypeError, ValueError):
+            self.qc_min_stars = 10
+        _qmr = data.get("qc_max_background_rms", self.qc_max_background_rms)
+        if _qmr is None or _qmr == "":
+            self.qc_max_background_rms = None
+        else:
+            try:
+                v = float(_qmr)
+                self.qc_max_background_rms = v if v > 0 and math.isfinite(v) else None
+            except (TypeError, ValueError):
+                self.qc_max_background_rms = None
+
+        self.auto_fwhm_enabled = bool(data.get("auto_fwhm_enabled", self.auto_fwhm_enabled))
+        try:
+            self.auto_fwhm_k_factor = float(data.get("auto_fwhm_k_factor", self.auto_fwhm_k_factor))
+        except (TypeError, ValueError):
+            self.auto_fwhm_k_factor = 1.5
+        try:
+            self.auto_fwhm_k_min = float(data.get("auto_fwhm_k_min", self.auto_fwhm_k_min))
+        except (TypeError, ValueError):
+            self.auto_fwhm_k_min = 1.0
+        try:
+            self.auto_fwhm_k_max = float(data.get("auto_fwhm_k_max", self.auto_fwhm_k_max))
+        except (TypeError, ValueError):
+            self.auto_fwhm_k_max = 4.0
+        if self.auto_fwhm_k_min > self.auto_fwhm_k_max:
+            self.auto_fwhm_k_min, self.auto_fwhm_k_max = 1.0, 4.0
+        self.auto_fwhm_k_factor = max(
+            float(self.auto_fwhm_k_min), min(float(self.auto_fwhm_k_max), float(self.auto_fwhm_k_factor))
+        )
+
+        self.aperture_photometry_enabled = bool(data.get("aperture_photometry_enabled", self.aperture_photometry_enabled))
+        self.save_lightcurve_png = bool(data.get("save_lightcurve_png", self.save_lightcurve_png))
+        self.phase2a_airmass_before_outlier = bool(
+            data.get("phase2a_airmass_before_outlier", self.phase2a_airmass_before_outlier)
+        )
+        self.sysrem_enabled = bool(data.get("sysrem_enabled", self.sysrem_enabled))
+        try:
+            self.sysrem_n_iter = max(1, int(data.get("sysrem_n_iter", self.sysrem_n_iter)))
+        except (TypeError, ValueError):
+            self.sysrem_n_iter = 3
+        self.comp_qa_enabled = bool(data.get("comp_qa_enabled", self.comp_qa_enabled))
+        self.trust_flag_enabled = bool(data.get("trust_flag_enabled", self.trust_flag_enabled))
+        # Export reports — prefer ``observer_name`` / ``observer_code``; fall back to legacy JSON keys.
+        _obn = data.get("observer_name")
+        if _obn is None or str(_obn).strip() == "":
+            _obn = data.get("varastro_observer_name", self.observer_name)
+        self.observer_name = str(_obn or "").strip() or "Unknown Observer"
+        _obc = data.get("observer_code")
+        if _obc is None:
+            _obc = data.get("aavso_observer_code", self.observer_code)
+        self.observer_code = str(_obc or "").strip()
+        self.varastro_observer_name = str(self.observer_name)
+        self.aavso_observer_code = str(self.observer_code)
+        _ffm = data.get("aavso_filter_map", {})
+        if isinstance(_ffm, dict):
+            self.aavso_filter_map = {
+                str(k).strip().upper(): str(v).strip()
+                for k, v in _ffm.items()
+                if str(k).strip() and str(v).strip()
+            }
+        else:
+            self.aavso_filter_map = {}
+        try:
+            self.observer_location_id = int(
+                data.get("observer_location_id", self.observer_location_id)
+            )
+        except (TypeError, ValueError):
+            self.observer_location_id = 1
+        self.observer_location_id = max(0, self.observer_location_id)
+        try:
+            self.observer_lat = float(data.get("observer_lat", self.observer_lat))
+            if not math.isfinite(self.observer_lat):
+                self.observer_lat = 0.0
+        except (TypeError, ValueError):
+            self.observer_lat = 0.0
+        try:
+            self.observer_lon = float(data.get("observer_lon", self.observer_lon))
+            if not math.isfinite(self.observer_lon):
+                self.observer_lon = 0.0
+        except (TypeError, ValueError):
+            self.observer_lon = 0.0
+        try:
+            self.observer_alt_m = float(data.get("observer_alt_m", self.observer_alt_m))
+            if not math.isfinite(self.observer_alt_m):
+                self.observer_alt_m = 0.0
+        except (TypeError, ValueError):
+            self.observer_alt_m = 0.0
+        self.observer_location_name = str(
+            data.get("observer_location_name", self.observer_location_name) or ""
+        ).strip()
+        if self.observer_location_id > 0:
+            try:
+                from database import get_observer_location_by_id
+
+                loc = get_observer_location_by_id(
+                    str(self.database_path), int(self.observer_location_id)
+                )
+                if loc is not None:
+                    if not self.observer_location_name:
+                        self.observer_location_name = str(loc.get("name") or "")
+                    if self.observer_lat == 0.0 and self.observer_lon == 0.0:
+                        self.observer_lat = float(loc.get("lat", 0.0) or 0.0)
+                        self.observer_lon = float(loc.get("lon", 0.0) or 0.0)
+                        self.observer_alt_m = float(loc.get("alt_m", 0.0) or 0.0)
+            except Exception:  # noqa: BLE001
+                pass
+        try:
+            v = float(data.get("export_arcsec_per_px", self.export_arcsec_per_px))
+            self.export_arcsec_per_px = v if math.isfinite(v) and v > 0 else 1.3
+        except Exception:  # noqa: BLE001
+            self.export_arcsec_per_px = 1.3
+        self.psf_photometry_enabled = bool(data.get("psf_photometry_enabled", self.psf_photometry_enabled))
+        try:
+            _pso = int(data.get("psf_spatial_order", self.psf_spatial_order))
+            self.psf_spatial_order = max(0, min(2, _pso))
+        except (TypeError, ValueError):
+            self.psf_spatial_order = 0
+        try:
+            _pct = float(data.get("psf_chi2_threshold", self.psf_chi2_threshold))
+            self.psf_chi2_threshold = _pct if math.isfinite(_pct) and _pct > 0 else 50.0
+        except (TypeError, ValueError):
+            self.psf_chi2_threshold = 50.0
+        self.psf_grouper_enabled = bool(data.get("psf_grouper_enabled", self.psf_grouper_enabled))
+        try:
+            _gsf = float(data.get("psf_group_sep_fwhm", self.psf_group_sep_fwhm))
+            self.psf_group_sep_fwhm = _gsf if math.isfinite(_gsf) and _gsf > 0 else 1.5
+        except (TypeError, ValueError):
+            self.psf_group_sep_fwhm = 1.5
+        try:
+            _nif = float(data.get("psf_neighbor_include_fwhm", self.psf_neighbor_include_fwhm))
+            self.psf_neighbor_include_fwhm = _nif if math.isfinite(_nif) and _nif > 0 else 3.0
+        except (TypeError, ValueError):
+            self.psf_neighbor_include_fwhm = 3.0
+        self.psf_spatial_enabled = bool(data.get("psf_spatial_enabled", self.psf_spatial_enabled))
+        _grid = str(data.get("psf_spatial_grid", self.psf_spatial_grid) or "3x3").lower().strip()
+        self.psf_spatial_grid = _grid if "x" in _grid else "3x3"
+        try:
+            _mspc = int(data.get("psf_spatial_min_stars_per_cell", self.psf_spatial_min_stars_per_cell))
+            self.psf_spatial_min_stars_per_cell = _mspc if _mspc >= 1 else 25
+        except (TypeError, ValueError):
+            self.psf_spatial_min_stars_per_cell = 25
+        self.psf_quality_fallback_enabled = bool(
+            data.get("psf_quality_fallback_enabled", self.psf_quality_fallback_enabled)
+        )
+        self.psf_adaptive_enabled = bool(data.get("psf_adaptive_enabled", self.psf_adaptive_enabled))
+        try:
+            self.psf_adaptive_resolve_fwhm = float(
+                data.get("psf_adaptive_resolve_fwhm", self.psf_adaptive_resolve_fwhm)
+            )
+        except (TypeError, ValueError):
+            self.psf_adaptive_resolve_fwhm = 2.0
+        try:
+            self.psf_adaptive_snr_lo = float(data.get("psf_adaptive_snr_lo", self.psf_adaptive_snr_lo))
+        except (TypeError, ValueError):
+            self.psf_adaptive_snr_lo = 15.0
+        try:
+            _mcl = float(data.get("moffat_chi2_limit", self.moffat_chi2_limit))
+            self.moffat_chi2_limit = _mcl if math.isfinite(_mcl) and _mcl > 0 else 50.0
+        except (TypeError, ValueError):
+            self.moffat_chi2_limit = 50.0
+        self.skip_processed_directory = bool(
+            data.get("skip_processed_directory", self.skip_processed_directory)
+        )
+        try:
+            _ems = int(data.get("epsf_min_stars", self.epsf_min_stars))
+            self.epsf_min_stars = max(10, _ems)
+        except (TypeError, ValueError):
+            self.epsf_min_stars = 30
+        _pm = str(data.get("photometry_mode", self.photometry_mode) or "both").strip().lower()
+        self.photometry_mode = _pm if _pm in ("aperture", "epsf", "both") else "both"
+        try:
+            self.aperture_fwhm_factor = float(data.get("aperture_fwhm_factor", self.aperture_fwhm_factor))
+            if not math.isfinite(self.aperture_fwhm_factor) or self.aperture_fwhm_factor <= 0:
+                self.aperture_fwhm_factor = 2.75
+        except (TypeError, ValueError):
+            self.aperture_fwhm_factor = 2.75
+        self.aperture_fwhm_factor = max(0.5, min(6.0, float(self.aperture_fwhm_factor)))
+        for _apt_key in (
+            "aperture_fwhm_factor_small",
+            "aperture_fwhm_factor_medium",
+            "aperture_fwhm_factor_large",
+        ):
+            try:
+                _av = float(data.get(_apt_key, getattr(self, _apt_key)))
+                if not math.isfinite(_av) or _av <= 0:
+                    raise ValueError
+                setattr(self, _apt_key, max(0.5, min(6.0, float(_av))))
+            except (TypeError, ValueError, AttributeError):
+                pass
+        try:
+            self.aperture_variable_factor = max(
+                0.25,
+                min(3.0, float(data.get("aperture_variable_factor", self.aperture_variable_factor))),
+            )
+        except (TypeError, ValueError):
+            self.aperture_variable_factor = 1.0
+        try:
+            self.aperture_comp_factor = max(
+                0.25,
+                min(3.0, float(data.get("aperture_comp_factor", self.aperture_comp_factor))),
+            )
+        except (TypeError, ValueError):
+            self.aperture_comp_factor = 1.1
+        self.aperture_correction_enabled = bool(
+            data.get("aperture_correction_enabled", self.aperture_correction_enabled)
+        )
+        try:
+            self.aperture_correction_min_ref_stars = max(
+                1,
+                min(50, int(data.get("aperture_correction_min_ref_stars", self.aperture_correction_min_ref_stars))),
+            )
+        except (TypeError, ValueError):
+            self.aperture_correction_min_ref_stars = 3
+        try:
+            _acmc = float(
+                data.get("aperture_correction_max_contamination", self.aperture_correction_max_contamination)
+            )
+            self.aperture_correction_max_contamination = (
+                float(_acmc) if math.isfinite(_acmc) and _acmc >= 0 else 0.15
+            )
+        except (TypeError, ValueError):
+            self.aperture_correction_max_contamination = 0.15
+        self.aperture_correction_max_contamination = max(0.0, min(2.0, float(self.aperture_correction_max_contamination)))
+        try:
+            _acms = float(
+                data.get("aperture_correction_max_scatter_mag", self.aperture_correction_max_scatter_mag)
+            )
+            self.aperture_correction_max_scatter_mag = (
+                float(_acms) if math.isfinite(_acms) and _acms >= 0 else 0.03
+            )
+        except (TypeError, ValueError):
+            self.aperture_correction_max_scatter_mag = 0.03
+
+        # Per-frame curve-of-growth aperture correction (gated, default OFF).
+        self.cog_aperture_correction_enabled = bool(
+            data.get("cog_aperture_correction_enabled", self.cog_aperture_correction_enabled)
+        )
+        try:
+            _v = float(data.get("cog_ref_fwhm", self.cog_ref_fwhm))
+            self.cog_ref_fwhm = _v if math.isfinite(_v) and _v > 0 else 4.5
+        except (TypeError, ValueError):
+            self.cog_ref_fwhm = 4.5
+        self.cog_ref_fwhm = max(1.5, min(10.0, float(self.cog_ref_fwhm)))
+        try:
+            self.cog_min_stars = max(1, min(500, int(data.get("cog_min_stars", self.cog_min_stars))))
+        except (TypeError, ValueError):
+            self.cog_min_stars = 8
+        try:
+            _v = float(data.get("cog_isolation_fwhm", self.cog_isolation_fwhm))
+            self.cog_isolation_fwhm = _v if math.isfinite(_v) and _v > 0 else 6.0
+        except (TypeError, ValueError):
+            self.cog_isolation_fwhm = 6.0
+        try:
+            _v = float(data.get("cog_snr_min", self.cog_snr_min))
+            self.cog_snr_min = _v if math.isfinite(_v) and _v >= 0 else 50.0
+        except (TypeError, ValueError):
+            self.cog_snr_min = 50.0
+        try:
+            _v = float(data.get("cog_sat_frac", self.cog_sat_frac))
+            self.cog_sat_frac = _v if math.isfinite(_v) and 0 < _v <= 1.0 else 0.85
+        except (TypeError, ValueError):
+            self.cog_sat_frac = 0.85
+        try:
+            _v = float(data.get("cog_ladder_step_px", self.cog_ladder_step_px))
+            self.cog_ladder_step_px = _v if math.isfinite(_v) and _v > 0 else 0.5
+        except (TypeError, ValueError):
+            self.cog_ladder_step_px = 0.5
+        try:
+            _v = float(data.get("cog_ac_factor_max", self.cog_ac_factor_max))
+            self.cog_ac_factor_max = _v if math.isfinite(_v) and _v >= 1.0 else 5.0
+        except (TypeError, ValueError):
+            self.cog_ac_factor_max = 5.0
+        self.aperture_correction_max_scatter_mag = max(
+            0.0, min(2.0, float(self.aperture_correction_max_scatter_mag))
+        )
+        try:
+            _g = float(data.get("gain", self.gain))
+            self.gain = float(_g) if math.isfinite(_g) and _g > 0 else 1.0
+        except (TypeError, ValueError):
+            self.gain = 1.0
+        try:
+            _rn = float(data.get("read_noise", self.read_noise))
+            self.read_noise = float(_rn) if math.isfinite(_rn) and _rn >= 0 else 10.0
+        except (TypeError, ValueError):
+            self.read_noise = 10.0
+        try:
+            self.masterstar_best_of_n = max(
+                1,
+                min(25, int(data.get("masterstar_best_of_n", self.masterstar_best_of_n))),
+            )
+        except (TypeError, ValueError):
+            self.masterstar_best_of_n = 10
+        try:
+            _sky = float(data.get("sky_adu_fallback", self.sky_adu_fallback))
+            self.sky_adu_fallback = float(_sky) if math.isfinite(_sky) and _sky >= 0 else 1581.6
+        except (TypeError, ValueError):
+            self.sky_adu_fallback = 1581.6
+        try:
+            self.phase01_ct_min_comp = max(
+                2,
+                min(30, int(data.get("phase01_ct_min_comp", self.phase01_ct_min_comp))),
+            )
+        except (TypeError, ValueError):
+            self.phase01_ct_min_comp = 7
+        _act = str(data.get("apply_color_term", self.apply_color_term) or "auto").strip().lower()
+        if _act in ("1", "true", "yes", "on"):
+            self.apply_color_term = "on"
+        elif _act in ("0", "false", "no", "off"):
+            self.apply_color_term = "off"
+        else:
+            self.apply_color_term = "auto"
+        try:
+            self.phase01_ct_extrapolation_tol = max(
+                0.0,
+                float(data.get("phase01_ct_extrapolation_tol", self.phase01_ct_extrapolation_tol)),
+            )
+        except (TypeError, ValueError):
+            self.phase01_ct_extrapolation_tol = 0.0
+        self.phase01_flux_col = str(data.get("phase01_flux_col", self.phase01_flux_col)).strip() or "dao_flux"
+        self.temporal_binning_enabled = bool(
+            data.get("temporal_binning_enabled", self.temporal_binning_enabled)
+        )
+        try:
+            self.temporal_bin_window = max(
+                0,
+                min(51, int(data.get("temporal_bin_window", self.temporal_bin_window))),
+            )
+        except (TypeError, ValueError):
+            self.temporal_bin_window = 0
+        self.democratic_detrend_enabled = bool(
+            data.get("democratic_detrend_enabled", self.democratic_detrend_enabled)
+        )
+        try:
+            self.democratic_sg_window_frac = max(
+                0.05,
+                min(
+                    0.95,
+                    float(data.get("democratic_sg_window_frac", self.democratic_sg_window_frac)),
+                ),
+            )
+        except (TypeError, ValueError):
+            self.democratic_sg_window_frac = 0.5
+        self.pytics_enabled = bool(data.get("pytics_enabled", self.pytics_enabled))
+        try:
+            self.pytics_n_iter = max(1, min(20, int(data.get("pytics_n_iter", self.pytics_n_iter))))
+        except (TypeError, ValueError):
+            self.pytics_n_iter = 5
+        try:
+            self.comp_max_slope_mmag_hr = max(
+                0.0,
+                min(500.0, float(data.get("comp_max_slope_mmag_hr", self.comp_max_slope_mmag_hr))),
+            )
+        except (TypeError, ValueError):
+            self.comp_max_slope_mmag_hr = 5.0
+        try:
+            self.annulus_inner_fwhm = float(data.get("annulus_inner_fwhm", self.annulus_inner_fwhm))
+            self.annulus_outer_fwhm = float(data.get("annulus_outer_fwhm", self.annulus_outer_fwhm))
+        except (TypeError, ValueError):
+            self.annulus_inner_fwhm = 5.5
+            self.annulus_outer_fwhm = 10.5
+        if self.annulus_outer_fwhm <= self.annulus_inner_fwhm:
+            self.annulus_outer_fwhm = self.annulus_inner_fwhm + 1.0
+        try:
+            self.nonlinearity_peak_percentile = float(
+                data.get("nonlinearity_peak_percentile", self.nonlinearity_peak_percentile)
+            )
+        except (TypeError, ValueError):
+            self.nonlinearity_peak_percentile = 20.0
+        self.nonlinearity_peak_percentile = max(0.0, min(50.0, float(self.nonlinearity_peak_percentile)))
+        try:
+            self.nonlinearity_fwhm_ratio = float(data.get("nonlinearity_fwhm_ratio", self.nonlinearity_fwhm_ratio))
+        except (TypeError, ValueError):
+            self.nonlinearity_fwhm_ratio = 1.25
+        self.nonlinearity_fwhm_ratio = max(1.01, min(3.0, float(self.nonlinearity_fwhm_ratio)))
+        try:
+            self.bpm_dark_mad_sigma = float(data.get("bpm_dark_mad_sigma", self.bpm_dark_mad_sigma))
+        except (TypeError, ValueError):
+            self.bpm_dark_mad_sigma = 5.0
+        self.bpm_dark_mad_sigma = max(2.0, min(12.0, float(self.bpm_dark_mad_sigma)))
+
+        try:
+            self.masterstar_solver_use_draft_median_if_hint_sep_deg = float(
+                data.get(
+                    "masterstar_solver_use_draft_median_if_hint_sep_deg",
+                    self.masterstar_solver_use_draft_median_if_hint_sep_deg,
+                )
+            )
+            if not math.isfinite(self.masterstar_solver_use_draft_median_if_hint_sep_deg):
+                self.masterstar_solver_use_draft_median_if_hint_sep_deg = 1.0
+        except (TypeError, ValueError):
+            self.masterstar_solver_use_draft_median_if_hint_sep_deg = 1.0
+        self.masterstar_solver_use_draft_median_if_hint_sep_deg = max(0.0, min(180.0, float(self.masterstar_solver_use_draft_median_if_hint_sep_deg)))
+        self.masterstar_log_astroalign = bool(data.get("masterstar_log_astroalign", self.masterstar_log_astroalign))
+        self.masterstar_optimizer_mirror_extra_log = bool(
+            data.get("masterstar_optimizer_mirror_extra_log", self.masterstar_optimizer_mirror_extra_log)
+        )
+        self.debug_platesolver = bool(data.get("debug_platesolver", self.debug_platesolver))
+        try:
+            self.masterstar_platesolve_sip_max_order = int(
+                data.get("masterstar_platesolve_sip_max_order", self.masterstar_platesolve_sip_max_order)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_platesolve_sip_max_order = 5
+        self.masterstar_platesolve_sip_max_order = max(2, min(5, int(self.masterstar_platesolve_sip_max_order)))
+        try:
+            self.masterstar_platesolve_sip_min_order = int(
+                data.get("masterstar_platesolve_sip_min_order", self.masterstar_platesolve_sip_min_order)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_platesolve_sip_min_order = 3
+        self.masterstar_platesolve_sip_min_order = max(2, min(5, int(self.masterstar_platesolve_sip_min_order)))
+        if self.masterstar_platesolve_sip_min_order > self.masterstar_platesolve_sip_max_order:
+            self.masterstar_platesolve_sip_min_order = int(self.masterstar_platesolve_sip_max_order)
+        try:
+            self.masterstar_dao_threshold_sigma = float(
+                data.get("masterstar_dao_threshold_sigma", self.masterstar_dao_threshold_sigma)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_dao_threshold_sigma = 1.8
+        self.masterstar_dao_threshold_sigma = max(0.1, min(6.0, float(self.masterstar_dao_threshold_sigma)))
+        try:
+            self.masterstar_prematch_peak_sigma_floor = float(
+                data.get("masterstar_prematch_peak_sigma_floor", self.masterstar_prematch_peak_sigma_floor)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_prematch_peak_sigma_floor = 3.2
+        self.masterstar_prematch_peak_sigma_floor = max(0.5, min(6.0, float(self.masterstar_prematch_peak_sigma_floor)))
+
+        def _opt_pos_float(key: str, lo: float, hi: float) -> float | None:
+            raw = data.get(key)
+            if raw is None or raw == "":
+                return None
+            try:
+                v = float(raw)
+            except (TypeError, ValueError):
+                return None
+            if not math.isfinite(v) or v <= 0:
+                return None
+            return max(lo, min(hi, v))
+
+        self.masterstar_platesolve_prewrite_rms_max_px = _opt_pos_float(
+            "masterstar_platesolve_prewrite_rms_max_px", 1.0, 80.0
+        )
+        self.masterstar_platesolve_prewrite_relaxed_rms_max_px = _opt_pos_float(
+            "masterstar_platesolve_prewrite_relaxed_rms_max_px", 1.0, 120.0
+        )
+        self.masterstar_platesolve_nn_refine_max_rms_px = _opt_pos_float(
+            "masterstar_platesolve_nn_refine_max_rms_px", 0.5, 50.0
+        )
+
+        _msiprg = data.get("masterstar_sip_force_rms_guard_ratio", self.masterstar_sip_force_rms_guard_ratio)
+        if _msiprg is None or _msiprg == "":
+            self.masterstar_sip_force_rms_guard_ratio = None
+        else:
+            try:
+                v = float(_msiprg)
+                self.masterstar_sip_force_rms_guard_ratio = v if math.isfinite(v) and v > 0 else 1.15
+            except (TypeError, ValueError):
+                self.masterstar_sip_force_rms_guard_ratio = 1.15
+
+        try:
+            self.platesolve_anisotropy_threshold = float(
+                data.get("platesolve_anisotropy_threshold", self.platesolve_anisotropy_threshold)
+            )
+            if not math.isfinite(self.platesolve_anisotropy_threshold):
+                self.platesolve_anisotropy_threshold = 1.3
+        except (TypeError, ValueError):
+            self.platesolve_anisotropy_threshold = 1.3
+        self.platesolve_anisotropy_threshold = max(1.01, min(5.0, float(self.platesolve_anisotropy_threshold)))
+
+        def _f01(key: str, default: float, lo: float, hi: float) -> None:
+            try:
+                v = float(data.get(key, getattr(self, key)))
+                if not math.isfinite(v):
+                    raise ValueError
+                setattr(self, key, max(lo, min(hi, v)))
+            except (TypeError, ValueError, AttributeError):
+                setattr(self, key, float(default))
+
+        def _i01(key: str, default: int, lo: int, hi: int) -> None:
+            try:
+                v = int(data.get(key, getattr(self, key)))
+                setattr(self, key, max(lo, min(hi, v)))
+            except (TypeError, ValueError, AttributeError):
+                setattr(self, key, int(default))
+
+        _f01("phase01_comparison_max_dist_deg", 1.0, 0.05, 10.0)
+        _f01("phase01_comparison_max_mag_diff", 0.25, 0.05, 5.0)
+        _f01("phase01_comparison_mag_bright_threshold", 12.0, 6.0, 18.0)
+        _f01("phase01_comparison_max_mag_diff_bright_floor", 1.25, 0.0, 4.0)
+        _f01("phase01_comparison_max_mag_diff_absolute", 3.0, 1.0, 10.0)
+        _f01("comp_max_delta_bprp", 0.79, 0.0, 5.0)
+        _f01("comp_tier1_bprp_limit", 0.25, 0.02, 5.0)
+        _f01("comp_tier2_bprp_limit", 0.48, 0.05, 5.0)
+        _f01("comp_tier3_bprp_limit", 0.79, 0.05, 5.0)
+        _f01("comp_tier4_bprp_limit", 1.10, 0.05, 5.0)
+        _f01("comp_tier1_weight", 1.00, 0.01, 1.00)
+        _f01("comp_tier2_weight", 0.85, 0.01, 1.00)
+        _f01("comp_tier3_weight", 0.50, 0.01, 1.00)
+        _f01("comp_tier4_weight", 0.25, 0.01, 1.00)
+        _f01("comp_contamination_penalty_k", 3.0, 0.0, 20.0)
+        self.gs11_dilution_enabled = bool(
+            data.get("gs11_dilution_enabled", self.gs11_dilution_enabled)
+        )
+        _f01("gs11_dilution_aperture_arcsec", 0.0, 0.0, 120.0)
+        _f01("gs11_dilution_mag_limit_delta", 5.0, 0.5, 15.0)
+        _f01("gs11_comp_max_dilution", 0.90, 0.01, 1.0)
+        _f01("gs11_comp_suspect_dilution", 0.98, 0.01, 1.0)
+        _f01("gs11_target_min_dilution", 0.50, 0.01, 1.0)
+        if float(self.gs11_comp_suspect_dilution) < float(self.gs11_comp_max_dilution):
+            self.gs11_comp_suspect_dilution = float(self.gs11_comp_max_dilution)
+        _i01("phase01_comparison_n_comp_min", 3, 2, 12)
+        _i01("phase01_comparison_n_comp_max", 12, 3, 20)
+        if int(self.phase01_comparison_n_comp_max) < int(self.phase01_comparison_n_comp_min):
+            self.phase01_comparison_n_comp_max = int(self.phase01_comparison_n_comp_min)
+        _f01("phase01_comparison_max_comp_rms", 0.05, 0.01, 0.5)
+        _f01("phase01_comparison_min_dist_arcsec", 60.0, 0.0, 600.0)
+        _f01("phase01_comparison_rms_bin_mag", 0.001, 0.0001, 0.05)
+        self.phase01_comparison_proximity_tiebreak = bool(
+            data.get(
+                "phase01_comparison_proximity_tiebreak",
+                self.phase01_comparison_proximity_tiebreak,
+            )
+        )
+        _f01("phase01_comparison_min_frames_frac", 0.3, 0.05, 0.95)
+        self.phase01_comparison_exclude_gaia_nss = bool(
+            data.get("phase01_comparison_exclude_gaia_nss", self.phase01_comparison_exclude_gaia_nss)
+        )
+        self.phase01_comparison_exclude_gaia_extobj = bool(
+            data.get("phase01_comparison_exclude_gaia_extobj", self.phase01_comparison_exclude_gaia_extobj)
+        )
+        # Plate-scale ceiling matches the runtime resolver clamp [0.1, 30.0] so that a
+        # wide-field config value (e.g. 9.77"/px) survives load instead of being capped
+        # at 5.0. phase01_* keeps lo=0.0 because 0.0 is the "auto / unset" sentinel
+        # (consumed as ``phase01_plate_scale_arcsec_per_px or 1.3``); clamping it to 0.1
+        # would turn "auto" into a real 0.1"/px scale.
+        _f01("phase01_plate_scale_arcsec_per_px", 0.0, 0.0, 30.0)
+        _f01("plate_scale_arcsec_per_px", 1.3, 0.1, 30.0)
+        _f01("phase01_match_radius_arcsec", 10.0, 3.0, 30.0)
+        _f01("phase01_comparison_max_psf_chi2", 50.0, 1.0, 500.0)
+        _f01("phase01_comparison_max_fwhm_factor", 1.5, 0.5, 5.0)
+        _f01("phase01_comparison_isolation_radius_px", 25.0, 1.0, 200.0)
+        _f01("phase01_comparison_rms_outlier_sigma", 3.0, 1.0, 10.0)
+        _i01("frame_width_px", 2082, 100, 20000)
+        _i01("frame_height_px", 1397, 100, 20000)
+
+        _chip_m = data.get("phase01_chip_interior_margin_px")
+        if _chip_m is None and "phase01_suspected_interior_margin_px" in data:
+            _chip_m = data.get("phase01_suspected_interior_margin_px")
+        if _chip_m is not None and _chip_m != "":
+            try:
+                self.phase01_chip_interior_margin_px = max(0, min(2000, int(_chip_m)))
+            except (TypeError, ValueError):
+                self.phase01_chip_interior_margin_px = 100
+
+        # Variability Detection
+        try:
+            self.variability_min_frames = max(
+                1, int(data.get("variability_min_frames", self.variability_min_frames))
+            )
+        except (TypeError, ValueError):
+            self.variability_min_frames = 30
+        try:
+            self.variability_min_frames_frac = float(
+                data.get("variability_min_frames_frac", self.variability_min_frames_frac)
+            )
+        except (TypeError, ValueError):
+            self.variability_min_frames_frac = 0.50
+        self.variability_min_frames_frac = max(0.05, min(0.99, float(self.variability_min_frames_frac)))
+
+        def _vfloat(key: str, default: float, lo: float, hi: float) -> None:
+            try:
+                v = float(data.get(key, getattr(self, key)))
+                if not math.isfinite(v):
+                    raise ValueError
+                setattr(self, key, max(lo, min(hi, v)))
+            except (TypeError, ValueError, AttributeError):
+                setattr(self, key, float(default))
+
+        def _vint(key: str, default: int, lo: int, hi: int) -> None:
+            try:
+                v = int(data.get(key, getattr(self, key)))
+                setattr(self, key, max(lo, min(hi, v)))
+            except (TypeError, ValueError, AttributeError):
+                setattr(self, key, int(default))
+
+        _vfloat("variability_sigma_clip", 5.0, 1.0, 20.0)
+        _vint("variability_p85_filter", 85, 50, 99)
+        _vfloat("variability_slope_floor", 0.02, 0.0, 1.0)
+        _vfloat("variability_sigma_threshold", 2.3, 0.5, 20.0)
+        _vfloat("variability_comp_floor_factor", 1.5, 0.5, 10.0)
+        _vfloat("variability_smoothness_max", 0.80, 0.05, 1.0)
+        _vfloat("variability_mag_limit", 14.5, 0.0, 30.0)
+        _vfloat("variability_min_rms_pct", 1.5, 0.0, 100.0)
+        _vfloat("variability_min_amplitude_mag", 0.01, 0.0, 10.0)
+        _vfloat("variability_clip_ratio_min", 0.80, 0.0, 1.0)
+        _vfloat("variability_vdi_z_threshold", 3.0, 0.0, 50.0)
+        _vint("variability_min_points_rms", 20, 5, 10_000)
+
+        try:
+            self.field_density_sparse_threshold = float(
+                data.get("field_density_sparse_threshold", self.field_density_sparse_threshold)
+            )
+        except (TypeError, ValueError):
+            self.field_density_sparse_threshold = 300.0
+        self.field_density_sparse_threshold = max(1.0, min(50_000.0, float(self.field_density_sparse_threshold)))
+        try:
+            self.field_density_dense_threshold = float(
+                data.get("field_density_dense_threshold", self.field_density_dense_threshold)
+            )
+        except (TypeError, ValueError):
+            self.field_density_dense_threshold = 1000.0
+        self.field_density_dense_threshold = max(
+            float(self.field_density_sparse_threshold) + 1.0,
+            min(100_000.0, float(self.field_density_dense_threshold)),
+        )
+        self.field_density_adaptive_enabled = bool(
+            data.get("field_density_adaptive_enabled", self.field_density_adaptive_enabled)
+        )
+        self.crowding_classifier_enabled = bool(
+            data.get("crowding_classifier_enabled", self.crowding_classifier_enabled)
+        )
+        try:
+            self.crowding_blend_tighten_threshold = float(
+                data.get("crowding_blend_tighten_threshold", self.crowding_blend_tighten_threshold)
+            )
+        except (TypeError, ValueError):
+            self.crowding_blend_tighten_threshold = 0.04
+        self.crowding_blend_tighten_threshold = max(0.0, min(1.0, float(self.crowding_blend_tighten_threshold)))
+        try:
+            self.crowding_comp_availability_loosen_count = float(
+                data.get("crowding_comp_availability_loosen_count", self.crowding_comp_availability_loosen_count)
+            )
+        except (TypeError, ValueError):
+            self.crowding_comp_availability_loosen_count = 500.0
+        self.crowding_comp_availability_loosen_count = max(
+            0.0, min(1_000_000.0, float(self.crowding_comp_availability_loosen_count))
+        )
+        try:
+            self.crowding_tighten_min_fwhm_px = float(
+                data.get("crowding_tighten_min_fwhm_px", self.crowding_tighten_min_fwhm_px)
+            )
+        except (TypeError, ValueError):
+            self.crowding_tighten_min_fwhm_px = 3.0
+        self.crowding_tighten_min_fwhm_px = max(0.0, min(30.0, float(self.crowding_tighten_min_fwhm_px)))
+        self.global_comp_pool_enabled = bool(data.get("global_comp_pool_enabled", self.global_comp_pool_enabled))
+
+        self.tess_enabled = bool(data.get("tess_enabled", self.tess_enabled))
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "archive_root": str(self.archive_root),
+            "calibration_library_root": str(self.calibration_library_root),
+            "database_path": str(self.database_path),
+            "masterdark_validity_days": int(self.masterdark_validity_days),
+            "masterflat_validity_days": int(self.masterflat_validity_days),
+            "calibration_library_native_binning": (
+                None
+                if self.calibration_library_native_binning is None
+                else int(self.calibration_library_native_binning)
+            ),
+            "gaia_db_path": str(self.gaia_db_path or ""),
+            "blind_index_path": str(self.blind_index_path or ""),
+            "blind_index_series": str(self.blind_index_series or ""),
+            "blind_index_select_mode": str(self.blind_index_select_mode or "auto"),
+            "blind_verify_enabled": bool(self.blind_verify_enabled),
+            "blind_verify_top_n": int(self.blind_verify_top_n),
+            "blind_verify_match_tol_px": float(self.blind_verify_match_tol_px),
+            "blind_verify_min_matches": int(self.blind_verify_min_matches),
+            "blind_verify_min_fraction": float(self.blind_verify_min_fraction),
+            "blind_verify_inmemory_catalog": bool(self.blind_verify_inmemory_catalog),
+            "verify_mag_limit": float(self.verify_mag_limit),
+            "blind_verify_early_accept": int(self.blind_verify_early_accept),
+            "blind_verify_early_floor": int(self.blind_verify_early_floor),
+            "blind_verify_early_fraction": float(self.blind_verify_early_fraction),
+            "blind_prefilter_min": int(self.blind_prefilter_min),
+            "blind_img_star_budget": int(self.blind_img_star_budget),
+            "blind_img_select_mode": str(self.blind_img_select_mode),
+            "blind_use_rig_prior": bool(self.blind_use_rig_prior),
+            "blind_scale_tol_frac": float(self.blind_scale_tol_frac),
+            "blind_cluster_min_votes": int(self.blind_cluster_min_votes),
+            "blind_cluster_eps_deg": float(self.blind_cluster_eps_deg),
+            "blind_cluster_min_samples": int(self.blind_cluster_min_samples),
+            "blind_cluster_vote_span": int(self.blind_cluster_vote_span),
+            "blind_cluster_coherence_cap": int(self.blind_cluster_coherence_cap),
+            "debug_platesolver": bool(self.debug_platesolver),
+            "vsx_local_db_path": str(self.vsx_local_db_path or ""),
+            "vsx_variable_targets_mag_limit": float(self.vsx_variable_targets_mag_limit),
+            "catalog_query_max_rows": int(self.catalog_query_max_rows),
+            "per_frame_mp_reserve_ram_gb": float(self.per_frame_mp_reserve_ram_gb),
+            "alignment_max_stars": int(self.alignment_max_stars),
+            "alignment_detection_sigma": float(self.alignment_detection_sigma),
+            "qc_dao_detection_sigma": float(self.qc_dao_detection_sigma),
+            "sips_dao_fwhm_px": float(self.sips_dao_fwhm_px),
+            "sips_dao_threshold_sigma": float(self.sips_dao_threshold_sigma),
+            "qc_after_calibrate_enabled": bool(self.qc_after_calibrate_enabled),
+            "dao_qc_in_calibrate": bool(self.dao_qc_in_calibrate),
+            "qc_max_hfr": float(self.qc_max_hfr),
+            "qc_min_stars": int(self.qc_min_stars),
+            "qc_max_background_rms": (
+                float(self.qc_max_background_rms)
+                if self.qc_max_background_rms is not None
+                else None
+            ),
+            "auto_fwhm_enabled": bool(self.auto_fwhm_enabled),
+            "auto_fwhm_k_factor": float(self.auto_fwhm_k_factor),
+            "auto_fwhm_k_min": float(self.auto_fwhm_k_min),
+            "auto_fwhm_k_max": float(self.auto_fwhm_k_max),
+            "aperture_photometry_enabled": bool(self.aperture_photometry_enabled),
+            "save_lightcurve_png": bool(self.save_lightcurve_png),
+            "phase2a_airmass_before_outlier": bool(self.phase2a_airmass_before_outlier),
+            "sysrem_enabled": bool(self.sysrem_enabled),
+            "comp_qa_enabled": bool(self.comp_qa_enabled),
+            "trust_flag_enabled": bool(self.trust_flag_enabled),
+            "sysrem_n_iter": int(self.sysrem_n_iter),
+            "observer_name": str(self.observer_name),
+            "observer_code": str(self.observer_code),
+            "aavso_observer_code": str(self.aavso_observer_code),
+            "aavso_filter_map": dict(self.aavso_filter_map),
+            "varastro_observer_name": str(self.varastro_observer_name),
+            "observer_location_id": int(self.observer_location_id),
+            "observer_lat": float(self.observer_lat),
+            "observer_lon": float(self.observer_lon),
+            "observer_alt_m": float(self.observer_alt_m),
+            "observer_location_name": str(self.observer_location_name),
+            "export_arcsec_per_px": float(self.export_arcsec_per_px),
+            "psf_photometry_enabled": bool(self.psf_photometry_enabled),
+            "psf_spatial_order": int(self.psf_spatial_order),
+            "psf_chi2_threshold": float(self.psf_chi2_threshold),
+            "psf_grouper_enabled": bool(self.psf_grouper_enabled),
+            "psf_group_sep_fwhm": float(self.psf_group_sep_fwhm),
+            "psf_neighbor_include_fwhm": float(self.psf_neighbor_include_fwhm),
+            "psf_spatial_enabled": bool(self.psf_spatial_enabled),
+            "psf_spatial_grid": str(self.psf_spatial_grid),
+            "psf_spatial_min_stars_per_cell": int(self.psf_spatial_min_stars_per_cell),
+            "psf_quality_fallback_enabled": bool(self.psf_quality_fallback_enabled),
+            "psf_adaptive_enabled": bool(self.psf_adaptive_enabled),
+            "psf_adaptive_resolve_fwhm": float(self.psf_adaptive_resolve_fwhm),
+            "psf_adaptive_snr_lo": float(self.psf_adaptive_snr_lo),
+            "moffat_chi2_limit": float(self.moffat_chi2_limit),
+            "skip_processed_directory": bool(self.skip_processed_directory),
+            "qc_fwhm_limit": float(self.qc_fwhm_limit),
+            "qc_elong_limit": float(self.qc_elong_limit),
+            "epsf_min_stars": int(self.epsf_min_stars),
+            "photometry_mode": str(self.photometry_mode),
+            "aperture_fwhm_factor": float(self.aperture_fwhm_factor),
+            "aperture_fwhm_factor_small": float(self.aperture_fwhm_factor_small),
+            "aperture_fwhm_factor_medium": float(self.aperture_fwhm_factor_medium),
+            "aperture_fwhm_factor_large": float(self.aperture_fwhm_factor_large),
+            "aperture_variable_factor": float(self.aperture_variable_factor),
+            "aperture_comp_factor": float(self.aperture_comp_factor),
+            "aperture_correction_enabled": bool(self.aperture_correction_enabled),
+            "aperture_correction_min_ref_stars": int(self.aperture_correction_min_ref_stars),
+            "aperture_correction_max_contamination": float(self.aperture_correction_max_contamination),
+            "aperture_correction_max_scatter_mag": float(self.aperture_correction_max_scatter_mag),
+            "cog_aperture_correction_enabled": bool(self.cog_aperture_correction_enabled),
+            "cog_ref_fwhm": float(self.cog_ref_fwhm),
+            "cog_min_stars": int(self.cog_min_stars),
+            "cog_isolation_fwhm": float(self.cog_isolation_fwhm),
+            "cog_snr_min": float(self.cog_snr_min),
+            "cog_sat_frac": float(self.cog_sat_frac),
+            "cog_ladder_step_px": float(self.cog_ladder_step_px),
+            "cog_ac_factor_max": float(self.cog_ac_factor_max),
+            "gain": float(self.gain),
+            "read_noise": float(self.read_noise),
+            "masterstar_best_of_n": int(self.masterstar_best_of_n),
+            "sky_adu_fallback": float(self.sky_adu_fallback),
+            "phase01_comparison_max_psf_chi2": float(self.phase01_comparison_max_psf_chi2),
+            "phase01_comparison_max_fwhm_factor": float(self.phase01_comparison_max_fwhm_factor),
+            "phase01_comparison_isolation_radius_px": float(self.phase01_comparison_isolation_radius_px),
+            "phase01_comparison_rms_outlier_sigma": float(self.phase01_comparison_rms_outlier_sigma),
+            "frame_width_px": int(self.frame_width_px),
+            "frame_height_px": int(self.frame_height_px),
+            "annulus_inner_fwhm": float(self.annulus_inner_fwhm),
+            "annulus_outer_fwhm": float(self.annulus_outer_fwhm),
+            "nonlinearity_peak_percentile": float(self.nonlinearity_peak_percentile),
+            "nonlinearity_fwhm_ratio": float(self.nonlinearity_fwhm_ratio),
+            "bpm_dark_mad_sigma": float(self.bpm_dark_mad_sigma),
+            "masterstar_solver_use_draft_median_if_hint_sep_deg": float(
+                self.masterstar_solver_use_draft_median_if_hint_sep_deg
+            ),
+            "masterstar_log_astroalign": bool(self.masterstar_log_astroalign),
+            "masterstar_optimizer_mirror_extra_log": bool(self.masterstar_optimizer_mirror_extra_log),
+            "masterstar_platesolve_sip_max_order": int(self.masterstar_platesolve_sip_max_order),
+            "masterstar_platesolve_sip_min_order": int(self.masterstar_platesolve_sip_min_order),
+            "masterstar_dao_threshold_sigma": float(self.masterstar_dao_threshold_sigma),
+            "masterstar_prematch_peak_sigma_floor": float(self.masterstar_prematch_peak_sigma_floor),
+            "masterstar_platesolve_prewrite_rms_max_px": (
+                float(self.masterstar_platesolve_prewrite_rms_max_px)
+                if self.masterstar_platesolve_prewrite_rms_max_px is not None
+                else None
+            ),
+            "masterstar_platesolve_prewrite_relaxed_rms_max_px": (
+                float(self.masterstar_platesolve_prewrite_relaxed_rms_max_px)
+                if self.masterstar_platesolve_prewrite_relaxed_rms_max_px is not None
+                else None
+            ),
+            "masterstar_platesolve_nn_refine_max_rms_px": (
+                float(self.masterstar_platesolve_nn_refine_max_rms_px)
+                if self.masterstar_platesolve_nn_refine_max_rms_px is not None
+                else None
+            ),
+            "masterstar_sip_force_rms_guard_ratio": (
+                float(self.masterstar_sip_force_rms_guard_ratio)
+                if self.masterstar_sip_force_rms_guard_ratio is not None
+                else None
+            ),
+            "platesolve_anisotropy_threshold": float(self.platesolve_anisotropy_threshold),
+            "phase01_comparison_max_dist_deg": float(self.phase01_comparison_max_dist_deg),
+            "phase01_comparison_max_mag_diff": float(self.phase01_comparison_max_mag_diff),
+            "phase01_comparison_mag_bright_threshold": float(self.phase01_comparison_mag_bright_threshold),
+            "phase01_comparison_max_mag_diff_bright_floor": float(
+                self.phase01_comparison_max_mag_diff_bright_floor
+            ),
+            "phase01_comparison_max_mag_diff_absolute": float(
+                self.phase01_comparison_max_mag_diff_absolute
+            ),
+            "comp_max_delta_bprp": float(self.comp_max_delta_bprp),
+            "comp_tier1_bprp_limit": float(self.comp_tier1_bprp_limit),
+            "comp_tier2_bprp_limit": float(self.comp_tier2_bprp_limit),
+            "comp_tier3_bprp_limit": float(self.comp_tier3_bprp_limit),
+            "comp_tier4_bprp_limit": float(self.comp_tier4_bprp_limit),
+            "comp_tier1_weight": float(self.comp_tier1_weight),
+            "comp_tier2_weight": float(self.comp_tier2_weight),
+            "comp_tier3_weight": float(self.comp_tier3_weight),
+            "comp_tier4_weight": float(self.comp_tier4_weight),
+            "comp_contamination_penalty_k": float(self.comp_contamination_penalty_k),
+            "phase01_comparison_n_comp_min": int(self.phase01_comparison_n_comp_min),
+            "phase01_comparison_n_comp_max": int(self.phase01_comparison_n_comp_max),
+            "phase01_comparison_max_comp_rms": float(self.phase01_comparison_max_comp_rms),
+            "phase01_comparison_min_dist_arcsec": float(self.phase01_comparison_min_dist_arcsec),
+            "phase01_comparison_rms_bin_mag": float(self.phase01_comparison_rms_bin_mag),
+            "phase01_comparison_proximity_tiebreak": bool(
+                self.phase01_comparison_proximity_tiebreak
+            ),
+            "phase01_comparison_min_frames_frac": float(self.phase01_comparison_min_frames_frac),
+            "phase01_comparison_exclude_gaia_nss": bool(self.phase01_comparison_exclude_gaia_nss),
+            "phase01_comparison_exclude_gaia_extobj": bool(self.phase01_comparison_exclude_gaia_extobj),
+            "phase01_ct_min_comp": int(self.phase01_ct_min_comp),
+            "apply_color_term": str(self.apply_color_term),
+            "phase01_ct_extrapolation_tol": float(self.phase01_ct_extrapolation_tol),
+            "phase01_flux_col": str(self.phase01_flux_col),
+            "temporal_binning_enabled": bool(self.temporal_binning_enabled),
+            "temporal_bin_window": int(self.temporal_bin_window),
+            "savgol_detrend_enabled": bool(self.savgol_detrend_enabled),
+            "savgol_window_frac": float(self.savgol_window_frac),
+            "savgol_polyorder": int(self.savgol_polyorder),
+            "democratic_detrend_enabled": bool(self.democratic_detrend_enabled),
+            "democratic_sg_window_frac": float(self.democratic_sg_window_frac),
+            "pytics_enabled": bool(self.pytics_enabled),
+            "pytics_n_iter": int(self.pytics_n_iter),
+            "comp_max_slope_mmag_hr": float(self.comp_max_slope_mmag_hr),
+            "gs11_dilution_enabled": bool(self.gs11_dilution_enabled),
+            "gs11_dilution_aperture_arcsec": float(self.gs11_dilution_aperture_arcsec),
+            "gs11_dilution_mag_limit_delta": float(self.gs11_dilution_mag_limit_delta),
+            "gs11_comp_max_dilution": float(self.gs11_comp_max_dilution),
+            "gs11_comp_suspect_dilution": float(self.gs11_comp_suspect_dilution),
+            "gs11_target_min_dilution": float(self.gs11_target_min_dilution),
+            "phase01_chip_interior_margin_px": int(self.phase01_chip_interior_margin_px),
+            "phase01_plate_scale_arcsec_per_px": float(self.phase01_plate_scale_arcsec_per_px),
+            "plate_scale_arcsec_per_px": float(self.plate_scale_arcsec_per_px),
+            "phase01_match_radius_arcsec": float(self.phase01_match_radius_arcsec),
+            "variability_min_frames": int(self.variability_min_frames),
+            "variability_min_frames_frac": float(self.variability_min_frames_frac),
+            "variability_sigma_clip": float(self.variability_sigma_clip),
+            "variability_p85_filter": int(self.variability_p85_filter),
+            "variability_slope_floor": float(self.variability_slope_floor),
+            "variability_sigma_threshold": float(self.variability_sigma_threshold),
+            "variability_comp_floor_factor": float(self.variability_comp_floor_factor),
+            "variability_smoothness_max": float(self.variability_smoothness_max),
+            "variability_mag_limit": float(self.variability_mag_limit),
+            "variability_min_rms_pct": float(self.variability_min_rms_pct),
+            "variability_min_amplitude_mag": float(self.variability_min_amplitude_mag),
+            "variability_clip_ratio_min": float(self.variability_clip_ratio_min),
+            "variability_vdi_z_threshold": float(self.variability_vdi_z_threshold),
+            "variability_min_points_rms": int(self.variability_min_points_rms),
+            "tess_enabled": bool(self.tess_enabled),
+            "field_density_sparse_threshold": float(self.field_density_sparse_threshold),
+            "field_density_dense_threshold": float(self.field_density_dense_threshold),
+            "field_density_adaptive_enabled": bool(self.field_density_adaptive_enabled),
+            "crowding_classifier_enabled": bool(self.crowding_classifier_enabled),
+            "crowding_blend_tighten_threshold": float(self.crowding_blend_tighten_threshold),
+            "crowding_comp_availability_loosen_count": float(self.crowding_comp_availability_loosen_count),
+            "crowding_tighten_min_fwhm_px": float(self.crowding_tighten_min_fwhm_px),
+            "global_comp_pool_enabled": bool(self.global_comp_pool_enabled),
+        }
+
+    # Backward-compatible alias (some callers expect to_dict()).
+    def to_dict(self) -> dict[str, Any]:
+        return self.to_json()
+
+    def ensure_base_dirs(self) -> None:
+        """Create base directories required by file-first workflow."""
+        self.archive_root.mkdir(parents=True, exist_ok=True)
+        self.calibration_library_root.mkdir(parents=True, exist_ok=True)
+
+
+# Delta overrides od baseline (normal / JSON). ``phase01_comparison_max_dist_deg`` sa v runtime pričíta k FOV-výsledku — viz ``apply_density_overrides``.
+DENSITY_OVERRIDES: dict[str, dict[str, float | int]] = {
+    "sparse": {
+        "phase01_comparison_max_mag_diff": +0.5,
+        "phase01_comparison_n_comp_min": -1,
+        "comp_max_delta_bprp": +0.20,
+        "phase01_comparison_max_dist_deg": +0.3,
+    },
+    "normal": {},
+    "dense": {
+        # NOTE: aperture_fwhm_factor -0.3 removed (2026-05) — it was structurally dead:
+        # the science aperture comes from the SNR-optimal table, which ignores
+        # aperture_fwhm_factor (only a fallback when the table is absent). Verified
+        # 0-px effect on 361/362. No LC impact; removed for clarity.
+        "annulus_inner_fwhm": +1.0,
+        "phase01_comparison_min_dist_arcsec": +30.0,
+        "comp_max_delta_bprp": -0.15,
+        "phase01_comparison_max_comp_rms": -0.02,
+    },
+}
+
+
+# [CROWDING-CLASSIFIER] Decoupled overrides for the signal-based classifier
+# (``AppConfig.crowding_classifier_enabled``). Each set keys on the PHYSICALLY correct
+# signal instead of the conflated stars/Mpx class:
+#   LOOSEN  -> low comp AVAILABILITY (few usable catalog comps in the FOV).
+#   TIGHTEN -> real contamination (blend_frac @ measured depth).
+# Both may fire independently; shared keys (comp_max_delta_bprp) sum additively.
+CROWDING_LOOSEN_OVERRIDES: dict[str, float | int] = {
+    "phase01_comparison_max_mag_diff": +0.5,   # suppressed when catalog-bottlenecked
+    "phase01_comparison_n_comp_min": -1,
+    "comp_max_delta_bprp": +0.20,
+    "phase01_comparison_max_dist_deg": +0.3,   # additive to FOV result (handled by caller)
+}
+CROWDING_TIGHTEN_OVERRIDES: dict[str, float | int] = {
+    "phase01_comparison_min_dist_arcsec": +30.0,
+    "comp_max_delta_bprp": -0.15,
+    "phase01_comparison_max_comp_rms": -0.02,
+    "annulus_inner_fwhm": +1.0,
+}
+
+
+def compute_field_density(n_masterstar_stars: int, chip_w_px: int, chip_h_px: int) -> float:
+    """Vráti hustotu poľa v hviezd/Mpx."""
+    mpx = (float(chip_w_px) * float(chip_h_px)) / 1_000_000.0
+    if mpx <= 0 or n_masterstar_stars < 0:
+        return 0.0
+    return float(n_masterstar_stars) / float(mpx)
+
+
+def classify_field_density(density: float, sparse_th: float, dense_th: float) -> str:
+    """Vráti ``sparse`` / ``normal`` / ``dense``."""
+    if density < float(sparse_th):
+        return "sparse"
+    if density <= float(dense_th):
+        return "normal"
+    return "dense"
+
+
+def apply_density_overrides(cfg: AppConfig, density_class: str) -> AppConfig:
+    """Vráti kópiu ``cfg`` s aplikovanými density override deltami."""
+    cfg_eff = copy.copy(cfg)
+    overrides = DENSITY_OVERRIDES.get(density_class, {})
+    for param, delta in overrides.items():
+        if param == "phase01_comparison_max_dist_deg":
+            # Do cfg neukladáme — v ``run_phase0_and_phase1`` sa pričíta k efektívnemu ``max_dist_deg`` (FOV kľúč).
+            continue
+        if not hasattr(cfg_eff, param):
+            continue
+        cur = getattr(cfg_eff, param)
+        if isinstance(cur, bool):
+            continue
+        if isinstance(cur, int) and not isinstance(cur, bool):
+            try:
+                new_val = int(cur) + int(delta)
+            except (TypeError, ValueError):
+                continue
+            if param == "phase01_comparison_n_comp_min":
+                new_val = max(2, new_val)
+            setattr(cfg_eff, param, new_val)
+            logging.debug("[DENSITY OVERRIDE] %s: %s → %s (delta=%+s)", param, cur, new_val, delta)
+            continue
+        try:
+            new_val = float(cur) + float(delta)
+        except (TypeError, ValueError):
+            continue
+        if param == "aperture_fwhm_factor":
+            new_val = max(0.5, min(6.0, float(new_val)))
+        elif param in {"annulus_inner_fwhm", "annulus_outer_fwhm"}:
+            new_val = max(1.0, min(30.0, float(new_val)))
+        elif param == "phase01_comparison_max_comp_rms":
+            new_val = max(0.01, min(0.5, float(new_val)))
+        elif param == "comp_max_delta_bprp":
+            new_val = max(0.0, min(5.0, float(new_val)))
+        elif param == "phase01_comparison_min_dist_arcsec":
+            new_val = max(0.0, min(600.0, float(new_val)))
+        setattr(cfg_eff, param, new_val)
+        logging.debug("[DENSITY OVERRIDE] %s: %s → %s (delta=%+s)", param, cur, new_val, delta)
+
+    # Zachovaj annulus_outer > inner + 1
+    try:
+        inn = float(getattr(cfg_eff, "annulus_inner_fwhm", 0.0) or 0.0)
+        out = float(getattr(cfg_eff, "annulus_outer_fwhm", 0.0) or 0.0)
+        if math.isfinite(inn) and math.isfinite(out) and out <= inn:
+            cfg_eff.annulus_outer_fwhm = float(inn + 1.0)
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).warning(
+            "[CONFIG] Annulus config clamp failed, using default: %s", exc
+        )
+    return cfg_eff
+
+
+def apply_crowding_overrides(
+    cfg: AppConfig,
+    *,
+    loosen: bool,
+    tighten: bool,
+    suppress_mag_loosen: bool = False,
+) -> tuple[AppConfig, float]:
+    """Additive, decoupled comp overrides for the crowding_index classifier.
+
+    ``loosen`` (low comp availability) and ``tighten`` (high blend_frac) are independent
+    and may both apply; shared keys (``comp_max_delta_bprp``) sum rather than clobber.
+    ``suppress_mag_loosen`` drops the ``max_mag_diff`` loosening when the field is
+    catalog-bottlenecked (fainter comps simply don't exist in the catalog, so loosening
+    the magnitude tolerance cannot help and only risks worse comps).
+
+    Returns ``(cfg_eff, max_dist_deg_delta)``; the caller adds ``max_dist_deg_delta`` to
+    the FOV-derived ``max_dist_deg`` (mirrors :func:`apply_density_overrides`).
+    """
+    cfg_eff = copy.copy(cfg)
+    deltas: dict[str, float] = {}
+    max_dist_delta = 0.0
+    if loosen:
+        for k, v in CROWDING_LOOSEN_OVERRIDES.items():
+            if k == "phase01_comparison_max_dist_deg":
+                max_dist_delta += float(v)
+                continue
+            if k == "phase01_comparison_max_mag_diff" and suppress_mag_loosen:
+                continue
+            deltas[k] = deltas.get(k, 0.0) + float(v)
+    if tighten:
+        for k, v in CROWDING_TIGHTEN_OVERRIDES.items():
+            deltas[k] = deltas.get(k, 0.0) + float(v)
+
+    for param, delta in deltas.items():
+        if not hasattr(cfg_eff, param):
+            continue
+        cur = getattr(cfg_eff, param)
+        if isinstance(cur, bool):
+            continue
+        if isinstance(cur, int) and not isinstance(cur, bool):
+            try:
+                new_val_i = int(cur) + int(round(float(delta)))
+            except (TypeError, ValueError):
+                continue
+            if param == "phase01_comparison_n_comp_min":
+                new_val_i = max(2, new_val_i)
+            setattr(cfg_eff, param, new_val_i)
+            logging.debug("[CROWDING OVERRIDE] %s: %s → %s (delta=%+s)", param, cur, new_val_i, delta)
+            continue
+        try:
+            new_val = float(cur) + float(delta)
+        except (TypeError, ValueError):
+            continue
+        if param in {"annulus_inner_fwhm", "annulus_outer_fwhm"}:
+            new_val = max(1.0, min(30.0, new_val))
+        elif param == "phase01_comparison_max_comp_rms":
+            new_val = max(0.01, min(0.5, new_val))
+        elif param == "comp_max_delta_bprp":
+            new_val = max(0.0, min(5.0, new_val))
+        elif param == "phase01_comparison_min_dist_arcsec":
+            new_val = max(0.0, min(600.0, new_val))
+        elif param == "phase01_comparison_max_mag_diff":
+            new_val = max(0.05, min(5.0, new_val))
+        setattr(cfg_eff, param, new_val)
+        logging.debug("[CROWDING OVERRIDE] %s: %s → %s (delta=%+s)", param, cur, new_val, delta)
+
+    try:
+        inn = float(getattr(cfg_eff, "annulus_inner_fwhm", 0.0) or 0.0)
+        out = float(getattr(cfg_eff, "annulus_outer_fwhm", 0.0) or 0.0)
+        if math.isfinite(inn) and math.isfinite(out) and out <= inn:
+            cfg_eff.annulus_outer_fwhm = float(inn + 1.0)
+    except Exception:  # noqa: BLE001
+        pass
+    return cfg_eff, float(max_dist_delta)
+

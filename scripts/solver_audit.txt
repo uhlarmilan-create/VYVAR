@@ -1,0 +1,2126 @@
+VYVAR — Plate solver audit (auto-generated)
+========================================================================
+
+## 1. Relevantné .py súbory (keyword match)
+
+Kľúčové slová: cone_r, CameraGeometry, plate_solve, platesolve, astrometry,
+triangle, pixel_scale, fov_deg, fov_width, fov_height
+
+Súbor                                                  Riadky  Posledná zmena (git log -1 alebo fs mtime)
+------------------------------------------------------------------------
+app.py                                                   2084  2026-04-28 10:08:26 +0200
+astrometry_optimizer.py                                  1172  2026-04-28 22:25:29 +0200
+config.py                                                 955  2026-05-01 23:27:08 +0200
+database.py                                              3849  2026-04-29 19:03:44 +0200
+diagnose_crowding_filters.py                              195  2026-04-15 10:37:43 +0200
+diagnose_ensemble.py                                      198  2026-04-17 16:36:50 +0200
+diagnose_flux.py                                          158  2026-04-17 16:36:50 +0200
+GAIA_DR3\build_gaia_blind_index.py                         23  2026-04-20 21:53:53 +0200
+GAIA_DR3\gaia-dr3_index_solver.py                         173  2026-04-20 21:53:53 +0200
+hrd_analysis.py                                           651  2026-04-29 19:03:44 +0200
+importer.py                                              2408  2026-04-20 21:53:53 +0200
+masterstar_context.py                                     166  2026-04-25 20:05:29 +0200
+masterstar_wcs_dao_diagnostic.py                          277  2026-04-15 10:37:43 +0200
+pdf_report.py                                              62  2026-04-28 10:08:26 +0200
+photometry_core.py                                       9086  2026-05-01 23:27:08 +0200
+photometry_report.py                                     2472  2026-05-01 23:27:08 +0200
+pipeline.py                                             15328  2026-05-01 23:27:08 +0200
+platesolve_ui_paths.py                                    119  2026-04-22 16:55:04 +0200
+psf_runner.py                                            1598  2026-04-24 12:16:14 +0200
+run_smoothness_report.py                                   60  2026-04-24 18:31:58 +0200
+scripts\_integration_test_todos.py                        168  2026-05-01 23:27:08 +0200
+scripts\_smoke_run_draft287.py                             86  2026-05-12 13:28:20 (fs)
+scripts\diag_bo_cvn_comp_quality_mtime.py                  40  2026-04-29 19:03:44 +0200
+scripts\diag_bo_cvn_comp_quality_vs_csv.py                 46  2026-04-29 19:03:44 +0200
+scripts\diag_bo_cvn_comp_vs_summary.py                     43  2026-04-29 19:03:44 +0200
+scripts\diagnose_masterstar_wcs_dao.py                     65  2026-04-15 10:37:43 +0200
+scripts\run_draft_000244_align_and_photometry.py          158  2026-04-23 15:59:39 +0200
+scripts\smoke_export_draft_000279.py                      259  2026-04-29 19:03:44 +0200
+scripts\smoke_test_draft283.py                            147  2026-04-30 17:42:44 +0200
+scripts\test_auto_crossmatch_tess_draft_000279.py         101  2026-04-29 19:03:44 +0200
+scripts\test_border_bbox.py                                34  2026-04-30 17:42:44 +0200
+smoke_test_bprp_tier.py                                   158  2026-04-29 19:03:44 +0200
+ui_aperture_photometry.py                                1690  2026-05-01 23:27:08 +0200
+ui_calibration.py                                         306  2026-04-15 10:37:43 +0200
+ui_dao_stars.py                                           127  2026-04-22 20:42:27 +0200
+ui_database_explorer.py                                   360  2026-04-28 10:08:26 +0200
+ui_finalization.py                                        499  2026-04-28 10:08:26 +0200
+ui_hrd.py                                                 215  2026-04-29 19:03:44 +0200
+ui_masterstar_qa.py                                       463  2026-04-28 10:08:26 +0200
+ui_photometry_quality.py                                  380  2026-04-28 20:07:13 +0200
+ui_photometry_results.py                                 1638  2026-04-28 20:07:13 +0200
+ui_quality_dashboard.py                                   935  2026-04-29 00:16:06 +0200
+ui_select_stars.py                                        624  2026-05-01 23:27:08 +0200
+ui_settings.py                                            762  2026-05-01 23:27:08 +0200
+ui_suspected_lightcurves.py                               197  2026-04-28 10:08:26 +0200
+ui_variability.py                                        1577  2026-05-01 23:27:08 +0200
+utils.py                                                  549  2026-04-22 20:42:27 +0200
+vyvar_alignment_frame.py                                  772  2026-04-23 15:59:39 +0200
+vyvar_blind_solver.py                                     312  2026-04-22 20:42:27 +0200
+vyvar_platesolver.py                                     3348  2026-04-29 19:03:44 +0200
+
+
+## 2. Detail podľa súboru
+
+
+------------------------------------------------------------------------
+FILE: app.py
+      lines=2084, mtime=2026-04-28 10:08:26 +0200
+
+### 2a) def / class (riadok)
+     35  def _vyvar_effective_draft_dir_override
+     43  def _vyvar_reset_variability_session_state
+     64  def _vyvar_execute_preprocess_pending
+    136  def _pcb_pp
+    137  def _inner
+    217  def _vyvar_execute_platesolve_pending
+    382  def _vyvar_apply_smart_plan_flat_fallbacks
+    416  def _vyvar_guess_filename_from_progress
+    425  def vyvar_init_footer_state_if_missing
+    437  def _vyvar_footer_set
+    460  def _vyvar_render_fixed_footer_into
+    507  def render_live_view
+    732  def _fmt
+    824  def _cal_progress
+    962  def _cb
+   1728  def _gaia_db_ok_for_masterstar
+   1743  def _masterstar_pointing_and_hash
+   1744  def _sess_float_ms
+   1901  def _iter_vyvar_fits_under
+   1911  def render_infolog
+   1938  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: astrometry_optimizer.py
+      lines=1172, mtime=2026-04-28 22:25:29 +0200
+
+### 2a) def / class (riadok)
+     55  def _optimizer_parity_flip_already_in_fits
+     73  def _first_existing_col
+     80  def _apply_wcs_pc_parity_flip_to_primary
+    122  def _norm_id
+    127  def _poly_features
+    133  def _fit_poly_model
+    148  def _eval_poly
+    156  def _gaia_for_field
+    201  def _backfill_bp_rp_from_gdf_and_db
+    262  def optimize_masterstar_matches
+    459  def _is_unmatched_row
+    462  def _write_match
+    477  def _refit_displacement_from_all_matches
+    504  def _match_bright_anchor_stars
+    540  def _rematch_pass
+    580  def _refit_wcs_sip5_once
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: config.py
+      lines=955, mtime=2026-05-01 23:27:08 +0200
+
+### 2a) def / class (riadok)
+     15  def config_json_path
+     19  def load_config_json
+     29  def save_config_json
+     34  def recommended_vyvar_parallel_workers
+     64  class AppConfig
+    289  def __post_init__
+    557  def _opt_pos_float
+    599  def _f01
+    608  def _i01
+    673  def _vfloat
+    682  def _vint
+    725  def to_json
+    861  def to_dict
+    864  def ensure_base_dirs
+    889  def compute_field_density
+    897  def classify_field_density
+    906  def apply_density_overrides
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: database.py
+      lines=3849, mtime=2026-04-29 19:03:44 +0200
+
+### 2a) def / class (riadok)
+     25  def get_gaia_db_max_g_mag
+     67  def query_local_gaia
+    186  def _normalize_gaia_source_id_for_sql
+    196  def query_local_gaia_by_source_ids
+    271  def validate_gaia_db_schema
+    294  def validate_vsx_local_db_schema
+    317  def _vsx_ra_intervals_deg
+    334  def query_local_vsx
+    430  class DraftTechnicalMetadataError
+    433  def __init__
+    441  def _db_fits_pixel_raw_to_micrometres
+    453  def _db_to_float
+    460  def _db_pick_header
+    467  def _db_xbinning_strict
+    478  def _db_ybinning_header
+    489  def _db_focal_plausible_mm
+    493  def _db_header_focal_length_mm
+    510  def _db_header_pixel_native_um_mean
+    528  def fits_header_cache_row_to_meta
+    572  def _fits_header_cache_pack_row
+    629  class VyvarDatabase
+    632  def __init__
+    643  def _enable_foreign_keys
+    646  def _create_tables
+    757  def _ensure_final_data_view
+    783  def _ensure_master_sources_table
+    854  def replace_master_sources_for_draft
+    919  def fetch_master_sources_for_draft
+    935  def update_master_source_safety
+    961  def sql_expr_active_is_true
+    974  def count_final_data_for_equipment_id
+    983  def count_final_data_for_telescope_id
+    992  def count_references_to_location_id
+   1006  def count_references_to_scanning_id
+   1021  def normalize_active_db_value
+   1046  def _coerce_sql_param
+   1068  def apply_main_table_editor_save
+   1093  def _parse_pk
+   1216  def _ensure_qc_processing_tables
+   1250  def fetch_obs_draft_by_id
+   1255  def update_obs_draft_center
+   1270  def update_obs_draft_status_panel_values
+   1305  def set_obs_draft_masterstar_path
+   1321  def get_obs_draft_masterstar_path
+   1340  def set_obs_draft_masterstar_source_path
+   1354  def get_obs_draft_masterstar_source_path
+   1370  def set_obs_draft_masterstar_fits_path
+   1384  def qc_processing_run_exists
+   1391  def delete_qc_processing_run_by_hash
+   1398  def record_qc_processing_apply
+   1488  def update_obs_draft_status
+   1495  def count_obs_files
+   1500  def maintenance_delete_obs_files_for_processed_drafts
+   1518  def maintenance_nuke_obs_files_and_drafts_preserve_qc_snapshots
+   1538  def _ensure_fits_header_cache_table
+   1571  def fits_header_cache_file_key
+   1574  def fits_header_cache_get_if_fresh
+   1596  def fits_header_cache_try_meta
+   1608  def fits_header_cache_try_filter
+   1623  def fits_header_cache_upsert_batch
+   1667  def fits_header_cache_upsert_one
+   1679  def _ensure_calibration_library_table
+   1704  def _migrate_calibration_library_scope_columns
+   1714  def register_calibration_library_entry
+   1772  def delete_calibration_library_entry_by_path
+   1779  def calibration_library_path_tag_map
+   1808  def find_best_calibration_library_path
+   1843  def _query_rows
+   1885  def _score
+   1918  def fetch_obs_draft_telescope_equipment
+   1938  def _normalize_calibration_library_filter_name
+   1944  def calibration_library_has_flat_for_filter
+   1957  def _ensure_obs_files_draft_column
+   1985  def _ensure_obs_files_qc_columns
+   2001  def _ensure_obs_files_quality_inspection_columns
+   2026  def _ensure_obs_files_observation_group_key
+   2034  def _ensure_obs_files_scanning_and_calibration_columns
+   2049  def _ensure_photometry_light_curve_table
+   2076  def replace_photometry_light_curve_for_draft
+   2115  def fetch_photometry_light_curve_for_draft
+   2127  def _ensure_scanning_gain_column
+   2136  def _ensure_obs_draft_masterstar_path_column
+   2146  def _ensure_obs_draft_status_panel_columns
+   2156  def _ensure_active_columns
+   2175  def _normalize_telescope_active_to_binary
+   2184  def _ensure_equipments_saturate_adu_column
+   2193  def _ensure_equipments_cosmic_columns
+   2203  def _ensure_equipments_focal_column
+   2211  def _ensure_settings_table
+   2222  def _seed_default_settings
+   2233  def get_setting_int
+   2243  def set_setting
+   2251  def _ensure_observation_import_columns
+   2270  def initialize_database
+   2296  def _ensure_obs_files_indexes
+   2307  def _jd_to_yyyymmdd
+   2329  def generate_hashtag
+   2347  def insert_equipment
+   2365  def get_equipment_saturation_adu
+   2383  def get_equipment_pixel_size_um
+   2405  def get_equipment_focal_mm
+   2435  def get_equipment_cosmic_params
+   2445  def _pos
+   2456  def get_telescope_focal_mm
+   2486  def get_combined_metadata
+   2597  def insert_telescope
+   2614  def insert_location
+   2631  def insert_scanning
+   2649  def find_or_create_scanning_id
+   2690  def insert_observation
+   2752  def add_observation
+   2775  def get_equipments
+   2787  def get_telescopes
+   2799  def get_observation_metadata
+   2842  def update_observation_import_log
+   2879  def insert_observation_files
+   2907  def count_obs_files_for_observation
+   2914  def count_obs_files_for_draft
+   2921  def insert_draft_files
+   2949  def update_obs_file_qc_by_raw_light_path
+   3023  def fetch_draft_light_rows_for_quality
+   3039  def fetch_draft_scanning_ids
+   3052  def update_obs_file_calibration_state_by_raw_light_path
+   3090  def update_obs_file_quality_by_id
+   3167  def bulk_update_obs_file_is_rejected
+   3190  def _normalize_obs_file_path_key
+   3196  def fetch_light_file_paths_not_rejected_for_draft
+   3213  def fetch_light_file_paths_not_rejected_for_observation
+   3230  def create_draft
+   3253  def update_draft_import_log
+   3290  def finalize_draft
+   3344  def finalize_draft_to_observation
+   3357  def _obs_cols
+   3475  def _migrate_comp_library_tables
+   3537  def _haversine_deg
+   3544  def find_matching_field
+   3573  def register_or_update_field
+   3650  def upsert_comp_star_library
+   3734  def _pool_rms
+   3822  def get_comp_stars_for_field
+   3847  def close
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: diagnose_crowding_filters.py
+      lines=195, mtime=2026-04-15 10:37:43 +0200
+
+### 2a) def / class (riadok)
+     18  def _p
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: diagnose_ensemble.py
+      lines=198, mtime=2026-04-17 16:36:50 +0200
+
+### 2a) def / class (riadok)
+     48  def norm
+     55  def flux_to_mag
+     59  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: diagnose_flux.py
+      lines=158, mtime=2026-04-17 16:36:50 +0200
+
+### 2a) def / class (riadok)
+     50  def norm
+     57  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: GAIA_DR3\build_gaia_blind_index.py
+      lines=23, mtime=2026-04-20 21:53:53 +0200
+
+### 2a) def / class (riadok)
+     12  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: GAIA_DR3\gaia-dr3_index_solver.py
+      lines=173, mtime=2026-04-20 21:53:53 +0200
+
+### 2a) def / class (riadok)
+     33  def triangle_hash
+     59  def build_blind_index
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: hrd_analysis.py
+      lines=651, mtime=2026-04-29 19:03:44 +0200
+
+### 2a) def / class (riadok)
+     17  def _f
+     27  def _gaia_table_name
+     39  def _table_columns
+     44  def _fetch_gaia_columns_by_source_id
+    123  def _spectral_class
+    160  def _classify_star
+    191  def build_hrd_dataframe
+    250  def _fmt
+    258  def _make_row
+    274  def get_top_interesting_stars
+    324  def plot_hrd_matplotlib
+    447  def resolve_clean_field_image_path
+    460  def _draft_dir_from_photometry
+    465  def _obs_group_from_photometry
+    469  def _masterstar_frame_score
+    475  def _norm_inverse
+    481  def _norm_direct
+    503  def fits_first_image_to_png
+    542  def ensure_clean_field_background_png
+    598  def annotate_field_image
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: importer.py
+      lines=2408, mtime=2026-04-20 21:53:53 +0200
+
+### 2a) def / class (riadok)
+     28  class ImportResult
+     39  class CalibrationStatus
+     50  class MasterGenerationResult
+     57  class SmartScanRow
+     65  def observation_group_key
+     76  def observation_group_folder_name
+     83  def _calibration_library_search_roots
+    102  class SmartImportPlan
+    127  def _list_fits_files
+    144  def _is_empty_or_missing
+    148  def _mtime_utc
+    153  def _parse_date_obs
+    170  def _fits_capture_date_yyyymmdd
+    183  def _earliest_capture_datetime_utc
+    208  def _filter_name_for_calibration_library_flat
+    216  def _register_master_path_in_calibration_library
+    249  def _sanitize_token
+    257  def _format_exp_seconds
+    263  def _format_temp
+    268  def _format_temp_deg_for_name
+    275  def _looks_like_master
+    292  def _first_fits_in_dir
+    308  def is_light_frame
+    317  def _classify_imagetyp
+    328  def _find_lights_subdirectory
+    338  def _imaging_kind_for_file
+    359  def _list_top_level_light_fits
+    372  def _resolve_session_lights
+    399  def _collect_fits_by_type
+    459  def _read_filter
+    475  def _master_kind_matches
+    503  def _sanitize_filter_folder
+    555  def _safe_copy2
+    566  def _sanitize_windows_filename
+    609  def _dst_path_with_length_limit
+    630  def _params_string
+    640  def _find_matching_master_in_library
+    738  def _age_days
+    747  def _find_best_masterflat_for_filter
+    853  def _write_master_to_library
+    943  def _find_existing_master_for_raw_set
+    983  def smart_scan_source
+   1201  def _scan_cal
+   1319  def generate_master_dark_from_source_dir
+   1372  def generate_master_flat_from_source_dir
+   1425  def _copy_fits_folder
+   1434  def smart_import_session
+   1614  def quicklook_preview_png_bytes
+   1651  def _to_float32_frame
+   1661  def _apply_binning_frame
+   1679  def _combine_stack_mean
+   1695  def _combine_stack_median
+   1712  def _stack_calibration_frames
+   1754  def _combine_block
+   1798  def _generate_master_dark
+   1812  def _generate_master_flat
+   1826  def generate_and_archive_masters
+   1998  def get_calibration_status
+   2088  def plan_session_import
+   2159  def _find_best_calibration_file
+   2240  def import_session
+   2379  def check_known_field
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: masterstar_context.py
+      lines=166, mtime=2026-04-25 20:05:29 +0200
+
+### 2a) def / class (riadok)
+     16  class MasterstarContext
+     35  def resolve_masterstar_fits_path
+     69  def load_masterstar_context
+     99  def _fhdr
+    143  def masterstar_context_markdown
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: masterstar_wcs_dao_diagnostic.py
+      lines=277, mtime=2026-04-15 10:37:43 +0200
+
+### 2a) def / class (riadok)
+     16  def resolve_paths_from_archive
+     29  def _load_wcs_from_fits
+     43  def _world_to_pix_xy
+     61  def _stats_lines
+     85  def _worst_table_lines
+     98  def run_masterstar_wcs_dao_diagnostic
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: pdf_report.py
+      lines=62, mtime=2026-04-28 10:08:26 +0200
+
+### 2a) def / class (riadok)
+     15  def generate_report
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: photometry_core.py
+      lines=9086, mtime=2026-05-01 23:27:08 +0200
+
+### 2a) def / class (riadok)
+     43  def bp_rp_to_bv
+     75  def bv_to_bprp_linear
+     91  def teff_to_bv
+    101  def lookup_bv_from_local_db
+    206  def parse_comp_quality_json_map
+    220  def _enrich_comp_bv
+    272  def _sid_int
+    281  def _gaia_bp_rp_teff
+    405  def _normalize_gaia_id
+    439  def _build_csv_lookup
+    478  def _lookup_star_in_csv
+    523  def _sat_limit_peak_adu
+    529  def _mad_sigma
+    538  def _aperture_to_mask_single
+    546  def measure_fwhm_from_masterstar
+    716  def compute_optimal_apertures
+    769  def _flux_to_mag
+    776  def _photometric_error
+    789  def read_flux_from_csv
+    998  def _target_row_is_catalog_only
+   1008  def _catalog_only_resolve_aligned_fits
+   1019  def _catalog_only_epoch_from_csv
+   1035  def _catalog_only_fixed_aperture_flux
+   1095  def _catalog_only_merge_frame_flux
+   1146  def _blank_row
+   1259  def check_comparison_stability
+   1355  def compute_aperture_correction
+   1378  def _fail
+   1494  def ensemble_normalize
+   1644  def fit_color_term_c1
+   1750  def apply_color_term
+   1793  def _check_color_term_extrapolation
+   1825  def should_apply_color_term
+   1941  def detect_outliers
+   1981  def airmass_detrend_lc
+   2049  def airmass_detrend_lc_piecewise
+   2118  def save_lightcurve_csv
+   2178  def _fill_scalar
+   2182  def _fill_bool
+   2186  def _flag_cell
+   2230  def save_lightcurve_png
+   2334  def save_cutout_png
+   2394  def save_field_map_png
+   2502  def save_target_field_map_png
+   2612  def _edge_ok_from_masterstar_pipeline
+   2672  def auto_export_variability_candidates_csv
+   2851  def _exists_source_id
+   2986  def run_phase2a
+   3020  def _p2
+   3058  def _coerce_skip_photometry
+   3061  def _to_b
+   3597  def _get_lc
+   4119  def _get_plate_scale_from_cfg
+   4252  def _compute_fov_max_dist
+   4304  def _read_plate_scale_from_fits_path
+   4362  def _angular_distance_deg
+   4372  def _normalize_id_value
+   4385  def _normalize_id_series
+   4389  def _bool_col
+   4395  class StressTestResult
+   4401  def _iter_fits_recursive
+   4414  def stress_test_relative_rms_from_sidecars
+   4485  def vsx_is_known_variable_top3_per_bin
+   4541  def common_field_intersection_bbox_px
+   4594  def recommended_aperture_by_color
+   4628  def bad_columns_for_light_frame
+   4657  def _fwhm_moment_at
+   4693  def compute_fwhm_gaussian_for_aperture_catalog
+   4773  def enhance_catalog_dataframe_aperture_bpm
+   4981  def _phase0_effective_frame_hw_px
+   5008  def _active_target_zone_flag
+   5024  def _auto_repair_catalog_ids
+   5068  def _enrich_active_targets_b_v_bp
+   5119  def _sid_int
+   5128  def _gaia_bp_teff
+   5255  def _read_field_density_inputs
+   5298  def _refresh_variable_targets_xy
+   5360  def select_active_targets
+   5460  def _gaia_id_str
+   5742  def _enrich_target_bp_rp_from_gaia_db
+   5756  def _fscalar
+   5852  def _select_comps_by_color_then_rms
+   5926  def _select_comps_tiered
+   5990  def build_global_comp_pool
+   6112  def _warn_zero_compstars_edge
+   6154  def select_comparison_stars_per_target
+   6431  def _safe_bv_limit
+   6467  def _individual_tier
+   6479  def _adaptive_mag_filter
+   7325  def _apply_aperture_isolation_safe
+   7548  def _tier_from_delta_color_cell
+   7973  def run_phase0_and_phase1
+   8034  def _p
+   8673  def run_full_photometry_pipeline
+   8692  def _p
+   8813  def _write_suspected_variables
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: photometry_report.py
+      lines=2472, mtime=2026-05-01 23:27:08 +0200
+
+### 2a) def / class (riadok)
+     18  def generate_photometry_report
+     88  def _norm_cid
+    123  def _obs_date_str
+    167  def _metric_color
+    195  def _prepare_jpeg
+    229  def _plot_lightcurve_to_jpeg
+    320  def _page_footer
+    331  def _variability_cover_metrics
+    387  def _draw_image_fit
+    413  def _draw_cover_page
+    521  def _draw_hockey_stick
+    716  def _fmt_num
+    720  def _tess_period_for
+    803  def _draft_id_from_dirname
+    815  def _load_obs_files_for_obs
+    874  def _load_qc_metrics_for_obs
+    901  def _compute_masterstar_score
+    906  def _norm_inverse
+    912  def _norm_direct
+    933  def _infer_masterstar_used_frame
+    973  def _draw_qa_page
+   1144  def _format_comp_catalog_id
+   1163  def _comp_rows_for_target
+   1190  def _fmt
+   1264  def _should_trigger_tess_report
+   1289  def _get_candidate_row_pdf
+   1329  def _generate_candidate_lc_png
+   1369  def _draw_candidate_detail_page
+   1423  def _is_sparse_star_data
+   1430  def _draw_compact_star_block
+   1465  def draw_compact_stars_page
+   1478  def _draw_catalog_crossmatch_block
+   1506  def _draw_tess_block
+   1558  def _draw_aperture_correction_block
+   1636  def draw_star_page
+   1810  def _draw_summary_page
+   1884  def _draw_field_astrophysics_pages
+   (removed) build_summary_measure_report — replaced by generate_photometry_report / RUN VYVAR
+   2144  def _norm_id
+   2186  def _zone_cell
+   2199  def _count_lc_normal
+   2214  def _flag_cell
+   2358  def _footer
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: pipeline.py
+      lines=15328, mtime=2026-05-01 23:27:08 +0200
+
+### 2a) def / class (riadok)
+     99  def _apply_aperture_catalog_enhancements_from_st
+    155  def _fits_header_positive_float
+    163  def _frame_gain_readnoise_for_error_map
+    187  def _per_frame_noise_error_map
+    198  def _vyvar_calibrate_multiprocessing_enabled
+    204  def _cfg_calibration_library_native_binning
+    219  def _log_calibration_io_preflight
+    261  def _pipeline_ui_info
+    279  def _pipeline_ui_error
+    296  def _ensure_parent_dirs_for_aligned_fits
+    301  def _assert_alignment_produced_fits
+    311  def _match_and_crop_pair
+    324  def _safe_filter_token
+    331  def observation_group_key_from_metadata
+    342  def _iter_light_fits
+    347  def _filter_light_paths_maybe
+    355  def _norm
+    391  def _archive_raw_to_calibrated_light
+    419  def _resolve_light_fits_for_quality_inspection
+    434  def _resolve_draft_light_raw_path
+    451  def _archive_preprocess_lights_root
+    460  def resolve_masterstar_input_root
+    470  def _pick_under
+    493  def _inspection_jd_from_header
+    535  def _exposure_sec_from_header
+    550  def _quality_inspection_dao_metrics
+    572  def _dao_star_table_mean_roundness
+    592  def _dao_star_table_mean_elongation
+    617  def _quality_inspection_dao_metrics_array
+    730  def draft_median_pointing_icrs_deg
+    755  def resolve_preprocess_target_coordinates
+    812  def _estimate_fov_deg_from_header
+    842  def _estimate_fov_deg_from_fits_path
+    853  def _icrs_offset_arcmin
+    867  def sync_obs_files_drift_arcmin_for_draft
+    929  def generate_observation_hash
+    976  def run_quality_analysis
+   1115  def run_draft_ram_calibration_qc_to_obs_files
+   1159  def _dark_np_for_path
+   1368  def calibrated_paths_for_draft_not_rejected
+   1397  def calibrated_paths_for_draft_apply_filters
+   1563  def first_calibrated_light_fits_under_archive
+   1576  def format_memory_bytes
+   1591  def _as_fits_float32_image
+   1598  def _fits_primary_pixel_count
+   1615  def _available_system_ram_bytes
+   1625  def estimate_memory_from_fits_headers
+   1659  def estimate_archive_memory_profile
+   1737  def _cupy_available
+   1747  def _iter_fits_recursive
+   1752  def _path_segments_forbidden_for_masterstar_physical_source
+   1762  def _path_is_under_tree
+   1770  def _pick_preferred_masterstar_basename_hit
+   1782  def _header_vy_fwhm_px
+   1795  def _obs_fwhm_basename_map_from_db
+   1818  def _sort_masterstar_paths_by_fwhm
+   1848  def _strip_external_platesolve_header
+   1870  def build_masterstar_from_detrended
+   2067  def _update_masterstar_obs_file_status
+   2123  def _resolve_best_effort_path_under
+   2186  def resolve_obs_file_to_processed_fits
+   2212  def list_best_processed_light_paths_for_masterstar
+   2250  def get_masterstar_candidate_rows
+   2333  def get_masterstar_candidates
+   2341  def _vyvar_open_database
+   2348  def _fits_pixel_raw_to_micrometres
+   2360  def _header_focal_length_mm
+   2377  def resolve_plate_solve_fov_deg_hint
+   2431  def _db_header_pixel_native_um_mean
+   2454  def get_auto_fov
+   2521  def _focal_mm_plausible
+   2525  def _resolve_focal_mm_for_plate_scale
+   2571  def _merge_equipment_pixel_into_metadata
+   2613  def _recompute_effective_pixel_from_physical
+   2632  def _header_pick_first
+   2639  def _enrich_calibration_metadata_from_header
+   2648  def _to_f
+   2698  def _apply_draft_combined_to_pipeline_meta
+   2745  def _log_calibration_metadata_diagnostic
+   2755  def _plate_solve_input_bundle
+   2843  def compute_plate_scale_from_db
+   2882  def _try_rescale_masterstar_linear_wcs_to_expected_plate_scale
+   2944  def _solve_wcs_solve_field_cli
+   3040  def _try_solve_wcs_astrometry_net_or_local_cli
+   3064  def _solve_wcs_astrometry_net
+   3125  def _apply_wcs_header_to_fits
+   3142  def _solve_wcs_external
+   3162  def _finalize_plate_solve_result
+   3187  def _try_vyvar
+   3428  def _has_valid_wcs
+   3432  def _wcs_astrometry_nearly_identical
+   3450  def _bin2d_mean
+   3466  def _dao_star_count_from_array
+   3497  def _pick_reference_frame_by_star_count
+   3525  def _wcs_field_center_radec_deg
+   3546  def _catalog_df_cap_brightest_by_mag
+   3566  def _query_gaia_local
+   3665  def _query_vsx_local
+   3734  def _saturate_limit_adu_from_header
+   3750  def _infer_sat_limit_from_bitpix
+   3772  def _equipment_saturate_adu_from_db
+   3790  def _effective_saturation_limit
+   3832  def _box_peak_max_adu
+   3849  def _box_peaks_at_centroids
+   3890  def _icrs_deg_to_unitxyz
+   3900  def _chord_to_arcsec
+   3909  def build_ucac_catalog_kdtree
+   3932  def nearest_sky_nn_kdtree
+   3958  def _saturated_core_plateau
+   3996  def _star_saturation_flags
+   4034  def _all_pix2world_icrs_deg
+   4049  def _saturated_core_plateau_vectorized
+   4082  def _vectorized_star_saturation_columns
+   4137  def _vyvar_df_round_time_jd_for_csv
+   4148  def _vyvar_df_to_csv
+   4166  def _fits_header_first_positive_float
+   4179  def _gaia_catalog_cone_radius_optics_floor_deg
+   4220  def _field_center_and_radius_from_wcs
+   4261  def _effective_field_catalog_cone_radius_deg
+   4303  def _invalidate_field_catalog_cone_cache_if_needed
+   4349  def _field_catalog_cone_meta_path
+   4353  def _write_field_catalog_cone_meta
+   4378  def select_comparison_stars_spatial_grid
+   4539  def _annotate_masterstars_flux_zones
+   4665  def write_photometry_plan_files
+   4716  def _cid
+   5029  def _norm_gaia_id
+   5299  def _sync_comparison_stars_across_setups
+   5349  def _dao_auto_binning_factor
+   5357  def _mean_bin2d_for_dao
+   5372  def _dao_xy_binned_to_full
+   5382  def _prefilter_dao_table_brightest
+   5394  def _dao_spatial_flux_cap_row_indices
+   5447  def detect_stars_match_master_reference
+   5638  def _pixel_nn_match
+   5931  def _merge_platesolve_gaia_pairs_into_masterstars_df
+   5977  def detect_stars_and_match_catalog
+   6419  def _bind_gaia_catalog_columns
+   6460  def _assign_catalog_at_threshold
+   6560  def _run_full_match_pass
+   6905  def _vyvar_parallel_use_processes
+   6912  def _vyvar_parallel_pool
+   6922  def _icrs_center_radius_from_hdr_data
+   6949  def _export_first_icrs_center_radius
+   6978  def _prefetch_export_shared_catalog_for_process_pool
+   7069  def _init_export_per_frame_worker
+   7092  def _extract_airmass_from_header
+   7130  def _export_per_frame_run_catalog_core
+   7433  def _export_per_frame_disk_worker_task
+   7454  def _export_per_frame_ram_worker_task
+   7488  def export_per_frame_catalogs
+   7703  def _refresh_shared_cat_kdtree
+   7878  def _append_deferred_csv
+   7881  def _ensure_cone_and_variables
+   7884  def _fill
+   7939  def _run_one_catalog
+   8100  def _process_frame
+   8112  def _process_ram_item
+   8120  def _catalog_worker_state
+   8321  def validate_comparison_ensemble_flatness
+   8464  def _apply_wcs_tan_fragment_to_header
+   8478  def _gaia_sky_match_wcs_fragment
+   8511  def _refine_masterstar_wcs_gaia_sky_match_infile
+   8538  def _fill_masterstars_gaia_matched_bp_rp_from_local_db
+   8595  def generate_masterstar_and_catalog
+   8730  def _map_qc_paths_to_disk
+   8737  def _mapped_hit_ok
+   8766  def _disk_stack_fallback_paths
+   9185  def _run_masterstar_vyvar_solve
+   9847  def _bin_step
+   9882  def _fwhm_moment_at
+   9937  def _color_bucket
+  10343  def _partition_detrended_by_subfolder
+  10365  def _merge_astrometry_group_reports
+  10392  def _astrometry_align_impl_body
+  10554  def _prog
+  10703  def _maybe_refine_aligned
+  10798  def _vy_fwhm_header_value
+  10809  def _aligned_masterstar_matches_platesolve
+  10833  def _ensure_aligned_masterstar_copy
+  10928  def _flush_one_alignment
+  11095  def _cat_prog
+  11234  def astrometry_align_and_build_masterstar
+  11397  def _fits_meta_ra_deg
+  11402  def _fits_meta_dec_deg
+  11407  def _resolve_cosmic_gain_readnoise
+  11457  def _satlevel_electrons_from_header
+  11466  def _db_for_cosmic
+  11477  def _db_for_calibration_tasks
+  11497  def _cosmic_pack_from_config
+  11515  def _qc_pack_from_config
+  11552  def _qc_center_crop_for_stars
+  11569  def _half_flux_radius_in_cutout
+  11589  def _mean_hfr_bright_stars_dao
+  11652  def _post_calibration_qc_eval
+  11726  def _maybe_cosmic_clean_calibrated_frame
+  11742  def _strip_raw_linearity_header_keywords
+  11764  def _vy_calib_status_numeric
+  11774  def _hdr_vy_cflag_str
+  11783  def _calibration_flags
+  11803  def _calibration_type_from_flags
+  11818  def _calibrate_one_light_apply_masters_in_ram
+  12016  def _calibrate_one_light_disk
+  12117  def _init_calibrate_batch_worker
+  12134  def _calibrate_batch_process_one
+  12202  def _has_usable_master_dark
+  12206  def _has_any_usable_master_flat
+  12215  def _passthrough_lights_to_calibrated
+  12306  def calibrate_lights_to_calibrated
+  12398  def _dark_np_for_path
+  12501  def _one_sequential
+  12709  def _safe_proc_name
+  12718  def _fit_background_poly2d
+  12791  def _background2d_mesh_box_size
+  12798  def _background_subtract
+  12839  def _remove_cosmics_lacosmic
+  12880  def _estimate_dao_fwhm_guess
+  12918  def _qc_fwhm_elongation
+  12936  def _maybe_flip
+  13250  def _vyvar_parallel_worker_count
+  13289  def _vyvar_qc_preprocess_workers
+  13294  def _estimate_catalog_frame_hw
+  13318  def _vyvar_cap_mp_workers_for_catalog
+  13341  def _vyvar_per_frame_csv_workers
+  13350  def _analyze_calibrated_qc_one
+  13389  def _preprocess_calibrated_one
+  13500  def _analyze_preprocess_combined_one
+  13625  def preprocess_calibrated_to_processed
+  13688  def _median_pointing_from_headers
+  13812  def analyze_calibrated_qc
+  13894  def analyze_preprocess_calibrated_combined
+  14021  def _qc_suggest_thresholds
+  14039  def _robust_suggest
+  14070  def _apply_temporal_sigma_clip_in_place
+  14179  def scan_calibrated_lights_pointing
+  14199  def _wcs_center_from_header
+  14219  def _jd_from_header
+  14232  def _detect_segments_from_wcs_centers
+  14347  def _parse_fits_binning_int
+  14355  def _log_effective_pixel_pitch
+  14373  def fits_metadata_from_primary_header
+  14385  def _pick
+  14501  def extract_fits_metadata
+  14604  def scan_usb_folder
+  14629  def _classify
+  14639  def _fits_files
+  14716  class AstroPipeline
+  14719  def __init__
+  14723  def calibrate
+  14732  def quick_calibrate_last_import
+  14793  def calibrate_batch
+  14986  def quick_preprocess_last_import
+  15072  def quick_analyze_last_import
+  15112  def _first_fits_file
+  15123  def prepare_observation_from_session
+  15156  def create_observation_from_payload
+  15161  def _field_jump_empty_result
+  15175  def detect_field_jumps
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+   9185      def _run_masterstar_vyvar_solve(*, enable_sip: bool, sip_max_order: int, fov_deg: float, max_rows: int) -> dict[str, Any]:
+   9190              fov_diameter_deg=float(fov_deg),
+   9212          fov_deg=float(_fov_ms_solve),
+   9278              fov_deg=float(_fov_ms_solve) * 1.25,
+
+
+------------------------------------------------------------------------
+FILE: platesolve_ui_paths.py
+      lines=119, mtime=2026-04-22 16:55:04 +0200
+
+### 2a) def / class (riadok)
+      9  def masterstars_csv_in_dir
+     17  def list_platesolve_setup_dirs
+     33  def legacy_platesolve_root_bundle
+     42  def platesolve_bundle_dirs
+     54  def default_bundle_dir
+     69  def cone_csv_path
+     73  def parse_draft_id_from_text
+     86  def resolve_draft_directory
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: psf_runner.py
+      lines=1598, mtime=2026-04-24 12:16:14 +0200
+
+### 2a) def / class (riadok)
+     80  def _force_utf8_stdout
+     96  def subtract_local_sky
+    147  def _header_egain_only
+    160  def get_gain_from_header
+    170  def _vy_qcrms_from_header
+    183  def _vy_fwhm_from_header
+    194  def _draft_equipment_id
+    209  def _draft_db_gain_e_per_adu
+    222  def _runner_database_path
+    234  def _fit_shape_for_cutout
+    242  def _load_psf_photometry_bundle
+    268  def _per_cutout_error_map
+    277  def _psf_stars_local_cutouts
+    410  def _print_chi2_distribution
+    434  def _comp_fail_reason_psf
+    462  def _print_dry_run_two_frame_report
+    517  def _rms_pct
+    538  def _proc_metrics_by_catalog
+    560  def _comp_catalog_sat_peak
+    581  def _cid_key
+    612  def _print_table
+    628  def flag_blended_stars
+    645  def _paths
+    672  def step_1_build_epsf
+    729  def step_2_load_targets
+    808  def _build_frame_xy_lookup
+    835  def step_3_run_psf_on_frames
+   1189  def step_4_build_summary
+   1313  def step_5_calibrate_lightcurve
+   1414  def _mag_cal
+   1530  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: run_smoothness_report.py
+      lines=60, mtime=2026-04-24 18:31:58 +0200
+
+### 2a) def / class (riadok)
+     10  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\_integration_test_todos.py
+      lines=168, mtime=2026-05-01 23:27:08 +0200
+
+### 2a) def / class (riadok)
+     27  def _read_log
+     33  def _last_int_matches
+     37  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\_smoke_run_draft287.py
+      lines=86, mtime=2026-05-12 13:28:20 (fs)
+
+### 2a) def / class (riadok)
+     23  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\diag_bo_cvn_comp_quality_mtime.py
+      lines=40, mtime=2026-04-29 19:03:44 +0200
+
+### 2a) def / class (riadok)
+      8  def _print_safe
+     15  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\diag_bo_cvn_comp_quality_vs_csv.py
+      lines=46, mtime=2026-04-29 19:03:44 +0200
+
+### 2a) def / class (riadok)
+      9  def _print_safe
+     16  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\diag_bo_cvn_comp_vs_summary.py
+      lines=43, mtime=2026-04-29 19:03:44 +0200
+
+### 2a) def / class (riadok)
+      8  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\diagnose_masterstar_wcs_dao.py
+      lines=65, mtime=2026-04-15 10:37:43 +0200
+
+### 2a) def / class (riadok)
+     26  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\run_draft_000244_align_and_photometry.py
+      lines=158, mtime=2026-04-23 15:59:39 +0200
+
+### 2a) def / class (riadok)
+     21  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\smoke_export_draft_000279.py
+      lines=259, mtime=2026-04-29 19:03:44 +0200
+
+### 2a) def / class (riadok)
+      9  def _print_safe
+     16  def check
+     25  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\smoke_test_draft283.py
+      lines=147, mtime=2026-04-30 17:42:44 +0200
+
+### 2a) def / class (riadok)
+     24  def check
+     33  def warn
+    104  def load_radec
+    119  def sep_arcsec
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\test_auto_crossmatch_tess_draft_000279.py
+      lines=101, mtime=2026-04-29 19:03:44 +0200
+
+### 2a) def / class (riadok)
+     19  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: scripts\test_border_bbox.py
+      lines=34, mtime=2026-04-30 17:42:44 +0200
+
+### 2a) def / class (riadok)
+  (žiadne)
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: smoke_test_bprp_tier.py
+      lines=158, mtime=2026-04-29 19:03:44 +0200
+
+### 2a) def / class (riadok)
+     13  def _find_setup_dir
+     26  def _is_finite
+     33  def main
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_aperture_photometry.py
+      lines=1690, mtime=2026-05-01 23:27:08 +0200
+
+### 2a) def / class (riadok)
+     36  def _cached_read_csv
+     40  def _airmass_column
+     47  def _ut_tick_labels_from_jd
+     71  def _latest_report_pdf
+     89  def _find_phase2a_paths
+    143  def _load_fwhm
+    161  def _fallback_masterstar_fits
+    180  def _phase2a_results_exist
+    186  def _phase2a_timestamp
+    197  def _load_summary
+    204  def _enrich_summary_with_zone_flags
+    334  def _phase2a_target_choice_label
+    365  def _float_coord_row
+    383  def _fmt_opt_num
+    404  def _render_target_detail
+    775  def _row_bg
+    782  def _tier_badge
+    803  def _format_comp_catalog_id
+    872  def _bv_src_badge
+    889  def _tier_color_src_badge
+    996  def render_aperture_photometry
+   1028  def _detect_obs_groups
+   1217  def _render_lines
+   1253  def _cb
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_calibration.py
+      lines=306, mtime=2026-04-15 10:37:43 +0200
+
+### 2a) def / class (riadok)
+     17  def render_calibration_equipment_header
+     76  def render_calibration_library_flat_warnings
+     96  def _read_bin_safe
+    108  def build_master_calibration_files_dataframe
+    171  def _group_keys_by_filter_exp
+    184  def _count_calibrated_fits
+    197  def _plate_solve_ok_for_groups
+    213  def _preview_calibration_status
+    227  def build_multi_observation_status_dataframe
+    268  def draft_runtime_status
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_dao_stars.py
+      lines=127, mtime=2026-04-22 20:42:27 +0200
+
+### 2a) def / class (riadok)
+     10  def _detail_help
+     18  def render_dao_stars_dashboard
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_database_explorer.py
+      lines=360, mtime=2026-04-28 10:08:26 +0200
+
+### 2a) def / class (riadok)
+     16  def _row_active_for_style
+     33  def _render_universal_main_table
+     68  def _grey_inactive
+    116  def render_database_explorer
+    189  def _highlight_binning_22
+    264  def _highlight_draft
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_finalization.py
+      lines=499, mtime=2026-04-28 10:08:26 +0200
+
+### 2a) def / class (riadok)
+     16  def _copy_finalization_files
+     68  def _draft_scan_row
+     84  def _draft_location_name
+    104  def _n_light_frames
+    120  def _csv_nonempty
+    130  def render_finalization
+    400  def render_known_field_banner
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_hrd.py
+      lines=215, mtime=2026-04-29 19:03:44 +0200
+
+### 2a) def / class (riadok)
+     15  def render_hrd_tab
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_masterstar_qa.py
+      lines=463, mtime=2026-04-28 10:08:26 +0200
+
+### 2a) def / class (riadok)
+     21  def _cached_msqa_vsx_chip_table
+     77  def _infer_setup_name_from_masterstar_candidate_path
+     95  def render_masterstar_qa
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_photometry_quality.py
+      lines=380, mtime=2026-04-28 20:07:13 +0200
+
+### 2a) def / class (riadok)
+     18  def _platesolve_dir_with_comparison
+     29  def _read_csv_cached
+     37  def _read_fits_image_cached
+     47  def _bool_series
+     63  def _catalog_id_key
+     72  def render_photometry_quality_diagnostic
+    196  def _draw_circles
+    204  def _draw_dots
+    212  def _draw_squares
+    243  def _hist
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_photometry_results.py
+      lines=1638, mtime=2026-04-28 20:07:13 +0200
+
+### 2a) def / class (riadok)
+     45  def _draft_archive_path
+     63  def _cid_key
+     79  def _to_bool
+     90  def _jd_from_fits_header
+    138  def _collect_per_frame_csv_paths
+    163  def _normalize_sidecar_dataframe
+    247  def _load_comp_and_targets
+    280  def _compute_differential_mag
+    337  def _time_val
+    400  def _opt_float
+    434  def _plot_light_curve
+    500  def _load_per_frame_sidecars
+    565  def _platesolve_dir
+    587  def _read_optional_csv
+    596  def _target_options
+    625  def _comparison_options
+    655  def _series_for_star
+    671  def _jd_plot_x_and_raw
+    677  def render_aperture_results
+    894  def render_psf_results
+   1189  def _hl
+   1201  def render_comp_validation
+   1263  def _verdict
+   1325  def render_variable_detection
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_quality_dashboard.py
+      lines=935, mtime=2026-04-29 00:16:06 +0200
+
+### 2a) def / class (riadok)
+     25  def _compute_masterstar_score
+     35  def _norm_inverse
+     42  def _norm_direct
+     77  def _masterstar_candidate_path_for_job
+     80  def _has_raw_seg
+    105  def _preview_path_from_plotly_state
+    127  def _make_is_rejected_persist_handler
+    134  def _on_change
+    175  def _jd_and_utc_strings
+    189  def _prepare_hover_time_fields
+    203  def _add_traces_by_filter
+    252  def _add_fwhm_traces_with_limit
+    325  def render_quality_dashboard
+    352  def _stage_center_update
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_select_stars.py
+      lines=624, mtime=2026-05-01 23:27:08 +0200
+
+### 2a) def / class (riadok)
+     34  def _find_phase01_setups
+     58  def _add_setup
+     80  def _default_setup_name
+    102  def _load_fwhm_from_masterstar
+    118  def _results_exist
+    127  def _results_timestamp
+    144  def _render_targets_tab
+    187  def _render_comparison_tab
+    269  def _tier_css
+    295  def _sanitize_suspected_variables_df
+    317  def _render_suspected_tab
+    360  def render_select_stars
+    495  def _phase01_ui
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_settings.py
+      lines=762, mtime=2026-05-01 23:27:08 +0200
+
+### 2a) def / class (riadok)
+     20  def _detail_help
+     28  def render_settings_dashboard
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_suspected_lightcurves.py
+      lines=197, mtime=2026-04-28 10:08:26 +0200
+
+### 2a) def / class (riadok)
+     26  def _collect_instrumental_lc
+     88  def render_suspected_lightcurves
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: ui_variability.py
+      lines=1577, mtime=2026-05-01 23:27:08 +0200
+
+### 2a) def / class (riadok)
+     25  def _detect_obs_groups
+     37  def _cached_load_matrix
+     51  def _read_comp_catalog_ids
+     66  def _vizier_link
+     80  def _raw_lightcurve_from_frames
+    112  def _get_candidate_row
+    163  def _should_trigger_tess
+    196  def _edge_ok_from_masterstar
+    261  def count_edge_safe_combined_candidates
+    301  def run_variability_detection_session
+    404  def _render_field_image_with_candidate
+    469  def _render_field_image_with_candidates
+    556  def _variability_crossmatch_dialog_body
+    656  def progress_callback
+    857  def render_variability_dashboard
+   1312  def _cm_format
+   1469  def load_candidate_lc
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: utils.py
+      lines=549, mtime=2026-04-22 20:42:27 +0200
+
+### 2a) def / class (riadok)
+     22  def iter_fits_paths_recursive
+     81  def strip_celestial_wcs_keys
+     97  def strip_vendor_platesolve_metadata
+    106  def header_key_is_celestial_wcs
+    111  def fits_header_has_celestial_wcs
+    122  def wcs_distortion_log_suffix
+    139  def wcs_rotation_angle_deg
+    162  def circular_angle_diff_deg
+    170  def effective_binned_pixel_pitch_um
+    180  def fits_binning_xy_from_header
+    182  def _one
+    193  def normalize_telescope_focal_mm_for_plate_scale
+    224  def effective_astrometry_net_tweak_order
+    241  def dao_detection_fwhm_pixels
+    266  def catalog_cone_radius_from_fov_diameter_deg
+    274  def plate_scale_arcsec_per_pixel
+    289  def plate_solve_fov_deg_diagonal_from_scale
+    300  def per_frame_catalog_match_sep_arcsec_for_scale
+    312  def get_optimal_params
+    369  def catalog_cone_radius_deg_from_optics
+    410  def astrometry_net_scale_bounds_arcsec_per_pix
+    431  def masterstar_wcs_quality
+    462  def maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel
+    515  def estimate_field_diameter_deg_diagonal
+    531  def generate_session_id
+    539  def session_paths
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: vyvar_alignment_frame.py
+      lines=772, mtime=2026-04-23 15:59:39 +0200
+
+### 2a) def / class (riadok)
+     34  def _as_fits_float32_image
+     38  def _hdr_has_wcs
+     42  def _alignment_emit_log
+     49  def _alignment_as_alignment_points
+     84  def _alignment_detect_xy
+    199  def _run_dao_on
+    269  def _alignment_run_astroalign_points
+    304  def _alignment_load_masterstar_catalog_points_for_frame
+    352  def _alignment_compute_one_frame
+    423  def _n_unique_spread_sample
+    760  def _astrometry_align_mp_init
+    765  def _astrometry_align_mp_task
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+  (žiadne výskyty)
+
+
+------------------------------------------------------------------------
+FILE: vyvar_blind_solver.py
+      lines=312, mtime=2026-04-22 20:42:27 +0200
+
+### 2a) def / class (riadok)
+     35  def _load_index
+     54  def find_blind_hint
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+     61      fov_deg: float | None = None,
+     71          fov_deg: Priemer poľa [deg]; odfiltruje L3 väčšie ako ~0.9×FOV (v arcsekundách).
+    216              if fov_deg is not None:
+    218                      _fov = float(fov_deg)
+
+
+------------------------------------------------------------------------
+FILE: vyvar_platesolver.py
+      lines=3348, mtime=2026-04-29 19:03:44 +0200
+
+### 2a) def / class (riadok)
+     66  def _apply_proper_motion
+    101  def _obs_year_from_header
+    116  def _apply_pm_to_gaia_rows
+    145  def _get_masterstar_wcs_parity
+    189  class PointingRequiredError
+    194  class ResolvedPointing
+    205  def _fits_header_pick
+    212  def _fits_header_parse_ra_deg
+    240  def _fits_header_parse_dec_deg
+    262  def pointing_hint_from_header
+    312  def parse_user_ra_string_to_deg
+    365  def parse_user_dec_string_to_deg
+    417  def resolve_pointing_for_vyvar
+    443  def _triangle_sorted_sides_pixel
+    451  def _ratios
+    457  def _scale_consistent
+    463  def _empirical_median_plate_scale_arcsec_per_px
+    500  def _triangle_angles_sorted_from_sides
+    506  def _ang
+    524  def _linear_tan_predict_pixels
+    531  def _wcs_pixel_rms_linear
+    536  def _wcs_pixel_rms_full
+    541  def _filter_catalog_to_fov
+    551  def _sip_uv_term_indices
+    563  def _sip_fill_ab
+    573  def _adaptive_ridge
+    586  def _fit_sip_on_matches
+    728  def _fit_sip_on_matches_masterstar_try_orders
+    771  def _fit_sip_for_solver
+    805  def _ransac_fit_wcs_tan
+    843  def _greedy_match_pairs_pixel_wcs
+    916  def _greedy_pixel_nn_one_to_one
+    986  def _refine_wcs_tan_nn_gaia
+   1046  def _log_wcs_orientation_header_hints
+   1090  def _mirror_detections_xy
+   1108  def _gaia_triangle_greedy_orientation_probe
+   1332  def _fits_header_strip_sip
+   1351  def _wcs_linear_without_sip
+   1365  def _equalize_wcs_cd_axes_to_target_arcsec
+   1416  def _maybe_repair_masterstar_anisotropic_plate_scale
+   1506  def solve_wcs_with_local_gaia
+
+### 2e) trieda CameraGeometry
+  NIE (žiadna definícia `class CameraGeometry` v súbore)
+
+### 2b) cone_r (riadok + riadok text)
+   1916      cone_r = catalog_cone_radius_deg_from_optics(
+   1944                      cone_r = max(float(cone_r), float(cone_diag))
+   1965      cone_r = max(float(cone_r), float(_min_cone))
+   1974      cone_r = max(float(cone_r), float(required_corners_radius))
+   1990          cone_r = max(float(cone_r), float(_r_fov))
+   1992          cone_r = max(float(cone_r), float(_opt.get("search_radius", 0.0)))
+   1998      calc_radius = float(cone_r)
+   2003          f"CATALOG SEARCH: Ra={ra0}, Dec={de0}, Radius={cone_r:.2f} deg (vypočítané pre {_foc_log}mm)"
+   2009      ra_min = ra0f - float(cone_r)
+   2010      ra_max = ra0f + float(cone_r)
+   2011      de_min = de0f - float(cone_r)
+   2012      de_max = de0f + float(cone_r)
+   2080              cone_r = min(float(cone_r), float(_fov_r))
+   2083                  f"cone_r obmedzený na {cone_r:.3f}° (FOV+20%)"
+   2085              ra_min = ra0f - float(cone_r)
+   2086              ra_max = ra0f + float(cone_r)
+   2087              de_min = de0f - float(cone_r)
+   2088              de_max = de0f + float(cone_r)
+   2089      # VŽDY obmedz cone_r na FOV+20% ak je _exp_scale k dispozícii; potom SQL box (RA šírka podľa |dec|)
+   2095          if float(cone_r) > _fov_r_deg:
+   2096              cone_r = _fov_r_deg
+   2097              log_event(f"VYVAR: cone_r clipped to FOV+20% = {cone_r:.3f}°")
+   2098          ra_min = ra0f - float(cone_r) / math.cos(math.radians(abs(de0f)))
+   2099          ra_max = ra0f + float(cone_r) / math.cos(math.radians(abs(de0f)))
+   2100          de_min = de0f - float(cone_r)
+   2101          de_max = de0f + float(cone_r)
+   2104              f"VYVAR platesolve: vynechávam cone_r clip na FOV+20% (blind hint + expected scale z DB/config môže byť nesprávna)."
+   2146      log_event(f"SQL GAIA: Nájdených {_n_cat_raw} hviezd pre box okolo hintu (≈ r {float(cone_r):.3f}°).")
+   3224      hdr0["VY_GAIR"] = (float(cone_r), "Gaia query cone radius [deg] used by VYVAR")
+   3337          "attempt": f"cone_r={cone_r:.3f}deg,mag<={eff_max_cat_mag}",
+
+### 2c) pixel_scale (riadok + riadok text)
+  (žiadne výskyty)
+
+### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
+   1715                          fov_deg=_blind_fov_deg,
+
+
+
+## 3. Duplicitné názvy funkcií (rovnaký `def` názov v ≥2 súboroch z auditu)
+
+  __init__:
+    - database.py:433
+    - database.py:632
+    - pipeline.py:14719
+  _as_fits_float32_image:
+    - pipeline.py:1591
+    - vyvar_alignment_frame.py:34
+  _cb:
+    - app.py:962
+    - ui_aperture_photometry.py:1253
+  _cid_key:
+    - psf_runner.py:581
+    - ui_photometry_results.py:63
+  _compute_masterstar_score:
+    - photometry_report.py:901
+    - ui_quality_dashboard.py:25
+  _dark_np_for_path:
+    - pipeline.py:1159
+    - pipeline.py:12398
+  _db_header_pixel_native_um_mean:
+    - database.py:510
+    - pipeline.py:2431
+  _detail_help:
+    - ui_dao_stars.py:10
+    - ui_settings.py:20
+  _detect_obs_groups:
+    - ui_aperture_photometry.py:1028
+    - ui_variability.py:25
+  _flag_cell:
+    - photometry_core.py:2186
+    - photometry_report.py:2214
+  _fmt:
+    - app.py:732
+    - hrd_analysis.py:250
+    - photometry_report.py:1190
+  _format_comp_catalog_id:
+    - photometry_report.py:1144
+    - ui_aperture_photometry.py:803
+  _fwhm_moment_at:
+    - photometry_core.py:4657
+    - pipeline.py:9882
+  _iter_fits_recursive:
+    - photometry_core.py:4401
+    - pipeline.py:1747
+  _norm_direct:
+    - hrd_analysis.py:481
+    - photometry_report.py:912
+    - ui_quality_dashboard.py:42
+  _norm_id:
+    - astrometry_optimizer.py:122
+    - photometry_report.py:2144
+  _norm_inverse:
+    - hrd_analysis.py:475
+    - photometry_report.py:906
+    - ui_quality_dashboard.py:35
+  _p:
+    - diagnose_crowding_filters.py:18
+    - photometry_core.py:8034
+    - photometry_core.py:8692
+  _print_safe:
+    - scripts\diag_bo_cvn_comp_quality_mtime.py:8
+    - scripts\diag_bo_cvn_comp_quality_vs_csv.py:9
+    - scripts\smoke_export_draft_000279.py:9
+  _sid_int:
+    - photometry_core.py:272
+    - photometry_core.py:5119
+  check:
+    - scripts\smoke_export_draft_000279.py:16
+    - scripts\smoke_test_draft283.py:24
+  main:
+    - GAIA_DR3\build_gaia_blind_index.py:12
+    - app.py:1938
+    - diagnose_ensemble.py:59
+    - diagnose_flux.py:57
+    - psf_runner.py:1530
+    - run_smoothness_report.py:10
+    - scripts\_integration_test_todos.py:37
+    - scripts\_smoke_run_draft287.py:23
+    - scripts\diag_bo_cvn_comp_quality_mtime.py:15
+    - scripts\diag_bo_cvn_comp_quality_vs_csv.py:16
+    - scripts\diag_bo_cvn_comp_vs_summary.py:8
+    - scripts\diagnose_masterstar_wcs_dao.py:26
+    - scripts\run_draft_000244_align_and_photometry.py:21
+    - scripts\smoke_export_draft_000279.py:25
+    - scripts\test_auto_crossmatch_tess_draft_000279.py:19
+    - smoke_test_bprp_tier.py:33
+  norm:
+    - diagnose_ensemble.py:48
+    - diagnose_flux.py:50
+
+
+## 4. TODO / FIXME / HACK v solver súboroch z tohto auditu
+
+Hľadanie: výskyt reťazcov TODO / FIXME / HACK (case-insensitive).
+
+- V `vyvar_platesolver.py`, `vyvar_blind_solver.py`, `astrometry_optimizer.py`: žiadny výskyt.
+- V `scripts\_integration_test_todos.py` len komentáre s názvami skupín testov (`TODO-1` … `TODO-4`) — nie technický debt typu `# TODO:`.
+- Celý súborový zoznam z auditu: žiadny riadok `# TODO:` / `FIXME` / `HACK` v zmysle backlog značky (grep `#\s*TODO`, `FIXME`, `HACK` naprieč týmito .py).
+

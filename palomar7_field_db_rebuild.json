@@ -1,0 +1,19 @@
+{
+  "started_utc": "2026-06-03T08:24:35.382799+00:00",
+  "cone_radius_deg": 0.45,
+  "cone_query": {
+    "mag_limit_used": 20.0,
+    "capped": false,
+    "method": "cone_search",
+    "row_count": 52376,
+    "faintest_g": 19.999996185302734
+  },
+  "field_db": {
+    "path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3_pal7_field.db",
+    "inserted": 52376,
+    "row_count": 52376,
+    "faintest_g": 19.999996185302734,
+    "max_g": 19.999996185302734
+  },
+  "finished_utc": "2026-06-03T08:41:39.818935+00:00"
+}
