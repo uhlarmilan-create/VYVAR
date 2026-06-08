@@ -18,7 +18,7 @@ os.environ["VYVAR_CT_PROTOTYPE"] = "1"
 FIELD_DB = _ROOT / "GAIA_DR3" / "vyvar_gaia_dr3_pal7_field.db"
 CONFIG_PATH = _ROOT / "config.json"
 DRAFT_ID = 367
-RESULT_PATH = _ROOT / "palomar7_bgr_continue367_result.json"
+RESULT_PATH = _ROOT / "tmp" / "palomar7_bgr_continue367_result.json"
 
 
 def _set_gaia_db(path: Path) -> dict:

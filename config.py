@@ -86,11 +86,13 @@ class AppConfig:
     #: Path to local Gaia DR3 SQLite database (must contain table ``gaia_dr3`` with indexes on ra/dec).
     gaia_db_path: str = ""
 
-    #: Path to blind plate-solve triangle hash index (``gaia_triangles.pkl``, from ``build_gaia_blind_index.py``).
-    blind_index_path: str = r"C:\ASTRO\python\VYVAR\GAIA_DR3\gaia_triangles.pkl"
-    #: JSON manifest of density tiers (``blind_index_series.json``); used when ``blind_index_select_mode`` is auto/series_all.
-    blind_index_series: str = r"C:\ASTRO\python\VYVAR\GAIA_DR3\blind_index_series.json"
-    #: ``auto`` = scale-aware tier order + verify; ``series_all`` = all tiers; ``single`` = ``blind_index_path`` only.
+    #: Fine blind index (Newton / ~1.3″/px rigs); built by ``build_blind_index.py``.
+    blind_index_fine_path: str = ""
+    #: Wide blind index (Carl-Zeiss / ~9.77″/px rigs); built by ``build_blind_index.py``.
+    blind_index_wide_path: str = ""
+    #: Deprecated alias of ``blind_index_fine_path`` (``single`` mode and legacy readers).
+    blind_index_path: str = ""
+    #: ``auto`` = scale-aware tier order + verify; ``series_all`` = all tiers; ``single`` = fine path only.
     blind_index_select_mode: str = "auto"
     #: Blind solver: geometric verification of top-N vote candidates (astrometry.net-style).
     blind_verify_enabled: bool = True
@@ -529,18 +531,29 @@ class AppConfig:
 
         self.gaia_db_path = str(data.get("gaia_db_path", data.get("GAIA_DB_PATH", "")) or "").strip()
 
-        _blind_default = self.blind_index_path
-        self.blind_index_path = str(
+        gaia_dir = self.project_root / "GAIA_DR3"
+        _fine_default = str(gaia_dir / "gaia_triangles_fine.pkl")
+        _wide_default = str(gaia_dir / "gaia_triangles_wide.pkl")
+        legacy_blind = str(
             data.get("blind_index_path", data.get("BLIND_INDEX_PATH", "")) or ""
         ).strip()
-        if not self.blind_index_path:
-            self.blind_index_path = str(_blind_default or "").strip()
-        _series_default = self.blind_index_series
-        self.blind_index_series = str(
-            data.get("blind_index_series", data.get("BLIND_INDEX_SERIES", "")) or ""
+        fine = str(
+            data.get("blind_index_fine_path", data.get("BLIND_INDEX_FINE_PATH", "")) or ""
         ).strip()
-        if not self.blind_index_series:
-            self.blind_index_series = str(_series_default or "").strip()
+        wide = str(
+            data.get("blind_index_wide_path", data.get("BLIND_INDEX_WIDE_PATH", "")) or ""
+        ).strip()
+        if not fine and not wide and legacy_blind:
+            base = Path(legacy_blind).expanduser().parent
+            fine = str((base / "gaia_triangles_fine.pkl").resolve())
+            wide = str((base / "gaia_triangles_wide.pkl").resolve())
+        if not fine:
+            fine = legacy_blind or _fine_default
+        if not wide:
+            wide = _wide_default
+        self.blind_index_fine_path = fine
+        self.blind_index_wide_path = wide
+        self.blind_index_path = fine
         _mode = str(data.get("blind_index_select_mode", self.blind_index_select_mode) or "auto")
         _mode = _mode.strip().lower()
         self.blind_index_select_mode = (
@@ -1409,8 +1422,8 @@ class AppConfig:
                 else int(self.calibration_library_native_binning)
             ),
             "gaia_db_path": str(self.gaia_db_path or ""),
-            "blind_index_path": str(self.blind_index_path or ""),
-            "blind_index_series": str(self.blind_index_series or ""),
+            "blind_index_fine_path": str(self.blind_index_fine_path or ""),
+            "blind_index_wide_path": str(self.blind_index_wide_path or ""),
             "blind_index_select_mode": str(self.blind_index_select_mode or "auto"),
             "blind_verify_enabled": bool(self.blind_verify_enabled),
             "blind_verify_top_n": int(self.blind_verify_top_n),

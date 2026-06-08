@@ -41,6 +41,10 @@ build/
 hard_copy_*.patch
 hard_copy_*.bundle
 
+# Scratch workspaces (one-off artifacts + helper scripts)
+/sandbox/
+/tmp/
+
 # Verify logs and temp extracts
 *.log
 *_verify_console.txt

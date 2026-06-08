@@ -19,7 +19,7 @@ os.environ["VYVAR_CT_PROTOTYPE"] = "1"
 DRAFT_ID = 368
 FIELD_DB = _ROOT / "GAIA_DR3" / "vyvar_gaia_dr3_m67_field.db"
 CONFIG_PATH = _ROOT / "config.json"
-RESULT_PATH = _ROOT / "m67_gr_sandbox_min5_result.json"
+RESULT_PATH = _ROOT / "tmp" / "m67_gr_sandbox_min5_result.json"
 GR_FILTERS = ("Green", "Red")
 DEFAULT_MIN_COMP = 5
 

@@ -383,7 +383,7 @@ def run() -> dict[str, Any]:
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     result = run()
-    (_ROOT / "pilot_palomar7_fixed_vs_free_result.json").write_text(
+    (_ROOT / "tmp" / "pilot_palomar7_fixed_vs_free_result.json").write_text(
         json.dumps(result, indent=2), encoding="utf-8"
     )
     print(json.dumps(result, indent=2))

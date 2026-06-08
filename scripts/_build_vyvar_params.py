@@ -481,7 +481,7 @@ def main() -> None:
         "# VYVAR — Config ↔ UI parameter registry",
         "",
         "Generated **2026-06-02** from `config.py`, `config.json`, and `ui*.py`.",
-        "Registry required by `VYVAR_PROCESS.md` Definition of Done §4.",
+        "Registry required by `docs/VYVAR_PROCESS.md` Definition of Done §4.",
         "",
         "**Legend — exposed:** `yes` = Settings or tool UI widget; `intentionally-hidden` =",
         "dev/gated flag documented here (edit via `config.json`); `no` = drift (config-only,",
@@ -552,7 +552,7 @@ def main() -> None:
             lines.append(f"- `{k}` → {', '.join(ui_hits[k])}")
         lines.append("")
 
-    out = ROOT / "VYVAR_PARAMS.md"
+    out = ROOT / "docs" / "VYVAR_PARAMS.md"
     out.write_text("\n".join(lines), encoding="utf-8")
     print(f"Wrote {out} ({len(rows)} keys)")
 

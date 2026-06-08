@@ -88,7 +88,7 @@ def main():
     ap.add_argument("detrended_aligned")
     ap.add_argument("--vyvar-photometry-dir", default=None)
     ap.add_argument("--proc-dir", default=None)
-    ap.add_argument("--out", default="./xval_out")
+    ap.add_argument("--out", default="./tmp/xval_out")
     ap.add_argument("--gmax", type=float, default=16.0)
     ap.add_argument("--max-field", type=int, default=600)
     ap.add_argument("--delta-g-blend", type=float, default=2.5)

@@ -10,7 +10,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 FIELD_DB = _ROOT / "GAIA_DR3" / "vyvar_gaia_dr3_pal7_field.db"
-RESULT_PATH = _ROOT / "palomar7_field_db_rebuild.json"
+RESULT_PATH = _ROOT / "tmp" / "palomar7_field_db_rebuild.json"
 PAL_RA = 272.684
 PAL_DEC = -7.208
 

@@ -79,7 +79,7 @@ def main() -> int:
     out["crowding_table"] = crowd_df.to_dict(orient="records")
     out["n_stars_analyzed"] = int(len(star_df))
 
-    result_path = _ROOT / "pilot_palomar7_deep_gaia_ab_partb_analysis.json"
+    result_path = _ROOT / "tmp" / "pilot_palomar7_deep_gaia_ab_partb_analysis.json"
     result_path.write_text(json.dumps(out, indent=2), encoding="utf-8")
     print(json.dumps(out, indent=2))
     return 0

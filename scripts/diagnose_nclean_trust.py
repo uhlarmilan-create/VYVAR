@@ -23,7 +23,7 @@ from trust_flag_core import (  # noqa: E402
     run_trust_flag_for_photometry_dir,
 )
 
-OUT_DIR = _ROOT / "diagnostic_nclean_trust"
+OUT_DIR = _ROOT / "tmp" / "diagnostic_nclean_trust"
 DRAFT_366 = _ROOT / "Archive" / "Drafts" / "draft_000366"
 DRAFT_380 = _ROOT / "Archive" / "Drafts" / "draft_000380"
 SETUP_366 = "NoFilter_60_2"

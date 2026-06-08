@@ -22,7 +22,7 @@ os.environ["VYVAR_CT_PROTOTYPE"] = "1"
 
 FIELD_DB = _ROOT / "GAIA_DR3" / "vyvar_gaia_dr3_m67_field.db"
 CONFIG_PATH = _ROOT / "config.json"
-RESULT_PATH = _ROOT / "m67_lrgb_night_run_result.json"
+RESULT_PATH = _ROOT / "tmp" / "m67_lrgb_night_run_result.json"
 SOURCE_ROOT = _ROOT / "Archive" / "m67" / "LRGB_cropped"
 M67_RA = 132.846
 M67_DEC = 11.814

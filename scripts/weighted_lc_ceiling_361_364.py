@@ -66,7 +66,7 @@ MAX_STARS_TOTAL = 800
 MAX_STARS_PER_BIN = 120
 SAT_FRAC = 0.85
 WEIGHTS = np.round(np.arange(0.0, 1.01, 0.1), 1)
-RESULT_JSON = _ROOT / "weighted_lc_ceiling_361_364_result.json"
+RESULT_JSON = _ROOT / "tmp" / "weighted_lc_ceiling_361_364_result.json"
 
 
 def _norm_cid(raw: Any) -> str:
@@ -654,7 +654,7 @@ def main() -> int:
         results.append(run_draft(draft_id, cfg=cfg, db=db))
 
     report = _format_report(results, psf_flags=psf_flags)
-    report_path = _ROOT / "weighted_lc_ceiling_361_364_report.txt"
+    report_path = _ROOT / "tmp" / "weighted_lc_ceiling_361_364_report.txt"
     report_path.write_text(report, encoding="utf-8")
 
     payload = {

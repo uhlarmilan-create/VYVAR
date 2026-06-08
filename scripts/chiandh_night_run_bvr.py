@@ -22,7 +22,7 @@ os.environ["VYVAR_CT_PROTOTYPE"] = "1"
 
 FIELD_DB = _ROOT / "GAIA_DR3" / "vyvar_gaia_dr3_chiandh_field.db"
 CONFIG_PATH = _ROOT / "config.json"
-RESULT_PATH = _ROOT / "chiandh_bvr_night_run_result.json"
+RESULT_PATH = _ROOT / "tmp" / "chiandh_bvr_night_run_result.json"
 SOURCE_ROOT = _ROOT / "Archive" / "Chi_and_H"
 FIELD_CENTER = (35.15, 57.13)
 

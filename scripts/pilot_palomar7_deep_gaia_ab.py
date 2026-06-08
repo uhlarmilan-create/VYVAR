@@ -32,7 +32,7 @@ PAL_DEC = -7.208
 CONE_RADIUS_DEG = 0.35
 MAG_LIMIT_INITIAL = 20.0
 MAG_LIMIT_CAP = 19.5
-RESULT_PATH = _ROOT / "pilot_palomar7_deep_gaia_ab_result.json"
+RESULT_PATH = _ROOT / "tmp" / "pilot_palomar7_deep_gaia_ab_result.json"
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 LOGGER = logging.getLogger("pal7_deep_gaia")
@@ -190,7 +190,7 @@ def part_a2_astroquery_cone() -> tuple[pd.DataFrame, dict[str, Any]]:
 
 def part_a3_build_field_db(df: pd.DataFrame) -> dict[str, Any]:
     sys.path.insert(0, str(_ROOT / "GAIA_DR3"))
-    from gaia_dr3_make_fast import init_db, insert_dataframe, _normalize_tap_dataframe  # noqa: PLC0415
+    from build_gaia_catalog import init_db, insert_dataframe, _normalize_tap_dataframe  # noqa: PLC0415
 
     FIELD_DB.parent.mkdir(parents=True, exist_ok=True)
     if FIELD_DB.is_file():

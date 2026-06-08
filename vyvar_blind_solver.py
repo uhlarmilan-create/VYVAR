@@ -2,7 +2,7 @@
 
 Nájde aproximatívne RA/Dec stredu snímky bez akéhokoľvek hintu
 z FITS hlavičky. Používa predgenerovaný index trojuholníkov z Gaia DR3
-(gaia_triangles.pkl, generovaný skriptom GAIA_DR3/build_gaia_blind_index.py).
+(``gaia_triangles_fine.pkl`` / ``gaia_triangles_wide.pkl``, generované skriptom ``GAIA_DR3/build_blind_index.py``).
 
 3D hash (L1/L3, L2/L3, normalizovaný log10 L3 v ″) + hlasovanie podľa centroidu;
 metadata môže obsahovať aj RA/Dec vrcholov (8 stĺpcov) pre rozšírenia / diagnostiku.
@@ -470,12 +470,12 @@ def _prepare_blind_context(
     hash_dim = int(idx.get("hash_dim", 2))
     if hash_dim == 4:
         log_event(
-            "WARNING: Blind solver: starý 4D index — vygeneruj znova (build_gaia_blind_index.py)."
+            "WARNING: Blind solver: stary 4D index — vygeneruj znova (build_blind_index.py)."
         )
         return None
     if hash_dim == 2:
         log_event(
-            "WARNING: Blind solver: starý 2D index bez mierky — vygeneruj znova (build_gaia_blind_index.py)."
+            "WARNING: Blind solver: stary 2D index bez mierky — vygeneruj znova (build_blind_index.py)."
         )
         return None
     if hash_dim != 3:

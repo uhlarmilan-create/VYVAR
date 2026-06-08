@@ -1,5 +1,0 @@
-filter,setup,n_targets,n_with_real_name,n_nan_name,n_comps_with_lc,n_target_lcs,n_clean_gt0,trust_GREEN,trust_YELLOW,trust_RED,n_lightcurves,trust_counts
-B,B_20_2,371,371,0,364,365,0,0,0,371,371,G=0 Y=0 R=371
-L,L_20_2,371,371,0,331,333,0,0,0,371,371,G=0 Y=0 R=371
-Rc,R_20_2,372,372,0,354,356,0,0,0,372,372,G=0 Y=0 R=372
-V,V_20_2,371,371,0,352,355,0,0,0,371,371,G=0 Y=0 R=371

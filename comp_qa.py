@@ -18,7 +18,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Comp-star LOO QA (Sokolovsky indices + mag locus)")
     ap.add_argument("--vyvar-photometry-dir", type=Path, required=True)
     ap.add_argument("--proc-dir", type=Path, required=True)
-    ap.add_argument("--out", type=Path, default=Path("./xval_out"))
+    ap.add_argument("--out", type=Path, default=Path("./tmp/xval_out"))
     ap.add_argument("--mad-k", type=float, default=4.0)
     ap.add_argument("--min-comps", type=int, default=3)
     args = ap.parse_args()

@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import datetime
 
 REPO_ROOT = Path(__file__).parent.parent
-STATE_FILE  = REPO_ROOT / "VYVAR_STATE.md"
+STATE_FILE  = REPO_ROOT / "docs" / "VYVAR_STATE.md"
 TASK_FILE   = REPO_ROOT / "CURSOR_TASK.md"
 RESULT_FILE = REPO_ROOT / "CURSOR_RESULT.md"
 LOG_FILE    = REPO_ROOT / "orchestrator" / "session.log"
@@ -23,7 +23,7 @@ SYSTEM_PROMPT = """You are Claude, architect of the VYVAR astronomical photometr
 You work in a team: Milan (product owner), Cursor (implementor), Claude (you = architect).
 
 Your job in this orchestrator:
-1. Read VYVAR_STATE.md for context
+1. Read docs/VYVAR_STATE.md for context
 2. Break down Milan's task into steps
 3. For each step, output EXACTLY one of these response types:
 
@@ -100,7 +100,7 @@ def run_orchestrator():
 
     # Read current state
     state = read_file(STATE_FILE)
-    log(f"VYVAR_STATE.md načítaný ({len(state)} znakov)")
+    log(f"docs/VYVAR_STATE.md načítaný ({len(state)} znakov)")
 
     # Get task from Milan
     print("\n🔭 Zadaj úlohu pre VYVAR pipeline:")
@@ -115,7 +115,7 @@ def run_orchestrator():
     messages = [
         {
             "role": "user",
-            "content": f"""Current VYVAR_STATE.md:
+            "content": f"""Current docs/VYVAR_STATE.md:
 ---
 {state}
 ---

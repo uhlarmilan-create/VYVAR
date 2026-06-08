@@ -1,8 +1,7 @@
-"""Blind index series: manifest load, scale-aware tier order, try-in-order verify."""
+"""Blind index series: config tier paths, scale-aware order, try-in-order verify."""
 
 from __future__ import annotations
 
-import json
 import math
 import pickle
 from dataclasses import replace
@@ -14,6 +13,12 @@ import pandas as pd
 from config import AppConfig
 from infolog import log_event
 from vyvar_blind_solver import find_blind_candidates, find_blind_hint
+
+# Ordering defaults per tier name — no PKL preload (density for sort only).
+_TIER_ORDER_DEFAULTS: dict[str, dict[str, float | int]] = {
+    "fine": {"cell_deg": 1.0, "stars_per_cell": 95, "target_density_deg2": 95.0},
+    "wide": {"cell_deg": 2.0, "stars_per_cell": 16, "target_density_deg2": 4.0},
+}
 
 
 def target_density_deg2(*, cell_deg: float, stars_per_cell: int) -> float:
@@ -54,32 +59,21 @@ def density_hint_from_plate_scale(plate_scale_arcsec_per_px: float | None) -> fl
     return None
 
 
-def load_series_manifest(manifest_path: Path | str) -> list[dict[str, Any]]:
-    path = Path(manifest_path).expanduser().resolve()
-    if not path.is_file():
-        raise FileNotFoundError(f"blind index series manifest not found: {path}")
-    data = json.loads(path.read_text(encoding="utf-8"))
-    tiers = data.get("tiers") if isinstance(data, dict) else data
-    if not isinstance(tiers, list) or not tiers:
-        raise ValueError(f"manifest has no tiers: {path}")
-    out: list[dict[str, Any]] = []
-    for t in tiers:
-        if not isinstance(t, dict) or not t.get("path"):
+def build_tiers_from_config(cfg: AppConfig) -> list[dict[str, Any]]:
+    """Build tier list from config paths; names from keys; ordering metadata without PKL load."""
+    specs = (
+        ("fine", str(getattr(cfg, "blind_index_fine_path", "") or "").strip()),
+        ("wide", str(getattr(cfg, "blind_index_wide_path", "") or "").strip()),
+    )
+    tiers: list[dict[str, Any]] = []
+    for name, raw_path in specs:
+        if not raw_path:
             continue
-        p = Path(str(t["path"]))
-        if not p.is_absolute():
-            p = (path.parent / p).resolve()
-        row = dict(t)
-        row["path"] = str(p)
-        if "target_density_deg2" not in row:
-            row["target_density_deg2"] = target_density_deg2(
-                cell_deg=float(row.get("cell_deg", 1.0)),
-                stars_per_cell=int(row.get("stars_per_cell", 1)),
-            )
-        out.append(row)
-    if not out:
-        raise ValueError(f"no resolvable tiers in {path}")
-    return out
+        p = Path(raw_path).expanduser().resolve()
+        row: dict[str, Any] = {"name": name, "path": str(p)}
+        row.update(_TIER_ORDER_DEFAULTS.get(name, {}))
+        tiers.append(row)
+    return tiers
 
 
 def _tier_sort_key(tier: dict[str, Any], rho_img: float) -> float:
@@ -156,9 +150,9 @@ def solve_blind_with_series(
             debug_sink=debug_sink,
         )
 
-    manifest = getattr(cfg, "blind_index_series", None)
-    if not manifest or not Path(str(manifest)).is_file():
-        log_event("WARNING: blind_index_series missing — falling back to blind_index_path.")
+    tiers = build_tiers_from_config(cfg)
+    if not tiers:
+        log_event("WARNING: blind index fine/wide paths missing — falling back to fine only.")
         return _solve_single(
             dao_df,
             cfg=cfg,
@@ -173,7 +167,6 @@ def solve_blind_with_series(
             debug_sink=debug_sink,
         )
 
-    tiers = load_series_manifest(manifest)
     budget = int(getattr(cfg, "blind_img_star_budget", 80))
     fov = float(fov_deg) if fov_deg is not None else 1.0
     rho = estimate_rho_img_deg2(
@@ -239,7 +232,6 @@ def solve_blind_with_series(
                 img_budget=budget,
                 log_L3_max=l3max,
             )
-            # Re-rank is expensive; only use per-tier l3 for logging
             if debug_sink is not None:
                 debug_sink.setdefault("tier_rho_img", {})[name] = rho_t
 
@@ -312,7 +304,10 @@ def _solve_single(
     max_cat_mag: float,
     debug_sink: dict[str, Any] | None,
 ) -> tuple[float, float, str] | None:
-    idx = getattr(cfg, "blind_index_path", None)
+    idx = (
+        str(getattr(cfg, "blind_index_fine_path", "") or "").strip()
+        or str(getattr(cfg, "blind_index_path", "") or "").strip()
+    )
     if not idx or not Path(str(idx)).is_file():
         return None
     from vyvar_platesolver import _verify_blind_candidates
@@ -368,4 +363,5 @@ def _solve_single(
         )
     if hint is None:
         return None
-    return float(hint[0]), float(hint[1]), "single"
+    return float(hint[0]), float(hint[1]), "fine"
+

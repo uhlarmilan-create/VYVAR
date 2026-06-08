@@ -483,7 +483,7 @@ def main() -> int:
             pass
     ap = argparse.ArgumentParser(description="Diagnose blind solver log_L3 clip on draft_000380.")
     ap.add_argument("--draft", type=Path, default=DEFAULT_DRAFT)
-    ap.add_argument("--index", type=Path, default=None, help="gaia_triangles.pkl (default: config blind_index_path)")
+    ap.add_argument("--index", type=Path, default=None, help="fine PKL (default: config blind_index_fine_path)")
     ap.add_argument("--plate-scale", type=float, default=DEFAULT_PLATE_SCALE)
     ap.add_argument("--truth-ra", type=float, default=DEFAULT_TRUTH_RA)
     ap.add_argument("--truth-dec", type=float, default=DEFAULT_TRUTH_DEC)
@@ -492,7 +492,9 @@ def main() -> int:
 
     cfg = AppConfig()
     draft = args.draft.expanduser().resolve()
-    index_path = Path(args.index or cfg.blind_index_path).expanduser().resolve()
+    index_path = Path(
+        args.index or cfg.blind_index_fine_path or cfg.blind_index_path
+    ).expanduser().resolve()
     out_dir = (args.out or (draft / "diag" / "blind_solver")).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 

@@ -44,10 +44,10 @@ FILTER_LABEL = {"B_20_2": "B", "V_20_2": "V", "R_20_2": "Rc", "L_20_2": "L"}
 MIN_COMP_CT = 7
 MAX_STDERR_RATIO = 0.5
 
-CT_SUMMARY_CSV = _ROOT / "ct_summary_chiandh_allfilters.csv"
-AUDIT_CSV = _ROOT / "audit_chiandh_allfilters.csv"
-PLATESOLVE_CSV = _ROOT / "platesolve_summary_chiandh_allfilters.csv"
-RESULT_JSON = _ROOT / "chiandh_allfilters_overnight_result.json"
+CT_SUMMARY_CSV = _ROOT / "tmp" / "ct_summary_chiandh_allfilters.csv"
+AUDIT_CSV = _ROOT / "tmp" / "audit_chiandh_allfilters.csv"
+PLATESOLVE_CSV = _ROOT / "tmp" / "platesolve_summary_chiandh_allfilters.csv"
+RESULT_JSON = _ROOT / "tmp" / "chiandh_allfilters_overnight_result.json"
 
 
 def _patch_config() -> dict[str, Any]:

@@ -21,7 +21,7 @@ from psf_photometry import _read_plate_scale_arcsec_px_from_fits  # noqa: E402
 
 SOURCE_DIR = Path(r"C:\ASTRO\python\VYVAR\Archive\palomar7\Luminance")
 CONFIG_PATH = _ROOT / "config.json"
-RESULT_PATH = _ROOT / "pilot_palomar7_result.json"
+RESULT_PATH = _ROOT / "tmp" / "pilot_palomar7_result.json"
 
 CAMERA = {
     "name": "QHY 600M",

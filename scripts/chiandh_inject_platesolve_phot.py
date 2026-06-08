@@ -166,7 +166,7 @@ def main() -> int:
         _restore_config(orig)
 
     report["finished_utc"] = datetime.now(timezone.utc).isoformat()
-    out = _ROOT / "chiandh_bvr_resume_result.json"
+    out = _ROOT / "tmp" / "chiandh_bvr_resume_result.json"
     out.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
     print(json.dumps(report, indent=2, default=str))
     return 0

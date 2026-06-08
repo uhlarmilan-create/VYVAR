@@ -23,7 +23,7 @@ os.environ["VYVAR_CT_PROTOTYPE"] = "1"
 DRAFT_ID = 368
 FIELD_DB = _ROOT / "GAIA_DR3" / "vyvar_gaia_dr3_m67_field.db"
 CONFIG_PATH = _ROOT / "config.json"
-RESULT_PATH = _ROOT / "m67_gr_merge_min7_result.json"
+RESULT_PATH = _ROOT / "tmp" / "m67_gr_merge_min7_result.json"
 MIN_COMP_CT = 7
 MAX_STDERR_RATIO = 0.5
 FIT_MIN_FRAMES = 5
@@ -540,9 +540,9 @@ def main() -> int:
 
     cfg = AppConfig()
     draft_dir = _draft_dir(cfg)
-    diag_csv = _ROOT / "m67_ct_gate_diagnosis_draft000368.csv"
+    diag_csv = _ROOT / "tmp" / "m67_ct_gate_diagnosis_draft000368.csv"
     min7_backup = draft_dir / "ct_prototype_min7_backup.csv"
-    min5_result = _ROOT / "m67_gr_sandbox_min5_result.json"
+    min5_result = _ROOT / "tmp" / "m67_gr_sandbox_min5_result.json"
 
     presel = _load_presel_in_range(diag_csv) if diag_csv.is_file() else {"Green": set(), "Red": set()}
     split_min7 = _split_min7_by_filter(min7_backup) if min7_backup.is_file() else {"Green": pd.DataFrame(), "Red": pd.DataFrame()}

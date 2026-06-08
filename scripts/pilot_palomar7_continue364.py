@@ -24,7 +24,7 @@ from ui_aperture_photometry import _find_phase2a_paths  # noqa: E402
 
 DRAFT_ID = 364
 CONFIG_PATH = _ROOT / "config.json"
-RESULT_PATH = _ROOT / "pilot_palomar7_continue364_result.json"
+RESULT_PATH = _ROOT / "tmp" / "pilot_palomar7_continue364_result.json"
 
 
 def _restore_psf_flag(original: bool) -> None:

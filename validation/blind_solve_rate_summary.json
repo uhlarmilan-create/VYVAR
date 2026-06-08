@@ -1,5 +1,5 @@
 {
-  "utc": "2026-06-05T11:08:42.324798+00:00",
+  "utc": "2026-06-08T15:00:11.001110+00:00",
   "n_fields": 10,
   "n_tested": 10,
   "n_hit": 10,
@@ -8,5 +8,5 @@
   "p90_sep_deg": 0.20199999999999999,
   "mode": "auto",
   "verify_mag_limit": 14.0,
-  "csv": "validation\\blind_solve_rate_mag14.csv"
+  "csv": "validation\\blind_solve_rate_b2.csv"
 }

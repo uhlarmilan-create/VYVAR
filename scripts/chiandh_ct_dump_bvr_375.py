@@ -30,8 +30,8 @@ SETUPS = ("B_20_2", "V_20_2", "R_20_2")
 FILTER_LABEL = {"B_20_2": "B", "V_20_2": "V", "R_20_2": "Rc"}
 MIN_COMP_CT = 7
 MAX_STDERR_RATIO = 0.5
-SUMMARY_CSV = _ROOT / "ct_summary_chiandh_BVR.csv"
-TARGETS_CSV = _ROOT / "ct_targets_chiandh_BVR.csv"
+SUMMARY_CSV = _ROOT / "tmp" / "ct_summary_chiandh_BVR.csv"
+TARGETS_CSV = _ROOT / "tmp" / "ct_targets_chiandh_BVR.csv"
 
 
 def _norm_cid(val: Any) -> str:
@@ -370,7 +370,7 @@ def main() -> int:
         "summaries": summaries,
         "n_target_rows": len(all_targets),
     }
-    (_ROOT / "chiandh_ct_dump_bvr375_result.json").write_text(
+    (_ROOT / "tmp" / "chiandh_ct_dump_bvr375_result.json").write_text(
         json.dumps(report, indent=2, default=str), encoding="utf-8"
     )
     print(json.dumps(report, indent=2), flush=True)

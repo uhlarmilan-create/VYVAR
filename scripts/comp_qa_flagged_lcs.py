@@ -96,10 +96,10 @@ def vyvar_quality(lc_dir: Path, target_id: str, comp_id: str) -> tuple[str, str]
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--qa-csv", type=Path, default=ROOT / "xval_out" / "comp_qa_per_comp.csv")
+    ap.add_argument("--qa-csv", type=Path, default=ROOT / "tmp" / "xval_out" / "comp_qa_per_comp.csv")
     ap.add_argument("--photometry-dir", type=Path, required=True)
     ap.add_argument("--proc-dir", type=Path, required=True)
-    ap.add_argument("--out", type=Path, default=ROOT / "xval_out" / "comp_qa_flagged_lcs.pdf")
+    ap.add_argument("--out", type=Path, default=ROOT / "tmp" / "xval_out" / "comp_qa_flagged_lcs.pdf")
     ap.add_argument("--panels-per-page", type=int, default=6)
     args = ap.parse_args()
 

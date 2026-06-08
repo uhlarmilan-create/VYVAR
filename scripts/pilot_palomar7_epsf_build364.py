@@ -47,7 +47,7 @@ def main() -> int:
         except Exception as exc:
             results[setup] = {"status": "error", "error": repr(exc)}
             print(f"ERROR: {exc!r}", flush=True)
-    Path(_ROOT / "pilot_palomar7_epsf_build364.json").write_text(
+    Path(_ROOT / "tmp" / "pilot_palomar7_epsf_build364.json").write_text(
         json.dumps(results, indent=2), encoding="utf-8"
     )
     return 0

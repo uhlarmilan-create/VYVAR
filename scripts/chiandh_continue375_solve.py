@@ -17,7 +17,7 @@ if str(_ROOT) not in sys.path:
 
 CONFIG_PATH = _ROOT / "config.json"
 STANDARD_GAIA_DB = _ROOT / "GAIA_DR3" / "vyvar_gaia_dr3.db"
-RESULT_PATH = _ROOT / "chiandh_continue375_result.json"
+RESULT_PATH = _ROOT / "tmp" / "chiandh_continue375_result.json"
 
 DRAFT_ID = 375
 EQUIPMENT_ID = 2

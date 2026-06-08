@@ -40,7 +40,7 @@ def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--draft", type=int, required=True)
-    ap.add_argument("--result", type=Path, default=_ROOT / "chiandh_bvr_phot_result.json")
+    ap.add_argument("--result", type=Path, default=_ROOT / "tmp" / "chiandh_bvr_phot_result.json")
     args = ap.parse_args()
 
     from config import AppConfig  # noqa: E402

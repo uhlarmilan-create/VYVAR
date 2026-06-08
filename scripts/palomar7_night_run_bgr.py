@@ -22,7 +22,7 @@ os.environ["VYVAR_CT_PROTOTYPE"] = "1"
 
 FIELD_DB = _ROOT / "GAIA_DR3" / "vyvar_gaia_dr3_pal7_field.db"
 CONFIG_PATH = _ROOT / "config.json"
-RESULT_PATH = _ROOT / "palomar7_bgr_night_run_result.json"
+RESULT_PATH = _ROOT / "tmp" / "palomar7_bgr_night_run_result.json"
 BGR_SOURCE = _ROOT / "Archive" / "palomar7" / "BGR_all"
 
 

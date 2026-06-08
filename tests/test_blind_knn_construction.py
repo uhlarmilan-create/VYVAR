@@ -16,7 +16,7 @@ _GAIA = Path(__file__).resolve().parents[1] / "GAIA_DR3"
 if str(_GAIA) not in sys.path:
     sys.path.insert(0, str(_GAIA))
 
-from blind_index_cells import cap_brightest_per_cell  # noqa: E402
+from build_blind_index import cap_brightest_per_cell  # noqa: E402
 from vyvar_blind_solver import (  # noqa: E402
     cap_brightest_per_pixel_cell,
     iter_local_knn_triangle_indices,

@@ -20,8 +20,8 @@ if str(_ROOT) not in sys.path:
 
 
 def _load_build_mod():
-    mod_path = _GAIA / "blind_index_build.py"
-    spec = importlib.util.spec_from_file_location("blind_index_build", mod_path)
+    mod_path = _GAIA / "build_blind_index.py"
+    spec = importlib.util.spec_from_file_location("build_blind_index", mod_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(mod_path)
     mod = importlib.util.module_from_spec(spec)

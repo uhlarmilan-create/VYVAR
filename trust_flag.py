@@ -25,7 +25,7 @@ def main() -> int:
         / "NoFilter_60_2"
         / "photometry",
     )
-    ap.add_argument("--out", type=Path, default=ROOT / "xval_out" / "trust_per_target.csv")
+    ap.add_argument("--out", type=Path, default=ROOT / "tmp" / "xval_out" / "trust_per_target.csv")
     args = ap.parse_args()
 
     result = run_trust_flag_for_photometry_dir(

@@ -474,9 +474,9 @@ def main() -> int:
         )
     report = report + "\n".join(verdict_lines) + "\n\nStandalone; no production/config changes.\n"
 
-    out = _ROOT / "sky_gradient_sky_plane_361_362_report.txt"
+    out = _ROOT / "tmp" / "sky_gradient_sky_plane_361_362_report.txt"
     out.write_text(report, encoding="utf-8")
-    (_ROOT / "sky_gradient_sky_plane_361_362_result.json").write_text(
+    (_ROOT / "tmp" / "sky_gradient_sky_plane_361_362_result.json").write_text(
         json.dumps({"drafts": results, "psf_flags": psf_flags}, indent=2), encoding="utf-8"
     )
     print(report)
