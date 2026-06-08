@@ -65,3 +65,4 @@ photometry_dir_*.txt
 # Secrets (never commit)
 orchestrator/api_key.txt
 **/api_key.txt
+GAIA_DR3/_*
