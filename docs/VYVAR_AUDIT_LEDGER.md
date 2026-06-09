@@ -13,7 +13,7 @@ Stav modulov a disposícia nálezov. Obnoviteľný register — nie čierna dier
 | `comp_selection_per_target.py` | done | batch 3: removed `g_teff` dead reads | F841 clear |
 | `comp_pool_rms.py` | done | F841 `avail_cols` | removed dead assignment |
 | `comp_qa.py` | done | batch 3: removed `lc_map` | dead local, no logic loss |
-| `comp_qa_core.py` | done | Phase F CQ-A..E (see AUDIT_FINDINGS) | CQ-A verify pre-cal then close ROADMAP HIGH |
+| `comp_qa_core.py` | done | Phase F CQ-A..E; **CQ-C CLOSED** (2026-06-09) fix-once pass-1 locus | order-independent; bounded diff 1/1/0; SHA edbd97e7 |
 | `trust_flag_core.py` | done | Phase E: Findings A+B implemented; C1 ddof=0; D guard doc; E deferred | 9 unit tests |
 | `calibration.py` | done | Phase F CAL-A..D (see AUDIT_FINDINGS) | clean; CAL-A caller logging verify |
 | `database.py` | done | Phase F DB-A..D (see AUDIT_FINDINGS) | mostly sound; DB-B threading verify |
@@ -252,7 +252,7 @@ Part 1 ePSF-vs-star Moffat audit on draft 367 Red_180_2 (0.3889 arcsec/px): **mi
 ## Dalsie kroky (Faza 1 pokracovanie)
 
 1. **Split track** -- `pipeline.py` / `photometry_core.py` (samostatny spec, byte-identita).
-2. **comp_qa fix-once locus (CQ-C)** + **ddof co-calibration** -- methodology passes with bounded diff.
+2. ~~**comp_qa fix-once locus (CQ-C)**~~ **DONE (2026-06-09)**; **ddof co-calibration** remains.
 
 ## Nástroje
 

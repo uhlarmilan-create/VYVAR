@@ -46,15 +46,22 @@ estimator prototypes alone.
 
 ## Byte-identity discipline
 
-- **Read-only change** (QA, metadata, reports-only): the numeric photometry must be
-  **byte-identical**. Prove it with a SHA-256 over `lightcurve_*.csv`, `comp_quality_*.json`,
-  `comparison_stars_per_target.csv`, and the AAVSO/VarAstro data rows. Report-text changes are
-  allowed only where intended (badge/note), and the diff must be *only* that text.
+- **Read-only change** (QA, metadata, reports-only): numeric photometry must be
+  **byte-identical**. Prove it with SHA-256 over `lightcurve_*.csv`, `comp_quality_*.json`,
+  `comparison_stars_per_target.csv` (core subset), plus `comp_qa_*.json` sidecars when comp QA
+  methodology is in scope. AAVSO/VarAstro data rows follow the same discipline. Report-text
+  changes are allowed only where intended (badge/note), and the diff must be *only* that text.
 - **Science-changing edit** (alters which comps / magnitudes): byte-identity will not hold.
   Acceptance becomes a **small, bounded, explainable** diff — quantify how many targets change
   and `max |Δmag|` / `max |Δlc_rms|`, and confirm it is `≪` the photometric error. If the
   change is large, stop and re-think (e.g. the reverted proximity tie-break churned 143/143
   targets — that failed the bar).
+
+### Re-baseline events (intentional SHA moves)
+
+| date | old SHA | new SHA | reason |
+|------|---------|---------|--------|
+| 2026-06-09 | `770966c3...` (core 283) | `edbd97e7...` (426 incl. comp_qa) | CQ-C fix-once order-independent comp_qa locus; core LC/comp_quality/comparison unchanged; bounded diff 1 flag / 1 n_clean / 0 trust |
 
 ## Config ↔ UI parity
 

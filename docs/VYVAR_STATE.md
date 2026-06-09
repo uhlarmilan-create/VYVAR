@@ -77,9 +77,10 @@ Per-set config architecture is still pending (ROADMAP: TODO-MULTISET).
 
 ### Reference draft and byte-identity
 
-- **Byte-identity reference:** `draft_000366` -- numeric photometry SHA **`770966c3...`**
-  (283 LC + comp_quality + comparison_stars files). Holds across the PSF accuracy arc,
-  EPSF-1 QC fix, and #4 fail-safety work (production PSF gated OFF; error paths only).
+- **Byte-identity reference:** `draft_000366` -- numeric photometry SHA **`edbd97e7...`**
+  (426 files: 283 LC + comp_quality + comparison_stars + **comp_qa** sidecars). CQ-C
+  (2026-06-09) re-baselined comp_qa only; core photometry subset (283 files) still
+  **`770966c3...`** (LC/comp_quality/comparison unchanged).
 - **Last science-validated wide draft:** `draft_000365` (V842 Her, 127 frames, 143 targets).
 - **CT science locked:** h & chi Per `draft_000380` (Johnson-Cousins B/V/Rc); details in JOURNAL.
 

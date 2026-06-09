@@ -143,9 +143,10 @@ bad-comp rejection (B2), trust gating (B3), color-term sign/magnitude (B4), cali
 
 ## Production discipline
 
-- Photometry numeric SHA on `draft_000366` (283 LC+comp files) must remain unchanged when
-  only validation / diagnostic code is added. Current reference: **`770966c3...`**
-- pytest `tests/`: **224 passed / 6 skipped** (+ V3d / V3e / neighbor_sub / A9 / draft367 tests).
+- Photometry numeric SHA on `draft_000366`: core subset (283 LC+comp_quality+comparison) must
+  remain unchanged when only validation / diagnostic code is added (**`770966c3...`**). Full
+  reference including comp_qa sidecars: **`edbd97e7...`** (426 files; post CQ-C fix-once locus).
+- pytest `tests/`: **226 passed / 6 skipped** (+ 3 slow CQ-C draft_366 tests; V3d / V3e / …).
 
 ## V3d fine-scale PSF (2026-06-09, publication-grade)
 

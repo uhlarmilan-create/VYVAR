@@ -18,12 +18,10 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
    fine-scale data only (standing rule in DECISIONS + PROCESS).
 2. **TODO-MULTISET** — per-telescope-set config (wide vs fine optics); blocks clean multi-rig
    production and crowding gating per rig.
-3. **TODO-GS9** — verify whether Lomb-Scargle / BLS period analysis is wired into the PDF or
-   only cited; implement folded LC for candidates if missing (~1-2 days).
-4. **trust_flag_core Finding E (deferred)** — lc_quality-missing soft note; revisit with
+3. **trust_flag_core Finding E (deferred)** — lc_quality-missing soft note; revisit with
    Finding D `len(soft)>=3` when a third soft source exists.
-5. **Phase C catalog rebuild** — full-sky G<=16.5 deepening mechanics (strip_progress / DB swap).
-6. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
+4. **Phase C catalog rebuild** — full-sky G<=16.5 deepening mechanics (strip_progress / DB swap).
+5. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
 
 ---
 
@@ -36,10 +34,6 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 - **TODO-GS8 — Multi-Night Global Matching + global ZP solver (Phase 3).** Cross-night comp
   matching + inter-night zeropoint → one long-baseline LC with no vertical jumps.
   Dep: AAVSO validation (GS6b ✓). ~2–4 days.
-- **TODO-GS9 — Ground-LC period analysis in the PDF.** Lomb-Scargle + BLS on the Phase-2A LC
-  CSV + folded/phase diagram for candidates, rendered into the report. LS/BLS citations are
-  already present — **verify whether period analysis is actually wired into the PDF or only
-  cited.** ~1–2 days.
 - **APCORR-MIXEDFRAME — latent (COG default OFF); blocks enabling COG in production.** With
   `cog_aperture_correction_enabled=True`, `cog_ok=False` frames keep *uncorrected* flux
   alongside corrected ones → cross-frame step in the LC. The QA dashboard `IS_REJECTED` path
@@ -154,10 +148,9 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## LOW
 
-- **comp_qa fix-once magnitude locus (CQ-C methodology).** Per-target flag thresholds are coupled
-  to deterministic target processing order via accumulating `dropped_global`. Keep current behavior;
-  validate a fix-once locus (computed once over full pass-1 pool) with bounded n_clean/trust diff —
-  sibling of ddof+threshold co-calibration (NEXT SESSION #2).
+- ~~**comp_qa fix-once magnitude locus (CQ-C)**~~ **DONE (2026-06-09)** — fix-once pass-1 locus;
+  order-independent flagging; bounded diff 1 flag / 1 n_clean / 0 trust on draft_000366; SHA
+  `edbd97e7...` (426 files incl. comp_qa). Sibling ddof+threshold co-calibration remains open.
 - **FITS-side proc glob consistency.** `pipeline.py` uses inline `aligned_dir.glob("proc_*.fits")`
   (~5578, 12604, 12683) rather than a shared helper; functionally correct (`proc_*` matches both
   naming styles). Optional consistency cleanup only.
@@ -243,6 +236,10 @@ inštalátor → rovnaký výsledok na T460; manuál a inštalátor konzistentn�
 
 ## Dropped / resolved (do not re-open)
 
+- **TODO-GS9 — Ground-LC period analysis in the PDF** — **closed: descoped 2026-06-09.**
+  Lomb-Scargle/BLS + folded diagram on VYVAR's own Phase-2A LC as a PDF science product is
+  out of scope; period finding/classification is downstream (Peranso, VStar, Period04). See
+  DECISIONS (product scope boundary). LS/BLS citations remain for `tess_verify` TESS cross-check.
 - **Blind solver in dense fields + index series + rig-prior** — **RESOLVED 2026-06-04** (Newton):
   mag14 tiers, `vyvar_blind_series`, solve-rate harness, scale/FOV hard gates (`blind_use_rig_prior`,
   `blind_scale_tol_frac`). **Wide-rig blind HIT** — still **OPEN** (`draft_365`: 0 votes &lt;2°;

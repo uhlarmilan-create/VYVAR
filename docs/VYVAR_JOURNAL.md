@@ -2,6 +2,32 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- build_gaia_catalog repo-root resolution (2026-06-09)
+
+`GAIA_DR3/build_gaia_catalog.py`: upward walk for `gaia_catalog_id.py` (fresh-clone friendly);
+clear `SystemExit` when run outside the repo. `build_blind_index.py` unchanged (self-contained).
+Utility hardening only; photometry SHA untouched.
+
+---
+
+## Session -- CQ-C fix-once comp_qa locus (2026-06-09)
+
+`comp_qa_core.compute_comp_qa`: magnitude locus fixed at pass-1 `build_locus` (no per-drop
+recompute from `dropped_global`). Order-independence PASS (>=5 shuffled orders). Bounded diff
+vs iterative locus on draft_000366: **1** flag flip, **1** `n_clean` +1, **0** trust changes.
+Core photometry SHA **770966c3** held (283 files); reference SHA **edbd97e7** (426 incl. comp_qa).
+Tests: `tests/test_comp_qa_fix_once_locus.py` (slow), `tests/test_photometry_sha_baseline.py`.
+pytest **226/6** skip (+3 slow deselected in default run).
+
+---
+
+## Session -- TODO-GS9 descoped (2026-06-09)
+
+Ground-LC Lomb-Scargle/BLS + folded diagram in PDF closed as out of scope; scope boundary
+recorded in DECISIONS (period science -> Peranso/VStar/Period04).
+
+---
+
 ## Session -- PSF publication-grade arc + EPSF-1 + #4 (2026-06-09)
 
 **GitHub push (PSF arc):** `fe8201c..28fdafa` (12 commits on `main`) -- annulus sky, residual

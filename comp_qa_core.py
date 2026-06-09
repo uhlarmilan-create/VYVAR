@@ -261,6 +261,7 @@ def compute_comp_qa(
     mad_k: float = 4.0,
     min_comps: int = 3,
     max_comps: int = 8,
+    _target_processing_order: list[str] | None = None,
 ) -> dict[str, Any]:
     """Run draft-wide comp QA; read-only w.r.t. photometry products.
 
@@ -327,7 +328,17 @@ def compute_comp_qa(
     n_flag_amp_inv = 0
     dropped_global: set[tuple[str, str]] = set()
 
-    for tid, td in target_data.items():
+    if _target_processing_order is not None:
+        _extra = [t for t in target_data if t not in _target_processing_order]
+        _target_items = [
+            (t, target_data[t])
+            for t in list(_target_processing_order) + _extra
+            if t in target_data
+        ]
+    else:
+        _target_items = list(target_data.items())
+
+    for tid, td in _target_items:
         grp = td["grp"]
         surviving = list(td["pool"])
 
@@ -338,22 +349,6 @@ def compute_comp_qa(
                 metrics[cid] = sokolovsky_indices(m)
                 row = td["comp_rows"].get(cid)
                 metrics[cid]["inst_mag"] = comp_axis_mag(td["flux_raw"].get(cid, np.array([])), row)
-
-            locus_pts_m, locus_pts_s = [], []
-            for t2, td2 in target_data.items():
-                surv2 = [c for c in td2["pool"] if (t2, c) not in dropped_global]
-                for cid in surv2:
-                    m = loo_diff_series(td2["mag"], cid, surv2)
-                    ix = sokolovsky_indices(m)
-                    row = td2["comp_rows"].get(cid)
-                    imag = comp_axis_mag(td2["flux_raw"].get(cid, np.array([])), row)
-                    if math.isfinite(imag) and math.isfinite(ix["sigma_iqr"]):
-                        locus_pts_m.append(imag)
-                        locus_pts_s.append(ix["sigma_iqr"])
-            if len(locus_pts_m) >= 3:
-                lc_c, lc_m, lc_s = build_locus(np.asarray(locus_pts_m), np.asarray(locus_pts_s))
-            elif lc_c.size == 0:
-                lc_c, lc_m, lc_s = build_locus(mags1, sig1)
 
             thr_inv = robust_thr([metrics[c]["inv_nv"] for c in surviving], mad_k)
             flagged: dict[str, list[str]] = {}
@@ -392,20 +387,6 @@ def compute_comp_qa(
         surv_final = [c for c in td["pool"] if (tid, c) not in dropped_global]
         if len(surv_final) < min_comps:
             surv_final = list(td["pool"])
-
-        locus_pts_m, locus_pts_s = [], []
-        for t2, td2 in target_data.items():
-            surv2 = [c for c in td2["pool"] if (t2, c) not in dropped_global]
-            for cid in surv2:
-                m = loo_diff_series(td2["mag"], cid, surv2)
-                ix = sokolovsky_indices(m)
-                row = td2["comp_rows"].get(cid)
-                imag = comp_axis_mag(td2["flux_raw"].get(cid, np.array([])), row)
-                if math.isfinite(imag) and math.isfinite(ix["sigma_iqr"]):
-                    locus_pts_m.append(imag)
-                    locus_pts_s.append(ix["sigma_iqr"])
-        if len(locus_pts_m) >= 3:
-            lc_c, lc_m, lc_s = build_locus(np.asarray(locus_pts_m), np.asarray(locus_pts_s))
 
         thr_inv_f = robust_thr(
             [

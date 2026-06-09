@@ -6,6 +6,26 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## Product scope: light curves in, period science out (2026-06-09)
+
+**VYVAR scope:** produce, validate, and prepare light curves for submission (AAVSO / VarAstro / VSX).
+Scientific analysis of those light curves -- period finding, classification -- is **OUT of scope**
+and left to downstream tools (Peranso, VStar, Period04).
+
+Internal Lomb-Scargle / BLS use is **not** VYVAR analyzing its own LCs as a science product. It
+runs only on:
+
+1. **External TESS cutouts** in `tess_verify.py` -- to confirm a variable-star candidate against an
+   independent survey.
+2. **Catalog-period display** (VSX / ASAS-SN / ZTF) in the variability UI -- detection/validation
+   aids, not folded LC products.
+
+Do **not** expand these into the PDF report as a period product (this descopes TODO-GS9).
+Citations `lomb1976` / `scargle1982` / `vanderplas2018` **stay** -- they back the `tess_verify`
+TESS cross-check.
+
+---
+
 ## Photometry method & scale
 
 ### Plate scale is WCS-derived (≈ 9.77″/px on the wide rig), not 1.3
@@ -418,13 +438,21 @@ per-frame arrays, pairwise boundaries, same-length Series `.tolist()` pairs).
 cross-DataFrame UI zips) or on untested display code. `strict=False` preserves today's
 truncate-to-shortest behavior; `strict=True` adds a defensive length assertion only.
 
-### comp_qa_core CQ-C — magnitude locus order coupling (2026-06-08, Phase F)
+### comp_qa_core CQ-C — fix-once magnitude locus (2026-06-09, Phase F)
 
-The comp QA magnitude locus is rebuilt from an accumulating `dropped_global`, so per-target flag
-thresholds are coupled to the (deterministic) target processing order. **Decision:** keep current
-behavior for now. A fix-once locus (computed once over the full pass-1 pool) is a **separate
-methodology change** — validate with a bounded n_clean/trust diff; ROADMAP sibling of ddof+
-threshold co-calibration (Finding C1).
+The comp QA magnitude locus was rebuilt from an accumulating `dropped_global`, coupling per-target
+flag thresholds to target processing order (circular: drops shaped the locus that shaped drops).
+**Decision:** use the **fix-once** pass-1 locus (`build_locus` over the full pass-1 pool) for all
+per-comp `locus_at` / spike / flag evaluation; `dropped_global` remains for survivor bookkeeping only.
+
+**Validation (draft_000366):** order-independence PASS (>=5 shuffled target orders -> byte-identical
+QA payload). Bounded diff vs iterative locus: **1** comp flag flip, **1** target `n_clean` +1,
+**0** trust-label changes (borderline only). `lightcurve_*.csv`, `comp_quality_*.json`, and
+`comparison_stars_per_target.csv` unchanged.
+
+**SHA transition:** core photometry subset (283 files) stays **`770966c3...`**; reference baseline
+expanded to include `comp_qa_*.json` sidecars (426 files) -> **`edbd97e7...`** (intentional
+CQ-C re-baseline, not a photometry regression). Sibling: ddof+threshold co-calibration (ROADMAP).
 
 ### Comp selection — proximity tie-break reverted (2026-06-08)
 
