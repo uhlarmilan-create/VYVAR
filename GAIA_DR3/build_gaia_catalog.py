@@ -35,9 +35,24 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Spustenie z GAIA_DR3/ aj z koreňa projektu
-_VYVAR_ROOT = Path(__file__).resolve().parent.parent
 _GAIA_DR3_DIR = Path(__file__).resolve().parent
+
+
+def _find_vyvar_root(start: Path) -> Path:
+    """Walk upward from *start* until a directory contains ``gaia_catalog_id.py``."""
+    here = start.resolve()
+    for candidate in (here, *here.parents):
+        if (candidate / "gaia_catalog_id.py").is_file():
+            return candidate
+    raise SystemExit(
+        "build_gaia_catalog.py needs gaia_catalog_id.py from the VYVAR repo. "
+        "Run this script from inside your VYVAR clone "
+        "(e.g. `python GAIA_DR3/build_gaia_catalog.py --out <path>`), "
+        "and use --out to write the DB anywhere you like."
+    )
+
+
+_VYVAR_ROOT = _find_vyvar_root(_GAIA_DR3_DIR)
 if str(_VYVAR_ROOT) not in sys.path:
     sys.path.insert(0, str(_VYVAR_ROOT))
 

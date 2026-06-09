@@ -40,6 +40,23 @@ VYVAR photometry has been cross-validated against four independent tools:
 pip install -r requirements.txt
 ```
 
+### Building the Gaia catalog (new user)
+
+After cloning VYVAR, run the catalog builders **from inside the repo** (they import
+`gaia_catalog_id.py` from the clone root). Use `--out` / `--fine-out` / `--wide-out` to
+write the large database and index files anywhere you like.
+
+```bash
+python GAIA_DR3/build_gaia_catalog.py --mag-limit 16.5 --out <path-to-db>
+python GAIA_DR3/build_blind_index.py --db <path-to-db> --tier both
+```
+
+Quick smoke (small sky patch):
+
+```bash
+python GAIA_DR3/build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum --out tmp/smoke_gaia.db
+```
+
 ### Running VYVAR
 
 ```bash
