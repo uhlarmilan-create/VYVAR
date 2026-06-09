@@ -1,45 +1,28 @@
-CURSOR RESULT -- 2026-06-09T05:00:00Z
+CURSOR RESULT -- 2026-06-09T05:30:00Z
 
 What I did
-Prepared 3-commit consolidation (C1 code A-H+FWHM, C2 harness, C4 docs). Wrote commit
-messages + tmp/consolidate_commits.ps1. Blocked: git user.name/email not configured.
+Set git identity (Milan Uhlar / uhlar.milan@gmail.com). Ran tmp/consolidate_commits.ps1 --
+3 logical commits landed. Post-commit verify passed.
 
 ## Output / findings
 
-### Commit plan (fallback: 3 commits, FWHM folded into C1)
-| Commit | Paths | Message file |
-|--------|-------|--------------|
-| C1 | 35 production .py + tests/test_trust_flag.py | tmp/commit_msg_c1_clean_code.txt |
-| C2 | tests/validation/*.py, README, .gitignore | tmp/commit_msg_c2_harness.txt |
-| C4 | docs/*, CURSOR_RESULT.md, inspect_drafts.py | tmp/commit_msg_c4_docs.txt |
+### Commits (newest first)
+| hash | message |
+|------|---------|
+| 26317cf | docs: ePSF/crowding diagnostics, NEIGHBOR-SUB design, campaign ledger |
+| 09b3466 | feat: inject-and-recover validation harness (tests/validation) |
+| 5769b30 | chore: clean-code campaign A-H + FWHM-consistency (co-mingled index) |
 
-psf_photometry.py / crowding_index.py: clean-code + FWHM hunks co-mingled -> single C1.
-
-### Prerequisite (Milan)
-    cd c:\ASTRO\python\VYVAR
-    git config user.name  "Milan ..."
-    git config user.email "...@..."
-Then:
-    powershell -File tmp/consolidate_commits.ps1
-
-### Pre-commit verify (current tree)
+### Verify (committed tree)
 | check | result |
 |-------|--------|
 | pytest | 183 passed, 6 skipped |
-| numeric SHA draft_000366 | 770966c3... match True |
-
-### Index state
-45 files were staged + unstaged MM on docs/CURSOR_RESULT. Script resets index then
-stages per commit. tests/validation/data/ gitignored (not committed).
+| numeric SHA draft_000366 (283 files) | 770966c3... unchanged |
+| git status | clean |
 
 ## Errors (if any)
-git commit blocked: Author identity unknown (no user.name / user.email in .git/config).
+None.
 
-## Files changed (this step only)
-- tmp/commit_msg_c1_clean_code.txt (new)
-- tmp/commit_msg_c2_harness.txt (new)
-- tmp/commit_msg_c4_docs.txt (new)
-- tmp/consolidate_commits.ps1 (new)
-- CURSOR_RESULT.md
-
-Not committed (awaiting Milan git identity).
+## Files changed
+36 production .py + test_trust_flag (C1); tests/validation + .gitignore (C2);
+15 docs + inspect_drafts + CURSOR_RESULT (C4). Not pushed.
