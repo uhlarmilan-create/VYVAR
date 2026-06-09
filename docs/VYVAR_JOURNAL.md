@@ -1,6 +1,69 @@
 Historical session log. Current state → VYVAR_STATE.md; decisions → VYVAR_DECISIONS.md; open work → VYVAR_ROADMAP.md.
 
-# VYVAR — Development State
+---
+
+## Session -- NEIGHBOR-SUB design recorded (2026-06-09)
+
+Read-only design for TODO-PSF-NEIGHBOR-SUB: fit neighbour ePSF, subtract, aperture residual.
+Worklist on corrected crowding (375/380 L: 58/53 blended, 39/34 hard). Insertion at per-frame
+measurement (not `compute_lc_flux_method` router). `_load_adaptive_blend_map` needs full worklist
+row extension. Doc `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`. No code.
+
+---
+
+## Session -- TODO-FWHM-CONSISTENCY implemented (2026-06-09)
+
+`header_core_fwhm_px` in `masterstar_context.py`; `crowding_index._load_wcs_meta` and
+`psf_photometry.get_epsf_fwhm_from_context` now prefer VY_FWHM_GAUSS -> VY_FWHM_GAUSSIAN -> VY_FWHM.
+h & chi Per 375/380 L live crowding: 58/53 is_blended, 39/34 hard; ePSF QC ratio ~0.78/0.81.
+Numeric SHA 770966c3 unchanged; pytest 183/6. ROADMAP TODO-FWHM-CONSISTENCY closed.
+
+---
+
+## Session -- crowding recompute VY_FWHM_GAUSS 375/380 L (2026-06-09)
+
+Read-only recompute: baseline crowding (VY_FWHM) self-check OK (77/87 is_blended). Corrected with
+VY_FWHM_GAUSS (~2.73 px): 58/53 is_blended, 39/34 hard nn<1.0. **PROCEED** for NEIGHBOR-SUB on
+h & chi Per. Diagnostic preceded production fix; doc `docs/VYVAR_HCHIPER_CROWDING_RECOMPUTE.md`.
+
+---
+
+## Session -- decisive ePSF FWHM test 375/380 L (2026-06-09)
+
+Independent Moffat/Gaussian/azimuthal FWHM on built ePSF + stellar cutouts. **Dominant: EXPLANATION 3**
+(OBS_FILES seeing ~3.84 px vs core ~2.0 px). EXPLANATION 2 rejected (ePSF ~= stars). Secondary:
+buggy half-max at 2.236=sqrt(5). Doc `docs/VYVAR_EPSF_FWHM_TEST.md`. No production changes.
+
+---
+
+## Session -- ePSF path audit EPSF-1 (2026-06-08)
+
+Read-only audit at fe8201c: `epsf_fwhm_native` half-max estimator (`psf_photometry.py:500-516`)
+biases ratio<1 on h & chi Per -- diagnostic only, not flux/gating. Doc `docs/VYVAR_EPSF_AUDIT.md`;
+ROADMAP `TODO-EPSF-1-FWHM-QC`; harness V3e added. No production changes.
+
+---
+
+## Session -- h & chi Per PSF probe drafts 375+380 (2026-06-08)
+
+Read-only crowding + ePSF QC on solved MASTERSTAR data. Scale **~1.30"/px bin2** (not fine).
+L-band richest (30 frames). blend_frac_1fwhm ~3.7-4.4%; 77-98 LC stars is_blended on L.
+ePSF asymmetry ~0.001 (no smear flag); ePSF/input FWHM ratio 0.59-0.67. Doc:
+`docs/VYVAR_HCHIPER_PSF_PROBE.md`. pytest 183/6 unchanged; production untouched.
+
+---
+
+## Overnight session — inject-and-recover validation harness (2026-06-08)
+
+Built `tests/validation/` (gen_frame, gen_series, recover, score) wired to real VYVAR
+entry points: crowding blend metrics, Sokolovsky indices, aperture photometry, trust gate,
+color-term fit, BJD/airmass, calibration masters. Tier A single-frame + Tier B 60-frame
+Gaia-structured series (fallback catalog). First full run: **14 pass / 2 fail / 2 skip**.
+FAIL findings (not production fixes): A3 ePSF asymmetry on smeared cutout, A7 photutils vs
+SEP ~0.7% flux offset. Docs: `docs/VYVAR_VALIDATION.md`, `tests/validation/README.md`.
+Production photometry untouched; pytest 183 passed / 6 skipped.
+
+---
 
 Last updated: 2026-06-03 (session 03.6.2026 — APCORR-COLOR Path B: extrapolation guard block)
 
@@ -2804,3 +2867,48 @@ correspondence** still the blocker. Newton spot-check OK post-change.
   check-star scatter uses ddof=0 (C).
 - Recorded language rule in PROCESS (Cursor↔Claude English; Milan↔Claude SK/CZ).
 - Open items moved to ROADMAP (`NEXT SESSION` section).
+- F841 batch 3: production 18 -> 1 pending (`n_rms_candidates` Cat 3). Removed dead locals
+  across `comp_qa`, `photometry_core` (`ra_ms`/`de_ms`, `gaia_teff`), `pipeline` (`n0`×4, `cfg`),
+  `psf_photometry` (`fit_shape`), `vyvar_alignment_frame` (`max_detected_stars`),
+  `vyvar_platesolver` (`center`), and harness modules. Audit notes: `cfg`/`max_detected_stars`/
+  `fit_shape` confirmed vestigial; `n_rms_candidates` awaits Milan (wire m2 RMS count vs remove).
+- Phase A1: `VYVAR_AUDIT_FINDINGS.md` re-encoded UTF-8 ASCII; `_gen_audit_findings.py` ASCII emitter.
+- Verify: pytest 174/6 skip; photometry SHA unchanged; PDF overflow 0.
+- Phase C: ruff safe auto-fix batch (production) -- 37 fixes (SIM114 17, RUF010 8, B009 4,
+  B010 4, SIM300 3, SIM910 1) across 16 modules; parenthesized dense SIM114 and/or merges.
+  Verify: 0 remaining in production scope; pytest 174/6 skip; photometry SHA unchanged; PDF 0.
+- Phase D: bug-class lint sweep (B023/B905/B904/RUF012/B007) -- 51 ruff instances cleared.
+  B905 policy recorded in DECISIONS. `_norm_med_for_bin` duplication flagged for Phase F;
+  B023 fix required `frame_med = nan` init before mag-bin branch (conditional binding).
+  Verify: pytest 174/6 skip; photometry SHA unchanged.
+- Phase E (trust_flag_core A+B): un-evaluated default RED + warn; nan check-star soft note;
+  forward guard documented; C1 ddof=0; E deferred. `tests/test_trust_flag.py` (9 tests).
+  draft_000366 trust re-run: 10 GREEN->YELLOW, 0 GREEN->RED; numeric LC/comp_quality unchanged.
+  pytest 183/6 skip.
+- Phase F manual audit: comp_qa_core.py done (CQ-A..E in AUDIT_FINDINGS). Headline: proc-CSV
+  HIGH likely resolved via `PROC_CSV_GLOB`; CQ-C locus order-coupling needs conscious decision;
+  CQ-B useless ternary; norm_id + `_norm_med_for_bin` duplication flagged for shared-core sweep.
+  Next: calibration.py, database.py, vyvar_platesolver.py.
+- Phase F: calibration.py done (CAL-A..D). Clean module; only LOW/future notes (passthrough
+  caller logging, RGGB assumption for TODO-45, Bayer global rescale doc). Next: database.py,
+  vyvar_platesolver.py.
+- Phase F COMPLETE: database.py (DB-A..D, mostly sound), vyvar_platesolver.py (PS-A..C, well-gated
+  blind solver). No new correctness bugs beyond CQ-B dead ternary. Headline: CQ-A proc-CSV HIGH
+  likely resolved -- verify pre-cal draft and close. PS-B -> Phase G priority. Actionable list in
+  AUDIT_FINDINGS Phase F COMPLETE section.
+- Phase F follow-ups (consolidated): CQ-B/E, shared `norm_med_for_bin`, DB-A allowlist, m2
+  RMS-only UI; CQ-A verified (proc glob tests, HIGH closed); CAL-A (no passthrough callers);
+  DB-B closed (pipeline per-rerun). CQ-C documented + ROADMAP fix-once locus. pytest 183/6 skip;
+  on-disk 283-file SHA stable across diff; PDF 0.
+- Phase G batch 1: confirmed COMP_QA/TRUST stage wrappers log; 8 platesolver solve-result-path
+  excepts now LOGGER.debug (logging-only). pytest 183/6 skip; numeric SHA 770966c3 unchanged.
+- Phase G batch 2: 6 platesolver pass-excepts now log (1 warning MASTERSTAR WCS persist, 5
+  debug); ~25 skip-OK reviewed. OPEN QUESTION: fatal MASTERSTAR write? pytest 183/6; SHA unchanged.
+- Phase G batch 3: 7 photometry_core excepts logged (edge-ok fail-open, variability export x2,
+  color-term x2, pipeline_meta); remainder skip-OK. OPEN QUESTION: edge-ok fail-closed? pytest
+  183/6; SHA unchanged.
+- Phase G batch 4: 3 pipeline.py excepts logged; worker error-surfacing reviewed; critical path
+  COMPLETE (platesolver + photometry_core + pipeline). pytest 183/6; SHA unchanged.
+- Phase H: cosmetic lint value-filtered (SIM118 x11, RUF022 x2, RUF007 x2, RUF034 x3); ProcFrameStore
+  `.keys()` x2 kept; ~89 style accepted (PROCESS). Clean-code campaign A-H COMPLETE. pytest 183/6;
+  SHA unchanged.

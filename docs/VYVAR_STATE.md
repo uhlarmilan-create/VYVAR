@@ -12,6 +12,7 @@ no history and no open-task detail — those live in the linked files.
 | `docs/VYVAR_JOURNAL.md` | Chronological session log (history, append-only). |
 | `docs/VYVAR_PROCESS.md` | How we work: Definition of Done, byte-identity discipline, config↔UI parity, tests. |
 | `docs/VYVAR_PARAMS.md` | Config-key ↔ default ↔ clamp ↔ UI-location registry. |
+| `docs/VYVAR_VALIDATION.md` | Inject-and-recover synthetic validation harness (matrix, FAIL policy). |
 | `CITATIONS.bib` | Single source of truth for all algorithm/software citations. |
 
 ---
@@ -159,14 +160,13 @@ Path-B blocks 8 red giants/filter; L CT off (toggle). **CT science locked.**
 **Decoupling/CT-toggle verified end-to-end** on all filters: ~371 targets/filter, **0 "nan"** names,
 comps + check-star LCs present (331–364). Production CT path correct.
 
-**n_clean=0 / trust RED — root cause (diagnostic; draft-specific, NOT a regression).**
-`comp_qa_core.load_proc_pivot()` hardcodes `glob("proc_*_Light_*.csv")`. Pre-calibrated imports write
-native basenames `proc_Chi_H_*.csv` (no `_Light_`) → 0 glob hits → comp QA evaluates 0 targets →
-`n_clean` NaN on all 371 → trust maps NaN→0 → RED on every target/filter incl L. Regression baseline
-**draft_000366** (Jirny V842 Her, calibrated, `proc_V842_Her_Light_*`, 127 frames) re-run with current
-code **reproduces the original exactly** (n_clean median 8, trust G=91/Y=46/R=6) → cleaning algorithm
-healthy. **Same pre-cal-naming class as the ProcFrameStore `proc_*`/`*_cal` issue — third consumer hit**
-(after alignment/masterstar source root and ProcFrameStore).
+**n_clean=0 / trust RED — resolved (PROC_CSV_GLOB, 2026-06-08).**
+`comp_qa_core.load_proc_pivot()` now uses `list_proc_csvs` / `PROC_CSV_GLOB="proc_*.csv"` (same
+pattern as `ProcFrameStore`), matching both pre-cal native basenames (`proc_Chi_H_*.csv`) and
+calibrated `proc_*_Light_*.csv`. Verified via `tests/test_proc_csv_glob.py` (synthetic pre-cal
+pivot non-empty) and calibrated **draft_000366** (n_clean median 8, trust healthy). Residual
+draft-specific issue: `classify_lc_quality` `min_frames=20` > short sessions still yields
+`lc_quality=no_data` independent of the glob fix.
 
 **Secondary (separate, draft-specific):** `classify_lc_quality` `min_frames=20` > Chi_and_H's 12 frames →
 `lc_quality=no_data` → an independent hard trust fail on 365 targets even if the glob were fixed.

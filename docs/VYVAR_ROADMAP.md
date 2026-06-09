@@ -13,35 +13,26 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## NEXT SESSION — open items
 
-1. **trust_flag_core fixes** — Finding A (un-evaluated → RED/UNKNOWN + warn on missing id) and
-   Finding B (soft note when check-star scatter is nan). Needs spec + unit tests; guard via
-   trust-output baseline, not photometry SHA.
-2. **trust_flag_core Finding C** — decide ddof=0 vs ddof=1 for check-star scatter; record in
-   DECISIONS.
-3. **Phase 2 manual audit continues:** `comp_qa_core.py` → `calibration.py` → `database.py` →
-   `vyvar_platesolver.py`.
-4. **F841 `g_teff` / `gaia_teff`** — deferred (benign); optional later cleanup.
-5. **Phase C — catalog rebuild mechanics:** deepening mag (full-sky 16.5) requires clearing
+1. **trust_flag_core Finding E (deferred)** — lc_quality-missing soft note; revisit together with
+   Finding D `len(soft)>=3` guard when a third soft source is added.
+2. **trust_flag_core ddof+threshold co-calibration (C1 follow-up)** — if switching to ddof=1,
+   re-tune 0.02/0.05 gates; currently ddof=0 locked (DECISIONS). Sibling:
+   **comp_qa fix-once magnitude locus** (CQ-C; see DECISIONS).
+3. **F841 production** — cleared (`n_rms_candidates` wired to m2, 2026-06-08 Phase F).
+4. **Phase C — catalog rebuild mechanics:** deepening mag (full-sky 16.5) requires clearing
    `strip_progress` OR building to a new DB then swapping `GAIA_DB_PATH`; PKL rebuild only for
    DEC (southern) expansion. ("k tomuto sa vrátime")
-6. **INSTALL-MANUAL** — install manual + installer for a new user (incl. catalog build via the
+5. **INSTALL-MANUAL** — install manual + installer for a new user (incl. catalog build via the
    2 GAIA scripts), tied to TODO-9 (Lenovo T460) + TODO-LIB (Cython `.pyd` package).
-7. **Open question** — `ui_photometry_results.py` + `ui_suspected_lightcurves.py` are disconnected
+6. **Open question** — `ui_photometry_results.py` + `ui_suspected_lightcurves.py` are disconnected
    from `app.py`: intent vs regression? Decide.
-8. *(optional)* **"new selection philosophy" ranking review** — sort by `comp_rms` @2089
+7. *(optional)* **"new selection philosophy" ranking review** — sort by `comp_rms` @2089
    confirmed correct; broader read optional.
 
 ---
 
 ## HIGH
 
-- **Canonical pre-cal proc-CSV resolution.** One source-of-truth pattern for per-frame `proc_*`
-  CSVs used by **all** consumers — alignment source root, `ProcFrameStore`, and
-  `comp_qa_core.load_proc_pivot` (currently `proc_*_Light_*.csv`). Pre-cal native basenames
-  (`proc_<obj>_*.csv`, no `_Light_`) must match everywhere. **Third consumer hit by this mismatch**
-  → stop patching per-site; fix once. It silently zeroes comp QA / `n_clean` / trust on every
-  pre-cal run. *(Merged from ProcFrameStore pre-cal naming + Chi_and_H n_clean diagnostic,
-  2026-06-04.)*
 - **TODO-MULTISET — per-telescope-set config architecture.** One config per rig (wide
   Carl-Zeiss 200 mm + QHY294MM ≈ 9.77″/px vs Newton 300/1200 + C3-26000 ≈ 0.65″/px).
   Underpins per-set plate scale, aperture, and crowding gating; blocks clean multi-rig
@@ -66,9 +57,22 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
     `≥ 2.0` is contradictory, so the resolvable-blend→PSF rule can never fire. Fix the
     thresholds.
   - **TODO-PSF-NEIGHBOR-SUB** — fit + subtract bright-neighbour ePSF, aperture the residual
-    (deblend that works at coarse resolution, unlike the grouper).
+    (deblend that works at coarse resolution, unlike the grouper). **Design recorded**
+    `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md` (2026-06-09); implementation pending Milan approval.
+    Build order: synthetic harness A9 -> subtract core -> guards -> trust -> h & chi Per.
   - **TODO-PSF-MULTIFRAME** — multi-frame ePSF stacking (isolation part done).
   - **TODO-PSF-ASYMMETRY** — tracking-smear diagnostics (BO CVn right-tail PSF).
+  - ~~**TODO-FWHM-CONSISTENCY**~~ **DONE (2026-06-09)** — `header_core_fwhm_px` in
+    `masterstar_context.py`; `crowding_index._load_wcs_meta` + `psf_photometry.get_epsf_fwhm_from_context`
+    prefer `VY_FWHM_GAUSS` -> `VY_FWHM_GAUSSIAN` -> `VY_FWHM`, matching aperture path
+    (`pipeline.py:9206`). h & chi Per L: is_blended 77/87 -> 58/53; numeric SHA 770966c3 unchanged.
+    See `docs/VYVAR_HCHIPER_CROWDING_RECOMPUTE.md`.
+  - **TODO-EPSF-1-FWHM-QC** — fix `epsf_fwhm_native` half-max estimator in
+    `psf_photometry.py:500-516` (azimuthally-binned radial profile + recalibrated 1343
+    warning thresholds). Audit finding EPSF-1: ratio<1 on h & chi Per (0.59-0.67) is likely a
+    **diagnostic artifact**, not a narrow ePSF — does not affect flux or `assess_psf_quality`.
+    Validate via harness **V3e** (synthetic known-FWHM -> ratio in [0.85,1.15]). See
+    `docs/VYVAR_EPSF_AUDIT.md`. Milan decision before implementation.
   - Realistic per-star PSF uncertainties; then validate + enable on real Newton data.
   - Blocked on having a Newton / dense-field draft.
 - **Per-frame saturation (not whole-star skip).** Whole-star `zone_flag=saturated` from the
@@ -114,9 +118,24 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
   ignores the config site; UI uses `LOCATION.IS_DEFAULT`). Fix = split a session-state store
   from the static overrides. **Do NOT gitignore `config.json`** — it holds real overrides.
 - **TODO-BROAD-EXCEPT-HYGIENE — dedicated day(s).** ~700 bare `except: pass/continue`; the
-  dangerous subset is those guarding safety/fallback paths in the core runtime. Narrow each
-  to the expected exceptions only. Includes: verify `comp_qa` / `trust` stage wrappers **log**
-  on failure (not silent-pass); and tighten the few adhoc/script callers that use config `1.3` directly instead of the WCS-first plate-scale resolver.
+  dangerous subset is those guarding safety/fallback paths in the core runtime. **Phase G batch 1
+  (2026-06-08):** comp_qa/trust stage wrappers confirmed logging (`[COMP_QA]`/`[TRUST]` warning,
+  closed); 8 platesolver solve-result-path excepts now `LOGGER.debug` before None/False fallback
+  (no control-flow change). **Batch 2 (2026-06-08):** 6 of ~31 `pass`-style excepts in
+  `vyvar_platesolver.py` now log (1 `LOGGER.warning` for failed MASTERSTAR WCS persist, 5
+  `LOGGER.debug` for skipped refinements/header writes); ~25 reviewed skip-OK (RANSAC inner-loop,
+  diag-log guards, optional VY_* headers, fallback refinements). **Batch 3 (2026-06-08):**
+  7 `photometry_core` high-risk excepts now log (3 warning: edge-ok fail-open, variability export;
+  4 debug: color-term fit x2, pipeline_meta write); ~223 remainder reviewed skip-OK.
+  **Batch 4 (2026-06-08):** 3 `pipeline.py` excepts logged (comparison-star sync skip ->
+  warning; cone/variables + prefetch CSV writes -> debug); worker error-surfacing via status
+  dicts + graceful fallbacks reviewed. **Critical path DONE** (platesolver / photometry_core /
+  pipeline). Remaining ~700 repo-wide count is lower-risk modules (UI, importer, tess_verify,
+  etc.) -- opportunistic only. **OPEN QUESTIONS (Milan):** failed MASTERSTAR `fits.writeto`
+  fatal? edge-ok check fail-open vs fail-closed (logging only so far).
+- **Phase H cosmetic lint (2026-06-08, DONE):** value-filtered subset applied (SIM118 x11,
+  RUF022 x2, RUF007 x2, RUF034 x3 dead-ternary); ProcFrameStore SIM118 x2 kept; ~89 style
+  findings accepted per PROCESS. **Clean-code campaign Phases A–H COMPLETE.**
 - **TODO-GEO — observer geographic position audit (BJD/airmass/HJD).** **Likely superseded
   by PARAM-PROVENANCE** (per-draft `ID_LOCATION` site resolution, 2026-05-30) — verify and
   close if so.
@@ -131,6 +150,13 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## LOW
 
+- **comp_qa fix-once magnitude locus (CQ-C methodology).** Per-target flag thresholds are coupled
+  to deterministic target processing order via accumulating `dropped_global`. Keep current behavior;
+  validate a fix-once locus (computed once over full pass-1 pool) with bounded n_clean/trust diff —
+  sibling of ddof+threshold co-calibration (NEXT SESSION #2).
+- **FITS-side proc glob consistency.** `pipeline.py` uses inline `aligned_dir.glob("proc_*.fits")`
+  (~5578, 12604, 12683) rather than a shared helper; functionally correct (`proc_*` matches both
+  naming styles). Optional consistency cleanup only.
 - **Spatial term in calibration (from SIPS comparison) — only for a future whole-field absolute
   mode.** SIPS's ensemble adds x,y polynomial terms (`x1·X + y1·Y + x2·X² + y2·Y² + xy·XY`) for
   field gradient / vignetting. **Not a gap in VYVAR's current per-target differential path** —
@@ -216,11 +242,16 @@ inštalátor → rovnaký výsledok na T460; manuál a inštalátor konzistentn�
 - **Blind solver in dense fields + index series + rig-prior** — **RESOLVED 2026-06-04** (Newton):
   mag14 tiers, `vyvar_blind_series`, solve-rate harness, scale/FOV hard gates (`blind_use_rig_prior`,
   `blind_scale_tol_frac`). **Wide-rig blind HIT** — still **OPEN** (`draft_365`: 0 votes &lt;2°;
-  tune `wide` tier / quads — see wide diag report).
+  tune `wide` tier / quads — see wide diag report). **PS-A note:** `_verify_blind_candidates`
+  relaxes `min_matches` 12→8 when plate scale ≥ 5″/px; when working this item, decide
+  fraction/scale_tol compensation for the wide rig.
 - **V/R re-run (draft_375)** — **RESOLVED 2026-06-04** via draft_380 clean full run (all filters).
 - **Trust `n_clean=0` diagnosis** — **RESOLVED 2026-06-04:** root cause = pre-cal proc-CSV glob in
   `load_proc_pivot` (draft-specific, not a cleaning regression); folded into canonical pre-cal
   proc-CSV resolution (HIGH).
+- **Canonical pre-cal proc-CSV resolution** — **CLOSED 2026-06-08:** `load_proc_pivot` uses
+  `list_proc_csvs` / `PROC_CSV_GLOB="proc_*.csv"`; verified `tests/test_proc_csv_glob.py` +
+  calibrated draft_000366 n_clean populated.
 - **ProcFrameStore pre-cal naming** — folded into canonical pre-cal proc-CSV resolution (HIGH,
   2026-06-04); do not fix per-consumer.
 - **MASTERSTAR-EPSF-ALL** — dropped 2026-06-02: plate scale is WCS-derived; affected drafts

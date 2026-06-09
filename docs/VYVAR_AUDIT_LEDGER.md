@@ -9,23 +9,23 @@ Stav modulov a disposícia nálezov. Obnoviteľný register — nie čierna dier
 | Modul | Stav | Nálezy (Fáza 0→1) | Disposícia |
 |---|---|---|---|
 | `photometry_report.py` | done | F821×27 → 0 (TYPE_CHECKING); F841×11 → 1; F811 cm/mm | fix batch 1 — kozmetika + dead locals |
-| `photometry_core.py` | done | batch 2: removed redundant `c1_stderr@7141`; `lc_df` read-guard preserved | F841 `ra_ms`/`gaia_teff` deferred |
-| `comp_selection_per_target.py` | done | removed `dist_score`, `rms_f2`; `g_teff` deferred | batch 2 cleanup |
+| `photometry_core.py` | done | batch 3: removed `ra_ms`/`de_ms`, `gaia_teff` dead reads | F841 clear |
+| `comp_selection_per_target.py` | done | batch 3: removed `g_teff` dead reads | F841 clear |
 | `comp_pool_rms.py` | done | F841 `avail_cols` | removed dead assignment |
-| `comp_qa.py` | todo | F841 `lc_map` | triage — možná zabudnutá logika |
-| `comp_qa_core.py` | todo | — | Fáza 2 manual read |
-| `trust_flag_core.py` | auditing | Phase 2 findings A–F (see AUDIT_FINDINGS) | fixes → ROADMAP next session |
-| `calibration.py` | todo | — | Fáza 2 manual read |
-| `database.py` | todo | — | Fáza 2 manual read |
-| `vyvar_platesolver.py` | todo | F841 `center` | Fáza 2 + F841 triage |
-| `pipeline.py` | todo | F841×2 (`n0`, `cfg`) | deferred — obrie súbor, split track |
-| `psf_photometry.py` | todo | F841 `fit_shape` | triage |
+| `comp_qa.py` | done | batch 3: removed `lc_map` | dead local, no logic loss |
+| `comp_qa_core.py` | done | Phase F CQ-A..E (see AUDIT_FINDINGS) | CQ-A verify pre-cal then close ROADMAP HIGH |
+| `trust_flag_core.py` | done | Phase E: Findings A+B implemented; C1 ddof=0; D guard doc; E deferred | 9 unit tests |
+| `calibration.py` | done | Phase F CAL-A..D (see AUDIT_FINDINGS) | clean; CAL-A caller logging verify |
+| `database.py` | done | Phase F DB-A..D (see AUDIT_FINDINGS) | mostly sound; DB-B threading verify |
+| `vyvar_platesolver.py` | done | Phase F PS-A..C + batch 3 `center` | PS-B = Phase G priority |
+| `pipeline.py` | done | batch 3: removed `n0`×4, `cfg` in `extract_fits_metadata` | F841 clear |
+| `psf_photometry.py` | done | batch 3: `fit_shape`; **EPSF-1** (2026-06-08) FWHM QC estimator bias | EPSF-1 diagnostic only; ROADMAP TODO-EPSF-1-FWHM-QC + harness V3e |
 | `export_reports.py` | done | F401×2 | ruff --fix batch 1 |
 | `config.py` | done | — | no F841 in scope |
-| `ui_*` (aggregate) | deferred | F841×3 v UI | nízka priorita vs core |
-| `tess_verify.py` | deferred | F841×2 | TESS side path |
-| `xval_run.py` | deferred | F841×2 | offline harness |
-| `psf_runner.py` | deferred | F841×1 | dev CLI |
+| `ui_*` (aggregate) | done | Phase F: `n_rms_candidates` wired to m2 | UI-only; reverses prior help-text |
+| `tess_verify.py` | done | batch 3: removed `center_col_tpf`/`center_row_tpf` | TESS side path |
+| `xval_run.py` | done | batch 3: removed `sf`, `PS` | offline harness |
+| `psf_runner.py` | done | batch 3: removed `mn_cid` | dev CLI |
 | `orchestrator/` | done | F401/F541 | ruff --fix batch 1 |
 
 ## Dávka 1 (2026-06-08) — hotovo
@@ -52,12 +52,157 @@ deferred (benign).
 | PDF overflow (`draft_000366`) | **0** violations (160 pages) |
 | commit | `10b81fa` |
 
-## Ďalšie kroky (Fáza 1 pokračovanie)
+## Dávka 3 (2026-06-08) — F841 batch 3 + audit findings re-encode
 
-1. **F841 kritická cesta** — `comp_selection_per_target`, `photometry_core` (`c1_stderr`, `lc_df`), jeden fix = jeden test ak rizikové.
-2. **`except Exception: pass`** — kritická cesta (683× broad except; 9× explicit pass) — po jednom, minimum log.
-3. **Fáza 2 manual read** — poradie: `photometry_core` → `comp_selection_per_target` → `comp_qa_core` → `trust_flag_core` → `calibration` → `database` → `vyvar_platesolver`.
-4. **Split track** — `pipeline.py` / `photometry_core.py` (samostatný spec, byte-identita).
+F841 production scope 18 -> 1 pending (`ui_variability.py:1480` Cat 3, awaiting Milan).
+Removed 17 dead locals / dead read blocks (Cat 1 + Cat 2). Phase A1: re-encoded
+`VYVAR_AUDIT_FINDINGS.md` to UTF-8 ASCII; `tmp/_gen_audit_findings.py` emits ASCII.
+
+| Check | Výsledok |
+|---|---|
+| F841 production | **1** (`ui_variability.py:1480` pending) |
+| `pytest tests` | **174 passed, 6 skipped** |
+| Photometry byte-identity (`draft_000366`, 284 artifacts) | **OK** — SHA-256 `ad12325d262e913dc57fa0e805e07c2115aec5005268c704177d7fb72856aa69` unchanged |
+| PDF overflow (`draft_000366`) | **0** violations (160 pages) |
+| commit | pending (git identity not configured locally; includes Phase B + C staged) |
+
+## Phase C (2026-06-08) -- ruff safe auto-fix (production scope)
+
+SIM114 17 / RUF010 8 / B009 4 / B010 4 / SIM300 3 / SIM910 1 = **37 fixed** across 16 modules.
+Parenthesized dense SIM114 and/or merges in `lunar_context`, `photometry_core`, `pipeline`,
+`catalog_crossmatch`, `importer` (cosmetic readability only).
+
+| Check | Vysledok |
+|---|---|
+| SIM114/RUF010/B009/B010/SIM300/SIM910 production | **0** remaining |
+| `pytest tests` | **174 passed, 6 skipped** |
+| Photometry byte-identity (`draft_000366`, 284 artifacts) | **OK** -- SHA-256 `ad12325d262e913dc57fa0e805e07c2115aec5005268c704177d7fb72856aa69` unchanged |
+| PDF overflow (`draft_000366`) | **0** violations (160 pages) |
+| commit | pending (git identity not configured locally) |
+
+## Phase D (2026-06-08) -- bug-class lint sweep (production scope)
+
+B023 23 / B905 22 / B904 1 / RUF012 1 / B007 4 = **51 fixed** (ruff instance count).
+B023: default-arg binding (all benign in-iteration closures). B905: `strict=True` where
+equal-length by construction; `strict=False` for ragged `.get(col, Series())` zips and
+untested UI. B904 `from exc`; RUF012 `ClassVar`; B007 `_` renames. Note: `_norm_med_for_bin`
+duplicated in `comp_pool_rms` + `comp_selection_per_target` -- Phase F manual audit.
+
+| Check | Vysledok |
+|---|---|
+| B023/B905/B904/RUF012/B007 production | **0** remaining |
+| `pytest tests` | **174 passed, 6 skipped** |
+| Photometry byte-identity (`draft_000366`, 284 artifacts) | **OK** -- SHA-256 `ad12325d262e913dc57fa0e805e07c2115aec5005268c704177d7fb72856aa69` unchanged |
+| PDF overflow (`draft_000366`) | **0** violations (160 pages) |
+| commit | pending (git identity not configured locally) |
+
+## Phase E (2026-06-08) -- trust_flag_core Findings A+B
+
+Finding A: un-evaluated summary rows default RED + reason (was GREEN). Finding B: nan
+check-star scatter adds soft note. C1: keep ddof=0 (documented). D: forward guard kept.
+
+| Check | Vysledok |
+|---|---|
+| `pytest tests` | **183 passed, 6 skipped** (+9 trust tests) |
+| Numeric photometry (`draft_000366`, LC + comp_quality + comparison_stars) | **unchanged** (283 files; trust does not touch numbers) |
+| Trust baseline diff (`draft_000366` re-run) | **10** GREEN->YELLOW (no-check soft); **0** GREEN->RED; **0** other level flips; 8 YELLOW JSON reason-only updates |
+| PDF overflow (`draft_000366`) | **0** violations (160 pages) |
+| commit | pending (git identity not configured locally) |
+
+## Phase F follow-ups (2026-06-08) -- consolidated
+
+CQ-B dead ternary; CQ-E `norm_id_or_empty` in `gaia_catalog_id.py`; shared `norm_med_for_bin`;
+DB-A editable-table allowlist; m2 shows RMS-only count. Part 3 verified: CQ-A (proc glob tests),
+CAL-A (no `allow_passthrough=True` callers), DB-B (pipeline per-rerun, not in session_state).
+
+| Check | Vysledok |
+|---|---|
+| `pytest tests` | **183 passed, 6 skipped** |
+| RUF034 production | **3** remaining (CQ-B cleared: was 4) |
+| On-disk photometry SHA (`draft_000366`, 283 LC+comp+comparison) | **unchanged** across Part 1-2 diff (`770966c3...`); historical baseline `ad12325d...` drifted pre-Phase-F (on-disk tree) |
+| PDF overflow (`draft_000366`) | **0** violations (160 pages) |
+| commit | pending (git identity not configured locally) |
+
+## Phase G batch 1 (2026-06-08) -- broad-except hygiene (result paths)
+
+G1.0: `photometry_core` COMP_QA/TRUST wrappers already `logging.warning` -- no change, ROADMAP
+sub-point closed. G1.1: 8 solve-result-path excepts in `vyvar_platesolver.py` now `LOGGER.debug`
+(logging-only; no type narrowing, no control-flow change).
+
+| Check | Vysledok |
+|---|---|
+| `pytest tests` | **183 passed, 6 skipped** |
+| Numeric photometry SHA (`draft_000366`, 283 files) | **unchanged** (`770966c3...`) |
+| PDF overflow (`draft_000366`) | **0** violations (160 pages) |
+| commit | pending (git identity not configured locally) |
+
+## Phase G batch 2 (2026-06-08) -- platesolver pass-style except triage
+
+6 pass-excepts now log (1 warning MASTERSTAR WCS persist, 5 debug refinements/headers); ~25
+confirmed skip-OK. OPEN QUESTION: fatal MASTERSTAR WCS write? (ROADMAP)
+
+| Check | Vysledok |
+|---|---|
+| `pytest tests` | **183 passed, 6 skipped** |
+| Numeric photometry SHA (`draft_000366`, 283 files) | **unchanged** (`770966c3...`) |
+| PDF overflow (`draft_000366`) | **0** violations (160 pages) |
+| commit | pending (git identity not configured locally) |
+
+## Phase G batch 3 (2026-06-08) -- photometry_core pass/return-path triage
+
+7 sites logged (3 warning, 4 debug); high-risk return/write subset of 230 excepts reviewed;
+graceful-fallback/loop-skip/already-logged remainder skip-OK. OPEN QUESTION: edge-ok fail-open.
+
+| Check | Vysledok |
+|---|---|
+| `pytest tests` | **183 passed, 6 skipped** |
+| Numeric photometry SHA (`draft_000366`, 283 files) | **unchanged** (`770966c3...`) |
+| PDF overflow (`draft_000366`) | **0** violations (160 pages) |
+| commit | pending (git identity not configured locally) |
+
+## Phase G batch 4 (2026-06-08) -- pipeline.py triage; critical path COMPLETE
+
+3 sites logged (comparison-star sync warning; cone/variables + prefetch CSV debug); worker
+status-dict error surfacing + graceful fallbacks reviewed. Phase G critical path done.
+
+| Check | Vysledok |
+|---|---|
+| `pytest tests` | **183 passed, 6 skipped** |
+| Numeric photometry SHA (`draft_000366`, 283 files) | **unchanged** (`770966c3...`) |
+| PDF overflow (`draft_000366`) | **0** violations (160 pages) |
+| commit | pending (git identity not configured locally) |
+
+## Phase H (2026-06-08) -- cosmetic lint; clean-code campaign COMPLETE
+
+SIM118 x11 (ProcFrameStore x2 kept `.keys()`), RUF022 x2, RUF007 x2, RUF034 x3 dead-ternary;
+~89 style findings accepted (PROCESS). Campaign A-H done.
+
+| Check | Vysledok |
+|---|---|
+| `pytest tests` | **183 passed, 6 skipped** |
+| Ruff SIM118/RUF022/RUF007/RUF034 | **2** SIM118 (ProcFrameStore intentional); rest **0** |
+| Numeric photometry SHA (`draft_000366`, 283 files) | **unchanged** (`770966c3...`) |
+| PDF overflow (`draft_000366`) | **0** violations (160 pages) |
+| commit | pending (git identity not configured locally) |
+
+## FWHM-CONSISTENCY (2026-06-09) -- crowding + ePSF context prefer VY_FWHM_GAUSS
+
+Shared `header_core_fwhm_px(hdr)` in `masterstar_context.py`. Two read sites only:
+`crowding_index._load_wcs_meta` (line ~62) and `psf_photometry.get_epsf_fwhm_from_context` (line ~181).
+Aperture path untouched.
+
+| Check | Vysledok |
+|---|---|
+| `pytest tests` | **183 passed, 6 skipped** |
+| Numeric photometry SHA (`draft_000366`, 283 files) | **unchanged** (`770966c3...`) |
+| Crowding 375 L (live) | is_blended **58**, hard **39**, blend@1 **0.0268**, blend@2 **0.0737** |
+| Crowding 380 L (live) | is_blended **53**, hard **34**, blend@1 **0.0269**, blend@2 **0.0751** |
+| ePSF ctx FWHM 375/380 L | **2.744 / 2.730** px; QC ratio ~**0.78 / 0.81** |
+
+## Dalsie kroky (Faza 1 pokracovanie)
+
+1. **Split track** -- `pipeline.py` / `photometry_core.py` (samostatny spec, byte-identita).
+2. **comp_qa fix-once locus (CQ-C)** + **ddof co-calibration** -- methodology passes with bounded diff.
 
 ## Nástroje
 

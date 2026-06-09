@@ -81,6 +81,19 @@ carried `psf_flux`).
   `validation/xval_ledger.csv` summary rows). No in-pipeline per-draft SEP stage; trust gate
   uses comp_qa + check-star + lc_quality only.
 
+## Accepted lint style (Phase H, 2026-06-08)
+
+VYVAR consciously does **not** enforce these ruff codes in production scope — they are style-only
+and many `--unsafe-fixes` variants can hurt readability or risk subtle behavior change:
+
+- **SIM102** (collapsible-if), **SIM103** (needless-bool), **SIM108** (if-else-to-ternary),
+  **SIM113** (enumerate-for-loop)
+- **RUF005** (collection-literal-concat), **RUF059** (unused-unpacked)
+
+Future audits should treat them as **accepted**, not open work. Value-filtered cosmetic fixes
+(SIM118 `.keys()` where safe, RUF022 sorted `__all__`, RUF007 `pairwise`, RUF034 dead-ternary)
+are applied when byte-identical; ProcFrameStore keeps explicit `.keys()` (no `__iter__`).
+
 ## Cursor / Claude workflow
 
 - **Claude** specs, audits (read-only, with `file:line`), designs, and reviews; recommends

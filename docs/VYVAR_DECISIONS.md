@@ -17,6 +17,24 @@ now correct; pixel-based geometry (aperture / annulus / SNR-optimal table / fiel
 immune. **Status: settled (2026-05-29/30).** Any residual `1.3` in old `pipeline_meta` is stale
 run metadata, overwritten on a clean re-run (see ROADMAP: WIDE-RIG-REPROCESS).
 
+### NEIGHBOR-SUB shape: PSF subtract contaminant, aperture measure target (2026-06-09, design only)
+
+For blended targets, use ePSF to fit and subtract a bright neighbour, then run the existing
+aperture path on the residual stamp. PSF does not replace aperture for science flux; it only
+removes contamination. Does not revive grouped PSF / rule 2 (mutually exclusive thresholds).
+Gated `psf_neighbor_sub_enabled` OFF until synthetic harness + h & chi Per scatter validation.
+Full design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`. **Status: pending implementation approval.**
+
+### Crowding + ePSF FWHM context use measured core (VY_FWHM_GAUSS), not DAO search scale (2026-06-09)
+`VY_FWHM` on MASTERSTAR is the DAOStarFinder search parameter (~3.4-3.8 px on h & chi Per L);
+`VY_FWHM_GAUSS` is the 2D Gaussian core fit (~2.7 px) already used by aperture photometry
+(`pipeline.py:9206`). Crowding (`_load_wcs_meta`) and ePSF build context
+(`get_epsf_fwhm_from_context`) previously read `VY_FWHM` only, inflating blend disks and
+deflating ePSF QC ratios. **Decision:** shared `header_core_fwhm_px` prefers
+`VY_FWHM_GAUSS` -> `VY_FWHM_GAUSSIAN` -> `VY_FWHM` at exactly those two sites; display-only
+and plate-solve hint readers keep `VY_FWHM`. Validated: numeric SHA `770966c3...` unchanged;
+h & chi Per L crowding 77/87 -> 58/53 is_blended. EPSF-1 half-max estimator remains a separate item.
+
 ### Aperture is the validated workhorse; PSF stays OFF at coarse/well-sampled scale
 At 9.77″/px the PSF is well-sampled and stable across the field, so a single ePSF already
 captures it and aperture wins. Every PSF variant — single ePSF, spatial `GriddedPSFModel`,
@@ -70,6 +88,76 @@ The Pejcha & Cagaš paper is a **citation / positioning reference for the GS7 pa
 source to copy. Where VYVAR is already ahead: Gaia-native catalog, independent cross-val +
 per-target trust gate, comp_qa, literature-backed comp selection, and reproducibility/citation
 discipline. **Status: settled 2026-06-02.**
+
+### What VYVAR does / does not adopt from CoLiTecVS (2026-06-09)
+Comparison in the same spirit as the SIPS entry. Sources: Savanevych/Briukhovetskyi/Khlamov/
+Kudzej/Dubovsky/Parimucha et al. -- Astron. Nachr. 2019;340:68-70; CAOSP 49,151 (2019);
+2022A&C....4000605S; Dubovsky et al. 2017 OEJV 180 (inverse-median-filter detail). CoLiTecVS is
+from the same community Milan works in (Kolonica Saddle / Vihorlat Obs. / UPJS Kosice).
+
+**Shared photometric family.** Both are automated differential aperture-photometry pipelines
+that take raw frames to AAVSO-style light curves with ensemble comparison stars and minimal
+manual step-by-step handling. Both were validated against the C-Munipack / Muniwin class of
+tools and reach comparable scatter (CoLiTecVS aperture uncertainty < 0.04 mag; on the MASTER OT
+J174305 field CoLiTecVS auto-ensemble SD ~0.0078 vs C-Munipack+MCV ~0.0067, i.e. parity).
+Same problem domain, same accuracy class.
+
+**Where VYVAR is ahead:**
+- **Gaia DR3-native + colour.** CoLiTecVS selects comparison stars from AAVSO charts (LookSky
+  tool). VYVAR is Gaia DR3-native with BP-RP colour, colour-term handling, and colour-aware comp
+  selection -- a more modern catalog/colour basis.
+- **Independent QA + per-target trust verdict.** CoLiTecVS reports a global aperture uncertainty
+  and validates in aggregate (one mean/SD table); it exposes no per-target machine-checkable
+  verdict and no independent second-extractor cross-check. VYVAR adds comp_qa (Sokolovsky
+  leave-one-out locus), SEP cross-validation (~0.2%/frame), and the three-axis GREEN/YELLOW/RED
+  trust gate.
+- **Reproducibility / provenance.** VYVAR has SHA-256 byte-identity on photometry artifacts, a
+  citation emitter, and a decision log. CoLiTecVS is a compact closed all-in-one -- by the
+  authors' own note you cannot isolate and test a single internal stage.
+- **Modularity / auditability.** VYVAR stages are individually inspectable and read-only
+  auditable; CoLiTecVS is monolithic (raw -> LC, turnkey).
+
+**Where CoLiTecVS is ahead (VYVAR gap):**
+- **Inverse-median-filter brightness equalization** (their signature). Removes large-scale
+  illumination non-uniformities from Moonlight / scattered light that dark+flat do NOT correct.
+  The authors report it usually beats classical flat-field for background equalization, with no
+  measurable photometric non-linearity (Dubovsky et al. 2017). VYVAR is flat-only and has NO
+  scattered-light / large-scale gradient equalization stage. Real gap for moonlit nights and
+  light-polluted sites.
+- **Online / real-time mode (OLDAS-Night):** processes data live off the sensor. VYVAR is offline
+  batch only.
+- **Maturity / proven scale:** CoLiTec lineage (700k+ observations in the asteroid-detection
+  heritage); CoLiTecVS tested on 100+ time series (20-600 frames) and in regular operational use
+  at Kolonica. VYVAR is a single-observer pipeline.
+- **LookSky one-click AAVSO-chart comp selection + reusable per-target task-file** (slick repeat-
+  target UX). Workflow convenience, not necessarily better science.
+- **Compact turnkey UX** (minimal interaction). VYVAR needs more setup and understanding.
+
+**Worth borrowing -- scoped in ROADMAP, not core changes:**
+- **PRIMARY: optional large-scale illumination-gradient removal** (inverse-median-filter or
+  equivalent background equalization), pre-photometry, OFF by default and gated. Directly addresses
+  the one real capability gap above; ties to existing items TODO-LC-TREND (differential extinction /
+  moonless-night note) and the LOW SIPS "spatial term". VYVAR can adopt it more safely than
+  CoLiTecVS validated it: byte-identity SHA, comp_qa locus, SEP cross-val, and check-star scatter
+  are the acceptance harness -- enable on a moonlit/gradient draft, confirm locus + check-star
+  improve (or are unchanged) and constant-star differential RMS does not degrade, with numeric SHA
+  tracked as a separate baseline. **Risks to gate:** median-background subtraction can remove real
+  extended flux and perturb faint-star annulus estimation; must stay optional, never silently alter
+  the photometry path, and pass the trust-gate acceptance before default-on (mirrors PSF "OFF until
+  validated" discipline).
+- **SECONDARY (optional, UX):** reusable per-target "task-file" (fixed target + comp set reused
+  every reduction). Only if VYVAR lacks an equivalent per-target config; low priority, workflow not
+  science.
+
+**Deliberately not adopted:**
+- **Monolithic compact architecture** -- VYVAR's modular, auditable design is a deliberate strength.
+- **Online OLDAS mode** -- out of scope for VYVAR's offline-rigor model.
+- **AAVSO-chart comp selection** -- VYVAR's Gaia DR3 + BP-RP colour basis is more modern;
+  switching to chart-based selection would be a step back.
+
+**Net:** borrow ONE idea (optional gated illumination-gradient equalization), validated through
+VYVAR's existing trust harness; keep everything else as VYVAR already does it. **Status: settled
+2026-06-09.**
 
 ### COG (curve-of-growth) aperture correction: implemented, default OFF
 Per-frame encircled-energy correction removes the constant target↔comp enclosed-flux bias and
@@ -256,6 +344,35 @@ Frames live in `non_calibrated/lights/`; all consumers read via one source root.
 VYVAR colour terms are relative to Gaia G → corrected magnitude is G-referenced, not standard
 Johnson/Sloan. AAVSO-standard B/V/Rc requires a standard catalog (APASS) or a documented
 G→standard transform — to resolve before science submission.
+
+### trust_flag_core Phase E (2026-06-08)
+
+- **Finding A:** summary/export targets absent from `trust_map` default to **RED** with reason
+  `not evaluated (no comp QA / missing from trust map)`; `LOGGER.warning` when any summary id
+  is missing. Conservative mission-safe default (was GREEN).
+- **Finding B:** `classify_warnings` adds soft note `no check-star verification available` when
+  `check_scatter` is nan; can shift GREEN->YELLOW when no other warnings. Max 2 soft preserved.
+- **Finding C (C1 chosen):** keep `np.nanstd(km)` ddof=0; 0.02/0.05 thresholds calibrated to
+  population std. Revisit ddof+threshold co-calibration on ROADMAP (not this pass).
+- **Finding D:** `len(soft) >= 3 -> RED` kept as forward guard (today max 2 soft).
+- **Finding E:** deferred -- lc_quality-missing soft note (would make D reachable).
+- **draft_000366 trust re-run:** 10 GREEN->YELLOW, 0 GREEN->RED; numeric LC/comp_quality unchanged.
+
+### B905 zip strict policy (2026-06-08, Phase D)
+
+`strict=True` only where paired iterables are equal-length by construction (parallel
+per-frame arrays, pairwise boundaries, same-length Series `.tolist()` pairs).
+`strict=False` where ragged length is intentional (`.get(col, pd.Series())` fallbacks,
+cross-DataFrame UI zips) or on untested display code. `strict=False` preserves today's
+truncate-to-shortest behavior; `strict=True` adds a defensive length assertion only.
+
+### comp_qa_core CQ-C — magnitude locus order coupling (2026-06-08, Phase F)
+
+The comp QA magnitude locus is rebuilt from an accumulating `dropped_global`, so per-target flag
+thresholds are coupled to the (deterministic) target processing order. **Decision:** keep current
+behavior for now. A fix-once locus (computed once over the full pass-1 pool) is a **separate
+methodology change** — validate with a bounded n_clean/trust diff; ROADMAP sibling of ddof+
+threshold co-calibration (Finding C1).
 
 ### Comp selection — proximity tie-break reverted (2026-06-08)
 
