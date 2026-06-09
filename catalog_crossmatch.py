@@ -172,9 +172,9 @@ def _gaia_varisum_types(row: Any) -> str:
             ok = bool(v)
         else:
             fv = _safe_float(v)
-            if fv is not None and fv > 0:
-                ok = True
-            elif isinstance(v, str) and v.strip() not in ("", "0", "N", "n", "F", "f", "--"):
+            if (fv is not None and fv > 0) or (
+                isinstance(v, str) and v.strip() not in ("", "0", "N", "n", "F", "f", "--")
+            ):
                 ok = True
         if ok:
             active.append(label)

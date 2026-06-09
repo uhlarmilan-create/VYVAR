@@ -45,7 +45,7 @@ def estimate_fwhm(data: np.ndarray, xs: np.ndarray, ys: np.ndarray, box: int = 1
     half = box // 2
     ny, nx = data.shape
     out: list[float] = []
-    for x, y in zip(xs, ys):
+    for x, y in zip(xs, ys, strict=True):
         xi, yi = int(round(x)), int(round(y))
         if xi - half < 0 or yi - half < 0 or xi + half >= nx or yi + half >= ny:
             continue

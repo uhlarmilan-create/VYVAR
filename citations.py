@@ -27,9 +27,7 @@ _FIELD = re.compile(
 
 def _strip_bib_value(raw: str) -> str:
     s = str(raw or "").strip().rstrip(",")
-    if len(s) >= 2 and s[0] == "{" and s[-1] == "}":
-        s = s[1:-1]
-    elif len(s) >= 2 and s[0] == '"' and s[-1] == '"':
+    if len(s) >= 2 and s[0] == "{" and s[-1] == "}" or len(s) >= 2 and s[0] == '"' and s[-1] == '"':
         s = s[1:-1]
     return (
         s.replace(r"\&", "&")

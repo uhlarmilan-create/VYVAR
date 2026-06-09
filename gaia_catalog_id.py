@@ -120,6 +120,20 @@ def normalize_gaia_source_id(val) -> str:
     return s
 
 
+def norm_id_or_empty(x: Any) -> str:
+    """Normalize a catalog_id-like value to Gaia decimal string, or \"\" if empty/nan/none."""
+    s = str(x or "").strip()
+    if not s or s.lower() in ("nan", "none"):
+        return ""
+    try:
+        return normalize_gaia_source_id(s)
+    except Exception:  # noqa: BLE001
+        try:
+            return str(int(float(s)))
+        except (ValueError, TypeError):
+            return s
+
+
 def normalize_gaia_source_id_series(s: pd.Series) -> pd.Series:
     return s.map(normalize_gaia_source_id).astype(object)
 

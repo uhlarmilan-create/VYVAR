@@ -1059,20 +1059,20 @@ def _variability_crossmatch_dialog_body() -> None:
                     col2.metric(
                         "PDM",
                         f"{float(getattr(sector, 'period_pdm', None)):.6f} d"
-                        if getattr(sector, "period_pdm", None) is not None and np.isfinite(float(getattr(sector, "period_pdm")))
+                        if getattr(sector, "period_pdm", None) is not None and np.isfinite(float(sector.period_pdm))
                         else "—",
                     )
                     col3.metric(
                         "BLS",
                         f"{float(getattr(sector, 'period_bls', None)):.6f} d"
-                        if getattr(sector, "period_bls", None) is not None and np.isfinite(float(getattr(sector, "period_bls")))
+                        if getattr(sector, "period_bls", None) is not None and np.isfinite(float(sector.period_bls))
                         else "—",
                     )
                     col4.metric(
                         "Consensus ★",
                         f"{float(getattr(sector, 'period_consensus', None)):.6f} d"
                         if getattr(sector, "period_consensus", None) is not None
-                        and np.isfinite(float(getattr(sector, "period_consensus")))
+                        and np.isfinite(float(sector.period_consensus))
                         else "—",
                         delta=str(getattr(sector, "period_method_used", "lomb-scargle") or "lomb-scargle"),
                         delta_color="off",
@@ -1490,11 +1490,10 @@ def render_variability_dashboard(
         )
         m2.metric(
             "RMS candidates",
-            f"{n_combined}",
+            f"{n_rms_candidates}",
             help=(
-                "Final candidates in the table below (combined RMS/VDI, edge_ok, excludes known VSX "
-                "and catalog_only) — matches variability_candidates.csv export count, not raw "
-                "flux-matrix RMS flag count."
+                "Stars flagged by the RMS hockey-stick test, excluding known VSX. "
+                "The combined RMS/VDI export count is the 'Combined' metric."
             ),
         )
         m3.metric(
@@ -1604,7 +1603,7 @@ def render_variability_dashboard(
                 LOGGER.debug("[VARIABILITY] TESS auto-branch guard (non-critical): %s", exc)
 
         missing = [
-            c for c in candidates if str(c) not in {str(k) for k in bullets_map.keys()}
+            c for c in candidates if str(c) not in {str(k) for k in bullets_map}
         ]
 
         if missing and "crossmatch_auto_done" not in st.session_state:
@@ -1685,7 +1684,7 @@ def render_variability_dashboard(
                         "[TESS] auto-TESS preskočený — žiadny kandidát v variability_candidates.csv "
                         "(alebo CSV chýba)"
                     )
-                _done_tess = {str(k) for k in (tess_results or {}).keys()}
+                _done_tess = {str(k) for k in (tess_results or {})}
                 _tess_photo = Path(str(photometry_dir)) if photometry_dir else None
 
                 def _tess_result_json_on_disk(scid: str) -> bool:

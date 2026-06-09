@@ -998,9 +998,7 @@ def _vyvar_apply_smart_plan_flat_fallbacks(plan: Any) -> None:
     for gk, g in ogs.items():
         fln = g["filter"]
         pth = mf.get(gk)
-        if fln not in mfb:
-            mfb[fln] = pth
-        elif pth is not None and mfb[fln] is None:
+        if fln not in mfb or pth is not None and mfb[fln] is None:
             mfb[fln] = pth
     plan.masterflat_by_filter = mfb
 
@@ -2307,7 +2305,7 @@ def render_live_view(
                     opts: list[str] = ["__skip__"] + [str(a) for a in alts]
                     og = ogroups
 
-                    def _fmt(v: str) -> str:
+                    def _fmt(v: str, og=og) -> str:
                         if v == "__skip__":
                             return "Skip (non_calibrated for this group)"
                         gg = og.get(v, {})

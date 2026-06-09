@@ -56,7 +56,7 @@ def _alignment_as_alignment_points(
         ):
             pts = np.transpose((sources["xcentroid"], sources["ycentroid"]))  # type: ignore[index]
         elif hasattr(sources, "dtype") and getattr(sources.dtype, "names", None):
-            names = set(getattr(sources.dtype, "names") or ())
+            names = set(sources.dtype.names or ())
             if "xcentroid" in names and "ycentroid" in names:
                 pts = np.transpose((sources["xcentroid"], sources["ycentroid"]))  # type: ignore[index]
             else:
@@ -348,7 +348,6 @@ def _alignment_compute_one_frame(
     platesolve_dir = Path(ctx["platesolve_dir"])
     align_star_cap = int(ctx["align_star_cap"])
     min_detected_stars = int(ctx["min_detected_stars"])
-    max_detected_stars = int(ctx["max_detected_stars"])
     fb_align = float(ctx["fb_align"])
     rotation_ref_angle_deg = ctx.get("rotation_ref_angle_deg")
 

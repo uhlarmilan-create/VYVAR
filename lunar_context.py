@@ -81,22 +81,12 @@ def _lunar_risk_from_metrics(
     elif phase < 10.0:
         risk = "LOW"
         reason = f"New moon ({phase:.0f}% illuminated)"
-    elif phase >= 10.0 and sep < 20.0:
+    elif (phase >= 10.0 and sep < 20.0) or (phase >= 40.0 and sep < 45.0):
         risk = "HIGH"
         reason = (
             f"Moon {sep:.0f}° from field, {phase:.0f}% illuminated, {alt:.0f}° altitude"
         )
-    elif phase >= 40.0 and sep < 45.0:
-        risk = "HIGH"
-        reason = (
-            f"Moon {sep:.0f}° from field, {phase:.0f}% illuminated, {alt:.0f}° altitude"
-        )
-    elif phase >= 40.0 and sep < 90.0:
-        risk = "MEDIUM"
-        reason = (
-            f"Moon {sep:.0f}° from field, {phase:.0f}% illuminated, {alt:.0f}° altitude"
-        )
-    elif phase >= 10.0 and sep < 45.0:
+    elif (phase >= 40.0 and sep < 90.0) or (phase >= 10.0 and sep < 45.0):
         risk = "MEDIUM"
         reason = (
             f"Moon {sep:.0f}° from field, {phase:.0f}% illuminated, {alt:.0f}° altitude"

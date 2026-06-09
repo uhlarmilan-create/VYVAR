@@ -367,7 +367,7 @@ def normalize_flat_master(
         )
         labels = (f"[0,0]={pat[0]}", f"[0,1]={pat[1]}", f"[1,0]={pat[2]}", f"[1,1]={pat[3]}")
         medians: list[float] = []
-        for sl, lab in zip(slices, labels):
+        for sl, lab in zip(slices, labels, strict=True):
             mv = float(np.nanmedian(sl))
             medians.append(mv)
             if np.isfinite(mv) and mv > 0:

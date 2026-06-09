@@ -110,7 +110,7 @@ def _fetch_gaia_columns_by_source_id(
             ph = ",".join("?" * len(chunk))
             q = f"SELECT {sel} FROM {table} WHERE source_id IN ({ph});"
             for row in conn.execute(q, chunk):
-                d = {k: row[k] for k in row.keys()}
+                d = {k: row[k] for k in row}
                 sid0 = d.get("source_id")
                 if sid0 is None:
                     continue

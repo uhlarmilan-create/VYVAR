@@ -287,7 +287,7 @@ def _focal_header_in_mm(header: Any) -> Any:
         if v is not None:
             f = float(v)
             if 0.0 < f < 25.0:  # metres (e.g. 1.2 -> 1200 mm); 25mm lens is the smallest realistic
-                patched = dict(header) if not isinstance(header, dict) else dict(header)
+                patched = dict(header)
                 patched["FOCALLEN"] = f * 1000.0
                 return patched
     except (TypeError, ValueError):

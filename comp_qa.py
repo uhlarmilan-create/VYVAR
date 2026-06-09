@@ -50,7 +50,6 @@ def main() -> int:
     if summ_path.is_file() and not tgt_df.empty:
         summ = pd.read_csv(summ_path, dtype={"catalog_id": str})
         summ["catalog_id"] = summ["catalog_id"].astype(str).str.strip()
-        lc_map = dict(zip(tgt_df["target_catalog_id"], tgt_df["n_clean"]))
         tgt_df = tgt_df.merge(
             summ[["catalog_id", "lc_rms"]].rename(columns={"catalog_id": "target_catalog_id"}),
             on="target_catalog_id",

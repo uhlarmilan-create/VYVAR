@@ -100,11 +100,11 @@ def _latest_report_pdf(draft_dir: Path, obs_group: str) -> Path | None:
     """Return newest PDF report for this setup (``report_{setup}.pdf`` or legacy glob)."""
     try:
         d = Path(draft_dir) / "platesolve" / str(obs_group) / "photometry"
-        primary = d / f"report_{str(obs_group)}.pdf"
+        primary = d / f"report_{obs_group!s}.pdf"
         if primary.exists():
             return primary
         legacy_dir = Path(draft_dir) / "platesolve" / str(obs_group)
-        pat = f"VYVAR_report_{str(obs_group)}_*.pdf"
+        pat = f"VYVAR_report_{obs_group!s}_*.pdf"
         candidates = list(legacy_dir.glob(pat))
         if not candidates:
             return None
@@ -1282,7 +1282,7 @@ def render_aperture_photometry(
                     if missing:
                         raise FileNotFoundError(", ".join(missing))
 
-                    def _cb(msg: str) -> None:
+                    def _cb(msg: str, nm=nm) -> None:
                         vyvar_footer_running("Aperture Photometry", f"{nm}: {msg}")
 
                     _ = run_full_photometry_pipeline(
@@ -1415,7 +1415,7 @@ def render_aperture_photometry(
 
                 _vsx_db_ap = str(getattr(cfg, "vsx_local_db_path", "") or "").strip() or None
                 bullets_map = st.session_state.get("var_catalog_bullets", {})
-                missing = [c for c in candidates if str(c) not in {str(k) for k in bullets_map.keys()}]
+                missing = [c for c in candidates if str(c) not in {str(k) for k in bullets_map}]
                 if missing:
                     pb = st.progress(0, text="Running catalog crossmatch...")
                     xr = st.session_state.setdefault("var_crossmatch_results", {})
@@ -1474,7 +1474,7 @@ def render_aperture_photometry(
             )
             _memory_cids = [str(x).strip() for x in candidates if str(x).strip()]
             _cid_rows = tess_catalog_ids_for_auto_run(draft_dir, _obs_for_tess, _memory_cids)
-            _done_tess = {str(k) for k in (tess_results or {}).keys()}
+            _done_tess = {str(k) for k in (tess_results or {})}
             to_tess = [
                 c
                 for c in _cid_rows

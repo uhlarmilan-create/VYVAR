@@ -1215,9 +1215,7 @@ def smart_scan_source(
     for gk, g in observation_groups.items():
         fln = g["filter"]
         pth = masterflat_by_obs_key.get(gk)
-        if fln not in masterflat_by_filter:
-            masterflat_by_filter[fln] = pth
-        elif pth is not None and masterflat_by_filter[fln] is None:
+        if fln not in masterflat_by_filter or (pth is not None and masterflat_by_filter[fln] is None):
             masterflat_by_filter[fln] = pth
 
     missing_flat_filters: list[str] = sorted(

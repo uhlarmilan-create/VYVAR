@@ -15,6 +15,16 @@ import pandas as pd
 
 LOGGER = logging.getLogger(__name__)
 
+
+def norm_med_for_bin(b: int, bin_meds: dict, bin_keys: np.ndarray) -> float:
+    bi = int(b)
+    if bi in bin_meds:
+        return float(bin_meds[bi])
+    if len(bin_keys) == 0:
+        return float("nan")
+    ck = int(bin_keys[int(np.argmin(np.abs(bin_keys - bi)))])
+    return float(bin_meds[ck])
+
 _POOL_USECOLS: list[str] = [
     "name",
     "catalog_id",
@@ -204,17 +214,9 @@ def compute_global_pool_rms_map(
 
             if bin_meds:
                 _bin_keys = np.fromiter(bin_meds.keys(), dtype=np.int64)
-
-                def _norm_med_for_bin(b: int) -> float:
-                    bi = int(b)
-                    if bi in bin_meds:
-                        return float(bin_meds[bi])
-                    if len(_bin_keys) == 0:
-                        return float("nan")
-                    ck = int(_bin_keys[int(np.argmin(np.abs(_bin_keys - bi)))])
-                    return float(bin_meds[ck])
-
-                sub_work["_norm_med"] = sub_work["_mag_bin"].map(_norm_med_for_bin)
+                sub_work["_norm_med"] = sub_work["_mag_bin"].map(
+                    lambda b: norm_med_for_bin(b, bin_meds, _bin_keys)
+                )
             else:
                 sub_work["_norm_med"] = float(frame_med)
 

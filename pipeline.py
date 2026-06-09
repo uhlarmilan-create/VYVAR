@@ -102,6 +102,7 @@ from vyvar_platesolver import (
     _fits_header_parse_ra_deg,
     pointing_hint_from_header as _pointing_hint_from_header,
 )
+import itertools
 
 # Aperturná fotometria Fáz 0–2A (active_targets.csv, zone_flag, skip_photometry) je v ``photometry_core``
 # — ``run_phase0_and_phase1`` / ``run_phase2a``, nie v tomto súbore.
@@ -655,7 +656,7 @@ def _dark_np_for_calibration_path(
     if p is None or not p.is_file():
         return None
     _mb_key = "hdr" if master_binning is None else str(int(master_binning))
-    key = f"{str(p.resolve())}|b{int(light_binning)}|mb{_mb_key}"
+    key = f"{p.resolve()!s}|b{int(light_binning)}|mb{_mb_key}"
     if key not in dark_cache:
         pm = get_processed_master(
             p,
@@ -5891,7 +5892,7 @@ def write_photometry_plan_files(
                             best = sub20.sort_values("_sep_arcsec", ascending=True).iloc[0]
 
                         # Gaia ID (prefer catalog_id if present, else source_id)
-                        raw_id = best.get("catalog_id", None) if isinstance(best, dict) else best.get("catalog_id", None)
+                        raw_id = best.get("catalog_id", None)
                         if raw_id is None or str(raw_id).strip() == "":
                             raw_id = best.get("source_id", None)
                         gid = _norm_gaia_id(raw_id)
@@ -6126,7 +6127,8 @@ def _sync_comparison_stars_across_setups(platesolve_root: Path) -> None:
                 )
             except Exception:  # noqa: BLE001
                 pass
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[PIPE] comparison-star sync across setups skipped: %s", exc)
         return
 
 
@@ -6277,14 +6279,12 @@ def _dao_targeted_pass2_unmatched_gaia(
     from photutils.detection import DAOStarFinder  # type: ignore
 
     if cat_df is None or cat_df.empty or "ra_deg" not in cat_df.columns or "dec_deg" not in cat_df.columns:
-        n0 = int(len(tbl_pass1)) if tbl_pass1 is not None else 0
         return tbl_pass1, 0, 0
 
     ra = pd.to_numeric(cat_df["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
     de = pd.to_numeric(cat_df["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
     ok = np.isfinite(ra) & np.isfinite(de)
     if not bool(ok.any()):
-        n0 = int(len(tbl_pass1)) if tbl_pass1 is not None else 0
         return tbl_pass1, 0, 0
 
     gx, gy = wcs_obj.world_to_pixel_values(ra[ok], de[ok])
@@ -6293,7 +6293,6 @@ def _dao_targeted_pass2_unmatched_gaia(
     gy = gy[inb]
     n_gaia_in = int(gx.size)
     if n_gaia_in == 0:
-        n0 = int(len(tbl_pass1)) if tbl_pass1 is not None else 0
         return tbl_pass1, 0, 0
 
     match_r_px = _catalog_match_radius_px(wcs_obj, match_sep_arcsec=float(match_sep_arcsec), wpx=wpx, h=h)
@@ -6316,7 +6315,6 @@ def _dao_targeted_pass2_unmatched_gaia(
 
     n_unmatched = len(unmatched_idx)
     if n_unmatched == 0:
-        n0 = int(len(tbl_pass1)) if tbl_pass1 is not None else 0
         return tbl_pass1, 0, 0
 
     sigma_p2 = max(1.5, min(20.0, float(pass2_sigma)))
@@ -7767,7 +7765,7 @@ def detect_stars_and_match_catalog(
             empty_cid = cid_st.eq("").to_numpy()
             cat_lab = np.where(cat_st.ne("").to_numpy(), cat_sel, "CAT")
             name_fb = np.array(
-                [f"{str(cat_lab[i])}_{int(idx_det[i]):04d}" for i in range(n)],
+                [f"{cat_lab[i]!s}_{int(idx_det[i]):04d}" for i in range(n)],
                 dtype=object,
             )
             name_cand = np.where(empty_cid, name_fb, cid_st.to_numpy())
@@ -8308,7 +8306,8 @@ def _prefetch_export_shared_catalog_for_process_pool(
                         naxis2=int(h_i),
                         plate_solve_fov_deg=plate_solve_fov_deg,
                     )
-                except Exception:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001
+                    LOGGER.debug("[PIPE] shared-catalog prefetch write skipped: %s", exc)
                     pass
 
         if v_df is None or getattr(v_df, "empty", True):
@@ -9342,7 +9341,8 @@ def export_per_frame_catalogs(
                             naxis2=int(naxis2),
                             plate_solve_fov_deg=_pfov_res,
                         )
-                    except Exception:  # noqa: BLE001
+                    except Exception as exc:  # noqa: BLE001
+                        LOGGER.debug("[PIPE] cone/variables CSV write failed: %s", exc)
                         pass
             if vsx_df is None or getattr(vsx_df, "empty", True):
                 _vsx_p2: Path | None = None
@@ -13430,9 +13430,7 @@ def _calibrate_one_light_apply_masters_in_ram(
         )
 
     md_data: np.ndarray | None = md_data_preload
-    if _mb_lib is None:
-        md_data = None
-    elif md_data is not None and md_data.shape != data.shape:
+    if _mb_lib is None or (md_data is not None and md_data.shape != data.shape):
         md_data = None
     if md_data is not None and master_dark_path is not None and master_dark_path.exists():
         if _mb_lib != light_bx:
@@ -13481,7 +13479,7 @@ def _calibrate_one_light_apply_masters_in_ram(
             if p_f.is_file():
                 mf_path = p_f
     if mf_path is not None and mf_path.exists() and used_dark:
-        key = f"{flt}|{str(mf_path)}|lb{light_bx}"
+        key = f"{flt}|{mf_path!s}|lb{light_bx}"
         if key not in fc:
             pmf = get_processed_master(
                 mf_path,
@@ -13555,7 +13553,7 @@ def _calibrate_one_light_apply_masters_in_ram(
         hdr["VY_MFP"] = (str(Path(mf_path).name)[:68], "MasterFlat filename")
     if used_flat:
         try:
-            key_m = f"{flt}|{str(mf_path)}|lb{light_bx}"
+            key_m = f"{flt}|{mf_path!s}|lb{light_bx}"
             hdr["VY_FLATM"] = (
                 float(fms[key_m]),
                 "Median ADU of master flat at target resample before normalize-to-1 (legacy: before pipeline division)",
@@ -15503,7 +15501,7 @@ def scan_calibrated_lights_pointing(
                 return None
             cuts = [0] + break_positions + [len(pts)]
             segments: list[dict[str, Any]] = []
-            for a, b in zip(cuts[:-1], cuts[1:], strict=False):
+            for a, b in itertools.pairwise(cuts):
                 seg = pts[a:b]
                 if len(seg) < int(min_segment_size):
                     continue
@@ -15802,7 +15800,6 @@ def extract_fits_metadata(
                 _apply_draft_combined_to_pipeline_meta(meta, comb)
             return meta
 
-    cfg = app_config or AppConfig()
     _fpu: float | None = None
     if force_physical_pixel_um is not None:
         try:
@@ -16533,7 +16530,7 @@ def detect_field_jumps(
     # Split into groups using jump boundaries.
     boundaries = [0] + [int(j["frame_index"]) for j in jump_indices] + [total]
     groups: list[dict[str, Any]] = []
-    for gid, (start, end) in enumerate(zip(boundaries[:-1], boundaries[1:]), 1):
+    for gid, (start, end) in enumerate(itertools.pairwise(boundaries), 1):
         n = int(end - start)
         groups.append(
             {

@@ -529,6 +529,7 @@ def render_quality_dashboard(
             for rp, p in zip(
                 raw_paths,
                 [_resolve_light_fits_for_quality_inspection(ap, rp) for rp in raw_paths],
+                strict=False,
             )
         ]
     else:
@@ -916,8 +917,8 @@ def render_quality_dashboard(
 
         _opts = [str(p) for p in _cand_df["Filename"].tolist()]
         _paths = [str(p) for p in _top5["_preview"].tolist()]
-        _paths_by_name = dict(zip(_opts, _paths))
-        _db_paths_by_name = dict(zip(_opts, [str(p) for p in _top5["FILE_PATH"].tolist()]))
+        _paths_by_name = dict(zip(_opts, _paths, strict=False))
+        _db_paths_by_name = dict(zip(_opts, [str(p) for p in _top5["FILE_PATH"].tolist()], strict=False))
         _default_name = str(_opts[0]) if _opts else ""
         pick_name = st.selectbox(
             "Pre-selected MASTERSTAR candidate (from table):",

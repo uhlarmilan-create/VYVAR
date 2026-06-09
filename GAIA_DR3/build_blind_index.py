@@ -101,7 +101,7 @@ def triangle_hash_batch(
     d02 = np.linalg.norm(p0 - p2, axis=1)
     sides = np.sort(np.stack([d01, d12, d02], axis=1), axis=1)
     L1, L2, L3 = sides[:, 0], sides[:, 1], sides[:, 2]
-    ok = (L3 >= 1e-8) & (L1 / L3 >= min_ratio)
+    ok = (L3 >= 1e-8) & (min_ratio <= L1 / L3)
     L3_arcsec = L3 * (180.0 / math.pi) * 3600.0
     ok &= L3_arcsec >= 0.1
     r1 = np.zeros_like(L3)

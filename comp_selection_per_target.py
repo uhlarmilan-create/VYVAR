@@ -14,7 +14,7 @@ from typing import AbstractSet, Any, Callable
 import numpy as np
 import pandas as pd
 
-from comp_pool_rms import sort_per_frame_csv_paths
+from comp_pool_rms import norm_med_for_bin, sort_per_frame_csv_paths
 from config import AppConfig
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
@@ -153,7 +153,6 @@ def _resolve_target_color_for_comp_selection(
 
     # If bp_rp is missing in the row, try to fetch it (and teff) from Gaia SQLite by source_id.
     g_bp_rp = float("nan")
-    g_teff = float("nan")
     if _sid and _sid.isdigit() and _gdb and os.path.exists(_gdb):
         try:
             import sqlite3  # noqa: PLC0415
@@ -165,8 +164,6 @@ def _resolve_target_color_for_comp_selection(
                 want = []
                 if "bp_rp" in cols:
                     want.append("bp_rp")
-                if "teff_gspphot" in cols:
-                    want.append("teff_gspphot")
                 if want:
                     row = con.execute(
                         f"SELECT {', '.join(want)} FROM gaia_dr3 WHERE source_id=? LIMIT 1;",
@@ -178,11 +175,6 @@ def _resolve_target_color_for_comp_selection(
                                 g_bp_rp = float(row["bp_rp"])
                             except (TypeError, ValueError):
                                 g_bp_rp = float("nan")
-                        if "teff_gspphot" in want and row.get("teff_gspphot") is not None:
-                            try:
-                                g_teff = float(row["teff_gspphot"])
-                            except (TypeError, ValueError):
-                                g_teff = float("nan")
             finally:
                 con.close()
         except Exception:  # noqa: BLE001
@@ -207,8 +199,6 @@ def _resolve_target_color_for_comp_selection(
                     sel = ["source_id"]
                     if "bp_rp" in cols:
                         sel.append("bp_rp")
-                    if "teff_gspphot" in cols:
-                        sel.append("teff_gspphot")
                     if sel:
                         q = (
                             f"SELECT {', '.join(sel)} FROM gaia_dr3 "
@@ -231,16 +221,11 @@ def _resolve_target_color_for_comp_selection(
                             ),
                         ).fetchone()
                         if row is not None:
-                            if "bp_rp" in row.keys() and row["bp_rp"] is not None:
+                            if "bp_rp" in row and row["bp_rp"] is not None:
                                 try:
                                     g_bp_rp = float(row["bp_rp"])
                                 except (TypeError, ValueError):
                                     g_bp_rp = float("nan")
-                            if "teff_gspphot" in row.keys() and row["teff_gspphot"] is not None:
-                                try:
-                                    g_teff = float(row["teff_gspphot"])
-                                except (TypeError, ValueError):
-                                    g_teff = float("nan")
                 finally:
                     con.close()
         except Exception as exc:  # noqa: BLE001
@@ -860,6 +845,7 @@ def _accumulate_per_frame_comp_metrics(
                 continue
 
             mag_col_frame = "mag" if "mag" in sub.columns else None
+            frame_med = float("nan")
             if mag_col_frame and mag_col_frame in sub.columns:
                 sub = sub.copy()
                 sub["_mag_num"] = pd.to_numeric(sub[mag_col_frame], errors="coerce")
@@ -888,17 +874,9 @@ def _accumulate_per_frame_comp_metrics(
 
                 if bin_meds:
                     _bin_keys = np.fromiter(bin_meds.keys(), dtype=np.int64)
-
-                    def _norm_med_for_bin(b: int) -> float:
-                        bi = int(b)
-                        if bi in bin_meds:
-                            return float(bin_meds[bi])
-                        if len(_bin_keys) == 0:
-                            return float("nan")
-                        ck = int(_bin_keys[int(np.argmin(np.abs(_bin_keys - bi)))])
-                        return float(bin_meds[ck])
-
-                    sub_work["_norm_med"] = sub_work["_mag_bin"].map(_norm_med_for_bin)
+                    sub_work["_norm_med"] = sub_work["_mag_bin"].map(
+                        lambda b: norm_med_for_bin(b, bin_meds, _bin_keys)
+                    )
                 else:
                     sub_work["_norm_med"] = float(frame_med)
 
@@ -979,7 +957,9 @@ def _accumulate_per_frame_comp_metrics(
             else:
                 _bin_keys = np.fromiter(bin_meds.keys(), dtype=np.int64) if bin_meds else np.array([], dtype=np.int64)
 
-                def _norm_med_for_bin_row(mag_num: float) -> float:
+                def _norm_med_for_bin_row(
+                    mag_num: float, bin_meds=bin_meds, _bin_keys=_bin_keys, frame_med=frame_med
+                ) -> float:
                     if bin_meds:
                         b = int(mag_num / 0.5) if math.isfinite(mag_num) else -1
                         if b in bin_meds:
@@ -1723,10 +1703,10 @@ def _assign_comp_tiers_to_pool(
             .astype(str)
             .str.strip()
         )
-        comp_bprp_map = dict(zip(_id_ser.tolist(), _bprp_map.tolist()))
-        comp_tier_final_map = dict(zip(_id_ser.tolist(), _tier_map_final.tolist()))
-        comp_delta_bprp_map = dict(zip(_id_ser.tolist(), _delta_bprp_map.tolist()))
-        comp_color_tier_src_map = dict(zip(_id_ser.tolist(), _cts.tolist()))
+        comp_bprp_map = dict(zip(_id_ser.tolist(), _bprp_map.tolist(), strict=True))
+        comp_tier_final_map = dict(zip(_id_ser.tolist(), _tier_map_final.tolist(), strict=True))
+        comp_delta_bprp_map = dict(zip(_id_ser.tolist(), _delta_bprp_map.tolist(), strict=True))
+        comp_color_tier_src_map = dict(zip(_id_ser.tolist(), _cts.tolist(), strict=True))
     except Exception:  # noqa: BLE001
         comp_bprp_map = {}
         comp_tier_final_map = {}

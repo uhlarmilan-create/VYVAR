@@ -9,7 +9,7 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, ClassVar, Iterable
 
 from astropy.io import fits
 
@@ -26,6 +26,9 @@ _VERIFY_GAIA_BRIGHT_CACHE: dict[tuple[str, float], tuple[list[float], list[float
 _GAIA_DB_GMAG_MAX_CACHE: dict[str, float] = {}
 
 LOGGER = logging.getLogger(__name__)
+
+_EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "SCANNING", "LOCATION"})
+_EDITABLE_DEFAULT_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
 
 
 def get_gaia_db_max_g_mag(db_path: str | Path) -> float:
@@ -1213,9 +1216,8 @@ class VyvarDatabase:
         """
         import pandas as pd_local
 
-        allowed = {"EQUIPMENTS", "TELESCOPE", "SCANNING", "LOCATION"}
-        if table not in allowed:
-            raise ValueError(f"Table not allowed for universal editor: {table}")
+        if table not in _EDITABLE_EDITOR_TABLES:
+            raise ValueError(f"Refusing to edit non-allowlisted table: {table!r}")
         if pk_col != "ID":
             raise ValueError("Expected primary key column ID.")
 
@@ -1329,7 +1331,7 @@ class VyvarDatabase:
                         changes[col] = nv
                 if not changes:
                     continue
-                set_sql = ", ".join(f"{k} = ?" for k in changes.keys())
+                set_sql = ", ".join(f"{k} = ?" for k in changes)
                 params = list(changes.values()) + [pid]
                 self.conn.execute(f"UPDATE {table} SET {set_sql} WHERE {pk_col} = ?;", params)
                 updated += 1
@@ -2361,7 +2363,7 @@ class VyvarDatabase:
     #: Designated default rows for the reference tables (Phase 2). These are the
     #: EXPLICIT user markers seeded once; they are NOT a silent ``id=1`` fallback.
     #: Equipment=QHY294MM(1), Telescope=Carl-Zeiss 200mm(1), Location=Jirny(2).
-    _DEFAULT_SEED_IDS: dict[str, int] = {
+    _DEFAULT_SEED_IDS: ClassVar[dict[str, int]] = {
         "EQUIPMENTS": 1,
         "TELESCOPE": 1,
         "LOCATION": 2,
@@ -2422,9 +2424,8 @@ class VyvarDatabase:
 
     def set_table_default(self, table: str, row_id: int) -> None:
         """Mark ``row_id`` as the single ``IS_DEFAULT = 1`` row in ``table`` (exclusive)."""
-        allowed = {"EQUIPMENTS", "TELESCOPE", "LOCATION"}
-        if table not in allowed:
-            raise ValueError(f"set_table_default: table not allowed: {table}")
+        if table not in _EDITABLE_DEFAULT_TABLES:
+            raise ValueError(f"Refusing to edit non-allowlisted table: {table!r}")
         try:
             self.conn.execute("BEGIN;")
             self.conn.execute(

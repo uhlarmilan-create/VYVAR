@@ -76,7 +76,6 @@ def load_dao(proc_dir: Path, ids: set[str]):
         sub = df[df["catalog_id"].isin(ids)]
         if sub.empty:
             continue
-        sf = sub["source_file"] if "source_file" in sub.columns else Path(fp).name
         for _, r in sub.iterrows():
             rows.append((r.get("source_file", Path(fp).name), r["catalog_id"], r["dao_flux"]))
     return pd.DataFrame(rows, columns=["frame", "source_id", "dao_flux"]) if rows else None
@@ -97,7 +96,6 @@ def main():
     root = Path(args.detrended_aligned).expanduser()
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     proc_dir = Path(args.proc_dir).expanduser() if args.proc_dir else root
-    PS = 9.768
 
     from astropy.io import fits as pyfits
     from astropy.wcs import WCS
@@ -182,12 +180,12 @@ def main():
         try: mjd = Time(hdr.get("DATE-OBS"), format="isot").mjd
         except Exception: mjd = np.nan
         times.append(mjd)
-        for sid, v in zip(sids, fp_s): rows_p.append((fp.name, mjd, sid, float(v)))
+        for sid, v in zip(sids, fp_s, strict=True): rows_p.append((fp.name, mjd, sid, float(v)))
         if HAVE_SEP:
             ds = d - sep.Background(d).back()
             xw, yw, _ = sep.winpos(ds, x0, y0, sig)
             fs, _, _ = sep.sum_circle(ds, xw, yw, r_small)
-            for sid, v in zip(sids, fs): rows_s.append((fp.name, sid, float(v)))
+            for sid, v in zip(sids, fs, strict=True): rows_s.append((fp.name, sid, float(v)))
         if (k+1) % 25 == 0 or k == len(lights)-1: log(f"  {k+1}/{len(lights)}")
     P = pd.DataFrame(rows_p, columns=["frame", "mjd", "source_id", "phot"])
     S = pd.DataFrame(rows_s, columns=["frame", "source_id", "sep"]) if HAVE_SEP else None
@@ -204,8 +202,8 @@ def main():
     # per-target decomposition
     if have_vyvar and target_comps:
         srows = []
-        lc_map = dict(zip(summ["catalog_id"], summ.get("lc_rms", pd.Series())))
-        vsx_map = dict(zip(summ["catalog_id"], summ.get("vsx_name", pd.Series())))
+        lc_map = dict(zip(summ["catalog_id"], summ.get("lc_rms", pd.Series()), strict=False))
+        vsx_map = dict(zip(summ["catalog_id"], summ.get("vsx_name", pd.Series()), strict=False))
         for tid, cs in target_comps.items():
             t_p = sclip_std(diff_series(wp, tid, cs)) if tid in wp.columns else np.nan
             t_s = sclip_std(diff_series(ws, tid, cs)) if (HAVE_SEP and tid in ws.columns) else np.nan

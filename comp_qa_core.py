@@ -11,6 +11,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from gaia_catalog_id import norm_id_or_empty as _normalize_id
 from proc_frame_store import list_proc_csvs
 
 LOGGER = logging.getLogger(__name__)
@@ -253,21 +254,6 @@ def load_proc_pivot(proc_dir: Path, ids: set[str]) -> tuple[pd.DataFrame, pd.Dat
     return flux_w, time_df
 
 
-def _normalize_id(x: Any) -> str:
-    s = str(x or "").strip()
-    if not s or s.lower() in ("nan", "none"):
-        return ""
-    try:
-        from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
-
-        return normalize_gaia_source_id(s)
-    except Exception:  # noqa: BLE001
-        try:
-            return str(int(float(s)))
-        except (ValueError, TypeError):
-            return s
-
-
 def compute_comp_qa(
     *,
     photometry_dir: Path,
@@ -432,7 +418,7 @@ def compute_comp_qa(
         n_flag_t = 0
         comp_payload: dict[str, dict[str, Any]] = {}
         for cid in td["pool"]:
-            peers = surv_final if cid in surv_final else surv_final
+            peers = surv_final
             m = loo_diff_series(td["mag"], cid, peers)
             idx = sokolovsky_indices(m)
             row = td["comp_rows"].get(cid)

@@ -19,6 +19,7 @@ from astropy.modeling.fitting import LevMarLSQFitter
 from astropy.modeling.models import Const2D, Moffat2D
 from astropy.nddata import NDData
 from astropy.table import Table
+from masterstar_context import header_core_fwhm_px
 from photutils.psf import (
     EPSFBuilder,
     EPSFStars,
@@ -183,17 +184,14 @@ def get_epsf_fwhm_from_context(
     db: VyvarDatabase,
     draft_id: int,
 ) -> float:
-    """Return FWHM in pixels for EPSFBuilder (VY_FWHM header → OBS_FILES median → 4.5), clamped to [2, 12]."""
+    """Return FWHM in pixels for EPSFBuilder (VY_FWHM_GAUSS -> VY_FWHM_GAUSSIAN -> VY_FWHM header
+    -> OBS_FILES median -> 4.5), clamped to [2, 12]."""
     fwhm: float | None = None
     p = Path(masterstar_fits_path)
     try:
         if p.is_file():
             with fits.open(p, memmap=True) as hdul:
-                hdr = hdul[0].header
-                if "VY_FWHM" in hdr:
-                    raw = float(hdr["VY_FWHM"])
-                    if math.isfinite(raw) and raw > 0.0:
-                        fwhm = raw
+                fwhm = header_core_fwhm_px(hdul[0].header)
     except Exception:  # noqa: BLE001
         fwhm = None
 
@@ -1182,7 +1180,7 @@ def _epsf_prepare_stars(
         else:
             _ra_arr = psf_stars_df["ra_deg"].to_numpy(dtype=float)
             _dec_arr = psf_stars_df["dec_deg"].to_numpy(dtype=float)
-            for i, row in psf_stars_df.iterrows():
+            for _, row in psf_stars_df.iterrows():
                 ra_i = float(row["ra_deg"])
                 de_i = float(row["dec_deg"])
                 if not (math.isfinite(ra_i) and math.isfinite(de_i)):
@@ -1640,8 +1638,6 @@ def fit_moffat_psf_stars(
             _cs += 1
         cutout_size = _cs
 
-    fit_shape = _fit_shape_for_cutout(int(cutout_size), fwhm_px=float(fwhm_guess_px))
-
     _alpha_init = float(fix_alpha) if fix_alpha is not None else 3.5
     try:
         _gamma_init = float(
@@ -2040,9 +2036,7 @@ def assess_psf_quality(
     """
     sev = 0  # 0 good, 1 marginal, 2 bad
     t = _PSF_QUALITY_THRESH
-    if chi2 is None or not math.isfinite(chi2):
-        sev = max(sev, 2)
-    elif chi2 >= chi2_bad:
+    if chi2 is None or not math.isfinite(chi2) or chi2 >= chi2_bad:
         sev = max(sev, 2)
     elif chi2 >= t["chi2_marginal"]:
         sev = max(sev, 1)
@@ -2063,13 +2057,9 @@ def assess_psf_quality(
         _contam = (nn_delta_mag is None) or (
             math.isfinite(nn_delta_mag) and nn_delta_mag <= t["nn_contam_dmag"]
         )
-        if nn_dist_fwhm < t["nn_bad_fwhm"]:
+        if nn_dist_fwhm < t["nn_bad_fwhm"] or _contam and nn_dist_fwhm < t["nn_blend_fwhm"]:
             sev = max(sev, 2)
-        elif _contam and nn_dist_fwhm < t["nn_blend_fwhm"]:
-            sev = max(sev, 2)
-        elif nn_dist_fwhm < t["nn_marginal_fwhm"]:
-            sev = max(sev, 1)
-        elif _contam and nn_dist_fwhm < (t["nn_marginal_fwhm"] + 0.5):
+        elif nn_dist_fwhm < t["nn_marginal_fwhm"] or _contam and nn_dist_fwhm < (t["nn_marginal_fwhm"] + 0.5):
             sev = max(sev, 1)
     return ("good", "marginal", "bad")[sev]
 
@@ -2561,8 +2551,8 @@ def psf_photometry_stars(
 
 
 __all__ = [
-    "get_epsf_fwhm_from_context",
     "build_epsf_model",
     "fit_moffat_psf_stars",
+    "get_epsf_fwhm_from_context",
     "psf_photometry_stars",
 ]

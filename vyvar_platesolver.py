@@ -983,7 +983,8 @@ def _blind_verify_prefilter_pass(
             np.asarray(dec_cat_deg[:n_c], dtype=np.float64),
             0,
         )
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SOLVER] blind prefilter exception: %s", exc)
         return False
     tol2 = float(max_px) * float(max_px)
     count = 0
@@ -1166,7 +1167,8 @@ def _refine_wcs_tan_nn_gaia(
         return None, out
     try:
         px_c, py_c = wcs_in.all_world2pix(ra_c, de_c, 0)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SOLVER] world2pix before NN refine failed: %s", exc)
         return None, out
     fin_m = np.isfinite(px_c) & np.isfinite(py_c)
     px_c = np.asarray(px_c[fin_m], dtype=np.float64)
@@ -1202,7 +1204,8 @@ def _refine_wcs_tan_nn_gaia(
         out["pya"] = pya
         out["world"] = world
         return w_new, out
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SOLVER] WCS NN refine failed: %s", exc)
         return None, out
 
 
@@ -1449,7 +1452,8 @@ def _fit_cluster_ransac_wcs(
         world = SkyCoord(ra=ra[idx] * u.deg, dec=dec[idx] * u.deg, frame="icrs")
         w_final = fit_wcs_from_points((xs[idx], ys[idx]), world, projection="TAN")
         w_final.array_shape = (int(naxis2), int(naxis1))
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SOLVER] cluster RANSAC WCS fit failed: %s", exc)
         return None, float("nan"), float("nan"), 0
     x_cen = float(naxis1) / 2.0
     y_cen = float(naxis2) / 2.0
@@ -2438,7 +2442,8 @@ def _wcs_linear_without_sip(wcs_in: WCS) -> WCS | None:
             warnings.simplefilter("ignore", FITSFixedWarning)
             w = WCS(h)
         return w if getattr(w, "has_celestial", False) else None
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SOLVER] linear-WCS (SIP strip) failed: %s", exc)
         return None
 
 
@@ -2455,7 +2460,8 @@ def _equalize_wcs_cd_axes_to_target_arcsec(
         scales = w.celestial.proj_plane_pixel_scales()
         sx = abs(float(scales[0].to(u.arcsec).value))
         sy = abs(float(scales[1].to(u.arcsec).value))
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SOLVER] CD-axis equalize failed: %s", exc)
         return None, meta
     if min(sx, sy) <= 0:
         return None, meta
@@ -2489,7 +2495,8 @@ def _equalize_wcs_cd_axes_to_target_arcsec(
         meta["plate_scale_sy_arcsec_after"] = float(sy2)
         meta["plate_scale_axis_ratio_after"] = float(max(sx2, sy2) / min(sx2, sy2))
         return w, meta
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SOLVER] CD-axis equalize failed: %s", exc)
         return None, meta
 
 
@@ -2522,7 +2529,8 @@ def _maybe_repair_masterstar_anisotropic_plate_scale(
         scales = wcs_in.celestial.proj_plane_pixel_scales()
         sx = abs(float(scales[0].to(u.arcsec).value))
         sy = abs(float(scales[1].to(u.arcsec).value))
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SOLVER] anisotropic plate-scale repair failed: %s", exc)
         return None, meta
     if min(sx, sy) <= 0:
         return None, meta
@@ -2736,7 +2744,6 @@ def _solve_wcs_build_catalog(
         f"CATALOG SEARCH: Ra={ra0}, Dec={de0}, Radius={cone_r:.2f} deg (vypočítané pre {_foc_log}mm)"
     )
 
-    center = SkyCoord(ra=ra0 * u.deg, dec=de0 * u.deg, frame="icrs")
     # Gaia rectangular prefilter around the cone (fast idx_ra/idx_dec); then filter by angular radius.
     ra0f, de0f = float(ra0), float(de0)
     ra_min = ra0f - float(cone_r)
@@ -3036,7 +3043,8 @@ def _solve_wcs_validate_and_refine(
         )
         pairs_x, pairs_y, pairs_ra, pairs_de = list(qx), list(qy), list(qra), list(qde)
         sip_meta["qa_rematch_max_px"] = float(_qa_px)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SOLVER] QA rematch pair update skipped: %s", exc)
         pass
 
     # Pre-write validation: reject weak/shifted solutions and retry with simpler TAN model.
@@ -3257,7 +3265,8 @@ def _solve_wcs_validate_and_refine(
                         wcs_final = w_sip_r
                         sip_meta.update(sip_r3)
                         sip_meta["sip_after_nn_refine"] = True
-                except Exception:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001
+                    LOGGER.debug("[SOLVER] SIP NN-refine apply skipped: %s", exc)
                     pass
             if pxa_r is not None and pya_r is not None and world_r is not None:
                 pairs_x = np.asarray(pxa_r, dtype=np.float64).tolist()
@@ -3318,7 +3327,7 @@ def _solve_wcs_validate_and_refine(
         log_event(
             f"VYVAR platesolve final: Gaia match_rate={_match_rate * 100.0:.1f}% "
             f"({int(_matched_n)}/{int(sip_meta.get('match_rate_n_used', n_img))} "
-            f"{str(sip_meta.get('match_rate_scope'))}) | all-frame≈{float(sip_meta.get('match_rate_full_frame', 0.0)) * 100.0:.1f}%"
+            f"{sip_meta.get('match_rate_scope')!s}) | all-frame≈{float(sip_meta.get('match_rate_full_frame', 0.0)) * 100.0:.1f}%"
         )
     except Exception:  # noqa: BLE001
         pass
@@ -3375,7 +3384,7 @@ def _solve_wcs_write_results(
     try:
         wh = wcs_final.to_header(relax=True)
     except Exception as exc:  # noqa: BLE001
-        raise _SolveWcsWriteError(f"VYVAR solver: WCS header: {exc}")
+        raise _SolveWcsWriteError(f"VYVAR solver: WCS header: {exc}") from exc
     # Update a local header (hdr0) with the complete solved WCS (incl. SIP).
     # This ensures the file stays consistent for downstream photometry.
     strip_celestial_wcs_keys(hdr0)
@@ -3430,7 +3439,8 @@ def _solve_wcs_write_results(
         if vy_platescale_arcsec_per_px is not None and math.isfinite(float(vy_platescale_arcsec_per_px)) and float(vy_platescale_arcsec_per_px) > 0:
             hdr0["VY_PLTS"] = (float(vy_platescale_arcsec_per_px), "VYVAR: solved plate scale [arcsec/px]")
             hdr0["VY_PLATESCALE"] = (float(vy_platescale_arcsec_per_px), "VYVAR: solved plate scale [arcsec/px]")
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SOLVER] VY_PLTS plate-scale header write skipped: %s", exc)
         pass
 
     # Write rotation hint for legacy tools: derive CROTA from WCS PC matrix (degrees).
@@ -3507,7 +3517,8 @@ def _solve_wcs_write_results(
     try:
         if _is_masterstar and _hdr_written is not None and _data_written is not None:
             fits.writeto(fp, _data_written, _hdr_written, overwrite=True)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[SOLVER] failed to persist solved MASTERSTAR WCS to %s: %s", fp, exc)
         pass
 
     if not fits_header_has_celestial_wcs(_hdr_written or hdr0):
@@ -4305,7 +4316,8 @@ def solve_wcs_with_local_gaia(
                         _ra_c0, _de_c0 = wcs_init.all_pix2world([_cx0], [_cy0], 0)
                         ra0 = float(_ra_c0[0])
                         de0 = float(_de_c0[0])
-                    except Exception:  # noqa: BLE001
+                    except Exception as exc:  # noqa: BLE001
+                        LOGGER.debug("[SOLVER] center RA/Dec from WCS failed: %s", exc)
                         pass
                     pairs_x, pairs_y, pairs_ra, pairs_de = _greedy_match_pairs_pixel_wcs(
                         wcs_init,
@@ -4564,7 +4576,8 @@ def solve_wcs_with_local_gaia(
             if w_rep is not None and bool(rep_meta.get("plate_scale_aniso_repair")):
                 wcs_final = w_rep
                 sip_meta.update(rep_meta)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("[SOLVER] anisotropic repair apply skipped: %s", exc)
             pass
 
     # Association QA + the post-solve NN refine (``_solve_wcs_validate_and_refine``) use the FULL

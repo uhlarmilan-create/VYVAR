@@ -433,7 +433,6 @@ def render_known_field_banner(
         )
         return
 
-    field = result["field"]
     n_obs = result["n_observations"]
     n_comp = result["n_comp_stars"]
     last_obs = result.get("last_observation_id") or "—"

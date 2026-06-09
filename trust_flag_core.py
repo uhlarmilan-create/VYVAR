@@ -22,11 +22,15 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from gaia_catalog_id import norm_id_or_empty as norm_id
+
 LOGGER = logging.getLogger(__name__)
 
 _LC_QUALITY_OK = frozenset({"good", "noisy"})
 _CHECK_SOFT_LO = 0.02
 _CHECK_HARD_LO = 0.05
+_UNEVALUATED_TRUST = "RED"
+_UNEVALUATED_REASON = "not evaluated (no comp QA / missing from trust map)"
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,21 +53,6 @@ def comp_thresholds_from_config(cfg: Any | None) -> CompTrustThresholds:
     mn = int(getattr(cfg, "phase01_comparison_n_comp_min", 3))
     mx = int(getattr(cfg, "phase01_comparison_n_comp_max", 8))
     return CompTrustThresholds.from_bounds(mn, mx)
-
-
-def norm_id(x: Any) -> str:
-    s = str(x or "").strip()
-    if not s or s.lower() in ("nan", "none"):
-        return ""
-    try:
-        from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
-
-        return normalize_gaia_source_id(s)
-    except Exception:  # noqa: BLE001
-        try:
-            return str(int(float(s)))
-        except (ValueError, TypeError):
-            return s
 
 
 def check_star_scatter(photometry_dir: Path, target_id: str) -> float:
@@ -111,6 +100,8 @@ def classify_warnings(
             hard.append(f"check-star scatter {check_scatter:.3f} mag (high)")
         elif check_scatter >= _CHECK_SOFT_LO:
             soft.append(f"check-star scatter {check_scatter:.3f} mag")
+    else:
+        soft.append("no check-star verification available")
 
     return hard, soft
 
@@ -121,6 +112,7 @@ def trust_level(
     soft: list[str],
     thresholds: CompTrustThresholds,
 ) -> str:
+    # len(soft)>=3 is a forward guard: today max 2 soft (thin-comp + one check note).
     if int(n_clean) < thresholds.min_comps or hard or len(soft) >= 3:
         return "RED"
     if soft:
@@ -293,11 +285,20 @@ def write_trust_artifacts(
         if summ_path.is_file():
             df = pd.read_csv(summ_path, dtype={"catalog_id": str}, low_memory=False)
             if "catalog_id" in df.columns:
+                n_missing = sum(
+                    1 for x in df["catalog_id"] if norm_id(x) not in trust_map
+                )
+                if n_missing > 0:
+                    LOGGER.warning(
+                        "[TRUST] %d summary target(s) absent from trust map -> defaulted to %s",
+                        n_missing,
+                        _UNEVALUATED_TRUST,
+                    )
                 df["trust"] = df["catalog_id"].map(
-                    lambda x: trust_map.get(norm_id(x), "GREEN")
+                    lambda x: trust_map.get(norm_id(x), _UNEVALUATED_TRUST)
                 )
                 df["trust_reason"] = df["catalog_id"].map(
-                    lambda x: reason_map.get(norm_id(x), "")
+                    lambda x: reason_map.get(norm_id(x), _UNEVALUATED_REASON)
                 )
                 df.to_csv(summ_path, index=False)
                 written.append(summ_path)
@@ -337,7 +338,7 @@ def run_trust_flag_for_photometry_dir(
 
 def format_export_trust_note(trust: str, trust_reason: str, *, max_len: int = 36) -> str:
     """Compact trust tag for AAVSO NOTES (fits after ``meth=…``)."""
-    t = str(trust or "GREEN").strip().upper()[:6] or "GREEN"
+    t = str(trust or _UNEVALUATED_TRUST).strip().upper()[:6] or _UNEVALUATED_TRUST
     note = f"trust={t}"
     if trust_reason:
         short = str(trust_reason).split(" — ")[0].strip()
@@ -349,7 +350,7 @@ def format_export_trust_note(trust: str, trust_reason: str, *, max_len: int = 36
 
 
 def format_varastro_trust_comment(trust: str, trust_reason: str) -> str:
-    t = str(trust or "GREEN").strip().upper() or "GREEN"
+    t = str(trust or _UNEVALUATED_TRUST).strip().upper() or _UNEVALUATED_TRUST
     reason = str(trust_reason or "").strip()
     if reason:
         return f"#   Trust: {t} — {reason}\n"

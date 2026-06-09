@@ -1867,9 +1867,7 @@ class _PhotometryReportBuilder:
             rename_map: dict[str, str] = {}
             for c0 in list(df0.columns):
                 cl = str(c0).strip().lower()
-                if cl in ("gaia_g_mag", "g_mag", "gaia_mag", "catalog_mag"):
-                    rename_map[c0] = "mag"
-                elif cl in ("mag_median", "lc_median_mag"):
+                if cl in ("gaia_g_mag", "g_mag", "gaia_mag", "catalog_mag") or cl in ("mag_median", "lc_median_mag"):
                     rename_map[c0] = "mag"
                 elif cl in ("rms", "lc_rms"):
                     rename_map[c0] = "lc_rms"
@@ -1962,9 +1960,7 @@ class _PhotometryReportBuilder:
         rename_map: dict[str, str] = {}
         for c0 in list(df.columns):
             cl = str(c0).strip().lower()
-            if cl in ("gaia_g_mag", "g_mag", "gaia_mag", "catalog_mag"):
-                rename_map[c0] = "mag"
-            elif cl in ("mag_median", "lc_median_mag"):
+            if cl in ("gaia_g_mag", "g_mag", "gaia_mag", "catalog_mag") or cl in ("mag_median", "lc_median_mag"):
                 rename_map[c0] = "mag"
             elif cl in ("rms", "lc_rms"):
                 rename_map[c0] = "lc_rms"
@@ -2690,7 +2686,7 @@ class _PhotometryReportBuilder:
                 continue
             if dnl == ref_l or dnl.startswith(ref_l) or ref_l.startswith(dnl):
                 L = min(len(dnl), len(ref_l))
-                if L > best_len:
+                if best_len < L:
                     best_len = L
                     best = row.to_dict()
         return best
@@ -3922,15 +3918,7 @@ class _PhotometryReportBuilder:
                             cell_style,
                         )
                     )
-                elif cn == "lc_rms":
-                    x = pd.to_numeric(r.get(cn), errors="coerce")
-                    row_out.append(
-                        self.Paragraph(
-                            self._pdf_escape(f"{float(x):.4f}" if np.isfinite(float(x)) else "—"),
-                            cell_style,
-                        )
-                    )
-                elif cn == "merr_med":
+                elif cn == "lc_rms" or cn == "merr_med":
                     x = pd.to_numeric(r.get(cn), errors="coerce")
                     row_out.append(
                         self.Paragraph(
@@ -4089,7 +4077,6 @@ class _PhotometryReportBuilder:
         y -= 0.75 * self.cm
 
         id_col = "vsx_name" if "vsx_name" in top.columns else "catalog_id"
-        cols = [id_col, "n_psf_ok", "n_frames", "pct_psf_ok", "mean_chi2", "min_chi2"]
         hdr = ["Star", "PSF OK", "Frames", "PSF %", "mean χ²", "min χ²"]
         data: list[list[str]] = [hdr]
         for _, r in top.iterrows():

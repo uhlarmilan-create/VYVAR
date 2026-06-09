@@ -145,7 +145,7 @@ def _select_blind_image_stars(
             )
             xb = np.floor(picked["x"].to_numpy(dtype=np.float64) / cell_px).astype(np.int64)
             yb = np.floor(picked["y"].to_numpy(dtype=np.float64) / cell_px).astype(np.int64)
-            n_cells = len({(int(a), int(b)) for a, b in zip(xb, yb)})
+            n_cells = len({(int(a), int(b)) for a, b in zip(xb, yb, strict=True)})
         stars = picked[["x", "y"]].to_numpy(dtype=np.float64)
         return (
             stars,
@@ -666,7 +666,7 @@ def _iter_blind_pass_results(
                 plate_scale_arcsec_per_px=plate_scale,
                 use_gnomonic=use_gnomonic,
             )
-            if L3 < max(0.1, 2.0 * plate_scale) or L1 / L3 < 0.15:
+            if max(0.1, 2.0 * plate_scale) > L3 or L1 / L3 < 0.15:
                 continue
 
             r1, r2 = L1 / L3, L2 / L3

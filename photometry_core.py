@@ -843,7 +843,7 @@ def _aperture_radius_from_snr_table(
     table = snr_table.get("table") or {}
     if not table:
         return float(aperture_fwhm_factor) * float(fwhm_px)
-    mag_bins = [float(k) for k in table.keys()]
+    mag_bins = [float(k) for k in table]
     if not math.isfinite(star_mag):
         star_mag = 99.0
     nearest = min(mag_bins, key=lambda m: abs(m - float(star_mag)))
@@ -879,7 +879,7 @@ def _get_star_aperture_px(
         return float(fallback_r)
     if not math.isfinite(_mag_f):
         return float(fallback_r)
-    _mag_bins = [float(k) for k in _table.keys()]
+    _mag_bins = [float(k) for k in _table]
     if not _mag_bins:
         return float(fallback_r)
     _nearest = min(_mag_bins, key=lambda m: abs(m - _mag_f))
@@ -1881,7 +1881,7 @@ def pytics_iterative_weights(
 
     # Build updated map — only update active comps, keep excluded untouched
     updated_map = dict(comp_rms_map)
-    for cid, new_rms_val in zip(active_cids, rms_arr):
+    for cid, new_rms_val in zip(active_cids, rms_arr, strict=True):
         updated_map[cid] = float(new_rms_val)
 
     LOGGER.debug(
@@ -2016,7 +2016,7 @@ def check_comparison_stability(
             _ref_bjd = _all_bjd[int(np.argmax([len(x) for x in _all_bjd]))]
             # Interpolate each comp to reference grid and stack
             _stack = []
-            for _b_arr, _m_arr in zip(_all_bjd, _all_mag_matrix):
+            for _b_arr, _m_arr in zip(_all_bjd, _all_mag_matrix, strict=True):
                 _interp = np.interp(_ref_bjd, _b_arr, _m_arr)
                 _stack.append(_interp)
             _common = np.median(np.vstack(_stack), axis=0)
@@ -2301,11 +2301,11 @@ def ensemble_normalize(
         if len(selected) >= n_comp_max:
             break
         p2p = float(comp_quality[cid].get("rms_p2p", float("nan")))
-        if len(selected) < n_comp_min:
-            selected.append(cid)
-        elif math.isfinite(p2p_thr) and math.isfinite(p2p) and p2p < p2p_thr:
-            selected.append(cid)
-        elif not math.isfinite(p2p_thr):
+        if (
+            len(selected) < n_comp_min
+            or (math.isfinite(p2p_thr) and math.isfinite(p2p) and p2p < p2p_thr)
+            or not math.isfinite(p2p_thr)
+        ):
             selected.append(cid)
 
     good_ids = selected[:n_comp_max]
@@ -2485,7 +2485,8 @@ def fit_color_term_c1(
     try:
         c1_init = float(p0[0])
         zp_init = float(p0[1])
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[PHOT] color-term c1 fit failed; no correction: %s", exc)
         return 0.0, float("nan"), 0
 
     resid = y - (c1_init * x + zp_init)
@@ -2509,7 +2510,8 @@ def fit_color_term_c1(
         coeffs, cov = fit_cl
         c1 = float(coeffs[0])
         c1_stderr = float(math.sqrt(float(cov[0, 0]))) if cov is not None else float("nan")
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[PHOT] color-term c1 fit (inner) failed; no correction: %s", exc)
         return 0.0, float("nan"), 0
 
     bp_min = float(np.min(np.asarray(bp_vals, dtype=np.float64)))
@@ -3236,9 +3238,7 @@ def _append_ct_prototype_row(draft_dir: Path, row: dict[str, Any]) -> None:
         out_row: dict[str, Any] = {}
         for key in _CT_PROTOTYPE_CSV_FIELDS:
             val = row.get(key, "")
-            if key == "gate_would_pass":
-                out_row[key] = "True" if bool(val) else "False"
-            elif isinstance(val, (bool, np.bool_)):
+            if key == "gate_would_pass" or isinstance(val, (bool, np.bool_)):
                 out_row[key] = "True" if bool(val) else "False"
             else:
                 out_row[key] = val
@@ -3529,7 +3529,7 @@ def airmass_detrend_lc(
     mask = np.array(
         [
             f == "normal" and math.isfinite(float(m)) and math.isfinite(float(am))
-            for f, m, am in zip(flags, mag_calib, airmass)
+            for f, m, am in zip(flags, mag_calib, airmass, strict=True)
         ],
         dtype=bool,
     )
@@ -3616,7 +3616,7 @@ def airmass_detrend_lc_piecewise(
                 and (f == "normal")
                 and math.isfinite(float(m))
                 and math.isfinite(float(am))
-                for seg, f, m, am in zip(segment, flags, mag_calib, airmass)
+                for seg, f, m, am in zip(segment, flags, mag_calib, airmass, strict=True)
             ],
             dtype=bool,
         )
@@ -3864,7 +3864,7 @@ def save_lightcurve_png(
     # Comp quality tabuľka
     ax_comp.axis("off")
     comp_lines = []
-    for i, (cid, info) in enumerate(comp_quality.items(), 1):
+    for i, (_, info) in enumerate(comp_quality.items(), 1):
         q = str(info["quality"])
         p2p = info.get("rms_p2p", float("nan"))
         icon = "[OK]" if q == "good" else ("[??]" if q == "suspect" else "[X]")
@@ -4200,7 +4200,8 @@ def _edge_ok_from_masterstar_pipeline(
 
     try:
         from astropy.io import fits as astrofits  # noqa: PLC0415
-    except Exception:
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[PHOT] edge-ok check failed; treating all stars as edge-ok: %s", exc)
         return pd.Series(True, index=stars_df.index)
 
     nx = ny = None
@@ -4268,7 +4269,8 @@ def auto_export_variability_candidates_csv(
     """
     try:
         from variability_detector import compute_rms_variability, compute_vdi, load_field_flux_matrix  # noqa: PLC0415
-    except Exception:
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[PHOT] variability candidates export failed: %s", exc)
         return None
 
     output_dir = Path(output_dir)
@@ -4641,10 +4643,14 @@ def auto_export_variability_candidates_csv(
     ]
 
     out_csv = output_dir / "variability_candidates.csv"
-    if export_cols:
-        cand_df[export_cols].to_csv(out_csv, index=False)
-    else:
-        cand_df.to_csv(out_csv, index=False)
+    try:
+        if export_cols:
+            cand_df[export_cols].to_csv(out_csv, index=False)
+        else:
+            cand_df.to_csv(out_csv, index=False)
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[PHOT] variability candidates export step failed: %s", exc)
+        return None
 
     logging.info("[VARIABILITY] Auto-export: %d kandidatov -> %s", int(len(cand_df)), str(out_csv))
     return out_csv
@@ -5048,7 +5054,8 @@ def merge_photometry_pipeline_meta(photometry_dir: Path | str, updates: dict[str
                 pass
         _existing.update(updates)
         _meta_path.write_text(json.dumps(_existing, indent=2), encoding="utf-8")
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[PHOT] pipeline_meta write failed: %s", exc)
         pass
 
 
@@ -5212,9 +5219,7 @@ def _build_phase2a_dynamic_params(
         aperture_r_px = None
 
     _plate = getattr(state, "plate_scale_arcsec", None)
-    if _plate is None:
-        _plate = None
-    elif not math.isfinite(float(_plate)):
+    if _plate is None or not math.isfinite(float(_plate)):
         _plate = None
 
     return {
@@ -7096,7 +7101,7 @@ def _phase2a_process_one_target(
 
     # ── Aperture correction (AC) ──
     ac_ok = bool(ac_result.get("ok", False)) if isinstance(ac_result, dict) else False
-    delta_m_corr = ac_result.get("delta_m_corr", None) if isinstance(ac_result, dict) else None
+    delta_m_corr = ac_result.get("delta_m_corr") if isinstance(ac_result, dict) else None
     if ac_ok and delta_m_corr is not None and np.isfinite(float(delta_m_corr)):
         mag_calib_ac = mag_calib + float(delta_m_corr)
     else:
@@ -8667,7 +8672,7 @@ def vsx_is_known_variable_top3_per_bin(
 
     viz = Vizier(row_limit=50)
     flagged: set[str] = set()
-    for b, items in by_bin.items():
+    for _, items in by_bin.items():
         items_sorted = sorted(items, key=lambda x: float(x.get(rms_key)))
         for r in items_sorted[: int(max_per_bin)]:
             sid = str(r.get("source_id_gaia") or "").strip()
@@ -8935,7 +8940,7 @@ def compute_fwhm_gaussian_for_aperture_catalog(
                             f"{float(fwhm_gaussian):.3f}px → apertura = "
                             f"{float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
                         )
-                        setattr(enhance_catalog_dataframe_aperture_bpm, "_did_log_fwhm", True)
+                        enhance_catalog_dataframe_aperture_bpm._did_log_fwhm = True
         except (TypeError, ValueError):
             pass
 
@@ -8947,7 +8952,7 @@ def compute_fwhm_gaussian_for_aperture_catalog(
                     f"[PHOT] FWHM fallback moment×0.619: {fwhm_gaussian:.3f}px → "
                     f"apertura = {float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
                 )
-                setattr(enhance_catalog_dataframe_aperture_bpm, "_did_log_fwhm", True)
+                enhance_catalog_dataframe_aperture_bpm._did_log_fwhm = True
         else:
             fwhm_gaussian = float("nan")
 
@@ -9291,7 +9296,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                             max(_apertures_used),
                             len(_apertures_used),
                         )
-                    setattr(enhance_catalog_dataframe_aperture_bpm, "_snr_ap_stats_logged", True)
+                    enhance_catalog_dataframe_aperture_bpm._snr_ap_stats_logged = True
             else:
                 r_ap = global_aperture_r_px
                 r_in = max(r_ap + 0.5, float(annulus_inner_fwhm) * fw)
@@ -9415,7 +9420,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                             float(_cog["ref_r_px"]),
                             float(np.nanmedian(_acf)),
                         )
-                        setattr(enhance_catalog_dataframe_aperture_bpm, "_cog_logged", True)
+                        enhance_catalog_dataframe_aperture_bpm._cog_logged = True
                 except Exception as _cog_exc:  # noqa: BLE001
                     logging.warning("[COG] per-frame aperture correction skipped: %s", _cog_exc)
                     out["ac_factor"] = np.ones(n, dtype=np.float64)
@@ -9935,9 +9940,7 @@ def select_active_targets(
         '[TODO-23] match_radius=%.2f" (plate_scale=%s"/px, adaptive=5×, floor=%s")',
         match_radius_arcsec,
         f"{float(plate_scale_arcsec_px):.3f}" if plate_scale_arcsec_px else "unknown",
-        f"{float(_cfg.phase01_match_radius_arcsec):.2f}"
-        if _plate_nominal > 0
-        else f"{float(_cfg.phase01_match_radius_arcsec):.2f}",
+        f"{float(_cfg.phase01_match_radius_arcsec):.2f}",
     )
 
     def _gaia_id_str(x: Any) -> str:
@@ -10346,8 +10349,6 @@ def _enrich_target_bp_rp_from_gaia_db(
         return v if math.isfinite(v) else float("nan")
 
     bpr_ms = _fscalar("bp_rp")
-    ra_ms = _fscalar("ra_deg")
-    de_ms = _fscalar("dec_deg")
 
     gid = normalize_gaia_source_id(out.get("catalog_id"))
     gdb = str(gaia_db_path or "").strip()
@@ -10358,7 +10359,6 @@ def _enrich_target_bp_rp_from_gaia_db(
         gdb_ok = False
 
     bpr_nf = float("nan")
-    gaia_teff = float("nan")
     _prefetched = bool(gaia_prefetch and gid and gid in gaia_prefetch)
     if _prefetched:
         pf = gaia_prefetch[gid]  # type: ignore[index]
@@ -10366,12 +10366,6 @@ def _enrich_target_bp_rp_from_gaia_db(
             vbp = pf.get("bp_rp")
             if vbp is not None and math.isfinite(float(vbp)):
                 bpr_nf = float(vbp)
-        except (TypeError, ValueError):
-            pass
-        try:
-            vte = pf.get("teff_gspphot")
-            if vte is not None and math.isfinite(float(vte)):
-                gaia_teff = float(vte)
         except (TypeError, ValueError):
             pass
     elif gid and gdb_ok and gid.isdigit():
@@ -10394,13 +10388,6 @@ def _enrich_target_bp_rp_from_gaia_db(
                                 vbp = rw["bp_rp"]
                                 if vbp is not None:
                                     bpr_nf = float(vbp)
-                            except (TypeError, ValueError, KeyError, IndexError):
-                                pass
-                        if "teff_gspphot" in parts:
-                            try:
-                                vte = rw["teff_gspphot"]
-                                if vte is not None:
-                                    gaia_teff = float(vte)
                             except (TypeError, ValueError, KeyError, IndexError):
                                 pass
             finally:
@@ -11807,7 +11794,7 @@ def run_phase0_and_phase1(
     _n_co = sum(1 for _, r in active.iterrows() if _target_row_is_catalog_only(r))
     _n_active = int(len(active)) - _n_co
     _i_active = 0
-    for i_num, (active_idx, target_row) in enumerate(active.iterrows(), start=1):
+    for _, (active_idx, target_row) in enumerate(active.iterrows(), start=1):
         _is_co = _target_row_is_catalog_only(target_row)
         if not _is_co:
             _i_active += 1
@@ -12845,37 +12832,37 @@ def _write_suspected_variables(
 __all__ = [
     # photometry (legacy)
     "StressTestResult",
-    "stress_test_relative_rms_from_sidecars",
-    "vsx_is_known_variable_top3_per_bin",
+    "_get_lc_psf_or_dao",
+    "airmass_detrend_lc",
+    "check_comparison_stability",
     "common_field_intersection_bbox_px",
-    "recommended_aperture_by_color",
+    "compute_aperture_correction",
     "compute_fwhm_gaussian_for_aperture_catalog",
-    "enhance_catalog_dataframe_aperture_bpm",
-    "select_active_targets",
-    "select_comparison_stars_per_target",
-    "run_phase0_and_phase1",
-    "run_sysrem_field",
-    "run_full_photometry_pipeline",
-    "resolve_apply_color_term",
-    "ensure_full_variable_targets_if_presel_stub",
-    # photometry_phase2a (legacy)
-    "measure_fwhm_from_masterstar",
     "compute_optimal_apertures",
     "compute_snr_optimal_aperture_table",
-    "read_flux_from_csv",
-    "load_epsf_metrics_for_draft",
-    "_get_lc_psf_or_dao",
-    "pytics_iterative_weights",
-    "check_comparison_stability",
-    "compute_aperture_correction",
-    "ensemble_normalize",
     "detect_outliers",
-    "airmass_detrend_lc",
-    "save_lightcurve_csv",
-    "save_lightcurve_png",
+    "enhance_catalog_dataframe_aperture_bpm",
+    "ensemble_normalize",
+    "ensure_full_variable_targets_if_presel_stub",
+    "load_epsf_metrics_for_draft",
+    # photometry_phase2a (legacy)
+    "measure_fwhm_from_masterstar",
+    "pytics_iterative_weights",
+    "read_flux_from_csv",
+    "recommended_aperture_by_color",
+    "resolve_apply_color_term",
+    "run_full_photometry_pipeline",
+    "run_phase0_and_phase1",
+    "run_phase2a",
+    "run_sysrem_field",
     "save_cutout_png",
     "save_field_map_png",
+    "save_lightcurve_csv",
+    "save_lightcurve_png",
     "save_target_field_map_png",
-    "run_phase2a",
+    "select_active_targets",
+    "select_comparison_stars_per_target",
+    "stress_test_relative_rms_from_sidecars",
+    "vsx_is_known_variable_top3_per_bin",
 ]
 

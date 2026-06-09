@@ -909,8 +909,6 @@ def _generate_tess_blend_check_png(
             if len(rows_apt) > 0:
                 apt_w = (c_max - c_min + 1) * TESS_ARCSEC_PX
                 apt_h = (r_max - r_min + 1) * TESS_ARCSEC_PX
-                center_col_tpf = n_cols / 2.0
-                center_row_tpf = n_rows / 2.0
                 apt_center_col = (c_min + c_max) / 2.0
                 apt_center_row = (r_min + r_max) / 2.0
                 # Offset apertúry od target pixelu (nie od stredu TPF)

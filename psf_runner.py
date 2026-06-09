@@ -687,7 +687,7 @@ def step_1_build_epsf() -> Path:
         for k in keys:
             if k in meta:
                 print(f"  {k:<12}: {meta[k]}")
-        extra = sorted([k for k in meta.keys() if k not in keys])
+        extra = sorted([k for k in meta if k not in keys])
         for k in extra:
             print(f"  {k:<12}: {meta[k]}")
     except Exception as exc:  # noqa: BLE001
@@ -1056,7 +1056,9 @@ def step_3_run_psf_on_frames(
             # Join role + frame metadata (optional bjd).
             role_map = {normalize_gaia_source_id(r["catalog_id"]): r["role"] for _, r in upd_ann.iterrows()}
             res = res.copy()
-            res["role"] = res["catalog_id"].map(lambda x: role_map.get(normalize_gaia_source_id(x), ""))
+            res["role"] = res["catalog_id"].map(
+                lambda x, role_map=role_map: role_map.get(normalize_gaia_source_id(x), "")
+            )
             res["frame_stem"] = frame_stem
             if "bjd_tdb_mid" in proc_df.columns:
                 try:
@@ -1378,8 +1380,6 @@ def step_5_calibrate_lightcurve() -> None:
     if not var_catalog_ids:
         print("V *_psf.csv nie sú žiadne VAR riadky — krok 5 končí.")
         return
-
-    mn_cid = normalize_gaia_source_id("1591057651117374976")
 
     def _mag_cal(fcal: float) -> float:
         if not math.isfinite(fcal) or fcal <= 0:

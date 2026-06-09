@@ -74,7 +74,7 @@ def main() -> None:
     print(header)
     print("-" * len(header))
     for r in summary_rows:
-        line = " | ".join(f"{str(r.get(k)):>15}" for _, k, _ in cols)
+        line = " | ".join(f"{r.get(k)!s:>15}" for _, k, _ in cols)
         print(line)
 
     # also dump a tidy CSV next to the runner for convenience

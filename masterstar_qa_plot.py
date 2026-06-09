@@ -111,7 +111,7 @@ def build_starfield_qa_png_mapping(
                 outline = (60, 100, 200) if invert else (90, 140, 255)
                 fill = (70, 130, 230) if invert else (120, 170, 255)
                 n_drawn = 0
-                for xi, yi in zip(xp, yp):
+                for xi, yi in zip(xp, yp, strict=False):
                     if not (np.isfinite(xi) and np.isfinite(yi)):
                         continue
                     sx, sy = float(xi) * scx, float(yi) * scy

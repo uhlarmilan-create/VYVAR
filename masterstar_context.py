@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,24 @@ import numpy as np
 
 from config import AppConfig
 from platesolve_ui_paths import default_bundle_dir
+
+
+def header_core_fwhm_px(hdr) -> float | None:
+    """Measured PSF core FWHM [px] from a MASTERSTAR header, preferring the Gaussian fit.
+
+    Order: VY_FWHM_GAUSS -> VY_FWHM_GAUSSIAN -> VY_FWHM. Returns None if none valid (>0, finite).
+    """
+    for k in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN", "VY_FWHM"):
+        v = hdr.get(k)
+        if v is None:
+            continue
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(f) and f > 0.0:
+            return f
+    return None
 
 
 @dataclass

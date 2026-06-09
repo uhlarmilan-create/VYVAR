@@ -10,7 +10,7 @@ DAO<->Gaia matching; when the flag is OFF the legacy stars/Mpx path is used unch
 It reads only EXISTING artifacts written by a prior run:
     - field_catalog_cone.csv        (full local-Gaia footprint, mag-cut at DB max)
     - masterstars_full_match.csv    (DAO detections matched to Gaia: flux, catalog_mag)
-    - MASTERSTAR.fits               (WCS + VY_FWHM)
+    - MASTERSTAR.fits               (WCS + core FWHM: VY_FWHM_GAUSS preferred)
     - photometry/active_targets.csv (variable-target worklist)
     - EQUIPMENTS gain/read-noise    (from the project DB)
 
@@ -38,6 +38,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from masterstar_context import header_core_fwhm_px
 from photometry_core import _photometric_error
 
 SNR_LIMIT = 5.0
@@ -59,7 +60,7 @@ def _load_wcs_meta(ms_fits: Path) -> dict[str, Any]:
         hdr = hdul[0].header
         naxis1 = int(hdr.get("NAXIS1", 0) or 0)
         naxis2 = int(hdr.get("NAXIS2", 0) or 0)
-        fwhm_px = float(hdr.get("VY_FWHM", 0) or 0)
+        fwhm_px = header_core_fwhm_px(hdr) or 0.0
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FITSFixedWarning)
             wcs = WCS(hdr)
@@ -235,7 +236,7 @@ def _build_blend_targets_df(
             idxs = np.atleast_1d(idxs)
             nn_i = None
             tid = str(t.get("catalog_id") or "").strip()
-            for d_, j_ in zip(dists, idxs):
+            for d_, j_ in zip(dists, idxs, strict=True):
                 if str(cone_ids[j_]).strip() == tid or d_ < 1e-6:
                     continue
                 nn_i = int(j_)
