@@ -17,6 +17,16 @@ now correct; pixel-based geometry (aperture / annulus / SNR-optimal table / fiel
 immune. **Status: settled (2026-05-29/30).** Any residual `1.3` in old `pipeline_meta` is stale
 run metadata, overwritten on a clean re-run (see ROADMAP: WIDE-RIG-REPROCESS).
 
+### Brno / external data: characterize before PSF or NEIGHBOR-SUB (2026-06-08)
+
+Before relying on PSF or NEIGHBOR-SUB for publishable output on incoming Brno University data (or any
+new field), run the standard characterization gate: plate scale + pixel sampling, ePSF-vs-star Moffat
+mismatch (decisive), and crowding (`compute_crowding_index`). NEIGHBOR-SUB is **validated at fine
+scale** (draft 367: mismatch ~1.0, A9 HV ~83%, FAIL-SILENT 0). If new data is **coarse or
+under-sampled** (mismatch > ~3%), it falls back to the **SAFE_LOW_YIELD** regime -- bright-neighbour
+blends will correctly **REFUSE**, not be silently deblended. That is the publishable-safe behaviour;
+do not force deblending outside the validated regime.
+
 ### NEIGHBOR-SUB shape: PSF subtract contaminant, aperture measure target (2026-06-09, design only)
 
 For blended targets, use ePSF to fit and subtract a bright neighbour, then run the existing

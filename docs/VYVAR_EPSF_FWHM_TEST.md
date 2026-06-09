@@ -66,8 +66,35 @@ fundamental ratio gap until the **seeing denominator** is aligned with stellar/e
 
 ---
 
+## Draft 367 fine-scale (NEIGHBOR-SUB gate, 2026-06-08)
+
+Same Moffat method on draft **367** (Palomar 7 BGR), setup **Red_180_2** (richest filter: Red,
+16 frames; 180 s exposure for SNR). Plate scale **0.3889 arcsec/px** (~0.39"/px). Raw JSON:
+`tmp/epsf_fwhm_367.json`. Harness: `tests/validation/epsf_fwhm_audit.py`.
+
+| quantity | draft 367 | h & chi Per 375 L |
+|----------|-----------|-------------------|
+| plate scale (arcsec/px) | **0.3889** | 1.30 |
+| VY_FWHM header (px) | 6.624 | 3.356 |
+| VY_FWHM_GAUSS (px) | **6.020** | ~2.74 |
+| ePSF Moffat FWHM (px) | **5.393** | 2.131 |
+| stars Moffat FWHM median (px, n=30) | **5.396** | 1.916 |
+| **mismatch ratio ePSF/stars** | **0.9994** | **1.112** |
+| FWHM (arcsec, Moffat) | 2.097 | ~2.5 |
+| star ellipticity proxy | 0.010 | -- |
+| n_epsf_stars | 81 | 322 |
+
+**Verdict:** fine-scale sampling collapses the ePSF-vs-star mismatch to **~0%** (vs coarse h & chi Per
+**~8-11%**). A9 NEIGHBOR-SUB at draft367 calibration (post `bright_close_regime` guard): HV
+PASS-RECOVER **83.3%**, FAIL-SILENT **0**, REFUSE **100%**. Real crowding on 367 is **sparse**
+(9 blended / 4 hard on Red_180_2) -> **VALIDATED_FINE_SCALE_IDLE**; defer 2b. Reports:
+`a9_draft367_diagnostic.md`, `docs/VYVAR_DRAFT367_CROWDING.md`.
+
+---
+
 ## Cross-references
 
 - Probe: `docs/VYVAR_HCHIPER_PSF_PROBE.md`
 - EPSF-1 audit: `docs/VYVAR_EPSF_AUDIT.md` (updated with resolved cause)
 - Harness V3e: synthetic Tier-A ratio=1.127 (ideal case); real-field ratio driven by denominator
+- NEIGHBOR-SUB fine-scale A9: `tests/validation/run_a9_draft367.py`

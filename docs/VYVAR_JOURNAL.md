@@ -2,6 +2,28 @@ Historical session log. Current state → VYVAR_STATE.md; decisions → VYVAR_DE
 
 ---
 
+## Session -- NEIGHBOR-SUB pre-2b: bright_close_regime guard + 367 crowding (2026-06-08)
+
+`bright_close_regime` guard (dM>=2.5 brighter + sep<=1.1 FWHM) closes draft-367 edge FAIL-SILENT
+(sep1.0/dM-3). Re-run A9: 367 FAIL-SILENT **0**, HV **83.3%**, coarse realistic FAIL-SILENT **0**.
+367 real crowding (Red_180_2, VY_FWHM_GAUSS): is_blended **9**, hard **4**, blend@2 **0.022** ->
+**VALIDATED_FINE_SCALE_IDLE** (sparse; defer 2b). Brno characterization gate recorded in DECISIONS.
+pytest green; SHA unchanged; gated OFF.
+
+---
+
+## Session -- NEIGHBOR-SUB fine-scale test draft 367 (2026-06-08)
+
+Read-only diagnostic (gated OFF; SHA unchanged). Part 1: ePSF-vs-star Moffat audit on draft 367
+Red_180_2 (richest filter Red, 16 frames, 0.3889 arcsec/px). **mismatch ratio 0.9994** (ePSF 5.39 px
+vs stars 5.40 px) vs h & chi Per 375 L **1.112** (~8%). Part 2: A9 `neighbor_sub` at draft367
+sampling + measured mismatch -- HV PASS-RECOVER **83.3%** (coarse realistic 17.6%), FAIL-SILENT **1**
+(sep1.0/dM-3 edge), REFUSE **100%**. Decision: **FINE_SCALE_HOME** (sampling rescued mismatch);
+2b wire blocked on one edge FAIL-SILENT until guard/crowding follow-up. Reports:
+`tmp/epsf_fwhm_367.json`, `tier_a9/a9_draft367_diagnostic.md`.
+
+---
+
 ## Session -- NEIGHBOR-SUB step 2a guard hardening (2026-06-08)
 
 Sep floor inclusive (`nn_dist_fwhm <= 0.8`). Catalog-anchored guards: `neighbor_overfit` (fitted nn

@@ -224,6 +224,31 @@ Mismatch diagnostic: `python -m tests.validation.run_a9_mismatch_diagnostic` ->
 `tests/validation/data/tier_a9/a9_mismatch_diagnostic.md` (gitignored; regenerate locally).
 Design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md` (joint fit §3b; guards §6).
 
+## NEIGHBOR-SUB pre-2b guard + 367 crowding (2026-06-08)
+
+`bright_close_regime` guard (dM>=2.5 + sep<=1.1 FWHM). A9 re-run: 367 FAIL-SILENT **0**, HV **83.3%**;
+coarse realistic FAIL-SILENT **0**. 367 crowding Red_180_2: is_blended **9**, hard **4** -> **SPARSE**;
+combined **VALIDATED_FINE_SCALE_IDLE** (defer 2b). Brno gate in `VYVAR_DECISIONS.md`.
+
+| Check | Vysledok |
+|---|---|
+| Numeric photometry SHA | **unchanged** (`770966c3...`) |
+| `psf_neighbor_sub_enabled` | **OFF** |
+
+## NEIGHBOR-SUB fine-scale test draft 367 (2026-06-08) -- read-only diagnostic
+
+Part 1 ePSF-vs-star Moffat audit on draft 367 Red_180_2 (0.3889 arcsec/px): **mismatch ratio
+0.9994** (vs h & chi Per 375 L **1.112**). Part 2 A9 draft367-calibrated: HV PASS-RECOVER **83.3%**
+(coarse realistic 17.6%), FAIL-SILENT **1** (sep1.0/dM-3 edge), REFUSE **100%**. Verdict:
+**FINE_SCALE_HOME_EDGE_FAIL_SILENT** -- sampling rescued mismatch; 2b wire blocked on one edge cell.
+`psf_neighbor_sub_enabled` OFF; no production wiring.
+
+| Check | Vysledok |
+|---|---|
+| Numeric photometry SHA (`draft_000366`, 283 files) | **unchanged** (`770966c3...`) |
+| ePSF audit JSON | `tmp/epsf_fwhm_367.json` |
+| A9 report | `tier_a9/a9_draft367_diagnostic.md` (regenerate: `run_a9_draft367`) |
+
 ## Dalsie kroky (Faza 1 pokracovanie)
 
 1. **Split track** -- `pipeline.py` / `photometry_core.py` (samostatny spec, byte-identita).

@@ -57,10 +57,15 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
     `≥ 2.0` is contradictory, so the resolvable-blend→PSF rule can never fire. Fix the
     thresholds.
   - **TODO-PSF-NEIGHBOR-SUB** — joint-fit + subtract neighbour, aperture residual (gated OFF).
-    **Steps 1-2a DONE** (`055595d`): A9 envelope, `psf_neighbor_sub.py`, fail-safe guards;
-    realistic mismatch **FAIL-SILENT 0**, **SAFE_LOW_YIELD** (~18% HV recover at coarse bin2).
-    **Step 2b blocked** (pipeline wire): re-test fine-scale A9 (draft 367) and/or ePSF first.
-    Design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`; validation: `docs/VYVAR_VALIDATION.md` §A9.
+    **Steps 1-2a + pre-2b DONE**: A9 envelope, `psf_neighbor_sub.py`, fail-safe guards +
+    `bright_close_regime` edge guard. Fine-scale draft 367: mismatch **~1.0**, HV **~83%**,
+    FAIL-SILENT **0**; real crowding **sparse** (9 blended) -> **VALIDATED_FINE_SCALE_IDLE**;
+    **2b deferred** until blended fine-scale field. Coarse bin2 remains **SAFE_LOW_YIELD**.
+    Design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`; crowding: `docs/VYVAR_DRAFT367_CROWDING.md`.
+  - **TODO-PSF-V3d-FINE-SCALE** (next PSF milestone) — inject-and-recover PSF-vs-aperture-vs-truth
+    at fine scale (draft 367, mismatch ~0). Unblocks harness V3d item skipped for lack of fine-scale
+    data. Core publishable claim: "VYVAR PSF photometry is correct" — where PSF beats/matches aperture
+    on known fluxes. **Not started** (flag only).
   - **TODO-PSF-MULTIFRAME** — multi-frame ePSF stacking (isolation part done).
   - **TODO-PSF-ASYMMETRY** — tracking-smear diagnostics (BO CVn right-tail PSF).
   - ~~**TODO-FWHM-CONSISTENCY**~~ **DONE (2026-06-09)** — `header_core_fwhm_px` in

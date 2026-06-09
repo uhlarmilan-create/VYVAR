@@ -127,6 +127,12 @@ orchestration; guards; bookkeeping columns.
 **Separation floor (inclusive):** refuse when `nn_dist_fwhm <= neighbor_sub_refuse_sep_fwhm` (default
 **0.8**). Covers sep 0.5 and 0.8 REFUSE-zone cells.
 
+**Bright-close regime (pre-2b, 2026-06-08):** preemptive refuse when neighbour is very bright AND
+very close -- `delta_mag_nn <= -neighbor_sub_regime_dmag_min` (default **2.5**) AND
+`nn_dist_fwhm <= neighbor_sub_regime_sep_max` (default **1.1**). Reason: `bright_close_regime`.
+Closes the draft-367 A9 edge cell (sep1.0/dM-3 mild over-subtract) without disturbing clean
+recoveries at sep 1.3+ or dM-2. Conservative: when in doubt, REFUSE.
+
 **Catalog-anchored sanity (production-ready; uses Gaia `mag` / `nn_mag`):**
 
 - `neighbor_overfit`: joint-fit neighbour aperture flux brighter than catalog `nn_mag` by more than
@@ -139,7 +145,9 @@ orchestration; guards; bookkeeping columns.
 **Fit-quality (secondary):** centroid shift, target_amp <= 0, `no_improvement`, chi2/rms when no gain.
 
 A9 realistic mismatch post-2a: **FAIL-SILENT 0**, HV PASS-RECOVER **~18%** -> **SAFE_LOW_YIELD**
-(2b blocked; re-test at fine scale / improve ePSF first).
+(coarse bin2). Fine-scale draft 367 (mismatch ~1.0): HV **~83%**, FAIL-SILENT **0** after
+`bright_close_regime` guard. Draft 367 real crowding is **sparse** (9 blended LC stars on Red_180_2) ->
+**VALIDATED_FINE_SCALE_IDLE** until a blended fine-scale field appears.
 
 Never mutate a shared frame; always work on a per-target stamp copy.
 
@@ -147,9 +155,10 @@ Never mutate a shared frame; always work on a per-target stamp copy.
 
 ## 7. Trust integration
 
-New per-measurement columns: `neighbor_subtracted`, `n_neighbors_subtracted`,
-`subtracted_neighbor_flux`, `neighbor_fit_chi2`. Surface a per-target summary into comp_quality /
-trust inputs so the gate can down-weight or YELLOW a target whose result leaned on a poor subtraction.
+New per-measurement columns: `neighbor_subtracted`, `neighbor_sub_refused`, `neighbor_sub_refuse_reason`,
+`n_neighbors_subtracted`, `subtracted_neighbor_flux`, `neighbor_fit_chi2`. Every target carries explicit
+provenance: deblended, refused (with reason), or plain aperture. Surface into comp_quality / trust so
+publication exports can state exactly which points used NEIGHBOR-SUB vs fallback.
 
 `lc_quality_flag`: a target measured via NEIGHBOR-SUB carries a flag so downstream/AAVSO export is
 transparent about the deblend.
@@ -161,7 +170,8 @@ transparent about the deblend.
 - `psf_neighbor_sub_enabled` (default OFF), `neighbor_sub_chi2_max`, `neighbor_sub_residual_rms_max`,
   `neighbor_sub_refuse_sep_fwhm` (0.8, **inclusive** `<=`), `neighbor_sub_centroid_max_fwhm`,
   `neighbor_sub_nn_contam_dmag`, `neighbor_sub_max_neighbor_overmag` (0.3),
-  `neighbor_sub_max_target_undermag` (0.2), `neighbor_sub_min_recovered_snr` (5.0).
+  `neighbor_sub_max_target_undermag` (0.2), `neighbor_sub_min_recovered_snr` (5.0),
+  `neighbor_sub_regime_dmag_min` (2.5), `neighbor_sub_regime_sep_max` (1.1).
 - Applies ONLY to worklist (`is_blended` + contaminant) targets. Isolated-star photometry is
   byte-identical (untouched). Stays OFF in production until validated (mirrors PSF discipline).
 

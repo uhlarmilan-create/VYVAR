@@ -79,8 +79,26 @@ e=0.08.
 | REFUSE correctness | 62.5% | **100%** |
 | Verdict | BLOCK_2B_GUARDS | **SAFE_LOW_YIELD** |
 
-2b **not started**: fail-safe achieved but yield low at coarse bin2; re-test at fine scale (draft 367)
-and/or improve ePSF before wiring production.
+2b **not started** at coarse scale: fail-safe achieved but yield low at bin2.
+
+#### Fine-scale draft 367 diagnostic (2026-06-08)
+
+```bash
+python -m tests.validation.run_a9_draft367
+```
+
+ePSF-vs-star mismatch on draft 367 Red_180_2 (0.3889 arcsec/px): ratio **0.9994** (vs h & chi Per
+375 L **1.112**). A9 `draft367` variant at measured mismatch:
+
+| Metric | draft 367 | coarse realistic |
+|--------|-----------|------------------|
+| HV PASS-RECOVER | **83.3%** | 17.6% |
+| FAIL-SILENT | **1** | 0 |
+| REFUSE correctness | **100%** | 100% |
+
+**Pre-2b (2026-06-08):** `bright_close_regime` guard closes edge FAIL-SILENT. Re-run: FAIL-SILENT **0**,
+HV **83.3%**, coarse realistic FAIL-SILENT **0**. Combined verdict: **VALIDATED_FINE_SCALE_IDLE**
+(367 sparse: 9 blended, 4 hard -- defer 2b). See `docs/VYVAR_DRAFT367_CROWDING.md`.
 
 Expected coarse shape (contamination **excess** over isolated control, %):
 
@@ -125,7 +143,7 @@ bad-comp rejection (B2), trust gating (B3), color-term sign/magnitude (B4), cali
 
 - Photometry numeric SHA on `draft_000366` (283 LC+comp files) must remain unchanged when
   only validation code is added.
-- Existing pytest: **195 passed, 6 skipped** (+12 neighbor_sub / A9 tests).
+- Existing pytest: **207 passed, 6 skipped** (+ neighbor_sub / A9 / draft367 tests).
 
 ## RNG seeds
 

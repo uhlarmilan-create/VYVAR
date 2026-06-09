@@ -79,6 +79,11 @@ only). Production measurement sites remain unwired until step 2b.
 **Mismatch diagnostic (step 2b gate):** `python -m tests.validation.run_a9_mismatch_diagnostic`
 writes `a9_mismatch_diagnostic.md` comparing legacy `mismatch` vs EPSF-audit `realistic` variant.
 
+**Fine-scale draft 367 diagnostic:** `python -m tests.validation.run_a9_draft367` runs ePSF-vs-star
+mismatch audit (Red_180_2) + A9 `neighbor_sub` at measured mismatch -> `a9_draft367_diagnostic.md`.
+
+**Draft 367 crowding:** `python -m tests.validation.crowding_audit_367` -> `tmp/crowding_audit_367.json`.
+
 ### Tier B -- series (`gen_series.py`)
 
 Catalog source: **fallback (b)** Gaia-structured synthetic catalog (`source_id`, ra, dec,

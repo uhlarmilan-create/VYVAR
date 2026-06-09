@@ -27,6 +27,14 @@ A change is not done until all six hold:
    (SHA-256 over LC / comp_quality / comparison_stars / exports); keep **0 PDF overflow** (R1);
    `pytest` green.
 
+## External data (Brno) — PSF / NEIGHBOR-SUB gate
+
+Before publishable PSF or NEIGHBOR-SUB on incoming external data: characterize plate scale,
+ePSF-vs-star mismatch, and crowding (`compute_crowding_index`). Fine scale + mismatch ~1.0 is the
+validated regime (draft 367). Coarse / under-sampled data (mismatch > ~3%) falls back to
+SAFE_LOW_YIELD — bright-neighbour blends **REFUSE**, not silent deblend. Standing rule:
+`docs/VYVAR_DECISIONS.md` (Brno section).
+
 ## Byte-identity discipline
 
 - **Read-only change** (QA, metadata, reports-only): the numeric photometry must be
