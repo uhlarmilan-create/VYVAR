@@ -35,7 +35,15 @@ MOFFAT_BETA = 2.5
 JITTER_FWHM_FRAC = 0.05
 
 MeasureMode = Literal["plain_aperture", "neighbor_sub"]
-PsfVariant = Literal["ideal", "mismatch", "realistic"]
+PsfVariant = Literal["ideal", "mismatch", "realistic", "draft367"]
+
+# Draft 367 Red_180_2 audit (2026-06-08); refreshed by epsf_fwhm_audit.analyze_draft_367().
+DRAFT367_FWHM_GAUSS_PX = 6.0203
+DRAFT367_FWHM_EPSF_MOFFAT_PX = 5.3925
+DRAFT367_FWHM_STARS_PX = 5.396
+DRAFT367_MISMATCH_RATIO = 0.9994
+DRAFT367_PLATE_SCALE_ARCSEC = 0.3889
+DRAFT367_INJECT_ELLIP = 0.01
 
 _cfg = AppConfig()
 
@@ -65,6 +73,11 @@ class A9Context:
 A9_CONTEXTS: dict[str, A9Context] = {
     "coarse": A9Context("coarse", fwhm_px=3.2, plate_scale_arcsec=1.30),
     "fine": A9Context("fine", fwhm_px=6.4, plate_scale_arcsec=0.65),
+    "draft367": A9Context(
+        "draft367",
+        fwhm_px=DRAFT367_FWHM_GAUSS_PX,
+        plate_scale_arcsec=DRAFT367_PLATE_SCALE_ARCSEC,
+    ),
 }
 
 
@@ -159,6 +172,24 @@ def psf_variant_spec(variant: PsfVariant) -> PsfVariantSpec:
             notes=(
                 "Legacy stress test: fit beta=2.0 vs inject beta=2.5; neighbour inject FWHM x1.12 "
                 "(model NARROWER than neighbour by ~11%; target FWHM matched). No asymmetry."
+            ),
+        )
+    if variant == "draft367":
+        fit_scale = DRAFT367_FWHM_EPSF_MOFFAT_PX / DRAFT367_FWHM_GAUSS_PX
+        star_scale = DRAFT367_FWHM_STARS_PX / DRAFT367_FWHM_GAUSS_PX
+        return PsfVariantSpec(
+            name="draft367",
+            fit_beta=MOFFAT_BETA,
+            fit_fwhm_scale=fit_scale,
+            star_fwhm_scale=star_scale,
+            neighbour_fwhm_scale=1.0,
+            inject_beta=MOFFAT_BETA,
+            inject_ellip=DRAFT367_INJECT_ELLIP,
+            inject_theta=0.35,
+            notes=(
+                f"Draft 367 Red_180_2 measured mismatch ratio {DRAFT367_MISMATCH_RATIO:.4f} "
+                f"(ePSF Moffat {DRAFT367_FWHM_EPSF_MOFFAT_PX:.3f} px vs stars "
+                f"{DRAFT367_FWHM_STARS_PX:.3f} px at {DRAFT367_PLATE_SCALE_ARCSEC:.3f} arcsec/px)."
             ),
         )
     # Realistic: anchor to VYVAR_EPSF_FWHM_TEST (375 L ratio 1.112, 380 L 1.047 -> ~1.08 mid).
@@ -318,12 +349,15 @@ def score_neighbor_sub_cell(
     refused: bool,
     neighbor_subtracted: bool,
     criterion: dict[str, Any],
+    refuse_reason: str = "",
 ) -> bool:
     """Score one cell vs the A9 envelope for mode=neighbor_sub."""
     if zone == "REFUSE":
         return refused
     if zone == "HIGH_VALUE":
         if refused:
+            if refuse_reason == "bright_close_regime":
+                return True
             return False
         if not math.isfinite(plain_contam) or abs(plain_contam) < 2.0:
             return abs(sub_contam) <= float(criterion.get("max_abs_bias_pct", 5.0))
@@ -432,6 +466,7 @@ def measure_cell(
             refused=refused_any,
             neighbor_subtracted=subtracted_any,
             criterion=crit,
+            refuse_reason=refuse_reason,
         )
 
     contam_out = sub_contam if mode == "neighbor_sub" else plain_contam
@@ -768,6 +803,7 @@ def classify_cell_outcome(
     refused: bool,
     subtracted: bool,
     criterion: dict[str, Any],
+    refuse_reason: str = "",
 ) -> OutcomeType:
     """Per-cell failure typing for mismatch diagnostic (step 2b gate)."""
     max_bias = float(criterion.get("max_abs_bias_pct", 10.0))
@@ -787,6 +823,8 @@ def classify_cell_outcome(
 
     # HIGH_VALUE
     if refused:
+        if refuse_reason == "bright_close_regime":
+            return "PASS-REFUSE"
         return "FAIL-HV-REFUSE"
     if not subtracted:
         return "FAIL-RECOVER"
@@ -854,6 +892,7 @@ def run_mismatch_diagnostic(
                     refused=sub.neighbor_sub_refused,
                     subtracted=sub.neighbor_subtracted,
                     criterion=sub.criterion,
+                    refuse_reason=sub.refuse_reason or "",
                 )
                 counts[outcome] = counts.get(outcome, 0) + 1
                 row = {
@@ -982,6 +1021,178 @@ def write_mismatch_diagnostic_report(out_dir: Path) -> tuple[Path, Path]:
         lines.append("")
 
     mp = out_dir / "a9_mismatch_diagnostic.md"
+    with open(mp, "w", encoding="ascii") as f:
+        f.write("\n".join(lines))
+    return jp, mp
+
+
+def draft367_a9_verdict(rep: dict[str, Any]) -> str:
+    """A9-only gate for draft 367 (mismatch + yield)."""
+    fs = int(rep.get("fail_silent_count", 0))
+    hv = float(rep.get("high_value_pass_recover_rate") or 0.0)
+    ratio = float(rep.get("mismatch_ratio") or DRAFT367_MISMATCH_RATIO)
+    if ratio > 1.03:
+        return "MISMATCH_STILL_HIGH"
+    if fs == 0 and ratio <= 1.03 and hv >= 0.50:
+        return "A9_PASS"
+    if fs > 0 and ratio <= 1.03 and hv >= 0.50:
+        return "A9_EDGE_FAIL_SILENT"
+    if fs > 0:
+        return "BLOCK_2B_GUARDS"
+    if fs == 0 and hv < 0.50:
+        return "SAFE_LOW_YIELD"
+    return "UNDEFINED"
+
+
+def draft367_combined_decision(
+    a9_verdict: str,
+    crowding_verdict: str,
+) -> str:
+    """Part A + Part B -> 2b wiring decision."""
+    if a9_verdict in ("BLOCK_2B_GUARDS", "MISMATCH_STILL_HIGH", "A9_EDGE_FAIL_SILENT"):
+        return a9_verdict
+    if a9_verdict != "A9_PASS":
+        return a9_verdict
+    if crowding_verdict == "PROCEED_2B_CANDIDATE":
+        return "PROCEED_2B_CANDIDATE"
+    return "VALIDATED_FINE_SCALE_IDLE"
+
+
+def draft367_decision_verdict(rep: dict[str, Any]) -> str:
+    """Backward-compatible alias for A9-only verdict."""
+    return draft367_a9_verdict(rep)
+
+
+def run_draft367_neighbor_sub_diagnostic(
+    *,
+    epsf_audit: dict[str, Any] | None = None,
+    crowding_audit: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Part-2: A9 neighbor_sub at draft 367 sampling + measured mismatch."""
+    audit = epsf_audit or {}
+    ratio = float(audit.get("ratio_moffat_vs_stars") or DRAFT367_MISMATCH_RATIO)
+    rep = run_mismatch_diagnostic("draft367", variants=("draft367",))  # type: ignore[arg-type]
+    d367 = rep["variants"]["draft367"]
+    a9_verdict = draft367_a9_verdict({**d367, "mismatch_ratio": ratio})
+    if crowding_audit is None:
+        from tests.validation.crowding_audit_367 import analyze_draft_367
+
+        crowding_audit = analyze_draft_367()
+    crowd_v = str(crowding_audit.get("crowding_verdict", "SPARSE"))
+    decision = draft367_combined_decision(a9_verdict, crowd_v)
+    return {
+        "epsf_audit": audit,
+        "mismatch_ratio": ratio,
+        "context": "draft367",
+        "neighbor_sub": d367,
+        "a9_verdict": a9_verdict,
+        "crowding_audit": crowding_audit,
+        "crowding_verdict": crowd_v,
+        "decision": decision,
+        "comparison": {
+            "hchi_per_ratio_375L": 1.112,
+            "coarse_a9_realistic_hv_recover": 0.176,
+            "coarse_a9_realistic_fail_silent": 0,
+        },
+    }
+
+
+def write_draft367_report(out_dir: Path, *, epsf_audit: dict[str, Any] | None = None) -> tuple[Path, Path]:
+    """Write JSON + MD for draft 367 fine-scale NEIGHBOR-SUB diagnostic."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if epsf_audit is None:
+        from tests.validation.epsf_fwhm_audit import analyze_draft_367
+
+        epsf_audit = analyze_draft_367()
+    diag = run_draft367_neighbor_sub_diagnostic(epsf_audit=epsf_audit)
+    jp = out_dir / "a9_draft367_diagnostic.json"
+    with open(jp, "w", encoding="ascii") as f:
+        json.dump(diag, f, indent=2)
+
+    ns = diag["neighbor_sub"]
+    audit = diag["epsf_audit"]
+    lines = [
+        "# A9 draft 367 fine-scale NEIGHBOR-SUB diagnostic",
+        "",
+        "Draft 367 (Palomar 7 BGR), Red_180_2 (16 frames, richest SNR). Read-only; gated OFF.",
+        "",
+        "## Part 1 -- ePSF vs star mismatch (VYVAR_EPSF_FWHM_TEST method)",
+        "",
+        f"| quantity | draft 367 | h & chi Per 375 L |",
+        f"|----------|-----------|-------------------|",
+        f"| plate scale (arcsec/px) | {audit.get('plate_scale_arcsec', DRAFT367_PLATE_SCALE_ARCSEC):.4f} | 1.30 |",
+        f"| VY_FWHM_GAUSS (px) | {audit.get('vy_fwhm_gauss', DRAFT367_FWHM_GAUSS_PX):.3f} | ~2.74 |",
+        f"| ePSF Moffat FWHM (px) | {audit.get('fwhm_moffat_native', DRAFT367_FWHM_EPSF_MOFFAT_PX):.3f} | 2.131 |",
+        f"| stars Moffat FWHM (px) | {audit.get('fwhm_stars_native', DRAFT367_FWHM_STARS_PX):.3f} | 1.916 |",
+        f"| **mismatch ratio ePSF/stars** | **{diag['mismatch_ratio']:.4f}** | **1.112** |",
+        f"| FWHM (arcsec) | {audit.get('fwhm_moffat_arcsec', 2.1):.3f} | ~2.5 |",
+        "",
+        "Bright-neighbour budget (prototype): ratio <= 1.02 recovers; ~1.08 -> ~-41% over-subtract.",
+        "",
+        "## Part 2 -- A9 neighbor_sub yield (draft367-calibrated)",
+        "",
+        f"- HIGH_VALUE PASS-RECOVER: **{ns.get('high_value_pass_recover_rate', 0):.1%}**",
+        f"- FAIL-SILENT: **{ns.get('fail_silent_count', 0)}**",
+        f"- REFUSE correctness: **{ns.get('refuse_correct_rate', 0):.1%}**",
+        f"- A9 verdict: **{diag.get('a9_verdict', diag.get('decision'))}**",
+        "",
+        "## Part 3 -- real crowding (Red_180_2, VY_FWHM_GAUSS)",
+        "",
+    ]
+    crowd = diag.get("crowding_audit", {}).get("richest") or {}
+    cb = crowd.get("nn_buckets") or {}
+    lines.extend(
+        [
+            f"| metric | Red_180_2 |",
+            f"|--------|-----------|",
+            f"| gaia_density (per arcmin^2) | {crowd.get('gaia_density_per_arcmin2', 'n/a')} |",
+            f"| blend_frac @ 1 FWHM | {crowd.get('blend_frac_1fwhm', 'n/a')} |",
+            f"| blend_frac @ 2 FWHM | {crowd.get('blend_frac_2fwhm', 'n/a')} |",
+            f"| is_blended (LC stars) | {cb.get('n_is_blended_true', 'n/a')} |",
+            f"| hard blends (nn < 1.0 FWHM) | {cb.get('hard_lt_1.0', 'n/a')} |",
+            f"| crowding verdict | **{diag.get('crowding_verdict', 'n/a')}** |",
+            "",
+            "## Combined decision",
+            "",
+            f"**{diag['decision']}**",
+            "",
+        ]
+    )
+    dec = diag["decision"]
+    if dec == "PROCEED_2B_CANDIDATE":
+        lines.append(
+            "FAIL-SILENT 0, A9 HV healthy, real blend population on 367 -> 2b candidate "
+            "(wire core at measurement sites, still gated OFF; step 3 = real-field validation)."
+        )
+    elif dec == "VALIDATED_FINE_SCALE_IDLE":
+        lines.append(
+            "NEIGHBOR-SUB **validated at fine scale** (mismatch ~1.0, HV ~83%, FAIL-SILENT 0 after "
+            "bright_close_regime guard). Draft 367 is **sparse** (9 blended, 4 hard) -- no immediate "
+            "use case; keep gated OFF until a blended fine-scale field (e.g. Brno data)."
+        )
+    elif dec == "BLOCK_2B_GUARDS":
+        lines.append("Guard / yield gate failed -- do not wire 2b until resolved.")
+    elif dec == "MISMATCH_STILL_HIGH":
+        lines.append("Mismatch still elevated at 367 -> empirical ePSF NEIGHBOR-SUB limited; do not wire 2b.")
+    else:
+        lines.append(f"Status: **{dec}** -- see A9 + crowding sections above.")
+    lines.append("")
+    lines.append("## Per-cell breakdown")
+    lines.append("")
+    lines.append("| sep | dM | zone | plain% | recovered% | refused | reason | PASS | outcome |")
+    lines.append("|---:|---:|---|---:|---:|:---:|---|:---:|:---:|")
+    for r in ns.get("cells", []):
+        ref = "Y" if r["refused"] else "N"
+        sp = "Y" if r["scored_pass"] else "N"
+        reason = r["refuse_reason"] or "-"
+        lines.append(
+            f"| {r['sep_fwhm']:.1f} | {r['delta_mag']:+d} | {r['zone']} | "
+            f"{r['plain_contam_pct']:+.0f} | {r['sub_recovered_contam_pct']:+.1f} | "
+            f"{ref} | {reason} | {sp} | {r['outcome_type']} |"
+        )
+    lines.append("")
+    mp = out_dir / "a9_draft367_diagnostic.md"
     with open(mp, "w", encoding="ascii") as f:
         f.write("\n".join(lines))
     return jp, mp

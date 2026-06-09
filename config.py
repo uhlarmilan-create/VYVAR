@@ -205,6 +205,9 @@ class AppConfig:
     neighbor_sub_max_target_undermag: float = 0.2
     #: Minimum recovered aperture SNR (flux / RMS/sqrt(area)) after subtraction.
     neighbor_sub_min_recovered_snr: float = 5.0
+    # Preemptive refuse: very bright neighbour within ~1 FWHM (fine-scale edge guard).
+    neighbor_sub_regime_dmag_min: float = 2.5
+    neighbor_sub_regime_sep_max: float = 1.1
     #: Spatially-varying ePSF (GriddedPSFModel). Default OFF → single global ePSF.
     #: When enabled, ePSFs are built per detector-region cell and interpolated by (x,y),
     #: which matters on wide fields where the PSF varies (coma / field curvature at edges).
@@ -923,6 +926,8 @@ class AppConfig:
             ("neighbor_sub_max_neighbor_overmag", 0.3),
             ("neighbor_sub_max_target_undermag", 0.2),
             ("neighbor_sub_min_recovered_snr", 5.0),
+            ("neighbor_sub_regime_dmag_min", 2.5),
+            ("neighbor_sub_regime_sep_max", 1.1),
         ):
             try:
                 _v = float(data.get(_attr, getattr(self, _attr)))
@@ -1537,6 +1542,8 @@ class AppConfig:
             "neighbor_sub_max_neighbor_overmag": float(self.neighbor_sub_max_neighbor_overmag),
             "neighbor_sub_max_target_undermag": float(self.neighbor_sub_max_target_undermag),
             "neighbor_sub_min_recovered_snr": float(self.neighbor_sub_min_recovered_snr),
+            "neighbor_sub_regime_dmag_min": float(self.neighbor_sub_regime_dmag_min),
+            "neighbor_sub_regime_sep_max": float(self.neighbor_sub_regime_sep_max),
             "psf_spatial_enabled": bool(self.psf_spatial_enabled),
             "psf_spatial_grid": str(self.psf_spatial_grid),
             "psf_spatial_min_stars_per_cell": int(self.psf_spatial_min_stars_per_cell),

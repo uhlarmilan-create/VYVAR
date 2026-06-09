@@ -52,6 +52,53 @@ def test_joint_recovers_high_value_ideal():
     assert abs(float(np.median(biases))) < 12.0
 
 
+def test_bright_close_regime_refuses_sep10_dm3():
+    """Preemptive refuse for brightest neighbour at tightest HV separation (367 edge cell)."""
+    ctx = A9_CONTEXTS["draft367"]
+    rng = np.random.default_rng(RNG_SEEDS["gen_a9"] + 5)
+    tflux = ctx.target_flux_adu()
+    nflux = tflux * 10.0 ** 1.2
+    r_ap, r_in, r_out = ctx.radii_px()
+    frame = build_blend_frame(
+        ctx,
+        target_flux=tflux,
+        neighbour_flux=nflux,
+        sep_fwhm=1.0,
+        rng=rng,
+        inject_beta=2.5,
+        star_fwhm_scale=5.396 / 6.0203,
+        neighbour_fwhm_scale=5.396 / 6.0203,
+    )
+    res = neighbor_sub_target_flux(
+        frame,
+        target_xy=(float(STAMP_C), float(STAMP_C)),
+        neighbour_xys=[(float(STAMP_C), float(STAMP_C + ctx.fwhm_px))],
+        fwhm_px=ctx.fwhm_px * (5.3925 / 6.0203),
+        r_ap=r_ap,
+        r_in=r_in,
+        r_out=r_out,
+        delta_mag_nn=-3.0,
+        nn_dist_fwhm=1.0,
+        target_mag=13.0,
+        nn_mag=10.0,
+        flux_zp=25.0,
+        cfg=_enabled_cfg(),
+    )
+    assert res.refused
+    assert res.refuse_reason == "bright_close_regime"
+    assert not res.neighbor_subtracted
+    assert res.target_flux == res.plain_target_flux
+
+
+def test_bright_close_regime_allows_sep13_dm3():
+    ctx = A9_CONTEXTS["draft367"]
+    from tests.validation.a9_core import A9Cell
+
+    cell = A9Cell(sep_fwhm=1.3, delta_mag=-3, context="draft367")
+    sub = measure_cell(cell, ctx, mode="neighbor_sub", psf_variant="draft367", n_frames=8)
+    assert not sub.neighbor_sub_refused or sub.refuse_reason != "bright_close_regime"
+
+
 def test_refuse_zone_sep_08_inclusive():
     ctx = A9_CONTEXTS["coarse"]
     rng = np.random.default_rng(RNG_SEEDS["gen_a9"] + 2)
@@ -115,7 +162,7 @@ def test_mismatch_degrades_vs_ideal():
     ctx = A9_CONTEXTS["coarse"]
     from tests.validation.a9_core import A9Cell
 
-    cell = A9Cell(sep_fwhm=1.0, delta_mag=-3, context="coarse")
+    cell = A9Cell(sep_fwhm=1.3, delta_mag=-3, context="coarse")
     ideal = measure_cell(cell, ctx, mode="neighbor_sub", psf_variant="ideal", n_frames=10)
     mismatch = measure_cell(cell, ctx, mode="neighbor_sub", psf_variant="mismatch", n_frames=10)
     assert abs(ideal.contamination_excess_pct) <= abs(mismatch.contamination_excess_pct) + 5.0
@@ -177,18 +224,18 @@ def test_refuse_target_undershoot_when_cleaned_too_faint():
     nflux = tflux * 100.0
     r_ap, r_in, r_out = ctx.radii_px()
     frame = build_blend_frame(
-        ctx, target_flux=tflux, neighbour_flux=nflux, sep_fwhm=1.0, rng=rng
+        ctx, target_flux=tflux, neighbour_flux=nflux, sep_fwhm=1.5, rng=rng
     )
     res = neighbor_sub_target_flux(
         frame,
         target_xy=(float(STAMP_C), float(STAMP_C)),
-        neighbour_xys=[(float(STAMP_C), float(STAMP_C + ctx.fwhm_px))],
+        neighbour_xys=[(float(STAMP_C), float(STAMP_C + 1.5 * ctx.fwhm_px))],
         fwhm_px=ctx.fwhm_px,
         r_ap=r_ap,
         r_in=r_in,
         r_out=r_out,
         delta_mag_nn=-5.0,
-        nn_dist_fwhm=1.0,
+        nn_dist_fwhm=1.5,
         target_mag=13.0,
         nn_mag=8.0,
         flux_zp=25.0,
@@ -200,6 +247,7 @@ def test_refuse_target_undershoot_when_cleaned_too_faint():
             "target_undershoot",
             "neighbor_overfit",
             "no_improvement",
+            "bright_close_regime",
         )
 
 

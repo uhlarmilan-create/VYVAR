@@ -265,6 +265,31 @@ def neighbor_sub_target_flux(
             target_y_fit=ty,
         )
 
+    regime_dmag = float(getattr(cfg, "neighbor_sub_regime_dmag_min", 2.5))
+    regime_sep = float(getattr(cfg, "neighbor_sub_regime_sep_max", 1.1))
+    if (
+        delta_mag_nn is not None
+        and math.isfinite(float(delta_mag_nn))
+        and float(delta_mag_nn) <= -regime_dmag
+        and nn_dist_fwhm is not None
+        and math.isfinite(nn_dist_fwhm)
+        and nn_dist_fwhm <= regime_sep
+    ):
+        return NeighborSubResult(
+            target_flux=plain_flux,
+            plain_target_flux=plain_flux,
+            neighbor_subtracted=False,
+            refused=True,
+            refuse_reason="bright_close_regime",
+            n_neighbors_subtracted=0,
+            subtracted_neighbor_flux=0.0,
+            joint_fit_chi2=float("nan"),
+            residual_rms=float("nan"),
+            fit_condition=float("nan"),
+            target_x_fit=tx,
+            target_y_fit=ty,
+        )
+
     centroid_max = float(getattr(cfg, "neighbor_sub_centroid_max_fwhm", 1.0))
     residual, meta = _joint_moffat_fit_subtract(
         stamp,

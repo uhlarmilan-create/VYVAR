@@ -50,6 +50,7 @@ def test_mismatch_diagnostic_structure():
     real = diag["variants"]["realistic"]
     assert "fail_silent_count" in real
     assert "verdict" in real
+    assert real["fail_silent_count"] <= 1
     assert len(real["cells"]) == 28
 
 
