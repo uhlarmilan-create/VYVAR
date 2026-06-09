@@ -62,10 +62,12 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
     FAIL-SILENT **0**; real crowding **sparse** (9 blended) -> **VALIDATED_FINE_SCALE_IDLE**;
     **2b deferred** until blended fine-scale field. Coarse bin2 remains **SAFE_LOW_YIELD**.
     Design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`; crowding: `docs/VYVAR_DRAFT367_CROWDING.md`.
-  - **TODO-PSF-V3d-FINE-SCALE** (next PSF milestone) — inject-and-recover PSF-vs-aperture-vs-truth
-    at fine scale (draft 367, mismatch ~0). Unblocks harness V3d item skipped for lack of fine-scale
-    data. Core publishable claim: "VYVAR PSF photometry is correct" — where PSF beats/matches aperture
-    on known fluxes. **Not started** (flag only).
+  - **TODO-PSF-V3d-FINE-SCALE** — **DONE (2026-06-08)** harness `tests/validation/v3d_fine_scale.py`.
+    Inject-and-recover at draft-367-like scale; PASS on accuracy/precision/calibration pillars.
+    Report: `tier_v3d/v3d_fine_scale.md`. Production PSF still OFF; real-field enablement separate.
+  - ~~**TODO-PSF-V3d-MIDMAG-BIAS**~~ **DONE (2026-06-09)** sky-only PSF fit weights
+    (`psf_weight_mode=sky_only`; Astier 2013 / Lacroix 2025). V3d mid-mag <2%, drift sub-%.
+    Report: `tier_v3d/v3d_weight_proof.md`. PSF arc ready to batch (pre-2b + V3d + sky + weights).
   - **TODO-PSF-MULTIFRAME** — multi-frame ePSF stacking (isolation part done).
   - **TODO-PSF-ASYMMETRY** — tracking-smear diagnostics (BO CVn right-tail PSF).
   - ~~**TODO-FWHM-CONSISTENCY**~~ **DONE (2026-06-09)** — `header_core_fwhm_px` in

@@ -27,6 +27,25 @@ No production, config, or flag changes from this audit. PSF remains OFF in produ
 | Per-star quality | `assess_psf_quality` | 2021 |
 | Photometry | `psf_photometry_stars` | 2077 |
 
+### Sky subtraction in `psf_photometry_stars` (2026-06-08 fix)
+
+**Was:** 2-pixel cutout border median (`psf_photometry.py` ~2392) -- bright-star wings
+contaminated the small fit cutout border (+7.9 ADU/px at mag 12 in V3d), producing mag-dependent
+pre-AC flux bias; single AC zero-pointed bright mags leaving ~+4-5% mid-mag excess.
+
+**Now:** Initial sky from aperture-geometry annulus on the full frame; **one-pass residual-annulus
+refine** after the first PSF fit subtracts the fitted ePSF wing (and grouped neighbours) from the
+annulus before the refit. Fallback: cutout border median when annulus is off-chip. Provenance:
+`psf_sky_method` (`residual_annulus` | `annulus_local` | `border_fallback`). PSF-only; aperture LC
+path unchanged.
+
+**V3d re-run (seed 367):** mid-mag drift fixed by **sky-only fit weights** (Astier 2013;
+Lacroix 2025; `psf_weight_mode=sky_only`). Reported errors use **sandwich variance**
+(`psf_err_mode=sandwich_skyonly`): true pixel variance with sky-only weights -- required for
+calibrated bright-star errors (P3 mag12 0.56 -> 1.07). Noisy post-AC: +0.8% (mag12) ->
++1.75% (mag16); drift **+0.95 pp**. V3d **PASS** all pillars mag<=17. See
+`tier_v3d/v3d_sandwich_proof.md`, `v3d_weight_proof.md`.
+
 ---
 
 ## FINDING EPSF-1 -- epsf_fwhm_native half-max estimator is non-robust

@@ -27,6 +27,15 @@ under-sampled** (mismatch > ~3%), it falls back to the **SAFE_LOW_YIELD** regime
 blends will correctly **REFUSE**, not be silently deblended. That is the publishable-safe behaviour;
 do not force deblending outside the validated regime.
 
+### PSF fit weights: sky + read noise only (2026-06-09)
+
+Mid-mag PSF bias on V3d (+4.5%) was **flux-dependent weighting**: including source Poisson in
+photutils fit `error` makes relative pixel weights depend on brightness (Astier et al. 2013; Lacroix
+et al. 2025). Production fix: `psf_weight_mode=sky_only` -- uniform per-stamp sigma from sky and
+read noise; reported `psf_flux_err` restored from full variance in the fit window. Forced position
+(Fix 2; Guy et al. 2010) not required at fine scale after Fix 1. Residual hardware systematics
+(brighter-fatter / pocket effect; Lacroix 2025) remain out of scope.
+
 ### NEIGHBOR-SUB shape: PSF subtract contaminant, aperture measure target (2026-06-09, design only)
 
 For blended targets, use ePSF to fit and subtract a bright neighbour, then run the existing

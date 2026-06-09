@@ -2,6 +2,84 @@ Historical session log. Current state → VYVAR_STATE.md; decisions → VYVAR_DE
 
 ---
 
+## Session -- sandwich PSF flux_err (P3 fix) (2026-06-09)
+
+`psf_err_mode=sandwich_skyonly`: Var(f_hat) with sky-only weights + true pixel variance.
+P3 mag12: 0.56 -> 1.07; V3d status **PASS**. Fluxes unchanged. SHA 770966c3 held.
+
+---
+
+## Session -- sky-only PSF fit weights (2026-06-09)
+
+**Fix 1:** `psf_weight_mode=sky_only` in `psf_photometry_stars` + `_grouped_psf_fit` (Astier 2013,
+Lacroix 2025). V3d noisy post-AC: +0.8% (mag12) -> +1.75% (mag16); drift **+0.95 pp** (was +3.5).
+Noiseless drift ~0 pp. Fix 2 (forced position) not needed. Citations wired. SHA 770966c3 held.
+Report: `v3d_weight_proof.md`. TODO-PSF-V3d-MIDMAG-BIAS closed.
+
+---
+
+## Session -- residual-annulus sky (option C) proof (2026-06-09)
+
+Shipped **residual_annulus** sky refine in `psf_photometry_stars` + `_grouped_psf_fit`
+(PSF-only). V3d noisy drift unchanged (+3.5 pp); noiseless annulus median already = truth on
+isolated Moffat inject. Truth-sky fallback confounded (no error map). Revised cause:
+flux-dependent fit weights + scalar AC. Report: `v3d_clean_sky_proof.md`. SHA 770966c3 held.
+
+---
+
+## Session -- fit_shape enlargement proof + sky drift fallback (2026-06-08)
+
+STEP 0: fit_shape is **global** ePSF-meta FWHM (uniform per star). Enlargement 3x/4x FWHM
+**worsens** noisy V3d post-AC drift (+3.5pp -> +8-14pp); **reverted** to 2xFWHM+1. Fallback
+noiseless truth-sky: **mag-drift vanishes** (0 pp) but ~+7% uniform offset -> **sky-annulus-wing
+contamination** is drift source, not fit_shape truncation in production. Report:
+`v3d_fit_shape_proof.md`. PSF not publication-grade; next: annulus push/sigma-clip.
+
+---
+
+## Session -- V3d empirical bias decomposition v2 (2026-06-08)
+
+Harness `v3d_bias_decomposition_v2.py` (T1-T4 on real `psf_photometry_stars`, seed 367).
+**T1 noiseless:** bias PERSISTS and grows (post-AC +6% mid-mag) -> **DETERMINISTIC**, not noise.
+**T2:** ePSF norm sum/osamp^2=1; reported/fit=0.99; noiseless recovery/truth=1.51 (not unit-conversion bug).
+**T3:** fit_shape truncation-sensitive (spread 14.8%; +52.5% at shape 15 vs +43.5% at 31).
+**Cause:** `deterministic_fit_shape_truncation`. Proposed fix: enlarge fit_shape (separate task).
+Report: `tier_v3d/v3d_bias_decomposition_v2.md`. pytest 218/6 skip; SHA unchanged.
+
+---
+
+## Session -- PSF annulus sky fix + V3d re-validation (2026-06-08)
+
+Production `psf_photometry_stars`: replaced 2-px cutout border-median sky with aperture-consistent
+annulus on full frame (`_catalog_only_fixed_aperture_flux` radii; fallback border; `psf_sky_method`
+column). Byte-identity SHA **770966c3** unchanged (283 files, PSF gated OFF). V3d re-run (367):
+mid-mag post-AC bias still ~+4.5% (excess vs mag12 improved ~0.5-1.4 pp, not <1-2% target); aperture
+<1%. A9 draft367: FAIL-SILENT **0**, HV **83.3%** preserved. pytest 217/6 skip. **Verdict:** precision
++ calibration publication-grade; accuracy not yet (residual fit-stage). `v3d_sky_fix_comparison.md`.
+
+---
+
+## Session -- V3d PSF mid-mag bias decomposition (2026-06-08)
+
+Harness diagnostic `run_v3d_bias_decomposition.py` (seed 367, n_real=30): records pre-AC and
+post-AC PSF flux per realization. **AC factor 0.701306** (single multiplicative, 8 bright stars);
+does not introduce mag-dependence. Pre-AC uniform ~+43% offset (ePSF flux scale); **excess vs mag 12**
+shows +4-5% at mid-mag **pre-AC and post-AC** (AC only zero-points bright end). Border sky error
++7.9 ADU/px at mag 12 vs ~0 at mid-mag -> **fit_background_border_median** (2-px border median in
+`psf_photometry_stars`). Proposed fix: annulus-local sky in fit cutout (not implemented). Reports:
+`tier_v3d/v3d_bias_decomposition.{md,json,png}`. pytest 216/6 skip; SHA unchanged; PSF OFF.
+
+---
+
+## Session -- V3d fine-scale PSF-vs-aperture-vs-truth (2026-06-08)
+
+Harness `v3d_fine_scale.py`: inject-and-recover mag 12-18 at draft-367-like sampling using real
+`psf_photometry_stars` + aperture path + PSF AC from bright-star truth. PASS: PSF bias <5% mag12-17,
+precision crossover ~mag14, uncertainty ratio ~0.8-1.1. Aperture faint-end bias +19% at mag18 (finding).
+`psf_photometry_enabled` OFF in production. pytest green; SHA unchanged.
+
+---
+
 ## Session -- NEIGHBOR-SUB pre-2b: bright_close_regime guard + 367 crowding (2026-06-08)
 
 `bright_close_regime` guard (dM>=2.5 brighter + sep<=1.1 FWHM) closes draft-367 edge FAIL-SILENT

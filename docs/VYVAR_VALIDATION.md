@@ -132,7 +132,7 @@ After first full harness run (`14 pass / 2 fail / 2 skip`):
 | A3 | FAIL | Quad-symmetry metric on smeared Moffat cutout stays below 0.1; full ePSF ensemble path not exercised on synthetic smear |
 | A7 | FAIL | photutils annulus sky vs SEP mesh background differ ~0.7% on clean stars (methodology gap, not necessarily pipeline bug) |
 | A6 | SKIP | Documented gap: flat-only leaves moonlight gradient |
-| V3d | SKIP | Fine-scale PSF-vs-aperture requires ~0.65"/px config |
+| V3d | PASS | Fine-scale PSF-vs-aperture-vs-truth (367-like); crossover mag ~14; see `tier_v3d/v3d_fine_scale.md` |
 | V3e | PASS | Synthetic Tier-A ratio=1.127; real h&chi Per still 0.59-0.67 (field-specific QC) |
 
 Pass highlights: crowding blend thresholds (A1/A2), Sokolovsky spike on CR series (A4),
@@ -143,7 +143,21 @@ bad-comp rejection (B2), trust gating (B3), color-term sign/magnitude (B4), cali
 
 - Photometry numeric SHA on `draft_000366` (283 LC+comp files) must remain unchanged when
   only validation code is added.
-- Existing pytest: **207 passed, 6 skipped** (+ neighbor_sub / A9 / draft367 tests).
+- Existing pytest: green (+ V3d / neighbor_sub / A9 / draft367 tests).
+
+## V3d fine-scale PSF (2026-06-08)
+
+`python -m tests.validation.run_v3d_fine_scale` -- draft-367-like optics (FWHM ~6 px, 0.39"/px).
+Real functions: `psf_photometry_stars` + `_catalog_only_fixed_aperture_flux` + PSF aperture
+correction from bright-star truth. Three pillars vs mag 12-18 (30 noise realizations/mag):
+
+| pillar | result |
+|--------|--------|
+| accuracy | PSF bias <5% mag12-17; aperture faint-end bias +19% at mag18 |
+| precision | PSF scatter wins from mag ~14 |
+| uncertainty | PSF reported err / actual scatter ~0.8-1.1 (mag<=17) |
+
+Report: `tests/validation/data/tier_v3d/v3d_fine_scale.md`. Production `psf_photometry_enabled` OFF.
 
 ## RNG seeds
 
@@ -152,5 +166,6 @@ bad-comp rejection (B2), trust gating (B3), color-term sign/magnitude (B4), cali
 | gen_frame | 42 |
 | gen_series | 43 |
 | gen_a9 | 44 |
+| v3d_fine | 367 |
 
 Deterministic regeneration: `python -m tests.validation.recover --all`.
