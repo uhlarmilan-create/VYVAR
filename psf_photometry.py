@@ -467,6 +467,78 @@ def _compute_moffat_aperture_correction(
         return 1.0, 0
 
 
+# ePSF/input FWHM ratio warning band (diagnostic only; set from V3e harness scatter).
+_EPSF_FWHM_RATIO_WARN_LO = 0.80
+_EPSF_FWHM_RATIO_WARN_HI = 1.25
+
+
+def _epsf_fwhm_native_legacy_px(epsf_data: np.ndarray, *, osamp: int) -> float:
+    """Legacy half-max: first radius-sorted pixel below 0.5*peak (EPSF-1 diagnostic baseline)."""
+    z = np.asarray(epsf_data, dtype=np.float64)
+    cy, cx = np.array(z.shape) // 2
+    y_idx, x_idx = np.indices(z.shape)
+    r = np.sqrt((x_idx - cx) ** 2 + (y_idx - cy) ** 2).ravel()
+    v = z.ravel()
+    finite_mask = np.isfinite(v)
+    r = r[finite_mask]
+    v = v[finite_mask]
+    if len(r) == 0 or v.max() <= 0:
+        return float("nan")
+    v = v / v.max()
+    sort_idx = np.argsort(r)
+    r_s = r[sort_idx]
+    v_s = v[sort_idx]
+    below_half = np.where(v_s < 0.5)[0]
+    if len(below_half) == 0:
+        return float("nan")
+    return float(2.0 * float(r_s[below_half[0]]) / max(1, int(osamp)))
+
+
+def _epsf_fwhm_native_from_profile(epsf_data: np.ndarray, *, osamp: int) -> float:
+    """Azimuthally-binned radial profile half-max FWHM (native px)."""
+    z = np.asarray(epsf_data, dtype=np.float64)
+    cy, cx = np.array(z.shape) // 2
+    yy, xx = np.indices(z.shape)
+    r = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2).ravel()
+    v = z.ravel()
+    ok = np.isfinite(v) & np.isfinite(r)
+    r = r[ok]
+    v = v[ok]
+    if r.size < 10:
+        return float("nan")
+    peak = float(np.max(v))
+    if peak <= 0:
+        return float("nan")
+    v = v / peak
+    h, w = z.shape
+    rmax = min(h, w) * 0.45
+    bin_w = 0.5  # oversampled px
+    edges = np.arange(0.0, rmax + bin_w * 0.5, bin_w)
+    centers: list[float] = []
+    means: list[float] = []
+    for i in range(len(edges) - 1):
+        lo, hi = float(edges[i]), float(edges[i + 1])
+        sel = (r >= lo) & (r < hi)
+        if int(sel.sum()) < 3:
+            continue
+        centers.append(0.5 * (lo + hi))
+        means.append(float(np.mean(v[sel])))
+    if len(centers) < 4:
+        return float("nan")
+    c_arr = np.asarray(centers, dtype=np.float64)
+    m_arr = np.asarray(means, dtype=np.float64)
+    cross = None
+    for i in range(len(c_arr) - 1):
+        a, b = m_arr[i], m_arr[i + 1]
+        if a >= 0.5 >= b and a != b:
+            frac = (a - 0.5) / (a - b)
+            cross = float(c_arr[i] + frac * (c_arr[i + 1] - c_arr[i]))
+            break
+    if cross is None:
+        return float("nan")
+    return float(2.0 * cross / max(1, int(osamp)))
+
+
 def _epsf_build_imagepsf_from_stars(
     stars: Any,
     *,
@@ -496,24 +568,9 @@ def _epsf_build_imagepsf_from_stars(
 
     nan_frac = float(np.sum(~np.isfinite(epsf_data)) / epsf_data.size)
 
-    # ePSF FWHM via radial profile (oversampled → native)
+    # ePSF FWHM via azimuthally-binned radial profile (oversampled -> native)
     try:
-        cy, cx = np.array(epsf_data.shape) // 2
-        y_idx, x_idx = np.indices(epsf_data.shape)
-        r = np.sqrt((x_idx - cx) ** 2 + (y_idx - cy) ** 2).ravel()
-        v = epsf_data.ravel()
-        finite_mask = np.isfinite(v)
-        r = r[finite_mask]
-        v = v[finite_mask]
-        if len(r) > 0 and v.max() > 0:
-            v = v / v.max()
-            sort_idx = np.argsort(r)
-            r_s = r[sort_idx]
-            v_s = v[sort_idx]
-            below_half = np.where(v_s < 0.5)[0]
-            epsf_fwhm_native = (2.0 * float(r_s[below_half[0]])) / osamp if len(below_half) else float("nan")
-        else:
-            epsf_fwhm_native = float("nan")
+        epsf_fwhm_native = _epsf_fwhm_native_from_profile(epsf_data, osamp=osamp)
     except Exception:  # noqa: BLE001
         epsf_fwhm_native = float("nan")
 
@@ -1339,8 +1396,13 @@ def build_epsf_model(
     if _qc.get("epsf_nan_fraction") and _qc["epsf_nan_fraction"] > 0.05:
         log_event(f"ePSF QC WARNING: {_qc['epsf_nan_fraction']:.1%} non-finite pixels in ePSF model")
     _ratio = _qc.get("epsf_vs_input_fwhm_ratio")
-    if _ratio is not None and (_ratio < 0.5 or _ratio > 2.0):
-        log_event(f"ePSF QC WARNING: ePSF/input FWHM ratio={_ratio:.2f} — possible bad ePSF build")
+    if _ratio is not None and (
+        _ratio < _EPSF_FWHM_RATIO_WARN_LO or _ratio > _EPSF_FWHM_RATIO_WARN_HI
+    ):
+        log_event(
+            f"ePSF QC WARNING: ePSF/input FWHM ratio={_ratio:.2f} "
+            f"(expect {_EPSF_FWHM_RATIO_WARN_LO:.2f}-{_EPSF_FWHM_RATIO_WARN_HI:.2f}) — possible bad ePSF build"
+        )
     if _qc.get("epsf_asymmetry") and _qc["epsf_asymmetry"] > 0.1:
         log_event(f"ePSF QC WARNING: ePSF asymmetry={_qc['epsf_asymmetry']:.3f} (>0.1) — coma/tracking")
 

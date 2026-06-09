@@ -20,6 +20,7 @@ RNG_SEEDS = {
     "gen_series": 43,
     "gen_a9": 44,
     "v3d_fine": 367,
+    "v3e_epsf": 370,
     "cr_pixels": 42,
     "series_variability": 43,
 }

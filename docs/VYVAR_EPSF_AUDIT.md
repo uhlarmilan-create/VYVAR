@@ -50,7 +50,12 @@ calibrated bright-star errors (P3 mag12 0.56 -> 1.07). Noisy post-AC: +0.8% (mag
 
 ## FINDING EPSF-1 -- epsf_fwhm_native half-max estimator is non-robust
 
-**Location:** `psf_photometry.py:500-516` (radial profile inside `_epsf_build_imagepsf_from_stars`).
+**Status: CLOSED (2026-06-08)** -- replaced with azimuthally-binned radial profile in
+`_epsf_fwhm_native_from_profile`; QC warning band tightened to [0.80, 1.25]; harness V3e PASS.
+Report: `tests/validation/data/tier_v3e/v3e_epsf_fwhm.md`.
+
+**Location (legacy):** `psf_photometry.py` first-pixel half-max inside `_epsf_build_imagepsf_from_stars`
+(preserved as `_epsf_fwhm_native_legacy_px` for harness comparison only).
 
 **Mechanism:**
 
@@ -98,12 +103,15 @@ looks like bad ePSF) and the <0.5 / >2.0 warning threshold (1343) is calibrated 
 readiness should rest on per-star quality gating (chi2/snr/shift/nn) and PSF-vs-aperture comp RMS on
 real blends, not on this ratio. See `docs/VYVAR_HCHIPER_PSF_PROBE.md`.
 
-**Recommended fix (ROADMAP `TODO-EPSF-1-FWHM-QC`, Milan decision):**
+**Fix shipped (EPSF-1, 2026-06-08):**
 
-1. Replace half-max estimator with azimuthally-binned radial profile: bin r, median v per bin,
-   normalize by central-bin average, interpolate 0.5 crossing. Recalibrate warning thresholds.
-2. Validate in `tests/validation` item V3e: inject known-FWHM field -> build ePSF -> assert ratio
-   in [0.85, 1.15] after fix.
+1. `_epsf_fwhm_native_from_profile`: bin radius (0.5 oversampled px), mean normalized flux per
+   annulus, linear interpolate 0.5 crossing -> `epsf_fwhm_native = 2*r_half/osamp`.
+2. QC warning at build: ratio outside **[0.80, 1.25]** (was 0.5-2.0).
+3. **V3e harness** (`v3e_epsf_fwhm.py`): Moffat inject at FWHM 2.7 / 5.4 / 6.02 px; NEW ratios
+   **1.038-1.049** (PASS [0.85, 1.15]); OLD ratios 1.048-1.111 (closer to 1 but still
+   grid-quantized). Real h&chi Per ratio 0.59-0.67 remains a **seeing-denominator** effect, not
+   flux or `assess_psf_quality`.
 
 ---
 

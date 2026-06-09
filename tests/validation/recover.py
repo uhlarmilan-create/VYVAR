@@ -724,7 +724,7 @@ def _run_v3(report: ValidationReport) -> None:
             "V3e",
             "ePSF FWHM native vs injected FWHM (synthetic)",
             "psf_photometry._epsf_build_imagepsf_from_stars QC",
-            "EPSF-1 half-max estimator (psf_photometry.py:500-516)",
+            "EPSF-1 azimuthally-binned radial profile estimator",
             expected=f"ratio in [0.85,1.15] for injected FWHM={inj_fwhm:.2f} px",
             recovered=f"native={native:.3f} px; ratio={ratio:.3f}; n_stars={n_stars}",
             delta=f"{ratio - 1.0:.3f}" if math.isfinite(ratio) else "nan",
