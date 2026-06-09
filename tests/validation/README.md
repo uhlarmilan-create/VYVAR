@@ -84,6 +84,9 @@ mismatch audit (Red_180_2) + A9 `neighbor_sub` at measured mismatch -> `a9_draft
 
 **Draft 367 crowding:** `python -m tests.validation.crowding_audit_367` -> `tmp/crowding_audit_367.json`.
 
+**V3d fine-scale PSF:** `python -m tests.validation.run_v3d_fine_scale` ->
+`data/tier_v3d/v3d_fine_scale.md` (PSF vs aperture vs truth; real `psf_photometry_stars`).
+
 ### Tier B -- series (`gen_series.py`)
 
 Catalog source: **fallback (b)** Gaia-structured synthetic catalog (`source_id`, ra, dec,
@@ -105,7 +108,7 @@ G, bp_rp). Positions are injected, not a live Gaia DR3 cone.
 | V3a | Blind WCS recovery | SKIP if no `GAIA_DR3/*.pkl`; else geometry proxy |
 | V3b | BJD + airmass | `time_utils` vs pipeline AltAz |
 | V3c | Flat/dark calibration | `calibration.get_processed_master` |
-| V3d | PSF vs aperture blends | SKIP unless fine-scale ~0.65"/px |
+| V3d | PSF vs aperture vs truth (fine scale) | `run_v3d_fine_scale`; real `psf_photometry_stars` |
 | V3e | ePSF FWHM native vs injected | ratio in [0.85,1.15]; FAIL documents EPSF-1 until fix |
 
 ## FAIL policy

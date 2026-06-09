@@ -743,16 +743,44 @@ def _run_v3(report: ValidationReport) -> None:
             note="Could not build synthetic ePSF for FWHM QC probe.",
         )
 
-    if PLATE_SCALE_ARCSEC > 1.0:
+    from tests.validation.v3d_fine_scale import V3dFineConfig, run_v3d_fine_scale, write_v3d_report
+
+    v3d_dir = DATA_ROOT / "tier_v3d"
+    v3d_cfg = V3dFineConfig(n_real=12)
+    try:
+        v3d_res = run_v3d_fine_scale(v3d_cfg, work_dir=v3d_dir / "_work")
+        write_v3d_report(v3d_dir, v3d_res)
+        sc = v3d_res.get("self_check", {})
+        pillars = v3d_res.get("pillars", {})
+        ms = v3d_res.get("mag_stats", [])
+        m16 = next((s for s in ms if s.get("mag") == 16), {})
+        ok = v3d_res.get("status") in ("PASS", "FLAG") and sc.get("pass")
         report.add(
             "V3d",
-            "PSF vs aperture on fine-scale blends",
-            "psf_photometry vs aperture (exploratory)",
-            "PSF roadmap evidence",
-            expected="SKIP unless ~0.65 arcsec/px config",
-            recovered=f"plate_scale={PLATE_SCALE_ARCSEC} arcsec/px",
-            status="SKIP",
-            note="Fine-scale bin1 config not used; PSF flags remain OFF in production.",
+            "fine-scale PSF vs aperture vs truth (inject-and-recover)",
+            "psf_photometry_stars + photometry_core._catalog_only_fixed_aperture_flux",
+            "TODO-PSF-V3d-FINE-SCALE; draft-367 validated regime",
+            expected="bright self-check; PSF bias <5% mag12-17; PSF scatter < aper faint-end",
+            recovered=(
+                f"status={v3d_res.get('status')}; mismatch={v3d_res.get('mismatch_ratio', float('nan')):.3f}; "
+                f"self_check={sc.get('pass')}; xover={pillars.get('crossover_mag_psf_wins')}; "
+                f"mag16 PSF scat={m16.get('psf_scatter_pct', float('nan')):.1f}% "
+                f"APER={m16.get('aper_scatter_pct', float('nan')):.1f}%"
+            ),
+            delta=f"P1={pillars.get('accuracy_pass')}; P3={pillars.get('uncertainty_calibration_pass')}",
+            status="PASS" if ok else "FAIL",
+            note=v3d_res.get("verdict", "")[:240],
+        )
+    except Exception as exc:
+        report.add(
+            "V3d",
+            "fine-scale PSF vs aperture vs truth",
+            "psf_photometry_stars",
+            "TODO-PSF-V3d-FINE-SCALE",
+            expected="inject-and-recover at fine scale",
+            recovered=f"error: {exc}",
+            status="FAIL",
+            note="V3d harness failed to run.",
         )
 
 

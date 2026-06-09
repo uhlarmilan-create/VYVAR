@@ -70,6 +70,28 @@ class A9Context:
         return 10.0 ** (-0.4 * (TARGET_MAG - ZP))
 
 
+# Frozen per-cell offsets (PYTHONHASHSEED=1); avoids hash-randomization flakiness in pytest.
+_CELL_RNG_OFFSETS: tuple[int, ...] = (
+    97363, 63432, 63432, 65007, 44691, 42632, 42632, 87382,
+    27587, 25528, 25528, 38406, 95388, 93329, 93329, 89695,
+    79581, 45650, 45650, 42016, 81894, 47963, 47963, 44329,
+    13121, 16271, 16271, 80765, 61643, 27712, 27712, 29287,
+    81060, 84210, 84210, 80576, 63956, 61897, 61897, 31600,
+    83373, 86523, 86523, 82889, 15950, 82019, 82019, 35210,
+    392, 49949, 49949, 51524, 77401, 75342, 75342, 45045,
+    17927, 15868, 15868, 17443, 40302, 95068, 95068, 7946,
+    34241, 32182, 32182, 96676, 8232, 22685, 22685, 75876,
+    86235, 52304, 52304, 5495, 11250, 9191, 9191, 78894,
+    65557, 31626, 31626, 33201,
+)
+_A9_CTX_ORDER: tuple[str, ...] = ("coarse", "fine", "draft367")
+# Isolated-bias path uses sep=-1.0 (not in SEPARATIONS_FWHM); frozen at PYTHONHASHSEED=1.
+_ISOLATED_RNG_OFFSETS: dict[str, int] = {
+    "coarse": 3010,
+    "fine": 96204,
+    "draft367": 55446,
+}
+
 A9_CONTEXTS: dict[str, A9Context] = {
     "coarse": A9Context("coarse", fwhm_px=3.2, plate_scale_arcsec=1.30),
     "fine": A9Context("fine", fwhm_px=6.4, plate_scale_arcsec=0.65),
@@ -116,8 +138,14 @@ class A9CellResult:
 
 
 def _rng_for_cell(ctx_name: str, sep: float, dM: int) -> np.random.Generator:
-    seed = A9_RNG_SEED + hash((ctx_name, sep, dM)) % 100_000
-    return np.random.default_rng(seed)
+    if sep < 0:
+        off = _ISOLATED_RNG_OFFSETS[ctx_name]
+    else:
+        ci = _A9_CTX_ORDER.index(ctx_name)
+        si = SEPARATIONS_FWHM.index(sep)
+        di = DELTA_MAGS.index(dM)
+        off = _CELL_RNG_OFFSETS[(ci * len(SEPARATIONS_FWHM) + si) * len(DELTA_MAGS) + di]
+    return np.random.default_rng(A9_RNG_SEED + off)
 
 
 @dataclass(frozen=True)
