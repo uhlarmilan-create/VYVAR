@@ -20,6 +20,8 @@ Stav modulov a disposícia nálezov. Obnoviteľný register — nie čierna dier
 | `vyvar_platesolver.py` | done | Phase F PS-A..C + batch 3 `center` | PS-B = Phase G priority |
 | `pipeline.py` | done | batch 3: removed `n0`×4, `cfg` in `extract_fits_metadata` | F841 clear |
 | `psf_photometry.py` | done | batch 3: `fit_shape`; **EPSF-1** (2026-06-08) FWHM QC estimator bias | EPSF-1 diagnostic only; ROADMAP TODO-EPSF-1-FWHM-QC + harness V3e |
+| `psf_neighbor_sub.py` | done | step 2/2a validation core + guards (gated OFF) | A9 scored; 2b blocked SAFE_LOW_YIELD |
+| `tests/validation` (A9) | done | blend grid envelope + mismatch diagnostic | `a9_core.py`; tier_a9 reports gitignored |
 | `export_reports.py` | done | F401×2 | ruff --fix batch 1 |
 | `config.py` | done | — | no F841 in scope |
 | `ui_*` (aggregate) | done | Phase F: `n_rms_candidates` wired to m2 | UI-only; reverses prior help-text |
@@ -198,6 +200,29 @@ Aperture path untouched.
 | Crowding 375 L (live) | is_blended **58**, hard **39**, blend@1 **0.0268**, blend@2 **0.0737** |
 | Crowding 380 L (live) | is_blended **53**, hard **34**, blend@1 **0.0269**, blend@2 **0.0751** |
 | ePSF ctx FWHM 375/380 L | **2.744 / 2.730** px; QC ratio ~**0.78 / 0.81** |
+
+## NEIGHBOR-SUB step 2 + 2a (2026-06-08) -- A9 envelope, joint-fit core, fail-safe guards
+
+Validation-scoped (`psf_neighbor_sub_enabled` default OFF; production measurement sites unwired).
+Joint-fit target+neighbour, subtract neighbour only, aperture residual via
+`_catalog_only_fixed_aperture_flux`. `BlendMapEntry` / `_load_blend_worklist` in `photometry_core.py`.
+A9 harness: `tests/validation/a9_core.py`, `gen_a9.py`, `run_a9.py`; recover `--a9`.
+
+Step **2a** guards: inclusive sep floor (`nn_dist_fwhm <= 0.8`); catalog-anchored
+`neighbor_overfit`, `target_undershoot`, `subtract_harmed`, sky-noise SNR floor.
+
+| Check | Vysledok |
+|---|---|
+| `pytest tests` | **203 passed, 6 skipped** |
+| Numeric photometry SHA (`draft_000366`, 283 files) | **unchanged** (`770966c3...`) |
+| A9 ideal pass (coarse) | **85.7%** |
+| A9 realistic mismatch post-2a | FAIL-SILENT **0**; HV PASS-RECOVER **17.6%**; verdict **SAFE_LOW_YIELD** |
+| Step 2b (pipeline wire) | **blocked** -- low yield at coarse bin2; fine-scale A9 / ePSF first |
+| commit | `055595d` feat(validation) |
+
+Mismatch diagnostic: `python -m tests.validation.run_a9_mismatch_diagnostic` ->
+`tests/validation/data/tier_a9/a9_mismatch_diagnostic.md` (gitignored; regenerate locally).
+Design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md` (joint fit §3b; guards §6).
 
 ## Dalsie kroky (Faza 1 pokracovanie)
 

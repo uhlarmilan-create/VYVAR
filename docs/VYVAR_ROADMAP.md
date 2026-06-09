@@ -56,10 +56,11 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
   - **Crowding rule-2 bug** — blend condition `nn_dist_fwhm ≤ 1.5` vs rule-2 requiring
     `≥ 2.0` is contradictory, so the resolvable-blend→PSF rule can never fire. Fix the
     thresholds.
-  - **TODO-PSF-NEIGHBOR-SUB** — fit + subtract bright-neighbour ePSF, aperture the residual
-    (deblend that works at coarse resolution, unlike the grouper). **Design recorded**
-    `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md` (2026-06-09); implementation pending Milan approval.
-    Build order: synthetic harness A9 -> subtract core -> guards -> trust -> h & chi Per.
+  - **TODO-PSF-NEIGHBOR-SUB** — joint-fit + subtract neighbour, aperture residual (gated OFF).
+    **Steps 1-2a DONE** (`055595d`): A9 envelope, `psf_neighbor_sub.py`, fail-safe guards;
+    realistic mismatch **FAIL-SILENT 0**, **SAFE_LOW_YIELD** (~18% HV recover at coarse bin2).
+    **Step 2b blocked** (pipeline wire): re-test fine-scale A9 (draft 367) and/or ePSF first.
+    Design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`; validation: `docs/VYVAR_VALIDATION.md` §A9.
   - **TODO-PSF-MULTIFRAME** — multi-frame ePSF stacking (isolation part done).
   - **TODO-PSF-ASYMMETRY** — tracking-smear diagnostics (BO CVn right-tail PSF).
   - ~~**TODO-FWHM-CONSISTENCY**~~ **DONE (2026-06-09)** — `header_core_fwhm_px` in
