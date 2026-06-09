@@ -13,6 +13,7 @@ no history and no open-task detail -- those live in the linked files.
 | `docs/VYVAR_PROCESS.md` | How we work: Definition of Done, byte-identity discipline, config<->UI parity, tests. |
 | `docs/VYVAR_PARAMS.md` | Config-key <-> default <-> clamp <-> UI-location registry. |
 | `docs/VYVAR_VALIDATION.md` | Inject-and-recover synthetic validation harness (matrix, FAIL policy). |
+| `docs/VYVAR_PIPELINE_CZ.md` | Czech pipeline manual for the paper (ASCII, rev. 2026-06-09). |
 | `CITATIONS.bib` | Single source of truth for all algorithm/software citations. |
 
 ---

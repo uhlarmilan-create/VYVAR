@@ -2,6 +2,13 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- VYVAR_PIPELINE_CZ revize 2026-06-09
+
+Novy/aktualizovany `docs/VYVAR_PIPELINE_CZ.md`: CQ-C, PSF arc, blind solver, byte-identity,
+Gaia build, fail-safety; sekce overeni pred odevzdanim clanku.
+
+---
+
 ## Session -- build_gaia_catalog repo-root resolution (2026-06-09)
 
 `GAIA_DR3/build_gaia_catalog.py`: upward walk for `gaia_catalog_id.py` (fresh-clone friendly);
