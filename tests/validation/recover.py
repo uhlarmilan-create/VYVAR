@@ -756,12 +756,58 @@ def _run_v3(report: ValidationReport) -> None:
         )
 
 
+def _run_a9(report: ValidationReport) -> None:
+    """A9: plain-aperture envelope + neighbor_sub scoring (ideal + PSF-mismatch)."""
+    from tests.validation.a9_core import (
+        run_baseline_envelope,
+        run_neighbor_sub_envelope,
+        self_check_envelope,
+        write_envelope_report,
+    )
+    from tests.validation.gen_a9 import write_a9_truth
+
+    a9_dir = DATA_ROOT / "tier_a9"
+    write_a9_truth(a9_dir)
+    jp, mp, all_ok = write_envelope_report(a9_dir)
+    coarse = run_baseline_envelope("coarse")
+    ok, notes = self_check_envelope(coarse)
+    ideal_ns = run_neighbor_sub_envelope("coarse", "ideal")
+    mismatch_ns = run_neighbor_sub_envelope("coarse", "mismatch")
+    M = coarse["contamination_excess_pct"]
+    seps, dms = coarse["separations_fwhm"], coarse["delta_mags"]
+    i05 = seps.index(0.5)
+    i30 = seps.index(3.0)
+    j0, jm3 = dms.index(0), dms.index(-3)
+    ns_ok = (
+        ideal_ns["pass_rate"] >= 0.55
+        and mismatch_ns["pass_rate"] < ideal_ns["pass_rate"]
+    )
+    report.add(
+        "A9",
+        "blend grid envelope + neighbor_sub joint-fit scoring",
+        "psf_neighbor_sub.neighbor_sub_target_flux / a9_core.measure_cell",
+        "photometry_core._catalog_only_fixed_aperture_flux; VYVAR_NEIGHBOR_SUB_DESIGN.md",
+        expected=(
+            "plain: REFUSE/CLEAN zone structure; ideal NS pass>=55%; "
+            "mismatch pass < ideal"
+        ),
+        recovered=(
+            f"plain sep0.5 dM-3={M[i05][jm3]:+.0f}%; sep3.0 dM0={M[i30][j0]:+.0f}%; "
+            f"ideal_pass={ideal_ns['pass_rate']:.1%}; mismatch_pass={mismatch_ns['pass_rate']:.1%}"
+        ),
+        delta=f"plain={'PASS' if ok else 'FAIL'}; ns={'PASS' if ns_ok else 'FAIL'}",
+        status="PASS" if ok and all_ok and ns_ok else "FAIL",
+        note="; ".join(notes) if notes else f"reports: {jp.name}, {mp.name}",
+    )
+
+
 def run_all(out_dir: Path | None = None) -> ValidationReport:
     out_dir = Path(out_dir or DATA_ROOT)
     report = ValidationReport()
     _run_tier_a(report)
     _run_tier_b(report)
     _run_v3(report)
+    _run_a9(report)
     report.finalize(out_dir)
     return report
 
@@ -772,10 +818,11 @@ def main() -> None:
     ap.add_argument("--tier-a", action="store_true", help="Tier A only")
     ap.add_argument("--tier-b", action="store_true", help="Tier B only")
     ap.add_argument("--v3", action="store_true", help="V3 targeted checks only")
+    ap.add_argument("--a9", action="store_true", help="A9 NEIGHBOR-SUB envelope only")
     ap.add_argument("--out", type=Path, default=DATA_ROOT, help="Report output directory")
     args = ap.parse_args()
 
-    if not (args.all or args.tier_a or args.tier_b or args.v3):
+    if not (args.all or args.tier_a or args.tier_b or args.v3 or args.a9):
         args.all = True
 
     report = ValidationReport()
@@ -789,6 +836,8 @@ def main() -> None:
         _run_tier_b(report)
     if args.all or args.v3:
         _run_v3(report)
+    if args.all or args.a9:
+        _run_a9(report)
 
     jp, mp = report.finalize(args.out)
     n_pass, n_fail, n_skip = report.summary()

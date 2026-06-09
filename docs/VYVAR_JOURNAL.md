@@ -2,6 +2,39 @@ Historical session log. Current state → VYVAR_STATE.md; decisions → VYVAR_DE
 
 ---
 
+## Session -- NEIGHBOR-SUB step 2a guard hardening (2026-06-08)
+
+Sep floor inclusive (`nn_dist_fwhm <= 0.8`). Catalog-anchored guards: `neighbor_overfit` (fitted nn
+mag vs catalog), `target_undershoot` (0.2 mag), `subtract_harmed`, sky-noise SNR floor. A9 realistic
+mismatch re-run: FAIL-SILENT **0** (was 14), HV PASS-RECOVER 17.6%, REFUSE 100%, verdict
+**SAFE_LOW_YIELD** -- 2b blocked (low yield at coarse bin2; fine-scale / ePSF improvement next). SHA
+unchanged; gated OFF.
+
+---
+
+## Session -- A9 mismatch diagnostic / step 2b gate (2026-06-08)
+
+Analysis-only: documented legacy `mismatch` variant (beta 2.0 vs 2.5, neighbour FWHM x1.12 ->
+model/star 0.89 on neighbour, inverted vs EPSF audit). Added `realistic` variant (model/star 1.08,
+e=0.08) anchored to `VYVAR_EPSF_FWHM_TEST`. Per-cell breakdown:
+realistic HV PASS-RECOVER 16.7%, FAIL-SILENT 14, verdict **BLOCK_2B_GUARDS** (guards must strengthen
+before pipeline wire). Reports: `tier_a9/a9_mismatch_diagnostic.md`. pytest green; SHA unchanged.
+
+---
+
+## Session -- NEIGHBOR-SUB step 2 core + A9 scoring (2026-06-08)
+
+Joint-fit subtract + aperture residual core (`psf_neighbor_sub.py`): fit target+neighbour together,
+subtract neighbour only, aperture target via `_catalog_only_fixed_aperture_flux`. Prototype finding
+baked in: single-neighbour fit over-subtracts; joint fit recovers on ideal data. Fit-quality-driven
+guards (sep floor ~0.8 FWHM pre-check; refuse on no_improvement / centroid shift / ill-conditioned
+amplitude). `BlendMapEntry` + `_load_blend_worklist` extend crowding plumbing. A9
+`measure_cell(mode="neighbor_sub")` scores ideal vs PSF-mismatch (fit_beta=2.0, inject FWHM x1.12);
+coarse pass rates ideal 85.7% / mismatch 21.4%. `psf_neighbor_sub_enabled` default OFF; production
+measurement sites NOT wired (step 2b). pytest 195/6 skip; numeric SHA 770966c3 unchanged.
+
+---
+
 ## Session -- NEIGHBOR-SUB design recorded (2026-06-09)
 
 Read-only design for TODO-PSF-NEIGHBOR-SUB: fit neighbour ePSF, subtract, aperture residual.

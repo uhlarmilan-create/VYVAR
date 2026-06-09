@@ -5287,18 +5287,28 @@ def _phase2a_compute_lunar_context(state: _Phase2AState) -> dict[str, Any] | Non
     return lunar
 
 
-_ADAPTIVE_BLEND_CACHE: dict[str, dict[str, tuple[bool, float]]] = {}
+@dataclass(frozen=True)
+class BlendMapEntry:
+    """One row from ``crowding_targets.csv`` for NEIGHBOR-SUB / adaptive routing."""
+
+    is_blended: bool
+    nn_dist_fwhm: float
+    nn_catalog_id: str | None = None
+    delta_mag_nn: float | None = None
+    nn_ra_deg: float | None = None
+    nn_dec_deg: float | None = None
+    mag: float | None = None
 
 
-def _load_adaptive_blend_map(masterstar_fits_path: Path) -> dict[str, tuple[bool, float]]:
-    """``catalog_id`` → ``(is_blended, nn_dist_fwhm)`` from ``crowding_targets.csv`` (cached).
+_ADAPTIVE_BLEND_CACHE: dict[str, dict[str, BlendMapEntry]] = {}
 
-    Best-effort: returns {} if the file is absent (selector then never fires rule 2).
-    """
+
+def _load_blend_worklist(masterstar_fits_path: Path) -> dict[str, BlendMapEntry]:
+    """``catalog_id`` -> blend worklist row from ``crowding_targets.csv`` (cached)."""
     key = str(masterstar_fits_path)
     if key in _ADAPTIVE_BLEND_CACHE:
         return _ADAPTIVE_BLEND_CACHE[key]
-    m: dict[str, tuple[bool, float]] = {}
+    m: dict[str, BlendMapEntry] = {}
     try:
         p = Path(masterstar_fits_path).parent / "crowding_targets.csv"
         if p.is_file():
@@ -5309,15 +5319,36 @@ def _load_adaptive_blend_map(masterstar_fits_path: Path) -> dict[str, tuple[bool
                     continue
                 isb = _coerce_bool_cell(r.get("is_blended"))
                 nn = float(pd.to_numeric(r.get("nn_dist_fwhm"), errors="coerce"))
-                tup = (isb, nn)
-                m[cid] = tup
+                nncid = str(r.get("nn_catalog_id", "") or "").strip() or None
+                dmag = float(pd.to_numeric(r.get("delta_mag_nn"), errors="coerce"))
+                dmag_v = dmag if math.isfinite(dmag) else None
+                ra = float(pd.to_numeric(r.get("ra_deg"), errors="coerce"))
+                de = float(pd.to_numeric(r.get("dec_deg"), errors="coerce"))
+                mag_v = float(pd.to_numeric(r.get("mag"), errors="coerce"))
+                entry = BlendMapEntry(
+                    is_blended=isb,
+                    nn_dist_fwhm=nn,
+                    nn_catalog_id=nncid,
+                    delta_mag_nn=dmag_v,
+                    nn_ra_deg=ra if math.isfinite(ra) else None,
+                    nn_dec_deg=de if math.isfinite(de) else None,
+                    mag=mag_v if math.isfinite(mag_v) else None,
+                )
+                m[cid] = entry
                 ncid = _normalize_gaia_id(cid)
                 if ncid:
-                    m[ncid] = tup
+                    m[ncid] = entry
     except Exception as e:  # noqa: BLE001
-        logging.warning("[ePSF] adaptive blend map load failed (%s) — rule 2 disabled", e)
+        logging.warning("[ePSF] blend worklist load failed (%s)", e)
     _ADAPTIVE_BLEND_CACHE[key] = m
     return m
+
+
+def _load_adaptive_blend_map(masterstar_fits_path: Path) -> dict[str, tuple[bool, float]]:
+    """``catalog_id`` -> ``(is_blended, nn_dist_fwhm)`` (legacy tuple API; see ``BlendMapEntry``)."""
+    return {
+        k: (v.is_blended, v.nn_dist_fwhm) for k, v in _load_blend_worklist(masterstar_fits_path).items()
+    }
 
 
 def _get_lc(cid: str, all_frames: pd.DataFrame) -> np.ndarray:

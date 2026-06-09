@@ -1,7 +1,7 @@
 # VYVAR NEIGHBOR-SUB -- design (TODO-PSF-NEIGHBOR-SUB)
 
-Status: **DESIGN for review** (no code yet). Grounded read-only at HEAD fe8201c + post
-FWHM-CONSISTENCY line drift noted below. ASCII only.
+Status: **step 2 implemented** (core + A9 scoring; gated OFF; not wired to production measurement
+sites yet -- step 2b). ASCII only.
 
 ---
 
@@ -37,33 +37,47 @@ Select a target for NEIGHBOR-SUB when ALL hold:
 
 On h & chi Per (corrected FWHM): 375 L -> 39 hard / 58 blended; 380 L -> 34 / 53 -- a real worklist.
 
-**Plumbing gap (pre-implementation):** `_load_adaptive_blend_map` (`photometry_core.py:5293`) currently
-caches only `(is_blended, nn_dist_fwhm)` per `catalog_id`. NEIGHBOR-SUB needs the full worklist row
-(`nn_catalog_id`, `delta_mag_nn`, positions). Extend the loader or read `crowding_targets.csv`
-directly when `psf_neighbor_sub_enabled`.
+**Plumbing (step 2):** `_load_blend_worklist` + `BlendMapEntry` (`photometry_core.py:5290`) load the
+full crowding row (`nn_catalog_id`, `delta_mag_nn`, neighbour ra/dec). Legacy
+`_load_adaptive_blend_map` still returns `(is_blended, nn_dist_fwhm)` tuples.
 
 ---
 
 ## 3. Algorithm (per blended target, per frame)
 
-a. Gather the target + its contaminating neighbour(s) positions (from the worklist + WCS->pixel).
+### 3a. Gather
 
-b. Fit the ePSF to the NEIGHBOUR ONLY: amplitude + sub-pixel centroid, ePSF SHAPE FIXED. Reuse the
-   existing fitter (`psf_photometry_stars`, `psf_photometry.py:2067`, run on a `star_positions`
-   frame that contains the neighbour; it already returns flux + fitted position + model + chi2).
+Target + contaminating neighbour(s) from the worklist (`delta_mag_nn <= nn_contam_dmag`) with
+positions (catalog + WCS->pixel for production; stamp coords in A9).
 
-c. Render the fitted neighbour model and SUBTRACT it from a local stamp of the frame around the
-   target (work on a stamp, not the whole frame, for speed and locality).
+### 3b. JOINT fit (prototype finding -- required)
 
-d. Run the EXISTING aperture extractor (`photometry_core` CircularAperture path,
-   `_catalog_only_fixed_aperture_flux` / `enhance_catalog_dataframe_aperture_bpm`, ~1479 / ~9313)
-   on the TARGET in the residual stamp -- same aperture/annulus radii (`VY_FWHM_GAUSS`-based) as normal.
+**Prototype (synthetic blends):** fitting the NEIGHBOUR ALONE over-subtracts (target flux leaks into
+the neighbour fit; residual bias -35% to -94%). **WRONG.**
 
-e. Emit the target's aperture flux from the residual PLUS bookkeeping: `neighbor_subtracted=True`,
-   `n_neighbors_subtracted`, `subtracted_neighbor_flux`, `neighbor_fit_chi2` / `residual_rms`.
+**Correct core:** JOINT-fit target + neighbour(s) together (amplitudes + bounded sub-pixel centroids,
+ePSF/Moffat SHAPE fixed), subtract ONLY the neighbour component(s) from a stamp copy, then aperture
+the target in the residual. On ideal data this recovers target flux to ~0% across separations.
 
-If multiple contaminating neighbours fall within the annulus, fit+subtract each (or jointly) before
-the aperture step.
+**Caveat:** ideal-data recovery is optimistic (exact PSF, clean partition). On real data the amplitude
+split is ill-conditioned at full overlap (sep <~0.8 FWHM) and the ePSF will not match exactly.
+Guards must be **fit-quality-driven** (not a blanket separation cut).
+
+Implementation (step 2): `psf_neighbor_sub._joint_moffat_fit_subtract` (validation uses Moffat;
+production step 2b will reuse grouped multi-source machinery in `psf_photometry_stars` ~2077).
+
+### 3c. Subtract + aperture
+
+Subtract neighbour model only from a **copy** of the local stamp (never mutate shared frames).
+Aperture the target via `_catalog_only_fixed_aperture_flux` with `VY_FWHM_GAUSS`-based radii.
+
+### 3d. Bookkeeping
+
+`neighbor_subtracted`, `n_neighbors_subtracted`, `subtracted_neighbor_flux`, `joint_fit_chi2`,
+`residual_rms`, `fit_condition` (amplitude-ratio proxy), fitted centroids.
+
+Multiple contaminants: joint-fit all in the stamp together (open-Q3: joint, since prototype showed
+joint is required even for one neighbour).
 
 ---
 
@@ -107,14 +121,27 @@ orchestration; guards; bookkeeping columns.
 
 ## 6. Guards / failure modes (fail SAFE to plain aperture + flag)
 
-- Bad neighbour fit (high chi2 / residual_rms above threshold, or fitted position far from catalog
-  neighbour position) -> DO NOT subtract; fall back to plain aperture; flag `neighbor_sub_failed`.
-- Over-subtraction risk: fitted neighbour centroid within ~0.5 FWHM of TARGET -> skip subtraction,
-  flag `ambiguous_blend`.
-- Saturated neighbour or target -> skip (PSF fit invalid on clipped cores).
-- Neighbour is itself a science target / variable -> still fine to subtract for THIS target's
-  measurement; never mutate a shared frame used by others -> always work on a per-target local stamp
-  copy.
+**Step 2a (2026-06-08):** A9 realistic-mismatch diagnostic drove guard hardening. Goal: **FAIL-SILENT ~0**
+(never emit a confident wrong flux; refuse and fall back to plain aperture).
+
+**Separation floor (inclusive):** refuse when `nn_dist_fwhm <= neighbor_sub_refuse_sep_fwhm` (default
+**0.8**). Covers sep 0.5 and 0.8 REFUSE-zone cells.
+
+**Catalog-anchored sanity (production-ready; uses Gaia `mag` / `nn_mag`):**
+
+- `neighbor_overfit`: joint-fit neighbour aperture flux brighter than catalog `nn_mag` by more than
+  `neighbor_sub_max_neighbor_overmag` (default 0.3 mag).
+- `target_undershoot`: recovered target flux fainter than catalog `mag` by more than
+  `neighbor_sub_max_target_undermag` (default 0.2 mag after A9 calibration).
+- `subtract_harmed`: mild-contamination case where cleaned flux < 95% of plain (subtraction hurt).
+- `nonphysical_flux`: recovered flux <= 0; `low_recovered_snr` vs sky+read noise in aperture.
+
+**Fit-quality (secondary):** centroid shift, target_amp <= 0, `no_improvement`, chi2/rms when no gain.
+
+A9 realistic mismatch post-2a: **FAIL-SILENT 0**, HV PASS-RECOVER **~18%** -> **SAFE_LOW_YIELD**
+(2b blocked; re-test at fine scale / improve ePSF first).
+
+Never mutate a shared frame; always work on a per-target stamp copy.
 
 ---
 
@@ -131,8 +158,10 @@ transparent about the deblend.
 
 ## 8. Config / gating
 
-- New flag `psf_neighbor_sub_enabled` (default OFF), plus thresholds: `neighbor_sub_chi2_max`,
-  `neighbor_sub_min_sep_fwhm` (~0.5), reuse `nn_contam_dmag` (or alias from `_PSF_QUALITY_THRESH`).
+- `psf_neighbor_sub_enabled` (default OFF), `neighbor_sub_chi2_max`, `neighbor_sub_residual_rms_max`,
+  `neighbor_sub_refuse_sep_fwhm` (0.8, **inclusive** `<=`), `neighbor_sub_centroid_max_fwhm`,
+  `neighbor_sub_nn_contam_dmag`, `neighbor_sub_max_neighbor_overmag` (0.3),
+  `neighbor_sub_max_target_undermag` (0.2), `neighbor_sub_min_recovered_snr` (5.0).
 - Applies ONLY to worklist (`is_blended` + contaminant) targets. Isolated-star photometry is
   byte-identical (untouched). Stays OFF in production until validated (mirrors PSF discipline).
 
@@ -173,20 +202,23 @@ subset, validated against synthetic truth and real-field scatter, not against ol
   They still bias annulus sky even if not the aperture core.
 - Where to persist neighbor-subtracted residual stamps (debug/QA) without bloating drafts.
 
-**Recommended build order once approved:**
+**Build order:**
 
-1. Synthetic harness item (controlled blends) -- define acceptance envelope FIRST.
-2. Subtract+aperture core reusing `psf_photometry_stars`.
-3. Guards + bookkeeping.
-4. Trust integration.
-5. Validate on h & chi Per.
+1. ~~A9 envelope (step 1)~~ DONE.
+2. ~~Joint-fit subtract + aperture core + A9 `neighbor_sub` scoring + PSF-mismatch variant (step 2)~~ DONE
+   (`psf_neighbor_sub.py`, gated OFF).
+3. Wire into per-frame measurement sites (step 2b): `enhance_catalog_dataframe_aperture_bpm` ~9197,
+   Phase-2A remeasure ~6225, `_catalog_only_merge_frame_flux` ~1655.
+4. Trust integration + h & chi Per real-field scatter validation (step 3).
 
-All OFF until synthetic envelope + real-field scatter confirm gain.
+All OFF in production until synthetic envelope + real-field scatter confirm gain.
 
 ---
 
 ## Cross-references
 
+- **A9 acceptance envelope (steps 1-2, DONE):** `tests/validation/a9_core.py`, `psf_neighbor_sub.py`,
+  `docs/VYVAR_VALIDATION.md` (ideal pass ~86%; mismatch ~21% on coarse grid)
 - Crowding worklist (corrected FWHM): `docs/VYVAR_HCHIPER_CROWDING_RECOMPUTE.md`
 - ePSF FWHM denominator context: `docs/VYVAR_EPSF_FWHM_TEST.md`
 - Validation harness: `docs/VYVAR_VALIDATION.md`, `tests/validation/README.md`

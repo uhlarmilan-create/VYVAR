@@ -187,6 +187,24 @@ class AppConfig:
     psf_group_sep_fwhm: float = 1.5
     #: Neighbour inclusion radius for joint-fit init params, in units of FWHM_px.
     psf_neighbor_include_fwhm: float = 3.0
+    #: NEIGHBOR-SUB: joint-fit neighbour, subtract model, aperture residual. Default OFF.
+    psf_neighbor_sub_enabled: bool = False
+    #: Reduced chi2 proxy ceiling for joint neighbour-sub fit (fit-quality refuse).
+    neighbor_sub_chi2_max: float = 120.0
+    #: Residual RMS ceiling (ADU) in target region after joint fit.
+    neighbor_sub_residual_rms_max: float = 150.0
+    #: Cheap pre-gate: sep below this (FWHM) triggers refuse unless fit is excellent.
+    neighbor_sub_refuse_sep_fwhm: float = 0.8
+    #: Max fitted centroid shift from catalog position, in units of FWHM.
+    neighbor_sub_centroid_max_fwhm: float = 1.0
+    #: Neighbour is a contaminant when delta_mag_nn <= this (mag_neighbour - mag_target).
+    neighbor_sub_nn_contam_dmag: float = 2.5
+    #: Catalog anchor: refuse if fitted neighbour mag is brighter than nn_mag by more than this.
+    neighbor_sub_max_neighbor_overmag: float = 0.3
+    #: Catalog anchor: refuse if recovered target mag is fainter than catalog by more than this.
+    neighbor_sub_max_target_undermag: float = 0.2
+    #: Minimum recovered aperture SNR (flux / RMS/sqrt(area)) after subtraction.
+    neighbor_sub_min_recovered_snr: float = 5.0
     #: Spatially-varying ePSF (GriddedPSFModel). Default OFF → single global ePSF.
     #: When enabled, ePSFs are built per detector-region cell and interpolated by (x,y),
     #: which matters on wide fields where the PSF varies (coma / field curvature at edges).
@@ -893,6 +911,24 @@ class AppConfig:
             self.psf_neighbor_include_fwhm = _nif if math.isfinite(_nif) and _nif > 0 else 3.0
         except (TypeError, ValueError):
             self.psf_neighbor_include_fwhm = 3.0
+        self.psf_neighbor_sub_enabled = bool(
+            data.get("psf_neighbor_sub_enabled", self.psf_neighbor_sub_enabled)
+        )
+        for _attr, _default in (
+            ("neighbor_sub_chi2_max", 120.0),
+            ("neighbor_sub_residual_rms_max", 150.0),
+            ("neighbor_sub_refuse_sep_fwhm", 0.8),
+            ("neighbor_sub_centroid_max_fwhm", 1.0),
+            ("neighbor_sub_nn_contam_dmag", 2.5),
+            ("neighbor_sub_max_neighbor_overmag", 0.3),
+            ("neighbor_sub_max_target_undermag", 0.2),
+            ("neighbor_sub_min_recovered_snr", 5.0),
+        ):
+            try:
+                _v = float(data.get(_attr, getattr(self, _attr)))
+                setattr(self, _attr, _v if math.isfinite(_v) and _v > 0 else _default)
+            except (TypeError, ValueError):
+                setattr(self, _attr, _default)
         self.psf_spatial_enabled = bool(data.get("psf_spatial_enabled", self.psf_spatial_enabled))
         _grid = str(data.get("psf_spatial_grid", self.psf_spatial_grid) or "3x3").lower().strip()
         self.psf_spatial_grid = _grid if "x" in _grid else "3x3"
@@ -1492,6 +1528,15 @@ class AppConfig:
             "psf_grouper_enabled": bool(self.psf_grouper_enabled),
             "psf_group_sep_fwhm": float(self.psf_group_sep_fwhm),
             "psf_neighbor_include_fwhm": float(self.psf_neighbor_include_fwhm),
+            "psf_neighbor_sub_enabled": bool(self.psf_neighbor_sub_enabled),
+            "neighbor_sub_chi2_max": float(self.neighbor_sub_chi2_max),
+            "neighbor_sub_residual_rms_max": float(self.neighbor_sub_residual_rms_max),
+            "neighbor_sub_refuse_sep_fwhm": float(self.neighbor_sub_refuse_sep_fwhm),
+            "neighbor_sub_centroid_max_fwhm": float(self.neighbor_sub_centroid_max_fwhm),
+            "neighbor_sub_nn_contam_dmag": float(self.neighbor_sub_nn_contam_dmag),
+            "neighbor_sub_max_neighbor_overmag": float(self.neighbor_sub_max_neighbor_overmag),
+            "neighbor_sub_max_target_undermag": float(self.neighbor_sub_max_target_undermag),
+            "neighbor_sub_min_recovered_snr": float(self.neighbor_sub_min_recovered_snr),
             "psf_spatial_enabled": bool(self.psf_spatial_enabled),
             "psf_spatial_grid": str(self.psf_spatial_grid),
             "psf_spatial_min_stars_per_cell": int(self.psf_spatial_min_stars_per_cell),

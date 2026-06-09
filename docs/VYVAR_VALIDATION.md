@@ -24,7 +24,7 @@ Outputs:
 - `tests/validation/data/validation_report.json`
 - `tests/validation/data/validation_report.md`
 
-Partial runs: `--tier-a`, `--tier-b`, `--v3`.
+Partial runs: `--tier-a`, `--tier-b`, `--v3`, `--a9`.
 
 See also `tests/validation/README.md` for the full matrix.
 
@@ -35,6 +35,64 @@ See also `tests/validation/README.md` for the full matrix.
 | A | Single-frame contaminations | `crowding_index._build_blend_targets_df`, `comp_qa_core.sokolovsky_indices`, `photometry_core._catalog_only_fixed_aperture_flux`, SEP cross-val |
 | B | 60-frame series | LombScargle LC, Sokolovsky comp QA, `trust_flag_core.evaluate_target`, `fit_color_term_c1` |
 | V3 | Targeted | `time_utils` BJD, pipeline airmass, `calibration.get_processed_master`, blind WCS proxy |
+| A9 | NEIGHBOR-SUB envelope | `a9_core.measure_cell` on blend grid; `plain_aperture` baseline + `neighbor_sub` scored path |
+
+## A9 NEIGHBOR-SUB acceptance envelope (steps 1-2)
+
+A9 defines the **plain-aperture contamination map** (the problem) and scores the joint-fit
+NEIGHBOR-SUB core (`psf_neighbor_sub.neighbor_sub_target_flux`) per cell vs zone-specific PASS rules.
+
+- Generator: `tests/validation/gen_a9.py` (truth sidecar; grid sep x delta_mag)
+- Measurement: VYVAR `_catalog_only_fixed_aperture_flux` with AppConfig radii (not raw photutils)
+- Contexts: **coarse** (FWHM 3.2 px, 1.30"/px) and **fine** (FWHM 6.4 px, 0.65"/px)
+- Reports: `tests/validation/data/tier_a9/a9_envelope.json` + `.md` + plain/gain heatmap PNGs
+- Scoring: `measure_cell(mode="neighbor_sub")` -- HIGH_VALUE cells must recover (>=80% contamination
+  reduction); REFUSE cells must guard-refuse; CLEAN cells no-op
+- PSF variants: legacy `mismatch` (stress test) and EPSF-audit `realistic` (see diagnostic below)
+
+Run: `python -m tests.validation.run_a9` or `python -m tests.validation.recover --a9`.
+
+Coarse neighbor_sub pass rates (2026-06-08): **ideal 85.7%**, **legacy mismatch 21.4%**.
+
+#### PSF-mismatch diagnostic (step 2b gate)
+
+```bash
+python -m tests.validation.run_a9_mismatch_diagnostic
+```
+
+Report: `tests/validation/data/tier_a9/a9_mismatch_diagnostic.md`
+
+**Legacy `mismatch`:** fit beta=2.0 vs inject beta=2.5; neighbour inject FWHM x1.12 (model/star
+**0.89** on neighbour -- inverted vs field ePSF audit). Over-aggressive; not a realistic field test.
+
+**`realistic` (EPSF audit anchor):** model/star FWHM **1.08**, beta matched, inject ellipticity
+e=0.08.
+
+**Post step-2a guards (2026-06-08):** inclusive sep floor `<=0.8`, catalog-anchored
+`neighbor_overfit` / `target_undershoot` / `subtract_harmed`. Re-run:
+`python -m tests.validation.run_a9_mismatch_diagnostic`
+
+| Metric | Pre-2a | Post-2a |
+|--------|--------|---------|
+| FAIL-SILENT | 14 | **0** |
+| HV PASS-RECOVER | 16.7% | **17.6%** |
+| REFUSE correctness | 62.5% | **100%** |
+| Verdict | BLOCK_2B_GUARDS | **SAFE_LOW_YIELD** |
+
+2b **not started**: fail-safe achieved but yield low at coarse bin2; re-test at fine scale (draft 367)
+and/or improve ePSF before wiring production.
+
+Expected coarse shape (contamination **excess** over isolated control, %):
+
+| sep | dM0 | dM-1 | dM-2 | dM-3 |
+|-----|-----|------|------|------|
+| 0.5 | ~+80 | ... | ... | ~+1300 |
+| 1.0 | ~+70 | ... | ... | ~+1100 |
+| 1.5 | ~+40 | ... | ... | ~+630 |
+| 2.0 | ~+14 | ... | ... | ~+225 |
+| 3.0 | ~0 | ~+3 | ~+9 | ~+24 |
+
+Exact numbers differ slightly with VYVAR annulus radii (factor 1.9 x FWHM); zone structure is what matters.
 
 ### Tier B catalog source
 
@@ -67,7 +125,7 @@ bad-comp rejection (B2), trust gating (B3), color-term sign/magnitude (B4), cali
 
 - Photometry numeric SHA on `draft_000366` (283 LC+comp files) must remain unchanged when
   only validation code is added.
-- Existing pytest: **183 passed, 6 skipped** (unchanged).
+- Existing pytest: **195 passed, 6 skipped** (+12 neighbor_sub / A9 tests).
 
 ## RNG seeds
 
@@ -75,5 +133,6 @@ bad-comp rejection (B2), trust gating (B3), color-term sign/magnitude (B4), cali
 |-----|-------|
 | gen_frame | 42 |
 | gen_series | 43 |
+| gen_a9 | 44 |
 
 Deterministic regeneration: `python -m tests.validation.recover --all`.

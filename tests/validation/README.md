@@ -38,6 +38,7 @@ python -m tests.validation.gen_series
 |--------|------|---------|
 | `gen_frame` | 42 | Tier-A single frame star positions + noise |
 | `gen_series` | 43 | Tier-B 60-frame series |
+| `gen_a9` | 44 | A9 blend-grid envelope |
 | CR pixels (Tier A) | 42 | Cosmic-ray pixel locations |
 
 ## Matrix
@@ -54,6 +55,29 @@ python -m tests.validation.gen_series
 | A6 | Moonlight gradient | (GAP) | SKIP -- document tilt |
 | A7 | Clean comps | photutils vs SEP | agree ~0.2%/frame |
 | A8 | Known ZP | aperture photometry | bias < 50 mmag |
+| A9 | Blend grid sep x delta_mag | `a9_core.measure_cell` plain + `neighbor_sub` | zone structure PASS; scores joint-fit core (ideal + PSF-mismatch) |
+
+### A9 -- NEIGHBOR-SUB acceptance envelope (`a9_core.py`, `gen_a9.py`)
+
+Grid: separations 0.5-3.0 FWHM x neighbour delta_mag 0,-1,-2,-3. Measures target flux through
+**VYVAR's** `photometry_core._catalog_only_fixed_aperture_flux` (AppConfig annulus radii).
+Contamination excess = blend bias minus isolated-control bias. Three zones:
+
+- **REFUSE** (sep <= 0.8): future NEIGHBOR-SUB guard must refuse
+- **HIGH_VALUE** (sep ~0.8-1.5, blended): recover + >=80% contamination reduction
+- **CLEAN** (wide sep / faint neighbour): NEIGHBOR-SUB no-op
+
+```bash
+python -m tests.validation.run_a9
+python -m tests.validation.recover --a9
+```
+
+Outputs: `data/tier_a9/a9_envelope.json`, `a9_envelope.md`, `a9_envelope_coarse.png`.
+`measure_cell(mode="neighbor_sub")` calls `psf_neighbor_sub.neighbor_sub_target_flux` (gated ON in A9
+only). Production measurement sites remain unwired until step 2b.
+
+**Mismatch diagnostic (step 2b gate):** `python -m tests.validation.run_a9_mismatch_diagnostic`
+writes `a9_mismatch_diagnostic.md` comparing legacy `mismatch` vs EPSF-audit `realistic` variant.
 
 ### Tier B -- series (`gen_series.py`)
 
