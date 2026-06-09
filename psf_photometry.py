@@ -346,9 +346,10 @@ def _read_plate_scale_arcsec_px_from_fits(fits_path: Path) -> float | None:
 
 
 def _fit_shape_for_cutout(cutout_size: int, fwhm_px: float | None = None) -> tuple[int, int]:
+    """PSF fit window size (odd). Uses global ``fwhm_px`` from ePSF meta (uniform per star)."""
     if fwhm_px is not None and fwhm_px > 0:
-        # 2×FWHM+1, rounded up to nearest odd integer, minimum 5
-        fs = int(math.ceil(2.0 * fwhm_px + 1.0))
+        # 2xFWHM+1, rounded up to nearest odd integer, minimum 5
+        fs = int(math.ceil(2.0 * float(fwhm_px) + 1.0))
         if fs % 2 == 0:
             fs += 1
         fs = max(5, fs)
@@ -1868,6 +1869,366 @@ def fit_moffat_psf_stars(
     return df
 
 
+def _aperture_annulus_radii_px(fwhm_px: float) -> tuple[float, float, float]:
+    """``r_ap``, ``r_in``, ``r_out`` matching ``photometry_core`` catalog-only aperture path."""
+    try:
+        from config import AppConfig
+
+        cfg = AppConfig()
+        af = float(cfg.aperture_fwhm_factor)
+        ai = float(cfg.annulus_inner_fwhm)
+        ao = float(cfg.annulus_outer_fwhm)
+    except Exception:  # noqa: BLE001
+        af, ai, ao = 1.9, 4.75, 9.0
+    fw = float(fwhm_px)
+    r_ap = max(0.5, af * fw)
+    r_in = max(r_ap + 0.5, ai * fw)
+    r_out = max(r_in + 0.5, ao * fw)
+    return r_ap, r_in, r_out
+
+
+def _border_median_sky_from_cutout(cut: np.ndarray) -> float:
+    """Legacy 2-pixel border median on a fit cutout (fallback when annulus is infeasible)."""
+    border_mask = np.ones(cut.shape, dtype=bool)
+    if cut.shape[0] > 4 and cut.shape[1] > 4:
+        border_mask[2:-2, 2:-2] = False
+    border_vals = cut[border_mask]
+    finite = border_vals[np.isfinite(border_vals)]
+    if len(finite) >= 8:
+        return float(np.median(finite))
+    return float(np.nanmedian(cut))
+
+
+def _psf_annulus_radii_px(
+    fwhm_px: float,
+    *,
+    inner_fwhm: float | None = None,
+    outer_fwhm: float | None = None,
+) -> tuple[float, float, float]:
+    """Annulus radii for PSF sky (defaults match aperture path; overrides PSF-only)."""
+    r_ap, r_in, r_out = _aperture_annulus_radii_px(fwhm_px)
+    fw = float(fwhm_px)
+    if inner_fwhm is not None and fw > 0:
+        r_in = max(r_ap + 0.5, float(inner_fwhm) * fw)
+    if outer_fwhm is not None and fw > 0:
+        r_out = max(r_in + 0.5, float(outer_fwhm) * fw)
+    return r_ap, r_in, r_out
+
+
+def _annulus_median_per_px(
+    frame_data: np.ndarray,
+    x: float,
+    y: float,
+    *,
+    r_in: float,
+    r_out: float,
+) -> float:
+    """Median ADU/px in a circular annulus (PSF path; does not touch aperture photometry)."""
+    if not (math.isfinite(x) and math.isfinite(y) and math.isfinite(r_in) and math.isfinite(r_out)):
+        return float("nan")
+    if r_out <= r_in:
+        return float("nan")
+    try:
+        from photutils.aperture import CircularAnnulus
+    except ImportError:
+        return float("nan")
+    d = np.asarray(frame_data, dtype=np.float64)
+    if np.any(~np.isfinite(d)):
+        fill = float(np.nanmedian(d)) if np.any(np.isfinite(d)) else 0.0
+        d = np.where(np.isfinite(d), d, fill)
+    pos = np.array([[float(x), float(y)]], dtype=np.float64)
+    an = CircularAnnulus(pos, r_in=float(r_in), r_out=float(r_out))
+    ann_masks = an.to_mask(method="center")
+    if not isinstance(ann_masks, (list, tuple)):
+        ann_masks = [ann_masks]
+    for amask in ann_masks:
+        try:
+            cut = np.asarray(amask.get_values(d), dtype=np.float64).ravel()
+            cut = cut[np.isfinite(cut)]
+            if cut.size >= 8:
+                return float(np.median(cut))
+        except Exception:  # noqa: BLE001
+            continue
+    return float("nan")
+
+
+def _annulus_sky_per_px_custom(
+    frame_data: np.ndarray,
+    x: float,
+    y: float,
+    *,
+    fwhm_px: float,
+    inner_fwhm: float,
+    outer_fwhm: float,
+) -> tuple[float, str]:
+    """PSF-only annulus sky with explicit inner/outer FWHM multipliers (option A sweep)."""
+    if not (math.isfinite(fwhm_px) and fwhm_px > 0):
+        return float("nan"), "border_fallback"
+    h, w = frame_data.shape
+    _, r_in, r_out = _psf_annulus_radii_px(
+        fwhm_px, inner_fwhm=inner_fwhm, outer_fwhm=outer_fwhm
+    )
+    margin = 0.5
+    if not (
+        x - r_out >= margin
+        and y - r_out >= margin
+        and x + r_out <= w - 1 - margin
+        and y + r_out <= h - 1 - margin
+    ):
+        return float("nan"), "border_fallback"
+    sky = _annulus_median_per_px(frame_data, x, y, r_in=r_in, r_out=r_out)
+    if math.isfinite(sky):
+        return sky, f"annulus_r{inner_fwhm:.1f}_{outer_fwhm:.1f}fwhm"
+    return float("nan"), "border_fallback"
+
+
+def _subtract_psf_models(
+    frame_data: np.ndarray,
+    psf_model: Any,
+    sources: list[tuple[float, float, float]],
+) -> np.ndarray:
+    """Return ``frame - sum(flux_i * PSF_i)`` on the full image."""
+    d = np.asarray(frame_data, dtype=np.float64)
+    residual = d.copy()
+    if not sources:
+        return residual
+    h, w = d.shape
+    yy, xx = np.mgrid[0:h, 0:w]
+    xg = xx.astype(np.float64)
+    yg = yy.astype(np.float64)
+    for sx, sy, sflux in sources:
+        if not (math.isfinite(sx) and math.isfinite(sy) and math.isfinite(sflux) and sflux > 0):
+            continue
+        shape = (h, w)
+        model = psf_model.evaluate(
+            xg,
+            yg,
+            np.full(shape, float(sflux), dtype=np.float64),
+            np.full(shape, float(sx), dtype=np.float64),
+            np.full(shape, float(sy), dtype=np.float64),
+        )
+        residual -= np.asarray(model, dtype=np.float64)
+    return residual
+
+
+def _residual_annulus_sky_per_px(
+    frame_data: np.ndarray,
+    x: float,
+    y: float,
+    *,
+    fwhm_px: float,
+    psf_model: Any,
+    sources: list[tuple[float, float, float]],
+    inner_fwhm: float | None = None,
+    outer_fwhm: float | None = None,
+) -> tuple[float, str]:
+    """Sky from annulus on (data - fitted PSF models); wing- and neighbour-clean (option C)."""
+    if not (math.isfinite(fwhm_px) and fwhm_px > 0):
+        return float("nan"), "border_fallback"
+    _, r_in, r_out = _psf_annulus_radii_px(
+        fwhm_px, inner_fwhm=inner_fwhm, outer_fwhm=outer_fwhm
+    )
+    h, w = frame_data.shape
+    margin = 0.5
+    if not (
+        x - r_out >= margin
+        and y - r_out >= margin
+        and x + r_out <= w - 1 - margin
+        and y + r_out <= h - 1 - margin
+    ):
+        return float("nan"), "border_fallback"
+    residual = _subtract_psf_models(frame_data, psf_model, sources)
+    sky = _annulus_median_per_px(residual, x, y, r_in=r_in, r_out=r_out)
+    if math.isfinite(sky):
+        return sky, "residual_annulus"
+    return float("nan"), "border_fallback"
+
+
+def _annulus_sky_per_px_full_frame(
+    frame_data: np.ndarray,
+    x: float,
+    y: float,
+    *,
+    fwhm_px: float,
+) -> tuple[float, str]:
+    """Aperture-consistent local sky on the full image (same annulus as catalog aperture path)."""
+    if not (math.isfinite(x) and math.isfinite(y) and math.isfinite(fwhm_px) and fwhm_px > 0):
+        return float("nan"), "border_fallback"
+    h, w = frame_data.shape
+    r_ap, r_in, r_out = _aperture_annulus_radii_px(fwhm_px)
+    margin = 0.5
+    if not (
+        x - r_out >= margin
+        and y - r_out >= margin
+        and x + r_out <= w - 1 - margin
+        and y + r_out <= h - 1 - margin
+    ):
+        return float("nan"), "border_fallback"
+    try:
+        from photometry_core import _catalog_only_fixed_aperture_flux
+
+        _, sky_pp, _ = _catalog_only_fixed_aperture_flux(
+            np.asarray(frame_data, dtype=np.float64),
+            float(x),
+            float(y),
+            r_ap,
+            r_in,
+            r_out,
+        )
+        if math.isfinite(sky_pp):
+            return float(sky_pp), "annulus_local"
+    except Exception:  # noqa: BLE001
+        pass
+    return float("nan"), "border_fallback"
+
+
+def _psf_resolve_gain_read_noise(frame_hdr: Any) -> tuple[float, float]:
+    """Gain (e-/ADU) and read noise (e-) for PSF fit-weight construction."""
+    try:
+        from config import AppConfig
+        from param_resolver import resolve_gain, resolve_read_noise
+
+        cfg = AppConfig()
+        gain = float(resolve_gain(frame_hdr, cfg=cfg).value or 1.0)
+        rn = float(resolve_read_noise(frame_hdr, cfg=cfg).value or 10.0)
+    except Exception:  # noqa: BLE001
+        gain, rn = 1.0, 10.0
+    if not math.isfinite(gain) or gain <= 0:
+        gain = 1.0
+    if not math.isfinite(rn) or rn < 0:
+        rn = 10.0
+    return gain, rn
+
+
+def _psf_sky_only_sigma_per_px(sky_per_px_adu: float, gain: float, read_noise_e: float) -> float:
+    """Brightness-independent per-pixel sigma (ADU): sky Poisson + read noise only."""
+    sky = max(0.0, float(sky_per_px_adu)) if math.isfinite(sky_per_px_adu) else 0.0
+    g = max(1e-6, float(gain))
+    rn = max(0.0, float(read_noise_e))
+    var = sky / g + (rn / g) ** 2
+    return float(math.sqrt(max(var, 1e-12)))
+
+
+def _psf_fit_error_cutout(
+    cut_shape: tuple[int, ...],
+    *,
+    sky_per_px: float,
+    gain: float,
+    read_noise_e: float,
+    err_full_cut: np.ndarray | None = None,
+) -> np.ndarray:
+    """Uniform sky+read-noise error map for photutils PSF fit weights."""
+    sigma = _psf_sky_only_sigma_per_px(sky_per_px, gain, read_noise_e)
+    err_fit = np.full(cut_shape, sigma, dtype=np.float64)
+    if err_full_cut is not None and err_full_cut.shape == cut_shape:
+        pos = err_fit > 0
+        if np.any(pos):
+            err_fit = np.where(pos, err_fit, sigma).astype(np.float64, copy=False)
+    return err_fit
+
+
+def _psf_fit_region_mask(
+    shape: tuple[int, ...],
+    cy: float,
+    cx: float,
+    fit_shape: tuple[int, int],
+) -> np.ndarray:
+    """Boolean mask for the PSF fit window centered on (cx, cy) in cutout coords."""
+    mask = np.zeros(shape, dtype=bool)
+    fh = max(int(fit_shape[0]), int(fit_shape[1])) // 2
+    iy = int(round(cy))
+    ix = int(round(cx))
+    y0 = max(0, iy - fh)
+    y1 = min(shape[0], iy + fh + 1)
+    x0 = max(0, ix - fh)
+    x1 = min(shape[1], ix + fh + 1)
+    mask[y0:y1, x0:x1] = True
+    return mask
+
+
+def _psf_sandwich_flux_err(
+    flux_fit: float,
+    psf_model: Any,
+    x_fit: float,
+    y_fit: float,
+    cut_shape: tuple[int, ...],
+    *,
+    sky_per_px: float,
+    gain: float,
+    read_noise_e: float,
+    fit_shape: tuple[int, int],
+) -> float:
+    """Sandwich SE for sky-only weighted PSF flux (true variance, sky-only weights)."""
+    if not (math.isfinite(flux_fit) and flux_fit > 0 and math.isfinite(x_fit) and math.isfinite(y_fit)):
+        return float("nan")
+    sigma_sky = _psf_sky_only_sigma_per_px(sky_per_px, gain, read_noise_e)
+    if not math.isfinite(sigma_sky) or sigma_sky <= 0:
+        return float("nan")
+    fh_y = int(fit_shape[0]) // 2
+    fh_x = int(fit_shape[1]) // 2
+    iy = int(round(y_fit))
+    ix = int(round(x_fit))
+    y0 = max(0, iy - fh_y)
+    y1 = min(int(cut_shape[0]), iy + fh_y + 1)
+    x0 = max(0, ix - fh_x)
+    x1 = min(int(cut_shape[1]), ix + fh_x + 1)
+    if y1 <= y0 or x1 <= x0:
+        return float("nan")
+    yy, xx = np.mgrid[y0:y1, x0:x1]
+    xg = xx.astype(np.float64).ravel()
+    yg = yy.astype(np.float64).ravel()
+    npx = xg.size
+    try:
+        model = psf_model.evaluate(
+            xg,
+            yg,
+            np.ones(npx, dtype=np.float64),
+            np.full(npx, float(x_fit), dtype=np.float64),
+            np.full(npx, float(y_fit), dtype=np.float64),
+        )
+        p = np.maximum(np.asarray(model, dtype=np.float64).ravel(), 0.0)
+    except Exception:  # noqa: BLE001
+        return float("nan")
+    w = 1.0 / (sigma_sky * sigma_sky)
+    g = max(1e-6, float(gain))
+    sigma_true_sq = sigma_sky * sigma_sky + float(flux_fit) * p / g
+    wp2 = w * p * p
+    denom = float(np.sum(wp2))
+    if denom <= 0 or not math.isfinite(denom):
+        return float("nan")
+    numer = float(np.sum(w * w * sigma_true_sq * p * p))
+    if not math.isfinite(numer) or numer <= 0:
+        return float("nan")
+    return float(math.sqrt(numer / (denom * denom)))
+
+
+def _apply_psf_fixed_position(phot: Any, *, fix: bool) -> None:
+    """Fix PSF centroid to init (forced photometry; Guy et al. 2010 / Lacroix et al. 2025)."""
+    if not fix:
+        return
+    try:
+        phot.psf_model.x_0.fixed = True
+        phot.psf_model.y_0.fixed = True
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _resolve_psf_fit_sky(
+    frame_data: np.ndarray,
+    cut: np.ndarray,
+    x: float,
+    y: float,
+    *,
+    fwhm_px: float,
+) -> tuple[float, str]:
+    """Prefer aperture-geometry annulus sky; fall back to cutout border median."""
+    if fwhm_px > 0:
+        sky, method = _annulus_sky_per_px_full_frame(frame_data, x, y, fwhm_px=fwhm_px)
+        if method == "annulus_local" and math.isfinite(sky):
+            return sky, method
+    return _border_median_sky_from_cutout(cut), "border_fallback"
+
+
 def _grouped_psf_fit(
     frame_data: np.ndarray,
     err_full: np.ndarray | None,
@@ -1882,6 +2243,7 @@ def _grouped_psf_fit(
     group_sep_fwhm: float,
     neighbor_include_fwhm: float,
     chi2_limit: float,
+    frame_hdr: Any = None,
 ) -> dict[str, Any] | None:
     """Joint (deblended) PSF fit of a target plus its close neighbours.
 
@@ -1927,14 +2289,13 @@ def _grouped_psf_fit(
     if cut.size == 0 or cut.shape[0] < int(fit_shape[1]) or cut.shape[1] < int(fit_shape[0]):
         return None
 
-    # Sky from the cutout border (outer 2-px frame).
+    sky, _sky_method = _resolve_psf_fit_sky(frame_data, cut, float(x), float(y), fwhm_px=float(fwhm_px))
+    cut_sub = cut - sky
     _bmask = np.ones(cut.shape, dtype=bool)
     if cut.shape[0] > 4 and cut.shape[1] > 4:
         _bmask[2:-2, 2:-2] = False
     _bvals = cut[_bmask]
     _bfin = _bvals[np.isfinite(_bvals)]
-    sky = float(np.median(_bfin)) if len(_bfin) >= 8 else float(np.nanmedian(cut))
-    cut_sub = cut - sky
 
     # Target init flux: positive sum within ~1 FWHM of its position.
     tx_l, ty_l = float(x) - x_lo, float(y) - y_lo
@@ -1952,16 +2313,17 @@ def _grouped_psf_fit(
     init_y = [sy - y_lo for sy in src_y]
     init_f = [f if (math.isfinite(f) and f > 0) else _fallback_f for f in src_f]
 
-    err_cut = None
+    err_full_cut = None
     if err_full is not None:
         ec = np.asarray(err_full[y_lo : y_hi + 1, x_lo : x_hi + 1], dtype=np.float64)
         if ec.shape == cut.shape and np.any(np.isfinite(ec)) and float(np.nanmax(ec)) > 0:
-            err_cut = ec
-    if err_cut is None:
-        _noise = float(np.std(_bfin)) if len(_bfin) >= 8 else 1.0
-        if not math.isfinite(_noise) or _noise <= 0:
-            _noise = 1.0
-        err_cut = np.full_like(cut_sub, _noise, dtype=np.float64)
+            err_full_cut = ec
+    _grp_gain, _grp_rn = _psf_resolve_gain_read_noise(frame_hdr)
+    err_cut = _psf_fit_error_cutout(
+        cut.shape, sky_per_px=sky, gain=_grp_gain, read_noise_e=_grp_rn, err_full_cut=err_full_cut
+    )
+    _weight_mode = "sky_only"
+    _err_mode = "sandwich_skyonly"
 
     try:
         grouper = SourceGrouper(min_separation=float(sep))
@@ -1974,6 +2336,28 @@ def _grouped_psf_fit(
         )
         init = Table([init_x, init_y, init_f], names=("x_0", "y_0", "flux_0"))
         res = phot(data=cut_sub, init_params=init, error=err_cut)
+        _flux_arr = np.asarray(res["flux_fit"], dtype=float)
+        _sources = [
+            (float(x_lo) + float(res["x_fit"][i]), float(y_lo) + float(res["y_fit"][i]), float(_flux_arr[i]))
+            for i in range(len(_flux_arr))
+            if math.isfinite(_flux_arr[i]) and _flux_arr[i] > 0
+        ]
+        if _sources:
+            _sky_new, _meth_new = _residual_annulus_sky_per_px(
+                frame_data,
+                float(x),
+                float(y),
+                fwhm_px=float(fwhm_px),
+                psf_model=psf_model,
+                sources=_sources,
+            )
+            if _meth_new == "residual_annulus" and math.isfinite(_sky_new):
+                sky = _sky_new
+                _sky_method = _meth_new
+                cut_sub = cut - sky
+                init_f2 = [float(f) for f in _flux_arr]
+                init = Table([init_x, init_y, init_f2], names=("x_0", "y_0", "flux_0"))
+                res = phot(data=cut_sub, init_params=init, error=err_cut)
         # Identify the target row: nearest fit position to the target init xy.
         xf = np.asarray(res["x_fit"], dtype=float)
         yf = np.asarray(res["y_fit"], dtype=float)
@@ -1982,7 +2366,17 @@ def _grouped_psf_fit(
         if math.sqrt(float(d2[k])) > max(2.0, 0.75 * float(fwhm_px)):
             return None  # target not recovered in the joint fit → fall back
         flux_fit = float(res["flux_fit"][k])
-        flux_err = float(res["flux_err"][k]) if "flux_err" in res.colnames else float("nan")
+        flux_err = _psf_sandwich_flux_err(
+            flux_fit,
+            psf_model,
+            float(xf[k]),
+            float(yf[k]),
+            cut.shape,
+            sky_per_px=sky,
+            gain=_grp_gain,
+            read_noise_e=_grp_rn,
+            fit_shape=fit_shape,
+        )
         chi2 = float(res["reduced_chi2"][k]) if "reduced_chi2" in res.colnames else float("nan")
         flags = int(res["flags"][k]) if "flags" in res.colnames else 0
     except Exception:  # noqa: BLE001
@@ -1998,6 +2392,9 @@ def _grouped_psf_fit(
         "psf_chi2": chi2,
         "psf_fit_ok": bool(converged and chi2_ok),
         "n_group": int(len(init_f)),
+        "psf_sky_method": _sky_method,
+        "psf_weight_mode": _weight_mode,
+        "psf_err_mode": _err_mode,
     }
 
 
@@ -2136,6 +2533,9 @@ def psf_photometry_stars(
         raise ValueError(f"cutout_size must be odd and >= 3, got {cutout_size}")
 
     fwhm_px_meta = float(meta.get("fwhm_px", 0.0))
+    _psf_gain, _psf_rn = _psf_resolve_gain_read_noise(frame_hdr)
+    _weight_mode = "sky_only"
+    _err_mode = "sandwich_skyonly"
 
     err_full: np.ndarray | None = None
     if error is not None:
@@ -2183,27 +2583,6 @@ def psf_photometry_stars(
         and gridded_model.get("cell_arrays")
     )
 
-    def _make_phot(_pm: ImagePSF) -> tuple[Any, bool]:
-        """Build a photometry object for a given (per-star) PSF model, mirroring global config."""
-        if use_iterative:
-            try:
-                return (
-                    IterativePSFPhotometry(
-                        _pm,
-                        fit_shape,
-                        _epsf_noop_finder,
-                        aperture_radius=_aperture_radius,
-                        sub_shape=fit_shape,
-                        maxiters=max_fit_iters,
-                        mode="new",
-                        progress_bar=False,
-                    ),
-                    True,
-                )
-            except Exception:  # noqa: BLE001
-                return PSFPhotometry(_pm, fit_shape=fit_shape, progress_bar=False), False
-        return PSFPhotometry(_pm, fit_shape=fit_shape, progress_bar=False), False
-
     if _spatial_active:
         log_event(
             f"PSF spatial ePSF ACTIVE: {gridded_model.get('grid_nx')}x{gridded_model.get('grid_ny')} grid, "
@@ -2217,6 +2596,32 @@ def psf_photometry_stars(
         _cfg_grp = _AppCfg()
     except Exception:  # noqa: BLE001
         _cfg_grp = None
+    _fix_position = bool(getattr(_cfg_grp, "psf_fix_position_enabled", False)) if _cfg_grp else False
+    _apply_psf_fixed_position(phot, fix=_fix_position)
+
+    def _make_phot(_pm: ImagePSF) -> tuple[Any, bool]:
+        """Build a photometry object for a given (per-star) PSF model, mirroring global config."""
+        if use_iterative:
+            try:
+                _p = IterativePSFPhotometry(
+                    _pm,
+                    fit_shape,
+                    _epsf_noop_finder,
+                    aperture_radius=_aperture_radius,
+                    sub_shape=fit_shape,
+                    maxiters=max_fit_iters,
+                    mode="new",
+                    progress_bar=False,
+                )
+                _apply_psf_fixed_position(_p, fix=_fix_position)
+                return _p, True
+            except Exception:  # noqa: BLE001
+                _p = PSFPhotometry(_pm, fit_shape=fit_shape, progress_bar=False)
+                _apply_psf_fixed_position(_p, fix=_fix_position)
+                return _p, False
+        _p = PSFPhotometry(_pm, fit_shape=fit_shape, progress_bar=False)
+        _apply_psf_fixed_position(_p, fix=_fix_position)
+        return _p, False
     _grp_enabled = (
         bool(getattr(_cfg_grp, "psf_grouper_enabled", False))
         if grouper_enabled is None
@@ -2278,6 +2683,9 @@ def psf_photometry_stars(
         "psf_group_fallback",
         "psf_snr",
         "psf_pos_shift",
+        "psf_sky_method",
+        "psf_weight_mode",
+        "psf_err_mode",
         "psf_nn_dist_fwhm",
         "psf_quality",
         "psf_quality_fallback",
@@ -2352,6 +2760,7 @@ def psf_photometry_stars(
                 group_sep_fwhm=_grp_sep,
                 neighbor_include_fwhm=_grp_inc,
                 chi2_limit=_grp_chi2_limit,
+                frame_hdr=frame_hdr,
             )
             if _gres is not None:
                 row_out = dict(base)
@@ -2389,16 +2798,18 @@ def psf_photometry_stars(
                 out_rows.append(base)
                 continue
 
-            # Sky estimate from cutout annulus (outermost 2-pixel border)
+            _sky_per_px, _sky_method = _resolve_psf_fit_sky(
+                frame_data,
+                cut,
+                float(x),
+                float(y),
+                fwhm_px=fwhm_px_meta if fwhm_px_meta > 0 else 0.0,
+            )
             _border_mask = np.ones(cut.shape, dtype=bool)
-            _border_mask[2:-2, 2:-2] = False  # True = border pixels
+            _border_mask[2:-2, 2:-2] = False
             _border_vals = cut[_border_mask]
             _border_finite = _border_vals[np.isfinite(_border_vals)]
-            if len(_border_finite) >= 8:
-                _sky_per_px = float(np.median(_border_finite))
-            else:
-                _sky_per_px = float(np.nanmedian(cut))
-            cut_sky_sub = cut - _sky_per_px  # sky-subtracted cutout
+            cut_sky_sub = cut - _sky_per_px
 
             xc = x - x1
             yc = y - y1
@@ -2409,17 +2820,18 @@ def psf_photometry_stars(
                     flux_guess = 1.0
 
             init = Table([[xc], [yc], [flux_guess]], names=("x_0", "y_0", "flux_0"))
-            err_cut = None
+            err_full_cut = None
             if err_full is not None:
-                err_cut = np.asarray(err_full[y1:y2, x1:x2], dtype=np.float64)
-                if err_cut.shape != cut.shape:
+                err_full_cut = np.asarray(err_full[y1:y2, x1:x2], dtype=np.float64)
+                if err_full_cut.shape != cut.shape:
                     raise ValueError("error cutout shape mismatch")
-            if err_cut is None or not np.any(np.isfinite(err_cut)) or float(np.nanmax(err_cut)) <= 0.0:
-                # Estimate per-pixel noise from cutout border std (fallback; makes reduced_chi2 finite)
-                _noise = float(np.std(_border_finite)) if len(_border_finite) >= 8 else 1.0
-                if not math.isfinite(_noise) or _noise <= 0:
-                    _noise = 1.0
-                err_cut = np.full_like(cut_sky_sub, _noise, dtype=np.float64)
+            err_cut = _psf_fit_error_cutout(
+                cut.shape,
+                sky_per_px=_sky_per_px,
+                gain=_psf_gain,
+                read_noise_e=_psf_rn,
+                err_full_cut=err_full_cut,
+            )
             _star_iterative = _used_iterative
             _psf_model_use = psf_model
             _phot_use = phot
@@ -2441,8 +2853,53 @@ def psf_photometry_stars(
                 else:
                     raise
 
+            # Residual-annulus sky: subtract fitted PSF wing from annulus (1 refine pass).
+            if fwhm_px_meta > 0:
+                _ff0 = float(res["flux_fit"][0])
+                _xf0 = float(res["x_fit"][0]) + float(x1)
+                _yf0 = float(res["y_fit"][0]) + float(y1)
+                if math.isfinite(_ff0) and _ff0 > 0:
+                    _sky_new, _meth_new = _residual_annulus_sky_per_px(
+                        frame_data,
+                        float(x),
+                        float(y),
+                        fwhm_px=float(fwhm_px_meta),
+                        psf_model=_psf_model_use,
+                        sources=[(_xf0, _yf0, _ff0)],
+                    )
+                    if _meth_new == "residual_annulus" and math.isfinite(_sky_new):
+                        _sky_per_px = _sky_new
+                        _sky_method = _meth_new
+                        cut_sky_sub = cut - _sky_per_px
+                        _fg2 = float(np.nansum(cut_sky_sub.clip(min=0)))
+                        if math.isfinite(_fg2) and _fg2 > 0:
+                            init = Table([[xc], [yc], [_fg2]], names=("x_0", "y_0", "flux_0"))
+                            try:
+                                res = _phot_use(data=cut_sky_sub, init_params=init, error=err_cut)
+                            except Exception as exc_refine:  # noqa: BLE001
+                                if _star_iterative:
+                                    _phot_fb = PSFPhotometry(
+                                        _psf_model_use, fit_shape=fit_shape, progress_bar=False
+                                    )
+                                    res = _phot_fb(data=cut_sky_sub, init_params=init, error=err_cut)
+                                    _star_iterative = False
+                                else:
+                                    log_event(f"PSF residual-sky refit failed ({exc_refine})")
+
             flux_fit = float(res["flux_fit"][0])
-            flux_err = float(res["flux_err"][0])
+            _xf_fit = float(res["x_fit"][0])
+            _yf_fit = float(res["y_fit"][0])
+            flux_err = _psf_sandwich_flux_err(
+                flux_fit,
+                _psf_model_use,
+                _xf_fit,
+                _yf_fit,
+                cut.shape,
+                sky_per_px=_sky_per_px,
+                gain=_psf_gain,
+                read_noise_e=_psf_rn,
+                fit_shape=fit_shape,
+            )
             chi2 = float(res["reduced_chi2"][0])
             flags = int(res["flags"][0])
             converged = (flags & 8) == 0
@@ -2484,6 +2941,9 @@ def psf_photometry_stars(
                     "psf_group_fallback": _group_fallback,
                     "psf_snr": _snr,
                     "psf_pos_shift": _pos_shift,
+                    "psf_sky_method": _sky_method,
+                    "psf_weight_mode": _weight_mode,
+                    "psf_err_mode": _err_mode,
                 }
             )
         except Exception:  # noqa: BLE001
