@@ -26,9 +26,7 @@ if TYPE_CHECKING:
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
 # NOTE: render_select_stars is not wired into app.py (inactive entry point).
-# _sanitize_suspected_variables_df is still imported by ui_suspected_lightcurves.py.
-# Functions are preserved for potential future use.
-# Last audit: 2026-05-18
+# Last audit: 2026-06-08
 
 
 # ---------------------------------------------------------------------------

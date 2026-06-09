@@ -4179,6 +4179,10 @@ def save_target_field_map_png(
 # ---------------------------------------------------------------------------
 
 
+_EDGE_FILTER_NOTE_OK = ""
+_EDGE_FILTER_NOTE_FAILED = "EDGE-UNFILTERED: edge safety check failed"
+
+
 def _edge_ok_from_masterstar_pipeline(
     masterstar_fits: Path,
     stars_df: pd.DataFrame,
@@ -4186,23 +4190,28 @@ def _edge_ok_from_masterstar_pipeline(
     *,
     ms_header: Any | None = None,
     ms_data: np.ndarray | None = None,
-) -> pd.Series:
+) -> tuple[pd.Series, bool]:
     """
     Per-star edge safety (annulus-aware, best-effort).
 
     Copy of UI logic (ui_variability._edge_ok_from_masterstar) without Streamlit dependency.
+    Returns (edge_ok, edge_filter_failed). On failure, fail-open (all edge-ok) with flag set.
     """
     if stars_df is None or stars_df.empty:
-        return pd.Series(dtype=bool)
+        return pd.Series(dtype=bool), False
     masterstar_fits = Path(masterstar_fits)
     if not masterstar_fits.exists():
-        return pd.Series(True, index=stars_df.index)
+        LOGGER.warning(
+            "[PHOT] edge-ok check failed (MASTERSTAR missing); treating all stars as edge-ok: %s",
+            masterstar_fits,
+        )
+        return pd.Series(True, index=stars_df.index), True
 
     try:
         from astropy.io import fits as astrofits  # noqa: PLC0415
     except Exception as exc:  # noqa: BLE001
         LOGGER.warning("[PHOT] edge-ok check failed; treating all stars as edge-ok: %s", exc)
-        return pd.Series(True, index=stars_df.index)
+        return pd.Series(True, index=stars_df.index), True
 
     nx = ny = None
     fwhm_px = float("nan")
@@ -4246,7 +4255,12 @@ def _edge_ok_from_masterstar_pipeline(
     ok = np.isfinite(x) & np.isfinite(y)
     if nx is not None and ny is not None and nx > 0 and ny > 0 and np.isfinite(margin) and margin >= 0:
         ok = ok & (x >= margin) & (x <= float(nx) - margin) & (y >= margin) & (y <= float(ny) - margin)
-    return ok.fillna(False).astype(bool)
+    edge_filter_failed = nx is None or ny is None or nx <= 0 or ny <= 0
+    if edge_filter_failed:
+        LOGGER.warning(
+            "[PHOT] edge-ok check incomplete (chip dims unknown); candidates EDGE-UNFILTERED"
+        )
+    return ok.fillna(False).astype(bool), bool(edge_filter_failed)
 
 
 def auto_export_variability_candidates_csv(
@@ -4469,7 +4483,7 @@ def auto_export_variability_candidates_csv(
             work["catalog_only_warning"] = False
             work.loc[_keep_co, "catalog_only_warning"] = True
 
-    edge_ok = _edge_ok_from_masterstar_pipeline(
+    edge_ok, edge_filter_failed = _edge_ok_from_masterstar_pipeline(
         Path(masterstar_fits_path),
         work,
         cfg_dict,
@@ -4477,12 +4491,21 @@ def auto_export_variability_candidates_csv(
         ms_data=ms_data,
     )
     work["edge_ok"] = edge_ok.reindex(work.index).fillna(False).astype(bool)
+    if edge_filter_failed:
+        LOGGER.error(
+            "[VARIABILITY] edge_filter_failed=True: candidate list is EDGE-UNFILTERED "
+            "(scrutinize edge candidates manually)"
+        )
 
     # EXACT cand_mask as UI
     vsx_known = rms_df["vsx_known_variable"].fillna(False).astype(bool)
     vsx_matched = rms_df["vsx_match"].fillna(False).astype(bool)
     cand_mask = work["is_candidate_combined"] & ~(vsx_known | vsx_matched) & work["edge_ok"]
     cand_df = work.loc[cand_mask].copy()
+    cand_df["edge_filter_failed"] = bool(edge_filter_failed)
+    cand_df["edge_filter_note"] = (
+        _EDGE_FILTER_NOTE_FAILED if edge_filter_failed else _EDGE_FILTER_NOTE_OK
+    )
     # Final guard: make sure exported IDs are stable strings (no trailing .0 etc.).
     try:
         from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
@@ -4635,6 +4658,8 @@ def auto_export_variability_candidates_csv(
             "zone",
             "zone_flag",
             "catalog_only_warning",
+            "edge_filter_failed",
+            "edge_filter_note",
             "vsx_known_variable",
             "vsx_match",
             "gaia_dr3_variable_catalog",

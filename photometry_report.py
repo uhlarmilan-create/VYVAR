@@ -1076,17 +1076,48 @@ class _PhotometryReportBuilder:
                 return "Variability: " + ", ".join(parts)
         return "Period: no period"
 
+    def _variability_edge_filter_note(self) -> str:
+        """Read edge_filter_failed from exported variability_candidates.csv (pipeline ground truth)."""
+        for vp in (
+            self.photometry_dir / "variability_candidates.csv",
+            self.platesolve_dir / "variability_candidates.csv",
+        ):
+            if not vp.is_file():
+                continue
+            try:
+                vdf = pd.read_csv(vp, low_memory=False, nrows=1)
+            except Exception:  # noqa: BLE001
+                continue
+            if vdf.empty:
+                continue
+            if "edge_filter_note" in vdf.columns:
+                note = str(vdf["edge_filter_note"].iloc[0] or "").strip()
+                if note:
+                    return note
+            if "edge_filter_failed" in vdf.columns:
+                try:
+                    if bool(vdf["edge_filter_failed"].iloc[0]):
+                        return "EDGE-UNFILTERED: edge safety check failed"
+                except Exception:  # noqa: BLE001
+                    pass
+            break
+        return ""
+
     def _variability_cover_rows(self) -> list[tuple[str, str]]:
         vm = self._variability_cover_metrics()
         if not vm:
             return []
-        return [
+        rows = [
             ("Stars analysed (variability)", f"{int(vm.get('n_all', 0)):d}"),
             ("New RMS candidates", f"{int(vm.get('n_rms', 0)):d}"),
             ("New VDI candidates", f"{int(vm.get('n_vdi', 0)):d}"),
             ("Combined edge-safe candidates", f"{int(vm.get('n_combined', 0)):d}"),
             ("Known VSX variables", f"{int(vm.get('n_vsx', 0)):d}"),
         ]
+        edge_note = self._variability_edge_filter_note()
+        if edge_note:
+            rows.append(("Edge filter status", edge_note))
+        return rows
 
     def _compress_image_for_pdf(self, 
         src_path: str | Path,

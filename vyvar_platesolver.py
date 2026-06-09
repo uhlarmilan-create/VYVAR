@@ -3509,17 +3509,37 @@ def _solve_wcs_write_results(
             hdul_w.flush()
             _hdr_written = h_w.copy()
             _data_written = np.asarray(hdul_w[0].data, dtype=np.float32)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         _hdr_written = None
         _data_written = None
+        if _is_masterstar:
+            LOGGER.error(
+                "[SOLVER] MASTERSTAR WCS persist failed (read/update) for %s: %s",
+                fp,
+                exc,
+            )
+            raise _SolveWcsWriteError(
+                f"VYVAR solver: MASTERSTAR WCS persist failed (read/update): {fp}: {exc}"
+            ) from exc
 
     # 2) For MASTERSTAR on disk: hard overwrite to guarantee file is physically updated.
-    try:
-        if _is_masterstar and _hdr_written is not None and _data_written is not None:
+    if _is_masterstar:
+        if _hdr_written is None or _data_written is None:
+            LOGGER.error("[SOLVER] MASTERSTAR WCS persist failed: missing header/data for %s", fp)
+            raise _SolveWcsWriteError(
+                f"VYVAR solver: MASTERSTAR WCS persist failed (missing header/data): {fp}"
+            )
+        try:
             fits.writeto(fp, _data_written, _hdr_written, overwrite=True)
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("[SOLVER] failed to persist solved MASTERSTAR WCS to %s: %s", fp, exc)
-        pass
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.error(
+                "[SOLVER] failed to persist solved MASTERSTAR WCS to %s: %s",
+                fp,
+                exc,
+            )
+            raise _SolveWcsWriteError(
+                f"VYVAR solver: MASTERSTAR WCS persist failed (writeto): {fp}: {exc}"
+            ) from exc
 
     if not fits_header_has_celestial_wcs(_hdr_written or hdr0):
         raise _SolveWcsWriteError("VYVAR solver: WCS po zápise stále neplatný.")
