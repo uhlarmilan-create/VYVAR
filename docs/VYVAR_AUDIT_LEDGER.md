@@ -19,7 +19,7 @@ Stav modulov a disposícia nálezov. Obnoviteľný register — nie čierna dier
 | `database.py` | done | Phase F DB-A..D (see AUDIT_FINDINGS) | mostly sound; DB-B threading verify |
 | `vyvar_platesolver.py` | done | Phase F PS-A..C + batch 3 `center` | PS-B = Phase G priority |
 | `pipeline.py` | done | batch 3: removed `n0`×4, `cfg` in `extract_fits_metadata` | F841 clear |
-| `psf_photometry.py` | done | batch 3: `fit_shape`; **EPSF-1** (2026-06-08) FWHM QC estimator bias | EPSF-1 diagnostic only; ROADMAP TODO-EPSF-1-FWHM-QC + harness V3e |
+| `psf_photometry.py` | done | batch 3: `fit_shape`; **EPSF-1** CLOSED (2026-06-08) azimuthal profile FWHM QC | Diagnostic only; V3e PASS; SHA 770966c3 unchanged |
 | `psf_neighbor_sub.py` | done | step 2/2a validation core + guards (gated OFF) | A9 scored; 2b blocked SAFE_LOW_YIELD |
 | `tests/validation` (A9) | done | blend grid envelope + mismatch diagnostic | `a9_core.py`; tier_a9 reports gitignored |
 | `export_reports.py` | done | F401×2 | ruff --fix batch 1 |
@@ -141,7 +141,7 @@ sub-point closed. G1.1: 8 solve-result-path excepts in `vyvar_platesolver.py` no
 ## Phase G batch 2 (2026-06-08) -- platesolver pass-style except triage
 
 6 pass-excepts now log (1 warning MASTERSTAR WCS persist, 5 debug refinements/headers); ~25
-confirmed skip-OK. OPEN QUESTION: fatal MASTERSTAR WCS write? (ROADMAP)
+confirmed skip-OK. MASTERSTAR WCS write fail-closed (#4, 2026-06-08).
 
 | Check | Vysledok |
 |---|---|
@@ -153,7 +153,7 @@ confirmed skip-OK. OPEN QUESTION: fatal MASTERSTAR WCS write? (ROADMAP)
 ## Phase G batch 3 (2026-06-08) -- photometry_core pass/return-path triage
 
 7 sites logged (3 warning, 4 debug); high-risk return/write subset of 230 excepts reviewed;
-graceful-fallback/loop-skip/already-logged remainder skip-OK. OPEN QUESTION: edge-ok fail-open.
+graceful-fallback/loop-skip/already-logged remainder skip-OK. edge-ok fail-open+flag (#4, 2026-06-08).
 
 | Check | Vysledok |
 |---|---|

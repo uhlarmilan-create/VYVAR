@@ -1,13 +1,13 @@
 # VYVAR — Config ↔ UI parameter registry
 
-Generated **2026-06-02** from `config.py`, `config.json`, and `ui*.py`.
-Registry required by `docs/VYVAR_PROCESS.md` Definition of Done §4.
+Generated **2026-06-09** from `config.py`, `config.json`, `psf_photometry.py`, and `ui*.py`.
+Registry required by `docs/VYVAR_PROCESS.md` Definition of Done section 4.
 
-**Legend — exposed:** `yes` = Settings or tool UI widget; `intentionally-hidden` =
+**Legend -- exposed:** `yes` = Settings or tool UI widget; `intentionally-hidden` =
 dev/gated flag documented here (edit via `config.json`); `no` = drift (config-only,
-no UI yet).
+no UI yet); `production-constant` = hardcoded in production module (not a config key).
 
-**Summary:** 63 exposed · 126 intentionally-hidden · 22 config-only (no UI) · 2 UI references without config key
+**Summary:** 63 exposed · 139 intentionally-hidden · 22 config-only (no UI) · 2 UI references without config key · 5 production-constants
 
 ---
 
@@ -167,6 +167,35 @@ no UI yet).
 | `psf_spatial_grid` | '3x3' | — | — | intentionally-hidden |
 | `psf_spatial_min_stars_per_cell` | 25 | — | — | intentionally-hidden |
 | `psf_spatial_order` | 0 | 0 … 2 | — | intentionally-hidden |
+
+### PSF production constants (hardcoded in `psf_photometry.py`)
+
+| key | default | notes | exposed |
+|-----|---------|-------|---------|
+| `psf_weight_mode` | `sky_only` | Fit weights from sky + read noise only (not object Poisson) | production-constant |
+| `psf_err_mode` | `sandwich_skyonly` | Reported err from true variance through sky-only weights | production-constant |
+| `psf_sky_method` | per-star column | `annulus_local` / `residual_annulus` / `border_fallback` | production-constant |
+| `epsf_fwhm_ratio_warn_lo` | 0.80 | EPSF-1 QC diagnostic warning (not flux gating) | production-constant |
+| `epsf_fwhm_ratio_warn_hi` | 1.25 | EPSF-1 QC diagnostic warning (not flux gating) | production-constant |
+
+## NEIGHBOR-SUB (gated OFF)
+
+| key | default | clamp/range | UI location | exposed |
+|-----|---------|-------------|-------------|---------|
+| `psf_neighbor_sub_enabled` | False | — | — | intentionally-hidden |
+| `neighbor_sub_chi2_max` | 120.0 | — | — | intentionally-hidden |
+| `neighbor_sub_residual_rms_max` | 150.0 | — | — | intentionally-hidden |
+| `neighbor_sub_refuse_sep_fwhm` | 0.8 | — | — | intentionally-hidden |
+| `neighbor_sub_centroid_max_fwhm` | 1.0 | — | — | intentionally-hidden |
+| `neighbor_sub_nn_contam_dmag` | 2.5 | — | — | intentionally-hidden |
+| `neighbor_sub_max_neighbor_overmag` | 0.3 | — | — | intentionally-hidden |
+| `neighbor_sub_max_target_undermag` | 0.2 | — | — | intentionally-hidden |
+| `neighbor_sub_min_recovered_snr` | 5.0 | — | — | intentionally-hidden |
+| `neighbor_sub_regime_dmag_min` | 2.5 | — | — | intentionally-hidden |
+| `neighbor_sub_regime_sep_max` | 1.1 | — | — | intentionally-hidden |
+
+`bright_close_regime` guard: refuse when sep <= `neighbor_sub_regime_sep_max` FWHM and
+delta_mag >= `neighbor_sub_regime_dmag_min` (in `psf_neighbor_sub.py`).
 
 ## Parallelism
 

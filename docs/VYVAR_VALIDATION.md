@@ -34,8 +34,10 @@ See also `tests/validation/README.md` for the full matrix.
 |------|-------|-------------------------|
 | A | Single-frame contaminations | `crowding_index._build_blend_targets_df`, `comp_qa_core.sokolovsky_indices`, `photometry_core._catalog_only_fixed_aperture_flux`, SEP cross-val |
 | B | 60-frame series | LombScargle LC, Sokolovsky comp QA, `trust_flag_core.evaluate_target`, `fit_color_term_c1` |
-| V3 | Targeted | `time_utils` BJD, pipeline airmass, `calibration.get_processed_master`, blind WCS proxy |
-| A9 | NEIGHBOR-SUB envelope | `a9_core.measure_cell` on blend grid; `plain_aperture` baseline + `neighbor_sub` scored path |
+| V3 | Targeted utilities | `time_utils` BJD, pipeline airmass, `calibration.get_processed_master`, blind WCS proxy |
+| A9 | NEIGHBOR-SUB acceptance envelope | `a9_core.measure_cell` on blend grid; `plain_aperture` baseline + `neighbor_sub` scored path |
+| V3d | Fine-scale PSF vs aperture vs truth | `psf_photometry_stars`, `_catalog_only_fixed_aperture_flux`, real ePSF build; accuracy/precision/P3 pillars |
+| V3e | ePSF FWHM QC (EPSF-1) | `_epsf_build_imagepsf_from_stars` + `_epsf_fwhm_native_from_profile`; OLD vs NEW ratio table |
 
 ## A9 NEIGHBOR-SUB acceptance envelope (steps 1-2)
 
@@ -133,7 +135,7 @@ After first full harness run (`14 pass / 2 fail / 2 skip`):
 | A7 | FAIL | photutils annulus sky vs SEP mesh background differ ~0.7% on clean stars (methodology gap, not necessarily pipeline bug) |
 | A6 | SKIP | Documented gap: flat-only leaves moonlight gradient |
 | V3d | PASS | Fine-scale PSF-vs-aperture-vs-truth (367-like); crossover mag ~14; see `tier_v3d/v3d_fine_scale.md` |
-| V3e | PASS | Synthetic Tier-A ratio=1.127; real h&chi Per still 0.59-0.67 (field-specific QC) |
+| V3e | PASS | NEW estimator ratios 1.038-1.049 (Moffat 2.7/5.4/6.02 px); OLD 1.048-1.111; see `tier_v3e/v3e_epsf_fwhm.md` |
 
 Pass highlights: crowding blend thresholds (A1/A2), Sokolovsky spike on CR series (A4),
 saturation peak (A5), aperture ZP after throughput calibration (A8), variability recovery (B1),
@@ -142,22 +144,37 @@ bad-comp rejection (B2), trust gating (B3), color-term sign/magnitude (B4), cali
 ## Production discipline
 
 - Photometry numeric SHA on `draft_000366` (283 LC+comp files) must remain unchanged when
-  only validation code is added.
-- Existing pytest: green (+ V3d / neighbor_sub / A9 / draft367 tests).
+  only validation / diagnostic code is added. Current reference: **`770966c3...`**
+- pytest `tests/`: **224 passed / 6 skipped** (+ V3d / V3e / neighbor_sub / A9 / draft367 tests).
 
-## V3d fine-scale PSF (2026-06-08)
+## V3d fine-scale PSF (2026-06-09, publication-grade)
 
 `python -m tests.validation.run_v3d_fine_scale` -- draft-367-like optics (FWHM ~6 px, 0.39"/px).
 Real functions: `psf_photometry_stars` + `_catalog_only_fixed_aperture_flux` + PSF aperture
-correction from bright-star truth. Three pillars vs mag 12-18 (30 noise realizations/mag):
+correction from bright-star truth. Three pillars vs mag 12-17 (30 noise realizations/mag):
 
-| pillar | result |
-|--------|--------|
-| accuracy | PSF bias <5% mag12-17; aperture faint-end bias +19% at mag18 |
-| precision | PSF scatter wins from mag ~14 |
-| uncertainty | PSF reported err / actual scatter ~0.8-1.1 (mag<=17) |
+| pillar | result (post sky-only weights + sandwich err) |
+|--------|-----------------------------------------------|
+| accuracy | PSF mid-mag bias **<~2%**; drift sub-% |
+| precision | PSF scatter wins from ~mag 13 |
+| uncertainty | P3 ~1 (sandwich `psf_err_mode=sandwich_skyonly`) |
 
-Report: `tests/validation/data/tier_v3d/v3d_fine_scale.md`. Production `psf_photometry_enabled` OFF.
+**Proof CLIs** (same inject-and-recover stack):
+
+| CLI | proves |
+|-----|--------|
+| `run_v3d_bias_decomposition_v2` | deterministic vs noise cause (fit_shape ruled out) |
+| `run_v3d_clean_sky_proof` | residual_annulus sky path |
+| `run_v3d_weight_proof` | sky-only fit weights fix mid-mag bias |
+| `run_v3d_sandwich_proof` | sandwich reported uncertainty (P3) |
+
+Reports under `tests/validation/data/tier_v3d/`. Production `psf_photometry_enabled` OFF.
+
+## V3e ePSF FWHM QC (2026-06-08, EPSF-1)
+
+`python -m tests.validation.run_v3e_epsf_fwhm` -- known Moffat FWHM inject -> build ePSF ->
+measure NEW azimuthal-profile estimator. PASS: ratio in [0.85, 1.15] (NEW span 1.038-1.049;
+OLD legacy estimator 1.048-1.111). Report: `tier_v3e/v3e_epsf_fwhm.md`. Diagnostic only.
 
 ## RNG seeds
 
@@ -167,5 +184,8 @@ Report: `tests/validation/data/tier_v3d/v3d_fine_scale.md`. Production `psf_phot
 | gen_series | 43 |
 | gen_a9 | 44 |
 | v3d_fine | 367 |
+| v3e_epsf | 370 |
+
+Run V3e: `python -m tests.validation.run_v3e_epsf_fwhm`.
 
 Deterministic regeneration: `python -m tests.validation.recover --all`.

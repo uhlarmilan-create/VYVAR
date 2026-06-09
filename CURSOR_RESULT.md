@@ -1,41 +1,39 @@
-CURSOR RESULT — 2026-06-09
+CURSOR RESULT -- 2026-06-09
 
 What I did
-Implemented sandwich reported uncertainty (`psf_err_mode=sandwich_skyonly`) for sky-only PSF
-weights. Flux unchanged; only `psf_flux_err` column changes.
+Full doc sweep: reconciled STATE + 6 core docs to 2026-06-09 reflecting the PSF publication-grade
+arc, EPSF-1, NEIGHBOR-SUB state, and #4 fail-safety work.
 
-## Change
+## Output / findings
 
-Var(f_hat) = sum(w_i^2 * sigma_true_i^2 * P_i^2) / (sum(w_i * P_i^2))^2
-- w_i = 1/sigma_sky^2 (fit weights)
-- sigma_true^2 = sigma_sky^2 + f_hat * P_i / gain
+- **VYVAR_STATE.md** -- restored clean snapshot + index (session blocks moved to JOURNAL); date
+  2026-06-09; tests 224/6; PSF / NEIGHBOR-SUB / #4 status blocks added.
+- **VYVAR_JOURNAL.md** -- master 2026-06-09 arc entry; archived 2026-06-03/04 blocks from STATE.
+- **VYVAR_ROADMAP.md** -- NEXT SESSION refreshed; closed rule-2 bug, realistic PSF uncertainties,
+  TODO-GEO; reconciled open questions.
+- **VYVAR_DECISIONS.md** -- sandwich uncertainty, EPSF-1, updated PSF/NEIGHBOR-SUB status.
+- **VYVAR_PROCESS.md** -- harness 2-3 attempt rule; Brno gate confirmed.
+- **VYVAR_PARAMS.md** -- PSF production constants + NEIGHBOR-SUB keys; count updated.
+- **VYVAR_VALIDATION.md** -- A9/V3d/V3e matrix + proof CLIs; pytest/SHA refs.
 
-## P3 OLD vs NEW
-
-| mag | OLD P3 | NEW P3 |
-|----:|-------:|-------:|
-| 12 | 0.563 | **1.070** |
-| 13 | 0.714 | 0.978 |
-| 14 | 1.009 | 1.092 |
-| 15 | 1.105 | 1.042 |
-| 16 | 1.137 | 1.137 |
-| 17 | 0.942 | 0.942 |
-
-## Bias unchanged (post-AC %)
-
-| mag | before sandwich | after |
-|----:|----------------:|------:|
-| 12 | +0.80 | +0.80 |
-| 16 | +1.75 | +1.75 |
-
-## VERDICT
-
-**Fully publication-grade** at fine scale. V3d **PASS** (accuracy + precision + P3 mag<=17).
+Docs reconciled to 2026-06-09.
 
 ## Regression
 
-- SHA `770966c3` unchanged
-- pytest: 218 passed
-- A9: FAIL-SILENT 0, HV 83.3%
+- Numeric SHA `770966c3` unchanged (docs-only pass).
+- pytest `tests/`: 224 passed / 6 skipped (unchanged from prior run).
 
-Report: `tests/validation/data/tier_v3d/v3d_sandwich_proof.md`
+## Errors (if any)
+
+None.
+
+## Files changed
+
+- `docs/VYVAR_STATE.md`
+- `docs/VYVAR_JOURNAL.md`
+- `docs/VYVAR_ROADMAP.md`
+- `docs/VYVAR_DECISIONS.md`
+- `docs/VYVAR_PROCESS.md`
+- `docs/VYVAR_PARAMS.md`
+- `docs/VYVAR_VALIDATION.md`
+- `CURSOR_RESULT.md`

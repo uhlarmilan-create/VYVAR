@@ -30,10 +30,19 @@ A change is not done until all six hold:
 ## External data (Brno) — PSF / NEIGHBOR-SUB gate
 
 Before publishable PSF or NEIGHBOR-SUB on incoming external data: characterize plate scale,
-ePSF-vs-star mismatch, and crowding (`compute_crowding_index`). Fine scale + mismatch ~1.0 is the
-validated regime (draft 367). Coarse / under-sampled data (mismatch > ~3%) falls back to
-SAFE_LOW_YIELD — bright-neighbour blends **REFUSE**, not silent deblend. Standing rule:
-`docs/VYVAR_DECISIONS.md` (Brno section).
+pixel sampling, ePSF-vs-star Moffat mismatch (decisive), and crowding (`compute_crowding_index`).
+Fine scale + mismatch ~1.0 is the validated regime (draft 367). Coarse / under-sampled data
+(mismatch > ~3%) falls back to SAFE_LOW_YIELD — bright-neighbour blends **REFUSE**, not silent
+deblend. PSF is validated publication-grade on synthetic fine-scale truth only; enable on real
+data only after this gate passes. Standing rule: `docs/VYVAR_DECISIONS.md` (Brno section).
+
+## Synthetic harness discipline
+
+When the inject-and-recover harness **fails to reproduce** a real-field effect after ~2-3 fix
+attempts, stop guessing prototype tweaks. Decompose on the **real production functions** (as V3d
+bias decomposition did) and/or consult the literature. Example (2026-06-09): mid-mag PSF bias was
+solved by SNLS/ZTF sky-only weighting practice (Astier 2013; Lacroix 2025), not by more sky
+estimator prototypes alone.
 
 ## Byte-identity discipline
 

@@ -3,7 +3,7 @@
 Single source of truth for **open** tasks. Closed work lives in `VYVAR_JOURNAL.md`;
 durable rationale in `VYVAR_DECISIONS.md`; current architecture in `VYVAR_STATE.md`.
 
-Reconciled against the full development log on **2026-06-04** — de-duplicated, and
+Reconciled against the full development log on **2026-06-09** — de-duplicated, and
 stale-closed items removed (e.g. GS6b had been listed as open in a side register but was
 closed 2026-05-20).
 
@@ -13,21 +13,17 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## NEXT SESSION — open items
 
-1. **trust_flag_core Finding E (deferred)** — lc_quality-missing soft note; revisit together with
-   Finding D `len(soft)>=3` guard when a third soft source is added.
-2. **trust_flag_core ddof+threshold co-calibration (C1 follow-up)** — if switching to ddof=1,
-   re-tune 0.02/0.05 gates; currently ddof=0 locked (DECISIONS). Sibling:
-   **comp_qa fix-once magnitude locus** (CQ-C; see DECISIONS).
-3. **F841 production** — cleared (`n_rms_candidates` wired to m2, 2026-06-08 Phase F).
-4. **Phase C — catalog rebuild mechanics:** deepening mag (full-sky 16.5) requires clearing
-   `strip_progress` OR building to a new DB then swapping `GAIA_DB_PATH`; PKL rebuild only for
-   DEC (southern) expansion. ("k tomuto sa vrátime")
-5. **INSTALL-MANUAL** — install manual + installer for a new user (incl. catalog build via the
-   2 GAIA scripts), tied to TODO-9 (Lenovo T460) + TODO-LIB (Cython `.pyd` package).
-6. **Open question** — `ui_photometry_results.py` + `ui_suspected_lightcurves.py` are disconnected
-   from `app.py`: intent vs regression? Decide.
-7. *(optional)* **"new selection philosophy" ranking review** — sort by `comp_rms` @2089
-   confirmed correct; broader read optional.
+1. **Brno / Newton characterization gate** — on arrival: plate scale + sampling, ePSF-vs-star
+   Moffat mismatch (decisive), crowding index; then decide PSF / NEIGHBOR-SUB enablement on
+   fine-scale data only (standing rule in DECISIONS + PROCESS).
+2. **TODO-MULTISET** — per-telescope-set config (wide vs fine optics); blocks clean multi-rig
+   production and crowding gating per rig.
+3. **TODO-GS9** — verify whether Lomb-Scargle / BLS period analysis is wired into the PDF or
+   only cited; implement folded LC for candidates if missing (~1-2 days).
+4. **trust_flag_core Finding E (deferred)** — lc_quality-missing soft note; revisit with
+   Finding D `len(soft)>=3` when a third soft source exists.
+5. **Phase C catalog rebuild** — full-sky G<=16.5 deepening mechanics (strip_progress / DB swap).
+6. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
 
 ---
 
@@ -53,10 +49,11 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 - **PSF on fine-scale (Newton ≈ 0.65″/px) data.** Infrastructure is DONE and default **OFF**
   (wiring `psf_flux`→Phase 2A, adaptive selector, per-star quality + auto-fallback, spatial
   grid, grouper — all lose to aperture at 9.77″/px, correctly kept off). OPEN:
-  - **Crowding rule-2 bug** — blend condition `nn_dist_fwhm ≤ 1.5` vs rule-2 requiring
-    `≥ 2.0` is contradictory, so the resolvable-blend→PSF rule can never fire. Fix the
-    thresholds.
-  - **TODO-PSF-NEIGHBOR-SUB** — joint-fit + subtract neighbour, aperture residual (gated OFF).
+  - ~~**Crowding rule-2 bug**~~ **CLOSED (2026-06-09):** resolvable-blend->PSF (rule 2) was
+    **removed** from adaptive routing (`photometry_core.py` ~5484); `is_blended` at 1.5 FWHM
+    remains for crowding metrics only. Adaptive PSF uses faint-isolated rule only. NEIGHBOR-SUB
+    is the blend path (not grouped PSF).
+  - **TODO-PSF-NEIGHBOR-SUB** — subtract neighbour + aperture residual (gated OFF).
     **Steps 1-2a + pre-2b DONE**: A9 envelope, `psf_neighbor_sub.py`, fail-safe guards +
     `bright_close_regime` edge guard. Fine-scale draft 367: mismatch **~1.0**, HV **~83%**,
     FAIL-SILENT **0**; real crowding **sparse** (9 blended) -> **VALIDATED_FINE_SCALE_IDLE**;
@@ -75,14 +72,13 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
     prefer `VY_FWHM_GAUSS` -> `VY_FWHM_GAUSSIAN` -> `VY_FWHM`, matching aperture path
     (`pipeline.py:9206`). h & chi Per L: is_blended 77/87 -> 58/53; numeric SHA 770966c3 unchanged.
     See `docs/VYVAR_HCHIPER_CROWDING_RECOMPUTE.md`.
-  - **TODO-EPSF-1-FWHM-QC** — fix `epsf_fwhm_native` half-max estimator in
-    `psf_photometry.py:500-516` (azimuthally-binned radial profile + recalibrated 1343
-    warning thresholds). Audit finding EPSF-1: ratio<1 on h & chi Per (0.59-0.67) is likely a
-    **diagnostic artifact**, not a narrow ePSF — does not affect flux or `assess_psf_quality`.
-    Validate via harness **V3e** (synthetic known-FWHM -> ratio in [0.85,1.15]). See
-    `docs/VYVAR_EPSF_AUDIT.md`. Milan decision before implementation.
-  - Realistic per-star PSF uncertainties; then validate + enable on real Newton data.
-  - Blocked on having a Newton / dense-field draft.
+  - ~~**TODO-EPSF-1-FWHM-QC**~~ **DONE (2026-06-08)** — `_epsf_fwhm_native_from_profile`
+    (azimuthally-binned radial profile); QC warning band [0.80, 1.25]. V3e PASS (NEW ratios
+    1.038-1.049 on synthetic Moffat). Diagnostic only; numeric SHA 770966c3 unchanged. See
+    `docs/VYVAR_EPSF_AUDIT.md`, `tier_v3e/v3e_epsf_fwhm.md`.
+  - ~~**Realistic per-star PSF uncertainties**~~ **DONE (2026-06-09)** via sandwich variance
+    (`psf_err_mode=sandwich_skyonly`; V3d P3 ~1 mag<=17). Real-field enablement still blocked
+    on a Newton / dense-field draft (Brno characterization gate).
 - **Per-frame saturation (not whole-star skip).** Whole-star `zone_flag=saturated` from the
   longest-exposure masterstar drops comps/targets with viable unsaturated frames (76 Green/49 Red
   on M67). Same "silent wrong drop" class as the cross-group MASTERSTAR bug.
@@ -139,14 +135,14 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
   warning; cone/variables + prefetch CSV writes -> debug); worker error-surfacing via status
   dicts + graceful fallbacks reviewed. **Critical path DONE** (platesolver / photometry_core /
   pipeline). Remaining ~700 repo-wide count is lower-risk modules (UI, importer, tess_verify,
-  etc.) -- opportunistic only. **OPEN QUESTIONS (Milan):** failed MASTERSTAR `fits.writeto`
-  fatal? edge-ok check fail-open vs fail-closed (logging only so far).
+  etc.) -- opportunistic only. **OPEN QUESTIONS CLOSED (2026-06-08, Milan #4):** MASTERSTAR
+  `fits.writeto` failure -> fail-closed (draft solve fails, Phase 2A blocked); edge-ok check
+  failure -> fail-open + `edge_filter_failed` flag on `variability_candidates.csv` + report note.
 - **Phase H cosmetic lint (2026-06-08, DONE):** value-filtered subset applied (SIM118 x11,
   RUF022 x2, RUF007 x2, RUF034 x3 dead-ternary); ProcFrameStore SIM118 x2 kept; ~89 style
   findings accepted per PROCESS. **Clean-code campaign Phases A–H COMPLETE.**
-- **TODO-GEO — observer geographic position audit (BJD/airmass/HJD).** **Likely superseded
-  by PARAM-PROVENANCE** (per-draft `ID_LOCATION` site resolution, 2026-05-30) — verify and
-  close if so.
+- ~~**TODO-GEO**~~ **CLOSED (2026-06-09)** — superseded by PARAM-PROVENANCE (`param_resolver.py`:
+  per-draft `ID_LOCATION` -> header -> config; BJD/airmass config-independent). See DECISIONS.
 - **Cross-field min_comp experiment (7 vs 5).** Across several archived fields (single-exposure
   groups, healthy stderr). Data points: h & χ Per (n_comp~140), M67 Green (clean but
   count-blocked), Pal7.

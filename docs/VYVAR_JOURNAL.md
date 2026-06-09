@@ -1,4 +1,58 @@
-Historical session log. Current state → VYVAR_STATE.md; decisions → VYVAR_DECISIONS.md; open work → VYVAR_ROADMAP.md.
+Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECISIONS.md; open work -> VYVAR_ROADMAP.md.
+
+---
+
+## Session -- PSF publication-grade arc + EPSF-1 + #4 (2026-06-09)
+
+**GitHub push (PSF arc):** `fe8201c..28fdafa` (12 commits on `main`) -- annulus sky, residual
+annulus, sky-only weights, sandwich P3, V3d harness + proofs, citations, docs close PSF arc.
+**Local post-push (not yet pushed):** EPSF-1 robust FWHM QC + V3e harness; #4 fail-safety/hygiene
+(dead UI delete, MASTERSTAR writeto fail-closed, edge-ok loud flag).
+
+### PSF mid-mag bias investigation (synthetic V3d, seed 367)
+
+1. **Annulus sky** -- replaced 2-px border-median with aperture-consistent annulus on full frame.
+   Precision improved; mid-mag accuracy still ~+4.5% post-AC.
+2. **fit_shape enlargement** -- ruled out (global meta FWHM; enlargement worsens drift).
+3. **Residual-annulus sky** -- shipped; noiseless truth already correct; noisy drift unchanged.
+4. **Truth-sky fallback** -- confounded (no error map); not production path.
+5. **Literature -> sky-only weights** -- root cause: flux-dependent (object-Poisson) fit weights
+   bias point-source fluxes (Astier 2013; Lacroix 2025). `psf_weight_mode=sky_only` fixes mid-mag
+   <2%, drift sub-%. Forced position (Guy 2010) not needed.
+6. **Sandwich reported uncertainty** -- `psf_err_mode=sandwich_skyonly`; P3 mag12 0.56 -> 1.07.
+   V3d **PASS** all pillars mag<=17.
+
+Proof reports: `tier_v3d/v3d_clean_sky_proof.md`, `v3d_weight_proof.md`, `v3d_sandwich_proof.md`.
+Numeric SHA **770966c3** held throughout (283 files, PSF gated OFF).
+
+### EPSF-1 + V3e
+
+Robust azimuthal-profile `epsf_fwhm_native`; QC band [0.80, 1.25]. V3e PASS (NEW ratios
+1.038-1.049). Diagnostic only.
+
+### #4 fail-safety
+
+MASTERSTAR WCS writeto fail-closed; edge-ok fail-open + `edge_filter_failed` on
+`variability_candidates.csv`; orphan UI deleted.
+
+pytest **224/6** skip; SHA 770966c3 held.
+
+---
+
+## Session -- hygiene + fail-safety #4 (2026-06-08)
+
+Deleted orphan UI (`ui_photometry_results`, `ui_suspected_lightcurves`). MASTERSTAR WCS writeto
+fail-closed (draft solve fails, Phase 2A blocked). Edge-ok fail-open + `edge_filter_failed` on
+`variability_candidates.csv` + report. pytest 224/6 skip; SHA 770966c3 held.
+
+---
+
+## Session -- EPSF-1 robust FWHM QC + V3e (2026-06-08)
+
+Replaced legacy first-pixel half-max `epsf_fwhm_native` with azimuthally-binned radial profile
+(`_epsf_fwhm_native_from_profile`). QC warning band [0.80, 1.25] (was 0.5-2.0). Harness V3e:
+NEW ratios 1.038-1.049 on Moffat FWHM 2.7/5.4/6.02 px (PASS). Diagnostic only; flux path and
+`assess_psf_quality` untouched. pytest 220/6 skip; SHA 770966c3 held.
 
 ---
 
@@ -2960,6 +3014,40 @@ confirm the reuse points, before any C1–C4 design.
 - Trust re-run on draft_000366: **not executed on this dev PC** (no draft tree in workspace);
   re-run `trust_flag.py --photometry-dir …` where comp_qa columns exist and record counts in
   STATE.
+
+---
+
+## Session -- Chi_and_H clean full re-run + n_clean root cause (2026-06-04)
+
+*Moved from VYVAR_STATE.md during 2026-06-09 doc sweep.*
+
+**draft_000380** -- clean fresh full run, all 4 filters (B/V/Rc/L), coordinate hint. Plate-solve
+anchored ~35.03/+57.14 (98.5-100%). CT reproduced: B -1.084, V -0.383, Rc -0.023; comp scatter
+pre->post B 0.376->0.053, V 0.188->0.047, Rc 0.061->0.060. Decoupling/CT-toggle verified: ~371
+targets/filter, 0 "nan" names.
+
+**n_clean=0 / trust RED -- resolved (PROC_CSV_GLOB, 2026-06-08).** `comp_qa_core.load_proc_pivot()`
+now uses `PROC_CSV_GLOB="proc_*.csv"`. Verified draft_000366 n_clean healthy. Residual:
+`classify_lc_quality` `min_frames=20` > short sessions still yields `lc_quality=no_data`.
+
+---
+
+## Session -- CT validation + pre-cal + plate-solve (2026-06-03/04)
+
+*Moved from VYVAR_STATE.md during 2026-06-09 doc sweep.*
+
+**M67 LRGB machinery (draft_368):** CT apply path exercised; Green count-gate-limited; Red
+data-limited. Exposure-merge hypothesis **refuted** (mixing 60s+240s degrades c1 fit).
+
+**h & chi Per science-grade CT (draft_375/380):** c1 B -1.09, V -0.40, Rc -0.026; comp scatter
+B 0.38->0.05, V 0.21->0.06. CT production architecture: full VSX field always; CT is applied
+correction toggle; presel opt-in only.
+
+**Non-cal session mode:** pre-calibrated import shipped (`calibration_mode=pre_calibrated`).
+
+**Plate-solve draft_375:** blind mis-land fixed via coordinate hint + standard Gaia DB.
+
+**Blind index series (2026-06-04):** mag14 tiers + rig-prior; wide HIT on draft_365 still open.
 
 ---
 

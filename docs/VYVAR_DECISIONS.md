@@ -30,19 +30,51 @@ do not force deblending outside the validated regime.
 ### PSF fit weights: sky + read noise only (2026-06-09)
 
 Mid-mag PSF bias on V3d (+4.5%) was **flux-dependent weighting**: including source Poisson in
-photutils fit `error` makes relative pixel weights depend on brightness (Astier et al. 2013; Lacroix
-et al. 2025). Production fix: `psf_weight_mode=sky_only` -- uniform per-stamp sigma from sky and
-read noise; reported `psf_flux_err` restored from full variance in the fit window. Forced position
-(Fix 2; Guy et al. 2010) not required at fine scale after Fix 1. Residual hardware systematics
-(brighter-fatter / pocket effect; Lacroix 2025) remain out of scope.
+photutils fit `error` makes relative pixel weights depend on brightness, so the bright/faint flux
+ratio becomes PSF-model-dependent and biases point-source fluxes (Astier et al. 2013; Lacroix /
+Regnault 2025). Production fix: `psf_weight_mode=sky_only` -- one estimator for all magnitudes,
+uniform per-stamp sigma from sky + read noise only. Accepted small bright-end precision cost vs
+object-weighted fits. Forced position (Guy et al. 2010) not required at fine scale after Fix 1.
+Residual hardware systematics (brighter-fatter / pocket effect; Lacroix 2025) remain out of scope.
 
-### NEIGHBOR-SUB shape: PSF subtract contaminant, aperture measure target (2026-06-09, design only)
+### Sandwich reported PSF uncertainty (2026-06-09)
+
+With sky-only fit weights, reported `psf_flux_err` must propagate **true pixel variance**
+(sky + source Poisson + read noise) through the **actual** weights used in the fit
+(`psf_err_mode=sandwich_skyonly`). This calibrates error bars (V3d P3 ~1 mag<=17) without
+changing fluxes. Stetson 1987 / Mighell 1999 cited for ensemble context; sandwich is the
+production implementation for per-star PSF errors.
+
+### EPSF-1 robust FWHM QC (2026-06-08, diagnostic only)
+
+`epsf_fwhm_native` uses an azimuthally-binned radial profile with linear 0.5 crossing (not
+first-pixel half-max). QC warning band tightened to **[0.80, 1.25]**. Does not enter flux path
+or `assess_psf_quality`; numeric SHA unchanged. Validated via harness V3e.
+
+### NEIGHBOR-SUB shape: PSF subtract contaminant, aperture measure target (2026-06-09)
 
 For blended targets, use ePSF to fit and subtract a bright neighbour, then run the existing
 aperture path on the residual stamp. PSF does not replace aperture for science flux; it only
 removes contamination. Does not revive grouped PSF / rule 2 (mutually exclusive thresholds).
-Gated `psf_neighbor_sub_enabled` OFF until synthetic harness + h & chi Per scatter validation.
-Full design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`. **Status: pending implementation approval.**
+Gated `psf_neighbor_sub_enabled` OFF. Synthetic validation: **VALIDATED_FINE_SCALE_IDLE**
+(A9 HV ~83%, FAIL-SILENT 0 on draft 367). Real-field enablement after Brno characterization.
+Full design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`.
+
+### Fail-safety hygiene #4 (2026-06-08, Milan confirmed)
+
+**MASTERSTAR WCS persist (`vyvar_platesolver.py`):** failed `fits.writeto` (or read/update) on
+MASTERSTAR is **fail-closed** for that draft -- returns `solved=False` via `_SolveWcsWriteError`,
+`LOGGER.error`, pipeline blocks Phase 2A (no silent stale WCS). Other frames in the batch are
+unaffected.
+
+**Edge-ok filter (`photometry_core._edge_ok_from_masterstar_pipeline`):** on check failure,
+**fail-open** (all stars treated edge-ok so detection is not zeroed) but **loud** --
+`edge_filter_failed=True` + `edge_filter_note` on `variability_candidates.csv` only (not on
+byte-identity SHA files: `lightcurve_*.csv`, `comp_quality_*.json`,
+`comparison_stars_per_target.csv`). Report cover shows edge-filter status when flagged.
+
+**Dead UI modules:** `ui_photometry_results.py` and `ui_suspected_lightcurves.py` deleted;
+function covered by `ui_aperture_photometry` + `ui_variability`.
 
 ### Crowding + ePSF FWHM context use measured core (VY_FWHM_GAUSS), not DAO search scale (2026-06-09)
 `VY_FWHM` on MASTERSTAR is the DAOStarFinder search parameter (~3.4-3.8 px on h & chi Per L);
@@ -52,16 +84,17 @@ Full design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`. **Status: pending implementati
 deflating ePSF QC ratios. **Decision:** shared `header_core_fwhm_px` prefers
 `VY_FWHM_GAUSS` -> `VY_FWHM_GAUSSIAN` -> `VY_FWHM` at exactly those two sites; display-only
 and plate-solve hint readers keep `VY_FWHM`. Validated: numeric SHA `770966c3...` unchanged;
-h & chi Per L crowding 77/87 -> 58/53 is_blended. EPSF-1 half-max estimator remains a separate item.
+h & chi Per L crowding 77/87 -> 58/53 is_blended.
 
-### Aperture is the validated workhorse; PSF stays OFF at coarse/well-sampled scale
+### Aperture is the validated workhorse; PSF validated-but-gated
 At 9.77″/px the PSF is well-sampled and stable across the field, so a single ePSF already
 captures it and aperture wins. Every PSF variant — single ePSF, spatial `GriddedPSFModel`,
 `SourceGrouper` joint fit, per-star adaptive selector — was implemented and **lost to aperture**
-at this scale (single ePSF ≈ 3× worse comp RMS; grid starves cells; grouper diverges on
-sub-resolution blends). **Decision: keep all PSF flags OFF in production.** The full PSF stack
-(wiring, quality+auto-fallback, spatial, grouper, adaptive) is built and ready to pay off on
-fine-scale Newton (~0.65″/px) data. **Status: settled; revisit only on fine optics.**
+at this scale (single ePSF ~3x worse comp RMS; grid starves cells; grouper diverges on
+sub-resolution blends). **Decision: keep all PSF flags OFF in production on the wide rig.**
+On fine-scale synthetic truth (draft-367-like), PSF is now **publication-grade** (accuracy,
+precision, sandwich P3) but remains **gated OFF** until real Newton / Brno data passes the
+characterization gate. **Status: settled on wide; fine-scale validated-but-gated.**
 
 ### Full-frame DAO over fixed-position stamp photometry (overnight-batch model)
 Every frame runs full-frame `DAOStarFinder` + match (the "master fast path" skips the per-frame
@@ -262,7 +295,7 @@ header(cross-check warn) → config**; observation-specific = header → DB → 
 (lat/lon/elev) = **per-draft `ID_LOCATION` → header → config (flagged, never silent)**. BJD /
 airmass are now **config-independent** (derive from the draft's own site). `config.json`
 `observer_location` is UI / last-session state only — moot for the science. **Status: settled
-2026-05-30.** (This likely closes TODO-GEO — verify in ROADMAP.)
+2026-05-30.** Closes TODO-GEO (ROADMAP 2026-06-09).
 
 ## Catalogs
 
