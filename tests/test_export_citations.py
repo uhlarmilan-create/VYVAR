@@ -33,6 +33,10 @@ def test_citations_bib_has_required_keys() -> None:
         "riello2021",
         "anderson2000",
         "moffat1969",
+        "astier2013",
+        "lacroix2025",
+        "guy2010",
+        "mighell1999",
         "pont2006",
         "tamuz2005",
         "savitzky1964",
@@ -101,6 +105,8 @@ def test_citation_lines_psf_conditional() -> None:
     assert "Moffat" not in _citation_text(off)
     assert "Anderson" in _citation_text(on)
     assert "Moffat" in _citation_text(on)
+    assert "Astier" in _citation_text(on)
+    assert "Lacroix" in _citation_text(on)
 
 
 def test_citation_lines_sysrem_conditional() -> None:

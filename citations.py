@@ -271,8 +271,13 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
             (
                 "PSF PHOTOMETRY",
                 [
+                    citation_line("stetson1987", bib=bib),
                     citation_line("anderson2000", bib=bib),
                     citation_line("moffat1969", bib=bib),
+                    citation_line("astier2013", bib=bib),
+                    citation_line("lacroix2025", bib=bib),
+                    citation_line("guy2010", bib=bib),
+                    citation_line("mighell1999", bib=bib),
                 ],
             )
         )
