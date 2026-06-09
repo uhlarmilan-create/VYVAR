@@ -70,3 +70,6 @@ photometry_dir_*.txt
 orchestrator/api_key.txt
 **/api_key.txt
 GAIA_DR3/_*
+
+# Validation harness generated FITS + truth sidecars
+tests/validation/data/
