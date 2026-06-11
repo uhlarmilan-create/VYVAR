@@ -2,7 +2,15 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
-## Session -- trust / anchor / reliability wrap (2026-06-11)
+## Session -- math/physics audit hygiene (2026-06-11, `9a4e525`)
+
+Byte-identity-neutral citation + guard pass. Filed `docs/VYVAR_MATH_PHYS_AUDIT.md` (ad6e788
+line refs). Scoped Broeg → comp selection + zeropoint; Collins 2017 / Honeycutt 1992 → AIJ
+flux-sum combination. `mid_exposure_jd` warns when EXPTIME missing (JD unchanged). MAD constant
+unified; `mighell1999` marked export-only. ROADMAP parked D1-combination, D3/#4, Howell second
+pass. Tests 261 passed; SHA unchanged.
+
+## Session -- trust / anchor / reliability wrap (2026-06-11, `ad6e788`)
 
 Long session, entirely byte-identity-disciplined (photometry SHA never moved).
 

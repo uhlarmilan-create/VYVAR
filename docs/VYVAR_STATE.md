@@ -1,7 +1,7 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-11** (trust/anchor/reliability session wrap; zaloha anchor confirmed;
-completeness gate; trust-correctness cluster; BLE001 guard).
+Last updated: **2026-06-11** (`ad6e788` trust/anchor wrap + `9a4e525` math/physics audit hygiene;
+zaloha anchor `203254fd` / `95a5515a`; see `docs/VYVAR_MATH_PHYS_AUDIT.md`).
 
 This is the **entry point**: a snapshot of what is true *now* + an index. It deliberately holds
 no history and no open-task detail -- those live in the linked files.
@@ -174,7 +174,7 @@ Astier et al. 2013, Lacroix et al. 2025, Guy et al. 2010, Stetson 1987, Mighell 
 - **Cross-validation:** CLOSED for the aperture path (offline `xval_run.py`: sep reproduces
   VYVAR to 0.2 %/frame); in-pipeline `sep_xval` retired 2026-06-03; PSF cross-val deferred.
 - **Trust distribution (draft_000365 baseline):** GREEN 69 / YELLOW 59 / RED 15.
-- **Tests:** **259 passed / 14 skipped** (last full `tests/` run; incl. BLE001 regression guard).
+- **Tests:** **261 passed / 14 skipped** (last full `tests/` run; incl. BLE001 + mid-exposure JD).
 - **Lint:** `ruff check . --select BLE001,E722` clean (`pyproject.toml` + pre-commit + pytest).
 - **Reporting:** R1 overflow guarantee holds (0 violations); R3 (aperture-vs-PSF overlay) pending.
 
@@ -189,4 +189,6 @@ Astier et al. 2013, Lacroix et al. 2025, Guy et al. 2010, Stetson 1987, Mighell 
 - **TODO-GS8** — Phase-3 global ZP / multi-night matching.
 - **DR4 build** (~Dec 2026) — J2017.5 epoch hook at `vyvar_platesolver.py:63`.
 - **PSF / NEIGHBOR-SUB** — needs bin1 ~0.65"/px real data (Brno gate).
-- **`build_gaia_catalog.py` adaptive-split** — apply at next full-sky build (DEFERRED this commit).
+- **`build_gaia_catalog.py` adaptive-split** — apply at next full-sky build (DEFERRED).
+- **Math/physics deep work** (`VYVAR_MATH_PHYS_AUDIT.md`) — D1-combination (Broeg-weighted
+  `ens_med`, moves anchor), D3 extinction/colour → AAVSO #4, Howell/aperture second pass.
