@@ -282,3 +282,6 @@ inštalátor → rovnaký výsledok na T460; manuál a inštalátor konzistentn�
 | DR4 build | ~Dec 2026; J2017.5 epoch hook `vyvar_platesolver.py:63` |
 | PSF / NEIGHBOR-SUB | Needs bin1 ~0.65"/px data (Brno gate) |
 | `build_gaia_catalog.py` adaptive-split | Next full-sky build only (not this commit) |
+| **D1-combination (Broeg-weighted vs flux-sum)** | Re-test weighted `ens_med` after colour/extinction — **moves anchor**; blocked on D3 |
+| **D3 extinction/colour physics** | Second-order extinction + standard system → ties **AAVSO #4** |
+| **C second pass (Howell + aperture corr.)** | CCD error budget, curve-of-growth / APCORR; citation-integrity follow-up |

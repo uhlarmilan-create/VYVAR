@@ -1,24 +1,24 @@
-CURSOR RESULT — 2026-06-11 (session wrap-up)
+CURSOR RESULT — 2026-06-11 (math/physics audit hygiene)
 
 What I did
-Updated STATE/JOURNAL/ROADMAP/DECISIONS/PARAMS/RUNBOOK/PROCESS/AUDIT docs for the full
-trust/anchor/reliability session. Re-trust draft_387 → **1382 YELLOW / 106 RED** (floor-5
-baseline). Verified pytest + ruff + photometry SHA. Single commit prepared (push on Milan's go).
+Landed byte-identity-neutral math/physics audit fixes: filed `VYVAR_MATH_PHYS_AUDIT.md`,
+scoped Broeg vs AIJ/Honeycutt citations, EXPTIME warning guard + test, MAD constant unify,
+citation-integrity notes (Mighell export-only), ROADMAP parked deep physics.
 
 ## Output / findings
 
-**Disciplines:**
-- `pytest tests` — 259 passed, 14 skipped
-- `ruff check . --select BLE001,E722` — clean
-- draft_387 SHA — core `203254fd...` (2806) / full `95a5515a...` (4285) unchanged
-- Trust on draft_387 — 1382/106 (post `comp_trust_min_comps=5`)
+**Photometry SHA (draft_387):** core `203254fd…` (2806) / full `95a5515a…` (4285) — **unchanged**.
 
-**Docs updated:** STATE, JOURNAL, ROADMAP, DECISIONS, PARAMS, PROCESS, AUDIT_LEDGER,
-AUDIT_FINDINGS, CHIANDH runbook, new `VYVAR_RUNBOOK.md`; trust/check-star/comp-floor specs
-confirmed under `docs/`.
+**Tests:** 261 passed, 14 skipped (+2 `test_time_utils_mid_exposure`).
+
+**D2 callers:** production uses `mid_exposure_jd` via `compute_time_columns`; only
+`scripts/cross_validate_draft342.py` duplicates logic (non-production).
+
+**Citation integrity:** `mighell1999` marked aspirational/export-only; `collins2017` +
+`honeycutt1992` added and wired in `citations.py` core + VarAstro summary.
 
 ## Errors (if any)
 None.
 
 ## Files changed
-Session code + docs (see git commit).
+See commit (docs + citations + time_utils + comp_qa_core comment + tests).

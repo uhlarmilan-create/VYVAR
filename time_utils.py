@@ -95,15 +95,24 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
                         pass
 
         exptime = 0.0
+        exptime_ok = False
         for key in ("EXPTIME", "EXPOSURE"):
             if key not in header:
                 continue
             try:
                 exptime = float(header[key])
-                if math.isfinite(exptime):
+                if math.isfinite(exptime) and exptime > 0.0:
+                    exptime_ok = True
                     break
             except (TypeError, ValueError):
                 continue
+        if not exptime_ok:
+            _warn_once(
+                "exptime_missing_or_invalid",
+                "VYVAR time_utils: EXPTIME/EXPOSURE missing or <=0 — jd_mid equals shutter-open "
+                "(not mid-exposure); BJD/HJD may be offset by up to EXPTIME/2 for affected frames.",
+            )
+            exptime = 0.0
 
         t_mid = t_start + TimeDelta(exptime / 2.0 * u.s)
         return float(t_mid.jd)

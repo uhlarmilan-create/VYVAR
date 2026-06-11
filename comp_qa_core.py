@@ -151,14 +151,14 @@ def build_locus(
         s = sigmas[m]
         med = float(np.median(s))
         mad = float(np.median(np.abs(s - med)))
-        spread = mad * 1.4826 if mad > 0 else float("nan")
+        spread = mad / _MAD_SCALE if mad > 0 else float("nan")
         centers.append(float((edges[i] + edges[i + 1]) / 2.0))
         locs.append(med)
         spreads.append(spread if math.isfinite(spread) and spread > 0 else med * 0.1 + 1e-4)
 
     if not centers:
         gmed = float(np.median(sigmas))
-        gm = float(np.median(np.abs(sigmas - gmed)) * 1.4826)
+        gm = float(np.median(np.abs(sigmas - gmed)) / _MAD_SCALE)
         return np.array([float(np.median(mags))]), np.array([gmed]), np.array([max(gm, 1e-4)])
 
     return np.asarray(centers), np.asarray(locs), np.asarray(spreads)

@@ -2382,6 +2382,8 @@ def ensemble_normalize(
 
         comp_vals = np.asarray([m for _, m in comp_pairs], dtype=np.float64)
 
+        # Combination = AIJ/Honeycutt flux sum (tot_C_cnts); Broeg 1/rms² applies to selection
+        # ordering + catalog zeropoint offset below, not to ens_med.
         # Priamy súčet fluxov — rovnaká metóda ako AIJ (tot_C_cnts = C2+C3+C4).
         # Váhovaný priemer 1/rms² deformuje extinkčný slope ensemble → záporný slope.
         comp_fluxes_list: list[float] = [10 ** (-0.4 * m) for _, m in comp_pairs]

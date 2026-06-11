@@ -24,6 +24,8 @@ def test_citations_bib_has_required_keys() -> None:
     bib = load_citations_bib()
     required = {
         "broeg2005",
+        "collins2017",
+        "honeycutt1992",
         "howell1989",
         "stetson1987",
         "gaia2023",
@@ -71,6 +73,8 @@ def test_citation_lines_core_always_present() -> None:
     cfg = AppConfig()
     text = _citation_text(cfg)
     assert "Broeg" in text
+    assert "Collins" in text or "AstroImageJ" in text
+    assert "Honeycutt" in text
     assert "Howell" in text
     assert "Stetson" in text
     assert "Gaia Collaboration" in text

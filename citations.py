@@ -227,6 +227,8 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
 
     core = [
         "broeg2005",
+        "collins2017",
+        "honeycutt1992",
         "howell1989",
         "stetson1987",
         "henden_kaitchuck1982",
@@ -361,10 +363,14 @@ def emit_pdf_methods_sections(ctx: RunCitationContext) -> list[tuple[str, list[s
 
 def emit_varastro_method_summary_lines(ctx: RunCitationContext) -> list[str]:
     """Short per-run algorithm lines for VarAstro body (non-comment)."""
-    lines: list[str] = [
-        "# PHOTOMETRY: Differential ensemble | Broeg et al. 2005 (AN 326, 134)\n",
-    ]
     bib = load_citations_bib()
+    lines: list[str] = [
+        "# PHOTOMETRY: Comp selection + 1/rms^2 zeropoint | "
+        f"{citation_line('broeg2005', bib=bib).strip()}\n",
+        "# PHOTOMETRY: Ensemble flux-sum combination | "
+        f"{citation_line('collins2017', bib=bib).strip()}; "
+        f"{citation_line('honeycutt1992', bib=bib).strip()}\n",
+    ]
     if ctx.use_temporal_binning:
         lines.append(f"# ALG: Temporal binning — {citation_line('pont2006', bib=bib)}\n")
     if ctx.use_pytics:
