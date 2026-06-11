@@ -44,7 +44,7 @@ def _fit_stars_wcs(fits_path: Path, stars: pd.DataFrame, cutout_h: int) -> pd.Da
         try:
             xp, yp = w.world_to_pixel_values(ra, de)
             x0, y0 = int(round(float(xp))), int(round(float(yp)))
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
         y1, y2 = max(0, y0 - half), min(h, y0 + half + 1)
         x1, x2 = max(0, x0 - half), min(wpx, x0 + half + 1)

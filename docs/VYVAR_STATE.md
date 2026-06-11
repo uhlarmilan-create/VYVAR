@@ -1,6 +1,7 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-09**.
+Last updated: **2026-06-11** (trust/anchor/reliability session wrap; zaloha anchor confirmed;
+completeness gate; trust-correctness cluster; BLE001 guard).
 
 This is the **entry point**: a snapshot of what is true *now* + an index. It deliberately holds
 no history and no open-task detail -- those live in the linked files.
@@ -14,6 +15,13 @@ no history and no open-task detail -- those live in the linked files.
 | `docs/VYVAR_PARAMS.md` | Config-key <-> default <-> clamp <-> UI-location registry. |
 | `docs/VYVAR_VALIDATION.md` | Inject-and-recover synthetic validation harness (matrix, FAIL policy). |
 | `docs/VYVAR_PIPELINE_CZ.md` | Czech pipeline manual for the paper (ASCII, rev. 2026-06-09). |
+| `docs/VYVAR_GAIA_DR3_AUDIT.md` | Gaia DR3 ingest audit (build schema, match, ref mag; 2026-06-10). |
+| `docs/VYVAR_LC_QUALITY_SHORT_BASELINE_SPEC.md` | `short_baseline` LC-quality spec #3 (rev b, ready; 2026-06-10). |
+| `docs/VYVAR_RUNBOOK.md` | Chi_and_H zaloha-only night-run procedure (alias → baseline runbook). |
+| `docs/VYVAR_CHIANDH_BASELINE_RUNBOOK.md` | Chi_and_H baseline re-cut procedure (byte-identity anchor; 2026-06-11). |
+| `docs/VYVAR_TRUST_CHECKSTAR_HARDENING_SPEC.md` | Trust Findings A/B + CS-1 hardening (2026-06-11). |
+| `docs/VYVAR_CHECKSTAR_SELECTION_SPEC.md` | Check-star selection CS-2..4 (2026-06-11). |
+| `docs/VYVAR_COMP_FLOOR_POLICY_SPEC.md` | Comp trust floor policy; Option B adopted. |
 | `CITATIONS.bib` | Single source of truth for all algorithm/software citations. |
 
 ---
@@ -61,8 +69,11 @@ PSF flags stay **OFF** on the wide rig (correct). The PSF path is now **validate
 enable only on characterized fine-scale data after the Brno / Newton characterization gate
 (see DECISIONS + ROADMAP).
 
-Comp bounds (user-configurable): `phase01_comparison_n_comp_min/max` = **3 / 8** (the trust gate
-and comp_qa derive their thresholds from these). `max_comp_rms` = 0.1; colour cut <= 0.79.
+Comp bounds (user-configurable): Phase-1 selection `phase01_comparison_n_comp_min/max` = **3 / 8**
+(unchanged). Trust-only floor `comp_trust_min_comps` = **5** (`strong = min+2` → **7** at
+defaults); `check_star_min_epochs` = **5**; CS-2 artefact floor `check_select_rms_floor` =
+**1e-4**; CS-4 uses `aperture_correction_max_contamination` = **0.15** when
+`contamination_idx` is present. `max_comp_rms` = 0.1; colour cut <= 0.79.
 
 ## Rigs (known sets)
 
@@ -76,12 +87,51 @@ Per-set config architecture is still pending (ROADMAP: TODO-MULTISET).
 
 ## Status snapshot
 
+### Gaia DR3 catalog integration
+
+PM (`pmra`/`pmdec`) and `ruwe` are **NOT** in the DR3 catalog; **deferred to the DR4 build**
+(~Dec 2026). Platesolver PM propagation is present but a no-op against DR3. Fine-scale dense
+fields carry the GAIA-1 mis-association caveat until DR4 (DECISIONS).
+
 ### Reference draft and byte-identity
 
-- **Byte-identity reference:** `draft_000366` -- numeric photometry SHA **`edbd97e7...`**
-  (426 files: 283 LC + comp_quality + comparison_stars + **comp_qa** sidecars). CQ-C
-  (2026-06-09) re-baselined comp_qa only; core photometry subset (283 files) still
-  **`770966c3...`** (LC/comp_quality/comparison unchanged).
+The anchor is a **SHA fingerprint + regeneration recipe**, not a dependency on any draft tree
+surviving. Byte-identity is re-verified by regenerating from the recipe below and comparing
+computed SHA to the recorded values (`tests/photometry_sha.py`).
+
+- **Core SHA** `203254fd75ea5874f5986eac3f478260c2e7e5a9c2636bfecf2b31244cfb09ba` (2806 files:
+  `lightcurve_*.csv` + `comp_quality_*.json` + `comparison_stars_per_target.csv`).
+- **Full SHA** `95a5515a6c15a473b6fcd29d3afe0c3b78d88a2da434f8a1c03f28dbe2783c24` (4285 files:
+  core + `comp_qa_*.json`). SHA set excludes `lc_quality_flag` / trust.
+- Cut from ephemeral `draft_000386` (2026-06-11); **confirmed** `draft_000387` (byte-identical).
+  **RETIRED:** `f4bcc0ee` / `bd0b1792` (draft_385 truncated photometry — false success);
+  `d246a5be` / `30a2f461` (draft_382 TAP field DB G<=19.5).
+
+**Regeneration recipe** (`docs/VYVAR_CHIANDH_BASELINE_RUNBOOK.md`) — **no TAP / no field DB:**
+
+1. **Source data (must retain):** `Archive/Chi_and_H` — pre-calibrated FITS (only non-regenerable input).
+2. **Catalog + blind index:** `GAIA_DR3/zaloha/vyvar_gaia_dr3.db` (G<=16), zaloha blind PKLs
+   (`gaia_triangles_fine.pkl`, `gaia_triangles_wide.pkl`). **Do not read** in-progress
+   `GAIA_DR3/vyvar_gaia_dr3.db`.
+3. **Run:** `python scripts/chiandh_night_run_bvr.py` (#3 code; Newton bin2 ~1.30"/px).
+4. **Verify:** `compute_photometry_sha(draft_root)` core + full vs recorded SHAs.
+
+**Setups (filter-wheel labels):** `B_20_2`, `V_20_2`, `R_20_2`, `L_20_2` — **B/V/R/L** are wheel
+positions. **V** = visual/green (`G/` folder); **L** = clear/broadband (`L_20_2` in anchor).
+
+**Provenance at anchor cut (2026-06-11, zaloha):**
+
+| Item | Value |
+|------|-------|
+| `git_commit` | `39690b7fa398dc0445f8956d318296aeb0cfe725` |
+| Catalog | `GAIA_DR3/zaloha/vyvar_gaia_dr3.db` (G<=16) + zaloha blind PKLs |
+| Rig | Newton 300/1200 + C3-26000, bin2 ~1.30"/px |
+| Ephemeral draft | `draft_000386` (~1401 LCs; deletable) |
+| Completeness gate | `night_run.audit_photometry_completeness` — >=90% summary/active per setup |
+
+Scoped trust at cut (`comp_trust_min_comps=5`, floor-5 baseline): **1382 YELLOW / 106 RED**
+(1488 summary rows; re-trust on draft_387). Pre-floor-5 counts were 1400/88 — superseded.
+Anchor photometry SHA is numeric and trust-independent.
 - **Last science-validated wide draft:** `draft_000365` (V842 Her, 127 frames, 143 targets).
 - **CT science locked:** h & chi Per `draft_000380` (Johnson-Cousins B/V/Rc); details in JOURNAL.
 
@@ -123,5 +173,19 @@ Astier et al. 2013, Lacroix et al. 2025, Guy et al. 2010, Stetson 1987, Mighell 
 - **Cross-validation:** CLOSED for the aperture path (offline `xval_run.py`: sep reproduces
   VYVAR to 0.2 %/frame); in-pipeline `sep_xval` retired 2026-06-03; PSF cross-val deferred.
 - **Trust distribution (draft_000365 baseline):** GREEN 69 / YELLOW 59 / RED 15.
-- **Tests:** **224 passed / 6 skipped** (last full `tests/` run).
+- **Tests:** **259 passed / 14 skipped** (last full `tests/` run; incl. BLE001 regression guard).
+- **Lint:** `ruff check . --select BLE001,E722` clean (`pyproject.toml` + pre-commit + pytest).
 - **Reporting:** R1 overflow guarantee holds (0 violations); R3 (aperture-vs-PSF overlay) pending.
+
+---
+
+## Top of mind (parked — see ROADMAP)
+
+- **Reserved check-star** (hold-one-out by design) — **moves photometry anchor**; defer until
+  explicit re-cut discipline.
+- **AAVSO-standard output #4** — G→B/V/Rc (Broeg band/colour point).
+- **TODO-MULTISET** — per-rig config (wide vs fine).
+- **TODO-GS8** — Phase-3 global ZP / multi-night matching.
+- **DR4 build** (~Dec 2026) — J2017.5 epoch hook at `vyvar_platesolver.py:63`.
+- **PSF / NEIGHBOR-SUB** — needs bin1 ~0.65"/px real data (Brno gate).
+- **`build_gaia_catalog.py` adaptive-split** — apply at next full-sky build (DEFERRED this commit).

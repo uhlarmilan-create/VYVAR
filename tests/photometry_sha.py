@@ -1,4 +1,9 @@
-"""Numeric photometry SHA helpers (draft_000366 reference set)."""
+"""Numeric photometry SHA helpers (Chi_and_H zaloha anchor; draft-independent).
+
+Recorded values (2026-06-11, draft_000386, confirmed draft_000387): core 203254fd... (2806),
+full 95a5515a... (4285). Re-verify via regeneration recipe in VYVAR_STATE.md /
+VYVAR_CHIANDH_BASELINE_RUNBOOK.md.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -6,15 +11,15 @@ from pathlib import Path
 
 # Core photometry only (LC + Phase-2A comp_quality + comparison pool).
 PHOTOMETRY_SHA_CORE = (
-    "770966c36fd7e7da925466cbe746b0eb09a7f69fced191fb62a15d8cbbb8574a"
+    "203254fd75ea5874f5986eac3f478260c2e7e5a9c2636bfecf2b31244cfb09ba"
 )
-PHOTOMETRY_SHA_CORE_PREFIX = "770966c3"
+PHOTOMETRY_SHA_CORE_PREFIX = "203254fd"
 
-# Post-CQ-C reference: core fileset + comp_qa sidecars (draft_000366, 426 files).
+# Full reference: core fileset + comp_qa sidecars (draft_000386, 4285 files).
 PHOTOMETRY_SHA_BASELINE = (
-    "edbd97e7f61c7dc1868eac12322c10cd62a46023c5f2bdac7ff94e97876360a3"
+    "95a5515a6c15a473b6fcd29d3afe0c3b78d88a2da434f8a1c03f28dbe2783c24"
 )
-PHOTOMETRY_SHA_BASELINE_PREFIX = "edbd97e7"
+PHOTOMETRY_SHA_BASELINE_PREFIX = "95a5515a"
 
 _SHA_PATTERNS_CORE = (
     "**/photometry/**/lightcurve_*.csv",

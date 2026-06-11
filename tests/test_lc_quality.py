@@ -23,6 +23,9 @@ def _classify(**kwargs: object) -> str:
         "n_normal_frames": 139,
         "lunar_risk": "LOW",
         "rms_model_coeffs": None,
+        "min_frames": 20,
+        "short_min_frames": 3,
+        "min_normal_frac": 0.5,
     }
     defaults.update(kwargs)
     return classify_lc_quality(
@@ -33,6 +36,9 @@ def _classify(**kwargs: object) -> str:
         n_normal_frames=int(defaults["n_normal_frames"]),  # type: ignore[arg-type]
         lunar_risk=str(defaults["lunar_risk"]),
         rms_model_coeffs=defaults.get("rms_model_coeffs"),  # type: ignore[arg-type]
+        min_frames=int(defaults["min_frames"]),  # type: ignore[arg-type]
+        short_min_frames=int(defaults["short_min_frames"]),  # type: ignore[arg-type]
+        min_normal_frac=float(defaults["min_normal_frac"]),  # type: ignore[arg-type]
     )
 
 
@@ -48,8 +54,25 @@ def test_saturated_wins():
     )
 
 
-def test_no_data_low_frames():
-    assert _classify(n_frames=10, n_normal_frames=10) == "no_data"
+def test_no_data_below_short_min():
+    assert _classify(n_frames=2, n_normal_frames=2) == "no_data"
+
+
+def test_short_baseline_at_short_min():
+    assert _classify(n_frames=3, n_normal_frames=3) == "short_baseline"
+
+
+def test_short_baseline_in_short_range():
+    assert _classify(n_frames=10, n_normal_frames=10) == "short_baseline"
+    assert _classify(n_frames=19, n_normal_frames=19) == "short_baseline"
+
+
+def test_short_range_low_normal_frac_is_no_data():
+    assert _classify(n_frames=12, n_normal_frames=4) == "no_data"
+
+
+def test_at_min_frames_good_path():
+    assert _classify(n_frames=20, n_normal_frames=20) == "good"
 
 
 def test_no_data_low_normal_frac():
@@ -157,6 +180,7 @@ def test_quality_summary_counts():
         {"lc_quality_flag": "good"},
         {"lc_quality_flag": "good"},
         {"lc_quality_flag": "noisy"},
+        {"lc_quality_flag": "short_baseline"},
         {"lc_quality_flag": "saturated"},
         {"lc_quality_flag": "noisy_moon"},
     ]
@@ -169,10 +193,11 @@ def test_quality_summary_counts():
     )
     assert s["good"] == 2
     assert s["noisy"] == 1
+    assert s["short_baseline"] == 1
     assert s["saturated"] == 1
     assert s["noisy_moon"] == 1
     assert s["no_data"] == 0
-    assert s["total"] == 5
+    assert s["total"] == 6
     assert s["available"] is True
     assert abs(s["rms_model_slope"] - 0.17) < 1e-6
     assert abs(s["rms_model_intercept"] - (-3.43)) < 1e-6

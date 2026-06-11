@@ -51,7 +51,7 @@ def _fit_moffat2d_array(arr: np.ndarray, *, fwhm_guess: float) -> dict:
     fitter = LevMarLSQFitter()
     try:
         fit = fitter(model, xx, yy, z)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return {"ok": False, "reason": str(exc)}
     g = float(fit.gamma.value)
     a = float(fit.alpha.value)
@@ -90,7 +90,7 @@ def _fit_gauss2d_array(arr: np.ndarray) -> dict:
     fitter = LevMarLSQFitter()
     try:
         fit = fitter(model, xx, yy, z)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return {"ok": False, "reason": str(exc)}
     sx = float(fit.x_stddev.value)
     sy = float(fit.y_stddev.value)
@@ -233,7 +233,7 @@ def _fit_star_moffat_native(
             dx = float(fit.x_0.value) - xc
             dy = float(fit.y_0.value) - yc
             ellips.append(math.hypot(dx, dy) / max(g, 1e-6))
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
     if not fwhms:
         return {"ok": False, "n": 0}

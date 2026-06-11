@@ -564,6 +564,47 @@ def render_settings_dashboard(
             used_in="Finds brightness peak percentile and compares profile width to FWHM expectation.",
             compute="Pipeline heuristic: peak above percentile and FWHM ratio > threshold → suspect saturation/nonlinearity.",
         )
+        st.markdown("---")
+        st.markdown("### Data quality & validation")
+        st.caption("LC-quality classification thresholds (Phase 2A summary `lc_quality_flag`).")
+        lc_q_min = st.slider(
+            "lc_quality_min_frames",
+            min_value=3,
+            max_value=500,
+            value=int(getattr(cfg, "lc_quality_min_frames", 20) or 20),
+            help="Frame floor for full good/noisy LC-quality verdict.",
+        )
+        lc_q_short = st.slider(
+            "lc_quality_short_min_frames",
+            min_value=2,
+            max_value=100,
+            value=int(getattr(cfg, "lc_quality_short_min_frames", 3) or 3),
+            help="Below this -> no_data; [short, min) -> short_baseline (YELLOW, exportable).",
+        )
+        lc_q_frac = st.slider(
+            "lc_quality_min_normal_frac",
+            min_value=0.1,
+            max_value=1.0,
+            value=float(getattr(cfg, "lc_quality_min_normal_frac", 0.5) or 0.5),
+            step=0.05,
+            help="Minimum unsaturated/normal frame fraction for short_baseline or good/noisy.",
+        )
+        comp_trust_min = st.slider(
+            "comp_trust_min_comps",
+            min_value=3,
+            max_value=20,
+            value=int(getattr(cfg, "comp_trust_min_comps", 5) or 5),
+            help="Trust RED floor (n_clean below); Phase-1 selection min stays separate.",
+        )
+        chk_min_epochs = st.slider(
+            "check_star_min_epochs",
+            min_value=3,
+            max_value=50,
+            value=int(getattr(cfg, "check_star_min_epochs", 5) or 5),
+            help="Trust gate: check-star scatter ignored below this epoch count.",
+        )
+        if int(lc_q_short) > int(lc_q_min):
+            st.warning("lc_quality_short_min_frames will be clamped to lc_quality_min_frames on save.")
 
     with tab_p01:
         st.markdown("### Phase 0+1 — star matching / stability")
@@ -800,6 +841,15 @@ def render_settings_dashboard(
         cfg.pytics_enabled = bool(pytics_enabled)
         cfg.savgol_detrend_enabled = bool(savgol_detrend_enabled)
         cfg.democratic_detrend_enabled = bool(democratic_detrend_enabled)
+        cfg.lc_quality_min_frames = int(max(3, min(500, lc_q_min)))
+        cfg.lc_quality_short_min_frames = int(max(2, min(100, lc_q_short)))
+        if cfg.lc_quality_short_min_frames > cfg.lc_quality_min_frames:
+            cfg.lc_quality_short_min_frames = cfg.lc_quality_min_frames
+        cfg.lc_quality_min_normal_frac = float(max(0.1, min(1.0, lc_q_frac)))
+        cfg.comp_trust_min_comps = int(max(3, min(20, comp_trust_min)))
+        if cfg.comp_trust_min_comps > cfg.phase01_comparison_n_comp_max:
+            cfg.comp_trust_min_comps = int(cfg.phase01_comparison_n_comp_max)
+        cfg.check_star_min_epochs = int(max(3, min(50, chk_min_epochs)))
 
         cfg.phase01_comparison_max_dist_deg = float(max(0.05, min(10.0, p01_md)))
         cfg.phase01_comparison_max_mag_diff = float(max(0.05, min(5.0, p01_mm)))

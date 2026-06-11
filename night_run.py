@@ -76,6 +76,11 @@ class NightRunResult:
     phase_timings: dict[str, float] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    photometry_completeness: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+
+# Phase 2A must cover at least this fraction of active_targets in photometry_summary.
+_PHOTOMETRY_COMPLETENESS_MIN_RATIO = 0.90
 
 
 def _load_app_config(config_path: Path | None) -> AppConfig:
@@ -375,6 +380,52 @@ def _night_run_platesolve(
         masterstar_selection_pct=ms_pct_f,
         master_dark_path=md_ps,
     )
+
+
+def audit_photometry_completeness(
+    output_dir: Path,
+    *,
+    min_ratio: float = _PHOTOMETRY_COMPLETENESS_MIN_RATIO,
+) -> dict[str, Any]:
+    """Compare ``photometry_summary.csv`` row count to ``active_targets.csv``.
+
+    Silent truncation (e.g. 69/373 targets) must fail the night run, not report success.
+    """
+    output_dir = Path(output_dir)
+    active_csv = output_dir / "active_targets.csv"
+    summary_csv = output_dir / "photometry_summary.csv"
+    out: dict[str, Any] = {
+        "output_dir": str(output_dir),
+        "n_active_targets": 0,
+        "n_summary_rows": 0,
+        "min_ratio": float(min_ratio),
+        "ratio": float("nan"),
+        "ok": False,
+    }
+    if not active_csv.is_file():
+        out["error"] = f"missing {active_csv.name}"
+        return out
+    if not summary_csv.is_file():
+        out["error"] = f"missing {summary_csv.name}"
+        return out
+    try:
+        at_df = pd.read_csv(active_csv, low_memory=False)
+        sm_df = pd.read_csv(summary_csv, low_memory=False)
+    except Exception as exc:  # noqa: BLE001
+        out["error"] = str(exc)
+        return out
+    n_active = int(len(at_df))
+    n_summary = int(len(sm_df))
+    out["n_active_targets"] = n_active
+    out["n_summary_rows"] = n_summary
+    if n_active <= 0:
+        out["ratio"] = 1.0 if n_summary == 0 else 0.0
+        out["ok"] = n_summary == 0
+        return out
+    ratio = n_summary / n_active
+    out["ratio"] = float(ratio)
+    out["ok"] = ratio >= float(min_ratio)
+    return out
 
 
 def _collect_photometry_metrics(output_dir: Path) -> tuple[int, float]:
@@ -881,6 +932,8 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             _p(str(msg))
 
         phot_errors: list[str] = []
+        completeness_issues: list[str] = []
+        completeness_by_setup: dict[str, dict[str, Any]] = {}
         total_lc = 0
         total_frames = 0
         lc_rms_values: list[float] = []
@@ -950,6 +1003,22 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             if math.isfinite(med_rms):
                 lc_rms_values.append(med_rms)
 
+            audit = audit_photometry_completeness(out_d)
+            completeness_by_setup[str(nm)] = audit
+            if not audit.get("ok"):
+                n_sm = int(audit.get("n_summary_rows") or 0)
+                n_at = int(audit.get("n_active_targets") or 0)
+                ratio = audit.get("ratio")
+                ratio_s = f"{float(ratio):.1%}" if ratio is not None and math.isfinite(float(ratio)) else "n/a"
+                err_detail = audit.get("error")
+                if err_detail:
+                    completeness_issues.append(f"{nm}: {err_detail}")
+                else:
+                    completeness_issues.append(
+                        f"{nm}: photometry_summary {n_sm}/{n_at} ({ratio_s} coverage, "
+                        f"min {_PHOTOMETRY_COMPLETENESS_MIN_RATIO:.0%} required)"
+                    )
+
             # Step 15: PDF per group
             try:
                 from photometry_report import generate_all_method_photometry_reports
@@ -965,8 +1034,16 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             except Exception as pdf_err:  # noqa: BLE001
                 result.warnings.append(f"PDF report {nm}: {pdf_err}")
 
+        result.photometry_completeness = completeness_by_setup
+
         if phot_errors:
             result.errors.extend(phot_errors)
+            result.phase_timings = timings
+            return result
+
+        if completeness_issues:
+            result.errors.append("Photometry completeness gate FAILED")
+            result.errors.extend(completeness_issues)
             result.phase_timings = timings
             return result
 

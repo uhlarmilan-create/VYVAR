@@ -1193,7 +1193,7 @@ class VyvarDatabase:
 
             if pd_na.isna(raw):
                 return None
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[DATABASE] Editor value coerce failed (non-critical): %s", exc)
         return raw
 

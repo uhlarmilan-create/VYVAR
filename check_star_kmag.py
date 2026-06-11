@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -35,25 +37,157 @@ def normalize_comp_df_export_columns(
     return df
 
 
-def select_check_star(comp_df: pd.DataFrame, n_comp_min: int = 3) -> pd.Series | None:
-    """Pick check star — best stability; only if >= n_comp_min comps remain."""
-    if comp_df is None or comp_df.empty:
-        return None
+def _norm_ensemble_id_set(ensemble_ids: set[str] | None) -> set[str]:
+    out: set[str] = set()
+    if not ensemble_ids:
+        return out
+    for raw in ensemble_ids:
+        cid = str(normalize_gaia_source_id(raw) or "").strip()
+        if cid:
+            out.add(cid)
+    return out
 
-    df = normalize_comp_df_export_columns(comp_df)
+
+def _comp_rms_map_from_df(comp_df: pd.DataFrame) -> dict[str, float]:
+    out: dict[str, float] = {}
+    if comp_df is None or comp_df.empty or "catalog_id" not in comp_df.columns:
+        return out
+    for _, r in comp_df.iterrows():
+        cid = str(normalize_gaia_source_id(r.get("catalog_id", "")) or "").strip()
+        if not cid:
+            continue
+        try:
+            out[cid] = float(pd.to_numeric(r.get("comp_rms", float("nan")), errors="coerce"))
+        except (TypeError, ValueError):
+            out[cid] = float("nan")
+    return out
+
+
+def resolve_ensemble_ids_for_check(
+    target_cid: str,
+    comp_df: pd.DataFrame,
+    *,
+    lc_dir: Path | None,
+    comp_quality_map: dict[str, str] | None,
+    cfg: AppConfig | None,
+) -> set[str]:
+    """Best-effort ensemble id set for check-star exclusion (empty -> legacy pool)."""
+    from photometry_core import ensemble_member_ids, parse_comp_quality_json_map  # noqa: PLC0415
+
+    tid = str(normalize_gaia_source_id(target_cid) or "").strip()
+    if not tid:
+        return set()
+    _cfg = cfg or AppConfig()
+    cq: dict[str, dict] = {}
+    if lc_dir is not None:
+        cq_path = Path(lc_dir) / f"comp_quality_{tid}.json"
+        if cq_path.is_file():
+            try:
+                raw = json.loads(cq_path.read_text(encoding="utf-8"))
+                cq = parse_comp_quality_json_map(raw)
+            except Exception:  # noqa: BLE001
+                cq = {}
+    if not cq and comp_quality_map:
+        for cid, q in comp_quality_map.items():
+            nk = str(normalize_gaia_source_id(cid) or "").strip()
+            if not nk:
+                continue
+            q2 = str(q or "").strip().lower()
+            if q2 in ("good", "suspect", "excluded"):
+                cq[nk] = {"quality": q2}
+    if not cq:
+        return set()
+    return ensemble_member_ids(
+        cq,
+        _comp_rms_map_from_df(comp_df),
+        n_comp_min=3,
+        n_comp_max=int(getattr(_cfg, "phase01_comparison_n_comp_max", 12) or 12),
+    )
+
+
+def _resolve_check_select_rms_floor(
+    df: pd.DataFrame,
+    cfg: AppConfig | None,
+    floor_override: float | None,
+) -> float:
+    if floor_override is not None and math.isfinite(float(floor_override)):
+        base = float(floor_override)
+    elif cfg is not None:
+        try:
+            base = float(getattr(cfg, "check_select_rms_floor", 1e-4) or 1e-4)
+        except (TypeError, ValueError):
+            base = 1e-4
+    else:
+        base = 1e-4
+    base = max(0.0, base)
+    metrics: list[float] = []
+    for col in ("p2p_rms", "comp_rms"):
+        if col not in df.columns:
+            continue
+        vals = pd.to_numeric(df[col], errors="coerce")
+        metrics.extend(float(v) for v in vals if math.isfinite(float(v)) and float(v) > 0.0)
+    if metrics:
+        med = float(np.median(metrics))
+        if math.isfinite(med) and med > 0.0:
+            return max(base, 0.1 * med)
+    return base
+
+
+def _drop_rms_artefacts(
+    df: pd.DataFrame,
+    *,
+    cfg: AppConfig | None,
+    floor_override: float | None,
+) -> pd.DataFrame:
+    if df.empty:
+        return df
+    floor = _resolve_check_select_rms_floor(df, cfg, floor_override)
+    work = df.copy()
+    if "p2p_rms" in work.columns:
+        work["p2p_rms"] = pd.to_numeric(work["p2p_rms"], errors="coerce")
+    if "comp_rms" in work.columns:
+        work["comp_rms"] = pd.to_numeric(work["comp_rms"], errors="coerce")
+
+    def _metric_ok(row: pd.Series) -> bool:
+        vals: list[float] = []
+        if "p2p_rms" in row.index:
+            v = float(pd.to_numeric(row.get("p2p_rms"), errors="coerce"))
+            if math.isfinite(v):
+                vals.append(v)
+        if "comp_rms" in row.index:
+            v = float(pd.to_numeric(row.get("comp_rms"), errors="coerce"))
+            if math.isfinite(v):
+                vals.append(v)
+        if not vals:
+            return True
+        m = min(vals)
+        return m > floor
+
+    mask = work.apply(_metric_ok, axis=1)
+    return work.loc[mask].copy()
+
+
+def _apply_crowding_exclusion(df: pd.DataFrame, cfg: AppConfig | None) -> pd.DataFrame:
+    """CS-4: drop high-contamination candidates when ``contamination_idx`` is present."""
+    if df.empty or "contamination_idx" not in df.columns:
+        return df
+    _cfg = cfg or AppConfig()
     try:
-        if "is_check_star" in df.columns:
-            mchk = df["is_check_star"].fillna(False).astype(bool)
-            if bool(mchk.any()):
-                return df.loc[mchk].iloc[0]
-    except Exception:  # noqa: BLE001
-        pass
+        thr = float(getattr(_cfg, "aperture_correction_max_contamination", 0.15) or 0.15)
+    except (TypeError, ValueError):
+        thr = 0.15
+    work = df.copy()
+    work["contamination_idx"] = pd.to_numeric(work["contamination_idx"], errors="coerce")
+    return work.loc[
+        work["contamination_idx"].isna() | (work["contamination_idx"] <= thr)
+    ].copy()
 
-    if "status" in df.columns:
-        df = df[df["status"].astype(str).str.strip().str.lower() == "good"]
-    if len(df) <= int(n_comp_min):
-        return None
 
+def _exclude_ensemble_members(df: pd.DataFrame, ensemble_ids: set[str]) -> pd.DataFrame:
+    ens = _norm_ensemble_id_set(ensemble_ids)
+    if ens and "catalog_id" in df.columns:
+        cids = df["catalog_id"].map(lambda x: str(normalize_gaia_source_id(x) or "").strip())
+        df = df.loc[~cids.isin(ens)].copy()
     for col in ("is_ensemble", "in_ensemble", "used_in_ensemble", "ensemble", "is_used"):
         if col in df.columns:
             try:
@@ -62,6 +196,44 @@ def select_check_star(comp_df: pd.DataFrame, n_comp_min: int = 3) -> pd.Series |
             except Exception:  # noqa: BLE001
                 pass
             break
+    return df
+
+
+def select_check_star(
+    comp_df: pd.DataFrame,
+    *,
+    ensemble_ids: set[str] | None = None,
+    n_comp_min: int = 3,
+    cfg: AppConfig | None = None,
+    check_select_rms_floor: float | None = None,
+) -> pd.Series | None:
+    """Pick independent check star — best stability among non-ensemble good comps."""
+    if comp_df is None or comp_df.empty:
+        return None
+
+    df = normalize_comp_df_export_columns(comp_df)
+    try:
+        if "is_check_star" in df.columns:
+            mchk = df["is_check_star"].fillna(False).astype(bool)
+            if bool(mchk.any()):
+                row = df.loc[mchk].iloc[0]
+                cid = str(normalize_gaia_source_id(row.get("catalog_id", "")) or "").strip()
+                ens = _norm_ensemble_id_set(ensemble_ids)
+                if ens and cid in ens:
+                    return None
+                return row
+    except Exception:  # noqa: BLE001
+        pass
+
+    if "status" in df.columns:
+        df = df[df["status"].astype(str).str.strip().str.lower() == "good"]
+
+    df = _exclude_ensemble_members(df, ensemble_ids or set())
+    df = _drop_rms_artefacts(df, cfg=cfg, floor_override=check_select_rms_floor)
+    df = _apply_crowding_exclusion(df, cfg)
+
+    if len(df) < int(n_comp_min):
+        return None
 
     tier_col = "tier" if "tier" in df.columns else ("comp_tier" if "comp_tier" in df.columns else None)
     if tier_col is not None:

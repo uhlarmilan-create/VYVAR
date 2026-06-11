@@ -88,11 +88,11 @@ def main() -> None:
     # Cleanup
     try:
         test_csv.unlink(missing_ok=True)
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
     try:
         test_cross_csv.unlink(missing_ok=True)
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
 
 

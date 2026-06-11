@@ -28,7 +28,7 @@ def _wcs_center_deg(hdr) -> tuple[float, float] | None:
         ny, nx = int(hdr["NAXIS2"]), int(hdr["NAXIS1"])
         sc = pixel_to_skycoord((nx - 1) / 2.0, (ny - 1) / 2.0, hdr, origin=0)
         return float(sc.ra.deg), float(sc.dec.deg)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 

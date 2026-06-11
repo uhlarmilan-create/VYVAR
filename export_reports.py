@@ -447,8 +447,19 @@ def _test_is_eclipsing() -> None:
         print(f"\nAll {len(cases)} tests passed!")
 
 
-def _select_check_star(comp_df: pd.DataFrame, n_comp_min: int = 3) -> pd.Series | None:
-    return select_check_star(comp_df, n_comp_min=n_comp_min)
+def _select_check_star(
+    comp_df: pd.DataFrame,
+    *,
+    ensemble_ids: set[str] | None = None,
+    n_comp_min: int = 3,
+    cfg: AppConfig | None = None,
+) -> pd.Series | None:
+    return select_check_star(
+        comp_df,
+        ensemble_ids=ensemble_ids or set(),
+        n_comp_min=n_comp_min,
+        cfg=cfg,
+    )
 
 
 def _copy_field_image(
@@ -472,7 +483,7 @@ def _copy_field_image(
                 try:
                     shutil.copy2(src, dst)
                     return dst_name
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     logging.warning("[EXPORT] Field image copy failed: %s", exc)
                     return None
         except Exception:  # noqa: BLE001
@@ -712,8 +723,23 @@ def export_lightcurve_reports(
     t_mag = pd.to_numeric(target_row.get("mag", float("nan")), errors="coerce")
     t_bprp = pd.to_numeric(target_row.get("bp_rp", float("nan")), errors="coerce")
 
-    # Check star.
-    check_row = _select_check_star(comp_df, n_comp_min=3)
+    # Check star (exclude Phase-2A ensemble members when comp_quality sidecar exists).
+    from check_star_kmag import resolve_ensemble_ids_for_check  # noqa: PLC0415
+
+    _lc_dir_pre = Path(lc_dir) if lc_dir is not None else (out_base.parent / "lightcurves")
+    _ens_ids = resolve_ensemble_ids_for_check(
+        target_cid,
+        comp_df,
+        lc_dir=_lc_dir_pre,
+        comp_quality_map=comp_quality_map,
+        cfg=fresh_cfg,
+    )
+    check_row = _select_check_star(
+        comp_df,
+        ensemble_ids=_ens_ids,
+        n_comp_min=3,
+        cfg=fresh_cfg,
+    )
     check_cid = str(check_row.get("catalog_id")) if check_row is not None else "na"
     _lc_dir = Path(lc_dir) if lc_dir is not None else (out_base.parent / "lightcurves")
     _phot_dir = out_base.parent

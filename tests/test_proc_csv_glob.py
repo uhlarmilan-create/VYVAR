@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 
 from comp_qa_core import load_proc_pivot
-from proc_frame_store import PROC_CSV_GLOB, list_proc_csvs
+from proc_frame_store import PROC_CSV_GLOB, list_proc_csvs, proc_csv_path_for_aligned_fits
 
 
 def _write_frame_csv(path: Path, *, catalog_id: str, flux: float, frame_name: str) -> None:
@@ -20,6 +20,12 @@ def _write_frame_csv(path: Path, *, catalog_id: str, flux: float, frame_name: st
             "bjd_tdb_mid": [2459000.0 + flux * 1e-6, 2459000.1],
         }
     ).to_csv(path, index=False)
+
+
+def test_proc_csv_path_raw_aligned_unchanged() -> None:
+    """Raw calibrated aligned FITS already proc_* -> same CSV basename as before Fix A."""
+    p = Path("frames/proc_V842_Her_Light_064.fits")
+    assert proc_csv_path_for_aligned_fits(p) == p.with_suffix(".csv")
 
 
 def test_list_proc_csvs_pre_cal_and_light_naming() -> None:

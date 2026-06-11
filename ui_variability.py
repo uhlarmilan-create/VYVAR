@@ -113,7 +113,7 @@ def _read_comp_catalog_ids(platesolve_dir: Path) -> list[str]:
         return []
     try:
         df = read_vyvar_csv(p, low_memory=False)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return []
     for col in ("catalog_id", "name"):
         if col in df.columns:
@@ -146,7 +146,7 @@ def _raw_lightcurve_from_frames(per_frame_dir: Path, catalog_id: str, flux_col: 
                 usecols=["catalog_id", flux_col, "bjd_tdb_mid"],
                 low_memory=False,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
         _want = normalize_gaia_source_id(catalog_id)
         df["_cid"] = df["catalog_id"].map(normalize_gaia_source_id)
@@ -303,7 +303,7 @@ def _get_candidate_row(
             pass
 
         return {"ra": ra, "dec": dec, "mag": mag}
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
@@ -472,7 +472,7 @@ def _edge_ok_from_masterstar(
 
     try:
         from astropy.io import fits as astrofits
-    except Exception:
+    except Exception:  # noqa: BLE001
         return pd.Series(True, index=stars_df.index)
 
     nx = ny = None
@@ -483,26 +483,26 @@ def _edge_ok_from_masterstar(
             data = hdul[0].data
         try:
             fwhm_px = float(hdr.get("VY_FWHM", float("nan")))
-        except Exception:
+        except Exception:  # noqa: BLE001
             fwhm_px = float("nan")
         try:
             if data is not None and hasattr(data, "shape") and len(data.shape) >= 2:
                 ny, nx = int(data.shape[-2]), int(data.shape[-1])
-        except Exception:
+        except Exception:  # noqa: BLE001
             nx = ny = None
-    except Exception:
+    except Exception:  # noqa: BLE001
         nx = ny = None
 
     # Base margin (same spirit as phase01 interior margin)
     try:
         base_margin = float(cfg_dict.get("phase01_chip_interior_margin_px", 100))
-    except Exception:
+    except Exception:  # noqa: BLE001
         base_margin = 100.0
 
     # Annulus-aware margin: outer annulus radius in px + small guard
     try:
         ann_outer_fwhm = float(cfg_dict.get("annulus_outer_fwhm", 9.0))
-    except Exception:
+    except Exception:  # noqa: BLE001
         ann_outer_fwhm = 9.0
     ann_margin = float(ann_outer_fwhm) * float(fwhm_px) + 5.0 if np.isfinite(fwhm_px) else float("nan")
 
@@ -714,7 +714,7 @@ def _render_field_image_with_candidate(
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         from io import BytesIO
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
     p = Path(masterstar_fits_path_s)
@@ -724,7 +724,7 @@ def _render_field_image_with_candidate(
     try:
         with astrofits.open(p, memmap=False) as hdul:
             data = np.asarray(hdul[0].data, dtype=np.float64)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
     if data.size == 0:
@@ -736,7 +736,7 @@ def _render_field_image_with_candidate(
     try:
         vmin = float(np.percentile(data[ok], float(percentile_lo)))
         vmax = float(np.percentile(data[ok], float(percentile_hi)))
-    except Exception:
+    except Exception:  # noqa: BLE001
         vmin, vmax = float("nan"), float("nan")
 
     fig, ax = plt.subplots(figsize=(11.5, 7.0), dpi=140)
@@ -780,7 +780,7 @@ def _render_field_image_with_candidates(
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         from io import BytesIO
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
     p = Path(masterstar_fits_path_s)
@@ -790,7 +790,7 @@ def _render_field_image_with_candidates(
     try:
         with astrofits.open(p, memmap=False) as hdul:
             data = np.asarray(hdul[0].data, dtype=np.float64)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
     if data.size == 0:
@@ -802,7 +802,7 @@ def _render_field_image_with_candidates(
     try:
         vmin = float(np.percentile(data[ok], float(percentile_lo)))
         vmax = float(np.percentile(data[ok], float(percentile_hi)))
-    except Exception:
+    except Exception:  # noqa: BLE001
         vmin, vmax = float("nan"), float("nan")
 
     fig, ax = plt.subplots(figsize=(11.5, 7.0), dpi=140)
@@ -824,7 +824,7 @@ def _render_field_image_with_candidates(
         for (vx, vy, vlab) in vsx_xy_label[:35]:
             try:
                 ax.text(float(vx) + 14, float(vy), str(vlab)[:18], color="#f39c12", fontsize=7, va="center")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
     # Candidates: red circles
@@ -836,7 +836,7 @@ def _render_field_image_with_candidates(
         for (cx, cy, lab) in cand_xy_label[:25]:
             try:
                 ax.text(float(cx) + 16, float(cy), str(lab)[:18], color="#ff3333", fontsize=7, va="center")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
     # Selected candidate highlight (yellow)
@@ -848,7 +848,7 @@ def _render_field_image_with_candidates(
                 ax.scatter([sx], [sy], s=26, c="#ffd54a", alpha=0.95)
                 if selected_label:
                     ax.text(sx + 16, sy, str(selected_label)[:22], color="#ffd54a", fontsize=9, va="center")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[VARIABILITY] Matplotlib overlay failed (non-critical): %s", exc)
 
     ax.set_title(
@@ -957,7 +957,7 @@ def _variability_crossmatch_dialog_body() -> None:
                     if cm is not None and hasattr(cm, "best_period"):
                         try:
                             period_hint = cm.best_period()
-                        except Exception:
+                        except Exception:  # noqa: BLE001
                             period_hint = None
                     photometry_dir = str(st.session_state.get("var_photometry_dir") or "").strip()
                     if not photometry_dir:
@@ -1101,7 +1101,7 @@ def _variability_crossmatch_dialog_body() -> None:
                     if sector.lc_raw_path and Path(sector.lc_raw_path).exists():
                         try:
                             df_lc = pd.read_csv(sector.lc_raw_path)
-                        except Exception:
+                        except Exception:  # noqa: BLE001
                             df_lc = pd.DataFrame()
                         tcol = "time" if "time" in df_lc.columns else df_lc.columns[0]
                         fcol = "flux" if "flux" in df_lc.columns else df_lc.columns[1]
@@ -1245,7 +1245,7 @@ def render_variability_dashboard(
         st.write(f"draft_dir: {draft_dir}")
         try:
             st.write(f"pipeline.draft_dir: {getattr(pipeline, 'draft_dir', None)}")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[VARIABILITY] Dashboard init/session restore failed (non-critical): %s", exc)
 
     obs_groups = _detect_obs_groups(draft_dir)
@@ -1599,7 +1599,7 @@ def render_variability_dashboard(
                 if isinstance(df0, pd.DataFrame) and (not df0.empty) and "catalog_id" in df0.columns:
                     st.session_state["var_candidates"] = [str(x) for x in df0["catalog_id"].astype(str).tolist()]
                     candidates = st.session_state.get("var_candidates", [])
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 LOGGER.debug("[VARIABILITY] TESS auto-branch guard (non-critical): %s", exc)
 
         missing = [
@@ -1631,7 +1631,7 @@ def render_variability_dashboard(
                         bullets_map[cid] = "\n".join(b) if b else "—"
                         xr = st.session_state.setdefault("var_crossmatch_results", {})
                         xr[cid] = cr
-                    except Exception as exc:
+                    except Exception as exc:  # noqa: BLE001
                         bullets_map[cid] = f"Error: {exc}"
                 else:
                     bullets_map[cid] = "—"
@@ -1750,7 +1750,7 @@ def render_variability_dashboard(
                         if cr is not None and hasattr(cr, "best_period"):
                             try:
                                 period_hint = cr.best_period()
-                            except Exception:
+                            except Exception:  # noqa: BLE001
                                 period_hint = None
 
                         with st.spinner(f"TESS: {str(cid)[:16]}..."):
@@ -1769,7 +1769,7 @@ def render_variability_dashboard(
                                     f"[TESS] {cid} — sektory: {tres.total_sectors_found}, "
                                     f"period: {tres.period_consensus}, error: {tres.error_global}"
                                 )
-                            except Exception as exc:
+                            except Exception as exc:  # noqa: BLE001
                                 # Store marker so auto loop doesn't retry this cid.
                                 tess_results[cid] = None
                                 st.warning(f"TESS failed for {str(cid)[:16]}: {exc}")
@@ -1968,7 +1968,7 @@ def render_variability_dashboard(
                             usecols=["catalog_id", flux_col_in, "bjd_tdb_mid", "airmass"],
                             low_memory=False,
                         )
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         continue
                     _want = _norm_cid(catalog_id)
                     if not _want:
@@ -2043,7 +2043,7 @@ def render_variability_dashboard(
                 cy = float(pd.to_numeric(selected_row.get("y"), errors="coerce"))
                 _sel_name = str(selected_row.get("vsx_name", "") or "").strip()
                 selected_label_map = _sel_name if _sel_name else str(selected_cid)
-        except Exception:
+        except Exception:  # noqa: BLE001
             cx, cy = float("nan"), float("nan")
             selected_label_map = str(selected_cid)
         masterstar_fits = platesolve_dir / "MASTERSTAR.fits"

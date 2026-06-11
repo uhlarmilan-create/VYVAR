@@ -178,7 +178,7 @@ def main():
         sky = ApertureStats(d, CircularAnnulus(pos, r_in, r_out), sigma_clip=sc).median
         fp_s = np.asarray(aperture_photometry(d, CircularAperture(pos, r_small))["aperture_sum"]) - sky*np.pi*r_small**2
         try: mjd = Time(hdr.get("DATE-OBS"), format="isot").mjd
-        except Exception: mjd = np.nan
+        except Exception: mjd = np.nan  # noqa: BLE001
         times.append(mjd)
         for sid, v in zip(sids, fp_s, strict=True): rows_p.append((fp.name, mjd, sid, float(v)))
         if HAVE_SEP:

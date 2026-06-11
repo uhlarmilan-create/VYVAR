@@ -45,7 +45,7 @@ def _sep_arcsec(coord: SkyCoord, ra_deg: Any, dec_deg: Any) -> float | None:
         if c2.ra.deg is None or c2.dec.deg is None:
             return None
         return float(coord.separation(c2).to(u.arcsec).value)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[CROSSMATCH] Query failed for coord separation: %s", exc)
         return None
 
@@ -164,7 +164,7 @@ def _gaia_varisum_types(row: Any) -> str:
     for col, label in _GAIA_VARISUM_FLAGS.items():
         try:
             v = row[col]
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[CROSSMATCH] Query failed for Gaia varisum column %s: %s", col, exc)
             continue
         ok = False
@@ -188,7 +188,7 @@ def _row_get(row: Any, *names: str) -> Any:
             continue
         try:
             return row[n]
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[CROSSMATCH] Query failed for row column %s: %s", n, exc)
             continue
     return None
@@ -200,7 +200,7 @@ def _query_simbad(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
     s = Simbad()
     try:
         s.add_votable_fields("otype", "V")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[CROSSMATCH] Query failed for SIMBAD votable fields: %s", exc)
         s.add_votable_fields("otype")
     res = s.query_region(coord, radius=radius_arcsec * u.arcsec)
@@ -216,7 +216,7 @@ def _query_simbad(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
             cra = _row_get(row, "RA", "ra", "RA_ICRS")
             cde = _row_get(row, "DEC", "dec", "DE_ICRS")
             dr = _sep_arcsec(coord, cra, cde)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[CROSSMATCH] Query failed for SIMBAD separation: %s", exc)
             dr = None
         out.append(
@@ -252,7 +252,7 @@ def _query_vsx_local_point(db_path: str | Path, coord: SkyCoord, radius_arcsec: 
         return []
     try:
         from database import query_local_vsx  # noqa: PLC0415
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[CROSSMATCH] Query failed for VSX local import: %s", exc)
         return []
 
@@ -272,7 +272,7 @@ def _query_vsx_local_point(db_path: str | Path, coord: SkyCoord, radius_arcsec: 
             dec_max=float(dec_max),
             max_rows=300,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[CROSSMATCH] Query failed for VSX local: %s", exc)
         return []
 
@@ -285,7 +285,7 @@ def _query_vsx_local_point(db_path: str | Path, coord: SkyCoord, radius_arcsec: 
         try:
             c2 = SkyCoord(ra=float(cra) * u.deg, dec=float(cde) * u.deg, frame="icrs")
             sep = float(coord.separation(c2).to(u.arcsec).value)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[CROSSMATCH] Query failed for VSX local separation: %s", exc)
             continue
         if sep > float(radius_arcsec):

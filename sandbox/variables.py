@@ -327,7 +327,7 @@ class VariableStar:
                 ap_c = self.__apsidal_movement_correction
                 period = self.__period
                 epoch = self.__epoch
-        except:
+        except Exception:
             mag0 = self.__mag0
             sec_ph = self.__sec_phase
             a_pri = self.__a_pri
@@ -388,7 +388,7 @@ class VariableStar:
                     if add_mag_and_offset:
                         model_point = -model_point + mag0 + self.__lc_offset
                     lightcurve_point.append(model_point)
-        except:
+        except Exception:
             lightcurve_point = []
         return lightcurve_point
 
@@ -432,7 +432,7 @@ class VariableStar:
                 ap_c = self.__apsidal_movement_correction
                 period = self.__period
                 epoch = self.__epoch
-        except:
+        except Exception:
             sec_ph = self.__sec_phase
             a_pri = self.__a_pri
             d_pri = self.__d_pri
@@ -465,7 +465,7 @@ class VariableStar:
             gon_polynom2 = sin2 * sin(4 * pi * phase) + cos2 * cos(4 * pi * phase)
             gon_polynom3 = sin3 * sin(8 * pi * phase) + cos3 * cos(8 * pi * phase)
             model_point = pri + sec + gon_polynom1 + gon_polynom2 + gon_polynom3
-        except:
+        except Exception:
             return None
         return model_point
 

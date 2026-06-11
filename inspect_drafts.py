@@ -16,7 +16,7 @@ import sys
 
 try:
     from astropy.io import fits
-except Exception:  # pragma: no cover
+except Exception:  # pragma: no cover  # noqa: BLE001
     print("astropy not importable in this env -- run inside the VYVAR venv")
     sys.exit(1)
 
@@ -43,7 +43,7 @@ def _plate_scale_from_cd(hdr):
             return math.hypot(cd11, cd12) * 3600.0
         if "CDELT1" in hdr:
             return abs(float(hdr["CDELT1"])) * 3600.0
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
     return None
 
@@ -65,7 +65,7 @@ def summarize_draft(path: str) -> dict:
     for f in fits_files[:40]:
         try:
             hdr = fits.getheader(f)
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
         filt = _first(hdr, FILTER_KEYS)
         if filt is not None:
@@ -78,7 +78,7 @@ def summarize_draft(path: str) -> dict:
         if sc:
             try:
                 info["scales"].append(round(float(sc), 3))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         nx, ny = hdr.get("NAXIS1"), hdr.get("NAXIS2")
         if nx and ny:
@@ -87,7 +87,7 @@ def summarize_draft(path: str) -> dict:
         if fw is not None:
             try:
                 info["fwhm"].append(float(fw))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
     # try a VYVAR proc/lightcurve CSV for FWHM if header had none
     if not info["fwhm"]:
@@ -104,9 +104,9 @@ def summarize_draft(path: str) -> dict:
                         for row in rd:
                             try:
                                 info["fwhm"].append(float(row[col]))
-                            except Exception:
+                            except Exception:  # noqa: BLE001
                                 pass
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
     return info
 

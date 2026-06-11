@@ -2,6 +2,11 @@
 
 **Generovane:** 2026-06-08 - **Prikaz:** `python tmp/_gen_audit_findings.py`
 
+**Closure (2026-06-11):** Trust Findings **A/B** implemented (`trust_flag_core` + tests); **CS-1..4**
+closed (`check_star_kmag.py`, specs); **Finding E** re-checked (`short_baseline` non-escalating).
+**BLE001/E722** regression guard enforced; critical-path broad-except review complete (no silent
+LC/completeness swallow). Ledger: Phase I in `VYVAR_AUDIT_LEDGER.md`.
+
 Automaticka previerka pred rucnym auditom. Priorita oprav: **F841 -> tichy except -> F821/F811 -> F401/F541**.
 
 ## Suhrn (ruff `--select F,B,SIM,RUF --statistics`)

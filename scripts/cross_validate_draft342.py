@@ -88,7 +88,7 @@ def _git_short_hash() -> str:
             text=True,
         )
         return out.strip() or "unknown"
-    except Exception:
+    except Exception:  # noqa: BLE001
         return "unknown"
 
 
@@ -247,7 +247,7 @@ def gaia_cone_query(
             (ra_deg - pad, ra_deg + pad, dec_deg - pad, dec_deg + pad, mag_limit),
         ).fetchall()
         con.close()
-    except Exception:
+    except Exception:  # noqa: BLE001
         return pd.DataFrame()
     out = []
     for sid, ra, dec, gm in rows:
@@ -297,7 +297,7 @@ def _mid_exposure_jd(hdr) -> float | None:
         return None
     try:
         t_start = Time(s, format="isot", scale="utc")
-    except Exception:
+    except Exception:  # noqa: BLE001
         if len(s) >= 10 and s[4:5] == "-" and s[7:8] == "-":
             t_start = Time(f"{s[:10]}T00:00:00", format="isot", scale="utc")
         else:
@@ -309,7 +309,7 @@ def _mid_exposure_jd(hdr) -> float | None:
             if to:
                 try:
                     t_start = Time(f"{s[:10]}T{to}", format="isot", scale="utc")
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
     exptime = 0.0
     for key in ("EXPTIME", "EXPOSURE"):
@@ -426,7 +426,7 @@ def _vyvar_plate_scale_arcsec() -> float:
             ps = float(cfg.get("phase01_plate_scale_arcsec_per_px", vy_ps))
             if math.isfinite(ps) and ps > 0:
                 return ps
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
     return vy_ps
 
@@ -521,7 +521,7 @@ def test_01_astrometry(vyvar: dict, fits_dir: Path) -> TestResult:
             f"astroalign round-trip median {med_arcsec:.3f} arcsec ({med_px:.3f} px)",
             [],
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return TestResult(name, False, float("nan"), thresh, 0, f"SKIP: {exc}", [])
 
 
@@ -575,7 +575,7 @@ def test_02_aperture_flux(vyvar: dict, fits_dir: Path) -> TestResult:
             f"median |d_mag| = {med * 1000:.2f} mmag",
             [],
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return TestResult(name, False, float("nan"), thresh, 0, f"SKIP: {exc}", [])
 
 
@@ -638,7 +638,7 @@ def test_03_sky_background(vyvar: dict, fits_dir: Path) -> TestResult:
             f"median |d_sky| = {med:.2f} ADU (VYVAR annulus vs {sky_col})",
             [],
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return TestResult(name, False, float("nan"), thresh, 0, f"SKIP: {exc}", [])
 
 
@@ -683,7 +683,7 @@ def test_04_fwhm(vyvar: dict, fits_dir: Path) -> TestResult:
             f"median |d_FWHM| = {med:.3f} px",
             [],
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return TestResult(name, False, float("nan"), thresh, 0, f"SKIP: {exc}", [])
 
 
@@ -721,7 +721,7 @@ def test_05_differential_lc(vyvar: dict, fits_dir: Path) -> TestResult:
                 if not row_c.empty:
                     try:
                         xy = (float(row_c.iloc[0]["x"]), float(row_c.iloc[0]["y"]))
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         xy = None
             if xy is None:
                 continue
@@ -732,7 +732,7 @@ def test_05_differential_lc(vyvar: dict, fits_dir: Path) -> TestResult:
                     rv = float(row_c.iloc[0]["aperture_r_px"])
                     if math.isfinite(rv) and rv > 0:
                         r = rv
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
             positions[cid] = (xy[0], xy[1], r)
 
@@ -794,7 +794,7 @@ def test_05_differential_lc(vyvar: dict, fits_dir: Path) -> TestResult:
             f"median |d_lc_rms| = {med * 1000:.2f} mmag ({len(frames)} frames)",
             [],
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return TestResult(name, False, float("nan"), thresh, 0, f"SKIP: {exc}", [])
 
 
@@ -867,7 +867,7 @@ def test_06_bjd_hjd(vyvar: dict, fits_dir: Path) -> TestResult:
             f"frame-level BJD: max |d_BJD| = {max_sec:.4f} s ({n} frames)",
             warnings,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return TestResult(name, False, float("nan"), thresh, 0, f"SKIP: {exc}", [])
 
 
@@ -929,7 +929,7 @@ def test_07_airmass(vyvar: dict) -> TestResult:
             f"median |d_airmass| = {med:.4f}",
             [],
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return TestResult(name, False, float("nan"), thresh, 0, f"SKIP: {exc}", [])
 
 
@@ -974,7 +974,7 @@ def test_08_plate_scale(vyvar: dict, fits_dir: Path) -> TestResult:
             detail,
             warnings,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return TestResult(name, False, float("nan"), thresh_pct, 0, f"SKIP: {exc}", [])
 
 
@@ -1000,7 +1000,7 @@ def test_09_comp_stability(vyvar: dict, fits_dir: Path) -> TestResult:
                 x = float(row.iloc[0]["x"])
                 y = float(row.iloc[0]["y"])
                 r = float(row.iloc[0].get("aperture_r_px", 3.0))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
             if math.isfinite(x) and math.isfinite(y):
                 positions[cid] = (x, y, r)
@@ -1037,7 +1037,7 @@ def test_09_comp_stability(vyvar: dict, fits_dir: Path) -> TestResult:
             f"median |d_comp_rms| = {med * 1000:.2f} mmag",
             [],
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return TestResult(name, False, float("nan"), thresh, 0, f"SKIP: {exc}", [])
 
 
@@ -1081,7 +1081,7 @@ def test_10_variability(vyvar: dict) -> TestResult:
             f"agreement {frac * 100:.1f}% ({agree}/{total})",
             ["ROT/noisy stars may disagree by design"],
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return TestResult(name, False, 0.0, thresh, 0, f"SKIP: {exc}", [])
 
 
@@ -1134,7 +1134,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"T{i:02d} running...", flush=True)
         try:
             results.append(fn())
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             results.append(
                 TestResult(
                     f"T{i:02d}",

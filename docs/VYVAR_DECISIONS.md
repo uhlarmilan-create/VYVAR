@@ -424,10 +424,17 @@ G→standard transform — to resolve before science submission.
   is missing. Conservative mission-safe default (was GREEN).
 - **Finding B:** `classify_warnings` adds soft note `no check-star verification available` when
   `check_scatter` is nan; can shift GREEN->YELLOW when no other warnings. Max 2 soft preserved.
+  **2026-06-10 (draft_382 check-star audit):** 15 hard-RED check-star targets on 12-15 frame
+  sessions are not genuine variables (8 crowding-blend, 4 short-baseline-outlier, 2 metric-mismatch,
+  1 thin-pool). Follow-ups CS-1..4 logged in ROADMAP (frame-blind 0.05 gate, select/gate metric
+  mismatch, ensemble-exclusion gap, crowding caveat) — record only; not fixed with #3.
 - **Finding C (C1 chosen):** keep `np.nanstd(km)` ddof=0; 0.02/0.05 thresholds calibrated to
   population std. Revisit ddof+threshold co-calibration on ROADMAP (not this pass).
 - **Finding D:** `len(soft) >= 3 -> RED` kept as forward guard (today max 2 soft).
-- **Finding E:** deferred -- lc_quality-missing soft note (would make D reachable).
+- **Finding E:** deferred -- lc_quality-missing soft note (would make D reachable). **2026-06-10
+  (rev b):** `short_baseline` is a **non-escalating** soft (excluded from `len(soft)>=3 -> RED`);
+  Finding E **stays OPEN** -- not the third escalating soft source. See
+  `VYVAR_LC_QUALITY_SHORT_BASELINE_SPEC.md`.
 - **draft_000366 trust re-run:** 10 GREEN->YELLOW, 0 GREEN->RED; numeric LC/comp_quality unchanged.
 
 ### B905 zip strict policy (2026-06-08, Phase D)
@@ -454,6 +461,47 @@ QA payload). Bounded diff vs iterative locus: **1** comp flag flip, **1** target
 expanded to include `comp_qa_*.json` sidecars (426 files) -> **`edbd97e7...`** (intentional
 CQ-C re-baseline, not a photometry regression). Sibling: ddof+threshold co-calibration (ROADMAP).
 
+### Gaia DR3 catalog ingest -- GAIA-3 Riello G correction (2026-06-10)
+
+DR3 `phot_g_mean_mag` already includes the Riello et al. 2021 milli-mag correction for
+6-param and 2-param solutions; **do not** re-apply. Prior "missing correction" concern closed.
+See `VYVAR_GAIA_DR3_AUDIT.md` (GAIA-3).
+
+### Gaia audit GAIA-1 / GAIA-2 deferred to DR4 (2026-06-10)
+
+`pmra`/`pmdec` (PM propagation) and `ruwe`/`duplicated_source` (astrometric-quality filter) will
+be added in the **Gaia DR4** catalog build (DR4 ~Dec 2026, ref epoch J2017.5), not by restarting
+the in-progress DR3 rebuild. The DR3 build completes as-is on the existing schema.
+
+**Rationale.** Gaia DR4 requires a fresh full-sky build regardless; restarting a ~50 h DR3 build
+for an interim catalog superseded within ~6 months is not worth the sunk cost.
+
+**Accepted interim risk (until DR4).** Platesolver PM propagation (`_apply_proper_motion`,
+`GAIA_EPOCH = 2016.0`) stays a no-op against the DR3 catalog; no `ruwe`-based comp filtering.
+Wide rig (~9.77"/px): negligible. Fine rig (~0.65"/px) in dense fields: GAIA-1 mis-association
+risk remains **unmitigated** -- treat fine-scale dense-field reference magnitudes with this caveat
+until DR4.
+
+**DR4 migration hooks (act at DR4 build time):**
+1. Reference epoch J2016.0 (DR3) -> **J2017.5** (DR4): `GAIA_EPOCH` at `vyvar_platesolver.py:63`
+   must update; prefer sourcing from catalog metadata.
+2. DR4 `build_gaia_catalog.py`: SELECT + `_ROW_COLUMNS` + `init_db` + INSERT must include
+   `pmra`, `pmdec`, `ruwe` (+ optional `duplicated_source`); downstream already tolerates them
+   (`database.py` :210-212).
+3. Re-verify lite-table column availability per DR4 datamodel.
+4. DR4 ~2.5B sources with reliability split; G <= 16.5 cut keeps VYVAR in the reliable subset.
+
+(GAIA-3 already closed: G-band correction baked into DR3 values; do not re-apply.)
+See `VYVAR_GAIA_DR3_AUDIT.md`.
+
+### Short-baseline LC quality `short_baseline` (#3, 2026-06-10, spec ready)
+
+New terminal `lc_quality` class for `[lc_quality_short_min_frames, lc_quality_min_frames)` with
+OK normal fraction. Defaults: short=**3**, min=**20** (LPV/Mira few-frame nights submittable).
+Terminal (no noisy/good sub-verdict); YELLOW trust; **exportable** to AAVSO; **excluded** from
+`len(soft)>=3` RED escalation. Implementation: `VYVAR_LC_QUALITY_SHORT_BASELINE_SPEC.md`.
+Follow-up: vsx_type-aware frame thresholds (out of scope).
+
 ### Comp selection — proximity tie-break reverted (2026-06-08)
 
 `dist_score` removed from `comp_selection_per_target.py`: the proximity tie-break was
@@ -479,3 +527,73 @@ triangle sides when FOV ≥ 2°. Full scale-blind mode remains via `blind_use_ri
   (draft_366 baseline reproduces original n_clean/trust with current code). Root cause: hardcoded
   `proc_*_Light_*.csv` glob in `load_proc_pivot` — the **pre-cal-naming class** again. The fix belongs in
   a **single canonical pre-cal proc-CSV resolution**, not a one-off per consumer.
+
+## Chi_and_H catalog policy — zaloha-only (2026-06-11)
+
+**Adopted:** `chiandh_night_run_bvr.py` and the anchor recipe use **only** paths from
+`config.json` pointing at `GAIA_DR3/zaloha/` (G<=16) + zaloha blind PKLs. **No field DB, no
+TAP, no astroquery** in the Chi_and_H night-run path. `build_gaia_catalog.py` adaptive-split
+remains DEFERRED until the next full-sky build.
+
+**Retired anchors:** `d246a5be` / `30a2f461` (draft_382 TAP G<=19.5); `f4bcc0ee` / `bd0b1792`
+(draft_385 truncated photometry / false success).
+
+## Confirm-reproducibility-before-locking (2026-06-11)
+
+Standing discipline: **two independent fresh runs must be byte-identical** on photometry SHA
+before recording a new anchor (`draft_386 == draft_387` for the current cut). Record SHAs,
+recipe, and `git rev-parse HEAD` in STATE/JOURNAL. Trust/QA changes must re-verify photometry
+SHA unchanged; trust counts may move (intended).
+
+## Night-run completeness gate (2026-06-11)
+
+`night_run.audit_photometry_completeness` fails `night_run_success` when any setup's
+`photometry_summary` covers <90% of `active_targets`. Guards the silent-truncation-as-success
+class (draft_385, draft_383).
+
+## Trust / check-star correctness (2026-06-11)
+
+**Findings A/B closed** (`VYVAR_TRUST_CHECKSTAR_HARDENING_SPEC.md`): un-evaluated trust → RED;
+`check_star_min_epochs=5`; `check_star_scatter` uses `ddof=1`. **Finding E re-checked:**
+`short_baseline` remains non-escalating YELLOW.
+
+**CS-3 (circular check):** Phase-2A check-star selection used column-based ensemble exclusion
+that was dead code — on draft_387 ~97% of selected checks were still ensemble members. Fix:
+`ensemble_member_ids()` + `select_check_star(..., ensemble_ids=...)`. Spec:
+`VYVAR_CHECKSTAR_SELECTION_SPEC.md`.
+
+**CS-2:** `check_select_rms_floor` guards artefact `comp_rms~0` rankings. **CS-4:** drop
+candidates with `contamination_idx > aperture_correction_max_contamination` when column present.
+
+**Reserved check-star (hold-one-out by design):** PARKED — would change which stars enter the
+ensemble and **move the photometry anchor**; requires explicit re-cut if ever adopted.
+
+## Broad-except regression guard (2026-06-11)
+
+**Enforced:** ruff `BLE001` + `E722` in `pyproject.toml` `select`; `.pre-commit-config.yaml`;
+`tests/test_ble001_regression.py`. Existing sites grandfathered with `# noqa: BLE001` (168 added);
+4 bare `except:` narrowed to `except Exception:`; 8 `photometry_core` parse paths narrowed.
+Critical LC/completeness path reviewed — no silent swallow found.
+
+## Comparison-star trust floor — ADOPTED (2026-06-11, Option B)
+
+**Spec:** `VYVAR_COMP_FLOOR_POLICY_SPEC.md`. **Trust-only split** — byte-identity-neutral w.r.t.
+photometry (anchor `203254fd` / `95a5515a` unchanged).
+
+**Adopted:**
+
+- `comp_trust_min_comps = 5` (config + Settings Data quality) — trust RED floor via `n_clean`.
+- `phase01_comparison_n_comp_min` stays **3** (Phase-1 selection / ensemble unchanged).
+- Trust `strong = min(comp_trust_min_comps + 2, phase01_comparison_n_comp_max)` → **7** at defaults.
+- `n_clean` 5-6 → thin comp soft YELLOW; 3-4 → RED.
+- **Trust baseline on draft_387:** **1382 YELLOW / 106 RED** (floor-5; 1488 rows). Pre-floor-5
+  1400/88 superseded.
+
+**Not adopted (Option A):** raising Phase-1 selection floor to 5 — would move photometry SHA
+(draft_387 footprint: 45 per-setup hits at 3-4 comps); anchor re-cut required if ever pursued.
+
+**Literature rationale:** Broeg weighted ensemble; AAVSO ~12-20 good comps; robustness floor ~5+.
+See spec for citations.
+
+**Check-star coupling:** CS-3 left 60 independent checks on draft_387; reserved-check design still
+parked (ROADMAP).

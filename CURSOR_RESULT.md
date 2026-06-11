@@ -1,39 +1,24 @@
-CURSOR RESULT -- 2026-06-09
+CURSOR RESULT — 2026-06-11 (session wrap-up)
 
 What I did
-Full doc sweep: reconciled STATE + 6 core docs to 2026-06-09 reflecting the PSF publication-grade
-arc, EPSF-1, NEIGHBOR-SUB state, and #4 fail-safety work.
+Updated STATE/JOURNAL/ROADMAP/DECISIONS/PARAMS/RUNBOOK/PROCESS/AUDIT docs for the full
+trust/anchor/reliability session. Re-trust draft_387 → **1382 YELLOW / 106 RED** (floor-5
+baseline). Verified pytest + ruff + photometry SHA. Single commit prepared (push on Milan's go).
 
 ## Output / findings
 
-- **VYVAR_STATE.md** -- restored clean snapshot + index (session blocks moved to JOURNAL); date
-  2026-06-09; tests 224/6; PSF / NEIGHBOR-SUB / #4 status blocks added.
-- **VYVAR_JOURNAL.md** -- master 2026-06-09 arc entry; archived 2026-06-03/04 blocks from STATE.
-- **VYVAR_ROADMAP.md** -- NEXT SESSION refreshed; closed rule-2 bug, realistic PSF uncertainties,
-  TODO-GEO; reconciled open questions.
-- **VYVAR_DECISIONS.md** -- sandwich uncertainty, EPSF-1, updated PSF/NEIGHBOR-SUB status.
-- **VYVAR_PROCESS.md** -- harness 2-3 attempt rule; Brno gate confirmed.
-- **VYVAR_PARAMS.md** -- PSF production constants + NEIGHBOR-SUB keys; count updated.
-- **VYVAR_VALIDATION.md** -- A9/V3d/V3e matrix + proof CLIs; pytest/SHA refs.
+**Disciplines:**
+- `pytest tests` — 259 passed, 14 skipped
+- `ruff check . --select BLE001,E722` — clean
+- draft_387 SHA — core `203254fd...` (2806) / full `95a5515a...` (4285) unchanged
+- Trust on draft_387 — 1382/106 (post `comp_trust_min_comps=5`)
 
-Docs reconciled to 2026-06-09.
-
-## Regression
-
-- Numeric SHA `770966c3` unchanged (docs-only pass).
-- pytest `tests/`: 224 passed / 6 skipped (unchanged from prior run).
+**Docs updated:** STATE, JOURNAL, ROADMAP, DECISIONS, PARAMS, PROCESS, AUDIT_LEDGER,
+AUDIT_FINDINGS, CHIANDH runbook, new `VYVAR_RUNBOOK.md`; trust/check-star/comp-floor specs
+confirmed under `docs/`.
 
 ## Errors (if any)
-
 None.
 
 ## Files changed
-
-- `docs/VYVAR_STATE.md`
-- `docs/VYVAR_JOURNAL.md`
-- `docs/VYVAR_ROADMAP.md`
-- `docs/VYVAR_DECISIONS.md`
-- `docs/VYVAR_PROCESS.md`
-- `docs/VYVAR_PARAMS.md`
-- `docs/VYVAR_VALIDATION.md`
-- `CURSOR_RESULT.md`
+Session code + docs (see git commit).

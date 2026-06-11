@@ -56,7 +56,7 @@ def _norm_cid(x: Any) -> str:
     except (InvalidOperation, ValueError, TypeError, OverflowError):
         try:
             return str(int(s))
-        except Exception:
+        except Exception:  # noqa: BLE001
             return s
 
 
@@ -301,7 +301,7 @@ class _PhotometryReportBuilder:
             # If obs_date_human is in YYYY-MM-DD, take it.
             if "-" in self.obs_date_human and len(self.obs_date_human) >= 10:
                 self.date_token = self.obs_date_human.split("T", 1)[0].replace("-", "")
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
         if self.output_pdf is None:
@@ -337,7 +337,7 @@ class _PhotometryReportBuilder:
                 from ui_aperture_photometry import _load_fwhm  # local import
 
                 self.fwhm_px = float(_load_fwhm(self.platesolve_dir / "MASTERSTAR.fits"))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self.aperture_px = float(np.nanmedian(pd.to_numeric(self.summary_df.get("aperture_px"), errors="coerce"))) if self.n_lc else float("nan")
 
@@ -485,7 +485,7 @@ class _PhotometryReportBuilder:
                     if v:
                         # Keep only date part.
                         return v.split("T", 1)[0].replace("-", ".")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         return datetime.today().strftime("%d.%m.%Y")
     def _metric_color(self, v: float) -> Any:
@@ -508,6 +508,7 @@ class _PhotometryReportBuilder:
             ("good", "good"),
             ("noisy", "noisy"),
             ("noisy_moon", "noisy_moon"),
+            ("short_baseline", "short_baseline"),
             ("no_data", "no_data"),
             ("saturated", "saturated"),
         ):
@@ -678,6 +679,7 @@ class _PhotometryReportBuilder:
                     f"  Good LCs:        {good}  ({pct:.1f}%)",
                     f"  Noisy:           {int(vc.get('noisy', 0))}",
                     f"  Noisy (moon):    {int(vc.get('noisy_moon', 0))}",
+                    f"  Short baseline:  {int(vc.get('short_baseline', 0))}",
                     f"  No data:         {int(vc.get('no_data', 0))}",
                     f"  Saturated:       {int(vc.get('saturated', 0))}",
                 ]
@@ -691,6 +693,7 @@ class _PhotometryReportBuilder:
                 f"  Good LCs:        {good}  ({pct:.1f}%)",
                 f"  Noisy:           {int(qs.get('noisy', 0) or 0)}",
                 f"  Noisy (moon):    {int(qs.get('noisy_moon', 0) or 0)}",
+                f"  Short baseline:  {int(qs.get('short_baseline', 0) or 0)}",
                 f"  No data:         {int(qs.get('no_data', 0) or 0)}",
                 f"  Saturated:       {int(qs.get('saturated', 0) or 0)}",
             ]
@@ -1031,12 +1034,22 @@ class _PhotometryReportBuilder:
             except Exception:  # noqa: BLE001
                 pass
         try:
-            from check_star_kmag import select_check_star
+            from check_star_kmag import resolve_ensemble_ids_for_check, select_check_star
 
             if not self.comp_df.empty and "_tcid" in self.comp_df.columns:
                 sub = self.comp_df[self.comp_df["_tcid"].astype(str).eq(cid)]
                 if not sub.empty:
-                    chk_row = select_check_star(sub)
+                    from config import AppConfig  # noqa: PLC0415
+
+                    _chk_cfg = AppConfig()
+                    ens = resolve_ensemble_ids_for_check(
+                        cid,
+                        sub,
+                        lc_dir=self.lc_dir,
+                        comp_quality_map=None,
+                        cfg=_chk_cfg,
+                    )
+                    chk_row = select_check_star(sub, ensemble_ids=ens, cfg=_chk_cfg)
                     if chk_row is not None:
                         cc = self._norm_cid(chk_row.get("catalog_id", ""))
                         out["kname"] = self._resolve_check_kname(cc, cid)
@@ -1518,7 +1531,7 @@ class _PhotometryReportBuilder:
             c.drawString(self.M_LEFT, 0.45 * self.cm, left_txt)
             c.drawRightString(self.PAGE_W - self.M_RIGHT, 0.45 * self.cm, f"Page {c.getPageNumber()}")
             c.setFillColor(self.colors.black)
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     def _layout_y_floor(self) -> float:
@@ -1737,7 +1750,7 @@ class _PhotometryReportBuilder:
             try:
                 jbuf, _fmt = self._compress_image_for_pdf(ip, mw, jq, force_jpeg=force_jpeg)
                 ir = self.ImageReader(jbuf)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 ir = self.ImageReader(str(ip))
             iw, ih = ir.getSize()
             if not iw or not ih:
@@ -1748,7 +1761,7 @@ class _PhotometryReportBuilder:
             dw = float(iw) * s
             dh = float(ih) * s
             c.drawImage(ir, x, y_top - dh, width=dw, height=dh, mask="auto")
-        except Exception:
+        except Exception:  # noqa: BLE001
             return
     def _draw_kv_table_section(self, 
         c: "canvas.Canvas",
@@ -1891,7 +1904,7 @@ class _PhotometryReportBuilder:
                     df0 = pd.read_csv(ps_csv, low_memory=False)
                 elif ps_xlsx.exists():
                     df0 = pd.read_excel(ps_xlsx)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return None
             if df0.empty:
                 return None
@@ -1983,7 +1996,7 @@ class _PhotometryReportBuilder:
                 df = pd.read_csv(ps_csv, low_memory=False)
             elif ps_xlsx.exists():
                 df = pd.read_excel(ps_xlsx)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return _legacy_simple_plot()
         if df.empty:
             return _legacy_simple_plot()
@@ -2065,7 +2078,7 @@ class _PhotometryReportBuilder:
         if vp is not None:
             try:
                 vdf = pd.read_csv(vp, low_memory=False, dtype=_GAIA_ID_DTYPE)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 vdf = pd.DataFrame()
             id_v = self._col_pick(vdf, ("catalog_id", "Catalog_ID", "gaia_id")) if not vdf.empty else None
             kat_v = self._col_pick(vdf, ("katalogy", "katalógy", "katalogy", "catalog_match")) if not vdf.empty else None
@@ -2924,7 +2937,7 @@ class _PhotometryReportBuilder:
         try:
             jbuf, _fmt_q = self._compress_png_bytes_for_pdf(png_payload, qa_mw, qa_jq)
             img = self.ImageReader(jbuf)
-        except Exception:
+        except Exception:  # noqa: BLE001
             img = self.ImageReader(BytesIO(png_payload))
         plots_h = 11.0 * self.cm
         c.drawImage(
@@ -3335,7 +3348,7 @@ class _PhotometryReportBuilder:
         try:
             mag0 = candidate_row.get("mag")
             mag_txt = f"{float(mag0):.3f}" if mag0 is not None and np.isfinite(float(mag0)) else "—"
-        except Exception:
+        except Exception:  # noqa: BLE001
             mag_txt = "—"
         c.drawString(
             self.M_LEFT,
@@ -3563,14 +3576,14 @@ class _PhotometryReportBuilder:
         bp_rp_val = star_data.get("bp_rp", float("nan"))
         try:
             bp_rp_f = float(bp_rp_val)
-        except Exception:
+        except Exception:  # noqa: BLE001
             bp_rp_f = float("nan")
         bp_rp_txt = f"{bp_rp_f:.3f}" if np.isfinite(bp_rp_f) else "—"
 
         b_v_val = star_data.get("b_v", float("nan"))
         try:
             b_v_f = float(b_v_val)
-        except Exception:
+        except Exception:  # noqa: BLE001
             b_v_f = float("nan")
         b_v_txt = f"{b_v_f:.2f}" if np.isfinite(b_v_f) else "—"
 
@@ -4052,7 +4065,7 @@ class _PhotometryReportBuilder:
                         qv = str(work.iloc[abs_i].get("lc_quality_flag", "") or "").strip().lower()
                         if qv == "good":
                             sty.add("BACKGROUND", (0, j), (-1, j), self.colors.HexColor("#eaf7eb"))
-                        elif qv in ("noisy", "noisy_moon", "saturated"):
+                        elif qv in ("noisy", "noisy_moon", "short_baseline", "saturated"):
                             sty.add("BACKGROUND", (0, j), (-1, j), self.colors.HexColor("#fff6e0"))
             t = self.Table(chunk_rows, colWidths=col_widths, rowHeights=chunk_heights)
             t.setStyle(sty)
@@ -4216,7 +4229,7 @@ class _PhotometryReportBuilder:
                 hmw, hjq = self._IMAGE_PDF_SETTINGS["hrd"]
                 hbuf, _hf = self._compress_image_for_pdf(hrd_png, hmw, hjq)
                 ir = self.ImageReader(hbuf)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 ir = self.ImageReader(str(hrd_png))
             iw, ih = ir.getSize()
             max_w = self.USE_W * 0.58
@@ -4283,7 +4296,7 @@ class _PhotometryReportBuilder:
             fmw, fjq = self._IMAGE_PDF_SETTINGS["field_map"]
             fbuf, _ff = self._compress_image_for_pdf(fmp, fmw, fjq)
             ir = self.ImageReader(fbuf)
-        except Exception:
+        except Exception:  # noqa: BLE001
             ir = self.ImageReader(str(fmp))
         iw, ih = ir.getSize()
         if not iw or not ih:
@@ -4333,7 +4346,7 @@ class _PhotometryReportBuilder:
                 hmw, hjq = self._IMAGE_PDF_SETTINGS["hockey"]
                 hb, _hk = self._compress_image_for_pdf(p, hmw, hjq)
                 ir = self.ImageReader(hb)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 ir = self.ImageReader(str(p))
             iw, ih = ir.getSize()
             if iw and ih:

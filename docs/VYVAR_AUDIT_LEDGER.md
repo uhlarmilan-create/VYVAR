@@ -249,15 +249,45 @@ Part 1 ePSF-vs-star Moffat audit on draft 367 Red_180_2 (0.3889 arcsec/px): **mi
 | ePSF audit JSON | `tmp/epsf_fwhm_367.json` |
 | A9 report | `tier_a9/a9_draft367_diagnostic.md` (regenerate: `run_a9_draft367`) |
 
+## Gaia DR3 ingest audit (2026-06-10)
+
+| ID | Severity | Build-decision | Status |
+|---|---|---|---|
+| GAIA-1 pmra/pmdec | MEDIUM (HIGH fine+dense) | YES | **deferred (DR4)** 2026-06-10 |
+| GAIA-2 ruwe | MEDIUM | YES | **deferred (DR4)** 2026-06-10 |
+| GAIA-3 Riello G | -- | NO | **closed** (already in DR3 values) |
+| GAIA-4 filter transform | LOW | NO | known / ROADMAP |
+| GAIA-5 C* excess | LOW | optional | defer |
+| GAIA-6 frame/tolerance | INFO | NO | confirmed |
+
+Full report: `docs/VYVAR_GAIA_DR3_AUDIT.md`. Scope: catalog build -> match -> comp ref mag;
+blind index unaffected.
+
 ## Dalsie kroky (Faza 1 pokracovanie)
 
 1. **Split track** -- `pipeline.py` / `photometry_core.py` (samostatny spec, byte-identita).
 2. ~~**comp_qa fix-once locus (CQ-C)**~~ **DONE (2026-06-09)**; **ddof co-calibration** remains.
+3. ~~**GAIA-1/GAIA-2**~~ **deferred to DR4** (2026-06-10); DR3 build completes as-is.
 
 ## Nástroje
 
 ```bash
 python tmp/_gen_audit_findings.py   # regeneruje docs/VYVAR_AUDIT_FINDINGS.md
 python -m ruff check . --select F821,F811,F841 --statistics
+python -m ruff check . --select BLE001,E722   # broad-except regression guard (pytest + pre-commit)
 python -m pytest tests -q
 ```
+
+## Phase I (2026-06-11) -- trust/anchor session + BLE001 guard
+
+Trust Findings A/B closed; CS-1..4 implemented; `comp_trust_min_comps=5` (Option B);
+completeness gate; zaloha-only anchor confirmed (386==387). BLE001/E722 enforced; 168 noqa
+grandfathered; 8 `photometry_core` narrowings; 4 bare excepts fixed (sandbox).
+
+| Check | Vysledok |
+|---|---|
+| `pytest tests` | **259 passed, 14 skipped** |
+| `ruff --select BLE001,E722` | **clean** |
+| Photometry SHA (`draft_000387`) | core `203254fd...` / full `95a5515a...` **unchanged** |
+| Trust baseline (`comp_trust_min_comps=5`) | **1382 YELLOW / 106 RED** (1488 rows) |
+| Specs filed | trust hardening, check-star selection, comp-floor policy |

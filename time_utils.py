@@ -77,7 +77,7 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
             return None
         try:
             t_start = Time(s, format="isot", scale="utc")
-        except Exception:
+        except Exception:  # noqa: BLE001
             if len(s) >= 10 and s[4:5] == "-" and s[7:8] == "-":
                 t_start = Time(f"{s[:10]}T00:00:00", format="isot", scale="utc")
             else:
@@ -91,7 +91,7 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
                 if to:
                     try:
                         t_start = Time(f"{s[:10]}T{to}", format="isot", scale="utc")
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         pass
 
         exptime = 0.0
@@ -107,7 +107,7 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
 
         t_mid = t_start + TimeDelta(exptime / 2.0 * u.s)
         return float(t_mid.jd)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
@@ -139,7 +139,7 @@ def compute_hjd_bjd(
         bjd = float((t.tdb + ltt_bary).jd)
 
         return hjd, bjd
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None, None
 
 
@@ -183,7 +183,7 @@ def _parse_objctradec(ra_s: str, dec_s: str) -> tuple[float | None, float | None
         dec_deg = float(Angle(de_str, unit=u.deg).value)
         if math.isfinite(ra_deg) and math.isfinite(dec_deg):
             return ra_deg, dec_deg
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
     return None, None
 
@@ -225,7 +225,7 @@ def resolve_target_coordinates(
                     rf, df = float(r0), float(d0)
                     if math.isfinite(rf) and math.isfinite(df):
                         return rf, df
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     return None, None

@@ -1,0 +1,21 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+exclude = [
+    "sandbox",
+    "tmp",
+    "Archive",
+    "scripts/archive",
+    ".venv",
+    "venv",
+    ".ruff_cache",
+]
+
+[tool.ruff.lint]
+select = [
+    "E722",   # bare except (swallows KeyboardInterrupt / SystemExit)
+    "BLE001", # blind except Exception — grandfathered via noqa; new sites must mark intent
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -442,7 +442,7 @@ def _alignment_compute_one_frame(
                 label=fp.name,
                 log_sink=log_sink,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             xy = np.zeros((0, 2), dtype=np.float32)
 
         if len(xy) == 0:
@@ -551,7 +551,7 @@ def _alignment_compute_one_frame(
             xy_used = np.asarray(xy, dtype=np.float32)
             _attempt_ok = True
             break
-        except Exception:
+        except Exception:  # noqa: BLE001
             aligned_data = None
             _alignment_emit_log(
                 log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami"

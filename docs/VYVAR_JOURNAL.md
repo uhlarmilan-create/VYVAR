@@ -2,6 +2,104 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- trust / anchor / reliability wrap (2026-06-11)
+
+Long session, entirely byte-identity-disciplined (photometry SHA never moved).
+
+**Anchor finally trustworthy.** Re-cut to confirmed-reproducible **zaloha-only** baseline: two
+independent fresh runs byte-identical (`draft_386 == draft_387`) → core `203254fd...`, full
+`95a5515a...`. Retired `d246a5be` / `30a2f461` (TAP field-DB draft_382) and `f4bcc0ee` /
+`bd0b1792` (truncated draft_385). Recipe: zaloha DB (G<=16) + zaloha blind PKLs + #3 code +
+this commit. No astroquery anywhere.
+
+**Reliability root cause fixed.** `night_run.audit_photometry_completeness` fails
+`night_run_success` when any setup photometry <90% of active targets — silent-truncation-as-
+success class (draft_385 bad anchor, draft_383 degradation).
+
+**#3 short_baseline** LC-quality and **Fix A** (proc_*.csv naming) confirmed in place.
+
+**zaloha-only policy.** `chiandh_night_run_bvr.py` reads Gaia from `config.json` (zaloha G<=16);
+no field DB, no TAP. (`build_gaia_catalog.py` adaptive-split DEFERRED.)
+
+**Trust correctness cluster** (all photometry byte-identity-neutral):
+
+- Findings A/B residuals: un-evaluated → RED; `check_star_min_epochs=5`; sample std `ddof=1`;
+  Finding E re-checked (`short_baseline` stays YELLOW).
+- CS-3: check star excluded from comparison ensemble via explicit `ensemble_ids` — prior column-
+  based exclusion was dead code (~97% of draft_387 checks were ensemble members / circular).
+- CS-2 artefact rms floor; CS-4 crowding exclusion when `contamination_idx` present.
+- `comp_trust_min_comps=5` (Option B, trust-only): 3–4 comp targets → RED without touching
+  photometry; `strong=min+2=7`. Trust baseline **1382 YELLOW / 106 RED** on draft_387
+  (pre-floor-5 was 1400/88).
+
+**min_comp policy** grounded in Broeg 2005 + AAVSO + empirical studies (floor = robustness/
+trust gate; >=5 with ~7 saturation knee). Specs filed under `docs/`.
+
+**Broad-except hygiene.** ruff BLE001/E722 enforced (`pyproject.toml`, pre-commit,
+`tests/test_ble001_regression.py`); 4 bare excepts fixed (`sandbox/variables.py`); 8
+`photometry_core` sites narrowed; 168 grandfathered `# noqa: BLE001`. No silent swallow on LC
+magnitude / completeness path.
+
+- core SHA `203254fd75ea5874f5986eac3f478260c2e7e5a9c2636bfecf2b31244cfb09ba` (2806)
+- full SHA `95a5515a6c15a473b6fcd29d3afe0c3b78d88a2da434f8a1c03f28dbe2783c24` (4285)
+- Tests: 259 passed / 14 skipped; ruff BLE001/E722 clean.
+
+## Session -- Chi_and_H zaloha anchor re-baseline (2026-06-11, RETIRED same day)
+
+Switched `chiandh_night_run_bvr.py` to zaloha-only. Recorded anchor from `draft_000385` — later
+found truncated (547 LCs vs ~1401 full). Superseded by draft_386 cut above.
+
+---
+
+## Session -- Chi_and_H byte-identity anchor recorded (2026-06-10)
+
+`chiandh_night_run_bvr.py` -> ephemeral `draft_000382` (Fix A validated). **Anchor = SHA
+fingerprint + recipe** (draft deletable; re-verify by regenerating — see STATE).
+
+- core SHA `d246a5be32c13cb0b0fd585220978040262ccf15245d92d1eda8ae78214d7d9d` (2810 files)
+- full SHA `30a2f4616e15fbfe8c834cb7c9db87d3688561bf3b9c2290bd7763de2d0b112e` (4291 files)
+- field DB recipe: TAP cone 0.75 deg @ 35.15, 57.13, G<=19.5, 2026-06-10, row_count=63138
+- **git_commit at cut: not recorded** (gap; re-cuts must `git rev-parse HEAD`)
+- source guard: `Archive/Chi_and_H` retained (only non-regenerable input)
+- setups B/V/R/L wheel labels: V=visual/green (`G/` folder), L=clear/broadband (`L_20_2` in anchor)
+- rig Newton 300/1200 + C3-26000 bin2 ~1.30"/px
+
+Trust decomposition (pre-#3): 1403 `no_data`, 87 saturated, 15 check-star (CS-1..4 logged).
+#3 `short_baseline` implemented; acceptance SHA vs recorded values (draft-independent).
+
+## Session -- anchor documentation amendment (2026-06-10)
+
+Amended STATE/JOURNAL/RUNBOOK: anchor is recipe + SHA, not draft survival; source-data guard;
+filter-wheel label correction (B/V/R/L); git_commit capture requirement; #3 acceptance compares
+re-run SHA to `d246a5be` / `30a2f461` not to draft_382 files on disk.
+
+---
+
+## Session -- Chi_and_H baseline runbook (2026-06-10)
+
+Runbook filed: `docs/VYVAR_CHIANDH_BASELINE_RUNBOOK.md`. Re-cut byte-identity anchor from
+Chi_and_H B/V/Ri (Newton bin2 ~1.3"/px) before #3 implementation. STATE: anchor PENDING RE-CUT.
+Not executed in this session (local data on Milan's machine).
+
+---
+
+## Session -- short-baseline LC-quality spec #3 rev b (2026-06-10)
+
+Spec updated: `docs/VYVAR_LC_QUALITY_SHORT_BASELINE_SPEC.md`. Decisions: `short_min=3` (LPV/Mira),
+terminal `short_baseline`, exportable YELLOW, **non-escalating** soft (Finding E stays open).
+Chi_and_H baseline re-cut plan documented. Ready for implement. No code changes.
+
+---
+
+## Session -- Gaia DR3 integration audit + DR4 deferral (2026-06-10)
+
+Audit filed: `docs/VYVAR_GAIA_DR3_AUDIT.md`. **Decision:** defer GAIA-1 (pmra/pmdec) + GAIA-2
+(ruwe/duplicated_source) to the Gaia DR4 catalog build rather than restart the in-progress DR3
+rebuild. GAIA-3 closed (G-band correction already in DR3). DR4 ref epoch J2017.5 hook recorded.
+No code changes.
+
+---
+
 ## Session -- VYVAR_PIPELINE_CZ revize 2026-06-09
 
 Novy/aktualizovany `docs/VYVAR_PIPELINE_CZ.md`: CQ-C, PSF arc, blind solver, byte-identity,

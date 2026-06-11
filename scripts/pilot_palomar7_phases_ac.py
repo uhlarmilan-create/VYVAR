@@ -166,14 +166,14 @@ def _collect_masterstar_stats(draft_dir: Path) -> dict:
                 sc = _read_plate_scale_arcsec_px_from_fits(ms_fits)
                 if sc is not None and math.isfinite(float(sc)):
                     all_scale.append(float(sc))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
             try:
                 with fits.open(ms_fits) as hd:
                     vf = hd[0].header.get("VY_FWHM")
                     if vf is not None and math.isfinite(float(vf)):
                         all_fwhm.append(float(vf))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
 
         for csv_name in ("masterstars_full_match.csv", "masterstars.csv"):

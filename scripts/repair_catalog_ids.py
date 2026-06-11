@@ -100,7 +100,7 @@ def repair_csv_catalog_ids_from_gaia_db(
             try:
                 ra_f = float(ra)
                 dec_f = float(dec)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 ra_f, dec_f = float("nan"), float("nan")
 
             # Step 1: check by ID (if parseable)
@@ -111,7 +111,7 @@ def repair_csv_catalog_ids_from_gaia_db(
                     # int("1498...") OK; int("1.49e18") fails -> will go to RA/DEC
                     old_int = int(old_raw)
                     ok_id = _exists_source_id(old_int)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 ok_id = False
 
             if ok_id:

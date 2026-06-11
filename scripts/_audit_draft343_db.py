@@ -20,7 +20,7 @@ try:
         print("  cols:", cols)
         for row in db.execute(f"SELECT * FROM {r[0]} LIMIT 5"):
             print(" ", dict(row))
-except Exception as e:
+except Exception as e:  # noqa: BLE001
     print(e)
 
 print("\n=== CALIBRATION_LIBRARY 60s (eq=1, tel=1) ===")
@@ -83,7 +83,7 @@ try:
     print("cols", cols)
     for r in db.execute("SELECT * FROM SCANNING ORDER BY ID DESC LIMIT 10"):
         print(dict(r))
-except Exception as e:
+except Exception as e:  # noqa: BLE001
     print(e)
 
 db.close()

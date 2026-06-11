@@ -150,7 +150,7 @@ def _lomb_scargle_best_period(
         return None
     try:
         return float(best_pg.period_at_max_power.value)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
@@ -1007,11 +1007,11 @@ def _generate_tess_blend_check_png(
 def _tpf_bjd_offset(tpf: Any) -> float:
     try:
         a = float(tpf.get_keyword("BJDREFI", hdu=1) or 0.0)
-    except Exception:
+    except Exception:  # noqa: BLE001
         a = 0.0
     try:
         b = float(tpf.get_keyword("BJDREFF", hdu=1) or 0.0)
-    except Exception:
+    except Exception:  # noqa: BLE001
         b = 0.0
     return a + b
 
@@ -1094,7 +1094,7 @@ def _process_one_sector(
                 logger.warning("[TESS] flatten pass2 failed (%s), fallback normalize", exc)
                 try:
                     lc_search = corr_lc.normalize()
-                except Exception:
+                except Exception:  # noqa: BLE001
                     lc_search = corr_lc
             wl_helpers = int(wl)
 
@@ -1469,7 +1469,7 @@ def run_tess_analysis(
                 logging.warning("[TESS] Sector %s failed: %s", sector_num, exc)
                 try:
                     sec_i = int(sector_num) if str(sector_num).isdigit() else 0
-                except Exception:
+                except Exception:  # noqa: BLE001
                     sec_i = 0
                 sectors.append(TessSectorResult(sector=sec_i, jd_start=0.0, jd_end=0.0, error=str(exc)))
 

@@ -18,7 +18,12 @@ import pandas as pd
 from astropy.io import fits as astrofits
 
 from comp_pool_rms import attach_comp_rms_to_pool_rows, compute_global_pool_rms_map
-from proc_frame_store import PROC_CSV_GLOB, PROC_STORE_COLS, ProcFrameStore
+from proc_frame_store import (
+    PROC_CSV_GLOB,
+    PROC_STORE_COLS,
+    ProcFrameStore,
+    proc_csv_path_for_aligned_fits,
+)
 from config import (
     AppConfig,
     DENSITY_OVERRIDES,
@@ -1225,7 +1230,7 @@ def read_flux_from_csv(
         try:
             # Keep Gaia IDs stable (avoid float/scientific precision loss in per-frame CSV).
             csv_df = pd.read_csv(frame_csv_path, low_memory=False, dtype=_GAIA_ID_DTYPE)
-        except Exception as exc:
+        except (OSError, ValueError) as exc:
             logging.warning(f"[FÁZA 2A] Nemôžem čítať CSV {frame_csv_path}: {exc}")
             return pd.DataFrame()
 
@@ -2235,6 +2240,46 @@ def compute_aperture_correction(
 # ---------------------------------------------------------------------------
 # KROK 4: Ensemble normalizácia
 # ---------------------------------------------------------------------------
+
+
+def ensemble_member_ids(
+    comp_quality: dict[str, dict],
+    comp_rms_map: dict[str, float] | None = None,
+    *,
+    n_comp_min: int = 3,
+    n_comp_max: int = 10,
+) -> set[str]:
+    """Catalog ids selected for Phase-2A ``ensemble_normalize`` (check-star must be outside)."""
+    comp_rms_map = comp_rms_map or {}
+    p2p_thr = float("nan")
+    for q in comp_quality.values():
+        t = q.get("p2p_threshold")
+        if t is not None and math.isfinite(float(t)):
+            p2p_thr = float(t)
+            break
+    usable_all = [
+        cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")
+    ]
+    usable_sorted = sorted(
+        usable_all,
+        key=lambda c: (
+            0 if comp_quality[c].get("quality") == "good" else 1,
+            float(comp_rms_map.get(c, float("inf"))),
+            str(c),
+        ),
+    )
+    selected: list[str] = []
+    for cid in usable_sorted:
+        if len(selected) >= int(n_comp_max):
+            break
+        p2p = float(comp_quality[cid].get("rms_p2p", float("nan")))
+        if (
+            len(selected) < int(n_comp_min)
+            or (math.isfinite(p2p_thr) and math.isfinite(p2p) and p2p < p2p_thr)
+            or not math.isfinite(p2p_thr)
+        ):
+            selected.append(cid)
+    return {str(c) for c in selected[: int(n_comp_max)]}
 
 
 def ensemble_normalize(
@@ -3914,7 +3959,7 @@ def save_cutout_png(
         else:
             with astrofits.open(masterstar_fits_path, memmap=False) as hdul:
                 data = np.asarray(hdul[0].data, dtype=np.float64)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     h, w = data.shape
@@ -3980,7 +4025,7 @@ def save_field_map_png(
         else:
             with astrofits.open(masterstar_fits_path, memmap=False) as hdul:
                 data = np.asarray(hdul[0].data, dtype=np.float64)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     finite = data[np.isfinite(data)]
@@ -4087,7 +4132,7 @@ def save_target_field_map_png(
         else:
             with astrofits.open(masterstar_fits_path, memmap=False) as hdul:
                 data = np.asarray(hdul[0].data, dtype=np.float64)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     finite = data[np.isfinite(data)]
@@ -4223,27 +4268,27 @@ def _edge_ok_from_masterstar_pipeline(
         if hdr is not None:
             try:
                 fwhm_px = float(hdr.get("VY_FWHM", float("nan")))
-            except Exception:
+            except (TypeError, ValueError):
                 fwhm_px = float("nan")
             try:
                 _n1 = int(hdr.get("NAXIS1", 0) or 0)
                 _n2 = int(hdr.get("NAXIS2", 0) or 0)
                 if _n1 > 0 and _n2 > 0:
                     nx, ny = _n1, _n2
-            except Exception:
+            except (TypeError, ValueError):
                 nx = ny = None
         if ms_data is not None and hasattr(ms_data, "shape") and len(ms_data.shape) >= 2:
             ny, nx = int(ms_data.shape[-2]), int(ms_data.shape[-1])
-    except Exception:
+    except Exception:  # noqa: BLE001
         nx = ny = None
 
     try:
         base_margin = float(cfg_dict.get("phase01_chip_interior_margin_px", 100))
-    except Exception:
+    except (TypeError, ValueError):
         base_margin = 100.0
     try:
         ann_outer_fwhm = float(cfg_dict.get("annulus_outer_fwhm", 9.0))
-    except Exception:
+    except (TypeError, ValueError):
         ann_outer_fwhm = 9.0
     ann_margin = float(ann_outer_fwhm) * float(fwhm_px) + 5.0 if np.isfinite(fwhm_px) else float("nan")
     margin = float(base_margin)
@@ -4293,11 +4338,11 @@ def auto_export_variability_candidates_csv(
     min_frames_frac = 1.0
     try:
         sigma_thr = float(cfg.variability_sigma_threshold)
-    except Exception:
+    except Exception:  # noqa: BLE001
         sigma_thr = 2.3
     try:
         mag_limit = float(cfg.vsx_variable_targets_mag_limit)
-    except Exception:
+    except Exception:  # noqa: BLE001
         mag_limit = 13.0
 
     flux_col = "dao_flux"
@@ -4354,7 +4399,7 @@ def auto_export_variability_candidates_csv(
                     cdf = cdf[~_co_cdf].copy()
                 try:
                     from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
-                except Exception:
+                except Exception:  # noqa: BLE001
                     normalize_gaia_source_id = None  # type: ignore[assignment]
                 comp_ids = [
                     (
@@ -4372,7 +4417,7 @@ def auto_export_variability_candidates_csv(
     try:
         if comparison_stars_csv:
             vsx_targets_csv = Path(comparison_stars_csv).parent / "variable_targets.csv"
-    except Exception:
+    except Exception:  # noqa: BLE001
         vsx_targets_csv = None
 
     cfg_run = dict(cfg_dict)
@@ -4536,7 +4581,7 @@ def auto_export_variability_candidates_csv(
                     def _exists_source_id(source_id: str) -> bool:
                         try:
                             sid_i = int(str(source_id).strip())
-                        except Exception:
+                        except (TypeError, ValueError):
                             return False
                         r = con.execute(
                             f"SELECT source_id FROM {tab} WHERE source_id=? LIMIT 1;",
@@ -4555,7 +4600,7 @@ def auto_export_variability_candidates_csv(
                         try:
                             ra_f = float(ra0)
                             dec_f = float(dec0)
-                        except Exception as exc:
+                        except (TypeError, ValueError) as exc:
                             LOGGER.debug("[CSV] Skipping row due to parse error: %s", exc)
                             continue
                         if not (math.isfinite(ra_f) and math.isfinite(dec_f)):
@@ -4612,7 +4657,7 @@ def auto_export_variability_candidates_csv(
                         try:
                             ra_f = float(cand_df.at[idx, ra_col])
                             de_f = float(cand_df.at[idx, dec_col])
-                        except Exception as exc:
+                        except (TypeError, ValueError) as exc:
                             LOGGER.debug("[CSV] Skipping row due to parse error: %s", exc)
                             continue
                         if not (math.isfinite(ra_f) and math.isfinite(de_f)):
@@ -4780,9 +4825,10 @@ def classify_lc_quality(
     rms_model_coeffs: np.ndarray | None = None,
     rms_noisy_k: float = 3.0,
     min_frames: int = 20,
+    short_min_frames: int = 3,
     min_normal_frac: float = 0.5,
 ) -> str:
-    """Classify light-curve quality: saturated | no_data | noisy | noisy_moon | good."""
+    """Classify light-curve quality: saturated | no_data | short_baseline | noisy | noisy_moon | good."""
     try:
         zf = str(zone_flag or "").strip().lower()
     except Exception:  # noqa: BLE001
@@ -4802,9 +4848,17 @@ def classify_lc_quality(
     nn = max(0, nn)
     nf = max(0, nf)
 
-    if nf < int(min_frames):
+    short_min = int(short_min_frames)
+    min_f = int(min_frames)
+    min_frac = float(min_normal_frac)
+
+    if nf < short_min:
         return "no_data"
-    if nf > 0 and (nn / float(nf)) < float(min_normal_frac):
+    if nf < min_f:
+        if nf > 0 and (nn / float(nf)) >= min_frac:
+            return "short_baseline"
+        return "no_data"
+    if nf > 0 and (nn / float(nf)) < min_frac:
         return "no_data"
 
     noisy_from_zone = zf in ("noisy2", "noisy3")
@@ -4830,7 +4884,14 @@ def classify_lc_quality(
     return "good"
 
 
-_LC_QUALITY_FLAGS: tuple[str, ...] = ("good", "noisy", "noisy_moon", "no_data", "saturated")
+_LC_QUALITY_FLAGS: tuple[str, ...] = (
+    "good",
+    "noisy",
+    "noisy_moon",
+    "short_baseline",
+    "no_data",
+    "saturated",
+)
 
 
 def build_lc_quality_summary(
@@ -4863,6 +4924,7 @@ def build_lc_quality_summary(
         "good": int(counts["good"]),
         "noisy": int(counts["noisy"]),
         "noisy_moon": int(counts["noisy_moon"]),
+        "short_baseline": int(counts["short_baseline"]),
         "no_data": int(counts["no_data"]),
         "saturated": int(counts["saturated"]),
         "total": total,
@@ -4969,6 +5031,9 @@ def _phase2a_write_summary(
             n_normal_frames=n_normal,
             lunar_risk=_lunar_risk,
             rms_model_coeffs=_rms_coeffs,
+            min_frames=int(getattr(_cfg_summary, "lc_quality_min_frames", 20) or 20),
+            short_min_frames=int(getattr(_cfg_summary, "lc_quality_short_min_frames", 3) or 3),
+            min_normal_frac=float(getattr(_cfg_summary, "lc_quality_min_normal_frac", 0.5) or 0.5),
         )
 
     summary_csv = Path(output_dir) / "photometry_summary.csv"
@@ -6120,7 +6185,7 @@ def _phase2a_prepare_shared_state(
                     logging.info(
                         f"[FÁZA 2A] FWHM z VY_FWHM (DAO): {_fwhm_from_header:.3f} px"
                     )
-    except Exception as _e:
+    except Exception as _e:  # noqa: BLE001
         logging.warning(f"[FÁZA 2A] Nemôžem čítať FWHM z hlavičky: {_e}")
 
     if _fwhm_from_header is not None:
@@ -7438,7 +7503,18 @@ def _phase2a_process_one_target(
             select_check_star,
         )
 
-        _chk_row = select_check_star(target_comps, n_comp_min=3)
+        _ensemble_ids = ensemble_member_ids(
+            comp_quality,
+            comp_rms_map,
+            n_comp_min=3,
+            n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
+        )
+        _chk_row = select_check_star(
+            target_comps,
+            ensemble_ids=_ensemble_ids,
+            n_comp_min=3,
+            cfg=_cfg,
+        )
         if _chk_row is not None:
             _chk_cid = _normalize_gaia_id(_chk_row.get("catalog_id", ""))
             if _chk_cid and _chk_cid in comp_lc:
@@ -7618,7 +7694,7 @@ def _phase2a_process_one_target(
             "reason": (str(ac_result.get("reason", "disabled")) if isinstance(ac_result, dict) else "disabled"),
         }
         _cq_path.write_text(json.dumps(_cq_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.warning("[PHASE 2A] Optional artifact write failed (comp_quality.json): %s", exc)
 
     lc_png = lc_dir / f"lightcurve_{target_cid}.png"
@@ -7646,7 +7722,7 @@ def _phase2a_process_one_target(
                 target_name,
                 ms_data=_ms_data,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             LOGGER.warning("[PHASE 2A] Optional artifact write failed (cutout PNG): %s", exc)
 
     # Per-target field map s číslovanými comp hviezdami — vždy (UI)
@@ -7660,7 +7736,7 @@ def _phase2a_process_one_target(
             _target_comp,
             ms_data=_ms_data,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.warning("[PHASE 2A] Optional artifact write failed (field map PNG): %s", exc)
 
     # Summary riadok
@@ -8342,7 +8418,7 @@ def _get_plate_scale_from_cfg(
                 float(result),
             )
             return result
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[PHASE 2A] Plate scale from config failed (non-critical): %s", exc)
     logging.info(
         "[FOV] _get_plate_scale_from_cfg → %.4f arcsec/px (None = fallback na max_dist_deg)",
@@ -8394,7 +8470,7 @@ def _compute_fov_max_dist(
             float(result),
         )
         return float(result)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logging.warning(
             "[FÁZA 0+1] FOV max_dist výpočet zlyhal (%s) → fallback=%.3f°",
             exc,
@@ -8626,7 +8702,11 @@ def stress_test_relative_rms_from_sidecars(
     then record relative flux for each star: f_i / median(f_all). Returns RMS over time for each star.
     """
     root = Path(frames_root)
-    files = [fp for fp in _iter_fits_recursive(root) if fp.with_suffix(".csv").is_file()]
+    files = [
+        fp
+        for fp in _iter_fits_recursive(root)
+        if proc_csv_path_for_aligned_fits(fp).is_file()
+    ]
     if not files or not source_ids:
         return StressTestResult(per_source_rms={}, frames_sampled=0, frames_used=0)
 
@@ -8643,7 +8723,7 @@ def stress_test_relative_rms_from_sidecars(
     frames_used = 0
     _sidecar_cache: dict[str, pd.DataFrame] = {}
     for fp in sample:
-        sidecar = fp.with_suffix(".csv")
+        sidecar = proc_csv_path_for_aligned_fits(fp)
         _sidecar_key = str(sidecar)
         if _sidecar_key not in _sidecar_cache:
             if Path(sidecar).is_file():
@@ -8652,7 +8732,7 @@ def stress_test_relative_rms_from_sidecars(
                     _sidecar_cache[_sidecar_key] = pd.read_csv(
                         sidecar, low_memory=False, dtype=_GAIA_ID_DTYPE
                     )
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     LOGGER.debug("[CSV] Skipping row due to parse error: %s", exc)
                     _sidecar_cache[_sidecar_key] = pd.DataFrame()
             else:
@@ -8708,7 +8788,7 @@ def vsx_is_known_variable_top3_per_bin(
         from astroquery.vizier import Vizier  # type: ignore
         import astropy.units as u
         from astropy.coordinates import SkyCoord
-    except Exception:
+    except Exception:  # noqa: BLE001
         return set()
 
     by_bin: dict[str, list[dict[str, Any]]] = {}
@@ -8742,7 +8822,7 @@ def vsx_is_known_variable_top3_per_bin(
             c = SkyCoord(ra=ra * u.deg, dec=de * u.deg, frame="icrs")
             try:
                 t = viz.query_region(c, radius=float(radius_arcsec) * u.arcsec, catalog="B/vsx")
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 LOGGER.debug("[CSV] Skipping row due to parse error: %s", exc)
                 continue
             if t and len(t) > 0 and len(t[0]) > 0:

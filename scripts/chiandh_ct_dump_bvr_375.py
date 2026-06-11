@@ -338,7 +338,7 @@ def _process_setup(*, draft_dir: Path, setup: str, cfg: AppConfig) -> tuple[dict
 def main() -> int:
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
 
     cfg = AppConfig()

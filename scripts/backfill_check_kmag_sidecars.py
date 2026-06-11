@@ -24,7 +24,11 @@ from check_star_kmag import (
     build_aligned_comp_inst,
 )
 from gaia_catalog_id import normalize_gaia_source_id
-from photometry_core import check_comparison_stability, parse_comp_quality_json_map
+from photometry_core import (
+    check_comparison_stability,
+    ensemble_member_ids,
+    parse_comp_quality_json_map,
+)
 
 
 def _norm_id(x: object) -> str:
@@ -60,8 +64,30 @@ def main() -> int:
         if lc_df.empty or "source_file" not in lc_df.columns:
             continue
         comp_df = comp_index.get(_norm_id(target_cid), pd.DataFrame())
-        chk = select_check_star(comp_df)
+        cat, tier, rms, tw = comp_ensemble_maps(comp_df, cfg)
+        cq_path = lc_dir / f"comp_quality_{target_cid}.json"
+        cq_map: dict[str, str] = {}
+        comp_quality_full: dict[str, dict] = {}
+        if cq_path.is_file():
+            raw = json.loads(cq_path.read_text(encoding="utf-8"))
+            comp_quality_full = parse_comp_quality_json_map(raw)
+            for qk, qv in comp_quality_full.items():
+                cq_map[_norm_id(qk)] = str(qv.get("quality", "")).strip().lower()
+        ens_ids = (
+            ensemble_member_ids(
+                comp_quality_full,
+                rms,
+                n_comp_min=3,
+                n_comp_max=int(cfg.phase01_comparison_n_comp_max),
+            )
+            if comp_quality_full
+            else set()
+        )
+        sidecar_path = check_kmag_sidecar_path(lc_dir, target_cid)
+        chk = select_check_star(comp_df, ensemble_ids=ens_ids, cfg=cfg)
         if chk is None:
+            if sidecar_path.is_file():
+                sidecar_path.unlink()
             continue
         check_cid = _norm_id(chk.get("catalog_id", ""))
         comp_ids = [_norm_id(c) for c in comp_df["catalog_id"].tolist() if _norm_id(c)]
@@ -69,13 +95,6 @@ def main() -> int:
             comp_ids.append(check_cid)
         source_files = lc_df["source_file"].astype(str).tolist()
         comp_lc = build_aligned_comp_inst(proc_dir, comp_ids, source_files, cfg, "aperture", csv_cache=proc_cache)
-        cat, tier, rms, tw = comp_ensemble_maps(comp_df, cfg)
-        cq_path = lc_dir / f"comp_quality_{target_cid}.json"
-        cq_map: dict[str, str] = {}
-        if cq_path.is_file():
-            raw = json.loads(cq_path.read_text(encoding="utf-8"))
-            for qk, qv in parse_comp_quality_json_map(raw).items():
-                cq_map[_norm_id(qk)] = str(qv.get("quality", "")).strip().lower()
         other_ids = [c for c in comp_ids if c != check_cid]
         other_lc = {c: comp_lc[c] for c in other_ids if c in comp_lc}
         comp_quality = check_comparison_stability(other_lc, comp_rms_map=rms, n_comp_min=3, outlier_sigma=3.0, common_mode_detrend=True)
@@ -87,7 +106,7 @@ def main() -> int:
             continue
         bjd = pd.to_numeric(lc_df["bjd"], errors="coerce").to_numpy(dtype=float)
         save_check_kmag_sidecar(
-            check_kmag_sidecar_path(lc_dir, target_cid),
+            sidecar_path,
             check_cid=check_cid,
             bjd=bjd,
             source_files=source_files,

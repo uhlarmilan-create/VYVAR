@@ -18,10 +18,18 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
    fine-scale data only (standing rule in DECISIONS + PROCESS).
 2. **TODO-MULTISET** — per-telescope-set config (wide vs fine optics); blocks clean multi-rig
    production and crowding gating per rig.
-3. **trust_flag_core Finding E (deferred)** — lc_quality-missing soft note; revisit with
-   Finding D `len(soft)>=3` when a third soft source exists.
-4. **Phase C catalog rebuild** — full-sky G<=16.5 deepening mechanics (strip_progress / DB swap).
-5. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
+3. ~~**Short-baseline LC quality (#3)**~~ **DONE (2026-06-10)** — `short_baseline` terminal class,
+   config keys, trust YELLOW non-escalating, exportable. ~~Finding E~~ **re-checked (2026-06-11)**.
+4. **Phase C catalog rebuild** — DR3 full-sky build completes on existing schema (G<=17.5).
+   GAIA-1/GAIA-2 columns deferred to DR4 (~Dec 2026) -- see DECISIONS.
+5. ~~**Chi_and_H baseline re-cut**~~ **DONE (2026-06-11)** — full zaloha anchor
+   (core `203254fd...`, full `95a5515a...`; draft_386 confirmed draft_387); completeness
+   gate in `night_run.py`. See STATE + RUNBOOK.
+6. ~~**Trust Findings A/B + CS-1..4 + comp trust floor (Option B)**~~ **DONE (2026-06-11)** —
+   specs under `docs/`; trust baseline 1382/106 on draft_387 at `comp_trust_min_comps=5`.
+7. ~~**Broad-except hygiene (BLE001/E722 regression guard)**~~ **DONE (2026-06-11)** — see
+   DECISIONS + `pyproject.toml` / pre-commit / `tests/test_ble001_regression.py`.
+8. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
 
 ---
 
@@ -115,39 +123,33 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
   `config.json` each run → perpetual git diff. **Zero functional effect** (the resolver
   ignores the config site; UI uses `LOCATION.IS_DEFAULT`). Fix = split a session-state store
   from the static overrides. **Do NOT gitignore `config.json`** — it holds real overrides.
-- **TODO-BROAD-EXCEPT-HYGIENE — dedicated day(s).** ~700 bare `except: pass/continue`; the
-  dangerous subset is those guarding safety/fallback paths in the core runtime. **Phase G batch 1
-  (2026-06-08):** comp_qa/trust stage wrappers confirmed logging (`[COMP_QA]`/`[TRUST]` warning,
-  closed); 8 platesolver solve-result-path excepts now `LOGGER.debug` before None/False fallback
-  (no control-flow change). **Batch 2 (2026-06-08):** 6 of ~31 `pass`-style excepts in
-  `vyvar_platesolver.py` now log (1 `LOGGER.warning` for failed MASTERSTAR WCS persist, 5
-  `LOGGER.debug` for skipped refinements/header writes); ~25 reviewed skip-OK (RANSAC inner-loop,
-  diag-log guards, optional VY_* headers, fallback refinements). **Batch 3 (2026-06-08):**
-  7 `photometry_core` high-risk excepts now log (3 warning: edge-ok fail-open, variability export;
-  4 debug: color-term fit x2, pipeline_meta write); ~223 remainder reviewed skip-OK.
-  **Batch 4 (2026-06-08):** 3 `pipeline.py` excepts logged (comparison-star sync skip ->
-  warning; cone/variables + prefetch CSV writes -> debug); worker error-surfacing via status
-  dicts + graceful fallbacks reviewed. **Critical path DONE** (platesolver / photometry_core /
-  pipeline). Remaining ~700 repo-wide count is lower-risk modules (UI, importer, tess_verify,
-  etc.) -- opportunistic only. **OPEN QUESTIONS CLOSED (2026-06-08, Milan #4):** MASTERSTAR
-  `fits.writeto` failure -> fail-closed (draft solve fails, Phase 2A blocked); edge-ok check
-  failure -> fail-open + `edge_filter_failed` flag on `variability_candidates.csv` + report note.
+- ~~**TODO-BROAD-EXCEPT-HYGIENE**~~ **DONE (2026-06-11).** Phase G critical-path logging
+  (2026-06-08) + **BLE001/E722 regression guard** (pyproject, pre-commit, pytest); 168 sites
+  grandfathered `# noqa: BLE001`; 4 bare excepts fixed; 8 `photometry_core` narrowings. ~1200
+  pre-existing noqa sites remain opportunistic. MASTERSTAR writeto fail-closed + edge-ok
+  fail-open (#4) unchanged.
 - **Phase H cosmetic lint (2026-06-08, DONE):** value-filtered subset applied (SIM118 x11,
   RUF022 x2, RUF007 x2, RUF034 x3 dead-ternary); ProcFrameStore SIM118 x2 kept; ~89 style
   findings accepted per PROCESS. **Clean-code campaign Phases A–H COMPLETE.**
 - ~~**TODO-GEO**~~ **CLOSED (2026-06-09)** — superseded by PARAM-PROVENANCE (`param_resolver.py`:
   per-draft `ID_LOCATION` -> header -> config; BJD/airmass config-independent). See DECISIONS.
-- **Cross-field min_comp experiment (7 vs 5).** Across several archived fields (single-exposure
-  groups, healthy stderr). Data points: h & χ Per (n_comp~140), M67 Green (clean but
-  count-blocked), Pal7.
-- **`classify_lc_quality` min_frames for short-baseline sessions.** Default `min_frames=20` marks
-  ~12-frame sessions `no_data` → hard trust fail. Decide a lower floor or a session-length-aware
-  policy (separate from the pre-cal proc-CSV glob bug; see STATE 2026-06-04).
-- **AAVSO-standard output.** G→standard B/V/Rc transform or standard catalog (APASS) so
-  CT-corrected mags sit on a standard system (see DECISIONS conceptual note).
+- ~~**Comparison-star floor policy**~~ **DONE (2026-06-11, Option B).** Trust-only
+  `comp_trust_min_comps=5`; Phase-1 selection min stays 3. Spec:
+  `VYVAR_COMP_FLOOR_POLICY_SPEC.md`. Option A (selection floor 5) parked — moves anchor.
+- **`classify_lc_quality` short-baseline (#3).** **DONE (2026-06-10)** — see
+  `VYVAR_LC_QUALITY_SHORT_BASELINE_SPEC.md`. Follow-up: vsx_type-aware thresholds.
+- ~~**Night-run false success (draft_383)**~~ **DONE (2026-06-11)** — completeness gate in
+  `night_run.py` (>=90% summary/active per setup).
+- ~~**Check-star trust audit CS-1..4**~~ **DONE (2026-06-11)** — specs +
+  `VYVAR_CHECKSTAR_SELECTION_SPEC.md`; CS-3 ensemble exclusion via `ensemble_ids`.
+- **Reserved check-star (hold-one-out).** PARKED — moves photometry anchor; see DECISIONS.
+- **AAVSO-standard output (#4).** PARKED — G→standard B/V/Rc (Broeg band/colour point).
 
 ## LOW
 
+- **GAIA-1 / GAIA-2 (pmra/pmdec, ruwe)** -- **DEFERRED to Gaia DR4 build** (~Dec 2026). Not
+  restarting the DR3 rebuild. See DECISIONS + `VYVAR_GAIA_DR3_AUDIT.md`. DR4 migration hooks
+  (epoch J2017.5, build columns, lite-table check) recorded in DECISIONS.
 - ~~**comp_qa fix-once magnitude locus (CQ-C)**~~ **DONE (2026-06-09)** — fix-once pass-1 locus;
   order-independent flagging; bounded diff 1 flag / 1 n_clean / 0 trust on draft_000366; SHA
   `edbd97e7...` (426 files incl. comp_qa). Sibling ddof+threshold co-calibration remains open.
@@ -266,3 +268,17 @@ inštalátor → rovnaký výsledok na T460; manuál a inštalátor konzistentn�
 - **TODO-DEV-PROCESS** — folded into `VYVAR_PROCESS.md` (the Definition-of-Done discipline).
 - The full **TODO-1…45 / PERF-1…10 / ALG-1…5 / CQ-1…7 / GS1–GS5** series — closed; see
   `VYVAR_JOURNAL.md`.
+
+---
+
+## Parked for next session (2026-06-11)
+
+| Item | Notes |
+|------|-------|
+| Reserved check-star | Hold-one-out by design — **moves photometry anchor** |
+| AAVSO-standard output #4 | G→B/V/Rc (Broeg band/colour) |
+| TODO-MULTISET | Per-rig config (wide vs fine) |
+| TODO-GS8 | Phase-3 global ZP |
+| DR4 build | ~Dec 2026; J2017.5 epoch hook `vyvar_platesolver.py:63` |
+| PSF / NEIGHBOR-SUB | Needs bin1 ~0.65"/px data (Brno gate) |
+| `build_gaia_catalog.py` adaptive-split | Next full-sky build only (not this commit) |

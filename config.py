@@ -55,7 +55,7 @@ def recommended_vyvar_parallel_workers(*, reserve_ram_gb: float = 1.5) -> int:
             ram_cap = 1
         else:
             ram_cap = max(1, min(32, avail // per_worker))
-    except Exception:
+    except Exception:  # noqa: BLE001
         ram_cap = 32
     return max(1, min(32, min(cpu_cap, ram_cap)))
 
@@ -153,6 +153,16 @@ class AppConfig:
     comp_qa_enabled: bool = True
     #: Post–Phase 2A trust flag (GREEN/YELLOW/RED); metadata + report/export notes only.
     trust_flag_enabled: bool = True
+    #: LC-quality frame floors for ``classify_lc_quality`` (Phase 2A summary).
+    lc_quality_min_frames: int = 20
+    lc_quality_short_min_frames: int = 3
+    lc_quality_min_normal_frac: float = 0.5
+    #: Trust-only comp floor (RED below); Phase-1 selection uses ``phase01_comparison_n_comp_min``.
+    comp_trust_min_comps: int = 5
+    #: Minimum check-star epochs before trust scatter thresholds apply.
+    check_star_min_epochs: int = 5
+    #: Artefact floor for check-star selection metric (comp_rms / p2p_rms).
+    check_select_rms_floor: float = 1e-4
     # Export reports (AAVSO + VAR.ASTRO.CZ)
     observer_name: str = "Unknown Observer"
     observer_code: str = ""
@@ -1316,6 +1326,16 @@ class AppConfig:
         _i01("phase01_comparison_n_comp_max", 12, 3, 20)
         if int(self.phase01_comparison_n_comp_max) < int(self.phase01_comparison_n_comp_min):
             self.phase01_comparison_n_comp_max = int(self.phase01_comparison_n_comp_min)
+        _i01("comp_trust_min_comps", 5, 3, 20)
+        if int(self.comp_trust_min_comps) > int(self.phase01_comparison_n_comp_max):
+            self.comp_trust_min_comps = int(self.phase01_comparison_n_comp_max)
+        _i01("lc_quality_min_frames", 20, 3, 500)
+        _i01("lc_quality_short_min_frames", 3, 2, 100)
+        _f01("lc_quality_min_normal_frac", 0.5, 0.1, 1.0)
+        if int(self.lc_quality_short_min_frames) > int(self.lc_quality_min_frames):
+            self.lc_quality_short_min_frames = int(self.lc_quality_min_frames)
+        _i01("check_star_min_epochs", 5, 3, 50)
+        _f01("check_select_rms_floor", 1e-4, 0.0, 0.01)
         _f01("phase01_comparison_max_comp_rms", 0.05, 0.01, 0.5)
         _f01("phase01_comparison_min_dist_arcsec", 60.0, 0.0, 600.0)
         _f01("phase01_comparison_rms_bin_mag", 0.001, 0.0001, 0.05)
@@ -1515,6 +1535,12 @@ class AppConfig:
             "sysrem_enabled": bool(self.sysrem_enabled),
             "comp_qa_enabled": bool(self.comp_qa_enabled),
             "trust_flag_enabled": bool(self.trust_flag_enabled),
+            "lc_quality_min_frames": int(self.lc_quality_min_frames),
+            "lc_quality_short_min_frames": int(self.lc_quality_short_min_frames),
+            "lc_quality_min_normal_frac": float(self.lc_quality_min_normal_frac),
+            "comp_trust_min_comps": int(self.comp_trust_min_comps),
+            "check_star_min_epochs": int(self.check_star_min_epochs),
+            "check_select_rms_floor": float(self.check_select_rms_floor),
             "sysrem_n_iter": int(self.sysrem_n_iter),
             "observer_name": str(self.observer_name),
             "observer_code": str(self.observer_code),

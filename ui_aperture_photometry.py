@@ -1438,7 +1438,7 @@ def render_aperture_photometry(
                                 b = cr.catalog_summary_bullets()
                                 bullets_map[str(cid)] = "\n".join(b) if b else "—"
                                 xr[str(cid)] = cr
-                            except Exception as exc:
+                            except Exception as exc:  # noqa: BLE001
                                 bullets_map[str(cid)] = f"Error: {exc}"
                         else:
                             bullets_map[str(cid)] = "—"
@@ -1509,7 +1509,7 @@ def render_aperture_photometry(
                             cfg=cfg,
                         )
                         tess_results[str(cid)] = tres
-                    except Exception as exc:
+                    except Exception as exc:  # noqa: BLE001
                         tess_results[str(cid)] = None
                         st.warning(f"TESS failed: {str(cid)[:16]}: {exc}")
                 else:
@@ -1551,8 +1551,8 @@ def render_aperture_photometry(
     tab_lc, tab_hrd = st.tabs(["Photometry / LC", "🌟 Field HRD"])
     with tab_lc:
         _n_total = int(len(summary_df))
-        _lc_qopts = ["good", "noisy", "noisy_moon", "no_data", "saturated"]
-        _lc_qdefault = ["good", "noisy", "noisy_moon"]
+        _lc_qopts = ["good", "noisy", "noisy_moon", "short_baseline", "no_data", "saturated"]
+        _lc_qdefault = ["good", "noisy", "noisy_moon", "short_baseline"]
         if "vyvar_lc_quality_filter" not in st.session_state:
             st.session_state["vyvar_lc_quality_filter"] = list(_lc_qdefault)
         st.multiselect(
@@ -1602,7 +1602,7 @@ def render_aperture_photometry(
         target_row = summary_df.iloc[int(_sel_i)]
         try:
             catalog_id = str(target_row.get("catalog_id", ""))
-        except Exception:
+        except Exception:  # noqa: BLE001
             catalog_id = ""
 
         col1, col2, col3 = st.columns([1, 2, 2])

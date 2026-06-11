@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
+from config import AppConfig
 from trust_flag_core import (
     CompTrustThresholds,
     _UNEVALUATED_REASON,
     _UNEVALUATED_TRUST,
     check_star_scatter,
     classify_warnings,
+    comp_thresholds_from_config,
     evaluate_target,
     format_export_trust_note,
     format_varastro_trust_comment,
@@ -22,6 +25,7 @@ from trust_flag_core import (
 )
 
 _TH = CompTrustThresholds.from_bounds(3, 8)
+_TH_TRUST = CompTrustThresholds.from_bounds(5, 12)  # strong=7 (comp_trust_min_comps default)
 
 
 def test_unevaluated_defaults_red(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
@@ -69,6 +73,7 @@ def test_missing_check_star_adds_soft() -> None:
         check_scatter=float("nan"),
         lc_quality="good",
         thresholds=_TH,
+        n_check=0,
     )
     assert "no check-star verification available" in soft
     assert not hard
@@ -83,6 +88,7 @@ def test_present_clean_check_is_green() -> None:
         lc_quality="good",
         check_scatter=0.005,
         thresholds=_TH,
+        n_check=5,
     )
     assert info["trust"] == "GREEN"
     assert info["n_soft"] == 0
@@ -95,6 +101,7 @@ def test_finite_check_thresholds() -> None:
         check_scatter=0.06,
         lc_quality="good",
         thresholds=_TH,
+        n_check=5,
     )
     assert any("high" in h for h in hard_hi)
     assert not soft_hi
@@ -105,6 +112,7 @@ def test_finite_check_thresholds() -> None:
         check_scatter=0.03,
         lc_quality="good",
         thresholds=_TH,
+        n_check=5,
     )
     assert not hard_lo
     assert any("0.030" in s for s in soft_lo)
@@ -119,6 +127,7 @@ def test_max_two_soft_keeps_yellow() -> None:
         check_scatter=float("nan"),
         lc_quality="good",
         thresholds=_TH,
+        n_check=0,
     )
     assert len(soft) == 2
     assert trust_level(nc, hard, soft, _TH) == "YELLOW"
@@ -137,6 +146,7 @@ def test_hard_forces_red() -> None:
             lc_quality=lq,
             check_scatter=chk,
             thresholds=_TH,
+            n_check=5 if math.isfinite(chk) else 0,
         )
         assert info["trust"] == "RED", (n_clean, lq, chk)
 
@@ -151,8 +161,95 @@ def test_check_scatter_ddof(tmp_path: Path) -> None:
     lc.mkdir()
     cid = "999"
     pd.DataFrame({"kmag": [10.00, 10.02]}).to_csv(lc / f"check_kmag_{cid}.csv", index=False)
-    scatter = check_star_scatter(tmp_path, cid)
-    assert scatter == pytest.approx(0.01000, abs=1e-5)
+    scatter, n = check_star_scatter(tmp_path, cid)
+    assert n == 2
+    assert scatter == pytest.approx(0.014142135623730951, abs=1e-9)
+
+
+def test_short_baseline_alone_is_yellow() -> None:
+    hard, soft = classify_warnings(
+        n_clean=_TH.strong,
+        check_scatter=0.005,
+        lc_quality="short_baseline",
+        thresholds=_TH,
+        n_frames=12,
+        n_check=5,
+    )
+    assert not hard
+    assert any(s.startswith("short baseline") for s in soft)
+    assert trust_level(_TH.strong, hard, soft, _TH) == "YELLOW"
+
+
+def test_short_baseline_three_soft_stays_yellow_not_red() -> None:
+    nc = _TH.min_comps + 1
+    hard, soft = classify_warnings(
+        n_clean=nc,
+        check_scatter=float("nan"),
+        lc_quality="short_baseline",
+        thresholds=_TH,
+        n_frames=12,
+        n_check=0,
+    )
+    assert len(soft) == 3
+    assert not hard
+    assert trust_level(nc, hard, soft, _TH) == "YELLOW"
+
+
+def test_short_baseline_plus_hard_is_red() -> None:
+    hard, soft = classify_warnings(
+        n_clean=_TH.strong,
+        check_scatter=0.06,
+        lc_quality="short_baseline",
+        thresholds=_TH,
+        n_frames=12,
+        n_check=5,
+    )
+    assert hard
+    assert any(s.startswith("short baseline") for s in soft)
+    assert trust_level(_TH.strong, hard, soft, _TH) == "RED"
+
+
+def test_short_baseline_export_trust_note() -> None:
+    note = format_export_trust_note("YELLOW", "soft: short baseline (12 frames, thin series)")
+    assert "trust=YELLOW" in note
+
+
+def test_comp_trust_thresholds_from_config_default() -> None:
+    cfg = AppConfig()
+    th = comp_thresholds_from_config(cfg)
+    assert th.min_comps == int(cfg.comp_trust_min_comps)
+    assert th.max_comps == int(cfg.phase01_comparison_n_comp_max)
+    assert th.strong == min(th.min_comps + 2, th.max_comps)
+
+
+@pytest.mark.parametrize("n_clean,expected", [(3, "RED"), (4, "RED"), (5, "YELLOW"), (6, "YELLOW")])
+def test_comp_trust_floor_n_clean_bands(n_clean: int, expected: str) -> None:
+    info = evaluate_target(
+        catalog_id="x",
+        vsx_name="",
+        n_clean=n_clean,
+        lc_quality="good",
+        check_scatter=0.005,
+        thresholds=_TH_TRUST,
+        n_check=5,
+    )
+    assert info["trust"] == expected
+    if expected == "YELLOW":
+        assert any("thin comp set" in s for s in info["soft_warnings"])
+
+
+def test_comp_trust_strong_not_thin_is_green() -> None:
+    info = evaluate_target(
+        catalog_id="x",
+        vsx_name="",
+        n_clean=7,
+        lc_quality="good",
+        check_scatter=0.005,
+        thresholds=_TH_TRUST,
+        n_check=5,
+    )
+    assert info["trust"] == "GREEN"
+    assert not any("thin comp set" in s for s in info["soft_warnings"])
 
 
 def test_trust_json_written(tmp_path: Path) -> None:

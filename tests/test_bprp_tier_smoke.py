@@ -26,7 +26,7 @@ def _find_setup_dir(draft_dir: Path) -> Path:
 def _is_finite(v: object) -> bool:
     try:
         return math.isfinite(float(v))
-    except Exception:
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -60,7 +60,7 @@ def main() -> None:
         assert 0.40 < float(row["bp_rp"]) < 0.52
         assert "b_v" not in at.columns or pd.isna(row.get("b_v", float("nan")))
         print(f"[OK] active_targets BO CVn: bp_rp={float(row['bp_rp']):.4f}")
-    except Exception:
+    except Exception:  # noqa: BLE001
         print(
             "[FAIL] active_targets BO CVn:",
             f"bp_rp={row.get('bp_rp')}",

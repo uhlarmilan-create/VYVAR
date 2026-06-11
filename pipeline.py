@@ -72,6 +72,7 @@ from photometry_core import (
     precompute_and_save_snr_aperture_table_for_draft,
     resolve_draft_dir_for_snr_aperture_table,
 )
+from proc_frame_store import proc_csv_path_for_aligned_fits
 
 from utils import (
     ASTROMETRY_SOLVE_FIELD_CPULIMIT_SEC,
@@ -1720,7 +1721,7 @@ def run_quality_analysis(
             _upd["cur_draft_de"] = float(med_de)
         _upd["drift_limit_arcmin"] = float(_dl_suggest)
         st.session_state.update(_upd)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
     return result
 
@@ -2079,7 +2080,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
             _upd2["cur_draft_de"] = float(med_de)
         _upd2["drift_limit_arcmin"] = float(_dl_suggest_ram)
         st.session_state.update(_upd2)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
     return result
 
@@ -8737,7 +8738,7 @@ def _export_per_frame_run_catalog_core(
         if _dbp and _did_tc is not None:
             try:
                 _db_tc = VyvarDatabase(Path(_dbp))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 _db_tc = None
         _geo_cfg = _cfg_from_export_worker_state(st)
         _time_cols = compute_time_columns(
@@ -8767,7 +8768,7 @@ def _export_per_frame_run_catalog_core(
         if "airmass" not in df.columns:
             _am_insert_pos = _pos + len(_tk)
             df.insert(_am_insert_pos, "airmass", _am_val)
-    except Exception as _tc_exc:
+    except Exception as _tc_exc:  # noqa: BLE001
         log_event(f"Time columns skipped: {_tc_exc}")
         for _tc in ("jd_mid", "hjd_mid", "bjd_tdb_mid"):
             if _tc not in df.columns:
@@ -8778,7 +8779,7 @@ def _export_per_frame_run_catalog_core(
         if _db_tc is not None:
             try:
                 _db_tc.conn.close()
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
 
     df2 = df.copy()
@@ -8795,7 +8796,7 @@ def _export_per_frame_run_catalog_core(
     out_flat = Path(str(st.get("out_flat") or "."))
 
     if write_sidecar:
-        sidecar = base_path.with_suffix(".csv")
+        sidecar = proc_csv_path_for_aligned_fits(base_path)
         if defer:
             deferred_writes.append((str(sidecar), df2.copy()))
         else:
@@ -9471,7 +9472,7 @@ def export_per_frame_catalogs(
             if _dbp and _did_tc is not None:
                 try:
                     _db_tc = VyvarDatabase(Path(_dbp))
-                except Exception:
+                except Exception:  # noqa: BLE001
                     _db_tc = None
             _time_cols = compute_time_columns(
                 hdr,
@@ -9500,7 +9501,7 @@ def export_per_frame_catalogs(
             if "airmass" not in df.columns:
                 _am_insert_pos = _pos + len(_tk)
                 df.insert(_am_insert_pos, "airmass", _am_val)
-        except Exception as _tc_exc:
+        except Exception as _tc_exc:  # noqa: BLE001
             log_event(f"Time columns skipped: {_tc_exc}")
             for _tc in ("jd_mid", "hjd_mid", "bjd_tdb_mid"):
                 if _tc not in df.columns:
@@ -9511,7 +9512,7 @@ def export_per_frame_catalogs(
             if _db_tc is not None:
                 try:
                     _db_tc.conn.close()
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
 
         df2 = df.copy()
@@ -9523,7 +9524,7 @@ def export_per_frame_catalogs(
 
         csv_paths: list[str] = []
         if write_sidecar_csv_next_to_fits:
-            sidecar = base_path.with_suffix(".csv")
+            sidecar = proc_csv_path_for_aligned_fits(base_path)
             if defer_disk_writes:
                 _append_deferred_csv(sidecar, df2.copy())
             else:
@@ -9827,7 +9828,7 @@ def validate_comparison_ensemble_flatness(
     files_n = 0
     _cfg_for_workers = AppConfig()
     for fp in sorted(_iter_fits_recursive(root)):
-        sidecar = fp.with_suffix(".csv")
+        sidecar = proc_csv_path_for_aligned_fits(fp)
         if not sidecar.is_file():
             continue
         meta = extract_fits_metadata(fp, app_config=_cfg_for_workers)
@@ -11313,7 +11314,7 @@ def generate_masterstar_and_catalog(
         logging.info(
             f"[MASTERSTAR] VY_FWHM_GAUSS={float(_gaussian_fwhm):.3f}px uložené do hlavičky (2D fit)"
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log_event(f"[ERROR] VY_FWHM_GAUSS fit ZLYHAL: {e}\n{traceback.format_exc()}")
     try:
         _ms_path_tag = Path(masterstar_fits)
@@ -14250,7 +14251,7 @@ def calibrate_lights_to_calibrated(
         dst = calibrated_root / rel
         try:
             _one_sequential(i, src, dst)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             _tb_seq = traceback.format_exc()
             LOGGER.error("Kalibrácia: súbor %s: %s\n%s", src, exc, _tb_seq)
             if not _seq_tb_logged:
@@ -14401,7 +14402,7 @@ def _qc_fwhm_elongation(
             "n_sources": int(a.size),
             "n_stars_detected": n_seg,
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
 
     # Fallback: DAOStarFinder + moments on small cutouts (requires photutils)
@@ -14509,7 +14510,7 @@ def _qc_fwhm_elongation(
             "n_sources": int(min(len(fwhm_list), len(elong_list))),
             "n_stars_detected": n_dao,
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
 
     # Last-resort fallback without photutils: naive local-max peak picking + moments
@@ -14640,7 +14641,7 @@ def _qc_fwhm_elongation(
             "n_sources": int(min(len(fwhm_list), len(elong_list))),
             "n_stars_detected": n_peaks_total,
         }
-    except Exception:
+    except Exception:  # noqa: BLE001
         return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
 
 
@@ -15182,7 +15183,7 @@ def preprocess_calibrated_to_processed(
             )
             if not df.empty:
                 df["temporal_mask"] = True
-        except Exception:
+        except Exception:  # noqa: BLE001
             # keep preprocessing results; temporal mask is optional
             if not df.empty:
                 df["temporal_mask"] = False
@@ -16310,7 +16311,7 @@ class AstroPipeline:
                 if run and not df.empty and not _skip_proc:
                     df.to_csv(qc_csv, index=False)
                 out["processed"]["source"]["qc_csv"] = str(qc_csv)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
             out["qc_suggestions"]["source"] = _qc_suggest_thresholds(df)
 
@@ -16343,7 +16344,7 @@ class AstroPipeline:
                 qc_csv = ap_root / "calibrated" / "lights" / "qc_analysis.csv"
                 df.to_csv(qc_csv, index=False)
                 out["analysis"]["calibrated"]["qc_csv"] = str(qc_csv)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
         else:
             out["warning"] = "No calibrated lights found. Run calibration first."

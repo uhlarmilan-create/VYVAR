@@ -293,7 +293,7 @@ def render_photometry_quality_diagnostic(*, pipeline: Any, draft_id: int | None)
             continue
         try:
             dfi = _read_csv_cached(csvp)
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
         if dfi.empty:
             continue

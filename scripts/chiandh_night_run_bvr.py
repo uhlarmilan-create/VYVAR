@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,7 +12,7 @@ from pathlib import Path
 try:
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
-except Exception:
+except Exception:  # noqa: BLE001
     pass
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -20,11 +21,25 @@ if str(_ROOT) not in sys.path:
 
 os.environ["VYVAR_CT_PROTOTYPE"] = "1"
 
-FIELD_DB = _ROOT / "GAIA_DR3" / "vyvar_gaia_dr3_chiandh_field.db"
 CONFIG_PATH = _ROOT / "config.json"
 RESULT_PATH = _ROOT / "tmp" / "chiandh_bvr_night_run_result.json"
 SOURCE_ROOT = _ROOT / "Archive" / "Chi_and_H"
 FIELD_CENTER = (35.15, 57.13)
+
+
+def _git_rev_parse_head() -> str:
+    try:
+        return (
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"],
+                cwd=_ROOT,
+                text=True,
+                stderr=subprocess.DEVNULL,
+            )
+            .strip()
+        )
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 def _patch_field_center_resolve() -> None:
@@ -47,14 +62,12 @@ def _patch_field_center_resolve() -> None:
     _pipeline.resolve_preprocess_target_coordinates = _resolve
 
 
-def _patch_config(*, gaia_db: Path, skip_processed: bool, psf_enabled: bool) -> dict:
+def _patch_config(*, skip_processed: bool, psf_enabled: bool) -> dict:
     data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     orig = {
-        "gaia_db_path": data.get("gaia_db_path"),
         "skip_processed_directory": data.get("skip_processed_directory"),
         "psf_photometry_enabled": data.get("psf_photometry_enabled"),
     }
-    data["gaia_db_path"] = str(gaia_db.resolve())
     data["skip_processed_directory"] = bool(skip_processed)
     data["psf_photometry_enabled"] = bool(psf_enabled)
     CONFIG_PATH.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
@@ -63,10 +76,21 @@ def _patch_config(*, gaia_db: Path, skip_processed: bool, psf_enabled: bool) -> 
 
 def _restore_config(orig: dict) -> None:
     data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    for key in ("gaia_db_path", "skip_processed_directory", "psf_photometry_enabled"):
+    for key in ("skip_processed_directory", "psf_photometry_enabled"):
         if key in orig:
             data[key] = orig[key]
     CONFIG_PATH.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def _config_snapshot(cfg: object) -> dict[str, object]:
+    return {
+        "gaia_db_path": str(getattr(cfg, "gaia_db_path", "") or ""),
+        "blind_index_fine_path": str(getattr(cfg, "blind_index_fine_path", "") or ""),
+        "blind_index_wide_path": str(getattr(cfg, "blind_index_wide_path", "") or ""),
+        "skip_processed_directory": bool(getattr(cfg, "skip_processed_directory", False)),
+        "psf_photometry_enabled": bool(getattr(cfg, "psf_photometry_enabled", False)),
+        "VYVAR_CT_PROTOTYPE": os.environ.get("VYVAR_CT_PROTOTYPE", ""),
+    }
 
 
 def _post_platesolve_hook(draft_id: int, draft_dir: Path, _cfg, _pipeline) -> None:
@@ -86,22 +110,20 @@ def main() -> int:
     import chiandh_phases_ac as chi  # noqa: E402
     import pilot_palomar7_phases_ac as pal  # noqa: E402
 
-    if not FIELD_DB.is_file():
-        print(f"Missing field DB: {FIELD_DB} — run build_field_db.py first")
-        return 1
-
     if not SOURCE_ROOT.is_dir() or not any(SOURCE_ROOT.rglob("*.fits")):
         print(f"Missing source FITS under {SOURCE_ROOT}")
         return 1
 
+    git_commit = _git_rev_parse_head()
+
     ids = chi.phase_a_register()
     _patch_field_center_resolve()
-    orig_cfg = _patch_config(gaia_db=FIELD_DB, skip_processed=True, psf_enabled=False)
+    orig_cfg = _patch_config(skip_processed=True, psf_enabled=False)
 
     report: dict = {
         "started_utc": datetime.now(timezone.utc).isoformat(),
+        "git_commit": git_commit,
         "source_dir": str(SOURCE_ROOT),
-        "field_db": str(FIELD_DB),
         "field_center": list(FIELD_CENTER),
         "equipment_ids": ids,
         "VYVAR_CT_PROTOTYPE": "1",
@@ -111,6 +133,7 @@ def main() -> int:
 
     try:
         cfg = AppConfig()
+        report["config_snapshot"] = _config_snapshot(cfg)
         report["gaia_max_g"] = get_gaia_db_max_g_mag(cfg.gaia_db_path)
         params = NightRunParams(
             source_dir=SOURCE_ROOT,
@@ -136,6 +159,7 @@ def main() -> int:
         report["warnings"] = nr.warnings
         report["phase_timings"] = nr.phase_timings
         report["n_lightcurves"] = nr.n_lightcurves
+        report["photometry_completeness"] = nr.photometry_completeness
         if nr.draft_dir:
             report["masterstar_stats"] = pal._collect_masterstar_stats(Path(nr.draft_dir))
             ct = Path(nr.draft_dir) / "ct_prototype.csv"
@@ -148,6 +172,25 @@ def main() -> int:
                 report["platesolve_setups"] = sorted(
                     d.name for d in ps.iterdir() if d.is_dir() and (d / "MASTERSTAR.fits").is_file()
                 )
+            try:
+                from tests.photometry_sha import (  # noqa: PLC0415
+                    PHOTOMETRY_SHA_BASELINE,
+                    PHOTOMETRY_SHA_CORE,
+                    compute_photometry_sha,
+                )
+
+                core_sha, core_n = compute_photometry_sha(Path(nr.draft_dir))
+                full_sha, full_n = compute_photometry_sha(Path(nr.draft_dir), include_comp_qa=True)
+                report["photometry_sha"] = {
+                    "core": core_sha,
+                    "core_n": core_n,
+                    "core_match": core_sha == PHOTOMETRY_SHA_CORE,
+                    "full": full_sha,
+                    "full_n": full_n,
+                    "full_match": full_sha == PHOTOMETRY_SHA_BASELINE,
+                }
+            except Exception as exc:  # noqa: BLE001
+                report["photometry_sha_error"] = str(exc)
     finally:
         _restore_config(orig_cfg)
         report["config_restored"] = True

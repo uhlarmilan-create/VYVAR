@@ -44,6 +44,19 @@ bias decomposition did) and/or consult the literature. Example (2026-06-09): mid
 solved by SNLS/ZTF sky-only weighting practice (Astier 2013; Lacroix 2025), not by more sky
 estimator prototypes alone.
 
+## Session lessons (trust/anchor, 2026-06-11)
+
+1. **Byte-identity after every trust/QA change** — re-run `compute_photometry_sha` on the anchor
+   draft; trust columns and sidecars are out of the SHA set but LC/comp selection are not.
+2. **Footprint-first** before a policy that might move the anchor (e.g. raising Phase-1
+   `n_comp_min` — 45 per-setup hits on draft_387; Option B trust-only split avoided re-cut).
+3. **Completeness gate** — `audit_photometry_completeness` is the false-success guard for night
+   runs (truncated photometry must not report `night_run_success`).
+4. **Specs before implementation** — trust hardening, check-star selection, comp-floor policy
+   filed under `docs/` before code landed.
+5. **Confirm-reproducibility-before-locking** — two independent fresh runs must match on SHA
+   before recording a new anchor (`draft_386 == draft_387`).
+
 ## Byte-identity discipline
 
 - **Read-only change** (QA, metadata, reports-only): numeric photometry must be
@@ -62,6 +75,9 @@ estimator prototypes alone.
 | date | old SHA | new SHA | reason |
 |------|---------|---------|--------|
 | 2026-06-09 | `770966c3...` (core 283) | `edbd97e7...` (426 incl. comp_qa) | CQ-C fix-once order-independent comp_qa locus; core LC/comp_quality/comparison unchanged; bounded diff 1 flag / 1 n_clean / 0 trust |
+| 2026-06-11 | `f4bcc0ee...` / `bd0b1792...` (draft_385 truncated, RETIRED) | `203254fd...` core (2806) / `95a5515a...` full (4285) | Chi_and_H full zaloha anchor (draft_386; confirmed draft_387; G<=16) |
+| 2026-06-11 | `d246a5be...` / `30a2f461...` (draft_382 TAP G<=19.5, RETIRED) | `f4bcc0ee...` core (1098) / `bd0b1792...` full (1113) | Chi_and_H zaloha cut from truncated run (RETIRED same day) |
+| 2026-06-10 | `770966c3...` / `edbd97e7...` (deleted draft_366) | `d246a5be...` core (2810) / `30a2f461...` full (4291) | Chi_and_H TAP field DB cut (RETIRED 2026-06-11) |
 
 ## Config ↔ UI parity
 
@@ -117,6 +133,10 @@ and many `--unsafe-fixes` variants can hurt readability or risk subtle behavior 
 Future audits should treat them as **accepted**, not open work. Value-filtered cosmetic fixes
 (SIM118 `.keys()` where safe, RUF022 sorted `__all__`, RUF007 `pairwise`, RUF034 dead-ternary)
 are applied when byte-identical; ProcFrameStore keeps explicit `.keys()` (no `__iter__`).
+
+**Enforced (2026-06-11):** `BLE001` + `E722` (broad/bare except) via `pyproject.toml`, pre-commit,
+and `tests/test_ble001_regression.py`. New unmarked `except Exception` / bare `except:` fails CI.
+Existing sites carry explicit `# noqa: BLE001`.
 
 ## Cursor / Claude workflow
 

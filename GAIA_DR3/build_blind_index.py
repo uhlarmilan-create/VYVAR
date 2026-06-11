@@ -315,7 +315,7 @@ def build_and_save(
     if hasattr(sys.stdout, "reconfigure"):
         try:
             sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
     t0 = time.time()
     print(f"{'=' * 60}\n VYVAR Blind Index Build\n{'=' * 60}")

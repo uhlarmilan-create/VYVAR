@@ -1105,7 +1105,7 @@ def _gaia_db_ok_for_masterstar(gaia_db_path: str) -> bool:
             st.error("❌ Gaia DR3 database not found. Please set the path in Settings.")
             st.caption(f"Detail: {msg}")
             return False
-    except Exception:
+    except Exception:  # noqa: BLE001
         st.error("❌ Gaia DR3 database not found. Please set the path in Settings.")
         return False
     return True

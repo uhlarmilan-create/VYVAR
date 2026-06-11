@@ -81,6 +81,19 @@ PROC_CSV_GLOB = "proc_*.csv"
 calibrated (proc_<obj>_Light_*.csv) and pre-cal (proc_<obj>_*.csv)."""
 
 
+def proc_csv_path_for_aligned_fits(base_path: Path | str) -> Path:
+    """Map aligned FITS path to canonical per-frame proc CSV: ``proc_<stem>.csv``.
+
+    Idempotent when the FITS stem already starts with ``proc_`` (raw calibrated aligned frames).
+    Mirrors ``pipeline._safe_proc_name`` stem logic for pre-cal ``Chi_H_*.fits`` basenames.
+    """
+    p = Path(base_path)
+    stem = p.stem
+    if not stem.casefold().startswith("proc_"):
+        stem = f"proc_{stem}"
+    return p.with_name(f"{stem}.csv")
+
+
 def list_proc_csvs(proc_dir: Path | str, *, recursive: bool = False) -> list[Path]:
     """Single entry point for listing per-frame proc CSV paths (sorted).
 

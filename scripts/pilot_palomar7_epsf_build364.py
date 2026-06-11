@@ -44,7 +44,7 @@ def main() -> int:
         except ValueError as exc:
             results[setup] = {"status": "failed", "error": str(exc)}
             print(f"FAILED cleanly: {exc}", flush=True)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             results[setup] = {"status": "error", "error": repr(exc)}
             print(f"ERROR: {exc!r}", flush=True)
     Path(_ROOT / "tmp" / "pilot_palomar7_epsf_build364.json").write_text(

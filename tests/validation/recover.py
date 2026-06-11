@@ -310,7 +310,7 @@ def _run_tier_a(report: ValidationReport) -> None:
                 cy, cx = centroid_com(box)
                 yc = int(y0) - 8 + cy
                 xc = int(x0) - 8 + cx
-            except Exception:
+            except Exception:  # noqa: BLE001
                 xc, yc = x0, y0
         else:
             xc, yc = x0, y0
@@ -731,7 +731,7 @@ def _run_v3(report: ValidationReport) -> None:
             status="PASS" if ok else "FAIL",
             note=note,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         report.add(
             "V3e",
             "ePSF FWHM native vs injected FWHM (synthetic)",
@@ -771,7 +771,7 @@ def _run_v3(report: ValidationReport) -> None:
             status="PASS" if ok else "FAIL",
             note=v3d_res.get("verdict", "")[:240],
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         report.add(
             "V3d",
             "fine-scale PSF vs aperture vs truth",

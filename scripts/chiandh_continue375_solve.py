@@ -150,11 +150,12 @@ def _ensure_proc_aliases(draft_dir: Path) -> dict[str, int]:
             proc_fits = d / f"proc_{fp.name}"
             if not proc_fits.is_file():
                 shutil.copy2(fp, proc_fits)
-            csv = fp.with_suffix(".csv")
-            if csv.is_file():
-                proc_csv = d / f"proc_{csv.name}"
-                if not proc_csv.is_file():
-                    shutil.copy2(csv, proc_csv)
+            from proc_frame_store import proc_csv_path_for_aligned_fits
+
+            proc_csv = proc_csv_path_for_aligned_fits(fp)
+            legacy_csv = fp.with_suffix(".csv")
+            if legacy_csv.is_file() and not proc_csv.is_file():
+                shutil.copy2(legacy_csv, proc_csv)
             n += 1
         counts[setup] = n
     return counts
@@ -223,7 +224,7 @@ def _solve_setup(
 
         h = fits.getheader(ps_dir / "MASTERSTAR.fits")
         crval = (h.get("CRVAL1"), h.get("CRVAL2"))
-    except Exception:
+    except Exception:  # noqa: BLE001
         crval = None
     return {
         "setup": setup,
@@ -243,7 +244,7 @@ def main() -> int:
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
 
     report: dict[str, Any] = {

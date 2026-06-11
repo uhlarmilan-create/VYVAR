@@ -463,7 +463,7 @@ def _compute_moffat_aperture_correction(
         if len(ratios) < min_ref_stars:
             return 1.0, len(ratios)
         return float(np.median(ratios)), len(ratios)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return 1.0, 0
 
 
@@ -1326,7 +1326,7 @@ def _epsf_prepare_stars(
         for _i, _s in enumerate(stars):
             try:
                 _s._data = _nd_list[_i].data  # noqa: SLF001
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         log_event("PSF ePSF: applied per-cutout sky subtraction before EPSFBuilder")
     except Exception as _sky_e:  # noqa: BLE001

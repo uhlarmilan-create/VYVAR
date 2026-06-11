@@ -17,6 +17,13 @@ no UI yet); `production-constant` = hardcoded in production module (not a config
 |-----|---------|-------|-----|---------|-------|
 | `comp_qa_enabled` | True | — | — | **intentionally-hidden** | OK in config.json |
 | `trust_flag_enabled` | True | — | — | **intentionally-hidden** | OK in config.json |
+| `lc_quality_min_frames` | 20 | 3 … 500 | ui_settings.py (Data quality) | yes |
+| `lc_quality_short_min_frames` | 3 | 2 … 100 (≤ min_frames) | ui_settings.py (Data quality) | yes |
+| `lc_quality_min_normal_frac` | 0.5 | 0.1 … 1.0 | ui_settings.py (Data quality) | yes |
+| `comp_trust_min_comps` | 5 | 3 … 20 (≤ n_comp_max) | ui_settings.py (Data quality) | yes |
+| `check_star_min_epochs` | 5 | 3 … 50 | ui_settings.py (Data quality) | yes |
+| `check_select_rms_floor` | 1e-4 | 0 … 0.01 | — | **intentionally-hidden** | CS-2 artefact floor |
+| `aperture_correction_max_contamination` | 0.15 | 0.0 … 2.0 | — | **intentionally-hidden** | CS-4 check-star crowding gate |
 | `phase01_comparison_proximity_tiebreak` | False | — | — | **intentionally-hidden** | OK in config.json |
 | `phase01_comparison_rms_bin_mag` | 0.001 | 0.0001 … 0.05 | — | **intentionally-hidden** | OK in config.json |
 | `cog_aperture_correction_enabled` | False | — | — | **intentionally-hidden** | OK in config.json |

@@ -52,7 +52,7 @@ def get_rms(summary_path: Path, cid: str) -> tuple[float | None, bool | None, fl
             bool(row["am_detrended"].iloc[0]),
             slope,
         )
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None, None, None
 
 
@@ -97,7 +97,7 @@ def main() -> int:
             cfg=cfg,
             draft_id=311,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print(f"  ERROR: {exc}")
         import traceback
 

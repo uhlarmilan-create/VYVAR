@@ -10,7 +10,7 @@ from pathlib import Path
 try:
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
-except Exception:
+except Exception:  # noqa: BLE001
     pass
 
 _ROOT = Path(__file__).resolve().parents[1]
