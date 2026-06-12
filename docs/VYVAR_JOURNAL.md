@@ -2,6 +2,22 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- Phase-1 duplicate Gaia comp pool crash (2026-06-12)
+
+**Problem:** `draft_000391` TOI host (and `1625336025625730816`) failed Phase-1 with
+`unhashable type: 'dict'` → no LC (7/8 completeness). Log blamed named target; actual crash was
+`comp_selection_per_target.py:2051` sorting `catalog_id` after duplicate comp IDs in global pool
+(two masterstars rows, same Gaia ID) made `Series.to_dict()` emit dict-valued columns.
+
+**Fix:** Dedupe global comp pool by Gaia key (keep best `comp_rms`); assembly guards (single-row
+lookup, skip duplicate `selected_ids`, scalar IDs); `normalize_gaia_source_id` accepts dict
+`source_id`; `normalize_gaia_id_set` for exclude sets.
+
+**Verify:** Re-run Phase 0–1 + 2A on `draft_000391` → **8/8 LCs**; host 78 frames, 4 comps;
+267 pytest passed.
+
+---
+
 ## Session -- comp-slope stability: common-mode detrend + significance gate (2026-06-11)
 
 **Problem (Step A):** `check_comparison_stability` common-mode detrend fired on DY Peg but removed

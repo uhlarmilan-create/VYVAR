@@ -16,7 +16,7 @@ import pandas as pd
 
 from comp_pool_rms import norm_med_for_bin, sort_per_frame_csv_paths
 from config import AppConfig
-from gaia_catalog_id import normalize_gaia_source_id
+from gaia_catalog_id import normalize_gaia_id_set, normalize_gaia_source_id
 from infolog import log_event
 from photometry_core import (
     _PHASE_USECOLS_PERFRAME,
@@ -365,10 +365,10 @@ def _filter_comp_candidates_spatial_static(
     ms["_norm_cid_vt"] = ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).map(_normalize_gaia_id)
     _vt_gaia_ids: frozenset[str] | None = None
     if variable_target_catalog_ids:
-        _vtmp = frozenset(
-            str(_normalize_gaia_id(str(x))) for x in variable_target_catalog_ids if str(x).strip()
-        )
-        _vt_gaia_ids = frozenset(x for x in _vtmp if x) or None
+        _vt_gaia_ids = normalize_gaia_id_set(
+            variable_target_catalog_ids,
+            log_label="variable_target_catalog_ids (comp spatial filter)",
+        ) or None
 
     cand_mask = (
         ms["_dist_deg"].le(max_dist_deg)
@@ -1575,6 +1575,8 @@ def _assign_comp_tiers_to_pool(
     candidate_pool_df = candidates[
         candidates[id_col_cand].astype(str).str.strip().isin(_active_keys)
     ].copy()
+    if id_col_cand in candidate_pool_df.columns and not candidate_pool_df.empty:
+        candidate_pool_df = candidate_pool_df.drop_duplicates(subset=[id_col_cand], keep="first")
     # P3 determinism: sort candidates by catalog_id before tier / top-N selection
     if "catalog_id" in candidate_pool_df.columns:
         candidate_pool_df = candidate_pool_df.sort_values("catalog_id", kind="mergesort").reset_index(
@@ -1900,16 +1902,28 @@ def _assemble_comp_selection_result_rows(
     except Exception:  # noqa: BLE001
         final_lookup = None
     result_rows = []
+    _seen_selected: set[str] = set()
     for cid in selected_ids:
+        cid_s = str(cid).strip()
+        if not cid_s or cid_s in _seen_selected:
+            continue
+        _seen_selected.add(cid_s)
         if final_lookup is not None:
             try:
-                r = final_lookup.loc[cid].to_dict()
+                hit = final_lookup.loc[cid_s]
+                if isinstance(hit, pd.DataFrame):
+                    hit = hit.iloc[0]
+                r = hit.to_dict()
             except Exception:  # noqa: BLE001
                 r = {}
         else:
             r = {}
         if not r:
             continue
+        if "catalog_id" in r:
+            r["catalog_id"] = normalize_gaia_source_id(r.get("catalog_id"))
+        if "name" in r:
+            r["name"] = normalize_gaia_source_id(r.get("name")) or str(r.get("name", "") or "")
         r["comp_rms"] = active.get(cid, float("nan"))
         r["comp_score"] = score_map.get(cid, float("nan"))
         # Ranking columns (new selection philosophy)
@@ -1922,8 +1936,8 @@ def _assemble_comp_selection_result_rows(
             )
         except (TypeError, ValueError):
             r["contamination_idx"] = float("nan")
-        r["comp_n_frames"] = len(flux_map.get(cid, []))
-        r["target_catalog_id"] = target_cid
+        r["comp_n_frames"] = len(flux_map.get(cid_s, flux_map.get(cid, [])))
+        r["target_catalog_id"] = normalize_gaia_source_id(target_cid) or str(target_cid)
         r["target_vsx_name"] = str(target.get("vsx_name", ""))
         r["selected_tier"] = str(best_tier)
         r["tier4_warning"] = bool(tier4_warning)

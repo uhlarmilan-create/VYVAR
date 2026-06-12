@@ -10787,10 +10787,12 @@ def build_global_comp_pool(
 
     _vt_gaia_ids: frozenset[str] | None = None
     if variable_target_catalog_ids:
-        _vtmp = frozenset(
-            str(_normalize_gaia_id(str(x))) for x in variable_target_catalog_ids if str(x).strip()
-        )
-        _vt_gaia_ids = frozenset(x for x in _vtmp if x) or None
+        from gaia_catalog_id import normalize_gaia_id_set  # noqa: PLC0415
+
+        _vt_gaia_ids = normalize_gaia_id_set(
+            variable_target_catalog_ids,
+            log_label="variable_target_catalog_ids (global comp pool)",
+        ) or None
     if _vt_gaia_ids:
         nid = pool.get("catalog_id", pool.get("name", pd.Series("", index=pool.index))).map(_normalize_gaia_id)
         pool = pool.loc[~nid.isin(_vt_gaia_ids)].copy()
@@ -10840,6 +10842,14 @@ def build_global_comp_pool(
         max_comp_rms=max_comp_rms,
     )
     pool = attach_comp_rms_to_pool_rows(pool, rms_map, id_col=id_col)
+    _before_dedupe = int(len(pool))
+    pool = _dedupe_comp_pool_by_gaia_key(pool)
+    if int(len(pool)) < _before_dedupe:
+        logging.info(
+            "[GLOBAL COMP POOL] deduped Gaia catalog_id: %d → %d rows",
+            _before_dedupe,
+            int(len(pool)),
+        )
     logging.info(
         "[GLOBAL COMP POOL] %d kandidátov (z %d masterstars, po filtroch)",
         len(pool),
@@ -10849,6 +10859,29 @@ def build_global_comp_pool(
     if "catalog_id" in pool.columns:
         pool = pool.sort_values("catalog_id", kind="mergesort").reset_index(drop=True)
     return pool
+
+
+def _dedupe_comp_pool_by_gaia_key(pool: pd.DataFrame) -> pd.DataFrame:
+    """One row per Gaia ``catalog_id`` (fallback ``name``); keep lowest ``comp_rms`` when duplicated."""
+    if pool is None or getattr(pool, "empty", True):
+        return pool if pool is not None else pd.DataFrame()
+    out = pool.copy()
+    id_src = out.get("catalog_id", out.get("name", pd.Series("", index=out.index)))
+    out["_gaia_key"] = id_src.map(_normalize_gaia_id)
+    out = out[out["_gaia_key"].astype(str).str.strip() != ""]
+    if out.empty:
+        return out.reset_index(drop=True)
+    sort_cols = ["_gaia_key"]
+    ascending = [True]
+    if "comp_rms" in out.columns:
+        sort_cols.append("comp_rms")
+        ascending.append(True)
+    if "catalog_id" in out.columns:
+        sort_cols.append("catalog_id")
+        ascending.append(True)
+    out = out.sort_values(sort_cols, ascending=ascending, kind="mergesort")
+    out = out.drop_duplicates(subset=["_gaia_key"], keep="first").drop(columns=["_gaia_key"])
+    return out.reset_index(drop=True)
 
 
 def _warn_zero_compstars_edge(
@@ -11858,8 +11891,13 @@ def run_phase0_and_phase1(
     _vt_cid_exclude: frozenset[str] | None = None
     try:
         if "catalog_id" in _vt_chip.columns:
-            _vx = frozenset(_normalize_gaia_id(str(v)) for v in _vt_chip["catalog_id"].tolist() if str(v).strip())
-            _vt_cid_exclude = frozenset(x for x in _vx if x) or None
+            from gaia_catalog_id import normalize_gaia_id_set  # noqa: PLC0415
+
+            _vx = normalize_gaia_id_set(
+                _vt_chip["catalog_id"].tolist(),
+                log_label="variable_targets.csv (phase1 exclude)",
+            )
+            _vt_cid_exclude = _vx or None
     except Exception:  # noqa: BLE001
         _vt_cid_exclude = None
     _fw_chip, _fh_chip = _phase0_effective_frame_hw_px(

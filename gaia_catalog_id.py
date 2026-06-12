@@ -6,10 +6,11 @@ or normalize_gaia_source_id_series() defined here.
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import AbstractSet, Any
 
 import numpy as np
 import pandas as pd
@@ -83,6 +84,19 @@ def normalize_gaia_source_id(val) -> str:
     #        non-numeric strings returned as-is — callers must validate.
     if val is None:
         return ""
+    if isinstance(val, dict):
+        for key in ("source_id", "catalog_id", "id", "SOURCE_ID", "SOURCE_ID_GAIA"):
+            if key in val and val[key] is not None:
+                nested = normalize_gaia_source_id(val[key])
+                if nested:
+                    return nested
+        return ""
+    if isinstance(val, (list, tuple)):
+        for item in val:
+            nested = normalize_gaia_source_id(item)
+            if nested:
+                return nested
+        return ""
     if isinstance(val, float) and not math.isfinite(val):
         return ""
     try:
@@ -136,6 +150,30 @@ def norm_id_or_empty(x: Any) -> str:
 
 def normalize_gaia_source_id_series(s: pd.Series) -> pd.Series:
     return s.map(normalize_gaia_source_id).astype(object)
+
+
+def normalize_gaia_id_set(
+    values: AbstractSet[Any] | list[Any] | tuple[Any, ...] | None,
+    *,
+    log_label: str = "catalog_id",
+) -> frozenset[str]:
+    """Build a hashable Gaia ID set; drop non-scalars with a logged warning."""
+    if not values:
+        return frozenset()
+    out: set[str] = set()
+    for raw in values:
+        if isinstance(raw, (dict, list, tuple)):
+            logging.warning(
+                "[GAIA ID] Dropping non-scalar %s entry in %s: %r",
+                type(raw).__name__,
+                log_label,
+                raw,
+            )
+            continue
+        gid = normalize_gaia_source_id(raw)
+        if gid:
+            out.add(gid)
+    return frozenset(out)
 
 
 def masterstar_row_gaia_key(row: pd.Series) -> str:
