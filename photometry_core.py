@@ -1912,7 +1912,9 @@ def check_comparison_stability(
     n_comp_min: int = 3,
     outlier_sigma: float = 3.0,
     max_comp_slope_mmag_hr: float = 5.0,
+    comp_slope_significance_k: float = 3.0,
     common_mode_detrend: bool = True,
+    stability_run_flags: dict[str, Any] | None = None,
 ) -> dict[str, dict]:
     """Krok 3: Stability check porovnávačiek.
 
@@ -2014,8 +2016,10 @@ def check_comparison_stability(
             _ok = np.isfinite(_b) & np.isfinite(_m)
             if int(_ok.sum()) < 20:
                 continue
-            _all_bjd.append(_b[_ok])
-            _all_mag_matrix.append(_m[_ok])
+            _bo, _mo = _b[_ok], _m[_ok]
+            _order = np.argsort(_bo, kind="mergesort")
+            _all_bjd.append(_bo[_order])
+            _all_mag_matrix.append(_mo[_order])
         if len(_all_mag_matrix) >= 2:
             # Use the comp with most frames as reference grid
             _ref_bjd = _all_bjd[int(np.argmax([len(x) for x in _all_bjd]))]
@@ -2038,6 +2042,8 @@ def check_comparison_stability(
                 _m_detrended[_ok] = _m[_ok] - (_lr_common.slope * _b[_ok] + _lr_common.intercept) + _common.mean()
                 _detrended_lc[_cid] = _m_detrended
                 _detrended_bjd[_cid] = _b
+            if stability_run_flags is not None:
+                stability_run_flags["common_mode_detrend_applied"] = True
             logging.info(
                 "[STABILITY] Common-mode detrend: %.2f mmag/hr removed from %d comps",
                 abs(_lr_common.slope) * 1000.0 / 24.0,
@@ -2061,20 +2067,31 @@ def check_comparison_stability(
                 continue
             lr = linregress(bjd_arr[ok], mag_arr[ok])
             slope_mmag_hr = abs(float(lr.slope)) * 1000.0 / 24.0
-            if slope_mmag_hr > float(max_comp_slope_mmag_hr):
+            _se = float(getattr(lr, "stderr", float("nan")))
+            slope_sig = (
+                abs(float(lr.slope)) / _se
+                if math.isfinite(_se) and _se > 0
+                else float("inf")
+            )
+            if slope_mmag_hr > float(max_comp_slope_mmag_hr) and slope_sig >= float(
+                comp_slope_significance_k
+            ):
                 logging.info(
-                    "Comp %s slope-excluded: %.1f mmag/hr > %s threshold",
+                    "Comp %s slope-excluded: %.1f mmag/hr (%.1fσ) > %s mmag/hr @ %sσ",
                     cid,
                     slope_mmag_hr,
+                    slope_sig,
                     max_comp_slope_mmag_hr,
+                    comp_slope_significance_k,
                 )
                 info["slope_mmag_hr"] = slope_mmag_hr
+                info["slope_sigma"] = slope_sig
                 if n_good_slope < n_comp_min:
                     info["quality"] = "suspect"
-                    note = f"slope={slope_mmag_hr:.1f} mmag/hr (kept: n_good<min)"
+                    note = f"slope={slope_mmag_hr:.1f} mmag/hr ({slope_sig:.1f}σ, kept: n_good<min)"
                 else:
                     info["quality"] = "excluded"
-                    note = f"slope={slope_mmag_hr:.1f} mmag/hr"
+                    note = f"slope={slope_mmag_hr:.1f} mmag/hr ({slope_sig:.1f}σ)"
                 if info.get("note"):
                     info["note"] = f"{info['note']}; {note}"
                 else:
@@ -5239,6 +5256,7 @@ class _Phase2AState:
     site_ok: bool = False
     group_color_term: _ColorTermGroupFit | None = None
     apply_color_term: bool = False
+    stability_run_flags: dict[str, Any] = field(default_factory=dict)
 
 
 def _build_phase2a_dynamic_params(
@@ -7122,7 +7140,9 @@ def _phase2a_process_one_target(
         n_comp_min=3,
         outlier_sigma=stability_sigma,
         max_comp_slope_mmag_hr=float(_cfg.comp_max_slope_mmag_hr),
+        comp_slope_significance_k=float(getattr(_cfg, "comp_slope_significance_k", 3.0)),
         common_mode_detrend=True,
+        stability_run_flags=state.stability_run_flags,
     )
 
     # ALG-5: PyTICS iterative comp star intercalibration (RASTI 2026)
@@ -8200,6 +8220,9 @@ def run_phase2a(
                 site_source=state.site_source,
             ),
             "dynamic_params": _dyn,
+            "common_mode_stability_detrend": bool(
+                state.stability_run_flags.get("common_mode_detrend_applied")
+            ),
             **_cal_meta,
         },
     )

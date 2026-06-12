@@ -168,6 +168,7 @@
   "pytics_enabled": true,
   "pytics_n_iter": 5,
   "comp_max_slope_mmag_hr": 5.0,
+  "comp_slope_significance_k": 3.0,
   "gs11_dilution_enabled": false,
   "gs11_dilution_aperture_arcsec": 0.0,
   "gs11_dilution_mag_limit_delta": 5.0,

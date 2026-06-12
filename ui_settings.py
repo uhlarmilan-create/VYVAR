@@ -544,6 +544,20 @@ def render_settings_dashboard(
                     value=bool(cfg.democratic_detrend_enabled),
                     help="arXiv 2026: 3-model marginalization + err_inflation column",
                 )
+            comp_slope_sig_k = st.slider(
+                "comp_slope_significance_k",
+                min_value=0.0,
+                max_value=10.0,
+                value=float(getattr(cfg, "comp_slope_significance_k", 3.0) or 3.0),
+                step=0.5,
+                help="Comp stability: min |slope|/stderr (σ) on common-mode-removed residual to exclude a comp.",
+            )
+            _detail_help(
+                "comp_slope_significance_k",
+                phase="Phase-2A comp stability (after common-mode detrend).",
+                used_in="Slope exclusion requires both |slope| > comp_max_slope_mmag_hr and σ ≥ this threshold.",
+                compute="Honeycutt/Broeg common-mode removed first; insignificant residual slopes are kept.",
+            )
         nl_pct = st.slider(
             "nonlinearity_peak_percentile",
             min_value=0.0,
@@ -841,7 +855,7 @@ def render_settings_dashboard(
         cfg.pytics_enabled = bool(pytics_enabled)
         cfg.savgol_detrend_enabled = bool(savgol_detrend_enabled)
         cfg.democratic_detrend_enabled = bool(democratic_detrend_enabled)
-        cfg.lc_quality_min_frames = int(max(3, min(500, lc_q_min)))
+        cfg.comp_slope_significance_k = float(max(0.0, min(10.0, comp_slope_sig_k)))
         cfg.lc_quality_short_min_frames = int(max(2, min(100, lc_q_short)))
         if cfg.lc_quality_short_min_frames > cfg.lc_quality_min_frames:
             cfg.lc_quality_short_min_frames = cfg.lc_quality_min_frames

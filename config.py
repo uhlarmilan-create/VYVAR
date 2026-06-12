@@ -404,6 +404,8 @@ class AppConfig:
 
     #: Fáza 2A: exclude comparison stars with |linear slope| above this (mmag/hr) in stability check.
     comp_max_slope_mmag_hr: float = 5.0
+    #: Minimum |slope|/stderr (σ) to treat a post-common-mode residual slope as real (stability check).
+    comp_slope_significance_k: float = 3.0
 
     # GS11 — Flux dilution correction
     gs11_dilution_enabled: bool = False
@@ -1166,6 +1168,13 @@ class AppConfig:
         except (TypeError, ValueError):
             self.comp_max_slope_mmag_hr = 5.0
         try:
+            self.comp_slope_significance_k = max(
+                0.0,
+                min(10.0, float(data.get("comp_slope_significance_k", self.comp_slope_significance_k))),
+            )
+        except (TypeError, ValueError):
+            self.comp_slope_significance_k = 3.0
+        try:
             self.annulus_inner_fwhm = float(data.get("annulus_inner_fwhm", self.annulus_inner_fwhm))
             self.annulus_outer_fwhm = float(data.get("annulus_outer_fwhm", self.annulus_outer_fwhm))
         except (TypeError, ValueError):
@@ -1690,6 +1699,7 @@ class AppConfig:
             "pytics_enabled": bool(self.pytics_enabled),
             "pytics_n_iter": int(self.pytics_n_iter),
             "comp_max_slope_mmag_hr": float(self.comp_max_slope_mmag_hr),
+            "comp_slope_significance_k": float(self.comp_slope_significance_k),
             "gs11_dilution_enabled": bool(self.gs11_dilution_enabled),
             "gs11_dilution_aperture_arcsec": float(self.gs11_dilution_aperture_arcsec),
             "gs11_dilution_mag_limit_delta": float(self.gs11_dilution_mag_limit_delta),

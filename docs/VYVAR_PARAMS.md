@@ -251,6 +251,7 @@ delta_mag >= `neighbor_sub_regime_dmag_min` (in `psf_neighbor_sub.py`).
 | `comp_contamination_penalty_k` | 3.0 | 0.0 … 20.0 | — | intentionally-hidden |
 | `comp_max_delta_bprp` | 0.79 | 0.0 … 5.0 | ui_settings.py:654, ui_settings.py:813 | yes |
 | `comp_max_slope_mmag_hr` | 5.0 | 0.0 … 500.0 | — | intentionally-hidden |
+| `comp_slope_significance_k` | 3.0 | 0.0 … 10.0 | ui_settings.py (Advanced algorithms) | yes |
 | `comp_tier1_bprp_limit` | 0.15 | 0.02 … 5.0 | ui_settings.py:625, ui_settings.py:809 | yes |
 | `comp_tier1_weight` | 1.0 | 0.01 … 1.00 | ui_settings.py:659, ui_settings.py:662, ui_settings.py:814 | yes |
 | `comp_tier2_bprp_limit` | 0.3 | 0.05 … 5.0 | ui_settings.py:633, ui_settings.py:810 | yes |

@@ -74,7 +74,6 @@ def test_citation_lines_core_always_present() -> None:
     text = _citation_text(cfg)
     assert "Broeg" in text
     assert "Collins" in text or "AstroImageJ" in text
-    assert "Honeycutt" in text
     assert "Howell" in text
     assert "Stetson" in text
     assert "Gaia Collaboration" in text
@@ -137,6 +136,14 @@ def test_citation_lines_data_quality_gate_conditional() -> None:
     assert "von Neumann" in text_on
     assert "Barbary" not in text_on
     assert "Bertin" not in text_on
+
+
+def test_citation_lines_common_mode_stability_detrend_conditional() -> None:
+    cfg = AppConfig()
+    off = build_run_citation_context(cfg, pipeline_meta={"common_mode_stability_detrend": False})
+    on = build_run_citation_context(cfg, pipeline_meta={"common_mode_stability_detrend": True})
+    assert "Honeycutt" not in "".join(_vyvar_export_citation_lines(cfg, run_ctx=off))
+    assert "Honeycutt" in "".join(_vyvar_export_citation_lines(cfg, run_ctx=on))
 
 
 def test_citation_lines_democratic_conditional() -> None:

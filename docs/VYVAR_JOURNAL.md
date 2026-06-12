@@ -2,6 +2,52 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- comp-slope stability: common-mode detrend + significance gate (2026-06-11)
+
+**Problem (Step A):** `check_comparison_stability` common-mode detrend fired on DY Peg but removed
+~97 mmag/hr instead of ~237 because `np.interp` received unsorted BJD (12/43 inversions). Slope
+cut used `|slope|` only (~140 mmag/hr post-detrend) while significance was ~0.03σ.
+
+**Fix (Step B):**
+
+- **B2:** stable `argsort` on `(bjd, mag)` before stacking/interp.
+- **B1:** `comp_slope_significance_k` (default 3.0); exclude only if magnitude **and** significance
+  thresholds met on post-detrend residual; note includes σ.
+- **B3:** Honeycutt 1992 in `CITATIONS.bib`; export citation gated on
+  `common_mode_stability_detrend` in `pipeline_meta.json`.
+
+**Verify DY Peg (`draft_000390` B_60_1, scratch):** common-mode log **237.14 mmag/hr**; post-detrend
+slopes ~9.2 mmag/hr; no slope-excluded comps (0.03σ); p2p suspect notes unchanged; LC/trust RED
+unchanged (2-comp pool).
+
+**Step C footprint (`draft_000387` anchor):** 12 frames/setup (L: 15) — both detrend and slope
+require ≥20 finite points → **paths never ran** on anchor; grep **0/1401** `slope=` notes on disk.
+Expected LC diff **0 targets**; trust distribution unchanged (informational B: 359 YELLOW / 13 RED
+class). **STOP for Milan** before Step D re-cut (`203254fd…` → new SHA after acceptance).
+
+**Tests:** `test_comp_stability.py` (5/5); full suite 262 passed; ruff BLE001/E722 clean.
+
+---
+
+## Session -- per-frame proc perf: DAO pre-filter + Moffat gate (2026-06-12)
+
+**Problem:** `draft_000389` DY Peg `B_60_1` per-frame `proc_*.csv` export ~171 s/frame (~12k DAO rows
+measured; 521 written). Moffat Step-1 ran in aperture-only mode (`_run_aperture`) though consumed
+only by `psf_photometry.py`.
+
+**Fix (LC byte-identical):** `_proc_drop_unmatched_dao_rows` after detect in both
+`_export_per_frame_run_catalog_core` and `export_per_frame_catalogs` (key on `catalog_id`, not
+`source_type`). Moffat gate `if _run_epsf:` only (`pipeline.py` was `if _run_epsf or _run_aperture`).
+
+**Verify:** Step A on `draft_000389`; Step C timing 6 frames **171.0 → 35.6 s/frame** (~4.8×).
+Matched-row photometry: two consecutive post-fix exports byte-identical on `x,y,dao_flux,flux,mag,
+aperture_r_px`; vs pre-fix on-disk baseline small centroid/flux deltas from independent detect re-run
+(`mag` / `aperture_r_px` exact; `VY_FWHM` header-driven). `moffat_*` absent in aperture-only mode
+(intended). Chi_and_H anchor unaffected (`proc_*.csv` not in SHA set). Milan to re-run `draft_000389`
+end-to-end for real-world acceptance.
+
+---
+
 ## Session -- math/physics audit hygiene (2026-06-11, `9a4e525`)
 
 Byte-identity-neutral citation + guard pass. Filed `docs/VYVAR_MATH_PHYS_AUDIT.md` (ad6e788

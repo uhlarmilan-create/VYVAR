@@ -25,18 +25,45 @@ def _make_flat_ensemble(n_comp: int, n_frames: int, *, trend_cid: str | None, sl
     return comp_lc, comp_bjd
 
 
-def test_slope_filter_excludes_trending_comp():
-    """+6 mmag/hr slope comp excluded at threshold 5.0."""
-    # 6 mmag/hr = 0.006 mag/hr = 0.144 mag per BJD day
+def test_slope_filter_keeps_insignificant_post_common_mode_slope():
+    """Shared linear trend: post-detrend residual large but insignificant → kept."""
+    n_frames = 44
+    bjd = np.linspace(2459000.0, 2459000.5, n_frames)
+    rng = np.random.default_rng(1)
+    shared_slope = 0.10  # mag/day → ~4167 mmag/hr common mode
+    comp_lc: dict[str, np.ndarray] = {}
+    comp_bjd: dict[str, np.ndarray] = {}
+    for i in range(2):
+        cid = f"comp_{i}"
+        noise = 0.05 * rng.standard_normal(n_frames)
+        mag = 12.0 + shared_slope * (bjd - bjd[0]) + noise
+        comp_lc[cid] = mag.astype(float)
+        comp_bjd[cid] = bjd.copy()
+    q = check_comparison_stability(
+        comp_lc,
+        comp_bjd=comp_bjd,
+        max_comp_slope_mmag_hr=5.0,
+        comp_slope_significance_k=3.0,
+        outlier_sigma=99.0,
+    )
+    for cid in comp_lc:
+        assert q[cid]["quality"] == "good"
+        assert "slope_mmag_hr" not in q[cid] or q[cid].get("slope_mmag_hr", 0) <= 5.0
+
+
+def test_slope_filter_excludes_significant_divergent_comp():
+    """Comp diverging from ensemble after common-mode removal → excluded."""
     comp_lc, comp_bjd = _make_flat_ensemble(5, 30, trend_cid="trend", slope_mag_per_day=0.144)
     q = check_comparison_stability(
         comp_lc,
         comp_bjd=comp_bjd,
         max_comp_slope_mmag_hr=5.0,
+        comp_slope_significance_k=3.0,
         outlier_sigma=99.0,
     )
     assert q["trend"]["quality"] in ("excluded", "suspect")
     assert q["trend"].get("slope_mmag_hr", 0) > 5.0
+    assert q["trend"].get("slope_sigma", 0) >= 3.0
 
 
 def test_slope_filter_keeps_stable_comp():

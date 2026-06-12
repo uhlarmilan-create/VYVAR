@@ -30,6 +30,13 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 7. ~~**Broad-except hygiene (BLE001/E722 regression guard)**~~ **DONE (2026-06-11)** — see
    DECISIONS + `pyproject.toml` / pre-commit / `tests/test_ble001_regression.py`.
 8. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
+9. ~~**Per-frame proc export perf (DAO pre-filter + Moffat gate)**~~ **DONE (2026-06-12)** —
+   `_proc_drop_unmatched_dao_rows` before aperture/PSF; Moffat gated on `_run_epsf` only; ~4.8× on
+   `draft_000389` B_60_1 (171 → 36 s/frame). See JOURNAL + DECISIONS.
+10. **Comp-slope stability (B2+B1) — code DONE; anchor re-baseline BLOCKED on Milan.** Common-mode
+    detrend BJD sort + significance gate (`comp_slope_significance_k`); Honeycutt 1992 conditional.
+    Footprint on `draft_000387`: **LC-neutral** (12 frames/setup → slope/detrend guards never fire;
+    0 on-disk `slope=` notes). Step D re-cut after acceptance only.
 
 ---
 
@@ -87,6 +94,12 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## MEDIUM
 
+- **TODO-COMP-P2P-RESIDUAL — evaluate p2p outlier on common-mode-removed residual.** The p2p
+  stability check (`check_comparison_stability`) still fires on the raw comp LC; on nights with a
+  shared airmass/transparency ramp, `rms_p2p` ≈ the ramp range (same methodological class as the
+  pre-B2 slope bug). **Separate science-changing task:** mirror the Honeycutt common-mode removal
+  before p2p scoring; own footprint + optional anchor re-cut. Comp-slope fix (B2+B1) is **DONE**
+  pending Milan acceptance; p2p deferred deliberately.
 - **Expose comp_qa / trust as Settings toggles** + write their defaults to
   `config.json`. These are **user-facing** QA features (the trust badge is observer-facing),
   currently config-only and UI-hidden. Add a "Data quality & validation" Settings section for

@@ -131,6 +131,18 @@ welcome only where it does not trade away QC (I/O, parallelism, caching); the pe
 full-frame detection itself is a feature, not a bottleneck to remove. **Status: settled
 2026-06-02.** (See also: SIPS comparison below.)
 
+### Per-frame catalog: drop unmatched DAO before aperture; Moffat gated on ePSF (2026-06-12)
+**DAO detection stays full-frame** (QC unchanged). After `detect_stars_match_master_reference`,
+rows with empty `catalog_id` are dropped **before** aperture / Moffat / PSF work
+(`_proc_drop_unmatched_dao_rows`; key on `catalog_id`, not `source_type`). They were never written
+to `proc_*.csv` anyway (final `_proc_catalog_keep_matched_rows_only`); this is pure wasted compute.
+
+**Moffat fit is Step 1 of the two-step ePSF path only** — gate `if _run_epsf:` (not
+`_run_aperture`). In aperture-only production (`psf_photometry_enabled=False`), `moffat_*` columns
+are omitted; LC / comp-QA readers do not consume them. **LC byte-identical** when `VY_FWHM` /
+`VY_FWHM_GAUSS` drives aperture radius (verified `draft_000389` B_60_1). Chi_and_H photometry SHA
+unchanged (`proc_*.csv` not in SHA set).
+
 ### What VYVAR deliberately does NOT adopt from SIPS (2026-06-02)
 Comparison against SIPS (Moravian Instruments; v4.4 manual + Pejcha & Cagaš 2022, A&A 667,
 A53) confirmed the two tools share a photometric **family** — both do full-frame per-frame star
@@ -597,3 +609,30 @@ See spec for citations.
 
 **Check-star coupling:** CS-3 left 60 independent checks on draft_387; reserved-check design still
 parked (ROADMAP).
+
+## Comp-slope stability on common-mode-removed residual (2026-06-11)
+
+**Adopted (science-changing on long baselines):**
+
+- **Common-mode detrend before slope test** (`check_comparison_stability`, default ON): fit a line
+  to the per-frame median of active comp LCs, subtract for slope evaluation only — ensemble
+  magnitudes unchanged. Formal basis: Honeycutt (1992) ensemble `em(e)` term; Broeg (2005)
+  artificial-comparison framing; Sokolovsky (2017) indices judged vs the comp population.
+- **BJD sort before `np.interp`** (B2): frame/proc order is not monotonic in BJD; unsorted xp
+  corrupted the common-mode estimate (Step A: 97 vs 237 mmag/hr on DY Peg).
+- **Significance gate** (B1): exclude on slope only if **both** `|slope| > comp_max_slope_mmag_hr`
+  **and** `|slope|/stderr ≥ comp_slope_significance_k` (default 3.0) on the **post-detrend**
+  residual. Large-but-insignificant slopes (noise / imperfect common-mode removal) are kept.
+- **`comp_slope_significance_k`** in config + Settings + `VYVAR_PARAMS.md`.
+- **Honeycutt 1992** citation emitted only when common-mode stability detrend runs
+  (`pipeline_meta.common_mode_stability_detrend`); remains in VarAstro flux-sum line (Collins +
+  Honeycutt combination).
+
+**Thin fields unchanged:** when `n_good < n_comp_min`, slope/p2p flags → `suspect` with
+`kept: n_good<min` — ensemble membership unchanged. DY Peg (2 comps) stays RED via comp_qa
+`n_clean` skip, not this change.
+
+**Anchor footprint (`draft_000387`):** 12 frames/setup (<20 guard) → detrend + slope paths never
+exercised; **0** historical `slope=` comp notes; **LC byte-identical** on re-run expectation.
+Re-baseline (Step D) waits for Milan acceptance of bounded diff on longer-baseline validation
+(e.g. DY Peg `draft_000390`: slope notes removed, ensemble unchanged).

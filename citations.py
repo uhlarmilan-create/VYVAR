@@ -125,6 +125,7 @@ class RunCitationContext:
     use_lightkurve: bool = False
     use_comp_qa: bool = True
     use_trust: bool = True
+    use_common_mode_stability_detrend: bool = False
 
 
 def _vsx_db_configured(cfg: AppConfig | None) -> bool:
@@ -190,6 +191,7 @@ def build_run_citation_context(
     use_tess = bool(tess_used) or bool(getattr(cfg, "tess_enabled", False)) if cfg else bool(tess_used)
     use_comp_qa = bool(getattr(cfg, "comp_qa_enabled", True)) if cfg else True
     use_trust = bool(getattr(cfg, "trust_flag_enabled", True)) if cfg else True
+    use_cm_detrend = bool(meta.get("common_mode_stability_detrend", False)) if meta else False
 
     return RunCitationContext(
         use_vsx=use_vsx,
@@ -206,6 +208,7 @@ def build_run_citation_context(
         use_lightkurve=use_tess,
         use_comp_qa=use_comp_qa,
         use_trust=use_trust,
+        use_common_mode_stability_detrend=use_cm_detrend,
     )
 
 
@@ -228,7 +231,6 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
     core = [
         "broeg2005",
         "collins2017",
-        "honeycutt1992",
         "howell1989",
         "stetson1987",
         "henden_kaitchuck1982",
@@ -265,6 +267,8 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
         )
     if ctx.use_democratic:
         optional.append(citation_line("hippke2024", bib=bib))
+    if ctx.use_common_mode_stability_detrend:
+        optional.append(citation_line("honeycutt1992", bib=bib))
     if optional:
         sections.append(("METHODS — this run", optional))
 

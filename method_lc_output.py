@@ -115,6 +115,7 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
         n_comp_min=3,
         outlier_sigma=ctx.stability_sigma,
         max_comp_slope_mmag_hr=float(_cfg.comp_max_slope_mmag_hr),
+        comp_slope_significance_k=float(getattr(_cfg, "comp_slope_significance_k", 3.0)),
         common_mode_detrend=True,
     )
     comp_rms_map = pytics_iterative_weights(
