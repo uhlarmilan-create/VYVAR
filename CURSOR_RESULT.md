@@ -15,7 +15,16 @@ See `docs/VYVAR_STATE.md`, `VYVAR_DECISIONS.md`, `VYVAR_PROCESS.md`, `VYVAR_ROAD
 `VYVAR_JOURNAL.md`.
 
 ### Step 3 — Verification
-(See commit message / below for pytest, ruff, gate status.)
+
+| Check | Result |
+|-------|--------|
+| `pytest tests/` | **284 passed, 12 skipped** |
+| `ruff` BLE001/E722 (touched) | **clean** |
+| Gate `--compare-only` | **0 science failures**, Brno **94.2%**, **exit 0** |
+
+### Step 4 — Commit
+
+**SHA:** `70c23d0` — pushed to `origin/main`.
 
 ### Open confirmation
 Brno **not fully locked** until Milan's **draft_401 UI sign-off + overlay**.
