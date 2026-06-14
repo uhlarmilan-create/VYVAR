@@ -31,6 +31,7 @@ from config import (
     apply_density_overrides,
     classify_field_density,
     compute_field_density,
+    resolve_comp_sparse_fallback_enabled,
 )
 from database import query_local_gaia, query_local_gaia_by_source_ids
 from gaia_catalog_id import (
@@ -8223,6 +8224,9 @@ def run_phase2a(
             "common_mode_stability_detrend": bool(
                 state.stability_run_flags.get("common_mode_detrend_applied")
             ),
+            "comp_sparse_fallback_used": bool(
+                resolve_comp_sparse_fallback_enabled(_cfg)
+            ),
             **_cal_meta,
         },
     )
@@ -10840,6 +10844,7 @@ def build_global_comp_pool(
         chip_fw=chip_fw,
         chip_fh=chip_fh,
         max_comp_rms=max_comp_rms,
+        apply_rms_prefilter=True,
     )
     pool = attach_comp_rms_to_pool_rows(pool, rms_map, id_col=id_col)
     _before_dedupe = int(len(pool))
@@ -10967,6 +10972,7 @@ def select_comparison_stars_per_target(
     plate_scale_arcsec: float = 1.3,
     use_pixel_dist: bool = False,
     gs11_comp_rejects_acc: list[int] | None = None,
+    _selection_mode: str = "auto",
 ) -> pd.DataFrame:
     """Fáza 1: Pre jeden target vyber najstabilnejšie porovnávacie hviezdy.
 
@@ -11025,13 +11031,73 @@ def select_comparison_stars_per_target(
         _detrend_and_compute_comp_rms_map,
         _ensemble_mad_filter_rms,
         _filter_comp_candidates_spatial_static,
+        _iterative_ensemble_clip_cm_residual,
         _resolve_target_color_for_comp_selection,
         _score_comp_candidates_broeg,
     )
 
-    _cfg_p1 = cfg if cfg is not None else AppConfig()
+    from config import (  # noqa: PLC0415
+        resolve_comp_sparse_fallback_enabled,
+        resolve_comp_sparse_fallback_min,
+    )
 
-    if global_comp_pool_df is not None and not getattr(global_comp_pool_df, "empty", True):
+    _cfg_p1 = cfg if cfg is not None else AppConfig()
+    _mode = str(_selection_mode or "auto").strip().lower()
+    if _mode not in ("auto", "default", "sparse_fallback"):
+        _mode = "auto"
+    sparse_fallback = _mode == "sparse_fallback"
+
+    def _retry_sparse_fallback() -> pd.DataFrame:
+        if sparse_fallback or _mode != "auto":
+            return pd.DataFrame()
+        if not resolve_comp_sparse_fallback_enabled(_cfg_p1):
+            return pd.DataFrame()
+        return select_comparison_stars_per_target(
+            target,
+            masterstars_df,
+            per_frame_csv_paths,
+            csv_cache=csv_cache,
+            global_comp_pool_df=global_comp_pool_df,
+            fwhm_px=fwhm_px,
+            max_dist_deg=max_dist_deg,
+            max_mag_diff=max_mag_diff,
+            max_mag_diff_t1=max_mag_diff_t1,
+            max_mag_diff_t2=max_mag_diff_t2,
+            max_mag_diff_t3=max_mag_diff_t3,
+            max_mag_diff_t4=max_mag_diff_t4,
+            n_comp_min=n_comp_min,
+            n_comp_max=n_comp_max,
+            max_comp_rms=max_comp_rms,
+            min_dist_arcsec=min_dist_arcsec,
+            min_frames_frac=min_frames_frac,
+            rms_outlier_sigma=rms_outlier_sigma,
+            exclude_gaia_nss=exclude_gaia_nss,
+            exclude_gaia_extobj=exclude_gaia_extobj,
+            mag_bright_threshold=mag_bright_threshold,
+            max_mag_diff_bright_floor=max_mag_diff_bright_floor,
+            max_psf_chi2=max_psf_chi2,
+            max_fwhm_factor=max_fwhm_factor,
+            isolation_radius_px=isolation_radius_px,
+            flux_col=flux_col,
+            chip_fw=chip_fw,
+            chip_fh=chip_fh,
+            chip_interior_margin_px=chip_interior_margin_px,
+            edge_bad_frame_frac_max=edge_bad_frame_frac_max,
+            max_delta_bprp=max_delta_bprp,
+            vsx_local_db_path=vsx_local_db_path,
+            gaia_db_path=gaia_db_path,
+            gaia_prefetch=gaia_prefetch,
+            variable_target_catalog_ids=variable_target_catalog_ids,
+            cfg=cfg,
+            plate_scale_arcsec=plate_scale_arcsec,
+            use_pixel_dist=use_pixel_dist,
+            gs11_comp_rejects_acc=gs11_comp_rejects_acc,
+            _selection_mode="sparse_fallback",
+        )
+
+    if sparse_fallback:
+        ms = masterstars_df.copy()
+    elif global_comp_pool_df is not None and not getattr(global_comp_pool_df, "empty", True):
         ms = global_comp_pool_df.copy()
         if "comp_rms" in ms.columns:
             ms = ms.drop(columns=["comp_rms"])
@@ -11132,9 +11198,10 @@ def select_comparison_stars_per_target(
         chip_interior_margin_px=int(chip_interior_margin_px),
         target=target,
         cfg=_cfg_p1,
+        sparse_fallback_mode=sparse_fallback,
     )
     if built is None:
-        return pd.DataFrame()
+        return _retry_sparse_fallback()
     candidates_pre, used_mag_tol = built
 
     if str(target_cid).strip() == "1498613634033133184":
@@ -11206,6 +11273,7 @@ def select_comparison_stars_per_target(
         chip_fh=chip_fh,
     )
     flux_map = metrics["flux_map"]
+    bjd_map = metrics.get("bjd_map") or {}
     n_frames_loaded = int(metrics["n_frames_loaded"])
     psf_chi2_map = metrics["psf_chi2_map"]
     fwhm_map = metrics["fwhm_map"]
@@ -11297,6 +11365,9 @@ def select_comparison_stars_per_target(
         isolation_radius_px=isolation_radius_px,
     )
 
+    _use_iter_clip = bool(sparse_fallback)
+    _clip_sigma = float(getattr(_cfg_p1, "comp_clip_sigma", 5.0))
+
     rms_result = _detrend_and_compute_comp_rms_map(
         flux_map,
         min_frames=min_frames,
@@ -11307,9 +11378,10 @@ def select_comparison_stars_per_target(
         chip_fw=chip_fw,
         chip_fh=chip_fh,
         chip_interior_margin_px=int(chip_interior_margin_px),
+        skip_apriori_rms=_use_iter_clip,
     )
     if rms_result[0] is None:
-        return pd.DataFrame()
+        return _retry_sparse_fallback()
     rms_map, sorted_rms_map = rms_result
 
     def _apply_aperture_isolation_safe(cands: pd.DataFrame) -> pd.DataFrame:
@@ -11353,22 +11425,35 @@ def select_comparison_stars_per_target(
             chip_fh=chip_fh,
             chip_interior_margin_px=int(chip_interior_margin_px),
         )
-        return pd.DataFrame()
+        return _retry_sparse_fallback()
     candidates = _apply_aperture_isolation_safe(candidates)
 
-    active = _ensemble_mad_filter_rms(
-        rms_map,
-        candidates,
-        target_cid=target_cid,
-        target=target,
-        n_comp_min=n_comp_min,
-        rms_outlier_sigma=rms_outlier_sigma,
-        chip_fw=chip_fw,
-        chip_fh=chip_fh,
-        chip_interior_margin_px=int(chip_interior_margin_px),
-    )
+    clip_meta: dict[str, int] | None = None
+    if _use_iter_clip:
+        _clip_out = _iterative_ensemble_clip_cm_residual(
+            flux_map,
+            bjd_map,
+            sorted_rms_map,
+            clip_sigma=_clip_sigma,
+            n_comp_min=n_comp_min,
+        )
+        if _clip_out is None:
+            return pd.DataFrame()
+        active, clip_meta = _clip_out
+    else:
+        active = _ensemble_mad_filter_rms(
+            rms_map,
+            candidates,
+            target_cid=target_cid,
+            target=target,
+            n_comp_min=n_comp_min,
+            rms_outlier_sigma=rms_outlier_sigma,
+            chip_fw=chip_fw,
+            chip_fh=chip_fh,
+            chip_interior_margin_px=int(chip_interior_margin_px),
+        )
     if active is None:
-        return pd.DataFrame()
+        return _retry_sparse_fallback()
 
     _bo_funnel: dict[str, int] = {}
     _bo_rms_rejected: list[tuple[str, float]] = []
@@ -11427,7 +11512,7 @@ def select_comparison_stars_per_target(
     )
     final_comps = tier_out["final_comps"]
     if final_comps is None or getattr(final_comps, "empty", True):
-        return pd.DataFrame()
+        return _retry_sparse_fallback()
 
     if str(target_cid).strip() == "1498613634033133184":
         try:
@@ -11455,7 +11540,7 @@ def select_comparison_stars_per_target(
     except Exception:  # noqa: BLE001
         final_lookup = None
 
-    return _assemble_comp_selection_result_rows(
+    result = _assemble_comp_selection_result_rows(
         tier_out["selected_ids"],
         final_comps,
         id_col_cand=id_col_cand,
@@ -11484,7 +11569,67 @@ def select_comparison_stars_per_target(
         dilution_map=_dilution_map,
         comp_gs11_notes=_comp_gs11_notes,
         cfg=_cfg_p1,
+        clip_meta=clip_meta,
+        comp_path="sparse_fallback" if sparse_fallback else "default",
     )
+
+    if _mode == "auto":
+        _cfg_nmin = int(getattr(_cfg_p1, "phase01_comparison_n_comp_min", n_comp_min) or n_comp_min)
+        _fb_min = resolve_comp_sparse_fallback_min(
+            _cfg_p1, n_comp_min=_cfg_nmin, n_comp_max=int(n_comp_max)
+        )
+        _n_res = int(len(result)) if result is not None and not getattr(result, "empty", True) else 0
+        if _n_res >= _fb_min:
+            return result
+        if resolve_comp_sparse_fallback_enabled(_cfg_p1):
+            fb = select_comparison_stars_per_target(
+                target,
+                masterstars_df,
+                per_frame_csv_paths,
+                csv_cache=csv_cache,
+                global_comp_pool_df=global_comp_pool_df,
+                fwhm_px=fwhm_px,
+                max_dist_deg=max_dist_deg,
+                max_mag_diff=max_mag_diff,
+                max_mag_diff_t1=max_mag_diff_t1,
+                max_mag_diff_t2=max_mag_diff_t2,
+                max_mag_diff_t3=max_mag_diff_t3,
+                max_mag_diff_t4=max_mag_diff_t4,
+                n_comp_min=n_comp_min,
+                n_comp_max=n_comp_max,
+                max_comp_rms=max_comp_rms,
+                min_dist_arcsec=min_dist_arcsec,
+                min_frames_frac=min_frames_frac,
+                rms_outlier_sigma=rms_outlier_sigma,
+                exclude_gaia_nss=exclude_gaia_nss,
+                exclude_gaia_extobj=exclude_gaia_extobj,
+                mag_bright_threshold=mag_bright_threshold,
+                max_mag_diff_bright_floor=max_mag_diff_bright_floor,
+                max_psf_chi2=max_psf_chi2,
+                max_fwhm_factor=max_fwhm_factor,
+                isolation_radius_px=isolation_radius_px,
+                flux_col=flux_col,
+                chip_fw=chip_fw,
+                chip_fh=chip_fh,
+                chip_interior_margin_px=chip_interior_margin_px,
+                edge_bad_frame_frac_max=edge_bad_frame_frac_max,
+                max_delta_bprp=max_delta_bprp,
+                vsx_local_db_path=vsx_local_db_path,
+                gaia_db_path=gaia_db_path,
+                gaia_prefetch=gaia_prefetch,
+                variable_target_catalog_ids=variable_target_catalog_ids,
+                cfg=cfg,
+                plate_scale_arcsec=plate_scale_arcsec,
+                use_pixel_dist=use_pixel_dist,
+                gs11_comp_rejects_acc=gs11_comp_rejects_acc,
+                _selection_mode="sparse_fallback",
+            )
+            _n_fb = int(len(fb)) if fb is not None and not getattr(fb, "empty", True) else 0
+            if _n_fb >= _fb_min:
+                return fb
+        return result
+
+    return result
 
 
 def run_phase0_and_phase1(

@@ -2554,10 +2554,18 @@ class VyvarDatabase:
             "INSERT OR IGNORE INTO EQUIPMENTS (ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE) "
             "VALUES (1, 'QHY294MM', 'Camera1', 'IMX492', '4164*2796', 4.63)"
         )
+        db.execute(
+            "INSERT OR IGNORE INTO EQUIPMENTS (ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE) "
+            "VALUES (4, 'C5A-150M', 'C5A-150M', 'CMOS', '4096*4096', 3.76)"
+        )
         # 2. Tabulka TELESCOPE
         db.execute(
             "INSERT OR IGNORE INTO TELESCOPE (ID, TELESCOPENAME, ALIAS, DIAMETER, FOCAL) "
             "VALUES (1, 'Carl-Zeiss', 'Teleobjektiv1', 72.0, 200.0)"
+        )
+        db.execute(
+            "INSERT OR IGNORE INTO TELESCOPE (ID, TELESCOPENAME, ALIAS, DIAMETER, FOCAL) "
+            "VALUES (6, 'AZ800', 'AZ800', 800.0, 5480.0)"
         )
         # 3. Tabulka LOCATION
         db.execute(

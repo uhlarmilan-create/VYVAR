@@ -41,9 +41,10 @@ trust -> reports); CT target presel hook. Params baked in: `plate_fov_deg=1.25`,
    `n_clean` on pre-calibrated imports (exactly this kind of data).
 3. **Code state:** pin with `git rev-parse HEAD` (recorded in result JSON).
 4. **Anchor model:** SHA fingerprint + this recipe; ephemeral `draft_*` may be deleted.
-   Re-verify by regenerating and comparing SHA to `203254fd...` / `95a5515a...`
-   (`tests/photometry_sha.py`). **RETIRED:** `f4bcc0ee` (truncated draft_385),
-   `d246a5be` (TAP draft_382).
+   Re-verify by regenerating and comparing SHA to `3f7c9e7a...` / `d5b72d08...`
+   (`tests/photometry_sha.py`). Historical pre-drift: `203254fd...` / `95a5515a...`.
+   Regression vs historical cut: `compare_photometry_science_meaningful` (PROCESS).
+   **RETIRED:** `f4bcc0ee` (truncated draft_385), `d246a5be` (TAP draft_382).
 
 ## Run
 
@@ -71,8 +72,10 @@ stats, calibrated/platesolve setups, CT prototype path).
 - [ ] CT prototype emitted (`ct_prototype.csv`) -- CT path exercised for B/V/R/L.
 - [ ] **`git rev-parse HEAD`** recorded in STATE/JOURNAL (commit hash is not auto-captured).
 - [ ] **Compute byte-identity SHA-256** (`compute_photometry_sha`): core + full vs recorded
-      `203254fd...` / `95a5515a...` — **draft-independent** gate. Record SHAs, zaloha recipe,
+      `3f7c9e7a...` / `d5b72d08...` — **draft-independent** gate. Record SHAs, zaloha recipe,
       config snapshot, and ephemeral `draft_id` in `VYVAR_STATE.md` / `VYVAR_JOURNAL.md`.
+      When comparing to the historical `203254fd...` cut, also run
+      `compare_photometry_science_meaningful` (benign-drift acceptance).
 
 SHA helpers: `tests/photometry_sha.py` (`compute_photometry_sha`).
 

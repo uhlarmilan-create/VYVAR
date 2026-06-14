@@ -126,6 +126,7 @@ class RunCitationContext:
     use_comp_qa: bool = True
     use_trust: bool = True
     use_common_mode_stability_detrend: bool = False
+    use_iterative_comp_clip: bool = False
 
 
 def _vsx_db_configured(cfg: AppConfig | None) -> bool:
@@ -192,6 +193,14 @@ def build_run_citation_context(
     use_comp_qa = bool(getattr(cfg, "comp_qa_enabled", True)) if cfg else True
     use_trust = bool(getattr(cfg, "trust_flag_enabled", True)) if cfg else True
     use_cm_detrend = bool(meta.get("common_mode_stability_detrend", False)) if meta else False
+    use_iter_clip = False
+    if cfg:
+        from config import resolve_comp_sparse_fallback_enabled  # noqa: PLC0415
+
+        use_iter_clip = resolve_comp_sparse_fallback_enabled(cfg)
+    use_iter_clip = use_iter_clip or bool(
+        meta.get("comp_sparse_fallback_used", meta.get("comp_iterative_clip_used", False))
+    )
 
     return RunCitationContext(
         use_vsx=use_vsx,
@@ -209,6 +218,7 @@ def build_run_citation_context(
         use_comp_qa=use_comp_qa,
         use_trust=use_trust,
         use_common_mode_stability_detrend=use_cm_detrend,
+        use_iterative_comp_clip=use_iter_clip,
     )
 
 
@@ -269,6 +279,14 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
         optional.append(citation_line("hippke2024", bib=bib))
     if ctx.use_common_mode_stability_detrend:
         optional.append(citation_line("honeycutt1992", bib=bib))
+    if ctx.use_iterative_comp_clip:
+        optional.extend(
+            [
+                citation_line("gilliland1988", bib=bib),
+                citation_line("burdanov2014", bib=bib),
+                citation_line("everett2001", bib=bib),
+            ]
+        )
     if optional:
         sections.append(("METHODS — this run", optional))
 

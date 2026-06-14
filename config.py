@@ -26,6 +26,33 @@ def load_config_json(project_root: Path) -> dict[str, Any]:
         return {}
 
 
+def resolve_comp_sparse_fallback_enabled(cfg: AppConfig | None) -> bool:
+    """True when per-target sparse comp fallback is enabled (includes legacy alias)."""
+    if cfg is None:
+        return False
+    if bool(getattr(cfg, "comp_sparse_fallback_enabled", False)):
+        return True
+    return bool(getattr(cfg, "comp_iterative_clip_enabled", False))
+
+
+def resolve_comp_sparse_fallback_min(
+    cfg: AppConfig | None,
+    *,
+    n_comp_min: int,
+    n_comp_max: int,
+) -> int:
+    """Minimum default-path comp count before sparse fallback may run."""
+    raw = 0
+    if cfg is not None:
+        try:
+            raw = int(getattr(cfg, "comp_sparse_fallback_min", 0) or 0)
+        except (TypeError, ValueError):
+            raw = 0
+    if raw <= 0:
+        raw = int(n_comp_min)
+    return max(2, min(int(n_comp_max), int(raw)))
+
+
 def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
     path = config_json_path(project_root)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -406,6 +433,14 @@ class AppConfig:
     comp_max_slope_mmag_hr: float = 5.0
     #: Minimum |slope|/stderr (σ) to treat a post-common-mode residual slope as real (stability check).
     comp_slope_significance_k: float = 3.0
+    #: Per-target sparse fallback: generous pool + iterative CM-residual clip when default starved.
+    comp_sparse_fallback_enabled: bool = True
+    #: Trigger fallback when default yields fewer than this many comps (0 → use ``n_comp_min``).
+    comp_sparse_fallback_min: int = 0
+    #: Deprecated alias for ``comp_sparse_fallback_enabled`` (config/UI backward compat).
+    comp_iterative_clip_enabled: bool = False
+    #: Population outlier threshold (σ-MAD) for sparse-fallback iterative clip.
+    comp_clip_sigma: float = 5.0
 
     # GS11 — Flux dilution correction
     gs11_dilution_enabled: bool = False
@@ -1174,6 +1209,29 @@ class AppConfig:
             )
         except (TypeError, ValueError):
             self.comp_slope_significance_k = 3.0
+        _legacy_iter = bool(data.get("comp_iterative_clip_enabled", self.comp_iterative_clip_enabled))
+        self.comp_sparse_fallback_enabled = bool(
+            data.get(
+                "comp_sparse_fallback_enabled",
+                data.get("comp_iterative_clip_enabled", self.comp_sparse_fallback_enabled),
+            )
+        )
+        if _legacy_iter and not self.comp_sparse_fallback_enabled:
+            self.comp_sparse_fallback_enabled = True
+        self.comp_iterative_clip_enabled = bool(self.comp_sparse_fallback_enabled)
+        try:
+            self.comp_sparse_fallback_min = int(
+                data.get("comp_sparse_fallback_min", self.comp_sparse_fallback_min)
+            )
+        except (TypeError, ValueError):
+            self.comp_sparse_fallback_min = 0
+        try:
+            self.comp_clip_sigma = max(
+                3.0,
+                min(10.0, float(data.get("comp_clip_sigma", self.comp_clip_sigma))),
+            )
+        except (TypeError, ValueError):
+            self.comp_clip_sigma = 5.0
         try:
             self.annulus_inner_fwhm = float(data.get("annulus_inner_fwhm", self.annulus_inner_fwhm))
             self.annulus_outer_fwhm = float(data.get("annulus_outer_fwhm", self.annulus_outer_fwhm))
@@ -1700,6 +1758,10 @@ class AppConfig:
             "pytics_n_iter": int(self.pytics_n_iter),
             "comp_max_slope_mmag_hr": float(self.comp_max_slope_mmag_hr),
             "comp_slope_significance_k": float(self.comp_slope_significance_k),
+            "comp_sparse_fallback_enabled": bool(self.comp_sparse_fallback_enabled),
+            "comp_sparse_fallback_min": int(self.comp_sparse_fallback_min),
+            "comp_iterative_clip_enabled": bool(self.comp_sparse_fallback_enabled),
+            "comp_clip_sigma": float(self.comp_clip_sigma),
             "gs11_dilution_enabled": bool(self.gs11_dilution_enabled),
             "gs11_dilution_aperture_arcsec": float(self.gs11_dilution_aperture_arcsec),
             "gs11_dilution_mag_limit_delta": float(self.gs11_dilution_mag_limit_delta),

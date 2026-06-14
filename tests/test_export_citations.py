@@ -146,6 +146,21 @@ def test_citation_lines_common_mode_stability_detrend_conditional() -> None:
     assert "Honeycutt" in "".join(_vyvar_export_citation_lines(cfg, run_ctx=on))
 
 
+def test_citation_lines_iterative_comp_clip_conditional() -> None:
+    cfg_off = AppConfig()
+    cfg_off.comp_sparse_fallback_enabled = False
+    cfg_off.comp_iterative_clip_enabled = False
+    off = build_run_citation_context(cfg_off, pipeline_meta={"comp_sparse_fallback_used": False})
+    on_cfg = AppConfig()
+    on_cfg.comp_sparse_fallback_enabled = True
+    on = build_run_citation_context(on_cfg, pipeline_meta={"comp_sparse_fallback_used": True})
+    off_text = "".join(_vyvar_export_citation_lines(cfg_off, run_ctx=off))
+    on_text = "".join(_vyvar_export_citation_lines(on_cfg, run_ctx=on))
+    assert "Gilliland" not in off_text
+    assert "Gilliland" in on_text
+    assert "Burdanov" in on_text
+
+
 def test_citation_lines_democratic_conditional() -> None:
     off = AppConfig()
     off.democratic_detrend_enabled = False

@@ -2,6 +2,140 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session — end-of-session consolidation: Brno production fix + docs (2026-06-14)
+
+**Task:** Diagnose draft_400 Brno `g_60_4` production-path failure; fix; anchor gate; doc sync; commit.
+
+**Comp / anchor (prior in session arc):** comp-stability fix; named-target dedupe; **sparse-only
+fallback** default ON + re-baseline lock (**3f7c9e7a** core / **d5b72d08** full); science-meaningful
+comparator is the regression arbiter.
+
+**Brno solver arc:**
+1. Scoped robustness (cone SIP, hint_sep) — sandbox 83.1% on draft_399 **never production-validated**.
+2. ROWORDER Y-flip **rejected** via anchor gate (~320 px / 77% LC break on home rig).
+3. Production root cause on draft_400: **Gaia cone at stale VY_TARG** (0.228° off solved center) →
+   full-pair refit capped ~55%; not “refit not engaging.”
+4. **Fix:** cone recenter on solved WCS (offset ≥0.05°) + full-pair refit pass 3; verified-strong
+   hint_sep escape; `app_config` + scoped flags wired in `generate_masterstar_and_catalog`.
+5. **Production path:** draft_400 `g_60_4` **passes** (75.5% brightest-N, WCS persists, past MASTERSTAR).
+6. **Anchor:** legacy-vs-scoped **0 science failures**; B ~0.003 px. **83.1% retracted** as target.
+
+**Other:** equipment seeds (C5A-150M id=4, AZ800 id=6); citation test fix; gate `_brno_check` → draft_400.
+
+**Open:** draft_401 UI sign-off + overlay; Brno r/i/z end-to-end.
+
+---
+
+## Session — plate-solver scoped lock: legacy-vs-scoped control (2026-06-14)
+
+**Task:** Confirm solver change photometry-neutral via same-harness (A) legacy vs (B) scoped re-cut; lock if (B) vs (A) = 0.
+
+**Control (`tmp/anchor387_legacy_vs_scoped_report.json`):**
+
+| Compare | science failures | max \|Δmag\| B |
+|---------|------------------|----------------|
+| (B) scoped vs (A) legacy | **0 / 1401** | **0.0** |
+| (A) legacy vs archive `3f7c9e7a…` | 1087 / 1401 | 2.26 |
+
+**Conclusion:** ~2.26 mag vs archive is **re-cut harness drift** (shared by legacy arm); scoped change (cone SIP + hint_sep) is photometry-neutral. ROWORDER Y-flip remains **OFF** (327 px break).
+
+**Brno `g_60_4`:** 83.1% match, WCS persists under scoped defaults.
+
+**Locked:** production defaults in `vyvar_platesolver.py`. No anchor re-baseline.
+
+**Parked:** `[TODO-RECUT-HARNESS-FIDELITY]` — re-cut vs archive gate unreliable until harness reproduces anchor science-meaningfully.
+
+---
+
+## Session — plate-solver robustness: SIP full cone pairs + ROWORDER (2026-06-14)
+
+**Task:** Brno `draft_000399` solver fix (SIP on all matched pairs, ROWORDER, equipment onboarding, anchor regression gate).
+
+**Changes:**
+- SIP refine pass matches against **deep Gaia cone** (`cat_df_cone_full`), not triangle slice — Brno `g_60_4` 128 pairs (was 34).
+- `ROWORDER=BOTTOM-UP` Y-flip on DAO centroids; skip mirror sweep when native ≥10% after flip.
+- FITS-header `hint_sep` escape at match ≥80%, RMS ≤2 px, hint_sep ≤0.45° (stale VY_TARG).
+- `force_apply` SIP blocked when `rms_sip > rms_linear` (strict; anchor L no longer spurious SIP).
+- Equipment seeds: C5A-150M id=4, AZ800 id=6 in `initialize_database()`.
+
+**Brno `g_60_4` after fix:** solve **passes**, WCS persists; match **83.1%** (128/154); linear RMS **1.36 px** (centre 1.15 / edge 2.09); SIP-3 on 128 pairs **rejected** (ratio 1.53 > guard 1.15) — distortion-limited linear, same class as diagnosis overlay (1).
+
+**Anchor 387 B/L/R/V `_20_2` re-solve:** `sip_applied=false` all setups; full-pair SIP input 242–250. Fresh re-solve CRPIX differs from frozen archive (full re-fit); **photometry science compare not re-run** — SIP status unchanged vs archive (all linear).
+
+**Tests:** `tests/test_platesolver_sip_roworder.py` (5). `ruff BLE001,E722` clean on touched files.
+
+---
+
+## Session -- anchor re-baseline lock: sparse fallback default ON (2026-06-11)
+
+**Task:** Reconcile additive-gate failure (`203254fd…` vs `3f7c9e7a…`) — three-way drift vs fallback;
+science-meaningful comparator; lock if benign.
+
+**Findings (in-SHA artefacts, all 4 setups, 1401 shared LCs):**
+
+| Compare | Verdict |
+|---------|---------|
+| (2) vs (1) code drift (ON re-cut vs archived `203254fd…`; fallback inert ⇒ OFF-equivalent) | `comp_path` column only on comp CSV (0 shared-row diffs); max &#124;ΔBJD&#124; = max &#124;ΔHJD&#124; = **1.86×10⁻⁹** d; **mag_calib / delta_mag / mag_inst / flux / dao_flux max &#124;Δ&#124; = 0.0**; per-frame **`err` QC recalc** (max &#124;Δ&#124; ≈ 1.60 mag, median ratio ~2.5×, mag unchanged) |
+| (3) vs (2) fallback effect | **0 recovery targets** on full re-cut — all `comp_path=default`; comp counts identical to archive |
+| Science-meaningful (3) vs (1) | **PASS** — `compare_photometry_science_meaningful`: 0 science/time failures |
+
+**9-vs-0 reconciliation:** Step-C phase01-only footprint (L:7, R:1, V:1 default-starved in isolated
+phase01 rerun) does **not** apply to full `draft_000387` photometry — archive already has ≥3 comps
+per target; fallback never fires; no new LC files (2806 unchanged).
+
+**Locked anchor:** core `3f7c9e7a5d8078317cb27678fde028cacf1986d3778547a0c50b087db5f19487` (2806);
+full `d5b72d0874a38b6bec69e7a3e56abb63b759b6906495c18aa6bbf4379525b2b6` (4285). Two-run repro
+confirmed (`tmp/rebaseline_387_sparse_fb_cut1` == `cut2`). Historical: `203254fd…` / `95a5515a…`.
+
+**Artifacts:** `tmp/anchor_reconcile_three_way.json`, `tests/photometry_sha.py`
+(`compare_photometry_science_meaningful`).
+
+---
+
+## Session -- sparse-only comp fallback (2026-06-12)
+
+**Context:** Wholesale `comp_iterative_clip_enabled` on anchor `draft_000387` was marginal churn
+(median Δlc_rms +0.04 mmag, ~93% same-n comp swaps, ~47% targets changed per filter) — rejected for
+rich fields.
+
+**Refactor:** Repurpose machinery as **`comp_sparse_fallback_enabled`** (default OFF; legacy alias
+`comp_iterative_clip_enabled`). Default a-priori selection unchanged; fallback runs **only** when
+default yields `< comp_sparse_fallback_min` (default = `n_comp_min`):
+
+- generous pool from masterstars (bypass global RMS pre-filter for that target),
+- leave-one-out 5σ-MAD clip on CM-removed residuals,
+- provenance `comp_path` ∈ {`default`, `sparse_fallback`} + funnel columns,
+- trust **YELLOW** on all `sparse_fallback` targets.
+
+**Anchor:** `tmp/sparse_fallback_step_cd.json` — B_20_2 rerun byte-identical when no default-starved
+targets; L/R/V have small default-starved counts → purely additive recovery only.
+
+**Sparse validation:** Qatar-8 / DY Peg in same JSON. CM-detrend target differential remains a
+separate opt-in thread (~182 mmag comp recovery, not 17 mmag).
+
+---
+
+## Session -- iterative ensemble-relative comp clip (2026-06-12)
+
+**Problem (sparse-field audit):** Double a-priori `comp_rms` cut — global pool pre-filter
+(`comp_pool_rms.py:399–404`) plus per-target gate — mis-rejects comps whose scatter is
+common-mode-contaminated (Qatar-8: 2 comps / 237 mmag LC; DY Peg: +7 comps recoverable after CM
+removal).
+
+**Fix (now sparse-only fallback — see session above):** machinery behind
+`comp_sparse_fallback_enabled` (default OFF).
+
+- Iterative leave-one-out 5σ-MAD clip on CM-removed ensemble residuals (Broeg 1/σ² provisional
+  ensemble; Honeycutt sorted-BJD CM detrend); provenance `comp_pool_n_*`, `comp_clip_iterations`,
+  `comp_path`.
+- Trust: sparse-fallback targets → **YELLOW**.
+- Citations gated when fallback runs: Gilliland & Brown 1988; Burdanov et al. 2014; Everett & Howell
+  2001.
+
+**Tests:** `tests/test_comp_iterative_clip.py`; full suite + ruff BLE001/E722.
+
+---
+
 ## Session -- Phase-1 duplicate Gaia comp pool crash (2026-06-12)
 
 **Problem:** `draft_000391` TOI host (and `1625336025625730816`) failed Phase-1 with

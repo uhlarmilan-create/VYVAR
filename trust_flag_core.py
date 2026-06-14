@@ -104,6 +104,9 @@ def classify_warnings(
     n_frames: int | None = None,
     n_check: int = 0,
     check_min_epochs: int = 5,
+    iterative_clip_used: bool = False,
+    sparse_fallback_used: bool = False,
+    comp_pool_n_final: int = 0,
 ) -> tuple[list[str], list[str]]:
     """Return (hard_labels, soft_labels) for one target."""
     hard: list[str] = []
@@ -112,8 +115,14 @@ def classify_warnings(
     th = thresholds
     n_chk = int(n_check)
     min_chk = max(3, int(check_min_epochs))
+    _sparse = bool(sparse_fallback_used or iterative_clip_used)
 
-    if nc < th.min_comps:
+    if _sparse:
+        _nf = int(comp_pool_n_final) if int(comp_pool_n_final) > 0 else nc
+        soft.append(
+            f"relaxed/iterative comp pool, low redundancy ({nc} clean / {_nf} selected)"
+        )
+    elif nc < th.min_comps:
         hard.append(f"only {nc} clean comp{'s' if nc != 1 else ''} (<{th.min_comps})")
     elif th.min_comps <= nc < th.strong:
         soft.append(
@@ -154,10 +163,12 @@ def trust_level(
     thresholds: CompTrustThresholds,
 ) -> str:
     # len(soft)>=3 is a forward guard (short_baseline excluded from escalation count).
-    if int(n_clean) < thresholds.min_comps or hard or _escalating_soft_count(soft) >= 3:
+    if hard or _escalating_soft_count(soft) >= 3:
         return "RED"
     if soft:
         return "YELLOW"
+    if int(n_clean) < thresholds.min_comps:
+        return "RED"
     return "GREEN"
 
 
@@ -205,6 +216,9 @@ def evaluate_target(
     n_frames: int | None = None,
     n_check: int = 0,
     check_min_epochs: int = 5,
+    iterative_clip_used: bool = False,
+    sparse_fallback_used: bool = False,
+    comp_pool_n_final: int = 0,
 ) -> dict[str, Any]:
     th = thresholds or CompTrustThresholds.from_bounds(3, 8)
     lq = str(lc_quality or "").strip().lower() or "—"
@@ -216,6 +230,9 @@ def evaluate_target(
         n_frames=n_frames,
         n_check=int(n_check),
         check_min_epochs=int(check_min_epochs),
+        iterative_clip_used=bool(iterative_clip_used),
+        sparse_fallback_used=bool(sparse_fallback_used),
+        comp_pool_n_final=int(comp_pool_n_final),
     )
     trust = trust_level(int(n_clean), hard, soft, th)
     reason = build_reason(
@@ -254,6 +271,34 @@ def compute_trust_for_photometry_dir(
     th = thresholds or CompTrustThresholds.from_bounds(3, 8)
     min_chk = max(3, int(check_min_epochs if check_min_epochs is not None else 5))
     summ = pd.read_csv(summ_path, dtype={"catalog_id": str}, low_memory=False)
+    comp_meta: dict[str, dict[str, int]] = {}
+    comp_path = phot / "comparison_stars_per_target.csv"
+    if comp_path.is_file():
+        try:
+            comp_df = pd.read_csv(
+                comp_path,
+                dtype={"target_catalog_id": str, "catalog_id": str},
+                low_memory=False,
+            )
+            if "target_catalog_id" in comp_df.columns:
+                for tid, grp in comp_df.groupby(comp_df["target_catalog_id"].astype(str).str.strip()):
+                    if not tid:
+                        continue
+                    ci = pd.to_numeric(grp.get("comp_clip_iterations"), errors="coerce")
+                    nf = pd.to_numeric(grp.get("comp_pool_n_final"), errors="coerce")
+                    _paths = (
+                        grp.get("comp_path", pd.Series("", index=grp.index))
+                        .astype(str)
+                        .str.strip()
+                        .str.lower()
+                    )
+                    comp_meta[tid] = {
+                        "comp_clip_iterations": int(ci.max()) if ci.notna().any() else 0,
+                        "comp_pool_n_final": int(nf.max()) if nf.notna().any() else 0,
+                        "sparse_fallback_used": bool((_paths == "sparse_fallback").any()),
+                    }
+        except Exception:  # noqa: BLE001
+            comp_meta = {}
     per_target: dict[str, dict[str, Any]] = {}
     conf_counts: dict[str, int] = {}
 
@@ -268,6 +313,9 @@ def compute_trust_for_photometry_dir(
         nf_raw = pd.to_numeric(row.get("n_frames"), errors="coerce")
         n_frames = int(nf_raw) if math.isfinite(float(nf_raw)) else None
         chk, n_chk = check_star_scatter(phot, cid)
+        _cm = comp_meta.get(cid, {})
+        _clip_iters = int(_cm.get("comp_clip_iterations", 0))
+        _sparse_fb = bool(_cm.get("sparse_fallback_used", False))
         info = evaluate_target(
             catalog_id=cid,
             vsx_name=vsx,
@@ -278,6 +326,9 @@ def compute_trust_for_photometry_dir(
             n_frames=n_frames,
             n_check=n_chk,
             check_min_epochs=min_chk,
+            iterative_clip_used=_clip_iters > 0,
+            sparse_fallback_used=_sparse_fb,
+            comp_pool_n_final=int(_cm.get("comp_pool_n_final", 0)),
         )
         per_target[cid] = info
         conf_counts[info["trust"]] = conf_counts.get(info["trust"], 0) + 1

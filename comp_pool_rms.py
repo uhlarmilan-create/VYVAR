@@ -88,6 +88,7 @@ def compute_global_pool_rms_map(
     chip_fw: int | None = None,
     chip_fh: int | None = None,
     max_comp_rms: float = 0.05,
+    apply_rms_prefilter: bool = True,
 ) -> dict[str, float]:
     """Vráti ``{star_id: comp_rms}`` po rovnakom flux→RMS reťazci ako Fáza 1 (bez per-target ensemble).
 
@@ -396,7 +397,7 @@ def compute_global_pool_rms_map(
                 int(nfr),
             )
 
-    if math.isfinite(max_comp_rms) and max_comp_rms > 0:
+    if apply_rms_prefilter and math.isfinite(max_comp_rms) and max_comp_rms > 0:
         rms_map = {
             cid: rms
             for cid, rms in sorted(rms_map.items(), key=lambda kv: (float(kv[1]), str(kv[0])))

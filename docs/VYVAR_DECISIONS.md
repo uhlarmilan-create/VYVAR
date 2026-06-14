@@ -636,3 +636,79 @@ parked (ROADMAP).
 exercised; **0** historical `slope=` comp notes; **LC byte-identical** on re-run expectation.
 Re-baseline (Step D) waits for Milan acceptance of bounded diff on longer-baseline validation
 (e.g. DY Peg `draft_000390`: slope notes removed, ensemble unchanged).
+
+### Sparse-only comp fallback (2026-06-12)
+
+**Decision:** Wholesale iterative comp clip rejected on anchor `draft_000387` (marginal churn, not net
+precision). Ship the same CM-residual clip machinery as a **per-target sparse-only fallback** behind
+`comp_sparse_fallback_enabled` (**default ON** from 2026-06-11 re-baseline lock; alias
+`comp_iterative_clip_enabled`).
+
+1. Run default a-priori selection unchanged; if `≥ comp_sparse_fallback_min` comps → stop.
+2. Else if flag ON: generous masterstars pool (no global RMS pre-filter / no a-priori comp_rms gate),
+   iterative leave-one-out 5σ-MAD on CM-removed residuals; recover LC if `≥ n_comp_min`.
+3. Provenance: `comp_path`, funnel columns on `comparison_stars_per_target.csv`.
+4. Trust: all `sparse_fallback` targets → **YELLOW**; default-path targets unchanged.
+
+**Anchor re-baseline (2026-06-11):** Three-way reconcile (`203254fd…` vs current code flag-OFF
+class vs flag-ON) on in-SHA artefacts. Rich `draft_000387` has **0 default-starved targets** in
+full photometry — fallback **inert** (all `comp_path=default`; 0 recovery LCs). Raw SHA moves to
+`3f7c9e7a…` / `d5b72d08…` (two-run repro). Drift vs old cut is benign: `comp_path` provenance,
+BJD/HJD ~1.9×10⁻⁹ d, per-frame `err` QC recalc (~2.5× scale, mag/flux byte-identical). Accept via
+`compare_photometry_science_meaningful` (PROCESS) — not raw `filecmp` vs `203254fd…`.
+
+**Baseline comparison method:** raw byte SHA for lock/repro; science-meaningful tolerance gate for
+regression vs prior anchor (provenance + QC excluded; BJD/HJD ≤1e-6 d; mag/flux ≤1e-6).
+
+### Plate-solver: scoped robustness + Brno production fix (2026-06-14)
+
+**Decision (locked):** Production defaults in `solve_wcs_with_local_gaia`:
+
+| Flag | Default | Rationale |
+|------|---------|-----------|
+| `solver_use_cone_for_sip` | ON | SIP pass 2 rematches on **deep Gaia cone** (not triangle slice) |
+| `solver_fits_header_hint_sep_escape` | ON | Verified-strong escape only (see below) — not match% alone |
+| `solver_apply_roworder_yflip` | **OFF** | **Rejected** — regression gate: ~**320 px** home-rig star displacement (77% LCs broken) |
+| `solver_legacy_masterstar_mirror_sweep` | ON | Single orientation resolver (home + Brno); mirror sweep retained |
+
+**ROWORDER `BOTTOM-UP` Y-flip rejected** — anchor regression gate showed it displaces home-rig stars
+~320 px. Kept **OFF**; legacy mirror sweep is the orientation resolver.
+
+**Brno 83.1% match retracted as a target** — draft_399 / lower detection count (154 vs 250) artifact;
+never production-validated on `generate_masterstar_and_catalog`. **Policy:** do not chase high match%;
+pass an **overlay-confirmed** correct-but-distortion-limited solve at lower match when appropriate.
+
+**Stale-hint cone recenter (real Brno blocker):** Gaia cone was built at `VY_TARG` while the linear
+WCS center was **0.228°** off. When header hint vs solved center offset **≥ 0.05°**, solver
+re-queries Gaia at the **solved WCS center** and re-runs full-pair refit.
+
+**hint_sep escape only on verified-strong solves:** cone recenter applied + **≥ 75%** brightest-N
+match + RMS **≤ 2 px** (+ overlay confirmation for distortion-limited passes) — **never on match%
+alone**.
+
+**Anchor gate:** same-harness legacy-vs-scoped re-cut on `draft_000387`: **0 science failures**
+(B) vs (A); B WCS **~0.003 px**. Re-cut vs archive alone is **not** a reliable gate (~2.26 mag B
+harness drift, internally deterministic) — use **`sandbox/anchor387_legacy_vs_scoped_gate.py`**.
+
+**Anchor re-baseline:** **3f7c9e7a (core) / d5b72d08 (full)** with sparse-only fallback default ON.
+**Science-meaningful comparator** adopted (numeric tolerance on BJD/mag/flux; excludes provenance
+columns).
+
+**SIP guard:** `force_apply` on MASTERSTAR requires `rms_sip ≤ rms_linear`. Distortion-limited fields
+may remain linear when SIP regresses.
+
+**Equipment:** C5A-150M (id=4, 3.76 µm), AZ800 (id=6, F=5480 mm) seeded in `initialize_database()`.
+
+**Supersedes** the 2026-06-14 scoped lock paragraph below (83.1% Brno target, ROWORDER ship candidate,
+FITS escape at ≥80% match alone).
+
+### Plate-solver: scoped robustness lock (2026-06-14, superseded)
+
+### Iterative ensemble-relative comp clip (2026-06-12, superseded by sparse-only fallback)
+
+**Decision:** Retire binding a-priori `comp_rms` cuts (global pool pre-filter + per-target gate)
+for sparse-field recovery. Replace with **generous candidate intake + iterative 5σ-MAD clip on
+CM-removed ensemble residuals** (Gilliland & Brown 1988; Broeg 2005; Honeycutt 1992 common-mode
+detrend; Burdanov et al. 2014 / ε Indi 2020 practice; Everett & Howell 2001).
+
+**Superseded:** wholesale flag — use sparse-only fallback above.

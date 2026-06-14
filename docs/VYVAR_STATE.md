@@ -1,7 +1,7 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-11** (`ad6e788` trust/anchor wrap + `9a4e525` math/physics audit hygiene;
-zaloha anchor `203254fd` / `95a5515a`; see `docs/VYVAR_MATH_PHYS_AUDIT.md`).
+Last updated: **2026-06-14** (Brno production solver fix; anchor `3f7c9e7a` / `d5b72d08`; sparse
+fallback ON).
 
 This is the **entry point**: a snapshot of what is true *now* + an index. It deliberately holds
 no history and no open-task detail -- those live in the linked files.
@@ -63,6 +63,7 @@ Plate scale is **WCS-derived** (~9.77 arcsec/px on the wide rig). Differential w
 | NEIGHBOR-SUB | `psf_neighbor_sub_enabled` | OFF |
 | COG aperture corr. | `cog_aperture_correction_enabled` | OFF |
 | Crowding classifier | `crowding_classifier_enabled` | OFF (wide rig) |
+| Sparse comp fallback | `comp_sparse_fallback_enabled` | **ON** (per-target; inert on rich anchor) |
 | Detrend | `sysrem_enabled`, `savgol_detrend_enabled` | OFF |
 | Skip processed/ | `skip_processed_directory` | OFF |
 
@@ -94,18 +95,43 @@ PM (`pmra`/`pmdec`) and `ruwe` are **NOT** in the DR3 catalog; **deferred to the
 (~Dec 2026). Platesolver PM propagation is present but a no-op against DR3. Fine-scale dense
 fields carry the GAIA-1 mis-association caveat until DR4 (DECISIONS).
 
+### Brno AZ800 / C5A-150M (production solver — 2026-06-14)
+
+**Brno AZ800 / C5A-150M onboarded.** Production solver fixed for stale FITS pointing hints
+(`VY_TARG`): when header hint vs solved WCS center offset **≥ 0.05°**, the solver **re-queries
+the Gaia cone at the solved center** and re-runs full-pair refit. FITS-header `hint_sep` escape is
+permitted only on a **verified-strong** solve (cone recenter applied + **≥ 75%** brightest-N match
++ RMS **≤ 2 px**). `generate_masterstar_and_catalog` passes `app_config` + explicit scoped flags to
+the solver.
+
+**Brno `g_60_4` (draft_400):** solves end-to-end on the **production path** — **75.5%** brightest-N
+(151/200), WCS persists, pipeline continues past MASTERSTAR. **Not fully locked** until Milan's
+**draft_401 UI sign-off + overlay**.
+
+**Open:** draft_401 UI operational sign-off + overlay; Brno **r/i/z** end-to-end.
+
+### Comp sparse-only fallback (2026-06-11 lock)
+
+**Sparse-only fallback live (default ON).** Canonical anchor **3f7c9e7a (core) / d5b72d08 (full)**.
+**Science-meaningful comparator** (`compare_photometry_science_meaningful`) is the regression arbiter
+when raw SHA drifts for non-science reasons (provenance, per-frame `err` QC).
+
 ### Reference draft and byte-identity
 
 The anchor is a **SHA fingerprint + regeneration recipe**, not a dependency on any draft tree
 surviving. Byte-identity is re-verified by regenerating from the recipe below and comparing
 computed SHA to the recorded values (`tests/photometry_sha.py`).
 
-- **Core SHA** `203254fd75ea5874f5986eac3f478260c2e7e5a9c2636bfecf2b31244cfb09ba` (2806 files:
+- **Core SHA** `3f7c9e7a5d8078317cb27678fde028cacf1986d3778547a0c50b087db5f19487` (2806 files:
   `lightcurve_*.csv` + `comp_quality_*.json` + `comparison_stars_per_target.csv`).
-- **Full SHA** `95a5515a6c15a473b6fcd29d3afe0c3b78d88a2da434f8a1c03f28dbe2783c24` (4285 files:
+- **Full SHA** `d5b72d0874a38b6bec69e7a3e56abb63b759b6906495c18aa6bbf4379525b2b6` (4285 files:
   core + `comp_qa_*.json`). SHA set excludes `lc_quality_flag` / trust.
-- Cut from ephemeral `draft_000386` (2026-06-11); **confirmed** `draft_000387` (byte-identical).
-  **RETIRED:** `f4bcc0ee` / `bd0b1792` (draft_385 truncated photometry — false success);
+- **Historical (pre-drift / flag-OFF era):** core `203254fd75ea5874…` / full `95a5515a6c15a473…`
+  (2026-06-11 zaloha cut; current code/env no longer byte-reproduces — benign drift only; see
+  PROCESS science-meaningful gate).
+- Cut from ephemeral `draft_000387` re-cut ×2 (2026-06-11); two-run repro confirmed on
+  `tmp/rebaseline_387_sparse_fb_cut{1,2}`. Prior cut `draft_000386` (byte-identical to archived
+  `draft_000387` at old SHA). **RETIRED:** `f4bcc0ee` / `bd0b1792` (draft_385 truncated photometry — false success);
   `d246a5be` / `30a2f461` (draft_382 TAP field DB G<=19.5).
 
 **Regeneration recipe** (`docs/VYVAR_CHIANDH_BASELINE_RUNBOOK.md`) — **no TAP / no field DB:**
@@ -115,7 +141,9 @@ computed SHA to the recorded values (`tests/photometry_sha.py`).
    (`gaia_triangles_fine.pkl`, `gaia_triangles_wide.pkl`). **Do not read** in-progress
    `GAIA_DR3/vyvar_gaia_dr3.db`.
 3. **Run:** `python scripts/chiandh_night_run_bvr.py` (#3 code; Newton bin2 ~1.30"/px).
-4. **Verify:** `compute_photometry_sha(draft_root)` core + full vs recorded SHAs.
+4. **Verify:** `compute_photometry_sha(draft_root)` core + full vs recorded SHAs (`3f7c9e7a…` /
+   `d5b72d08…`). For regression vs the historical cut, use
+   `compare_photometry_science_meaningful` (PROCESS) — excludes provenance/`err` QC drift.
 
 **Setups (filter-wheel labels):** `B_20_2`, `V_20_2`, `R_20_2`, `L_20_2` — **B/V/R/L** are wheel
 positions. **V** = visual/green (`G/` folder); **L** = clear/broadband (`L_20_2` in anchor).
@@ -124,7 +152,7 @@ positions. **V** = visual/green (`G/` folder); **L** = clear/broadband (`L_20_2`
 
 | Item | Value |
 |------|-------|
-| `git_commit` | `39690b7fa398dc0445f8956d318296aeb0cfe725` |
+| `git_commit` | `7317ece87944b749461a7b6abca6615f1a30dc72` (re-baseline lock) |
 | Catalog | `GAIA_DR3/zaloha/vyvar_gaia_dr3.db` (G<=16) + zaloha blind PKLs |
 | Rig | Newton 300/1200 + C3-26000, bin2 ~1.30"/px |
 | Ephemeral draft | `draft_000386` (~1401 LCs; deletable) |

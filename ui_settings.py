@@ -757,6 +757,31 @@ def render_settings_dashboard(
             value=float(cfg.phase01_comparison_max_comp_rms),
             step=0.01,
         )
+        p01_sparse_fb = st.checkbox(
+            "comp_sparse_fallback_enabled",
+            value=bool(getattr(cfg, "comp_sparse_fallback_enabled", True)),
+            help=(
+                "Per-target sparse fallback only: when default comp selection is starved, "
+                "run generous pool + iterative CM-residual clip (default OFF)."
+            ),
+        )
+        p01_sparse_fb_min = st.number_input(
+            "comp_sparse_fallback_min",
+            min_value=2,
+            max_value=int(cfg.phase01_comparison_n_comp_max),
+            value=int(getattr(cfg, "comp_sparse_fallback_min", 0) or cfg.phase01_comparison_n_comp_min),
+            step=1,
+            disabled=not p01_sparse_fb,
+            help="Trigger fallback when default yields fewer comps than this (0 in config → n_comp_min).",
+        )
+        p01_clip_sigma = st.slider(
+            "comp_clip_sigma",
+            min_value=3.0,
+            max_value=10.0,
+            value=float(getattr(cfg, "comp_clip_sigma", 5.0) or 5.0),
+            step=0.5,
+            disabled=not p01_sparse_fb,
+        )
         p01_mind = st.slider(
             "phase01_comparison_min_dist_arcsec",
             min_value=0.0,
@@ -884,6 +909,11 @@ def render_settings_dashboard(
         if cfg.phase01_comparison_n_comp_max < cfg.phase01_comparison_n_comp_min:
             cfg.phase01_comparison_n_comp_max = cfg.phase01_comparison_n_comp_min
         cfg.phase01_comparison_max_comp_rms = float(max(0.01, min(0.5, p01_rms)))
+        cfg.comp_sparse_fallback_enabled = bool(p01_sparse_fb)
+        cfg.comp_iterative_clip_enabled = bool(p01_sparse_fb)
+        _fb_min_raw = int(p01_sparse_fb_min)
+        cfg.comp_sparse_fallback_min = 0 if _fb_min_raw == int(cfg.phase01_comparison_n_comp_min) else _fb_min_raw
+        cfg.comp_clip_sigma = float(max(3.0, min(10.0, p01_clip_sigma)))
         cfg.phase01_comparison_min_dist_arcsec = float(max(0.0, min(600.0, p01_mind)))
         cfg.phase01_comparison_min_frames_frac = float(max(0.05, min(0.95, p01_mff)))
         cfg.phase01_comparison_exclude_gaia_nss = bool(p01_ex_nss)

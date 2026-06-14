@@ -57,10 +57,41 @@ estimator prototypes alone.
 5. **Confirm-reproducibility-before-locking** — two independent fresh runs must match on SHA
    before recording a new anchor (`draft_386 == draft_387`).
 
+## Plate-solver change lock (2026-06-14)
+
+**Locked:** scoped solver in `vyvar_platesolver.py` — full-cone SIP refine ON; ROWORDER Y-flip **OFF**
+(~320 px home break); legacy mirror sweep ON; **stale-hint Gaia cone recenter** + **verified-strong**
+FITS-header `hint_sep` escape (recenter + ≥75% brightest-N + RMS ≤2 px; overlay for distortion-limited).
+
+**Test-vs-production gap is recurring.** Validate solver/photometry changes on the **production
+entry** (`generate_masterstar_and_catalog` / a fresh UI draft), not a sandbox harness on
+`solve_wcs_with_local_gaia` alone. The 83.1% Brno artifact and re-cut harness drift are both instances.
+
+**Regression gate before lock:** anchor footprint + science-meaningful comparator catches silent
+corruption before lock (caught the 320 px ROWORDER break).
+
+**Guard relaxation only with overlay-confirmed correctness** — never on match% alone.
+
+**Acceptance method:** same-harness legacy-vs-scoped control
+(`sandbox/anchor387_legacy_vs_scoped_gate.py`); **(B) vs (A) = 0 science failures** → lock.
+Re-cut vs frozen archive alone conflates harness drift (~1087 failures, B max |Δmag| ≈ 2.26).
+
+**Follow-up (does not block lock):** `[TODO-RECUT-HARNESS-FIDELITY]` in ROADMAP.
+
 ## Byte-identity discipline
 
+- **Raw byte SHA** (`compute_photometry_sha`): canonical fingerprint for a locked anchor cut.
+  Two independent fresh runs must match before lock (`draft_386 == draft_387` class).
+- **Science-meaningful acceptance** (`compare_photometry_science_meaningful` in
+  `tests/photometry_sha.py`): use for re-baseline / additive gates vs a prior anchor when raw
+  bytes differ for non-science reasons. Excludes provenance columns on
+  `comparison_stars_per_target.csv` (`comp_path`, funnel cols) and LC QC columns (`err`,
+  `err_inflation`, `flag`, `method`, `source_file`, lunar metadata). Tolerances: BJD/HJD
+  `≤ 1e-6` d; differential photometry columns (`mag_*`, `flux*`, `delta_mag`) `≤ 1e-6`.
+  Per-frame `err` is **out of scope** for anchor science identity (QC export; mag unchanged).
 - **Read-only change** (QA, metadata, reports-only): numeric photometry must be
-  **byte-identical**. Prove it with SHA-256 over `lightcurve_*.csv`, `comp_quality_*.json`,
+  **byte-identical** *or* pass the science-meaningful gate when comparing to a historical cut.
+  Prove raw drift with SHA-256 over `lightcurve_*.csv`, `comp_quality_*.json`,
   `comparison_stars_per_target.csv` (core subset), plus `comp_qa_*.json` sidecars when comp QA
   methodology is in scope. AAVSO/VarAstro data rows follow the same discipline. Report-text
   changes are allowed only where intended (badge/note), and the diff must be *only* that text.
@@ -75,6 +106,7 @@ estimator prototypes alone.
 | date | old SHA | new SHA | reason |
 |------|---------|---------|--------|
 | 2026-06-09 | `770966c3...` (core 283) | `edbd97e7...` (426 incl. comp_qa) | CQ-C fix-once order-independent comp_qa locus; core LC/comp_quality/comparison unchanged; bounded diff 1 flag / 1 n_clean / 0 trust |
+| 2026-06-11 | `203254fd...` / `95a5515a...` (historical pre-drift) | `3f7c9e7a...` core (2806) / `d5b72d08...` full (4285) | Sparse-fallback default ON + benign code drift (`comp_path`, BJD ~1e-9, `err` QC); rich anchor inert (0 recovery); two-run repro on `draft_000387` re-cut |
 | 2026-06-11 | `f4bcc0ee...` / `bd0b1792...` (draft_385 truncated, RETIRED) | `203254fd...` core (2806) / `95a5515a...` full (4285) | Chi_and_H full zaloha anchor (draft_386; confirmed draft_387; G<=16) |
 | 2026-06-11 | `d246a5be...` / `30a2f461...` (draft_382 TAP G<=19.5, RETIRED) | `f4bcc0ee...` core (1098) / `bd0b1792...` full (1113) | Chi_and_H zaloha cut from truncated run (RETIRED same day) |
 | 2026-06-10 | `770966c3...` / `edbd97e7...` (deleted draft_366) | `d246a5be...` core (2810) / `30a2f461...` full (4291) | Chi_and_H TAP field DB cut (RETIRED 2026-06-11) |

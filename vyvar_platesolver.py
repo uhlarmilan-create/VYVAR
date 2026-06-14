@@ -704,6 +704,18 @@ def _fit_sip_on_matches(
     if force_apply and w_sip.sip is not None:
         _rms_sip_f = float(meta.get("rms_sip_px") or 999.0)
         _rms_lin_f = float(meta.get("rms_linear_px") or 999.0)
+        if _rms_sip_f > _rms_lin_f:
+            meta["sip_applied"] = False
+            meta["reason"] = "force_apply_blocked_rms_regression"
+            meta["rms_guard_ratio"] = round(_rms_sip_f / _rms_lin_f, 4) if _rms_lin_f > 0 else None
+            _hist_msg = (
+                f"VYVAR: SIP rejected by RMS guard "
+                f"(lin={_rms_lin_f:.3f} sip={_rms_sip_f:.3f} "
+                f"ratio={_rms_sip_f / _rms_lin_f:.3f}; SIP must not exceed linear RMS)"
+            )
+            log_event(_hist_msg)
+            meta["sip_rms_guard_history"] = _hist_msg
+            return None, meta
         _guard = float(sip_force_rms_guard_ratio) if sip_force_rms_guard_ratio is not None else None
         if _guard is not None and _rms_lin_f > 0 and _rms_sip_f > _rms_lin_f * _guard:
             meta["sip_applied"] = False
@@ -2189,6 +2201,200 @@ def _mirror_detections_xy(
     return x, y
 
 
+def _fits_roworder_yflip_applied(hdr: Any) -> bool:
+    ro = str(hdr.get("ROWORDER", "") or "").strip().upper().replace("_", "-")
+    return ro == "BOTTOM-UP"
+
+
+def _apply_fits_roworder_to_detections(
+    xs: np.ndarray,
+    ys: np.ndarray,
+    *,
+    hdr: Any,
+    naxis2: int,
+) -> tuple[np.ndarray, np.ndarray, str | None]:
+    """Map DAO centroids to top-down image frame when FITS ``ROWORDER=BOTTOM-UP``."""
+    x = np.asarray(xs, dtype=np.float64, copy=True)
+    y = np.asarray(ys, dtype=np.float64, copy=True)
+    if _fits_roworder_yflip_applied(hdr):
+        y = (float(naxis2) - 1.0) - y
+        return x, y, "bottom_up_yflip"
+    return x, y, None
+
+
+def _sip_match_max_px(max_px_coarse: float) -> float:
+    """Match radius for SIP fitting — wide enough to include edge stars (distortion constraints)."""
+    return max(15.0, min(48.0, float(max_px_coarse) * 0.55))
+
+
+def _assess_masterstar_distortion_limited_linear(
+    wcs: WCS,
+    px: np.ndarray,
+    py: np.ndarray,
+    pra: np.ndarray,
+    pde: np.ndarray,
+    *,
+    naxis1: int,
+    naxis2: int,
+) -> dict[str, Any]:
+    """Overlay-style check: centre-tight / edge-drift residuals (benign Newton distortion)."""
+    meta: dict[str, Any] = {"distortion_limited_benign": False}
+    pxa = np.asarray(px, dtype=np.float64)
+    pya = np.asarray(py, dtype=np.float64)
+    ra_a = np.asarray(pra, dtype=np.float64)
+    de_a = np.asarray(pde, dtype=np.float64)
+    if len(pxa) < 20:
+        meta["distortion_assess_skipped"] = "too_few_pairs"
+        return meta
+    try:
+        xp, yp = wcs.all_world2pix(ra_a, de_a, 0)
+        res = np.hypot(pxa - np.asarray(xp, dtype=np.float64), pya - np.asarray(yp, dtype=np.float64))
+    except Exception as exc:  # noqa: BLE001
+        meta["distortion_assess_error"] = repr(exc)
+        return meta
+    cx = 0.5 * float(naxis1)
+    cy = 0.5 * float(naxis2)
+    r_norm = np.hypot(pxa - cx, pya - cy) / max(1.0, 0.5 * min(float(naxis1), float(naxis2)))
+    centre = r_norm < 0.35
+    edge = r_norm > 0.65
+    if not bool(np.any(centre)) or not bool(np.any(edge)):
+        meta["distortion_assess_skipped"] = "insufficient_radial_bins"
+        return meta
+    centre_rms = float(np.sqrt(np.mean(np.square(res[centre]))))
+    edge_rms = float(np.sqrt(np.mean(np.square(res[edge]))))
+    overall_rms = float(np.sqrt(np.mean(np.square(res))))
+    ratio = float(edge_rms / centre_rms) if centre_rms > 1e-6 else float("inf")
+    meta.update(
+        {
+            "distortion_centre_rms_px": centre_rms,
+            "distortion_edge_rms_px": edge_rms,
+            "distortion_edge_centre_ratio": ratio,
+            "distortion_overall_rms_px": overall_rms,
+        }
+    )
+    benign = (
+        math.isfinite(centre_rms)
+        and math.isfinite(edge_rms)
+        and centre_rms <= 1.60
+        and edge_rms <= 3.20
+        and ratio <= 2.50
+        and overall_rms <= 2.50
+    )
+    meta["distortion_limited_benign"] = bool(benign)
+    return meta
+
+
+def _greedy_match_pairs_for_sip(
+    wcs: WCS,
+    ra_all: np.ndarray,
+    de_all: np.ndarray,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    *,
+    max_px_coarse: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
+    max_px = _sip_match_max_px(max_px_coarse)
+    px, py, pra, pde = _greedy_match_pairs_pixel_wcs(
+        wcs,
+        ra_all,
+        de_all,
+        xs,
+        ys,
+        max_px=max_px,
+    )
+    return (
+        np.asarray(px, dtype=np.float64),
+        np.asarray(py, dtype=np.float64),
+        np.asarray(pra, dtype=np.float64),
+        np.asarray(pde, dtype=np.float64),
+        float(max_px),
+    )
+
+
+def _fit_linear_wcs_from_pairs(
+    px: np.ndarray,
+    py: np.ndarray,
+    pra: np.ndarray,
+    pde: np.ndarray,
+    *,
+    ransac_refinement: bool,
+    ransac_min_pairs: int,
+    rng_seed: int,
+) -> WCS:
+    world_m = SkyCoord(ra=np.asarray(pra, dtype=np.float64) * u.deg, dec=np.asarray(pde, dtype=np.float64) * u.deg, frame="icrs")
+    if ransac_refinement and len(px) >= int(ransac_min_pairs):
+        rng = np.random.default_rng(int(rng_seed))
+        return _ransac_fit_wcs_tan(px, py, world_m, rng=rng)
+    return fit_wcs_from_points((px, py), world_m, projection="TAN")
+
+
+def _refit_linear_and_sip_on_full_pairs(
+    w_lin: WCS,
+    ra_all: np.ndarray,
+    de_all: np.ndarray,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    *,
+    max_px_coarse: float,
+    enable_sip: bool,
+    sip_max_order: int,
+    sip_min_order: int,
+    is_masterstar: bool,
+    sip_force_rms_guard_ratio: float | None,
+    ransac_refinement: bool,
+    ransac_min_pairs: int,
+    rng_seed: int,
+) -> tuple[WCS, list[float], list[float], list[float], list[float], dict[str, Any]]:
+    """Greedy wide match → linear refit → optional SIP on **all** matched pairs (not tight subset)."""
+    meta: dict[str, Any] = {}
+    px, py, pra, pde, max_px_sip = _greedy_match_pairs_for_sip(
+        w_lin, ra_all, de_all, xs, ys, max_px_coarse=max_px_coarse
+    )
+    meta["max_px_sip"] = float(max_px_sip)
+    meta["n_pairs_sip_input"] = int(len(px))
+    if len(px) < 5:
+        meta["sip_skipped"] = "too_few_full_pairs"
+        return (
+            w_lin,
+            np.asarray(px, dtype=np.float64).tolist(),
+            np.asarray(py, dtype=np.float64).tolist(),
+            np.asarray(pra, dtype=np.float64).tolist(),
+            np.asarray(pde, dtype=np.float64).tolist(),
+            meta,
+        )
+    w_lin2 = _fit_linear_wcs_from_pairs(
+        px, py, pra, pde,
+        ransac_refinement=ransac_refinement,
+        ransac_min_pairs=ransac_min_pairs,
+        rng_seed=rng_seed,
+    )
+    wcs_out: WCS = w_lin2
+    world_m = SkyCoord(ra=pra * u.deg, dec=pde * u.deg, frame="icrs")
+    if enable_sip and int(sip_max_order) >= 2:
+        w_sip, sip_m = _fit_sip_for_solver(
+            bool(is_masterstar),
+            w_lin2,
+            px,
+            py,
+            world_m,
+            sip_max_order=int(sip_max_order),
+            sip_min_order=int(sip_min_order),
+            force_apply=bool(is_masterstar),
+            sip_force_rms_guard_ratio=sip_force_rms_guard_ratio,
+        )
+        meta.update(sip_m)
+        if w_sip is not None:
+            wcs_out = w_sip
+    return (
+        wcs_out,
+        px.tolist(),
+        py.tolist(),
+        pra.tolist(),
+        pde.tolist(),
+        meta,
+    )
+
+
 def _gaia_triangle_greedy_orientation_probe(
     cat_df_in: pd.DataFrame,
     xs: np.ndarray,
@@ -2990,6 +3196,7 @@ def _solve_wcs_validate_and_refine(
     masterstar_prewrite_rms_max_px: float | None,
     masterstar_prewrite_relaxed_rms_max_px: float | None,
     masterstar_nn_refine_max_rms_px: float | None,
+    fits_header_hint_sep_escape: bool = True,
 ) -> tuple[
     WCS,
     fits.Header,
@@ -3029,7 +3236,7 @@ def _solve_wcs_validate_and_refine(
     try:
         _ra_cat = cat_df_assoc["ra_deg"].to_numpy(dtype=np.float64)
         _de_cat = cat_df_assoc["dec_deg"].to_numpy(dtype=np.float64)
-        _mtq = float(sip_meta.get("max_px_tight", 0.0) or 0.0)
+        _mtq = float(sip_meta.get("max_px_sip", 0.0) or 0.0)
         if not (math.isfinite(_mtq) and _mtq > 0):
             _mtq = float(max_px_coarse)
         _qa_px = max(15.0, min(48.0, float(_mtq) * 1.22))
@@ -3053,8 +3260,51 @@ def _solve_wcs_validate_and_refine(
     _match_rate = float(_matched_n) / float(_n_det_total)
     sip_meta["match_rate_n_used"] = int(n_img)
     sip_meta["match_rate_n_matched"] = int(_matched_n)
+    # Brightest-N scope (same as final user-facing match%) for validation gates.
+    _nrate_qa = min(200, int(n_img))
+    _match_rate_bright = _match_rate
+    if _nrate_qa >= 6 and int(n_img) > _nrate_qa:
+        try:
+            _bxq = np.asarray(xs, dtype=np.float64)[: int(_nrate_qa)]
+            _byq = np.asarray(ys, dtype=np.float64)[: int(_nrate_qa)]
+            _bqx, _bqy, _, _ = _greedy_match_pairs_pixel_wcs(
+                wcs_final,
+                _ra_cat,
+                _de_cat,
+                _bxq,
+                _byq,
+                max_px=float(_qa_px),
+            )
+            _match_rate_bright = float(len(_bqx)) / float(int(_nrate_qa))
+            sip_meta["match_rate_bright_n"] = int(_nrate_qa)
+            sip_meta["match_rate_bright"] = float(_match_rate_bright)
+            sip_meta["match_rate_bright_matched"] = int(len(_bqx))
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("[SOLVER] QA brightest-N rematch skipped: %s", exc)
+    _match_rate_gate = float(_match_rate_bright if _is_masterstar else _match_rate)
+    _dist_assess: dict[str, Any] = {}
+    if _is_masterstar and int(_matched_n) >= 20:
+        try:
+            _dist_assess = _assess_masterstar_distortion_limited_linear(
+                wcs_final,
+                np.asarray(pairs_x, dtype=np.float64),
+                np.asarray(pairs_y, dtype=np.float64),
+                np.asarray(pairs_ra, dtype=np.float64),
+                np.asarray(pairs_de, dtype=np.float64),
+                naxis1=int(naxis1),
+                naxis2=int(naxis2),
+            )
+            sip_meta.update(_dist_assess)
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("[SOLVER] distortion-limited assess skipped: %s", exc)
+    _dist_benign = bool(_dist_assess.get("distortion_limited_benign", False))
     _rms_px = None
-    for _k in ("wcs_refine_rms_px", "rms_sip_px", "rms_linear_px"):
+    _rms_keys = (
+        ("wcs_refine_rms_px", "rms_sip_px", "rms_linear_px")
+        if bool(sip_meta.get("sip_applied", False))
+        else ("wcs_refine_rms_px", "rms_linear_px", "rms_sip_px")
+    )
+    for _k in _rms_keys:
         _v = sip_meta.get(_k)
         try:
             _vf = float(_v)
@@ -3080,7 +3330,12 @@ def _solve_wcs_validate_and_refine(
         _hint_sep_deg = float("nan")
     log_event(
         f"VYVAR platesolve QA: match_rate={_match_rate * 100.0:.1f}% "
-        f"rms={float(_rms_px):.2f}px hint_vs_solved={_hint_sep_deg:.3f}deg"
+        f"gate={_match_rate_gate * 100.0:.1f}% "
+        f"rms={float(_rms_px):.2f}px hint_vs_solved={_hint_sep_deg:.3f}deg "
+        f"distortion_benign={bool(_dist_benign)} "
+        f"centre/edge_rms="
+        f"{_dist_assess.get('distortion_centre_rms_px', 'n/a')}/"
+        f"{_dist_assess.get('distortion_edge_rms_px', 'n/a')}px"
     )
 
     # Hint separation guard: adapt to hint source + field size.
@@ -3130,6 +3385,56 @@ def _solve_wcs_validate_and_refine(
                 f"VYVAR MASTERSTAR: hint_sep limit widened {_old_lim:.2f}→{hint_sep_limit:.2f}deg "
                 f"(excellent QA; hint_vs_solved={float(_hint_sep_deg):.3f}deg)"
             )
+    # Pre-cal / stale mount-object hints: accept strong Gaia match when hint is modestly off.
+    if (
+        _is_masterstar
+        and _relax_ok
+        and math.isfinite(float(_hint_sep_deg))
+        and (float(_hint_sep_deg) > float(hint_sep_limit))
+        and (float(_match_rate) >= 0.85)
+        and (int(_matched_n) >= 80)
+        and math.isfinite(float(_rms_px))
+        and (float(_rms_px) <= 2.0)
+        and (float(_hint_sep_deg) <= 0.45)
+    ):
+        hint_sep_limit = float(_hint_sep_deg) + 0.01
+        log_event(
+            f"VYVAR MASTERSTAR: hint_sep limit widened to {hint_sep_limit:.2f}deg "
+            f"(strong match {float(_match_rate) * 100.0:.1f}%, rms={float(_rms_px):.2f}px, "
+            f"hint_vs_solved={float(_hint_sep_deg):.3f}deg)"
+        )
+    # FITS-header hints (stale VY_TARG / mount pointing): Qatar-class when QA is healthy but just under 85%.
+    _hint_is_fits_hdr = "fits header" in _coord_src_l
+    _fits_escape_match_ok = (float(_match_rate) >= 0.80) or (
+        int(_matched_n) >= 80
+        and float(_match_rate) >= 0.45
+        and float(_match_rate_gate) >= 0.65
+        and (
+            _dist_benign
+            or bool(sip_meta.get("cone_recenter_refit_applied"))
+        )
+    )
+    if (
+        bool(fits_header_hint_sep_escape)
+        and _is_masterstar
+        and _hint_is_fits_hdr
+        and (not _hint_is_weak)
+        and _relax_ok
+        and math.isfinite(float(_hint_sep_deg))
+        and (float(_hint_sep_deg) > float(hint_sep_limit))
+        and bool(_fits_escape_match_ok)
+        and (int(_matched_n) >= 80)
+        and math.isfinite(float(_rms_px))
+        and (float(_rms_px) <= 2.0)
+        and (float(_hint_sep_deg) <= 0.45)
+    ):
+        hint_sep_limit = float(_hint_sep_deg) + 0.01
+        _escape_tag = "distortion-limited" if _dist_benign and float(_match_rate) < 0.80 else "strong match"
+        log_event(
+            f"VYVAR MASTERSTAR: FITS-header hint_sep widened to {hint_sep_limit:.2f}deg "
+            f"({_escape_tag} {float(_match_rate) * 100.0:.1f}%, gate={float(_match_rate_gate) * 100.0:.1f}%, "
+            f"rms={float(_rms_px):.2f}px, hint_vs_solved={float(_hint_sep_deg):.3f}deg)"
+        )
     _hint_sep_bad = math.isfinite(float(_hint_sep_deg)) and float(_hint_sep_deg) > float(hint_sep_limit)
     log_event(
         f"INFO: hint_sep guard: {float(_hint_sep_deg):.3f}deg "
@@ -3282,7 +3587,7 @@ def _solve_wcs_validate_and_refine(
     try:
         _ra_cat2 = cat_df_assoc["ra_deg"].to_numpy(dtype=np.float64)
         _de_cat2 = cat_df_assoc["dec_deg"].to_numpy(dtype=np.float64)
-        _mtq3 = float(sip_meta.get("max_px_tight", 0.0) or 0.0)
+        _mtq3 = float(sip_meta.get("max_px_sip", 0.0) or 0.0)
         if not (math.isfinite(_mtq3) and _mtq3 > 0):
             _mtq3 = float(max_px_coarse)
         _post_px = max(15.0, min(52.0, float(_mtq3) * 1.28))
@@ -3571,6 +3876,10 @@ def solve_wcs_with_local_gaia(
     masterstar_sip_min_order: int | None = None,
     masterstar_sip_force_rms_guard_ratio: float | None = None,
     app_config: Any | None = None,
+    solver_use_cone_for_sip: bool = True,
+    solver_apply_roworder_yflip: bool = False,
+    solver_legacy_masterstar_mirror_sweep: bool = True,
+    solver_fits_header_hint_sep_escape: bool = True,
 ) -> dict[str, Any]:
     """Plate-solve by matching DAO stars to **local Gaia DR3** (SQLite); writes WCS into the FITS primary HDU.
 
@@ -3595,6 +3904,14 @@ def solve_wcs_with_local_gaia(
         return {"solved": False, "reason": f"File not found: {fp}"}
     _cfg_ps = app_config or AppConfig()
     _is_masterstar = fp.name.strip().upper() == "MASTERSTAR.FITS"
+    log_event(
+        "VYVAR solver flags: "
+        f"cone_sip={bool(solver_use_cone_for_sip)} "
+        f"hint_sep_escape={bool(solver_fits_header_hint_sep_escape)} "
+        f"legacy_mirror={bool(solver_legacy_masterstar_mirror_sweep)} "
+        f"roworder_yflip={bool(solver_apply_roworder_yflip)} "
+        f"app_config={'passed' if app_config is not None else 'default'}"
+    )
 
     # SIP order: 2–5; MASTERSTAR skúša nadol po masterstar_sip_min_order (napr. 5→4→3).
     if enable_sip:
@@ -4085,6 +4402,11 @@ def solve_wcs_with_local_gaia(
     tbl = tbl_sorted[:top]
     xs = np.asarray(tbl["xcentroid"], dtype=np.float64)
     ys = np.asarray(tbl["ycentroid"], dtype=np.float64)
+    _roworder_ori: str | None = None
+    if bool(solver_apply_roworder_yflip):
+        xs, ys, _roworder_ori = _apply_fits_roworder_to_detections(
+            xs, ys, hdr=hdr0, naxis2=int(naxis2)
+        )
     n_img = len(xs)
     if n_img < 6:
         return {"solved": False, "reason": "VYVAR solver: po orezaní málo hviezd na snímke."}
@@ -4153,15 +4475,29 @@ def solve_wcs_with_local_gaia(
 
     ori_candidates: list[tuple[str, bool, bool, dict[str, Any]]] = [("native", False, False, probe0)]
     _probe_rate0 = float(probe0["match_rate"])
-    # Slabý native match: vždy otestovať zrkadlá. MASTERSTAR: vždy porovnať (rohy / parity),
-    # lebo vysoký globálny match_rate ešte nemusí znamenať správnu orientáciu pixel↔sky.
+    # Slabý native match: vždy otestovať zrkadlá. MASTERSTAR: legacy path vždy porovná zrkadlá
+    # (anchor-validated); ROWORDER skip len keď explicitne vypnutý legacy režim.
     _preferred = str(preferred_mirror or "").strip().lower() or None
     if _preferred not in {"native", "mirror_x", "mirror_y", "mirror_xy"}:
         _preferred = None
 
-    # If caller hints the expected parity/orientation (from MASTERSTAR WCS), try it first and allow early exit.
-    # This is especially important when the field is mirrored (det<0) and the naive sweep can pick a wrong axis.
-    _mirror_sweep = bool(_probe_rate0 < 0.10) or bool(_is_masterstar) or bool(_preferred and _preferred != "native")
+    if bool(solver_legacy_masterstar_mirror_sweep):
+        _mirror_sweep = (
+            bool(_preferred and _preferred != "native")
+            or float(_probe_rate0) < 0.10
+            or bool(_is_masterstar)
+        )
+    else:
+        _roworder_native_ok = bool(_roworder_ori) and float(_probe_rate0) >= 0.10
+        _mirror_sweep = bool(_preferred and _preferred != "native") or (
+            float(_probe_rate0) < 0.10
+            or (bool(_is_masterstar) and not _roworder_native_ok)
+        )
+        if _roworder_native_ok:
+            log_event(
+                f"INFO: FITS ROWORDER native parity {float(_probe_rate0) * 100.0:.1f}% — "
+                "mirror sweep preskočený (fallback len pri native < 10%)."
+            )
     if _mirror_sweep:
         mirrors = [("mirror_x", True, False), ("mirror_y", False, True), ("mirror_xy", True, True)]
         if _preferred and _preferred != "native":
@@ -4353,6 +4689,8 @@ def solve_wcs_with_local_gaia(
     sip_meta: dict[str, Any] = {
         "max_px_coarse": float(max_px_coarse),
     }
+    if _roworder_ori:
+        sip_meta["fits_roworder_applied"] = str(_roworder_ori)
     if best_fx or best_fy:
         sip_meta["det_mirror_orientation"] = str(_best_name)
         sip_meta["n_pairs_after_mirror_native"] = int(_n_pairs_post_orientation)
@@ -4380,87 +4718,211 @@ def solve_wcs_with_local_gaia(
             else:
                 w_lin = fit_wcs_from_points((pxa, pya), world_m, projection="TAN")
             wcs_final = w_lin
-            sip_pass1: dict[str, Any] = {}
-            if enable_sip and int(sip_max_order) >= 2:
-                w_sip, sip_pass1 = _fit_sip_for_solver(
-                    bool(_is_masterstar),
-                    w_lin,
-                    pxa,
-                    pya,
-                    world_m,
-                    sip_max_order=int(sip_max_order),
-                    sip_min_order=int(_sip_min_ms),
-                    force_apply=bool(_is_masterstar),
-                    sip_force_rms_guard_ratio=_ms_sip_guard_r,
-                )
-                if w_sip is not None:
-                    wcs_final = w_sip
-            sip_meta.update(sip_pass1)
+            sip_meta["sip_pass1_deferred"] = True
 
-            # Refine pass 2: tighter max_px after a better WCS (incl. SIP) → cleaner pairs, refit TAN+SIP.
-            max_px_tight = max(6.5, min(13.5, max_px_coarse * 0.40))
-            sip_meta["max_px_tight"] = float(max_px_tight)
-            prx, pry, prra, prde = _greedy_match_pairs_pixel_wcs(
+            # Refine pass 2: wide greedy match → refit TAN+SIP (deep cone when enabled).
+            if bool(solver_use_cone_for_sip):
+                _ra_sip = cat_df_cone_full["ra_deg"].to_numpy(dtype=np.float64)
+                _de_sip = cat_df_cone_full["dec_deg"].to_numpy(dtype=np.float64)
+            else:
+                _ra_sip = np.asarray(ra_all, dtype=np.float64)
+                _de_sip = np.asarray(de_all, dtype=np.float64)
+            rng_seed = (hash(str(fp)) & 0xFFFFFFFF) ^ 0xA5A51234
+            _mr_before_refine = float(len(pairs_x)) / float(max(1, int(n_img)))
+            log_event(
+                "VYVAR full-pair refit: entering "
+                f"n_coarse={len(pairs_x)} match_rate={_mr_before_refine * 100.0:.1f}% "
+                f"cone_sip={bool(solver_use_cone_for_sip)} "
+                f"gaia_cone_n={len(_ra_sip)} detections={int(n_img)}"
+            )
+            w_ref, prx, pry, prra, prde, sip_pass2 = _refit_linear_and_sip_on_full_pairs(
                 wcs_final,
-                ra_all,
-                de_all,
+                _ra_sip,
+                _de_sip,
                 xs,
                 ys,
-                max_px=max_px_tight,
+                max_px_coarse=max_px_coarse,
+                enable_sip=enable_sip,
+                sip_max_order=int(sip_max_order),
+                sip_min_order=int(_sip_min_ms),
+                is_masterstar=bool(_is_masterstar),
+                sip_force_rms_guard_ratio=_ms_sip_guard_r,
+                ransac_refinement=ransac_refinement,
+                ransac_min_pairs=ransac_min_pairs,
+                rng_seed=rng_seed,
             )
             n_coarse = len(pairs_x)
             sip_meta["n_pairs_coarse"] = int(n_coarse)
-            sip_meta["n_pairs_tight"] = int(len(prx))
-            min_tight = max(8, int(0.55 * n_coarse))
-            if len(prx) >= min_tight and len(prx) >= 5:
-                pxa2 = np.asarray(prx, dtype=np.float64)
-                pya2 = np.asarray(pry, dtype=np.float64)
+            sip_meta["n_pairs_full_sip"] = int(len(prx))
+            _mr_full_pairs = float(len(prx)) / float(max(1, int(n_img)))
+            log_event(
+                "VYVAR full-pair refit: greedy result "
+                f"n_pairs={len(prx)} match_rate={_mr_full_pairs * 100.0:.1f}% "
+                f"max_px_sip={sip_pass2.get('max_px_sip')} "
+                f"sip_skipped={sip_pass2.get('sip_skipped', '')!s}"
+            )
+            if len(prx) >= 5:
                 world_m2 = SkyCoord(
                     ra=np.asarray(prra, dtype=np.float64) * u.deg,
                     dec=np.asarray(prde, dtype=np.float64) * u.deg,
                     frame="icrs",
                 )
+                pxa2 = np.asarray(prx, dtype=np.float64)
+                pya2 = np.asarray(pry, dtype=np.float64)
                 try:
-                    if ransac_refinement and len(prx) >= int(ransac_min_pairs):
-                        rng2 = np.random.default_rng((hash(str(fp)) & 0xFFFFFFFF) ^ 0xA5A51234)
-                        w_lin2 = _ransac_fit_wcs_tan(pxa2, pya2, world_m2, rng=rng2)
-                    else:
-                        w_lin2 = fit_wcs_from_points((pxa2, pya2), world_m2, projection="TAN")
-                    w_try = w_lin2
-                    sip_pass2: dict[str, Any] = {}
-                    if enable_sip and int(sip_max_order) >= 2:
-                        w_sip2, sip_pass2 = _fit_sip_for_solver(
-                            bool(_is_masterstar),
-                            w_lin2,
-                            pxa2,
-                            pya2,
-                            world_m2,
-                            sip_max_order=int(sip_max_order),
-                            sip_min_order=int(_sip_min_ms),
-                            force_apply=bool(_is_masterstar),
-                            sip_force_rms_guard_ratio=_ms_sip_guard_r,
-                        )
-                        if w_sip2 is not None:
-                            w_try = w_sip2
                     rms_prev = _wcs_pixel_rms_full(wcs_final, pxa2, pya2, world_m2)
-                    rms_new = _wcs_pixel_rms_full(w_try, pxa2, pya2, world_m2)
+                    rms_new = _wcs_pixel_rms_full(w_ref, pxa2, pya2, world_m2)
+                    sip_meta["refine_full_pairs_rms_prev"] = float(rms_prev)
+                    sip_meta["refine_full_pairs_rms_new"] = float(rms_new)
                     if rms_new <= rms_prev * 1.08:
-                        wcs_final = w_try
-                        sip_meta["refine_tight_applied"] = True
+                        wcs_final = w_ref
+                        sip_meta["refine_full_pairs_applied"] = True
                         sip_meta.update(sip_pass2)
                         pairs_x, pairs_y, pairs_ra, pairs_de = prx, pry, prra, prde
+                        log_event(
+                            "VYVAR full-pair refit: ADOPTED "
+                            f"rms {rms_prev:.2f}→{rms_new:.2f}px "
+                            f"pairs {n_coarse}→{len(prx)} "
+                            f"match_rate {_mr_before_refine * 100.0:.1f}%→{_mr_full_pairs * 100.0:.1f}%"
+                        )
                     else:
-                        sip_meta["refine_tight_applied"] = False
-                        sip_meta["refine_tight_rejected"] = "rms_regression"
-                except Exception:  # noqa: BLE001
-                    sip_meta["refine_tight_applied"] = False
-                    sip_meta["refine_tight_error"] = True
+                        sip_meta["refine_full_pairs_applied"] = False
+                        sip_meta["refine_full_pairs_rejected"] = "rms_regression"
+                        log_event(
+                            "VYVAR full-pair refit: REJECTED rms_regression "
+                            f"rms {rms_prev:.2f}→{rms_new:.2f}px (limit {rms_prev * 1.08:.2f}px) "
+                            f"pairs={len(prx)} match_rate={_mr_full_pairs * 100.0:.1f}%"
+                        )
+                except Exception as _ref_exc:  # noqa: BLE001
+                    sip_meta["refine_full_pairs_applied"] = False
+                    sip_meta["refine_full_pairs_error"] = True
+                    log_event(f"VYVAR full-pair refit: ERROR {_ref_exc!r}")
             else:
-                sip_meta["refine_tight_applied"] = False
-                sip_meta["refine_tight_skipped"] = "too_few_pairs"
+                sip_meta["refine_full_pairs_applied"] = False
+                sip_meta["refine_full_pairs_skipped"] = "too_few_pairs"
+                log_event(
+                    f"VYVAR full-pair refit: SKIPPED too_few_pairs n={len(prx)} "
+                    f"(gate ≥5, coarse had {n_coarse})"
+                )
         except Exception:  # noqa: BLE001
             wcs_final = wcs_init
             sip_meta["refine_error"] = True
+
+    # MASTERSTAR cone recenter: when linear WCS center disagrees with header hint, the Gaia cone
+    # queried at VY_TARG can skew full-pair matching (stale mount pointing). Re-query at solved center.
+    if (
+        _is_masterstar
+        and bool(solver_use_cone_for_sip)
+        and len(pairs_x) >= 5
+    ):
+        try:
+            _cx_r = 0.5 * float(naxis1)
+            _cy_r = 0.5 * float(naxis2)
+            _ra_w, _de_w = wcs_final.all_pix2world([_cx_r], [_cy_r], 0)
+            _sc_h = SkyCoord(ra=float(ra0) * u.deg, dec=float(de0) * u.deg, frame="icrs")
+            _sc_w = SkyCoord(ra=float(_ra_w[0]) * u.deg, dec=float(_de_w[0]) * u.deg, frame="icrs")
+            _off_deg = float(_sc_h.separation(_sc_w).deg)
+            sip_meta["cone_hint_vs_wcs_center_deg"] = _off_deg
+            if math.isfinite(_off_deg) and _off_deg >= 0.05:
+                log_event(
+                    f"VYVAR MASTERSTAR cone recenter: header hint vs WCS center = {_off_deg:.3f}° "
+                    "— Gaia re-query at solved center + full-pair refit pass 3."
+                )
+                (
+                    _cat_df_rc,
+                    _cat_df_tri_rc,
+                    _c_cat_rc,
+                    _cone_r_rc,
+                    cat_df_cone_full,
+                    _eff_mag_rc,
+                ) = _solve_wcs_build_catalog(
+                    pointing_ra=float(_ra_w[0]),
+                    pointing_dec=float(_de_w[0]),
+                    fov_diameter_deg_eff=float(fov_diameter_deg_eff),
+                    exp_scale=_exp_scale,
+                    chip_fw=int(naxis1),
+                    chip_fh=int(naxis2),
+                    gaia_db_path=root,
+                    eff_max_cat_mag=float(max_cat_mag),
+                    obs_epoch=float(_obs_year_from_header(hdr0)),
+                    logger=LOGGER,
+                    hdr0=hdr0,
+                    fov_diameter_deg=float(fov_diameter_deg),
+                    pixel_pitch_um=float(_f_um),
+                    focal_length_mm=_foc_mm,
+                    scale_arcsec=_scale_arcsec,
+                    optimal_params=_opt,
+                    max_catalog_rows=max_catalog_rows,
+                    max_cat_mag=float(max_cat_mag),
+                    faintest_mag_limit=faintest_mag_limit,
+                    coord_src=f"{_coord_src}; cone recentered on WCS",
+                    exp_scale_from_expected_arg=bool(_exp_scale_from_expected_arg),
+                    app_config=_cfg_ps,
+                )
+                cat_df = _cat_df_rc
+                cat_df_tri = _cat_df_tri_rc
+                cone_r = float(_cone_r_rc)
+                _ra_sip_rc = cat_df_cone_full["ra_deg"].to_numpy(dtype=np.float64)
+                _de_sip_rc = cat_df_cone_full["dec_deg"].to_numpy(dtype=np.float64)
+                _mr_before_rc = float(len(pairs_x)) / float(max(1, int(n_img)))
+                w_ref3, prx3, pry3, prra3, prde3, sip_pass3 = _refit_linear_and_sip_on_full_pairs(
+                    wcs_final,
+                    _ra_sip_rc,
+                    _de_sip_rc,
+                    xs,
+                    ys,
+                    max_px_coarse=max_px_coarse,
+                    enable_sip=enable_sip,
+                    sip_max_order=int(sip_max_order),
+                    sip_min_order=int(_sip_min_ms),
+                    is_masterstar=True,
+                    sip_force_rms_guard_ratio=_ms_sip_guard_r,
+                    ransac_refinement=ransac_refinement,
+                    ransac_min_pairs=ransac_min_pairs,
+                    rng_seed=(hash(str(fp)) & 0xFFFFFFFF) ^ 0xC0E12345,
+                )
+                _mr_rc = float(len(prx3)) / float(max(1, int(n_img)))
+                log_event(
+                    f"VYVAR cone recenter refit: n_pairs={len(prx3)} "
+                    f"match_rate {_mr_before_rc * 100.0:.1f}%→{_mr_rc * 100.0:.1f}%"
+                )
+                if len(prx3) >= 5:
+                    world_m3 = SkyCoord(
+                        ra=np.asarray(prra3, dtype=np.float64) * u.deg,
+                        dec=np.asarray(prde3, dtype=np.float64) * u.deg,
+                        frame="icrs",
+                    )
+                    pxa3 = np.asarray(prx3, dtype=np.float64)
+                    pya3 = np.asarray(pry3, dtype=np.float64)
+                    rms_prev3 = _wcs_pixel_rms_full(wcs_final, pxa3, pya3, world_m3)
+                    rms_new3 = _wcs_pixel_rms_full(w_ref3, pxa3, pya3, world_m3)
+                    _adopt_rc = (
+                        rms_new3 <= rms_prev3 * 1.08
+                        and (
+                            _mr_rc > _mr_before_rc + 0.03
+                            or len(prx3) >= len(pairs_x) + 8
+                        )
+                    )
+                    if _adopt_rc:
+                        wcs_final = w_ref3
+                        pairs_x, pairs_y, pairs_ra, pairs_de = prx3, pry3, prra3, prde3
+                        sip_meta["cone_recenter_refit_applied"] = True
+                        sip_meta["cone_recenter_match_rate"] = float(_mr_rc)
+                        sip_meta.update(sip_pass3)
+                        log_event(
+                            f"VYVAR cone recenter refit: ADOPTED rms {rms_prev3:.2f}→{rms_new3:.2f}px "
+                            f"pairs {len(prx3)} match_rate={_mr_rc * 100.0:.1f}%"
+                        )
+                    else:
+                        sip_meta["cone_recenter_refit_applied"] = False
+                        log_event(
+                            f"VYVAR cone recenter refit: REJECTED "
+                            f"rms {rms_prev3:.2f}→{rms_new3:.2f}px "
+                            f"match {_mr_before_rc * 100.0:.1f}%→{_mr_rc * 100.0:.1f}%"
+                        )
+        except Exception as _rc_exc:  # noqa: BLE001
+            sip_meta["cone_recenter_error"] = repr(_rc_exc)
+            log_event(f"VYVAR cone recenter: skipped ({_rc_exc!r})")
 
     if wcs_final.sip is None:
         _cd_rescaled_any = False
@@ -4661,6 +5123,7 @@ def solve_wcs_with_local_gaia(
             masterstar_prewrite_rms_max_px=masterstar_prewrite_rms_max_px,
             masterstar_prewrite_relaxed_rms_max_px=masterstar_prewrite_relaxed_rms_max_px,
             masterstar_nn_refine_max_rms_px=masterstar_nn_refine_max_rms_px,
+            fits_header_hint_sep_escape=bool(solver_fits_header_hint_sep_escape),
         )
     except _SolveWcsValidationError as exc:
         return exc.result
@@ -4695,13 +5158,13 @@ def solve_wcs_with_local_gaia(
 
 
     LOGGER.info(
-        "VYVAR plate solve OK: %s n_match=%s sip=%s max_px_coarse/tight=%s/%s tight_pass=%s rms_lin=%s rms_sip=%s",
+        "VYVAR plate solve OK: %s n_match=%s sip=%s max_px_coarse/sip=%s/%s full_pairs=%s rms_lin=%s rms_sip=%s",
         fp.name,
         len(pairs_x),
         sip_meta.get("sip_applied", False),
         sip_meta.get("max_px_coarse"),
-        sip_meta.get("max_px_tight"),
-        sip_meta.get("refine_tight_applied"),
+        sip_meta.get("max_px_sip"),
+        sip_meta.get("refine_full_pairs_applied"),
         sip_meta.get("rms_linear_px"),
         sip_meta.get("rms_sip_px"),
     )

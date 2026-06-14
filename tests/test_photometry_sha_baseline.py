@@ -1,6 +1,7 @@
-"""Byte-identity SHA guards when ephemeral draft_000386 is present (optional local check).
+"""Byte-identity SHA guards when local anchor trees are present (optional).
 
-Anchor gate is draft-independent: compare compute_photometry_sha output to PHOTOMETRY_SHA_* constants.
+Locked anchor: compare re-cut output to PHOTOMETRY_SHA_* (2026-06-11 lock).
+Historical archive `draft_000387` remains at PHOTOMETRY_SHA_*_PRE_SPARSE_FB.
 """
 from __future__ import annotations
 
@@ -10,27 +11,64 @@ import pytest
 
 from tests.photometry_sha import (
     PHOTOMETRY_SHA_BASELINE,
+    PHOTOMETRY_SHA_BASELINE_PRE_SPARSE_FB,
     PHOTOMETRY_SHA_CORE,
+    PHOTOMETRY_SHA_CORE_PRE_SPARSE_FB,
+    compare_photometry_science_meaningful,
     compute_photometry_sha,
 )
 
-_DRAFT = Path(__file__).resolve().parents[1] / "Archive" / "Drafts" / "draft_000386"
+_ROOT = Path(__file__).resolve().parents[1]
+_DRAFT387 = _ROOT / "Archive" / "Drafts" / "draft_000387"
+_RECUT = _ROOT / "tmp" / "rebaseline_387_sparse_fb_cut1"
 
-pytestmark = pytest.mark.skipif(
-    not (_DRAFT / "platesolve").is_dir(),
-    reason="draft_000386 not present",
+
+@pytest.mark.skipif(
+    not (_DRAFT387 / "platesolve").is_dir(),
+    reason="draft_000387 archive not present",
 )
+def test_draft_387_historical_core_photometry_sha():
+    """Frozen archive matches pre-sparse-fallback SHA."""
+    sha, n = compute_photometry_sha(_DRAFT387)
+    assert n == 2806
+    assert sha == PHOTOMETRY_SHA_CORE_PRE_SPARSE_FB
 
 
-def test_draft_386_core_photometry_sha():
-    """LC + comp_quality + comparison pool (excludes comp_qa, lc_quality, trust)."""
-    sha, n = compute_photometry_sha(_DRAFT)
+@pytest.mark.skipif(
+    not (_DRAFT387 / "platesolve").is_dir(),
+    reason="draft_000387 archive not present",
+)
+def test_draft_387_historical_extended_photometry_sha():
+    sha, n = compute_photometry_sha(_DRAFT387, include_comp_qa=True)
+    assert n == 4285
+    assert sha == PHOTOMETRY_SHA_BASELINE_PRE_SPARSE_FB
+
+
+@pytest.mark.skipif(
+    not (_RECUT / "platesolve").is_dir(),
+    reason="rebaseline cut1 not present",
+)
+def test_rebaseline_cut1_core_photometry_sha():
+    sha, n = compute_photometry_sha(_RECUT)
     assert n == 2806
     assert sha == PHOTOMETRY_SHA_CORE
 
 
-def test_draft_386_extended_photometry_sha():
-    """Full anchor includes comp_qa sidecars."""
-    sha, n = compute_photometry_sha(_DRAFT, include_comp_qa=True)
+@pytest.mark.skipif(
+    not (_RECUT / "platesolve").is_dir(),
+    reason="rebaseline cut1 not present",
+)
+def test_rebaseline_cut1_extended_photometry_sha():
+    sha, n = compute_photometry_sha(_RECUT, include_comp_qa=True)
     assert n == 4285
     assert sha == PHOTOMETRY_SHA_BASELINE
+
+
+@pytest.mark.skipif(
+    not ((_DRAFT387 / "platesolve").is_dir() and (_RECUT / "platesolve").is_dir()),
+    reason="draft_000387 and rebaseline cut1 required",
+)
+def test_rebaseline_science_meaningful_vs_historical():
+    rep = compare_photometry_science_meaningful(_DRAFT387, _RECUT)
+    assert rep["summary"]["benign"] is True
+    assert rep["summary"]["science_failures"] == 0

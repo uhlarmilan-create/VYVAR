@@ -582,6 +582,7 @@ def _build_candidates_pre_adaptive_mag(
     chip_interior_margin_px: int,
     target: pd.Series,
     cfg: AppConfig | None = None,
+    sparse_fallback_mode: bool = False,
 ) -> tuple[pd.DataFrame, float] | None:
     """Returns (candidates_pre, used_mag_tol) or None if too few candidates."""
     # Start with a broad candidate set (emergency tier) for one-pass per-frame metrics.
@@ -603,6 +604,8 @@ def _build_candidates_pre_adaptive_mag(
         try:
             _cfg_mag = cfg or AppConfig()
             mag_abs = float(_cfg_mag.phase01_comparison_max_mag_diff_absolute or 3.0)
+            if sparse_fallback_mode:
+                mag_abs = min(mag_abs, 2.0)
         except Exception:  # noqa: BLE001
             mag_abs = 3.0
         candidates_pre = candidates_pre.copy()
@@ -639,18 +642,24 @@ def _build_candidates_pre_adaptive_mag(
                 drop=True
             )
     if len(candidates_pre) < n_comp_min:
-        logging.warning(
-            f"[FÁZA 1] Target {target_cid}: len {len(candidates_pre)} kandidátov "
-            f"< n_comp_min={n_comp_min} — preskakujem."
-        )
-        _warn_zero_compstars_edge(
-            target_cid=target_cid,
-            target=target,
-            chip_fw=chip_fw,
-            chip_fh=chip_fh,
-            chip_interior_margin_px=int(chip_interior_margin_px),
-        )
-        return None
+        if sparse_fallback_mode and len(candidates_pre) > 0:
+            logging.info(
+                f"[FÁZA 1] Target {target_cid}: sparse fallback — "
+                f"{len(candidates_pre)} kandidátov (< n_comp_min={n_comp_min}), pokračujem."
+            )
+        else:
+            logging.warning(
+                f"[FÁZA 1] Target {target_cid}: len {len(candidates_pre)} kandidátov "
+                f"< n_comp_min={n_comp_min} — preskakujem."
+            )
+            _warn_zero_compstars_edge(
+                target_cid=target_cid,
+                target=target,
+                chip_fw=chip_fw,
+                chip_fh=chip_fh,
+                chip_interior_margin_px=int(chip_interior_margin_px),
+            )
+            return None
     if "catalog_id" in candidates_pre.columns:
         candidates_pre = candidates_pre.sort_values("catalog_id", kind="mergesort").reset_index(
             drop=True
@@ -731,6 +740,7 @@ def _accumulate_per_frame_comp_metrics(
 ) -> dict[str, Any]:
     _sorted_cids = sorted(cand_ids)
     flux_map: dict[str, list[float]] = {cid: [] for cid in _sorted_cids}
+    bjd_map: dict[str, list[float]] = {cid: [] for cid in _sorted_cids}
     n_frames_loaded = 0
     contamination_map: dict[str, float] = {}
     psf_chi2_map: dict[str, list[float]] = {cid: [] for cid in _sorted_cids}
@@ -947,6 +957,10 @@ def _accumulate_per_frame_comp_metrics(
                 for cid, grp in sub_work.loc[_rel_ok].groupby(name_col, sort=True):
                     cid_s = str(cid)
                     flux_map[cid_s].extend(grp["_rel"].astype(float).tolist())
+                    if "bjd_tdb_mid" in grp.columns:
+                        bjd_map[cid_s].extend(
+                            pd.to_numeric(grp["bjd_tdb_mid"], errors="coerce").astype(float).tolist()
+                        )
 
                 for cid, grp in sub_work.groupby(name_col, sort=True):
                     cid_s = str(cid)
@@ -1024,6 +1038,10 @@ def _accumulate_per_frame_comp_metrics(
                         rel = raw_flux / norm_med
                         if math.isfinite(rel) and rel > 0:
                             flux_map[cid].append(rel)
+                            if "bjd_tdb_mid" in row.index:
+                                _bjd_v = float(pd.to_numeric(row.get("bjd_tdb_mid"), errors="coerce"))
+                                if math.isfinite(_bjd_v):
+                                    bjd_map[cid].append(_bjd_v)
 
         except Exception:  # noqa: BLE001
             continue
@@ -1036,6 +1054,7 @@ def _accumulate_per_frame_comp_metrics(
     )
     return {
         "flux_map": flux_map,
+        "bjd_map": bjd_map,
         "n_frames_loaded": n_frames_loaded,
         "contamination_map": contamination_map,
         "psf_chi2_map": psf_chi2_map,
@@ -1296,6 +1315,205 @@ def _compute_comp_contamination_map(
     return contamination_map
 
 
+_MAD_SIGMA_SCALE = 1.4826
+
+
+def _mad_sigma(values: np.ndarray) -> float:
+    v = np.asarray(values, dtype=np.float64)
+    v = v[np.isfinite(v)]
+    if int(v.size) < 3:
+        return float(np.std(v)) if int(v.size) > 0 else float("inf")
+    med = float(np.median(v))
+    mad = float(np.median(np.abs(v - med)))
+    if mad > 0:
+        return float(_MAD_SIGMA_SCALE * mad)
+    return float(np.std(v)) if float(np.std(v)) > 0 else float("inf")
+
+
+def _flux_series_to_mag_bjd(
+    flux_map: dict[str, list[float]],
+    bjd_map: dict[str, list[float]],
+) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+    """Per-candidate mag LC and BJD from relative flux series (Phase-1 frame norm)."""
+    mag_lc: dict[str, np.ndarray] = {}
+    bjd_lc: dict[str, np.ndarray] = {}
+    for cid in sorted(flux_map.keys()):
+        fluxes = flux_map.get(cid) or []
+        if len(fluxes) < 3:
+            continue
+        arr = np.asarray(fluxes, dtype=np.float64)
+        ok = np.isfinite(arr) & (arr > 0)
+        if int(ok.sum()) < 3:
+            continue
+        bjds = bjd_map.get(cid) or []
+        if len(bjds) == len(fluxes):
+            b = np.asarray(bjds, dtype=np.float64)
+        else:
+            b = np.arange(len(arr), dtype=np.float64)
+        mag_lc[cid] = -2.5 * np.log10(arr)
+        bjd_lc[cid] = b
+    return mag_lc, bjd_lc
+
+
+def _common_mode_detrend_mag_lcs(
+    mag_lc: dict[str, np.ndarray],
+    bjd_lc: dict[str, np.ndarray],
+) -> dict[str, np.ndarray]:
+    """Sorted-BJD linear common-mode detrend (Honeycutt 1992 em(e); stability-check style)."""
+    from scipy.stats import linregress as _lr
+
+    cids = sorted(mag_lc.keys())
+    stacks_bjd: list[np.ndarray] = []
+    stacks_mag: list[np.ndarray] = []
+    for cid in cids:
+        b = bjd_lc.get(cid)
+        m = mag_lc.get(cid)
+        if b is None or m is None:
+            continue
+        ok = np.isfinite(b) & np.isfinite(m)
+        if int(ok.sum()) < 20:
+            continue
+        bo, mo = b[ok], m[ok]
+        order = np.argsort(bo, kind="mergesort")
+        stacks_bjd.append(bo[order])
+        stacks_mag.append(mo[order])
+    if len(stacks_mag) < 2:
+        return {cid: mag_lc[cid].copy() for cid in cids}
+    ref_bjd = stacks_bjd[int(np.argmax([len(x) for x in stacks_bjd]))]
+    stack = [np.interp(ref_bjd, b, m) for b, m in zip(stacks_bjd, stacks_mag, strict=True)]
+    common = np.median(np.vstack(stack), axis=0)
+    lr = _lr(ref_bjd, common)
+    out: dict[str, np.ndarray] = {}
+    for cid in cids:
+        b = bjd_lc.get(cid)
+        m = mag_lc.get(cid)
+        if b is None or m is None:
+            continue
+        ok = np.isfinite(b) & np.isfinite(m)
+        md = m.copy()
+        md[ok] = m[ok] - (lr.slope * b[ok] + lr.intercept) + float(common.mean())
+        out[cid] = md
+    return out
+
+
+def _iterative_ensemble_clip_cm_residual(
+    flux_map: dict[str, list[float]],
+    bjd_map: dict[str, list[float]],
+    provisional_rms: dict[str, float],
+    *,
+    clip_sigma: float,
+    n_comp_min: int,
+    max_iter: int = 5,
+) -> tuple[dict[str, float], dict[str, int]] | None:
+    """Ensemble-relative 5σ-MAD clip on CM-removed differential residuals."""
+    mag_lc, bjd_lc = _flux_series_to_mag_bjd(flux_map, bjd_map)
+    active = sorted(mag_lc.keys())
+    n_candidates = int(len(active))
+    if n_candidates < int(n_comp_min):
+        return None
+    cm_all = _common_mode_detrend_mag_lcs(mag_lc, bjd_lc)
+    sigma_k = float(clip_sigma) if math.isfinite(float(clip_sigma)) and float(clip_sigma) > 0 else 5.0
+
+    def _broeg_weights(cids: list[str]) -> dict[str, float]:
+        wts: dict[str, float] = {}
+        for cid in cids:
+            r = float(provisional_rms.get(cid, float("nan")))
+            wts[cid] = 1.0 / max(r * r, 1e-8) if math.isfinite(r) and r > 1e-6 else 1.0
+        return wts
+
+    def _ensemble_on_ref(ref_bjd: np.ndarray, cids: list[str]) -> np.ndarray:
+        wts = _broeg_weights(cids)
+        stack: list[np.ndarray] = []
+        weights: list[float] = []
+        for cid in cids:
+            b = bjd_lc[cid]
+            m = cm_all[cid]
+            interp = np.interp(ref_bjd, b, m, left=np.nan, right=np.nan)
+            stack.append(interp)
+            weights.append(float(wts.get(cid, 1.0)))
+        mat = np.vstack(stack)
+        w_arr = np.asarray(weights, dtype=np.float64)
+        with np.errstate(invalid="ignore"):
+            num = np.nansum(mat * w_arr[:, None], axis=0)
+            den = np.nansum(np.where(np.isfinite(mat), w_arr[:, None], 0.0), axis=0)
+            return num / np.where(den > 0, den, np.nan)
+
+    iterations = 0
+    for _ in range(int(max_iter)):
+        iterations += 1
+        if len(active) <= int(n_comp_min):
+            break
+        ref_cid = active[int(np.argmax([len(bjd_lc[c]) for c in active]))]
+        ref_bjd = bjd_lc[ref_cid]
+        ok_ref = np.isfinite(ref_bjd)
+        ref_bjd = ref_bjd[ok_ref]
+        if int(ref_bjd.size) < 10:
+            break
+        order = np.argsort(ref_bjd, kind="mergesort")
+        ref_bjd = ref_bjd[order]
+        ens = _ensemble_on_ref(ref_bjd, active)
+        scatters: dict[str, float] = {}
+        for cid in active:
+            b = bjd_lc[cid]
+            m = cm_all[cid]
+            interp = np.interp(ref_bjd, b, m, left=np.nan, right=np.nan)
+            resid = interp - ens
+            ok = np.isfinite(resid)
+            if int(ok.sum()) < 10:
+                scatters[cid] = float("inf")
+            else:
+                scatters[cid] = _mad_sigma(resid[ok])
+        outliers: list[str] = []
+        for cid in active:
+            others = np.asarray(
+                [scatters[c] for c in active if c != cid],
+                dtype=np.float64,
+            )
+            others = others[np.isfinite(others)]
+            if int(others.size) < 2:
+                continue
+            pop_med = float(np.median(others))
+            pop_sigma = _mad_sigma(others)
+            if not math.isfinite(pop_sigma) or pop_sigma <= 0:
+                pop_sigma = float(np.std(others))
+            if not math.isfinite(pop_sigma) or pop_sigma <= 0:
+                pop_sigma = max(abs(pop_med) * 0.01, 1e-6)
+            thr = pop_med + sigma_k * pop_sigma
+            if scatters[cid] > thr:
+                outliers.append(cid)
+        if not outliers:
+            break
+        worst = max(outliers, key=lambda c: scatters[c])
+        if len(active) - 1 < int(n_comp_min):
+            break
+        active = [c for c in active if c != worst]
+
+    if len(active) < int(n_comp_min):
+        return None
+    active_rms = {
+        cid: float(provisional_rms.get(cid, float("nan")))
+        for cid in active
+        if cid in provisional_rms and math.isfinite(float(provisional_rms.get(cid, float("nan"))))
+    }
+    if len(active_rms) < int(n_comp_min):
+        active_rms = {cid: 0.05 for cid in active}
+    meta = {
+        "comp_pool_n_candidates": n_candidates,
+        "comp_pool_n_clipped": int(n_candidates - len(active)),
+        "comp_pool_n_final": int(len(active)),
+        "comp_clip_iterations": int(iterations),
+    }
+    logging.info(
+        "[COMP] Iterative ensemble clip: %d → %d comps (%d clipped, %d iter, σ=%.1f)",
+        n_candidates,
+        meta["comp_pool_n_final"],
+        meta["comp_pool_n_clipped"],
+        meta["comp_clip_iterations"],
+        sigma_k,
+    )
+    return active_rms, meta
+
+
 def _detrend_and_compute_comp_rms_map(
     flux_map: dict[str, list[float]],
     *,
@@ -1307,6 +1525,7 @@ def _detrend_and_compute_comp_rms_map(
     chip_fw: int | None,
     chip_fh: int | None,
     chip_interior_margin_px: int,
+    skip_apriori_rms: bool = False,
 ) -> Any:
     # ── Krok 2b: Airmass detrending ──
     # Polynomický fit (stupeň 2) na časový rad relatívneho flux odstráni
@@ -1362,6 +1581,21 @@ def _detrend_and_compute_comp_rms_map(
     sorted_rms_map: dict[str, float] = dict(
         sorted(rms_map.items(), key=lambda kv: (float(kv[1]), str(kv[0])))
     )
+
+    if skip_apriori_rms:
+        if not rms_map:
+            logging.warning(
+                f"[FÁZA 1] Target {target_cid}: iterative clip — no candidates with enough frames."
+            )
+            _warn_zero_compstars_edge(
+                target_cid=target_cid,
+                target=target,
+                chip_fw=chip_fw,
+                chip_fh=chip_fh,
+                chip_interior_margin_px=int(chip_interior_margin_px),
+            )
+            return None, None
+        return rms_map, sorted_rms_map
 
     # Tvrdý RMS limit — odmietni nestabilné hviezdy bez ohľadu na ranking
     if math.isfinite(max_comp_rms) and max_comp_rms > 0:
@@ -1891,6 +2125,8 @@ def _assemble_comp_selection_result_rows(
     dilution_map: dict[str, dict[str, Any]] | None = None,
     comp_gs11_notes: dict[str, str] | None = None,
     cfg: AppConfig | None = None,
+    clip_meta: dict[str, int] | None = None,
+    comp_path: str = "default",
 ) -> pd.DataFrame:
     _cfg_asm = cfg or AppConfig()
     # Zostav výstupný DataFrame
@@ -1990,6 +2226,16 @@ def _assemble_comp_selection_result_rows(
             _sel = f"{_sel}; {_gs11n}" if _sel else _gs11n
         r["selection_note"] = _sel
         r["used_mag_tol"] = float(used_mag_tol) if math.isfinite(float(used_mag_tol)) else float("nan")
+        r["comp_path"] = str(comp_path or "default").strip() or "default"
+        if clip_meta:
+            for _mk in (
+                "comp_pool_n_candidates",
+                "comp_pool_n_clipped",
+                "comp_pool_n_final",
+                "comp_clip_iterations",
+            ):
+                if _mk in clip_meta:
+                    r[_mk] = int(clip_meta[_mk])
         rms_val = r.get("comp_rms", float("nan"))
         try:
             rms_f = float(pd.to_numeric(rms_val, errors="coerce"))
@@ -2044,6 +2290,11 @@ def _assemble_comp_selection_result_rows(
                 "dilution_delta_mag",
                 "selection_note",
                 "used_mag_tol",
+                "comp_path",
+                "comp_pool_n_candidates",
+                "comp_pool_n_clipped",
+                "comp_pool_n_final",
+                "comp_clip_iterations",
                 "selected_tier",
                 "tier4_warning",
                 "n_tier1",

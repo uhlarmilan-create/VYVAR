@@ -528,8 +528,8 @@ def _fill_psf_catalog_columns(
         if "psf_fit_ok" not in df.columns:
             df["psf_fit_ok"] = False
 
-    # ── Moffat PSF fit (Step 1 of two-step pipeline) ───────────────────────────
-    if _run_epsf or _run_aperture:
+    # ── Moffat PSF fit (Step 1 of two-step ePSF pipeline only) ─────────────────
+    if _run_epsf:
         try:
             from config import AppConfig
             from psf_photometry import fit_moffat_psf_stars
@@ -6515,6 +6515,21 @@ def _proc_rename_det_names_to_catalog_id(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _proc_drop_unmatched_dao_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop unmatched DAO_ONLY detections (no catalog_id) BEFORE expensive per-star work.
+
+    GAIA_MATCHED and FORCED_APERTURE rows both carry a catalog_id and are kept; DAO_ONLY rows
+    (empty catalog_id) are discarded by the final keep-matched filter anyway. Keying on
+    catalog_id (not source_type) is correct in both export paths, including the in-process path
+    where source_type=GAIA_MATCHED is assigned only later.
+    """
+    if df is None or len(df) == 0 or "catalog_id" not in df.columns:
+        return df
+    cid = df["catalog_id"].fillna("").astype(str).str.strip()
+    keep = cid.ne("") & ~cid.str.lower().isin({"nan", "none"})
+    return df.loc[keep].reset_index(drop=True)
+
+
 def _proc_catalog_keep_matched_rows_only(df: pd.DataFrame) -> pd.DataFrame:
     """TODO-13: keep catalog rows with valid ``catalog_id`` and ``source_type``."""
     if df is None or len(df) == 0 or "catalog_id" not in df.columns:
@@ -8656,6 +8671,10 @@ def _export_per_frame_run_catalog_core(
                 "debug_pixel_match": debug_pixel_match,
             }
 
+    _before_dao = len(df)
+    df = _proc_drop_unmatched_dao_rows(df)
+    LOGGER.debug("[TODO-13] catalog-only pre-filter (detect): %d → %d rows", _before_dao, len(df))
+
     # --- Join MASTERSTAR annotations into per-frame catalog (via catalog_id) ---
     # For matched rows (catalog_id non-empty), bring stable MASTERSTAR columns like zone/is_usable/bp_rp/etc.
     try:
@@ -9439,6 +9458,10 @@ def export_per_frame_catalogs(
                 )
             except Exception as exc:  # noqa: BLE001
                 return {"file": fname, "status": f"error: {exc}", "csv": ""}
+
+        _before_dao = len(df)
+        df = _proc_drop_unmatched_dao_rows(df)
+        LOGGER.debug("[TODO-13] catalog-only pre-filter (detect): %d → %d rows", _before_dao, len(df))
 
         _run_aperture = bool(_ap_st.get("_run_aperture", True))
         _run_epsf = bool(_ap_st.get("_run_epsf", False))
@@ -10707,6 +10730,11 @@ def generate_masterstar_and_catalog(
             masterstar_prewrite_relaxed_rms_max_px=float(_prms_r) if _prms_r is not None else None,
             masterstar_nn_refine_max_rms_px=float(_nnrms) if _nnrms is not None else None,
             masterstar_sip_min_order=int(_sip_lo),
+            app_config=_cfg_ms,
+            solver_use_cone_for_sip=True,
+            solver_fits_header_hint_sep_escape=True,
+            solver_legacy_masterstar_mirror_sweep=True,
+            solver_apply_roworder_yflip=False,
         )
 
     solve_meta = _run_masterstar_vyvar_solve(

@@ -13,9 +13,9 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## NEXT SESSION — open items
 
-1. **Brno / Newton characterization gate** — on arrival: plate scale + sampling, ePSF-vs-star
-   Moffat mismatch (decisive), crowding index; then decide PSF / NEIGHBOR-SUB enablement on
-   fine-scale data only (standing rule in DECISIONS + PROCESS).
+1. **Brno / Newton characterization gate (finish)** — `g_60_4` solves on **production path**
+   (draft_400: 75.5% brightest-N, WCS persists). **Open:** Milan **draft_401 UI sign-off + overlay**;
+   Brno **r/i/z** end-to-end; gate `_brno_check` tail fixed (draft_400 / skip).
 2. **TODO-MULTISET** — per-telescope-set config (wide vs fine optics); blocks clean multi-rig
    production and crowding gating per rig.
 3. ~~**Short-baseline LC quality (#3)**~~ **DONE (2026-06-10)** — `short_baseline` terminal class,
@@ -23,7 +23,7 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 4. **Phase C catalog rebuild** — DR3 full-sky build completes on existing schema (G<=17.5).
    GAIA-1/GAIA-2 columns deferred to DR4 (~Dec 2026) -- see DECISIONS.
 5. ~~**Chi_and_H baseline re-cut**~~ **DONE (2026-06-11)** — full zaloha anchor
-   (core `203254fd...`, full `95a5515a...`; draft_386 confirmed draft_387); completeness
+   (core `3f7c9e7a...`, full `d5b72d08...`; draft_000387 re-cut ×2); completeness
    gate in `night_run.py`. See STATE + RUNBOOK.
 6. ~~**Trust Findings A/B + CS-1..4 + comp trust floor (Option B)**~~ **DONE (2026-06-11)** —
    specs under `docs/`; trust baseline 1382/106 on draft_387 at `comp_trust_min_comps=5`.
@@ -33,10 +33,11 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 9. ~~**Per-frame proc export perf (DAO pre-filter + Moffat gate)**~~ **DONE (2026-06-12)** —
    `_proc_drop_unmatched_dao_rows` before aperture/PSF; Moffat gated on `_run_epsf` only; ~4.8× on
    `draft_000389` B_60_1 (171 → 36 s/frame). See JOURNAL + DECISIONS.
-10. **Comp-slope stability (B2+B1) — code DONE; anchor re-baseline BLOCKED on Milan.** Common-mode
-    detrend BJD sort + significance gate (`comp_slope_significance_k`); Honeycutt 1992 conditional.
-    Footprint on `draft_000387`: **LC-neutral** (12 frames/setup → slope/detrend guards never fire;
-    0 on-disk `slope=` notes). Step D re-cut after acceptance only.
+10. ~~**Sparse-only comp fallback**~~ **DONE (2026-06-11)** — default **ON**; anchor
+    `3f7c9e7a` / `d5b72d08`; science-meaningful comparator for regression vs prior cut.
+11. ~~**Comp-slope stability (B2+B1)**~~ **DONE (2026-06-11)** — common-mode detrend BJD sort +
+    significance gate (`comp_slope_significance_k`); Honeycutt 1992 conditional. Anchor footprint
+    LC-neutral on `draft_000387`.
 
 ---
 
@@ -192,6 +193,10 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
   foundation exists) · TODO-12 HRD classification (after new DB) · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
   · TODO-PIXEL-XCHECK-BINNING binning-aware pixel cross-check (cosmetic log) ·
+  **TODO-RECUT-HARNESS-FIDELITY** — re-cut harness vs frozen anchor (`draft_000387` /
+  `3f7c9e7a…`) does not reproduce science-meaningfully (legacy arm alone: 1087 failures, B
+  max \|Δmag\| ≈ 2.26); use legacy-vs-scoped same-harness control for solver gates until fixed
+  (`sandbox/anchor387_legacy_vs_scoped_gate.py`) ·
   **TODO-INSTALL-MANUAL — inštalačný manuál + inštalátor pre nového užívateľa (vrátane
   katalógov)** · TODO-PLATESCALE-PERSET focal×pixel per-set plate-scale fallback.
 
@@ -238,6 +243,21 @@ inštalátor → rovnaký výsledok na T460; manuál a inštalátor konzistentn�
   start yet. (DECISIONS.)
 - **TODO-SCENE-FORWARD-MODEL** — conditional on crowded-faint science (Brno / globular
   clusters); priority lowered after the grouper-negative result.
+
+---
+
+## Parked (next — Milan chooses, 2026-06-14)
+
+| Item | Notes |
+|------|-------|
+| **CM-detrend differential** | ~10× lever; opt-in; needs transit injection-recovery test before opt-in |
+| **Exoplanet / TOI catalog** | NASA Exoplanet Archive TAP integration |
+| **Newton-V colour-term** | Per-rig c1 from field BP-RP |
+| **Meridian-flip handling** | Qatar-8 class |
+| **`[TODO-RECUT-HARNESS-FIDELITY]`** | Re-cut vs archive gate unreliable (~2.26 mag B drift) |
+
+**Backlog (unchanged):** broad-except Tier-1 (~25); B-V legacy removal Stages 2–4; TODO-46 (skip
+airmass detrend for known VSX variables); TODO-LC-QUALITY; TODO-LC-TREND; TODO-GEO; GS8–GS11.
 
 ---
 

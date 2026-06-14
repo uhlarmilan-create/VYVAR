@@ -267,6 +267,10 @@ delta_mag >= `neighbor_sub_regime_dmag_min` (in `psf_neighbor_sub.py`).
 | `phase01_comparison_isolation_radius_px` | 25.0 | 1.0 … 200.0 | — | intentionally-hidden |
 | `phase01_comparison_mag_bright_threshold` | 12.75 | 6.0 … 18.0 | ui_select_stars.py:443, ui_select_stars.py:531, ui_settings.py:594 | yes |
 | `phase01_comparison_max_comp_rms` | 0.1 | 0.01 … 0.5 | ui_select_stars.py:447, ui_select_stars.py:536, ui_settings.py:699 | yes |
+| `comp_sparse_fallback_enabled` | true | — | ui_settings.py:760, ui_settings.py:900 | yes |
+| `comp_sparse_fallback_min` | 0 (= n_comp_min) | 2 … n_comp_max | ui_settings.py:768, ui_settings.py:902 | yes |
+| `comp_iterative_clip_enabled` | false | — | (alias → sparse_fallback) | yes |
+| `comp_clip_sigma` | 5.0 | 3.0 … 10.0 | ui_settings.py:776, ui_settings.py:904 | yes |
 | `phase01_comparison_max_dist_deg` | 1.5 | 0.05 … 10.0 | ui_dao_stars.py:81, ui_dao_stars.py:191, ui_dao_stars.py:199 | yes |
 | `phase01_comparison_max_fwhm_factor` | 1.5 | 0.5 … 5.0 | — | intentionally-hidden |
 | `phase01_comparison_max_mag_diff` | 1.5 | 0.05 … 5.0 | ui_select_stars.py:442, ui_select_stars.py:530, ui_settings.py:80 | yes |
