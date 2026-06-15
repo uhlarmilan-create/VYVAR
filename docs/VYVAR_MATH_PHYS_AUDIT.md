@@ -57,7 +57,8 @@ Known limitation (APCORR-COLOR parked; AAVSO #4 open). Same physics as D1 slope 
 - **Howell 1989** — aperture-path error budget + scintillation (gain/read-noise located in
   `psf_photometry.py`; aperture uncertainty not traced).
 - **Stetson / aperture correction** — APCORR-MIXEDFRAME coupling.
-- **Mighell 1999 χ²-gamma** — see citation integrity below (export-only).
+- **Mighell 1999 χ²-gamma** — export-only; **new reduced-χ²/dof gate** scoped in
+  `docs/VYVAR_SIGMA_BUDGET_SPEC.md` + `tmp/phase12/chi2_sigma_gate.py` (sandbox, 2026-06-15).
 - **PM epoch** — `vyvar_platesolver.py:63` `GAIA_EPOCH=2016.0` → DR4 `J2017.5`.
 
 ---

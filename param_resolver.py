@@ -4,7 +4,8 @@ ONE place that decides, per physical parameter, which source wins:
 
     * OBSERVATION-SPECIFIC (pointing, time, exptime, binning, filter, ccd-temp,
       plate-scale): HEADER / solved-WCS (valid) -> DB -> config.
-    * EQUIPMENT-INTRINSIC (gain, read-noise, pixel size, focal, saturation):
+    * EQUIPMENT-INTRINSIC gain: HEADER (e-/ADU or setting-index mapped) ->
+      DB -> config.  Read-noise and other equipment-intrinsic params remain
       DB-SET (valid) -> HEADER (fallback + cross-check) -> config.
       (DB authority is required because plausible-but-wrong headers exist:
       draft 363 carries XPIXSIZE=10.0 µm while the real IMX457 pitch is 3.76 µm —
@@ -79,13 +80,22 @@ HEADER_KEYS: dict[str, tuple[str, ...]] = {
 # Relative tolerance for header<->DB cross-check warnings (equipment-intrinsic).
 CROSS_CHECK_RTOL = 0.05
 
+# QHY driver GAIN header is a setting index, not e-/ADU.  Map (equipment_id, setting) -> e-/ADU.
+# QHY294PROM read mode 0, gain setting 0 -> 3.17 e-/ADU (matches EQUIPMENTS.GAIN_ADU eq 1).
+GAIN_SETTING_INDEX_MAP: dict[int, dict[int, float]] = {
+    1: {0: 3.17},  # QHY294MM
+}
+
+_E_PER_ADU_COMMENT_MARKERS = ("e-/adu", "e/adu", "electron")
+_GAIN_INDEX_COMMENTS = frozenset({"gain", "index", ""})
+
 
 @dataclass
 class Resolved:
     """Result of resolving one parameter."""
 
     value: Any = None
-    source: str = "unresolved"      # header | db | config | default | unresolved
+    source: str = "unresolved"      # header | header_index_mapped | db | config | default | unresolved
     key: str | None = None          # winning header keyword (if source == header)
     ok: bool = False
     warnings: list[str] = field(default_factory=list)
@@ -191,6 +201,173 @@ def _resolve_equipment_intrinsic(
     return res
 
 
+def _header_card_comment(header: Any, key: str) -> str:
+    if header is None or key not in header:
+        return ""
+    try:
+        return str(header.comments[key] or "")
+    except (TypeError, AttributeError, KeyError):
+        pass
+    try:
+        return str(header.cards[key].comment or "")
+    except (TypeError, AttributeError, KeyError):
+        return ""
+
+
+def _header_gain_raw(header: Any) -> tuple[float | None, str | None, str]:
+    """First finite EGAIN/GAIN value (including 0) and its comment."""
+    if header is None:
+        return None, None, ""
+    for key in HEADER_KEYS["gain"]:
+        if key not in header:
+            continue
+        try:
+            v = float(header[key])
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(v):
+            return v, key, _header_card_comment(header, key)
+    return None, None, ""
+
+
+def _comment_indicates_e_per_adu(comment: str) -> bool:
+    c = str(comment or "").lower()
+    return any(m in c for m in _E_PER_ADU_COMMENT_MARKERS)
+
+
+def _comment_indicates_gain_index(comment: str) -> bool:
+    return str(comment or "").strip().lower() in _GAIN_INDEX_COMMENTS
+
+
+def _equipment_gain_header_units_e_per_adu(equipment_id: int | None, cfg: Any) -> bool:
+    """Optional per-camera override: header GAIN is always e-/ADU (not a setting index)."""
+    if cfg is None or equipment_id is None:
+        return False
+    flag = getattr(cfg, "gain_header_units_e_per_adu", None)
+    if isinstance(flag, dict):
+        try:
+            return bool(flag.get(int(equipment_id), False))
+        except (TypeError, ValueError):
+            return False
+    return bool(flag)
+
+
+def _is_gain_setting_index(
+    header: Any,
+    raw: float,
+    comment: str,
+    db_value: float | None,
+    *,
+    is_e_per_adu: bool,
+) -> bool:
+    """True when the header GAIN/EGAIN card is a driver setting index, not e-/ADU."""
+    if is_e_per_adu:
+        return False
+    if _comment_indicates_gain_index(comment):
+        return True
+    if header is not None and "READMODE" in header:
+        return True
+    if _is_valid("gain", db_value) and not math.isclose(
+        float(raw), float(db_value), rel_tol=CROSS_CHECK_RTOL
+    ):
+        # Integer 0..100 without e-/ADU semantics is implausible as e-/ADU for this camera.
+        ri = int(round(float(raw)))
+        if float(raw) == ri and 0 <= ri <= 100:
+            return True
+    return False
+
+
+def _map_gain_setting_index(
+    setting_index: int,
+    equipment_id: int | None,
+    header: Any,
+) -> float | None:
+    _ = header  # reserved for future read-mode keyed tables
+    if equipment_id is not None:
+        per_eq = GAIN_SETTING_INDEX_MAP.get(int(equipment_id), {})
+        if setting_index in per_eq:
+            return float(per_eq[setting_index])
+    return None
+
+
+def _resolve_gain_header_first(
+    *,
+    header: Any,
+    db_value: float | None,
+    cfg_value: float | None,
+    equipment_id: int | None,
+    cfg: Any,
+) -> Resolved:
+    """Header-first gain: e-/ADU card -> setting-index map -> DB -> config."""
+    res = Resolved()
+    db_ok = _is_valid("gain", db_value)
+    raw, hdr_key, comment = _header_gain_raw(header)
+
+    if raw is not None:
+        force_e_per_adu = _equipment_gain_header_units_e_per_adu(equipment_id, cfg)
+        is_e_per_adu = force_e_per_adu or _comment_indicates_e_per_adu(comment)
+        is_index = _is_gain_setting_index(
+            header, raw, comment, db_value, is_e_per_adu=is_e_per_adu
+        )
+
+        if is_e_per_adu and not is_index and _is_valid("gain", raw):
+            res.value = float(raw)
+            res.source = "header"
+            res.key = hdr_key
+            res.ok = True
+            if db_ok and not math.isclose(float(raw), float(db_value), rel_tol=CROSS_CHECK_RTOL):
+                msg = (
+                    f"[RESOLVE gain] header {hdr_key}={raw:g} disagrees with "
+                    f"DB={float(db_value):g} (>{CROSS_CHECK_RTOL:.0%}); using header (session truth)"
+                )
+                res.warnings.append(msg)
+                _warn_once("xcheck_gain_header_wins", msg)
+            logger.debug("[RESOLVE gain] -> %s (source=%s, key=%s)", res.value, res.source, res.key)
+            return res
+
+        if is_index or (not is_e_per_adu and _comment_indicates_gain_index(comment)):
+            setting = int(round(float(raw)))
+            mapped = _map_gain_setting_index(setting, equipment_id, header)
+            if mapped is not None and _is_valid("gain", mapped):
+                res.value = float(mapped)
+                res.source = "header_index_mapped"
+                res.key = hdr_key
+                res.ok = True
+                logger.debug("[RESOLVE gain] -> %s (source=%s, key=%s, index=%d)", res.value, res.source, res.key, setting)
+                return res
+            if db_ok:
+                msg = (
+                    f"[RESOLVE gain] header GAIN index {setting} not in gain map; using DB base "
+                    f"{float(db_value):g} e-/ADU"
+                )
+                res.warnings.append(msg)
+                _warn_once(f"gain_index_unmapped_{equipment_id}_{setting}", msg)
+                res.value = float(db_value)  # type: ignore[arg-type]
+                res.source = "db"
+                res.ok = True
+                logger.debug("[RESOLVE gain] -> %s (source=%s, unmapped index)", res.value, res.source)
+                return res
+
+    if db_ok:
+        res.value = float(db_value)  # type: ignore[arg-type]
+        res.source = "db"
+        res.ok = True
+        logger.debug("[RESOLVE gain] -> %s (source=%s)", res.value, res.source)
+        return res
+
+    if _is_valid("gain", cfg_value):
+        res.value = float(cfg_value)  # type: ignore[arg-type]
+        res.source = "config"
+        res.ok = True
+        logger.debug("[RESOLVE gain] -> %s (source=%s)", res.value, res.source)
+        return res
+
+    res.source = "unresolved"
+    res.ok = False
+    logger.debug("[RESOLVE gain] -> unresolved")
+    return res
+
+
 def _db_cosmic(db: Any, equipment_id: int | None) -> tuple[float | None, float | None]:
     if db is None or equipment_id is None:
         return None, None
@@ -212,8 +389,12 @@ def resolve_gain(
     if db_value is None:
         db_value, _ = _db_cosmic(db, equipment_id)
     cfg_v = getattr(cfg, "gain", None) if cfg is not None else None
-    return _resolve_equipment_intrinsic(
-        "gain", header=header, db_value=db_value, cfg_value=cfg_v, log_label="gain"
+    return _resolve_gain_header_first(
+        header=header,
+        db_value=db_value,
+        cfg_value=cfg_v,
+        equipment_id=equipment_id,
+        cfg=cfg,
     )
 
 

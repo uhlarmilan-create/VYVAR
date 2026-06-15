@@ -25,7 +25,7 @@ from photometry_core import (
     _normalize_gaia_id,
     _normalize_id_series,
     _normalize_id_value,
-    _select_comps_tiered,
+    _select_comps_by_color_then_rms,
     _warn_zero_compstars_edge,
 )
 
@@ -1950,19 +1950,42 @@ def _assign_comp_tiers_to_pool(
         comp_color_tier_src_map = {}
 
     _cfg_w = cfg or AppConfig()
-    tier_weights = {
-        1: float(_cfg_w.comp_tier1_weight or 1.00),
-        2: float(_cfg_w.comp_tier2_weight or 0.85),
-        3: float(_cfg_w.comp_tier3_weight or 0.50),
-        4: float(_cfg_w.comp_tier4_weight or 0.25),
-    }
+    _max_d = float(_cfg_w.comp_max_delta_bprp or 0.79)
 
-    final_comps, sel_note = _select_comps_tiered(
+    final_comps = _select_comps_by_color_then_rms(
         candidates=candidate_pool_df,
+        target_bprp=float(target_bprp_eff),
         n_comp_min=int(n_comp_min),
         n_comp_max=int(n_comp_max),
-        tier_weights=tier_weights,
+        max_delta_bprp=_max_d,
+        cfg=_cfg_w,
     )
+
+    def _color_rms_sel_note(fc: pd.DataFrame) -> str:
+        if fc is None or getattr(fc, "empty", True):
+            return "no_candidates"
+        if "_delta_bprp_abs" in fc.columns:
+            _col = "_delta_bprp_abs"
+        elif "delta_bprp_abs" in fc.columns:
+            _col = "delta_bprp_abs"
+        else:
+            return "color_rms"
+        mx = float(pd.to_numeric(fc[_col], errors="coerce").max())
+        t1 = float(_cfg_w.comp_tier1_bprp_limit)
+        t2 = float(_cfg_w.comp_tier2_bprp_limit)
+        t3 = float(_cfg_w.comp_tier3_bprp_limit)
+        cap = float(_cfg_w.comp_max_delta_bprp)
+        if mx <= t1:
+            return "color_rms_t1"
+        if mx <= t2:
+            return "color_rms_t2"
+        if mx <= t3:
+            return "color_rms_t3"
+        if mx <= cap:
+            return "color_rms_cap"
+        return "color_rms_wide"
+
+    sel_note = _color_rms_sel_note(final_comps)
 
     if final_comps is None or getattr(final_comps, "empty", True):
         _warn_zero_compstars_edge(
@@ -2000,9 +2023,9 @@ def _assign_comp_tiers_to_pool(
             f"T4={int((_t==4).sum())} "
             f"note={sel_note}"
         )
-        if str(sel_note) in ("t3_fallback", "t4_fallback", "sparse"):
+        if str(sel_note).startswith("color_rms") and sel_note not in ("color_rms_t1",):
             log_event(
-                f"[COMP] WARNING {target_cid}: {sel_note} — field má limity / červené hviezdy / malé FOV"
+                f"[COMP] WARNING {target_cid}: {sel_note} — widened colour window / sparse pool"
             )
     except Exception:  # noqa: BLE001
         pass

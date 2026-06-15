@@ -425,13 +425,27 @@ def render_settings_dashboard(
                         _g_cur, _rn_cur = _db_eq.get_equipment_cosmic_params(_eq_id)
                         _g_disp = float(_g_cur) if _g_cur is not None else 0.0
                         _rn_disp = float(_rn_cur) if _rn_cur is not None else 0.0
+                        _gain_ui_max = 50.0
+                        _rn_ui_max = 500.0
+                        if _g_disp > _gain_ui_max or _g_disp < 0.0:
+                            st.warning(
+                                f"Stored gain {_g_disp:.3f} e⁻/ADU is outside the editor range "
+                                f"0–{_gain_ui_max:.0f}; clamped for display — correct and Save."
+                            )
+                        if _rn_disp > 50.0:
+                            st.warning(
+                                f"Stored read noise {_rn_disp:.1f} e⁻ is unusually high "
+                                f"(typical 3–15 e⁻) — verify units and Save if corrected."
+                            )
+                        _g_val = min(max(_g_disp, 0.0), _gain_ui_max)
+                        _rn_val = min(max(_rn_disp, 0.0), _rn_ui_max)
                         _col1, _col2 = st.columns(2)
                         with _col1:
                             _gain_new = st.number_input(
                                 "Gain [e⁻/ADU]",
                                 min_value=0.0,
-                                max_value=20.0,
-                                value=_g_disp,
+                                max_value=_gain_ui_max,
+                                value=_g_val,
                                 step=0.01,
                                 format="%.3f",
                                 key=f"vyvar_gain_{_eq_id}",
@@ -441,8 +455,8 @@ def render_settings_dashboard(
                             _rn_new = st.number_input(
                                 "Read Noise [e⁻]",
                                 min_value=0.0,
-                                max_value=50.0,
-                                value=_rn_disp,
+                                max_value=_rn_ui_max,
+                                value=_rn_val,
                                 step=0.1,
                                 format="%.1f",
                                 key=f"vyvar_rn_{_eq_id}",
@@ -520,13 +534,16 @@ def render_settings_dashboard(
                 help="Aperture scale for comparison stars (1.1 = +10% for S/N)",
             )
         with st.expander("🔬 Advanced algorithms (ALG-2/3/4/5)"):
-            st.caption("These algorithms run after ensemble normalization.")
+            st.caption("ALG-3 runs before ensemble normalization; ALG-2/4 run after airmass detrend.")
             col_a, col_b = st.columns(2)
             with col_a:
                 temporal_binning_enabled = st.toggle(
                     "Temporal Binning (ALG-3)",
                     value=bool(cfg.temporal_binning_enabled),
-                    help="MNRAS 2023: smooth comp ensemble before normalization",
+                    help=(
+                        "Hartley & Wilson 2023 MNRAS: smooth comp light curves before ensemble. "
+                        "Default OFF — per-frame ensemble preserves common-mode cancellation."
+                    ),
                 )
                 pytics_enabled = st.toggle(
                     "PyTICS weights (ALG-5)",

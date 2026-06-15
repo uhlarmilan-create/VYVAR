@@ -1109,13 +1109,19 @@ def precompute_and_save_snr_aperture_table_for_draft(
             output_dir=dd,
             masterstar_fits_path=Path(masterstar_fits_path) if masterstar_fits_path else dd,
         )
+    _snr_header = None
+    if masterstar_fits_path is not None and str(masterstar_fits_path).strip():
+        try:
+            with astrofits.open(Path(masterstar_fits_path), memmap=False) as hdul:
+                _snr_header = hdul[0].header
+        except Exception:  # noqa: BLE001
+            _snr_header = None
     if db is not None and eq_id is not None:
-        # Unified equipment-intrinsic resolution (param_resolver): DB-set (valid) ->
-        # header (none here) -> config -> default. Single source of truth shared with
-        # the per-frame error map and Phase 2A photometric errors.
+        # Unified gain resolution (param_resolver): header e-/ADU or index-mapped ->
+        # DB -> config. Read noise stays DB-first. Shared with Phase 2A and error map.
         from param_resolver import resolve_gain, resolve_read_noise  # noqa: PLC0415
 
-        _g_res = resolve_gain(None, db=db, equipment_id=int(eq_id))
+        _g_res = resolve_gain(_snr_header, db=db, equipment_id=int(eq_id))
         _rn_res = resolve_read_noise(None, db=db, equipment_id=int(eq_id))
         if _g_res.ok:
             gain_p = float(_g_res.value)
@@ -2416,7 +2422,9 @@ def ensemble_normalize(
         ensemble_scatter[i] = float(np.std(comp_vals)) if comp_vals.size > 1 else 0.0
         delta_mag[i] = target_mag_inst[i] - ens_med
 
-        # Zeropoint: weighted mean(cat − inst) on comps to align absolute mag to catalog.
+        # Honeycutt (1992) PASP 104:435 — per-frame ensemble zeropoint from constant comps.
+        # mag_calib[i] = target_inst + ZP_frame; delta_mag[i] = target_inst - ens_med (AIJ flux sum).
+        # Hence mag_calib - delta_mag = ZP_frame + ens_med (frame-dependent; not identical zeropoints).
         # ``delta_mag + median(cat)`` by bolo nesúladné s ``ens_med`` zo súčtu fluxov (−2.5 log ΣF).
         zp_offs: list[float] = []
         zp_vals: list[float] = []
@@ -3314,13 +3322,78 @@ def _append_ct_prototype_row(draft_dir: Path, row: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _target_row_is_vsx_known_variable(target_row: pd.Series) -> bool:
+    """True when target is a catalogued variable (VSX name/type), not a Gaia-only label."""
+    vn = str(target_row.get("vsx_name", target_row.get("name", "")) or "").strip()
+    if vn and vn.lower() not in ("nan", "none", "—", "-"):
+        if not vn.lower().startswith("gaia dr3"):
+            return True
+    vt = str(target_row.get("vsx_type", "") or "").strip()
+    return bool(vt) and vt.lower() not in ("nan", "none")
+
+
+def empirical_feature_mask_mag(
+    mag: np.ndarray,
+    *,
+    k: float = 3.0,
+    min_run: int = 3,
+) -> np.ndarray:
+    """Mask eclipses/transits before sigma-clipping (TESS subdwarf recipe, arXiv:2402.16018).
+
+    In flux space: mark runs of >= ``min_run`` consecutive points below ``-k`` sigma_MAD
+    from the median flux; extend the mask on both sides until flux returns above the median.
+    """
+    n = len(mag)
+    protected = np.zeros(n, dtype=bool)
+    m = np.asarray(mag, dtype=float)
+    finite = np.isfinite(m)
+    if int(finite.sum()) < max(int(min_run) + 2, 5):
+        return protected
+
+    flux = np.power(10.0, -0.4 * m)
+    f_ref = float(np.nanmedian(flux[finite]))
+    if not math.isfinite(f_ref) or f_ref <= 0:
+        return protected
+
+    resid = flux - f_ref
+    r_fin = resid[finite]
+    r_med = float(np.median(r_fin))
+    mad = float(np.median(np.abs(r_fin - r_med)))
+    sigma = max(mad / _MAD_CONSISTENCY, 1e-12)
+    deep = (resid < (-float(k) * sigma)) & finite
+
+    i = 0
+    while i < n:
+        if not bool(deep[i]):
+            i += 1
+            continue
+        j = i
+        while j < n and bool(deep[j]):
+            j += 1
+        if (j - i) >= int(min_run):
+            lo = i
+            while lo > 0 and bool(finite[lo - 1]) and float(flux[lo - 1]) < f_ref:
+                lo -= 1
+            hi = j
+            while hi < n and bool(finite[hi]) and float(flux[hi]) < f_ref:
+                hi += 1
+            protected[lo:hi] = True
+        i = j
+    return protected
+
+
 def detect_outliers(
     mag_calib: np.ndarray,
     flags_saturated: np.ndarray,
     *,
     outlier_sigma: float = 3.0,
+    feature_mask: np.ndarray | None = None,
+    skip_sigma_clip: bool = False,
 ) -> list[str]:
-    """Outlier detekcia v svetelnej krivke (pred airmass fitom v run_phase2a; pozri ``phase2a_airmass_before_outlier``).
+    """Outlier detekcia v svetelnej krivke (reporting path; mask-first for features).
+
+    ``feature_mask`` protects eclipse/transit epochs (arXiv:2402.16018) from sigma-clipping.
+    ``skip_sigma_clip`` relaxes clipping for VSX-known variables (catalogued astrophysical signal).
 
     Returns:
         list flagov: "normal" / "saturated" / "outlier_hi" / "outlier_lo" / "no_data"
@@ -3329,29 +3402,100 @@ def detect_outliers(
     flags = ["no_data"] * n
     finite_mask = np.isfinite(mag_calib)
 
-    if finite_mask.sum() < 3:
-        return flags
-
-    finite_vals = mag_calib[finite_mask]
-    med = float(np.median(finite_vals))
-    sigma = _mad_sigma(finite_vals)
-    thr = outlier_sigma * sigma
+    _prot = np.zeros(n, dtype=bool)
+    if feature_mask is not None:
+        _fm = np.asarray(feature_mask, dtype=bool)
+        if len(_fm) == n:
+            _prot = _fm
 
     for i in range(n):
         if not math.isfinite(mag_calib[i]):
             flags[i] = "no_data"
         elif bool(flags_saturated[i]):
             flags[i] = "saturated"
-        elif mag_calib[i] < med - thr:
-            # Spike nahor (flux nahor = mag nižšie = lietadlo/kozmický lúč)
-            flags[i] = "outlier_hi"
-        elif mag_calib[i] > med + thr:
-            # Pokles flux (zakrytie, potenciálne zaujímavé)
-            flags[i] = "outlier_lo"
+        elif bool(_prot[i]) or bool(skip_sigma_clip):
+            flags[i] = "normal"
         else:
             flags[i] = "normal"
 
+    if skip_sigma_clip or finite_mask.sum() < 3:
+        return flags
+
+    clip_mask = finite_mask & ~_prot
+    if int(clip_mask.sum()) < 3:
+        clip_mask = finite_mask
+
+    finite_vals = mag_calib[clip_mask]
+    med = float(np.median(finite_vals))
+    sigma = _mad_sigma(finite_vals)
+    thr = outlier_sigma * sigma
+
+    for i in range(n):
+        if flags[i] != "normal":
+            continue
+        if bool(_prot[i]):
+            continue
+        if mag_calib[i] < med - thr:
+            flags[i] = "outlier_hi"
+        elif mag_calib[i] > med + thr:
+            flags[i] = "outlier_lo"
+
     return flags
+
+
+def apply_reporting_postprocess(
+    mag_calib: np.ndarray,
+    mag_calib_ct: np.ndarray,
+    *,
+    target_row: pd.Series,
+    target_name: str,
+    sat_flags: np.ndarray,
+    target_frames: pd.DataFrame,
+    outlier_sigma: float,
+    ct_ok: bool,
+    ac_ok: bool,
+    delta_m_corr: float | None,
+    cfg: AppConfig | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str]]:
+    """Workstream B: ship ensemble-calibrated mag; mask-first outliers; no target airmass LSQ.
+
+    Basis: Plavchan et al. (2007) arXiv:0704.3584; TESS subdwarf mask arXiv:2402.16018.
+    """
+    _cfg = cfg or AppConfig()
+    mag_calib_raw = np.asarray(mag_calib, dtype=np.float64).copy()
+    mag_for_report = np.asarray(mag_calib_ct, dtype=np.float64)
+    _feature_mask = empirical_feature_mask_mag(mag_for_report)
+    _vsx_known = _target_row_is_vsx_known_variable(target_row)
+    if int(_feature_mask.sum()) > 0:
+        logging.info(
+            "[OUTLIER] Feature mask: %d/%d frames protected before clip (arXiv:2402.16018)",
+            int(_feature_mask.sum()),
+            len(_feature_mask),
+        )
+    if _vsx_known:
+        logging.debug("[OUTLIER] VSX-known variable %s: sigma clip skipped", target_name)
+    out_flags = detect_outliers(
+        mag_for_report,
+        sat_flags,
+        outlier_sigma=outlier_sigma,
+        feature_mask=_feature_mask,
+        skip_sigma_clip=_vsx_known,
+    )
+    _preserve_nondetection_flags_helper(out_flags, target_frames)
+    mag_out = mag_calib_raw.copy()
+    if ac_ok and delta_m_corr is not None and np.isfinite(float(delta_m_corr)):
+        mag_calib_ac = mag_out + float(delta_m_corr)
+    else:
+        mag_calib_ac = np.full_like(mag_out, float("nan"))
+    mag_calib_ct_out = np.asarray(mag_calib_ct, dtype=np.float64).copy()
+    if not ct_ok:
+        mag_calib_ct_out = mag_out.copy()
+    if bool(_cfg.phase2a_airmass_before_outlier):
+        logging.info(
+            "[PHASE 2A] phase2a_airmass_before_outlier=True ignored for shipped columns "
+            "(Workstream B: no target airmass LSQ on reporting path)"
+        )
+    return mag_calib_raw, mag_out, mag_calib_ct_out, mag_calib_ac, out_flags
 
 
 def democratic_detrend_lc(
@@ -6224,7 +6368,7 @@ def _phase2a_prepare_shared_state(
     _p2(f"Fáza 2A: FWHM={float(fwhm_px):.3f} px — mapa poľa a svetelné krivky…")
 
     # Gain / read noise for photometric errors and SNR aperture table.
-    # Unified resolver (equipment-intrinsic): DB-set (valid) -> header (cross-check) -> config.
+    # Gain: header-first (e-/ADU or index-mapped) -> DB -> config. RN: DB-first.
     from param_resolver import resolve_gain, resolve_read_noise  # noqa: PLC0415
 
     _equipment_id = _resolve_phase2a_equipment_id(
@@ -7429,65 +7573,23 @@ def _phase2a_process_one_target(
         else:
             base_flags.append("no_data")
 
-    # TODO-29 order (default): outlier detect → airmass fit on clean frames.
-    # Diagnostic revert: ``cfg.phase2a_airmass_before_outlier=True`` → airmass fit → outlier detect.
-    mag_for_airmass = np.asarray(mag_calib_ct, dtype=np.float64)
-    if bool(ct_ok) and math.isfinite(float(c1)) and float(c1) != 0.0:
-        logging.info("[PHASE 2A] Airmass detrend applied on CT-corrected mag (TODO-30)")
+    # Reporting path (Workstream B): see ``apply_reporting_postprocess``.
+    mag_calib_raw, mag_calib, mag_calib_ct, mag_calib_ac, out_flags = apply_reporting_postprocess(
+        mag_calib,
+        mag_calib_ct,
+        target_row=target_row,
+        target_name=target_name,
+        sat_flags=sat_flags,
+        target_frames=target_frames,
+        outlier_sigma=outlier_sigma,
+        ct_ok=bool(ct_ok),
+        ac_ok=bool(ac_ok),
+        delta_m_corr=(float(delta_m_corr) if delta_m_corr is not None else None),
+        cfg=_cfg,
+    )
 
     am_slope = float("nan")
     am_piecewise = False
-    _am_before_outlier = bool(_cfg.phase2a_airmass_before_outlier)
-
-    if _am_before_outlier:
-        logging.info(
-            "[PHASE 2A] phase2a_airmass_before_outlier=True: airmass fit before outlier detect (pre-TODO-29)"
-        )
-        mag_cal_am, am_slope, am_piecewise = _apply_airmass_detrend_helper(
-                mag_for_airmass, base_flags, airmass_arr, flip_arr, target_cid
-            )
-        mag_calib_raw = mag_calib.copy()
-        mag_calib = mag_cal_am
-        if ac_ok and delta_m_corr is not None and np.isfinite(float(delta_m_corr)):
-            mag_calib_ac = mag_calib + float(delta_m_corr)
-        else:
-            mag_calib_ac = np.full_like(mag_calib, float("nan"))
-        out_flags = detect_outliers(mag_calib, sat_flags, outlier_sigma=outlier_sigma)
-        _preserve_nondetection_flags_helper(out_flags, target_frames)
-    else:
-        out_flags = detect_outliers(mag_for_airmass, sat_flags, outlier_sigma=outlier_sigma)
-        _preserve_nondetection_flags_helper(out_flags, target_frames)
-        airmass_fit_flags: list[str] = []
-        for i in range(len(mag_calib)):
-            bf = base_flags[i]
-            of = out_flags[i]
-            if bf != "normal":
-                airmass_fit_flags.append(bf)
-            elif of != "normal":
-                airmass_fit_flags.append(of)
-            else:
-                airmass_fit_flags.append("normal")
-        n_total = len(airmass_fit_flags)
-        n_clean = sum(1 for f in airmass_fit_flags if f == "normal")
-        logging.info(
-            "[PHASE 2A] Airmass fit on %d/%d frames (after outlier mask)",
-            n_clean,
-            n_total,
-        )
-        mag_cal_am, am_slope, am_piecewise = _apply_airmass_detrend_helper(
-                mag_for_airmass, airmass_fit_flags, airmass_arr, flip_arr, target_cid
-            )
-        mag_calib_raw = mag_calib.copy()
-        mag_calib = mag_cal_am  # CT + airmass detrend when ct_ok; else == detrend(mag_calib)
-        if ac_ok and delta_m_corr is not None and np.isfinite(float(delta_m_corr)):
-            mag_calib_ac = mag_calib + float(delta_m_corr)
-        else:
-            mag_calib_ac = np.full_like(mag_calib, float("nan"))
-
-    if not ct_ok:
-        # When CT was not applied, align mag_calib_ct with final post-airmass mag_calib
-        # so downstream tools do not misread the airmass detrend as a CT shift.
-        mag_calib_ct = mag_calib.copy()
 
     # ALG-2: Savitzky-Golay non-linear detrending (Savitzky & Golay 1964)
     # Runs after airmass detrend — removes slow systematic trends
@@ -10569,17 +10671,40 @@ def _enrich_target_bp_rp_from_gaia_db(
     return out
 
 
+def _bprp_tier_ladder_for_selection(
+    cfg: AppConfig | None,
+    max_delta_bprp: float,
+) -> list[float]:
+    """Tier-ladder colour windows: tier1 -> tier2 -> tier3 -> comp_max_delta_bprp cap."""
+    if cfg is not None:
+        raw = [
+            float(getattr(cfg, "comp_tier1_bprp_limit", 0.15)),
+            float(getattr(cfg, "comp_tier2_bprp_limit", 0.30)),
+            float(getattr(cfg, "comp_tier3_bprp_limit", 0.55)),
+            float(getattr(cfg, "comp_max_delta_bprp", max_delta_bprp)),
+        ]
+    else:
+        raw = [float(max_delta_bprp)]
+    out: list[float] = []
+    for v in raw:
+        if math.isfinite(v) and v > 0 and v not in out:
+            out.append(float(v))
+    return out or [float(max_delta_bprp)]
+
+
 def _select_comps_by_color_then_rms(
     candidates: pd.DataFrame,
     target_bprp: float,
     n_comp_min: int,
     n_comp_max: int,
     max_delta_bprp: float = 0.5,
+    *,
+    cfg: AppConfig | None = None,
 ) -> pd.DataFrame:
     """
-    Stupeň 1: farebný filter (|ΔBP-RP|)
-    Stupeň 2: Broeg ranking (1/comp_rms)
-    Fallback: uvoľni threshold ak < n_comp_min
+    Stupeň 1: farebný filter (|ΔBP-RP|) — tier ladder widen ak < n_comp_min
+    Stupeň 2: rank by comp_rms ASC (Broeg 1/rms equivalent)
+    Drop comp_rms < comp_select_rms_floor (isolated_bin artefact).
     """
     if candidates is None or getattr(candidates, "empty", True):
         return pd.DataFrame()
@@ -10587,36 +10712,43 @@ def _select_comps_by_color_then_rms(
     if "comp_rms" not in candidates.columns:
         raise ValueError("_select_comps_by_color_then_rms requires comp_rms column")
 
-    if not np.isfinite(float(target_bprp)):
-        # Ak target nemá BP-RP → preskočiť farebný filter, použiť len RMS ranking
-        ranked = candidates.copy()
+    _floor = 1e-6
+    if cfg is not None:
+        try:
+            _floor = float(getattr(cfg, "comp_select_rms_floor", 1e-6) or 1e-6)
+        except (TypeError, ValueError):
+            _floor = 1e-6
+
+    def _apply_rms_floor(df: pd.DataFrame) -> pd.DataFrame:
+        rms = pd.to_numeric(df["comp_rms"], errors="coerce")
+        return df[rms >= _floor].copy()
+
+    def _rank_by_rms(df: pd.DataFrame) -> pd.DataFrame:
+        ranked = df.copy()
         ranked["_broeg_score"] = ranked["comp_rms"].apply(
             lambda r: 1.0 / r if np.isfinite(r) and r > 0 else 0.0
         )
-        ranked = ranked.sort_values(
-            ["_broeg_score", "catalog_id"], ascending=[False, True], kind="mergesort"
+        id_col = "catalog_id" if "catalog_id" in ranked.columns else ranked.columns[0]
+        return ranked.sort_values(
+            ["_broeg_score", id_col], ascending=[False, True], kind="mergesort"
         )
+
+    if not np.isfinite(float(target_bprp)):
+        ranked = _rank_by_rms(_apply_rms_floor(candidates.copy()))
         return ranked.head(int(n_comp_max))
 
-    # Vypočítaj delta_bprp pre každého kandidáta
     out = candidates.copy()
     out["_delta_bprp_abs"] = (pd.to_numeric(out.get("bp_rp"), errors="coerce") - float(target_bprp)).abs()
+    out = _apply_rms_floor(out)
 
-    # Fallback thresholds: postupne uvoľňuj
-    thresholds = [
-        float(max_delta_bprp),  # napr. 0.5
-        float(max_delta_bprp) * 1.6,  # napr. 0.8
-        99.0,  # všetci
-    ]
+    thresholds = _bprp_tier_ladder_for_selection(cfg, max_delta_bprp)
+    first_thr = float(thresholds[0]) if thresholds else float(max_delta_bprp)
 
     selected = pd.DataFrame()
     used_threshold: float | None = None
 
     for thr in thresholds:
-        if float(thr) >= 90.0:
-            pool = out[(out["_delta_bprp_abs"] <= float(thr)) | out["_delta_bprp_abs"].isna()]
-        else:
-            pool = out[out["_delta_bprp_abs"] <= float(thr)]
+        pool = out[out["_delta_bprp_abs"] <= float(thr)]
         if int(len(pool)) >= int(n_comp_min):
             selected = pool
             used_threshold = float(thr)
@@ -10624,21 +10756,11 @@ def _select_comps_by_color_then_rms(
 
     if selected.empty:
         selected = out
-        used_threshold = 99.0
+        used_threshold = float(thresholds[-1]) if thresholds else float(max_delta_bprp)
 
-    # Stupeň 2: Broeg ranking
-    selected = selected.copy()
-    selected["_broeg_score"] = selected["comp_rms"].apply(
-        lambda r: 1.0 / r if np.isfinite(r) and r > 0 else 0.0
-    )
-    selected = selected.sort_values(
-        ["_broeg_score", "catalog_id"], ascending=[False, True], kind="mergesort"
-    )
+    result = _rank_by_rms(selected).head(int(n_comp_max))
 
-    result = selected.head(int(n_comp_max))
-
-    # Logguj ak bol použitý fallback
-    if used_threshold is not None and used_threshold > float(max_delta_bprp):
+    if used_threshold is not None and used_threshold > first_thr:
         log_event(
             f"[COMP] color filter relaxed to delta_bprp<={float(used_threshold):.2f} "
             f"(target_bprp={float(target_bprp):.3f}, n={int(len(result))})"
@@ -13177,7 +13299,7 @@ __all__ = [
     # photometry (legacy)
     "StressTestResult",
     "_get_lc_psf_or_dao",
-    "airmass_detrend_lc",
+    "apply_reporting_postprocess",
     "check_comparison_stability",
     "common_field_intersection_bbox_px",
     "compute_aperture_correction",
@@ -13185,6 +13307,7 @@ __all__ = [
     "compute_optimal_apertures",
     "compute_snr_optimal_aperture_table",
     "detect_outliers",
+    "empirical_feature_mask_mag",
     "enhance_catalog_dataframe_aperture_bpm",
     "ensemble_normalize",
     "ensure_full_variable_targets_if_presel_stub",

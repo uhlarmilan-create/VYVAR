@@ -2407,6 +2407,28 @@ class _PhotometryReportBuilder:
             if "n_frames" in self.summary_df.columns:
                 nf_med = float(np.nanmedian(pd.to_numeric(self.summary_df["n_frames"], errors="coerce")))
             kv.append(("LC points (median per target)", f"{int(round(nf_med)):d}" if np.isfinite(nf_med) else "—"))
+            ms_fits = self.platesolve_dir / "MASTERSTAR.fits"
+            if ms_fits.is_file():
+                try:
+                    from astropy.io import fits
+
+                    with fits.open(ms_fits, memmap=False) as hdul:
+                        _hsw = hdul[0].header.get("VY_HSWN")
+                        _hsep = hdul[0].header.get("VY_HSEP")
+                    if _hsw is not None and bool(_hsw):
+                        _sep_s = "—"
+                        try:
+                            _sep_s = f"{float(_hsep[0] if isinstance(_hsep, tuple) else _hsep):.3f}°"
+                        except (TypeError, ValueError):
+                            pass
+                        kv.append(
+                            (
+                                "Plate-solve hint offset (warning)",
+                                f"Stale pointing hint vs solved WCS ({_sep_s}); solve verified via catalog recovery.",
+                            )
+                        )
+                except Exception:  # noqa: BLE001
+                    pass
             return kv
 
         y = self._draw_kv_table_section(

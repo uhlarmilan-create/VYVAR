@@ -2,6 +2,89 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- photometry root-cause investigation (AIJ ground truth) + direction (2026-06-15)
+
+**Problem entry:** a non-home set (V0612 Cam, draft_407 g, Brno C5A-150M bin4, ~0.562 arcsec/px,
+EA eclipse) showed lc_rms ~0.20 chaos while AIJ/SIPS showed a clean ~0.16 mag eclipse.
+Investigated against AIJ (AstroImageJ) ground truth (Table.tbl: 14 px aperture, sky 27/54, comps
+C2/C3/C4, no detrend; pre-eclipse scatter 0.011 mag).
+
+**Sandbox phases** (all under tmp/phase*/, no production edits):
+- Ph1-2: aperture undersizing real but NOT the root cause; simple T/sum(comps) at production 5.55 px
+  is already AIJ-clean (0.014). Matched-14px "chaos" was partly an aligned-image-product artifact.
+- Ph3-4: ran the REAL production delta_mag path per-stage. Root cause = **temporal_bin_comp_lc
+  (ALG-3)** rolling-median smoothing of comp magnitude series before the differential. Disabling
+  restores delta_mag pre 0.051->0.0139, eclipse shape corr 0.40->0.935. The "0.214 full RMS" was
+  largely the real eclipse counted as noise by undemeaned lc_rms.
+- Ph5: mechanism PROVEN -- corr(injection, comp high-freq transparency) = 0.9995; injection vanishes
+  on flat transparency, explodes on variable. Regime: binning helps 0/25 targets across both rigs;
+  "home works because binning helps" refuted (home just masks the same inflation via slower/larger
+  signals). Only pre-differential common-mode breaker is temporal_bin_comp_lc.
+- Ph6: prototyped fix pair (binning OFF + leave-one-out residual comp-QA). Pair restores AIJ-class LC
+  (V0612 pre 0.011, corr 0.947) and sensible comp QA; LOO residual discriminates a real injected
+  variable comp from shared transparency.
+- Ph7: simple-pipeline params audit -- color window start **0.15** (existing comp_tier1_bprp_limit);
+  widen ladder 0.30/0.55/0.79; N 3-8; flux-sum ensemble (AIJ); trust_flag_enabled=False = bypass.
+
+**Refuted along the way:** aperture-as-root-cause; comp_rms~0 inverse-variance weighting;
+PyTICS/color-term/AC/savgol/democratic as the driver.
+
+**Literature grounding:** ALG-3 source is **Hartley & Wilson 2023, MNRAS 526, 3482** (docstring/config
+mis-attribute it to "Broeg-Bischoff & Dreizler"). Their method bins ONLY the comp signal and is valid
+only when the systematic (transparency) timescale >> cadence AND the comp is white-noise-limited
+(few/faint comps). Milan's data violates all three (many comps, fast transparency, fast targets).
+Standard tools (AIJ, Broeg 2005/prose, SPECULOOS) reduce reference noise by the per-frame ENSEMBLE
+(spatial), which preserves common-mode; they do not temporally smooth comps before the differential.
+
+**Direction decided:** drop the fudge stack (temporal binning, color term, complex weighting) in favor
+of a SIMPLE, physics-first differential -> color-matched + stable comp selection. Trust RED/YELLOW
+temporarily OFF while tuning photometry. Legacy anchor fields (h&chi Per, DY Peg, BO CVn) and old-SHA
+re-cut framing retired; tune on new catalog + new pkl. See DECISIONS / ROADMAP / STATE.
+
+**Deliverables:** CURSOR_RESULT_phase4..6, CURSOR_RESULT_simple_pipeline_params_audit.md;
+sandbox harnesses tmp/phase4..7/.
+
+---
+
+## Session — catalog-recovery gate + hint-as-prior (TASK 2 — 2026-06-14)
+
+**Task:** CURSOR_TASK TASK 2 — MASTERSTAR accept on catalog-recovery; `hint_sep` warning when VERIFIED.
+
+**Changes:**
+- `vyvar_platesolver.py` — `_compute_masterstar_catalog_recovery`, `_masterstar_solve_acceptance`;
+  collapse stacked hint_sep escape blocks; benign ratio 2.50→3.20; FITS `VY_CRT`/`VY_HSWN`.
+- `config.py` / `config.json` / `ui_dao_stars.py` — four new MASTERSTAR verification keys.
+- `citations.py` + `CITATIONS.bib` — Lang et al. 2010 when catalog-recovery verification runs.
+- `tests/test_masterstar_catalog_recovery_gate.py` — synthetic acceptance cases.
+- Docs: DECISIONS, STATE, ROADMAP, PROCESS, VYVAR_PARAMS.
+
+**Expected:** Brno `r_60_4` VERIFIED (recovery ~0.84); `z_90_4` stays rejected (~0.34).
+
+**Pending gates before commit lock:** Milan overlay; anchor 0 science failures; home-rig no displacement.
+
+---
+
+## Session — per-set astrometry fault isolation (2026-06-14)
+
+**Task:** TASK 1 from CURSOR_TASK — one bad filter/set must not abort RUN VYVAR; partial-success
+semantics for photometry stage.
+
+**Changes:**
+- `pipeline.py` — multi-group `astrometry_align_and_build_masterstar`: per-job try/except; merge
+  survivors; `skipped_subgroups` on partial fail; all-fail still raises. Single-group path unchanged
+  (fail-fast).
+- `app.py` — RUN VYVAR photometry: track `completed`; hard-fail only when nothing succeeded;
+  surface astrometry `skipped_subgroups` in partial-completion log.
+- `tests/test_astrometry_fault_isolation.py` — monkeypatch `_astrometry_align_impl_body`.
+
+**Context:** draft_402 — `g`/`i` solved, `r` failed hint_sep guard, `z` never ran; whole run aborted.
+TASK 2 (hint-as-prior reframe) **blocked** on Milan `r` overlay + anchor/home-rig gate.
+
+**Photometry-neutral:** survivors use independent `_astrometry_align_impl_body` per set; skipped set
+fail-closed (no catalog).
+
+---
+
 ## Session — end-of-session consolidation: Brno production fix + docs (2026-06-14)
 
 **Task:** Diagnose draft_400 Brno `g_60_4` production-path failure; fix; anchor gate; doc sync; commit.

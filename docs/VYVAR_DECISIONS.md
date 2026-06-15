@@ -699,8 +699,38 @@ may remain linear when SIP regresses.
 
 **Equipment:** C5A-150M (id=4, 3.76 µm), AZ800 (id=6, F=5480 mm) seeded in `initialize_database()`.
 
-**Supersedes** the 2026-06-14 scoped lock paragraph below (83.1% Brno target, ROWORDER ship candidate,
-FITS escape at ≥80% match alone).
+### Per-set astrometry fault isolation (2026-06-14)
+
+**Decision:** In multi-group drafts, a plate-solve / MASTERSTAR failure in one filter/setup must **not**
+abort astrometry for sibling sets or block photometry on sets that already produced catalogs.
+
+**Mechanism:** `astrometry_align_and_build_masterstar` loops jobs with try/except; merges survivor
+reports via `_merge_astrometry_group_reports`; attaches `skipped_subgroups` for failed setups.
+All-fail still raises. **Single-group path unchanged** — one set, nothing to continue to.
+
+**RUN VYVAR:** photometry stage hard-fails only when **no** set completed; partial success logs OK +
+skipped/failed sets (including astrometry skips from `skipped_subgroups`).
+
+**Fail-closed on skipped set:** exception before catalog / `per_frame_catalog_index.csv` write — no
+half-written MASTERSTAR downstream.
+
+**TASK 2 (shipped 2026-06-14):** catalog-recovery verification gate + hint-as-prior on MASTERSTAR.
+
+**Accept gate (VERIFIED):** `catalog_recovery_tight ≥ masterstar_catalog_recovery_min` (default **0.65**),
+`n_matched_tight ≥ masterstar_min_matched_floor` (default **40**), and distortion healthy
+(`distortion_limited_benign` **or** `centre_rms ≤ masterstar_centre_rms_max_px`, default **1.20 px**).
+Detection-denominated `_match_rate` / brightest-N remain **informational only**.
+
+**hint_sep:** once VERIFIED, stale pointing offset is **`hint_sep_warn`** (non-fatal; PDF cover note via
+`VY_HSWN`). Hard reject only when **not VERIFIED** and `hint_sep > max(1.5°, fov_diameter_deg)`.
+Stacked FITS-header escape blocks (≥85% match + RMS ≤2 px) **removed** — superseded by this rule.
+
+**Distortion benign ratio:** edge/centre cap **2.50 → 3.20** (`masterstar_distortion_benign_ratio_max`;
+Brno `r` ratio ~3.0).
+
+**Citations:** Lang et al. 2010 (Astrometry.net) emitted when catalog-recovery verification runs.
+
+**Supersedes** hint_sep escape paragraphs above (≥75% brightest-N + RMS ≤2 px widen) and TASK 2 blocked note.
 
 ### Plate-solver: scoped robustness lock (2026-06-14, superseded)
 
@@ -712,3 +742,122 @@ CM-removed ensemble residuals** (Gilliland & Brown 1988; Broeg 2005; Honeycutt 1
 detrend; Burdanov et al. 2014 / ε Indi 2020 practice; Everett & Howell 2001).
 
 **Superseded:** wholesale flag — use sparse-only fallback above.
+
+---
+
+## Photometry math / simple differential (2026-06-15)
+
+- ALG-3 comp temporal binning (`temporal_bin_comp_lc`) is incorrect for VYVAR's regime; **default
+  OFF**. Proven root cause of non-home-set chaos (mechanism: per-frame common-mode breakage;
+  corr(injection, transparency HF)=0.9995).
+- Color term (c1) to be **dropped** in favor of color-matched comp selection (min |delta BP-RP|):
+  removes the color systematic at source.
+- Comp selection criterion = **min |delta(BP-RP)| + min RMS**; plain per-frame ensemble; no
+  temporal binning, no color term, no complex weighting.
+- Trust RED/YELLOW **temporarily disabled** during photometry tuning; to be re-derived on corrected
+  numbers afterward.
+- Legacy fields/anchors (h&chi Per, DY Peg, BO CVn) and old-SHA re-cut framing are **retired**; we
+  are on the new catalog + new pkl.
+- Fix mis-attribution: ALG-3 is **Hartley & Wilson 2023, MNRAS 526, 3482** (not Broeg-Bischoff &
+  Dreizler) at docstring + config.py:452 + config_schema.md:145, and the UI caption ("after
+  ensemble" -> ALG-3 runs BEFORE ensemble).
+- **Supersede** proposed `comp_color_window_bprp` param (PARAMS 2026-06-15): reuse existing
+  tier ladder (`comp_tier1_bprp_limit` 0.15 -> tier2 0.30 -> tier3 0.55 -> cap
+  `comp_max_delta_bprp` 0.79) in `_select_comps_by_color_then_rms`; no lone 0.2 step, no new key.
+- Phase-1 comp rank artefact floor: **`comp_select_rms_floor` = 1e-6** (drop isolated_bin comps
+  before RMS ranking; mirrors CS-2 `check_select_rms_floor` pattern at 1e-4).
+- **Workstream A landed (2026-06-15):** dataclass + config.json defaults (`temporal_binning_enabled`
+  False, `apply_color_term` off); Phase-1 routes through `_select_comps_by_color_then_rms` in
+  `_assign_comp_tiers_to_pool`; tier load-clamp fixed (0.15/0.30/0.55 survive JSON). DoD-A PASS
+  V0612 `delta_mag` 0.0113 / 0.949 / 7 comps.
+- **Gate:** >=1 additional ground-truth field recommended before treating V0612-only as global
+  default risk closure (Milan risk call).
+
+---
+
+## Decision-grounding rule (2026-06-15, ADOPTED — Milan)
+
+Any design fork Claude brings to Milan must be grounded in physics/math, peer-reviewed literature,
+or documented field practice. Bare engineering preference is not sufficient; no "recommended" label
+without a cited basis. Grounding may supersede earlier recommendations. Method citations belong in
+`CITATIONS.bib` at call sites when code changes land.
+
+---
+
+## Reporting-column fix — grounded synthesis (2026-06-15, supersedes B1/B2)
+
+**Earlier B1/B2 framing withdrawn:** "guard the airmass detrend" treated a non-physical step as
+load-bearing; not grounded in differential-photometry physics.
+
+**Code audit (read-only, 2026-06-15):**
+
+| function | file:line | finding |
+|----------|-----------|---------|
+| `airmass_detrend_lc` | `photometry_core.py:3584-3651` | Least-squares fit **`mag = a·airmass + b` on the target's own curve** (`mag_fit = mag_calib[mask]`). **Not** a comp-derived extinction coefficient. Applied via `_apply_airmass_detrend_helper` (`:5732-5754`) to `mag_for_airmass` (= `mag_calib_ct` when CT ok, else pre-CT `mag_calib`; `:7440-7487`). |
+| `detect_outliers` | `photometry_core.py:3323-3360` | Global median + MAD on all finite mags; **no VSX/feature mask**. Eclipse dimming → `outlier_lo` (`mag > med + thr`, `:3354-3356`). V0612 DoD-A LC: **2× `outlier_lo`** (ingress). |
+| `delta_mag` export | `save_lightcurve_csv` `:7594`, `:3814` | **Unchanged** by outlier/airmass stages; only `mag_calib*` columns are rewritten (`:7486-7496`). |
+| Shape preservation | DoD-A LC `tmp/phase10/.../lightcurve_1111749368289526912.csv` | `corr(delta_mag, mag_calib_raw)` **0.998**; `corr(delta_mag, mag_calib)` **0.59** after target-fit airmass detrend (slope ≈ **0.78** mag/airmass on normal frames, within `:3630-3638` guard). |
+
+**Grounded fix (three parts):**
+
+1. **Reported mag = validated differential + ensemble zero-point** (`delta_mag + ZP_ensemble` per
+   frame from colour-matched comps; Honeycutt 1992 ensemble — already cited). For V0612,
+   pre-detrend `mag_calib_raw` already matches `delta_mag` shape (corr 0.998); implementation must
+   make that the shipping curve, not hope post-hoc guards salvage a target-fit detrend.
+2. **Remove per-target airmass detrend from the variable reporting path** — redundant after
+   colour-matched differential (Plavchan et al. arXiv:0704.3584; Dhillon PHY217); signal-absorbing
+   when fitted to the target (confirmed above). Any residual extinction → comp ensemble, not target LSQ.
+3. **Mask-first known-variable guard on `detect_outliers`** — clip out-of-eclipse only; extend mask
+   around ingress/egress (TESS subdwarf recipe arXiv:2402.16018; democratic detrender clips
+   out-of-transit only — arXiv:2411.09753). Required regardless of (1–2).
+
+**DoD-B (2026-06-15): PASS** — ``apply_reporting_postprocess``; V0612 ``mag_calib`` corr **0.958** /
+pre **0.011** (was 0.57); ingress 24/24 ``normal``. Harness: ``tmp/phase11/dod_b_workstream_b.json``.
+
+**Tier-2 (PARKED):** comp-ensemble-derived k for wide delta-airmass — ROADMAP.
+
+---
+
+## Canonical ensemble combination — A vs B resolved (2026-06-15)
+
+**Decision-grounding:** Gauss-Markov / Broeg (2005) AN 326:134; SPECULOOS-South arXiv:2005.02423;
+Howell (1989) sigma budget. Flux-sum equals inverse-variance weighting only in the photon-limited,
+all-constant limit.
+
+**Resolution (conditional, not taste):**
+
+1. **Canonical science product = Broeg inverse-variance estimate** — *when* sigma is complete and
+   error bars are validated (chi²/dof ~ 1 on a constant star).
+2. **`delta_mag` (flux-sum) retained as AIJ-validation / diagnostic column** (`tot_C_cnts` parity);
+   not the primary science export once sigma is trusted. The ~0.002 corr gap vs ``mag_calib`` on
+   V0612 is the expected weighting difference, not a bug.
+3. **Load-bearing work = sigma budget** (photon + read + sky + scintillation + Broeg intrinsic
+   inflation) — same machinery required for TODO-GS8 / TODO-MULTISET multi-rig combine.
+
+### Read-only audit — current code vs Broeg-canonical (2026-06-15)
+
+| Question | Finding | Anchor |
+|----------|---------|--------|
+| **1. What sigma feeds `ZP_weighted`?** | **Not** the per-frame Howell CCD ``err``. Weights use **night-level `comp_rms`** = RMS of **detrended relative flux** around 1.0 (dimensionless stability metric from Phase 1 / global pool), mapped into ``w = 1/rms² × tier_weight``. **No scintillation**; dark only via read-noise in the separate LC ``err`` column, not in weights. | ``comp_pool_rms.py:356-380``; ``comp_selection_per_target.py:1556``; ``ensemble_normalize`` ``:2437-2446``; ``_photometric_error`` ``:636-656`` (photon+sky+read only) |
+| **2. Broeg iteration / variable comp inflation?** | **Partial.** ``pytics_iterative_weights`` (default **on**, ``config.json``) iteratively **inflates `comp_rms`** from per-comp residual scatter vs weighted ZP — Broeg-like, but on **stability RMS**, not per-frame photon sigma. ``check_comparison_stability`` MAD-filters high p2p comps (excludes/suspects), does not iteratively drop variables inside ``ensemble_normalize``. **Ensemble combination itself is flux-sum** (explicitly *not* Broeg-weighted — comment: 1/rms² deforms extinction slope). | ``:2409-2418``; ``pytics_iterative_weights`` ``:1821-1906``; ``check_comparison_stability`` ``:1914+`` |
+| **3. Error bars validated (chi²/dof ~ 1)?** | **No production gate.** LC ``err`` = Howell photon+sky+read per frame; **not** propagated into ensemble weights; **no** chi²/dof check on constant stars in the Phase-2A export path (Mighell χ²-gamma cited export-only per ``VYVAR_MATH_PHYS_AUDIT.md``). DoD-B constant gate used no-regression + RMS ratio, not chi². | ``:1428-1434``; ``VYVAR_MATH_PHYS_AUDIT.md`` Mighell row |
+
+**Outcome:** sigma **incomplete** for Broeg-canonical ensemble combine → **hold flux-sum for `delta_mag`**
+(AI/diagnostic); **reporting `mag_calib` already uses partial Broeg (ZP offset only)**. Do **not**
+promote inverse-variance **ensemble combine** until: (a) weights use validated per-frame sigma
+(Howell + scintillation + inflation), (b) chi²/dof ~ 1 on a constant calibrator. That sigma fix
+is load-bearing for GS8/MULTISET regardless.
+
+**Citations added (sandbox, 2026-06-15):** `young1967`, `osborn2015`, `dravins1998`,
+`murray2020speculoos` in `CITATIONS.bib`. Spec: `docs/VYVAR_SIGMA_BUDGET_SPEC.md`;
+sandbox: `tmp/phase12/`.
+
+### Sigma-budget work item — χ² audit + sandbox (2026-06-15)
+
+**Read-only χ² audit:** Mighell (1999) is **export-only** (`citations.py` PSF block); no
+production χ²/dof on constant stars. PSF `reduced_chi2` and trust `check_star_scatter` are
+unrelated. **Verdict:** promote **new** reduced-χ²/dof gate (not Mighell χ²-gamma as-is).
+
+**Sandbox shipped:** Osborn eq. (7) scintillation + Howell quadrature + Broeg inflation helpers;
+chi² gate harness. **Not production** until χ²/dof ~ 1 on verified-constant calibrator.
+`delta_mag` unchanged.

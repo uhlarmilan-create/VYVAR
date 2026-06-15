@@ -11,11 +11,30 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
+### Workstream B — DONE (DoD-B PASS 2026-06-15)
+
+Tier-2 comp-ensemble extinction k **parked** (wide-field delta-airmass; ROADMAP).
+
+Evidence: ``tmp/phase11/dod_b_workstream_b.json``; ``apply_reporting_postprocess`` in
+``photometry_core.py``.
+
+---
+
 ## NEXT SESSION — open items
 
+0. **Sigma budget (LOAD-BEARING)** — complete per-measurement σ (Howell + Osborn scintillation +
+   Broeg inflation), per-frame IVW weights, **χ²/dof ~ 1** gate on verified-constant calibrator.
+   Sandbox: `tmp/phase12/`; spec: `docs/VYVAR_SIGMA_BUDGET_SPEC.md`. Blocks Broeg-canonical
+   ensemble combine + TODO-GS8 / TODO-MULTISET multi-rig IVW. **`delta_mag` canonical until gate
+   passes.** No commit to production until demonstrated.
+
 1. **Brno / Newton characterization gate (finish)** — `g_60_4` solves on **production path**
-   (draft_400: 75.5% brightest-N, WCS persists). **Open:** Milan **draft_401 UI sign-off + overlay**;
-   Brno **r/i/z** end-to-end; gate `_brno_check` tail fixed (draft_400 / skip).
+   (draft_400: 75.5% brightest-N, WCS persists). **Per-set fault isolation shipped** (2026-06-14) —
+   one bad filter no longer aborts RUN VYVAR; surviving sets reach photometry. **Open:** Milan
+   **draft_401 UI sign-off + overlay**; Brno **r/i/z** end-to-end (draft_402: `r` hint_sep reject,
+   `z` blocked by whole-run abort — now unblocked for survivors); gate `_brno_check` tail fixed
+   (draft_400 / skip). **TASK 2 shipped (2026-06-14):** catalog-recovery gate + hint-as-prior;
+   Brno `r` should accept, `z` stays rejected — pending Milan overlay + anchor/home-rig re-run.
 2. **TODO-MULTISET** — per-telescope-set config (wide vs fine optics); blocks clean multi-rig
    production and crowding gating per rig.
 3. ~~**Short-baseline LC quality (#3)**~~ **DONE (2026-06-10)** — `short_baseline` terminal class,
@@ -42,6 +61,11 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 ---
 
 ## HIGH
+
+- **Sigma budget — validated per-measurement uncertainty (BLOCKING IVW).** Howell + modified
+  Young/Osborn scintillation + Broeg variability inflation; per-frame weight σ; reduced χ²/dof ~ 1
+  on verified-constant calibrator. Sandbox started 2026-06-15 (`tmp/phase12/`). See
+  `VYVAR_SIGMA_BUDGET_SPEC.md`. **Do not** flip ensemble combine to Broeg IVW until gate passes.
 
 - **TODO-MULTISET — per-telescope-set config architecture.** One config per rig (wide
   Carl-Zeiss 200 mm + QHY294MM ≈ 9.77″/px vs Newton 300/1200 + C3-26000 ≈ 0.65″/px).
@@ -230,6 +254,19 @@ manuáli.
 **Definition of Done:** manuál → čistá inštalácia od nuly po GREEN trust na testovacom poli;
 inštalátor → rovnaký výsledok na T460; manuál a inštalátor konzistentné.
 
+### Plate-solver robustness backlog (TASK 2 shipped — 2026-06-14)
+
+**Shipped:** catalog-recovery VERIFIED gate + hint-as-prior on MASTERSTAR (`vyvar_platesolver.py`).
+**Pending sign-off:** Milan `r` overlay + anchor/home-rig regression re-run before commit lock.
+
+**Future (lower priority):**
+1. **Odds-based verification** — replace flat brightest-N % with confidence/odds vs chance (cone
+   density aware; astrometry.net lesson).
+2. **RANSAC / sigma-clipped SIP on inlier pairs** — fit distortion on inliers when ~35% spurious
+   pairs prevent SIP adoption (`lin <= sip` guard).
+3. **Geometry/position verification** — score full matched-set position residuals (band-agnostic)
+   instead of brightness-ranked brightest-N alone.
+
 ## FUTURE
 
 - **Blind index — 3rd rig tier (Noctutec 206/560).** When a validated draft exists, add a
@@ -255,9 +292,51 @@ inštalátor → rovnaký výsledok na T460; manuál a inštalátor konzistentn�
 | **Newton-V colour-term** | Per-rig c1 from field BP-RP |
 | **Meridian-flip handling** | Qatar-8 class |
 | **`[TODO-RECUT-HARNESS-FIDELITY]`** | Re-cut vs archive gate unreliable (~2.26 mag B drift) |
+| **Pre-filled camera catalog** | New-user onboarding — sensor-keyed research, camera-keyed rows; **PARKED** (see below) |
 
 **Backlog (unchanged):** broad-except Tier-1 (~25); B-V legacy removal Stages 2–4; TODO-46 (skip
 airmass detrend for known VSX variables); TODO-LC-QUALITY; TODO-LC-TREND; TODO-GEO; GS8–GS11.
+
+### TODO (PARKED) — Pre-filled camera catalog for new-user onboarding
+
+**Idea:** Ship VYVAR with a curated catalog of monochrome astronomy cameras (the ones amateurs /
+professionals actually use). A new user picks their camera from the list to pre-populate their
+EQUIPMENTS row and set it as default, instead of hand-entering specs. Lowers the onboarding barrier
+(fits the non-expert / "trust in the numbers" mission).
+
+**Status:** PARKED — discuss scope + format with Milan before any implementation.
+
+**Design decisions already reached (do not relitigate without discussion):**
+
+- **Two-tier table.**
+  - *Static / authoritative (safe to ship as fixed):* sensor model, pixel size, sensor dimensions,
+    bit depth, nominal saturation / full-well. These are genuinely fixed per camera/sensor.
+  - *Setting-dependent (ship as "base defaults", NOT authority):* gain (e-/ADU) and read noise.
+    These are **not fixed** — they vary with the gain setting and binning. Store them **per gain
+    mode** (e.g. gain-0/LCG, unity, HCG/high), clearly marked "nominal, verify against your FITS
+    header / measurement." A single value per camera would give a false sense of correctness.
+- **Integrates with the header-first gain logic (already implemented).** Catalog = base/fallback;
+  the FITS header overrides gain per-session when it carries e-/ADU (Moravian). Read noise has no
+  header source in tested cameras, so the catalog/DB per-mode RN is what's used → per-mode RN
+  matters most.
+- **"Trust in the numbers":** recommend the user measure their own gain/RN (photon-transfer) or rely
+  on the header value; the catalog is a starting point, not a substitute.
+- **Research sensor-keyed, deliver camera-keyed.** Many cameras share one Sony BSI sensor
+  (IMX571 = ASI2600/QHY268/C3-26000; IMX455 = ASI6200/QHY600; etc.). Research gain/RN at the sensor
+  level, deliver rows that map to EQUIPMENTS columns (CAMERANAME, SENSORTYPE, SENSORSIZE, PIXELSIZE,
+  SATURATE_ADU, GAIN_ADU, READNOISE_E; FOCAL stays null = per telescope).
+- **Suggested first scope:** dominant Sony BSI mono family + the cameras using each — IMX571, IMX455,
+  IMX411, IMX492/294, IMX533, IMX585, IMX461, plus legacy IMX174/178/290 and Panasonic MN34230
+  (ASI1600). Covers ~90% of real usage. Not an exhaustive "every camera" list (scope + accuracy).
+- **Sources:** manufacturer spec pages + peer-reviewed characterizations (e.g. Alarcon et al. for
+  IMX455/IMX411), not memory.
+
+**Open questions to settle before implementing:**
+
+1. Scope breadth (start with the Sony BSI family above? wider/narrower?).
+2. Format: seed data the app offers for selection (CSV/SQL) vs a reference document for review first.
+3. Schema: does EQUIPMENTS need a gain-mode dimension (per-mode gain/RN rows), or one base row per
+   camera + reliance on header-first gain for the per-session value?
 
 ---
 
@@ -315,6 +394,6 @@ airmass detrend for known VSX variables); TODO-LC-QUALITY; TODO-LC-TREND; TODO-G
 | DR4 build | ~Dec 2026; J2017.5 epoch hook `vyvar_platesolver.py:63` |
 | PSF / NEIGHBOR-SUB | Needs bin1 ~0.65"/px data (Brno gate) |
 | `build_gaia_catalog.py` adaptive-split | Next full-sky build only (not this commit) |
-| **D1-combination (Broeg-weighted vs flux-sum)** | Re-test weighted `ens_med` after colour/extinction — **moves anchor**; blocked on D3 |
+| **D1-combination (Broeg-weighted vs flux-sum)** | Re-test weighted `ens_med` after **sigma budget + χ² gate** — **moves anchor**; blocked on sigma completeness |
 | **D3 extinction/colour physics** | Second-order extinction + standard system → ties **AAVSO #4** |
 | **C second pass (Howell + aperture corr.)** | CCD error budget, curve-of-growth / APCORR; citation-integrity follow-up |

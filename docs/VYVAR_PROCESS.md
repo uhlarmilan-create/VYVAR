@@ -59,9 +59,10 @@ estimator prototypes alone.
 
 ## Plate-solver change lock (2026-06-14)
 
-**Locked:** scoped solver in `vyvar_platesolver.py` — full-cone SIP refine ON; ROWORDER Y-flip **OFF**
-(~320 px home break); legacy mirror sweep ON; **stale-hint Gaia cone recenter** + **verified-strong**
-FITS-header `hint_sep` escape (recenter + ≥75% brightest-N + RMS ≤2 px; overlay for distortion-limited).
+**Locked:** scoped solver — full-cone SIP ON; ROWORDER Y-flip **OFF**; legacy mirror sweep ON;
+**catalog-recovery VERIFIED gate** on MASTERSTAR (defaults: recovery ≥0.65, floor 40, centre RMS
+≤1.20 px; benign edge/centre ratio ≤3.20). **`hint_sep`** warning-only when verified; wide tripwire
+when not (`max(1.5°, FOV)`). Stale-hint Gaia cone recenter unchanged.
 
 **Test-vs-production gap is recurring.** Validate solver/photometry changes on the **production
 entry** (`generate_masterstar_and_catalog` / a fresh UI draft), not a sandbox harness on

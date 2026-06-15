@@ -1,7 +1,7 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-14** (Brno production solver fix; anchor `3f7c9e7a` / `d5b72d08`; sparse
-fallback ON).
+Last updated: **2026-06-15** (photometry root-cause: ALG-3 temporal comp binning; simple differential
+direction; legacy anchor framing retired).
 
 This is the **entry point**: a snapshot of what is true *now* + an index. It deliberately holds
 no history and no open-task detail -- those live in the linked files.
@@ -97,18 +97,15 @@ fields carry the GAIA-1 mis-association caveat until DR4 (DECISIONS).
 
 ### Brno AZ800 / C5A-150M (production solver — 2026-06-14)
 
-**Brno AZ800 / C5A-150M onboarded.** Production solver fixed for stale FITS pointing hints
-(`VY_TARG`): when header hint vs solved WCS center offset **≥ 0.05°**, the solver **re-queries
-the Gaia cone at the solved center** and re-runs full-pair refit. FITS-header `hint_sep` escape is
-permitted only on a **verified-strong** solve (cone recenter applied + **≥ 75%** brightest-N match
-+ RMS **≤ 2 px**). `generate_masterstar_and_catalog` passes `app_config` + explicit scoped flags to
-the solver.
+**Brno AZ800 / C5A-150M onboarded.** Production solver uses **catalog-recovery verification**
+(Gaia-in-frame / DAO at 2.5 px) as the MASTERSTAR accept gate; detection match% is informational.
+Stale FITS pointing (`VY_TARG`) → **`hint_sep_warn`** when VERIFIED (Lang et al. 2010 prior), not
+hard reject. Cone recenter at solved center when hint offset **≥ 0.05°** unchanged.
+`generate_masterstar_and_catalog` passes `app_config` + scoped flags.
 
-**Brno `g_60_4` (draft_400):** solves end-to-end on the **production path** — **75.5%** brightest-N
-(151/200), WCS persists, pipeline continues past MASTERSTAR. **Not fully locked** until Milan's
-**draft_401 UI sign-off + overlay**.
-
-**Open:** draft_401 UI operational sign-off + overlay; Brno **r/i/z** end-to-end.
+**Brno `r_60_4`:** catalog recovery tight **~84%** → **VERIFIED** under new gate (was rejected on
+`hint_sep` + detection-denominated metrics). **`z_90_4`:** recovery **~34%** → stays rejected.
+**Open:** Milan overlay sign-off on `tmp/diag_overlay_r.png`; anchor + home-rig regression re-run.
 
 ### Comp sparse-only fallback (2026-06-11 lock)
 
@@ -208,15 +205,28 @@ Astier et al. 2013, Lacroix et al. 2025, Guy et al. 2010, Stetson 1987, Mighell 
 
 ---
 
-## Top of mind (parked — see ROADMAP)
+## Top of mind
 
-- **Reserved check-star** (hold-one-out by design) — **moves photometry anchor**; defer until
-  explicit re-cut discipline.
-- **AAVSO-standard output #4** — G→B/V/Rc (Broeg band/colour point).
-- **TODO-MULTISET** — per-rig config (wide vs fine).
-- **TODO-GS8** — Phase-3 global ZP / multi-night matching.
-- **DR4 build** (~Dec 2026) — J2017.5 epoch hook at `vyvar_platesolver.py:63`.
-- **PSF / NEIGHBOR-SUB** — needs bin1 ~0.65"/px real data (Brno gate).
-- **`build_gaia_catalog.py` adaptive-split** — apply at next full-sky build (DEFERRED).
-- **Math/physics deep work** (`VYVAR_MATH_PHYS_AUDIT.md`) — D1-combination (Broeg-weighted
-  `ens_med`, moves anchor), D3 extinction/colour → AAVSO #4, Howell/aperture second pass.
+**Fixing differential photometry math on physical grounds** (new catalog + new pkl). Root cause of
+the non-home-set chaos is identified and proven: ALG-3 comp temporal binning (`temporal_bin_comp_lc`)
+breaks per-frame common-mode cancellation. Moving to a SIMPLE approach:
+
+- Comp selection by **minimum |delta(BP-RP)|** (color-match target) AND **minimum RMS**
+  (stability). Color-matched comps remove the color systematic at source -> color term becomes
+  unnecessary.
+- Plain per-frame ensemble differential (median/flux-sum). **NO** temporal binning, **NO** color
+  term, **NO** complex weighting.
+- Trust RED/YELLOW gating **disabled for now** (revisit after photometry is clean, re-derived on
+  correct numbers).
+- Optimize/report **RMS** (and eclipse-shape fidelity vs AIJ ground truth).
+
+**Verification asset:** AIJ Table.tbl for V0612 Cam (draft_407 g) = ground truth (pre-eclipse
+0.011 mag, clean eclipse). **Workstream A landed 2026-06-15** (bin OFF + tier-ladder selector +
+`comp_select_rms_floor`; DoD-A PASS). **Workstream B landed 2026-06-15** (`apply_reporting_postprocess`;
+DoD-B PASS: V0612 `mag_calib` corr 0.958 vs AIJ, ingress 24/24 normal).
+
+**Load-bearing next:** sigma budget (`docs/VYVAR_SIGMA_BUDGET_SPEC.md`) — scintillation + per-frame
+σ + χ²/dof gate before Broeg-canonical IVW ensemble combine.
+
+**Parked (see ROADMAP):** TODO-MULTISET; Brno/Milan overlay gate; AAVSO #4; DR4 build; PSF /
+NEIGHBOR-SUB; reserved check-star (revisit after photometry clean).

@@ -107,6 +107,7 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | phase01_comparison_exclude_gaia_nss | bool | true |  |
 | phase01_comparison_exclude_gaia_extobj | bool | true |  |
 | phase01_ct_min_comp | int | 7 | Fáza 2A: minimum number of comps used in color-term fit before applying CT (``should_apply_color_term``). |
+| apply_color_term | str | "off" | Fáza 2A: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear). |
 | phase01_ct_extrapolation_tol | float | 0.0 | Fáza 2A: BP-RP tolerance (mag) when testing target vs comp range before applying CT; 0 = strict block on extrapolation. |
 | phase01_flux_col | str | "dao_flux" | Column name used for flux in Phase 1 comp selection (dao_flux = aperture DAO; psf_flux = ePSF). |
 | phase01_chip_interior_margin_px | int | 50 | Jednotný vnútorný okraj čipu (px) pre **celú Fázu 0+1**: aktívne premenné, porovnávacie hviezdy aj suspected. Hviezdy s ``x,y`` bližšie ako tento počet pixelov od okraja referenčného poľa sa neberú (zmierňuje artefakty pri zarovnaní / posune poľa / okrajoch). ``0`` = vypnuté (celý čip). Predvolene 50 px. |
@@ -142,7 +143,8 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | aperture_correction_min_ref_stars | int | 3 |  |
 | aperture_correction_max_contamination | float | 0.15 |  |
 | aperture_correction_max_scatter_mag | float | 0.03 |  |
-| temporal_binning_enabled | bool | true | ALG-3: Temporal binning of comp ensemble before stability/PyTICS (Broeg-Bischoff & Dreizler 2023 MNRAS). |
+| comp_select_rms_floor | float | 1e-6 | Drop comps with comp_rms below floor before tier-ladder rank (isolated_bin artefact guard). |
+| temporal_binning_enabled | bool | false | ALG-3: Temporal binning of comp ensemble before stability/PyTICS (Hartley & Wilson 2023 MNRAS). Default OFF — per-frame ensemble preserves common-mode cancellation. |
 | temporal_bin_window | int | 0 |  |
 | savgol_detrend_enabled | bool | false | ALG-2: Savitzky-Golay detrend after airmass (opt-in; Aigrain & Irwin 2004 MNRAS). |
 | savgol_window_frac | float | 0.5 |  |

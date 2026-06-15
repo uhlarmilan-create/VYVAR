@@ -190,6 +190,8 @@ class AppConfig:
     check_star_min_epochs: int = 5
     #: Artefact floor for check-star selection metric (comp_rms / p2p_rms).
     check_select_rms_floor: float = 1e-4
+    #: Phase-1 comp selection: drop candidates with comp_rms below this (isolated_bin artefact).
+    comp_select_rms_floor: float = 1e-6
     # Export reports (AAVSO + VAR.ASTRO.CZ)
     observer_name: str = "Unknown Observer"
     observer_code: str = ""
@@ -330,6 +332,43 @@ class AppConfig:
     masterstar_platesolve_nn_refine_max_rms_px: float | None = None
     #: Pri ``force_apply`` SIP: zamietnuť ak ``rms_sip > rms_linear * ratio``. ``None`` = bez stráže (pôvodné správanie).
     masterstar_sip_force_rms_guard_ratio: float | None = 1.15
+    #: MASTERSTAR verified-solve: min. catalog recovery (Gaia-in-frame with DAO match at 2.5 px).
+    masterstar_catalog_recovery_min: float = 0.65
+    #: MASTERSTAR verified-solve: absolute floor on tight-matched catalog stars (not fraction-only pass).
+    masterstar_min_matched_floor: int = 40
+    #: MASTERSTAR verified-solve: centre RMS cap [px] when distortion is not globally benign.
+    masterstar_centre_rms_max_px: float = 1.20
+    #: MASTERSTAR distortion-limited benign: max edge/centre residual ratio (was 2.50; Brno r ~3.0).
+    masterstar_distortion_benign_ratio_max: float = 3.20
+
+    #: MASTERSTAR accept gate: ``odds`` (Bayesian false-alarm) or legacy ``fraction``.
+    masterstar_accept_mode: str = "odds"
+    #: Odds gate: absolute floor on tight matches (with ``masterstar_odds_k * expected_random``).
+    masterstar_odds_match_floor: int = 30
+    #: Odds gate: require n_matched >= k * expected_random matches by chance.
+    masterstar_odds_k: float = 12.0
+    #: Odds gate: minimum quadrants with tight matches.
+    masterstar_odds_min_quadrants: int = 3
+    #: Odds gate: maximum false-alarm probability (binom tail).
+    masterstar_false_alarm_p_max: float = 1e-6
+    #: Quality flag: n_cat_in_frame at or above this -> ``crowded``.
+    masterstar_quality_crowded_n_cat_min: int = 800
+    #: Adaptive DAO detection cap for dense fields (scales with catalog richness).
+    masterstar_detection_cap_adaptive: bool = True
+    masterstar_detection_cap_min: int = 250
+    masterstar_detection_cap_max: int = 800
+    masterstar_detection_cap_k: float = 0.08
+
+    #: Pass 2 sibling-WCS recovery for filters that failed independent plate-solve (same draft field).
+    masterstar_sibling_recovery_enabled: bool = True
+    #: Sibling odds gate: minimum tight-matched catalog stars at 2.5 px.
+    masterstar_sibling_min_matched: int = 40
+    #: Sibling odds gate: maximum RMS of tight matches [px].
+    masterstar_sibling_rms_max_px: float = 2.0
+    #: Sibling odds gate: minimum quadrants with at least one tight match.
+    masterstar_sibling_min_quadrants: int = 3
+    #: Median-stack frame count for sibling stacking rescue when single-frame odds fail.
+    masterstar_sibling_stack_n: int = 10
 
     #: Pomer sx/sy (arcsec/px) — nad týmto sa považuje WCS za príliš anizotropný (VYVAR retry / diagnostika).
     platesolve_anisotropy_threshold: float = 1.3
@@ -406,14 +445,15 @@ class AppConfig:
     #: Fáza 2A: minimum number of comps used in color-term fit before applying CT (``should_apply_color_term``).
     phase01_ct_min_comp: int = 7
     #: Fáza 2A: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear).
-    apply_color_term: str = "auto"
+    apply_color_term: str = "off"
     #: Fáza 2A: BP-RP tolerance (mag) when testing target vs comp range before applying CT (0 = strict).
     phase01_ct_extrapolation_tol: float = 0.0
     #: Column name used for flux in Phase 1 comp selection (dao_flux = aperture DAO; psf_flux = ePSF).
     phase01_flux_col: str = "dao_flux"
 
-    #: ALG-3: Temporal binning of comp ensemble before stability/PyTICS (Broeg-Bischoff & Dreizler 2023 MNRAS).
-    temporal_binning_enabled: bool = True
+    #: ALG-3: Temporal binning of comp ensemble before stability/PyTICS (Hartley & Wilson 2023 MNRAS).
+    #: Default OFF: per-frame ensemble common-mode cancellation (validated V0612 differential path).
+    temporal_binning_enabled: bool = False
     temporal_bin_window: int = 0  # 0 = auto-optimize among [3,5,7,9,11]
 
     #: ALG-2: Savitzky-Golay detrend after airmass (opt-in; Aigrain & Irwin 2004 MNRAS).
@@ -1339,6 +1379,161 @@ class AppConfig:
                 self.masterstar_sip_force_rms_guard_ratio = 1.15
 
         try:
+            self.masterstar_catalog_recovery_min = float(
+                data.get("masterstar_catalog_recovery_min", self.masterstar_catalog_recovery_min)
+            )
+            if not math.isfinite(self.masterstar_catalog_recovery_min):
+                self.masterstar_catalog_recovery_min = 0.65
+        except (TypeError, ValueError):
+            self.masterstar_catalog_recovery_min = 0.65
+        self.masterstar_catalog_recovery_min = max(
+            0.40, min(0.95, float(self.masterstar_catalog_recovery_min))
+        )
+        try:
+            self.masterstar_min_matched_floor = int(
+                data.get("masterstar_min_matched_floor", self.masterstar_min_matched_floor)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_min_matched_floor = 40
+        self.masterstar_min_matched_floor = max(
+            1, min(500, int(self.masterstar_min_matched_floor))
+        )
+        try:
+            self.masterstar_centre_rms_max_px = float(
+                data.get("masterstar_centre_rms_max_px", self.masterstar_centre_rms_max_px)
+            )
+            if not math.isfinite(self.masterstar_centre_rms_max_px):
+                self.masterstar_centre_rms_max_px = 1.20
+        except (TypeError, ValueError):
+            self.masterstar_centre_rms_max_px = 1.20
+        self.masterstar_centre_rms_max_px = max(
+            0.5, min(5.0, float(self.masterstar_centre_rms_max_px))
+        )
+        try:
+            self.masterstar_distortion_benign_ratio_max = float(
+                data.get(
+                    "masterstar_distortion_benign_ratio_max",
+                    self.masterstar_distortion_benign_ratio_max,
+                )
+            )
+            if not math.isfinite(self.masterstar_distortion_benign_ratio_max):
+                self.masterstar_distortion_benign_ratio_max = 3.20
+        except (TypeError, ValueError):
+            self.masterstar_distortion_benign_ratio_max = 3.20
+        self.masterstar_distortion_benign_ratio_max = max(
+            2.0, min(5.0, float(self.masterstar_distortion_benign_ratio_max))
+        )
+        _mode = str(data.get("masterstar_accept_mode", self.masterstar_accept_mode) or "odds").strip().lower()
+        self.masterstar_accept_mode = _mode if _mode in ("odds", "fraction") else "odds"
+        try:
+            self.masterstar_odds_match_floor = int(
+                data.get("masterstar_odds_match_floor", self.masterstar_odds_match_floor)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_odds_match_floor = 30
+        self.masterstar_odds_match_floor = max(1, min(500, int(self.masterstar_odds_match_floor)))
+        try:
+            self.masterstar_odds_k = float(data.get("masterstar_odds_k", self.masterstar_odds_k))
+            if not math.isfinite(self.masterstar_odds_k):
+                self.masterstar_odds_k = 12.0
+        except (TypeError, ValueError):
+            self.masterstar_odds_k = 12.0
+        self.masterstar_odds_k = max(1.0, min(100.0, float(self.masterstar_odds_k)))
+        try:
+            self.masterstar_odds_min_quadrants = int(
+                data.get("masterstar_odds_min_quadrants", self.masterstar_odds_min_quadrants)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_odds_min_quadrants = 3
+        self.masterstar_odds_min_quadrants = max(1, min(4, int(self.masterstar_odds_min_quadrants)))
+        try:
+            self.masterstar_false_alarm_p_max = float(
+                data.get("masterstar_false_alarm_p_max", self.masterstar_false_alarm_p_max)
+            )
+            if not math.isfinite(self.masterstar_false_alarm_p_max):
+                self.masterstar_false_alarm_p_max = 1e-6
+        except (TypeError, ValueError):
+            self.masterstar_false_alarm_p_max = 1e-6
+        self.masterstar_false_alarm_p_max = max(1e-12, min(1.0, float(self.masterstar_false_alarm_p_max)))
+        try:
+            self.masterstar_quality_crowded_n_cat_min = int(
+                data.get("masterstar_quality_crowded_n_cat_min", self.masterstar_quality_crowded_n_cat_min)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_quality_crowded_n_cat_min = 800
+        self.masterstar_quality_crowded_n_cat_min = max(
+            100, min(20000, int(self.masterstar_quality_crowded_n_cat_min))
+        )
+        self.masterstar_detection_cap_adaptive = bool(
+            data.get("masterstar_detection_cap_adaptive", self.masterstar_detection_cap_adaptive)
+        )
+        try:
+            self.masterstar_detection_cap_min = int(
+                data.get("masterstar_detection_cap_min", self.masterstar_detection_cap_min)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_detection_cap_min = 250
+        self.masterstar_detection_cap_min = max(50, min(2000, int(self.masterstar_detection_cap_min)))
+        try:
+            self.masterstar_detection_cap_max = int(
+                data.get("masterstar_detection_cap_max", self.masterstar_detection_cap_max)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_detection_cap_max = 800
+        self.masterstar_detection_cap_max = max(
+            int(self.masterstar_detection_cap_min),
+            min(5000, int(self.masterstar_detection_cap_max)),
+        )
+        try:
+            self.masterstar_detection_cap_k = float(
+                data.get("masterstar_detection_cap_k", self.masterstar_detection_cap_k)
+            )
+            if not math.isfinite(self.masterstar_detection_cap_k):
+                self.masterstar_detection_cap_k = 0.08
+        except (TypeError, ValueError):
+            self.masterstar_detection_cap_k = 0.08
+        self.masterstar_detection_cap_k = max(0.01, min(1.0, float(self.masterstar_detection_cap_k)))
+        self.masterstar_sibling_recovery_enabled = bool(
+            data.get("masterstar_sibling_recovery_enabled", self.masterstar_sibling_recovery_enabled)
+        )
+        try:
+            self.masterstar_sibling_min_matched = int(
+                data.get("masterstar_sibling_min_matched", self.masterstar_sibling_min_matched)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_sibling_min_matched = 40
+        self.masterstar_sibling_min_matched = max(
+            1, min(500, int(self.masterstar_sibling_min_matched))
+        )
+        try:
+            self.masterstar_sibling_rms_max_px = float(
+                data.get("masterstar_sibling_rms_max_px", self.masterstar_sibling_rms_max_px)
+            )
+            if not math.isfinite(self.masterstar_sibling_rms_max_px):
+                self.masterstar_sibling_rms_max_px = 2.0
+        except (TypeError, ValueError):
+            self.masterstar_sibling_rms_max_px = 2.0
+        self.masterstar_sibling_rms_max_px = max(
+            0.5, min(10.0, float(self.masterstar_sibling_rms_max_px))
+        )
+        try:
+            self.masterstar_sibling_min_quadrants = int(
+                data.get("masterstar_sibling_min_quadrants", self.masterstar_sibling_min_quadrants)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_sibling_min_quadrants = 3
+        self.masterstar_sibling_min_quadrants = max(
+            1, min(4, int(self.masterstar_sibling_min_quadrants))
+        )
+        try:
+            self.masterstar_sibling_stack_n = int(
+                data.get("masterstar_sibling_stack_n", self.masterstar_sibling_stack_n)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_sibling_stack_n = 10
+        self.masterstar_sibling_stack_n = max(2, min(50, int(self.masterstar_sibling_stack_n)))
+
+        try:
             self.platesolve_anisotropy_threshold = float(
                 data.get("platesolve_anisotropy_threshold", self.platesolve_anisotropy_threshold)
             )
@@ -1370,9 +1565,9 @@ class AppConfig:
         _f01("phase01_comparison_max_mag_diff_bright_floor", 1.25, 0.0, 4.0)
         _f01("phase01_comparison_max_mag_diff_absolute", 3.0, 1.0, 10.0)
         _f01("comp_max_delta_bprp", 0.79, 0.0, 5.0)
-        _f01("comp_tier1_bprp_limit", 0.25, 0.02, 5.0)
-        _f01("comp_tier2_bprp_limit", 0.48, 0.05, 5.0)
-        _f01("comp_tier3_bprp_limit", 0.79, 0.05, 5.0)
+        _f01("comp_tier1_bprp_limit", 0.15, 0.02, 5.0)
+        _f01("comp_tier2_bprp_limit", 0.30, 0.05, 5.0)
+        _f01("comp_tier3_bprp_limit", 0.55, 0.05, 5.0)
         _f01("comp_tier4_bprp_limit", 1.10, 0.05, 5.0)
         _f01("comp_tier1_weight", 1.00, 0.01, 1.00)
         _f01("comp_tier2_weight", 0.85, 0.01, 1.00)
@@ -1403,6 +1598,7 @@ class AppConfig:
             self.lc_quality_short_min_frames = int(self.lc_quality_min_frames)
         _i01("check_star_min_epochs", 5, 3, 50)
         _f01("check_select_rms_floor", 1e-4, 0.0, 0.01)
+        _f01("comp_select_rms_floor", 1e-6, 0.0, 0.01)
         _f01("phase01_comparison_max_comp_rms", 0.05, 0.01, 0.5)
         _f01("phase01_comparison_min_dist_arcsec", 60.0, 0.0, 600.0)
         _f01("phase01_comparison_rms_bin_mag", 0.001, 0.0001, 0.05)
@@ -1608,6 +1804,7 @@ class AppConfig:
             "comp_trust_min_comps": int(self.comp_trust_min_comps),
             "check_star_min_epochs": int(self.check_star_min_epochs),
             "check_select_rms_floor": float(self.check_select_rms_floor),
+            "comp_select_rms_floor": float(self.comp_select_rms_floor),
             "sysrem_n_iter": int(self.sysrem_n_iter),
             "observer_name": str(self.observer_name),
             "observer_code": str(self.observer_code),
@@ -1712,6 +1909,27 @@ class AppConfig:
                 if self.masterstar_sip_force_rms_guard_ratio is not None
                 else None
             ),
+            "masterstar_catalog_recovery_min": float(self.masterstar_catalog_recovery_min),
+            "masterstar_min_matched_floor": int(self.masterstar_min_matched_floor),
+            "masterstar_centre_rms_max_px": float(self.masterstar_centre_rms_max_px),
+            "masterstar_distortion_benign_ratio_max": float(
+                self.masterstar_distortion_benign_ratio_max
+            ),
+            "masterstar_accept_mode": str(self.masterstar_accept_mode),
+            "masterstar_odds_match_floor": int(self.masterstar_odds_match_floor),
+            "masterstar_odds_k": float(self.masterstar_odds_k),
+            "masterstar_odds_min_quadrants": int(self.masterstar_odds_min_quadrants),
+            "masterstar_false_alarm_p_max": float(self.masterstar_false_alarm_p_max),
+            "masterstar_quality_crowded_n_cat_min": int(self.masterstar_quality_crowded_n_cat_min),
+            "masterstar_detection_cap_adaptive": bool(self.masterstar_detection_cap_adaptive),
+            "masterstar_detection_cap_min": int(self.masterstar_detection_cap_min),
+            "masterstar_detection_cap_max": int(self.masterstar_detection_cap_max),
+            "masterstar_detection_cap_k": float(self.masterstar_detection_cap_k),
+            "masterstar_sibling_recovery_enabled": bool(self.masterstar_sibling_recovery_enabled),
+            "masterstar_sibling_min_matched": int(self.masterstar_sibling_min_matched),
+            "masterstar_sibling_rms_max_px": float(self.masterstar_sibling_rms_max_px),
+            "masterstar_sibling_min_quadrants": int(self.masterstar_sibling_min_quadrants),
+            "masterstar_sibling_stack_n": int(self.masterstar_sibling_stack_n),
             "platesolve_anisotropy_threshold": float(self.platesolve_anisotropy_threshold),
             "phase01_comparison_max_dist_deg": float(self.phase01_comparison_max_dist_deg),
             "phase01_comparison_max_mag_diff": float(self.phase01_comparison_max_mag_diff),

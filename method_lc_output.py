@@ -76,13 +76,11 @@ def _build_flux(
 def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
     """Run ensemble pipeline for one flux method and write suffixed LC CSV."""
     from photometry_core import (  # noqa: PLC0415
-        _apply_airmass_detrend_helper,
         _get_comp_bjd_series,
-        _preserve_nondetection_flags_helper,
         apply_color_term,
+        apply_reporting_postprocess,
         check_comparison_stability,
         democratic_detrend_lc,
-        detect_outliers,
         ensemble_normalize,
         fit_color_term_c1,
         pytics_iterative_weights,
@@ -250,34 +248,19 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
         else:
             base_flags.append("no_data")
 
-    mag_for_airmass = np.asarray(mag_calib_ct, dtype=np.float64)
-    out_flags = detect_outliers(mag_for_airmass, ctx.sat_flags, outlier_sigma=ctx.outlier_sigma)
-    _preserve_nondetection_flags_helper(out_flags, ctx.target_frames)
-    airmass_fit_flags: list[str] = []
-    for i in range(len(mag_calib)):
-        bf = base_flags[i]
-        of = out_flags[i]
-        if bf != "normal":
-            airmass_fit_flags.append(bf)
-        elif of != "normal":
-            airmass_fit_flags.append(of)
-        else:
-            airmass_fit_flags.append("normal")
-    mag_cal_am, _am_slope, _am_piecewise = _apply_airmass_detrend_helper(
-        mag_for_airmass,
-        airmass_fit_flags,
-        ctx.airmass_arr,
-        ctx.flip_arr,
-        ctx.target_cid,
+    mag_calib_raw, mag_calib, mag_calib_ct, mag_calib_ac, out_flags = apply_reporting_postprocess(
+        mag_calib,
+        mag_calib_ct,
+        target_row=ctx.target_row,
+        target_name=str(ctx.target_row.get("vsx_name", ctx.target_cid)),
+        sat_flags=ctx.sat_flags,
+        target_frames=ctx.target_frames,
+        outlier_sigma=ctx.outlier_sigma,
+        ct_ok=bool(ct_ok),
+        ac_ok=bool(ac_ok),
+        delta_m_corr=(float(delta_m_corr) if delta_m_corr is not None else None),
+        cfg=_cfg,
     )
-    mag_calib_raw = mag_calib.copy()
-    mag_calib = mag_cal_am
-    if ac_ok and delta_m_corr is not None and np.isfinite(float(delta_m_corr)):
-        mag_calib_ac = mag_calib + float(delta_m_corr)
-    else:
-        mag_calib_ac = np.full_like(mag_calib, float("nan"))
-    if not ct_ok:
-        mag_calib_ct = mag_calib.copy()
 
     if bool(_cfg.savgol_detrend_enabled):
         mag_calib = savgol_detrend_lc(

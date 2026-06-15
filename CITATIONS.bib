@@ -12,6 +12,53 @@
   export  = {Broeg, Fernandez \& Neuhaeuser (2005) AN 326, 134 — variability-based comp selection \& inverse-variance zeropoint offset}
 }
 
+@article{young1967,
+  author  = {Young, A. T.},
+  title   = {Photometric error analysis},
+  journal = {The Astronomical Journal},
+  year    = {1967},
+  volume  = {72},
+  pages   = {747--755},
+  doi     = {10.1086/110366},
+  export  = {Young (1967) AJ 72, 747 — scintillation-noise approximation (use Osborn C_Y correction)}
+}
+
+@article{osborn2015,
+  author  = {Osborn, J. and F{\"o}hring, D. and Dhillon, V. S. and Wilson, R. W.},
+  title   = {Atmospheric scintillation in astronomical photometry},
+  journal = {Monthly Notices of the Royal Astronomical Society},
+  year    = {2015},
+  volume  = {452},
+  pages   = {1707--1716},
+  doi     = {10.1093/mnras/stv1400},
+  export  = {Osborn et al. (2015) MNRAS 452, 1707 — modified Young scintillation (empirical C_Y; Young alone underestimates median)}
+}
+
+@article{dravins1998,
+  author  = {Dravins, D. and Lindegren, L. and Mezey, E. and Young, A. T.},
+  title   = {Atmospheric intensity scintillation of stellar light},
+  journal = {Publications of the Astronomical Society of the Pacific},
+  year    = {1998},
+  volume  = {110},
+  pages   = {610--633},
+  doi     = {10.1086/316167},
+  export  = {Dravins et al. (1998) PASP 110, 610 — small-aperture scintillation regime}
+}
+
+@article{murray2020speculoos,
+  author  = {Murray, C. A. and Delrez, L. and Pedersen, P. P. and Queloz, D. and Gillon, M. and others},
+  title   = {Photometry and Performance of {SPECULOOS-South}},
+  journal = {Monthly Notices of the Royal Astronomical Society},
+  year    = {2020},
+  volume  = {495},
+  pages   = {2448--2472},
+  doi     = {10.1093/mnras/staa1034},
+  eprint  = {2005.02423},
+  archivePrefix = {arXiv},
+  primaryClass = {astro-ph.EP},
+  export  = {Murray et al. (2020) MNRAS 495, 2448 (arXiv:2005.02423) — optimal weighted differential photometry / IVW ALC}
+}
+
 @article{honeycutt1992,
   author  = {Honeycutt, R. K.},
   title   = {A check-list and differential photometry algorithm for well-sampled datasets},
@@ -129,6 +176,17 @@
   export  = {Bertin \& Arnouts (1996) A\&AS 117, 393 — SExtractor (SEP algorithm basis)}
 }
 
+@article{lang2010,
+  author  = {Lang, D. and Hogg, D. W. and Mierle, K. and Roweis, S. and Blanton, M.},
+  title   = {Astrometry.net: Blind astrometric calibration of arbitrary astronomical images},
+  journal = {The Astronomical Journal},
+  year    = {2010},
+  volume  = {139},
+  pages   = {1782--1800},
+  doi     = {10.1088/0004-6256/139/5/1782},
+  export  = {Lang et al. (2010) AJ 139, 1782 — Astrometry.net blind calibration (hint-as-prior verification)}
+}
+
 @article{howell1989,
   author  = {Howell, S. B.},
   title   = {Two-dimensional aperture photometry: signal-to-noise ratio of point-source observations and optimal data-extraction techniques},
@@ -192,7 +250,7 @@
   volume  = {518},
   pages   = {380--384},
   doi     = {10.1086/307123},
-  export  = {Mighell (1999) ApJ 518, 380 — chi-square-gamma goodness-of-fit (export-only)}
+  export  = {Mighell (1999) ApJ 518, 380 — chi-square-gamma goodness-of-fit (export-only)},
   note    = {aspirational — cited in PSF Methods exports; chi-square-gamma statistic not implemented in production code}
 }
 
@@ -313,6 +371,33 @@
   pages   = {331--339},
   doi     = {10.1111/j.1365-2966.2004.07628.x},
   export  = {Aigrain \& Irwin (2004) MNRAS 350, 331 — red-noise envelope / variability threshold}
+}
+
+@misc{plavchan2007,
+  author  = {Plavchan, Peter and Churchill, Christopher W. and Nelson, Robert P. and others},
+  title   = {A Search for Transits of {AU~Mic} b},
+  year    = {2007},
+  eprint  = {0704.3584},
+  archivePrefix = {arXiv},
+  export  = {Plavchan et al. (2007) arXiv:0704.3584 — first-order airmass detrend redundant in differential photometry}
+}
+
+@misc{bastien2015,
+  author  = {Bastien, Fabienne A. and others},
+  title   = {Stellar Surface Granulation as a Source of {Flicker} Noise},
+  year    = {2015},
+  eprint  = {1512.03454},
+  archivePrefix = {arXiv},
+  export  = {Bastien et al. (2015) arXiv:1512.03454 — separate transit removal before outlier clipping}
+}
+
+@misc{tesser2024,
+  author  = {others},
+  title   = {TESS hot-subdwarf and white-dwarf flare/eclipse analysis},
+  year    = {2024},
+  eprint  = {2402.16018},
+  archivePrefix = {arXiv},
+  export  = {arXiv:2402.16018 — mask and extend eclipses before detrending}
 }
 
 @misc{hippke2024,

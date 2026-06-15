@@ -127,6 +127,7 @@ class RunCitationContext:
     use_trust: bool = True
     use_common_mode_stability_detrend: bool = False
     use_iterative_comp_clip: bool = False
+    use_catalog_recovery_verify: bool = False
 
 
 def _vsx_db_configured(cfg: AppConfig | None) -> bool:
@@ -201,6 +202,10 @@ def build_run_citation_context(
     use_iter_clip = use_iter_clip or bool(
         meta.get("comp_sparse_fallback_used", meta.get("comp_iterative_clip_used", False))
     )
+    use_catalog_recovery = bool(meta.get("masterstar_catalog_recovery_verified", False))
+    if not use_catalog_recovery:
+        _ast = meta.get("astrometry") if isinstance(meta.get("astrometry"), dict) else {}
+        use_catalog_recovery = bool(_ast.get("catalog_recovery_verified", False))
 
     return RunCitationContext(
         use_vsx=use_vsx,
@@ -219,6 +224,7 @@ def build_run_citation_context(
         use_trust=use_trust,
         use_common_mode_stability_detrend=use_cm_detrend,
         use_iterative_comp_clip=use_iter_clip,
+        use_catalog_recovery_verify=use_catalog_recovery,
     )
 
 
@@ -349,6 +355,17 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
         )
     if dq:
         sections.append(("DATA-QUALITY GATE", dq))
+
+    if ctx.use_catalog_recovery_verify:
+        sections.append(
+            (
+                "ASTROMETRY VERIFICATION",
+                [
+                    citation_line("lang2010", bib=bib),
+                    citation_line("gaia2023", bib=bib),
+                ],
+            )
+        )
 
     return sections
 
