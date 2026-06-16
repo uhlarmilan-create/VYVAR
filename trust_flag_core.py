@@ -6,10 +6,10 @@ Comp-count trust thresholds follow ``comp_trust_min_comps`` / ``phase01_comparis
 (Phase-1 selection floor ``phase01_comparison_n_comp_min`` unchanged).
 Read-only w.r.t. numeric photometry.
 
-Gate semantics (2026-06-03, post sep_xval retirement; #3 2026-06-10):
-- **RED:** ``n_clean < min_comps`` OR any hard warning (bad lc_quality, check ≥ 0.05).
-- **YELLOW:** any soft warning (thin comp set, check in [0.02, 0.05), ``short_baseline``).
-- **GREEN:** ``n_clean ≥ strong``, check < 0.02, lc_quality ∈ {good, noisy}, no warnings.
+Gate semantics (Phase-1 degradation, green_min=3):
+- **RED:** ``n_clean == 0`` OR no check star OR hard warnings (bad lc_quality, check ≥ 0.05).
+- **YELLOW:** thin comp set (1–2 clean), sparse_fallback, T3+ with colour-term off, soft check scatter.
+- **GREEN:** ``n_clean ≥ green_min`` (T1/T2 count ≥ green_min) + check + comp_qa OK, no soft warnings.
 - ``short_baseline`` is a non-escalating soft (excluded from ``len(soft) >= 3`` -> RED).
 """
 from __future__ import annotations
@@ -43,22 +43,23 @@ class CompTrustThresholds:
     strong: int
 
     @classmethod
-    def from_bounds(cls, min_comps: int, max_comps: int) -> CompTrustThresholds:
-        mn = max(1, int(min_comps))
-        mx = max(mn, int(max_comps))
-        return cls(min_comps=mn, max_comps=mx, strong=min(mn + 2, mx))
+    def from_bounds(cls, green_min: int, max_comps: int) -> CompTrustThresholds:
+        """``green_min`` = GREEN threshold (``comp_trust_min_comps``); not a RED gate."""
+        gm = max(1, int(green_min))
+        mx = max(gm, int(max_comps))
+        return cls(min_comps=1, max_comps=mx, strong=gm)
 
 
 def comp_thresholds_from_config(cfg: Any | None) -> CompTrustThresholds:
-    """Trust-only comp floors (``comp_trust_min_comps``); selection floor unchanged."""
+    """Trust GREEN threshold (``comp_trust_min_comps`` = green_min); selection floor unchanged."""
     if cfg is None:
-        return CompTrustThresholds.from_bounds(5, 12)
+        return CompTrustThresholds.from_bounds(3, 12)
     if getattr(cfg, "comp_trust_min_comps", None) is not None:
-        mn = int(getattr(cfg, "comp_trust_min_comps"))
+        gm = int(getattr(cfg, "comp_trust_min_comps"))
     else:
-        mn = int(getattr(cfg, "phase01_comparison_n_comp_min", 3))
+        gm = int(getattr(cfg, "phase01_comparison_n_comp_min", 3))
     mx = int(getattr(cfg, "phase01_comparison_n_comp_max", 12))
-    return CompTrustThresholds.from_bounds(mn, mx)
+    return CompTrustThresholds.from_bounds(gm, mx)
 
 
 def check_star_min_epochs_from_config(cfg: Any | None) -> int:
@@ -108,6 +109,8 @@ def classify_warnings(
     sparse_fallback_used: bool = False,
     comp_pool_n_final: int = 0,
     n_stability_suspect: int = 0,
+    n_tier12: int | None = None,
+    color_term_off: bool = False,
 ) -> tuple[list[str], list[str]]:
     """Return (hard_labels, soft_labels) for one target."""
     hard: list[str] = []
@@ -118,17 +121,26 @@ def classify_warnings(
     min_chk = max(3, int(check_min_epochs))
     _sparse = bool(sparse_fallback_used or iterative_clip_used)
 
+    if nc <= 0:
+        hard.append("no clean comps")
+
     if _sparse:
         _nf = int(comp_pool_n_final) if int(comp_pool_n_final) > 0 else nc
         soft.append(
-            f"relaxed/iterative comp pool, low redundancy ({nc} clean / {_nf} selected)"
+            f"sparse_fallback comp path ({nc} clean / {_nf} selected)"
         )
-    elif nc < th.min_comps:
-        hard.append(f"only {nc} clean comp{'s' if nc != 1 else ''} (<{th.min_comps})")
-    elif th.min_comps <= nc < th.strong:
+    elif 0 < nc < th.strong:
         soft.append(
-            f"thin comp set ({nc} clean, prefer >={th.strong})"
+            f"thin comp set ({nc} clean, GREEN requires >={th.strong})"
         )
+
+    _nt12 = int(n_tier12) if n_tier12 is not None else nc
+    if nc > 0 and _nt12 < nc:
+        soft.append("ensemble includes T3+ comps (colour mismatch)")
+    if nc >= th.strong and _nt12 < th.strong:
+        soft.append(f"only {_nt12} T1/T2 comps (GREEN requires >={th.strong})")
+    if bool(color_term_off) and nc > 0 and _nt12 < th.strong:
+        soft.append("T3+ comps with color term off (trust capped YELLOW)")
 
     lq = str(lc_quality or "").strip().lower()
     if lq in _LC_QUALITY_SOFT:
@@ -145,7 +157,7 @@ def classify_warnings(
         hard.append(f"LC quality: {lq}")
 
     if n_chk == 0:
-        soft.append("no check-star verification available")
+        hard.append("no check-star verification")
     elif 0 < n_chk < min_chk:
         soft.append(f"insufficient check-star verification (n={n_chk})")
     elif math.isfinite(check_scatter):
@@ -172,9 +184,9 @@ def trust_level(
         return "RED"
     if soft:
         return "YELLOW"
-    if int(n_clean) < thresholds.min_comps:
-        return "RED"
-    return "GREEN"
+    if int(n_clean) >= thresholds.strong:
+        return "GREEN"
+    return "YELLOW"
 
 
 def build_reason(
@@ -225,6 +237,8 @@ def evaluate_target(
     sparse_fallback_used: bool = False,
     comp_pool_n_final: int = 0,
     n_stability_suspect: int = 0,
+    n_tier12: int | None = None,
+    color_term_off: bool = False,
 ) -> dict[str, Any]:
     th = thresholds or CompTrustThresholds.from_bounds(3, 8)
     lq = str(lc_quality or "").strip().lower() or "—"
@@ -240,6 +254,8 @@ def evaluate_target(
         sparse_fallback_used=bool(sparse_fallback_used),
         comp_pool_n_final=int(comp_pool_n_final),
         n_stability_suspect=int(n_stability_suspect),
+        n_tier12=n_tier12,
+        color_term_off=bool(color_term_off),
     )
     trust = trust_level(int(n_clean), hard, soft, th)
     reason = build_reason(
@@ -269,6 +285,7 @@ def compute_trust_for_photometry_dir(
     *,
     thresholds: CompTrustThresholds | None = None,
     check_min_epochs: int | None = None,
+    cfg: Any | None = None,
 ) -> dict[str, Any]:
     phot = Path(photometry_dir)
     summ_path = phot / "photometry_summary.csv"
@@ -278,6 +295,12 @@ def compute_trust_for_photometry_dir(
     th = thresholds or CompTrustThresholds.from_bounds(3, 8)
     min_chk = max(3, int(check_min_epochs if check_min_epochs is not None else 5))
     summ = pd.read_csv(summ_path, dtype={"catalog_id": str}, low_memory=False)
+    _color_term_off = True
+    if cfg is not None:
+        try:
+            _color_term_off = not bool(getattr(cfg, "apply_color_term", True))
+        except Exception:  # noqa: BLE001
+            _color_term_off = True
     comp_meta: dict[str, dict[str, int]] = {}
     comp_path = phot / "comparison_stars_per_target.csv"
     if comp_path.is_file():
@@ -314,7 +337,11 @@ def compute_trust_for_photometry_dir(
         if not cid:
             continue
         n_clean_raw = pd.to_numeric(row.get("n_clean"), errors="coerce")
-        n_clean = int(n_clean_raw) if math.isfinite(float(n_clean_raw)) else 0
+        if math.isfinite(float(n_clean_raw)):
+            n_clean = int(n_clean_raw)
+        else:
+            ng_raw = pd.to_numeric(row.get("n_good_comp"), errors="coerce")
+            n_clean = int(ng_raw) if math.isfinite(float(ng_raw)) else 0
         lc_quality = str(row.get("lc_quality_flag", "") or "").strip()
         vsx = str(row.get("vsx_name", "") or "")
         nf_raw = pd.to_numeric(row.get("n_frames"), errors="coerce")
@@ -325,6 +352,8 @@ def compute_trust_for_photometry_dir(
         _sparse_fb = bool(_cm.get("sparse_fallback_used", False))
         _stab_sus_raw = pd.to_numeric(row.get("n_stability_suspect"), errors="coerce")
         _stab_sus = int(_stab_sus_raw) if math.isfinite(float(_stab_sus_raw)) else 0
+        _nt12_raw = pd.to_numeric(row.get("n_tier12"), errors="coerce")
+        _nt12 = int(_nt12_raw) if math.isfinite(float(_nt12_raw)) else None
         info = evaluate_target(
             catalog_id=cid,
             vsx_name=vsx,
@@ -339,6 +368,8 @@ def compute_trust_for_photometry_dir(
             sparse_fallback_used=_sparse_fb,
             comp_pool_n_final=int(_cm.get("comp_pool_n_final", 0)),
             n_stability_suspect=_stab_sus,
+            n_tier12=_nt12,
+            color_term_off=_color_term_off,
         )
         per_target[cid] = info
         conf_counts[info["trust"]] = conf_counts.get(info["trust"], 0) + 1
@@ -435,7 +466,7 @@ def run_trust_flag_for_photometry_dir(
     th = thresholds or comp_thresholds_from_config(cfg)
     min_chk = check_star_min_epochs_from_config(cfg)
     result = compute_trust_for_photometry_dir(
-        photometry_dir, thresholds=th, check_min_epochs=min_chk
+        photometry_dir, thresholds=th, check_min_epochs=min_chk, cfg=cfg
     )
     paths = write_trust_artifacts(
         result,

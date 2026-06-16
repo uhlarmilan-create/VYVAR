@@ -909,3 +909,18 @@ pre-claim checklist, diagnose-then-fix, and reproducibility (archive proc before
 
 Definition-of-Done discipline remains in `VYVAR_PROCESS.md`; old **TODO-DEV-PROCESS** folded/replaced
 by A/B plus charter session-start checklist.
+
+---
+
+## Phase-1 comp degradation trust bands (2026-06-16)
+
+**Decision:** sparse_fallback + check sidecar currently caps trust at **YELLOW** even when sparse comps
+are unusable (degenerate / V0611 sparse `comp_rms` ~1.9-3.3 mag). An **absolute sanity ceiling** on
+sparse comps is **deferred to Phase-2** as a conscious decision (ROADMAP item 1 after Phase-1b).
+
+**Correction logged:** prior validation note "expected degenerate -> RED" was wrong for the current
+trust model. Locked rule: sparse path + check present -> **YELLOW** (not RED), until Phase-2 ceiling
+lands.
+
+**Known issue (b):** per-target `comp_rms` gate not authoritative for N_good; RMS fallback + routing
+fix is **Phase-1b** (immediate next), not part of the Phase-1 commit.

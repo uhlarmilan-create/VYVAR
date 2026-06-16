@@ -7172,6 +7172,50 @@ def _phase2a_process_one_target(
         else:
             comp_rms_map[cid0] = float(rms_raw)
 
+    _chk_cid_pref: str | None = None
+    try:
+        from check_star_kmag import (  # noqa: PLC0415
+            field_check_star_candidate_pool,
+            select_check_star,
+        )
+
+        _chk_pool_pref = field_check_star_candidate_pool(
+            state.comp_df,
+            target_comps=target_comps,
+        )
+        if not _chk_pool_pref.empty:
+            _chk_row_pref = select_check_star(
+                _chk_pool_pref,
+                ensemble_ids=set(comp_ids),
+                n_comp_min=max(1, min(3, len(_chk_pool_pref))),
+                cfg=_cfg,
+            )
+            if _chk_row_pref is not None:
+                _chk_cid_pref = _normalize_gaia_id(_chk_row_pref.get("catalog_id", ""))
+                if (
+                    _chk_cid_pref
+                    and _chk_cid_pref not in comp_ids
+                    and _chk_cid_pref != target_cid
+                ):
+                    all_ids.append(_chk_cid_pref)
+                    for _mk in ("mag", "phot_g_mean_mag"):
+                        try:
+                            _cm = float(pd.to_numeric(_chk_row_pref.get(_mk), errors="coerce"))
+                        except Exception:  # noqa: BLE001
+                            _cm = float("nan")
+                        if math.isfinite(_cm):
+                            comp_catalog_mag[_chk_cid_pref] = _cm
+                            break
+                    try:
+                        _cx = float(pd.to_numeric(_chk_row_pref.get("x"), errors="coerce"))
+                        _cy = float(pd.to_numeric(_chk_row_pref.get("y"), errors="coerce"))
+                    except Exception:  # noqa: BLE001
+                        _cx, _cy = float("nan"), float("nan")
+                    if math.isfinite(_cx) and math.isfinite(_cy):
+                        _star_xy[_chk_cid_pref] = (_cx, _cy)
+    except Exception as _ck_pref_exc:  # noqa: BLE001
+        logging.debug("[CHECK-KMAG] preselect skipped for %s: %s", target_cid, _ck_pref_exc)
+
     # Krok 2: Fotometria per snímka (PERF-8: slice shared flux matrix when built)
     frame_results: list[pd.DataFrame] = []
     if not _flux_matrix.empty and not _is_co_target:
@@ -7445,7 +7489,7 @@ def _phase2a_process_one_target(
     )
 
     # Krok 4: Ensemble normalizácia
-    mag_calib, delta_mag, _ = ensemble_normalize(
+    mag_calib, delta_mag, ensemble_scatter = ensemble_normalize(
         target_lc,
         comp_lc,
         comp_catalog_mag,
@@ -7453,7 +7497,7 @@ def _phase2a_process_one_target(
         comp_rms_map=comp_rms_map,
         comp_tier_map=comp_tier_map,
         tier_weights=tier_weights,
-        n_comp_min=3,
+        n_comp_min=max(1, int(getattr(_cfg, "phase01_comparison_n_comp_min", 3))),
         n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
     )
 
@@ -7692,6 +7736,24 @@ def _phase2a_process_one_target(
     )
 
     err = target_frames["err"].to_numpy(dtype=float)
+    _n_ens = sum(1 for q in comp_quality.values() if q.get("quality") in ("good", "suspect"))
+    if _n_ens > 0:
+        _rms_vals = [
+            float(v)
+            for v in comp_rms_map.values()
+            if v is not None and math.isfinite(float(v)) and float(v) > 0
+        ]
+        _ref_sigma = float("nan")
+        if _rms_vals:
+            _med_rms = float(np.median(np.asarray(_rms_vals, dtype=np.float64)))
+            if math.isfinite(_med_rms) and _med_rms > 0:
+                _ref_sigma = _med_rms / math.sqrt(float(_n_ens))
+        if math.isfinite(_ref_sigma) and _ref_sigma > 0:
+            err = np.sqrt(np.square(err) + _ref_sigma * _ref_sigma)
+        if ensemble_scatter is not None:
+            _ens_sc = np.asarray(ensemble_scatter, dtype=np.float64)
+            if _ens_sc.shape == err.shape:
+                err = np.sqrt(np.square(err) + np.square(_ens_sc) / max(float(_n_ens), 1.0))
     ap_arr = target_frames["aperture_r_px"].to_numpy(dtype=float)
     src_files = target_frames["source_file"].tolist()
     sat_flags = (target_frames["flag"] == "saturated").to_numpy(dtype=bool)
@@ -7774,43 +7836,38 @@ def _phase2a_process_one_target(
             check_kmag_sidecar_path,
             compute_check_ensemble_mag_calib,
             save_check_kmag_sidecar,
-            select_check_star,
         )
 
-        _ensemble_ids = ensemble_member_ids(
-            comp_quality,
-            comp_rms_map,
-            n_comp_min=3,
-            n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
-        )
-        _chk_row = select_check_star(
-            target_comps,
-            ensemble_ids=_ensemble_ids,
-            n_comp_min=3,
-            cfg=_cfg,
-        )
-        if _chk_row is not None:
-            _chk_cid = _normalize_gaia_id(_chk_row.get("catalog_id", ""))
-            if _chk_cid and _chk_cid in comp_lc:
+        _chk_cid = _chk_cid_pref
+        if _chk_cid:
+            _ext_lc = dict(comp_lc)
+            if _chk_cid not in _ext_lc:
+                _chk_series = _get_lc(_chk_cid, all_frames)
+                if _chk_series is not None and np.isfinite(_chk_series).any():
+                    _ext_lc[_chk_cid] = _chk_series
+            if _chk_cid in _ext_lc:
+                _chk_n_min = max(1, min(3, len(comp_ids)))
                 _chk_mag = compute_check_ensemble_mag_calib(
                     _chk_cid,
                     list(comp_ids),
-                    comp_lc,
-                    comp_catalog_mag,
-                    comp_quality,
-                    comp_rms_map=comp_rms_map,
-                    comp_tier_map=comp_tier_map,
-                    tier_weights=tier_weights,
-                    cfg=_cfg,
+                    _ext_lc,
+                comp_catalog_mag,
+                comp_quality,
+                comp_rms_map=comp_rms_map,
+                comp_tier_map=comp_tier_map,
+                tier_weights=tier_weights,
+                cfg=_cfg,
+                n_comp_min=_chk_n_min,
+                n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
+            )
+            if _chk_mag is not None and np.isfinite(_chk_mag).any():
+                save_check_kmag_sidecar(
+                    check_kmag_sidecar_path(lc_dir, target_cid),
+                    check_cid=_chk_cid,
+                    bjd=bjd,
+                    source_files=src_files,
+                    kmag=_chk_mag,
                 )
-                if _chk_mag is not None and np.isfinite(_chk_mag).any():
-                    save_check_kmag_sidecar(
-                        check_kmag_sidecar_path(lc_dir, target_cid),
-                        check_cid=_chk_cid,
-                        bjd=bjd,
-                        source_files=src_files,
-                        kmag=_chk_mag,
-                    )
     except Exception as _ck_exc:  # noqa: BLE001
         logging.debug("[CHECK-KMAG] sidecar skipped for %s: %s", target_cid, _ck_exc)
 
@@ -8034,6 +8091,17 @@ def _phase2a_process_one_target(
     _lc_rms_full = float(np.std(finite_calib)) if len(finite_calib) > 1 else float("nan")
     _lc_rms_ooe = compute_lc_rms_ooe(mag_calib, out_flags)
 
+    _comp_path = "default"
+    _n_tier12 = 0
+    if not target_comps.empty:
+        if "comp_path" in target_comps.columns:
+            _cpaths = target_comps["comp_path"].astype(str).str.strip().str.lower()
+            if (_cpaths == "sparse_fallback").any():
+                _comp_path = "sparse_fallback"
+        if "comp_tier" in target_comps.columns:
+            _tiers = pd.to_numeric(target_comps["comp_tier"], errors="coerce")
+            _n_tier12 = int(_tiers.isin([1, 2]).sum())
+
     summary_rows.append(
         {
             "catalog_id": target_cid,
@@ -8042,6 +8110,8 @@ def _phase2a_process_one_target(
             "zone_flag": str(target_row.get("zone_flag", "")).strip(),
             "n_frames": len(bjd),
             "n_good_comp": n_good_comp,
+            "n_tier12": _n_tier12,
+            "comp_path": _comp_path,
             "n_stability_good": n_stability_good,
             "n_stability_suspect": n_stability_suspect,
             "n_saturated": n_sat,
@@ -8493,9 +8563,6 @@ def run_phase2a(
             "dynamic_params": _dyn,
             "common_mode_stability_detrend": bool(
                 state.stability_run_flags.get("common_mode_detrend_applied")
-            ),
-            "comp_sparse_fallback_used": bool(
-                resolve_comp_sparse_fallback_enabled(_cfg)
             ),
             **_cal_meta,
         },
@@ -11716,6 +11783,7 @@ def select_comparison_stars_per_target(
             sorted_rms_map,
             clip_sigma=_clip_sigma,
             n_comp_min=n_comp_min,
+            min_final=1 if sparse_fallback else None,
         )
         if _clip_out is None:
             return pd.DataFrame()
@@ -11851,15 +11919,12 @@ def select_comparison_stars_per_target(
         cfg=_cfg_p1,
         clip_meta=clip_meta,
         comp_path="sparse_fallback" if sparse_fallback else "default",
+        per_target_rms_map=rms_map,
     )
 
     if _mode == "auto":
-        _cfg_nmin = int(getattr(_cfg_p1, "phase01_comparison_n_comp_min", n_comp_min) or n_comp_min)
-        _fb_min = resolve_comp_sparse_fallback_min(
-            _cfg_p1, n_comp_min=_cfg_nmin, n_comp_max=int(n_comp_max)
-        )
-        _n_res = int(len(result)) if result is not None and not getattr(result, "empty", True) else 0
-        if _n_res >= _fb_min:
+        _n_good = int(len(result)) if result is not None and not getattr(result, "empty", True) else 0
+        if _n_good >= 1:
             return result
         if resolve_comp_sparse_fallback_enabled(_cfg_p1):
             fb = select_comparison_stars_per_target(
@@ -11905,9 +11970,9 @@ def select_comparison_stars_per_target(
                 _selection_mode="sparse_fallback",
             )
             _n_fb = int(len(fb)) if fb is not None and not getattr(fb, "empty", True) else 0
-            if _n_fb >= _fb_min:
+            if _n_fb >= 1:
                 return fb
-        return result
+        return pd.DataFrame()
 
     return result
 
@@ -12739,6 +12804,23 @@ def run_phase0_and_phase1(
     except Exception:  # noqa: BLE001
         pass
     comp_df.to_csv(comp_csv, index=False)
+    _sparse_target_n = 0
+    if "comp_path" in comp_df.columns and "target_catalog_id" in comp_df.columns:
+        try:
+            _cp = (
+                comp_df.groupby(comp_df["target_catalog_id"].astype(str).str.strip())["comp_path"]
+                .first()
+                .astype(str)
+                .str.strip()
+                .str.lower()
+            )
+            _sparse_target_n = int((_cp == "sparse_fallback").sum())
+        except Exception:  # noqa: BLE001
+            _sparse_target_n = 0
+    merge_photometry_pipeline_meta(
+        output_dir,
+        {"comp_sparse_fallback_target_count": int(_sparse_target_n)},
+    )
     logging.info(
         f"[FÁZA 1] Uložené: {comp_csv} "
         f"({len(comp_df)} riadkov, {len(all_comp_rows)} targetov s porovnávačkami)"

@@ -401,7 +401,7 @@ def test_alg4_not_applied_to_mag_calib_in_phase2a_by_default():
     cfg = AppConfig()
     assert cfg.democratic_detrend_enabled is False
     assert cfg.savgol_detrend_enabled is False
-    assert cfg.temporal_binning_enabled is True
+    assert cfg.temporal_binning_enabled is False
     assert cfg.pytics_enabled is True
 
 

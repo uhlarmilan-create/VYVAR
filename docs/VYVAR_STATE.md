@@ -1,7 +1,7 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-16** (simple-differential PRODUCTION; draft_409 trust/consistency cleanup;
-SIPS cross-validation on V0612).
+Last updated: **2026-06-16** (Phase-1 graceful comp degradation committed + matrix `164157` validated;
+simple-differential PRODUCTION; known-issue (b) pending immediate fix).
 
 This is the **entry point**: a snapshot of what is true *now* + an index. It deliberately holds
 no history and no open-task detail -- those live in the linked files.
@@ -28,7 +28,7 @@ no history and no open-task detail -- those live in the linked files.
 | `docs/VYVAR_CHECKSTAR_SELECTION_SPEC.md` | Check-star selection CS-2..4 (2026-06-11). |
 | `docs/VYVAR_COMP_FLOOR_POLICY_SPEC.md` | Comp trust floor policy; Option B adopted. |
 | `docs/VYVAR_MATH_PHYS_AUDIT.md` | Math/physics audit (first pass; citation scoping landed). |
-| `CITATIONS.bib` | Single source of truth for all algorithm/software citations. |
+| `docs/VYVAR_COMP_DEGRADATION_SPEC.md` | Phase-1 graceful comp degradation spec (committed 2026-06-16). |
 
 ---
 
@@ -90,10 +90,21 @@ enable only on characterized fine-scale data after the Brno / Newton characteriz
 (see DECISIONS + ROADMAP).
 
 Comp bounds (user-configurable): Phase-1 selection `phase01_comparison_n_comp_min/max` = **3 / 8**
-(unchanged). Trust-only floor `comp_trust_min_comps` = **5** (`strong = min+2` → **7** at
-defaults); `check_star_min_epochs` = **5**; CS-2 artefact floor `check_select_rms_floor` =
+(unchanged). Trust-only floor `comp_trust_min_comps` = **3** (Phase-1; GREEN requires >=3 clean T1/T2
+comps + check); `check_star_min_epochs` = **5**; CS-2 artefact floor `check_select_rms_floor` =
 **1e-4**; CS-4 uses `aperture_correction_max_contamination` = **0.15** when
 `contamination_idx` is present. `max_comp_rms` = 0.1; colour cut <= 0.79.
+
+### Phase-1 graceful comp degradation (2026-06-16)
+
+**Status:** committed + structurally validated (matrix `164157`; check-star preselect active).
+
+Graded routing keeps 1-N good comps on default path (sparse only at 0); honest `comp_rms` /
+`comp_rms_fieldwide` split; `comp_path` on summary + PDF; sigma scales with N; SS Cam fold
+(pool attach, check-star field preselect).
+
+**Known issue (b) -- pending immediate fix:** per-target `comp_rms` gate not yet authoritative for
+N_good (RMS fallback 0.1->0.15 + `len(result)>=1` routing). See ROADMAP + JOURNAL.
 
 ## Rigs (known sets)
 

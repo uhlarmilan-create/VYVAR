@@ -25,7 +25,7 @@ from trust_flag_core import (
 )
 
 _TH = CompTrustThresholds.from_bounds(3, 8)
-_TH_TRUST = CompTrustThresholds.from_bounds(5, 12)  # strong=7 (comp_trust_min_comps default)
+_TH_TRUST = CompTrustThresholds.from_bounds(3, 12)  # green_min=3
 
 
 def test_unevaluated_defaults_red(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
@@ -67,7 +67,7 @@ def test_unevaluated_defaults_red(tmp_path: Path, caplog: pytest.LogCaptureFixtu
     assert any("absent from trust map" in r.message for r in caplog.records)
 
 
-def test_missing_check_star_adds_soft() -> None:
+def test_missing_check_star_is_hard_red() -> None:
     hard, soft = classify_warnings(
         n_clean=_TH.strong,
         check_scatter=float("nan"),
@@ -75,9 +75,8 @@ def test_missing_check_star_adds_soft() -> None:
         thresholds=_TH,
         n_check=0,
     )
-    assert "no check-star verification available" in soft
-    assert not hard
-    assert trust_level(_TH.strong, hard, soft, _TH) == "YELLOW"
+    assert any("no check-star verification" in h for h in hard)
+    assert trust_level(_TH.strong, hard, soft, _TH) == "RED"
 
 
 def test_present_clean_check_is_green() -> None:
@@ -119,23 +118,24 @@ def test_finite_check_thresholds() -> None:
     assert trust_level(_TH.strong, hard_lo, soft_lo, _TH) == "YELLOW"
 
 
-def test_max_two_soft_keeps_yellow() -> None:
-    nc = _TH.min_comps + 1
-    assert _TH.min_comps <= nc < _TH.strong
+def test_thin_comp_with_check_is_yellow() -> None:
+    nc = 2
+    assert nc < _TH.strong
     hard, soft = classify_warnings(
         n_clean=nc,
-        check_scatter=float("nan"),
+        check_scatter=0.01,
         lc_quality="good",
         thresholds=_TH,
-        n_check=0,
+        n_check=5,
     )
-    assert len(soft) == 2
+    assert any("thin comp set" in s for s in soft)
+    assert not hard
     assert trust_level(nc, hard, soft, _TH) == "YELLOW"
 
 
 def test_hard_forces_red() -> None:
     for n_clean, lq, chk in (
-        (_TH.min_comps - 1, "good", 0.005),
+        (0, "good", 0.005),
         (_TH.strong, "saturated", 0.005),
         (_TH.strong, "good", 0.06),
     ):
@@ -180,18 +180,19 @@ def test_short_baseline_alone_is_yellow() -> None:
     assert trust_level(_TH.strong, hard, soft, _TH) == "YELLOW"
 
 
-def test_short_baseline_three_soft_stays_yellow_not_red() -> None:
-    nc = _TH.min_comps + 1
+def test_short_baseline_thin_comp_with_check_stays_yellow() -> None:
+    nc = 2
     hard, soft = classify_warnings(
         n_clean=nc,
-        check_scatter=float("nan"),
+        check_scatter=0.01,
         lc_quality="short_baseline",
         thresholds=_TH,
         n_frames=12,
-        n_check=0,
+        n_check=5,
     )
-    assert len(soft) == 3
     assert not hard
+    assert any(s.startswith("short baseline") for s in soft)
+    assert any("thin comp set" in s for s in soft)
     assert trust_level(nc, hard, soft, _TH) == "YELLOW"
 
 
@@ -217,12 +218,15 @@ def test_short_baseline_export_trust_note() -> None:
 def test_comp_trust_thresholds_from_config_default() -> None:
     cfg = AppConfig()
     th = comp_thresholds_from_config(cfg)
-    assert th.min_comps == int(cfg.comp_trust_min_comps)
+    assert th.strong == int(cfg.comp_trust_min_comps)
     assert th.max_comps == int(cfg.phase01_comparison_n_comp_max)
-    assert th.strong == min(th.min_comps + 2, th.max_comps)
+    assert th.min_comps == 1
 
 
-@pytest.mark.parametrize("n_clean,expected", [(3, "RED"), (4, "RED"), (5, "YELLOW"), (6, "YELLOW")])
+@pytest.mark.parametrize(
+    "n_clean,expected",
+    [(0, "RED"), (1, "YELLOW"), (2, "YELLOW"), (3, "GREEN"), (6, "GREEN")],
+)
 def test_comp_trust_floor_n_clean_bands(n_clean: int, expected: str) -> None:
     info = evaluate_target(
         catalog_id="x",
@@ -232,9 +236,10 @@ def test_comp_trust_floor_n_clean_bands(n_clean: int, expected: str) -> None:
         check_scatter=0.005,
         thresholds=_TH_TRUST,
         n_check=5,
+        n_tier12=n_clean,
     )
     assert info["trust"] == expected
-    if expected == "YELLOW":
+    if expected == "YELLOW" and n_clean > 0:
         assert any("thin comp set" in s for s in info["soft_warnings"])
 
 

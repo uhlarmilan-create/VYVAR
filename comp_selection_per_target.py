@@ -1404,12 +1404,14 @@ def _iterative_ensemble_clip_cm_residual(
     clip_sigma: float,
     n_comp_min: int,
     max_iter: int = 5,
+    min_final: int | None = None,
 ) -> tuple[dict[str, float], dict[str, int]] | None:
     """Ensemble-relative 5σ-MAD clip on CM-removed differential residuals."""
+    _min_final = max(1, int(min_final if min_final is not None else n_comp_min))
     mag_lc, bjd_lc = _flux_series_to_mag_bjd(flux_map, bjd_map)
     active = sorted(mag_lc.keys())
     n_candidates = int(len(active))
-    if n_candidates < int(n_comp_min):
+    if n_candidates < _min_final:
         return None
     cm_all = _common_mode_detrend_mag_lcs(mag_lc, bjd_lc)
     sigma_k = float(clip_sigma) if math.isfinite(float(clip_sigma)) and float(clip_sigma) > 0 else 5.0
@@ -1488,14 +1490,14 @@ def _iterative_ensemble_clip_cm_residual(
             break
         active = [c for c in active if c != worst]
 
-    if len(active) < int(n_comp_min):
+    if len(active) < _min_final:
         return None
     active_rms = {
         cid: float(provisional_rms.get(cid, float("nan")))
         for cid in active
         if cid in provisional_rms and math.isfinite(float(provisional_rms.get(cid, float("nan"))))
     }
-    if len(active_rms) < int(n_comp_min):
+    if len(active_rms) < _min_final:
         active_rms = {cid: 0.05 for cid in active}
     meta = {
         "comp_pool_n_candidates": n_candidates,
@@ -1665,10 +1667,10 @@ def _ensemble_mad_filter_rms(
         for cid, rms in sorted(rms_map.items(), key=lambda kv: (float(kv[1]), str(kv[0])))
         if cid in cand_ids
     }
-    if len(active) < n_comp_min:
+    if len(active) < 2:
         logging.warning(
             f"[FÁZA 1] {target_cid}: len {len(active)} comp po RMS filtre "
-            f"< n_comp_min={n_comp_min}."
+            f"< 2 (minimum for QA)."
         )
         _warn_zero_compstars_edge(
             target_cid=target_cid,
@@ -2040,18 +2042,13 @@ def _assign_comp_tiers_to_pool(
     n_t4 = int((_t_final == 4).sum())
     n_good = int(n_t1 + n_t2)
 
-    if len(selected_ids) < int(n_comp_min):
+    if len(selected_ids) == 0:
         if n_good == 0:
             logging.warning(
                 "[COMP] %s: žiadne T1/T2 comp, "
                 "len %d TIER3/4 — LC bude vynechaná",
                 target_cid,
                 len(selected_ids),
-            )
-        else:
-            logging.warning(
-                f"[FÁZA 1] Target {target_cid}: po filtrácii len {len(selected_ids)} "
-                f"< n_comp_min={n_comp_min}."
             )
         _warn_zero_compstars_edge(
             target_cid=target_cid,
@@ -2076,6 +2073,11 @@ def _assign_comp_tiers_to_pool(
             "comp_delta_bprp_map": {},
             "comp_color_tier_src_map": {},
         }
+    if len(selected_ids) < int(n_comp_min):
+        logging.warning(
+            f"[FÁZA 1] Target {target_cid}: po filtrácii len {len(selected_ids)} "
+            f"< n_comp_min={n_comp_min} — keeping thin set (graceful degradation)."
+        )
 
     # Tier distribution + warning logic (after final selection)
     if n_good == 0 and n_t4 > 0:
@@ -2150,6 +2152,7 @@ def _assemble_comp_selection_result_rows(
     cfg: AppConfig | None = None,
     clip_meta: dict[str, int] | None = None,
     comp_path: str = "default",
+    per_target_rms_map: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     _cfg_asm = cfg or AppConfig()
     # Zostav výstupný DataFrame
@@ -2183,7 +2186,16 @@ def _assemble_comp_selection_result_rows(
             r["catalog_id"] = normalize_gaia_source_id(r.get("catalog_id"))
         if "name" in r:
             r["name"] = normalize_gaia_source_id(r.get("name")) or str(r.get("name", "") or "")
-        r["comp_rms"] = active.get(cid, float("nan"))
+        _cid_key = cid_s
+        _pt_map = per_target_rms_map or {}
+        _pt_rms = float(_pt_map.get(_cid_key, _pt_map.get(cid, float("nan"))))
+        _fw_rms = float(active.get(cid, active.get(_cid_key, float("nan"))))
+        if str(comp_path or "default").strip().lower() == "sparse_fallback":
+            r["comp_rms"] = _pt_rms if math.isfinite(_pt_rms) else float("nan")
+            r["comp_rms_fieldwide"] = _fw_rms if math.isfinite(_fw_rms) else float("nan")
+        else:
+            r["comp_rms"] = _fw_rms if math.isfinite(_fw_rms) else _pt_rms
+            r["comp_rms_fieldwide"] = float("nan")
         r["comp_score"] = score_map.get(cid, float("nan"))
         # Ranking columns (new selection philosophy)
         try:
@@ -2299,6 +2311,7 @@ def _assemble_comp_selection_result_rows(
                 "mag",
                 "bp_rp",
                 "comp_rms",
+                "comp_rms_fieldwide",
                 "comp_score",
                 "contamination_idx",
                 "comp_n_frames",

@@ -199,6 +199,37 @@ def _exclude_ensemble_members(df: pd.DataFrame, ensemble_ids: set[str]) -> pd.Da
     return df
 
 
+def field_check_star_candidate_pool(
+    comp_field_df: pd.DataFrame,
+    *,
+    target_comps: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Union field comp metrics (one row per catalog_id) for check-star selection."""
+    frames: list[pd.DataFrame] = []
+    if comp_field_df is not None and not getattr(comp_field_df, "empty", True):
+        frames.append(comp_field_df)
+    if target_comps is not None and not getattr(target_comps, "empty", True):
+        frames.append(target_comps)
+    if not frames:
+        return pd.DataFrame()
+    pool = pd.concat(frames, ignore_index=True)
+    pool = normalize_comp_df_export_columns(pool)
+    if pool.empty or "catalog_id" not in pool.columns:
+        return pool
+    pool = pool.copy()
+    pool["catalog_id"] = pool["catalog_id"].map(
+        lambda x: str(normalize_gaia_source_id(x) or "").strip()
+    )
+    pool = pool.loc[pool["catalog_id"].astype(str).str.len().gt(0)].copy()
+    if "comp_rms" in pool.columns:
+        pool["comp_rms"] = pd.to_numeric(pool["comp_rms"], errors="coerce")
+        pool = pool.sort_values(
+            ["comp_rms", "catalog_id"], ascending=[True, True], kind="mergesort"
+        )
+    pool = pool.drop_duplicates(subset=["catalog_id"], keep="first")
+    return pool.reset_index(drop=True)
+
+
 def select_check_star(
     comp_df: pd.DataFrame,
     *,
@@ -260,6 +291,10 @@ def select_check_star(
             cand = cand[cand["comp_rms"].notna()].sort_values("comp_rms", ascending=True)
             if not cand.empty:
                 return cand.iloc[0]
+
+    if "comp_rms_fieldwide" in df.columns:
+        # Field-wide RMS is for sparse-path diagnostics only — never rank check stars on it.
+        pass
 
     if "comp_score" in df.columns:
         df["comp_score"] = pd.to_numeric(df["comp_score"], errors="coerce")
@@ -324,13 +359,17 @@ def compute_check_ensemble_mag_calib(
     comp_tier_map: dict[str, int],
     tier_weights: dict[int, float],
     cfg: AppConfig,
+    n_comp_min: int | None = None,
+    n_comp_max: int | None = None,
 ) -> np.ndarray | None:
     """Ensemble-standardize the check star, excluding it from its own ensemble."""
     cid = str(normalize_gaia_source_id(check_cid) or "").strip()
     if not cid or cid not in comp_lc:
         return None
     other_ids = [c for c in comp_ids if c != cid and c in comp_lc]
-    if len(other_ids) < 3:
+    _min_other = max(1, int(n_comp_min if n_comp_min is not None else 3))
+    _max_other = int(n_comp_max if n_comp_max is not None else cfg.phase01_comparison_n_comp_max)
+    if len(other_ids) < _min_other:
         return None
     other_lc = {c: comp_lc[c] for c in other_ids}
     other_cat = {c: comp_catalog_mag[c] for c in other_ids if c in comp_catalog_mag}
@@ -339,7 +378,7 @@ def compute_check_ensemble_mag_calib(
         for c in other_ids
         if c in comp_quality and str(comp_quality[c].get("quality", "")).strip().lower() != "excluded"
     }
-    if len(other_quality) < 3:
+    if len(other_quality) < _min_other:
         return None
     mag_calib, _, _ = ensemble_normalize(
         comp_lc[cid],
@@ -349,8 +388,8 @@ def compute_check_ensemble_mag_calib(
         comp_rms_map=comp_rms_map,
         comp_tier_map=comp_tier_map,
         tier_weights=tier_weights,
-        n_comp_min=3,
-        n_comp_max=int(cfg.phase01_comparison_n_comp_max),
+        n_comp_min=_min_other,
+        n_comp_max=_max_other,
     )
     if not np.isfinite(mag_calib).any():
         return None

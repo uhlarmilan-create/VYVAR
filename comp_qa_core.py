@@ -285,8 +285,9 @@ def compute_comp_qa(
             continue
         comp_ids = sorted(grp["_catalog_id_n"].unique().tolist())
         comp_ids = [c for c in comp_ids if c]
-        if len(comp_ids) < min_comps:
+        if len(comp_ids) < 1:
             continue
+        _qa_min = max(1, min(int(min_comps), len(comp_ids)))
         all_ids = set(comp_ids) | {tid}
         flux_w, _time_df = load_proc_pivot(proc_dir, all_ids)
         if flux_w.empty or tid not in flux_w.columns:
@@ -295,9 +296,10 @@ def compute_comp_qa(
         flux_raw = {cid: flux_w[cid].values.astype(float) for cid in flux_w.columns}
         comp_rows = {row["_catalog_id_n"]: row for _, row in grp.iterrows()}
         pool = [c for c in comp_ids if c in mag]
-        if len(pool) < min_comps:
+        if len(pool) < 1:
             continue
         target_data[tid] = {
+            "qa_min_comps": _qa_min,
             "grp": grp,
             "pool": pool,
             "mag": mag,
@@ -342,7 +344,8 @@ def compute_comp_qa(
         grp = td["grp"]
         surviving = list(td["pool"])
 
-        while len(surviving) >= min_comps:
+        _qa_min = int(td.get("qa_min_comps", min_comps))
+        while len(surviving) >= _qa_min:
             metrics = {}
             for cid in surviving:
                 m = loo_diff_series(td["mag"], cid, surviving)
@@ -385,7 +388,7 @@ def compute_comp_qa(
             surviving = [c for c in surviving if c != worst_id]
 
         surv_final = [c for c in td["pool"] if (tid, c) not in dropped_global]
-        if len(surv_final) < min_comps:
+        if len(surv_final) < _qa_min:
             surv_final = list(td["pool"])
 
         thr_inv_f = robust_thr(

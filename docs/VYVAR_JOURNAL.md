@@ -2,7 +2,37 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
-## Session -- Claude operating-principles charter + process upgrades (2026-06-16)
+## Session -- Phase-1 graceful comp degradation committed (2026-06-16)
+
+**Committed:** Phase-1 graceful comp degradation (spec: `docs/VYVAR_COMP_DEGRADATION_SPEC.md`).
+Structural design validated via cross-field matrix `matrix_20260616_164157.json` (check-star
+preselect active).
+
+**Matrix results (164157):**
+| Field / target | Result |
+|----------------|--------|
+| draft_410 BO CVn | GREEN -- 4 T1 comps, check scatter 0.007 |
+| draft_411 V0842 Her (`1400549875578714240`) | YELLOW -- 8 T1, comp_rms med 0.0124; soft check scatter 0.023 |
+| draft_409 V0612 | RED -- 1 T3 comp; degraded proc; archive T1 comps rejected by Filter B (PSF/FWHM) |
+| draft_409 SS Cam | RED -- 1 T3 comp (comp_rms 0.134); honest fail-safe on degraded proc |
+| draft_409 V0611 | YELLOW -- sparse_fallback, fieldwide comp_rms labeled |
+| draft_409 degenerate | YELLOW -- sparse_fallback (sparse + check caps at YELLOW; see DECISIONS) |
+
+**Structural confirmations:** no field-wide masquerade on default path (`comp_rms_fieldwide`=NaN);
+field-wide labeled + matching on sparse; `comp_path` in summary + PDF; sigma scales with N; good comps
+not discarded for sparse when N>=1; check-star preselect active on all key targets.
+
+**a) SS Cam 3->1 RESOLVED:** not a regression, not a tier-drop bug. "3 comps" never existed on this
+proc (stored archive had 2 T1; both now rejected by Filter B). Log: RMS fallback finds 2 at 0.15,
+final 1 kept in `_select_comps_by_color_then_rms` (color/RMS final selection), not trust-tier removal.
+Data-limited on degraded proc.
+
+**KNOWN ISSUE (b) -- immediate next fix:** per-target `comp_rms` gate is NOT authoritative for N_good.
+RMS fallback relaxes gate (0.1 -> 0.15) at `comp_selection_per_target.py:1614-1627`; auto-routing
+`len(result) >= 1` at `photometry_core.py:11925-11928`. Pre-Phase-1 fallback the design intended to
+supersede. Violates spec section 3 (N_good = colour ladder + per-target comp_rms gate).
+
+---
 
 **Landed:** `docs/VYVAR_CLAUDE_OPERATING_PRINCIPLES.md` (INIT NOTE, sections 0-7, Session-start
 checklist) -- verbatim charter governing how Claude reasons and answers in VYVAR sessions.

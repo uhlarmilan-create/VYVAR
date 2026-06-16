@@ -11,6 +11,13 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
+### Phase-1 graceful comp degradation — DONE (2026-06-16)
+
+Validated matrix `matrix_20260616_164157.json`. Spec: `docs/VYVAR_COMP_DEGRADATION_SPEC.md`.
+Known-issue **(b)** deferred to immediate next item (comp_rms gate authoritative for N_good).
+
+---
+
 ### Simple differential + reporting + trust cleanup — DONE (2026-06-16)
 
 - **Workstream A** (defaults + Phase-1 tier-ladder selector): DoD-A PASS 2026-06-15; commit `2a8355b`.
@@ -35,59 +42,69 @@ Evidence: ``tmp/phase11/dod_b_workstream_b.json``; ``apply_reporting_postprocess
 
 ## NEXT SESSION — open items
 
-0. **Sigma budget (HIGH, multi-rig, LOAD-BEARING)** — scintillation (Young 1967 / Osborn 2015) +
+0. **Phase-1b — comp_rms gate authoritative for N_good (HIGH, immediate).** Fix known-issue (b):
+   RMS fallback relaxation (`comp_selection_per_target.py:1614-1627`) and `len(result)>=1` auto-routing
+   (`photometry_core.py:11925-11928`) must not admit gate-failing comps as N_good on the default path.
+   N_good = colour ladder + per-target comp_rms gate (spec section 3). No threshold retuning beyond
+   making the gate authoritative.
+
+1. **Phase-2 comp degradation — absolute sanity ceiling (HIGH, after 0).** Relative-locus comp_rms
+   gate + absolute sanity ceiling on sparse comps (sparse_fallback comp_rms ~1.9-3.3 mag on
+   degenerate/V0611 must not pass as usable).
+
+2. **Sigma budget (HIGH, multi-rig, LOAD-BEARING)** — scintillation (Young 1967 / Osborn 2015) +
    per-frame sigma + chi-squared/dof ~ 1 gate on verified-constant calibrator -> then Broeg IVW
    canonical ensemble combine. Spec: `docs/VYVAR_SIGMA_BUDGET_SPEC.md`; sandbox `tmp/phase12/`.
    Blocks TODO-GS8 (global ZP) + TODO-MULTISET. Needs a constant calibrator. **`delta_mag`
    flux-sum canonical until gate passes.**
 
-1. **FWHM external validation (MEDIUM)** — confirm/deny "true ~7.7-8.6 px" claim before any factor
+3. **FWHM external validation (MEDIUM)** — confirm/deny "true ~7.7-8.6 px" claim before any factor
    retune; header Gaussian 6.43 is self-consistent on draft_409 V0612.
 
-2. **Frame-level CR / bad-pixel rejection (MEDIUM)** — shared V0612 anomaly (~JD 2461200.385) is a
+4. **Frame-level CR / bad-pixel rejection (MEDIUM)** — shared V0612 anomaly (~JD 2461200.385) is a
    single-frame artifact matching SIPS; consider pixel-level CR rejection **before** photometry
    (not LC sigma-clip, which must preserve real eclipse features).
 
-3. **Source_id exact-match audit (MEDIUM)** — verify loose `contains()` matching is confined to
+5. **Source_id exact-match audit (MEDIUM)** — verify loose `contains()` matching is confined to
    throwaway harnesses, NOT production (19-digit exact match; draft_409 audit neighbor contamination
    tied to Decimal-precision discipline in `build_gaia_catalog`).
 
-4. **Optional fresh byte-identity anchor (LOW)** — cut new SHA + recipe on committed simple-diff path
+6. **Optional fresh byte-identity anchor (LOW)** — cut new SHA + recipe on committed simple-diff path
    for regression on top of SIPS/AIJ empirical validation (Milan call).
 
-5. **Brno / Newton characterization gate (finish)** — `g_60_4` solves on **production path**
+7. **Brno / Newton characterization gate (finish)** — `g_60_4` solves on **production path**
    (draft_400: 75.5% brightest-N, WCS persists). **Per-set fault isolation shipped** (2026-06-14) —
    one bad filter no longer aborts RUN VYVAR; surviving sets reach photometry. **Open:** Milan
    **draft_401 UI sign-off + overlay**; Brno **r/i/z** end-to-end (draft_402: `r` hint_sep reject,
    `z` blocked by whole-run abort — now unblocked for survivors); gate `_brno_check` tail fixed
    (draft_400 / skip). **TASK 2 shipped (2026-06-14):** catalog-recovery gate + hint-as-prior;
    Brno `r` should accept, `z` stays rejected — pending Milan overlay + anchor/home-rig re-run.
-6. **TODO-MULTISET** — per-telescope-set config (wide vs fine optics); blocks clean multi-rig
+8. **TODO-MULTISET** — per-telescope-set config (wide vs fine optics); blocks clean multi-rig
    production and crowding gating per rig.
-7. ~~**Short-baseline LC quality (#3)**~~ **DONE (2026-06-10)** — `short_baseline` terminal class,
+9. ~~**Short-baseline LC quality (#3)**~~ **DONE (2026-06-10)** — `short_baseline` terminal class,
    config keys, trust YELLOW non-escalating, exportable. ~~Finding E~~ **re-checked (2026-06-11)**.
-8. **Phase C catalog rebuild** — DR3 full-sky build completes on existing schema (G<=17.5).
+10. **Phase C catalog rebuild** — DR3 full-sky build completes on existing schema (G<=17.5).
    GAIA-1/GAIA-2 columns deferred to DR4 (~Dec 2026) -- see DECISIONS.
-9. ~~**Chi_and_H baseline re-cut**~~ **DONE (2026-06-11)** — full zaloha anchor
+11. ~~**Chi_and_H baseline re-cut**~~ **DONE (2026-06-11)** — full zaloha anchor
    (core `3f7c9e7a...`, full `d5b72d08...`; draft_000387 re-cut ×2); completeness
    gate in `night_run.py`. See STATE + RUNBOOK.
-10. ~~**Trust Findings A/B + CS-1..4 + comp trust floor (Option B)**~~ **DONE (2026-06-11)** —
+12. ~~**Trust Findings A/B + CS-1..4 + comp trust floor (Option B)**~~ **DONE (2026-06-11)** —
    specs under `docs/`; trust baseline 1382/106 on draft_387 at `comp_trust_min_comps=5`.
-11. ~~**Broad-except hygiene (BLE001/E722 regression guard)**~~ **DONE (2026-06-11)** — see
+13. ~~**Broad-except hygiene (BLE001/E722 regression guard)**~~ **DONE (2026-06-11)** — see
    DECISIONS + `pyproject.toml` / pre-commit / `tests/test_ble001_regression.py`.
-12. **DEV-PROCESS-A — JSON pass/fail validation ledger (HIGH, spec only).** Structured JSON file
+14. **DEV-PROCESS-A — JSON pass/fail validation ledger (HIGH, spec only).** Structured JSON file
     listing end-to-end validation items (per fix and the cross-field trust matrix), each with a
     `passes: true/false` status. Rules: agents may edit ONLY the status field; status flips to
     `true` only after careful end-to-end verification; tests are never deleted or weakened.
     Rationale: JSON resists inappropriate rewrites better than Markdown; an explicit pass/fail
     list prevents "declared done prematurely." Grounded in Anthropic long-running-agent harness
     guidance (structured pass/fail ledger).
-13. **DEV-PROCESS-B — session-start baseline-check script (HIGH, spec only).** Script run at the top
+15. **DEV-PROCESS-B — session-start baseline-check script (HIGH, spec only).** Script run at the top
     of each session that reproduces the reference draft / runs the regression check and confirms the
     known-good result before any new work, catching drift or a broken state early (the lost V0612
     proc is the motivating case). Grounded in Anthropic context-engineering / long-running-agent
     harness guidance (verify known-good baseline before new work).
-14. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
+16. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
 13. ~~**Per-frame proc export perf (DAO pre-filter + Moffat gate)**~~ **DONE (2026-06-12)** —
    `_proc_drop_unmatched_dao_rows` before aperture/PSF; Moffat gated on `_run_epsf` only; ~4.8× on
    `draft_000389` B_60_1 (171 → 36 s/frame). See JOURNAL + DECISIONS.

@@ -1034,7 +1034,7 @@ class _PhotometryReportBuilder:
             except Exception:  # noqa: BLE001
                 pass
         try:
-            from check_star_kmag import resolve_ensemble_ids_for_check, select_check_star
+            from check_star_kmag import field_check_star_candidate_pool, resolve_ensemble_ids_for_check, select_check_star
 
             if not self.comp_df.empty and "_tcid" in self.comp_df.columns:
                 sub = self.comp_df[self.comp_df["_tcid"].astype(str).eq(cid)]
@@ -1049,7 +1049,11 @@ class _PhotometryReportBuilder:
                         comp_quality_map=None,
                         cfg=_chk_cfg,
                     )
-                    chk_row = select_check_star(sub, ensemble_ids=ens, cfg=_chk_cfg)
+                    _chk_pool = field_check_star_candidate_pool(
+                        self.comp_df,
+                        target_comps=sub,
+                    )
+                    chk_row = select_check_star(_chk_pool, ensemble_ids=ens, cfg=_chk_cfg)
                     if chk_row is not None:
                         cc = self._norm_cid(chk_row.get("catalog_id", ""))
                         out["kname"] = self._resolve_check_kname(cc, cid)
@@ -3637,6 +3641,7 @@ class _PhotometryReportBuilder:
         ap_txt = f"{ap_px:.1f}px" if np.isfinite(ap_px) else "—"
         metrics = (
             f"lc_rms (OOE): {rms_txt}   |   stable comp: {good_comp:d}   |   aperture: {ap_txt}   |   "
+            f"comp_path: {str(star_data.get('comp_path', '—') or '—')}   |   "
             "Vizier: https://vizier.cds.unistra.fr/viz-bin/Vsx"
         )
         metrics_style = self._get_para_style("star_metrics", fontSize=9, textColor=self.colors.HexColor("#666666"))

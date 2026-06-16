@@ -397,12 +397,10 @@ def compute_global_pool_rms_map(
                 int(nfr),
             )
 
+    # Global-pool RMS uses field-wide normalization; do not prefilter here — per-target
+    # Phase-1 applies max_comp_rms on the target-specific candidate subset.
     if apply_rms_prefilter and math.isfinite(max_comp_rms) and max_comp_rms > 0:
-        rms_map = {
-            cid: rms
-            for cid, rms in sorted(rms_map.items(), key=lambda kv: (float(kv[1]), str(kv[0])))
-            if rms <= float(max_comp_rms)
-        }
+        pass  # intentionally disabled (see comment above)
 
     return rms_map
 
@@ -435,5 +433,6 @@ def attach_comp_rms_to_pool_rows(
         return _norm_rms.get(nk, float("nan"))
 
     out["comp_rms"] = keys.map(_lookup)
-    _cr = pd.to_numeric(out["comp_rms"], errors="coerce")
-    return out[_cr.notna() & np.isfinite(_cr.to_numpy(dtype=np.float64))].reset_index(drop=True)
+    # Keep all spatial/static pool rows; per-target Phase-1 recomputes RMS on the
+    # target-specific candidate subset. Dropping rows here starved sparse fields.
+    return out.reset_index(drop=True)

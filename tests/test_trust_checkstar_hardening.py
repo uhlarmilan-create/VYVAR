@@ -154,7 +154,7 @@ def test_sufficient_check_high_scatter_red() -> None:
     assert info["trust"] == "RED"
 
 
-def test_missing_check_file_soft() -> None:
+def test_missing_check_file_is_hard_red() -> None:
     hard, soft = classify_warnings(
         n_clean=_TH.strong,
         check_scatter=float("nan"),
@@ -163,8 +163,8 @@ def test_missing_check_file_soft() -> None:
         n_check=0,
         check_min_epochs=_MIN_CHK,
     )
-    assert "no check-star verification available" in soft
-    assert trust_level(_TH.strong, hard, soft, _TH) == "YELLOW"
+    assert any("no check-star verification" in h for h in hard)
+    assert trust_level(_TH.strong, hard, soft, _TH) == "RED"
 
 
 def test_check_scatter_uses_sample_std_ddof1(tmp_path: Path) -> None:
@@ -179,7 +179,7 @@ def test_check_scatter_uses_sample_std_ddof1(tmp_path: Path) -> None:
 
 
 def test_short_baseline_thin_comp_thin_check_stays_yellow() -> None:
-    nc = _TH.min_comps + 1
+    nc = 2
     hard, soft = classify_warnings(
         n_clean=nc,
         check_scatter=0.001,
