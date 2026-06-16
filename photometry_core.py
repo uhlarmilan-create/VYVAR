@@ -768,12 +768,15 @@ def _phase2a_star_mag_lookup(
     comp_df: pd.DataFrame,
     masterstar_fits_path: Path,
 ) -> dict[str, float]:
-    """Best-effort Gaia G (or catalog mag) per ``catalog_id`` for SNR aperture lookup."""
+    """Best-effort observed-band / catalog mag per ``catalog_id`` for SNR aperture lookup.
+
+    Prefers ``mag`` / ``catalog_mag`` (filter-native) over broad Gaia ``phot_g_mean_mag``.
+    """
     out: dict[str, float] = {}
     for df in (at_df, comp_df):
         if df is None or df.empty or "catalog_id" not in df.columns:
             continue
-        for mag_col in ("phot_g_mean_mag", "catalog_mag", "mag"):
+        for mag_col in _APERTURE_SIZING_MAG_COLS:
             if mag_col not in df.columns:
                 continue
             for _, r in df.iterrows():
@@ -789,11 +792,11 @@ def _phase2a_star_mag_lookup(
             ms_df0 = pd.read_csv(
                 ms_full,
                 low_memory=False,
-                usecols=lambda c: c in ("catalog_id", "phot_g_mean_mag", "catalog_mag", "mag"),
+                usecols=lambda c: c in ("catalog_id", *_APERTURE_SIZING_MAG_COLS),
                 dtype=_GAIA_ID_DTYPE,
             )
             ms_df0["catalog_id"] = ms_df0["catalog_id"].apply(_normalize_gaia_id)
-            for mag_col in ("phot_g_mean_mag", "catalog_mag", "mag"):
+            for mag_col in _APERTURE_SIZING_MAG_COLS:
                 if mag_col not in ms_df0.columns:
                     continue
                 for _, r in ms_df0.iterrows():
@@ -823,6 +826,37 @@ def _median_sky_from_phase2a_csv_cache(
         return float(fallback)
     med = float(np.nanmedian(np.asarray(vals, dtype=np.float64)))
     return med if math.isfinite(med) and med > 0 else float(fallback)
+
+
+def _measured_aperture_from_proc_cache(
+    catalog_id: str,
+    csv_cache: dict[str, pd.DataFrame],
+    *,
+    id_col: str = "catalog_id",
+) -> float:
+    """Median ``aperture_r_px`` from per-frame proc CSV (flux measurement truth)."""
+    cid = _normalize_gaia_id(catalog_id) or str(catalog_id).strip()
+    vals: list[float] = []
+    for df in csv_cache.values():
+        if df is None or df.empty or "aperture_r_px" not in df.columns:
+            continue
+        col = id_col if id_col in df.columns else (
+            "catalog_id" if "catalog_id" in df.columns else "name"
+        )
+        if col not in df.columns:
+            continue
+        try:
+            ids = df[col].apply(_normalize_gaia_id)
+        except Exception:  # noqa: BLE001
+            ids = df[col].astype(str)
+        sub = df[ids.astype(str) == cid]
+        if sub.empty:
+            continue
+        ap = pd.to_numeric(sub["aperture_r_px"], errors="coerce").dropna()
+        vals.extend(float(x) for x in ap.tolist() if math.isfinite(float(x)) and float(x) > 0)
+    if not vals:
+        return float("nan")
+    return float(np.median(np.asarray(vals, dtype=np.float64)))
 
 
 def _snr_table_radius_for_mag_bin(table: dict[Any, Any], nearest: float) -> float | None:
@@ -1910,6 +1944,157 @@ def pytics_iterative_weights(
 # KROK 3: Stability check porovnávačiek (Abbeho p2p scatter + MAD)
 # ---------------------------------------------------------------------------
 
+# Observed-band / catalog mag before broad Gaia G for SNR-optimal aperture sizing.
+_APERTURE_SIZING_MAG_COLS: tuple[str, ...] = (
+    "mag",
+    "catalog_mag",
+    "lc_median_mag",
+    "phot_g_mean_mag",
+)
+
+
+def _star_mag_for_aperture_sizing(row: Any) -> float | None:
+    """Brightness for SNR aperture table: prefer observed-band ``mag`` over Gaia G."""
+    for mag_col in _APERTURE_SIZING_MAG_COLS:
+        try:
+            if mag_col not in row.index if hasattr(row, "index") else mag_col not in row:
+                continue
+        except Exception:  # noqa: BLE001
+            if isinstance(row, dict) and mag_col not in row:
+                continue
+        try:
+            mv = float(pd.to_numeric(row.get(mag_col) if hasattr(row, "get") else row[mag_col], errors="coerce"))
+        except Exception:  # noqa: BLE001
+            continue
+        if math.isfinite(mv):
+            return mv
+    return None
+
+
+def _common_mode_detrend_comp_lc(
+    comp_lc: dict[str, np.ndarray],
+    comp_bjd: dict[str, np.ndarray] | None,
+    *,
+    min_frames: int = 20,
+) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+    """Remove shared linear night trend from comp LCs (differential-photometry residual).
+
+    Returns (detrended_lc, detrended_bjd). When detrend is impossible, returns shallow copies.
+    """
+    if comp_bjd is None or not comp_lc:
+        return (
+            {cid: np.asarray(lc, dtype=np.float64).copy() for cid, lc in comp_lc.items()},
+            dict(comp_bjd or {}),
+        )
+
+    from scipy.stats import linregress as _lr
+
+    _all_bjd: list[np.ndarray] = []
+    _all_mag_matrix: list[np.ndarray] = []
+    _active_cids: list[str] = []
+    for cid, lc in comp_lc.items():
+        bjd_arr = comp_bjd.get(cid)
+        if bjd_arr is None:
+            continue
+        m = np.asarray(lc, dtype=np.float64)
+        b = np.asarray(bjd_arr, dtype=np.float64)
+        ok = np.isfinite(b) & np.isfinite(m)
+        if int(ok.sum()) < int(min_frames):
+            continue
+        bo, mo = b[ok], m[ok]
+        order = np.argsort(bo, kind="mergesort")
+        _all_bjd.append(bo[order])
+        _all_mag_matrix.append(mo[order])
+        _active_cids.append(cid)
+
+    if len(_all_mag_matrix) < 2:
+        return (
+            {cid: np.asarray(lc, dtype=np.float64).copy() for cid, lc in comp_lc.items()},
+            dict(comp_bjd),
+        )
+
+    _ref_bjd = _all_bjd[int(np.argmax([len(x) for x in _all_bjd]))]
+    _stack = []
+    for b_arr, m_arr in zip(_all_bjd, _all_mag_matrix, strict=True):
+        _stack.append(np.interp(_ref_bjd, b_arr, m_arr))
+    _common = np.median(np.vstack(_stack), axis=0)
+    _lr_common = _lr(_ref_bjd, _common)
+
+    _detrended_lc: dict[str, np.ndarray] = {}
+    _detrended_bjd: dict[str, np.ndarray] = {}
+    for cid in comp_lc:
+        b = comp_bjd.get(cid)
+        m = comp_lc.get(cid)
+        if b is None or m is None:
+            continue
+        b = np.asarray(b, dtype=np.float64)
+        m = np.asarray(m, dtype=np.float64)
+        ok = np.isfinite(b) & np.isfinite(m)
+        m_detrended = m.copy()
+        m_detrended[ok] = m[ok] - (_lr_common.slope * b[ok] + _lr_common.intercept) + float(_common.mean())
+        _detrended_lc[cid] = m_detrended
+        _detrended_bjd[cid] = b
+
+    return _detrended_lc, _detrended_bjd
+
+
+def _comp_lc_frame_ensemble_residual(comp_lc: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+    """Per-frame ensemble-median subtraction (differential residual per comp).
+
+    Same principle as Phase-1 ``comp_rms`` (flux / bin median): comp intrinsic scatter
+    is only visible after the shared per-frame signal is removed.
+    """
+    if not comp_lc:
+        return {}
+    cids = list(comp_lc.keys())
+    arrays = [np.asarray(comp_lc[c], dtype=np.float64) for c in cids]
+    lengths = [int(a.size) for a in arrays if a.size > 0]
+    if not lengths:
+        return {c: np.array([], dtype=np.float64) for c in cids}
+    n = int(min(lengths))
+    if n < 3:
+        return {c: a[:n].copy() for c, a in zip(cids, arrays, strict=True)}
+    stack = np.column_stack([a[:n] for a in arrays])
+    med = np.nanmedian(stack, axis=1)
+    out: dict[str, np.ndarray] = {}
+    for j, cid in enumerate(cids):
+        out[cid] = stack[:, j] - med
+    return out
+
+
+def compute_lc_rms_ooe(
+    mag_calib: np.ndarray,
+    flags: Sequence[str],
+    *,
+    brightest_frac: float = 0.33,
+) -> float:
+    """Out-of-eclipse / brightest-tertile scatter (precision metric for variables).
+
+    For eclipsing variables the faintest frames are in eclipse; the brightest ``brightest_frac``
+  fraction approximates OOE scatter without requiring a period.
+    """
+    m = np.asarray(mag_calib, dtype=np.float64)
+    if m.size < 3:
+        return float("nan")
+    fl = [str(f).strip().lower() for f in flags]
+    if len(fl) == m.size:
+        ok = np.array([f == "normal" for f in fl], dtype=bool)
+    else:
+        ok = np.ones(m.size, dtype=bool)
+    finite = m[ok & np.isfinite(m)]
+    if finite.size < 3:
+        finite = m[np.isfinite(m)]
+    if finite.size < 3:
+        return float("nan")
+    frac = float(brightest_frac)
+    if not (0.0 < frac < 1.0):
+        frac = 0.33
+    thr = float(np.quantile(finite, frac))
+    ooe = finite[finite <= thr]
+    if ooe.size < 3:
+        ooe = finite
+    return float(np.std(ooe))
+
 
 def check_comparison_stability(
     comp_lc: dict[str, np.ndarray],
@@ -1925,10 +2110,10 @@ def check_comparison_stability(
 ) -> dict[str, dict]:
     """Krok 3: Stability check porovnávačiek.
 
-    Abbeho point-to-point scatter:
-        rms_p2p = std(diff(mag_inst)) / sqrt(2)
+    Abbeho point-to-point scatter on **common-mode-detrended** comp residuals:
+        rms_p2p = std(diff(mag_resid)) / sqrt(2)
 
-    MAD filter na rms_p2p hodnoty.
+    Shared atmospheric drift is removed before p2p/MAD (same differential logic as ensemble).
 
     Returns:
         dict {catalog_id: {"rms_p2p": float, "lc_rms": float, "quality": str, "p2p_threshold": float}}
@@ -1936,9 +2121,28 @@ def check_comparison_stability(
     """
     result: dict[str, dict[str, Any]] = {}
 
-    # Vypočítaj metriky
+    _detrended_lc: dict[str, np.ndarray] = {}
+    _detrended_bjd: dict[str, np.ndarray] = {}
+    _residual_lc = _comp_lc_frame_ensemble_residual(comp_lc)
+    if common_mode_detrend and comp_bjd is not None:
+        _detrended_lc, _detrended_bjd = _common_mode_detrend_comp_lc(_residual_lc, comp_bjd)
+        if stability_run_flags is not None and len(_detrended_lc) >= 2:
+            stability_run_flags["common_mode_detrend_applied"] = True
+            stability_run_flags["frame_ensemble_residual"] = True
+            logging.info(
+                "[STABILITY] Frame-ensemble residual + CM detrend before p2p: %d comps",
+                len(_detrended_lc),
+            )
+    else:
+        _detrended_lc = {cid: np.asarray(lc, dtype=np.float64).copy() for cid, lc in _residual_lc.items()}
+        _detrended_bjd = dict(comp_bjd or {})
+        if stability_run_flags is not None:
+            stability_run_flags["frame_ensemble_residual"] = True
+
+    # Vypočítaj metriky na per-frame differential reziduálnych radách
     for cid, lc in comp_lc.items():
-        finite = lc[np.isfinite(lc)]
+        resid = _detrended_lc.get(cid, lc)
+        finite = np.asarray(resid, dtype=np.float64)[np.isfinite(resid)]
         if len(finite) < 3:
             result[cid] = {
                 "rms_p2p": float("nan"),
@@ -1997,65 +2201,6 @@ def check_comparison_stability(
                     result[cid]["note"] = (
                         f"outlier (p2p={info['rms_p2p']:.4f} > thr={threshold:.4f})"
                     )
-
-    # Common-mode detrend: remove shared night-long trend (e.g. lunar sky gradient)
-    # before evaluating individual comp slopes.
-    # Strategy: fit a linear trend to the per-frame MEDIAN of all non-excluded comp LCs,
-    # then subtract that common trend from every comp LC before the slope test.
-    # The detrended arrays are used ONLY for slope evaluation — comp_lc itself is NOT
-    # modified (ensemble_normalize downstream still uses the original magnitudes).
-    _detrended_lc: dict[str, np.ndarray] = {}
-    _detrended_bjd: dict[str, np.ndarray] = {}
-    if common_mode_detrend and comp_bjd is not None:
-        from scipy.stats import linregress as _lr
-
-        # Collect finite (bjd, mag) pairs for all currently non-excluded comps
-        _active_cids = [c for c, v in result.items() if v["quality"] != "excluded"]
-        # Build a common BJD grid from the union of all active comp BJDs
-        # (they share the same frame timestamps so median per position is valid)
-        _all_bjd = []
-        _all_mag_matrix = []
-        for _cid in _active_cids:
-            _b = comp_bjd.get(_cid)
-            _m = comp_lc.get(_cid)
-            if _b is None or _m is None:
-                continue
-            _ok = np.isfinite(_b) & np.isfinite(_m)
-            if int(_ok.sum()) < 20:
-                continue
-            _bo, _mo = _b[_ok], _m[_ok]
-            _order = np.argsort(_bo, kind="mergesort")
-            _all_bjd.append(_bo[_order])
-            _all_mag_matrix.append(_mo[_order])
-        if len(_all_mag_matrix) >= 2:
-            # Use the comp with most frames as reference grid
-            _ref_bjd = _all_bjd[int(np.argmax([len(x) for x in _all_bjd]))]
-            # Interpolate each comp to reference grid and stack
-            _stack = []
-            for _b_arr, _m_arr in zip(_all_bjd, _all_mag_matrix, strict=True):
-                _interp = np.interp(_ref_bjd, _b_arr, _m_arr)
-                _stack.append(_interp)
-            _common = np.median(np.vstack(_stack), axis=0)
-            # Fit linear trend to the common mode
-            _lr_common = _lr(_ref_bjd, _common)
-            # Subtract common linear trend from each comp's original series
-            for _cid in _active_cids:
-                _b = comp_bjd.get(_cid)
-                _m = comp_lc.get(_cid)
-                if _b is None or _m is None:
-                    continue
-                _ok = np.isfinite(_b) & np.isfinite(_m)
-                _m_detrended = _m.copy()
-                _m_detrended[_ok] = _m[_ok] - (_lr_common.slope * _b[_ok] + _lr_common.intercept) + _common.mean()
-                _detrended_lc[_cid] = _m_detrended
-                _detrended_bjd[_cid] = _b
-            if stability_run_flags is not None:
-                stability_run_flags["common_mode_detrend_applied"] = True
-            logging.info(
-                "[STABILITY] Common-mode detrend: %.2f mmag/hr removed from %d comps",
-                abs(_lr_common.slope) * 1000.0 / 24.0,
-                len(_detrended_lc),
-            )
 
     # Slope filter: exclude comps with a night-long linear trend (slow drifts pass p2p RMS).
     if comp_bjd is not None and max_comp_slope_mmag_hr > 0:
@@ -7525,6 +7670,10 @@ def _phase2a_process_one_target(
 
     # Časové hodnoty targetu
     target_frames = all_frames[all_frames["catalog_id"] == target_cid]
+    _measured_ap_target = _measured_aperture_from_proc_cache(target_cid, state._phase2a_csv_cache)
+    if math.isfinite(_measured_ap_target) and _measured_ap_target > 0 and not target_frames.empty:
+        target_frames = target_frames.copy()
+        target_frames["aperture_r_px"] = float(_measured_ap_target)
     bjd = target_frames["bjd"].to_numpy(dtype=float)
     hjd = target_frames["hjd"].to_numpy(dtype=float)
     jd = target_frames["jd"].to_numpy(dtype=float)
@@ -7869,7 +8018,21 @@ def _phase2a_process_one_target(
     n_good_comp = sum(
         1 for q in comp_quality.values() if q.get("quality") in ("good", "suspect")
     )
+    n_stability_good = sum(1 for q in comp_quality.values() if q.get("quality") == "good")
+    n_stability_suspect = sum(1 for q in comp_quality.values() if q.get("quality") == "suspect")
     n_sat = sum(1 for f in out_flags if f == "saturated")
+
+    _measured_ap = (
+        float(_measured_ap_target)
+        if math.isfinite(_measured_ap_target) and _measured_ap_target > 0
+        else float("nan")
+    )
+    if not math.isfinite(_measured_ap) and not target_frames.empty and "aperture_r_px" in target_frames.columns:
+        _ap_meas = pd.to_numeric(target_frames["aperture_r_px"], errors="coerce").dropna()
+        if not _ap_meas.empty:
+            _measured_ap = float(np.median(_ap_meas.to_numpy(dtype=float)))
+    _lc_rms_full = float(np.std(finite_calib)) if len(finite_calib) > 1 else float("nan")
+    _lc_rms_ooe = compute_lc_rms_ooe(mag_calib, out_flags)
 
     summary_rows.append(
         {
@@ -7879,10 +8042,14 @@ def _phase2a_process_one_target(
             "zone_flag": str(target_row.get("zone_flag", "")).strip(),
             "n_frames": len(bjd),
             "n_good_comp": n_good_comp,
+            "n_stability_good": n_stability_good,
+            "n_stability_suspect": n_stability_suspect,
             "n_saturated": n_sat,
-            "lc_rms": float(np.std(finite_calib)) if len(finite_calib) > 1 else float("nan"),
+            "lc_rms": _lc_rms_full,
+            "lc_rms_ooe": _lc_rms_ooe,
             "lc_median_mag": float(np.median(finite_calib)) if len(finite_calib) > 0 else float("nan"),
-            "aperture_px": float(apertures_px.get(target_cid, float("nan"))),
+            "aperture_px": _measured_ap if math.isfinite(_measured_ap) else float(apertures_px.get(target_cid, float("nan"))),
+            "aperture_px_planned": float(apertures_px.get(target_cid, float("nan"))),
             "am_slope": am_slope,
             "am_detrended": bool(math.isfinite(am_slope)),
             "dilution_factor": float(_dilution_result.get("dilution_factor", 1.0)),
@@ -7902,12 +8069,13 @@ def _phase2a_process_one_target(
     )
     n_lc += 1
     lc_rms = float(summary_rows[-1]["lc_rms"])
-    r_ap = float(apertures_px.get(target_cid, float("nan")))
+    lc_rms_ooe = float(summary_rows[-1].get("lc_rms_ooe", float("nan")))
+    r_ap = float(summary_rows[-1]["aperture_px"])
     logging.info(
         f"[FÁZA 2A] {target_name}: "
-        f"lc_rms={lc_rms:.4f}, "
-        f"n_comp={n_good_comp}, "
-        f"apertura={r_ap:.2f}px, "
+        f"lc_rms={lc_rms:.4f}, lc_rms_ooe={lc_rms_ooe:.4f}, "
+        f"n_comp={n_good_comp} (stability_good={n_stability_good}), "
+        f"apertura={r_ap:.2f}px (measured), "
         f"am_slope={float(am_slope):.4f} mag/am"
     )
 
@@ -9530,17 +9698,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                             _cid = _normalize_gaia_id(_cid_series.iloc[i])
                         except Exception:  # noqa: BLE001
                             _cid = ""
-                    _star_mag: float | None = None
-                    for _mag_col in ("phot_g_mean_mag", "mag", "lc_median_mag", "catalog_mag"):
-                        if _mag_col not in out.columns:
-                            continue
-                        try:
-                            _mv = float(pd.to_numeric(out[_mag_col].iloc[i], errors="coerce"))
-                        except Exception:  # noqa: BLE001
-                            continue
-                        if math.isfinite(_mv):
-                            _star_mag = _mv
-                            break
+                    _star_mag = _star_mag_for_aperture_sizing(out.iloc[i])
                     _r_ap_i = _get_star_aperture_px(
                         _cid,
                         _star_mag,
@@ -13304,6 +13462,7 @@ __all__ = [
     "common_field_intersection_bbox_px",
     "compute_aperture_correction",
     "compute_fwhm_gaussian_for_aperture_catalog",
+    "compute_lc_rms_ooe",
     "compute_optimal_apertures",
     "compute_snr_optimal_aperture_table",
     "detect_outliers",

@@ -16,16 +16,28 @@ A change is not done until all six hold:
    after work depended on it — audit first next time.)
 2. **Impact analysis.** State what the change touches — numbers / reports / exports /
    downstream stages — and whether the photometry output is expected **byte-identical** or is
-   an **intended** change. If intended, write the re-validation plan.
+   an **intended** change. If intended, write the re-validation plan (empirical cross-validation
+   vs AIJ/SIPS when byte-identity anchors are retired — see STATE 2026-06-16).
 3. **Config.** Any new parameter is added to `config.py` with a sensible default and a clamp.
 4. **UI parity.** The same parameter is surfaced in the Settings UI (label, help, range), and
    recorded in `docs/VYVAR_PARAMS.md`. *A parameter that exists only in config is not done.*
 5. **Docs + citation.** Update `docs/VYVAR_STATE/ROADMAP/DECISIONS/JOURNAL` as appropriate; close
    any stale TODO. If the change adds a *method*, add a `CITATIONS.bib` entry and wire it into
    the conditional emitter (gated to when the method actually runs).
-6. **Verification.** Reproduce the expected numbers; for read-only changes prove byte-identity
-   (SHA-256 over LC / comp_quality / comparison_stars / exports); keep **0 PDF overflow** (R1);
-   `pytest` green.
+6. **Verification.** Reproduce the expected numbers; keep **0 PDF overflow** (R1); `pytest` green.
+   Byte-identity SHA when anchors are active; otherwise ground-truth metrics (DoD-A/B, SIPS parity).
+
+## Decision-grounding rule + sandbox discipline (2026-06-15/16)
+
+**Grounding rule** (`docs/VYVAR_DECISION_GROUNDING_RULE.md`): design forks must cite physics,
+literature, or field practice — not bare engineering preference.
+
+**Sandbox arc discipline** (simple-differential + draft_409 trust cleanup):
+
+1. **Sandbox** — prototype / measure under `tmp/phase*` (not committed).
+2. **Measure** — DoD metrics vs AIJ / SIPS / constant calibrator.
+3. **Milan review** — PDF + numbers before production commit.
+4. **Commit** — source + tests + docs only; harnesses stay in `tmp/`.
 
 ## External data (Brno) — PSF / NEIGHBOR-SUB gate
 

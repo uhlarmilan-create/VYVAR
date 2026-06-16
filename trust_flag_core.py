@@ -107,6 +107,7 @@ def classify_warnings(
     iterative_clip_used: bool = False,
     sparse_fallback_used: bool = False,
     comp_pool_n_final: int = 0,
+    n_stability_suspect: int = 0,
 ) -> tuple[list[str], list[str]]:
     """Return (hard_labels, soft_labels) for one target."""
     hard: list[str] = []
@@ -152,6 +153,10 @@ def classify_warnings(
             hard.append(f"check-star scatter {check_scatter:.3f} mag (high)")
         elif check_scatter >= _CHECK_SOFT_LO:
             soft.append(f"check-star scatter {check_scatter:.3f} mag")
+
+    ns = int(n_stability_suspect)
+    if ns > 0:
+        soft.append(f"{ns} comp(s) flagged suspect by stability (kept in ensemble)")
 
     return hard, soft
 
@@ -219,6 +224,7 @@ def evaluate_target(
     iterative_clip_used: bool = False,
     sparse_fallback_used: bool = False,
     comp_pool_n_final: int = 0,
+    n_stability_suspect: int = 0,
 ) -> dict[str, Any]:
     th = thresholds or CompTrustThresholds.from_bounds(3, 8)
     lq = str(lc_quality or "").strip().lower() or "—"
@@ -233,6 +239,7 @@ def evaluate_target(
         iterative_clip_used=bool(iterative_clip_used),
         sparse_fallback_used=bool(sparse_fallback_used),
         comp_pool_n_final=int(comp_pool_n_final),
+        n_stability_suspect=int(n_stability_suspect),
     )
     trust = trust_level(int(n_clean), hard, soft, th)
     reason = build_reason(
@@ -316,6 +323,8 @@ def compute_trust_for_photometry_dir(
         _cm = comp_meta.get(cid, {})
         _clip_iters = int(_cm.get("comp_clip_iterations", 0))
         _sparse_fb = bool(_cm.get("sparse_fallback_used", False))
+        _stab_sus_raw = pd.to_numeric(row.get("n_stability_suspect"), errors="coerce")
+        _stab_sus = int(_stab_sus_raw) if math.isfinite(float(_stab_sus_raw)) else 0
         info = evaluate_target(
             catalog_id=cid,
             vsx_name=vsx,
@@ -329,6 +338,7 @@ def compute_trust_for_photometry_dir(
             iterative_clip_used=_clip_iters > 0,
             sparse_fallback_used=_sparse_fb,
             comp_pool_n_final=int(_cm.get("comp_pool_n_final", 0)),
+            n_stability_suspect=_stab_sus,
         )
         per_target[cid] = info
         conf_counts[info["trust"]] = conf_counts.get(info["trust"], 0) + 1

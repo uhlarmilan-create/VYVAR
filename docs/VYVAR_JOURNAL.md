@@ -3551,3 +3551,67 @@ correspondence** still the blocker. Newton spot-check OK post-change.
 - Phase H: cosmetic lint value-filtered (SIM118 x11, RUF022 x2, RUF007 x2, RUF034 x3); ProcFrameStore
   `.keys()` x2 kept; ~89 style accepted (PROCESS). Clean-code campaign A-H COMPLETE. pytest 183/6;
   SHA unchanged.
+
+---
+
+## Session 2026-06-15/16 -- simple differential PRODUCTION + draft_409 trust cleanup
+
+### Root cause and design (ALG-3 -> simple differential)
+
+- **ALG-3:** comp temporal binning (`temporal_bin_comp_lc`) breaks per-frame common-mode cancellation
+  -> **`temporal_binning_enabled` OFF** (production default).
+- **Simple-diff design** grounded on draft_407 V0612 + AIJ Table.tbl:
+  - Tier-ladder colour window [0.15, 0.30, 0.55] -> cap 0.79; rank-by-RMS inside tier; bounds 3/8.
+  - `comp_select_rms_floor` = 1e-6 drops isolated-bin artefact comp before RMS ranking.
+  - Flux-sum ensemble; **`apply_color_term` OFF** (colour-matched comps).
+- **Decision-grounding rule adopted** (`docs/VYVAR_DECISION_GROUNDING_RULE.md`).
+
+### Workstream A (2026-06-15) -- defaults + Phase-1 selector
+
+- Dataclass + config.json defaults; Phase-1 routes `_select_comps_by_color_then_rms`.
+- **DoD-A PASS:** V0612 `delta_mag` pre-eclipse RMS 0.0113, eclipse corr 0.949, 7 comps.
+- Harness: `tmp/phase10/`.
+
+### Workstream B (2026-06-15) -- reporting column grounded decision
+
+- Supersedes B1/B2: report differential + ensemble ZP; drop per-target airmass detrend on
+  reporting path (Plavchan arXiv:0704.3584; Dhillon); mask-first outlier guard for variables
+  (TESS arXiv:2402.16018; democratic detrender arXiv:2411.09753).
+- `apply_reporting_postprocess` shipped.
+- **DoD-B PASS:** V0612 `mag_calib` corr 0.958 (was 0.57 with target-fit detrend).
+- Spec: `docs/VYVAR_REPORTING_COLUMN_GROUNDED_DECISION.md`.
+
+### Canonical combination logic
+
+- Broeg (2005) inverse-variance optimal but **CONDITIONAL** on complete validated sigma.
+- **HOLD A:** flux-sum `delta_mag` canonical until sigma = Howell + scintillation + Broeg inflation
+  AND chi-squared/dof ~ 1 on constant calibrator.
+- Sigma-budget work item **PARKED** (`docs/VYVAR_SIGMA_BUDGET_SPEC.md`, `docs/VYVAR_CANONICAL_COMBINATION_LOGIC.md`).
+
+### draft_407 closure (commit 2a8355b)
+
+- Workstreams A+B committed; real pipeline run; clean V0612 eclipse on production path.
+
+### draft_409 UI run + read-only audit (2026-06-16)
+
+- Aperture is RADIUS ~0.89x FWHM (SNR-opt path) -- fine.
+- **Bug found:** comp stability ran on raw `mag_inst` (~0.35 mag night drift) -> all comps suspect.
+- `lc_rms` undemeaned (includes eclipse) -- misleading headline for variables.
+- FWHM 6.43 self-consistent in headers; external 7.7-8.6 claim unproven (ROADMAP item).
+- **Phantom from audit harness:** loose `contains('111174')` matched neighbor
+  `1111749157833870208` (G~11.2, 6.85 px) -- true V0612: mag 12.326, aperture 5.754 px.
+
+### Fixes 1-3 (2026-06-16 commit)
+
+1. Comp stability on per-frame **ensemble residual** (not raw `mag_inst`).
+2. Measured proc aperture on card/LC; observed-band mag priority for SNR sizing.
+3. `lc_rms (OOE)` on variable cards; `n_stability_good/suspect` + trust soft-warning.
+
+**Cross-validation vs SIPS on V0612:** eclipse shape match; single bright outlier at ~JD 2461200.385
+matches in both reductions -> shared frame-level artifact (cosmic-ray-like on target), NOT VYVAR bug.
+
+**draft_409 post-fix:** `n_stability_good=8`, `n_stability_suspect=0`, trust GREEN, `lc_rms_ooe` ~0.006,
+`delta_mag` pre-eclipse RMS ~0.010.
+
+**Byte-identity:** simple-differential change retired old photometry SHA anchors by design; validation
+asset is empirical SIPS/AIJ cross-validation. Optional fresh anchor cut -- Milan call (ROADMAP).

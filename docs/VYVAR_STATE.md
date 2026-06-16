@@ -1,7 +1,7 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-15** (photometry root-cause: ALG-3 temporal comp binning; simple differential
-direction; legacy anchor framing retired).
+Last updated: **2026-06-16** (simple-differential PRODUCTION; draft_409 trust/consistency cleanup;
+SIPS cross-validation on V0612).
 
 This is the **entry point**: a snapshot of what is true *now* + an index. It deliberately holds
 no history and no open-task detail -- those live in the linked files.
@@ -11,8 +11,12 @@ no history and no open-task detail -- those live in the linked files.
 | `docs/VYVAR_ROADMAP.md` | Open work (the only place to look for "what's next"). |
 | `docs/VYVAR_DECISIONS.md` | Durable design decisions + *why* they hold. |
 | `docs/VYVAR_JOURNAL.md` | Chronological session log (history, append-only). |
-| `docs/VYVAR_PROCESS.md` | How we work: Definition of Done, byte-identity discipline, config<->UI parity, tests. |
+| `docs/VYVAR_PROCESS.md` | How we work: Definition of Done, validation discipline, config<->UI parity, tests. |
 | `docs/VYVAR_PARAMS.md` | Config-key <-> default <-> clamp <-> UI-location registry. |
+| `docs/VYVAR_DECISION_GROUNDING_RULE.md` | Adopted rule: cite physics/literature/practice before design forks. |
+| `docs/VYVAR_REPORTING_COLUMN_GROUNDED_DECISION.md` | Workstream B reporting column (supersedes B1/B2). |
+| `docs/VYVAR_CANONICAL_COMBINATION_LOGIC.md` | Flux-sum vs Broeg IVW -- conditional hold until sigma budget. |
+| `docs/VYVAR_SIGMA_BUDGET_SPEC.md` | PARKED sigma-budget work item (Howell + scintillation + chi-squared gate). |
 | `docs/VYVAR_VALIDATION.md` | Inject-and-recover synthetic validation harness (matrix, FAIL policy). |
 | `docs/VYVAR_PIPELINE_CZ.md` | Czech pipeline manual for the paper (ASCII, rev. 2026-06-09). |
 | `docs/VYVAR_GAIA_DR3_AUDIT.md` | Gaia DR3 ingest audit (build schema, match, ref mag; 2026-06-10). |
@@ -41,24 +45,37 @@ real Newton / dense-field draft passes the characterization gate.
 
 ```
 Raw -> Calibrate -> QC (in-place) -> Align -> MASTERSTAR + Gaia DR3 catalog
-   -> Phase 0+1: comp selection per target (colour tier + stability gate, distance gate)
-   -> Phase 2A: differential photometry (Broeg 1/sigma^2 ensemble; SNR-optimal per-star aperture)
+   -> Phase 0+1: tier-ladder comp selection (colour window + RMS rank; bounds 3/8)
+   -> Phase 2A: simple differential photometry
+        (flux-sum ensemble; SNR-opt per-star aperture; NO temporal comp binning)
+        -> reporting postprocess (ensemble ZP mag; NO per-target airmass detrend;
+           mask-first outlier guard for known variables)
+        -> comp stability QA (per-frame ensemble residual p2p)
    -> comp_qa (Sokolovsky LOO QA, read-only)
-   -> trust gate (GREEN/YELLOW/RED per target; comp-health + check-star + lc_quality)
+   -> trust gate (GREEN/YELLOW/RED; comp-health + check-star + lc_quality + stability)
    -> reports/exports (PDF SUMMARY MEASURE REPORT, AAVSO, VarAstro)
 ```
 
-Plate scale is **WCS-derived** (~9.77 arcsec/px on the wide rig). Differential weighting is **Broeg
-(2005) 1/sigma^2**, order-independent. Comp selection ranks colour tier first, stability second
-(both gated), proximity as a distance gate only. (See DECISIONS for the rationale.)
+Plate scale is **WCS-derived** (~9.77 arcsec/px on the wide rig). Ensemble combine is **flux-sum**
+(`delta_mag` canonical; AIJ/SIPS validated). Broeg inverse-variance ensemble combine is **PARKED**
+until sigma budget validates (`docs/VYVAR_SIGMA_BUDGET_SPEC.md`). Comp selection ranks colour tier
+first, stability second (both gated), proximity as a distance gate only. (See DECISIONS.)
 
 ## Production defaults (feature flags)
 
-| Area | Flag | Default |
-|------|------|---------|
+| Area | Flag / behaviour | Default |
+|------|------------------|---------|
+| Comp temporal binning | `temporal_binning_enabled` | **OFF** (ALG-3 breaks common-mode) |
+| Color term | `apply_color_term` | **OFF** (colour-matched comps) |
+| Comp selection | tier ladder 0.15/0.30/0.55, cap 0.79; bounds 3/8 | `_select_comps_by_color_then_rms` |
+| Comp RMS floor | `comp_select_rms_floor` | **1e-6** (drop isolated-bin artefact) |
+| Reporting | `apply_reporting_postprocess` | ensemble ZP `mag_calib`; no target airmass detrend; mask-first outliers |
+| Comp stability | `check_comparison_stability` | p2p on **per-frame ensemble residual** (not raw `mag_inst`) |
+| LC precision display | `lc_rms_ooe` on card | brightest-tertile scatter for variables |
+| Aperture on card | `aperture_px` | **measured** proc `aperture_r_px` (not Phase-2A replan) |
 | Comp QA | `comp_qa_enabled` | **ON** |
-| Trust gate | `trust_flag_enabled` | **ON** (inform-only) |
-| Proximity tie-break | `phase01_comparison_proximity_tiebreak` | OFF (reverted) |
+| Trust gate | `trust_flag_enabled` | **ON** (GREEN observed on draft_409 V0612) |
+| Proximity tie-break | `phase01_comparison_proximity_tiebreak` | OFF |
 | PSF (all) | `psf_photometry_enabled`, `psf_adaptive_enabled`, `psf_grouper_enabled`, `psf_spatial_enabled` | OFF |
 | NEIGHBOR-SUB | `psf_neighbor_sub_enabled` | OFF |
 | COG aperture corr. | `cog_aperture_correction_enabled` | OFF |
@@ -109,29 +126,24 @@ hard reject. Cone recenter at solved center when hint offset **≥ 0.05°** unch
 
 ### Comp sparse-only fallback (2026-06-11 lock)
 
-**Sparse-only fallback live (default ON).** Canonical anchor **3f7c9e7a (core) / d5b72d08 (full)**.
-**Science-meaningful comparator** (`compare_photometry_science_meaningful`) is the regression arbiter
-when raw SHA drifts for non-science reasons (provenance, per-frame `err` QC).
+**Sparse-only fallback live (default ON).** Historical byte-identity anchor `3f7c9e7a` / `d5b72d08`
+retired by simple-differential algorithm change; regression now uses empirical SIPS/AIJ cross-validation
+on V0612 plus `compare_photometry_science_meaningful` for archaeology vs the zaloha cut.
 
-### Reference draft and byte-identity
+### Reference draft and validation (not byte-identity)
 
-The anchor is a **SHA fingerprint + regeneration recipe**, not a dependency on any draft tree
-surviving. Byte-identity is re-verified by regenerating from the recipe below and comparing
-computed SHA to the recorded values (`tests/photometry_sha.py`).
+The simple-differential algorithm change **retired** the old photometry SHA byte-identity anchors
+(by design). Validation is now **empirical cross-validation** vs AIJ/SIPS on V0612:
 
-- **Core SHA** `3f7c9e7a5d8078317cb27678fde028cacf1986d3778547a0c50b087db5f19487` (2806 files:
-  `lightcurve_*.csv` + `comp_quality_*.json` + `comparison_stars_per_target.csv`).
-- **Full SHA** `d5b72d0874a38b6bec69e7a3e56abb63b759b6906495c18aa6bbf4379525b2b6` (4285 files:
-  core + `comp_qa_*.json`). SHA set excludes `lc_quality_flag` / trust.
-- **Historical (pre-drift / flag-OFF era):** core `203254fd75ea5874…` / full `95a5515a6c15a473…`
-  (2026-06-11 zaloha cut; current code/env no longer byte-reproduces — benign drift only; see
-  PROCESS science-meaningful gate).
-- Cut from ephemeral `draft_000387` re-cut ×2 (2026-06-11); two-run repro confirmed on
-  `tmp/rebaseline_387_sparse_fb_cut{1,2}`. Prior cut `draft_000386` (byte-identical to archived
-  `draft_000387` at old SHA). **RETIRED:** `f4bcc0ee` / `bd0b1792` (draft_385 truncated photometry — false success);
-  `d246a5be` / `30a2f461` (draft_382 TAP field DB G<=19.5).
+- Out-of-eclipse RMS ~0.011 mag; eclipse shape correlation ~0.95+.
+- draft_409 (2026-06-16): eclipse + single shared bright outlier at ~JD 2461200.385 matches SIPS
+  -> frame-level artifact (cosmic-ray-like on target), not a VYVAR reduction bug.
 
-**Regeneration recipe** (`docs/VYVAR_CHIANDH_BASELINE_RUNBOOK.md`) — **no TAP / no field DB:**
+Historical SHA anchors (`3f7c9e7a` / `d5b72d08`, Chi_and_H chi Per zaloha cut) remain documented for
+regression archaeology; current code does not byte-reproduce them. Optional fresh anchor cut after
+Milan sign-off (see ROADMAP / JOURNAL).
+
+**Regeneration recipe (historical zaloha anchor)** (`docs/VYVAR_CHIANDH_BASELINE_RUNBOOK.md`):
 
 1. **Source data (must retain):** `Archive/Chi_and_H` — pre-calibrated FITS (only non-regenerable input).
 2. **Catalog + blind index:** `GAIA_DR3/zaloha/vyvar_gaia_dr3.db` (G<=16), zaloha blind PKLs
@@ -207,26 +219,15 @@ Astier et al. 2013, Lacroix et al. 2025, Guy et al. 2010, Stetson 1987, Mighell 
 
 ## Top of mind
 
-**Fixing differential photometry math on physical grounds** (new catalog + new pkl). Root cause of
-the non-home-set chaos is identified and proven: ALG-3 comp temporal binning (`temporal_bin_comp_lc`)
-breaks per-frame common-mode cancellation. Moving to a SIMPLE approach:
+**Simple differential photometry is PRODUCTION** and cross-validated vs SIPS on V0612 (draft_409):
+clean eclipse + shared single-frame anomaly at ~JD 2461200.385 (matches SIPS -> frame artifact).
 
-- Comp selection by **minimum |delta(BP-RP)|** (color-match target) AND **minimum RMS**
-  (stability). Color-matched comps remove the color systematic at source -> color term becomes
-  unnecessary.
-- Plain per-frame ensemble differential (median/flux-sum). **NO** temporal binning, **NO** color
-  term, **NO** complex weighting.
-- Trust RED/YELLOW gating **disabled for now** (revisit after photometry is clean, re-derived on
-  correct numbers).
-- Optimize/report **RMS** (and eclipse-shape fidelity vs AIJ ground truth).
+**Trust/consistency cleanup landed (2026-06-16):** comp stability on per-frame ensemble residual;
+measured aperture on card; `lc_rms (OOE)` for variables; trust GREEN on draft_409.
 
-**Verification asset:** AIJ Table.tbl for V0612 Cam (draft_407 g) = ground truth (pre-eclipse
-0.011 mag, clean eclipse). **Workstream A landed 2026-06-15** (bin OFF + tier-ladder selector +
-`comp_select_rms_floor`; DoD-A PASS). **Workstream B landed 2026-06-15** (`apply_reporting_postprocess`;
-DoD-B PASS: V0612 `mag_calib` corr 0.958 vs AIJ, ingress 24/24 normal).
+**Canonical column:** `delta_mag` flux-sum (AIJ/SIPS parity). Reporting `mag_calib` via
+`apply_reporting_postprocess`. Broeg IVW ensemble combine **PARKED** until sigma budget validates
+(`docs/VYVAR_SIGMA_BUDGET_SPEC.md`).
 
-**Load-bearing next:** sigma budget (`docs/VYVAR_SIGMA_BUDGET_SPEC.md`) — scintillation + per-frame
-σ + χ²/dof gate before Broeg-canonical IVW ensemble combine.
-
-**Parked (see ROADMAP):** TODO-MULTISET; Brno/Milan overlay gate; AAVSO #4; DR4 build; PSF /
-NEIGHBOR-SUB; reserved check-star (revisit after photometry clean).
+**Parked (see ROADMAP):** sigma budget; FWHM external validation; frame-level CR rejection;
+source_id exact-match audit; TODO-MULTISET; Brno/Milan overlay; PSF / NEIGHBOR-SUB.

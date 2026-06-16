@@ -484,6 +484,26 @@ Harness ``tmp/phase11/dod_b_workstream_b.json``.
 
 ---
 
+## draft_409 trust/consistency cleanup (2026-06-16, **Fixes 1-3 landed**)
+
+Summary / LC / PDF fields (not all `AppConfig` keys):
+
+| field / symbol | source | note |
+|----------------|--------|------|
+| `aperture_px` | measured `aperture_r_px` from proc cache | card + LC; supersedes Phase-2A replan display |
+| `aperture_px_planned` | Phase-2A SNR-opt replan | diagnostic only |
+| `lc_rms_ooe` | brightest-tertile scatter of `mag_calib` | headline precision for variables on PDF card |
+| `lc_rms` | undemeaned std of `mag_calib` | retained; not headline for variables |
+| `n_stability_good` / `n_stability_suspect` | `check_comparison_stability` on ensemble residual | trust soft-warning when suspect > 0 |
+| `_APERTURE_SIZING_MAG_COLS` | observed-band `mag` before `phot_g_mean_mag` | SNR-opt aperture sizing |
+
+**Superseded:** `comp_color_window_bprp` single-step window — tier ladder (0.15/0.30/0.55, cap 0.79) used instead.
+
+**DoD (draft_409 V0612 g):** `n_stability_good=8`, `n_stability_suspect=0`, trust GREEN, measured aperture 5.754 px,
+`lc_rms_ooe` ~0.006, `delta_mag` pre-eclipse RMS ~0.010, SIPS eclipse + shared frame anomaly match.
+
+---
+
 ## UI references without `AppConfig` key (reverse drift)
 
 These strings appear in UI code but are not fields on `AppConfig`:

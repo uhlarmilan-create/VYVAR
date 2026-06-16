@@ -3424,8 +3424,10 @@ class _PhotometryReportBuilder:
         else:
             c.drawString(self.M_LEFT, yy, f"{vsx_name}  |  {vsx_type}  |  {zone_flag}")
         yy -= 0.55 * self.cm
-        lc_rms = float(pd.to_numeric(sd.get("lc_rms"), errors="coerce"))
-        good_comp = int(pd.to_numeric(sd.get("good_comp"), errors="coerce") or 0)
+        lc_rms = float(pd.to_numeric(sd.get("lc_rms_ooe", sd.get("lc_rms")), errors="coerce"))
+        good_comp = int(
+            pd.to_numeric(sd.get("n_stability_good", sd.get("good_comp")), errors="coerce") or 0
+        )
         ap_px = float(pd.to_numeric(sd.get("aperture_px"), errors="coerce"))
         rms_txt = f"{lc_rms:.4f}" if np.isfinite(lc_rms) else "—"
         ap_txt = f"{ap_px:.1f}px" if np.isfinite(ap_px) else "—"
@@ -3434,7 +3436,7 @@ class _PhotometryReportBuilder:
         c.drawString(
             self.M_LEFT,
             yy,
-            f"lc_rms: {rms_txt}  |  good comp: {good_comp:d}  |  aperture: {ap_txt}  |   "
+            f"lc_rms (OOE): {rms_txt}  |  stable comp: {good_comp:d}  |  aperture: {ap_txt}  |   "
             "Vizier: https://vizier.cds.unistra.fr/viz-bin/Vsx",
         )
         yy -= 0.45 * self.cm
@@ -3622,13 +3624,19 @@ class _PhotometryReportBuilder:
         trust = str(star_data.get("trust", "") or "").strip().upper()
         trust_reason = str(star_data.get("trust_reason", "") or "").strip()
 
-        lc_rms = float(pd.to_numeric(star_data.get("lc_rms"), errors="coerce"))
-        good_comp = int(pd.to_numeric(star_data.get("good_comp"), errors="coerce") or 0)
+        lc_rms = float(pd.to_numeric(star_data.get("lc_rms_ooe", star_data.get("lc_rms")), errors="coerce"))
+        good_comp = int(
+            pd.to_numeric(
+                star_data.get("n_stability_good", star_data.get("good_comp")),
+                errors="coerce",
+            )
+            or 0
+        )
         ap_px = float(pd.to_numeric(star_data.get("aperture_px"), errors="coerce"))
         rms_txt = f"{lc_rms:.4f}" if np.isfinite(lc_rms) else "—"
         ap_txt = f"{ap_px:.1f}px" if np.isfinite(ap_px) else "—"
         metrics = (
-            f"lc_rms: {rms_txt}   |   good comp: {good_comp:d}   |   aperture: {ap_txt}   |   "
+            f"lc_rms (OOE): {rms_txt}   |   stable comp: {good_comp:d}   |   aperture: {ap_txt}   |   "
             "Vizier: https://vizier.cds.unistra.fr/viz-bin/Vsx"
         )
         metrics_style = self._get_para_style("star_metrics", fontSize=9, textColor=self.colors.HexColor("#666666"))
@@ -5001,8 +5009,10 @@ class _PhotometryReportBuilder:
                     "zone_flag": row.get("zone_flag", ""),
                     "bp_rp": row.get("bp_rp", float("nan")),
                     "b_v": row.get("b_v", float("nan")),
-                    "lc_rms": row.get("lc_rms", float("nan")),
-                    "good_comp": row.get("n_good_comp", 0),
+                    "lc_rms": row.get("lc_rms_ooe", row.get("lc_rms", float("nan"))),
+                    "lc_rms_full": row.get("lc_rms", float("nan")),
+                    "good_comp": row.get("n_stability_good", row.get("n_good_comp", 0)),
+                    "n_stability_good": row.get("n_stability_good", row.get("n_good_comp", 0)),
                     "aperture_px": row.get("aperture_px", float("nan")),
                     "n_saturated": n_sat,
                     "n_points": int(lc_st.get("n_points", 0) or 0),

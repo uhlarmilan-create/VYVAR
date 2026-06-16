@@ -861,3 +861,29 @@ unrelated. **Verdict:** promote **new** reduced-χ²/dof gate (not Mighell χ²-
 **Sandbox shipped:** Osborn eq. (7) scintillation + Howell quadrature + Broeg inflation helpers;
 chi² gate harness. **Not production** until χ²/dof ~ 1 on verified-constant calibrator.
 `delta_mag` unchanged.
+
+---
+
+## draft_409 trust/consistency cleanup — Fixes 1-3 (2026-06-16)
+
+### Comp stability on ensemble residual (not raw `mag_inst`)
+
+**Problem:** `check_comparison_stability` peak-to-peak on raw instrumental mag included
+night-level common-mode drift (~0.35 mag), flagging all comps suspect despite GREEN LOO trust.
+
+**Decision:** Assess stability on **per-frame ensemble residual** (median-subtracted differential
+quantity) before optional common-mode detrend. Aligns comp QA labels with trust-line intent.
+
+### Measured aperture + observed-band SNR sizing
+
+**Decision:** PDF card and LC export report **measured** proc `aperture_r_px`, not Phase-2A replan.
+SNR-opt sizing prefers observed-band catalog `mag` over Gaia G (`_APERTURE_SIZING_MAG_COLS`).
+
+### `lc_rms (OOE)` for variables
+
+**Decision:** Headline precision on variable target cards = **out-of-eclipse** scatter
+(`lc_rms_ooe`, brightest tertile). Full undemeaned `lc_rms` retained but not the headline for
+variables (eclipse-dominated otherwise).
+
+**Validation:** draft_409 V0612 cross-validated vs SIPS — eclipse shape + single bright outlier at
+~JD 2461200.385 match in both reductions (frame-level artifact, not VYVAR bug).
