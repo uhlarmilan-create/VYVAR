@@ -2,6 +2,48 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- Phase-1b: per-target comp_rms gate authoritative for N_good (2026-06-16)
+
+**Landed:** known-issue (b) closed. The per-target `phase01_comparison_max_comp_rms` (=0.1) gate is now
+authoritative for N_good. Separate commit on top of Phase-1 (`1c80219`).
+
+**Two loci fixed (no threshold re-tuning):**
+- `comp_selection_per_target.py` `_detrend_and_compute_comp_rms_map` -- RMS fallback no longer relaxes
+  above the gate. Old steps `[max, 0.08, 0.15]` admitted comps with `comp_rms > max_comp_rms` (the 0.15
+  step). Now the fallback selects only among gate-passers (`comp_rms <= max_comp_rms`); never exceeds
+  the gate. Thin-set keeping for gate-PASSERS (Phase-1 downstream behaviour) is untouched.
+- `photometry_core.py` auto-routing -- new `_count_gate_passing_comps`: routes on the count of comps
+  passing the per-target gate, not raw `len(result)`. Zero gate-passers -> `sparse_fallback`.
+
+**Tests:** added `tests/test_comp_rms_gate_authoritative.py` (8 cases: fallback never admits above-gate;
+gate-passers retained; routing helper excludes above-gate / keeps thin set / handles disabled gate).
+Full suite **330 passed / 15 skipped**; ruff clean.
+
+**Matrix re-run (`matrix_20260616_185831.json`) vs baseline `164157` -- only SS Cam changed:**
+| Target | OLD | NEW | note |
+|--------|-----|-----|------|
+| V0612 (`...526912`) | default RED 1@0.034 | default RED 1@0.034 | unchanged (gate-passer thin set) |
+| SS Cam (`...992064`) | default RED 1@**0.134** | **sparse_fallback YELLOW** 3@~0.35 | flip; 0.134 comp no longer a good default comp |
+| BO CVn (`...133184`) | default GREEN 4@0.0086 | default GREEN 4@0.0086 | regression guard PASS |
+| V0842 Her (`...714240`) | default YELLOW 8@0.0124 | default YELLOW 8@0.0124 | regression guard PASS |
+| V0611 / degenerate | sparse YELLOW 8 | sparse YELLOW 8 | unchanged |
+
+**SS Cam trust RED->YELLOW (reconciliation -- expected RED, got YELLOW):** the (b) fix correctly flips
+SS Cam `default -> sparse_fallback` (its only default comp, `comp_rms 0.134`, fails the gate -> 0
+gate-passers). The matrix prediction "stays RED (hard check 0.053)" assumed a path-independent
+check-star scatter. In reality check-star scatter is **ensemble-dependent**: against the new sparse
+ensemble it is **0.043 < `_CHECK_HARD_LO` 0.05**, so it is a soft warning, not a hard RED. This matches
+the grounded trust model (spec section 5: `sparse_fallback` lands at YELLOW at most). The sparse comps
+(~0.35 mag field-wide) are only catchable by the **Phase-2 sparse-comp sanity ceiling** (explicitly out
+of scope here). RED was NOT forced -- no threshold re-tuning, no Phase-2 / check-star-selector changes.
+Decision flagged to Milan; accepted the grounded YELLOW outcome and committed.
+
+**DoD:** no selection path counts an above-gate comp as good; routing uses gate-passer count; SS Cam
+default->sparse_fallback; V0612 + BO CVn + V0842 Her unchanged; pytest/ruff green. Known-issue (b)
+CLOSED. Phase-2 sparse-comp sanity ceiling remains open.
+
+---
+
 ## Session -- Phase-1 graceful comp degradation committed (2026-06-16)
 
 **Committed:** Phase-1 graceful comp degradation (spec: `docs/VYVAR_COMP_DEGRADATION_SPEC.md`).

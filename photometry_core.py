@@ -11278,6 +11278,39 @@ def _warn_zero_compstars_edge(
         logging.warning("[COMP] %s: 0 comp stars", target_cid)
 
 
+def _count_gate_passing_comps(
+    result: pd.DataFrame | None,
+    per_target_rms_map: dict[str, float] | None,
+    max_comp_rms: float,
+    id_col: str,
+) -> int:
+    """Count comps in ``result`` whose per-target ``comp_rms`` passes the gate.
+
+    N_good = comps passing the colour ladder + per-target ``max_comp_rms`` gate.
+    The per-target gate is authoritative: a comp with ``comp_rms > max_comp_rms``
+    is never counted as good, so routing never treats an above-gate comp as a
+    usable default comp (known-issue (b) fix). When the gate is disabled
+    (non-finite / <= 0) fall back to the raw row count.
+    """
+    if result is None or getattr(result, "empty", True):
+        return 0
+    if not (math.isfinite(max_comp_rms) and max_comp_rms > 0):
+        return int(len(result))
+    if id_col not in result.columns:
+        return int(len(result))
+    _map = per_target_rms_map or {}
+    n_good = 0
+    for _rid in result[id_col].astype(str).str.strip():
+        _v = _map.get(_rid, _map.get(str(_rid), float("nan")))
+        try:
+            _vf = float(_v)
+        except (TypeError, ValueError):
+            _vf = float("nan")
+        if math.isfinite(_vf) and _vf <= float(max_comp_rms):
+            n_good += 1
+    return n_good
+
+
 def select_comparison_stars_per_target(
     target: pd.Series,
     masterstars_df: pd.DataFrame,
@@ -11923,7 +11956,9 @@ def select_comparison_stars_per_target(
     )
 
     if _mode == "auto":
-        _n_good = int(len(result)) if result is not None and not getattr(result, "empty", True) else 0
+        # Route on the count of comps passing the per-target comp_rms gate, not raw
+        # len(result): zero gate-passers -> sparse_fallback (known-issue (b) fix).
+        _n_good = _count_gate_passing_comps(result, rms_map, max_comp_rms, id_col_cand)
         if _n_good >= 1:
             return result
         if resolve_comp_sparse_fallback_enabled(_cfg_p1):

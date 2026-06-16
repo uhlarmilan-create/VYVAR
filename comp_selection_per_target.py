@@ -1610,21 +1610,22 @@ def _detrend_and_compute_comp_rms_map(
                 f"odmietol {n_rejected} kandidátov, zostáva {len(rms_map)}"
             )
 
-    # Fallback na uvoľnený RMS limit ak stále <n_comp_min
+    # Fallback ak stále < n_comp_min: PER-TARGET GATE JE AUTORITATÍVNY.
+    # max_comp_rms je tvrdá kvalitatívna latka — žiadna selekčná cesta nesmie
+    # pustiť comp s comp_rms > max_comp_rms ako "dobrý". Predtým sa gate uvoľňoval
+    # krokmi [max, 0.08, 0.15], čo prijímalo nad-gate comp (known-issue (b)).
+    # Teraz vyberáme len spomedzi gate-passerov; nikdy nerelaxujeme nad gate.
     if len(rms_map) < n_comp_min and math.isfinite(max_comp_rms) and max_comp_rms > 0:
-        _good: dict[str, float] = dict(rms_map)
-        _rms_fallback_steps = [float(max_comp_rms), 0.08, 0.15]
-        for _rms_limit in _rms_fallback_steps:
-            _good = {cid: rms for cid, rms in sorted_rms_map.items() if rms <= float(_rms_limit)}
-            if len(_good) >= n_comp_min:
-                if float(_rms_limit) > float(max_comp_rms):
-                    logging.warning(
-                        f"[FÁZA 1] Target {target_cid}: RMS fallback "
-                        f"max_comp_rms {float(max_comp_rms):.3f} → {float(_rms_limit):.3f}, "
-                        f"nájdených {len(_good)} comp"
-                    )
-                break
-        rms_map = _good
+        rms_map = {
+            cid: rms
+            for cid, rms in sorted_rms_map.items()
+            if rms <= float(max_comp_rms)
+        }
+        logging.info(
+            f"[FÁZA 1] Target {target_cid}: {len(rms_map)} comp pod gate "
+            f"(max_comp_rms={float(max_comp_rms):.3f}); gate autoritatívny, "
+            f"bez relaxácie nad gate."
+        )
 
     if len(rms_map) < n_comp_min:
         logging.warning(

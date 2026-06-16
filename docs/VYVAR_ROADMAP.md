@@ -42,15 +42,16 @@ Evidence: ``tmp/phase11/dod_b_workstream_b.json``; ``apply_reporting_postprocess
 
 ## NEXT SESSION — open items
 
-0. **Phase-1b — comp_rms gate authoritative for N_good (HIGH, immediate).** Fix known-issue (b):
-   RMS fallback relaxation (`comp_selection_per_target.py:1614-1627`) and `len(result)>=1` auto-routing
-   (`photometry_core.py:11925-11928`) must not admit gate-failing comps as N_good on the default path.
-   N_good = colour ladder + per-target comp_rms gate (spec section 3). No threshold retuning beyond
-   making the gate authoritative.
+0. **Phase-1b — comp_rms gate authoritative for N_good — DONE (2026-06-16).** Known-issue (b) closed.
+   RMS fallback no longer relaxes above `max_comp_rms` (the `0.15` step removed); auto-routing counts
+   gate-passers via `_count_gate_passing_comps` instead of raw `len(result)`. Matrix re-run `185831`:
+   SS Cam flips default->sparse_fallback; V0612 / BO CVn / V0842 Her unchanged. SS Cam trust landed
+   YELLOW (grounded sparse outcome; check scatter 0.043 < 0.05 hard line) rather than the predicted RED
+   — RED would need the Phase-2 sanity ceiling below. No threshold re-tuning.
 
 1. **Phase-2 comp degradation — absolute sanity ceiling (HIGH, after 0).** Relative-locus comp_rms
    gate + absolute sanity ceiling on sparse comps (sparse_fallback comp_rms ~1.9-3.3 mag on
-   degenerate/V0611 must not pass as usable).
+   degenerate/V0611, and ~0.35 mag on SS Cam, must not pass as usable -> would keep SS Cam RED).
 
 2. **Sigma budget (HIGH, multi-rig, LOAD-BEARING)** — scintillation (Young 1967 / Osborn 2015) +
    per-frame sigma + chi-squared/dof ~ 1 gate on verified-constant calibrator -> then Broeg IVW
