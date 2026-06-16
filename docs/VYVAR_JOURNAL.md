@@ -39,8 +39,16 @@ of scope here). RED was NOT forced -- no threshold re-tuning, no Phase-2 / check
 Decision flagged to Milan; accepted the grounded YELLOW outcome and committed.
 
 **DoD:** no selection path counts an above-gate comp as good; routing uses gate-passer count; SS Cam
-default->sparse_fallback; V0612 + BO CVn + V0842 Her unchanged; pytest/ruff green. Known-issue (b)
-CLOSED. Phase-2 sparse-comp sanity ceiling remains open.
+default->sparse_fallback; V0612 + BO CVn + V0842 Her unchanged; pytest/ruff green. Gate-authority part
+of known-issue (b) CLOSED.
+
+**Clarification (handoff, same day):** the SS Cam trust **band** (RED vs YELLOW) is **UNRESOLVED, not
+closed** — YELLOW is the current *code output*, not a verified grounded conclusion. The sparse comp_rms
+(~0.35 mag) is field-wide-scale (different definition from the 0.1 per-target gate) and check-0.043 is
+ensemble-dependent; the tension (comps look bad, check looks OK) is unverified. Phase-2 is
+**diagnostic-first**: characterize what field-wide sparse comp_rms represents (does it cancel in the
+differential?) and whether check-0.043 is reliable (N points / baseline) BEFORE setting any threshold.
+Do NOT reverse-engineer RED.
 
 ---
 

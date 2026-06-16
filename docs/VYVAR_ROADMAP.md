@@ -42,16 +42,19 @@ Evidence: ``tmp/phase11/dod_b_workstream_b.json``; ``apply_reporting_postprocess
 
 ## NEXT SESSION — open items
 
-0. **Phase-1b — comp_rms gate authoritative for N_good — DONE (2026-06-16).** Known-issue (b) closed.
-   RMS fallback no longer relaxes above `max_comp_rms` (the `0.15` step removed); auto-routing counts
+0. **Phase-1b — comp_rms gate authoritative for N_good — gate-authority DONE (2026-06-16).** RMS
+   fallback no longer relaxes above `max_comp_rms` (the `0.15` step removed); auto-routing counts
    gate-passers via `_count_gate_passing_comps` instead of raw `len(result)`. Matrix re-run `185831`:
-   SS Cam flips default->sparse_fallback; V0612 / BO CVn / V0842 Her unchanged. SS Cam trust landed
-   YELLOW (grounded sparse outcome; check scatter 0.043 < 0.05 hard line) rather than the predicted RED
-   — RED would need the Phase-2 sanity ceiling below. No threshold re-tuning.
+   SS Cam flips default->sparse_fallback; V0612 / BO CVn / V0842 Her unchanged. No threshold re-tuning.
+   **STILL OPEN:** the SS Cam trust **band** (it landed YELLOW; check scatter 0.043 < 0.05) is
+   **UNRESOLVED** — see item 1. Do not treat RED as the answer.
 
-1. **Phase-2 comp degradation — absolute sanity ceiling (HIGH, after 0).** Relative-locus comp_rms
-   gate + absolute sanity ceiling on sparse comps (sparse_fallback comp_rms ~1.9-3.3 mag on
-   degenerate/V0611, and ~0.35 mag on SS Cam, must not pass as usable -> would keep SS Cam RED).
+1. **Phase-2 comp degradation — sparse-comp sanity, diagnostic-first (HIGH, after 0).** The sparse
+   comp_rms is **field-wide-scale** (~1.9-3.3 mag on degenerate/V0611, ~0.35 mag on SS Cam) —
+   a different definition from the 0.1 per-target gate — and the SS Cam check scatter (0.043) is
+   ensemble-dependent. **Characterize first, threshold second:** does field-wide sparse comp_rms cancel
+   in the differential? is check-0.043 reliable (N points, baseline)? Only then decide a relative-locus
+   gate / absolute sanity ceiling and the SS Cam band. **Do NOT reverse-engineer RED.**
 
 2. **Sigma budget (HIGH, multi-rig, LOAD-BEARING)** — scintillation (Young 1967 / Osborn 2015) +
    per-frame sigma + chi-squared/dof ~ 1 gate on verified-constant calibrator -> then Broeg IVW

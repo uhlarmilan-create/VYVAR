@@ -105,14 +105,20 @@ Graded routing keeps 1-N good comps on default path (sparse only at 0); honest `
 
 ### Phase-1b: per-target comp_rms gate authoritative for N_good (2026-06-16)
 
-**Status:** committed (known-issue (b) **CLOSED**). The per-target `max_comp_rms`=0.1 gate is now the
-hard quality bar for N_good. RMS fallback no longer relaxes above the gate (the `0.15` step is gone);
-auto-routing counts gate-passers (`_count_gate_passing_comps`), not raw `len(result)`. Matrix re-run
-`185831`: SS Cam flips **default -> sparse_fallback** (its 0.134 comp fails the gate, no longer a good
-default comp); V0612 + BO CVn + V0842 Her unchanged. SS Cam trust came out **YELLOW** (not the predicted
-RED) because the check-star scatter vs the new sparse ensemble is 0.043 (< 0.05 hard line) -- the
-grounded sparse=YELLOW outcome (spec section 5); the ~0.35 mag sparse comps await the Phase-2 sanity
-ceiling. No threshold re-tuning.
+**Status:** committed (gate-authority part of known-issue (b) **CLOSED**). The per-target
+`max_comp_rms`=0.1 gate is now the hard quality bar for N_good. RMS fallback no longer relaxes above the
+gate (the `0.15` step is gone); auto-routing counts gate-passers (`_count_gate_passing_comps`), not raw
+`len(result)`. Matrix re-run `185831`: SS Cam flips **default -> sparse_fallback** (its 0.134 comp fails
+the gate, no longer a good default comp); V0612 + BO CVn + V0842 Her unchanged.
+
+**OPEN -- SS Cam trust band (RED vs YELLOW) is UNRESOLVED, not closed.** SS Cam came out **YELLOW**, not
+the predicted RED, but whether YELLOW is the grounded-correct band is **not yet decided**. The tension:
+the sparse comp_rms (~0.35 mag) is a **field-wide-scale** quantity (different definition from the 0.1
+per-target gate), and the check-star scatter (0.043 < 0.05 hard line) is **ensemble-dependent** -- comps
+look bad, check looks OK, and neither has been verified. Resolve **diagnostic-first** in Phase-2 (does
+field-wide sparse comp_rms cancel in the differential? is check-0.043 reliable given N points /
+baseline?) **before** setting any sanity-ceiling threshold. Do NOT reverse-engineer RED. No threshold
+re-tuning was done here.
 
 ## Rigs (known sets)
 
