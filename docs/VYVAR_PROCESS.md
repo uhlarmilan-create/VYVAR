@@ -1,8 +1,12 @@
 # VYVAR — Process & conventions
 
 How we work. The aim is that every change is **understood in its impact**, reflected in
-**config and UI together**, and **documented** — so nothing drifts silently. This file
-supersedes the old TODO-DEV-PROCESS item.
+**config and UI together**, and **documented** — so nothing drifts silently. Definition-of-Done
+discipline lives here; open harness items **DEV-PROCESS-A/B** are spec'd in ROADMAP.
+
+**Session init:** read STATE, ROADMAP, latest JOURNAL, PROCESS, and
+`docs/VYVAR_CLAUDE_OPERATING_PRINCIPLES.md` (the last governs how Claude reasons and answers; it is
+not optional context).
 
 ---
 

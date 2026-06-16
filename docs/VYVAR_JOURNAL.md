@@ -2,6 +2,29 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- Claude operating-principles charter + process upgrades (2026-06-16)
+
+**Landed:** `docs/VYVAR_CLAUDE_OPERATING_PRINCIPLES.md` (INIT NOTE, sections 0-7, Session-start
+checklist) -- verbatim charter governing how Claude reasons and answers in VYVAR sessions.
+
+**Wired to session init:** `CLAUDE.md` and `docs/VYVAR_PROCESS.md` now list the principles file as a
+required read alongside STATE / ROADMAP / latest JOURNAL / PROCESS.
+
+**ROADMAP:** reshaped **TODO-DEV-PROCESS** into two open spec items (not implemented this session):
+- **DEV-PROCESS-A** -- JSON pass/fail validation ledger (agents edit status only; no weakened tests).
+- **DEV-PROCESS-B** -- session-start baseline-check script (known-good regression before new work).
+
+Both grounded in Anthropic long-running-agent harness / context-engineering guidance.
+
+**Rationale / history:** recurring failure mode = confident symptom-narrative before reading the
+governing code/param/log (V0612 degraded-proc vs SS Cam vs V842 Her wrong-ID harness were three
+distinct causes folded into one story). Lost validated V0612 proc taught archive-before-re-proc and
+baseline-before-work discipline -- now in charter section 5 and session-start checklist section 7.
+
+**Decision recorded:** `VYVAR_DECISIONS.md` (DEV-PROCESS-A/B + session-init charter load).
+
+---
+
 ## Session -- photometry root-cause investigation (AIJ ground truth) + direction (2026-06-15)
 
 **Problem entry:** a non-home set (V0612 Cam, draft_407 g, Brno C5A-150M bin4, ~0.562 arcsec/px,

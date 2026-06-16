@@ -7,6 +7,10 @@ State and process docs live under `docs/`:
 - `docs/VYVAR_STATE.md` — entry point (current snapshot)
 - `docs/VYVAR_ROADMAP.md`, `docs/VYVAR_JOURNAL.md`, `docs/VYVAR_DECISIONS.md`
 - `docs/VYVAR_PROCESS.md`, `docs/VYVAR_PARAMS.md`, `docs/config_schema.md`
+- `docs/VYVAR_CLAUDE_OPERATING_PRINCIPLES.md` — Claude operating charter (session-init required read)
+
+**Session init:** read STATE, ROADMAP, latest JOURNAL, PROCESS, and CLAUDE_OPERATING_PRINCIPLES
+(the last governs how Claude reasons and answers; it is not optional context).
 
 Scratch outputs: `tmp/` (gitignored). Reusable one-off helpers: `sandbox/` (gitignored).
 

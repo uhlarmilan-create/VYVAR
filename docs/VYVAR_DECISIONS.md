@@ -887,3 +887,25 @@ variables (eclipse-dominated otherwise).
 
 **Validation:** draft_409 V0612 cross-validated vs SIPS — eclipse shape + single bright outlier at
 ~JD 2461200.385 match in both reductions (frame-level artifact, not VYVAR bug).
+
+---
+
+## Development process harness (2026-06-16)
+
+**Decision:** Adopt JSON pass/fail validation ledger + session-start baseline check
+(**DEV-PROCESS-A/B**), and load **CLAUDE_OPERATING_PRINCIPLES** at session init. Grounded in
+Anthropic context-engineering / long-running-agent harness guidance (get your bearings, verify a
+known-good baseline before new work, structured pass/fail ledger, leave a clean state).
+
+**Charter:** `docs/VYVAR_CLAUDE_OPERATING_PRINCIPLES.md` -- session-init required read; governs
+pre-claim checklist, diagnose-then-fix, and reproducibility (archive proc before re-proc; exact
+19-digit source_id matching).
+
+**Open (spec only, ROADMAP):**
+- **DEV-PROCESS-A** -- JSON ledger of end-to-end validation items (`passes: true/false`); agents
+  may edit status only; no deleting or weakening tests.
+- **DEV-PROCESS-B** -- session-start script reproducing reference draft / regression baseline before
+  new work (motivating case: lost V0612 proc).
+
+Definition-of-Done discipline remains in `VYVAR_PROCESS.md`; old **TODO-DEV-PROCESS** folded/replaced
+by A/B plus charter session-start checklist.

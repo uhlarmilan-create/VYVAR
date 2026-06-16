@@ -12,6 +12,7 @@ no history and no open-task detail -- those live in the linked files.
 | `docs/VYVAR_DECISIONS.md` | Durable design decisions + *why* they hold. |
 | `docs/VYVAR_JOURNAL.md` | Chronological session log (history, append-only). |
 | `docs/VYVAR_PROCESS.md` | How we work: Definition of Done, validation discipline, config<->UI parity, tests. |
+| `docs/VYVAR_CLAUDE_OPERATING_PRINCIPLES.md` | Claude operating charter (session-init required read; governs reasoning and answers). |
 | `docs/VYVAR_PARAMS.md` | Config-key <-> default <-> clamp <-> UI-location registry. |
 | `docs/VYVAR_DECISION_GROUNDING_RULE.md` | Adopted rule: cite physics/literature/practice before design forks. |
 | `docs/VYVAR_REPORTING_COLUMN_GROUNDED_DECISION.md` | Workstream B reporting column (supersedes B1/B2). |

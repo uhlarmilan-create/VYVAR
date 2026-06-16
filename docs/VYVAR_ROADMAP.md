@@ -75,7 +75,19 @@ Evidence: ``tmp/phase11/dod_b_workstream_b.json``; ``apply_reporting_postprocess
    specs under `docs/`; trust baseline 1382/106 on draft_387 at `comp_trust_min_comps=5`.
 11. ~~**Broad-except hygiene (BLE001/E722 regression guard)**~~ **DONE (2026-06-11)** — see
    DECISIONS + `pyproject.toml` / pre-commit / `tests/test_ble001_regression.py`.
-12. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
+12. **DEV-PROCESS-A — JSON pass/fail validation ledger (HIGH, spec only).** Structured JSON file
+    listing end-to-end validation items (per fix and the cross-field trust matrix), each with a
+    `passes: true/false` status. Rules: agents may edit ONLY the status field; status flips to
+    `true` only after careful end-to-end verification; tests are never deleted or weakened.
+    Rationale: JSON resists inappropriate rewrites better than Markdown; an explicit pass/fail
+    list prevents "declared done prematurely." Grounded in Anthropic long-running-agent harness
+    guidance (structured pass/fail ledger).
+13. **DEV-PROCESS-B — session-start baseline-check script (HIGH, spec only).** Script run at the top
+    of each session that reproduces the reference draft / runs the regression check and confirms the
+    known-good result before any new work, catching drift or a broken state early (the lost V0612
+    proc is the motivating case). Grounded in Anthropic context-engineering / long-running-agent
+    harness guidance (verify known-good baseline before new work).
+14. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
 13. ~~**Per-frame proc export perf (DAO pre-filter + Moffat gate)**~~ **DONE (2026-06-12)** —
    `_proc_drop_unmatched_dao_rows` before aperture/PSF; Moffat gated on `_run_epsf` only; ~4.8× on
    `draft_000389` B_60_1 (171 → 36 s/frame). See JOURNAL + DECISIONS.
@@ -404,7 +416,9 @@ EQUIPMENTS row and set it as default, instead of hand-entering specs. Lowers the
   engines (sep matches VYVAR to 0.2 %) already validate extraction; not feasible on
   Py3.12/Ubuntu24.
 - **TODO-WEIGHTED-LC, TODO-SKY-PLANE** — tested negative, closed.
-- **TODO-DEV-PROCESS** — folded into `VYVAR_PROCESS.md` (the Definition-of-Done discipline).
+- **TODO-DEV-PROCESS** — reshaped into **DEV-PROCESS-A** (JSON pass/fail validation ledger) and
+  **DEV-PROCESS-B** (session-start baseline-check script); Definition-of-Done discipline remains in
+  `VYVAR_PROCESS.md`. Charter: `VYVAR_CLAUDE_OPERATING_PRINCIPLES.md`.
 - The full **TODO-1…45 / PERF-1…10 / ALG-1…5 / CQ-1…7 / GS1–GS5** series — closed; see
   `VYVAR_JOURNAL.md`.
 
