@@ -128,6 +128,7 @@ class RunCitationContext:
     use_common_mode_stability_detrend: bool = False
     use_iterative_comp_clip: bool = False
     use_catalog_recovery_verify: bool = False
+    use_frame_quality_gate: bool = False
 
 
 def _vsx_db_configured(cfg: AppConfig | None) -> bool:
@@ -207,6 +208,8 @@ def build_run_citation_context(
     if not use_catalog_recovery:
         _ast = meta.get("astrometry") if isinstance(meta.get("astrometry"), dict) else {}
         use_catalog_recovery = bool(_ast.get("catalog_recovery_verified", False))
+    use_frame_quality_gate = bool(getattr(cfg, "frame_quality_gate_enabled", False)) if cfg else False
+    use_frame_quality_gate = use_frame_quality_gate or bool(meta.get("frame_quality_gate_used", False))
 
     return RunCitationContext(
         use_vsx=use_vsx,
@@ -226,6 +229,7 @@ def build_run_citation_context(
         use_common_mode_stability_detrend=use_cm_detrend,
         use_iterative_comp_clip=use_iter_clip,
         use_catalog_recovery_verify=use_catalog_recovery,
+        use_frame_quality_gate=use_frame_quality_gate,
     )
 
 
@@ -354,6 +358,10 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
                 citation_line("vonneumann1941", bib=bib),
             ]
         )
+    if ctx.use_frame_quality_gate:
+        # Frame-quality gate: per-frame PSF-concentration (flux_large/flux) outlier rejection,
+        # grounded in the curve-of-growth / SNR-optimal aperture framework.
+        dq.append(citation_line("howell1989", bib=bib))
     if dq:
         sections.append(("DATA-QUALITY GATE", dq))
 

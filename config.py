@@ -607,6 +607,15 @@ class AppConfig:
     auto_fwhm_k_min: float = 1.0
     auto_fwhm_k_max: float = 4.0
 
+    #: Round-2 B.2: Phase-2A whole-frame transparency/PSF-collapse gate (default OFF -> byte-identical).
+    #: Rejects frames whose PSF-concentration (median flux_large/flux) is a robust outlier
+    #: (z = (ratio - med)/(1.4826*MAD) > k) AND whose per-frame FWHM exceeds factor*median-FWHM.
+    #: Targets transparency-collapsed / heavily-blurred frames; clear-but-faint frames are spared.
+    frame_quality_gate_enabled: bool = False
+    frame_quality_ratio_k: float = 5.0       # robust z-score cut on per-frame flux_large/flux ratio (primary)
+    frame_quality_fwhm_factor: float = 1.0   # guard: reject only if FWHM >= factor*median-FWHM (spares sharp frames)
+    frame_quality_min_keep_frames: int = 10  # safety floor: skip gate if it would drop below this
+
     # Paths derived from config.json (must stay after all init=True fields for dataclass(slots=True)).
     archive_root: Path = field(init=False)
     calibration_library_root: Path = field(init=False)
@@ -897,6 +906,28 @@ class AppConfig:
         self.auto_fwhm_k_factor = max(
             float(self.auto_fwhm_k_min), min(float(self.auto_fwhm_k_max), float(self.auto_fwhm_k_factor))
         )
+
+        self.frame_quality_gate_enabled = bool(
+            data.get("frame_quality_gate_enabled", self.frame_quality_gate_enabled)
+        )
+        try:
+            self.frame_quality_ratio_k = max(
+                2.0, min(20.0, float(data.get("frame_quality_ratio_k", self.frame_quality_ratio_k)))
+            )
+        except (TypeError, ValueError):
+            self.frame_quality_ratio_k = 5.0
+        try:
+            self.frame_quality_fwhm_factor = max(
+                0.8, min(3.0, float(data.get("frame_quality_fwhm_factor", self.frame_quality_fwhm_factor)))
+            )
+        except (TypeError, ValueError):
+            self.frame_quality_fwhm_factor = 1.0
+        try:
+            self.frame_quality_min_keep_frames = max(
+                3, min(100000, int(data.get("frame_quality_min_keep_frames", self.frame_quality_min_keep_frames)))
+            )
+        except (TypeError, ValueError):
+            self.frame_quality_min_keep_frames = 10
 
         self.aperture_photometry_enabled = bool(data.get("aperture_photometry_enabled", self.aperture_photometry_enabled))
         self.save_lightcurve_png = bool(data.get("save_lightcurve_png", self.save_lightcurve_png))
@@ -1792,6 +1823,10 @@ class AppConfig:
             "auto_fwhm_k_factor": float(self.auto_fwhm_k_factor),
             "auto_fwhm_k_min": float(self.auto_fwhm_k_min),
             "auto_fwhm_k_max": float(self.auto_fwhm_k_max),
+            "frame_quality_gate_enabled": bool(self.frame_quality_gate_enabled),
+            "frame_quality_ratio_k": float(self.frame_quality_ratio_k),
+            "frame_quality_fwhm_factor": float(self.frame_quality_fwhm_factor),
+            "frame_quality_min_keep_frames": int(self.frame_quality_min_keep_frames),
             "aperture_photometry_enabled": bool(self.aperture_photometry_enabled),
             "save_lightcurve_png": bool(self.save_lightcurve_png),
             "phase2a_airmass_before_outlier": bool(self.phase2a_airmass_before_outlier),

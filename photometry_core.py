@@ -6085,6 +6085,92 @@ def _preserve_nondetection_flags_helper(
             out_flags_local[i] = "nondetection"
 
 
+def _frame_quality_gate_select(
+    csv_files: list[Path],
+    cfg: AppConfig | None,
+    proc_frame_store: ProcFrameStore | None,
+) -> tuple[list[Path], list[str]]:
+    """Round-2 B.2: whole-frame transparency / PSF-collapse gate.
+
+    Default OFF -> returns ``(list(csv_files), [])`` unchanged (byte-identical baseline).
+
+    When enabled, rejects frames whose PSF concentration -- the per-frame median of
+    ``flux_large / flux`` over bright, unsaturated sources -- is a robust outlier
+    ``z = (ratio - median) / (1.4826*MAD) > cfg.frame_quality_ratio_k`` (the decisive primary
+    signal) guarded by ``fwhm_estimate_px > cfg.frame_quality_fwhm_factor * median-FWHM`` so a
+    spurious ratio outlier on a better-than-median (sharp) frame is spared.
+    A collapsed/heavily-blurred frame pushes flux out of the fixed science aperture so the
+    large/small aperture ratio spikes; a clear-but-faint frame keeps a normal concentration
+    (flux falls equally in both apertures) and is spared. Frames with no usable photometry are
+    also dropped. Safety floor: if the gate would keep < ``cfg.frame_quality_min_keep_frames``
+    frames it is skipped (returns the input unchanged) to avoid nuking a marginal night.
+
+    Returns ``(kept_csv_files, rejected_basenames)``.
+    """
+    if cfg is None or not getattr(cfg, "frame_quality_gate_enabled", False):
+        return list(csv_files), []
+    cols = ["flux", "flux_large", "fwhm_estimate_px", "likely_saturated", "mag"]
+    ratios: list[float] = []
+    fwhms: list[float] = []
+    for p in csv_files:
+        df = proc_frame_store.get_frame(p, cols=cols) if proc_frame_store is not None else None
+        if df is None:
+            try:
+                _want = set(cols)
+                df = pd.read_csv(p, usecols=lambda c: c in _want, low_memory=False)
+            except Exception:  # noqa: BLE001
+                df = None
+        if df is None or "flux" not in df.columns or "flux_large" not in df.columns:
+            ratios.append(np.nan)
+            fwhms.append(np.nan)
+            continue
+        fs = pd.to_numeric(df["flux"], errors="coerce")
+        fl = pd.to_numeric(df["flux_large"], errors="coerce")
+        sat = (
+            pd.to_numeric(df["likely_saturated"], errors="coerce").fillna(0) > 0
+            if "likely_saturated" in df.columns
+            else pd.Series(False, index=fs.index)
+        )
+        m = (fs > 0) & (fl > 0) & ~sat
+        if "mag" in df.columns:
+            mg = pd.to_numeric(df["mag"], errors="coerce")
+            mm = m & np.isfinite(mg) & (mg >= 10.0) & (mg <= 14.5)
+            if int(mm.sum()) >= 5:
+                m = mm
+        ratios.append(
+            float(np.nanmedian((fl[m] / fs[m]).to_numpy())) if int(m.sum()) >= 3 else np.nan
+        )
+        fwhms.append(
+            float(np.nanmedian(pd.to_numeric(df["fwhm_estimate_px"], errors="coerce")))
+            if "fwhm_estimate_px" in df.columns
+            else np.nan
+        )
+    rr = np.asarray(ratios, dtype=float)
+    fw = np.asarray(fwhms, dtype=float)
+    good = np.isfinite(rr)
+    if int(good.sum()) < max(int(cfg.frame_quality_min_keep_frames), 5):
+        return list(csv_files), []
+    med = float(np.nanmedian(rr[good]))
+    mad = float(np.nanmedian(np.abs(rr[good] - med)))
+    scale = 1.4826 * mad if mad > 0 else (float(np.nanstd(rr[good])) or 1.0)
+    fwhm_med = float(np.nanmedian(fw[np.isfinite(fw)])) if np.isfinite(fw).any() else np.inf
+    z = (rr - med) / scale
+    reject = (z > float(cfg.frame_quality_ratio_k)) & (
+        (~np.isfinite(fw)) | (fw > float(cfg.frame_quality_fwhm_factor) * fwhm_med)
+    )
+    reject = reject | (~good)
+    if int((~reject).sum()) < int(cfg.frame_quality_min_keep_frames):
+        LOGGER.warning(
+            "[FRAME-QC] gate would keep only %d < floor %d frames -> SKIPPING gate",
+            int((~reject).sum()),
+            int(cfg.frame_quality_min_keep_frames),
+        )
+        return list(csv_files), []
+    kept = [p for p, rj in zip(csv_files, reject) if not rj]
+    rejected = [Path(p).name for p, rj in zip(csv_files, reject) if rj]
+    return kept, rejected
+
+
 def _phase2a_prepare_shared_state(
     output_dir: Path,
     lc_dir: Path,
@@ -6287,6 +6373,22 @@ def _phase2a_prepare_shared_state(
         csv_files = sorted(Path(k) for k in proc_frame_store.keys())
     else:
         csv_files = sorted(Path(per_frame_csv_dir).glob("proc_*.csv"))
+    # Round-2 B.2: optional whole-frame transparency/PSF-collapse gate (default OFF -> no-op).
+    if getattr(_cfg, "frame_quality_gate_enabled", False):
+        _kept_csv, _rejected_csv = _frame_quality_gate_select(csv_files, _cfg, proc_frame_store)
+        if _rejected_csv:
+            csv_files = _kept_csv
+            logging.info(
+                "[FRAME-QC] transparency/PSF-collapse gate: rejected %d/%d frames (%s%s)",
+                len(_rejected_csv),
+                len(_rejected_csv) + len(_kept_csv),
+                ", ".join(_rejected_csv[:5]),
+                " ..." if len(_rejected_csv) > 5 else "",
+            )
+            _p2(
+                f"Frame-QC gate: {len(_rejected_csv)} collapsed frames rejected, "
+                f"{len(_kept_csv)} kept"
+            )
     # Len CSV — bez FITS (flux sa číta z dao_flux v CSV)
     n_frames = len(csv_files)
     _n_total = int(len(at_df))

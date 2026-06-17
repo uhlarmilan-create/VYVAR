@@ -27,6 +27,10 @@ no UI yet).
 | `skip_processed_directory` | False | — | — | **intentionally-hidden** | OK in config.json |
 | `qc_fwhm_limit` | 8.0 | — | — | **intentionally-hidden** | OK in config.json |
 | `qc_elong_limit` | 1.8 | — | — | **intentionally-hidden** | OK in config.json |
+| `frame_quality_gate_enabled` | False | — | ui_settings.py (Photometry → Data quality) | **yes** | Round-2 B.2; default OFF → byte-identical |
+| `frame_quality_ratio_k` | 5.0 | 2.0 … 20.0 | ui_settings.py (Photometry → Data quality) | **yes** | robust z-cut on per-frame flux_large/flux |
+| `frame_quality_fwhm_factor` | 1.0 | 0.8 … 3.0 | ui_settings.py (Photometry → Data quality) | **yes** | guard: reject only if FWHM ≥ factor×median |
+| `frame_quality_min_keep_frames` | 10 | 3 … 100000 | ui_settings.py (Photometry → Data quality) | **yes** | safety floor: skip gate below this |
 
 ---
 
