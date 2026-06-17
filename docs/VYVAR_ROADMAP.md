@@ -46,15 +46,23 @@ Verified g-only on draft_413. A-durable (MP reload robustness), B-cap (spatial-f
 variable_targets; comp-purity coupling Milan-accepted), measurable completeness gate, NoDetections
 log-flood summary. Writeup: `CURSOR_RESULT_round1.md`; decisions in `VYVAR_DECISIONS.md`.
 
-### Round 2 — epoch/transparency quality + aperture-skirt/COG — OPEN (HIGH)
+### Round 2 — frame-quality gate (B.2) DONE; aperture-skirt (B.1) REFUTED (2026-06-17)
 
-Designed and measured in isolation (science-changing magnitudes/trust). Two threads:
-- **Epoch/transparency frame-quality:** the post-flip dawn collapse (all-RED night-wide) and the
-  pre-flip RED floor (draft_413 g: best lc_rms ~14 mmag but field median check-scatter ~84 mmag;
-  RED driven by check-star gaps + thin comps + 73% lunar background, not the flip). Define an
-  epoch-quality gate / per-epoch weighting; revisit bright-star check-star selection.
-- **Aperture-skirt / COG sizing:** `cog_aperture_correction_enabled`, aperture sizing, frame
-  selection — left unchanged in Round 1. Know the problem, not the fix.
+Diagnosed and measured in isolation on draft_413 g; writeup `CURSOR_RESULT_round2.md`. Push gated on Milan.
+- **B.1 aperture-skirt / COG — REFUTED, not implemented.** COG confirms 5 px aperture captures only
+  EE=0.65, but widening to the plateau does not reduce differential scatter (flat 24→27 mmag) and
+  adaptive sizing is worse; the skirt swing is common-mode (cancelled differentially). Decision in
+  `VYVAR_DECISIONS.md`.
+- **B.2 transparency frame-quality gate — DONE (default-OFF).** `frame_quality_gate_enabled` (+
+  `ratio_k`, `fwhm_factor`, `min_keep_frames`) rejects PSF-collapsed frames via `flux_large/flux`
+  robust-outlier + FWHM guard; cuts bright-target LC scatter median −257 mmag on draft_413 g.
+
+**Round 2 open follow-ups (HIGH):**
+- **Trust still RED after B.2** — the gate fixes scatter, not trust. RED is set by the structural
+  check-star/thin-comp/colour-term-off chain. Next: revisit bright-star check-star selection +
+  thin-comp handling so cleaned bright targets can reach GREEN.
+- **Frame-quality gate scope** — currently Phase-2A only (target LC/trust). Consider extending the
+  same per-frame gate to Phase-0+1 comp selection.
 
 ---
 

@@ -2,6 +2,41 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- Part A clean state + Round 2 (B.1 refuted, B.2 gate) (2026-06-17)
+
+**Part A (clean committed baseline).** Executed Milan triage: masterstar catalog-recovery /
+sibling-WCS / per-set fault isolation feature **KEPT** as its own commit; `config.json` observer
+location **reverted** (Jirny); 16 accidentally-deleted docs **restored** (incl.
+CLAUDE_OPERATING_PRINCIPLES). `pipeline.py` mixed feature + Round-1 in one file; split via per-hunk
+patches (LF-normalised, `git apply --cached`; autocrlf=true, HEAD blob is LF). Result: **6 commits**
+(`1eea2d2` feature, `e042bc1` A-durable, `d222eb7` B-cap, `2cc2b76` gate, `63e57c0` log-flood,
+`15c699e` docs); tree clean; imports OK; 44 tests pass. **Push gated on Milan.**
+
+**Round 2 (diagnostic-first, default-OFF, isolated). Full writeup: `CURSOR_RESULT_round2.md`.**
+
+**B.1 aperture-skirt -- REFUTED, not implemented.** COG (`tmp/b1_cog_diag.py`, 12 bright isolated
+pre-flip stars) confirms the 5 px production aperture captures only **EE=0.65**, but the decisive
+test fails: differential scatter is flat from r=5 px to the 18 px plateau (24->27 mmag; min ~21 at
+6 px, within noise). FWHM-adaptive aperture is **worse** (30-32 mmag). The ±5-7% skirt-fraction swing
+(~48 mmag) is **common-mode PSF breathing** that differential photometry already cancels. Decision:
+do not implement (a 5->6 px bump is within noise).
+
+**B.2 frame-quality gate -- CONFIRMED, default-OFF flag.** Diagnostic
+(`tmp/b2_transparency_diag.py`): 13 post-flip frames collapse (PSF concentration `flux_large/flux`
+~11-16 vs good ~2.7, FWHM pegged at 8.62 px rail, 5 px aperture catches only noise); the two signals
+flag the identical 13, wide gap to the good population; the gradual-transparency frames (clear-but-
+faint, ratio stays ~2.7) are spared. Implemented `_frame_quality_gate_select()`
+(`photometry_core.py`) + Phase-2A hook; params `frame_quality_{gate_enabled=False,ratio_k=5.0,
+fwhm_factor=1.0,min_keep_frames=10}` (config + ui_settings + VYVAR_PARAMS); `howell1989` gated in
+citations; 5 unit tests. **Isolated measurement** (`tmp/b2_measure.py`, gate ON vs OFF on draft_413
+g): LC scatter drops **median -257 mmag, 14/15 bright targets** (V0454 CrA 0.404->0.147; flat field
+star ASAS J175832 0.342->**0.035**). **Trust unchanged (all 67 RED both runs)** -- RED is set by
+the structural check-star/thin-comp/colour-term-off gates, not LC scatter. Default OFF =>
+byte-identical baseline (preserves the end-of-day UI test). Push gated on Milan. Tests: 339 passed,
+15 skipped.
+
+---
+
 ## Session -- Round 1: four known fixes + pre-flip demo (2026-06-17)
 
 Verified g-only on `draft_000413` (Boyden V454 CrA), reusing existing aligned frames. Full writeup:

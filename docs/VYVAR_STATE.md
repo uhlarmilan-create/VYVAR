@@ -1,6 +1,11 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-17** (Round 1 four known fixes verified on draft_413 g: A-durable MP-reload
+Last updated: **2026-06-17** (Part A clean baseline committed [6 commits, push gated]; Round 2:
+B.1 aperture-skirt **refuted** by COG/scatter diagnostic [not implemented]; B.2 transparency
+**frame-quality gate** implemented behind default-OFF `frame_quality_gate_enabled` -- isolated
+measurement on draft_413 g cuts bright-target LC scatter by median -257 mmag, trust still RED
+[structural check-star/comp]. See `CURSOR_RESULT_round2.md`).
+Prior: 2026-06-17 (Round 1 four known fixes verified on draft_413 g: A-durable MP-reload
 robustness, B-cap spatial-first variable_targets [+comp-purity coupling, Milan-accepted], measurable
 completeness gate, NoDetections log-flood summary; simple-differential PRODUCTION).
 Prior: 2026-06-16 (Phase-1 graceful comp degradation committed + matrix `164157` validated;

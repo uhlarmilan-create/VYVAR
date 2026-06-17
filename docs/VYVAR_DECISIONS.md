@@ -6,6 +6,35 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## Aperture-skirt fix REJECTED; transparency frame-quality gate ADOPTED (default-OFF) (2026-06-17)
+
+**B.1 aperture-skirt — not implemented.** The SNR-optimal science aperture (~5 px) captures only
+EE≈0.65 of a defocused star (curve-of-growth on bright isolated pre-flip stars), so the premise
+"aperture under-captures the skirt" is true. But the decisive test refutes the *fix*: differential
+frame-to-frame scatter is **flat** from r=5 px to the EE≥0.99 plateau (~24→27 mmag; minimum ~21 mmag
+at r≈6 px, within noise), and a per-frame FWHM-adaptive aperture is **worse** (30–32 mmag). The
+±5–7% skirt-fraction swing (~48 mmag nominal) is **common-mode PSF breathing** that differential
+photometry already cancels; the bright-star floor is not aperture-limited. Grounded decision: widening
+the aperture is not justified (a 5→6 px bump is within noise). Evidence: `CURSOR_RESULT_round2.md`,
+`tmp/b1_cog_diag.py`.
+
+**B.2 transparency frame-quality gate — adopted behind a default-OFF flag.** A per-frame
+PSF-concentration statistic, median `flux_large / flux` over bright unsaturated sources, cleanly
+separates transparency/PSF-collapsed frames (ratio ~11–16, FWHM at the rail, science aperture
+catching only noise) from clear-but-faint frames (ratio stays ~2.7 as flux falls equally in both
+apertures). Grounded in the curve-of-growth / SNR-optimal aperture framework (Howell 1989). The gate
+rejects whole frames whose ratio is a robust outlier (`z>k`, primary) guarded by `FWHM ≥ factor·median`
+(spares sharp frames); safety floor on min kept frames. **Default OFF ⇒ baseline byte-identical**
+(preserves the UI test). Params `frame_quality_{gate_enabled,ratio_k,fwhm_factor,min_keep_frames}`
+(config + ui_settings + VYVAR_PARAMS); `howell1989` gated. Isolated measurement (draft_413 g, ON vs
+OFF): LC scatter for bright targets drops **median −257 mmag** (14/15 improved; a flat field star
+0.342→0.035 mag); **trust unchanged (RED)** because RED is set by the structural check-star/thin-comp/
+colour-term-off gates, not LC scatter — the gate is a precision win, not a trust-flip. Scope: Phase 2A
+(target LC/trust); Phase-0+1 comp selection not gated yet. Evidence: `CURSOR_RESULT_round2.md`,
+`tmp/b2_measure.py`, `docs/round2_figs/`.
+
+---
+
 ## variable_targets selection is spatial-first (frame bbox), and it also purges variables from the comp pool (2026-06-17)
 
 VSX `variable_targets` are selected from the **frame footprint** (frame bbox + the 50 px in-frame
