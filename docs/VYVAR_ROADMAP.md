@@ -40,6 +40,24 @@ Evidence: ``tmp/phase11/dod_b_workstream_b.json``; ``apply_reporting_postprocess
 
 ---
 
+### Round 1 — four known fixes — DONE (2026-06-17)
+
+Verified g-only on draft_413. A-durable (MP reload robustness), B-cap (spatial-first
+variable_targets; comp-purity coupling Milan-accepted), measurable completeness gate, NoDetections
+log-flood summary. Writeup: `CURSOR_RESULT_round1.md`; decisions in `VYVAR_DECISIONS.md`.
+
+### Round 2 — epoch/transparency quality + aperture-skirt/COG — OPEN (HIGH)
+
+Designed and measured in isolation (science-changing magnitudes/trust). Two threads:
+- **Epoch/transparency frame-quality:** the post-flip dawn collapse (all-RED night-wide) and the
+  pre-flip RED floor (draft_413 g: best lc_rms ~14 mmag but field median check-scatter ~84 mmag;
+  RED driven by check-star gaps + thin comps + 73% lunar background, not the flip). Define an
+  epoch-quality gate / per-epoch weighting; revisit bright-star check-star selection.
+- **Aperture-skirt / COG sizing:** `cog_aperture_correction_enabled`, aperture sizing, frame
+  selection — left unchanged in Round 1. Know the problem, not the fix.
+
+---
+
 ## NEXT SESSION — open items
 
 0. **Phase-1b — comp_rms gate authoritative for N_good — gate-authority DONE (2026-06-16).** RMS

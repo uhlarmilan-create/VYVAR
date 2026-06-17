@@ -2,6 +2,45 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- Round 1: four known fixes + pre-flip demo (2026-06-17)
+
+Verified g-only on `draft_000413` (Boyden V454 CrA), reusing existing aligned frames. Full writeup:
+`CURSOR_RESULT_round1.md`.
+
+**Fix 1 (A-durable, infra):** spawn pool now resolves MP funcs by **fresh module attribute** at
+dispatch (`pipeline.py:12923-12924`) + `pickle.PicklingError` -> single-process fallback
+(`12937-12947`). Sim (`tmp/fix1_fallback_sim.py`) reproduces the exact production message ("not the
+same object as vyvar_alignment_frame._astrometry_align_mp_task") and confirms the fallback. No
+numeric effect. No new param.
+
+**Fix 2 (B-cap, science-changing):** new `_query_vsx_local_frame_bbox` (`pipeline.py:4512`) drives
+variable_targets off the **frame bbox** (no cap) instead of the 3.5deg cone + 15000-row cap.
+In-frame VSX **26 -> 100**; **V0454 CrA (m9.9), KQ/KM/KT CrA** (all Dec ~-39.5, the slice the cap
+dropped) now appear. **Originals NOT byte-identical:** clean OLD-vs-NEW control
+(`tmp/fix2_e2e_oldnew.py`) shows **6/19 shift, max |dmag|=0.122**, because `variable_targets` also
+drives the global comp-pool veto -> newly-recognised variables are purged from the ensemble
+(deterministic comp-purity improvement). **Milan accepted the coupling.** (Earlier "old-code
+control" was invalid: `ensure_full_..._stub` writes the restore back to `vt_path.parent`, clobbering
+the 26-row backup to 100.)
+
+**Fix 3 (completeness gate):** `audit_photometry_completeness` (`night_run.py:385`) now scores
+coverage against **measurable** targets (missing-and-fainter-than-achieved-depth = honest, doesn't
+fail; missing-but-detectable = truncation, still fails). Depth derived from data -> no new param.
+Tests `tests/test_completeness_gate_measurable.py` 4/4. Real data: the task's g **86.4% (19/22)**
+now PASS (`measurable_ratio=1.0`, 3 below depth 13.82); uncapped 67/71 PASS.
+
+**Fix 4 (log flood):** `NoDetectionsWarning` suppressed in the DAO pass-2 targeted-cutout loop,
+misses counted, one summary line per stage (`pipeline.py:6420-6480`). No detection change.
+
+**Pre-flip demo (`tmp/demo_preflip.py`):** pre-flip floor is tens of mmag (best lc_rms 13.6, p25
+40.5; check-scatter min 28, median 84 mmag), confirming "defocus helps bright" and that all-RED
+night-wide is the post-flip collapse. But bright named variables do NOT reach GREEN pre-flip either
+(all 68 RED) -- driven by check-star verification gaps (28), check-scatter-high (38), and lunar
+background (73% moon). Distinct from the flip; sharpens Round-2 (epoch-quality + bright-star
+check-star/comp handling).
+
+---
+
 ## Session -- Phase-1b: per-target comp_rms gate authoritative for N_good (2026-06-16)
 
 **Landed:** known-issue (b) closed. The per-target `phase01_comparison_max_comp_rms` (=0.1) gate is now

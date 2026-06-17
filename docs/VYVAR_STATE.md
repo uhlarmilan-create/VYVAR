@@ -1,7 +1,10 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-16** (Phase-1 graceful comp degradation committed + matrix `164157` validated;
-simple-differential PRODUCTION; known-issue (b) pending immediate fix).
+Last updated: **2026-06-17** (Round 1 four known fixes verified on draft_413 g: A-durable MP-reload
+robustness, B-cap spatial-first variable_targets [+comp-purity coupling, Milan-accepted], measurable
+completeness gate, NoDetections log-flood summary; simple-differential PRODUCTION).
+Prior: 2026-06-16 (Phase-1 graceful comp degradation committed + matrix `164157` validated;
+known-issue (b) closed).
 
 This is the **entry point**: a snapshot of what is true *now* + an index. It deliberately holds
 no history and no open-task detail -- those live in the linked files.

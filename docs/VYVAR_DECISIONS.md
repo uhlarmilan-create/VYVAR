@@ -6,6 +6,42 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## variable_targets selection is spatial-first (frame bbox), and it also purges variables from the comp pool (2026-06-17)
+
+VSX `variable_targets` are selected from the **frame footprint** (frame bbox + the 50 px in-frame
+margin) via `_query_vsx_local_frame_bbox`, **not** the 3.5° cone box. The cone hit
+`catalog_query_max_rows=15000` with **no `ORDER BY`** and silently dropped a contiguous Dec slice
+(the northern half of the field, incl. bright named variables — V0454 CrA m9.9, KQ/KM/KT CrA).
+Completeness must not depend on row order; the bbox is sub-degree so the SQL result is tiny and the
+cap never bites.
+
+**Accepted consequence (Milan, 2026-06-17): this is NOT a pure target-add.** The same
+`variable_targets` list drives the **global comparison-pool veto**
+(`build_global_comp_pool(..., variable_target_catalog_ids=...)`). The now-complete list correctly
+removes newly-recognised variables from the comparison ensemble, which shifts a minority of
+previously-measured targets (draft_413 g: 6/19, max |Δmag|=0.122) — both by dropping a
+variable-as-comp directly and by lowering surviving comps' field-wide RMS (the variables had
+inflated ensemble scatter) so weights re-rank. This is a comp-purity **improvement**, deterministic,
+and accepted as the correct behaviour. Byte-identity vs the capped baseline is therefore *not* a
+goal for B. The plan-level `comparison_stars.csv` (the unconditional cone veto in
+`write_photometry_plan_files`) is byte-identical old-vs-new; the shift is entirely in the phase-1
+global-pool path. Evidence: `CURSOR_RESULT_round1.md`, `tmp/fix2_e2e_oldnew.py`,
+`tmp/fix2_mechanism3.py`.
+
+## Completeness gate scores measurable targets, not raw active count (2026-06-17)
+
+`audit_photometry_completeness` (`night_run.py`) is a **false-success / truncation** guard, not a
+yield gate. Its verdict is taken against **measurable** targets: a missing target (active, no
+summary row) counts as honest *unmeasurable* (does NOT fail) when it is fainter than the achieved
+detection depth (faintest measured target's catalog mag); a missing target at-or-above depth is a
+*measurable miss* and still fails (the silent-truncation guard — draft_383/385-style cut-short runs
+must fail). Depth is derived from the data, so **no new threshold/param** is introduced.
+Conservative fallbacks (no mag, nothing measured) treat misses as measurable so truncation can never
+masquerade as honest. This unblocks honest RED nights (g 19/22 = 86.4% now PASS) without weakening
+the guard. Evidence: `tests/test_completeness_gate_measurable.py` (4/4).
+
+---
+
 ## Product scope: light curves in, period science out (2026-06-09)
 
 **VYVAR scope:** produce, validate, and prepare light curves for submission (AAVSO / VarAstro / VSX).
