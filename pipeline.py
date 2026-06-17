@@ -28,6 +28,7 @@ from astropy.wcs import FITSFixedWarning
 import pandas as pd
 
 from config import AppConfig, load_config_json
+import vyvar_alignment_frame  # A-durable: fresh-attr MP func lookup at dispatch (reload-safe)
 from vyvar_alignment_frame import (
     _alignment_compute_one_frame,
     _alignment_detect_xy,
@@ -12803,17 +12804,40 @@ def _astrometry_align_impl_body(
             "fb_align": float(_align_ctx["fb_align"]),
             "rotation_ref_angle_deg": _align_ctx["rotation_ref_angle_deg"],
         }
-        with ProcessPoolExecutor(
-            max_workers=n_align_workers,
-            initializer=_astrometry_align_mp_init,
-            initargs=(_mp_ctx,),
-        ) as pool:
-            raw_list = list(pool.map(_astrometry_align_mp_task, align_tasks, chunksize=1))
-        for res in raw_list:
-            for ln in res.get("log_events", ()):
-                log_event(ln)
-            res_flush = {k: v for k, v in res.items() if k != "log_events"}
-            _flush_one_alignment(res_flush)
+        def _run_alignment_single_process() -> None:
+            for fp_s, idx in align_tasks:
+                res = _alignment_compute_one_frame(Path(fp_s), int(idx), _align_ctx, None)
+                _flush_one_alignment(res)
+
+        # A-durable: resolve the MP init/task by FRESH module attribute at call time, so the
+        # objects handed to the spawn pool are exactly what sys.modules resolves — even if the
+        # Streamlit file-watcher reloaded vyvar_alignment_frame after pipeline.py was imported
+        # (the import-time `from … import` binding would otherwise go stale → PicklingError).
+        _mp_init = vyvar_alignment_frame._astrometry_align_mp_init
+        _mp_task = vyvar_alignment_frame._astrometry_align_mp_task
+        try:
+            with ProcessPoolExecutor(
+                max_workers=n_align_workers,
+                initializer=_mp_init,
+                initargs=(_mp_ctx,),
+            ) as pool:
+                raw_list = list(pool.map(_mp_task, align_tasks, chunksize=1))
+            for res in raw_list:
+                for ln in res.get("log_events", ()):
+                    log_event(ln)
+                res_flush = {k: v for k, v in res.items() if k != "log_events"}
+                _flush_one_alignment(res_flush)
+        except pickle.PicklingError as _pkl_err:
+            # Robust fallback: if the spawn pool cannot pickle the MP funcs (e.g. mid-run module
+            # reload defeats the fresh-attr lookup), run alignment single-process instead of
+            # aborting. Photometry is byte-identical to the MP path (same per-frame compute).
+            # PicklingError is raised at task-submission (pickling the worker funcs) before any
+            # result is flushed, so no partial per-frame state exists here — run single-process.
+            _pipeline_ui_info(
+                f"Alignment: multiprocessing dispatch failed to pickle worker functions "
+                f"({_pkl_err}); falling back to single-process alignment."
+            )
+            _run_alignment_single_process()
     else:
         for fp_s, idx in align_tasks:
             res = _alignment_compute_one_frame(Path(fp_s), int(idx), _align_ctx, None)
