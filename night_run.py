@@ -387,9 +387,19 @@ def audit_photometry_completeness(
     *,
     min_ratio: float = _PHOTOMETRY_COMPLETENESS_MIN_RATIO,
 ) -> dict[str, Any]:
-    """Compare ``photometry_summary.csv`` row count to ``active_targets.csv``.
+    """False-success guard: did photometry process every *measurable* active target?
 
-    Silent truncation (e.g. 69/373 targets) must fail the night run, not report success.
+    Compares ``photometry_summary.csv`` rows to ``active_targets.csv``, but the verdict is taken
+    against **measurable** targets only. A target is counted *unmeasurable* (honest, must NOT fail
+    the run) when it produced no summary row AND is fainter than the deepest target that *was*
+    measured — i.e. below the achieved per-setup detection depth (undetected / too faint / RED).
+    Targets that are missing yet bright enough to be measurable (≤ achieved depth) are *measurable
+    misses* and still fail the run — this preserves the silent-truncation guard (draft_383/385:
+    e.g. 69/373), where a cut-short process drops bright, on-frame, detectable targets.
+
+    Depth is taken from the data itself (faintest measured target's catalog mag), so no new
+    threshold/parameter is introduced. Conservative fallbacks (no mag, nothing measured) count a
+    miss as *measurable* so truncation can never masquerade as honest unmeasurability.
     """
     output_dir = Path(output_dir)
     active_csv = output_dir / "active_targets.csv"
@@ -398,8 +408,13 @@ def audit_photometry_completeness(
         "output_dir": str(output_dir),
         "n_active_targets": 0,
         "n_summary_rows": 0,
+        "n_unmeasurable_missing": 0,
+        "n_measurable_active": 0,
+        "n_measurable_missing": 0,
+        "achieved_depth_mag": float("nan"),
         "min_ratio": float(min_ratio),
         "ratio": float("nan"),
+        "measurable_ratio": float("nan"),
         "ok": False,
     }
     if not active_csv.is_file():
@@ -420,11 +435,48 @@ def audit_photometry_completeness(
     out["n_summary_rows"] = n_summary
     if n_active <= 0:
         out["ratio"] = 1.0 if n_summary == 0 else 0.0
+        out["measurable_ratio"] = out["ratio"]
         out["ok"] = n_summary == 0
         return out
-    ratio = n_summary / n_active
-    out["ratio"] = float(ratio)
-    out["ok"] = ratio >= float(min_ratio)
+
+    raw_ratio = n_summary / n_active
+    out["ratio"] = float(raw_ratio)
+
+    # Classify missing targets (active but no summary row) by achieved depth.
+    def _norm_id(s: pd.Series) -> pd.Series:
+        return s.astype(str).str.strip()
+
+    n_measurable_missing = n_active - n_summary  # conservative default (treat all as measurable)
+    achieved_depth = float("nan")
+    if "catalog_id" in at_df.columns and "catalog_id" in sm_df.columns:
+        measured_ids = set(_norm_id(sm_df["catalog_id"]).tolist())
+        at_ids = _norm_id(at_df["catalog_id"])
+        is_measured = at_ids.isin(measured_ids)
+        at_mag = pd.to_numeric(at_df.get("mag"), errors="coerce") if "mag" in at_df.columns else None
+        if at_mag is not None:
+            measured_mag = at_mag[is_measured].dropna()
+            if not measured_mag.empty:
+                achieved_depth = float(measured_mag.max())
+            missing_mag = at_mag[~is_measured]
+            if math.isfinite(achieved_depth):
+                # Unmeasurable = missing AND fainter than the deepest measured target.
+                unmeasurable_mask = (~is_measured) & at_mag.notna() & (at_mag > achieved_depth)
+                n_unmeasurable = int(unmeasurable_mask.sum())
+            else:
+                # Nothing measured → cannot assert depth → all misses are measurable (truncation).
+                n_unmeasurable = 0
+            n_measurable_missing = int((~is_measured).sum()) - n_unmeasurable
+            out["n_unmeasurable_missing"] = n_unmeasurable
+
+    n_measurable_missing = max(0, int(n_measurable_missing))
+    out["n_measurable_missing"] = n_measurable_missing
+    n_measurable_active = n_summary + n_measurable_missing
+    out["n_measurable_active"] = int(n_measurable_active)
+    out["achieved_depth_mag"] = float(achieved_depth)
+
+    measurable_ratio = (n_summary / n_measurable_active) if n_measurable_active > 0 else 1.0
+    out["measurable_ratio"] = float(measurable_ratio)
+    out["ok"] = measurable_ratio >= float(min_ratio)
     return out
 
 
@@ -1008,15 +1060,22 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             if not audit.get("ok"):
                 n_sm = int(audit.get("n_summary_rows") or 0)
                 n_at = int(audit.get("n_active_targets") or 0)
-                ratio = audit.get("ratio")
-                ratio_s = f"{float(ratio):.1%}" if ratio is not None and math.isfinite(float(ratio)) else "n/a"
+                n_meas = int(audit.get("n_measurable_active") or 0)
+                n_unmeas = int(audit.get("n_unmeasurable_missing") or 0)
+                mratio = audit.get("measurable_ratio")
+                mratio_s = (
+                    f"{float(mratio):.1%}"
+                    if mratio is not None and math.isfinite(float(mratio))
+                    else "n/a"
+                )
                 err_detail = audit.get("error")
                 if err_detail:
                     completeness_issues.append(f"{nm}: {err_detail}")
                 else:
                     completeness_issues.append(
-                        f"{nm}: photometry_summary {n_sm}/{n_at} ({ratio_s} coverage, "
-                        f"min {_PHOTOMETRY_COMPLETENESS_MIN_RATIO:.0%} required)"
+                        f"{nm}: photometry_summary {n_sm}/{n_meas} measurable targets "
+                        f"({mratio_s} coverage, min {_PHOTOMETRY_COMPLETENESS_MIN_RATIO:.0%} required; "
+                        f"{n_unmeas} of {n_at} active are below achieved depth → unmeasurable)"
                     )
 
             # Step 15: PDF per group
