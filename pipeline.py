@@ -6413,54 +6413,70 @@ def _dao_targeted_pass2_unmatched_gaia(
     pass2_rows: list[dict[str, float]] = []
     center_tol = 5.0
 
-    for i in unmatched_idx:
-        x0 = float(gx[i])
-        y0 = float(gy[i])
-        ix, iy = int(round(x0)), int(round(y0))
-        xlo, xhi = max(0, ix - hw), min(int(wpx), ix + hw + 1)
-        ylo, yhi = max(0, iy - hw), min(int(h), iy + hw + 1)
-        if xhi - xlo < 7 or yhi - ylo < 7:
-            continue
-        cutout = data0[ylo:yhi, xlo:xhi]
-        _, local_std = _dao_pass2_annulus_stats(data0, x0, y0)
-        if not (math.isfinite(local_std) and local_std > 0):
-            continue
-        thr2 = max(sigma_p2 * float(local_std), 1e-6)
-        try:
-            finder2 = DAOStarFinder(
-                fwhm=float(fwhm_cut),
-                threshold=float(thr2),
-                brightest=None,
-                **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
-            )
-            tloc = finder2(cutout)
-        except Exception:  # noqa: BLE001
-            continue
-        if tloc is None or len(tloc) == 0:
-            continue
-        xc = np.asarray(tloc["xcentroid"], dtype=np.float64)
-        yc = np.asarray(tloc["ycentroid"], dtype=np.float64)
-        x_full = xlo + xc
-        y_full = ylo + yc
-        dctr = np.hypot(x_full - x0, y_full - y0)
-        j = int(np.argmin(dctr))
-        if float(dctr[j]) > center_tol:
-            continue
-        flux_np = np.asarray(tloc["flux"], dtype=np.float64)
-        peak_np = (
-            np.asarray(tloc["peak"], dtype=np.float64)
-            if "peak" in tloc.colnames
-            else flux_np
-        )
-        pass2_rows.append(
-            {
-                "x_full": float(x_full[j]),
-                "y_full": float(y_full[j]),
-                "flux": float(flux_np[j]),
-                "peak": float(peak_np[j]),
-            }
-        )
+    # Hygiene: targeted-cutout DAO on empty patches floods the log with one
+    # photutils NoDetectionsWarning per miss (thousands per frame). Suppress the
+    # per-occurrence warning, count the misses, and emit a single summary line.
+    from photutils.utils.exceptions import NoDetectionsWarning  # noqa: PLC0415
 
+    n_empty_cutouts = 0
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", NoDetectionsWarning)
+        for i in unmatched_idx:
+            x0 = float(gx[i])
+            y0 = float(gy[i])
+            ix, iy = int(round(x0)), int(round(y0))
+            xlo, xhi = max(0, ix - hw), min(int(wpx), ix + hw + 1)
+            ylo, yhi = max(0, iy - hw), min(int(h), iy + hw + 1)
+            if xhi - xlo < 7 or yhi - ylo < 7:
+                continue
+            cutout = data0[ylo:yhi, xlo:xhi]
+            _, local_std = _dao_pass2_annulus_stats(data0, x0, y0)
+            if not (math.isfinite(local_std) and local_std > 0):
+                continue
+            thr2 = max(sigma_p2 * float(local_std), 1e-6)
+            try:
+                finder2 = DAOStarFinder(
+                    fwhm=float(fwhm_cut),
+                    threshold=float(thr2),
+                    brightest=None,
+                    **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
+                )
+                tloc = finder2(cutout)
+            except Exception:  # noqa: BLE001
+                continue
+            if tloc is None or len(tloc) == 0:
+                n_empty_cutouts += 1
+                continue
+            xc = np.asarray(tloc["xcentroid"], dtype=np.float64)
+            yc = np.asarray(tloc["ycentroid"], dtype=np.float64)
+            x_full = xlo + xc
+            y_full = ylo + yc
+            dctr = np.hypot(x_full - x0, y_full - y0)
+            j = int(np.argmin(dctr))
+            if float(dctr[j]) > center_tol:
+                continue
+            flux_np = np.asarray(tloc["flux"], dtype=np.float64)
+            peak_np = (
+                np.asarray(tloc["peak"], dtype=np.float64)
+                if "peak" in tloc.colnames
+                else flux_np
+            )
+            pass2_rows.append(
+                {
+                    "x_full": float(x_full[j]),
+                    "y_full": float(y_full[j]),
+                    "flux": float(flux_np[j]),
+                    "peak": float(peak_np[j]),
+                }
+            )
+
+    if n_empty_cutouts > 0:
+        LOGGER.info(
+            "[DAO pass 2] %d/%d targeted cutouts had no detection "
+            "(NoDetectionsWarning suppressed)",
+            int(n_empty_cutouts),
+            int(n_unmatched),
+        )
     merged = _merge_dao_pass1_pass2_tables(tbl_pass1, pass2_rows, bfac=int(bfac), dedup_px=3.0)
     return merged, n_unmatched, len(pass2_rows)
 
