@@ -58,11 +58,20 @@ Diagnosed and measured in isolation on draft_413 g; writeup `CURSOR_RESULT_round
   robust-outlier + FWHM guard; cuts bright-target LC scatter median −257 mmag on draft_413 g.
 
 **Round 2 open follow-ups (HIGH):**
-- **Trust still RED after B.2** — the gate fixes scatter, not trust. RED is set by the structural
-  check-star/thin-comp/colour-term-off chain. Next: revisit bright-star check-star selection +
-  thin-comp handling so cleaned bright targets can reach GREEN.
-- **Frame-quality gate scope** — currently Phase-2A only (target LC/trust). Consider extending the
-  same per-frame gate to Phase-0+1 comp selection.
+- **OUTSTANDING — UI-VYVAR live test of A-durable** (the one validation still pending from this
+  session). In the Streamlit UI, reach the alignment MP stage, save a watched `.py` to trigger a
+  mid-run reload, and confirm **no PicklingError** (MP continues via fresh-attr dispatch, or the
+  single-process fallback engages). Headless never reproduces it — must be exercised in the UI.
+- **Structural comp / check-star yield = next lever for GREEN on bright/sparse fields** — post-B.2,
+  trust RED is **structural** (check-star gaps, thin comps, colour-term-off), **not** LC scatter
+  (the gate already fixed scatter, median −257 mmag). `green_min=3` is literature-grounded → improve
+  comp/check-star **yield**; do NOT relax the gate.
+- **Flip-aware comp selection (candidate)** — when a meridian flip is detected, prefer **near-target**
+  comps (per-side normalization as an alternative). Root cause = uncorrected flat-field on non-cal
+  data under the 180° p→−p mapping; evidence = V0454 flip diagnostic (±0.1 mag position-dependent
+  post-flip step; `docs/round2_figs/v0454_flip_diag.png`, DECISIONS). Connects to the comp follow-up.
+- **B.2 frame-quality gate Phase-0+1 extension (future)** — gate collapsed frames at
+  **comp-selection** time too, not only Phase 2A; may recover comps and feed the structural follow-up.
 
 ---
 

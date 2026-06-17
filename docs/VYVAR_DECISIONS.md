@@ -6,6 +6,33 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## V0454 CrA amplitude = real eclipse egress + a position-dependent meridian-flip step (2026-06-17)
+
+**Finding (diagnose-only, no code change).** V0454 CrA's ~0.45 mag gate-ON rise on draft_413 g
+decomposes into a **real eclipse egress that dominates ~4:1** plus a **secondary ~+0.1 mag
+post-fainter meridian-flip step**. The egress and the flip coincide in time (egress is pre-flip,
+plateau is post-flip) but are cleanly separated by their comp-dependence:
+
+- **Egress is real (comp-invariant).** Differential curves vs comps spanning 141–1840 px overlay in
+  the pre-flip branch: pre-flip rise mean −0.288, **std 0.088 mag**; ~0.369 mag of the rise occurs
+  *within the single pre-flip orientation* (no flip involved); SIPS independently reproduces the same
+  egress→plateau on the same aligned frames.
+- **Flip step is instrumental (comp/position-dependent).** Post-flip offsets fan out with comp
+  position: near-centre comps −0.25, mid/far −0.38…−0.53 (**std 0.174 mag** across comps). Check stars
+  near V0454 show a cross-flip step **median +0.100 mag (post-fainter)**, growing with separation
+  (~0 co-located → +0.2 at ~450 px). Boundary continuity (D3) shows the post-flip plateau sits +0.144
+  mag below the extrapolated egress (part natural turnover, part step).
+
+**Consequence.** The VYVAR-0.450 vs SIPS-0.548 amplitude gap (0.098 mag) is a **comp-choice / flip-step
+artifact, not a pixel-data disagreement** — SIPS used the identical aligned frames; its comp simply
+carried a flip step opposite to VYVAR's near-centre ensemble (measuring V0454 against far comps yields
+~0.55 mag, SIPS-like). Root cause = **uncorrected flat-field under the 180° p→−p flip mapping**,
+exacerbated by non-cal data. This grounds the ROADMAP **flip-aware comp selection** candidate (prefer
+near-target comps / per-side normalization when a flip is detected). Evidence: `tmp/v0454_flip_diag.md`
+(throwaway), `docs/round2_figs/v0454_flip_diag.png`, JOURNAL 2026-06-17 end-of-day.
+
+---
+
 ## Aperture-skirt fix REJECTED; transparency frame-quality gate ADOPTED (default-OFF) (2026-06-17)
 
 **B.1 aperture-skirt — not implemented.** The SNR-optimal science aperture (~5 px) captures only

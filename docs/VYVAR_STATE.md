@@ -1,6 +1,15 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-17** (Part A clean baseline committed [6 commits, push gated]; Round 2:
+Last updated: **2026-06-17 (end-of-day)** — clean committed **+ pushed** baseline at `955b850`
+(8 commits: `1eea2d2` masterstar recovery, `e042bc1` A-durable, `d222eb7` B-cap, `2cc2b76`
+completeness gate, `63e57c0` log-flood, `a126980` B.2 gate, `15c699e`/`955b850` docs). `draft_413` =
+Boyden V454 CrA non-cal sandbox (g+r; **g fully validated** this session). Validated this session:
+non-cal ingest, headless run, meridian-flip handling, Brno gate, B-cap, B.2 (default-OFF). **V0454 CrA
+flip diagnostic:** the 0.45 mag rise = real eclipse egress (~0.37 mag, comp-invariant, SIPS-corroborated)
+dominating ~4:1 over a ~+0.1 mag position-dependent meridian-flip step (explains the 0.45-vs-SIPS-0.548
+gap as comp choice, not pixels; see DECISIONS + `docs/round2_figs/v0454_flip_diag.png`). **Pending:
+UI-VYVAR live test of A-durable** (ROADMAP).
+Prior: 2026-06-17 (Part A clean baseline committed [6 commits, push gated]; Round 2:
 B.1 aperture-skirt **refuted** by COG/scatter diagnostic [not implemented]; B.2 transparency
 **frame-quality gate** implemented behind default-OFF `frame_quality_gate_enabled` -- isolated
 measurement on draft_413 g cuts bright-target LC scatter by median -257 mmag, trust still RED

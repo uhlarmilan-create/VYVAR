@@ -2,6 +2,51 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- Boyden V454 CrA (draft_413) sandbox: robustness hardening on defocused meridian-flip data (2026-06-17, end-of-day)
+
+Stress-tested VYVAR on real external Brno-group data (Boyden, V454 CrA, non-cal, defocused, dense
+bulge, meridian flip) to harden robustness for arbitrary photometrists. Clean committed baseline at
+`955b850` (**pushed**).
+
+**Shipped (8 commits).** `1eea2d2` masterstar catalog-recovery + sibling-WCS + per-set fault isolation
+(the 2026-06-14 work, previously uncommitted -- 3-day drift -- now committed; tree hygiene: 16
+accidentally-deleted docs restored incl. the operating-principles charter, `config.json` observer
+location reverted to Jirny). `e042bc1` A-durable MP-reload robustness (UI crash = Streamlit watcher
+reloading `vyvar_alignment_frame` mid-run -> desynced import-time MP bindings -> spawn-pool
+PicklingError; fix = fresh module-attribute lookup at dispatch + PicklingError->single-process
+fallback; headless never hit it). `d222eb7` B-cap spatial-first `variable_targets` (the 15000-row VSX
+cap with no ORDER BY truncated a contiguous Dec slice -> dropped the northern half of the field's VSX
+incl. bright named variables V0454/KQ/KM/KT CrA, AND those known variables silently stayed in the comp
+pool; fix = frame-bbox query, no cap; re-baseline in DECISIONS: 6/19 originals shift <=0.122 mag, a
+comp-purity correction). `2cc2b76` completeness gate scores measurable targets (honest-RED passes,
+truncation still fails). `63e57c0` NoDetectionsWarning summarized. `a126980` B.2 frame-quality gate
+(default-OFF; `flux_large/flux` concentration z-cut + FWHM guard isolates the 13 collapsed post-flip
+frames; precision win bright-target lc_rms median -257 mmag, flat star 0.342->0.035; trust stays RED --
+structural, not scatter; Howell 1989 gated; scope Phase 2A only). `15c699e` / `955b850` docs.
+
+**Findings.** Meridian flip benign for alignment (~180 deg rotation, det>0, 100% aligned). Brno gate
+correct on defocused fine-scale data (Moffat mismatch 8.7/6.5% -> SAFE_LOW_YIELD, PSF correctly OFF,
+aperture+COG ran; blend~0, completeness 1.0; defocus limits depth 12.5-13.9 mag). B.1 aperture-skirt
+**refuted** (35% skirt loss real but differential scatter flat -- common-mode PSF breathing cancels;
+widening adds sky noise, FWHM-adaptive worse; matters only for absolute photometry, so
+`cog_aperture_correction` correctly stays OFF). **V0454 CrA vs SIPS (`v0454_flip_diag`,
+`docs/round2_figs/v0454_flip_diag.png`):** the ~0.45 mag gate-ON rise decomposes into a **real eclipse
+egress** (comp-invariant pre-flip rise ~0.37 mag, std 0.088 across comps 141-1840 px; ~0.369 mag occurs
+*within the pre-flip orientation* with no flip; SIPS-corroborated) **dominating ~4:1** over a
+**meridian-flip step ~+0.1 mag post-fainter** (D2 check-star median +0.100; D3 boundary jump +0.144;
+D1 comp-dependent post-flip offset std 0.174, near -0.25 -> far/mid -0.38..-0.53). The flip step is
+comp/position-dependent and explains the 0.45-vs-SIPS-0.548 amplitude gap (**comp choice, not pixels** --
+SIPS used the same aligned frames); root cause = uncorrected flat-field under the 180 deg p->-p mapping,
+exacerbated by non-cal data; confirmed independently by SIPS (manual multi-comp) and VYVAR.
+
+**Process.** Diagnose-before-fix paid off (B.1 refuted before shipping a noise-adding fix; the flip
+step was measured, not assumed). Hygiene lesson: the 3-day uncommitted drift + accidental doc deletions
+must not recur -- commit at the end of each session.
+
+**Outstanding:** UI-VYVAR live test of A-durable (deferred to next session).
+
+---
+
 ## Session -- Part A clean state + Round 2 (B.1 refuted, B.2 gate) (2026-06-17)
 
 **Part A (clean committed baseline).** Executed Milan triage: masterstar catalog-recovery /
