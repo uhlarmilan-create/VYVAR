@@ -4509,6 +4509,81 @@ def _query_vsx_local(
     return out
 
 
+def _query_vsx_local_frame_bbox(
+    *,
+    wcs: Any,
+    width_px: int,
+    height_px: int,
+    vsx_db_path: Path | None,
+    margin_px: float = 50.0,
+    center: SkyCoord | None = None,
+) -> pd.DataFrame:
+    """Query **local VSX** within the FRAME footprint (frame bbox + ``margin_px``), spatial-first.
+
+    Completeness must not depend on row order: the frame bbox is tiny (sub-degree), so the SQL
+    result is small and the global ``catalog_query_max_rows`` cap never truncates it (unlike the
+    3.5° cone in ``_query_vsx_local``, which hit the 15000-row cap and dropped a contiguous Dec
+    slice). Returns raw VSX rows over the bbox; the caller applies the precise in-frame pixel
+    filter (matching ``margin_px``). RA wrap is handled via centre-relative offsets.
+    """
+    if vsx_db_path is None:
+        return pd.DataFrame()
+    vp = Path(vsx_db_path).expanduser().resolve()
+    if not vp.is_file():
+        return pd.DataFrame()
+    m = float(margin_px)
+    w = float(width_px)
+    h = float(height_px)
+    # Pixel-space samples covering the frame border + margin (corners + edge midpoints).
+    xs_px = np.asarray([-m, w * 0.5, w + m, -m, w + m, -m, w * 0.5, w + m], dtype=np.float64)
+    ys_px = np.asarray([-m, -m, -m, h * 0.5, h * 0.5, h + m, h + m, h + m], dtype=np.float64)
+    try:
+        world = wcs.all_pix2world(xs_px, ys_px, 0)
+        ras = np.asarray(world[0], dtype=np.float64)
+        decs = np.asarray(world[1], dtype=np.float64)
+    except Exception:  # noqa: BLE001
+        return pd.DataFrame()
+    ok = np.isfinite(ras) & np.isfinite(decs)
+    if not bool(ok.any()):
+        return pd.DataFrame()
+    ras = ras[ok]
+    decs = decs[ok]
+    de_min = float(np.min(decs))
+    de_max = float(np.max(decs))
+    if center is not None:
+        try:
+            ra0 = float(center.icrs.ra.deg)
+        except Exception:  # noqa: BLE001
+            ra0 = float(np.median(ras))
+    else:
+        ra0 = float(np.median(ras))
+    dra = ((ras - ra0 + 180.0) % 360.0) - 180.0
+    ra_min = ra0 + float(np.min(dra))
+    ra_max = ra0 + float(np.max(dra))
+    pad = 1.0 / 3600.0  # 1 arcsec rounding pad
+    rows = query_local_vsx(
+        vp,
+        ra_min=ra_min - pad,
+        ra_max=ra_max + pad,
+        dec_min=de_min - pad,
+        dec_max=de_max + pad,
+        max_rows=None,  # frame bbox is tiny → no cap needed (spatial-first completeness)
+    )
+    if not rows:
+        return pd.DataFrame()
+    df = pd.DataFrame(rows)
+    if "ra_deg" not in df.columns or "dec_deg" not in df.columns:
+        return pd.DataFrame()
+    try:
+        log_event(
+            f"CATALOG SEARCH (VSX local, frame bbox+{int(m)}px): {len(df)} zdrojov "
+            f"(RA=[{ra_min:.4f},{ra_max:.4f}], Dec=[{de_min:.4f},{de_max:.4f}], bez cap)"
+        )
+    except Exception:  # noqa: BLE001
+        pass
+    return df
+
+
 def _saturate_limit_adu_from_header(hdr: fits.Header) -> float | None:
     """Return saturation / linearity ceiling in image units (ADU, e⁻, …) if present in header."""
     import math
@@ -5697,7 +5772,22 @@ def write_photometry_plan_files(
                     _vsx_p3 = Path(_vsp3).expanduser().resolve()
             except Exception:  # noqa: BLE001
                 _vsx_p3 = None
-            vsx_df = _query_vsx_local(center=center, radius_deg=float(radius_deg), vsx_db_path=_vsx_p3)
+            # B-cap fix: variable_targets are driven by the FRAME footprint (bbox + the same
+            # 50px margin used by the in-frame pixel filter below), not the 3.5° cone box. The
+            # cone box hit the 15000-row catalog_query_max_rows cap (no ORDER BY) and silently
+            # dropped a contiguous Dec slice (northern half of the field, incl. bright named
+            # variables). The frame bbox is tiny → no cap → spatial-first completeness. Note this
+            # list also drives the global comparison-pool veto, so the now-complete variable set
+            # correctly purges newly-recognised variables from the comp ensemble (Milan-approved,
+            # CURSOR_RESULT_round1).
+            vsx_df = _query_vsx_local_frame_bbox(
+                wcs=w0,
+                width_px=int(wpx),
+                height_px=int(h),
+                vsx_db_path=_vsx_p3,
+                margin_px=50.0,
+                center=center,
+            )
             n_vsx_in_cone = int(len(vsx_df)) if vsx_df is not None else 0
             _vsx_n_cone = n_vsx_in_cone
             try:
