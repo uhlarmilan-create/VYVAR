@@ -561,6 +561,7 @@ def _run_vyvar_full_pipeline(
             run_groups = list(sorted(all_setups.keys()))
 
         errors: list[str] = []
+        completed: list[str] = []
         for nm in run_groups:
             p = all_setups.get(str(nm)) or {}
             ms_fits = Path(p.get("masterstar_fits")) if p.get("masterstar_fits") else None
@@ -599,6 +600,7 @@ def _run_vyvar_full_pipeline(
                     draft_id=int(_did),
                     progress_cb=_prog_phot,
                 )
+                completed.append(str(nm))
                 try:
                     from photometry_report import generate_all_method_photometry_reports  # noqa: PLC0415
 
@@ -614,10 +616,24 @@ def _run_vyvar_full_pipeline(
                     log_event(f"[RUN VYVAR] SUMMARY MEASURE REPORT zlyhal: {_pdf_err}")
             except Exception as exc_nm:  # noqa: BLE001
                 errors.append(f"{nm}: {exc_nm}")
-        if errors:
+        _astro_skips = (
+            [str(s.get("setup") or "?") for s in (_ps_out.get("skipped_subgroups") or [])]
+            if isinstance(_ps_out, dict)
+            else []
+        )
+        _all_problems = list(errors) + [f"{nm}: plate-solve skipped" for nm in _astro_skips]
+        if _all_problems and not completed:
             return _fail(
                 "Phase 0+1 + Phase 2A (photometry)",
-                RuntimeError(" ; ".join(errors)),
+                RuntimeError(" ; ".join(_all_problems)),
+            )
+        if _all_problems:
+            log_event(
+                "⚠ RUN VYVAR dokončený ČIASTOČNE — OK: ["
+                + ", ".join(completed)
+                + "]; preskočené/zlyhané: ["
+                + " ; ".join(_all_problems)
+                + "]"
             )
 
         # Fresh pipeline outputs: force Variability tab to re-run detection on next render.

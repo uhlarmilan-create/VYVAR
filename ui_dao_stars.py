@@ -145,6 +145,108 @@ def render_dao_stars_dashboard(
         "that skews diagnostics."
     )
 
+    st.markdown("#### Catalog-recovery verification (MASTERSTAR accept gate)")
+    st.caption(
+        "Default **odds** mode: accept when tight matches vastly exceed chance (false-alarm p). "
+        "Recovery fraction, centre RMS, and distortion are **quality flags only** (VY_QFLAG). "
+        "Legacy **fraction** mode still available via ``masterstar_accept_mode``."
+    )
+    _cur_rec = float(getattr(cfg, "masterstar_catalog_recovery_min", 0.65))
+    _cur_floor = int(getattr(cfg, "masterstar_min_matched_floor", 40))
+    _cur_centre = float(getattr(cfg, "masterstar_centre_rms_max_px", 1.20))
+    _cur_ratio = float(getattr(cfg, "masterstar_distortion_benign_ratio_max", 3.20))
+    rec_min = st.slider(
+        "masterstar_catalog_recovery_min",
+        min_value=0.40,
+        max_value=0.95,
+        value=min(max(_cur_rec, 0.40), 0.95),
+        step=0.01,
+        key="vyvar_dao_rec_min",
+        help="Minimum fraction of in-frame Gaia stars recovered at 2.5 px (Brno r ~0.84, z ~0.34).",
+    )
+    matched_floor = st.slider(
+        "masterstar_min_matched_floor",
+        min_value=1,
+        max_value=200,
+        value=min(max(_cur_floor, 1), 200),
+        step=1,
+        key="vyvar_dao_matched_floor",
+        help="Absolute floor on tight-matched catalog stars (prevents tiny fields passing on high fraction alone).",
+    )
+    centre_rms_max = st.slider(
+        "masterstar_centre_rms_max_px",
+        min_value=0.5,
+        max_value=3.0,
+        value=min(max(_cur_centre, 0.5), 3.0),
+        step=0.05,
+        key="vyvar_dao_centre_rms",
+        help="Centre residual RMS cap when edge/centre ratio is elevated but benign overall.",
+    )
+    benign_ratio = st.slider(
+        "masterstar_distortion_benign_ratio_max",
+        min_value=2.0,
+        max_value=5.0,
+        value=min(max(_cur_ratio, 2.0), 5.0),
+        step=0.05,
+        key="vyvar_dao_benign_ratio",
+        help="Max edge/centre residual ratio for distortion-limited benign classification (was 2.50).",
+    )
+    _detail_help(
+        "masterstar_catalog_recovery_min / min_matched_floor / centre_rms_max_px",
+        phase="MASTERSTAR — post-solve QA before WCS persist.",
+        used_in="Replaces detection-denominated match% as the accept gate; hint_sep is warning-only when verified.",
+        compute="catalog_recovery_tight = n_matched_tight / n_cat_in_frame at wcs_final.",
+    )
+
+    st.markdown("#### Sibling-WCS Pass 2 recovery")
+    st.caption(
+        "After independent plate-solve per filter, failed filters may inherit a verified sibling's "
+        "WCS geometry + bulk-shift + odds confirmation (same draft field)."
+    )
+    _sib_en = bool(getattr(cfg, "masterstar_sibling_recovery_enabled", True))
+    _sib_min = int(getattr(cfg, "masterstar_sibling_min_matched", 40))
+    _sib_rms = float(getattr(cfg, "masterstar_sibling_rms_max_px", 2.0))
+    _sib_quad = int(getattr(cfg, "masterstar_sibling_min_quadrants", 3))
+    _sib_stk = int(getattr(cfg, "masterstar_sibling_stack_n", 10))
+    sibling_enabled = st.checkbox(
+        "masterstar_sibling_recovery_enabled",
+        value=_sib_en,
+        key="vyvar_dao_sibling_en",
+        help="Off reproduces pre-recovery behaviour (failed filters stay skipped).",
+    )
+    sibling_min = st.slider(
+        "masterstar_sibling_min_matched",
+        min_value=1,
+        max_value=200,
+        value=min(max(_sib_min, 1), 200),
+        step=1,
+        key="vyvar_dao_sibling_min",
+    )
+    sibling_rms = st.slider(
+        "masterstar_sibling_rms_max_px",
+        min_value=0.5,
+        max_value=5.0,
+        value=min(max(_sib_rms, 0.5), 5.0),
+        step=0.05,
+        key="vyvar_dao_sibling_rms",
+    )
+    sibling_quad = st.slider(
+        "masterstar_sibling_min_quadrants",
+        min_value=1,
+        max_value=4,
+        value=min(max(_sib_quad, 1), 4),
+        step=1,
+        key="vyvar_dao_sibling_quad",
+    )
+    sibling_stk = st.slider(
+        "masterstar_sibling_stack_n",
+        min_value=2,
+        max_value=50,
+        value=min(max(_sib_stk, 2), 50),
+        step=1,
+        key="vyvar_dao_sibling_stk",
+    )
+
     draft_id = st.session_state.get("vyvar_last_draft_id")
     db = getattr(pipeline, "db", None) if pipeline is not None else None
     ms_path = resolve_masterstar_fits_path(
@@ -246,6 +348,15 @@ Apply these values manually in the sliders above, or click **Apply suggestions**
                 _slo = _shi
             cfg.masterstar_platesolve_sip_max_order = max(2, min(5, _shi))
             cfg.masterstar_platesolve_sip_min_order = max(2, min(5, _slo))
+            cfg.masterstar_catalog_recovery_min = float(rec_min)
+            cfg.masterstar_min_matched_floor = int(matched_floor)
+            cfg.masterstar_centre_rms_max_px = float(centre_rms_max)
+            cfg.masterstar_distortion_benign_ratio_max = float(benign_ratio)
+            cfg.masterstar_sibling_recovery_enabled = bool(sibling_enabled)
+            cfg.masterstar_sibling_min_matched = int(sibling_min)
+            cfg.masterstar_sibling_rms_max_px = float(sibling_rms)
+            cfg.masterstar_sibling_min_quadrants = int(sibling_quad)
+            cfg.masterstar_sibling_stack_n = int(sibling_stk)
             save_config_json(cfg.project_root, cfg.to_json())
             st.success(
                 "Saved. The next **MASTERSTARS** / worker run will use the new values "

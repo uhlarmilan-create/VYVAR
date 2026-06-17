@@ -219,10 +219,8 @@ def _frame_gain_readnoise_for_error_map(
 ) -> tuple[float, float]:
     """Gain / read-noise for the per-frame error map.
 
-    Unified equipment-intrinsic resolution (param_resolver): DB-set (valid) ->
-    header EGAIN/GAIN/RDNOISE (cross-checked fallback) -> default. This matches
-    the Phase 2A photometric-error path so a single frame can no longer pick up
-    gain from two different sources at two stages.
+    Unified resolution (param_resolver): gain header-first (e-/ADU or index-mapped) ->
+    DB -> config; read noise DB-first. Matches Phase 2A photometric-error path.
     """
     from param_resolver import resolve_gain, resolve_read_noise  # noqa: PLC0415
 
@@ -10101,6 +10099,7 @@ def generate_masterstar_and_catalog(
     masterstar_fits_only: bool = False,
     masterstar_skip_build: bool = False,
     masterstar_platesolve_only: bool = False,
+    masterstar_platesolve_skip_solve: bool = False,
     hint_ra_deg: float | None = None,
     hint_dec_deg: float | None = None,
 ) -> dict[str, Any]:
@@ -10635,207 +10634,233 @@ def generate_masterstar_and_catalog(
     except (TypeError, ValueError):
         pass
 
-    _mra, _mde, _ = _pointing_hint_from_header(hdr)
-    if hint_ra_deg is not None and hint_dec_deg is not None:
-        try:
-            _hra_ov = float(hint_ra_deg)
-            _hde_ov = float(hint_dec_deg)
-            if math.isfinite(_hra_ov) and math.isfinite(_hde_ov):
-                _mra, _mde = _hra_ov, _hde_ov
-                log_event(
-                    "MASTERSTAR: hint_ra_deg / hint_dec_deg z volania prepisujú hint z FITS "
-                    "(druhý MASTERSTAR / detrended aligned)."
-                )
-        except (TypeError, ValueError):
-            pass
-    try:
-        _hint_sep_thr = float(_cfg_ms.masterstar_solver_use_draft_median_if_hint_sep_deg)
-    except (TypeError, ValueError):
-        _hint_sep_thr = 1.0
-    if not math.isfinite(_hint_sep_thr) or _hint_sep_thr < 0:
-        _hint_sep_thr = 1.0
-    if draft_id is not None:
-        _dbc_hint = _vyvar_open_database(_cfg_ms)
-        if _dbc_hint is not None:
-            try:
-                med_ra, med_de = draft_median_pointing_icrs_deg(_dbc_hint, int(draft_id))
-                if med_ra is not None and med_de is not None:
-                    if _mra is None or _mde is None:
-                        _mra, _mde = med_ra, med_de
-                        log_event(
-                            "MASTERSTAR solve: používam medián RA/Dec z OBS_FILES (hlavička bez spoľahlivého hintu)."
-                        )
-                    else:
-                        sc_h = SkyCoord(ra=float(_mra) * u.deg, dec=float(_mde) * u.deg, frame="icrs")
-                        sc_d = SkyCoord(ra=float(med_ra) * u.deg, dec=float(med_de) * u.deg, frame="icrs")
-                        sep = float(sc_h.separation(sc_d).deg)
-                        if sep > float(_hint_sep_thr):
-                            log_event(
-                                f"MASTERSTAR solve: hint vs draft median = {sep:.3f}° > {_hint_sep_thr}° "
-                                "— používam draft medián z OBS_FILES."
-                            )
-                            _mra, _mde = med_ra, med_de
-                        elif sep > 0.05:
-                            log_event(
-                                f"MASTERSTAR solve: hint vs draft median = {sep:.3f}° (skontrolujte pointing)."
-                            )
-            finally:
-                try:
-                    _dbc_hint.conn.close()
-                except Exception:  # noqa: BLE001
-                    pass
-
-    _fov_ms_solve = resolve_plate_solve_fov_deg_hint(
-        hdr,
-        int(data.shape[0]),
-        int(data.shape[1]),
-        database_path=_cfg_ms.database_path,
-        equipment_id=_eq_ms,
-        draft_id=int(draft_id) if draft_id is not None else None,
+    _skip_independent_solve = bool(masterstar_platesolve_skip_solve) or (
+        str(hdr.get("VY_CRT", "")).strip().lower() == "sibling_recovered"
+        and _has_valid_wcs(hdr)
     )
-    if _fov_ms_solve is None:
-        try:
-            _pf_ms = float(plate_solve_fov_deg)
-            if math.isfinite(_pf_ms) and _pf_ms > 0:
-                _fov_ms_solve = _pf_ms
-        except (TypeError, ValueError):
-            pass
-    if _fov_ms_solve is None:
-        _fov_ms_solve = float(_cfg_ms.plate_solve_fov_deg)
-    _prms = _cfg_ms.masterstar_platesolve_prewrite_rms_max_px
-    _prms_r = _cfg_ms.masterstar_platesolve_prewrite_relaxed_rms_max_px
-    _nnrms = _cfg_ms.masterstar_platesolve_nn_refine_max_rms_px
-    # MASTERSTAR platesolve: always single best processed FITS (copy mode).
-    _ms_vyvar_max_rows = 30000
-
-    def _run_masterstar_vyvar_solve(*, enable_sip: bool, sip_max_order: int, fov_deg: float, max_rows: int) -> dict[str, Any]:
-        return solve_wcs_with_local_gaia(
-            masterstar_fits,
-            hint_ra_deg=_mra,
-            hint_dec_deg=_mde,
-            fov_diameter_deg=float(fov_deg),
-            gaia_db_path=Path(_full_db),
-            enable_sip=bool(enable_sip),
-            sip_max_order=int(sip_max_order),
-            ransac_refinement=True,
-            max_catalog_rows=int(max_rows),
-            faintest_mag_limit=18.0,
-            dao_threshold_sigma=float(_dao_sigma_eff),
-            effective_pixel_um=float(_eff_um) if _eff_um is not None else None,
-            focal_length_mm=float(_foc_mm) if _foc_mm is not None else None,
-            expected_plate_scale_arcsec_per_px=(
-                float(_plate_scale_ms) if _plate_scale_ms is not None else None
-            ),
-            masterstar_prewrite_rms_max_px=float(_prms) if _prms is not None else None,
-            masterstar_prewrite_relaxed_rms_max_px=float(_prms_r) if _prms_r is not None else None,
-            masterstar_nn_refine_max_rms_px=float(_nnrms) if _nnrms is not None else None,
-            masterstar_sip_min_order=int(_sip_lo),
-            app_config=_cfg_ms,
-            solver_use_cone_for_sip=True,
-            solver_fits_header_hint_sep_escape=True,
-            solver_legacy_masterstar_mirror_sweep=True,
-            solver_apply_roworder_yflip=False,
-        )
-
-    solve_meta = _run_masterstar_vyvar_solve(
-        enable_sip=True,
-        sip_max_order=int(_sip_ms),
-        fov_deg=float(_fov_ms_solve),
-        max_rows=int(_ms_vyvar_max_rows),
-    )
-    if not isinstance(solve_meta, dict) or not bool(solve_meta.get("solved", False)):
-        raise RuntimeError(
-            "MASTERSTAR plate-solve zlyhal. "
-            f"Back-end returned: {solve_meta!r}. "
-            "Cannot safely continue with photometry / source extraction."
-        )
-
-    # Refresh header/data after solve attempt (solver overwrote MASTERSTAR.fits header)
-    with fits.open(masterstar_fits, memmap=False) as hdul:
-        hdr = hdul[0].header.copy()
-        data = np.array(hdul[0].data, dtype=np.float32, copy=True)
-    if not _has_valid_wcs(hdr):
-        raise RuntimeError(
-            "MASTERSTAR: po plate-solve chýba platný WCS. Skontroluj gaia_db_path, RA/Dec a mierku v hlavičke "
-            "(FOCALLEN/PIXSIZE alebo SECPIX) a výstup solvera."
-        )
-
-    # Pipeline-level acceptance criteria (stricter than solver's minimal guard):
-    # - match_rate: allow 60% on the first solve (optimizer refines later)
-    try:
-        _mr = float(solve_meta.get("match_rate", 0.0) or 0.0)
-    except (TypeError, ValueError):
-        _mr = 0.0
-    _min_mr = 0.60
-    if _mr < _min_mr:
-        raise RuntimeError(
-            f"MASTERSTAR plate-solve zamietnutý: match_rate={_mr * 100.0:.1f}% < {_min_mr * 100.0:.0f}%. "
-            "Skús zvýšiť n_stack alebo upraviť hint/DAO prahy."
-        )
-
-    try:
-        _aniso_thr = float(_cfg_ms.platesolve_anisotropy_threshold)
-    except (TypeError, ValueError):
-        _aniso_thr = 1.3
-    if not math.isfinite(_aniso_thr) or _aniso_thr <= 0:
-        _aniso_thr = 1.3
-    _aniso_thr = max(1.01, min(5.0, float(_aniso_thr)))
-
-    # Post-solve anisotropy validation: reject strongly anisotropic pixel scale and retry solver once.
-    try:
-        from astropy.wcs import WCS
-
-        wcs0 = WCS(hdr)
-        scale_x = abs(float(wcs0.pixel_scale_matrix[0, 0])) * 3600.0  # arcsec/px
-        scale_y = abs(float(wcs0.pixel_scale_matrix[1, 1])) * 3600.0  # arcsec/px
-        if math.isfinite(scale_x) and math.isfinite(scale_y) and scale_x > 0 and scale_y > 0:
-            scale_ratio = max(scale_x, scale_y) / min(scale_x, scale_y)
-        else:
-            scale_ratio = float("nan")
-    except Exception:  # noqa: BLE001
-        scale_ratio = float("nan")
-
-    if math.isfinite(scale_ratio) and scale_ratio > _aniso_thr:
+    solve_meta: dict[str, Any] = {}
+    if _skip_independent_solve:
         log_event(
-            f"VAROVANIE: Anizotropná mierka ratio={scale_ratio:.2f} — plate-solve zamietnutý, restartujem solver (relaxed)."
+            "MASTERSTAR: sibling-recovered WCS on disk — skipping independent Pass-1 plate-solve."
         )
-        # Retry with relaxed knobs:
-        # - slightly larger FOV diameter (hint-vs-solved tolerance),
-        # - more Gaia rows,
-        # - no SIP (simpler model can be more stable when the fit goes off-rails).
-        solve_meta2 = _run_masterstar_vyvar_solve(
-            enable_sip=False,
-            sip_max_order=0,
-            fov_deg=float(_fov_ms_solve) * 1.25,
-            max_rows=int(max(_ms_vyvar_max_rows, 30000)),
+        try:
+            _vy_sodd = int(hdr.get("VY_SODD", 0) or 0)
+        except (TypeError, ValueError):
+            _vy_sodd = 0
+        solve_meta = {
+            "solved": True,
+            "method": "sibling_recovered",
+            "match_rate": 1.0,
+            "sip_meta": {
+                "masterstar_verified": True,
+                "route": "sibling_recovered",
+                "n_matched_tight": _vy_sodd,
+            },
+        }
+
+    if not _skip_independent_solve:
+
+        _mra, _mde, _ = _pointing_hint_from_header(hdr)
+        if hint_ra_deg is not None and hint_dec_deg is not None:
+            try:
+                _hra_ov = float(hint_ra_deg)
+                _hde_ov = float(hint_dec_deg)
+                if math.isfinite(_hra_ov) and math.isfinite(_hde_ov):
+                    _mra, _mde = _hra_ov, _hde_ov
+                    log_event(
+                        "MASTERSTAR: hint_ra_deg / hint_dec_deg z volania prepisujú hint z FITS "
+                        "(druhý MASTERSTAR / detrended aligned)."
+                    )
+            except (TypeError, ValueError):
+                pass
+        try:
+            _hint_sep_thr = float(_cfg_ms.masterstar_solver_use_draft_median_if_hint_sep_deg)
+        except (TypeError, ValueError):
+            _hint_sep_thr = 1.0
+        if not math.isfinite(_hint_sep_thr) or _hint_sep_thr < 0:
+            _hint_sep_thr = 1.0
+        if draft_id is not None:
+            _dbc_hint = _vyvar_open_database(_cfg_ms)
+            if _dbc_hint is not None:
+                try:
+                    med_ra, med_de = draft_median_pointing_icrs_deg(_dbc_hint, int(draft_id))
+                    if med_ra is not None and med_de is not None:
+                        if _mra is None or _mde is None:
+                            _mra, _mde = med_ra, med_de
+                            log_event(
+                                "MASTERSTAR solve: používam medián RA/Dec z OBS_FILES (hlavička bez spoľahlivého hintu)."
+                            )
+                        else:
+                            sc_h = SkyCoord(ra=float(_mra) * u.deg, dec=float(_mde) * u.deg, frame="icrs")
+                            sc_d = SkyCoord(ra=float(med_ra) * u.deg, dec=float(med_de) * u.deg, frame="icrs")
+                            sep = float(sc_h.separation(sc_d).deg)
+                            if sep > float(_hint_sep_thr):
+                                log_event(
+                                    f"MASTERSTAR solve: hint vs draft median = {sep:.3f}° > {_hint_sep_thr}° "
+                                    "— používam draft medián z OBS_FILES."
+                                )
+                                _mra, _mde = med_ra, med_de
+                            elif sep > 0.05:
+                                log_event(
+                                    f"MASTERSTAR solve: hint vs draft median = {sep:.3f}° (skontrolujte pointing)."
+                                )
+                finally:
+                    try:
+                        _dbc_hint.conn.close()
+                    except Exception:  # noqa: BLE001
+                        pass
+
+        _fov_ms_solve = resolve_plate_solve_fov_deg_hint(
+            hdr,
+            int(data.shape[0]),
+            int(data.shape[1]),
+            database_path=_cfg_ms.database_path,
+            equipment_id=_eq_ms,
+            draft_id=int(draft_id) if draft_id is not None else None,
         )
-        if not isinstance(solve_meta2, dict) or not bool(solve_meta2.get("solved", False)):
-            raise RuntimeError(
-                f"MASTERSTAR platesolve retry zlyhal po anizotropii. Back-end returned: {solve_meta2!r}"
+        if _fov_ms_solve is None:
+            try:
+                _pf_ms = float(plate_solve_fov_deg)
+                if math.isfinite(_pf_ms) and _pf_ms > 0:
+                    _fov_ms_solve = _pf_ms
+            except (TypeError, ValueError):
+                pass
+        if _fov_ms_solve is None:
+            _fov_ms_solve = float(_cfg_ms.plate_solve_fov_deg)
+        _prms = _cfg_ms.masterstar_platesolve_prewrite_rms_max_px
+        _prms_r = _cfg_ms.masterstar_platesolve_prewrite_relaxed_rms_max_px
+        _nnrms = _cfg_ms.masterstar_platesolve_nn_refine_max_rms_px
+        # MASTERSTAR platesolve: always single best processed FITS (copy mode).
+        _ms_vyvar_max_rows = 30000
+
+        def _run_masterstar_vyvar_solve(*, enable_sip: bool, sip_max_order: int, fov_deg: float, max_rows: int) -> dict[str, Any]:
+            return solve_wcs_with_local_gaia(
+                masterstar_fits,
+                hint_ra_deg=_mra,
+                hint_dec_deg=_mde,
+                fov_diameter_deg=float(fov_deg),
+                gaia_db_path=Path(_full_db),
+                enable_sip=bool(enable_sip),
+                sip_max_order=int(sip_max_order),
+                ransac_refinement=True,
+                max_catalog_rows=int(max_rows),
+                faintest_mag_limit=18.0,
+                dao_threshold_sigma=float(_dao_sigma_eff),
+                effective_pixel_um=float(_eff_um) if _eff_um is not None else None,
+                focal_length_mm=float(_foc_mm) if _foc_mm is not None else None,
+                expected_plate_scale_arcsec_per_px=(
+                    float(_plate_scale_ms) if _plate_scale_ms is not None else None
+                ),
+                masterstar_prewrite_rms_max_px=float(_prms) if _prms is not None else None,
+                masterstar_prewrite_relaxed_rms_max_px=float(_prms_r) if _prms_r is not None else None,
+                masterstar_nn_refine_max_rms_px=float(_nnrms) if _nnrms is not None else None,
+                masterstar_sip_min_order=int(_sip_lo),
+                app_config=_cfg_ms,
+                solver_use_cone_for_sip=True,
+                solver_fits_header_hint_sep_escape=True,
+                solver_legacy_masterstar_mirror_sweep=True,
+                solver_apply_roworder_yflip=False,
             )
-        solve_meta = solve_meta2
-        # Reload header after retry
+
+        solve_meta = _run_masterstar_vyvar_solve(
+            enable_sip=True,
+            sip_max_order=int(_sip_ms),
+            fov_deg=float(_fov_ms_solve),
+            max_rows=int(_ms_vyvar_max_rows),
+        )
+        if not isinstance(solve_meta, dict) or not bool(solve_meta.get("solved", False)):
+            raise RuntimeError(
+                "MASTERSTAR plate-solve zlyhal. "
+                f"Back-end returned: {solve_meta!r}. "
+                "Cannot safely continue with photometry / source extraction."
+            )
+
+        # Refresh header/data after solve attempt (solver overwrote MASTERSTAR.fits header)
         with fits.open(masterstar_fits, memmap=False) as hdul:
             hdr = hdul[0].header.copy()
             data = np.array(hdul[0].data, dtype=np.float32, copy=True)
         if not _has_valid_wcs(hdr):
-            raise RuntimeError("MASTERSTAR: po retry plate-solve chýba platný WCS.")
+            raise RuntimeError(
+                "MASTERSTAR: po plate-solve chýba platný WCS. Skontroluj gaia_db_path, RA/Dec a mierku v hlavičke "
+                "(FOCALLEN/PIXSIZE alebo SECPIX) a výstup solvera."
+            )
+
+        # Pipeline-level acceptance criteria (stricter than solver's minimal guard):
+        # - match_rate: allow 60% on the first solve (optimizer refines later)
+        try:
+            _mr = float(solve_meta.get("match_rate", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            _mr = 0.0
+        _min_mr = 0.60
+        if _mr < _min_mr:
+            raise RuntimeError(
+                f"MASTERSTAR plate-solve zamietnutý: match_rate={_mr * 100.0:.1f}% < {_min_mr * 100.0:.0f}%. "
+                "Skús zvýšiť n_stack alebo upraviť hint/DAO prahy."
+            )
+
+        try:
+            _aniso_thr = float(_cfg_ms.platesolve_anisotropy_threshold)
+        except (TypeError, ValueError):
+            _aniso_thr = 1.3
+        if not math.isfinite(_aniso_thr) or _aniso_thr <= 0:
+            _aniso_thr = 1.3
+        _aniso_thr = max(1.01, min(5.0, float(_aniso_thr)))
+
+        # Post-solve anisotropy validation: reject strongly anisotropic pixel scale and retry solver once.
         try:
             from astropy.wcs import WCS
 
-            wcs1 = WCS(hdr)
-            sx = abs(float(wcs1.pixel_scale_matrix[0, 0])) * 3600.0
-            sy = abs(float(wcs1.pixel_scale_matrix[1, 1])) * 3600.0
-            if math.isfinite(sx) and math.isfinite(sy) and sx > 0 and sy > 0:
-                scale_ratio2 = max(sx, sy) / min(sx, sy)
+            wcs0 = WCS(hdr)
+            scale_x = abs(float(wcs0.pixel_scale_matrix[0, 0])) * 3600.0  # arcsec/px
+            scale_y = abs(float(wcs0.pixel_scale_matrix[1, 1])) * 3600.0  # arcsec/px
+            if math.isfinite(scale_x) and math.isfinite(scale_y) and scale_x > 0 and scale_y > 0:
+                scale_ratio = max(scale_x, scale_y) / min(scale_x, scale_y)
             else:
-                scale_ratio2 = float("nan")
+                scale_ratio = float("nan")
         except Exception:  # noqa: BLE001
-            scale_ratio2 = float("nan")
-        if math.isfinite(scale_ratio2) and scale_ratio2 > _aniso_thr:
-            raise RuntimeError(
-                f"MASTERSTAR plate-solve zamietnutý: anizotropná mierka po retry ratio={scale_ratio2:.2f} (>{_aniso_thr})."
+            scale_ratio = float("nan")
+
+        if math.isfinite(scale_ratio) and scale_ratio > _aniso_thr:
+            log_event(
+                f"VAROVANIE: Anizotropná mierka ratio={scale_ratio:.2f} — plate-solve zamietnutý, restartujem solver (relaxed)."
             )
+            # Retry with relaxed knobs:
+            # - slightly larger FOV diameter (hint-vs-solved tolerance),
+            # - more Gaia rows,
+            # - no SIP (simpler model can be more stable when the fit goes off-rails).
+            solve_meta2 = _run_masterstar_vyvar_solve(
+                enable_sip=False,
+                sip_max_order=0,
+                fov_deg=float(_fov_ms_solve) * 1.25,
+                max_rows=int(max(_ms_vyvar_max_rows, 30000)),
+            )
+            if not isinstance(solve_meta2, dict) or not bool(solve_meta2.get("solved", False)):
+                raise RuntimeError(
+                    f"MASTERSTAR platesolve retry zlyhal po anizotropii. Back-end returned: {solve_meta2!r}"
+                )
+            solve_meta = solve_meta2
+            # Reload header after retry
+            with fits.open(masterstar_fits, memmap=False) as hdul:
+                hdr = hdul[0].header.copy()
+                data = np.array(hdul[0].data, dtype=np.float32, copy=True)
+            if not _has_valid_wcs(hdr):
+                raise RuntimeError("MASTERSTAR: po retry plate-solve chýba platný WCS.")
+            try:
+                from astropy.wcs import WCS
+
+                wcs1 = WCS(hdr)
+                sx = abs(float(wcs1.pixel_scale_matrix[0, 0])) * 3600.0
+                sy = abs(float(wcs1.pixel_scale_matrix[1, 1])) * 3600.0
+                if math.isfinite(sx) and math.isfinite(sy) and sx > 0 and sy > 0:
+                    scale_ratio2 = max(sx, sy) / min(sx, sy)
+                else:
+                    scale_ratio2 = float("nan")
+            except Exception:  # noqa: BLE001
+                scale_ratio2 = float("nan")
+            if math.isfinite(scale_ratio2) and scale_ratio2 > _aniso_thr:
+                raise RuntimeError(
+                    f"MASTERSTAR plate-solve zamietnutý: anizotropná mierka po retry ratio={scale_ratio2:.2f} (>{_aniso_thr})."
+                )
 
     _exp_scale_apx: float | None = None
     if _plate_scale_ms is not None:
@@ -11943,6 +11968,181 @@ def generate_masterstar_and_catalog(
     return out
 
 
+def _pass2_sibling_wcs_recovery(
+    *,
+    reports: list[dict[str, Any]],
+    skipped: list[dict[str, Any]],
+    job_list: list[dict[str, Any]],
+    align_kw: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Pass 2: recover failed filter sub-groups via verified sibling WCS + bulk-shift."""
+    cfg = align_kw.get("app_config") or AppConfig()
+    if not bool(getattr(cfg, "masterstar_sibling_recovery_enabled", True)):
+        return reports, skipped
+    if len(job_list) <= 1 or not skipped or not reports:
+        return reports, skipped
+
+    from vyvar_platesolver import (
+        filter_code_from_setup_name,
+        pick_sibling_donor_filter,
+        try_recover_masterstar_sibling_wcs,
+    )
+
+    job_by_gkey = {str(j.get("gkey") or ""): j for j in job_list}
+    report_by_gkey: dict[str, dict[str, Any]] = {}
+    for rep in reports:
+        gk = str(rep.get("observation_group_key") or "")
+        if gk:
+            report_by_gkey[gk] = rep
+
+    verified_filters: set[str] = set()
+    for gk in report_by_gkey:
+        setup = Path(gk).name if gk else "(root)"
+        flt = filter_code_from_setup_name(setup)
+        if flt:
+            verified_filters.add(flt)
+
+    still_skipped: list[dict[str, Any]] = []
+    archive_path = Path(align_kw["archive_path"])
+
+    for sk in skipped:
+        gkey = str(sk.get("gkey") or "")
+        setup = str(sk.get("setup") or (Path(gkey).name if gkey else "(root)"))
+        recipient_filter = filter_code_from_setup_name(setup)
+        job = job_by_gkey.get(gkey)
+        if not recipient_filter or job is None:
+            still_skipped.append(sk)
+            continue
+
+        donor_filter = pick_sibling_donor_filter(recipient_filter, verified_filters)
+        if donor_filter is None:
+            still_skipped.append(sk)
+            continue
+
+        donor_gkey: str | None = None
+        donor_report: dict[str, Any] | None = None
+        for gk, rep in report_by_gkey.items():
+            d_setup = Path(gk).name if gk else "(root)"
+            if filter_code_from_setup_name(d_setup) == donor_filter:
+                donor_gkey = gk
+                donor_report = rep
+                break
+        donor_job = job_by_gkey.get(donor_gkey or "") if donor_gkey else None
+        if donor_report is None or donor_job is None:
+            still_skipped.append(sk)
+            continue
+
+        platesolve_dir = Path(job["platesolve_dir"])
+        platesolve_dir.mkdir(parents=True, exist_ok=True)
+        recipient_ms = platesolve_dir / "MASTERSTAR.fits"
+        donor_ms_str = str(donor_report.get("masterstar_fits") or "").strip()
+        donor_ms = (
+            Path(donor_ms_str)
+            if donor_ms_str
+            else Path(donor_job["platesolve_dir"]) / "MASTERSTAR.fits"
+        )
+
+        try:
+            if not recipient_ms.is_file():
+                generate_masterstar_and_catalog(
+                    archive_path=archive_path,
+                    source_root=Path(job["detrended_root"]),
+                    platesolve_dir=platesolve_dir,
+                    setup_name=gkey or None,
+                    masterstar_fits_only=True,
+                    app_config=cfg,
+                    equipment_id=align_kw.get("id_equipment"),
+                    draft_id=align_kw.get("draft_id"),
+                    master_dark_path=align_kw.get("master_dark_path"),
+                    platesolve_backend=str(align_kw.get("platesolve_backend") or "vyvar"),
+                    plate_solve_fov_deg=float(
+                        align_kw.get("plate_solve_fov_deg") or cfg.plate_solve_fov_deg
+                    ),
+                )
+
+            _bundle = _plate_solve_input_bundle(
+                recipient_ms if recipient_ms.is_file() else donor_ms,
+                app_config=cfg,
+                equipment_id=align_kw.get("id_equipment"),
+                draft_id=align_kw.get("draft_id"),
+            )
+            with fits.open(recipient_ms, memmap=False) as _hd_ms:
+                _ms_hdr = _hd_ms[0].header
+                _ms_data = _hd_ms[0].data
+            _fov = resolve_plate_solve_fov_deg_hint(
+                _ms_hdr,
+                int(_ms_data.shape[0]),
+                int(_ms_data.shape[1]),
+                database_path=cfg.database_path,
+                equipment_id=align_kw.get("id_equipment"),
+                draft_id=align_kw.get("draft_id"),
+            )
+            if _fov is None:
+                _fov = float(align_kw.get("plate_solve_fov_deg") or cfg.plate_solve_fov_deg)
+
+            rec_result = try_recover_masterstar_sibling_wcs(
+                recipient_masterstar_fits=recipient_ms,
+                donor_masterstar_fits=donor_ms,
+                recipient_filter=recipient_filter,
+                donor_filter=donor_filter,
+                frame_paths=[Path(f) for f in (job.get("files") or [])],
+                app_config=cfg,
+                plate_solve_fov_deg=float(_fov),
+                expected_plate_scale_arcsec_per_px=_bundle.get("expected_arcsec_per_px"),
+                effective_pixel_um=_bundle.get("eff_um"),
+                focal_length_mm=_bundle.get("focal_mm"),
+            )
+            if not rec_result.get("confirmed"):
+                still_skipped.append(sk)
+                continue
+
+            generate_masterstar_and_catalog(
+                archive_path=archive_path,
+                platesolve_dir=platesolve_dir,
+                setup_name=gkey or None,
+                masterstar_skip_build=True,
+                masterstar_platesolve_skip_solve=True,
+                app_config=cfg,
+                equipment_id=align_kw.get("id_equipment"),
+                draft_id=align_kw.get("draft_id"),
+                platesolve_backend=str(align_kw.get("platesolve_backend") or "vyvar"),
+                plate_solve_fov_deg=float(_fov),
+                catalog_match_max_sep_arcsec=float(
+                    align_kw.get("catalog_match_max_sep_arcsec") or 25.0
+                ),
+                max_catalog_rows=int(align_kw.get("max_catalog_rows") or 12000),
+                dao_threshold_sigma=float(
+                    align_kw.get("dao_threshold_sigma") or cfg.masterstar_dao_threshold_sigma
+                ),
+                catalog_local_gaia_only=align_kw.get("catalog_local_gaia_only"),
+            )
+
+            rep = _astrometry_align_impl_body(
+                job=job,
+                sibling_recovery_use_masterstar=True,
+                build_masterstar_and_catalogs=False,
+                **{
+                    k: v
+                    for k, v in align_kw.items()
+                    if k not in {"build_masterstar_and_catalogs"}
+                },
+            )
+            rep["sibling_recovery"] = rec_result
+            reports.append(rep)
+            report_by_gkey[gkey] = rep
+            verified_filters.add(recipient_filter)
+            log_event(
+                f"SIBLING-WCS Pass2: recovered {setup} via donor {donor_filter} — "
+                f"n_tight={((rec_result.get('after') or {}).get('n_matched_tight'))}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.error("Sibling-WCS Pass2 failed for %s: %s", setup, exc)
+            log_event(f"⚠ Sibling-WCS Pass2: set {setup} zostáva preskočený — {exc}")
+            still_skipped.append(sk)
+
+    return reports, still_skipped
+
+
 def _partition_detrended_by_subfolder(files: list[Path], detrended_root: Path) -> dict[str, list[Path]]:
     """Group detrended FITS by full parent subpath under ``detrended_root``.
 
@@ -12017,6 +12217,7 @@ def _astrometry_align_impl_body(
     progress_cb: "callable | None" = None,
     ram_align_and_catalog: bool = False,
     app_config: AppConfig | None = None,
+    sibling_recovery_use_masterstar: bool = False,
 ) -> dict[str, Any]:
     """Internal: astrometry + alignment + per-frame CSV for one observation subtree (``job``)."""
     import numpy as np
@@ -12244,6 +12445,31 @@ def _astrometry_align_impl_body(
                 log_event(f"DEBUG: Reference WCS copy from MASTERSTAR failed: {_wcs_copy_exc}")
             except Exception:  # noqa: BLE001
                 pass
+
+    if (
+        not build_masterstar_and_catalogs
+        and sibling_recovery_use_masterstar
+        and not _masterstar_built
+    ):
+        try:
+            _ms_path = (platesolve_dir / "MASTERSTAR.fits").resolve()
+            if _ms_path.is_file():
+                with fits.open(_ms_path, memmap=False) as hdul:
+                    _ms_hdr = hdul[0].header.copy()
+                    ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+                if _has_valid_wcs(_ms_hdr):
+                    ref_fp = _ms_path
+                    ref_hdr = _ms_hdr
+                    has_wcs = True
+                    _cat_info_root = {
+                        "masterstar_fits": str(_ms_path),
+                        "masterstars_csv": str(platesolve_dir / "masterstars_full_match.csv"),
+                    }
+                    log_event(
+                        f"INFO: Sibling-recovery alignment using existing MASTERSTAR: {_ms_path.name}"
+                    )
+        except Exception as _sib_ms_exc:  # noqa: BLE001
+            log_event(f"DEBUG: Sibling-recovery MASTERSTAR load failed: {_sib_ms_exc}")
 
     if not has_wcs:
         _prog("Plate solve referencie (môže chvíľu trvať)…")
@@ -13089,9 +13315,46 @@ def astrometry_align_and_build_masterstar(
     )
     if len(job_list) == 1:
         return _astrometry_align_impl_body(job=job_list[0], **_kw)
-    return _merge_astrometry_group_reports(
-        [_astrometry_align_impl_body(job=j, **_kw) for j in job_list]
+
+    reports: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    for j in job_list:
+        _gkey = str(j.get("gkey") or "")
+        _setup = Path(_gkey).name if _gkey else "(root)"
+        try:
+            reports.append(_astrometry_align_impl_body(job=j, **_kw))
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.error("Astrometria/MASTERSTAR failed for set %s: %s", _setup, exc)
+            log_event(
+                f"⚠ Set {_setup}: plate-solve/MASTERSTAR zlyhal — set sa preskakuje, "
+                f"pokračujem ďalším setom. Dôvod: {exc}"
+            )
+            skipped.append(
+                {"gkey": _gkey, "setup": _setup, "solved": False, "skipped_reason": str(exc)}
+            )
+            continue
+
+    reports, skipped = _pass2_sibling_wcs_recovery(
+        reports=reports,
+        skipped=skipped,
+        job_list=job_list,
+        align_kw=_kw,
     )
+
+    if not reports:
+        raise RuntimeError(
+            "Astrometria: žiadny set neprešiel plate-solve/MASTERSTAR. "
+            + "; ".join(f"{s['setup']}: {s['skipped_reason']}" for s in skipped)
+        )
+
+    merged = _merge_astrometry_group_reports(reports)
+    if skipped:
+        merged["skipped_subgroups"] = skipped
+        log_event(
+            f"Astrometria: {len(reports)} setov OK, {len(skipped)} preskočených: "
+            + ", ".join(s["setup"] for s in skipped)
+        )
+    return merged
 
 
 def _fits_meta_ra_deg(value: Any) -> float:

@@ -200,7 +200,8 @@ def build_run_citation_context(
 
         use_iter_clip = resolve_comp_sparse_fallback_enabled(cfg)
     use_iter_clip = use_iter_clip or bool(
-        meta.get("comp_sparse_fallback_used", meta.get("comp_iterative_clip_used", False))
+        int(meta.get("comp_sparse_fallback_target_count", 0) or 0) > 0
+        or meta.get("comp_sparse_fallback_used", meta.get("comp_iterative_clip_used", False))
     )
     use_catalog_recovery = bool(meta.get("masterstar_catalog_recovery_verified", False))
     if not use_catalog_recovery:

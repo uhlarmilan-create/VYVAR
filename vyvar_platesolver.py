@@ -2227,6 +2227,219 @@ def _sip_match_max_px(max_px_coarse: float) -> float:
     return max(15.0, min(48.0, float(max_px_coarse) * 0.55))
 
 
+def _compute_masterstar_catalog_recovery(
+    wcs: WCS,
+    cat_ra: np.ndarray,
+    cat_de: np.ndarray,
+    xs_det: np.ndarray,
+    ys_det: np.ndarray,
+    *,
+    naxis1: int,
+    naxis2: int,
+    qa_px: float,
+    tight_px: float = 2.5,
+) -> dict[str, Any]:
+    """Catalog-denominated recovery at ``wcs_final`` (Gaia-in-frame vs DAO matches)."""
+    out: dict[str, Any] = {
+        "n_cat_in_frame": 0,
+        "n_matched_coarse": 0,
+        "n_matched_tight": 0,
+        "catalog_recovery_coarse": 0.0,
+        "catalog_recovery_tight": 0.0,
+    }
+    ra_a = np.asarray(cat_ra, dtype=np.float64)
+    de_a = np.asarray(cat_de, dtype=np.float64)
+    xs_a = np.asarray(xs_det, dtype=np.float64)
+    ys_a = np.asarray(ys_det, dtype=np.float64)
+    if len(ra_a) == 0 or len(xs_a) == 0:
+        return out
+    try:
+        xp, yp = wcs.all_world2pix(ra_a, de_a, 0)
+        xp = np.asarray(xp, dtype=np.float64)
+        yp = np.asarray(yp, dtype=np.float64)
+        in_frame = (
+            np.isfinite(xp)
+            & np.isfinite(yp)
+            & (xp >= 0.0)
+            & (xp < float(naxis1))
+            & (yp >= 0.0)
+            & (yp < float(naxis2))
+        )
+        ra_if = ra_a[in_frame]
+        de_if = de_a[in_frame]
+        n_cat = int(len(ra_if))
+        out["n_cat_in_frame"] = n_cat
+        if n_cat <= 0:
+            return out
+        qx_c, _, _, _ = _greedy_match_pairs_pixel_wcs(
+            wcs,
+            ra_if,
+            de_if,
+            xs_a,
+            ys_a,
+            max_px=float(qa_px),
+        )
+        qx_t, qy_t, _, _ = _greedy_match_pairs_pixel_wcs(
+            wcs,
+            ra_if,
+            de_if,
+            xs_a,
+            ys_a,
+            max_px=float(tight_px),
+        )
+        n_coarse = int(len(qx_c))
+        n_tight = int(len(qx_t))
+        n_det = int(len(xs_a))
+        out["n_detections_used"] = n_det
+        out["n_matched_coarse"] = n_coarse
+        out["n_matched_tight"] = n_tight
+        out["catalog_recovery_coarse"] = float(n_coarse) / float(n_cat)
+        out["catalog_recovery_tight"] = float(n_tight) / float(n_cat)
+        # Gate fraction (legacy QA flag only under odds acceptance): at most one Gaia star per DAO peak.
+        n_denom = int(min(n_cat, n_det)) if n_det > 0 else n_cat
+        out["catalog_recovery_denom"] = n_denom
+        out["catalog_recovery_tight_gate"] = float(n_tight) / float(max(1, n_denom))
+        out["catalog_recovery_coarse_gate"] = float(n_coarse) / float(max(1, n_denom))
+        out["quadrants_with_match"] = _sibling_quadrant_count(
+            np.asarray(qx_t, dtype=np.float64),
+            np.asarray(qy_t, dtype=np.float64),
+            int(naxis1),
+            int(naxis2),
+        )
+        area = float(max(1, int(naxis1) * int(naxis2)))
+        p_one = min(1.0, float(n_cat) * math.pi * float(tight_px) ** 2 / area)
+        out["expected_random"] = float(n_det) * p_one
+        out["false_alarm_p"] = _sibling_false_alarm_p(
+            n_tight, n_det, n_cat, int(naxis1), int(naxis2), r_px=float(tight_px)
+        )
+    except Exception as exc:  # noqa: BLE001
+        out["catalog_recovery_error"] = repr(exc)
+    return out
+
+
+def _masterstar_quality_flags(
+    *,
+    catalog_recovery_tight_gate: float,
+    recovery_min: float,
+    n_cat_in_frame: int,
+    centre_rms: float | None,
+    centre_rms_max: float,
+    dist_benign: bool,
+    crowded_n_cat_min: int = 800,
+) -> dict[str, Any]:
+    """Non-gating quality metadata for MASTERSTAR (trust / photometry QA)."""
+    tags: list[str] = []
+    if float(catalog_recovery_tight_gate) < float(recovery_min):
+        tags.append("low_recovery")
+    if int(n_cat_in_frame) >= int(crowded_n_cat_min):
+        tags.append("crowded")
+    if centre_rms is not None and math.isfinite(float(centre_rms)) and float(centre_rms) > float(centre_rms_max):
+        tags.append("blurred")
+    if not bool(dist_benign):
+        tags.append("distorted")
+    if "crowded" in tags:
+        qflag = "crowded"
+    elif "blurred" in tags:
+        qflag = "blurred"
+    elif "distorted" in tags:
+        qflag = "distorted"
+    elif "low_recovery" in tags:
+        qflag = "low_recovery"
+    else:
+        qflag = "ok"
+    return {
+        "quality_flags": tags,
+        "quality_flag_primary": qflag,
+    }
+
+
+def _masterstar_solve_acceptance(
+    *,
+    accept_mode: str = "odds",
+    catalog_recovery_tight: float,
+    catalog_recovery_tight_gate: float | None = None,
+    n_matched_tight: int,
+    n_det: int = 0,
+    n_cat_in_frame: int = 0,
+    quadrants_with_match: int = 0,
+    expected_random: float | None = None,
+    false_alarm_p: float | None = None,
+    dist_benign: bool,
+    centre_rms: float | None,
+    edge_rms: float | None = None,
+    recovery_min: float,
+    matched_floor: int,
+    centre_rms_max: float,
+    hint_sep_deg: float,
+    hint_sep_limit: float,
+    fov_diameter_deg: float,
+    odds_k: float = 12.0,
+    odds_min_quadrants: int = 3,
+    false_alarm_p_max: float = 1e-6,
+    crowded_n_cat_min: int = 800,
+) -> dict[str, Any]:
+    """MASTERSTAR verified-solve gate: odds-based acceptance (default) or legacy fraction."""
+    _centre_ok = False
+    if centre_rms is not None and math.isfinite(float(centre_rms)):
+        _centre_ok = float(centre_rms) <= float(centre_rms_max)
+    _dist_ok = bool(dist_benign) or _centre_ok
+    _mode = str(accept_mode or "odds").strip().lower()
+    _gate_frac = (
+        float(catalog_recovery_tight_gate)
+        if catalog_recovery_tight_gate is not None
+        else float(catalog_recovery_tight)
+    )
+    exp_r = float(expected_random) if expected_random is not None else 0.0
+    p_false = float(false_alarm_p) if false_alarm_p is not None else 1.0
+    if _mode == "odds":
+        k_thr = max(float(matched_floor), float(odds_k) * max(0.0, exp_r))
+        _verified = (
+            int(n_matched_tight) >= int(math.ceil(k_thr))
+            and int(quadrants_with_match) >= int(odds_min_quadrants)
+            and p_false <= float(false_alarm_p_max)
+        )
+    else:
+        _verified = (
+            float(_gate_frac) >= float(recovery_min)
+            and int(n_matched_tight) >= int(matched_floor)
+            and bool(_dist_ok)
+        )
+    qmeta = _masterstar_quality_flags(
+        catalog_recovery_tight_gate=float(_gate_frac),
+        recovery_min=float(recovery_min),
+        n_cat_in_frame=int(n_cat_in_frame),
+        centre_rms=centre_rms,
+        centre_rms_max=float(centre_rms_max),
+        dist_benign=bool(dist_benign),
+        crowded_n_cat_min=int(crowded_n_cat_min),
+    )
+    _fov_d = float(fov_diameter_deg)
+    _tripwire = max(1.5, _fov_d) if math.isfinite(_fov_d) and _fov_d > 0.0 else 1.5
+    _hint_sep_bad_hard = (
+        (not _verified)
+        and math.isfinite(float(hint_sep_deg))
+        and float(hint_sep_deg) > float(_tripwire)
+    )
+    _hint_sep_warn = (
+        _verified
+        and math.isfinite(float(hint_sep_deg))
+        and float(hint_sep_deg) > float(hint_sep_limit)
+    )
+    return {
+        "masterstar_verified": bool(_verified),
+        "accept_mode": _mode,
+        "expected_random": float(exp_r),
+        "false_alarm_p": float(p_false),
+        "odds_match_threshold": float(max(float(matched_floor), float(odds_k) * max(0.0, exp_r))),
+        "hint_sep_warn": bool(_hint_sep_warn),
+        "hint_sep_bad_hard": bool(_hint_sep_bad_hard),
+        "hint_sep_tripwire_deg": float(_tripwire),
+        "distortion_ok": bool(_dist_ok),
+        "quality_flag_primary": qmeta["quality_flag_primary"],
+        "quality_flags": qmeta["quality_flags"],
+    }
+
+
 def _assess_masterstar_distortion_limited_linear(
     wcs: WCS,
     px: np.ndarray,
@@ -2236,6 +2449,7 @@ def _assess_masterstar_distortion_limited_linear(
     *,
     naxis1: int,
     naxis2: int,
+    benign_ratio_max: float = 3.20,
 ) -> dict[str, Any]:
     """Overlay-style check: centre-tight / edge-drift residuals (benign Newton distortion)."""
     meta: dict[str, Any] = {"distortion_limited_benign": False}
@@ -2277,10 +2491,11 @@ def _assess_masterstar_distortion_limited_linear(
         and math.isfinite(edge_rms)
         and centre_rms <= 1.60
         and edge_rms <= 3.20
-        and ratio <= 2.50
+        and ratio <= float(benign_ratio_max)
         and overall_rms <= 2.50
     )
     meta["distortion_limited_benign"] = bool(benign)
+    meta["distortion_benign_ratio_max"] = float(benign_ratio_max)
     return meta
 
 
@@ -3197,6 +3412,7 @@ def _solve_wcs_validate_and_refine(
     masterstar_prewrite_relaxed_rms_max_px: float | None,
     masterstar_nn_refine_max_rms_px: float | None,
     fits_header_hint_sep_escape: bool = True,
+    app_config: Any | None = None,
 ) -> tuple[
     WCS,
     fits.Header,
@@ -3233,13 +3449,13 @@ def _solve_wcs_validate_and_refine(
 
     # QA rematch on the same detections used for solving (``n_img`` brightest), not ``len(tbl_sorted)`` (can be 5k+).
     # Use ``cat_df_assoc`` (deep cone), not the triangle-probe crop in ``ra_all``/``de_all``.
+    _ra_cat = cat_df_assoc["ra_deg"].to_numpy(dtype=np.float64)
+    _de_cat = cat_df_assoc["dec_deg"].to_numpy(dtype=np.float64)
+    _mtq = float(sip_meta.get("max_px_sip", 0.0) or 0.0)
+    if not (math.isfinite(_mtq) and _mtq > 0):
+        _mtq = float(max_px_coarse)
+    _qa_px = max(15.0, min(48.0, float(_mtq) * 1.22))
     try:
-        _ra_cat = cat_df_assoc["ra_deg"].to_numpy(dtype=np.float64)
-        _de_cat = cat_df_assoc["dec_deg"].to_numpy(dtype=np.float64)
-        _mtq = float(sip_meta.get("max_px_sip", 0.0) or 0.0)
-        if not (math.isfinite(_mtq) and _mtq > 0):
-            _mtq = float(max_px_coarse)
-        _qa_px = max(15.0, min(48.0, float(_mtq) * 1.22))
         qx, qy, qra, qde = _greedy_match_pairs_pixel_wcs(
             wcs_final,
             _ra_cat,
@@ -3282,6 +3498,34 @@ def _solve_wcs_validate_and_refine(
         except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[SOLVER] QA brightest-N rematch skipped: %s", exc)
     _match_rate_gate = float(_match_rate_bright if _is_masterstar else _match_rate)
+    _cfg_val = app_config or AppConfig()
+    _benign_ratio_max = 3.20
+    _recovery_min = 0.65
+    _matched_floor = 40
+    _centre_rms_max = 1.20
+    if _is_masterstar:
+        try:
+            _benign_ratio_max = float(
+                getattr(_cfg_val, "masterstar_distortion_benign_ratio_max", 3.20)
+            )
+        except (TypeError, ValueError):
+            _benign_ratio_max = 3.20
+        _benign_ratio_max = max(2.0, min(5.0, _benign_ratio_max))
+        try:
+            _recovery_min = float(getattr(_cfg_val, "masterstar_catalog_recovery_min", 0.65))
+        except (TypeError, ValueError):
+            _recovery_min = 0.65
+        _recovery_min = max(0.40, min(0.95, _recovery_min))
+        try:
+            _matched_floor = int(getattr(_cfg_val, "masterstar_min_matched_floor", 40))
+        except (TypeError, ValueError):
+            _matched_floor = 40
+        _matched_floor = max(1, min(500, _matched_floor))
+        try:
+            _centre_rms_max = float(getattr(_cfg_val, "masterstar_centre_rms_max_px", 1.20))
+        except (TypeError, ValueError):
+            _centre_rms_max = 1.20
+        _centre_rms_max = max(0.5, min(5.0, _centre_rms_max))
     _dist_assess: dict[str, Any] = {}
     if _is_masterstar and int(_matched_n) >= 20:
         try:
@@ -3293,11 +3537,30 @@ def _solve_wcs_validate_and_refine(
                 np.asarray(pairs_de, dtype=np.float64),
                 naxis1=int(naxis1),
                 naxis2=int(naxis2),
+                benign_ratio_max=float(_benign_ratio_max),
             )
             sip_meta.update(_dist_assess)
         except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[SOLVER] distortion-limited assess skipped: %s", exc)
     _dist_benign = bool(_dist_assess.get("distortion_limited_benign", False))
+    _catalog_recovery: dict[str, Any] = {}
+    if _is_masterstar:
+        try:
+            _catalog_recovery = _compute_masterstar_catalog_recovery(
+                wcs_final,
+                _ra_cat,
+                _de_cat,
+                np.asarray(xs, dtype=np.float64),
+                np.asarray(ys, dtype=np.float64),
+                naxis1=int(naxis1),
+                naxis2=int(naxis2),
+                qa_px=float(_qa_px),
+                tight_px=2.5,
+            )
+            sip_meta.update(_catalog_recovery)
+            sip_meta["catalog_recovery_verification"] = True
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("[SOLVER] catalog-recovery assess skipped: %s", exc)
     _rms_px = None
     _rms_keys = (
         ("wcs_refine_rms_px", "rms_sip_px", "rms_linear_px")
@@ -3328,15 +3591,24 @@ def _solve_wcs_validate_and_refine(
         _hint_sep_deg = float(_hint_sc.separation(_sol_sc).deg)
     except Exception:  # noqa: BLE001
         _hint_sep_deg = float("nan")
-    log_event(
+    _qa_log = (
         f"VYVAR platesolve QA: match_rate={_match_rate * 100.0:.1f}% "
-        f"gate={_match_rate_gate * 100.0:.1f}% "
+        f"gate={_match_rate_gate * 100.0:.1f}% (info) "
         f"rms={float(_rms_px):.2f}px hint_vs_solved={_hint_sep_deg:.3f}deg "
         f"distortion_benign={bool(_dist_benign)} "
         f"centre/edge_rms="
         f"{_dist_assess.get('distortion_centre_rms_px', 'n/a')}/"
         f"{_dist_assess.get('distortion_edge_rms_px', 'n/a')}px"
     )
+    if _is_masterstar and _catalog_recovery:
+        _qa_log += (
+            f" catalog_recovery_tight={float(_catalog_recovery.get('catalog_recovery_tight', 0.0)) * 100.0:.1f}%"
+            f" gate={float(_catalog_recovery.get('catalog_recovery_tight_gate', 0.0)) * 100.0:.1f}%"
+            f" coarse={float(_catalog_recovery.get('catalog_recovery_coarse', 0.0)) * 100.0:.1f}%"
+            f" n_cat_in_frame={int(_catalog_recovery.get('n_cat_in_frame', 0))}"
+            f" n_det={int(_catalog_recovery.get('n_detections_used', 0))}"
+        )
+    log_event(_qa_log)
 
     # Hint separation guard: adapt to hint source + field size.
     # - Strong hint (mount/object header): keep strict.
@@ -3359,83 +3631,98 @@ def _solve_wcs_validate_and_refine(
         _rel_by_fov = _base_relaxed
         _strict_by_fov = _base_strict
     hint_sep_limit = float(_rel_by_fov if _hint_is_weak else _strict_by_fov)
-    # Anti-false-solve: only relax hint guard when match is reasonably strong.
+    # Anti-false-solve: only relax hint guard when match is reasonably strong (non-MASTERSTAR).
     _relax_ok = (float(_match_rate) >= (0.20 if _is_masterstar else 0.10)) and (int(_matched_n) >= (20 if _is_masterstar else 12))
     if _hint_is_weak and not _relax_ok:
         hint_sep_limit = float(_base_strict)
-    # MASTERSTAR-only conservative escape hatch:
-    # If the solve QA is excellent but the header hint is off (common with stale VY_TARG),
-    # widen the hint guard just enough to accept this specific solution.
-    if (
-        _is_masterstar
-        and (not _hint_is_weak)
-        and _relax_ok
-        and math.isfinite(float(_hint_sep_deg))
-        and (float(_hint_sep_deg) > float(hint_sep_limit))
-        and (float(_match_rate) >= 0.985)
-        and (int(_matched_n) >= 120)
-        and math.isfinite(float(_rms_px))
-        and (float(_rms_px) <= 1.10)
-    ):
-        _old_lim = float(hint_sep_limit)
-        _new_lim = min(1.20, max(_old_lim, float(_hint_sep_deg) + 0.06))
-        if _new_lim > _old_lim:
-            hint_sep_limit = float(_new_lim)
+    _ = fits_header_hint_sep_escape  # legacy API; MASTERSTAR escape blocks removed (TASK 2)
+    _verified = False
+    _hint_sep_warn = False
+    _hint_sep_bad_hard = False
+    _hint_sep_bad = False
+    if _is_masterstar:
+        _centre_rms_val = _dist_assess.get("distortion_centre_rms_px")
+        try:
+            _centre_rms_f = float(_centre_rms_val) if _centre_rms_val is not None else None
+            if _centre_rms_f is not None and not math.isfinite(_centre_rms_f):
+                _centre_rms_f = None
+        except (TypeError, ValueError):
+            _centre_rms_f = None
+        _accept = _masterstar_solve_acceptance(
+            accept_mode=str(getattr(_cfg_val, "masterstar_accept_mode", "odds")),
+            catalog_recovery_tight=float(
+                _catalog_recovery.get("catalog_recovery_tight", 0.0)
+            ),
+            catalog_recovery_tight_gate=float(
+                _catalog_recovery.get(
+                    "catalog_recovery_tight_gate",
+                    _catalog_recovery.get("catalog_recovery_tight", 0.0),
+                )
+            ),
+            n_matched_tight=int(_catalog_recovery.get("n_matched_tight", 0)),
+            n_det=int(_catalog_recovery.get("n_detections_used", 0)),
+            n_cat_in_frame=int(_catalog_recovery.get("n_cat_in_frame", 0)),
+            quadrants_with_match=int(_catalog_recovery.get("quadrants_with_match", 0)),
+            expected_random=_catalog_recovery.get("expected_random"),
+            false_alarm_p=_catalog_recovery.get("false_alarm_p"),
+            dist_benign=_dist_benign,
+            centre_rms=_centre_rms_f,
+            edge_rms=_dist_assess.get("distortion_edge_rms_px"),
+            recovery_min=float(_recovery_min),
+            matched_floor=int(
+                getattr(_cfg_val, "masterstar_odds_match_floor", 30)
+                if str(getattr(_cfg_val, "masterstar_accept_mode", "odds")).strip().lower() == "odds"
+                else _matched_floor
+            ),
+            centre_rms_max=float(_centre_rms_max),
+            hint_sep_deg=float(_hint_sep_deg),
+            hint_sep_limit=float(hint_sep_limit),
+            fov_diameter_deg=float(fov_diameter_deg),
+            odds_k=float(getattr(_cfg_val, "masterstar_odds_k", 12.0)),
+            odds_min_quadrants=int(getattr(_cfg_val, "masterstar_odds_min_quadrants", 3)),
+            false_alarm_p_max=float(getattr(_cfg_val, "masterstar_false_alarm_p_max", 1e-6)),
+            crowded_n_cat_min=int(getattr(_cfg_val, "masterstar_quality_crowded_n_cat_min", 800)),
+        )
+        _verified = bool(_accept.get("masterstar_verified", False))
+        _hint_sep_warn = bool(_accept.get("hint_sep_warn", False))
+        _hint_sep_bad_hard = bool(_accept.get("hint_sep_bad_hard", False))
+        sip_meta["masterstar_verified"] = bool(_verified)
+        sip_meta["masterstar_accept_mode"] = str(_accept.get("accept_mode", "odds"))
+        sip_meta["expected_random"] = _accept.get("expected_random")
+        sip_meta["false_alarm_p"] = _accept.get("false_alarm_p")
+        sip_meta["odds_match_threshold"] = _accept.get("odds_match_threshold")
+        sip_meta["quadrants_with_match"] = int(_catalog_recovery.get("quadrants_with_match", 0))
+        sip_meta["quality_flag_primary"] = _accept.get("quality_flag_primary", "ok")
+        sip_meta["quality_flags"] = _accept.get("quality_flags", [])
+        sip_meta["masterstar_catalog_recovery_min"] = float(_recovery_min)
+        sip_meta["masterstar_min_matched_floor"] = int(_matched_floor)
+        sip_meta["masterstar_centre_rms_max_px"] = float(_centre_rms_max)
+        if _is_masterstar and _accept.get("accept_mode") == "odds":
             log_event(
-                f"VYVAR MASTERSTAR: hint_sep limit widened {_old_lim:.2f}→{hint_sep_limit:.2f}deg "
-                f"(excellent QA; hint_vs_solved={float(_hint_sep_deg):.3f}deg)"
+                "VYVAR MASTERSTAR odds: "
+                f"n_tight={int(_catalog_recovery.get('n_matched_tight', 0))} "
+                f"expected_random={float(_accept.get('expected_random', 0.0)):.2f} "
+                f"p_false={float(_accept.get('false_alarm_p', 1.0)):.2e} "
+                f"quads={int(_catalog_recovery.get('quadrants_with_match', 0))} "
+                f"verified={bool(_verified)} "
+                f"qflag={_accept.get('quality_flag_primary', 'ok')}"
             )
-    # Pre-cal / stale mount-object hints: accept strong Gaia match when hint is modestly off.
-    if (
-        _is_masterstar
-        and _relax_ok
-        and math.isfinite(float(_hint_sep_deg))
-        and (float(_hint_sep_deg) > float(hint_sep_limit))
-        and (float(_match_rate) >= 0.85)
-        and (int(_matched_n) >= 80)
-        and math.isfinite(float(_rms_px))
-        and (float(_rms_px) <= 2.0)
-        and (float(_hint_sep_deg) <= 0.45)
-    ):
-        hint_sep_limit = float(_hint_sep_deg) + 0.01
-        log_event(
-            f"VYVAR MASTERSTAR: hint_sep limit widened to {hint_sep_limit:.2f}deg "
-            f"(strong match {float(_match_rate) * 100.0:.1f}%, rms={float(_rms_px):.2f}px, "
-            f"hint_vs_solved={float(_hint_sep_deg):.3f}deg)"
-        )
-    # FITS-header hints (stale VY_TARG / mount pointing): Qatar-class when QA is healthy but just under 85%.
-    _hint_is_fits_hdr = "fits header" in _coord_src_l
-    _fits_escape_match_ok = (float(_match_rate) >= 0.80) or (
-        int(_matched_n) >= 80
-        and float(_match_rate) >= 0.45
-        and float(_match_rate_gate) >= 0.65
-        and (
-            _dist_benign
-            or bool(sip_meta.get("cone_recenter_refit_applied"))
-        )
-    )
-    if (
-        bool(fits_header_hint_sep_escape)
-        and _is_masterstar
-        and _hint_is_fits_hdr
-        and (not _hint_is_weak)
-        and _relax_ok
-        and math.isfinite(float(_hint_sep_deg))
-        and (float(_hint_sep_deg) > float(hint_sep_limit))
-        and bool(_fits_escape_match_ok)
-        and (int(_matched_n) >= 80)
-        and math.isfinite(float(_rms_px))
-        and (float(_rms_px) <= 2.0)
-        and (float(_hint_sep_deg) <= 0.45)
-    ):
-        hint_sep_limit = float(_hint_sep_deg) + 0.01
-        _escape_tag = "distortion-limited" if _dist_benign and float(_match_rate) < 0.80 else "strong match"
-        log_event(
-            f"VYVAR MASTERSTAR: FITS-header hint_sep widened to {hint_sep_limit:.2f}deg "
-            f"({_escape_tag} {float(_match_rate) * 100.0:.1f}%, gate={float(_match_rate_gate) * 100.0:.1f}%, "
-            f"rms={float(_rms_px):.2f}px, hint_vs_solved={float(_hint_sep_deg):.3f}deg)"
-        )
-    _hint_sep_bad = math.isfinite(float(_hint_sep_deg)) and float(_hint_sep_deg) > float(hint_sep_limit)
+        if _hint_sep_warn:
+            sip_meta["hint_sep_warn"] = True
+            sip_meta["hint_sep_deg"] = float(_hint_sep_deg)
+            log_event(
+                f"VYVAR MASTERSTAR: hint_sep warning (non-fatal): "
+                f"{float(_hint_sep_deg):.3f}deg > limit {float(hint_sep_limit):.2f}deg "
+                f"(verified catalog_recovery_gate={float(_catalog_recovery.get('catalog_recovery_tight_gate', _catalog_recovery.get('catalog_recovery_tight', 0.0))) * 100.0:.1f}%)"
+            )
+        if _hint_sep_bad_hard:
+            log_event(
+                f"VYVAR MASTERSTAR: hint_sep hard tripwire: "
+                f"{float(_hint_sep_deg):.3f}deg > {float(_accept.get('hint_sep_tripwire_deg', 1.5)):.2f}deg "
+                f"(not verified)"
+            )
+    else:
+        _hint_sep_bad = math.isfinite(float(_hint_sep_deg)) and float(_hint_sep_deg) > float(hint_sep_limit)
     log_event(
         f"INFO: hint_sep guard: {float(_hint_sep_deg):.3f}deg "
         f"(limit={float(hint_sep_limit):.2f}deg, is_masterstar={bool(_is_masterstar)}, "
@@ -3476,8 +3763,24 @@ def _solve_wcs_validate_and_refine(
             f"ale match_rate={_match_rate * 100.0:.1f}% — akceptujem do {_rms_relaxed_cap:.0f} px pred ďalšími krokmi."
         )
         sip_meta["prewrite_rms_relaxed_for_masterstar"] = True
-    _invalid = (_match_rate < 0.02) or (not math.isfinite(float(_rms_px))) or _rms_bad or bool(_hint_sep_bad)
+    if _is_masterstar:
+        _invalid = (
+            (not _verified)
+            or (not math.isfinite(float(_rms_px)))
+            or _rms_bad
+            or _hint_sep_bad_hard
+        )
+    else:
+        _invalid = (_match_rate < 0.02) or (not math.isfinite(float(_rms_px))) or _rms_bad or bool(_hint_sep_bad)
     if _invalid:
+        _reason_extra = ""
+        if _is_masterstar:
+            _reason_extra = (
+                f", verified={bool(_verified)}, "
+                f"catalog_recovery_tight={float(_catalog_recovery.get('catalog_recovery_tight', 0.0)) * 100.0:.1f}%, "
+                f"catalog_recovery_gate={float(_catalog_recovery.get('catalog_recovery_tight_gate', 0.0)) * 100.0:.1f}%, "
+                f"n_matched_tight={int(_catalog_recovery.get('n_matched_tight', 0))}"
+            )
         raise _SolveWcsValidationError(
             {
                 "solved": False,
@@ -3485,7 +3788,7 @@ def _solve_wcs_validate_and_refine(
                 "rms_px": float(_rms_px),
                 "reason": (
                     f"VYVAR solver: invalid solution (match_rate={_match_rate * 100.0:.1f}%, "
-                    f"rms={float(_rms_px):.2f}px, hint_sep={_hint_sep_deg:.3f}deg)."
+                    f"rms={float(_rms_px):.2f}px, hint_sep={_hint_sep_deg:.3f}deg{_reason_extra})."
                 ),
             }
         )
@@ -3711,6 +4014,57 @@ def _solve_wcs_write_results(
             int(sip_meta.get("match_rate_n_matched", len(pairs_x)) or 0),
             "VYVAR: DAO stars matched (bright-N metric if brightest_n)",
         )
+        if sip_meta.get("catalog_recovery_tight") is not None:
+            _crt_gate = sip_meta.get("catalog_recovery_tight_gate")
+            _crt_pct = (
+                float(_crt_gate) * 100.0
+                if _crt_gate is not None
+                else float(sip_meta.get("catalog_recovery_tight", 0.0)) * 100.0
+            )
+            hdr0["VY_CRT"] = (
+                _crt_pct,
+                "VYVAR: catalog recovery gate [%] (QA flag; not accept gate under odds mode)",
+            )
+        if sip_meta.get("quality_flag_primary") is not None:
+            hdr0["VY_QFLAG"] = (
+                str(sip_meta.get("quality_flag_primary", "ok")),
+                "VYVAR: field quality flag (ok|crowded|blurred|distorted|low_recovery)",
+            )
+        if sip_meta.get("catalog_recovery_tight_gate") is not None:
+            hdr0["VY_QFRAC"] = (
+                float(sip_meta.get("catalog_recovery_tight_gate", 0.0)) * 100.0,
+                "VYVAR: catalog recovery gate [%] (quality metadata)",
+            )
+        _qrms = sip_meta.get("distortion_centre_rms_px")
+        if _qrms is None:
+            _qrms = sip_meta.get("wcs_refine_rms_px", sip_meta.get("rms_linear_px"))
+        if _qrms is not None:
+            try:
+                hdr0["VY_QRMS"] = (
+                    float(_qrms),
+                    "VYVAR: centre/residual RMS [px] (quality metadata)",
+                )
+            except (TypeError, ValueError):
+                pass
+        if sip_meta.get("n_cat_in_frame") is not None:
+            hdr0["VY_QCRWD"] = (
+                int(sip_meta.get("n_cat_in_frame", 0)),
+                "VYVAR: Gaia-in-frame count (crowding proxy)",
+            )
+            hdr0["VY_CNF"] = (
+                int(sip_meta.get("n_cat_in_frame", 0)),
+                "VYVAR: Gaia catalog stars predicted in frame",
+            )
+        if bool(sip_meta.get("hint_sep_warn", False)):
+            hdr0["VY_HSWN"] = (
+                True,
+                "VYVAR: hint separation warning (solve verified; stale pointing hint)",
+            )
+            if sip_meta.get("hint_sep_deg") is not None:
+                hdr0["VY_HSEP"] = (
+                    float(sip_meta.get("hint_sep_deg", 0.0)),
+                    "VYVAR: hint vs solved separation [deg]",
+                )
     except Exception:  # noqa: BLE001
         pass
 
@@ -3851,6 +4205,53 @@ def _solve_wcs_write_results(
 
 
 
+def _try_blind_series_hint(
+    data: np.ndarray,
+    hdr0: fits.Header,
+    *,
+    plate_scale_arcsec_per_px: float | None,
+    fov_deg: float | None,
+    max_cat_mag: float,
+    app_config: Any,
+) -> tuple[float, float, str] | None:
+    """Run scale-constrained blind triangle solver; return (ra, dec, tier) or None."""
+    from astropy.stats import sigma_clipped_stats
+    from photutils.detection import DAOStarFinder
+
+    try:
+        from vyvar_blind_series import solve_blind_with_series
+
+        _, med, std = sigma_clipped_stats(data, sigma=3.0)
+        finder = DAOStarFinder(fwhm=3.0, threshold=5.0 * float(std))
+        srcs = finder(data - float(med))
+        if srcs is None or len(srcs) < 3:
+            return None
+        bdf = srcs.to_pandas().rename(columns={"xcentroid": "x", "ycentroid": "y"})
+        if "peak" in bdf.columns and "flux" not in bdf.columns:
+            bdf["flux"] = bdf["peak"]
+        elif "flux" not in bdf.columns:
+            bdf["flux"] = 1.0
+        bdf = bdf.sort_values("flux", ascending=False)
+        blind_sink: dict[str, Any] = {}
+        series = solve_blind_with_series(
+            bdf,
+            hdr0,
+            plate_scale_arcsec_per_px=plate_scale_arcsec_per_px,
+            fov_deg=fov_deg,
+            max_cat_mag=float(max_cat_mag),
+            debug_sink=blind_sink if bool(getattr(app_config, "debug_platesolver", False)) else None,
+        )
+        if series is None:
+            return None
+        ra_b, de_b, tier = float(series[0]), float(series[1]), str(series[2])
+        if not (math.isfinite(ra_b) and math.isfinite(de_b)):
+            return None
+        return ra_b, de_b, tier
+    except Exception as exc:  # noqa: BLE001
+        log_event(f"WARNING: Blind series hint failed: {exc}")
+        return None
+
+
 def solve_wcs_with_local_gaia(
     fits_path: Path | str,
     *,
@@ -3880,6 +4281,8 @@ def solve_wcs_with_local_gaia(
     solver_apply_roworder_yflip: bool = False,
     solver_legacy_masterstar_mirror_sweep: bool = True,
     solver_fits_header_hint_sep_escape: bool = True,
+    solver_skip_header_coords: bool = False,
+    solver_blind_fallback_attempted: bool = False,
 ) -> dict[str, Any]:
     """Plate-solve by matching DAO stars to **local Gaia DR3** (SQLite); writes WCS into the FITS primary HDU.
 
@@ -3990,7 +4393,9 @@ def solve_wcs_with_local_gaia(
     de0: float | None = None
     _coord_src = ""
 
-    ra_h, dec_h, src_h = pointing_hint_from_header(hdr0)
+    ra_h, dec_h, src_h = (None, None, "")
+    if not bool(solver_skip_header_coords):
+        ra_h, dec_h, src_h = pointing_hint_from_header(hdr0)
     if (ra_h is None or dec_h is None) and (_caller_hint_ra is not None) and (_caller_hint_dec is not None):
         try:
             _rr = float(_caller_hint_ra)
@@ -3999,6 +4404,8 @@ def solve_wcs_with_local_gaia(
                 ra_h, dec_h, src_h = _rr, _dd, "caller_hint"
         except (TypeError, ValueError):
             pass
+    if bool(solver_skip_header_coords) and ra_h is not None and dec_h is not None:
+        src_h = src_h or "blind solver (fallback)"
     # Optional debug: trace why hint is missing (per-frame should have VYTARG* injected).
     try:
         if bool(getattr(_cfg_ps, "debug_platesolver", False)):
@@ -4022,8 +4429,11 @@ def solve_wcs_with_local_gaia(
             _rf, _df = float(ra_h), float(dec_h)
             if math.isfinite(_rf) and math.isfinite(_df):
                 ra0, de0 = _rf, _df
-                _coord_src = f"FITS header ({src_h})"
-                log_event(f"INFO: Solver hint z FITS hlavičky: RA={ra0:.4f} Dec={de0:.4f}")
+                if bool(solver_skip_header_coords):
+                    _coord_src = str(src_h or "blind solver (fallback)")
+                else:
+                    _coord_src = f"FITS header ({src_h})"
+                log_event(f"INFO: Solver hint: RA={ra0:.4f} Dec={de0:.4f} ({_coord_src})")
         except (TypeError, ValueError):
             ra0, de0 = None, None
 
@@ -4398,7 +4808,19 @@ def solve_wcs_with_local_gaia(
     order_full = np.argsort(-flux_arr)
     tbl_sorted = tbl[order_full]
     _simple_mode = not bool(enable_sip)
-    top = min(250, len(tbl_sorted))
+    _cap_adaptive = bool(getattr(_cfg_ps, "masterstar_detection_cap_adaptive", True))
+    _cap_min = int(getattr(_cfg_ps, "masterstar_detection_cap_min", 250))
+    _cap_max = int(getattr(_cfg_ps, "masterstar_detection_cap_max", 800))
+    _cap_k = float(getattr(_cfg_ps, "masterstar_detection_cap_k", 0.08))
+    _n_cat_est = int(len(cat_df_tri)) if cat_df_tri is not None else 0
+    if _is_masterstar and _cap_adaptive and _n_cat_est > 0:
+        top = min(len(tbl_sorted), max(_cap_min, min(_cap_max, int(_cap_k * _n_cat_est))))
+        log_event(
+            f"VYVAR MASTERSTAR: adaptive detection cap {top} "
+            f"(n_cat_tri={_n_cat_est}, k={_cap_k}, bounds [{_cap_min},{_cap_max}])"
+        )
+    else:
+        top = min(250, len(tbl_sorted))
     tbl = tbl_sorted[:top]
     xs = np.asarray(tbl["xcentroid"], dtype=np.float64)
     ys = np.asarray(tbl["ycentroid"], dtype=np.float64)
@@ -5124,8 +5546,58 @@ def solve_wcs_with_local_gaia(
             masterstar_prewrite_relaxed_rms_max_px=masterstar_prewrite_relaxed_rms_max_px,
             masterstar_nn_refine_max_rms_px=masterstar_nn_refine_max_rms_px,
             fits_header_hint_sep_escape=bool(solver_fits_header_hint_sep_escape),
+            app_config=_cfg_ps,
         )
     except _SolveWcsValidationError as exc:
+        if (
+            _is_masterstar
+            and not bool(solver_blind_fallback_attempted)
+            and "blind solver" not in str(_coord_src or "").lower()
+        ):
+            _bl_fb = _try_blind_series_hint(
+                data,
+                hdr0,
+                plate_scale_arcsec_per_px=_blind_plate_scale,
+                fov_deg=_blind_fov_deg,
+                max_cat_mag=float(max_cat_mag),
+                app_config=_cfg_ps,
+            )
+            if _bl_fb is not None:
+                log_event(
+                    "INFO: MASTERSTAR validation failed — blind fallback retry "
+                    f"(prior hint {float(ra0):.4f},{float(de0):.4f} → blind {float(_bl_fb[0]):.4f},{float(_bl_fb[1]):.4f})."
+                )
+                return solve_wcs_with_local_gaia(
+                    fits_path,
+                    hint_ra_deg=float(_bl_fb[0]),
+                    hint_dec_deg=float(_bl_fb[1]),
+                    fov_diameter_deg=fov_diameter_deg,
+                    gaia_db_path=gaia_db_path,
+                    dao_threshold_sigma=dao_threshold_sigma,
+                    max_cat_mag=max_cat_mag,
+                    enable_sip=enable_sip,
+                    sip_max_order=sip_max_order,
+                    ransac_refinement=ransac_refinement,
+                    ransac_min_pairs=ransac_min_pairs,
+                    effective_pixel_um=effective_pixel_um,
+                    focal_length_mm=focal_length_mm,
+                    expected_plate_scale_arcsec_per_px=expected_plate_scale_arcsec_per_px,
+                    max_catalog_rows=max_catalog_rows,
+                    faintest_mag_limit=faintest_mag_limit,
+                    preferred_mirror=preferred_mirror,
+                    masterstar_prewrite_rms_max_px=masterstar_prewrite_rms_max_px,
+                    masterstar_prewrite_relaxed_rms_max_px=masterstar_prewrite_relaxed_rms_max_px,
+                    masterstar_nn_refine_max_rms_px=masterstar_nn_refine_max_rms_px,
+                    masterstar_sip_min_order=masterstar_sip_min_order,
+                    masterstar_sip_force_rms_guard_ratio=masterstar_sip_force_rms_guard_ratio,
+                    app_config=app_config,
+                    solver_use_cone_for_sip=solver_use_cone_for_sip,
+                    solver_apply_roworder_yflip=solver_apply_roworder_yflip,
+                    solver_legacy_masterstar_mirror_sweep=solver_legacy_masterstar_mirror_sweep,
+                    solver_fits_header_hint_sep_escape=solver_fits_header_hint_sep_escape,
+                    solver_skip_header_coords=True,
+                    solver_blind_fallback_attempted=True,
+                )
         return exc.result
 
 
@@ -5213,4 +5685,721 @@ def solve_wcs_with_local_gaia(
         "pairs_ra": pairs_ra_out,
         "pairs_de": pairs_de_out,
         "pairs_catalog_id": pairs_catalog_id,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Pass 2 — sibling-WCS recovery (validated in sandbox/sibling_wcs_recovery_test.py)
+# ---------------------------------------------------------------------------
+
+SIBLING_WCS_TIGHT_PX: float = 2.5
+
+FILTER_EFFECTIVE_WAVELENGTH_NM: dict[str, float] = {
+    "u": 354.0,
+    "g": 477.0,
+    "r": 623.0,
+    "i": 762.0,
+    "z": 913.0,
+    "y": 1035.0,
+    "b": 440.0,
+    "v": 551.0,
+    "R": 623.0,
+    "I": 762.0,
+    "B": 440.0,
+    "V": 551.0,
+    "clear": 550.0,
+    "none": 550.0,
+    "nofilter": 550.0,
+}
+
+
+def filter_code_from_setup_name(setup: str) -> str:
+    """Extract filter token from setup folder name (e.g. ``g_60_4`` → ``g``)."""
+    s = str(setup or "").strip()
+    if not s or s.casefold() == "(root)":
+        return ""
+    return s.split("_")[0].strip().lower()
+
+
+def _sibling_cfg_thresholds(cfg: AppConfig) -> dict[str, float | int]:
+    try:
+        min_matched = int(cfg.masterstar_sibling_min_matched)
+    except (TypeError, ValueError):
+        min_matched = 40
+    min_matched = max(1, min(500, int(min_matched)))
+    try:
+        rms_max = float(cfg.masterstar_sibling_rms_max_px)
+    except (TypeError, ValueError):
+        rms_max = 2.0
+    if not math.isfinite(rms_max) or rms_max <= 0:
+        rms_max = 2.0
+    try:
+        min_quads = int(cfg.masterstar_sibling_min_quadrants)
+    except (TypeError, ValueError):
+        min_quads = 3
+    min_quads = max(1, min(4, int(min_quads)))
+    try:
+        stack_n = int(cfg.masterstar_sibling_stack_n)
+    except (TypeError, ValueError):
+        stack_n = 10
+    stack_n = max(2, min(50, int(stack_n)))
+    return {
+        "min_matched": min_matched,
+        "rms_max_px": rms_max,
+        "min_quadrants": min_quads,
+        "stack_n": stack_n,
+    }
+
+
+def _sibling_quadrant_count(
+    xs: np.ndarray, ys: np.ndarray, naxis1: int, naxis2: int
+) -> int:
+    if len(xs) == 0:
+        return 0
+    cx, cy = float(naxis1) * 0.5, float(naxis2) * 0.5
+    quads: set[int] = set()
+    for x, y in zip(xs, ys, strict=False):
+        q = (0 if float(x) < cx else 1) + (0 if float(y) < cy else 2)
+        quads.add(int(q))
+    return len(quads)
+
+
+def _sibling_false_alarm_p(
+    n_matched: int,
+    n_det: int,
+    n_cat: int,
+    naxis1: int,
+    naxis2: int,
+    *,
+    r_px: float,
+) -> float:
+    area = float(max(1, int(naxis1) * int(naxis2)))
+    p_one = min(1.0, float(n_cat) * math.pi * float(r_px) ** 2 / area)
+    if n_det <= 0 or n_matched <= 0:
+        return 1.0
+    try:
+        from scipy.stats import binom
+
+        return float(binom.sf(n_matched - 1, n_det, p_one))
+    except Exception:  # noqa: BLE001
+        lam = n_det * p_one
+        if lam <= 0:
+            return 1.0
+        return float(min(1.0, lam ** n_matched))
+
+
+def _sibling_odds_confirmed(
+    metrics: dict[str, Any],
+    *,
+    min_matched: int,
+    rms_max_px: float,
+    min_quadrants: int,
+) -> bool:
+    n_tight = int(metrics.get("n_matched_tight") or 0)
+    rms_d = metrics.get("rms_px")
+    quads = int(metrics.get("quadrants_with_match") or 0)
+    p_false = float(metrics.get("false_alarm_p") or 1.0)
+    return (
+        n_tight >= int(min_matched)
+        and rms_d is not None
+        and math.isfinite(float(rms_d))
+        and float(rms_d) <= float(rms_max_px)
+        and quads >= int(min_quadrants)
+        and p_false < 1e-6
+    )
+
+
+def _sibling_match_metrics(
+    wcs_use: WCS,
+    ra_cat: np.ndarray,
+    de_cat: np.ndarray,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    naxis1: int,
+    naxis2: int,
+    *,
+    thresholds: dict[str, float | int],
+    cat_pred_flip: str | None = None,
+) -> dict[str, Any]:
+    qa_px = max(15.0, min(48.0, 15.0 * 1.22))
+    rec = _compute_masterstar_catalog_recovery(
+        wcs_use,
+        ra_cat,
+        de_cat,
+        xs,
+        ys,
+        naxis1=int(naxis1),
+        naxis2=int(naxis2),
+        qa_px=float(qa_px),
+        tight_px=float(SIBLING_WCS_TIGHT_PX),
+    )
+    pred_x, pred_y = wcs_use.all_world2pix(ra_cat, de_cat, 0)
+    pred_x = np.asarray(pred_x, dtype=np.float64)
+    pred_y = np.asarray(pred_y, dtype=np.float64)
+    if cat_pred_flip == "flip_x":
+        pred_x = float(naxis1) - 1.0 - pred_x
+    elif cat_pred_flip == "rot180":
+        pred_x = float(naxis1) - 1.0 - pred_x
+        pred_y = float(naxis2) - 1.0 - pred_y
+    qx, qy, qra, qde = _greedy_match_pairs_pixel_wcs(
+        wcs_use,
+        ra_cat,
+        de_cat,
+        xs,
+        ys,
+        max_px=float(SIBLING_WCS_TIGHT_PX),
+        cat_pred_xy=(pred_x, pred_y),
+    )
+    n_tight = int(len(qx))
+    if n_tight > 0:
+        res: list[float] = []
+        for xi, yi, ra_i, de_i in zip(qx, qy, qra, qde, strict=False):
+            px, py = wcs_use.all_world2pix(float(ra_i), float(de_i), 0)
+            px, py = float(px), float(py)
+            if cat_pred_flip == "flip_x":
+                px = float(naxis1) - 1.0 - px
+            elif cat_pred_flip == "rot180":
+                px = float(naxis1) - 1.0 - px
+                py = float(naxis2) - 1.0 - py
+            res.append(float(math.hypot(px - float(xi), py - float(yi))))
+        med_d = float(np.median(res))
+        rms_d = float(math.sqrt(np.mean(np.square(res))))
+    else:
+        med_d = float("nan")
+        rms_d = float("inf")
+    n_cat = int(rec.get("n_cat_in_frame", 0))
+    n_det = int(rec.get("n_detections_used", len(xs)))
+    quads = _sibling_quadrant_count(np.asarray(qx), np.asarray(qy), naxis1, naxis2)
+    p_false = _sibling_false_alarm_p(
+        n_tight, n_det, n_cat, naxis1, naxis2, r_px=float(SIBLING_WCS_TIGHT_PX)
+    )
+    metrics = {
+        "n_matched_tight": n_tight,
+        "median_dpx": med_d,
+        "rms_px": rms_d,
+        "quadrants_with_match": quads,
+        "false_alarm_p": p_false,
+        "catalog_recovery_tight": rec.get("catalog_recovery_tight"),
+        "catalog_recovery_tight_gate": rec.get("catalog_recovery_tight_gate"),
+        "n_cat_in_frame": n_cat,
+        "n_detections_used": n_det,
+    }
+    metrics["confirmed"] = _sibling_odds_confirmed(
+        metrics,
+        min_matched=int(thresholds["min_matched"]),
+        rms_max_px=float(thresholds["rms_max_px"]),
+        min_quadrants=int(thresholds["min_quadrants"]),
+    )
+    return metrics
+
+
+def _sibling_match_offset_median(
+    wcs: WCS,
+    ra_cat: np.ndarray,
+    de_cat: np.ndarray,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    *,
+    cat_pred_flip: str | None,
+    naxis1: int,
+    naxis2: int,
+) -> tuple[float, float]:
+    pred_x, pred_y = wcs.all_world2pix(ra_cat, de_cat, 0)
+    pred_x = np.asarray(pred_x, dtype=np.float64)
+    pred_y = np.asarray(pred_y, dtype=np.float64)
+    if cat_pred_flip == "flip_x":
+        pred_x = float(naxis1) - 1.0 - pred_x
+    elif cat_pred_flip == "rot180":
+        pred_x = float(naxis1) - 1.0 - pred_x
+        pred_y = float(naxis2) - 1.0 - pred_y
+    qx, qy, qra, qde = _greedy_match_pairs_pixel_wcs(
+        wcs,
+        ra_cat,
+        de_cat,
+        xs,
+        ys,
+        max_px=float(SIBLING_WCS_TIGHT_PX),
+        cat_pred_xy=(pred_x, pred_y),
+    )
+    if len(qx) < 4:
+        return float("nan"), float("nan")
+    dxs: list[float] = []
+    dys: list[float] = []
+    for xi, yi, ra_i, de_i in zip(qx, qy, qra, qde, strict=False):
+        px, py = wcs.all_world2pix(float(ra_i), float(de_i), 0)
+        px, py = float(px), float(py)
+        if cat_pred_flip == "flip_x":
+            px = float(naxis1) - 1.0 - px
+        elif cat_pred_flip == "rot180":
+            px = float(naxis1) - 1.0 - px
+            py = float(naxis2) - 1.0 - py
+        dxs.append(float(xi) - px)
+        dys.append(float(yi) - py)
+    return float(np.median(dxs)), float(np.median(dys))
+
+
+def _sibling_apply_bulk_shift_crpix(
+    wcs: WCS, dx: float, dy: float, *, sx: int = -1, sy: int = -1
+) -> WCS:
+    w2 = wcs.deepcopy()
+    w2.wcs.crpix[0] = float(w2.wcs.crpix[0]) + float(sx) * float(dx)
+    w2.wcs.crpix[1] = float(w2.wcs.crpix[1]) + float(sy) * float(dy)
+    return w2
+
+
+def _sibling_best_bulk_shift(
+    w_adopt: WCS,
+    ra_cat: np.ndarray,
+    de_cat: np.ndarray,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    naxis1: int,
+    naxis2: int,
+    *,
+    thresholds: dict[str, float | int],
+    cat_pred_flip: str | None = None,
+) -> tuple[WCS, dict[str, Any], dict[str, Any]]:
+    before = _sibling_match_metrics(
+        w_adopt,
+        ra_cat,
+        de_cat,
+        xs,
+        ys,
+        naxis1,
+        naxis2,
+        thresholds=thresholds,
+        cat_pred_flip=cat_pred_flip,
+    )
+    if before.get("confirmed"):
+        return (
+            w_adopt,
+            {"dx": 0.0, "dy": 0.0, "applied": False, "reason": "already confirmed"},
+            before,
+        )
+    mdx, mdy = _sibling_match_offset_median(
+        w_adopt,
+        ra_cat,
+        de_cat,
+        xs,
+        ys,
+        cat_pred_flip=cat_pred_flip,
+        naxis1=naxis1,
+        naxis2=naxis2,
+    )
+    if not (math.isfinite(mdx) and math.isfinite(mdy)):
+        return (
+            w_adopt,
+            {"dx": mdx, "dy": mdy, "applied": False, "reason": "no offset"},
+            before,
+        )
+    best_w = w_adopt
+    best_after = before
+    best_bulk: dict[str, Any] = {"dx": mdx, "dy": mdy, "applied": False, "sign": (0, 0)}
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            w_try = _sibling_apply_bulk_shift_crpix(w_adopt, mdx, mdy, sx=sx, sy=sy)
+            after_try = _sibling_match_metrics(
+                w_try,
+                ra_cat,
+                de_cat,
+                xs,
+                ys,
+                naxis1,
+                naxis2,
+                thresholds=thresholds,
+                cat_pred_flip=cat_pred_flip,
+            )
+            score = (
+                int(after_try.get("confirmed", False)),
+                int(after_try.get("n_matched_tight") or 0),
+                -float(after_try.get("median_dpx") or 99),
+            )
+            best_score = (
+                int(best_after.get("confirmed", False)),
+                int(best_after.get("n_matched_tight") or 0),
+                -float(best_after.get("median_dpx") or 99),
+            )
+            if score > best_score:
+                best_w, best_after = w_try, after_try
+                best_bulk = {"dx": mdx, "dy": mdy, "applied": True, "sign": (sx, sy)}
+    if not best_bulk.get("applied"):
+        best_bulk["reason"] = "no improving shift"
+    return best_w, best_bulk, best_after
+
+
+def _sibling_adopt_and_confirm(
+    donor_wcs: WCS,
+    ra_cat: np.ndarray,
+    de_cat: np.ndarray,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    naxis1: int,
+    naxis2: int,
+    *,
+    thresholds: dict[str, float | int],
+    cat_pred_flip: str | None = None,
+) -> dict[str, Any]:
+    w_adopt = donor_wcs.deepcopy()
+    before = _sibling_match_metrics(
+        w_adopt,
+        ra_cat,
+        de_cat,
+        xs,
+        ys,
+        naxis1,
+        naxis2,
+        thresholds=thresholds,
+        cat_pred_flip=cat_pred_flip,
+    )
+    w_after, bulk, after = _sibling_best_bulk_shift(
+        w_adopt,
+        ra_cat,
+        de_cat,
+        xs,
+        ys,
+        naxis1,
+        naxis2,
+        thresholds=thresholds,
+        cat_pred_flip=cat_pred_flip,
+    )
+    return {
+        "wcs": w_after,
+        "before": before,
+        "bulk_shift": bulk,
+        "after": after,
+        "confirmed": bool(after.get("confirmed")),
+    }
+
+
+def pick_sibling_donor_filter(
+    recipient_filter: str,
+    verified_filters: "set[str] | dict[str, Any]",
+) -> str | None:
+    """Pick spectrally-nearest verified donor filter (preference, not hard rule)."""
+    if isinstance(verified_filters, dict):
+        candidates = {str(k) for k in verified_filters if str(k)}
+    else:
+        candidates = {str(f) for f in verified_filters if str(f)}
+    candidates.discard(str(recipient_filter))
+    if not candidates:
+        return None
+    lam_r = float(FILTER_EFFECTIVE_WAVELENGTH_NM.get(str(recipient_filter).lower(), 550.0))
+    return min(
+        candidates,
+        key=lambda f: abs(
+            float(FILTER_EFFECTIVE_WAVELENGTH_NM.get(str(f).lower(), 550.0)) - lam_r
+        ),
+    )
+
+
+def _sibling_detect_dao_on_image(
+    data: np.ndarray,
+    hdr: fits.Header,
+    *,
+    dao_sigma: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    from astropy.stats import sigma_clipped_stats
+    from photutils.detection import DAOStarFinder
+
+    working = np.nan_to_num(np.asarray(data, dtype=np.float32))
+    _, med_w, clipped_std = sigma_clipped_stats(working, sigma=3.0, maxiters=5)
+    std = float(clipped_std) if np.isfinite(clipped_std) and clipped_std > 0 else 1.0
+    img2 = np.clip(working - float(med_w), 0.0, None).astype(np.float32, copy=False)
+    dao_fw = float(dao_detection_fwhm_pixels(hdr, configured_fallback=3.0) or 3.5)
+    sig_try: list[float] = []
+    for s in (float(dao_sigma), 2.0, 1.2, 1.0):
+        ss = max(float(s), 1e-6)
+        if not any(abs(ss - t) < 1e-9 for t in sig_try):
+            sig_try.append(ss)
+    tbl = None
+    best_tbl, best_n = None, -1
+    for s in sig_try:
+        finder = DAOStarFinder(
+            fwhm=dao_fw,
+            threshold=max(float(s) * std, 1e-6),
+            brightest=None,
+            roundlo=-1.0,
+            roundhi=1.0,
+        )
+        tbl_try = finder(img2)
+        n_try = int(len(tbl_try)) if tbl_try is not None else 0
+        if n_try > best_n:
+            best_n, best_tbl = n_try, tbl_try
+        if tbl_try is not None and n_try >= 50:
+            tbl = tbl_try
+            break
+    if tbl is None:
+        tbl = best_tbl
+    if tbl is None or len(tbl) < 6:
+        return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.float64)
+    tbl = tbl[np.isfinite(tbl["xcentroid"]) & np.isfinite(tbl["ycentroid"]) & np.isfinite(tbl["flux"])]
+    flux_arr = np.asarray(tbl["flux"], dtype=np.float64)
+    order = np.argsort(-flux_arr)
+    tbl = tbl[order[: min(250, len(tbl))]]
+    xs = np.asarray(tbl["xcentroid"], dtype=np.float64)
+    ys = np.asarray(tbl["ycentroid"], dtype=np.float64)
+    return xs, ys
+
+
+def _sibling_median_stack_into_fits(
+    recipient_path: Path,
+    frame_paths: "list[Path]",
+    *,
+    n_stack: int,
+) -> int:
+    paths = sorted(frame_paths, key=lambda p: str(p).casefold())
+    if len(paths) <= 1:
+        return 0
+    n = min(max(2, int(n_stack)), len(paths))
+    start = max(0, (len(paths) - n) // 2)
+    picked = paths[start : start + n]
+    stacks: list[np.ndarray] = []
+    for fp in picked:
+        with fits.open(fp, memmap=False) as hd:
+            stacks.append(np.asarray(hd[0].data, dtype=np.float32))
+    med = np.median(np.stack(stacks, axis=0), axis=0).astype(np.float32)
+    with fits.open(recipient_path, mode="update", memmap=False) as hd:
+        hd[0].data = med
+        hd.flush()
+    return int(n)
+
+
+def _sibling_load_gaia_catalog(
+    wcs_ref: WCS,
+    hdr: fits.Header,
+    naxis1: int,
+    naxis2: int,
+    *,
+    gaia_db_path: Path,
+    fov_diameter_deg: float,
+    expected_plate_scale_arcsec_per_px: float | None,
+    effective_pixel_um: float | None,
+    focal_length_mm: float | None,
+    app_config: AppConfig | None,
+) -> tuple[np.ndarray, np.ndarray]:
+    ra0 = float(wcs_ref.wcs.crval[0])
+    de0 = float(wcs_ref.wcs.crval[1])
+    try:
+        obs_year = float(_obs_year_from_header(hdr))
+    except Exception:  # noqa: BLE001
+        obs_year = 2026.0
+    _opt = get_optimal_params(
+        focal_length_mm=float(focal_length_mm) if focal_length_mm is not None else None,
+        pixel_size_um=float(effective_pixel_um) if effective_pixel_um is not None else None,
+        fov_diameter_deg=float(fov_diameter_deg),
+    )
+    exp_scale = float(expected_plate_scale_arcsec_per_px) if expected_plate_scale_arcsec_per_px else None
+    _cat = _solve_wcs_build_catalog(
+        pointing_ra=ra0,
+        pointing_dec=de0,
+        fov_diameter_deg_eff=float(fov_diameter_deg),
+        exp_scale=exp_scale,
+        chip_fw=int(naxis1),
+        chip_fh=int(naxis2),
+        gaia_db_path=Path(gaia_db_path),
+        eff_max_cat_mag=18.0,
+        obs_epoch=obs_year,
+        logger=None,
+        hdr0=hdr,
+        fov_diameter_deg=float(fov_diameter_deg),
+        pixel_pitch_um=float(effective_pixel_um) if effective_pixel_um is not None else None,
+        focal_length_mm=float(focal_length_mm) if focal_length_mm is not None else None,
+        scale_arcsec=exp_scale,
+        optimal_params=_opt,
+        max_catalog_rows=30000,
+        max_cat_mag=18.0,
+        faintest_mag_limit=18.0,
+        coord_src="sibling recovery",
+        exp_scale_from_expected_arg=True,
+        app_config=app_config,
+    )
+    cat_df_cone_full = _cat[4]
+    ra = np.asarray(cat_df_cone_full["ra_deg"].to_numpy(dtype=np.float64))
+    de = np.asarray(cat_df_cone_full["dec_deg"].to_numpy(dtype=np.float64))
+    return ra, de
+
+
+def _write_sibling_recovered_wcs_to_fits(
+    recipient_path: Path,
+    wcs_final: WCS,
+    *,
+    donor_filter: str,
+    bulk_shift: dict[str, Any],
+    metrics: dict[str, Any],
+    stack_n: int,
+) -> None:
+    wcs_hdr = wcs_final.to_header(relax=True)
+    with fits.open(recipient_path, mode="update", memmap=False) as hdul:
+        h = hdul[0].header
+        strip_celestial_wcs_keys(h)
+        for k in wcs_hdr:
+            if k in ("", "COMMENT", "HISTORY", "SIMPLE", "BITPIX", "NAXIS", "EXTEND"):
+                continue
+            if k.startswith("NAXIS") and k != "NAXIS":
+                continue
+            try:
+                h[k] = wcs_hdr[k]
+            except Exception:  # noqa: BLE001
+                pass
+        h["VY_CRT"] = ("sibling_recovered", "VYVAR creation route")
+        h["VY_SIBL"] = (str(donor_filter), "Sibling donor filter")
+        h["VY_SSHX"] = (float(bulk_shift.get("dx") or 0.0), "Sibling bulk-shift dx [px]")
+        h["VY_SSHY"] = (float(bulk_shift.get("dy") or 0.0), "Sibling bulk-shift dy [px]")
+        h["VY_SODD"] = (int(metrics.get("n_matched_tight") or 0), "Sibling odds n_matched_tight")
+        h["VY_SRMS"] = (float(metrics.get("rms_px") or 0.0), "Sibling odds RMS [px]")
+        h["VY_SSTK"] = (int(stack_n), "Sibling stack N frames (0=single)")
+        h.add_history(
+            "VYVAR: sibling-WCS Pass 2 recovery - donor geometry + bulk-shift + odds confirm"
+        )
+        hdul.flush()
+
+
+def try_recover_masterstar_sibling_wcs(
+    *,
+    recipient_masterstar_fits: Path,
+    donor_masterstar_fits: Path,
+    recipient_filter: str,
+    donor_filter: str,
+    frame_paths: "list[Path] | None" = None,
+    app_config: AppConfig | None = None,
+    plate_solve_fov_deg: float | None = None,
+    expected_plate_scale_arcsec_per_px: float | None = None,
+    effective_pixel_um: float | None = None,
+    focal_length_mm: float | None = None,
+) -> dict[str, Any]:
+    """Adopt donor WCS, bulk-shift on recipient detections, odds-confirm; optional median stack."""
+    cfg = app_config or AppConfig()
+    thresholds = _sibling_cfg_thresholds(cfg)
+    recipient_path = Path(recipient_masterstar_fits)
+    donor_path = Path(donor_masterstar_fits)
+    if not recipient_path.is_file():
+        return {"confirmed": False, "reason": f"recipient MASTERSTAR missing: {recipient_path}"}
+    if not donor_path.is_file():
+        return {"confirmed": False, "reason": f"donor MASTERSTAR missing: {donor_path}"}
+
+    with fits.open(donor_path, memmap=False) as hd_d:
+        donor_wcs = WCS(hd_d[0].header)
+    with fits.open(recipient_path, memmap=False) as hd_r:
+        hdr = hd_r[0].header.copy()
+        data = np.asarray(hd_r[0].data, dtype=np.float32)
+        naxis1 = int(hdr.get("NAXIS1", data.shape[1]))
+        naxis2 = int(hdr.get("NAXIS2", data.shape[0]))
+
+    if not donor_wcs.has_celestial:
+        return {"confirmed": False, "reason": "donor WCS not celestial"}
+
+    try:
+        dao_sigma = float(cfg.masterstar_dao_threshold_sigma)
+    except (TypeError, ValueError):
+        dao_sigma = 2.1
+    if not math.isfinite(dao_sigma) or dao_sigma <= 0:
+        dao_sigma = 2.1
+
+    fov_deg = float(plate_solve_fov_deg) if plate_solve_fov_deg is not None else float(cfg.plate_solve_fov_deg)
+    gaia_db = Path(str(cfg.gaia_db_path or "").strip())
+    if not gaia_db.is_file():
+        return {"confirmed": False, "reason": "gaia_db_path missing"}
+
+    ra_cat, de_cat = _sibling_load_gaia_catalog(
+        donor_wcs,
+        hdr,
+        naxis1,
+        naxis2,
+        gaia_db_path=gaia_db,
+        fov_diameter_deg=fov_deg,
+        expected_plate_scale_arcsec_per_px=expected_plate_scale_arcsec_per_px,
+        effective_pixel_um=effective_pixel_um,
+        focal_length_mm=focal_length_mm,
+        app_config=cfg,
+    )
+
+    # Validated sandbox path: no auto-flip; flip/0-match -> conservative skip (T5).
+    cat_pred_flip: str | None = None
+
+    xs, ys = _sibling_detect_dao_on_image(data, hdr, dao_sigma=dao_sigma)
+    stack_n = 0
+    adopt = _sibling_adopt_and_confirm(
+        donor_wcs,
+        ra_cat,
+        de_cat,
+        xs,
+        ys,
+        naxis1,
+        naxis2,
+        thresholds=thresholds,
+        cat_pred_flip=cat_pred_flip,
+    )
+    n_after = int((adopt.get("after") or {}).get("n_matched_tight") or 0)
+    flip_guard = int(thresholds["min_matched"]) // 4
+    if n_after < flip_guard:
+        return {
+            "confirmed": False,
+            "donor_filter": donor_filter,
+            "reason": f"flip/0-match guard: n_tight={n_after} < {flip_guard}",
+            "before": adopt.get("before"),
+            "after": adopt.get("after"),
+            "stack_n": 0,
+        }
+
+    if not adopt.get("confirmed") and frame_paths:
+        stack_n = _sibling_median_stack_into_fits(
+            recipient_path,
+            list(frame_paths),
+            n_stack=int(thresholds["stack_n"]),
+        )
+        if stack_n > 0:
+            with fits.open(recipient_path, memmap=False) as hd_r2:
+                data2 = np.asarray(hd_r2[0].data, dtype=np.float32)
+            xs, ys = _sibling_detect_dao_on_image(data2, hdr, dao_sigma=dao_sigma)
+            adopt = _sibling_adopt_and_confirm(
+                donor_wcs,
+                ra_cat,
+                de_cat,
+                xs,
+                ys,
+                naxis1,
+                naxis2,
+                thresholds=thresholds,
+                cat_pred_flip=cat_pred_flip,
+            )
+            n_after = int((adopt.get("after") or {}).get("n_matched_tight") or 0)
+            if n_after < flip_guard:
+                return {
+                    "confirmed": False,
+                    "donor_filter": donor_filter,
+                    "reason": f"flip/0-match after stack: n_tight={n_after} < {flip_guard}",
+                    "before": adopt.get("before"),
+                    "after": adopt.get("after"),
+                    "stack_n": stack_n,
+                }
+
+    confirmed = bool(adopt.get("confirmed"))
+    bulk = adopt.get("bulk_shift") if isinstance(adopt.get("bulk_shift"), dict) else {}
+    after = adopt.get("after") if isinstance(adopt.get("after"), dict) else {}
+    if confirmed:
+        w_final = adopt.get("wcs")
+        if isinstance(w_final, WCS):
+            _write_sibling_recovered_wcs_to_fits(
+                recipient_path,
+                w_final,
+                donor_filter=str(donor_filter),
+                bulk_shift=bulk,
+                metrics=after,
+                stack_n=stack_n,
+            )
+
+    log_event(
+        f"SIBLING-WCS Pass2: donor={donor_filter} recipient={recipient_filter} "
+        f"dx={bulk.get('dx', 0):.3f} dy={bulk.get('dy', 0):.3f} "
+        f"n_tight={after.get('n_matched_tight', 0)} rms={after.get('rms_px', 'nan')} "
+        f"stack={stack_n} CONFIRMED={confirmed}"
+    )
+    return {
+        "confirmed": confirmed,
+        "donor_filter": donor_filter,
+        "recipient_filter": recipient_filter,
+        "bulk_shift": bulk,
+        "before": adopt.get("before"),
+        "after": after,
+        "stack_n": stack_n,
     }
