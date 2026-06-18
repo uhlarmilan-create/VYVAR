@@ -1,6 +1,19 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-18** — **Fix B: reject-on-alignment-residual frame gate** (default-OFF;
+Last updated: **2026-06-18** — **Fix C / Phase C1: dense-field alignment DIAGNOSED → root = PSF/FWHM
+bloat; recovery NOT APPLICABLE.** The 14 late-night (post-flip, back-half) frames Fix B drops are **not**
+"good data that only failed alignment" — they are **PSF-degraded**: median **FWHM 8.60 px = 1.85× the
+good baseline 4.64 px**, concentration flux_large/flux **13.1 vs 1.65**, **corr(FWHM,
+alignment-residual)=0.95** (161 frames; `tmp/phaseC1/fixC_root_cause.png`). The bloated-donut centroid
+noise (~2.4 px) is the single root — it breaks astroalign (misalignment is the *symptom*) and is what
+B.2 (concentration) + Fix-B (residual) measure. Likely **late-night focus drift on the defocused rig**
+(a transparency/flux drop alone would not bloat FWHM); post-flip-half-not-refocused is an observer
+question. **Not recoverable to sub-px** (centroid floor ~2.4 px > 1.37 px gate; cap50→3/14, WCS absent
+0/162, translation-refine inapplicable). **Fix B + B.2 are the correct PERMANENT quality gate** — not a
+stop-gap awaiting Fix C. Logged a SEPARATE control-point-cap perf ticket (astroalign mcp≈200 → ~654
+s/frame on dense fields; cap ~50 → ~3–10 s; ROADMAP). **A.B.: Fix A `005716d` + Fix B `fa03410` pushed
+to origin/main this session (Milan-authorized).** `CURSOR_RESULT_fixC_diag.md`. See DECISIONS/JOURNAL.
+Prior: 2026-06-18 — **Fix B: reject-on-alignment-residual frame gate** (default-OFF;
 `frame_align_residual_gate_enabled`). Two additive pieces: (1) **always-on QC** — a per-frame
 **alignment residual** (median deviation of bright matched sources from their across-night median
 position) is computed at the Phase-2A frame-selection point and recorded as `align_residual_px` in
@@ -14,7 +27,8 @@ drops 14 frames = all 13 phase_correlation + 1 mis-aligned astroalign** (dr=1.64
 outlier) — V0454 outliers 22→10, the catastrophic +3.7 mag/NaN points gone (clean SIPS-grade egress;
 `tmp/fixB_v0454.png`). **B.2 cross-check:** residual gate ⊇ B.2 (overlap 13, residual-only the 1
 astroalign, B.2-only 0) — cause-correct (alignment) superset of B.2's aperture-integrity symptom; both
-kept distinct. Self-deactivating once Fix C fixes alignment. See DECISIONS/JOURNAL.
+kept distinct. **[C1 correction: PERMANENT gate, not "self-deactivating once Fix C fixes alignment" —
+the frames are PSF/FWHM-bloated and unrecoverable.]** See DECISIONS/JOURNAL.
 Prior: 2026-06-18 — **Fix A: per-point error model bug fixed** (default; no flag). The LC
 `err` term-3 was `np.std(comp instrumental mags)/√n` (`photometry_core.py:2567`) — for a sparse/
 brightness-spread ensemble this is the comps' brightness *spread* (a fixed ~0.58 mag floor on V0454,

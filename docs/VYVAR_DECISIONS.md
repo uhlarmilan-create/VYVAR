@@ -6,12 +6,58 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## Fix C diagnosed (C1): run-414 bad frames are PSF/FWHM-bloated, not mis-aligned; recovery N/A (2026-06-18)
+
+**Finding (measured, run-414 g, production alignment path; `CURSOR_RESULT_fixC_diag.md`).** The 14
+late-night frames Fix B drops are **PSF-degraded**, not "good data that only failed alignment". bad-14
+median **FWHM 8.60 px = 1.85× the good baseline 4.64 px**; concentration flux_large/flux **13.1 vs 1.65**
+(8× worse); **corr(FWHM, alignment-residual) = 0.95** across 161 frames. The bloated-donut centroid noise
+(~2.4 px) is the single root: it breaks astroalign's asterism matching (the **misalignment is a symptom**)
+and it is exactly what B.2 (concentration) and Fix-B (alignment residual) measure — two downstream
+symptoms of one cause. Most likely cause: **late-night focus drift on the deliberately-defocused rig**
+(a pure transparency/flux drop would not bloat FWHM); the post-flip half may not have been refocused
+(observer question).
+
+**Decision — Fix C "alignment recovery" is NOT APPLICABLE; close it.** The frames are **not recoverable
+to sub-px**: residual geometry on the matched subset is incoherent ~2.4 px scatter (rotation ~0°, scale
+~1.0, |t| ~0.1 px; a similarity fit does not reduce it; no radial trend) + ~50 % source loss — centroid
+noise, not a fixable transform. Their centroid floor (~2.4 px) is **above the 1.37 px gate**, so even a
+perfect alignment would still be flagged. Candidate tests confirm it: control-point cap 50 → 3/14, cap 80
+→ 2/14, cap+isolation → 1/14; per-frame WCS is absent (0/162) so WCS-reproject is unavailable;
+translation-refinement is inapplicable to incoherent scatter. Force-aligning bloated PSFs would not yield
+science-grade photometry and would risk the 147 working frames / all rigs. **Diagnose-before-fix
+prevented shipping a useless, risky alignment change.**
+
+**Decision — Fix B + B.2 are the correct, PERMANENT handling.** They reject genuinely unusable frames;
+there is nothing to "recover", so the residual gate is a **permanent quality gate**, not a stop-gap that
+self-deactivates once "Fix C" succeeds. (The earlier "self-deactivating" wording is superseded below.)
+
+**Decision — log a SEPARATE perf/robustness ticket (not Fix C recovery).** astroalign at the production
+mcp≈200 on dense fields is ~654 s/frame (and still fails); cap to ~50 (astroalign's design point) →
+~3–10 s. Two integration shapes — additive recovery rung (keeps the 147 byte-identical, does **not** fix
+slowness) vs primary cap (fixes slowness, changes the 147 transforms → needs a **cross-rig regression,
+home + narrow rigs**, before adoption). Deferred until cross-rig data is available. See ROADMAP.
+
+**Watch-item.** Mildly-bloated near-threshold frames kept by the gate (e.g. g_0231, FWHM 5.12 = 1.10×):
+differential photometry largely cancels common-mode FWHM changes, so likely benign — watch the LC near
+the good→bad transition.
+
+---
+
 ## Fix B: reject-on-alignment-residual frame gate is rig-agnostic + cause-correct; default-OFF (2026-06-18)
+
+> **[Updated by C1, 2026-06-18.]** The "Problem"/"always-on"/"Self-deactivating" clauses below assumed
+> the frames were *recoverable* once "Fix C" fixed alignment. **C1 refuted that** — the frames are
+> PSF/FWHM-bloated (FWHM 1.85×; corr(FWHM,residual)=0.95) and **unrecoverable** (centroid floor ~2.4 px >
+> 1.37 px gate). Fix B is therefore a **permanent quality gate**, and the alignment residual is a
+> *symptom* of PSF bloat (alongside B.2), not a signal awaiting a future alignment fix. See the C1
+> decision above.
 
 **Problem.** run-414 D-A/D-B: the catastrophic V0454 LC outliers are 13 phase_correlation frames
 mis-aligned ~2.1 px (translation-only fallback after astroalign failed on the dense field). The frames'
-photometry data is fine — only the alignment failed. They are recoverable once alignment is fixed
-(Fix C), but until then they must not reach photometry.
+photometry data is fine — only the alignment failed. ~~They are recoverable once alignment is fixed
+(Fix C), but until then they must not reach photometry.~~ **[C1: not recoverable — PSF/FWHM bloat;
+permanent gate. See C1 decision above.]**
 
 **Decision 1 — record a per-frame alignment residual as always-on QC.** Compute, at the Phase-2A
 frame-selection point, a per-frame residual = median (over bright matched sources, 10≤mag≤13) of the
@@ -20,7 +66,8 @@ deviation of (x,y) from each source's robust across-night median position, and w
 dominated by the well-aligned majority, so a translation-mis-aligned frame's residual ≈ its full shift
 — it reproduces the diagnostic's clean separation (astroalign ~0.36 px vs phase_corr ~2.13 px) without
 needing the alignment transform's internal control points. *Why always-on:* it is additive QC metadata
-(does not feed photometry → baseline byte-identical) and is the exact signal Fix C will target.
+(does not feed photometry → baseline byte-identical) and is a direct measure of frame quality.
+**[C1: it is a *symptom* of PSF/FWHM bloat (corr=0.95), not a signal a future "Fix C" will lower.]**
 
 **Decision 2 — gate threshold is RELATIVE (rig-agnostic), not a fixed pixel value.** Reject if
 residual > `frame_align_residual_max_frac × science-aperture-radius-px`. *Why relative:* a fixed px
@@ -39,9 +86,11 @@ phase_correlation frame — this is desired, not a defect. **Relationship to B.2
 residual gate (alignment quality) is the cause-correct signal; B.2 (flux_large/flux concentration) is
 the aperture-integrity symptom and also catches genuine transparency collapse the residual gate would
 miss. On run-414 the residual gate is a strict superset of B.2 (overlap 13, residual-only the 1
-astroalign, B.2-only 0). Consolidation is deferred (a future question), not done here. **Self-
+astroalign, B.2-only 0). Consolidation is deferred (a future question), not done here. ~~**Self-
 deactivating:** once Fix C makes astroalign succeed on these frames their residual drops below
-threshold and the guard stops rejecting them — a safety net, not a permanent exclusion.
+threshold and the guard stops rejecting them — a safety net, not a permanent exclusion.~~ **[Corrected
+by C1, 2026-06-18: the gate is PERMANENT — the frames are PSF/FWHM-bloated (centroid floor ~2.4 px >
+1.37 px threshold) and unrecoverable; there is no "Fix C" that lowers their residual. See C1 above.]**
 
 ---
 

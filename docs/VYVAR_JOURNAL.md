@@ -2,12 +2,54 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- Fix C / Phase C1: dense-field alignment DIAGNOSED -> root = PSF/FWHM bloat (2026-06-18)
+
+DIAGNOSE-only (sandbox `tmp/phaseC1/`, no production edits). Deliverable `CURSOR_RESULT_fixC_diag.md`.
+**Refutes the Day-2 framing.** The 14 late-night (post-flip, back-half) frames Fix B drops are NOT
+"good data, only alignment failed" -- they are **PSF-degraded**. Measured on the production alignment
+path (run-414 g):
+- **Root cause = PSF/FWHM bloat.** bad-14 median **FWHM 8.60 px = 1.85x** the good baseline 4.64 px;
+  concentration flux_large/flux **13.1 vs 1.65** (8x worse); **corr(FWHM, alignment-residual) = 0.95**
+  across 161 frames (`tmp/phaseC1/fixC_root_cause.png`). Most likely **late-night focus drift on the
+  deliberately-defocused rig** (a pure transparency/flux drop would not bloat FWHM); possibly the
+  post-flip half was not refocused -- open observer question. The bloated-donut centroid noise
+  (~2.4 px) both breaks astroalign (misalignment is the *symptom*) and is exactly what Fix-B / B.2
+  measure. This precisely characterizes B.2's original PSF/transparency intuition as FWHM bloat.
+- **Residual geometry.** On the matched subset the leftover is **incoherent ~2.4 px scatter**
+  (rotation ~0 deg, scale ~1.0, |t| ~0.1 px; a best-fit similarity does NOT reduce it, rms_pre ~=
+  rms_post; no radial trend) + ~50% source loss -- centroid noise, not a recoverable transform.
+- **Per-frame WCS:** MASTERSTAR has celestial WCS but **0/162 input frames** do -> WCS-reproject
+  unavailable on this non-cal data.
+- **Candidates (production path, monkeypatch only the control-point lever).** control-point cap 50 ->
+  3/14 recovered, cap 80 -> 2/14, cap+isolation -> 1/14; WCS-reproject N/A; translation-refine
+  inapplicable (incoherent residual). **No candidate recovers the 14 to sub-px.** The bloated frames'
+  centroid floor (~2.4 px) > the 1.37 px gate, so even a perfect alignment would still be flagged. Only
+  the mildly-bloated g_0231 (FWHM 5.12 = 1.10x) recovers reliably.
+- **Side finding (real, unrelated to recovery):** astroalign at the production mcp~200 on dense fields
+  is **~654 s/frame** (and still fails); capping to ~50 (astroalign's design point) -> ~3-10 s.
+
+**Conclusions.** Fix C as "alignment recovery" is **DIAGNOSED -- NOT APPLICABLE**: there is nothing to
+recover, and force-aligning bloated PSFs would not yield science-grade photometry (and would risk the
+147 working frames / all rigs). **Fix B + B.2 are the correct handling** -- a **permanent quality
+gate**, not a stop-gap awaiting Fix C. The Day-2 "misalignment, not transparency" attribution was an
+over-correction; the single root is **PSF/FWHM bloat**, and B.2 (concentration) + Fix-B (alignment
+residual) are two downstream symptoms of it (corr=0.95 is the discriminating measurement Day-1/Day-2
+lacked). Logged a SEPARATE perf/robustness ticket for a dense-field astroalign control-point cap
+(ROADMAP). Diagnose-before-fix prevented shipping a useless, risky alignment change. No code, no commits.
+**Watch-item:** mildly-bloated near-threshold frames kept by the gate (e.g. g_0231, 1.10x) -- likely
+benign since differential photometry cancels common-mode FWHM changes; watch the LC near the
+good->bad transition.
+
+---
+
 ## Session -- Fix B: reject-on-alignment-residual frame-quality guard (default-OFF) (2026-06-18)
 
 Stop-gap for the run-414 D-A/D-B finding (the catastrophic LC outliers are 13 phase_correlation
-frames mis-aligned ~2.1 px by the translation-only fallback). The data is good (465–500 stars); only
-the alignment failed → drop frames whose *measured alignment residual* is too large, so they never
-reach photometry. Cause-correct and method-agnostic. Alignment itself is untouched (that is Fix C).
+frames mis-aligned ~2.1 px by the translation-only fallback). [The session framing below read "the data
+is good; only the alignment failed (that is Fix C)" — **C1 later refuted this**: the frames are
+PSF/FWHM-bloated and the misalignment is a symptom; see the C1 session above.] Drop frames whose
+*measured alignment residual* is too large, so they never reach photometry. Cause-correct and
+method-agnostic. Alignment itself is untouched.
 
 **Audit (`file:line`).** `alignment_report.csv` is written from `star_counts` per-frame dicts at
 `pipeline.py:12974` (before MASTERSTAR/Phase-2A, so proc CSVs don't yet exist there). The B.2 gate
@@ -49,8 +91,10 @@ trust tests pass.
   residual-only = the 1 astroalign, B.2-only = 0** — the residual gate is a strict superset; it is the
   cause-correct (alignment) signal, B.2 the aperture-integrity symptom. Both kept distinct.
 
-Committed (push held for Milan). Self-deactivating: once Fix C lets astroalign succeed on these dense
-frames, their residual drops below threshold → the guard stops rejecting them.
+Committed (push held for Milan). **[Corrected by C1, 2026-06-18:** this gate is **permanent**, not
+self-deactivating — C1 proved the 14 frames are PSF/FWHM-bloated, with a centroid floor (~2.4 px) above
+the 1.37 px threshold, so they are unrecoverable and there is no "Fix C" that lowers their residual.
+Fix B is the correct permanent handling. See the C1 session above.**]**
 
 ---
 

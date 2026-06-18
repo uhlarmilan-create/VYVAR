@@ -73,20 +73,35 @@ Diagnosed and measured in isolation on draft_413 g; writeup `CURSOR_RESULT_round
 - **B.2 frame-quality gate Phase-0+1 extension (future)** — gate collapsed frames at
   **comp-selection** time too, not only Phase 2A; may recover comps and feed the structural follow-up.
 
-### run-414 fixes — Fix A (err model) DONE; Fix B (residual gate) DONE; Fix C (alignment) OPEN (2026-06-18)
+### run-414 fixes — Fix A DONE; Fix B DONE; Fix C DIAGNOSED → N/A; control-point-cap perf ticket OPEN (2026-06-18)
 
-From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`). Push of Fix A + Fix B gated on Milan.
+From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnostic
+(`CURSOR_RESULT_fixC_diag.md`). Fix A + Fix B pushed to origin/main 2026-06-18 (Milan-authorized).
 - **Fix A — per-point `err` model — DONE (default).** `err` term-3 was std of comp instrumental mags
   (brightness spread, ~0.58 mag floor); now per-frame ensemble-ZP residual SEM. Decisions/JOURNAL.
-- **Fix B — reject-on-alignment-residual gate — DONE (default-OFF).** `frame_align_residual_gate_enabled`
-  (+ `max_frac`=0.25 of aperture radius, `min_keep_frames`). Per-frame `align_residual_px` recorded
-  always-on in `alignment_report.csv`. On run-414 g, ON drops the 13 phase_correlation + 1 mis-aligned
-  astroalign frame; OFF byte-identical. Strict superset of B.2 (cause-correct vs symptom).
-- **Fix C — alignment robustness on dense fields (OPEN, HIGH).** Root cause of the bad frames: astroalign
-  fails on the dense post-flip field (combinatorial triangle ambiguity at 465–500 stars) → translation-
-  only `phase_correlation` fallback (~2.1 px mis-align). Make astroalign succeed (cap/seed control
-  points, detection ladder, bright-star asterism) so the frames are recovered. Once fixed, the Fix B
-  residual gate self-deactivates on these frames. Whether to then consolidate Fix B + B.2 is a follow-up.
+- **Fix B — reject-on-alignment-residual gate — DONE (default-OFF), PERMANENT quality gate.**
+  `frame_align_residual_gate_enabled` (+ `max_frac`=0.25 of aperture radius, `min_keep_frames`).
+  Per-frame `align_residual_px` recorded always-on in `alignment_report.csv`. On run-414 g, ON drops the
+  13 phase_correlation + 1 mis-aligned astroalign frame; OFF byte-identical. C1 confirmed Fix B + B.2 are
+  the **correct permanent handling** of these frames (not a stop-gap awaiting Fix C).
+- **Fix C — dense-field alignment recovery — DIAGNOSED → NOT APPLICABLE (2026-06-18, C1).** The premise
+  ("good data, only alignment failed → recoverable") is **refuted**: the 14 frames are **PSF/FWHM-bloated**
+  (median FWHM 8.60 px = 1.85× the good 4.64 px; concentration 13.1 vs 1.65; **corr(FWHM,residual)=0.95**).
+  Bloated-donut centroid noise (~2.4 px) breaks astroalign (misalignment = symptom) and is what Fix-B/B.2
+  measure. **Not recoverable to sub-px** (centroid floor ~2.4 px > 1.37 px gate; cap50→3/14, WCS absent
+  0/162, translation-refine inapplicable). Likely **late-night focus drift on the defocused rig** (FWHM
+  bloat, not a flux drop); post-flip-half-not-refocused is an observer question. **Closed** — recovery
+  would be useless and risky. `CURSOR_RESULT_fixC_diag.md`, `tmp/phaseC1/fixC_root_cause.png`.
+- **NEW — dense-field astroalign control-point cap (perf/robustness, OPEN, MED).** *Separate from Fix-C
+  recovery.* astroalign at `mcp≈200` on dense fields is ~654 s/frame (and still fails); cap to ~50
+  (astroalign's design point) → ~3–10 s. Two shapes: (i) **additive recovery rung** — cap tried only
+  after the current attempts fail, before `phase_correlation` (hook: `vyvar_alignment_frame.`
+  `_alignment_compute_one_frame`, between the `_attempts` loop end and the phase_correlation block);
+  keeps the 147 byte-identical, does **not** fix slowness. (ii) **primary cap** — fixes slowness but
+  changes the 147 transforms → requires a **cross-rig regression (home + narrow rigs)** before adoption.
+  **Defer until cross-rig data is available.** **Watch-item:** mildly-bloated near-threshold frames kept
+  by the gate (e.g. g_0231, FWHM 1.10×) — likely benign (differential photometry cancels common-mode
+  FWHM), watch the LC near the good→bad transition.
 
 ---
 
