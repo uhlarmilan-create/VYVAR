@@ -671,6 +671,35 @@ def render_settings_dashboard(
             value=int(getattr(cfg, "frame_quality_min_keep_frames", 10) or 10),
             help="Safety floor: skip the gate entirely if it would keep fewer than this many frames.",
         )
+        st.caption(
+            "Fix B: reject-on-alignment-residual gate. Per-frame alignment residual (median "
+            "deviation of bright sources from their across-night median position) is always recorded "
+            "in alignment_report.csv; the gate (default OFF -> byte-identical) drops frames whose "
+            "residual exceeds a fraction of the science aperture radius (rig-agnostic)."
+        )
+        frame_align_residual_gate_enabled = st.toggle(
+            "frame_align_residual_gate_enabled",
+            value=bool(getattr(cfg, "frame_align_residual_gate_enabled", False)),
+            help="Drop frames whose measured alignment residual is too large (cause-correct: "
+            "catches translation-only / failed alignment). Method-agnostic; self-deactivating "
+            "once alignment succeeds.",
+        )
+        frame_align_residual_max_frac = st.slider(
+            "frame_align_residual_max_frac",
+            min_value=0.05,
+            max_value=1.0,
+            value=float(getattr(cfg, "frame_align_residual_max_frac", 0.25) or 0.25),
+            step=0.01,
+            help="Reject if residual > frac * science aperture radius (px). Relative, not fixed px, "
+            "so it generalizes across rigs. ~0.2-0.25 is where defocused-donut flux leaves the aperture.",
+        )
+        frame_align_residual_min_keep_frames = st.slider(
+            "frame_align_residual_min_keep_frames",
+            min_value=3,
+            max_value=200,
+            value=int(getattr(cfg, "frame_align_residual_min_keep_frames", 10) or 10),
+            help="Safety floor: skip the gate entirely if it would keep fewer than this many frames.",
+        )
 
     with tab_p01:
         st.markdown("### Phase 0+1 — star matching / stability")
@@ -945,6 +974,9 @@ def render_settings_dashboard(
         cfg.frame_quality_ratio_k = float(max(2.0, min(20.0, frame_quality_ratio_k)))
         cfg.frame_quality_fwhm_factor = float(max(0.8, min(3.0, frame_quality_fwhm_factor)))
         cfg.frame_quality_min_keep_frames = int(max(3, min(100000, frame_quality_min_keep_frames)))
+        cfg.frame_align_residual_gate_enabled = bool(frame_align_residual_gate_enabled)
+        cfg.frame_align_residual_max_frac = float(max(0.05, min(1.0, frame_align_residual_max_frac)))
+        cfg.frame_align_residual_min_keep_frames = int(max(3, min(100000, frame_align_residual_min_keep_frames)))
 
         cfg.phase01_comparison_max_dist_deg = float(max(0.05, min(10.0, p01_md)))
         cfg.phase01_comparison_max_mag_diff = float(max(0.05, min(5.0, p01_mm)))

@@ -6202,6 +6202,140 @@ def _frame_quality_gate_select(
     return kept, rejected
 
 
+def _proc_stem(name: str) -> str:
+    """``proc_<stem>.csv`` -> ``<stem>`` (matches alignment_report.csv ``file`` minus ``.fits``)."""
+    if name.startswith("proc_") and name.endswith(".csv"):
+        return name[5:-4]
+    return name
+
+
+def _compute_frame_align_residuals(
+    csv_files: list[Path],
+    proc_frame_store: ProcFrameStore | None,
+) -> tuple[dict[Path, float], float]:
+    """Fix B (QC, always-on): per-frame alignment residual (px) + science aperture radius (px).
+
+    ``residual[frame]`` = the median, over bright matched sources (``10 <= mag <= 13`` and
+    ``flux > 0``), of the Euclidean deviation of each source's ``(x, y)`` from that source's
+    robust across-night median position. This is method-agnostic and reproduces the run-414
+    diagnostic separation (astroalign ~0.36 px vs phase_correlation ~2.13 px). The reference
+    (across-night median) is dominated by the well-aligned majority, so a translation-mis-aligned
+    frame stands out by ~its full shift. Also returns the field-median science aperture radius
+    (``aperture_r_px``) as the rig-agnostic scale for the gate threshold.
+
+    Pure QC: does NOT change ``csv_files`` selection (and so leaves photometry byte-identical);
+    its only side effect (recording the column) is in ``_record_align_residuals_to_report``.
+    """
+    cols = ["catalog_id", "x", "y", "mag", "flux", "aperture_r_px"]
+    per_frame: list[tuple[Path, pd.DataFrame]] = []
+    frames: list[pd.DataFrame] = []
+    ap_vals: list[float] = []
+    for p in csv_files:
+        df = proc_frame_store.get_frame(p, cols=cols) if proc_frame_store is not None else None
+        if df is None:
+            try:
+                _want = set(cols)
+                df = pd.read_csv(p, usecols=lambda c: c in _want, low_memory=False)
+            except Exception:  # noqa: BLE001
+                df = None
+        if df is None or not {"catalog_id", "x", "y"}.issubset(df.columns):
+            per_frame.append((p, pd.DataFrame(columns=["catalog_id", "x", "y"])))
+            continue
+        cid = df["catalog_id"].astype(str)
+        x = pd.to_numeric(df["x"], errors="coerce")
+        y = pd.to_numeric(df["y"], errors="coerce")
+        mg = pd.to_numeric(df["mag"], errors="coerce") if "mag" in df.columns else pd.Series(np.nan, index=df.index)
+        fl = pd.to_numeric(df["flux"], errors="coerce") if "flux" in df.columns else pd.Series(1.0, index=df.index)
+        bright = np.isfinite(x) & np.isfinite(y) & (fl > 0)
+        if mg.notna().any():
+            _b = bright & (mg >= 10.0) & (mg <= 13.0)
+            if int(_b.sum()) >= 5:
+                bright = _b
+        sub = pd.DataFrame({"catalog_id": cid[bright], "x": x[bright], "y": y[bright]})
+        per_frame.append((p, sub))
+        if not sub.empty:
+            frames.append(sub.assign(_fi=len(per_frame) - 1))
+        if "aperture_r_px" in df.columns:
+            apr = pd.to_numeric(df["aperture_r_px"], errors="coerce")
+            apr = apr[np.isfinite(apr) & (apr > 0)]
+            if len(apr):
+                ap_vals.append(float(np.nanmedian(apr.to_numpy())))
+    residuals: dict[Path, float] = {p: float("nan") for p, _ in per_frame}
+    if frames:
+        allpos = pd.concat(frames, ignore_index=True)
+        ref = allpos.groupby("catalog_id")[["x", "y"]].median().rename(columns={"x": "mx", "y": "my"})
+        for fi, (p, sub) in enumerate(per_frame):
+            if sub.empty:
+                continue
+            j = sub.join(ref, on="catalog_id")
+            dr = np.hypot(j["x"] - j["mx"], j["y"] - j["my"]).to_numpy()
+            dr = dr[np.isfinite(dr)]
+            if len(dr):
+                residuals[p] = float(np.median(dr))
+    aperture_r_px = float(np.nanmedian(ap_vals)) if ap_vals else float("nan")
+    return residuals, aperture_r_px
+
+
+def _record_align_residuals_to_report(report_path: Path, residuals: dict[Path, float]) -> None:
+    """Fix B (QC, always-on): add/refresh ``align_residual_px`` in ``alignment_report.csv``.
+
+    Additive metadata only — does not affect photometry (baseline stays byte-identical). Matches by
+    frame stem (``alignment_report.file`` minus ``.fits`` == proc basename minus ``proc_``/``.csv``).
+    Best-effort: any failure is logged and ignored so QC never breaks a run.
+    """
+    try:
+        if not Path(report_path).is_file():
+            return
+        stem_resid = {_proc_stem(Path(p).name): v for p, v in residuals.items()}
+        rep = pd.read_csv(report_path)
+        if "file" not in rep.columns:
+            return
+        stems = rep["file"].astype(str).str.replace(".fits", "", regex=False)
+        rep["align_residual_px"] = [stem_resid.get(s, float("nan")) for s in stems]
+        rep.to_csv(report_path, index=False)
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[ALIGN-QC] failed to record align_residual_px: %s", exc)
+
+
+def _frame_align_residual_gate_select(
+    csv_files: list[Path],
+    cfg: AppConfig | None,
+    residuals: dict[Path, float],
+    aperture_r_px: float,
+) -> tuple[list[Path], list[str], float]:
+    """Fix B: reject-on-alignment-residual frame gate (default OFF -> input unchanged).
+
+    Rejects frames whose recorded alignment residual exceeds
+    ``cfg.frame_align_residual_max_frac * science-aperture-radius-px`` (rig-agnostic: a fraction of
+    the aperture radius, never a fixed pixel value). Frames with no measurable residual (NaN) are
+    KEPT (a missing QC value must not silently drop data). Safety floor: if the gate would keep
+    fewer than ``cfg.frame_align_residual_min_keep_frames`` frames it is skipped (no-op).
+
+    Cause-correct counterpart to the B.2 aperture-integrity gate; self-deactivating once alignment
+    (Fix C) succeeds. Returns ``(kept, rejected_basenames, threshold_px)``.
+    """
+    if cfg is None or not getattr(cfg, "frame_align_residual_gate_enabled", False):
+        return list(csv_files), [], float("nan")
+    if not (math.isfinite(aperture_r_px) and aperture_r_px > 0):
+        LOGGER.warning("[ALIGN-QC] residual gate: no valid aperture radius -> SKIPPING gate")
+        return list(csv_files), [], float("nan")
+    thr = float(cfg.frame_align_residual_max_frac) * float(aperture_r_px)
+    reject = []
+    for p in csv_files:
+        r = residuals.get(p, float("nan"))
+        reject.append(bool(math.isfinite(r) and r > thr))
+    if int(len(csv_files) - sum(reject)) < int(cfg.frame_align_residual_min_keep_frames):
+        LOGGER.warning(
+            "[ALIGN-QC] residual gate would keep only %d < floor %d frames -> SKIPPING gate",
+            int(len(csv_files) - sum(reject)),
+            int(cfg.frame_align_residual_min_keep_frames),
+        )
+        return list(csv_files), [], thr
+    kept = [p for p, rj in zip(csv_files, reject) if not rj]
+    rejected = [Path(p).name for p, rj in zip(csv_files, reject) if rj]
+    return kept, rejected, thr
+
+
 def _phase2a_prepare_shared_state(
     output_dir: Path,
     lc_dir: Path,
@@ -6419,6 +6553,38 @@ def _phase2a_prepare_shared_state(
             _p2(
                 f"Frame-QC gate: {len(_rejected_csv)} collapsed frames rejected, "
                 f"{len(_kept_csv)} kept"
+            )
+    # Fix B: per-frame alignment residual (px). Always-on QC: compute on the full frame set and
+    # record into alignment_report.csv (additive metadata -> photometry stays byte-identical).
+    # Then, only if the gate is enabled, drop frames whose residual exceeds the rig-agnostic
+    # threshold (fraction of the science aperture radius). Cause-correct counterpart to B.2.
+    try:
+        _align_resid, _align_apr = _compute_frame_align_residuals(csv_files, proc_frame_store)
+        _align_report_path = Path(masterstar_fits_path).resolve().parent / "alignment_report.csv"
+        _record_align_residuals_to_report(_align_report_path, _align_resid)
+    except Exception as _ar_exc:  # noqa: BLE001
+        LOGGER.warning("[ALIGN-QC] residual compute/record failed (gate disabled this run): %s", _ar_exc)
+        _align_resid, _align_apr = {}, float("nan")
+    if getattr(_cfg, "frame_align_residual_gate_enabled", False):
+        _kept_ar, _rejected_ar, _ar_thr = _frame_align_residual_gate_select(
+            csv_files, _cfg, _align_resid, _align_apr
+        )
+        if _rejected_ar:
+            csv_files = _kept_ar
+            logging.info(
+                "[ALIGN-QC] alignment-residual gate: rejected %d/%d frames "
+                "(thr=%.2f px = %.2f*%.2f apr; %s%s)",
+                len(_rejected_ar),
+                len(_rejected_ar) + len(_kept_ar),
+                _ar_thr,
+                float(_cfg.frame_align_residual_max_frac),
+                float(_align_apr),
+                ", ".join(_rejected_ar[:5]),
+                " ..." if len(_rejected_ar) > 5 else "",
+            )
+            _p2(
+                f"Align-residual gate: {len(_rejected_ar)} mis-aligned frames rejected, "
+                f"{len(_kept_ar)} kept"
             )
     # Len CSV — bez FITS (flux sa číta z dao_flux v CSV)
     n_frames = len(csv_files)

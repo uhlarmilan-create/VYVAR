@@ -1,6 +1,21 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-18** — **Fix A: per-point error model bug fixed** (default; no flag). The LC
+Last updated: **2026-06-18** — **Fix B: reject-on-alignment-residual frame gate** (default-OFF;
+`frame_align_residual_gate_enabled`). Two additive pieces: (1) **always-on QC** — a per-frame
+**alignment residual** (median deviation of bright matched sources from their across-night median
+position) is computed at the Phase-2A frame-selection point and recorded as `align_residual_px` in
+`alignment_report.csv` (additive metadata → photometry byte-identical); it reproduces the run-414
+diagnostic separation (astroalign med **0.358**/max **1.648** px vs phase_corr min **1.450**/med
+**2.130** px). (2) **gate (default-OFF)** — rejects frames whose residual exceeds
+`frame_align_residual_max_frac × science-aperture-radius-px` (**rig-agnostic** fraction, default
+**0.25** → 1.37 px, in the 1.206→1.450 px good/bad gap; safety floor `min_keep_frames`). Verified on
+run-414 g: **OFF byte-identical** (70 targets, V0454 `mag_calib`/`delta_mag`/`err` max|diff|=0); **ON
+drops 14 frames = all 13 phase_correlation + 1 mis-aligned astroalign** (dr=1.648, itself an LC
+outlier) — V0454 outliers 22→10, the catastrophic +3.7 mag/NaN points gone (clean SIPS-grade egress;
+`tmp/fixB_v0454.png`). **B.2 cross-check:** residual gate ⊇ B.2 (overlap 13, residual-only the 1
+astroalign, B.2-only 0) — cause-correct (alignment) superset of B.2's aperture-integrity symptom; both
+kept distinct. Self-deactivating once Fix C fixes alignment. See DECISIONS/JOURNAL.
+Prior: 2026-06-18 — **Fix A: per-point error model bug fixed** (default; no flag). The LC
 `err` term-3 was `np.std(comp instrumental mags)/√n` (`photometry_core.py:2567`) — for a sparse/
 brightness-spread ensemble this is the comps' brightness *spread* (a fixed ~0.58 mag floor on V0454,
 23× the empirical 0.025), not a per-point uncertainty. Replaced with the per-frame **ensemble-ZP

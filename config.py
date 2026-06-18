@@ -616,6 +616,16 @@ class AppConfig:
     frame_quality_fwhm_factor: float = 1.0   # guard: reject only if FWHM >= factor*median-FWHM (spares sharp frames)
     frame_quality_min_keep_frames: int = 10  # safety floor: skip gate if it would drop below this
 
+    #: Fix B: Phase-2A reject-on-alignment-residual gate (default OFF -> byte-identical).
+    #: Rejects frames whose per-frame alignment residual (median deviation of bright matched
+    #: sources from their across-night median position, recorded in alignment_report.csv) exceeds
+    #: ``frame_align_residual_max_frac * science-aperture-radius-px``. Rig-agnostic (relative to the
+    #: aperture radius, not a fixed pixel value). Cause-correct alignment-quality signal; complements
+    #: the B.2 aperture-integrity gate. Self-deactivating once alignment (Fix C) succeeds.
+    frame_align_residual_gate_enabled: bool = False
+    frame_align_residual_max_frac: float = 0.25   # reject if residual > frac * science aperture radius (clamped 0.05..1.0)
+    frame_align_residual_min_keep_frames: int = 10  # safety floor: skip gate if it would drop below this
+
     # Paths derived from config.json (must stay after all init=True fields for dataclass(slots=True)).
     archive_root: Path = field(init=False)
     calibration_library_root: Path = field(init=False)
@@ -928,6 +938,26 @@ class AppConfig:
             )
         except (TypeError, ValueError):
             self.frame_quality_min_keep_frames = 10
+
+        self.frame_align_residual_gate_enabled = bool(
+            data.get("frame_align_residual_gate_enabled", self.frame_align_residual_gate_enabled)
+        )
+        try:
+            self.frame_align_residual_max_frac = max(
+                0.05, min(1.0, float(data.get("frame_align_residual_max_frac", self.frame_align_residual_max_frac)))
+            )
+        except (TypeError, ValueError):
+            self.frame_align_residual_max_frac = 0.25
+        try:
+            self.frame_align_residual_min_keep_frames = max(
+                3,
+                min(
+                    100000,
+                    int(data.get("frame_align_residual_min_keep_frames", self.frame_align_residual_min_keep_frames)),
+                ),
+            )
+        except (TypeError, ValueError):
+            self.frame_align_residual_min_keep_frames = 10
 
         self.aperture_photometry_enabled = bool(data.get("aperture_photometry_enabled", self.aperture_photometry_enabled))
         self.save_lightcurve_png = bool(data.get("save_lightcurve_png", self.save_lightcurve_png))
@@ -1827,6 +1857,9 @@ class AppConfig:
             "frame_quality_ratio_k": float(self.frame_quality_ratio_k),
             "frame_quality_fwhm_factor": float(self.frame_quality_fwhm_factor),
             "frame_quality_min_keep_frames": int(self.frame_quality_min_keep_frames),
+            "frame_align_residual_gate_enabled": bool(self.frame_align_residual_gate_enabled),
+            "frame_align_residual_max_frac": float(self.frame_align_residual_max_frac),
+            "frame_align_residual_min_keep_frames": int(self.frame_align_residual_min_keep_frames),
             "aperture_photometry_enabled": bool(self.aperture_photometry_enabled),
             "save_lightcurve_png": bool(self.save_lightcurve_png),
             "phase2a_airmass_before_outlier": bool(self.phase2a_airmass_before_outlier),

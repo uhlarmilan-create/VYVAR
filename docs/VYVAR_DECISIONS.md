@@ -6,6 +6,45 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## Fix B: reject-on-alignment-residual frame gate is rig-agnostic + cause-correct; default-OFF (2026-06-18)
+
+**Problem.** run-414 D-A/D-B: the catastrophic V0454 LC outliers are 13 phase_correlation frames
+mis-aligned ~2.1 px (translation-only fallback after astroalign failed on the dense field). The frames'
+photometry data is fine — only the alignment failed. They are recoverable once alignment is fixed
+(Fix C), but until then they must not reach photometry.
+
+**Decision 1 — record a per-frame alignment residual as always-on QC.** Compute, at the Phase-2A
+frame-selection point, a per-frame residual = median (over bright matched sources, 10≤mag≤13) of the
+deviation of (x,y) from each source's robust across-night median position, and write it as
+`align_residual_px` in `alignment_report.csv`. *Why this metric:* the across-night median reference is
+dominated by the well-aligned majority, so a translation-mis-aligned frame's residual ≈ its full shift
+— it reproduces the diagnostic's clean separation (astroalign ~0.36 px vs phase_corr ~2.13 px) without
+needing the alignment transform's internal control points. *Why always-on:* it is additive QC metadata
+(does not feed photometry → baseline byte-identical) and is the exact signal Fix C will target.
+
+**Decision 2 — gate threshold is RELATIVE (rig-agnostic), not a fixed pixel value.** Reject if
+residual > `frame_align_residual_max_frac × science-aperture-radius-px`. *Why relative:* a fixed px
+threshold would mis-generalize across rigs/plate-scales/focus; expressing it as a fraction of the
+aperture radius ties it to where flux physically leaves the aperture. *Default 0.25:* on run-414 the
+good/bad gap (1.206→1.450 px) is 0.22–0.27 × the 5.47 px aperture radius, and physically residual
+≳~0.2× aperture-radius is where the defocused-donut flux starts leaving the science aperture; 0.25
+(→1.37 px) sits in the gap. Safety floor (`min_keep_frames`, default 10) makes the gate a no-op rather
+than nuke a marginal night.
+
+**Decision 3 — default-OFF; method-agnostic; keep distinct from B.2.** Default-OFF ⇒ byte-identical
+(verified: 70 targets 0 diff, V0454 max|diff|=0). ON drops 14 frames = all 13 phase_correlation **+ 1
+mis-aligned astroalign** (dr=1.648, itself an LC outlier): the gate keys on *measured residual*, not on
+the alignment method, so it correctly catches a bad astroalign frame and would spare a well-aligned
+phase_correlation frame — this is desired, not a defect. **Relationship to B.2 (kept separate):** the
+residual gate (alignment quality) is the cause-correct signal; B.2 (flux_large/flux concentration) is
+the aperture-integrity symptom and also catches genuine transparency collapse the residual gate would
+miss. On run-414 the residual gate is a strict superset of B.2 (overlap 13, residual-only the 1
+astroalign, B.2-only 0). Consolidation is deferred (a future question), not done here. **Self-
+deactivating:** once Fix C makes astroalign succeed on these frames their residual drops below
+threshold and the guard stops rejecting them — a safety net, not a permanent exclusion.
+
+---
+
 ## Per-point `err` = photon ⊕ ensemble-ZP residual SEM (NOT std of comp instrumental mags) (2026-06-18)
 
 **Bug.** The LC `err` term-3 was `ensemble_scatter/√n_ens` with `ensemble_scatter = np.std(comp_vals)`

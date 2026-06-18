@@ -31,6 +31,9 @@ no UI yet).
 | `frame_quality_ratio_k` | 5.0 | 2.0 … 20.0 | ui_settings.py (Photometry → Data quality) | **yes** | robust z-cut on per-frame flux_large/flux |
 | `frame_quality_fwhm_factor` | 1.0 | 0.8 … 3.0 | ui_settings.py (Photometry → Data quality) | **yes** | guard: reject only if FWHM ≥ factor×median |
 | `frame_quality_min_keep_frames` | 10 | 3 … 100000 | ui_settings.py (Photometry → Data quality) | **yes** | safety floor: skip gate below this |
+| `frame_align_residual_gate_enabled` | False | — | ui_settings.py (Photometry → Data quality) | **yes** | Fix B; default OFF → byte-identical; residual column always recorded |
+| `frame_align_residual_max_frac` | 0.25 | 0.05 … 1.0 | ui_settings.py (Photometry → Data quality) | **yes** | reject if residual > frac×science aperture radius (rig-agnostic, not fixed px) |
+| `frame_align_residual_min_keep_frames` | 10 | 3 … 100000 | ui_settings.py (Photometry → Data quality) | **yes** | safety floor: skip gate below this |
 
 ---
 

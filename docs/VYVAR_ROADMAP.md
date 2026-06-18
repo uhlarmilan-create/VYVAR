@@ -73,6 +73,21 @@ Diagnosed and measured in isolation on draft_413 g; writeup `CURSOR_RESULT_round
 - **B.2 frame-quality gate Phase-0+1 extension (future)** — gate collapsed frames at
   **comp-selection** time too, not only Phase 2A; may recover comps and feed the structural follow-up.
 
+### run-414 fixes — Fix A (err model) DONE; Fix B (residual gate) DONE; Fix C (alignment) OPEN (2026-06-18)
+
+From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`). Push of Fix A + Fix B gated on Milan.
+- **Fix A — per-point `err` model — DONE (default).** `err` term-3 was std of comp instrumental mags
+  (brightness spread, ~0.58 mag floor); now per-frame ensemble-ZP residual SEM. Decisions/JOURNAL.
+- **Fix B — reject-on-alignment-residual gate — DONE (default-OFF).** `frame_align_residual_gate_enabled`
+  (+ `max_frac`=0.25 of aperture radius, `min_keep_frames`). Per-frame `align_residual_px` recorded
+  always-on in `alignment_report.csv`. On run-414 g, ON drops the 13 phase_correlation + 1 mis-aligned
+  astroalign frame; OFF byte-identical. Strict superset of B.2 (cause-correct vs symptom).
+- **Fix C — alignment robustness on dense fields (OPEN, HIGH).** Root cause of the bad frames: astroalign
+  fails on the dense post-flip field (combinatorial triangle ambiguity at 465–500 stars) → translation-
+  only `phase_correlation` fallback (~2.1 px mis-align). Make astroalign succeed (cap/seed control
+  points, detection ladder, bright-star asterism) so the frames are recovered. Once fixed, the Fix B
+  residual gate self-deactivates on these frames. Whether to then consolidate Fix B + B.2 is a follow-up.
+
 ---
 
 ## NEXT SESSION — open items

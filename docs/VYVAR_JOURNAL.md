@@ -2,6 +2,58 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- Fix B: reject-on-alignment-residual frame-quality guard (default-OFF) (2026-06-18)
+
+Stop-gap for the run-414 D-A/D-B finding (the catastrophic LC outliers are 13 phase_correlation
+frames mis-aligned ~2.1 px by the translation-only fallback). The data is good (465–500 stars); only
+the alignment failed → drop frames whose *measured alignment residual* is too large, so they never
+reach photometry. Cause-correct and method-agnostic. Alignment itself is untouched (that is Fix C).
+
+**Audit (`file:line`).** `alignment_report.csv` is written from `star_counts` per-frame dicts at
+`pipeline.py:12974` (before MASTERSTAR/Phase-2A, so proc CSVs don't yet exist there). The B.2 gate
+hooks `csv_files` at `photometry_core.py:6541` inside `_phase2a_prepare_shared_state`; same point for
+Fix B. `alignment_report.csv` lives at `masterstar_fits_path.parent`.
+
+**Step 1 — residual metric (always-on QC).** `_compute_frame_align_residuals` (proc CSVs at the
+Phase-2A point): per-frame residual = median, over bright matched sources (10≤mag≤13, flux>0), of the
+Euclidean deviation of (x,y) from that source's robust across-night median position. The reference is
+dominated by the well-aligned majority, so a translation-mis-aligned frame stands out by ~its full
+shift. `_record_align_residuals_to_report` adds the `align_residual_px` column to `alignment_report.csv`
+(additive metadata; matched by frame stem; best-effort try/except so QC never breaks a run). Reproduces
+the diagnostic: astroalign median **0.358**/max **1.648** px vs phase_corr min **1.450**/median
+**2.130**/max **2.334** px.
+
+**Step 2 — gate design (default-OFF, rig-agnostic).** Reject if residual >
+`frame_align_residual_max_frac × science-aperture-radius-px` (field-median bright-source
+`aperture_r_px` = 5.47 px on run-414). Threshold is a **fraction of the aperture radius, never a fixed
+px** (generalizes across rigs). Data: the good/bad gap is 1.206 px (last good astroalign, not an LC
+outlier) → 1.450 px (first phase_corr) = **0.22–0.27 × aperture radius**, matching the physical
+"residual ≳ ~0.2× aperture-radius is where defocused-donut flux leaves the aperture". Default **frac =
+0.25** → 1.37 px, squarely in the gap. Safety floor `frame_align_residual_min_keep_frames` (default 10)
+skips the gate (no-op) if too few frames would remain. Frames with no measurable residual (NaN) are
+kept. Flags (config + Settings UI + PARAMS parity): `frame_align_residual_gate_enabled` (False),
+`frame_align_residual_max_frac` (0.25, clamp 0.05–1.0), `frame_align_residual_min_keep_frames` (10).
+
+**Step 3 — implement.** Wired at the B.2 hook in `_phase2a_prepare_shared_state`: residual compute +
+record run always (wrapped in try/except); the gate filters `csv_files` only when enabled. B.2 gate and
+the alignment stage untouched. No new method → no new citation. Lints clean; 99 photometry/config/
+trust tests pass.
+
+**Step 4 — verify isolated (run-414 g, two real re-runs vs the Fix-A no-Fix-B baseline `tmp/fixA_new`).**
+- **OFF = byte-identical:** 70 targets compared, 0 differing `mag_calib`/`delta_mag`/`err` columns;
+  V0454 all three `max|diff| = 0`. The always-on residual recording does not perturb photometry.
+- **ON (frac=0.25):** drops **14 frames = all 13 phase_correlation + 1 astroalign** (dr=1.648, itself
+  an LC outlier). V0454: robust `lc_rms` 0.1027→0.0993, outliers 22→10 (the 12 alignment-caused ones
+  removed), catastrophic +3.7 mag/NaN points gone → clean SIPS-grade egress (`tmp/fixB_v0454.png`).
+- **B.2 cross-check (not consolidating):** B.2 flags 13, residual gate drops 14, **overlap 13,
+  residual-only = the 1 astroalign, B.2-only = 0** — the residual gate is a strict superset; it is the
+  cause-correct (alignment) signal, B.2 the aperture-integrity symptom. Both kept distinct.
+
+Committed (push held for Milan). Self-deactivating: once Fix C lets astroalign succeed on these dense
+frames, their residual drops below threshold → the guard stops rejecting them.
+
+---
+
 ## Session -- Fix A: per-point error model (inflated err / std-of-instrumental-mags bug) (2026-06-18)
 
 Followed up the run-414 D-C diagnostic (`CURSOR_RESULT_414_diag.md`) with the bug fix.
