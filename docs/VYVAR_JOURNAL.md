@@ -2,6 +2,41 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## Session -- Fix A: per-point error model (inflated err / std-of-instrumental-mags bug) (2026-06-18)
+
+Followed up the run-414 D-C diagnostic (`CURSOR_RESULT_414_diag.md`) with the bug fix.
+
+**Bug (audit, `file:line`).** LC `err` (`photometry_core.py:4111`, assembled `:7840-7858`) =
+photon/SNR base (`:1462` `_photometric_error`) ⊕ `comp_rms_med/√n_ens` (term-2) ⊕
+`ensemble_scatter/√n_ens` (term-3), where `ensemble_scatter = np.std(comp_vals)` on the comps'
+**instrumental** magnitudes (`:2552,:2567`). For a sparse/brightness-spread ensemble that std is the
+comps' brightness *spread* (a fixed per-target floor), not a per-point uncertainty: V0454's 2 comps
+differ 1.655 mag instrumentally → std 0.827 → 0.585 mag on **every** point (23× the empirical 0.025).
+
+**Step-1 consumer audit (checkpoint).** `err` does NOT feed the trust verdict (empirical `lc_rms` +
+check-star scatter + comp counts), `lc_rms` (`np.std(mags)`, `:2154`), the production Broeg ensemble
+combine (uses `comp_rms`, not `err`), or production sigma-clip. It DOES feed AAVSO/VarAstro export
+MAGERR + PDF median-err (intended; improved) and **SysRem IVW weights** (`run_sysrem_field:13138`,
+`W=1/err²`) — but `sysrem_enabled` is default-OFF; the fix improves its weighting (bad frames
+down-weighted instead of ~uniform). Milan: proceed (option 2 — fix + doc-note SysRem, no SysRem code
+change).
+
+**Fix (default; no flag).** Term-3 → per-frame **ensemble zeropoint standard error** = `std(comp
+residuals, ddof=1)/√n`, each residual = comp instrumental mag − its own across-night median
+(`comp_ref_map`), so brightness/colour spread cancels (Honeycutt 1992). Term-2 (`comp_rms/√n`) dropped
+(same ensemble-ZP quantity → no double-count). Photon term-1 kept (correctly large/NaN on SNR collapse).
+Touched only the error path; `mag_calib`/`delta_mag`/`ens_med` untouched.
+
+**Verify (run-414 g, re-run vs committed artifacts).** Centres `mag_calib`/`delta_mag`/`mag_calib_raw`
+**byte-identical** (max|diff|=0, n=161). V0454 err median **0.581→0.013** vs empirical plateau 0.025
+(mis-cal 23.5×→0.5×). Multi-target: NEW err tracks brightness (corr +0.75; bright 0.013 → faint 2.08),
+no fixed baseline; faint targets (mag>15) ~unchanged (photon already dominated). The 13 mis-aligned
+phase_correlation frames still carry large err (median 4.96, max 17.4) via the photon term — that
+removal is **Fix B** (alignment), not A. Tests: 71 photometry/alg/lc-quality + 21 sysrem/trust pass.
+Harness `tmp/fixA_verify.py`.
+
+---
+
 ## Session -- Boyden V454 CrA (draft_413) sandbox: robustness hardening on defocused meridian-flip data (2026-06-17, end-of-day)
 
 Stress-tested VYVAR on real external Brno-group data (Boyden, V454 CrA, non-cal, defocused, dense

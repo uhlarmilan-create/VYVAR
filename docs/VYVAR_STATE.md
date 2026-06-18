@@ -1,6 +1,16 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-17 (end-of-day)** — clean committed **+ pushed** baseline at `955b850`
+Last updated: **2026-06-18** — **Fix A: per-point error model bug fixed** (default; no flag). The LC
+`err` term-3 was `np.std(comp instrumental mags)/√n` (`photometry_core.py:2567`) — for a sparse/
+brightness-spread ensemble this is the comps' brightness *spread* (a fixed ~0.58 mag floor on V0454,
+23× the empirical 0.025), not a per-point uncertainty. Replaced with the per-frame **ensemble-ZP
+standard error from comp residuals** (each comp vs its own across-night median → brightness/colour
+cancels; Honeycutt 1992); the redundant `comp_rms/√n` term-2 was dropped (no double-count); photon
+term-1 (incl. SNR-blowup on bad frames) kept. Verified on run-414 g: centres `mag_calib`/`delta_mag`
+**byte-identical**, V0454 err 0.581→0.013 (≈empirical), faint targets photon-dominated, the 13
+mis-aligned frames still flagged (Fix B). `err` does NOT feed trust/lc_rms/production-Broeg-combine;
+it does feed SysRem IVW weights (default-OFF) — improved, not broken. See DECISIONS/JOURNAL.
+Prior: 2026-06-17 (end-of-day) — clean committed **+ pushed** baseline at `955b850`
 (8 commits: `1eea2d2` masterstar recovery, `e042bc1` A-durable, `d222eb7` B-cap, `2cc2b76`
 completeness gate, `63e57c0` log-flood, `a126980` B.2 gate, `15c699e`/`955b850` docs). `draft_413` =
 Boyden V454 CrA non-cal sandbox (g+r; **g fully validated** this session). Validated this session:

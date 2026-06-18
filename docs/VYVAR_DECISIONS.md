@@ -6,6 +6,42 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## Per-point `err` = photon ⊕ ensemble-ZP residual SEM (NOT std of comp instrumental mags) (2026-06-18)
+
+**Bug.** The LC `err` term-3 was `ensemble_scatter/√n_ens` with `ensemble_scatter = np.std(comp_vals)`
+on the comparison stars' **instrumental** magnitudes (`photometry_core.py:2552,:2567`). The std of
+comps' instrumental mags is dominated by their **brightness spread** — a fixed ensemble-composition
+number, ~constant frame-to-frame — not by per-point uncertainty. For V0454's 2 comps (instrumental Δ
+1.655 mag) it injected a constant **0.585 mag** onto every point, ~23× the empirical 0.025 mag
+differential scatter. The LC centres were always correct (flux-sum zeropoint `ens_med`); only the error
+bars were wrong. This is a distinct error-propagation bug that **shares the sparse/colour-mismatched-comp
+structural root** with trust-RED (a thin, brightness-spread ensemble amplifies it) but is not the same
+issue.
+
+**Decision (bug fix; corrected formula is the default, no flag).** Term-3 is now the per-frame
+**ensemble zeropoint standard error** from the comps' residuals: for each comp, residual = its
+instrumental mag minus its **own across-night median** (`comp_ref_map`), so the comps' brightness and
+constant colour offsets cancel and only the genuine per-frame zeropoint scatter remains; the per-point
+contribution is `std(residuals, ddof=1)/√n` (Honeycutt 1992 PASP 104:435, `honeycutt1992`). The former
+`comp_rms_med/√n_ens` term-2 is **dropped** to avoid double-counting the same ensemble-ZP quantity. The
+photon/SNR base term-1 is **kept** (correctly large/NaN when a mis-centred aperture tanks SNR — that is
+Fix B's domain). Small-n robustness: a near-zero residual SEM leaves `err` = photon base (the floor).
+
+**Consumers (Step-1 audit).** `err` does **not** feed the trust verdict, `lc_rms` (empirical
+`np.std(mags)`), the production Broeg ensemble combine (`1/comp_rms²` weights), or production
+sigma-clipping — so trust and production weights are unaffected. It feeds AAVSO/VarAstro export MAGERR +
+the PDF median-error (intended; now correct) and **SysRem's inverse-variance weights**
+(`run_sysrem_field`, `W=1/err²`, Tamuz 2005) — `sysrem_enabled` is **default-OFF**, and the fix
+*improves* its weighting (mis-aligned frames down-weighted instead of the old ~uniform weighting). No
+SysRem code change.
+
+**Verification (run-414 g, re-run vs committed artifacts).** `mag_calib`/`delta_mag` **byte-identical**
+(max|diff|=0); V0454 `err` 0.581→0.013 vs empirical 0.025 (mis-cal 23.5×→0.5×); err now tracks
+brightness (corr(err,mag) +0.75), no fixed baseline; the 13 mis-aligned frames still flagged via the
+photon term. Evidence: `CURSOR_RESULT_414_diag.md`, `tmp/fixA_verify.py`.
+
+---
+
 ## V0454 CrA amplitude = real eclipse egress + a position-dependent meridian-flip step (2026-06-17)
 
 **Finding (diagnose-only, no code change).** V0454 CrA's ~0.45 mag gate-ON rise on draft_413 g

@@ -2534,6 +2534,21 @@ def ensemble_normalize(
         f"catalog_mag median={cat_offset:.3f} (mag_calib zeropoint = median(cat−inst) per frame)"
     )
 
+    # Per-comp across-night reference = median of its own instrumental magnitudes. Referencing each
+    # comp to its OWN reference (rather than comparing comps' absolute instrumental mags) cancels the
+    # comps' brightness AND constant colour offsets, so the per-frame ``ensemble_scatter`` below is the
+    # genuine zeropoint scatter (Honeycutt 1992), not the comps' brightness spread. Used ONLY for the
+    # error model; does not touch mag_calib/delta_mag/ens_med.
+    comp_ref_map: dict[str, float] = {}
+    for cid in good_ids:
+        arr_cid = comp_mag_inst.get(cid)
+        if arr_cid is None:
+            continue
+        _vals = np.asarray(arr_cid, dtype=np.float64)
+        _fin = _vals[np.isfinite(_vals)]
+        if _fin.size:
+            comp_ref_map[cid] = float(np.median(_fin))
+
     for i in range(n_frames):
         comp_pairs: list[tuple[str, float]] = []
         for cid in good_ids:
@@ -2564,7 +2579,23 @@ def ensemble_normalize(
         else:
             ens_med = float(np.median(comp_vals))
 
-        ensemble_scatter[i] = float(np.std(comp_vals)) if comp_vals.size > 1 else 0.0
+        # Per-point ensemble zeropoint uncertainty (Honeycutt 1992 PASP 104:435): the standard error
+        # of the comps' per-frame residuals about the ensemble mean, where each residual is the comp's
+        # deviation from its OWN across-night reference (``comp_ref_map``). This cancels the comps'
+        # brightness/colour spread — the previous ``np.std(comp_vals)`` on raw instrumental mags
+        # injected a fixed ~comp-brightness-difference floor (the inflated-err bug). Small n: a near-
+        # zero residual SEM leaves err = photon base (the floor); we do not use comp_rms here (it is
+        # dropped at the err-assembly site to avoid double-counting this same ensemble term).
+        comp_resid = [
+            (m - comp_ref_map[cid_j])
+            for cid_j, m in comp_pairs
+            if cid_j in comp_ref_map and math.isfinite(comp_ref_map[cid_j])
+        ]
+        if len(comp_resid) >= 2:
+            _resid_arr = np.asarray(comp_resid, dtype=np.float64)
+            ensemble_scatter[i] = float(np.std(_resid_arr, ddof=1) / math.sqrt(len(comp_resid)))
+        else:
+            ensemble_scatter[i] = 0.0
         delta_mag[i] = target_mag_inst[i] - ens_med
 
         # Honeycutt (1992) PASP 104:435 — per-frame ensemble zeropoint from constant comps.
@@ -7838,24 +7869,20 @@ def _phase2a_process_one_target(
     )
 
     err = target_frames["err"].to_numpy(dtype=float)
-    _n_ens = sum(1 for q in comp_quality.values() if q.get("quality") in ("good", "suspect"))
-    if _n_ens > 0:
-        _rms_vals = [
-            float(v)
-            for v in comp_rms_map.values()
-            if v is not None and math.isfinite(float(v)) and float(v) > 0
-        ]
-        _ref_sigma = float("nan")
-        if _rms_vals:
-            _med_rms = float(np.median(np.asarray(_rms_vals, dtype=np.float64)))
-            if math.isfinite(_med_rms) and _med_rms > 0:
-                _ref_sigma = _med_rms / math.sqrt(float(_n_ens))
-        if math.isfinite(_ref_sigma) and _ref_sigma > 0:
-            err = np.sqrt(np.square(err) + _ref_sigma * _ref_sigma)
-        if ensemble_scatter is not None:
-            _ens_sc = np.asarray(ensemble_scatter, dtype=np.float64)
-            if _ens_sc.shape == err.shape:
-                err = np.sqrt(np.square(err) + np.square(_ens_sc) / max(float(_n_ens), 1.0))
+    # Per-point uncertainty = photon/SNR base error (term-1, ``err`` above; correctly large/NaN when a
+    # mis-centred aperture tanks SNR) ⊕ ensemble zeropoint uncertainty (term-3, ``ensemble_scatter``).
+    # ``ensemble_scatter`` is now the per-frame standard error of the comps' zeropoint residuals
+    # (Honeycutt 1992), each comp referenced to its own across-night median so the comps' brightness/
+    # colour spread cancels — replacing the former ``std(comp instrumental mags)`` which injected a
+    # fixed ~comp-brightness-difference floor (the ~0.58 mag / 23× inflation bug). The old
+    # ``comp_rms_med/√n_ens`` term is intentionally DROPPED here: it measured the same ensemble-ZP
+    # quantity and would double-count the residual term. Small-n robustness: when the residual SEM is
+    # ~0 (good frame), err falls back to the photon base (the floor).
+    if ensemble_scatter is not None:
+        _ens_sc = np.asarray(ensemble_scatter, dtype=np.float64)
+        if _ens_sc.shape == err.shape:
+            _ens_sc = np.where(np.isfinite(_ens_sc), _ens_sc, 0.0)
+            err = np.sqrt(np.square(err) + np.square(_ens_sc))
     ap_arr = target_frames["aperture_r_px"].to_numpy(dtype=float)
     src_files = target_frames["source_file"].tolist()
     sat_flags = (target_frames["flag"] == "saturated").to_numpy(dtype=bool)
