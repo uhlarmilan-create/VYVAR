@@ -11134,24 +11134,10 @@ def generate_masterstar_and_catalog(
         data = np.array(hdul[0].data, dtype=np.float32, copy=True)
     data = np.ascontiguousarray(data, dtype=np.float32)
     data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
-    _skip_boj = True
-    if _skip_boj:
-        _ms_mean = float(np.nanmean(data))
-        log_event(
-            "MASTERSTAR: globálne odčítanie medianu (BOJ) vypnuté."
-        )
-        log_event(f"MASTERSTAR po nan_to_num: mean={_ms_mean:.6f}")
-    else:
-        _ms_sky = data[data > 10.0]
-        if _ms_sky.size > 0:
-            _ms_med = float(np.nanmedian(_ms_sky))
-        else:
-            _ms_med = float(np.nanmedian(data))
-        data -= np.float32(_ms_med)
-        data = np.clip(data, -100.0, None).astype(np.float32, copy=False)
-        _ms_mean = float(np.nanmean(data))
-        log_event(f"⭐ MASTERSTAR - Background flattened by {_ms_med:.2f}")
-        log_event(f"🚨 BOJ O NULU: Removed {_ms_med:.2f} | Resulting Mean: {_ms_mean:.6f}")
+    # Global median (BOJ) background subtraction is intentionally OFF (handled downstream).
+    _ms_mean = float(np.nanmean(data))
+    log_event("MASTERSTAR: globálne odčítanie medianu (BOJ) vypnuté.")
+    log_event(f"MASTERSTAR po nan_to_num: mean={_ms_mean:.6f}")
     _ms_min = float(np.nanmin(data))
     _ms_max = float(np.nanmax(data))
     log_event(f"MASTERSTAR levels: noise_floor(min)={_ms_min:.2f}, saturation_proxy(max)={_ms_max:.2f}")
@@ -11354,8 +11340,17 @@ def generate_masterstar_and_catalog(
     try:
         # Critical: keep Gaia IDs as strings (avoid float/scientific precision loss).
         df_final = pd.read_csv(csv_path, low_memory=False, dtype={"catalog_id": str, "name": str})
-    except Exception:  # noqa: BLE001
+    except Exception as _df_final_exc:  # noqa: BLE001
+        log_event(
+            f"MASTERSTAR: re-read of {Path(csv_path).name} failed ({_df_final_exc!s}); "
+            "using in-memory df_out and re-asserting catalog_id/name as str."
+        )
         df_final = df_out.copy()
+        # df_out.copy() can carry catalog_id/name as non-string dtypes -> re-assert to avoid
+        # reintroducing float/scientific precision loss on Gaia IDs downstream.
+        for _idcol in ("catalog_id", "name"):
+            if _idcol in df_final.columns:
+                df_final[_idcol] = df_final[_idcol].astype(str)
     df_final = _annotate_masterstars_flux_zones(
         df_final,
         noise_floor_adu=det_meta.get("noise_floor_adu"),
@@ -11516,8 +11511,11 @@ def generate_masterstar_and_catalog(
     # Multi-filter support: keep comparison stars consistent across platesolve/<setup>/ folders.
     try:
         _sync_comparison_stars_across_setups(Path(platesolve_dir).parent)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as _sync_exc:  # noqa: BLE001
+        log_event(
+            f"MASTERSTAR: comparison-star cross-setup sync failed ({_sync_exc!s}); "
+            "B/V/R comp sets may be inconsistent across setups."
+        )
 
     out: dict[str, Any] = {
         "masterstar_fits": str(masterstar_fits),
@@ -11920,8 +11918,11 @@ def generate_masterstar_and_catalog(
                                     database_path=Path(_cfg_ms.database_path),
                                 )
                                 out.update(_wp2)
-                            except Exception:  # noqa: BLE001
-                                pass
+                            except Exception as _wp2_exc:  # noqa: BLE001
+                                log_event(
+                                    f"MASTERSTAR: DB-aware photometry-plan rewrite failed ({_wp2_exc!s}); "
+                                    "keeping the non-DB photometry plan."
+                                )
                         except Exception as exc:  # noqa: BLE001
                             out["master_sources_written"] = 0
                             out["master_sources_error"] = str(exc)
