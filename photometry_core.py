@@ -6845,14 +6845,20 @@ def _phase2a_prepare_shared_state(
 
     _nt = int(len(at_df))
     _plate_scale_arcsec = _resolve_plate_scale_arcsec_per_px(
-        _cfg, _ms_path, ms_header=_ms_header, default=1.3
+        _cfg, _ms_path, ms_header=_ms_header
     )
     _gaia_db_path = str(_cfg.gaia_db_path or "").strip() or None
-    logging.info(
-        "[PHASE 2A] GS11 context: plate_scale=%.4f arcsec/px gaia_db=%s",
-        float(_plate_scale_arcsec),
-        "set" if _gaia_db_path else "none",
-    )
+    if _plate_scale_arcsec is not None:
+        logging.info(
+            "[PHASE 2A] GS11 context: plate_scale=%.4f arcsec/px gaia_db=%s",
+            float(_plate_scale_arcsec),
+            "set" if _gaia_db_path else "none",
+        )
+    else:
+        logging.warning(
+            "[PHASE 2A] GS11 context: plate_scale unknown (derive-or-None) gaia_db=%s",
+            "set" if _gaia_db_path else "none",
+        )
 
     # Observer site resolved ONCE per draft (param_resolver): draft ID_LOCATION ->
     # header SITELAT -> flagged config. Threaded into BJD/HJD recompute + meta so
@@ -6921,7 +6927,13 @@ def _phase2a_prepare_shared_state(
         _cfg=_cfg,
         _nt=_nt,
         _n_catalog_only=_n_catalog_only,
-        plate_scale_arcsec=float(_plate_scale_arcsec),
+        plate_scale_arcsec=(
+            float(_plate_scale_arcsec)
+            if _plate_scale_arcsec is not None
+            and math.isfinite(float(_plate_scale_arcsec))
+            and float(_plate_scale_arcsec) > 0
+            else float("nan")
+        ),
         gaia_db_path=_gaia_db_path,
         masterstars_df=masterstars_df,
         site_lat=_site.lat,
@@ -8983,12 +8995,13 @@ def _resolve_plate_scale_arcsec_per_px(
     fits_path: Path | None = None,
     *,
     ms_header: Any | None = None,
-    default: float = 1.3,
-) -> float:
+) -> float | None:
     """Plate scale (arcsec/px) for GS11 + aperture arcsec conversion.
 
     Priority: (1) solved WCS/CD matrix from the FITS; (2) config
-    ``phase01_plate_scale_arcsec_per_px``; (3) ``default``. Clamp [0.1, 30.0].
+    ``phase01_plate_scale_arcsec_per_px`` (last resort with warning).
+    Returns None when nothing derivable (derive-or-None; no magic default).
+    Clamp [0.1, 30.0] when a value is returned.
     """
     _lo, _hi = 0.1, 30.0
     _fits_ps: float | None = None
@@ -9011,7 +9024,10 @@ def _resolve_plate_scale_arcsec_per_px(
             float(cfg_ps),
         )
         return float(cfg_ps)
-    return float(default)
+    logging.warning(
+        "[PLATE SCALE] plate scale not derivable (WCS/CD + config exhausted) — returning None"
+    )
+    return None
 
 
 def _cd_matrix_scale_arcsec_per_px(hdr: Any) -> float | None:
@@ -10292,6 +10308,61 @@ def _enrich_active_targets_bp_rp(
     return df
 
 
+def _resolve_frame_hw_px_from_masterstar(
+    ms_fits: Path,
+    *,
+    frame_w_px: int,
+    frame_h_px: int,
+    db: Any = None,
+    draft_id: int | None = None,
+) -> tuple[int, int, str]:
+    """Authoritative chip width/height for Phase 0+1 spatial culling.
+
+    Priority: (1) MASTERSTAR FITS ``NAXIS1``/``NAXIS2``; (2) DB ``SCANNING`` via draft;
+    (3) caller defaults (global cfg knob / hardcoded 2082×1397).
+    """
+    w_def, h_def = int(frame_w_px), int(frame_h_px)
+    if ms_fits.is_file():
+        try:
+            with astrofits.open(ms_fits, memmap=False) as hdul:
+                hdr = hdul[0].header
+                w = int(hdr.get("NAXIS1", 0) or 0)
+                h = int(hdr.get("NAXIS2", 0) or 0)
+                if w > 0 and h > 0:
+                    return w, h, "fits_naxis"
+        except Exception:  # noqa: BLE001
+            pass
+    if db is not None and draft_id is not None:
+        try:
+            did = int(draft_id)
+        except (TypeError, ValueError):
+            did = 0
+        if did > 0 and hasattr(db, "conn"):
+            try:
+                cur = db.conn.execute(
+                    """
+                    SELECT s.NAXIS1, s.NAXIS2
+                    FROM OBS_FILES f
+                    JOIN SCANNING s ON s.ID = f.ID_SCANNING
+                    WHERE f.DRAFT_ID = ?
+                      AND LOWER(COALESCE(f.IMAGETYP, '')) = 'light'
+                      AND s.NAXIS1 > 0 AND s.NAXIS2 > 0
+                    ORDER BY f.FILE_PATH
+                    LIMIT 1
+                    """,
+                    (did,),
+                )
+                row = cur.fetchone()
+                if row is not None:
+                    w = int(row["NAXIS1"] or 0)
+                    h = int(row["NAXIS2"] or 0)
+                    if w > 0 and h > 0:
+                        return w, h, "db_scanning"
+            except Exception:  # noqa: BLE001
+                pass
+    return w_def, h_def, "caller_default"
+
+
 def _read_field_density_inputs(
     ms_fits: Path,
     masterstars_csv: Path,
@@ -10308,14 +10379,15 @@ def _read_field_density_inputs(
     n_stars = 0
     src = "defaults"
     vy_ndao_raw: int | None = None
+    cw, ch, _hw_src = _resolve_frame_hw_px_from_masterstar(
+        ms_fits, frame_w_px=cw, frame_h_px=ch
+    )
+    if _hw_src == "fits_naxis":
+        src = "fits_naxis"
     if ms_fits.is_file():
         try:
             with astrofits.open(ms_fits, memmap=False) as hdul:
                 hdr = hdul[0].header
-                _w = int(hdr.get("NAXIS1", 0) or 0)
-                _h = int(hdr.get("NAXIS2", 0) or 0)
-                if _w > 0 and _h > 0:
-                    cw, ch = _w, _h
                 v = hdr.get("VY_NDAO")
                 if v is not None and str(v).strip() != "":
                     try:
@@ -12215,6 +12287,23 @@ def run_phase0_and_phase1(
 
     _cfg_base = cfg if cfg is not None else AppConfig()
     _ms_density = Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits"
+    _fw_in, _fh_in = int(frame_w_px), int(frame_h_px)
+    frame_w_px, frame_h_px, _frame_hw_src = _resolve_frame_hw_px_from_masterstar(
+        _ms_density,
+        frame_w_px=_fw_in,
+        frame_h_px=_fh_in,
+        db=db,
+        draft_id=draft_id,
+    )
+    if _frame_hw_src != "caller_default":
+        logging.info(
+            "[PHASE 0+1] Frame dimensions %d×%d px from %s (caller default %d×%d)",
+            int(frame_w_px),
+            int(frame_h_px),
+            _frame_hw_src,
+            _fw_in,
+            _fh_in,
+        )
     _n_field, _cw_fd, _ch_fd, _nsrc_fd, _vy_ndao_raw = _read_field_density_inputs(
         _ms_density,
         Path(masterstars_csv),
@@ -12462,11 +12551,9 @@ def run_phase0_and_phase1(
     ):
         _plate_scale_p01 = float(plate_scale_arcsec_px)
     elif _ms_for_catalog_only.is_file():
-        _plate_scale_p01 = _resolve_plate_scale_arcsec_per_px(
-            _cfg_p01, _ms_for_catalog_only, default=1.3
-        )
+        _plate_scale_p01 = _resolve_plate_scale_arcsec_per_px(_cfg_p01, _ms_for_catalog_only)
     else:
-        _plate_scale_p01 = _resolve_plate_scale_arcsec_per_px(_cfg_p01, default=1.3)
+        _plate_scale_p01 = _resolve_plate_scale_arcsec_per_px(_cfg_p01)
 
     active = select_active_targets(
         variable_targets_csv,
@@ -13335,20 +13422,34 @@ def run_full_photometry_pipeline(
                 "[FOV] plate_scale from MASTERSTAR.fits header → %.4f arcsec/px",
                 float(_plate_scale),
             )
+    _fw_pipe, _fh_pipe, _frame_hw_src = _resolve_frame_hw_px_from_masterstar(
+        Path(masterstar_fits_path),
+        frame_w_px=int(_cfg.frame_width_px),
+        frame_h_px=int(_cfg.frame_height_px),
+        db=db,
+        draft_id=draft_id,
+    )
+    if _frame_hw_src != "caller_default":
+        logging.info(
+            "[PHASE 0+1] Pipeline frame dimensions %d×%d px from %s",
+            int(_fw_pipe),
+            int(_fh_pipe),
+            _frame_hw_src,
+        )
     p01 = run_phase0_and_phase1(
         variable_targets_csv=Path(variable_targets_csv),
         masterstars_csv=Path(masterstars_csv),
         per_frame_csv_dir=Path(per_frame_csv_dir),
         output_dir=Path(output_dir),
         fwhm_px=float(fwhm_px),
-        frame_w_px=int(_cfg.frame_width_px),
-        frame_h_px=int(_cfg.frame_height_px),
+        frame_w_px=int(_fw_pipe),
+        frame_h_px=int(_fh_pipe),
         chip_interior_margin_px=int(_cfg.phase01_chip_interior_margin_px),
         match_radius_arcsec=float(_cfg.phase01_match_radius_arcsec),
         plate_scale_arcsec_px=_plate_scale,
         max_dist_deg=_compute_fov_max_dist(
-            frame_w_px=int(_cfg.frame_width_px),
-            frame_h_px=int(_cfg.frame_height_px),
+            frame_w_px=int(_fw_pipe),
+            frame_h_px=int(_fh_pipe),
             plate_scale=_plate_scale,
             fov_fraction=float(_cfg.phase01_comparison_fov_fraction),
             fallback_deg=float(_cfg.phase01_comparison_max_dist_deg),
