@@ -1009,10 +1009,10 @@ load-bearing; not grounded in differential-photometry physics.
 
 | function | file:line | finding |
 |----------|-----------|---------|
-| `airmass_detrend_lc` | `photometry_core.py:3898` | Least-squares fit **`mag = a·airmass + b` on the target's own curve**. **Not** a comp-derived extinction coefficient. **[2026-06-19 — removed as dead]** the wiring helper `_apply_airmass_detrend_helper` was deleted (no caller); the per-target airmass detrend no longer runs (Phase-2A summary honestly reports `am_detrended=False`), per the grounded fix below. `airmass_detrend_lc`/`airmass_detrend_lc_piecewise` are now orphaned and pending removal. |
+| `airmass_detrend_lc` | *(removed)* | Least-squares fit **`mag = a·airmass + b` on the target's own curve**. **Not** a comp-derived extinction coefficient. **[2026-06-19 — fully removed]** wiring helper `_apply_airmass_detrend_helper` (T1-2) and functions `airmass_detrend_lc`/`airmass_detrend_lc_piecewise` (T1-7) deleted; per-target airmass detrend no longer runs (Phase-2A summary reports `am_detrended=False`), per the grounded fix below. |
 | `detect_outliers` | `photometry_core.py:3323-3360` | Global median + MAD on all finite mags; **no VSX/feature mask**. Eclipse dimming → `outlier_lo` (`mag > med + thr`, `:3354-3356`). V0612 DoD-A LC: **2× `outlier_lo`** (ingress). |
 | `delta_mag` export | `save_lightcurve_csv` `:7594`, `:3814` | **Unchanged** by outlier/airmass stages; only `mag_calib*` columns are rewritten (`:7486-7496`). |
-| Shape preservation | DoD-A LC `tmp/phase10/.../lightcurve_1111749368289526912.csv` | `corr(delta_mag, mag_calib_raw)` **0.998**; `corr(delta_mag, mag_calib)` **0.59** after target-fit airmass detrend (slope ≈ **0.78** mag/airmass on normal frames, within `:3630-3638` guard). |
+| Shape preservation | DoD-A LC `tmp/phase10/.../lightcurve_1111749368289526912.csv` | `corr(delta_mag, mag_calib_raw)` **0.998**; historical `corr(delta_mag, mag_calib)` **0.59** after target-fit airmass detrend (slope ≈ **0.78** mag/airmass) — detrend path since removed. |
 
 **Grounded fix (three parts):**
 

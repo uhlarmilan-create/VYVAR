@@ -7,7 +7,7 @@ Status: **LANDED** (Workstream B, commit `2a8355b`; supersedes B1/B2)
 
 ## Problem
 
-Per-target airmass detrend (`airmass_detrend_lc` on the target's own `mag_calib`) and global
+Per-target airmass detrend (former `airmass_detrend_lc` on the target's own `mag_calib`, **implementation removed 2026-06-19**) and global
 MAD outlier clipping were degrading eclipse shape on V0612 (corr `mag_calib` vs `delta_mag` ~0.59).
 
 ---
@@ -19,7 +19,7 @@ MAD outlier clipping were degrading eclipse shape on V0612 (corr `mag_calib` vs 
 
 2. **Drop per-target airmass detrend on the reporting path** -- redundant after colour-matched
    differential (Plavchan et al. arXiv:0704.3584; Dhillon PHY217); signal-absorbing when fitted
-   to the variable target.
+   to the variable target. **Landed:** helper + `airmass_detrend_lc`/`_piecewise` removed (T1-2/T1-7).
 
 3. **Mask-first outlier guard** -- clip out-of-eclipse only for known/candidate variables (TESS
    subdwarf recipe arXiv:2402.16018; democratic detrender arXiv:2411.09753).
