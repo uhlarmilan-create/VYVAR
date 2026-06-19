@@ -10991,17 +10991,29 @@ def generate_masterstar_and_catalog(
         except Exception:  # noqa: BLE001
             _exp_scale_apx = None
     if _exp_scale_apx is None or (not math.isfinite(_exp_scale_apx)) or _exp_scale_apx <= 0:
-        _exp_scale_apx = 9.77
+        # derive-or-None (DR6 pattern): all principled sources exhausted — do not guess.
+        _exp_scale_apx = None
+        log_event(
+            "WARNING: MASTERSTAR plate scale not derivable (DB/FITS/WCS exhausted) — "
+            "expected scale unknown; VY_PLTS will not be written."
+        )
 
     _wcs_ok = False
     try:
         with fits.open(masterstar_fits, memmap=False) as _hd_wq:
             _w_check = WCS(_hd_wq[0].header)
-        _wcs_q = masterstar_wcs_quality(
-            _w_check, float(_exp_scale_apx), anisotropy_limit=float(_aniso_thr)
-        )
-        _wcs_ok = bool(_wcs_q.get("ok", False))
-        if not _wcs_ok:
+        if _exp_scale_apx is None:
+            log_event(
+                "MASTERSTAR WCS quality: expected plate scale unknown "
+                "(no DB/FITS/WCS/config) - check skipped."
+            )
+            _wcs_q = None
+        else:
+            _wcs_q = masterstar_wcs_quality(
+                _w_check, float(_exp_scale_apx), anisotropy_limit=float(_aniso_thr)
+            )
+            _wcs_ok = bool(_wcs_q.get("ok", False))
+        if _wcs_q is not None and not _wcs_ok:
             _rq = _wcs_q.get("ratio")
             _se = _wcs_q.get("scale_err_pct")
             try:
@@ -11043,8 +11055,6 @@ def generate_masterstar_and_catalog(
             )
         if _vy_plts is None:
             _vy_plts = _exp_scale_apx
-        if _vy_plts is None:
-            _vy_plts = float(_cfg_ms.export_arcsec_per_px)
     except Exception:  # noqa: BLE001
         _vy_plts = None
 
@@ -11061,6 +11071,11 @@ def generate_masterstar_and_catalog(
                 log_event(f"VY_PLTS={_vy_plts_f:.4f} written to MASTERSTAR.fits")
         except Exception as exc:  # noqa: BLE001
             log_event(f"Could not write VY_PLTS to MASTERSTAR: {exc}")
+    else:
+        log_event(
+            "WARNING: MASTERSTAR VY_PLTS not written — plate scale not derivable "
+            "(derive-or-None; no rig/global constant written to header)."
+        )
 
     if masterstar_platesolve_only:
         _cfg_early = app_config or AppConfig()
