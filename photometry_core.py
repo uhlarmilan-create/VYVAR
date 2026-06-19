@@ -6043,32 +6043,6 @@ def load_epsf_metrics_for_draft(
     return result
 
 
-def _apply_airmass_detrend_helper(
-    mag_in: np.ndarray,
-    fit_flags: list[str],
-    airmass_arr: np.ndarray,
-    flip_arr: np.ndarray,
-    target_cid: str,
-) -> tuple[np.ndarray, float, bool]:
-    am_slope = float("nan")
-    am_piecewise = False
-    mag_am = np.asarray(mag_in, dtype=np.float64).copy()
-    if bool(np.any(flip_arr)) and bool(np.any(~flip_arr)):
-        seg = np.where(flip_arr, 1, 0).astype(int)
-        mag_am, seg_fits = airmass_detrend_lc_piecewise(
-            mag_in, airmass_arr, fit_flags, seg
-        )
-        if 0 in seg_fits or 1 in seg_fits:
-            am_piecewise = True
-            slopes = [float(v[0]) for v in seg_fits.values() if math.isfinite(float(v[0]))]
-            am_slope = float(np.median(slopes)) if slopes else float("nan")
-    if not am_piecewise:
-        mag_am, am_slope, _ = airmass_detrend_lc(
-            mag_in, airmass_arr, fit_flags, target_id=target_cid
-        )
-    return mag_am, am_slope, am_piecewise
-
-
 def _apply_role_aware_aperture_scaling(
     apertures_px: dict[str, float],
     at_df: pd.DataFrame,
@@ -8053,7 +8027,8 @@ def _phase2a_process_one_target(
     src_files = target_frames["source_file"].tolist()
     sat_flags = (target_frames["flag"] == "saturated").to_numpy(dtype=bool)
 
-    # Airmass detrending (ak je dosť bodov a airmass k dispozícii)
+    # Airmass / flip arrays for export + the democratic detrender (no per-target airmass detrend here:
+    # airmass is handled by the differential comp ensemble).
     if "airmass" in target_frames.columns:
         airmass_arr = target_frames["airmass"].to_numpy(dtype=float)
     else:
@@ -8094,11 +8069,8 @@ def _phase2a_process_one_target(
         cfg=_cfg,
     )
 
-    am_slope = float("nan")
-    am_piecewise = False
-
     # ALG-2: Savitzky-Golay non-linear detrending (Savitzky & Golay 1964)
-    # Runs after airmass detrend — removes slow systematic trends
+    # Removes slow systematic trends (airmass is handled by the differential comp ensemble).
     _sg_enabled = bool(_cfg.savgol_detrend_enabled)
     if _sg_enabled:
         mag_calib = savgol_detrend_lc(
@@ -8325,17 +8297,20 @@ def _phase2a_process_one_target(
 
     lc_png = lc_dir / f"lightcurve_{target_cid}.png"
     if _save_png:
-        save_lightcurve_png(
-            lc_png,
-            bjd,
-            mag_calib,
-            err,
-            out_flags,
-            target_name,
-            comp_quality,
-            delta_mag_mode=False,
-            delta_mag=delta_mag,
-        )
+        try:
+            save_lightcurve_png(
+                lc_png,
+                bjd,
+                mag_calib,
+                err,
+                out_flags,
+                target_name,
+                comp_quality,
+                delta_mag_mode=False,
+                delta_mag=delta_mag,
+            )
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("[PHASE 2A] Optional artifact write failed (lightcurve PNG): %s", exc)
 
     cutout_png = lc_dir / f"cutout_{target_cid}.png"
     if _save_png:
@@ -8415,8 +8390,8 @@ def _phase2a_process_one_target(
             "lc_median_mag": float(np.median(finite_calib)) if len(finite_calib) > 0 else float("nan"),
             "aperture_px": _measured_ap if math.isfinite(_measured_ap) else float(apertures_px.get(target_cid, float("nan"))),
             "aperture_px_planned": float(apertures_px.get(target_cid, float("nan"))),
-            "am_slope": am_slope,
-            "am_detrended": bool(math.isfinite(am_slope)),
+            "am_slope": float("nan"),
+            "am_detrended": False,
             "dilution_factor": float(_dilution_result.get("dilution_factor", 1.0)),
             "dilution_delta_mag": float(_dilution_result.get("dilution_delta_mag", 0.0)),
             "n_neighbors_aperture": int(_dilution_result.get("n_neighbors", 0)),
@@ -8440,8 +8415,7 @@ def _phase2a_process_one_target(
         f"[FÁZA 2A] {target_name}: "
         f"lc_rms={lc_rms:.4f}, lc_rms_ooe={lc_rms_ooe:.4f}, "
         f"n_comp={n_good_comp} (stability_good={n_stability_good}), "
-        f"apertura={r_ap:.2f}px (measured), "
-        f"am_slope={float(am_slope):.4f} mag/am"
+        f"apertura={r_ap:.2f}px (measured)"
     )
 
 
@@ -12564,7 +12538,11 @@ def run_phase0_and_phase1(
                 )
                 _wcs_scale_ok = False
         except Exception as _wcs_exc:  # noqa: BLE001
-            logging.warning("[WCS SANITY] check failed (non-fatal): %s", _wcs_exc)
+            logging.warning(
+                "[WCS SANITY] check failed (non-fatal): %s — skipping check, assuming WCS scale OK "
+                "(radec-haversine distance mode).",
+                _wcs_exc,
+            )
     log_event(
         f"[COMP SELECT] Distance mode: "
         f"{'pixel-fallback' if not _wcs_scale_ok else 'radec-haversine'}"
