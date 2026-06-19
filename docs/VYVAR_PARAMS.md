@@ -155,7 +155,6 @@ no UI yet).
 | `observer_location_name` | 'Boyden - JAR' (dataclass '') | — | — | no |
 | `observer_lon` | 26.40394 (dataclass 14.6982547) | — | — | no |
 | `observer_name` | 'Milan Uhlar' (dataclass 'Unknown Observer') | — | — | no |
-| `varastro_observer_name` | 'Milan Uhlar' | — | — | no |
 
 ## Other
 

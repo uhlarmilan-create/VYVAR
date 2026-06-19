@@ -195,9 +195,8 @@ class AppConfig:
     # Export reports (AAVSO + VAR.ASTRO.CZ)
     observer_name: str = "Unknown Observer"
     observer_code: str = ""
-    #: Legacy mirrors — synced from ``observer_*`` in ``__post_init__`` (kept for older callers).
+    #: Legacy mirror — synced from ``observer_code`` in ``__post_init__`` (kept for older callers).
     aavso_observer_code: str = "UMIA"
-    varastro_observer_name: str = "Milan Uhlar"
     #: User overrides: filter/setup name (uppercase key) → AAVSO FILT code (e.g. ``"MYLUM": "CV"``).
     aavso_filter_map: dict[str, str] = field(default_factory=dict)
     # Observer location — used for BJD, airmass, lunar context
@@ -971,16 +970,15 @@ class AppConfig:
             self.sysrem_n_iter = 3
         self.comp_qa_enabled = bool(data.get("comp_qa_enabled", self.comp_qa_enabled))
         self.trust_flag_enabled = bool(data.get("trust_flag_enabled", self.trust_flag_enabled))
-        # Export reports — prefer ``observer_name`` / ``observer_code``; fall back to legacy JSON keys.
+        # Export reports — prefer ``observer_name`` / ``observer_code``; fall back to legacy JSON key for the code.
         _obn = data.get("observer_name")
         if _obn is None or str(_obn).strip() == "":
-            _obn = data.get("varastro_observer_name", self.observer_name)
+            _obn = self.observer_name
         self.observer_name = str(_obn or "").strip() or "Unknown Observer"
         _obc = data.get("observer_code")
         if _obc is None:
             _obc = data.get("aavso_observer_code", self.observer_code)
         self.observer_code = str(_obc or "").strip()
-        self.varastro_observer_name = str(self.observer_name)
         self.aavso_observer_code = str(self.observer_code)
         _ffm = data.get("aavso_filter_map", {})
         if isinstance(_ffm, dict):
@@ -1878,7 +1876,6 @@ class AppConfig:
             "observer_code": str(self.observer_code),
             "aavso_observer_code": str(self.aavso_observer_code),
             "aavso_filter_map": dict(self.aavso_filter_map),
-            "varastro_observer_name": str(self.varastro_observer_name),
             "observer_location_id": int(self.observer_location_id),
             "observer_lat": float(self.observer_lat),
             "observer_lon": float(self.observer_lon),

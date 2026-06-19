@@ -29,8 +29,7 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 |----------------|------|---------|-------------|
 | observer_name | str | "Unknown Observer" |  |
 | observer_code | str | "" |  |
-| aavso_observer_code | str | "UMIA" | Legacy mirrors — synced from ``observer_*`` in ``__post_init__`` (kept for older callers). |
-| varastro_observer_name | str | "Milan Uhlar" |  |
+| aavso_observer_code | str | "UMIA" | Legacy mirror — synced from ``observer_code`` in ``__post_init__`` (kept for older callers). |
 | observer_location_id | int | 2 |  |
 | observer_lat | float | 50.1121658 |  |
 | observer_lon | float | 14.6982547 |  |
