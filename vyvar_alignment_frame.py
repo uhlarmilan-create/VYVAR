@@ -26,7 +26,9 @@ from utils import (
     dao_detection_fwhm_pixels,
     fits_header_has_celestial_wcs,
     header_key_is_celestial_wcs,
+    seeded_numpy_default_rng,
     strip_celestial_wcs_keys,
+    VYVAR_RANDOM_SEED,
     wcs_rotation_angle_deg,
 )
 
@@ -274,11 +276,12 @@ def _alignment_run_astroalign_points(
         if len(src) < 10 or len(tgt) < 10:
             return None, "Insufficient stars"
         mcp = max(12, min(int(max_control_points), int(min(len(src), len(tgt)))))
-        t, _ = astroalign.find_transform(
-            source=np.asarray(src, dtype=np.float32),
-            target=np.asarray(tgt, dtype=np.float32),
-            max_control_points=mcp,
-        )
+        with seeded_numpy_default_rng(VYVAR_RANDOM_SEED):
+            t, _ = astroalign.find_transform(
+                source=np.asarray(src, dtype=np.float32),
+                target=np.asarray(tgt, dtype=np.float32),
+                max_control_points=mcp,
+            )
         aligned_data, _ = astroalign.apply_transform(t, image_source, image_target)
         return _as_fits_float32_image(aligned_data), None
     except Exception as e:  # noqa: BLE001

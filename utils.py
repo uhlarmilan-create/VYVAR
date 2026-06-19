@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import glob
 import json
 import logging
@@ -19,6 +20,32 @@ from astropy.io import fits
 from astropy.wcs import FITSFixedWarning, WCS
 
 from fits_suffixes import path_suffix_is_fits
+
+# Shared deterministic RNG seed (solver RANSAC uses 42; astroalign patched below).
+VYVAR_RANDOM_SEED: int = 42
+
+
+@contextlib.contextmanager
+def seeded_numpy_default_rng(seed: int | None = None):
+    """Pin ``numpy.random.default_rng()`` for libraries that call it without a seed.
+
+    astroalign 2.6.x RANSAC uses ``np.random.default_rng().shuffle(...)``, which is
+    nondeterministic across runs. Patch only the no-argument call used by astroalign.
+    """
+    s = int(seed if seed is not None else VYVAR_RANDOM_SEED)
+    rng = np.random.default_rng(s)
+    orig = np.random.default_rng
+
+    def _patched(*args: Any, **kwargs: Any) -> np.random.Generator:
+        if len(args) == 0 and not kwargs:
+            return rng
+        return orig(*args, **kwargs)
+
+    np.random.default_rng = _patched  # type: ignore[method-assign, assignment]
+    try:
+        yield rng
+    finally:
+        np.random.default_rng = orig  # type: ignore[method-assign, assignment]
 
 
 class _NumpyEncoder(json.JSONEncoder):
