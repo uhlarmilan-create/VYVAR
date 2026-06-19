@@ -5794,19 +5794,33 @@ def _sibling_odds_confirmed(
     min_matched: int,
     rms_max_px: float,
     min_quadrants: int,
+    false_alarm_p_max: float = 1e-6,
 ) -> bool:
+    """Sibling odds gate: binomial false-alarm path OR strong geometric evidence on crowded fields."""
     n_tight = int(metrics.get("n_matched_tight") or 0)
     rms_d = metrics.get("rms_px")
     quads = int(metrics.get("quadrants_with_match") or 0)
     p_false = float(metrics.get("false_alarm_p") or 1.0)
-    return (
+    rms_finite = rms_d is not None and math.isfinite(float(rms_d))
+    rms_val = float(rms_d) if rms_finite else float("inf")
+    quads_ok = quads >= int(min_quadrants)
+    odds_ok = (
         n_tight >= int(min_matched)
-        and rms_d is not None
-        and math.isfinite(float(rms_d))
-        and float(rms_d) <= float(rms_max_px)
-        and quads >= int(min_quadrants)
-        and p_false < 1e-6
+        and rms_finite
+        and rms_val <= float(rms_max_px)
+        and quads_ok
+        and p_false < float(false_alarm_p_max)
     )
+    # Crowded fields inflate p_one -> p_false; sub-px RMS with many tight matches is not random.
+    strong_n = max(int(min_matched) * 2, int(min_matched) + 20)
+    strong_rms = float(rms_max_px) * 0.5
+    geometric_ok = (
+        n_tight >= strong_n
+        and rms_finite
+        and rms_val <= strong_rms
+        and quads_ok
+    )
+    return odds_ok or geometric_ok
 
 
 def _sibling_match_metrics(
@@ -6392,6 +6406,8 @@ def try_recover_masterstar_sibling_wcs(
         f"SIBLING-WCS Pass2: donor={donor_filter} recipient={recipient_filter} "
         f"dx={bulk.get('dx', 0):.3f} dy={bulk.get('dy', 0):.3f} "
         f"n_tight={after.get('n_matched_tight', 0)} rms={after.get('rms_px', 'nan')} "
+        f"quads={after.get('quadrants_with_match', 0)} "
+        f"p_false={after.get('false_alarm_p', 'nan')} "
         f"stack={stack_n} CONFIRMED={confirmed}"
     )
     return {

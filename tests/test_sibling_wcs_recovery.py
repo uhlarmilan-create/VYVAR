@@ -158,6 +158,132 @@ def test_odds_gate_requires_quadrants_and_false_alarm():
     assert not _sibling_odds_confirmed(m_bad, min_matched=40, rms_max_px=2.0, min_quadrants=3)
 
 
+def test_crowded_field_geometric_confirm_draft417_v_metrics():
+    """draft 417 Chi/h V_20_2: high n_det inflates p_false but geometry is unambiguous."""
+    from vyvar_platesolver import _sibling_false_alarm_p
+
+    naxis1, naxis2 = 3126, 2088
+    n_cat = 95700
+    n_det = 800
+    n_tight = 238
+    p_false = _sibling_false_alarm_p(
+        n_tight, n_det, n_cat, naxis1, naxis2, r_px=2.5
+    )
+    # odds-only path fails on inflated p_false (crowded field + many detections)
+    assert p_false >= 1e-6
+    m_chi = {
+        "n_matched_tight": n_tight,
+        "rms_px": 0.72,
+        "quadrants_with_match": 4,
+        "false_alarm_p": p_false,
+    }
+    assert not (
+        m_chi["n_matched_tight"] >= 40
+        and m_chi["rms_px"] <= 2.0
+        and m_chi["quadrants_with_match"] >= 3
+        and m_chi["false_alarm_p"] < 1e-6
+    )
+    assert _sibling_odds_confirmed(m_chi, min_matched=40, rms_max_px=2.0, min_quadrants=3)
+
+
+def test_geometric_gate_rejects_bad_recoveries():
+    """Negative: weak match count, bad RMS, or sparse quadrants stay rejected."""
+    assert not _sibling_odds_confirmed(
+        {
+            "n_matched_tight": 15,
+            "rms_px": 0.8,
+            "quadrants_with_match": 4,
+            "false_alarm_p": 1.0,
+        },
+        min_matched=40,
+        rms_max_px=2.0,
+        min_quadrants=3,
+    )
+    assert not _sibling_odds_confirmed(
+        {
+            "n_matched_tight": 100,
+            "rms_px": 6.0,
+            "quadrants_with_match": 4,
+            "false_alarm_p": 1.0,
+        },
+        min_matched=40,
+        rms_max_px=2.0,
+        min_quadrants=3,
+    )
+    assert not _sibling_odds_confirmed(
+        {
+            "n_matched_tight": 100,
+            "rms_px": 0.8,
+            "quadrants_with_match": 1,
+            "false_alarm_p": 1.0,
+        },
+        min_matched=40,
+        rms_max_px=2.0,
+        min_quadrants=3,
+    )
+    # Moderate metrics + high p_false: not strong enough for geometric branch
+    assert not _sibling_odds_confirmed(
+        {
+            "n_matched_tight": 45,
+            "rms_px": 1.5,
+            "quadrants_with_match": 3,
+            "false_alarm_p": 0.5,
+        },
+        min_matched=40,
+        rms_max_px=2.0,
+        min_quadrants=3,
+    )
+
+
+def _gate_kw() -> dict[str, float | int]:
+    return {"min_matched": 40, "rms_max_px": 2.0, "min_quadrants": 3}
+
+
+def test_crowded_near_miss_wrong_shift_rejected():
+    """Crowded coincidental matches with near-miss RMS must not confirm (false-acceptance guard)."""
+    assert not _sibling_odds_confirmed(
+        {
+            "n_matched_tight": 120,
+            "rms_px": 1.4,
+            "quadrants_with_match": 4,
+            "false_alarm_p": 0.3,
+        },
+        **_gate_kw(),
+    )
+
+
+def test_geometric_gate_n_tight_boundary():
+    """Geometric branch: n_tight threshold is max(2*min_matched, min_matched+20) = 80."""
+    kw = _gate_kw()
+    crowded = {"rms_px": 0.8, "quadrants_with_match": 4, "false_alarm_p": 0.3}
+    assert not _sibling_odds_confirmed(
+        dict(crowded, n_matched_tight=79),
+        **kw,
+    )
+    assert _sibling_odds_confirmed(
+        dict(crowded, n_matched_tight=80),
+        **kw,
+    )
+
+
+def test_geometric_gate_rms_boundary():
+    """Geometric branch: rms must be <= rms_max/2 (1.0 px at default rms_max=2.0)."""
+    kw = _gate_kw()
+    crowded = {
+        "n_matched_tight": 120,
+        "quadrants_with_match": 4,
+        "false_alarm_p": 0.3,
+    }
+    assert not _sibling_odds_confirmed(
+        dict(crowded, rms_px=1.01),
+        **kw,
+    )
+    assert _sibling_odds_confirmed(
+        dict(crowded, rms_px=1.00),
+        **kw,
+    )
+
+
 def test_pass2_disabled_is_noop():
     from pipeline import _pass2_sibling_wcs_recovery
 
