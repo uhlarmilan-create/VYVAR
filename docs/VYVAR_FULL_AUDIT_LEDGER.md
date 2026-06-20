@@ -2,7 +2,7 @@
 
 **Status:** AUDIT-ONLY (read + log; no code edits during audit pass).
 **Started:** 2026-06-19
-**Last checkpoint:** Group 4 complete — Science / variability / QA (2026-06-20 local)
+**Last checkpoint:** Group 5 complete — Reporting / export (2026-06-20 local) — Science / variability / QA (2026-06-20 local)
 
 Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 functions), targeted verification against `docs/VYVAR_CODE_AUDIT.md` DR2-DR6 threads, science-critical logic reads.
 
@@ -1391,6 +1391,269 @@ Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L11 emphasis)
 
 ---
 
+## Group 5 checkpoint — Reporting / export (2026-06-20)
+
+**Status:** AUDIT-ONLY batch appended; no code edits in this pass.
+
+Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L3/L11 emphasis) on 6 modules (174 functions); targeted reads of `export_lightcurve_reports`, AAVSO/VarAstro column assembly, trust-note wiring, PDF overflow discipline, citations vs production trust gate (post G4-F001), `lc_source` / `forced_aperture` provenance (post G2-F001); reconciliation with DECISIONS export specs.
+
+### Prioritized findings (Group 5 — deduplicated, severity-sorted)
+
+| ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
+|----|-----|------|----------|--------------|---------------------|
+| G5-F001 | **HIGH** | L4/L11 | `export_reports.py:603-640`, `858-896` | **Export ignores `lc_source` / `forced_aperture`.** `catalog_only` targets (`lc_source=forced_aperture` per G2-F001) are exported to AAVSO/VarAstro as standard ensemble differential photometry with no NOTES/comment provenance. PDF skips LC pages for `catalog_only` (`photometry_report.py:4965-4967`) but **text exports still ship** forced-aperture LCs without disclosure. | Forced-aperture / catalog-only LCs must be labeled in every deliverable format or excluded consistently. |
+| G5-F002 | **HIGH** | L11 | `export_reports.py:609-621`, `861-862` | When aperture correction is applied (`mag_calib_ac` + `ac_ok`), export **replaces magnitude with `mag_calib_ac` but keeps original `err`** from uncorrected `mag_calib`. Published mag/error pairs can be inconsistent when AC is on. | Exported uncertainty must match the magnitude column actually submitted. |
+| G5-F003 | **HIGH** | L11 | `photometry_report.py:3332-3347` | `_generate_candidate_lc_png` picks **first column containing `"mag"`** → `mag_inst`, not `mag_calib` / `mag_calib_ac`. Candidate LC figures embedded in PDF show **instrumental** magnitudes while axis label says `mag_inst` — wrong published number for external readers expecting calibrated differential photometry. Main per-star LC plots correctly prefer `mag_calib` (`:1315`, `:1374`). | Report figures must use the same calibrated mag column as exports unless explicitly labeled instrumental. |
+| G5-F004 | **MED** | L3 | `export_reports.py:1052-1074`, `688-693`, `489-490` | Export failures are **swallowed**: LC CSV read errors `continue`, per-method `export_lightcurve_reports` exceptions log warning and `continue`, empty exportable LC returns `{}` (info only), field-image copy failures return `None` quietly. Batch export can finish with **missing AAVSO/VarAstro files** and no operator-visible error. | Deliverable writes must surface failures at operator-visible level; missing export files must not be silent. |
+| G5-F005 | **MED** | L4 | `photometry_report.py:4898`, `3421-3429` | PDF glossary / star headers document `zone_flag` (`catalog_only` = “VSX catalog only”) but **do not mention `lc_source=forced_aperture`** or that a forced-aperture LC may still exist. Post G2-F001 provenance is incomplete in the deliverable layer. | Report labels must reflect `lc_source` semantics, not legacy zone-only wording. |
+| G5-F006 | **MED** | L11 | `photometry_report.py:3346`, `4869` | PDF LC / glossary time labels use **“BJD”** without **(TDB)**; pipeline LC `bjd` column is `bjd_tdb_mid`. VarAstro export correctly states `# TIME SYSTEM: BJD(TDB)` (`export_reports.py:914`). Inconsistent time-system labeling across deliverables. | Stated time system in labels must match the stored column and export headers. |
+| G5-F007 | **MED** | L1 | `export_reports.py:653`, `851` | Default `arcsec_per_px=1.3` in `export_lightcurve_reports` and hardcoded `#SOFTWARE=VYVAR/1.0` in AAVSO header while `software_version` param is only used in VarAstro body (`:909`). Aperture arcsec line in VarAstro can be wrong if plate scale ≠ 1.3. | Report/export metadata must be config- or draft-sourced, not hardcoded placeholders. |
+| G5-F008 | **MED** | L11 | `export_reports.py:944-956` | VarAstro header reports `n_good_comp` from summary, while production trust uses **`n_clean`** from comp_qa. Operators comparing export comments to trust verdict may read mismatched comp-health metrics. | Export provenance fields must cite the same comp-health metric as the trust gate. |
+| G5-F009 | **LOW** | L5 | `export_reports.py:106`, `387`, `494` | **3 TRULY-DEAD** helpers after mechanism pass (`_observer_location_configured`, `_test_is_eclipsing`, `_comp_quality_map_for_export`). | Trim only after confirming no dynamic/registry dispatch. |
+| G5-F010 | **LOW** | L5 | `photometry_report.py:522`, `1874` | **2 TRULY-DEAD** builder methods (`_lunar_risk_fill_color`, `_katalogy_cell_for_pdf`). | UI/PDF trim candidates after dispatch confirmation. |
+| G5-P001 | **CLEAN** | - | `export_reports.py:677-679`, `41-78` | Per-draft `pipeline_meta.json` observer site preferred over session `cfg` for export coordinates — matches BJD/airmass site. | Exported observer location must match photometry time-system site. |
+| G5-P002 | **CLEAN** | - | `export_reports.py:794-803`, `958-963` | Trust notes use `format_export_trust_note` / `format_varastro_trust_comment` from `trust_flag_core` — **no SEP / 3-axis wording** in export comments (post G4-F001). | Export trust text must match production trust gate semantics. |
+| G5-P003 | **CLEAN** | - | `citations.py:353-366`, `tests/test_export_citations.py:124-138` | DATA-QUALITY GATE cites Sokolovsky + von Neumann for comp_qa/trust; **Barbary/Bertin (SEP) excluded** from export when trust/comp_qa on. | Methods/citations must not cite offline-only SEP axis as production. |
+| G5-P004 | **CLEAN** | - | `photometry_report.py:1545-1577`, `5072-5076` | PDF builder supports `verify_overflow` mode with `_bounds_check` / violation logging (“0 PDF overflow” discipline). | Long tables/names must not silently overflow page bounds. |
+| G5-P005 | **CLEAN** | - | `export_reports.py:854`, `914`, `1006` | AAVSO `#DATE=BJD` + VarAstro `# TIME SYSTEM: BJD(TDB)` align with LC `bjd` from `bjd_tdb_mid`. | Export time-system headers must match LC column semantics. |
+
+### Coverage table (Group 5 modules)
+
+| Module | Funcs | Audited | TRULY-DEAD | LIVE-DYNAMIC† | FLAGGED | NEEDS-TEST |
+|--------|-------|---------|------------|---------------|---------|------------|
+| `photometry_report.py` | 123 | 123 | 2 | 89 | 11 | 21 |
+| `export_reports.py` | 27 | 27 | 3 | 17 | 6 | 1 |
+| `pdf_report.py` | 1 | 1 | 0 | 0 | 0 | 1 |
+| `report_methods.py` | 9 | 9 | 0 | 0 | 0 | 9 |
+| `citations.py` | 12 | 12 | 0 | 5 | 1 | 6 |
+| `jd_axis_format.py` | 2 | 2 | 0 | 0 | 2 | 0 |
+| **Group 5 total** | **174** | **174** | **5** | **111** | **20** | **38** |
+
+† LIVE-DYNAMIC: heuristic-zero-ref functions reclassified live (Qt/reportlab callbacks, registry refs). Full rows: `tmp/audit_group5_func_rows.md`.
+
+### TRULY-DEAD (Group 5)
+
+| Location | Function |
+|----------|----------|
+| `photometry_report.py:522` | `_PhotometryReportBuilder._lunar_risk_fill_color` |
+| `photometry_report.py:1874` | `_PhotometryReportBuilder._katalogy_cell_for_pdf` |
+| `export_reports.py:106` | `_observer_location_configured` |
+| `export_reports.py:387` | `_test_is_eclipsing` |
+| `export_reports.py:494` | `_comp_quality_map_for_export` |
+
+### Test-gap list (Group 5 — deliverable-critical)
+
+| Module / function | Existing test | Gap |
+|-------------------|---------------|-----|
+| `export_lightcurve_reports` / AAVSO row assembly | `test_gs11_pipeline` (notes suffix only) | No pytest round-trip: full LC row mag/err/filter/BJD/airmass column order vs AAVSO Extended spec |
+| `_select_export_lc_rows` + `mag_calib_ac` | none | AC-on export must pair `mag_calib_ac` with correct uncertainty — untested |
+| `catalog_only` / `forced_aperture` export | `test_phase2a_catalog_only_routing` (summary only) | No test that AAVSO/VarAstro labels or excludes forced-aperture LCs |
+| RED-trust export row | `test_trust_flag` (formatters only) | No test that `trust=` appears in AAVSO NOTES for RED targets with correct reason text |
+| `_generate_candidate_lc_png` | none | Candidate LC figure uses `mag_inst` — no test asserting calibrated mag |
+| `_is_eclipsing` / VarAstro gate | inline `_test_is_eclipsing` (dead) | Eclipsing-type filter not in pytest |
+| `pdf_report.generate_report` | `test_report_methods` (paths only) | No PDF byte/layout test; overflow verify not in CI |
+| `report_methods` path helpers | `test_report_methods.py` | Path naming only — no export content |
+| `jd_axis_format` | none | Display offset logic untested (low risk — not export column path) |
+| `emit_export_citation_lines` | `test_export_citations.py` | Citation presence only — not full VarAstro body reconciliation |
+
+### Reproducibility scan (Group 5)
+
+| Location | Issue | Severity |
+|----------|-------|----------|
+| `export_reports._bjd_to_datestr_yyyymmdd` | BJD(TDB) → UTC calendar for filename date tag; edge-of-night boundary could shift date tag vs observer night | LOW |
+| `export_reports` file naming | `safe_name` + first-LC `date_tag` — deterministic given LC order | - |
+| `photometry_report` PDF | Reportlab paragraph wrap — deterministic given data | - |
+| `citations.build_run_citation_context` | Config/meta driven — reproducible given same draft meta | - |
+| `jd_axis_format` | Pure numeric offset for display | - |
+
+### Per-module function registry (Group 5)
+
+| Location | Function | Status |
+|----------|----------|--------|
+| `photometry_report.py:49` | `_norm_cid` | NEEDS-TEST |
+| `photometry_report.py:63` | `_register_pdf_unicode_fonts` | NEEDS-TEST |
+| `photometry_report.py:99` | `gs11_report_lines` | NEEDS-TEST |
+| `photometry_report.py:5048` | `generate_photometry_report` | NEEDS-TEST |
+| `photometry_report.py:5150` | `generate_all_method_photometry_reports` | NEEDS-TEST |
+| `photometry_report.py:134` | `_PhotometryReportBuilder.__init__` | NEEDS-TEST |
+| `photometry_report.py:397` | `_PhotometryReportBuilder._vsx_type_sort_rank` | NEEDS-TEST |
+| `photometry_report.py:413` | `_PhotometryReportBuilder._try_load_variability_from_csv` | NEEDS-TEST |
+| `photometry_report.py:464` | `_PhotometryReportBuilder._obs_date_str` | NEEDS-TEST |
+| `photometry_report.py:481` | `_PhotometryReportBuilder._metric_color` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:490` | `_PhotometryReportBuilder._format_lc_count_display` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:512` | `_PhotometryReportBuilder._lunar_risk_fill_color` | TRULY-DEAD |
+| `photometry_report.py:522` | `_PhotometryReportBuilder._draw_observing_conditions_section` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:710` | `_PhotometryReportBuilder._draw_gs11_dilution_section` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:723` | `_PhotometryReportBuilder._build_comp_pool_cover_rows` | NEEDS-TEST |
+| `photometry_report.py:787` | `_PhotometryReportBuilder._load_variability_candidates_by_cid` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:808` | `_PhotometryReportBuilder._resolve_observer_identity` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:835` | `_PhotometryReportBuilder._resolve_plate_scale_arcsec` | FLAGGED(MED) |
+| `photometry_report.py:865` | `_PhotometryReportBuilder._resolve_equipment_summary` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:889` | `_PhotometryReportBuilder._build_night_qc_summary` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:945` | `_PhotometryReportBuilder._build_target_lc_stats` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:982` | `_PhotometryReportBuilder._resolve_check_kname` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1002` | `_PhotometryReportBuilder._check_star_report_for` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1054` | `_PhotometryReportBuilder._ground_variability_line` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1086` | `_PhotometryReportBuilder._variability_edge_filter_note` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1113` | `_PhotometryReportBuilder._variability_cover_rows` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1129` | `_PhotometryReportBuilder._compress_image_for_pdf` | LIVE-DYNAMIC (attribute call, symbol ref) |
+| `photometry_report.py:1196` | `_PhotometryReportBuilder._compress_png_bytes_for_pdf` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1236` | `_PhotometryReportBuilder._prepare_jpeg` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1269` | `_PhotometryReportBuilder._plot_lightcurve_to_jpeg` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1338` | `_PhotometryReportBuilder._robust_rms_148mad` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1347` | `_PhotometryReportBuilder._load_lc_xy_from_csv` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1376` | `_PhotometryReportBuilder._overlay_lc_cache_fresh` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1387` | `_PhotometryReportBuilder._plot_lightcurve_overlay_to_jpeg` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1490` | `_PhotometryReportBuilder._resolve_primary_lc_image` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1520` | `_PhotometryReportBuilder._page_footer` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1531` | `_PhotometryReportBuilder._layout_y_floor` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1535` | `_PhotometryReportBuilder._record_overflow` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1540` | `_PhotometryReportBuilder.overflow_violation_count` | NEEDS-TEST |
+| `photometry_report.py:1543` | `_PhotometryReportBuilder._bounds_check` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1554` | `_PhotometryReportBuilder._layout_page_break` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1560` | `_PhotometryReportBuilder._layout_ensure_space` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1566` | `_PhotometryReportBuilder._get_para_style` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1590` | `_PhotometryReportBuilder._pdf_escape` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1593` | `_PhotometryReportBuilder._pdf_break_long` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1599` | `_PhotometryReportBuilder._pdf_id_display` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1609` | `_PhotometryReportBuilder._para_row_height` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1616` | `_PhotometryReportBuilder._draw_paragraph_block` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1639` | `_PhotometryReportBuilder._draw_flow_lines` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1670` | `_PhotometryReportBuilder._variability_cover_metrics` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1725` | `_PhotometryReportBuilder._draw_image_fit` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1760` | `_PhotometryReportBuilder._draw_kv_table_section` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1843` | `_PhotometryReportBuilder._sanitize_katalogy_pdf_line` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1850` | `_PhotometryReportBuilder._katalogy_positive_lines` | NEEDS-TEST |
+| `photometry_report.py:1864` | `_PhotometryReportBuilder._katalogy_cell_for_pdf` | TRULY-DEAD |
+| `photometry_report.py:1875` | `_PhotometryReportBuilder._katalogy_row_has_positive` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:1877` | `_PhotometryReportBuilder._draw_hockey_stick_png` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:2189` | `_PhotometryReportBuilder._report_cover_page` | NEEDS-TEST |
+| `photometry_report.py:2268` | `_PhotometryReportBuilder._report_observation_summary` | NEEDS-TEST |
+| `photometry_report.py:2526` | `_PhotometryReportBuilder._draft_id_from_dirname` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:2537` | `_PhotometryReportBuilder._load_obs_files_for_obs` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:2596` | `_PhotometryReportBuilder._load_qc_metrics_for_obs` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:2624` | `_PhotometryReportBuilder._compute_masterstar_score` | NEEDS-TEST |
+| `photometry_report.py:2655` | `_PhotometryReportBuilder._qa_fwhm_limit_px` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:2698` | `_PhotometryReportBuilder._qc_row_by_frame_index` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:2705` | `_PhotometryReportBuilder._qc_row_by_file_hint` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:2736` | `_PhotometryReportBuilder._masterstar_from_candidates_csv` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:2776` | `_PhotometryReportBuilder._match_qc_row_by_vy_header_metrics` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:2811` | `_PhotometryReportBuilder._resolve_masterstar_used_frame` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:2858` | `_PhotometryReportBuilder._report_fits_qa` | FLAGGED(MED) |
+| `photometry_report.py:2978` | `_PhotometryReportBuilder._format_comp_catalog_id` | FLAGGED(MED) |
+| `photometry_report.py:2997` | `_PhotometryReportBuilder._proc_csv_dir` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3006` | `_PhotometryReportBuilder._rms_p2p_from_quality_note` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3015` | `_PhotometryReportBuilder._comp_rms_p2p_map_from_proc` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3057` | `_PhotometryReportBuilder._comp_rms_p2p_map_for_target` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3090` | `_PhotometryReportBuilder._comp_rows_for_target` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3227` | `_PhotometryReportBuilder._should_trigger_tess_report` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3251` | `_PhotometryReportBuilder._get_candidate_row_pdf` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3290` | `_PhotometryReportBuilder._generate_candidate_lc_png` | LIVE-DYNAMIC (attribute call, symbol ref) |
+| `photometry_report.py:3332` | `_PhotometryReportBuilder._draw_candidate_detail_page` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3383` | `_PhotometryReportBuilder._is_sparse_star_data` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3389` | `_PhotometryReportBuilder._draw_compact_star_block` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3431` | `_PhotometryReportBuilder._report_per_star_compact_page` | NEEDS-TEST |
+| `photometry_report.py:3443` | `_PhotometryReportBuilder._draw_catalog_crossmatch_block` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3479` | `_PhotometryReportBuilder._draw_aperture_correction_block` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:3567` | `_PhotometryReportBuilder._report_per_star_page` | FLAGGED(MED) |
+| `photometry_report.py:3896` | `_PhotometryReportBuilder._report_summary_table` | NEEDS-TEST |
+| `photometry_report.py:4091` | `_PhotometryReportBuilder._report_psf_summary_section` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:4191` | `_PhotometryReportBuilder._report_hrd_page` | NEEDS-TEST |
+| `photometry_report.py:4281` | `_PhotometryReportBuilder._report_field_map` | NEEDS-TEST |
+| `photometry_report.py:4324` | `_PhotometryReportBuilder._find_hockey_stick_disk_png` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:4332` | `_PhotometryReportBuilder._report_hockey_stick` | NEEDS-TEST |
+| `photometry_report.py:4372` | `_PhotometryReportBuilder._col_pick` | LIVE-DYNAMIC (attribute call) |
+| `photometry_report.py:4377` | `_PhotometryReportBuilder._report_candidates_table` | FLAGGED(MED) |
+| `photometry_report.py:4565` | `_PhotometryReportBuilder._report_tess_section` | FLAGGED(MED) |
+| `photometry_report.py:4833` | `_PhotometryReportBuilder._report_abbreviations` | FLAGGED(MED) |
+| `photometry_report.py:4900` | `_PhotometryReportBuilder.build_pdf` | NEEDS-TEST |
+| `photometry_report.py:1158` | `_to_rgb_white_bg` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:1207` | `_to_rgb_white_bg` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:1892` | `_legacy_simple_plot` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:2073` | `_known_vsx_row` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:2310` | `_cover_obs_condition_rows` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:2629` | `_norm_inverse` | NEEDS-TEST |
+| `photometry_report.py:2635` | `_norm_direct` | NEEDS-TEST |
+| `photometry_report.py:3126` | `_fmt` | NEEDS-TEST |
+| `photometry_report.py:3144` | `_cid_short` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:3897` | `_cell_txt` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:3900` | `_zone_row_fill` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4024` | `_row_height` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4381` | `_empty_candidates_page` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4404` | `_short` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4434` | `_katalogy_paragraph_source_lines` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4449` | `_kat_cell` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4459` | `_kat_row_h_pts` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4570` | `_vsx_display_for_cid` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4580` | `_sector_sort_key` | LIVE-DYNAMIC (symbol ref) |
+| `photometry_report.py:4587` | `_rel_color` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4597` | `_fmt_metric` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4690` | `_fmt_period_cell` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4694` | `_tess_blend_tail_h` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4701` | `_sector_block_h` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `photometry_report.py:4706` | `_tess_period_analysis_table` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:41` | `_resolved_site_from_meta` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:81` | `_site_coords` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:106` | `_observer_location_configured` | TRULY-DEAD |
+| `export_reports.py:117` | `_append_aavso_observer_location_lines` | FLAGGED(MED) |
+| `export_reports.py:129` | `_append_varastro_site_line` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:141` | `_vyvar_export_citation_lines` | FLAGGED(MED) |
+| `export_reports.py:165` | `_varastro_alg_lines` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:182` | `_safe_filename` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:190` | `_bjd_to_datestr_yyyymmdd` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:201` | `_fmt_opt_num` | FLAGGED(MED) |
+| `export_reports.py:209` | `_aavso_gs11_notes_suffix` | FLAGGED(MED) |
+| `export_reports.py:222` | `_fmt_opt_int` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:273` | `_filter_lookup_key` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:278` | `_resolve_aavso_filter` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:313` | `_guess_setup_info_from_obs_group` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:342` | `_token_is_eclipsing` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:354` | `_is_eclipsing` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:387` | `_test_is_eclipsing` | TRULY-DEAD |
+| `export_reports.py:450` | `_select_check_star` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:465` | `_copy_field_image` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:494` | `_comp_quality_map_for_export` | TRULY-DEAD |
+| `export_reports.py:509` | `_normalize_comp_df_export_columns` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:526` | `_export_comp_status_label` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:554` | `_format_varastro_comp_table` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `export_reports.py:603` | `_select_export_lc_rows` | FLAGGED(MED) |
+| `export_reports.py:643` | `export_lightcurve_reports` | FLAGGED(MED) |
+| `export_reports.py:1022` | `export_all_method_lightcurve_reports` | NEEDS-TEST |
+| `pdf_report.py:15` | `generate_report` | NEEDS-TEST |
+| `report_methods.py:16` | `have_psf_frame_columns` | NEEDS-TEST |
+| `report_methods.py:26` | `active_report_methods` | NEEDS-TEST |
+| `report_methods.py:42` | `multi_method_reports_active` | NEEDS-TEST |
+| `report_methods.py:46` | `lc_csv_path` | NEEDS-TEST |
+| `report_methods.py:55` | `aavso_export_path` | NEEDS-TEST |
+| `report_methods.py:71` | `varastro_export_path` | NEEDS-TEST |
+| `report_methods.py:86` | `pdf_report_path` | NEEDS-TEST |
+| `report_methods.py:105` | `report_title` | NEEDS-TEST |
+| `report_methods.py:113` | `software_method_label` | NEEDS-TEST |
+| `citations.py:28` | `_strip_bib_value` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `citations.py:70` | `load_citations_bib` | NEEDS-TEST |
+| `citations.py:98` | `citation_line` | NEEDS-TEST |
+| `citations.py:134` | `_vsx_db_configured` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `citations.py:141` | `_targets_use_vsx_names` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `citations.py:162` | `_lc_method_implies_psf` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `citations.py:167` | `build_run_citation_context` | FLAGGED(MED) |
+| `citations.py:236` | `load_pipeline_meta` | NEEDS-TEST |
+| `citations.py:248` | `_sections_for_context` | LIVE-DYNAMIC (direct call, symbol ref) |
+| `citations.py:382` | `emit_export_citation_lines` | NEEDS-TEST |
+| `citations.py:404` | `emit_pdf_methods_sections` | NEEDS-TEST |
+| `citations.py:412` | `emit_varastro_method_summary_lines` | NEEDS-TEST |
+| `jd_axis_format.py:16` | `jd_series_relative` | FLAGGED(MED) |
+| `jd_axis_format.py:34` | `jd_axis_title` | FLAGGED(MED) |
+
+### Automation artifacts (Group 5, tmp/, gitignored)
+
+- `tmp/audit_group5.py` — scan driver
+- `tmp/audit_group5_results.json` — inventory + lens hits
+- `tmp/audit_group5_func_rows.md` — function rows (174)
+
+**Checkpoint policy:** Milan + Claude review Group 5 batch before Group 6.
+
+---
+
 ## Next group
 
-**Group 5 —** (per roadmap; not started).
+**Group 6 —** (per roadmap; not started).
