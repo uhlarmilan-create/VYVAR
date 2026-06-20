@@ -1473,6 +1473,18 @@ def read_flux_from_csv(
     return pd.DataFrame(rows)
 
 
+def _masterstar_wcs_usable_for_placement(header: Any, wcs: Any) -> bool:
+    """MASTERSTAR WCS usable for catalog_only placement: celestial + solved or sibling-recovered."""
+    if not wcs.has_celestial:
+        return False
+    try:
+        vy_psolv = int(header.get("VY_PSOLV", 0))
+    except (TypeError, ValueError):
+        vy_psolv = 0
+    vy_sibl = str(header.get("VY_SIBL", "") or "").strip()
+    return int(vy_psolv) == 1 or bool(vy_sibl)
+
+
 def _target_row_is_catalog_only(target_row: Any) -> bool:
     if not hasattr(target_row, "get"):
         return False
@@ -10771,12 +10783,15 @@ def select_active_targets(
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", FITSFixedWarning)
                 with astrofits.open(_ms_fits_co, memmap=False) as hdul:
-                    wcs_m = WCS(hdul[0].header)
-                    vy_psolv = int(hdul[0].header.get("VY_PSOLV", 0))
+                    hdr_co = hdul[0].header
+                    wcs_m = WCS(hdr_co)
+            wcs_usable = _masterstar_wcs_usable_for_placement(hdr_co, wcs_m)
             if not wcs_m.has_celestial:
                 log_event("CATALOG_ONLY WCS missing celestial axes — skipping forced aperture placement")
-            if int(vy_psolv) != 1:
-                log_event("CATALOG_ONLY forced aperture skipped — VY_PSOLV != 1 (unsolved frame)")
+            elif not wcs_usable:
+                log_event(
+                    "CATALOG_ONLY forced aperture skipped — masterstar WCS not solved (no VY_PSOLV/VY_SIBL)"
+                )
             if safe_bbox is not None:
                 try:
                     x0b, y0b, x1b, y1b = safe_bbox
@@ -10803,7 +10818,7 @@ def select_active_targets(
             de_u = pd.to_numeric(unmatched["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
             ok_rd = np.isfinite(ra_u) & np.isfinite(de_u)
             xy_u = np.full((len(unmatched), 2), np.nan, dtype=np.float64)
-            if bool(ok_rd.any()) and wcs_m.has_celestial and int(vy_psolv) == 1:
+            if bool(ok_rd.any()) and wcs_usable:
                 pts = np.column_stack([ra_u[ok_rd], de_u[ok_rd]])
                 xy_part = wcs_m.all_world2pix(pts, 0)
                 xy_u[ok_rd, :] = xy_part
