@@ -109,6 +109,8 @@ class AppConfig:
     #: (typically ``1`` = full resolution). Lights with ``XBINNING`` 2×2 are matched in RAM (temporary resample).
     #: JSON ``null``: read ``XBINNING`` from each master FITS (e.g. Bin2 library files with 2×2 lights).
     calibration_library_native_binning: int | None = 1
+    #: Max |ΔT| (°C) when matching library dark masters to light ``CCD_TEMP`` (``find_best_calibration_library_path``).
+    calibration_master_ccd_temp_tolerance_c: float = 0.5
 
     #: Path to local Gaia DR3 SQLite database (must contain table ``gaia_dr3`` with indexes on ra/dec).
     gaia_db_path: str = ""
@@ -654,6 +656,17 @@ class AppConfig:
                 self.calibration_library_native_binning = max(1, min(16, _cln))
             except (TypeError, ValueError):
                 self.calibration_library_native_binning = 1
+        try:
+            _ctol = float(
+                data.get(
+                    "calibration_master_ccd_temp_tolerance_c",
+                    self.calibration_master_ccd_temp_tolerance_c,
+                )
+            )
+            if math.isfinite(_ctol) and 0.01 <= _ctol <= 20.0:
+                self.calibration_master_ccd_temp_tolerance_c = float(_ctol)
+        except (TypeError, ValueError):
+            pass
 
         self.gaia_db_path = str(data.get("gaia_db_path", data.get("GAIA_DB_PATH", "")) or "").strip()
 
@@ -1633,6 +1646,7 @@ class AppConfig:
         _f01("comp_tier3_weight", 0.50, 0.01, 1.00)
         _f01("comp_tier4_weight", 0.25, 0.01, 1.00)
         _f01("comp_contamination_penalty_k", 3.0, 0.0, 20.0)
+        _f01("calibration_master_ccd_temp_tolerance_c", 0.5, 0.01, 20.0)
         self.gs11_dilution_enabled = bool(
             data.get("gs11_dilution_enabled", self.gs11_dilution_enabled)
         )
@@ -1803,6 +1817,9 @@ class AppConfig:
                 None
                 if self.calibration_library_native_binning is None
                 else int(self.calibration_library_native_binning)
+            ),
+            "calibration_master_ccd_temp_tolerance_c": float(
+                self.calibration_master_ccd_temp_tolerance_c
             ),
             "gaia_db_path": str(self.gaia_db_path or ""),
             "blind_index_fine_path": str(self.blind_index_fine_path or ""),

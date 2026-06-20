@@ -1941,6 +1941,25 @@ class VyvarDatabase:
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
         _eq = int(id_equipments) if id_equipments is not None else None
         _tel = int(id_telescope) if id_telescope is not None else None
+        if _eq is None or _tel is None:
+            try:
+                log_event(
+                    f"CALIB LIB: refused registration without equipment/telescope scope: {fp}"
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            return False
+        if k == "dark" and (
+            ccd_temp is None
+            or not math.isfinite(float(ccd_temp))
+        ):
+            try:
+                log_event(
+                    f"CALIB LIB: refused dark registration without finite CCD_TEMP: {fp}"
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            return False
         existing = self.get_calibration_library_row_by_path(fp)
         if existing is not None and not self.calibration_scopes_match(
             existing.get("ID_EQUIPMENTS"),
@@ -2027,7 +2046,7 @@ class VyvarDatabase:
         kind: str,
         xbinning: int,
         exptime: float,
-        ccd_temp: float,
+        ccd_temp: float | None,
         filter_name: str = "",
         gain: int = 0,
         temp_tolerance: float = 0.5,
@@ -2035,67 +2054,83 @@ class VyvarDatabase:
         id_equipments: int | None = None,
         id_telescope: int | None = None,
     ) -> str | None:
-        """Return best existing file path for lights/calibration matching, or None.
+        """Return best scoped calibration master path, or None.
 
-        Prefers smallest |ΔT| among rows within ``temp_tolerance``, then newest file mtime.
+        Scoped model (no global NULL,NULL rows):
+        - **dark:** equipment+telescope, XBINNING, EXPTIME, GAIN, CCD_TEMP within tol (required).
+        - **flat:** equipment+telescope, XBINNING, GAIN, FILTER_NAME (no EXPTIME gate).
 
-        When ``prefer_unbinned_master`` is True and ``xbinning`` > 1, a **1×1** library row
-        is tried first so the pipeline can resample the master to the light binning on-the-fly.
-
-        When ``id_equipments`` and ``id_telescope`` are set, rows must either match that set
-        exactly or be **legacy** (both IDs NULL = všeobecný master pre všetky sety).
+        Prefers smallest |ΔT| for dark, then newest mtime. When ``prefer_unbinned_master`` and
+        ``xbinning`` > 1, tries XBINNING=1 first for on-the-fly resample.
         """
         k = str(kind or "").strip().lower()
         if k not in ("dark", "flat"):
             return None
+        try:
+            tol = float(temp_tolerance)
+        except (TypeError, ValueError):
+            tol = 0.5
+        if not math.isfinite(tol) or tol < 0:
+            tol = 0.5
+        try:
+            eq_id = int(id_equipments)
+            tel_id = int(id_telescope)
+        except (TypeError, ValueError):
+            try:
+                log_event(f"CALIB LIB: no scoped master for {k} — missing equipment/telescope ids")
+            except Exception:  # noqa: BLE001
+                pass
+            return None
+        if k == "dark":
+            if ccd_temp is None or not math.isfinite(float(ccd_temp)):
+                try:
+                    log_event(
+                        f"CALIB LIB: no scoped dark — light CCD_TEMP unknown "
+                        f"(eq={eq_id} tel={tel_id})"
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+                return None
         flt = "" if k == "dark" else str(filter_name or "").strip()
-        _scope = (
-            id_equipments is not None
-            and id_telescope is not None
-            and math.isfinite(float(int(id_equipments)))
-            and math.isfinite(float(int(id_telescope)))
-        )
+        light_temp = float(ccd_temp) if k == "dark" else float("nan")
 
         def _query_rows(xb: int) -> list[sqlite3.Row]:
-            params: list[Any] = [
-                k,
-                int(xb),
-                float(exptime),
-                int(gain),
-                flt,
-                float(ccd_temp),
-                float(temp_tolerance),
-            ]
-            scope_sql = ""
-            if _scope:
-                scope_sql = (
-                    " AND ("
-                    "(ID_EQUIPMENTS IS NULL AND ID_TELESCOPE IS NULL) "
-                    "OR (ID_EQUIPMENTS = ? AND ID_TELESCOPE = ?)"
-                    ")"
-                )
-                params.extend([int(id_equipments), int(id_telescope)])
-            cur = self.conn.execute(
-                f"""
-                SELECT FILE_PATH, CCD_TEMP
-                FROM CALIBRATION_LIBRARY
-                WHERE KIND = ?
-                  AND XBINNING = ?
-                  AND EXPTIME = ?
-                  AND COALESCE(GAIN, 0) = ?
-                  AND (
-                    (KIND = 'dark' AND COALESCE(FILTER_NAME, '') = '')
-                    OR (KIND = 'flat' AND FILTER_NAME = ?)
-                  )
-                  AND (
-                    CCD_TEMP IS NULL
-                    OR ABS(CCD_TEMP - ?) <= ?
-                  )
-                  {scope_sql}
-                ;
-                """,
-                tuple(params),
-            )
+            if k == "dark":
+                params: list[Any] = [
+                    int(xb),
+                    float(exptime),
+                    int(gain),
+                    float(light_temp),
+                    float(tol),
+                    eq_id,
+                    tel_id,
+                ]
+                query = """
+                    SELECT FILE_PATH, CCD_TEMP
+                    FROM CALIBRATION_LIBRARY
+                    WHERE KIND = 'dark'
+                      AND XBINNING = ?
+                      AND EXPTIME = ?
+                      AND COALESCE(GAIN, 0) = ?
+                      AND COALESCE(FILTER_NAME, '') = ''
+                      AND CCD_TEMP IS NOT NULL
+                      AND ABS(CCD_TEMP - ?) <= ?
+                      AND ID_EQUIPMENTS = ?
+                      AND ID_TELESCOPE = ?
+                """
+            else:
+                params = [int(xb), int(gain), flt, eq_id, tel_id]
+                query = """
+                    SELECT FILE_PATH, CCD_TEMP
+                    FROM CALIBRATION_LIBRARY
+                    WHERE KIND = 'flat'
+                      AND XBINNING = ?
+                      AND COALESCE(GAIN, 0) = ?
+                      AND FILTER_NAME = ?
+                      AND ID_EQUIPMENTS = ?
+                      AND ID_TELESCOPE = ?
+                """
+            cur = self.conn.execute(query, tuple(params))
             return cur.fetchall()
 
         def _score(rows_in: list[sqlite3.Row]) -> str | None:
@@ -2104,14 +2139,16 @@ class VyvarDatabase:
                 p = Path(str(row["FILE_PATH"]))
                 if not p.is_file():
                     continue
-                tdb = row["CCD_TEMP"]
-                if tdb is None:
-                    tdelta = 1e9
-                else:
+                if k == "dark":
+                    tdb = row["CCD_TEMP"]
+                    if tdb is None:
+                        continue
                     try:
-                        tdelta = abs(float(tdb) - float(ccd_temp))
+                        tdelta = abs(float(tdb) - float(light_temp))
                     except (TypeError, ValueError):
-                        tdelta = 1e9
+                        continue
+                else:
+                    tdelta = 0.0
                 try:
                     mtime = -float(p.stat().st_mtime)
                 except OSError:
@@ -2122,13 +2159,29 @@ class VyvarDatabase:
             scored.sort(key=lambda x: (x[0], x[1]))
             return scored[0][2]
 
-        rows = _query_rows(int(xbinning))
+        def _pick(xb: int) -> str | None:
+            return _score(_query_rows(xb))
+
         if prefer_unbinned_master and int(xbinning) > 1:
-            rows_1 = _query_rows(1)
-            hit1 = _score(rows_1)
+            hit1 = _pick(1)
             if hit1 is not None:
                 return hit1
-        hit = _score(rows)
+        hit = _pick(int(xbinning))
+        if hit is None:
+            try:
+                if k == "dark":
+                    log_event(
+                        f"CALIB LIB: no scoped master for dark eq={eq_id} tel={tel_id} "
+                        f"bin={int(xbinning)} exp={float(exptime):g} gain={int(gain)} "
+                        f"temp={float(light_temp):g}±{tol:g}C"
+                    )
+                else:
+                    log_event(
+                        f"CALIB LIB: no scoped master for flat eq={eq_id} tel={tel_id} "
+                        f"bin={int(xbinning)} gain={int(gain)} filter={flt!r}"
+                    )
+            except Exception:  # noqa: BLE001
+                pass
         return hit
 
     def fetch_obs_draft_telescope_equipment(self, draft_id: int) -> dict[str, Any] | None:

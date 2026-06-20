@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -80,6 +81,74 @@ def observation_group_folder_name(group_key: str) -> str:
     s = group_key.replace("|", "_").replace("/", "_").replace("\\", "_")
     s = "".join(c if c.isalnum() or c in "._-" else "_" for c in s)
     return s[:120] if len(s) > 120 else s
+
+
+_CCD_TEMP_HEADER_KEYS = ("CCD-TEMP", "SENSORTEMP", "SET-TEMP")
+
+
+def _raw_ccd_temp_from_header(header: fits.Header) -> float | None:
+    for key in _CCD_TEMP_HEADER_KEYS:
+        if key in header and header[key] not in (None, ""):
+            try:
+                v = float(header[key])
+            except (TypeError, ValueError):
+                continue
+            return v if math.isfinite(v) else None
+    return None
+
+
+def _calibration_light_temp_c(
+    path: Path | str,
+    db: VyvarDatabase | None = None,
+) -> float | None:
+    """Light CCD temperature for dark matching from raw ``CCD_TEMP``; ``None`` when unknown."""
+    p = Path(path)
+    if db is not None:
+        try:
+            st = p.stat()
+        except OSError:
+            st = None
+        if st is not None:
+            row = db.fits_header_cache_get_if_fresh(
+                p, file_size=int(st.st_size), mtime=float(st.st_mtime)
+            )
+            if row is not None:
+                ct = row["CCD_TEMP"]
+                if ct is None:
+                    return None
+                try:
+                    v = float(ct)
+                except (TypeError, ValueError):
+                    return None
+                return v if math.isfinite(v) else None
+    try:
+        with fits.open(p, memmap=False) as hdul:
+            return _raw_ccd_temp_from_header(hdul[0].header)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _scoped_library_row_matches(
+    db: VyvarDatabase,
+    fp: Path,
+    *,
+    kind: str,
+    id_equipments: int,
+    id_telescope: int,
+) -> bool:
+    row = db.get_calibration_library_row_by_path(fp)
+    if row is None:
+        return False
+    if str(row.get("KIND", "")).strip().lower() != str(kind).strip().lower():
+        return False
+    try:
+        row_eq = row.get("ID_EQUIPMENTS")
+        row_tel = row.get("ID_TELESCOPE")
+        if row_eq is None or row_tel is None:
+            return False
+        return int(row_eq) == int(id_equipments) and int(row_tel) == int(id_telescope)
+    except (TypeError, ValueError):
+        return False
 
 
 def _calibration_library_search_roots(calibration_library_root: Path) -> list[Path]:
@@ -257,6 +326,14 @@ def _register_master_path_in_calibration_library(
     """Register master in CALIBRATION_LIBRARY. Returns False if path belongs to another set."""
     if db is None:
         return True
+    if id_equipments is None or id_telescope is None:
+        try:
+            log_event(
+                f"CALIB LIB: refused registration without scope for {path}"
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        return False
     try:
         meta = extract_fits_metadata(path, db=db)
         k = str(kind).strip().lower()
@@ -268,7 +345,7 @@ def _register_master_path_in_calibration_library(
             file_path=path.resolve(),
             xbinning=int(meta.get("binning", 1) or 1),
             exptime=float(meta.get("exposure", 0.0)),
-            ccd_temp=float(meta["temp"]) if meta.get("temp") is not None else None,
+        ccd_temp=_calibration_light_temp_c(path, db=db) if k == "dark" else None,
             filter_name=flt,
             gain=int(meta.get("gain", 0) or 0),
             ncombine=ncombine,
@@ -654,10 +731,10 @@ def _dst_path_with_length_limit(dst_dir: Path, original_name: str, *, max_path_l
 def _params_string(meta: dict[str, Any], *, include_filter: bool) -> str:
     exp = float(meta.get("exposure", 0.0))
     gain = int(meta.get("gain", 0))
-    temp = float(meta.get("temp", 0.0))
+    temp_s = f"{float(meta.get('temp', 0.0)):g}"
     binning = int(meta.get("binning", 1))
     flt = str(meta.get("filter", "Unknown"))
-    base = f"Exp={exp:g}s, Gain={gain}G, Temp={temp:g}C, Bin={binning}"
+    base = f"Exp={exp:g}s, Gain={gain}G, Temp={temp_s}C, Bin={binning}"
     return f"{base}, Filter={flt}" if include_filter else base
 
 
@@ -668,26 +745,45 @@ def _find_matching_master_in_library(
     exp: float,
     gain: int,
     binning: int,
-    temp: float,
+    temp: float | None,
     flt: str | None,
     db: VyvarDatabase | None = None,
     search_roots: list[Path] | None = None,
     id_equipments: int | None = None,
     id_telescope: int | None = None,
+    temp_tolerance: float = 0.5,
 ) -> Path | None:
+    if id_equipments is None or id_telescope is None:
+        try:
+            log_event(
+                f"CALIB LIB: cannot match {kind} master — missing equipment/telescope scope"
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+    eq_id = int(id_equipments)
+    tel_id = int(id_telescope)
+    if kind == "dark":
+        if temp is None or not math.isfinite(float(temp)):
+            try:
+                log_event("CALIB LIB: cannot match dark — light CCD_TEMP unknown")
+            except Exception:  # noqa: BLE001
+                pass
+            return None
+    flt_key = _filter_name_for_calibration_library_flat(flt) if kind == "flat" else ""
     if db is not None:
-        flt_key = _filter_name_for_calibration_library_flat(flt) if kind == "flat" else ""
         try:
             hit = db.find_best_calibration_library_path(
                 kind=kind,
                 xbinning=int(binning),
                 exptime=float(exp),
-                ccd_temp=float(temp),
+                ccd_temp=float(temp) if kind == "dark" else None,
                 filter_name=flt_key,
                 gain=int(gain),
                 prefer_unbinned_master=True,
-                id_equipments=id_equipments,
-                id_telescope=id_telescope,
+                id_equipments=eq_id,
+                id_telescope=tel_id,
+                temp_tolerance=float(temp_tolerance),
             )
         except Exception:  # noqa: BLE001
             hit = None
@@ -733,34 +829,37 @@ def _find_matching_master_in_library(
         except Exception:  # noqa: BLE001
             continue
 
-        if float(meta.get("exposure", -1.0)) != float(exp):
+        if db is None or not _scoped_library_row_matches(
+            db,
+            fp,
+            kind=kind,
+            id_equipments=eq_id,
+            id_telescope=tel_id,
+        ):
             continue
+
+        if kind == "dark":
+            if float(meta.get("exposure", -1.0)) != float(exp):
+                continue
+            master_temp = _calibration_light_temp_c(fp, db=db)
+            if master_temp is None:
+                continue
+            if abs(float(master_temp) - float(temp)) > float(temp_tolerance):
+                continue
+        else:
+            flt_norm = _filter_name_for_calibration_library_flat(flt)
+            if str(meta.get("filter", "")).strip() != str(flt_norm).strip():
+                continue
+
         if int(meta.get("gain", 0)) != int(gain):
             continue
         mb = int(meta.get("binning", 0) or 0)
         if mb != int(binning) and not (int(binning) > 1 and mb == 1):
             continue
-        if abs(float(meta.get("temp", 0.0)) - float(temp)) > 0.5:
-            continue
-        if kind == "flat" and flt is not None:
-            if str(meta.get("filter", "")).strip() != str(flt).strip():
-                continue
 
         if not _looks_like_master(fp):
             continue
         if not _master_kind_matches(fp, kind):
-            continue
-
-        if (
-            id_equipments is not None
-            and id_telescope is not None
-            and _master_path_scope_conflicts(
-                db,
-                fp,
-                id_equipments=id_equipments,
-                id_telescope=id_telescope,
-            )
-        ):
             continue
 
         mtime = os.path.getmtime(fp)
@@ -793,27 +892,29 @@ def _find_best_masterflat_for_filter(
     search_roots: list[Path] | None = None,
     id_equipments: int | None = None,
     id_telescope: int | None = None,
+    temp_tolerance: float = 0.5,
 ) -> tuple[Path | None, str]:
     """Return best masterflat and a UI-friendly status string."""
     roots = search_roots or _calibration_library_search_roots(calibration_library_root)
     flt_norm = _filter_name_for_calibration_library_flat(flt)
     if (
         db is not None
-        and exp is not None
         and gain is not None
-        and temp is not None
+        and id_equipments is not None
+        and id_telescope is not None
     ):
         try:
             hit = db.find_best_calibration_library_path(
                 kind="flat",
                 xbinning=int(binning),
-                exptime=float(exp),
-                ccd_temp=float(temp),
+                exptime=float(exp) if exp is not None else 0.0,
+                ccd_temp=None,
                 filter_name=flt_norm,
                 gain=int(gain),
                 prefer_unbinned_master=True,
                 id_equipments=id_equipments,
                 id_telescope=id_telescope,
+                temp_tolerance=float(temp_tolerance),
             )
         except Exception:  # noqa: BLE001
             hit = None
@@ -1007,7 +1108,7 @@ def _find_existing_master_for_raw_set(
     raw_binning = int(meta0.get("binning", 1))
     _ = target_binning
     binning = raw_binning
-    temp = float(meta0.get("temp", 0.0))
+    temp = _calibration_light_temp_c(sample_file, db=db)
     flt = str(meta0.get("filter", "")).strip() if kind == "flat" else None
 
     cr = Path(calibration_library_root)
@@ -1035,12 +1136,19 @@ def smart_scan_source(
     db: VyvarDatabase | None = None,
     id_equipments: int | None = None,
     id_telescope: int | None = None,
+    calibration_master_ccd_temp_tolerance_c: float = 0.5,
 ) -> SmartImportPlan:
     """Scan source for lights/darks/flats and decide calibration paths.
 
     With ``db``, refreshes ``FITS_HEADER_CACHE`` (header metadata only) for fast rescans; no observation/draft writes.
     """
     root = Path(source_root)
+    try:
+        temp_tol = float(calibration_master_ccd_temp_tolerance_c)
+    except (TypeError, ValueError):
+        temp_tol = 0.5
+    if not math.isfinite(temp_tol) or temp_tol < 0:
+        temp_tol = 0.5
 
     scan_rows: list[SmartScanRow] = []
     warnings: list[str] = []
@@ -1122,7 +1230,7 @@ def smart_scan_source(
     exp = float(metadata["exposure"])
     gain = int(metadata.get("gain", 0))
     binning = int(metadata["binning"])
-    temp = float(metadata["temp"])
+    temp = _calibration_light_temp_c(first_light, db=db)
     flt = str(metadata.get("filter", "Unknown"))
 
     calib_root = Path(calibration_library_root)
@@ -1156,7 +1264,7 @@ def smart_scan_source(
                 "exposure_s": exp_i,
                 "binning": b_i,
                 "gain": int(meta_i.get("gain", 0)),
-                "temp": float(meta_i.get("temp", 0.0)),
+                "temp": _calibration_light_temp_c(fp, db=db),
                 "representative_light": str(fp),
                 "light_paths": [],
                 "plate_scale_arcsec_per_px": scale,
@@ -1176,10 +1284,11 @@ def smart_scan_source(
             db=db,
             exp=float(g["exposure_s"]),
             gain=int(g["gain"]),
-            temp=float(g["temp"]),
+            temp=g["temp"],
             search_roots=cal_roots,
             id_equipments=id_equipments,
             id_telescope=id_telescope,
+            temp_tolerance=temp_tol,
         )
         masterflat_by_obs_key[gk] = str(fp_best) if fp_best is not None else None
         masterflat_status[gk] = status
@@ -1192,12 +1301,13 @@ def smart_scan_source(
             exp=float(g["exposure_s"]),
             gain=int(g["gain"]),
             binning=int(g["binning"]),
-            temp=float(g["temp"]),
+            temp=g["temp"],
             flt=None,
             db=db,
             search_roots=cal_roots,
             id_equipments=id_equipments,
             id_telescope=id_telescope,
+            temp_tolerance=temp_tol,
         )
         if d_found is not None:
             age_d = _age_days(d_found)
@@ -1283,6 +1393,7 @@ def smart_scan_source(
             search_roots=cal_roots,
             id_equipments=id_equipments,
             id_telescope=id_telescope,
+            temp_tolerance=temp_tol,
         )
         if found is None:
             return (
