@@ -1046,7 +1046,7 @@ Rig intrinsics live in SQLite `EQUIPMENTS` / `TELESCOPE` (`GAIN_ADU`, `READNOISE
 | G3-F006 | **MED** | L11 | `catalog_crossmatch.py:599-655` | Online catalog workers (Vizier/SIMBAD) use epoch-blind cone queries; no PM propagation at crossmatch layer (distinct from platesolver PM path). GAIA-1 deferred for DB build, not for operator crossmatch UI. | Crossmatch epoch/PM handling must be explicit per catalog epoch or flagged uncertain. |
 | G3-F007 | **MED** | L3 | `database.py:34-73` | `get_gaia_db_max_g_mag` returns `0.0` on query failure (logged once) — callers may treat as “empty DB” vs error. | Catalog depth probes must distinguish failure vs empty vs valid max. |
 | G3-F008 | **MED** | L4 | `calibration.py:441-452` | `get_processed_master(..., allow_passthrough=True)` synthesizes zero/one master if file missing — **no production callers** today but dangerous if wired. | Missing master must fail loud; synthetic passthrough corrupts all flux. |
-| G3-F009 | **LOW** | L5 | `database.py`, `importer.py`, `catalog_crossmatch.py` | AST ref-count: ~189 DEAD functions (mostly UI CRUD / cache helpers with no string refs). Automation under-counts `self.method` dispatch. | Dead API surface should be trimmed after UI dispatch audit. |
+| G3-F009 | **LOW** | L5 | `database.py`, `importer.py`, `catalog_crossmatch.py` | ~~AST ref-count: ~189 DEAD…~~ **RECLASSIFIED** (2026-06-20): heuristic 207 → **25 TRULY-DEAD**, 182 LIVE-DYNAMIC (dispatch/registry/Qt/dunder); see DEAD reclassification section. | Dead API surface should be trimmed after UI dispatch audit; only TRULY-DEAD rows are removal candidates. |
 | G3-D001 | **DEFER** | L11 | `vyvar_platesolver.py:63` | Known DR4 forward hook: `GAIA_EPOCH=2016.0` → J2017.5 for DR4 build (**not a new finding**). | Epoch constant moves with DR4 rebuild; do not restart DR3. |
 | G3-D002 | **DEFER** | L11 | GAIA-1/GAIA-2 | `pmra/pmdec`, `ruwe` columns deferred to DR4 build per DECISIONS/ROADMAP — `build_gaia_catalog.py` schema omits them today; `query_local_gaia` optionally reads if present. | DR4 build adds columns; no DR3 rebuild. |
 | G3-P001 | **CLEAN** | - | `param_resolver.py` | Documented provenance chain (header → DB → config); site `ok=False` when unresolved; DB cross-check for plausible-but-wrong headers (draft 363 pixel case). | Reference pattern for rig-parameter authority. |
@@ -1059,6 +1059,93 @@ Rig intrinsics live in SQLite `EQUIPMENTS` / `TELESCOPE` (`GAIN_ADU`, `READNOISE
 **Cross-rig trace (Group 3 as source):** Universal literals `2082×1397`, `9.77″/px`, `1.3″/px` do **not** live in Group 3 hot paths (only `calibration.py` documents them as shape examples). Downstream patches (G1 T2-1/T2-2) consumed `get_combined_metadata` / `param_resolver` / header cache — root authority is here, not in photometry.
 
 ## Coverage table (Group 3 modules)
+
+| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC† | TEST-ONLY† |
+|--------|-------|-------|---------|------------------|------------|---------------|------------|
+| `database.py` | 4181 | 151 | 151 | 72 | 13 | 59 | 0 |
+| `importer.py` | 2034 | 54 | 54 | 46 | 5 | 41 | 0 |
+| `calibration.py` | 549 | 15 | 15 | 9 | 0 | 9 | 0 |
+| `proc_frame_store.py` | 290 | 14 | 14 | 3 | 1 | 2 | 0 |
+| `catalog_crossmatch.py` | 681 | 23 | 23 | 17 | 0 | 17 | 0 |
+| `crossmatch_runner.py` | 299 | 7 | 7 | 5 | 0 | 5 | 0 |
+| `gaia_catalog_id.py` | 207 | 8 | 8 | 1 | 0 | 1 | 0 |
+| `param_resolver.py` | 641 | 27 | 27 | 20 | 2 | 18 | 0 |
+| `draft_provenance.py` | 139 | 9 | 9 | 0 | 0 | 0 | 0 |
+| `time_utils.py` | 266 | 11 | 11 | 4 | 3 | 1 | 0 |
+| `fits_suffixes.py` | 12 | 1 | 1 | 0 | 0 | 0 | 0 |
+| `masterstar_context.py` | 185 | 5 | 5 | 1 | 0 | 1 | 0 |
+| `GAIA_DR3/build_gaia_catalog.py` | 738 | 27 | 27 | 20 | 0 | 20 | 0 |
+| `GAIA_DR3/build_blind_index.py` | 481 | 11 | 11 | 7 | 1 | 6 | 0 |
+| `VSX/vsx_make.py` | 195 | 4 | 4 | 2 | 0 | 2 | 0 |
+| **Group 3 total** | - | **367** | **367** | **207** | **25** | **182** | **0** |
+
+† **LIVE-DYNAMIC** / **TEST-ONLY**: reclassification of heuristic-DEAD rows only (2026-06-20 pass). These functions have callers via direct/symbol ref, string dispatch, `getattr`, Qt `.connect`, registry tuples (e.g. `_CATALOG_WORKERS`), dunder protocol, or CLI `__main__`. They are **not** removal candidates.
+
+**Prior checkpoint** reported 189 heuristic DEAD (under-counted module sum); automated inventory is **207** zero-outside-ref private/public functions.
+
+Flagged counts (9 FLAGGED) and NEEDS-TEST (142) unchanged from original lens pass. Heuristic DEAD column retained for diff against TRULY-DEAD.
+
+## Group 3 DEAD reclassification (2026-06-20, AUDIT-ONLY)
+
+**Goal:** Trustworthy dead-code status before any removal. Re-checked all **207** heuristic-DEAD Group-3 functions with eight caller mechanisms (direct/attribute call, symbol ref, string ref in py/ui/json, `getattr`, Qt `.connect`, `super()`, registry/CLI `__main__`, dunder protocol). Excluded `tmp/` audit tooling from reference scans.
+
+### Summary
+
+| Metric | Count |
+|--------|-------|
+| Heuristic DEAD (original AST pass) | 207 |
+| **TRULY-DEAD** (no caller by any mechanism) | **25** |
+| LIVE-DYNAMIC (reclassified from DEAD) | 182 |
+| TEST-ONLY (Group-3 subset) | 0 |
+
+**False-positive rate:** 182/207 ≈ **88%** of heuristic DEAD were live (mostly `database.py` / `importer.py` CRUD + `catalog_crossmatch.py` `_CATALOG_WORKERS` registry).
+
+### TRULY-DEAD list (removal candidates — each still needs per-step do-no-harm before delete)
+
+| Location | Function |
+|----------|----------|
+| `database.py:1065` | `update_master_source_safety` |
+| `database.py:1104` | `count_final_data_for_equipment_id` |
+| `database.py:1113` | `count_final_data_for_telescope_id` |
+| `database.py:1464` | `set_obs_draft_masterstar_path` |
+| `database.py:1543` | `qc_processing_run_exists` |
+| `database.py:1550` | `delete_qc_processing_run_by_hash` |
+| `database.py:2511` | `get_setting_int` |
+| `database.py:2521` | `set_setting` |
+| `database.py:3131` | `get_observation_metadata` |
+| `database.py:3174` | `update_observation_import_log` |
+| `database.py:3211` | `insert_observation_files` |
+| `database.py:3371` | `fetch_draft_scanning_ids` |
+| `database.py:3622` | `finalize_draft` |
+| `importer.py:146` | `_is_empty_or_missing` |
+| `importer.py:296` | `_format_temp` |
+| `importer.py:325` | `_first_fits_in_dir` |
+| `importer.py:396` | `_resolve_session_lights` |
+| `importer.py:1500` | `_copy_fits_folder` |
+| `proc_frame_store.py:283` | `frame_columns` |
+| `param_resolver.py:479` | `resolve_saturation` |
+| `param_resolver.py:529` | `resolve_exptime` |
+| `time_utils.py:33` | `_clamp_lat` |
+| `time_utils.py:37` | `_clamp_lon` |
+| `time_utils.py:46` | `_clamp_elev` |
+| `GAIA_DR3/build_blind_index.py:117` | `triangle_hash` |
+
+**Full per-function reclassification** (all 207 rows): `tmp/reclassify_group3_dead_table.md` (gitignored).
+
+### Group 1 / Group 2 DEAD spot-check (5 each)
+
+Same mechanism pass on ledger DEAD samples:
+
+| Group | Sample | Result |
+|-------|--------|--------|
+| G1 (5/5) | `_fits_header_positive_float`, `_per_frame_noise_error_map`, `get_auto_fov`, `_cluster_centroid_votes`, `autofill` | **TRULY-DEAD** (all 5) |
+| G2 (5) | `_aperture_to_mask_single`, `_norm_id_series` | **TRULY-DEAD** |
+| G2 | `_get_lc_adaptive`, `_select_comps_tiered` | **LIVE-DYNAMIC** (script/symbol refs) |
+| G2 | `_epsf_fwhm_native_legacy_px` | **TEST-ONLY** |
+
+**Conclusion:** Group 1/2 low DEAD counts are **genuine** on spot-check; the 51% heuristic DEAD rate is an **Group-3 DB/UI artifact** (dynamic dispatch + registry tuples), not a project-wide dead-code crisis.
+
+## Coverage table (Group 3 modules) — original heuristic (superseded)
 
 | Module | Lines | Funcs | Audited | DEAD | FLAGGED | NEEDS-TEST | CLEAN |
 |--------|-------|-------|---------|------|---------|------------|-------|
@@ -1079,7 +1166,7 @@ Rig intrinsics live in SQLite `EQUIPMENTS` / `TELESCOPE` (`GAIN_ADU`, `READNOISE
 | `VSX/vsx_make.py` | 195 | 4 | 4 | 2 | 0 | 2 | 0 |
 | **Group 3 total** | - | **367** | **367** | **189** | **9** | **142** | **0** |
 
-Flagged counts include manual science review overrides (automation under-flagged hot paths). DEAD counts are AST string-ref heuristic (likely over-count for DB UI methods).
+Flagged counts include manual science review overrides (automation under-flagged hot paths). **DEAD column superseded** by reclassification table above.
 
 ## Per-module function registry (Group 3)
 
@@ -1100,7 +1187,7 @@ Flagged regions: `database.find_best_calibration_library_path`, `database.query_
 | 95 | `masterstar_row_gaia_key` | NEEDS-TEST |
 | 118 | `_coerce_catalog_id_cell` | NEEDS-TEST |
 | 131 | `PROC_CSV_READ_COLS` | NEEDS-TEST |
-| 134 | `_GAIA_ID_DTYPE` | DEAD |
+| 134 | `_GAIA_ID_DTYPE` | LIVE-DYNAMIC (reclass) |
 
 ### `proc_frame_store.py` (all functions)
 
@@ -1119,14 +1206,14 @@ Flagged regions: `database.find_best_calibration_library_path`, `database.query_
 | 204 | `lookup` | NEEDS-TEST |
 | 212 | `_read_proc_csv` | NEEDS-TEST |
 | 248 | `_coerce_numeric_cols` | NEEDS-TEST |
-| 262 | `_normalize_ids` | DEAD |
+| 262 | `_normalize_ids` | LIVE-DYNAMIC (reclass) |
 
 ### `param_resolver.py` (flagged + public resolvers)
 
 | Line | Function | Status |
 |------|----------|--------|
-| 120 | `_is_valid` | DEAD |
-| 128 | `_header_float` | DEAD |
+| 120 | `_is_valid` | LIVE-DYNAMIC (reclass) |
+| 128 | `_header_float` | LIVE-DYNAMIC (reclass) |
 | 178 | `resolve_gain` | FLAGGED(MED) |
 | 248 | `resolve_read_noise` | NEEDS-TEST |
 | 312 | `resolve_pixel_um` | NEEDS-TEST |
@@ -1141,21 +1228,21 @@ Flagged regions: `database.find_best_calibration_library_path`, `database.query_
 
 | Line | Function | Status |
 |------|----------|--------|
-| 55 | `_parse_master_header_datetime` | DEAD |
+| 55 | `_parse_master_header_datetime` | LIVE-DYNAMIC (reclass) |
 | 79 | `get_master_age_days` | NEEDS-TEST |
-| 101 | `read_master_binning_from_header` | DEAD |
+| 101 | `read_master_binning_from_header` | LIVE-DYNAMIC (reclass) |
 | 108 | `read_master_binning_from_fits` | NEEDS-TEST |
 | 115 | `infer_spatial_block_factor` | NEEDS-TEST |
-| 137 | `infer_spatial_upscale_factor` | DEAD |
+| 137 | `infer_spatial_upscale_factor` | LIVE-DYNAMIC (reclass) |
 | 155 | `align_resampled_master_to_light_shape` | NEEDS-TEST |
 | 198 | `resample_master_to_light_binning` | NEEDS-TEST |
-| 248 | `_flat_saved_unnormalized` | DEAD |
+| 248 | `_flat_saved_unnormalized` | LIVE-DYNAMIC (reclass) |
 | 268 | `normalize_flat_master` | FLAGGED(MED) |
 | 414 | `get_processed_master` | FLAGGED(MED) |
-| 514 | `_bayer_pattern_from_db` | DEAD |
-| 528 | `_assumed_bayer_pattern` | DEAD |
-| 536 | `_parse_bayer_pattern_text` | DEAD |
-| 548 | `_bayer_tile_slices` | DEAD |
+| 514 | `_bayer_pattern_from_db` | LIVE-DYNAMIC (reclass) |
+| 528 | `_assumed_bayer_pattern` | LIVE-DYNAMIC (reclass) |
+| 536 | `_parse_bayer_pattern_text` | LIVE-DYNAMIC (reclass) |
+| 548 | `_bayer_tile_slices` | LIVE-DYNAMIC (reclass) |
 
 ## Test-gap list (Group 3 - science-critical)
 
@@ -1175,7 +1262,7 @@ Flagged regions: `database.find_best_calibration_library_path`, `database.query_
 | `VSX/vsx_make.py` | verify script | Schema + mag_limit incremental untested in pytest |
 | `proc_frame_store` | `test_proc_frame_store.py` | Partial — column union / failed frame fallback |
 
-Inventory: 142 NEEDS-TEST + 9 FLAGGED + 189 DEAD (heuristic) across Group 3 (100% statused).
+Inventory: 142 NEEDS-TEST + 9 FLAGGED + **25 TRULY-DEAD** (reclassified 2026-06-20; was 207 heuristic DEAD) across Group 3.
 
 ## Reproducibility scan (Group 3)
 
@@ -1190,10 +1277,15 @@ Inventory: 142 NEEDS-TEST + 9 FLAGGED + 189 DEAD (heuristic) across Group 3 (100
 
 ## Automation artifacts (Group 3, tmp/, gitignored)
 
-- `tmp/audit_group3.py` - scan driver
+- `tmp/audit_group3.py` - original scan driver
 - `tmp/audit_group3_results.json` - raw inventory + lens hits
 - `tmp/audit_group3_func_rows.md` - function rows (367)
 - `tmp/audit_group3_module_summary.json` - coverage counts
+- `tmp/reclassify_group3_dead.py` - DEAD reclassification driver
+- `tmp/reclassify_group3_dead_results.json` - per-function new status
+- `tmp/reclassify_group3_dead_table.md` - full 207-row reclass table
+- `tmp/reclassify_group3_truly_dead.txt` - TRULY-DEAD short list
+- `tmp/reclassify_g1_g2_spotcheck.json` - G1/G2 spot-check
 
 ---
 
