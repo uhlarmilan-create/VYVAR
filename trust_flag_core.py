@@ -1,10 +1,18 @@
 """Per-target trust flag (GREEN / YELLOW / RED) — shared by pipeline and CLI.
 
-Uses draft ``photometry_summary.csv`` columns from comp QA
-(``n_clean``, ``lc_quality_flag``) plus check-star scatter.
-Comp-count trust thresholds follow ``comp_trust_min_comps`` / ``phase01_comparison_n_comp_max``
-(Phase-1 selection floor ``phase01_comparison_n_comp_min`` unchanged).
-Read-only w.r.t. numeric photometry.
+Production trust inputs (no SEP / xval axis):
+- **Comp-set quality:** `n_clean` from comp_qa (Sokolovsky leave-one-out locus)
+- **Check-star scatter** (population RMS vs configured soft/hard thresholds)
+- **`lc_quality_flag`** from Phase 2A summary (`good` / `noisy` informational; saturated etc. hard)
+
+SEP vs DAO cross-validation is **offline-only** (`xval_run.py` / `xval_harness_core.py`) — a
+one-off validation study tool, not imported by the production pipeline and not a trust axis.
+
+Unevaluated targets default **RED** (fail-closed).
+
+Comp-count thresholds follow ``comp_trust_min_comps`` / ``phase01_comparison_n_comp_max``
+(Phase-1 selection floor ``phase01_comparison_n_comp_min`` unchanged). Read-only w.r.t.
+numeric photometry.
 
 Gate semantics (Phase-1 degradation, green_min=3):
 - **RED:** ``n_clean == 0`` OR no check star OR hard warnings (bad lc_quality, check ≥ 0.05).

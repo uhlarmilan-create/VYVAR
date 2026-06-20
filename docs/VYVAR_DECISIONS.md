@@ -408,9 +408,10 @@ Same problem domain, same accuracy class.
   selection -- a more modern catalog/colour basis.
 - **Independent QA + per-target trust verdict.** CoLiTecVS reports a global aperture uncertainty
   and validates in aggregate (one mean/SD table); it exposes no per-target machine-checkable
-  verdict and no independent second-extractor cross-check. VYVAR adds comp_qa (Sokolovsky
-  leave-one-out locus), SEP cross-validation (~0.2%/frame), and the three-axis GREEN/YELLOW/RED
-  trust gate.
+  verdict and no independent second-extractor cross-check in-product. VYVAR adds comp_qa
+  (Sokolovsky leave-one-out locus), a **production per-target trust gate** (comp health +
+  check-star scatter + `lc_quality_flag`; see Trust & validation below), and **offline-only**
+  SEP cross-validation (~0.2%/frame via `xval_run.py` — validation study, not a pipeline trust axis).
 - **Reproducibility / provenance.** VYVAR has SHA-256 byte-identity on photometry artifacts, a
   citation emitter, and a decision log. CoLiTecVS is a compact closed all-in-one -- by the
   authors' own note you cannot isolate and test a single internal stage.
@@ -502,17 +503,22 @@ enable on the well-sampled Newton cluster.**
 
 ## Trust & validation
 
-### 3-axis trust gate — hard/soft model, inform-only (v1)
-Per-target GREEN/YELLOW/RED from comp health (`n_clean`), independent SEP cross-val
-(`sep_confidence`), check-star scatter, and `lc_quality_flag`. **Hard** warnings (real red
-flags: `n_clean < min_comps`, `sep=review`, `saturated`, check ≥ 0.05) vs **soft** (faint/thin:
-unverified sep, thin comps, marginal check 0.02–0.05). RED = `n_clean < min` OR any hard OR
-≥ 3 soft; YELLOW = 1–2 soft; GREEN = clean. Thresholds derive from the user-configurable
-`phase01_comparison_n_comp_min/max`. **`lc_quality="noisy"` is informational only** — it is
-variability-driven (e.g. V0349 Dra: lc_rms 0.155 but check-star 0.0054 → GREEN); counting it as
-a warning wrongly demoted 48 real variables. **v1 is inform-only** (RED is surfaced, not
-auto-dropped from exports). **Status: shipped 2026-06-02 — supersedes the earlier flat
-W-count gate (the standalone 81/52/10 → production 69/59/15 with complete check-star data).**
+### Production trust gate — hard/soft model, inform-only (v1)
+
+Per-target GREEN/YELLOW/RED from **comp-set quality** (`n_clean` from comp_qa Sokolovsky LOO),
+**check-star scatter**, and **`lc_quality_flag`**. **No SEP / xval axis in production** — SEP vs
+DAO cross-validation is an offline harness only (`xval_run.py`, `assign_sep_confidence` in
+`xval_harness_core.py`); see Cross-validation CLOSED below.
+
+**Hard** warnings (real red flags: `n_clean == 0`, no check star, bad `lc_quality` e.g. saturated,
+check ≥ 0.05) vs **soft** (thin comps, sparse_fallback, marginal check 0.02–0.05, short_baseline).
+RED = any hard OR ≥ 3 escalating soft; YELLOW = any soft; GREEN = `n_clean ≥ strong` + check OK +
+no warnings. Thresholds derive from `comp_trust_min_comps` / `phase01_comparison_n_comp_max`.
+**Unevaluated targets → RED** (fail-closed). **`lc_quality="noisy"` is informational only** —
+variability-driven (counting it as a hard warning wrongly demoted real variables). **v1 is
+inform-only** (RED is surfaced, not auto-dropped from exports). **Status: shipped 2026-06-02;
+SEP axis removed from production 2026-06-03** (trust gate v2 — supersedes the earlier harness-era
+gate that also read `xval_results.csv` / `sep_confidence`).
 
 ### Cross-validation CLOSED (aperture path); SEP is the independent witness
 draft_000365 triple-validated (photutils + sep + dao): the science number reproduces to ~1 %,

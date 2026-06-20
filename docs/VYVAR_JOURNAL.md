@@ -3642,7 +3642,7 @@ G≥19 frames reach good quality and the realized gain is measured more robustly
 
 ---
 
-## Session 2026-05-31 — comp QA (Sokolovsky) + 3-axis trust flag (draft_000365)
+## Session 2026-05-31 — comp QA (Sokolovsky) + harness-era trust flag (draft_000365)
 
 ### Report label fix (commit `8e8cf29`)
 
@@ -3673,22 +3673,22 @@ J1618591+485752). **n_clean buckets:** ≥5: **133** / 3–4: **8** / <3: **2**.
 
 ### Trust flag (`trust_flag.py` → `xval_out/trust_per_target.csv`, 143 rows)
 
-3-axis per-target gate for non-experts. Inputs: comp-health (`comp_qa_targets.csv` n_clean),
-sep cross-val (`xval_results.csv`: `confirmed` / `vyvar_ok_indep_failed` / `review` /
-`no_independent` / `no_vyvar_rms`), VYVAR check-star scatter + `lc_quality_flag`.
+**Historical note (2026-05-31 draft_000365 study):** the gate below originally included a SEP
+cross-val axis (`xval_results.csv` / `sep_confidence`). **Production since 2026-06-03** uses
+trust gate v2 only — comp QA + check-star + `lc_quality_flag` (see Session 2026-06-03 below).
 
-**Warnings (W):** sep≠confirmed; n_clean 3–4; check_star_scatter≥0.02 mag;
+Per-target gate for non-experts. **Harness-era inputs (not production today):** comp-health
+(`comp_qa_targets.csv` n_clean), sep cross-val (`xval_results.csv`: `confirmed` /
+`vyvar_ok_indep_failed` / `review` / `no_independent` / `no_vyvar_rms`), VYVAR check-star scatter
++ `lc_quality_flag`.
+
+**Harness-era warnings (W):** sep≠confirmed; n_clean 3–4; check_star_scatter≥0.02 mag;
 `lc_quality`∉{good,noisy} (e.g. **saturated** — genuine data-quality demotion).
 
-**Levels:** RED if n_clean<3 or W≥2; YELLOW if W==1; GREEN if W==0 (confirmed + n_clean≥5 +
-check<0.02 + no hard quality flag).
+**Harness-era levels:** RED if n_clean<3 or W≥2; YELLOW if W==1; GREEN if W==0 (confirmed +
+n_clean≥5 + check<0.02 + no hard quality flag).
 
-**Key decision:** `lc_quality="noisy"` is variability-driven (informational only, not a
-warning). Counting it as a warning wrongly demoted **48** real variables (e.g. V0349 Dra:
-lc_rms 0.155, check-star 0.0054 → GREEN after fix). Adding `lc_quality∉{good,noisy}` catches
-**saturated** (HD 143776 YELLOW→RED).
-
-**Final counts (draft_000365, xval_results present):** GREEN **81** / YELLOW **52** / RED **10**.
+**Harness-era counts (draft_000365, xval_results present):** GREEN **81** / YELLOW **52** / RED **10**.
 
 ### Cross-validation
 

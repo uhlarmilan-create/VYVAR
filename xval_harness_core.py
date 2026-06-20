@@ -1,4 +1,6 @@
-"""Shared helpers for the offline cross-validation harness (``xval_run.py``).
+"""Standalone OFFLINE cross-validation tooling (SEP vs DAO study). NOT imported by the production pipeline; not a production trust axis.
+
+Shared helpers for the offline cross-validation harness (``xval_run.py``).
 
 Confidence thresholds and LOO differential utilities — not used by the production pipeline.
 """

@@ -222,7 +222,7 @@ nepoustel):
 | PSF mid-mag bias | +4.5% -> ~1% | `tests/validation/run_v3d_weight_proof.py` |
 | PSF vs apertura | PSF presnejsi od ~mag 13 | `tests/validation/run_v3d_fine_scale.py` |
 | P3 (sandwich err) | ~0.56 -> ~1 na mag12 | `tests/validation/run_v3d_sandwich_proof.py` |
-| SEP cross-validace | ~0.2%/snimek | `xval_run.py` |
+| SEP cross-validace (offline harness, not pipeline) | ~0.2%/snimek | `xval_run.py` |
 | Blind solver | 10/10 solve rate; `verify_mag_limit=14` | `scripts/blind_verify_mag_ab.py`, `scripts/blind_solve_rate.py` |
 | DBSCAN prahy | `eps`, `min_samples`, `min_votes` | `vyvar_blind_solver.py`, `config.py` |
 | Index hustota | `stars_per_cell=95` (fine build) | `GAIA_DR3/build_blind_index.py`, PKL meta |

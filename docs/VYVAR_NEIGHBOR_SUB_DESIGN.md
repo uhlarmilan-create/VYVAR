@@ -10,7 +10,8 @@ sites yet -- step 2b). ASCII only.
 For a target whose aperture/annulus is contaminated by a bright NEIGHBOUR (a blend), measure the
 target by: fit the ePSF to the NEIGHBOUR, subtract that model from the frame, then run the EXISTING
 aperture photometry on the cleaned residual. The target is still measured by APERTURE (which VYVAR
-trusts, cross-validates with SEP, and feeds comp_qa) -- PSF is used only to remove the contaminant.
+trusts (production trust gate: comp QA + check-star + lc_quality; SEP cross-val is offline-only
+via `xval_run.py`), and feeds comp_qa) -- PSF is used only to remove the contaminant.
 
 Why not the grouper: simultaneous grouped PSF fitting (former "rule 2") was removed -- no precision
 gain at 0.39"/px on draft 364, and is_blended (nn <= 1.5 FWHM) vs resolve_fwhm (>= 2.0) are mutually

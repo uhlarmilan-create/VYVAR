@@ -2,7 +2,7 @@
 
 **Status:** AUDIT-ONLY (read + log; no code edits during audit pass).
 **Started:** 2026-06-19
-**Last checkpoint:** Group 3 complete - Data / IO / catalog (2026-06-20 local)
+**Last checkpoint:** Group 4 complete — Science / variability / QA (2026-06-20 local)
 
 Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 functions), targeted verification against `docs/VYVAR_CODE_AUDIT.md` DR2-DR6 threads, science-critical logic reads.
 
@@ -43,18 +43,20 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 
 ## Coverage table (Group 1 modules)
 
-| Module | Lines | Funcs | Audited | DEAD | FLAGGED | NEEDS-TEST | CLEAN |
-|--------|-------|-------|---------|------|---------|------------|-------|
-| `pipeline.py` | 17012 | 231 | 231 | 11 | 4 | 0 | 216 |
-| `vyvar_platesolver.py` | 6405 | 91 | 91 | 0 | 6 | 0 | 85 |
-| `vyvar_blind_solver.py` | 1482 | 33 | 33 | 1 | 2 | 0 | 30 |
-| `vyvar_blind_series.py` | 367 | 9 | 9 | 0 | 1 | 0 | 8 |
-| `vyvar_alignment_frame.py` | 755 | 10 | 10 | 0 | 0 | 10 | 0 |
-| `astrometry_optimizer.py` | 1164 | 10 | 10 | 0 | 1 | 0 | 9 |
-| `optics_autodetect.py` | 374 | 16 | 16 | 1 | 0 | 15 | 0 |
-| `optics_selection.py` | 234 | 7 | 7 | 0 | 0 | 0 | 7 |
-| `platesolve_ui_paths.py` | 119 | 8 | 8 | 0 | 0 | 8 | 0 |
-| **Group 1 total** | - | **415** | **415** | **13** | **14** | **33** | **355** |
+| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC† | TEST-ONLY† |
+|--------|-------|-------|---------|------------------|------------|---------------|------------|
+| `pipeline.py` | 17012 | 231 | 231 | 11 | 11 | 0 | 0 |
+| `vyvar_platesolver.py` | 6405 | 91 | 91 | 0 | 0 | 0 | 0 |
+| `vyvar_blind_solver.py` | 1482 | 33 | 33 | 1 | 1 | 0 | 0 |
+| `vyvar_blind_series.py` | 367 | 9 | 9 | 0 | 0 | 0 | 0 |
+| `vyvar_alignment_frame.py` | 755 | 10 | 10 | 0 | 0 | 0 | 0 |
+| `astrometry_optimizer.py` | 1164 | 10 | 10 | 0 | 0 | 0 | 0 |
+| `optics_autodetect.py` | 374 | 16 | 16 | 1 | 0 | 1 | 0 |
+| `optics_selection.py` | 234 | 7 | 7 | 0 | 0 | 0 | 0 |
+| `platesolve_ui_paths.py` | 119 | 8 | 8 | 0 | 0 | 0 | 0 |
+| **Group 1 total** | - | **415** | **415** | **13** | **12** | **1** | **0** |
+
+† Reclassified 2026-06-20 (`tmp/reclassify_g1_g2_dead.py`). FLAGGED 14 + NEEDS-TEST 33 unchanged.
 
 ---
 
@@ -589,19 +591,21 @@ Method (Group 2): automated AST inventory + lens scans (L1-L11) on 10 modules (3
 
 ## Coverage table (Group 2 modules)
 
-| Module | Lines | Funcs | Audited | DEAD | FLAGGED | NEEDS-TEST | CLEAN |
-|--------|-------|-------|---------|------|---------|------------|-------|
-| `photometry_core.py` | 13849 | 163 | 163 | 3 | 7 | 0 | 153 |
-| `psf_photometry.py` | 3080 | 44 | 44 | 3 | 40 | 0 | 1 |
-| `psf_runner.py` | 1568 | 28 | 28 | 0 | 0 | 28 | 0 |
-| `psf_neighbor_sub.py` | 423 | 7 | 7 | 0 | 0 | 7 | 0 |
-| `comp_selection_per_target.py` | 2381 | 21 | 21 | 0 | 0 | 21 | 0 |
-| `comp_pool_rms.py` | 438 | 6 | 6 | 1 | 0 | 5 | 0 |
-| `comp_qa_core.py` | 606 | 15 | 15 | 0 | 0 | 15 | 0 |
-| `dilution.py` | 373 | 9 | 9 | 0 | 9 | 0 | 0 |
-| `crowding_index.py` | 510 | 9 | 9 | 0 | 0 | 9 | 0 |
-| `check_star_kmag.py` | 628 | 20 | 20 | 0 | 0 | 20 | 0 |
-| **Group 2 total** | - | **322** | **322** | **7** | **56** | **105** | **154** |
+| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC† | TEST-ONLY† |
+|--------|-------|-------|---------|------------------|------------|---------------|------------|
+| `photometry_core.py` | 13849 | 163 | 163 | 3 | 1 | 2 | 0 |
+| `psf_photometry.py` | 3080 | 44 | 44 | 3 | 1 | 0 | 2 |
+| `psf_runner.py` | 1568 | 28 | 28 | 0 | 0 | 0 | 0 |
+| `psf_neighbor_sub.py` | 423 | 7 | 7 | 0 | 0 | 0 | 0 |
+| `comp_selection_per_target.py` | 2381 | 21 | 21 | 0 | 0 | 0 | 0 |
+| `comp_pool_rms.py` | 438 | 6 | 6 | 1 | 1 | 0 | 0 |
+| `comp_qa_core.py` | 606 | 15 | 15 | 0 | 0 | 0 | 0 |
+| `dilution.py` | 373 | 9 | 9 | 0 | 0 | 0 | 0 |
+| `crowding_index.py` | 510 | 9 | 9 | 0 | 0 | 0 | 0 |
+| `check_star_kmag.py` | 628 | 20 | 20 | 0 | 0 | 0 | 0 |
+| **Group 2 total** | - | **322** | **322** | **7** | **3** | **2** | **2** |
+
+† Reclassified 2026-06-20. FLAGGED 56 + NEEDS-TEST 105 unchanged.
 
 ## Per-module function registry (Group 2)
 
@@ -1143,7 +1147,16 @@ Same mechanism pass on ledger DEAD samples:
 | G2 | `_get_lc_adaptive`, `_select_comps_tiered` | **LIVE-DYNAMIC** (script/symbol refs) |
 | G2 | `_epsf_fwhm_native_legacy_px` | **TEST-ONLY** |
 
-**Conclusion:** Group 1/2 low DEAD counts are **genuine** on spot-check; the 51% heuristic DEAD rate is an **Group-3 DB/UI artifact** (dynamic dispatch + registry tuples), not a project-wide dead-code crisis.
+**Conclusion:** Group 1/2 low heuristic DEAD counts are **mostly genuine** after full reclassification (G1 12/13 TRULY-DEAD, G2 3/7 TRULY-DEAD + 2 TEST-ONLY); Group 3 over-count was the DB/UI artifact.
+
+### Group 1 / Group 2 full DEAD reclassification (2026-06-20)
+
+| Group | Heuristic DEAD | TRULY-DEAD | LIVE-DYNAMIC | TEST-ONLY |
+|-------|----------------|------------|--------------|-----------|
+| G1 | 13 | 12 | 1 (`optics_autodetect.Detection.autofill` Qt) | 0 |
+| G2 | 7 | 3 | 2 (`_get_lc_adaptive`, `_select_comps_tiered`) | 2 (psf test helpers) |
+
+Artifacts: `tmp/reclassify_g1_g2_dead_results.json`, `tmp/reclassify_g1_g2_truly_dead.txt`.
 
 ## Coverage table (Group 3 modules) — original heuristic (superseded)
 
@@ -1287,8 +1300,97 @@ Inventory: 142 NEEDS-TEST + 9 FLAGGED + **25 TRULY-DEAD** (reclassified 2026-06-
 - `tmp/reclassify_group3_truly_dead.txt` - TRULY-DEAD short list
 - `tmp/reclassify_g1_g2_spotcheck.json` - G1/G2 spot-check
 
+- `tmp/reclassify_g1_g2_dead.py` - G1/G2 DEAD reclassification driver
+- `tmp/reclassify_g1_g2_dead_results.json` - G1/G2 per-function new status
+- `tmp/reclassify_g1_g2_truly_dead.txt` - G1/G2 TRULY-DEAD short list
+
+---
+
+## Group 4 checkpoint — Science / variability / QA (2026-06-20)
+
+**Status:** AUDIT-ONLY batch appended; no code edits in this pass.
+
+Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L11 emphasis) on 16 modules (166 functions); science-critical reads of variability/trust/comp_qa/xval/TESS/HRD paths; reconciliation with DECISIONS (trust gate, comp QA Sokolovsky LOO, SEP xval CLOSED).
+
+### Prioritized findings (Group 4 — deduplicated, severity-sorted)
+
+| ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
+|----|-----|------|----------|--------------|---------------------|
+| G4-F001 | **RESOLVED (Option B)** | L4 | `trust_flag_core.py`, `xval_run.py`, docs | Docs described a 3-axis production trust gate including SEP/xval; production uses comp QA + check-star + `lc_quality_flag` only. **Fix (2026-06-19):** DECISIONS/JOURNAL/PIPELINE_CZ corrected; offline headers on `xval_*`; `tests/test_no_xval_in_production.py` guard. No production logic change. | Trust certification must include every axis documented as production, or docs must mark SEP as manual/offline-only. |
+| G4-F002 | **MED** | L4 | `photometry_core.py:5242-5253`, `classify_lc_quality` | `catalog_only` targets (`lc_source=forced_aperture`) still get `lc_quality_flag` from mag-dependent RMS model; forced-aperture scatter can yield `noisy` (trust treats as informational). **Mitigated** in variability UI (`ui_variability.py:609-618` excludes catalog_only from candidate detection). Summary/export `lc_rms` can still look “variable” without zone/`lc_source` filter. | Forced-aperture LCs must not be interpreted as astrophysical variability outside explicit `lc_source` / zone guards. |
+| G4-F003 | **MED** | L3 | `photometry_core.py:8363-8380`, `comp_qa` stage ~8355 | Trust and comp_qa stages wrapped in **non-fatal** `except` — failure logs warning and leaves summary without fresh trust/comp QA columns (not fail-open GREEN, but **silent skip** of verdict layer). | Science verdict stages must log at operator-visible level and surface “trust not evaluated” on failure. |
+| G4-F004 | **MED** | L11 | `comp_qa_core.py:27-46`, `loo_diff_series` | Sokolovsky LOO + mag-locus thresholds (`_SPIKE_HARD=3.0`, MAD with `n<2→nan`) are principled but **small-N / all-NaN comp sets** need adversarial tests before CLEAN. | LOO comp rejection must be validated on thin pools and sparse fields. |
+| G4-F005 | **MED** | L1/L4 | `xval_harness_core.py:14-19`, `assign_sep_confidence` | SEP/DAO ratio thresholds (`_R_SEP_CONFIRMED_HI=1.40`, etc.) are **hardcoded** from draft_000365 harness — not config-sourced; harness is offline-only. | Cross-val pass bounds must be config-visible and tied to equipment/depth when used for gating. |
+| G4-F006 | **MED** | L11 | `tess_verify.py`, `tess_runner.py` | TESS cross-match + comparison — epoch/coordinate handling needs explicit tests (Gaia epoch vs TESS BJD); not fully traced in audit pass. | External survey comparison must document epoch basis and tolerance. |
+| G4-F007 | **LOW** | L5 | `ui_variability.py:139`, `:700`, `validate_lc_crossval.py:102` | **3 TRULY-DEAD** UI/helper symbols after mechanism pass (see coverage). | Trim only after UI dispatch confirmation. |
+| G4-P001 | **CLEAN** | - | `trust_flag_core.py:35-36`, `write_trust_artifacts` | Missing trust-map entries default **RED** (`_UNEVALUATED_TRUST`) — fail-closed, not fail-open GREEN. | Conservative default for uncertified targets. |
+| G4-P002 | **CLEAN** | - | `ui_variability.py:609-618`, `photometry_core.py:4588+` | `catalog_only` excluded from variability candidate detection (sky-noise path). | Catalog-only LCs must not enter field-variability candidate pool. |
+| G4-P003 | **CLEAN** | - | `comp_qa_core.py` | Sokolovsky indices + mag-locus LOO QA read-only post-2A; aligns with DECISIONS comp-degradation spec. | Comp health gate is productionized and byte-neutral on photometry. |
+
+### Coverage table (Group 4 modules)
+
+| Module | Funcs | Audited | TRULY-DEAD | LIVE-DYNAMIC† | FLAGGED | NEEDS-TEST |
+|--------|-------|---------|------------|---------------|---------|------------|
+| `variability_detector.py` | 9 | 9 | 0 | 5 | 3 | 1 |
+| `ui_variability.py` | 30 | 30 | 2 | 14 | 11 | 3 |
+| `tess_runner.py` | 7 | 7 | 0 | 5 | 2 | 0 |
+| `tess_verify.py` | 30 | 30 | 0 | 23 | 2 | 5 |
+| `hrd_analysis.py` | 20 | 20 | 0 | 9 | 4 | 7 |
+| `ui_hrd.py` | 1 | 1 | 0 | 0 | 0 | 1 |
+| `trust_flag.py` | 1 | 1 | 0 | 0 | 1 | 0 |
+| `trust_flag_core.py` | 14 | 14 | 0 | 1 | 11 | 2 |
+| `xval_run.py` | 4 | 4 | 0 | 0 | 4 | 0 |
+| `xval_harness_core.py` | 7 | 7 | 0 | 0 | 0 | 7 |
+| `validate_lc_crossval.py` | 14 | 14 | 1 | 1 | 3 | 9 |
+| `comp_qa.py` | 2 | 2 | 0 | 0 | 2 | 0 |
+| `comp_qa_core.py` | 15 | 15 | 0 | 0 | 5 | 10 |
+| `ui_masterstar_qa.py` | 5 | 5 | 0 | 4 | 0 | 1 |
+| `masterstar_qa_plot.py` | 5 | 5 | 0 | 0 | 0 | 5 |
+| `method_lc_output.py` | 2 | 2 | 0 | 1 | 1 | 0 |
+| **Group 4 total** | **166** | **166** | **3** | **63** | **49** | **51** |
+
+† LIVE-DYNAMIC: heuristic-zero-ref functions reclassified live (Qt callbacks, registry refs). Full rows: `tmp/audit_group4_func_rows.md`.
+
+### TRULY-DEAD (Group 4)
+
+| Location | Function |
+|----------|----------|
+| `ui_variability.py:139` | `_raw_lightcurve_from_frames` |
+| `ui_variability.py:700` | `_render_field_image_with_candidate` |
+| `validate_lc_crossval.py:102` | `_row_mag` |
+
+### Test-gap list (Group 4 — science-critical)
+
+| Module / function | Existing test | Gap |
+|-------------------|---------------|-----|
+| `trust_flag_core.evaluate_target` / missing map | `test_trust_flag.py` + `test_no_xval_in_production.py` | SEP-absent production trust documented and guarded |
+| `classify_lc_quality` + `catalog_only` | none | Forced-aperture high RMS → `lc_quality_flag` path untested |
+| `comp_qa_core` Sokolovsky LOO | scripts | No pytest for small-N comp pool / all-NaN LOO |
+| `assign_sep_confidence` | harness only | Threshold edges (1.40, 0.70) not unit-tested |
+| `variability_detector.compute_rms_variability` | none | Mag-bin envelope + candidate filters untested |
+| `validate_lc_crossval` | offline script | 0.2%/frame agreement not in pytest |
+| `tess_verify` | none | Cross-match tolerance / epoch handling untested |
+| `hrd_analysis` | none | Dereddening / abs-mag assumptions untested |
+
+### Reproducibility scan (Group 4)
+
+| Location | Issue | Severity |
+|----------|-------|----------|
+| `trust_flag_core` | Deterministic given fixed summary inputs | - |
+| `comp_qa_core` | LOO order depends on comp list order | LOW |
+| `xval_run` | Offline harness; Gaia TAP query order | LOW |
+| `ui_variability` | Session-state dependent UI | - |
+
+### Automation artifacts (Group 4, tmp/, gitignored)
+
+- `tmp/audit_group4.py` — scan driver
+- `tmp/audit_group4_results.json` — inventory + lens hits
+- `tmp/audit_group4_func_rows.md` — function rows (166)
+
+**Checkpoint policy:** Milan + Claude review Group 4 batch before Group 5.
+
 ---
 
 ## Next group
 
-**Group 4 -** (per roadmap; not started).
+**Group 5 —** (per roadmap; not started).

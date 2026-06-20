@@ -1,58 +1,66 @@
-CURSOR RESULT — 2026-06-20 (Group 3 DEAD reclassification — AUDIT-ONLY)
+CURSOR RESULT — 2026-06-19 (Fix Step 6: G4-F001 Option B)
 
 What I did
-Reclassified all Group-3 heuristic-DEAD functions using eight caller mechanisms (direct/attribute call, symbol ref, string ref in py/ui/json, `getattr`, Qt `.connect`, `super()`, registry/CLI `__main__`, dunder protocol). Updated `docs/VYVAR_FULL_AUDIT_LEDGER.md`. Spot-checked Group 1/2 DEAD samples. **No code removal.** Ledger commit pending review.
+Corrected trust-gate documentation to match production reality (comp QA + check-star + `lc_quality_flag`; no SEP axis). Reclassified SEP/xval as offline-only harness. Added module headers on `xval_*`, guard test `tests/test_no_xval_in_production.py`, ledger G4-F001 → RESOLVED (Option B). No production logic changes.
 
----
+## 6a — Inventory (docs/strings describing 3-axis or production SEP trust axis)
 
-## Summary (207 heuristic DEAD → corrected)
+| File | Line(s) | Issue |
+|------|---------|-------|
+| `docs/VYVAR_DECISIONS.md` | 412–413 | Listed SEP cross-val + "three-axis" trust gate as pipeline capabilities |
+| `docs/VYVAR_DECISIONS.md` | 505–515 | "### 3-axis trust gate" with `sep_confidence` as production input |
+| `docs/VYVAR_JOURNAL.md` | 3645 | Session title "3-axis trust flag" |
+| `docs/VYVAR_JOURNAL.md` | 3674–3691 | Trust flag section: 3-axis inputs including `xval_results.csv` / sep warnings |
+| `docs/VYVAR_PIPELINE_CZ.md` | 225 | SEP cross-val table row without offline-only label |
+| `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md` | 13 | "cross-validates with SEP" (implied in-pipeline) |
+| `docs/VYVAR_FULL_AUDIT_LEDGER.md` | 1319, 1366 | G4-F001 finding + test-gap referencing 3-axis docs |
+| `CURSOR_RESULT.md` | 34 | Prior audit summary (3-axis vs 2-axis) |
 
-| Status | Count | Notes |
-|--------|-------|-------|
-| Heuristic DEAD (original AST pass) | **207** | Ledger checkpoint said 189 (module-sum mismatch); JSON inventory = 207 |
-| **TRULY-DEAD** | **25** | Removal candidates only |
-| LIVE-DYNAMIC (reclassified) | **182** | Registry tuples, same-module refs, dunder protocol, etc. |
-| TEST-ONLY (Group-3 subset) | **0** | G2 spot-check found 1 TEST-ONLY (`_epsf_fwhm_native_legacy_px`) |
+**Already correct (no edit required):**
+- `docs/VYVAR_STATE.md` ~95–96 — xval offline, trust uses comp_qa + check-star + lc_quality
+- `docs/VYVAR_PROCESS.md` ~169–171 — cross-val storage offline; trust gate without SEP
+- `docs/VYVAR_DECISIONS.md` ~526–536 — `sep_xval` retired / trust gate v2 (pre-existing)
+- `docs/VYVAR_JOURNAL.md` ~3766–3780 — Session 2026-06-03 trust gate v2 (pre-existing)
+- `trust_flag_core.py` — implementation already SEP-free; docstring clarified in 6c
 
-**False-positive rate:** ~88% of heuristic DEAD were live — concentrated in `database.py` (59/72) and `importer.py` (41/46).
+**Production code scan:** no production module imports `xval_run` / `xval_harness_core` / `assign_sep_confidence` (confirmed by guard test).
 
----
+## 6b — Doc corrections
 
-## Group 1 / Group 2 spot-check (5 each)
+- `VYVAR_DECISIONS.md`: production trust gate section rewritten (comp QA + check-star + `lc_quality_flag`; unevaluated → RED; SEP offline); intro bullet separated SEP study from pipeline trust.
+- `VYVAR_JOURNAL.md`: harness-era trust flag marked historical; production since 2026-06-03 = trust gate v2 without SEP.
+- `VYVAR_PIPELINE_CZ.md`: SEP row labeled offline harness, not pipeline.
+- `VYVAR_NEIGHBOR_SUB_DESIGN.md`: aperture trust wording aligned with production gate + offline SEP.
+- `VYVAR_FULL_AUDIT_LEDGER.md`: G4-F001 RESOLVED (Option B); test-gap row updated.
 
-| Group | Result |
-|-------|--------|
-| **G1** (5/5) | All **TRULY-DEAD** — `_fits_header_positive_float`, `_per_frame_noise_error_map`, `get_auto_fov`, `_cluster_centroid_votes`, `autofill` |
-| **G2** | 2 TRULY-DEAD (`_aperture_to_mask_single`, `_norm_id_series`); 2 LIVE-DYNAMIC (`_get_lc_adaptive`, `_select_comps_tiered` via scripts); 1 TEST-ONLY (`_epsf_fwhm_native_legacy_px`) |
+## 6c — Module headers
 
-**Conclusion:** G1/G2 low DEAD counts are genuine; heuristic only over-counted in DB/UI-heavy Group 3.
+- `xval_run.py` — standalone OFFLINE cross-validation docstring prefix.
+- `xval_harness_core.py` — same prefix.
+- `trust_flag_core.py` — production inputs + explicit no SEP/xval axis.
 
----
+## 6d — Guard test
 
-## TRULY-DEAD (25) — `file:line`
+- `tests/test_no_xval_in_production.py` — scans production `.py` (excludes `tests/`, `scripts/`, `sandbox/`, `xval_*`, `validate_lc_crossval.py`) for forbidden imports.
 
-See ledger table; top clusters: `database.py` (13), `importer.py` (5), `time_utils.py` (3), `param_resolver.py` (2).
+## Output / findings
 
-Full list in `tmp/reclassify_group3_truly_dead.txt`.
-
----
-
-## Artifacts (tmp/, gitignored)
-
-- `tmp/reclassify_group3_dead.py` — driver
-- `tmp/reclassify_group3_dead_results.json` — 207 rows with mechanism notes
-- `tmp/reclassify_group3_dead_table.md` — full per-function reclassification
-- `tmp/reclassify_g1_g2_spotcheck.json`
-
----
-
-## Files changed
-
-- `docs/VYVAR_FULL_AUDIT_LEDGER.md` — corrected coverage table, TRULY-DEAD list, G3-F009 update, per-module status fixes
-- `CURSOR_RESULT.md` (this report)
-
-**Status:** AUDIT-ONLY; ledger update ready for commit on review.
+- `pytest tests/test_no_xval_in_production.py tests/test_trust_flag.py tests/test_trust_checkstar_hardening.py`: **33 passed**
+- `ruff check` on new/changed modules: **clean**
 
 ## Errors (if any)
 
 None.
+
+## Files changed
+
+- `docs/VYVAR_DECISIONS.md`
+- `docs/VYVAR_JOURNAL.md`
+- `docs/VYVAR_PIPELINE_CZ.md`
+- `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`
+- `docs/VYVAR_FULL_AUDIT_LEDGER.md`
+- `trust_flag_core.py` (docstring only)
+- `xval_run.py` (docstring only)
+- `xval_harness_core.py` (docstring only)
+- `tests/test_no_xval_in_production.py` (new)
+- `CURSOR_RESULT.md`

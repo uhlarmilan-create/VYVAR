@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+Standalone OFFLINE cross-validation tooling (SEP vs DAO study). NOT imported by the production
+pipeline; not a production trust axis.
+
 VYVAR cross-validation HARNESS — reusable, any draft.
 
 Consolidates the validated draft_000365 workflow:
