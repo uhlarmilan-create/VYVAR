@@ -7196,18 +7196,14 @@ def _phase2a_process_one_target(
         skip_photo = str(_sp).strip().lower() in ("1", "true", "yes", "t")
     _zf_row = str(target_row.get("zone_flag", "")).strip()
     _zf_low = _zf_row.lower()
-    if _zf_low in ("saturated", "catalog_only"):
+    if _zf_low == "saturated":
         skip_photo = True
     if progress_cb is not None and (
         ti == 1 or ti == _nt or (_nt > 1 and ti % max(1, _nt // 12) == 0)
     ):
         _p2(f"Fáza 2A: cieľ {ti}/{_nt}: {target_name[:50]}")
     if skip_photo:
-        _skip_reason = (
-            "catalog_only (bez DAO na masterstar)"
-            if _zf_low == "catalog_only"
-            else "saturovaný cieľ"
-        )
+        _skip_reason = "saturovaný cieľ"
         logging.info(f"[FÁZA 2A] Preskakujem fotometriu ({_skip_reason}): {target_name}")
         summary_rows.append(
             {
