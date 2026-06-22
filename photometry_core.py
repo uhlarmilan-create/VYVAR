@@ -887,6 +887,40 @@ def _aperture_radius_from_snr_table(
     return max(r_min, min(r_max, r_opt))
 
 
+def _resolve_photometric_aperture_px_for_gs11(
+    target_cid: str,
+    apertures_px: dict[str, float],
+    target_g_mag: float,
+    snr_ap_table: dict[str, Any] | None,
+    *,
+    aperture_fwhm_factor: float,
+    fwhm_px: float,
+) -> tuple[float | None, str]:
+    """Layered photometric aperture for GS11 dilution (Seager 2003 / Howell 2006).
+
+    1. Per-star map from Phase 2A SNR sizing (same build as ``apertures_px``).
+    2. Derive from SNR table at ``target_g_mag`` via ``_aperture_radius_from_snr_table``.
+    3. Unavailable — caller must skip dilution (no fixed-pixel fallback).
+    """
+    cid = _normalize_gaia_id(target_cid) if target_cid else ""
+    if cid and cid in apertures_px:
+        ap = float(apertures_px[cid])
+        if math.isfinite(ap) and ap > 0:
+            return ap, "map"
+    if snr_ap_table is not None and math.isfinite(float(target_g_mag)):
+        ap = float(
+            _aperture_radius_from_snr_table(
+                float(target_g_mag),
+                snr_ap_table,
+                aperture_fwhm_factor=float(aperture_fwhm_factor),
+                fwhm_px=float(fwhm_px),
+            )
+        )
+        if math.isfinite(ap) and ap > 0:
+            return ap, "snr_derived"
+    return None, "unavailable"
+
+
 def _get_star_aperture_px(
     catalog_id: str,
     star_mag: float | None,
@@ -5238,6 +5272,7 @@ class _Phase2AState:
     apply_color_term: bool = False
     stability_run_flags: dict[str, Any] = field(default_factory=dict)
     variable_target_catalog_ids: frozenset[str] = field(default_factory=frozenset)
+    snr_ap_table: dict[str, Any] | None = None
 
 
 def _build_phase2a_dynamic_params(
@@ -6735,6 +6770,7 @@ def _phase2a_prepare_shared_state(
         group_color_term=_group_ct,
         apply_color_term=bool(_apply_ct),
         variable_target_catalog_ids=_variable_target_cids,
+        snr_ap_table=_snr_ap_table,
     )
 
 
@@ -7301,11 +7337,30 @@ def _phase2a_process_one_target(
                 _target_g_mag = _gv
                 break
         _ap_cfg = float(_cfg.gs11_dilution_aperture_arcsec)
+        _dilution_skipped_ap = False
         if math.isfinite(_ap_cfg) and _ap_cfg > 0:
             _ap_arcsec = _ap_cfg
         else:
-            _ap_px = float(apertures_px.get(target_cid, 3.0))
-            _ap_arcsec = float(_ap_px) * float(state.plate_scale_arcsec)
+            _ap_px, _ap_src = _resolve_photometric_aperture_px_for_gs11(
+                target_cid,
+                apertures_px,
+                _target_g_mag,
+                state.snr_ap_table,
+                aperture_fwhm_factor=float(_apt_fw),
+                fwhm_px=float(fwhm_px),
+            )
+            if _ap_px is None:
+                logging.warning(
+                    "[GS11] target %s: photometric aperture unavailable — dilution skipped",
+                    target_cid or "?",
+                )
+                log_event(
+                    f"[GS11] target {target_cid or '?'}: photometric aperture unavailable — dilution skipped"
+                )
+                _dilution_skipped_ap = True
+                _ap_arcsec = float("nan")
+            else:
+                _ap_arcsec = float(_ap_px) * float(state.plate_scale_arcsec)
         _cid_int = None
         try:
             from dilution import _normalize_exclude_source_id  # noqa: PLC0415
@@ -7313,15 +7368,27 @@ def _phase2a_process_one_target(
             _cid_int = _normalize_exclude_source_id(target_cid)
         except Exception:  # noqa: BLE001
             _cid_int = None
-        _dilution_result = compute_dilution_factor(
-            _target_ra,
-            _target_dec,
-            _target_g_mag,
-            _ap_arcsec,
-            str(state.gaia_db_path),
-            catalog_id=_cid_int,
-            mag_limit_delta=float(_cfg.gs11_dilution_mag_limit_delta),
-        )
+        if _dilution_skipped_ap:
+            _dilution_result = {
+                "dilution_factor": 1.0,
+                "dilution_delta_mag": 0.0,
+                "n_neighbors": 0,
+                "neighbor_flux_sum": 0.0,
+                "aperture_arcsec": float("nan"),
+                "search_radius_arcsec": float("nan"),
+                "dilution_skipped": True,
+                "dilution_skip_reason": "photometric_aperture_unavailable",
+            }
+        else:
+            _dilution_result = compute_dilution_factor(
+                _target_ra,
+                _target_dec,
+                _target_g_mag,
+                _ap_arcsec,
+                str(state.gaia_db_path),
+                catalog_id=_cid_int,
+                mag_limit_delta=float(_cfg.gs11_dilution_mag_limit_delta),
+            )
         _mag_pre_gs11 = float("nan")
         _finite_pre = mag_calib[np.isfinite(mag_calib)]
         if len(_finite_pre) > 0:
@@ -7878,6 +7945,8 @@ def _phase2a_process_one_target(
             "dilution_delta_mag": float(_dilution_result.get("dilution_delta_mag", 0.0)),
             "n_neighbors_aperture": int(_dilution_result.get("n_neighbors", 0)),
             "gs11_aperture_arcsec": float(_dilution_result.get("aperture_arcsec", float("nan"))),
+            "gs11_dilution_skipped": bool(_dilution_result.get("dilution_skipped", False)),
+            "gs11_dilution_skip_reason": str(_dilution_result.get("dilution_skip_reason", "") or ""),
             "mag_median_pre_gs11": _mag_pre_gs11,
             "mag_median_post_gs11": _mag_post_gs11,
             "lc_csv": str(lc_csv),

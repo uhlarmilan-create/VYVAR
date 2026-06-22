@@ -30,6 +30,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 16 | G3-F002 query_local_gaia mag_limit None | **FIXED (Path A):** None ⇒ no cap; MASTER_SOURCES `mag_limit=None`; stale 11.5 default removed | `fb75867` |
 | 17 | G1-F001 / G1-F002 alignment_max_control_points | **FIXED:** decouple astroalign CP from detection ladder; `alignment_max_control_points=80`; Chi/h draft 419 `B_20_2` validation PASS — max Δtranslation **0.0275 px**, speedup **5.2–13.8×** (mean **8.6×**); not byte-identical, quality-validated | `2819e86` |
 | 18 | validate_alignment_control_points draft layouts | **DONE:** `non_calibrated` / `processed` / `calibrated` / `detrended_aligned` lights + default `platesolve/MASTERSTAR` ref | `65a608b` |
+| 19 | G2-F003 dilution aperture 3.0 fallback | **FIXED:** layered fallback map → SNR-derive → skip+flag; fixed 3.0 removed; Seager 2003 / Howell 2006 photometric aperture | `0e50805` |
 | 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `b4a45fb` |
 
 ---
@@ -595,7 +596,7 @@ Method (Group 2): automated AST inventory + lens scans (L1-L11) on 10 modules (3
 | G2-F001 | **SUPERSEDED** | L4 | `photometry_core.py` (removed) | ~~catalog_only forced-aperture routing~~ **SUPERSEDED** (`7f0dc86`): path deleted; unmatched VSX excluded in Fáza 0 (`select_active_targets`). Saturated `skip_photometry` unchanged. | Photometry is DAO+Gaia matched only; no forced-aperture LCs. |
 | G2-F002 | **SUPERSEDED** | L4 | `photometry_core.py` (removed) | ~~catalog_only WCS placement~~ **SUPERSEDED** (`7f0dc86`): placement helpers deleted with forced-aperture path. | Unmatched VSX are excluded, not placed via VSX coords. |
 | G2-F002b | **MED** | L4 | `photometry_core.py` (per-frame) | **BACKLOG** — `dao_matched` frames on unsolved per-frame WCS can yield nondetection flux without explicit trust downgrade (distinct from masterstar placement). | Per-frame unsolved trust must downgrade, not silent nondetection. |
-| G2-F003 | **MED** | L1 | `photometry_core.py:7692` | `apertures_px.get(target_cid, 3.0)` dilution fallback when aperture map missing (DR4-2). | Missing per-star aperture must fail loud or derive from SNR table, not a universal 3.0 px literal. |
+| G2-F003 | **FIXED** | L1 | `photometry_core.py` | ~~`apertures_px.get(target_cid, 3.0)` dilution fallback~~ **FIXED:** `_resolve_photometric_aperture_px_for_gs11` — per-star map → `_aperture_radius_from_snr_table` derive → skip+flag (`dilution_skipped`); fixed 3.0 removed; grounded in Seager 2003 / Howell 2006 (photometric aperture for neighbor search). | Missing per-star aperture must fail loud or derive from SNR table, not a universal 3.0 px literal. |
 | G2-F004 | **MED** | L4 | `photometry_core.py:7897` | Fix-A `err` paired with `ensemble_scatter` by positional index only (DR4-1); row misalignment risks wrong error columns. | Error model pairing must use stable star keys, not parallel list order. |
 | G2-F005 | **RESOLVED** | L4 | `photometry_core.py` (removed) | ~~Log claimed catalog_only skip while downstream implied photometry~~ **RESOLVED** (`7f0dc86`): catalog_only Phase 2A branch removed; only DAO-matched targets measured. | Operator logs must match the actual branch taken for catalog_only targets. |
 | G2-P001 | **CLEAN** | - | `photometry_core.py:2454-2660` | `ensemble_normalize` verified against SPEC/Honeycutt ensemble ZP math. | Keep as reference implementation for comp ensemble detrend. |
@@ -1921,7 +1922,7 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 | Group | Scope | Funcs audited | HIGH findings (open at map close) |
 |-------|--------|---------------|-----------------------------------|
 | 1 | Alignment / platesolve / optics | 415 | G1-F003 (+ MED alignment identity fallback); G1-F001/F002 **FIXED** |
-| 2 | Photometry core | 322 | G2-F003 catalog funnel (partially superseded) |
+| 2 | Photometry core | 322 | G2-F004 (+ G2-F002b backlog); G2-F003 **FIXED** |
 | 3 | Data / IO / catalog | 367 | G3-F002 (+ G3-F001 **FIXED**) |
 | 4 | Science / variability / QA | 166 | G4-F001 trust (partially **FIXED**) |
 | 5 | Reporting / export | 174 | G5-F004 **FIXED**; remaining LOW dead helpers |
