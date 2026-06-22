@@ -508,5 +508,4 @@ Summary / LC / PDF fields (not all `AppConfig` keys):
 
 These strings appear in UI code but are not fields on `AppConfig`:
 
-- `phase01_comparison_max_bv_diff` → ui_select_stars.py:443, ui_select_stars.py:531
-- `phase01_use_bprp_primary` → ui_aperture_photometry.py:1657, ui_select_stars.py:618
+- `phase01_use_bprp_primary` → ui_aperture_photometry.py:1657

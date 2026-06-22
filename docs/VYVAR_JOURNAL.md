@@ -2,6 +2,88 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-06-22 — 7-group audit fix-pass CLOSE-OUT (HIGH + numeric MED)
+
+**Účel.** Uzavřít systematický 7-group audit map po fix-passu: všechny **HIGH** nálezy a numerické **MED** z fronty opraveny, validovány a pushnuty; zbytek explicitně backlog.
+
+**Rozsah.** `f3b73e9..f235986` (**44 commitů**, `origin/main`) + `5e01c25` (tracked `config.json`: `alignment_max_control_points=80`, orphan key drop; observer site lokální).
+
+**Integrační brána.** Draft 421 e2e PASS (viz entry níže) — stack hraje dohromady na reálných datech.
+
+### Fix-pass — uzavřené položky (commit → finding)
+
+| Skupina | Finding | Commit | Poznámka |
+|---------|---------|--------|----------|
+| Phot | forced-aperture / `catalog_only` removal | `7f0dc86` | DAO+Gaia only; variable direct-hit |
+| G5 | export plate scale derive-or-None + software version | `6774f83` | G5-F007 |
+| G5 | candidate LC calibrated mag | `76c5a93` | G5-F003 |
+| G5 | canonical `mag_calib_final` (CT+AC) | `be3e193` | G5-F011 |
+| G5 | PDF time axis BJD(TDB) | `b74c301` | G5-F006 |
+| G5 | VarAstro comp count vs trust | `07e6f69` | G5-F008 |
+| G5 | export failure surfacing | `efbb4de` | G5-F004 |
+| G7 | unwired Select Stars removed | `3e1cad7` | G7-F001/F002 |
+| G6 | validity_days 90/200 unified | `379e78f` | G6-F002 |
+| G3 | `mag_limit=None` = no cap | `fb75867` | G3-F002 |
+| G3 | scoped calibration master model | `9e3280e` | G3-F001 |
+| G1 | `alignment_max_control_points=80` | `2819e86` | G1-F001/F002; Chi/h 419 PASS |
+| G2 | dilution aperture SNR-derive | `4b13e4a` | G2-F003; fixed 3.0 removed |
+| G1 | pixel-fallback gated on `VY_ALGN` | `dbf76d5` | G1-F003 part 1 |
+| G1 | `alignment_failed` LC + trust flag | `0a43dbf` | G1-F003 part 2 |
+| Config | alignment CP key + orphan drop | `5e01c25` | housekeeping |
+
+### Otevřený backlog (po fix-passu)
+
+- **G2-F004** — per-frame `err` paired by index, not stable star key
+- **G2-F002b** — unsolved per-frame WCS nondetection without trust downgrade
+- **G6-F001 / TODO-MULTISET** — Set-1 rig literals as global defaults; derive-or-None / per-rig profiles
+- **Silent excepts** — G1-F005 (`optics_selection.py`), G7-F008 (`ui_components` / `ui_aperture_photometry`)
+- **G7-F003** — `phase01_use_bprp_primary` non-persistable (`getattr` only)
+
+**config.json audit:** orphan reconcile **empty** (247 non-observer keys = `AppConfig` fields); Dáblice bin2 + GS11 OFF → žádný rig override potřeba.
+
+### Verdikt
+
+7-group audit fix-pass **DONE** pro HIGH + numerické MED. Ledger + PARAMS aktualizovány; zbytek v ROADMAP backlogu.
+
+---
+
+## 2026-06-22 — Draft 421: e2e integrační validace celého opravného stacku (PASS)
+
+**Účel.** První end-to-end běh kompletní opravené pipeline na reálných datech, jako integrační brána před pushem. Ověřuje, že se jednotlivě validované opravy chovají správně **dohromady** — ne jen v unit testech.
+
+**Vstup.** Chi/h Persei, konfigurace Dáblice, sety `B_20_2` / `R_20_2` / `V_20_2`, **12 vědeckých snímků/set** (+ MASTERSTAR). Identický snímkový set jako drafty 419 (starý kód) a 420 (13/13 `*.fits` shodných pro každý set), takže meziznámkové srovnání je platné. Hluboký katalog (`catalog_rows=95706`, `n_gaia_detected=12270`), `plate_scale≈1.302″/px`, `density_class=dense`.
+
+**Validovaný stack** (push `f3b73e9..f235986`, 44 commitů): odstranění forced-aperture/catalog_only → G5 export vrstva (kanonická `mag_calib_final`, plate scale z WCS, BJD(TDB), comp count, export failures) → G6‑F002 (validity_days 90/200) → G3‑F002 (`mag_limit=None` = bez capu) → G1‑F001/F002 (alignment_max_control_points=80) → G2‑F003 (dilution aperture: SNR‑derive, žádná fixní 3.0) → G1‑F003 (pixel‑fallback gated na VY_ALGN, flag selhané registrace).
+
+### Výsledky — PASS
+
+| Brána | Výsledek |
+|------|----------|
+| Pipeline dokončena | **Ano** — infolog řádek 8004 `✓ Pipeline dokončený úspešne`, PDF pro všechny 3 sety |
+| Žádný blow‑up (selhání po odstranění forced-aperture) | **Ano** — 0 cílů s `mag_inst > 5` nebo `< −14`; historický ~−12 mag wrong‑star vzor se nevrátil. Kalibrované mag ~8–16.5 |
+| G5‑F011 invariant na reálných LC | **Ano** — `mag_calib_final == mag_calib_ac` (CT off) bit‑identicky, **0 neshod / 7468 párů** (B+R+V) |
+| Export MAG ↔ LC | **Ano** — 3277/3279 řádků B sedí na 3 dp (2 jen rounding boundary, ne drift); watch cíl přesně |
+| `alignment_failed` (nový flag) tichý na zdravé registraci | **Ano** — **0 / 9756** LC bodů; 0 cílů s alignment‑fail v trustu |
+| Control points 80 | Reziduály zdravé (max <0.25 px na B); registrováno v logu |
+| `mag_limit=None` hluboký katalóg | Aktivní (95706 řádků), comp počty srovnatelné s předchozími Chi/h drafty |
+| Watch proměnná Gaia DR3 `458415401545371264` | Finální mag **+0.72 mmag** vs 419 (dřívější ~30 mmag posun nuly **vyřešen**); `mag_inst` −0.17 mmag |
+| Comp `458412790204894208` (intermitentní DAO) | `qa_flag=false` v comp_qa — **správně**: odstranění forced bodů opravilo příčinu u zdroje, comp je nyní legitimně čistý (DAO‑only, 10/12), LOO exkluze už není potřeba |
+
+### Rozsah a výhrady (poctivě)
+
+- **Testovací draft o 12 snímcích** → veškerý trust **YELLOW** (automatický `short_baseline`, protože 12 < `lc_quality_min_frames=20`). **Není regrese** — artefakt krátké série. GREEN vyžaduje plné drafty ≥20 snímků.
+- **GS11 dilution vypnuta** v configu (`gs11_dilution_enabled=false`) → oprava G2‑F003 v tomto běhu **neprovětrána** (kryta pouze unit testy). Při publikaci s dilution je třeba běh s ní zapnutou.
+- **Watch proměnná `n_clean=1`** (tenká comp sada, 7 comps flagnuto jako spike) — důsledek krátké série; na delší sérii by prošlo více comps.
+- **V_20_2 plate‑solve chyba** (řádek 3559, RMS 22.48 px) — **zotaveno** v rámci běhu (retry registrace, V má 114 cílů, 97 AAVSO exportů). Hlídat opakování.
+
+### Verdikt
+
+Integrace **PASS**. Opravy hrají dohromady, žádná regrese, kanonická magnituda a nula proměnné stabilní na reálných datech. Stack pushnut na `origin/main` (`f3b73e9..f235986`); následný `5e01c25` doplnil `alignment_max_control_points: 80` do tracked `config.json` (observer site zůstává lokální).
+
+> **Toto ověřuje integrační soundnost stacku, ne finální publikační čísla.** Následuje další testování na reálných datech (plné ≥20‑snímkové drafty), kde se ověří trust GREEN a chování comp_qa na delší sérii.
+
+---
+
 ## Session -- Fix C / Phase C1: dense-field alignment DIAGNOSED -> root = PSF/FWHM bloat (2026-06-18)
 
 DIAGNOSE-only (sandbox `tmp/phaseC1/`, no production edits). Deliverable `CURSOR_RESULT_fixC_diag.md`.

@@ -30,9 +30,9 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 16 | G3-F002 query_local_gaia mag_limit None | **FIXED (Path A):** None ⇒ no cap; MASTER_SOURCES `mag_limit=None`; stale 11.5 default removed | `fb75867` |
 | 17 | G1-F001 / G1-F002 alignment_max_control_points | **FIXED:** decouple astroalign CP from detection ladder; `alignment_max_control_points=80`; Chi/h draft 419 `B_20_2` validation PASS — max Δtranslation **0.0275 px**, speedup **5.2–13.8×** (mean **8.6×**); not byte-identical, quality-validated | `2819e86` |
 | 18 | validate_alignment_control_points draft layouts | **DONE:** `non_calibrated` / `processed` / `calibrated` / `detrended_aligned` lights + default `platesolve/MASTERSTAR` ref | `65a608b` |
-| 19 | G2-F003 dilution aperture 3.0 fallback | **FIXED:** layered fallback map → SNR-derive → skip+flag; fixed 3.0 removed; Seager 2003 / Howell 2006 photometric aperture | `0e50805` |
+| 19 | G2-F003 dilution aperture 3.0 fallback | **FIXED:** layered fallback map → SNR-derive → skip+flag; fixed 3.0 removed; Seager 2003 / Howell 2006 photometric aperture | `4b13e4a` |
 | 20 | G1-F003 alignment identity / pixel-fallback | **FIXED:** ref-grid pixel NN gated on `VY_ALGN` (`dbf76d5`); failed-alignment epochs flagged in LC (`alignment_failed`) + summary + trust soft signal (`0a43dbf`); residual gate left OFF | `0a43dbf` |
-| 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `b4a45fb` |
+| 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `9e3280e` |
 
 ---
 
@@ -1920,19 +1920,21 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 ## 7-group map complete (2026-06-19)
 
-| Group | Scope | Funcs audited | HIGH findings (open at map close) |
-|-------|--------|---------------|-----------------------------------|
-| 1 | Alignment / platesolve / optics | 415 | G1-F003 **FIXED**; G1-F001/F002 **FIXED** |
-| 2 | Photometry core | 322 | G2-F004 (+ G2-F002b backlog); G2-F003 **FIXED** |
-| 3 | Data / IO / catalog | 367 | G3-F002 (+ G3-F001 **FIXED**) |
-| 4 | Science / variability / QA | 166 | G4-F001 trust (partially **FIXED**) |
-| 5 | Reporting / export | 174 | G5-F004 **FIXED**; remaining LOW dead helpers |
-| 6 | Config / orchestration / utils | 110 | G6-F001–F004 config/parity |
-| 7 | UI shell | ~~144~~ **131** | G7-F001/F002 **RESOLVED** (Select Stars removed); G7-F003 open |
-| **Total** | **7 groups** | **1728** | Fix-pass queue starts after Claude review |
+| Group | Scope | Funcs audited | HIGH findings (post fix-pass 2026-06-22) |
+|-------|--------|---------------|-------------------------------------------|
+| 1 | Alignment / platesolve / optics | 415 | HIGH **closed** — G1-F001/F002/F003 **FIXED** (`2819e86`, `dbf76d5`, `0a43dbf`); open MED G1-F004–F007; G1-F005 silent except |
+| 2 | Photometry core | 322 | G2-F003 **FIXED** (`4b13e4a`); open G2-F004, G2-F002b |
+| 3 | Data / IO / catalog | 367 | G3-F001/F002 **FIXED** (`9e3280e`, `fb75867`) |
+| 4 | Science / variability / QA | 166 | G4-F001 trust partially **FIXED** |
+| 5 | Reporting / export | 174 | G5-F003–F011, F004 **FIXED** (`6774f83`…`efbb4de`); forced-aperture **RESOLVED** (`7f0dc86`); LOW dead helpers remain |
+| 6 | Config / orchestration / utils | 110 | G6-F002 **FIXED** (`379e78f`); G6-F001 TODO-MULTISET; G6-F003/F004 parity |
+| 7 | UI shell | ~~144~~ **131** | G7-F001/F002 **RESOLVED** (`3e1cad7`); open G7-F003, G7-F008 |
+| **Total** | **7 groups** | **1728** | Fix-pass **DONE** (HIGH + numeric MED) — see queue below |
 
 ---
 
-## Post-map fix-pass queue (not started)
+## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G2-F004, G2-F002b, G6-F001/TODO-MULTISET, silent excepts (G1-F005, G7-F008), G7-F003.
 
-Per roadmap after map close: G1-F001/F002 (alignment caps), G3-F002, G6 config items (validity defaults, `max_bv_diff` / `phase01_use_bprp_primary`, orphan json keys).
+**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), forced-aperture removal (`7f0dc86`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
+
+**Still open:** G2-F004 (err index pairing), G2-F002b (unsolved WCS nondetection), G6-F001/TODO-MULTISET (rig literals), silent excepts G1-F005 + G7-F008, G7-F003 (`phase01_use_bprp_primary` parity).
