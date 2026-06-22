@@ -158,6 +158,33 @@ def _compare_frame(
     }
 
 
+def _draft_lights_dir(draft_root: Path, setup: str) -> Path:
+    """Resolve input lights folder for a draft setup (VYVAR layout variants)."""
+    setup = str(setup).strip()
+    candidates = [
+        draft_root / "processed" / "lights" / setup,
+        draft_root / "non_calibrated" / "lights" / setup,
+        draft_root / "calibrated" / "lights" / setup,
+        draft_root / "detrended" / "lights" / setup,
+        draft_root / "detrended_aligned" / "lights" / setup,
+    ]
+    for p in candidates:
+        if p.is_dir():
+            return p
+    tried = ", ".join(str(c) for c in candidates)
+    raise FileNotFoundError(f"No lights dir for setup {setup!r}; tried: {tried}")
+
+
+def _list_light_fits(lights_dir: Path) -> list[Path]:
+    files = sorted(lights_dir.glob("proc_*.fits"))
+    if not files:
+        files = sorted(
+            p for p in lights_dir.glob("*.fits")
+            if p.name.upper() not in ("MASTERSTAR.FITS", "MASTERDARK.FITS", "MASTERFLAT.FITS")
+        )
+    return files
+
+
 def _resolve_frames(args: argparse.Namespace) -> tuple[Path, list[Path]]:
     if args.ref and args.frames:
         ref = Path(args.ref).resolve()
@@ -169,20 +196,18 @@ def _resolve_frames(args: argparse.Namespace) -> tuple[Path, list[Path]]:
 
     draft_root = Path(args.draft_root).resolve()
     setup = str(args.setup).strip()
-    processed = draft_root / "processed" / "lights" / setup
-    if not processed.is_dir():
-        raise FileNotFoundError(f"Missing processed lights dir: {processed}")
-    all_files = sorted(processed.glob("proc_*.fits"))
+    lights_dir = _draft_lights_dir(draft_root, setup)
+    all_files = _list_light_fits(lights_dir)
     if not all_files:
-        all_files = sorted(processed.glob("*.fits"))
-    if not all_files:
-        raise FileNotFoundError(f"No FITS in {processed}")
+        raise FileNotFoundError(f"No light FITS in {lights_dir}")
 
-    ref = Path(args.ref).resolve() if args.ref else all_files[0]
     if args.ref:
+        ref = Path(args.ref).resolve()
         frames = all_files
     else:
-        frames = [f for f in all_files if f != ref]
+        ms_ref = draft_root / "platesolve" / setup / "MASTERSTAR.fits"
+        ref = ms_ref.resolve() if ms_ref.is_file() else all_files[0]
+        frames = [f for f in all_files if f.resolve() != ref.resolve()]
     if args.max_frames and args.max_frames > 0:
         frames = frames[: int(args.max_frames)]
     if not frames:
@@ -193,7 +218,7 @@ def _resolve_frames(args: argparse.Namespace) -> tuple[Path, list[Path]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate astroalign control-point cap (200 vs 80).")
     parser.add_argument("--draft-root", type=Path, default=None, help="Draft dir (e.g. Archive/Drafts/draft_000419)")
-    parser.add_argument("--setup", type=str, default="", help="Filter/exp/bin subdir under processed/lights")
+    parser.add_argument("--setup", type=str, default="", help="Filter/exp/bin subdir under draft lights tree")
     parser.add_argument("--ref", type=Path, default=None, help="Reference FITS (default: first proc in setup)")
     parser.add_argument("--frames", nargs="*", default=None, help="Light FITS paths (with --ref)")
     parser.add_argument("--max-frames", type=int, default=5, help="Max light frames to test (draft mode)")
