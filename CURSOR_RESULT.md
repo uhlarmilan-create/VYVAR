@@ -66,7 +66,7 @@ With **tracked config** (CT off, AC on): export AAVSO MAG **byte-identical** to 
 
 ## Commit
 
-`fix(calib): canonical mag_calib_final (CT+AC) used by export and all figures (G5-F011)` — see hash below.
+`fix(calib): canonical mag_calib_final (CT+AC) used by export and all figures (G5-F011)` — **`be3e193`**.
 
 **Not pushed** — stop for Claude review. **Next:** documentation pass (column lineage + consumer table for manual).
 
