@@ -278,7 +278,7 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 - **TODO-45 — RGB camera support** (IMX533 RGGB → de-Bayer → G-channel photometry).
 - **TODO-8-BOO — Bootes globular-cluster validation** (ePSF vs aperture on a dense ~2 h
   field). Pairs with the PSF/Newton work.
-- **TODO-FORCED-COMP — forced-aperture `catalog_only` without Phase-1 tier selection.**
+- ~~**TODO-FORCED-COMP — forced-aperture `catalog_only` without Phase-1 tier selection.**~~ **SUPERSEDED (`7f0dc86`)** — forced-aperture / catalog_only path removed; DAO+Gaia matched only.
 - **TODO-LC-TREND — differential extinction + ALG audit** (partial; re-validate on a
   moonless night).
 - **TODO-LIB — Cython `.pyd` compilation** (hide source, enable C translation).
@@ -333,11 +333,11 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 - **TODO-10 — Settings-tab refactor + `CONFIG_GUIDE.md`.** Ties to `VYVAR_PARAMS.md` /
   config↔UI parity.
 - **TODO-13 validation — Gaia→DAO completeness ~3.5%** still low in the QA dashboard;
-  validate after the DAO pass-2 + forced rows.
+  validate after DAO pass-2 completeness work (forced-aperture rows no longer injected post `7f0dc86`).
 - **TODO-LC-QUALITY — LC classification filter.** `lc_quality_flag` exists and is consumed by
   the trust gate; verify the saturated/noisy export policy is complete.
 - **TODO-14 — PDF size optimization** (29 MB → < 10 MB).
-- **TODO-MASTERSTAR-QA — FORCED_APERTURE cyan overlay** in the QA UI.
+- ~~**TODO-MASTERSTAR-QA — FORCED_APERTURE cyan overlay** in the QA UI.~~ **SUPERSEDED (`7f0dc86`)** — `FORCED_APERTURE` proc rows no longer produced.
 - **Misc LOW:** TODO-7 plate-solver refactor · TODO-11 auto-trigger watchdog (`night_run`
   foundation exists) · TODO-12 HRD classification (after new DB) · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
