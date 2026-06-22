@@ -60,16 +60,6 @@ def _norm_cid(x: Any) -> str:
             return s
 
 
-def _is_catalog_only(df: pd.DataFrame) -> pd.Series:
-    """Boolean mask: True = catalog_only row (no real DAO detection)."""
-    mask = pd.Series(False, index=df.index)
-    if "zone_flag" in df.columns:
-        mask |= df["zone_flag"].astype(str).str.strip().str.lower() == "catalog_only"
-    if "zone" in df.columns:
-        mask |= df["zone"].astype(str).str.strip().str.lower() == "catalog_only"
-    return mask
-
-
 def _register_pdf_unicode_fonts() -> tuple[str, str, str]:
     """DejaVu Sans for Slovak / UTF-8; fallback to Helvetica if registration fails."""
     try:
@@ -1925,14 +1915,6 @@ class _PhotometryReportBuilder:
                     rename_map[c0] = "catalog_id"
             if rename_map:
                 df0 = df0.rename(columns=rename_map)
-            _co_mask0 = _is_catalog_only(df0)
-            if _co_mask0.any():
-                logging.info(
-                    "[HOCKEY STICK] Excluding %d catalog_only stars "
-                    "(no DAO detection — sky noise only)",
-                    int(_co_mask0.sum()),
-                )
-                df0 = df0.loc[~_co_mask0].copy()
             mag_c = "mag" if "mag" in df0.columns else next(
                 (c for c in df0.columns if "mag" in str(c).lower() and "calib" not in str(c).lower()),
                 None,
@@ -2020,15 +2002,6 @@ class _PhotometryReportBuilder:
                 rename_map[c0] = "catalog_id"
         if rename_map:
             df = df.rename(columns=rename_map)
-
-        _co_mask = _is_catalog_only(df)
-        if _co_mask.any():
-            logging.info(
-                "[HOCKEY STICK] Excluding %d catalog_only stars "
-                "(no DAO detection — sky noise only)",
-                int(_co_mask.sum()),
-            )
-            df = df.loc[~_co_mask].copy()
 
         mag_col = "mag" if "mag" in df.columns else next(
             (c for c in df.columns if "mag" in str(c).lower() and "calib" not in str(c).lower()),
@@ -4895,7 +4868,7 @@ class _PhotometryReportBuilder:
             ("VDI candidate", "Star with high VDI score (non-random phase distribution)"),
             ("w(rel)", "Relative weight of comparison star in ensemble"),
             ("ZP", "Zero point (photometric calibration offset)"),
-            ("zone_flag", "linear = DAO-detected; catalog_only = position from VSX catalog only"),
+            ("zone_flag", "linear = DAO-detected; saturated = likely saturated on MASTERSTAR"),
             (
                 "Aperture correction Method B",
                 "Ensemble-based aperture correction using stable reference stars; ΔM = offset applied, "
@@ -4962,10 +4935,6 @@ class _PhotometryReportBuilder:
             try:
                 cid = str(row.get("_cid", "") or self._norm_cid(row.get("catalog_id", "")))
                 vsx_name = str(row.get("vsx_name", cid) or cid)
-                _zf = str(row.get("zone_flag", row.get("zone", "")) or "").strip().lower()
-                if _zf == "catalog_only":
-                    logging.debug("[PDF] Skip LC page — catalog_only: %s", vsx_name)
-                    continue
                 _lc_rms = pd.to_numeric(row.get("lc_rms"), errors="coerce")
                 _n_frames = int(pd.to_numeric(row.get("n_frames"), errors="coerce") or 0)
                 if _n_frames <= 0 or (not np.isfinite(float(_lc_rms))):

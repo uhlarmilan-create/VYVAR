@@ -244,11 +244,11 @@ def _run_tier_a(report: ValidationReport) -> None:
         note="" if status == "PASS" else "Spike index did not exceed hard threshold on injected outliers.",
     )
 
-    from photometry_core import _catalog_only_fixed_aperture_flux
+    from photometry_core import _annulus_sky_subtracted_flux
 
     sat = _star_by_name(truth, "saturated_star")
     rap = _aperture_r(fwhm)
-    _, _, peak = _catalog_only_fixed_aperture_flux(
+    _, _, peak = _annulus_sky_subtracted_flux(
         data, sat["x"], sat["y"], rap, rap * 1.5, rap * 2.5
     )
     sat_lim = float(hdr.get("SATURATE", SAT_ADU))
@@ -256,7 +256,7 @@ def _run_tier_a(report: ValidationReport) -> None:
     report.add(
         "A5",
         "saturated star (clip at SATURATE)",
-        "photometry_core._catalog_only_fixed_aperture_flux peak vs SATURATE",
+        "photometry_core._annulus_sky_subtracted_flux peak vs SATURATE",
         "saturation flag / comp exclusion",
         expected=f"peak >= 0.85*SATURATE ({0.85 * sat_lim:.0f} ADU)",
         recovered=f"peak={peak:.0f} ADU",
@@ -285,7 +285,7 @@ def _run_tier_a(report: ValidationReport) -> None:
         note="Large-scale gradient remains after flat-only calibration; CoLiTecVS-style inverse-median not implemented.",
     )
 
-    from photometry_core import _catalog_only_fixed_aperture_flux as apflux
+    from photometry_core import _annulus_sky_subtracted_flux as apflux
 
     from photutils.centroids import centroid_com
 
@@ -370,7 +370,7 @@ def _run_tier_a(report: ValidationReport) -> None:
     report.add(
         "A8",
         "clean control stars aperture photometry ZP",
-        "photometry_core._catalog_only_fixed_aperture_flux",
+        "photometry_core._annulus_sky_subtracted_flux",
         "aperture + instrumental mag vs injected ZP",
         expected="recovered mag within few mmag of injected (|bias| < 50 mmag)",
         recovered=f"median bias={bias * 1000:.1f} mmag (n={len(mags_rec)})",
@@ -758,7 +758,7 @@ def _run_v3(report: ValidationReport) -> None:
         report.add(
             "V3d",
             "fine-scale PSF vs aperture vs truth (inject-and-recover)",
-            "psf_photometry_stars + photometry_core._catalog_only_fixed_aperture_flux",
+            "psf_photometry_stars + photometry_core._annulus_sky_subtracted_flux",
             "TODO-PSF-V3d-FINE-SCALE; draft-367 validated regime",
             expected="bright self-check; PSF bias <5% mag12-17; PSF scatter < aper faint-end",
             recovered=(
@@ -814,7 +814,7 @@ def _run_a9(report: ValidationReport) -> None:
         "A9",
         "blend grid envelope + neighbor_sub joint-fit scoring",
         "psf_neighbor_sub.neighbor_sub_target_flux / a9_core.measure_cell",
-        "photometry_core._catalog_only_fixed_aperture_flux; VYVAR_NEIGHBOR_SUB_DESIGN.md",
+        "photometry_core._annulus_sky_subtracted_flux; VYVAR_NEIGHBOR_SUB_DESIGN.md",
         expected=(
             "plain: REFUSE/CLEAN zone structure; ideal NS pass>=55%; "
             "mismatch pass < ideal"

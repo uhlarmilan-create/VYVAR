@@ -101,7 +101,7 @@ def main() -> int:
         at = pd.read_csv(at_csv, low_memory=False, dtype={"catalog_id": str, "name": str})
         results[12] = len(at) == 198
         if "zone_flag" in at.columns:
-            results[13] = int((at["zone_flag"].astype(str).str.strip().str.lower() == "catalog_only").sum()) == 156
+            results[13] = int((at["zone_flag"].astype(str).str.strip().str.lower() == "catalog_only").sum()) == 0
         else:
             results[13] = False
     else:

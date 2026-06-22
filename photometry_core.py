@@ -84,14 +84,6 @@ _BPRP_VALID_MAX = 3.5
 _GAIA_ID_DTYPE: dict[str, type] = dict(GAIA_PROC_CSV_READ_DTYPE)
 
 
-def _is_catalog_only(df: pd.DataFrame) -> pd.Series:
-    """Boolean mask: True = catalog_only row (no real DAO detection)."""
-    mask = pd.Series(False, index=df.index)
-    if "zone_flag" in df.columns:
-        mask |= df["zone_flag"].astype(str).str.strip().str.lower() == "catalog_only"
-    if "zone" in df.columns:
-        mask |= df["zone"].astype(str).str.strip().str.lower() == "catalog_only"
-    return mask
 
 
 def _sid_int(v: Any) -> int | None:
@@ -1250,6 +1242,7 @@ def read_flux_from_csv(
     gain: float = 1.0,
     read_noise: float = 10.0,
     use_apcorr_flux: bool = False,
+    variable_target_catalog_ids: frozenset[str] | None = None,
 ) -> pd.DataFrame:
     """Krok 2: Načítaj flux z per-frame CSV (dao_flux).
 
@@ -1354,27 +1347,38 @@ def read_flux_from_csv(
             ref_y = float(ry) if math.isfinite(float(ry)) else None
 
         cid_key = _normalize_gaia_id(cid)
-        row_csv = _lookup_star_in_csv(
-            cid_key or cid, id_map, xy_df_lookup, ref_x, ref_y, xy_tol_px=xy_tol_px
+        _is_variable_target = (
+            variable_target_catalog_ids is not None
+            and cid_key
+            and cid_key in variable_target_catalog_ids
         )
-        if row_csv is None:
-            rows.append(base)
-            continue
+        if _is_variable_target:
+            if not cid_key or cid_key not in id_map:
+                rows.append(base)
+                continue
+            row_csv = id_map[cid_key]
+        else:
+            row_csv = _lookup_star_in_csv(
+                cid_key or cid, id_map, xy_df_lookup, ref_x, ref_y, xy_tol_px=xy_tol_px
+            )
+            if row_csv is None:
+                rows.append(base)
+                continue
 
-        # XY fallback (nie priamy ID hit): odmietni príliš jasnú hviezdu (zlá NN zhoda).
-        if not cid_key or cid_key not in id_map:
-            fallback_flux = float(row_csv.get("dao_flux", float("nan")))
-            if math.isfinite(fallback_flux) and fallback_flux > 0:
-                fallback_mag = _flux_to_mag(fallback_flux)
-                if math.isfinite(fallback_mag) and fallback_mag > -8.0:
-                    logging.warning(
-                        "[FÁZA 2A] XY fallback wrong star: cid=%s, fallback_mag=%.2f > -8.0, "
-                        "nastavujem NaN",
-                        cid,
-                        fallback_mag,
-                    )
-                    rows.append(base)
-                    continue
+            # XY fallback (nie priamy ID hit): comp pool keeps legacy guard.
+            if not cid_key or cid_key not in id_map:
+                fallback_flux = float(row_csv.get("dao_flux", float("nan")))
+                if math.isfinite(fallback_flux) and fallback_flux > 0:
+                    fallback_mag = _flux_to_mag(fallback_flux)
+                    if math.isfinite(fallback_mag) and fallback_mag > -8.0:
+                        logging.warning(
+                            "[FÁZA 2A] XY fallback wrong star: cid=%s, fallback_mag=%.2f > -8.0, "
+                            "nastavujem NaN",
+                            cid,
+                            fallback_mag,
+                        )
+                        rows.append(base)
+                        continue
 
         # PSF photometry (b.5) — read per-star/per-frame PSF flux + quality if present.
         base["psf_flux"] = float(pd.to_numeric(row_csv.get("psf_flux"), errors="coerce"))
@@ -1473,56 +1477,9 @@ def read_flux_from_csv(
     return pd.DataFrame(rows)
 
 
-def _masterstar_wcs_usable_for_placement(header: Any, wcs: Any) -> bool:
-    """MASTERSTAR WCS usable for catalog_only placement: celestial + solved or sibling-recovered."""
-    if not wcs.has_celestial:
-        return False
-    try:
-        vy_psolv = int(header.get("VY_PSOLV", 0))
-    except (TypeError, ValueError):
-        vy_psolv = 0
-    vy_sibl = str(header.get("VY_SIBL", "") or "").strip()
-    return int(vy_psolv) == 1 or bool(vy_sibl)
 
 
-def _target_row_is_catalog_only(target_row: Any) -> bool:
-    if not hasattr(target_row, "get"):
-        return False
-    z = str(target_row.get("zone", "") or "").strip().lower()
-    if z == "catalog_only":
-        return True
-    zf = str(target_row.get("zone_flag", "") or "").strip().lower()
-    return zf == "catalog_only"
-
-
-def _catalog_only_resolve_aligned_fits(proc_csv: Path, aligned_dir: Path) -> Path | None:
-    """``proc_*.csv`` → rovnomenný FITS v priečinku CSV alebo v ``aligned_dir``."""
-    stem = proc_csv.stem
-    for base in (Path(proc_csv).parent, Path(aligned_dir)):
-        for ext in (".fits", ".fit", ".fts", ".FITS", ".FIT"):
-            p = base / f"{stem}{ext}"
-            if p.is_file():
-                return p.resolve()
-    return None
-
-
-def _catalog_only_epoch_from_csv(csv_df: pd.DataFrame | None) -> dict[str, float]:
-    out: dict[str, float] = {"bjd": float("nan"), "hjd": float("nan"), "jd": float("nan")}
-    if csv_df is None or csv_df.empty:
-        return out
-    for col, key in (("bjd_tdb_mid", "bjd"), ("hjd_mid", "hjd"), ("jd_mid", "jd")):
-        if col not in csv_df.columns:
-            continue
-        s = pd.to_numeric(csv_df[col], errors="coerce")
-        if s.notna().any():
-            try:
-                out[key] = float(s.dropna().iloc[0])
-            except Exception:  # noqa: BLE001
-                out[key] = float("nan")
-    return out
-
-
-def _catalog_only_fixed_aperture_flux(
+def _annulus_sky_subtracted_flux(
     data: np.ndarray,
     x_c: float,
     y_c: float,
@@ -1530,7 +1487,7 @@ def _catalog_only_fixed_aperture_flux(
     r_in: float,
     r_out: float,
 ) -> tuple[float, float, float]:
-    """Sky-subtrahovaný súčet v apertúre, medián oblohy z annulu, odhad peak v apertúre."""
+    """Sky-subtracted aperture sum, annulus sky median, peak in aperture (shared DAO/PSF path)."""
     if not (math.isfinite(x_c) and math.isfinite(y_c) and math.isfinite(r_ap) and r_ap > 0):
         return float("nan"), float("nan"), float("nan")
     try:
@@ -1580,175 +1537,6 @@ def _catalog_only_fixed_aperture_flux(
         peak_local = float("nan")
 
     return flux_net, sky_pp, peak_local
-
-
-def _catalog_only_merge_frame_flux(
-    df_frame: pd.DataFrame,
-    *,
-    target_catalog_id: str,
-    ra_deg: float,
-    dec_deg: float,
-    proc_csv: Path,
-    aligned_dir: Path,
-    frame_csv_df: pd.DataFrame | None,
-    aperture_r_px: float,
-    fwhm_px: float,
-    annulus_inner_fwhm: float,
-    annulus_outer_fwhm: float,
-    sat_limit_adu: float | None,
-    frame_times: dict[str, Any] | None,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
-) -> pd.DataFrame:
-    """Pre ``zone=catalog_only``: apertúrna fotometria na fixnej WCS pozícii v zarovnanom FITS (nie DAO CSV)."""
-    cid_n = _normalize_gaia_id(target_catalog_id)
-    if not cid_n or df_frame.empty:
-        return df_frame
-
-    fits_path = _catalog_only_resolve_aligned_fits(Path(proc_csv), Path(aligned_dir))
-    ep = _catalog_only_epoch_from_csv(frame_csv_df)
-    am_frame = float("nan")
-    flip_frame: bool | None = None
-    if frame_times:
-        try:
-            _am = float(frame_times.get("airmass", float("nan")))
-            if math.isfinite(_am):
-                am_frame = _am
-        except (TypeError, ValueError):
-            pass
-        try:
-            _fl = frame_times.get("is_flipped", None)
-            if isinstance(_fl, bool):
-                flip_frame = _fl
-            elif _fl is not None:
-                s = str(_fl).strip().lower()
-                if s in ("true", "1", "yes", "y"):
-                    flip_frame = True
-                elif s in ("false", "0", "no", "n"):
-                    flip_frame = False
-        except Exception:  # noqa: BLE001
-            flip_frame = None
-
-    _lim_raw = sat_limit_adu if sat_limit_adu is not None else _sat_limit_peak_adu()
-    if _lim_raw is None or (isinstance(_lim_raw, float) and not math.isfinite(float(_lim_raw))):
-        _sat_lim = float("inf")
-    else:
-        _sat_lim = float(_lim_raw)
-
-    def _blank_row() -> dict[str, Any]:
-        return {
-            "catalog_id": cid_n,
-            "source_file": Path(proc_csv).name,
-            "bjd": float(ep.get("bjd", float("nan"))),
-            "hjd": float(ep.get("hjd", float("nan"))),
-            "jd": float(ep.get("jd", float("nan"))),
-            "airmass": am_frame,
-            "is_flipped": flip_frame,
-            "mag_inst": float("nan"),
-            "err": float("nan"),
-            "aperture_r_px": float(aperture_r_px) if math.isfinite(float(aperture_r_px)) else float("nan"),
-            "x": float("nan"),
-            "y": float("nan"),
-            "sky_annulus_r_out_px": float("nan"),
-            "edge_fail": False,
-            "sky_pp": float("nan"),
-            "flux_raw": float("nan"),
-            "flux_small": float("nan"),
-            "flux_large": float("nan"),
-            "flag": "no_data",
-        }
-
-    if fits_path is None:
-        out = df_frame.copy()
-        m = out["catalog_id"].astype(str).map(_normalize_gaia_id).eq(cid_n)
-        if bool(m.any()):
-            out.loc[m, ["mag_inst", "err", "flag"]] = [float("nan"), float("nan"), "no_data"]
-        return out
-
-    try:
-        import warnings
-
-        from astropy.wcs import WCS
-        from astropy.wcs import FITSFixedWarning
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", FITSFixedWarning)
-            with astrofits.open(fits_path, memmap=False) as hdul:
-                hdr = hdul[0].header
-                data = np.asarray(hdul[0].data, dtype=np.float64)
-                wcs = WCS(hdr)
-                if not wcs.has_celestial:
-                    out = df_frame.copy()
-                    m = out["catalog_id"].astype(str).map(_normalize_gaia_id).eq(cid_n)
-                    if bool(m.any()):
-                        out.loc[m, ["mag_inst", "err", "flag"]] = [float("nan"), float("nan"), "no_data"]
-                    return out
-                xy = wcs.all_world2pix(np.array([[float(ra_deg), float(dec_deg)]], dtype=np.float64), 0)
-                x_px = float(xy[0, 0])
-                y_px = float(xy[0, 1])
-    except Exception as exc:  # noqa: BLE001
-        logging.debug("[CATALOG_ONLY] WCS/FITS %s: %s", str(fits_path), exc)
-        out = df_frame.copy()
-        m = out["catalog_id"].astype(str).map(_normalize_gaia_id).eq(cid_n)
-        if bool(m.any()):
-            out.loc[m, ["mag_inst", "err", "flag"]] = [float("nan"), float("nan"), "no_data"]
-        return out
-
-    h, w = int(data.shape[0]), int(data.shape[1])
-    fw = float(fwhm_px) if math.isfinite(float(fwhm_px)) and float(fwhm_px) > 0 else 3.5
-    r_ap = float(aperture_r_px) if math.isfinite(float(aperture_r_px)) and float(aperture_r_px) > 0 else max(0.5, 1.75 * fw)
-    r_in = max(r_ap + 0.5, float(annulus_inner_fwhm) * fw)
-    r_out = max(r_in + 0.5, float(annulus_outer_fwhm) * fw)
-
-    edge_ok = (
-        math.isfinite(x_px)
-        and math.isfinite(y_px)
-        and (x_px - r_out >= 0)
-        and (x_px + r_out <= float(w))
-        and (y_px - r_out >= 0)
-        and (y_px + r_out <= float(h))
-    )
-    flux_net = sky_pp = peak_v = float("nan")
-    if edge_ok:
-        flux_net, sky_pp, peak_v = _catalog_only_fixed_aperture_flux(data, x_px, y_px, r_ap, r_in, r_out)
-
-    row_out: dict[str, Any] = _blank_row()
-    row_out["x"] = x_px if math.isfinite(x_px) else float("nan")
-    row_out["y"] = y_px if math.isfinite(y_px) else float("nan")
-    row_out["aperture_r_px"] = float(r_ap)
-    row_out["sky_annulus_r_out_px"] = float(r_out)
-    row_out["sky_pp"] = float(sky_pp) if math.isfinite(sky_pp) else float("nan")
-
-    if not edge_ok:
-        row_out["flag"] = "edge_fail"
-        row_out["edge_fail"] = True
-    elif not (math.isfinite(flux_net) and flux_net > 0):
-        row_out["flux_raw"] = float(flux_net) if math.isfinite(flux_net) else float("nan")
-        row_out["flag"] = "nondetection"
-    else:
-        row_out["flux_raw"] = float(flux_net)
-        row_out["mag_inst"] = _flux_to_mag(float(flux_net))
-        area = math.pi * r_ap * r_ap
-        row_out["err"] = _photometric_error(
-            float(flux_net),
-            float(sky_pp) if math.isfinite(sky_pp) else 0.0,
-            area,
-            gain=gain,
-            read_noise=read_noise,
-        )
-        is_sat = math.isfinite(peak_v) and math.isfinite(_sat_lim) and float(peak_v) > _sat_lim
-        row_out["flag"] = "saturated" if is_sat else "normal"
-
-    out = df_frame.copy()
-    m = out["catalog_id"].astype(str).map(_normalize_gaia_id).eq(cid_n)
-    if not bool(m.any()):
-        out = pd.concat([out, pd.DataFrame([row_out])], ignore_index=True)
-    else:
-        idx0 = int(out.index[m][0])
-        for k, v in row_out.items():
-            if k in out.columns:
-                out.at[idx0, k] = v
-    return out
 
 
 # ---------------------------------------------------------------------------
@@ -4585,17 +4373,6 @@ def auto_export_variability_candidates_csv(
                 meta["zone_flag"] = meta.index.astype(str).map(_zf_map)
         except Exception:  # noqa: BLE001
             pass
-    _co_meta = _is_catalog_only(meta)
-    if _co_meta.any():
-        _drop_ids = meta.index[_co_meta].astype(str)
-        logging.info(
-            "[VARIABILITY] Excluding %d catalog_only from candidate detection "
-            "(sky noise, not real variability)",
-            int(len(_drop_ids)),
-        )
-        fm = fm.drop(_drop_ids, errors="ignore")
-        meta = meta.loc[~_co_meta].copy()
-
     comp_ids: list[str] = []
     if comparison_stars_csv:
         try:
@@ -4605,14 +4382,6 @@ def auto_export_variability_candidates_csv(
                 dtype={**_GAIA_ID_DTYPE, "target_catalog_id": str},
             )
             if "catalog_id" in cdf.columns:
-                _co_cdf = _is_catalog_only(cdf)
-                if _co_cdf.any():
-                    logging.info(
-                        "[COMP] catalog_only excluded from comp-id list: %d removed, %d remain",
-                        int(_co_cdf.sum()),
-                        int(len(cdf) - _co_cdf.sum()),
-                    )
-                    cdf = cdf[~_co_cdf].copy()
                 try:
                     from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
                 except Exception:  # noqa: BLE001
@@ -4720,29 +4489,6 @@ def auto_export_variability_candidates_csv(
                 work["zone_flag"] = work["catalog_id"].astype(str).map(_zf_map)
         except Exception:  # noqa: BLE001
             pass
-
-    _co_mask = _is_catalog_only(work)
-    if _co_mask.any():
-        _vsx_m = pd.Series(False, index=work.index)
-        if "vsx_match" in work.columns:
-            _vsx_m |= work["vsx_match"].fillna(False).astype(bool)
-        if "vsx_id" in work.columns:
-            _vsx_m |= work["vsx_id"].notna() & (work["vsx_id"].astype(str).str.strip() != "")
-        if "vsx_name" in work.columns:
-            _vn = work["vsx_name"].astype(str).str.strip()
-            _vsx_m |= _vn.ne("") & (~_vn.str.lower().isin(("nan", "none", "—", "-")))
-        _drop = _co_mask & ~_vsx_m
-        if _drop.any():
-            logging.info(
-                "[VARIABILITY] Excluding %d catalog_only from candidate detection "
-                "(sky noise, not real variability)",
-                int(_drop.sum()),
-            )
-            work = work[~_drop].copy()
-        _keep_co = _is_catalog_only(work)
-        if _keep_co.any():
-            work["catalog_only_warning"] = False
-            work.loc[_keep_co, "catalog_only_warning"] = True
 
     edge_ok, edge_filter_failed = _edge_ok_from_masterstar_pipeline(
         Path(masterstar_fits_path),
@@ -4918,7 +4664,6 @@ def auto_export_variability_candidates_csv(
             "variability_score",
             "zone",
             "zone_flag",
-            "catalog_only_warning",
             "edge_filter_failed",
             "edge_filter_note",
             "vsx_known_variable",
@@ -5220,7 +4965,7 @@ def _phase2a_write_summary(
     cfg: Any | None = None,
     plate_scale_arcsec: float = 1.3,
 ) -> tuple[Path, pd.DataFrame]:
-    """Write photometry_summary.csv (includes catalog_only with ``lc_source``). Returns path and written frame."""
+    """Write photometry_summary.csv. Returns path and written frame."""
     _cfg_summary = cfg or AppConfig()
     _lunar_risk = "UNKNOWN"
     if isinstance(lunar_context, dict):
@@ -5261,17 +5006,6 @@ def _phase2a_write_summary(
             _sum_df["catalog_id"] = normalize_gaia_source_id_series(_sum_df["catalog_id"])
     except Exception:  # noqa: BLE001
         pass
-    if "lc_source" not in _sum_df.columns:
-        _sum_df["lc_source"] = "dao_matched"
-    _co_mask = _is_catalog_only(_sum_df)
-    _sum_df.loc[_co_mask, "lc_source"] = "forced_aperture"
-    _sum_df.loc[~_co_mask, "lc_source"] = "dao_matched"
-    _n_forced = int(_co_mask.sum())
-    if _n_forced:
-        logging.info(
-            "[PHASE 2A] photometry_summary.csv: %d catalog_only rows (lc_source=forced_aperture)",
-            _n_forced,
-        )
 
     _rms_n_stars = int(len(_rms_fit[1])) if _rms_fit is not None else 0
     _qs = build_lc_quality_summary(
@@ -5437,7 +5171,6 @@ class _Phase2AState:
     _aligned_dir_2a: Path
     _cfg: object
     _nt: int
-    _n_catalog_only: int
     lunar_context: dict[str, Any] | None = None
     plate_scale_arcsec: float = 1.3
     gaia_db_path: str | None = None
@@ -5454,6 +5187,7 @@ class _Phase2AState:
     group_color_term: _ColorTermGroupFit | None = None
     apply_color_term: bool = False
     stability_run_flags: dict[str, Any] = field(default_factory=dict)
+    variable_target_catalog_ids: frozenset[str] = field(default_factory=frozenset)
 
 
 def _build_phase2a_dynamic_params(
@@ -5932,7 +5666,6 @@ def _apply_role_aware_aperture_scaling(
     _target_cids = set(
         _normalize_gaia_id(str(r.get("catalog_id", "")))
         for _, r in at_df.iterrows()
-        if not _target_row_is_catalog_only(r)
     )
     _n_var_scaled = 0
     _n_comp_scaled = 0
@@ -6439,18 +6172,8 @@ def _phase2a_prepare_shared_state(
     # Len CSV — bez FITS (flux sa číta z dao_flux v CSV)
     n_frames = len(csv_files)
     _n_total = int(len(at_df))
-    _n_catalog_only = sum(1 for _, r in at_df.iterrows() if _target_row_is_catalog_only(r))
-    _n_active = _n_total - _n_catalog_only
-    logging.info(
-        "[PHASE 2A] %d targets (%d dao_matched LC + %d catalog_only forced-aperture)",
-        _n_total,
-        _n_active,
-        _n_catalog_only,
-    )
-    _p2(
-        f"Fáza 2A: {_n_active} dao_matched + {_n_catalog_only} catalog_only "
-        f"({_n_total} celkom), {n_frames} snímok — načítavam CSV cache…"
-    )
+    logging.info("[PHASE 2A] %d targets (DAO+Gaia matched)", _n_total)
+    _p2(f"Phase 2A: {_n_total} targets, {n_frames} frames - loading CSV cache...")
 
     # Načítaj CSV cache raz pre celú Fázu 2A (read_flux_from_csv per target inak 82× na target).
     if proc_frame_store is not None and len(proc_frame_store) > 0:
@@ -6711,6 +6434,12 @@ def _phase2a_prepare_shared_state(
             logging.warning("[PHASE 2A] Could not save aperture_snr_table.json: %s", _ap_exc)
 
     _star_mag_by_cid = _phase2a_star_mag_lookup(at_df, comp_df, Path(masterstar_fits_path))
+    _variable_target_cids = frozenset(
+        c
+        for _, row in at_df.iterrows()
+        for c in [_normalize_gaia_id(row.get("catalog_id", ""))]
+        if c
+    )
 
     if force_aperture_px is not None and force_aperture_px > 0:
         # Fixná apertura pre všetky hviezdy — debug/kalibrácia
@@ -6824,6 +6553,7 @@ def _phase2a_prepare_shared_state(
             gain=float(_gain_phot),
             read_noise=float(_rn_phot),
             use_apcorr_flux=bool(getattr(_cfg, "cog_aperture_correction_enabled", False)),
+            variable_target_catalog_ids=_variable_target_cids,
         )
         if not _df_all.empty:
             _flux_matrix_rows.append(_df_all)
@@ -6938,7 +6668,6 @@ def _phase2a_prepare_shared_state(
         _aligned_dir_2a=_aligned_dir_2a,
         _cfg=_cfg,
         _nt=_nt,
-        _n_catalog_only=_n_catalog_only,
         plate_scale_arcsec=(
             float(_plate_scale_arcsec)
             if _plate_scale_arcsec is not None
@@ -6955,6 +6684,7 @@ def _phase2a_prepare_shared_state(
         site_ok=bool(_site.ok),
         group_color_term=_group_ct,
         apply_color_term=bool(_apply_ct),
+        variable_target_catalog_ids=_variable_target_cids,
     )
 
 
@@ -7044,105 +6774,6 @@ def _recompute_bjd_hjd_per_target(
     return bjd_out, hjd_out
 
 
-def _phase2a_catalog_only_nearest_comps(
-    target_row: Any,
-    masterstars_df: pd.DataFrame,
-    *,
-    n_comps: int,
-    target_cid: str,
-) -> pd.DataFrame:
-    """Nearest usable masterstars comps for catalog_only targets (no Phase 1 assignment)."""
-    _cols_out = ["catalog_id", "mag", "comp_tier", "comp_rms", "x", "y"]
-    if masterstars_df is None or masterstars_df.empty:
-        return pd.DataFrame(columns=_cols_out)
-    try:
-        ra_t = float(pd.to_numeric(target_row.get("ra_deg"), errors="coerce"))
-        dec_t = float(pd.to_numeric(target_row.get("dec_deg"), errors="coerce"))
-    except Exception:  # noqa: BLE001
-        ra_t, dec_t = float("nan"), float("nan")
-    if not (math.isfinite(ra_t) and math.isfinite(dec_t)):
-        return pd.DataFrame(columns=_cols_out)
-
-    pool = masterstars_df.copy()
-    if "is_usable" not in pool.columns:
-        return pd.DataFrame(columns=_cols_out)
-    pool = pool.loc[_bool_col(pool["is_usable"])].copy()
-
-    _zcol = "zone" if "zone" in pool.columns else ("zone_flag" if "zone_flag" in pool.columns else None)
-    if _zcol:
-        _z = pool[_zcol].astype(str).str.strip().str.lower()
-        pool = pool.loc[_z.isin(["linear", "noisy1"])].copy()
-    else:
-        return pd.DataFrame(columns=_cols_out)
-
-    if "catalog_id" in pool.columns:
-        _cids = pool["catalog_id"].map(_normalize_gaia_id)
-    else:
-        _cids = pool.get("name", pd.Series("", index=pool.index)).map(_normalize_gaia_id)
-    pool = pool.loc[_cids.ne(target_cid) & _cids.astype(str).str.len().gt(0)].copy()
-    if pool.empty:
-        return pd.DataFrame(columns=_cols_out)
-
-    _ra = pd.to_numeric(pool.get("ra_deg"), errors="coerce")
-    _de = pd.to_numeric(pool.get("dec_deg"), errors="coerce")
-    pool = pool.loc[_ra.notna() & _de.notna()].copy()
-    if pool.empty:
-        return pd.DataFrame(columns=_cols_out)
-
-    _dists: list[tuple[float, int]] = []
-    for _i, _r in pool.iterrows():
-        try:
-            _d = _angular_distance_deg(
-                ra_t,
-                dec_t,
-                float(_r["ra_deg"]),
-                float(_r["dec_deg"]),
-            )
-        except Exception:  # noqa: BLE001
-            continue
-        _dists.append((_d, int(_i)))
-    if not _dists:
-        return pd.DataFrame(columns=_cols_out)
-
-    _dists.sort(key=lambda t: t[0])
-    _n_pick = max(1, int(n_comps))
-    _picked_idx = [t[1] for t in _dists[:_n_pick]]
-    picked = pool.loc[_picked_idx]
-
-    rows: list[dict[str, Any]] = []
-    for _, r in picked.iterrows():
-        cid = _normalize_gaia_id(r.get("catalog_id", r.get("name", "")))
-        if not cid:
-            continue
-        try:
-            mag = float(pd.to_numeric(r.get("mag"), errors="coerce"))
-        except Exception:  # noqa: BLE001
-            mag = float("nan")
-        try:
-            x = float(pd.to_numeric(r.get("x"), errors="coerce"))
-            y = float(pd.to_numeric(r.get("y"), errors="coerce"))
-        except Exception:  # noqa: BLE001
-            x, y = float("nan"), float("nan")
-        rows.append(
-            {
-                "catalog_id": cid,
-                "mag": mag,
-                "comp_tier": 2,
-                "comp_rms": float("nan"),
-                "x": x,
-                "y": y,
-            }
-        )
-    out = pd.DataFrame(rows, columns=_cols_out)
-    if not out.empty:
-        logging.info(
-            "[PHASE 2A] catalog_only %s: %d nearest comps from masterstars (linear/noisy1)",
-            target_cid,
-            len(out),
-        )
-    return out
-
-
 def _phase2a_process_one_target(
     target_row: Any,
     *,
@@ -7199,7 +6830,6 @@ def _phase2a_process_one_target(
 
     target_cid = _normalize_gaia_id(target_row.get("catalog_id", ""))
     target_name = _target_display_name(target_row, fallback_cid=target_cid)
-    _is_co_target = _target_row_is_catalog_only(target_row)
     target_vsx_type = str(target_row.get("vsx_type", "") or "").strip()
     _sp = target_row.get("skip_photometry", False)
     if isinstance(_sp, (bool, np.bool_)):
@@ -7232,7 +6862,6 @@ def _phase2a_process_one_target(
                 "am_detrended": False,
                 "lc_csv": "",
                 "lc_png": "",
-                "lc_source": "forced_aperture" if _is_co_target else "dao_matched",
             }
         )
         return summary_rows, n_lc
@@ -7246,31 +6875,6 @@ def _phase2a_process_one_target(
     # Comp hviezdy pre tento target
     target_comps = _comp_index.get(target_cid, pd.DataFrame()).copy()
     _star_xy = dict(star_xy)
-
-    if target_comps.empty and _is_co_target:
-        try:
-            _n_co_comps = int(_cfg.catalog_only_n_comps)
-        except (TypeError, ValueError):
-            _n_co_comps = 5
-        if _n_co_comps < 1:
-            _n_co_comps = 5
-        target_comps = _phase2a_catalog_only_nearest_comps(
-            target_row,
-            state.masterstars_df,
-            n_comps=_n_co_comps,
-            target_cid=target_cid,
-        )
-        for _, _cr in target_comps.iterrows():
-            _ccid = _normalize_gaia_id(_cr.get("catalog_id", ""))
-            if not _ccid:
-                continue
-            try:
-                _cx = float(pd.to_numeric(_cr.get("x"), errors="coerce"))
-                _cy = float(pd.to_numeric(_cr.get("y"), errors="coerce"))
-            except Exception:  # noqa: BLE001
-                continue
-            if math.isfinite(_cx) and math.isfinite(_cy):
-                _star_xy[_ccid] = (_cx, _cy)
 
     if target_comps.empty:
         logging.warning(f"[FÁZA 2A] Target {target_name}: žiadne comp hviezdy")
@@ -7375,7 +6979,7 @@ def _phase2a_process_one_target(
 
     # Krok 2: Fotometria per snímka (PERF-8: slice shared flux matrix when built)
     frame_results: list[pd.DataFrame] = []
-    if not _flux_matrix.empty and not _is_co_target:
+    if not _flux_matrix.empty:
         _id_set = set(all_ids)
         _target_slice = _flux_matrix[_flux_matrix["catalog_id"].isin(_id_set)]
         for csv_path in csv_files:
@@ -7386,30 +6990,6 @@ def _phase2a_process_one_target(
             df_frame = _df_sub.copy()
             _ft = frame_time_lookup.get(csv_path.stem)
             _cached_df = _phase2a_csv_cache.get(str(csv_path))
-            if _target_row_is_catalog_only(target_row) and not df_frame.empty:
-                try:
-                    _ra_t = float(pd.to_numeric(target_row.get("ra_deg"), errors="coerce"))
-                    _de_t = float(pd.to_numeric(target_row.get("dec_deg"), errors="coerce"))
-                except Exception:  # noqa: BLE001
-                    _ra_t, _de_t = float("nan"), float("nan")
-                if math.isfinite(_ra_t) and math.isfinite(_de_t):
-                    df_frame = _catalog_only_merge_frame_flux(
-                        df_frame,
-                        target_catalog_id=target_cid,
-                        ra_deg=_ra_t,
-                        dec_deg=_de_t,
-                        proc_csv=csv_path,
-                        aligned_dir=_aligned_dir_2a,
-                        frame_csv_df=_cached_df,
-                        aperture_r_px=float(apertures_px.get(target_cid, float("nan"))),
-                        fwhm_px=float(fwhm_px),
-                        annulus_inner_fwhm=float(annulus_inner_fwhm),
-                        annulus_outer_fwhm=float(annulus_outer_fwhm),
-                        sat_limit_adu=sat_limit_resolved,
-                        frame_times=_ft,
-                        gain=float(_gain_phot),
-                        read_noise=float(_rn_phot),
-                    )
             if (chip_fw is None or chip_fh is None) and ("x" in df_frame.columns and "y" in df_frame.columns):
                 try:
                     _xm = float(pd.to_numeric(df_frame["x"], errors="coerce").max())
@@ -7477,31 +7057,8 @@ def _phase2a_process_one_target(
                 gain=float(_gain_phot),
                 read_noise=float(_rn_phot),
                 use_apcorr_flux=bool(getattr(_cfg, "cog_aperture_correction_enabled", False)),
+                variable_target_catalog_ids=state.variable_target_catalog_ids,
             )
-            if _is_co_target and not df_frame.empty:
-                try:
-                    _ra_t = float(pd.to_numeric(target_row.get("ra_deg"), errors="coerce"))
-                    _de_t = float(pd.to_numeric(target_row.get("dec_deg"), errors="coerce"))
-                except Exception:  # noqa: BLE001
-                    _ra_t, _de_t = float("nan"), float("nan")
-                if math.isfinite(_ra_t) and math.isfinite(_de_t):
-                    df_frame = _catalog_only_merge_frame_flux(
-                        df_frame,
-                        target_catalog_id=target_cid,
-                        ra_deg=_ra_t,
-                        dec_deg=_de_t,
-                        proc_csv=csv_path,
-                        aligned_dir=_aligned_dir_2a,
-                        frame_csv_df=_cached_df,
-                        aperture_r_px=float(apertures_px.get(target_cid, float("nan"))),
-                        fwhm_px=float(fwhm_px),
-                        annulus_inner_fwhm=float(annulus_inner_fwhm),
-                        annulus_outer_fwhm=float(annulus_outer_fwhm),
-                        sat_limit_adu=sat_limit_resolved,
-                        frame_times=_ft,
-                        gain=float(_gain_phot),
-                        read_noise=float(_rn_phot),
-                    )
             if not df_frame.empty:
                 if (chip_fw is None or chip_fh is None) and ("x" in df_frame.columns and "y" in df_frame.columns):
                     try:
@@ -8120,15 +7677,6 @@ def _phase2a_process_one_target(
                         )
         except Exception as _meth_exc:  # noqa: BLE001
             logging.warning("[METHOD-LC] init failed for %s: %s", target_cid, _meth_exc)
-    if _target_row_is_catalog_only(target_row) and lc_csv.is_file():
-        try:
-            import shutil  # noqa: PLC0415
-
-            _lc_alias = lc_dir / f"LC_{target_cid}.csv"
-            shutil.copyfile(lc_csv, _lc_alias)
-        except Exception:  # noqa: BLE001
-            pass
-
     # Kvalita comp pre UI (tabuľka „Porovnávacie hviezdy“)
     _cq_path = lc_dir / f"comp_quality_{target_cid}.json"
     try:
@@ -8284,7 +7832,6 @@ def _phase2a_process_one_target(
             "mag_median_post_gs11": _mag_post_gs11,
             "lc_csv": str(lc_csv),
             "lc_png": str(lc_png),
-            "lc_source": "forced_aperture" if _is_co_target else "dao_matched",
             "ct_ok": bool(ct_ok),
             "ct_corr": float(ct_corr) if bool(ct_ok) and math.isfinite(float(ct_corr)) else float("nan"),
             "ct_c1": float(c1) if bool(ct_ok) and math.isfinite(float(c1)) else float("nan"),
@@ -8425,9 +7972,6 @@ def _phase2a_finalize_exports(
         for _, trow in at_df.iterrows():
             target_cid = _normalize_gaia_id(trow.get("catalog_id", ""))
             if not target_cid:
-                continue
-            if _target_row_is_catalog_only(trow):
-                logging.debug("[EXPORT] Skip catalog_only target %s", target_cid)
                 continue
             lc_csv = lc_csv_path(lc_dir, target_cid, "aperture")
             if not lc_csv.is_file():
@@ -8666,7 +8210,6 @@ def run_phase2a(
     _aligned_dir_2a = state._aligned_dir_2a
     _cfg = state._cfg
     _nt = state._nt
-    _n_catalog_only = state._n_catalog_only
     _save_png = bool(_cfg.save_lightcurve_png)
     if aperture_fwhm_factor is not None:
         try:
@@ -8722,11 +8265,6 @@ def run_phase2a(
     )
 
     # Per target loop
-    if _n_catalog_only:
-        logging.info(
-            "[PHASE 2A] %d catalog_only targets — preskočené (bez DAO na masterstar)",
-            _n_catalog_only,
-        )
     # _phase2a_process_single_target (inline): ZP → CT → (outlier → airmass | airmass → outlier) → export.
     for ti, (_, target_row) in enumerate(at_df.iterrows(), start=1):
         summary_rows, n_lc = _phase2a_process_one_target(
@@ -10509,10 +10047,8 @@ def select_active_targets(
     - Hviezda musí byť v snímke (``x,y`` aspoň ``edge_margin_px`` od okraja efektívneho poľa; to isté číslo
       ako ``chip_interior_margin_px`` vo Fáze 0+1 — jednotné s porovnávačkami a suspected).
     - Šírka/výška sa zväčší z dát ak treba
-    - Musí byť nájdená v masterstars_full_match.csv (cross-match < match_radius_arcsec), **alebo**
-      (ak je zadaný ``masterstar_fits_path``) môže byť doplnená ako ``zone=catalog_only`` — VSX v
-      ``variable_targets`` v ``safe_bbox`` s Gaia match ``good``/``uncertain``, bez masterstar zhody,
-      s ``x,y`` z aktuálneho MASTERSTAR WCS (nie zo stĺpcov v ``variable_targets``).
+    - Must match masterstars_full_match.csv (cross-match < match_radius_arcsec).
+      VSX without masterstar (DAO+Gaia) match is excluded from active_targets.
     - ``catalog_id`` z masterstars musí byť neprázdny (inak sa cieľ vynechá).
     - **Žiadny filter na zónu** (linear / noisy / saturated všetky prejdú); kvalita je v ``zone_flag``,
       saturované ciele majú ``skip_photometry=True`` pre Fázu 2A.
@@ -10771,136 +10307,13 @@ def select_active_targets(
         "zone_flag",
         "skip_photometry",
     ]
-    # --- CATALOG_ONLY: VSX v safe_bbox bez masterstar zhody; x,y z MASTERSTAR WCS (nie stale CSV) ---
-    catalog_only_rows: list[dict] = []
-    _ms_fits_co = Path(str(masterstar_fits_path)).expanduser().resolve() if masterstar_fits_path else None
-    if _ms_fits_co is not None and _ms_fits_co.is_file():
-        try:
-            import warnings
-
-            from astropy.wcs import FITSFixedWarning, WCS
-
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", FITSFixedWarning)
-                with astrofits.open(_ms_fits_co, memmap=False) as hdul:
-                    hdr_co = hdul[0].header
-                    wcs_m = WCS(hdr_co)
-            wcs_usable = _masterstar_wcs_usable_for_placement(hdr_co, wcs_m)
-            if not wcs_m.has_celestial:
-                log_event("CATALOG_ONLY WCS missing celestial axes — skipping forced aperture placement")
-            elif not wcs_usable:
-                log_event(
-                    "CATALOG_ONLY forced aperture skipped — masterstar WCS not solved (no VY_PSOLV/VY_SIBL)"
-                )
-            if safe_bbox is not None:
-                try:
-                    x0b, y0b, x1b, y1b = safe_bbox
-                    x_min, y_min, x_max, y_max = float(x0b), float(y0b), float(x1b), float(y1b)
-                except Exception:  # noqa: BLE001
-                    x_min = float(edge_margin_px)
-                    y_min = float(edge_margin_px)
-                    x_max = float(fw) - float(edge_margin_px)
-                    y_max = float(fh) - float(edge_margin_px)
-            else:
-                x_min = float(edge_margin_px)
-                y_min = float(edge_margin_px)
-                x_max = float(fw) - float(edge_margin_px)
-                y_max = float(fh) - float(edge_margin_px)
-
-            unmatched = vt_in.loc[~vt_in.index.isin(matched_vt_idx)].copy()
-            if "gaia_match_quality" in unmatched.columns:
-                gmq = unmatched["gaia_match_quality"].astype(str).str.strip().str.lower()
-                quality_mask = gmq.isin(["good", "uncertain"])
-            else:
-                quality_mask = pd.Series(True, index=unmatched.index)
-
-            ra_u = pd.to_numeric(unmatched["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
-            de_u = pd.to_numeric(unmatched["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
-            ok_rd = np.isfinite(ra_u) & np.isfinite(de_u)
-            xy_u = np.full((len(unmatched), 2), np.nan, dtype=np.float64)
-            if bool(ok_rd.any()) and wcs_usable:
-                pts = np.column_stack([ra_u[ok_rd], de_u[ok_rd]])
-                xy_part = wcs_m.all_world2pix(pts, 0)
-                xy_u[ok_rd, :] = xy_part
-            unmatched = unmatched.copy()
-            unmatched["_x_wcs"] = xy_u[:, 0]
-            unmatched["_y_wcs"] = xy_u[:, 1]
-            xw = pd.to_numeric(unmatched["_x_wcs"], errors="coerce")
-            yw = pd.to_numeric(unmatched["_y_wcs"], errors="coerce")
-            inside_mask = xw.between(x_min, x_max) & yw.between(y_min, y_max) & np.isfinite(xw) & np.isfinite(yw)
-            cand = unmatched.loc[inside_mask & quality_mask].copy()
-            if not cand.empty and "catalog_id" in cand.columns:
-                cand["catalog_id"] = cand["catalog_id"].apply(_normalize_gaia_id)
-                cand = cand.drop_duplicates(subset=["catalog_id"], keep="first")
-
-            for _, urow in cand.iterrows():
-                if str(urow.get("gaia_match_quality", "")).strip().lower() != "uncertain":
-                    continue
-                ucid = _normalize_gaia_id(urow.get("catalog_id"))
-                if not ucid:
-                    continue
-                uvsx = str(urow.get("vsx_name", urow.get("name", "")) or "").strip() or "?"
-                try:
-                    _gsep = float(pd.to_numeric(urow.get("gaia_match_arcsec"), errors="coerce"))
-                except Exception:  # noqa: BLE001
-                    _gsep = float("nan")
-                _sep_s = f"{_gsep:.2f}\"" if math.isfinite(_gsep) else "?"
-                logging.warning(
-                    "[CATALOG_ONLY] WARNING: uncertain gaia_match pre catalog_id %s (%s, match=%s)",
-                    ucid,
-                    uvsx,
-                    _sep_s,
-                )
-
-            for _, row in cand.iterrows():
-                cid_c = _normalize_gaia_id(row.get("catalog_id"))
-                if not cid_c:
-                    continue
-                try:
-                    ra_v = float(pd.to_numeric(row["ra_deg"], errors="coerce"))
-                    de_v = float(pd.to_numeric(row["dec_deg"], errors="coerce"))
-                except Exception:  # noqa: BLE001
-                    continue
-                if not (math.isfinite(ra_v) and math.isfinite(de_v)):
-                    continue
-                xc = float(row["_x_wcs"])
-                yc = float(row["_y_wcs"])
-                if not (math.isfinite(xc) and math.isfinite(yc)):
-                    continue
-                mag_vsx = row.get("vsx_mag_max", row.get("mag", float("nan")))
-                mag_v = float(pd.to_numeric(mag_vsx, errors="coerce"))
-                if not math.isfinite(mag_v):
-                    mag_v = float("nan")
-                catalog_only_rows.append(
-                    {
-                        "name": row.get("name", ""),
-                        "vsx_name": row.get("vsx_name", row.get("name", "")),
-                        "vsx_type": row.get("vsx_type", ""),
-                        "vsx_period": row.get("vsx_period", ""),
-                        "priority": row.get("priority", 1),
-                        "ra_deg": ra_v,
-                        "dec_deg": de_v,
-                        "x": xc,
-                        "y": yc,
-                        "catalog_id": cid_c,
-                        "mag": mag_v,
-                        "b_v": float("nan"),
-                        "bp_rp": float("nan"),
-                        "zone_flag": "catalog_only",
-                        "skip_photometry": False,
-                        "bv_source": "none",
-                    }
-                )
-
-            n_co = len(catalog_only_rows)
-            if n_co > 0:
-                logging.info(
-                    "[CATALOG_ONLY] %s VSX hviezd pridaných ako catalog_only fallback",
-                    n_co,
-                )
-        except Exception as exc_co:  # noqa: BLE001
-            logging.warning("[CATALOG_ONLY] fallback skipped: %s", exc_co)
-    if not matched_rows and not catalog_only_rows:
+    n_excluded_no_dao_match = int((~vt_in.index.isin(matched_vt_idx)).sum())
+    if n_excluded_no_dao_match:
+        logging.info(
+            "[Faza 0] Excluded %d VSX targets without masterstar (DAO+Gaia) match - not in active_targets",
+            n_excluded_no_dao_match,
+        )
+    if not matched_rows:
         log_event(
             "select_active_targets: linear=0 noisy1=0 noisy2=0 noisy3=0 saturated=0 "
             f"no_catalog_id={no_catalog_id} out_of_frame={out_of_frame}"
@@ -10908,8 +10321,6 @@ def select_active_targets(
         return pd.DataFrame(columns=_empty_cols)
 
     result = pd.DataFrame(matched_rows) if matched_rows else pd.DataFrame(columns=_empty_cols)
-    if catalog_only_rows:
-        result = pd.concat([result, pd.DataFrame(catalog_only_rows)], ignore_index=True)
     if "catalog_id" in result.columns:
         # NEPOUŽÍVAŤ float() (precision loss). Použi robustnú normalizáciu.
         result["catalog_id"] = result["catalog_id"].apply(_normalize_gaia_id)
@@ -10946,19 +10357,14 @@ def select_active_targets(
     n_n2 = int((result["zone_flag"] == "noisy2").sum())
     n_n3 = int((result["zone_flag"] == "noisy3").sum())
     n_sat = int((result["zone_flag"] == "saturated").sum())
-    n_catalog_only = (
-        int(result["zone_flag"].astype(str).str.strip().str.lower().eq("catalog_only").sum())
-        if "zone_flag" in result.columns
-        else 0
-    )
     log_event(
         f"select_active_targets: linear={n_lin} noisy1={n_n1} noisy2={n_n2} noisy3={n_n3} "
         f"saturated={n_sat} no_catalog_id={no_catalog_id} out_of_frame={out_of_frame} "
-        f"catalog_only={n_catalog_only}"
+        f"excluded_no_dao_match={n_excluded_no_dao_match}"
     )
     logging.info(
         f"[FÁZA 0] active_targets: {len(result)} / {len(vt)} VSX hviezd "
-        f"(in_frame={int(in_frame.sum())}, masterstar_matched={len(matched_rows)}, catalog_only={n_catalog_only})"
+        f"(in_frame={int(in_frame.sum())}, masterstar_matched={len(matched_rows)}, excluded_no_dao_match={n_excluded_no_dao_match})"
     )
     result = _ensure_active_target_display_names(result)
     return result.reset_index(drop=True)
@@ -11307,14 +10713,6 @@ def build_global_comp_pool(
 ) -> pd.DataFrame:
     """Zostav globálny comp pool — statické filtre + RMS naprieč framami (raz pre pole)."""
     pool = masterstars_df.copy()
-    _co_mask = _is_catalog_only(pool)
-    if _co_mask.any():
-        pool = pool[~_co_mask].copy()
-        logging.info(
-            "[COMP] catalog_only excluded from comp pool: %d removed, %d remain",
-            int(_co_mask.sum()),
-            int(len(pool)),
-        )
     for _id_col in ("catalog_id", "name"):
         if _id_col in pool.columns:
             pool[_id_col] = _normalize_id_series(pool[_id_col])
@@ -11699,14 +11097,6 @@ def select_comparison_stars_per_target(
             ms = ms.drop(columns=["comp_rms"])
     else:
         ms = masterstars_df.copy()
-    _co_mask = _is_catalog_only(ms)
-    if _co_mask.any():
-        ms = ms[~_co_mask].copy()
-        logging.info(
-            "[COMP] catalog_only excluded from comp pool: %d removed, %d remain",
-            int(_co_mask.sum()),
-            int(len(ms)),
-        )
     for _id_col in ("catalog_id", "name"):
         if _id_col in ms.columns:
             ms[_id_col] = _normalize_id_series(ms[_id_col])
@@ -12750,24 +12140,14 @@ def run_phase0_and_phase1(
 
     _t_phase1 = time.time()
     _gs11_comp_rejects_acc: list[int] = [0]
-    _n_co = sum(1 for _, r in active.iterrows() if _target_row_is_catalog_only(r))
-    _n_active = int(len(active)) - _n_co
-    _i_active = 0
-    for _, (active_idx, target_row) in enumerate(active.iterrows(), start=1):
-        _is_co = _target_row_is_catalog_only(target_row)
-        if not _is_co:
-            _i_active += 1
+    _n_active = int(len(active))
+    for _i_active, (active_idx, target_row) in enumerate(active.iterrows(), start=1):
         try:
-            if progress_cb is not None and not _is_co and (
-                _i_active == 1
-                or _i_active == _n_active
-                or (_n_active > 1 and _i_active % max(1, _n_active // 12) == 0)
+            if progress_cb is not None and (
+                _i_active == 1 or _i_active == _n_active or (_n_active > 1 and _i_active % max(1, _n_active // 12) == 0)
             ):
                 _tid = str(target_row.get("vsx_name") or target_row.get("catalog_id", ""))[:48]
-                _p(
-                    f"Fáza 1: cieľ {_i_active}/{_n_active} "
-                    f"(+ {_n_co} catalog_only skipped): {_tid}"
-                )
+                _p(f"Phase 1: target {_i_active}/{_n_active}: {_tid}")
             tr_enriched = _enrich_target_bp_rp_from_gaia_db(
                 target_row,
                 gaia_db_path=_gaia_db_targets,
@@ -12776,12 +12156,6 @@ def run_phase0_and_phase1(
             )
             if "bp_rp" in active.columns:
                 active.loc[active_idx, "bp_rp"] = tr_enriched.get("bp_rp", active.loc[active_idx, "bp_rp"])
-            if _is_co:
-                logging.debug(
-                    "[PHASE 1] Skip catalog_only comp selection: %s",
-                    target_row.get("catalog_id", "?"),
-                )
-                continue
             comps = select_comparison_stars_per_target(
                 tr_enriched,
                 ms_df,

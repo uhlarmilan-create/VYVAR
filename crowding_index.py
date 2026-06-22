@@ -167,9 +167,6 @@ def _load_lc_star_table(platesolve_dir: Path) -> pd.DataFrame:
         df = df.copy()
         df["catalog_id"] = df["catalog_id"].fillna("").astype(str).str.strip()
         df = df[df["catalog_id"].ne("") & ~df["catalog_id"].str.lower().isin(["nan", "none"])]
-        zcol = "zone_flag" if "zone_flag" in df.columns else ("zone" if "zone" in df.columns else None)
-        if zcol is not None:
-            df = df[df[zcol].fillna("").astype(str).str.strip().str.lower() != "catalog_only"]
         keep = [c for c in ("catalog_id", "name", "vsx_type", "ra_deg", "dec_deg", "mag") if c in df.columns]
         return df[keep] if not df.empty else None
 

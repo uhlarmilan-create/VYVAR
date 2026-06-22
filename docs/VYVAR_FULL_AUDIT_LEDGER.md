@@ -14,8 +14,9 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 |------|---------|--------|--------|
 | 1 | G1-F007 sibling crowded-field `p_false` gate | **FIXED** (geometric-evidence branch + adversarial tests) | `5225c27` |
 | 2 | Group 1 repro: astroalign RANSAC unseeded | **FIXED** (`seeded_numpy_default_rng` + determinism tests) | `98de910` |
-| 3 | G2-F001 catalog_only silent drop in Phase 2A | **FIXED** (route to forced-aperture; saturated skip unchanged) | `f42ce89` |
-| 4 | G2-F002 catalog_only placement rejects sibling WCS | **FIXED** (`_masterstar_wcs_usable_for_placement`: VY_PSOLV or VY_SIBL) | `0dd59d7` |
+| 3 | G2-F001 catalog_only silent drop in Phase 2A | **SUPERSEDED** (2026-06-22): forced-aperture / catalog_only path removed; VSX without DAO+Gaia match excluded upstream in `select_active_targets` | this commit |
+| 4 | G2-F002 catalog_only placement rejects sibling WCS | **SUPERSEDED** (2026-06-22): catalog_only placement removed with forced-aperture path | this commit |
+| — | **Forced-aperture removal — validated do-no-harm** | **DONE** (2026-06-22): strip-FORCED gate vs draft 419 — `mag_inst` 360/360 B; `mag_calib` 357/360 B (one +~30 mmag uniform zeropoint accepted); R XY wrong-star closed. Variable direct-hit-only rule. Backlog: upfront exclusion of intermittently-DAO comps at selection. | this commit |
 | 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `b4a45fb` |
 
 ---
@@ -578,8 +579,8 @@ Method (Group 2): automated AST inventory + lens scans (L1-L11) on 10 modules (3
 
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
-| G2-F001 | **HIGH** | L4 | `photometry_core.py:7199-7230` | ~~`zone_flag=catalog_only` sets `skip_photo=True`…~~ **FIXED** `f42ce89`: only `saturated` skips; catalog_only routes to `_catalog_only_merge_frame_flux` at 7473. | Catalog-only targets must not silently drop LCs while reporting a forced-aperture source. |
-| G2-F002 | **HIGH** | L4 | `photometry_core.py:10782` | ~~Phase-01 `VY_PSOLV != 1` skips catalog_only placement~~ **FIXED** `0dd59d7`: usable WCS = celestial + (`VY_PSOLV==1` or `VY_SIBL`). See **G2-F002b** for per-frame dao trust downgrade (out of scope). | Unsolved-frame catalog placement must surface trust/quality downgrade, not quiet flux gaps. |
+| G2-F001 | **HIGH** | L4 | `photometry_core.py` (removed) | ~~catalog_only forced-aperture routing~~ **SUPERSEDED** (2026-06-19): path deleted; unmatched VSX excluded in Fáza 0 (`select_active_targets`). Saturated `skip_photometry` unchanged. | Photometry is DAO+Gaia matched only; no forced-aperture LCs. |
+| G2-F002 | **HIGH** | L4 | `photometry_core.py` (removed) | ~~catalog_only WCS placement~~ **SUPERSEDED** (2026-06-19): placement helpers deleted with forced-aperture path. | Unmatched VSX are excluded, not placed via VSX coords. |
 | G2-F002b | **MED** | L4 | `photometry_core.py` (per-frame) | **BACKLOG** — `dao_matched` frames on unsolved per-frame WCS can yield nondetection flux without explicit trust downgrade (distinct from masterstar placement). | Per-frame unsolved trust must downgrade, not silent nondetection. |
 | G2-F003 | **MED** | L1 | `photometry_core.py:7692` | `apertures_px.get(target_cid, 3.0)` dilution fallback when aperture map missing (DR4-2). | Missing per-star aperture must fail loud or derive from SNR table, not a universal 3.0 px literal. |
 | G2-F004 | **MED** | L4 | `photometry_core.py:7897` | Fix-A `err` paired with `ensemble_scatter` by positional index only (DR4-1); row misalignment risks wrong error columns. | Error model pairing must use stable star keys, not parallel list order. |

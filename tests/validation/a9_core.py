@@ -1,6 +1,6 @@
 """A9 NEIGHBOR-SUB acceptance envelope: blend grid, VYVAR aperture baseline, zone criteria.
 
-Validation-only. Uses photometry_core._catalog_only_fixed_aperture_flux (VYVAR annulus path)
+Validation-only. Uses photometry_core._annulus_sky_subtracted_flux (VYVAR annulus path)
 with AppConfig-default aperture radii (VY_FWHM_GAUSS scale). ASCII, deterministic.
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ from typing import Any, Literal
 import numpy as np
 
 from config import AppConfig
-from photometry_core import _catalog_only_fixed_aperture_flux
+from photometry_core import _annulus_sky_subtracted_flux
 from tests.validation.gen_frame import moffat_stamp
 from tests.validation.score import RNG_SEEDS
 
@@ -298,7 +298,7 @@ def measure_target_flux_vyvar(
 ) -> float:
     """VYVAR sky-subtracted circular aperture (photometry_core path)."""
     r_ap, r_in, r_out = ctx.radii_px()
-    flux, _, _ = _catalog_only_fixed_aperture_flux(data, x_c, y_c, r_ap, r_in, r_out)
+    flux, _, _ = _annulus_sky_subtracted_flux(data, x_c, y_c, r_ap, r_in, r_out)
     return float(flux)
 
 
@@ -563,7 +563,7 @@ def run_baseline_envelope(ctx_name: str = "coarse") -> dict[str, Any]:
         "aperture_r_px": r_ap,
         "annulus_r_in_px": r_in,
         "annulus_r_out_px": r_out,
-        "extractor": "photometry_core._catalog_only_fixed_aperture_flux",
+        "extractor": "photometry_core._annulus_sky_subtracted_flux",
         "isolated_bias_pct": iso,
         "separations_fwhm": list(SEPARATIONS_FWHM),
         "delta_mags": list(DELTA_MAGS),
@@ -756,7 +756,7 @@ def write_envelope_report(out_dir: Path) -> tuple[Path, Path, bool]:
         "# A9 NEIGHBOR-SUB acceptance envelope (plain_aperture baseline)",
         "",
         "Defines per-cell zones and PASS criteria for future `neighbor_sub` scoring.",
-        f"Extractor: `photometry_core._catalog_only_fixed_aperture_flux` with AppConfig radii.",
+        f"Extractor: `photometry_core._annulus_sky_subtracted_flux` with AppConfig radii.",
         f"RNG seed: {A9_RNG_SEED}. N_FRAMES={N_FRAMES} per cell.",
         "",
     ]

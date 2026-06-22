@@ -1,6 +1,14 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-18** — **Fix C / Phase C1: dense-field alignment DIAGNOSED → root = PSF/FWHM
+Last updated: **2026-06-22** — **Forced-aperture / catalog_only removed; DAO+Gaia photometry only.**
+Variable targets measured **only on direct DAO `catalog_id` hit** (miss → nondetection/NaN; no XY
+fallback). Unmatched VSX excluded in Fáza 0. Validated do-no-harm vs draft 419: `mag_inst` 360/360 B;
+`mag_calib` 357/360 B (one target +~30 mmag uniform zeropoint from comp_qa excluding intermittent
+forced-only comp — accepted). See DECISIONS.
+
+Prior: **2026-06-19** — Stage B held pending validation (forced-aperture removal draft).
+
+Prior: **2026-06-18** — **Fix C / Phase C1: dense-field alignment DIAGNOSED → root = PSF/FWHM
 bloat; recovery NOT APPLICABLE.** The 14 late-night (post-flip, back-half) frames Fix B drops are **not**
 "good data that only failed alignment" — they are **PSF-degraded**: median **FWHM 8.60 px = 1.85× the
 good baseline 4.64 px**, concentration flux_large/flux **13.1 vs 1.65**, **corr(FWHM,

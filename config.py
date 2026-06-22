@@ -293,8 +293,6 @@ class AppConfig:
     #: TODO-44: Role-aware scale on SNR-optimal radius (SIPS-style); 1.0 = no change.
     aperture_variable_factor: float = 1.0
     aperture_comp_factor: float = 1.1
-    #: Phase 2A ``catalog_only`` targets: nearest comp stars from masterstars when Phase 1 assigned none.
-    catalog_only_n_comps: int = 5
     annulus_inner_fwhm: float = 4.75
     annulus_outer_fwhm: float = 9.0
     #: Top ``p`` %% brightest by ``peak_max_adu`` checked for FWHM non-linearity vs field median.

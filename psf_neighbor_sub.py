@@ -14,7 +14,7 @@ from astropy.modeling.fitting import LevMarLSQFitter
 from astropy.modeling.models import Moffat2D
 
 from config import AppConfig
-from photometry_core import _catalog_only_fixed_aperture_flux
+from photometry_core import _annulus_sky_subtracted_flux
 
 _DEFAULT_NN_CONTAM_DMAG = 2.5
 _DEFAULT_FLUX_ZP = 25.0
@@ -155,7 +155,7 @@ def _joint_moffat_fit_subtract(
         sub_flux += float(np.sum(comp_i))
         if r_ap is not None and r_in is not None and r_out is not None and neigh_idx < len(neighbour_xys):
             nx, ny = neighbour_xys[neigh_idx]
-            nfit, _, _ = _catalog_only_fixed_aperture_flux(
+            nfit, _, _ = _annulus_sky_subtracted_flux(
                 comp_i + sky, float(nx), float(ny), float(r_ap), float(r_in), float(r_out)
             )
             neighbor_fit_fluxes.append(float(nfit))
@@ -209,7 +209,7 @@ def neighbor_sub_target_flux(
     """Joint-fit subtract neighbour(s), aperture target on residual. Fail-safe to plain aperture."""
     cfg = cfg or AppConfig()
     tx, ty = float(target_xy[0]), float(target_xy[1])
-    plain_flux, _, _ = _catalog_only_fixed_aperture_flux(stamp, tx, ty, r_ap, r_in, r_out)
+    plain_flux, _, _ = _annulus_sky_subtracted_flux(stamp, tx, ty, r_ap, r_in, r_out)
     plain_flux = float(plain_flux)
 
     contam_dmag = float(getattr(cfg, "neighbor_sub_nn_contam_dmag", _DEFAULT_NN_CONTAM_DMAG))
@@ -328,7 +328,7 @@ def neighbor_sub_target_flux(
     shift = math.hypot(txf - tx, tyf - ty)
     t_amp = float(meta.get("target_amplitude", 0.0))
 
-    clean_flux, _, _ = _catalog_only_fixed_aperture_flux(residual, tx, ty, r_ap, r_in, r_out)
+    clean_flux, _, _ = _annulus_sky_subtracted_flux(residual, tx, ty, r_ap, r_in, r_out)
     clean_flux = float(clean_flux)
 
     max_nn_over = float(getattr(cfg, "neighbor_sub_max_neighbor_overmag", 0.3))

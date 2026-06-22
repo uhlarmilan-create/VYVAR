@@ -70,7 +70,7 @@ production step 2b will reuse grouped multi-source machinery in `psf_photometry_
 ### 3c. Subtract + aperture
 
 Subtract neighbour model only from a **copy** of the local stamp (never mutate shared frames).
-Aperture the target via `_catalog_only_fixed_aperture_flux` with `VY_FWHM_GAUSS`-based radii.
+Aperture the target via `_annulus_sky_subtracted_flux` with `VY_FWHM_GAUSS`-based radii.
 
 ### 3d. Bookkeeping
 
@@ -95,7 +95,6 @@ The router and downstream LC build stay unchanged except they may see new bookke
 |------|------|-------------|
 | Pipeline per-frame catalog | `enhance_catalog_dataframe_aperture_bpm` (~9197) | Flux in CSV is already deblended; all Phase 2A paths benefit |
 | Phase 2A remeasure | After `read_flux_from_csv` (~6225) for worklist targets | No pipeline rerun; re-opens aligned FITS per frame |
-| Catalog-only path | `_catalog_only_merge_frame_flux` (~1655) | Covers catalog-only targets today |
 
 Recommended: **pipeline hook** for standard DAO+aperture frames; **Phase 2A remeasure** fallback for
 catalog-only / reprocess-without-pipeline. Both gated OFF by default.
@@ -112,7 +111,7 @@ NEIGHBOR-SUB does not revive rule 2; it is a separate measurement path upstream.
 | ePSF model + per-star fit (flux, position, model, chi2) | `psf_photometry_stars` (2067), `fit_moffat_psf_stars` (1565), `build_epsf_model` -> `masterstar_epsf.fits` |
 | Worklist + neighbour identity/brightness | `crowding_targets.csv` via `_build_blend_targets_df` (195) |
 | Contaminant criterion | `assess_psf_quality` `nn_contam_dmag` logic (2056-2063) |
-| Aperture extraction on residual | `_catalog_only_fixed_aperture_flux` (1467) or `_aperture_flux_sky_per_star` (8983) |
+| Aperture extraction on residual | `_annulus_sky_subtracted_flux` (1470) or `_aperture_flux_sky_per_star` (8983) |
 | FWHM/aperture radii | `VY_FWHM_GAUSS` (post FWHM-CONSISTENCY), consistent with aperture path (`pipeline.py:9206`) |
 
 **Genuinely new code (small):** render+subtract fitted neighbour model on a local stamp; per-target
@@ -219,7 +218,7 @@ subset, validated against synthetic truth and real-field scatter, not against ol
 2. ~~Joint-fit subtract + aperture core + A9 `neighbor_sub` scoring + PSF-mismatch variant (step 2)~~ DONE
    (`psf_neighbor_sub.py`, gated OFF).
 3. Wire into per-frame measurement sites (step 2b): `enhance_catalog_dataframe_aperture_bpm` ~9197,
-   Phase-2A remeasure ~6225, `_catalog_only_merge_frame_flux` ~1655.
+   Phase-2A remeasure ~6225.
 4. Trust integration + h & chi Per real-field scatter validation (step 3).
 
 All OFF in production until synthetic envelope + real-field scatter confirm gain.

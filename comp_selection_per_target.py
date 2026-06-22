@@ -1892,26 +1892,6 @@ def _assign_comp_tiers_to_pool(
             _target_name,
         )
 
-    _tz = str(target.get("zone", "") or "").strip().lower()
-    _no_eff_color = not math.isfinite(float(target_bprp_eff))
-    if _tz == "catalog_only" and _no_eff_color and math.isfinite(float(mag_t)):
-        _half_t1 = float(max_mag_diff_t1)
-        if not math.isfinite(_half_t1) or _half_t1 <= 0:
-            _half_t1 = float(max_mag_diff)
-        if not math.isfinite(_half_t1) or _half_t1 <= 0:
-            _half_t1 = 0.5
-        _mag_col_c = candidate_pool_df.get("_mag", candidate_pool_df.get("mag", candidate_pool_df.get("phot_g_mean_mag")))
-        _mag_co = pd.to_numeric(_mag_col_c, errors="coerce")
-        _mag_only_t1 = _mag_co.sub(float(mag_t)).abs().le(float(_half_t1)) & np.isfinite(_mag_co)
-        n_mag_t1 = int(_mag_only_t1.sum())
-        candidate_pool_df.loc[_mag_only_t1, "comp_tier"] = 1
-        logging.info(
-            "[COMP] catalog_only %s: žiadna efektívna farba → mag-only selection (%d kandidátov tier=1, |Δmag|≤%.2f)",
-            target_cid,
-            n_mag_t1,
-            float(_half_t1),
-        )
-
     if logging.getLogger(__name__).isEnabledFor(logging.DEBUG):
         _tbpr_dbg = float(target_bprp_eff) if math.isfinite(float(target_bprp_eff)) else float("nan")
         for _, prow in candidate_pool_df.iterrows():

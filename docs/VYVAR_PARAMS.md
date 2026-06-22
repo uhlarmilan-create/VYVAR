@@ -319,12 +319,6 @@ no UI yet).
 |-----|---------|-------------|-------------|---------|
 | `save_lightcurve_png` | False | — | ui_photometry.py:72, ui_photometry.py:77, ui_photometry.py:103 | yes |
 
-## Photometry
-
-| key | default | clamp/range | UI location | exposed |
-|-----|---------|-------------|-------------|---------|
-| `catalog_only_n_comps` | 5 | — | — | intentionally-hidden ⚠ not in config.json |
-
 ## Photometry / COG correction
 
 | key | default | clamp/range | UI location | exposed |

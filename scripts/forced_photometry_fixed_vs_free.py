@@ -29,7 +29,7 @@ if str(_ROOT) not in sys.path:
 from config import AppConfig  # noqa: E402
 from photometry_core import (  # noqa: E402
     _aperture_radius_from_snr_table,
-    _catalog_only_fixed_aperture_flux,
+    _annulus_sky_subtracted_flux,
     load_snr_aperture_table_from_draft_dir,
 )
 
@@ -279,7 +279,7 @@ def run() -> dict[str, Any]:
         for j in range(len(cone)):
             x, y = float(x_all[j]), float(y_all[j])
             rap = float(r_ap[j])
-            a_flux[j], sky, peak = _catalog_only_fixed_aperture_flux(data, x, y, rap, ann_in, ann_out)
+            a_flux[j], sky, peak = _annulus_sky_subtracted_flux(data, x, y, rap, ann_in, ann_out)
             if peak > SAT_FRAC * sat_limit:
                 a_flux[j] = float("nan")
                 continue

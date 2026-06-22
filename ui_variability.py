@@ -19,52 +19,6 @@ from variability_detector import compute_rms_variability, compute_vdi, load_fiel
 LOGGER = logging.getLogger(__name__)
 
 
-def _is_catalog_only(df: pd.DataFrame) -> pd.Series:
-    """Boolean mask: True = catalog_only row (no real DAO detection)."""
-    mask = pd.Series(False, index=df.index)
-    if "zone_flag" in df.columns:
-        mask |= df["zone_flag"].astype(str).str.strip().str.lower() == "catalog_only"
-    if "zone" in df.columns:
-        mask |= df["zone"].astype(str).str.strip().str.lower() == "catalog_only"
-    return mask
-
-
-def _catalog_only_ids_from_active_targets(platesolve_dir: Path) -> set[str]:
-    at_path = Path(platesolve_dir) / "photometry" / "active_targets.csv"
-    if not at_path.is_file():
-        return set()
-    try:
-        at = read_vyvar_csv(at_path, low_memory=False)
-        if "catalog_id" not in at.columns:
-            return set()
-        co = _is_catalog_only(at)
-        if not co.any():
-            return set()
-        return {str(x).strip() for x in at.loc[co, "catalog_id"].tolist() if str(x).strip()}
-    except Exception:  # noqa: BLE001
-        return set()
-
-
-def _exclude_catalog_only_by_active_targets(
-    df: pd.DataFrame,
-    platesolve_dir: Path,
-    *,
-    log_prefix: str,
-) -> pd.DataFrame:
-    co_ids = _catalog_only_ids_from_active_targets(platesolve_dir)
-    if not co_ids or "catalog_id" not in df.columns:
-        return df
-    m = df["catalog_id"].astype(str).isin(co_ids)
-    if not m.any():
-        return df
-    logging.info(
-        "%s Excluding %d catalog_only (no DAO detection — sky noise)",
-        log_prefix,
-        int(m.sum()),
-    )
-    return df.loc[~m].copy()
-
-
 if TYPE_CHECKING:
     from pipeline import AstroPipeline
 
@@ -606,25 +560,12 @@ def run_variability_detection_session(
                 meta["zone_flag"] = meta.index.astype(str).map(_zf_map)
         except Exception:  # noqa: BLE001
             pass
-    _co_meta = _is_catalog_only(meta)
-    if _co_meta.any():
-        _drop_ids = meta.index[_co_meta].astype(str)
-        logging.info(
-            "[VARIABILITY] Excluding %d catalog_only from candidate detection "
-            "(sky noise, not real variability)",
-            int(len(_drop_ids)),
-        )
-        fm = fm.drop(_drop_ids, errors="ignore")
-        meta = meta.loc[~_co_meta].copy()
     comp_ids = _read_comp_catalog_ids(platesolve_dir)
     comp_rms_map: dict[str, float] = {}
     comp_csv = platesolve_dir / "photometry" / "comparison_stars_per_target.csv"
     if comp_csv.exists():
         try:
             comp_df = read_vyvar_csv(comp_csv, low_memory=False)
-            _co_comp = _is_catalog_only(comp_df)
-            if _co_comp.any():
-                comp_df = comp_df[~_co_comp].copy()
             if "catalog_id" in comp_df.columns and "comp_rms" in comp_df.columns:
                 for _, row in comp_df.iterrows():
                     cid = str(row.get("catalog_id", "")).strip()
@@ -1372,11 +1313,6 @@ def render_variability_dashboard(
 
         st.subheader("Hockey stick (RMS)")
         work = results_df.copy()
-        work = _exclude_catalog_only_by_active_targets(
-            work,
-            platesolve_dir,
-            log_prefix="[HOCKEY STICK UI]",
-        )
         work["mag"] = pd.to_numeric(work["mag"], errors="coerce")
         work["rms_pct"] = pd.to_numeric(work["rms_pct"], errors="coerce")
         work["expected_rms_pct"] = pd.to_numeric(work["expected_rms_pct"], errors="coerce")

@@ -6481,129 +6481,6 @@ def _dao_targeted_pass2_unmatched_gaia(
     return merged, n_unmatched, len(pass2_rows)
 
 
-def _inject_forced_aperture_rows(
-    df_detected: pd.DataFrame,
-    master_df: pd.DataFrame,
-    wcs_obj: Any,
-    *,
-    wpx: int,
-    h: int,
-    match_sep_arcsec: float = 8.0,
-) -> pd.DataFrame:
-    """Append forced-aperture rows for master catalog stars not matched in ``df_detected``.
-
-    Each forced row has catalog metadata from master, per-frame ``x``/``y`` from WCS, NaN flux
-    (filled later by ``enhance_catalog_dataframe_aperture_bpm``), and ``source_type='FORCED_APERTURE'``.
-    """
-    import numpy as np
-
-    _ = float(match_sep_arcsec)  # reserved for future proximity dedup vs detections
-    base = df_detected.copy() if df_detected is not None else pd.DataFrame()
-    if master_df is None or getattr(master_df, "empty", True):
-        return base
-
-    matched_ids: set[str] = set()
-    if len(base) and "catalog_id" in base.columns:
-        for raw in base["catalog_id"].fillna("").astype(str).str.strip():
-            if not raw or raw.lower() in ("nan", "none"):
-                continue
-            try:
-                matched_ids.add(str(normalize_gaia_source_id(raw)).strip())
-            except Exception:  # noqa: BLE001
-                matched_ids.add(raw)
-
-    m = master_df
-    if "ra_deg" not in m.columns or "dec_deg" not in m.columns:
-        return base
-    ra = pd.to_numeric(m["ra_deg"], errors="coerce")
-    de = pd.to_numeric(m["dec_deg"], errors="coerce")
-    ok_sky = ra.notna() & de.notna()
-    if "catalog_id" not in m.columns:
-        return base
-    cid_raw = m["catalog_id"].fillna("").astype(str).str.strip()
-    cid_norm = cid_raw.map(
-        lambda x: (
-            str(normalize_gaia_source_id(x)).strip()
-            if x and str(x).lower() not in ("nan", "none")
-            else ""
-        )
-    )
-    ok_cid = cid_norm.ne("")
-    already = cid_norm.isin(matched_ids)
-    pick = ok_sky & ok_cid & ~already
-    if not bool(pick.any()):
-        return base
-
-    sub = m.loc[pick].copy()
-    ra_u = pd.to_numeric(sub["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
-    de_u = pd.to_numeric(sub["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
-    gx, gy = wcs_obj.world_to_pixel_values(ra_u, de_u)
-    gx = np.asarray(gx, dtype=np.float64)
-    gy = np.asarray(gy, dtype=np.float64)
-    inb = (gx >= 0) & (gx < float(wpx)) & (gy >= 0) & (gy < float(h))
-    if not bool(inb.any()):
-        return base
-
-    sub = sub.loc[inb].reset_index(drop=True)
-    gx = gx[inb]
-    gy = gy[inb]
-
-    n_f = len(sub)
-    cid_out = sub["catalog_id"].map(
-        lambda x: str(normalize_gaia_source_id(x)).strip() if str(x).strip() else ""
-    )
-    cat_out = (
-        sub["catalog"].fillna("").astype(str).str.strip().to_numpy(dtype=object)
-        if "catalog" in sub.columns
-        else np.array(["GAIA_DR3"] * n_f, dtype=object)
-    )
-    nm_out = (
-        sub["name"].fillna("").astype(str).str.strip().to_numpy(dtype=object)
-        if "name" in sub.columns
-        else cid_out.astype(str)
-    )
-    mag_out = (
-        pd.to_numeric(sub["mag"], errors="coerce").to_numpy(dtype=np.float64)
-        if "mag" in sub.columns
-        else np.full(n_f, np.nan, dtype=np.float64)
-    )
-
-    forced: dict[str, Any] = {
-        "name": nm_out,
-        "catalog_id": cid_out.astype(str).to_numpy(dtype=object),
-        "ra_deg": pd.to_numeric(sub["ra_deg"], errors="coerce").to_numpy(dtype=np.float64),
-        "dec_deg": pd.to_numeric(sub["dec_deg"], errors="coerce").to_numpy(dtype=np.float64),
-        "mag": mag_out,
-        "catalog": cat_out,
-        "x": gx,
-        "y": gy,
-        "flux": np.full(n_f, np.nan, dtype=np.float64),
-        "dao_flux": np.full(n_f, np.nan, dtype=np.float64),
-        "source_type": np.array(["FORCED_APERTURE"] * n_f, dtype=object),
-        "photometry_ok": np.zeros(n_f, dtype=bool),
-    }
-    if "b_v" in sub.columns:
-        forced["b_v"] = pd.to_numeric(sub["b_v"], errors="coerce").to_numpy(dtype=np.float64)
-    for col in (
-        "bp_rp",
-        "phot_g_mean_mag",
-        "vsx_known_variable",
-        "gaia_dr3_variable_catalog",
-        "zone",
-        "is_saturated",
-        "is_usable",
-        "edge_safe_10px",
-        "saturate_limit_adu",
-    ):
-        if col in sub.columns:
-            forced[col] = sub[col].to_numpy()
-
-    forced_df = pd.DataFrame(forced)
-    if len(base) == 0:
-        return forced_df.reset_index(drop=True)
-    return pd.concat([base, forced_df], ignore_index=True)
-
-
 def _proc_rename_det_names_to_catalog_id(df: pd.DataFrame) -> pd.DataFrame:
     """Matched rows still named DET_* get ``name`` = ``catalog_id`` (stale master names)."""
     if df is None or df.empty or "catalog_id" not in df.columns or "name" not in df.columns:
@@ -6623,7 +6500,7 @@ def _proc_rename_det_names_to_catalog_id(df: pd.DataFrame) -> pd.DataFrame:
 def _proc_drop_unmatched_dao_rows(df: pd.DataFrame) -> pd.DataFrame:
     """Drop unmatched DAO_ONLY detections (no catalog_id) BEFORE expensive per-star work.
 
-    GAIA_MATCHED and FORCED_APERTURE rows both carry a catalog_id and are kept; DAO_ONLY rows
+    GAIA_MATCHED rows carry a catalog_id and are kept; DAO_ONLY rows
     (empty catalog_id) are discarded by the final keep-matched filter anyway. Keying on
     catalog_id (not source_type) is correct in both export paths, including the in-process path
     where source_type=GAIA_MATCHED is assigned only later.
@@ -6643,9 +6520,7 @@ def _proc_catalog_keep_matched_rows_only(df: pd.DataFrame) -> pd.DataFrame:
     _valid_cid = cid.ne("") & ~cid.str.lower().isin({"nan", "none"})
     if "source_type" in df.columns:
         _valid_source = (
-            df["source_type"].fillna("").astype(str).str.strip().str.upper().isin(
-                {"GAIA_MATCHED", "FORCED_APERTURE"}
-            )
+            df["source_type"].fillna("").astype(str).str.strip().str.upper().eq("GAIA_MATCHED")
         )
         keep = _valid_cid & _valid_source
     else:
@@ -6921,25 +6796,6 @@ def detect_stars_match_master_reference(
 
     if tbl is None or len(tbl) == 0:
         df_out = pd.DataFrame()
-        if getattr(wcs_obj, "has_celestial", False):
-            df_out = _inject_forced_aperture_rows(
-                df_out,
-                m_valid,
-                wcs_obj,
-                wpx=int(_chip_wpx),
-                h=int(_chip_h),
-                match_sep_arcsec=float(match_sep_arcsec),
-            )
-            n_forced_empty = (
-                int((df_out["source_type"] == "FORCED_APERTURE").sum())
-                if len(df_out) and "source_type" in df_out.columns
-                else 0
-            )
-            if n_forced_empty:
-                LOGGER.info(
-                    "[DAO forced] injected %d forced-aperture rows for unmatched master stars",
-                    n_forced_empty,
-                )
         df_out = _proc_rename_det_names_to_catalog_id(df_out)
         empty_meta["faintest_mag_limit"] = float(faintest_mag_limit) if faintest_mag_limit is not None else None
         empty_meta["n_dropped_fainter_than_limit"] = 0
@@ -7208,22 +7064,6 @@ def detect_stars_match_master_reference(
         }
     else:
         meta_mag = {"faintest_mag_limit": None, "n_dropped_fainter_than_limit": 0}
-
-    if getattr(wcs_obj, "has_celestial", False):
-        df_out = _inject_forced_aperture_rows(
-            df_out,
-            m_valid,
-            wcs_obj,
-            wpx=int(_chip_wpx),
-            h=int(_chip_h),
-            match_sep_arcsec=float(match_sep_arcsec),
-        )
-        n_forced = int((df_out["source_type"] == "FORCED_APERTURE").sum()) if "source_type" in df_out.columns else 0
-        if n_forced:
-            LOGGER.info(
-                "[DAO forced] injected %d forced-aperture rows for unmatched master stars",
-                n_forced,
-            )
 
     df_out = _proc_rename_det_names_to_catalog_id(df_out)
 
@@ -8784,11 +8624,6 @@ def _export_per_frame_run_catalog_core(
     # For matched rows (catalog_id non-empty), bring stable MASTERSTAR columns like zone/is_usable/bp_rp/etc.
     try:
         if master_tab is not None and "catalog_id" in df.columns and "catalog_id" in master_tab.columns:
-            _forced_aperture_mask = (
-                df["source_type"].fillna("").astype(str).str.strip().eq("FORCED_APERTURE")
-                if "source_type" in df.columns
-                else pd.Series(False, index=df.index)
-            )
             _JOIN_COLS = [
                 "zone",
                 "is_saturated",
@@ -8817,8 +8652,6 @@ def _export_per_frame_run_catalog_core(
                 # Avoid column collisions; MASTERSTAR values should win for these columns.
                 df = df.drop(columns=[c for c in join_cols if c in df.columns], errors="ignore")
                 df = df.merge(master_lookup, on="catalog_id", how="left")
-                if bool(_forced_aperture_mask.any()):
-                    df.loc[_forced_aperture_mask, "source_type"] = "FORCED_APERTURE"
     except Exception:  # noqa: BLE001
         pass
 

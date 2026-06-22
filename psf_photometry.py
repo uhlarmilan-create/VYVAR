@@ -72,18 +72,8 @@ def _median_fwhm_obs_files(db: VyvarDatabase, draft_id: int) -> float | None:
     return float(np.median(np.asarray(vals, dtype=np.float64)))
 
 
-def _row_is_catalog_only(row: Any) -> bool:
-    if not hasattr(row, "get"):
-        return False
-    z = str(row.get("zone", "") or "").strip().lower()
-    if z == "catalog_only":
-        return True
-    zf = str(row.get("zone_flag", "") or "").strip().lower()
-    return zf == "catalog_only"
-
-
 def _epsf_allowed_catalog_ids(platesolve_dir: Path) -> tuple[set[str], int, int]:
-    """Catalog IDs for ePSF build: active_targets (non catalog_only) + comparison_stars pool."""
+    """Catalog IDs for ePSF build: active_targets + comparison_stars pool."""
     root = Path(platesolve_dir)
     phot = root / "photometry"
     ms_ids: set[str] = set()
@@ -105,8 +95,6 @@ def _epsf_allowed_catalog_ids(platesolve_dir: Path) -> tuple[set[str], int, int]
         try:
             at = pd.read_csv(at_p, low_memory=False, dtype={"catalog_id": str})
             for _, row in at.iterrows():
-                if _row_is_catalog_only(row):
-                    continue
                 _add_cid(row.get("catalog_id"), ms_ids)
         except Exception as exc:  # noqa: BLE001
             LOGGER.warning("[ePSF] active_targets load failed: %s", exc)
@@ -139,7 +127,7 @@ def _epsf_positions_from_csvs(
     if not need:
         return extra
 
-    def _try_csv(path: Path, *, skip_catalog_only: bool = False) -> None:
+    def _try_csv(path: Path) -> None:
         nonlocal need, extra
         if not path.is_file() or not need:
             return
@@ -148,8 +136,6 @@ def _epsf_positions_from_csvs(
         except Exception:  # noqa: BLE001
             return
         for _, row in df.iterrows():
-            if skip_catalog_only and _row_is_catalog_only(row):
-                continue
             cid = str(_norm_catalog_id(row.get("catalog_id", "")) or "").strip()
             if not cid or cid not in need:
                 continue
@@ -173,7 +159,7 @@ def _epsf_positions_from_csvs(
             )
             need.discard(cid)
 
-    _try_csv(phot / "active_targets.csv", skip_catalog_only=True)
+    _try_csv(phot / "active_targets.csv")
     for comp_p in (phot / "comparison_stars.csv", root / "comparison_stars.csv"):
         _try_csv(comp_p)
     return extra
@@ -2127,9 +2113,9 @@ def _annulus_sky_per_px_full_frame(
     ):
         return float("nan"), "border_fallback"
     try:
-        from photometry_core import _catalog_only_fixed_aperture_flux
+        from photometry_core import _annulus_sky_subtracted_flux
 
-        _, sky_pp, _ = _catalog_only_fixed_aperture_flux(
+        _, sky_pp, _ = _annulus_sky_subtracted_flux(
             np.asarray(frame_data, dtype=np.float64),
             float(x),
             float(y),

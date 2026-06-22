@@ -467,7 +467,7 @@ def render_masterstar_qa(
                     f"{_gaia_dao_pct:.1f}",
                     help=(
                         f"{_help_detected} of {_denom or '?'} Gaia catalog stars detected by DAO\n"
-                        f"Undetected (catalog_only): {_undetected}"
+                        f"Undetected (no DAO match): {_undetected}"
                     ),
                 )
             else:

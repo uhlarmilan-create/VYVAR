@@ -1,7 +1,7 @@
 """V3d: PSF-vs-aperture-vs-truth at fine scale (draft-367-like, mismatch ~0).
 
 Publication-grade inject-and-recover validation using VYVAR's real ``psf_photometry_stars`` and
-``_catalog_only_fixed_aperture_flux``. ASCII, deterministic RNG. Harness-only (production PSF OFF).
+``_annulus_sky_subtracted_flux``. ASCII, deterministic RNG. Harness-only (production PSF OFF).
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from astropy.table import Table
 from photutils.psf import extract_stars
 
 from config import AppConfig
-from photometry_core import _catalog_only_fixed_aperture_flux
+from photometry_core import _annulus_sky_subtracted_flux
 from psf_photometry import _MASTERSTAR_EPSF_META_NAME, _epsf_build_imagepsf_from_stars, psf_photometry_stars
 from tests.validation.gen_frame import moffat_stamp
 from tests.validation.score import RNG_SEEDS
@@ -99,7 +99,7 @@ def aperture_correction_factor(cfg: V3dFineConfig) -> float:
         ny=cfg.stamp_n,
         nx=cfg.stamp_n,
     )
-    flux_in, _, _ = _catalog_only_fixed_aperture_flux(pure, cfg.stamp_c, cfg.stamp_c, r_ap, r_in, r_out)
+    flux_in, _, _ = _annulus_sky_subtracted_flux(pure, cfg.stamp_c, cfg.stamp_c, r_ap, r_in, r_out)
     if not math.isfinite(flux_in) or flux_in <= 0:
         return 1.0
     return 1.0 / float(flux_in)
@@ -200,7 +200,7 @@ def measure_aperture(
     apcor: float,
 ) -> tuple[float, float]:
     r_ap, r_in, r_out = cfg.radii_px()
-    flux, sky_pp, _ = _catalog_only_fixed_aperture_flux(
+    flux, sky_pp, _ = _annulus_sky_subtracted_flux(
         frame, cfg.stamp_c, cfg.stamp_c, r_ap, r_in, r_out
     )
     flux_c = float(flux) * float(apcor)
@@ -312,7 +312,7 @@ def _sky_border_median(cut: np.ndarray) -> float:
 def _sky_annulus_per_px(frame: np.ndarray, cfg: V3dFineConfig) -> float:
     """Annulus sky from production aperture path (per-pixel median)."""
     r_ap, r_in, r_out = cfg.radii_px()
-    _, sky_pp, _ = _catalog_only_fixed_aperture_flux(
+    _, sky_pp, _ = _annulus_sky_subtracted_flux(
         frame, cfg.stamp_c, cfg.stamp_c, r_ap, r_in, r_out
     )
     return float(sky_pp)

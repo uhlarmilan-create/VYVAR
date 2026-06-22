@@ -6,6 +6,44 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## Photometry: DAO+Gaia matched only; forced-aperture / catalog_only path removed (2026-06-22)
+
+**Decision.** VYVAR measures variable targets only when they have a **masterstar (DAO+Gaia) cross-match**.
+VSX entries without such a match are **excluded upstream** in Fáza 0 (`select_active_targets`), not
+measured via forced aperture at VSX catalog coordinates. The former `catalog_only` / `forced_aperture`
+Phase 2A branch, `lc_source` provenance column, and `catalog_only_n_comps` config are **removed**.
+
+**Variable-target flux rule (strict).** Active variable targets are measured **only on a direct DAO
+`catalog_id` hit** in the per-frame proc CSV (`read_flux_from_csv`). If the target `catalog_id` is
+missing from the frame catalog → **nondetection / NaN** (`no_data`). **No XY fallback** for variable
+targets (prevents wrong-neighbor grabs on intermittent DAO frames). Comp stars retain the legacy
+`_lookup_star_in_csv` path with the bright-neighbor reject (`fallback_mag > −8.0`).
+
+**Removed knobs.** `phase2a_variable_xy_fallback_mag_tol`, `_phase2a_variable_xy_fallback_expected_mag`.
+
+**Shared helper preserved.** `_catalog_only_fixed_aperture_flux` was **renamed** to
+`_annulus_sky_subtracted_flux` (body unchanged) — it remains the annulus sky-subtraction primitive for
+DAO PSF local-sky (`psf_photometry.py`) and neighbor-sub residual aperture (`psf_neighbor_sub.py`).
+
+**Unchanged.** Saturated targets still get `skip_photometry=True` / zero-frame skip in Phase 2A.
+
+**Supersedes.** G2-F001 forced-aperture routing (`f42ce89`) and G2-F002 catalog_only WCS placement
+(`0dd59d7`) — both paths deleted rather than maintained in parallel.
+
+**Validation (strip-FORCED + Phase-2A vs draft 419, Jirny comp lists).** `mag_inst` byte-identical
+**360/360** B stable pool; **346/350** R (4 frames = intermittent-DAO NaN gaps, intended). `mag_calib`
+byte-identical **357/360** B and **344/350** R. One B target (`458415401545371264`) shows a **uniform
+~30 mmag zeropoint shift** on all 12 frames (`mag_inst` unchanged): comp_qa correctly **excludes**
+intermittent forced-only comp `458412790204894208` (10/12 DAO, 2 frames FORCED_APERTURE-only in 419) →
+ensemble 8→7 comps. **Accepted** as intended DAO-only effect (variability shape preserved; `lc_rms`
+slightly improved). R outlier `458470858164631936` frame 0041: wrong-neighbor XY closed → NaN gap.
+
+**Future backlog (not this fix).** Comp selection should exclude intermittently-DAO comps upfront
+(e.g. `458412790204894208`, listed `comp_n_frames=12` but DAO-only 10/12) so comp_qa need not drop
+them post-hoc.
+
+---
+
 ## Fix C diagnosed (C1): run-414 bad frames are PSF/FWHM-bloated, not mis-aligned; recovery N/A (2026-06-18)
 
 **Finding (measured, run-414 g, production alignment path; `CURSOR_RESULT_fixC_diag.md`).** The 14
