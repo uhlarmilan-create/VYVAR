@@ -30,4 +30,4 @@ None.
 - `trust_flag_core.py` — trust soft signal
 - `tests/test_g1_f003_alignment_pixel_fallback.py` — new
 - `docs/VYVAR_FULL_AUDIT_LEDGER.md` — G1-F003 FIXED
-- Commits: (part 1 hash) + (part 2 hash + ledger) — not pushed
+- Commits: `dbf76d5` (part 1 pixel-fallback), `0a43dbf` (part 2 LC/trust + ledger) — not pushed

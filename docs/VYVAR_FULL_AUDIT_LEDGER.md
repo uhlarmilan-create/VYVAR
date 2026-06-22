@@ -31,7 +31,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 17 | G1-F001 / G1-F002 alignment_max_control_points | **FIXED:** decouple astroalign CP from detection ladder; `alignment_max_control_points=80`; Chi/h draft 419 `B_20_2` validation PASS — max Δtranslation **0.0275 px**, speedup **5.2–13.8×** (mean **8.6×**); not byte-identical, quality-validated | `2819e86` |
 | 18 | validate_alignment_control_points draft layouts | **DONE:** `non_calibrated` / `processed` / `calibrated` / `detrended_aligned` lights + default `platesolve/MASTERSTAR` ref | `65a608b` |
 | 19 | G2-F003 dilution aperture 3.0 fallback | **FIXED:** layered fallback map → SNR-derive → skip+flag; fixed 3.0 removed; Seager 2003 / Howell 2006 photometric aperture | `0e50805` |
-| 20 | G1-F003 alignment identity / pixel-fallback | **FIXED:** ref-grid pixel NN gated on `VY_ALGN`; failed-alignment epochs flagged in LC (`alignment_failed`) + summary + trust soft signal; residual gate left OFF | pending |
+| 20 | G1-F003 alignment identity / pixel-fallback | **FIXED:** ref-grid pixel NN gated on `VY_ALGN` (`dbf76d5`); failed-alignment epochs flagged in LC (`alignment_failed`) + summary + trust soft signal (`0a43dbf`); residual gate left OFF | `0a43dbf` |
 | 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `b4a45fb` |
 
 ---
