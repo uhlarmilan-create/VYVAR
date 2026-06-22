@@ -25,6 +25,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 11 | G5-F006 PDF time axis BJD vs BJD(TDB) | **FIXED:** `_pdf_time_axis_label`; PDF LC/glossary use BJD(TDB) for bjd/bjd_tdb columns | `b74c301` |
 | 12 | G5-F008 VarAstro `n_good_comp` vs trust `n_clean` | **FIXED (distinct metrics):** VarAstro header `n_ensemble_comp` label + glossary/calibration doc; no number reconciliation | `07e6f69` |
 | 13 | G5-F004 silent export failures | **FIXED:** `record_export_failure` + `log_export_batch_summary`; ERROR logging; Phase 2A batch collector | `efbb4de` |
+| 14 | G7-F001 / G7-F002 unwired Select Stars page | **RESOLVED:** delete `ui_select_stars.py` (phantom `max_bv_diff` / stale kwarg) | pending |
 | 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `b4a45fb` |
 
 ---
@@ -1815,7 +1816,7 @@ Inventory: **49 NEEDS-TEST** + **22 FLAGGED** across Group 6 (100% statused at m
 | `app.py` | 29 | 2733 | Main Streamlit shell, pipeline pending orchestration |
 | `ui_aperture_photometry.py` | 25 | 1800 | Phase 2A UI, LC plots, report triggers |
 | `ui_quality_dashboard.py` | 14 | 1072 | QC / analyze workflow |
-| `ui_select_stars.py` | 13 | 622 | Phase 0+1 comp selection |
+| `ui_select_stars.py` | ~~13~~ **deleted** | unwired legacy page removed 2026-06-22 |
 | `ui_calibration_library.py` | 12 | 415 | Calibration library browser |
 | `ui_calibration.py` | 10 | 306 | Calibration import UI |
 | `ui_photometry_quality.py` | 10 | 380 | Photometry QC views |
@@ -1835,9 +1836,9 @@ Method: AST inventory + lens scans (L1–L11) on 14 modules (144 functions), Pha
 
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
-| G7-F001 | **HIGH** | L7 | `ui_select_stars.py:438-443`, `531` | **`cfg.phase01_comparison_max_bv_diff`** — not on `AppConfig` (`hasattr` False). **Direct attribute access** on every Select Stars page render (rules expander `st.code` block) → **AttributeError** before any button click. Confirms G6-F003 from UI side. | Every `cfg.*` in UI must be a declared field or guarded accessor. |
-| G7-F002 | **HIGH** | L8/L7 | `ui_select_stars.py:531`; `photometry_core.py:11693-11730` | UI passes **`max_bv_diff=`** to `run_phase0_and_phase1`, but core **has no such parameter** — even with a config field, call would **`TypeError`** (stale kwarg). BV filtering is not wired on the live Phase 0+1 API. | UI must call core with the live signature; dead kwargs hide broken comp-color paths. |
-| G7-F003 | **MED** | L7 | `ui_aperture_photometry.py:1657`, `ui_select_stars.py:618` | **`phase01_use_bprp_primary`** via `getattr(cfg, …, True)` only — **no crash**, but **non-persistable** (not on `AppConfig`, not in PARAMS). Confirms G6-F004; severity **MED** (hidden default), not AttributeError class. | getattr defaults bypass config registry and mislead operators. |
+| G7-F001 | **RESOLVED** | L7 | ~~`ui_select_stars.py`~~ **removed** (`refactor` dead unwired page) | ~~`cfg.phase01_comparison_max_bv_diff` AttributeError~~ **RESOLVED:** unwired `ui_select_stars.py` deleted; phantom field no longer referenced repo-wide. | Every `cfg.*` in UI must be a declared field or guarded accessor. |
+| G7-F002 | **RESOLVED** | L8/L7 | ~~`ui_select_stars.py:531`~~ **removed** | ~~Stale `max_bv_diff=` kwarg to `run_phase0_and_phase1`~~ **RESOLVED:** deleted with unwired Select Stars page. | UI must call core with the live signature; dead kwargs hide broken comp-color paths. |
+| G7-F003 | **MED** | L7 | `ui_aperture_photometry.py:1657` | **`phase01_use_bprp_primary`** via `getattr(cfg, …, True)` only — **no crash**, but **non-persistable** (not on `AppConfig`, not in PARAMS). **STILL OPEN** — defer to config↔UI parity fix-pass. | getattr defaults bypass config registry and mislead operators. |
 | G7-F004 | **MED** | L3 | `app.py` (15+ `except: pass` lines), `ui_aperture_photometry.py`, `ui_quality_dashboard.py` | Broad **`except: pass`** / silent exception branches in action handlers (archive hash, PDF/report triggers, QC paths) — failures can present as **button did nothing**. | UI actions must surface errors to Infolog / `st.error`. |
 | G7-F005 | **MED** | L4 | `ui_settings.py:645-700` | Frame-quality / align-residual gates use **`getattr(..., False)`** defaults — **fail-open OFF by design** (byte-identical when unset); documented in PARAMS Round-2 B.2. Not a bug; monitor that toggles stay wired to `cfg` save path (`973-976`). | Safety gates default OFF only when explicitly documented. |
 | G7-F006 | **MED** | L7 | `VYVAR_PARAMS.md`, Group 6 parity | **34 config-only (`exposed \| no`)** keys: **intentionally hidden** for blind-cluster tuning, neighbor-sub PSF, `dao_qc_in_calibrate`, observer export block (session `config.json` values). **Not accidental unexposed** for most; observer site uses DB location picker (`observer_location_id` in Settings) while lat/lon/name live in json without dedicated widgets. | Hidden keys need intentional-hidden classification vs drift. |
@@ -1851,9 +1852,9 @@ Method: AST inventory + lens scans (L1–L11) on 14 modules (144 functions), Pha
 
 | Symbol | Access pattern | UI verdict | Severity |
 |--------|----------------|------------|----------|
-| `phase01_comparison_max_bv_diff` | **Direct** `cfg.phase01_comparison_max_bv_diff` | **Real AttributeError** on Select Stars page (expander + run) | **HIGH** (G7-F001) |
-| `phase01_use_bprp_primary` | **`getattr(cfg, …, True)`** only | No crash; **always True** unless field added; not in registry | **MED** (G7-F003) |
-| `max_bv_diff=` kwarg | Passed to `run_phase0_and_phase1` | **Stale API** — not in core signature | **HIGH** (G7-F002) |
+| `phase01_comparison_max_bv_diff` | ~~`ui_select_stars.py`~~ **removed** | **RESOLVED** (G7-F001) — no repo references |
+| `phase01_use_bprp_primary` | `ui_aperture_photometry.py:1657` | Silent default via `getattr(..., True)` only — **STILL OPEN** (G7-F003) |
+| `max_bv_diff=` kwarg | ~~`ui_select_stars.py`~~ **removed** | **RESOLVED** (G7-F002) |
 | 34 PARAMS `no` keys | No `ui*.py` string match | Mostly **intentionally-hidden** dev/json knobs; observer block is **session json + DB location id** | Documented (G7-F006) |
 
 False positives from regex scan (`cfg.to_json`, `cfg.ensure_base_dirs`) are **methods** on `AppConfig`, not missing fields.
@@ -1865,7 +1866,7 @@ False positives from regex scan (`cfg.to_json`, `cfg.ensure_base_dirs`) are **me
 | `app.py` | 29 | 29 | 0 | 4 | 8 | 12 |
 | `ui_aperture_photometry.py` | 25 | 25 | 0 | 3 | 6 | 10 |
 | `ui_quality_dashboard.py` | 14 | 14 | 0 | 2 | 5 | 8 |
-| `ui_select_stars.py` | 13 | 13 | 0 | 0 | 3 | 4 |
+| `ui_select_stars.py` | — | — | — | — | — | — | **deleted** (2026-06-22) |
 | `ui_calibration_library.py` | 12 | 12 | 0 | 0 | 1 | 4 |
 | `ui_calibration.py` | 10 | 10 | 0 | 0 | 0 | 3 |
 | `ui_photometry_quality.py` | 10 | 10 | 0 | 1 | 2 | 4 |
@@ -1876,7 +1877,7 @@ False positives from regex scan (`cfg.to_json`, `cfg.ensure_base_dirs`) are **me
 | `ui_components.py` | 3 | 3 | 0 | 0 | 1 | 1 |
 | `ui_photometry.py` | 2 | 2 | 0 | 0 | 0 | 2 |
 | `ui_settings.py` | 2 | 2 | 0 | 0 | 1 | 3 |
-| **Group 7 total** | **144** | **144** | **0** | **11** | **29** | **52** |
+| **Group 7 total** | **131** | **131** | **0** | **11** | **26** | **48** |
 
 † LIVE-DYNAMIC: Streamlit callbacks, nested render closures, `@st.cache_data` wrappers — heuristic zero-ref, not removal candidates.
 
@@ -1887,7 +1888,7 @@ False positives from regex scan (`cfg.to_json`, `cfg.ensure_base_dirs`) are **me
 | Area | Gap |
 |------|-----|
 | `ui_settings` save → `config.json` round-trip | partial manual; no automated test |
-| `ui_select_stars` Phase 0+1 launch | **broken** on `max_bv_diff` path — needs fix before test |
+| `ui_select_stars` Phase 0+1 launch | ~~broken~~ | **removed** — unwired page deleted |
 | Frame-quality gate toggles | default OFF regression (byte-identical) |
 | `app.py` pending preprocess/platesolve error surfacing | headless parity with `night_run` |
 | QC dashboard analyze flow | exception → user-visible error |
@@ -1921,7 +1922,7 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 | 4 | Science / variability / QA | 166 | G4-F001 trust (partially **FIXED**) |
 | 5 | Reporting / export | 174 | G5-F004 **FIXED**; remaining LOW dead helpers |
 | 6 | Config / orchestration / utils | 110 | G6-F001–F004 config/parity |
-| 7 | UI shell | 144 | G7-F001–F002 Select Stars crash/stale API |
+| 7 | UI shell | ~~144~~ **131** | G7-F001/F002 **RESOLVED** (Select Stars removed); G7-F003 open |
 | **Total** | **7 groups** | **1728** | Fix-pass queue starts after Claude review |
 
 ---

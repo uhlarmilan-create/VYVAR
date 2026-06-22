@@ -1,51 +1,50 @@
-CURSOR RESULT — 2026-06-19 (Group 7 audit — UI shell — 7-group map complete)
+CURSOR RESULT — 2026-06-22 (remove unwired Select Stars page — G7-F001/F002)
 
 What I did
-AUDIT-ONLY final group: 14 UI modules (144 functions), AST + L1–L11 scans, Phase B verification of G6 parity items from UI source. Appended ledger + **7-group map complete** summary. No code fixes.
+Confirmed `ui_select_stars.py` is unwired (no imports, no tests), deleted the file, verified phantom field removal and test suite, updated ledger G7-F001/F002 → RESOLVED. G7-F003 untouched.
 
-## Module set + counts
+## Step 1 — Isolation (current tree)
 
-14 modules · **144 functions** · ~9.8k LOC (`app.py` + `ui_*.py` except Group 4: `ui_variability`, `ui_hrd`, `ui_masterstar_qa`).
+```
+grep -rn "render_select_stars" --include=*.py .
+→ ui_select_stars.py:28 (comment), ui_select_stars.py:358 (definition only)
 
-| Module | Funcs |
-|--------|-------|
-| `app.py` | 29 |
-| `ui_aperture_photometry.py` | 25 |
-| `ui_quality_dashboard.py` | 14 |
-| `ui_select_stars.py` | 13 |
-| + 10 smaller `ui_*.py` | 52 |
-| **Total** | **144** |
+grep -rn "ui_select_stars" --include=*.py . | grep -v ui_select_stars.py
+→ (no matches)
 
-## Phase B — G6 parity resolution (UI side)
+grep -rln "ui_select_stars" tests/
+→ (no matches)
+```
 
-| Symbol | Pattern | Verdict |
-|--------|---------|---------|
-| `phase01_comparison_max_bv_diff` | Direct `cfg.` | **AttributeError** on Select Stars page (expander `st.code` + run) — **HIGH** G7-F001 |
-| `phase01_use_bprp_primary` | `getattr(..., True)` | No crash; non-persist — **MED** G7-F003 (downgrades G6-F004 severity) |
-| `max_bv_diff=` kwarg | `run_phase0_and_phase1(...)` | **Not in core signature** — stale API **HIGH** G7-F002 |
+**Verdict:** No live references — safe to delete.
 
-34 PARAMS config-only keys: mostly **intentionally-hidden** (blind cluster, neighbor-sub, session observer json).
+## Step 2 — Delete
 
-## Findings summary
+`git rm ui_select_stars.py` (622 lines removed)
 
-| Sev | Count | Headline |
-|-----|-------|----------|
-| HIGH | 2 | G7-F001 crash + G7-F002 stale `max_bv_diff` kwarg |
-| MED | 5 | Silent except handlers; frame gates OFF-by-design; display column drift risk |
-| LOW | 1 | Minor silent passes |
-| CLEAN | 3 | Settings save path; no rig literals in shell; delegates to core |
+## Step 3 — Post-delete verification
 
-**DEAD:** 0 TRULY-DEAD / 144 · **29 FLAGGED** · **52 NEEDS-TEST**
+| Check | Result |
+|-------|--------|
+| `phase01_comparison_max_bv_diff` repo-wide | **0 matches** |
+| Live `phase01_comparison_*` fields | Present in `config.py`, `ui_settings.py`, `photometry_core.py`, `ui_dao_stars.py` |
+| `vyvar_ui_status` helpers | Still imported in `ui_aperture_photometry.py:25`, used at `:787-791` |
+| `python -c "import app"` | **OK** |
+| Full pytest | **406 passed, 15 skipped** |
 
-## 7-group map complete
+## Step 4 — Ledger
 
-**1728 functions** audited across 7 groups (see ledger table). Fix-pass queue: G1-F001/F002, G3-F002, G6/G7 config parity.
+- **G7-F001** → **RESOLVED** (dead-code removal)
+- **G7-F002** → **RESOLVED** (dead-code removal)
+- **G7-F003** → **STILL OPEN** (`phase01_use_bprp_primary` in `ui_aperture_photometry.py` only — defer to parity fix-pass)
 
-Artifacts: `tmp/audit_group7_inventory.py`, `tmp/audit_group7_results.json`
+## Errors (if any)
+
+None.
 
 ## Files changed
 
-- `docs/VYVAR_FULL_AUDIT_LEDGER.md` (Group 7 checkpoint + map summary)
-- `CURSOR_RESULT.md`
+- `ui_select_stars.py` (deleted)
+- `docs/VYVAR_FULL_AUDIT_LEDGER.md`
 
-**No fix steps** — checkpoint for Claude review before HIGH fix-pass.
+**Not pushed** — stop for Claude review.
