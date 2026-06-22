@@ -120,6 +120,7 @@ def classify_warnings(
     n_tier12: int | None = None,
     color_term_off: bool = False,
     n_alignment_failed: int = 0,
+    n_wcs_untrusted: int = 0,
 ) -> tuple[list[str], list[str]]:
     """Return (hard_labels, soft_labels) for one target."""
     hard: list[str] = []
@@ -185,6 +186,13 @@ def classify_warnings(
         frac_af = float(n_af) / max(nf_af, 1)
         if frac_af >= 0.05 or n_af >= 2:
             soft.append(f"{n_af} epoch(s) failed alignment ({frac_af:.0%} of LC)")
+
+    n_wut = int(n_wcs_untrusted)
+    if n_wut > 0:
+        nf_wut = int(n_frames) if n_frames is not None else 0
+        frac_wut = float(n_wut) / max(nf_wut, 1)
+        if frac_wut >= 0.05 or n_wut >= 2:
+            soft.append(f"{n_wut} epoch(s) pixel-fallback WCS match ({frac_wut:.0%} of LC)")
 
     return hard, soft
 
@@ -256,6 +264,7 @@ def evaluate_target(
     n_tier12: int | None = None,
     color_term_off: bool = False,
     n_alignment_failed: int = 0,
+    n_wcs_untrusted: int = 0,
 ) -> dict[str, Any]:
     th = thresholds or CompTrustThresholds.from_bounds(3, 8)
     lq = str(lc_quality or "").strip().lower() or "—"
@@ -274,6 +283,7 @@ def evaluate_target(
         n_tier12=n_tier12,
         color_term_off=bool(color_term_off),
         n_alignment_failed=int(n_alignment_failed),
+        n_wcs_untrusted=int(n_wcs_untrusted),
     )
     trust = trust_level(int(n_clean), hard, soft, th)
     reason = build_reason(
@@ -374,6 +384,8 @@ def compute_trust_for_photometry_dir(
         _nt12 = int(_nt12_raw) if math.isfinite(float(_nt12_raw)) else None
         _naf_raw = pd.to_numeric(row.get("n_alignment_failed"), errors="coerce")
         _n_af = int(_naf_raw) if math.isfinite(float(_naf_raw)) else 0
+        _nwut_raw = pd.to_numeric(row.get("n_wcs_untrusted"), errors="coerce")
+        _n_wut = int(_nwut_raw) if math.isfinite(float(_nwut_raw)) else 0
         info = evaluate_target(
             catalog_id=cid,
             vsx_name=vsx,
@@ -391,6 +403,7 @@ def compute_trust_for_photometry_dir(
             n_tier12=_nt12,
             color_term_off=_color_term_off,
             n_alignment_failed=_n_af,
+            n_wcs_untrusted=_n_wut,
         )
         per_target[cid] = info
         conf_counts[info["trust"]] = conf_counts.get(info["trust"], 0) + 1

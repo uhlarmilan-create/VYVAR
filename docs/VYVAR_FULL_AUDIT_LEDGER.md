@@ -33,6 +33,10 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 19 | G2-F003 dilution aperture 3.0 fallback | **FIXED:** layered fallback map → SNR-derive → skip+flag; fixed 3.0 removed; Seager 2003 / Howell 2006 photometric aperture | `4b13e4a` |
 | 20 | G1-F003 alignment identity / pixel-fallback | **FIXED:** ref-grid pixel NN gated on `VY_ALGN` (`dbf76d5`); failed-alignment epochs flagged in LC (`alignment_failed`) + summary + trust soft signal (`0a43dbf`); residual gate left OFF | `0a43dbf` |
 | 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `9e3280e` |
+| 21 | G2-F004 err paired by positional index | **FIXED:** `_combine_err_with_ensemble_scatter_keyed` joins scatter by `source_file` | `8f86078` |
+| 22 | G1-F005 optics DB lookup silent except | **FIXED:** `_first_db_optics_ids` logs WARNING on DB failure; typed excepts | `473f089` |
+| 23 | G7-F008 UI helper silent except | **FIXED:** archive-path probe + UT tick helper log skip reason | `473f089` |
+| 24 | G2-F002b per-frame WCS trust flag | **FIXED:** `catalog_match_mode` + `wcs_untrusted` LC cols; `n_wcs_untrusted` soft-YELLOW trust; NONDET modes split; do-no-harm vs draft 421 PASS | `<g2f002b>` |
 
 ---
 
@@ -44,7 +48,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | G1-F002 | **FIXED** | L6 | `config.py`, `pipeline.py`, `vyvar_alignment_frame.py` | ~~Dense field: ~200 CP → ~654 s/frame~~ **FIXED:** control points decoupled from detection ladder, capped at cfg default 80. Chi/h 419 `B_20_2` PASS: max Δtranslation **0.0275 px**, speedup **5.2–13.8×** (mean **8.6×**); quality-validated, not byte-identical. | Iteration/control-point budgets need explicit wall-clock + count bounds on dense fields. |
 | G1-F003 | **FIXED** | L4 | `pipeline.py`, `photometry_core.py`, `trust_flag_core.py` | ~~Identity frames: ref-grid pixel-fallback wrong-star; silent LC~~ **FIXED:** pixel NN fallback gated on `VY_ALGN`; `alignment_report.csv` `aligned`/`reason` → per-epoch `alignment_failed` in LC + `n_alignment_failed` summary; trust soft when ≥5% or ≥2 epochs failed; sky-match identity epochs kept (correct flux); `frame_align_residual_gate` still OFF. Do-no-harm: fully-aligned drafts byte-identical `mag_inst` except new all-False `alignment_failed` column. | Failed alignment must not silently use reference-grid pixel matching; identity epochs visible in LC/trust without dropping valid sky-match flux. |
 | G1-F004 | **MED** | L1 | `vyvar_blind_series.py:212-216` | Blind verify tolerance scaled vs fixed `_ref = 1.3`/px (narrow-rig reference), not measured scale. | Scale-dependent tolerances must derive from equipment/WCS scale, not a universal literal. |
-| G1-F005 | **MED** | L3 | `optics_selection.py:50-64` | `_first_db_optics_ids`: broad `except: pass` on DB queries - failed lookup -> `None` with no log. | DB failures on optics resolution must log; silent pass risks wrong rig. |
+| G1-F005 | **FIXED** | L3 | `optics_selection.py:50-64` | ~~`_first_db_optics_ids`: broad `except: pass` on DB queries~~ **FIXED:** typed excepts + WARNING log on EQUIPMENTS/TELESCOPE lookup failure; returns `None` with operator-visible reason. | DB failures on optics resolution must log; silent pass risks wrong rig. |
 | G1-F006 | **MED** | L4 | `vyvar_platesolver.py:2356-2440` | Odds accept gate (`masterstar_accept_mode=odds`) ignores legacy fraction/distortion when mode=odds - by design per DECISIONS. Thresholds from `config.py` (`masterstar_odds_k=12`, `matched_floor`, `false_alarm_p_max=1e-6`, quadrants>=3). | Document mode split; ensure UI exposes accept_mode if operators need fraction gate. |
 | G1-F007 | **MED** | L10 | `vyvar_platesolver.py:5792-5893` | Sibling-WCS recovery uses separate odds gate (`masterstar_sibling_min_matched=40`, `rms_max_px=2.0`). Tested in `tests/test_sibling_wcs_recovery.py`. | Multi-filter recovery gates must stay aligned with independent-solve gates - monitor on rig x filter matrix. |
 | G1-F008 | **LOW** | L5 | `pipeline.py` (11 funcs) | Dead code confirmed by AST ref-count: `_fits_header_positive_float`, `_per_frame_noise_error_map`, `get_auto_fov`, `_try_solve_wcs_astrometry_net_or_local_cli`, etc. | Remove after final API surface check (DB/UI dispatch). |
@@ -596,9 +600,9 @@ Method (Group 2): automated AST inventory + lens scans (L1-L11) on 10 modules (3
 |----|-----|------|----------|--------------|---------------------|
 | G2-F001 | **SUPERSEDED** | L4 | `photometry_core.py` (removed) | ~~catalog_only forced-aperture routing~~ **SUPERSEDED** (`7f0dc86`): path deleted; unmatched VSX excluded in Fáza 0 (`select_active_targets`). Saturated `skip_photometry` unchanged. | Photometry is DAO+Gaia matched only; no forced-aperture LCs. |
 | G2-F002 | **SUPERSEDED** | L4 | `photometry_core.py` (removed) | ~~catalog_only WCS placement~~ **SUPERSEDED** (`7f0dc86`): placement helpers deleted with forced-aperture path. | Unmatched VSX are excluded, not placed via VSX coords. |
-| G2-F002b | **MED** | L4 | `photometry_core.py` (per-frame) | **BACKLOG** — `dao_matched` frames on unsolved per-frame WCS can yield nondetection flux without explicit trust downgrade (distinct from masterstar placement). | Per-frame unsolved trust must downgrade, not silent nondetection. |
+| G2-F002b | **FIXED** | L4 | `catalog_match_trust.py`, `pipeline.py`, `photometry_core.py`, `trust_flag_core.py` | ~~unsolved per-frame WCS nondetection without trust downgrade~~ **FIXED:** per-epoch `catalog_match_mode` + `wcs_untrusted` on LC; export modes `nondet_no_wcs` / `nondet_unaligned_sky`; `n_wcs_untrusted` soft-YELLOW trust (distinct from `alignment_failed`); flag-only — `mag_inst`/`mag_calib`/`err` bit-identical vs frozen draft 421 on production HEAD re-run. Real-data pixel-fallback firing pending wide-rig data. | Per-frame unsolved trust must downgrade, not silent nondetection. |
 | G2-F003 | **FIXED** | L1 | `photometry_core.py` | ~~`apertures_px.get(target_cid, 3.0)` dilution fallback~~ **FIXED:** `_resolve_photometric_aperture_px_for_gs11` — per-star map → `_aperture_radius_from_snr_table` derive → skip+flag (`dilution_skipped`); fixed 3.0 removed; grounded in Seager 2003 / Howell 2006 (photometric aperture for neighbor search). | Missing per-star aperture must fail loud or derive from SNR table, not a universal 3.0 px literal. |
-| G2-F004 | **MED** | L4 | `photometry_core.py:7897` | Fix-A `err` paired with `ensemble_scatter` by positional index only (DR4-1); row misalignment risks wrong error columns. | Error model pairing must use stable star keys, not parallel list order. |
+| G2-F004 | **FIXED** | L4 | `photometry_core.py` | ~~Fix-A `err` paired with `ensemble_scatter` by positional index~~ **FIXED:** `_combine_err_with_ensemble_scatter_keyed` joins by `source_file` (`8f86078`). | Error model pairing must use stable star keys, not parallel list order. |
 | G2-F005 | **RESOLVED** | L4 | `photometry_core.py` (removed) | ~~Log claimed catalog_only skip while downstream implied photometry~~ **RESOLVED** (`7f0dc86`): catalog_only Phase 2A branch removed; only DAO-matched targets measured. | Operator logs must match the actual branch taken for catalog_only targets. |
 | G2-P001 | **CLEAN** | - | `photometry_core.py:2454-2660` | `ensemble_normalize` verified against SPEC/Honeycutt ensemble ZP math. | Keep as reference implementation for comp ensemble detrend. |
 | G2-P002 | **CLEAN** | - | `photometry_core.py:8037-8060` | Fix-A err model arithmetic verified. | Positional coupling (G2-F004) is separate from the core formula correctness. |
@@ -1849,7 +1853,7 @@ Method: AST inventory + lens scans (L1–L11) on 14 modules (144 functions), Pha
 | G7-F005 | **MED** | L4 | `ui_settings.py:645-700` | Frame-quality / align-residual gates use **`getattr(..., False)`** defaults — **fail-open OFF by design** (byte-identical when unset); documented in PARAMS Round-2 B.2. Not a bug; monitor that toggles stay wired to `cfg` save path (`973-976`). | Safety gates default OFF only when explicitly documented. |
 | G7-F006 | **MED** | L7 | `VYVAR_PARAMS.md`, Group 6 parity | **34 config-only (`exposed \| no`)** keys: **intentionally hidden** for blind-cluster tuning, neighbor-sub PSF, `dao_qc_in_calibrate`, observer export block (session `config.json` values). **Not accidental unexposed** for most; observer site uses DB location picker (`observer_location_id` in Settings) while lat/lon/name live in json without dedicated widgets. | Hidden keys need intentional-hidden classification vs drift. |
 | G7-F007 | **MED** | L8 | `ui_aperture_photometry.py:236+` | `_enrich_summary_with_zone_flags` / LC column picks (`mag_calib` vs `mag_calib_raw`) in UI — **display-layer** only (no ensemble math); risk is **label drift** vs export `mag_calib_final` (G5-F011), not duplicated photometry core. | Display columns must match publication canonical names. |
-| G7-F008 | **LOW** | L3 | `ui_components.py:103-104`, `ui_aperture_photometry.py:77-78` | Silent passes on archive-path probe / JD tick helper (`try: pass` stub). Low operator impact. | Even minor UI helpers should log skip reason. |
+| G7-F008 | **FIXED** | L3 | `ui_components.py:103-104`, `ui_aperture_photometry.py:77-78` | ~~Silent passes on archive-path probe / JD tick helper~~ **FIXED:** typed excepts + DEBUG log on skip (same commit as G1-F005). | Even minor UI helpers should log skip reason. |
 | G7-P001 | **CLEAN** | - | `ui_settings.py:973-1010` | Settings save writes frame-quality + align-residual + comp knobs back to `cfg` + `to_json()` — live round-trip for exposed controls. | Settings must persist to `AppConfig` + json. |
 | G7-P002 | **CLEAN** | - | `app.py` pipeline pending handlers | Photometry/platesolve/preprocess delegate to `pipeline` / `photometry_core` — **no** `ensemble_normalize` / `savgol` in UI shell (L8 scan clean on `app.py`). | UI orchestrates; core computes. |
 | G7-P003 | **CLEAN** | - | `app.py` L1 scan | **No** hardcoded `1.3` / `9.77` / `2082` rig literals in UI shell (rig values come from `cfg` or DB). | UI must not embed cross-rig literals. |
@@ -1922,19 +1926,19 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 | Group | Scope | Funcs audited | HIGH findings (post fix-pass 2026-06-22) |
 |-------|--------|---------------|-------------------------------------------|
-| 1 | Alignment / platesolve / optics | 415 | HIGH **closed** — G1-F001/F002/F003 **FIXED** (`2819e86`, `dbf76d5`, `0a43dbf`); open MED G1-F004–F007; G1-F005 silent except |
-| 2 | Photometry core | 322 | G2-F003 **FIXED** (`4b13e4a`); open G2-F004, G2-F002b |
+| 1 | Alignment / platesolve / optics | 415 | HIGH **closed** — G1-F001/F002/F003 **FIXED** (`2819e86`, `dbf76d5`, `0a43dbf`); G1-F005 **FIXED**; open MED G1-F004–F007 |
+| 2 | Photometry core | 322 | G2-F003/F004/F002b **FIXED** (`4b13e4a`, `8f86078`, `<g2f002b>`) |
 | 3 | Data / IO / catalog | 367 | G3-F001/F002 **FIXED** (`9e3280e`, `fb75867`) |
 | 4 | Science / variability / QA | 166 | G4-F001 trust partially **FIXED** |
 | 5 | Reporting / export | 174 | G5-F003–F011, F004 **FIXED** (`6774f83`…`efbb4de`); forced-aperture **RESOLVED** (`7f0dc86`); LOW dead helpers remain |
 | 6 | Config / orchestration / utils | 110 | G6-F002 **FIXED** (`379e78f`); G6-F001 TODO-MULTISET; G6-F003/F004 parity |
-| 7 | UI shell | ~~144~~ **131** | G7-F001/F002 **RESOLVED** (`3e1cad7`); open G7-F003, G7-F008 |
+| 7 | UI shell | ~~144~~ **131** | G7-F001/F002 **RESOLVED** (`3e1cad7`); G7-F008 **FIXED**; open G7-F003 |
 | **Total** | **7 groups** | **1728** | Fix-pass **DONE** (HIGH + numeric MED) — see queue below |
 
 ---
 
-## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G2-F004, G2-F002b, G6-F001/TODO-MULTISET, silent excepts (G1-F005, G7-F008), G7-F003.
+## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003, broad-except Tier-1 backlog (~25 sites).
 
-**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), forced-aperture removal (`7f0dc86`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
+**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`<g2f002b>`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
 
-**Still open:** G2-F004 (err index pairing), G2-F002b (unsolved WCS nondetection), G6-F001/TODO-MULTISET (rig literals), silent excepts G1-F005 + G7-F008, G7-F003 (`phase01_use_bprp_primary` parity).
+**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003 (`phase01_use_bprp_primary` parity), broad-except Tier-1 backlog (~25 remaining `BLE001` sites outside the closed silent-except pair).

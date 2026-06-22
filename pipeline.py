@@ -28,6 +28,7 @@ from astropy.wcs import FITSFixedWarning
 import pandas as pd
 
 from config import AppConfig, load_config_json
+from catalog_match_trust import export_catalog_match_mode_from_internal
 import vyvar_alignment_frame  # A-durable: fresh-attr MP func lookup at dispatch (reload-safe)
 from vyvar_alignment_frame import (
     _alignment_compute_one_frame,
@@ -6792,7 +6793,7 @@ def detect_stars_match_master_reference(
         "n_matched": 0,
         "n_matched_before_mag_limit": 0,
         "catalog_rows": int(len(master_df)),
-        "catalog_match_mode": ("master_reference_pixel" if match_mode.startswith("pixel") else "master_reference_sky"),
+        "catalog_match_mode": export_catalog_match_mode_from_internal(match_mode),
         "n_likely_saturated": 0,
         "n_saturated_from_peak": 0,
         "n_saturated_plateau": 0,
@@ -7114,7 +7115,7 @@ def detect_stars_match_master_reference(
         "n_matched_before_mag_limit": n_matched_before_mag,
         "n_matched": n_matched_final,
         "catalog_rows": int(len(master_df)),
-        "catalog_match_mode": ("master_reference_pixel" if match_mode.startswith("pixel") else "master_reference_sky"),
+        "catalog_match_mode": export_catalog_match_mode_from_internal(match_mode),
         "n_likely_saturated": n_sat,
         "n_saturated_from_peak": n_sat_pk,
         "n_saturated_plateau": n_sat_pl,
@@ -8775,6 +8776,9 @@ def _export_per_frame_run_catalog_core(
 
     df2 = df.copy()
     df2.insert(0, "source_file", fname)
+    _cmm_export = str(meta.get("catalog_match_mode") or "").strip()
+    if _cmm_export:
+        df2["catalog_match_mode"] = _cmm_export
 
     _before_cat = len(df2)
     df2 = _proc_catalog_keep_matched_rows_only(df2)

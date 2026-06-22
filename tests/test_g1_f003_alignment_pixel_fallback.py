@@ -100,7 +100,7 @@ def test_aligned_bad_wcs_uses_pixel_fallback() -> None:
 def test_unaligned_bad_wcs_skips_pixel_fallback() -> None:
     df, meta = _run_detect(aligned=False, with_wcs=True)
     assert int(meta.get("n_matched", 0)) == 0
-    assert meta.get("catalog_match_mode") == "master_reference_sky"
+    assert meta.get("catalog_match_mode") == "nondet_unaligned_sky"
     assert not any(str(c).strip() for c in df.get("catalog_id", pd.Series(dtype=str)))
 
 
@@ -114,7 +114,7 @@ def test_aligned_no_wcs_uses_pixel_fallback() -> None:
 def test_unaligned_no_wcs_nondetection() -> None:
     df, meta = _run_detect(aligned=False, with_wcs=False)
     assert int(meta.get("n_matched", 0)) == 0
-    assert meta.get("catalog_match_mode") == "master_reference_sky"
+    assert meta.get("catalog_match_mode") == "nondet_no_wcs"
     assert not any(str(c).strip() for c in df.get("catalog_id", pd.Series(dtype=str)))
 
 

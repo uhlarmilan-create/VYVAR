@@ -2,6 +2,26 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-06-22 — G2-F002b WCS-trust flag + err reconciliation (permanent record)
+
+**Shipped (G2-F002b).** Per-epoch `catalog_match_mode` + `wcs_untrusted` on LC CSV (additive
+columns); `n_wcs_untrusted` soft-YELLOW trust signal (distinct from `alignment_failed`);
+export modes split (`nondet_no_wcs` / `nondet_unaligned_sky` vs `master_reference_pixel`).
+Flag-only — do-no-harm vs frozen draft 421 on production HEAD: `mag_inst` / `mag_calib` / `err`
+bit-identical @6dp (`tmp/run_prod_one_target_b20.py`, full-set `run_full_photometry_pipeline`
+confirm). Real-data pixel-fallback firing pending wide-rig data.
+
+**Err reconciliation (do not re-litigate).** Frozen draft 421 LC `err` = combined
+`sqrt(photon² + ensemble_scatter²)` where photon uses proc-CSV `aperture_r_px`, gain, and DB RN
+(1.3). A G2-F002b gate harness that called Phase 2A with **`db=None`** hit RN fallback 10.0 →
+~7% inflated photon `err` vs frozen — **not a regression** on HEAD. Production HEAD reproduces
+frozen 421 `err` bit-identical when `db` is wired. SNR `apertures_px` dict does not drive photon
+err when proc CSV carries `aperture_r_px`.
+
+**Also closed:** G2-F004 (`8f86078` keyed scatter join), G1-F005 + G7-F008 (silent except → log).
+
+---
+
 ## 2026-06-22 — 7-group audit fix-pass CLOSE-OUT (HIGH + numeric MED)
 
 **Účel.** Uzavřít systematický 7-group audit map po fix-passu: všechny **HIGH** nálezy a numerické **MED** z fronty opraveny, validovány a pushnuty; zbytek explicitně backlog.
@@ -33,11 +53,9 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ### Otevřený backlog (po fix-passu)
 
-- **G2-F004** — per-frame `err` paired by index, not stable star key
-- **G2-F002b** — unsolved per-frame WCS nondetection without trust downgrade
 - **G6-F001 / TODO-MULTISET** — Set-1 rig literals as global defaults; derive-or-None / per-rig profiles
-- **Silent excepts** — G1-F005 (`optics_selection.py`), G7-F008 (`ui_components` / `ui_aperture_photometry`)
 - **G7-F003** — `phase01_use_bprp_primary` non-persistable (`getattr` only)
+- **Broad-except Tier-1 backlog** — ~25 remaining `BLE001` sites outside G1-F005/G7-F008
 
 **config.json audit:** orphan reconcile **empty** (247 non-observer keys = `AppConfig` fields); Dáblice bin2 + GS11 OFF → žádný rig override potřeba.
 

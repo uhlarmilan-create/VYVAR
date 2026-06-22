@@ -187,6 +187,16 @@ are applied when byte-identical; ProcFrameStore keeps explicit `.keys()` (no `__
 and `tests/test_ble001_regression.py`. New unmarked `except Exception` / bare `except:` fails CI.
 Existing sites carry explicit `# noqa: BLE001`.
 
+## Phase 2A do-no-harm validation (`err` / read noise)
+
+When re-running Phase 2A against frozen draft LC baselines (scratch harness under `tmp/` or any
+future tracked validator), pass **`db=VyvarDatabase(...)`** into `run_phase2a` /
+`_phase2a_prepare_shared_state` — the same as `app.py` / `run_full_photometry_pipeline`. With
+`db=None`, `resolve_read_noise` falls back to RN **10.0** e⁻ while production uses DB RN (e.g.
+**1.3** for Dáblice); photon `err` inflates ~6–11% and produces false `err` diffs vs frozen LC.
+Photon-error aperture always comes from proc CSV `aperture_r_px` when present
+(`read_flux_from_csv`), not from SNR `apertures_px` dict.
+
 ## Cursor / Claude workflow
 
 - **Claude** specs, audits (read-only, with `file:line`), designs, and reviews; recommends

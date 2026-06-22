@@ -41,6 +41,8 @@ from gaia_catalog_id import (
     read_vyvar_csv,
 )
 from infolog import log_event
+
+from catalog_match_trust import is_wcs_untrusted_catalog_match_mode, normalize_catalog_match_mode
 from jd_axis_format import jd_axis_title, jd_series_relative
 from utils import iter_fits_paths_recursive as _iter_fits_recursive
 
@@ -1322,6 +1324,7 @@ def read_flux_from_csv(
     am_frame = float("nan")
     flip_frame: bool | None = None
     align_failed_frame: bool = False
+    frame_catalog_match_mode = ""
     if frame_times:
         try:
             _am = float(frame_times.get("airmass", float("nan")))
@@ -1360,6 +1363,9 @@ def read_flux_from_csv(
                     align_failed_frame = s in ("false", "0", "no", "n")
         except Exception:  # noqa: BLE001
             align_failed_frame = False
+        _cmm_ft = frame_times.get("catalog_match_mode", None)
+        if _cmm_ft is not None:
+            frame_catalog_match_mode = normalize_catalog_match_mode(str(_cmm_ft))
 
     rows: list[dict] = []
 
@@ -1373,6 +1379,8 @@ def read_flux_from_csv(
             "airmass": am_frame,
             "is_flipped": flip_frame,
             "alignment_failed": align_failed_frame,
+            "catalog_match_mode": frame_catalog_match_mode,
+            "wcs_untrusted": is_wcs_untrusted_catalog_match_mode(frame_catalog_match_mode),
             "mag_inst": float("nan"),
             "err": float("nan"),
             # PSF photometry (b.5) columns — carried through so Phase 2A's flux selector
@@ -1444,6 +1452,11 @@ def read_flux_from_csv(
         base["psf_quality"] = str(_pq).strip().lower() if _pq is not None and not (
             isinstance(_pq, float) and math.isnan(_pq)
         ) else ""
+
+        _row_cmm = normalize_catalog_match_mode(row_csv.get("catalog_match_mode"))
+        if _row_cmm:
+            base["catalog_match_mode"] = _row_cmm
+            base["wcs_untrusted"] = is_wcs_untrusted_catalog_match_mode(_row_cmm)
 
         # Časové značky
         base["bjd"] = float(row_csv.get("bjd_tdb_mid", float("nan")))
@@ -3894,6 +3907,8 @@ def save_lightcurve_csv(
     dilution_factor: float = 1.0,
     alignment_failed: np.ndarray | None = None,
     err_scatter_unmatched: np.ndarray | None = None,
+    catalog_match_mode: list[str] | np.ndarray | None = None,
+    wcs_untrusted: np.ndarray | None = None,
 ) -> None:
     """Uloží lightcurve CSV."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -3965,6 +3980,14 @@ def save_lightcurve_csv(
                 err_scatter_unmatched
                 if err_scatter_unmatched is not None
                 else np.full_like(bjd, False, dtype=bool)
+            ),
+            "catalog_match_mode": (
+                [normalize_catalog_match_mode(m) for m in catalog_match_mode]
+                if catalog_match_mode is not None
+                else [""] * n
+            ),
+            "wcs_untrusted": (
+                wcs_untrusted if wcs_untrusted is not None else np.full_like(bjd, False, dtype=bool)
             ),
             "mag_inst": np.round(mag_inst, 6),
             "mag_calib_raw": np.round(mag_calib_raw, 6),
@@ -6407,6 +6430,7 @@ def _phase2a_prepare_shared_state(
                     "psf_chi2",
                     "psf_quality",
                     "psf_snr",
+                    "catalog_match_mode",
                 ]
             )
         )
@@ -6452,6 +6476,11 @@ def _phase2a_prepare_shared_state(
         _csv_tmp = _phase2a_csv_cache.get(str(csv_path))
         if _csv_tmp is None or _csv_tmp.empty:
             continue
+        _cmm_frame = ""
+        if "catalog_match_mode" in _csv_tmp.columns:
+            _cmm_s = _csv_tmp["catalog_match_mode"].dropna()
+            if len(_cmm_s) > 0:
+                _cmm_frame = normalize_catalog_match_mode(str(_cmm_s.iloc[0]))
         try:
             for col_bjd, col_hjd, col_jd in (("bjd_tdb_mid", "hjd_mid", "jd_mid"),):
                 if not all(c in _csv_tmp.columns for c in (col_bjd, col_hjd, col_jd)):
@@ -6473,7 +6502,17 @@ def _phase2a_prepare_shared_state(
                     "jd": float(vals[col_jd].iloc[0]),
                     "airmass": am_val,
                 }
+                if _cmm_frame:
+                    frame_time_lookup[stem]["catalog_match_mode"] = _cmm_frame
                 break
+            if stem not in frame_time_lookup and _cmm_frame:
+                frame_time_lookup[stem] = {
+                    "bjd": float("nan"),
+                    "hjd": float("nan"),
+                    "jd": float("nan"),
+                    "airmass": float("nan"),
+                    "catalog_match_mode": _cmm_frame,
+                }
         except Exception:  # noqa: BLE001
             pass
 
@@ -7713,6 +7752,21 @@ def _phase2a_process_one_target(
     )
     n_alignment_failed = int(np.count_nonzero(align_fail_arr))
     alignment_failed_frac = float(n_alignment_failed) / max(int(len(bjd)), 1)
+    if "catalog_match_mode" in target_frames.columns:
+        catalog_match_mode_list = [
+            normalize_catalog_match_mode(v) for v in target_frames["catalog_match_mode"].tolist()
+        ]
+    else:
+        catalog_match_mode_list = [""] * len(bjd)
+    if "wcs_untrusted" in target_frames.columns:
+        wcs_untrusted_arr = target_frames["wcs_untrusted"].fillna(False).astype(bool).to_numpy()
+    else:
+        wcs_untrusted_arr = np.array(
+            [is_wcs_untrusted_catalog_match_mode(m) for m in catalog_match_mode_list],
+            dtype=bool,
+        )
+    n_wcs_untrusted = int(np.count_nonzero(wcs_untrusted_arr))
+    wcs_untrusted_frac = float(n_wcs_untrusted) / max(int(len(bjd)), 1)
 
     if "flag" in target_frames.columns:
         _raw_tf = target_frames["flag"].astype(str).str.strip().str.lower().reset_index(drop=True)
@@ -7856,6 +7910,8 @@ def _phase2a_process_one_target(
         method=_lc_export_method,
         alignment_failed=align_fail_arr,
         err_scatter_unmatched=err_scatter_unmatched_arr,
+        catalog_match_mode=catalog_match_mode_list,
+        wcs_untrusted=wcs_untrusted_arr,
     )
     if _have_psf_cols:
         try:
@@ -8055,6 +8111,8 @@ def _phase2a_process_one_target(
             "n_saturated": n_sat,
             "n_alignment_failed": n_alignment_failed,
             "alignment_failed_frac": alignment_failed_frac,
+            "n_wcs_untrusted": n_wcs_untrusted,
+            "wcs_untrusted_frac": wcs_untrusted_frac,
             "lc_rms": _lc_rms_full,
             "lc_rms_ooe": _lc_rms_ooe,
             "lc_median_mag": float(np.median(finite_calib)) if len(finite_calib) > 0 else float("nan"),
