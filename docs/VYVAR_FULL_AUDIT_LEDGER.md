@@ -27,6 +27,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 13 | G5-F004 silent export failures | **FIXED:** `record_export_failure` + `log_export_batch_summary`; ERROR logging; Phase 2A batch collector | `efbb4de` |
 | 14 | G7-F001 / G7-F002 unwired Select Stars page | **RESOLVED:** delete `ui_select_stars.py` (phantom `max_bv_diff` / stale kwarg) | `3e1cad7` |
 | 15 | G6-F002 master validity_days mismatch | **FIXED:** unified default dark **90** / flat **200** (dataclass, `__post_init__`, DB seed, `config.json`); DB SETTINGS vestigial | `379e78f` |
+| 16 | G3-F002 query_local_gaia mag_limit None | **FIXED (Path A):** None ⇒ no cap; MASTER_SOURCES `mag_limit=None`; stale 11.5 default removed | pending |
 | 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `b4a45fb` |
 
 ---
@@ -1054,7 +1055,7 @@ Rig intrinsics live in SQLite `EQUIPMENTS` / `TELESCOPE` (`GAIN_ADU`, `READNOISE
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
 | G3-F001 | **HIGH** | L4 | `database.py:2047-2189`, `importer.py:709-838` | ~~`find_best_calibration_library_path` accepts `CCD_TEMP IS NULL`…~~ **FIXED** (fix log step 5): scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity; `_calibration_light_temp_c` reads raw CCD_TEMP. | Calibration master selection must require temperature match and equipment scope; NULL temp is not equivalent to a match. |
-| G3-F002 | **HIGH** | L1/L4 | `database.py:150-152`, `219-240` | `query_local_gaia` defaults `mag_limit=11.5` when caller omits cap — faint-field cones truncate Gaia rows without field-depth context; only logged at SQL layer. | Gaia cone limits must derive from field depth / DB max / caller intent, not a universal 11.5 mag floor. |
+| G3-F002 | **FIXED** | L1/L4 | `database.py:133-256`, `pipeline.py:11404-11411`, `4405` | ~~`query_local_gaia` defaulted `mag_limit=11.5` when omitted~~ **FIXED (Path A):** `mag_limit=None` ⇒ **no g_mag SQL cap**; explicit float unchanged (clamp/log). MASTER_SOURCES calls `mag_limit=None` (small det±0.01° bbox — **no max_rows** guard; dense-box risk negligible). `_query_gaia_local` when `max_mag is None` now full depth. | Gaia cone limits must derive from field depth / caller intent, not a universal 11.5 mag floor. |
 | G3-F003 | **MED** | L3 | `importer.py:692-693`, `733-734` | `_find_matching_master_in_library`: broad `except` on DB lookup and per-file `extract_fits_metadata` → skip candidate with no log at DEBUG only on metadata path. | Master discovery failures must log at operator-visible level; silent skip risks missing calibration. |
 | G3-F004 | **MED** | L3/L6 | `database.py:173-179`, `507-511`, `query_local_vsx` | Read-path side effects: `CREATE INDEX IF NOT EXISTS` + `commit` on first Gaia/VSX query can block large DBs mid-pipeline. | Index creation belongs to build/migration, not hot query paths. |
 | G3-F005 | **MED** | L1 | `param_resolver.py:85-87` | `GAIN_SETTING_INDEX_MAP` only maps equipment `1` (QHY294MM); other cameras with index-style GAIN headers lack map → DB-only path. | Equipment-specific header index maps must be DB-driven or complete per seeded rig. |

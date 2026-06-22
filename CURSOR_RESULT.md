@@ -1,56 +1,54 @@
-CURSOR RESULT — 2026-06-22 (G6-F002 master validity_days 90/200)
+CURSOR RESULT — 2026-06-22 (G3-F002 query_local_gaia mag_limit=None)
 
 What I did
-Mapped validity-day precedence, unified defaults to dark **90** / flat **200** across dataclass, `__post_init__`, DB seed, and tracked `config.json`. Added regression tests. Ledger G6-F002 → FIXED.
+Path A: `mag_limit=None` ⇒ no g_mag SQL cap in `query_local_gaia`; MASTER_SOURCES explicit `mag_limit=None`; updated stale comment at `_query_gaia_local`. Tests + ledger. No push.
 
-## Step 1 — Verify-first (precedence)
+## Step 1 — SQL construction (before fix)
 
-**Live calibration path:** `importer.py` receives `masterdark_validity_days` / `masterflat_validity_days` as **function arguments** from `cfg` (`app.py`, `night_run.py`, `ui_settings` save). Gate: `age_days > validity_days` → expired.
+`database.py:150-152` silently set `mag_limit = 11.5` when omitted.
 
-**DB SETTINGS seed verdict: VESTIGIAL**
-- `database.py` `_seed_default_settings` inserts `masterdark_validity_days` / `masterflat_validity_days` into `SETTINGS`.
-- `get_setting_int()` exists but has **zero callers** repo-wide — seed is never read on the calibration path.
-- Effective value is always **`AppConfig`** (from `config.json` via `__post_init__`).
+SQL built at `:238-247` with always `AND g_mag <= {mag_limit}`; optional `ORDER BY g_mag ASC LIMIT` when `max_rows` set.
 
-**Literal default sources (before fix):**
+Clamp/log at `:159-167` when explicit cap > DB MAX(g_mag).
 
-| Source | dark | flat |
-|--------|------|------|
-| `config.py` dataclass `:100-101` | 80 | 524 |
-| `config.py` `__post_init__` `:642-643` | **60** | 200 |
-| `database.py` seed `:2556/2560` | **60** | 200 |
-| tracked `config.json` | 80 | 524 |
-| `docs/VYVAR_PARAMS.md` | 80 | 524 |
+## Step 2 — Fix
 
-## Step 2 — Fix (90 / 200 everywhere)
+- `mag_cap: float | None` — set only when `mag_limit` is explicit finite > 0; invalid values log and apply **no cap** (no silent 11.5).
+- `mag_clause` empty when `mag_cap is None`.
+- Clamp/"orezávam" skipped when no cap.
 
-- `config.py` dataclass + `__post_init__` fallbacks
-- `database.py` seed strings `"90"` / `"200"`
-- `config.json` → 90 / 200
-- `importer.py` consumer logic unchanged
+## Step 3 — pipeline.py:11404 (MASTER_SOURCES)
 
-## Step 3 — Tests
+- `mag_limit=None` explicit (full depth for faint detections).
+- **max_rows:** left unset — bbox is detection extent ±0.01° (tiny); `ORDER BY g_mag LIMIT N` would bias to bright stars and re-cut faint matches; row count not pathological.
 
-`tests/test_master_validity_days_g6_f002.py` — **4 passed**
-- Empty JSON → 90/200
-- JSON missing keys → 90/200
-- Regression: dataclass default == `__post_init__` fallback == DB seed literals
-- Fresh `VyvarDatabase` SETTINGS rows → 90/200
+## Step 4 — pipeline.py:4405
 
-Full suite: **410 passed, 15 skipped** (prior run had 1 fail before VyvarDatabase fix; spot-check green).
+- Comment updated: `None ⇒ no mag cap` (was "defaults to 11.5").
+- When `max_mag is None`, `_ql_kw` omits `mag_limit` → full depth (matches faintest_mag_limit intent).
 
-## Step 4 — Ledger
+## Step 5 — Tests
 
-G6-F002 → **FIXED** (notes DB seed vestigial).
+`tests/test_query_local_gaia_g3_f002.py` — **5 passed**
+- Explicit `mag_limit=11.5` excludes g>11.5
+- `mag_limit=None` includes g=12, 14.5
+- Explicit `mag_limit=20` unchanged row set
+- MASTER_SOURCES bbox simulation: faint match within 2″ with None; excluded with 11.5
 
-## Note for Milan
+Full suite: **415 passed, 15 skipped**
 
-If your **local** `config.json` outside the repo still has 80/524, update to 90/200 (or your tighter per-rig values) so runs match intent.
+## Scripts note
+
+`scripts/forced_photometry_pal7.py` and `scripts/diagnose_wide_true_triangle_shape.py` pass explicit `mag_limit` — unchanged. Any script omitting `mag_limit` now gets full depth (acceptable for dev tools).
+
+## Ledger
+
+G3-F002 → **FIXED** (Path A)
 
 ## Files changed
 
-- `config.py`, `database.py`, `config.json`
-- `tests/test_master_validity_days_g6_f002.py`
+- `database.py`, `pipeline.py`
+- `tests/test_query_local_gaia_g3_f002.py`
 - `docs/VYVAR_FULL_AUDIT_LEDGER.md`
 
 **Not pushed** — stop for Claude review.

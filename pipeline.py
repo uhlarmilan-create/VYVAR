@@ -4370,7 +4370,7 @@ def _query_gaia_local(
     ra_max = float(_ra_l) + float(radius_deg)
     de_min = float(_de_l) - float(radius_deg)
     de_max = float(_de_l) + float(radius_deg)
-    # query_local_gaia defaults mag_limit to 11.5 when omitted — must pass caller's max_mag
+    # query_local_gaia: mag_limit=None ⇒ no g_mag SQL cap; pass max_mag only when set
     # so MASTERSTAR / cone export honor faintest_mag_limit in SQL (not only a redundant pandas filter).
     _ql_kw: dict[str, Any] = {
         "ra_min": ra_min,
@@ -11407,6 +11407,7 @@ def generate_masterstar_and_catalog(
                     ra_max=ra_max,
                     dec_min=de_min,
                     dec_max=de_max,
+                    mag_limit=None,
                 )
                 if ga:
                     gdf = pd.DataFrame(ga)

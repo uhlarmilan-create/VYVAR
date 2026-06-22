@@ -147,25 +147,32 @@ def query_local_gaia(
     p = Path(db_path).expanduser().resolve()
     if not p.is_file():
         raise FileNotFoundError(f"Gaia DB not found: {p}")
-    # Default mag cap: keep SQL row counts low (target ~300–500 stars per cone on full DB).
-    if mag_limit is None:
-        mag_limit = 11.5
-    try:
-        ml = float(mag_limit)
-    except (TypeError, ValueError):
-        ml = float("nan")
-    if not math.isfinite(ml) or ml <= 0:
-        ml = 11.5
-    _gmax_db = get_gaia_db_max_g_mag(p)
-    if _gmax_db > 0.0 and ml > float(_gmax_db):
+
+    mag_cap: float | None = None
+    if mag_limit is not None:
         try:
-            log_event(
-                f"GAIA SQL: mag_limit {float(ml):.2f} > MAX(g_mag) v DB ({float(_gmax_db):.3f}) — orezávam."
-            )
-        except Exception:  # noqa: BLE001
-            pass
-        ml = float(_gmax_db)
-    mag_limit = float(ml)
+            ml = float(mag_limit)
+        except (TypeError, ValueError):
+            ml = float("nan")
+        if not math.isfinite(ml) or ml <= 0:
+            try:
+                log_event(
+                    f"GAIA SQL: invalid mag_limit={mag_limit!r} — no g_mag cap applied."
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        else:
+            _gmax_db = get_gaia_db_max_g_mag(p)
+            if _gmax_db > 0.0 and ml > float(_gmax_db):
+                try:
+                    log_event(
+                        f"GAIA SQL: mag_limit {float(ml):.2f} > MAX(g_mag) v DB ({float(_gmax_db):.3f}) — orezávam."
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+                ml = float(_gmax_db)
+            mag_cap = float(ml)
+
     conn = sqlite3.connect(str(p))
     conn.row_factory = sqlite3.Row
     global _GAIA_INDEX_CHECK_DONE
@@ -216,7 +223,7 @@ def query_local_gaia(
         if "catalog_id" in cols:
             opt_cols.append("catalog_id")
         sel = ", ".join(base_cols + opt_cols)
-        # Always include g_mag constraint in SQL text (critical for performance/row count).
+        mag_clause = f" AND g_mag <= {float(mag_cap)}" if mag_cap is not None else ""
         # Prefer ORDER BY+LIMIT when max_rows is set to avoid fetching huge boxes from full Gaia DB.
         lim = None
         if max_rows is not None:
@@ -230,18 +237,21 @@ def query_local_gaia(
             # With proper indexes, ORDER BY g_mag gives a stable "brightest-first" subset.
             query = (
                 f"SELECT {sel} FROM gaia_dr3 "
-                f"WHERE ra >= ? AND ra <= ? AND dec >= ? AND dec <= ? AND g_mag <= {float(mag_limit)} "
+                f"WHERE ra >= ? AND ra <= ? AND dec >= ? AND dec <= ?{mag_clause} "
                 f"ORDER BY g_mag ASC LIMIT {int(lim)};"
             )
         else:
             query = (
                 f"SELECT {sel} FROM gaia_dr3 "
-                f"WHERE ra >= ? AND ra <= ? AND dec >= ? AND dec <= ? AND g_mag <= {float(mag_limit)};"
+                f"WHERE ra >= ? AND ra <= ? AND dec >= ? AND dec <= ?{mag_clause};"
             )
         cur = conn.execute(query, (float(ra_min), float(ra_max), float(dec_min), float(dec_max)))
         rows = [dict(r) for r in cur.fetchall()]
         try:
-            log_event(f"GAIA SQL: Found {len(rows)} stars (Mag <= {float(mag_limit)})")
+            if mag_cap is not None:
+                log_event(f"GAIA SQL: Found {len(rows)} stars (Mag <= {float(mag_cap)})")
+            else:
+                log_event(f"GAIA SQL: Found {len(rows)} stars (no mag cap)")
         except Exception:  # noqa: BLE001
             pass
         return rows
