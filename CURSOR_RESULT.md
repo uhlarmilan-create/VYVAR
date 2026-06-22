@@ -42,7 +42,7 @@ Matches existing manual style: Czech, ASCII, code-anchored (same family as `VYVA
 
 ## Commit
 
-`docs: magnitude-calibration data-flow (lineage, corrections, consumers) in manual` — see hash below.
+`docs: magnitude-calibration data-flow (lineage, corrections, consumers) in manual` — **`1da84a8`**.
 
 **Not pushed** — stop for Claude review.
 
