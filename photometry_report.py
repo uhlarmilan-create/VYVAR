@@ -126,6 +126,18 @@ def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[st
     ]
 
 
+def _pdf_time_axis_label(time_col: str) -> str:
+    """PDF LC axis label for the stored time column (LC ``bjd`` is BJD(TDB) from Phase 2A)."""
+    c = str(time_col or "").strip().lower()
+    if c in ("bjd", "bjd_tdb", "bjd_tdb_mid") or c.startswith("bjd"):
+        return "BJD(TDB)"
+    if c == "hjd":
+        return "HJD"
+    if c in ("jd", "jd_mid"):
+        return "JD"
+    return str(time_col or "time")
+
+
 def _publication_lc_mag_column(columns: Any) -> str | None:
     """Y-axis / export magnitude column for publication-facing LC plots and exports."""
     cols = list(columns)
@@ -1344,7 +1356,7 @@ class _PhotometryReportBuilder:
                 ax.scatter(x, y, s=6, c="#1f77b4", alpha=0.9, linewidths=0)
                 ax.invert_yaxis()
                 ax.grid(True, alpha=0.25)
-                ax.set_xlabel(xcol)
+                ax.set_xlabel(_pdf_time_axis_label(xcol))
                 ax.set_ylabel(ycol)
                 fig.tight_layout()
                 out_png = out_jpg.with_suffix(".png")
@@ -1470,7 +1482,7 @@ class _PhotometryReportBuilder:
                     ax.scatter(x_s, y_s, s=6, c=col, alpha=0.85, linewidths=0, marker=mk, label=leg)
                 ax.invert_yaxis()
                 ax.grid(True, alpha=0.25)
-                ax.set_xlabel(xcol)
+                ax.set_xlabel(_pdf_time_axis_label(xcol))
                 ax.set_ylabel(ycol)
                 ax.legend(loc="best", fontsize=7, framealpha=0.9)
 
@@ -2389,9 +2401,9 @@ class _PhotometryReportBuilder:
             bjd_min = float(nq.get("bjd_min", float("nan")))
             bjd_max = float(nq.get("bjd_max", float("nan")))
             if np.isfinite(bjd_min) and np.isfinite(bjd_max):
-                kv.append(("BJD span (session)", f"{bjd_min:.5f} → {bjd_max:.5f}"))
+                kv.append(("BJD(TDB) span (session)", f"{bjd_min:.5f} → {bjd_max:.5f}"))
             else:
-                kv.append(("BJD span (session)", "—"))
+                kv.append(("BJD(TDB) span (session)", "—"))
             fmin = float(nq.get("fwhm_min", float("nan")))
             fmed = float(nq.get("fwhm_med", float("nan")))
             fmax = float(nq.get("fwhm_max", float("nan")))
@@ -3359,7 +3371,7 @@ class _PhotometryReportBuilder:
                     alpha=0.7,
                     color="#378ADD",
                 )
-                ax.set_xlabel("BJD - BJD0")
+                ax.set_xlabel("BJD(TDB) - BJD0")
                 ax.set_ylabel(ylab)
                 ax.set_title(f"Light curve — {str(cid)[:20]}")
                 ax.invert_yaxis()
@@ -4882,7 +4894,7 @@ class _PhotometryReportBuilder:
         c.setFillColor(self.colors.black)
         pairs = [
             ("AAVSO", "American Association of Variable Star Observers"),
-            ("BJD", "Barycentric Julian Date"),
+            ("BJD(TDB)", "Barycentric Julian Date (TDB time standard; LC column ``bjd``)"),
             ("BP-RP", "Gaia colour index (Blue Photometer minus Red Photometer)"),
             ("comp", "Comparison star"),
             ("DAO", "DAOPHOT star detection algorithm (Stetson 1987)"),
