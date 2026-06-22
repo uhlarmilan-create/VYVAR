@@ -26,7 +26,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 12 | G5-F008 VarAstro `n_good_comp` vs trust `n_clean` | **FIXED (distinct metrics):** VarAstro header `n_ensemble_comp` label + glossary/calibration doc; no number reconciliation | `07e6f69` |
 | 13 | G5-F004 silent export failures | **FIXED:** `record_export_failure` + `log_export_batch_summary`; ERROR logging; Phase 2A batch collector | `efbb4de` |
 | 14 | G7-F001 / G7-F002 unwired Select Stars page | **RESOLVED:** delete `ui_select_stars.py` (phantom `max_bv_diff` / stale kwarg) | `3e1cad7` |
-| 15 | G6-F002 master validity_days mismatch | **FIXED:** unified default dark **90** / flat **200** (dataclass, `__post_init__`, DB seed, `config.json`); DB SETTINGS vestigial | pending |
+| 15 | G6-F002 master validity_days mismatch | **FIXED:** unified default dark **90** / flat **200** (dataclass, `__post_init__`, DB seed, `config.json`); DB SETTINGS vestigial | `379e78f` |
 | 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `b4a45fb` |
 
 ---
