@@ -126,35 +126,25 @@ def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[st
     ]
 
 
-def _resolve_candidate_lc_mag_for_plot(df: pd.DataFrame) -> tuple[str, pd.Series] | None:
-    """Magnitude column + values for candidate LC PNG — mirrors export ``_select_export_lc_rows``.
+def _publication_lc_mag_column(columns: Any) -> str | None:
+    """Y-axis / export magnitude column for publication-facing LC plots and exports."""
+    cols = list(columns)
+    if "mag_calib_final" in cols:
+        return "mag_calib_final"
+    if "mag_calib_ct" in cols:
+        return "mag_calib_ct"
+    if "mag_calib" in cols:
+        return "mag_calib"
+    return None
 
-    Prefer ``mag_calib_ac`` when ``ac_ok`` and finite; else ``mag_calib``. Instrumental only
-    when no calibrated columns exist (explicit ``mag_inst`` label).
-    """
+
+def _resolve_candidate_lc_mag_for_plot(df: pd.DataFrame) -> tuple[str, pd.Series] | None:
+    """Magnitude column + values for candidate LC PNG — canonical ``mag_calib_final`` when present."""
     if df is None or df.empty:
         return None
-    has_calib = "mag_calib" in df.columns or "mag_calib_ac" in df.columns
-    if has_calib:
-        mag = (
-            pd.to_numeric(df["mag_calib"], errors="coerce")
-            if "mag_calib" in df.columns
-            else pd.Series(np.nan, index=df.index, dtype=float)
-        )
-        ylab = "mag_calib"
-        if "mag_calib_ac" in df.columns:
-            ac_ok = (
-                df["ac_ok"].astype(bool)
-                if "ac_ok" in df.columns
-                else pd.Series(False, index=df.index)
-            )
-            mac = pd.to_numeric(df["mag_calib_ac"], errors="coerce")
-            use_ac = ac_ok & mac.notna() & np.isfinite(mac.to_numpy(dtype=float))
-            if use_ac.any():
-                mag = mag.copy()
-                mag.loc[use_ac] = mac.loc[use_ac]
-                ylab = "mag_calib_ac" if bool(use_ac.all()) else "mag_calib"
-        return ylab, mag
+    ycol = _publication_lc_mag_column(df.columns)
+    if ycol is not None:
+        return ycol, pd.to_numeric(df[ycol], errors="coerce")
     if "mag_inst" in df.columns:
         return "mag_inst", pd.to_numeric(df["mag_inst"], errors="coerce")
     return None
@@ -1336,7 +1326,7 @@ class _PhotometryReportBuilder:
                 if c in dfn.columns:
                     xcol = c
                     break
-            ycol = "mag_calib_ct" if "mag_calib_ct" in dfn.columns else ("mag_calib" if "mag_calib" in dfn.columns else None)
+            ycol = _publication_lc_mag_column(dfn.columns)
             if xcol is None or ycol is None:
                 return None
 
@@ -1395,7 +1385,7 @@ class _PhotometryReportBuilder:
         if dfn.empty:
             dfn = df
         xcol = next((c for c in ("bjd_tdb", "bjd", "hjd", "jd") if c in dfn.columns), None)
-        ycol = "mag_calib_ct" if "mag_calib_ct" in dfn.columns else ("mag_calib" if "mag_calib" in dfn.columns else None)
+        ycol = _publication_lc_mag_column(dfn.columns)
         if xcol is None or ycol is None:
             return None
         x = pd.to_numeric(dfn[xcol], errors="coerce").to_numpy(dtype=float)

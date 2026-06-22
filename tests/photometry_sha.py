@@ -64,6 +64,7 @@ PHOTOMETRY_SCIENCE_COLS_LC = frozenset(
         "mag_calib_raw",
         "mag_calib_ct",
         "mag_calib_ac",
+        "mag_calib_final",
         "mag_inst",
         "delta_mag",
         "flux",

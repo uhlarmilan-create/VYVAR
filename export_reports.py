@@ -643,12 +643,14 @@ def _format_varastro_comp_table(
 
 
 def _select_export_lc_rows(lc_df: pd.DataFrame) -> pd.DataFrame:
-    """Rows suitable for AAVSO/VAR.ASTRO export (prefer aperture-corrected mag when available)."""
+    """Rows suitable for AAVSO/VAR.ASTRO export (canonical ``mag_calib_final`` when present)."""
     if lc_df is None or lc_df.empty:
         return pd.DataFrame()
     work = lc_df.copy()
     mag_col = "mag_calib"
-    if "mag_calib_ac" in work.columns:
+    if "mag_calib_final" in work.columns:
+        mag_col = "mag_calib_final"
+    elif "mag_calib_ac" in work.columns:
         ac_ok = (
             work["ac_ok"].astype(bool)
             if "ac_ok" in work.columns
@@ -679,6 +681,9 @@ def _select_export_lc_rows(lc_df: pd.DataFrame) -> pd.DataFrame:
     if mag_col == "_export_mag" and "mag_calib" in out.columns:
         out = out.copy()
         out["mag_calib"] = out["_export_mag"]
+    elif mag_col == "mag_calib_final" and "mag_calib" in out.columns:
+        out = out.copy()
+        out["mag_calib"] = pd.to_numeric(out["mag_calib_final"], errors="coerce")
     return out
 
 
@@ -727,7 +732,7 @@ def export_lightcurve_reports(
     vsx_name = str(target_row.get("vsx_name", "") or "").strip() or "unknown"
     safe = _safe_filename(vsx_name)
 
-    # Use exportable LC points (normal frames; prefer mag_calib_ac when AC applied).
+    # Use exportable LC points (normal frames; canonical mag_calib_final when present).
     lc0 = lc_df.copy() if lc_df is not None else pd.DataFrame()
     lc_normal = _select_export_lc_rows(lc0)
 

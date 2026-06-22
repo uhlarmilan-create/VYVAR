@@ -3695,6 +3695,46 @@ def savgol_detrend_lc(
     return mag_sg
 
 
+def compute_mag_calib_final(
+    mag_calib: np.ndarray,
+    *,
+    ct_ok: bool = False,
+    ct_correction: float | None = None,
+    ac_ok: bool = False,
+    delta_m_corr: float | None = None,
+    mag_calib_ac: np.ndarray | None = None,
+) -> np.ndarray:
+    """Canonical published magnitude: final ``mag_calib`` + CT + AC (per-target/night constants).
+
+    CT and AC are additive on the ensemble-calibrated base. When CT is off, result matches
+    ``mag_calib_ac`` (same ``mag_calib`` + ``delta_m_corr``) for byte-identical export under CT-off config.
+    """
+    base = np.asarray(mag_calib, dtype=np.float64)
+    ct_add = 0.0
+    if bool(ct_ok) and ct_correction is not None:
+        try:
+            v = float(ct_correction)
+            if math.isfinite(v):
+                ct_add = v
+        except (TypeError, ValueError):
+            pass
+    ac_add = 0.0
+    if bool(ac_ok) and delta_m_corr is not None:
+        try:
+            v = float(delta_m_corr)
+            if math.isfinite(v):
+                ac_add = v
+        except (TypeError, ValueError):
+            pass
+    if ct_add == 0.0 and ac_add == 0.0:
+        return base.copy()
+    if ct_add == 0.0 and ac_add != 0.0 and mag_calib_ac is not None:
+        ac_arr = np.asarray(mag_calib_ac, dtype=np.float64)
+        if ac_arr.shape == base.shape:
+            return ac_arr.copy()
+    return base + ct_add + ac_add
+
+
 # ---------------------------------------------------------------------------
 # KROK 6: Výstup — lightcurve CSV
 # ---------------------------------------------------------------------------
@@ -3766,6 +3806,15 @@ def save_lightcurve_csv(
         if len(mag_calib_ac_arr) != n:
             mag_calib_ac_arr = np.full_like(np.asarray(mag_calib, dtype=np.float64), float("nan"), dtype=np.float64)
 
+    mag_calib_final_arr = compute_mag_calib_final(
+        mag_calib,
+        ct_ok=bool(ct_ok),
+        ct_correction=ct_correction,
+        ac_ok=ac_ok,
+        delta_m_corr=delta_m_corr if ac_ok else None,
+        mag_calib_ac=mag_calib_ac_arr,
+    )
+
     def _fill_scalar(v: float | None, default: float) -> np.ndarray:
         vv = float(v) if v is not None else float(default)
         return np.full(n, vv, dtype=np.float64)
@@ -3802,6 +3851,7 @@ def save_lightcurve_csv(
             "ac_n_ref": np.full(n, int(ac_n_ref), dtype=int),
             "ac_ok": np.full(n, bool(ac_ok), dtype=bool),
             "mag_calib_ac": np.round(mag_calib_ac_arr, 6),
+            "mag_calib_final": np.round(mag_calib_final_arr, 6),
             "delta_mag": np.round(delta_mag, 6),
             "err": np.round(err, 6),
             "aperture_r_px": np.round(aperture_r_px, 3),
@@ -13201,6 +13251,7 @@ __all__ = [
     "compute_aperture_correction",
     "compute_fwhm_gaussian_for_aperture_catalog",
     "compute_lc_rms_ooe",
+    "compute_mag_calib_final",
     "compute_optimal_apertures",
     "compute_snr_optimal_aperture_table",
     "detect_outliers",
