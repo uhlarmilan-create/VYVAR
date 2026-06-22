@@ -2514,6 +2514,71 @@ def ensemble_normalize(
     return mag_calib, delta_mag, ensemble_scatter
 
 
+def _ensemble_scatter_by_source_file(
+    all_frames: pd.DataFrame,
+    target_cid: str,
+    ensemble_scatter: np.ndarray | None,
+) -> dict[str, float]:
+    """Map proc CSV filename -> ensemble_scatter (G2-F004 epoch-level join key)."""
+    if ensemble_scatter is None:
+        return {}
+    sc = np.asarray(ensemble_scatter, dtype=np.float64)
+    if sc.size == 0:
+        return {}
+    sub = all_frames[all_frames["catalog_id"] == target_cid]
+    if sub.empty:
+        return {}
+    out: dict[str, float] = {}
+    for i, sf in enumerate(sub["source_file"].astype(str).str.strip().tolist()):
+        if i >= len(sc):
+            break
+        key = str(sf)
+        if key:
+            out[key] = float(sc[i])
+    return out
+
+
+def _combine_err_with_ensemble_scatter_keyed(
+    err_photon: np.ndarray,
+    source_files: list[str] | np.ndarray,
+    scatter_by_file: dict[str, float],
+    *,
+    target_name: str = "",
+) -> tuple[np.ndarray, np.ndarray]:
+    """Join photon ``err`` with ensemble scatter by EXACT ``source_file`` match (G2-F004).
+
+    Matched epoch, finite scatter -> ``sqrt(err^2 + scatter^2)``.
+    Matched epoch, NaN scatter -> scatter treated as 0.0 (photon-only), same as legacy
+    ``np.where(isfinite, scatter, 0.0)``.
+    Unmatched ``source_file`` -> photon-only err, ``err_scatter_unmatched`` True, WARNING logged.
+    """
+    err_out = np.asarray(err_photon, dtype=np.float64).copy()
+    unmatched = np.zeros(len(err_out), dtype=bool)
+    if not scatter_by_file:
+        return err_out, unmatched
+
+    n_unmatched = 0
+    for i, sf in enumerate(np.asarray(source_files, dtype=object)):
+        key = str(sf).strip()
+        if not key or key not in scatter_by_file:
+            unmatched[i] = True
+            n_unmatched += 1
+            continue
+        sc = float(scatter_by_file[key])
+        sc_eff = float(sc) if math.isfinite(sc) else 0.0
+        err_out[i] = float(np.sqrt(np.square(err_out[i]) + sc_eff * sc_eff))
+
+    if n_unmatched > 0:
+        logging.warning(
+            "[G2-F004] %s: %d/%d epochs missing ensemble_scatter for source_file "
+            "— photon-only err kept",
+            target_name or "?",
+            n_unmatched,
+            len(err_out),
+        )
+    return err_out, unmatched
+
+
 # ---------------------------------------------------------------------------
 # Color term (BP-RP) — globálny shift na noc
 # ---------------------------------------------------------------------------
@@ -3828,6 +3893,7 @@ def save_lightcurve_csv(
     lunar_risk: str = "UNKNOWN",
     dilution_factor: float = 1.0,
     alignment_failed: np.ndarray | None = None,
+    err_scatter_unmatched: np.ndarray | None = None,
 ) -> None:
     """Uloží lightcurve CSV."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -3894,6 +3960,11 @@ def save_lightcurve_csv(
             "is_flipped": (is_flipped if is_flipped is not None else np.full_like(bjd, False, dtype=bool)),
             "alignment_failed": (
                 alignment_failed if alignment_failed is not None else np.full_like(bjd, False, dtype=bool)
+            ),
+            "err_scatter_unmatched": (
+                err_scatter_unmatched
+                if err_scatter_unmatched is not None
+                else np.full_like(bjd, False, dtype=bool)
             ),
             "mag_inst": np.round(mag_inst, 6),
             "mag_calib_raw": np.round(mag_calib_raw, 6),
@@ -7341,6 +7412,9 @@ def _phase2a_process_one_target(
         n_comp_min=max(1, int(getattr(_cfg, "phase01_comparison_n_comp_min", 3))),
         n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
     )
+    _ensemble_scatter_by_file = _ensemble_scatter_by_source_file(
+        all_frames, target_cid, ensemble_scatter
+    )
 
     _dilution_result: dict[str, Any] = {
         "dilution_factor": 1.0,
@@ -7608,20 +7682,15 @@ def _phase2a_process_one_target(
     )
 
     err = target_frames["err"].to_numpy(dtype=float)
-    # Per-point uncertainty = photon/SNR base error (term-1, ``err`` above; correctly large/NaN when a
-    # mis-centred aperture tanks SNR) ⊕ ensemble zeropoint uncertainty (term-3, ``ensemble_scatter``).
-    # ``ensemble_scatter`` is now the per-frame standard error of the comps' zeropoint residuals
-    # (Honeycutt 1992), each comp referenced to its own across-night median so the comps' brightness/
-    # colour spread cancels — replacing the former ``std(comp instrumental mags)`` which injected a
-    # fixed ~comp-brightness-difference floor (the ~0.58 mag / 23× inflation bug). The old
-    # ``comp_rms_med/√n_ens`` term is intentionally DROPPED here: it measured the same ensemble-ZP
-    # quantity and would double-count the residual term. Small-n robustness: when the residual SEM is
-    # ~0 (good frame), err falls back to the photon base (the floor).
-    if ensemble_scatter is not None:
-        _ens_sc = np.asarray(ensemble_scatter, dtype=np.float64)
-        if _ens_sc.shape == err.shape:
-            _ens_sc = np.where(np.isfinite(_ens_sc), _ens_sc, 0.0)
-            err = np.sqrt(np.square(err) + np.square(_ens_sc))
+    # Per-point uncertainty = photon/SNR base error (term-1) ⊕ ensemble zeropoint uncertainty
+    # (term-3, ``ensemble_scatter``). Joined by EXACT ``source_file`` (G2-F004), not positional index.
+    _src_for_err = target_frames["source_file"].astype(str).tolist()
+    err, err_scatter_unmatched_arr = _combine_err_with_ensemble_scatter_keyed(
+        err,
+        _src_for_err,
+        _ensemble_scatter_by_file,
+        target_name=str(target_name),
+    )
     ap_arr = target_frames["aperture_r_px"].to_numpy(dtype=float)
     src_files = target_frames["source_file"].tolist()
     sat_flags = (target_frames["flag"] == "saturated").to_numpy(dtype=bool)
@@ -7786,6 +7855,7 @@ def _phase2a_process_one_target(
         dilution_factor=float(_dilution_result.get("dilution_factor", 1.0)),
         method=_lc_export_method,
         alignment_failed=align_fail_arr,
+        err_scatter_unmatched=err_scatter_unmatched_arr,
     )
     if _have_psf_cols:
         try:
