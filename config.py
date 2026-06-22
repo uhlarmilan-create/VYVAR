@@ -97,8 +97,8 @@ class AppConfig:
     project_root: Path = field(default_factory=lambda: Path(__file__).resolve().parent)
 
     # Calibration validity defaults (days)
-    masterdark_validity_days: int = 80
-    masterflat_validity_days: int = 524
+    masterdark_validity_days: int = 90
+    masterflat_validity_days: int = 200
 
     #: Estimated field diameter in degrees for VYVAR Gaia plate solve (used as **minimum** hint only).
     #: The actual Gaia kužeľ pre celý čip sa odvodzuje z FOCALLEN+PIXSIZE+NAXIS (pozri ``catalog_cone_radius_deg_from_optics``
@@ -639,7 +639,7 @@ class AppConfig:
         )
         self.database_path = Path(data.get("database_path", str(self.project_root / "vyvar.sqlite3")))
 
-        self.masterdark_validity_days = int(data.get("masterdark_validity_days", 60))
+        self.masterdark_validity_days = int(data.get("masterdark_validity_days", 90))
         self.masterflat_validity_days = int(data.get("masterflat_validity_days", 200))
 
         # ``plate_solve_fov_deg`` is no longer read from JSON — resolved from FITS + DB (see ``resolve_plate_solve_fov_deg_hint``).

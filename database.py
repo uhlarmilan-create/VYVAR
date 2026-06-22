@@ -2553,7 +2553,7 @@ class VyvarDatabase:
     def _seed_default_settings(self) -> None:
         self.conn.execute(
             "INSERT OR IGNORE INTO SETTINGS (KEY, VALUE) VALUES (?, ?);",
-            ("masterdark_validity_days", "60"),
+            ("masterdark_validity_days", "90"),
         )
         self.conn.execute(
             "INSERT OR IGNORE INTO SETTINGS (KEY, VALUE) VALUES (?, ?);",
