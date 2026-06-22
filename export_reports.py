@@ -32,10 +32,52 @@ from check_star_kmag import (
     resolve_proc_csv_dir,
     select_check_star,
 )
-from photometry_core import parse_comp_quality_json_map
+from photometry_core import parse_comp_quality_json_map, _resolve_plate_scale_arcsec_per_px
 
 # Gaia ID musí byť str — float64 stráca cifry
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
+
+# Single source for export headers (AAVSO #SOFTWARE + VarAstro Software line).
+VYVAR_SOFTWARE_VERSION = "VYVAR 1.0"
+
+
+def _aavso_software_header_line(software_version: str, export_method: str) -> str:
+    """Format AAVSO ``#SOFTWARE`` from the canonical version string."""
+    ver = str(software_version or VYVAR_SOFTWARE_VERSION).strip() or VYVAR_SOFTWARE_VERSION
+    soft_id = ver.replace(" ", "/") if "/" not in ver else ver
+    return (
+        f"#SOFTWARE={soft_id} ({software_method_label(export_method)} photometry; "
+        "Broeg 2005 ensemble)\n"
+    )
+
+
+def _resolve_export_arcsec_per_px(
+    photometry_dir: Path,
+    cfg: AppConfig,
+) -> float | None:
+    """Derive plate scale (arcsec/px) for export headers — derive-or-None (no magic 1.3).
+
+    Priority: ``pipeline_meta.json`` ``plate_scale_arcsec_px`` (Phase 2A session);
+    then WCS/CD from sibling ``MASTERSTAR.fits`` via ``_resolve_plate_scale_arcsec_per_px``.
+    """
+    meta = load_pipeline_meta(photometry_dir)
+    ps = meta.get("plate_scale_arcsec_px")
+    if ps is not None:
+        try:
+            v = float(ps)
+            if math.isfinite(v) and v > 0:
+                return float(v)
+        except (TypeError, ValueError):
+            pass
+    masterstar = photometry_dir.parent / "MASTERSTAR.fits"
+    if masterstar.is_file():
+        try:
+            v = _resolve_plate_scale_arcsec_per_px(cfg, masterstar)
+            if v is not None and math.isfinite(float(v)) and float(v) > 0:
+                return float(v)
+        except Exception:  # noqa: BLE001
+            pass
+    return None
 
 
 def _resolved_site_from_meta(output_dir: Path | str | None) -> dict[str, Any] | None:
@@ -650,8 +692,8 @@ def export_lightcurve_reports(
     observer_code: str = "",
     observer_name: str = "Unknown Observer",
     comp_quality_map: dict[str, str] | None = None,
-    arcsec_per_px: float = 1.3,
-    software_version: str = "VYVAR 1.0",
+    arcsec_per_px: float | None = None,
+    software_version: str | None = None,
     cfg: AppConfig | None = None,
     lc_dir: Path | None = None,
     obs_group: str = "",
@@ -673,6 +715,10 @@ def export_lightcurve_reports(
     out_base = Path(output_dir)
     (out_base / "aavso").mkdir(parents=True, exist_ok=True)
     (out_base / "varastro").mkdir(parents=True, exist_ok=True)
+
+    _phot_dir = out_base.parent
+    _sw_ver = str(software_version or VYVAR_SOFTWARE_VERSION).strip() or VYVAR_SOFTWARE_VERSION
+    arcsec_per_px = _resolve_export_arcsec_per_px(_phot_dir, fresh_cfg)
 
     # Per-draft resolved observer site (param_resolver, persisted by Phase 2A) so the
     # exported #LATITUDE / VAR.ASTRO site matches the location used for BJD/airmass.
@@ -803,7 +849,6 @@ def export_lightcurve_reports(
                 notes_first = (notes_first + "|" + _tnote)[:100]
 
     # --- AAVSO Extended ---
-    _phot_dir = out_base.parent
     _cite_kw: dict[str, Any] = {
         "photometry_dir": _phot_dir,
         "target_row": target_row,
@@ -847,9 +892,7 @@ def export_lightcurve_reports(
         )
     a_lines.append(f"#OBSCODE={_obc}\n")
     _append_aavso_observer_location_lines(a_lines, fresh_cfg, _resolved_site)
-    a_lines.append(
-        f"#SOFTWARE=VYVAR/1.0 ({software_method_label(_export_method)} photometry; Broeg 2005 ensemble)\n"
-    )
+    a_lines.append(_aavso_software_header_line(_sw_ver, _export_method))
     a_lines.append("#DELIM=,\n")
     a_lines.append("#DATE=BJD\n")
     a_lines.append("#OBSTYPE=CCD\n")
@@ -906,7 +949,7 @@ def export_lightcurve_reports(
     v_lines: list[str] = []
     v_lines.extend(_vyvar_export_citation_lines(fresh_cfg, **_cite_kw))
     v_lines.append("# VYVAR — Differential Ensemble Photometry\n")
-    v_lines.append(f"# Software: {software_version} | Observer: {observer_name}\n")
+    v_lines.append(f"# Software: {_sw_ver} | Observer: {observer_name}\n")
     _append_varastro_site_line(v_lines, fresh_cfg, _resolved_site)
     if obs_group_resolved:
         v_lines.append(f"# Setup: {obs_group_resolved}\n")
@@ -943,7 +986,7 @@ def export_lightcurve_reports(
     n_frames = pd.to_numeric(summary_row.get("n_frames", float("nan")), errors="coerce")
     n_good_comp = pd.to_numeric(summary_row.get("n_good_comp", float("nan")), errors="coerce")
     lc_rms = pd.to_numeric(summary_row.get("lc_rms", float("nan")), errors="coerce")
-    if math.isfinite(float(ap_px)) and math.isfinite(float(arcsec_per_px)):
+    if math.isfinite(float(ap_px)) and arcsec_per_px is not None and math.isfinite(float(arcsec_per_px)):
         v_lines.append(
             f"#   Aperture: {float(ap_px):.2f}px ({float(ap_px) * float(arcsec_per_px):.2f}arcsec)\n"
         )

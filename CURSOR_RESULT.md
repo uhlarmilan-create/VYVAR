@@ -1,66 +1,80 @@
-CURSOR RESULT — 2026-06-19 (Fix Step 6: G4-F001 Option B)
+CURSOR RESULT — 2026-06-22 (G5-F002 close + G5-F007 fix)
 
 What I did
-Corrected trust-gate documentation to match production reality (comp QA + check-star + `lc_quality_flag`; no SEP axis). Reclassified SEP/xval as offline-only harness. Added module headers on `xval_*`, guard test `tests/test_no_xval_in_production.py`, ledger G4-F001 → RESOLVED (Option B). No production logic changes.
+Marked **G5-F002 RESOLVED (non-issue)** in ledger. Diagnosed G5-F007 call chain; implemented derive-or-None plate scale + canonical `#SOFTWARE` version; added tests; regression on AAVSO data rows; isolated commit (no push).
 
-## 6a — Inventory (docs/strings describing 3-axis or production SEP trust axis)
+## G5-F002 — RESOLVED (non-issue)
 
-| File | Line(s) | Issue |
-|------|---------|-------|
-| `docs/VYVAR_DECISIONS.md` | 412–413 | Listed SEP cross-val + "three-axis" trust gate as pipeline capabilities |
-| `docs/VYVAR_DECISIONS.md` | 505–515 | "### 3-axis trust gate" with `sep_confidence` as production input |
-| `docs/VYVAR_JOURNAL.md` | 3645 | Session title "3-axis trust flag" |
-| `docs/VYVAR_JOURNAL.md` | 3674–3691 | Trust flag section: 3-axis inputs including `xval_results.csv` / sep warnings |
-| `docs/VYVAR_PIPELINE_CZ.md` | 225 | SEP cross-val table row without offline-only label |
-| `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md` | 13 | "cross-validates with SEP" (implied in-pipeline) |
-| `docs/VYVAR_FULL_AUDIT_LEDGER.md` | 1319, 1366 | G4-F001 finding + test-gap referencing 3-axis docs |
-| `CURSOR_RESULT.md` | 34 | Prior audit summary (3-axis vs 2-axis) |
+**Evidence (one line):** AC applies constant `delta_m_corr` → `mag_calib_ac`; per-point `err` (photon + ensemble SEM) is invariant under constant mag shift; no `err_ac` in pipeline; folding `ac_scatter` per-point would misrepresent a correlated systematic as random.
 
-**Already correct (no edit required):**
-- `docs/VYVAR_STATE.md` ~95–96 — xval offline, trust uses comp_qa + check-star + lc_quality
-- `docs/VYVAR_PROCESS.md` ~169–171 — cross-val storage offline; trust gate without SEP
-- `docs/VYVAR_DECISIONS.md` ~526–536 — `sep_xval` retired / trust gate v2 (pre-existing)
-- `docs/VYVAR_JOURNAL.md` ~3766–3780 — Session 2026-06-03 trust gate v2 (pre-existing)
-- `trust_flag_core.py` — implementation already SEP-free; docstring clarified in 6c
+Ledger: **G5-F002** → **RESOLVED (non-issue)**; fix-log step 7.
 
-**Production code scan:** no production module imports `xval_run` / `xval_harness_core` / `assign_sep_confidence` (confirmed by guard test).
+---
 
-## 6b — Doc corrections
+## G5-F007 — diagnosis (call chain)
 
-- `VYVAR_DECISIONS.md`: production trust gate section rewritten (comp QA + check-star + `lc_quality_flag`; unevaluated → RED; SEP offline); intro bullet separated SEP study from pipeline trust.
-- `VYVAR_JOURNAL.md`: harness-era trust flag marked historical; production since 2026-06-03 = trust gate v2 without SEP.
-- `VYVAR_PIPELINE_CZ.md`: SEP row labeled offline harness, not pipeline.
-- `VYVAR_NEIGHBOR_SUB_DESIGN.md`: aperture trust wording aligned with production gate + offline SEP.
-- `VYVAR_FULL_AUDIT_LEDGER.md`: G4-F001 RESOLVED (Option B); test-gap row updated.
+### Plate scale `1.3`
 
-## 6c — Module headers
+| Caller | Passes `arcsec_per_px`? |
+|--------|-------------------------|
+| `photometry_core.export_all_method_lightcurve_reports` (~8003) | **Before fix:** always `float(_cfg.export_arcsec_per_px)` (config default **1.3**) |
+| `export_lightcurve_reports` signature | **Before fix:** default `arcsec_per_px=1.3` |
+| Scripts (`reexport_draft_aavso.py`, `verify_method_report_separation.py`) | Explicit literals in some paths |
 
-- `xval_run.py` — standalone OFFLINE cross-validation docstring prefix.
-- `xval_harness_core.py` — same prefix.
-- `trust_flag_core.py` — production inputs + explicit no SEP/xval axis.
+**Production path:** Phase 2A → `export_all_method_lightcurve_reports` → `export_lightcurve_reports`. Config default **1.3** was threaded on every export unless operator overrode `export_arcsec_per_px` in config — **not** draft WCS/meta.
 
-## 6d — Guard test
+**Real plate scale at export site:** `photometry/pipeline_meta.json` → `plate_scale_arcsec_px` (Phase 2A); sibling `../MASTERSTAR.fits` WCS/CD via `_resolve_plate_scale_arcsec_per_px`. Reachable from `out_base.parent` (`_phot_dir`).
 
-- `tests/test_no_xval_in_production.py` — scans production `.py` (excludes `tests/`, `scripts/`, `sandbox/`, `xval_*`, `validate_lc_crossval.py`) for forbidden imports.
+**Verdict:** **1.3 did reach** VarAstro aperture-arcsec commentary whenever config default was used and meta/WCS were not consulted for export headers. Severity was real, not latent-only.
 
-## Output / findings
+### `#SOFTWARE=VYVAR/1.0`
 
-- `pytest tests/test_no_xval_in_production.py tests/test_trust_flag.py tests/test_trust_checkstar_hardening.py`: **33 passed**
-- `ruff check` on new/changed modules: **clean**
+AAVSO header used a **literal** `#SOFTWARE=VYVAR/1.0` while `software_version` param only appeared in VarAstro body. No separate config key; canonical string is module constant `VYVAR_SOFTWARE_VERSION = "VYVAR 1.0"`.
 
-## Errors (if any)
+---
 
-None.
+## G5-F007 — fix (minimal)
+
+**`export_reports.py`**
+- `VYVAR_SOFTWARE_VERSION` + `_aavso_software_header_line()` — AAVSO `#SOFTWARE` uses version param/constant (space → `/`).
+- `_resolve_export_arcsec_per_px(photometry_dir, cfg)` — `pipeline_meta.plate_scale_arcsec_px` → MASTERSTAR WCS; **derive-or-None** (no 1.3).
+- `export_lightcurve_reports` resolves scale internally; VarAstro `#   Aperture: …arcsec` only when scale derivable.
+
+**`photometry_core.py`**
+- Removed `arcsec_per_px=float(_cfg.export_arcsec_per_px)` and hardcoded `software_version="VYVAR 1.0"` from export call (~8013).
+
+**`tests/test_export_g5_f007.py`** — 8 tests (positive home/fine rig, derive-or-None omit, version header, regression data row).
+
+---
+
+## Tests
+
+| Case | Result |
+|------|--------|
+| Meta 9.77″/px (home rig) | VarAstro shows `48.85arcsec` (5×9.77) |
+| Meta 0.65″/px (fine rig) | `_resolve_export_arcsec_per_px` → 0.65 |
+| No derivable scale | Aperture arcsec line omitted; **never 1.3** |
+| `#SOFTWARE` | `#SOFTWARE=VYVAR/1.0` from `VYVAR_SOFTWARE_VERSION` |
+| Regression AAVSO body | Data row `REG_STAR,2460000.500000,12.500,0.010,…` unchanged |
+| Full suite | **381 passed**, 15 skipped |
+| Ruff | `export_reports.py`, `photometry_core.py` clean |
+
+---
+
+## Ledger
+
+| Finding | Status |
+|---------|--------|
+| **G5-F002** | **RESOLVED (non-issue)** — fix-log step 7 |
+| **G5-F007** | **FIXED** — fix-log step 8, commit **`770f062`** |
+
+## Commit
+
+`fix(export): derive AAVSO plate scale from WCS (no hardcoded 1.3); real software version (G5-F007)` — **`770f062`**
+
+**Not pushed** — stop for Claude review.
 
 ## Files changed
 
-- `docs/VYVAR_DECISIONS.md`
-- `docs/VYVAR_JOURNAL.md`
-- `docs/VYVAR_PIPELINE_CZ.md`
-- `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md`
-- `docs/VYVAR_FULL_AUDIT_LEDGER.md`
-- `trust_flag_core.py` (docstring only)
-- `xval_run.py` (docstring only)
-- `xval_harness_core.py` (docstring only)
-- `tests/test_no_xval_in_production.py` (new)
-- `CURSOR_RESULT.md`
+- `export_reports.py`, `photometry_core.py`, `tests/test_export_g5_f007.py`
+- `docs/VYVAR_FULL_AUDIT_LEDGER.md`, `CURSOR_RESULT.md`

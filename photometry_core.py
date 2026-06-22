@@ -8010,8 +8010,6 @@ def _phase2a_finalize_exports(
                     observer_code=str(_cfg.observer_code or ""),
                     observer_name=str(_cfg.observer_name or "Unknown Observer"),
                     comp_quality_map=_comp_qmap if _comp_qmap else None,
-                    arcsec_per_px=float(_cfg.export_arcsec_per_px),
-                    software_version="VYVAR 1.0",
                     cfg=_cfg,
                     obs_group=_setup_obs_group,
                     targets_df=at_df,
