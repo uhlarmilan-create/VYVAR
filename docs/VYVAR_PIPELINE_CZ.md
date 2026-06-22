@@ -8,7 +8,7 @@ session 2026-06-09). Sekce [Overeni pred odevzdanim clanku](#overeni-pred-odevzd
 na konci shrnuje hodnoty, ktere doporucujeme jeste jednou potvrdit proti zivemu kodu / harness.
 
 **Souvisejici anglicke dokumenty:** `VYVAR_STATE.md`, `VYVAR_DECISIONS.md`, `VYVAR_PROCESS.md`,
-`VYVAR_VALIDATION.md`, `VYVAR_PARAMS.md`, `CITATIONS.bib`.
+`VYVAR_VALIDATION.md`, `VYVAR_PARAMS.md`, `VYVAR_CALIBRATION.md`, `CITATIONS.bib`.
 
 ---
 
@@ -21,7 +21,8 @@ na konci shrnuje hodnoty, ktere doporucujeme jeste jednou potvrdit proti zivemu 
 5. [Byte-identity](#4-byte-identity----princip-nezmenen-kotva-v-prechodu)
 6. [Gaia katalog a build pro noveho uzivatele](#5-gaia-katalog----g--175-a-build-pro-noveho-uzivatele)
 7. [Fail-safety / hygiena (#4)](#6-fail-safety--hygiena-4)
-8. [Overeni pred odevzdanim clanku](#overeni-pred-odevzdanim-clanku-doporuceni)
+8. [Kalibrace magnitud -- datovy tok](#7-kalibrace-magnitud--datovy-tok)
+9. [Overeni pred odevzdanim clanku](#overeni-pred-odevzdanim-clanku-doporuceni)
 
 ---
 
@@ -208,6 +209,20 @@ python GAIA_DR3/build_blind_index.py --db <path-to-db> --tier both
   (mimo SHA sadu), `LOGGER.error` a status na titulce reportu. Modul: `photometry_core.py`.
 - Odstraneny mrtve UI moduly (`ui_photometry_results`, `ui_suspected_lightcurves`; nahrazeny
   `render_aperture_photometry` / `render_variability_dashboard`).
+
+---
+
+## 7) Kalibrace magnitud -- datovy tok
+
+Kompletni linie sloupcu `mag_inst` -> `mag_calib` -> korekce (GS11, SG, CT, AC) ->
+kanonicky **`mag_calib_final`**, tabulka spotrebitelu (export, PDF, `lc_rms`, variability),
+a dokumentace sloupce `err` jsou v dedikovanem manualu:
+
+**`docs/VYVAR_CALIBRATION.md`** (verze 2026-06-22, Path A commit `be3e193`).
+
+Shrnuti: vsechny publikacni vystupy (AAVSO/VarAstro MAG, LC figury v PDF) ctou
+`mag_calib_final`; scatter metriky (`lc_rms`, trust) zustavaji na `mag_calib` (CT/AC jsou
+konstantni posuvy). Rozhodnuti: `VYVAR_DECISIONS.md` (Path A); audit G5-F011.
 
 ---
 

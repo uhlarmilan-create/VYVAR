@@ -44,6 +44,28 @@ them post-hoc.
 
 ---
 
+## Photometry: canonical published magnitude `mag_calib_final` (Path A, 2026-06-22)
+
+**Decision.** One canonical calibrated magnitude for all **publication-facing** outputs:
+`mag_calib_final = mag_calib + ct_correction (if ct_ok) + delta_m_corr (if ac_ok)`, stored in
+each `lightcurve_*.csv` alongside provenance columns (`mag_calib`, `mag_calib_ct`,
+`mag_calib_ac`, `mag_calib_raw`).
+
+**Consumers.** AAVSO export, VarAstro MAG column, main per-star PDF LC plots, candidate PDF LC
+figures — all read `mag_calib_final` (`export_reports.py`, `photometry_report.py`).
+VarAstro `delta_mag` remains the ensemble differential (not CT/AC adjusted).
+
+**Not changed.** `lc_rms`, `lc_rms_ooe`, comp_qa, trust gate continue to use `mag_calib`
+(CT/AC are per-target/night constants → scatter invariant). Variability detection uses
+instrumental `dao_flux` from proc CSVs.
+
+**Supersedes.** Split consumer model (export AC-only vs PDF CT-only) flagged as G5-F011;
+G5-F003 candidate-figure AC precedence is subsumed by this column.
+
+**Implementation.** `be3e193`; full data-flow doc: `docs/VYVAR_CALIBRATION.md`.
+
+---
+
 ## Fix C diagnosed (C1): run-414 bad frames are PSF/FWHM-bloated, not mis-aligned; recovery N/A (2026-06-18)
 
 **Finding (measured, run-414 g, production alignment path; `CURSOR_RESULT_fixC_diag.md`).** The 14
