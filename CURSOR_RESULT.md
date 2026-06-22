@@ -57,7 +57,7 @@ Fix scoped strictly to `_generate_candidate_lc_png` (candidate detail pages only
 
 ## Commit
 
-`fix(report): candidate LC figures use calibrated mag, not mag_inst (G5-F003)` — see hash below.
+`fix(report): candidate LC figures use calibrated mag, not mag_inst (G5-F003)` — **`76c5a93`**.
 
 **Not pushed** — stop for Claude review.
 
