@@ -2,7 +2,7 @@
 
 **Status:** AUDIT-ONLY (read + log; no code edits during audit pass).
 **Started:** 2026-06-19
-**Last checkpoint:** Group 5 complete — Reporting / export (2026-06-20 local) — Science / variability / QA (2026-06-20 local)
+**Last checkpoint:** Group 6 complete — Config / orchestration / utils (2026-06-19 local)
 
 Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 functions), targeted verification against `docs/VYVAR_CODE_AUDIT.md` DR2-DR6 threads, science-critical logic reads.
 
@@ -1664,6 +1664,148 @@ Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L3/L11 emphas
 
 ---
 
+## Group 6 checkpoint — Config / orchestration / utils (2026-06-19)
+
+**Module set (12 modules, 110 functions, ~4.9k LOC audited):**
+
+| Module | Role |
+|--------|------|
+| `config.py` | `AppConfig` dataclass + JSON load (`__post_init__`), density/crowding override helpers |
+| `utils.py` | WCS/plate-scale, FITS discovery, session paths, `seeded_numpy_default_rng` |
+| `night_run.py` | Headless night pipeline orchestration |
+| `infolog.py` | In-process log ring buffer + logging handler |
+| `vyvar_ui_status.py` | Footer status strings / BV column visibility helper |
+| `inspect_drafts.py` | CLI draft summary (plate scale hints) |
+| `lunar_context.py` | Lunar phase / separation for reports |
+| `orchestrator/vyvar_orchestrator.py` | Claude↔Cursor file bridge (dev) |
+| `scripts/_build_vyvar_params.py` | `VYVAR_PARAMS.md` registry generator |
+| `simulate_night_run.py` | Night-run simulation CLI |
+| `run_crowding_index.py` | Crowding index CLI |
+| `run_smoothness_report.py` | Smoothness report CLI |
+
+**Excluded (audited in prior groups):** `param_resolver.py`, `time_utils.py`, `draft_provenance.py`, `fits_suffixes.py`, `masterstar_context.py` (Group 3); `app.py` + `ui_*.py` shells (Group 7 scope — scanned for L7 parity only).
+
+Method: AST inventory + lens scans (L1–L11) on 12 modules (110 functions), `__post_init__` science read, cross-check `docs/VYVAR_PARAMS.md` + live `config.json` vs `AppConfig` (script `tmp/audit_group6_parity.py`).
+
+### Prioritized findings (Group 6 — deduplicated, severity-sorted)
+
+| ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
+|----|-----|------|----------|--------------|---------------------|
+| G6-F001 | **HIGH** | L1/L2 | `config.py:439-441`, `540-541`, `211`, `1695-1702` | **Set-1 rig literals** as global defaults: `plate_scale_arcsec_per_px=1.3`, `phase01_plate_scale_arcsec_per_px=1.3`, `frame_width_px=2082`, `frame_height_px=1397`, `export_arcsec_per_px=1.3`. Wide-field (9.77″/px) requires explicit `config.json` overrides (TODO-MULTISET). Export path now derive-or-None (`G5-F007`) but config defaults still imply fine rig. | Cross-rig constants must not masquerade as universal defaults; derive-or-None or per-rig profiles. |
+| G6-F002 | **HIGH** | L4/L7 | `config.py:99-101`, `642-643`, `docs/VYVAR_PARAMS.md:57-58` | **Calibration validity default mismatch:** dataclass declares `masterdark_validity_days=80`, `masterflat_validity_days=524`; `__post_init__` fallbacks when JSON key missing are **60** and **200**. UI/PARAMS document 80/524; empty JSON silently gets shorter validity. | Default in dataclass, `__post_init__`, PARAMS, and UI must agree. |
+| G6-F003 | **HIGH** | L7 | `ui_select_stars.py:443`, `531`; `config.py` (no field) | UI reads **`cfg.phase01_comparison_max_bv_diff`** — **not an `AppConfig` field** (`hasattr` False). Comp-selection display / `max_bv_diff=` call will **AttributeError** when that path runs on a stock config. | Every UI `cfg.*` access must map to a declared config field or safe resolver. |
+| G6-F004 | **HIGH** | L7 | `ui_aperture_photometry.py:1657`, `ui_select_stars.py:618`; `config.py` (no field) | UI uses **`getattr(cfg, "phase01_use_bprp_primary", True)`** — not on `AppConfig`; always defaults True; cannot be persisted or tuned via config/PARAMS registry. | Hidden UI behavior via getattr bypass breaks config↔UI parity. |
+| G6-F005 | **MED** | L3 | `config.py:19-26` | `load_config_json` returns `{}` on `JSONDecodeError` with **no log** — corrupt `config.json` looks like “no overrides”. | Config load failures must log at operator-visible level. |
+| G6-F006 | **MED** | L3 | `config.py:1045-1046` | Observer location DB hydration (`get_observer_location_by_id`) on broad **`except: pass`** — bad DB/path leaves stale lat/lon silently. | DB failures on site resolution must log. |
+| G6-F007 | **MED** | L3/L4 | `config.py:666-667`, `1148-1149`, `2291-2292` | Silent **`pass`** on calibration temp tolerance parse, aperture tier parse, annulus crowding clamp — invalid JSON values retain prior silently. | Invalid config values should log + clamp explicitly. |
+| G6-F008 | **MED** | L1/L11 | `config.py:74-75`, `utils.py:408-417` | `recommended_vyvar_parallel_workers` RAM estimate hardcodes **2048×2048** frames; `per_frame_catalog_match_sep_arcsec_for_scale` uses **20″** fallback when scale unknown. | Worker/RAM and match tolerances should use cfg geometry or derive-or-None. |
+| G6-F009 | **MED** | L7 | `config.json` key `phase2a_variable_xy_fallback_mag_tol`; not in `AppConfig` | Orphan JSON key — edits have **no effect** on pipeline. | Every `config.json` key must bind to `AppConfig` or be removed. |
+| G6-F010 | **MED** | L3 | `infolog.py:35-37`, `night_run.py:329-336` | Infolog `log_event` swallows all exceptions; `night_run` pending DAO FWHM/threshold parse failures **`pass`** without log. | Orchestration glue must not hide operator-actionable parse failures. |
+| G6-F011 | **MED** | L7 | `docs/VYVAR_PARAMS.md` summary | Registry reports **34 config-only (no UI)** keys marked `exposed \| no` — drift bucket (observer site fields, blind cluster tuning, neighbor-sub PSF knobs, etc.). Not all are intentional-hidden; PARAMS generator marks `no` when no `ui*.py` string match. | Config-only knobs need explicit intentional-hidden vs drift classification. |
+| G6-F012 | **LOW** | L5 | `inspect_drafts.py:46-109` | Diagnostic CLI: multiple **`except: pass`** on FITS/header reads (acceptable for CLI probe, but errors invisible). | Even diagnostics should print skip reason. |
+| G6-P001 | **CLEAN** | - | `utils.py:24-48`, `VYVAR_RANDOM_SEED=42` | `seeded_numpy_default_rng` patches astroalign nondeterminism — aligns with Group 1 fix `98de910`. | Reproducibility hooks belong in shared utils. |
+| G6-P002 | **CLEAN** | - | `utils.py:382-396`, `477-516` | `plate_scale_arcsec_per_pixel` + `catalog_cone_radius_deg_from_optics` derive cone from optics with `MIN_GAIA_CONE_RADIUS_DEG` floor — correct derive-or-fallback pattern. | Scale-dependent geometry should derive from optics/WCS. |
+| G6-P003 | **CLEAN** | - | `scripts/_build_vyvar_params.py` | Automated PARAMS registry from `config.py` + `ui*.py` scan — supports L7 parity workflow. | Registry tooling should stay in sync with `AppConfig` fields. |
+| G6-P004 | **CLEAN** | - | `config.py:645-646` | `plate_solve_fov_deg` intentionally **not** read from JSON — resolved from FITS+DB per comment (matches DECISIONS FOV authority). | FOV hints must not be stale JSON literals. |
+
+### Config ↔ UI parity mismatch list (L7 — concrete)
+
+**Registry snapshot** (`tmp/audit_group6_parity.py`, 2026-06-19): `AppConfig` fields **278** · `config.json` keys **252** · UI `cfg.*` refs **95** (16 `ui*.py` files) · `VYVAR_PARAMS.md` keys **259**.
+
+**Summary (from `VYVAR_PARAMS.md`):** 82 exposed · 136 intentionally-hidden · **34 config-only (`exposed \| no`)** · **2 UI strings without `AppConfig` field**.
+
+#### A — UI references without `AppConfig` field (reverse drift)
+
+| Symbol | UI location | Risk |
+|--------|-------------|------|
+| `phase01_comparison_max_bv_diff` | `ui_select_stars.py:443`, `531` | **AttributeError** on direct `cfg.` access |
+| `phase01_use_bprp_primary` | `ui_aperture_photometry.py:1657`, `ui_select_stars.py:618` | Silent default via `getattr(..., True)` only |
+
+#### B — `config.json` key not on `AppConfig`
+
+| Key | Note |
+|-----|------|
+| `phase2a_variable_xy_fallback_mag_tol` | Present in repo `config.json`; no loader field |
+
+#### C — Dataclass vs `__post_init__` vs PARAMS default mismatches (selected)
+
+| Key | Dataclass default | `__post_init__` if JSON missing | PARAMS / UI |
+|-----|-------------------|----------------------------------|-------------|
+| `masterdark_validity_days` | 80 | **60** | 80 (UI yes) |
+| `masterflat_validity_days` | 524 | **200** | 524 (UI yes) |
+| `comp_iterative_clip_enabled` | False | loaded from JSON (often True) | PARAMS notes both |
+| Observer block (`observer_lat/lon/…`) | Jirny-ish literals | DB/json session values | PARAMS shows dataclass vs json drift |
+
+#### D — Config-only keys (`VYVAR_PARAMS.md` `exposed \| no`, 33 rows)
+
+`aavso_filter_map`, `observer_alt_m`, `observer_code`, `observer_lat`, `observer_location_id`, `observer_location_name`, `observer_lon`, `observer_name`, `apply_color_term`, `blind_cluster_coherence_cap`, `blind_cluster_eps_deg`, `blind_cluster_min_samples`, `blind_cluster_min_votes`, `blind_cluster_vote_span`, `blind_img_select_mode`, `blind_img_star_budget`, `blind_scale_tol_frac`, `blind_use_rig_prior`, `check_select_rms_floor`, `neighbor_sub_centroid_max_fwhm`, `neighbor_sub_chi2_max`, `neighbor_sub_max_neighbor_overmag`, `neighbor_sub_max_target_undermag`, `neighbor_sub_min_recovered_snr`, `neighbor_sub_nn_contam_dmag`, `neighbor_sub_refuse_sep_fwhm`, `neighbor_sub_regime_dmag_min`, `neighbor_sub_regime_sep_max`, `neighbor_sub_residual_rms_max`, `psf_neighbor_sub_enabled`, `blind_index_select_mode`, `catalog_query_max_rows`, `dao_qc_in_calibrate`.
+
+(Plus `export_arcsec_per_px` marked intentionally-hidden in PARAMS — superseded in export code by derive-or-None but config default remains 1.3.)
+
+### Coverage table (Group 6 modules)
+
+| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC† | FLAGGED | NEEDS-TEST |
+|--------|-------|-------|---------|------------------|------------|---------------|---------|------------|
+| `config.py` | 2294 | 19‡ | 19 | 0 | 0 | 0 | 9 | 10 |
+| `utils.py` | 736 | 34 | 34 | 0 | 0 | 2§ | 6 | 14 |
+| `night_run.py` | 1128 | 19 | 19 | 0 | 0 | 2§ | 4 | 9 |
+| `infolog.py` | 138 | 10 | 10 | 0 | 0 | 0 | 2 | 5 |
+| `vyvar_ui_status.py` | 90 | 4 | 4 | 0 | 0 | 0 | 0 | 1 |
+| `inspect_drafts.py` | 154 | 4 | 4 | 0 | 0 | 0 | 1 | 1 |
+| `lunar_context.py` | 139 | 6 | 6 | 0 | 0 | 0 | 0 | 4 |
+| `orchestrator/vyvar_orchestrator.py` | 206 | 6 | 6 | 0 | 0 | 0 | 0 | 1 |
+| `scripts/_build_vyvar_params.py` | 578 | 4 | 4 | 0 | 0 | 0 | 0 | 2 |
+| `simulate_night_run.py` | 164 | 2 | 2 | 0 | 0 | 0 | 0 | 1 |
+| `run_crowding_index.py` | 86 | 1 | 1 | 0 | 0 | 0 | 0 | 1 |
+| `run_smoothness_report.py` | 61 | 1 | 1 | 0 | 0 | 0 | 0 | 1 |
+| **Group 6 total** | - | **110** | **110** | **0** | **0** | **4** | **22** | **49** |
+
+‡ `AppConfig.__post_init__` (~1.6k lines) is the primary load surface — counted as part of `config.py` audit, not separate func row.
+
+§ LIVE-DYNAMIC: nested closures in `resolve_draft_dir` / `night_run` progress callbacks — heuristic zero-ref, live via parent.
+
+**Mechanism-aware DEAD:** Raw AST heuristic DEAD **0/110** — no removal candidates; config uses `_f01`/`_i01` helpers and density override tables (registry/dispatch). Do **not** apply Group-3-style 88% DEAD heuristic here.
+
+### TRULY-DEAD (Group 6)
+
+None confirmed. CLI `main()` entries and orchestrator helpers are entrypoints or dev tooling.
+
+### Test-gap list (Group 6 — science-critical)
+
+| Module / function | Existing test | Gap |
+|-------------------|---------------|-----|
+| `config.load_config_json` / corrupt JSON | — | `JSONDecodeError` → `{}` silent |
+| `AppConfig.__post_init__` round-trip | partial via integration | validity-day defaults 60/200 vs dataclass 80/524 |
+| `apply_density_overrides` / `apply_crowding_overrides` | — | additive override clamps |
+| `recommended_vyvar_parallel_workers` | — | RAM cap vs cfg frame size |
+| `utils.plate_scale_arcsec_per_pixel` | indirect | unit edge cases |
+| `utils.per_frame_catalog_match_sep_arcsec_for_scale` | — | 20″ fallback when scale None |
+| `utils.seeded_numpy_default_rng` | Group 1 alignment tests | direct unit test optional |
+| `night_run.run_night_pipeline` error paths | smoke scripts | headless failure surfacing |
+| `infolog.save_infolog_to_disk` | — | disk write failure path |
+| `lunar_context.get_lunar_context` | `tests/test_lunar_context.py` | partial coverage |
+
+Inventory: **49 NEEDS-TEST** + **22 FLAGGED** across Group 6 (100% statused at module level).
+
+### Reproducibility scan (Group 6)
+
+| Area | Finding |
+|------|---------|
+| RNG | `utils.VYVAR_RANDOM_SEED=42`; `seeded_numpy_default_rng` for astroalign |
+| Parallelism | `recommended_vyvar_parallel_workers` uses `os.cpu_count()` + **psutil** free RAM — run-dependent worker cap |
+| Config authority | `AppConfig()` always merges `config.json` (session observer site, equipment-tuned overrides) — not a pure dataclass default |
+| Orchestrator | `vyvar_orchestrator.py` local timestamps; no science RNG |
+| Night run | Delegates to `pipeline` / Group 1 reproducibility fixes |
+
+### Automation artifacts (Group 6, tmp/, gitignored)
+
+- `tmp/audit_group6_parity.py` — config↔UI↔json parity driver
+- `tmp/audit_group6_parity.json` — full parity dump (189 keys with no `ui*.py` ref)
+
+**Checkpoint policy:** Milan + Claude review Group 6 batch before Group 7.
+
+---
+
 ## Next group
 
-**Group 6 —** (per roadmap; not started).
+**Group 7 —** UI shell (`app.py`, `ui_*.py` not in Group 4) + integration glue (per roadmap; not started).

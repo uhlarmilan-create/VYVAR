@@ -1,73 +1,58 @@
-CURSOR RESULT — 2026-06-19 (G5-F006, G5-F008, G5-F004)
+CURSOR RESULT — 2026-06-19 (Group 6 audit — config / orchestration / utils)
 
 What I did
-Completed three isolated Group 5 publication-layer fixes in order: F006 (PDF BJD label) → F008 (comp count clarity) → F004 (export failure visibility). Each: diagnose → minimal fix → test → commit. Updated audit ledger. No push.
+AUDIT-ONLY Group 6 checkpoint: 12 modules (110 functions), AST inventory + L1–L11 lens scans, `AppConfig.__post_init__` read, config↔UI parity cross-check vs `VYVAR_PARAMS.md` / `config.json`. Appended ledger section. No code fixes.
 
-## G5-F006 — PDF time axis BJD(TDB)
+## Module set + counts
 
-**Diagnosis:** PDF LC plots and glossary used raw column name `bjd` / label “BJD”; pipeline LC column is `bjd_tdb_mid` stored as `bjd`. VarAstro already had `# TIME SYSTEM: BJD(TDB)`.
+| Module | Funcs | Lines |
+|--------|-------|-------|
+| `config.py` | 19 (+ `__post_init__` load surface) | 2294 |
+| `utils.py` | 34 | 736 |
+| `night_run.py` | 19 | 1128 |
+| `infolog.py` | 10 | 138 |
+| `vyvar_ui_status.py` | 4 | 90 |
+| `inspect_drafts.py` | 4 | 154 |
+| `lunar_context.py` | 6 | 139 |
+| `orchestrator/vyvar_orchestrator.py` | 6 | 206 |
+| `scripts/_build_vyvar_params.py` | 4 | 578 |
+| `simulate_night_run.py` | 2 | 164 |
+| `run_crowding_index.py` | 1 | 86 |
+| `run_smoothness_report.py` | 1 | 61 |
+| **Total** | **110** | ~4634 |
 
-**Fix:** `photometry_report.py` — `_pdf_time_axis_label()` maps `bjd` / `bjd_tdb` / `bjd_tdb_mid` → `BJD(TDB)`; `hjd` → `HJD`; `jd` → `JD`. Main LC axes, overlay, candidate LC PNG, session cover kv, glossary.
+Excluded (prior groups): `param_resolver`, `time_utils`, `draft_provenance`, `fits_suffixes`, `masterstar_context` (G3). `ui_*.py` / `app.py` scanned for parity only → Group 7.
 
-**Tests:** `tests/test_export_g5_f006.py` — 3 passed.
+## Findings summary
 
-**Ledger:** G5-F006 → **FIXED** (`b74c301`).
+| Sev | Count | IDs |
+|-----|-------|-----|
+| HIGH | 4 | G6-F001 rig literals; G6-F002 validity-day defaults; G6-F003 `max_bv_diff` missing field; G6-F004 `phase01_use_bprp_primary` getattr-only |
+| MED | 7 | G6-F005–F011 (silent config load/swallow, orphan json key, PARAMS drift bucket) |
+| LOW | 1 | G6-F012 inspect_drafts silent except |
+| CLEAN | 4 | G6-P001–P004 |
 
-**Commit:** `fix(report): PDF time axis labeled BJD(TDB) to match column (G5-F006)` — **`b74c301`**.
+**DEAD reclassification:** 0 TRULY-DEAD / 110 functions (heuristic DEAD 0 — do not apply G3 88% over-count here).
 
----
+**Coverage:** 22 FLAGGED · 49 NEEDS-TEST · 4 LIVE-DYNAMIC (nested closures).
 
-## G5-F008 — VarAstro comp count vs trust `n_clean`
+## Config ↔ UI parity (headline)
 
-**Verify verdict: DISTINCT metrics (no number reconciliation).**
+- `AppConfig` fields **278** · `config.json` **252** · UI refs **95** · PARAMS keys **259**
+- PARAMS summary: 82 exposed · 136 intentionally-hidden · **34 config-only (`no`)** · **2 UI-without-field**
+- Verified: `phase01_comparison_max_bv_diff` **not** on `AppConfig` — `ui_select_stars.py` direct access → AttributeError risk
+- Orphan json: `phase2a_variable_xy_fallback_mag_tol`
 
-| Metric | Source | Meaning |
-|--------|--------|---------|
-| `n_good_comp` (summary) | `photometry_core.py:7827-7829` | Ensemble pool: comps with Phase-2A stability `good` or `suspect` |
-| `n_clean` (trust) | `comp_qa_core.py:465-470` | comp_qa pool minus Sokolovsky LOO-flagged comps per target |
-
-**Fix (clarity only):**
-- `export_reports.py` VarAstro header: label **`n_ensemble_comp`** with comment `(stability good+suspect; not comp_qa n_clean)`.
-- `photometry_report.py` glossary: clarified `n_good_comp`; added `n_clean` entry.
-- `docs/VYVAR_CALIBRATION.md` consumer table + short note.
-
-**Tests:** `tests/test_export_g5_f008.py` — 1 passed.
-
-**Ledger:** G5-F008 → **FIXED** (`07e6f69`).
-
-**Commit:** `fix(export): clarify/reconcile VarAstro comp count vs trust n_clean (G5-F008)` — **`07e6f69`**.
-
----
-
-## G5-F004 — Surface silent export failures
-
-**Diagnosis:** `export_reports.py` and `photometry_core.py` Phase-2A batch used `continue` on LC read errors, `logging.info` on empty exportable LC, and `logging.warning` on per-method exceptions — batch could finish with missing AAVSO/VarAstro files and no operator-visible ERROR trail.
-
-**Fix (fail-visible, batch completes):**
-- `export_reports.py`: `ExportFailure` typed dict; `record_export_failure()` (ERROR log + append); `log_export_batch_summary()` (ERROR summary at batch end).
-- `export_lightcurve_reports`: `export_failures` collector; empty LC → ERROR + record; AAVSO/VarAstro write errors → ERROR + record (partial paths if one write fails).
-- `export_all_method_lightcurve_reports`: missing LC / read error / empty LC / export exception → record; passes collector to single-target export.
-- `photometry_core.py` Phase-2A loop: `_export_failures` list; gate failures recorded; `export_failures=` passed; `log_export_batch_summary()` after loop.
-
-**Tests:** `tests/test_export_g5_f004.py` — 5 passed. Regression: clean export byte-identical when `export_failures=[]` vs omitted (`test_clean_export_byte_identical_without_failure_collector`). Related G5 tests (F006/F007/F008) — 16 passed total in combined run.
-
-**Ledger:** G5-F004 → **FIXED** (`efbb4de`).
-
-**Commit:** `fix(export): surface export read/write failures (batch summary, no silent skip) (G5-F004)` — **`efbb4de`**.
-
----
+Artifacts: `tmp/audit_group6_parity.py`, `tmp/audit_group6_parity.json`
 
 ## Errors (if any)
 
 None.
 
-## Files changed (this task)
+## Files changed
 
-| Commit | Files |
-|--------|-------|
-| `b74c301` | `photometry_report.py`, `tests/test_export_g5_f006.py` |
-| `07e6f69` | `export_reports.py`, `photometry_report.py`, `tests/test_export_g5_f008.py`, `docs/VYVAR_CALIBRATION.md` |
-| `efbb4de` | `export_reports.py`, `photometry_core.py`, `tests/test_export_g5_f004.py` |
-| `ec38807` | `docs/VYVAR_FULL_AUDIT_LEDGER.md` |
+- `docs/VYVAR_FULL_AUDIT_LEDGER.md` (Group 6 checkpoint)
+- `CURSOR_RESULT.md`
+- `tmp/audit_group6_parity.py`, `tmp/audit_group6_parity.json` (gitignored)
 
-**Not pushed** — stop for Claude review.
+**No fix steps** — checkpoint for Claude review before Group 7.
