@@ -31,6 +31,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 17 | G1-F001 / G1-F002 alignment_max_control_points | **FIXED:** decouple astroalign CP from detection ladder; `alignment_max_control_points=80`; Chi/h draft 419 `B_20_2` validation PASS — max Δtranslation **0.0275 px**, speedup **5.2–13.8×** (mean **8.6×**); not byte-identical, quality-validated | `2819e86` |
 | 18 | validate_alignment_control_points draft layouts | **DONE:** `non_calibrated` / `processed` / `calibrated` / `detrended_aligned` lights + default `platesolve/MASTERSTAR` ref | `65a608b` |
 | 19 | G2-F003 dilution aperture 3.0 fallback | **FIXED:** layered fallback map → SNR-derive → skip+flag; fixed 3.0 removed; Seager 2003 / Howell 2006 photometric aperture | `0e50805` |
+| 20 | G1-F003 alignment identity / pixel-fallback | **FIXED:** ref-grid pixel NN gated on `VY_ALGN`; failed-alignment epochs flagged in LC (`alignment_failed`) + summary + trust soft signal; residual gate left OFF | pending |
 | 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `b4a45fb` |
 
 ---
@@ -41,7 +42,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 |----|-----|------|----------|--------------|---------------------|
 | G1-F001 | **FIXED** | L4/L5 | `config.py`, `pipeline.py`, `vyvar_alignment_frame.py` | ~~`max_control_points` dead knob; ladder used `min(max_st, n_fit)`~~ **FIXED:** `alignment_max_control_points` is a real, read config (default 80); dead hardcoded 180 removed; plumbed via `_align_ctx`; ladder uses plumbed cap; detection ladder unchanged. Chi/h draft 419 `B_20_2` validated (not byte-identical). | Caller-facing knobs must bind to the live code path; silent dead params mislead tuning and perf work. |
 | G1-F002 | **FIXED** | L6 | `config.py`, `pipeline.py`, `vyvar_alignment_frame.py` | ~~Dense field: ~200 CP → ~654 s/frame~~ **FIXED:** control points decoupled from detection ladder, capped at cfg default 80. Chi/h 419 `B_20_2` PASS: max Δtranslation **0.0275 px**, speedup **5.2–13.8×** (mean **8.6×**); quality-validated, not byte-identical. | Iteration/control-point budgets need explicit wall-clock + count bounds on dense fields. |
-| G1-F003 | **MED** | L4 | `vyvar_alignment_frame.py:684-709` | Alignment failure -> **identity fallback** (`VY_ALGN=False` but frame still written). Misaligned pixels can enter photometry unless residual gate catches them. | Science path should reject or hard-flag failed alignment; identity is not a valid aligned product. |
+| G1-F003 | **FIXED** | L4 | `pipeline.py`, `photometry_core.py`, `trust_flag_core.py` | ~~Identity frames: ref-grid pixel-fallback wrong-star; silent LC~~ **FIXED:** pixel NN fallback gated on `VY_ALGN`; `alignment_report.csv` `aligned`/`reason` → per-epoch `alignment_failed` in LC + `n_alignment_failed` summary; trust soft when ≥5% or ≥2 epochs failed; sky-match identity epochs kept (correct flux); `frame_align_residual_gate` still OFF. Do-no-harm: fully-aligned drafts byte-identical `mag_inst` except new all-False `alignment_failed` column. | Failed alignment must not silently use reference-grid pixel matching; identity epochs visible in LC/trust without dropping valid sky-match flux. |
 | G1-F004 | **MED** | L1 | `vyvar_blind_series.py:212-216` | Blind verify tolerance scaled vs fixed `_ref = 1.3`/px (narrow-rig reference), not measured scale. | Scale-dependent tolerances must derive from equipment/WCS scale, not a universal literal. |
 | G1-F005 | **MED** | L3 | `optics_selection.py:50-64` | `_first_db_optics_ids`: broad `except: pass` on DB queries - failed lookup -> `None` with no log. | DB failures on optics resolution must log; silent pass risks wrong rig. |
 | G1-F006 | **MED** | L4 | `vyvar_platesolver.py:2356-2440` | Odds accept gate (`masterstar_accept_mode=odds`) ignores legacy fraction/distortion when mode=odds - by design per DECISIONS. Thresholds from `config.py` (`masterstar_odds_k=12`, `matched_floor`, `false_alarm_p_max=1e-6`, quadrants>=3). | Document mode split; ensure UI exposes accept_mode if operators need fraction gate. |
@@ -1921,7 +1922,7 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 | Group | Scope | Funcs audited | HIGH findings (open at map close) |
 |-------|--------|---------------|-----------------------------------|
-| 1 | Alignment / platesolve / optics | 415 | G1-F003 (+ MED alignment identity fallback); G1-F001/F002 **FIXED** |
+| 1 | Alignment / platesolve / optics | 415 | G1-F003 **FIXED**; G1-F001/F002 **FIXED** |
 | 2 | Photometry core | 322 | G2-F004 (+ G2-F002b backlog); G2-F003 **FIXED** |
 | 3 | Data / IO / catalog | 367 | G3-F002 (+ G3-F001 **FIXED**) |
 | 4 | Science / variability / QA | 166 | G4-F001 trust (partially **FIXED**) |

@@ -1321,6 +1321,7 @@ def read_flux_from_csv(
     # Airmass z frame_times
     am_frame = float("nan")
     flip_frame: bool | None = None
+    align_failed_frame: bool = False
     if frame_times:
         try:
             _am = float(frame_times.get("airmass", float("nan")))
@@ -1340,6 +1341,25 @@ def read_flux_from_csv(
                     flip_frame = False
         except Exception:  # noqa: BLE001
             flip_frame = None
+        try:
+            _af = frame_times.get("alignment_failed", None)
+            if isinstance(_af, bool):
+                align_failed_frame = bool(_af)
+            elif _af is not None:
+                s = str(_af).strip().lower()
+                if s in ("true", "1", "yes", "y"):
+                    align_failed_frame = True
+                elif s in ("false", "0", "no", "n"):
+                    align_failed_frame = False
+            elif frame_times.get("aligned", None) is not None:
+                _al = frame_times.get("aligned")
+                if isinstance(_al, bool):
+                    align_failed_frame = not _al
+                else:
+                    s = str(_al).strip().lower()
+                    align_failed_frame = s in ("false", "0", "no", "n")
+        except Exception:  # noqa: BLE001
+            align_failed_frame = False
 
     rows: list[dict] = []
 
@@ -1352,6 +1372,7 @@ def read_flux_from_csv(
             "jd": float("nan"),
             "airmass": am_frame,
             "is_flipped": flip_frame,
+            "alignment_failed": align_failed_frame,
             "mag_inst": float("nan"),
             "err": float("nan"),
             # PSF photometry (b.5) columns — carried through so Phase 2A's flux selector
@@ -3806,6 +3827,7 @@ def save_lightcurve_csv(
     lunar_separation_deg: float = float("nan"),
     lunar_risk: str = "UNKNOWN",
     dilution_factor: float = 1.0,
+    alignment_failed: np.ndarray | None = None,
 ) -> None:
     """Uloží lightcurve CSV."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -3870,6 +3892,9 @@ def save_lightcurve_csv(
             "jd": jd,
             "airmass": airmass,
             "is_flipped": (is_flipped if is_flipped is not None else np.full_like(bjd, False, dtype=bool)),
+            "alignment_failed": (
+                alignment_failed if alignment_failed is not None else np.full_like(bjd, False, dtype=bool)
+            ),
             "mag_inst": np.round(mag_inst, 6),
             "mag_calib_raw": np.round(mag_calib_raw, 6),
             "mag_calib": np.round(mag_calib, 6),
@@ -6386,7 +6411,7 @@ def _phase2a_prepare_shared_state(
         align_rep = Path(masterstar_fits_path).resolve().parent / "alignment_report.csv"
         if align_rep.is_file():
             rep = pd.read_csv(align_rep, low_memory=False)
-            if "file" in rep.columns and "is_flipped" in rep.columns:
+            if "file" in rep.columns:
                 for _, r in rep.iterrows():
                     fn = str(r.get("file", "")).strip()
                     if not fn:
@@ -6394,10 +6419,26 @@ def _phase2a_prepare_shared_state(
                     stem = Path(fn).stem
                     if stem not in frame_time_lookup:
                         continue
-                    try:
-                        frame_time_lookup[stem]["is_flipped"] = bool(r.get("is_flipped", False))
-                    except Exception:  # noqa: BLE001
-                        frame_time_lookup[stem]["is_flipped"] = False
+                    if "is_flipped" in rep.columns:
+                        try:
+                            frame_time_lookup[stem]["is_flipped"] = bool(r.get("is_flipped", False))
+                        except Exception:  # noqa: BLE001
+                            frame_time_lookup[stem]["is_flipped"] = False
+                    if "aligned" in rep.columns:
+                        try:
+                            _al = r.get("aligned", True)
+                            if isinstance(_al, bool):
+                                _aligned = bool(_al)
+                            else:
+                                s = str(_al).strip().lower()
+                                _aligned = s not in ("false", "0", "no", "n")
+                            frame_time_lookup[stem]["alignment_failed"] = not _aligned
+                        except Exception:  # noqa: BLE001
+                            frame_time_lookup[stem]["alignment_failed"] = False
+                    if "reason" in rep.columns:
+                        _rs = str(r.get("reason", "") or "").strip()
+                        if _rs:
+                            frame_time_lookup[stem]["alignment_reason"] = _rs
     except Exception:  # noqa: BLE001
         pass
 
@@ -7596,6 +7637,13 @@ def _phase2a_process_one_target(
         if "is_flipped" in target_frames.columns
         else np.zeros_like(bjd, dtype=bool)
     )
+    align_fail_arr = (
+        target_frames["alignment_failed"].fillna(False).astype(bool).to_numpy()
+        if "alignment_failed" in target_frames.columns
+        else np.zeros_like(bjd, dtype=bool)
+    )
+    n_alignment_failed = int(np.count_nonzero(align_fail_arr))
+    alignment_failed_frac = float(n_alignment_failed) / max(int(len(bjd)), 1)
 
     if "flag" in target_frames.columns:
         _raw_tf = target_frames["flag"].astype(str).str.strip().str.lower().reset_index(drop=True)
@@ -7737,6 +7785,7 @@ def _phase2a_process_one_target(
         lunar_risk=_lc_lunar_risk,
         dilution_factor=float(_dilution_result.get("dilution_factor", 1.0)),
         method=_lc_export_method,
+        alignment_failed=align_fail_arr,
     )
     if _have_psf_cols:
         try:
@@ -7934,6 +7983,8 @@ def _phase2a_process_one_target(
             "n_stability_good": n_stability_good,
             "n_stability_suspect": n_stability_suspect,
             "n_saturated": n_sat,
+            "n_alignment_failed": n_alignment_failed,
+            "alignment_failed_frac": alignment_failed_frac,
             "lc_rms": _lc_rms_full,
             "lc_rms_ooe": _lc_rms_ooe,
             "lc_median_mag": float(np.median(finite_calib)) if len(finite_calib) > 0 else float("nan"),
