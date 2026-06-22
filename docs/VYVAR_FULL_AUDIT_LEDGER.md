@@ -2,7 +2,7 @@
 
 **Status:** AUDIT-ONLY (read + log; no code edits during audit pass).
 **Started:** 2026-06-19
-**Last checkpoint:** Group 6 complete — Config / orchestration / utils (2026-06-19 local)
+**Last checkpoint:** Group 7 complete — UI shell (2026-06-19 local) — **7-group map complete**
 
 Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 functions), targeted verification against `docs/VYVAR_CODE_AUDIT.md` DR2-DR6 threads, science-critical logic reads.
 
@@ -1806,6 +1806,126 @@ Inventory: **49 NEEDS-TEST** + **22 FLAGGED** across Group 6 (100% statused at m
 
 ---
 
-## Next group
+## Group 7 checkpoint — UI shell (2026-06-19)
 
-**Group 7 —** UI shell (`app.py`, `ui_*.py` not in Group 4) + integration glue (per roadmap; not started).
+**Module set (14 modules, 144 functions, ~9.8k LOC audited):**
+
+| Module | Funcs | Lines | Notes |
+|--------|-------|-------|-------|
+| `app.py` | 29 | 2733 | Main Streamlit shell, pipeline pending orchestration |
+| `ui_aperture_photometry.py` | 25 | 1800 | Phase 2A UI, LC plots, report triggers |
+| `ui_quality_dashboard.py` | 14 | 1072 | QC / analyze workflow |
+| `ui_select_stars.py` | 13 | 622 | Phase 0+1 comp selection |
+| `ui_calibration_library.py` | 12 | 415 | Calibration library browser |
+| `ui_calibration.py` | 10 | 306 | Calibration import UI |
+| `ui_photometry_quality.py` | 10 | 380 | Photometry QC views |
+| `ui_epsf_dashboard.py` | 7 | 374 | ePSF dashboard |
+| `ui_finalization.py` | 7 | 506 | Export / finalization |
+| `ui_database_explorer.py` | 6 | 375 | DB explorer |
+| `ui_dao_stars.py` | 4 | 370 | DAO / MASTERSTAR controls |
+| `ui_components.py` | 3 | 212 | Shared MASTERSTAR candidate widget |
+| `ui_photometry.py` | 2 | 108 | Photometry tab router |
+| `ui_settings.py` | 2 | 1019 | Settings save (`render_settings` body is one large function) |
+
+**Excluded (audited in Group 4):** `ui_variability.py` (30), `ui_hrd.py` (1), `ui_masterstar_qa.py` (5). **Excluded (Group 6):** `vyvar_ui_status.py`.
+
+Method: AST inventory + lens scans (L1–L11) on 14 modules (144 functions), Phase B verification of G6-F003/F004 from UI source, parity cross-check vs `tmp/audit_group6_parity.json` + `VYVAR_PARAMS.md`.
+
+### Prioritized findings (Group 7 — deduplicated, severity-sorted)
+
+| ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
+|----|-----|------|----------|--------------|---------------------|
+| G7-F001 | **HIGH** | L7 | `ui_select_stars.py:438-443`, `531` | **`cfg.phase01_comparison_max_bv_diff`** — not on `AppConfig` (`hasattr` False). **Direct attribute access** on every Select Stars page render (rules expander `st.code` block) → **AttributeError** before any button click. Confirms G6-F003 from UI side. | Every `cfg.*` in UI must be a declared field or guarded accessor. |
+| G7-F002 | **HIGH** | L8/L7 | `ui_select_stars.py:531`; `photometry_core.py:11693-11730` | UI passes **`max_bv_diff=`** to `run_phase0_and_phase1`, but core **has no such parameter** — even with a config field, call would **`TypeError`** (stale kwarg). BV filtering is not wired on the live Phase 0+1 API. | UI must call core with the live signature; dead kwargs hide broken comp-color paths. |
+| G7-F003 | **MED** | L7 | `ui_aperture_photometry.py:1657`, `ui_select_stars.py:618` | **`phase01_use_bprp_primary`** via `getattr(cfg, …, True)` only — **no crash**, but **non-persistable** (not on `AppConfig`, not in PARAMS). Confirms G6-F004; severity **MED** (hidden default), not AttributeError class. | getattr defaults bypass config registry and mislead operators. |
+| G7-F004 | **MED** | L3 | `app.py` (15+ `except: pass` lines), `ui_aperture_photometry.py`, `ui_quality_dashboard.py` | Broad **`except: pass`** / silent exception branches in action handlers (archive hash, PDF/report triggers, QC paths) — failures can present as **button did nothing**. | UI actions must surface errors to Infolog / `st.error`. |
+| G7-F005 | **MED** | L4 | `ui_settings.py:645-700` | Frame-quality / align-residual gates use **`getattr(..., False)`** defaults — **fail-open OFF by design** (byte-identical when unset); documented in PARAMS Round-2 B.2. Not a bug; monitor that toggles stay wired to `cfg` save path (`973-976`). | Safety gates default OFF only when explicitly documented. |
+| G7-F006 | **MED** | L7 | `VYVAR_PARAMS.md`, Group 6 parity | **34 config-only (`exposed \| no`)** keys: **intentionally hidden** for blind-cluster tuning, neighbor-sub PSF, `dao_qc_in_calibrate`, observer export block (session `config.json` values). **Not accidental unexposed** for most; observer site uses DB location picker (`observer_location_id` in Settings) while lat/lon/name live in json without dedicated widgets. | Hidden keys need intentional-hidden classification vs drift. |
+| G7-F007 | **MED** | L8 | `ui_aperture_photometry.py:236+` | `_enrich_summary_with_zone_flags` / LC column picks (`mag_calib` vs `mag_calib_raw`) in UI — **display-layer** only (no ensemble math); risk is **label drift** vs export `mag_calib_final` (G5-F011), not duplicated photometry core. | Display columns must match publication canonical names. |
+| G7-F008 | **LOW** | L3 | `ui_components.py:103-104`, `ui_aperture_photometry.py:77-78` | Silent passes on archive-path probe / JD tick helper (`try: pass` stub). Low operator impact. | Even minor UI helpers should log skip reason. |
+| G7-P001 | **CLEAN** | - | `ui_settings.py:973-1010` | Settings save writes frame-quality + align-residual + comp knobs back to `cfg` + `to_json()` — live round-trip for exposed controls. | Settings must persist to `AppConfig` + json. |
+| G7-P002 | **CLEAN** | - | `app.py` pipeline pending handlers | Photometry/platesolve/preprocess delegate to `pipeline` / `photometry_core` — **no** `ensemble_normalize` / `savgol` in UI shell (L8 scan clean on `app.py`). | UI orchestrates; core computes. |
+| G7-P003 | **CLEAN** | - | `app.py` L1 scan | **No** hardcoded `1.3` / `9.77` / `2082` rig literals in UI shell (rig values come from `cfg` or DB). | UI must not embed cross-rig literals. |
+
+### Config ↔ UI parity disposition (resolves G6-F003 / G6-F004)
+
+| Symbol | Access pattern | UI verdict | Severity |
+|--------|----------------|------------|----------|
+| `phase01_comparison_max_bv_diff` | **Direct** `cfg.phase01_comparison_max_bv_diff` | **Real AttributeError** on Select Stars page (expander + run) | **HIGH** (G7-F001) |
+| `phase01_use_bprp_primary` | **`getattr(cfg, …, True)`** only | No crash; **always True** unless field added; not in registry | **MED** (G7-F003) |
+| `max_bv_diff=` kwarg | Passed to `run_phase0_and_phase1` | **Stale API** — not in core signature | **HIGH** (G7-F002) |
+| 34 PARAMS `no` keys | No `ui*.py` string match | Mostly **intentionally-hidden** dev/json knobs; observer block is **session json + DB location id** | Documented (G7-F006) |
+
+False positives from regex scan (`cfg.to_json`, `cfg.ensure_base_dirs`) are **methods** on `AppConfig`, not missing fields.
+
+### Coverage table (Group 7 modules)
+
+| Module | Funcs | Audited | TRULY-DEAD | LIVE-DYNAMIC† | FLAGGED | NEEDS-TEST |
+|--------|-------|---------|------------|---------------|---------|------------|
+| `app.py` | 29 | 29 | 0 | 4 | 8 | 12 |
+| `ui_aperture_photometry.py` | 25 | 25 | 0 | 3 | 6 | 10 |
+| `ui_quality_dashboard.py` | 14 | 14 | 0 | 2 | 5 | 8 |
+| `ui_select_stars.py` | 13 | 13 | 0 | 0 | 3 | 4 |
+| `ui_calibration_library.py` | 12 | 12 | 0 | 0 | 1 | 4 |
+| `ui_calibration.py` | 10 | 10 | 0 | 0 | 0 | 3 |
+| `ui_photometry_quality.py` | 10 | 10 | 0 | 1 | 2 | 4 |
+| `ui_epsf_dashboard.py` | 7 | 7 | 0 | 0 | 1 | 3 |
+| `ui_finalization.py` | 7 | 7 | 0 | 1 | 1 | 3 |
+| `ui_database_explorer.py` | 6 | 6 | 0 | 0 | 0 | 3 |
+| `ui_dao_stars.py` | 4 | 4 | 0 | 0 | 1 | 2 |
+| `ui_components.py` | 3 | 3 | 0 | 0 | 1 | 1 |
+| `ui_photometry.py` | 2 | 2 | 0 | 0 | 0 | 2 |
+| `ui_settings.py` | 2 | 2 | 0 | 0 | 1 | 3 |
+| **Group 7 total** | **144** | **144** | **0** | **11** | **29** | **52** |
+
+† LIVE-DYNAMIC: Streamlit callbacks, nested render closures, `@st.cache_data` wrappers — heuristic zero-ref, not removal candidates.
+
+**Mechanism-aware DEAD:** **0 TRULY-DEAD** / 144 (Group 4 already logged 2 dead symbols in `ui_variability.py`).
+
+### Test-gap list (Group 7 — UI-critical)
+
+| Area | Gap |
+|------|-----|
+| `ui_settings` save → `config.json` round-trip | partial manual; no automated test |
+| `ui_select_stars` Phase 0+1 launch | **broken** on `max_bv_diff` path — needs fix before test |
+| Frame-quality gate toggles | default OFF regression (byte-identical) |
+| `app.py` pending preprocess/platesolve error surfacing | headless parity with `night_run` |
+| QC dashboard analyze flow | exception → user-visible error |
+
+Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
+
+### Reproducibility scan (Group 7)
+
+| Area | Finding |
+|------|---------|
+| Session state | `st.session_state` keys (`vyvar_draft_dir_override`, variability caches) — run-order / draft dependent |
+| Draft override | Effective paths from session override vs `cfg.archive_root` |
+| No UI RNG | Science RNG remains in core/utils (Group 1/6) |
+
+### Automation artifacts (Group 7, tmp/, gitignored)
+
+- `tmp/audit_group7_inventory.py` — scan driver
+- `tmp/audit_group7_results.json` — per-module lens + cfg ref dump
+
+**Checkpoint policy:** Group 7 closes the systematic map — next step HIGH fix-pass (G1-F001/F002, G3-F002, G6 config items).
+
+---
+
+## 7-group map complete (2026-06-19)
+
+| Group | Scope | Funcs audited | HIGH findings (open at map close) |
+|-------|--------|---------------|-----------------------------------|
+| 1 | Alignment / platesolve / optics | 415 | G1-F001, G1-F002 (+ MED alignment identity fallback) |
+| 2 | Photometry core | 322 | G2-F003 catalog funnel (partially superseded) |
+| 3 | Data / IO / catalog | 367 | G3-F002 (+ G3-F001 **FIXED**) |
+| 4 | Science / variability / QA | 166 | G4-F001 trust (partially **FIXED**) |
+| 5 | Reporting / export | 174 | G5-F004 **FIXED**; remaining LOW dead helpers |
+| 6 | Config / orchestration / utils | 110 | G6-F001–F004 config/parity |
+| 7 | UI shell | 144 | G7-F001–F002 Select Stars crash/stale API |
+| **Total** | **7 groups** | **1728** | Fix-pass queue starts after Claude review |
+
+---
+
+## Post-map fix-pass queue (not started)
+
+Per roadmap after map close: G1-F001/F002 (alignment caps), G3-F002, G6 config items (validity defaults, `max_bv_diff` / `phase01_use_bprp_primary`, orphan json keys).

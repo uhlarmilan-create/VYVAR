@@ -1,58 +1,51 @@
-CURSOR RESULT — 2026-06-19 (Group 6 audit — config / orchestration / utils)
+CURSOR RESULT — 2026-06-19 (Group 7 audit — UI shell — 7-group map complete)
 
 What I did
-AUDIT-ONLY Group 6 checkpoint: 12 modules (110 functions), AST inventory + L1–L11 lens scans, `AppConfig.__post_init__` read, config↔UI parity cross-check vs `VYVAR_PARAMS.md` / `config.json`. Appended ledger section. No code fixes.
+AUDIT-ONLY final group: 14 UI modules (144 functions), AST + L1–L11 scans, Phase B verification of G6 parity items from UI source. Appended ledger + **7-group map complete** summary. No code fixes.
 
 ## Module set + counts
 
-| Module | Funcs | Lines |
-|--------|-------|-------|
-| `config.py` | 19 (+ `__post_init__` load surface) | 2294 |
-| `utils.py` | 34 | 736 |
-| `night_run.py` | 19 | 1128 |
-| `infolog.py` | 10 | 138 |
-| `vyvar_ui_status.py` | 4 | 90 |
-| `inspect_drafts.py` | 4 | 154 |
-| `lunar_context.py` | 6 | 139 |
-| `orchestrator/vyvar_orchestrator.py` | 6 | 206 |
-| `scripts/_build_vyvar_params.py` | 4 | 578 |
-| `simulate_night_run.py` | 2 | 164 |
-| `run_crowding_index.py` | 1 | 86 |
-| `run_smoothness_report.py` | 1 | 61 |
-| **Total** | **110** | ~4634 |
+14 modules · **144 functions** · ~9.8k LOC (`app.py` + `ui_*.py` except Group 4: `ui_variability`, `ui_hrd`, `ui_masterstar_qa`).
 
-Excluded (prior groups): `param_resolver`, `time_utils`, `draft_provenance`, `fits_suffixes`, `masterstar_context` (G3). `ui_*.py` / `app.py` scanned for parity only → Group 7.
+| Module | Funcs |
+|--------|-------|
+| `app.py` | 29 |
+| `ui_aperture_photometry.py` | 25 |
+| `ui_quality_dashboard.py` | 14 |
+| `ui_select_stars.py` | 13 |
+| + 10 smaller `ui_*.py` | 52 |
+| **Total** | **144** |
+
+## Phase B — G6 parity resolution (UI side)
+
+| Symbol | Pattern | Verdict |
+|--------|---------|---------|
+| `phase01_comparison_max_bv_diff` | Direct `cfg.` | **AttributeError** on Select Stars page (expander `st.code` + run) — **HIGH** G7-F001 |
+| `phase01_use_bprp_primary` | `getattr(..., True)` | No crash; non-persist — **MED** G7-F003 (downgrades G6-F004 severity) |
+| `max_bv_diff=` kwarg | `run_phase0_and_phase1(...)` | **Not in core signature** — stale API **HIGH** G7-F002 |
+
+34 PARAMS config-only keys: mostly **intentionally-hidden** (blind cluster, neighbor-sub, session observer json).
 
 ## Findings summary
 
-| Sev | Count | IDs |
-|-----|-------|-----|
-| HIGH | 4 | G6-F001 rig literals; G6-F002 validity-day defaults; G6-F003 `max_bv_diff` missing field; G6-F004 `phase01_use_bprp_primary` getattr-only |
-| MED | 7 | G6-F005–F011 (silent config load/swallow, orphan json key, PARAMS drift bucket) |
-| LOW | 1 | G6-F012 inspect_drafts silent except |
-| CLEAN | 4 | G6-P001–P004 |
+| Sev | Count | Headline |
+|-----|-------|----------|
+| HIGH | 2 | G7-F001 crash + G7-F002 stale `max_bv_diff` kwarg |
+| MED | 5 | Silent except handlers; frame gates OFF-by-design; display column drift risk |
+| LOW | 1 | Minor silent passes |
+| CLEAN | 3 | Settings save path; no rig literals in shell; delegates to core |
 
-**DEAD reclassification:** 0 TRULY-DEAD / 110 functions (heuristic DEAD 0 — do not apply G3 88% over-count here).
+**DEAD:** 0 TRULY-DEAD / 144 · **29 FLAGGED** · **52 NEEDS-TEST**
 
-**Coverage:** 22 FLAGGED · 49 NEEDS-TEST · 4 LIVE-DYNAMIC (nested closures).
+## 7-group map complete
 
-## Config ↔ UI parity (headline)
+**1728 functions** audited across 7 groups (see ledger table). Fix-pass queue: G1-F001/F002, G3-F002, G6/G7 config parity.
 
-- `AppConfig` fields **278** · `config.json` **252** · UI refs **95** · PARAMS keys **259**
-- PARAMS summary: 82 exposed · 136 intentionally-hidden · **34 config-only (`no`)** · **2 UI-without-field**
-- Verified: `phase01_comparison_max_bv_diff` **not** on `AppConfig` — `ui_select_stars.py` direct access → AttributeError risk
-- Orphan json: `phase2a_variable_xy_fallback_mag_tol`
-
-Artifacts: `tmp/audit_group6_parity.py`, `tmp/audit_group6_parity.json`
-
-## Errors (if any)
-
-None.
+Artifacts: `tmp/audit_group7_inventory.py`, `tmp/audit_group7_results.json`
 
 ## Files changed
 
-- `docs/VYVAR_FULL_AUDIT_LEDGER.md` (Group 6 checkpoint)
+- `docs/VYVAR_FULL_AUDIT_LEDGER.md` (Group 7 checkpoint + map summary)
 - `CURSOR_RESULT.md`
-- `tmp/audit_group6_parity.py`, `tmp/audit_group6_parity.json` (gitignored)
 
-**No fix steps** — checkpoint for Claude review before Group 7.
+**No fix steps** — checkpoint for Claude review before HIGH fix-pass.
