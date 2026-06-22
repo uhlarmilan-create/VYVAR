@@ -1,80 +1,67 @@
-CURSOR RESULT — 2026-06-22 (G5-F002 close + G5-F007 fix)
+CURSOR RESULT — 2026-06-22 (G5-F003 fix)
 
 What I did
-Marked **G5-F002 RESOLVED (non-issue)** in ledger. Diagnosed G5-F007 call chain; implemented derive-or-None plate scale + canonical `#SOFTWARE` version; added tests; regression on AAVSO data rows; isolated commit (no push).
+Diagnosed `_generate_candidate_lc_png` column selection vs export/main plots; implemented calibrated-mag precedence mirroring `_select_export_lc_rows`; added tests; updated ledger. Isolated commit (no push).
 
-## G5-F002 — RESOLVED (non-issue)
+## Diagnosis
 
-**Evidence (one line):** AC applies constant `delta_m_corr` → `mag_calib_ac`; per-point `err` (photon + ensemble SEM) is invariant under constant mag shift; no `err_ac` in pipeline; folding `ac_scatter` per-point would misrepresent a correlated systematic as random.
+### `_generate_candidate_lc_png` (before fix)
 
-Ledger: **G5-F002** → **RESOLVED (non-issue)**; fix-log step 7.
+```3306:3320:photometry_report.py
+            mag_col = next((c for c in df.columns if "mag" in str(c).lower()), None)
+            ...
+            ax.set_ylabel("mag_inst")
+```
 
----
+- Magnitude: **first column whose name contains `"mag"`** → typically `mag_inst` (column order in LC CSV).
+- Y-label: hardcoded **`mag_inst`** regardless of plotted column.
+- Y-axis inverted (brighter up) — already matched main plots; kept.
 
-## G5-F007 — diagnosis (call chain)
+### Export + main per-star plots (reference)
 
-### Plate scale `1.3`
+| Path | Magnitude precedence |
+|------|----------------------|
+| **Export** (`_select_export_lc_rows`) | `mag_calib`; when `ac_ok` + finite `mag_calib_ac` → AC values (export column conceptually `mag_calib`) |
+| **Main LC plots** (`_plot_lightcurve_to_jpeg`, `_load_lc_xy_from_csv`) | `mag_calib_ct` if present, else `mag_calib`; filter `flag=normal`; y-label = column name |
 
-| Caller | Passes `arcsec_per_px`? |
-|--------|-------------------------|
-| `photometry_core.export_all_method_lightcurve_reports` (~8003) | **Before fix:** always `float(_cfg.export_arcsec_per_px)` (config default **1.3**) |
-| `export_lightcurve_reports` signature | **Before fix:** default `arcsec_per_px=1.3` |
-| Scripts (`reexport_draft_aavso.py`, `verify_method_report_separation.py`) | Explicit literals in some paths |
+Task scope: candidate figures mirror **export** AC precedence (`mag_calib_ac` when AC on, else `mag_calib`), not `mag_calib_ct` (main plots use CT column when present; export does not).
 
-**Production path:** Phase 2A → `export_all_method_lightcurve_reports` → `export_lightcurve_reports`. Config default **1.3** was threaded on every export unless operator overrode `export_arcsec_per_px` in config — **not** draft WCS/meta.
+## Fix
 
-**Real plate scale at export site:** `photometry/pipeline_meta.json` → `plate_scale_arcsec_px` (Phase 2A); sibling `../MASTERSTAR.fits` WCS/CD via `_resolve_plate_scale_arcsec_per_px`. Reachable from `out_base.parent` (`_phot_dir`).
+- **`_resolve_candidate_lc_mag_for_plot(df)`** — export-mirror: `mag_calib_ac` when `ac_ok` & finite; else `mag_calib`; explicit `mag_inst` only when no calibrated columns.
+- **`_generate_candidate_lc_png`** — uses helper; `flag=normal` filter; time cols `bjd_tdb`/`bjd`/`hjd`/`jd`; y-label = resolved column name; `invert_yaxis()` unchanged.
 
-**Verdict:** **1.3 did reach** VarAstro aperture-arcsec commentary whenever config default was used and meta/WCS were not consulted for export headers. Severity was real, not latent-only.
+**Not touched:** main per-star plot path (`_plot_lightcurve_to_jpeg`, `_load_lc_xy_from_csv`).
 
-### `#SOFTWARE=VYVAR/1.0`
-
-AAVSO header used a **literal** `#SOFTWARE=VYVAR/1.0` while `software_version` param only appeared in VarAstro body. No separate config key; canonical string is module constant `VYVAR_SOFTWARE_VERSION = "VYVAR 1.0"`.
-
----
-
-## G5-F007 — fix (minimal)
-
-**`export_reports.py`**
-- `VYVAR_SOFTWARE_VERSION` + `_aavso_software_header_line()` — AAVSO `#SOFTWARE` uses version param/constant (space → `/`).
-- `_resolve_export_arcsec_per_px(photometry_dir, cfg)` — `pipeline_meta.plate_scale_arcsec_px` → MASTERSTAR WCS; **derive-or-None** (no 1.3).
-- `export_lightcurve_reports` resolves scale internally; VarAstro `#   Aperture: …arcsec` only when scale derivable.
-
-**`photometry_core.py`**
-- Removed `arcsec_per_px=float(_cfg.export_arcsec_per_px)` and hardcoded `software_version="VYVAR 1.0"` from export call (~8013).
-
-**`tests/test_export_g5_f007.py`** — 8 tests (positive home/fine rig, derive-or-None omit, version header, regression data row).
-
----
-
-## Tests
+## Tests (`tests/test_g5_f003_candidate_lc.py`)
 
 | Case | Result |
 |------|--------|
-| Meta 9.77″/px (home rig) | VarAstro shows `48.85arcsec` (5×9.77) |
-| Meta 0.65″/px (fine rig) | `_resolve_export_arcsec_per_px` → 0.65 |
-| No derivable scale | Aperture arcsec line omitted; **never 1.3** |
-| `#SOFTWARE` | `#SOFTWARE=VYVAR/1.0` from `VYVAR_SOFTWARE_VERSION` |
-| Regression AAVSO body | Data row `REG_STAR,2460000.500000,12.500,0.010,…` unchanged |
-| Full suite | **381 passed**, 15 skipped |
-| Ruff | `export_reports.py`, `photometry_core.py` clean |
+| `mag_calib` + `mag_inst` | Uses `mag_calib`, ylab `mag_calib` |
+| AC on (`mag_calib_ac`, `ac_ok`) | Uses AC mags, ylab `mag_calib_ac` |
+| Mixed AC | AC values where `ac_ok`, ylab `mag_calib` |
+| No calib columns | Explicit `mag_inst` fallback |
+| PNG integration | Figure ylab + scatter y-data verified |
 
----
+**387 passed**, 15 skipped; ruff clean.
+
+## PDF regression
+
+Fix scoped strictly to `_generate_candidate_lc_png` (candidate detail pages only). Main per-star LC JPEG path, tables, headers, glossary unchanged — no code overlap. Full-draft PDF byte-identity not run (would require golden PDF fixture); collateral risk limited to candidate LC PNG cache files (`lc_*.png` in `_report_cache`).
 
 ## Ledger
 
 | Finding | Status |
 |---------|--------|
-| **G5-F002** | **RESOLVED (non-issue)** — fix-log step 7 |
-| **G5-F007** | **FIXED** — fix-log step 8, commit **`6774f83`** |
+| **G5-F003** | **FIXED** — fix-log step 9 |
 
 ## Commit
 
-`fix(export): derive AAVSO plate scale from WCS (no hardcoded 1.3); real software version (G5-F007)` — **`6774f83`**
+`fix(report): candidate LC figures use calibrated mag, not mag_inst (G5-F003)` — see hash below.
 
 **Not pushed** — stop for Claude review.
 
 ## Files changed
 
-- `export_reports.py`, `photometry_core.py`, `tests/test_export_g5_f007.py`
+- `photometry_report.py`, `tests/test_g5_f003_candidate_lc.py`
 - `docs/VYVAR_FULL_AUDIT_LEDGER.md`, `CURSOR_RESULT.md`

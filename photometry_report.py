@@ -126,6 +126,40 @@ def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[st
     ]
 
 
+def _resolve_candidate_lc_mag_for_plot(df: pd.DataFrame) -> tuple[str, pd.Series] | None:
+    """Magnitude column + values for candidate LC PNG — mirrors export ``_select_export_lc_rows``.
+
+    Prefer ``mag_calib_ac`` when ``ac_ok`` and finite; else ``mag_calib``. Instrumental only
+    when no calibrated columns exist (explicit ``mag_inst`` label).
+    """
+    if df is None or df.empty:
+        return None
+    has_calib = "mag_calib" in df.columns or "mag_calib_ac" in df.columns
+    if has_calib:
+        mag = (
+            pd.to_numeric(df["mag_calib"], errors="coerce")
+            if "mag_calib" in df.columns
+            else pd.Series(np.nan, index=df.index, dtype=float)
+        )
+        ylab = "mag_calib"
+        if "mag_calib_ac" in df.columns:
+            ac_ok = (
+                df["ac_ok"].astype(bool)
+                if "ac_ok" in df.columns
+                else pd.Series(False, index=df.index)
+            )
+            mac = pd.to_numeric(df["mag_calib_ac"], errors="coerce")
+            use_ac = ac_ok & mac.notna() & np.isfinite(mac.to_numpy(dtype=float))
+            if use_ac.any():
+                mag = mag.copy()
+                mag.loc[use_ac] = mac.loc[use_ac]
+                ylab = "mag_calib_ac" if bool(use_ac.all()) else "mag_calib"
+        return ylab, mag
+    if "mag_inst" in df.columns:
+        return "mag_inst", pd.to_numeric(df["mag_inst"], errors="coerce")
+    return None
+
+
 class _PhotometryReportBuilder:
     """Internal PDF builder; section renderers extracted from generate_photometry_report."""
 
@@ -3302,22 +3336,41 @@ class _PhotometryReportBuilder:
             return None
         try:
             df = pd.read_csv(files[0])
-            time_col = next((c for c in df.columns if "bjd" in str(c).lower() or "time" in str(c).lower()), None)
-            mag_col = next((c for c in df.columns if "mag" in str(c).lower()), None)
-            if not time_col or not mag_col:
+            if "flag" in df.columns:
+                dfn = df[df["flag"].astype(str).eq("normal")].copy()
+            else:
+                dfn = df.copy()
+            if dfn.empty:
+                dfn = df.copy()
+            time_col = next((c for c in ("bjd_tdb", "bjd", "hjd", "jd") if c in dfn.columns), None)
+            if time_col is None:
+                time_col = next(
+                    (c for c in dfn.columns if "bjd" in str(c).lower() or "time" in str(c).lower()),
+                    None,
+                )
+            mag_res = _resolve_candidate_lc_mag_for_plot(dfn)
+            if not time_col or mag_res is None:
                 return None
-            df[time_col] = pd.to_numeric(df[time_col], errors="coerce")
-            df[mag_col] = pd.to_numeric(df[mag_col], errors="coerce")
-            df = df.dropna(subset=[time_col, mag_col])
-            if df.empty:
+            ylab, mag_series = mag_res
+            plot_df = dfn.copy()
+            plot_df[time_col] = pd.to_numeric(plot_df[time_col], errors="coerce")
+            plot_df["_plot_mag"] = mag_series
+            plot_df = plot_df.dropna(subset=[time_col, "_plot_mag"])
+            if plot_df.empty:
                 return None
-            t0 = float(df[time_col].min())
+            t0 = float(plot_df[time_col].min())
             fig, ax = plt.subplots(figsize=(10, 3))
             try:
                 fig.patch.set_facecolor("white")
-                ax.scatter(df[time_col] - t0, df[mag_col], s=8, alpha=0.7, color="#378ADD")
+                ax.scatter(
+                    plot_df[time_col] - t0,
+                    plot_df["_plot_mag"],
+                    s=8,
+                    alpha=0.7,
+                    color="#378ADD",
+                )
                 ax.set_xlabel("BJD - BJD0")
-                ax.set_ylabel("mag_inst")
+                ax.set_ylabel(ylab)
                 ax.set_title(f"Light curve — {str(cid)[:20]}")
                 ax.invert_yaxis()
                 ax.grid(True, alpha=0.3)
