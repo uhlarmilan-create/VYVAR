@@ -1000,7 +1000,7 @@ def export_lightcurve_reports(
     if math.isfinite(float(n_frames)) or math.isfinite(float(n_good_comp)) or math.isfinite(float(lc_rms)):
         v_lines.append(
             f"#   n_frames: {_fmt_opt_int(n_frames)} | "
-            f"n_good_comp: {_fmt_opt_int(n_good_comp)} | "
+            f"n_ensemble_comp: {_fmt_opt_int(n_good_comp)} (stability good+suspect; not comp_qa n_clean) | "
             f"lc_rms: {_fmt_opt_num(lc_rms, '.4f')}\n"
         )
     _trust = str(summary_row.get("trust", "") or "").strip().upper()

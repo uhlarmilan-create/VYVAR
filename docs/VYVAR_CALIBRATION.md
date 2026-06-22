@@ -204,12 +204,18 @@ exportem pri CT-off config). Ulozeni: `save_lightcurve_csv` ~3809-3854.
 | Candidate PDF LC PNG | `mag_calib_final` | `_resolve_candidate_lc_mag_for_plot` `photometry_report.py:141-150` |
 | `lc_rms`, `lc_rms_ooe` (summary) | **`mag_calib`** (ne final) | `photometry_core.py:7843-7844` |
 | comp_qa locus os | `mag_calib` / `lc_median_mag` z summary | `comp_qa_core.py:24-25`, `comp_axis_mag` ~64-73 |
-| Trust / export trust note | summary `lc_rms` (z `mag_calib`) | VarAstro header `export_reports.py:993-1004`; `format_export_trust_note` ~848-852 |
+| Trust / export trust note | summary `lc_rms` + `n_clean` (comp_qa) | VarAstro header `export_reports.py:1000-1011`; `format_export_trust_note` ~848-852 |
+| VarAstro header comp count | `n_good_comp` summary -> label **`n_ensemble_comp`** (stability good+suspect) | `export_reports.py:1000-1005`; **distinct** from trust `n_clean` (`comp_qa_core.py:465-470`) |
 | Variability detection | instrumental `dao_flux` z `proc_*.csv` | `variability_detector.py:19`, `load_field_flux_matrix` default `flux_col="dao_flux"` ~277 |
 
 **Publikacni vystupy** (AAVSO, VarAstro MAG, vsechny LC figury v PDF) nyni pouzivaji
 **`mag_calib_final`**. Scatter/metriky kvality (`lc_rms`, trust) zustavaji na **`mag_calib`**
 ù CT/AC jsou konstantni posuvy, scatter je invariantni.
+
+**`n_ensemble_comp` vs `n_clean`:** summary `n_good_comp` (`photometry_core.py:7827-7829`) =
+komparace stability `good` nebo `suspect` (ensemble pool). `n_clean` z comp_qa
+(`comp_qa_core.py:465-470`) = komparace bez Sokolovsky flagu pro cil (trust). VarAstro header:
+`n_ensemble_comp` (ne `n_good_comp`); trust pouziva `n_clean`.
 
 **Legacy CSV** bez sloupce `mag_calib_final`: export fallback na AC precedence
 (`mag_calib_ac` kdyz `ac_ok`) ù `export_reports.py:653-665`.
