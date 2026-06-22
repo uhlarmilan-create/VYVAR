@@ -212,6 +212,26 @@ def _fits_header_positive_float(hdr: fits.Header, *keys: str) -> float | None:
     return None
 
 
+def _fits_header_vy_algn_aligned(hdr: fits.Header) -> bool:
+    """True when frame pixels are on the MASTERSTAR reference alignment grid (VY_ALGN)."""
+    try:
+        val = hdr.get("VY_ALGN")
+        if val is None:
+            return True  # legacy frames without tag — keep pixel-fallback behaviour
+        if isinstance(val, tuple):
+            val = val[0]
+        if isinstance(val, bool):
+            return bool(val)
+        s = str(val).strip().lower()
+        if s in ("true", "1", "t", "yes"):
+            return True
+        if s in ("false", "0", "f", "no"):
+            return False
+    except Exception:  # noqa: BLE001
+        pass
+    return True
+
+
 def _frame_gain_readnoise_for_error_map(
     hdr: fits.Header,
     *,
@@ -6870,11 +6890,13 @@ def detect_stars_match_master_reference(
     oix: np.ndarray | None = None
     ra_deg: np.ndarray
     dec_deg: np.ndarray
+    _frame_on_ref_grid = _fits_header_vy_algn_aligned(hdr)
 
     # Robust strategy:
     # - If celestial WCS exists, try sky-match first (arcsec threshold).
-    # - If sky-match looks suspiciously bad (e.g. WCS offset), fall back to pixel match.
-    # - If no WCS, use pixel match directly.
+    # - If sky-match looks suspiciously bad (e.g. WCS offset), fall back to pixel match
+    #   only when the frame is on the reference alignment grid (VY_ALGN=True).
+    # Matching unaligned DAO xy to the reference pixel grid is invalid by construction.
     if getattr(wcs_obj, "has_celestial", False):
         ra_deg, dec_deg = _all_pix2world_icrs_deg(wcs_obj, x, y)
         det_coords = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
@@ -6886,33 +6908,45 @@ def detect_stars_match_master_reference(
         # the WCS is likely offset (e.g. wrong reference grid / flip / stale solve).
         med_sep = float(np.nanmedian(sep_sky)) if np.isfinite(np.nanmedian(sep_sky)) else float("inf")
         if (not np.isfinite(med_sep)) or (med_sep > max(30.0, match_thr * 3.0)):
-            ic_px, sep_px, oix_px = _pixel_nn_match(dist_thr_px=float(6.0))
-            # Prefer pixel match if it yields any finite distances.
-            if int(np.count_nonzero(np.isfinite(sep_px))) > 0:
-                icomp = ic_px
-                sep_arcsec_arr = sep_px  # px (kept numeric for mask)
-                oix = oix_px
-                match_mode = "pixel_fallback_bad_wcs"
-                ra_deg = np.full(n, np.nan, dtype=np.float64)
-                dec_deg = np.full(n, np.nan, dtype=np.float64)
-            else:
+            if not _frame_on_ref_grid:
                 icomp = ic_sky
                 sep_arcsec_arr = sep_sky
                 oix = None
-                match_mode = "sky"
+                match_mode = "sky_unaligned_no_pixel_fallback"
+            else:
+                ic_px, sep_px, oix_px = _pixel_nn_match(dist_thr_px=float(6.0))
+                # Prefer pixel match if it yields any finite distances.
+                if int(np.count_nonzero(np.isfinite(sep_px))) > 0:
+                    icomp = ic_px
+                    sep_arcsec_arr = sep_px  # px (kept numeric for mask)
+                    oix = oix_px
+                    match_mode = "pixel_fallback_bad_wcs"
+                    ra_deg = np.full(n, np.nan, dtype=np.float64)
+                    dec_deg = np.full(n, np.nan, dtype=np.float64)
+                else:
+                    icomp = ic_sky
+                    sep_arcsec_arr = sep_sky
+                    oix = None
+                    match_mode = "sky"
         else:
             icomp = ic_sky
             sep_arcsec_arr = sep_sky
             oix = None
             match_mode = "sky"
     else:
-        match_mode = "pixel_fallback_no_wcs"
         ra_deg = np.full(n, np.nan, dtype=np.float64)
         dec_deg = np.full(n, np.nan, dtype=np.float64)
-        ic_px, sep_px, oix_px = _pixel_nn_match(dist_thr_px=float(15.0))
-        icomp = ic_px
-        sep_arcsec_arr = sep_px  # px (kept numeric for mask)
-        oix = oix_px
+        if not _frame_on_ref_grid:
+            match_mode = "nondet_unaligned_no_wcs"
+            icomp = np.zeros(n, dtype=np.int64)
+            sep_arcsec_arr = np.full(n, np.nan, dtype=np.float64)
+            oix = None
+        else:
+            match_mode = "pixel_fallback_no_wcs"
+            ic_px, sep_px, oix_px = _pixel_nn_match(dist_thr_px=float(15.0))
+            icomp = ic_px
+            sep_arcsec_arr = sep_px  # px (kept numeric for mask)
+            oix = oix_px
 
     pmax_arr = _box_peaks_at_centroids(arr, x, y)
     _sat_block = _vectorized_star_saturation_columns(
