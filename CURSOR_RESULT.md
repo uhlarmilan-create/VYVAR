@@ -66,11 +66,11 @@ AAVSO header used a **literal** `#SOFTWARE=VYVAR/1.0` while `software_version` p
 | Finding | Status |
 |---------|--------|
 | **G5-F002** | **RESOLVED (non-issue)** — fix-log step 7 |
-| **G5-F007** | **FIXED** — fix-log step 8, commit **`770f062`** |
+| **G5-F007** | **FIXED** — fix-log step 8, commit **`6774f83`** |
 
 ## Commit
 
-`fix(export): derive AAVSO plate scale from WCS (no hardcoded 1.3); real software version (G5-F007)` — **`770f062`**
+`fix(export): derive AAVSO plate scale from WCS (no hardcoded 1.3); real software version (G5-F007)` — **`6774f83`**
 
 **Not pushed** — stop for Claude review.
 
