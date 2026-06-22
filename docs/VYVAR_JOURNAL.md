@@ -18,7 +18,7 @@ confirm). Real-data pixel-fallback firing pending wide-rig data.
 frozen 421 `err` bit-identical when `db` is wired. SNR `apertures_px` dict does not drive photon
 err when proc CSV carries `aperture_r_px`.
 
-**Also closed:** G2-F004 (`8f86078` keyed scatter join), G1-F005 + G7-F008 (silent except → log).
+**Also closed:** G2-F004 (`8f86078` keyed scatter join), G1-F005 + G7-F008 (`473f089` silent except → log). G2-F002b commit `977920f`.
 
 ---
 

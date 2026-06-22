@@ -36,7 +36,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 21 | G2-F004 err paired by positional index | **FIXED:** `_combine_err_with_ensemble_scatter_keyed` joins scatter by `source_file` | `8f86078` |
 | 22 | G1-F005 optics DB lookup silent except | **FIXED:** `_first_db_optics_ids` logs WARNING on DB failure; typed excepts | `473f089` |
 | 23 | G7-F008 UI helper silent except | **FIXED:** archive-path probe + UT tick helper log skip reason | `473f089` |
-| 24 | G2-F002b per-frame WCS trust flag | **FIXED:** `catalog_match_mode` + `wcs_untrusted` LC cols; `n_wcs_untrusted` soft-YELLOW trust; NONDET modes split; do-no-harm vs draft 421 PASS | `<g2f002b>` |
+| 24 | G2-F002b per-frame WCS trust flag | **FIXED:** `catalog_match_mode` + `wcs_untrusted` LC cols; `n_wcs_untrusted` soft-YELLOW trust; NONDET modes split; do-no-harm vs draft 421 PASS | `977920f` |
 
 ---
 
@@ -1927,7 +1927,7 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 | Group | Scope | Funcs audited | HIGH findings (post fix-pass 2026-06-22) |
 |-------|--------|---------------|-------------------------------------------|
 | 1 | Alignment / platesolve / optics | 415 | HIGH **closed** — G1-F001/F002/F003 **FIXED** (`2819e86`, `dbf76d5`, `0a43dbf`); G1-F005 **FIXED**; open MED G1-F004–F007 |
-| 2 | Photometry core | 322 | G2-F003/F004/F002b **FIXED** (`4b13e4a`, `8f86078`, `<g2f002b>`) |
+| 2 | Photometry core | 322 | G2-F003/F004/F002b **FIXED** (`4b13e4a`, `8f86078`, `977920f`) |
 | 3 | Data / IO / catalog | 367 | G3-F001/F002 **FIXED** (`9e3280e`, `fb75867`) |
 | 4 | Science / variability / QA | 166 | G4-F001 trust partially **FIXED** |
 | 5 | Reporting / export | 174 | G5-F003–F011, F004 **FIXED** (`6774f83`…`efbb4de`); forced-aperture **RESOLVED** (`7f0dc86`); LOW dead helpers remain |
@@ -1939,6 +1939,6 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 ## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003, broad-except Tier-1 backlog (~25 sites).
 
-**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`<g2f002b>`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
+**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
 
 **Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003 (`phase01_use_bprp_primary` parity), broad-except Tier-1 backlog (~25 remaining `BLE001` sites outside the closed silent-except pair).
