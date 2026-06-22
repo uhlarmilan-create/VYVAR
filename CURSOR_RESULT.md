@@ -1,54 +1,63 @@
-CURSOR RESULT — 2026-06-22 (G3-F002 query_local_gaia mag_limit=None)
+CURSOR RESULT — 2026-06-19
 
 What I did
-Path A: `mag_limit=None` ⇒ no g_mag SQL cap in `query_local_gaia`; MASTER_SOURCES explicit `mag_limit=None`; updated stale comment at `_query_gaia_local`. Tests + ledger. No push.
+Decoupled astroalign control-point count from the detection ladder (G1-F001/F002): new `alignment_max_control_points` config (default 80), plumbed through night_run/app/pipeline into `_align_ctx`, ladder uses plumbed cap while detection still uses max_stars 200–500. Added unit tests and Milan validation script. Ledger: FIXED pending Chi/h validation. Commit held locally; not pushed.
 
-## Step 1 — SQL construction (before fix)
+## Output / findings
 
-`database.py:150-152` silently set `mag_limit = 11.5` when omitted.
+### Root cause (fixed)
+- `vyvar_alignment_frame.py`: `mcp = max(12, min(max_st, n_fit))` tied astroalign CP to ladder detection cap (up to 500).
+- `pipeline.py`: `align_cp` was `min(cap, 1.5×N_ref)` and never passed into worker ctx; `max_control_points` param was dead at frame level.
 
-SQL built at `:238-247` with always `AND g_mag <= {mag_limit}`; optional `ORDER BY g_mag ASC LIMIT` when `max_rows` set.
+### Changes
+| Area | Change |
+|------|--------|
+| `config.py` | `alignment_max_control_points: int = 80`; clamp 12–500 in `__post_init__`; `to_dict` |
+| `ui_settings.py` | Slider next to `alignment_max_stars` |
+| `pipeline.py` | `align_cp` from `cfg.alignment_max_control_points`; `max_control_points` in `_align_ctx` + MP ctx |
+| `vyvar_alignment_frame.py` | `mcp = max(12, min(max_control_points, n_fit))` |
+| `night_run.py` / `app.py` | Source from `cfg.alignment_max_control_points` (removed hardcoded 180) |
+| `scripts/validate_alignment_control_points.py` | Chi/h validation harness (200 vs 80 on same detections) |
+| `tests/test_alignment_max_control_points.py` | Mechanism tests (default, clamp, json, mcp formula) |
 
-Clamp/log at `:159-167` when explicit cap > DB MAX(g_mag).
+### Unit tests
+```
+420 passed, 15 skipped (full suite)
+tests/test_alignment_max_control_points.py: 6 passed
+```
+No wall-clock speedup measured in unit tests (synthetic points only). Theoretical triangle budget: C(200,3)/C(80,3) ≈ **16.2×**.
 
-## Step 2 — Fix
+### Validation script (Milan — Chi/h draft 419/420)
 
-- `mag_cap: float | None` — set only when `mag_limit` is explicit finite > 0; invalid values log and apply **no cap** (no silent 11.5).
-- `mag_clause` empty when `mag_cap is None`.
-- Clamp/"orezávam" skipped when no cap.
+From repo root, after draft has `processed/lights/<setup>/proc_*.fits`:
 
-## Step 3 — pipeline.py:11404 (MASTER_SOURCES)
+```powershell
+python scripts/validate_alignment_control_points.py `
+  --draft-root Archive/Drafts/draft_000419 `
+  --setup B_60_2 `
+  --max-frames 5
+```
 
-- `mag_limit=None` explicit (full depth for faint detections).
-- **max_rows:** left unset — bbox is detection extent ±0.01° (tiny); `ORDER BY g_mag LIMIT N` would bias to bright stars and re-cut faint matches; row count not pathological.
+Adjust `--draft-root` (419 or 420), `--setup` (filter/exp/bin folder name under `processed/lights`), and `--max-frames` as needed.
 
-## Step 4 — pipeline.py:4405
+Explicit FITS mode:
 
-- Comment updated: `None ⇒ no mag cap` (was "defaults to 11.5").
-- When `max_mag is None`, `_ql_kw` omits `mag_limit` → full depth (matches faintest_mag_limit intent).
+```powershell
+python scripts/validate_alignment_control_points.py `
+  --ref path/to/reference.fits `
+  --frames path/to/light1.fits path/to/light2.fits
+```
 
-## Step 5 — Tests
+**Pass criteria (printed by script):** |dtranslation| < 0.05 px, |drotation| < 0.01°, |dscale| < 1e-4, |dRMS| < 0.05 px; NEW (80 CP) materially faster than OLD (200 CP). Frames exceeding thresholds are flagged FAIL.
 
-`tests/test_query_local_gaia_g3_f002.py` — **5 passed**
-- Explicit `mag_limit=11.5` excludes g>11.5
-- `mag_limit=None` includes g=12, 14.5
-- Explicit `mag_limit=20` unchanged row set
-- MASTER_SOURCES bbox simulation: faint match within 2″ with None; excluded with 11.5
+**Do not mark G1-F001/F002 fully closed until Milan reports Chi/h result.** Alignment output is not byte-identical.
 
-Full suite: **415 passed, 15 skipped**
-
-## Scripts note
-
-`scripts/forced_photometry_pal7.py` and `scripts/diagnose_wide_true_triangle_shape.py` pass explicit `mag_limit` — unchanged. Any script omitting `mag_limit` now gets full depth (acceptable for dev tools).
-
-## Ledger
-
-G3-F002 → **FIXED** (Path A)
+## Errors (if any)
+None.
 
 ## Files changed
-
-- `database.py`, `pipeline.py`
-- `tests/test_query_local_gaia_g3_f002.py`
+- `config.py`, `pipeline.py`, `vyvar_alignment_frame.py`, `night_run.py`, `app.py`, `ui_settings.py`
+- `scripts/_build_vyvar_params.py`, `scripts/validate_alignment_control_points.py`
+- `tests/test_alignment_max_control_points.py`
 - `docs/VYVAR_FULL_AUDIT_LEDGER.md`
-
-**Not pushed** — stop for Claude review.
+- Commit: `8198c45` (not pushed)

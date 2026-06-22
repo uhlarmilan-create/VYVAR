@@ -28,6 +28,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 14 | G7-F001 / G7-F002 unwired Select Stars page | **RESOLVED:** delete `ui_select_stars.py` (phantom `max_bv_diff` / stale kwarg) | `3e1cad7` |
 | 15 | G6-F002 master validity_days mismatch | **FIXED:** unified default dark **90** / flat **200** (dataclass, `__post_init__`, DB seed, `config.json`); DB SETTINGS vestigial | `379e78f` |
 | 16 | G3-F002 query_local_gaia mag_limit None | **FIXED (Path A):** None ⇒ no cap; MASTER_SOURCES `mag_limit=None`; stale 11.5 default removed | `fb75867` |
+| 17 | G1-F001 / G1-F002 alignment_max_control_points | **FIXED pending Chi/h validation:** decouple astroalign CP from detection ladder; `alignment_max_control_points=80`; validation script `scripts/validate_alignment_control_points.py` (not byte-identical; ~16× triangle budget) | `8198c45` |
 | 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `b4a45fb` |
 
 ---
@@ -36,8 +37,8 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
-| G1-F001 | **HIGH** | L4/L5 | `pipeline.py:12323`, `12836`, `vyvar_alignment_frame.py:392-397` | `max_control_points` threaded from UI/`night_run` (180-250) is **never read** in `_astrometry_align_impl_body`; effective cap is `min(cfg.alignment_max_stars, 200)` then `align_cp = min(cap, 1.5xN_ref)`. Worker uses hardcoded attempt `max_stars` 200-500, not `align_cp`. | Caller-facing knobs must bind to the live code path; silent dead params mislead tuning and perf work. |
-| G1-F002 | **HIGH** | L6 | `pipeline.py:12349`, `12836`; `vyvar_alignment_frame.py:512` | Dense-field alignment: 200-star cap -> `align_cp~200` -> astroalign ~654 s/frame (Fix-C perf ticket). Cap is hardcoded, not equipment-aware. | Iteration/control-point budgets need explicit wall-clock + count bounds on dense fields. |
+| G1-F001 | **FIXED pending Chi/h validation** | L4/L5 | `config.py`, `pipeline.py`, `vyvar_alignment_frame.py` | ~~`max_control_points` dead knob; ladder used `min(max_st, n_fit)`~~ **FIXED:** `alignment_max_control_points` (default 80) plumbed via `_align_ctx`; ladder uses plumbed cap; detection ladder unchanged. Not byte-identical — Milan validates on Chi/h. | Caller-facing knobs must bind to the live code path; silent dead params mislead tuning and perf work. |
+| G1-F002 | **FIXED pending Chi/h validation** | L6 | `config.py`, `pipeline.py`, `vyvar_alignment_frame.py` | ~~Dense field: ~200 CP → ~654 s/frame~~ **FIXED:** CP cap 80 independent of detection 200–500; theoretical speedup C(200,3)/C(80,3) ≈ 16×. Pending Chi/h transform comparison. | Iteration/control-point budgets need explicit wall-clock + count bounds on dense fields. |
 | G1-F003 | **MED** | L4 | `vyvar_alignment_frame.py:684-709` | Alignment failure -> **identity fallback** (`VY_ALGN=False` but frame still written). Misaligned pixels can enter photometry unless residual gate catches them. | Science path should reject or hard-flag failed alignment; identity is not a valid aligned product. |
 | G1-F004 | **MED** | L1 | `vyvar_blind_series.py:212-216` | Blind verify tolerance scaled vs fixed `_ref = 1.3`/px (narrow-rig reference), not measured scale. | Scale-dependent tolerances must derive from equipment/WCS scale, not a universal literal. |
 | G1-F005 | **MED** | L3 | `optics_selection.py:50-64` | `_first_db_optics_ids`: broad `except: pass` on DB queries - failed lookup -> `None` with no log. | DB failures on optics resolution must log; silent pass risks wrong rig. |

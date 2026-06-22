@@ -378,8 +378,10 @@ class AppConfig:
     #: Reserve this much RAM (GB) when capping paralelného exportu katalógov cez ``psutil`` (nad rámec jednotného ``_pw``).
     per_frame_mp_reserve_ram_gb: float = 1.5
 
-    #: Frame alignment (``astroalign`` + DAO positions): max brightest sources offered as control points per frame.
+    #: Frame alignment (DAO detection ladder): max brightest sources detected per frame (astroalign picks a subset).
     alignment_max_stars: int = 160
+    #: Frame alignment (``astroalign`` triangle matching): brightest N stars used as control points (independent of detection count).
+    alignment_max_control_points: int = 80
     #: DAOStarFinder threshold multiplier vs sigma-clipped background RMS (higher = fewer, more significant peaks).
     alignment_detection_sigma: float = 5.0
     #: Same recipe as QC HFR star detection (``_mean_hfr_bright_stars_dao`` first pass: ``threshold = qc_dao_detection_sigma × std``).
@@ -854,6 +856,16 @@ class AppConfig:
             )
         except (TypeError, ValueError):
             self.alignment_max_stars = 200
+        try:
+            self.alignment_max_control_points = max(
+                12,
+                min(
+                    500,
+                    int(data.get("alignment_max_control_points", self.alignment_max_control_points)),
+                ),
+            )
+        except (TypeError, ValueError):
+            self.alignment_max_control_points = 80
         try:
             self.alignment_detection_sigma = float(
                 data.get("alignment_detection_sigma", self.alignment_detection_sigma)
@@ -1849,6 +1861,7 @@ class AppConfig:
             "catalog_query_max_rows": int(self.catalog_query_max_rows),
             "per_frame_mp_reserve_ram_gb": float(self.per_frame_mp_reserve_ram_gb),
             "alignment_max_stars": int(self.alignment_max_stars),
+            "alignment_max_control_points": int(self.alignment_max_control_points),
             "alignment_detection_sigma": float(self.alignment_detection_sigma),
             "qc_dao_detection_sigma": float(self.qc_dao_detection_sigma),
             "sips_dao_fwhm_px": float(self.sips_dao_fwhm_px),

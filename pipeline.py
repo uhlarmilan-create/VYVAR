@@ -12154,7 +12154,7 @@ def _astrometry_align_impl_body(
     job: dict[str, Any],
     archive_path: Path,
     astrometry_api_key: str | None = None,
-    max_control_points: int = 180,
+    max_control_points: int = 80,
     min_detected_stars: int = 100,
     max_detected_stars: int = 500,
     platesolve_backend: str = "vyvar",
@@ -12666,8 +12666,8 @@ def _astrometry_align_impl_body(
     )
 
     # Align every other frame to reference (skip duplicate if ref is not files[0]).
-    # Control points fixed to 1.5× selected stars (bounded).
-    align_cp = int(max(12, min(_align_star_cap, int(round(1.5 * max(1, len(ref_xy_fit)))))))
+    # Astroalign control-point cap from cfg (decoupled from detection ladder max_stars).
+    align_cp = int(max(12, min(500, int(_cfg_align.alignment_max_control_points))))
     ref_pts = np.asarray(ref_xy_fit, dtype=np.float32)
     if ref_pts is None or len(ref_pts) == 0:
         raise ValueError("Referenčné hviezdy sú prázdne pred štartom alignmentu!")
@@ -12699,6 +12699,7 @@ def _astrometry_align_impl_body(
         "has_ref_wcs": ref_wcs_obj is not None,
         "platesolve_dir": str(platesolve_dir),
         "align_star_cap": int(_align_star_cap),
+        "max_control_points": int(align_cp),
         "min_detected_stars": int(min_detected_stars),
         "max_detected_stars": int(max_detected_stars),
         "fb_align": float(_fb_align),
@@ -12755,6 +12756,7 @@ def _astrometry_align_impl_body(
             "has_ref_wcs": bool(_align_ctx["has_ref_wcs"]),
             "platesolve_dir": str(_align_ctx["platesolve_dir"]),
             "align_star_cap": int(_align_ctx["align_star_cap"]),
+            "max_control_points": int(_align_ctx["max_control_points"]),
             "min_detected_stars": int(_align_ctx["min_detected_stars"]),
             "max_detected_stars": int(_align_ctx["max_detected_stars"]),
             "fb_align": float(_align_ctx["fb_align"]),
@@ -13127,7 +13129,7 @@ def astrometry_align_and_build_masterstar(
     *,
     archive_path: Path,
     astrometry_api_key: str | None = None,
-    max_control_points: int = 180,
+    max_control_points: int = 80,
     min_detected_stars: int = 100,
     max_detected_stars: int = 500,
     platesolve_backend: str = "vyvar",

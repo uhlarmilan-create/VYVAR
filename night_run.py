@@ -55,7 +55,7 @@ class NightRunParams:
     max_extra_platesolve: int = 0
     min_detected_stars: int = 100
     max_detected_stars: int = 500
-    max_control_points: int = 180
+    max_control_points: int = 80
     saturate_level_fraction: float = 0.95
     post_platesolve_hook: Callable[[int, Path, AppConfig, AstroPipeline], None] | None = None
     pre_calibrated_mode: bool = False
@@ -354,7 +354,7 @@ def _night_run_platesolve(
         archive_path=ap,
         app_config=cfg_run,
         astrometry_api_key=(str(pending.get("astrometry_api_key", "")).strip() or None),
-        max_control_points=int(pending.get("max_control_points", 180)),
+        max_control_points=int(pending.get("max_control_points", cfg_run.alignment_max_control_points)),
         min_detected_stars=int(pending.get("min_detected_stars", 100)),
         max_detected_stars=int(pending.get("max_detected_stars", 500)),
         platesolve_backend=str(pending.get("platesolve_backend", "vyvar")),
@@ -897,7 +897,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             "inject_pointing_ra_deg": (float(ira) if coords_ok else None),
             "inject_pointing_dec_deg": (float(ide) if coords_ok else None),
             "quality_filter_draft_id": draft_id,
-            "max_control_points": int(params.max_control_points),
+            "max_control_points": int(cfg.alignment_max_control_points),
             "min_detected_stars": int(params.min_detected_stars),
             "max_detected_stars": int(params.max_detected_stars),
             "astrometry_api_key": "",

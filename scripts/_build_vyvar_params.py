@@ -127,6 +127,7 @@ def _parse_clamps(src: str) -> dict[str, str]:
         "sips_dao_fwhm_px": "1.0 … 8.0",
         "calibration_library_native_binning": "1 … 16",
         "alignment_max_stars": "10 … 5000",
+        "alignment_max_control_points": "12 … 500",
         "catalog_query_max_rows": "1000 … 500000",
         "psf_spatial_order": "0 … 2",
     }

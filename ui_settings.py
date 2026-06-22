@@ -377,13 +377,27 @@ def render_settings_dashboard(
             max_value=5000,
             value=int(cfg.alignment_max_stars),
             step=10,
-            help="Max. brightest control points per frame.",
+            help="Max. brightest stars detected per frame (DAO ladder); astroalign uses a smaller control-point subset.",
         )
         _detail_help(
             "alignment_max_stars",
             phase="Alignment phase (between calibration and stack / per-frame).",
             used_in="Sort stars by flux, trim to N for matching reference frame.",
             compute="N = min(detected, alignment_max_stars).",
+        )
+        aln_mcp = st.slider(
+            "alignment_max_control_points",
+            min_value=12,
+            max_value=500,
+            value=int(cfg.alignment_max_control_points),
+            step=4,
+            help="Brightest N stars used for the astroalign triangle transform; lower = faster, 50–100 typical.",
+        )
+        _detail_help(
+            "alignment_max_control_points",
+            phase="Alignment (astroalign triangle matching).",
+            used_in="Caps control points passed to astroalign.find_transform (independent of detection ladder).",
+            compute="mcp = min(alignment_max_control_points, min(source, target) detections).",
         )
         aln_sig = st.slider(
             "alignment_detection_sigma",
@@ -946,6 +960,7 @@ def render_settings_dashboard(
         cfg.qc_min_stars = int(qc_stars)
         cfg.qc_after_calibrate_enabled = bool(qc_after_cal)
         cfg.alignment_max_stars = int(max(10, min(5000, aln_max)))
+        cfg.alignment_max_control_points = int(max(12, min(500, aln_mcp)))
         det_sig = float(aln_sig)
         cfg.alignment_detection_sigma = det_sig if det_sig > 0 else 5.0
         cfg.aperture_fwhm_factor = float(max(0.5, min(6.0, ap_fwhm)))

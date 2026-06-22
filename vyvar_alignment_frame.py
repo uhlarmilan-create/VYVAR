@@ -350,6 +350,7 @@ def _alignment_compute_one_frame(
     reference_list: list[Any] = ctx["reference_list"]
     platesolve_dir = Path(ctx["platesolve_dir"])
     align_star_cap = int(ctx["align_star_cap"])
+    max_control_points = int(ctx.get("max_control_points", 80))
     min_detected_stars = int(ctx["min_detected_stars"])
     fb_align = float(ctx["fb_align"])
     rotation_ref_angle_deg = ctx.get("rotation_ref_angle_deg")
@@ -512,7 +513,7 @@ def _alignment_compute_one_frame(
                 if n_fit > 0:
                     xy_fit = np.asarray(xy_fit[:n_fit], dtype=np.float32)
                     ref_fit = np.asarray(ref_fit[:n_fit], dtype=np.float32)
-                mcp = max(12, min(max_st, n_fit))
+                mcp = max(12, min(int(max_control_points), n_fit))
                 aligned_data, aa_err = _alignment_run_astroalign_points(
                     source_pts=xy_fit,
                     target_pts=ref_fit,
