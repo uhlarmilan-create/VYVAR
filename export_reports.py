@@ -6,7 +6,7 @@ import logging
 import re
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import pandas as pd
 import numpy as np
@@ -39,6 +39,68 @@ _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
 # Single source for export headers (AAVSO #SOFTWARE + VarAstro Software line).
 VYVAR_SOFTWARE_VERSION = "VYVAR 1.0"
+
+
+class ExportFailure(TypedDict):
+    target_id: str
+    method: str
+    reason: str
+
+
+def record_export_failure(
+    failures: list[ExportFailure] | None,
+    target_id: str,
+    method: str,
+    reason: str,
+) -> None:
+    """Append one export failure and log at ERROR (batch callers collect + summarize)."""
+    if failures is None:
+        logging.error(
+            "[EXPORT] failed %s method=%s: %s",
+            target_id or "?",
+            method or "-",
+            reason,
+        )
+        return
+    failures.append(
+        {
+            "target_id": str(target_id or "").strip() or "?",
+            "method": str(method or "").strip(),
+            "reason": str(reason),
+        }
+    )
+    logging.error(
+        "[EXPORT] failed %s method=%s: %s",
+        failures[-1]["target_id"],
+        failures[-1]["method"] or "-",
+        failures[-1]["reason"],
+    )
+
+
+def log_export_batch_summary(failures: list[ExportFailure]) -> None:
+    """Emit operator-visible batch summary when any per-target exports failed or were empty."""
+    if not failures:
+        return
+    ids = sorted({f["target_id"] for f in failures})
+    logging.error(
+        "[EXPORT] batch finished with %d export failure(s) across %d target(s)",
+        len(failures),
+        len(ids),
+    )
+    if len(ids) <= 25:
+        logging.error("[EXPORT] failed target ids: %s", ",".join(ids))
+    else:
+        logging.error(
+            "[EXPORT] failed target ids (first 25): %s ...",
+            ",".join(ids[:25]),
+        )
+    for f in failures:
+        logging.error(
+            "[EXPORT]   %s | method=%s | %s",
+            f["target_id"],
+            f.get("method") or "-",
+            f["reason"],
+        )
 
 
 def _aavso_software_header_line(software_version: str, export_method: str) -> str:
@@ -707,6 +769,7 @@ def export_lightcurve_reports(
     export_method: str = "aperture",
     active_methods: list[str] | None = None,
     proc_csv_cache: dict[str, pd.DataFrame] | None = None,
+    export_failures: list[ExportFailure] | None = None,
 ) -> dict[str, Path]:
     """Generuje AAVSO a VAR.ASTRO súbory pre jeden target."""
     fresh_cfg = cfg or AppConfig()
@@ -731,22 +794,25 @@ def export_lightcurve_reports(
 
     vsx_name = str(target_row.get("vsx_name", "") or "").strip() or "unknown"
     safe = _safe_filename(vsx_name)
+    _export_method = str(export_method or "aperture").strip().lower()
+    _target_id = str(target_row.get("catalog_id", "") or vsx_name).strip()
 
     # Use exportable LC points (normal frames; canonical mag_calib_final when present).
     lc0 = lc_df.copy() if lc_df is not None else pd.DataFrame()
     lc_normal = _select_export_lc_rows(lc0)
 
     if lc_normal.empty:
-        logging.info(
-            "[EXPORT] Skip %s — no exportable LC points (flags/mag empty)",
-            str(vsx_name),
+        record_export_failure(
+            export_failures,
+            _target_id,
+            _export_method,
+            "no exportable LC points (flags/mag empty)",
         )
         return {}
 
     bjd_first = pd.to_numeric(lc_normal.iloc[0].get("bjd", float("nan")), errors="coerce")
     date_tag = _bjd_to_datestr_yyyymmdd(float(bjd_first)) if math.isfinite(float(bjd_first)) else "unknown"
 
-    _export_method = str(export_method or "aperture").strip().lower()
     _active_methods = list(active_methods or active_report_methods(fresh_cfg))
     aavso_path = aavso_export_path(out_base, safe, date_tag, _export_method, active_methods=_active_methods)
     var_path = varastro_export_path(out_base, safe, date_tag, _export_method, active_methods=_active_methods)
@@ -942,8 +1008,19 @@ def export_lightcurve_reports(
             )
             + "\n"
         )
-    aavso_path.write_text("".join(a_lines), encoding="utf-8")
-    logging.info("[EXPORT] AAVSO: %s", str(aavso_path.name))
+    paths: dict[str, Path] = {}
+    try:
+        aavso_path.write_text("".join(a_lines), encoding="utf-8")
+        logging.info("[EXPORT] AAVSO: %s", str(aavso_path.name))
+        paths["aavso"] = aavso_path
+    except OSError as exc:
+        record_export_failure(
+            export_failures,
+            _target_id,
+            _export_method,
+            f"AAVSO write error: {exc}",
+        )
+        return paths
 
     # --- VAR.ASTRO.CZ ---
     vsx_type = str(target_row.get("vsx_type", "") or "").strip()
@@ -1061,10 +1138,19 @@ def export_lightcurve_reports(
             continue
         v_lines.append(f"{float(bjd):.6f}   {_fmt_opt_num(dmag, '.4f'):>7}   {_fmt_opt_num(err, '.4f'):>7}   {_fmt_opt_num(mag_cal, '.4f'):>7}\n")
 
-    var_path.write_text("".join(v_lines), encoding="utf-8")
-    logging.info("[EXPORT] VAR.ASTRO: %s", str(var_path.name))
+    try:
+        var_path.write_text("".join(v_lines), encoding="utf-8")
+        logging.info("[EXPORT] VAR.ASTRO: %s", str(var_path.name))
+        paths["varastro"] = var_path
+    except OSError as exc:
+        record_export_failure(
+            export_failures,
+            _target_id,
+            _export_method,
+            f"VarAstro write error: {exc}",
+        )
 
-    return {"aavso": aavso_path, "varastro": var_path}
+    return paths
 
 
 def export_all_method_lightcurve_reports(
@@ -1077,11 +1163,13 @@ def export_all_method_lightcurve_reports(
     summary_row: pd.Series,
     cfg: AppConfig | None = None,
     proc_csv_cache: dict[str, pd.DataFrame] | None = None,
+    export_failures: list[ExportFailure] | None = None,
     **kwargs: Any,
 ) -> dict[str, dict[str, Path]]:
     """Export AAVSO + VarAstro for each active photometry method."""
     fresh_cfg = cfg or AppConfig()
     _lc_dir = Path(lc_dir)
+    _tid = str(target_cid or target_row.get("catalog_id", "") or "").strip()
     _have_psf_files = any(_lc_dir.glob("lightcurve_*_psf.csv")) or any(
         _lc_dir.glob("lightcurve_*_adaptive.csv")
     )
@@ -1096,12 +1184,20 @@ def export_all_method_lightcurve_reports(
     for method in _methods:
         lc_path = lc_csv_path(_lc_dir, target_cid, method)
         if not lc_path.is_file():
+            record_export_failure(export_failures, _tid, method, "LC CSV missing")
             continue
         try:
             lc_df = pd.read_csv(lc_path, low_memory=False)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            record_export_failure(
+                export_failures,
+                _tid,
+                method,
+                f"LC CSV read error: {exc}",
+            )
             continue
         if lc_df.empty:
+            record_export_failure(export_failures, _tid, method, "LC CSV empty")
             continue
         try:
             paths = export_lightcurve_reports(
@@ -1115,10 +1211,16 @@ def export_all_method_lightcurve_reports(
                 export_method=method,
                 active_methods=_methods,
                 proc_csv_cache=_proc_cache,
+                export_failures=export_failures,
                 **kwargs,
             )
         except Exception as exc:  # noqa: BLE001
-            logging.warning("[EXPORT] %s method %s: %s", target_cid, method, exc)
+            record_export_failure(
+                export_failures,
+                _tid,
+                method,
+                f"export error: {exc}",
+            )
             continue
         if paths:
             out[method] = paths

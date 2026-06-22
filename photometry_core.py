@@ -7987,7 +7987,11 @@ def _phase2a_finalize_exports(
     # Export lightcurve reports (AAVSO + VAR.ASTRO.CZ) — best effort, non-fatal.
     try:
         from citations import build_run_citation_context, load_pipeline_meta  # noqa: PLC0415
-        from export_reports import export_all_method_lightcurve_reports  # noqa: PLC0415
+        from export_reports import (  # noqa: PLC0415
+            export_all_method_lightcurve_reports,
+            log_export_batch_summary,
+            record_export_failure,
+        )
         from report_methods import active_report_methods, lc_csv_path  # noqa: PLC0415
 
         reports_dir = output_dir / "lightcurves_reports"
@@ -8019,17 +8023,30 @@ def _phase2a_finalize_exports(
 
         n_export_ok = 0
         n_export_skip = 0
+        _export_failures: list[dict[str, str]] = []
         for _, trow in at_df.iterrows():
             target_cid = _normalize_gaia_id(trow.get("catalog_id", ""))
             if not target_cid:
                 continue
             lc_csv = lc_csv_path(lc_dir, target_cid, "aperture")
             if not lc_csv.is_file():
+                record_export_failure(
+                    _export_failures,
+                    target_cid,
+                    "aperture",
+                    "LC CSV missing",
+                )
                 n_export_skip += 1
                 continue
             try:
                 pd.read_csv(lc_csv, low_memory=False)
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                record_export_failure(
+                    _export_failures,
+                    target_cid,
+                    "aperture",
+                    f"LC CSV read error: {exc}",
+                )
                 continue
 
             comp_target = _comp_index.get(target_cid, pd.DataFrame()).copy()
@@ -8064,15 +8081,22 @@ def _phase2a_finalize_exports(
                     obs_group=_setup_obs_group,
                     targets_df=at_df,
                     run_citation_ctx=_run_cite,
+                    export_failures=_export_failures,
                 )
                 if _method_paths:
                     n_export_ok += 1
                 else:
                     n_export_skip += 1
             except Exception as exc:  # noqa: BLE001
-                logging.warning("[EXPORT] %s: %s", target_cid, exc)
+                record_export_failure(
+                    _export_failures,
+                    target_cid,
+                    "all",
+                    f"export batch error: {exc}",
+                )
                 n_export_skip += 1
 
+        log_export_batch_summary(_export_failures)
         logging.info(
             "[EXPORT] lightcurves_reports: %d targets exported, %d skipped (methods=%s)",
             int(n_export_ok),
