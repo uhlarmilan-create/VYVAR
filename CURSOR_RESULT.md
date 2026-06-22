@@ -1,53 +1,73 @@
-CURSOR RESULT — 2026-06-22 (magnitude-calibration manual)
+CURSOR RESULT — 2026-06-19 (G5-F006, G5-F008, G5-F004)
 
 What I did
-Read-only verification of post-`be3e193` code paths; wrote Czech ASCII calibration data-flow manual with file:line citations. **Doc only — no code change.**
+Completed three isolated Group 5 publication-layer fixes in order: F006 (PDF BJD label) → F008 (comp count clarity) → F004 (export failure visibility). Each: diagnose → minimal fix → test → commit. Updated audit ledger. No push.
 
-## Doc choice
+## G5-F006 — PDF time axis BJD(TDB)
 
-**New file:** `docs/VYVAR_CALIBRATION.md` (dedicated section "Kalibrace magnitud — datovy tok").
+**Diagnosis:** PDF LC plots and glossary used raw column name `bjd` / label “BJD”; pipeline LC column is `bjd_tdb_mid` stored as `bjd`. VarAstro already had `# TIME SYSTEM: BJD(TDB)`.
 
-**Linked from:** `docs/VYVAR_PIPELINE_CZ.md` §7, `docs/VYVAR_STATE.md`, `docs/VYVAR_DECISIONS.md` (Path A decision block added).
+**Fix:** `photometry_report.py` — `_pdf_time_axis_label()` maps `bjd` / `bjd_tdb` / `bjd_tdb_mid` → `BJD(TDB)`; `hjd` → `HJD`; `jd` → `JD`. Main LC axes, overlay, candidate LC PNG, session cover kv, glossary.
 
-Matches existing manual style: Czech, ASCII, code-anchored (same family as `VYVAR_PIPELINE_CZ.md`).
+**Tests:** `tests/test_export_g5_f006.py` — 3 passed.
 
-## Section outline (`VYVAR_CALIBRATION.md`)
+**Ledger:** G5-F006 → **FIXED** (`b74c301`).
 
-1. Column lineage — ASCII diagram + CSV column table
-2. Corrections — ensemble ZP, GS11, Savitzky-Golay, CT, AC, `mag_calib_final` (formula, gates, config defaults, file:line)
-3. Consumer table — export, PDF, `lc_rms`, comp_qa, trust, variability
-4. `err` column — photon + ensemble SEM, invariance under CT/AC, `ac_scatter` not in `err`
-5. Cross-links — DECISIONS, ledger G5-F011, CITATIONS, canonical combination doc
+**Commit:** `fix(report): PDF time axis labeled BJD(TDB) to match column (G5-F006)` — **`b74c301`**.
 
-## Source verification (post-`be3e193`)
+---
 
-| Item | Verified location |
-|------|-------------------|
-| `ensemble_normalize` / `mag_calib` formula | `photometry_core.py:2254-2452` |
-| GS11 dilution gate | `dilution.py:346-359`, `config.py:485` |
-| AC Method B `delta_m_corr` | `photometry_core.py:2075-2206`, gates ~7173-7180 |
-| CT `apply_color_term` | `photometry_core.py:2580-2613`, per-target ~7394-7405 |
-| `apply_reporting_postprocess` / `mag_calib_raw` | `photometry_core.py:3422-3474` |
-| Savitzky-Golay + AC recompute | `photometry_core.py:7563-7576` |
-| `compute_mag_calib_final` + CSV write | `photometry_core.py:3698-3735`, `save_lightcurve_csv` ~3809-3854 |
-| Export `mag_calib_final` | `export_reports.py:645-686` |
-| PDF `_publication_lc_mag_column` | `photometry_report.py:129-138` |
-| `lc_rms` on `mag_calib` | `photometry_core.py:7843-7844` |
-| Variability `dao_flux` | `variability_detector.py:277` |
-| `err` assembly | `photometry_core.py:628-649`, ~7502-7516 |
+## G5-F008 — VarAstro comp count vs trust `n_clean`
 
-**Note documented:** `mag_calib_ct` in CSV is CT on pre-SG `mag_calib`; `mag_calib_final` applies scalar `ct_correction` to post-SG `mag_calib` — canonical export uses `mag_calib_final`.
+**Verify verdict: DISTINCT metrics (no number reconciliation).**
 
-**VarAstro `delta_mag`:** left as ensemble differential (`export_reports.py:1057`) — documented explicitly.
+| Metric | Source | Meaning |
+|--------|--------|---------|
+| `n_good_comp` (summary) | `photometry_core.py:7827-7829` | Ensemble pool: comps with Phase-2A stability `good` or `suspect` |
+| `n_clean` (trust) | `comp_qa_core.py:465-470` | comp_qa pool minus Sokolovsky LOO-flagged comps per target |
 
-## Commit
+**Fix (clarity only):**
+- `export_reports.py` VarAstro header: label **`n_ensemble_comp`** with comment `(stability good+suspect; not comp_qa n_clean)`.
+- `photometry_report.py` glossary: clarified `n_good_comp`; added `n_clean` entry.
+- `docs/VYVAR_CALIBRATION.md` consumer table + short note.
 
-`docs: magnitude-calibration data-flow (lineage, corrections, consumers) in manual` — **`1da84a8`**.
+**Tests:** `tests/test_export_g5_f008.py` — 1 passed.
+
+**Ledger:** G5-F008 → **FIXED** (`07e6f69`).
+
+**Commit:** `fix(export): clarify/reconcile VarAstro comp count vs trust n_clean (G5-F008)` — **`07e6f69`**.
+
+---
+
+## G5-F004 — Surface silent export failures
+
+**Diagnosis:** `export_reports.py` and `photometry_core.py` Phase-2A batch used `continue` on LC read errors, `logging.info` on empty exportable LC, and `logging.warning` on per-method exceptions — batch could finish with missing AAVSO/VarAstro files and no operator-visible ERROR trail.
+
+**Fix (fail-visible, batch completes):**
+- `export_reports.py`: `ExportFailure` typed dict; `record_export_failure()` (ERROR log + append); `log_export_batch_summary()` (ERROR summary at batch end).
+- `export_lightcurve_reports`: `export_failures` collector; empty LC → ERROR + record; AAVSO/VarAstro write errors → ERROR + record (partial paths if one write fails).
+- `export_all_method_lightcurve_reports`: missing LC / read error / empty LC / export exception → record; passes collector to single-target export.
+- `photometry_core.py` Phase-2A loop: `_export_failures` list; gate failures recorded; `export_failures=` passed; `log_export_batch_summary()` after loop.
+
+**Tests:** `tests/test_export_g5_f004.py` — 5 passed. Regression: clean export byte-identical when `export_failures=[]` vs omitted (`test_clean_export_byte_identical_without_failure_collector`). Related G5 tests (F006/F007/F008) — 16 passed total in combined run.
+
+**Ledger:** G5-F004 → **FIXED** (`efbb4de`).
+
+**Commit:** `fix(export): surface export read/write failures (batch summary, no silent skip) (G5-F004)` — **`efbb4de`**.
+
+---
+
+## Errors (if any)
+
+None.
+
+## Files changed (this task)
+
+| Commit | Files |
+|--------|-------|
+| `b74c301` | `photometry_report.py`, `tests/test_export_g5_f006.py` |
+| `07e6f69` | `export_reports.py`, `photometry_report.py`, `tests/test_export_g5_f008.py`, `docs/VYVAR_CALIBRATION.md` |
+| `efbb4de` | `export_reports.py`, `photometry_core.py`, `tests/test_export_g5_f004.py` |
+| `ec38807` | `docs/VYVAR_FULL_AUDIT_LEDGER.md` |
 
 **Not pushed** — stop for Claude review.
-
-## Files changed
-
-- `docs/VYVAR_CALIBRATION.md` (new)
-- `docs/VYVAR_PIPELINE_CZ.md`, `docs/VYVAR_DECISIONS.md`, `docs/VYVAR_STATE.md`
-- `CURSOR_RESULT.md`
