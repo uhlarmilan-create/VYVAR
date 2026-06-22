@@ -10,10 +10,14 @@ Never silently fall back to hardcoded equipment id=1 (QHY294MM).
 
 from __future__ import annotations
 
+import logging
+import sqlite3
 from dataclasses import dataclass
 from typing import Any
 
 from infolog import log_event
+
+_log = logging.getLogger(__name__)
 
 SESSION_EQUIPMENT_KEY = "vyvar_active_equipment_id"
 SESSION_TELESCOPE_KEY = "vyvar_active_telescope_id"
@@ -47,8 +51,11 @@ def _first_db_optics_ids(db: Any) -> tuple[int | None, int | None]:
         ).fetchone()
         if row is not None:
             eq_id = int(row["ID"])
-    except Exception:  # noqa: BLE001
-        pass
+    except (sqlite3.Error, AttributeError, TypeError, ValueError, KeyError) as exc:
+        _log.warning(
+            "EQUIPMENTS optics lookup failed (%s); equipment_id resolution fell through to None",
+            exc,
+        )
     try:
         row = db.conn.execute(
             """
@@ -60,8 +67,11 @@ def _first_db_optics_ids(db: Any) -> tuple[int | None, int | None]:
         ).fetchone()
         if row is not None:
             tel_id = int(row["ID"])
-    except Exception:  # noqa: BLE001
-        pass
+    except (sqlite3.Error, AttributeError, TypeError, ValueError, KeyError) as exc:
+        _log.warning(
+            "TELESCOPE optics lookup failed (%s); telescope_id resolution fell through to None",
+            exc,
+        )
     return eq_id, tel_id
 
 

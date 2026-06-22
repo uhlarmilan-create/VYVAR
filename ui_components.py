@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import sqlite3
 import streamlit as st
 
 from pipeline import (
@@ -15,6 +17,8 @@ from pipeline import (
 )
 from infolog import log_event
 import plotly.express as px
+
+_log = logging.getLogger(__name__)
 
 DRAFT_CENTER_RA_STATE_KEY = "cur_draft_ra"
 DRAFT_CENTER_DE_STATE_KEY = "cur_draft_de"
@@ -100,8 +104,12 @@ def render_masterstar_selection_qc(
                         _try_p = Path(_raw_ap)
                         if _try_p.is_dir():
                             _arch = _try_p
-            except Exception:  # noqa: BLE001
-                pass
+            except (sqlite3.Error, OSError, AttributeError, TypeError, ValueError) as exc:
+                _log.debug(
+                    "Archive path probe skipped for draft %s: %s",
+                    did,
+                    exc,
+                )
 
     if _arch is None or not _arch.is_dir():
         st.info("Enter a valid **archive path** above (or import with ARCHIVE_PATH in the draft) to find FITS in `processed/lights`.")

@@ -47,6 +47,8 @@ _LC_OVERVIEW_COLS = [
 
 _MAX_LC_PRELOAD = 200
 
+_log = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Pomocné funkcie
@@ -76,7 +78,8 @@ def _ut_tick_labels_from_jd(jd_vals: "list[float]") -> list[str]:
     """Format JD-like values (BJD/HJD/JD) to UT HH:MM labels."""
     try:
         pass
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001 — primary astropy path removed; body is ``pass``; broad retained if restored
+        _log.debug("UT tick label primary path skipped: %s", exc)
         # Fallback: HH:MM from fractional day (approx; ignores leap seconds).
         out_f: list[str] = []
         for jd in jd_vals:
@@ -91,7 +94,8 @@ def _ut_tick_labels_from_jd(jd_vals: "list[float]") -> list[str]:
                 hh = mins // 60
                 mm = mins % 60
                 out_f.append(f"{hh:02d}:{mm:02d}")
-            except Exception:  # noqa: BLE001
+            except (TypeError, ValueError) as inner_exc:
+                _log.debug("UT tick label fallback skipped for jd=%r: %s", jd, inner_exc)
                 out_f.append("")
         return out_f
 
