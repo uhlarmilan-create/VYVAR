@@ -89,7 +89,7 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | comp_tier2_bprp_limit | float | 0.3 |  |
 | comp_tier3_bprp_limit | float | 0.55 |  |
 | comp_tier4_bprp_limit | float | 1.1 |  |
-| phase01_use_bprp_primary | bool | true | ``True`` = tier + farebný hard filter podľa BP-RP (fallback konverzia z B-V podľa Riello linear). ``False`` = legacy podľa /ΔB-V/ a ``comp_tier*_bv_limit``. |
+| phase01_use_bprp_primary | bool | true | ``True`` = BP-RP tier + colour hard filter (Riello linear B-V fallback when needed); ``False`` = legacy /ΔB-V/ tiers via ``comp_tier*_bv_limit``. **Persisted** in ``config.json``; **intentionally-hidden** (no Settings toggle — edit json); default ``true``. Consumed by Phase 2A LC viewer (`ui_aperture_photometry.py`). |
 | comp_tier1_bv_limit | float | 0.15 | Legacy /ΔB-V/ tier limity — report / export; pri ``phase01_use_bprp_primary`` sa nepoužívajú na výber. |
 | comp_tier2_bv_limit | float | 0.3 |  |
 | comp_tier3_bv_limit | float | 0.5 |  |

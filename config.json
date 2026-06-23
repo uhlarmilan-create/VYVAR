@@ -199,6 +199,7 @@
   "phase01_comparison_min_frames_frac": 0.2,
   "phase01_comparison_exclude_gaia_nss": true,
   "phase01_comparison_exclude_gaia_extobj": true,
+  "phase01_use_bprp_primary": true,
   "phase01_ct_min_comp": 7,
   "apply_color_term": "off",
   "phase01_ct_extrapolation_tol": 0.0,

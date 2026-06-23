@@ -37,6 +37,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 22 | G1-F005 optics DB lookup silent except | **FIXED:** `_first_db_optics_ids` logs WARNING on DB failure; typed excepts | `473f089` |
 | 23 | G7-F008 UI helper silent except | **FIXED:** archive-path probe + UT tick helper log skip reason | `473f089` |
 | 24 | G2-F002b per-frame WCS trust flag | **FIXED:** `catalog_match_mode` + `wcs_untrusted` LC cols; `n_wcs_untrusted` soft-YELLOW trust; NONDET modes split; do-no-harm vs draft 421 PASS | `977920f` |
+| 25 | G7-F003 `phase01_use_bprp_primary` non-persistable | **FIXED:** `AppConfig` field + `config.json` + PARAMS; `ui_aperture_photometry` reads `cfg.phase01_use_bprp_primary` | `<g7f003>` |
 
 ---
 
@@ -1848,7 +1849,8 @@ Method: AST inventory + lens scans (L1–L11) on 14 modules (144 functions), Pha
 |----|-----|------|----------|--------------|---------------------|
 | G7-F001 | **RESOLVED** | L7 | ~~`ui_select_stars.py`~~ **removed** (`refactor` dead unwired page) | ~~`cfg.phase01_comparison_max_bv_diff` AttributeError~~ **RESOLVED:** unwired `ui_select_stars.py` deleted; phantom field no longer referenced repo-wide. | Every `cfg.*` in UI must be a declared field or guarded accessor. |
 | G7-F002 | **RESOLVED** | L8/L7 | ~~`ui_select_stars.py:531`~~ **removed** | ~~Stale `max_bv_diff=` kwarg to `run_phase0_and_phase1`~~ **RESOLVED:** deleted with unwired Select Stars page. | UI must call core with the live signature; dead kwargs hide broken comp-color paths. |
-| G7-F003 | **MED** | L7 | `ui_aperture_photometry.py:1657` | **`phase01_use_bprp_primary`** via `getattr(cfg, …, True)` only — **no crash**, but **non-persistable** (not on `AppConfig`, not in PARAMS). **STILL OPEN** — defer to config↔UI parity fix-pass. | getattr defaults bypass config registry and mislead operators. |
+| G7-F003 | **FIXED** | L7 | `config.py`, `ui_aperture_photometry.py:1661` | ~~`phase01_use_bprp_primary` via `getattr` only~~ **FIXED:** real `AppConfig` bool (default True), `config.json`, PARAMS intentionally-hidden; LC viewer reads `cfg.phase01_use_bprp_primary`. | getattr defaults bypass config registry and mislead operators. |
+| G7-F003b | **MED** | L7 | `photometry_report.py` (~310–313) | **BACKLOG** — `self._use_bprp_primary = True` hardcoded; PDF report can disagree with Phase 2A LC viewer when `phase01_use_bprp_primary=False`. Should read `cfg.phase01_use_bprp_primary`. **Deferred.** | Report colour-mode must follow the same config knob as Phase 2A display. |
 | G7-F004 | **MED** | L3 | `app.py` (15+ `except: pass` lines), `ui_aperture_photometry.py`, `ui_quality_dashboard.py` | Broad **`except: pass`** / silent exception branches in action handlers (archive hash, PDF/report triggers, QC paths) — failures can present as **button did nothing**. | UI actions must surface errors to Infolog / `st.error`. |
 | G7-F005 | **MED** | L4 | `ui_settings.py:645-700` | Frame-quality / align-residual gates use **`getattr(..., False)`** defaults — **fail-open OFF by design** (byte-identical when unset); documented in PARAMS Round-2 B.2. Not a bug; monitor that toggles stay wired to `cfg` save path (`973-976`). | Safety gates default OFF only when explicitly documented. |
 | G7-F006 | **MED** | L7 | `VYVAR_PARAMS.md`, Group 6 parity | **34 config-only (`exposed \| no`)** keys: **intentionally hidden** for blind-cluster tuning, neighbor-sub PSF, `dao_qc_in_calibrate`, observer export block (session `config.json` values). **Not accidental unexposed** for most; observer site uses DB location picker (`observer_location_id` in Settings) while lat/lon/name live in json without dedicated widgets. | Hidden keys need intentional-hidden classification vs drift. |
@@ -1863,7 +1865,7 @@ Method: AST inventory + lens scans (L1–L11) on 14 modules (144 functions), Pha
 | Symbol | Access pattern | UI verdict | Severity |
 |--------|----------------|------------|----------|
 | `phase01_comparison_max_bv_diff` | ~~`ui_select_stars.py`~~ **removed** | **RESOLVED** (G7-F001) — no repo references |
-| `phase01_use_bprp_primary` | `ui_aperture_photometry.py:1657` | Silent default via `getattr(..., True)` only — **STILL OPEN** (G7-F003) |
+| `phase01_use_bprp_primary` | `ui_aperture_photometry.py:1661` | **FIXED** (G7-F003) — `AppConfig` + `config.json` |
 | `max_bv_diff=` kwarg | ~~`ui_select_stars.py`~~ **removed** | **RESOLVED** (G7-F002) |
 | 34 PARAMS `no` keys | No `ui*.py` string match | Mostly **intentionally-hidden** dev/json knobs; observer block is **session json + DB location id** | Documented (G7-F006) |
 
@@ -1932,13 +1934,13 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 | 4 | Science / variability / QA | 166 | G4-F001 trust partially **FIXED** |
 | 5 | Reporting / export | 174 | G5-F003–F011, F004 **FIXED** (`6774f83`…`efbb4de`); forced-aperture **RESOLVED** (`7f0dc86`); LOW dead helpers remain |
 | 6 | Config / orchestration / utils | 110 | G6-F002 **FIXED** (`379e78f`); G6-F001 TODO-MULTISET; G6-F003/F004 parity |
-| 7 | UI shell | ~~144~~ **131** | G7-F001/F002 **RESOLVED** (`3e1cad7`); G7-F008 **FIXED**; open G7-F003 |
+| 7 | UI shell | ~~144~~ **131** | G7-F001/F002 **RESOLVED** (`3e1cad7`); G7-F003 **FIXED** (`<g7f003>`); G7-F008 **FIXED**; open G7-F003b |
 | **Total** | **7 groups** | **1728** | Fix-pass **DONE** (HIGH + numeric MED) — see queue below |
 
 ---
 
-## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003, broad-except Tier-1 backlog (~25 sites).
+## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003b, broad-except Tier-1 backlog (~25 sites).
 
-**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
+**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`<g7f003>`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
 
-**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003 (`phase01_use_bprp_primary` parity), broad-except Tier-1 backlog (~25 remaining `BLE001` sites outside the closed silent-except pair).
+**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003b (`photometry_report` hardcoded `_use_bprp_primary`), broad-except Tier-1 backlog (~25 remaining `BLE001` sites outside the closed silent-except pair).

@@ -1658,7 +1658,7 @@ def render_aperture_photometry(
             key="phase2a_show_all_filters",
         )
 
-        _phase01_bprp_pri = bool(getattr(cfg, "phase01_use_bprp_primary", True))
+        _phase01_bprp_pri = bool(cfg.phase01_use_bprp_primary)
 
         if show_all_filters and catalog_id:
             try:

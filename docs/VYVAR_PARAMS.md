@@ -7,7 +7,7 @@ Registry required by `docs/VYVAR_PROCESS.md` Definition of Done §4.
 dev/gated flag documented here (edit via `config.json`); `no` = drift (config-only,
 no UI yet).
 
-**Summary:** 82 exposed · 136 intentionally-hidden · 34 config-only (no UI) · 2 UI references without config key
+**Summary:** 82 exposed · 137 intentionally-hidden · 34 config-only (no UI) · 0 UI references without config key
 
 ---
 
@@ -248,6 +248,7 @@ no UI yet).
 | `phase01_ct_extrapolation_tol` | 0.0 | — | — | intentionally-hidden |
 | `phase01_ct_min_comp` | 7 | 2 … 30 | — | intentionally-hidden |
 | `phase01_flux_col` | 'dao_flux' | — | — | intentionally-hidden |
+| `phase01_use_bprp_primary` | True | — | ui_aperture_photometry.py:1661 | intentionally-hidden | OK in config.json |
 | `phase01_match_radius_arcsec` | 10.0 | 3.0 … 30.0 | — | intentionally-hidden |
 | `phase01_plate_scale_arcsec_per_px` | 1.3 | 0.0 … 30.0 | — | intentionally-hidden |
 | `phase01_tier1_mag` | 0.5 | — | — | intentionally-hidden ⚠ not in config.json |
@@ -504,8 +505,3 @@ Summary / LC / PDF fields (not all `AppConfig` keys):
 
 ---
 
-## UI references without `AppConfig` key (reverse drift)
-
-These strings appear in UI code but are not fields on `AppConfig`:
-
-- `phase01_use_bprp_primary` → ui_aperture_photometry.py:1657

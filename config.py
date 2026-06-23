@@ -419,6 +419,9 @@ class AppConfig:
     phase01_comparison_min_frames_frac: float = 0.2
     phase01_comparison_exclude_gaia_nss: bool = True
     phase01_comparison_exclude_gaia_extobj: bool = True
+    #: ``True`` = tier + colour hard filter via BP-RP (Riello linear B-V fallback when needed).
+    #: ``False`` = legacy |ΔB-V| tiers via ``comp_tier*_bv_limit``.
+    phase01_use_bprp_primary: bool = True
     #: Max |ΔBP-RP| v efektívnom farebnom priestore (hard filter pri výbere comp).
     comp_max_delta_bprp: float = 0.79
     #: Tier limity |ΔBP-RP| (Gaia BP-RP ako primárny farebný filter pri výbere comp).
@@ -1698,6 +1701,9 @@ class AppConfig:
         self.phase01_comparison_exclude_gaia_extobj = bool(
             data.get("phase01_comparison_exclude_gaia_extobj", self.phase01_comparison_exclude_gaia_extobj)
         )
+        self.phase01_use_bprp_primary = bool(
+            data.get("phase01_use_bprp_primary", self.phase01_use_bprp_primary)
+        )
         # Plate-scale ceiling matches the runtime resolver clamp [0.1, 30.0] so that a
         # wide-field config value (e.g. 9.77"/px) survives load instead of being capped
         # at 5.0. phase01_* keeps lo=0.0 because 0.0 is the "auto / unset" sentinel
@@ -2054,6 +2060,7 @@ class AppConfig:
             "phase01_comparison_min_frames_frac": float(self.phase01_comparison_min_frames_frac),
             "phase01_comparison_exclude_gaia_nss": bool(self.phase01_comparison_exclude_gaia_nss),
             "phase01_comparison_exclude_gaia_extobj": bool(self.phase01_comparison_exclude_gaia_extobj),
+            "phase01_use_bprp_primary": bool(self.phase01_use_bprp_primary),
             "phase01_ct_min_comp": int(self.phase01_ct_min_comp),
             "apply_color_term": str(self.apply_color_term),
             "phase01_ct_extrapolation_tol": float(self.phase01_ct_extrapolation_tol),
