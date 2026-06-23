@@ -307,7 +307,7 @@ class _PhotometryReportBuilder:
             from config import AppConfig
 
             self._cfg = AppConfig()
-            self._use_bprp_primary = True
+            self._use_bprp_primary = bool(self._cfg.phase01_use_bprp_primary)
         except Exception:  # noqa: BLE001
             self._cfg = None
             self._use_bprp_primary = True
