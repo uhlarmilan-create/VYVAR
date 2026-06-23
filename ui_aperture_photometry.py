@@ -780,6 +780,31 @@ def _render_target_detail(
         if parts:
             st.caption(" | ".join(parts))
 
+    _exo_host = str(target_row.get("exo_host_name", "") or "").strip()
+    if not _exo_host:
+        ms_csv = output_dir.parent / "masterstars.csv"
+        if ms_csv.is_file():
+            try:
+                ms_df = pd.read_csv(ms_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
+                if "catalog_id" in ms_df.columns:
+                    cid_norm = _normalize_gaia_id(catalog_id)
+                    ms_df = ms_df.copy()
+                    ms_df["_nid"] = ms_df["catalog_id"].apply(_normalize_gaia_id)
+                    hit_ms = ms_df[ms_df["_nid"] == cid_norm]
+                    if not hit_ms.empty and "exo_host_name" in hit_ms.columns:
+                        _exo_host = str(hit_ms.iloc[0].get("exo_host_name", "") or "").strip()
+            except Exception:  # noqa: BLE001
+                pass
+    if _exo_host:
+        _exo_disp = str(target_row.get("exo_disposition", "") or "").strip()
+        _exo_src = str(target_row.get("exo_cat_source", "") or "").strip()
+        exo_parts = [f"exo host: **{_exo_host}**"]
+        if _exo_src:
+            exo_parts.append(f"source={_exo_src}")
+        if _exo_disp:
+            exo_parts.append(f"disposition={_exo_disp}")
+        st.caption(" | ".join(exo_parts))
+
     if comp_df is not None and not comp_df.empty and "target_catalog_id" in comp_df.columns:
         comp_work = comp_df.copy()
         comp_work["_tcid"] = comp_work["target_catalog_id"].apply(_normalize_gaia_id)

@@ -2,6 +2,30 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-06-23 — Exoplanet local DB + informational host cross-match (EXOPLANET-XMATCH)
+
+**Shipped.** Local NASA Exoplanet Archive snapshot builder `exoplanets/exoplanet_make.py`
+(separate from VYVAR core; not in this repo commit) produces `exoplanets/vyvar_exoplanet_local.db`
+(**14185** rows: **6298** CONFIRMED + **7887** TOI). VYVAR integration mirrors VSX read layer +
+config: `database.query_local_exoplanet` + schema validate; `exoplanet_local_db_path`,
+`exoplanet_match_max_sep_arcsec`; `pipeline._query_exoplanet_local`,
+`_exo_host_annotation_arrays`, detect/export hooks; `_apply_exo_host_columns_to_proc_df` closes
+MASTERSTAR fast-path gap. Columns `exo_host_obj_id`, `exo_host_name`, `exo_cat_source`,
+`exo_disposition`, `exo_match_sep_arcsec` — **additive informational only**; never wired into
+`catalog_known_variable`, comp exclusion, proximity veto, variability masks, trust, or photometry
+numerics. UI Settings test connection; target detail caption + PDF `exo host:` suffix.
+
+**Isolation (draft 421).** DB-off vs DB-on full B/R/V re-run: comp sets, `mag_inst` / `mag_calib` /
+`err`, and trust **bit-identical** per set. **36** hosts in Persei audit box; **1** matched within
+3″ (**TOI-7453.01**, Gaia `458577476430838272`, sep 2.79″, B band only) — stayed a comp, not
+excluded by exo leak. Test: `tests/test_exoplanet_local_match.py`.
+
+**Gates:** ruff clean on touched files; pytest pass.
+
+**Commit:** `<pending>`
+
+---
+
 ## 2026-06-23 — G7-F003b PDF report reads phase01_use_bprp_primary
 
 **Shipped.** `photometry_report` reads `cfg.phase01_use_bprp_primary` via existing `self._cfg`

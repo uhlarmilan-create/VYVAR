@@ -574,6 +574,123 @@ def query_local_vsx(
         conn.close()
 
 
+def validate_exoplanet_local_db_schema(db_path: str | Path) -> tuple[bool, str]:
+    """Validate local exoplanet host SQLite (``exoplanet_data`` from NASA Exoplanet Archive snapshot)."""
+    p = Path(db_path).expanduser().resolve()
+    if not str(db_path).strip() or not p.is_file():
+        return False, "missing_file"
+    con = sqlite3.connect(str(p))
+    try:
+        cur = con.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='exoplanet_data' LIMIT 1;"
+        )
+        if cur.fetchone() is None:
+            return False, "missing_table_exoplanet_data"
+        cur2 = con.execute("PRAGMA table_info('exoplanet_data');")
+        cols = {str(r[1]).strip().lower() for r in cur2.fetchall()}
+        required = {"obj_id", "ra_deg", "dec_deg"}
+        missing = sorted([c for c in required if c not in cols])
+        if missing:
+            return False, f"missing_columns:{','.join(missing)}"
+        return True, "ok"
+    finally:
+        con.close()
+
+
+def query_local_exoplanet(
+    db_path: str | Path,
+    *,
+    ra_min: float,
+    ra_max: float,
+    dec_min: float,
+    dec_max: float,
+    max_rows: int | None = None,
+) -> list[dict[str, Any]]:
+    """Query local exoplanet host SQLite (``exoplanet_data``) for a rectangular RA/Dec window (deg).
+
+    Same bounding-box pattern as ``query_local_vsx``; RA wrap via ``_vsx_ra_intervals_deg``.
+    Rows de-duplicated by ``obj_id`` when present, else by (ra_deg, dec_deg).
+    """
+    p = Path(db_path).expanduser().resolve()
+    if not p.is_file():
+        return []
+    de0 = float(dec_min)
+    de1 = float(dec_max)
+    if de1 < de0:
+        de0, de1 = de1, de0
+    de0 = max(-90.0, min(90.0, de0))
+    de1 = max(-90.0, min(90.0, de1))
+    intervals = _vsx_ra_intervals_deg(float(ra_min), float(ra_max))
+    lim: int | None = None
+    if max_rows is not None:
+        try:
+            lim_i = int(max_rows)
+            lim = lim_i if lim_i > 0 else None
+        except (TypeError, ValueError):
+            lim = None
+
+    conn = sqlite3.connect(str(p))
+    conn.row_factory = sqlite3.Row
+    try:
+        try:
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_exo_ra ON exoplanet_data (ra_deg);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_exo_dec ON exoplanet_data (dec_deg);")
+            conn.commit()
+        except Exception:  # noqa: BLE001
+            pass
+        cur_cols = conn.execute("PRAGMA table_info('exoplanet_data');")
+        cols = {str(r[1]).strip().lower() for r in cur_cols.fetchall()}
+        if not cols or "ra_deg" not in cols or "dec_deg" not in cols:
+            return []
+        want = [
+            "obj_id",
+            "name",
+            "host_name",
+            "ra_deg",
+            "dec_deg",
+            "cat_source",
+            "disposition",
+            "period",
+            "mag",
+            "mag_band",
+        ]
+        sel_cols = [c for c in want if c in cols]
+        sel = ", ".join(sel_cols)
+        seen: set[Any] = set()
+        rows_out: list[dict[str, Any]] = []
+        for rlo, rhi in intervals:
+            if lim is not None and len(rows_out) >= lim:
+                break
+            q = (
+                f"SELECT {sel} FROM exoplanet_data "
+                "WHERE ra_deg >= ? AND ra_deg <= ? AND dec_deg >= ? AND dec_deg <= ?;"
+            )
+            cur = conn.execute(q, (float(rlo), float(rhi), de0, de1))
+            for r in cur.fetchall():
+                d = dict(r)
+                oid = d.get("obj_id")
+                key: Any
+                if oid is not None and str(oid).strip():
+                    key = str(oid).strip()
+                else:
+                    key = (d.get("ra_deg"), d.get("dec_deg"))
+                if key in seen:
+                    continue
+                seen.add(key)
+                rows_out.append(d)
+                if lim is not None and len(rows_out) >= lim:
+                    break
+        try:
+            log_event(
+                f"EXO SQL: {len(rows_out)} riadkov (obdĺžnik Dec=[{de0:.3f},{de1:.3f}], RA intervaly={len(intervals)})"
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        return rows_out
+    finally:
+        conn.close()
+
+
 class DraftTechnicalMetadataError(RuntimeError):
     """Focal length and/or effective pixel pitch missing after FITS + OBS_DRAFT SQL merge."""
 

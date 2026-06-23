@@ -43,6 +43,7 @@ from database import (
     _db_to_float as _to_float_db,
     query_local_gaia,
     query_local_gaia_by_source_ids,
+    query_local_exoplanet,
     query_local_vsx,
 )
 from time_utils import _header_float as _header_float_tu
@@ -4530,6 +4531,251 @@ def _query_vsx_local(
     return out
 
 
+_EXO_HOST_ANNOTATION_COLUMNS: tuple[str, ...] = (
+    "exo_host_obj_id",
+    "exo_host_name",
+    "exo_cat_source",
+    "exo_disposition",
+    "exo_match_sep_arcsec",
+)
+
+
+def _query_exoplanet_local(
+    *,
+    center: SkyCoord,
+    radius_deg: float,
+    exoplanet_db_path: Path | None,
+    max_rows: int | None = None,
+) -> pd.DataFrame:
+    """Query local exoplanet host SQLite for the field; box query + great-circle cone filter."""
+    if exoplanet_db_path is None:
+        return pd.DataFrame()
+    ep = Path(exoplanet_db_path).expanduser().resolve()
+    if not ep.is_file():
+        return pd.DataFrame()
+    try:
+        _ra_l = float(center.icrs.ra.deg)
+        _de_l = float(center.icrs.dec.deg)
+    except Exception:  # noqa: BLE001
+        return pd.DataFrame()
+    ra_min = float(_ra_l) - float(radius_deg)
+    ra_max = float(_ra_l) + float(radius_deg)
+    de_min = float(_de_l) - float(radius_deg)
+    de_max = float(_de_l) + float(radius_deg)
+    _cap = max_rows
+    if _cap is None:
+        try:
+            _cap = int(AppConfig().catalog_query_max_rows)
+        except Exception:  # noqa: BLE001
+            _cap = 500_000
+        _cap = max(10_000, min(500_000, int(_cap)))
+
+    rows = query_local_exoplanet(
+        ep,
+        ra_min=ra_min,
+        ra_max=ra_max,
+        dec_min=de_min,
+        dec_max=de_max,
+        max_rows=int(_cap),
+    )
+    if not rows:
+        return pd.DataFrame()
+    df = pd.DataFrame(rows)
+    if "ra_deg" not in df.columns or "dec_deg" not in df.columns:
+        return pd.DataFrame()
+    _raq = pd.to_numeric(df["ra_deg"], errors="coerce")
+    _deq = pd.to_numeric(df["dec_deg"], errors="coerce")
+    _okq = _raq.notna() & _deq.notna()
+    if not bool(_okq.any()):
+        return pd.DataFrame()
+    sub = df.loc[_okq].copy()
+    _coo_q = SkyCoord(
+        ra=pd.to_numeric(sub["ra_deg"], errors="coerce").astype(float).to_numpy() * u.deg,
+        dec=pd.to_numeric(sub["dec_deg"], errors="coerce").astype(float).to_numpy() * u.deg,
+        frame="icrs",
+    )
+    _inner = center.separation(_coo_q).deg <= float(radius_deg) + 1e-9
+    out = sub.loc[_inner].reset_index(drop=True)
+    try:
+        log_event(
+            f"CATALOG SEARCH (exoplanet local): {len(out)} hostov v kuželi r≈{float(radius_deg):.3f}° "
+            f"(Ra={_ra_l:.4f}, Dec={_de_l:.4f})"
+        )
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
+def _exo_host_annotation_arrays(
+    det_coords: SkyCoord,
+    exo_df: pd.DataFrame,
+    max_sep_arcsec: float,
+    *,
+    frame_name: str = "",
+) -> tuple[dict[str, Any], list[str]]:
+    """Nearest exoplanet host per detection within ``max_sep_arcsec`` (informational only)."""
+    import numpy as np
+    from astropy.coordinates import search_around_sky
+
+    n = len(det_coords)
+    out: dict[str, Any] = {
+        "exo_host_obj_id": np.array([""] * n, dtype=object),
+        "exo_host_name": np.array([""] * n, dtype=object),
+        "exo_cat_source": np.array([""] * n, dtype=object),
+        "exo_disposition": np.array([""] * n, dtype=object),
+        "exo_match_sep_arcsec": np.full(n, np.nan, dtype=np.float64),
+    }
+    warnings_out: list[str] = []
+    if exo_df is None or exo_df.empty or n == 0:
+        return out, warnings_out
+
+    exc = SkyCoord(
+        ra=np.asarray(exo_df["ra_deg"], dtype=float) * u.deg,
+        dec=np.asarray(exo_df["dec_deg"], dtype=float) * u.deg,
+        frame="icrs",
+    )
+    max_sep = float(max_sep_arcsec)
+    idx_nearest, sep2d, _ = det_coords.match_to_catalog_sky(exc)
+    sep_arc = np.asarray(sep2d.to(u.arcsec).value, dtype=np.float64)
+    hit = np.isfinite(sep_arc) & (sep_arc <= max_sep)
+
+    try:
+        idx_d, idx_e, sep_a, _ = search_around_sky(det_coords, exc, max_sep * u.arcsec)
+        counts: dict[int, int] = {}
+        for i_d in np.asarray(idx_d, dtype=np.int64):
+            counts[int(i_d)] = counts.get(int(i_d), 0) + 1
+        for i_d, cnt in counts.items():
+            if cnt > 1:
+                msg = (
+                    f"[EXO MATCH] {cnt} exoplanet hosts within {max_sep:g}″ of detection "
+                    f"index {i_d}"
+                    + (f" ({frame_name})" if frame_name else "")
+                )
+                warnings_out.append(msg)
+                LOGGER.warning(msg)
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[EXO MATCH] ambiguity search skipped: %s", exc)
+
+    for i in np.flatnonzero(hit):
+        j = int(idx_nearest[i])
+        if j < 0 or j >= len(exo_df):
+            continue
+        row = exo_df.iloc[j]
+        out["exo_host_obj_id"][i] = str(row.get("obj_id", "") or "").strip()
+        out["exo_host_name"][i] = str(row.get("host_name", "") or "").strip()
+        out["exo_cat_source"][i] = str(row.get("cat_source", "") or "").strip()
+        out["exo_disposition"][i] = str(row.get("disposition", "") or "").strip()
+        out["exo_match_sep_arcsec"][i] = float(sep_arc[i])
+
+    return out, warnings_out
+
+
+def _slice_exo_annotation(exo_ann: dict[str, Any], keep: Any) -> dict[str, Any]:
+    import numpy as np
+
+    k = np.asarray(keep, dtype=bool)
+    return {col: np.asarray(exo_ann[col])[k] for col in _EXO_HOST_ANNOTATION_COLUMNS}
+
+
+def _apply_exo_host_columns_to_proc_df(
+    df: pd.DataFrame,
+    hdr: fits.Header,
+    data_shape: tuple[int, int],
+    st: dict[str, Any],
+    *,
+    frame_name: str = "",
+) -> pd.DataFrame:
+    """Add informational ``exo_*`` columns when local DB path is configured.
+
+    ``detect_stars_and_match_catalog`` already annotates; this covers the MASTERSTAR fast path.
+    """
+    if df is None or df.empty:
+        return df
+    if any(c in df.columns for c in _EXO_HOST_ANNOTATION_COLUMNS):
+        return df
+
+    _exo_path: Path | None = None
+    try:
+        _exs = str(st.get("exoplanet_local_db_path") or "").strip()
+        if _exs:
+            _exo_path = Path(_exs).expanduser().resolve()
+    except Exception:  # noqa: BLE001
+        _exo_path = None
+    if _exo_path is None or not _exo_path.is_file():
+        return df
+
+    exo_max = 3.0
+    try:
+        exo_max = float(st.get("exoplanet_match_max_sep_arcsec", 3.0))
+        if not math.isfinite(exo_max):
+            exo_max = 3.0
+    except (TypeError, ValueError):
+        exo_max = 3.0
+    exo_max = max(0.5, min(30.0, float(exo_max)))
+
+    if "ra_deg" not in df.columns or "dec_deg" not in df.columns:
+        return df
+
+    import numpy as np
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FITSFixedWarning)
+        wcs_obj = WCS(hdr)
+    if not wcs_obj.has_celestial:
+        return df
+
+    h, wpx = int(data_shape[0]), int(data_shape[1])
+    _fov_hint = st.get("plate_solve_fov_deg")
+    try:
+        if _fov_hint is not None and not math.isfinite(float(_fov_hint)):
+            _fov_hint = None
+    except (TypeError, ValueError):
+        _fov_hint = None
+    if _fov_hint is None:
+        try:
+            _fov_hint = resolve_plate_solve_fov_deg_hint(
+                hdr,
+                h,
+                wpx,
+                database_path=st.get("database_path"),
+                equipment_id=st.get("equipment_id"),
+                draft_id=st.get("draft_id"),
+            )
+        except Exception:  # noqa: BLE001
+            _fov_hint = None
+    if _fov_hint is None:
+        try:
+            _fov_hint = float(AppConfig().plate_solve_fov_deg)
+        except Exception:  # noqa: BLE001
+            _fov_hint = None
+
+    center, radius_deg = _effective_field_catalog_cone_radius_deg(
+        wcs_obj, h, wpx, _fov_hint, fits_header=hdr
+    )
+    exo_df = _query_exoplanet_local(
+        center=center,
+        radius_deg=radius_deg,
+        exoplanet_db_path=_exo_path,
+    )
+
+    ra = pd.to_numeric(df["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    de = pd.to_numeric(df["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    if not np.any(np.isfinite(ra) & np.isfinite(de)):
+        return df
+
+    det_coords = SkyCoord(ra=ra * u.deg, dec=de * u.deg, frame="icrs")
+    exo_ann, _ = _exo_host_annotation_arrays(
+        det_coords,
+        exo_df if exo_df is not None else pd.DataFrame(),
+        exo_max,
+        frame_name=frame_name,
+    )
+    out = df.copy()
+    for col in _EXO_HOST_ANNOTATION_COLUMNS:
+        out[col] = exo_ann[col]
+    return out
+
+
 def _query_vsx_local_frame_bbox(
     *,
     wcs: Any,
@@ -7191,6 +7437,7 @@ def detect_stars_and_match_catalog(
     max_catalog_rows: int = 12000,
     cat_df: pd.DataFrame | None = None,
     vsx_df: pd.DataFrame | None = None,
+    exo_df: pd.DataFrame | None = None,
     gaia_variable_df: pd.DataFrame | None = None,
     match_sep_arcsec: float = 8.0,
     vsx_match_max_sep_arcsec: float = 5.0,
@@ -7345,6 +7592,33 @@ def detect_stars_and_match_catalog(
         except Exception:  # noqa: BLE001
             _vx = None
         vsx_df = _query_vsx_local(center=center, radius_deg=radius_deg, vsx_db_path=_vx)
+    exo_annotation_active = False
+    exo_max = 3.0
+    try:
+        exo_max = float(cfg.exoplanet_match_max_sep_arcsec)
+        if not math.isfinite(exo_max):
+            exo_max = 3.0
+    except Exception:  # noqa: BLE001
+        exo_max = 3.0
+    exo_max = max(0.5, min(30.0, float(exo_max)))
+    _exo_path: Path | None = None
+    try:
+        _exs = str(cfg.exoplanet_local_db_path or "").strip()
+        if _exs:
+            _exo_path = Path(_exs).expanduser().resolve()
+    except Exception:  # noqa: BLE001
+        _exo_path = None
+    if _exo_path is not None and _exo_path.is_file():
+        exo_annotation_active = True
+    if exo_df is None and exo_annotation_active:
+        exo_df = _query_exoplanet_local(
+            center=center,
+            radius_deg=radius_deg,
+            exoplanet_db_path=_exo_path,
+        )
+    elif not exo_annotation_active:
+        exo_df = pd.DataFrame()
+    exo_ann: dict[str, Any] = {}
     if gaia_variable_df is None:
         gaia_variable_df = pd.DataFrame()
 
@@ -7505,6 +7779,9 @@ def detect_stars_and_match_catalog(
             "n_saturated_from_peak": 0,
             "n_saturated_plateau": 0,
             "n_vsx_in_field": int(len(vsx_df)) if vsx_df is not None else 0,
+            "n_exo_hosts_in_field": (
+                int(len(exo_df)) if exo_annotation_active and exo_df is not None else 0
+            ),
             "n_gaia_variable_in_field": int(len(gaia_variable_df)) if gaia_variable_df is not None else 0,
             "faintest_mag_limit": float(faintest_mag_limit) if faintest_mag_limit is not None else None,
             "n_dropped_fainter_than_limit": 0,
@@ -7563,6 +7840,13 @@ def detect_stars_and_match_catalog(
     else:
         gvar_hit = np.zeros(n, dtype=bool)
     catalog_known_variable = np.asarray(vsx_hit, dtype=bool) | np.asarray(gvar_hit, dtype=bool)
+    if exo_annotation_active:
+        exo_ann, _exo_warns = _exo_host_annotation_arrays(
+            det_coords,
+            exo_df if exo_df is not None else pd.DataFrame(),
+            exo_max,
+            frame_name=frame_name,
+        )
 
     sat_frac = float(saturate_level_fraction)
     sat_frac = min(max(sat_frac, 0.5), 1.0)
@@ -7598,6 +7882,8 @@ def detect_stars_and_match_catalog(
         vsx_hit = vsx_hit[snr_keep]
         gvar_hit = gvar_hit[snr_keep]
         catalog_known_variable = catalog_known_variable[snr_keep]
+        if exo_annotation_active:
+            exo_ann = _slice_exo_annotation(exo_ann, snr_keep)
         pmax_arr = pmax_arr[snr_keep]
         _sat_block = {k: np.asarray(v)[snr_keep] for k, v in _sat_block.items()}
         _sat_csv, n_sat_pk, n_sat_pl = _proc_sat_block_for_csv(_sat_block)
@@ -7631,6 +7917,7 @@ def detect_stars_and_match_catalog(
                 "flux": flux,
                 "vsx_known_variable": vsx_hit,
                 "gaia_dr3_variable_catalog": gvar_hit,
+                **(exo_ann if exo_annotation_active else {}),
                 **_sat_csv,
             }
         )
@@ -7794,6 +8081,7 @@ def detect_stars_and_match_catalog(
                     "flux": flux,
                     "vsx_known_variable": vsx_hit,
                     "gaia_dr3_variable_catalog": gvar_hit,
+                    **(exo_ann if exo_annotation_active else {}),
                     **_sat_csv,
                 }
             )
@@ -7981,6 +8269,13 @@ def detect_stars_and_match_catalog(
                                 catalog_known_variable = np.asarray(vsx_hit, dtype=bool) | np.asarray(
                                     gvar_hit, dtype=bool
                                 )
+                                if exo_annotation_active:
+                                    exo_ann, _ = _exo_host_annotation_arrays(
+                                        det_coords,
+                                        exo_df if exo_df is not None else pd.DataFrame(),
+                                        exo_max,
+                                        frame_name=frame_name,
+                                    )
                                 if tree_pack is not None:
                                     tr, oix_rows = tree_pack
                                     icomp, sepa = nearest_sky_nn_kdtree(tr, ra_deg, dec_deg)
@@ -8013,6 +8308,13 @@ def detect_stars_and_match_catalog(
                     else:
                         gvar_hit = np.zeros(n, dtype=bool)
                     catalog_known_variable = np.asarray(vsx_hit, dtype=bool) | np.asarray(gvar_hit, dtype=bool)
+                    if exo_annotation_active:
+                        exo_ann, _ = _exo_host_annotation_arrays(
+                            det_coords,
+                            exo_df if exo_df is not None else pd.DataFrame(),
+                            exo_max,
+                            frame_name=frame_name,
+                        )
                     icomp, sepa = nearest_sky_nn_kdtree(tr, ra_deg, dec_deg)
                     _run_full_match_pass()
                     _wcs_refine_iters += 1
@@ -8052,6 +8354,13 @@ def detect_stars_and_match_catalog(
                         else:
                             gvar_hit = np.zeros(n, dtype=bool)
                         catalog_known_variable = np.asarray(vsx_hit, dtype=bool) | np.asarray(gvar_hit, dtype=bool)
+                        if exo_annotation_active:
+                            exo_ann, _ = _exo_host_annotation_arrays(
+                                det_coords,
+                                exo_df if exo_df is not None else pd.DataFrame(),
+                                exo_max,
+                                frame_name=frame_name,
+                            )
                         icomp, sepa = nearest_sky_nn_kdtree(tr, ra_deg, dec_deg)
                         _run_full_match_pass()
                         break
@@ -8123,6 +8432,7 @@ def detect_stars_and_match_catalog(
         "saturate_limit_adu": float(sat_limit) if sat_limit is not None else None,
         "saturate_limit_source": sat_limit_src,
         "n_vsx_in_field": int(len(vsx_df)) if vsx_df is not None else 0,
+        "n_exo_hosts_in_field": int(len(exo_df)) if exo_annotation_active and exo_df is not None else 0,
         "n_gaia_variable_in_field": int(len(gaia_variable_df)) if gaia_variable_df is not None else 0,
         **foot_meta,
         "field_catalog_cone_csv": str(Path(field_catalog_export_path)) if field_catalog_export_path else None,
@@ -8650,6 +8960,8 @@ def _export_per_frame_run_catalog_core(
                 "infolog_messages": [f"Per-frame catalog {fname}: {exc}"],
                 "debug_pixel_match": debug_pixel_match,
             }
+
+    df = _apply_exo_host_columns_to_proc_df(df, hdr, (h_i, wpx_i), st, frame_name=fname)
 
     _before_dao = len(df)
     df = _proc_drop_unmatched_dao_rows(df)
@@ -9435,6 +9747,16 @@ def export_per_frame_catalogs(
             except Exception as exc:  # noqa: BLE001
                 return {"file": fname, "status": f"error: {exc}", "csv": ""}
 
+        _exo_st = {
+            "exoplanet_local_db_path": str(_cfg_ap.exoplanet_local_db_path or ""),
+            "exoplanet_match_max_sep_arcsec": float(_cfg_ap.exoplanet_match_max_sep_arcsec),
+            "plate_solve_fov_deg": _pfov_res,
+            "database_path": str(Path(_cfg_ap.database_path).resolve()),
+            "equipment_id": equipment_id,
+            "draft_id": draft_id,
+        }
+        df = _apply_exo_host_columns_to_proc_df(df, hdr, (h_i, wpx_i), _exo_st, frame_name=fname)
+
         _before_dao = len(df)
         df = _proc_drop_unmatched_dao_rows(df)
         LOGGER.debug("[TODO-13] catalog-only pre-filter (detect): %d → %d rows", _before_dao, len(df))
@@ -9619,6 +9941,8 @@ def export_per_frame_catalogs(
             "observer_lat": float(_cfg_ap.observer_lat),
             "observer_lon": float(_cfg_ap.observer_lon),
             "observer_alt_m": float(_cfg_ap.observer_alt_m),
+            "exoplanet_local_db_path": str(_cfg_ap.exoplanet_local_db_path or ""),
+            "exoplanet_match_max_sep_arcsec": float(_cfg_ap.exoplanet_match_max_sep_arcsec),
             **_export_catalog_psf_st_fields(_cfg_ap, ps),
         }
 

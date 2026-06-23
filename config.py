@@ -167,6 +167,11 @@ class AppConfig:
     #: Set to ``<= 0`` to disable this cutoff (export all VSX rows in the field cone).
     vsx_variable_targets_mag_limit: float = 14.5
 
+    #: Path to local exoplanet host SQLite (``exoplanet_data``: NASA Exoplanet Archive snapshot).
+    exoplanet_local_db_path: str = "exoplanets/vyvar_exoplanet_local.db"
+    #: Per-detection exoplanet host cross-match tolerance (arcsec); informational label only.
+    exoplanet_match_max_sep_arcsec: float = 3.0
+
     #: After a cone query, keep at most this many catalog rows (brightest by ``mag``) to avoid RAM/CPU freeze.
     catalog_query_max_rows: int = 15_000
 
@@ -833,6 +838,22 @@ class AppConfig:
             # ``<= 0`` = žiadny mag. rez VSX (export všetkých v kuželi); ``> 0`` = max ``mag_max`` z VSX.
         except (TypeError, ValueError):
             self.vsx_variable_targets_mag_limit = 13.0
+        self.exoplanet_local_db_path = str(
+            data.get(
+                "exoplanet_local_db_path",
+                data.get("EXOPLANET_LOCAL_DB_PATH", self.exoplanet_local_db_path),
+            )
+            or self.exoplanet_local_db_path
+            or ""
+        ).strip()
+        try:
+            _exo_sep = float(
+                data.get("exoplanet_match_max_sep_arcsec", self.exoplanet_match_max_sep_arcsec)
+            )
+            if math.isfinite(_exo_sep):
+                self.exoplanet_match_max_sep_arcsec = max(0.5, min(30.0, _exo_sep))
+        except (TypeError, ValueError):
+            self.exoplanet_match_max_sep_arcsec = 3.0
         try:
             self.catalog_query_max_rows = max(
                 1000, min(500_000, int(data.get("catalog_query_max_rows", self.catalog_query_max_rows)))
@@ -1718,6 +1739,7 @@ class AppConfig:
         _f01("phase01_plate_scale_arcsec_per_px", 0.0, 0.0, 30.0)
         _f01("plate_scale_arcsec_per_px", 1.3, 0.1, 30.0)
         _f01("phase01_match_radius_arcsec", 10.0, 3.0, 30.0)
+        _f01("exoplanet_match_max_sep_arcsec", 3.0, 0.5, 30.0)
         _f01("phase01_comparison_max_psf_chi2", 50.0, 1.0, 500.0)
         _f01("phase01_comparison_max_fwhm_factor", 1.5, 0.5, 5.0)
         _f01("phase01_comparison_isolation_radius_px", 25.0, 1.0, 200.0)
@@ -1870,6 +1892,8 @@ class AppConfig:
             "debug_platesolver": bool(self.debug_platesolver),
             "vsx_local_db_path": str(self.vsx_local_db_path or ""),
             "vsx_variable_targets_mag_limit": float(self.vsx_variable_targets_mag_limit),
+            "exoplanet_local_db_path": str(self.exoplanet_local_db_path or ""),
+            "exoplanet_match_max_sep_arcsec": float(self.exoplanet_match_max_sep_arcsec),
             "catalog_query_max_rows": int(self.catalog_query_max_rows),
             "per_frame_mp_reserve_ram_gb": float(self.per_frame_mp_reserve_ram_gb),
             "alignment_max_stars": int(self.alignment_max_stars),

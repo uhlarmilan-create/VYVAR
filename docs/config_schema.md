@@ -196,6 +196,8 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | blind_index_wide_path | str | "…/GAIA_DR3/gaia_triangles_wide.pkl" | Wide blind triangle index (Carl-Zeiss-scale rigs). |
 | blind_index_path | str | *(deprecated)* | Alias of ``blind_index_fine_path`` after load; not serialized. |
 | vsx_local_db_path | str | "" | Path to local VSX subset SQLite (table ``vsx_data``: oid, ra_deg, dec_deg, …) for variable-star flags. |
+| exoplanet_local_db_path | str | ``exoplanets/vyvar_exoplanet_local.db`` | Path to local exoplanet host SQLite (``exoplanet_data``); informational annotation only. |
+| exoplanet_match_max_sep_arcsec | float | 3.0 | Per-detection exoplanet host match tolerance (arcsec). |
 | catalog_query_max_rows | int | 15000 | After a cone query, keep at most this many catalog rows (brightest by ``mag``) to avoid RAM/CPU freeze. |
 | sysrem_enabled | bool | false | TODO-35: SysRem (Tamuz et al. 2005) on exported ``lightcurve_*.csv`` after Phase 2A. |
 | sysrem_n_iter | int | 3 |  |

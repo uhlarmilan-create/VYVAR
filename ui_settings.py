@@ -262,6 +262,48 @@ def render_settings_dashboard(
                 "Pipeline use follows this path."
             )
 
+        st.markdown("---")
+        st.subheader("Exoplanet host local database")
+        exo_db_path = st.text_input(
+            "EXOPLANET_LOCAL_DB_PATH (SQLite .db, table `exoplanet_data`)",
+            value=str(getattr(cfg, "exoplanet_local_db_path", "") or ""),
+            key="vyvar_exoplanet_local_db_path",
+        )
+        _detail_help(
+            "EXOPLANET_LOCAL_DB_PATH",
+            phase="Per-frame catalog annotation (informational host label).",
+            used_in="Local exoplanet host cone query (obj_id, host_name, ra_deg, dec_deg, …).",
+            compute="None — NASA Exoplanet Archive snapshot import.",
+        )
+        col_e1, col_e2 = st.columns([1, 3])
+        with col_e1:
+            if st.button("🔍 Test Connection", key="vyvar_test_exoplanet_local_db"):
+                try:
+                    from database import validate_exoplanet_local_db_schema
+
+                    ok, code = validate_exoplanet_local_db_schema(str(exo_db_path).strip())
+                    if not ok:
+                        _msgs = {
+                            "missing_file": "File does not exist or path is empty.",
+                            "missing_table_exoplanet_data": "Table `exoplanet_data` missing in DB.",
+                        }
+                        if str(code).startswith("missing_columns:"):
+                            st.error(
+                                f"Missing columns: {code.split(':', 1)[1]} "
+                                "(required: obj_id, ra_deg, dec_deg)."
+                            )
+                        else:
+                            st.error(_msgs.get(str(code), str(code)))
+                    else:
+                        st.success("OK: file exists, table `exoplanet_data` has required columns.")
+                except Exception as exc:  # noqa: BLE001
+                    st.error(str(exc))
+        with col_e2:
+            st.caption(
+                "NASA Exoplanet Archive snapshot (CONFIRMED + TOI hosts). "
+                "Informational label only — does not affect comp selection or photometry."
+            )
+
         vsx_mag_limit_save = st.number_input(
             "Mag limit for Variable Targets export (VSX)",
             min_value=0.0,
@@ -955,6 +997,7 @@ def render_settings_dashboard(
         cfg.blind_index_wide_path = str(blind_index_wide_path).strip()
         cfg.blind_index_path = cfg.blind_index_fine_path
         cfg.vsx_local_db_path = str(vsx_db_path).strip()
+        cfg.exoplanet_local_db_path = str(exo_db_path).strip()
         cfg.vsx_variable_targets_mag_limit = float(vsx_mag_limit_save)
         cfg.qc_max_hfr = float(qc_hfr)
         cfg.qc_min_stars = int(qc_stars)

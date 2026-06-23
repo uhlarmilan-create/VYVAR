@@ -238,6 +238,8 @@ no UI yet).
 | `catalog_query_max_rows` | 15000 | 1000 … 500_000 | — | no |
 | `gaia_db_path` | 'C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3.db' (dataclass '') | — | ui_hrd.py:49, ui_settings.py:123, ui_settings.py:872 | yes |
 | `vsx_local_db_path` | 'C:\\ASTRO\\python\\VYVAR\\VSX\\vyvar_vsx_local_v2.db' (dataclass '') | — | ui_aperture_photometry.py:1416, ui_masterstar_qa.py:595, ui_settings.py:230 | yes |
+| `exoplanet_local_db_path` | `exoplanets/vyvar_exoplanet_local.db` (dataclass default) | — | ui_settings.py, pipeline.py `detect_stars_and_match_catalog` | yes |
+| `exoplanet_match_max_sep_arcsec` | 3.0 | 0.5 … 30.0 | pipeline.py `detect_stars_and_match_catalog` | intentionally-hidden |
 | `vsx_variable_targets_mag_limit` | 14.5 | — | ui_aperture_photometry.py:1358, ui_settings.py:269, ui_settings.py:274 | yes |
 
 ## Phase 0+1

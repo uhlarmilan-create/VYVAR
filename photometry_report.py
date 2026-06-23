@@ -293,6 +293,33 @@ class _PhotometryReportBuilder:
             meta = self.at_df[["_cid"] + meta_cols].drop_duplicates("_cid")
             self.summary_df = self.summary_df.merge(meta, how="left", on="_cid", suffixes=("", "_at"))
 
+        ms_csv = self.platesolve_dir / "masterstars.csv"
+        if ms_csv.is_file() and "_cid" in self.summary_df.columns:
+            try:
+                ms_df = pd.read_csv(ms_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
+                if "catalog_id" in ms_df.columns:
+                    ms_df["_cid"] = ms_df["catalog_id"].map(_norm_cid)
+                    exo_meta = [
+                        c
+                        for c in (
+                            "exo_host_obj_id",
+                            "exo_host_name",
+                            "exo_cat_source",
+                            "exo_disposition",
+                            "exo_match_sep_arcsec",
+                        )
+                        if c in ms_df.columns
+                    ]
+                    if exo_meta:
+                        self.summary_df = self.summary_df.merge(
+                            ms_df[["_cid"] + exo_meta].drop_duplicates("_cid"),
+                            how="left",
+                            on="_cid",
+                            suffixes=("", "_ms"),
+                        )
+            except Exception:  # noqa: BLE001
+                pass
+
         if "vsx_type" in self.summary_df.columns:
             self.summary_df["_vsx_rank"] = self.summary_df["vsx_type"].map(self._vsx_type_sort_rank)
         else:
@@ -3644,10 +3671,15 @@ class _PhotometryReportBuilder:
         b_v_txt = f"{b_v_f:.2f}" if np.isfinite(b_v_f) else "—"
 
         vtype_short = vsx_type if len(vsx_type) <= 64 else (vsx_type[:61] + "...")
+        exo_host = str(star_data.get("exo_host_name", "") or "").strip()
+        exo_suffix = f"  |  exo host: {exo_host}" if exo_host else ""
         if self._use_bprp_primary:
-            title = f"{vsx_name}  |  {vtype_short}  |  {zone_flag}  |  BP-RP: {bp_rp_txt}"
+            title = f"{vsx_name}  |  {vtype_short}  |  {zone_flag}  |  BP-RP: {bp_rp_txt}{exo_suffix}"
         else:
-            title = f"{vsx_name}  |  {vtype_short}  |  {zone_flag}  |  BP-RP: {bp_rp_txt}  |  B-V: {b_v_txt}"
+            title = (
+                f"{vsx_name}  |  {vtype_short}  |  {zone_flag}  |  "
+                f"BP-RP: {bp_rp_txt}  |  B-V: {b_v_txt}{exo_suffix}"
+            )
         title_style = self._get_para_style("star_title", fontName=self.FONT_BOLD, fontSize=14, leading=16)
         y_cursor = self._draw_paragraph_block(
             c, self.M_LEFT, y_cursor, self.USE_W, self._pdf_escape(title), title_style, paginate=False, gap_pt=0.06 * self.cm
@@ -5056,6 +5088,9 @@ class _PhotometryReportBuilder:
                     "field_img": str(field_img_jpg) if field_img_jpg is not None else "",
                     "comp_rows": comp_rows_pdf,
                     "comp_excluded_note": comp_excluded_note,
+                    "exo_host_name": row.get("exo_host_name", ""),
+                    "exo_cat_source": row.get("exo_cat_source", ""),
+                    "exo_disposition": row.get("exo_disposition", ""),
                 }
                 if self._is_sparse_star_data(star_data):
                     sparse_buf.append(star_data)
