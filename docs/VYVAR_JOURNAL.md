@@ -22,7 +22,7 @@ excluded by exo leak. Test: `tests/test_exoplanet_local_match.py`.
 
 **Gates:** ruff clean on touched files; pytest pass.
 
-**Commit:** `c169675`
+**Commit:** `c169675` (ledger `37d18d8`)
 
 ---
 
