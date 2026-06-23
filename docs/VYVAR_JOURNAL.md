@@ -32,7 +32,7 @@ reject float inputs to `normalize_gaia_source_id` / `_gaia_id_str` fallbacks.
 
 **Gates:** ruff clean; pytest pass (`tests/test_exoplanet_variable_targets_merge.py`).
 
-**Commit:** (this entry — hash after push)
+**Commit:** `1616b18`
 
 ---
 

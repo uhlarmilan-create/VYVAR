@@ -41,7 +41,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 26 | G7-F003b PDF report hardcoded BP-RP primary | **FIXED:** `photometry_report` reads `cfg.phase01_use_bprp_primary` (default True unchanged) | `795faef` |
 | 27 | EQUIP-BINNING DB bin1 fallback unscaled | **FIXED:** FITS equipment intrinsics win; DB bin1 fallback scaled (gain×bin², RN×bin, summed binning); draft 421 gain bit-identical; RN deliberate 1.3→2.6 (~3.9 mmag photon term, NOT do-no-harm); `db=None`→10.0 left unscaled by design | `b19cd7e` |
 | 28 | EXOPLANET-XMATCH local host annotation | **DONE:** `exoplanets/exoplanet_make.py` builder (14185 rows CONFIRMED+TOI) + VYVAR read/match integration; informational `exo_*` cols only; draft 421 DB-off/on bit-identical; 1/36 hosts matched (TOI-7453.01, kept as comp); fast-path export gap fixed | `c169675` |
-| 29 | EXO-AS-TARGET exoplanet host promotion | **DONE:** masterstars→`variable_targets` merge; string Gaia id end-to-end (`…0528` true; `…0400` float artifact); dedup VSX∩exo; exclusion flip + proximity veto; draft 422 production-path validation PASS; TOI-1131 saturated at 60s V (observing) | (this commit) |
+| 29 | EXO-AS-TARGET exoplanet host promotion | **DONE:** masterstars→`variable_targets` merge; string Gaia id end-to-end (`…0528` true; `…0400` float artifact); dedup VSX∩exo; exclusion flip + proximity veto; draft 422 production-path validation PASS; TOI-1131 saturated at 60s V (observing) | `1616b18` |
 
 ---
 
@@ -1946,7 +1946,7 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 ## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003c, Tier-1 deferred backlog (see below).
 
-**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G7-F003b (`795faef`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`), Tier-1 broad-except STEP 2 core (`f950e3f`), EQUIP-BINNING DB bin1 scaling (`b19cd7e`), EXOPLANET-XMATCH local host annotation (`c169675`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
+**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G7-F003b (`795faef`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`), Tier-1 broad-except STEP 2 core (`f950e3f`), EQUIP-BINNING DB bin1 scaling (`b19cd7e`), EXOPLANET-XMATCH local host annotation (`c169675`), EXO-AS-TARGET host promotion (`1616b18`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
 
 **Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003c (report re-loads `AppConfig()` at PDF-build — cfg drift vs run), EQUIP-BINNING-ASYM (asymmetric binning scaling — deferred LOW), GAIA-ID-FLOAT-GUARD (catalog_id float64 read/normalize truncation — deferred MED), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites — deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback — deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
 
@@ -2023,7 +2023,7 @@ Persei box hosts matched at 3″ (TOI-7453.01, kept as comp).
 
 ### EXO-AS-TARGET — exoplanet host promotion — DONE (2026-06-23)
 
-**Status:** DONE (hash in fix log row 29 after commit).
+**Status:** DONE (`1616b18`, 2026-06-23).
 
 **Scope:** `pipeline.py` promotion from `masterstars_full_match` → merged `variable_targets.csv`;
 dedup VSX∩exo on exact Gaia string id; exclusion flip (`_vt_cid_exclude`, merged 10″ plan veto,
