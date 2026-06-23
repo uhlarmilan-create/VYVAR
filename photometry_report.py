@@ -293,8 +293,10 @@ class _PhotometryReportBuilder:
             meta = self.at_df[["_cid"] + meta_cols].drop_duplicates("_cid")
             self.summary_df = self.summary_df.merge(meta, how="left", on="_cid", suffixes=("", "_at"))
 
-        ms_csv = self.platesolve_dir / "masterstars.csv"
-        if ms_csv.is_file() and "_cid" in self.summary_df.columns:
+        from pipeline import resolve_masterstars_metadata_csv  # noqa: PLC0415
+
+        ms_csv = resolve_masterstars_metadata_csv(self.platesolve_dir)
+        if ms_csv is not None and "_cid" in self.summary_df.columns:
             try:
                 ms_df = pd.read_csv(ms_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
                 if "catalog_id" in ms_df.columns:

@@ -10607,6 +10607,16 @@ def select_active_targets(
             "zone_flag": zone_flag,
             "skip_photometry": bool(skip_ph),
         }
+        for _exo_col in (
+            "exo_host_obj_id",
+            "exo_host_name",
+            "exo_cat_source",
+            "exo_disposition",
+            "exo_match_sep_arcsec",
+            "target_origin",
+        ):
+            if _exo_col in vrow.index:
+                rec[_exo_col] = vrow.get(_exo_col, "")
         matched_vt_idx.add(vidx)
         matched_rows.append(rec)
 

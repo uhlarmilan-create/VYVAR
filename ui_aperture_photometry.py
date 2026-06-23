@@ -782,8 +782,10 @@ def _render_target_detail(
 
     _exo_host = str(target_row.get("exo_host_name", "") or "").strip()
     if not _exo_host:
-        ms_csv = output_dir.parent / "masterstars.csv"
-        if ms_csv.is_file():
+        from pipeline import resolve_masterstars_metadata_csv  # noqa: PLC0415
+
+        ms_csv = resolve_masterstars_metadata_csv(output_dir.parent)
+        if ms_csv is not None:
             try:
                 ms_df = pd.read_csv(ms_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
                 if "catalog_id" in ms_df.columns:

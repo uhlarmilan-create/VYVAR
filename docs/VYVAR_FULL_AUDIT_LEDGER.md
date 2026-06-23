@@ -41,6 +41,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 26 | G7-F003b PDF report hardcoded BP-RP primary | **FIXED:** `photometry_report` reads `cfg.phase01_use_bprp_primary` (default True unchanged) | `795faef` |
 | 27 | EQUIP-BINNING DB bin1 fallback unscaled | **FIXED:** FITS equipment intrinsics win; DB bin1 fallback scaled (gain×bin², RN×bin, summed binning); draft 421 gain bit-identical; RN deliberate 1.3→2.6 (~3.9 mmag photon term, NOT do-no-harm); `db=None`→10.0 left unscaled by design | `b19cd7e` |
 | 28 | EXOPLANET-XMATCH local host annotation | **DONE:** `exoplanets/exoplanet_make.py` builder (14185 rows CONFIRMED+TOI) + VYVAR read/match integration; informational `exo_*` cols only; draft 421 DB-off/on bit-identical; 1/36 hosts matched (TOI-7453.01, kept as comp); fast-path export gap fixed | `c169675` |
+| 29 | EXO-AS-TARGET exoplanet host promotion | **DONE:** masterstars→`variable_targets` merge; string Gaia id end-to-end (`…0528` true; `…0400` float artifact); dedup VSX∩exo; exclusion flip + proximity veto; draft 422 production-path validation PASS; TOI-1131 saturated at 60s V (observing) | (this commit) |
 
 ---
 
@@ -1947,7 +1948,7 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 **Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G7-F003b (`795faef`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`), Tier-1 broad-except STEP 2 core (`f950e3f`), EQUIP-BINNING DB bin1 scaling (`b19cd7e`), EXOPLANET-XMATCH local host annotation (`c169675`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
 
-**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003c (report re-loads `AppConfig()` at PDF-build — cfg drift vs run), EQUIP-BINNING-ASYM (asymmetric binning scaling — deferred LOW), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites — deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback — deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
+**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003c (report re-loads `AppConfig()` at PDF-build — cfg drift vs run), EQUIP-BINNING-ASYM (asymmetric binning scaling — deferred LOW), GAIA-ID-FLOAT-GUARD (catalog_id float64 read/normalize truncation — deferred MED), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites — deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback — deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
 
 ### G7-F003c — PDF report cfg reload vs run cfg (LOW-MED, deferred)
 
@@ -1995,6 +1996,18 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 **Status:** OPEN (deferred; follow-up finding from EQUIP-BINNING fix review — do not fix in this batch).
 
+**Finding:** Asymmetric binning (`XBINNING != YBINNING`) currently → raw DB bin1 value + WARNING (no scaling). Physically the summed-binning factor is `bin_x × bin_y` for gain and depends on axis for RN, not `bin²`. All current rigs bin symmetrically (2×2) so no impact now; if asymmetric data ever arrives, the value is silently left at the wrong bin1 base (warned, not corrected).
+
+**Remediation (future):** Generalize `_scale_bin1_to_binning` to `bin_x × bin_y` when asymmetric data is in scope.
+
+### GAIA-ID-FLOAT-GUARD — catalog_id float64 truncation (MED, deferred)
+
+**Status:** OPEN (deferred; follow-up from EXO-AS-TARGET promotion audit — fixed in promotion path only).
+
+**Finding:** Default `pd.read_csv` without `dtype={'catalog_id': str}` infers float64 for 19-digit Gaia IDs; `normalize_gaia_source_id(float)` and `select_active_targets` `_gaia_id_str()` (`int(float(s))`) can silently truncate IDs above 2^53 (e.g. true `1625373404725030528` → artifact `1625373404725030400`). EXO-AS-TARGET hardened promotion + plan write; same pattern may exist at other read sites.
+
+**Remediation (future):** Audit all `catalog_id` reads for `read_vyvar_csv` / explicit `dtype=str`; reject or warn on float-typed inputs to `normalize_gaia_source_id`; eliminate `int(float())` Gaia id fallbacks.
+
 ### EXOPLANET-XMATCH — local exoplanet host annotation — DONE (2026-06-23)
 
 **Status:** DONE (`c169675`, 2026-06-23).
@@ -2008,7 +2021,20 @@ variability masks / trust / photometry numerics. Test: `tests/test_exoplanet_loc
 **Validation:** Draft 421 DB-off vs DB-on B/R/V bit-identical (comp / mag / err / trust); 1/36
 Persei box hosts matched at 3″ (TOI-7453.01, kept as comp).
 
+### EXO-AS-TARGET — exoplanet host promotion — DONE (2026-06-23)
 
-**Finding:** Asymmetric binning (`XBINNING != YBINNING`) currently → raw DB bin1 value + WARNING (no scaling). Physically the summed-binning factor is `bin_x × bin_y` for gain and depends on axis for RN, not `bin²`. All current rigs bin symmetrically (2×2) so no impact now; if asymmetric data ever arrives, the value is silently left at the wrong bin1 base (warned, not corrected).
+**Status:** DONE (hash in fix log row 29 after commit).
 
-**Remediation (future):** Generalize `_scale_bin1_to_binning` to `bin_x × bin_y` when asymmetric data is in scope.
+**Scope:** `pipeline.py` promotion from `masterstars_full_match` → merged `variable_targets.csv`;
+dedup VSX∩exo on exact Gaia string id; exclusion flip (`_vt_cid_exclude`, merged 10″ plan veto,
+`phase01_comparison_min_dist_arcsec`); `resolve_masterstars_metadata_csv` surfacing fix;
+`masterstar_row_gaia_key` string-safe id in promotion; `comp_qa_core` locus excludes skip targets
+without LC (do-no-harm). Tests: `tests/test_exoplanet_variable_targets_merge.py`; validator:
+`scripts/validate_exo_as_target_422.py`.
+
+**Validation:** Draft 422 `V_60_2` via `run_full_photometry_pipeline` — TOI-1131.01 promoted (8→9
+active), true Gaia id `1625373404725030528`, excluded from comps; 8 VSX do-no-harm PASS.
+
+**Observing:** TOI-1131 saturated at 60 s V (target peak ~44.6 k ADU median; MASTERSTAR 58.5 k >
+85% of 65535) — shorter exposures needed for transit LC (not a code bug).
+

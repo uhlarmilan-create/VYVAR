@@ -1,66 +1,87 @@
-CURSOR RESULT — 2026-06-23 (Tier-1 broad-except STEP 2 — high-value core only)
+CURSOR RESULT — 2026-06-19 (EXO-AS-TARGET — Gaia ID audit + saturation report)
 
 What I did
-Implemented BATCH 1–3 (10 sites): narrowed broad `except Exception` handlers at 4 MEDIUM core locations + 4 photometry_core debug-only sites + infolog `log_event` (broad kept, DEBUG swallow log added). Deferred 38 SAFE UI sites — logged as TIER1-UI-DEBT in ledger. Added `tests/test_config_observer_location_hydrate.py` (2 cases). No commit/push (awaiting Milan sign-off).
+Read-only audit of TOI-1131 Gaia `catalog_id` float corruption narrative, traced float-touch sites, re-verified exclusion/dedup on the **true** id, hardened exo promotion id resolution (`masterstar_row_gaia_key`), reverted validation-script masking. Saturation determination on draft 422 `V_60_2` target star (not whole-frame max).
 
-## Output / findings
+## Issue 1 — Gaia catalog_id (BLOCKER audit)
 
-### BATCH 1 — MEDIUM core (fallback/control flow unchanged; logging added)
+### 1. True Gaia source_id (string-safe)
 
-| Site | Narrowed types | Fallback unchanged |
-|------|----------------|-------------------|
-| `config.py:1061` | `sqlite3.Error`, `TypeError`, `ValueError` | On DB hydrate failure, json-loaded `observer_lat`/`lon`/`alt_m`/`location_name` are left as set before the try block (including 0.0 coords when json has zeros). No DB values applied. |
-| `ui_quality_dashboard.py:434` | `ImportError`, `KeyError`, `TypeError`, `ValueError`, `AttributeError` | Success path (st.info / st.warning for missing RN / st.caption) unchanged. Failure now surfaces `st.warning` + `logging.WARNING` instead of silent pass. |
-| `app.py:1568` | `sqlite3.Error`, `TypeError`, `ValueError`, `KeyError` | `_equip_sat` from `_equipment_saturate_adu_from_db` retained when combined-metadata lookup fails; only adds `log_event` WARNING. |
-| `app.py:2409` | `sqlite3.Error`, `TypeError`, `ValueError`, `KeyError` | Import completion flow unchanged; failed SATURATE_ADU log now emits WARNING via `log_event` instead of silent pass. |
+| Source | `source_id` | sep from TOI host |
+|--------|-------------|-------------------|
+| `GAIA_DR3/vyvar_gaia_dr3.db` nearest match | **1625373404725030528** | 0.0065″ |
+| `masterstars_full_match.csv` (`dtype={'catalog_id':str}`) | **1625373404725030528** | — |
+| `exoplanets/vyvar_exoplanet_local.db` host position | RA 248.433545°, Dec 61.718334° | — |
 
-### BATCH 2 — photometry_core (narrow only; DEBUG level unchanged)
+**True 19-digit Gaia DR3 id: `1625373404725030528`**
 
-| Site | Narrowed types |
-|------|----------------|
-| `:7214` | `ImportError`, `KeyError`, `TypeError`, `ValueError`, `AttributeError` |
-| `:7867` | `ImportError`, `KeyError`, `TypeError`, `ValueError`, `AttributeError`, `OSError` |
-| `:9632` | `ImportError`, `AttributeError`, `ValueError`, `TypeError` |
-| `:9882` | `ValueError`, `TypeError` |
+### 2. `...0400` vs `...0528`
 
-### BATCH 3 — infolog.py:35
+| Value | In Gaia DB? | Role |
+|-------|-------------|------|
+| `1625373404725030528` | **Yes** (RA/Dec match TOI host) | **Correct id** |
+| `1625373404725030400` | **No** (lookup returns NULL) | **Float64 corruption** of `...0528` |
 
-- Kept broad `except Exception` with `# noqa: BLE001` + comment (logging must not crash pipeline).
-- Added `logging.debug("log_event append failed: …")` for swallowed errors.
+Demonstration: `int(np.float64(1625373404725030528))` → `1625373404725030400`. Same via `normalize_gaia_source_id(1.6253734047250304e+18)`.
 
-### config.py:1060 test
+The STEP 1 assumption that `...0400` was canonical was **wrong**; the pipeline/masterstars CSV already carry the **correct** string `...0528` when read with `dtype=str`.
 
-`tests/test_config_observer_location_hydrate.py`:
-- `test_observer_location_hydrate_db_failure_keeps_json_coords_and_warns` — patched `sqlite3.Error` → json lat/lon/alt/name preserved + WARNING logged.
-- `test_observer_location_hydrate_db_failure_keeps_zero_coords` — 0.0/0.0 coords stay 0.0 on failure + WARNING.
+### 3. Float-touch sites (where `...0400` would appear)
 
-### Validation
+| Site | Risk |
+|------|------|
+| `pd.read_csv` without `dtype={'catalog_id':str}` on masterstars | infers float64 → scientific string → normalizes to `...0400` |
+| `normalize_gaia_source_id(float)` / `normalize_gaia_source_id('1.625e+18')` | returns `...0400` |
+| `photometry_core.select_active_targets` `_gaia_id_str()` fallback `int(float(s))` | corrupts if hit |
+| VSX path in `write_photometry_plan_files` | uses `_norm_gaia_id` on Gaia DB rows **as strings** (safe) |
+| Exo promotion (before fix) | `normalize_gaia_source_id(row.get('catalog_id'))` only — unsafe if row is float-typed |
 
-- `ruff check . --select BLE001,E722` → **All checks passed!** (0 unmarked)
-- `pytest -q` → **447 passed, 15 skipped** (was 445/15; +2 new tests)
+**Current draft 422 `masterstars_full_match.csv` on disk:** raw CSV quotes `"1625373404725030528"` (correct). Default pandas read → `np.float64(1.6253734047250304e+18)` (display only; normalize → `...0400`).
 
-### Ledger
+### 4. Re-verification on TRUE id `...0528`
 
-- `docs/VYVAR_FULL_AUDIT_LEDGER.md` — new **TIER1-UI-DEBT** entry (38 SAFE UI/plotly sites deferred LOW cosmetic).
+| Check | Result |
+|-------|--------|
+| In `comparison_stars.csv` pool | **No** |
+| Used as comp (`comparison_stars_per_target`) | **No** (as comp); has Phase-1 comp **rows as target** (expected) |
+| Wrong id `...0400` in comp pools | **No** |
+| Dedup VSX∩exo same true id | Unit test: one row with both labels when ids match `...0528` |
+| Dedup VSX `...0400` + exo `...0528` | **Two rows** (no false merge) — test added |
 
-### Deferred (not touched)
+### 5. Fix at cause (promotion path)
 
-- 38 SAFE UI/plotly `pass` sites → TIER1-UI-DEBT
-- 299 pipeline/photometry_core defensive passes → existing phased-audit item
+`pipeline._build_exoplanet_promotion_rows_from_masterstars`:
+- Apply `catalog_id_series_for_masterstars_export()` on masterstars input (mirror plan write).
+- Resolve promoted id via `masterstar_row_gaia_key(row)` (mirror `select_active_targets` / VSX discipline).
 
-## Errors (if any)
+Validation script reverted: matches by **exact** `TRUE_GAIA_CID = 1625373404725030528`; no `exo_host_obj_id` pass workaround; no “saturated = LC pass” masking.
 
-None.
+## Issue 2 — TOI-1131 saturated → no LC (OBSERVING finding)
+
+**Target star** on `V_60_2` (78 proc frames, catalog_id `...0528`):
+
+| Metric | Value |
+|--------|-------|
+| `peak_max_adu` (target) | min 28 984, max 58 589, median ~44 627 ADU |
+| `saturate_limit_adu` (proc) | 65 535 |
+| `saturate_limit_adu_85pct` (masterstars) | 55 704.75 (equipment × 0.85) |
+| MASTERSTAR reference `peak_max_adu` | **58 555** > 55 704.75 → `zone=saturated` |
+| `zone` on all 78 frames | `saturated` |
+| Phase 2A LC | **None** (`skip_photometry=True`) |
+
+**Conclusion:** TOI-1131 is **genuinely saturated** on the 60 s V frames (target peak exceeds 85% equipment ceiling). Skip is **correct pipeline behavior**, not a bug to suppress. Milan needs **shorter exposures** (or a fainter filter setup) for a usable transit LC on this host.
+
+## Validation (production path)
+
+Script: `tmp/validate_exo_as_target_422.py` — `write_photometry_plan_files` + `run_full_photometry_pipeline`.
+
+Acceptance: true `catalog_id` in `variable_targets` + `active_targets`, no float-corrupted id in outputs, exclusion on true id, 8-VSX do-no-harm, active count 9. LC absence reported separately (Issue 2).
 
 ## Files changed
 
-- `config.py` — observer hydrate narrow + WARNING; `import sqlite3`
-- `ui_quality_dashboard.py` — Gain/RN panel narrow + st.warning + logging.WARNING
-- `app.py` — saturate_adu sites narrow + log_event WARNING; `import sqlite3`
-- `infolog.py` — DEBUG swallow log; noqa comment
-- `photometry_core.py` — 4 narrowed debug handlers
-- `tests/test_config_observer_location_hydrate.py` — new
-- `docs/VYVAR_FULL_AUDIT_LEDGER.md` — TIER1-UI-DEBT
-- `CURSOR_RESULT.md` — this report
+- `pipeline.py` — exo promotion id resolution
+- `tmp/validate_exo_as_target_422.py` — true-id validation (masking reverted)
+- `tests/test_exoplanet_variable_targets_merge.py` — true id + anti-false-dedup test
+- `comp_qa_core.py` — locus excludes skip targets without LC (prior do-no-harm)
 
-Commit: `f950e3f` (2026-06-23).
+**No commit / no push** (awaiting sign-off).

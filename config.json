@@ -33,6 +33,8 @@
   "debug_platesolver": false,
   "vsx_local_db_path": "C:\\ASTRO\\python\\VYVAR\\VSX\\vyvar_vsx_local_v2.db",
   "vsx_variable_targets_mag_limit": 14.5,
+  "exoplanet_local_db_path": "exoplanets/vyvar_exoplanet_local.db",
+  "exoplanet_match_max_sep_arcsec": 3.0,
   "catalog_query_max_rows": 15000,
   "per_frame_mp_reserve_ram_gb": 1.5,
   "alignment_max_stars": 160,

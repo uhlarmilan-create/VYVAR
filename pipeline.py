@@ -4776,6 +4776,224 @@ def _apply_exo_host_columns_to_proc_df(
     return out
 
 
+def resolve_masterstars_metadata_csv(platesolve_dir: Path | str) -> Path | None:
+    """Return masterstars metadata CSV in a platesolve setup dir (full_match preferred)."""
+    ps = Path(platesolve_dir)
+    for name in ("masterstars_full_match.csv", "masterstars.csv"):
+        p = ps / name
+        if p.is_file():
+            return p
+    return None
+
+
+def _build_exoplanet_promotion_rows_from_masterstars(
+    master_df: pd.DataFrame,
+    hdr: fits.Header,
+    cfg: AppConfig,
+    *,
+    frame_w_px: int,
+    frame_h_px: int,
+    margin_px: float = 50.0,
+) -> pd.DataFrame:
+    """Promote masterstars rows with exoplanet host match within configured separation."""
+    _exo_path: Path | None = None
+    try:
+        _exs = str(cfg.exoplanet_local_db_path or "").strip()
+        if _exs:
+            _exo_path = Path(_exs).expanduser().resolve()
+    except Exception:  # noqa: BLE001
+        _exo_path = None
+    if _exo_path is None or not _exo_path.is_file():
+        return pd.DataFrame()
+    if master_df is None or master_df.empty:
+        return pd.DataFrame()
+    if "catalog_id" not in master_df.columns or "ra_deg" not in master_df.columns or "dec_deg" not in master_df.columns:
+        return pd.DataFrame()
+
+    import numpy as np
+
+    from gaia_catalog_id import catalog_id_series_for_masterstars_export, masterstar_row_gaia_key
+
+    m = master_df.copy()
+    if "catalog_id" in m.columns:
+        m["catalog_id"] = catalog_id_series_for_masterstars_export(m)
+    cid_s = m["catalog_id"].fillna("").astype(str).str.strip()
+    ok_cid = cid_s.ne("") & ~cid_s.str.lower().isin({"nan", "none"})
+    ra = pd.to_numeric(m["ra_deg"], errors="coerce")
+    de = pd.to_numeric(m["dec_deg"], errors="coerce")
+    ok_sky = ra.notna() & de.notna()
+    m = m.loc[ok_cid & ok_sky].copy()
+    if m.empty:
+        return pd.DataFrame()
+
+    if "x" in m.columns and "y" in m.columns:
+        xn = pd.to_numeric(m["x"], errors="coerce")
+        yn = pd.to_numeric(m["y"], errors="coerce")
+        in_frame = xn.between(-float(margin_px), float(frame_w_px) + float(margin_px)) & yn.between(
+            -float(margin_px), float(frame_h_px) + float(margin_px)
+        )
+        m = m.loc[in_frame].copy()
+    if m.empty:
+        return pd.DataFrame()
+
+    exo_max = 3.0
+    try:
+        exo_max = float(cfg.exoplanet_match_max_sep_arcsec)
+        if not math.isfinite(exo_max):
+            exo_max = 3.0
+    except (TypeError, ValueError):
+        exo_max = 3.0
+    exo_max = max(0.5, min(30.0, float(exo_max)))
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FITSFixedWarning)
+        wcs_obj = WCS(hdr)
+    if not wcs_obj.has_celestial:
+        return pd.DataFrame()
+    try:
+        _fov_hint = float(cfg.plate_solve_fov_deg)
+        if not math.isfinite(_fov_hint):
+            _fov_hint = None
+    except (TypeError, ValueError):
+        _fov_hint = None
+    center, radius_deg = _effective_field_catalog_cone_radius_deg(
+        wcs_obj, int(frame_h_px), int(frame_w_px), _fov_hint, fits_header=hdr
+    )
+    exo_df = _query_exoplanet_local(
+        center=center,
+        radius_deg=radius_deg,
+        exoplanet_db_path=_exo_path,
+    )
+
+    ra_arr = pd.to_numeric(m["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    de_arr = pd.to_numeric(m["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    det_coords = SkyCoord(ra=ra_arr * u.deg, dec=de_arr * u.deg, frame="icrs")
+    exo_ann, _ = _exo_host_annotation_arrays(
+        det_coords,
+        exo_df if exo_df is not None else pd.DataFrame(),
+        exo_max,
+    )
+
+    exo_ids = np.asarray(exo_ann["exo_host_obj_id"], dtype=object)
+    exo_sep = np.asarray(exo_ann["exo_match_sep_arcsec"], dtype=np.float64)
+    promote_mask = np.zeros(len(m), dtype=bool)
+    for i in range(len(m)):
+        oid = str(exo_ids[i] or "").strip()
+        sep = float(exo_sep[i]) if math.isfinite(float(exo_sep[i])) else float("nan")
+        promote_mask[i] = bool(oid) and math.isfinite(sep) and sep <= exo_max
+    if not bool(np.any(promote_mask)):
+        return pd.DataFrame()
+
+    sub = m.loc[promote_mask].copy()
+    prom_idx = np.where(promote_mask)[0]
+
+    from gaia_catalog_id import masterstar_row_gaia_key
+
+    rows: list[dict[str, Any]] = []
+    for j, (_, row) in enumerate(sub.iterrows()):
+        ii = int(prom_idx[j])
+        cid_norm = masterstar_row_gaia_key(row)
+        if not cid_norm:
+            continue
+        host_name = str(exo_ann["exo_host_name"][ii] or "").strip()
+        obj_id = str(exo_ann["exo_host_obj_id"][ii] or "").strip()
+        disp = str(exo_ann["exo_disposition"][ii] or "").strip()
+        src = str(exo_ann["exo_cat_source"][ii] or "").strip()
+        try:
+            mag_v = float(pd.to_numeric(row.get("mag", row.get("phot_g_mean_mag")), errors="coerce"))
+        except (TypeError, ValueError):
+            mag_v = float("nan")
+        if not math.isfinite(mag_v):
+            mag_v = float("nan")
+        rows.append(
+            {
+                "name": host_name or obj_id,
+                "catalog_id": cid_norm,
+                "catalog": "EXOPLANET",
+                "ra_deg": float(row["ra_deg"]),
+                "dec_deg": float(row["dec_deg"]),
+                "priority": 2,
+                "notes": f"{src} {disp}".strip(),
+                "vsx_name": "",
+                "vsx_type": "",
+                "vsx_period": np.nan,
+                "x": pd.to_numeric(row.get("x"), errors="coerce"),
+                "y": pd.to_numeric(row.get("y"), errors="coerce"),
+                "mag": mag_v,
+                "zone": str(row.get("zone", "") or "").strip().lower(),
+                "gaia_match_arcsec": float(exo_sep[ii]),
+                "gaia_match_quality": "good",
+                "gaia_match_source": "masterstars_exo",
+                "vsx_mag_max": np.nan,
+                "exo_host_obj_id": obj_id,
+                "exo_host_name": host_name,
+                "exo_cat_source": src,
+                "exo_disposition": disp,
+                "exo_match_sep_arcsec": float(exo_sep[ii]),
+                "target_origin": "EXOPLANET",
+            }
+        )
+    if not rows:
+        return pd.DataFrame()
+    log_event(f"[EXO TARGET] {len(rows)} exoplanet host(s) promoted from masterstars (≤{exo_max:g}″)")
+    return pd.DataFrame(rows)
+
+
+def _merge_vsx_exoplanet_variable_targets(
+    vsx_df: pd.DataFrame,
+    exo_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Merge VSX + exoplanet promotion rows; same Gaia id -> one row with VSX labels + exo_*."""
+    from gaia_catalog_id import normalize_gaia_source_id_series
+
+    vsx = vsx_df.copy() if vsx_df is not None else pd.DataFrame()
+    exo = exo_df.copy() if exo_df is not None else pd.DataFrame()
+    if vsx.empty and exo.empty:
+        return vsx
+    if "catalog_id" in vsx.columns:
+        vsx["catalog_id"] = normalize_gaia_source_id_series(vsx["catalog_id"])
+    if not exo.empty and "catalog_id" in exo.columns:
+        exo["catalog_id"] = normalize_gaia_source_id_series(exo["catalog_id"])
+
+    exo_extra = list(_EXO_HOST_ANNOTATION_COLUMNS) + ["target_origin"]
+    if exo.empty:
+        return vsx
+    for col in exo_extra:
+        if col not in vsx.columns:
+            vsx[col] = ""
+
+    if vsx.empty:
+        return exo
+
+    exo_by_cid: dict[str, pd.Series] = {}
+    for _, er in exo.iterrows():
+        cid = str(er.get("catalog_id", "") or "").strip()
+        if cid:
+            exo_by_cid[cid] = er
+
+    vsx_cids: set[str] = set()
+    for i in vsx.index:
+        cid = str(vsx.at[i, "catalog_id"] or "").strip()
+        if not cid:
+            continue
+        vsx_cids.add(cid)
+        er = exo_by_cid.get(cid)
+        if er is not None:
+            for col in exo_extra:
+                if col in er.index:
+                    vsx.at[i, col] = er[col]
+
+    exo_only = exo.loc[~exo["catalog_id"].astype(str).str.strip().isin(vsx_cids)].copy()
+    if exo_only.empty:
+        return vsx
+    merged = pd.concat([vsx, exo_only], ignore_index=True)
+    log_event(
+        f"[EXO TARGET] variable_targets merge: VSX={len(vsx)} exo-only added={len(exo_only)} "
+        f"total={len(merged)}"
+    )
+    return merged
+
+
 def _query_vsx_local_frame_bbox(
     *,
     wcs: Any,
@@ -5867,35 +6085,8 @@ def write_photometry_plan_files(
 
     _cfg_plan = AppConfig()
 
-    # Pre-query VSX targets for proximity veto (same cone as variable_targets.csv export).
-    _vsx_for_veto: pd.DataFrame | None = None
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", FITSFixedWarning)
-            w0_pre = WCS(hdr)
-        if bool(getattr(w0_pre, "has_celestial", False)) and w0_pre.has_celestial:
-            center, radius_deg = _effective_field_catalog_cone_radius_deg(
-                w0_pre, int(h), int(wpx), plate_solve_fov_deg=None, fits_header=hdr
-            )
-            _vsx_p0: Path | None = None
-            try:
-                _vsp0 = str(_cfg_plan.vsx_local_db_path or "").strip()
-                if _vsp0:
-                    _vsx_p0 = Path(_vsp0).expanduser().resolve()
-            except Exception:  # noqa: BLE001
-                _vsx_p0 = None
-            _vsx_df0 = _query_vsx_local(center=center, radius_deg=float(radius_deg), vsx_db_path=_vsx_p0)
-            if _vsx_df0 is not None and not _vsx_df0.empty:
-                try:
-                    mag_limit0 = float(_cfg_plan.vsx_variable_targets_mag_limit or 13.0)
-                except Exception:  # noqa: BLE001
-                    mag_limit0 = 13.0
-                if "mag_max" in _vsx_df0.columns and mag_limit0 is not None and float(mag_limit0) > 0.0:
-                    mm0 = pd.to_numeric(_vsx_df0["mag_max"], errors="coerce")
-                    _vsx_df0 = _vsx_df0[mm0.isna() | (mm0 <= float(mag_limit0))].copy()
-                _vsx_for_veto = _vsx_df0
-    except Exception:  # noqa: BLE001
-        _vsx_for_veto = None
+    comp_path = ps / "comparison_stars.csv"
+    var_path = ps / "variable_targets.csv"
 
     # --- Annulus-aware intersection bbox (Variant A2) ---
     # Compute a "safe" bbox from the intersection of aligned frames, shrunk by the sky-annulus outer radius.
@@ -5977,28 +6168,7 @@ def write_photometry_plan_files(
         log_event(f"[BORDER] safe_bbox computation failed: {_bbox_exc!s} - skipping border filter")
         _safe_bbox = None
 
-    comp_df, cmeta = select_comparison_stars_spatial_grid(
-        df,
-        width_px=float(wpx),
-        height_px=float(h),
-        n_comp=int(n_comparison_stars),
-        require_non_variable=bool(require_non_variable),
-        variable_targets_df=_vsx_for_veto,
-        safe_bbox=_safe_bbox,
-    )
-    comp_path = ps / "comparison_stars.csv"
-    try:
-        from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
-
-        if "catalog_id" in comp_df.columns:
-            comp_df = comp_df.copy()
-            comp_df["catalog_id"] = normalize_gaia_source_id_series(comp_df["catalog_id"])
-    except Exception:  # noqa: BLE001
-        pass
-    _vyvar_df_to_csv(comp_df, comp_path)
-
-    # VSX variable targets for the field (full cone), with pixel coords from MASTERSTAR WCS.
-    var_path = ps / "variable_targets.csv"
+    # VSX variable targets for the field (frame bbox), with pixel coords from MASTERSTAR WCS.
     var_cols = [
         "name",
         "catalog_id",
@@ -6018,6 +6188,12 @@ def write_photometry_plan_files(
         "gaia_match_quality",
         "gaia_match_source",
         "vsx_mag_max",
+        "exo_host_obj_id",
+        "exo_host_name",
+        "exo_cat_source",
+        "exo_disposition",
+        "exo_match_sep_arcsec",
+        "target_origin",
     ]
     vsx_out = pd.DataFrame(columns=var_cols)
     _vsx_n_cone = 0
@@ -6375,16 +6551,50 @@ def write_photometry_plan_files(
         log_event(f"variable_targets.csv (VSX export) preskočený: {_vsx_exc!s}")
         vsx_out = pd.DataFrame(columns=var_cols)
 
-    # Always overwrite (even if it exists) so UI sees current field cone.
+    exo_promo = _build_exoplanet_promotion_rows_from_masterstars(
+        df,
+        hdr,
+        _cfg_plan,
+        frame_w_px=int(wpx),
+        frame_h_px=int(h),
+        margin_px=50.0,
+    )
+    merged_var = _merge_vsx_exoplanet_variable_targets(vsx_out, exo_promo)
+    _proximity_veto_df: pd.DataFrame | None = None
+    if merged_var is not None and not merged_var.empty:
+        _ra_v = pd.to_numeric(merged_var.get("ra_deg"), errors="coerce")
+        _de_v = pd.to_numeric(merged_var.get("dec_deg"), errors="coerce")
+        _proximity_veto_df = merged_var.loc[_ra_v.notna() & _de_v.notna()].copy()
+
+    comp_df, cmeta = select_comparison_stars_spatial_grid(
+        df,
+        width_px=float(wpx),
+        height_px=float(h),
+        n_comp=int(n_comparison_stars),
+        require_non_variable=bool(require_non_variable),
+        variable_targets_df=_proximity_veto_df,
+        safe_bbox=_safe_bbox,
+    )
     try:
         from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
 
-        if "catalog_id" in vsx_out.columns:
-            vsx_out = vsx_out.copy()
-            vsx_out["catalog_id"] = normalize_gaia_source_id_series(vsx_out["catalog_id"])
+        if "catalog_id" in comp_df.columns:
+            comp_df = comp_df.copy()
+            comp_df["catalog_id"] = normalize_gaia_source_id_series(comp_df["catalog_id"])
     except Exception:  # noqa: BLE001
         pass
-    _vyvar_df_to_csv(vsx_out, var_path)
+    _vyvar_df_to_csv(comp_df, comp_path)
+
+    # Always overwrite (even if it exists) so UI sees current field cone + exo promotions.
+    try:
+        from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
+
+        if "catalog_id" in merged_var.columns:
+            merged_var = merged_var.copy()
+            merged_var["catalog_id"] = normalize_gaia_source_id_series(merged_var["catalog_id"])
+    except Exception:  # noqa: BLE001
+        pass
+    _vyvar_df_to_csv(merged_var, var_path)
     if _vsx_diag:
         _mag_leg = (
             "mag filter vypnutý (limit≤0)"
@@ -6401,12 +6611,12 @@ def write_photometry_plan_files(
             f"{_mag_leg} → "
             f"v ráme={_vsx_diag.get('vsx_rows_after_in_frame_margin')} → "
             f"Gaia≤10″={_vsx_diag.get('gaia_matches_within_10arcsec')} → "
-            f"CSV={int(len(vsx_out))}. "
+            f"CSV={int(len(merged_var))}. "
             f"Odhad VSX s Gaia ID (Fáza 0 potom cross-match na masterstars): {_vsx_diag.get('phase0_active_targets_hint_count')}."
         )
     else:
         log_event(
-            f"variable_targets.csv (VSX export): cone={_vsx_n_cone} → zapísané={int(len(vsx_out))} "
+            f"variable_targets.csv (VSX export): cone={_vsx_n_cone} → zapísané={int(len(merged_var))} "
             f"({var_path.name})"
         )
 

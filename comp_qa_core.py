@@ -307,6 +307,16 @@ def compute_comp_qa(
             "comp_rows": comp_rows,
         }
 
+    # Sokolovsky locus is draft-wide: only targets with a Phase-2A light curve participate
+    # (skip_photometry / saturated targets may still have comp rows but no LC).
+    _lc_dir = phot / "lightcurves"
+    if target_data:
+        target_data = {
+            tid: td
+            for tid, td in target_data.items()
+            if (_lc_dir / f"lightcurve_{tid}.csv").is_file()
+        }
+
     pass1: list[tuple[str, str, float, float]] = []
     for tid, td in target_data.items():
         for cid in td["pool"]:

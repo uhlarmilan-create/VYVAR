@@ -2,6 +2,40 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-06-23 — Exoplanet hosts as active targets (EXO-AS-TARGET)
+
+**Shipped.** Exoplanet hosts with a DAO+position match in `masterstars_full_match.csv` now promote
+into `variable_targets.csv` (merged with VSX cone rows), flow through `select_active_targets`, and
+behave like VSX variable targets: `_vt_cid_exclude`, global comp pool veto, merged 10″ plan proximity
+veto, and `phase01_comparison_min_dist_arcsec`. Dedup VSX↔exo on exact string Gaia `catalog_id`
+(VSX labels win; `exo_*` columns additive). Passive informational annotation (EXOPLANET-XMATCH)
+unchanged for non-promoted hosts.
+
+**Gaia `catalog_id` string safety.** True TOI-1131 id `1625373404725030528` (Gaia DB); float64
+truncation artifact `…0400` does not exist in DB. Promotion path hardened:
+`catalog_id_series_for_masterstars_export` + `masterstar_row_gaia_key` (mirrors VSX /
+`select_active_targets`). Surfacing: `resolve_masterstars_metadata_csv` prefers
+`masterstars_full_match.csv` for UI caption + PDF.
+
+**Validation (draft 422 `V_60_2`, production path).** `write_photometry_plan_files` +
+`run_full_photometry_pipeline` (not sandbox): TOI-1131.01 promoted (`exo_disposition=PC`), active
+8→9, excluded from comps on true id; 8 VSX targets do-no-harm PASS. Script:
+`scripts/validate_exo_as_target_422.py`.
+
+**Observing finding (not a code bug).** TOI-1131 is **genuinely saturated** on 60 s V (`V_60_2`):
+target `peak_max_adu` ~29–59 k ADU (median ~44.6 k); MASTERSTAR reference peak **58.5 k** exceeds
+85% of equipment ceiling (55.7 k from 65535 ADU) → `zone=saturated`, `skip_photometry=True`, no
+Phase-2A LC. **Shorter V exposures required** for a usable transit light curve on this host.
+
+**Deferred (ledger):** GAIA-ID-FLOAT-GUARD — audit all `catalog_id` read sites for `dtype=str`;
+reject float inputs to `normalize_gaia_source_id` / `_gaia_id_str` fallbacks.
+
+**Gates:** ruff clean; pytest pass (`tests/test_exoplanet_variable_targets_merge.py`).
+
+**Commit:** (this entry — hash after push)
+
+---
+
 ## 2026-06-23 — Exoplanet local DB + informational host cross-match (EXOPLANET-XMATCH)
 
 **Shipped.** Local NASA Exoplanet Archive snapshot builder `exoplanets/exoplanet_make.py`
