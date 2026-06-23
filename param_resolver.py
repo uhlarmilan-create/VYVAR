@@ -151,6 +151,81 @@ def _clamp(param: str, v: float) -> float:
     return max(lo, min(hi, float(v)))
 
 
+def _scale_bin1_to_binning(value: float, binning: int, exponent: int) -> float:
+    """Scale a bin1 per-pixel DB intrinsic by summed binning (gain: bin², RN: bin)."""
+    b = int(binning)
+    if b <= 1:
+        return float(value)
+    return float(value) * float(b ** int(exponent))
+
+
+def _binning_from_header(header: Any) -> int | None:
+    """Integer binning from FITS ``XBINNING`` / ``BINNING`` when trustworthy.
+
+    Returns ``None`` when binning cannot be resolved safely (missing, invalid,
+    or asymmetric ``XBINNING`` vs ``YBINNING``).
+    """
+    if header is None:
+        return None
+    x_v, _ = _header_value(header, "binning")
+    if x_v is None:
+        return None
+    try:
+        x_bin = int(round(float(x_v)))
+    except (TypeError, ValueError):
+        return None
+    if x_bin < 1:
+        return None
+    if "YBINNING" in header:
+        try:
+            y_bin = int(round(float(header["YBINNING"])))
+        except (TypeError, ValueError):
+            return None
+        if y_bin < 1 or y_bin != x_bin:
+            return None
+    return x_bin
+
+
+def _scale_bin1_db_for_header(
+    value: float | None,
+    header: Any,
+    *,
+    exponent: int,
+    param_label: str,
+) -> float | None:
+    """Scale bin1 DB fallback using FITS binning; log INFO/WARNING per policy."""
+    if value is None:
+        return None
+    try:
+        raw = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(raw):
+        return None
+    binning = _binning_from_header(header)
+    if binning is None:
+        _warn_once(
+            f"bin1_scale_skip_{param_label}",
+            (
+                f"[RESOLVE {param_label}] binning unresolved — using raw DB bin1 value "
+                f"{raw:g} (no scaling)"
+            ),
+        )
+        return raw
+    if binning == 1:
+        return raw
+    eff = _scale_bin1_to_binning(raw, binning, exponent)
+    logger.info(
+        "[RESOLVE %s] scaled DB bin1 %g -> %g (binning=%d, exp=%d)",
+        param_label,
+        raw,
+        eff,
+        binning,
+        int(exponent),
+    )
+    return eff
+
+
 # --------------------------------------------------------------------------- #
 # EQUIPMENT-INTRINSIC: DB-set (valid) -> header (fallback + cross-check) -> config
 # --------------------------------------------------------------------------- #
@@ -342,14 +417,20 @@ def _resolve_gain_header_first(
                 )
                 res.warnings.append(msg)
                 _warn_once(f"gain_index_unmapped_{equipment_id}_{setting}", msg)
-                res.value = float(db_value)  # type: ignore[arg-type]
+                eff_db = _scale_bin1_db_for_header(
+                    float(db_value), header, exponent=2, param_label="gain"
+                )
+                res.value = float(eff_db if eff_db is not None else db_value)  # type: ignore[arg-type]
                 res.source = "db"
                 res.ok = True
                 logger.debug("[RESOLVE gain] -> %s (source=%s, unmapped index)", res.value, res.source)
                 return res
 
     if db_ok:
-        res.value = float(db_value)  # type: ignore[arg-type]
+        eff_db = _scale_bin1_db_for_header(
+            float(db_value), header, exponent=2, param_label="gain"
+        )
+        res.value = float(eff_db if eff_db is not None else db_value)  # type: ignore[arg-type]
         res.source = "db"
         res.ok = True
         logger.debug("[RESOLVE gain] -> %s (source=%s)", res.value, res.source)
@@ -408,9 +489,20 @@ def resolve_read_noise(
 ) -> Resolved:
     if db_value is None:
         _, db_value = _db_cosmic(db, equipment_id)
+    db_for_resolve = db_value
+    if db_value is not None and _is_valid("read_noise", db_value):
+        scaled = _scale_bin1_db_for_header(
+            float(db_value), header, exponent=1, param_label="read_noise"
+        )
+        if scaled is not None:
+            db_for_resolve = scaled
     cfg_v = getattr(cfg, "read_noise", None) if cfg is not None else None
     return _resolve_equipment_intrinsic(
-        "read_noise", header=header, db_value=db_value, cfg_value=cfg_v, log_label="read_noise"
+        "read_noise",
+        header=header,
+        db_value=db_for_resolve,
+        cfg_value=cfg_v,
+        log_label="read_noise",
     )
 
 
