@@ -39,6 +39,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 24 | G2-F002b per-frame WCS trust flag | **FIXED:** `catalog_match_mode` + `wcs_untrusted` LC cols; `n_wcs_untrusted` soft-YELLOW trust; NONDET modes split; do-no-harm vs draft 421 PASS | `977920f` |
 | 25 | G7-F003 `phase01_use_bprp_primary` non-persistable | **FIXED:** `AppConfig` field + `config.json` + PARAMS; `ui_aperture_photometry` reads `cfg.phase01_use_bprp_primary` | `31db3af` |
 | 26 | G7-F003b PDF report hardcoded BP-RP primary | **FIXED:** `photometry_report` reads `cfg.phase01_use_bprp_primary` (default True unchanged) | `795faef` |
+| 27 | EQUIP-BINNING DB bin1 fallback unscaled | **FIXED:** FITS equipment intrinsics win; DB bin1 fallback scaled (gain×bin², RN×bin, summed binning); draft 421 gain bit-identical; RN deliberate 1.3→2.6 (~3.9 mmag photon term, NOT do-no-harm); `db=None`→10.0 left unscaled by design | `b19cd7e` |
 
 ---
 
@@ -1945,7 +1946,7 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 **Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G7-F003b (`795faef`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`), Tier-1 broad-except STEP 2 core (`f950e3f`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
 
-**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003c (report re-loads `AppConfig()` at PDF-build — cfg drift vs run), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites — deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback — deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
+**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003c (report re-loads `AppConfig()` at PDF-build — cfg drift vs run), EQUIP-BINNING-ASYM (asymmetric binning scaling — deferred LOW), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites — deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback — deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
 
 ### G7-F003c — PDF report cfg reload vs run cfg (LOW-MED, deferred)
 
@@ -1980,3 +1981,19 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 **Why deferred:** `ruff check . --select BLE001,E722` is already 0-unmarked (all broad handlers carry justified `# noqa: BLE001`; gate in `tests/test_ble001_regression.py`). These sites lack operator-visible diagnostics but do not affect photometric output or pipeline correctness.
 
 **Remediation (future):** Narrow to realistic exception types + optional DEBUG logging; no control-flow changes. Separate from the 299 pipeline/`photometry_core` defensive `pass` cluster (existing phased-audit item).
+
+### EQUIP-BINNING — DB bin1 fallback scaling — FIXED (2026-06-23)
+
+**Status:** FIXED (`b19cd7e`, 2026-06-23).
+
+**Scope:** `param_resolver.py` — `_scale_bin1_to_binning`, `_binning_from_header`, `_scale_bin1_db_for_header`; DB-fallback branches in `resolve_gain` (exp=2) and `resolve_read_noise` (exp=1). FITS-present equipment intrinsics unchanged (already binned). Config fallback not scaled. Test: `tests/test_param_resolver_binning_scale.py`.
+
+**Validation:** Draft 421 gain bit-identical (78/78 FITS gain 3.12). RN deliberate 1.3→2.6 on bin2 run (~3.9 mmag photon-term increase per epoch — NOT do-no-harm). `db=None`→caller 10.0 left unscaled by design.
+
+### EQUIP-BINNING-ASYM — asymmetric binning scaling (LOW, deferred)
+
+**Status:** OPEN (deferred; follow-up finding from EQUIP-BINNING fix review — do not fix in this batch).
+
+**Finding:** Asymmetric binning (`XBINNING != YBINNING`) currently → raw DB bin1 value + WARNING (no scaling). Physically the summed-binning factor is `bin_x × bin_y` for gain and depends on axis for RN, not `bin²`. All current rigs bin symmetrically (2×2) so no impact now; if asymmetric data ever arrives, the value is silently left at the wrong bin1 base (warned, not corrected).
+
+**Remediation (future):** Generalize `_scale_bin1_to_binning` to `bin_x × bin_y` when asymmetric data is in scope.
