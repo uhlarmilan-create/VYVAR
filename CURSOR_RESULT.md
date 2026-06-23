@@ -63,4 +63,4 @@ None.
 - `docs/VYVAR_FULL_AUDIT_LEDGER.md` — TIER1-UI-DEBT
 - `CURSOR_RESULT.md` — this report
 
-No commit hash (awaiting Milan sign-off → approved 2026-06-23 for commit/push).
+Commit: `f950e3f` (2026-06-23).

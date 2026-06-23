@@ -1941,17 +1941,17 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 ## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003b, Tier-1 deferred backlog (see below).
 
-**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
+**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`), Tier-1 broad-except STEP 2 core (`f950e3f`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
 
 **Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003b (`photometry_report` hardcoded `_use_bprp_primary`), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites — deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback — deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
 
 ### Tier-1 broad-except STEP 2 core — FIXED (2026-06-23)
 
-**Status:** FIXED — commit hash recorded below after push.
+**Status:** FIXED (`f950e3f`, 2026-06-23).
 
 **Scope (10 sites):** BATCH 1 MEDIUM core — `config.py` observer-location hydrate, `ui_quality_dashboard.py` Gain/RN panel, `app.py` saturate_adu (×2). BATCH 2 — `photometry_core.py` debug-only narrow (4 sites). BATCH 3 — `infolog.py` `log_event` (broad kept + DEBUG swallow log). Test: `tests/test_config_observer_location_hydrate.py`.
 
-**Commit:** *(hash pending — confirm via `git log` after commit)*
+**Commit:** `f950e3f`
 
 ### TIER1-OBSLOC-ZERO — observer 0.0/0.0 fallback (MED, deferred)
 

@@ -16,7 +16,7 @@ fallback may silently corrupt airmass/BJD/dilution context (MED, follow-up findi
 
 **Gates:** `ruff BLE001/E722` 0-unmarked; pytest 447 passed, 15 skipped.
 
-**Commit:** *(hash after push — see ledger)*
+**Commit:** `f950e3f`
 
 ---
 
