@@ -7,6 +7,7 @@ import html
 import logging
 import math
 import re
+import sqlite3
 import uuid
 from pathlib import Path
 from typing import Any
@@ -1565,8 +1566,11 @@ def _render_pending_job_dispatcher(
                             _cm = pipeline.db.get_combined_metadata(_al[0], int(_draft_ms))
                             if _cm.get("saturate_adu") is not None:
                                 _equip_sat = _cm["saturate_adu"]
-                    except Exception:  # noqa: BLE001
-                        pass
+                    except (sqlite3.Error, TypeError, ValueError, KeyError) as exc:
+                        log_event(
+                            f"WARNING: saturate_adu from combined metadata failed "
+                            f"(draft {_draft_ms}): {exc}"
+                        )
                 _plan_mc = st.session_state.get("vyvar_last_import_plan")
                 _md_mc = (
                     Path(_plan_mc.dark_master)
@@ -2406,8 +2410,11 @@ def render_live_view(
                         f"Equipment ID {import_equipment_id}: SATURATE_ADU v DB = "
                         f"{_sat_eq if _sat_eq is not None else '(NULL — pri MASTERSTAR katalógu: hlavička → BITPIX → Settings fallback)'}"
                     )
-                except Exception:  # noqa: BLE001
-                    pass
+                except (sqlite3.Error, TypeError, ValueError, KeyError) as exc:
+                    log_event(
+                        f"WARNING: equipment SATURATE_ADU DB lookup failed "
+                        f"(equipment_id={import_equipment_id}): {exc}"
+                    )
                 if result.warnings:
                     for w in result.warnings:
                         log_event(f"Import varování: {w}")

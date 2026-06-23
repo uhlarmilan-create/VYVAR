@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -431,8 +432,14 @@ def render_quality_dashboard(
                 )
         else:
             st.caption("Gain/RN: no equipment assigned for this draft.")
-    except Exception:  # noqa: BLE001
-        pass
+    except (ImportError, KeyError, TypeError, ValueError, AttributeError) as exc:
+        logging.getLogger(__name__).warning(
+            "Gain/RN quality panel skipped (draft %s): %s", did, exc
+        )
+        st.warning(
+            "⚠️ Could not load detector gain/RN for this draft. "
+            "Check Settings → Photometry → Detector and the draft equipment link."
+        )
 
     st.caption("Adjust **Center RA/DE** in the VARSTREM panel (Step 2).")
 

@@ -32,9 +32,8 @@ def log_event(message: str) -> None:
         line = f"{ts}  {message}"
         with _lock:
             _lines.append(line)
-    except Exception:  # noqa: BLE001
-        # Never let Infolog break processing (e.g. extreme memory pressure).
-        pass
+    except Exception as exc:  # noqa: BLE001 — Infolog must never crash the pipeline
+        logging.getLogger(__name__).debug("log_event append failed: %s", exc)
 
 
 def log_gaia_query(ra: float, dec: float, calculated_radius: float) -> None:

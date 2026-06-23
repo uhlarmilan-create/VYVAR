@@ -1,53 +1,66 @@
-CURSOR RESULT — 2026-06-22 (G2-F004 keyed err/scatter pairing — validated on draft 421)
+CURSOR RESULT — 2026-06-23 (Tier-1 broad-except STEP 2 — high-value core only)
 
 What I did
-Implemented G2-F004: `err` joined to `ensemble_scatter` by EXACT `source_file` (localized adapter; `ensemble_normalize` unchanged). Added `err_scatter_unmatched` LC column. Validated on real `draft_000421` data (all 3 sets). Unit tests 5/5.
+Implemented BATCH 1–3 (10 sites): narrowed broad `except Exception` handlers at 4 MEDIUM core locations + 4 photometry_core debug-only sites + infolog `log_event` (broad kept, DEBUG swallow log added). Deferred 38 SAFE UI sites — logged as TIER1-UI-DEBT in ledger. Added `tests/test_config_observer_location_hydrate.py` (2 cases). No commit/push (awaiting Milan sign-off).
 
-## Implementation
+## Output / findings
 
-- `_ensemble_scatter_by_source_file` + `_combine_err_with_ensemble_scatter_keyed` (`photometry_core.py` ~2517–2578)
-- After ensemble: build scatter map from `all_frames` target rows
-- Replace positional combine (~7682) with keyed join + WARNING on unmatched epochs
-- LC CSV: new `err_scatter_unmatched` column (additive; `err` unchanged when join succeeds)
+### BATCH 1 — MEDIUM core (fallback/control flow unchanged; logging added)
 
-## Draft 421 validation (real data)
+| Site | Narrowed types | Fallback unchanged |
+|------|----------------|-------------------|
+| `config.py:1061` | `sqlite3.Error`, `TypeError`, `ValueError` | On DB hydrate failure, json-loaded `observer_lat`/`lon`/`alt_m`/`location_name` are left as set before the try block (including 0.0 coords when json has zeros). No DB values applied. |
+| `ui_quality_dashboard.py:434` | `ImportError`, `KeyError`, `TypeError`, `ValueError`, `AttributeError` | Success path (st.info / st.warning for missing RN / st.caption) unchanged. Failure now surfaces `st.warning` + `logging.WARNING` instead of silent pass. |
+| `app.py:1568` | `sqlite3.Error`, `TypeError`, `ValueError`, `KeyError` | `_equip_sat` from `_equipment_saturate_adu_from_db` retained when combined-metadata lookup fails; only adds `log_event` WARNING. |
+| `app.py:2409` | `sqlite3.Error`, `TypeError`, `ValueError`, `KeyError` | Import completion flow unchanged; failed SATURATE_ADU log now emits WARNING via `log_event` instead of silent pass. |
 
-| Set | Targets | Epochs | `unmatched_epochs` | `keyed==legacy` (6dp) | `per-target source_file dup` |
-|-----|---------|--------|--------------------|-------------------------|------------------------------|
-| B_20_2 | 363 | 4356 | **0** | **0** | **0** |
-| R_20_2 | 353 | 4236 | **0** | **0** | **0** |
-| V_20_2 | 97 | 1164 | **0** | **0** | **0** |
-| **Total** | 793 | **9756** | **0** | **0** | **0** |
+### BATCH 2 — photometry_core (narrow only; DEBUG level unchanged)
 
-### source_file collision check
+| Site | Narrowed types |
+|------|----------------|
+| `:7214` | `ImportError`, `KeyError`, `TypeError`, `ValueError`, `AttributeError` |
+| `:7867` | `ImportError`, `KeyError`, `TypeError`, `ValueError`, `AttributeError`, `OSError` |
+| `:9632` | `ImportError`, `AttributeError`, `ValueError`, `TypeError` |
+| `:9882` | `ValueError`, `TypeError` |
 
-- **Within per-target join scope** (`all_frames` for one target): **no duplicate `source_file` rows** (sampled; empty dup list).
-- **Cross-target LC reuse** of the same 12 proc filenames across 363 targets is **expected** (not a join-scope collision).
+### BATCH 3 — infolog.py:35
 
-### Do-no-harm (`err` column)
+- Kept broad `except Exception` with `# noqa: BLE001` + comment (logging must not crash pipeline).
+- Added `logging.debug("log_event append failed: …")` for swallowed errors.
 
-1. **Scatter-consistency** (`tmp/validate_g2_f004_scatter_consistency.py`): for all **9756** LC epochs, baseline `err` decomposes with **rebuilt** `ensemble_scatter` and keyed combine math at **6 dp** — **0 mismatches**, **0 missing scatter keys**.
+### config.py:1060 test
 
-2. **Keyed vs legacy positional** on offline full rebuild: **0 mismatches** at 6 dp (all sets).
+`tests/test_config_observer_location_hydrate.py`:
+- `test_observer_location_hydrate_db_failure_keeps_json_coords_and_warns` — patched `sqlite3.Error` → json lat/lon/alt/name preserved + WARNING logged.
+- `test_observer_location_hydrate_db_failure_keeps_zero_coords` — 0.0/0.0 coords stay 0.0 on failure + WARNING.
 
-3. **Full photon rebuild vs 421 baseline**: **36 epochs** differ at 6 dp (24 B + 12 R), all one target `458536313463539840` — offline `read_flux_from_csv` path differs slightly from production (aperture/role scaling); **not** keyed-join behavior. V set: **0** baseline deltas.
+### Validation
 
-**Do-no-harm verdict:** `err` values in draft 421 are **unchanged** by G2-F004 keyed join (scatter map complete; keyed == positional). New column `err_scatter_unmatched` would be **all False** on 421.
+- `ruff check . --select BLE001,E722` → **All checks passed!** (0 unmarked)
+- `pytest -q` → **447 passed, 15 skipped** (was 445/15; +2 new tests)
 
-## Tests
+### Ledger
 
-```
-tests/test_g2_f004_err_scatter_keyed.py — 5 passed
-```
+- `docs/VYVAR_FULL_AUDIT_LEDGER.md` — new **TIER1-UI-DEBT** entry (38 SAFE UI/plotly sites deferred LOW cosmetic).
 
-## Files changed (uncommitted)
+### Deferred (not touched)
 
-- `photometry_core.py`
-- `tests/test_g2_f004_err_scatter_keyed.py`
-- `tmp/validate_g2_f004_draft421.py`, `tmp/validate_g2_f004_scatter_consistency.py` (scratch)
+- 38 SAFE UI/plotly `pass` sites → TIER1-UI-DEBT
+- 299 pipeline/photometry_core defensive passes → existing phased-audit item
 
-## Errors
+## Errors (if any)
 
 None.
 
-Ready for commit + push on Milan approval.
+## Files changed
+
+- `config.py` — observer hydrate narrow + WARNING; `import sqlite3`
+- `ui_quality_dashboard.py` — Gain/RN panel narrow + st.warning + logging.WARNING
+- `app.py` — saturate_adu sites narrow + log_event WARNING; `import sqlite3`
+- `infolog.py` — DEBUG swallow log; noqa comment
+- `photometry_core.py` — 4 narrowed debug handlers
+- `tests/test_config_observer_location_hydrate.py` — new
+- `docs/VYVAR_FULL_AUDIT_LEDGER.md` — TIER1-UI-DEBT
+- `CURSOR_RESULT.md` — this report
+
+No commit hash (awaiting Milan sign-off → approved 2026-06-23 for commit/push).

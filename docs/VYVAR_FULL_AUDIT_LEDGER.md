@@ -1939,8 +1939,34 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 ---
 
-## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003b, broad-except Tier-1 backlog (~25 sites).
+## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003b, Tier-1 deferred backlog (see below).
 
 **Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
 
-**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003b (`photometry_report` hardcoded `_use_bprp_primary`), broad-except Tier-1 backlog (~25 remaining `BLE001` sites outside the closed silent-except pair).
+**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003b (`photometry_report` hardcoded `_use_bprp_primary`), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites — deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback — deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
+
+### Tier-1 broad-except STEP 2 core — FIXED (2026-06-23)
+
+**Status:** FIXED — commit hash recorded below after push.
+
+**Scope (10 sites):** BATCH 1 MEDIUM core — `config.py` observer-location hydrate, `ui_quality_dashboard.py` Gain/RN panel, `app.py` saturate_adu (×2). BATCH 2 — `photometry_core.py` debug-only narrow (4 sites). BATCH 3 — `infolog.py` `log_event` (broad kept + DEBUG swallow log). Test: `tests/test_config_observer_location_hydrate.py`.
+
+**Commit:** *(hash pending — confirm via `git log` after commit)*
+
+### TIER1-OBSLOC-ZERO — observer 0.0/0.0 fallback (MED, deferred)
+
+**Status:** OPEN (deferred; follow-up finding from STEP 2 review — do not fix in core batch).
+
+**Finding:** On DB observer-location hydrate failure, `config.py` falls back to json coords including `0.0/0.0`, which is a valid lat/lon pair but almost certainly a misconfiguration for any real rig. Silent use corrupts airmass / BJD / lunar dilution context.
+
+**Remediation (future):** Consider a louder/hard signal when observer location is `0.0/0.0` after hydrate (WARNING already added for DB failure; separate question is whether zero coords should block or escalate).
+
+### TIER1-UI-DEBT — deferred broad-except cleanup (LOW)
+
+**Status:** OPEN (deferred; not part of Tier-1 STEP 2 core batch).
+
+**Scope:** 38 SAFE UI/plotly optional-panel sites where `except Exception: pass` is cosmetic only — optional UI blocks, Plotly chart helpers, CLI tools. Examples: `ui_variability`, `ui_dao_stars`, `ui_masterstar_qa`, `ui_quality_dashboard` plotly paths, `ui_aperture_photometry` optional UI, `app.py:1584`, `config.py:2312`.
+
+**Why deferred:** `ruff check . --select BLE001,E722` is already 0-unmarked (all broad handlers carry justified `# noqa: BLE001`; gate in `tests/test_ble001_regression.py`). These sites lack operator-visible diagnostics but do not affect photometric output or pipeline correctness.
+
+**Remediation (future):** Narrow to realistic exception types + optional DEBUG logging; no control-flow changes. Separate from the 299 pipeline/`photometry_core` defensive `pass` cluster (existing phased-audit item).

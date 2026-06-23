@@ -8,6 +8,7 @@ import json
 import logging
 import math
 import os
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -1057,8 +1058,13 @@ class AppConfig:
                         self.observer_lat = float(loc.get("lat", 0.0) or 0.0)
                         self.observer_lon = float(loc.get("lon", 0.0) or 0.0)
                         self.observer_alt_m = float(loc.get("alt_m", 0.0) or 0.0)
-            except Exception:  # noqa: BLE001
-                pass
+            except (sqlite3.Error, TypeError, ValueError) as exc:
+                logging.getLogger(__name__).warning(
+                    "Observer location DB hydrate failed (location_id=%s); "
+                    "using config.json observer coordinates: %s",
+                    self.observer_location_id,
+                    exc,
+                )
         try:
             v = float(data.get("export_arcsec_per_px", self.export_arcsec_per_px))
             self.export_arcsec_per_px = v if math.isfinite(v) and v > 0 else 1.3

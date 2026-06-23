@@ -2,6 +2,24 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-06-23 — Tier-1 broad-except STEP 2 core (10 sites)
+
+**Shipped.** Narrowed broad `except Exception` at 10 high-value sites: observer-location DB hydrate
+(`config.py`), Gain/RN quality panel (`ui_quality_dashboard.py`), saturate_adu import paths
+(`app.py` ×2), four `photometry_core` debug-only handlers, `infolog.log_event` (broad kept +
+DEBUG swallow log). Behavior-preserving — fallback values and control flow unchanged; logging and
+operator visibility added. Test: `tests/test_config_observer_location_hydrate.py` (2 cases).
+
+**Deferred (ledger):** TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites, LOW); 299-defensive
+pipeline/`photometry_core` cluster (phased audit); TIER1-OBSLOC-ZERO — 0.0/0.0 observer json
+fallback may silently corrupt airmass/BJD/dilution context (MED, follow-up finding).
+
+**Gates:** `ruff BLE001/E722` 0-unmarked; pytest 447 passed, 15 skipped.
+
+**Commit:** *(hash after push — see ledger)*
+
+---
+
 ## 2026-06-22 — G2-F002b WCS-trust flag + err reconciliation (permanent record)
 
 **Shipped (G2-F002b).** Per-epoch `catalog_match_mode` + `wcs_untrusted` on LC CSV (additive

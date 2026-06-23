@@ -7211,7 +7211,7 @@ def _phase2a_process_one_target(
                         _cx, _cy = float("nan"), float("nan")
                     if math.isfinite(_cx) and math.isfinite(_cy):
                         _star_xy[_chk_cid_pref] = (_cx, _cy)
-    except Exception as _ck_pref_exc:  # noqa: BLE001
+    except (ImportError, KeyError, TypeError, ValueError, AttributeError) as _ck_pref_exc:
         logging.debug("[CHECK-KMAG] preselect skipped for %s: %s", target_cid, _ck_pref_exc)
 
     # Krok 2: Fotometria per snímka (PERF-8: slice shared flux matrix when built)
@@ -7864,7 +7864,7 @@ def _phase2a_process_one_target(
                     source_files=src_files,
                     kmag=_chk_mag,
                 )
-    except Exception as _ck_exc:  # noqa: BLE001
+    except (ImportError, KeyError, TypeError, ValueError, AttributeError, OSError) as _ck_exc:
         logging.debug("[CHECK-KMAG] sidecar skipped for %s: %s", target_cid, _ck_exc)
 
     # Krok 6: Uloženie výstupov
@@ -9629,7 +9629,7 @@ def compute_per_frame_cog_correction(
             tree = cKDTree(pts)
             dist, _ = tree.query(pts, k=2)
             nn[finite_xy] = dist[:, 1]
-    except Exception:  # noqa: BLE001
+    except (ImportError, AttributeError, ValueError, TypeError):
         logging.debug("[COG] cKDTree unavailable — isolation check skipped")
 
     g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
@@ -9879,7 +9879,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                         flux_lg = np.where(np.isfinite(flux_lg), flux_lg, np.nan)
                         out["flux_small"] = flux_sm.astype(np.float64)
                         out["flux_large"] = flux_lg.astype(np.float64)
-                    except Exception as _ma_exc:  # noqa: BLE001
+                    except (ValueError, TypeError) as _ma_exc:
                         logging.debug("[PHOT] multi-aperture flux_small/flux_large skipped: %s", _ma_exc)
 
             # Per-frame curve-of-growth aperture correction (gated; never overwrites dao_flux).
