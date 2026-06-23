@@ -38,6 +38,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 23 | G7-F008 UI helper silent except | **FIXED:** archive-path probe + UT tick helper log skip reason | `473f089` |
 | 24 | G2-F002b per-frame WCS trust flag | **FIXED:** `catalog_match_mode` + `wcs_untrusted` LC cols; `n_wcs_untrusted` soft-YELLOW trust; NONDET modes split; do-no-harm vs draft 421 PASS | `977920f` |
 | 25 | G7-F003 `phase01_use_bprp_primary` non-persistable | **FIXED:** `AppConfig` field + `config.json` + PARAMS; `ui_aperture_photometry` reads `cfg.phase01_use_bprp_primary` | `31db3af` |
+| 26 | G7-F003b PDF report hardcoded BP-RP primary | **FIXED:** `photometry_report` reads `cfg.phase01_use_bprp_primary` (default True unchanged) | `795faef` |
 
 ---
 
@@ -1850,7 +1851,8 @@ Method: AST inventory + lens scans (L1–L11) on 14 modules (144 functions), Pha
 | G7-F001 | **RESOLVED** | L7 | ~~`ui_select_stars.py`~~ **removed** (`refactor` dead unwired page) | ~~`cfg.phase01_comparison_max_bv_diff` AttributeError~~ **RESOLVED:** unwired `ui_select_stars.py` deleted; phantom field no longer referenced repo-wide. | Every `cfg.*` in UI must be a declared field or guarded accessor. |
 | G7-F002 | **RESOLVED** | L8/L7 | ~~`ui_select_stars.py:531`~~ **removed** | ~~Stale `max_bv_diff=` kwarg to `run_phase0_and_phase1`~~ **RESOLVED:** deleted with unwired Select Stars page. | UI must call core with the live signature; dead kwargs hide broken comp-color paths. |
 | G7-F003 | **FIXED** | L7 | `config.py`, `ui_aperture_photometry.py:1661` | ~~`phase01_use_bprp_primary` via `getattr` only~~ **FIXED:** real `AppConfig` bool (default True), `config.json`, PARAMS intentionally-hidden; LC viewer reads `cfg.phase01_use_bprp_primary`. | getattr defaults bypass config registry and mislead operators. |
-| G7-F003b | **MED** | L7 | `photometry_report.py` (~310–313) | **BACKLOG** — `self._use_bprp_primary = True` hardcoded; PDF report can disagree with Phase 2A LC viewer when `phase01_use_bprp_primary=False`. Should read `cfg.phase01_use_bprp_primary`. **Deferred.** | Report colour-mode must follow the same config knob as Phase 2A display. |
+| G7-F003b | **FIXED** | L7 | `photometry_report.py` (~310) | ~~`self._use_bprp_primary = True` hardcoded~~ **FIXED:** reads `cfg.phase01_use_bprp_primary` via existing `self._cfg = AppConfig()`; default True preserves PDF wording. | Report colour-mode must follow the same config knob as Phase 2A display. |
+| G7-F003c | **LOW-MED** | L7 | `photometry_report.py` (`AppConfig()` at PDF-build) | **BACKLOG (deferred)** — builder re-loads `AppConfig()` from `config.json` at PDF-build time rather than receiving the cfg instance Phase 2A used. If `config.json` is edited between photometry run and PDF generation, the report can describe settings (bp_rp primary, plate scale, GS11, aperture factors, observer location) that differ from what the run actually used, with no detection. Proper fix: thread the run's cfg (or persist a per-draft config snapshot) into the report. Affects all cfg-derived report fields, not just `phase01_use_bprp_primary`. | Report cfg must match the run that produced the photometry artifacts. |
 | G7-F004 | **MED** | L3 | `app.py` (15+ `except: pass` lines), `ui_aperture_photometry.py`, `ui_quality_dashboard.py` | Broad **`except: pass`** / silent exception branches in action handlers (archive hash, PDF/report triggers, QC paths) — failures can present as **button did nothing**. | UI actions must surface errors to Infolog / `st.error`. |
 | G7-F005 | **MED** | L4 | `ui_settings.py:645-700` | Frame-quality / align-residual gates use **`getattr(..., False)`** defaults — **fail-open OFF by design** (byte-identical when unset); documented in PARAMS Round-2 B.2. Not a bug; monitor that toggles stay wired to `cfg` save path (`973-976`). | Safety gates default OFF only when explicitly documented. |
 | G7-F006 | **MED** | L7 | `VYVAR_PARAMS.md`, Group 6 parity | **34 config-only (`exposed \| no`)** keys: **intentionally hidden** for blind-cluster tuning, neighbor-sub PSF, `dao_qc_in_calibrate`, observer export block (session `config.json` values). **Not accidental unexposed** for most; observer site uses DB location picker (`observer_location_id` in Settings) while lat/lon/name live in json without dedicated widgets. | Hidden keys need intentional-hidden classification vs drift. |
@@ -1934,16 +1936,24 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 | 4 | Science / variability / QA | 166 | G4-F001 trust partially **FIXED** |
 | 5 | Reporting / export | 174 | G5-F003–F011, F004 **FIXED** (`6774f83`…`efbb4de`); forced-aperture **RESOLVED** (`7f0dc86`); LOW dead helpers remain |
 | 6 | Config / orchestration / utils | 110 | G6-F002 **FIXED** (`379e78f`); G6-F001 TODO-MULTISET; G6-F003/F004 parity |
-| 7 | UI shell | ~~144~~ **131** | G7-F001/F002 **RESOLVED** (`3e1cad7`); G7-F003 **FIXED** (`31db3af`); G7-F008 **FIXED**; open G7-F003b |
+| 7 | UI shell | ~~144~~ **131** | G7-F001/F002 **RESOLVED** (`3e1cad7`); G7-F003 **FIXED** (`31db3af`); G7-F003b **FIXED** (`795faef`); G7-F008 **FIXED**; open G7-F003c |
 | **Total** | **7 groups** | **1728** | Fix-pass **DONE** (HIGH + numeric MED) — see queue below |
 
 ---
 
-## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003b, Tier-1 deferred backlog (see below).
+## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003c, Tier-1 deferred backlog (see below).
 
-**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`), Tier-1 broad-except STEP 2 core (`f950e3f`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
+**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G7-F003b (`795faef`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`), Tier-1 broad-except STEP 2 core (`f950e3f`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
 
-**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003b (`photometry_report` hardcoded `_use_bprp_primary`), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites — deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback — deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
+**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003c (report re-loads `AppConfig()` at PDF-build — cfg drift vs run), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites — deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback — deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
+
+### G7-F003c — PDF report cfg reload vs run cfg (LOW-MED, deferred)
+
+**Status:** OPEN (deferred; follow-up from G7-F003b review — do not fix in G7-F003b batch).
+
+**Finding:** `photometry_report` builder re-loads `AppConfig()` from `config.json` at PDF-build time rather than receiving the cfg instance Phase 2A used. If `config.json` is edited between the photometry run and PDF generation, the report can describe settings (bp_rp primary, plate scale, GS11, aperture factors, observer location) that differ from what the run actually used, with no detection.
+
+**Remediation (future):** Thread the run's cfg (or persist a per-draft config snapshot) into the report instead of a fresh `AppConfig()` load. Affects all cfg-derived report fields, not just `phase01_use_bprp_primary`.
 
 ### Tier-1 broad-except STEP 2 core — FIXED (2026-06-23)
 

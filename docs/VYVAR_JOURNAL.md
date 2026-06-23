@@ -2,6 +2,19 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-06-23 — G7-F003b PDF report reads phase01_use_bprp_primary
+
+**Shipped.** `photometry_report` reads `cfg.phase01_use_bprp_primary` via existing `self._cfg`
+(instead of hardcoded `True`). Default True preserves all existing PDF wording; False switches to
+legacy B-V layout/footnotes. Test: `tests/test_g7_f003b_report_bprp_primary.py` (4 cases).
+
+**Deferred (ledger):** G7-F003c — report re-loads `AppConfig()` at PDF-build; cfg edited after
+Phase 2A can drift from run settings (LOW-MED).
+
+**Commit:** `795faef`
+
+---
+
 ## 2026-06-23 — Tier-1 broad-except STEP 2 core (10 sites)
 
 **Shipped.** Narrowed broad `except Exception` at 10 high-value sites: observer-location DB hydrate
