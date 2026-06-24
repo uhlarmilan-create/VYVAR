@@ -2,6 +2,34 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-06-24 — Photometric band classifier (BAND-DETECT, additive)
+
+**Shipped (additive, not wired).** New module `band_classify.py`:
+`classify_photometric_band(obs_group, fits_filter=, aavso_code=)` returns
+`{STANDARD_FILTER, LUMINANCE, CLEAR_UNFILTERED, UNKNOWN}`. Single source of truth
+consolidating `_is_nofilter_obs_group`, `_is_broadband_photometric_filter`, and
+`_AAVSO_FILTER_BUILTIN` synonym mapping (`FILTER_SYNONYM_TO_CANONICAL`). Helpers:
+`effective_band_for_extinction` (UNKNOWN fail-safe -> CLEAR for k''), `color_term_auto_from_band`.
+
+**Policy decisions recorded (not yet in production CT gate):**
+- **CV/CR -> CLEAR_UNFILTERED** (physically clear-transformed; legacy broadband list wrongly enabled CT).
+- **L -> LUMINANCE** (own class; CT off like legacy, distinct from clear for future k'' policy).
+
+**Do-no-harm vs legacy `apply_color_term=auto`:** all real obs_groups AGREE; intentional FLIPs only
+CV/CR obs_groups and FITS-rescue when obs_group token unknown (e.g. Johnson V header).
+
+**Rewiring deferred** to band-aware k'' work (production CT gate + CV/CR flip activated together).
+
+**Open data gap:** Newton/Brno literal FITS FILTER strings unconfirmed (not in local Archive).
+Capture: `FILTER` / `FILT` / `FILTER1` / `INSTFILT` on Chi_and_H B/V/R/L and Brno `r_60_4` frames;
+`SELECT DISTINCT FILTER, ID_EQUIPMENTS FROM FITS_HEADER_CACHE` on dev DB.
+
+**Gates:** `pytest tests/test_band_classify.py` — 52 passed.
+
+**Commit:** `fe9b375`
+
+---
+
 ## 2026-06-23 — Exoplanet hosts as active targets (EXO-AS-TARGET)
 
 **Shipped.** Exoplanet hosts with a DAO+position match in `masterstars_full_match.csv` now promote

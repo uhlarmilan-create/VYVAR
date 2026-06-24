@@ -291,3 +291,19 @@ grandfathered; 8 `photometry_core` narrowings; 4 bare excepts fixed (sandbox).
 | Photometry SHA (`draft_000387`) | core `203254fd...` / full `95a5515a...` **unchanged** |
 | Trust baseline (`comp_trust_min_comps=5`) | **1382 YELLOW / 106 RED** (1488 rows) |
 | Specs filed | trust hardening, check-star selection, comp-floor policy |
+
+## BAND-DETECT — photometric band classifier (2026-06-24)
+
+| Item | Status | Notes |
+|---|---|---|
+| `band_classify.py` + `tests/test_band_classify.py` | **DONE (additive)** | commit `fe9b375`; 52 tests pass |
+| Production CT-gate rewiring | **PENDING** | activate with band-aware k''; includes CV/CR behavioral flip |
+| OPEN data gap | **capture needed** | Newton/Brno literal FITS FILTER unconfirmed (not in local Archive) |
+
+**NOTE:** Classifier consolidates `_is_nofilter_obs_group` / `_is_broadband_photometric_filter` /
+`_AAVSO_FILTER_BUILTIN`. CV/CR -> CLEAR_UNFILTERED; L -> LUMINANCE; UNKNOWN fail-safe -> clear for k''.
+Do-no-harm: real obs_groups agree with legacy CT auto; FLIPs only CV/CR + Johnson-V FITS rescue.
+
+**Capture list (dev PC / rigs):** FITS headers `FILTER`, `FILT`, `FILTER1`, `INSTFILT` on Newton
+Chi_and_H B/V/R/L frames and Brno `r_60_4`; SQL
+`SELECT DISTINCT FILTER, ID_EQUIPMENTS FROM FITS_HEADER_CACHE`.
