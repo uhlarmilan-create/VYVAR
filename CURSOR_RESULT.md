@@ -1,33 +1,27 @@
-CURSOR RESULT — 2026-06-25 (F-HOWELL-3 Stage C)
+CURSOR RESULT — 2026-06-25 (F-BJD-1 Stage D)
 
 What I did
-Implemented `sky_adu_per_px_annulus` column + err call-site preference with legacy fallback.
-Verified on real draft_424 via production `run_full_photometry_pipeline`. Updated docs (Stage B
-number corrections + Stage C FIXED).
+Added `time_base` provenance column to per-target LC (`BJD_TDB` vs `JD_FALLBACK`) via
+`_recompute_bjd_hjd_with_status`; kept 2-tuple wrapper for existing callers. Updated docs;
+closed 2026-06-25 citation/error-model audit.
 
 ## Output / findings
 
-### C1 implementation
-- `enhance_catalog_dataframe_aperture_bpm`: writes `sky_adu_per_px_annulus` (both branches)
-- `read_flux_from_csv` / `_sky_pp_for_photometric_error`: prefers annulus column
-- `proc_frame_store.py`, `gaia_catalog_id.py`, Phase-2A column lists updated
-- `tests/test_photometric_error_sky_column.py` (4 tests)
+### Implementation
+- `_recompute_bjd_hjd_with_status` — cause-reported status on three fallback paths
+- `_recompute_bjd_hjd_per_target` — thin 2-tuple wrapper (sandbox/tests unchanged)
+- Production Phase 2A writes constant `time_base` column via `save_lightcurve_csv`
+- `compare_photometry_science_meaningful`: `time_base` in QC exclusion set
+- `tests/test_time_base_flag.py` (6 tests)
 
-### C2 verification (draft_424, production path)
-- **C2a:** 178/178 LCs `science_ok` true (mag/flux/delta_mag unchanged; err deltas only)
-- **C2b:** sky-dominated faint targets: err ratio detection/annulus **1.12–1.14** (~12–14%)
-- **C2c:** `photometry_mode=epsf` without ePSF → aperture OFF; no annulus column (rare edge)
-- Report: `tmp/phaseHowell3/stage_c_verify.json`
-
-### C3 docs
-- Corrected Stage B addendum numbers (1.30 ratio, 1.5% bright-star inflation)
-- STATE / DECISIONS / JOURNAL / ROADMAP / AUDIT_LEDGER updated
+### Verification
+- `pytest tests/` green (535 passed)
+- Numeric columns unchanged; additive `time_base` only
 
 ## Errors (if any)
 None.
 
 ## Files changed
-- `photometry_core.py`, `proc_frame_store.py`, `gaia_catalog_id.py`
-- `tests/test_photometric_error_sky_column.py`
+- `photometry_core.py`, `method_lc_output.py`, `tests/photometry_sha.py`
+- `tests/test_time_base_flag.py`
 - `docs/VYVAR_MATH_PHYS_AUDIT.md`, `VYVAR_STATE.md`, `VYVAR_DECISIONS.md`, `VYVAR_JOURNAL.md`, `VYVAR_ROADMAP.md`, `VYVAR_AUDIT_LEDGER.md`
-- Commit message: `fix(err): annulus-sky column for Howell sky term; deglobalize noise_floor_adu`

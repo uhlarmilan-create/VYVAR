@@ -304,6 +304,7 @@ grandfathered; 8 `photometry_core` narrowings; 4 bare excepts fixed (sandbox).
 | F-RIELLO-1 B-V/Riello citation | **FIXED (A1)** | — | report + emitter; BP-RP raw Gaia only |
 | F-HOWELL-1 / F-CITE-HONEYCUTT | **FIXED (A2/A3)** | — | Howell ADU comment; Honeycutt in CORE |
 | F-HOWELL-3 err sky column | **FIXED (Stage C)** | — | `sky_adu_per_px_annulus`; draft_424 verified |
+| F-BJD-1 time_base provenance | **FIXED (Stage D)** | — | LC column `BJD_TDB`/`JD_FALLBACK`; audit closed |
 | Band classifier (additive) | **DONE** | `fe9b375` | see BAND-DETECT below |
 | Production CT-gate + k'' rewiring | **PENDING** | — | blocked on filtered draft + FITS FILTER capture |
 

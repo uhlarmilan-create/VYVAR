@@ -54,6 +54,7 @@ PHOTOMETRY_QC_COLS_LC = frozenset(
         "lunar_phase_pct",
         "lunar_separation_deg",
         "lunar_risk",
+        "time_base",
     }
 )
 PHOTOMETRY_TIME_COLS = frozenset({"bjd", "hjd", "jd", "mjd", "time", "bjd_tdb", "bjd_bary"})

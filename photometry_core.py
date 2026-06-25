@@ -53,6 +53,11 @@ _MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
 # Explicit annulus sky (ADU/px) for Howell err; ``noise_floor_adu`` remains detection-floor legacy.
 SKY_ADU_PER_PX_ANNULUS_COL = "sky_adu_per_px_annulus"
 
+# Per-target LC time provenance (F-BJD-1): labels BJD recompute path, does not alter time values.
+TIME_BASE_COL = "time_base"
+TIME_BASE_BJD_TDB = "BJD_TDB"
+TIME_BASE_JD_FALLBACK = "JD_FALLBACK"
+
 
 def _safe_polyfit(
     x: np.ndarray,
@@ -3928,8 +3933,13 @@ def save_lightcurve_csv(
     err_scatter_unmatched: np.ndarray | None = None,
     catalog_match_mode: list[str] | np.ndarray | None = None,
     wcs_untrusted: np.ndarray | None = None,
+    time_base: str = TIME_BASE_BJD_TDB,
 ) -> None:
-    """Uloží lightcurve CSV."""
+    """Uloží lightcurve CSV.
+
+    LC schema note: ``time_base`` labels the BJD/HJD recompute path (``BJD_TDB`` vs
+    ``JD_FALLBACK``); it does not alter ``bjd``/``hjd``/``jd`` values.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     n = int(len(bjd))
     if mag_calib_ct is None:
@@ -3990,6 +4000,7 @@ def save_lightcurve_csv(
             "bjd": bjd,
             "hjd": hjd,
             "jd": jd,
+            "time_base": [str(time_base or TIME_BASE_BJD_TDB)] * n,
             "airmass": airmass,
             "is_flipped": (is_flipped if is_flipped is not None else np.full_like(bjd, False, dtype=bool)),
             "alignment_failed": (
@@ -6945,6 +6956,83 @@ def _phase2a_prepare_shared_state(
     )
 
 
+def _recompute_bjd_hjd_with_status(
+    jd_array: np.ndarray,
+    ra_deg: float,
+    dec_deg: float,
+    cfg: AppConfig,
+    site: tuple[float | None, float | None, float | None] | None = None,
+) -> tuple[np.ndarray, np.ndarray, str]:
+    """Recompute per-target BJD(TDB) and HJD from frame JD values.
+
+    Returns ``(bjd, hjd, time_base)`` where ``time_base`` is ``BJD_TDB`` on the astropy
+    success path or ``JD_FALLBACK`` when raw JD is copied for both BJD and HJD.
+
+    See ``_recompute_bjd_hjd_per_target`` for full docstring / references.
+    """
+    jd_arr = np.asarray(jd_array, dtype=float)
+    bjd_out = np.full_like(jd_arr, float("nan"), dtype=float)
+    hjd_out = np.full_like(jd_arr, float("nan"), dtype=float)
+
+    if site is not None and site[0] is not None and site[1] is not None:
+        lat = float(site[0])
+        lon = float(site[1])
+        alt = float(site[2]) if site[2] is not None else 0.0
+    else:
+        lat = float(cfg.observer_lat)
+        lon = float(cfg.observer_lon)
+        alt = float(cfg.observer_alt_m)
+
+    if not math.isfinite(ra_deg) or not math.isfinite(dec_deg):
+        LOGGER.warning(
+            "BJD-PERTARGET: invalid coords ra=%s dec=%s — using frame JD fallback",
+            ra_deg,
+            dec_deg,
+        )
+        return jd_arr.copy(), jd_arr.copy(), TIME_BASE_JD_FALLBACK
+
+    if lat == 0.0 and lon == 0.0:
+        LOGGER.warning("BJD-PERTARGET: observer location not set — using frame JD fallback")
+        return jd_arr.copy(), jd_arr.copy(), TIME_BASE_JD_FALLBACK
+
+    try:
+        import astropy.units as u
+        from astropy.coordinates import EarthLocation, SkyCoord
+        from astropy.time import Time
+
+        location = EarthLocation(
+            lat=lat * u.deg,
+            lon=lon * u.deg,
+            height=alt * u.m,
+        )
+        target = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
+        finite = np.isfinite(jd_arr)
+        if not np.any(finite):
+            return bjd_out, hjd_out, TIME_BASE_BJD_TDB
+
+        t = Time(jd_arr[finite], format="jd", scale="utc", location=location)
+        ltt_bary = t.light_travel_time(target, "barycentric")
+        bjd_finite = (t.tdb + ltt_bary).jd
+        ltt_helio = t.light_travel_time(target, "heliocentric")
+        hjd_finite = (t + ltt_helio).jd
+
+        bjd_out[finite] = np.asarray(bjd_finite, dtype=float)
+        hjd_out[finite] = np.asarray(hjd_finite, dtype=float)
+        n_ok = int(np.sum(np.isfinite(bjd_out[finite])))
+        LOGGER.debug(
+            "BJD-PERTARGET: %d/%d frames recomputed (batch) for ra=%.4f dec=%.4f",
+            n_ok,
+            int(finite.sum()),
+            ra_deg,
+            dec_deg,
+        )
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("BJD-PERTARGET: batch recompute failed (%s) — frame JD fallback", exc)
+        return jd_arr.copy(), jd_arr.copy(), TIME_BASE_JD_FALLBACK
+
+    return bjd_out, hjd_out, TIME_BASE_BJD_TDB
+
+
 def _recompute_bjd_hjd_per_target(
     jd_array: np.ndarray,
     ra_deg: float,
@@ -6968,67 +7056,8 @@ def _recompute_bjd_hjd_per_target(
         Eastman, Siverd & Gaudi (2010) PASP 122, 935 — BJD standards
         time_utils.compute_hjd_bjd() for scalar equivalence
     """
-    jd_arr = np.asarray(jd_array, dtype=float)
-    bjd_out = np.full_like(jd_arr, float("nan"), dtype=float)
-    hjd_out = np.full_like(jd_arr, float("nan"), dtype=float)
-
-    if site is not None and site[0] is not None and site[1] is not None:
-        lat = float(site[0])
-        lon = float(site[1])
-        alt = float(site[2]) if site[2] is not None else 0.0
-    else:
-        lat = float(cfg.observer_lat)
-        lon = float(cfg.observer_lon)
-        alt = float(cfg.observer_alt_m)
-
-    if not math.isfinite(ra_deg) or not math.isfinite(dec_deg):
-        LOGGER.warning(
-            "BJD-PERTARGET: invalid coords ra=%s dec=%s — using frame JD fallback",
-            ra_deg,
-            dec_deg,
-        )
-        return jd_arr.copy(), jd_arr.copy()
-
-    if lat == 0.0 and lon == 0.0:
-        LOGGER.warning("BJD-PERTARGET: observer location not set — using frame JD fallback")
-        return jd_arr.copy(), jd_arr.copy()
-
-    try:
-        import astropy.units as u
-        from astropy.coordinates import EarthLocation, SkyCoord
-        from astropy.time import Time
-
-        location = EarthLocation(
-            lat=lat * u.deg,
-            lon=lon * u.deg,
-            height=alt * u.m,
-        )
-        target = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
-        finite = np.isfinite(jd_arr)
-        if not np.any(finite):
-            return bjd_out, hjd_out
-
-        t = Time(jd_arr[finite], format="jd", scale="utc", location=location)
-        ltt_bary = t.light_travel_time(target, "barycentric")
-        bjd_finite = (t.tdb + ltt_bary).jd
-        ltt_helio = t.light_travel_time(target, "heliocentric")
-        hjd_finite = (t + ltt_helio).jd
-
-        bjd_out[finite] = np.asarray(bjd_finite, dtype=float)
-        hjd_out[finite] = np.asarray(hjd_finite, dtype=float)
-        n_ok = int(np.sum(np.isfinite(bjd_out[finite])))
-        LOGGER.debug(
-            "BJD-PERTARGET: %d/%d frames recomputed (batch) for ra=%.4f dec=%.4f",
-            n_ok,
-            int(finite.sum()),
-            ra_deg,
-            dec_deg,
-        )
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("BJD-PERTARGET: batch recompute failed (%s) — frame JD fallback", exc)
-        return jd_arr.copy(), jd_arr.copy()
-
-    return bjd_out, hjd_out
+    bjd, hjd, _ = _recompute_bjd_hjd_with_status(jd_array, ra_deg, dec_deg, cfg, site=site)
+    return bjd, hjd
 
 
 def _phase2a_process_one_target(
@@ -7732,7 +7761,7 @@ def _phase2a_process_one_target(
     _target_dec = float(
         pd.to_numeric(target_row.get("dec_deg", target_row.get("dec", float("nan"))), errors="coerce")
     )
-    bjd, hjd = _recompute_bjd_hjd_per_target(
+    bjd, hjd, time_base = _recompute_bjd_hjd_with_status(
         jd,
         _target_ra,
         _target_dec,
@@ -7932,6 +7961,7 @@ def _phase2a_process_one_target(
         err_scatter_unmatched=err_scatter_unmatched_arr,
         catalog_match_mode=catalog_match_mode_list,
         wcs_untrusted=wcs_untrusted_arr,
+        time_base=time_base,
     )
     if _have_psf_cols:
         try:
@@ -7975,6 +8005,7 @@ def _phase2a_process_one_target(
                     lunar_phase_pct=_lc_lunar_phase,
                     lunar_separation_deg=_lc_lunar_sep,
                     lunar_risk=_lc_lunar_risk,
+                    time_base=time_base,
                 )
                 for _alt_m in _alt_methods:
                     try:

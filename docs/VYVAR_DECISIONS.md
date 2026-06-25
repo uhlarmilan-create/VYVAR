@@ -21,6 +21,13 @@ sky-dominated faint targets show ~12–14% err inflation if detection floor were
 annulus. Edge case (`photometry_mode=epsf` without ePSF): aperture enhance skipped — rare;
 structural insurance via explicit column + fallback.
 
+**Time provenance (F-BJD-1, Stage D FIXED 2026-06-25).** `_recompute_bjd_hjd_with_status` returns
+`(bjd, hjd, time_base)` where `time_base` is `BJD_TDB` on astropy success or `JD_FALLBACK` on
+the three documented fallback paths (invalid coords; observer 0/0; astropy batch failure). The
+2-tuple wrapper preserves sandbox/test callers. Production Phase 2A writes constant per-frame
+`time_base` into `lightcurve_*.csv`; numeric time columns unchanged. `compare_photometry_science_meaningful`
+excludes `time_base` from science diffs.
+
 ---
 
 **Decision.** VYVAR measures variable targets only when they have a **masterstar (DAO+Gaia) cross-match**.

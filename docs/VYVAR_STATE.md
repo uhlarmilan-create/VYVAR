@@ -1,7 +1,11 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-25** — F-HOWELL-3 Stage C: `sky_adu_per_px_annulus` column shipped; draft_424
-science byte-identical.
+Last updated: **2026-06-25** — F-BJD-1 Stage D: `time_base` provenance on per-target LC (`BJD_TDB` /
+`JD_FALLBACK`); numeric columns unchanged.
+
+**Done 2026-06-25 (F-BJD-1 Stage D):** per-target LC column `time_base` labels BJD recompute path;
+`_recompute_bjd_hjd_with_status` reports cause (`BJD_TDB` vs `JD_FALLBACK`). Purely additive —
+`bjd`/`hjd`/`jd` byte-identical. Closes the 2026-06-25 citation/error-model audit.
 
 **Done 2026-06-25 (F-HOWELL-3 Stage C):** explicit annulus-sky column for Howell err; `_photometric_error`
 reads `sky_adu_per_px_annulus` with legacy `noise_floor_adu` fallback. Verified on real draft_424

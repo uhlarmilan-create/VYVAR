@@ -49,6 +49,7 @@ class MethodLcWriteContext:
     lunar_phase_pct: float
     lunar_separation_deg: float
     lunar_risk: str
+    time_base: str = "BJD_TDB"
 
 
 def _build_flux(
@@ -318,6 +319,7 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
         lunar_risk=str(ctx.lunar_risk),
         dilution_factor=float(_dilution_result.get("dilution_factor", 1.0)),
         method=method,
+        time_base=str(ctx.time_base),
     )
     LOGGER.info("[METHOD-LC] %s %s → %s", method, ctx.target_cid, out_path.name)
     return out_path

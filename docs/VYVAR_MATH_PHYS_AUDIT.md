@@ -102,9 +102,7 @@ Stages A/B; Stage C gated on Stage B review.
 
 **Bottom line:** production LC kernels (`delta_mag`, flux-sum ensemble, Broeg-scoped weights,
 Eastman BJD, Sokolovsky QA) are correctly implemented and scoped. No defect touches canonical
-`delta_mag` today. Actionable items: F-HOWELL-3 (overloaded `noise_floor_adu`; edge-case err
-sky inflation -- revised framing), F-RIELLO-1 **RESOLVED (a)**, F-HOWELL-1, F-CITE-HONEYCUTT,
-F-BJD-1 (deferred).
+`delta_mag` today. **2026-06-25 audit closed** — Stages A, C, D shipped; nothing parked from it.
 
 ### Findings disposition
 
@@ -114,7 +112,7 @@ F-BJD-1 (deferred).
 | F-HOWELL-1 | LOW | **FIXED (A2)** | Howell err units comment -> ADU |
 | F-CITE-HONEYCUTT | LOW | **FIXED (A3)** | `honeycutt1992` in CORE; not duplicated under stability detrend |
 | F-HOWELL-3 | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus` column; err reads it; draft_424 byte-identical science |
-| F-BJD-1 | LOW | OPEN | `time_base` provenance flag (Stage D) |
+| F-BJD-1 | LOW | **FIXED (Stage D)** | `time_base` column on LC (`BJD_TDB` / `JD_FALLBACK`); numeric times unchanged |
 
 ### F-HOWELL-3 (revised)
 
@@ -136,6 +134,12 @@ bright synthetic star (not ~5%+). Sky-dominated regime was **not measured** in S
 - **C2c:** `photometry_mode=epsf` without ePSF model → `_run_aperture=False` (rare; structural
   insurance). New column absent when enhance skipped; err falls back to `noise_floor_adu`.
 - Fix: explicit `sky_adu_per_px_annulus` written by aperture export; `_photometric_error` prefers it.
+
+### F-BJD-1 (Stage D, 2026-06-25)
+
+- `_recompute_bjd_hjd_with_status` reports cause: `BJD_TDB` vs `JD_FALLBACK` on three fallback paths.
+- Per-target LC column `time_base` (constant per target); `bjd`/`hjd`/`jd` unchanged.
+- 2-tuple wrapper preserves existing callers; `compare_photometry_science_meaningful` excludes `time_base`.
 
 ---
 

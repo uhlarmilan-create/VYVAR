@@ -19,6 +19,10 @@ edge err +**1.5%** on bright star only (mechanism confirmed, magnitude not).
 `run_full_photometry_pipeline`: 178/178 LCs science-identical; C2b faint sky-dominated
 `err(det)/err(ann)` **1.12–1.14**. Harness: `tmp/phaseHowell3/stage_c_verify.json`.
 
+**Stage D (shipped):** `time_base` LC column via `_recompute_bjd_hjd_with_status`
+(`BJD_TDB` / `JD_FALLBACK`); numeric `bjd`/`hjd`/`jd` unchanged. Closes F-BJD-1 and the
+2026-06-25 citation/error-model audit.
+
 **Docs:** addendum in `VYVAR_MATH_PHYS_AUDIT.md`.
 
 ---
