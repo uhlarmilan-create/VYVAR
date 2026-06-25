@@ -322,6 +322,15 @@ Do **not** expand these into the PDF report as a period product (this descopes T
 Citations `lomb1976` / `scargle1982` / `vanderplas2018` **stay** -- they back the `tess_verify`
 TESS cross-check.
 
+## Product scope: single-night is the canonical publishable unit (2026-06-25)
+
+**Decision (Milan).** The unit VYVAR produces, validates, and submits is a **single-night
+light curve**. This is the regime cross-validated against SIPS/AIJ (V0612, wide rig) and the
+unit a user processes per session. **Multi-night global matching / inter-night zeropoint
+(TODO-GS8) is descoped from HIGH to FUTURE / nice-to-have** — built only if a long-baseline
+science case requires it. Consistent with the TODO-GS9 (downstream period analysis) scope
+boundary: stitching and long-baseline analysis live outside VYVAR's core submission path.
+
 ---
 
 ## Photometry method & scale

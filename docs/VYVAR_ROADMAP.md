@@ -248,8 +248,10 @@ next calibration lever.
   Carl-Zeiss 200 mm + QHY294MM ≈ 9.77″/px vs Newton 300/1200 + C3-26000 ≈ 0.65″/px).
   Underpins per-set plate scale, aperture, and crowding gating; blocks clean multi-rig
   production.
-- **TODO-GS8 — Multi-Night Global Matching + global ZP solver (Phase 3).** Cross-night comp
-  matching + inter-night zeropoint → one long-baseline LC with no vertical jumps.
+- **TODO-GS8 — Multi-Night Global Matching + global ZP solver — FUTURE / nice-to-have
+  (descoped from HIGH 2026-06-25).** Cross-night comp matching + inter-night zeropoint.
+  NOT a priority: the canonical publishable unit is a single night (see DECISIONS,
+  product-scope boundary). Build only if a long-baseline science case demands it.
   Dep: AAVSO validation (GS6b ✓). ~2–4 days.
 - **APCORR-MIXEDFRAME — latent (COG default OFF); blocks enabling COG in production.** With
   `cog_aperture_correction_enabled=True`, `cog_ok=False` frames keep *uncorrected* flux
