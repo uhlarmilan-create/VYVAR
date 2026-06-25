@@ -1,10 +1,26 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-22** — **Forced-aperture / catalog_only removed; DAO+Gaia photometry only.**
-Variable targets measured **only on direct DAO `catalog_id` hit** (miss → nondetection/NaN; no XY
-fallback). Unmatched VSX excluded in Fáza 0. Validated do-no-harm vs draft 419: `mag_inst` 360/360 B;
-`mag_calib` 357/360 B (one target +~30 mmag uniform zeropoint from comp_qa excluding intermittent
-forced-only comp — accepted). See DECISIONS.
+Last updated: **2026-06-25** — Session close: audit follow-ups, exoplanet integration, additive band
+classifier; **band-aware k'' PARKED** (ROADMAP).
+
+**Done this session (commits):** G7-F003b — PDF report reads `phase01_use_bprp_primary` (`795faef`);
+OBSLOC/EQUIP-BINNING chain — DB bin1 gain/RN scaled by FITS binning, summed bin²/RN×bin (`b19cd7e`;
+deliberate RN 1.3→2.6 on bin2, ~3.9 mmag photon term); exoplanet local DB builder + informational
+cross-match (`c169675`); exoplanet-as-target promotion with string-safe Gaia id (`1616b18`); photometric
+band classifier additive, **not wired to production CT gating** (`fe9b375`).
+
+**In-flight / PARKED — band-aware k'' (second-order extinction):** comp-select **grow-redesign REJECTED**
+on population validation (~**45% regressions**; sandbox-only, **nothing ported**). Physically-correct
+direction: **airmass = CORRECTION not selection**, derived from constant comps (signal-safe), band-aware
+(k'' reliable for **STANDARD_FILTER**; **NOT** for CLEAR/unfiltered where tight colour-match is primary).
+Band classifier is the first piece — shipped additive, **not yet wired** to production CT gating. The
+CV/CR→clear flip + CT rewiring are **PENDING** — activate **together with k''**. Two **data blockers**
+(Milan-side inputs, not code): filtered V/B/R draft for validation; Newton/Brno literal FITS FILTER strings
+— see ROADMAP.
+
+Prior: **2026-06-22** — Forced-aperture / catalog_only removed; DAO+Gaia photometry only. Variable
+targets measured **only on direct DAO `catalog_id` hit** (miss → nondetection/NaN; no XY fallback).
+Unmatched VSX excluded in Fáza 0. Validated do-no-harm vs draft 419. See DECISIONS.
 
 Prior: **2026-06-19** — Stage B held pending validation (forced-aperture removal draft).
 
@@ -310,15 +326,21 @@ Astier et al. 2013, Lacroix et al. 2025, Guy et al. 2010, Stetson 1987, Mighell 
 
 ## Top of mind
 
-**Simple differential photometry is PRODUCTION** and cross-validated vs SIPS on V0612 (draft_409):
-clean eclipse + shared single-frame anomaly at ~JD 2461200.385 (matches SIPS -> frame artifact).
+**Next when resuming:** band-aware k'' (second-order extinction) — classifier shipped (`fe9b375`), CT
+rewiring + CV/CR flip **blocked on Milan data** (filtered draft; Newton/Brno FITS FILTER strings).
+Comp-select grow-redesign **do not revisit** — rejected (~45% regressions; sandbox only).
 
-**Trust/consistency cleanup landed (2026-06-16):** comp stability on per-frame ensemble residual;
-measured aperture on card; `lc_rms (OOE)` for variables; trust GREEN on draft_409.
+**Simple differential photometry is PRODUCTION** (SIPS/AIJ cross-validated). Canonical column:
+`delta_mag` flux-sum; reporting `mag_calib` via `apply_reporting_postprocess`. Broeg IVW **PARKED**
+until sigma budget validates (`docs/VYVAR_SIGMA_BUDGET_SPEC.md`).
 
-**Canonical column:** `delta_mag` flux-sum (AIJ/SIPS parity). Reporting `mag_calib` via
-`apply_reporting_postprocess`. Broeg IVW ensemble combine **PARKED** until sigma budget validates
-(`docs/VYVAR_SIGMA_BUDGET_SPEC.md`).
+**Recent shipped (2026-06-23–25):** exoplanet local DB + passive annotation (`c169675`); matched hosts
+promoted to active targets with string-safe Gaia ids (`1616b18`); EQUIP-BINNING gain/RN scaling
+(`b19cd7e`); G7-F003b report cfg parity (`795faef`); additive `band_classify.py` (`fe9b375`).
 
-**Parked (see ROADMAP):** sigma budget; FWHM external validation; frame-level CR rejection;
-source_id exact-match audit; TODO-MULTISET; Brno/Milan overlay; PSF / NEIGHBOR-SUB.
+**Deferred findings (none blocking — ROADMAP):** GAIA-ID-FLOAT-GUARD (MED); G7-F003c (per-draft cfg
+snapshot drift); EQUIP-BINNING-ASYM; TIER1-OBSLOC-ZERO (null-island guard); TIER1-UI-DEBT (38 sites);
+299-defensive broad-except cluster.
+
+**Also parked (ROADMAP):** sigma budget; FWHM external validation; frame-level CR rejection;
+TODO-MULTISET; Brno/Milan overlay; PSF / NEIGHBOR-SUB.

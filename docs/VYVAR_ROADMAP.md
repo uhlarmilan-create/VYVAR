@@ -5,9 +5,55 @@ durable rationale in `VYVAR_DECISIONS.md`; current architecture in `VYVAR_STATE.
 
 Reconciled against the full development log on **2026-06-09** — de-duplicated, and
 stale-closed items removed (e.g. GS6b had been listed as open in a side register but was
-closed 2026-05-20).
+closed 2026-05-20). **Session close 2026-06-25:** band-aware k'' design parked; blockers + deferred
+findings recorded below.
 
 Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, not a history.
+
+---
+
+## IN-FLIGHT / PARKED — band-aware k'' (second-order extinction)
+
+**Status:** design parked; first code piece shipped additive (`fe9b375`); production CT rewiring **PENDING**.
+
+**Rejected (do not port):** comp-select **grow-redesign** — population validation showed ~**45%**
+regressions; sandbox-only (`sandbox/comp_grow*.py`, `tmp/` metrics); **nothing ported to production**.
+
+**Correct direction (when unblocked):** treat **airmass as CORRECTION, not selection** — derive k''
+from **constant comps** (signal-safe); **band-aware** policy via `band_classify.py`:
+- **STANDARD_FILTER** (B/V/R/etc.): k'' is reliable; apply second-order extinction correction.
+- **CLEAR_UNFILTERED** / unfiltered: tight colour-match is primary; **do not** rely on k''.
+- **LUMINANCE (L):** own class; distinct from clear for future policy.
+- CV/CR → CLEAR_UNFILTERED (physically clear-transformed); flip activates **with** CT rewiring, not alone.
+
+**Shipped additive (not wired):** `band_classify.py` + 52 tests (`fe9b375`); consolidates legacy
+`_is_nofilter_obs_group` / broadband CT auto. Ledger: `VYVAR_AUDIT_LEDGER.md` BAND-DETECT (`5d6801c`).
+
+### REAL BLOCKERS — resume band-aware k'' (Milan-side data, not code)
+
+1. **Filtered draft (V/B/R) for validation.** k'' only does real work on filtered data. Locally only
+   **NoFilter** draft **424** exists — k'' **cannot be validated where it matters** until a filtered
+   V/B/R draft is available on the dev machine.
+2. **Newton/Brno literal FITS FILTER strings.** Needed so those rigs get k'' routing instead of
+   fail-safe clear (UNKNOWN → CLEAR). Capture on dev PC / rigs: `FILTER`, `FILT`, `FILTER1`, `INSTFILT`
+   on Chi_and_H **B/V/R/L** frames and Brno **`r_60_4`**; SQL on dev DB:
+   `SELECT DISTINCT FILTER, ID_EQUIPMENTS FROM FITS_HEADER_CACHE`.
+
+**Activate together (code, when data unblocked):** wire `band_classify` into production CT gating +
+CV/CR→clear behavioral flip + band-aware k'' correction path.
+
+---
+
+## Deferred findings (carry forward — none blocking)
+
+| ID | Sev | Notes |
+|----|-----|-------|
+| **GAIA-ID-FLOAT-GUARD** | MED | Audit remaining `catalog_id` read sites for float64 truncation pattern; highest-value follow-up (`1616b18` hardened promotion path only). |
+| **G7-F003c** | LOW-MED | PDF report re-loads `AppConfig()` at build time — cfg edited post-run can drift from photometry settings. |
+| **EQUIP-BINNING-ASYM** | LOW | Asymmetric binning (`XBINNING ≠ YBINNING`) warns but does not scale gain/RN; all current rigs symmetric. |
+| **TIER1-OBSLOC-ZERO** | MED | Observer json 0.0/0.0 fallback may silently corrupt airmass/BJD/dilution (null-island guard). |
+| **TIER1-UI-DEBT** | LOW | 38 SAFE UI/plotly broad-except `pass` sites — cosmetic diagnostics only. |
+| **299-defensive cluster** | MED | Pipeline/`photometry_core` broad-except `pass` cluster — existing phased-audit backlog item. |
 
 ---
 
@@ -106,6 +152,10 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 ---
 
 ## NEXT SESSION — open items
+
+**Resume here when Milan data unblocks k'':** filtered V/B/R draft + Newton/Brno FITS FILTER capture
+(see IN-FLIGHT section above). Until then, other HIGH items below remain valid but k'' is the designed
+next calibration lever.
 
 0. **Phase-1b — comp_rms gate authoritative for N_good — gate-authority DONE (2026-06-16).** RMS
    fallback no longer relaxes above `max_comp_rms` (the `0.15` step removed); auto-routing counts

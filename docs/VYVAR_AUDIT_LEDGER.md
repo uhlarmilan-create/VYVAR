@@ -292,7 +292,23 @@ grandfathered; 8 `photometry_core` narrowings; 4 bare excepts fixed (sandbox).
 | Trust baseline (`comp_trust_min_comps=5`) | **1382 YELLOW / 106 RED** (1488 rows) |
 | Specs filed | trust hardening, check-star selection, comp-floor policy |
 
-## BAND-DETECT — photometric band classifier (2026-06-24)
+## Session close 2026-06-23–25 — audit follow-ups + exoplanet + band classifier
+
+| Item | Status | Commit | Notes |
+|---|---|---|---|
+| G7-F003b PDF `phase01_use_bprp_primary` | **FIXED** | `795faef` | was hardcoded `True`; test `test_g7_f003b_report_bprp_primary.py` |
+| EQUIP-BINNING DB bin1 gain/RN scaling | **FIXED** | `b19cd7e` | FITS intrinsics win; DB fallback scaled gain×bin², RN×bin; deliberate RN 1.3→2.6 on bin2 |
+| EXOPLANET-XMATCH local host annotation | **DONE** | `c169675` | 14185-row local DB; informational `exo_*` cols only; draft 421 bit-identical |
+| EXO-AS-TARGET host promotion | **DONE** | `1616b18` | string Gaia id end-to-end; draft 422 production-path PASS |
+| comp-select grow-redesign | **REJECTED** | — | ~45% population regressions; sandbox only; not ported |
+| Band classifier (additive) | **DONE** | `fe9b375` | see BAND-DETECT below |
+| Production CT-gate + k'' rewiring | **PENDING** | — | blocked on filtered draft + FITS FILTER capture |
+
+**Deferred (non-blocking):** GAIA-ID-FLOAT-GUARD (MED); G7-F003c; EQUIP-BINNING-ASYM; TIER1-OBSLOC-ZERO;
+TIER1-UI-DEBT (38 sites); 299-defensive broad-except cluster. Full detail: ROADMAP deferred table +
+`VYVAR_FULL_AUDIT_LEDGER.md`.
+
+## BAND-DETECT — photometric band classifier (2026-06-24, ledger sync `5d6801c`)
 
 | Item | Status | Notes |
 |---|---|---|
