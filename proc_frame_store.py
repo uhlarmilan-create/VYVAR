@@ -8,6 +8,9 @@ Design:
 - Column projection views — consumers get a sub-DataFrame without copying
 - Single parse pass via usecols callable (no separate nrows=0 sniff)
 - dict-compatible interface for backward compat (csv_cache.get() pattern)
+
+Proc schema note (2026-06-25): ``sky_adu_per_px_annulus`` holds per-star annulus sky (ADU/px)
+for the Howell err model; ``noise_floor_adu`` remains the DAO detection floor (MASTERSTAR / SNR table).
 """
 
 from __future__ import annotations
@@ -36,6 +39,7 @@ PROC_STORE_COLS = [
     "dao_flux",
     "flux",
     "noise_floor_adu",
+    "sky_adu_per_px_annulus",
     "aperture_r_px",
     "flux_small",
     "flux_large",
@@ -109,6 +113,7 @@ _NUMERIC_COLS = (
     "flux",
     "dao_flux",
     "noise_floor_adu",
+    "sky_adu_per_px_annulus",
     "aperture_r_px",
     "peak_max_adu",
     "saturate_limit_adu_85pct",

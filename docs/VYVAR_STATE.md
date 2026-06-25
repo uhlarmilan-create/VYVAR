@@ -1,14 +1,17 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-25** — Citation audit Stages A+B: Riello B-V citation removed; Honeycutt
-in CORE; F-HOWELL-3 Stage B diagnostic done (**Stage C gated**).
+Last updated: **2026-06-25** — F-HOWELL-3 Stage C: `sky_adu_per_px_annulus` column shipped; draft_424
+science byte-identical.
+
+**Done 2026-06-25 (F-HOWELL-3 Stage C):** explicit annulus-sky column for Howell err; `_photometric_error`
+reads `sky_adu_per_px_annulus` with legacy `noise_floor_adu` fallback. Verified on real draft_424
+(`run_full_photometry_pipeline`): 178/178 LCs science-identical; sky-dominated err inflation measured
+**~12–14%** (detection vs annulus) on faint targets.
 
 **Done 2026-06-25 (citation audit Stage A):** F-RIELLO-1 — B-V/Riello report citation removed
-(BP-RP is raw Gaia); F-HOWELL-1 units comment; F-CITE-HONEYCUTT Honeycutt in CORE. LC numeric
-output byte-identical.
+(BP-RP is raw Gaia); F-HOWELL-1 units comment; F-CITE-HONEYCUTT Honeycutt in CORE (`5a1bae0`).
 
-**In-flight / gated:** F-HOWELL-3 Stage C — `sky_adu_per_px_annulus` column (awaiting Milan after
-Stage B diagnostic in `tmp/phaseHowell3/`).
+**In-flight / gated:** band-aware k'' (ROADMAP blockers: filtered draft + FITS FILTER strings).
 
 **Done this session (prior commits):** G7-F003b (`795faef`); EQUIP-BINNING (`b19cd7e`); exoplanet
 (`c169675`, `1616b18`); band classifier (`fe9b375`).

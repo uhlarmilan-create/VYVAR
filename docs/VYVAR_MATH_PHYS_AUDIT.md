@@ -113,18 +113,29 @@ F-BJD-1 (deferred).
 | F-RIELLO-1 | MED | **FIXED (A1)** | B-V deprecated; Riello B-V citation removed from report + emitter |
 | F-HOWELL-1 | LOW | **FIXED (A2)** | Howell err units comment -> ADU |
 | F-CITE-HONEYCUTT | LOW | **FIXED (A3)** | `honeycutt1992` in CORE; not duplicated under stability detrend |
-| F-HOWELL-3 | MED/HIGH | **Stage B done; C gated** | Three-way diagnostic `tmp/phaseHowell3/`; add `sky_adu_per_px_annulus` when approved |
+| F-HOWELL-3 | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus` column; err reads it; draft_424 byte-identical science |
 | F-BJD-1 | LOW | OPEN | `time_base` provenance flag (Stage D) |
 
 ### F-HOWELL-3 (revised)
 
 `noise_floor_adu` is overloaded: detection floor on MASTERSTAR/SNR table; annulus sky on proc
 after `enhance_catalog_dataframe_aperture_bpm`. Happy path: proc == annulus (not 10-sigma floor).
-Edge case (enhance skip): proc == detection floor -> inflated err sky term. Blocks sigma-budget.
+Edge case (enhance skip): proc == detection floor -> inflated err sky term.
 
-Stage B synthetic diagnostic (2026-06-25): detection/annulus ratio ~1.5x; happy path proc matches
-annulus; edge case err inflated ~5%+ vs annulus. Full verdict table and verified-correct kernels:
-see orchestrator audit packet (session 2026-06-25).
+**Stage B (synthetic, 2026-06-25):** no local proc CSV; edge case manually assigned; bright
+photon-dominated star only. Confirmed the *mechanism* (overloaded column; happy path = annulus,
+edge = detection floor) but **not** the production trigger or sky-dominated magnitude. Measured
+JSON: detection/annulus ratio **1.30** (not ~1.5); edge-case err inflation **~1.5%** on the
+bright synthetic star (not ~5%+). Sky-dominated regime was **not measured** in Stage B.
+
+**Stage C (real draft_424, production `run_full_photometry_pipeline`, 2026-06-25):**
+- **C2a:** 178/178 LCs — canonical science columns byte-identical vs baseline (`science_ok` true;
+  `err` deltas expected, out of science set).
+- **C2b (sky-dominated, faint decile):** measured `err(detection)/err(annulus)` **1.12–1.14**
+  (~12–14%) on real proc data; frame detection/annulus **~1.29×**.
+- **C2c:** `photometry_mode=epsf` without ePSF model → `_run_aperture=False` (rare; structural
+  insurance). New column absent when enhance skipped; err falls back to `noise_floor_adu`.
+- Fix: explicit `sky_adu_per_px_annulus` written by aperture export; `_photometric_error` prefers it.
 
 ---
 

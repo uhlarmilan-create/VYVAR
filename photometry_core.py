@@ -50,6 +50,9 @@ LOGGER = logging.getLogger(__name__)
 
 _MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
 
+# Explicit annulus sky (ADU/px) for Howell err; ``noise_floor_adu`` remains detection-floor legacy.
+SKY_ADU_PER_PX_ANNULUS_COL = "sky_adu_per_px_annulus"
+
 
 def _safe_polyfit(
     x: np.ndarray,
@@ -650,6 +653,21 @@ def _photometric_error(
     # F=flux[ADU], sky=sky_pp[ADU/px], g=gain[e-/ADU], A=area[px], RN=read noise[e-]
     variance = flux / g + max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
     return math.sqrt(variance) / flux if flux > 0 else float("nan")
+
+
+def _sky_pp_for_photometric_error(row: Any) -> float:
+    """Sky level (ADU/px) for Howell ``_photometric_error`` from a proc-CSV row.
+
+    Prefer ``sky_adu_per_px_annulus`` (explicit annulus median from aperture export).
+    Fall back to ``noise_floor_adu`` for older proc CSVs (happy path: annulus; edge: detection).
+    """
+    ann = float(pd.to_numeric(row.get(SKY_ADU_PER_PX_ANNULUS_COL), errors="coerce"))
+    if math.isfinite(ann) and ann >= 0:
+        return ann
+    legacy = float(pd.to_numeric(row.get("noise_floor_adu"), errors="coerce"))
+    if math.isfinite(legacy) and legacy >= 0:
+        return legacy
+    return 0.0
 
 
 def compute_snr_optimal_aperture_table(
@@ -1500,8 +1518,8 @@ def read_flux_from_csv(
         if math.isfinite(ap_csv) and ap_csv > 0:
             base["aperture_r_px"] = ap_csv
 
-        # Sky per pixel z noise_floor_adu (ak je k dispozícii)
-        sky_pp = float(row_csv.get("noise_floor_adu", float("nan")))
+        # Sky per pixel for Howell err: explicit annulus column, legacy noise_floor fallback.
+        sky_pp = _sky_pp_for_photometric_error(row_csv)
         if math.isfinite(sky_pp):
             base["sky_pp"] = sky_pp
 
@@ -6402,6 +6420,7 @@ def _phase2a_prepare_shared_state(
                     "jd_mid",
                     "dao_flux",
                     "noise_floor_adu",
+                    "sky_adu_per_px_annulus",
                     "aperture_r_px",
                     "peak_max_adu",
                     "airmass",
@@ -9019,6 +9038,7 @@ _PHASE_USECOLS_PERFRAME: list[str] = [
     "flux",
     "dao_flux",
     "noise_floor_adu",
+    "sky_adu_per_px_annulus",
     "aperture_r_px",
     "is_usable",
     "is_saturated",
@@ -9824,6 +9844,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                 out["aperture_r_px"] = r_ap_arr.astype(np.float64)
                 out["sky_annulus_r_out_px"] = r_out_arr.astype(np.float64)
                 out["noise_floor_adu"] = sky_pp_arr.astype(np.float64)
+                out[SKY_ADU_PER_PX_ANNULUS_COL] = sky_pp_arr.astype(np.float64)
             else:
                 ap = CircularAperture(pos, r=r_ap)
                 an = CircularAnnulus(pos, r_in=r_in, r_out=r_out)
@@ -9846,6 +9867,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                 out["aperture_r_px"] = float(r_ap)
                 out["sky_annulus_r_out_px"] = float(r_out)
                 out["noise_floor_adu"] = sky_pp_arr.astype(np.float64)
+                out[SKY_ADU_PER_PX_ANNULUS_COL] = sky_pp_arr.astype(np.float64)
 
             # Multi-apertúra: rovnaký sky_pp_arr (ADU/px²) × plocha apertúry ako sky odčítanie.
             if r_small_px is not None and r_large_px is not None:

@@ -47,6 +47,7 @@ PROC_CSV_READ_COLS: list[str] = [
     "aperture_r_px",
     "sky_annulus_r_out_px",
     "noise_floor_adu",
+    "sky_adu_per_px_annulus",
     "peak_max_adu",
     "peak_dao",
     "mag",

@@ -12,14 +12,18 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 - **F-HOWELL-1:** Howell err-model units comment corrected (ADU, not e-).
 - **F-CITE-HONEYCUTT:** `honeycutt1992` moved to CORE (always-on Fix-A err model).
 
-**Stage B (diagnostic only, `tmp/phaseHowell3/`):** three-way sky comparison (synthetic;
-no local draft_421/422). Happy path: proc `noise_floor_adu` == annulus median (REFUTES
-always-inflated claim). Edge case (enhance skipped): proc == detection floor (CONFIRMS
-naming/overloading hazard). **Stage C not started** — awaits Milan sign-off.
+**Stage B (diagnostic only, `tmp/phaseHowell3/`):** synthetic; detection/annulus ratio **1.30**;
+edge err +**1.5%** on bright star only (mechanism confirmed, magnitude not).
 
-**Docs:** addendum appended to `VYVAR_MATH_PHYS_AUDIT.md`.
+**Stage C (shipped):** `sky_adu_per_px_annulus`; err prefers annulus column. Draft_424
+`run_full_photometry_pipeline`: 178/178 LCs science-identical; C2b faint sky-dominated
+`err(det)/err(ann)` **1.12–1.14**. Harness: `tmp/phaseHowell3/stage_c_verify.json`.
+
+**Docs:** addendum in `VYVAR_MATH_PHYS_AUDIT.md`.
 
 ---
+
+## 2026-06-24 — Photometric band classifier (BAND-DETECT, additive)
 
 **Shipped (additive, not wired).** New module `band_classify.py`:
 `classify_photometric_band(obs_group, fits_filter=, aavso_code=)` returns

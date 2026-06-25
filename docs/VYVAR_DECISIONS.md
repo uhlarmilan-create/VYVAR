@@ -13,10 +13,13 @@ Gaia `bp_rp` on matched stars; no BP-RP → B-V transform is implemented or desi
 report and citation emitter no longer cite Riello 2021 as a B-V transform. The legacy `b_v`
 column plumbing remains (mostly NaN) — removal is a separate bounded task.
 
-**Err model (F-HOWELL-3, Stage B).** Proc `noise_floor_adu` is **overloaded** (detection floor
-vs annulus sky). Happy path uses annulus sky; edge case (aperture enhance skipped) falls back
-to detection floor and can inflate the Howell sky term. **Fix gated:** dedicated
-`sky_adu_per_px_annulus` column (Stage C, post-approval). Blocks sigma-budget / Broeg IVW.
+**Err model (F-HOWELL-3, Stage C FIXED 2026-06-25).** Proc export writes explicit
+`sky_adu_per_px_annulus` (annulus median ADU/px) alongside legacy `noise_floor_adu` (detection
+floor on MASTERSTAR). `_photometric_error` prefers the annulus column; falls back to
+`noise_floor_adu` on older proc CSVs. Verified on draft_424: canonical LC science byte-identical;
+sky-dominated faint targets show ~12–14% err inflation if detection floor were used instead of
+annulus. Edge case (`photometry_mode=epsf` without ePSF): aperture enhance skipped — rare;
+structural insurance via explicit column + fallback.
 
 ---
 
