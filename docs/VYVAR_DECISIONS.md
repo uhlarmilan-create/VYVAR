@@ -6,7 +6,19 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
-## Photometry: DAO+Gaia matched only; forced-aperture / catalog_only path removed (2026-06-22)
+## Colour: raw Gaia BP-RP only; B-V / Riello citation removed (2026-06-25)
+
+**Decision.** Johnson B-V is **deprecated** for tiering and reporting. Colour comes from raw
+Gaia `bp_rp` on matched stars; no BP-RP → B-V transform is implemented or desired. The PDF
+report and citation emitter no longer cite Riello 2021 as a B-V transform. The legacy `b_v`
+column plumbing remains (mostly NaN) — removal is a separate bounded task.
+
+**Err model (F-HOWELL-3, Stage B).** Proc `noise_floor_adu` is **overloaded** (detection floor
+vs annulus sky). Happy path uses annulus sky; edge case (aperture enhance skipped) falls back
+to detection floor and can inflate the Howell sky term. **Fix gated:** dedicated
+`sky_adu_per_px_annulus` column (Stage C, post-approval). Blocks sigma-budget / Broeg IVW.
+
+---
 
 **Decision.** VYVAR measures variable targets only when they have a **masterstar (DAO+Gaia) cross-match**.
 VSX entries without such a match are **excluded upstream** in Fáza 0 (`select_active_targets`), not

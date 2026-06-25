@@ -147,9 +147,9 @@ def main() -> None:
         check("# COMP TABLE" in txt, "VAR.ASTRO: COMP TABLE sekcia", "VAR.ASTRO: chýba COMP TABLE", ok=ok, errors=errors)
         check("Broeg" in txt, "VAR.ASTRO: Broeg referencia", "VAR.ASTRO: chýba Broeg ref", ok=ok, errors=errors)
         check(
-            ("Color system: Gaia BP-RP (primary)" in txt) or ("Riello" in txt),
-            "VAR.ASTRO: Color system (BP-RP primary) alebo legacy Riello riadok",
-            "VAR.ASTRO: chýba color-system / Riello ref",
+            "Color system: Gaia BP-RP" in txt,
+            "VAR.ASTRO: Color system Gaia BP-RP",
+            "VAR.ASTRO: chýba color-system BP-RP riadok",
             ok=ok,
             errors=errors,
         )

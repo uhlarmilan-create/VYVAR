@@ -15,12 +15,8 @@ from reportlab.lib.units import cm, mm
 from config import AppConfig
 from photometry_report import _PhotometryReportBuilder, _norm_cid
 
-_BPRP_PRIMARY_NOTE_TXT = (
+_NOTE_TXT = (
     "Gaia BP-RP colour | COMP weights: w = 1/sigma^2 - Broeg et al., Astron. Nachr. 326, 134 (2005)"
-)
-_LEGACY_BV_NOTE_TXT = (
-    "B-V from Gaia BP-RP (Riello et al. 2021) | "
-    "COMP weights: w = 1/sigma^2 - Broeg et al., Astron. Nachr. 326, 134 (2005)"
 )
 
 
@@ -88,15 +84,16 @@ def test_report_use_bprp_primary_true_matches_legacy_wording(
 ) -> None:
     builder = _minimal_report_builder(tmp_path, monkeypatch, bprp_primary=True)
     assert builder._use_bprp_primary is True
-    assert builder.NOTE_TXT == _BPRP_PRIMARY_NOTE_TXT
+    assert builder.NOTE_TXT == _NOTE_TXT
 
 
-def test_report_use_bprp_primary_false_uses_legacy_bv_wording(
+def test_report_use_bprp_primary_false_still_uses_bprp_note(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     builder = _minimal_report_builder(tmp_path, monkeypatch, bprp_primary=False)
     assert builder._use_bprp_primary is False
-    assert builder.NOTE_TXT == _LEGACY_BV_NOTE_TXT
+    assert builder.NOTE_TXT == _NOTE_TXT
+    assert "Riello" not in builder.NOTE_TXT
 
 
 def test_comp_rows_false_includes_bv_columns(

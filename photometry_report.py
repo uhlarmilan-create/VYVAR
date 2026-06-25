@@ -432,13 +432,9 @@ class _PhotometryReportBuilder:
         self.GAP_W = 0.5 * self.cm
         self.FI_W = self.USE_W - self.LC_W - self.GAP_W
 
+        # Colour is raw Gaia BP-RP (catalog); B-V transform is not applied (deprecated).
         self.NOTE_TXT = (
             "Gaia BP-RP colour | COMP weights: w = 1/sigma^2 - Broeg et al., Astron. Nachr. 326, 134 (2005)"
-            if self._use_bprp_primary
-            else (
-                "B-V from Gaia BP-RP (Riello et al. 2021) | "
-                "COMP weights: w = 1/sigma^2 - Broeg et al., Astron. Nachr. 326, 134 (2005)"
-            )
         )
 
         # Per Phase 4: max pixel width (long edge cap for PDF embed) + JPEG quality

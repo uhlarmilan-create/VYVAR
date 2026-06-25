@@ -2,7 +2,24 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
-## 2026-06-24 — Photometric band classifier (BAND-DETECT, additive)
+## 2026-06-25 — Photometry citation audit follow-ups (Stages A + B)
+
+**Milan approved:** fix-now on citation hygiene + diagnostic-first F-HOWELL-3; Stage C gated.
+
+**Stage A (committed):**
+- **F-RIELLO-1:** removed dead B-V / Riello report line; dropped `riello2021` from citation
+  emitter (BP-RP is raw Gaia catalog value).
+- **F-HOWELL-1:** Howell err-model units comment corrected (ADU, not e-).
+- **F-CITE-HONEYCUTT:** `honeycutt1992` moved to CORE (always-on Fix-A err model).
+
+**Stage B (diagnostic only, `tmp/phaseHowell3/`):** three-way sky comparison (synthetic;
+no local draft_421/422). Happy path: proc `noise_floor_adu` == annulus median (REFUTES
+always-inflated claim). Edge case (enhance skipped): proc == detection floor (CONFIRMS
+naming/overloading hazard). **Stage C not started** — awaits Milan sign-off.
+
+**Docs:** addendum appended to `VYVAR_MATH_PHYS_AUDIT.md`.
+
+---
 
 **Shipped (additive, not wired).** New module `band_classify.py`:
 `classify_photometric_band(obs_group, fits_filter=, aavso_code=)` returns

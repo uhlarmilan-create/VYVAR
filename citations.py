@@ -253,6 +253,7 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
         "broeg2005",
         "collins2017",
         "howell1989",
+        "honeycutt1992",
         "stetson1987",
         "henden_kaitchuck1982",
         "aavso_ccd_guide",
@@ -271,8 +272,6 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
     sections.append(("SOFTWARE", [citation_line(k, bib=bib) for k in software]))
 
     optional: list[str] = []
-    if ctx.use_color_tiers:
-        optional.append(citation_line("riello2021", bib=bib))
     if ctx.use_temporal_binning:
         optional.append(citation_line("pont2006", bib=bib))
     if ctx.use_pytics:
@@ -288,8 +287,6 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
         )
     if ctx.use_democratic:
         optional.append(citation_line("hippke2024", bib=bib))
-    if ctx.use_common_mode_stability_detrend:
-        optional.append(citation_line("honeycutt1992", bib=bib))
     if ctx.use_iterative_comp_clip:
         optional.extend(
             [

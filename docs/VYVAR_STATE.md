@@ -1,13 +1,17 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-25** — Session close: audit follow-ups, exoplanet integration, additive band
-classifier; **band-aware k'' PARKED** (ROADMAP).
+Last updated: **2026-06-25** — Citation audit Stages A+B: Riello B-V citation removed; Honeycutt
+in CORE; F-HOWELL-3 Stage B diagnostic done (**Stage C gated**).
 
-**Done this session (commits):** G7-F003b — PDF report reads `phase01_use_bprp_primary` (`795faef`);
-OBSLOC/EQUIP-BINNING chain — DB bin1 gain/RN scaled by FITS binning, summed bin²/RN×bin (`b19cd7e`;
-deliberate RN 1.3→2.6 on bin2, ~3.9 mmag photon term); exoplanet local DB builder + informational
-cross-match (`c169675`); exoplanet-as-target promotion with string-safe Gaia id (`1616b18`); photometric
-band classifier additive, **not wired to production CT gating** (`fe9b375`).
+**Done 2026-06-25 (citation audit Stage A):** F-RIELLO-1 — B-V/Riello report citation removed
+(BP-RP is raw Gaia); F-HOWELL-1 units comment; F-CITE-HONEYCUTT Honeycutt in CORE. LC numeric
+output byte-identical.
+
+**In-flight / gated:** F-HOWELL-3 Stage C — `sky_adu_per_px_annulus` column (awaiting Milan after
+Stage B diagnostic in `tmp/phaseHowell3/`).
+
+**Done this session (prior commits):** G7-F003b (`795faef`); EQUIP-BINNING (`b19cd7e`); exoplanet
+(`c169675`, `1616b18`); band classifier (`fe9b375`).
 
 **In-flight / PARKED — band-aware k'' (second-order extinction):** comp-select **grow-redesign REJECTED**
 on population validation (~**45% regressions**; sandbox-only, **nothing ported**). Physically-correct

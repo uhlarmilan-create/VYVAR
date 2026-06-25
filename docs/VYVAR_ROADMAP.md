@@ -49,6 +49,8 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | ID | Sev | Notes |
 |----|-----|-------|
 | **GAIA-ID-FLOAT-GUARD** | MED | Audit remaining `catalog_id` read sites for float64 truncation pattern; highest-value follow-up (`1616b18` hardened promotion path only). |
+| **F-HOWELL-3** | MED/HIGH | Stage B diagnostic **done** (`tmp/phaseHowell3/`); Stage C (`sky_adu_per_px_annulus`) **gated** — blocks sigma-budget. |
+| **F-BJD-1** | LOW | `time_base` provenance flag (Stage D, deferred). |
 | **G7-F003c** | LOW-MED | PDF report re-loads `AppConfig()` at build time — cfg edited post-run can drift from photometry settings. |
 | **EQUIP-BINNING-ASYM** | LOW | Asymmetric binning (`XBINNING ≠ YBINNING`) warns but does not scale gain/RN; all current rigs symmetric. |
 | **TIER1-OBSLOC-ZERO** | MED | Observer json 0.0/0.0 fallback may silently corrupt airmass/BJD/dilution (null-island guard). |

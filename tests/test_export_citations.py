@@ -75,6 +75,8 @@ def test_citation_lines_core_always_present() -> None:
     assert "Broeg" in text
     assert "Collins" in text or "AstroImageJ" in text
     assert "Howell" in text
+    assert "Honeycutt" in text
+    assert text.count("Honeycutt") == 1
     assert "Stetson" in text
     assert "Gaia Collaboration" in text
     assert "Lindegren" in text
@@ -138,12 +140,16 @@ def test_citation_lines_data_quality_gate_conditional() -> None:
     assert "Bertin" not in text_on
 
 
-def test_citation_lines_common_mode_stability_detrend_conditional() -> None:
+def test_citation_lines_common_mode_stability_detrend_no_duplicate_honeycutt() -> None:
     cfg = AppConfig()
     off = build_run_citation_context(cfg, pipeline_meta={"common_mode_stability_detrend": False})
     on = build_run_citation_context(cfg, pipeline_meta={"common_mode_stability_detrend": True})
-    assert "Honeycutt" not in "".join(_vyvar_export_citation_lines(cfg, run_ctx=off))
-    assert "Honeycutt" in "".join(_vyvar_export_citation_lines(cfg, run_ctx=on))
+    off_text = "".join(_vyvar_export_citation_lines(cfg, run_ctx=off))
+    on_text = "".join(_vyvar_export_citation_lines(cfg, run_ctx=on))
+    assert "Honeycutt" in off_text
+    assert "Honeycutt" in on_text
+    assert off_text.count("Honeycutt") == 1
+    assert on_text.count("Honeycutt") == 1
 
 
 def test_citation_lines_iterative_comp_clip_conditional() -> None:

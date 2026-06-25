@@ -301,6 +301,9 @@ grandfathered; 8 `photometry_core` narrowings; 4 bare excepts fixed (sandbox).
 | EXOPLANET-XMATCH local host annotation | **DONE** | `c169675` | 14185-row local DB; informational `exo_*` cols only; draft 421 bit-identical |
 | EXO-AS-TARGET host promotion | **DONE** | `1616b18` | string Gaia id end-to-end; draft 422 production-path PASS |
 | comp-select grow-redesign | **REJECTED** | — | ~45% population regressions; sandbox only; not ported |
+| F-RIELLO-1 B-V/Riello citation | **FIXED (A1)** | — | report + emitter; BP-RP raw Gaia only |
+| F-HOWELL-1 / F-CITE-HONEYCUTT | **FIXED (A2/A3)** | — | Howell ADU comment; Honeycutt in CORE |
+| F-HOWELL-3 err sky column | **Stage B done; C gated** | — | `tmp/phaseHowell3/` three-way diagnostic |
 | Band classifier (additive) | **DONE** | `fe9b375` | see BAND-DETECT below |
 | Production CT-gate + k'' rewiring | **PENDING** | — | blocked on filtered draft + FITS FILTER capture |
 

@@ -75,7 +75,7 @@ Known limitation (APCORR-COLOR parked; AAVSO #4 open). Same physics as D1 slope 
 |-----|--------|----------------------|
 | `broeg2005` | **used** | `citations.py` core; zeropoint weights `photometry_core.py:~2418` |
 | `collins2017` | **used** | `citations.py` core (2026-06-11) |
-| `honeycutt1992` | **used** | `citations.py` core; `ensemble_normalize` flux sum |
+| `honeycutt1992` | **used** | `citations.py` CORE (2026-06-25); Fix-A err model `photometry_core.py:2450-2466` + flux-sum combine |
 | `howell1989` | **used** | `citations.py` core |
 | `stetson1987` | **used** | `citations.py`; PSF/aperture context |
 | `sokolovsky2017`, `vonneumann1941` | **used** | `comp_qa_core.py` indices; `citations.py` comp_qa |
@@ -91,7 +91,40 @@ Known limitation (APCORR-COLOR parked; AAVSO #4 open). Same physics as D1 slope 
 | `seager2003`, `ciardi2015` | **used** | GS11 dilution exports |
 | `photutils`, `astropy2022`, `numpy2020`, `scipy2020`, `lightkurve2018`, `astroquery2019` | **used** | Software stack imports + exports |
 | `watson2006` | **used** | VSX when configured |
-| `riello2021` | **used** | Colour tiers when on |
+| `riello2021` | **bib only (2026-06-25)** | Dropped from emitter; no BP-RP->B-V transform in code (F-RIELLO-1 closed) |
+
+---
+
+## Addendum 2026-06-25 -- citation-integrity and error-model spot-audit
+
+**Repo HEAD:** `9e6a08f` (session-close). **Cursor spot-check + Milan approval:** fix-now on
+Stages A/B; Stage C gated on Stage B review.
+
+**Bottom line:** production LC kernels (`delta_mag`, flux-sum ensemble, Broeg-scoped weights,
+Eastman BJD, Sokolovsky QA) are correctly implemented and scoped. No defect touches canonical
+`delta_mag` today. Actionable items: F-HOWELL-3 (overloaded `noise_floor_adu`; edge-case err
+sky inflation -- revised framing), F-RIELLO-1 **RESOLVED (a)**, F-HOWELL-1, F-CITE-HONEYCUTT,
+F-BJD-1 (deferred).
+
+### Findings disposition
+
+| ID | Sev | Status | Notes |
+|----|-----|--------|-------|
+| F-RIELLO-1 | MED | **FIXED (A1)** | B-V deprecated; Riello B-V citation removed from report + emitter |
+| F-HOWELL-1 | LOW | **FIXED (A2)** | Howell err units comment -> ADU |
+| F-CITE-HONEYCUTT | LOW | **FIXED (A3)** | `honeycutt1992` in CORE; not duplicated under stability detrend |
+| F-HOWELL-3 | MED/HIGH | **Stage B done; C gated** | Three-way diagnostic `tmp/phaseHowell3/`; add `sky_adu_per_px_annulus` when approved |
+| F-BJD-1 | LOW | OPEN | `time_base` provenance flag (Stage D) |
+
+### F-HOWELL-3 (revised)
+
+`noise_floor_adu` is overloaded: detection floor on MASTERSTAR/SNR table; annulus sky on proc
+after `enhance_catalog_dataframe_aperture_bpm`. Happy path: proc == annulus (not 10-sigma floor).
+Edge case (enhance skip): proc == detection floor -> inflated err sky term. Blocks sigma-budget.
+
+Stage B synthetic diagnostic (2026-06-25): detection/annulus ratio ~1.5x; happy path proc matches
+annulus; edge case err inflated ~5%+ vs annulus. Full verdict table and verified-correct kernels:
+see orchestrator audit packet (session 2026-06-25).
 
 ---
 

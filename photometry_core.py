@@ -634,9 +634,10 @@ def _photometric_error(
     gain: float = 1.0,
     read_noise: float = 10.0,
 ) -> float:
-    """Kvadratický súčet fotónový + sky + read-noise šum (v e⁻, potom /flux pre relatívnu chybu).
+    """Relative photometric error from Poisson + read-noise variance (Howell 1989 eq. 2).
 
-    err = sqrt(flux/gain + sky_pp/gain*area + (read_noise/gain)²*area) / flux
+    Units at boundary: ``flux`` and ``sky_pp`` in ADU (per px for sky); ``gain`` in e-/ADU;
+    ``read_noise`` in e-; internal variance in ADU². Returns dimensionless err/flux.
     """
     if not math.isfinite(flux) or flux <= 0:
         return float("nan")
@@ -645,8 +646,8 @@ def _photometric_error(
     g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
     rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
     # Howell (1989) PASP 101:616, eq. 2 — CCD photometric error
-    # variance = F/g + sky/g * A + (RN/g)^2 * A
-    # F=flux[e-], g=gain[e-/ADU], A=aperture area[px], RN=read noise[e-]
+    # variance = F/g + sky/g * A + (RN/g)^2 * A  (variance in ADU²)
+    # F=flux[ADU], sky=sky_pp[ADU/px], g=gain[e-/ADU], A=area[px], RN=read noise[e-]
     variance = flux / g + max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
     return math.sqrt(variance) / flux if flux > 0 else float("nan")
 
