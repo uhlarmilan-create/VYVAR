@@ -27,6 +27,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, NamedTuple
 
+DarkResampleMode = Literal["sum", "mean"]
+
 import numpy as np
 from astropy.io import fits
 
@@ -202,6 +204,7 @@ def resample_master_to_light_binning(
     master_binning: int,
     light_binning: int,
     kind: Literal["dark", "flat"],
+    dark_resample_mode: DarkResampleMode = "sum",
 ) -> tuple[np.ndarray, int]:
     """Bin a 2D master down so one output pixel matches ``light_binning`` / ``master_binning``.
 
@@ -248,7 +251,10 @@ def resample_master_to_light_binning(
 
     v = a.reshape(h // bf, bf, w // bf, bf)
     if kind == "dark":
-        out = np.sum(v, axis=(1, 3)).astype(np.float32, copy=False)
+        if dark_resample_mode == "mean":
+            out = np.mean(v, axis=(1, 3)).astype(np.float32, copy=False)
+        else:
+            out = np.sum(v, axis=(1, 3)).astype(np.float32, copy=False)
     else:
         # Flat: block **mean** only — not sum (would skew flat field) and not median (not a block average).
         out = np.mean(v, axis=(1, 3)).astype(np.float32, copy=False)
@@ -422,6 +428,7 @@ def get_processed_master(
     allow_passthrough: bool = False,
     db: VyvarDatabase | None = None,
     id_equipments: int | None = None,
+    dark_resample_mode: DarkResampleMode = "sum",
 ) -> ProcessedMasterResult:
     """Load a master FITS and optionally bin it to match the light's ``XBINNING``.
 
@@ -466,8 +473,13 @@ def get_processed_master(
         if sp is not None:
             eff_lb = max(eff_lb, mb * sp)
 
+    _drm: DarkResampleMode = dark_resample_mode if kind == "dark" else "sum"
     out, bf = resample_master_to_light_binning(
-        data, master_binning=mb, light_binning=int(eff_lb), kind=kind
+        data,
+        master_binning=mb,
+        light_binning=int(eff_lb),
+        kind=kind,
+        dark_resample_mode=_drm,
     )
 
     if light_shape is not None:
