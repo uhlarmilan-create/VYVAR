@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-07** — K2 v1 band-aware second-order extinction **activated** (`k2_mode=literature`).
+Last updated: **2026-07-07** — K2 v1 band-aware second-order extinction **active** (incl. B-sign hotfix `8a190b4`); K2 session **closed**.
 
 **Done 2026-07-07 (K2 v1):** Literature k'' path via `k2_extinction.py`; `band_classify` wired to
 `resolve_apply_color_term` (CV/CR flip live); LC columns `k2_source`/`k2_value`/`k2_colour_ref`;

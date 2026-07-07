@@ -34,6 +34,7 @@ regressions; sandbox-only; **nothing ported to production**.
 | **PROV-HEADLESS** | MED | `merge_photometry_pipeline_meta` (`photometry_core.py:5317–5332`) writes no `git_hash`/`config_snapshot`; TODO-PIPELINE-VERSIONING not on HEAD. Git archaeology first; fix after diagnosis. |
 | **PROC-MAG-NAMING** | LOW | proc CSV `mag` = Gaia catalog G (constant per star) — rename or document; sandbox harnesses must use `dao_flux` (PROCESS note). |
 | **K2-DATA-BLOCKER** | — | NIGHT_FIT needs calibrated filtered draft, dX ≥ ~0.3, comp residual floor ≪ 15 mmag. Home rig + flats qualifies; Boyden blocked on flat/flip systematics. **Supersedes** old blockers (filtered draft + FILTER strings — both satisfied 2026-07-07). |
+| **K2-SLOPE-TRACE** | LOW | GR/UG converter slopes (0.859 / 1.091) are spec-anchored illustrative, not derived by the traceable Jordi method used for BV (Table 6 anchor derivation gives ~1.04 for g-r; would shift k2_g −0.0137 → −0.0166, k2_r −0.0034 → −0.0042). Unify on the traceable method or document the exception; population-mean coefficient, ~20% effect. |
 
 ---
 
