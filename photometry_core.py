@@ -8618,6 +8618,16 @@ def run_phase2a(
         }
     except Exception:  # noqa: BLE001
         pass
+    _cal_diag_meta: dict[str, Any] = {}
+    try:
+        from cal_diag import load_cal_diag_json_for_meta
+
+        _dd = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
+        _cd = load_cal_diag_json_for_meta(_dd)
+        if _cd is not None:
+            _cal_diag_meta = {"cal_diag": _cd}
+    except Exception:  # noqa: BLE001
+        pass
     merge_photometry_pipeline_meta(
         output_dir,
         {
@@ -8632,6 +8642,7 @@ def run_phase2a(
                 state.stability_run_flags.get("common_mode_detrend_applied")
             ),
             **_cal_meta,
+            **_cal_diag_meta,
         },
     )
 
