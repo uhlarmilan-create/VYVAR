@@ -2925,7 +2925,10 @@ class VyvarDatabase:
         gain: float,
         read_noise: float,
     ) -> None:
-        """Persist detector gain [e⁻/ADU] and read noise [e⁻] on EQUIPMENTS."""
+        """Persist detector gain [e-/ADU] and read noise [e-] on EQUIPMENTS.
+
+        ``READNOISE_E`` is per-pixel at bin1; param_resolver scales *bin for software-summed binning.
+        """
         try:
             g = float(gain)
         except (TypeError, ValueError):

@@ -113,6 +113,13 @@ class AppConfig:
     #: Max |ΔT| (°C) when matching library dark masters to light ``CCD_TEMP`` (``find_best_calibration_library_path``).
     calibration_master_ccd_temp_tolerance_c: float = 0.5
 
+    #: CAL-DIAG radiometry gate at calibrate time (VYVAR_CAL_DIAG_SPEC v1.1).
+    cal_diag_gate_enabled: bool = True
+    cal_diag_autocorrect_enabled: bool = True
+    cal_diag_rel_tol: float = 0.02
+    cal_diag_hard_sigma: float = 5.0
+    cal_diag_sat_warn_frac: float = 0.90
+
     #: Path to local Gaia DR3 SQLite database (must contain table ``gaia_dr3`` with indexes on ra/dec).
     gaia_db_path: str = ""
 
@@ -1687,6 +1694,15 @@ class AppConfig:
         _f01("comp_tier4_weight", 0.25, 0.01, 1.00)
         _f01("comp_contamination_penalty_k", 3.0, 0.0, 20.0)
         _f01("calibration_master_ccd_temp_tolerance_c", 0.5, 0.01, 20.0)
+        self.cal_diag_gate_enabled = bool(
+            data.get("cal_diag_gate_enabled", self.cal_diag_gate_enabled)
+        )
+        self.cal_diag_autocorrect_enabled = bool(
+            data.get("cal_diag_autocorrect_enabled", self.cal_diag_autocorrect_enabled)
+        )
+        _f01("cal_diag_rel_tol", 0.02, 0.0, 0.2)
+        _f01("cal_diag_hard_sigma", 5.0, 3.0, 10.0)
+        _f01("cal_diag_sat_warn_frac", 0.90, 0.5, 1.0)
         self.gs11_dilution_enabled = bool(
             data.get("gs11_dilution_enabled", self.gs11_dilution_enabled)
         )
@@ -1865,6 +1881,11 @@ class AppConfig:
             "calibration_master_ccd_temp_tolerance_c": float(
                 self.calibration_master_ccd_temp_tolerance_c
             ),
+            "cal_diag_gate_enabled": bool(self.cal_diag_gate_enabled),
+            "cal_diag_autocorrect_enabled": bool(self.cal_diag_autocorrect_enabled),
+            "cal_diag_rel_tol": float(self.cal_diag_rel_tol),
+            "cal_diag_hard_sigma": float(self.cal_diag_hard_sigma),
+            "cal_diag_sat_warn_frac": float(self.cal_diag_sat_warn_frac),
             "gaia_db_path": str(self.gaia_db_path or ""),
             "blind_index_fine_path": str(self.blind_index_fine_path or ""),
             "blind_index_wide_path": str(self.blind_index_wide_path or ""),

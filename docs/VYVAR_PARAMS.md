@@ -57,6 +57,16 @@ no UI yet).
 | `masterdark_validity_days` | 80 | — | ui_settings.py:286, ui_settings.py:869 | yes |
 | `masterflat_validity_days` | 524 | — | ui_settings.py:299, ui_settings.py:870 | yes |
 
+## CAL-DIAG (calibrate-time radiometry gate)
+
+| key | default | clamp/range | UI location | exposed |
+|-----|---------|-------------|-------------|---------|
+| `cal_diag_gate_enabled` | True | — | ui_settings.py (Calibration tab) | yes |
+| `cal_diag_autocorrect_enabled` | True | — | config.json only | intentionally-hidden |
+| `cal_diag_rel_tol` | 0.02 | 0.0 … 0.2 | config.json only | intentionally-hidden |
+| `cal_diag_hard_sigma` | 5.0 | 3.0 … 10.0 | config.json only | intentionally-hidden |
+| `cal_diag_sat_warn_frac` | 0.90 | 0.5 … 1.0 | config.json only | intentionally-hidden |
+
 ## Crowding classifier
 
 | key | default | clamp/range | UI location | exposed |

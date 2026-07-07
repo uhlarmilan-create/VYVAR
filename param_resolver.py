@@ -152,7 +152,10 @@ def _clamp(param: str, v: float) -> float:
 
 
 def _scale_bin1_to_binning(value: float, binning: int, exponent: int) -> float:
-    """Scale a bin1 per-pixel DB intrinsic by summed binning (gain: bin², RN: bin)."""
+    """Scale a bin1 per-pixel DB intrinsic by summed binning (gain: bin², RN: bin).
+
+    ``READNOISE_E`` in EQUIPMENTS is per-pixel at bin1; scaled *bin for software-summed binning.
+    """
     b = int(binning)
     if b <= 1:
         return float(value)
