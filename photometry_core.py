@@ -7594,8 +7594,9 @@ def _phase2a_process_one_target(
     _k2_val = float(getattr(state, "k2_bprp", float("nan")))
     _k2_src = str(getattr(state, "k2_source", K2Source.NONE.value))
     if _k2_src == K2Source.LITERATURE_DEFAULT.value and math.isfinite(_k2_val):
-        if "airmass" in target_frames.columns:
-            _airmass_k2 = target_frames["airmass"].to_numpy(dtype=float)
+        _tf_k2 = all_frames[all_frames["catalog_id"] == target_cid]
+        if "airmass" in _tf_k2.columns:
+            _airmass_k2 = _tf_k2["airmass"].to_numpy(dtype=float)
         else:
             _airmass_k2 = np.full(len(mag_calib), float("nan"), dtype=float)
         _bp_med_k2 = bp_rp_comp_median(comp_bp_rp, comp_quality)
