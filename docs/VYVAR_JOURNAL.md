@@ -2,6 +2,25 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-07 — K2-HOTFIX-BSIGN (SLOPE_BV_PER_BPRP sign)
+
+**Root cause:** `SLOPE_BV_PER_BPRP` was `-0.620` — not a valid `d(B-V)/d(BP-RP)` from Jordi et al.
+2010 (likely a misread Table 3 quadratic coeff or V−G_RVS linear term). Both B−V and BP−RP
+increase with redness, so the converter slope must be **positive**. Wrong sign gave
+`k2_B = +0.0186`; draft_425 B validation applied k'' in the **wrong** direction (max |Δ|≈96 mmag).
+
+**Fix:** `SLOPE_BV_PER_BPRP = +0.713` derived from Jordi 2010 Table 3 (B−V)→GBP−GRP polynomial
+(Sect. 5.2 Eq. 1) at FGK anchor B−V≈0.58; `k2_B ≈ −0.02139` (Henden −0.03 × 0.713). Audited
+GR/UG slope comments (Table 6 / spec anchors; Sloan values unchanged). Added **spec-anchored sign
+tests** in `tests/test_k2_extinction.py` (u/B/g/r negative; i/z positive; B in [−0.024, −0.017]).
+
+**Re-validation (425 B):** Snapshot `draft_000425_snapshot_20260707` unchanged; V/R science
+byte-identical; B `k2_value=−0.02139` on all rows; max |Δmag_calib|≈110 mmag; median Δ≈+1.1 mmag;
+per-target Δmag vs (BP-RP_t − comp_med) **100% sign-consistent** with negative k2 (Spearman ρ≈1).
+Report: `tmp/k2_land/validation_report.json`.
+
+---
+
 ## 2026-07-07 — K2 session (CAL-DIAG verify, measurement campaign, v1 activation)
 
 **CAL-DIAG-VERIFY (drafts 425–427):** Gate correctly **silent** on `pre_calibrated` imports (no library

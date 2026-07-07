@@ -165,6 +165,8 @@ carried `psf_flux`).
 - **Reproducibility:** a standalone QA result and its productionized stage must produce the
   same numbers on the same draft.
 - **Tests:** `pytest tests/` green before commit.
+- **K2 / literature validation:** expected values anchor in the **spec/literature**, never in the
+  code under test (no circular checks).
 - **Cross-checks:** prefer an independent witness (sep) over re-running the same engine.
 - **Cross-val storage:** offline harness only (`xval_run.py` → `xval_out/` scratch or
   `validation/xval_ledger.csv` summary rows). No in-pipeline per-draft SEP stage; trust gate

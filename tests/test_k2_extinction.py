@@ -109,3 +109,25 @@ def test_filter_token_from_obs_group() -> None:
 def test_sloan_r_literature_johnson_r_zero() -> None:
     assert computed_k2_bprp_for_token("r") == pytest.approx(-0.004 * SLOPE_GR_PER_BPRP, rel=1e-6)
     assert computed_k2_bprp_for_token("R") == 0.0
+
+
+def test_k2_literature_signs_negative_u_b_g_r() -> None:
+    """Smith/Henden negative k''_native bands stay negative after Jordi conversion."""
+    for token in ("u", "B", "g", "r"):
+        val = computed_k2_bprp_for_token(token)
+        assert val is not None
+        assert float(val) < 0.0, token
+
+
+def test_k2_literature_signs_positive_i_z() -> None:
+    for token in ("i", "z"):
+        val = computed_k2_bprp_for_token(token)
+        assert val is not None
+        assert float(val) > 0.0, token
+
+
+def test_k2_B_in_spec_anchored_range() -> None:
+    """Spec-anchored Henden B band: k2_B in [-0.024, -0.017] mag/(airmass*BP-RP)."""
+    b = computed_k2_bprp_for_token("B")
+    assert b is not None
+    assert -0.024 <= float(b) <= -0.017

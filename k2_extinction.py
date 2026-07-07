@@ -25,10 +25,25 @@ from band_classify import (
 
 LOGGER = logging.getLogger(__name__)
 
-# Jordi et al. 2010 A&A 515 A16 - FGK linear transformation slopes (Table 1).
-SLOPE_GR_PER_BPRP = 0.859  # d(g'-r')/d(BP-RP)
-SLOPE_BV_PER_BPRP = -0.620  # d(B-V)/d(BP-RP)
-SLOPE_UG_PER_BPRP = 1.091  # d(u'-g')/d(BP-RP)
+# Jordi et al. 2010 A&A 515 A16 colour-colour polynomials (Sect. 5.2, Eq. 1):
+#   C_Gaia = a + b*C_native + c*C_native^2 + d*C_native^3
+# Converter uses d(C_native)/d(BP-RP) = 1 / (b + 2*c*C0 + 3*d*C0^2) at FGK anchor C0.
+# Validity: BaSeL3.1 FGK dwarfs; B-V fits have large scatter for Teff < 4500 K (Sect. 5.2).
+
+# Table 6 unreddened SDSS (g-r) -> GBP-GRP: a=0.3523, b=1.1876, c=-0.5370, d=0.4003.
+# Anchor g-r=0.48 (FGK): d(g-r)/d(BP-RP) ~ 1/(b + 2*c*0.48 + 3*d*0.48^2) ~ 1.04.
+# VYVAR design-spec illustrative rounded value 0.859 (Smith g k2 = -0.016 * 0.859 = -0.013744).
+SLOPE_GR_PER_BPRP = 0.859  # d(g'-r')/d(BP-RP); spec anchor; see Table 6 note above
+
+# Table 3 Johnson-Cousins (B-V) -> GBP-GRP, all Av: a=0.0981, b=1.4290, c=-0.0269, d=0.0061.
+# Anchor B-V=0.58 (FGK): d(B-V)/d(BP-RP) = 1/(1.429 - 2*0.0269*0.58 + 3*0.0061*0.58^2) ~ +0.713.
+# Range B-V 0.45-0.75: slope ~0.71-0.72. Henden k''_B=-0.03 per (B-V) -> k2_B ~ -0.021.
+SLOPE_BV_PER_BPRP = 0.713  # d(B-V)/d(BP-RP); Jordi 2010 Table 3, FGK anchor
+
+# Table 6 unreddened SDSS (g-z) -> GBP-GRP: a=0.4052, b=0.6407, c=-0.0091, d=0.0004.
+# Anchor g-z=1.0: d(g-z)/d(BP-RP) ~ 1/0.641 ~ 1.56; u-g via SDSS locus not in Jordi Table 3-6.
+# VYVAR design-spec illustrative 1.091 (Smith u k2 = -0.021 * 1.091 = -0.0229); audit pending u-g row.
+SLOPE_UG_PER_BPRP = 1.091  # d(u'-g')/d(BP-RP); spec anchor
 
 # Smith et al. 2002 - k'' per native Sloan colour (mag/airmass/mag colour).
 SMITH_K2_NATIVE: dict[str, float] = {
@@ -100,7 +115,7 @@ def computed_k2_bprp_for_token(token: str) -> float | None:
     key = raw.upper()
     if key in K2_NONE_TOKENS:
         return None
-    # Sloan lowercase obs_group tokens (g,r,i,u,z) ù distinct from Johnson uppercase R/I.
+    # Sloan lowercase obs_group tokens (g,r,i,u,z) - distinct from Johnson uppercase R/I.
     if len(raw) == 1 and raw.islower() and raw in "griuz":
         slo = raw.upper()
         if slo in SMITH_K2_NATIVE:
