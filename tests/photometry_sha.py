@@ -42,6 +42,9 @@ PHOTOMETRY_PROVENANCE_COLS = frozenset(
         "comp_pool_n_clipped",
         "comp_pool_n_final",
         "comp_clip_iterations",
+        "k2_source",
+        "k2_value",
+        "k2_colour_ref",
     }
 )
 PHOTOMETRY_QC_COLS_LC = frozenset(

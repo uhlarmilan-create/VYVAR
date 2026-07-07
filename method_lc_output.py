@@ -204,6 +204,34 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
     ct_ok = False
     mag_calib_ct = mag_calib.copy()
     _c1_stderr = float("nan")
+    from k2_extinction import (  # noqa: PLC0415
+        K2Source,
+        apply_k2_per_frame,
+        apply_k2_to_comp_mag_inst,
+        bp_rp_comp_median,
+        resolve_k2_bprp_value,
+    )
+
+    _obs_group = str(getattr(ctx.state, "obs_group", "") or "")
+    _k2_val, _k2_src = resolve_k2_bprp_value(_cfg, _obs_group)
+    _bp_med_k2 = bp_rp_comp_median(ctx.comp_bp_rp, comp_quality)
+    if (
+        _k2_src is K2Source.LITERATURE_DEFAULT
+        and math.isfinite(float(_k2_val))
+        and math.isfinite(_bp_med_k2)
+    ):
+        comp_lc = apply_k2_to_comp_mag_inst(
+            comp_lc,
+            ctx.comp_bp_rp,
+            comp_quality,
+            ctx.airmass_arr,
+            float(_k2_val),
+            _bp_med_k2,
+        )
+    k2_value_lc = float("nan")
+    k2_colour_ref = float("nan")
+    k2_source_rows = [K2Source.NONE.value] * len(mag_calib)
+    apply_ct = False
     if ctx.comp_bp_rp:
         c1, _c1_stderr, ct_n_comp = fit_color_term_c1(
             comp_lc,
@@ -214,25 +242,40 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
             sigma_clip_sigma=3.0,
         )
         apply_ct, _ct_reason = should_apply_color_term(
-            obs_group=str(getattr(ctx.state, "obs_group", "") or ""),
+            obs_group=_obs_group,
             c1=c1,
             c1_stderr=_c1_stderr,
             n_comp=ct_n_comp,
             min_comp_for_ct=int(_cfg.phase01_ct_min_comp),
         )
-        if apply_ct:
-            mag_calib_ct, ct_corr, bp_rp_comp_med = apply_color_term(
-                mag_calib,
-                target_bp_rp,
-                ctx.comp_bp_rp,
-                comp_quality,
-                c1,
-            )
-            ct_ok = (
-                bool(math.isfinite(float(target_bp_rp)))
-                and float(c1) != 0.0
-                and math.isfinite(float(bp_rp_comp_med))
-            )
+    if (
+        _k2_src is K2Source.LITERATURE_DEFAULT
+        and math.isfinite(float(_k2_val))
+        and math.isfinite(_bp_med_k2)
+    ):
+        mag_calib, _, k2_source_rows = apply_k2_per_frame(
+            mag_calib,
+            ctx.airmass_arr,
+            object_bp_rp=float(target_bp_rp),
+            bp_rp_comp_med=_bp_med_k2,
+            k2_value=float(_k2_val),
+            k2_source=K2Source.LITERATURE_DEFAULT,
+        )
+        k2_value_lc = float(_k2_val)
+        k2_colour_ref = _bp_med_k2
+    if ctx.comp_bp_rp and apply_ct:
+        mag_calib_ct, ct_corr, bp_rp_comp_med = apply_color_term(
+            mag_calib,
+            target_bp_rp,
+            ctx.comp_bp_rp,
+            comp_quality,
+            c1,
+        )
+        ct_ok = (
+            bool(math.isfinite(float(target_bp_rp)))
+            and float(c1) != 0.0
+            and math.isfinite(float(bp_rp_comp_med))
+        )
 
     if "flag" in ctx.target_frames.columns:
         _raw_tf = ctx.target_frames["flag"].astype(str).str.strip().str.lower().reset_index(drop=True)
@@ -311,6 +354,9 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
         ct_bp_rp_comp_med=(float(bp_rp_comp_med) if bool(ct_ok) else float("nan")),
         ct_n_comp=(int(ct_n_comp) if bool(ct_ok) else None),
         ct_ok=bool(ct_ok),
+        k2_source=k2_source_rows,
+        k2_value=(float(k2_value_lc) if math.isfinite(float(k2_value_lc)) else float("nan")),
+        k2_colour_ref=(float(k2_colour_ref) if math.isfinite(float(k2_colour_ref)) else float("nan")),
         ac_result=(ctx.ac_result if isinstance(ctx.ac_result, dict) else None),
         mag_democratic=_mag_democratic,
         err_inflation=_err_inflation,

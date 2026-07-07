@@ -129,6 +129,7 @@ class RunCitationContext:
     use_iterative_comp_clip: bool = False
     use_catalog_recovery_verify: bool = False
     use_frame_quality_gate: bool = False
+    use_k2_literature: bool = False
 
 
 def _vsx_db_configured(cfg: AppConfig | None) -> bool:
@@ -210,6 +211,8 @@ def build_run_citation_context(
         use_catalog_recovery = bool(_ast.get("catalog_recovery_verified", False))
     use_frame_quality_gate = bool(getattr(cfg, "frame_quality_gate_enabled", False)) if cfg else False
     use_frame_quality_gate = use_frame_quality_gate or bool(meta.get("frame_quality_gate_used", False))
+    _k2m = str(getattr(cfg, "k2_mode", "off") or "off").strip().lower() if cfg else "off"
+    use_k2 = _k2m not in ("0", "false", "no", "off", "none")
 
     return RunCitationContext(
         use_vsx=use_vsx,
@@ -230,6 +233,7 @@ def build_run_citation_context(
         use_iterative_comp_clip=use_iter_clip,
         use_catalog_recovery_verify=use_catalog_recovery,
         use_frame_quality_gate=use_frame_quality_gate,
+        use_k2_literature=use_k2,
     )
 
 
@@ -294,6 +298,14 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
                 citation_line("gilliland1988", bib=bib),
                 citation_line("burdanov2014", bib=bib),
                 citation_line("everett2001", bib=bib),
+            ]
+        )
+    if ctx.use_k2_literature:
+        optional.extend(
+            [
+                citation_line("smith2002", bib=bib),
+                citation_line("jordi2010", bib=bib),
+                "Second-order extinction k'' from literature defaults (BP-RP units; band-aware).",
             ]
         )
     if optional:
