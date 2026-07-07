@@ -48,7 +48,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 
 | ID | Sev | Notes |
 |----|-----|-------|
-| **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. Photon-transfer on field lights **INCONCLUSIVE** (g_eff~0.9; need bin2 flats). **OPEN sub-Q:** RN db **7.6 e-** scaled x2 -> **15.2 e-** may double-count if DB value is already read-mode-0; resolve in **CAL-DIAG** (no code change yet). |
+| **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. Photon-transfer on field lights **INCONCLUSIVE** (g_eff~0.9; need bin2 flats). RN sub-Q directionally **CLOSED** via D3 (DECISIONS 2026-07-07); empirical photon-transfer closure pending bin2 flats. |
 | **F-EXCEPT-TIER1** | MED | 160 silent pass/continue sites; dedicated batch later (out of Fable follow-up scope). |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
