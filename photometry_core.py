@@ -2835,78 +2835,12 @@ def should_apply_color_term(
     Returns: (apply: bool, reason: str)
     reason = krátky popis prečo sa CT aplikuje alebo nie
     """
+    from band_classify import classify_photometric_band, color_term_auto_from_band
+
     filter_raw = str(obs_group or "").split("|")[0].strip()
-    filter_norm = filter_raw.lower().strip()
-
-    no_filter_names = {
-        "nofilter",
-        "no_filter",
-        "no filter",
-        "clear",
-        "clr",
-        "cl",
-        "none",
-        "lum",
-        "luminance",
-        "",
-    }
-    if filter_norm in no_filter_names:
-        return False, f"NoFilter/Clear ({filter_raw}) — CT nie je potrebný"
-
-    broadband_filters = {
-        # Johnson-Cousins
-        "b",
-        "v",
-        "r",
-        "i",
-        "u",
-        # Cousins
-        "rc",
-        "ic",
-        "vc",
-        "bc",
-        # Sloan
-        "g",
-        "z",
-        "g'",
-        "r'",
-        "i'",
-        "u'",
-        "z'",
-        "sloan_g",
-        "sloan_r",
-        "sloan_i",
-        "sloan_u",
-        "sloan_z",
-        # Variácie zo softvérov (NINA, APT, SGP, PRISM)
-        "johnson_b",
-        "johnson_v",
-        "johnson_r",
-        "johnson_i",
-        "cousins_r",
-        "cousins_i",
-        # OSC / tri-colour (AAVSO TG/TB/TR)
-        "tg",
-        "tb",
-        "tr",
-        # Sloan caps
-        "sg",
-        "sr",
-        "si",
-        # Clear-transformed
-        "cv",
-        "cr",
-    }
-
-    is_broadband = filter_norm in broadband_filters
-    if not is_broadband:
-        for prefix in ("b", "v", "r", "i", "u", "g", "z"):
-            if filter_norm.startswith(prefix) and len(filter_norm) <= 8:
-                is_broadband = True
-                break
-
-    if not is_broadband:
-        return False, f"Neznámy filter ({filter_raw}) — CT preskočený"
+    band = classify_photometric_band(obs_group)
+    if not color_term_auto_from_band(band):
+        return False, f"{band.value} ({filter_raw}) — CT nie je potrebný"
 
     try:
         n_comp_i = int(n_comp)
@@ -2969,65 +2903,33 @@ def _is_nofilter_obs_group(obs_group: str) -> bool:
 
 def _is_broadband_photometric_filter(obs_group: str) -> bool:
     """True for Johnson/Cousins/Sloan broadband filters (B/V/Rc/…); false for L/Clear/unknown."""
-    if _is_nofilter_obs_group(obs_group):
-        return False
-    filter_norm = _obs_group_filter_key(obs_group)
-    broadband_filters = {
-        "b",
-        "v",
-        "r",
-        "i",
-        "u",
-        "rc",
-        "ic",
-        "vc",
-        "bc",
-        "g",
-        "z",
-        "g'",
-        "r'",
-        "i'",
-        "u'",
-        "z'",
-        "sloan_g",
-        "sloan_r",
-        "sloan_i",
-        "sloan_u",
-        "sloan_z",
-        "johnson_b",
-        "johnson_v",
-        "johnson_r",
-        "johnson_i",
-        "cousins_r",
-        "cousins_i",
-        "tg",
-        "tb",
-        "tr",
-        "sg",
-        "sr",
-        "si",
-        "cv",
-        "cr",
-        "blue",
-        "green",
-        "red",
-    }
-    if filter_norm in broadband_filters:
-        return True
-    for prefix in ("b", "v", "r", "i", "u", "g", "z"):
-        if filter_norm.startswith(prefix) and len(filter_norm) <= 8:
-            return True
-    return False
+    from band_classify import classify_photometric_band, color_term_auto_from_band
+
+    band = classify_photometric_band(obs_group)
+    return bool(color_term_auto_from_band(band))
 
 
-def resolve_apply_color_term(cfg: Any | None, obs_group: str) -> bool:
+def resolve_apply_color_term(
+    cfg: Any | None,
+    obs_group: str,
+    *,
+    fits_filter: str | None = None,
+    aavso_code: str | None = None,
+) -> bool:
     """User/config toggle: CT applies correction only — never limits the target set."""
+    from band_classify import classify_photometric_band, color_term_auto_from_band
+
     mode = str(getattr(cfg, "apply_color_term", "auto") or "auto").strip().lower()
     if mode in ("0", "false", "no", "off"):
         return False
     if mode in ("1", "true", "yes", "on"):
         return True
-    return _is_broadband_photometric_filter(obs_group)
+    band = classify_photometric_band(
+        obs_group,
+        fits_filter=fits_filter,
+        aavso_code=aavso_code,
+    )
+    return bool(color_term_auto_from_band(band))
 
 
 def _target_display_name(row: Any, *, fallback_cid: str = "") -> str:
@@ -3196,6 +3098,26 @@ def _compute_group_color_term_fit(
     )
     if n_from_matrix < max(10, len(comp_ids) // 4) and flux_matrix is not None:
         comp_mag_inst = _group_comp_mag_inst_from_flux_matrix(flux_matrix, comp_ids, csv_files)
+    from k2_extinction import (  # noqa: PLC0415
+        K2Source,
+        apply_k2_to_comp_mag_inst,
+        airmass_from_proc_csvs,
+        bp_rp_comp_median,
+        resolve_k2_bprp_value,
+    )
+
+    _k2_val, _k2_src = resolve_k2_bprp_value(cfg, obs_group)
+    if _k2_src is K2Source.LITERATURE_DEFAULT and math.isfinite(float(_k2_val)):
+        _bp_med = bp_rp_comp_median(comp_bp_rp, comp_quality)
+        if math.isfinite(_bp_med):
+            comp_mag_inst = apply_k2_to_comp_mag_inst(
+                comp_mag_inst,
+                comp_bp_rp,
+                comp_quality,
+                airmass_from_proc_csvs(csv_files),
+                float(_k2_val),
+                _bp_med,
+            )
     c1, c1_stderr, n_comp = fit_color_term_c1(
         comp_mag_inst,
         comp_catalog_mag,
@@ -3922,6 +3844,9 @@ def save_lightcurve_csv(
     ct_bp_rp_comp_med: float | None = None,
     ct_n_comp: int | None = None,
     ct_ok: bool | None = None,
+    k2_source: list[str] | np.ndarray | None = None,
+    k2_value: float | None = None,
+    k2_colour_ref: float | None = None,
     ac_result: dict[str, Any] | None = None,
     mag_democratic: np.ndarray | None = None,
     err_inflation: np.ndarray | None = None,
@@ -4029,6 +3954,13 @@ def save_lightcurve_csv(
             "ct_bp_rp_comp_med": np.round(_fill_scalar(ct_bp_rp_comp_med, float("nan")), 6),
             "ct_n_comp": np.full(n, int(ct_n_comp) if ct_n_comp is not None else -1, dtype=int),
             "ct_ok": _fill_bool(ct_ok),
+            "k2_source": (
+                [str(x) for x in k2_source]
+                if k2_source is not None
+                else [""] * n
+            ),
+            "k2_value": np.round(_fill_scalar(k2_value, float("nan")), 6),
+            "k2_colour_ref": np.round(_fill_scalar(k2_colour_ref, float("nan")), 6),
             "ac_correction": np.round(_fill_scalar(delta_m_corr if (ac_ok and math.isfinite(delta_m_corr)) else None, float("nan")), 6),
             "ac_scatter": np.round(_fill_scalar(ac_scatter if math.isfinite(ac_scatter) else None, float("nan")), 6),
             "ac_n_ref": np.full(n, int(ac_n_ref), dtype=int),
@@ -5419,6 +5351,8 @@ class _Phase2AState:
     site_ok: bool = False
     group_color_term: _ColorTermGroupFit | None = None
     apply_color_term: bool = False
+    k2_bprp: float = float("nan")
+    k2_source: str = "none"
     stability_run_flags: dict[str, Any] = field(default_factory=dict)
     variable_target_catalog_ids: frozenset[str] = field(default_factory=frozenset)
     snr_ap_table: dict[str, Any] | None = None
@@ -6908,6 +6842,12 @@ def _phase2a_prepare_shared_state(
     else:
         log_event(f"[COLOR TERM] disabled for {obs_group} (apply_color_term toggle / filter type)")
 
+    from k2_extinction import resolve_k2_bprp_value  # noqa: PLC0415
+
+    _k2_bprp, _k2_src_enum = resolve_k2_bprp_value(_cfg, obs_group)
+    if _k2_src_enum.value != "none" and math.isfinite(float(_k2_bprp)):
+        log_event(f"[K2] obs_group {obs_group}: k2={float(_k2_bprp):.6f} source={_k2_src_enum.value}")
+
     return _Phase2AState(
         at_df=at_df,
         comp_df=comp_df,
@@ -6951,6 +6891,8 @@ def _phase2a_prepare_shared_state(
         site_ok=bool(_site.ok),
         group_color_term=_group_ct,
         apply_color_term=bool(_apply_ct),
+        k2_bprp=float(_k2_bprp),
+        k2_source=str(_k2_src_enum.value),
         variable_target_catalog_ids=_variable_target_cids,
         snr_ap_table=_snr_ap_table,
     )
@@ -7644,6 +7586,30 @@ def _phase2a_process_one_target(
             if math.isfinite(fv):
                 comp_bp_rp[cidc] = float(fv)
 
+    from k2_extinction import K2Source, apply_k2_per_frame, bp_rp_comp_median  # noqa: PLC0415
+
+    k2_value_lc = float("nan")
+    k2_colour_ref = float("nan")
+    k2_source_rows = [K2Source.NONE.value] * len(mag_calib)
+    _k2_val = float(getattr(state, "k2_bprp", float("nan")))
+    _k2_src = str(getattr(state, "k2_source", K2Source.NONE.value))
+    if _k2_src == K2Source.LITERATURE_DEFAULT.value and math.isfinite(_k2_val):
+        if "airmass" in target_frames.columns:
+            _airmass_k2 = target_frames["airmass"].to_numpy(dtype=float)
+        else:
+            _airmass_k2 = np.full(len(mag_calib), float("nan"), dtype=float)
+        _bp_med_k2 = bp_rp_comp_median(comp_bp_rp, comp_quality)
+        mag_calib, _k2_delta, k2_source_rows = apply_k2_per_frame(
+            mag_calib,
+            _airmass_k2,
+            object_bp_rp=float(target_bp_rp),
+            bp_rp_comp_med=_bp_med_k2,
+            k2_value=_k2_val,
+            k2_source=K2Source.LITERATURE_DEFAULT,
+        )
+        k2_value_lc = _k2_val
+        k2_colour_ref = _bp_med_k2
+
     c1 = 0.0
     ct_n_comp = 0
     mag_calib_ct = mag_calib.copy()
@@ -7949,6 +7915,9 @@ def _phase2a_process_one_target(
         ct_bp_rp_comp_med=(float(bp_rp_comp_med) if bool(ct_ok) else float("nan")),
         ct_n_comp=(int(ct_n_comp) if bool(ct_ok) else None),
         ct_ok=bool(ct_ok),
+        k2_source=k2_source_rows,
+        k2_value=(float(k2_value_lc) if math.isfinite(float(k2_value_lc)) else float("nan")),
+        k2_colour_ref=(float(k2_colour_ref) if math.isfinite(float(k2_colour_ref)) else float("nan")),
         ac_result=(ac_result if isinstance(ac_result, dict) else None),
         mag_democratic=_mag_democratic,
         err_inflation=_err_inflation,
