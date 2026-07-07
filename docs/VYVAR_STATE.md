@@ -5,7 +5,7 @@ Last updated: **2026-07-07** — K2 v1 band-aware second-order extinction **acti
 **Done 2026-07-07 (K2 v1):** Literature k'' path via `k2_extinction.py`; `band_classify` wired to
 `resolve_apply_color_term` (CV/CR flip live); LC columns `k2_source`/`k2_value`/`k2_colour_ref`;
 NIGHT_FIT deferred (`k2_fit_enabled` OFF). Spec: `docs/VYVAR_K2_DESIGN_SPEC.md`. Validation:
-`tmp/k2_land/validation_report.json`.
+424/425/427 matrix **PASS** (`tmp/k2_land/validation_report.json`, 2026-07-07).
 
 **Done 2026-07-07 (CAL-DIAG-IMPL):** Calibration-time radiometry gate per `VYVAR_CAL_DIAG_SPEC.md`
 v1.1 — Check A (SUM/MEAN convention) + Check B (post-dark sky sanity); parent pre-gate for MP

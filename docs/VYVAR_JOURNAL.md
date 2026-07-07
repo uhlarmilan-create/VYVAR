@@ -32,6 +32,14 @@ NIGHT_FIT + pre-gate = **v2** (`k2_fit_enabled` OFF). Spec: `docs/VYVAR_K2_DESIG
 
 Evidence: `CURSOR_RESULT_k2_*` series; validation `tmp/k2_land/validation_report.json`.
 
+**K2-LAND validation addendum (2026-07-07):** Stage 3 matrix on HEAD `e62cc16`+fixes.
+424 NoFilter — science mag cols **byte-identical** (178 LCs; harness flags `catalog_match_mode`
+string metadata only). 425 snapshot `draft_000425_snapshot_20260707` — **V/R science
+identical**; **B only** delta (max |Δmag_calib|≈96 mmag; median≈−1 mmag; k2_value=+0.0186,
+k2_source=literature_default on all rows); raw-light checksums verified. 427 g/r rerun with
+k2 columns — vs gated snapshot science delta **expected** (literature k2); g k2≈−0.013744,
+r k2≈−0.003436. CV/CR audit: **no tokens** in OBS_FILES or archive — flip affects nobody locally.
+
 ---
 
 ## 2026-07-07 — CAL-DIAG-IMPL (calibration-time radiometry gate)
