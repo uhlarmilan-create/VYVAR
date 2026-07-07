@@ -333,9 +333,9 @@ boundary: stitching and long-baseline analysis live outside VYVAR's core submiss
 
 ## CAL-DIAG — calibration-time radiometry gate (agreed 2026-07-07)
 
-**Decision (Milan).** Add a camera-agnostic calibration-time diagnostic (spec pending from Claude).
-VYVAR must verify radiometry from data when users build masters at arbitrary binning -- not assume
-per-camera SUM/MEAN conventions.
+**Decision (Milan).** Add a camera-agnostic calibration-time diagnostic. Spec:
+`docs/VYVAR_CAL_DIAG_SPEC.md` (v1.1, 2026-07-07). VYVAR must verify radiometry from data
+when users build masters at arbitrary binning -- not assume per-camera SUM/MEAN conventions.
 
 **Scope (planned):**
 - Post-dark-subtraction sky-median sanity (> 0, plausible).
@@ -347,7 +347,66 @@ per-camera SUM/MEAN conventions.
 radiometric validation. **F-BINGAIN-1 RN sub-question** (db 7.6 e- scaled x2 -> 15.2 e- if DB
 already read-mode-0) resolves here, not via ad-hoc param_resolver exponent change.
 
-**Status:** workstream open; no implementation yet. See `VYVAR_ROADMAP.md` IN-FLIGHT CAL-DIAG.
+**Status:** spec written and Cursor-reviewed 2026-07-07 (`docs/VYVAR_CAL_DIAG_SPEC.md`, v1.1);
+grounding trace `CURSOR_RESULT_caldiag_flow.md`. Awaiting Milan implementation go.
+
+---
+
+## Calibration masters: manual library build only; no auto-stack on import (2026-07-07)
+
+**Decision (Milan).** When an imported session folder contains raw darks/flats, VYVAR copies
+them to `Raw/darks|flats` in the archive but does **NOT** auto-stack them into masters at
+import time. Master creation stays **manual via the CalibrationLibrary UI**
+(`generate_master_dark_from_source_dir` / `generate_master_flat_from_source_dir`,
+importer.py:1483-1608; ui_calibration_library.py:366,398), which registers the result in
+`CALIBRATION_LIBRARY` for reuse.
+
+**Why.** The library is the single curated source of validated masters (scoped per
+equipment+telescope, validity-windowed). Auto-stacking arbitrary session frames at import
+would silently admit unvetted masters (wrong temp match, too few frames, light leaks) into
+science calibration -- against the "trust in the numbers" mission. The user builds masters
+deliberately, once, and the library serves them everywhere.
+
+**Context.** The product description previously implied auto-build ("folder with
+lights/darks/flats creates new masters"); the 2026-07-07 flow trace
+(`CURSOR_RESULT_caldiag_flow.md` Q3) showed the code never did this. Milan confirmed the
+code behavior as intended -- this entry codifies it so the gap between description and code
+does not resurface as a "bug".
+
+## Calibration masters: library precedence over session raw (2026-07-07)
+
+**Decision (Milan).** When a session provides raw darks/flats AND a valid scoped library
+master exists for the same obs_group, the **library master wins** for calibration
+(importer.py:1438-1439). Session raw frames are archived under `Raw/darks|flats` as
+provenance, not stacked or preferred.
+
+**Why.** A registered library master is a known quantity: scoped to the equipment set,
+within its validity window (90 d dark / 200 d flat), built from a deliberate stack. A
+handful of session raw frames is not automatically better -- and choosing it silently would
+make calibration depend on what happened to be in the source folder. Deterministic
+precedence beats per-session guessing. The user who wants session-specific masters builds
+them via the UI (previous decision), which then wins the scoped lookup as the freshest
+valid entry.
+
+## READNOISE_E is per-pixel at bin1; RN_eff = RN_db * bin is correct for software binning (2026-07-07)
+
+**Decision.** The DB `EQUIPMENTS.READNOISE_E` value is defined as the **per-pixel read noise
+at bin1** (native read mode). The EQUIP-BINNING scaling `RN_eff = RN_db * binning`
+(exponent 1; `_scale_bin1_to_binning`, param_resolver.py:154-159, applied in
+`resolve_read_noise` param_resolver.py:493-498) is **physically correct** for
+software/digitally binned CMOS: a bin-b superpixel sums b^2 independent pixel reads, so
+read noise adds in quadrature, sigma = RN_px * sqrt(b^2) = RN_px * b. For the QHY294MM,
+7.6 e- (per-pixel, per spec sheet) -> 15.2 e- effective at bin2. There is **no
+double-count** under this semantic; a double-count would require the DB to store an
+already-binned effective value, which nothing in code or docs claims.
+
+**Closes the F-BINGAIN-1 RN sub-question directionally.** Final empirical closure = photon
+transfer on **bin2 flats** (Milan data item; the 2026-07-07 field-light attempt was
+inconclusive, g_eff~0.9). No param_resolver exponent change; the guard is CAL-DIAG's
+data-driven radiometry gate, not per-camera constants.
+
+**Implementation note:** semantic comment at param_resolver.py:155 and in the
+`set_equipment_cosmic_params` docstring (database.py:2928), landed with the CAL-DIAG PR.
 
 ---
 

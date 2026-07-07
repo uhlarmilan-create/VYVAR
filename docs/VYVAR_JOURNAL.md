@@ -2,6 +2,25 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-07 — CAL-DIAG-IMPL (calibration-time radiometry gate)
+
+**Milan approved:** MP variant (a) parent pre-gate + pass results to workers; D1–D3 unchanged.
+
+**Shipped:** `cal_diag.py` + `_cal_diag_gate_for_obs_group`; dark `dark_resample_mode` override in
+`resample_master_to_light_binning`; wired sequential calibrate, RAM-QC, and `calibrate_batch` MP path;
+config keys (`cal_diag_gate_enabled` exposed in Settings); D3 READNOISE_E bin1 comments.
+
+**Validation:**
+- `tests/test_cal_diag_gate.py`: **14 passed** (PASS/AUTO-CORRECT/FAIL-CLOSED/PASSTHROUGH/path-coverage).
+- Full suite: **549 passed**, 15 skipped; `ruff check . --select BLE001,E722` clean.
+- draft_424 regression (`sandbox/caldiag_d424_regression.py`): gate ON — **150/150** `VY_DKRSMP=SUM`,
+  **0** WARN/FAIL, calibrated pixel arrays byte-identical to baseline; photometry science failures **0**
+  (`compare_photometry_science_meaningful`, setup `NoFilter_60_2`); gate OFF — no `VY_*` CAL-DIAG headers.
+
+Evidence: `CURSOR_RESULT_caldiag_impl.md`; report `tmp/caldiag_d424_regression/stage7_report.json`.
+
+---
+
 ## 2026-06-25 — Photometry citation audit follow-ups (Stages A + B)
 
 **Milan approved:** fix-now on citation hygiene + diagnostic-first F-HOWELL-3; Stage C gated.

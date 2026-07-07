@@ -1,7 +1,13 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-07** — Fable audit session close: F-BINGAIN-1 **LATENT**; CAL-DIAG workstream
-agreed; `4f18f02` pushed.
+Last updated: **2026-07-07** — CAL-DIAG radiometry gate **implemented and validated** on draft_424.
+
+**Done 2026-07-07 (CAL-DIAG-IMPL):** Calibration-time radiometry gate per `VYVAR_CAL_DIAG_SPEC.md`
+v1.1 — Check A (SUM/MEAN convention) + Check B (post-dark sky sanity); parent pre-gate for MP
+variant (a); provenance headers `VY_DKRSMP`/`VY_CDSKY`/`VY_CDSTAT` + `archive/<draft>/cal_diag.json`.
+14 gate unit tests; `549 passed` full suite; draft_424: **150/150** frames `VY_DKRSMP=SUM`, 0
+WARN/FAIL, calibrated arrays and photometry science byte-identical to baseline. Ledger items
+CAL-AGE-CLOCK / RN-HEADER-NONE / CAL-PASSTHRU-DEAD remain open (spec section 10).
 
 **Done 2026-07-07 (session close):** F-BINGAIN-1 Stage A -> **LATENT** (not live on wide rig);
 CAL-DIAG workstream registered (calibration radiometry gate; spec pending). F-AIRMASS-CITE fixed;

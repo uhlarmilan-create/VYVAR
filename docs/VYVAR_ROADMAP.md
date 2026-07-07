@@ -62,22 +62,31 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 
 ---
 
-## IN-FLIGHT — CAL-DIAG (calibration-time radiometry gate)
+## IN-FLIGHT — CAL-DIAG (calibration-time radiometry gate) — **IMPLEMENTED / VALIDATED (2026-07-07)**
 
-**Agreed 2026-07-07 (Milan + Claude).** Spec pending from Claude. **No code change yet.**
+**Agreed 2026-07-07 (Milan + Claude).** Spec: `docs/VYVAR_CAL_DIAG_SPEC.md` v1.1.
+Grounding: `CURSOR_RESULT_caldiag_flow.md`. Implementation: `CURSOR_RESULT_caldiag_impl.md`.
 
-Camera-agnostic calibration-time diagnostic gate:
+Camera-agnostic calibration-time diagnostic gate (shipped):
 
-1. **Post-dark-subtraction sky-median sanity** -- median > 0 and plausible (reject negative/absurd
+1. **Post-dark-subtraction sky-median sanity** — median > 0 and plausible (reject negative/absurd
    calibrated sky).
-2. **Pre-subtraction convention cross-check** -- `median(light)` vs `median(resampled dark)`; detect
+2. **Pre-subtraction convention cross-check** — `median(light)` vs `median(resampled dark)`; detect
    SUM vs MEAN dark-resample mismatch with loud auto-correction (SUM -> MEAN retry) or fail-closed abort.
-3. **Provenance flag** `dark_resample` = `SUM` | `MEAN_AUTOCORRECTED` | `PASSTHROUGH`.
+3. **Provenance** — `VY_DKRSMP` = `SUM` | `MEAN_AUTOCORRECTED` | `PASSTHROUGH`; `archive/<draft>/cal_diag.json`.
 
-**Rationale:** user may build masters at any binning; VYVAR must verify radiometry from data, not
-assume camera conventions. Today only **geometric** adaptation is guarded (`calibration.py`
-`get_processed_master`); no radiometric check exists. Resolves F-BINGAIN-1 RN sub-question and
-future binning/gain ambiguity without per-camera hardcoding.
+**Validation:** 14 pytest gate tests; full `pytest tests/` green; draft_424 regression PASS (150/150
+`VY_DKRSMP=SUM`, 0 WARN/FAIL, calibrated arrays + photometry science byte-identical).
+
+**Related ledger (NOT part of this gate — remain open):**
+
+| ID | Sev | Summary |
+|----|-----|---------|
+| **CAL-AGE-CLOCK** | MED | Import scan mtime vs library UI header-age clocks diverge (`importer.py` vs `get_master_age_days`). |
+| **RN-HEADER-NONE** | LOW/MED | SNR aperture helper passes `header=None` to read-noise resolver on binned data. |
+| **CAL-PASSTHRU-DEAD** | LOW | Synthetic passthrough master in `get_processed_master` has no production caller. |
+
+Flat-norm Stage 2 and other ROADMAP calibration items unchanged (D1/D2/D3 codify current behavior).
 
 ---
 
