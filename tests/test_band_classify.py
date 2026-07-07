@@ -127,8 +127,8 @@ def test_synonym_table_nonempty() -> None:
         ("V_20_2", True, True),
         ("R_20_2", True, True),
         ("L_20_2", False, False),
-        ("CV_20_2", True, False),  # documented FLIP
-        ("CR_20_2", True, False),  # documented FLIP
+        ("CV_20_2", False, False),  # band_classify wired (legacy broadband True retired)
+        ("CR_20_2", False, False),
     ],
 )
 def test_documented_flip_cases(obs_group: str, legacy_ct: bool, new_ct: bool) -> None:

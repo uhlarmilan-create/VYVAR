@@ -266,10 +266,19 @@ def test_color_term_extrapolation_fallback_preserves_mag():
 
 
 @pytest.mark.parametrize(
-    "filter_name",
-    ["TG", "TB", "TR", "SG", "SR", "SI", "CV", "CR"],
+    ("filter_name", "expected_apply"),
+    [
+        ("TG", True),
+        ("TB", True),
+        ("TR", True),
+        ("SG", True),
+        ("SR", True),
+        ("SI", True),
+        ("CV", False),
+        ("CR", False),
+    ],
 )
-def test_should_apply_color_term_osc_aavso_broadband(filter_name: str):
+def test_should_apply_color_term_osc_aavso_broadband(filter_name: str, expected_apply: bool):
     from photometry_core import should_apply_color_term
 
     apply, reason = should_apply_color_term(
@@ -279,8 +288,9 @@ def test_should_apply_color_term_osc_aavso_broadband(filter_name: str):
         n_comp=8,
         min_comp_for_ct=7,
     )
-    assert apply is True
-    assert "aplikovaný" in reason.lower() or "CT" in reason
+    assert apply is expected_apply
+    if expected_apply:
+        assert "aplikovaný" in reason.lower() or "CT" in reason
 
 
 @pytest.mark.parametrize(
