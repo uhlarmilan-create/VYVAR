@@ -258,6 +258,7 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
         "henden_kaitchuck1982",
         "aavso_ccd_guide",
         "eastman2010",
+        # CORE-candidates (not wired): kastenyoung1989 — airmass column provenance only
     ]
     sections.append(("CORE", [citation_line(k, bib=bib) for k in core]))
 

@@ -305,6 +305,10 @@ grandfathered; 8 `photometry_core` narrowings; 4 bare excepts fixed (sandbox).
 | F-HOWELL-1 / F-CITE-HONEYCUTT | **FIXED (A2/A3)** | — | Howell ADU comment; Honeycutt in CORE |
 | F-HOWELL-3 err sky column | **FIXED (Stage C)** | — | `sky_adu_per_px_annulus`; draft_424 verified |
 | F-BJD-1 time_base provenance | **FIXED (Stage D)** | — | LC column `BJD_TDB`/`JD_FALLBACK`; audit closed |
+| F-AIRMASS-CITE Kasten-Young | **FIXED** | — | pipeline docstring; `kastenyoung1989` bib |
+| F-BINGAIN-1 gain exponent | **OPEN (diag)** | — | `tmp/phaseBinGain/`; draft_424 resolver 0% scaled-db |
+| GAIA-ID-FLOAT-GUARD | **CLOSED** | — | verified 2x clone + live tree |
+| F-EXCEPT-TIER1 silent pass | **OPEN** | — | 160 sites; dedicated batch later |
 | Band classifier (additive) | **DONE** | `fe9b375` | see BAND-DETECT below |
 | Production CT-gate + k'' rewiring | **PENDING** | — | blocked on filtered draft + FITS FILTER capture |
 

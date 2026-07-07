@@ -143,6 +143,27 @@ bright synthetic star (not ~5%+). Sky-dominated regime was **not measured** in S
 
 ---
 
+## Addendum 2026-07-07 -- Fable audit fresh pass (HEAD `d0a9a0a`)
+
+**Milan approved 2026-07-07.** Condensed disposition; full audit: `VYVAR_FABLE_AUDIT_2026-07-02.md`.
+
+| ID | Sev | Status | Notes |
+|----|-----|--------|-------|
+| F-BINGAIN-1 | MED | **OPEN (Stage A diag)** | Bin2 gain exponent ambiguity; diagnostic in `tmp/phaseBinGain/` |
+| F-AIRMASS-CITE | LOW | **FIXED** | Kasten & Young (1989) attribution; `kastenyoung1989` in bib |
+| F-EXCEPT-TIER1 | MED | **OPEN** | 160 silent pass/continue sites; dedicated batch later |
+| GAIA-ID-FLOAT-GUARD | MED | **CLOSED** | Verified 2x (clone + live tree); str dtype on all production reads |
+
+**Verified sound (no action):** calibration resampling, dark exact-EXPTIME matching, airmass chain,
+dilution GS11, `band_classify` fail-safe.
+
+**F-BINGAIN-1 Stage A (diagnostic, no code change):** draft_424 QHY294MM bin2 production frames
+resolve gain via `header_index_mapped` -> **3.17 e-/ADU** (scaled-db `exponent=2` path **0%** on
+sample). Photon transfer on field lights **inconclusive** (no local bin2 flats; g_eff~0.9 on
+high-sky BO CVn pairs). **STOP** -- Milan review before any exponent change.
+
+---
+
 ## Parked deep work (ROADMAP)
 
 1. **D1-combination** — Broeg-weighted `ens_med` re-test after colour/extinction (**moves anchor**).

@@ -8884,7 +8884,7 @@ def _init_export_per_frame_worker(state: dict[str, Any]) -> None:
 
 
 def _airmass_from_altitude_deg(alt_deg: float) -> float:
-    """Rozenberg airmass from altitude in degrees."""
+    """Kasten & Young (1989) airmass from altitude in degrees."""
     alt_rad = math.radians(float(alt_deg))
     return 1.0 / (
         math.sin(alt_rad) + 0.50572 * (float(alt_deg) + 6.07995) ** (-1.6364)
@@ -8982,7 +8982,7 @@ def _extract_airmass_from_header(
             except (TypeError, ValueError):
                 pass
 
-    # Fallback: altitude → airmass cez Rozenbergovu aproximáciu
+    # Fallback: altitude → airmass cez aproximaciu Kasten & Young (1989)
     for kw in ("ALT_OBJ", "OBJCTALT", "ALTITUDE", "TELALT"):
         val = hdr.get(kw)
         if val is not None:

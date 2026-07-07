@@ -1,7 +1,11 @@
 # VYVAR -- Development State
 
-Last updated: **2026-06-25** — F-BJD-1 Stage D: `time_base` provenance on per-target LC (`BJD_TDB` /
-`JD_FALLBACK`); numeric columns unchanged.
+Last updated: **2026-07-07** — Fable audit follow-ups: F-AIRMASS-CITE fixed; GAIA-ID guard closed;
+F-BINGAIN-1 diagnostic in `tmp/phaseBinGain/` (awaiting Milan).
+
+**Done 2026-07-07 (Fable audit B+C):** Kasten & Young (1989) airmass attribution corrected;
+`kastenyoung1989` in `CITATIONS.bib`. GAIA-ID-FLOAT-GUARD closed (live-tree parity check).
+F-BINGAIN-1 Stage A diagnostic only — no exponent change yet.
 
 **Done 2026-06-25 (F-BJD-1 Stage D):** per-target LC column `time_base` labels BJD recompute path;
 `_recompute_bjd_hjd_with_status` reports cause (`BJD_TDB` vs `JD_FALLBACK`). Purely additive —
