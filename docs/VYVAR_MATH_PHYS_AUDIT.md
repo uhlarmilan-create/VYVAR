@@ -149,7 +149,7 @@ bright synthetic star (not ~5%+). Sky-dominated regime was **not measured** in S
 
 | ID | Sev | Status | Notes |
 |----|-----|--------|-------|
-| F-BINGAIN-1 | MED | **OPEN (Stage A diag)** | Bin2 gain exponent ambiguity; diagnostic in `tmp/phaseBinGain/` |
+| F-BINGAIN-1 | MED | **LATENT (Stage A)** | Not live on wide rig; draft_424 index-mapped 3.17; PT inconclusive; RN -> CAL-DIAG |
 | F-AIRMASS-CITE | LOW | **FIXED** | Kasten & Young (1989) attribution; `kastenyoung1989` in bib |
 | F-EXCEPT-TIER1 | MED | **OPEN** | 160 silent pass/continue sites; dedicated batch later |
 | GAIA-ID-FLOAT-GUARD | MED | **CLOSED** | Verified 2x (clone + live tree); str dtype on all production reads |

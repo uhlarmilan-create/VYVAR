@@ -331,6 +331,24 @@ unit a user processes per session. **Multi-night global matching / inter-night z
 science case requires it. Consistent with the TODO-GS9 (downstream period analysis) scope
 boundary: stitching and long-baseline analysis live outside VYVAR's core submission path.
 
+## CAL-DIAG — calibration-time radiometry gate (agreed 2026-07-07)
+
+**Decision (Milan).** Add a camera-agnostic calibration-time diagnostic (spec pending from Claude).
+VYVAR must verify radiometry from data when users build masters at arbitrary binning -- not assume
+per-camera SUM/MEAN conventions.
+
+**Scope (planned):**
+- Post-dark-subtraction sky-median sanity (> 0, plausible).
+- Pre-subtraction `median(light)` vs `median(resampled dark)` cross-check; loud auto-correction
+  (SUM -> MEAN retry) or fail-closed abort.
+- Provenance flag `dark_resample` = `SUM` | `MEAN_AUTOCORRECTED` | `PASSTHROUGH`.
+
+**Gap today:** `calibration.py` `get_processed_master` guards geometric resampling only; no
+radiometric validation. **F-BINGAIN-1 RN sub-question** (db 7.6 e- scaled x2 -> 15.2 e- if DB
+already read-mode-0) resolves here, not via ad-hoc param_resolver exponent change.
+
+**Status:** workstream open; no implementation yet. See `VYVAR_ROADMAP.md` IN-FLIGHT CAL-DIAG.
+
 ---
 
 ## Photometry method & scale

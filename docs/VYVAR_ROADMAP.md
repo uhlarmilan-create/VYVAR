@@ -48,14 +48,36 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 
 | ID | Sev | Notes |
 |----|-----|-------|
-| **GAIA-ID-FLOAT-GUARD** | MED | Audit remaining `catalog_id` read sites for float64 truncation pattern; highest-value follow-up (`1616b18` hardened promotion path only). |
+| **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. Photon-transfer on field lights **INCONCLUSIVE** (g_eff~0.9; need bin2 flats). **OPEN sub-Q:** RN db **7.6 e-** scaled x2 -> **15.2 e-** may double-count if DB value is already read-mode-0; resolve in **CAL-DIAG** (no code change yet). |
+| **F-EXCEPT-TIER1** | MED | 160 silent pass/continue sites; dedicated batch later (out of Fable follow-up scope). |
+| **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
 | **F-BJD-1** | LOW | **FIXED (Stage D)** | `time_base` LC column; numeric times unchanged |
+| **F-AIRMASS-CITE** | LOW | **FIXED** (2026-07-07) | Kasten & Young (1989) attribution |
 | **G7-F003c** | LOW-MED | PDF report re-loads `AppConfig()` at build time — cfg edited post-run can drift from photometry settings. |
 | **EQUIP-BINNING-ASYM** | LOW | Asymmetric binning (`XBINNING ≠ YBINNING`) warns but does not scale gain/RN; all current rigs symmetric. |
 | **TIER1-OBSLOC-ZERO** | MED | Observer json 0.0/0.0 fallback may silently corrupt airmass/BJD/dilution (null-island guard). |
 | **TIER1-UI-DEBT** | LOW | 38 SAFE UI/plotly broad-except `pass` sites — cosmetic diagnostics only. |
 | **299-defensive cluster** | MED | Pipeline/`photometry_core` broad-except `pass` cluster — existing phased-audit backlog item. |
+
+---
+
+## IN-FLIGHT — CAL-DIAG (calibration-time radiometry gate)
+
+**Agreed 2026-07-07 (Milan + Claude).** Spec pending from Claude. **No code change yet.**
+
+Camera-agnostic calibration-time diagnostic gate:
+
+1. **Post-dark-subtraction sky-median sanity** -- median > 0 and plausible (reject negative/absurd
+   calibrated sky).
+2. **Pre-subtraction convention cross-check** -- `median(light)` vs `median(resampled dark)`; detect
+   SUM vs MEAN dark-resample mismatch with loud auto-correction (SUM -> MEAN retry) or fail-closed abort.
+3. **Provenance flag** `dark_resample` = `SUM` | `MEAN_AUTOCORRECTED` | `PASSTHROUGH`.
+
+**Rationale:** user may build masters at any binning; VYVAR must verify radiometry from data, not
+assume camera conventions. Today only **geometric** adaptation is guarded (`calibration.py`
+`get_processed_master`); no radiometric check exists. Resolves F-BINGAIN-1 RN sub-question and
+future binning/gain ambiguity without per-camera hardcoding.
 
 ---
 

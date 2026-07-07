@@ -306,13 +306,24 @@ grandfathered; 8 `photometry_core` narrowings; 4 bare excepts fixed (sandbox).
 | F-HOWELL-3 err sky column | **FIXED (Stage C)** | — | `sky_adu_per_px_annulus`; draft_424 verified |
 | F-BJD-1 time_base provenance | **FIXED (Stage D)** | — | LC column `BJD_TDB`/`JD_FALLBACK`; audit closed |
 | F-AIRMASS-CITE Kasten-Young | **FIXED** | — | pipeline docstring; `kastenyoung1989` bib |
-| F-BINGAIN-1 gain exponent | **OPEN (diag)** | — | `tmp/phaseBinGain/`; draft_424 resolver 0% scaled-db |
+| F-BINGAIN-1 gain exponent | **LATENT** | — | draft_424: 12/12 `header_index_mapped` 3.17; scaled-db 0%; PT INCONCLUSIVE; RN sub-Q -> CAL-DIAG |
 | GAIA-ID-FLOAT-GUARD | **CLOSED** | — | verified 2x clone + live tree |
 | F-EXCEPT-TIER1 silent pass | **OPEN** | — | 160 sites; dedicated batch later |
 | Band classifier (additive) | **DONE** | `fe9b375` | see BAND-DETECT below |
+| CAL-DIAG radiometry gate | **OPEN** | — | agreed 2026-07-07; spec pending |
 | Production CT-gate + k'' rewiring | **PENDING** | — | blocked on filtered draft + FITS FILTER capture |
 
-**Deferred (non-blocking):** GAIA-ID-FLOAT-GUARD (MED); G7-F003c; EQUIP-BINNING-ASYM; TIER1-OBSLOC-ZERO;
+### F-BINGAIN-1 Stage A summary (2026-07-07, `tmp/phaseBinGain/`)
+
+| Check | Result |
+|-------|--------|
+| Resolver (draft_424 bin2, n=12) | `header_index_mapped` gain **3.17 e-/ADU**; scaled-db **0%** |
+| RN resolved | db-scaled **15.2 e-** (7.6 x bin2); sub-Q: double-count if DB already read-mode-0 |
+| Photon transfer (8 light pairs) | g_eff mean **0.899** +/- 0.057 -- **INCONCLUSIVE** (no bin2 flats) |
+| ADU ceiling | data_max ~**68608** (16-bit full-scale) |
+| Verdict | **LATENT** -- no exponent change; flat PT + CAL-DIAG for RN convention |
+
+**Deferred (non-blocking):** G7-F003c; EQUIP-BINNING-ASYM; TIER1-OBSLOC-ZERO;
 TIER1-UI-DEBT (38 sites); 299-defensive broad-except cluster. Full detail: ROADMAP deferred table +
 `VYVAR_FULL_AUDIT_LEDGER.md`.
 

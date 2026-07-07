@@ -1,7 +1,11 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-07** — Fable audit follow-ups: F-AIRMASS-CITE fixed; GAIA-ID guard closed;
-F-BINGAIN-1 diagnostic in `tmp/phaseBinGain/` (awaiting Milan).
+Last updated: **2026-07-07** — Fable audit session close: F-BINGAIN-1 **LATENT**; CAL-DIAG workstream
+agreed; `4f18f02` pushed.
+
+**Done 2026-07-07 (session close):** F-BINGAIN-1 Stage A -> **LATENT** (not live on wide rig);
+CAL-DIAG workstream registered (calibration radiometry gate; spec pending). F-AIRMASS-CITE fixed;
+GAIA-ID guard closed. Commits: `4f18f02` (Fable B+C), session-close docs pending.
 
 **Done 2026-07-07 (Fable audit B+C):** Kasten & Young (1989) airmass attribution corrected;
 `kastenyoung1989` in `CITATIONS.bib`. GAIA-ID-FLOAT-GUARD closed (live-tree parity check).

@@ -27,15 +27,20 @@ edge err +**1.5%** on bright star only (mechanism confirmed, magnitude not).
 
 ---
 
-## 2026-07-07 -- Fable audit follow-ups (Stages A diagnostic + B/C)
+## 2026-07-07 -- Fable audit follow-ups + session close
 
 **Stage A (F-BINGAIN-1, diagnostic only):** `tmp/phaseBinGain/bingain_diag.{md,json}`.
 draft_424 bin2: gain `header_index_mapped` 3.17 (scaled-db 0%); photon transfer on field lights
-inconclusive (g_eff~0.9; need bin2 flats). **STOP for Milan.**
+inconclusive (g_eff~0.9; need bin2 flats). Verdict -> **LATENT** (not live). RN sub-Q (7.6->15.2
+double-count?) deferred to **CAL-DIAG**.
 
-**Stage B:** F-AIRMASS-CITE -- Rozenberg -> Kasten & Young (1989); bib entry added.
+**Stage B:** F-AIRMASS-CITE -- Rozenberg -> Kasten & Young (1989); bib entry added (`4f18f02`).
 
-**Stage C:** GAIA-ID-FLOAT-GUARD closed on live tree (production reads str dtype; no float-corruption).
+**Stage C:** GAIA-ID-FLOAT-GUARD closed on live tree (production reads str dtype).
+
+**Session close:** CAL-DIAG workstream agreed (calibration radiometry gate; spec pending).
+`VYVAR_PIPELINE_CZ_rework.md` added (draft, does not supersede `VYVAR_PIPELINE_CZ.md`).
+Pushed `4f18f02` to origin.
 
 ---
 
