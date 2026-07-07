@@ -25,12 +25,12 @@ from band_classify import (
 
 LOGGER = logging.getLogger(__name__)
 
-# Jordi et al. 2010 A&A 515 A16 ù FGK linear transformation slopes (Table 1).
+# Jordi et al. 2010 A&A 515 A16 - FGK linear transformation slopes (Table 1).
 SLOPE_GR_PER_BPRP = 0.859  # d(g'-r')/d(BP-RP)
 SLOPE_BV_PER_BPRP = -0.620  # d(B-V)/d(BP-RP)
 SLOPE_UG_PER_BPRP = 1.091  # d(u'-g')/d(BP-RP)
 
-# Smith et al. 2002 ù k'' per native Sloan colour (mag/airmass/mag colour).
+# Smith et al. 2002 - k'' per native Sloan colour (mag/airmass/mag colour).
 SMITH_K2_NATIVE: dict[str, float] = {
     "U": -0.021,
     "SU": -0.021,
