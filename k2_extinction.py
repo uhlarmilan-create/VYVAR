@@ -67,10 +67,6 @@ K2_NONE_TOKENS: frozenset[str] = frozenset(
     }
 )
 
-# Johnson/Cousins bands with negligible k'' (AAVSO practice).
-K2_ZERO_TOKENS: frozenset[str] = frozenset({"V", "VC", "R", "RC", "RJ", "I", "IC", "IJ"})
-
-
 class K2Source(str, enum.Enum):
     NIGHT_FIT = "night_fit"
     LITERATURE_DEFAULT = "literature_default"
@@ -78,11 +74,18 @@ class K2Source(str, enum.Enum):
 
 
 def filter_token_from_obs_group(obs_group: str) -> str:
-    """Canonical uppercase filter token from obs_group (first segment)."""
+    """Canonical filter token from obs_group (first segment; case preserved for Sloan vs Johnson)."""
     raw = obs_group_first_token(obs_group)
     if not raw:
         return ""
-    return str(raw).strip().upper().replace("''", "'")
+    return str(raw).strip().replace("''", "'")
+
+
+# Johnson/Cousins bands with negligible k'' (AAVSO practice); uppercase tokens only.
+JOHNSON_K2_ZERO_TOKENS: frozenset[str] = frozenset({"V", "VC", "R", "RC", "RJ", "I", "IC", "IJ"})
+
+# Legacy alias kept for imports; prefer JOHNSON_K2_ZERO_TOKENS.
+K2_ZERO_TOKENS = JOHNSON_K2_ZERO_TOKENS
 
 
 def k2_native_to_bprp(token: str, k_native: float, *, native_slope: float) -> float:
@@ -91,10 +94,21 @@ def k2_native_to_bprp(token: str, k_native: float, *, native_slope: float) -> fl
 
 def computed_k2_bprp_for_token(token: str) -> float | None:
     """Literature k'' per BP-RP for a canonical filter token, or None if not applicable."""
-    key = str(token or "").strip().upper().replace("''", "'")
-    if not key or key in K2_NONE_TOKENS:
+    raw = str(token or "").strip().replace("''", "'")
+    if not raw:
         return None
-    if key in K2_ZERO_TOKENS:
+    key = raw.upper()
+    if key in K2_NONE_TOKENS:
+        return None
+    # Sloan lowercase obs_group tokens (g,r,i,u,z) ù distinct from Johnson uppercase R/I.
+    if len(raw) == 1 and raw.islower() and raw in "griuz":
+        slo = raw.upper()
+        if slo in SMITH_K2_NATIVE:
+            kn = SMITH_K2_NATIVE[slo]
+            if slo in ("U", "SU", "UP"):
+                return k2_native_to_bprp(slo, kn, native_slope=SLOPE_UG_PER_BPRP)
+            return k2_native_to_bprp(slo, kn, native_slope=SLOPE_GR_PER_BPRP)
+    if raw.isupper() and key in JOHNSON_K2_ZERO_TOKENS:
         return 0.0
     if key in ("B", "BC"):
         return k2_native_to_bprp(key, HENDEN_K2_B_PER_BV, native_slope=SLOPE_BV_PER_BPRP)

@@ -51,7 +51,7 @@ def test_g_band_literature_default() -> None:
 def test_k2_config_override() -> None:
     cfg = AppConfig()
     cfg.k2_mode = "literature"
-    cfg.k2_defaults_bprp = {"G": -0.99}
+    cfg.k2_defaults_bprp = {"g": -0.99}
     val, src = resolve_k2_bprp_value(cfg, "g_60_2")
     assert src is K2Source.LITERATURE_DEFAULT
     assert val == pytest.approx(-0.99)
@@ -101,5 +101,11 @@ def test_apply_k2_missing_airmass_skips_row() -> None:
 
 
 def test_filter_token_from_obs_group() -> None:
-    assert filter_token_from_obs_group("g_60_2") == "G"
+    assert filter_token_from_obs_group("g_60_2") == "g"
+    assert filter_token_from_obs_group("R_20_2") == "R"
     assert filter_token_from_obs_group("CV_20_2") == "CV"
+
+
+def test_sloan_r_literature_johnson_r_zero() -> None:
+    assert computed_k2_bprp_for_token("r") == pytest.approx(-0.004 * SLOPE_GR_PER_BPRP, rel=1e-6)
+    assert computed_k2_bprp_for_token("R") == 0.0
