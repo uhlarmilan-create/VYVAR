@@ -107,6 +107,13 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | phase01_comparison_exclude_gaia_extobj | bool | true |  |
 | phase01_ct_min_comp | int | 7 | Fáza 2A: minimum number of comps used in color-term fit before applying CT (``should_apply_color_term``). |
 | apply_color_term | str | "off" | Fáza 2A: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear). |
+| k2_mode | str | "literature" | Second-order extinction: ``off``, ``literature``, or ``fit_else_literature`` (v2). |
+| k2_defaults_bprp | object | {} | Optional per-band k'' overrides (mag/airmass/BP-RP). |
+| k2_ceiling | float | 0.1 | Hard plausibility bound for fitted k'' (v2). |
+| k2_fit_enabled | bool | false | Enable per-night k'' fit (v2). |
+| k2_fit_min_detectability | float | 3.0 | Pre-gate: sigma_k2 vs literature detectability. |
+| k2_fit_consistency_sigma | float | 2.0 | Pre-gate tertile/arc consistency threshold. |
+| k2_fit_lit_factor | float | 4.0 | Pre-gate literature plausibility factor. |
 | phase01_ct_extrapolation_tol | float | 0.0 | Fáza 2A: BP-RP tolerance (mag) when testing target vs comp range before applying CT; 0 = strict block on extrapolation. |
 | phase01_flux_col | str | "dao_flux" | Column name used for flux in Phase 1 comp selection (dao_flux = aperture DAO; psf_flux = ePSF). |
 | phase01_chip_interior_margin_px | int | 50 | Jednotný vnútorný okraj čipu (px) pre **celú Fázu 0+1**: aktívne premenné, porovnávacie hviezdy aj suspected. Hviezdy s ``x,y`` bližšie ako tento počet pixelov od okraja referenčného poľa sa neberú (zmierňuje artefakty pri zarovnaní / posune poľa / okrajoch). ``0`` = vypnuté (celý čip). Predvolene 50 px. |

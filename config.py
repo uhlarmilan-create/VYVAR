@@ -463,6 +463,17 @@ class AppConfig:
     phase01_ct_min_comp: int = 7
     #: Fáza 2A: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear).
     apply_color_term: str = "off"
+    #: Second-order extinction: ``off`` | ``literature`` | ``fit_else_literature`` (fit path v2).
+    k2_mode: str = "literature"
+    #: Optional per-band k'' overrides (mag/airmass/BP-RP); empty dict uses ``k2_extinction`` converter.
+    k2_defaults_bprp: dict[str, float] = field(default_factory=dict)
+    #: Hard plausibility ceiling for fitted k'' (v2 pre-gate).
+    k2_ceiling: float = 0.1
+    #: Enable per-night k'' fit (v2; off in v1 activation bundle).
+    k2_fit_enabled: bool = False
+    k2_fit_min_detectability: float = 3.0
+    k2_fit_consistency_sigma: float = 2.0
+    k2_fit_lit_factor: float = 4.0
     #: Fáza 2A: BP-RP tolerance (mag) when testing target vs comp range before applying CT (0 = strict).
     phase01_ct_extrapolation_tol: float = 0.0
     #: Column name used for flux in Phase 1 comp selection (dao_flux = aperture DAO; psf_flux = ePSF).
@@ -1318,6 +1329,45 @@ class AppConfig:
             self.apply_color_term = "off"
         else:
             self.apply_color_term = "auto"
+        _k2m = str(data.get("k2_mode", self.k2_mode) or "literature").strip().lower()
+        if _k2m in ("0", "false", "no", "off", "none"):
+            self.k2_mode = "off"
+        elif _k2m in ("fit", "fit_else_literature", "night_fit"):
+            self.k2_mode = _k2m
+        else:
+            self.k2_mode = "literature"
+        _k2o = data.get("k2_defaults_bprp", self.k2_defaults_bprp)
+        if isinstance(_k2o, dict):
+            parsed: dict[str, float] = {}
+            for k, v in _k2o.items():
+                try:
+                    fv = float(v)
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(fv):
+                    parsed[str(k)] = fv
+            self.k2_defaults_bprp = parsed
+        self.k2_fit_enabled = bool(data.get("k2_fit_enabled", self.k2_fit_enabled))
+        try:
+            self.k2_ceiling = max(0.0, float(data.get("k2_ceiling", self.k2_ceiling)))
+        except (TypeError, ValueError):
+            self.k2_ceiling = 0.1
+        try:
+            self.k2_fit_min_detectability = max(
+                0.1, float(data.get("k2_fit_min_detectability", self.k2_fit_min_detectability))
+            )
+        except (TypeError, ValueError):
+            self.k2_fit_min_detectability = 3.0
+        try:
+            self.k2_fit_consistency_sigma = max(
+                0.5, float(data.get("k2_fit_consistency_sigma", self.k2_fit_consistency_sigma))
+            )
+        except (TypeError, ValueError):
+            self.k2_fit_consistency_sigma = 2.0
+        try:
+            self.k2_fit_lit_factor = max(1.0, float(data.get("k2_fit_lit_factor", self.k2_fit_lit_factor)))
+        except (TypeError, ValueError):
+            self.k2_fit_lit_factor = 4.0
         try:
             self.phase01_ct_extrapolation_tol = max(
                 0.0,
@@ -2114,6 +2164,13 @@ class AppConfig:
             "phase01_use_bprp_primary": bool(self.phase01_use_bprp_primary),
             "phase01_ct_min_comp": int(self.phase01_ct_min_comp),
             "apply_color_term": str(self.apply_color_term),
+            "k2_mode": str(self.k2_mode),
+            "k2_defaults_bprp": dict(self.k2_defaults_bprp),
+            "k2_ceiling": float(self.k2_ceiling),
+            "k2_fit_enabled": bool(self.k2_fit_enabled),
+            "k2_fit_min_detectability": float(self.k2_fit_min_detectability),
+            "k2_fit_consistency_sigma": float(self.k2_fit_consistency_sigma),
+            "k2_fit_lit_factor": float(self.k2_fit_lit_factor),
             "phase01_ct_extrapolation_tol": float(self.phase01_ct_extrapolation_tol),
             "phase01_flux_col": str(self.phase01_flux_col),
             "temporal_binning_enabled": bool(self.temporal_binning_enabled),

@@ -600,6 +600,20 @@ def render_settings_dashboard(
                 0.05,
                 help="Aperture scale for comparison stars (1.1 = +10% for S/N)",
             )
+        with st.expander("Second-order extinction (k'')"):
+            _k2_opts = ("literature", "off", "fit_else_literature")
+            _k2_cur = str(getattr(cfg, "k2_mode", "literature") or "literature").strip().lower()
+            if _k2_cur not in _k2_opts:
+                _k2_cur = "literature"
+            k2_mode = st.selectbox(
+                "k2_mode",
+                options=_k2_opts,
+                index=_k2_opts.index(_k2_cur),
+                help=(
+                    "Literature = band-keyed Smith/Henden defaults (BP-RP units). "
+                    "Independent of apply_color_term. fit_else_literature reserved for v2 night fit."
+                ),
+            )
         with st.expander("🔬 Advanced algorithms (ALG-2/3/4/5)"):
             st.caption("ALG-3 runs before ensemble normalization; ALG-2/4 run after airmass detrend.")
             col_a, col_b = st.columns(2)
@@ -1031,6 +1045,7 @@ def render_settings_dashboard(
         cfg.pytics_enabled = bool(pytics_enabled)
         cfg.savgol_detrend_enabled = bool(savgol_detrend_enabled)
         cfg.democratic_detrend_enabled = bool(democratic_detrend_enabled)
+        cfg.k2_mode = str(k2_mode)
         cfg.comp_slope_significance_k = float(max(0.0, min(10.0, comp_slope_sig_k)))
         cfg.lc_quality_short_min_frames = int(max(2, min(100, lc_q_short)))
         if cfg.lc_quality_short_min_frames > cfg.lc_quality_min_frames:

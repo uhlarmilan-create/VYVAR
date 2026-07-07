@@ -171,6 +171,8 @@ no UI yet).
 | key | default | clamp/range | UI location | exposed |
 |-----|---------|-------------|-------------|---------|
 | `apply_color_term` | 'off' | — | — | no |
+| `k2_mode` | 'literature' | — | ui_settings.py (Second-order extinction) | yes |
+| `k2_defaults_bprp` | {} | — | — | no |
 | `blind_cluster_coherence_cap` | 25 | — | — | no |
 | `blind_cluster_eps_deg` | 1.0 | 0.1 … 5.0 | — | no |
 | `blind_cluster_min_samples` | 3 | — | — | no |
