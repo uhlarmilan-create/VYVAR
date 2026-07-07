@@ -197,6 +197,11 @@ future tracked validator), pass **`db=VyvarDatabase(...)`** into `run_phase2a` /
 Photon-error aperture always comes from proc CSV `aperture_r_px` when present
 (`read_flux_from_csv`), not from SNR `apertures_px` dict.
 
+**Proc CSV `mag` vs science flux (2026-07-07):** per-frame sidecar column `mag` is Gaia catalog
+`g_mag` (constant per `catalog_id` across frames). Differential photometry and sandbox/diagnostic
+harnesses must derive instrumental magnitudes from **`dao_flux`** (`read_flux_from_csv`,
+`photometry_core.py:1291`) — never from proc `mag`.
+
 ## Cursor / Claude workflow
 
 - **Claude** specs, audits (read-only, with `file:line`), designs, and reviews; recommends

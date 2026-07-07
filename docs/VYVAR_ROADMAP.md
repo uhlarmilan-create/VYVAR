@@ -12,7 +12,32 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## IN-FLIGHT / PARKED — band-aware k'' (second-order extinction)
+## IN-FLIGHT / ACTIVATED — band-aware k'' (second-order extinction) v1
+
+**Status:** **ACTIVATED v1 (2026-07-07).** Spec: `docs/VYVAR_K2_DESIGN_SPEC.md`. Code: `k2_extinction.py`,
+`k2_mode=literature` default, band_classify CT wiring + CV/CR flip, LC provenance columns.
+**NIGHT_FIT = v2 open** (`k2_fit_enabled` OFF; pre-gate spec'd, sandbox machinery in `tmp/k2_*`).
+
+**Rejected (do not port):** comp-select **grow-redesign** — population validation showed ~**45%**
+regressions; sandbox-only; **nothing ported to production**.
+
+**Policy (shipped):** airmass = **CORRECTION not selection**; literature k'' for STANDARD_FILTER
+(excluding OSC RGB tokens); CLEAR/CV/CR/L/UNKNOWN → k2 none; CV/CR CT flip live.
+
+**Shipped additive precursor:** `band_classify.py` + tests (`fe9b375`); now wired to
+`resolve_apply_color_term`.
+
+### K2 ledger (2026-07-07)
+
+| ID | Sev | Item |
+|----|-----|------|
+| **PROV-HEADLESS** | MED | `merge_photometry_pipeline_meta` (`photometry_core.py:5317–5332`) writes no `git_hash`/`config_snapshot`; TODO-PIPELINE-VERSIONING not on HEAD. Git archaeology first; fix after diagnosis. |
+| **PROC-MAG-NAMING** | LOW | proc CSV `mag` = Gaia catalog G (constant per star) — rename or document; sandbox harnesses must use `dao_flux` (PROCESS note). |
+| **K2-DATA-BLOCKER** | — | NIGHT_FIT needs calibrated filtered draft, dX ≥ ~0.3, comp residual floor ≪ 15 mmag. Home rig + flats qualifies; Boyden blocked on flat/flip systematics. **Supersedes** old blockers (filtered draft + FILTER strings — both satisfied 2026-07-07). |
+
+---
+
+## IN-FLIGHT / PARKED — band-aware k'' (second-order extinction) [SUPERSEDED — see ACTIVATED v1 above]
 
 **Status:** design parked; first code piece shipped additive (`fe9b375`); production CT rewiring **PENDING**.
 
@@ -29,7 +54,7 @@ from **constant comps** (signal-safe); **band-aware** policy via `band_classify.
 **Shipped additive (not wired):** `band_classify.py` + 52 tests (`fe9b375`); consolidates legacy
 `_is_nofilter_obs_group` / broadband CT auto. Ledger: `VYVAR_AUDIT_LEDGER.md` BAND-DETECT (`5d6801c`).
 
-### REAL BLOCKERS — resume band-aware k'' (Milan-side data, not code)
+### REAL BLOCKERS — resume band-aware k'' (Milan-side data, not code) [SATISFIED 2026-07-07 for v1 literature path]
 
 1. **Filtered draft (V/B/R) for validation.** k'' only does real work on filtered data. Locally only
    **NoFilter** draft **424** exists — k'' **cannot be validated where it matters** until a filtered
@@ -59,6 +84,9 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **TIER1-OBSLOC-ZERO** | MED | Observer json 0.0/0.0 fallback may silently corrupt airmass/BJD/dilution (null-island guard). |
 | **TIER1-UI-DEBT** | LOW | 38 SAFE UI/plotly broad-except `pass` sites — cosmetic diagnostics only. |
 | **299-defensive cluster** | MED | Pipeline/`photometry_core` broad-except `pass` cluster — existing phased-audit backlog item. |
+| **PROV-HEADLESS** | MED | `merge_photometry_pipeline_meta` writes no `git_hash`/`config_snapshot`; fix after git archaeology. |
+| **PROC-MAG-NAMING** | LOW | proc CSV `mag` = Gaia G — document/rename; harnesses use `dao_flux`. |
+| **K2-DATA-BLOCKER** | — | NIGHT_FIT needs dX ≥ ~0.3, comp floor ≪ 15 mmag; Boyden blocked on flats/flip. |
 
 ---
 

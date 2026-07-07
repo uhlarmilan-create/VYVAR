@@ -1,6 +1,11 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-07** — CAL-DIAG radiometry gate **implemented and validated** on draft_424.
+Last updated: **2026-07-07** — K2 v1 band-aware second-order extinction **activated** (`k2_mode=literature`).
+
+**Done 2026-07-07 (K2 v1):** Literature k'' path via `k2_extinction.py`; `band_classify` wired to
+`resolve_apply_color_term` (CV/CR flip live); LC columns `k2_source`/`k2_value`/`k2_colour_ref`;
+NIGHT_FIT deferred (`k2_fit_enabled` OFF). Spec: `docs/VYVAR_K2_DESIGN_SPEC.md`. Validation:
+`tmp/k2_land/validation_report.json`.
 
 **Done 2026-07-07 (CAL-DIAG-IMPL):** Calibration-time radiometry gate per `VYVAR_CAL_DIAG_SPEC.md`
 v1.1 — Check A (SUM/MEAN convention) + Check B (post-dark sky sanity); parent pre-gate for MP
@@ -29,19 +34,12 @@ reads `sky_adu_per_px_annulus` with legacy `noise_floor_adu` fallback. Verified 
 **Done 2026-06-25 (citation audit Stage A):** F-RIELLO-1 — B-V/Riello report citation removed
 (BP-RP is raw Gaia); F-HOWELL-1 units comment; F-CITE-HONEYCUTT Honeycutt in CORE (`5a1bae0`).
 
-**In-flight / gated:** band-aware k'' (ROADMAP blockers: filtered draft + FITS FILTER strings).
+**In-flight / gated:** NIGHT_FIT k'' pre-gate (v2; K2-DATA-BLOCKER). See ROADMAP ACTIVATED v1.
 
-**Done this session (prior commits):** G7-F003b (`795faef`); EQUIP-BINNING (`b19cd7e`); exoplanet
-(`c169675`, `1616b18`); band classifier (`fe9b375`).
+**Done this session (prior):** band classifier (`fe9b375`) — now wired with k'' v1.
 
-**In-flight / PARKED — band-aware k'' (second-order extinction):** comp-select **grow-redesign REJECTED**
-on population validation (~**45% regressions**; sandbox-only, **nothing ported**). Physically-correct
-direction: **airmass = CORRECTION not selection**, derived from constant comps (signal-safe), band-aware
-(k'' reliable for **STANDARD_FILTER**; **NOT** for CLEAR/unfiltered where tight colour-match is primary).
-Band classifier is the first piece — shipped additive, **not yet wired** to production CT gating. The
-CV/CR→clear flip + CT rewiring are **PENDING** — activate **together with k''**. Two **data blockers**
-(Milan-side inputs, not code): filtered V/B/R draft for validation; Newton/Brno literal FITS FILTER strings
-— see ROADMAP.
+**In-flight / PARKED — band-aware k'' (second-order extinction):** **ACTIVATED v1** — see STATE
+2026-07-07 K2 paragraph and `VYVAR_K2_DESIGN_SPEC.md`. NIGHT_FIT = v2.
 
 Prior: **2026-06-22** — Forced-aperture / catalog_only removed; DAO+Gaia photometry only. Variable
 targets measured **only on direct DAO `catalog_id` hit** (miss → nondetection/NaN; no XY fallback).

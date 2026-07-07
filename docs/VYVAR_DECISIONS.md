@@ -6,6 +6,35 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## Second-order extinction k'' — band-aware v1 (2026-07-07)
+
+**Decision.** Ship k'' as a **deterministic, provenance-tagged correction** (not a per-night free
+parameter in v1). Source hierarchy: `night_fit` (v2 only, pre-gate) → `literature_default` → `none`.
+
+**Q1 — default `k2_mode=literature`.** Population-mean Smith/Henden coefficients; explicit
+`k2_source`/`k2_value` on every LC row; independent of `apply_color_term` (CT default remains off).
+
+**Q2 — v1 scope:** `band_classify` CT wiring + CV/CR flip + literature k'' path. NIGHT_FIT machinery
+stays in sandbox; `k2_fit_enabled=OFF` until a feasible dataset exists (K2-DATA-BLOCKER).
+
+**Q3 — draft_425 validation** under snapshot discipline (manifest + raw-light checksum sample).
+
+**OSC tri-colour (BLUE/GREEN/RED, TG/TB/TR):** `STANDARD_FILTER` for CT eligibility only; **k2=none**
+— no citable k'' for Bayer RGB bandpasses (`k2_none_tokens` second check in `k2_extinction.py`).
+
+**Mandatory ordering.** k'' on comp instrumental mags **before** `fit_color_term_c1`; k'' on target
+`mag_calib` **before** `apply_color_term` — otherwise fitted c1 absorbs k''×X_bar (CT bias).
+
+**Missing data (fail-soft).** No finite Gaia BP-RP → no k'' (`k2_source=none`); no finite airmass →
+skip that frame; never invent default colour.
+
+**Converter.** `k2_bprp = k''_native × d(C_native)/d(C_bprp)` (Jordi et al. 2010 slopes in
+`k2_extinction.py`; B-band uses cited `d(B-V)/d(BP-RP)`).
+
+Spec: `docs/VYVAR_K2_DESIGN_SPEC.md` v1.1.
+
+---
+
 ## Colour: raw Gaia BP-RP only; B-V / Riello citation removed (2026-06-25)
 
 **Decision.** Johnson B-V is **deprecated** for tiering and reporting. Colour comes from raw

@@ -2,6 +2,38 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-07 — K2 session (CAL-DIAG verify, measurement campaign, v1 activation)
+
+**CAL-DIAG-VERIFY (drafts 425–427):** Gate correctly **silent** on `pre_calibrated` imports (no library
+darks for eq 2/4). Confirms CAL-DIAG does not false-alarm on Boyden/Newton pre-reduced inputs. k''
+data blockers 1+2 **satisfied**: draft_425 BVR on disk; Sloan FILTER strings on 426/427 (`g`, `r`, …).
+
+**K2-DIAG feasibility:** 425 Newton BVR — dX≈0.014 → k''×C×X_bar degenerate with colour term
+(~0.6 mmag signal vs ~6 mmag noise). 426 — monotonic X(t), low leverage. 427 — best leverage but
+comp residual floor too high for NIGHT_FIT.
+
+**427-RERUN-GATED:** Snapshot `draft_000427_snapshot_20260707`; Fix B/B.2 ON — 8–11% frames dropped;
+lc_rms g 0.35→0.11; snapshot g `mag_calib` defect fixed on current HEAD. CAL-DIAG silent on
+pre_calibrated (expected).
+
+**K2-SIGMA-FIX:** Harness Fix-A-class residual bug **CONFIRMED** (pooled std without per-comp median
+removal → σ_resid≈0.86); Honeycutt differential path correct on flux mags.
+
+**K2-FIT + K2-FIT-VERIFY:** g k''=0 was **clip collapse** on 4-unique-value residuals from proc
+catalog `mag`; join-degeneracy hypothesis **REFUTED**. Ungated r k'' fake +56 mmag.
+
+**K2-QUANT-ROOT + FIT v2:** proc CSV `mag` = Gaia catalog G (constant per comp); science =
+`dao_flux`. Severity **LOW** (harness-scope). Flux-based comp floor 71–89 mmag; fitted k'' fails
+sign/tertile/arc → 427 **NOT feasible** for NIGHT_FIT.
+
+**K2 design v1.0 → live-tree review → v1.1 → Milan Q1–Q3 → implementation:** `k2_extinction.py`,
+band_classify CT wiring + CV/CR flip, literature k'' at three insertion points, LC provenance columns.
+NIGHT_FIT + pre-gate = **v2** (`k2_fit_enabled` OFF). Spec: `docs/VYVAR_K2_DESIGN_SPEC.md`.
+
+Evidence: `CURSOR_RESULT_k2_*` series; validation `tmp/k2_land/validation_report.json`.
+
+---
+
 ## 2026-07-07 — CAL-DIAG-IMPL (calibration-time radiometry gate)
 
 **Milan approved:** MP variant (a) parent pre-gate + pass results to workers; D1–D3 unchanged.
