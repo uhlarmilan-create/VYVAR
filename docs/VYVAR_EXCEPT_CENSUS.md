@@ -145,6 +145,11 @@ VSX-to-Gaia fallback continue on unparseable ra/dec excludes variable from varia
 
 stress_test_relative_rms_from_sidecars continues when a proc sidecar CSV cannot be read, omitting that frame from the flatness ensemble without a drop counter.
 
+### TOP-10 fix batch (FIXED 2026-07-08, EXCEPT-FIX-2)
+
+Probe (424/425/427): **all 10 NEVER-FIRE** on natural paths (`tmp/except_fix2_probe.json`). EXC-0433 probed via unit-test path (425/427 pre-calibrated). EXC-0389 standard pass uses `stress_test_relative_rms_from_sidecars`; census site is `validate_comparison_ensemble_flatness` (utility path).
+Fix: ERROR + `except_fix_counters` per site; 0342 returns FOV fallback cone (never 0.0); 0350 counted coord-drop summary; 0433 retry-once + calibrate summary. Validation: artifact SHA stable; **604 passed** pytest.
+
 ## Census
 
 | ID | Site | Except | Handler | Tier | What gets silently lost | Disposition |
@@ -423,7 +428,7 @@ stress_test_relative_rms_from_sidecars continues when a proc sidecar CSV cannot 
 | EXC-0272 | `photometry_report.py:5096` | Exception | log-below-ERROR (logging.warning) | T2-INTEGRITY | report/export may omit or misstate (if _epsf_fits is not None and Path(_epsf_fits).is_file(): / self._report_psf_summary_section(c) / except Exception as ex) | narrow+log |
 | EXC-0273 | `photometry_report.py:5189` | Exception | mixed-silent (log-below-ERROR+continue) | T2-INTEGRITY | report/export may omit or misstate (sparse_buf = [] / self._report_per_star_page(c, star_data) / except Exception as exc_star:  # noqa: BLE001 / logging.war) | narrow+log |
 | EXC-0274 | `photometry_report.py:5254` | Exception | mixed-silent (log-below-ERROR+return) | T2-INTEGRITY | report/export may omit or misstate (from reportlab.lib.styles import ParagraphStyle / from reportlab.platypus import Paragraph, Table, TableStyle / except E) | narrow+log |
-| EXC-0275 | `pipeline.py:220` | Exception | mixed-silent (return) | T1-SCIENCE | [SILENT-DROP] Aperture/BPM/COG enhancement failure returns the input catalog unchanged, so dao_flux, BPM flags, and nonlinearity columns never attach to matched stars. | fix-now |
+| EXC-0275 | `pipeline.py:220` | Exception | mixed-silent (return) | T1-SCIENCE | [SILENT-DROP] Aperture/BPM/COG enhancement failure returns the input catalog unchanged, so dao_flux, BPM flags, and nonlinearity columns never attach to matched stars. | FIXED (EXCEPT-FIX-2) |
 | EXC-0276 | `pipeline.py:247` | Exception | pass | T4-LEGIT | Unparseable VY_ALGN header values default to aligned=True, preserving legacy frames without the tag. | narrow+comment(T4) |
 | EXC-0277 | `pipeline.py:321` | Exception | pass | T1-SCIENCE | [SILENT-DROP] active_targets.csv load failure leaves the ePSF target-id set empty, excluding programme stars from PSF star selection. | fix-now |
 | EXC-0278 | `pipeline.py:411` | Exception | pass | T1-SCIENCE | [SILENT-DROP] active_targets.csv load failure in the LC catalog-id builder drops all active targets from the gated PSF coverage set. | fix-now |
@@ -460,12 +465,12 @@ stress_test_relative_rms_from_sidecars continues when a proc sidecar CSV cannot 
 | EXC-0309 | `pipeline.py:3355` | Exception | pass | T4-LEGIT | db.conn.close failure in FOV hint finally block is ignored after the hint is computed or skipped. | narrow+comment(T4) |
 | EXC-0310 | `pipeline.py:3421` | Exception | mixed-silent (return) | T1-SCIENCE | WCS corner separation failure makes get_auto_fov return None when header optics are also missing. | narrow+log-ERROR |
 | EXC-0311 | `pipeline.py:3480` | Exception | return | T1-SCIENCE | [CAL-DIAG] EQUIPMENTS.PIXELSIZE fetch failure aborts merging native pixel pitch, leaving plate-scale metadata at FITS-only values. | fix-now |
-| EXC-0312 | `pipeline.py:3748` | Exception | pass | T1-SCIENCE | [CAL-DIAG] Any exception in _plate_solve_input_bundle is swallowed, returning empty meta/eff_um/expected_arcsec_per_px so the solver runs without optics scale. | fix-now |
+| EXC-0312 | `pipeline.py:3748` | Exception | pass | T1-SCIENCE | [CAL-DIAG] Any exception in _plate_solve_input_bundle is swallowed, returning empty meta/eff_um/expected_arcsec_per_px so the solver runs without optics scale. | FIXED (EXCEPT-FIX-2) |
 | EXC-0313 | `pipeline.py:3754` | Exception | pass | T4-LEGIT | db_u.conn.close failure in plate-solve bundle finally is ignored after bundle assembly. | narrow+comment(T4) |
 | EXC-0314 | `pipeline.py:3793` | Exception | pass | T1-SCIENCE | [CAL-DIAG] compute_plate_scale_from_db failure returns None, so expected arcsec/pixel is unavailable to the Gaia solver. | narrow+log-ERROR |
 | EXC-0315 | `pipeline.py:3844` | Exception | mixed-silent (return) | T1-SCIENCE | w2.to_header failure aborts CD rescale entirely, leaving MASTERSTAR WCS at the pre-optics pixel scale. | fix-now |
 | EXC-0316 | `pipeline.py:3856` | Exception | pass | T1-SCIENCE | Individual WCS keyword assignment failures are skipped, producing a partially updated celestial header after rescale. | fix-now |
-| EXC-0317 | `pipeline.py:3883` | Exception | log_event (log_event) | T1-SCIENCE | Post-rescale masterstars_full_match.csv ra_deg/dec_deg recompute failure leaves catalog sky positions inconsistent with the updated WCS. | fix-now |
+| EXC-0317 | `pipeline.py:3883` | Exception | log_event (log_event) | T1-SCIENCE | Post-rescale masterstars_full_match.csv ra_deg/dec_deg recompute failure leaves catalog sky positions inconsistent with the updated WCS. | FIXED (EXCEPT-FIX-2) |
 | EXC-0318 | `pipeline.py:3964` | Exception | mixed-silent (return) | T4-LEGIT | solve-field timeout returns solved=False with an explicit reason string (not silent). | narrow+comment(T4) |
 | EXC-0319 | `pipeline.py:3976` | Exception | mixed-silent (return) | T1-SCIENCE | Generated .wcs read failure returns solved=False without applying any WCS to the image. | narrow+log-ERROR |
 | EXC-0320 | `pipeline.py:4034` | Exception | mixed-silent (return) | T1-SCIENCE | astroquery import failure disables the Astrometry.net API fallback with an explicit reason payload. | narrow+log-ERROR |
@@ -479,7 +484,7 @@ stress_test_relative_rms_from_sidecars continues when a proc sidecar CSV cannot 
 | EXC-0328 | `pipeline.py:4257` | Exception | pass | T2-INTEGRITY | Outer OBS_DRAFT hint DB block failure is swallowed after inner cleanup. | narrow+comment(T4) |
 | EXC-0329 | `pipeline.py:4279` | Exception | pass | T4-LEGIT | _db_ps.conn.close failure is ignored once plate-scale auto lookup finishes. | narrow+comment(T4) |
 | EXC-0330 | `pipeline.py:4312` | Exception | pass | T3-UI | debug_platesolver hint_ra/hint_dec log is skipped; solver inputs unchanged. | delete-dead |
-| EXC-0331 | `pipeline.py:4326` | Exception | log_event (log_event) | T1-SCIENCE | VYTARGRA/VYTARGDE header write failure leaves per-frame FITS without blind-solve hints that vyvar_platesolver reads. | fix-now |
+| EXC-0331 | `pipeline.py:4326` | Exception | log_event (log_event) | T1-SCIENCE | VYTARGRA/VYTARGDE header write failure leaves per-frame FITS without blind-solve hints that vyvar_platesolver reads. | FIXED (EXCEPT-FIX-2) |
 | EXC-0332 | `pipeline.py:4398` | Exception | mixed-silent (return) | T4-LEGIT | WCS equality check exception returns False, conservatively treating frames as astrometrically distinct. | narrow+comment(T4) |
 | EXC-0333 | `pipeline.py:4442` | Exception | mixed-silent (return) | T1-SCIENCE | DAOStarFinder exception assigns score 0 for that candidate frame in reference-frame ranking. | narrow+log-ERROR |
 | EXC-0334 | `pipeline.py:4494` | Exception | mixed-silent (return) | T1-SCIENCE | WCS field-center conversion failure returns None, blocking cone queries keyed to chip center. | narrow+log-ERROR |
@@ -487,10 +492,10 @@ stress_test_relative_rms_from_sidecars continues when a proc sidecar CSV cannot 
 | EXC-0336 | `pipeline.py:4681` | Exception | pass | T2-INTEGRITY | VSX local cone success log is skipped; returned DataFrame is unchanged. | leave+comment |
 | EXC-0337 | `pipeline.py:4711` | Exception | mixed-silent (return) | T1-SCIENCE | Exoplanet host center extraction failure returns an empty DataFrame, dropping all exo-host annotations for the field. | narrow+log-ERROR |
 | EXC-0338 | `pipeline.py:4756` | Exception | pass | T2-INTEGRITY | Exoplanet cone count log is skipped when logging itself fails. | leave+comment |
-| EXC-0339 | `pipeline.py:5181` | Exception | mixed-silent (return) | T1-SCIENCE | [SILENT-DROP] WCS all_pix2world failure returns empty VSX DataFrame, so frame-bbox variable_targets miss every VSX source for that field. | fix-now |
+| EXC-0339 | `pipeline.py:5181` | Exception | mixed-silent (return) | T1-SCIENCE | [SILENT-DROP] WCS all_pix2world failure returns empty VSX DataFrame, so frame-bbox variable_targets miss every VSX source for that field. | FIXED (EXCEPT-FIX-2) |
 | EXC-0340 | `pipeline.py:5219` | Exception | pass | T2-INTEGRITY | VSX frame-bbox search count log is skipped; query result is already materialized. | leave+comment |
 | EXC-0341 | `pipeline.py:5276` | Exception | mixed-silent (return) | T1-SCIENCE | [CAL-DIAG] EQUIPMENTS.SATURATE_ADU DB read failure makes equipment saturation None, weakening saturation gating in catalog and cal-diagnostic paths. | narrow+log-ERROR |
-| EXC-0342 | `pipeline.py:5725` | Exception | mixed-silent (return) | T1-SCIENCE | [CAL-DIAG] Optics-based Gaia cone floor computation failure returns 0.0°, allowing an undersized catalog cone that clips edge Gaia stars. | fix-now |
+| EXC-0342 | `pipeline.py:5725` | Exception | mixed-silent (return) | T1-SCIENCE | [CAL-DIAG] Optics-based Gaia cone floor computation failure returns 0.0°, allowing an undersized catalog cone that clips edge Gaia stars. | FIXED (EXCEPT-FIX-2) |
 | EXC-0343 | `pipeline.py:5764` | Exception | pass | T1-SCIENCE | proj_plane_pixel_scales failure skips the CD-based cone radius boost, risking too-small Gaia prefetch cones at chip edges. | narrow+log-ERROR |
 | EXC-0344 | `pipeline.py:5968` | Exception | pass | T1-SCIENCE | VSX proximity veto exception leaves comparison-star candidates within 10″ of variable targets in the ensemble pool. | fix-now |
 | EXC-0345 | `pipeline.py:5983` | Exception | pass | T1-SCIENCE | Safe-bbox border filter failure keeps comparison candidates outside the annulus-shrunk intersection, polluting ensemble photometry. | narrow+log-ERROR |
@@ -498,7 +503,7 @@ stress_test_relative_rms_from_sidecars continues when a proc sidecar CSV cannot 
 | EXC-0347 | `pipeline.py:6230` | Exception | pass | T1-SCIENCE | MASTER_SOURCES likely_nonlinear/on_bad_column DB merge failure omits nonlinear/bad-column flags from comparison_stars.csv selection input. | fix-now |
 | EXC-0348 | `pipeline.py:6235` | Exception | mixed-silent (log_event+return) | T1-SCIENCE | MASTERSTAR.fits open failure logs and returns error dict, skipping comparison/variable target CSV generation for the setup. | narrow+log-ERROR |
 | EXC-0349 | `pipeline.py:6304` | Exception | log_event (log_event) | T2-INTEGRITY | detect_field_jumps failure logs and falls back to all aligned frames for border bbox, potentially wrong safe_bbox after meridian jumps. | narrow+log-ERROR |
-| EXC-0350 | `pipeline.py:6520` | Exception | continue | T1-SCIENCE | [SILENT-DROP] VSX→Gaia fallback continue skips a variable whose ra/dec cannot be parsed, excluding it from variable_targets.csv with no row count. | fix-now |
+| EXC-0350 | `pipeline.py:6520` | Exception | continue | T1-SCIENCE | [SILENT-DROP] VSX→Gaia fallback continue skips a variable whose ra/dec cannot be parsed, excluding it from variable_targets.csv with no row count. | FIXED (EXCEPT-FIX-2) |
 | EXC-0351 | `pipeline.py:6624` | Exception | pass | T2-INTEGRITY | Per-variable 'no Gaia match' log line is skipped when logging fails; catalog_id remains empty. | leave+comment |
 | EXC-0352 | `pipeline.py:6741` | Exception | pass | T1-SCIENCE | normalize_gaia_source_id_series failure on comparison_stars.csv can write non-canonical 19-digit catalog_id strings. | narrow+log-ERROR |
 | EXC-0353 | `pipeline.py:6752` | Exception | pass | T1-SCIENCE | normalize_gaia_source_id_series failure on variable_targets.csv can write IDs that fail downstream Gaia joins. | narrow+log-ERROR |
@@ -537,7 +542,7 @@ stress_test_relative_rms_from_sidecars continues when a proc sidecar CSV cannot 
 | EXC-0386 | `pipeline.py:10393` | Exception | log_event (log_event) | T3-UI | Same debug_pixel_match JSON log fallback on disk parallel export path. | delete-dead |
 | EXC-0387 | `pipeline.py:10423` | Exception | log_event (log_event) | T3-UI | Same debug_pixel_match JSON log fallback on sequential RAM export path. | delete-dead |
 | EXC-0388 | `pipeline.py:10443` | Exception | log_event (log_event) | T3-UI | Same debug_pixel_match JSON log fallback on sequential disk export path. | delete-dead |
-| EXC-0389 | `pipeline.py:10536` | Exception | continue | T1-SCIENCE | [SILENT-DROP] `stress_test_relative_rms_from_sidecars` `continue`s when a proc sidecar CSV cannot be read, omitting that aligned frame from the flatness ensemble without incrementing any drop counter. | fix-now |
+| EXC-0389 | `pipeline.py:10536` | Exception | continue | T1-SCIENCE | [SILENT-DROP] `stress_test_relative_rms_from_sidecars` `continue`s when a proc sidecar CSV cannot be read, omitting that aligned frame from the flatness ensemble without incrementing any drop counter. | FIXED (EXCEPT-FIX-2) |
 | EXC-0390 | `pipeline.py:10625` | Exception | pass | T1-SCIENCE | `_apply_wcs_tan_fragment_to_header` `pass`es on individual WCS keyword copies, leaving a partially copied TAN matrix that can break alignment astrometry. | narrow+log-ERROR |
 | EXC-0391 | `pipeline.py:11040` | Exception | log_event (log_event) | T2-INTEGRITY | MASTERSTAR DB candidate query failure is only `log_event` (below ERROR); selection falls through to disk fallback without surfacing severity. | narrow+log-ERROR |
 | EXC-0392 | `pipeline.py:11045` | Exception | pass | T4-LEGIT | `_db_ms.conn.close()` in `finally`; failure to close SQLite handle cannot affect MASTERSTAR science outputs. | narrow+comment(T4) |
@@ -563,7 +568,7 @@ stress_test_relative_rms_from_sidecars continues when a proc sidecar CSV cannot 
 | EXC-0412 | `pipeline.py:12501` | Exception | log_event (log_event) | T2-INTEGRITY | DB-aware `write_photometry_plan_files` rewrite fails; pipeline keeps non-DB photometry plan that may disagree with `MASTER_SOURCES`. | narrow+log-ERROR |
 | EXC-0413 | `pipeline.py:12971` | Exception | pass | T4-LEGIT | `_db_sat.conn.close()` after equipment saturate lookup; handle cleanup only. | narrow+comment(T4) |
 | EXC-0414 | `pipeline.py:13021` | Exception | pass | T4-LEGIT | `_db_pf.conn.close()` after plate-scale lookup for per-frame match sep; cleanup only. | narrow+comment(T4) |
-| EXC-0415 | `pipeline.py:13104` | Exception | pass | T1-SCIENCE | MASTERSTAR-as-reference swap failure is swallowed (nested `pass`); alignment keeps star-count reference frame instead of MASTERSTAR pixel grid, breaking per-frame catalog match. | fix-now |
+| EXC-0415 | `pipeline.py:13104` | Exception | pass | T1-SCIENCE | MASTERSTAR-as-reference swap failure is swallowed (nested `pass`); alignment keeps star-count reference frame instead of MASTERSTAR pixel grid, breaking per-frame catalog match. | FIXED (EXCEPT-FIX-2) |
 | EXC-0416 | `pipeline.py:13134` | Exception | pass | T1-SCIENCE | Copying MASTERSTAR WCS onto reference FITS fails silently; aligned products can carry arcminute-offset WCS vs MASTERSTAR catalogs. | fix-now |
 | EXC-0417 | `pipeline.py:13159` | Exception | log_event (log_event) | T2-INTEGRITY | Sibling-recovery MASTERSTAR load failure logged at DEBUG only; setup proceeds without recovered reference. | narrow+log-ERROR |
 | EXC-0418 | `pipeline.py:13233` | Exception | pass | T3-UI | DEBUG min/max/mean/NaN stats logging `pass`; alignment detection proceeds regardless. | leave+comment |
@@ -581,7 +586,7 @@ stress_test_relative_rms_from_sidecars continues when a proc sidecar CSV cannot 
 | EXC-0430 | `pipeline.py:14948` | Exception | pass | T4-LEGIT | `db_pt.conn.close()` at end of passthrough loop; handle cleanup only. | narrow+comment(T4) |
 | EXC-0431 | `pipeline.py:15082` | Exception | log_event (log_event) | T2-INTEGRITY | `filter_light_paths_for_calibration_db` failure logs and skips IS_REJECTED filter, potentially calibrating user-rejected lights. | narrow+log-ERROR |
 | EXC-0432 | `pipeline.py:15132` | Exception | log_event (log_event) | T2-INTEGRITY | [CAL-DIAG] First-light metadata diagnostic (`extract_fits_metadata` for focal/pixel logging before CAL-DIAG pregate) fails with `log_event` only; gate still runs but operator loses pregate context. | narrow+log-ERROR |
-| EXC-0433 | `pipeline.py:15246` | Exception | pass | T2-INTEGRITY | [CAL-DIAG] Sequential calibrate: `update_obs_file_calibration_state_by_raw_light_path` `pass` after successful `_calibrate_one_light_disk`; FITS carries `VY_CFLAG` but DB provenance diverges from CAL-DIAG outcome. | fix-now |
+| EXC-0433 | `pipeline.py:15246` | Exception | pass | T2-INTEGRITY | [CAL-DIAG] Sequential calibrate: `update_obs_file_calibration_state_by_raw_light_path` `pass` after successful `_calibrate_one_light_disk`; FITS carries `VY_CFLAG` but DB provenance diverges from CAL-DIAG outcome. | FIXED (EXCEPT-FIX-2) |
 | EXC-0434 | `pipeline.py:15377` | Exception | pass | T2-INTEGRITY | [CAL-DIAG] MP calibrate batch: same OBS_FILES calibration-state update `pass` after worker success; masks DB sync of gate/calibration flags. | fix-now |
 | EXC-0435 | `pipeline.py:15458` | Exception | mixed-silent (return) | T1-SCIENCE | `_estimate_fwhm_from_image` broad `except` returns hardcoded `3.0` px; QC FWHM reject and header `VY_FWHM` can be wrong on detection failure. | narrow+log-ERROR |
 | EXC-0436 | `pipeline.py:15790` | Exception | mixed-silent (return) | T1-SCIENCE | DAOStarFinder QC fallback outer `except` returns all-None FWHM/elongation; frame marked QC-failed downstream rather than silently accepted. | leave+comment |

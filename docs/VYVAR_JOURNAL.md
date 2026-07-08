@@ -2,6 +2,18 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — EXCEPT-FIX-2 (Tranche-2 TOP-10 pipeline)
+
+**Probe:** drafts 424/425/427 — **all 10 NEVER-FIRE** on natural paths (`tmp/except_fix2_probe.json`).
+EXC-0433 via unit-test path (425/427 pre-calibrated). EXC-0389 standard pass = `stress_test_relative_rms_from_sidecars`.
+
+**Fixes:** ERROR + `except_fix_counters` per site; 0342 FOV fallback (never 0.0); 0350 coord-drop summary;
+0433 retry-once + calibrate stats. **604 passed** pytest.
+
+Artifact: `CURSOR_RESULT_except_fix2.md`.
+
+---
+
 ## 2026-07-08 — EXCEPT-RETRIAGE-2 (pipeline.py evidence triage)
 
 **Scope:** 170 `pipeline.py` sites (EXC-0275–0444): preprocess, platesolve, catalog export,

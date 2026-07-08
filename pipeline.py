@@ -217,7 +217,11 @@ def _apply_aperture_catalog_enhancements_from_st(
             snr_aperture_table=st.get("snr_aperture_table"),
             cog_params=cog_params,
         )
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().catalog_bpm_enhance_fail += 1
+        LOGGER.error("[CATALOG] aperture/BPM/COG enhancement failed: %s", exc)
         return df
 
 
@@ -3745,8 +3749,12 @@ def _plate_solve_input_bundle(
             calculated_scale = out["expected_arcsec_per_px"]
             if calculated_scale is not None:
                 log_event(f"MATH CHECK: ({eff_um} / {foc}) * 206.265 = {calculated_scale}")
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as exc:  # noqa: BLE001
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().plate_solve_bundle_fail += 1
+        LOGGER.error("[PLATE-SOLVE] _plate_solve_input_bundle failed: %s", exc)
+        out["bundle_error"] = str(exc)
     finally:
         if db_u is not None:
             try:
@@ -3881,8 +3889,12 @@ def _try_rescale_masterstar_linear_wcs_to_expected_plate_scale(
                         "masterstars_full_match.csv ra_deg/dec_deg recomputed after WCS rescale"
                     )
             except Exception as _csv_exc:  # noqa: BLE001
-                log_event(
-                    f"masterstars_full_match.csv ra/dec recompute after WCS rescale failed: {_csv_exc!s}"
+                from except_fix_counters import get_except_fix_counters
+
+                get_except_fix_counters().masterstars_rescale_coords_fail += 1
+                LOGGER.error(
+                    "masterstars_full_match.csv ra/dec recompute after WCS rescale failed: %s",
+                    _csv_exc,
                 )
         out["rescaled"] = True
         out["expected_arcsec_per_px"] = exp_f
@@ -4324,7 +4336,10 @@ def _solve_wcs_external(
                         hdul.flush()
                 log_event(f"INFO: Per-frame VYTARG zapísaný: RA={float(hint_ra):.4f} Dec={float(hint_dec):.4f}")
             except Exception as e:  # noqa: BLE001
-                log_event(f"WARNING: Per-frame VYTARG zápis zlyhal: {e}")
+                from except_fix_counters import get_except_fix_counters
+
+                get_except_fix_counters().vytarg_header_write_fail += 1
+                LOGGER.error("Per-frame VYTARG header write failed: %s", e)
 
         _no_sip = os.environ.get("VYVAR_PLATE_SOLVE_NO_SIP", "").strip().lower() in {"1", "true", "yes", "on"}
         # For MASTERSTAR only: hint mirror orientation from its own header (VY_MIRR) / parity.
@@ -5178,7 +5193,11 @@ def _query_vsx_local_frame_bbox(
         world = wcs.all_pix2world(xs_px, ys_px, 0)
         ras = np.asarray(world[0], dtype=np.float64)
         decs = np.asarray(world[1], dtype=np.float64)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().vsx_frame_bbox_wcs_fail += 1
+        LOGGER.error("[VSX] frame-bbox WCS all_pix2world failed: %s", exc)
         return pd.DataFrame()
     ok = np.isfinite(ras) & np.isfinite(decs)
     if not bool(ok.any()):
@@ -5722,8 +5741,13 @@ def _gaia_catalog_cone_radius_optics_floor_deg(
                 fov_diameter_fallback_deg=float(plate_solve_fov_fallback_deg),
             )
         )
-    except Exception:  # noqa: BLE001
-        return 0.0
+    except Exception as exc:  # noqa: BLE001
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().gaia_cone_optics_floor_fail += 1
+        LOGGER.error("[CATALOG] Gaia cone optics floor failed; using FOV fallback: %s", exc)
+        fb = max(0.05, float(plate_solve_fov_fallback_deg))
+        return float(max(MIN_GAIA_CONE_RADIUS_DEG, fb * 0.65))
 
 
 def _field_center_and_radius_from_wcs(w: WCS, h: int, wpx: int) -> tuple[SkyCoord, float]:
@@ -6497,6 +6521,7 @@ def write_photometry_plan_files(
                 fb_good = 0
                 fb_uncertain = 0
                 fb_poor = 0
+                _vsx_coord_skip_labels: list[str] = []
                 if gaia_db and unresolved_idx:
                     # Cache per VSX coord (avoid repeated SQL if duplicates).
                     gaia_cache: dict[tuple[float, float], pd.DataFrame] = {}
@@ -6518,6 +6543,8 @@ def write_photometry_plan_files(
                             vsx_ra = float(v.iloc[i]["ra_deg"])
                             vsx_dec = float(v.iloc[i]["dec_deg"])
                         except Exception:  # noqa: BLE001
+                            _lbl = str(v.iloc[i].get("name") or v.iloc[i].get("oid") or f"row{i}").strip()
+                            _vsx_coord_skip_labels.append(_lbl or f"row{i}")
                             continue
                         if not (math.isfinite(vsx_ra) and math.isfinite(vsx_dec)):
                             continue
@@ -6628,6 +6655,17 @@ def write_photometry_plan_files(
                     log_event(
                         f"VSX→Gaia fallback DR3: resolved={int(fb_resolved)} unresolved={int(fb_unresolved)} "
                         f"(good={int(fb_good)} uncertain={int(fb_uncertain)} poor={int(fb_poor)})"
+                    )
+                if _vsx_coord_skip_labels:
+                    from except_fix_counters import get_except_fix_counters
+
+                    _n_skip = len(_vsx_coord_skip_labels)
+                    get_except_fix_counters().vsx_variable_coord_drop += _n_skip
+                    LOGGER.error(
+                        "[VSX] skipped %d variables (unparsable coords): %s",
+                        _n_skip,
+                        ", ".join(_vsx_coord_skip_labels[:20])
+                        + (" …" if _n_skip > 20 else ""),
                     )
 
                 # Period column varies by VSX schema.
@@ -10533,7 +10571,11 @@ def validate_comparison_ensemble_flatness(
             if "name" in _hdr_sc.columns:
                 _dtype_sc["name"] = str
             dff = pd.read_csv(sidecar, dtype=_dtype_sc)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            from except_fix_counters import get_except_fix_counters
+
+            get_except_fix_counters().stress_sidecar_skip += 1
+            LOGGER.error("[STRESS] sidecar CSV read skip %s: %s", sidecar.name, exc)
             continue
         if name_col not in dff.columns or flux_col not in dff.columns:
             continue
@@ -13099,10 +13141,10 @@ def _astrometry_align_impl_body(
                     has_wcs = _has_valid_wcs(ref_hdr)
                     log_event(f"INFO: Alignment reference set to MASTERSTAR: {ref_fp.name}")
         except Exception as _ms_ref_exc:  # noqa: BLE001
-            try:
-                log_event(f"DEBUG: Using MASTERSTAR as alignment reference failed: {_ms_ref_exc}")
-            except Exception:  # noqa: BLE001
-                pass
+            from except_fix_counters import get_except_fix_counters
+
+            get_except_fix_counters().masterstar_ref_swap_fail += 1
+            LOGGER.error("Using MASTERSTAR as alignment reference failed: %s", _ms_ref_exc)
 
     _prog(
         f"detrended_aligned/lights: pripravujem zarovnanie ({n_files} snímok z {detrended_root.name}/…)…"
@@ -14590,6 +14632,57 @@ def _calibrate_one_light_apply_masters_in_ram(
     return data, hdr, used_dark, used_flat
 
 
+def _sync_obs_calibration_state_with_retry(
+    db: VyvarDatabase | None,
+    *,
+    raw_light_path: Path,
+    draft_id: int | None,
+    observation_id: str | None,
+    is_calibrated: int,
+    calib_type: str,
+    calib_flags: str,
+    stats: dict[str, Any] | None = None,
+) -> bool:
+    """Sync OBS_FILES cal state after successful calibrate; retry once then ERROR + count."""
+    if db is None:
+        return True
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        try:
+            db.update_obs_file_calibration_state_by_raw_light_path(
+                raw_light_path,
+                draft_id=draft_id,
+                observation_id=observation_id,
+                is_calibrated=is_calibrated,
+                calib_type=calib_type,
+                calib_flags=calib_flags,
+            )
+            return True
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            if attempt == 0:
+                LOGGER.warning(
+                    "CAL-DIAG: OBS_FILES cal sync retry after failure (%s): %s",
+                    raw_light_path.name,
+                    exc,
+                )
+    if last_exc is not None:
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().calibrate_db_sync_fail += 1
+        LOGGER.error(
+            "CAL-DIAG: OBS_FILES cal sync failed after calibrate (%s): %s",
+            raw_light_path.name,
+            last_exc,
+        )
+        if stats is not None:
+            stats["cal_db_sync_failures"] = int(stats.get("cal_db_sync_failures", 0)) + 1
+            errs = stats.setdefault("cal_db_sync_errors", [])
+            if isinstance(errs, list):
+                errs.append({"file": raw_light_path.name, "error": str(last_exc)})
+    return False
+
+
 def _calibrate_one_light_disk(
     *,
     src: Path,
@@ -15064,6 +15157,8 @@ def calibrate_lights_to_calibrated(
         "applied_pixel_size": None,
         "perf10_qc_results": {},
         "cal_diag_aborted_groups": 0,
+        "cal_db_sync_failures": 0,
+        "cal_db_sync_errors": [],
     }
     perf10_qc_results: dict[str, dict[str, Any]] = stats["perf10_qc_results"]
 
@@ -15233,18 +15328,16 @@ def calibrate_lights_to_calibrated(
         )
         if isinstance(perf10_qc, dict) and perf10_qc and not perf10_qc.get("error"):
             perf10_qc_results[str(src.resolve())] = perf10_qc
-        try:
-            if db_main is not None:
-                db_main.update_obs_file_calibration_state_by_raw_light_path(
-                    src,
-                    draft_id=draft_id,
-                    observation_id=observation_id,
-                    is_calibrated=1 if "D" in _flags else 0,
-                    calib_type=_calibration_type_from_flags(_flags),
-                    calib_flags=_flags,
-                )
-        except Exception:  # noqa: BLE001
-            pass
+        _sync_obs_calibration_state_with_retry(
+            db_main,
+            raw_light_path=src,
+            draft_id=draft_id,
+            observation_id=observation_id,
+            is_calibrated=1 if "D" in _flags else 0,
+            calib_type=_calibration_type_from_flags(_flags),
+            calib_flags=_flags,
+            stats=stats,
+        )
         stats["processed"] += 1
         if used_dark:
             stats["used_dark"] += 1
@@ -15364,18 +15457,16 @@ def calibrate_lights_to_calibrated(
             except Exception:  # noqa: BLE001
                 ud = uf = False
                 _flags = "P"
-            try:
-                if db_main is not None:
-                    db_main.update_obs_file_calibration_state_by_raw_light_path(
-                        Path(items[idx][0]),
-                        draft_id=draft_id,
-                        observation_id=observation_id,
-                        is_calibrated=1 if "D" in _flags else 0,
-                        calib_type=_calibration_type_from_flags(_flags),
-                        calib_flags=_flags,
-                    )
-            except Exception:  # noqa: BLE001
-                pass
+            _sync_obs_calibration_state_with_retry(
+                db_main,
+                raw_light_path=Path(items[idx][0]),
+                draft_id=draft_id,
+                observation_id=observation_id,
+                is_calibrated=1 if "D" in _flags else 0,
+                calib_type=_calibration_type_from_flags(_flags),
+                calib_flags=_flags,
+                stats=stats,
+            )
             if ud:
                 stats["used_dark"] += 1
             if uf:
