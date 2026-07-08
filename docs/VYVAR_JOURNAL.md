@@ -2,6 +2,36 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — QUICKWINS-0708 (four ledger items + determinism)
+
+**Item 0 (evidence):** draft_425 `B_20_2` Phase 2A rerun on HEAD `21c20e3` — science columns
+byte-identical run-to-run (363 LCs, 0 diffs; provenance `stamped_at` excluded). Evidence:
+`tmp/quickwins_0708/item0_determinism.json`. Retroactively covers PROV-FIX science check.
+
+**Item 1 — K2-SLOPE-TRACE (`8c44b71`):** `SLOPE_GR_PER_BPRP` 0.859→1.054 (Jordi 2010 Table 6
+inverse at FGK g-r=0.48); k2_g≈−0.0169, k2_r≈−0.0042. UG slope 1.091 retained with explicit
+exception comment (no Jordi u-g row) — ledger **K2-SLOPE-UG** FUTURE. Analytic 427 extreme-colour
+shift (no rerun): g max ≈12.3 mmag, r max ≈3.2 mmag from stored comparison pools.
+
+**Item 2 — PROC-MAG-NAMING (`0913665`):** Documented only — `_vyvar_df_to_csv` docstring +
+`VYVAR_PIPELINE_CZ.md` proc schema note; PROCESS dao_flux rule verified present.
+
+**Item 3 — CAL-PASSTHRU-DEAD (`21c20e3`):** Caller audit — no production/test callers of
+`allow_passthrough=True`; parameter + synthetic master branch removed.
+
+**Item 4 — RN-HEADER-NONE (`1830527`, science-affecting):** `precompute_and_save_snr_aperture_table_for_draft`
+now passes MASTERSTAR header to `resolve_read_noise` (bin2 RN×bin). Unit test
+`tests/test_snr_table_rn_header.py`. draft_424 validation: snapshot
+`draft_000424_snapshot_20260708`; SNR table RN 7.6→15.2 e⁻, max aperture shift 2.2% (mag 13.0
+−0.05 px); Phase 2A rerun 178 LCs **byte-identical** (Phase 2A already used header); median
+lc_rms unchanged 0.0863; raw checksums OK. **New 424 baseline anchor** — provenance block hash
+`e1a7a311b02c81a5bf602080b345ac95d8ba351327c2f63edd5ca185ff29e80f`. Evidence:
+`tmp/quickwins_0708/item4_report.json`.
+
+**Gate:** `568 passed` pytest + ruff BLE001/E722 between items 3–4 and at close.
+
+---
+
 ## 2026-07-08 — PROV-FIX (pipeline_meta run provenance)
 
 **Archaeology (PROV-ARCHEO):** `git_hash` / `config_snapshot` were **never-wired** to

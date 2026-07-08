@@ -1,6 +1,8 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-08** — `pipeline_meta.json` run provenance active (`e7ce7ea`); K2 v1 closed (`8a190b4` B-sign hotfix).
+Last updated: **2026-07-08** — QUICKWINS-0708 batch closed: K2 GR slope traced (`8c44b71`), proc `mag` documented (`0913665`), CAL passthrough dead code removed (`21c20e3`), SNR RN header fix + draft_424 new anchor (`1830527`, provenance hash `e1a7a311…`).
+
+**Done 2026-07-08 (QUICKWINS-0708):** Four ledger items + determinism check. Item 0: draft_425 B_20_2 Phase 2A rerun science-identical (363 LCs, 0 diffs). K2-SLOPE-TRACE GR→1.054; UG exception documented (K2-SLOPE-UG FUTURE). PROC-MAG-NAMING documented (not renamed). CAL-PASSTHRU-DEAD removed. RN-HEADER-NONE: precompute SNR table now bin-scales RN; draft_424 snapshot `draft_000424_snapshot_20260708`, LC byte-identical, new baseline anchor. `568 passed` pytest + ruff green.
 
 **Done 2026-07-08 (PROV-FIX):** `provenance` block in `pipeline_meta.json` via
 `merge_photometry_pipeline_meta` when `cfg` passed — `git_hash`, `git_dirty`, full
@@ -17,8 +19,8 @@ NIGHT_FIT deferred (`k2_fit_enabled` OFF). Spec: `docs/VYVAR_K2_DESIGN_SPEC.md`.
 v1.1 — Check A (SUM/MEAN convention) + Check B (post-dark sky sanity); parent pre-gate for MP
 variant (a); provenance headers `VY_DKRSMP`/`VY_CDSKY`/`VY_CDSTAT` + `archive/<draft>/cal_diag.json`.
 14 gate unit tests; `549 passed` full suite; draft_424: **150/150** frames `VY_DKRSMP=SUM`, 0
-WARN/FAIL, calibrated arrays and photometry science byte-identical to baseline. Ledger items
-CAL-AGE-CLOCK / RN-HEADER-NONE / CAL-PASSTHRU-DEAD remain open (spec section 10).
+WARN/FAIL, calibrated arrays and photometry science byte-identical to baseline. **RN-HEADER-NONE**
+and **CAL-PASSTHRU-DEAD** closed 2026-07-08 (`1830527`, `21c20e3`). CAL-AGE-CLOCK remains open.
 
 **Done 2026-07-07 (session close):** F-BINGAIN-1 Stage A -> **LATENT** (not live on wide rig);
 CAL-DIAG workstream registered (calibration radiometry gate; spec pending). F-AIRMASS-CITE fixed;

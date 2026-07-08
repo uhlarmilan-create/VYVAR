@@ -32,9 +32,10 @@ regressions; sandbox-only; **nothing ported to production**.
 | ID | Sev | Item |
 |----|-----|------|
 | **PROV-HEADLESS** | — | **FIXED** (`e7ce7ea`): `pipeline_meta.json` `provenance` block (`git_hash`, `git_dirty`, full `config_snapshot`, `stamped_at_utc`, `entry_point`); last-writer-wins at `run_phase2a` + `generate_masterstar_and_catalog`. |
-| **PROC-MAG-NAMING** | LOW | proc CSV `mag` = Gaia catalog G (constant per star) — rename or document; sandbox harnesses must use `dao_flux` (PROCESS note). |
+| **PROC-MAG-NAMING** | — | **FIXED** (`0913665`, documented): proc CSV `mag` = Gaia catalog G (constant per star at match time); science uses `dao_flux`. Docstring + `VYVAR_PIPELINE_CZ.md` schema note; PROCESS dao_flux rule verified. |
 | **K2-DATA-BLOCKER** | — | NIGHT_FIT needs calibrated filtered draft, dX ≥ ~0.3, comp residual floor ≪ 15 mmag. Home rig + flats qualifies; Boyden blocked on flat/flip systematics. **Supersedes** old blockers (filtered draft + FILTER strings — both satisfied 2026-07-07). |
-| **K2-SLOPE-TRACE** | LOW | GR/UG converter slopes (0.859 / 1.091) are spec-anchored illustrative, not derived by the traceable Jordi method used for BV (Table 6 anchor derivation gives ~1.04 for g-r; would shift k2_g −0.0137 → −0.0166, k2_r −0.0034 → −0.0042). Unify on the traceable method or document the exception; population-mean coefficient, ~20% effect. |
+| **K2-SLOPE-TRACE** | — | **FIXED** (`8c44b71`): GR slope 0.859→1.054 (Jordi 2010 Table 6 inverse, FGK g-r=0.48); k2_g≈−0.0169, k2_r≈−0.0042. UG retained 1.091 as documented exception → **K2-SLOPE-UG** (FUTURE). |
+| **K2-SLOPE-UG** | FUTURE | No Jordi u-g row; spec-anchored UG slope 1.091 retained pending citable source. |
 
 ---
 
@@ -86,7 +87,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **TIER1-UI-DEBT** | LOW | 38 SAFE UI/plotly broad-except `pass` sites — cosmetic diagnostics only. |
 | **299-defensive cluster** | MED | Pipeline/`photometry_core` broad-except `pass` cluster — existing phased-audit backlog item. |
 | **PROV-HEADLESS** | — | **FIXED** (`e7ce7ea`) — see K2 ledger row. |
-| **PROC-MAG-NAMING** | LOW | proc CSV `mag` = Gaia G — document/rename; harnesses use `dao_flux`. |
+| **PROC-MAG-NAMING** | — | **FIXED** (`0913665`) — documented, not renamed. |
 | **K2-DATA-BLOCKER** | — | NIGHT_FIT needs dX ≥ ~0.3, comp floor ≪ 15 mmag; Boyden blocked on flats/flip. |
 
 ---
@@ -112,8 +113,8 @@ Camera-agnostic calibration-time diagnostic gate (shipped):
 | ID | Sev | Summary |
 |----|-----|---------|
 | **CAL-AGE-CLOCK** | MED | Import scan mtime vs library UI header-age clocks diverge (`importer.py` vs `get_master_age_days`). |
-| **RN-HEADER-NONE** | LOW/MED | SNR aperture helper passes `header=None` to read-noise resolver on binned data. |
-| **CAL-PASSTHRU-DEAD** | LOW | Synthetic passthrough master in `get_processed_master` has no production caller. |
+| **RN-HEADER-NONE** | — | **FIXED** (`1830527`): SNR precompute passes MASTERSTAR header to `resolve_read_noise` (bin2 RN×bin parity with Phase 2A). draft_424 validated: max aperture shift 2.2%, LC byte-identical. |
+| **CAL-PASSTHRU-DEAD** | — | **FIXED** (`21c20e3`): removed `allow_passthrough` from `get_processed_master` (tests-only dead branch). |
 
 Flat-norm Stage 2 and other ROADMAP calibration items unchanged (D1/D2/D3 codify current behavior).
 
