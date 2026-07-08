@@ -33,7 +33,9 @@ no anchor ambiguity.
 - Artifact: `tmp/except_fix1_closeout_validate.json`
 
 ## Commits
-(pending push)
+
+- `91b421b` fix(photometry): EXC-0626 empty-comp drop + pool CSV schema guard
+- `a992f85` docs: closeout postmortem + EXC-0626 census + CURSOR_RESULT
 
 ## Errors (if any)
 
