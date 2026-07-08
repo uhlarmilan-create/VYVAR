@@ -29,5 +29,8 @@ None
 
 ## Files changed
 - docs/VYVAR_EXCEPT_CENSUS.md
+- docs/VYVAR_JOURNAL.md
 - CURSOR_RESULT_except_retriage2.md
-- sandbox/_except_retriage2_apply.py
+- sandbox/_except_retriage2_apply.py (local, gitignored)
+
+**Commit:** `d183261` — pushed to `main`.
