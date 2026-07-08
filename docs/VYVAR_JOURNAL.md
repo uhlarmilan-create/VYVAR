@@ -2,6 +2,49 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — EXCEPT-RETRIAGE-3 + EXCEPT-FIX-3 (tranche 3: astrometry/import/database)
+
+**Part 0 (scanner refresh, `e2444b5`):** re-ran `sandbox/_except_census_scan.py` at HEAD
+`9f3da34`. Found the scanner was double-counting (1230 sites) because a leftover
+`.worktrees/except_fix1_*` git worktree wasn't excluded → added `.worktrees` to `EXCLUDE_DIRS`.
+Added a **stable-ID line-refresh mode**: with an existing census the scanner now preserves every
+EXC-#### ID + curated tranche prose/disposition and updates ONLY `file:line` per row (within-file
+line-order match, `FIXED` rows treated as retired). **102 line numbers refreshed**; all tranche
+IDs unchanged. Deferred `pipeline.py` (160 surviving vs 159 scan — one non-`FIXED` site surfaced
+beyond the 10 FIX-2 rows; out of tranche-3 scope, IDs left intact). Census now: 604 currently-silent
++ 21 FIXED + 1 deferred = 626 rows.
+
+**Part A (evidence, `a5b8bdf`):** Tranche 3 (84 core) + 3b `astrometry_optimizer.py` (14,
+Milan-approved scope extension) = 98 sites triaged by line-level read. Tiers T1 2 / T2 25 /
+T3 35 / T4 36; dispositions fix-now 11, narrow+log-ERROR 4, narrow+log 19, narrow+comment 45,
+delete-dead 19. Verified grounded fact: `log_event` self-guards (`infolog.py:28-36`), so pure
+log_event wrappers over validated locals are dead code. Key insight: `vyvar_platesolver.py`
+(36 sites) is mostly HEALTHY (RANSAC `continue` is correct; terminal fails already surfaced);
+real risk concentrates in `importer.py` (calibration library + frame classification).
+
+**Part B (EXCEPT-FIX-3, `c47e9b8`):** 11 sites surfaced (10 new counters + shared
+`wcs_header_io.copy_wcs_header_keys`). Surfacing-only: #1 _read_filter, #2 dark BPM sidecar,
+#4 library register, #6 IMAGETYP, #7 obs-group meta, #10 platesolver match-rate (+ nan/error
+sentinels). **Behavior changes (all fail-safe):** #3 scope-conflict fail-open→fail-closed (DB
+error ⇒ assume conflict); #5 capture date today→file mtime; #8 shared WCS-copy helper aborts
+atomically on any core-key failure (validated on a scratch header BEFORE opening the FITS, so no
+half-written WCS is flushed) — EXC-0625 sibling recovery returns unrecovered, EXC-0010 SIP refit
+skipped, cosmetic keys warn only; #9 `_n_unique_spread_sample` promoted to module level, returns
+`-1` ("check unavailable") on error and callers no longer reject a good frame on a diagnostic's
+own failure.
+
+**Part C (gates):** `tests/test_except_fix3.py` (11 tests incl. #3/#5/#8a-c/#9 + #1/#4/#6 smokes).
+Full suite **615 passed, 15 skipped** (baseline 604 + 11). Ruff BLE001/E722 clean. Happy-path
+invariance argued structurally: all edits are in except handlers / post-exception sentinels; the
+WCS helper is byte-identical on success; the alignment refactor is behavior-preserving and unit-
+tested; byte-identity gate tests remain green. (draft_424 headless anchor not re-run — touched
+paths do not fire on a healthy draft.)
+
+**Next:** EXCEPT-RETRIAGE-4 (tranche 4: report/export/UI) → bulk dispositions. Artifact:
+`CURSOR_RESULT_except_retriage3.md`.
+
+---
+
 ## 2026-07-08 — SESSION-CLOSE-0708
 
 **Day closed** on `main` — morning PROV-FIX / QUICKWINS-0708 / CAL-AGE-CLOCK / INPUT-GUARDS;
