@@ -6,6 +6,7 @@ entry points for multiprocessing (Windows spawn).
 
 from __future__ import annotations
 
+import logging
 import math
 import warnings
 from pathlib import Path
@@ -32,6 +33,8 @@ from utils import (
     wcs_rotation_angle_deg,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _as_fits_float32_image(data: Any) -> np.ndarray:
     return np.ascontiguousarray(np.asarray(data, dtype=np.float32))
@@ -46,6 +49,53 @@ def _alignment_emit_log(log_sink: list[str] | None, msg: str) -> None:
         log_sink.append(msg)
     else:
         log_event(msg)
+
+
+def _alignment_n_unique_spread_sample(
+    arr_in: np.ndarray,
+    *,
+    fp_name: str = "",
+    log_sink: list[str] | None = None,
+    max_samples: int = 10_000,
+) -> int:
+    """Count unique values on a spread sample across the whole frame.
+
+    Used by the constant-frame QC gate. Using the first N finite pixels is biased toward
+    borders (often constant due to padding), which can incorrectly mark a valid aligned
+    frame as 'constant'; hence the spread sampling.
+
+    Returns the unique count (>= 0) or ``-1`` when the check itself is unavailable
+    (EXC-0586 / EXCEPT-FIX-3 #9): on an internal error we surface it and return the ``-1``
+    sentinel so callers do NOT reject a good frame just because the diagnostic failed. The
+    previous ``return 0`` made ``n_unique <= 3`` reject the frame outright.
+    """
+    try:
+        a = np.asarray(arr_in, dtype=np.float32)
+        flat = a.ravel()
+        if flat.size == 0:
+            return 0
+        finite = np.isfinite(flat)
+        if not np.any(finite):
+            return 0
+        idx_all = np.flatnonzero(finite)
+        n = int(min(int(max_samples), int(idx_all.size)))
+        if n <= 0:
+            return 0
+        if idx_all.size <= n:
+            samp = flat[idx_all]
+        else:
+            take = np.linspace(0, idx_all.size - 1, num=n, dtype=np.int64)
+            samp = flat[idx_all[take]]
+        return int(len(np.unique(samp)))
+    except Exception as exc:  # noqa: BLE001
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().align_unique_sample_fail += 1
+        _alignment_emit_log(
+            log_sink, f"WARNING: unique-spread check unavailable for {fp_name}: {exc}"
+        )
+        logger.error("[ALIGN] unique-spread sample failed for %s: %s", fp_name, exc)
+        return -1
 
 
 def _alignment_as_alignment_points(
@@ -408,31 +458,11 @@ def _alignment_compute_one_frame(
     _attempt_ok = False
 
     def _n_unique_spread_sample(arr_in: np.ndarray, *, max_samples: int = 10_000) -> int:
-        """Count unique values on a spread sample across the whole frame.
-
-        NOTE: Using the first N finite pixels is biased toward borders (often constant due to padding),
-        which can incorrectly mark a valid aligned frame as 'constant'.
-        """
-        try:
-            a = np.asarray(arr_in, dtype=np.float32)
-            flat = a.ravel()
-            if flat.size == 0:
-                return 0
-            finite = np.isfinite(flat)
-            if not np.any(finite):
-                return 0
-            idx_all = np.flatnonzero(finite)
-            n = int(min(int(max_samples), int(idx_all.size)))
-            if n <= 0:
-                return 0
-            if idx_all.size <= n:
-                samp = flat[idx_all]
-            else:
-                take = np.linspace(0, idx_all.size - 1, num=n, dtype=np.int64)
-                samp = flat[idx_all[take]]
-            return int(len(np.unique(samp)))
-        except Exception:  # noqa: BLE001
-            return 0
+        # Thin closure over the module-level helper so the constant-frame gate can log via the
+        # per-frame log_sink / name. See _alignment_n_unique_spread_sample (EXC-0586 / FIX-3 #9).
+        return _alignment_n_unique_spread_sample(
+            arr_in, fp_name=fp.name, log_sink=log_sink, max_samples=max_samples
+        )
 
     for i_att, att in enumerate(_attempts, start=1):
         dao_sig = float(att["dao_sigma"])
@@ -527,7 +557,10 @@ def _alignment_compute_one_frame(
             try:
                 arr_check = np.asarray(aligned_data, dtype=np.float32)
                 n_unique = _n_unique_spread_sample(arr_check, max_samples=10_000)
-                if n_unique <= 3:
+                # EXCEPT-FIX-3 #9: only 0 <= n_unique <= 3 is truly constant; n_unique < 0
+                # means the check was unavailable -> accept the frame (do not reject on a
+                # diagnostic's own failure). See census EXC-0586.
+                if 0 <= n_unique <= 3:
                     _alignment_emit_log(
                         log_sink,
                         f"WARNING: {fp.name} aligned frame je konštantný (n_unique={n_unique}), pokus {i_att} zlyhal",
@@ -609,7 +642,8 @@ def _alignment_compute_one_frame(
                         )
                         shifted = _as_fits_float32_image(shifted)
                         n_unique = _n_unique_spread_sample(shifted, max_samples=10_000)
-                        if n_unique > 3 and float(np.nansum(np.abs(shifted))) >= 1.0:
+                        # EXCEPT-FIX-3 #9: n_unique < 0 = check unavailable -> not "constant".
+                        if (n_unique < 0 or n_unique > 3) and float(np.nansum(np.abs(shifted))) >= 1.0:
                             aligned_data = shifted
                             aligned_method = "phase_correlation"
                             _attempt_ok = True
@@ -648,7 +682,8 @@ def _alignment_compute_one_frame(
                     shifted = _as_fits_float32_image(shifted)
                     # Sanity: avoid constant/empty frames.
                     n_unique = _n_unique_spread_sample(shifted, max_samples=10_000)
-                    if n_unique > 3 and float(np.nansum(np.abs(shifted))) >= 1.0:
+                    # EXCEPT-FIX-3 #9: n_unique < 0 = check unavailable -> not "constant".
+                    if (n_unique < 0 or n_unique > 3) and float(np.nansum(np.abs(shifted))) >= 1.0:
                         aligned_data = shifted
                         aligned_method = "wcs_shift"
                         _attempt_ok = True

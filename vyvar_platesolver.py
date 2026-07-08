@@ -3937,8 +3937,16 @@ def _solve_wcs_validate_and_refine(
             f"({int(_matched_n)}/{int(sip_meta.get('match_rate_n_used', n_img))} "
             f"{sip_meta.get('match_rate_scope')!s}) | all-frame≈{float(sip_meta.get('match_rate_full_frame', 0.0)) * 100.0:.1f}%"
         )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as exc:  # noqa: BLE001
+        # EXC-0605 / EXCEPT-FIX-3 #10: surface the final match-rate QA computation failure and
+        # write explicit sentinels so downstream solve QA sees "error" instead of a silently
+        # missing match_rate_final key. See docs/VYVAR_EXCEPT_CENSUS.md (EXC-0605).
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().platesolve_match_rate_meta_fail += 1
+        LOGGER.error("[PLATE-SOLVE] final match-rate meta computation failed: %s", exc)
+        sip_meta["match_rate_final"] = float("nan")
+        sip_meta["match_rate_scope"] = "error"
 
     return (
         wcs_final,
@@ -6233,6 +6241,13 @@ def _sibling_load_gaia_catalog(
     return ra, de
 
 
+class _SiblingWcsCopyError(Exception):
+    """Raised when a core WCS key cannot be copied during sibling recovery (EXC-0625).
+
+    Signals the caller to ABORT recovery for that frame so no half-written WCS is persisted.
+    """
+
+
 def _write_sibling_recovered_wcs_to_fits(
     recipient_path: Path,
     wcs_final: WCS,
@@ -6242,19 +6257,21 @@ def _write_sibling_recovered_wcs_to_fits(
     metrics: dict[str, Any],
     stack_n: int,
 ) -> None:
+    from astropy.io.fits import Header
+    from wcs_header_io import copy_wcs_header_keys
+
     wcs_hdr = wcs_final.to_header(relax=True)
+    # EXC-0625 / EXCEPT-FIX-3 #8: validate core-key copyability BEFORE opening/mutating the
+    # recipient FITS. If any core celestial key is uncopyable we abort here (nothing is
+    # opened or stripped), so the frame stays unrecovered instead of getting a broken WCS.
+    ctx = f"sibling recovery {recipient_path.name}"
+    failed_core = copy_wcs_header_keys(Header(), wcs_hdr, context=ctx)
+    if failed_core:
+        raise _SiblingWcsCopyError(f"core WCS keys uncopyable: {failed_core}")
     with fits.open(recipient_path, mode="update", memmap=False) as hdul:
         h = hdul[0].header
         strip_celestial_wcs_keys(h)
-        for k in wcs_hdr:
-            if k in ("", "COMMENT", "HISTORY", "SIMPLE", "BITPIX", "NAXIS", "EXTEND"):
-                continue
-            if k.startswith("NAXIS") and k != "NAXIS":
-                continue
-            try:
-                h[k] = wcs_hdr[k]
-            except Exception:  # noqa: BLE001
-                pass
+        copy_wcs_header_keys(h, wcs_hdr, context=ctx)
         h["VY_CRT"] = ("sibling_recovered", "VYVAR creation route")
         h["VY_SIBL"] = (str(donor_filter), "Sibling donor filter")
         h["VY_SSHX"] = (float(bulk_shift.get("dx") or 0.0), "Sibling bulk-shift dx [px]")
@@ -6393,14 +6410,30 @@ def try_recover_masterstar_sibling_wcs(
     if confirmed:
         w_final = adopt.get("wcs")
         if isinstance(w_final, WCS):
-            _write_sibling_recovered_wcs_to_fits(
-                recipient_path,
-                w_final,
-                donor_filter=str(donor_filter),
-                bulk_shift=bulk,
-                metrics=after,
-                stack_n=stack_n,
-            )
+            try:
+                _write_sibling_recovered_wcs_to_fits(
+                    recipient_path,
+                    w_final,
+                    donor_filter=str(donor_filter),
+                    bulk_shift=bulk,
+                    metrics=after,
+                    stack_n=stack_n,
+                )
+            except _SiblingWcsCopyError as exc:
+                # EXCEPT-FIX-3 #8: core WCS-key copy failed -> recovery aborted before any FITS
+                # mutation; the frame stays unrecovered (pre-existing loud path) rather than
+                # carrying a half-written WCS. See census EXC-0625.
+                LOGGER.error(
+                    "[SIBLING-WCS] recovery aborted for %s (%s)", recipient_path, exc
+                )
+                return {
+                    "confirmed": False,
+                    "donor_filter": donor_filter,
+                    "reason": f"wcs header copy aborted: {exc}",
+                    "before": adopt.get("before"),
+                    "after": after,
+                    "stack_n": stack_n,
+                }
 
     log_event(
         f"SIBLING-WCS Pass2: donor={donor_filter} recipient={recipient_filter} "

@@ -620,18 +620,20 @@ def optimize_masterstar_matches(
             )
             w_out = w_sip if w_sip is not None else w_lin
             wh = w_out.to_header(relax=True)
+            # EXC-0010 / EXCEPT-FIX-3 #8: validate core WCS-key copyability BEFORE opening/
+            # stripping the FITS. On a core-key failure skip the refit (keep the pre-refit WCS)
+            # rather than flushing a half-written WCS. See docs/VYVAR_EXCEPT_CENSUS.md (EXC-0010).
+            from astropy.io.fits import Header as _Header
+            from wcs_header_io import copy_wcs_header_keys
+
+            _refit_ctx = f"astrometry {tag} SIP refit"
+            if copy_wcs_header_keys(_Header(), wh, context=_refit_ctx):
+                log_event(f"Astrometry optimizer {tag}: WCS refit skipped (core WCS key copy failed)")
+                return {}
             with fits.open(fits_path, mode="update", memmap=False) as hdul2:
                 hh = hdul2[0].header
                 strip_celestial_wcs_keys(hh)
-                for k in wh:
-                    if k in ("", "COMMENT", "HISTORY", "SIMPLE", "BITPIX", "NAXIS", "EXTEND"):
-                        continue
-                    if k.startswith("NAXIS") and k != "NAXIS":
-                        continue
-                    try:
-                        hh[k] = wh[k]
-                    except Exception:  # noqa: BLE001
-                        pass
+                copy_wcs_header_keys(hh, wh, context=_refit_ctx)
                 hh["VY_SIPRF"] = (True, f"WCS refit ({tag}, SIP{int(sip_order)})")
                 if meta.get("rms_linear_px") is not None and meta.get("rms_sip_px") is not None:
                     hh.add_history(

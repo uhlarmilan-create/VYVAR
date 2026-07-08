@@ -6,6 +6,7 @@ import os
 import shutil
 import tempfile
 import math
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,6 +27,8 @@ from pipeline import (
     log_lights_binning_from_headers_preflight,
 )
 from utils import fits_binning_xy_from_header, plate_scale_arcsec_per_pixel
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -248,8 +251,19 @@ def _fits_capture_date_yyyymmdd(path: Path) -> str:
         if dt is None:
             return datetime.now(timezone.utc).strftime("%Y%m%d")
         return dt.strftime("%Y%m%d")
-    except Exception:  # noqa: BLE001
-        return datetime.now(timezone.utc).strftime("%Y%m%d")
+    except Exception as exc:  # noqa: BLE001
+        # EXC-0089 / EXCEPT-FIX-3 #5 [BEHAVIOR CHANGE: better fallback]: an unreadable FITS
+        # is now surfaced (was silent) and the draft is dated from the file mtime, which is
+        # strictly closer to the true capture date than "today"; only fall back to now() if
+        # even the mtime is unavailable. See docs/VYVAR_EXCEPT_CENSUS.md (EXC-0089).
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().importer_capture_date_fallback += 1
+        logger.error("[IMPORT] capture-date read failed for %s: %s", path, exc)
+        try:
+            return _mtime_utc(path).strftime("%Y%m%d")
+        except Exception:  # noqa: BLE001
+            return datetime.now(timezone.utc).strftime("%Y%m%d")
 
 
 def _earliest_capture_datetime_utc(files: list[Path]) -> datetime | None:
@@ -298,8 +312,18 @@ def _master_path_scope_conflicts(
         return db.calibration_library_scope_conflicts(
             path, id_equipments, id_telescope
         )
-    except Exception:  # noqa: BLE001
-        return False
+    except Exception as exc:  # noqa: BLE001
+        # EXC-0090 / EXCEPT-FIX-3 #3 [BEHAVIOR CHANGE: fail-open -> fail-closed]: a DB error
+        # must NOT be read as "no conflict" (that could silently allow a cross-rig master to
+        # register). Assume a conflict so the caller refuses/disambiguates the filename -- the
+        # safe direction. See docs/VYVAR_EXCEPT_CENSUS.md (EXC-0090).
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().calib_scope_conflict_check_fail += 1
+        logger.error(
+            "[CALIB-LIB] scope-conflict check failed for %s (assuming conflict): %s", path, exc
+        )
+        return True
 
 
 def _scoped_master_filename(base_name: str, id_equipments: int | None, id_telescope: int | None) -> str:
@@ -353,7 +377,16 @@ def _register_master_path_in_calibration_library(
             id_equipments=id_equipments,
             id_telescope=id_telescope,
         )
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        # EXC-0092 / EXCEPT-FIX-3 #4: registration failure is now surfaced (was a silent False),
+        # which otherwise leaves a master invisible to the library (duplicates / wrong matches
+        # downstream). Contract unchanged (still returns False). See census EXC-0092.
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().calib_library_register_fail += 1
+        logger.error(
+            "[CALIB-LIB] library registration failed (kind=%s) for %s: %s", kind, path, exc
+        )
         return False
 
 
@@ -454,7 +487,13 @@ def _imaging_kind_for_file(fp: Path, db: VyvarDatabase | None) -> str:
             hdr.get("IMAGETYP") or hdr.get("FRAME") or hdr.get("IMTYPE") or ""
         )
         return _classify_imagetyp(imagetyp_raw)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        # EXC-0094 / EXCEPT-FIX-3 #6: classification failure is surfaced (was silent); an
+        # "unknown" frame is excluded from lights. Contract unchanged. See census EXC-0094.
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().importer_imagetyp_read_fail += 1
+        logger.error("[IMPORT] IMAGETYP classification failed for %s: %s", fp, exc)
         return "unknown"
 
 
@@ -570,7 +609,15 @@ def _read_filter(fp: Path, db: VyvarDatabase | None = None) -> str:
         if not flt or flt.strip().lower() in {"unknown", "none", "nan"}:
             return "NoFilter"
         return flt
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        # EXC-0095 / EXCEPT-FIX-3 #1 (T1): an unreadable header is NOT evidence of an
+        # unfiltered frame; returning "NoFilter" is a known filter-MISATTRIBUTION risk
+        # (wrong flat group + wrong band_classify/CT/k2 routing), now surfaced loudly.
+        # Contract unchanged. OPEN follow-up: a fail-closed import abort (see census EXC-0095).
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().importer_filter_read_fail += 1
+        logger.error("[IMPORT] filter read failed for %s (returning NoFilter): %s", fp, exc)
         return "NoFilter"
 
 
@@ -898,6 +945,7 @@ def _age_days(
             )
             if warnings is not None:
                 warnings.append(msg)
+            logger.warning(msg)
     return float(info.age_days)
 
 
@@ -1098,8 +1146,14 @@ def _write_master_to_library(
             _sig = float(AppConfig().bpm_dark_mad_sigma)
             _nb = int(header.get("XBINNING") or header.get("BINNING") or binning)
             write_dark_bpm_json(out_path, master, mad_sigma=_sig, native_binning=_nb)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # EXC-0100 / EXCEPT-FIX-3 #2 (T1): the BPM sidecar stays best-effort (the master
+            # dark is still created), but the failure is now loud -- otherwise photometry runs
+            # without the bad-pixel map with no trace. See census EXC-0100.
+            from except_fix_counters import get_except_fix_counters
+
+            get_except_fix_counters().dark_bpm_sidecar_write_fail += 1
+            logger.error("[IMPORT] dark BPM sidecar write failed for %s: %s", out_path, exc)
     _register_master_path_in_calibration_library(
         db,
         kind=kind,
@@ -1265,7 +1319,13 @@ def smart_scan_source(
     for fp in lights_files[:8000]:
         try:
             meta_i = extract_fits_metadata(fp, db=db)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            # EXC-0102 / EXCEPT-FIX-3 #7: a light frame silently dropped from calibration
+            # observation-group planning is now surfaced (still continues). See census EXC-0102.
+            from except_fix_counters import get_except_fix_counters
+
+            get_except_fix_counters().importer_obs_group_meta_skip += 1
+            logger.error("[IMPORT] obs-group metadata read failed for %s (frame skipped): %s", fp, exc)
             continue
         f_i = str(meta_i.get("filter", "")).strip()
         if not f_i or f_i.lower() in {"unknown", "none", "nan"}:

@@ -30,6 +30,17 @@ class ExceptFixCounters:
     stress_sidecar_skip: int = 0
     masterstar_ref_swap_fail: int = 0
     calibrate_db_sync_fail: int = 0
+    # EXCEPT-FIX-3 (tranche 3: importer / platesolver / alignment / astrometry_optimizer)
+    importer_filter_read_fail: int = 0
+    dark_bpm_sidecar_write_fail: int = 0
+    calib_scope_conflict_check_fail: int = 0
+    calib_library_register_fail: int = 0
+    importer_capture_date_fallback: int = 0
+    importer_imagetyp_read_fail: int = 0
+    importer_obs_group_meta_skip: int = 0
+    wcs_header_key_copy_fail: int = 0
+    align_unique_sample_fail: int = 0
+    platesolve_match_rate_meta_fail: int = 0
 
     def snapshot(self) -> dict[str, int]:
         return {
@@ -55,6 +66,16 @@ class ExceptFixCounters:
             "stress_sidecar_skip": self.stress_sidecar_skip,
             "masterstar_ref_swap_fail": self.masterstar_ref_swap_fail,
             "calibrate_db_sync_fail": self.calibrate_db_sync_fail,
+            "importer_filter_read_fail": self.importer_filter_read_fail,
+            "dark_bpm_sidecar_write_fail": self.dark_bpm_sidecar_write_fail,
+            "calib_scope_conflict_check_fail": self.calib_scope_conflict_check_fail,
+            "calib_library_register_fail": self.calib_library_register_fail,
+            "importer_capture_date_fallback": self.importer_capture_date_fallback,
+            "importer_imagetyp_read_fail": self.importer_imagetyp_read_fail,
+            "importer_obs_group_meta_skip": self.importer_obs_group_meta_skip,
+            "wcs_header_key_copy_fail": self.wcs_header_key_copy_fail,
+            "align_unique_sample_fail": self.align_unique_sample_fail,
+            "platesolve_match_rate_meta_fail": self.platesolve_match_rate_meta_fail,
         }
 
 
