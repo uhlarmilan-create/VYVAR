@@ -71,6 +71,11 @@ T3-UI (cosmetic) - T4-LEGIT (correct best-effort fallback) - **?** (needs human 
 
 10. **EXC-0198** `photometry_core.py:10430` — variable_targets.csv x/y WCS refresh fails; stale pixel coords used for target/comp matching in phase 0+1.
 
+### TOP-10 fix batch (FIXED 2026-07-08, EXCEPT-FIX-1)
+
+Probe (drafts 424/425/427): **all 10 NEVER-FIRE** on current data (PSF trio: `psf_photometry_enabled=false`).
+Fix: terminal failures → ERROR + `except_fix_summary` counters in `pipeline_meta.json`; invalid sky → NaN flux (EXC-0132). Validation: draft_424 rerun `except_fix_summary` all zeros; **593 passed**.
+
 ## Census
 
 | ID | Site | Except | Handler | Tier | What gets silently lost | Disposition |
@@ -117,9 +122,9 @@ T3-UI (cosmetic) - T4-LEGIT (correct best-effort fallback) - **?** (needs human 
 | EXC-0040 | `comp_selection_per_target.py:516` | Exception | pass | T3-UI | BO CVn debug print after Filter A (nss/extobj) suppressed | delete-dead |
 | EXC-0041 | `comp_selection_per_target.py:595` | Exception | pass | T3-UI | BO CVn debug print before adaptive delta-mag filter suppressed | delete-dead |
 | EXC-0042 | `comp_selection_per_target.py:638` | Exception | pass | T3-UI | BO CVn debug print after adaptive /delta-mag/ filter suppressed | delete-dead |
-| EXC-0043 | `comp_selection_per_target.py:728` | Exception | continue | T1-SCIENCE | Unreadable per-frame proc CSV skipped in phase1 cache - comp metrics miss that frame entirely | fix-now |
-| EXC-0044 | `comp_selection_per_target.py:1046` | Exception | continue | T1-SCIENCE | Whole frame dropped from comp flux/BJD accumulation - RMS scatter computed without that epoch | fix-now |
-| EXC-0045 | `comp_selection_per_target.py:1549` | Exception | pass | T1-SCIENCE | Quadratic detrend fit failure leaves raw (non-detrended) comp flux - RMS map biased high/low | fix-now |
+| EXC-0043 | `comp_selection_per_target.py:728` | Exception | continue | T1-SCIENCE | Unreadable per-frame proc CSV skipped in phase1 cache - comp metrics miss that frame entirely | FIXED (EXCEPT-FIX-1) |
+| EXC-0044 | `comp_selection_per_target.py:1046` | Exception | continue | T1-SCIENCE | Whole frame dropped from comp flux/BJD accumulation - RMS scatter computed without that epoch | FIXED (EXCEPT-FIX-1) |
+| EXC-0045 | `comp_selection_per_target.py:1549` | Exception | pass | T1-SCIENCE | Quadratic detrend fit failure leaves raw (non-detrended) comp flux - RMS map biased high/low | FIXED (EXCEPT-FIX-1) |
 | EXC-0046 | `comp_selection_per_target.py:1903` | Exception | continue | T3-UI | DEBUG tier-assignment log line for one comp candidate skipped | delete-dead |
 | EXC-0047 | `comp_selection_per_target.py:2013` | Exception | pass | T3-UI | Comp selection summary log_event (widened colour window warning) never emitted | delete-dead |
 | EXC-0048 | `config.py:2419` | Exception | pass | T4-LEGIT | optional enrichment skipped (if math.isfinite(inn) and math.isfinite(out) and out <= inn: / cfg_eff.annulus_outer_fwhm = float(inn + 1.0) / except Ex) | narrow+comment |
@@ -206,11 +211,11 @@ T3-UI (cosmetic) - T4-LEGIT (correct best-effort fallback) - **?** (needs human 
 | EXC-0129 | `photometry_core.py:1087` | Exception | pass | T1-SCIENCE | MASTERSTAR header FWHM key parse fails - SNR/aperture table uses later fallback FWHM source | narrow+log-ERROR |
 | EXC-0130 | `photometry_core.py:1143` | Exception | continue | T1-SCIENCE | One frame skipped when estimating median sky for SNR table - sky_adu biased if few frames | narrow+log-ERROR |
 | EXC-0131 | `photometry_core.py:1222` | Exception | pass | T2-INTEGRITY | db.conn.close() after SNR table precompute ignored | narrow+comment(T4) |
-| EXC-0132 | `photometry_core.py:1618` | Exception | continue | T1-SCIENCE | Annulus sky mask failure leaves sky_pp=0 - net aperture flux equals raw sum (no sky subtraction) | fix-now |
+| EXC-0132 | `photometry_core.py:1618` | Exception | continue | T1-SCIENCE | Annulus sky mask failure leaves sky_pp=0 - net aperture flux equals raw sum (no sky subtraction) | FIXED (EXCEPT-FIX-1) |
 | EXC-0133 | `photometry_core.py:1861` | Exception | continue | T4-LEGIT | Bad mag value on one masterstar row skipped - loop tries next row for aperture sizing | narrow+comment(T4) |
 | EXC-0134 | `photometry_core.py:2264` | Exception | continue | T4-LEGIT | Non-finite small/large aperture flux pair skipped in per-frame delta-mag collection | narrow+comment(T4) |
 | EXC-0135 | `photometry_core.py:2453` | Exception | continue | T1-SCIENCE | One comp's inst mag on one frame skipped - ensemble normalization ignores that comp for that epoch | narrow+log-ERROR |
-| EXC-0136 | `photometry_core.py:3025` | Exception | continue | T1-SCIENCE | Unreadable per-frame proc CSV skipped - global comp pool mag arrays have NaN for that frame index | fix-now |
+| EXC-0136 | `photometry_core.py:3025` | Exception | continue | T1-SCIENCE | Unreadable per-frame proc CSV skipped - global comp pool mag arrays have NaN for that frame index | FIXED (EXCEPT-FIX-1) |
 | EXC-0137 | `photometry_core.py:3190` | Exception | log-below-ERROR (logging.warning) | T1-SCIENCE | comparison_stars.csv spatial pool refresh fails - CT fit uses stale/sparse comp pool | narrow+log-ERROR |
 | EXC-0138 | `photometry_core.py:3201` | Exception | mixed-silent (return) | T2-INTEGRITY | variable_targets stub detection CSV read fails - returns False (stub may go undetected) | narrow+log-ERROR |
 | EXC-0139 | `photometry_core.py:3255` | Exception | mixed-silent (log-below-ERROR+return) | T1-SCIENCE | Full variable_targets restore from field cone fails - CT presel stub may remain as target list | narrow+log-ERROR |
@@ -240,7 +245,7 @@ T3-UI (cosmetic) - T4-LEGIT (correct best-effort fallback) - **?** (needs human 
 | EXC-0163 | `photometry_core.py:5810` | Exception | continue | T2-INTEGRITY | One frame's psf_fit CSV unreadable - ePSF metrics aggregate omits that frame's stars | narrow+log-ERROR |
 | EXC-0164 | `photometry_core.py:6279` | Exception | pass | T1-SCIENCE | Chip height/width inference from target/comp xy max fails - chip margin filter may use wrong dimensions | narrow+log-ERROR |
 | EXC-0165 | `photometry_core.py:6316` | Exception | continue | T4-LEGIT | Non-numeric bp_rp on one masterstars row skipped when building target_bp_rp_by_cid | narrow+comment(T4) |
-| EXC-0166 | `photometry_core.py:6480` | Exception | continue | T1-SCIENCE | Phase 2A per-frame proc CSV not cached - all stars on that frame get NaN flux (frame effectively dropped) | fix-now |
+| EXC-0166 | `photometry_core.py:6480` | Exception | continue | T1-SCIENCE | Phase 2A per-frame proc CSV not cached - all stars on that frame get NaN flux (frame effectively dropped) | FIXED (EXCEPT-FIX-1) |
 | EXC-0167 | `photometry_core.py:6543` | Exception | pass | T2-INTEGRITY | catalog_match_mode not stored in frame_time_lookup for one frame stem | narrow+log-ERROR |
 | EXC-0168 | `photometry_core.py:6579` | Exception | pass | T2-INTEGRITY | alignment_report.csv alignment_failed/reason not propagated into frame_time_lookup | narrow+log-ERROR |
 | EXC-0169 | `photometry_core.py:6615` | Exception | pass | T2-INTEGRITY | VY_OBSG/OBSG/FILTER header tag not parsed - obs_group label missing from frame metadata | narrow+log-ERROR |
@@ -272,7 +277,7 @@ T3-UI (cosmetic) - T4-LEGIT (correct best-effort fallback) - **?** (needs human 
 | EXC-0195 | `photometry_core.py:10328` | Exception | pass | T4-LEGIT | DB OBS_FILES NAXIS query fails - returns caller-supplied default frame width/height | narrow+comment(T4) |
 | EXC-0196 | `photometry_core.py:10364` | Exception | pass | T2-INTEGRITY | VY_NDAO header read from MASTERSTAR fails - field density uses masterstars count fallback | narrow+log-ERROR |
 | EXC-0197 | `photometry_core.py:10380` | Exception | pass | T2-INTEGRITY | masterstars_full_match.csv star-count read fails - field density n_stars may use VY_NDAO only | narrow+log-ERROR |
-| EXC-0198 | `photometry_core.py:10430` | Exception | mixed-silent (log-below-ERROR+return) | T1-SCIENCE | variable_targets.csv x/y WCS refresh fails - stale pixel coords used for target/comp matching | fix-now |
+| EXC-0198 | `photometry_core.py:10430` | Exception | mixed-silent (log-below-ERROR+return) | T1-SCIENCE | variable_targets.csv x/y WCS refresh fails - stale pixel coords used for target/comp matching | FIXED (EXCEPT-FIX-1) |
 | EXC-0199 | `photometry_core.py:10588` | Exception | log-below-ERROR (logging.warning) | T1-SCIENCE | WCS scale sanity check failure logged - distance matching may stay on ra/dec instead of pixel fallback | narrow+log-ERROR |
 | EXC-0200 | `photometry_core.py:10614` | Exception | mixed-silent (return) | T4-LEGIT | Non-numeric Gaia id string returned as-is in select_active_targets helper | narrow+comment(T4) |
 | EXC-0201 | `photometry_core.py:10892` | Exception | mixed-silent (return) | T4-LEGIT | Non-coercible target field returns NaN in _fscalar - treated as missing color/mag | narrow+comment(T4) |
@@ -523,13 +528,13 @@ T3-UI (cosmetic) - T4-LEGIT (correct best-effort fallback) - **?** (needs human 
 | EXC-0446 | `psf_photometry.py:136` | Exception | return | T1-SCIENCE | Auxiliary CSV read for PSF star x/y fails - those catalog_ids missing from PSF star_positions | narrow+log-ERROR |
 | EXC-0447 | `psf_photometry.py:330` | Exception | mixed-silent (return) | T2-INTEGRITY | Plate scale from FITS header fails - PSF cutout/fit sizing uses defaults | narrow+log-ERROR |
 | EXC-0448 | `psf_photometry.py:452` | Exception | mixed-silent (return) | T4-LEGIT | Moffat aperture-correction ratio fit fails - returns unity correction (no offset applied) | narrow+comment(T4) |
-| EXC-0449 | `psf_photometry.py:1315` | Exception | pass | T1-SCIENCE | Sky-subtracted cutout not injected into ePSF star object - EPSFBuilder trains on raw not sky-sub data | fix-now |
+| EXC-0449 | `psf_photometry.py:1315` | Exception | pass | T1-SCIENCE | Sky-subtracted cutout not injected into ePSF star object - EPSFBuilder trains on raw not sky-sub data | FIXED (EXCEPT-FIX-1) |
 | EXC-0450 | `psf_photometry.py:1439` | Exception | mixed-silent (return) | T4-LEGIT | Malformed psf_grid string defaults to 3x3 tile layout | narrow+comment(T4) |
 | EXC-0451 | `psf_photometry.py:1998` | Exception | continue | T4-LEGIT | One annulus mask fails - loop tries next annulus before returning NaN sky | narrow+comment(T4) |
-| EXC-0452 | `psf_photometry.py:2128` | Exception | pass | T1-SCIENCE | Local annulus sky via photometry_core fails - PSF fit gets NaN sky and border_fallback path | fix-now |
+| EXC-0452 | `psf_photometry.py:2128` | Exception | pass | T1-SCIENCE | Local annulus sky via photometry_core fails - PSF fit gets NaN sky and border_fallback path | FIXED (EXCEPT-FIX-1) |
 | EXC-0453 | `psf_photometry.py:2238` | Exception | mixed-silent (return) | T1-SCIENCE | PSF model evaluate for sandwich flux_err fails - flux uncertainty becomes NaN for that star | narrow+log-ERROR |
 | EXC-0454 | `psf_photometry.py:2260` | Exception | pass | T1-SCIENCE | PSF centroid fixed-position flags not set - forced photometry may drift centroid and change flux | narrow+log-ERROR |
-| EXC-0455 | `psf_photometry.py:2430` | Exception | mixed-silent (return) | T1-SCIENCE | Grouped photutils PSF fit throws - star omitted from PSF results (silent drop) | fix-now |
+| EXC-0455 | `psf_photometry.py:2430` | Exception | mixed-silent (return) | T1-SCIENCE | Grouped photutils PSF fit throws - star omitted from PSF results (silent drop) | FIXED (EXCEPT-FIX-1) |
 | EXC-0456 | `psf_photometry.py:2576` | Exception | pass | T4-LEGIT | ePSF meta oversampling parse fails - default osamp=2 retained | narrow+comment(T4) |
 | EXC-0457 | `psf_runner.py:84` | Exception | pass | T3-UI | PYTHONIOENCODING env setup for CLI stdout fails silently | delete-dead |
 | EXC-0458 | `psf_runner.py:93` | Exception | pass | T3-UI | stdout/stderr UTF-8 reconfigure for CLI fails silently | delete-dead |

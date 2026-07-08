@@ -2,6 +2,23 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — EXCEPT-FIX-1 (TOP-10 T1 + firing probe)
+
+**Probe (drafts 424 NoFilter, 425 B, 427 g):** all 10 TOP-10 sites **NEVER-FIRE** on current data
+(PSF trio cold: `psf_photometry_enabled=false`). Artifact: `tmp/except_fix1_probe_light.json`.
+
+**Fixes:** terminal broad-except → narrow classes + ERROR + `except_fix_summary` counters in
+`pipeline_meta.json`; EXC-0132 invalid sky → NaN flux + flag (not sky_pp=0). Bonus: `_chk_mag`
+indentation UnboundLocalError (`photometry_core.py` ~7924).
+
+**Validation:** `tests/test_except_fix_top10.py` 5 passed; **593 passed** pytest; draft_424 rerun
+`except_fix_summary` all zeros. photometry_summary hash changed on full Phase2A rerun (0 comp LCs
+path), not except-fix firing — no anchor-worthy science delta.
+
+**Census:** TOP-10 rows → **FIXED (EXCEPT-FIX-1)** in `docs/VYVAR_EXCEPT_CENSUS.md`.
+
+---
+
 ## 2026-07-08 — EXCEPT-BATCH-S0 (HRD fix + silent-failure census)
 
 **HRD-PLOT-TUPLE root cause (CONFIRM/REFUTE):** `row_factory = sqlite3.Row` was **already set**
