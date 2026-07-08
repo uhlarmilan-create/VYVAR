@@ -76,6 +76,10 @@ T3-UI (cosmetic) - T4-LEGIT (correct best-effort fallback) - **?** (needs human 
 Probe (drafts 424/425/427): **all 10 NEVER-FIRE** on current data (PSF trio: `psf_photometry_enabled=false`).
 Fix: terminal failures → ERROR + `except_fix_summary` counters in `pipeline_meta.json`; invalid sky → NaN flux (EXC-0132). Validation: draft_424 rerun `except_fix_summary` all zeros; **593 passed**.
 
+### EXCEPT-FIX-1-CLOSEOUT — silent empty-comp drop (FIXED 2026-07-08)
+
+**EXC-0626** `photometry_core.py:7217` — active target with empty `target_comps` returned without summary append (176-row silent loss under wrong comp CSV). Fix: `_phase2a_skip_empty_comps_target` + `phase2a_empty_comp_drop` counter + `_require_comparison_stars_per_target_schema` harness guard.
+
 ## Census
 
 | ID | Site | Except | Handler | Tier | What gets silently lost | Disposition |
@@ -705,3 +709,4 @@ Fix: terminal failures → ERROR + `except_fix_summary` counters in `pipeline_me
 | EXC-0623 | `vyvar_platesolver.py:5387` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"VYVAR WCS: CD/PC škálované podľa empirie z párov hviezd ≈ {float(_emp_s):.3f} arcsec/px" / ) / except Exception:  # no) | fix now |
 | EXC-0624 | `vyvar_platesolver.py:5460` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults ("VYVAR: Low match_rate → forcing SIP refit (TAN-SIP) for edge correction." / ) / except Exception:  # noqa: BLE001 / pas) | fix now |
 | EXC-0625 | `vyvar_platesolver.py:6256` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / h[k] = wcs_hdr[k] / except Exception:  # noqa: BLE001 / pass / h["VY_CRT"] = ("sibling_recovered", "VYVAR creatio) | fix now |
+| EXC-0626 | `photometry_core.py:7280` | (no except) | return (silent) | T1-SCIENCE | active target with no per-target comps omitted from photometry_summary (176-row loss under pool CSV harness) | FIXED (EXCEPT-FIX-1-CLOSEOUT) |

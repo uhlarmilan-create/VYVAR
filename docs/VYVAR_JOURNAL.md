@@ -17,6 +17,24 @@ path), not except-fix firing — no anchor-worthy science delta.
 
 **Census:** TOP-10 rows → **FIXED (EXCEPT-FIX-1)** in `docs/VYVAR_EXCEPT_CENSUS.md`.
 
+**POSTMORTEM (EXCEPT-FIX-1-POSTMORTEM):** Original draft_424 validation **invalid** — harness used
+`comparison_stars.csv` (pool) not `comparison_stars_per_target.csv`; 180→4 summary rows, 2 LCs
+corrupted (flat, n_good_comp=1). **Not** attributable to TOP-10 except-fix (counters zero) or
+`_chk_mag` hunk (cd0b59e vs HEAD identical on correct-path rerun).
+
+**Verdict (d) — CONFIRMED:** 1-cell `aperture_px_planned` drift on star `1496795041799526400`
+(R CVn, catalog mag 7.12 → SNR bin 7.0): **3.918→3.868 px (−0.05)** = deterministic
+**RN-HEADER-NONE footprint** (SNR table RN 7.6→15.2 e⁻, Item 4 `1830527`); not rerun noise.
+Science columns byte-identical; no anchor ambiguity.
+
+**`_chk_mag`:** indentation bug since `1c802197` (2026-06-16); fixed in `c7227ae` **bundled without
+isolated validation**; 424 hot path unaffected (178 check_kmag sidecars).
+
+**CLOSEOUT:** EXC-0626 empty-comp silent drop fixed (`phase2a_empty_comp_drop` counter + summary
+stub + pool-CSV schema guard). See `CURSOR_RESULT_except_fix1_closeout.md`.
+
+**Process:** STOP rules bind without row-level attribution; original close should have halted at sha mismatch.
+
 ---
 
 ## 2026-07-08 — EXCEPT-BATCH-S0 (HRD fix + silent-failure census)
