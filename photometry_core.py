@@ -1210,7 +1210,7 @@ def precompute_and_save_snr_aperture_table_for_draft(
         from param_resolver import resolve_gain, resolve_read_noise  # noqa: PLC0415
 
         _g_res = resolve_gain(_snr_header, db=db, equipment_id=int(eq_id))
-        _rn_res = resolve_read_noise(None, db=db, equipment_id=int(eq_id))
+        _rn_res = resolve_read_noise(_snr_header, db=db, equipment_id=int(eq_id))
         if _g_res.ok:
             gain_p = float(_g_res.value)
             gain_src = _g_res.source
