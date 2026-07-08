@@ -80,6 +80,7 @@ PHOTOMETRY_SCIENCE_COLS_LC = frozenset(
 )
 TOL_TIME_D = 1e-6
 TOL_SCIENCE = 1e-6
+TOL_COMP_DIST_DEG = 1e-12
 
 _SHA_PATTERNS_CORE = (
     "**/photometry/**/lightcurve_*.csv",
@@ -209,7 +210,14 @@ def compare_photometry_science_meaningful(
                 for col in shared_cols:
                     if col in ("target_catalog_id", "catalog_id", "name"):
                         continue
-                    row_diffs += int((ma.loc[common, col].astype(str) != mb.loc[common, col].astype(str)).sum())
+                    a_col = ma.loc[common, col]
+                    b_col = mb.loc[common, col]
+                    if col == "_dist_deg":
+                        na = pd.to_numeric(a_col, errors="coerce")
+                        nb = pd.to_numeric(b_col, errors="coerce")
+                        row_diffs += int((np.abs(na - nb) > TOL_COMP_DIST_DEG).sum())
+                    else:
+                        row_diffs += int((a_col.astype(str) != b_col.astype(str)).sum())
                 comp_rep = {
                     "cols_only_a": sorted(set(da.columns) - set(db.columns)),
                     "cols_only_b": sorted(set(db.columns) - set(da.columns)),
