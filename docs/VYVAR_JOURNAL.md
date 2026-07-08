@@ -2,6 +2,30 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — EXCEPT-RETRIAGE-4 + EXCEPT-FIX-4 + EXCEPT-BULK (batch CLOSE)
+
+**Part A:** Tranche 4 (report/export/UI) + 4b (remaining modules) = 213 sites triaged. **Zero T1**
+in tranche 4 (report/UI layer). 19 T2 cluster around time-base, trust, provenance, export metadata.
+
+**Part B (EXCEPT-FIX-4):** 8 surfacing-only fixes, zero behavior changes. New counters:
+`timeobs_parse_fallback`, `jd_mid_compute_fail`, `trust_kmag_sidecar_read_fail`,
+`variability_gaia_id_norm_skip`, `k2_airmass_read_fail`, `export_observer_location_read_fail`,
+`optics_draft_override_read_fail`, `check_star_ensemble_filter_skip`. `tests/test_except_fix4.py`
+(8 tests).
+
+**Part C (EXCEPT-BULK):** Milan-approved conservative policy via `scripts/_except_bulk_apply.py`:
+breadth kept by default; delete-dead for pure log_event guards; stdlib logging per evidence;
+comment on all handlers; approved narrow tuples only. Phases C1/C2/C3 (delete-dead, log,
+narrow+comment). **623 passed**, 15 skipped; ruff BLE001/E722 clean.
+
+**Part D:** `scripts/_except_census_scan.py` committed. Post-bulk scan: **496** currently-silent.
+**pipeline.py reconciliation:** original 160 vs 159 deferral = FIX-2 EXC-0275 already FIXED; post-bulk
+160 vs 155 = five handlers surfaced by bulk (delete-dead + ERROR logging) without ordinal refresh.
+
+**Batch status: CLOSED.** Artifact: `CURSOR_RESULT_except_final.md`.
+
+---
+
 ## 2026-07-08 — EXCEPT-RETRIAGE-3 + EXCEPT-FIX-3 (tranche 3: astrometry/import/database)
 
 **Part 0 (scanner refresh, `e2444b5`):** re-ran `sandbox/_except_census_scan.py` at HEAD

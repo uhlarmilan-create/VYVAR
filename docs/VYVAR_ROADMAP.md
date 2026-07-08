@@ -76,7 +76,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | ID | Sev | Notes |
 |----|-----|-------|
 | **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. Photon-transfer on field lights **INCONCLUSIVE** (g_eff~0.9; need bin2 flats). RN sub-Q directionally **CLOSED** via D3 (DECISIONS 2026-07-07); empirical photon-transfer closure pending bin2 flats. |
-| **F-EXCEPT-TIER1** | MED | **IN PROGRESS** — 32 fixes landed (FIX-1/2 TOP-10 + EXC-0626 + **FIX-3 tranche-3 11**); census `docs/VYVAR_EXCEPT_CENSUS.md` **412 EVIDENCE** (tranches 1+2+3+3b). Remaining: tranche 4 (~72), bulk narrow+log / narrow+comment / delete-dead. |
+| **F-EXCEPT-TIER1** | — | **CLOSED (2026-07-08)** — 40 fixes + EXCEPT-BULK; census `docs/VYVAR_EXCEPT_CENSUS.md` all **625 EVIDENCE**. |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
 | **F-BJD-1** | LOW | **FIXED (Stage D)** | `time_base` LC column; numeric times unchanged |
@@ -86,7 +86,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **TIER1-OBSLOC-ZERO** | — | **FIXED** (`166cbf4`): `resolve_site` null-island guard (|lat|,|lon| < 0.01° → UNRESOLVED); airmass refuses, BJD `JD_FALLBACK`. |
 | **TIER1-UI-DEBT** | LOW | 38 SAFE UI/plotly broad-except `pass` sites — cosmetic; subset of T3-UI in `docs/VYVAR_EXCEPT_CENSUS.md`. |
 | **HRD-PLOT-TUPLE** | — | **FIXED** (EXCEPT-BATCH-S0): `sqlite3.Row` iterates values not keys (`hrd_analysis.py:113`); PDF now emits HRD page or explicit unavailable placeholder (`photometry_report.py`). |
-| **299-defensive cluster** | MED | **IN PROGRESS** — phased fix queue in `docs/VYVAR_EXCEPT_CENSUS.md`; tranches 1+2+3+3b EVIDENCE + 32 fixes done; tranche 4 + bulk dispositions remain. |
+| **299-defensive cluster** | — | **CLOSED (2026-07-08)** — EXCEPT batch complete; ledger `docs/VYVAR_EXCEPT_CENSUS.md`. |
 | **PROV-HEADLESS** | — | **FIXED** (`e7ce7ea`) — see K2 ledger row. |
 | **PROC-MAG-NAMING** | — | **FIXED** (`0913665`) — documented, not renamed. |
 | **K2-DATA-BLOCKER** | — | NIGHT_FIT needs dX ≥ ~0.3, comp floor ≪ 15 mmag; Boyden blocked on flats/flip. |
@@ -159,28 +159,23 @@ Flat-norm Stage 2 and other ROADMAP calibration items unchanged (D1/D2/D3 codify
 
 ---
 
-## IN-FLIGHT — EXCEPT batch (silent broad-except census) — **IN PROGRESS (2026-07-08)**
+## IN-FLIGHT — EXCEPT batch (silent broad-except census) — **CLOSED (2026-07-08)**
 
-**Ledger:** `docs/VYVAR_EXCEPT_CENSUS.md` — **626 rows** (604 currently-silent + 21 FIXED + 1
-deferred); **412 EVIDENCE** (tranches 1+2+3+3b). Scanner refreshed (Part 0): `.worktrees` excluded
-+ stable-ID line-refresh; 102 line numbers updated, all EXC IDs preserved.
+**Ledger:** `docs/VYVAR_EXCEPT_CENSUS.md` — **625 EVIDENCE** (all tranches); **40 fix-batch** sites
+surfaced; remainder **EXCEPT-BULK** processed. Scanner: `scripts/_except_census_scan.py`.
 
 | Tranche | Scope | Sites | Status |
 |---------|-------|------:|--------|
-| 1 | `photometry_core`, `comp_selection_per_target`, `psf_*` | 144 | **EVIDENCE** + FIX-1 TOP-10 + EXC-0626 |
-| 2 | `pipeline.py` | 170 | **EVIDENCE** + FIX-2 TOP-10 |
-| 3 | `vyvar_platesolver`, alignment, importer, database, blind | 84 | **EVIDENCE** + **FIX-3 (10 of 11)** |
-| 3b | `astrometry_optimizer.py` (Milan-approved scope ext.) | 14 | **EVIDENCE** + **FIX-3 #8 companion (1)** |
-| 4 | report/export/UI (astrometry_optimizer done in 3b) | ~72 | **NEXT** — EXCEPT-RETRIAGE-4 |
-| bulk | narrow+log-ERROR / narrow+log / narrow+comment / delete-dead | across all tranches | pending |
+| 1 | science kernel | 144 | EVIDENCE + FIX-1 + EXC-0626 |
+| 2 | pipeline.py | 170 | EVIDENCE + FIX-2 |
+| 3+3b | astrometry/import/database | 98 | EVIDENCE + FIX-3 |
+| 4+4b | report/export/UI + remaining | 213 | EVIDENCE + FIX-4 + BULK |
+| bulk | delete-dead / log / comment / narrow | remainder | **DONE** |
 
-**Fixes landed:** 21 T1 (FIX-1/2) + **11 tranche-3 (EXCEPT-FIX-3)** = 32; `except_fix_counters`
-+ ERROR surfacing (10 new counters + shared `wcs_header_io.copy_wcs_header_keys`). FIX-3
-behavior-change fixes: #3 (scope-conflict fail-closed), #5 (capture date -> mtime), #8 (WCS
-core-key abort), #9 (alignment sentinel -1). **Gate: 615 passed** pytest.
-**HRD-PLOT-TUPLE:** **FIXED** (EXCEPT-BATCH-S0).
+**Fixes landed:** 40 (FIX-1..4 + companions/closeouts). **Gate: 623 passed**, 15 skipped.
+**Empirical check:** run `except_fix_counters` snapshot on next healthy draft — expect all zeros.
 
-**Next session entry point:** **EXCEPT-RETRIAGE-4** (tranche 4: report/export/UI) → bulk dispositions.
+**Next:** none (batch closed). See JOURNAL for history pointer.
 
 ---
 

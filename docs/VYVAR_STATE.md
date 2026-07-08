@@ -1,22 +1,16 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-08** — EXCEPT-RETRIAGE-3 + EXCEPT-FIX-3.
+Last updated: **2026-07-08** — EXCEPT batch **CLOSED** (RETRIAGE-4 + FIX-4 + BULK).
 
-**2026-07-08 snapshot:** Morning — **PROV-FIX** / **QUICKWINS-0708** / **CAL-AGE-CLOCK** (darks expire
-~**2026-07-21**) / **INPUT-GUARDS**. **EXCEPT batch:** census **412 EVIDENCE** (tranches 1+2+3+3b);
-**32 fixes landed** (FIX-1/2 TOP-10 ×2 + EXC-0626 + **EXCEPT-FIX-3 tranche-3 11**); **HRD-PLOT-TUPLE**
-fixed. **EXCEPT-RETRIAGE-3 + FIX-3 (this session):** tranche 3 (84) + 3b `astrometry_optimizer` (14,
-Milan-approved) triaged; EXCEPT-FIX-3 surfaced 11 sites (10 new counters + shared
-`wcs_header_io.copy_wcs_header_keys`), incl. 4 fail-safe behavior changes (#3 scope-conflict
-fail-closed, #5 capture-date→mtime, #8 WCS core-key abort, #9 alignment `-1` sentinel). Scanner
-refreshed (Part 0: `.worktrees` excluded + stable-ID line refresh). Full pytest **615 passed**.
-**Next:** EXCEPT-RETRIAGE-4 (report/export/UI ~72) → bulk dispositions. **PUBLICATION** venue
+**2026-07-08 snapshot:** EXCEPT batch **CLOSED**. Census **625 EVIDENCE**; **40 fix-batch** sites
+(FIX-1..4); remainder **EXCEPT-BULK** (conservative policy: breadth kept, delete-dead, log, comment,
+approved narrow only). **EXCEPT-FIX-4:** 8 surfacing-only fixes (time/trust/export/optics/check-star).
+Scanner committed: `scripts/_except_census_scan.py`. Full pytest **623 passed**, 15 skipped.
+**Next:** empirical `except_fix_counters` zero-check on next healthy draft run. **PUBLICATION** venue
 decision pending (Milan).
 
-**Done 2026-07-08 (EXCEPT batch):** EXCEPT-BATCH-S0 census + HRD fix; EXCEPT-RETRIAGE-1/2/3 evidence
-triages; EXCEPT-FIX-1/2/3 terminal failure surfacing (`except_fix_counters` +
-`wcs_header_io.copy_wcs_header_keys`); EXC-0626 empty-comp silent drop. Ledger:
-`docs/VYVAR_EXCEPT_CENSUS.md`.
+**Done 2026-07-08 (EXCEPT batch):** EXCEPT-BATCH-S0 through EXCEPT-RETRIAGE-4 + FIX-1..4 + BULK;
+batch **CLOSED**. Ledger: `docs/VYVAR_EXCEPT_CENSUS.md`.
 
 **Done 2026-07-08 (INPUT-GUARDS-0708):** `resolve_site` null-island guard (`166cbf4`); PDF cfg from
 `provenance.config_snapshot` (`80aab21`, synergy with PROV-FIX `e7ce7ea`). `604 passed` gate.
