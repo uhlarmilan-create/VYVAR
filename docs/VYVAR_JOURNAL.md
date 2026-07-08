@@ -2,6 +2,32 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — CAL-AGE-CLOCK (unified master validity clock)
+
+**Problem:** import scan used filesystem mtime (`importer._age_days`); library UI used
+`get_master_age_days` (header capture date). Copying CalibrationLibrary to a new machine
+reset mtime and could revive expired masters.
+
+**Fix:** `resolve_master_age` in `calibration.py` — priority `VY_CDATE` → `DATE-OBS` →
+`DATEOBS`; naive datetimes assumed UTC; mtime fallback with one warning per file per scan.
+Import scan (`_age_days`), `get_calibration_status`, and UI (`get_master_age_days`) now share
+this clock. Boundary: **valid when age ≤ limit** (expired only when age > limit; matches UI).
+
+**Third consumer found:** `get_calibration_status` also used mtime — unified.
+
+**Local library scan** (`tmp/cal_age_clock/library_scan.json`): 3 masters, **0 validity flips**.
+All have `VY_CDATE` 2026-04-22 (~76 d); header age ≈ mtime age (no copy scenario locally).
+
+| File | kind | age_header | age_mtime | valid (both) |
+|------|------|------------|-----------|--------------|
+| Dark_120s_…_20260422.fits | dark | 76.5 d | 76.2 d | ✅ / ✅ |
+| Dark_60s_…_20260422.fits | dark | 76.5 d | 76.2 d | ✅ / ✅ |
+| Flat_0.15s_…_20260422.fits | flat | 76.5 d | 76.2 d | ✅ / ✅ |
+
+Tests: `tests/test_cal_age_clock.py` (9). Gate: `577 passed` pytest + ruff.
+
+---
+
 ## 2026-07-08 — QUICKWINS-0708 (four ledger items + determinism)
 
 **Item 0 (evidence):** draft_425 `B_20_2` Phase 2A rerun on HEAD `21c20e3` — science columns

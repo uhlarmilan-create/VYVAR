@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-08** — QUICKWINS-0708 batch closed: K2 GR slope traced (`8c44b71`), proc `mag` documented (`0913665`), CAL passthrough dead code removed (`21c20e3`), SNR RN header fix + draft_424 new anchor (`1830527`, provenance hash `e1a7a311…`).
+Last updated: **2026-07-08** — CAL-AGE-CLOCK closed: import scan + library UI share `resolve_master_age` header clock.
 
 **Done 2026-07-08 (QUICKWINS-0708):** Four ledger items + determinism check. Item 0: draft_425 B_20_2 Phase 2A rerun science-identical (363 LCs, 0 diffs). K2-SLOPE-TRACE GR→1.054; UG exception documented (K2-SLOPE-UG FUTURE). PROC-MAG-NAMING documented (not renamed). CAL-PASSTHRU-DEAD removed. RN-HEADER-NONE: precompute SNR table now bin-scales RN; draft_424 snapshot `draft_000424_snapshot_20260708`, LC byte-identical, new baseline anchor. `568 passed` pytest + ruff green.
 
@@ -20,7 +20,7 @@ v1.1 — Check A (SUM/MEAN convention) + Check B (post-dark sky sanity); parent 
 variant (a); provenance headers `VY_DKRSMP`/`VY_CDSKY`/`VY_CDSTAT` + `archive/<draft>/cal_diag.json`.
 14 gate unit tests; `549 passed` full suite; draft_424: **150/150** frames `VY_DKRSMP=SUM`, 0
 WARN/FAIL, calibrated arrays and photometry science byte-identical to baseline. **RN-HEADER-NONE**
-and **CAL-PASSTHRU-DEAD** closed 2026-07-08 (`1830527`, `21c20e3`). CAL-AGE-CLOCK remains open.
+and **CAL-PASSTHRU-DEAD** closed 2026-07-08 (`1830527`, `21c20e3`); **CAL-AGE-CLOCK** closed 2026-07-08 (header-age unified). CAL-AGE-CLOCK was the last open CAL-DIAG ledger item.
 
 **Done 2026-07-07 (session close):** F-BINGAIN-1 Stage A -> **LATENT** (not live on wide rig);
 CAL-DIAG workstream registered (calibration radiometry gate; spec pending). F-AIRMASS-CITE fixed;

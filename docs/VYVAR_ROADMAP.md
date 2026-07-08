@@ -112,7 +112,7 @@ Camera-agnostic calibration-time diagnostic gate (shipped):
 
 | ID | Sev | Summary |
 |----|-----|---------|
-| **CAL-AGE-CLOCK** | MED | Import scan mtime vs library UI header-age clocks diverge (`importer.py` vs `get_master_age_days`). |
+| **CAL-AGE-CLOCK** | — | **FIXED**: import scan + get_calibration_status use `resolve_master_age` (header `VY_CDATE`→`DATE-OBS`→`DATEOBS`, naive→UTC); mtime fallback warns once per scan. |
 | **RN-HEADER-NONE** | — | **FIXED** (`1830527`): SNR precompute passes MASTERSTAR header to `resolve_read_noise` (bin2 RN×bin parity with Phase 2A). draft_424 validated: max aperture shift 2.2%, LC byte-identical. |
 | **CAL-PASSTHRU-DEAD** | — | **FIXED** (`21c20e3`): removed `allow_passthrough` from `get_processed_master` (tests-only dead branch). |
 
