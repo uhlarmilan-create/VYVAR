@@ -1,6 +1,12 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-07** — K2 v1 band-aware second-order extinction **active** (incl. B-sign hotfix `8a190b4`); K2 session **closed**.
+Last updated: **2026-07-08** — `pipeline_meta.json` run provenance active (`e7ce7ea`); K2 v1 closed (`8a190b4` B-sign hotfix).
+
+**Done 2026-07-08 (PROV-FIX):** `provenance` block in `pipeline_meta.json` via
+`merge_photometry_pipeline_meta` when `cfg` passed — `git_hash`, `git_dirty`, full
+`AppConfig.to_dict()` snapshot, `stamped_at_utc`, `entry_point`; last-writer-wins at
+`run_phase2a` and `generate_masterstar_and_catalog`. Archaeology: never-wired (not regression).
+No secrets in `AppConfig` (post-`c26e351` credentials reset).
 
 **Done 2026-07-07 (K2 v1):** Literature k'' path via `k2_extinction.py`; `band_classify` wired to
 `resolve_apply_color_term` (CV/CR flip live); LC columns `k2_source`/`k2_value`/`k2_colour_ref`;

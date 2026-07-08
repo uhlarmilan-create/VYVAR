@@ -2,6 +2,21 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — PROV-FIX (pipeline_meta run provenance)
+
+**Archaeology (PROV-ARCHEO):** `git_hash` / `config_snapshot` were **never-wired** to
+`pipeline_meta.json` in recoverable git history (not a regression); JOURNAL background conflated
+TODO-25 / PARAM-PROVENANCE with aspirational `TODO-PIPELINE-VERSIONING`. `dynamic_params` was
+already wired since history reset.
+
+**Fix (`e7ce7ea`):** `provenance` nested block via `merge_photometry_pipeline_meta` when `cfg`
+passed — `git_hash`, mandatory `git_dirty`, full `AppConfig.to_dict()` snapshot (no curated
+field list; no secrets in AppConfig), `stamped_at_utc`, `entry_point`. **Last-writer-wins**
+(Phase 2A overwrites catalog stamp). Wired at `run_phase2a` and
+`generate_masterstar_and_catalog`. Night-run report JSONs unchanged (parallel artifact).
+
+---
+
 ## 2026-07-07 — K2-HOTFIX-BSIGN (SLOPE_BV_PER_BPRP sign)
 
 **Root cause:** `SLOPE_BV_PER_BPRP` was `-0.620` — not a valid `d(B-V)/d(BP-RP)` from Jordi et al.
