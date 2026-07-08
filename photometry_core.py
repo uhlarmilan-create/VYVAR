@@ -6987,6 +6987,8 @@ def _recompute_bjd_hjd_with_status(
         lon = float(cfg.observer_lon)
         alt = float(cfg.observer_alt_m)
 
+    from param_resolver import is_null_island_coords  # noqa: PLC0415
+
     if not math.isfinite(ra_deg) or not math.isfinite(dec_deg):
         LOGGER.warning(
             "BJD-PERTARGET: invalid coords ra=%s dec=%s — using frame JD fallback",
@@ -6995,7 +6997,7 @@ def _recompute_bjd_hjd_with_status(
         )
         return jd_arr.copy(), jd_arr.copy(), TIME_BASE_JD_FALLBACK
 
-    if lat == 0.0 and lon == 0.0:
+    if is_null_island_coords(lat, lon):
         LOGGER.warning("BJD-PERTARGET: observer location not set — using frame JD fallback")
         return jd_arr.copy(), jd_arr.copy(), TIME_BASE_JD_FALLBACK
 

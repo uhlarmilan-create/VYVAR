@@ -114,6 +114,10 @@ class SiteResult:
     warnings: list[str] = field(default_factory=list)
 
 
+# Null-island guard: |lat| and |lon| both below this → UNRESOLVED (sanity bound, not user pref).
+NULL_ISLAND_LAT_LON_THRESHOLD_DEG: float = 0.01
+
+
 # --------------------------------------------------------------------------- #
 # Low-level helpers
 # --------------------------------------------------------------------------- #
@@ -666,6 +670,56 @@ def _header_site(header: Any) -> tuple[float, float, float] | None:
     return float(lat), float(lon), float(elev if elev is not None else 0.0)
 
 
+def is_null_island_coords(
+    lat: float,
+    lon: float,
+    *,
+    threshold_deg: float = NULL_ISLAND_LAT_LON_THRESHOLD_DEG,
+) -> bool:
+    """True when both coordinates are within ``threshold_deg`` of (0, 0)."""
+    return abs(float(lat)) < float(threshold_deg) and abs(float(lon)) < float(threshold_deg)
+
+
+def _draft_id_location(db: Any, draft_id: int | None) -> int | None:
+    if db is None or draft_id is None:
+        return None
+    try:
+        row = db.conn.execute(
+            "SELECT ID_LOCATION FROM OBS_DRAFT WHERE ID = ?;",
+            (int(draft_id),),
+        ).fetchone()
+        if row is not None and row[0] is not None:
+            return int(row[0])
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+def _apply_null_island_guard(
+    res: SiteResult,
+    *,
+    db: Any = None,
+    draft_id: int | None = None,
+) -> SiteResult:
+    if not res.ok or res.lat is None or res.lon is None:
+        return res
+    if not is_null_island_coords(res.lat, res.lon):
+        return res
+    id_loc = _draft_id_location(db, draft_id)
+    detail = f"({res.lat:.4f},{res.lon:.4f}) source={res.source}"
+    if draft_id is not None:
+        detail += f" draft_id={draft_id}"
+    if id_loc is not None:
+        detail += f" ID_LOCATION={id_loc}"
+    msg = f"[RESOLVE site] null-island observer coordinates {detail} — treated as UNRESOLVED"
+    logger.error(msg)
+    _warn_once("site_null_island", msg)
+    res.warnings.append(msg)
+    res.ok = False
+    res.source = "unresolved"
+    return res
+
+
 def resolve_site(
     header: Any = None,
     *,
@@ -700,14 +754,14 @@ def resolve_site(
             res.warnings.append(msg)
             _warn_once("xcheck_site", msg)
         logger.debug("[RESOLVE site] -> draft (%.4f,%.4f,%.0f)", res.lat, res.lon, res.elev or 0.0)
-        return res
+        return _apply_null_island_guard(res, db=db, draft_id=draft_id)
 
     hsv = _header_site(header)
     if hsv is not None:
         res.lat, res.lon, res.elev = _clamp("lat", hsv[0]), _clamp("lon", hsv[1]), _clamp("elev", hsv[2])
         res.source, res.ok = "header", True
         logger.debug("[RESOLVE site] -> header (%.4f,%.4f,%.0f)", res.lat, res.lon, res.elev or 0.0)
-        return res
+        return _apply_null_island_guard(res, db=db, draft_id=draft_id)
 
     if allow_config and cfg is not None:
         try:
@@ -716,7 +770,7 @@ def resolve_site(
             calt = float(getattr(cfg, "observer_alt_m", 0.0) or 0.0)
         except (TypeError, ValueError):
             clat = clon = calt = 0.0
-        if clat != 0.0 or clon != 0.0:
+        if not is_null_island_coords(clat, clon):
             res.lat, res.lon, res.elev = _clamp("lat", clat), _clamp("lon", clon), _clamp("elev", calt)
             res.source, res.ok = "config", True
             _warn_once(
@@ -725,7 +779,7 @@ def resolve_site(
                 "using config observer location as a FLAGGED fallback — verify it belongs to this session.",
             )
             logger.debug("[RESOLVE site] -> config (flagged) (%.4f,%.4f,%.0f)", res.lat, res.lon, res.elev or 0.0)
-            return res
+            return _apply_null_island_guard(res, db=db, draft_id=draft_id)
 
     res.source, res.ok = "unresolved", False
     _warn_once(
