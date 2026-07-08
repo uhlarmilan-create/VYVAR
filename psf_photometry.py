@@ -1312,8 +1312,16 @@ def _epsf_prepare_stars(
         for _i, _s in enumerate(stars):
             try:
                 _s._data = _nd_list[_i].data  # noqa: SLF001
-            except Exception:  # noqa: BLE001
-                pass
+            except (AttributeError, IndexError, TypeError, ValueError) as exc:
+                from except_fix_counters import get_except_fix_counters
+
+                get_except_fix_counters().psf_epsf_sky_inject_fail += 1
+                logging.error(
+                    "[ePSF] sky-sub data inject failed star %d: %s",
+                    _i,
+                    exc,
+                )
+                raise RuntimeError(f"ePSF sky-sub inject failed for star {_i}") from exc
         log_event("PSF ePSF: applied per-cutout sky subtraction before EPSFBuilder")
     except Exception as _sky_e:  # noqa: BLE001
         LOGGER.warning("[ePSF] per-cutout sky subtraction failed; proceeding without it: %s", _sky_e)
@@ -2125,9 +2133,16 @@ def _annulus_sky_per_px_full_frame(
         )
         if math.isfinite(sky_pp):
             return float(sky_pp), "annulus_local"
-    except Exception:  # noqa: BLE001
-        pass
-    return float("nan"), "border_fallback"
+    except (ImportError, ValueError, TypeError, IndexError) as exc:
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().psf_local_sky_fail += 1
+        logging.error(
+            "[PSF] local annulus sky failed x=%.2f y=%.2f: %s",
+            float(x),
+            float(y),
+            exc,
+        )
 
 
 def _psf_resolve_gain_read_noise(frame_hdr: Any) -> tuple[float, float]:
@@ -2427,7 +2442,16 @@ def _grouped_psf_fit(
         )
         chi2 = float(res["reduced_chi2"][k]) if "reduced_chi2" in res.colnames else float("nan")
         flags = int(res["flags"][k]) if "flags" in res.colnames else 0
-    except Exception:  # noqa: BLE001
+    except (ValueError, TypeError, RuntimeError, ImportError) as exc:
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().psf_grouped_fit_fail += 1
+        logging.error(
+            "[PSF] grouped fit failed x=%.2f y=%.2f: %s",
+            float(x),
+            float(y),
+            exc,
+        )
         return None
 
     if not math.isfinite(flux_fit) or flux_fit <= 0:
