@@ -1,8 +1,11 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-08** — CAL-AGE-CLOCK closed: import scan + library UI share `resolve_master_age` header clock.
+Last updated: **2026-07-08** — INPUT-GUARDS-0708: null-island observer guard + PDF provenance cfg snapshot.
 
-**Done 2026-07-08 (QUICKWINS-0708):** Four ledger items + determinism check. Item 0: draft_425 B_20_2 Phase 2A rerun science-identical (363 LCs, 0 diffs). K2-SLOPE-TRACE GR→1.054; UG exception documented (K2-SLOPE-UG FUTURE). PROC-MAG-NAMING documented (not renamed). CAL-PASSTHRU-DEAD removed. RN-HEADER-NONE: precompute SNR table now bin-scales RN; draft_424 snapshot `draft_000424_snapshot_20260708`, LC byte-identical, new baseline anchor. `568 passed` pytest + ruff green.
+**Done 2026-07-08 (INPUT-GUARDS-0708):** `resolve_site` null-island guard (`166cbf4`); PDF cfg from
+`provenance.config_snapshot` (`80aab21`, synergy with PROV-FIX `e7ce7ea`). `587 passed` gate.
+
+**Done 2026-07-08 (CAL-AGE-CLOCK):** `resolve_master_age` unified import scan + library UI.
 
 **Done 2026-07-08 (PROV-FIX):** `provenance` block in `pipeline_meta.json` via
 `merge_photometry_pipeline_meta` when `cfg` passed — `git_hash`, `git_dirty`, full

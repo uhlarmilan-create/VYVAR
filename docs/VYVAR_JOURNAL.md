@@ -2,6 +2,26 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — INPUT-GUARDS-0708 (TIER1-OBSLOC-ZERO + G7-F003c)
+
+**TIER1-OBSLOC-ZERO (`166cbf4`):** Null-island guard at `param_resolver.resolve_site`
+(choke point). Priority unchanged: draft `ID_LOCATION` → header `SITELAT/LONG/ELEV` → flagged
+config. `|lat| < 0.01° AND |lon| < 0.01°` → `ok=False`, `source=unresolved`, ERROR log names
+`draft_id` + `ID_LOCATION`. Consumers: `time_utils.resolve_observer_location` →
+`pipeline._compute_airmass_from_altaz` (NaN), `photometry_core._recompute_bjd_hjd_with_status`
+(`JD_FALLBACK` / `time_base`), `lunar_context.get_lunar_context` (skipped when `site_ok=False`).
+Threshold: module constant `NULL_ISLAND_LAT_LON_THRESHOLD_DEG = 0.01`.
+
+**G7-F003c (`80aab21`):** PDF builder `resolve_report_config` reads
+`pipeline_meta.provenance.config_snapshot` (PROV-FIX synergy); live `AppConfig` only when
+snapshot absent — footer annotates `config: live (no run snapshot)`. draft_424 PDF rebuild:
+**0 overflow violations**.
+
+Tests: `tests/test_obsloc_null_island.py` (7), `tests/test_g7_f003c_report_cfg_snapshot.py` (3).
+Gate: `587 passed`.
+
+---
+
 ## 2026-07-08 — CAL-AGE-CLOCK (unified master validity clock)
 
 **Problem:** import scan used filesystem mtime (`importer._age_days`); library UI used

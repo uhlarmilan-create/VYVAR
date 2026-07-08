@@ -81,9 +81,9 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
 | **F-BJD-1** | LOW | **FIXED (Stage D)** | `time_base` LC column; numeric times unchanged |
 | **F-AIRMASS-CITE** | LOW | **FIXED** (2026-07-07) | Kasten & Young (1989) attribution |
-| **G7-F003c** | LOW-MED | PDF report re-loads `AppConfig()` at build time — cfg edited post-run can drift from photometry settings. |
+| **G7-F003c** | — | **FIXED** (`80aab21`): PDF reads `provenance.config_snapshot` from `pipeline_meta.json`; live `AppConfig` fallback footer-annotated. |
 | **EQUIP-BINNING-ASYM** | LOW | Asymmetric binning (`XBINNING ≠ YBINNING`) warns but does not scale gain/RN; all current rigs symmetric. |
-| **TIER1-OBSLOC-ZERO** | MED | Observer json 0.0/0.0 fallback may silently corrupt airmass/BJD/dilution (null-island guard). |
+| **TIER1-OBSLOC-ZERO** | — | **FIXED** (`166cbf4`): `resolve_site` null-island guard (|lat|,|lon| < 0.01° → UNRESOLVED); airmass refuses, BJD `JD_FALLBACK`. |
 | **TIER1-UI-DEBT** | LOW | 38 SAFE UI/plotly broad-except `pass` sites — cosmetic diagnostics only. |
 | **299-defensive cluster** | MED | Pipeline/`photometry_core` broad-except `pass` cluster — existing phased-audit backlog item. |
 | **PROV-HEADLESS** | — | **FIXED** (`e7ce7ea`) — see K2 ledger row. |
