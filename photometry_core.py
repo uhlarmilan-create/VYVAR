@@ -783,6 +783,77 @@ def _draft_dir_from_phase2a_paths(output_dir: Path, masterstar_fits_path: Path) 
     return Path(output_dir).parent.parent
 
 
+def _require_comparison_stars_per_target_schema(comp_df: pd.DataFrame, csv_path: Path) -> None:
+    """Phase 2A comp routing requires ``target_catalog_id`` (not the pool CSV)."""
+    if comp_df is None or comp_df.empty:
+        return
+    if "target_catalog_id" in comp_df.columns:
+        return
+    pool_markers = ("comp_id", "role")
+    if any(col in comp_df.columns for col in pool_markers):
+        raise ValueError(
+            "comparison_stars_csv must be comparison_stars_per_target.csv "
+            f"(missing target_catalog_id; got comparison pool file): {csv_path}"
+        )
+    raise ValueError(
+        "comparison_stars_csv missing target_catalog_id column "
+        f"(required for Phase 2A per-target comp routing): {csv_path}"
+    )
+
+
+def _phase2a_empty_comp_summary_row(
+    *,
+    target_cid: str,
+    target_name: str,
+    zone_flag: str,
+) -> dict[str, Any]:
+    """Summary stub when an active target has no per-target comparison stars."""
+    return {
+        "catalog_id": target_cid,
+        "vsx_name": target_name,
+        "zone_flag": zone_flag,
+        "n_frames": 0,
+        "n_good_comp": 0,
+        "n_saturated": 0,
+        "lc_rms": float("nan"),
+        "lc_median_mag": float("nan"),
+        "aperture_px": float("nan"),
+        "am_slope": float("nan"),
+        "am_detrended": False,
+        "lc_csv": "",
+        "lc_png": "",
+    }
+
+
+def _phase2a_skip_empty_comps_target(
+    *,
+    target_cid: str,
+    target_name: str,
+    zone_flag: str,
+    summary_rows: list,
+) -> list:
+    """Record counted drop when an active target has no per-target comparison stars."""
+    from except_fix_counters import get_except_fix_counters
+
+    _ctr = get_except_fix_counters()
+    _ctr.phase2a_empty_comp_drop += 1
+    logging.error(
+        "[FÁZA 2A] Target %s (%s): žiadne comp hviezdy — preskočené "
+        "(phase2a_empty_comp_drop=%d)",
+        target_name,
+        target_cid,
+        _ctr.phase2a_empty_comp_drop,
+    )
+    summary_rows.append(
+        _phase2a_empty_comp_summary_row(
+            target_cid=target_cid,
+            target_name=target_name,
+            zone_flag=zone_flag,
+        )
+    )
+    return summary_rows
+
+
 def _phase2a_star_mag_lookup(
     at_df: pd.DataFrame,
     comp_df: pd.DataFrame,
@@ -6260,6 +6331,7 @@ def _phase2a_prepare_shared_state(
                 df[col] = df[col].apply(_normalize_gaia_id)
 
     at_df["skip_photometry"] = _phase2a_coerce_skip_photometry(at_df)
+    _require_comparison_stars_per_target_schema(comp_df, Path(comparison_stars_csv))
 
     # _phase2a_load_star_list (inline): chip dims, comp index, BP-RP map, CSV cache — through target loop below.
 
@@ -7215,7 +7287,12 @@ def _phase2a_process_one_target(
     _star_xy = dict(star_xy)
 
     if target_comps.empty:
-        logging.warning(f"[FÁZA 2A] Target {target_name}: žiadne comp hviezdy")
+        summary_rows = _phase2a_skip_empty_comps_target(
+            target_cid=target_cid,
+            target_name=target_name,
+            zone_flag=_zf_row,
+            summary_rows=summary_rows,
+        )
         return summary_rows, n_lc
 
     comp_ids: list[str] = []

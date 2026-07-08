@@ -19,6 +19,7 @@ class ExceptFixCounters:
     psf_epsf_sky_inject_fail: int = 0
     psf_local_sky_fail: int = 0
     psf_grouped_fit_fail: int = 0
+    phase2a_empty_comp_drop: int = 0
 
     def snapshot(self) -> dict[str, int]:
         return {
@@ -33,6 +34,7 @@ class ExceptFixCounters:
             "psf_epsf_sky_inject_fail": self.psf_epsf_sky_inject_fail,
             "psf_local_sky_fail": self.psf_local_sky_fail,
             "psf_grouped_fit_fail": self.psf_grouped_fit_fail,
+            "phase2a_empty_comp_drop": self.phase2a_empty_comp_drop,
         }
 
 

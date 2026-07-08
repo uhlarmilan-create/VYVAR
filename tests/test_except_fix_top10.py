@@ -130,3 +130,41 @@ def test_exc0455_grouped_fit_logs_and_returns_none(monkeypatch: pytest.MonkeyPat
     )
     assert out is None
     assert get_except_fix_counters().psf_grouped_fit_fail >= 1
+
+
+def test_require_comparison_stars_per_target_schema_rejects_pool(tmp_path: Path) -> None:
+    import pandas as pd
+
+    from photometry_core import _require_comparison_stars_per_target_schema
+
+    pool = tmp_path / "comparison_stars.csv"
+    pd.DataFrame(
+        {
+            "comp_id": ["1"],
+            "role": ["comp"],
+            "catalog_id": ["1499883638682689408"],
+            "x": [100.0],
+            "y": [200.0],
+        }
+    ).to_csv(pool, index=False)
+    df = pd.read_csv(pool, dtype={"catalog_id": str})
+    with pytest.raises(ValueError, match="comparison_stars_per_target"):
+        _require_comparison_stars_per_target_schema(df, pool)
+
+
+def test_phase2a_empty_comp_drop_row_and_counter(caplog: pytest.LogCaptureFixture) -> None:
+    from photometry_core import _phase2a_skip_empty_comps_target
+
+    reset_except_fix_counters()
+    caplog.set_level(logging.ERROR)
+    rows = _phase2a_skip_empty_comps_target(
+        target_cid="123",
+        target_name="T1",
+        zone_flag="linear",
+        summary_rows=[],
+    )
+    assert len(rows) == 1
+    assert rows[0]["catalog_id"] == "123"
+    assert rows[0]["n_frames"] == 0
+    assert get_except_fix_counters().phase2a_empty_comp_drop == 1
+    assert any("comp hviezdy" in r.message for r in caplog.records)
