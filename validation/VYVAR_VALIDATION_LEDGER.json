@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "updated": "2026-07-08",
+  "_rules": [
+    "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
+    "passes flips to true only after careful end-to-end verification on the production path.",
+    "Items are never deleted and their verification is never weakened.",
+    "New items may be added; the guard test's required-ID list must be extended in the same commit (visible diff).",
+    "Rationale: structured JSON pass/fail ledger resists inappropriate rewrites (Anthropic long-running-agent harness guidance)."
+  ],
+  "items": [
+    {
+      "id": "VL-PYTEST-FULL",
+      "area": "tests",
+      "description": "Full pytest suite green on production tree",
+      "verification": "pytest -q",
+      "passes": true,
+      "last_verified": "2026-07-08",
+      "commit": null,
+      "notes": "Seeded at DEV-PROCESS-A closeout; re-verified each session via session_baseline_check --fast."
+    },
+    {
+      "id": "VL-ANCHOR-424",
+      "area": "photometry",
+      "description": "draft_424 provenance anchor reproduces via session baseline --full",
+      "verification": "scripts/session_baseline_check.py --full (science-meaningful compare vs draft_000424_snapshot_20260708; provenance_block_hash e1a7a311...)",
+      "passes": false,
+      "last_verified": null,
+      "commit": null,
+      "notes": "Set by Part B --full run in DEV-PROCESS-AB task."
+    },
+    {
+      "id": "VL-COUNTERS-ZERO",
+      "area": "except-hygiene",
+      "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
+      "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
+      "passes": false,
+      "last_verified": null,
+      "commit": null,
+      "notes": "Set by Part B --full run in DEV-PROCESS-AB task."
+    },
+    {
+      "id": "VL-K2-MATRIX",
+      "area": "extinction",
+      "description": "424/425/427 K2 validation matrix PASS",
+      "verification": "tmp/k2_land/validation_report.json",
+      "passes": true,
+      "last_verified": "2026-07-07",
+      "commit": null,
+      "notes": "K2-HOTFIX-BSIGN re-validation; matrix recorded 2026-07-07."
+    },
+    {
+      "id": "VL-CALDIAG-424",
+      "area": "calibration",
+      "description": "CAL-DIAG regression draft_424: 150/150 frames VY_DKRSMP=SUM, 0 WARN/FAIL, byte-identical",
+      "verification": "sandbox/caldiag_d424_regression.py (CAL-DIAG-IMPL gate)",
+      "passes": true,
+      "last_verified": "2026-07-07",
+      "commit": null,
+      "notes": "Gate ON; science byte-identical to baseline."
+    },
+    {
+      "id": "VL-AAVSO-EXPORT",
+      "area": "export",
+      "description": "GS6b AAVSO export validation",
+      "verification": "scripts/validate_aavso_export.py",
+      "passes": true,
+      "last_verified": "2026-05-20",
+      "commit": null,
+      "notes": "Historical PASS; re-run on export-touching changes."
+    },
+    {
+      "id": "VL-XVAL-V0612",
+      "area": "cross-validation",
+      "description": "SIPS cross-val V0612 eclipse shape + shared outlier match",
+      "verification": "SIPS cross-validation harness (V0612)",
+      "passes": true,
+      "last_verified": "2026-06-16",
+      "commit": null,
+      "notes": "Historical PASS."
+    },
+    {
+      "id": "VL-DETERMINISM-425",
+      "area": "reproducibility",
+      "description": "draft_425 two-fresh-runs determinism PASS (QUICKWINS-0708)",
+      "verification": "tmp/quickwins_0708/item0_determinism.json",
+      "passes": true,
+      "last_verified": "2026-07-08",
+      "commit": null,
+      "notes": "363 LCs science byte-identical run-to-run; provenance stamped_at excluded."
+    },
+    {
+      "id": "VL-SHA-CUT1",
+      "area": "anchors",
+      "description": "Rebaseline cut1 SHAs (tests/test_photometry_sha_baseline.py, fixture-present)",
+      "verification": "tests/test_photometry_sha_baseline.py",
+      "passes": true,
+      "last_verified": "2026-06-11",
+      "commit": null,
+      "notes": "2026-06-11 lock; core 3f7c9e7a / full d5b72d08 where fixture present."
+    },
+    {
+      "id": "VL-TRUST-BASELINE",
+      "area": "trust",
+      "description": "Trust baseline on reference draft",
+      "verification": "Trust gate on reference draft (1382 YELLOW / 106 RED at comp_trust_min_comps=5)",
+      "passes": true,
+      "last_verified": "2026-06-11",
+      "commit": null,
+      "notes": "Historical PASS on draft_387 zaloha anchor. Original draft_387 zaloha NO LONGER EXISTS (Milan 2026-07-08). Re-point verification at draft_424 on next verification."
+    }
+  ]
+}
