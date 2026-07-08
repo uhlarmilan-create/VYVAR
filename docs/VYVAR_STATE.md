@@ -1,9 +1,14 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-08** — Process / session infra group **A CLOSED** (DEV-PROCESS-A/B +
-EXCEPT-BULK-2).
+Last updated: **2026-07-08** — PROC-STORE-TRUST-FIX + coherent draft_424 re-anchor **CLOSED**.
 
-**2026-07-08 snapshot:** EXCEPT batch **CLOSED** (BULK-2 applied 98/98 drift rows, `97affe3`).
+**2026-07-08 snapshot:** draft_424 coherent anchor `draft_000424_snapshot_20260708_full`
+(`run_full_photometry_pipeline`; core SHA `92939fab…` n=357). Hybrid snapshot retired.
+`session_baseline_check.py --full` OVERALL PASS (run-2 verification). Ledger VL-ANCHOR-424 +
+VL-COUNTERS-ZERO **passing**. Full pytest **631 passed**, 15 skipped. Local chain unpushed until
+PROC-STORE-TRUST-FIX push (Milan-authorized 2026-07-08).
+
+**2026-07-08 snapshot (prior):** EXCEPT batch **CLOSED** (BULK-2 applied 98/98 drift rows, `97affe3`).
 Validation ledger + session baseline check live (`bfe710e`, `00dd0cd`). Full pytest **625 passed**,
 15 skipped. **Next:** `--full` draft_424 anchor verification (session baseline); **PUBLICATION**
 venue decision pending (Milan).

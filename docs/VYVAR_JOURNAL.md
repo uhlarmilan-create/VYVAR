@@ -2,6 +2,28 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — PROC-STORE-TRUST-FIX + coherent draft_424 re-anchor
+
+**Root cause (BASELINE-FULL-DIAG):** `catalog_match_mode` missing from `PROC_STORE_COLS` since
+`977920f` — `run_full_photometry_pipeline` produced empty LC trust column; Phase-2A-only reruns
+populated it. Retired hybrid snapshot `draft_000424_snapshot_20260708_hybrid_deprecated`.
+
+**Fix (`7960715`):** Add `catalog_match_mode` to `PROC_STORE_COLS`; `wcs_untrusted` derived
+downstream. Tests: `tests/test_proc_store_trust_cols.py`.
+
+**Comparator (`750c856`):** `_dist_deg` numeric atol=1e-12 in comp CSV compare;
+`catalog_match_mode` stays strict.
+
+**Re-anchor (`619a6e4`):** Coherent cut `draft_000424_snapshot_20260708_full` via
+`run_full_photometry_pipeline` (run 1: 2378s). Mode histogram: 24,742 × `master_reference_sky`
+(100% trusted). Content SHA: core `92939fab…` n=357; extended `76642318…` n=535.
+`--full` gate now content-based (science + photometry SHA; provenance hash informational).
+
+**Verification (run 2):** `session_baseline_check.py --full` OVERALL PASS (2692s pipeline;
+178 LCs; SHA match; counters zero). Ledger `VL-ANCHOR-424` + `VL-COUNTERS-ZERO` flipped.
+
+---
+
 ## 2026-07-08 — DEV-PROCESS group A closeout (DEV-PROCESS-A/B + EXCEPT-BULK-2)
 
 **DEV-PROCESS-A (`bfe710e`):** `validation/VYVAR_VALIDATION_LEDGER.json` (10 seed items) +
