@@ -2,6 +2,32 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — Day close (CLOSE-0708)
+
+**Session summary** — five workstreams landed on `main`; full-day gate **587 passed**.
+
+| Workstream | Commits | Headline |
+|------------|---------|----------|
+| **PROV-ARCHEO + PROV-FIX** | `e7ce7ea`, `7b2d285` | Archaeology: `git_hash`/`config_snapshot` never-wired (not regression). `provenance` block in `pipeline_meta.json` (full `AppConfig.to_dict()`, last-writer-wins). |
+| **QUICKWINS-0708** | `8c44b71`…`cd0b59e` | K2 GR slope traced; proc `mag` documented; CAL passthrough dead code removed; RN header fix; draft_425 determinism PASS; **draft_424 new anchor** (`e1a7a311…` provenance hash). |
+| **CAL-AGE-CLOCK** | `5143485`, `ee89de8` | Import scan + UI share `resolve_master_age` (header `VY_CDATE`); 3 local masters, 0 validity flips. Darks `VY_CDATE` 2026-04-22 → **~2026-07-21** expiry at 90 d (calendar note). |
+| **INPUT-GUARDS** | `166cbf4`, `80aab21`, `6a3d020` | Null-island guard at `resolve_site`; PDF cfg from provenance snapshot (G7×PROV synergy); draft_424 PDF **0 overflow**. |
+| **HRD-PLOT-TUPLE** | (ledger only) | draft_424 PDF: HRD build fails — see traceback below; panel **missing**. Deferred to 299-defensive cluster. |
+
+**HRD traceback (draft_424 repro, read-only):**
+```
+IndexError: tuple index out of range
+  File "hrd_analysis.py", line 241, in build_hrd_dataframe
+    gdf = _fetch_gaia_columns_by_source_id(...)
+  File "hrd_analysis.py", line 113, in _fetch_gaia_columns_by_source_id
+    d = {k: row[k] for k in row}
+        ~~~^^^
+```
+Swallowed at `photometry_report.py:4365` (`PDF HRD: build/plot failed`). PDF lacks
+`Field astrophysics` / Hertzsprung page; `hrd_field_summary.png` not written.
+
+---
+
 ## 2026-07-08 — INPUT-GUARDS-0708 (TIER1-OBSLOC-ZERO + G7-F003c)
 
 **TIER1-OBSLOC-ZERO (`166cbf4`):** Null-island guard at `param_resolver.resolve_site`

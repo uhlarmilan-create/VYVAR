@@ -85,6 +85,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **EQUIP-BINNING-ASYM** | LOW | Asymmetric binning (`XBINNING ≠ YBINNING`) warns but does not scale gain/RN; all current rigs symmetric. |
 | **TIER1-OBSLOC-ZERO** | — | **FIXED** (`166cbf4`): `resolve_site` null-island guard (|lat|,|lon| < 0.01° → UNRESOLVED); airmass refuses, BJD `JD_FALLBACK`. |
 | **TIER1-UI-DEBT** | LOW | 38 SAFE UI/plotly broad-except `pass` sites — cosmetic diagnostics only. |
+| **HRD-PLOT-TUPLE** | LOW | HRD panel in PDF report throws `IndexError: tuple index out of range` (swallowed to warning at `photometry_report.py:4365`; root `hrd_analysis.py:113` `_fetch_gaia_columns_by_source_id`); panel **missing** (page skipped). Fix with **299-defensive-cluster** batch — same silent-failure class. |
 | **299-defensive cluster** | MED | Pipeline/`photometry_core` broad-except `pass` cluster — existing phased-audit backlog item. |
 | **PROV-HEADLESS** | — | **FIXED** (`e7ce7ea`) — see K2 ledger row. |
 | **PROC-MAG-NAMING** | — | **FIXED** (`0913665`) — documented, not renamed. |

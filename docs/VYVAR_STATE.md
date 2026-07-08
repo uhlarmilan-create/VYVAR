@@ -1,6 +1,8 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-08** — INPUT-GUARDS-0708: null-island observer guard + PDF provenance cfg snapshot.
+Last updated: **2026-07-08** — CLOSE-0708: day session closed; HRD-PLOT-TUPLE logged (LOW, 299-cluster batch).
+
+**Done 2026-07-08 (CLOSE-0708):** HRD PDF panel on draft_424 fails at `hrd_analysis._fetch_gaia_columns_by_source_id:113` (`IndexError`); swallowed — panel missing. Ledger **HRD-PLOT-TUPLE** (LOW). Day batches: PROV-FIX, QUICKWINS-0708, CAL-AGE-CLOCK (darks expire ~**2026-07-21**), INPUT-GUARDS.
 
 **Done 2026-07-08 (INPUT-GUARDS-0708):** `resolve_site` null-island guard (`166cbf4`); PDF cfg from
 `provenance.config_snapshot` (`80aab21`, synergy with PROV-FIX `e7ce7ea`). `587 passed` gate.
