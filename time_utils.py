@@ -60,6 +60,7 @@ def _header_float(hdr: fits.Header, key: str) -> float | None:
 
 
 def mid_exposure_jd(header: fits.Header) -> float | None:
+    date_obs_log = header.get("DATE-OBS")
     try:
         raw = header.get("DATE-OBS")
         if raw is None:
@@ -91,8 +92,17 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
                 if to:
                     try:
                         t_start = Time(f"{s[:10]}T{to}", format="isot", scale="utc")
-                    except Exception:  # noqa: BLE001
-                        pass
+                    except Exception as exc:  # noqa: BLE001
+                        from except_fix_counters import get_except_fix_counters
+
+                        get_except_fix_counters().timeobs_parse_fallback += 1
+                        logger.error(
+                            "[TIME] TIME-OBS parse failed DATE-OBS=%r TIME-OBS=%r; "
+                            "jd will be DATE-only (midnight) for this frame: %s",
+                            s,
+                            to_raw,
+                            exc,
+                        )
 
         exptime = 0.0
         exptime_ok = False
@@ -116,7 +126,15 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
 
         t_mid = t_start + TimeDelta(exptime / 2.0 * u.s)
         return float(t_mid.jd)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().jd_mid_compute_fail += 1
+        logger.error(
+            "[TIME] jd_mid computation failed for DATE-OBS=%r: %s",
+            date_obs_log,
+            exc,
+        )
         return None
 
 

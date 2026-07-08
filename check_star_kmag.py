@@ -193,8 +193,15 @@ def _exclude_ensemble_members(df: pd.DataFrame, ensemble_ids: set[str]) -> pd.Da
             try:
                 m = df[col].fillna(False).astype(bool)
                 df = df.loc[~m].copy()
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as exc:  # noqa: BLE001
+                from except_fix_counters import get_except_fix_counters
+
+                get_except_fix_counters().check_star_ensemble_filter_skip += 1
+                logging.error(
+                    "[CHECK-KMAG] ensemble-flag column filter skipped for column %r: %s",
+                    col,
+                    exc,
+                )
             break
     return df
 

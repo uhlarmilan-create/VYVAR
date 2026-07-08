@@ -280,7 +280,15 @@ def airmass_from_proc_csvs(csv_files: list[Any]) -> np.ndarray:
             import pandas as pd
 
             df = pd.read_csv(p, usecols=lambda c: c in ("airmass", "AIRMASS"), nrows=8)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            from except_fix_counters import get_except_fix_counters
+
+            get_except_fix_counters().k2_airmass_read_fail += 1
+            LOGGER.error(
+                "[K2] airmass read failed for proc CSV %s: %s",
+                p,
+                exc,
+            )
             continue
         col = "airmass" if "airmass" in df.columns else ("AIRMASS" if "AIRMASS" in df.columns else None)
         if col is None:

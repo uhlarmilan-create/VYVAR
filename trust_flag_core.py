@@ -95,7 +95,15 @@ def check_star_scatter(photometry_dir: Path, target_id: str) -> tuple[float, int
         if n_finite < 2:
             return float("nan"), n_finite
         return float(np.nanstd(km, ddof=1)), n_finite
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().trust_kmag_sidecar_read_fail += 1
+        LOGGER.error(
+            "[TRUST] check-star kmag sidecar read failed for %s: %s",
+            p,
+            exc,
+        )
         return float("nan"), 0
 
 

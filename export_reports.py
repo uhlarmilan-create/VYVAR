@@ -138,6 +138,7 @@ def _resolve_export_arcsec_per_px(
             if v is not None and math.isfinite(float(v)) and float(v) > 0:
                 return float(v)
         except Exception:  # noqa: BLE001
+            # EXC-0078: T2 -- report/export may omit or misstate (if v is not None and math.isfinite(float(v)) and fl... (EXCEPT-BULK 2026-07-08)
             pass
     return None
 
@@ -157,7 +158,15 @@ def _resolved_site_from_meta(output_dir: Path | str | None) -> dict[str, Any] | 
         if not pm.is_file():
             return None
         meta = json.loads(pm.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().export_observer_location_read_fail += 1
+        logging.warning(
+            "[EXPORT] observer_location read failed from %s: %s",
+            pm,
+            exc,
+        )
         return None
     loc = meta.get("observer_location") if isinstance(meta, dict) else None
     if not isinstance(loc, dict):

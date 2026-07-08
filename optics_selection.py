@@ -161,7 +161,15 @@ def resolve_optics_ids_for_platesolve(
         return eq, tel
     try:
         dr = db.fetch_obs_draft_by_id(int(draft_id))
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().optics_draft_override_read_fail += 1
+        _log.error(
+            "[OPTICS] OBS_DRAFT override read failed for draft_id=%s: %s",
+            draft_id,
+            exc,
+        )
         return eq, tel
     if dr is None:
         return eq, tel

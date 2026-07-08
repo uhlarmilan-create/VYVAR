@@ -50,6 +50,7 @@ def _cached_load_matrix(
             if _store is not None:
                 csv_cache_arg = _store
         except Exception:  # noqa: BLE001
+            # EXC-0540: T3 -- UI diagnostic/plot only (if _store is not None: / csv_cache_arg = _store / except Excep... (EXCEPT-BULK 2026-07-08)
             pass
 
     return load_field_flux_matrix(
@@ -68,6 +69,7 @@ def _read_comp_catalog_ids(platesolve_dir: Path) -> list[str]:
     try:
         df = read_vyvar_csv(p, low_memory=False)
     except Exception:  # noqa: BLE001
+        # EXC-0541: T3 -- UI diagnostic/plot only (try: / df = read_vyvar_csv(p, low_memory=False) / except Excep... (EXCEPT-BULK 2026-07-08)
         return []
     for col in ("catalog_id", "name"):
         if col in df.columns:
@@ -101,6 +103,7 @@ def _raw_lightcurve_from_frames(per_frame_dir: Path, catalog_id: str, flux_col: 
                 low_memory=False,
             )
         except Exception:  # noqa: BLE001
+            # EXC-0542: T3 -- UI diagnostic/plot only (low_memory=False, / ) / except Exception:  # noqa: BLE001 / co... (EXCEPT-BULK 2026-07-08)
             continue
         _want = normalize_gaia_source_id(catalog_id)
         df["_cid"] = df["catalog_id"].map(normalize_gaia_source_id)
@@ -238,6 +241,7 @@ def _get_candidate_row(
                             if _at_cand.is_file():
                                 _at_path = _at_cand
                     except Exception:  # noqa: BLE001
+                        # EXC-0543: T3 -- UI diagnostic/plot only (if _at_cand.is_file(): / _at_path = _at_cand / except Exceptio... (EXCEPT-BULK 2026-07-08)
                         pass
                 else:
                     _at_path = _find_active_targets_csv(_dd)
@@ -254,10 +258,12 @@ def _get_candidate_row(
                             ra = float(_at_ra)
                             dec = float(_at_dec)
         except Exception:  # noqa: BLE001
+            # EXC-0544: T3 -- UI diagnostic/plot only (ra = float(_at_ra) / dec = float(_at_dec) / except Exception: ... (EXCEPT-BULK 2026-07-08)
             pass
 
         return {"ra": ra, "dec": dec, "mag": mag}
     except Exception:  # noqa: BLE001
+        # EXC-0545: T3 -- UI diagnostic/plot only (return {'ra': ra, 'dec': dec, 'mag': mag} / except Exception: ... (EXCEPT-BULK 2026-07-08)
         return None
 
 
@@ -316,6 +322,7 @@ def load_katalogy_map_from_disk(draft_dir: Path, obs_group: str) -> dict[str, st
         try:
             df = read_vyvar_csv(p, low_memory=False)
         except Exception:  # noqa: BLE001
+            # EXC-0546: T3 -- UI diagnostic/plot only (try: / df = read_vyvar_csv(p, low_memory=False) / except Excep... (EXCEPT-BULK 2026-07-08)
             continue
         if df.empty or "catalog_id" not in df.columns:
             continue
@@ -347,6 +354,7 @@ def load_tess_eligible_candidate_ids_from_disk(draft_dir: Path, obs_group: str) 
         try:
             df = read_vyvar_csv(p, low_memory=False)
         except Exception:  # noqa: BLE001
+            # EXC-0547: T3 -- UI diagnostic/plot only (try: / df = read_vyvar_csv(p, low_memory=False) / except Excep... (EXCEPT-BULK 2026-07-08)
             continue
         if df.empty or "catalog_id" not in df.columns:
             continue
@@ -360,18 +368,21 @@ def load_tess_eligible_candidate_ids_from_disk(draft_dir: Path, obs_group: str) 
                     if bool(pd.to_numeric(row.get("vsx_known_variable"), errors="coerce")):
                         continue
                 except Exception:  # noqa: BLE001
+                    # EXC-0548: T3 -- UI diagnostic/plot only (if bool(pd.to_numeric(row.get('vsx_known_variable'), errors='c... (EXCEPT-BULK 2026-07-08)
                     pass
             if "vsx_match" in df.columns:
                 try:
                     if bool(pd.to_numeric(row.get("vsx_match"), errors="coerce")):
                         continue
                 except Exception:  # noqa: BLE001
+                    # EXC-0549: T3 -- UI diagnostic/plot only (if bool(pd.to_numeric(row.get('vsx_match'), errors='coerce')):... (EXCEPT-BULK 2026-07-08)
                     pass
             if "gaia_dr3_variable_catalog" in df.columns:
                 try:
                     if bool(pd.to_numeric(row.get("gaia_dr3_variable_catalog"), errors="coerce")):
                         continue
                 except Exception:  # noqa: BLE001
+                    # EXC-0550: T3 -- UI diagnostic/plot only (if bool(pd.to_numeric(row.get('gaia_dr3_variable_catalog'), er... (EXCEPT-BULK 2026-07-08)
                     pass
             if kat_col and kat_col in df.columns:
                 if not _should_trigger_tess(str(row.get(kat_col, "") or "")):
@@ -427,6 +438,7 @@ def _edge_ok_from_masterstar(
     try:
         from astropy.io import fits as astrofits
     except Exception:  # noqa: BLE001
+        # EXC-0551: T3 -- UI diagnostic/plot only (try: / from astropy.io import fits as astrofits / except Excep... (EXCEPT-BULK 2026-07-08)
         return pd.Series(True, index=stars_df.index)
 
     nx = ny = None
@@ -538,6 +550,7 @@ def run_variability_detection_session(
         if _store is not None:
             _store_nframes = len(_store)
     except Exception:  # noqa: BLE001
+        # EXC-0552: T3 -- UI diagnostic/plot only (if _store is not None: / _store_nframes = len(_store) / except... (EXCEPT-BULK 2026-07-08)
         pass
     fm, meta, _bjd = _cached_load_matrix(
         str(per_frame_dir),
@@ -559,6 +572,7 @@ def run_variability_detection_session(
                 meta = meta.copy()
                 meta["zone_flag"] = meta.index.astype(str).map(_zf_map)
         except Exception:  # noqa: BLE001
+            # EXC-0553: T3 -- UI diagnostic/plot only (meta = meta.copy() / meta['zone_flag'] = meta.index.astype(str... (EXCEPT-BULK 2026-07-08)
             pass
     comp_ids = _read_comp_catalog_ids(platesolve_dir)
     comp_rms_map: dict[str, float] = {}
@@ -656,6 +670,7 @@ def _render_field_image_with_candidate(
         import matplotlib.pyplot as plt
         from io import BytesIO
     except Exception:  # noqa: BLE001
+        # EXC-0554: T3 -- UI diagnostic/plot only (import matplotlib.pyplot as plt / from io import BytesIO / exc... (EXCEPT-BULK 2026-07-08)
         return None
 
     p = Path(masterstar_fits_path_s)
@@ -666,6 +681,7 @@ def _render_field_image_with_candidate(
         with astrofits.open(p, memmap=False) as hdul:
             data = np.asarray(hdul[0].data, dtype=np.float64)
     except Exception:  # noqa: BLE001
+        # EXC-0555: T3 -- UI diagnostic/plot only (with astrofits.open(p, memmap=False) as hdul: / data = np.asar... (EXCEPT-BULK 2026-07-08)
         return None
 
     if data.size == 0:
@@ -722,6 +738,7 @@ def _render_field_image_with_candidates(
         import matplotlib.pyplot as plt
         from io import BytesIO
     except Exception:  # noqa: BLE001
+        # EXC-0556: T3 -- UI diagnostic/plot only (import matplotlib.pyplot as plt / from io import BytesIO / exc... (EXCEPT-BULK 2026-07-08)
         return None
 
     p = Path(masterstar_fits_path_s)
@@ -732,6 +749,7 @@ def _render_field_image_with_candidates(
         with astrofits.open(p, memmap=False) as hdul:
             data = np.asarray(hdul[0].data, dtype=np.float64)
     except Exception:  # noqa: BLE001
+        # EXC-0557: T3 -- UI diagnostic/plot only (with astrofits.open(p, memmap=False) as hdul: / data = np.asar... (EXCEPT-BULK 2026-07-08)
         return None
 
     if data.size == 0:
@@ -766,6 +784,7 @@ def _render_field_image_with_candidates(
             try:
                 ax.text(float(vx) + 14, float(vy), str(vlab)[:18], color="#f39c12", fontsize=7, va="center")
             except Exception:  # noqa: BLE001
+                # EXC-0558: T3 -- UI diagnostic/plot only (try: / ax.text(float(vx) + 14, float(vy), str(vlab)[:18], colo... (EXCEPT-BULK 2026-07-08)
                 continue
 
     # Candidates: red circles
@@ -778,6 +797,7 @@ def _render_field_image_with_candidates(
             try:
                 ax.text(float(cx) + 16, float(cy), str(lab)[:18], color="#ff3333", fontsize=7, va="center")
             except Exception:  # noqa: BLE001
+                # EXC-0559: T3 -- UI diagnostic/plot only (try: / ax.text(float(cx) + 16, float(cy), str(lab)[:18], color... (EXCEPT-BULK 2026-07-08)
                 continue
 
     # Selected candidate highlight (yellow)
@@ -1264,6 +1284,7 @@ def render_variability_dashboard(
                         len(read_vyvar_csv(_exported)),
                     )
             except Exception as _var_export_exc:  # noqa: BLE001
+                # EXC-0560: T3 -- UI diagnostic/plot only (len(read_vyvar_csv(_exported)), / ) / except Exception as _var... (EXCEPT-BULK 2026-07-08)
                 logging.warning("[VARIABILITY] Auto-export variability_candidates.csv failed: %s", _var_export_exc)
         except Exception as exc:  # noqa: BLE001
             st.error(f"Analysis error: {exc}")
@@ -1858,8 +1879,15 @@ def render_variability_dashboard(
                         if "catalog_id" in vt_df.columns:
                             vt_df = vt_df.copy()
                             vt_df["catalog_id"] = normalize_gaia_source_id_series(vt_df["catalog_id"])
-                    except Exception:  # noqa: BLE001
-                        pass
+                    except Exception as exc:  # noqa: BLE001
+                        from except_fix_counters import get_except_fix_counters
+
+                        get_except_fix_counters().variability_gaia_id_norm_skip += 1
+                        LOGGER.error(
+                            "[VARIABILITY] Gaia ID normalization skipped before to_csv; "
+                            "IDs written UNNORMALIZED (float-rounding hazard): %s",
+                            exc,
+                        )
                     vt_df.to_csv(vt_path, index=False)
                     st.success(
                         f"✅ Added {n_added} stars to variable_targets.csv\n"

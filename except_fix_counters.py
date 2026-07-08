@@ -41,6 +41,15 @@ class ExceptFixCounters:
     wcs_header_key_copy_fail: int = 0
     align_unique_sample_fail: int = 0
     platesolve_match_rate_meta_fail: int = 0
+    # EXCEPT-FIX-4 (tranche 4: time/trust/export/optics/check-star)
+    timeobs_parse_fallback: int = 0
+    jd_mid_compute_fail: int = 0
+    trust_kmag_sidecar_read_fail: int = 0
+    variability_gaia_id_norm_skip: int = 0
+    k2_airmass_read_fail: int = 0
+    export_observer_location_read_fail: int = 0
+    optics_draft_override_read_fail: int = 0
+    check_star_ensemble_filter_skip: int = 0
 
     def snapshot(self) -> dict[str, int]:
         return {
@@ -76,6 +85,14 @@ class ExceptFixCounters:
             "wcs_header_key_copy_fail": self.wcs_header_key_copy_fail,
             "align_unique_sample_fail": self.align_unique_sample_fail,
             "platesolve_match_rate_meta_fail": self.platesolve_match_rate_meta_fail,
+            "timeobs_parse_fallback": self.timeobs_parse_fallback,
+            "jd_mid_compute_fail": self.jd_mid_compute_fail,
+            "trust_kmag_sidecar_read_fail": self.trust_kmag_sidecar_read_fail,
+            "variability_gaia_id_norm_skip": self.variability_gaia_id_norm_skip,
+            "k2_airmass_read_fail": self.k2_airmass_read_fail,
+            "export_observer_location_read_fail": self.export_observer_location_read_fail,
+            "optics_draft_override_read_fail": self.optics_draft_override_read_fail,
+            "check_star_ensemble_filter_skip": self.check_star_ensemble_filter_skip,
         }
 
 
