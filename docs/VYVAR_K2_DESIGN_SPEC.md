@@ -58,8 +58,8 @@ colour-matched comps.
 
 **Unit convention:** VYVAR's native colour is Gaia BP-RP. Internal k'' is stored
 **per BP-RP mag**. Literature values convert via the adopted colour-slope (Jordi et al.
-2010; d(g-r)/d(BP-RP) ~ 0.859 in the relevant range; B-V slope analogous -- exact adopted
-slopes land in `CITATIONS.bib` + a converter helper, not hand-scattered constants).
+2010; d(g-r)/d(BP-RP) ~ **1.054** at FGK anchor g-r=0.48 (Jordi Table 6; converter authoritative);
+B-V slope analogous -- exact adopted slopes land in `CITATIONS.bib` + converter helper.
 
 Default table (per BP-RP; **illustrative rounded values -- the authoritative numbers are
 COMPUTED by a converter module `k2_extinction.py` from cited native-colour coefficients**;
@@ -76,9 +76,9 @@ with the source equation. CITATIONS.bib additions: `smith2002`, `jordi2010`, `fu
 |------------------|-----------|
 | u | literature (converted from Smith u': -0.021 per u'-g') |
 | B | literature (converted from Henden k''_B ~ -0.03 per B-V) |
-| g | literature (converted from Smith g': -0.016 per g'-r' -> ~ -0.014 per BP-RP) |
+| g | literature (converted from Smith g': -0.016 per g'-r' -> ~ **-0.0169** per BP-RP @ slope 1.054) |
 | V / R / Rc / Ic / I | 0.0 (insignificant; AAVSO) |
-| r | literature (Smith r': -0.004) |
+| r | literature (Smith r': -0.004 -> ~ **-0.0042** per BP-RP @ slope 1.054) |
 | i | literature (Smith i': +0.006) |
 | z | literature (Smith z': +0.003) |
 | **OSC BLUE/GREEN/RED, TG/TB/TR** | **none** -- classify STANDARD_FILTER for CT (live-tree behavior, band_classify.py:130-132,176-177) but NO literature k'' exists for Bayer RGB bandpasses; applying Sloan/Johnson coefficients would be an uncited number ("trust in the numbers"). |

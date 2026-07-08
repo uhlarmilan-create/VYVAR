@@ -31,19 +31,18 @@ LOGGER = logging.getLogger(__name__)
 # Validity: BaSeL3.1 FGK dwarfs; B-V fits have large scatter for Teff < 4500 K (Sect. 5.2).
 
 # Table 6 unreddened SDSS (g-r) -> GBP-GRP: a=0.3523, b=1.1876, c=-0.5370, d=0.4003.
-# Anchor g-r=0.48 (FGK): d(g-r)/d(BP-RP) ~ 1/(b + 2*c*0.48 + 3*d*0.48^2) ~ 1.04.
-# VYVAR design-spec illustrative rounded value 0.859 (Smith g k2 = -0.016 * 0.859 = -0.013744).
-SLOPE_GR_PER_BPRP = 0.859  # d(g'-r')/d(BP-RP); spec anchor; see Table 6 note above
+# Anchor g-r=0.48 (FGK): d(g-r)/d(BP-RP) = 1/(1.1876 - 2*0.5370*0.48 + 3*0.4003*0.48^2) ~ +1.054.
+# Smith g k2 = -0.016 * 1.054 ~ -0.0169; r k2 = -0.004 * 1.054 ~ -0.0042.
+SLOPE_GR_PER_BPRP = 1.054  # d(g'-r')/d(BP-RP); Jordi 2010 Table 6, FGK anchor g-r=0.48
 
 # Table 3 Johnson-Cousins (B-V) -> GBP-GRP, all Av: a=0.0981, b=1.4290, c=-0.0269, d=0.0061.
 # Anchor B-V=0.58 (FGK): d(B-V)/d(BP-RP) = 1/(1.429 - 2*0.0269*0.58 + 3*0.0061*0.58^2) ~ +0.713.
 # Range B-V 0.45-0.75: slope ~0.71-0.72. Henden k''_B=-0.03 per (B-V) -> k2_B ~ -0.021.
 SLOPE_BV_PER_BPRP = 0.713  # d(B-V)/d(BP-RP); Jordi 2010 Table 3, FGK anchor
 
-# Table 6 unreddened SDSS (g-z) -> GBP-GRP: a=0.4052, b=0.6407, c=-0.0091, d=0.0004.
-# Anchor g-z=1.0: d(g-z)/d(BP-RP) ~ 1/0.641 ~ 1.56; u-g via SDSS locus not in Jordi Table 3-6.
-# VYVAR design-spec illustrative 1.091 (Smith u k2 = -0.021 * 1.091 = -0.0229); audit pending u-g row.
-SLOPE_UG_PER_BPRP = 1.091  # d(u'-g')/d(BP-RP); spec anchor
+# No Jordi u-g transformation in Tables 3-6; spec-anchored value retained pending citable source.
+# Smith u k2 = -0.021 * 1.091 = -0.0229 (ledger K2-SLOPE-UG, FUTURE).
+SLOPE_UG_PER_BPRP = 1.091  # d(u'-g')/d(BP-RP); documented exception (no Jordi row)
 
 # Smith et al. 2002 - k'' per native Sloan colour (mag/airmass/mag colour).
 SMITH_K2_NATIVE: dict[str, float] = {
