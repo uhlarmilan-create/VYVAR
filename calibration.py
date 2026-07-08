@@ -425,7 +425,6 @@ def get_processed_master(
     master_binning: int | None = None,
     light_shape: tuple[int, int] | None = None,
     light_filename: str = "",
-    allow_passthrough: bool = False,
     db: VyvarDatabase | None = None,
     id_equipments: int | None = None,
     dark_resample_mode: DarkResampleMode = "sum",
@@ -445,18 +444,6 @@ def get_processed_master(
     """
     p = Path(master_path)
     if not p.is_file():
-        if allow_passthrough and light_shape is not None:
-            eh, ew = int(light_shape[0]), int(light_shape[1])
-            base = np.zeros((eh, ew), dtype=np.float32) if kind == "dark" else np.ones((eh, ew), dtype=np.float32)
-            return ProcessedMasterResult(
-                data=base,
-                master_binning=max(1, int(target_binning)),
-                resampled=False,
-                block_factor=1,
-                is_passthrough=True,
-                flat_median_adu_before_norm=1.0 if kind == "flat" else None,
-                flat_normalized_at_calibrate=False,
-            )
         raise MasterResamplingError(f"Master súbor neexistuje: {p}")
 
     with fits.open(p, memmap=False) as hdul:
