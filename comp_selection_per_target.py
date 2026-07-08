@@ -725,7 +725,11 @@ def _bootstrap_phase1_csv_cache(
                         _df0["saturate_limit_adu_85pct"], errors="coerce"
                     )
                 csv_cache[str(_csv_path)] = _df0
-            except Exception:  # noqa: BLE001
+            except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
+                from except_fix_counters import get_except_fix_counters
+
+                get_except_fix_counters().phase1_csv_cache_skip += 1
+                logging.error("[COMP] phase1 CSV cache skip %s: %s", _csv_path, exc)
                 continue
     return csv_cache
 
@@ -1043,11 +1047,15 @@ def _accumulate_per_frame_comp_metrics(
                                 if math.isfinite(_bjd_v):
                                     bjd_map[cid].append(_bjd_v)
 
-        except Exception:  # noqa: BLE001
+        except (ValueError, TypeError, KeyError, IndexError) as exc:
+            from except_fix_counters import get_except_fix_counters
+
+            get_except_fix_counters().comp_frame_accumulation_skip += 1
+            logging.error("[COMP] frame metrics accumulation failed %s: %s", csv_path, exc)
             continue
 
     logging.info(
-        "[PERF-4B] _accumulate_per_frame_comp_metrics: %d frames × %d candidates (%s)",
+        "[PERF-4B] _accumulate_per_frame_comp_metrics: %d frames x %d candidates (%s)",
         n_frames_loaded,
         len(cand_ids),
         "vectorized" if _use_vectorized else "iterrows (small N)",
@@ -1546,8 +1554,16 @@ def _detrend_and_compute_comp_rms_map(
             med_dt = float(np.median(detrended))
             if math.isfinite(med_dt) and med_dt > 0:
                 flux_map[cid] = (detrended / med_dt).tolist()
-        except Exception:  # noqa: BLE001
-            pass  # Ponechaj pôvodné hodnoty ak fit zlyhá
+        except (ValueError, TypeError, np.linalg.LinAlgError) as exc:
+            from except_fix_counters import get_except_fix_counters
+
+            get_except_fix_counters().comp_detrend_skip += 1
+            logging.error(
+                "[COMP] detrend fit failed for %s (%d frames): %s",
+                cid,
+                len(vals),
+                exc,
+            )
 
     # ── Krok 3: RMS scatter per kandidát ──
     rms_map: dict[str, float] = {}
