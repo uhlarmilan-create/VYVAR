@@ -76,7 +76,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | ID | Sev | Notes |
 |----|-----|-------|
 | **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. Photon-transfer on field lights **INCONCLUSIVE** (g_eff~0.9; need bin2 flats). RN sub-Q directionally **CLOSED** via D3 (DECISIONS 2026-07-07); empirical photon-transfer closure pending bin2 flats. |
-| **F-EXCEPT-TIER1** | MED | 160 silent pass/continue sites; dedicated batch later (out of Fable follow-up scope). |
+| **F-EXCEPT-TIER1** | MED | 160 silent pass/continue sites (`pipeline`+`photometry_core`); working queue → `docs/VYVAR_EXCEPT_CENSUS.md` (625 sites, EXCEPT-BATCH-S0). |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
 | **F-BJD-1** | LOW | **FIXED (Stage D)** | `time_base` LC column; numeric times unchanged |
@@ -84,9 +84,9 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **G7-F003c** | — | **FIXED** (`80aab21`): PDF reads `provenance.config_snapshot` from `pipeline_meta.json`; live `AppConfig` fallback footer-annotated. |
 | **EQUIP-BINNING-ASYM** | LOW | Asymmetric binning (`XBINNING ≠ YBINNING`) warns but does not scale gain/RN; all current rigs symmetric. |
 | **TIER1-OBSLOC-ZERO** | — | **FIXED** (`166cbf4`): `resolve_site` null-island guard (|lat|,|lon| < 0.01° → UNRESOLVED); airmass refuses, BJD `JD_FALLBACK`. |
-| **TIER1-UI-DEBT** | LOW | 38 SAFE UI/plotly broad-except `pass` sites — cosmetic diagnostics only. |
-| **HRD-PLOT-TUPLE** | LOW | HRD panel in PDF report throws `IndexError: tuple index out of range` (swallowed to warning at `photometry_report.py:4365`; root `hrd_analysis.py:113` `_fetch_gaia_columns_by_source_id`); panel **missing** (page skipped). Fix with **299-defensive-cluster** batch — same silent-failure class. |
-| **299-defensive cluster** | MED | Pipeline/`photometry_core` broad-except `pass` cluster — existing phased-audit backlog item. |
+| **TIER1-UI-DEBT** | LOW | 38 SAFE UI/plotly broad-except `pass` sites — cosmetic; subset of T3-UI in `docs/VYVAR_EXCEPT_CENSUS.md`. |
+| **HRD-PLOT-TUPLE** | — | **FIXED** (EXCEPT-BATCH-S0): `sqlite3.Row` iterates values not keys (`hrd_analysis.py:113`); PDF now emits HRD page or explicit unavailable placeholder (`photometry_report.py`). |
+| **299-defensive cluster** | MED | Pipeline/`photometry_core` broad-except `pass` cluster — phased fix queue in `docs/VYVAR_EXCEPT_CENSUS.md` (T1+T2 dispositions). |
 | **PROV-HEADLESS** | — | **FIXED** (`e7ce7ea`) — see K2 ledger row. |
 | **PROC-MAG-NAMING** | — | **FIXED** (`0913665`) — documented, not renamed. |
 | **K2-DATA-BLOCKER** | — | NIGHT_FIT needs dX ≥ ~0.3, comp floor ≪ 15 mmag; Boyden blocked on flats/flip. |

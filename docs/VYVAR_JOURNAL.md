@@ -2,6 +2,22 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — EXCEPT-BATCH-S0 (HRD fix + silent-failure census)
+
+**HRD-PLOT-TUPLE root cause (CONFIRM/REFUTE):** `row_factory = sqlite3.Row` was **already set**
+(`hrd_analysis.py:73`). Failure mechanism: `for k in row` iterates **values**, not column names;
+`row[value]` → `IndexError`. Fix: `{key: row[key] for key in row.keys()}`. PDF handler narrowed
+to `_hrd_build_errors`; ERROR+log+traceback; explicit **HRD panel unavailable** placeholder page.
+
+**Validation:** draft_424 PDF page 15 = Field astrophysics + HRD table (2474 reliable stars);
+**0 overflow**; **588 passed** pytest; ruff green.
+
+**EXCEPT census:** `docs/VYVAR_EXCEPT_CENSUS.md` — **625** sites (EXC-0001…), tiers: T1-SCIENCE
+354, T2-INTEGRITY 82, T3-UI 76, T4-LEGIT 3, ? 110. Reconciles F-EXCEPT-TIER1 (160 ≈ pipeline 95
++ photometry_core 66 pass/continue).
+
+---
+
 ## 2026-07-08 — PUB-TODO (publication workstream opened)
 
 **PUBLICATION** workstream added to ROADMAP: JAAVSO methods paper + JOSS software DOI two-track;

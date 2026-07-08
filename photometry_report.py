@@ -4329,8 +4329,23 @@ class _PhotometryReportBuilder:
         self._page_footer(c)
         c.showPage()
 
+    def _report_hrd_unavailable_page(self, c: "canvas.Canvas", reason: str) -> None:
+        """Emit a visible placeholder when the HRD section cannot be rendered."""
+        c.showPage()
+        y0 = self.PAGE_H - self.M_TOP
+        c.setFont(self.FONT_BOLD, 14)
+        c.setFillColor(self.C_TITLE)
+        c.drawString(self.M_LEFT, y0 - 0.5 * self.cm, "Field astrophysics (Hertzsprung–Russell diagram)")
+        c.setFillColor(self.colors.black)
+        c.setFont(self.FONT_REG, 11)
+        c.drawString(self.M_LEFT, y0 - 1.1 * self.cm, f"HRD panel unavailable: {reason}")
+        self._page_footer(c)
+        c.showPage()
+
     def _report_hrd_page(self, c: "canvas.Canvas") -> None:
         """HRD + highlighted stars table (best effort)."""
+        import sqlite3
+
         try:
             from config import AppConfig
 
@@ -4339,30 +4354,45 @@ class _PhotometryReportBuilder:
                 get_top_interesting_stars,
                 plot_hrd_matplotlib,
             )
-        except Exception as exc:  # noqa: BLE001
-            logging.warning("PDF HRD: import failed (%s)", exc)
+        except (ImportError, ModuleNotFoundError) as exc:
+            logging.error("PDF HRD: import failed (%s)", exc)
+            self._report_hrd_unavailable_page(c, f"import failed ({exc})")
             return
 
         gdb = Path(str(getattr(AppConfig(), "gaia_db_path", "") or "").strip())
         ms_csv = self.platesolve_dir / "masterstars_full_match.csv"
         if not ms_csv.is_file():
-            logging.info("PDF HRD: skip — missing %s", ms_csv.name)
+            logging.error("PDF HRD: missing %s", ms_csv.name)
+            self._report_hrd_unavailable_page(c, f"missing {ms_csv.name}")
             return
         if not gdb.is_file():
-            logging.info("PDF HRD: skip — gaia_db_path not configured or file missing")
+            logging.error("PDF HRD: gaia_db_path not configured or file missing")
+            self._report_hrd_unavailable_page(c, "Gaia SQLite database not available")
             return
 
         hrd_png = self.cache_dir / "hrd_field_summary.png"
         top = pd.DataFrame()
         hrd_df = pd.DataFrame()
+        _hrd_build_errors = (
+            OSError,
+            sqlite3.Error,
+            ValueError,
+            KeyError,
+            TypeError,
+            IndexError,
+            RuntimeError,
+            ArithmeticError,
+        )
         try:
             hrd_df = build_hrd_dataframe(ms_csv, gdb)
             if hrd_df.empty:
+                self._report_hrd_unavailable_page(c, "no field stars in masterstars catalog")
                 return
             top = get_top_interesting_stars(hrd_df)
             plot_hrd_matplotlib(hrd_df, top, output_path=hrd_png)
-        except Exception as exc:  # noqa: BLE001
-            logging.warning("PDF HRD: build/plot failed (%s)", exc)
+        except _hrd_build_errors as exc:
+            logging.exception("PDF HRD: build/plot failed")
+            self._report_hrd_unavailable_page(c, str(exc))
             return
 
         c.showPage()
