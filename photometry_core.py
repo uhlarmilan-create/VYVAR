@@ -1603,7 +1603,8 @@ def _annulus_sky_subtracted_flux(
     sum_ap = float(np.asarray(phot_ap["aperture_sum"], dtype=np.float64).ravel()[0])
     area_ap = float(ap.area)
 
-    sky_pp = 0.0
+    sky_pp = float("nan")
+    sky_ok = False
     ann_masks = an.to_mask(method="center")
     if not isinstance(ann_masks, (list, tuple)):
         ann_masks = [ann_masks]
@@ -1614,9 +1615,46 @@ def _annulus_sky_subtracted_flux(
             cut = cut[np.isfinite(cut)]
             if cut.size > 0:
                 sky_pp = float(np.median(cut))
+                sky_ok = True
                 break
-        except Exception:  # noqa: BLE001
+        except (ValueError, TypeError, IndexError) as exc:
+            from except_fix_counters import get_except_fix_counters
+
+            get_except_fix_counters().sky_annulus_mask_fail += 1
+            logging.error(
+                "[PHOT] annulus sky mask failed x=%.2f y=%.2f: %s",
+                float(x_c),
+                float(y_c),
+                exc,
+            )
             continue
+
+    if not sky_ok:
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().sky_annulus_invalid += 1
+        logging.error(
+            "[PHOT] annulus sky invalid (no usable pixels) x=%.2f y=%.2f r_ap=%.2f",
+            float(x_c),
+            float(y_c),
+            float(r_ap),
+        )
+        peak_local = float("nan")
+        try:
+            m_ap = ap.to_mask(method="center")
+            if isinstance(m_ap, (list, tuple)):
+                m0 = m_ap[0]
+            else:
+                m0 = m_ap
+            vals = m0.get_values(d)
+            peak_local = (
+                float(np.nanmax(np.asarray(vals, dtype=np.float64)))
+                if vals is not None
+                else float("nan")
+            )
+        except (ValueError, TypeError, IndexError):
+            peak_local = float("nan")
+        return float("nan"), float("nan"), peak_local
 
     flux_net = float(sum_ap - sky_pp * area_ap)
     try:
@@ -3022,7 +3060,11 @@ def _group_comp_mag_inst_from_proc_csvs(
     for i, csv_path in enumerate(csv_files):
         try:
             df = pd.read_csv(csv_path, low_memory=False, dtype=_GAIA_ID_DTYPE)
-        except Exception:  # noqa: BLE001
+        except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
+            from except_fix_counters import get_except_fix_counters
+
+            get_except_fix_counters().comp_pool_csv_skip += 1
+            logging.error("[PHOT] comp-pool CSV skip %s (frame %d): %s", csv_path, i, exc)
             continue
         if "catalog_id" not in df.columns:
             continue
@@ -6477,7 +6519,11 @@ def _phase2a_prepare_shared_state(
                 if _dtype_2a:
                     _kw["dtype"] = _dtype_2a
                 _phase2a_csv_cache[str(_csv_path)] = pd.read_csv(_csv_path, **_kw)
-            except Exception:  # noqa: BLE001
+            except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
+                from except_fix_counters import get_except_fix_counters
+
+                get_except_fix_counters().phase2a_csv_cache_skip += 1
+                logging.error("[PHASE 2A] proc CSV cache skip %s: %s", _csv_path, exc)
                 continue
         logging.info(
             f"[FÁZA 2A] CSV cache: {len(_phase2a_csv_cache)} súborov "
@@ -7927,23 +7973,23 @@ def _phase2a_process_one_target(
                     _chk_cid,
                     list(comp_ids),
                     _ext_lc,
-                comp_catalog_mag,
-                comp_quality,
-                comp_rms_map=comp_rms_map,
-                comp_tier_map=comp_tier_map,
-                tier_weights=tier_weights,
-                cfg=_cfg,
-                n_comp_min=_chk_n_min,
-                n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
-            )
-            if _chk_mag is not None and np.isfinite(_chk_mag).any():
-                save_check_kmag_sidecar(
-                    check_kmag_sidecar_path(lc_dir, target_cid),
-                    check_cid=_chk_cid,
-                    bjd=bjd,
-                    source_files=src_files,
-                    kmag=_chk_mag,
+                    comp_catalog_mag,
+                    comp_quality,
+                    comp_rms_map=comp_rms_map,
+                    comp_tier_map=comp_tier_map,
+                    tier_weights=tier_weights,
+                    cfg=_cfg,
+                    n_comp_min=_chk_n_min,
+                    n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
                 )
+                if _chk_mag is not None and np.isfinite(_chk_mag).any():
+                    save_check_kmag_sidecar(
+                        check_kmag_sidecar_path(lc_dir, target_cid),
+                        check_cid=_chk_cid,
+                        bjd=bjd,
+                        source_files=src_files,
+                        kmag=_chk_mag,
+                    )
     except (ImportError, KeyError, TypeError, ValueError, AttributeError, OSError) as _ck_exc:
         logging.debug("[CHECK-KMAG] sidecar skipped for %s: %s", target_cid, _ck_exc)
 
@@ -8523,6 +8569,13 @@ def _phase2a_finalize_exports(
     except Exception as exc:  # noqa: BLE001
         logging.warning("[AUTO] crossmatch/TESS zlyhalo: %s", exc)
 
+    from except_fix_counters import get_except_fix_counters
+
+    _ef_snap = get_except_fix_counters().snapshot()
+    merge_photometry_pipeline_meta(output_dir, {"except_fix_summary": _ef_snap})
+    if any(v > 0 for v in _ef_snap.values()):
+        logging.error("[EXCEPT-FIX] Phase 2A terminal-failure counters: %s", _ef_snap)
+
     return {
         "n_targets": len(at_df),
         "n_frames": n_frames,
@@ -8569,6 +8622,10 @@ def run_phase2a(
     output_dir = Path(output_dir)
     lc_dir = output_dir / "lightcurves"
     lc_dir.mkdir(parents=True, exist_ok=True)
+
+    from except_fix_counters import reset_except_fix_counters
+
+    reset_except_fix_counters()
 
     def _p2(msg: str) -> None:
         if progress_cb is None:
@@ -10427,8 +10484,11 @@ def _refresh_variable_targets_xy(
         df["x"] = xy[:, 0]
         df["y"] = xy[:, 1]
         df.to_csv(vt_path, index=False)
-    except Exception as e:  # noqa: BLE001
-        logging.warning("[VT REFRESH] WCS prepočet zlyhal: %s — x/y ostávajú stale", e)
+    except (ValueError, TypeError, AttributeError) as e:
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().vt_wcs_refresh_fail += 1
+        logging.error("[VT REFRESH] WCS prepočet zlyhal: %s — x/y ostávajú stale", e)
         return
 
     logging.info("[VT REFRESH] x/y súradnice variable_targets.csv aktualizované z MASTERSTAR WCS")
