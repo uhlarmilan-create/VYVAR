@@ -1,10 +1,10 @@
 """Numeric photometry SHA helpers (Chi_and_H zaloha anchor; draft-independent).
 
 Recorded values (2026-06-11 re-baseline, draft_000387 re-cut x2): core 3f7c9e7a... (2806),
-full d5b72d08... (4285). **Note (2026-07-08):** original draft_387 zaloha no longer exists;
-current production anchor is draft_424 (`e1a7a311…` provenance hash, QUICKWINS-0708) verified
-via `scripts/session_baseline_check.py --full`. Re-verify via regeneration recipe in
-VYVAR_STATE.md / VYVAR_CHIANDH_BASELINE_RUNBOOK.md (where fixture present).
+full d5b72d08... (4285). **Note (2026-07-08):** draft_424 coherent anchor is
+``draft_000424_snapshot_20260708_full`` (run_full_photometry_pipeline cut; core 92939fab… n=357,
+extended 76642318… n=535). Retired hybrid ``draft_000424_snapshot_20260708_hybrid_deprecated``.
+Verified via ``scripts/session_baseline_check.py --full``.
 """
 from __future__ import annotations
 

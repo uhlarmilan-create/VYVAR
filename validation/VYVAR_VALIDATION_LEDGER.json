@@ -22,12 +22,12 @@
     {
       "id": "VL-ANCHOR-424",
       "area": "photometry",
-      "description": "draft_424 provenance anchor reproduces via session baseline --full",
-      "verification": "scripts/session_baseline_check.py --full (science-meaningful compare vs draft_000424_snapshot_20260708; provenance_block_hash e1a7a311...)",
+      "description": "draft_424 coherent content anchor reproduces via session baseline --full",
+      "verification": "scripts/session_baseline_check.py --full (science-meaningful compare + photometry SHA vs Archive/Drafts/draft_000424_snapshot_20260708_full; core 92939fab... n=357; extended 76642318... n=535; provenance hash informational only)",
       "passes": false,
       "last_verified": null,
       "commit": null,
-      "notes": "Set by Part B --full run in DEV-PROCESS-AB task."
+      "notes": "Coherent re-anchor via run_full_photometry_pipeline (PROC-STORE-TRUST-FIX 2026-07-08). Retired hybrid snapshot draft_000424_snapshot_20260708_hybrid_deprecated is NOT a valid anchor (June comp CSV + July Phase-2A-only LCs)."
     },
     {
       "id": "VL-COUNTERS-ZERO",

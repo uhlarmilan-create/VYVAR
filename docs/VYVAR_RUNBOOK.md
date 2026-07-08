@@ -16,9 +16,20 @@ python scripts/session_baseline_check.py --full   # after science-touching chang
 | Tier | What it checks |
 |------|----------------|
 | **--fast** | Git tree (FAIL on staged changes); config paths; full `pytest -q`; validation ledger + TODO hint for `passes=false` items |
-| **--full** | Everything in --fast, plus headless **draft_424** via `run_full_photometry_pipeline` into `tmp/session_baseline/<timestamp>/` (archive inputs read-only); science-meaningful compare vs `draft_000424_snapshot_20260708`; `except_fix_counters` all-zero; updates ledger `VL-ANCHOR-424` + `VL-COUNTERS-ZERO` on PASS |
+| **--full** | Everything in --fast, plus headless **draft_424** via `run_full_photometry_pipeline` into `tmp/session_baseline/<timestamp>/` (archive inputs read-only); **content anchor gate**: science-meaningful compare vs `draft_000424_snapshot_20260708_full` + photometry SHA (core `92939fab…` / extended `76642318…`); `except_fix_counters` all-zero; updates ledger `VL-ANCHOR-424` + `VL-COUNTERS-ZERO` on PASS. **Provenance block hash** printed informational only (git-bound; not a cross-commit gate). |
 
 Exit **0** = PASS, **1** = FAIL. Concise summary table printed at end.
+
+### Anchor cuts and entry paths (2026-07-08)
+
+| Path | Use |
+|------|-----|
+| `run_full_photometry_pipeline` | **Production path** and **exclusive anchor-cut recipe** from 2026-07-08. Builds `ProcFrameStore`, Phase 0+1 comp selection, Phase 2A LCs — single coherent artifact tree. |
+| Phase-2A-only rerun | Legacy validation shortcut (QUICKWINS-0708 Item 4). Skips `ProcFrameStore`; must **not** be used for anchor cuts. Produced the retired hybrid snapshot (`draft_000424_snapshot_20260708_hybrid_deprecated`). |
+
+**Two-fresh-runs rule:** before locking any photometry anchor, run the full production path **twice** independently; both must match the stored snapshot (science comparator + photometry SHA). Run 1 = anchor cut; run 2 = verification (`session_baseline_check.py --full`).
+
+**Retired anchor:** `Archive/Drafts/draft_000424_snapshot_20260708_hybrid_deprecated` — hybrid artifact (2026-06-24 comp CSV + 2026-07-07 Phase-2A-only LCs); not a valid anchor.
 
 ---
 

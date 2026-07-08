@@ -21,10 +21,12 @@ LEDGER_PATH = REPO_ROOT / "validation" / "VYVAR_VALIDATION_LEDGER.json"
 
 DRAFT_ID = 424
 SETUP = "NoFilter_60_2"
-SNAPSHOT_NAME = "draft_000424_snapshot_20260708"
-EXPECTED_PROVENANCE_HASH = (
-    "e1a7a311b02c81a5bf602080b345ac95d8ba351327c2f63edd5ca185ff29e80f"
-)
+SNAPSHOT_NAME = "draft_000424_snapshot_20260708_full"
+# Content anchors (coherent run_full_photometry_pipeline cut; set at PROC-STORE-TRUST-FIX re-anchor).
+EXPECTED_PHOTOMETRY_SHA_CORE = "92939fabaa6f099d0fc57268d10cf740f0623bec948da22716eae23fd674aacb"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED = "76642318b37dde9664f5bdcae8f2417e98406750e761b293fd9c3e4225176c45"
+EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = EXPECTED_PHOTOMETRY_SHA_CORE[:8]
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = EXPECTED_PHOTOMETRY_SHA_EXTENDED[:8]
 
 # Known untracked paths: WARN only (not FAIL). Extend when deliberately added.
 KNOWN_UNTRACKED_PREFIXES = (
@@ -205,7 +207,10 @@ def run_full_baseline(report: SessionReport) -> None:
     from database import VyvarDatabase  # noqa: PLC0415
     from except_fix_counters import get_except_fix_counters, reset_except_fix_counters  # noqa: PLC0415
     from photometry_core import run_full_photometry_pipeline  # noqa: PLC0415
-    from tests.photometry_sha import compare_photometry_science_meaningful  # noqa: PLC0415
+    from tests.photometry_sha import (  # noqa: PLC0415
+        compare_photometry_science_meaningful,
+        compute_photometry_sha,
+    )
 
     cfg = AppConfig()
     cfg.k2_mode = "literature"
@@ -283,17 +288,47 @@ def run_full_baseline(report: SessionReport) -> None:
         )
 
     prov_hash = provenance_block_hash(out_phot)
-    if prov_hash == EXPECTED_PROVENANCE_HASH:
-        report.add("full-provenance-hash", "PASS", prov_hash)
-    else:
-        # Hash includes git_hash; commit drift is expected after QUICKWINS-0708 (21c20e3).
-        # Science-meaningful compare vs snapshot is the authoritative anchor gate.
-        sci_ok = any(r.name == "full-science-compare" and r.status == "PASS" for r in report.results)
-        status = "WARN" if sci_ok else "FAIL"
+    report.add(
+        "full-provenance-hash",
+        "PASS",
+        f"{prov_hash[:16]}... (informational; git-bound, not cross-commit gate)",
+    )
+
+    core_sha, core_n = compute_photometry_sha(work_root, include_comp_qa=False)
+    ext_sha, ext_n = compute_photometry_sha(work_root, include_comp_qa=True)
+    snap_core_sha, snap_core_n = compute_photometry_sha(snapshot, include_comp_qa=False)
+    snap_ext_sha, snap_ext_n = compute_photometry_sha(snapshot, include_comp_qa=True)
+    if snap_core_sha != EXPECTED_PHOTOMETRY_SHA_CORE:
         report.add(
-            "full-provenance-hash",
-            status,
-            f"got {prov_hash[:16]}... expected {EXPECTED_PROVENANCE_HASH[:16]}... (git-bound)",
+            "full-snapshot-sha-core",
+            "FAIL",
+            f"snapshot {snap_core_sha[:16]}... != expected {EXPECTED_PHOTOMETRY_SHA_CORE[:16]}...",
+        )
+    else:
+        report.add("full-snapshot-sha-core", "PASS", f"{snap_core_sha[:16]}... n={snap_core_n}")
+    if core_sha == snap_core_sha and core_n == snap_core_n:
+        report.add(
+            "full-photometry-sha-core",
+            "PASS",
+            f"{core_sha[:16]}... n={core_n}",
+        )
+    else:
+        report.add(
+            "full-photometry-sha-core",
+            "FAIL",
+            f"run {core_sha[:16]}... n={core_n} vs snap {snap_core_sha[:16]}... n={snap_core_n}",
+        )
+    if ext_sha == snap_ext_sha and ext_n == snap_ext_n:
+        report.add(
+            "full-photometry-sha-extended",
+            "PASS",
+            f"{ext_sha[:16]}... n={ext_n}",
+        )
+    else:
+        report.add(
+            "full-photometry-sha-extended",
+            "FAIL",
+            f"run {ext_sha[:16]}... vs snapshot extended mismatch",
         )
 
     counters = get_except_fix_counters().snapshot()

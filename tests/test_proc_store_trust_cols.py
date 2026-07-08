@@ -13,7 +13,6 @@ from catalog_match_trust import (
     UNTRUSTED_FLUX_CATALOG_MATCH_MODES,
     normalize_catalog_match_mode,
 )
-from photometry_core import normalize_catalog_match_mode as p2a_normalize  # noqa: F401 — same fn
 from proc_frame_store import PROC_STORE_COLS, ProcFrameStore
 
 _KNOWN_EXPORT_MODES = (
