@@ -2,6 +2,22 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — EXCEPT-RETRIAGE-2 (pipeline.py evidence triage)
+
+**Scope:** 170 `pipeline.py` sites (EXC-0275–0444): preprocess, platesolve, catalog export,
+alignment, calibrate/CAL-DIAG. S0 mechanical all-T1/fix-now replaced with consequence-based tiers.
+
+**Counts:** T1 83, T2 41, T3 20, T4 26; fix-now **26**, narrow+log-ERROR 80; **10** silent-drop,
+**14** CAL-DIAG flagged.
+
+**TOP-10 fix batch:** EXC-0312 (optics bundle swallow), 0339 (VSX WCS empty), 0342 (Gaia cone 0),
+0275 (BPM bypass), 0317 (stale masterstars), 0331 (VYTARG), 0433 (CAL-DIAG DB sync), 0415
+(MASTERSTAR ref), 0350 (VSX variable drop), 0389 (stress sidecar continue).
+
+Artifact: `CURSOR_RESULT_except_retriage2.md`, `sandbox/_except_retriage2_apply.py`.
+
+---
+
 ## 2026-07-08 — EXCEPT-FIX-1 (TOP-10 T1 + firing probe)
 
 **Probe (drafts 424 NoFilter, 425 B, 427 g):** all 10 TOP-10 sites **NEVER-FIRE** on current data

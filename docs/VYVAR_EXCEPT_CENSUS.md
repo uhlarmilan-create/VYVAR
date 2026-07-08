@@ -80,6 +80,71 @@ Fix: terminal failures → ERROR + `except_fix_summary` counters in `pipeline_me
 
 **EXC-0626** `photometry_core.py:7217` — active target with empty `target_comps` returned without summary append (176-row silent loss under wrong comp CSV). Fix: `_phase2a_skip_empty_comps_target` + `phase2a_empty_comp_drop` counter + `_require_comparison_stars_per_target_schema` harness guard.
 
+## Tranche 2 - pipeline.py (EVIDENCE, 2026-07-08)
+
+**Scope:** `pipeline.py` (170 sites, EXC-0275-EXC-0444). Method: line-level code read; S0 mechanical tier/description replaced.
+
+### Tranche 2 summary
+
+| Tier | Count |
+|------|------:|
+| T1-SCIENCE | 83 |
+| T2-INTEGRITY | 41 |
+| T3-UI | 20 |
+| T4-LEGIT | 26 |
+
+| Disposition | Count |
+|-------------|------:|
+| narrow+log-ERROR | 80 |
+| fix-now | 26 |
+| narrow+comment(T4) | 26 |
+| leave+comment | 20 |
+| delete-dead | 18 |
+
+**CAL-DIAG flagged:** 14 sites. **Silent-drop flagged:** 10 sites. **fix-now:** 26 sites.
+
+### TOP-10 most dangerous T1 (first fix batch)
+
+1. **EXC-0312** `pipeline.py:3748` - plate solve optics bundle swallow
+
+Any exception in `_plate_solve_input_bundle` is swallowed, returning empty meta/eff_um/expected_arcsec_per_px so the solver runs without optics scale - widest blast-radius site in pipeline.py.
+
+2. **EXC-0339** `pipeline.py:5181` - VSX frame-bbox WCS failure empty DataFrame
+
+WCS `all_pix2world` failure returns empty VSX DataFrame, so frame-bbox variable_targets miss every VSX source for the field (documented Dec-slice drop mode).
+
+3. **EXC-0342** `pipeline.py:5725` - Gaia cone optics floor returns 0
+
+Optics-based Gaia cone floor computation failure returns 0.0 deg, allowing an undersized catalog cone that clips edge Gaia stars from field_catalog_cone.csv.
+
+4. **EXC-0275** `pipeline.py:220` - catalog BPM/COG enhancement bypass
+
+Aperture/BPM/COG enhancement failure returns the input catalog unchanged, so dao_flux, BPM flags, and nonlinearity columns never attach to matched stars.
+
+5. **EXC-0317** `pipeline.py:3883` - stale masterstars after WCS rescale
+
+Post-rescale masterstars_full_match.csv ra_deg/dec_deg recompute failure leaves sky coordinates inconsistent with the updated WCS.
+
+6. **EXC-0331** `pipeline.py:4326` - VYTARG header write failure
+
+VYTARGRA/VYTARGDE header write failure leaves per-frame FITS without blind-solve hints that vyvar_platesolver reads.
+
+7. **EXC-0433** `pipeline.py:15246` - CAL-DIAG OBS_FILES cal state not synced after calibrate
+
+Sequential calibrate: update_obs_file_calibration_state_by_raw_light_path passes after successful calibrate; FITS carries VY_CFLAG but DB provenance diverges from CAL-DIAG outcome.
+
+8. **EXC-0415** `pipeline.py:13104` - MASTERSTAR reference swap swallowed
+
+MASTERSTAR-as-reference swap failure is swallowed; alignment keeps star-count reference frame instead of MASTERSTAR pixel grid.
+
+9. **EXC-0350** `pipeline.py:6520` - VSX variable continue silent drop
+
+VSX-to-Gaia fallback continue on unparseable ra/dec excludes variable from variable_targets.csv with no surfaced drop count.
+
+10. **EXC-0389** `pipeline.py:10536` - stress-test sidecar continue silent frame drop
+
+stress_test_relative_rms_from_sidecars continues when a proc sidecar CSV cannot be read, omitting that frame from the flatness ensemble without a drop counter.
+
 ## Census
 
 | ID | Site | Except | Handler | Tier | What gets silently lost | Disposition |
@@ -358,176 +423,176 @@ Fix: terminal failures → ERROR + `except_fix_summary` counters in `pipeline_me
 | EXC-0272 | `photometry_report.py:5096` | Exception | log-below-ERROR (logging.warning) | T2-INTEGRITY | report/export may omit or misstate (if _epsf_fits is not None and Path(_epsf_fits).is_file(): / self._report_psf_summary_section(c) / except Exception as ex) | narrow+log |
 | EXC-0273 | `photometry_report.py:5189` | Exception | mixed-silent (log-below-ERROR+continue) | T2-INTEGRITY | report/export may omit or misstate (sparse_buf = [] / self._report_per_star_page(c, star_data) / except Exception as exc_star:  # noqa: BLE001 / logging.war) | narrow+log |
 | EXC-0274 | `photometry_report.py:5254` | Exception | mixed-silent (log-below-ERROR+return) | T2-INTEGRITY | report/export may omit or misstate (from reportlab.lib.styles import ParagraphStyle / from reportlab.platypus import Paragraph, Table, TableStyle / except E) | narrow+log |
-| EXC-0275 | `pipeline.py:220` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (cog_params=cog_params, / ) / except Exception:  # noqa: BLE001 / return df) | fix now |
-| EXC-0276 | `pipeline.py:247` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if s in ("false", "0", "f", "no"): / return False / except Exception:  # noqa: BLE001 / pass / return True) | fix now |
-| EXC-0277 | `pipeline.py:321` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (except Exception:  # noqa: BLE001 / ids.add(s) / except Exception:  # noqa: BLE001 / pass / for comp_p in (phot / "compa) | fix now |
-| EXC-0278 | `pipeline.py:411` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (except Exception:  # noqa: BLE001 / ids.add(s) / except Exception:  # noqa: BLE001 / pass / for comp_p in (phot / "compa) | fix now |
-| EXC-0279 | `pipeline.py:663` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (else: / LOGGER.debug("[PSF] Moffat skipped — no stars selected for fit") / except Exception as _mex:  # noqa: BLE001 / l) | fix now |
-| EXC-0280 | `pipeline.py:849` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (return / st.info(msg) / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0281 | `pipeline.py:866` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (_fn() / st.error(msg) / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0282 | `pipeline.py:1094` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (with fits.open(fits_path, memmap=False) as hdul: / return str(hdul[0].header.get("VY_QC", "ok")).strip().lower() / excep) | fix now |
-| EXC-0283 | `pipeline.py:1261` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (t = Time(d_s, scale="utc") / return float(t.jd) / except Exception:  # noqa: BLE001 / pass / return None) | fix now |
-| EXC-0284 | `pipeline.py:1298` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (hdr = hdul[0].header / data = np.asarray(hdul[0].data, dtype=np.float32) / except Exception as exc:  # noqa: BLE001 / re) | fix now |
-| EXC-0285 | `pipeline.py:1319` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (return None / return float(np.mean(per[ok])) / except Exception:  # noqa: BLE001 / return None) | fix now |
-| EXC-0286 | `pipeline.py:1344` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (return None / return float(np.mean(elong[ok])) / except Exception:  # noqa: BLE001 / return None) | fix now |
-| EXC-0287 | `pipeline.py:1371` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (try: / arr = np.asarray(data, dtype=np.float32) / except Exception as exc:  # noqa: BLE001 / return {**out, "error": str) | fix now |
-| EXC-0288 | `pipeline.py:1517` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults ("DEBUG: OBS_DRAFT center is 0/0 — beriem ako nevyplnené; skúšam UI, potom medián z OBS_FILES." / ) / except Exception:  ) | fix now |
-| EXC-0289 | `pipeline.py:1538` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults () / return float(med_ra), float(med_de) / except Exception:  # noqa: BLE001 / pass / return None, None) | fix now |
-| EXC-0290 | `pipeline.py:1580` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (with fits.open(p, memmap=False) as hdul: / return _estimate_fov_deg_from_header(hdul[0].header) / except Exception:  # n) | fix now |
-| EXC-0291 | `pipeline.py:1737` | Exception | continue | T1-SCIENCE | science path may skip or use stale defaults (try: / rid_to_scan[int(_r["ID"])] = int(_r.get("ID_SCANNING") or 0) / except Exception:  # noqa: BLE001 / continue / fwh) | fix now |
-| EXC-0292 | `pipeline.py:2240` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (for sid, v in sorted(by_scan.items()) / } / except Exception:  # noqa: BLE001 / pass / try:) | fix now |
-| EXC-0293 | `pipeline.py:2360` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (cal_paths.append(cand_m.resolve()) / continue / except Exception:  # noqa: BLE001 / pass / cand = src_root / raw.name) | fix now |
-| EXC-0294 | `pipeline.py:2394` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (cal_paths.append(cand_m.resolve()) / continue / except Exception:  # noqa: BLE001 / pass / cand = src_root / raw.name) | fix now |
-| EXC-0295 | `pipeline.py:2476` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (return int(psutil.virtual_memory().available), "psutil" / except Exception:  # noqa: BLE001 / return None, "unknown") | fix now |
-| EXC-0296 | `pipeline.py:2544` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if _lights_mem.is_dir(): / cal = _lights_mem / except Exception:  # noqa: BLE001 / pass / if cal.is_dir():) | fix now |
-| EXC-0297 | `pipeline.py:2606` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (return int(cp.cuda.runtime.getDeviceCount()) > 0 / except Exception:  # noqa: BLE001 / return False) | fix now |
-| EXC-0298 | `pipeline.py:2705` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (with fits.open(fp, memmap=False) as h: / v = _header_vy_fwhm_px(h[0].header) / except Exception:  # noqa: BLE001 / pass ) | fix now |
-| EXC-0299 | `pipeline.py:2845` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (_comp_names = [Path(p).name for p in files] / log_event(f"📂 MASTERSTAR COMPOSITION: Using [{', '.join(_comp_names)}]") /) | fix now |
-| EXC-0300 | `pipeline.py:2913` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if _v_fw is not None and 1.0 < _v_fw < 15.0: / _fwhm_auto_values.append(float(_v_fw)) / except Exception:  # noqa: BLE00) | fix now |
-| EXC-0301 | `pipeline.py:2941` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (h.flush() / except Exception as _exc:  # noqa: BLE001 / log_event(f"MASTERSTAR: VY_FWHM zapis zlyhal: {_exc!s}")) | fix now |
-| EXC-0302 | `pipeline.py:3008` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (finally: / db.conn.close() / except Exception as exc:  # noqa: BLE001 / log_event(f"MASTERSTAR DB update skipped: {exc!s) | fix now |
-| EXC-0303 | `pipeline.py:3039` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (): / return cand / except Exception:  # noqa: BLE001 / pass / # If relative, try directly.) | fix now |
-| EXC-0304 | `pipeline.py:3059` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (): / return cand2_proc / except Exception:  # noqa: BLE001 / pass / # Basename / fuzzy suffix fallback (handles prefixes) | fix now |
-| EXC-0305 | `pipeline.py:3172` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / _dbc.conn.close() / except Exception:  # noqa: BLE001 / pass / ranked = _sort_masterstar_paths_by_fwhm(files, fwh) | fix now |
-| EXC-0306 | `pipeline.py:3272` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (try: / return VyvarDatabase(Path(cfg.database_path)) / except Exception:  # noqa: BLE001 / return None) | fix now |
-| EXC-0307 | `pipeline.py:3330` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (try: / db = VyvarDatabase(Path(dbp)) / except Exception:  # noqa: BLE001 / return None / try:) | fix now |
-| EXC-0308 | `pipeline.py:3350` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (ny = int(hdr.get("NAXIS2", h) or h) / return plate_solve_fov_deg_diagonal_from_scale(nx, ny, float(sc)) / except Excepti) | fix now |
-| EXC-0309 | `pipeline.py:3355` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / db.conn.close() / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0310 | `pipeline.py:3421` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (if math.isfinite(float(sep)) and float(sep) > 0: / return float(sep) / except Exception:  # noqa: BLE001 / return None /) | fix now |
-| EXC-0311 | `pipeline.py:3480` | Exception | return | T1-SCIENCE | science path may skip or use stale defaults (try: / native = db.get_equipment_pixel_size_um(int(equipment_id)) / except Exception:  # noqa: BLE001 / return / if nati) | fix now |
-| EXC-0312 | `pipeline.py:3748` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if calculated_scale is not None: / log_event(f"MATH CHECK: ({eff_um} / {foc}) * 206.265 = {calculated_scale}") / except ) | fix now |
-| EXC-0313 | `pipeline.py:3754` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / db_u.conn.close() / except Exception:  # noqa: BLE001 / pass / return out) | fix now |
-| EXC-0314 | `pipeline.py:3793` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (scale = (pixel_um * bx) / focal_mm * 206.265 / return round(scale, 4) / except Exception:  # noqa: BLE001 / pass / retur) | fix now |
-| EXC-0315 | `pipeline.py:3844` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (try: / wh = w2.to_header(relax=True) / except Exception:  # noqa: BLE001 / return out / with fits.open(fp, mode="update") | fix now |
-| EXC-0316 | `pipeline.py:3856` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / h[k] = wh[k] / except Exception:  # noqa: BLE001 / pass / h.add_history("VYVAR: CD scaled to expected arcsec/pixe) | fix now |
-| EXC-0317 | `pipeline.py:3883` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults ("masterstars_full_match.csv ra_deg/dec_deg recomputed after WCS rescale" / ) / except Exception as _csv_exc:  # noqa: BL) | fix now |
-| EXC-0318 | `pipeline.py:3964` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (except subprocess.TimeoutExpired: / return {"solved": False, "reason": "solve-field subprocess timeout (900s wall)"} / e) | fix now |
-| EXC-0319 | `pipeline.py:3976` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (with fits.open(wcs_path, memmap=False) as wh: / wcs_hdr = wh[0].header.copy() / except Exception as exc:  # noqa: BLE001) | fix now |
-| EXC-0320 | `pipeline.py:4034` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (try: / from astroquery.astrometry_net import AstrometryNet  # type: ignore / except Exception as exc:  # noqa: BLE001 / ) | fix now |
-| EXC-0321 | `pipeline.py:4062` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (try: / wcs_header = ast.solve_from_image(str(masterstar_path), **solve_kw) / except Exception as exc:  # noqa: BLE001 / ) | fix now |
-| EXC-0322 | `pipeline.py:4092` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / h[k] = wcs_hdr[k] / except Exception:  # noqa: BLE001 / pass / hdul.flush()) | fix now |
-| EXC-0323 | `pipeline.py:4127` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"DEBUG: Initial WCS offset detected: {_off:.2f} pixels. Applying coarse correction (Pass 0)..." / ) / except Exception:) | fix now |
-| EXC-0324 | `pipeline.py:4138` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults ("Returning solved=False to prevent downstream matching on invalid WCS." / ) / except Exception:  # noqa: BLE001 / pass /) | fix now |
-| EXC-0325 | `pipeline.py:4203` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"root_path={_ms_path_root} exists_root={_ms_path_root.is_file()}" / ) / except Exception:  # noqa: BLE001 / pass / # Pr) | fix now |
-| EXC-0326 | `pipeline.py:4229` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults () / # Do not set preferred_mirror for per-frame solves here. / except Exception as _e:  # noqa: BLE001 / log_event(f"WAR) | fix now |
-| EXC-0327 | `pipeline.py:4255` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / _db_hint.conn.close() / except Exception:  # noqa: BLE001 / pass / except Exception:  # noqa: BLE001) | fix now |
-| EXC-0328 | `pipeline.py:4257` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (except Exception:  # noqa: BLE001 / pass / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0329 | `pipeline.py:4279` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / _db_ps.conn.close() / except Exception:  # noqa: BLE001 / pass / exp_scale = _auto_ps or exp_scale or None) | fix now |
-| EXC-0330 | `pipeline.py:4312` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"DEBUG: _try_vyvar hint_ra={hint_ra} hint_dec={hint_dec} is_masterstar={_is_masterstar}" / ) / except Exception:  # noq) | fix now |
-| EXC-0331 | `pipeline.py:4326` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (hdul.flush() / log_event(f"INFO: Per-frame VYTARG zapísaný: RA={float(hint_ra):.4f} Dec={float(hint_dec):.4f}") / except) | fix now |
-| EXC-0332 | `pipeline.py:4398` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (return False / return True / except Exception:  # noqa: BLE001 / return False) | fix now |
-| EXC-0333 | `pipeline.py:4442` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults () / tbl = finder(img2) / except Exception:  # noqa: BLE001 / return 0 / if tbl is None or len(tbl) == 0:) | fix now |
-| EXC-0334 | `pipeline.py:4494` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (c = SkyCoord.from_pixel((wpx - 1) / 2.0, (h - 1) / 2.0, wcs=w, origin=0) / return float(c.ra.deg), float(c.dec.deg) / ex) | fix now |
-| EXC-0335 | `pipeline.py:4633` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (_ra_l = float(center.icrs.ra.deg) / _de_l = float(center.icrs.dec.deg) / except Exception:  # noqa: BLE001 / return pd.D) | fix now |
-| EXC-0336 | `pipeline.py:4681` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"(Ra={_ra_l:.4f}, Dec={_de_l:.4f})" / ) / except Exception:  # noqa: BLE001 / pass / return out) | fix now |
-| EXC-0337 | `pipeline.py:4711` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (_ra_l = float(center.icrs.ra.deg) / _de_l = float(center.icrs.dec.deg) / except Exception:  # noqa: BLE001 / return pd.D) | fix now |
-| EXC-0338 | `pipeline.py:4756` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"(Ra={_ra_l:.4f}, Dec={_de_l:.4f})" / ) / except Exception:  # noqa: BLE001 / pass / return out) | fix now |
-| EXC-0339 | `pipeline.py:5181` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (ras = np.asarray(world[0], dtype=np.float64) / decs = np.asarray(world[1], dtype=np.float64) / except Exception:  # noqa) | fix now |
-| EXC-0340 | `pipeline.py:5219` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"(RA=[{ra_min:.4f},{ra_max:.4f}], Dec=[{de_min:.4f},{de_max:.4f}], bez cap)" / ) / except Exception:  # noqa: BLE001 / ) | fix now |
-| EXC-0341 | `pipeline.py:5276` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (db = VyvarDatabase(cfg.database_path) / return db.get_equipment_saturation_adu(eid) / except Exception:  # noqa: BLE001 ) | fix now |
-| EXC-0342 | `pipeline.py:5725` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults () / ) / except Exception:  # noqa: BLE001 / return 0.0) | fix now |
-| EXC-0343 | `pipeline.py:5764` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (r_cd = float(math.hypot(0.5 * (wpx - 1) * sx_deg, 0.5 * (h - 1) * sy_deg)) / radius_deg = max(radius_deg, r_cd * 1.22) /) | fix now |
-| EXC-0344 | `pipeline.py:5968` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"[COMP SELECT] Proximity veto: removed {n_removed} comp candidates within {float(veto_arcsec):.0f} arcsec of VSX target) | fix now |
-| EXC-0345 | `pipeline.py:5983` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"(annulus-aware intersection)" / ) / except Exception:  # noqa: BLE001 / pass / if exclude_nonlinear_badcolumn and "lik) | fix now |
-| EXC-0346 | `pipeline.py:6203` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (df = df.copy() / df["catalog_id"] = catalog_id_series_for_masterstars_export(df) / except Exception:  # noqa: BLE001 / p) | fix now |
-| EXC-0347 | `pipeline.py:6230` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (df["likely_nonlinear"] = df["catalog_id"].map(lambda c: sid_nl.get(_cid(c), 0)) / df["on_bad_column"] = df["catalog_id"]) | fix now |
-| EXC-0348 | `pipeline.py:6235` | Exception | mixed-silent (log_event+return) | T1-SCIENCE | science path may skip or use stale defaults (with fits.open(masterstar_fits, memmap=False) as hdul: / hdr = hdul[0].header / except Exception as _ms_open_exc:  # noq) | fix now |
-| EXC-0349 | `pipeline.py:6304` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (f"[BORDER] Field stable - using all {len(frames_for_bbox)} aligned frames for intersection bbox" / ) / except Exception ) | fix now |
-| EXC-0350 | `pipeline.py:6520` | Exception | continue | T1-SCIENCE | science path may skip or use stale defaults (vsx_ra = float(v.iloc[i]["ra_deg"]) / vsx_dec = float(v.iloc[i]["dec_deg"]) / except Exception:  # noqa: BLE001 / contin) | fix now |
-| EXC-0351 | `pipeline.py:6624` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"VSX no Gaia match: {vsx_name0} ra={vsx_ra:.4f} dec={vsx_dec:.4f} — hviezda nebude sledovaná" / ) / except Exception:  ) | fix now |
-| EXC-0352 | `pipeline.py:6741` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (comp_df = comp_df.copy() / comp_df["catalog_id"] = normalize_gaia_source_id_series(comp_df["catalog_id"]) / except Excep) | fix now |
-| EXC-0353 | `pipeline.py:6752` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (merged_var = merged_var.copy() / merged_var["catalog_id"] = normalize_gaia_source_id_series(merged_var["catalog_id"]) / ) | fix now |
-| EXC-0354 | `pipeline.py:6852` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"INFO: Comparison stars skopírované z {ref_dir.name} → {d.name}" / ) / except Exception:  # noqa: BLE001 / pass / excep) | fix now |
-| EXC-0355 | `pipeline.py:6918` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if math.isfinite(arcsec_per_px) and arcsec_per_px > 0: / return max(floor_px, float(match_sep_arcsec) / arcsec_per_px) /) | fix now |
-| EXC-0356 | `pipeline.py:7079` | Exception | continue | T1-SCIENCE | science path may skip or use stale defaults () / tloc = finder2(cutout) / except Exception:  # noqa: BLE001 / continue / if tloc is None or len(tloc) == 0:) | fix now |
-| EXC-0357 | `pipeline.py:7317` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"min={mn:.1f} max={mx:.1f}" / ) / except Exception:  # noqa: BLE001 / pass / # If the frame isn't constant (min != max)) | fix now |
-| EXC-0358 | `pipeline.py:7324` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if int(np.count_nonzero(nonzero_mask)) > 100: / std_dao = float(np.std(arr[nonzero_mask])) / except Exception:  # noqa: ) | fix now |
-| EXC-0359 | `pipeline.py:7339` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"threshold={float(_thr):.1f} fwhm={float(fwhm_eff):.2f}" / ) / except Exception:  # noqa: BLE001 / pass / finder = DAOS) | fix now |
-| EXC-0360 | `pipeline.py:7949` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (plate_solve_fov_deg=float(_fov_hint) if _fov_hint is not None else None, / ) / except Exception:  # noqa: BLE001 / pass ) | fix now |
-| EXC-0361 | `pipeline.py:8041` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"min={mn:.1f} max={mx:.1f}" / ) / except Exception:  # noqa: BLE001 / pass / try:) | fix now |
-| EXC-0362 | `pipeline.py:8047` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if int(np.count_nonzero(nonzero_mask)) > 100: / std_dao = float(np.std(arr[nonzero_mask])) / except Exception:  # noqa: ) | fix now |
-| EXC-0363 | `pipeline.py:8070` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"threshold={float(_thr):.1f} fwhm={float(fwhm_eff):.2f}" / ) / except Exception:  # noqa: BLE001 / pass / finder = DAOS) | fix now |
-| EXC-0364 | `pipeline.py:8766` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (wcs_distortion_log_suffix(hdr), / ) / except Exception:  # noqa: BLE001 / pass / if faintest_mag_limit is not None and n) | fix now |
-| EXC-0365 | `pipeline.py:8895` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults () / return c_i, r_i, wpx_i, h_i / except Exception:  # noqa: BLE001 / return None) | fix now |
-| EXC-0366 | `pipeline.py:8923` | Exception | continue | T1-SCIENCE | science path may skip or use stale defaults () / return c_i, r_i, wpx_i, h_i / except Exception:  # noqa: BLE001 / continue / return None) | fix now |
-| EXC-0367 | `pipeline.py:9039` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (int(d.shape[1]), / ) / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0368 | `pipeline.py:9114` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults () / return round(am, 5) / except Exception:  # noqa: BLE001 / return float("nan") / return float("nan")) | fix now |
-| EXC-0369 | `pipeline.py:9246` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (+ master_tab.loc[:, cols].head(5).to_string(index=False) / ) / except Exception:  # noqa: BLE001 / pass / try:) | fix now |
-| EXC-0370 | `pipeline.py:9256` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"ra_deg notna={int(master_tab['ra_deg'].notna().sum())}" / ) / except Exception:  # noqa: BLE001 / pass / try:) | fix now |
-| EXC-0371 | `pipeline.py:9263` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (debug_pixel_match["have_x"] = bool("x" in master_tab.columns) / debug_pixel_match["have_y"] = bool("y" in master_tab.col) | fix now |
-| EXC-0372 | `pipeline.py:9278` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (frame_name=fname, / ) / except Exception as exc:  # noqa: BLE001 / return { / "file": fname,) | fix now |
-| EXC-0373 | `pipeline.py:9321` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (frame_name=fname, / ) / except Exception as exc:  # noqa: BLE001 / return { / "file": fname,) | fix now |
-| EXC-0374 | `pipeline.py:9369` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (df = df.drop(columns=[c for c in join_cols if c in df.columns], errors="ignore") / df = df.merge(master_lookup, on="cata) | fix now |
-| EXC-0375 | `pipeline.py:9376` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (debug_pixel_match["plate_scale_arcsec_per_px"] = meta.get("plate_scale_arcsec_per_px") / debug_pixel_match["n_matched"] ) | fix now |
-| EXC-0376 | `pipeline.py:9515` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (hdr = hdul[0].header.copy() / data = np.array(hdul[0].data, dtype=np.float32, copy=True) / except Exception as exc:  # n) | fix now |
-| EXC-0377 | `pipeline.py:9539` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (try: / hdr = pickle.loads(hdr_pkl) / except Exception as exc:  # noqa: BLE001 / return { / "file": fname,) | fix now |
-| EXC-0378 | `pipeline.py:9549` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (try: / data = np.frombuffer(raw, dtype=np.float32, count=ny * nx).reshape((ny, nx)).copy() / except Exception as exc:  #) | fix now |
-| EXC-0379 | `pipeline.py:9785` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (meta_path.name, / ) / except Exception:  # noqa: BLE001 / pass / if _reuse:) | fix now |
-| EXC-0380 | `pipeline.py:10082` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (equipment_saturate_adu=equipment_saturate_adu, / ) / except Exception as exc:  # noqa: BLE001 / return {"file": fname, ") | fix now |
-| EXC-0381 | `pipeline.py:10114` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (fov_draft_id=int(draft_id) if draft_id is not None else None, / ) / except Exception as exc:  # noqa: BLE001 / return {") | fix now |
-| EXC-0382 | `pipeline.py:10249` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (hdr = hdul[0].header.copy() / data = np.array(hdul[0].data, dtype=np.float32, copy=True) / except Exception as exc:  # n) | fix now |
-| EXC-0383 | `pipeline.py:10252` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (return {"file": fp.name, "status": f"read_error: {exc}", "csv": ""} / return _run_one_catalog(fp, hdr, data) / except Ex) | fix now |
-| EXC-0384 | `pipeline.py:10260` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (base = Path(aligned_target_dir) / name / return _run_one_catalog(base, hdr0.copy(), np.asarray(arr0, dtype=np.float32)) ) | fix now |
-| EXC-0385 | `pipeline.py:10354` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (+ json.dumps(res.get("debug_pixel_match"), ensure_ascii=False, default=str) / ) / except Exception:  # noqa: BLE001 / lo) | fix now |
-| EXC-0386 | `pipeline.py:10393` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (+ json.dumps(res.get("debug_pixel_match"), ensure_ascii=False, default=str) / ) / except Exception:  # noqa: BLE001 / lo) | fix now |
-| EXC-0387 | `pipeline.py:10423` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (+ json.dumps(r.get("debug_pixel_match"), ensure_ascii=False, default=str) / ) / except Exception:  # noqa: BLE001 / log_) | fix now |
-| EXC-0388 | `pipeline.py:10443` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (+ json.dumps(r.get("debug_pixel_match"), ensure_ascii=False, default=str) / ) / except Exception:  # noqa: BLE001 / log_) | fix now |
-| EXC-0389 | `pipeline.py:10536` | Exception | continue | T1-SCIENCE | science path may skip or use stale defaults (_dtype_sc["name"] = str / dff = pd.read_csv(sidecar, dtype=_dtype_sc) / except Exception:  # noqa: BLE001 / continue / i) | fix now |
-| EXC-0390 | `pipeline.py:10625` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / h[k] = wh[k] / except Exception:  # noqa: BLE001 / pass / h.add_history(history_note)) | fix now |
-| EXC-0391 | `pipeline.py:11040` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (f"MASTERSTAR: DB výber (draft {int(draft_id)}) sa nepodarilo namapovať na FITS pod {detrended_root}." / ) / except Excep) | fix now |
-| EXC-0392 | `pipeline.py:11045` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / _db_ms.conn.close() / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0393 | `pipeline.py:11082` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if _vals.size: / _ms_fwhm_fb = float(np.median(_vals)) / except Exception:  # noqa: BLE001 / pass / finally:) | fix now |
-| EXC-0394 | `pipeline.py:11087` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / _dbc_fw.conn.close() / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0395 | `pipeline.py:11106` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if p not in _cand_all and p.is_file(): / _cand_all.append(p) / except Exception:  # noqa: BLE001 / pass / if not _cand_a) | fix now |
-| EXC-0396 | `pipeline.py:11160` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / _db_ms_build.conn.close() / except Exception:  # noqa: BLE001 / pass / try:) | fix now |
-| EXC-0397 | `pipeline.py:11166` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if _legacy_master.is_file() and _legacy_master.resolve() != masterstar_fits.resolve(): / _legacy_master.unlink(missing_o) | fix now |
-| EXC-0398 | `pipeline.py:11275` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / _db_scale.conn.close() / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0399 | `pipeline.py:11379` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / _dbc_hint.conn.close() / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0400 | `pipeline.py:11634` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (hdul.flush() / log_event(f"VY_PLTS={_vy_plts_f:.4f} written to MASTERSTAR.fits") / except Exception as exc:  # noqa: BLE) | fix now |
-| EXC-0401 | `pipeline.py:11756` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (effective_radius_deg=float(_r_cat_need), / ) / except Exception as exc:  # noqa: BLE001 / log_event(f"Katalóg: kontrola ) | fix now |
-| EXC-0402 | `pipeline.py:11820` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (f"(mirror={_mir or 'native'}, pre astrometry optimizer)." / ) / except Exception as exc:  # noqa: BLE001 / log_event(f"M) | fix now |
-| EXC-0403 | `pipeline.py:11910` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (f"MASTERSTAR repair: repaired={rep.get('repaired')} warnings={rep.get('warnings')} ({Path(csv_path).name})" / ) / except) | fix now |
-| EXC-0404 | `pipeline.py:11949` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (log_event(f"masterstars bp_rp fallback: {_n_bp_fill}/{_n_bp_miss} doplnených z Gaia DB") / _vyvar_df_to_csv(df_final, cs) | fix now |
-| EXC-0405 | `pipeline.py:12051` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (f"[MASTERSTAR] VY_FWHM_GAUSS={float(_gaussian_fwhm):.3f}px uložené do hlavičky (2D fit)" / ) / except Exception as e:  #) | fix now |
-| EXC-0406 | `pipeline.py:12063` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults () / _hdul_tag.flush() / except Exception:  # noqa: BLE001 / pass / # Small flush pause: UI may read CSV immediately afte) | fix now |
-| EXC-0407 | `pipeline.py:12070` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / del df_out / except Exception:  # noqa: BLE001 / pass / # Keep platesolve clean: remove temporary/duplicate artif) | fix now |
-| EXC-0408 | `pipeline.py:12081` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if Path(_dup).is_file() and Path(_dup).resolve() != Path(csv_path).resolve(): / Path(_dup).unlink(missing_ok=True) / exc) | fix now |
-| EXC-0409 | `pipeline.py:12093` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (try: / _sync_comparison_stars_across_setups(Path(platesolve_dir).parent) / except Exception as _sync_exc:  # noqa: BLE00) | fix now |
-| EXC-0410 | `pipeline.py:12420` | Exception | continue | T1-SCIENCE | science path may skip or use stale defaults (try: / mj = float(gdf["g_mag"].iloc[j]) / except Exception:  # noqa: BLE001 / continue / if not math.isfinite(mj):) | fix now |
-| EXC-0411 | `pipeline.py:12429` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if abs(dm) > 0.001: / excl = "Gaia neighbor blend" / except Exception:  # noqa: BLE001 / pass / if likely_nl and excl is) | fix now |
-| EXC-0412 | `pipeline.py:12501` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults () / out.update(_wp2) / except Exception as _wp2_exc:  # noqa: BLE001 / log_event( / f"MASTERSTAR: DB-aware photometry-pl) | fix now |
-| EXC-0413 | `pipeline.py:12971` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (finally: / _db_sat.conn.close() / except Exception:  # noqa: BLE001 / pass / if not files:) | fix now |
-| EXC-0414 | `pipeline.py:13021` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / _db_pf.conn.close() / except Exception:  # noqa: BLE001 / pass / _j_psep = job.get("per_frame_catalog_match_sep_a) | fix now |
-| EXC-0415 | `pipeline.py:13104` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / log_event(f"DEBUG: Using MASTERSTAR as alignment reference failed: {_ms_ref_exc}") / except Exception:  # noqa: B) | fix now |
-| EXC-0416 | `pipeline.py:13134` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / log_event(f"DEBUG: Reference WCS copy from MASTERSTAR failed: {_wcs_copy_exc}") / except Exception:  # noqa: BLE0) | fix now |
-| EXC-0417 | `pipeline.py:13159` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (f"INFO: Sibling-recovery alignment using existing MASTERSTAR: {_ms_path.name}" / ) / except Exception as _sib_ms_exc:  #) | fix now |
-| EXC-0418 | `pipeline.py:13233` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (f"NaN count: {np.isnan(data_to_detect).sum()}" / ) / except Exception:  # noqa: BLE001 / pass / ref_xy_all = _alignment_) | fix now |
-| EXC-0419 | `pipeline.py:13272` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if tot > int(0.70 * avail): / use_ram_handoff = False / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0420 | `pipeline.py:13317` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (vv = float(_v) / return float(vv) if math.isfinite(vv) and vv > 0 else None / except Exception:  # noqa: BLE001 / return) | fix now |
-| EXC-0421 | `pipeline.py:13335` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (if int(s_src.st_mtime) == int(s_dst.st_mtime): / return True / except Exception:  # noqa: BLE001 / return False / # Head) | fix now |
-| EXC-0422 | `pipeline.py:13604` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if _var.is_file(): / cat_info["variable_targets_csv"] = str(_var) / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0423 | `pipeline.py:13625` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults () / cat_info.update(_wp_aligned or {}) / except Exception:  # noqa: BLE001 / pass) | fix now |
-| EXC-0424 | `pipeline.py:13771` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (df = df.copy() / df["catalog_id"] = normalize_gaia_source_id_series(df["catalog_id"]) / except Exception:  # noqa: BLE00) | fix now |
-| EXC-0425 | `pipeline.py:14095` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (try: / return VyvarDatabase(Path(p)) / except Exception:  # noqa: BLE001 / return None) | fix now |
-| EXC-0426 | `pipeline.py:14694` | Exception | log-below-ERROR (logging.warning) | T1-SCIENCE | science path may skip or use stale defaults (hdr, / ) / except Exception as exc:  # noqa: BLE001 / logging.warning("[PERF-10] DAO QC in calibrate failed for %s: %s",) | fix now |
-| EXC-0427 | `pipeline.py:14835` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (try: / log_exception(f"CHYBA WORKERA: {Path(src_s).name}", exc) / except Exception:  # noqa: BLE001 / pass / return {) | fix now |
-| EXC-0428 | `pipeline.py:14914` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (calib_flags="P", / ) / except Exception:  # noqa: BLE001 / pass / continue) | fix now |
-| EXC-0429 | `pipeline.py:14941` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (calib_flags="P", / ) / except Exception:  # noqa: BLE001 / pass / except Exception:  # noqa: BLE001) | fix now |
-| EXC-0430 | `pipeline.py:14948` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (if db_pt is not None: / db_pt.conn.close() / except Exception:  # noqa: BLE001 / pass / return stats) | fix now |
-| EXC-0431 | `pipeline.py:15082` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (observation_id=observation_id, / ) / except Exception as exc:  # noqa: BLE001 / log_event(f"OBS_FILES IS_REJECTED filter) | fix now |
-| EXC-0432 | `pipeline.py:15132` | Exception | log_event (log_event) | T1-SCIENCE | science path may skip or use stale defaults (finally: / _db_cal_diag.conn.close() / except Exception as exc:  # noqa: BLE001 / log_event(f"DIAGNOSTIKA KALIBRÁCIE: me) | fix now |
-| EXC-0433 | `pipeline.py:15246` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (calib_flags=_flags, / ) / except Exception:  # noqa: BLE001 / pass / stats["processed"] += 1) | fix now |
-| EXC-0434 | `pipeline.py:15377` | Exception | pass | T1-SCIENCE | science path may skip or use stale defaults (calib_flags=_flags, / ) / except Exception:  # noqa: BLE001 / pass / if ud:) | fix now |
-| EXC-0435 | `pipeline.py:15458` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (return 3.0 / return float(np.clip(mf, 1.0, 20.0)) / except Exception:  # noqa: BLE001 / return 3.0) | fix now |
-| EXC-0436 | `pipeline.py:15790` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults ("n_stars_detected": n_peaks_total, / } / except Exception:  # noqa: BLE001 / return {"fwhm_px": None, "elongation": None) | fix now |
-| EXC-0437 | `pipeline.py:15857` | Exception | continue | T1-SCIENCE | science path may skip or use stale defaults (if ny > 0 and nx > 0: / return ny, nx / except Exception:  # noqa: BLE001 / continue / return 2048, 2048) | fix now |
-| EXC-0438 | `pipeline.py:15917` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults ("max": float(np.nanmax(arr)) if arr.size else None, / } / except Exception as exc:  # noqa: BLE001 / return {"src": str() | fix now |
-| EXC-0439 | `pipeline.py:16005` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults ("bg_median": bg_m.get("bg_median"), / } / except Exception as exc:  # noqa: BLE001 / return {"src": str(src), "dst": str) | fix now |
-| EXC-0440 | `pipeline.py:16237` | Exception | continue | T1-SCIENCE | science path may skip or use stale defaults (ras.append(ra_v) / decs.append(de_v) / except Exception:  # noqa: BLE001 / continue / if not ras or not decs:) | fix now |
-| EXC-0441 | `pipeline.py:16596` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (if math.isfinite(ra0) and math.isfinite(de0) and (-90.0 <= de0 <= 90.0): / return ra0, de0 / except Exception:  # noqa: ) | fix now |
-| EXC-0442 | `pipeline.py:16609` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults (if math.isfinite(jd_f) and jd_f > 0: / return jd_f / except Exception:  # noqa: BLE001 / return None / return None) | fix now |
-| EXC-0443 | `pipeline.py:16685` | Exception | mixed-silent (return) | T1-SCIENCE | science path may skip or use stale defaults ("sep_arcmin_max": float(max(seps_arcmin)) if seps_arcmin else None, / } / except Exception:  # noqa: BLE001 / return Non) | fix now |
-| EXC-0444 | `pipeline.py:17666` | Exception | mixed-silent (log-below-ERROR+return) | T1-SCIENCE | science path may skip or use stale defaults (try: / rows = db.fetch_draft_light_rows_for_quality(int(draft_id)) / except Exception as exc:  # noqa: BLE001 / logging.) | fix now |
+| EXC-0275 | `pipeline.py:220` | Exception | mixed-silent (return) | T1-SCIENCE | [SILENT-DROP] Aperture/BPM/COG enhancement failure returns the input catalog unchanged, so dao_flux, BPM flags, and nonlinearity columns never attach to matched stars. | fix-now |
+| EXC-0276 | `pipeline.py:247` | Exception | pass | T4-LEGIT | Unparseable VY_ALGN header values default to aligned=True, preserving legacy frames without the tag. | narrow+comment(T4) |
+| EXC-0277 | `pipeline.py:321` | Exception | pass | T1-SCIENCE | [SILENT-DROP] active_targets.csv load failure leaves the ePSF target-id set empty, excluding programme stars from PSF star selection. | fix-now |
+| EXC-0278 | `pipeline.py:411` | Exception | pass | T1-SCIENCE | [SILENT-DROP] active_targets.csv load failure in the LC catalog-id builder drops all active targets from the gated PSF coverage set. | fix-now |
+| EXC-0279 | `pipeline.py:663` | Exception | log_event (log_event) | T1-SCIENCE | Moffat aperture-correction fit failure removes moffat_flux/moffat_ac_factor columns from the per-frame catalog merge. | narrow+log-ERROR |
+| EXC-0280 | `pipeline.py:849` | Exception | pass | T3-UI | Streamlit st.info footer routing failure only suppresses an in-app status banner; log_event already ran. | delete-dead |
+| EXC-0281 | `pipeline.py:866` | Exception | pass | T3-UI | Streamlit st.error display failure only hides the red UI banner; the message was already logged. | delete-dead |
+| EXC-0282 | `pipeline.py:1094` | Exception | mixed-silent (return) | T2-INTEGRITY | FITS open failure makes _get_vy_qc_status return the literal string 'error', which can mis-classify frames versus true VY_QC values. | narrow+log-ERROR |
+| EXC-0283 | `pipeline.py:1261` | Exception | pass | T2-INTEGRITY | DATE-OBS/Time parse failure leaves inspection_jd NULL in OBS_FILES QC updates. | narrow+log-ERROR |
+| EXC-0284 | `pipeline.py:1298` | Exception | mixed-silent (return) | T1-SCIENCE | FITS read failure aborts DAO QC for that light, so FWHM/sky/star_count never populate OBS_FILES for the frame. | narrow+log-ERROR |
+| EXC-0285 | `pipeline.py:1319` | Exception | mixed-silent (return) | T2-INTEGRITY | DAO roundness aggregation failure stores roundness_mean=NULL instead of a numeric QC metric. | leave+comment |
+| EXC-0286 | `pipeline.py:1344` | Exception | mixed-silent (return) | T2-INTEGRITY | DAO elongation aggregation failure stores elongation_mean=NULL, disabling roundness-based auto-reject for that frame. | leave+comment |
+| EXC-0287 | `pipeline.py:1371` | Exception | mixed-silent (return) | T1-SCIENCE | Array coercion failure returns early with error set but star_count=0, so the frame is treated as having zero detected stars. | narrow+log-ERROR |
+| EXC-0288 | `pipeline.py:1517` | Exception | pass | T1-SCIENCE | OBS_DRAFT center DB read failure silently skips DB pointing, forcing UI/median fallbacks for catalog cone center. | narrow+log-ERROR |
+| EXC-0289 | `pipeline.py:1538` | Exception | pass | T1-SCIENCE | Draft median pointing computation failure returns (None,None), leaving preprocess without a field center. | narrow+log-ERROR |
+| EXC-0290 | `pipeline.py:1580` | Exception | mixed-silent (return) | T1-SCIENCE | FITS FOV header read failure returns None, removing the plate-solve FOV diameter hint for that frame. | narrow+log-ERROR |
+| EXC-0291 | `pipeline.py:1737` | Exception | continue | T1-SCIENCE | [SILENT-DROP] Bad ID/ID_SCANNING row parsing is dropped via continue, so that frame is omitted from by-scanning QC aggregates with no reject counter. | fix-now |
+| EXC-0292 | `pipeline.py:2240` | Exception | pass | T3-UI | by_scanning summary block failure only prevents populating Streamlit session medians; DB QC rows were already written. | leave+comment |
+| EXC-0293 | `pipeline.py:2360` | Exception | pass | T1-SCIENCE | is_relative_to guard failure skips an archive-mapped calibrated path, potentially excluding a DB-selected frame until rescue/fuzzy fallback. | narrow+log-ERROR |
+| EXC-0294 | `pipeline.py:2394` | Exception | pass | T1-SCIENCE | Same rescue-pass path guard failure can omit a calibrated FITS from the preprocess file list without incrementing a drop stat. | narrow+log-ERROR |
+| EXC-0295 | `pipeline.py:2476` | Exception | mixed-silent (return) | T4-LEGIT | Missing psutil makes RAM estimates 'unknown' but does not alter which frames are processed. | narrow+comment(T4) |
+| EXC-0296 | `pipeline.py:2544` | Exception | pass | T4-LEGIT | resolve_draft_lights_root failure falls back to calibrated/lights for memory profiling only. | narrow+comment(T4) |
+| EXC-0297 | `pipeline.py:2606` | Exception | mixed-silent (return) | T4-LEGIT | CuPy/CUDA probe failure reports GPU unavailable without changing photometry code paths here. | narrow+comment(T4) |
+| EXC-0298 | `pipeline.py:2705` | Exception | pass | T1-SCIENCE | Per-file VY_FWHM header read failure removes that frame from FWHM-ranked MASTERSTAR candidacy scoring. | narrow+log-ERROR |
+| EXC-0299 | `pipeline.py:2845` | Exception | pass | T2-INTEGRITY | MASTERSTAR composition filename log is skipped when Path/name extraction fails; the copy still proceeds. | leave+comment |
+| EXC-0300 | `pipeline.py:2913` | Exception | pass | T1-SCIENCE | Auto-FWHM scan skips frames whose VY_FWHM header cannot be read, biasing the median written into MASTERSTAR.fits. | narrow+log-ERROR |
+| EXC-0301 | `pipeline.py:2941` | Exception | log_event (log_event) | T1-SCIENCE | VY_FWHM header write/flush failure leaves MASTERSTAR.fits without the auto-computed FWHM used by DAO and annulus sizing. | fix-now |
+| EXC-0302 | `pipeline.py:3008` | Exception | log_event (log_event) | T2-INTEGRITY | OBS_FILES WCS/STARS columns are not updated when the post-solve DB write fails after platesolve. | narrow+log-ERROR |
+| EXC-0303 | `pipeline.py:3039` | Exception | pass | T1-SCIENCE | Absolute-path relative_to check failure prevents mapping OBS_FILES paths to processed FITS under the lights tree. | narrow+log-ERROR |
+| EXC-0304 | `pipeline.py:3059` | Exception | pass | T1-SCIENCE | proc_* filename fallback construction failure blocks resolving raw light names to processed FITS for MASTERSTAR input. | narrow+log-ERROR |
+| EXC-0305 | `pipeline.py:3172` | Exception | pass | T4-LEGIT | DB conn.close failure after FWHM map fetch is ignored once ranked paths are computed. | narrow+comment(T4) |
+| EXC-0306 | `pipeline.py:3272` | Exception | mixed-silent (return) | T2-INTEGRITY | VyvarDatabase open failure returns None, disabling DB-backed helpers that callers treat as optional. | narrow+log-ERROR |
+| EXC-0307 | `pipeline.py:3330` | Exception | mixed-silent (return) | T1-SCIENCE | [CAL-DIAG] Database open failure in resolve_plate_solve_fov_deg_hint returns None, removing optics-based FOV hints for solving. | narrow+log-ERROR |
+| EXC-0308 | `pipeline.py:3350` | Exception | mixed-silent (return) | T1-SCIENCE | [CAL-DIAG] DB plate-scale/FOV computation failure returns None instead of a diagonal FOV estimate for the solver. | narrow+log-ERROR |
+| EXC-0309 | `pipeline.py:3355` | Exception | pass | T4-LEGIT | db.conn.close failure in FOV hint finally block is ignored after the hint is computed or skipped. | narrow+comment(T4) |
+| EXC-0310 | `pipeline.py:3421` | Exception | mixed-silent (return) | T1-SCIENCE | WCS corner separation failure makes get_auto_fov return None when header optics are also missing. | narrow+log-ERROR |
+| EXC-0311 | `pipeline.py:3480` | Exception | return | T1-SCIENCE | [CAL-DIAG] EQUIPMENTS.PIXELSIZE fetch failure aborts merging native pixel pitch, leaving plate-scale metadata at FITS-only values. | fix-now |
+| EXC-0312 | `pipeline.py:3748` | Exception | pass | T1-SCIENCE | [CAL-DIAG] Any exception in _plate_solve_input_bundle is swallowed, returning empty meta/eff_um/expected_arcsec_per_px so the solver runs without optics scale. | fix-now |
+| EXC-0313 | `pipeline.py:3754` | Exception | pass | T4-LEGIT | db_u.conn.close failure in plate-solve bundle finally is ignored after bundle assembly. | narrow+comment(T4) |
+| EXC-0314 | `pipeline.py:3793` | Exception | pass | T1-SCIENCE | [CAL-DIAG] compute_plate_scale_from_db failure returns None, so expected arcsec/pixel is unavailable to the Gaia solver. | narrow+log-ERROR |
+| EXC-0315 | `pipeline.py:3844` | Exception | mixed-silent (return) | T1-SCIENCE | w2.to_header failure aborts CD rescale entirely, leaving MASTERSTAR WCS at the pre-optics pixel scale. | fix-now |
+| EXC-0316 | `pipeline.py:3856` | Exception | pass | T1-SCIENCE | Individual WCS keyword assignment failures are skipped, producing a partially updated celestial header after rescale. | fix-now |
+| EXC-0317 | `pipeline.py:3883` | Exception | log_event (log_event) | T1-SCIENCE | Post-rescale masterstars_full_match.csv ra_deg/dec_deg recompute failure leaves catalog sky positions inconsistent with the updated WCS. | fix-now |
+| EXC-0318 | `pipeline.py:3964` | Exception | mixed-silent (return) | T4-LEGIT | solve-field timeout returns solved=False with an explicit reason string (not silent). | narrow+comment(T4) |
+| EXC-0319 | `pipeline.py:3976` | Exception | mixed-silent (return) | T1-SCIENCE | Generated .wcs read failure returns solved=False without applying any WCS to the image. | narrow+log-ERROR |
+| EXC-0320 | `pipeline.py:4034` | Exception | mixed-silent (return) | T1-SCIENCE | astroquery import failure disables the Astrometry.net API fallback with an explicit reason payload. | narrow+log-ERROR |
+| EXC-0321 | `pipeline.py:4062` | Exception | mixed-silent (return) | T1-SCIENCE | Astrometry.net solve_from_image exception returns solved=False, leaving the frame without API-derived WCS. | narrow+log-ERROR |
+| EXC-0322 | `pipeline.py:4092` | Exception | pass | T1-SCIENCE | Per-keyword WCS merge failures during _apply_wcs_header_to_fits drop individual celestial keywords silently. | narrow+log-ERROR |
+| EXC-0323 | `pipeline.py:4127` | Exception | pass | T3-UI | Initial WCS offset debug log is suppressed; solve outcome is unchanged. | delete-dead |
+| EXC-0324 | `pipeline.py:4138` | Exception | pass | T1-SCIENCE | Low match-rate guard failure can allow solved=True to propagate when match_rate<2% should force solved=False. | fix-now |
+| EXC-0325 | `pipeline.py:4203` | Exception | pass | T3-UI | debug_platesolver MASTERSTAR search trace is skipped without affecting hint injection. | delete-dead |
+| EXC-0326 | `pipeline.py:4229` | Exception | log_event (log_event) | T1-SCIENCE | Per-frame CRVAL hint extraction from MASTERSTAR failure leaves hint_ra/hint_dec unset, increasing blind-solve risk. | narrow+log-ERROR |
+| EXC-0327 | `pipeline.py:4255` | Exception | pass | T4-LEGIT | _db_hint.conn.close failure is ignored after hint lookup attempt. | narrow+comment(T4) |
+| EXC-0328 | `pipeline.py:4257` | Exception | pass | T2-INTEGRITY | Outer OBS_DRAFT hint DB block failure is swallowed after inner cleanup. | narrow+comment(T4) |
+| EXC-0329 | `pipeline.py:4279` | Exception | pass | T4-LEGIT | _db_ps.conn.close failure is ignored once plate-scale auto lookup finishes. | narrow+comment(T4) |
+| EXC-0330 | `pipeline.py:4312` | Exception | pass | T3-UI | debug_platesolver hint_ra/hint_dec log is skipped; solver inputs unchanged. | delete-dead |
+| EXC-0331 | `pipeline.py:4326` | Exception | log_event (log_event) | T1-SCIENCE | VYTARGRA/VYTARGDE header write failure leaves per-frame FITS without blind-solve hints that vyvar_platesolver reads. | fix-now |
+| EXC-0332 | `pipeline.py:4398` | Exception | mixed-silent (return) | T4-LEGIT | WCS equality check exception returns False, conservatively treating frames as astrometrically distinct. | narrow+comment(T4) |
+| EXC-0333 | `pipeline.py:4442` | Exception | mixed-silent (return) | T1-SCIENCE | DAOStarFinder exception assigns score 0 for that candidate frame in reference-frame ranking. | narrow+log-ERROR |
+| EXC-0334 | `pipeline.py:4494` | Exception | mixed-silent (return) | T1-SCIENCE | WCS field-center conversion failure returns None, blocking cone queries keyed to chip center. | narrow+log-ERROR |
+| EXC-0335 | `pipeline.py:4633` | Exception | mixed-silent (return) | T2-INTEGRITY | SkyCoord center extraction failure logs Ra/Dec as NaN but still runs the Gaia SQL box query. | narrow+log-ERROR |
+| EXC-0336 | `pipeline.py:4681` | Exception | pass | T2-INTEGRITY | VSX local cone success log is skipped; returned DataFrame is unchanged. | leave+comment |
+| EXC-0337 | `pipeline.py:4711` | Exception | mixed-silent (return) | T1-SCIENCE | Exoplanet host center extraction failure returns an empty DataFrame, dropping all exo-host annotations for the field. | narrow+log-ERROR |
+| EXC-0338 | `pipeline.py:4756` | Exception | pass | T2-INTEGRITY | Exoplanet cone count log is skipped when logging itself fails. | leave+comment |
+| EXC-0339 | `pipeline.py:5181` | Exception | mixed-silent (return) | T1-SCIENCE | [SILENT-DROP] WCS all_pix2world failure returns empty VSX DataFrame, so frame-bbox variable_targets miss every VSX source for that field. | fix-now |
+| EXC-0340 | `pipeline.py:5219` | Exception | pass | T2-INTEGRITY | VSX frame-bbox search count log is skipped; query result is already materialized. | leave+comment |
+| EXC-0341 | `pipeline.py:5276` | Exception | mixed-silent (return) | T1-SCIENCE | [CAL-DIAG] EQUIPMENTS.SATURATE_ADU DB read failure makes equipment saturation None, weakening saturation gating in catalog and cal-diagnostic paths. | narrow+log-ERROR |
+| EXC-0342 | `pipeline.py:5725` | Exception | mixed-silent (return) | T1-SCIENCE | [CAL-DIAG] Optics-based Gaia cone floor computation failure returns 0.0°, allowing an undersized catalog cone that clips edge Gaia stars. | fix-now |
+| EXC-0343 | `pipeline.py:5764` | Exception | pass | T1-SCIENCE | proj_plane_pixel_scales failure skips the CD-based cone radius boost, risking too-small Gaia prefetch cones at chip edges. | narrow+log-ERROR |
+| EXC-0344 | `pipeline.py:5968` | Exception | pass | T1-SCIENCE | VSX proximity veto exception leaves comparison-star candidates within 10″ of variable targets in the ensemble pool. | fix-now |
+| EXC-0345 | `pipeline.py:5983` | Exception | pass | T1-SCIENCE | Safe-bbox border filter failure keeps comparison candidates outside the annulus-shrunk intersection, polluting ensemble photometry. | narrow+log-ERROR |
+| EXC-0346 | `pipeline.py:6203` | Exception | pass | T1-SCIENCE | catalog_id_series_for_masterstars_export failure leaves float-rounded Gaia IDs in photometry plan CSVs. | narrow+log-ERROR |
+| EXC-0347 | `pipeline.py:6230` | Exception | pass | T1-SCIENCE | MASTER_SOURCES likely_nonlinear/on_bad_column DB merge failure omits nonlinear/bad-column flags from comparison_stars.csv selection input. | fix-now |
+| EXC-0348 | `pipeline.py:6235` | Exception | mixed-silent (log_event+return) | T1-SCIENCE | MASTERSTAR.fits open failure logs and returns error dict, skipping comparison/variable target CSV generation for the setup. | narrow+log-ERROR |
+| EXC-0349 | `pipeline.py:6304` | Exception | log_event (log_event) | T2-INTEGRITY | detect_field_jumps failure logs and falls back to all aligned frames for border bbox, potentially wrong safe_bbox after meridian jumps. | narrow+log-ERROR |
+| EXC-0350 | `pipeline.py:6520` | Exception | continue | T1-SCIENCE | [SILENT-DROP] VSX→Gaia fallback continue skips a variable whose ra/dec cannot be parsed, excluding it from variable_targets.csv with no row count. | fix-now |
+| EXC-0351 | `pipeline.py:6624` | Exception | pass | T2-INTEGRITY | Per-variable 'no Gaia match' log line is skipped when logging fails; catalog_id remains empty. | leave+comment |
+| EXC-0352 | `pipeline.py:6741` | Exception | pass | T1-SCIENCE | normalize_gaia_source_id_series failure on comparison_stars.csv can write non-canonical 19-digit catalog_id strings. | narrow+log-ERROR |
+| EXC-0353 | `pipeline.py:6752` | Exception | pass | T1-SCIENCE | normalize_gaia_source_id_series failure on variable_targets.csv can write IDs that fail downstream Gaia joins. | narrow+log-ERROR |
+| EXC-0354 | `pipeline.py:6852` | Exception | pass | T2-INTEGRITY | Cross-setup comparison_stars.csv copy failure leaves sibling filter setups without a synced comp pool. | narrow+log-ERROR |
+| EXC-0355 | `pipeline.py:6918` | Exception | pass | T4-LEGIT | proj_plane_pixel_scales failure falls back to a 10 px Gaia↔DAO match radius floor. | narrow+comment(T4) |
+| EXC-0356 | `pipeline.py:7079` | Exception | continue | T1-SCIENCE | [SILENT-DROP] DAO pass-2 cutout finder exception continues to the next Gaia position, leaving that catalog star unmatched without tallying the miss. | fix-now |
+| EXC-0357 | `pipeline.py:7317` | Exception | pass | T3-UI | DEBUG std=0 print block is suppressed; frame handling continues. | delete-dead |
+| EXC-0358 | `pipeline.py:7324` | Exception | pass | T1-SCIENCE | Nonzero-pixel std fallback failure can trigger std=0 early return, exporting zero catalog rows for that aligned frame. | narrow+log-ERROR |
+| EXC-0359 | `pipeline.py:7339` | Exception | pass | T3-UI | DEBUG DAO INPUT print is skipped; detection parameters are unchanged. | delete-dead |
+| EXC-0360 | `pipeline.py:7949` | Exception | pass | T2-INTEGRITY | field_catalog_cone_meta.json write failure leaves stale cone-radius metadata for cache reuse decisions. | narrow+log-ERROR |
+| EXC-0361 | `pipeline.py:8041` | Exception | pass | T3-UI | DEBUG std=0 diagnostic print suppressed in full-cone detect path. | delete-dead |
+| EXC-0362 | `pipeline.py:8047` | Exception | pass | T1-SCIENCE | Same nonzero std fallback failure in detect_stars_and_match_catalog returns empty catalog with reason std_dao_zero. | narrow+log-ERROR |
+| EXC-0363 | `pipeline.py:8070` | Exception | pass | T3-UI | DEBUG DAO INPUT print suppressed in full-cone path. | delete-dead |
+| EXC-0364 | `pipeline.py:8766` | Exception | pass | T2-INTEGRITY | wcs_distortion_log_suffix call failure omits optional distortion metadata from export meta only. | leave+comment |
+| EXC-0365 | `pipeline.py:8895` | Exception | mixed-silent (return) | T1-SCIENCE | In-memory WCS cone derivation failure returns None, blocking shared Gaia prefetch for parallel per-frame workers. | fix-now |
+| EXC-0366 | `pipeline.py:8923` | Exception | continue | T4-LEGIT | Per-file WCS center probe failure tries the next FITS in the export file list. | narrow+comment(T4) |
+| EXC-0367 | `pipeline.py:9039` | Exception | pass | T1-SCIENCE | Worker initializer failure to cache ref_wcs/masterstar_data_shape disables fast master-reference matching for that process. | narrow+log-ERROR |
+| EXC-0368 | `pipeline.py:9114` | Exception | mixed-silent (return) | T2-INTEGRITY | AltAz airmass computation failure writes NaN airmass into per-star catalog CSV time columns. | narrow+log-ERROR |
+| EXC-0369 | `pipeline.py:9246` | Exception | pass | T3-UI | One-time master_tab xy debug log suppressed in worker. | delete-dead |
+| EXC-0370 | `pipeline.py:9256` | Exception | pass | T3-UI | DEBUG SKY-MATCH print suppressed in worker. | delete-dead |
+| EXC-0371 | `pipeline.py:9263` | Exception | pass | T3-UI | debug_pixel_match column flags not populated when introspection fails. | delete-dead |
+| EXC-0372 | `pipeline.py:9278` | Exception | mixed-silent (return) | T1-SCIENCE | detect_stars_match_master_reference exception returns status error with empty csv for that frame (counted in index). | narrow+log-ERROR |
+| EXC-0373 | `pipeline.py:9321` | Exception | mixed-silent (return) | T1-SCIENCE | detect_stars_and_match_catalog exception returns status error with empty csv for that frame (counted in index). | narrow+log-ERROR |
+| EXC-0374 | `pipeline.py:9369` | Exception | pass | T1-SCIENCE | [SILENT-DROP] MASTERSTAR zone/is_usable/bp_rp merge failure leaves per-frame proc rows without MASTERSTAR quality annotations used in phase-2 gating. | fix-now |
+| EXC-0375 | `pipeline.py:9376` | Exception | pass | T3-UI | debug_pixel_match match_mode/n_matched fields not filled when meta introspection fails. | delete-dead |
+| EXC-0376 | `pipeline.py:9515` | Exception | mixed-silent (return) | T1-SCIENCE | Disk worker FITS read failure returns read_error status and no sidecar CSV for that frame. | narrow+log-ERROR |
+| EXC-0377 | `pipeline.py:9539` | Exception | mixed-silent (return) | T1-SCIENCE | RAM worker header pickle load failure returns header_error with empty catalog output. | narrow+log-ERROR |
+| EXC-0378 | `pipeline.py:9549` | Exception | mixed-silent (return) | T1-SCIENCE | RAM worker pixel buffer reshape failure returns buffer_error with empty catalog output. | narrow+log-ERROR |
+| EXC-0379 | `pipeline.py:9785` | Exception | pass | T2-INTEGRITY | Cached field_catalog_cone meta parse failure silently allows reusing a potentially undersized Gaia cone CSV. | narrow+log-ERROR |
+| EXC-0380 | `pipeline.py:10082` | Exception | mixed-silent (return) | T1-SCIENCE | Master-reference detect exception in _run_one_catalog returns error status without writing proc CSV for that frame. | narrow+log-ERROR |
+| EXC-0381 | `pipeline.py:10114` | Exception | mixed-silent (return) | T1-SCIENCE | Full-cone detect exception in _run_one_catalog returns error status without proc CSV for that frame. | narrow+log-ERROR |
+| EXC-0382 | `pipeline.py:10249` | Exception | mixed-silent (return) | T1-SCIENCE | _process_frame FITS read failure returns read_error and skips catalog export for that file. | narrow+log-ERROR |
+| EXC-0383 | `pipeline.py:10252` | Exception | mixed-silent (return) | T1-SCIENCE | Outer _process_frame exception returns generic error status, omitting catalog rows for that frame. | narrow+log-ERROR |
+| EXC-0384 | `pipeline.py:10260` | Exception | mixed-silent (return) | T1-SCIENCE | RAM handoff _process_ram_item failure returns error status without catalog CSV for that aligned frame. | narrow+log-ERROR |
+| EXC-0385 | `pipeline.py:10354` | Exception | log_event (log_event) | T3-UI | json.dumps debug_pixel_match failure falls back to str() log only; no science data affected. | delete-dead |
+| EXC-0386 | `pipeline.py:10393` | Exception | log_event (log_event) | T3-UI | Same debug_pixel_match JSON log fallback on disk parallel export path. | delete-dead |
+| EXC-0387 | `pipeline.py:10423` | Exception | log_event (log_event) | T3-UI | Same debug_pixel_match JSON log fallback on sequential RAM export path. | delete-dead |
+| EXC-0388 | `pipeline.py:10443` | Exception | log_event (log_event) | T3-UI | Same debug_pixel_match JSON log fallback on sequential disk export path. | delete-dead |
+| EXC-0389 | `pipeline.py:10536` | Exception | continue | T1-SCIENCE | [SILENT-DROP] `stress_test_relative_rms_from_sidecars` `continue`s when a proc sidecar CSV cannot be read, omitting that aligned frame from the flatness ensemble without incrementing any drop counter. | fix-now |
+| EXC-0390 | `pipeline.py:10625` | Exception | pass | T1-SCIENCE | `_apply_wcs_tan_fragment_to_header` `pass`es on individual WCS keyword copies, leaving a partially copied TAN matrix that can break alignment astrometry. | narrow+log-ERROR |
+| EXC-0391 | `pipeline.py:11040` | Exception | log_event (log_event) | T2-INTEGRITY | MASTERSTAR DB candidate query failure is only `log_event` (below ERROR); selection falls through to disk fallback without surfacing severity. | narrow+log-ERROR |
+| EXC-0392 | `pipeline.py:11045` | Exception | pass | T4-LEGIT | `_db_ms.conn.close()` in `finally`; failure to close SQLite handle cannot affect MASTERSTAR science outputs. | narrow+comment(T4) |
+| EXC-0393 | `pipeline.py:11082` | Exception | pass | T1-SCIENCE | DB FWHM median fetch `pass` leaves `_ms_fwhm_fb` at config default instead of draft QC median, shifting DAO kernel for MASTERSTAR stack selection. | narrow+log-ERROR |
+| EXC-0394 | `pipeline.py:11087` | Exception | pass | T4-LEGIT | `_dbc_fw.conn.close()` cleanup only; no radiometry or frame data touched. | narrow+comment(T4) |
+| EXC-0395 | `pipeline.py:11106` | Exception | pass | T2-INTEGRITY | Disk fallback expansion for best-of-N MASTERSTAR candidates `pass`es, shrinking candidate pool without logging why expansion failed. | narrow+log-ERROR |
+| EXC-0396 | `pipeline.py:11160` | Exception | pass | T4-LEGIT | `_db_ms_build.conn.close()` in build `finally`; best-effort handle release. | narrow+comment(T4) |
+| EXC-0397 | `pipeline.py:11166` | Exception | pass | T4-LEGIT | Legacy `detrended_root/MASTERSTAR.fits` unlink cleanup; failure leaves duplicate artifact, not bad science. | narrow+comment(T4) |
+| EXC-0398 | `pipeline.py:11275` | Exception | pass | T4-LEGIT | `_db_scale.conn.close()` after plate-scale DB lookup; handle cleanup only. | narrow+comment(T4) |
+| EXC-0399 | `pipeline.py:11379` | Exception | pass | T4-LEGIT | `_dbc_hint.conn.close()` after draft pointing-hint query; no science mutation on close failure. | narrow+comment(T4) |
+| EXC-0400 | `pipeline.py:11634` | Exception | log_event (log_event) | T2-INTEGRITY | `VY_PLTS` header write failure logged via `log_event` only; downstream plate-scale-dependent matching proceeds without header provenance. | narrow+log-ERROR |
+| EXC-0401 | `pipeline.py:11756` | Exception | log_event (log_event) | T2-INTEGRITY | Field-catalog cone cache invalidation skipped on WCS parse error; stale `field_catalog_cone.csv` may be reused for MASTERSTAR Gaia cone. | narrow+log-ERROR |
+| EXC-0402 | `pipeline.py:11820` | Exception | log_event (log_event) | T1-SCIENCE | Platesolve Gaia pair merge into `df_out` skipped; MASTERSTAR catalog loses solver anchor stars used by astrometry optimizer. | narrow+log-ERROR |
+| EXC-0403 | `pipeline.py:11910` | Exception | log_event (log_event) | T2-INTEGRITY | `repair_catalog_ids_from_gaia_db` skipped; float-truncated Gaia IDs may persist in `masterstars_full_match.csv`. | narrow+log-ERROR |
+| EXC-0404 | `pipeline.py:11949` | Exception | log_event (log_event) | T1-SCIENCE | `source_type` / `bp_rp` DB fill block fails; comparison-star color bins and aperture recommendations may be wrong. | narrow+log-ERROR |
+| EXC-0405 | `pipeline.py:12051` | Exception | log_event (log_event) | T1-SCIENCE | Gaussian `VY_FWHM_GAUSS` 2D fit failure leaves header without measured FWHM; aperture sizing falls back to DAO/config estimates. | narrow+log-ERROR |
+| EXC-0406 | `pipeline.py:12063` | Exception | pass | T4-LEGIT | Optional `VY_NDAO` header tag write `pass`; diagnostic header only. | narrow+comment(T4) |
+| EXC-0407 | `pipeline.py:12070` | Exception | pass | T4-LEGIT | `del df_out` wrapped in try/except `pass`; `del` on missing name cannot fail in normal Python — handler is dead code. | delete-dead |
+| EXC-0408 | `pipeline.py:12081` | Exception | pass | T4-LEGIT | Temp platesolve artifact `unlink` cleanup; leftover temp files do not alter catalog science. | narrow+comment(T4) |
+| EXC-0409 | `pipeline.py:12093` | Exception | log_event (log_event) | T1-SCIENCE | Cross-setup `comparison_stars.csv` sync failure leaves B/V/R setups with inconsistent comp sets for multi-filter photometry. | narrow+log-ERROR |
+| EXC-0410 | `pipeline.py:12420` | Exception | continue | T1-SCIENCE | Neighbor `g_mag` parse `continue` skips one Gaia neighbor in blend-veto sum; comp `exclusion_reason` may miss a blend flag for that star only. | leave+comment |
+| EXC-0411 | `pipeline.py:12429` | Exception | pass | T1-SCIENCE | Outer `search_around_sky` blend-veto block `pass`es; star keeps `is_safe_comp=1` when neighbor-blend math fails. | leave+comment |
+| EXC-0412 | `pipeline.py:12501` | Exception | log_event (log_event) | T2-INTEGRITY | DB-aware `write_photometry_plan_files` rewrite fails; pipeline keeps non-DB photometry plan that may disagree with `MASTER_SOURCES`. | narrow+log-ERROR |
+| EXC-0413 | `pipeline.py:12971` | Exception | pass | T4-LEGIT | `_db_sat.conn.close()` after equipment saturate lookup; handle cleanup only. | narrow+comment(T4) |
+| EXC-0414 | `pipeline.py:13021` | Exception | pass | T4-LEGIT | `_db_pf.conn.close()` after plate-scale lookup for per-frame match sep; cleanup only. | narrow+comment(T4) |
+| EXC-0415 | `pipeline.py:13104` | Exception | pass | T1-SCIENCE | MASTERSTAR-as-reference swap failure is swallowed (nested `pass`); alignment keeps star-count reference frame instead of MASTERSTAR pixel grid, breaking per-frame catalog match. | fix-now |
+| EXC-0416 | `pipeline.py:13134` | Exception | pass | T1-SCIENCE | Copying MASTERSTAR WCS onto reference FITS fails silently; aligned products can carry arcminute-offset WCS vs MASTERSTAR catalogs. | fix-now |
+| EXC-0417 | `pipeline.py:13159` | Exception | log_event (log_event) | T2-INTEGRITY | Sibling-recovery MASTERSTAR load failure logged at DEBUG only; setup proceeds without recovered reference. | narrow+log-ERROR |
+| EXC-0418 | `pipeline.py:13233` | Exception | pass | T3-UI | DEBUG min/max/mean/NaN stats logging `pass`; alignment detection proceeds regardless. | leave+comment |
+| EXC-0419 | `pipeline.py:13272` | Exception | pass | T2-INTEGRITY | `estimate_archive_memory_profile` failure leaves `use_ram_handoff=True`; may exhaust RAM instead of switching to disk handoff. | narrow+log-ERROR |
+| EXC-0420 | `pipeline.py:13317` | Exception | mixed-silent (return) | T1-SCIENCE | `_vy_fwhm_header_value` returns `None` on read error; MASTERSTAR match heuristic falls through to size-only comparison. | leave+comment |
+| EXC-0421 | `pipeline.py:13335` | Exception | mixed-silent (return) | T2-INTEGRITY | `_aligned_masterstar_matches_platesolve` stat/read failure returns `False`, allowing aligned MASTERSTAR overwrite guard to fail open. | leave+comment |
+| EXC-0422 | `pipeline.py:13604` | Exception | pass | T3-UI | Optional `variable_targets_csv` path probe `pass`; UI metadata field may be absent. | leave+comment |
+| EXC-0423 | `pipeline.py:13625` | Exception | pass | T1-SCIENCE | Post-RAM-flush DB-aware photometry plan rewrite `pass`es; border-safe bbox may use stale on-disk alignment state. | narrow+log-ERROR |
+| EXC-0424 | `pipeline.py:13771` | Exception | pass | T1-SCIENCE | `normalize_gaia_source_id_series` failure `pass`es before deferred CSV write; per-frame catalogs can ship float-damaged Gaia IDs. | fix-now |
+| EXC-0425 | `pipeline.py:14095` | Exception | mixed-silent (return) | T2-INTEGRITY | [CAL-DIAG] `_db_for_calibration_tasks` returns `None` on open failure; post-calibrate QC/OBS_FILES updates silently disabled for worker. | narrow+log-ERROR |
+| EXC-0426 | `pipeline.py:14694` | Exception | log-below-ERROR (logging.warning) | T1-SCIENCE | [CAL-DIAG] `_quality_inspection_dao_metrics_array` in calibrate path logs WARNING and omits PERF-10 QC metrics for that frame's calibrated output. | narrow+log-ERROR |
+| EXC-0427 | `pipeline.py:14835` | Exception | pass | T4-LEGIT | Nested `pass` when `log_exception` itself fails; worker already returns `{ok: False, error, traceback}`. | narrow+comment(T4) |
+| EXC-0428 | `pipeline.py:14914` | Exception | pass | T2-INTEGRITY | [CAL-DIAG] Passthrough reuse path: `update_obs_file_calibration_state_by_raw_light_path` failure `pass`es; OBS_FILES may show stale non-passthrough cal state. | narrow+log-ERROR |
+| EXC-0429 | `pipeline.py:14941` | Exception | pass | T2-INTEGRITY | [CAL-DIAG] Fresh passthrough copy: DB calibration-state update failure `pass`es after `VY_CALIB=PASSTHROUGH` header written. | narrow+log-ERROR |
+| EXC-0430 | `pipeline.py:14948` | Exception | pass | T4-LEGIT | `db_pt.conn.close()` at end of passthrough loop; handle cleanup only. | narrow+comment(T4) |
+| EXC-0431 | `pipeline.py:15082` | Exception | log_event (log_event) | T2-INTEGRITY | `filter_light_paths_for_calibration_db` failure logs and skips IS_REJECTED filter, potentially calibrating user-rejected lights. | narrow+log-ERROR |
+| EXC-0432 | `pipeline.py:15132` | Exception | log_event (log_event) | T2-INTEGRITY | [CAL-DIAG] First-light metadata diagnostic (`extract_fits_metadata` for focal/pixel logging before CAL-DIAG pregate) fails with `log_event` only; gate still runs but operator loses pregate context. | narrow+log-ERROR |
+| EXC-0433 | `pipeline.py:15246` | Exception | pass | T2-INTEGRITY | [CAL-DIAG] Sequential calibrate: `update_obs_file_calibration_state_by_raw_light_path` `pass` after successful `_calibrate_one_light_disk`; FITS carries `VY_CFLAG` but DB provenance diverges from CAL-DIAG outcome. | fix-now |
+| EXC-0434 | `pipeline.py:15377` | Exception | pass | T2-INTEGRITY | [CAL-DIAG] MP calibrate batch: same OBS_FILES calibration-state update `pass` after worker success; masks DB sync of gate/calibration flags. | fix-now |
+| EXC-0435 | `pipeline.py:15458` | Exception | mixed-silent (return) | T1-SCIENCE | `_estimate_fwhm_from_image` broad `except` returns hardcoded `3.0` px; QC FWHM reject and header `VY_FWHM` can be wrong on detection failure. | narrow+log-ERROR |
+| EXC-0436 | `pipeline.py:15790` | Exception | mixed-silent (return) | T1-SCIENCE | DAOStarFinder QC fallback outer `except` returns all-None FWHM/elongation; frame marked QC-failed downstream rather than silently accepted. | leave+comment |
+| EXC-0437 | `pipeline.py:15857` | Exception | continue | T2-INTEGRITY | `_estimate_catalog_frame_hw` `continue`s to next FITS on read error, eventually defaulting to 2048×2048 for MP worker cap — conservative RAM estimate, not frame drop. | leave+comment |
+| EXC-0438 | `pipeline.py:15917` | Exception | mixed-silent (return) | T1-SCIENCE | `_analyze_calibrated_qc_one` returns `{status: error}` without ERROR log; frame omitted from QC aggregate silently except in returned row. | narrow+log-ERROR |
+| EXC-0439 | `pipeline.py:16005` | Exception | mixed-silent (return) | T1-SCIENCE | [SILENT-DROP] `_preprocess_calibrated_one` returns `{status: error}` without writing proc FITS; row exists but no surfaced pipeline drop counter for skipped output file. | narrow+log-ERROR |
+| EXC-0440 | `pipeline.py:16237` | Exception | continue | T2-INTEGRITY | Header pointing median fallback `continue`s unreadable frames; logged only if all frames fail. | leave+comment |
+| EXC-0441 | `pipeline.py:16596` | Exception | mixed-silent (return) | T2-INTEGRITY | WCS center extraction returns `None, None` on failure; draft segmentation sees frame as missing pointing, not dropped. | leave+comment |
+| EXC-0442 | `pipeline.py:16609` | Exception | mixed-silent (return) | T2-INTEGRITY | JD parse helper returns `None`; WCS change-point logic excludes frame from segment list. | leave+comment |
+| EXC-0443 | `pipeline.py:16685` | Exception | mixed-silent (return) | T2-INTEGRITY | Multi-pointing segment detector returns `None` on any internal error; caller treats as no segments detected without ERROR. | narrow+log-ERROR |
+| EXC-0444 | `pipeline.py:17666` | Exception | mixed-silent (log-below-ERROR+return) | T2-INTEGRITY | `fetch_draft_light_rows_for_quality` failure logs WARNING and returns empty jump result, hiding field jumps from UI quality warnings. | narrow+log-ERROR |
 | EXC-0445 | `psf_neighbor_sub.py:131` | Exception | mixed-silent (return) | ? | intent unclear (try: / fitted = fitter(compound, xx, yy, sub, maxiter=400) / except Exception as exc:  # noqa: BLE001 / return img.copy() | triage (?) |
 | EXC-0446 | `psf_photometry.py:136` | Exception | return | T1-SCIENCE | Auxiliary CSV read for PSF star x/y fails - those catalog_ids missing from PSF star_positions | narrow+log-ERROR |
 | EXC-0447 | `psf_photometry.py:330` | Exception | mixed-silent (return) | T2-INTEGRITY | Plate scale from FITS header fails - PSF cutout/fit sizing uses defaults | narrow+log-ERROR |
