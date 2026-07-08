@@ -5650,7 +5650,12 @@ def _vyvar_df_round_time_jd_for_csv(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _vyvar_df_to_csv(df: pd.DataFrame, path: Path | str) -> None:
-    """Write sidecar / index CSV. Optional PyArrow writer; else pandas (``to_csv`` has no ``engine='c'`` for write)."""
+    """Write sidecar / per-frame proc CSV.
+
+    When ``mag`` is present it holds the Gaia catalog G magnitude (``phot_g_mean_mag`` at
+    cross-match time) — constant per star for the night, not the frame instrumental magnitude.
+    Science paths must use ``dao_flux`` (see ``docs/VYVAR_PROCESS.md``).
+    """
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     export_df = df
