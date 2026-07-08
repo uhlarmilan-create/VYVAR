@@ -93,6 +93,44 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 
 ---
 
+## PUBLICATION — VYVAR methods paper + software DOI (workstream, opened 2026-07-08)
+
+**Status:** venue research **DONE** (2026-07-08, Claude web research); venue decision **PENDING**
+(Milan). Two-track strategy recommended: **JAAVSO** methods paper + **JOSS** software DOI;
+**OEJV** (Masaryk Univ. Brno — SQUADRA home venue) for subsequent science papers citing the
+pipeline paper; **Astronomy & Computing** as a possible expanded v2 paper later.
+
+**Venue matrix (researched 2026-07-08):**
+
+| Venue | Fit | Cost | Notes |
+|-------|-----|------|-------|
+| JAAVSO | methods paper, observer audience, ADS-indexed | free for AAVSO members ($100/page non-members) | 2 issues/yr, window closes 6 wks before Jun 15 / Dec 15; Word or LaTeX; journal@aavso.org |
+| JOSS | software itself gets citable DOI; review = code+docs+tests via public GitHub issues | free | REQUIRES: OSI license, public repo, English README/docs; paper ~1000 words, must NOT contain science results; 2026 criteria value sustained commit history (VYVAR: months of history, 590+ tests) |
+| OEJV | science-results papers using VYVAR; SQUADRA/MUNI home venue | free | PDF to oejv@physics.muni.cz; referee report ≤1 month; arXiv-mirrored, Crossref-indexed |
+| Astronomy & Computing | professional pipeline-paper league (PHOTOMETRYPIPELINE, Photometry+) | OA $2220 or subscription route free | candidate for expanded v2 paper (post NIGHT-FIT v2) |
+
+**Sub-items:**
+
+- [ ] **PUB-VENUE** (Milan decision): confirm JAAVSO+JOSS two-track; optionally ask OEJV
+      editors informally whether a methods paper is in scope (home-field option).
+- [ ] **PUB-OUTLINE**: Claude drafts paper outline (Intro / Architecture / Photometric methods /
+      QA & trust / Validation / Comparison with existing tools / Summary) — first writing task.
+- [ ] **PUB-FIGS**: figure set from real drafts (RMS-vs-mag, example LC (BO CVn), comp-QA panel,
+      architecture diagram, CAL-DIAG/k2 provenance example) — Cursor generates, Milan approves.
+- [ ] **PUB-JOSS-PREREQS** (only if JOSS confirmed): OSI license file in repo, repo public,
+      English README + install/user docs, tagged release + Zenodo DOI at acceptance.
+- [ ] **PUB-POLICY**: check chosen venue's AI-assisted-writing policy before submission;
+      acknowledge per policy (Milan authorial decision).
+- [ ] **PUB-VALIDATION-SECTION**: existing threads feed here — **TODO-SEP-XVAL** longitudinal
+      record ("mission + paper Validation section") and the single-night canonical unit
+      (**TODO-GS8** / DECISIONS product-scope boundary) become the Validation section's backbone.
+
+**Depends on / feeds:** nothing blocks writing the outline now; PUB-FIGS wants a
+representative filtered draft (425 BVR qualifies today); JOSS track blocked only on repo
+licensing decision.
+
+---
+
 ## IN-FLIGHT — CAL-DIAG (calibration-time radiometry gate) — **IMPLEMENTED / VALIDATED (2026-07-07)**
 
 **Agreed 2026-07-07 (Milan + Claude).** Spec: `docs/VYVAR_CAL_DIAG_SPEC.md` v1.1.
@@ -314,7 +352,7 @@ next calibration lever.
   (descoped from HIGH 2026-06-25).** Cross-night comp matching + inter-night zeropoint.
   NOT a priority: the canonical publishable unit is a single night (see DECISIONS,
   product-scope boundary). Build only if a long-baseline science case demands it.
-  Dep: AAVSO validation (GS6b ✓). ~2–4 days.
+  Dep: AAVSO validation (GS6b ✓). ~2–4 days. → **PUBLICATION** workstream.
 - **APCORR-MIXEDFRAME — latent (COG default OFF); blocks enabling COG in production.** With
   `cog_aperture_correction_enabled=True`, `cog_ok=False` frames keep *uncorrected* flux
   alongside corrected ones → cross-frame step in the LC. The QA dashboard `IS_REJECTED` path
@@ -371,12 +409,13 @@ next calibration lever.
   currently config-only and UI-hidden. Add a "Data quality & validation" Settings section for
   the two. Keep the experimental `phase01_comparison_proximity_tiebreak` / `rms_bin_mag` and
   the PSF/COG/crowding flags hidden.
-- **Persist offline cross-val results to a tracked ledger.** Append one summary row per
+- **TODO-SEP-XVAL — Persist offline cross-val results to a tracked ledger.** Append one summary row per
   `xval_run.py` harness run to `validation/xval_ledger.csv` (in git):
   `date, draft_id, engine, n_targets, median_ratio, n_confirmed, n_review, n_indep_failed,
   commit, notes`. The offline `xval_out/` stays scratch; per-draft photometry tree is unchanged
   (no in-pipeline `sep_xval_*` artifacts). Gives a longitudinal validation record (mission +
   paper Validation section). *(Re-scoped 2026-06-03 after in-pipeline sep_xval retirement.)*
+  → **PUBLICATION** workstream.
 - **TODO-APCORR-COLOR — Extrapolation guard warn→block: DONE** (2026-06-03). Target BP-RP
   outside comp range → CT skipped, target kept uncorrected (`phase01_ct_extrapolation_tol`,
   default strict 0). **NoFilter CT enable: PARKED** — prototype on draft_000366 showed modest

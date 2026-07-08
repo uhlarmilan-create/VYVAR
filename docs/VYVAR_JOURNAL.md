@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — PUB-TODO (publication workstream opened)
+
+**PUBLICATION** workstream added to ROADMAP: JAAVSO methods paper + JOSS software DOI two-track;
+venue matrix researched 2026-07-08 (decision pending Milan). Cross-links: **TODO-SEP-XVAL**,
+**TODO-GS8** → Validation section backbone.
+
+---
+
 ## 2026-07-08 — Day close (CLOSE-0708)
 
 **Session summary** — five workstreams landed on `main`; full-day gate **587 passed**.
