@@ -1,16 +1,19 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-08** — EXCEPT batch **CLOSED** (RETRIAGE-4 + FIX-4 + BULK).
+Last updated: **2026-07-08** — Process / session infra group **A CLOSED** (DEV-PROCESS-A/B +
+EXCEPT-BULK-2).
 
-**2026-07-08 snapshot:** EXCEPT batch **CLOSED**. Census **625 EVIDENCE**; **40 fix-batch** sites
-(FIX-1..4); remainder **EXCEPT-BULK** (conservative policy: breadth kept, delete-dead, log, comment,
-approved narrow only). **EXCEPT-FIX-4:** 8 surfacing-only fixes (time/trust/export/optics/check-star).
-Scanner committed: `scripts/_except_census_scan.py`. Full pytest **623 passed**, 15 skipped.
-**Next:** empirical `except_fix_counters` zero-check on next healthy draft run. **PUBLICATION** venue
-decision pending (Milan).
+**2026-07-08 snapshot:** EXCEPT batch **CLOSED** (BULK-2 applied 98/98 drift rows, `97affe3`).
+Validation ledger + session baseline check live (`bfe710e`, `00dd0cd`). Full pytest **625 passed**,
+15 skipped. **Next:** `--full` draft_424 anchor verification (session baseline); **PUBLICATION**
+venue decision pending (Milan).
 
-**Done 2026-07-08 (EXCEPT batch):** EXCEPT-BATCH-S0 through EXCEPT-RETRIAGE-4 + FIX-1..4 + BULK;
-batch **CLOSED**. Ledger: `docs/VYVAR_EXCEPT_CENSUS.md`.
+**Done 2026-07-08 (DEV-PROCESS group A):** JSON validation ledger + guard test; `session_baseline_check.py`
+(`--fast` / `--full` with draft_424 anchor + counters zero-check); EXCEPT-BULK-2 (98 rows);
+roadmap closeouts (RECUT-HARNESS-FIDELITY superseded; exoplanet row stale).
+
+**Done 2026-07-08 (EXCEPT batch):** EXCEPT-BATCH-S0 through EXCEPT-RETRIAGE-4 + FIX-1..4 + BULK +
+BULK-2; batch **CLOSED**. Census: `docs/VYVAR_EXCEPT_CENSUS.md`.
 
 **Done 2026-07-08 (INPUT-GUARDS-0708):** `resolve_site` null-island guard (`166cbf4`); PDF cfg from
 `provenance.config_snapshot` (`80aab21`, synergy with PROV-FIX `e7ce7ea`). `604 passed` gate.

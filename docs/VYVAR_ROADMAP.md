@@ -333,18 +333,12 @@ next calibration lever.
    specs under `docs/`; trust baseline 1382/106 on draft_387 at `comp_trust_min_comps=5`.
 13. ~~**Broad-except hygiene (BLE001/E722 regression guard)**~~ **DONE (2026-06-11)** — see
    DECISIONS + `pyproject.toml` / pre-commit / `tests/test_ble001_regression.py`.
-14. **DEV-PROCESS-A — JSON pass/fail validation ledger (HIGH, spec only).** Structured JSON file
-    listing end-to-end validation items (per fix and the cross-field trust matrix), each with a
-    `passes: true/false` status. Rules: agents may edit ONLY the status field; status flips to
-    `true` only after careful end-to-end verification; tests are never deleted or weakened.
-    Rationale: JSON resists inappropriate rewrites better than Markdown; an explicit pass/fail
-    list prevents "declared done prematurely." Grounded in Anthropic long-running-agent harness
-    guidance (structured pass/fail ledger).
-15. **DEV-PROCESS-B — session-start baseline-check script (HIGH, spec only).** Script run at the top
-    of each session that reproduces the reference draft / runs the regression check and confirms the
-    known-good result before any new work, catching drift or a broken state early (the lost V0612
-    proc is the motivating case). Grounded in Anthropic context-engineering / long-running-agent
-    harness guidance (verify known-good baseline before new work).
+14. ~~**DEV-PROCESS-A — JSON pass/fail validation ledger**~~ **DONE (2026-07-08)** —
+    `validation/VYVAR_VALIDATION_LEDGER.json` + `tests/test_validation_ledger.py` (frozen
+    required-ID guard). Rules: agents edit only `passes` / `last_verified` / `commit` / `notes`.
+15. ~~**DEV-PROCESS-B — session-start baseline-check script**~~ **DONE (2026-07-08)** —
+    `scripts/session_baseline_check.py` (`--fast` / `--full`); `--full` re-verifies draft_424
+    science anchor + `except_fix_counters` zero-check; documented in RUNBOOK + CLAUDE_OPERATING_PRINCIPLES.
 16. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
 13. ~~**Per-frame proc export perf (DAO pre-filter + Moffat gate)**~~ **DONE (2026-06-12)** —
    `_proc_drop_unmatched_dao_rows` before aperture/PSF; Moffat gated on `_run_epsf` only; ~4.8× on
@@ -517,10 +511,11 @@ next calibration lever.
   foundation exists) · TODO-12 HRD classification (after new DB) · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
   · TODO-PIXEL-XCHECK-BINNING binning-aware pixel cross-check (cosmetic log) ·
-  **TODO-RECUT-HARNESS-FIDELITY** — re-cut harness vs frozen anchor (`draft_000387` /
-  `3f7c9e7a…`) does not reproduce science-meaningfully (legacy arm alone: 1087 failures, B
-  max \|Δmag\| ≈ 2.26); use legacy-vs-scoped same-harness control for solver gates until fixed
-  (`sandbox/anchor387_legacy_vs_scoped_gate.py`) ·
+  **TODO-RECUT-HARNESS-FIDELITY** — **CLOSED (superseded, 2026-07-08):** draft_387 zaloha no longer
+  exists (Milan confirmed); frozen-anchor premise dead. Current regression references: draft_424
+  provenance anchor `e1a7a311…` + `session_baseline_check.py --full`; rebaseline cut1 SHAs where
+  fixture present (`tests/test_photometry_sha_baseline.py`). Historical SHA constants in
+  `tests/photometry_sha.py` retained (self-skipping).
   **TODO-INSTALL-MANUAL — inštalačný manuál + inštalátor pre nového užívateľa (vrátane
   katalógov)** · TODO-PLATESCALE-PERSET focal×pixel per-set plate-scale fallback.
 
@@ -588,10 +583,10 @@ inštalátor → rovnaký výsledok na T460; manuál a inštalátor konzistentn�
 | Item | Notes |
 |------|-------|
 | **CM-detrend differential** | ~10× lever; opt-in; needs transit injection-recovery test before opt-in |
-| **Exoplanet / TOI catalog** | NASA Exoplanet Archive TAP integration |
+| **Exoplanet / TOI catalog** | **DONE** — NASA Exoplanet Archive TAP (14,185 rows), TOI annotation live; see JOURNAL 2026-07-08 EXO entry |
 | **Newton-V colour-term** | Per-rig c1 from field BP-RP |
 | **Meridian-flip handling** | Qatar-8 class |
-| **`[TODO-RECUT-HARNESS-FIDELITY]`** | Re-cut vs archive gate unreliable (~2.26 mag B drift) |
+| **`[TODO-RECUT-HARNESS-FIDELITY]`** | **CLOSED (superseded 2026-07-08)** — draft_387 zaloha gone; use draft_424 + DEV-PROCESS-B --full |
 | **Pre-filled camera catalog** | New-user onboarding — sensor-keyed research, camera-keyed rows; **PARKED** (see below) |
 
 **Backlog (unchanged):** broad-except Tier-1 (~25); B-V legacy removal Stages 2–4; TODO-46 (skip
@@ -677,8 +672,8 @@ EQUIPMENTS row and set it as default, instead of hand-entering specs. Lowers the
   engines (sep matches VYVAR to 0.2 %) already validate extraction; not feasible on
   Py3.12/Ubuntu24.
 - **TODO-WEIGHTED-LC, TODO-SKY-PLANE** — tested negative, closed.
-- **TODO-DEV-PROCESS** — reshaped into **DEV-PROCESS-A** (JSON pass/fail validation ledger) and
-  **DEV-PROCESS-B** (session-start baseline-check script); Definition-of-Done discipline remains in
+- ~~**TODO-DEV-PROCESS**~~ **DONE (2026-07-08)** — **DEV-PROCESS-A** (validation ledger) +
+  **DEV-PROCESS-B** (`session_baseline_check.py`); Definition-of-Done discipline in
   `VYVAR_PROCESS.md`. Charter: `VYVAR_CLAUDE_OPERATING_PRINCIPLES.md`.
 - The full **TODO-1…45 / PERF-1…10 / ALG-1…5 / CQ-1…7 / GS1–GS5** series — closed; see
   `VYVAR_JOURNAL.md`.

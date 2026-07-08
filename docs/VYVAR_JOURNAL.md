@@ -2,6 +2,26 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — DEV-PROCESS group A closeout (DEV-PROCESS-A/B + EXCEPT-BULK-2)
+
+**DEV-PROCESS-A (`bfe710e`):** `validation/VYVAR_VALIDATION_LEDGER.json` (10 seed items) +
+`tests/test_validation_ledger.py` (frozen `REQUIRED_IDS` guard).
+
+**DEV-PROCESS-B (`00dd0cd`):** `scripts/session_baseline_check.py` — `--fast` (git/config/pytest/ledger
+TODO hint); `--full` (draft_424 headless via `run_full_photometry_pipeline`, science-meaningful compare
+vs `draft_000424_snapshot_20260708`, provenance hash + counters). Documented in RUNBOOK +
+CLAUDE_OPERATING_PRINCIPLES session-start ritual.
+
+**EXCEPT-BULK-2 (`97affe3`):** 98/98 drift-skipped rows applied (`--only-ids-file` + ordinal line
+resolve in bulk script). Disposition counts applied: 24 delete-dead attempted (all 24 downgraded to
+comment-only per safety interlock); log/comment/narrow per census. Census updated; ASCII `delta` fix
+in `comp_selection_per_target.py` debug prints.
+
+**Roadmap closeouts:** DEV-PROCESS-A/B DONE; TODO-RECUT-HARNESS-FIDELITY CLOSED (draft_387 zaloha dead);
+exoplanet/TOI parked row DONE (see prior EXO JOURNAL). **625 passed**, 15 skipped.
+
+---
+
 ## 2026-07-08 — EXCEPT-RETRIAGE-4 + EXCEPT-FIX-4 + EXCEPT-BULK (batch CLOSE)
 
 **Part A:** Tranche 4 (report/export/UI) + 4b (remaining modules) = 213 sites triaged. **Zero T1**
