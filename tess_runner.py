@@ -34,6 +34,7 @@ def _write_tess_result_txt(result_json_path: Path, result_txt_path: Path, catalo
         try:
             return f"{float(x):.4f}"
         except Exception:  # noqa: BLE001
+            # EXC-0469: ? -- intent unclear (try: / return f'{float(x):.4f}' / except Exception:  # noqa: BLE001 / r... (EXCEPT-BULK 2026-07-08)
             return "?"
 
     lines: list[str] = [
@@ -89,6 +90,7 @@ def _period_hint_from_crossmatch_cache(cache_path: Path) -> float | None:
     try:
         raw = json.loads(Path(cache_path).read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
+        # EXC-0470: ? -- intent unclear (try: / raw = json.loads(Path(cache_path).read_text(encoding='utf-8')) /... (EXCEPT-BULK 2026-07-08)
         return None
     try:
         matches = raw.get("matches", {}) if isinstance(raw, dict) else {}
@@ -99,6 +101,7 @@ def _period_hint_from_crossmatch_cache(cache_path: Path) -> float | None:
                 pf = float(p)
                 return pf if math.isfinite(pf) and pf > 0 else None
     except Exception:  # noqa: BLE001
+        # EXC-0471: ? -- intent unclear (pf = float(p) / return pf if math.isfinite(pf) and pf > 0 else None / e... (EXCEPT-BULK 2026-07-08)
         return None
     return None
 
@@ -120,7 +123,8 @@ def auto_tess_verify_candidates(
             dtype={"catalog_id": str, "name": str},  # Gaia ID musí byť str — float64 stráca cifry
             low_memory=False,
         )
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.warning('[EXC-0472] intent unclear (low_memory=False, / ) / except Exception:  # noqa: BLE001 / return / if...: %s', exc)
         return
     if df.empty or "catalog_id" not in df.columns:
         return

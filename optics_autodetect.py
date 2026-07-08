@@ -281,6 +281,7 @@ def find_sample_light_header(source_root: str | Path, *, max_scan: int = 400) ->
         try:
             hdr = fits.getheader(fp)
         except Exception:  # noqa: BLE001
+            # EXC-0114: ? -- intent unclear (try: / hdr = fits.getheader(fp) / except Exception:  # noqa: BLE001 / c... (EXCEPT-BULK 2026-07-08)
             continue
         imagetyp = str(hdr.get("IMAGETYP", "") or "").upper()
         if "LIGHT" in imagetyp or "OBJECT" in imagetyp or "SCIENCE" in imagetyp:

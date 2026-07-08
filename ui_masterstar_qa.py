@@ -95,6 +95,7 @@ def _masterstar_reference_basename(
                 ref = Path(str(mp)).name
                 via.append("db")
         except Exception:  # noqa: BLE001
+            # EXC-0521: T3 -- UI diagnostic/plot only (ref = Path(str(mp)).name / via.append('db') / except Exception... (EXCEPT-BULK 2026-07-08)
             pass
 
     ms_fits = setup_dir / "MASTERSTAR.fits"
@@ -123,6 +124,7 @@ def _masterstar_reference_basename(
                     via.append(f"header:{key}")
                     break
         except Exception:  # noqa: BLE001
+            # EXC-0522: T3 -- UI diagnostic/plot only (via.append(f'header:{key}') / break / except Exception:  # noq... (EXCEPT-BULK 2026-07-08)
             pass
 
     cand_csv = setup_dir / "masterstar_candidates.csv"
@@ -142,6 +144,7 @@ def _masterstar_reference_basename(
                             via.append("masterstar_candidates.csv")
                         break
         except Exception:  # noqa: BLE001
+            # EXC-0523: T3 -- UI diagnostic/plot only (via.append('masterstar_candidates.csv') / break / except Excep... (EXCEPT-BULK 2026-07-08)
             pass
 
     if ref is None and ap_path is not None:
@@ -156,6 +159,7 @@ def _masterstar_reference_basename(
                             via.append("infolog")
                             break
             except Exception:  # noqa: BLE001
+                # EXC-0524: T3 -- UI diagnostic/plot only (via.append('infolog') / break / except Exception:  # noqa: BLE... (EXCEPT-BULK 2026-07-08)
                 pass
 
     note = "+".join(via) if via else "unresolved"
@@ -199,6 +203,7 @@ def _resolve_masterstar_proc_overlay_csv(
                     if csv_p.is_file():
                         return csv_p, "per_frame_catalog_index (MASTERSTAR row)"
         except Exception:  # noqa: BLE001
+            # EXC-0525: T3 -- UI diagnostic/plot only (if csv_p.is_file(): / return csv_p, 'per_frame_catalog_index (... (EXCEPT-BULK 2026-07-08)
             pass
 
     if ref_bn and ap_path is not None:
@@ -231,6 +236,7 @@ def _infer_setup_name_from_masterstar_candidate_path(p: Path) -> str | None:
             if re.fullmatch(r"[A-Za-z]+_\d+_\d+", seg):
                 return seg
     except Exception:  # noqa: BLE001
+        # EXC-0526: T3 -- UI diagnostic/plot only (if re.fullmatch(r'[A-Za-z]+_/d+_/d+', seg): / return seg / exc... (EXCEPT-BULK 2026-07-08)
         return None
     return None
 
@@ -393,6 +399,7 @@ def render_masterstar_qa(
                     f"(diag≈{diag_deg:.3f}°)."
                 )
         except Exception:  # noqa: BLE001
+            # EXC-0527: T3 -- UI diagnostic/plot only (f'(diag≈{diag_deg:.3f}°).' / ) / except Exception:  # noqa: BL... (EXCEPT-BULK 2026-07-08)
             pass
 
         coo = SkyCoord(
@@ -422,6 +429,7 @@ def render_masterstar_qa(
             try:
                 _cone_rows = len(read_vyvar_csv(_cone_csv, low_memory=False))
             except Exception:  # noqa: BLE001
+                # EXC-0528: T3 -- UI diagnostic/plot only (try: / _cone_rows = len(read_vyvar_csv(_cone_csv, low_memory=F... (EXCEPT-BULK 2026-07-08)
                 pass
         # TODO-25: pipeline-computed value (same formula as detect_stars_and_match_catalog)
         _gaia_dao_pct: float | None = None
@@ -441,6 +449,7 @@ def render_masterstar_qa(
                 if _cr_raw is not None:
                     _meta_catalog_rows = int(_cr_raw)
             except Exception:  # noqa: BLE001
+                # EXC-0529: T3 -- UI diagnostic/plot only (if _cr_raw is not None: / _meta_catalog_rows = int(_cr_raw) / ... (EXCEPT-BULK 2026-07-08)
                 pass
         if _gaia_dao_pct is None and _cone_rows and _cone_rows > 0:
             _n_dao_detected_fb = n_ok

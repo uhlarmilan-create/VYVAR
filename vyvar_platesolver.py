@@ -106,10 +106,12 @@ def _obs_year_from_header(header: fits.Header | None) -> float:
         try:
             return float(Time(date_obs, format="isot", scale="utc").decimalyear)
         except Exception:  # noqa: BLE001
+            # EXC-0590: T4 -- DATE-OBS isot parse fail -> next format in ladder (EXCEPT-BULK 2026-07-08)
             pass
         try:
             return float(Time(date_obs, format="fits", scale="utc").decimalyear)
         except Exception:  # noqa: BLE001
+            # EXC-0591: T4 -- DATE-OBS fits parse fail -> now()-year fallback (EXCEPT-BULK 2026-07-08)
             pass
     return float(datetime.utcnow().year)
 
@@ -183,6 +185,7 @@ def _get_masterstar_wcs_parity(masterstar_fits_path: Path) -> str | None:
         log_event(f"INFO: MASTERSTAR WCS parity = native (det={float(det):.2e})")
         return "native"
     except Exception as e:  # noqa: BLE001
+        # EXC-0592: T4 -- WCS parity detection fail surfaced as WARNING + None (EXCEPT-BULK 2026-07-08)
         log_event(f"WARNING: Nemôžem zistiť WCS paritu z MASTERSTAR: {e}")
         return None
 
@@ -839,6 +842,7 @@ def _ransac_fit_wcs_tan(
         try:
             w_trial = fit_wcs_from_points((x[idx], y[idx]), world[idx], projection="TAN")
         except Exception:  # noqa: BLE001
+            # EXC-0593: T4 -- RANSAC trial fit fail -> continue (expected-iteration failure) (EXCEPT-BULK 2026-07-08)
             continue
         px, py = w_trial.all_world2pix(world.ra.deg, world.dec.deg, 0)
         dist = np.hypot(px - x, py - y)
@@ -1451,6 +1455,7 @@ def _fit_cluster_ransac_wcs(
             w_try = fit_wcs_from_points((xs[sample], ys[sample]), world, projection="TAN")
             w_try.array_shape = (int(naxis2), int(naxis1))
         except Exception:  # noqa: BLE001
+            # EXC-0594: T4 -- RANSAC triangle trial fail -> continue (EXCEPT-BULK 2026-07-08)
             continue
         inliers = _count_wcs_inliers(w_try, xs, ys, ra, dec, tol_px=tol_px)
         n_inl = int(np.count_nonzero(inliers))
@@ -1558,6 +1563,7 @@ def _best_triangle_wcs_in_cluster(
                 use_gnomonic=use_gnomonic,
             )
         except Exception:  # noqa: BLE001
+            # EXC-0595: T4 -- candidate triangle WCS fail -> continue (EXCEPT-BULK 2026-07-08)
             continue
         if rig_prior and known_ps is not None:
             ok, _ = _wcs_scale_gate(w_try, known_ps=known_ps, scale_tol=scale_tol)
@@ -1961,6 +1967,7 @@ def _verify_blind_candidates(
                         best_hd_prev = hd
                         best_w_prev = w_t
                 except Exception:  # noqa: BLE001
+                    # EXC-0596: T4 -- candidate refine loop fail -> continue (EXCEPT-BULK 2026-07-08)
                     continue
             if best_w_prev is not None:
                 wcs_use = best_w_prev
@@ -2145,6 +2152,7 @@ def _log_wcs_orientation_header_hints(wcs_obj: WCS, hdr: fits.Header) -> None:
         xb, yb = fits_binning_xy_from_header(hdr)
         log_event(f"WCS diag: FITS binning ≈ {int(xb)}×{int(yb)} (XBINNING/YBINNING) — over zhodu s efektívnym pixelom pri mierke.")
     except Exception:  # noqa: BLE001
+        # EXC-0597: T3 -- WCS diag block (wraps fits_binning_xy_from_header) skipped (EXCEPT-BULK 2026-07-08)
         pass
     try:
         scales = wcs_obj.celestial.proj_plane_pixel_scales()
@@ -2157,6 +2165,7 @@ def _log_wcs_orientation_header_hints(wcs_obj: WCS, hdr: fits.Header) -> None:
                 f"— WCS je pravdepodobne nesprávny. Skontroluj plate-solve v MASTERSTAR QA tabe."
             )
     except Exception:  # noqa: BLE001
+        # EXC-0598: T3 -- WCS diag block (wraps proj_plane_pixel_scales) skipped (EXCEPT-BULK 2026-07-08)
         pass
     try:
         det = float(np.linalg.det(np.asarray(wcs_obj.wcs.get_pc(), dtype=np.float64)))
@@ -2172,6 +2181,7 @@ def _log_wcs_orientation_header_hints(wcs_obj: WCS, hdr: fits.Header) -> None:
                 "over radšej pomer mierky sx/sy a zhodu s optikou."
             )
     except Exception:  # noqa: BLE001
+        # EXC-0599: T3 -- WCS diag block (wraps det computation) skipped (EXCEPT-BULK 2026-07-08)
         pass
     for key in ("FLIPSTAT", "FLIPPED", "MIRRORED"):
         if key not in hdr:
@@ -2742,6 +2752,7 @@ def _gaia_triangle_greedy_orientation_probe(
                 pxp, pyp = w_try.all_world2pix(ra_l, de_l, 0)
                 rms = float(np.sqrt(np.mean((pxp - px) ** 2 + (pyp - py) ** 2)))
             except Exception:  # noqa: BLE001
+                # EXC-0600: T4 -- permutation trial fit fail -> continue (EXCEPT-BULK 2026-07-08)
                 continue
             if rms < rms0:
                 rms0 = rms
@@ -2764,6 +2775,7 @@ def _gaia_triangle_greedy_orientation_probe(
             )
             rate0 = float(len(px_m)) / float(max(1, int(n_img)))
         except Exception:  # noqa: BLE001
+            # EXC-0601: T4 -- candidate coarse-match-rate fail -> continue (EXCEPT-BULK 2026-07-08)
             continue
         if (rate0 > best_rate + 1e-9) or (abs(rate0 - best_rate) < 1e-9 and rms0 < best_rms):
             best_rate = float(rate0)
@@ -2796,6 +2808,7 @@ def _gaia_triangle_greedy_orientation_probe(
                 )
                 log_event(f"CATALOG BOUNDS PX: X[-500,{int(naxis1) + 500}] Y[-400,{int(naxis2) + 400}]")
     except Exception:  # noqa: BLE001
+        # EXC-0602: T4 -- catalog crop fail -> full catalog kept (fail-safe, slower) (EXCEPT-BULK 2026-07-08)
         pass
 
     ra_all = cat_df["ra_deg"].to_numpy(dtype=np.float64)
@@ -3105,6 +3118,7 @@ def _solve_wcs_build_catalog(
                 if math.isfinite(cone_diag) and cone_diag > 0:
                     cone_r = max(float(cone_r), float(cone_diag))
     except Exception:  # noqa: BLE001
+        # EXC-0603: T2 -- optics-based cone floor fail -> pass -> possibly undersized Gaia cone (solve failure is... (EXCEPT-BULK 2026-07-08)
         pass
     # Global minimum cone radius is only needed when optics are unknown; for narrow-field optics it is harmful
     # (explodes Gaia rows and makes triangle matching intractable).
@@ -3152,7 +3166,7 @@ def _solve_wcs_build_catalog(
         cone_r = max(float(cone_r), float(_r_fov))
     try:
         cone_r = max(float(cone_r), float(_opt.get("search_radius", 0.0)))
-    except Exception:  # noqa: BLE001
+    except (TypeError, ValueError) as exc:  # noqa: BLE001
         pass
     _foc_log = f"{_foc_mm:g}" if _foc_mm is not None else "?"
     ra_deg = float(ra0)
@@ -4119,6 +4133,7 @@ def _solve_wcs_write_results(
                 hdr0["CROTA1"] = (float(crota), "VYVAR: derived rotation from solved WCS (deg)")
                 hdr0["CROTA2"] = (float(crota), "VYVAR: derived rotation from solved WCS (deg)")
     except Exception:  # noqa: BLE001
+        # EXC-0610: T3 -- VY_MIRR header write skipped (EXCEPT-BULK 2026-07-08)
         pass
 
     hdr0["VY_PSOLV"] = (True, "Plate solved by VYVAR (Gaia DR3 match)")
@@ -4383,6 +4398,7 @@ def solve_wcs_with_local_gaia(
                         try:
                             _caller = float(fov_diameter_deg)
                         except (TypeError, ValueError):
+                            # EXC-0612: T4 -- optics FOV override fail surfaced as WARNING, falls back to caller FOV (EXCEPT-BULK 2026-07-08)
                             _caller = float("nan")
                         if (not math.isfinite(_caller)) or (_caller <= 0) or (_caller > _diag_eff * 3.0) or (_caller < _diag_eff / 3.0):
                             fov_diameter_deg_eff = _diag_eff

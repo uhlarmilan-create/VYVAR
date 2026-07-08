@@ -62,6 +62,7 @@ def _dynamic_window_length(lc: Any, min_window: int = 301) -> int:
     try:
         n = int(len(lc))
     except Exception:  # noqa: BLE001
+        # EXC-0478: T4 -- intent unclear (try: / n = int(len(lc)) / except Exception:  # noqa: BLE001 / return mi... (EXCEPT-BULK 2026-07-08)
         return min_window
     w = max(min_window, int(0.10 * n))
     return w if w % 2 == 1 else w + 1
@@ -151,6 +152,7 @@ def _lomb_scargle_best_period(
     try:
         return float(best_pg.period_at_max_power.value)
     except Exception:  # noqa: BLE001
+        # EXC-0479: T4 -- intent unclear (try: / return float(best_pg.period_at_max_power.value) / except Excepti... (EXCEPT-BULK 2026-07-08)
         return None
 
 
@@ -257,6 +259,7 @@ def _lomb_standard_power_at_frequency(lc: Any, frequency_per_day: float) -> floa
         ls = LombScargle(t, y, dy=dy, normalization="standard")
         return float(ls.power(float(frequency_per_day)))
     except Exception:  # noqa: BLE001
+        # EXC-0480: T4 -- intent unclear (ls = LombScargle(t, y, dy=dy, normalization='standard') / return float(... (EXCEPT-BULK 2026-07-08)
         return None
 
 
@@ -543,6 +546,7 @@ def _period_consensus(
             af = float(a)
             bf = float(b)
         except Exception:  # noqa: BLE001
+            # EXC-0481: T4 -- intent unclear (af = float(a) / bf = float(b) / except Exception:  # noqa: BLE001 / ret... (EXCEPT-BULK 2026-07-08)
             return False
         if not (np.isfinite(af) and np.isfinite(bf) and af > 0 and bf > 0):
             return False
@@ -636,6 +640,7 @@ def _tpf_coord_deg(val: Any) -> float:
             return float(val.deg)
         return float(val)
     except Exception:  # noqa: BLE001
+        # EXC-0482: T4 -- intent unclear (return float(val.deg) / return float(val) / except Exception:  # noqa: ... (EXCEPT-BULK 2026-07-08)
         return float("nan")
 
 
@@ -1390,6 +1395,7 @@ def run_tess_analysis(
             try:
                 progress_callback(msg, float(val))
             except Exception:  # noqa: BLE001
+                # EXC-0483: T4 -- intent unclear (try: / progress_callback(msg, float(val)) / except Exception:  # noqa: ... (EXCEPT-BULK 2026-07-08)
                 pass
 
     x, y, mx, my, cutsize = _get_aperture_params(mag)
@@ -1397,6 +1403,7 @@ def run_tess_analysis(
     try:
         search_results = lk.search_tesscut(f"{float(ra)} {float(dec)}", sector=list(range(1, 70)))
     except Exception as exc:  # noqa: BLE001
+        # EXC-0484: T4 -- intent unclear (try: / search_results = lk.search_tesscut(f'{float(ra)} {float(dec)}', ... (EXCEPT-BULK 2026-07-08)
         return TessResult(
             catalog_id=cid,
             ra=float(ra),
@@ -1424,6 +1431,7 @@ def run_tess_analysis(
     try:
         tpfs = search_results.download_all(cutout_size=int(cutsize), quality_bitmask="hard")
     except Exception as exc:  # noqa: BLE001
+        # EXC-0485: T4 -- intent unclear (try: / tpfs = search_results.download_all(cutout_size=int(cutsize), qua... (EXCEPT-BULK 2026-07-08)
         return TessResult(
             catalog_id=cid,
             ra=float(ra),

@@ -85,6 +85,7 @@ def _safe_polyfit(
             return np.polyfit(x_a, y_a, int(deg), cov=True)
         return np.polyfit(x_a, y_a, int(deg))
     except Exception:  # noqa: BLE001
+        # EXC-0120: T4 -- Polyfit failure returns None - callers skip that detrend model branch (EXCEPT-BULK 2026-07-08)
         return None
 
 
@@ -104,6 +105,7 @@ def _sid_int(v: Any) -> int | None:
         try:
             return int(sid)
         except Exception:  # noqa: BLE001
+            # EXC-0121: T4 -- Non-integer Gaia source_id returns None - downstream treats star as uncatalogued (EXCEPT-BULK 2026-07-08)
             return None
     return None
 
@@ -248,7 +250,8 @@ def _enrich_comp_bp_rp(
                 ).fetchone()
                 if rw is not None and rw["bp_rp"] is not None:
                     bp_r = float(rw["bp_rp"])
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.error('[EXC-0122] Gaia DB bp_rp row fetch fails - comp star keeps NaN bp_rp and wrong colour tier: %s', exc)
                 pass
         gaia_bp_cache[int(sid_i)] = bp_r if math.isfinite(bp_r) else float("nan")
         return gaia_bp_cache[int(sid_i)]
@@ -770,7 +773,8 @@ def _resolve_phase2a_equipment_id(
         ).fetchone()
         if row is not None and row[0] is not None:
             return int(row[0])
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0125] OBS_DRAFT equipment_id DB read fails - gain/RN resolver falls back without equipment scope: %s', exc)
         return None
     return None
 
@@ -897,7 +901,8 @@ def _phase2a_star_mag_lookup(
                     v = pd.to_numeric(r.get(mag_col), errors="coerce")
                     if math.isfinite(float(v)):
                         out[cid] = float(v)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error("[EXC-0126] Per-star mag from masterstars CSV cache load fails - aperture sizing lacks that star's ...: %s", exc)
         pass
     return out
 
@@ -1098,6 +1103,7 @@ def load_snr_aperture_table_from_draft_dir(
         with path.open(encoding="utf-8") as f:
             table = json.load(f)
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0128] aperture_snr_table.json unreadable - Phase 2A uses global default aperture instead of p...: %s', exc)
         logging.warning("[FÁZA 2A] aperture_snr_table.json nečitateľná (%s) — globálna apertúra", exc)
         return None
     if not isinstance(table, dict):
@@ -1155,7 +1161,8 @@ def resolve_fwhm_px_for_snr_aperture_table(
                     continue
                 if math.isfinite(vf) and 0.5 < vf < 30.0:
                     return vf
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0129] MASTERSTAR header FWHM key parse fails - SNR/aperture table uses later fallback FWHM so...: %s', exc)
             pass
     sel = masterstar_selection if isinstance(masterstar_selection, dict) else {}
     try:
@@ -1211,7 +1218,8 @@ def estimate_median_sky_adu_per_px_for_snr_table(
                 )
                 if nf is not None:
                     vals.append(float(nf))
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.error('[EXC-0130] One frame skipped when estimating median sky for SNR table - sky_adu biased if few frames: %s', exc)
                 continue
 
     if not vals:
@@ -2559,7 +2567,8 @@ def ensemble_normalize(
                 continue
             try:
                 mv = float(comp_mag_inst[cid][i])
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.error("[EXC-0135] One comp's inst mag on one frame skipped - ensemble normalization ignores that comp for...: %s", exc)
                 continue
             if math.isfinite(mv):
                 comp_pairs.append((cid, mv))
@@ -3301,6 +3310,7 @@ def _ensure_group_comp_pool_csv(
         )
         log_event(f"[PHOT] Refreshed comparison_stars.csv pool ({n_pool}→spatial grid) for CT fit in {ps_dir.name}")
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0137] comparison_stars.csv spatial pool refresh fails - CT fit uses stale/sparse comp pool: %s', exc)
         logging.warning("[PHOT] comparison_stars pool refresh failed: %s", exc)
     return comp_csv
 
@@ -3311,7 +3321,8 @@ def _variable_targets_looks_like_ct_presel_stub(vt_path: Path, *, masterstars_cs
     try:
         vt = pd.read_csv(vt_path, low_memory=False, nrows=500)
         ms = pd.read_csv(masterstars_csv, low_memory=False, usecols=["catalog_id"])
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0138] variable_targets stub detection CSV read fails - returns False (stub may go undetected): %s', exc)
         return False
     if len(vt) >= max(80, int(len(ms) * 0.05)):
         return False
@@ -3366,6 +3377,7 @@ def ensure_full_variable_targets_if_presel_stub(
         )
         return True
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0139] Full variable_targets restore from field cone fails - CT presel stub may remain as targ...: %s', exc)
         logging.warning("[PHOT] variable_targets restore failed: %s", exc)
         return False
 
@@ -3445,7 +3457,8 @@ def _color_term_cat_inst_scatter_pair(
     try:
         c1_init = float(p0[0])
         zp_init = float(p0[1])
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0140] Color-term fit coefficient unpack fails - returns NaN c1/zp and downstream CT fit abort...: %s', exc)
         return float("nan"), float("nan")
 
     resid = y - (c1_init * x + zp_init)
@@ -3741,7 +3754,8 @@ def democratic_detrend_lc(
                 )
                 mag_a = mag - trend_a + np.nanmedian(mag_normal)
                 models.append(mag_a)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0141] Airmass detrend model branch dropped - democratic detrend uses fewer models, LC trend r...: %s', exc)
             pass
 
     # Model B: degree-2 polynomial on BJD (slow time trend)
@@ -3757,7 +3771,8 @@ def democratic_detrend_lc(
                 trend_b = np.polyval(coeffs_b, bjd_centered)
                 mag_b = mag - trend_b + np.nanmedian(mag_normal)
                 models.append(mag_b)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0142] BJD polynomial detrend model branch dropped - democratic detrend LC differs: %s', exc)
             pass
 
     # Model C: Savitzky-Golay on time axis
@@ -3772,7 +3787,8 @@ def democratic_detrend_lc(
             trend_c = np.interp(np.arange(len(mag)), idx_normal, mag_smooth)
             mag_c = mag - trend_c + np.nanmedian(mag_normal)
             models.append(mag_c)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0143] Savitzky-Golay detrend model branch dropped - democratic detrend LC differs: %s', exc)
             pass
 
     if not models:
@@ -4651,7 +4667,8 @@ def auto_export_variability_candidates_csv(
                 )
                 meta = meta.copy()
                 meta["zone_flag"] = meta.index.astype(str).map(_zf_map)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0148] zone_flag merge into variability-candidate metadata fails - exported rows lack zone_flag: %s', exc)
             pass
     comp_ids: list[str] = []
     if comparison_stars_csv:
@@ -4715,7 +4732,8 @@ def auto_export_variability_candidates_csv(
         if vdi_df is not None and (not vdi_df.empty) and ("catalog_id" in vdi_df.columns):
             vdi_df = vdi_df.copy()
             vdi_df["catalog_id"] = normalize_gaia_source_id_series(vdi_df["catalog_id"])
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0149] catalog_id normalize on rms/vdi frames fails - float-corrupted Gaia IDs may break comp ...: %s', exc)
         pass
 
     results_df = rms_df.copy()
@@ -4767,7 +4785,8 @@ def auto_export_variability_candidates_csv(
                     .astype(str)
                 )
                 work["zone_flag"] = work["catalog_id"].astype(str).map(_zf_map)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0150] zone_flag map onto variability work frame fails - edge filter may use missing zone: %s', exc)
             pass
 
     edge_ok, edge_filter_failed = _edge_ok_from_masterstar_pipeline(
@@ -4799,7 +4818,8 @@ def auto_export_variability_candidates_csv(
 
         if "catalog_id" in cand_df.columns:
             cand_df["catalog_id"] = normalize_gaia_source_id_series(cand_df["catalog_id"])
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0151] Final cand_df catalog_id normalization fails - exported candidate IDs may retain .0 cor...: %s', exc)
         pass
 
     # Best-effort: if Gaia IDs are still corrupted (float64 precision loss), repair using RA/DEC nearest match
@@ -4925,7 +4945,8 @@ def auto_export_variability_candidates_csv(
                         cand_id = normalize_gaia_source_id(r.get("name")) or normalize_gaia_source_id(r.get("catalog_id"))
                         if cand_id:
                             cand_df.at[idx, "catalog_id"] = str(cand_id)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0153] MASTERSTAR NN catalog_id repair block fails - corrupted comp IDs may persist in candida...: %s', exc)
         pass
 
     export_cols = [
@@ -5159,7 +5180,8 @@ def build_lc_quality_summary(
         try:
             slope = float(rms_model_coeffs[0])
             intercept = float(rms_model_coeffs[1])
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0155] RMS model slope/intercept not written to lc_quality summary metadata: %s', exc)
             pass
     out: dict[str, Any] = {
         "good": int(counts["good"]),
@@ -5284,7 +5306,8 @@ def _phase2a_write_summary(
 
         if "catalog_id" in _sum_df.columns:
             _sum_df["catalog_id"] = normalize_gaia_source_id_series(_sum_df["catalog_id"])
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0156] photometry_summary.csv catalog_id normalization fails - summary rows may carry float-tr...: %s', exc)
         pass
 
     _rms_n_stars = int(len(_rms_fit[1])) if _rms_fit is not None else 0
@@ -5304,7 +5327,8 @@ def _phase2a_write_summary(
             _gs11_prev = _prev.get("gs11_summary")
             if isinstance(_gs11_prev, dict):
                 _comps_gs11_rej = int(_gs11_prev.get("comps_gs11_rejected", 0) or 0)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0157] Prior gs11_summary comps_gs11_rejected count not loaded - GS11 summary undercounts reje...: %s', exc)
         pass
     _gs11 = build_gs11_summary(
         _sum_df.to_dict("records"),
@@ -5427,7 +5451,8 @@ def merge_photometry_pipeline_meta(
         if _meta_path.is_file():
             try:
                 _existing = json.loads(_meta_path.read_text(encoding="utf-8"))
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.error('[EXC-0158] Existing pipeline_meta.json parse failure replaced with empty dict - prior meta keys si...: %s', exc)
                 pass
         _merged = dict(updates)
         if cfg is not None and entry_point:
@@ -5453,7 +5478,8 @@ def _phase2a_resolve_field_center_ra_dec(
                 dec = float(cr2)
                 if math.isfinite(ra) and math.isfinite(dec):
                     return ra, dec, "MASTERSTAR_CRVAL"
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0159] MASTERSTAR CRVAL1/2 parse fails - field center falls back to active_targets median (may...: %s', exc)
             pass
     if at_df is not None and not at_df.empty:
         ra_col = "ra_deg" if "ra_deg" in at_df.columns else ("ra" if "ra" in at_df.columns else None)
@@ -5553,7 +5579,8 @@ def _build_phase2a_dynamic_params(
             _dc = _fd.get("density_class")
             if _dc is not None and str(_dc).strip():
                 density_class = str(_dc).strip()
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0160] field_density.json density_class not loaded - adaptive crowding params use default density: %s', exc)
             pass
 
     vy_ndao: int | None = None
@@ -5579,7 +5606,8 @@ def _build_phase2a_dynamic_params(
             if isinstance(_sb, (list, tuple)) and len(_sb) == 4:
                 safe_bbox = [float(_sb[0]), float(_sb[1]), float(_sb[2]), float(_sb[3])]
                 break
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0161] alignment safe_bbox from plan JSON not loaded - chip margin/edge filters may use full f...: %s', exc)
             pass
 
     aperture_r_px: float | None = None
@@ -5723,6 +5751,7 @@ def _load_blend_worklist(masterstar_fits_path: Path) -> dict[str, BlendMapEntry]
                 if ncid:
                     m[ncid] = entry
     except Exception as e:  # noqa: BLE001
+        logging.error('[EXC-0162] ePSF blend worklist JSON load fails - adaptive blend deblend map empty, crowded stars u...: %s', exc)
         logging.warning("[ePSF] blend worklist load failed (%s)", e)
     _ADAPTIVE_BLEND_CACHE[key] = m
     return m
@@ -5913,7 +5942,8 @@ def load_epsf_metrics_for_draft(
                 csv_path, usecols=usecols, low_memory=False, dtype=_cid_dtype
             )
             chunks.append(df)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error("[EXC-0163] One frame's psf_fit CSV unreadable - ePSF metrics aggregate omits that frame's stars: %s", exc)
             try:
                 df = pd.read_csv(csv_path, low_memory=False)
                 if "psf_fit_ok" not in df.columns:
@@ -6390,7 +6420,8 @@ def _phase2a_prepare_shared_state(
                 chip_fw = int(math.ceil(xm)) + 2
             if chip_fh is None and math.isfinite(ym) and ym > 0:
                 chip_fh = int(math.ceil(ym)) + 2
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0164] Chip height/width inference from target/comp xy max fails - chip margin filter may use ...: %s', exc)
             pass
 
     if "x" not in comp_df.columns or "y" not in comp_df.columns:
@@ -6658,7 +6689,8 @@ def _phase2a_prepare_shared_state(
                     "airmass": float("nan"),
                     "catalog_match_mode": _cmm_frame,
                 }
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0167] catalog_match_mode not stored in frame_time_lookup for one frame stem: %s', exc)
             pass
 
     # Propagate meridian-flip / rotation-change flag from alignment_report.csv when present.
@@ -6694,7 +6726,8 @@ def _phase2a_prepare_shared_state(
                         _rs = str(r.get("reason", "") or "").strip()
                         if _rs:
                             frame_time_lookup[stem]["alignment_reason"] = _rs
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0168] alignment_report.csv alignment_failed/reason not propagated into frame_time_lookup: %s', exc)
         pass
 
     # Krok 1: Globálna fixná apertúra — všetky hviezdy (target + comp), faktor × FWHM
@@ -6730,7 +6763,8 @@ def _phase2a_prepare_shared_state(
                     _s = str(_obsg).strip()
                     if _s:
                         obs_group = _s
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.error('[EXC-0169] VY_OBSG/OBSG/FILTER header tag not parsed - obs_group label missing from frame metadata: %s', exc)
                 pass
             vy_fwhm_gauss = hdr.get("VY_FWHM_GAUSS", None)
             vy_fwhm_dao = hdr.get("VY_FWHM", None)
@@ -6749,6 +6783,7 @@ def _phase2a_prepare_shared_state(
                         f"[FÁZA 2A] FWHM z VY_FWHM (DAO): {_fwhm_from_header:.3f} px"
                     )
     except Exception as _e:  # noqa: BLE001
+        logging.error('[EXC-0170] MASTERSTAR header FWHM read throws - measured FWHM from stars used instead (logged warn...: %s', exc)
         logging.warning(f"[FÁZA 2A] Nemôžem čítať FWHM z hlavičky: {_e}")
 
     if _fwhm_from_header is not None:
@@ -6812,6 +6847,7 @@ def _phase2a_prepare_shared_state(
                 json.dump(_snr_ap_table, _f, indent=2)
             logging.info("[PHASE 2A] Aperture SNR table saved: %s", _ap_table_path)
         except Exception as _ap_exc:  # noqa: BLE001
+            logging.error('[EXC-0171] aperture_snr_table.json write to draft dir fails - table used in-memory but not persist...: %s', exc)
             logging.warning("[PHASE 2A] Could not save aperture_snr_table.json: %s", _ap_exc)
 
     _star_mag_by_cid = _phase2a_star_mag_lookup(at_df, comp_df, Path(masterstar_fits_path))
@@ -8169,6 +8205,7 @@ def _phase2a_process_one_target(
                         _mctx = MethodLcWriteContext(**{**_mctx_base.__dict__, "method": _alt_m})
                         save_method_variant_lightcurve(_mctx)
                     except Exception as _alt_exc:  # noqa: BLE001
+                        logging.error('[EXC-0172] Alternate method-variant LC file (e.g. detrended) not written for one target/method: %s', exc)
                         logging.warning(
                             "[METHOD-LC] %s %s failed: %s",
                             target_cid,
@@ -8176,6 +8213,7 @@ def _phase2a_process_one_target(
                             _alt_exc,
                         )
         except Exception as _meth_exc:  # noqa: BLE001
+            logging.error('[EXC-0173] All method-variant LC exports for target skipped when init block fails: %s', exc)
             logging.warning("[METHOD-LC] init failed for %s: %s", target_cid, _meth_exc)
     # Kvalita comp pre UI (tabuľka „Porovnávacie hviezdy“)
     _cq_path = lc_dir / f"comp_quality_{target_cid}.json"
@@ -8414,6 +8452,7 @@ def _phase2a_finalize_exports(
                 max_comps=int(getattr(_cfg, "phase01_comparison_n_comp_max", 8)),
             )
         except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0174] COMP_QA stage failure - comp_quality JSON/summary not updated post Phase 2A: %s', exc)
             logging.warning("[COMP_QA] Stage failed (non-fatal): %s", exc)
 
     # Draft-level trust flag (read-only w.r.t. photometry; before AAVSO/VarAstro/PDF).
@@ -8430,6 +8469,7 @@ def _phase2a_finalize_exports(
             )
             _sum_df = pd.read_csv(output_dir / "photometry_summary.csv", low_memory=False)
         except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0175] Trust-flag stage failure - photometry_summary trust columns not refreshed: %s', exc)
             logging.warning("[TRUST] Stage failed (non-fatal): %s", exc)
 
     logging.info(f"[FÁZA 2A] Hotovo: {n_lc} svetelných kriviek → {output_dir}")
@@ -8560,6 +8600,7 @@ def _phase2a_finalize_exports(
             ",".join(_active_methods),
         )
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0176] AAVSO/VarAstro lightcurve export batch fails - external report files missing: %s', exc)
         logging.warning("[EXPORT] init failed: %s", exc)
 
     # Build flux pivot once — reuse in variability detection (TODO-PERF-6)
@@ -8624,6 +8665,7 @@ def _phase2a_finalize_exports(
             ms_data=_ms_data,
         )
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0177] Auto variability-candidates CSV export fails - rms_candidates.csv not produced: %s', exc)
         logging.warning("[VARIABILITY] Auto-export failed: %s", exc)
 
     # Auto crossmatch + TESS verify for candidates before Summary Measure Report (best effort).
@@ -8644,6 +8686,7 @@ def _phase2a_finalize_exports(
         else:
             logging.info("[AUTO] No candidates CSV found for crossmatch/TESS in %s", str(output_dir))
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0178] Auto crossmatch/TESS verify on candidates fails - enrichment columns absent from export: %s', exc)
         logging.warning("[AUTO] crossmatch/TESS zlyhalo: %s", exc)
 
     from except_fix_counters import get_except_fix_counters
@@ -8784,7 +8827,8 @@ def run_phase2a(
             "calibration_mode": _cal_mode,
             "calibration_report_line": calibration_mode_report_line(_cal_mode),
         }
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0179] calibration_mode not merged into pipeline_meta after Phase 2A: %s', exc)
         pass
     _cal_diag_meta: dict[str, Any] = {}
     try:
@@ -8794,7 +8838,8 @@ def run_phase2a(
         _cd = load_cal_diag_json_for_meta(_dd)
         if _cd is not None:
             _cal_diag_meta = {"cal_diag": _cd}
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0180] cal_diag block not merged into pipeline_meta: %s', exc)
         pass
     merge_photometry_pipeline_meta(
         output_dir,
@@ -9080,6 +9125,7 @@ def _compute_fov_max_dist(
         )
         return float(result)
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0182] FOV max_dist degree calculation fails - comp/target cone uses hardcoded fallback radius: %s', exc)
         logging.warning(
             "[FÁZA 0+1] FOV max_dist výpočet zlyhal (%s) → fallback=%.3f°",
             exc,
@@ -9108,6 +9154,7 @@ def _resolve_plate_scale_arcsec_per_px(
             _fp = Path(fits_path) if fits_path is not None else Path(".")
             _fits_ps = _read_plate_scale_from_fits_path(_fp, ms_header=ms_header)
         except Exception:  # noqa: BLE001
+            # EXC-0183: T4 -- WCS pixel_scale_from_wcs path fails - CD-matrix fallback attempted next (EXCEPT-BULK 2026-07-08)
             _fits_ps = None
     if _fits_ps is not None and math.isfinite(_fits_ps) and _lo <= float(_fits_ps) <= _hi:
         return float(_fits_ps)
@@ -9199,7 +9246,8 @@ def _read_plate_scale_from_fits_path(
                 return None
             with astrofits.open(fp, memmap=False) as hdul:
                 hdr = hdul[0].header
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0184] FITS open/header read for plate scale fails - returns None, caller uses config/default ...: %s', exc)
         return None
 
     # (1) Authoritative: solved WCS / CD matrix.
@@ -9236,6 +9284,7 @@ def _read_plate_scale_from_fits_path(
             if math.isfinite(f) and _MIN <= f <= _MAX:
                 return float(f)
     except Exception:  # noqa: BLE001
+        # EXC-0186: T4 -- Non-numeric catalog_id string returned unchanged instead of int-normalized form (EXCEPT-BULK 2026-07-08)
         return None
     return None
 
@@ -9913,7 +9962,8 @@ def compute_per_frame_cog_correction(
                 fr = ee / ref_val
                 if np.all(np.isfinite(fr)):
                     fracs.append(fr)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0190] One bright star skipped in COG encircled-energy curve - aperture COG correction biased: %s', exc)
             continue
 
     n_cog = len(fracs)
@@ -10380,7 +10430,8 @@ def _enrich_active_targets_bp_rp(
                 ).fetchone()
                 if rw is not None and rw["bp_rp"] is not None:
                     bp_r = float(rw["bp_rp"])
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.error('[EXC-0192] Gaia DB bp_rp fetch for active targets fails - target row keeps NaN bp_rp: %s', exc)
                 pass
         gaia_cache[int(sid_i)] = bp_r if math.isfinite(bp_r) else float("nan")
         return gaia_cache[int(sid_i)]
@@ -10495,7 +10546,8 @@ def _read_field_density_inputs(
                         vy_ndao_raw = int(float(v))
                     except (TypeError, ValueError):
                         vy_ndao_raw = None
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0196] VY_NDAO header read from MASTERSTAR fails - field density uses masterstars count fallback: %s', exc)
             pass
     msc_path = Path(masterstars_csv)
     if msc_path.is_file():
@@ -10511,7 +10563,8 @@ def _read_field_density_inputs(
             if _n_gaia > 0:
                 n_stars = _n_gaia
                 src = "masterstars_gaia_matched"
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0197] masterstars_full_match.csv star-count read fails - field density n_stars may use VY_NDA...: %s', exc)
             pass
     if n_stars <= 0 and vy_ndao_raw is not None and vy_ndao_raw > 0:
         n_stars = int(vy_ndao_raw)
@@ -10723,6 +10776,7 @@ def select_active_targets(
                     f"— pixel-distance matching"
                 )
         except Exception as _wcs_exc:  # noqa: BLE001
+            logging.error('[EXC-0199] WCS scale sanity check failure logged - distance matching may stay on ra/dec instead of...: %s', exc)
             logging.warning("[SELECT TARGETS] WCS sanity check failed: %s", _wcs_exc)
     if _use_pixel_dist:
         log_event("[SELECT TARGETS] Distance mode: pixel-fallback")
@@ -11075,6 +11129,7 @@ def _enrich_target_bp_rp_from_gaia_db(
             finally:
                 con.close()
         except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0202] Outer Gaia SQL for target bp_rp logs failure - target keeps CSV bp_rp or NaN: %s', exc)
             log_event(f"TARGET Gaia SQL: {vsx} — {exc!s}")
 
     if math.isfinite(bpr_nf):
@@ -11945,7 +12000,8 @@ def select_comparison_stars_per_target(
             ms_arr_x2 = ms_arr_x
             ms_arr_y2 = ms_arr_y
             ms_arr_mag2 = ms_arr_mag
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0205] Aperture isolation filter skipped when ms_arr arrays unavailable - crowded comps not re...: %s', exc)
             return cands
         rej: set[Any] = set()
         for idx2, crow2 in cands.iterrows():
@@ -12390,7 +12446,8 @@ def run_phase0_and_phase1(
                     ),
                     encoding="utf-8",
                 )
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.error('[EXC-0208] crowding_signal.json diagnostic write fails during field-density adaptive step: %s', exc)
                 pass
         except Exception as _exc:  # noqa: BLE001
             logging.warning(
@@ -12432,7 +12489,8 @@ def run_phase0_and_phase1(
             ),
             encoding="utf-8",
         )
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0209] field_density.json write fails - downstream Phase 2A lacks stored density metadata: %s', exc)
         pass
 
     _wcs_scale_ok = True
@@ -12460,6 +12518,7 @@ def run_phase0_and_phase1(
                 )
                 _wcs_scale_ok = False
         except Exception as _wcs_exc:  # noqa: BLE001
+            logging.error('[EXC-0210] WCS scale sanity exception assumes scale OK - comp matching uses ra/dec haversine when ...: %s', exc)
             logging.warning(
                 "[WCS SANITY] check failed (non-fatal): %s — skipping check, assuming WCS scale OK "
                 "(radec-haversine distance mode).",
@@ -12545,7 +12604,8 @@ def run_phase0_and_phase1(
         if "catalog_id" in active.columns:
             active = active.copy()
             active["catalog_id"] = normalize_gaia_source_id_series(active["catalog_id"])
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0211] active_targets.csv catalog_id normalization fails - float-truncated IDs written to disk: %s', exc)
         pass
     active.to_csv(active_csv, index=False)
     logging.info(f"[FÁZA 0] Uložené: {active_csv} ({len(active)} cieľov)")
@@ -12704,6 +12764,7 @@ def run_phase0_and_phase1(
                 len(_comp_gaia_prefetch),
             )
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0213] Comp Gaia bp_rp prefetch batch fails - phase1 comp selection hits DB per-star instead o...: %s', exc)
         logging.warning("[PERF-3] Comp Gaia prefetch failed (non-fatal): %s", exc)
 
     _t_phase1 = time.time()
@@ -12790,6 +12851,7 @@ def run_phase0_and_phase1(
         active.to_csv(active_csv, index=False)
         logging.info("[FÁZA 0–1] active_targets.csv prepísané po doplnení bp_rp targetov (Gaia DB).")
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0214] active_targets.csv rewrite after phase1 bp_rp enrichment fails - disk copy lacks update...: %s', exc)
         log_event(f"active_targets.csv zápis po Fáze 1 zlyhal: {exc!s}")
 
     comp_df = pd.concat(all_comp_rows, ignore_index=True) if all_comp_rows else pd.DataFrame()
@@ -13000,7 +13062,8 @@ def run_phase0_and_phase1(
 
             if n_nan > 0:
                 log_event(f"COMP bp_rp fallback: {n_found}/{n_nan} hviezd doplnených z Gaia DB")
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0217] Whole comp bp_rp Gaia-DB fallback block fails - comps export with NaN bp_rp and wrong t...: %s', exc)
         pass
 
     comp_csv = output_dir / "comparison_stars_per_target.csv"
@@ -13013,7 +13076,8 @@ def run_phase0_and_phase1(
         if "target_catalog_id" in comp_df.columns:
             comp_df = comp_df.copy()
             comp_df["target_catalog_id"] = normalize_gaia_source_id_series(comp_df["target_catalog_id"])
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0218] comparison_stars_per_target.csv catalog_id normalization fails - corrupted IDs in comp ...: %s', exc)
         pass
     comp_df.to_csv(comp_csv, index=False)
     _sparse_target_n = 0
@@ -13093,7 +13157,8 @@ def run_phase0_and_phase1(
                     max_sep_arcsec=10.0,
                     log_fn=lambda _m: None,
                 )
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0219] suspected_variables.csv catalog_id auto-repair from Gaia DB fails silently: %s', exc)
         pass
 
     _p(f"Fáza 0+1 hotovo: {int(len(active))} cieľov, {int(len(comp_df))} párov porovnávačiek")
@@ -13342,6 +13407,7 @@ def run_full_photometry_pipeline(
             with astrofits.open(_ms_path_shared, memmap=False) as _hdul:
                 _ms_header_shared = _hdul[0].header.copy()
         except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0220] Shared MASTERSTAR header cache load fails - repeated FITS opens (perf), not science num...: %s', exc)
             logging.warning("[PERF-2] Cannot open MASTERSTAR.fits for header: %s", exc)
     if _ms_header_shared is not None:
         try:
@@ -13353,7 +13419,8 @@ def run_full_photometry_pipeline(
                 if 0.5 < fv < 30.0:
                     fwhm_px = fv
                     break
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0221] VY_FWHM/VY_FWHM_GAUSS header parse fails - pipeline uses default/config FWHM for phase0+1: %s', exc)
             pass
 
     # ── FÁZA 0+1 ──
@@ -13657,7 +13724,8 @@ def _write_suspected_variables(
                 rel = raw_flux / norm_med
                 if math.isfinite(rel) and rel > 0:
                     flux_map[cid].append(rel)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0222] One frame skipped in suspected-variables flux accumulation - star RMS computed without ...: %s', exc)
             continue
 
     logging.info(
@@ -13690,7 +13758,8 @@ def _write_suspected_variables(
             med_dt = float(np.median(detrended))
             if math.isfinite(med_dt) and med_dt > 0:
                 flux_map[cid] = (detrended / med_dt).tolist()
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0223] Detrend fit failure in suspected-variables leaves raw flux - false variable candidates ...: %s', exc)
             pass
 
     min_f = max(3, int(n_frames * min_frames_frac))
@@ -13752,7 +13821,8 @@ def _write_suspected_variables(
 
         if "catalog_id" in out_df.columns:
             out_df["catalog_id"] = normalize_gaia_source_id_series(out_df["catalog_id"])
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0224] suspected_variables.csv catalog_id normalization fails - exported IDs may be float-corr...: %s', exc)
         pass
     out_df.to_csv(output_path, index=False)
     logging.info(

@@ -44,6 +44,7 @@ def _plate_scale_from_cd(hdr):
         if "CDELT1" in hdr:
             return abs(float(hdr["CDELT1"])) * 3600.0
     except Exception:  # noqa: BLE001
+        # EXC-0105: T3 -- intent unclear (if 'CDELT1' in hdr: / return abs(float(hdr['CDELT1'])) * 3600.0 / excep... (EXCEPT-BULK 2026-07-08)
         pass
     return None
 
@@ -66,6 +67,7 @@ def summarize_draft(path: str) -> dict:
         try:
             hdr = fits.getheader(f)
         except Exception:  # noqa: BLE001
+            # EXC-0106: T3 -- intent unclear (try: / hdr = fits.getheader(f) / except Exception:  # noqa: BLE001 / co... (EXCEPT-BULK 2026-07-08)
             continue
         filt = _first(hdr, FILTER_KEYS)
         if filt is not None:
@@ -79,6 +81,7 @@ def summarize_draft(path: str) -> dict:
             try:
                 info["scales"].append(round(float(sc), 3))
             except Exception:  # noqa: BLE001
+                # EXC-0107: T3 -- intent unclear (try: / info['scales'].append(round(float(sc), 3)) / except Exception:  ... (EXCEPT-BULK 2026-07-08)
                 pass
         nx, ny = hdr.get("NAXIS1"), hdr.get("NAXIS2")
         if nx and ny:
@@ -88,6 +91,7 @@ def summarize_draft(path: str) -> dict:
             try:
                 info["fwhm"].append(float(fw))
             except Exception:  # noqa: BLE001
+                # EXC-0108: T3 -- intent unclear (try: / info['fwhm'].append(float(fw)) / except Exception:  # noqa: BLE0... (EXCEPT-BULK 2026-07-08)
                 pass
     # try a VYVAR proc/lightcurve CSV for FWHM if header had none
     if not info["fwhm"]:
@@ -105,8 +109,10 @@ def summarize_draft(path: str) -> dict:
                             try:
                                 info["fwhm"].append(float(row[col]))
                             except Exception:  # noqa: BLE001
+                                # EXC-0109: T3 -- intent unclear (try: / info['fwhm'].append(float(row[col])) / except Exception:  # noqa... (EXCEPT-BULK 2026-07-08)
                                 pass
             except Exception:  # noqa: BLE001
+                # EXC-0110: T3 -- intent unclear (except Exception:  # noqa: BLE001 / pass / except Exception:  # noqa: B... (EXCEPT-BULK 2026-07-08)
                 pass
     return info
 

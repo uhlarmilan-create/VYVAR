@@ -114,7 +114,7 @@ def peek_index_log_l3_max(index_path: Path | str) -> float | None:
             data = pickle.load(f)
         v = data.get("log_L3_max")
         return float(v) if v is not None else None
-    except Exception:  # noqa: BLE001
+    except (OSError, pickle.UnpicklingError, KeyError, TypeError, ValueError) as exc:  # noqa: BLE001
         return None
 
 

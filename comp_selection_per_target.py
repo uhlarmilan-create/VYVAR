@@ -177,7 +177,8 @@ def _resolve_target_color_for_comp_selection(
                                 g_bp_rp = float("nan")
             finally:
                 con.close()
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0030] Gaia source_id BP-RP SQL lookup failure leaves target bp_rp NaN until NN fallback may m...: %s', exc)
             pass
 
     # If source_id lookup failed (often due to catalog_id float precision loss upstream),
@@ -229,6 +230,7 @@ def _resolve_target_color_for_comp_selection(
                 finally:
                     con.close()
         except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0031] Same BP-RP SQL lookup failure logged via log_event but target still proceeds without bp_rp: %s', exc)
             log_event(f"[COMP] Gaia BP-RP lookup failed for {target_cid}: {exc}")
 
     if not math.isfinite(t_bp_tgt) and math.isfinite(g_bp_rp):
@@ -344,10 +346,7 @@ def _filter_comp_candidates_spatial_static(
     # ── Krok 1: Filter kandidátov ──
     _debug_bo = str(target_cid).strip() == "1498613634033133184"
     if _debug_bo:
-        try:
-            print(f"[DEBUG BO CVn] Step A: global_comp_pool size = {int(len(ms))}")
-        except Exception:  # noqa: BLE001
-            pass
+                print(f"[DEBUG BO CVn] Step A: global_comp_pool size = {int(len(ms))}")
     if use_pixel_dist and x_t is not None and y_t is not None and "x" in ms.columns and "y" in ms.columns:
         x_arr = pd.to_numeric(ms["x"], errors="coerce").to_numpy(dtype=np.float64)
         y_arr = pd.to_numeric(ms["y"], errors="coerce").to_numpy(dtype=np.float64)
@@ -393,10 +392,7 @@ def _filter_comp_candidates_spatial_static(
     if target_cid:
         cand_mask &= ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).astype(str) != target_cid
         if _debug_bo:
-            try:
-                print(f"[DEBUG BO CVn] (exclude self) -> {int(cand_mask.sum())}")
-            except Exception:  # noqa: BLE001
-                pass
+                        print(f"[DEBUG BO CVn] (exclude self) -> {int(cand_mask.sum())}")
 
     # Jednotný vnútorný okraj čipu (premenné / comp / suspected rovnaké pravidlá)
     _cm = int(chip_interior_margin_px)
@@ -413,10 +409,7 @@ def _filter_comp_candidates_spatial_static(
         _yn = pd.to_numeric(ms["y"], errors="coerce")
         cand_mask &= _xn.between(_cm, int(chip_fw) - _cm) & _yn.between(_cm, int(chip_fh) - _cm)
         if _debug_bo:
-            try:
-                print(f"[DEBUG BO CVn] (chip margin {int(_cm)} px) -> {int(cand_mask.sum())}")
-            except Exception:  # noqa: BLE001
-                pass
+                        print(f"[DEBUG BO CVn] (chip margin {int(_cm)} px) -> {int(cand_mask.sum())}")
 
     # Hard filter: minimálna vzdialenosť od targetu
     if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0:
@@ -437,10 +430,7 @@ def _filter_comp_candidates_spatial_static(
     if _vt_gaia_ids:
         cand_mask &= ~ms["_norm_cid_vt"].isin(_vt_gaia_ids)
         if _debug_bo:
-            try:
-                print(f"[DEBUG BO CVn] (exclude variable_targets IDs) -> {int(cand_mask.sum())}")
-            except Exception:  # noqa: BLE001
-                pass
+                        print(f"[DEBUG BO CVn] (exclude variable_targets IDs) -> {int(cand_mask.sum())}")
 
     # Hard filter: |ΔMag| sa aplikuje adaptívne neskôr (na candidates_pre),
     # aby bol robustný pre celé rozpätie magnitúd a riedke polia.
@@ -590,10 +580,7 @@ def _build_candidates_pre_adaptive_mag(
     candidates_pre = ms[_base_mask | det_mask].copy()
     _debug_bo = str(target_cid).strip() == "1498613634033133184"
     if _debug_bo:
-        try:
-            print(f"[DEBUG BO CVn] Step G0: candidates before adaptive Δmag = {int(len(candidates_pre))}")
-        except Exception:  # noqa: BLE001
-            pass
+                print(f"[DEBUG BO CVn] Step G0: candidates before adaptive Δmag = {int(len(candidates_pre))}")
     # P3 determinism: sort candidates by catalog_id before any filtering
     if "catalog_id" in candidates_pre.columns:
         candidates_pre = candidates_pre.sort_values("catalog_id", kind="mergesort").reset_index(
@@ -630,13 +617,10 @@ def _build_candidates_pre_adaptive_mag(
             f"{_before_mag} → {int(len(candidates_pre))} (used_mag_tol={float(used_mag_tol):.2f})"
         )
         if _debug_bo:
-            try:
-                print(
-                    f"[DEBUG BO CVn] Step C: after adaptive |Δmag| (start={float(mag_tol):.2f}, "
-                    f"used={float(used_mag_tol):.2f}) -> {int(len(candidates_pre))}"
-                )
-            except Exception:  # noqa: BLE001
-                pass
+                        print(
+                            f"[DEBUG BO CVn] Step C: after adaptive |Δmag| (start={float(mag_tol):.2f}, "
+                            f"used={float(used_mag_tol):.2f}) -> {int(len(candidates_pre))}"
+                        )
         if "catalog_id" in candidates_pre.columns:
             candidates_pre = candidates_pre.sort_values("catalog_id", kind="mergesort").reset_index(
                 drop=True

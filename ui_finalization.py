@@ -45,6 +45,7 @@ def _copy_finalization_files(
                 else:
                     log_event(f"Finalizácia: preskočený chýbajúci súbor {src}")
             except Exception as exc:  # noqa: BLE001
+                # EXC-0512: T3 -- UI diagnostic/plot only (else: / log_event(f'Finalizácia: preskočený chýbajúci súbor {s... (EXCEPT-BULK 2026-07-08)
                 log_event(f"Finalizácia: kopírovanie zlyhalo {src} → {dst}: {exc!s}")
 
         pcsv = root / "processed"
@@ -53,6 +54,7 @@ def _copy_finalization_files(
             try:
                 out_flat.mkdir(parents=True, exist_ok=True)
             except Exception as exc:  # noqa: BLE001
+                # EXC-0513: T3 -- UI diagnostic/plot only (try: / out_flat.mkdir(parents=True, exist_ok=True) / except Ex... (EXCEPT-BULK 2026-07-08)
                 log_event(f"Finalizácia: nemôžem vytvoriť {out_flat}: {exc!s}")
             else:
                 for src in pcsv.rglob("*_catalog.csv"):
@@ -62,8 +64,10 @@ def _copy_finalization_files(
                             shutil.copy2(src, dst)
                             copied.append(f"per_frame_csv/{dst.name}")
                     except Exception as exc:  # noqa: BLE001
+                        # EXC-0514: T3 -- UI diagnostic/plot only (shutil.copy2(src, dst) / copied.append(f'per_frame_csv/{dst.na... (EXCEPT-BULK 2026-07-08)
                         log_event(f"Finalizácia: kopírovanie zlyhalo {src}: {exc!s}")
     except Exception as exc:  # noqa: BLE001
+        # EXC-0515: T3 -- UI diagnostic/plot only (except Exception as exc:  # noqa: BLE001 / log_event(f'Finaliz... (EXCEPT-BULK 2026-07-08)
         log_event(f"Finalizácia: _copy_finalization_files: {exc!s}")
     return copied
 
@@ -81,6 +85,7 @@ def _draft_scan_row(db: Any, draft_id: int) -> dict[str, Any] | None:
         ).fetchone()
         return dict(row) if row is not None else None
     except Exception:  # noqa: BLE001
+        # EXC-0516: T3 -- UI diagnostic/plot only ().fetchone() / return dict(row) if row is not None else None /... (EXCEPT-BULK 2026-07-08)
         return None
 
 
@@ -101,6 +106,7 @@ def _draft_location_name(db: Any, draft_id: int) -> str:
         s = str(v).strip() if v is not None else ""
         return s or "—"
     except Exception:  # noqa: BLE001
+        # EXC-0517: T3 -- UI diagnostic/plot only (s = str(v).strip() if v is not None else '' / return s or '—' ... (EXCEPT-BULK 2026-07-08)
         return "—"
 
 
@@ -117,6 +123,7 @@ def _n_light_frames(db: Any, draft_id: int) -> int:
             return 0
         return int(row["n"] if hasattr(row, "keys") else row[0])
     except Exception:  # noqa: BLE001
+        # EXC-0518: T3 -- UI diagnostic/plot only (return 0 / return int(row['n'] if hasattr(row, 'keys') else ro... (EXCEPT-BULK 2026-07-08)
         return 0
 
 
@@ -127,6 +134,7 @@ def _csv_nonempty(path: Path) -> bool:
         df = pd.read_csv(path, nrows=5000)
         return len(df) > 0
     except Exception:  # noqa: BLE001
+        # EXC-0519: T3 -- UI diagnostic/plot only (df = pd.read_csv(path, nrows=5000) / return len(df) > 0 / exce... (EXCEPT-BULK 2026-07-08)
         return False
 
 
@@ -390,6 +398,7 @@ def render_finalization(
                             )
 
                         except Exception as _ce:  # noqa: BLE001
+                            # EXC-0520: T3 -- UI diagnostic/plot only () / except Exception as _ce:  # noqa: BLE001 / log_event(f'COM... (EXCEPT-BULK 2026-07-08)
                             log_event(f"COMP_STAR_LIBRARY zápis zlyhal (nekritické): {_ce}")
 
                 if approved_by.strip():

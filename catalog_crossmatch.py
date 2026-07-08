@@ -625,6 +625,7 @@ def check_candidate_in_catalogs(
         try:
             return label, fn(coord, float(radius_arcsec)), None
         except Exception as exc:  # noqa: BLE001
+            # EXC-0021: ? -- intent unclear (try: / return label, fn(coord, float(radius_arcsec)), None / except Exc... (EXCEPT-BULK 2026-07-08)
             return label, None, str(exc)
 
     with ThreadPoolExecutor(max_workers=6) as ex:

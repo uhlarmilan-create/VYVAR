@@ -89,6 +89,7 @@ def _build_rows(
             with fits.open(fp, memmap=True) as hdul:
                 hdr = hdul[0].header
         except Exception:  # noqa: BLE001
+            # EXC-0506: T3 -- UI diagnostic/plot only (with fits.open(fp, memmap=True) as hdul: / hdr = hdul[0].heade... (EXCEPT-BULK 2026-07-08)
             continue
         kind = _parse_kind_from_name(fp, hdr)
         if kind is None:

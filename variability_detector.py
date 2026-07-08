@@ -70,6 +70,7 @@ def _lookup_cached_frame_df(p: Path, csv_cache: dict[str, pd.DataFrame] | None) 
             if Path(k).name == p.name:
                 return v
         except Exception:  # noqa: BLE001
+            # EXC-0569: ? -- intent unclear (if Path(k).name == p.name: / return v / except Exception:  # noqa: BLE0... (EXCEPT-BULK 2026-07-08)
             continue
     return None
 
@@ -200,7 +201,8 @@ def _finalize_flux_matrix_from_rows(
             if not (math.isfinite(med) and med > 0):
                 continue
             pivot_norm[col] = series / med
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.warning('[EXC-0570] intent unclear (continue / pivot_norm[col] = series / med / except Exception:  # noqa: ...: %s', exc)
             continue
 
     min_frames = max(1, int(math.ceil(float(min_frames_frac) * float(pivot_norm.shape[1]))))
@@ -544,7 +546,8 @@ def compute_rms_variability(
                             str(r.get("vsx_name", "") or ""),
                             str(r.get("vsx_type", "") or ""),
                         )
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("[EXC-0575] intent unclear (str(r.get('vsx_type', '') or ''), / ) / except Exception:  # noqa: BLE0...: %s", exc)
             pass
     out["vsx_match"] = out.index.isin(vsx_ids)
     out["vsx_name"] = out.index.map(lambda c: (vsx_meta.get(str(c), ("", ""))[0]))
@@ -613,7 +616,8 @@ def compute_rms_variability(
             expected[:] = expected_vals
             resid = y - (a + b * x)
             sigma_log = _mad_sigma(resid)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.debug('[EXC-0576] intent unclear (resid = y - (a + b * x) / sigma_log = _mad_sigma(resid) / except Except...: %s', exc)
             pass
 
     if expected.isna().all():

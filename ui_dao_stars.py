@@ -32,6 +32,7 @@ def _masterstar_detection_count(fits_path: Path, setup_dir: Path | None) -> int 
                 if not df.empty:
                     return int(len(df))
             except Exception:  # noqa: BLE001
+                # EXC-0508: T3 -- UI diagnostic/plot only (if not df.empty: / return int(len(df)) / except Exception:  # ... (EXCEPT-BULK 2026-07-08)
                 pass
     try:
         from astropy.io import fits
@@ -47,6 +48,7 @@ def _masterstar_detection_count(fits_path: Path, setup_dir: Path | None) -> int 
                     except (TypeError, ValueError):
                         continue
     except Exception:  # noqa: BLE001
+        # EXC-0509: T3 -- UI diagnostic/plot only (except (TypeError, ValueError): / continue / except Exception:... (EXCEPT-BULK 2026-07-08)
         pass
     return None
 

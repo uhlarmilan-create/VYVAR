@@ -464,6 +464,7 @@ def _run_vyvar_full_pipeline(
         try:
             pipeline.db.set_obs_draft_masterstar_source_path(int(_did), _use_path)
         except Exception as exc:  # noqa: BLE001
+            # EXC-0001: T3 -- UI diagnostic/plot only (try: / pipeline.db.set_obs_draft_masterstar_source_path(int(_d... (EXCEPT-BULK 2026-07-08)
             log_event(f"[RUN VYVAR] Zápis MASTERSTAR source do DB: {exc}")
 
         _update("MAKE MASTERSTAR (detrend + plate-solve + zarovnanie)")
@@ -614,6 +615,7 @@ def _run_vyvar_full_pipeline(
                     for _pdf_path in _pdf_paths:
                         log_event(f"[RUN VYVAR] SUMMARY MEASURE REPORT: {Path(_pdf_path).name}")
                 except Exception as _pdf_err:  # noqa: BLE001
+                    # EXC-0002: T3 -- UI diagnostic/plot only (for _pdf_path in _pdf_paths: / log_event(f'[RUN VYVAR] SUMMARY... (EXCEPT-BULK 2026-07-08)
                     log_event(f"[RUN VYVAR] SUMMARY MEASURE REPORT zlyhal: {_pdf_err}")
             except Exception as exc_nm:  # noqa: BLE001
                 errors.append(f"{nm}: {exc_nm}")
@@ -1248,6 +1250,7 @@ def _sync_varstrem_session_state(pipeline: AstroPipeline) -> None:
                 )
                 st.session_state["vyvar_last_saved_draft_center_sig"] = _sig_now
         except Exception as _exc_center:  # noqa: BLE001
+            # EXC-0003: T3 -- UI diagnostic/plot only () / st.session_state['vyvar_last_saved_draft_center_sig'] = _s... (EXCEPT-BULK 2026-07-08)
             log_event(f"Draft center save skipped: {_exc_center!s}")
 
 
@@ -1586,6 +1589,7 @@ def _render_pending_job_dispatcher(
                         if _mj.is_file():
                             _md_mc = _mj
                     except Exception:  # noqa: BLE001
+                        # EXC-0004: T3 -- UI diagnostic/plot only (if _mj.is_file(): / _md_mc = _mj / except Exception:  # noqa: ... (EXCEPT-BULK 2026-07-08)
                         pass
                 _hint_ra_j = pending.get("inject_pointing_ra_deg")
                 _hint_de_j = pending.get("inject_pointing_dec_deg")
@@ -2224,6 +2228,7 @@ def render_live_view(
                     ]
                 )
         except Exception:  # noqa: BLE001
+            # EXC-0005: T3 -- UI diagnostic/plot only (] / ) / except Exception:  # noqa: BLE001 / pass) (EXCEPT-BULK 2026-07-08)
             pass
 
         # Mandatory validation: at least one Light found in the whole tree

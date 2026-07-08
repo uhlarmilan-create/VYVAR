@@ -71,6 +71,7 @@ def _optimizer_parity_flip_already_in_fits(fits_path: Path) -> bool:
             except (TypeError, ValueError):
                 return str(v).strip().lower() in ("1", "t", "true", "yes")
     except Exception:  # noqa: BLE001
+        # EXC-0006: T2 -- VY_OPTPF read fail -> False ('not yet flipped') -> repeat parity flip possible on a fra... (EXCEPT-BULK 2026-07-08)
         return False
 
 
@@ -119,6 +120,7 @@ def _apply_wcs_pc_parity_flip_to_primary(fits_path: Path, *, set_vy_optpf: bool 
             hdul.flush()
         return True
     except Exception as exc:  # noqa: BLE001
+        # EXC-0007: T4 -- parity flip write fail surfaced via log + False (EXCEPT-BULK 2026-07-08)
         log_event(f"Astrometry optimizer: parity flip write failed: {exc!s}")
         return False
 
@@ -348,6 +350,7 @@ def optimize_masterstar_matches(
             f"Dec[{float(_gde.min()):.6f},{float(_gde.max()):.6f}]"
         )
     except Exception:  # noqa: BLE001
+        # EXC-0008: T3 -- BBOX diagnostic block (wraps min/max computations) skipped (EXCEPT-BULK 2026-07-08)
         pass
     if id_col is None:
         cid = pd.Series([""] * len(df))
@@ -456,6 +459,7 @@ def optimize_masterstar_matches(
                         f"from {int(np.count_nonzero(keep0))} candidates (NN sky <=180\")."
                     )
     except Exception as exc:  # noqa: BLE001
+        # EXC-0009: T4 -- initial-jump estimation fail surfaced as 'skipped' (EXCEPT-BULK 2026-07-08)
         log_event(f"Astrometry optimizer initial jump skipped: {exc!s}")
     log_event("Astrometry optimizer: adaptive rematch radius enabled (center=5.0\", edge>800px => 10–15\").")
     cid_series = df.get("catalog_id", pd.Series([""] * len(df), index=df.index)).copy()

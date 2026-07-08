@@ -456,6 +456,7 @@ def render_quality_dashboard(
             if not _ra_med.empty and not _de_med.empty:
                 _stage_center_update(float(_ra_med.median()), float(_de_med.median()))
     except Exception:  # noqa: BLE001
+        # EXC-0531: T3 -- UI diagnostic/plot only (if not _ra_med.empty and not _de_med.empty: / _stage_center_up... (EXCEPT-BULK 2026-07-08)
         pass
     try:
         _calib_t = (
@@ -469,6 +470,7 @@ def render_quality_dashboard(
         if bool((_calib_t.eq("PASSTHROUGH") | _is_cal.eq(0)).any()):
             st.warning("WARNING: You are viewing uncalibrated data (Passthrough Mode).")
     except Exception:  # noqa: BLE001
+        # EXC-0532: T3 -- UI diagnostic/plot only (if bool((_calib_t.eq('PASSTHROUGH') (EXCEPT-BULK 2026-07-08)
         pass
     for col in (
         "CALIB_FLAGS",
@@ -522,6 +524,7 @@ def render_quality_dashboard(
                     _median = float(np.median(_fwhm_vals))
                     st.session_state["fwhm_threshold"] = float(round(float(_median * 1.05), 2))
             except Exception:  # noqa: BLE001
+                # EXC-0533: T3 -- UI diagnostic/plot only (_median = float(np.median(_fwhm_vals)) / st.session_state['fwh... (EXCEPT-BULK 2026-07-08)
                 pass
         st.session_state[_auto_seed_key] = True
 
@@ -706,6 +709,7 @@ def render_quality_dashboard(
                     annotation_position="top left",
                 )
     except Exception:  # noqa: BLE001
+        # EXC-0534: T3 -- UI diagnostic/plot only (annotation_position='top left', / ) / except Exception:  # noq... (EXCEPT-BULK 2026-07-08)
         pass
     fig_f.update_layout(
         title="FWHM — red line = limit from slider above; green ≤ limit, red > limit",
@@ -725,6 +729,7 @@ def render_quality_dashboard(
             if math.isfinite(_fwhm_min) and math.isfinite(_fwhm_max) and _fwhm_max > _fwhm_min:
                 fig_f.update_yaxes(range=[float(_fwhm_min), float(_fwhm_max)])
     except Exception:  # noqa: BLE001
+        # EXC-0535: T3 -- UI diagnostic/plot only (if math.isfinite(_fwhm_min) and math.isfinite(_fwhm_max) and _... (EXCEPT-BULK 2026-07-08)
         pass
     st.plotly_chart(
         fig_f, key=key_fwhm, on_select="rerun", selection_mode="points", width="stretch"
@@ -820,6 +825,7 @@ def render_quality_dashboard(
                         xi = int(jf.get("frame_index"))
                         da = float(jf.get("delta_arcmin"))
                     except Exception:  # noqa: BLE001
+                        # EXC-0536: T3 -- UI diagnostic/plot only (xi = int(jf.get('frame_index')) / da = float(jf.get('delta_arc... (EXCEPT-BULK 2026-07-08)
                         continue
                     fig_d.add_vline(
                         x=xi,
@@ -944,6 +950,7 @@ def render_quality_dashboard(
                 png_b = quicklook_preview_png_bytes(_pick_preview)
                 st.image(png_b, caption=f"Preview (auto): {Path(_pick_preview).name}", width="stretch")
             except Exception:  # noqa: BLE001
+                # EXC-0537: T3 -- UI diagnostic/plot only (png_b = quicklook_preview_png_bytes(_pick_preview) / st.image(... (EXCEPT-BULK 2026-07-08)
                 pass
 
         if st.button(
@@ -962,6 +969,7 @@ def render_quality_dashboard(
                     finally:
                         _db2.conn.close()
                 except Exception:  # noqa: BLE001
+                    # EXC-0538: T3 -- UI diagnostic/plot only (finally: / _db2.conn.close() / except Exception:  # noqa: BLE0... (EXCEPT-BULK 2026-07-08)
                     pass
                 if p_job:
                     st.session_state["vyvar_masterstar_candidate_paths"] = [p_job]
@@ -1073,6 +1081,7 @@ def render_quality_dashboard(
                 finally:
                     _db2.conn.close()
             except Exception:  # noqa: BLE001
+                # EXC-0539: T3 -- UI diagnostic/plot only (finally: / _db2.conn.close() / except Exception:  # noqa: BLE0... (EXCEPT-BULK 2026-07-08)
                 pass
             log_event(f"MASTERSTAR manuálne nastavený: {Path(p_sel).name}")
             st.success(f"Set: `{Path(p_sel).name}` will be used as MASTERSTAR.")

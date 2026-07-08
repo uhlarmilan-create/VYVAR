@@ -160,6 +160,7 @@ def fits_header_has_celestial_wcs(header: fits.Header) -> bool:
             w = WCS(header)
         return bool(w.has_celestial)
     except Exception:  # noqa: BLE001
+        # EXC-0563: T4 -- intent unclear (w = WCS(header) / return bool(w.has_celestial) / except Exception:  # n... (EXCEPT-BULK 2026-07-08)
         return False
 
 
@@ -200,6 +201,7 @@ def wcs_rotation_angle_deg(header: fits.Header) -> float | None:
         a = float(ang % 360.0)
         return a
     except Exception:  # noqa: BLE001
+        # EXC-0564: T4 -- intent unclear (a = float(ang % 360.0) / return a / except Exception:  # noqa: BLE001 /... (EXCEPT-BULK 2026-07-08)
         return None
 
 
@@ -564,6 +566,7 @@ def masterstar_wcs_quality(
             "scale_err_pct": scale_err,
         }
     except Exception as exc:  # noqa: BLE001
+        # EXC-0565: T4 -- intent unclear ('scale_err_pct': scale_err, / } / except Exception as exc:  # noqa: BLE... (EXCEPT-BULK 2026-07-08)
         return {"ok": False, "ratio": 999.0, "error": str(exc)}
 
 
@@ -589,6 +592,7 @@ def maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel(
         psm = np.asarray(w.pixel_scale_matrix, dtype=np.float64)
         current_scale = float(np.sqrt(np.abs(np.linalg.det(psm))) * 3600.0)
     except Exception:  # noqa: BLE001
+        # EXC-0566: T4 -- intent unclear (psm = np.asarray(w.pixel_scale_matrix, dtype=np.float64) / current_scal... (EXCEPT-BULK 2026-07-08)
         return wcs_in, False
     if not math.isfinite(current_scale) or current_scale <= 0:
         return wcs_in, False
@@ -612,11 +616,13 @@ def maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel(
             w.wcs.cdelt = np.asarray(w.wcs.cdelt, dtype=np.float64) * fac
         w.wcs.set()
     except Exception:  # noqa: BLE001
+        # EXC-0567: T4 -- intent unclear (w.wcs.cdelt = np.asarray(w.wcs.cdelt, dtype=np.float64) * fac / w.wcs.s... (EXCEPT-BULK 2026-07-08)
         return wcs_in, False
     try:
         new_psm = np.asarray(w.pixel_scale_matrix, dtype=np.float64)
         new_scale = float(np.sqrt(np.abs(np.linalg.det(new_psm))) * 3600.0)
     except Exception:  # noqa: BLE001
+        # EXC-0568: T4 -- intent unclear (new_psm = np.asarray(w.pixel_scale_matrix, dtype=np.float64) / new_scal... (EXCEPT-BULK 2026-07-08)
         return wcs_in, False
     if abs(new_scale - tgt) / tgt > 0.05:
         logging.warning(

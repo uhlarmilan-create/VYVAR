@@ -2417,6 +2417,7 @@ def apply_crowding_overrides(
         if math.isfinite(inn) and math.isfinite(out) and out <= inn:
             cfg_eff.annulus_outer_fwhm = float(inn + 1.0)
     except Exception:  # noqa: BLE001
+        # EXC-0048: T4 -- optional enrichment skipped (if math.isfinite(inn) and math.isfinite(out) and out <= in... (EXCEPT-BULK 2026-07-08)
         pass
     return cfg_eff, float(max_dist_delta)
 

@@ -294,6 +294,7 @@ def render_photometry_quality_diagnostic(*, pipeline: Any, draft_id: int | None)
         try:
             dfi = _read_csv_cached(csvp)
         except Exception:  # noqa: BLE001
+            # EXC-0530: T3 -- UI diagnostic/plot only (try: / dfi = _read_csv_cached(csvp) / except Exception:  # noq... (EXCEPT-BULK 2026-07-08)
             continue
         if dfi.empty:
             continue

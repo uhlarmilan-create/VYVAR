@@ -462,7 +462,8 @@ def _db_cosmic(db: Any, equipment_id: int | None) -> tuple[float | None, float |
     try:
         g, rn = db.get_equipment_cosmic_params(int(equipment_id))
         return g, rn
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.warning('[EXC-0116] science path may skip or use stale defaults (g, rn = db.get_equipment_cosmic_params(int...: %s', exc)
         return None, None
 
 
@@ -549,7 +550,8 @@ def resolve_focal_mm(
         if (db_value is None or not _is_valid("focal_mm", db_value)) and telescope_id is not None:
             try:
                 db_value = db.get_telescope_focal_mm(int(telescope_id))
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.debug('[EXC-0117] science path may skip or use stale defaults (try: / db_value = db.get_telescope_focal_m...: %s', exc)
                 pass
     # FOCALLEN sometimes carried in metres for fast scopes -> normalise.
     res = _resolve_equipment_intrinsic(
@@ -647,7 +649,8 @@ def _draft_location(db: Any, draft_id: int | None) -> tuple[float, float, float]
             (int(draft_id),),
         )
         row = cur.fetchone()
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.warning('[EXC-0118] science path may skip or use stale defaults () / row = cur.fetchone() / except Exceptio...: %s', exc)
         return None
     if row is None:
         return None

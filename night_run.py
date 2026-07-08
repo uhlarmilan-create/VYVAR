@@ -487,7 +487,8 @@ def _collect_photometry_metrics(output_dir: Path) -> tuple[int, float]:
         return 0, float("nan")
     try:
         df = pd.read_csv(summary, low_memory=False)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.warning('[EXC-0113] intent unclear (try: / df = pd.read_csv(summary, low_memory=False) / except Exception: ...: %s', exc)
         return 0, float("nan")
     n_lc = int(len(df))
     if "lc_rms" not in df.columns:

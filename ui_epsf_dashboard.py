@@ -62,6 +62,7 @@ def _load_psf_lc_from_proc(proc_dir: Path, cid: str) -> pd.DataFrame | None:
                 dtype={"catalog_id": str},
             )
         except Exception:  # noqa: BLE001
+            # EXC-0510: T3 -- UI diagnostic/plot only (csv_path, low_memory=False, dtype={'catalog_id': str} / ) / ex... (EXCEPT-BULK 2026-07-08)
             try:
                 df = pd.read_csv(
                     csv_path, low_memory=False, dtype={"catalog_id": str}
@@ -245,6 +246,7 @@ def _epsf_meta_caption(epsf_fits: Path | None) -> str:
             f"FWHM {fwhm_s}, oversampling {meta.get('oversampling', '?')}×"
         )
     except Exception:  # noqa: BLE001
+        # EXC-0511: T3 -- UI diagnostic/plot only (f'FWHM {fwhm_s}, oversampling {meta.get('oversampling', '?')}×... (EXCEPT-BULK 2026-07-08)
         return f"Model: `{epsf_fits.name}`"
 
 

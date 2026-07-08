@@ -82,12 +82,14 @@ def _format_katalogy_cell(result: CrossmatchResult | dict[str, Any]) -> str:
                             extra=(m.get("extra") if isinstance(m.get("extra"), dict) else {}),
                         )
                     )
-                except Exception:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001
+                    logging.warning('[EXC-0049] intent unclear () / ) / except Exception:  # noqa: BLE001 / continue / out_matches[str(...: %s', exc)
                     continue
             out_matches[str(cat)] = items
         cm.matches = out_matches
         return "\n".join(cm.catalog_summary_bullets())
     except Exception:  # noqa: BLE001
+        # EXC-0050: ? -- intent unclear (try: / return json.dumps(result, ensure_ascii=False, cls=_NumpyEncoder)... (EXCEPT-BULK 2026-07-08)
         try:
             return json.dumps(result, ensure_ascii=False, cls=_NumpyEncoder)
         except Exception:  # noqa: BLE001
@@ -107,7 +109,8 @@ def _load_radec_map(output_dir: Path) -> dict[str, tuple[float, float]]:
             continue
         try:
             df = pd.read_csv(csv_path, dtype={"catalog_id": str, "name": str}, low_memory=False)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.debug("[EXC-0051] intent unclear (try: / df = pd.read_csv(csv_path, dtype={'catalog_id': str, 'name': str...: %s", exc)
             continue
         ra_col = "ra_deg" if "ra_deg" in df.columns else ("ra" if "ra" in df.columns else None)
         de_col = "dec_deg" if "dec_deg" in df.columns else ("dec" if "dec" in df.columns else None)
@@ -216,7 +219,8 @@ def auto_crossmatch_candidates(
                 dec = pd.to_numeric(r.get("dec_deg", ""), errors="coerce")
                 if cid and math.isfinite(float(ra)) and math.isfinite(float(dec)):
                     _at_radec[cid] = (float(ra), float(dec))
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.warning('[EXC-0054] intent unclear (if cid and math.isfinite(float(ra)) and math.isfinite(float(dec)): / _a...: %s', exc)
             pass
 
     radec_map = {**radec_map, **_at_radec}

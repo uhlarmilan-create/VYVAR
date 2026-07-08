@@ -133,7 +133,8 @@ def _epsf_positions_from_csvs(
             return
         try:
             df = pd.read_csv(path, low_memory=False, dtype={"catalog_id": str})
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0446] Auxiliary CSV read for PSF star x/y fails - those catalog_ids missing from PSF star_pos...: %s', exc)
             return
         for _, row in df.iterrows():
             cid = str(_norm_catalog_id(row.get("catalog_id", "")) or "").strip()
@@ -327,7 +328,8 @@ def _read_plate_scale_arcsec_px_from_fits(fits_path: Path) -> float | None:
                     pass
 
             return None
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0447] Plate scale from FITS header fails - PSF cutout/fit sizing uses defaults: %s', exc)
         return None
 
 
@@ -2250,7 +2252,8 @@ def _psf_sandwich_flux_err(
             np.full(npx, float(y_fit), dtype=np.float64),
         )
         p = np.maximum(np.asarray(model, dtype=np.float64).ravel(), 0.0)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0453] PSF model evaluate for sandwich flux_err fails - flux uncertainty becomes NaN for that ...: %s', exc)
         return float("nan")
     w = 1.0 / (sigma_sky * sigma_sky)
     g = max(1e-6, float(gain))
@@ -2272,7 +2275,8 @@ def _apply_psf_fixed_position(phot: Any, *, fix: bool) -> None:
     try:
         phot.psf_model.x_0.fixed = True
         phot.psf_model.y_0.fixed = True
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0454] PSF centroid fixed-position flags not set - forced photometry may drift centroid and ch...: %s', exc)
         pass
 
 

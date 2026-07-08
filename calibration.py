@@ -331,7 +331,8 @@ def _db_equipment_suggests_osc(db: VyvarDatabase | None, equipment_id: int | Non
             "SELECT SENSORTYPE FROM EQUIPMENTS WHERE ID = ?",
             (int(equipment_id),),
         ).fetchone()
-    except Exception:  # noqa: BLE001
+    except sqlite3.Error as exc:  # noqa: BLE001
+        # EXC-0020: ? -- intent unclear ((int(equipment_id),), / ).fetchone() / except Exception:  # noqa: BLE00... (EXCEPT-BULK 2026-07-08)
         return False
     if not row or row[0] in (None, ""):
         return False

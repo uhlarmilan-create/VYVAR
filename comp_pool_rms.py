@@ -47,7 +47,8 @@ def _norm_id_val(x: Any) -> str:
         return ""
     try:
         return str(int(float(s)))
-    except Exception:  # noqa: BLE001
+    except (TypeError, ValueError) as exc:  # noqa: BLE001
+        # EXC-0029: T1 -- science path may skip or use stale defaults (try: / return str(int(float(s))) / except ... (EXCEPT-BULK 2026-07-08)
         return s
 
 

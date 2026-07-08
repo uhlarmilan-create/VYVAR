@@ -144,6 +144,7 @@ def build_starfield_qa_png_mapping(
                     draw.ellipse((sx0 - rr, sy0 - rr, sx0 + rr, sy0 + rr), outline=outline, width=2)
                     note = note + f"Gaia query r≈{r_deg:.2f}° (VY_GAIR). "
             except Exception:  # noqa: BLE001
+                # EXC-0112: ? -- intent unclear (draw.ellipse((sx0 - rr, sy0 - rr, sx0 + rr, sy0 + rr), outline=outline,... (EXCEPT-BULK 2026-07-08)
                 pass
 
     if mapped_df is not None and not mapped_df.empty and "x" in mapped_df.columns and "y" in mapped_df.columns:

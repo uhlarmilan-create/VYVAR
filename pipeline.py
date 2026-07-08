@@ -1258,7 +1258,8 @@ def _inspection_jd_from_header(hdr: fits.Header) -> float | None:
         try:
             t = Time(iso, format="isot", scale="utc")
             return float(t.jd)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0283] DATE-OBS/Time parse failure leaves inspection_jd NULL in OBS_FILES QC updates.: %s', exc)
             try:
                 t = Time(d_s, scale="utc")
                 return float(t.jd)
@@ -3169,6 +3170,7 @@ def list_best_processed_light_paths_for_masterstar(
             try:
                 _fb = _obs_fwhm_basename_map_from_db(_dbc, int(draft_id))
             except Exception:  # noqa: BLE001
+                # EXC-0305: T4 -- DB conn.close failure after FWHM map fetch is ignored once ranked paths are computed. (EXCEPT-BULK 2026-07-08)
                 _fb = {}
             finally:
                 try:
@@ -3352,6 +3354,7 @@ def resolve_plate_solve_fov_deg_hint(
         ny = int(hdr.get("NAXIS2", h) or h)
         return plate_solve_fov_deg_diagonal_from_scale(nx, ny, float(sc))
     except Exception:  # noqa: BLE001
+        # EXC-0309: T4 -- db.conn.close failure in FOV hint finally block is ignored after the hint is computed o... (EXCEPT-BULK 2026-07-08)
         return None
     finally:
         try:
@@ -3750,6 +3753,7 @@ def _plate_solve_input_bundle(
             if calculated_scale is not None:
                 log_event(f"MATH CHECK: ({eff_um} / {foc}) * 206.265 = {calculated_scale}")
     except Exception as exc:  # noqa: BLE001
+        # EXC-0313: T4 -- db_u.conn.close failure in plate-solve bundle finally is ignored after bundle assembly. (EXCEPT-BULK 2026-07-08)
         from except_fix_counters import get_except_fix_counters
 
         get_except_fix_counters().plate_solve_bundle_fail += 1
@@ -3974,6 +3978,7 @@ def _solve_wcs_solve_field_cli(
     except subprocess.TimeoutExpired:
         return {"solved": False, "reason": "solve-field subprocess timeout (900s wall)"}
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0319] Generated .wcs read failure returns solved=False without applying any WCS to the image.: %s', exc)
         return {"solved": False, "reason": f"solve-field: {exc!s}"}
 
     if not wcs_path.is_file():
@@ -6225,6 +6230,7 @@ def write_photometry_plan_files(
             df = df.copy()
             df["catalog_id"] = catalog_id_series_for_masterstars_export(df)
     except Exception:  # noqa: BLE001
+        # EXC-0347: T1 -- MASTER_SOURCES likely_nonlinear/on_bad_column DB merge failure omits nonlinear/bad-colu... (EXCEPT-BULK 2026-07-08)
         pass
     if draft_id is not None and database_path:
         dbp = Path(str(database_path))
@@ -6620,6 +6626,7 @@ def write_photometry_plan_files(
                         try:
                             sep_val = float(best.get("_sep_arcsec", float("nan")))
                         except Exception:  # noqa: BLE001
+                            # EXC-0351: T2 -- Per-variable 'no Gaia match' log line is skipped when logging fails; catalog_id remains... (EXCEPT-BULK 2026-07-08)
                             sep_val = float("nan")
                         sep_out[i] = sep_val
                         if math.isfinite(sep_val):
@@ -7945,7 +7952,8 @@ def detect_stars_and_match_catalog(
         gp = (cfg.gaia_db_path or "").strip()
         if gp:
             _gaia_db_path = Path(gp)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0360] field_catalog_cone_meta.json write failure leaves stale cone-radius metadata for cache ...: %s', exc)
         _gaia_db_path = None
     _fb_sat = fallback_saturate_adu
     try:
@@ -9314,6 +9322,7 @@ def _export_per_frame_run_catalog_core(
                 frame_name=fname,
             )
         except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0373] detect_stars_and_match_catalog exception returns status error with empty csv for that f...: %s', exc)
             return {
                 "file": fname,
                 "status": f"error: {exc}",
@@ -9357,6 +9366,7 @@ def _export_per_frame_run_catalog_core(
                 frame_name=fname,
             )
         except Exception as exc:  # noqa: BLE001
+            # EXC-0374: T1 -- [SILENT-DROP] MASTERSTAR zone/is_usable/bp_rp merge failure leaves per-frame proc rows ... (EXCEPT-BULK 2026-07-08)
             return {
                 "file": fname,
                 "status": f"error: {exc}",
@@ -11080,6 +11090,8 @@ def generate_masterstar_and_catalog(
                                 f"MASTERSTAR: DB výber (draft {int(draft_id)}) sa nepodarilo namapovať na FITS pod {detrended_root}."
                             )
                 except Exception as exc:  # noqa: BLE001
+                    # EXC-0394: T4 -- `_dbc_fw.conn.close()` cleanup only; no radiometry or frame data touched. (EXCEPT-BULK 2026-07-08)
+                    logging.error('[EXC-0393] DB FWHM median fetch `pass` leaves `_ms_fwhm_fb` at config default instead of draft QC ...: %s', exc)
                     log_event(f"MASTERSTAR: DB výber kandidátov zlyhal ({exc!s}).")
                 finally:
                     try:
@@ -12091,6 +12103,7 @@ def generate_masterstar_and_catalog(
             f"[MASTERSTAR] VY_FWHM_GAUSS={float(_gaussian_fwhm):.3f}px uložené do hlavičky (2D fit)"
         )
     except Exception as e:  # noqa: BLE001
+        logging.error('[EXC-0409] Cross-setup `comparison_stars.csv` sync failure leaves B/V/R setups with inconsistent c...: %s', exc)
         log_event(f"[ERROR] VY_FWHM_GAUSS fit ZLYHAL: {e}\n{traceback.format_exc()}")
     try:
         _ms_path_tag = Path(masterstar_fits)
@@ -15454,7 +15467,8 @@ def calibrate_lights_to_calibrated(
                     _flags = _hdr_vy_cflag_str(h0)
                     ud = bool(h0.get("VY_DARK", False))
                     uf = bool(h0.get("VY_FLAT", False))
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.error('[EXC-0435] `_estimate_fwhm_from_image` broad `except` returns hardcoded `3.0` px; QC FWHM reject a...: %s', exc)
                 ud = uf = False
                 _flags = "P"
             _sync_obs_calibration_state_with_retry(

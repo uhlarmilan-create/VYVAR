@@ -79,6 +79,7 @@ def persist_draft_center_on_change(
         st.session_state["center_de"] = float(de)
         st.session_state["vyvar_last_saved_draft_center_sig"] = f"{int(draft_id)}|{ra:.9f}|{de:.9f}"
     except Exception as exc:  # noqa: BLE001
+        # EXC-0507: T3 -- UI diagnostic/plot only (st.session_state['center_de'] = float(de) / st.session_state['... (EXCEPT-BULK 2026-07-08)
         log_event(f"Draft center on_change save skipped: {exc!s}")
 
 

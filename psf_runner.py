@@ -76,6 +76,7 @@ from photutils.psf import ImagePSF, PSFPhotometry  # noqa: E402
 from psf_photometry import build_epsf_model  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
 from config import AppConfig  # noqa: E402
+import logging
 
 
 def _force_utf8_stdout() -> None:
@@ -1469,7 +1470,8 @@ def step_5_calibrate_lightcurve() -> None:
             continue
         try:
             df = pd.read_csv(fp, low_memory=False, dtype=_GAIA_ID_DTYPE)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0466] One per-frame PSF CSV unreadable in final psf_runner sweep - frame skipped: %s', exc)
             continue
         if df.empty:
             continue

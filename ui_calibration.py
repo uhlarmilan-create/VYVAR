@@ -102,6 +102,7 @@ def _read_bin_safe(p: str | Path | None) -> int | None:
     try:
         return int(read_master_binning_from_fits(pp))
     except Exception:  # noqa: BLE001
+        # EXC-0505: T3 -- UI diagnostic/plot only (try: / return int(read_master_binning_from_fits(pp)) / except ... (EXCEPT-BULK 2026-07-08)
         return None
 
 

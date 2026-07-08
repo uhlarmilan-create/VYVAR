@@ -428,6 +428,7 @@ def _load_index(index_path: str | Path) -> dict | None:
         log_event(f"INFO: Blind index načítaný: {len(data['metadata'])} trojuholníkov")
         return data
     except Exception as exc:  # noqa: BLE001
+        # EXC-0589: T4 -- blind index load fail already surfaced as WARNING; blind tier degrades loudly downstream (EXCEPT-BULK 2026-07-08)
         log_event(f"WARNING: Blind index: načítanie zlyhalo: {exc}")
         return None
 

@@ -146,6 +146,7 @@ def _targets_use_vsx_names(targets_df: Any) -> bool:
         if getattr(targets_df, "empty", True):
             return False
     except Exception:  # noqa: BLE001
+        # EXC-0027: T4 -- optional enrichment skipped (if getattr(targets_df, 'empty', True): / return False / ex... (EXCEPT-BULK 2026-07-08)
         return False
     col = "vsx_name" if "vsx_name" in targets_df.columns else None
     if col is None:
@@ -245,7 +246,8 @@ def load_pipeline_meta(photometry_dir: Path | str | None) -> dict[str, Any]:
         return {}
     try:
         return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.debug("[EXC-0028] optional enrichment skipped (try: / return json.loads(p.read_text(encoding='utf-8')) / ...: %s", exc)
         return {}
 
 

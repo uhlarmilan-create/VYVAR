@@ -54,6 +54,7 @@ def _norm_cid(x: Any) -> str:
     try:
         return str(int(Decimal(s)))
     except (InvalidOperation, ValueError, TypeError, OverflowError):
+        # EXC-0225: T2 -- report/export may omit or misstate (try: / return str(int(s)) / except Exception:  # no... (EXCEPT-BULK 2026-07-08)
         try:
             return str(int(s))
         except Exception:  # noqa: BLE001
@@ -303,6 +304,7 @@ class _PhotometryReportBuilder:
                     self._pipeline_meta = dict(self._pipeline_meta or {})
                     self._pipeline_meta["calibration_mode"] = _mode
             except Exception:  # noqa: BLE001
+                # EXC-0226: T2 -- report/export may omit or misstate (self._pipeline_meta = dict(self._pipeline_meta or {... (EXCEPT-BULK 2026-07-08)
                 pass
         self.comp_csv = self.photometry_dir / "comparison_stars_per_target.csv"
         self.at_csv_primary = self.platesolve_dir / "active_targets.csv"
@@ -369,6 +371,7 @@ class _PhotometryReportBuilder:
                             suffixes=("", "_ms"),
                         )
             except Exception:  # noqa: BLE001
+                # EXC-0227: T2 -- report/export may omit or misstate (suffixes=('', '_ms'), / ) / except Exception:  # no... (EXCEPT-BULK 2026-07-08)
                 pass
 
         if "vsx_type" in self.summary_df.columns:
@@ -405,6 +408,7 @@ class _PhotometryReportBuilder:
             if "-" in self.obs_date_human and len(self.obs_date_human) >= 10:
                 self.date_token = self.obs_date_human.split("T", 1)[0].replace("-", "")
         except Exception:  # noqa: BLE001
+            # EXC-0228: T2 -- report/export may omit or misstate (if '-' in self.obs_date_human and len(self.obs_date... (EXCEPT-BULK 2026-07-08)
             pass
 
         if self.output_pdf is None:
@@ -441,6 +445,7 @@ class _PhotometryReportBuilder:
 
                 self.fwhm_px = float(_load_fwhm(self.platesolve_dir / "MASTERSTAR.fits"))
             except Exception:  # noqa: BLE001
+                # EXC-0229: T2 -- report/export may omit or misstate (self.fwhm_px = float(_load_fwhm(self.platesolve_dir... (EXCEPT-BULK 2026-07-08)
                 pass
         self.aperture_px = float(np.nanmedian(pd.to_numeric(self.summary_df.get("aperture_px"), errors="coerce"))) if self.n_lc else float("nan")
 
@@ -531,6 +536,7 @@ class _PhotometryReportBuilder:
         try:
             vdf = pd.read_csv(vp, low_memory=False, dtype=_GAIA_ID_DTYPE)
         except Exception:  # noqa: BLE001
+            # EXC-0230: T2 -- report/export may omit or misstate (try: / vdf = pd.read_csv(vp, low_memory=False, dtyp... (EXCEPT-BULK 2026-07-08)
             return None, set()
         if vdf.empty or "catalog_id" not in vdf.columns:
             return None, set()
@@ -585,6 +591,7 @@ class _PhotometryReportBuilder:
                         # Keep only date part.
                         return v.split("T", 1)[0].replace("-", ".")
             except Exception:  # noqa: BLE001
+                # EXC-0231: T2 -- report/export may omit or misstate (# Keep only date part. / return v.split('T', 1)[0].... (EXCEPT-BULK 2026-07-08)
                 pass
         return datetime.today().strftime("%d.%m.%Y")
     def _metric_color(self, v: float) -> Any:
@@ -886,6 +893,7 @@ class _PhotometryReportBuilder:
                     elif s in ("excluded", "rejected"):
                         n_rej += 1
         except Exception:  # noqa: BLE001
+            # EXC-0232: T2 -- report/export may omit or misstate (elif s in ('excluded', 'rejected'): / n_rej += 1 / ... (EXCEPT-BULK 2026-07-08)
             pass
         if n_good or n_susp or n_rej:
             rows_out.append(("Good / suspect / rejected (comp_quality)", f"{n_good:d} / {n_susp:d} / {n_rej:d}"))
@@ -904,6 +912,7 @@ class _PhotometryReportBuilder:
             try:
                 vdf = pd.read_csv(vp, low_memory=False, dtype=_GAIA_ID_DTYPE)
             except Exception:  # noqa: BLE001
+                # EXC-0233: T2 -- report/export may omit or misstate (try: / vdf = pd.read_csv(vp, low_memory=False, dtyp... (EXCEPT-BULK 2026-07-08)
                 continue
             if vdf.empty or "catalog_id" not in vdf.columns:
                 continue
@@ -968,6 +977,7 @@ class _PhotometryReportBuilder:
                     if np.isfinite(scale) and scale > 0:
                         return scale
             except Exception:  # noqa: BLE001
+                # EXC-0234: T2 -- report/export may omit or misstate (if np.isfinite(scale) and scale > 0: / return scale... (EXCEPT-BULK 2026-07-08)
                 pass
         return float("nan")
 
@@ -984,6 +994,7 @@ class _PhotometryReportBuilder:
                     tel = str(row.get("telescope_name", "") or "").strip()
                     cam = str(row.get("equipment_name", "") or "").strip()
             except Exception:  # noqa: BLE001
+                # EXC-0235: T2 -- report/export may omit or misstate (tel = str(row.get('telescope_name', '') or '').stri... (EXCEPT-BULK 2026-07-08)
                 pass
         if isinstance(self._pipeline_meta, dict):
             eq = self._pipeline_meta.get("equipment")
@@ -1044,6 +1055,7 @@ class _PhotometryReportBuilder:
                         xv = pd.to_numeric(dfl[xcol], errors="coerce").dropna()
                         bjd_vals.extend(float(x) for x in xv.to_numpy(dtype=float) if np.isfinite(x))
                 except Exception:  # noqa: BLE001
+                    # EXC-0236: T2 -- report/export may omit or misstate (xv = pd.to_numeric(dfl[xcol], errors='coerce').drop... (EXCEPT-BULK 2026-07-08)
                     continue
             if bjd_vals:
                 arr = np.asarray(bjd_vals, dtype=float)
@@ -1131,6 +1143,7 @@ class _PhotometryReportBuilder:
                     out["kname"] = self._resolve_check_kname(chk, cid)
                     return out
             except Exception:  # noqa: BLE001
+                # EXC-0237: T2 -- report/export may omit or misstate (out['kname'] = self._resolve_check_kname(chk, cid) ... (EXCEPT-BULK 2026-07-08)
                 pass
         try:
             from check_star_kmag import field_check_star_candidate_pool, resolve_ensemble_ids_for_check, select_check_star
@@ -1159,6 +1172,7 @@ class _PhotometryReportBuilder:
                         cc = self._norm_cid(chk_row.get("catalog_id", ""))
                         out["kname"] = self._resolve_check_kname(cc, cid)
         except Exception:  # noqa: BLE001
+            # EXC-0238: T2 -- report/export may omit or misstate (cc = self._norm_cid(chk_row.get('catalog_id', '')) ... (EXCEPT-BULK 2026-07-08)
             pass
         return out
 
@@ -1205,6 +1219,7 @@ class _PhotometryReportBuilder:
             try:
                 vdf = pd.read_csv(vp, low_memory=False, nrows=1)
             except Exception:  # noqa: BLE001
+                # EXC-0239: T2 -- report/export may omit or misstate (try: / vdf = pd.read_csv(vp, low_memory=False, nrow... (EXCEPT-BULK 2026-07-08)
                 continue
             if vdf.empty:
                 continue
@@ -1217,6 +1232,7 @@ class _PhotometryReportBuilder:
                     if bool(vdf["edge_filter_failed"].iloc[0]):
                         return "EDGE-UNFILTERED: edge safety check failed"
                 except Exception:  # noqa: BLE001
+                    # EXC-0240: T2 -- report/export may omit or misstate (if bool(vdf['edge_filter_failed'].iloc[0]): / retur... (EXCEPT-BULK 2026-07-08)
                     pass
             break
         return ""
@@ -1349,6 +1365,7 @@ class _PhotometryReportBuilder:
         try:
             from PIL import Image as PILImage  # pillow
         except Exception as exc:  # noqa: BLE001
+            # EXC-0241: T2 -- report/export may omit or misstate (try: / from PIL import Image as PILImage  # pillow ... (EXCEPT-BULK 2026-07-08)
             logging.warning("PIL (pillow) nie je dostupný, kompresiu obrázkov preskakujem (%s)", exc)
             return src if src.exists() else None
 
@@ -1375,6 +1392,7 @@ class _PhotometryReportBuilder:
                 im.save(dst, format="JPEG", quality=int(quality), optimize=True, progressive=True)
             return dst
         except Exception as exc:  # noqa: BLE001
+            # EXC-0242: T2 -- report/export may omit or misstate (im.save(dst, format='JPEG', quality=int(quality), o... (EXCEPT-BULK 2026-07-08)
             logging.warning("JPEG príprava zlyhala pre %s: %s", src, exc)
             return src if src.exists() else None
     def _plot_lightcurve_to_jpeg(self, lc_csv: Path, out_jpg: Path) -> Path | None:
@@ -1385,6 +1403,7 @@ class _PhotometryReportBuilder:
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
         except Exception as exc:  # noqa: BLE001
+            # EXC-0243: T2 -- report/export may omit or misstate (matplotlib.use('Agg') / import matplotlib.pyplot as... (EXCEPT-BULK 2026-07-08)
             logging.warning("matplotlib nie je dostupný, krivku z CSV nevygenerujem (%s)", exc)
             return None
 
@@ -1442,6 +1461,7 @@ class _PhotometryReportBuilder:
             # Convert to JPEG for size (match per-star LC embed limits)
             return self._prepare_jpeg(out_png, out_jpg, max_side_px=1000, quality=75)
         except Exception as exc:  # noqa: BLE001
+            # EXC-0244: T2 -- report/export may omit or misstate (# Convert to JPEG for size (match per-star LC embed... (EXCEPT-BULK 2026-07-08)
             logging.warning("Plot lightcurve zlyhal (%s): %s", lc_csv, exc)
             return None
 
@@ -1462,6 +1482,7 @@ class _PhotometryReportBuilder:
         try:
             df = pd.read_csv(lc_csv, low_memory=False)
         except Exception:  # noqa: BLE001
+            # EXC-0245: T2 -- report/export may omit or misstate (try: / df = pd.read_csv(lc_csv, low_memory=False) /... (EXCEPT-BULK 2026-07-08)
             return None
         if df.empty:
             return None
@@ -1508,6 +1529,7 @@ class _PhotometryReportBuilder:
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
         except Exception as exc:  # noqa: BLE001
+            # EXC-0246: T2 -- report/export may omit or misstate (matplotlib.use('Agg') / import matplotlib.pyplot as... (EXCEPT-BULK 2026-07-08)
             logging.warning("matplotlib nie je dostupný, overlay LC nevygenerujem (%s)", exc)
             return None
 
@@ -1595,6 +1617,7 @@ class _PhotometryReportBuilder:
                 plt.close(fig)
             return self._prepare_jpeg(out_png, out_jpg, max_side_px=1000, quality=75)
         except Exception as exc:  # noqa: BLE001
+            # EXC-0247: T2 -- report/export may omit or misstate (plt.close(fig) / return self._prepare_jpeg(out_png,... (EXCEPT-BULK 2026-07-08)
             logging.warning("Plot LC overlay zlyhal (%s): %s", aperture_csv, exc)
             return None
 
@@ -1641,6 +1664,7 @@ class _PhotometryReportBuilder:
             c.drawRightString(self.PAGE_W - self.M_RIGHT, 0.45 * self.cm, f"Page {c.getPageNumber()}")
             c.setFillColor(self.colors.black)
         except Exception:  # noqa: BLE001
+            # EXC-0248: T2 -- report/export may omit or misstate (c.drawRightString(self.PAGE_W - self.M_RIGHT, 0.45 ... (EXCEPT-BULK 2026-07-08)
             pass
 
     def _layout_y_floor(self) -> float:
@@ -1870,6 +1894,7 @@ class _PhotometryReportBuilder:
             dh = float(ih) * s
             c.drawImage(ir, x, y_top - dh, width=dw, height=dh, mask="auto")
         except Exception:  # noqa: BLE001
+            # EXC-0249: T2 -- report/export may omit or misstate (dh = float(ih) * s / c.drawImage(ir, x, y_top - dh,... (EXCEPT-BULK 2026-07-08)
             return
     def _draw_kv_table_section(self, 
         c: "canvas.Canvas",
@@ -2013,6 +2038,7 @@ class _PhotometryReportBuilder:
                 elif ps_xlsx.exists():
                     df0 = pd.read_excel(ps_xlsx)
             except Exception:  # noqa: BLE001
+                # EXC-0250: T2 -- report/export may omit or misstate (elif ps_xlsx.exists(): / df0 = pd.read_excel(ps_xls... (EXCEPT-BULK 2026-07-08)
                 return None
             if df0.empty:
                 return None
@@ -2097,6 +2123,7 @@ class _PhotometryReportBuilder:
             elif ps_xlsx.exists():
                 df = pd.read_excel(ps_xlsx)
         except Exception:  # noqa: BLE001
+            # EXC-0251: T2 -- report/export may omit or misstate (elif ps_xlsx.exists(): / df = pd.read_excel(ps_xlsx... (EXCEPT-BULK 2026-07-08)
             return _legacy_simple_plot()
         if df.empty:
             return _legacy_simple_plot()
@@ -2357,6 +2384,7 @@ class _PhotometryReportBuilder:
             c.drawString(self.M_LEFT, y, calibration_mode_report_line(_cal_mode))
             y -= 0.6 * self.cm
         except Exception:  # noqa: BLE001
+            # EXC-0252: T2 -- report/export may omit or misstate (c.drawString(self.M_LEFT, y, calibration_mode_repor... (EXCEPT-BULK 2026-07-08)
             pass
         c.drawString(self.M_LEFT, y, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
@@ -2453,6 +2481,7 @@ class _PhotometryReportBuilder:
                                 am_vals.extend(float(x) for x in v.to_numpy(dtype=float) if np.isfinite(x))
                                 break
                     except Exception:  # noqa: BLE001
+                        # EXC-0253: T2 -- report/export may omit or misstate (am_vals.extend(float(x) for x in v.to_numpy(dtype=f... (EXCEPT-BULK 2026-07-08)
                         continue
             if am_vals:
                 arr = np.asarray(am_vals, dtype=float)
@@ -2519,6 +2548,7 @@ class _PhotometryReportBuilder:
                             )
                         )
                 except Exception:  # noqa: BLE001
+                    # EXC-0254: T2 -- report/export may omit or misstate () / ) / except Exception:  # noqa: BLE001 / pass / ... (EXCEPT-BULK 2026-07-08)
                     pass
             return kv
 
@@ -2564,12 +2594,14 @@ class _PhotometryReportBuilder:
 
             _pu_ver = str(getattr(photutils, "__version__", "?"))
         except Exception:  # noqa: BLE001
+            # EXC-0255: T2 -- report/export may omit or misstate (_pu_ver = str(getattr(photutils, '__version__', '?'... (EXCEPT-BULK 2026-07-08)
             pass
         try:
             import astropy
 
             _ap_ver = str(getattr(astropy, "__version__", "?"))
         except Exception:  # noqa: BLE001
+            # EXC-0256: T2 -- report/export may omit or misstate (_ap_ver = str(getattr(astropy, '__version__', '?'))... (EXCEPT-BULK 2026-07-08)
             pass
 
         _period_used = bool(self._accepted_periods) or bool(
@@ -2647,6 +2679,7 @@ class _PhotometryReportBuilder:
             digits = "".join(ch for ch in tail if ch.isdigit())
             return int(digits) if digits else None
         except Exception:  # noqa: BLE001
+            # EXC-0257: T2 -- report/export may omit or misstate (digits = ''.join(ch for ch in tail if ch.isdigit())... (EXCEPT-BULK 2026-07-08)
             return None
     def _load_obs_files_for_obs(self, ) -> pd.DataFrame:
         """Load QA metrics from DB (OBS_FILES) for this draft + setup."""
@@ -2657,12 +2690,14 @@ class _PhotometryReportBuilder:
             from config import AppConfig
             from database import VyvarDatabase
         except Exception:  # noqa: BLE001
+            # EXC-0258: T2 -- report/export may omit or misstate (from config import AppConfig / from database import... (EXCEPT-BULK 2026-07-08)
             return pd.DataFrame()
         try:
             cfg = AppConfig()
             db = VyvarDatabase(cfg.database_path)
             rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
         except Exception:  # noqa: BLE001
+            # EXC-0259: T2 -- report/export may omit or misstate (db = VyvarDatabase(cfg.database_path) / rows = db.f... (EXCEPT-BULK 2026-07-08)
             return pd.DataFrame()
         if not rows:
             return pd.DataFrame()
@@ -2716,6 +2751,7 @@ class _PhotometryReportBuilder:
         try:
             dfq = pd.read_csv(qc_csv, low_memory=False)
         except Exception:  # noqa: BLE001
+            # EXC-0260: T2 -- report/export may omit or misstate (try: / dfq = pd.read_csv(qc_csv, low_memory=False) ... (EXCEPT-BULK 2026-07-08)
             return pd.DataFrame()
         if dfq.empty:
             return pd.DataFrame()
@@ -2793,6 +2829,7 @@ class _PhotometryReportBuilder:
 
                 cfg = AppConfig()
         except Exception:  # noqa: BLE001
+            # EXC-0261: T2 -- report/export may omit or misstate (cfg = AppConfig() / except Exception:  # noqa: BLE0... (EXCEPT-BULK 2026-07-08)
             return float("nan")
         arr = pd.to_numeric(qc_df.get("FWHM_PX"), errors="coerce").to_numpy(dtype=float)
         arr = arr[np.isfinite(arr) & (arr > 0.0)]
@@ -2857,6 +2894,7 @@ class _PhotometryReportBuilder:
         try:
             cdf = pd.read_csv(csvp, low_memory=False)
         except Exception:  # noqa: BLE001
+            # EXC-0262: T2 -- report/export may omit or misstate (try: / cdf = pd.read_csv(csvp, low_memory=False) / ... (EXCEPT-BULK 2026-07-08)
             return None
         if cdf.empty:
             return None
@@ -2899,6 +2937,7 @@ class _PhotometryReportBuilder:
             nstar = float(hdr.get("VY_NSTAR", float("nan")))
             sky = float(hdr.get("VY_QCBG", float("nan")))
         except Exception:  # noqa: BLE001
+            # EXC-0263: T2 -- report/export may omit or misstate (nstar = float(hdr.get('VY_NSTAR', float('nan'))) / ... (EXCEPT-BULK 2026-07-08)
             return None
         d = np.zeros(len(qc_df), dtype=float)
         wsum = 0.0
@@ -2954,6 +2993,7 @@ class _PhotometryReportBuilder:
                             hit["_ms_resolve"] = f"header:{key}"
                             return hit
                 except Exception:  # noqa: BLE001
+                    # EXC-0264: T2 -- report/export may omit or misstate (hit['_ms_resolve'] = f'header:{key}' / return hit /... (EXCEPT-BULK 2026-07-08)
                     continue
             for key in ("VY_REFFILE", "VY_SRCPATH", "VY_SRCFILE", "VY_REF", "ORIGNAME", "ORIGFILE"):
                 raw = hdr.get(key)
@@ -2981,6 +3021,7 @@ class _PhotometryReportBuilder:
         try:
             import matplotlib.pyplot as plt
         except Exception:  # noqa: BLE001
+            # EXC-0265: T2 -- report/export may omit or misstate (try: / import matplotlib.pyplot as plt / except Exc... (EXCEPT-BULK 2026-07-08)
             return
 
         # Charts use per-frame QC from OBS_FILES (FWHM_PX vs frame_index), same source as FITS QA dashboard.
@@ -3144,6 +3185,7 @@ class _PhotometryReportBuilder:
                     usecols=lambda c: c in {"catalog_id", "dao_flux", "flux", "bjd_tdb_mid", "jd_mid", "hjd_mid"},
                 )
             except Exception:  # noqa: BLE001
+                # EXC-0266: T2 -- report/export may omit or misstate (usecols=lambda c: c in {'catalog_id', 'dao_flux', '... (EXCEPT-BULK 2026-07-08)
                 continue
             if df.empty or "catalog_id" not in df.columns:
                 continue
@@ -3403,6 +3445,7 @@ class _PhotometryReportBuilder:
                 return {"ra": 0.0, "dec": 0.0, "mag": mag}
             return {"ra": float(ra), "dec": float(dec), "mag": mag}
         except Exception:  # noqa: BLE001
+            # EXC-0267: T2 -- report/export may omit or misstate (return {'ra': 0.0, 'dec': 0.0, 'mag': mag} / return... (EXCEPT-BULK 2026-07-08)
             return {"ra": 0.0, "dec": 0.0, "mag": None}
     def _generate_candidate_lc_png(self, cid: str, photometry_dir_in: Path, cache_dir_in: Path) -> Path | None:
         """Load light-curve CSV for cid and save as PNG."""
@@ -3463,6 +3506,7 @@ class _PhotometryReportBuilder:
                 plt.close(fig)
             return png_path if png_path.exists() else None
         except Exception as exc:  # noqa: BLE001
+            # EXC-0268: T2 -- report/export may omit or misstate (plt.close(fig) / return png_path if png_path.exists... (EXCEPT-BULK 2026-07-08)
             logging.warning("[PDF] _generate_candidate_lc_png failed: %s", exc)
             return None
     def _draw_candidate_detail_page(self, 
@@ -3620,6 +3664,7 @@ class _PhotometryReportBuilder:
             if float(y_top) < float(self.M_BOTTOM) + _MIN_H_PT:
                 return y_top
         except Exception:  # noqa: BLE001
+            # EXC-0269: T2 -- report/export may omit or misstate (if float(y_top) < float(self.M_BOTTOM) + _MIN_H_PT:... (EXCEPT-BULK 2026-07-08)
             return y_top
 
         qpath = self.lc_dir / f"comp_quality_{cid_key}.json"
@@ -3628,6 +3673,7 @@ class _PhotometryReportBuilder:
         try:
             qraw = json.loads(qpath.read_text(encoding="utf-8"))
         except Exception:  # noqa: BLE001
+            # EXC-0270: T2 -- report/export may omit or misstate (try: / qraw = json.loads(qpath.read_text(encoding='... (EXCEPT-BULK 2026-07-08)
             return y_top
         if not isinstance(qraw, dict):
             return y_top
@@ -4234,6 +4280,7 @@ class _PhotometryReportBuilder:
         try:
             from photometry_core import load_epsf_metrics_for_draft
         except Exception as exc:  # noqa: BLE001
+            # EXC-0271: T2 -- report/export may omit or misstate (try: / from photometry_core import load_epsf_metric... (EXCEPT-BULK 2026-07-08)
             logging.warning("PDF PSF section: import failed (%s)", exc)
             return
 
@@ -5094,6 +5141,7 @@ class _PhotometryReportBuilder:
                 if _epsf_fits is not None and Path(_epsf_fits).is_file():
                     self._report_psf_summary_section(c)
         except Exception as exc:  # noqa: BLE001
+            # EXC-0272: T2 -- report/export may omit or misstate (if _epsf_fits is not None and Path(_epsf_fits).is_f... (EXCEPT-BULK 2026-07-08)
             logging.warning("PDF PSF section skipped (non-fatal): %s", exc)
         self._report_hrd_page(c)
 
@@ -5187,6 +5235,7 @@ class _PhotometryReportBuilder:
                         sparse_buf = []
                     self._report_per_star_page(c, star_data)
             except Exception as exc_star:  # noqa: BLE001
+                # EXC-0273: T2 -- report/export may omit or misstate (sparse_buf = [] / self._report_per_star_page(c, sta... (EXCEPT-BULK 2026-07-08)
                 logging.warning("PDF: skip star (%s): %s", row.get("vsx_name", ""), exc_star)
                 continue
 
@@ -5252,6 +5301,7 @@ def generate_photometry_report(
         from reportlab.lib.styles import ParagraphStyle
         from reportlab.platypus import Paragraph, Table, TableStyle
     except Exception as exc:  # noqa: BLE001
+        # EXC-0274: T2 -- report/export may omit or misstate (from reportlab.lib.styles import ParagraphStyle / f... (EXCEPT-BULK 2026-07-08)
         logging.warning("reportlab is not installed, skipping PDF (%s)", exc)
         return None
 

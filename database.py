@@ -155,12 +155,9 @@ def query_local_gaia(
         except (TypeError, ValueError):
             ml = float("nan")
         if not math.isfinite(ml) or ml <= 0:
-            try:
-                log_event(
-                    f"GAIA SQL: invalid mag_limit={mag_limit!r} — no g_mag cap applied."
-                )
-            except Exception:  # noqa: BLE001
-                pass
+                        log_event(
+                            f"GAIA SQL: invalid mag_limit={mag_limit!r} — no g_mag cap applied."
+                        )
         else:
             _gmax_db = get_gaia_db_max_g_mag(p)
             if _gmax_db > 0.0 and ml > float(_gmax_db):
@@ -337,10 +334,7 @@ def query_local_gaia_by_source_ids(
                 }
     finally:
         conn.close()
-    try:
         log_event(f"GAIA SQL by source_id: fetched {len(out)} / {len(ids_u)} unique ids (batched).")
-    except Exception:  # noqa: BLE001
-        pass
     return out
 
 
@@ -563,12 +557,9 @@ def query_local_vsx(
                 rows_out.append(d)
                 if lim is not None and len(rows_out) >= lim:
                     break
-        try:
-            log_event(
-                f"VSX SQL: {len(rows_out)} riadkov (obdĺžnik Dec=[{de0:.3f},{de1:.3f}], RA intervaly={len(intervals)})"
-            )
-        except Exception:  # noqa: BLE001
-            pass
+                log_event(
+                    f"VSX SQL: {len(rows_out)} riadkov (obdĺžnik Dec=[{de0:.3f},{de1:.3f}], RA intervaly={len(intervals)})"
+                )
         return rows_out
     finally:
         conn.close()
@@ -680,12 +671,9 @@ def query_local_exoplanet(
                 rows_out.append(d)
                 if lim is not None and len(rows_out) >= lim:
                     break
-        try:
-            log_event(
-                f"EXO SQL: {len(rows_out)} riadkov (obdĺžnik Dec=[{de0:.3f},{de1:.3f}], RA intervaly={len(intervals)})"
-            )
-        except Exception:  # noqa: BLE001
-            pass
+                log_event(
+                    f"EXO SQL: {len(rows_out)} riadkov (obdĺžnik Dec=[{de0:.3f},{de1:.3f}], RA intervaly={len(intervals)})"
+                )
         return rows_out
     finally:
         conn.close()

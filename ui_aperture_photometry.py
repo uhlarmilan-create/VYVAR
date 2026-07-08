@@ -115,6 +115,7 @@ def _latest_report_pdf(draft_dir: Path, obs_group: str) -> Path | None:
         candidates.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0.0, reverse=True)
         return candidates[0]
     except Exception:  # noqa: BLE001
+        # EXC-0492: T3 -- UI diagnostic/plot only (candidates.sort(key=lambda p: p.stat().st_mtime if p.exists() ... (EXCEPT-BULK 2026-07-08)
         return None
 
 
@@ -167,6 +168,7 @@ def _find_phase2a_paths(
             }
         return result  # type: ignore[return-value]
     except Exception:  # noqa: BLE001
+        # EXC-0493: T3 -- UI diagnostic/plot only (} / return result  # type: ignore[return-value] / except Excep... (EXCEPT-BULK 2026-07-08)
         return {}
 
 
@@ -184,6 +186,7 @@ def _load_fwhm(masterstar_fits: Path | None) -> float:
                     if 0.5 < fv < 30.0:
                         return round(fv, 3)
     except Exception:  # noqa: BLE001
+        # EXC-0494: T3 -- UI diagnostic/plot only (if 0.5 < fv < 30.0: / return round(fv, 3) / except Exception: ... (EXCEPT-BULK 2026-07-08)
         pass
     return 3.7
 
@@ -233,6 +236,7 @@ def _load_summary(summary_csv_str: str) -> pd.DataFrame:
     try:
         return pd.read_csv(summary_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
     except Exception as exc:  # noqa: BLE001
+        # EXC-0495: T3 -- UI diagnostic/plot only (try: / return pd.read_csv(summary_csv, low_memory=False, dtype... (EXCEPT-BULK 2026-07-08)
         logging.warning("[PERF-7] Cannot read summary: %s", exc)
         return pd.DataFrame()
 
@@ -363,6 +367,7 @@ def _enrich_summary_with_zone_flags(
                         bv_list.append(float("nan"))
             out["b_v"] = pd.to_numeric(bv_list, errors="coerce")
     except Exception:  # noqa: BLE001
+        # EXC-0496: T3 -- UI diagnostic/plot only (bv_list.append(float('nan')) / out['b_v'] = pd.to_numeric(bv_l... (EXCEPT-BULK 2026-07-08)
         return out
     return out
 
@@ -472,6 +477,7 @@ def _render_target_detail(
                         ra_target = _float_coord_row(r0, "ra_deg", "ra")
                         dec_target = _float_coord_row(r0, "dec_deg", "dec")
             except Exception:  # noqa: BLE001
+                # EXC-0497: T3 -- UI diagnostic/plot only (ra_target = _float_coord_row(r0, 'ra_deg', 'ra') / dec_target ... (EXCEPT-BULK 2026-07-08)
                 pass
 
     lc_dir = output_dir / "lightcurves"
@@ -796,6 +802,7 @@ def _render_target_detail(
                     if not hit_ms.empty and "exo_host_name" in hit_ms.columns:
                         _exo_host = str(hit_ms.iloc[0].get("exo_host_name", "") or "").strip()
             except Exception:  # noqa: BLE001
+                # EXC-0498: T3 -- UI diagnostic/plot only (if not hit_ms.empty and 'exo_host_name' in hit_ms.columns: / _... (EXCEPT-BULK 2026-07-08)
                 pass
     if _exo_host:
         _exo_disp = str(target_row.get("exo_disposition", "") or "").strip()
@@ -1126,6 +1133,7 @@ def render_aperture_photometry(
                     out.append(d.name)
             return out
         except Exception:  # noqa: BLE001
+            # EXC-0499: T3 -- UI diagnostic/plot only (out.append(d.name) / return out / except Exception:  # noqa: B... (EXCEPT-BULK 2026-07-08)
             return []
 
     detected = _detect_obs_groups()
@@ -1156,6 +1164,7 @@ def render_aperture_photometry(
                 _d_cls = str(_fd.get("density_class", "?"))
                 st.info(f"Field density: {_d_mpx:.0f} stars/Mpx ({_d_cls})")
             except Exception:  # noqa: BLE001
+                # EXC-0500: T3 -- UI diagnostic/plot only (_d_cls = str(_fd.get('density_class', '?')) / st.info(f'Field ... (EXCEPT-BULK 2026-07-08)
                 pass
 
     exists = _phase2a_results_exist(output_dir)
@@ -1240,6 +1249,7 @@ def render_aperture_photometry(
                             key=f"pdf_dl_hdr_{selected_setup}",
                         )
                 except Exception:  # noqa: BLE001
+                    # EXC-0501: T3 -- UI diagnostic/plot only (key=f'pdf_dl_hdr_{selected_setup}', / ) / except Exception:  #... (EXCEPT-BULK 2026-07-08)
                     pass
         else:
             st.warning("⚠️ Not started")
@@ -1347,6 +1357,7 @@ def render_aperture_photometry(
                             try:
                                 st.session_state.setdefault("vyvar_pdf_paths", {})[str(nm)] = str(pdf_path)
                             except Exception:  # noqa: BLE001
+                                # EXC-0502: T3 -- UI diagnostic/plot only (try: / st.session_state.setdefault('vyvar_pdf_paths', {})[str(... (EXCEPT-BULK 2026-07-08)
                                 pass
                             with open(pdf_path, "rb") as f:
                                 st.download_button(
@@ -1426,6 +1437,7 @@ def render_aperture_photometry(
             try:
                 vyvar_footer_idle()
             except Exception:  # noqa: BLE001
+                # EXC-0503: T3 -- UI diagnostic/plot only (try: / vyvar_footer_idle() / except Exception:  # noqa: BLE001... (EXCEPT-BULK 2026-07-08)
                 pass
         return
 
@@ -1677,6 +1689,7 @@ def render_aperture_photometry(
                         for p in lc_files:
                             _ = _cached_read_csv(str(p))
                     except Exception:  # noqa: BLE001
+                        # EXC-0504: T3 -- UI diagnostic/plot only (for p in lc_files: / _ = _cached_read_csv(str(p)) / except Exc... (EXCEPT-BULK 2026-07-08)
                         pass
 
         show_all_filters = st.checkbox(

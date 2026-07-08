@@ -40,6 +40,7 @@ def _setup_logging(log_path: Path) -> None:
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")
     except Exception:  # noqa: BLE001
+        # EXC-0468: ? -- intent unclear (sys.stdout.reconfigure(encoding='utf-8') / sys.stderr.reconfigure(encod... (EXCEPT-BULK 2026-07-08)
         pass
 
 

@@ -129,6 +129,7 @@ def _joint_moffat_fit_subtract(
     try:
         fitted = fitter(compound, xx, yy, sub, maxiter=400)
     except Exception as exc:  # noqa: BLE001
+        # EXC-0445: ? -- intent unclear (try: / fitted = fitter(compound, xx, yy, sub, maxiter=400) / except Exc... (EXCEPT-BULK 2026-07-08)
         return img.copy(), {
             "ok": False,
             "error": str(exc),

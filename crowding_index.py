@@ -40,6 +40,7 @@ import pandas as pd
 
 from masterstar_context import header_core_fwhm_px
 from photometry_core import _photometric_error
+import logging
 
 SNR_LIMIT = 5.0
 APERTURE_FWHM_FACTOR = 1.9  # AppConfig default; aperture radius = factor * FWHM
@@ -91,7 +92,8 @@ def _gain_rn_for_draft(db: Any, draft_id: int) -> tuple[float, float, str]:
             rn_res = resolve_read_noise(None, db=db, equipment_id=eid)
             if g_res.ok and rn_res.ok:
                 return float(g_res.value), float(rn_res.value), f"{g_res.source}_eq{eid}"
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.debug('[EXC-0055] science path may skip or use stale defaults (if g_res.ok and rn_res.ok: / return float(...: %s', exc)
         pass
     return GAIN_FALLBACK, RN_FALLBACK, "fallback_eq1"
 

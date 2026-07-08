@@ -128,7 +128,8 @@ def _calibration_light_temp_c(
     try:
         with fits.open(p, memmap=False) as hdul:
             return _raw_ccd_temp_from_header(hdul[0].header)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.warning("[EXC-0088] _raw_ccd_temp: unreadable FITS -> None -> dark registration later refused as 'temp unkn...: %s", exc)
         return None
 
 

@@ -17,6 +17,7 @@ def have_psf_frame_columns(all_frames: Any) -> bool:
     try:
         cols = getattr(all_frames, "columns", None)
     except Exception:  # noqa: BLE001
+        # EXC-0467: ? -- intent unclear (try: / cols = getattr(all_frames, 'columns', None) / except Exception: ... (EXCEPT-BULK 2026-07-08)
         return False
     if cols is None:
         return False

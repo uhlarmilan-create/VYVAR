@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from importer import SmartImportPlan
+import logging
 
 CALIBRATION_MODE_VYVAR = "vyvar_calibrated"
 CALIBRATION_MODE_PRE = "pre_calibrated"
@@ -96,7 +97,8 @@ def load_draft_manifest(archive_path: Path | str) -> dict[str, Any]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
         return raw if isinstance(raw, dict) else {}
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.warning("[EXC-0076] report/export may omit or misstate (raw = json.loads(path.read_text(encoding='utf-8')) ...: %s", exc)
         return {}
 
 
