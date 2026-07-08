@@ -78,6 +78,10 @@ PROC_STORE_COLS = [
     "psf_chi2",
     "psf_quality",
     "psf_snr",
+    # G2-F002b trust (per-frame proc CSV; Phase 2A frame_time_lookup)
+    "catalog_match_mode",
+    # wcs_untrusted is NOT stored here — derived in Phase 2A LC export from
+    # catalog_match_mode via catalog_match_trust.is_wcs_untrusted_catalog_match_mode.
 ]
 
 PROC_CSV_GLOB = "proc_*.csv"
