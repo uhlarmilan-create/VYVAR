@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-08** — SESSION-CLOSE-0708 (`145f8c6`).
+Last updated: **2026-07-08** — SESSION-CLOSE-0708 (`c3b655c`).
 
 **2026-07-08 snapshot (two-day close):** Morning workstreams — **PROV-FIX** (`provenance` block live in
 `pipeline_meta.json`), **QUICKWINS-0708** (RN-HEADER-NONE fix + draft_424 new anchor), **CAL-AGE-CLOCK**

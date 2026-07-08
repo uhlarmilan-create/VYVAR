@@ -4,7 +4,7 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ## 2026-07-08 — SESSION-CLOSE-0708
 
-**Day closed** at `main` **`145f8c6`** — morning PROV-FIX / QUICKWINS-0708 / CAL-AGE-CLOCK / INPUT-GUARDS;
+**Day closed** at `main` **`c3b655c`** — morning PROV-FIX / QUICKWINS-0708 / CAL-AGE-CLOCK / INPUT-GUARDS;
 afternoon EXCEPT batch (census 625, 314 EVIDENCE, 21 T1 fixes, HRD-PLOT-TUPLE fixed).
 **604 passed** pytest. **Next:** EXCEPT-RETRIAGE-3 (tranche 3). PUBLICATION venue decision pending Milan.
 
