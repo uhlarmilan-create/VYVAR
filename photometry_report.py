@@ -96,6 +96,55 @@ _GS11_SUMMARY_KEYS: tuple[str, ...] = (
 )
 
 
+class _ReportConfigView:
+    """Cfg-like view: provenance ``config_snapshot`` first, live ``AppConfig`` for missing keys."""
+
+    def __init__(self, snapshot: dict[str, Any], live: Any | None) -> None:
+        self._snapshot = dict(snapshot)
+        self._live = live
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._snapshot:
+            return self._snapshot[name]
+        if self._live is not None:
+            return getattr(self._live, name)
+        raise AttributeError(name)
+
+    def to_dict(self) -> dict[str, Any]:
+        if self._snapshot:
+            out = dict(self._snapshot)
+            if self._live is not None and hasattr(self._live, "to_dict"):
+                for k, v in self._live.to_dict().items():
+                    out.setdefault(k, v)
+            return out
+        if self._live is not None and hasattr(self._live, "to_dict"):
+            return dict(self._live.to_dict())
+        return {}
+
+
+def resolve_report_config(
+    pipeline_meta: dict[str, Any] | None,
+) -> tuple[Any | None, str]:
+    """PDF cfg source: run ``provenance.config_snapshot`` when present, else live AppConfig."""
+    snapshot: dict[str, Any] | None = None
+    if isinstance(pipeline_meta, dict):
+        prov = pipeline_meta.get("provenance")
+        if isinstance(prov, dict):
+            raw = prov.get("config_snapshot")
+            if isinstance(raw, dict) and raw:
+                snapshot = raw
+    live = None
+    try:
+        from config import AppConfig
+
+        live = AppConfig()
+    except Exception:  # noqa: BLE001
+        live = None
+    if snapshot is not None:
+        return _ReportConfigView(snapshot, live), "run snapshot"
+    return live, "live (no run snapshot)"
+
+
 def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[str]:
     """Text lines for PDF / tests — Flux Dilution (Gaia) subsection."""
     enabled = bool(getattr(cfg, "gs11_dilution_enabled", False)) if cfg is not None else False
@@ -333,12 +382,11 @@ class _PhotometryReportBuilder:
             self.summary_df = self.summary_df.sort_values("_vsx_rank", ascending=True, na_position="last")
 
         try:
-            from config import AppConfig
-
-            self._cfg = AppConfig()
-            self._use_bprp_primary = bool(self._cfg.phase01_use_bprp_primary)
+            self._cfg, self._cfg_source_label = resolve_report_config(self._pipeline_meta)
+            self._use_bprp_primary = bool(getattr(self._cfg, "phase01_use_bprp_primary", True))
         except Exception:  # noqa: BLE001
             self._cfg = None
+            self._cfg_source_label = "live (no run snapshot)"
             self._use_bprp_primary = True
 
         if (self._var_results is None) or (not self._candidates_set):
@@ -1090,9 +1138,11 @@ class _PhotometryReportBuilder:
             if not self.comp_df.empty and "_tcid" in self.comp_df.columns:
                 sub = self.comp_df[self.comp_df["_tcid"].astype(str).eq(cid)]
                 if not sub.empty:
-                    from config import AppConfig  # noqa: PLC0415
+                    _chk_cfg = self._cfg
+                    if _chk_cfg is None:
+                        from config import AppConfig  # noqa: PLC0415
 
-                    _chk_cfg = AppConfig()
+                        _chk_cfg = AppConfig()
                     ens = resolve_ensemble_ids_for_check(
                         cid,
                         sub,
@@ -1584,6 +1634,10 @@ class _PhotometryReportBuilder:
             c.setFillColor(self.colors.HexColor("#1a1a2e"))
             left_txt = f"VYVAR — {self._report_draft_lbl} — {self.obs_group}"
             c.drawString(self.M_LEFT, 0.45 * self.cm, left_txt)
+            if getattr(self, "_cfg_source_label", "") == "live (no run snapshot)":
+                c.setFont(self.FONT_REG, 7)
+                c.drawString(self.M_LEFT, 0.28 * self.cm, "config: live (no run snapshot)")
+                c.setFont(self.FONT_REG, 9)
             c.drawRightString(self.PAGE_W - self.M_RIGHT, 0.45 * self.cm, f"Page {c.getPageNumber()}")
             c.setFillColor(self.colors.black)
         except Exception:  # noqa: BLE001
@@ -1758,10 +1812,9 @@ class _PhotometryReportBuilder:
         work["vsx_known_variable"] = work["vsx_known_variable"].fillna(False).astype(bool)
         n_combined_edge = 0
         try:
-            from config import AppConfig
             from ui_variability import count_edge_safe_combined_candidates
 
-            cfg_d = AppConfig().to_dict()
+            cfg_d = self._cfg.to_dict() if self._cfg is not None and hasattr(self._cfg, "to_dict") else {}
             n_combined_edge = int(
                 count_edge_safe_combined_candidates(
                     rms_df,
@@ -2732,10 +2785,13 @@ class _PhotometryReportBuilder:
             if np.isfinite(fv) and fv > 0.0:
                 return float(round(fv, 4))
         try:
-            from config import AppConfig
             from photometry_core import compute_auto_fwhm_limit
 
-            cfg = AppConfig()
+            cfg = self._cfg
+            if cfg is None:
+                from config import AppConfig
+
+                cfg = AppConfig()
         except Exception:  # noqa: BLE001
             return float("nan")
         arr = pd.to_numeric(qc_df.get("FWHM_PX"), errors="coerce").to_numpy(dtype=float)
@@ -5175,9 +5231,15 @@ def generate_photometry_report(
     _methods = list(active_methods) if active_methods else None
     if _methods is None:
         try:
-            from config import AppConfig
+            _pm_path = Path(draft_dir) / "platesolve" / str(obs_group) / "photometry" / "pipeline_meta.json"
+            _pm_pdf: dict[str, Any] = {}
+            if _pm_path.is_file():
+                _pm_pdf = json.loads(_pm_path.read_text(encoding="utf-8"))
+            _cfg_pdf, _ = resolve_report_config(_pm_pdf)
+            if _cfg_pdf is None:
+                from config import AppConfig
 
-            _cfg_pdf = AppConfig()
+                _cfg_pdf = AppConfig()
             _lc_dir_pdf = Path(draft_dir) / "platesolve" / str(obs_group) / "photometry" / "lightcurves"
             _have_psf_lc = any(_lc_dir_pdf.glob("lightcurve_*_psf.csv")) or any(
                 _lc_dir_pdf.glob("lightcurve_*_adaptive.csv")
