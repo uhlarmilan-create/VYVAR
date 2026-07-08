@@ -78,26 +78,63 @@ def _parse_master_header_datetime(raw: object) -> datetime | None:
     return None
 
 
-def get_master_age_days(file_path: str | Path) -> float:
-    """Age of master in days from header date or filesystem mtime."""
+class MasterAgeInfo(NamedTuple):
+    """Resolved master age for validity checks (import scan + library UI)."""
+
+    age_days: float
+    source: str  # "header" | "mtime"
+    header_key: str | None
+    capture_utc: datetime | None
+
+
+def _header_capture_datetime(hdr: fits.Header) -> tuple[datetime | None, str | None]:
+    """Priority: VY_CDATE (VYVAR stack stamp) -> DATE-OBS -> DATEOBS; naive -> UTC."""
+    for key in ("VY_CDATE", "DATE-OBS", "DATEOBS"):
+        dt = _parse_master_header_datetime(hdr.get(key))
+        if dt is not None:
+            return dt, key
+    return None, None
+
+
+def resolve_master_age(file_path: str | Path) -> MasterAgeInfo:
+    """Age of master in days from header capture date, else filesystem mtime."""
     p = Path(file_path)
     now = datetime.now(timezone.utc)
     dt: datetime | None = None
+    header_key: str | None = None
+    source = "mtime"
     if p.is_file():
         try:
             with fits.open(p, memmap=True) as hdul:
                 hdr = hdul[0].header
-            dt = _parse_master_header_datetime(hdr.get("VY_CDATE") or hdr.get("DATE-OBS") or hdr.get("DATEOBS"))
+            dt, header_key = _header_capture_datetime(hdr)
+            if dt is not None:
+                source = "header"
         except Exception:  # noqa: BLE001
             dt = None
+            header_key = None
     if dt is None:
         try:
             ts = os.path.getmtime(p)
             dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+            source = "mtime"
+            header_key = None
         except OSError:
             dt = now
+            source = "mtime"
+            header_key = None
     age = (now - dt).total_seconds() / 86400.0
-    return max(0.0, float(age))
+    return MasterAgeInfo(
+        age_days=max(0.0, float(age)),
+        source=source,
+        header_key=header_key,
+        capture_utc=dt,
+    )
+
+
+def get_master_age_days(file_path: str | Path) -> float:
+    """Age of master in days from header date or filesystem mtime."""
+    return resolve_master_age(file_path).age_days
 
 
 def read_master_binning_from_header(header: fits.Header) -> int:

@@ -16,6 +16,7 @@ from astropy.io import fits
 from astropy.visualization import ZScaleInterval
 
 
+from calibration import resolve_master_age
 from database import DraftTechnicalMetadataError, VyvarDatabase
 from fits_suffixes import path_suffix_is_fits
 from infolog import log_event
@@ -870,13 +871,34 @@ def _find_matching_master_in_library(
     return best
 
 
-def _age_days(path: Path) -> int | None:
+_master_age_mtime_warned: set[str] = set()
+
+
+def _reset_master_age_mtime_warnings() -> None:
+    _master_age_mtime_warned.clear()
+
+
+def _age_days(
+    path: Path,
+    *,
+    warnings: list[str] | None = None,
+) -> float | None:
+    """Master age in days — same clock as library UI (:func:`calibration.get_master_age_days`)."""
     try:
-        mtime = _mtime_utc(path)
+        info = resolve_master_age(path)
     except OSError:
         return None
-    now_utc = datetime.now(timezone.utc)
-    return int((now_utc - mtime).total_seconds() // 86400)
+    if info.source == "mtime":
+        key = str(path.resolve())
+        if key not in _master_age_mtime_warned:
+            _master_age_mtime_warned.add(key)
+            msg = (
+                f"Master age: no resolvable header date for {path.name}; "
+                "using filesystem mtime fallback."
+            )
+            if warnings is not None:
+                warnings.append(msg)
+    return float(info.age_days)
 
 
 def _find_best_masterflat_for_filter(
@@ -893,6 +915,7 @@ def _find_best_masterflat_for_filter(
     id_equipments: int | None = None,
     id_telescope: int | None = None,
     temp_tolerance: float = 0.5,
+    warnings: list[str] | None = None,
 ) -> tuple[Path | None, str]:
     """Return best masterflat and a UI-friendly status string."""
     roots = search_roots or _calibration_library_search_roots(calibration_library_root)
@@ -921,13 +944,13 @@ def _find_best_masterflat_for_filter(
         if hit:
             p_hit = Path(hit)
             if p_hit.is_file() and _master_kind_matches(p_hit, "flat") and _looks_like_master(p_hit):
-                age = _age_days(p_hit)
+                age = _age_days(p_hit, warnings=warnings)
                 if age is not None and age <= validity_days:
-                    return p_hit, f"MasterFlat (Filter {flt}): ✅ library DB ({age} days old)"
+                    return p_hit, f"MasterFlat (Filter {flt}): ✅ library DB ({int(age)} days old)"
                 if age is not None:
                     return (
                         None,
-                        f"MasterFlat (Filter {flt}): ⚠️ library DB expirované ({age} dní) — vygeneruj nový",
+                        f"MasterFlat (Filter {flt}): ⚠️ library DB expirované ({int(age)} dní) — vygeneruj nový",
                     )
                 return p_hit, f"MasterFlat (Filter {flt}): ✅ library DB"
 
@@ -949,8 +972,8 @@ def _find_best_masterflat_for_filter(
         seen_cf.add(ck)
         cand_cf.append(fp)
     candidates = cand_cf
-    best_fresh: tuple[Path, int] | None = None  # (path, age_days)
-    best_any: tuple[Path, int] | None = None
+    best_fresh: tuple[Path, float] | None = None  # (path, age_days)
+    best_any: tuple[Path, float] | None = None
 
     for fp in candidates:
         try:
@@ -966,9 +989,10 @@ def _find_best_masterflat_for_filter(
             continue
         if not _master_kind_matches(fp, "flat"):
             continue
-        age = _age_days(fp)
+        age = _age_days(fp, warnings=warnings)
         if age is None:
             continue
+        age_i = int(age)
         if best_any is None or age < best_any[1]:
             best_any = (fp, age)
         if age <= validity_days:
@@ -977,12 +1001,12 @@ def _find_best_masterflat_for_filter(
 
     if best_fresh:
         fp, age = best_fresh
-        return fp, f"MasterFlat (Filter {flt}): ✅ found ({age} days old)"
+        return fp, f"MasterFlat (Filter {flt}): ✅ found ({int(age)} days old)"
     if best_any:
         _fp, age = best_any
         return (
             None,
-            f"MasterFlat (Filter {flt}): ⚠️ len expirovaný master ({age} dní) — vygeneruj nový",
+            f"MasterFlat (Filter {flt}): ⚠️ len expirovaný master ({int(age)} dní) — vygeneruj nový",
         )
     return None, f"MasterFlat (Filter {flt}): ❌ MISSING!"
 
@@ -1152,6 +1176,7 @@ def smart_scan_source(
 
     scan_rows: list[SmartScanRow] = []
     warnings: list[str] = []
+    _reset_master_age_mtime_warnings()
 
     if not root.exists() or not root.is_dir():
         scan_rows.append(SmartScanRow("Lights", "missing", 0, ""))
@@ -1289,6 +1314,7 @@ def smart_scan_source(
             id_equipments=id_equipments,
             id_telescope=id_telescope,
             temp_tolerance=temp_tol,
+            warnings=warnings,
         )
         masterflat_by_obs_key[gk] = str(fp_best) if fp_best is not None else None
         masterflat_status[gk] = status
@@ -1310,11 +1336,11 @@ def smart_scan_source(
             temp_tolerance=temp_tol,
         )
         if d_found is not None:
-            age_d = _age_days(d_found)
+            age_d = _age_days(d_found, warnings=warnings)
             if age_d is not None and age_d > masterdark_validity_days:
                 dark_master_by_obs_key[gk] = None
                 warnings.append(
-                    f"MasterDark pre skupinu {gk} je expirovaný ({age_d} dní) — vygeneruj nový."
+                    f"MasterDark pre skupinu {gk} je expirovaný ({int(age_d)} dní) — vygeneruj nový."
                 )
             else:
                 dark_master_by_obs_key[gk] = str(d_found)
@@ -1402,7 +1428,9 @@ def smart_scan_source(
                 True,
             )
         validity = masterflat_validity_days if kind == "flat" else masterdark_validity_days
-        stt = get_calibration_status(found, kind=f"Master {kind.title()}", validity_days=validity)
+        stt = get_calibration_status(
+            found, kind=f"Master {kind.title()}", validity_days=validity, warnings=warnings
+        )
         if stt.status == "expired":
             warnings.append(stt.message)
             return (
@@ -1442,7 +1470,12 @@ def smart_scan_source(
     elif dark_found is None:
         masterdark_status = "MasterDark: raw on source (will build if requested)"
     else:
-        stt_dark = get_calibration_status(dark_found, kind="Master Dark", validity_days=masterdark_validity_days)
+        stt_dark = get_calibration_status(
+            dark_found,
+            kind="Master Dark",
+            validity_days=masterdark_validity_days,
+            warnings=warnings,
+        )
         if stt_dark.status == "expired":
             masterdark_status = f"MasterDark: ⚠️ found but expired ({stt_dark.age_days} days old)"
             warnings.append(stt_dark.message)
@@ -2028,12 +2061,15 @@ def get_calibration_status(
     *,
     kind: str,
     validity_days: int,
+    warnings: list[str] | None = None,
 ) -> CalibrationStatus:
     """Return calibration status for a given file/folder.
 
     - status=missing: path is None / doesn't exist / empty dir
-    - status=expired: newest mtime older than stale_days
+    - status=expired: age older than validity_days (header capture date; mtime fallback)
     - status=ok: otherwise
+
+    Boundary: age == validity_days is **ok** (same as library UI: expired only when age > limit).
     """
     if path is None:
         return CalibrationStatus(
@@ -2073,9 +2109,8 @@ def get_calibration_status(
             )
         check_path = max(files, key=lambda fp: os.path.getmtime(fp))
 
-    try:
-        mtime = _mtime_utc(check_path)
-    except OSError:
+    age_f = _age_days(check_path, warnings=warnings)
+    if age_f is None:
         return CalibrationStatus(
             kind=kind,
             path=str(p),
@@ -2083,30 +2118,31 @@ def get_calibration_status(
             last_modified_utc=None,
             age_days=None,
             validity_days=validity_days,
-            message=f"{kind}: cannot read modification time",
+            message=f"{kind}: cannot resolve master age",
         )
 
-    now_utc = datetime.now(timezone.utc)
-    age = now_utc - mtime
-    age_days = int(age.total_seconds() // 86400)
-    expired = age_days > validity_days
+    info = resolve_master_age(check_path)
+    capture = info.capture_utc
+    last_str = capture.strftime("%Y-%m-%d %H:%M UTC") if capture is not None else None
+    age_days = int(age_f)
+    expired = age_f > validity_days
 
     if expired:
         return CalibrationStatus(
             kind=kind,
             path=str(p),
             status="expired",
-            last_modified_utc=mtime.strftime("%Y-%m-%d %H:%M UTC"),
+            last_modified_utc=last_str,
             age_days=age_days,
             validity_days=validity_days,
-            message=f"{kind}: expired (last {mtime.strftime('%Y-%m-%d')}, {age_days} days old)",
+            message=f"{kind}: expired (capture {last_str or 'unknown'}, {age_days} days old)",
         )
 
     return CalibrationStatus(
         kind=kind,
         path=str(p),
         status="ok",
-        last_modified_utc=mtime.strftime("%Y-%m-%d %H:%M UTC"),
+        last_modified_utc=last_str,
         age_days=age_days,
         validity_days=validity_days,
         message=f"{kind}: ok ({age_days} days old)",
