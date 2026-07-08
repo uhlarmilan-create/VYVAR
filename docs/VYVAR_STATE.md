@@ -1,11 +1,24 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-08** — CLOSE-0708: day session closed; HRD-PLOT-TUPLE logged (LOW, 299-cluster batch).
+Last updated: **2026-07-08** — SESSION-CLOSE-0708.
 
-**Done 2026-07-08 (CLOSE-0708):** HRD PDF panel on draft_424 fails at `hrd_analysis._fetch_gaia_columns_by_source_id:113` (`IndexError`); swallowed — panel missing. Ledger **HRD-PLOT-TUPLE** (LOW). Day batches: PROV-FIX, QUICKWINS-0708, CAL-AGE-CLOCK (darks expire ~**2026-07-21**), INPUT-GUARDS.
+**2026-07-08 snapshot (two-day close):** Morning workstreams — **PROV-FIX** (`provenance` block live in
+`pipeline_meta.json`), **QUICKWINS-0708** (RN-HEADER-NONE fix + draft_424 new anchor), **CAL-AGE-CLOCK**
+(unified header validity clock; darks expire ~**2026-07-21**), **INPUT-GUARDS** (null-island guard +
+PDF config from provenance snapshot). Afternoon/evening **EXCEPT batch:** census **625** sites;
+**314 EVIDENCE** (tranches 1+2: science kernel 144 + `pipeline.py` 170); **21 T1 fixes landed**
+(EXCEPT-FIX-1 TOP-10 + EXCEPT-FIX-2 TOP-10 + EXC-0626 closeout); **HRD-PLOT-TUPLE** fixed
+(`sqlite3.Row` tuple bug). Full pytest **604 passed**. **Next:** tranche 3 EXCEPT-RETRIAGE-3
+(`vyvar_platesolver` / alignment / importer / database ~78 silent sites) → tranche 4
+(report/export/UI ~72) → bulk dispositions (narrow+log-ERROR ~155, delete-dead ~45).
+**PUBLICATION** workstream open — venue decision pending (Milan).
+
+**Done 2026-07-08 (EXCEPT batch):** EXCEPT-BATCH-S0 census + HRD fix; EXCEPT-RETRIAGE-1/2 evidence
+triages; EXCEPT-FIX-1/2 TOP-10 terminal failure surfacing (`except_fix_counters`); EXC-0626
+empty-comp silent drop. Ledger: `docs/VYVAR_EXCEPT_CENSUS.md`.
 
 **Done 2026-07-08 (INPUT-GUARDS-0708):** `resolve_site` null-island guard (`166cbf4`); PDF cfg from
-`provenance.config_snapshot` (`80aab21`, synergy with PROV-FIX `e7ce7ea`). `587 passed` gate.
+`provenance.config_snapshot` (`80aab21`, synergy with PROV-FIX `e7ce7ea`). `604 passed` gate.
 
 **Done 2026-07-08 (CAL-AGE-CLOCK):** `resolve_master_age` unified import scan + library UI.
 

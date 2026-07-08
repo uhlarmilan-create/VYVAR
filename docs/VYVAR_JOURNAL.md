@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-08 — SESSION-CLOSE-0708
+
+**Day closed** at `main` — morning PROV-FIX / QUICKWINS-0708 / CAL-AGE-CLOCK / INPUT-GUARDS;
+afternoon EXCEPT batch (census 625, 314 EVIDENCE, 21 T1 fixes, HRD-PLOT-TUPLE fixed).
+**604 passed** pytest. **Next:** EXCEPT-RETRIAGE-3 (tranche 3). PUBLICATION venue decision pending Milan.
+
+---
+
 ## 2026-07-08 — EXCEPT-FIX-2 (Tranche-2 TOP-10 pipeline)
 
 **Probe:** drafts 424/425/427 — **all 10 NEVER-FIRE** on natural paths (`tmp/except_fix2_probe.json`).
@@ -89,9 +97,10 @@ venue matrix researched 2026-07-08 (decision pending Milan). Cross-links: **TODO
 
 ---
 
-## 2026-07-08 — Day close (CLOSE-0708)
+## 2026-07-08 — Day close (CLOSE-0708) — superseded by SESSION-CLOSE-0708
 
-**Session summary** — five workstreams landed on `main`; full-day gate **587 passed**.
+**Session summary** — five morning workstreams + EXCEPT batch; final gate **604 passed**.
+See SESSION-CLOSE-0708 entry above for authoritative close.
 
 | Workstream | Commits | Headline |
 |------------|---------|----------|
@@ -99,19 +108,8 @@ venue matrix researched 2026-07-08 (decision pending Milan). Cross-links: **TODO
 | **QUICKWINS-0708** | `8c44b71`…`cd0b59e` | K2 GR slope traced; proc `mag` documented; CAL passthrough dead code removed; RN header fix; draft_425 determinism PASS; **draft_424 new anchor** (`e1a7a311…` provenance hash). |
 | **CAL-AGE-CLOCK** | `5143485`, `ee89de8` | Import scan + UI share `resolve_master_age` (header `VY_CDATE`); 3 local masters, 0 validity flips. Darks `VY_CDATE` 2026-04-22 → **~2026-07-21** expiry at 90 d (calendar note). |
 | **INPUT-GUARDS** | `166cbf4`, `80aab21`, `6a3d020` | Null-island guard at `resolve_site`; PDF cfg from provenance snapshot (G7×PROV synergy); draft_424 PDF **0 overflow**. |
-| **HRD-PLOT-TUPLE** | (ledger only) | draft_424 PDF: HRD build fails — see traceback below; panel **missing**. Deferred to 299-defensive cluster. |
-
-**HRD traceback (draft_424 repro, read-only):**
-```
-IndexError: tuple index out of range
-  File "hrd_analysis.py", line 241, in build_hrd_dataframe
-    gdf = _fetch_gaia_columns_by_source_id(...)
-  File "hrd_analysis.py", line 113, in _fetch_gaia_columns_by_source_id
-    d = {k: row[k] for k in row}
-        ~~~^^^
-```
-Swallowed at `photometry_report.py:4365` (`PDF HRD: build/plot failed`). PDF lacks
-`Field astrophysics` / Hertzsprung page; `hrd_field_summary.png` not written.
+| **EXCEPT batch** | `…`→`136b152` | Census 625 / 314 EVIDENCE; FIX-1/2 TOP-10 + EXC-0626; HRD-PLOT-TUPLE fixed. |
+| **HRD-PLOT-TUPLE** | EXCEPT-BATCH-S0 | **FIXED** — `sqlite3.Row` tuple bug; PDF HRD page restored. |
 
 ---
 

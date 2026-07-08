@@ -76,7 +76,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | ID | Sev | Notes |
 |----|-----|-------|
 | **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. Photon-transfer on field lights **INCONCLUSIVE** (g_eff~0.9; need bin2 flats). RN sub-Q directionally **CLOSED** via D3 (DECISIONS 2026-07-07); empirical photon-transfer closure pending bin2 flats. |
-| **F-EXCEPT-TIER1** | MED | 160 silent pass/continue sites (`pipeline`+`photometry_core`); working queue → `docs/VYVAR_EXCEPT_CENSUS.md` (625 sites, EXCEPT-BATCH-S0). |
+| **F-EXCEPT-TIER1** | MED | **IN PROGRESS** — 21 T1 fixes landed (FIX-1/2 TOP-10 + EXC-0626); census `docs/VYVAR_EXCEPT_CENSUS.md` **625** sites, **314 EVIDENCE** (tranches 1+2 done). Remaining: tranche 3 (~78), tranche 4 (~72), bulk narrow+log ~155, delete-dead ~45. |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
 | **F-BJD-1** | LOW | **FIXED (Stage D)** | `time_base` LC column; numeric times unchanged |
@@ -86,7 +86,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **TIER1-OBSLOC-ZERO** | — | **FIXED** (`166cbf4`): `resolve_site` null-island guard (|lat|,|lon| < 0.01° → UNRESOLVED); airmass refuses, BJD `JD_FALLBACK`. |
 | **TIER1-UI-DEBT** | LOW | 38 SAFE UI/plotly broad-except `pass` sites — cosmetic; subset of T3-UI in `docs/VYVAR_EXCEPT_CENSUS.md`. |
 | **HRD-PLOT-TUPLE** | — | **FIXED** (EXCEPT-BATCH-S0): `sqlite3.Row` iterates values not keys (`hrd_analysis.py:113`); PDF now emits HRD page or explicit unavailable placeholder (`photometry_report.py`). |
-| **299-defensive cluster** | MED | Pipeline/`photometry_core` broad-except `pass` cluster — phased fix queue in `docs/VYVAR_EXCEPT_CENSUS.md` (T1+T2 dispositions). |
+| **299-defensive cluster** | MED | **IN PROGRESS** — phased fix queue in `docs/VYVAR_EXCEPT_CENSUS.md`; tranches 1+2 EVIDENCE + 21 T1 fixes done; tranches 3–4 + bulk dispositions remain. |
 | **PROV-HEADLESS** | — | **FIXED** (`e7ce7ea`) — see K2 ledger row. |
 | **PROC-MAG-NAMING** | — | **FIXED** (`0913665`) — documented, not renamed. |
 | **K2-DATA-BLOCKER** | — | NIGHT_FIT needs dX ≥ ~0.3, comp floor ≪ 15 mmag; Boyden blocked on flats/flip. |
@@ -156,6 +156,25 @@ Camera-agnostic calibration-time diagnostic gate (shipped):
 | **CAL-PASSTHRU-DEAD** | — | **FIXED** (`21c20e3`): removed `allow_passthrough` from `get_processed_master` (tests-only dead branch). |
 
 Flat-norm Stage 2 and other ROADMAP calibration items unchanged (D1/D2/D3 codify current behavior).
+
+---
+
+## IN-FLIGHT — EXCEPT batch (silent broad-except census) — **IN PROGRESS (2026-07-08)**
+
+**Ledger:** `docs/VYVAR_EXCEPT_CENSUS.md` — **625** sites total; **314 EVIDENCE** (tranches 1+2).
+
+| Tranche | Scope | Sites | Status |
+|---------|-------|------:|--------|
+| 1 | `photometry_core`, `comp_selection_per_target`, `psf_*` | 144 | **EVIDENCE** + FIX-1 TOP-10 + EXC-0626 |
+| 2 | `pipeline.py` | 170 | **EVIDENCE** + FIX-2 TOP-10 |
+| 3 | `vyvar_platesolver`, alignment, importer, database | ~78 | **NEXT** — EXCEPT-RETRIAGE-3 |
+| 4 | report/export/UI | ~72 | pending |
+| bulk | narrow+log-ERROR / delete-dead | ~155 / ~45 | pending |
+
+**Fixes landed:** 21 T1 (TOP-10 ×2 + EXC-0626); `except_fix_counters` + ERROR surfacing.
+**HRD-PLOT-TUPLE:** **FIXED** (EXCEPT-BATCH-S0). Gate: **604 passed** pytest.
+
+**Next session entry point:** **EXCEPT-RETRIAGE-3** (tranche 3 evidence triage).
 
 ---
 
