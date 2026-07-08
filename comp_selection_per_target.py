@@ -248,6 +248,7 @@ def _resolve_target_color_for_comp_selection(
         else:
             log_event(f"[COMP] BP-RP=NaN for target {target_cid} → T4 / mag proxy")
     except Exception:  # noqa: BLE001
+        # EXC-0032: T3 -- BP-RP status log_event line for target never prints (EXCEPT-BULK-2 2026-07-08)
         pass
     if not math.isfinite(target_bprp_eff):
         _vnm = str(target.get("vsx_name", "") or target.get("name", "") or "").strip() or (target_cid or "?")
@@ -424,6 +425,7 @@ def _filter_comp_candidates_spatial_static(
                     f"-> {_n_d}"
                 )
             except Exception:  # noqa: BLE001
+                # EXC-0037: T3 -- BO CVn debug print after min_dist filter suppressed (EXCEPT-BULK-2 2026-07-08)
                 pass
 
     # Žiadna hviezda zo zoznamu VSX cieľov (variable_targets) ako comp — vrátane catalog_only Gaia ID.
@@ -450,10 +452,11 @@ def _filter_comp_candidates_spatial_static(
                 _n_b = int(cand_mask.sum())
                 BO_CVN_STEP_COUNTS["B_bp_rp"] = _n_b
                 print(
-                    f"[DEBUG BO CVn] Step D: after |ΔBP-RP|≤{float(max_delta_bprp_cfg):.2f} "
+                    f"[DEBUG BO CVn] Step D: after |delta BP-RP|<={float(max_delta_bprp_cfg):.2f} "
                     f"-> {_n_b}"
                 )
             except Exception:  # noqa: BLE001
+                # EXC-0039: T3 -- BO CVn debug print after BP-RP color filter suppressed (EXCEPT-BULK-2 2026-07-08)
                 pass
         n_cf = int((_known_color & ~_color_ok).sum())
         if n_cf > 0:
@@ -504,6 +507,7 @@ def _filter_comp_candidates_spatial_static(
             BO_CVN_STEP_COUNTS["E_is_usable_zone"] = int(cand_mask.sum())
             print(f"[DEBUG BO CVn] Step A': after Filter A (nss/extobj) -> {int(cand_mask.sum())}")
         except Exception:  # noqa: BLE001
+            # EXC-0040: T3 -- BO CVn debug print after Filter A (nss/extobj) suppressed (EXCEPT-BULK-2 2026-07-08)
             pass
 
     # Zahrň DET hviezdy (bez Gaia ID) ak majú snr50_ok a nie sú saturované.
@@ -580,7 +584,7 @@ def _build_candidates_pre_adaptive_mag(
     candidates_pre = ms[_base_mask | det_mask].copy()
     _debug_bo = str(target_cid).strip() == "1498613634033133184"
     if _debug_bo:
-                print(f"[DEBUG BO CVn] Step G0: candidates before adaptive Δmag = {int(len(candidates_pre))}")
+        print(f"[DEBUG BO CVn] Step G0: candidates before adaptive delta mag = {int(len(candidates_pre))}")
     # P3 determinism: sort candidates by catalog_id before any filtering
     if "catalog_id" in candidates_pre.columns:
         candidates_pre = candidates_pre.sort_values("catalog_id", kind="mergesort").reset_index(
@@ -617,10 +621,10 @@ def _build_candidates_pre_adaptive_mag(
             f"{_before_mag} → {int(len(candidates_pre))} (used_mag_tol={float(used_mag_tol):.2f})"
         )
         if _debug_bo:
-                        print(
-                            f"[DEBUG BO CVn] Step C: after adaptive |Δmag| (start={float(mag_tol):.2f}, "
-                            f"used={float(used_mag_tol):.2f}) -> {int(len(candidates_pre))}"
-                        )
+            print(
+                f"[DEBUG BO CVn] Step C: after adaptive |delta mag| (start={float(mag_tol):.2f}, "
+                f"used={float(used_mag_tol):.2f}) -> {int(len(candidates_pre))}"
+            )
         if "catalog_id" in candidates_pre.columns:
             candidates_pre = candidates_pre.sort_values("catalog_id", kind="mergesort").reset_index(
                 drop=True
@@ -1927,6 +1931,7 @@ def _assign_comp_tiers_to_pool(
         comp_delta_bprp_map = dict(zip(_id_ser.tolist(), _delta_bprp_map.tolist(), strict=True))
         comp_color_tier_src_map = dict(zip(_id_ser.tolist(), _cts.tolist(), strict=True))
     except Exception:  # noqa: BLE001
+        # EXC-0046: T3 -- DEBUG tier-assignment log line for one comp candidate skipped (EXCEPT-BULK-2 2026-07-08)
         comp_bprp_map = {}
         comp_tier_final_map = {}
         comp_delta_bprp_map = {}
@@ -2011,6 +2016,7 @@ def _assign_comp_tiers_to_pool(
                 f"[COMP] WARNING {target_cid}: {sel_note} — widened colour window / sparse pool"
             )
     except Exception:  # noqa: BLE001
+        # EXC-0047: T3 -- Comp selection summary log_event (widened colour window warning) never emitted (EXCEPT-BULK-2 2026-07-08)
         pass
 
     selected_ids = final_comps[id_col_cand].astype(str).str.strip().tolist()

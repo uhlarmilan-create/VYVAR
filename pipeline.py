@@ -13024,6 +13024,7 @@ def _astrometry_align_impl_body(
             finally:
                 _db_sat.conn.close()
         except Exception:  # noqa: BLE001
+            # EXC-0414: T4 -- `_db_pf.conn.close()` after plate-scale lookup for per-frame match sep; cleanup only. (EXCEPT-BULK-2 2026-07-08)
             pass
     if not files:
         raise FileNotFoundError(
@@ -13154,6 +13155,7 @@ def _astrometry_align_impl_body(
                     has_wcs = _has_valid_wcs(ref_hdr)
                     log_event(f"INFO: Alignment reference set to MASTERSTAR: {ref_fp.name}")
         except Exception as _ms_ref_exc:  # noqa: BLE001
+            # EXC-0416: T1 -- Copying MASTERSTAR WCS onto reference FITS fails silently; aligned products can carry a... (EXCEPT-BULK-2 2026-07-08)
             from except_fix_counters import get_except_fix_counters
 
             get_except_fix_counters().masterstar_ref_swap_fail += 1
@@ -13212,6 +13214,7 @@ def _astrometry_align_impl_body(
                         f"INFO: Sibling-recovery alignment using existing MASTERSTAR: {_ms_path.name}"
                     )
         except Exception as _sib_ms_exc:  # noqa: BLE001
+            # EXC-0418: T3 -- DEBUG min/max/mean/NaN stats logging `pass`; alignment detection proceeds regardless. (EXCEPT-BULK-2 2026-07-08)
             log_event(f"DEBUG: Sibling-recovery MASTERSTAR load failed: {_sib_ms_exc}")
 
     if not has_wcs:
@@ -13260,6 +13263,7 @@ def _astrometry_align_impl_body(
     try:
         pass  # type: ignore
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0419] `estimate_archive_memory_profile` failure leaves `use_ram_handoff=True`; may exhaust RA...: %s', exc)
         raise RuntimeError(f"astroalign required for frame registration: {exc}") from exc
 
     log_event(
@@ -13325,6 +13329,7 @@ def _astrometry_align_impl_body(
             if tot > int(0.70 * avail):
                 use_ram_handoff = False
     except Exception:  # noqa: BLE001
+        # EXC-0420: T1 -- `_vy_fwhm_header_value` returns `None` on read error; MASTERSTAR match heuristic falls ... (EXCEPT-BULK-2 2026-07-08)
         pass
 
     aligned_ram_buffer: list[tuple[str, fits.Header, np.ndarray]] = []
@@ -13338,6 +13343,7 @@ def _astrometry_align_impl_body(
     try:
         rotation_ref_angle_deg = wcs_rotation_angle_deg(ref_hdr)
     except Exception:  # noqa: BLE001
+        # EXC-0421: T2 -- `_aligned_masterstar_matches_platesolve` stat/read failure returns `False`, allowing al... (EXCEPT-BULK-2 2026-07-08)
         rotation_ref_angle_deg = None
 
     try:
@@ -13642,10 +13648,12 @@ def _astrometry_align_impl_body(
         try:
             ms_csv = Path(str((cat_info.get("masterstars_csv") or (_ps_root / "masterstars_full_match.csv")))).resolve()
         except Exception:  # noqa: BLE001
+            # EXC-0422: T3 -- Optional `variable_targets_csv` path probe `pass`; UI metadata field may be absent. (EXCEPT-BULK-2 2026-07-08)
             ms_csv = Path(str(cat_info.get("masterstars_csv") or (_ps_root / "masterstars_full_match.csv")))
         try:
             ms_fits = Path(str((cat_info.get("masterstar_fits") or (_ps_root / "MASTERSTAR.fits")))).resolve()
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0423] Post-RAM-flush DB-aware photometry plan rewrite `pass`es; border-safe bbox may use stal...: %s', exc)
             ms_fits = Path(str(cat_info.get("masterstar_fits") or (_ps_root / "MASTERSTAR.fits")))
 
         # comparison_stars.csv / variable_targets.csv are produced in this setup directory already.
@@ -13770,6 +13778,7 @@ def _astrometry_align_impl_body(
                     finally:
                         _db_epsf.conn.close()
         except Exception as _e:  # noqa: BLE001
+            # EXC-0424: T1 -- `normalize_gaia_source_id_series` failure `pass`es before deferred CSV write; per-frame... (EXCEPT-BULK-2 2026-07-08)
             LOGGER.warning("[ePSF] build_epsf_model failed (non-fatal): %s", _e)
 
     def _cat_prog(i: int, tot: int, msg: str) -> None:
@@ -14672,6 +14681,7 @@ def _sync_obs_calibration_state_with_retry(
             )
             return True
         except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0426] [CAL-DIAG] `_quality_inspection_dao_metrics_array` in calibrate path logs WARNING and o...: %s', exc)
             last_exc = exc
             if attempt == 0:
                 LOGGER.warning(
@@ -14798,6 +14808,7 @@ def _calibrate_one_light_disk(
                 hdr,
             )
         except Exception as exc:  # noqa: BLE001
+            # EXC-0427: T4 -- Nested `pass` when `log_exception` itself fails; worker already returns `{ok: False, er... (EXCEPT-BULK-2 2026-07-08)
             logging.warning("[PERF-10] DAO QC in calibrate failed for %s: %s", src.name, exc)
 
     fits.writeto(dst, _as_fits_float32_image(data), header=hdr, overwrite=True)
@@ -14934,6 +14945,7 @@ def _calibrate_batch_process_one(
             "vy_cflag": _cf,
         }
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0428] [CAL-DIAG] Passthrough reuse path: `update_obs_file_calibration_state_by_raw_light_path...: %s', exc)
         tb = traceback.format_exc()
         LOGGER.error("calibrate_batch worker: %s -> %s\n%s", src_s, exc, tb)
         try:
@@ -15051,7 +15063,8 @@ def _passthrough_lights_to_calibrated(
     try:
         if db_pt is not None:
             db_pt.conn.close()
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0431] `filter_light_paths_for_calibration_db` failure logs and skips IS_REJECTED filter, pote...: %s', exc)
         pass
     return stats
 
@@ -15188,6 +15201,7 @@ def calibrate_lights_to_calibrated(
                     observation_id=observation_id,
                 )
         except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0432] [CAL-DIAG] First-light metadata diagnostic (`extract_fits_metadata` for focal/pixel log...: %s', exc)
             log_event(f"OBS_FILES IS_REJECTED filter skipped (error): {exc}")
     total = len(files)
     if total < _n_before_obs_filter:
@@ -15413,6 +15427,7 @@ def calibrate_lights_to_calibrated(
                         src_name = Path(items[idx][0]).name
                         progress_cb(done, total, f"Calibrating batch {done}/{total} ({src_name})")
         except Exception as exc:  # noqa: BLE001
+            # EXC-0434: T2 -- [CAL-DIAG] MP calibrate batch: same OBS_FILES calibration-state update `pass` after wor... (EXCEPT-BULK-2 2026-07-08)
             _tb_pool = traceback.format_exc()
             LOGGER.error("Kalibrácia (parallel): pool zlyhal, fallback na sekvenčný režim: %s\n%s", exc, _tb_pool)
             log_exception("CHYBA POOLU KALIBRÁCIE", exc)
@@ -15762,6 +15777,7 @@ def _qc_fwhm_elongation(
             "n_stars_detected": n_dao,
         }
     except Exception as exc:  # noqa: BLE001
+        # EXC-0436: T1 -- DAOStarFinder QC fallback outer `except` returns all-None FWHM/elongation; frame marked... (EXCEPT-BULK-2 2026-07-08)
         LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
 
     # Last-resort fallback without photutils: naive local-max peak picking + moments
@@ -15893,6 +15909,7 @@ def _qc_fwhm_elongation(
             "n_stars_detected": n_peaks_total,
         }
     except Exception:  # noqa: BLE001
+        # EXC-0437: T2 -- `_estimate_catalog_frame_hw` `continue`s to next FITS on read error, eventually default... (EXCEPT-BULK-2 2026-07-08)
         return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
 
 
@@ -16020,6 +16037,7 @@ def _analyze_calibrated_qc_one(src: Path) -> dict[str, Any]:
             "max": float(np.nanmax(arr)) if arr.size else None,
         }
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0439] [SILENT-DROP] `_preprocess_calibrated_one` returns `{status: error}` without writing pr...: %s', exc)
         return {"src": str(src), "status": f"error: {exc}"}
 
 
@@ -16589,6 +16607,7 @@ def _apply_temporal_sigma_clip_in_place(
         try:
             import cupy as cp  # type: ignore
         except Exception:  # noqa: BLE001
+            # EXC-0441: T2 -- WCS center extraction returns `None, None` on failure; draft segmentation sees frame as... (EXCEPT-BULK-2 2026-07-08)
             use_gpu = False
             cp = None
 
@@ -16699,6 +16718,7 @@ def scan_calibrated_lights_pointing(
             if math.isfinite(ra0) and math.isfinite(de0) and (-90.0 <= de0 <= 90.0):
                 return ra0, de0
         except Exception:  # noqa: BLE001
+            # EXC-0442: T2 -- JD parse helper returns `None`; WCS change-point logic excludes frame from segment list. (EXCEPT-BULK-2 2026-07-08)
             return None, None
         return None, None
 
@@ -16711,7 +16731,8 @@ def scan_calibrated_lights_pointing(
             jd_f = float(jd)
             if math.isfinite(jd_f) and jd_f > 0:
                 return jd_f
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.error('[EXC-0443] Multi-pointing segment detector returns `None` on any internal error; caller treats as ...: %s', exc)
             return None
         return None
 
@@ -17662,6 +17683,7 @@ class AstroPipeline:
                 df.to_csv(qc_csv, index=False)
                 out["analysis"]["calibrated"]["qc_csv"] = str(qc_csv)
             except Exception as exc:  # noqa: BLE001
+                logging.error('[EXC-0444] `fetch_draft_light_rows_for_quality` failure logs WARNING and returns empty jump result...: %s', exc)
                 LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
         else:
             out["warning"] = "No calibrated lights found. Run calibration first."

@@ -166,6 +166,7 @@ def query_local_gaia(
                         f"GAIA SQL: mag_limit {float(ml):.2f} > MAX(g_mag) v DB ({float(_gmax_db):.3f}) — orezávam."
                     )
                 except Exception:  # noqa: BLE001
+                    # EXC-0060: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
                     pass
                 ml = float(_gmax_db)
             mag_cap = float(ml)
@@ -179,7 +180,7 @@ def query_local_gaia(
             conn.execute("CREATE INDEX IF NOT EXISTS idx_ra ON gaia_dr3 (ra);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_dec ON gaia_dr3 (dec);")
             conn.commit()
-        except Exception:  # noqa: BLE001
+        except sqlite3.Error as exc:  # noqa: BLE001
             pass
 
         # Discover optional columns for forward-compatible queries.
@@ -208,7 +209,7 @@ def query_local_gaia(
                         "GAIA DB: upozornenie — nenašiel sa zjavný index na (ra, dec); "
                         "dotazy môžu byť pomalé."
                     )
-            except Exception:  # noqa: BLE001
+            except sqlite3.Error as exc:  # noqa: BLE001
                 pass
             _GAIA_INDEX_CHECK_DONE = True
         base_cols = ["source_id", "ra", "dec", "g_mag", "bp_mag", "rp_mag", "bp_rp", "var_flag"]
@@ -250,6 +251,7 @@ def query_local_gaia(
             else:
                 log_event(f"GAIA SQL: Found {len(rows)} stars (no mag cap)")
         except Exception:  # noqa: BLE001
+            # EXC-0063: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
             pass
         return rows
     finally:
@@ -511,7 +513,7 @@ def query_local_vsx(
             conn.execute("CREATE INDEX IF NOT EXISTS idx_vsx_ra ON vsx_data (ra_deg);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_vsx_dec ON vsx_data (dec_deg);")
             conn.commit()
-        except Exception:  # noqa: BLE001
+        except sqlite3.Error as exc:  # noqa: BLE001
             pass
         cur_cols = conn.execute("PRAGMA table_info('vsx_data');")
         cols = {str(r[1]).strip().lower() for r in cur_cols.fetchall()}
@@ -627,7 +629,7 @@ def query_local_exoplanet(
             conn.execute("CREATE INDEX IF NOT EXISTS idx_exo_ra ON exoplanet_data (ra_deg);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_exo_dec ON exoplanet_data (dec_deg);")
             conn.commit()
-        except Exception:  # noqa: BLE001
+        except sqlite3.Error as exc:  # noqa: BLE001
             pass
         cur_cols = conn.execute("PRAGMA table_info('exoplanet_data');")
         cols = {str(r[1]).strip().lower() for r in cur_cols.fetchall()}
@@ -2073,6 +2075,7 @@ class VyvarDatabase:
                     f"CALIB LIB: refused dark registration without finite CCD_TEMP: {fp}"
                 )
             except Exception:  # noqa: BLE001
+                # EXC-0070: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
                 pass
             return False
         existing = self.get_calibration_library_row_by_path(fp)
@@ -2194,6 +2197,7 @@ class VyvarDatabase:
             try:
                 log_event(f"CALIB LIB: no scoped master for {k} — missing equipment/telescope ids")
             except Exception:  # noqa: BLE001
+                # EXC-0072: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
                 pass
             return None
         if k == "dark":
@@ -2204,6 +2208,7 @@ class VyvarDatabase:
                         f"(eq={eq_id} tel={tel_id})"
                     )
                 except Exception:  # noqa: BLE001
+                    # EXC-0071: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
                     pass
                 return None
         flt = "" if k == "dark" else str(filter_name or "").strip()
@@ -2295,7 +2300,7 @@ class VyvarDatabase:
                         f"CALIB LIB: no scoped master for flat eq={eq_id} tel={tel_id} "
                         f"bin={int(xbinning)} gain={int(gain)} filter={flt!r}"
                     )
-            except Exception:  # noqa: BLE001
+            except (TypeError, ValueError) as exc:  # noqa: BLE001
                 pass
         return hit
 
@@ -2614,7 +2619,7 @@ class VyvarDatabase:
             row = self.conn.execute(
                 f"SELECT ID FROM {table} WHERE IS_DEFAULT = 1 ORDER BY ID LIMIT 1;"
             ).fetchone()
-        except Exception:  # noqa: BLE001
+        except sqlite3.Error as exc:  # noqa: BLE001
             return None
         return int(row["ID"]) if row is not None and row["ID"] is not None else None
 
@@ -2866,7 +2871,7 @@ class VyvarDatabase:
         try:
             cursor = self.conn.execute("PRAGMA table_info('EQUIPMENTS');")
             cols = {row["name"] for row in cursor.fetchall()}
-        except Exception:  # noqa: BLE001
+        except sqlite3.Error as exc:  # noqa: BLE001
             return None
         if "FOCAL" not in cols:
             return None

@@ -260,7 +260,8 @@ def select_check_star(
                 if ens and cid in ens:
                     return None
                 return row
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.debug('[EXC-0023] intent unclear (return None / return row / except Exception:  # noqa: BLE001 / pass): %s', exc)
         pass
 
     if "status" in df.columns:
@@ -311,7 +312,7 @@ def select_check_star(
 
     try:
         return df.iloc[0]
-    except Exception:  # noqa: BLE001
+    except IndexError as exc:  # noqa: BLE001
         return None
 
 
@@ -443,7 +444,8 @@ def kmag_from_sidecar(
         return None
     try:
         df = pd.read_csv(sidecar_path, low_memory=False)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.debug('[EXC-0025] intent unclear (try: / df = pd.read_csv(sidecar_path, low_memory=False) / except Except...: %s', exc)
         return None
     if df.empty or "kmag" not in df.columns:
         return None
@@ -519,7 +521,8 @@ def build_aligned_comp_inst(
         if csv_df is None:
             try:
                 csv_df = pd.read_csv(path, low_memory=False, dtype=_GAIA_ID_DTYPE)
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.warning('[EXC-0026] intent unclear (try: / csv_df = pd.read_csv(path, low_memory=False, dtype=_GAIA_ID_DTYP...: %s', exc)
                 continue
             cache[key] = csv_df
         id_col = "catalog_id" if "catalog_id" in csv_df.columns else "name"

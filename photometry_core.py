@@ -275,6 +275,7 @@ def _enrich_comp_bp_rp(
             if con is not None:
                 con.close()
         except Exception:  # noqa: BLE001
+            # EXC-0123: T2 -- sqlite con.close() failure during comp bp_rp enrichment ignored (EXCEPT-BULK-2 2026-07-08)
             pass
 
     return df
@@ -555,6 +556,7 @@ def measure_fwhm_from_masterstar(
                 fwhm_values.append((fwhm_x + fwhm_y) / 2.0)
 
         except Exception:  # noqa: BLE001
+            # EXC-0124: T4 -- One star skipped in Gaussian FWHM loop - median still computed from remaining stars (EXCEPT-BULK-2 2026-07-08)
             continue
 
     if len(fwhm_values) < 3:
@@ -1082,6 +1084,7 @@ def resolve_draft_dir_for_snr_aperture_table(
         try:
             return _draft_dir_from_phase2a_paths(Path(str(raw)), Path(str(raw)))
         except Exception:  # noqa: BLE001
+            # EXC-0127: T2 -- Draft directory inference from path fails - SNR table loader tries next candidate path (EXCEPT-BULK-2 2026-07-08)
             continue
     return None
 
@@ -1299,6 +1302,7 @@ def precompute_and_save_snr_aperture_table_for_draft(
         try:
             db.conn.close()
         except Exception:  # noqa: BLE001
+            # EXC-0131: T2 -- db.conn.close() after SNR table precompute ignored (EXCEPT-BULK-2 2026-07-08)
             pass
 
     logging.info(
@@ -1971,6 +1975,7 @@ def _star_mag_for_aperture_sizing(row: Any) -> float | None:
             if mag_col not in row.index if hasattr(row, "index") else mag_col not in row:
                 continue
         except Exception:  # noqa: BLE001
+            # EXC-0133: T4 -- Bad mag value on one masterstar row skipped - loop tries next row for aperture sizing (EXCEPT-BULK-2 2026-07-08)
             if isinstance(row, dict) and mag_col not in row:
                 continue
         try:
@@ -2379,6 +2384,7 @@ def compute_aperture_correction(
                 fsv = float(fs)
                 flv = float(fl)
             except Exception:  # noqa: BLE001
+                # EXC-0134: T4 -- Non-finite small/large aperture flux pair skipped in per-frame delta-mag collection (EXCEPT-BULK-2 2026-07-08)
                 continue
             if not (math.isfinite(fsv) and math.isfinite(flv) and fsv > 0 and flv > 0):
                 continue
@@ -3885,6 +3891,7 @@ def savgol_detrend_lc(
     try:
         mag_smooth = savgol_filter(mag_normal, window_length=window, polyorder=polyorder)
     except Exception:  # noqa: BLE001
+        # EXC-0144: T4 -- SavGol detrend failure returns un-detrended mag array unchanged (EXCEPT-BULK-2 2026-07-08)
         return mag.copy()
 
     trend_all = np.interp(
@@ -4260,6 +4267,7 @@ def save_cutout_png(
             with astrofits.open(masterstar_fits_path, memmap=False) as hdul:
                 data = np.asarray(hdul[0].data, dtype=np.float64)
     except Exception:  # noqa: BLE001
+        # EXC-0145: T3 -- Per-star cutout PNG export aborted when MASTERSTAR data cannot be loaded (EXCEPT-BULK-2 2026-07-08)
         return
 
     h, w = data.shape
@@ -4326,6 +4334,7 @@ def save_field_map_png(
             with astrofits.open(masterstar_fits_path, memmap=False) as hdul:
                 data = np.asarray(hdul[0].data, dtype=np.float64)
     except Exception:  # noqa: BLE001
+        # EXC-0146: T3 -- Field map PNG export aborted when MASTERSTAR data cannot be loaded (EXCEPT-BULK-2 2026-07-08)
         return
 
     finite = data[np.isfinite(data)]
@@ -4433,6 +4442,7 @@ def save_target_field_map_png(
             with astrofits.open(masterstar_fits_path, memmap=False) as hdul:
                 data = np.asarray(hdul[0].data, dtype=np.float64)
     except Exception:  # noqa: BLE001
+        # EXC-0147: T3 -- Target field map PNG export aborted when MASTERSTAR data cannot be loaded (EXCEPT-BULK-2 2026-07-08)
         return
 
     finite = data[np.isfinite(data)]
@@ -4892,6 +4902,7 @@ def auto_export_variability_candidates_csv(
                 finally:
                     con.close()
     except Exception:  # noqa: BLE001
+        # EXC-0152: T2 -- Gaia DB con.close() after catalog_id repair ignored (EXCEPT-BULK-2 2026-07-08)
         pass
 
     # If Gaia DB doesn't cover the box (or is too sparse), repair from MASTERSTAR catalog (best effort).
@@ -5073,6 +5084,7 @@ def expected_rms_from_model(mag: float, coeffs: np.ndarray) -> float:
             return float("nan")
         return float(10.0**log_rms)
     except Exception:  # noqa: BLE001
+        # EXC-0154: T4 -- RMS-vs-mag model evaluation failure returns NaN expected_rms - quality flag may show no... (EXCEPT-BULK-2 2026-07-08)
         return float("nan")
 
 
@@ -6421,6 +6433,7 @@ def _phase2a_prepare_shared_state(
             if chip_fh is None and math.isfinite(ym) and ym > 0:
                 chip_fh = int(math.ceil(ym)) + 2
         except Exception as exc:  # noqa: BLE001
+            # EXC-0165: T4 -- Non-numeric bp_rp on one masterstars row skipped when building target_bp_rp_by_cid (EXCEPT-BULK-2 2026-07-08)
             logging.error('[EXC-0164] Chip height/width inference from target/comp xy max fails - chip margin filter may use ...: %s', exc)
             pass
 
@@ -9000,6 +9013,7 @@ def _get_plate_scale_from_cfg(
                             if 1 <= b0 <= 16:
                                 binning = b0
                 except Exception:  # noqa: BLE001
+                    # EXC-0181: T4 -- DB plate-scale lookup failure falls through to config phase01_plate_scale_arcsec_per_px (EXCEPT-BULK-2 2026-07-08)
                     binning = 1
 
                 pix_um = None
@@ -9247,6 +9261,7 @@ def _read_plate_scale_from_fits_path(
             with astrofits.open(fp, memmap=False) as hdul:
                 hdr = hdul[0].header
     except Exception as exc:  # noqa: BLE001
+        # EXC-0185: T4 -- Header keyword plate-scale scan fails - returns None after trying CD/WCS paths (EXCEPT-BULK-2 2026-07-08)
         logging.error('[EXC-0184] FITS open/header read for plate scale fails - returns None, caller uses config/default ...: %s', exc)
         return None
 
@@ -9396,6 +9411,7 @@ def stress_test_relative_rms_from_sidecars(
                         sidecar, low_memory=False, dtype=_GAIA_ID_DTYPE
                     )
                 except Exception as exc:  # noqa: BLE001
+                    # EXC-0187: T4 -- astroquery/Vizier import failure returns empty VSX-neighbor set - VSX comp exclusion sk... (EXCEPT-BULK-2 2026-07-08)
                     LOGGER.debug("[CSV] Skipping row due to parse error: %s", exc)
                     _sidecar_cache[_sidecar_key] = pd.DataFrame()
             else:
@@ -9452,6 +9468,7 @@ def vsx_is_known_variable_top3_per_bin(
         import astropy.units as u
         from astropy.coordinates import SkyCoord
     except Exception:  # noqa: BLE001
+        # EXC-0188: T4 -- numpy/fits import failure returns None intersection bbox - alignment crop not applied (EXCEPT-BULK-2 2026-07-08)
         return set()
 
     by_bin: dict[str, list[dict[str, Any]]] = {}
@@ -9486,6 +9503,7 @@ def vsx_is_known_variable_top3_per_bin(
             try:
                 t = viz.query_region(c, radius=float(radius_arcsec) * u.arcsec, catalog="B/vsx")
             except Exception as exc:  # noqa: BLE001
+                # EXC-0189: T4 -- One aligned frame skipped in common-field bbox - intersection computed from remaining f... (EXCEPT-BULK-2 2026-07-08)
                 LOGGER.debug("[CSV] Skipping row due to parse error: %s", exc)
                 continue
             if t and len(t) > 0 and len(t[0]) > 0:
@@ -10330,6 +10348,7 @@ def _active_target_zone_flag(ms_row: pd.Series, zone_val_raw: str) -> str:
     try:
         sat = bool(ms_row.get("is_saturated", False))
     except Exception:  # noqa: BLE001
+        # EXC-0191: T3 -- Nested log_event inside catalog_id auto-repair failure also fails - repair error messag... (EXCEPT-BULK-2 2026-07-08)
         sat = False
     if sat:
         return "saturated"
@@ -10413,6 +10432,7 @@ def _enrich_active_targets_bp_rp(
                 str(r[1]).strip().lower() for r in con.execute("PRAGMA table_info('gaia_dr3')").fetchall()
             }
         except Exception:  # noqa: BLE001
+            # EXC-0193: T2 -- sqlite con.close() after active-target bp_rp enrichment ignored (EXCEPT-BULK-2 2026-07-08)
             con = None
             gaia_cols = set()
     sel_bp = "bp_rp" in gaia_cols
@@ -10455,6 +10475,7 @@ def _enrich_active_targets_bp_rp(
             if con is not None:
                 con.close()
         except Exception:  # noqa: BLE001
+            # EXC-0195: T4 -- DB OBS_FILES NAXIS query fails - returns caller-supplied default frame width/height (EXCEPT-BULK-2 2026-07-08)
             pass
 
     return df
@@ -10776,6 +10797,7 @@ def select_active_targets(
                     f"— pixel-distance matching"
                 )
         except Exception as _wcs_exc:  # noqa: BLE001
+            # EXC-0200: T4 -- Non-numeric Gaia id string returned as-is in select_active_targets helper (EXCEPT-BULK-2 2026-07-08)
             logging.error('[EXC-0199] WCS scale sanity check failure logged - distance matching may stay on ra/dec instead of...: %s', exc)
             logging.warning("[SELECT TARGETS] WCS sanity check failed: %s", _wcs_exc)
     if _use_pixel_dist:
@@ -11819,6 +11841,7 @@ def select_comparison_stars_per_target(
 
             BO_CVN_STEP_COUNTS["C_mag_diff"] = int(len(candidates_pre))
         except Exception:  # noqa: BLE001
+            # EXC-0203: T3 -- BO CVn BO_CVN_STEP_COUNTS debug counter not updated (EXCEPT-BULK-2 2026-07-08)
             pass
 
     if str(target_cid).strip() == "1498613634033133184":
@@ -11837,6 +11860,7 @@ def select_comparison_stars_per_target(
             if _cols:
                 print(_dbg[_cols].head(200).to_string(index=False))
         except Exception:  # noqa: BLE001
+            # EXC-0204: T3 -- BO CVn candidates debug table print suppressed (EXCEPT-BULK-2 2026-07-08)
             pass
 
     _r_ap_iso = 7.0
@@ -12001,6 +12025,7 @@ def select_comparison_stars_per_target(
             ms_arr_y2 = ms_arr_y
             ms_arr_mag2 = ms_arr_mag
         except Exception as exc:  # noqa: BLE001
+            # EXC-0206: T3 -- BO CVn RMS-rejection funnel debug list not built (EXCEPT-BULK-2 2026-07-08)
             logging.error('[EXC-0205] Aperture isolation filter skipped when ms_arr arrays unavailable - crowded comps not re...: %s', exc)
             return cands
         rej: set[Any] = set()
@@ -12079,6 +12104,7 @@ def select_comparison_stars_per_target(
                     if math.isfinite(float(_rv)) and float(_rv) > float(max_comp_rms):
                         _bo_rms_rejected.append((str(_cid_r), float(_rv)))
         except Exception:  # noqa: BLE001
+            # EXC-0207: T3 -- BO CVn comp funnel summary log not emitted (EXCEPT-BULK-2 2026-07-08)
             pass
 
     id_col_cand = (
@@ -12605,6 +12631,7 @@ def run_phase0_and_phase1(
             active = active.copy()
             active["catalog_id"] = normalize_gaia_source_id_series(active["catalog_id"])
     except Exception as exc:  # noqa: BLE001
+        # EXC-0212: T3 -- ProcFrameStore not stored in Streamlit session_state - UI perf cache miss only (EXCEPT-BULK-2 2026-07-08)
         logging.error('[EXC-0211] active_targets.csv catalog_id normalization fails - float-truncated IDs written to disk: %s', exc)
         pass
     active.to_csv(active_csv, index=False)
@@ -12839,6 +12866,7 @@ def run_phase0_and_phase1(
             else:
                 all_comp_rows.append(comps)
         except Exception as exc:  # noqa: BLE001
+            # EXC-0215: T3 -- Prefetch coverage stats log after comp selection suppressed (EXCEPT-BULK-2 2026-07-08)
             logging.warning(
                 "[PHASE1] %s: neočakávaná chyba, preskakujem: %s",
                 str(target_row.get("catalog_id", "?")),
@@ -12954,6 +12982,7 @@ def run_phase0_and_phase1(
                         try:
                             mag_comp = float(pd.to_numeric(row.get(mag_col), errors="coerce"))
                         except Exception:  # noqa: BLE001
+                            # EXC-0216: T4 -- Bad ra/dec on one Gaia fallback row skipped in comp bp_rp nearest-neighbor search (EXCEPT-BULK-2 2026-07-08)
                             mag_comp = float("nan")
                     if not math.isfinite(mag_comp):
                         continue

@@ -214,7 +214,8 @@ def what_lost(tier: str, context: str, handler: str) -> str:
     return f"intent unclear ({ctx})"
 
 
-def scan_file(path: Path) -> list[Site]:
+def _iter_broad_handlers(path: Path) -> list[tuple[int, str, str, str]]:
+    """Return (lineno, exc_types, handler_kind, context) for every broad except in file."""
     rel = path.relative_to(ROOT).as_posix()
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
@@ -223,7 +224,7 @@ def scan_file(path: Path) -> list[Site]:
     except SyntaxError:
         return []
 
-    sites: list[Site] = []
+    out: list[tuple[int, str, str, str]] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Try):
             continue
@@ -231,20 +232,34 @@ def scan_file(path: Path) -> list[Site]:
             if not is_broad_except(handler):
                 continue
             kind, detail = classify_handler(handler.body)
-            if not is_silent(kind):
-                continue
             ctx = snippet(lines, handler.lineno, radius=2)
-            sites.append(
-                Site(
-                    file=rel,
-                    line=handler.lineno,
-                    exc_types=exc_type_str(handler),
-                    handler=kind,
-                    handler_detail=detail,
-                    context=ctx,
-                )
+            out.append((handler.lineno, exc_type_str(handler), kind, ctx))
+    out.sort(key=lambda t: t[0])
+    return out
+
+
+def scan_file(path: Path) -> list[Site]:
+    rel = path.relative_to(ROOT).as_posix()
+    sites: list[Site] = []
+    for lineno, exc_types, kind, ctx in _iter_broad_handlers(path):
+        if not is_silent(kind):
+            continue
+        sites.append(
+            Site(
+                file=rel,
+                line=lineno,
+                exc_types=exc_types,
+                handler=kind,
+                handler_detail="",
+                context=ctx,
             )
+        )
     return sites
+
+
+def scan_file_all_broad_lines(path: Path) -> list[int]:
+    """Line numbers of all broad-except handlers (silent or surfaced)."""
+    return [ln for ln, *_ in _iter_broad_handlers(path)]
 
 
 CENSUS_MARKER = "## Census"
@@ -320,31 +335,69 @@ def main() -> None:
         if out.exists() and preamble is not None:
             from collections import defaultdict
 
-            new_by_file: dict[str, list[int]] = defaultdict(list)
+            # Silent sites (census criterion) for whole-file silent refresh fallback.
+            new_silent_by_file: dict[str, list[int]] = defaultdict(list)
             for s in all_sites:
-                new_by_file[s.file].append(s.line)
-            for lst in new_by_file.values():
+                new_silent_by_file[s.file].append(s.line)
+            for lst in new_silent_by_file.values():
                 lst.sort()
 
-            # surviving (non-FIXED) old rows per file, in document (line) order
+            # All broad-except lines for pending (not DONE, not FIXED) BULK-2 refresh.
+            broad_by_file: dict[str, list[int]] = defaultdict(list)
+            for p in iter_production_py():
+                rel = p.relative_to(ROOT).as_posix()
+                broad_by_file[rel] = scan_file_all_broad_lines(p)
+
+            def _is_done(disp: str) -> bool:
+                return "DONE" in disp.upper()
+
+            def _is_fixed(disp: str) -> bool:
+                return "FIXED" in disp.upper()
+
+            # Pending rows: recorded disposition not yet applied (BULK-2 targets).
+            pending_by_file: dict[str, list[OldRow]] = defaultdict(list)
+            for r in old_rows:
+                if _is_fixed(r.disp) or _is_done(r.disp):
+                    continue
+                pending_by_file[r.file].append(r)
+
+            # Silent-only pool for legacy rows that remain silent (DONE/FIXED excluded).
             surviving_by_file: dict[str, list[OldRow]] = defaultdict(list)
             for r in old_rows:
-                if "FIXED" not in r.disp.upper():
+                if not _is_fixed(r.disp):
                     surviving_by_file[r.file].append(r)
 
             newline_map: dict[int, int] = {}  # id(OldRow) -> new line
             mismatched_files: list[str] = []
             updated = 0
-            for fname, survivors in surviving_by_file.items():
-                new_lines = new_by_file.get(fname, [])
-                if len(survivors) == len(new_lines):
-                    for r, nl in zip(survivors, new_lines):
+
+            # Pass 1: pending rows vs all broad handlers (EXCEPT-BULK-2 line refresh).
+            for fname, pending in pending_by_file.items():
+                new_lines = broad_by_file.get(fname, [])
+                if len(pending) == len(new_lines):
+                    for r, nl in zip(pending, new_lines):
                         newline_map[id(r)] = nl
                         if nl != r.line:
                             updated += 1
                 else:
                     mismatched_files.append(
-                        f"{fname} (surviving-rows={len(survivors)}, scan-sites={len(new_lines)})"
+                        f"{fname} pending (rows={len(pending)}, broad-handlers={len(new_lines)})"
+                    )
+
+            # Pass 2: remaining non-FIXED rows (incl. DONE) via silent scan where not mapped.
+            for fname, survivors in surviving_by_file.items():
+                new_lines = new_silent_by_file.get(fname, [])
+                unmapped = [r for r in survivors if id(r) not in newline_map]
+                if not unmapped:
+                    continue
+                if len(unmapped) == len(new_lines):
+                    for r, nl in zip(unmapped, new_lines):
+                        newline_map[id(r)] = nl
+                        if nl != r.line:
+                            updated += 1
+                elif fname not in {m.split()[0] for m in mismatched_files}:
+                    mismatched_files.append(
+                        f"{fname} silent (surviving-rows={len(unmapped)}, scan-sites={len(new_lines)})"
                     )
 
             out_rows: list[str] = []

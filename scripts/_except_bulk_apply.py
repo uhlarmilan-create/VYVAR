@@ -20,7 +20,7 @@ from typing import Iterable, Literal
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CENSUS_PATH = REPO_ROOT / "docs" / "VYVAR_EXCEPT_CENSUS.md"
-BULK_STAMP = "EXCEPT-BULK 2026-07-08"
+BULK_STAMP = "EXCEPT-BULK-2 2026-07-08"
 COMMENT_PREFIX = "# EXC-"
 
 Phase = Literal["delete-dead", "log", "comment", "narrow", "all"]
@@ -449,35 +449,82 @@ class HandlerMatch:
     handler_end: int
 
 
-def _find_handler(source: str, target_line: int) -> HandlerMatch | None:
-    tree = ast.parse(source)
-    lines = source.splitlines()
+def _is_broad_handler(handler: ast.ExceptHandler) -> bool:
+    if handler.type is None:
+        return True
+    if isinstance(handler.type, ast.Name):
+        return handler.type.id in ("Exception", "BaseException")
+    if isinstance(handler.type, ast.Tuple):
+        names = [elt.id for elt in handler.type.elts if isinstance(elt, ast.Name)]
+        return "Exception" in names or "BaseException" in names
+    return False
 
-    best: HandlerMatch | None = None
+
+def _handler_match(node: ast.Try, handler: ast.ExceptHandler) -> HandlerMatch:
+    return HandlerMatch(
+        try_node=node,
+        handler=handler,
+        try_start=node.lineno,
+        try_end=node.end_lineno or node.lineno,
+        handler_start=handler.lineno,
+        handler_end=handler.end_lineno or handler.lineno,
+    )
+
+
+def _all_broad_handler_lines(source: str) -> list[int]:
+    tree = ast.parse(source)
+    lines: list[int] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Try):
             continue
         for handler in node.handlers:
+            if _is_broad_handler(handler):
+                lines.append(handler.lineno)
+    return sorted(set(lines))
+
+
+def _resolve_drift_lines(source: str, file_sites: list[CensusSite], *, max_delta: int = 200) -> None:
+    """Map drifted census lines to unique nearest broad-except handlers (BULK-2)."""
+    broad = _all_broad_handler_lines(source)
+    if not broad:
+        return
+    claimed: set[int] = set()
+    for site in sorted(file_sites, key=lambda s: s.line):
+        candidates = [ln for ln in broad if ln not in claimed and abs(ln - site.line) <= max_delta]
+        if not candidates:
+            continue
+        best = min(candidates, key=lambda ln: (abs(ln - site.line), ln))
+        site.line = best
+        claimed.add(best)
+
+
+def _find_handler(source: str, target_line: int, *, max_line_delta: int = 0) -> tuple[HandlerMatch | None, int | None]:
+    """Locate except handler at target_line, or nearest broad handler within max_line_delta."""
+    tree = ast.parse(source)
+    exact: HandlerMatch | None = None
+    broad: list[tuple[int, HandlerMatch]] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Try):
+            continue
+        for handler in node.handlers:
+            if not _is_broad_handler(handler):
+                continue
+            hm = _handler_match(node, handler)
+            broad.append((handler.lineno, hm))
             if handler.lineno <= target_line <= getattr(handler, "end_lineno", handler.lineno):
-                best = HandlerMatch(
-                    try_node=node,
-                    handler=handler,
-                    try_start=node.lineno,
-                    try_end=node.end_lineno or node.lineno,
-                    handler_start=handler.lineno,
-                    handler_end=handler.end_lineno or handler.lineno,
-                )
-                return best
-            if handler.lineno == target_line:
-                return HandlerMatch(
-                    try_node=node,
-                    handler=handler,
-                    try_start=node.lineno,
-                    try_end=node.end_lineno or node.lineno,
-                    handler_start=handler.lineno,
-                    handler_end=handler.end_lineno or handler.lineno,
-                )
-    return best
+                exact = hm
+            elif handler.lineno == target_line:
+                exact = hm
+
+    if exact is not None:
+        return exact, None
+    if not broad:
+        return None, None
+    nearest_line, nearest = min(broad, key=lambda t: abs(t[0] - target_line))
+    if abs(nearest_line - target_line) <= max_line_delta:
+        return nearest, nearest_line
+    return None, None
 
 
 def _handler_body_lines(source: str, match: HandlerMatch) -> list[str]:
@@ -656,7 +703,7 @@ def apply_log(source: str, site: CensusSite, match: HandlerMatch) -> tuple[str, 
     if exc_changed:
         lines[match.handler_start - 1] = exc_line
         source = "\n".join(lines) + ("\n" if source.endswith("\n") else "")
-        match = _find_handler(source, site.line)
+        match, _ = _find_handler(source, site.line)
         if match is None:
             return source, False
         lines = source.splitlines()
@@ -699,16 +746,19 @@ def apply_site(source: str, site: CensusSite, phase: Phase, *, dry_run: bool) ->
         notes.append(f"SKIP {site.exc_id}: {site.skip_reason}")
         return source, notes
 
-    match = _find_handler(source, site.line)
+    match, resolved_line = _find_handler(source, site.line, max_line_delta=0)
     if match is None:
         notes.append(f"SKIP {site.exc_id}: no except handler at line {site.line}")
         return source, notes
+    if resolved_line is not None and resolved_line != site.line:
+        notes.append(f"LINE-REFRESH {site.exc_id}: {site.line} -> {resolved_line}")
+        site.line = resolved_line
 
     if _already_bulk(source, match):
         notes.append(f"SKIP {site.exc_id}: already has EXCEPT-BULK marker")
         return source, notes
 
-    actions = site.actions
+    actions = set(site.actions)
     if phase != "all":
         if phase not in actions:
             return source, notes
@@ -721,6 +771,28 @@ def apply_site(source: str, site: CensusSite, phase: Phase, *, dry_run: bool) ->
         before = source
         if action == "delete-dead":
             source, did = apply_delete_dead(source, site, match)
+            if did:
+                try:
+                    ast.parse(source)
+                except SyntaxError as exc:
+                    notes.append(f"ROLLBACK {site.exc_id}: syntax error after delete-dead: {exc}")
+                    source = before
+                    did = False
+            if not did:
+                notes.append(f"DOWNGRADE {site.exc_id}: delete-dead -> comment-only (unsafe try body)")
+                source, cdid = apply_comment(source, site, match)
+                if cdid:
+                    try:
+                        ast.parse(source)
+                    except SyntaxError as exc:
+                        notes.append(f"ROLLBACK {site.exc_id}: syntax error after downgraded comment: {exc}")
+                        source = before
+                        cdid = False
+                    else:
+                        changed = True
+                        notes.append(f"APPLY {site.exc_id}: comment (downgraded from delete-dead)")
+                        match, _ = _find_handler(source, site.line, max_line_delta=0)
+                continue
         elif action == "log":
             source, did = apply_log(source, site, match)
             if did and not dry_run:
@@ -741,7 +813,7 @@ def apply_site(source: str, site: CensusSite, phase: Phase, *, dry_run: bool) ->
         if did:
             changed = True
             notes.append(f"APPLY {site.exc_id}: {action}")
-            match = _find_handler(source, site.line)
+            match, _ = _find_handler(source, site.line)
             if match is None and action != "delete-dead":
                 notes.append(f"WARN {site.exc_id}: handler lost after {action}")
                 break
@@ -792,13 +864,15 @@ def update_census_dispositions(census_text: str, applied_ids: Iterable[str]) -> 
     return "\n".join(out_lines) + ("\n" if census_text.endswith("\n") else "")
 
 
-def run(phase: Phase, *, dry_run: bool) -> int:
+def run(phase: Phase, *, dry_run: bool, only_ids: frozenset[str] | None = None) -> int:
     census_text = CENSUS_PATH.read_text(encoding="utf-8")
     sites = parse_census(census_text)
 
     by_file: dict[str, list[CensusSite]] = {}
     for site in sites.values():
         if site.skip_reason:
+            continue
+        if only_ids is not None and site.exc_id not in only_ids:
             continue
         by_file.setdefault(site.rel_path, []).append(site)
 
@@ -820,6 +894,8 @@ def run(phase: Phase, *, dry_run: bool) -> int:
             continue
 
         source = abs_path.read_text(encoding="utf-8")
+        if only_ids is not None:
+            _resolve_drift_lines(source, file_sites)
         file_changed = False
 
         for site in sorted(file_sites, key=lambda s: s.line, reverse=True):
@@ -882,8 +958,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print planned edits without writing files or census",
     )
+    parser.add_argument(
+        "--only-ids-file",
+        type=Path,
+        default=None,
+        help="Apply only EXC IDs listed one per line (EXCEPT-BULK-2 drift rows)",
+    )
     args = parser.parse_args(argv)
-    return run(args.phase, dry_run=args.dry_run)
+    only_ids: frozenset[str] | None = None
+    if args.only_ids_file is not None:
+        only_ids = frozenset(
+            ln.strip()
+            for ln in args.only_ids_file.read_text(encoding="utf-8").splitlines()
+            if ln.strip().startswith("EXC-")
+        )
+    return run(args.phase, dry_run=args.dry_run, only_ids=only_ids)
 
 
 if __name__ == "__main__":

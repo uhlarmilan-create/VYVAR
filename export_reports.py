@@ -308,13 +308,14 @@ def _bjd_to_datestr_yyyymmdd(bjd_tdb: float) -> str:
         dt = t.utc.datetime
         return f"{dt.year:04d}{dt.month:02d}{dt.day:02d}"
     except Exception:  # noqa: BLE001
+        # EXC-0080: T3 -- BJD→datestr fail → 'unknown' token (EXCEPT-BULK-2 2026-07-08)
         return "unknown"
 
 
 def _fmt_opt_num(v: Any, fmt: str, *, na: str = "na") -> str:
     try:
         f = float(pd.to_numeric(v, errors="coerce"))
-    except Exception:  # noqa: BLE001
+    except (TypeError, ValueError) as exc:  # noqa: BLE001
         return na
     return (format(f, fmt) if math.isfinite(f) else na)
 
@@ -335,7 +336,7 @@ def _aavso_gs11_notes_suffix(summary_row: pd.Series, cfg: AppConfig | None) -> s
 def _fmt_opt_int(v: Any, *, na: str = "na") -> str:
     try:
         f = float(pd.to_numeric(v, errors="coerce"))
-    except Exception:  # noqa: BLE001
+    except (TypeError, ValueError) as exc:  # noqa: BLE001
         return na
     if not math.isfinite(f):
         return na
@@ -597,9 +598,11 @@ def _copy_field_image(
                     shutil.copy2(src, dst)
                     return dst_name
                 except Exception as exc:  # noqa: BLE001
+                    # EXC-0084: T4 -- field image copy fail already warns (EXCEPT-BULK-2 2026-07-08)
                     logging.warning("[EXPORT] Field image copy failed: %s", exc)
                     return None
         except Exception:  # noqa: BLE001
+            # EXC-0085: T2 -- report/export may omit or misstate (logging.warning('[EXPORT] Field image copy failed: ... (EXCEPT-BULK-2 2026-07-08)
             continue
     return None
 
@@ -646,6 +649,7 @@ def _export_comp_status_label(row: pd.Series, quality_map: dict[str, str] | None
             if v is None or (isinstance(v, float) and not math.isfinite(float(v))):
                 continue
         except Exception:  # noqa: BLE001
+            # EXC-0086: T2 -- report/export may omit or misstate (if v is None or (isinstance(v, float) and not math.... (EXCEPT-BULK-2 2026-07-08)
             continue
         s = str(v).strip().lower()
         if not s or s in ("?", "nan", "none"):
@@ -840,6 +844,7 @@ def export_lightcurve_reports(
             if setup_dir.name and setup_dir.name.lower() not in ("platesolve", "photometry"):
                 obs_group_resolved = setup_dir.name
         except Exception:  # noqa: BLE001
+            # EXC-0087: T2 -- report/export may omit or misstate (if setup_dir.name and setup_dir.name.lower() not in... (EXCEPT-BULK-2 2026-07-08)
             pass
     setup_filter_raw, exptime_s, binning = _guess_setup_info_from_obs_group(obs_group_resolved)
     aavso_filter, filt_warn = _resolve_aavso_filter(setup_filter_raw, fresh_cfg)

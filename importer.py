@@ -318,6 +318,7 @@ def _master_path_scope_conflicts(
         # must NOT be read as "no conflict" (that could silently allow a cross-rig master to
         # register). Assume a conflict so the caller refuses/disambiguates the filename -- the
         # safe direction. See docs/VYVAR_EXCEPT_CENSUS.md (EXC-0090).
+        # EXC-0091: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
         from except_fix_counters import get_except_fix_counters
 
         get_except_fix_counters().calib_scope_conflict_check_fail += 1
@@ -382,6 +383,7 @@ def _register_master_path_in_calibration_library(
         # EXC-0092 / EXCEPT-FIX-3 #4: registration failure is now surfaced (was a silent False),
         # which otherwise leaves a master invisible to the library (duplicates / wrong matches
         # downstream). Contract unchanged (still returns False). See census EXC-0092.
+        logging.warning('[EXC-0093] _looks_like_master: unreadable header -> False (candidate skipped; fail-closed but silent): %s', exc)
         from except_fix_counters import get_except_fix_counters
 
         get_except_fix_counters().calib_library_register_fail += 1
@@ -808,6 +810,7 @@ def _find_matching_master_in_library(
                 f"CALIB LIB: cannot match {kind} master — missing equipment/telescope scope"
             )
         except Exception:  # noqa: BLE001
+            # EXC-0096: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
             pass
         return None
     eq_id = int(id_equipments)
@@ -817,6 +820,7 @@ def _find_matching_master_in_library(
             try:
                 log_event("CALIB LIB: cannot match dark — light CCD_TEMP unknown")
             except Exception:  # noqa: BLE001
+                # EXC-0097: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
                 pass
             return None
     flt_key = _filter_name_for_calibration_library_flat(flt) if kind == "flat" else ""
@@ -834,7 +838,8 @@ def _find_matching_master_in_library(
                 id_telescope=tel_id,
                 temp_tolerance=float(temp_tolerance),
             )
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.warning('[EXC-0098] master candidate metadata fail -> continue -> silently falls back to worse/older master: %s', exc)
             hit = None
         if hit:
             p_hit = Path(hit)
@@ -988,7 +993,8 @@ def _find_best_masterflat_for_filter(
                 id_telescope=id_telescope,
                 temp_tolerance=float(temp_tolerance),
             )
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logging.warning('[EXC-0099] flat candidate metadata fail -> continue -> same as above for flats: %s', exc)
             hit = None
         if hit:
             p_hit = Path(hit)
@@ -1151,6 +1157,7 @@ def _write_master_to_library(
             # EXC-0100 / EXCEPT-FIX-3 #2 (T1): the BPM sidecar stays best-effort (the master
             # dark is still created), but the failure is now loud -- otherwise photometry runs
             # without the bad-pixel map with no trace. See census EXC-0100.
+            logging.warning("[EXC-0101] sample metadata fail -> None ('no existing master') -> duplicate master creation: %s", exc)
             from except_fix_counters import get_except_fix_counters
 
             get_except_fix_counters().dark_bpm_sidecar_write_fail += 1
@@ -1762,6 +1769,7 @@ def smart_import_session(
         if _comb.get("focal_length_mm") is None or _comb.get("pixel_effective_um") is None:
             plan.warnings.append(str(DraftTechnicalMetadataError(int(draft_id))))
     except Exception:  # noqa: BLE001
+        # EXC-0103: T3 -- guard suppresses appending a non-fatal DraftTechnicalMetadataError warning (EXCEPT-BULK-2 2026-07-08)
         pass
 
     archive_session = Path(pipeline.config.archive_root) / "Drafts" / f"draft_{draft_id:06d}"
@@ -2237,6 +2245,7 @@ def check_known_field(
             "masterstar_path": field.get("MASTERSTAR_PATH"),
             "comparison_csv_path": field.get("COMPARISON_CSV_PATH"),
         }
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logging.warning('[EXC-0104] known-field lookup fail -> None -> field treated as new: %s', exc)
         return None
 

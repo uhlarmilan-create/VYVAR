@@ -660,6 +660,7 @@ def optimize_masterstar_matches(
             _refit_displacement_from_all_matches()
             return dict(meta)
         except Exception as exc:  # noqa: BLE001
+            # EXC-0011: T4 -- WCS refit fail surfaced as 'skipped' + {} (EXCEPT-BULK-2 2026-07-08)
             log_event(f"Astrometry optimizer {tag}: WCS refit skipped: {exc!s}")
             return {}
 
@@ -730,11 +731,13 @@ def optimize_masterstar_matches(
                         try:
                             hh[k] = wh_r[k]
                         except Exception as exc:  # noqa: BLE001
+                            # EXC-0012: T3 -- VY_SIPRF provenance key copy skipped (EXCEPT-BULK-2 2026-07-08)
                             LOGGER.debug("[ASTROMETRY] FITS header key copy failed (non-critical): %s", exc)
                     if "VY_SIPRF" in _best_grip_hdr:
                         try:
                             hh["VY_SIPRF"] = _best_grip_hdr["VY_SIPRF"]
-                        except Exception:  # noqa: BLE001
+                        except Exception as exc:  # noqa: BLE001
+                            logging.error('[EXC-0013] Grip regression FITS RESTORE failure only logged via log_event -> restore failure deser...: %s', exc)
                             pass
                     hdul_r.flush()
                 with fits.open(fits_path, memmap=False) as _hf:
@@ -799,6 +802,7 @@ def optimize_masterstar_matches(
                             "MASTERSTAR: skontrolujte parity / zrkadlenie v optike alebo znovu plate solve s konzistentným RA/Dec hintom."
                         )
     except Exception as exc:  # noqa: BLE001
+        # EXC-0014: T4 -- orientation test fail surfaced as 'skipped' (EXCEPT-BULK-2 2026-07-08)
         log_event(f"Astrometry optimizer orientation test skipped: {exc!s}")
 
     if do_parity_flip and _optimizer_parity_flip_already_in_fits(fits_path):
@@ -860,6 +864,7 @@ def optimize_masterstar_matches(
                             x[mm_pf][keep_pf], y[mm_pf][keep_pf], dx_pf[keep_pf], dy_pf[keep_pf]
                         )
                 except Exception:  # noqa: BLE001
+                    # EXC-0015: T4 -- post-flip poly refit fail -> silently keeps previous model (acceptable fallback) (EXCEPT-BULK-2 2026-07-08)
                     pass
                 gx_base = gx0 + _eval_poly(mdl_x, gx0, gy0)
                 gy_base = gy0 + _eval_poly(mdl_y, gx0, gy0)
@@ -931,6 +936,7 @@ def optimize_masterstar_matches(
                         f"Astrometry optimizer post-parity-flip re-match: passA=+{ex_a} passB=+{ex_b} bright=+{ex_c}."
                     )
         except Exception as exc_pf2:  # noqa: BLE001
+            # EXC-0016: T4 -- post-parity-flip rebuild fail surfaced (EXCEPT-BULK-2 2026-07-08)
             log_event(f"Astrometry optimizer post-parity-flip rebuild failed: {exc_pf2!s}")
 
     # Final edge-only pass after displacement / pre-SIP correction: no NAXIS clipping before matching.
@@ -1051,6 +1057,7 @@ def optimize_masterstar_matches(
                 added4 += 1
             log_event(f"Astrometry optimizer pass4 full-field@30\": +{int(added4)} matches after SIP refit.")
     except Exception as exc:  # noqa: BLE001
+        # EXC-0017: T4 -- pass4 fail surfaced as 'skipped' (EXCEPT-BULK-2 2026-07-08)
         log_event(f"Astrometry optimizer pass4 skipped: {exc!s}")
 
     # Final global shift correction (post parity flip + post pass3/pass4):
@@ -1139,11 +1146,13 @@ def optimize_masterstar_matches(
                                         df.at[i, "match_sep_arcsec"] = float(sep_arc2[i])
                             log_event(f"Astrometry optimizer global shift re-match@15\": +{int(added15)} new matches.")
     except Exception as exc:  # noqa: BLE001
+        # EXC-0018: T4 -- global shift correction fail surfaced as 'skipped' (EXCEPT-BULK-2 2026-07-08)
         log_event(f"Astrometry optimizer global shift correction skipped: {exc!s}")
 
     try:
         _backfill_bp_rp_from_gdf_and_db(df, gdf, gmap, gaia_db_path)
     except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0019] bp_rp backfill skip logged below ERROR; BP-RP is load-bearing for comp colour matching ...: %s', exc)
         log_event(f"Astrometry optimizer bp_rp backfill skipped: {exc!s}")
 
     if "phot_g_mean_mag" not in df.columns:
