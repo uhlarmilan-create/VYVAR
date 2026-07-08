@@ -8,7 +8,9 @@ import math
 import os
 import random
 import re
+import subprocess
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import AbstractSet, Any, Sequence
 from dataclasses import dataclass, field
@@ -5246,7 +5248,64 @@ def _phase2a_observer_location_dict(
     }
 
 
-def merge_photometry_pipeline_meta(photometry_dir: Path | str, updates: dict[str, Any], cfg: Any = None) -> None:
+_GIT_PROVENANCE_WARNED = False
+_REPO_ROOT_FOR_PROVENANCE = Path(__file__).resolve().parent
+
+
+def _resolve_git_provenance() -> tuple[str | None, bool | None]:
+    """Return (HEAD hash, dirty flag) from repo root; nulls when git unavailable."""
+    global _GIT_PROVENANCE_WARNED
+    try:
+        head = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=_REPO_ROOT_FOR_PROVENANCE,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain"],
+            cwd=_REPO_ROOT_FOR_PROVENANCE,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+        dirty = bool(status.strip())
+        return (head or None), dirty
+    except Exception:  # noqa: BLE001
+        if not _GIT_PROVENANCE_WARNED:
+            LOGGER.warning(
+                "[PHOT] pipeline provenance: git unavailable; git_hash/git_dirty set to null"
+            )
+            _GIT_PROVENANCE_WARNED = True
+        return None, None
+
+
+def _build_pipeline_provenance_block(cfg: Any, *, entry_point: str) -> dict[str, Any]:
+    """Run provenance stamped into ``pipeline_meta.json`` (last writer wins)."""
+    git_hash, git_dirty = _resolve_git_provenance()
+    if hasattr(cfg, "to_dict"):
+        config_snapshot = cfg.to_dict()
+    elif hasattr(cfg, "to_json"):
+        config_snapshot = cfg.to_json()
+    else:
+        from dataclasses import asdict
+
+        config_snapshot = asdict(cfg)
+    return {
+        "git_hash": git_hash,
+        "git_dirty": git_dirty,
+        "config_snapshot": config_snapshot,
+        "stamped_at_utc": datetime.now(timezone.utc).isoformat(),
+        "entry_point": entry_point,
+    }
+
+
+def merge_photometry_pipeline_meta(
+    photometry_dir: Path | str,
+    updates: dict[str, Any],
+    cfg: Any = None,
+    *,
+    entry_point: str | None = None,
+) -> None:
     """Merge keys into ``photometry/pipeline_meta.json`` (MASTERSTAR + Phase 2A)."""
     _meta_path = Path(photometry_dir) / "pipeline_meta.json"
     try:
@@ -5257,7 +5316,10 @@ def merge_photometry_pipeline_meta(photometry_dir: Path | str, updates: dict[str
                 _existing = json.loads(_meta_path.read_text(encoding="utf-8"))
             except Exception:  # noqa: BLE001
                 pass
-        _existing.update(updates)
+        _merged = dict(updates)
+        if cfg is not None and entry_point:
+            _merged["provenance"] = _build_pipeline_provenance_block(cfg, entry_point=entry_point)
+        _existing.update(_merged)
         _meta_path.write_text(json.dumps(_existing, indent=2), encoding="utf-8")
     except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[PHOT] pipeline_meta write failed: %s", exc)
@@ -8614,6 +8676,8 @@ def run_phase2a(
             **_cal_meta,
             **_cal_diag_meta,
         },
+        _cfg,
+        entry_point="run_phase2a",
     )
 
     # Per target loop

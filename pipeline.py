@@ -11989,6 +11989,8 @@ def generate_masterstar_and_catalog(
                 "n_gaia_detected": int(_n_gaia_det_opt),
                 "n_gaia_undetected": int(_cat_rows_opt - _n_gaia_det_opt),
             },
+            _cfg_ms,
+            entry_point="generate_masterstar_and_catalog",
         )
     log_event(
         f"MASTERSTAR katalóg: {Path(csv_path).name} — {len(df_final)} riadkov "
