@@ -91,9 +91,10 @@ def check_git_state(report: SessionReport) -> None:
         report.add("git-tree", "PASS", "clean")
         return
 
-    staged = [ln for ln in porcelain.splitlines() if ln and ln[0] in "MADRCU"]
-    if staged:
-        report.add("git-staged", "FAIL", f"{len(staged)} staged change(s)")
+    staged_diff = _run_git("diff", "--cached", "--name-only")
+    if staged_diff and staged_diff.strip():
+        n_staged = len([ln for ln in staged_diff.splitlines() if ln.strip()])
+        report.add("git-staged", "FAIL", f"{n_staged} staged change(s)")
     else:
         report.add("git-staged", "PASS", "none")
 
