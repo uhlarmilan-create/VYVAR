@@ -33,6 +33,7 @@ from dao_reconcile import (  # noqa: E402
     ReferencePopulationMismatch,
     compute_gaia_dao_reconcile,
     fleming_completeness,
+    resolve_effective_match_depth,
 )
 from gaia_catalog_id import read_vyvar_csv  # noqa: E402
 from masterstar_context import header_core_fwhm_px, load_masterstar_context  # noqa: E402
@@ -117,17 +118,24 @@ def _load_inputs(setup_dir: Path) -> dict:
     meta_path = setup_dir / "photometry" / "pipeline_meta.json"
     mag_limit = 18.0
     match_sep = 8.0
+    pipeline_meta: dict = {}
     if meta_path.is_file():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        pipeline_meta = meta
         if meta.get("dao_fwhm_px") is not None:
             fwhm_px = float(meta["dao_fwhm_px"])
-        if meta.get("faintest_mag_limit") is not None:
+        match_depth_info = resolve_effective_match_depth(meta, is_masterstar=True)
+        if match_depth_info.get("match_depth") is not None:
+            mag_limit = float(match_depth_info["match_depth"])
+        elif meta.get("faintest_mag_limit") is not None:
             mag_limit = float(meta["faintest_mag_limit"])
         match_sep = float(
             meta.get("match_sep_arcsec_effective")
             or meta.get("match_sep_arcsec_requested")
             or match_sep
         )
+    else:
+        match_depth_info = resolve_effective_match_depth(None, is_masterstar=True)
 
     return {
         "detections": det,
@@ -140,7 +148,76 @@ def _load_inputs(setup_dir: Path) -> dict:
         "mag_limit": mag_limit,
         "match_sep_arcsec": match_sep,
         "fits_path": fits_path,
+        "pipeline_meta": pipeline_meta,
+        "match_depth_info": match_depth_info,
     }
+
+
+def _save_missed_g_histogram(report: dict, labeled: pd.DataFrame, out_dir: Path) -> str | None:
+    if labeled is None or labeled.empty or "_bucket" not in labeled.columns:
+        return None
+    missed = labeled.loc[labeled["_bucket"] == "genuinely_missed"]
+    mags = pd.to_numeric(missed.get("_mag", missed.get("mag")), errors="coerce").dropna()
+    if mags.empty:
+        return None
+    g50 = report.get("g_lim_50")
+    g90 = report.get("g_lim_90")
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.hist(mags, bins=30, color="#E45756", edgecolor="white", alpha=0.9)
+    if g50 is not None:
+        label50 = report.get("g_lim_50_display") or f"G_lim_50={g50}"
+        ax.axvline(float(g50), color="#72B7B2", linestyle=":", linewidth=2, label=label50)
+    if g90 is not None:
+        label90 = report.get("g_lim_90_display") or f"G_lim_90={g90}"
+        ax.axvline(float(g90), color="#F58518", linestyle=":", linewidth=2, label=label90)
+    ax.set_xlabel("Gaia G (genuinely missed)")
+    ax.set_ylabel("Count")
+    ax.set_title(
+        f"Missed-G histogram (below_g90={report.get('n_missed_below_g90', '?')} "
+        f"fadezone={report.get('n_missed_fadezone', '?')})"
+    )
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    png = out_dir / "g_hist_missed_g90.png"
+    fig.savefig(png, dpi=120)
+    plt.close(fig)
+    return str(png)
+
+
+def _format_g_lim(report: dict, key: str) -> str:
+    display = report.get(f"{key}_display")
+    if display:
+        return str(display)
+    val = report.get(key)
+    censored = report.get(f"{key}_censored")
+    if val is None:
+        return "?"
+    if censored:
+        return f">= {float(val):.1f} (censored)"
+    return f"{float(val):.2f}"
+
+
+def _print_cross_draft_table(results: list[dict]) -> None:
+    if not results:
+        return
+    print("\n=== Cross-draft summary (R-2b) ===")
+    hdr = (
+        f"{'draft':<14} {'setup':<14} {'G_lim_50':<22} {'G_lim_90':<22} "
+        f"{'compl_50':>8} {'miss@G90':>8} {'fadezone':>8} {'match_depth':>11}"
+    )
+    print(hdr)
+    print("-" * len(hdr))
+    for r in sorted(results, key=lambda x: (x.get("draft_label", ""), x.get("setup_name", ""))):
+        print(
+            f"{r.get('draft_label', '?'):<14} "
+            f"{r.get('setup_name', '?'):<14} "
+            f"{_format_g_lim(r, 'g_lim_50'):<22} "
+            f"{_format_g_lim(r, 'g_lim_90'):<22} "
+            f"{r.get('gaia_dao_completeness_pct') or '?':>8} "
+            f"{r.get('n_missed_below_g90', '?'):>8} "
+            f"{r.get('n_missed_fadezone', '?'):>8} "
+            f"{r.get('match_depth', '?'):>11}"
+        )
 
 
 def _save_histograms(labeled: pd.DataFrame, out_dir: Path) -> list[str]:
@@ -210,13 +287,20 @@ def _report_to_jsonable(report: dict) -> dict:
 
 
 def _print_report(report: dict) -> None:
-    print("=== Gaia<->DAO reconciliation (R-2 footprint) ===")
-    print(f"G_lim_50: {report.get('g_lim_50')} | G_lim_90: {report.get('g_lim_90')} | fit: {report.get('fit_method')}")
+    print("=== Gaia<->DAO reconciliation (R-2b footprint) ===")
+    print(
+        f"G_lim_50: {_format_g_lim(report, 'g_lim_50')} | "
+        f"G_lim_90: {_format_g_lim(report, 'g_lim_90')} | fit: {report.get('fit_method')}"
+    )
+    if report.get("completeness_50_label"):
+        print(f"Headline: {report.get('completeness_50_label')}")
+    print(f"match_depth: {report.get('match_depth')} ({report.get('match_depth_source', '?')})")
     print(f"n_ref_in_frame: {report.get('n_ref_in_frame')} | off-frame: {report.get('n_gaia_off_frame')}")
     print(f"  matched:         {report.get('n_gaia_matched')}")
     print(f"  below-limit:     {report.get('n_gaia_below_limit')}")
     print(f"  blended:         {report.get('n_gaia_blended')}")
-    print(f"  genuinely-missed:{report.get('n_gaia_missed')}")
+    print(f"  genuinely-missed:{report.get('n_gaia_missed')} "
+          f"(below_g90={report.get('n_missed_below_g90')} fadezone={report.get('n_missed_fadezone')})")
     print(f"completeness_50: {report.get('gaia_dao_completeness_pct')}%")
     if report.get("gaia_dao_completeness_raw_pct") is not None:
         print(f"raw (cone legacy): {report.get('gaia_dao_completeness_raw_pct')}%")
@@ -252,17 +336,24 @@ def run_diagnostic(
         match_sep_arcsec=float(inp["match_sep_arcsec"]),
         cone_df=inp["cone"],
     )
+    md = inp.get("match_depth_info") or resolve_effective_match_depth(inp.get("pipeline_meta"), is_masterstar=True)
+    report["match_depth"] = md.get("match_depth")
+    report["match_depth_source"] = md.get("match_depth_source")
+    report["faintest_mag_limit_config"] = md.get("faintest_mag_limit_config")
 
     label = draft_label or setup_dir.name
     out_dir = _ROOT / "tmp" / "dao_reconcile" / label / setup_dir.name
     labeled = report.get("labeled_reference")
     hist_paths = _save_histograms(labeled, out_dir) if labeled is not None else []
+    missed_png = _save_missed_g_histogram(report, labeled, out_dir) if labeled is not None else None
     curve_png = _save_completeness_curve_png(report, out_dir)
     payload = _report_to_jsonable(report)
     payload["setup_dir"] = str(setup_dir)
     payload["draft_label"] = label
     payload["generated_at_utc"] = datetime.now(timezone.utc).isoformat()
     payload["histogram_pngs"] = hist_paths
+    if missed_png:
+        payload["missed_g_histogram_png"] = missed_png
     if curve_png:
         payload["completeness_curve_png"] = curve_png
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -297,6 +388,7 @@ def run_all_drafts(cfg: AppConfig) -> tuple[list[dict], list[dict]]:
         json.dumps({"results": results, "skipped": skipped}, indent=2),
         encoding="utf-8",
     )
+    _print_cross_draft_table(results)
     print(f"\nCross-draft summary: {summary_path}")
     return results, skipped
 

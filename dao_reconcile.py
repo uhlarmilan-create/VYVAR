@@ -26,6 +26,8 @@ DEFAULT_BIN_WIDTH_MAG = 0.5
 COLLINEAR_MIN_POINTS = 3
 COLLINEAR_MAX_PERP_PX = 2.0
 DEFAULT_MATCH_SEP_ARCSEC = 8.0
+CENSOR_MARGIN_MAG = 0.1
+MASTERSTAR_FAINTEST_MAG_FLOOR = 18.0
 
 
 class ReferencePopulationMismatch(RuntimeError):
@@ -40,6 +42,169 @@ class FlemingFitResult:
     fit_method: str
     fit_params: dict[str, float | None]
     curve_bins: list[dict[str, Any]]
+
+
+@dataclass
+class CensoredLimit:
+    """G limit after right-censoring against reference-population depth."""
+
+    value_g: float | None
+    raw_fit_g: float | None
+    censored: bool
+    reference_depth_g: float | None
+    display: str
+
+
+def reference_population_depth_g(
+    reference_df: pd.DataFrame,
+    *,
+    mag_limit: float | None = None,
+    gaia_db_path: str | Any | None = None,
+) -> tuple[float | None, float | None]:
+    """Return (max G in reference, query mag_limit actually used)."""
+    mags = pd.to_numeric(reference_df.get("mag"), errors="coerce").dropna()
+    max_ref = float(mags.max()) if not mags.empty else None
+    ml: float | None
+    if mag_limit is not None and math.isfinite(float(mag_limit)):
+        ml = float(mag_limit)
+    elif gaia_db_path is not None:
+        _gmax = get_gaia_db_max_g_mag(gaia_db_path)
+        ml = float(_gmax) if _gmax > 0 else None
+    else:
+        ml = None
+    depth = max_ref
+    if ml is not None and (depth is None or ml < depth):
+        depth = ml
+    return (
+        round(depth, 4) if depth is not None and math.isfinite(depth) else None,
+        round(ml, 4) if ml is not None and math.isfinite(ml) else None,
+    )
+
+
+def apply_limit_censoring(
+    fit_g: float | None,
+    reference_depth_g: float | None,
+    *,
+    label: str,
+) -> CensoredLimit:
+    """Clamp extrapolated G_lim when fit exceeds reference depth (right-censored)."""
+    raw = float(fit_g) if fit_g is not None and math.isfinite(float(fit_g)) else None
+    depth = float(reference_depth_g) if reference_depth_g is not None and math.isfinite(float(reference_depth_g)) else None
+    if raw is None:
+        return CensoredLimit(
+            value_g=depth,
+            raw_fit_g=None,
+            censored=False,
+            reference_depth_g=depth,
+            display=f"{label}: ?",
+        )
+    if depth is None:
+        return CensoredLimit(
+            value_g=raw,
+            raw_fit_g=raw,
+            censored=False,
+            reference_depth_g=None,
+            display=f"{label}={raw:.2f}",
+        )
+    censored = raw > depth - CENSOR_MARGIN_MAG
+    if censored:
+        return CensoredLimit(
+            value_g=depth,
+            raw_fit_g=raw,
+            censored=True,
+            reference_depth_g=depth,
+            display=f">= {depth:.1f} (censored)",
+        )
+    return CensoredLimit(
+        value_g=raw,
+        raw_fit_g=raw,
+        censored=False,
+        reference_depth_g=depth,
+        display=f"{label}={raw:.2f}",
+    )
+
+
+def split_missed_by_g90(
+    labeled: pd.DataFrame,
+    *,
+    g_lim_90: float | None,
+    g_lim_50: float | None,
+    g_lim_90_censored: bool,
+    reference_depth_g: float | None,
+) -> dict[str, int | bool | None]:
+    """Split genuinely-missed into fade-zone vs below-G90 (2-pass decision metric)."""
+    if labeled.empty or "_bucket" not in labeled.columns:
+        return {
+            "n_missed_below_g90": 0,
+            "n_missed_fadezone": 0,
+            "missed_below_g90_uses_censored_depth": False,
+        }
+    missed = labeled.loc[labeled["_bucket"] == "genuinely_missed"].copy()
+    if missed.empty:
+        return {
+            "n_missed_below_g90": 0,
+            "n_missed_fadezone": 0,
+            "missed_below_g90_uses_censored_depth": False,
+        }
+    mags = pd.to_numeric(missed.get("_mag", missed.get("mag")), errors="coerce")
+    g90_thr = g_lim_90
+    uses_censored = False
+    if g_lim_90_censored or g90_thr is None:
+        g90_thr = reference_depth_g
+        uses_censored = g90_thr is not None
+    g50_thr = g_lim_50 if g_lim_50 is not None else reference_depth_g
+    below = 0
+    fade = 0
+    for g in mags.dropna():
+        gv = float(g)
+        if g90_thr is not None and gv < float(g90_thr):
+            below += 1
+        elif g50_thr is not None and float(g90_thr or g50_thr) <= gv <= float(g50_thr):
+            fade += 1
+        elif g90_thr is not None and g50_thr is not None and gv > float(g50_thr):
+            pass
+        elif g90_thr is None and g50_thr is not None and gv <= float(g50_thr):
+            fade += 1
+    return {
+        "n_missed_below_g90": int(below),
+        "n_missed_fadezone": int(fade),
+        "missed_below_g90_uses_censored_depth": bool(uses_censored),
+    }
+
+
+def resolve_effective_match_depth(
+    pipeline_meta: dict[str, Any] | None,
+    *,
+    is_masterstar: bool = True,
+) -> dict[str, Any]:
+    """Resolve faintest_mag_limit that governed detect-time catalog matching."""
+    meta = pipeline_meta or {}
+    config_val = meta.get("faintest_mag_limit")
+    provenance = meta.get("provenance") if isinstance(meta.get("provenance"), dict) else {}
+    snap = provenance.get("config_snapshot") if isinstance(provenance.get("config_snapshot"), dict) else {}
+    setup_val = snap.get("faintest_mag_limit")
+    raw = config_val if config_val is not None else setup_val
+    if is_masterstar:
+        if raw is None:
+            eff = MASTERSTAR_FAINTEST_MAG_FLOOR
+            source = (
+                "MASTERSTAR _ms_faintest_mag_eff=18.0 "
+                "(faintest_mag_limit unset in setup + pipeline_meta)"
+            )
+        else:
+            eff = max(float(raw), MASTERSTAR_FAINTEST_MAG_FLOOR)
+            source = f"max(faintest_mag_limit={float(raw)}, {MASTERSTAR_FAINTEST_MAG_FLOOR}) MASTERSTAR floor"
+    elif raw is not None and math.isfinite(float(raw)):
+        eff = float(raw)
+        source = f"faintest_mag_limit={eff} (detect path)"
+    else:
+        eff = None
+        source = "no faintest_mag_limit (detect path)"
+    return {
+        "match_depth": round(float(eff), 4) if eff is not None and math.isfinite(float(eff)) else None,
+        "match_depth_source": source,
+        "faintest_mag_limit_config": float(raw) if raw is not None and math.isfinite(float(raw)) else None,
+    }
 
 
 def _normalize_ids(df: pd.DataFrame, col: str = "catalog_id") -> pd.Series:
@@ -693,8 +858,16 @@ def compute_gaia_dao_reconcile(
 
     curve_bins = bin_completeness_curve(ref_in_frame, matched_ids, bin_width=bin_width_mag)
     fleming = fit_fleming_completeness(curve_bins)
-    g_lim_50 = float(fleming.g_lim_50)
-    g_lim_90 = fleming.g_lim_90
+    ref_depth, query_mag_limit = reference_population_depth_g(
+        reference_df,
+        mag_limit=mag_limit,
+        gaia_db_path=gaia_db_path,
+    )
+
+    lim50 = apply_limit_censoring(fleming.g_lim_50, ref_depth, label="G_lim_50")
+    lim90 = apply_limit_censoring(fleming.g_lim_90, ref_depth, label="G_lim_90")
+    g_lim_50 = float(lim50.value_g) if lim50.value_g is not None else float(fleming.g_lim_50)
+    g_lim_90 = float(lim90.value_g) if lim90.value_g is not None else fleming.g_lim_90
 
     labeled, counts = decompose_reference_population(
         reference_df,
@@ -704,7 +877,19 @@ def compute_gaia_dao_reconcile(
         blend_factor=blend_factor,
     )
 
+    missed_split = split_missed_by_g90(
+        labeled,
+        g_lim_90=g_lim_90,
+        g_lim_50=g_lim_50,
+        g_lim_90_censored=lim90.censored,
+        reference_depth_g=ref_depth,
+    )
+
     corr_pct = completeness_50_pct(counts["n_gaia_matched_detectable"], counts["n_gaia_missed"])
+    if lim50.censored and ref_depth is not None:
+        completeness_label = f"measured to G <= {ref_depth:.1f}"
+    else:
+        completeness_label = f"measured to G <= {g_lim_50:.2f}"
     cid = _normalize_ids(detections_df)
     n_matched_unique = int(cid[cid != ""].nunique())
     catalog_rows = int(len(cone_df)) if cone_df is not None else int(len(reference_df))
@@ -738,12 +923,21 @@ def compute_gaia_dao_reconcile(
     return {
         "methodology": "footprint_reference_fleming1995",
         "population_check": pop_check,
-        "g_lim_50": round(g_lim_50, 4),
+        "reference_depth_g": ref_depth,
+        "reference_query_mag_limit": query_mag_limit,
+        "g_lim_50": round(g_lim_50, 4) if math.isfinite(g_lim_50) else None,
         "g_lim_90": round(float(g_lim_90), 4) if g_lim_90 is not None and math.isfinite(float(g_lim_90)) else None,
-        "g_lim_est": round(g_lim_50, 4),
+        "g_lim_50_raw_fit": round(lim50.raw_fit_g, 4) if lim50.raw_fit_g is not None else None,
+        "g_lim_90_raw_fit": round(lim90.raw_fit_g, 4) if lim90.raw_fit_g is not None else None,
+        "g_lim_50_censored": bool(lim50.censored),
+        "g_lim_90_censored": bool(lim90.censored),
+        "g_lim_50_display": lim50.display,
+        "g_lim_90_display": lim90.display,
+        "g_lim_est": round(g_lim_50, 4) if math.isfinite(g_lim_50) else None,
         "fit_method": fleming.fit_method,
         "fleming_fit_params": fleming.fit_params,
         "completeness_curve": fleming.curve_bins,
+        "completeness_50_label": completeness_label,
         "fwhm_px": round(float(fwhm_px), 4),
         "edge_margin_px": round(float(edge_margin_fwhm) * float(fwhm_px), 4),
         "blend_factor_fwhm": float(blend_factor),
@@ -758,6 +952,9 @@ def compute_gaia_dao_reconcile(
         **counts,
         "gaia_dao_completeness_pct": corr_pct,
         "gaia_dao_completeness_raw_pct": raw_pct,
+        "n_missed_below_g90": missed_split["n_missed_below_g90"],
+        "n_missed_fadezone": missed_split["n_missed_fadezone"],
+        "missed_below_g90_uses_censored_depth": missed_split["missed_below_g90_uses_censored_depth"],
         "unmatched_dao": unmatched_dao,
         "n_dao_unmatched": int(unmatched_dao["n_dao_unmatched"]),
         "labeled_reference": labeled,
@@ -779,15 +976,28 @@ def reconcile_to_pipeline_meta(report: dict[str, Any]) -> dict[str, Any]:
     return {
         "g_lim_50": report.get("g_lim_50"),
         "g_lim_90": report.get("g_lim_90"),
+        "g_lim_50_raw_fit": report.get("g_lim_50_raw_fit"),
+        "g_lim_90_raw_fit": report.get("g_lim_90_raw_fit"),
+        "g_lim_50_censored": report.get("g_lim_50_censored"),
+        "g_lim_90_censored": report.get("g_lim_90_censored"),
+        "g_lim_50_display": report.get("g_lim_50_display"),
+        "g_lim_90_display": report.get("g_lim_90_display"),
         "g_lim_est": report.get("g_lim_50"),
         "fit_method": report.get("fit_method"),
         "completeness_curve": compact_curve,
+        "completeness_50_label": report.get("completeness_50_label"),
+        "reference_depth_g": report.get("reference_depth_g"),
+        "match_depth": report.get("match_depth"),
+        "match_depth_source": report.get("match_depth_source"),
         "n_ref_in_frame": report.get("n_ref_in_frame"),
         "n_gaia_matched": report.get("n_gaia_matched"),
         "n_gaia_off_frame": report.get("n_gaia_off_frame"),
         "n_gaia_below_limit": report.get("n_gaia_below_limit"),
         "n_gaia_blended": report.get("n_gaia_blended"),
         "n_gaia_missed": report.get("n_gaia_missed"),
+        "n_missed_below_g90": report.get("n_missed_below_g90"),
+        "n_missed_fadezone": report.get("n_missed_fadezone"),
+        "missed_below_g90_uses_censored_depth": report.get("missed_below_g90_uses_censored_depth"),
         "gaia_dao_completeness_pct": report.get("gaia_dao_completeness_pct"),
         "gaia_dao_completeness_raw_pct": report.get("gaia_dao_completeness_raw_pct"),
         "n_dao_unmatched": report.get("n_dao_unmatched"),

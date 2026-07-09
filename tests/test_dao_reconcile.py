@@ -13,6 +13,7 @@ from astropy.wcs import WCS
 from dao_reconcile import (
     ReferencePopulationMismatch,
     apply_footprint_filter,
+    apply_limit_censoring,
     bin_completeness_curve,
     blend_radius_px,
     check_reference_population_consistency,
@@ -22,6 +23,9 @@ from dao_reconcile import (
     fleming_completeness,
     is_blended_with_matched,
     reconcile_to_pipeline_meta,
+    resolve_effective_match_depth,
+    split_missed_by_g90,
+    CENSOR_MARGIN_MAG,
 )
 
 
@@ -187,3 +191,99 @@ def test_is_blended_edge_inclusive():
     matched = np.array([[100.0, 100.0]])
     r = blend_radius_px(2.0)
     assert is_blended_with_matched(100.0 + r, 100.0, matched, blend_r_px=r) is True
+
+
+def test_limit_censoring_when_fit_exceeds_reference_depth():
+    lim = apply_limit_censoring(19.25, 17.5, label="G_lim_50")
+    assert lim.censored is True
+    assert lim.value_g == pytest.approx(17.5)
+    assert lim.raw_fit_g == pytest.approx(19.25)
+    assert "censored" in lim.display
+    assert "19.25" not in lim.display
+
+
+def test_limit_not_censored_when_fit_within_depth():
+    lim = apply_limit_censoring(14.97, 17.5, label="G_lim_50")
+    assert lim.censored is False
+    assert lim.value_g == pytest.approx(14.97)
+
+
+def test_censoring_synthetic_high_at_reference_edge():
+    """Curve still high at reference edge -> censored flag, no extrapolated G surfaced."""
+    bins = []
+    for center, frac in [(13.0, 0.55), (14.0, 0.72), (15.0, 0.85), (16.0, 0.94), (17.0, 0.98), (17.4, 0.99)]:
+        bins.append(
+            {
+                "bin_lo": center - 0.25,
+                "bin_hi": center + 0.25,
+                "bin_center": center,
+                "n_ref": 100,
+                "n_matched": int(100 * frac),
+                "completeness_frac": frac,
+            }
+        )
+    fit = fit_fleming_completeness(bins)
+    depth = 17.5
+    lim50 = apply_limit_censoring(fit.g_lim_50, depth, label="G_lim_50")
+    assert float(fit.g_lim_50) > depth - CENSOR_MARGIN_MAG
+    assert lim50.censored is True
+    assert lim50.value_g == pytest.approx(depth)
+    assert lim50.raw_fit_g == pytest.approx(float(fit.g_lim_50))
+    assert "censored" in lim50.display
+
+
+def test_split_missed_below_g90_and_fadezone():
+    labeled = pd.DataFrame(
+        {
+            "_bucket": ["genuinely_missed"] * 3,
+            "_mag": [12.0, 13.5, 14.5],
+        }
+    )
+    split = split_missed_by_g90(
+        labeled,
+        g_lim_90=14.0,
+        g_lim_50=15.0,
+        g_lim_90_censored=False,
+        reference_depth_g=17.5,
+    )
+    assert split["n_missed_below_g90"] == 2
+    assert split["n_missed_fadezone"] == 1
+
+
+def test_resolve_effective_match_depth_masterstar_default():
+    md = resolve_effective_match_depth({}, is_masterstar=True)
+    assert md["match_depth"] == pytest.approx(18.0)
+    assert "18.0" in md["match_depth_source"]
+
+
+def test_reconcile_to_pipeline_meta_r2b_keys():
+    report = {
+        "g_lim_50": 17.5,
+        "g_lim_90": 17.5,
+        "g_lim_50_raw_fit": 19.25,
+        "g_lim_50_censored": True,
+        "g_lim_90_censored": True,
+        "g_lim_50_display": ">= 17.5 (censored)",
+        "completeness_50_label": "measured to G <= 17.5",
+        "match_depth": 18.0,
+        "match_depth_source": "MASTERSTAR default",
+        "n_missed_below_g90": 5,
+        "n_missed_fadezone": 12,
+        "fit_method": "fleming1995_erf",
+        "completeness_curve": [],
+        "n_ref_in_frame": 500,
+        "n_gaia_matched": 400,
+        "n_gaia_off_frame": 50,
+        "n_gaia_below_limit": 30,
+        "n_gaia_blended": 10,
+        "n_gaia_missed": 17,
+        "gaia_dao_completeness_pct": 95.0,
+        "n_dao_unmatched": 12,
+        "unmatched_dao": {"n_now_matched_to_faint": 3},
+        "blend_radius_px": 3.6,
+        "methodology": "footprint_reference_fleming1995",
+    }
+    meta = reconcile_to_pipeline_meta(report)
+    assert meta["g_lim_50_censored"] is True
+    assert meta["n_missed_below_g90"] == 5
+    assert meta["match_depth"] == 18.0

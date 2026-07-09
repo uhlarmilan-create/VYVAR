@@ -440,6 +440,14 @@ def render_masterstar_qa(
         _g_lim_est: float | None = None
         _g_lim_50: float | None = None
         _g_lim_90: float | None = None
+        _g_lim_50_display: str | None = None
+        _g_lim_90_display: str | None = None
+        _g_lim_50_censored: bool = False
+        _g_lim_90_censored: bool = False
+        _completeness_50_label: str | None = None
+        _n_missed_below_g90: int | None = None
+        _n_missed_fadezone: int | None = None
+        _match_depth: float | None = None
         _fit_method: str | None = None
         _n_gaia_matched: int | None = None
         _n_gaia_off_frame: int | None = None
@@ -482,6 +490,20 @@ def render_masterstar_qa(
                     _g_lim_50 = float(_meta["g_lim_est"])
                 if _meta.get("g_lim_90") is not None:
                     _g_lim_90 = float(_meta["g_lim_90"])
+                if _meta.get("g_lim_50_display") is not None:
+                    _g_lim_50_display = str(_meta["g_lim_50_display"])
+                if _meta.get("g_lim_90_display") is not None:
+                    _g_lim_90_display = str(_meta["g_lim_90_display"])
+                _g_lim_50_censored = bool(_meta.get("g_lim_50_censored"))
+                _g_lim_90_censored = bool(_meta.get("g_lim_90_censored"))
+                if _meta.get("completeness_50_label") is not None:
+                    _completeness_50_label = str(_meta["completeness_50_label"])
+                if _meta.get("n_missed_below_g90") is not None:
+                    _n_missed_below_g90 = int(_meta["n_missed_below_g90"])
+                if _meta.get("n_missed_fadezone") is not None:
+                    _n_missed_fadezone = int(_meta["n_missed_fadezone"])
+                if _meta.get("match_depth") is not None:
+                    _match_depth = float(_meta["match_depth"])
                 _g_lim_est = _g_lim_50
                 if _meta.get("fit_method") is not None:
                     _fit_method = str(_meta["fit_method"])
@@ -514,16 +536,31 @@ def render_masterstar_qa(
             st.metric("DAO→Gaia Match (%)", f"{match_rate:.2f}")
         with m3:
             if _gaia_dao_pct is not None:
+                _g50_txt = _g_lim_50_display or (
+                    f">= {_g_lim_50:.1f} (frame deeper than reference)"
+                    if _g_lim_50_censored and _g_lim_50 is not None
+                    else (f"{_g_lim_50:.2f}" if _g_lim_50 is not None else "?")
+                )
+                _g90_txt = _g_lim_90_display or (
+                    f">= {_g_lim_90:.1f} (frame deeper than reference)"
+                    if _g_lim_90_censored and _g_lim_90 is not None
+                    else (f"{_g_lim_90:.2f}" if _g_lim_90 is not None else "?")
+                )
                 _help_lines = [
-                    "completeness_50: matched / (matched + genuinely-missed) in-frame at G <= G_lim_50",
-                    f"G_lim_50: {_g_lim_50 if _g_lim_50 is not None else '?'}",
-                    f"G_lim_90: {_g_lim_90 if _g_lim_90 is not None else '?'}",
+                    _completeness_50_label or "completeness_50: matched / (matched + genuinely-missed) in-frame",
+                    f"G_lim_50: {_g50_txt}"
+                    + (" [right-censored: fit exceeded reference depth]" if _g_lim_50_censored else ""),
+                    f"G_lim_90: {_g90_txt}"
+                    + (" [right-censored]" if _g_lim_90_censored else ""),
                     f"Fit: {_fit_method if _fit_method is not None else '?'}",
+                    f"Match depth: {_match_depth if _match_depth is not None else '?'}",
                     f"Matched: {_n_gaia_matched if _n_gaia_matched is not None else '?'}",
                     f"Off-frame: {_n_gaia_off_frame if _n_gaia_off_frame is not None else '?'}",
                     f"Below limit: {_n_gaia_below_limit if _n_gaia_below_limit is not None else '?'}",
                     f"Blended: {_n_gaia_blended if _n_gaia_blended is not None else '?'}",
                     f"Genuinely missed: {_n_gaia_missed if _n_gaia_missed is not None else '?'}",
+                    f"  missed below G90 (2-pass metric): {_n_missed_below_g90 if _n_missed_below_g90 is not None else '?'}",
+                    f"  missed fade-zone (G90..G50): {_n_missed_fadezone if _n_missed_fadezone is not None else '?'}",
                 ]
                 if _gaia_dao_raw_pct is not None:
                     _help_lines.append(f"Raw (cone legacy): {_gaia_dao_raw_pct:.1f}%")

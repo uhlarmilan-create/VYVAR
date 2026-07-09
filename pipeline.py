@@ -92,7 +92,7 @@ from photometry_core import (
 )
 from proc_frame_store import proc_csv_path_for_aligned_fits
 
-from dao_reconcile import compute_gaia_dao_reconcile, reconcile_to_pipeline_meta
+from dao_reconcile import compute_gaia_dao_reconcile, reconcile_to_pipeline_meta, resolve_effective_match_depth
 from masterstar_context import header_core_fwhm_px
 
 from utils import (
@@ -8918,6 +8918,8 @@ def detect_stars_and_match_catalog(
                     match_sep_arcsec=float(match_sep_used),
                     cone_df=cat_df,
                 )
+                _md = resolve_effective_match_depth(meta, is_masterstar=False)
+                _recon.update(_md)
                 meta.update(reconcile_to_pipeline_meta(_recon))
                 LOGGER.info(
                     "[DAO] Gaia→DAO reconcile: completeness_50=%.1f%% (matched=%d missed=%d "
@@ -12137,6 +12139,8 @@ def generate_masterstar_and_catalog(
                     match_sep_arcsec=_match_sep_recon,
                     cone_df=_cone_df,
                 )
+                _md = resolve_effective_match_depth(det_meta, is_masterstar=True)
+                _recon.update(_md)
                 _meta_patch.update(reconcile_to_pipeline_meta(_recon))
         except Exception as exc:  # noqa: BLE001
             log_event(f"MASTERSTAR Gaia reconcile decomposition skipped: {exc!s}")
