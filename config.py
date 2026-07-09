@@ -262,6 +262,7 @@ class AppConfig:
     neighbor_sub_regime_dmag_min: float = 2.5
     neighbor_sub_regime_sep_max: float = 1.1
     #: Spatially-varying ePSF (GriddedPSFModel). Default OFF → single global ePSF.
+    #: Master gate for spatial ePSF: spatial active iff (psf_spatial_enabled AND psf_spatial_order > 0).
     #: When enabled, ePSFs are built per detector-region cell and interpolated by (x,y),
     #: which matters on wide fields where the PSF varies (coma / field curvature at edges).
     psf_spatial_enabled: bool = False

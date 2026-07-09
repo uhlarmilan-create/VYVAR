@@ -527,6 +527,7 @@ def _fill_psf_catalog_columns(
                     "psf_fit_ok",
                     "psf_ac_factor",
                     "psf_ac_n_used",
+                    "psf_ac_applied",
                     "psf_snr",
                     "psf_quality",
                     "psf_quality_fallback",

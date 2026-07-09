@@ -74,10 +74,15 @@ PROC_STORE_COLS = [
     "gaia_dr3_variable_catalog",
     # PSF photometry (gated — Phase 2A adaptive / PSF selector)
     "psf_flux",
+    "psf_flux_err",
     "psf_fit_ok",
     "psf_chi2",
     "psf_quality",
+    "psf_quality_fallback",
     "psf_snr",
+    "psf_ac_factor",
+    "psf_ac_n_used",
+    "psf_ac_applied",
     # G2-F002b trust (per-frame proc CSV; Phase 2A frame_time_lookup)
     "catalog_match_mode",
     # wcs_untrusted is NOT stored here — derived in Phase 2A LC export from
@@ -126,6 +131,7 @@ _NUMERIC_COLS = (
     "flux_small",
     "flux_large",
     "psf_flux",
+    "psf_flux_err",
     "psf_snr",
     "x",
     "y",

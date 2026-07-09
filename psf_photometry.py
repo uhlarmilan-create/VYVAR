@@ -1381,6 +1381,9 @@ def build_epsf_model(
     if spatial_order is None:
         spatial_order = int(getattr(cfg, "psf_spatial_order", 0) or 0) if cfg is not None else 0
     spatial_order = max(0, min(2, int(spatial_order)))
+    _spatial_enabled = bool(getattr(cfg, "psf_spatial_enabled", False)) if cfg is not None else False
+    if not _spatial_enabled:
+        spatial_order = 0
 
     _built = _epsf_build_imagepsf_from_stars(stars, osamp=osamp, fwhm_px=fwhm_px, cutout_size=cutout_size)
     _qc = _built["qc"]
@@ -2754,6 +2757,7 @@ def psf_photometry_stars(
         "psf_iterative",
         "psf_ac_factor",
         "psf_ac_n_used",
+        "psf_ac_applied",
         "psf_group_used",
         "psf_group_n",
         "psf_group_fallback",
@@ -2796,6 +2800,7 @@ def psf_photometry_stars(
                     "psf_iterative": False,
                     "psf_ac_factor": 1.0,
                     "psf_ac_n_used": 0,
+                    "psf_ac_applied": False,
                     "psf_group_used": False,
                     "psf_group_n": 0,
                     "psf_group_fallback": False,
@@ -2815,6 +2820,7 @@ def psf_photometry_stars(
             "psf_iterative": False,
             "psf_ac_factor": 1.0,
             "psf_ac_n_used": 0,
+            "psf_ac_applied": False,
             "psf_group_used": False,
             "psf_group_n": 0,
             "psf_group_fallback": False,
@@ -3060,6 +3066,10 @@ def psf_photometry_stars(
     for r in out_rows:
         r["psf_ac_factor"] = _ac_factor
         r["psf_ac_n_used"] = _ac_n_used
+        if apply_aperture_correction:
+            r["psf_ac_applied"] = bool(_ac_n_used >= 5)
+        else:
+            r["psf_ac_applied"] = False
         # Per-star quality grade (always computed) + auto-fallback (default on).
         _cid_s = str(r.get("catalog_id", "")).strip()
         _nn = _nn_map.get(_cid_s, float("nan"))

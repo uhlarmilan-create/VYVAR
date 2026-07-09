@@ -47,6 +47,65 @@ def _frame_catalog_match_mode_from_df(df: pd.DataFrame) -> str:
     return normalize_catalog_match_mode(str(_cmm_s.iloc[0]))
 
 
+_PSF_LC_STORE_COLS = (
+    "psf_flux",
+    "psf_flux_err",
+    "psf_fit_ok",
+    "psf_quality",
+    "psf_quality_fallback",
+    "psf_snr",
+    "psf_ac_factor",
+    "psf_ac_n_used",
+    "psf_ac_applied",
+)
+
+
+def _synthetic_psf_proc_frame(path: Path) -> None:
+    pd.DataFrame(
+        {
+            "catalog_id": ["111"],
+            "name": ["111"],
+            "bjd_tdb_mid": [2459000.1],
+            "dao_flux": [1000.0],
+            "psf_flux": [950.0],
+            "psf_flux_err": [12.5],
+            "psf_fit_ok": [True],
+            "psf_quality": ["good"],
+            "psf_quality_fallback": [False],
+            "psf_snr": [18.0],
+            "psf_ac_factor": [1.02],
+            "psf_ac_n_used": [6],
+            "psf_ac_applied": [True],
+        }
+    ).to_csv(path, index=False)
+
+
+def test_proc_store_cols_includes_psf_lc_columns() -> None:
+    for col in _PSF_LC_STORE_COLS:
+        assert col in PROC_STORE_COLS
+
+
+def test_phase2a_store_path_preserves_psf_columns() -> None:
+    """Entry-path equivalence for PSF LC columns (catalog_match_mode lesson)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        p = Path(tmpdir)
+        csv_path = p / "proc_test.csv"
+        _synthetic_psf_proc_frame(csv_path)
+
+        store = ProcFrameStore.build(p)
+        store_df = store.get(str(csv_path))
+        direct_df = pd.read_csv(
+            csv_path,
+            usecols=lambda c: c in set(PROC_STORE_COLS),
+            low_memory=False,
+        )
+        assert store_df is not None
+        for col in _PSF_LC_STORE_COLS:
+            assert col in store_df.columns, col
+            assert col in direct_df.columns, col
+            assert store_df[col].iloc[0] == direct_df[col].iloc[0], col
+
+
 def test_proc_store_cols_includes_catalog_match_mode() -> None:
     assert "catalog_match_mode" in PROC_STORE_COLS
 

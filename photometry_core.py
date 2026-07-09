@@ -1492,14 +1492,17 @@ def read_flux_from_csv(
             "wcs_untrusted": is_wcs_untrusted_catalog_match_mode(frame_catalog_match_mode),
             "mag_inst": float("nan"),
             "err": float("nan"),
-            # PSF photometry (b.5) columns — carried through so Phase 2A's flux selector
-            # (_get_lc_psf_or_dao / adaptive) can actually see them. Default NaN/False so a
-            # frame/CSV without PSF stays pure-aperture (no behaviour change).
+            # PSF photometry (b.5) columns — carried through so Phase 2A star-method / adaptive
+            # routing can see them. Default NaN/False so a frame/CSV without PSF stays pure-aperture.
             "psf_flux": float("nan"),
+            "psf_flux_err": float("nan"),
             "psf_fit_ok": False,
             "psf_quality": "",
             "psf_quality_fallback": False,
             "psf_snr": float("nan"),
+            "psf_ac_factor": float("nan"),
+            "psf_ac_n_used": 0,
+            "psf_ac_applied": False,
             "aperture_r_px": apertures_px.get(cid, float("nan")),
             "x": float("nan"),
             "y": float("nan"),
@@ -1554,9 +1557,14 @@ def read_flux_from_csv(
 
         # PSF photometry (b.5) — read per-star/per-frame PSF flux + quality if present.
         base["psf_flux"] = float(pd.to_numeric(row_csv.get("psf_flux"), errors="coerce"))
+        base["psf_flux_err"] = float(pd.to_numeric(row_csv.get("psf_flux_err"), errors="coerce"))
         base["psf_snr"] = float(pd.to_numeric(row_csv.get("psf_snr"), errors="coerce"))
         base["psf_fit_ok"] = _coerce_bool_cell(row_csv.get("psf_fit_ok"))
         base["psf_quality_fallback"] = _coerce_bool_cell(row_csv.get("psf_quality_fallback"))
+        base["psf_ac_factor"] = float(pd.to_numeric(row_csv.get("psf_ac_factor"), errors="coerce"))
+        _ac_n = pd.to_numeric(row_csv.get("psf_ac_n_used"), errors="coerce")
+        base["psf_ac_n_used"] = int(_ac_n) if pd.notna(_ac_n) else 0
+        base["psf_ac_applied"] = _coerce_bool_cell(row_csv.get("psf_ac_applied"))
         _pq = row_csv.get("psf_quality")
         base["psf_quality"] = str(_pq).strip().lower() if _pq is not None and not (
             isinstance(_pq, float) and math.isnan(_pq)
@@ -3997,6 +4005,7 @@ def save_lightcurve_csv(
     catalog_match_mode: list[str] | np.ndarray | None = None,
     wcs_untrusted: np.ndarray | None = None,
     time_base: str = TIME_BASE_BJD_TDB,
+    err_method: list[str] | None = None,
 ) -> None:
     """Uloží lightcurve CSV.
 
@@ -4128,6 +4137,8 @@ def save_lightcurve_csv(
     df["lunar_phase_pct"] = np.round(np.full(n, _lp, dtype=np.float64), 6)
     df["lunar_separation_deg"] = np.round(np.full(n, _ls, dtype=np.float64), 6)
     df["lunar_risk"] = [str(lunar_risk or "UNKNOWN")] * n
+    if err_method is not None:
+        df["err_method"] = [str(m) for m in err_method]
     df.to_csv(output_path, index=False)
 
 
@@ -5776,6 +5787,31 @@ def _load_adaptive_blend_map(masterstar_fits_path: Path) -> dict[str, tuple[bool
     }
 
 
+_PSF_ERR_MAG_SCALE = 1.0857362
+
+
+def _route_lc_per_frame_err(
+    target_frames: pd.DataFrame,
+    err: np.ndarray,
+) -> tuple[np.ndarray, list[str] | None]:
+    """Use PSF sandwich err for PSF-routed frames when finite; else keep aperture err."""
+    if "lc_flux_method" not in target_frames.columns:
+        return err, None
+    methods = target_frames["lc_flux_method"].astype(str).to_numpy()
+    if not np.any(methods == "psf"):
+        return err, None
+    out = np.asarray(err, dtype=float).copy()
+    err_methods = ["aperture"] * len(out)
+    pf = pd.to_numeric(target_frames.get("psf_flux"), errors="coerce").to_numpy(dtype=float)
+    pfe = pd.to_numeric(target_frames.get("psf_flux_err"), errors="coerce").to_numpy(dtype=float)
+    psf_mask = (methods == "psf") & np.isfinite(pf) & (pf > 0) & np.isfinite(pfe) & (pfe > 0)
+    if np.any(psf_mask):
+        out[psf_mask] = _PSF_ERR_MAG_SCALE * pfe[psf_mask] / pf[psf_mask]
+        for i in np.where(psf_mask)[0]:
+            err_methods[int(i)] = "psf"
+    return out, err_methods
+
+
 def _get_lc(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
     sub = all_frames[all_frames["catalog_id"] == cid]["mag_inst"].to_numpy(dtype=float)
     return sub
@@ -5791,40 +5827,7 @@ def _get_comp_bjd_series(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
     return np.array([], dtype=float)
 
 
-def _get_lc_psf_or_dao(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
-    """TODO-8: Per-frame flux selector — psf_flux when psf_fit_ok, else dao_flux/mag_inst.
-
-    Falls back to mag_inst (aperture) when:
-    - psf_fit_ok is False or NaN
-    - psf_flux is NaN or non-finite
-    - psf_flux columns not present
-    """
-    sub = all_frames[all_frames["catalog_id"] == cid].copy()
-    if sub.empty:
-        return np.array([], dtype=float)
-
-    mag_inst = sub["mag_inst"].to_numpy(dtype=float)
-
-    if "psf_flux" not in sub.columns or "psf_fit_ok" not in sub.columns:
-        return mag_inst
-
-    psf_flux = pd.to_numeric(sub["psf_flux"], errors="coerce").to_numpy(dtype=float)
-    psf_ok = sub["psf_fit_ok"].map(_coerce_bool_cell).to_numpy(dtype=bool)
-
-    psf_mag = np.where(
-        psf_ok & np.isfinite(psf_flux) & (psf_flux > 0),
-        -2.5 * np.log10(psf_flux),
-        np.nan,
-    )
-
-    result = np.where(np.isfinite(psf_mag), psf_mag, mag_inst)
-    n_psf = int(np.isfinite(psf_mag).sum())
-    if n_psf > 0:
-        LOGGER.debug("[ePSF] %s: %d/%d frames using PSF flux", cid, n_psf, len(result))
-    return result
-
-
-def _get_lc_psf_strict(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
+def _resolve_star_flux_method(cid: str, all_frames: pd.DataFrame) -> str:
     """PSF-only inst mag: NaN when PSF flux unavailable (no aperture fallback)."""
     sub = all_frames[all_frames["catalog_id"] == cid]
     if sub.empty:
@@ -5906,7 +5909,9 @@ def compute_lc_flux_method(
         snr_aper = np.where(np.isfinite(err) & (err > 0), 1.0857362 / err, np.inf)
 
     pf = psf_flux.to_numpy(dtype=float)
-    psf_usable = psf_ok & np.isfinite(pf) & (pf > 0) & (psf_q.to_numpy() != "bad")
+    _ac_raw = all_frames.get("psf_ac_applied", pd.Series(False, index=idx))
+    psf_ac_ok = _ac_raw.map(_coerce_bool_cell).to_numpy(dtype=bool)
+    psf_usable = psf_ok & np.isfinite(pf) & (pf > 0) & (psf_q.to_numpy() != "bad") & psf_ac_ok
 
     rule_faint_psf = psf_usable & (snr_aper <= float(snr_lo)) & (psf_q.to_numpy() == "good")
 
@@ -5927,7 +5932,16 @@ def _get_lc_adaptive(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
     if "lc_flux_method" not in sub.columns or "psf_flux" not in sub.columns:
         return mag_inst
     psf_flux = pd.to_numeric(sub["psf_flux"], errors="coerce").to_numpy(dtype=float)
-    use_psf = (sub["lc_flux_method"].astype(str).to_numpy() == "psf") & np.isfinite(psf_flux) & (psf_flux > 0)
+    if "psf_ac_applied" in sub.columns:
+        ac_ok = sub["psf_ac_applied"].map(_coerce_bool_cell).to_numpy(dtype=bool)
+    else:
+        ac_ok = np.zeros(len(sub), dtype=bool)
+    use_psf = (
+        (sub["lc_flux_method"].astype(str).to_numpy() == "psf")
+        & ac_ok
+        & np.isfinite(psf_flux)
+        & (psf_flux > 0)
+    )
     psf_mag = np.where(use_psf, -2.5 * np.log10(np.where(psf_flux > 0, psf_flux, np.nan)), np.nan)
     return np.where(np.isfinite(psf_mag), psf_mag, mag_inst)
 
@@ -6611,10 +6625,15 @@ def _phase2a_prepare_shared_state(
                     "likely_saturated",
                     "is_usable",
                     "psf_flux",
+                    "psf_flux_err",
                     "psf_fit_ok",
                     "psf_chi2",
                     "psf_quality",
+                    "psf_quality_fallback",
                     "psf_snr",
+                    "psf_ac_factor",
+                    "psf_ac_n_used",
+                    "psf_ac_applied",
                     "catalog_match_mode",
                 ]
             )
@@ -7973,6 +7992,7 @@ def _phase2a_process_one_target(
     )
 
     err = target_frames["err"].to_numpy(dtype=float)
+    err, err_method_rows = _route_lc_per_frame_err(target_frames, err)
     # Per-point uncertainty = photon/SNR base error (term-1) ⊕ ensemble zeropoint uncertainty
     # (term-3, ``ensemble_scatter``). Joined by EXACT ``source_file`` (G2-F004), not positional index.
     _src_for_err = target_frames["source_file"].astype(str).tolist()
@@ -8168,6 +8188,7 @@ def _phase2a_process_one_target(
         catalog_match_mode=catalog_match_mode_list,
         wcs_untrusted=wcs_untrusted_arr,
         time_base=time_base,
+        err_method=err_method_rows,
     )
     if _have_psf_cols:
         try:
@@ -13863,7 +13884,7 @@ def _write_suspected_variables(
 __all__ = [
     # photometry (legacy)
     "StressTestResult",
-    "_get_lc_psf_or_dao",
+    "_get_lc_adaptive",
     "apply_reporting_postprocess",
     "check_comparison_stability",
     "common_field_intersection_bbox_px",
