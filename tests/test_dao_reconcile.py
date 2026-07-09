@@ -256,6 +256,64 @@ def test_resolve_effective_match_depth_masterstar_default():
     assert "18.0" in md["match_depth_source"]
 
 
+def test_flat_curve_no_crossing_censored_not_median():
+    """Flat completeness to reference edge -> no_crossing, not median-bin fabrication."""
+    bins = []
+    for center, frac in [
+        (10.0, 1.0),
+        (12.0, 1.0),
+        (14.0, 1.0),
+        (16.0, 1.0),
+        (17.25, 0.988),
+    ]:
+        bins.append(
+            {
+                "bin_lo": center - 0.25,
+                "bin_hi": center + 0.25,
+                "bin_center": center,
+                "n_ref": 50,
+                "n_matched": int(50 * frac),
+                "completeness_frac": frac,
+            }
+        )
+    fit = fit_fleming_completeness(bins)
+    assert fit.fit_method == "no_crossing"
+    assert fit.g_lim_50 is None
+    assert fit.no_crossing_50 is True
+    depth = 17.5
+    lim50 = apply_limit_censoring(fit.g_lim_50, depth, label="G_lim_50", no_crossing=True)
+    assert lim50.censored is True
+    assert lim50.value_g == pytest.approx(depth)
+    assert lim50.raw_fit_g is None
+    assert "no crossing" in lim50.display
+    assert "13" not in lim50.display
+
+
+def test_degenerate_two_bin_input_flagged():
+    bins = [
+        {
+            "bin_lo": 10.0,
+            "bin_hi": 10.5,
+            "bin_center": 10.25,
+            "n_ref": 20,
+            "n_matched": 10,
+            "completeness_frac": 0.5,
+        },
+        {
+            "bin_lo": 11.0,
+            "bin_hi": 11.5,
+            "bin_center": 11.25,
+            "n_ref": 20,
+            "n_matched": 18,
+            "completeness_frac": 0.9,
+        },
+    ]
+    fit = fit_fleming_completeness(bins)
+    assert fit.fit_method == "degenerate"
+    assert fit.g_lim_50 is not None
+    assert math.isfinite(float(fit.g_lim_50))
+
+
 def test_reconcile_to_pipeline_meta_r2b_keys():
     report = {
         "g_lim_50": 17.5,

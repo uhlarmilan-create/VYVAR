@@ -36,12 +36,14 @@ class ReferencePopulationMismatch(RuntimeError):
 
 @dataclass
 class FlemingFitResult:
-    g_lim_50: float
+    g_lim_50: float | None
     g_lim_90: float | None
     sigma_mag: float | None
     fit_method: str
     fit_params: dict[str, float | None]
     curve_bins: list[dict[str, Any]]
+    no_crossing_50: bool = False
+    no_crossing_90: bool = False
 
 
 @dataclass
@@ -86,10 +88,19 @@ def apply_limit_censoring(
     reference_depth_g: float | None,
     *,
     label: str,
+    no_crossing: bool = False,
 ) -> CensoredLimit:
     """Clamp extrapolated G_lim when fit exceeds reference depth (right-censored)."""
     raw = float(fit_g) if fit_g is not None and math.isfinite(float(fit_g)) else None
     depth = float(reference_depth_g) if reference_depth_g is not None and math.isfinite(float(reference_depth_g)) else None
+    if no_crossing and depth is not None:
+        return CensoredLimit(
+            value_g=depth,
+            raw_fit_g=None,
+            censored=True,
+            reference_depth_g=depth,
+            display=f">= {depth:.1f} (no crossing)",
+        )
     if raw is None:
         return CensoredLimit(
             value_g=depth,
@@ -494,13 +505,27 @@ def _crossing_mag(bins: list[dict[str, Any]], level: float) -> float | None:
     return None
 
 
+def _deepest_bin(curve_bins: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not curve_bins:
+        return None
+    return max(curve_bins, key=lambda b: float(b["bin_center"]))
+
+
+def _stays_above_level_to_edge(curve_bins: list[dict[str, Any]], level: float) -> bool:
+    """True when the faintest bin completeness stays at or above ``level`` (no crossing)."""
+    deepest = _deepest_bin(curve_bins)
+    if deepest is None:
+        return False
+    return float(deepest["completeness_frac"]) >= float(level) - 1e-6
+
+
 def fit_fleming_completeness(
     curve_bins: list[dict[str, Any]],
 ) -> FlemingFitResult:
     """Fit Fleming erf completeness; fallback to linear interpolation crossings."""
     if not curve_bins:
         return FlemingFitResult(
-            g_lim_50=float("nan"),
+            g_lim_50=None,
             g_lim_90=None,
             sigma_mag=None,
             fit_method="none",
@@ -514,10 +539,12 @@ def fit_fleming_completeness(
 
     g50_i = _crossing_mag(curve_bins, 0.5)
     g90_i = _crossing_mag(curve_bins, 0.9)
+    no_cross_50 = g50_i is None and _stays_above_level_to_edge(curve_bins, 0.5)
+    no_cross_90 = g90_i is None and _stays_above_level_to_edge(curve_bins, 0.9)
 
     fit_method = "interpolation"
-    g50 = g50_i
-    g90 = g90_i
+    g50: float | None = g50_i
+    g90: float | None = g90_i
     sigma: float | None = None
     params: dict[str, float | None] = {"g_lim_50_interp": g50_i, "g_lim_90_interp": g90_i}
 
@@ -548,15 +575,37 @@ def fit_fleming_completeness(
         except Exception:  # noqa: BLE001
             pass
 
-    if g50 is None or not math.isfinite(float(g50)):
+    fleming_ok = fit_method == "fleming1995_erf"
+
+    if len(curve_bins) < 3:
+        fit_method = "degenerate"
         g50 = float(np.median(mags))
+    elif not fleming_ok and no_cross_50:
+        fit_method = "no_crossing"
+        g50 = None
+        if no_cross_90:
+            g90 = None
+    elif g50 is None or not math.isfinite(float(g50)):
+        if no_cross_50:
+            fit_method = "no_crossing"
+            g50 = None
+            if no_cross_90:
+                g90 = None
+
+    if g90 is not None and not math.isfinite(float(g90)):
+        g90 = g90_i if g90_i is not None and math.isfinite(float(g90_i)) else None
+    if no_cross_90 and g90 is None and fit_method != "degenerate":
+        pass
+
     return FlemingFitResult(
-        g_lim_50=float(g50),
-        g_lim_90=float(g90) if g90 is not None and math.isfinite(float(g90)) else g90_i,
+        g_lim_50=g50,
+        g_lim_90=g90,
         sigma_mag=sigma,
         fit_method=fit_method,
         fit_params={k: (round(float(v), 4) if v is not None and math.isfinite(float(v)) else None) for k, v in params.items()},
         curve_bins=curve_bins,
+        no_crossing_50=bool(no_cross_50 and g50 is None and fit_method == "no_crossing"),
+        no_crossing_90=bool(no_cross_90 and g90 is None and fit_method in ("no_crossing", "interpolation", "fleming1995_erf")),
     )
 
 
@@ -864,15 +913,25 @@ def compute_gaia_dao_reconcile(
         gaia_db_path=gaia_db_path,
     )
 
-    lim50 = apply_limit_censoring(fleming.g_lim_50, ref_depth, label="G_lim_50")
-    lim90 = apply_limit_censoring(fleming.g_lim_90, ref_depth, label="G_lim_90")
-    g_lim_50 = float(lim50.value_g) if lim50.value_g is not None else float(fleming.g_lim_50)
+    lim50 = apply_limit_censoring(
+        fleming.g_lim_50,
+        ref_depth,
+        label="G_lim_50",
+        no_crossing=fleming.no_crossing_50,
+    )
+    lim90 = apply_limit_censoring(
+        fleming.g_lim_90,
+        ref_depth,
+        label="G_lim_90",
+        no_crossing=fleming.no_crossing_90,
+    )
+    g_lim_50 = float(lim50.value_g) if lim50.value_g is not None else None
     g_lim_90 = float(lim90.value_g) if lim90.value_g is not None else fleming.g_lim_90
 
     labeled, counts = decompose_reference_population(
         reference_df,
         detections_df,
-        g_lim_50=g_lim_50,
+        g_lim_50=float(g_lim_50) if g_lim_50 is not None else float(ref_depth or 0.0),
         fwhm_px=float(fwhm_px),
         blend_factor=blend_factor,
     )
@@ -886,10 +945,12 @@ def compute_gaia_dao_reconcile(
     )
 
     corr_pct = completeness_50_pct(counts["n_gaia_matched_detectable"], counts["n_gaia_missed"])
-    if lim50.censored and ref_depth is not None:
+    if (lim50.censored or fleming.no_crossing_50) and ref_depth is not None:
         completeness_label = f"measured to G <= {ref_depth:.1f}"
-    else:
+    elif g_lim_50 is not None:
         completeness_label = f"measured to G <= {g_lim_50:.2f}"
+    else:
+        completeness_label = "completeness_50 unavailable"
     cid = _normalize_ids(detections_df)
     n_matched_unique = int(cid[cid != ""].nunique())
     catalog_rows = int(len(cone_df)) if cone_df is not None else int(len(reference_df))
@@ -925,7 +986,7 @@ def compute_gaia_dao_reconcile(
         "population_check": pop_check,
         "reference_depth_g": ref_depth,
         "reference_query_mag_limit": query_mag_limit,
-        "g_lim_50": round(g_lim_50, 4) if math.isfinite(g_lim_50) else None,
+        "g_lim_50": round(g_lim_50, 4) if g_lim_50 is not None and math.isfinite(g_lim_50) else None,
         "g_lim_90": round(float(g_lim_90), 4) if g_lim_90 is not None and math.isfinite(float(g_lim_90)) else None,
         "g_lim_50_raw_fit": round(lim50.raw_fit_g, 4) if lim50.raw_fit_g is not None else None,
         "g_lim_90_raw_fit": round(lim90.raw_fit_g, 4) if lim90.raw_fit_g is not None else None,
@@ -933,7 +994,7 @@ def compute_gaia_dao_reconcile(
         "g_lim_90_censored": bool(lim90.censored),
         "g_lim_50_display": lim50.display,
         "g_lim_90_display": lim90.display,
-        "g_lim_est": round(g_lim_50, 4) if math.isfinite(g_lim_50) else None,
+        "g_lim_est": round(g_lim_50, 4) if g_lim_50 is not None and math.isfinite(g_lim_50) else None,
         "fit_method": fleming.fit_method,
         "fleming_fit_params": fleming.fit_params,
         "completeness_curve": fleming.curve_bins,
