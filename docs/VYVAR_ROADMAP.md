@@ -288,18 +288,20 @@ next calibration lever.
    **STILL OPEN:** the SS Cam trust **band** (it landed YELLOW; check scatter 0.043 < 0.05) is
    **UNRESOLVED** — see item 1. Do not treat RED as the answer.
 
-1. **Phase-2 comp degradation — sparse-comp sanity, diagnostic-first (HIGH, after 0).** The sparse
+1. **Phase-2 comp degradation — sparse-comp sanity, diagnostic-first (IN PROGRESS, HIGH, after 0).** The sparse
    comp_rms is **field-wide-scale** (~1.9-3.3 mag on degenerate/V0611, ~0.35 mag on SS Cam) —
    a different definition from the 0.1 per-target gate — and the SS Cam check scatter (0.043) is
    ensemble-dependent. **Characterize first, threshold second:** does field-wide sparse comp_rms cancel
    in the differential? is check-0.043 reliable (N points, baseline)? Only then decide a relative-locus
    gate / absolute sanity ceiling and the SS Cam band. **Do NOT reverse-engineer RED.**
+   Committed diagnostic: `scripts/sparse_comp_diag.py` (output `tmp/sigma_budget/sparse_comp_diag.json`).
 
-2. **Sigma budget (HIGH, multi-rig, LOAD-BEARING)** — scintillation (Young 1967 / Osborn 2015) +
+2. **Sigma budget Phase A (IN PROGRESS, HIGH, multi-rig, LOAD-BEARING)** — scintillation (Young 1967 / Osborn 2015) +
    per-frame sigma + chi-squared/dof ~ 1 gate on verified-constant calibrator -> then Broeg IVW
-   canonical ensemble combine. Spec: `docs/VYVAR_SIGMA_BUDGET_SPEC.md`; sandbox `tmp/phase12/`.
-   Blocks TODO-GS8 (global ZP) + TODO-MULTISET. Needs a constant calibrator. **`delta_mag`
-   flux-sum canonical until gate passes.**
+   canonical ensemble combine. Spec: `docs/VYVAR_SIGMA_BUDGET_SPEC.md`; committed modules
+   `sigma_budget.py`, `scripts/chi2_sigma_gate.py`, `scripts/select_constant_calibrators.py`
+   (output `tmp/sigma_budget/calibrator_chi2_summary.json`). Blocks TODO-GS8 (global ZP) + TODO-MULTISET.
+   Needs a constant calibrator. **`delta_mag` flux-sum canonical until gate passes.**
 
 3. **EXTERNAL-XVAL — external validation campaign (MEDIUM).** VYVAR vs external tools (AstroImageJ
    et al.); includes the FWHM external-validation claim (confirm/deny "true ~7.7–8.6 px" before any
@@ -357,9 +359,10 @@ next calibration lever.
 
 ## HIGH
 
-- **Sigma budget — validated per-measurement uncertainty (BLOCKING IVW).** Howell + modified
+- **Sigma budget Phase A — validated per-measurement uncertainty (IN PROGRESS, BLOCKING IVW).** Howell + modified
   Young/Osborn scintillation + Broeg variability inflation; per-frame weight σ; reduced χ²/dof ~ 1
-  on verified-constant calibrator. Sandbox started 2026-06-15 (`tmp/phase12/`). See
+  on verified-constant calibrator. Committed 2026-07-09: `sigma_budget.py`, `scripts/chi2_sigma_gate.py`,
+  `scripts/select_constant_calibrators.py`, `tests/test_sigma_budget.py`. See
   `VYVAR_SIGMA_BUDGET_SPEC.md`. **Do not** flip ensemble combine to Broeg IVW until gate passes.
 
 - **TODO-MULTISET — per-telescope-set config architecture.** One config per rig (wide

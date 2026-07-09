@@ -1,8 +1,14 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-09** — DAO-RECONCILE workstream **CLOSED** (chain pushed).
+Last updated: **2026-07-09** — Sigma budget Phase A + sparse-comp diagnostics **IN PROGRESS** (diagnostic scripts committed).
 
-**2026-07-09 snapshot:** DAO-RECONCILE-CLOSE: flat-curve no-crossing censoring fix (draft_426
+**2026-07-09 snapshot:** SIGMA-BUDGET-A + SPARSE-COMP-DIAG: committed `sigma_budget.py` (Howell wrap +
+Osborn scintillation), `scripts/chi2_sigma_gate.py`, `scripts/select_constant_calibrators.py`,
+`scripts/sparse_comp_diag.py`, `tests/test_sigma_budget.py`. Archive runs:
+`tmp/sigma_budget/calibrator_chi2_summary.json`, `tmp/sigma_budget/sparse_comp_diag.json`.
+No production wiring; `delta_mag` flux-sum canonical. pytest **666 passed**, 15 skipped.
+
+**2026-07-09 snapshot (prior):** DAO-RECONCILE-CLOSE: flat-curve no-crossing censoring fix (draft_426
 G_lim was spurious 13.0, now `>=17.5 no crossing`); 2-pass DAO recovery CLOSED
 (not-worth-complexity); PUB-QC-MISSRESIDUAL parked. Completeness 89.7–98.3% across rigs;
 miss@G90 health signals live in QA dashboard. pytest **661 passed**, 15 skipped. Chain pushed

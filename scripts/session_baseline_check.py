@@ -364,6 +364,11 @@ def print_summary(report: SessionReport) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="Explicit alias for default fast tier (pytest + git/config/ledger only)",
+    )
+    parser.add_argument(
         "--full",
         action="store_true",
         help="Deliberate full tier: draft_424 headless run + anchor + counters (~25 min)",

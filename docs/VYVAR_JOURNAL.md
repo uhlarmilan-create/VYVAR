@@ -2,6 +2,29 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-09 — SIGMA-BUDGET-A + SPARSE-COMP-DIAG (diagnostic-first, committed scripts)
+
+**Scope:** sandbox/diagnostic only — no production wiring to `_photometric_error`, ensemble combine,
+or LC/proc output. `delta_mag` flux-sum remains canonical.
+
+**Committed modules:** `sigma_budget.py` (Howell via `_photometric_error`, Osborn scintillation,
+`total_sigma` variants), `scripts/chi2_sigma_gate.py` (reduced chi2/dof harness + bootstrap CI),
+`scripts/select_constant_calibrators.py` (filter comp-selection + LOO via
+`check_star_kmag.compute_check_ensemble_mag_calib`), `scripts/sparse_comp_diag.py` (two-way comp
+matrix decomposition + cancellation test), `tests/test_sigma_budget.py`.
+
+**Archive runs (2026-07-09):** `tmp/sigma_budget/calibrator_chi2_summary.json` (draft_424
+NoFilter_60_2: 8 calibrators G 9.3–13.2, f_resid=1.0, median chi2/dof=1.13);
+`tmp/sigma_budget/sparse_comp_diag.json` (SS Cam draft_426 g/i/r; V0611 g; healthy locus draft_424).
+Plot: `tmp/sigma_budget/chi2_vs_g_draft000424_NoFilter_60_2.png`.
+
+**Deviations reported in `CURSOR_RESULT_sigma_sparse_diag.md`** (frame gate 200→120, draft_425 no
+GREEN anchor, TELESCOPE.DIAMETER unit on draft_424).
+
+**pytest:** 666 passed, 15 skipped. **No push** (separate step).
+
+---
+
 ## 2026-07-09 — DAO-RECONCILE-CLOSE (flat-curve fix + workstream closure)
 
 **Flat-curve fix:** When completeness stays above 50%/90% to reference depth with no
