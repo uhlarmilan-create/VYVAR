@@ -126,6 +126,33 @@ real blends, not on this ratio. See `docs/VYVAR_HCHIPER_PSF_PROBE.md`.
 
 ---
 
+## Revision 2026-07-09 (HEAD f38e924) — PSF-AUDIT-FIXES
+
+Read-only audit (Claude, 2026-07-09) found four latent PSF-arc issues; all **FIXED** with PSF
+disabled in production (byte-identity vs draft_424 anchor preserved).
+
+| ID | Status | Commit | Summary |
+|----|--------|--------|---------|
+| **PSF-ERR-DECOUPLED** | FIXED | `0b5eb8b` | `psf_flux_err` never reached LC err; added missing `psf_*` to `PROC_STORE_COLS`; route LC `err` from PSF sandwich when `lc_flux_method=psf`; emit `err_method` only when PSF routes exist. |
+| **PSF-AC-FALLBACK** | FIXED | `0b5eb8b` | `psf_ac_applied` per-row flag; routing guards require AC applied (`rule_faint_psf`, `_get_lc_adaptive`, `_resolve_star_flux_method` via `compute_lc_flux_method`). |
+| **PSF-FLAG-VESTIGIAL** | FIXED | `a3368fb` | `psf_spatial_enabled` master gate: spatial active iff `enabled AND order>0`. |
+| **PSF-LEGACY-SELECTOR** | FIXED | `0b5eb8b` | Removed `_get_lc_psf_or_dao` (superseded by per-star/adaptive router). |
+
+**Part A.1 store-projection check:** `PROC_STORE_COLS` previously had `psf_flux`, `psf_fit_ok`,
+`psf_chi2`, `psf_quality`, `psf_snr` only. **Added:** `psf_flux_err`, `psf_quality_fallback`,
+`psf_ac_factor`, `psf_ac_n_used`, `psf_ac_applied`. `lc_flux_method` is runtime-computed (not
+proc-CSV persisted). `wcs_untrusted` remains derived from `catalog_match_mode`.
+
+**Positive confirmations (unchanged):** fail-safe `_run_epsf` gating; quality-fallback default;
+`neighbor_sub` `bright_close_regime` refuse path; grouper gate; EPSF-1 closure holds.
+
+**Runner classification:** `psf_runner.py` = standalone dev harness, **not** production path.
+
+**Enablement checklist (post-fix):** real-field Newton draft + ERR/AC gates **DONE** by this task;
+flip `psf_photometry_enabled` only after Brno-gate field validation.
+
+---
+
 ## Cross-references
 
 - h & chi Per probe: `docs/VYVAR_HCHIPER_PSF_PROBE.md`
