@@ -17,7 +17,7 @@ import pandas as pd
 from scipy.optimize import curve_fit
 from scipy.special import erf, erfinv
 
-from database import get_gaia_db_max_g_mag, query_local_gaia
+from database import get_gaia_db_max_g_mag, query_local_gaia, query_local_gaia_by_source_ids
 from gaia_catalog_id import normalize_gaia_source_id_series
 
 BLEND_FWHM_FACTOR = 1.5
@@ -104,6 +104,47 @@ def gaia_db_rows_to_reference_df(rows: list[dict[str, Any]]) -> pd.DataFrame:
     df["ra_deg"] = pd.to_numeric(df.get("ra_deg"), errors="coerce")
     df["dec_deg"] = pd.to_numeric(df.get("dec_deg"), errors="coerce")
     return df
+
+
+def augment_reference_with_matched_ids(
+    reference_df: pd.DataFrame,
+    detections_df: pd.DataFrame,
+    gaia_db_path: str | Any,
+) -> pd.DataFrame:
+    """Add bbox-missed but DAO-matched stars from per-id Gaia lookup + MASTERSTAR astrometry."""
+    matched_ids = _matched_catalog_id_set(detections_df)
+    ref_ids = set(_normalize_ids(reference_df)) - {""}
+    missing = sorted(matched_ids - ref_ids)
+    if not missing:
+        return reference_df
+
+    got = query_local_gaia_by_source_ids(gaia_db_path, missing)
+    det = detections_df.copy()
+    det["_cid"] = _normalize_ids(det)
+    rows: list[dict[str, Any]] = []
+    for cid in missing:
+        sub = det.loc[det["_cid"] == cid]
+        if sub.empty:
+            continue
+        r0 = sub.iloc[0]
+        ra = pd.to_numeric(r0.get("ra_deg"), errors="coerce")
+        de = pd.to_numeric(r0.get("dec_deg"), errors="coerce")
+        g_row = got.get(cid, {})
+        g_db = g_row.get("g_mag") if isinstance(g_row, dict) else None
+        mag = pd.to_numeric(g_db if g_db is not None else r0.get("phot_g_mean_mag", r0.get("mag")), errors="coerce")
+        rows.append(
+            {
+                "catalog_id": cid,
+                "ra_deg": float(ra) if np.isfinite(ra) else np.nan,
+                "dec_deg": float(de) if np.isfinite(de) else np.nan,
+                "mag": float(mag) if np.isfinite(mag) else np.nan,
+                "_augmented_match": True,
+            }
+        )
+    if not rows:
+        return reference_df
+    extra = pd.DataFrame(rows)
+    return pd.concat([reference_df, extra], ignore_index=True)
 
 
 def query_reference_population(
@@ -561,7 +602,11 @@ def classify_unmatched_dao(
             pd.to_numeric(unmatched.get("y"), errors="coerce").to_numpy(dtype=np.float64),
         ]
     )
-    collin = find_largest_collinear_group(xy, min_points=collinear_min_points, max_perp_px=collinear_max_perp_px)
+    collin = find_largest_collinear_group(
+        xy[: min(n_total, 400)],
+        min_points=collinear_min_points,
+        max_perp_px=collinear_max_perp_px,
+    )
 
     faint_hit = np.zeros(n_total, dtype=bool)
     if ref_in_frame is not None and not ref_in_frame.empty:
@@ -633,6 +678,7 @@ def compute_gaia_dao_reconcile(
         naxis2,
         mag_limit=mag_limit,
     )
+    reference_df = augment_reference_with_matched_ids(reference_df, detections_df, gaia_db_path)
     pop_check = check_reference_population_consistency(detections_df, reference_df)
     reference_df, n_off = apply_footprint_filter(
         reference_df,
