@@ -58,9 +58,9 @@ from **constant comps** (signal-safe); **band-aware** policy via `band_classify.
 
 ### REAL BLOCKERS — resume band-aware k'' (Milan-side data, not code) [SATISFIED 2026-07-07 for v1 literature path]
 
-1. **Filtered draft (V/B/R) for validation.** k'' only does real work on filtered data. Locally only
-   **NoFilter** draft **424** exists — k'' **cannot be validated where it matters** until a filtered
-   V/B/R draft is available on the dev machine.
+1. **Filtered draft (V/B/R) for validation.** k'' only does real work on filtered data. Locally
+   **NoFilter** draft **424** exists; **filtered drafts now exist on disk (Milan, 2026-07-09) —
+   data availability to be re-verified when NIGHT_FIT v2 is scheduled** (do not unblock/schedule here).
 2. **Newton/Brno literal FITS FILTER strings.** Needed so those rigs get k'' routing instead of
    fail-safe clear (UNKNOWN → CLEAR). Capture on dev PC / rigs: `FILTER`, `FILT`, `FILTER1`, `INSTFILT`
    on Chi_and_H **B/V/R/L** frames and Brno **`r_60_4`**; SQL on dev DB:
@@ -94,6 +94,8 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 ---
 
 ## PUBLICATION — VYVAR methods paper + software DOI (workstream, opened 2026-07-08)
+
+**Scheduling: LAST** — after functional work completes (Milan, 2026-07-09). Do not delete PUB items.
 
 **Status:** venue research **DONE** (2026-07-08, Claude web research); venue decision **PENDING**
 (Milan). Two-track strategy recommended: **JAAVSO** methods paper + **JOSS** software DOI;
@@ -299,8 +301,10 @@ next calibration lever.
    Blocks TODO-GS8 (global ZP) + TODO-MULTISET. Needs a constant calibrator. **`delta_mag`
    flux-sum canonical until gate passes.**
 
-3. **FWHM external validation (MEDIUM)** — confirm/deny "true ~7.7-8.6 px" claim before any factor
-   retune; header Gaussian 6.43 is self-consistent on draft_409 V0612.
+3. **EXTERNAL-XVAL — external validation campaign (MEDIUM).** VYVAR vs external tools (AstroImageJ
+   et al.); includes the FWHM external-validation claim (confirm/deny "true ~7.7–8.6 px" before any
+   factor retune). Feeds **TODO-SEP-XVAL** ledger and the future publication Validation section.
+   Supersedes standalone "FWHM external validation" item.
 
 4. **Frame-level CR / bad-pixel rejection (MEDIUM)** — shared V0612 anomaly (~JD 2461200.385) is a
    single-frame artifact matching SIPS; consider pixel-level CR rejection **before** photometry
@@ -318,8 +322,8 @@ next calibration lever.
    one bad filter no longer aborts RUN VYVAR; surviving sets reach photometry. **Open:** Milan
    **draft_401 UI sign-off + overlay**; Brno **r/i/z** end-to-end (draft_402: `r` hint_sep reject,
    `z` blocked by whole-run abort — now unblocked for survivors); gate `_brno_check` tail fixed
-   (draft_400 / skip). **TASK 2 shipped (2026-06-14):** catalog-recovery gate + hint-as-prior;
-   Brno `r` should accept, `z` stays rejected — pending Milan overlay + anchor/home-rig re-run.
+   (draft_400 / skip). **Plate-solver TASK 2 shipped (2026-06-14):** catalog-recovery gate +
+   hint-as-prior; pending Milan `r` overlay + anchor/home-rig regression re-run.
 8. **TODO-MULTISET** — per-telescope-set config (wide vs fine optics); blocks clean multi-rig
    production and crowding gating per rig.
 9. ~~**Short-baseline LC quality (#3)**~~ **DONE (2026-06-10)** — `short_baseline` terminal class,
@@ -404,8 +408,10 @@ next calibration lever.
     1.038-1.049 on synthetic Moffat). Diagnostic only; numeric SHA 770966c3 unchanged. See
     `docs/VYVAR_EPSF_AUDIT.md`, `tier_v3e/v3e_epsf_fwhm.md`.
   - ~~**Realistic per-star PSF uncertainties**~~ **DONE (2026-06-09)** via sandwich variance
-    (`psf_err_mode=sandwich_skyonly`; V3d P3 ~1 mag<=17). Real-field enablement still blocked
-    on a Newton / dense-field draft (Brno characterization gate).
+    (`psf_err_mode=sandwich_skyonly`; V3d P3 ~1 mag<=17). **2026-07-09 audit (HEAD f38e924):**
+    four latent findings **FIXED** — PSF-ERR-DECOUPLED, PSF-AC-FALLBACK, PSF-FLAG-VESTIGIAL,
+    PSF-LEGACY-SELECTOR. Enablement checklist: real-field Newton draft + ERR/AC gates DONE;
+    production PSF still OFF (`psf_photometry_enabled=False`).
 - **Per-frame saturation (not whole-star skip).** Whole-star `zone_flag=saturated` from the
   longest-exposure masterstar drops comps/targets with viable unsaturated frames (76 Green/49 Red
   on M67). Same "silent wrong drop" class as the cross-group MASTERSTAR bug.
@@ -433,9 +439,8 @@ next calibration lever.
 - **TODO-APCORR-COLOR — Extrapolation guard warn→block: DONE** (2026-06-03). Target BP-RP
   outside comp range → CT skipped, target kept uncorrected (`phase01_ct_extrapolation_tol`,
   default strict 0). **NoFilter CT enable: PARKED** — prototype on draft_000366 showed modest
-  effect (c1 ~ −0.1…−0.5 for gate-passers, cat−inst scatter 0.078→0.053 mag, only ~11% pass
-  the numeric gate; colour cut ≤0.79 already suppresses most of it). Revisit when filtered /
-  Newton fine-scale data exists.
+  effect; **filtered drafts now exist (Milan, 2026-07-09) — revisit when scheduled; do not
+  unblock here.** Revisit when filtered / Newton fine-scale data is re-verified.
 - **Verify wide-field WCS distortion model (from SIPS comparison).** Confirm whether the
   plate solve fits higher-order distortion (SIP-style) or only a linear CD matrix. On the wide
   rig (~5.6°×3.8°, with a corrector) residual field curvature can reach several pixels at the
@@ -494,9 +499,8 @@ next calibration lever.
   the local-comp ensemble already cancels most spatial systematics. Relevant only if/when VYVAR
   does whole-field absolute photometry (all targets against one frame-wide solution). Sibling of
   APCORR-COLOR (the colour term). (See DECISIONS: *What VYVAR deliberately does NOT adopt from SIPS* — spatial term scoped here.)
-- **TODO-WIDE-RIG-REPROCESS — clean re-run of 361/362.** Not a code bug: MASTERSTAR CD/WCS +
-  ePSF are already ≈ 9.77; the stale `pipeline_meta` carries `1.3` from an old run. Re-run
-  with the current WCS-first resolvers to refresh comp geometry + meta. (DECISIONS.)
+- ~~**TODO-WIDE-RIG-REPROCESS — clean re-run of 361/362.**~~ **CLOSED (OBE, 2026-07-09):** drafts
+  361/362 deleted; item no longer actionable.
 - ~~**B-V legacy removal — Stages 2–4.**~~ **Closed 2026-06-03** (scope A+B; commits in
   JOURNAL). Regenerate `vyvar_vsx_local.db` on the catalog machine after pulling.
 - **TODO-10 — Settings-tab refactor + `CONFIG_GUIDE.md`.** Ties to `VYVAR_PARAMS.md` /
@@ -549,10 +553,7 @@ manuáli.
 **Definition of Done:** manuál → čistá inštalácia od nuly po GREEN trust na testovacom poli;
 inštalátor → rovnaký výsledok na T460; manuál a inštalátor konzistentné.
 
-### Plate-solver robustness backlog (TASK 2 shipped — 2026-06-14)
-
-**Shipped:** catalog-recovery VERIFIED gate + hint-as-prior on MASTERSTAR (`vyvar_platesolver.py`).
-**Pending sign-off:** Milan `r` overlay + anchor/home-rig regression re-run before commit lock.
+### Plate-solver robustness backlog (future, lower priority)
 
 **Future (lower priority):**
 1. **Odds-based verification** — replace flat brightest-N % with confidence/odds vs chance (cone
@@ -651,10 +652,8 @@ EQUIPMENTS row and set it as default, instead of hand-entering specs. Lowers the
   DECISIONS (product scope boundary). LS/BLS citations remain for `tess_verify` TESS cross-check.
 - **Blind solver in dense fields + index series + rig-prior** — **RESOLVED 2026-06-04** (Newton):
   mag14 tiers, `vyvar_blind_series`, solve-rate harness, scale/FOV hard gates (`blind_use_rig_prior`,
-  `blind_scale_tol_frac`). **Wide-rig blind HIT** — still **OPEN** (`draft_365`: 0 votes &lt;2°;
-  tune `wide` tier / quads — see wide diag report). **PS-A note:** `_verify_blind_candidates`
-  relaxes `min_matches` 12→8 when plate scale ≥ 5″/px; when working this item, decide
-  fraction/scale_tol compensation for the wide rig.
+  `blind_scale_tol_frac`). ~~**Wide-rig blind HIT**~~ **CLOSED (2026-07-09):** believed resolved by
+  later solver work (Milan); reopen on the next wide-rig blind-solve failure.
 - **V/R re-run (draft_375)** — **RESOLVED 2026-06-04** via draft_380 clean full run (all filters).
 - **Trust `n_clean=0` diagnosis** — **RESOLVED 2026-06-04:** root cause = pre-cal proc-CSV glob in
   `load_proc_pivot` (draft-specific, not a cleaning regression); folded into canonical pre-cal

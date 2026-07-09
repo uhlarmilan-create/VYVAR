@@ -2,6 +2,20 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-09 — PSF-AUDIT-FIXES + ROADMAP-RECONCILE
+
+**PSF arc (PSF off):** four latent audit findings fixed; draft_424 anchor byte-identity preserved.
+Commits `0b5eb8b` (err routing + AC guard + ProcFrameStore PSF cols + legacy removal),
+`a3368fb` (spatial flag PARAMS note). 643 pytest passed.
+
+**Store projection (Part A.1):** added `psf_flux_err`, `psf_quality_fallback`, `psf_ac_factor`,
+`psf_ac_n_used`, `psf_ac_applied` to `PROC_STORE_COLS`.
+
+**Roadmap:** wide blind HIT CLOSED; WIDE-RIG-REPROCESS OBE; EXTERNAL-XVAL merged FWHM item;
+PUBLICATION scheduled LAST; filtered-draft note for NIGHT_FIT/NoFilter CT.
+
+---
+
 ## 2026-07-08 — PROC-STORE-TRUST-FIX + coherent draft_424 re-anchor
 
 **Root cause (BASELINE-FULL-DIAG):** `catalog_match_mode` missing from `PROC_STORE_COLS` since
