@@ -130,6 +130,7 @@ def _parse_clamps(src: str) -> dict[str, str]:
         "alignment_max_control_points": "12 … 500",
         "catalog_query_max_rows": "1000 … 500000",
         "psf_spatial_order": "0 … 2",
+        "psf_spatial_enabled": "master gate; spatial ePSF active iff enabled AND order>0",
     }
     clamps.update({k: v for k, v in manual.items() if k not in clamps})
     return clamps
