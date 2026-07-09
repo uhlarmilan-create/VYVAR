@@ -195,18 +195,49 @@ def analyze_setup(
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", type=Path, default=Path("tmp/sigma_budget"))
+    ap.add_argument(
+        "--chi2-only",
+        action="store_true",
+        help="Recompute check-star chi2 rows only (skip decomposition)",
+    )
     args = ap.parse_args()
     cfg = AppConfig()
     cases = [
         (426, "g_60_4", SS_CAM_CID),
         (426, "r_60_4", SS_CAM_CID),
         (426, "i_70_4", SS_CAM_CID),
-        (426, "z_90_4", SS_CAM_CID),
         (426, "g_60_4", V0611_CID),
-        (424, "NoFilter_60_2", "1496278752372040832"),
-        (425, "V_20_2", "458344517406391040"),
     ]
-    results = [analyze_setup(d, s, t, cfg=cfg) for d, s, t in cases]
+    if args.chi2_only:
+        results = []
+        for d, s, t in cases:
+            phot_dir = Path(cfg.archive_root) / "Drafts" / f"draft_{d:06d}" / "platesolve" / s / "photometry"
+            lc_dir = phot_dir / "lightcurves"
+            lc_path = lc_dir / f"lightcurve_{t}.csv"
+            proc_dir = resolve_proc_csv_dir(phot_dir, s)
+            meta = json.loads((phot_dir / "pipeline_meta.json").read_text(encoding="utf-8")) if (phot_dir / "pipeline_meta.json").is_file() else {}
+            rig = resolve_rig_scintillation_params(draft_id=d, setup=s, cfg=cfg, pipeline_meta=meta)
+            entry: dict[str, Any] = {"draft_id": d, "setup": s, "target_catalog_id": t, "chi2_only": True}
+            side = lc_dir / f"check_kmag_{t}.csv"
+            if not side.is_file() or proc_dir is None or not lc_path.is_file():
+                entry["available"] = False
+            else:
+                lc_df = pd.read_csv(lc_path, low_memory=False)
+                side_df = pd.read_csv(side, low_memory=False)
+                side_df["delta_mag"] = pd.to_numeric(side_df["kmag"], errors="coerce")
+                side_df["source_file"] = lc_df["source_file"].astype(str).iloc[: len(side_df)].tolist()
+                side_df["airmass"] = pd.to_numeric(lc_df["airmass"], errors="coerce").iloc[: len(side_df)].tolist()
+                chk_cid = str(side_df["check_catalog_id"].iloc[0]) if "check_catalog_id" in side_df.columns else ""
+                mags, variants, _, _ = sigma_arrays_from_lc_and_proc(side_df, proc_dir, chk_cid, rig_params=rig)
+                bjd = pd.to_numeric(lc_df.get("bjd"), errors="coerce").to_numpy(dtype=np.float64)
+                entry["available"] = True
+                entry["rig"] = rig.to_dict()
+                entry["check_chi2"] = [r.to_dict() for r in evaluate_lc_chi2_variants(
+                    mags, variants, catalog_id=chk_cid, mag_g=None, bjd=bjd,
+                )]
+            results.append(entry)
+    else:
+        results = [analyze_setup(d, s, t, cfg=cfg) for d, s, t in cases]
     path = write_summary_json({"cases": results}, args.out_dir / "sparse_comp_diag.json")
     print(path)
 

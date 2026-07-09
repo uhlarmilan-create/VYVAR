@@ -24,6 +24,26 @@ _REL_FLUX_TO_MAG = 2.5 / math.log(10.0)
 SIGMA_VARIANT_HOWELL_ONLY = "howell_only"
 SIGMA_VARIANT_HOWELL_SCINT_FULL = "howell_scint_full"
 SIGMA_VARIANT_HOWELL_SCINT_FRESID = "howell_scint_fresid"
+SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR = "howell_scint_fresid_floor"
+
+
+def combine_sigma_mag_quadrature(
+    sig_howell_mag: float,
+    sig_scint_mag: float,
+    *,
+    sigma_floor_mag: float = 0.0,
+) -> float:
+    """Combine magnitude-domain sigmas in quadrature (Howell + scint + optional floor)."""
+    terms: list[float] = []
+    if math.isfinite(sig_howell_mag) and sig_howell_mag > 0:
+        terms.append(sig_howell_mag * sig_howell_mag)
+    if math.isfinite(sig_scint_mag) and sig_scint_mag > 0:
+        terms.append(sig_scint_mag * sig_scint_mag)
+    if math.isfinite(sigma_floor_mag) and sigma_floor_mag > 0:
+        terms.append(sigma_floor_mag * sigma_floor_mag)
+    if not terms:
+        return float("nan")
+    return math.sqrt(sum(terms))
 
 
 @dataclass
@@ -187,9 +207,13 @@ def resolve_rig_scintillation_params(
 
     meta = pipeline_meta or {}
     ol = meta.get("observer_location") if isinstance(meta.get("observer_location"), dict) else {}
-    if ol.get("alt_m") is not None and math.isfinite(float(ol["alt_m"])):
-        alt_m = float(ol["alt_m"])
-        notes.append(f"altitude_m={alt_m} from pipeline_meta.observer_location")
+    if ol.get("alt_m") is not None:
+        alt_candidate = float(ol["alt_m"])
+        if math.isfinite(alt_candidate) and alt_candidate > 0:
+            alt_m = alt_candidate
+            notes.append(f"altitude_m={alt_m} from pipeline_meta.observer_location")
+        elif math.isfinite(alt_candidate):
+            notes.append(f"altitude_m={alt_candidate} from pipeline_meta ignored (<=0)")
 
     if draft_id is not None:
         try:
@@ -212,9 +236,13 @@ def resolve_rig_scintillation_params(
                     notes.append(
                         f"D={diam_m:.3f} m from TELESCOPE.DIAMETER ({rd.get('telescope_name')})"
                     )
-                if alt_m is None and rd.get("altitude_m") is not None and math.isfinite(float(rd["altitude_m"])):
-                    alt_m = float(rd["altitude_m"])
-                    notes.append(f"altitude_m={alt_m} from LOCATION ({rd.get('place_name')})")
+                if alt_m is None and rd.get("altitude_m") is not None:
+                    loc_alt = float(rd["altitude_m"])
+                    if math.isfinite(loc_alt) and loc_alt > 0:
+                        alt_m = loc_alt
+                        notes.append(f"altitude_m={alt_m} from LOCATION ({rd.get('place_name')})")
+                    elif math.isfinite(loc_alt):
+                        notes.append(f"LOCATION altitude_m={loc_alt} ignored (<=0)")
         except Exception as exc:  # noqa: BLE001
             notes.append(f"DB rig lookup failed: {exc!s}")
 

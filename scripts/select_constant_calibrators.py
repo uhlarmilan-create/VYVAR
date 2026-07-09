@@ -30,11 +30,20 @@ from scripts.chi2_sigma_gate import (  # noqa: E402
     Chi2StarResult,
     evaluate_lc_chi2_variants,
     fit_f_resid_ensemble,
+    fit_f_resid_sigma_floor_ensemble,
     plot_chi2_vs_g,
+    saturation_margin_distribution,
     sigma_arrays_from_lc_and_proc,
     write_summary_json,
 )
-from sigma_budget import SIGMA_VARIANT_HOWELL_SCINT_FRESID, resolve_rig_scintillation_params  # noqa: E402
+from sigma_budget import (  # noqa: E402
+    SIGMA_VARIANT_HOWELL_SCINT_FRESID,
+    SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR,
+    resolve_rig_scintillation_params,
+)
+
+G93_CALIBRATOR = "1497674651102612992"
+SATURATION_FLAG_FILL = 0.85
 
 
 def _norm_id(x: object) -> str:
@@ -169,6 +178,62 @@ def build_loo_differential_lc(
     return out
 
 
+def draft_trust_summary(phot_dir: Path) -> dict[str, Any]:
+    summ_path = phot_dir / "photometry_summary.csv"
+    if not summ_path.is_file():
+        return {"available": False}
+    summ = pd.read_csv(summ_path, low_memory=False)
+    trust_col = summ.get("trust", pd.Series(dtype=str)).astype(str)
+    counts = trust_col.value_counts(dropna=False).to_dict()
+    return {
+        "available": True,
+        "trust_value_counts": {str(k): int(v) for k, v in counts.items()},
+        "n_rows": int(len(summ)),
+        "n_green": int((trust_col.str.upper() == "GREEN").sum()),
+    }
+
+
+def _run_chi2_for_calibrators(
+    calibrators: pd.DataFrame,
+    *,
+    phot_dir: Path,
+    setup: str,
+    anchor: str,
+    proc_dir: Path,
+    rig: Any,
+    cfg: AppConfig,
+    f_resid: float,
+    sigma_floor_mag: float,
+    exclude_ids: set[str] | None = None,
+) -> tuple[list[Chi2StarResult], list[dict[str, Any]]]:
+    chi2_objs: list[Chi2StarResult] = []
+    rows_out: list[dict[str, Any]] = []
+    fmap = {
+        SIGMA_VARIANT_HOWELL_SCINT_FRESID: f_resid,
+        SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR: f_resid,
+    }
+    fmap_floor = {SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR: sigma_floor_mag}
+    for _, row in calibrators.iterrows():
+        cid = _norm_id(row["catalog_id"])
+        if exclude_ids and cid in exclude_ids:
+            continue
+        loo = build_loo_differential_lc(cid, phot_dir=phot_dir, setup=setup, anchor_target=anchor, cfg=cfg)
+        if loo is None:
+            continue
+        mags, variants, _, _ = sigma_arrays_from_lc_and_proc(
+            loo, proc_dir, cid, rig_params=rig, f_resid=f_resid, sigma_floor_mag=sigma_floor_mag,
+        )
+        bjd = pd.to_numeric(loo["bjd"], errors="coerce").to_numpy(dtype=np.float64)
+        res = evaluate_lc_chi2_variants(
+            mags, variants, catalog_id=cid,
+            mag_g=float(row["mag_g"]) if math.isfinite(float(row["mag_g"])) else None,
+            bjd=bjd, f_resid_map=fmap, sigma_floor_map=fmap_floor,
+        )
+        chi2_objs.extend(res)
+        rows_out.extend([r.to_dict() for r in res])
+    return chi2_objs, rows_out
+
+
 def run_setup(draft_id: int, setup: str, *, cfg: AppConfig, min_frames: int, out_dir: Path) -> dict[str, Any]:
     phot_dir = Path(cfg.archive_root) / "Drafts" / f"draft_{draft_id:06d}" / "platesolve" / setup / "photometry"
     meta = json.loads((phot_dir / "pipeline_meta.json").read_text(encoding="utf-8")) if (phot_dir / "pipeline_meta.json").is_file() else {}
@@ -199,46 +264,70 @@ def run_setup(draft_id: int, setup: str, *, cfg: AppConfig, min_frames: int, out
         "min_frames_requested": min_frames,
         "min_frames_effective": eff_min,
         "frame_gate_relaxed": frame_gate_relaxed,
+        "trust_summary": draft_trust_summary(phot_dir),
         "calibrators": [],
         "chi2_results": [],
+        "chi2_results_excl_g93": [],
+        "variant_iqr": {},
     }
     if calibrators.empty or anchor is None or proc_dir is None:
         out["note"] = "no calibrators or anchor/proc missing"
         return out
 
     ensemble_inputs: list[tuple[np.ndarray, np.ndarray, np.ndarray]] = []
-    chi2_objs: list[Chi2StarResult] = []
+    loo_by_cid: dict[str, pd.DataFrame] = {}
     for _, row in calibrators.iterrows():
         cid = _norm_id(row["catalog_id"])
         loo = build_loo_differential_lc(cid, phot_dir=phot_dir, setup=setup, anchor_target=anchor, cfg=cfg)
         if loo is None:
             continue
+        loo_by_cid[cid] = loo
         mags, _, sh, ss = sigma_arrays_from_lc_and_proc(loo, proc_dir, cid, rig_params=rig)
         ensemble_inputs.append((mags, sh, ss))
-        out["calibrators"].append(
-            {
-                "catalog_id": cid,
-                "mag_g": float(row["mag_g"]) if math.isfinite(float(row["mag_g"])) else None,
-                "n_frames": int(row["comp_n_frames"]),
-                "comp_rms": float(row["comp_rms"]),
-            }
-        )
+        cal_entry = {
+            "catalog_id": cid,
+            "mag_g": float(row["mag_g"]) if math.isfinite(float(row["mag_g"])) else None,
+            "n_frames": int(row["comp_n_frames"]),
+            "comp_rms": float(row["comp_rms"]),
+        }
+        if cid == _norm_id(G93_CALIBRATOR):
+            cal_entry["saturation_margin"] = saturation_margin_distribution(loo, proc_dir, cid)
+        out["calibrators"].append(cal_entry)
+
     f_resid, med_c2d, spread = fit_f_resid_ensemble(ensemble_inputs)
     out["f_resid_fit"] = {"f_resid": f_resid, "median_chi2_dof": med_c2d, "chi2_dof_iqr": spread}
-    for _, row in calibrators.iterrows():
-        cid = _norm_id(row["catalog_id"])
-        loo = build_loo_differential_lc(cid, phot_dir=phot_dir, setup=setup, anchor_target=anchor, cfg=cfg)
-        if loo is None:
-            continue
-        mags, variants, _, _ = sigma_arrays_from_lc_and_proc(loo, proc_dir, cid, rig_params=rig, f_resid=f_resid)
-        bjd = pd.to_numeric(loo["bjd"], errors="coerce").to_numpy(dtype=np.float64)
-        res = evaluate_lc_chi2_variants(
-            mags, variants, catalog_id=cid,
-            mag_g=float(row["mag_g"]) if math.isfinite(float(row["mag_g"])) else None,
-            bjd=bjd, f_resid_map={SIGMA_VARIANT_HOWELL_SCINT_FRESID: f_resid},
+    joint = fit_f_resid_sigma_floor_ensemble(ensemble_inputs)
+    out["joint_fit"] = joint.to_dict()
+    out["sigma_floor_mag"] = joint.sigma_floor_mag
+    out["sigma_floor_mag_mm"] = joint.sigma_floor_mag * 1000.0
+
+    sat_flag = False
+    for c in out["calibrators"]:
+        sm = c.get("saturation_margin") or {}
+        if sm.get("fill_p95") is not None and float(sm["fill_p95"]) >= SATURATION_FLAG_FILL:
+            sat_flag = True
+        if sm.get("fill_max") is not None and float(sm["fill_max"]) >= 1.0:
+            sat_flag = True
+    out["g93_saturation_flagged"] = sat_flag
+
+    chi2_objs, chi2_rows = _run_chi2_for_calibrators(
+        calibrators, phot_dir=phot_dir, setup=setup, anchor=anchor, proc_dir=proc_dir,
+        rig=rig, cfg=cfg, f_resid=joint.f_resid, sigma_floor_mag=joint.sigma_floor_mag,
+    )
+    out["chi2_results"] = chi2_rows
+    if sat_flag:
+        _, chi2_excl = _run_chi2_for_calibrators(
+            calibrators, phot_dir=phot_dir, setup=setup, anchor=anchor, proc_dir=proc_dir,
+            rig=rig, cfg=cfg, f_resid=joint.f_resid, sigma_floor_mag=joint.sigma_floor_mag,
+            exclude_ids={_norm_id(G93_CALIBRATOR)},
         )
-        chi2_objs.extend(res)
-        out["chi2_results"].extend([r.to_dict() for r in res])
+        out["chi2_results_excl_g93"] = chi2_excl
+
+    for variant in sorted({r.variant for r in chi2_objs}):
+        sub = [r.chi2_dof for r in chi2_objs if r.variant == variant and math.isfinite(r.chi2_dof)]
+        if len(sub) >= 2:
+            out["variant_iqr"][variant] = float(np.subtract(*np.percentile(sub, [75, 25])))
+
     if chi2_objs:
         out["chi2_plot"] = plot_chi2_vs_g(
             chi2_objs, out_dir / f"chi2_vs_g_draft{draft_id:06d}_{setup}.png",
@@ -249,7 +338,7 @@ def run_setup(draft_id: int, setup: str, *, cfg: AppConfig, min_frames: int, out
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--drafts", default="424,425")
+    ap.add_argument("--drafts", default="424")
     ap.add_argument("--min-frames", type=int, default=200)
     ap.add_argument("--out-dir", type=Path, default=Path("tmp/sigma_budget"))
     args = ap.parse_args()
@@ -263,6 +352,12 @@ def main() -> None:
             if sd.is_dir():
                 setups.append(run_setup(d, sd.name, cfg=cfg, min_frames=args.min_frames, out_dir=out_dir))
     path = write_summary_json({"setups": setups}, out_dir / "calibrator_chi2_summary.json")
+    # Side-question: draft_425 trust distribution (K2 validation draft)
+    trust_425: list[dict[str, Any]] = []
+    for setup_name in ("V_20_2", "B_20_2", "R_20_2"):
+        phot_dir = Path(cfg.archive_root) / "Drafts" / "draft_000425" / "platesolve" / setup_name / "photometry"
+        trust_425.append({"draft_id": 425, "setup": setup_name, **draft_trust_summary(phot_dir)})
+    write_summary_json({"draft_425_trust": trust_425}, out_dir / "draft_425_trust.json")
     print(path)
 
 

@@ -2,7 +2,12 @@
 
 Last updated: **2026-07-09** — Sigma budget Phase A + sparse-comp diagnostics **IN PROGRESS** (diagnostic scripts committed).
 
-**2026-07-09 snapshot:** SIGMA-BUDGET-A + SPARSE-COMP-DIAG: committed `sigma_budget.py` (Howell wrap +
+**2026-07-09 snapshot:** SIGMA-A2: rig fixes (TELESCOPE.DIAMETER 72→200 mm, alt<=0 guard),
+`sigma_floor` variant + joint (f_resid, sigma_floor) fit with bootstrap CIs; draft_424 rerun
+D=0.2 m alt=275 m, joint fit f_resid=0.74 sigma_floor=10.5 mmag. G9.3 calibrator not saturation-flagged
+(fill_max=0.53). pytest **669 passed**, 15 skipped. Pushed e2c9466 (A) + A2 commit.
+
+**2026-07-09 snapshot (prior):** SIGMA-BUDGET-A + SPARSE-COMP-DIAG: committed `sigma_budget.py` (Howell wrap +
 Osborn scintillation), `scripts/chi2_sigma_gate.py`, `scripts/select_constant_calibrators.py`,
 `scripts/sparse_comp_diag.py`, `tests/test_sigma_budget.py`. Archive runs:
 `tmp/sigma_budget/calibrator_chi2_summary.json`, `tmp/sigma_budget/sparse_comp_diag.json`.

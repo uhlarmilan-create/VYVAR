@@ -2,6 +2,23 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-09 — SIGMA-A2 (rig fixes, sigma_floor variant, rerun)
+
+**Rig fixes:** `scripts/fix_telescope_diameter.py` (Carl-Zeiss DIAMETER 72→200 mm, `--apply`);
+`resolve_rig_scintillation_params` rejects alt<=0 from pipeline_meta → LOCATION fallback.
+
+**sigma_floor variant:** `howell_scint_fresid_floor` in quadrature (mag domain); joint grid fit +
+bootstrap CIs on (f_resid, sigma_floor). draft_424 rerun: D=0.2 m, alt=275 m (Jirny);
+f_resid=0.74 [0.0,1.0], sigma_floor=10.5 mmag [9.5,11.0], median chi2/dof=1.000, IQR=0.158.
+G9.3 calibrator saturation fill p50/p95/max = 0.41/0.49/0.53 (not flagged; threshold 0.85).
+
+**draft_425 trust:** V/B/R setups have zero GREEN rows — trust counts YELLOW+RED only
+(see `tmp/sigma_budget/draft_425_trust.json`).
+
+**pytest:** 669 passed, 15 skipped.
+
+---
+
 ## 2026-07-09 — SIGMA-BUDGET-A + SPARSE-COMP-DIAG (diagnostic-first, committed scripts)
 
 **Scope:** sandbox/diagnostic only — no production wiring to `_photometric_error`, ensemble combine,

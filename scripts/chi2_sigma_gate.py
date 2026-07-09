@@ -22,6 +22,8 @@ from sigma_budget import (
     SIGMA_VARIANT_HOWELL_ONLY,
     SIGMA_VARIANT_HOWELL_SCINT_FULL,
     SIGMA_VARIANT_HOWELL_SCINT_FRESID,
+    SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR,
+    combine_sigma_mag_quadrature,
     relative_flux_err_to_mag_sigma,
     resolve_rig_scintillation_params,
     total_sigma,
@@ -45,6 +47,23 @@ class Chi2StarResult:
     chi2_dof_ci_lo: float | None
     chi2_dof_ci_hi: float | None
     f_resid: float | None = None
+    sigma_floor_mag: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class JointFitResult:
+    f_resid: float
+    sigma_floor_mag: float
+    median_chi2_dof: float
+    chi2_dof_iqr: float
+    f_resid_ci_lo: float | None
+    f_resid_ci_hi: float | None
+    sigma_floor_ci_lo: float | None
+    sigma_floor_ci_hi: float | None
+    f_resid_pinned_edge: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -122,6 +141,7 @@ def evaluate_lc_chi2_variants(
     mag_g: float | None,
     bjd: np.ndarray,
     f_resid_map: dict[str, float] | None = None,
+    sigma_floor_map: dict[str, float] | None = None,
 ) -> list[Chi2StarResult]:
     out: list[Chi2StarResult] = []
     bh = baseline_hours_from_bjd(bjd)
@@ -141,40 +161,19 @@ def evaluate_lc_chi2_variants(
                 chi2_dof_ci_lo=lo,
                 chi2_dof_ci_hi=hi,
                 f_resid=(f_resid_map or {}).get(variant),
+                sigma_floor_mag=(sigma_floor_map or {}).get(variant),
             )
         )
     return out
 
 
-def fit_f_resid_ensemble(
+def _ensemble_median_chi2(
     calibrator_results: list[tuple[np.ndarray, np.ndarray, np.ndarray]],
-) -> tuple[float, float, float]:
-    grid = np.linspace(0.0, 1.0, 51)
-    best_f = 0.0
-    best_dist = float("inf")
-    best_median = float("nan")
-    for f in grid:
-        c2ds: list[float] = []
-        for mags, sh, ss in calibrator_results:
-            m = np.asarray(mags, dtype=np.float64)
-            shv = np.asarray(sh, dtype=np.float64)
-            ssv = np.asarray(ss, dtype=np.float64)
-            ok = np.isfinite(m) & np.isfinite(shv) & np.isfinite(ssv)
-            if int(ok.sum()) < 3:
-                continue
-            sig = np.sqrt(shv[ok] ** 2 + (f * ssv[ok]) ** 2)
-            _, _, c2d, _ = reduced_chi2_constant(m[ok], sig)
-            if math.isfinite(c2d):
-                c2ds.append(c2d)
-        if not c2ds:
-            continue
-        med = float(np.median(c2ds))
-        dist = abs(med - 1.0)
-        if dist < best_dist:
-            best_dist = dist
-            best_f = float(f)
-            best_median = med
-    final_c2ds: list[float] = []
+    *,
+    f_resid: float,
+    sigma_floor_mag: float = 0.0,
+) -> float | None:
+    c2ds: list[float] = []
     for mags, sh, ss in calibrator_results:
         m = np.asarray(mags, dtype=np.float64)
         shv = np.asarray(sh, dtype=np.float64)
@@ -182,16 +181,127 @@ def fit_f_resid_ensemble(
         ok = np.isfinite(m) & np.isfinite(shv) & np.isfinite(ssv)
         if int(ok.sum()) < 3:
             continue
-        sig = np.sqrt(shv[ok] ** 2 + (best_f * ssv[ok]) ** 2)
+        sig = np.array(
+            [
+                combine_sigma_mag_quadrature(shv[i], f_resid * ssv[i], sigma_floor_mag=sigma_floor_mag)
+                for i in np.where(ok)[0]
+            ],
+            dtype=np.float64,
+        )
         _, _, c2d, _ = reduced_chi2_constant(m[ok], sig)
         if math.isfinite(c2d):
-            final_c2ds.append(c2d)
-    spread = (
-        float(np.subtract(*np.percentile(final_c2ds, [75, 25])))
-        if len(final_c2ds) >= 2
+            c2ds.append(c2d)
+    return float(np.median(c2ds)) if c2ds else None
+
+
+def _ensemble_chi2_spread(
+    calibrator_results: list[tuple[np.ndarray, np.ndarray, np.ndarray]],
+    *,
+    f_resid: float,
+    sigma_floor_mag: float = 0.0,
+) -> float:
+    c2ds: list[float] = []
+    for mags, sh, ss in calibrator_results:
+        m = np.asarray(mags, dtype=np.float64)
+        shv = np.asarray(sh, dtype=np.float64)
+        ssv = np.asarray(ss, dtype=np.float64)
+        ok = np.isfinite(m) & np.isfinite(shv) & np.isfinite(ssv)
+        if int(ok.sum()) < 3:
+            continue
+        sig = np.array(
+            [
+                combine_sigma_mag_quadrature(shv[i], f_resid * ssv[i], sigma_floor_mag=sigma_floor_mag)
+                for i in np.where(ok)[0]
+            ],
+            dtype=np.float64,
+        )
+        _, _, c2d, _ = reduced_chi2_constant(m[ok], sig)
+        if math.isfinite(c2d):
+            c2ds.append(c2d)
+    return (
+        float(np.subtract(*np.percentile(c2ds, [75, 25])))
+        if len(c2ds) >= 2
         else float("nan")
     )
-    return best_f, best_median, spread
+
+
+def _fit_f_floor_grid(
+    calibrator_results: list[tuple[np.ndarray, np.ndarray, np.ndarray]],
+    *,
+    fit_floor: bool,
+) -> tuple[float, float, float, float]:
+    f_grid = np.linspace(0.0, 1.0, 51)
+    floor_grid = np.linspace(0.0, 0.02, 41) if fit_floor else np.array([0.0])
+    best_f, best_floor = 0.0, 0.0
+    best_dist = float("inf")
+    best_median = float("nan")
+    for f in f_grid:
+        for fl in floor_grid:
+            med = _ensemble_median_chi2(calibrator_results, f_resid=float(f), sigma_floor_mag=float(fl))
+            if med is None:
+                continue
+            dist = abs(med - 1.0)
+            if dist < best_dist:
+                best_dist = dist
+                best_f = float(f)
+                best_floor = float(fl)
+                best_median = med
+    spread = _ensemble_chi2_spread(
+        calibrator_results, f_resid=best_f, sigma_floor_mag=best_floor,
+    )
+    return best_f, best_floor, best_median, spread
+
+
+def fit_f_resid_ensemble(
+    calibrator_results: list[tuple[np.ndarray, np.ndarray, np.ndarray]],
+) -> tuple[float, float, float]:
+    f, _, med, spread = _fit_f_floor_grid(calibrator_results, fit_floor=False)
+    return f, med, spread
+
+
+def fit_f_resid_sigma_floor_ensemble(
+    calibrator_results: list[tuple[np.ndarray, np.ndarray, np.ndarray]],
+    *,
+    n_boot: int = 400,
+    seed: int = 0,
+    alpha: float = 0.16,
+) -> JointFitResult:
+    f, floor, med, spread = _fit_f_floor_grid(calibrator_results, fit_floor=True)
+    pinned: str | None = None
+    if abs(f) < 1e-9:
+        pinned = "lower"
+    elif abs(f - 1.0) < 1e-9:
+        pinned = "upper"
+    f_boot: list[float] = []
+    fl_boot: list[float] = []
+    n_cal = len(calibrator_results)
+    if n_cal >= 3 and n_boot > 0:
+        rng = np.random.default_rng(seed)
+        for _ in range(n_boot):
+            idx = rng.integers(0, n_cal, size=n_cal)
+            sample = [calibrator_results[int(i)] for i in idx]
+            bf, bfl, _, _ = _fit_f_floor_grid(sample, fit_floor=True)
+            f_boot.append(bf)
+            fl_boot.append(bfl)
+    f_lo = f_hi = fl_lo = fl_hi = None
+    if len(f_boot) >= 10:
+        f_arr = np.sort(np.asarray(f_boot, dtype=float))
+        fl_arr = np.sort(np.asarray(fl_boot, dtype=float))
+        f_lo = float(np.quantile(f_arr, alpha))
+        f_hi = float(np.quantile(f_arr, 1.0 - alpha))
+        fl_lo = float(np.quantile(fl_arr, alpha))
+        fl_hi = float(np.quantile(fl_arr, 1.0 - alpha))
+    return JointFitResult(
+        f_resid=f,
+        sigma_floor_mag=floor,
+        median_chi2_dof=med,
+        chi2_dof_iqr=spread,
+        f_resid_ci_lo=f_lo,
+        f_resid_ci_hi=f_hi,
+        sigma_floor_ci_lo=fl_lo,
+        sigma_floor_ci_hi=fl_hi,
+        f_resid_pinned_edge=pinned,
+    )
 
 
 def plot_chi2_vs_g(
@@ -207,6 +317,7 @@ def plot_chi2_vs_g(
         SIGMA_VARIANT_HOWELL_ONLY: "#4C78A8",
         SIGMA_VARIANT_HOWELL_SCINT_FULL: "#E45756",
         SIGMA_VARIANT_HOWELL_SCINT_FRESID: "#72B7B2",
+        SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR: "#54A24B",
     }
     for v in sorted({r.variant for r in results}):
         sub = [r for r in results if r.variant == v and r.mag_g is not None and math.isfinite(r.chi2_dof)]
@@ -263,6 +374,7 @@ def sigma_arrays_from_lc_and_proc(
     *,
     rig_params: Any,
     f_resid: float = 0.0,
+    sigma_floor_mag: float = 0.0,
     gain: float = 1.0,
     read_noise: float = 10.0,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], np.ndarray, np.ndarray]:
@@ -276,6 +388,7 @@ def sigma_arrays_from_lc_and_proc(
         SIGMA_VARIANT_HOWELL_ONLY: np.full(n, np.nan),
         SIGMA_VARIANT_HOWELL_SCINT_FULL: np.full(n, np.nan),
         SIGMA_VARIANT_HOWELL_SCINT_FRESID: np.full(n, np.nan),
+        SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR: np.full(n, np.nan),
     }
     for i, sf in enumerate(lc_df.get("source_file", pd.Series([""] * n)).astype(str).tolist()):
         row = load_proc_row_for_source(proc_dir, sf, catalog_id)
@@ -318,7 +431,45 @@ def sigma_arrays_from_lc_and_proc(
         variants[SIGMA_VARIANT_HOWELL_ONLY][i] = sh[i]
         variants[SIGMA_VARIANT_HOWELL_SCINT_FULL][i] = relative_flux_err_to_mag_sigma(sig_t_full)
         variants[SIGMA_VARIANT_HOWELL_SCINT_FRESID][i] = relative_flux_err_to_mag_sigma(sig_t_fr)
+        variants[SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR][i] = combine_sigma_mag_quadrature(
+            sh[i], f_resid * ss[i], sigma_floor_mag=sigma_floor_mag,
+        )
     return mags, variants, sh, ss
+
+
+def saturation_margin_distribution(
+    lc_df: pd.DataFrame,
+    proc_dir: Path,
+    catalog_id: str,
+) -> dict[str, Any]:
+    """Per-frame peak ADU fill fraction vs pipeline saturate_limit_adu_85pct."""
+    fills: list[float] = []
+    peaks: list[float] = []
+    limits: list[float] = []
+    for sf in lc_df.get("source_file", pd.Series(dtype=str)).astype(str).tolist():
+        row = load_proc_row_for_source(proc_dir, sf, catalog_id)
+        if row is None:
+            continue
+        peak = float(pd.to_numeric(row.get("peak_max_adu"), errors="coerce"))
+        limit = float(pd.to_numeric(row.get("saturate_limit_adu_85pct"), errors="coerce"))
+        if not math.isfinite(limit) or limit <= 0:
+            limit = float(pd.to_numeric(row.get("saturate_limit_adu"), errors="coerce"))
+        if math.isfinite(peak) and math.isfinite(limit) and limit > 0:
+            fills.append(peak / limit)
+            peaks.append(peak)
+            limits.append(limit)
+    if not fills:
+        return {"n_frames": 0, "fill_p50": None, "fill_p95": None, "fill_max": None}
+    arr = np.asarray(fills, dtype=float)
+    return {
+        "n_frames": int(len(fills)),
+        "fill_p50": float(np.quantile(arr, 0.5)),
+        "fill_p95": float(np.quantile(arr, 0.95)),
+        "fill_max": float(np.max(arr)),
+        "peak_max_adu_max": float(np.max(peaks)),
+        "saturate_limit_adu_85pct_median": float(np.median(limits)),
+        "likely_saturated_frames": int(np.sum(arr >= 1.0)),
+    }
 
 
 def main() -> None:
