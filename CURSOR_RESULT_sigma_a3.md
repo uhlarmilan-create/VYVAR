@@ -10,7 +10,7 @@ Added variant (e) with Honeycutt ensemble SEM (dual path a/b), joint refit (d)+(
 | Item | Value |
 |------|-------|
 | Base | `b7db856` |
-| Push | (see Files changed) |
+| Push | `a676848` |
 
 ### Variant median chi2/dof and IQR — draft_424 calibrator ensemble
 

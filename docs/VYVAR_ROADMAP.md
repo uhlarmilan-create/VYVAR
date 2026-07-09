@@ -75,7 +75,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 
 | ID | Sev | Notes |
 |----|-----|-------|
-| **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. **A4 (2026-07-09):** draft_426 bin4 check-star χ²=0.04–0.33; header GAIN=12.48 vs DB eq4-scaled 16.0; σ_ratio≈1.13 → χ²_pred≈0.78 (partial). Forensics: `scripts/bin4_sigma_forensics.py`, `tmp/sigma_budget/bin4_sigma_forensics.json`. DB equipment_id mismatch (eq4 IMX411 vs header matching eq2 IMX571 scale). |
+| **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. **A4 (2026-07-09):** draft_426 bin4 check-star χ²=0.04–0.33; header GAIN=12.48 (session truth); σ_ratio≈1.13 → χ²_pred≈0.78. **SESSION-CLOSE-0709:** FITS headers unambiguously identify **eq4 C5A-150M/IMX411** (INSTRUME + 3552×2664 @ bin4 → 14208×10656); OBS_DRAFT already eq4 — **gain accounting EXCLUDED** as equipment-attribution error. Corrected-gain hypothesis (gain=16) **worsens** χ². Open candidates: **RN scaling mode** (RN=14.08 = 4× bin1 — sum-mode assumption to verify), **sky/area accounting** in binned pixels, **stack hypothesis** (IMAGETYP=OBJECT, NCOMBINE absent on sampled frames — not stacked subs). Forensics: `scripts/bin4_sigma_forensics.py`, `tmp/sigma_budget/bin4_sigma_forensics.json`. |
 | **F-EXCEPT-TIER1** | — | **CLOSED (2026-07-08)** — 40 fixes + EXCEPT-BULK; census `docs/VYVAR_EXCEPT_CENSUS.md` all **625 EVIDENCE**. |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
@@ -288,26 +288,29 @@ next calibration lever.
    **STILL OPEN:** the SS Cam trust **band** (it landed YELLOW; check scatter 0.043 < 0.05) is
    **UNRESOLVED** — see item 1. Do not treat RED as the answer.
 
-1. **Phase-2 comp degradation — sparse-comp sanity, diagnostic-first (IN PROGRESS, HIGH, after 0).** The sparse
-   comp_rms is **field-wide-scale** (~1.9-3.3 mag on degenerate/V0611, ~0.35 mag on SS Cam) —
-   a different definition from the 0.1 per-target gate — and the SS Cam check scatter (0.043) is
-   ensemble-dependent. **Characterize first, threshold second:** does field-wide sparse comp_rms cancel
-   in the differential? is check-0.043 reliable (N points, baseline)? Only then decide a relative-locus
-   gate / absolute sanity ceiling and the SS Cam band. **Do NOT reverse-engineer RED.**
-   Committed diagnostic: `scripts/sparse_comp_diag.py` (output `tmp/sigma_budget/sparse_comp_diag.json`).
+1. **Phase-2 comp degradation — sparse-comp sanity (DIAGNOSTICS DONE, gate redesign PROPOSED).** Sparse
+   comp_rms is **field-wide-scale** (~0.41–1.0 mag headline on SS Cam/V0611) — offset structure that
+   **~95% cancels** in differential (cancellation_factor ~0.02–0.08 on draft_426). **Temporal component**
+   8–12 mmag (healthy). Check scatter 0.037 mag on SS Cam g_60_4 with CI [0.032, 0.040] — healthy vs
+   gate. **PROPOSED (not enacted):** sparse trust should evaluate (a) check scatter vs its CI and
+   (b) the **temporal** component of comp_rms — never the field-wide headline against the 0.1 per-target
+   gate (different quantities). SS Cam stays **YELLOW**; band decision **OPEN** pending Milan review.
+   **Do NOT reverse-engineer RED.** Diagnostic: `scripts/sparse_comp_diag.py`
+   (`tmp/sigma_budget/sparse_comp_diag.json`).
 
-2. **Sigma budget Phase A (IN PROGRESS, HIGH, multi-rig, LOAD-BEARING)** — scintillation (Young 1967 / Osborn 2015) +
-   per-frame sigma + chi-squared/dof ~ 1 gate on verified-constant calibrator -> then Broeg IVW
-   canonical ensemble combine. Spec: `docs/VYVAR_SIGMA_BUDGET_SPEC.md`; committed modules
+2. ~~**Sigma budget Phase A (wide rig)**~~ **DONE (2026-07-09, wide rig; Newton bin4 open).**
+   Validated model: photon (+) Honeycutt ensemble SEM (+) **6.5 mmag floor**; scintillation ~2 mmag
+   negligible on D=0.2 m; f_resid → 0 (variant e). Attribution (draft_424): k2-signature pooled R²≈0 —
+   **k'' would recover 0.0 mmag** (colour matching works; NIGHT_FIT v2 will not reduce this floor);
+   phase/PRNU strongest candidate (6.5 → 4.5 mmag); **~4.5 mmag rig constant** remains. Committed:
    `sigma_budget.py`, `scripts/chi2_sigma_gate.py`, `scripts/select_constant_calibrators.py`,
-   `scripts/fix_telescope_diameter.py` (A2 rig DB fix). A2 rerun (draft_424): joint fit
-   f_resid=0.74, sigma_floor=10.5 mmag, median chi2/dof=1.000. **A3 (2026-07-09):** variant (e)
-   adds production Honeycutt ensemble SEM; joint (e) refit sigma_floor=6.5 mmag (prediction:
-   floor_did_not_collapse). **A4 (2026-07-09):** k2-signature attribution pooled R²≈0 — k'' correction
-   would recover **0.0 mmag** of the 6.5 mmag floor; phase-signature floor_after=4.5 mmag (Δ=2.0).
-   Bin4 forensics: header gain 12.48 e-/ADU (session truth), σ_used/σ_exp≈1.13; F-BINGAIN-1 reframe
-   pointer in `scripts/bin4_sigma_forensics.py`. Blocks TODO-GS8 + TODO-MULTISET.
-   **`delta_mag` flux-sum canonical until gate passes.**
+   `scripts/sigma_floor_attribution.py`, `scripts/bin4_sigma_forensics.py`, `scripts/fix_telescope_diameter.py`,
+   `scripts/fix_draft_equipment.py`. **Remaining scoped:** Newton bin4 chi2 deficit (F-BINGAIN-1).
+   **Open decisions (Milan):**
+   - **PROD-SIGMA-FLOOR:** add per-rig `sigma_sys` floor to production err (changes outputs → re-anchor;
+     bright-star AAVSO error bars currently underestimated by floor) — separate session.
+   - **SIGMA-NEWTON:** extend chi2 gate to Newton rigs once bin4 sigma is fixed.
+   Blocks TODO-GS8 + TODO-MULTISET for IVW flip. **`delta_mag` flux-sum canonical until Newton gate passes.**
 
 3. **EXTERNAL-XVAL — external validation campaign (MEDIUM).** VYVAR vs external tools (AstroImageJ
    et al.); includes the FWHM external-validation claim (confirm/deny "true ~7.7–8.6 px" before any
@@ -365,11 +368,10 @@ next calibration lever.
 
 ## HIGH
 
-- **Sigma budget Phase A — validated per-measurement uncertainty (IN PROGRESS, BLOCKING IVW).** Howell + modified
-  Young/Osborn scintillation + Broeg variability inflation; per-frame weight σ; reduced χ²/dof ~ 1
-  on verified-constant calibrator. Committed 2026-07-09: `sigma_budget.py`, `scripts/chi2_sigma_gate.py`,
-  `scripts/select_constant_calibrators.py`, `tests/test_sigma_budget.py`. See
-  `VYVAR_SIGMA_BUDGET_SPEC.md`. **Do not** flip ensemble combine to Broeg IVW until gate passes.
+- ~~**Sigma budget Phase A — validated per-measurement uncertainty (wide rig)**~~ **DONE (2026-07-09).**
+  Howell + Honeycutt ensemble SEM + 6.5 mmag floor; scintillation negligible on wide rig; f_resid→0.
+  Newton bin4 chi2 gate still open (F-BINGAIN-1). **Do not** flip ensemble combine to Broeg IVW until
+  Newton gate passes. See `VYVAR_SIGMA_BUDGET_SPEC.md`, `scripts/chi2_sigma_gate.py`.
 
 - **TODO-MULTISET — per-telescope-set config architecture.** One config per rig (wide
   Carl-Zeiss 200 mm + QHY294MM ≈ 9.77″/px vs Newton 300/1200 + C3-26000 ≈ 0.65″/px).

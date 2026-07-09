@@ -1,8 +1,15 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-09** — Sigma budget Phase A + sparse-comp diagnostics **IN PROGRESS** (diagnostic scripts committed).
+Last updated: **2026-07-09** — SESSION-CLOSE-0709: Sigma budget Phase A **DONE (wide rig)**; sparse-comp
+diagnostics + proposed gate redesign recorded; draft_426 equipment verified eq4 (no DB change).
 
-**2026-07-09 snapshot:** SIGMA-A4: wide-rig floor attribution (k2 pooled R²≈0, floor_after k2=6.5 mmag
+**2026-07-09 snapshot:** SESSION-CLOSE-0709: draft_426 FITS headers (INSTRUME=C5A-150M, 3552×2664 @
+bin4) verify OBS_DRAFT eq4 — GAIN=12.48 anomaly is F-BINGAIN-1 not wrong equipment;
+`scripts/fix_draft_equipment.py` + tests. Sigma Phase A wide-rig DONE (6.5 mmag floor, k2 attribution
+zero, ~4.5 mmag rig constant). Sparse-comp: ~95% field-wide offset cancels; temporal 8–12 mmag healthy.
+pytest **682 passed**, 15 skipped. Pushed to origin/main (Milan-authorized 2026-07-09).
+
+**2026-07-09 snapshot (prior):** SIGMA-A4: wide-rig floor attribution (k2 pooled R²≈0, floor_after k2=6.5 mmag
 unchanged); Newton bin4 forensics (header gain 12.48, σ_ratio≈1.13, χ²_pred≈0.78); hypothesis
 gain/RN correction moves χ² away from 1. pytest **679 passed**, 15 skipped.
 

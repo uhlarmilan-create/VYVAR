@@ -2,6 +2,28 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-09 — SESSION-CLOSE-0709 (equipment verify, sigma closeout, session close)
+
+**Day arc:** DAO-RECONCILE close (3.5% accounting bug → 89.7–98.3% real completeness, 2-pass closed) →
+sigma budget Phase A chain (A → A2 → A3 → A4: ensemble term, falsified-then-refined floor, attribution) →
+sparse-comp decomposition (field-wide offset ~95% cancels; temporal 8–12 mmag healthy) → PSF audit fixes
+(recap in prior journal entries) → draft_426 equipment verification.
+
+**draft_426 equipment:** FITS INSTRUME=C5A-150M, NAXIS=3552×2664 bin4, GAIN=12.48, IMAGETYP=OBJECT,
+NCOMBINE absent. Headers identify eq4 (C5A-150M/IMX411); OBS_DRAFT already ID_EQUIPMENTS=4 — **no DB change**.
+GAIN=12.48 matches eq2 bin4 scale but does not override INSTRUME+geometry (F-BINGAIN-1, not attribution).
+`scripts/fix_draft_equipment.py` committed for auditable future fixes.
+
+**Sigma Phase A (wide rig) DONE:** photon + Honeycutt ensemble SEM + 6.5 mmag floor; scint ~2 mmag on D=0.2 m;
+f_resid→0. Attribution: k2 ZERO; phase strongest (6.5→4.5 mmag); ~4.5 mmag rig constant. Open: PROD-SIGMA-FLOOR,
+SIGMA-NEWTON (after bin4 fix).
+
+**Sparse-comp:** SS Cam YELLOW; proposed gate uses check scatter CI + temporal comp_rms, not field-wide headline.
+
+**pytest:** 682 passed, 15 skipped. session_baseline_check (default/fast) PASS.
+
+---
+
 ## 2026-07-09 — SIGMA-A4 (floor attribution + bin4 forensics)
 
 **Attribution draft_424:** k2 pooled R²≈0; k2_effective≈-3.6e-05, CI spans zero; floor_after k2 removal
