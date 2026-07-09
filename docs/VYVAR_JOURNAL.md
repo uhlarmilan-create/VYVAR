@@ -2,6 +2,21 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-09 — SIGMA-A3 (ensemble SEM variant + refit)
+
+**Variant (e):** `howell_scint_fresid_floor_ensemble` — quadrature of target Howell, f_resid×scint,
+Honeycutt ensemble SEM (production `ensemble_normalize`), sigma_floor. Dual SEM extraction: path (b)
+production primary; path (a) LC err decomposition (LOO inherits anchor-target `err` — agreement
+pooled median |diff|≈41 mmag; clamp fraction median 0.0).
+
+**Joint refit draft_424:** (d) f_resid=0.74, sigma_floor=10.5 mmag [9.5,11.0] unchanged;
+(e) f_resid=0.0 [0.0,0.62] pinned lower, sigma_floor=6.5 mmag [5.5,7.5], median chi2/dof=1.000,
+IQR=0.137. **Prediction verdict:** floor_did_not_collapse (6.5 mmag > 5 mmag PRNU-scale bound).
+
+**pytest:** 674 passed, 15 skipped.
+
+---
+
 ## 2026-07-09 — SIGMA-A2 (rig fixes, sigma_floor variant, rerun)
 
 **Rig fixes:** `scripts/fix_telescope_diameter.py` (Carl-Zeiss DIAMETER 72→200 mm, `--apply`);

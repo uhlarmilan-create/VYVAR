@@ -23,6 +23,7 @@ from sigma_budget import (
     SIGMA_VARIANT_HOWELL_SCINT_FULL,
     SIGMA_VARIANT_HOWELL_SCINT_FRESID,
     SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR,
+    SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE,
     combine_sigma_mag_quadrature,
     relative_flux_err_to_mag_sigma,
     resolve_rig_scintillation_params,
@@ -32,6 +33,125 @@ from sigma_budget import (
 CHI2_DOF_LO = 0.8
 CHI2_DOF_HI = 1.2
 _MAG_ERR_SCALE = 2.5 / math.log(10.0)
+
+CalibratorEnsembleInput = tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+
+
+def ensemble_sem_from_lc(
+    err_rel: np.ndarray,
+    sigma_photon_mag: np.ndarray,
+) -> tuple[np.ndarray, float]:
+    """Path (a): ensemble SEM from production err minus recomputed target Howell (mag domain)."""
+    err = np.asarray(err_rel, dtype=np.float64)
+    phot = np.asarray(sigma_photon_mag, dtype=np.float64)
+    n = min(err.size, phot.size)
+    sem = np.full(max(err.size, phot.size), np.nan, dtype=np.float64)
+    clamped = 0
+    valid = 0
+    for i in range(n):
+        if not (math.isfinite(float(err[i])) and float(err[i]) > 0):
+            continue
+        if not (math.isfinite(float(phot[i])) and float(phot[i]) >= 0):
+            continue
+        err_mag = float(_MAG_ERR_SCALE * float(err[i]))
+        phot_mag = float(phot[i])
+        diff = err_mag * err_mag - phot_mag * phot_mag
+        valid += 1
+        if diff <= 0:
+            sem[i] = 0.0
+            clamped += 1
+        else:
+            sem[i] = math.sqrt(diff)
+    clamp_frac = float(clamped / valid) if valid > 0 else float("nan")
+    return sem, clamp_frac
+
+
+def ensemble_sem_agreement_stats(
+    sem_a: np.ndarray,
+    sem_b: np.ndarray,
+) -> dict[str, float | None]:
+    """Cross-check path (a) vs path (b) ensemble SEM per frame."""
+    a = np.asarray(sem_a, dtype=np.float64)
+    b = np.asarray(sem_b, dtype=np.float64)
+    n = min(a.size, b.size)
+    diffs: list[float] = []
+    for i in range(n):
+        if math.isfinite(float(a[i])) and math.isfinite(float(b[i])):
+            diffs.append(abs(float(a[i]) - float(b[i])))
+    if not diffs:
+        return {"median_abs_diff": None, "p95_abs_diff": None, "n_compared": 0}
+    arr = np.asarray(diffs, dtype=float)
+    return {
+        "median_abs_diff": float(np.median(arr)),
+        "p95_abs_diff": float(np.quantile(arr, 0.95)),
+        "n_compared": int(len(diffs)),
+    }
+
+
+def select_primary_ensemble_sem(
+    sem_a: np.ndarray,
+    sem_b: np.ndarray,
+) -> np.ndarray:
+    """Use production path (b) when finite; otherwise LC decomposition (a)."""
+    a = np.asarray(sem_a, dtype=np.float64)
+    b = np.asarray(sem_b, dtype=np.float64)
+    n = max(a.size, b.size)
+    out = np.full(n, np.nan, dtype=np.float64)
+    for i in range(n):
+        bv = float(b[i]) if i < b.size else float("nan")
+        av = float(a[i]) if i < a.size else float("nan")
+        if math.isfinite(bv):
+            out[i] = bv
+        elif math.isfinite(av):
+            out[i] = av
+    return out
+
+
+def compute_production_ensemble_scatter(
+    target_mag_inst: np.ndarray,
+    comp_mag_inst: dict[str, np.ndarray],
+    comp_catalog_mag: dict[str, float],
+    comp_quality: dict[str, dict],
+    *,
+    comp_rms_map: dict[str, float] | None = None,
+    comp_tier_map: dict[str, int] | None = None,
+    tier_weights: dict[int, float] | None = None,
+    n_comp_min: int = 3,
+    n_comp_max: int = 10,
+) -> np.ndarray:
+    """Path (b): Honeycutt per-frame ensemble SEM via production ``ensemble_normalize``."""
+    from photometry_core import ensemble_normalize
+
+    _, _, ensemble_scatter = ensemble_normalize(
+        target_mag_inst,
+        comp_mag_inst,
+        comp_catalog_mag,
+        comp_quality,
+        comp_rms_map=comp_rms_map,
+        comp_tier_map=comp_tier_map,
+        tier_weights=tier_weights,
+        n_comp_min=n_comp_min,
+        n_comp_max=n_comp_max,
+    )
+    return np.asarray(ensemble_scatter, dtype=np.float64)
+
+
+def dual_ensemble_sem_arrays(
+    lc_df: pd.DataFrame,
+    sigma_photon_mag: np.ndarray,
+    *,
+    production_scatter: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, dict[str, float | None]]:
+    """Return (sem_primary, sem_lc, sem_prod, clamp_fraction, agreement_stats)."""
+    err_rel = pd.to_numeric(lc_df.get("err"), errors="coerce").to_numpy(dtype=np.float64)
+    sem_lc, clamp_frac = ensemble_sem_from_lc(err_rel, sigma_photon_mag)
+    if production_scatter is not None:
+        sem_prod = np.asarray(production_scatter, dtype=np.float64)
+    else:
+        sem_prod = np.full_like(sem_lc, np.nan, dtype=np.float64)
+    agreement = ensemble_sem_agreement_stats(sem_lc, sem_prod)
+    sem_primary = select_primary_ensemble_sem(sem_lc, sem_prod)
+    return sem_primary, sem_lc, sem_prod, clamp_frac, agreement
 
 
 @dataclass
@@ -167,26 +287,50 @@ def evaluate_lc_chi2_variants(
     return out
 
 
+def _sigma_mag_array_for_fit(
+    sh: np.ndarray,
+    ss: np.ndarray,
+    sem: np.ndarray,
+    *,
+    f_resid: float,
+    sigma_floor_mag: float,
+    include_ensemble: bool,
+) -> np.ndarray:
+    shv = np.asarray(sh, dtype=np.float64)
+    ssv = np.asarray(ss, dtype=np.float64)
+    semv = np.asarray(sem, dtype=np.float64)
+    terms = np.square(shv) + np.square(f_resid * ssv)
+    if math.isfinite(sigma_floor_mag) and sigma_floor_mag > 0:
+        terms = terms + sigma_floor_mag * sigma_floor_mag
+    if include_ensemble:
+        sem_eff = np.where(np.isfinite(semv) & (semv > 0), semv, 0.0)
+        terms = terms + np.square(sem_eff)
+    with np.errstate(invalid="ignore"):
+        return np.sqrt(terms)
+
+
 def _ensemble_median_chi2(
-    calibrator_results: list[tuple[np.ndarray, np.ndarray, np.ndarray]],
+    calibrator_results: list[CalibratorEnsembleInput],
     *,
     f_resid: float,
     sigma_floor_mag: float = 0.0,
+    include_ensemble: bool = False,
 ) -> float | None:
     c2ds: list[float] = []
-    for mags, sh, ss in calibrator_results:
+    for entry in calibrator_results:
+        mags, sh, ss = entry[0], entry[1], entry[2]
+        sem = entry[3] if len(entry) > 3 else np.zeros_like(sh)
         m = np.asarray(mags, dtype=np.float64)
-        shv = np.asarray(sh, dtype=np.float64)
-        ssv = np.asarray(ss, dtype=np.float64)
-        ok = np.isfinite(m) & np.isfinite(shv) & np.isfinite(ssv)
+        ok = np.isfinite(m) & np.isfinite(sh) & np.isfinite(ss)
         if int(ok.sum()) < 3:
             continue
-        sig = np.array(
-            [
-                combine_sigma_mag_quadrature(shv[i], f_resid * ssv[i], sigma_floor_mag=sigma_floor_mag)
-                for i in np.where(ok)[0]
-            ],
-            dtype=np.float64,
+        sig = _sigma_mag_array_for_fit(
+            sh[ok],
+            ss[ok],
+            sem[ok],
+            f_resid=f_resid,
+            sigma_floor_mag=sigma_floor_mag,
+            include_ensemble=include_ensemble,
         )
         _, _, c2d, _ = reduced_chi2_constant(m[ok], sig)
         if math.isfinite(c2d):
@@ -195,25 +339,27 @@ def _ensemble_median_chi2(
 
 
 def _ensemble_chi2_spread(
-    calibrator_results: list[tuple[np.ndarray, np.ndarray, np.ndarray]],
+    calibrator_results: list[CalibratorEnsembleInput],
     *,
     f_resid: float,
     sigma_floor_mag: float = 0.0,
+    include_ensemble: bool = False,
 ) -> float:
     c2ds: list[float] = []
-    for mags, sh, ss in calibrator_results:
+    for entry in calibrator_results:
+        mags, sh, ss = entry[0], entry[1], entry[2]
+        sem = entry[3] if len(entry) > 3 else np.zeros_like(sh)
         m = np.asarray(mags, dtype=np.float64)
-        shv = np.asarray(sh, dtype=np.float64)
-        ssv = np.asarray(ss, dtype=np.float64)
-        ok = np.isfinite(m) & np.isfinite(shv) & np.isfinite(ssv)
+        ok = np.isfinite(m) & np.isfinite(sh) & np.isfinite(ss)
         if int(ok.sum()) < 3:
             continue
-        sig = np.array(
-            [
-                combine_sigma_mag_quadrature(shv[i], f_resid * ssv[i], sigma_floor_mag=sigma_floor_mag)
-                for i in np.where(ok)[0]
-            ],
-            dtype=np.float64,
+        sig = _sigma_mag_array_for_fit(
+            sh[ok],
+            ss[ok],
+            sem[ok],
+            f_resid=f_resid,
+            sigma_floor_mag=sigma_floor_mag,
+            include_ensemble=include_ensemble,
         )
         _, _, c2d, _ = reduced_chi2_constant(m[ok], sig)
         if math.isfinite(c2d):
@@ -226,9 +372,10 @@ def _ensemble_chi2_spread(
 
 
 def _fit_f_floor_grid(
-    calibrator_results: list[tuple[np.ndarray, np.ndarray, np.ndarray]],
+    calibrator_results: list[CalibratorEnsembleInput],
     *,
     fit_floor: bool,
+    include_ensemble: bool = False,
 ) -> tuple[float, float, float, float]:
     f_grid = np.linspace(0.0, 1.0, 51)
     floor_grid = np.linspace(0.0, 0.02, 41) if fit_floor else np.array([0.0])
@@ -237,7 +384,12 @@ def _fit_f_floor_grid(
     best_median = float("nan")
     for f in f_grid:
         for fl in floor_grid:
-            med = _ensemble_median_chi2(calibrator_results, f_resid=float(f), sigma_floor_mag=float(fl))
+            med = _ensemble_median_chi2(
+                calibrator_results,
+                f_resid=float(f),
+                sigma_floor_mag=float(fl),
+                include_ensemble=include_ensemble,
+            )
             if med is None:
                 continue
             dist = abs(med - 1.0)
@@ -247,26 +399,32 @@ def _fit_f_floor_grid(
                 best_floor = float(fl)
                 best_median = med
     spread = _ensemble_chi2_spread(
-        calibrator_results, f_resid=best_f, sigma_floor_mag=best_floor,
+        calibrator_results,
+        f_resid=best_f,
+        sigma_floor_mag=best_floor,
+        include_ensemble=include_ensemble,
     )
     return best_f, best_floor, best_median, spread
 
 
 def fit_f_resid_ensemble(
-    calibrator_results: list[tuple[np.ndarray, np.ndarray, np.ndarray]],
+    calibrator_results: list[CalibratorEnsembleInput],
 ) -> tuple[float, float, float]:
     f, _, med, spread = _fit_f_floor_grid(calibrator_results, fit_floor=False)
     return f, med, spread
 
 
 def fit_f_resid_sigma_floor_ensemble(
-    calibrator_results: list[tuple[np.ndarray, np.ndarray, np.ndarray]],
+    calibrator_results: list[CalibratorEnsembleInput],
     *,
     n_boot: int = 400,
     seed: int = 0,
     alpha: float = 0.16,
+    include_ensemble: bool = False,
 ) -> JointFitResult:
-    f, floor, med, spread = _fit_f_floor_grid(calibrator_results, fit_floor=True)
+    f, floor, med, spread = _fit_f_floor_grid(
+        calibrator_results, fit_floor=True, include_ensemble=include_ensemble,
+    )
     pinned: str | None = None
     if abs(f) < 1e-9:
         pinned = "lower"
@@ -280,7 +438,7 @@ def fit_f_resid_sigma_floor_ensemble(
         for _ in range(n_boot):
             idx = rng.integers(0, n_cal, size=n_cal)
             sample = [calibrator_results[int(i)] for i in idx]
-            bf, bfl, _, _ = _fit_f_floor_grid(sample, fit_floor=True)
+            bf, bfl, _, _ = _fit_f_floor_grid(sample, fit_floor=True, include_ensemble=include_ensemble)
             f_boot.append(bf)
             fl_boot.append(bfl)
     f_lo = f_hi = fl_lo = fl_hi = None
@@ -318,6 +476,7 @@ def plot_chi2_vs_g(
         SIGMA_VARIANT_HOWELL_SCINT_FULL: "#E45756",
         SIGMA_VARIANT_HOWELL_SCINT_FRESID: "#72B7B2",
         SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR: "#54A24B",
+        SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE: "#B279A2",
     }
     for v in sorted({r.variant for r in results}):
         sub = [r for r in results if r.variant == v and r.mag_g is not None and math.isfinite(r.chi2_dof)]
@@ -375,9 +534,10 @@ def sigma_arrays_from_lc_and_proc(
     rig_params: Any,
     f_resid: float = 0.0,
     sigma_floor_mag: float = 0.0,
+    production_ensemble_scatter: np.ndarray | None = None,
     gain: float = 1.0,
     read_noise: float = 10.0,
-) -> tuple[np.ndarray, dict[str, np.ndarray], np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, dict[str, np.ndarray], np.ndarray, np.ndarray, dict[str, Any]]:
     mags = pd.to_numeric(lc_df.get("delta_mag"), errors="coerce").to_numpy(dtype=np.float64)
     if not np.isfinite(mags).any() and "mag_calib" in lc_df.columns:
         mags = pd.to_numeric(lc_df["mag_calib"], errors="coerce").to_numpy(dtype=np.float64)
@@ -389,6 +549,7 @@ def sigma_arrays_from_lc_and_proc(
         SIGMA_VARIANT_HOWELL_SCINT_FULL: np.full(n, np.nan),
         SIGMA_VARIANT_HOWELL_SCINT_FRESID: np.full(n, np.nan),
         SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR: np.full(n, np.nan),
+        SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE: np.full(n, np.nan),
     }
     for i, sf in enumerate(lc_df.get("source_file", pd.Series([""] * n)).astype(str).tolist()):
         row = load_proc_row_for_source(proc_dir, sf, catalog_id)
@@ -434,7 +595,27 @@ def sigma_arrays_from_lc_and_proc(
         variants[SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR][i] = combine_sigma_mag_quadrature(
             sh[i], f_resid * ss[i], sigma_floor_mag=sigma_floor_mag,
         )
-    return mags, variants, sh, ss
+    sem_primary, sem_lc, sem_prod, clamp_frac, agreement = dual_ensemble_sem_arrays(
+        lc_df, sh, production_scatter=production_ensemble_scatter,
+    )
+    for i in range(n):
+        sem_i = float(sem_primary[i]) if math.isfinite(float(sem_primary[i])) else 0.0
+        if not (math.isfinite(sh[i]) and math.isfinite(ss[i])):
+            continue
+        variants[SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE][i] = combine_sigma_mag_quadrature(
+            sh[i],
+            f_resid * ss[i],
+            sigma_floor_mag=sigma_floor_mag,
+            ensemble_sem_mag=sem_i,
+        )
+    meta = {
+        "ensemble_sem_primary": sem_primary,
+        "ensemble_sem_from_lc": sem_lc,
+        "ensemble_sem_from_production": sem_prod,
+        "ensemble_sem_clamp_fraction": clamp_frac,
+        "ensemble_sem_agreement": agreement,
+    }
+    return mags, variants, sh, ss, meta
 
 
 def saturation_margin_distribution(
@@ -497,7 +678,7 @@ def main() -> None:
         draft_id=args.draft_id, setup=args.setup or args.proc_dir.parent.name,
         pipeline_meta=meta,
     )
-    mags, variants, _, _ = sigma_arrays_from_lc_and_proc(
+    mags, variants, _, _, _ = sigma_arrays_from_lc_and_proc(
         lc_df, args.proc_dir, args.catalog_id, rig_params=rig, f_resid=args.f_resid,
     )
     bjd = pd.to_numeric(lc_df.get("bjd"), errors="coerce").to_numpy(dtype=np.float64)

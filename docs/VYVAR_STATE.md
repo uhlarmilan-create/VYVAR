@@ -2,7 +2,12 @@
 
 Last updated: **2026-07-09** — Sigma budget Phase A + sparse-comp diagnostics **IN PROGRESS** (diagnostic scripts committed).
 
-**2026-07-09 snapshot:** SIGMA-A2: rig fixes (TELESCOPE.DIAMETER 72→200 mm, alt<=0 guard),
+**2026-07-09 snapshot:** SIGMA-A3: variant (e) `howell_scint_fresid_floor_ensemble` (+ Honeycutt ensemble SEM);
+dual SEM paths (LC decomposition + production `ensemble_normalize`); draft_424 joint refit (d) unchanged
+f_resid=0.74 sigma_floor=10.5 mmag, joint (e) f_resid=0.0 sigma_floor=6.5 mmag — prediction
+**floor_did_not_collapse**. pytest **674 passed**, 15 skipped.
+
+**2026-07-09 snapshot (prior):** SIGMA-A2: rig fixes (TELESCOPE.DIAMETER 72→200 mm, alt<=0 guard),
 `sigma_floor` variant + joint (f_resid, sigma_floor) fit with bootstrap CIs; draft_424 rerun
 D=0.2 m alt=275 m, joint fit f_resid=0.74 sigma_floor=10.5 mmag. G9.3 calibrator not saturation-flagged
 (fill_max=0.53). pytest **669 passed**, 15 skipped. Pushed e2c9466 (A) + 0b901aa (A2).

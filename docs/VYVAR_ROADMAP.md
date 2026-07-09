@@ -301,7 +301,10 @@ next calibration lever.
    canonical ensemble combine. Spec: `docs/VYVAR_SIGMA_BUDGET_SPEC.md`; committed modules
    `sigma_budget.py`, `scripts/chi2_sigma_gate.py`, `scripts/select_constant_calibrators.py`,
    `scripts/fix_telescope_diameter.py` (A2 rig DB fix). A2 rerun (draft_424): joint fit
-   f_resid=0.74, sigma_floor=10.5 mmag, median chi2/dof=1.000. Blocks TODO-GS8 + TODO-MULTISET.
+   f_resid=0.74, sigma_floor=10.5 mmag, median chi2/dof=1.000. **A3 (2026-07-09):** variant (e)
+   adds production Honeycutt ensemble SEM; joint (e) refit sigma_floor=6.5 mmag (prediction:
+   floor_did_not_collapse); ensemble SEM median ~7.8 mmag on draft_424 calibrators. Blocks
+   TODO-GS8 + TODO-MULTISET.
    **`delta_mag` flux-sum canonical until gate passes.**
 
 3. **EXTERNAL-XVAL — external validation campaign (MEDIUM).** VYVAR vs external tools (AstroImageJ

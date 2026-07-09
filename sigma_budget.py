@@ -25,6 +25,7 @@ SIGMA_VARIANT_HOWELL_ONLY = "howell_only"
 SIGMA_VARIANT_HOWELL_SCINT_FULL = "howell_scint_full"
 SIGMA_VARIANT_HOWELL_SCINT_FRESID = "howell_scint_fresid"
 SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR = "howell_scint_fresid_floor"
+SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE = "howell_scint_fresid_floor_ensemble"
 
 
 def combine_sigma_mag_quadrature(
@@ -32,13 +33,16 @@ def combine_sigma_mag_quadrature(
     sig_scint_mag: float,
     *,
     sigma_floor_mag: float = 0.0,
+    ensemble_sem_mag: float = 0.0,
 ) -> float:
-    """Combine magnitude-domain sigmas in quadrature (Howell + scint + optional floor)."""
+    """Combine magnitude-domain sigmas in quadrature (Howell + scint + floor + ensemble SEM)."""
     terms: list[float] = []
     if math.isfinite(sig_howell_mag) and sig_howell_mag > 0:
         terms.append(sig_howell_mag * sig_howell_mag)
     if math.isfinite(sig_scint_mag) and sig_scint_mag > 0:
         terms.append(sig_scint_mag * sig_scint_mag)
+    if math.isfinite(ensemble_sem_mag) and ensemble_sem_mag > 0:
+        terms.append(ensemble_sem_mag * ensemble_sem_mag)
     if math.isfinite(sigma_floor_mag) and sigma_floor_mag > 0:
         terms.append(sigma_floor_mag * sigma_floor_mag)
     if not terms:

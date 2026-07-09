@@ -27,6 +27,7 @@ from scripts.chi2_sigma_gate import (  # noqa: E402
     sigma_arrays_from_lc_and_proc,
     write_summary_json,
 )
+from scripts.select_constant_calibrators import compute_loo_production_ensemble_scatter  # noqa: E402
 from sigma_budget import resolve_rig_scintillation_params  # noqa: E402
 
 SS_CAM_CID = "1112113066119992064"
@@ -105,6 +106,107 @@ def bootstrap_scatter_mag_ci(
     return float(np.quantile(arr, alpha)), float(np.quantile(arr, 1.0 - alpha))
 
 
+def _load_draft424_joint_fits(summary_path: Path) -> tuple[float, float, float, float]:
+    """Return (f_resid_d, sigma_floor_d, f_resid_e, sigma_floor_e) from calibrator summary."""
+    defaults = (0.74, 0.0105, 0.0, 0.0065)
+    if not summary_path.is_file():
+        return defaults
+    try:
+        payload = json.loads(summary_path.read_text(encoding="utf-8"))
+        setups = payload.get("setups") or []
+        setup = next((s for s in setups if int(s.get("draft_id", -1)) == 424), None)
+        if not setup:
+            return defaults
+        jd = setup.get("joint_fit") or {}
+        je = setup.get("joint_fit_ensemble") or {}
+        return (
+            float(jd.get("f_resid", defaults[0])),
+            float(jd.get("sigma_floor_mag", defaults[1])),
+            float(je.get("f_resid", defaults[2])),
+            float(je.get("sigma_floor_mag", defaults[3])),
+        )
+    except Exception:  # noqa: BLE001
+        return defaults
+
+
+def _check_star_chi2_rows(
+    *,
+    phot_dir: Path,
+    setup: str,
+    target_cid: str,
+    lc_df: pd.DataFrame,
+    side_df: pd.DataFrame,
+    proc_dir: Path,
+    rig: Any,
+    cfg: AppConfig,
+    f_resid_d: float = 0.74,
+    sigma_floor_d: float = 0.0105,
+    f_resid_e: float = 0.0,
+    sigma_floor_e: float = 0.0065,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    chk_cid = str(side_df["check_catalog_id"].iloc[0]) if "check_catalog_id" in side_df.columns else ""
+    if not chk_cid:
+        return [], {"available": False}
+    work = side_df.copy()
+    work["delta_mag"] = pd.to_numeric(work["kmag"], errors="coerce")
+    work["source_file"] = lc_df["source_file"].astype(str).iloc[: len(work)].tolist()
+    work["airmass"] = pd.to_numeric(lc_df["airmass"], errors="coerce").iloc[: len(work)].tolist()
+    if "err" not in work.columns and "err" in lc_df.columns:
+        work["err"] = pd.to_numeric(lc_df["err"], errors="coerce").iloc[: len(work)].tolist()
+    prod_scatter = compute_loo_production_ensemble_scatter(
+        chk_cid,
+        phot_dir=phot_dir,
+        setup=setup,
+        anchor_target=target_cid,
+        cfg=cfg,
+    )
+    mags_d, variants_d, _, _, _sem_meta_d = sigma_arrays_from_lc_and_proc(
+        work,
+        proc_dir,
+        chk_cid,
+        rig_params=rig,
+        f_resid=f_resid_d,
+        sigma_floor_mag=sigma_floor_d,
+        production_ensemble_scatter=prod_scatter,
+    )
+    _, variants_e, _, _, sem_meta_e = sigma_arrays_from_lc_and_proc(
+        work,
+        proc_dir,
+        chk_cid,
+        rig_params=rig,
+        f_resid=f_resid_e,
+        sigma_floor_mag=sigma_floor_e,
+        production_ensemble_scatter=prod_scatter,
+    )
+    variants_d.update(
+        {k: variants_e[k] for k in variants_e if k.endswith("_ensemble")},
+    )
+    bjd = pd.to_numeric(lc_df.get("bjd"), errors="coerce").to_numpy(dtype=np.float64)
+    rows = [
+        r.to_dict()
+        for r in evaluate_lc_chi2_variants(
+            mags_d,
+            variants_d,
+            catalog_id=chk_cid,
+            mag_g=None,
+            bjd=bjd,
+        )
+    ]
+    sem_p = sem_meta_e.get("ensemble_sem_primary")
+    sem_summary: dict[str, Any] = {
+        "check_catalog_id": chk_cid,
+        "ensemble_sem_clamp_fraction": sem_meta_e.get("ensemble_sem_clamp_fraction"),
+        "ensemble_sem_agreement": sem_meta_e.get("ensemble_sem_agreement"),
+    }
+    if isinstance(sem_p, np.ndarray):
+        fin = sem_p[np.isfinite(sem_p)]
+        if fin.size:
+            sem_summary["ensemble_sem_median_mag"] = float(np.median(fin))
+            sem_summary["ensemble_sem_p95_mag"] = float(np.quantile(fin, 0.95))
+            sem_summary["ensemble_sem_max_mag"] = float(np.max(fin))
+    return rows, sem_summary
+
+
 def check_scatter_from_sidecar(lc_dir: Path, target_cid: str) -> dict[str, Any]:
     side = lc_dir / f"check_kmag_{target_cid}.csv"
     if not side.is_file():
@@ -136,6 +238,7 @@ def analyze_setup(
     target_cid: str,
     *,
     cfg: AppConfig,
+    joint_path: Path | None = None,
 ) -> dict[str, Any]:
     phot_dir = Path(cfg.archive_root) / "Drafts" / f"draft_{draft_id:06d}" / "platesolve" / setup / "photometry"
     lc_dir = phot_dir / "lightcurves"
@@ -176,19 +279,28 @@ def analyze_setup(
         )
     meta = json.loads((phot_dir / "pipeline_meta.json").read_text(encoding="utf-8")) if (phot_dir / "pipeline_meta.json").is_file() else {}
     rig = resolve_rig_scintillation_params(draft_id=draft_id, setup=setup, cfg=cfg, pipeline_meta=meta)
+    f_resid_d, sigma_floor_d, f_resid_e, sigma_floor_e = _load_draft424_joint_fits(
+        joint_path or Path("tmp/sigma_budget/calibrator_chi2_summary.json"),
+    )
     side = lc_dir / f"check_kmag_{target_cid}.csv"
-    if side.is_file():
+    if side.is_file() and proc_dir is not None:
         side_df = pd.read_csv(side, low_memory=False)
-        side_df["delta_mag"] = pd.to_numeric(side_df["kmag"], errors="coerce")
-        side_df["source_file"] = lc_df["source_file"].astype(str).iloc[: len(side_df)].tolist()
-        side_df["airmass"] = pd.to_numeric(lc_df["airmass"], errors="coerce").iloc[: len(side_df)].tolist()
-        chk_cid = str(side_df["check_catalog_id"].iloc[0]) if "check_catalog_id" in side_df.columns else ""
-        if chk_cid and proc_dir is not None:
-            mags, variants, _, _ = sigma_arrays_from_lc_and_proc(side_df, proc_dir, chk_cid, rig_params=rig)
-            bjd = pd.to_numeric(lc_df.get("bjd"), errors="coerce").to_numpy(dtype=np.float64)
-            out["check_chi2"] = [r.to_dict() for r in evaluate_lc_chi2_variants(
-                mags, variants, catalog_id=chk_cid, mag_g=None, bjd=bjd,
-            )]
+        rows, sem_summary = _check_star_chi2_rows(
+            phot_dir=phot_dir,
+            setup=setup,
+            target_cid=target_cid,
+            lc_df=lc_df,
+            side_df=side_df,
+            proc_dir=proc_dir,
+            rig=rig,
+            cfg=cfg,
+            f_resid_d=f_resid_d,
+            sigma_floor_d=sigma_floor_d,
+            f_resid_e=f_resid_e,
+            sigma_floor_e=sigma_floor_e,
+        )
+        out["check_chi2"] = rows
+        out["check_ensemble_sem"] = sem_summary
     return out
 
 
@@ -202,6 +314,8 @@ def main() -> None:
     )
     args = ap.parse_args()
     cfg = AppConfig()
+    joint_path = Path(args.out_dir) / "calibrator_chi2_summary.json"
+    f_resid_d, sigma_floor_d, f_resid_e, sigma_floor_e = _load_draft424_joint_fits(joint_path)
     cases = [
         (426, "g_60_4", SS_CAM_CID),
         (426, "r_60_4", SS_CAM_CID),
@@ -224,20 +338,29 @@ def main() -> None:
             else:
                 lc_df = pd.read_csv(lc_path, low_memory=False)
                 side_df = pd.read_csv(side, low_memory=False)
-                side_df["delta_mag"] = pd.to_numeric(side_df["kmag"], errors="coerce")
-                side_df["source_file"] = lc_df["source_file"].astype(str).iloc[: len(side_df)].tolist()
-                side_df["airmass"] = pd.to_numeric(lc_df["airmass"], errors="coerce").iloc[: len(side_df)].tolist()
-                chk_cid = str(side_df["check_catalog_id"].iloc[0]) if "check_catalog_id" in side_df.columns else ""
-                mags, variants, _, _ = sigma_arrays_from_lc_and_proc(side_df, proc_dir, chk_cid, rig_params=rig)
-                bjd = pd.to_numeric(lc_df.get("bjd"), errors="coerce").to_numpy(dtype=np.float64)
+                rows, sem_summary = _check_star_chi2_rows(
+                    phot_dir=phot_dir,
+                    setup=s,
+                    target_cid=t,
+                    lc_df=lc_df,
+                    side_df=side_df,
+                    proc_dir=proc_dir,
+                    rig=rig,
+                    cfg=cfg,
+                    f_resid_d=f_resid_d,
+                    sigma_floor_d=sigma_floor_d,
+                    f_resid_e=f_resid_e,
+                    sigma_floor_e=sigma_floor_e,
+                )
                 entry["available"] = True
                 entry["rig"] = rig.to_dict()
-                entry["check_chi2"] = [r.to_dict() for r in evaluate_lc_chi2_variants(
-                    mags, variants, catalog_id=chk_cid, mag_g=None, bjd=bjd,
-                )]
+                entry["joint_fit_d"] = {"f_resid": f_resid_d, "sigma_floor_mag": sigma_floor_d}
+                entry["joint_fit_e"] = {"f_resid": f_resid_e, "sigma_floor_mag": sigma_floor_e}
+                entry["check_chi2"] = rows
+                entry["check_ensemble_sem"] = sem_summary
             results.append(entry)
     else:
-        results = [analyze_setup(d, s, t, cfg=cfg) for d, s, t in cases]
+        results = [analyze_setup(d, s, t, cfg=cfg, joint_path=joint_path) for d, s, t in cases]
     path = write_summary_json({"cases": results}, args.out_dir / "sparse_comp_diag.json")
     print(path)
 
