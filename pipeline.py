@@ -8900,24 +8900,37 @@ def detect_stars_and_match_catalog(
                     _plate_recon = float(np.mean(proj_plane_pixel_scales(wcs_obj) * 3600.0))
                 except Exception:  # noqa: BLE001
                     pass
-            _recon = compute_gaia_dao_reconcile(
-                cat_df,
-                df_out,
-                fwhm_px=float(_fwhm_used),
-                plate_scale_arcsec=_plate_recon,
-                wcs=wcs_obj if getattr(wcs_obj, "has_celestial", False) else None,
-            )
-            meta.update(reconcile_to_pipeline_meta(_recon))
-            LOGGER.info(
-                "[DAO] Gaia→DAO reconcile: corrected=%.1f%% (matched=%d missed=%d "
-                "below_limit=%d blended=%d) G_lim=%.2f",
-                float(meta.get("gaia_dao_completeness_pct") or 0.0),
-                int(meta.get("n_gaia_matched") or 0),
-                int(meta.get("n_gaia_missed") or 0),
-                int(meta.get("n_gaia_below_limit") or 0),
-                int(meta.get("n_gaia_blended") or 0),
-                float(meta.get("g_lim_est") or 0.0),
-            )
+            if _gaia_db_path is not None and getattr(wcs_obj, "has_celestial", False):
+                _max_mag_recon = (
+                    float(faintest_mag_limit)
+                    if faintest_mag_limit is not None and np.isfinite(float(faintest_mag_limit))
+                    else 18.0
+                )
+                _recon = compute_gaia_dao_reconcile(
+                    df_out,
+                    gaia_db_path=_gaia_db_path,
+                    wcs=wcs_obj,
+                    naxis1=int(wpx),
+                    naxis2=int(h),
+                    fwhm_px=float(_fwhm_used),
+                    plate_scale_arcsec=_plate_recon,
+                    mag_limit=_max_mag_recon,
+                    match_sep_arcsec=float(match_sep_used),
+                    cone_df=cat_df,
+                )
+                meta.update(reconcile_to_pipeline_meta(_recon))
+                LOGGER.info(
+                    "[DAO] Gaia→DAO reconcile: completeness_50=%.1f%% (matched=%d missed=%d "
+                    "off_frame=%d below_limit=%d blended=%d) G_lim_50=%.2f fit=%s",
+                    float(meta.get("gaia_dao_completeness_pct") or 0.0),
+                    int(meta.get("n_gaia_matched") or 0),
+                    int(meta.get("n_gaia_missed") or 0),
+                    int(meta.get("n_gaia_off_frame") or 0),
+                    int(meta.get("n_gaia_below_limit") or 0),
+                    int(meta.get("n_gaia_blended") or 0),
+                    float(meta.get("g_lim_50") or meta.get("g_lim_est") or 0.0),
+                    str(meta.get("fit_method") or "?"),
+                )
         except Exception as exc:  # noqa: BLE001
             LOGGER.warning("[DAO] Gaia reconcile decomposition failed: %s", exc)
             meta["gaia_dao_completeness_pct"] = round(_gaia_dao_rate, 2)
@@ -12083,30 +12096,46 @@ def generate_masterstar_and_catalog(
             "n_gaia_undetected": int(_cat_rows_opt - _n_gaia_det_opt),
         }
         try:
+            _cone_df = None
             _cone_csv = Path(platesolve_dir) / "field_catalog_cone.csv"
             if _cone_csv.is_file():
                 _cone_df = read_vyvar_csv(_cone_csv, low_memory=False, dtype={"catalog_id": str})
-                _fwhm_recon = float(det_meta.get("dao_fwhm_px") or 0.0)
-                if not (_fwhm_recon > 0.0):
-                    _fwhm_recon = float(header_core_fwhm_px(hdr) or 3.5)
-                _wcs_recon = None
-                _plate_recon = None
-                if _has_valid_wcs(hdr):
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore", FITSFixedWarning)
-                        _wcs_recon = WCS(hdr)
-                    try:
-                        from astropy.wcs.utils import proj_plane_pixel_scales
+            _fwhm_recon = float(det_meta.get("dao_fwhm_px") or 0.0)
+            if not (_fwhm_recon > 0.0):
+                _fwhm_recon = float(header_core_fwhm_px(hdr) or 3.5)
+            _wcs_recon = None
+            _plate_recon = None
+            _nax1 = int(hdr.get("NAXIS1") or 0)
+            _nax2 = int(hdr.get("NAXIS2") or 0)
+            if _has_valid_wcs(hdr) and _nax1 > 0 and _nax2 > 0:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", FITSFixedWarning)
+                    _wcs_recon = WCS(hdr)
+                try:
+                    from astropy.wcs.utils import proj_plane_pixel_scales
 
-                        _plate_recon = float(np.mean(proj_plane_pixel_scales(_wcs_recon) * 3600.0))
-                    except Exception:  # noqa: BLE001
-                        pass
+                    _plate_recon = float(np.mean(proj_plane_pixel_scales(_wcs_recon) * 3600.0))
+                except Exception:  # noqa: BLE001
+                    pass
+            _gdb_recon = str(_cfg_ms.gaia_db_path or "").strip()
+            _faintest_recon = float(det_meta.get("faintest_mag_limit") or 18.0)
+            _match_sep_recon = float(
+                det_meta.get("match_sep_arcsec_effective")
+                or det_meta.get("match_sep_arcsec_requested")
+                or 8.0
+            )
+            if _wcs_recon is not None and _gdb_recon:
                 _recon = compute_gaia_dao_reconcile(
-                    _cone_df,
                     df_final,
+                    gaia_db_path=_gdb_recon,
+                    wcs=_wcs_recon,
+                    naxis1=_nax1,
+                    naxis2=_nax2,
                     fwhm_px=_fwhm_recon,
                     plate_scale_arcsec=_plate_recon,
-                    wcs=_wcs_recon,
+                    mag_limit=_faintest_recon,
+                    match_sep_arcsec=_match_sep_recon,
+                    cone_df=_cone_df,
                 )
                 _meta_patch.update(reconcile_to_pipeline_meta(_recon))
         except Exception as exc:  # noqa: BLE001
