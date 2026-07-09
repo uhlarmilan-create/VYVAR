@@ -1,8 +1,14 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-09** — DAO-RECONCILE-2b censoring + missed@G90 **DONE**, chain **PUSHED**.
+Last updated: **2026-07-09** — DAO-RECONCILE workstream **CLOSED** (chain pushed).
 
-**2026-07-09 snapshot:** DAO-RECONCILE-2b (`78febea`): right-censor G_lim vs reference depth;
+**2026-07-09 snapshot:** DAO-RECONCILE-CLOSE: flat-curve no-crossing censoring fix (draft_426
+G_lim was spurious 13.0, now `>=17.5 no crossing`); 2-pass DAO recovery CLOSED
+(not-worth-complexity); PUB-QC-MISSRESIDUAL parked. Completeness 89.7–98.3% across rigs;
+miss@G90 health signals live in QA dashboard. pytest **661 passed**, 15 skipped. Chain pushed
+to origin/main (Milan-authorized 2026-07-09).
+
+**2026-07-09 snapshot (prior):** DAO-RECONCILE-2b (`78febea`): right-censor G_lim vs reference depth;
 `missed_below_g90` / `missed_fadezone` 2-pass metric; `match_depth` forensics; missed-G
 histogram in diag. draft_424: compl_50=89.7%, missed=353 but **miss@G90=15** (fadezone=338).
 draft_425 B/R: G_lim_50 censored at 17.5 (was spurious 19.25). All-drafts diag:

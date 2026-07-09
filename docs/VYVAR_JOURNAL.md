@@ -2,6 +2,22 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-09 — DAO-RECONCILE-CLOSE (flat-curve fix + workstream closure)
+
+**Flat-curve fix:** When completeness stays above 50%/90% to reference depth with no
+interpolation crossing (draft_426), report `>= depth (no crossing)` — not median-bin fallback
+(which had produced spurious G_lim_50=13.0). `fit_method="degenerate"` reserved for <3 bins.
+
+**Workstream CLOSED.** The original ~3.5% Gaia→DAO completeness was an accounting bug (cone
+brightest-100k denominator), not DAO health. After R-1→R-2→R-2b, true completeness is
+89.7–98.3%; miss@G90 is 6–18 on wide/Newton rigs. **2-pass DAO recovery: CLOSED**
+(not-worth-complexity) — 425 B/R residuals are catalog cross-match ceiling, not recoverable
+signal. **PUB-QC-MISSRESIDUAL** parked (LOW).
+
+**draft_426 corrected:** g/i/r/z G_lim_50/90 = `>= 17.5 (no crossing)`; compl_50 99.5–100%.
+
+---
+
 ## 2026-07-09 — DAO-RECONCILE-2b (censoring + missed@G90 + match_depth)
 
 **R-2b (`78febea`):** Right-censor G_lim_50/G_lim_90 when Fleming fit exceeds reference depth

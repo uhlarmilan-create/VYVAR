@@ -505,21 +505,25 @@ next calibration lever.
   JOURNAL). Regenerate `vyvar_vsx_local.db` on the catalog machine after pulling.
 - **TODO-10 — Settings-tab refactor + `CONFIG_GUIDE.md`.** Ties to `VYVAR_PARAMS.md` /
   config↔UI parity.
-- **DAO-RECONCILE — Gaia↔DAO field accounting (reframes TODO-13).** **R-1 metric fix DONE
-  (2026-07-09, `becc274`/`e9daec9`); R-1 numbers SUPERSEDED** — cone `ORDER BY g_mag LIMIT
-  100000` population bug (brightest-100k ≠ detect-time depth). **R-2 DONE (2026-07-09,
-  `bd6244a`/`4279a52`/`b7df7c6`):** footprint reference via direct Gaia DB bbox query (no row
-  cap) + Fleming et al. (1995) erf completeness fit → `G_lim_50` / `G_lim_90`;
-  `completeness_50` = matched/(matched+genuinely-missed) in-frame at G≤G_lim_50; buckets:
-  matched / off-frame / below-limit / blended / genuinely-missed. **R-2b DONE (2026-07-09,
-  `78febea`):** right-censor G_lim when fit exceeds reference depth; `missed_below_g90` vs
-  `missed_fadezone` as 2-pass decision metric; `match_depth` forensics per setup; missed-G
-  histogram PNG in diag. Diagnostic: `scripts/dao_reconcile_diag.py --all-drafts`. **Goal
-  (Milan 2026-07-09):** near-100% two-way reconciliation. **2-pass DAO recovery — OPEN**
-  gated on `missed_below_g90` (draft_424: **15** @ 89.7% completeness_50; draft_425 B/R
-  censored at G17.5 with 212–314 below-G90 — discuss with Milan). **Artificial-star injection
-  tests** (photutils) = future gold-standard validation; candidate for EXTERNAL-XVAL /
-  publication Validation section.
+- **DAO-RECONCILE — Gaia↔DAO field accounting (reframes TODO-13).** **CLOSED
+  (2026-07-09).** Arc: R-1 (`becc274`/`e9daec9`) population bug fix → R-2 (`bd6244a`/
+  `4279a52`/`b7df7c6`) footprint+Fleming fit → R-2b (`78febea`) censoring+miss@G90 → close
+  (`DAO-RECONCILE-CLOSE`) flat-curve no-crossing fix. **Outcome:** completeness 89.7–98.3%
+  across rigs; G_lim characterized (wide ~15.0, Newton V ~16.7, B/R >=17.5 censored,
+  narrow-band >=17.5 no-crossing); `completeness_50` + `missed_below_g90` live in QA dashboard
+  as ongoing health signals; original TODO-13 fully superseded. Diagnostic:
+  `scripts/dao_reconcile_diag.py --all-drafts`.
+  **2-pass DAO recovery: CLOSED (not-worth-complexity, 2026-07-09).** Decision basis: after
+  the reference-population fix, true anomalies (missed@G90) are 15 (424 wide), 6/18 (427 g/r),
+  10 (425 V); 425 B/R misses (314/212 under censored depth) are the practical ceiling of
+  catalog cross-match (Gaia near-bright-star spurious sources, sub-blend-radius pairs, proper
+  motion) — 2-pass would harvest artifacts, not signal. **REOPEN CONDITION:** missed@G90
+  becomes material (hundreds) on a new rig/config in the QA dashboard.
+  **PUB-QC-MISSRESIDUAL (PARKED, LOW):** positional classification of the 425 B/R missed
+  sample (near-bright-star distance, pair separation, PM) — explains the residual 2–3%, strong
+  QC passage for future publication Validation section. Not scheduled.
+  **Artificial-star injection tests** (photutils) = future gold-standard validation; candidate
+  for EXTERNAL-XVAL / publication Validation section.
 - **TODO-LC-QUALITY — LC classification filter.** `lc_quality_flag` exists and is consumed by
   the trust gate; verify the saturated/noisy export policy is complete.
 - **TODO-14 — PDF size optimization** (29 MB → < 10 MB).
