@@ -1,32 +1,45 @@
-"""Gaia<->DAO field accounting: G_lim, cone decomposition, unmatched-DAO classification.
+"""Gaia<->DAO field accounting on the frame footprint reference population.
 
-Shared by ``scripts/dao_reconcile_diag.py`` and ``pipeline.py`` (``pipeline_meta.json``).
-Blend radius follows ``crowding_index._build_blend_targets_df``: 1.5  FWHM [px].
+Completeness curve and G_lim_50 / G_lim_90 use the Fleming et al. (1995) error-function
+model (see ``CITATIONS.bib`` key ``fleming1995``). Reference stars come from a direct
+local-Gaia DB query over the MASTERSTAR WCS bounding box at detect-time depth (no
+``field_catalog_cone.csv`` row cap). Blend radius: 1.5 x FWHM [px] (``crowding_index``).
 """
 
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import curve_fit
+from scipy.special import erf, erfinv
 
+from database import get_gaia_db_max_g_mag, query_local_gaia
 from gaia_catalog_id import normalize_gaia_source_id_series
 
 BLEND_FWHM_FACTOR = 1.5
-DEFAULT_G_LIM_PERCENTILE = 95.0
+DEFAULT_EDGE_MARGIN_FWHM = 2.0
+DEFAULT_BIN_WIDTH_MAG = 0.5
 COLLINEAR_MIN_POINTS = 3
 COLLINEAR_MAX_PERP_PX = 2.0
+DEFAULT_MATCH_SEP_ARCSEC = 8.0
 
 
-def _finite_mag_series(df: pd.DataFrame, cols: tuple[str, ...]) -> pd.Series:
-    for col in cols:
-        if col in df.columns:
-            s = pd.to_numeric(df[col], errors="coerce")
-            if s.notna().any():
-                return s
-    return pd.Series(dtype=float)
+class ReferencePopulationMismatch(RuntimeError):
+    """Matched DAO catalog_ids or magnitudes inconsistent with the reference query."""
+
+
+@dataclass
+class FlemingFitResult:
+    g_lim_50: float
+    g_lim_90: float | None
+    sigma_mag: float | None
+    fit_method: str
+    fit_params: dict[str, float | None]
+    curve_bins: list[dict[str, Any]]
 
 
 def _normalize_ids(df: pd.DataFrame, col: str = "catalog_id") -> pd.Series:
@@ -35,25 +48,29 @@ def _normalize_ids(df: pd.DataFrame, col: str = "catalog_id") -> pd.Series:
     return normalize_gaia_source_id_series(df[col]).fillna("").astype(str).str.strip()
 
 
-def estimate_g_lim(
-    mags: pd.Series | np.ndarray,
-    *,
-    percentile: float = DEFAULT_G_LIM_PERCENTILE,
-) -> float | None:
-    """Frame detection limit from matched-star Gaia G distribution (default p95)."""
-    arr = pd.to_numeric(pd.Series(mags), errors="coerce").to_numpy(dtype=np.float64)
-    ok = np.isfinite(arr)
-    if int(np.count_nonzero(ok)) < 3:
-        return None
-    return float(np.percentile(arr[ok], float(percentile)))
-
-
 def blend_radius_px(fwhm_px: float, *, factor: float = BLEND_FWHM_FACTOR) -> float:
     return float(factor) * float(fwhm_px)
 
 
 def blend_radius_arcsec(fwhm_px: float, plate_scale_arcsec: float, *, factor: float = BLEND_FWHM_FACTOR) -> float:
     return blend_radius_px(fwhm_px, factor=factor) * float(plate_scale_arcsec)
+
+
+def fleming_completeness(mag: np.ndarray | float, g_lim_50: float, sigma_mag: float) -> np.ndarray:
+    """Fleming et al. (1995): C(G) = 0.5 * (1 + erf((G_50 - G) / (sqrt(2) sigma)))."""
+    m = np.asarray(mag, dtype=np.float64)
+    sig = max(float(sigma_mag), 1e-6)
+    return 0.5 * (1.0 + erf((float(g_lim_50) - m) / (math.sqrt(2.0) * sig)))
+
+
+def frame_sky_bbox_deg(wcs: Any, naxis1: int, naxis2: int) -> tuple[float, float, float, float]:
+    """RA/Dec extrema from the four chip corners (ICRS deg)."""
+    xs = [0.0, float(naxis1 - 1), float(naxis1 - 1), 0.0]
+    ys = [0.0, 0.0, float(naxis2 - 1), float(naxis2 - 1)]
+    ra, dec = wcs.all_pix2world(xs, ys, 0)
+    ra = np.asarray(ra, dtype=np.float64)
+    dec = np.asarray(dec, dtype=np.float64)
+    return float(np.nanmin(ra)), float(np.nanmax(ra)), float(np.nanmin(dec)), float(np.nanmax(dec))
 
 
 def project_ra_dec_to_pixel(
@@ -74,9 +91,82 @@ def project_ra_dec_to_pixel(
     return xp, yp
 
 
-def _matched_detection_mask(detections_df: pd.DataFrame) -> np.ndarray:
-    cid = _normalize_ids(detections_df)
-    return (cid != "").to_numpy(dtype=bool)
+def gaia_db_rows_to_reference_df(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    if not rows:
+        return pd.DataFrame(columns=["catalog_id", "ra_deg", "dec_deg", "mag"])
+    df = pd.DataFrame(rows)
+    rename = {"source_id": "catalog_id", "ra": "ra_deg", "dec": "dec_deg", "g_mag": "mag"}
+    for old, new in rename.items():
+        if old in df.columns and new not in df.columns:
+            df = df.rename(columns={old: new})
+    df["catalog_id"] = _normalize_ids(df)
+    df["mag"] = pd.to_numeric(df.get("mag"), errors="coerce")
+    df["ra_deg"] = pd.to_numeric(df.get("ra_deg"), errors="coerce")
+    df["dec_deg"] = pd.to_numeric(df.get("dec_deg"), errors="coerce")
+    return df
+
+
+def query_reference_population(
+    gaia_db_path: str | Any,
+    wcs: Any,
+    naxis1: int,
+    naxis2: int,
+    *,
+    mag_limit: float | None = None,
+) -> pd.DataFrame:
+    """Direct Gaia DB query over the frame WCS bbox at full detect-time depth (no row cap)."""
+    ra_min, ra_max, dec_min, dec_max = frame_sky_bbox_deg(wcs, naxis1, naxis2)
+    ml = float(mag_limit) if mag_limit is not None and math.isfinite(float(mag_limit)) else None
+    if ml is None:
+        _gmax = get_gaia_db_max_g_mag(gaia_db_path)
+        ml = float(_gmax) if _gmax > 0 else None
+    rows = query_local_gaia(
+        gaia_db_path,
+        ra_min=ra_min,
+        ra_max=ra_max,
+        dec_min=dec_min,
+        dec_max=dec_max,
+        mag_limit=ml,
+        max_rows=None,
+    )
+    return gaia_db_rows_to_reference_df(rows)
+
+
+def apply_footprint_filter(
+    reference_df: pd.DataFrame,
+    wcs: Any,
+    naxis1: int,
+    naxis2: int,
+    *,
+    fwhm_px: float,
+    edge_margin_fwhm: float = DEFAULT_EDGE_MARGIN_FWHM,
+) -> tuple[pd.DataFrame, int]:
+    """Tag in-frame (chip interior minus edge margin) vs off-frame."""
+    if reference_df.empty:
+        return reference_df.copy(), 0
+    ref = reference_df.copy()
+    xp, yp = project_ra_dec_to_pixel(wcs, ref["ra_deg"], ref["dec_deg"])
+    ref["_x_pix"] = xp
+    ref["_y_pix"] = yp
+    margin = float(edge_margin_fwhm) * float(fwhm_px)
+    on_chip = (
+        np.isfinite(xp)
+        & np.isfinite(yp)
+        & (xp >= 0.0)
+        & (xp < float(naxis1))
+        & (yp >= 0.0)
+        & (yp < float(naxis2))
+    )
+    in_frame = (
+        on_chip
+        & (xp >= margin)
+        & (xp < float(naxis1) - margin)
+        & (yp >= margin)
+        & (yp < float(naxis2) - margin)
+    )
+    ref["_in_frame"] = in_frame
+    n_off = int((~in_frame).sum())
+    return ref, n_off
 
 
 def _matched_catalog_id_set(detections_df: pd.DataFrame) -> set[str]:
@@ -85,8 +175,9 @@ def _matched_catalog_id_set(detections_df: pd.DataFrame) -> set[str]:
 
 
 def _build_matched_xy(detections_df: pd.DataFrame) -> np.ndarray:
-    m = _matched_detection_mask(detections_df)
-    if not np.any(m):
+    cid = _normalize_ids(detections_df)
+    m = cid != ""
+    if not m.any():
         return np.empty((0, 2), dtype=np.float64)
     sub = detections_df.loc[m]
     x = pd.to_numeric(sub["x"], errors="coerce").to_numpy(dtype=np.float64)
@@ -108,47 +199,201 @@ def is_blended_with_matched(
     return bool(np.min(d2) <= float(blend_r_px) ** 2)
 
 
-def decompose_undetected_cone(
-    cone_df: pd.DataFrame,
+def check_reference_population_consistency(
+    detections_df: pd.DataFrame,
+    reference_df: pd.DataFrame,
+) -> dict[str, Any]:
+    """Assert matched stars are covered by the reference query (exact catalog_id + G depth)."""
+    matched_mask = _normalize_ids(detections_df) != ""
+    matched_df = detections_df.loc[matched_mask]
+    matched_ids = _matched_catalog_id_set(detections_df)
+    ref_ids = set(reference_df["catalog_id"].astype(str).str.strip()) if len(reference_df) else set()
+    missing_ids = sorted(matched_ids - ref_ids)
+    mags = pd.to_numeric(matched_df.get("phot_g_mean_mag", matched_df.get("mag")), errors="coerce").dropna()
+    ref_mags = pd.to_numeric(reference_df.get("mag"), errors="coerce").dropna()
+    max_matched = float(mags.max()) if not mags.empty else float("nan")
+    max_ref = float(ref_mags.max()) if not ref_mags.empty else float("nan")
+    ok = not missing_ids and (not math.isfinite(max_matched) or not math.isfinite(max_ref) or max_matched <= max_ref + 1e-3)
+    out = {
+        "ok": bool(ok),
+        "n_matched_ids": int(len(matched_ids)),
+        "n_missing_from_reference": int(len(missing_ids)),
+        "missing_ids_sample": missing_ids[:12],
+        "max_matched_g": round(max_matched, 4) if math.isfinite(max_matched) else None,
+        "max_reference_g": round(max_ref, 4) if math.isfinite(max_ref) else None,
+    }
+    if not ok:
+        raise ReferencePopulationMismatch(
+            f"Reference population mismatch: missing={len(missing_ids)} "
+            f"max_matched_G={max_matched} max_ref_G={max_ref}"
+        )
+    return out
+
+
+def bin_completeness_curve(
+    reference_in_frame: pd.DataFrame,
+    matched_ids: set[str],
+    *,
+    bin_width: float = DEFAULT_BIN_WIDTH_MAG,
+) -> list[dict[str, Any]]:
+    """Per-bin n_ref, n_matched, completeness fraction (0.5 mag bins by default)."""
+    if reference_in_frame.empty:
+        return []
+    ref = reference_in_frame.copy()
+    ref["_matched"] = ref["catalog_id"].astype(str).str.strip().isin(matched_ids)
+    mags = pd.to_numeric(ref["mag"], errors="coerce")
+    ref = ref.loc[mags.notna()].copy()
+    if ref.empty:
+        return []
+    bw = float(bin_width)
+    lo = float(math.floor(float(mags.min()) / bw) * bw)
+    hi = float(math.ceil(float(mags.max()) / bw) * bw)
+    bins: list[dict[str, Any]] = []
+    edge = lo
+    while edge < hi + 1e-9:
+        center = edge + 0.5 * bw
+        mask = (mags >= edge) & (mags < edge + bw)
+        n_ref = int(mask.sum())
+        if n_ref > 0:
+            n_mat = int(ref.loc[mask, "_matched"].sum())
+            frac = float(n_mat) / float(n_ref)
+            bins.append(
+                {
+                    "bin_lo": round(edge, 3),
+                    "bin_hi": round(edge + bw, 3),
+                    "bin_center": round(center, 3),
+                    "n_ref": n_ref,
+                    "n_matched": n_mat,
+                    "completeness_frac": round(frac, 4),
+                }
+            )
+        edge += bw
+    return bins
+
+
+def _crossing_mag(bins: list[dict[str, Any]], level: float) -> float | None:
+    if not bins:
+        return None
+    pts = sorted(bins, key=lambda b: b["bin_center"])
+    for i in range(len(pts) - 1):
+        f0 = float(pts[i]["completeness_frac"])
+        f1 = float(pts[i + 1]["completeness_frac"])
+        m0 = float(pts[i]["bin_center"])
+        m1 = float(pts[i + 1]["bin_center"])
+        if f0 <= level <= f1 or f1 <= level <= f0:
+            if abs(f1 - f0) < 1e-9:
+                return m0
+            t = (level - f0) / (f1 - f0)
+            return float(m0 + t * (m1 - m0))
+    return None
+
+
+def fit_fleming_completeness(
+    curve_bins: list[dict[str, Any]],
+) -> FlemingFitResult:
+    """Fit Fleming erf completeness; fallback to linear interpolation crossings."""
+    if not curve_bins:
+        return FlemingFitResult(
+            g_lim_50=float("nan"),
+            g_lim_90=None,
+            sigma_mag=None,
+            fit_method="none",
+            fit_params={},
+            curve_bins=[],
+        )
+
+    mags = np.array([b["bin_center"] for b in curve_bins], dtype=np.float64)
+    fracs = np.array([b["completeness_frac"] for b in curve_bins], dtype=np.float64)
+    weights = np.sqrt(np.maximum([b["n_ref"] for b in curve_bins], 1)).astype(np.float64)
+
+    g50_i = _crossing_mag(curve_bins, 0.5)
+    g90_i = _crossing_mag(curve_bins, 0.9)
+
+    fit_method = "interpolation"
+    g50 = g50_i
+    g90 = g90_i
+    sigma: float | None = None
+    params: dict[str, float | None] = {"g_lim_50_interp": g50_i, "g_lim_90_interp": g90_i}
+
+    if len(curve_bins) >= 4 and np.any(fracs < 0.95) and np.any(fracs > 0.05):
+        try:
+            p0 = (float(g50_i or np.median(mags)), 0.4)
+            bounds = ([float(mags.min()) - 2.0, 0.05], [float(mags.max()) + 2.0, 3.0])
+
+            def _model(m: np.ndarray, m50: float, sig: float) -> np.ndarray:
+                return fleming_completeness(m, m50, sig)
+
+            popt, _ = curve_fit(
+                _model,
+                mags,
+                fracs,
+                p0=p0,
+                bounds=bounds,
+                sigma=1.0 / weights,
+                absolute_sigma=False,
+                maxfev=8000,
+            )
+            m50_f, sig_f = float(popt[0]), float(popt[1])
+            g50 = m50_f
+            sigma = sig_f
+            g90 = m50_f - math.sqrt(2.0) * sig_f * float(erfinv(0.8))
+            fit_method = "fleming1995_erf"
+            params = {"g_lim_50": m50_f, "sigma_mag": sig_f, "g_lim_90": g90}
+        except Exception:  # noqa: BLE001
+            pass
+
+    if g50 is None or not math.isfinite(float(g50)):
+        g50 = float(np.median(mags))
+    return FlemingFitResult(
+        g_lim_50=float(g50),
+        g_lim_90=float(g90) if g90 is not None and math.isfinite(float(g90)) else g90_i,
+        sigma_mag=sigma,
+        fit_method=fit_method,
+        fit_params={k: (round(float(v), 4) if v is not None and math.isfinite(float(v)) else None) for k, v in params.items()},
+        curve_bins=curve_bins,
+    )
+
+
+def decompose_reference_population(
+    reference_df: pd.DataFrame,
     detections_df: pd.DataFrame,
     *,
-    g_lim: float,
+    g_lim_50: float,
     fwhm_px: float,
-    wcs: Any | None = None,
     blend_factor: float = BLEND_FWHM_FACTOR,
 ) -> tuple[pd.DataFrame, dict[str, int]]:
-    """Label each cone row: matched | below_limit | blended | genuinely_missed."""
-    if cone_df.empty:
+    """Bucket each reference star: matched / off_frame / below_limit / blended / genuinely_missed."""
+    if reference_df.empty:
         return pd.DataFrame(), {
             "n_gaia_matched": 0,
+            "n_gaia_off_frame": 0,
             "n_gaia_below_limit": 0,
             "n_gaia_blended": 0,
             "n_gaia_missed": 0,
+            "n_ref_in_frame": 0,
         }
 
-    cone = cone_df.copy()
-    cone["_cid"] = _normalize_ids(cone)
-    cone["_mag"] = pd.to_numeric(cone.get("mag"), errors="coerce")
+    ref = reference_df.copy()
     matched_ids = _matched_catalog_id_set(detections_df)
-    cone["_bucket"] = np.where(cone["_cid"].isin(matched_ids), "matched", "undetected")
+    ref["_mag"] = pd.to_numeric(ref.get("mag"), errors="coerce")
+    ref["_bucket"] = "off_frame"
+    in_frame = ref.get("_in_frame", pd.Series(False, index=ref.index)).astype(bool)
+    ref.loc[in_frame, "_bucket"] = np.where(
+        ref.loc[in_frame, "catalog_id"].astype(str).str.strip().isin(matched_ids),
+        "matched",
+        "undetected",
+    )
 
     matched_xy = _build_matched_xy(detections_df)
     blend_r = blend_radius_px(fwhm_px, factor=blend_factor)
+    glim = float(g_lim_50)
 
-    if wcs is not None and {"ra_deg", "dec_deg"}.issubset(cone.columns):
-        cx, cy = project_ra_dec_to_pixel(wcs, cone["ra_deg"], cone["dec_deg"])
-        cone["_x_pix"] = cx
-        cone["_y_pix"] = cy
-    else:
-        cone["_x_pix"] = np.nan
-        cone["_y_pix"] = np.nan
-
-    und = cone["_bucket"] == "undetected"
-    below = und & cone["_mag"].gt(float(g_lim))
-    cone.loc[below, "_bucket"] = "below_limit"
+    und = in_frame & (ref["_bucket"] == "undetected")
+    below = und & ref["_mag"].gt(glim)
+    ref.loc[below, "_bucket"] = "below_limit"
 
     rest = und & ~below
-    blended_mask = np.zeros(len(cone), dtype=bool)
+    blended_mask = np.zeros(len(ref), dtype=bool)
     if np.any(rest) and matched_xy.size > 0:
         from scipy.spatial import cKDTree
 
@@ -156,8 +401,8 @@ def decompose_undetected_cone(
         idxs = np.where(rest.to_numpy())[0]
         pts = np.column_stack(
             [
-                cone.loc[rest, "_x_pix"].to_numpy(dtype=np.float64),
-                cone.loc[rest, "_y_pix"].to_numpy(dtype=np.float64),
+                ref.loc[rest, "_x_pix"].to_numpy(dtype=np.float64),
+                ref.loc[rest, "_y_pix"].to_numpy(dtype=np.float64),
             ]
         )
         ok_pt = np.isfinite(pts).all(axis=1)
@@ -165,24 +410,32 @@ def decompose_undetected_cone(
             dists, _ = tree.query(pts[ok_pt], k=1)
             blended_local = dists <= blend_r
             blended_mask[idxs[ok_pt]] = blended_local
-    cone.loc[blended_mask, "_bucket"] = "blended"
+    ref.loc[blended_mask, "_bucket"] = "blended"
     missed = und & ~below & ~blended_mask
-    cone.loc[missed, "_bucket"] = "genuinely_missed"
+    ref.loc[missed, "_bucket"] = "genuinely_missed"
+
+    in_frame_mask = in_frame.to_numpy()
+    detectable = in_frame_mask & ref["_mag"].le(glim).to_numpy()
+    n_matched_detectable = int((detectable & (ref["_bucket"] == "matched").to_numpy()).sum())
+    n_missed = int((ref["_bucket"] == "genuinely_missed").sum())
 
     counts = {
-        "n_gaia_matched": int((cone["_bucket"] == "matched").sum()),
-        "n_gaia_below_limit": int((cone["_bucket"] == "below_limit").sum()),
-        "n_gaia_blended": int((cone["_bucket"] == "blended").sum()),
-        "n_gaia_missed": int((cone["_bucket"] == "genuinely_missed").sum()),
+        "n_gaia_matched": int((ref["_bucket"] == "matched").sum()),
+        "n_gaia_matched_detectable": n_matched_detectable,
+        "n_gaia_off_frame": int((ref["_bucket"] == "off_frame").sum()),
+        "n_gaia_below_limit": int((ref["_bucket"] == "below_limit").sum()),
+        "n_gaia_blended": int((ref["_bucket"] == "blended").sum()),
+        "n_gaia_missed": n_missed,
+        "n_ref_in_frame": int(in_frame.sum()),
     }
-    return cone, counts
+    return ref, counts
 
 
-def corrected_completeness_pct(n_matched: int, n_missed: int) -> float | None:
-    denom = int(n_matched) + int(n_missed)
+def completeness_50_pct(n_matched_detectable: int, n_missed: int) -> float | None:
+    denom = int(n_matched_detectable) + int(n_missed)
     if denom <= 0:
         return None
-    return round(100.0 * float(n_matched) / float(denom), 2)
+    return round(100.0 * float(n_matched_detectable) / float(denom), 2)
 
 
 def raw_completeness_pct(n_matched_unique: int, catalog_rows: int) -> float | None:
@@ -205,7 +458,6 @@ def find_largest_collinear_group(
     min_points: int = COLLINEAR_MIN_POINTS,
     max_perp_px: float = COLLINEAR_MAX_PERP_PX,
 ) -> dict[str, Any]:
-    """Return the largest subset consistent with a straight line (satellite-trail probe)."""
     pts = np.asarray(xy, dtype=np.float64)
     ok = np.isfinite(pts).all(axis=1)
     pts = pts[ok]
@@ -238,60 +490,101 @@ def find_largest_collinear_group(
     }
 
 
+def _positional_match_to_reference(
+    unmatched: pd.DataFrame,
+    ref_in_frame: pd.DataFrame,
+    *,
+    match_sep_arcsec: float,
+    plate_scale_arcsec: float | None,
+    fwhm_px: float,
+) -> np.ndarray:
+    if unmatched.empty or ref_in_frame.empty:
+        return np.zeros(len(unmatched), dtype=bool)
+    if plate_scale_arcsec is not None and plate_scale_arcsec > 0:
+        r_px = float(match_sep_arcsec) / float(plate_scale_arcsec)
+    else:
+        r_px = float(match_sep_arcsec) / 9.78
+    from scipy.spatial import cKDTree
+
+    ref_xy = np.column_stack(
+        [
+            pd.to_numeric(ref_in_frame["_x_pix"], errors="coerce").to_numpy(dtype=np.float64),
+            pd.to_numeric(ref_in_frame["_y_pix"], errors="coerce").to_numpy(dtype=np.float64),
+        ]
+    )
+    ok_ref = np.isfinite(ref_xy).all(axis=1)
+    if not np.any(ok_ref):
+        return np.zeros(len(unmatched), dtype=bool)
+    tree = cKDTree(ref_xy[ok_ref])
+    ux = pd.to_numeric(unmatched["x"], errors="coerce").to_numpy(dtype=np.float64)
+    uy = pd.to_numeric(unmatched["y"], errors="coerce").to_numpy(dtype=np.float64)
+    pts = np.column_stack([ux, uy])
+    ok_u = np.isfinite(pts).all(axis=1)
+    hit = np.zeros(len(unmatched), dtype=bool)
+    if np.any(ok_u):
+        dists, _ = tree.query(pts[ok_u], k=1)
+        hit[np.where(ok_u)[0]] = dists <= r_px
+    return hit
+
+
 def classify_unmatched_dao(
     detections_df: pd.DataFrame,
     *,
+    ref_in_frame: pd.DataFrame | None = None,
+    matched_ids: set[str] | None = None,
+    match_sep_arcsec: float = DEFAULT_MATCH_SEP_ARCSEC,
+    plate_scale_arcsec: float | None = None,
+    fwhm_px: float = 3.5,
     collinear_min_points: int = COLLINEAR_MIN_POINTS,
     collinear_max_perp_px: float = COLLINEAR_MAX_PERP_PX,
 ) -> dict[str, Any]:
-    """DAO detections without ``catalog_id``: flux/peak stats + collinearity artifact probe."""
     cid = _normalize_ids(detections_df)
     unmatched = detections_df.loc[cid == ""].copy()
     n_total = int(len(unmatched))
     if n_total == 0:
         return {
             "n_dao_unmatched": 0,
+            "n_now_matched_to_faint": 0,
             "n_artifact_candidates": 0,
             "n_unexplained": 0,
             "collinearity": find_largest_collinear_group(np.empty((0, 2))),
             "flux": {},
             "peak_dao": {},
-            "sharpness": {},
-            "roundness": {},
             "classification": "none",
         }
 
-    flux = _finite_mag_series(unmatched, ("flux", "dao_flux"))
-    peak = _finite_mag_series(unmatched, ("peak_dao", "peak_max_adu"))
-    sharp = _finite_mag_series(unmatched, ("sharpness",))
-    roundness = _finite_mag_series(unmatched, ("roundness_mean", "roundness"))
-
+    peak = pd.to_numeric(unmatched.get("peak_dao", unmatched.get("peak_max_adu")), errors="coerce")
+    flux = pd.to_numeric(unmatched.get("flux", unmatched.get("dao_flux")), errors="coerce")
     xy = np.column_stack(
         [
             pd.to_numeric(unmatched.get("x"), errors="coerce").to_numpy(dtype=np.float64),
             pd.to_numeric(unmatched.get("y"), errors="coerce").to_numpy(dtype=np.float64),
         ]
     )
-    collin = find_largest_collinear_group(
-        xy,
-        min_points=collinear_min_points,
-        max_perp_px=collinear_max_perp_px,
-    )
+    collin = find_largest_collinear_group(xy, min_points=collinear_min_points, max_perp_px=collinear_max_perp_px)
 
-    artifact_mask = np.zeros(n_total, dtype=bool)
+    faint_hit = np.zeros(n_total, dtype=bool)
+    if ref_in_frame is not None and not ref_in_frame.empty:
+        faint_hit = _positional_match_to_reference(
+            unmatched,
+            ref_in_frame,
+            match_sep_arcsec=match_sep_arcsec,
+            plate_scale_arcsec=plate_scale_arcsec,
+            fwhm_px=fwhm_px,
+        )
+
+    artifact_mask = faint_hit.copy()
     if collin["consistent_with_line"] and collin["inlier_indices"]:
         artifact_mask[collin["inlier_indices"]] = True
-
-    # Isolated hot-pixel / cosmic candidates: peak well above median unmatched peak.
     if peak.notna().sum() >= 5:
         med_peak = float(peak.median())
         p90_peak = float(peak.quantile(0.9))
         hot_thr = max(med_peak * 3.0, p90_peak * 1.5)
         artifact_mask |= peak.to_numpy(dtype=np.float64) >= hot_thr
 
+    n_faint = int(faint_hit.sum())
     n_artifact = int(artifact_mask.sum())
     n_unexplained = int(n_total - n_artifact)
-    classification = "artifact_dominant" if n_artifact >= max(1, n_total // 2) else "mixed"
 
     def _dist_stats(s: pd.Series) -> dict[str, float | None]:
         arr = pd.to_numeric(s, errors="coerce").dropna()
@@ -306,54 +599,70 @@ def classify_unmatched_dao(
 
     return {
         "n_dao_unmatched": n_total,
+        "n_now_matched_to_faint": n_faint,
         "n_artifact_candidates": n_artifact,
         "n_unexplained": n_unexplained,
-        "classification": classification,
+        "classification": "artifact_dominant" if n_artifact >= max(1, n_total // 2) else "mixed",
         "collinearity": collin,
         "flux": _dist_stats(flux),
         "peak_dao": _dist_stats(peak),
-        "sharpness": _dist_stats(sharp),
-        "roundness": _dist_stats(roundness),
     }
 
 
 def compute_gaia_dao_reconcile(
-    cone_df: pd.DataFrame,
     detections_df: pd.DataFrame,
     *,
+    gaia_db_path: str | Any,
+    wcs: Any,
+    naxis1: int,
+    naxis2: int,
     fwhm_px: float,
     plate_scale_arcsec: float | None = None,
-    wcs: Any | None = None,
-    g_lim_percentile: float = DEFAULT_G_LIM_PERCENTILE,
+    mag_limit: float | None = None,
+    edge_margin_fwhm: float = DEFAULT_EDGE_MARGIN_FWHM,
+    bin_width_mag: float = DEFAULT_BIN_WIDTH_MAG,
     blend_factor: float = BLEND_FWHM_FACTOR,
+    match_sep_arcsec: float = DEFAULT_MATCH_SEP_ARCSEC,
+    cone_df: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
-    """Full Gaia<->DAO reconciliation report (diagnostic + pipeline meta source)."""
-    matched_mask = _matched_detection_mask(detections_df)
-    matched_df = detections_df.loc[matched_mask]
-    matched_mags = _finite_mag_series(matched_df, ("phot_g_mean_mag", "mag", "catalog_mag"))
-    g_lim = estimate_g_lim(matched_mags, percentile=g_lim_percentile)
+    """Full footprint-based Gaia<->DAO reconciliation (R-2 methodology)."""
+    reference_df = query_reference_population(
+        gaia_db_path,
+        wcs,
+        naxis1,
+        naxis2,
+        mag_limit=mag_limit,
+    )
+    pop_check = check_reference_population_consistency(detections_df, reference_df)
+    reference_df, n_off = apply_footprint_filter(
+        reference_df,
+        wcs,
+        naxis1,
+        naxis2,
+        fwhm_px=fwhm_px,
+        edge_margin_fwhm=edge_margin_fwhm,
+    )
+    matched_ids = _matched_catalog_id_set(detections_df)
+    ref_in_frame = reference_df.loc[reference_df.get("_in_frame", False).astype(bool)].copy()
 
-    if g_lim is None:
-        g_lim = estimate_g_lim(pd.to_numeric(cone_df.get("mag"), errors="coerce"), percentile=g_lim_percentile)
+    curve_bins = bin_completeness_curve(ref_in_frame, matched_ids, bin_width=bin_width_mag)
+    fleming = fit_fleming_completeness(curve_bins)
+    g_lim_50 = float(fleming.g_lim_50)
+    g_lim_90 = fleming.g_lim_90
 
-    if g_lim is None:
-        raise ValueError("Cannot estimate G_lim: insufficient matched-star magnitudes")
-
-    labeled, counts = decompose_undetected_cone(
-        cone_df,
+    labeled, counts = decompose_reference_population(
+        reference_df,
         detections_df,
-        g_lim=float(g_lim),
+        g_lim_50=g_lim_50,
         fwhm_px=float(fwhm_px),
-        wcs=wcs,
         blend_factor=blend_factor,
     )
 
+    corr_pct = completeness_50_pct(counts["n_gaia_matched_detectable"], counts["n_gaia_missed"])
     cid = _normalize_ids(detections_df)
     n_matched_unique = int(cid[cid != ""].nunique())
-    catalog_rows = int(len(cone_df))
-    raw_pct = raw_completeness_pct(n_matched_unique, catalog_rows)
-    corr_pct = corrected_completeness_pct(counts["n_gaia_matched"], counts["n_gaia_missed"])
-    unmatched_dao = classify_unmatched_dao(detections_df)
+    catalog_rows = int(len(cone_df)) if cone_df is not None else int(len(reference_df))
+    raw_pct = raw_completeness_pct(n_matched_unique, catalog_rows) if cone_df is not None else None
 
     if plate_scale_arcsec is None and wcs is not None:
         try:
@@ -364,6 +673,15 @@ def compute_gaia_dao_reconcile(
         except Exception:  # noqa: BLE001
             plate_scale_arcsec = None
 
+    unmatched_dao = classify_unmatched_dao(
+        detections_df,
+        ref_in_frame=ref_in_frame,
+        matched_ids=matched_ids,
+        match_sep_arcsec=match_sep_arcsec,
+        plate_scale_arcsec=plate_scale_arcsec,
+        fwhm_px=float(fwhm_px),
+    )
+
     blend_r_px = blend_radius_px(fwhm_px, factor=blend_factor)
     blend_r_arcsec = (
         blend_radius_arcsec(fwhm_px, plate_scale_arcsec, factor=blend_factor)
@@ -371,24 +689,24 @@ def compute_gaia_dao_reconcile(
         else None
     )
 
-    matched_mag_arr = pd.to_numeric(matched_mags, errors="coerce").dropna()
-    g_lim_stats = {
-        "percentile": float(g_lim_percentile),
-        "p50": round(float(matched_mag_arr.quantile(0.5)), 4) if not matched_mag_arr.empty else None,
-        "p90": round(float(matched_mag_arr.quantile(0.9)), 4) if not matched_mag_arr.empty else None,
-        "p95": round(float(matched_mag_arr.quantile(0.95)), 4) if not matched_mag_arr.empty else None,
-        "max": round(float(matched_mag_arr.max()), 4) if not matched_mag_arr.empty else None,
-        "n_matched_stars": int(len(matched_mag_arr)),
-    }
-
     return {
-        "g_lim_est": round(float(g_lim), 4),
-        "g_lim_stats": g_lim_stats,
+        "methodology": "footprint_reference_fleming1995",
+        "population_check": pop_check,
+        "g_lim_50": round(g_lim_50, 4),
+        "g_lim_90": round(float(g_lim_90), 4) if g_lim_90 is not None and math.isfinite(float(g_lim_90)) else None,
+        "g_lim_est": round(g_lim_50, 4),
+        "fit_method": fleming.fit_method,
+        "fleming_fit_params": fleming.fit_params,
+        "completeness_curve": fleming.curve_bins,
         "fwhm_px": round(float(fwhm_px), 4),
+        "edge_margin_px": round(float(edge_margin_fwhm) * float(fwhm_px), 4),
         "blend_factor_fwhm": float(blend_factor),
         "blend_radius_px": round(blend_r_px, 4),
         "blend_radius_arcsec": round(blend_r_arcsec, 4) if blend_r_arcsec is not None else None,
         "plate_scale_arcsec": round(float(plate_scale_arcsec), 6) if plate_scale_arcsec is not None else None,
+        "n_ref_total": int(len(reference_df)),
+        "n_ref_in_frame": int(counts["n_ref_in_frame"]),
+        "n_gaia_off_frame": int(counts["n_gaia_off_frame"]),
         "catalog_rows": catalog_rows,
         "n_gaia_matched_unique": n_matched_unique,
         **counts,
@@ -396,22 +714,39 @@ def compute_gaia_dao_reconcile(
         "gaia_dao_completeness_raw_pct": raw_pct,
         "unmatched_dao": unmatched_dao,
         "n_dao_unmatched": int(unmatched_dao["n_dao_unmatched"]),
-        "labeled_cone": labeled,
+        "labeled_reference": labeled,
     }
 
 
 def reconcile_to_pipeline_meta(report: dict[str, Any]) -> dict[str, Any]:
     """Extract flat keys for ``merge_photometry_pipeline_meta``."""
+    curve = report.get("completeness_curve") or []
+    compact_curve = [
+        {
+            "bin_center": c.get("bin_center"),
+            "n_ref": c.get("n_ref"),
+            "n_matched": c.get("n_matched"),
+            "completeness_frac": c.get("completeness_frac"),
+        }
+        for c in curve[:80]
+    ]
     return {
-        "g_lim_est": report.get("g_lim_est"),
+        "g_lim_50": report.get("g_lim_50"),
+        "g_lim_90": report.get("g_lim_90"),
+        "g_lim_est": report.get("g_lim_50"),
+        "fit_method": report.get("fit_method"),
+        "completeness_curve": compact_curve,
+        "n_ref_in_frame": report.get("n_ref_in_frame"),
         "n_gaia_matched": report.get("n_gaia_matched"),
+        "n_gaia_off_frame": report.get("n_gaia_off_frame"),
         "n_gaia_below_limit": report.get("n_gaia_below_limit"),
         "n_gaia_blended": report.get("n_gaia_blended"),
         "n_gaia_missed": report.get("n_gaia_missed"),
         "gaia_dao_completeness_pct": report.get("gaia_dao_completeness_pct"),
         "gaia_dao_completeness_raw_pct": report.get("gaia_dao_completeness_raw_pct"),
         "n_dao_unmatched": report.get("n_dao_unmatched"),
-        "g_lim_percentile": report.get("g_lim_stats", {}).get("percentile"),
+        "n_dao_matched_to_faint": (report.get("unmatched_dao") or {}).get("n_now_matched_to_faint"),
         "blend_radius_px": report.get("blend_radius_px"),
         "blend_radius_arcsec": report.get("blend_radius_arcsec"),
+        "dao_reconcile_methodology": report.get("methodology"),
     }
