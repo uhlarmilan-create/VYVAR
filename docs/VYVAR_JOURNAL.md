@@ -2,6 +2,26 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-09 — DAO-RECONCILE (Gaia↔DAO field accounting)
+
+**Goal (Milan):** near-100% two-way reconciliation between DAO signal and Gaia catalog;
+old ~3.5% dashboard figure was unlimited-cone-denominator artifact, not DAO health.
+
+**Part 1 (`becc274`):** `dao_reconcile.py` + `scripts/dao_reconcile_diag.py` + 8 unit tests.
+draft_424 diagnostic: G_lim (p95)=16.69; matched=3437; below-limit=0; blended=83;
+genuinely-missed=96480; corrected completeness=3.44%; raw=3.97%; n_dao_unmatched=2724
+(54 artifact candidates, collinearity n=33). Report: `tmp/dao_reconcile/draft_000424/`.
+
+**Part 2 (`e9daec9`):** `pipeline.py` detect + MASTERSTAR paths persist decomposition to
+`pipeline_meta.json`; `ui_masterstar_qa.py` shows redefined metric + bucket tooltip.
+
+**Decision:** 2-pass DAO recovery remains OPEN — draft_424 genuinely-missed is large;
+re-run diagnostic after MASTERSTAR regen to refresh meta.
+
+**Anchor:** no LC/proc CSV schema change; draft_424 SHA unchanged.
+
+---
+
 ## 2026-07-09 — PSF-AUDIT-FIXES + ROADMAP-RECONCILE
 
 **PSF arc (PSF off):** four latent audit findings fixed; draft_424 anchor byte-identity preserved.

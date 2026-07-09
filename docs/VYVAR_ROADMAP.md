@@ -505,8 +505,18 @@ next calibration lever.
   JOURNAL). Regenerate `vyvar_vsx_local.db` on the catalog machine after pulling.
 - **TODO-10 — Settings-tab refactor + `CONFIG_GUIDE.md`.** Ties to `VYVAR_PARAMS.md` /
   config↔UI parity.
-- **TODO-13 validation — Gaia→DAO completeness ~3.5%** still low in the QA dashboard;
-  validate after DAO pass-2 completeness work (forced-aperture rows no longer injected post `7f0dc86`).
+- **DAO-RECONCILE — Gaia↔DAO field accounting (reframes TODO-13).** **Metric fix DONE
+  (2026-07-09, `becc274`/`e9daec9`):** `dao_reconcile.py` decomposes cone stars into
+  matched / below-limit (G > G_lim) / blended (≤1.5×FWHM) / genuinely-missed; redefined
+  `gaia_dao_completeness_pct` = matched/(matched+missed); raw unlimited-denominator ratio
+  kept as `gaia_dao_completeness_raw_pct`. Diagnostic: `scripts/dao_reconcile_diag.py`.
+  **Goal (Milan 2026-07-09):** near-100% two-way reconciliation — every DAO detection
+  matched or explained, every catalog star bucketed. SIPS comparison: SIPS reports
+  one-directional solve-acceptance match only; VYVAR decomposes both directions by design.
+  **2-pass DAO recovery — OPEN decision** gated on Part 1 `n_gaia_missed`: implement only
+  if genuinely-missed is material; if ~single digits, close as not-worth-complexity.
+  draft_424 Part 1 (2026-07-09): G_lim≈16.69, corrected completeness≈3.4%, genuinely-missed
+  ≈96k (cone depth vs detection yield — not a broken metric denominator alone).
 - **TODO-LC-QUALITY — LC classification filter.** `lc_quality_flag` exists and is consumed by
   the trust gate; verify the saturated/noisy export policy is complete.
 - **TODO-14 — PDF size optimization** (29 MB → < 10 MB).

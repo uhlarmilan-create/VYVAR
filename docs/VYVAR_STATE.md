@@ -1,10 +1,13 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-09** — PSF-AUDIT-FIXES + ROADMAP-RECONCILE **CLOSED**.
+Last updated: **2026-07-09** — DAO-RECONCILE metric fix **DONE**; PSF-AUDIT-FIXES **CLOSED**.
 
-**2026-07-09 snapshot:** PSF arc audit fixes (four latent findings); production PSF still OFF;
-draft_424 content anchor unchanged (`92939fab` / `76642318`). Full pytest **643 passed**, 15 skipped.
-Roadmap reconciled per Milan 2026-07-08/09 decisions.
+**2026-07-09 snapshot:** DAO-RECONCILE (`becc274`, `e9daec9`): Gaia↔DAO completeness
+redefined in `pipeline_meta.json` + QA dashboard (`dao_reconcile.py` shared helper;
+`scripts/dao_reconcile_diag.py` read-only diagnostic). draft_424 Part 1: G_lim≈16.69,
+corrected completeness≈3.4%, genuinely-missed≈96k — 2-pass DAO recovery decision OPEN
+(gated on missed count). PSF arc fixes; production PSF still OFF; draft_424 content anchor
+unchanged (`92939fab` / `76642318`). Full pytest **651 passed**, 15 skipped.
 
 **2026-07-08 snapshot:** draft_424 coherent anchor `draft_000424_snapshot_20260708_full`
 (`run_full_photometry_pipeline`; core SHA `92939fab…` n=357). Hybrid snapshot retired.
