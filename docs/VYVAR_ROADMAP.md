@@ -75,7 +75,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 
 | ID | Sev | Notes |
 |----|-----|-------|
-| **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. Photon-transfer on field lights **INCONCLUSIVE** (g_eff~0.9; need bin2 flats). RN sub-Q directionally **CLOSED** via D3 (DECISIONS 2026-07-07); empirical photon-transfer closure pending bin2 flats. |
+| **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. **A4 (2026-07-09):** draft_426 bin4 check-star χ²=0.04–0.33; header GAIN=12.48 vs DB eq4-scaled 16.0; σ_ratio≈1.13 → χ²_pred≈0.78 (partial). Forensics: `scripts/bin4_sigma_forensics.py`, `tmp/sigma_budget/bin4_sigma_forensics.json`. DB equipment_id mismatch (eq4 IMX411 vs header matching eq2 IMX571 scale). |
 | **F-EXCEPT-TIER1** | — | **CLOSED (2026-07-08)** — 40 fixes + EXCEPT-BULK; census `docs/VYVAR_EXCEPT_CENSUS.md` all **625 EVIDENCE**. |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
@@ -303,8 +303,10 @@ next calibration lever.
    `scripts/fix_telescope_diameter.py` (A2 rig DB fix). A2 rerun (draft_424): joint fit
    f_resid=0.74, sigma_floor=10.5 mmag, median chi2/dof=1.000. **A3 (2026-07-09):** variant (e)
    adds production Honeycutt ensemble SEM; joint (e) refit sigma_floor=6.5 mmag (prediction:
-   floor_did_not_collapse); ensemble SEM median ~7.8 mmag on draft_424 calibrators. Blocks
-   TODO-GS8 + TODO-MULTISET.
+   floor_did_not_collapse). **A4 (2026-07-09):** k2-signature attribution pooled R²≈0 — k'' correction
+   would recover **0.0 mmag** of the 6.5 mmag floor; phase-signature floor_after=4.5 mmag (Δ=2.0).
+   Bin4 forensics: header gain 12.48 e-/ADU (session truth), σ_used/σ_exp≈1.13; F-BINGAIN-1 reframe
+   pointer in `scripts/bin4_sigma_forensics.py`. Blocks TODO-GS8 + TODO-MULTISET.
    **`delta_mag` flux-sum canonical until gate passes.**
 
 3. **EXTERNAL-XVAL — external validation campaign (MEDIUM).** VYVAR vs external tools (AstroImageJ

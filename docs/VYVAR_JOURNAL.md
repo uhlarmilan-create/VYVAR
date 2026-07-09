@@ -2,6 +2,20 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-09 — SIGMA-A4 (floor attribution + bin4 forensics)
+
+**Attribution draft_424:** k2 pooled R²≈0; k2_effective≈-3.6e-05, CI spans zero; floor_after k2 removal
+unchanged 6.5 mmag (k'' workstream would recover 0.0 mmag). Phase-signature floor_after=4.5 mmag
+(Δ=2.0 mmag). Controls X/time R²<0.2%.
+
+**Bin4 forensics draft_426:** header gain 12.48 (source=header), RN 14.08 (db); σ_used/σ_exp≈1.13;
+check-star χ² 0.04–0.33. Hypothesis DB-scaled gain=16 worsens χ². SEM=0: sparse 2-comp ensembles;
+producer zero_fraction 0–4%.
+
+**pytest:** 679 passed, 15 skipped.
+
+---
+
 ## 2026-07-09 — SIGMA-A3 (ensemble SEM variant + refit)
 
 **Variant (e):** `howell_scint_fresid_floor_ensemble` — quadrature of target Howell, f_resid×scint,

@@ -2,7 +2,11 @@
 
 Last updated: **2026-07-09** — Sigma budget Phase A + sparse-comp diagnostics **IN PROGRESS** (diagnostic scripts committed).
 
-**2026-07-09 snapshot:** SIGMA-A3: variant (e) `howell_scint_fresid_floor_ensemble` (+ Honeycutt ensemble SEM);
+**2026-07-09 snapshot:** SIGMA-A4: wide-rig floor attribution (k2 pooled R²≈0, floor_after k2=6.5 mmag
+unchanged); Newton bin4 forensics (header gain 12.48, σ_ratio≈1.13, χ²_pred≈0.78); hypothesis
+gain/RN correction moves χ² away from 1. pytest **679 passed**, 15 skipped.
+
+**2026-07-09 snapshot (prior):** SIGMA-A3: variant (e) `howell_scint_fresid_floor_ensemble` (+ Honeycutt ensemble SEM);
 dual SEM paths (LC decomposition + production `ensemble_normalize`); draft_424 joint refit (d) unchanged
 f_resid=0.74 sigma_floor=10.5 mmag, joint (e) f_resid=0.0 sigma_floor=6.5 mmag — prediction
 **floor_did_not_collapse**. pytest **674 passed**, 15 skipped.
