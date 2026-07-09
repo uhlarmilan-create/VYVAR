@@ -2,6 +2,24 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-09 — DAO-RECONCILE-2 (footprint reference + Fleming fit)
+
+**Root cause (R-1):** `field_catalog_cone.csv` = brightest 100k in circumscribed cone (G~15.3
+cap) vs detect-time depth to G~17.5 — population mismatch made R-1 genuinely-missed≈96k unusable.
+
+**R-2 (`bd6244a`, `4279a52`, `b7df7c6`):** Direct Gaia DB bbox query at detect depth; frame
+footprint filter (2×FWHM margin); Fleming et al. (1995) erf fit; `G_lim_50`/`G_lim_90`;
+`completeness_50` headline. Citation: `fleming1995` in `CITATIONS.bib`. All-drafts diag (~42s).
+
+**draft_424 R-2:** n_ref_in_frame=12478; G_lim_50=14.97; G_lim_90=14.17; completeness_50=89.67%;
+blended=69; genuinely-missed=353; unmatched DAO 2724 (faint-real=2, artifact=40).
+
+**2-pass gate:** 353 missed — material but completeness already ~90%; OPEN for Milan.
+
+**Anchor:** no LC/proc CSV change.
+
+---
+
 ## 2026-07-09 — DAO-RECONCILE (Gaia↔DAO field accounting)
 
 **Goal (Milan):** near-100% two-way reconciliation between DAO signal and Gaia catalog;

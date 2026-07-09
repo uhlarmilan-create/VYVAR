@@ -1,13 +1,12 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-09** — DAO-RECONCILE metric fix **DONE**; PSF-AUDIT-FIXES **CLOSED**.
+Last updated: **2026-07-09** — DAO-RECONCILE-2 footprint+Fleming fit **DONE**.
 
-**2026-07-09 snapshot:** DAO-RECONCILE (`becc274`, `e9daec9`): Gaia↔DAO completeness
-redefined in `pipeline_meta.json` + QA dashboard (`dao_reconcile.py` shared helper;
-`scripts/dao_reconcile_diag.py` read-only diagnostic). draft_424 Part 1: G_lim≈16.69,
-corrected completeness≈3.4%, genuinely-missed≈96k — 2-pass DAO recovery decision OPEN
-(gated on missed count). PSF arc fixes; production PSF still OFF; draft_424 content anchor
-unchanged (`92939fab` / `76642318`). Full pytest **651 passed**, 15 skipped.
+**2026-07-09 snapshot:** DAO-RECONCILE-2 (`bd6244a`…`b7df7c6`): footprint Gaia reference +
+Fleming (1995) completeness curve; `completeness_50` headline. draft_424 R-2: G_lim_50≈14.97,
+completeness_50≈89.7%, genuinely-missed=353 (R-1: 96k @ 3.4% — population bug). All-drafts
+diag: `tmp/dao_reconcile/cross_draft_summary.json`. pytest **653 passed**, 15 skipped. Anchor
+unchanged (`92939fab` / `76642318`). Unpushed local chain.
 
 **2026-07-08 snapshot:** draft_424 coherent anchor `draft_000424_snapshot_20260708_full`
 (`run_full_photometry_pipeline`; core SHA `92939fab…` n=357). Hybrid snapshot retired.

@@ -505,18 +505,19 @@ next calibration lever.
   JOURNAL). Regenerate `vyvar_vsx_local.db` on the catalog machine after pulling.
 - **TODO-10 — Settings-tab refactor + `CONFIG_GUIDE.md`.** Ties to `VYVAR_PARAMS.md` /
   config↔UI parity.
-- **DAO-RECONCILE — Gaia↔DAO field accounting (reframes TODO-13).** **Metric fix DONE
-  (2026-07-09, `becc274`/`e9daec9`):** `dao_reconcile.py` decomposes cone stars into
-  matched / below-limit (G > G_lim) / blended (≤1.5×FWHM) / genuinely-missed; redefined
-  `gaia_dao_completeness_pct` = matched/(matched+missed); raw unlimited-denominator ratio
-  kept as `gaia_dao_completeness_raw_pct`. Diagnostic: `scripts/dao_reconcile_diag.py`.
-  **Goal (Milan 2026-07-09):** near-100% two-way reconciliation — every DAO detection
-  matched or explained, every catalog star bucketed. SIPS comparison: SIPS reports
-  one-directional solve-acceptance match only; VYVAR decomposes both directions by design.
-  **2-pass DAO recovery — OPEN decision** gated on Part 1 `n_gaia_missed`: implement only
-  if genuinely-missed is material; if ~single digits, close as not-worth-complexity.
-  draft_424 Part 1 (2026-07-09): G_lim≈16.69, corrected completeness≈3.4%, genuinely-missed
-  ≈96k (cone depth vs detection yield — not a broken metric denominator alone).
+- **DAO-RECONCILE — Gaia↔DAO field accounting (reframes TODO-13).** **R-1 metric fix DONE
+  (2026-07-09, `becc274`/`e9daec9`); R-1 numbers SUPERSEDED** — cone `ORDER BY g_mag LIMIT
+  100000` population bug (brightest-100k ≠ detect-time depth). **R-2 DONE (2026-07-09,
+  `bd6244a`/`4279a52`/`b7df7c6`):** footprint reference via direct Gaia DB bbox query (no row
+  cap) + Fleming et al. (1995) erf completeness fit → `G_lim_50` / `G_lim_90`;
+  `completeness_50` = matched/(matched+genuinely-missed) in-frame at G≤G_lim_50; buckets:
+  matched / off-frame / below-limit / blended / genuinely-missed. Diagnostic:
+  `scripts/dao_reconcile_diag.py --all-drafts`. **Goal (Milan 2026-07-09):** near-100%
+  two-way reconciliation. SIPS: one-directional solve-acceptance only; VYVAR goes further.
+  **2-pass DAO recovery — OPEN** gated on R-2 cross-draft `n_gaia_missed` (draft_424: 353 @
+  89.7% completeness_50 — not single digits, but already near 90%; discuss with Milan).
+  **Artificial-star injection tests** (photutils) = future gold-standard validation; candidate
+  for EXTERNAL-XVAL / publication Validation section.
 - **TODO-LC-QUALITY — LC classification filter.** `lc_quality_flag` exists and is consumed by
   the trust gate; verify the saturated/noisy export policy is complete.
 - **TODO-14 — PDF size optimization** (29 MB → < 10 MB).
