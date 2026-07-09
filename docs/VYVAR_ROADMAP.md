@@ -511,13 +511,15 @@ next calibration lever.
   `bd6244a`/`4279a52`/`b7df7c6`):** footprint reference via direct Gaia DB bbox query (no row
   cap) + Fleming et al. (1995) erf completeness fit → `G_lim_50` / `G_lim_90`;
   `completeness_50` = matched/(matched+genuinely-missed) in-frame at G≤G_lim_50; buckets:
-  matched / off-frame / below-limit / blended / genuinely-missed. Diagnostic:
-  `scripts/dao_reconcile_diag.py --all-drafts`. **Goal (Milan 2026-07-09):** near-100%
-  two-way reconciliation. SIPS: one-directional solve-acceptance only; VYVAR goes further.
-  **2-pass DAO recovery — OPEN** gated on R-2 cross-draft `n_gaia_missed` (draft_424: 353 @
-  89.7% completeness_50 — not single digits, but already near 90%; discuss with Milan).
-  **Artificial-star injection tests** (photutils) = future gold-standard validation; candidate
-  for EXTERNAL-XVAL / publication Validation section.
+  matched / off-frame / below-limit / blended / genuinely-missed. **R-2b DONE (2026-07-09,
+  `78febea`):** right-censor G_lim when fit exceeds reference depth; `missed_below_g90` vs
+  `missed_fadezone` as 2-pass decision metric; `match_depth` forensics per setup; missed-G
+  histogram PNG in diag. Diagnostic: `scripts/dao_reconcile_diag.py --all-drafts`. **Goal
+  (Milan 2026-07-09):** near-100% two-way reconciliation. **2-pass DAO recovery — OPEN**
+  gated on `missed_below_g90` (draft_424: **15** @ 89.7% completeness_50; draft_425 B/R
+  censored at G17.5 with 212–314 below-G90 — discuss with Milan). **Artificial-star injection
+  tests** (photutils) = future gold-standard validation; candidate for EXTERNAL-XVAL /
+  publication Validation section.
 - **TODO-LC-QUALITY — LC classification filter.** `lc_quality_flag` exists and is consumed by
   the trust gate; verify the saturated/noisy export policy is complete.
 - **TODO-14 — PDF size optimization** (29 MB → < 10 MB).

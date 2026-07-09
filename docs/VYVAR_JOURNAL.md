@@ -2,6 +2,27 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-09 — DAO-RECONCILE-2b (censoring + missed@G90 + match_depth)
+
+**R-2b (`78febea`):** Right-censor G_lim_50/G_lim_90 when Fleming fit exceeds reference depth
+(max Gaia G in query). `missed_below_g90` vs `missed_fadezone` split for 2-pass gate.
+`resolve_effective_match_depth()` → `match_depth` in report/meta/diag table. Missed-G histogram
+PNG with G_lim markers. QA tooltip: censored display + missed split.
+
+**draft_424:** compl_50=89.67%; missed=353 → **miss@G90=15**, fadezone=338 (fade-zone pile near
+G_lim_50; only 15 true sub-G90 anomalies).
+
+**draft_425 B/R:** G_lim_50 censored `>=17.5` (raw fit was 19.25); R miss@G90=212 (G90 also
+censored).
+
+**draft_426 g/i/r/z forensics:** `match_depth=18.0` (MASTERSTAR `_ms_faintest_mag_eff` default;
+`faintest_mag_limit` unset in pipeline_meta). G_lim_50≈13.0 is **not** config truncation — median
+fallback when completeness stays ~100% to G17.5 (sparse in-frame reference n~400).
+
+**pytest:** 659 passed, 15 skipped. **Push:** Milan-authorized; full chain dc9f9f9→78febea.
+
+---
+
 ## 2026-07-09 — DAO-RECONCILE-2 (footprint reference + Fleming fit)
 
 **Root cause (R-1):** `field_catalog_cone.csv` = brightest 100k in circumscribed cone (G~15.3
