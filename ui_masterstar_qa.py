@@ -431,29 +431,60 @@ def render_masterstar_qa(
             except Exception:  # noqa: BLE001
                 # EXC-0528: T3 -- UI diagnostic/plot only (try: / _cone_rows = len(read_vyvar_csv(_cone_csv, low_memory=F... (EXCEPT-BULK 2026-07-08)
                 pass
-        # TODO-25: pipeline-computed value (same formula as detect_stars_and_match_catalog)
+        # TODO-25 / DAO-RECONCILE: pipeline-computed completeness (redefined + raw)
         _gaia_dao_pct: float | None = None
+        _gaia_dao_raw_pct: float | None = None
+        _gaia_dao_is_raw_only = False
         _n_gaia_undetected: int | None = None
         _meta_catalog_rows: int | None = None
+        _g_lim_est: float | None = None
+        _n_gaia_matched: int | None = None
+        _n_gaia_below_limit: int | None = None
+        _n_gaia_blended: int | None = None
+        _n_gaia_missed: int | None = None
+        _n_dao_unmatched: int | None = None
         _meta_json = setup_dir / "photometry" / "pipeline_meta.json"
         if _meta_json.is_file():
             try:
                 _meta = json.loads(_meta_json.read_text(encoding="utf-8"))
-                _pct_raw = _meta.get("gaia_dao_completeness_pct")
-                if _pct_raw is not None:
-                    _gaia_dao_pct = float(_pct_raw)
+                _has_redefined = _meta.get("g_lim_est") is not None or _meta.get("n_gaia_missed") is not None
+                if _has_redefined:
+                    _pct_corr = _meta.get("gaia_dao_completeness_pct")
+                    if _pct_corr is not None:
+                        _gaia_dao_pct = float(_pct_corr)
+                    _raw_legacy = _meta.get("gaia_dao_completeness_raw_pct")
+                    if _raw_legacy is not None:
+                        _gaia_dao_raw_pct = float(_raw_legacy)
+                else:
+                    _pct_legacy = _meta.get("gaia_dao_completeness_pct")
+                    if _pct_legacy is not None:
+                        _gaia_dao_raw_pct = float(_pct_legacy)
+                        _gaia_dao_is_raw_only = True
                 _nu_raw = _meta.get("n_gaia_undetected")
                 if _nu_raw is not None:
                     _n_gaia_undetected = int(_nu_raw)
                 _cr_raw = _meta.get("catalog_rows")
                 if _cr_raw is not None:
                     _meta_catalog_rows = int(_cr_raw)
+                if _meta.get("g_lim_est") is not None:
+                    _g_lim_est = float(_meta["g_lim_est"])
+                if _meta.get("n_gaia_matched") is not None:
+                    _n_gaia_matched = int(_meta["n_gaia_matched"])
+                if _meta.get("n_gaia_below_limit") is not None:
+                    _n_gaia_below_limit = int(_meta["n_gaia_below_limit"])
+                if _meta.get("n_gaia_blended") is not None:
+                    _n_gaia_blended = int(_meta["n_gaia_blended"])
+                if _meta.get("n_gaia_missed") is not None:
+                    _n_gaia_missed = int(_meta["n_gaia_missed"])
+                if _meta.get("n_dao_unmatched") is not None:
+                    _n_dao_unmatched = int(_meta["n_dao_unmatched"])
             except Exception:  # noqa: BLE001
                 # EXC-0529: T3 -- UI diagnostic/plot only (if _cr_raw is not None: / _meta_catalog_rows = int(_cr_raw) / ... (EXCEPT-BULK 2026-07-08)
                 pass
-        if _gaia_dao_pct is None and _cone_rows and _cone_rows > 0:
+        if _gaia_dao_pct is None and _gaia_dao_raw_pct is None and _cone_rows and _cone_rows > 0:
             _n_dao_detected_fb = n_ok
-            _gaia_dao_pct = 100.0 * float(_n_dao_detected_fb) / float(_cone_rows)
+            _gaia_dao_raw_pct = 100.0 * float(_n_dao_detected_fb) / float(_cone_rows)
+            _gaia_dao_is_raw_only = True
             _n_gaia_undetected = int(_cone_rows) - int(_n_dao_detected_fb)
         m1, m2, m3, m4 = st.columns(4)
         with m1:
@@ -462,6 +493,22 @@ def render_masterstar_qa(
             st.metric("DAO→Gaia Match (%)", f"{match_rate:.2f}")
         with m3:
             if _gaia_dao_pct is not None:
+                _help_lines = [
+                    f"Corrected: matched / (matched + genuinely-missed)",
+                    f"G_lim est (p95 matched G): {_g_lim_est if _g_lim_est is not None else '?'}",
+                    f"Matched: {_n_gaia_matched if _n_gaia_matched is not None else '?'}",
+                    f"Below limit: {_n_gaia_below_limit if _n_gaia_below_limit is not None else '?'}",
+                    f"Blended: {_n_gaia_blended if _n_gaia_blended is not None else '?'}",
+                    f"Genuinely missed: {_n_gaia_missed if _n_gaia_missed is not None else '?'}",
+                ]
+                if _gaia_dao_raw_pct is not None:
+                    _help_lines.append(f"Raw (full cone): {_gaia_dao_raw_pct:.1f}%")
+                st.metric(
+                    "Gaia→DAO Completeness (%)",
+                    f"{_gaia_dao_pct:.1f}",
+                    help="\n".join(_help_lines),
+                )
+            elif _gaia_dao_raw_pct is not None and _gaia_dao_is_raw_only:
                 _denom = _meta_catalog_rows if _meta_catalog_rows else _cone_rows
                 _undetected = (
                     int(_n_gaia_undetected)
@@ -472,9 +519,10 @@ def render_masterstar_qa(
                     int(_denom) - _undetected if _denom and _n_gaia_undetected is not None else int(n_ok)
                 )
                 st.metric(
-                    "Gaia→DAO Completeness (%)",
-                    f"{_gaia_dao_pct:.1f}",
+                    "Gaia→DAO Completeness (%) raw",
+                    f"{_gaia_dao_raw_pct:.1f}",
                     help=(
+                        f"raw (unlimited denominator)\n"
                         f"{_help_detected} of {_denom or '?'} Gaia catalog stars detected by DAO\n"
                         f"Undetected (no DAO match): {_undetected}"
                     ),
@@ -492,15 +540,26 @@ def render_masterstar_qa(
             f"With **catalog_id**: **{n_ok}** · without **catalog_id**: **{max(0, n_all - n_ok)}** "
             f"(all rows with finite WCS projection)."
         )
-        if _gaia_dao_pct is not None:
-            if _gaia_dao_pct >= 90.0:
-                st.caption("✅ Completeness: EXCELLENT (≥90% Gaia stars detected)")
-            elif _gaia_dao_pct >= 80.0:
+        if _n_dao_unmatched is not None:
+            st.caption(f"Unmatched detections (artifact candidates): **{_n_dao_unmatched}**")
+        elif max(0, n_all - n_ok) > 0:
+            st.caption(f"Unmatched detections (artifact candidates): **{max(0, n_all - n_ok)}**")
+        _thresh_pct = _gaia_dao_pct if _gaia_dao_pct is not None else None
+        if _thresh_pct is not None:
+            if _thresh_pct >= 90.0:
+                st.caption("✅ Completeness: EXCELLENT (≥90% in-frame Gaia stars detected)")
+            elif _thresh_pct >= 80.0:
                 st.caption("⚠️ Completeness: GOOD (80–90%)")
             else:
-                st.caption("❌ Completeness: LOW (<80%) — consider TODO-13 2-pass DAO")
+                _miss_n = int(_n_gaia_missed) if _n_gaia_missed is not None else "?"
+                st.caption(
+                    f"❌ Completeness: LOW (<80%) — {_miss_n} genuinely-missed stars above the frame "
+                    "limit; check DAO threshold/FWHM; 2-pass recovery candidate"
+                )
+        elif _gaia_dao_raw_pct is not None and _gaia_dao_is_raw_only:
+            st.caption("Gaia→DAO: legacy/raw metric (unlimited cone denominator) — re-run MASTERSTAR for corrected buckets")
         elif _cone_rows and _cone_rows > 0:
-            st.caption("Gaia→DAO: pipeline_meta.json missing — recomputed from MASTERSTAR rows")
+            st.caption("Gaia→DAO: pipeline_meta.json missing — raw ratio from MASTERSTAR rows")
         else:
             st.caption("Gaia→DAO: field_catalog_cone.csv unavailable")
         if match_rate >= 90.0:

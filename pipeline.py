@@ -92,6 +92,9 @@ from photometry_core import (
 )
 from proc_frame_store import proc_csv_path_for_aligned_fits
 
+from dao_reconcile import compute_gaia_dao_reconcile, reconcile_to_pipeline_meta
+from masterstar_context import header_core_fwhm_px
+
 from utils import (
     ASTROMETRY_SOLVE_FIELD_CPULIMIT_SEC,
     DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
@@ -8877,7 +8880,7 @@ def detect_stars_and_match_catalog(
             _n_gaia_detected = int(n_matched_final)
         _gaia_dao_rate = 100.0 * float(_n_gaia_detected) / float(_catalog_rows)
         LOGGER.info(
-            "[DAO] Gaia→DAO completeness: "
+            "[DAO] Gaia→DAO completeness (raw): "
             "%d/%d Gaia stars detected (%.1f%%) "
             "| catalog_only (undetected): %d",
             _n_gaia_detected,
@@ -8885,13 +8888,45 @@ def detect_stars_and_match_catalog(
             _gaia_dao_rate,
             _catalog_rows - _n_gaia_detected,
         )
-        meta["gaia_dao_completeness_pct"] = round(_gaia_dao_rate, 2)
+        meta["gaia_dao_completeness_raw_pct"] = round(_gaia_dao_rate, 2)
+        meta["n_gaia_detected"] = int(_n_gaia_detected)
         meta["n_gaia_undetected"] = int(_catalog_rows - _n_gaia_detected)
-        if _gaia_dao_rate < 80.0:
+        try:
+            _plate_recon = None
+            if getattr(wcs_obj, "has_celestial", False):
+                try:
+                    from astropy.wcs.utils import proj_plane_pixel_scales
+
+                    _plate_recon = float(np.mean(proj_plane_pixel_scales(wcs_obj) * 3600.0))
+                except Exception:  # noqa: BLE001
+                    pass
+            _recon = compute_gaia_dao_reconcile(
+                cat_df,
+                df_out,
+                fwhm_px=float(_fwhm_used),
+                plate_scale_arcsec=_plate_recon,
+                wcs=wcs_obj if getattr(wcs_obj, "has_celestial", False) else None,
+            )
+            meta.update(reconcile_to_pipeline_meta(_recon))
+            LOGGER.info(
+                "[DAO] Gaia→DAO reconcile: corrected=%.1f%% (matched=%d missed=%d "
+                "below_limit=%d blended=%d) G_lim=%.2f",
+                float(meta.get("gaia_dao_completeness_pct") or 0.0),
+                int(meta.get("n_gaia_matched") or 0),
+                int(meta.get("n_gaia_missed") or 0),
+                int(meta.get("n_gaia_below_limit") or 0),
+                int(meta.get("n_gaia_blended") or 0),
+                float(meta.get("g_lim_est") or 0.0),
+            )
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("[DAO] Gaia reconcile decomposition failed: %s", exc)
+            meta["gaia_dao_completeness_pct"] = round(_gaia_dao_rate, 2)
+        _corr = meta.get("gaia_dao_completeness_pct")
+        if _corr is not None and float(_corr) < 80.0:
             LOGGER.warning(
-                "[DAO] Gaia→DAO completeness LOW: %.1f%% (%d Gaia stars undetected)",
-                _gaia_dao_rate,
-                _catalog_rows - _n_gaia_detected,
+                "[DAO] Gaia→DAO corrected completeness LOW: %.1f%% (%d genuinely-missed in-frame)",
+                float(_corr),
+                int(meta.get("n_gaia_missed") or 0),
             )
     else:
         LOGGER.debug("[DAO] catalog_rows not available — Gaia→DAO skip")
@@ -12041,14 +12076,45 @@ def generate_masterstar_and_catalog(
     )
     # TODO-25: persist to pipeline_meta.json so UI can read single source of truth
     if _cat_rows_opt > 0:
+        _meta_patch: dict[str, Any] = {
+            "gaia_dao_completeness_raw_pct": round(float(_gaia_rate_opt), 2),
+            "catalog_rows": int(_cat_rows_opt),
+            "n_gaia_detected": int(_n_gaia_det_opt),
+            "n_gaia_undetected": int(_cat_rows_opt - _n_gaia_det_opt),
+        }
+        try:
+            _cone_csv = Path(platesolve_dir) / "field_catalog_cone.csv"
+            if _cone_csv.is_file():
+                _cone_df = read_vyvar_csv(_cone_csv, low_memory=False, dtype={"catalog_id": str})
+                _fwhm_recon = float(det_meta.get("dao_fwhm_px") or 0.0)
+                if not (_fwhm_recon > 0.0):
+                    _fwhm_recon = float(header_core_fwhm_px(hdr) or 3.5)
+                _wcs_recon = None
+                _plate_recon = None
+                if _has_valid_wcs(hdr):
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", FITSFixedWarning)
+                        _wcs_recon = WCS(hdr)
+                    try:
+                        from astropy.wcs.utils import proj_plane_pixel_scales
+
+                        _plate_recon = float(np.mean(proj_plane_pixel_scales(_wcs_recon) * 3600.0))
+                    except Exception:  # noqa: BLE001
+                        pass
+                _recon = compute_gaia_dao_reconcile(
+                    _cone_df,
+                    df_final,
+                    fwhm_px=_fwhm_recon,
+                    plate_scale_arcsec=_plate_recon,
+                    wcs=_wcs_recon,
+                )
+                _meta_patch.update(reconcile_to_pipeline_meta(_recon))
+        except Exception as exc:  # noqa: BLE001
+            log_event(f"MASTERSTAR Gaia reconcile decomposition skipped: {exc!s}")
+            _meta_patch["gaia_dao_completeness_pct"] = round(float(_gaia_rate_opt), 2)
         merge_photometry_pipeline_meta(
             Path(platesolve_dir) / "photometry",
-            {
-                "gaia_dao_completeness_pct": round(float(_gaia_rate_opt), 2),
-                "catalog_rows": int(_cat_rows_opt),
-                "n_gaia_detected": int(_n_gaia_det_opt),
-                "n_gaia_undetected": int(_cat_rows_opt - _n_gaia_det_opt),
-            },
+            _meta_patch,
             _cfg_ms,
             entry_point="generate_masterstar_and_catalog",
         )
