@@ -7,7 +7,7 @@ diagnostics + proposed gate redesign recorded; draft_426 equipment verified eq4 
 bin4) verify OBS_DRAFT eq4 — GAIN=12.48 anomaly is F-BINGAIN-1 not wrong equipment;
 `scripts/fix_draft_equipment.py` + tests. Sigma Phase A wide-rig DONE (6.5 mmag floor, k2 attribution
 zero, ~4.5 mmag rig constant). Sparse-comp: ~95% field-wide offset cancels; temporal 8–12 mmag healthy.
-pytest **682 passed**, 15 skipped. Pushed to origin/main (Milan-authorized 2026-07-09).
+pytest **681 passed**, 15 skipped. Pushed to origin/main (Milan-authorized 2026-07-09).
 
 **2026-07-09 snapshot (prior):** SIGMA-A4: wide-rig floor attribution (k2 pooled R²≈0, floor_after k2=6.5 mmag
 unchanged); Newton bin4 forensics (header gain 12.48, σ_ratio≈1.13, χ²_pred≈0.78); hypothesis

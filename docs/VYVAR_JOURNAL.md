@@ -20,7 +20,7 @@ SIGMA-NEWTON (after bin4 fix).
 
 **Sparse-comp:** SS Cam YELLOW; proposed gate uses check scatter CI + temporal comp_rms, not field-wide headline.
 
-**pytest:** 682 passed, 15 skipped. session_baseline_check (default/fast) PASS.
+**pytest:** 681 passed, 15 skipped. session_baseline_check (default/fast) PASS.
 
 ---
 
