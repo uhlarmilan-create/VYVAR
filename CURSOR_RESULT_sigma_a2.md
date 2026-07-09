@@ -1,4 +1,4 @@
-CURSOR RESULT ó 2026-07-09 (SIGMA-A2)
+CURSOR RESULT ù 2026-07-09 (SIGMA-A2)
 
 What I did
 Part 0: committed and pushed SIGMA-BUDGET-A diagnostics (e2c9466). Part A2: rig parameter fixes,
@@ -11,7 +11,7 @@ sigma_floor variant, saturation margin check, archive rerun, docs update, second
 | Step | Hash | Message |
 |------|------|---------|
 | Part 0 push | `e2c9466` | Add sigma-budget Phase A and sparse-comp diagnostic harness (sandbox) |
-| Part 5 push | *(see commit below)* | SIGMA-A2 rig fixes, sigma_floor variant, rerun |
+| Part 5 push | `0b901aa` | SIGMA-A2 rig fixes, sigma_floor variant, rerun |
 
 ### Rig parameters (corrected, draft_424 NoFilter_60_2)
 
@@ -23,18 +23,18 @@ sigma_floor variant, saturation margin check, archive rerun, docs update, second
 
 DB maintenance: `scripts/fix_telescope_diameter.py` (dry-run + `--apply` auditable).
 
-### Joint fit (f_resid, sigma_floor) ó draft_424 calibrator ensemble
+### Joint fit (f_resid, sigma_floor) ù draft_424 calibrator ensemble
 
-| Parameter | Value | Bootstrap CI (16ñ84%) |
+| Parameter | Value | Bootstrap CI (16ù84%) |
 |-----------|-------|----------------------|
 | f_resid | 0.74 | [0.0, 1.0] |
 | sigma_floor | 10.5 mmag (0.0105 mag) | [9.5, 11.0] mmag |
-| median chi2/dof | 1.000 | ó |
-| per-star IQR (floor variant) | 0.158 | ó |
+| median chi2/dof | 1.000 | ù |
+| per-star IQR (floor variant) | 0.158 | ù |
 
-f_resid not pinned to edge. sigma_floor magnitude: 10.5 mmag (bookkeeping vs ~1ñ5 mmag PRNU/flat-residual scale: number only).
+f_resid not pinned to edge. sigma_floor magnitude: 10.5 mmag (bookkeeping vs ~1ù5 mmag PRNU/flat-residual scale: number only).
 
-### Chi2/dof per calibrator ó all four variants (draft_424, corrected rig)
+### Chi2/dof per calibrator ù all four variants (draft_424, corrected rig)
 
 | G | howell_only | howell_scint_full | howell_scint_fresid (f=0.74) | howell_scint_fresid_floor |
 |---|-------------|-------------------|------------------------------|---------------------------|
@@ -88,7 +88,7 @@ JSON: `tmp/sigma_budget/draft_425_trust.json`
 2. f_resid bootstrap CI spans full [0,1] grid (wide; 8 calibrators).
 3. sigma_floor grid upper bound 20 mmag (0.02 mag); fit landed at 10.5 mmag.
 4. DB fix applied to local Milan dev DB only (not in git); script is committed.
-5. G9.3 not excluded ó saturation margin well below 0.85 pipeline fraction.
+5. G9.3 not excluded ù saturation margin well below 0.85 pipeline fraction.
 
 ## Errors (if any)
 
@@ -96,10 +96,10 @@ None.
 
 ## Files changed
 
-- `sigma_budget.py` ó alt<=0 guard, `combine_sigma_mag_quadrature`, floor variant constant
-- `scripts/chi2_sigma_gate.py` ó joint fit + bootstrap CIs, saturation margin, 4th variant
-- `scripts/select_constant_calibrators.py` ó A2 rerun outputs, draft_425 trust probe
-- `scripts/sparse_comp_diag.py` ó chi2_ci/scatter_mag_ci naming, `--chi2-only`
+- `sigma_budget.py` ù alt<=0 guard, `combine_sigma_mag_quadrature`, floor variant constant
+- `scripts/chi2_sigma_gate.py` ù joint fit + bootstrap CIs, saturation margin, 4th variant
+- `scripts/select_constant_calibrators.py` ù A2 rerun outputs, draft_425 trust probe
+- `scripts/sparse_comp_diag.py` ù chi2_ci/scatter_mag_ci naming, `--chi2-only`
 - `scripts/fix_telescope_diameter.py` (new)
 - `tests/test_sigma_a2.py` (new)
 - `docs/VYVAR_ROADMAP.md`, `docs/VYVAR_STATE.md`, `docs/VYVAR_JOURNAL.md`
