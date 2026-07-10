@@ -2,6 +2,19 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-10 (večer) — TODO-12g2-HRD: catalog-color field polish
+
+**Problém (Milan review draft425_B):** fyzikálně správné, vizuálně ploché -- per-channel clip
+bělí jádra (RS Per bílá), tisíce slabých K/M splatů barví šum na pozadí, implicitní D65 dává
+v reddened poli (E(B-V)~0.5-0.6) pozorované BP-RP chi/h Per B hvězd ~0.3-0.7 -> Teff ~6000-7500 K
+-> téměř neutrální (render říkal pravdu, ne „modrobílý cluster" z očekávání 12g).
+
+**Fix (vizualizace only):** hue-preserving highlight (scale-by-max / soft Reinhard L);
+chroma SNR gate w=s/(s+snr); field_median von Kries white point + extended caption;
+saturation default 0.85. Hard gates G1-G4 na draft425_B + draft424.
+
+---
+
 ## 2026-07-10 (večer) — TODO-12g-HRD: catalog-color field (Gaia tinted)
 
 **Cíl:** vizualizační vrstva — monochromatické MASTERSTAR pole obarvené katalogovou chrominancí

@@ -144,7 +144,13 @@ class AppConfig:
     #: HRD catalog-color field tinting (Gaia BP-RP chrominance x mono luminance).
     hrd_color_field_enabled: bool = True
     #: Desaturation toward white for catalog-color field (0=gray, 1=full Planckian chroma).
-    hrd_color_saturation: float = 0.7
+    hrd_color_saturation: float = 0.85
+    #: Highlight handling: ``soft`` (Reinhard L roll + hue-preserving scale) or ``scale`` only.
+    hrd_color_highlight_mode: str = "soft"
+    #: Chroma SNR gate softness (0=disabled, 12g behavior); higher = color only on bright signal.
+    hrd_color_chroma_snr: float = 3.0
+    #: White point: ``d65`` absolute Planckian or ``field_median`` relative von Kries scaling.
+    hrd_color_white_point: str = "field_median"
 
     #: Fine blind index (Newton / ~1.3″/px rigs); built by ``build_blind_index.py``.
     blind_index_fine_path: str = ""
@@ -785,8 +791,19 @@ class AppConfig:
                 data.get("hrd_color_saturation", self.hrd_color_saturation)
             )
         except (TypeError, ValueError):
-            self.hrd_color_saturation = 0.7
+            self.hrd_color_saturation = 0.85
         self.hrd_color_saturation = max(0.0, min(1.0, float(self.hrd_color_saturation)))
+        _hl = str(data.get("hrd_color_highlight_mode", self.hrd_color_highlight_mode) or "soft").strip().lower()
+        self.hrd_color_highlight_mode = "scale" if _hl == "scale" else "soft"
+        try:
+            self.hrd_color_chroma_snr = float(
+                data.get("hrd_color_chroma_snr", self.hrd_color_chroma_snr)
+            )
+        except (TypeError, ValueError):
+            self.hrd_color_chroma_snr = 3.0
+        self.hrd_color_chroma_snr = max(0.0, min(20.0, float(self.hrd_color_chroma_snr)))
+        _wp = str(data.get("hrd_color_white_point", self.hrd_color_white_point) or "field_median").strip().lower()
+        self.hrd_color_white_point = "d65" if _wp == "d65" else "field_median"
 
         gaia_dir = self.project_root / "GAIA_DR3"
         _fine_default = str(gaia_dir / "gaia_triangles_fine.pkl")
@@ -2058,6 +2075,9 @@ class AppConfig:
             "hrd_dsc_confirm_prob": float(self.hrd_dsc_confirm_prob),
             "hrd_color_field_enabled": bool(self.hrd_color_field_enabled),
             "hrd_color_saturation": float(self.hrd_color_saturation),
+            "hrd_color_highlight_mode": str(self.hrd_color_highlight_mode),
+            "hrd_color_chroma_snr": float(self.hrd_color_chroma_snr),
+            "hrd_color_white_point": str(self.hrd_color_white_point),
             "blind_index_fine_path": str(self.blind_index_fine_path or ""),
             "blind_index_wide_path": str(self.blind_index_wide_path or ""),
             "blind_index_select_mode": str(self.blind_index_select_mode or "auto"),

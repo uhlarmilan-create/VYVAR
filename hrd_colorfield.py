@@ -7,7 +7,7 @@ Physics:
   - Teff: ``teff_gspphot`` from HRD enrichment cache when present (extreme candidates); else
     BP-RP -> Teff via monotonic Pecaut & Mamajek (2013) Gaia BP-RP anchor points.
   - Teff -> sRGB chromaticity: Planckian locus with Wyman, Sloan & Shirley (2013, JCGT 2, 2)
-    analytic CIE 1931 CMFs -> linear sRGB (D65) -> gamma; unit max channel; desaturate toward white.
+    analytic CIE 1931 CMFs -> sRGB (D65) -> gamma; von Kries white-point when field-relative.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import logging
 import math
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -28,22 +28,27 @@ from infolog import log_event
 
 logger = logging.getLogger(__name__)
 
-# Mandatory honesty caption (English, on-image).
-HRD_COLORFIELD_CAPTION = (
+HighlightMode = Literal["scale", "soft"]
+WhitePointMode = Literal["d65", "field_median"]
+
+HRD_COLORFIELD_CAPTION_BASE = (
     "Catalog-derived colors (Gaia BP-RP / Teff); not measured by this camera. "
     "BP-RP includes interstellar reddening -- extinguished stars appear redder."
+)
+HRD_COLORFIELD_CAPTION_FIELD_MEDIAN = (
+    " white point = field median Teff (~{teff:.0f} K); colors are relative to the field average."
 )
 
 TEFF_MIN_K = 2500.0
 TEFF_MAX_K = 40000.0
 BP_RP_DOMAIN = (-0.4, 4.5)
+D65_TEFF_K = 6500.0
 
 # Pecaut & Mamajek (2013, ApJS 208, 9) Gaia-era BP-RP vs Teff anchors (2024 online table).
 _BP_RP_ANCHORS = np.array([-0.40, -0.25, -0.05, 0.65, 1.00, 1.35, 1.80, 2.15, 2.85, 3.60, 4.50])
 _TEFF_ANCHORS = np.array([40000.0, 30000.0, 9600.0, 5772.0, 5250.0, 4400.0, 3800.0, 3400.0, 3000.0, 2700.0, 2500.0])
 _BP_RP_TO_TEFF = PchipInterpolator(_BP_RP_ANCHORS, _TEFF_ANCHORS, extrapolate=True)
 
-# Planck + CMF integration grid (nm).
 _WL_NM = np.arange(380.0, 781.0, 2.0)
 _H_PLANCK = 6.62607015e-34
 _C_LIGHT = 299792458.0
@@ -52,17 +57,16 @@ _K_BOLTZ = 1.380649e-23
 _DEFAULT_KERNEL_SIGMA_PX = 2.5
 _STRETCH_LO_PCT = 5.0
 _STRETCH_HI_PCT = 99.5
+_LOW_L_FRAC_FOR_SIGMA = 0.15
 
 
 def _piecewise_gaussian(x: np.ndarray, mean: float, stddev_1: float, stddev_2: float) -> np.ndarray:
-    """Wyman et al. (2013) piecewise Gaussian lobe."""
     stddev = np.where(x < mean, stddev_1, stddev_2)
     a = (x - mean) / stddev
     return np.exp(-0.5 * a * a)
 
 
 def _cie_cmfs_wyman2013(wavelength_nm: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """CIE 1931 x-bar, y-bar, z-bar via Wyman, Sloan & Shirley (2013) multi-lobe Gaussian fit."""
     wl = np.asarray(wavelength_nm, dtype=np.float64)
     xbar = (
         1.056 * _piecewise_gaussian(wl, 599.8, 37.9, 31.0)
@@ -79,7 +83,6 @@ def _cie_cmfs_wyman2013(wavelength_nm: np.ndarray) -> tuple[np.ndarray, np.ndarr
 
 
 def _planck_spd(wavelength_nm: np.ndarray, teff_k: np.ndarray) -> np.ndarray:
-    """Relative Planck spectral radiance; teff_k shape (N,) -> (N, n_wl)."""
     wl_m = np.asarray(wavelength_nm, dtype=np.float64) * 1e-9
     t = np.asarray(teff_k, dtype=np.float64)[..., np.newaxis]
     c1 = 2.0 * _H_PLANCK * _C_LIGHT**2
@@ -89,7 +92,6 @@ def _planck_spd(wavelength_nm: np.ndarray, teff_k: np.ndarray) -> np.ndarray:
 
 
 def _xyz_from_spd_batch(spd: np.ndarray) -> np.ndarray:
-    """Integrate SPD against Wyman CMFs -> XYZ, shape (N, 3)."""
     xbar, ybar, zbar = _cie_cmfs_wyman2013(_WL_NM)
     cmf = np.stack([xbar, ybar, zbar], axis=0)
     integrand = spd[..., np.newaxis, :] * cmf[np.newaxis, :, :]
@@ -114,48 +116,97 @@ def _srgb_gamma_encode(rgb_lin: np.ndarray) -> np.ndarray:
 
 
 def teff_from_bp_rp(bp_rp: float | np.ndarray) -> float | np.ndarray:
-    """Monotonic BP-RP -> Teff (K); domain [-0.4, 4.5], clamp [2500, 40000].
-
-    Anchor points from Pecaut & Mamajek (2013, ApJS 208, 9) Gaia BP-RP scale; PCHIP interpolation.
-    """
+    """Monotonic BP-RP -> Teff (K); domain [-0.4, 4.5], clamp [2500, 40000]."""
     scalar = np.isscalar(bp_rp)
     x = np.atleast_1d(np.asarray(bp_rp, dtype=np.float64))
-    teff = _BP_RP_TO_TEFF(x)
-    teff = np.clip(teff, TEFF_MIN_K, TEFF_MAX_K)
+    teff = np.clip(_BP_RP_TO_TEFF(x), TEFF_MIN_K, TEFF_MAX_K)
     if scalar:
         return float(teff[0])
     return teff
 
 
-def teff_to_srgb_chroma(
-    teff_k: float | np.ndarray,
-    *,
-    saturation: float = 0.7,
-) -> np.ndarray:
-    """Planckian locus -> unit-max sRGB chromaticity with desaturation toward white.
-
-    Wyman, Sloan & Shirley (2013, JCGT 2, 2) CMFs; sRGB D65 gamma encoding.
-    """
-    sat = float(np.clip(saturation, 0.0, 1.0))
-    scalar = np.isscalar(teff_k)
-    t = np.atleast_1d(np.asarray(teff_k, dtype=np.float64))
-    t = np.clip(t, TEFF_MIN_K, TEFF_MAX_K)
+def _planck_srgb_absolute(teff_k: np.ndarray) -> np.ndarray:
+    """Planckian unit-max sRGB (gamma) before white-point or desaturation."""
+    t = np.clip(np.asarray(teff_k, dtype=np.float64), TEFF_MIN_K, TEFF_MAX_K)
     spd = _planck_spd(_WL_NM, t)
     xyz = _xyz_from_spd_batch(spd)
     rgb_lin = _srgb_linear_from_xyz(xyz)
     mx = np.max(rgb_lin, axis=-1, keepdims=True)
     mx = np.where(mx > 0, mx, 1.0)
-    rgb_lin = rgb_lin / mx
-    rgb = _srgb_gamma_encode(rgb_lin)
+    return _srgb_gamma_encode(rgb_lin / mx)
+
+
+def teff_to_srgb_chroma(
+    teff_k: float | np.ndarray,
+    *,
+    saturation: float = 0.85,
+    white_point_rgb: np.ndarray | None = None,
+) -> np.ndarray:
+    """Planckian sRGB chromaticity with optional von Kries white-point and desaturation."""
+    sat = float(np.clip(saturation, 0.0, 1.0))
+    scalar = np.isscalar(teff_k)
+    t = np.atleast_1d(np.asarray(teff_k, dtype=np.float64))
+    rgb = _planck_srgb_absolute(t)
+    if white_point_rgb is not None:
+        wp = np.asarray(white_point_rgb, dtype=np.float64).reshape(1, 3)
+        wp = np.where(wp > 0, wp, 1.0)
+        rgb = rgb / wp
     rgb = sat * rgb + (1.0 - sat) * 1.0
     if scalar:
         return rgb[0]
     return rgb
 
 
+def apply_chroma_snr_gate(
+    luminance: np.ndarray,
+    chroma: np.ndarray,
+    sigma_bg: float,
+    snr_softness: float,
+) -> np.ndarray:
+    """Blend chroma toward neutral white where L lacks SNR.
+
+    s = (L - bg) / sigma_bg with bg=0 in percentile-stretched space;
+    w = s / (s + snr_softness); chroma_out = w * chroma + (1 - w) * 1.
+    snr_softness=0 disables the gate (12g behavior).
+    """
+    if snr_softness <= 0:
+        return chroma
+    sig = max(float(sigma_bg), 1e-6)
+    s = np.maximum(luminance, 0.0) / sig
+    w = s / (s + float(snr_softness))
+    return w[..., np.newaxis] * chroma + (1.0 - w[..., np.newaxis]) * 1.0
+
+
+def compose_catalog_color_rgb(
+    luminance: np.ndarray,
+    chroma: np.ndarray,
+    *,
+    highlight_mode: HighlightMode = "soft",
+) -> np.ndarray:
+    """L x chroma with hue-preserving highlight handling."""
+    l = np.asarray(luminance, dtype=np.float64)
+    if highlight_mode == "soft":
+        l = l / (1.0 + l)
+    rgb = l[..., np.newaxis] * np.asarray(chroma, dtype=np.float64)
+    mx = np.max(rgb, axis=-1, keepdims=True)
+    over = mx > 1.0
+    rgb = np.where(over, rgb / np.maximum(mx, 1.0), rgb)
+    return np.clip(rgb, 0.0, 1.0)
+
+
+def build_colorfield_caption(
+    *,
+    white_point: WhitePointMode,
+    field_median_teff_k: float | None = None,
+) -> str:
+    cap = HRD_COLORFIELD_CAPTION_BASE
+    if white_point == "field_median" and field_median_teff_k is not None:
+        cap += HRD_COLORFIELD_CAPTION_FIELD_MEDIAN.format(teff=float(field_median_teff_k))
+    return cap
+
+
 def hrd_color_saturation_from_cfg(cfg: Any | None) -> float:
-    """Resolve ``hrd_color_saturation`` (default 0.7, clamp 0..1)."""
-    default = 0.7
+    default = 0.85
     if cfg is None:
         return default
     try:
@@ -163,6 +214,41 @@ def hrd_color_saturation_from_cfg(cfg: Any | None) -> float:
     except (TypeError, ValueError):
         return default
     return float(np.clip(val, 0.0, 1.0))
+
+
+def hrd_color_chroma_snr_from_cfg(cfg: Any | None) -> float:
+    default = 3.0
+    if cfg is None:
+        return default
+    try:
+        val = float(getattr(cfg, "hrd_color_chroma_snr", default))
+    except (TypeError, ValueError):
+        return default
+    return float(np.clip(val, 0.0, 20.0))
+
+
+def hrd_color_highlight_mode_from_cfg(cfg: Any | None) -> HighlightMode:
+    default: HighlightMode = "soft"
+    if cfg is None:
+        return default
+    raw = str(getattr(cfg, "hrd_color_highlight_mode", default) or default).strip().lower()
+    if raw == "scale":
+        return "scale"
+    if raw != "soft":
+        logger.debug("Unknown hrd_color_highlight_mode=%r; using soft", raw)
+    return "soft"
+
+
+def hrd_color_white_point_from_cfg(cfg: Any | None) -> WhitePointMode:
+    default: WhitePointMode = "field_median"
+    if cfg is None:
+        return default
+    raw = str(getattr(cfg, "hrd_color_white_point", default) or default).strip().lower()
+    if raw == "d65":
+        return "d65"
+    if raw not in ("field_median", "d65"):
+        logger.debug("Unknown hrd_color_white_point=%r; using field_median", raw)
+    return "field_median"
 
 
 def hrd_color_field_enabled(cfg: Any | None) -> bool:
@@ -219,8 +305,8 @@ def _load_luminance_from_fits(
     *,
     lo_pct: float = _STRETCH_LO_PCT,
     hi_pct: float = _STRETCH_HI_PCT,
-) -> np.ndarray | None:
-    """Percentile-stretched luminance L in [0, 1] (same logic as ``fits_first_image_to_png``)."""
+) -> tuple[np.ndarray, float] | None:
+    """Percentile-stretched L in [0,1] plus sigma_bg in stretched units."""
     try:
         from astropy.io import fits
     except ImportError:
@@ -245,11 +331,16 @@ def _load_luminance_from_fits(
         hi = lo + 1e-6
     scaled = np.clip((data - lo) / (hi - lo), 0.0, 1.0)
     scaled[~ok] = 0.0
-    return scaled
+    low = scaled[scaled < _LOW_L_FRAC_FOR_SIGMA]
+    if low.size >= 16:
+        sigma_bg = float(np.std(low))
+    else:
+        sigma_bg = float(np.std(scaled[ok])) if ok.any() else 0.05
+    sigma_bg = max(sigma_bg, 1e-4)
+    return scaled, sigma_bg
 
 
 def _estimate_kernel_sigma_px(platesolve_dir: Path, photometry_dir: Path) -> float:
-    """Median QC ``fwhm_px`` for this setup, else 2.5 px."""
     try:
         from hrd_analysis import _draft_dir_from_photometry, _obs_group_from_photometry
         from pipeline import find_qc_metrics_csv
@@ -279,7 +370,6 @@ def _prepare_color_stars(
     ms_csv: Path,
     enrich_cache: Path,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (all_dao_rows, colorable_rows with teff_k and flux)."""
     ms = read_vyvar_csv(ms_csv, low_memory=False)
     if ms.empty:
         return ms, ms
@@ -320,7 +410,6 @@ def splat_chroma_layer(
     *,
     sigma_px: float,
 ) -> np.ndarray:
-    """Amplitude-weighted Gaussian splat of per-star RGB chromaticities; neutral (1,1,1) elsewhere."""
     h, w = int(shape[0]), int(shape[1])
     rgb_acc = np.zeros((h, w, 3), dtype=np.float64)
     w_acc = np.zeros((h, w), dtype=np.float64)
@@ -434,10 +523,11 @@ def render_catalog_color_field(
         log_event("HRD color field: masterstars_full_match.csv missing -- skipped")
         return None
 
-    luminance = _load_luminance_from_fits(fits_path)
-    if luminance is None:
+    lum_hit = _load_luminance_from_fits(fits_path)
+    if lum_hit is None:
         log_event("HRD color field: could not load MASTERSTAR luminance -- skipped")
         return None
+    luminance, sigma_bg = lum_hit
 
     enrich_cache = ps / "_hrd_cache" / "hrd_enrich.json"
     _all, colorable = _prepare_color_stars(ms_csv, enrich_cache)
@@ -446,8 +536,22 @@ def render_catalog_color_field(
         return None
 
     saturation = hrd_color_saturation_from_cfg(cfg)
+    chroma_snr = hrd_color_chroma_snr_from_cfg(cfg)
+    highlight_mode = hrd_color_highlight_mode_from_cfg(cfg)
+    white_point_mode = hrd_color_white_point_from_cfg(cfg)
+
     teffs = colorable["teff_k"].to_numpy(dtype=np.float64)
-    rgbs = teff_to_srgb_chroma(teffs, saturation=saturation)
+    field_median_teff: float | None = None
+    white_point_rgb: np.ndarray | None = None
+    if white_point_mode == "field_median":
+        field_median_teff = float(np.median(teffs))
+        white_point_rgb = _planck_srgb_absolute(np.array([field_median_teff]))[0]
+    elif white_point_mode == "d65":
+        white_point_rgb = None
+
+    rgbs = teff_to_srgb_chroma(
+        teffs, saturation=saturation, white_point_rgb=white_point_rgb
+    )
     flux = colorable["flux_use"].to_numpy(dtype=np.float64)
     flux = np.where(np.isfinite(flux) & (flux > 0), flux, 1.0)
     amps = np.sqrt(flux)
@@ -463,10 +567,14 @@ def render_catalog_color_field(
 
     sigma = _estimate_kernel_sigma_px(ps, pt)
     chroma = splat_chroma_layer((h, w), xs, ys, rgbs, amps, sigma_px=sigma)
+    chroma = apply_chroma_snr_gate(luminance, chroma, sigma_bg, chroma_snr)
+    rgb = compose_catalog_color_rgb(luminance, chroma, highlight_mode=highlight_mode)
 
-    rgb = np.clip(luminance[..., np.newaxis] * chroma, 0.0, 1.0)
+    caption = build_colorfield_caption(
+        white_point=white_point_mode, field_median_teff_k=field_median_teff
+    )
     img_u8 = (rgb * 255.0).astype(np.uint8)
-    img_u8 = _draw_caption(img_u8, HRD_COLORFIELD_CAPTION)
+    img_u8 = _draw_caption(img_u8, caption)
 
     out_png.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -484,13 +592,16 @@ def render_catalog_color_field(
     return out_png
 
 
+# Backward-compatible alias for UI imports.
+HRD_COLORFIELD_CAPTION = HRD_COLORFIELD_CAPTION_BASE
+
+
 def color_field_stats(
     platesolve_dir: Path,
     photometry_dir: Path,
     *,
     render_seconds: float | None = None,
 ) -> dict[str, Any]:
-    """Diagnostics for validation: colored fraction, BP-RP range, render time."""
     ps = Path(platesolve_dir)
     pt = Path(photometry_dir)
     ms_csv = _resolve_masterstars_csv(ps, pt)
@@ -520,7 +631,6 @@ def timed_render_catalog_color_field(
     cfg: Any,
     out_png: Path,
 ) -> tuple[Path | None, float]:
-    """Wrapper returning (path, elapsed_seconds) for validation scripts."""
     t0 = time.perf_counter()
     path = render_catalog_color_field(platesolve_dir, photometry_dir, cfg, out_png)
     return path, time.perf_counter() - t0

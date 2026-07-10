@@ -593,6 +593,9 @@ next calibration lever.
   Arc **DONE** — see `CURSOR_RESULT_todo12_hrd.md` … `_todo12f_hrd.md`.
   **TODO-12g (2026-07-10):** catalog-color field rendering (mono luminance x Gaia BP-RP chrominance;
   Wyman et al. 2013 CMFs; Pecaut & Mamajek BP-RP->Teff; UI expander + validate PNGs; no photometry/PDF).
+  **TODO-12g2 (2026-07-10):** polish -- hue-preserving highlight scale, chroma SNR gate (background
+  speckle), field-median white point (relative colors; reddened chi/h Per B stars correctly near
+  neutral under absolute D65); saturation default 0.85.
   · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
   · TODO-PIXEL-XCHECK-BINNING binning-aware pixel cross-check (cosmetic log) ·

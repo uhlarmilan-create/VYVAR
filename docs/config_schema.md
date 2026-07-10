@@ -212,7 +212,10 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | hrd_nss_category_enabled | bool | false | Include Gaia NSS binary candidates in HRD Stage-1/2 (default off). |
 | hrd_dsc_confirm_prob | float | 0.90 | Gaia DSC probability floor for HRD "likely" WD tier; clamp 0.5..1.0. |
 | hrd_color_field_enabled | bool | true | HRD catalog-color field (Gaia BP-RP tint x mono luminance); visualization only. |
-| hrd_color_saturation | float | 0.7 | Catalog-color field Planckian desaturation toward white; clamp 0..1. |
+| hrd_color_saturation | float | 0.85 | Catalog-color field Planckian desaturation toward white; clamp 0..1. |
+| hrd_color_highlight_mode | string | soft | Hue-preserving highlights: ``soft`` (Reinhard L + scale) or ``scale``. |
+| hrd_color_chroma_snr | float | 3.0 | Chroma SNR gate softness (0=off); clamp 0..20. |
+| hrd_color_white_point | string | field_median | ``d65`` absolute or ``field_median`` relative von Kries white point. |
 | blind_index_fine_path | str | "…/GAIA_DR3/gaia_triangles_fine.pkl" | Fine blind triangle index (Newton-scale rigs). |
 | blind_index_wide_path | str | "…/GAIA_DR3/gaia_triangles_wide.pkl" | Wide blind triangle index (Carl-Zeiss-scale rigs). |
 | blind_index_path | str | *(deprecated)* | Alias of ``blind_index_fine_path`` after load; not serialized. |

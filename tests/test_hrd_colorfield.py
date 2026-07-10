@@ -8,13 +8,17 @@ from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from hrd_colorfield import (
     BP_RP_DOMAIN,
     TEFF_MAX_K,
     TEFF_MIN_K,
+    apply_chroma_snr_gate,
+    compose_catalog_color_rgb,
+    hrd_color_chroma_snr_from_cfg,
+    hrd_color_highlight_mode_from_cfg,
     hrd_color_saturation_from_cfg,
+    hrd_color_white_point_from_cfg,
     render_catalog_color_field,
     splat_chroma_layer,
     teff_from_bp_rp,
@@ -39,7 +43,7 @@ def test_teff_from_bp_rp_monotonic_and_clamps():
 
 
 def test_teff_to_srgb_sanity():
-    sat = 0.7
+    sat = 0.85
     r3000, g3000, b3000 = teff_to_srgb_chroma(3000.0, saturation=sat)
     assert r3000 > g3000 > b3000
 
@@ -74,11 +78,43 @@ def test_splat_blending_two_stars():
     assert np.allclose(corner, [1.0, 1.0, 1.0], atol=1e-6)
 
 
-def test_config_saturation_clamp():
+def test_hue_preserving_scale_preserves_rb_ratio():
+    l = np.array([[1.0]])
+    chroma = np.array([[[1.8, 1.0, 0.7]]])
+    rgb = compose_catalog_color_rgb(l, chroma, highlight_mode="scale")
+    rb_before = 1.8 / 0.7
+    rb_after = float(rgb[0, 0, 0] / rgb[0, 0, 2])
+    assert abs(rb_before - rb_after) < 0.02
+    assert float(rgb.max()) <= 1.0 + 1e-9
+
+
+def test_chroma_snr_gate_neutralizes_zero_signal():
+    l = np.array([[0.0, 0.5]])
+    chroma = np.array([[[1.5, 0.9, 0.8], [1.2, 1.0, 0.9]]])
+    out = apply_chroma_snr_gate(l, chroma, sigma_bg=0.05, snr_softness=3.0)
+    assert np.allclose(out[0, 0], [1.0, 1.0, 1.0], atol=1e-6)
+    assert not np.allclose(out[0, 1], [1.0, 1.0, 1.0])
+
+
+def test_field_median_white_point_maps_median_star_neutral():
+    temps = np.array([4000.0, 5500.0, 7000.0])
+    med = float(np.median(temps))
+    from hrd_colorfield import _planck_srgb_absolute
+
+    wp = _planck_srgb_absolute(np.array([med]))[0]
+    rgb_med = teff_to_srgb_chroma(np.array([med]), saturation=1.0, white_point_rgb=wp)[0]
+    assert abs(float(rgb_med[0]) - float(rgb_med[2])) < 0.08
+
+
+def test_config_clamps_and_enums():
     assert hrd_color_saturation_from_cfg(_Cfg(hrd_color_saturation=1.5)) == 1.0
-    assert hrd_color_saturation_from_cfg(_Cfg(hrd_color_saturation=-0.2)) == 0.0
-    assert hrd_color_saturation_from_cfg(_Cfg(hrd_color_saturation=0.55)) == 0.55
-    assert hrd_color_saturation_from_cfg(None) == 0.7
+    assert hrd_color_saturation_from_cfg(None) == 0.85
+    assert hrd_color_chroma_snr_from_cfg(_Cfg(hrd_color_chroma_snr=99)) == 20.0
+    assert hrd_color_chroma_snr_from_cfg(_Cfg(hrd_color_chroma_snr=-1)) == 0.0
+    assert hrd_color_highlight_mode_from_cfg(_Cfg(hrd_color_highlight_mode="scale")) == "scale"
+    assert hrd_color_highlight_mode_from_cfg(_Cfg(hrd_color_highlight_mode="bogus")) == "soft"
+    assert hrd_color_white_point_from_cfg(_Cfg(hrd_color_white_point="d65")) == "d65"
+    assert hrd_color_white_point_from_cfg(_Cfg(hrd_color_white_point="other")) == "field_median"
 
 
 def test_render_fail_open_missing_fits(tmp_path: Path):

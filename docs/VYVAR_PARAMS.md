@@ -259,7 +259,10 @@ no UI yet).
 | `hrd_nss_category_enabled` | False | — | hrd_analysis.py | intentionally-hidden |
 | `hrd_dsc_confirm_prob` | 0.90 | 0.5 … 1.0 | hrd_analysis.py | intentionally-hidden |
 | `hrd_color_field_enabled` | True | — | hrd_colorfield.py, ui_hrd.py | intentionally-hidden |
-| `hrd_color_saturation` | 0.7 | 0 … 1 | hrd_colorfield.py | intentionally-hidden |
+| `hrd_color_saturation` | 0.85 | 0 … 1 | hrd_colorfield.py | intentionally-hidden |
+| `hrd_color_highlight_mode` | soft | scale, soft | hrd_colorfield.py | intentionally-hidden |
+| `hrd_color_chroma_snr` | 3.0 | 0 … 20 | hrd_colorfield.py | intentionally-hidden |
+| `hrd_color_white_point` | field_median | d65, field_median | hrd_colorfield.py | intentionally-hidden |
 | `vsx_local_db_path` | 'C:\\ASTRO\\python\\VYVAR\\VSX\\vyvar_vsx_local_v2.db' (dataclass '') | — | ui_aperture_photometry.py:1416, ui_masterstar_qa.py:595, ui_settings.py:230 | yes |
 | `exoplanet_local_db_path` | `exoplanets/vyvar_exoplanet_local.db` (dataclass default) | — | ui_settings.py, pipeline.py `detect_stars_and_match_catalog` | yes |
 | `exoplanet_match_max_sep_arcsec` | 3.0 | 0.5 … 30.0 | pipeline.py `detect_stars_and_match_catalog` | intentionally-hidden |
