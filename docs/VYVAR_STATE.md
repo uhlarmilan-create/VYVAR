@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-10** — SESSION-CLOSE-0710. **HEAD `560723c`** on `origin/main`.
+Last updated: **2026-07-10** — SESSION-CLOSE-0710. **HEAD `5803bed`** on `origin/main`.
 **pytest 737 passed**, 15 skipped. **session_baseline_check --fast:** PASS.
 
 **2026-07-10 snapshot (SESSION-CLOSE):** Two workstreams **DONE** today:
