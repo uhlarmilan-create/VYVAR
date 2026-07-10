@@ -33,6 +33,10 @@ HRD_ABS_MAG_LUMINOUS = 0.0
 HRD_ABS_MAG_WD = 10.0
 
 HRD_EMPTY_FIELD_MSG = "No extreme objects in this field (all stars near the main sequence)"
+HRD_DETAILS_DISTANCE_CAVEAT = (
+    "Distances use naive inverse parallax (1000/ω, mas); not corrected for Gaia DR3 zero-point "
+    "or Lutz-Kelker bias — see Bailer-Jones et al. (2021)."
+)
 HRD_CAPTION = (
     "HRD positions use Gaia DR3 catalog values (BP-RP, M_G). Differences between filter sessions "
     "reflect which stars DAO detected in that band (detection selection), not the measured photometry. "
@@ -655,6 +659,103 @@ def _fmt(val: Any, spec: str, *, na: bool = False) -> str:
         return missing
 
 
+def _fmt_raw_str(val: Any, *, table_na: bool = False) -> str:
+    s = str(val or "").strip()
+    if not s or s.lower() in ("nan", "none"):
+        return "N/A" if table_na else "\u2014"
+    return s
+
+
+def format_hrd_dsc_wd_p(val: Any) -> str:
+    """Format Gaia DSC white-dwarf probability (~2 significant figures)."""
+    f = _f(val)
+    if f is None:
+        return "N/A"
+    if f == 0.0:
+        return "0.0"
+    return f"{f:.2g}"
+
+
+def format_hrd_sexagesimal(ra_deg: Any, dec_deg: Any) -> str:
+    """RA/Dec sexagesimal (J2000); fall back to decimal degrees on error."""
+    try:
+        ra = float(ra_deg)
+        dec = float(dec_deg)
+        if not (math.isfinite(ra) and math.isfinite(dec)):
+            raise ValueError("non-finite coordinates")
+        from astropy import units as u
+        from astropy.coordinates import SkyCoord
+
+        coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame="icrs")
+        ra_s = coord.ra.to_string(unit=u.hour, sep=":", precision=1, pad=True)
+        dec_s = coord.dec.to_string(sep=":", alwayssign=True, precision=1, pad=True)
+        return f"{ra_s} {dec_s}"
+    except Exception:  # noqa: BLE001
+        return f"{ra_deg} {dec_deg}"
+
+
+def build_hrd_detail_line(row: dict[str, Any] | pd.Series) -> str:
+    """Assemble the pipe-separated detail line for PDF/UI (Part 2 spec)."""
+    rr = dict(row)
+    parts: list[str] = []
+
+    ra = rr.get("ra_deg")
+    dec = rr.get("dec_deg")
+    if ra not in (None, "", "N/A", "\u2014") and dec not in (None, "", "N/A", "\u2014"):
+        sex = str(rr.get("ra_dec_sex") or "").strip()
+        if not sex:
+            sex = format_hrd_sexagesimal(ra, dec)
+        parts.append(f"RA/Dec (J2000): {sex}")
+
+    for key, label in (
+        ("mag_g", "G"),
+        ("abs_mag_g", "M_G"),
+        ("bp_rp", "BP-RP"),
+    ):
+        val = rr.get(key)
+        if val not in (None, "", "N/A", "\u2014"):
+            parts.append(f"{label}={val}")
+
+    dist = rr.get("dist_pc")
+    if dist not in (None, "", "N/A", "\u2014"):
+        plx = rr.get("parallax_mas", "N/A")
+        snr = rr.get("parallax_snr", "N/A")
+        parts.append(f"dist={dist} pc (plx {plx} mas, SNR {snr})")
+
+    teff = rr.get("teff", "N/A")
+    teff_src = rr.get("teff_source", "n/a")
+    parts.append(f"Teff={teff} K ({teff_src})")
+    logg = rr.get("logg", "N/A")
+    logg_src = rr.get("logg_source", "n/a")
+    parts.append(f"logg={logg} ({logg_src})")
+
+    spt = rr.get("sp_type_raw")
+    if spt not in (None, "", "N/A", "\u2014"):
+        parts.append(f"SpT={spt}")
+    otype = rr.get("otype_raw")
+    if otype not in (None, "", "N/A", "\u2014"):
+        parts.append(f"otype={otype}")
+
+    dsc = rr.get("dsc_wd_p")
+    if dsc not in (None, "", "N/A", "\u2014"):
+        parts.append(f"DSC WD p={dsc}")
+
+    x_px = rr.get("x_px")
+    y_px = rr.get("y_px")
+    if x_px not in (None, "", "N/A", "\u2014") and y_px not in (None, "", "N/A", "\u2014"):
+        parts.append(f"pix=({x_px}, {y_px})")
+
+    return " | ".join(parts)
+
+
+def hrd_detail_header_name(row: dict[str, Any] | pd.Series) -> str:
+    main_id = str(dict(row).get("simbad_main_id") or "").strip()
+    if main_id:
+        return main_id
+    cid = str(dict(row).get("catalog_id") or "").strip()
+    return f"Gaia DR3 {cid}" if cid else "Unknown"
+
+
 def _make_row(
     row: pd.Series,
     category: str,
@@ -672,12 +773,32 @@ def _make_row(
         simbad_disp = f"{simbad_disp}; {ident_detail}" if simbad_disp else ident_detail
     src = str(row.get("enrich_source") or "local").strip() or "local"
     logg_src = str(row.get("_logg_source") or "n/a").strip() or "n/a"
+    teff_src = "gaia" if _f(row.get("teff_gspphot")) is not None else "n/a"
+    reliable = bool(row.get("hrd_reliable"))
+    parallax = _f(row.get("parallax"))
+    parallax_snr = _f(row.get("parallax_over_error"))
+    if reliable and parallax is not None and parallax > 0:
+        dist_pc_val = 1000.0 / parallax
+        dist_pc = _fmt(dist_pc_val, ".1f", na=table_na)
+        parallax_mas = _fmt(parallax, ".2f", na=table_na)
+        parallax_snr_s = _fmt(parallax_snr, ".2f", na=table_na)
+    else:
+        dist_pc = "N/A" if table_na else "\u2014"
+        parallax_mas = "N/A" if table_na else "\u2014"
+        parallax_snr_s = "N/A" if table_na else "\u2014"
+    ra_raw = row.get("ra_deg")
+    dec_raw = row.get("dec_deg")
+    ra_dec_sex = ""
+    if _f(ra_raw) is not None and _f(dec_raw) is not None:
+        ra_dec_sex = format_hrd_sexagesimal(ra_raw, dec_raw)
+    dsc_wd_p = format_hrd_dsc_wd_p(row.get("classprob_dsc_combmod_whitedwarf"))
     return {
         "catalog_id": str(row.get("catalog_id", "")),
         "category": category,
         "ident": ident if ident in _IDENT_TIERS else "candidate",
         "ident_detail": ident_detail,
         "simbad_id": simbad_disp,
+        "simbad_main_id": simbad_id,
         "mag_g": _fmt(row.get("phot_g_mean_mag"), ".2f", na=table_na),
         "abs_mag_g": _fmt(row.get("abs_mag_g"), ".2f", na=table_na),
         "bp_rp": _fmt(row.get("bp_rp"), ".3f", na=table_na),
@@ -685,8 +806,16 @@ def _make_row(
         "logg": _fmt(row.get("logg_gspphot"), ".2f", na=table_na),
         "src": src if src else "N/A",
         "logg_source": logg_src,
-        "ra_deg": _fmt(row.get("ra_deg"), ".4f"),
-        "dec_deg": _fmt(row.get("dec_deg"), ".4f"),
+        "teff_source": teff_src,
+        "dist_pc": dist_pc,
+        "parallax_mas": parallax_mas,
+        "parallax_snr": parallax_snr_s,
+        "sp_type_raw": _fmt_raw_str(row.get("simbad_sp_type"), table_na=table_na),
+        "otype_raw": _fmt_raw_str(row.get("simbad_otype"), table_na=table_na),
+        "dsc_wd_p": dsc_wd_p,
+        "ra_deg": _fmt(ra_raw, ".4f"),
+        "dec_deg": _fmt(dec_raw, ".4f"),
+        "ra_dec_sex": ra_dec_sex,
         "x_px": _fmt(row.get("x"), ".0f"),
         "y_px": _fmt(row.get("y"), ".0f"),
         "_empty_field": False,
@@ -702,6 +831,16 @@ def _empty_field_table() -> pd.DataFrame:
                 "ident": "",
                 "ident_detail": "",
                 "simbad_id": "",
+                "simbad_main_id": "",
+                "dist_pc": "",
+                "parallax_mas": "",
+                "parallax_snr": "",
+                "sp_type_raw": "",
+                "otype_raw": "",
+                "dsc_wd_p": "",
+                "teff_source": "",
+                "ra_dec_sex": "",
+                "logg_source": "",
                 "mag_g": "",
                 "abs_mag_g": "",
                 "bp_rp": "",

@@ -4628,6 +4628,64 @@ class _PhotometryReportBuilder:
 
         self._page_footer(c)
         c.showPage()
+        if not is_empty and top is not None and not top.empty:
+            self._report_hrd_extreme_details(c, top)
+
+    def _report_hrd_extreme_details(self, c: "canvas.Canvas", top: pd.DataFrame) -> None:
+        """Follow-on page(s): per-object catalog/astrophysics detail blocks."""
+        from hrd_analysis import (
+            HRD_DETAILS_DISTANCE_CAVEAT,
+            build_hrd_detail_line,
+            hrd_detail_header_name,
+        )
+
+        work = top.loc[~top.get("_empty_field", False).astype(bool)].head(17)
+        if work.empty:
+            return
+
+        y = float(self.PAGE_H - self.M_TOP)
+        c.setFont(self.FONT_BOLD, 14)
+        c.setFillColor(self.C_TITLE)
+        c.drawString(self.M_LEFT, y - 0.5 * self.cm, "Extreme objects -- details")
+        c.setFillColor(self.colors.black)
+        y -= 1.0 * self.cm
+
+        y = self._draw_flow_lines(
+            c,
+            y,
+            [(HRD_DETAILS_DISTANCE_CAVEAT, self.FONT_REG, 7.0)],
+            line_step=8.0,
+            paginate=True,
+        )
+        y -= 0.15 * self.cm
+
+        for _, rr in work.iterrows():
+            row_dict = rr.to_dict()
+            header = (
+                f"{hrd_detail_header_name(row_dict)} -- "
+                f"{row_dict.get('category', '')} -- "
+                f"{row_dict.get('ident', 'candidate')}"
+            )
+            detail = build_hrd_detail_line(row_dict)
+            y = self._draw_flow_lines(
+                c,
+                y,
+                [(header, self.FONT_BOLD, 8.0)],
+                line_step=10.0,
+                paginate=True,
+            )
+            y = self._draw_flow_lines(
+                c,
+                y,
+                [(detail, self.FONT_REG, 7.0)],
+                line_step=8.5,
+                paginate=True,
+            )
+            y -= 0.12 * self.cm
+
+        self._page_footer(c)
+        c.showPage()
+
     def _report_field_map(self, c: "canvas.Canvas") -> None:
         fmp: Path | None = None
         for cand in (self.platesolve_dir / "field_map.png", self.photometry_dir / "field_map.png"):

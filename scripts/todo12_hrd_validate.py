@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import math
 import shutil
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -27,7 +29,21 @@ from hrd_analysis import (
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "tmp" / "todo12_hrd"
-PRE12E = OUT / "pre12e"
+PRE12F = OUT / "pre12f"
+
+
+def _git_head_short() -> str:
+    try:
+        return (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],
+                cwd=str(ROOT),
+                text=True,
+            )
+            .strip()
+        )
+    except Exception:  # noqa: BLE001
+        return "unknown"
 RS_PER_CID = "458407464445792384"
 
 
@@ -266,12 +282,12 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
 
 def main() -> int:
     gdb = Path(AppConfig().gaia_db_path)
-    if OUT.is_dir() and any(OUT.iterdir()) and not PRE12E.is_dir():
-        PRE12E.mkdir(parents=True, exist_ok=True)
+    if OUT.is_dir() and any(OUT.iterdir()) and not PRE12F.is_dir():
+        PRE12F.mkdir(parents=True, exist_ok=True)
         for item in OUT.iterdir():
             if item.name.startswith("pre12"):
                 continue
-            dest = PRE12E / item.name
+            dest = PRE12F / item.name
             if item.is_dir():
                 shutil.copytree(item, dest, dirs_exist_ok=True)
             else:
@@ -299,8 +315,13 @@ def main() -> int:
         )
     )
     out_json = OUT / "summary.json"
-    out_json.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    print(json.dumps(summary, indent=2))
+    payload = {
+        "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "git_head": _git_head_short(),
+        "setups": summary,
+    }
+    out_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(json.dumps(payload, indent=2))
     return 0
 
 

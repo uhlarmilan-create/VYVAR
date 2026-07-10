@@ -237,6 +237,35 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
         show = top_stars[display_cols]
         st.dataframe(show, width="stretch", hide_index=True)
 
+        detail_cols = [
+            c
+            for c in (
+                "category",
+                "ident",
+                "simbad_id",
+                "sp_type_raw",
+                "otype_raw",
+                "ra_dec_sex",
+                "dist_pc",
+                "parallax_mas",
+                "mag_g",
+                "abs_mag_g",
+                "bp_rp",
+                "teff",
+                "teff_source",
+                "logg",
+                "logg_source",
+                "dsc_wd_p",
+                "catalog_id",
+                "x_px",
+                "y_px",
+                "src",
+            )
+            if c in top_stars.columns
+        ]
+        with st.expander("Extreme objects -- details"):
+            st.dataframe(top_stars[detail_cols], width="stretch", hide_index=True)
+
     _cache = photometry_dir / "_hrd_cache"
     _cache.mkdir(parents=True, exist_ok=True)
     bg_png, from_fits = ensure_clean_field_background_png(platesolve_dir, photometry_dir, cache_dir=_cache)
