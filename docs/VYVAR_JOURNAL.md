@@ -2,6 +2,36 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-10 — SESSION-CLOSE-0710 (HRD arc + F-BINGAIN-1, session close)
+
+**Denní oblouk:** TODO-12 HRD (12→12f: absolutní extrémní objekty, obohacení Gaia TAP/SIMBAD,
+identifikační tier, PDF/UI detaily, summary.json freshness stamps) → F-BINGAIN-1 FIX (empirický
+`sigma_bkg_ap` v produkčním `err`) → acceptance + regate (dekomponované brány G1–G4 PASS) →
+hybrid `howell_scaled` fallback (B_20_2: 0 % raw fallback).
+
+**F-BINGAIN-1 — příčina:** level-based rekonstrukce background variance (`sky_pp/g·A + (RN/g)²·A`)
+selhává při pedestal in level + resampling korelace (Stage B/C); RN hodnota sekundární. Žádné
+bias/dark kalibrace na eq4 (0 C5A bias/dark v archivu) → dark subtract neprobíhá.
+
+**Fix:** empty-aperture `sigma_bkg_ap` (Labbe et al. 2003; IRAF/DAOPHOT/SExtractor/photutils pattern);
+`var = F/g + sigma_bkg_ap²`. Hybrid fallback: `howell_scaled` s transferovaným r_setup (Casertano spirit).
+
+**Regate — proč původní brána padla:** dekompozice LC err² ukázala, že V0611 **není**
+background-dominated v žádném pásmu (bkg podíl 7–10 %, ensemble 84–91 %). Původní „χ²∈[0.8,1.2]
+všechna pásma" tiše předpokládala background dominanci — neplatné. **Anti-blanket-gate:** budget
+je heterogenní per hvězda; oba ocasy musí být prozkoumány.
+
+**SIGMA-NEWTON seed čísla (zítřejší entry point):**
+- i/r: ensemble SEM podíl ~91 %, χ²≈0.25 → ~2× nadhodnocená nejistota (underdispersion) → SIGMA-NEWTON scope.
+- g_60_4 pooled χ²≈2.99 vs V0611 g χ²≈1.11 → overdispersion v jiné hvězdě/kohoru; stejný setup, jiný budget.
+
+**Byte-identity:** re-anchor pro `err` sloupec (dokumentovaná divergence); non-err proc sloupce
+byte-identical na patch-only acceptance.
+
+**pytest:** 737 passed, 15 skipped. **session_baseline_check --fast:** PASS. **origin/main:** `560723c`.
+
+---
+
 ## 2026-07-10 — F-BINGAIN-1 acceptance regate (decomposition + hybrid fallback)
 
 **Part 1 decomposition (V0611 draft_426, archive LC):** LC err² is **ensemble-dominated**

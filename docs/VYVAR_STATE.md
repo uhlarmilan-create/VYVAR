@@ -1,15 +1,24 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-10** — F-BINGAIN-1 **FIX landed** (empirical background-noise term in photometric
-err model); pytest **733 passed**, 15 skipped. Draft chi2 acceptance gate **pending** re-run on
-draft_424/425/426 (local Archive empty).
+Last updated: **2026-07-10** — SESSION-CLOSE-0710. **HEAD `560723c`** on `origin/main`.
+**pytest 737 passed**, 15 skipped. **session_baseline_check --fast:** PASS.
 
-**2026-07-10 snapshot (F-BINGAIN-1 FIX):** Production `err` uses empty-aperture `sigma_bkg_ap`
-(Labbe et al. 2003) + source Poisson `F/g`; config keys `err_background_mode` (default `empirical`),
-`err_empty_apertures_n` (64, clamp 16..256), `err_empty_apertures_min` (16). Proc-CSV columns
-`sigma_bkg_ap`, `err_bkg_source`. Howell legacy preserved as `howell` mode + crowding fallback.
-PROD-SIGMA-FLOOR unchanged (separate Milan decision). **Not committed** — STOP: draft chi2 gate
-not executed (no draft data in workspace Archive).
+**2026-07-10 snapshot (SESSION-CLOSE):** Two workstreams **DONE** today:
+(1) **TODO-12 HRD arc** 12/12b/12c/12d/12e/12f — session-aware extreme-object table, enrichment,
+identification tiers, PDF/UI details, summary.json freshness stamps (`generated_at_utc`, `git_head`).
+(2) **F-BINGAIN-1 RESOLVED** — empirical empty-aperture `sigma_bkg_ap` in production `err` (IRAF/SExtractor/
+photutils-aligned); hybrid `howell_scaled` fallback for crowded fields; regate PASS (decomposition-driven
+gates). Result files: `CURSOR_RESULT_todo12_hrd.md` … `_todo12f_hrd.md`, `CURSOR_RESULT_bingain_fix.md`,
+`CURSOR_RESULT_bingain_acceptance.md`, `CURSOR_RESULT_bingain_regate.md`.
+
+**Byte-identity baseline (F-BINGAIN-1):** Re-anchored for documented **`err` column divergence**
+(empirical bkg term); **non-err proc-CSV science columns verified byte-identical** on patch-only
+acceptance (draft_426 g, draft_424/425 all setups). LC `err` is the authoritative production uncertainty.
+
+**NEXT SESSION entry point:** **SIGMA-NEWTON** (unblocked; prerequisite: wire **SIGMA-BUDGET-EMPIRICAL**
+harness or use LC `err` — see ROADMAP). Seed numbers: V0611 i/r ensemble SEM ~91% share, χ²≈0.25
+(~2× underdispersed); g_60_4 **pooled** χ²≈2.99 vs V0611 g χ²≈1.11 — heterogeneous budget per star
+(examine both tails; no blanket gate). Milan pending: **PROD-SIGMA-FLOOR**, **SS Cam trust band**.
 
 **2026-07-10 snapshot (TODO-12f):** `_make_row` extended (dist, parallax, raw SpT/otype, DSC p,
 teff_source); PDF follow-on page per object; UI expander with full column set; validate

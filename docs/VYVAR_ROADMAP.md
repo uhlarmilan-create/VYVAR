@@ -75,7 +75,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 
 | ID | Sev | Notes |
 |----|-----|-------|
-| **F-BINGAIN-1** | — | **RESOLVED (2026-07-10).** Empirical empty-aperture `sigma_bkg_ap` + hybrid `howell_scaled` fallback (Casertano transferred correction). **Acceptance (regate 2026-07-10):** Part 1 decomposition shows V0611 LC err is **ensemble-dominated (84–91%)**, not background-dominated in any band (bkg share 7–10%) — original blanket chi2 gate was invalid. Refined gates G1–G4 PASS (see JOURNAL). B_20_2: 0% raw fallback after hybrid (r_setup≈0.166). **Follow-up:** `sigma_arrays_from_lc_and_proc` ignores `sigma_bkg_ap` (chi2 harness mismatch) — wire empirical photon term before SIGMA-NEWTON work. |
+| **F-BINGAIN-1** | — | **RESOLVED (2026-07-10).** Empirical empty-aperture `sigma_bkg_ap` + hybrid `howell_scaled` fallback. Regate PASS (decomposition-driven gates G1–G4). Result chain: `CURSOR_RESULT_bingain_fix.md`, `CURSOR_RESULT_bingain_acceptance.md`, `CURSOR_RESULT_bingain_regate.md`. **Follow-up:** **SIGMA-BUDGET-EMPIRICAL** (MED) — harness ignores `sigma_bkg_ap`. |
 | **SIGMA-BUDGET-EMPIRICAL** | MED | **OPEN.** `scripts/chi2_sigma_gate.py:sigma_arrays_from_lc_and_proc` recomputes Howell photon sigma from proc rows and ignores proc `sigma_bkg_ap` / empirical LC err. Production chi2 validation must use LC `err` column (as `bingain_fix_validate.py` now does) until harness updated. Blocks unified sigma-budget vs production err audit. |
 | **F-EXCEPT-TIER1** | — | **CLOSED (2026-07-08)** — 40 fixes + EXCEPT-BULK; census `docs/VYVAR_EXCEPT_CENSUS.md` all **625 EVIDENCE**. |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
@@ -276,7 +276,41 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ---
 
-## NEXT SESSION — open items
+## NEXT SESSION — entry point (2026-07-10 close)
+
+**Start here:** **SIGMA-NEWTON** — extend chi2 gate to Newton rigs (unblocked post F-BINGAIN-1 regate).
+**Prerequisite (ROADMAP deferred row):** wire **SIGMA-BUDGET-EMPIRICAL** harness (`sigma_arrays_from_lc_and_proc`
+must use proc `sigma_bkg_ap` / empirical photon term) **or** validate via production LC `err` column
+(as `scripts/bingain_fix_validate.py` now does).
+
+**Seed numbers from regate decomposition (do not use blanket per-setup gates):**
+- V0611 **i/r:** ensemble SEM share ~**91%**, χ²≈**0.25** (~2× underdispersed) — target ensemble/scint/floor budget, not empirical bkg.
+- **g_60_4 pooled** χ²≈**2.99** vs V0611 g χ²≈**1.11** — heterogeneous per-star budget; examine both tails.
+
+**Milan decisions pending (Claude prepares one-screen briefs at session open):**
+- **PROD-SIGMA-FLOOR** — per-rig `sigma_sys` floor in production err (re-anchor if adopted).
+- **SS Cam trust band** — YELLOW; sparse gate redesign proposed (check scatter CI + temporal comp_rms).
+
+**Follow-ups (code, no block on SIGMA-NEWTON start if using LC err):**
+- **SIGMA-BUDGET-EMPIRICAL** (MED) — chi2 harness mismatch tracked in deferred table.
+- **z-band closure anomaly** (Stage C post/pre ratio ~0.06) — separate from F-BINGAIN-1.
+- **Teff=N/A unit cosmetic** (quickwin).
+- **summary.json freshness stamps** — **DONE today** (TODO-12f: `generated_at_utc`, `git_head`).
+
+**Milan data tasks:**
+- eq4 **bin4 bias/darks** (≥6 frames, GAIN=12.48, T~-15 °C) for empirical RN measurement (Stage B blocked at 0 pairs).
+- **New darks** before ~**2026-07-21** expiry.
+- **BVR night** with dX ≥ 0.3 (home rig; k'' NIGHT_FIT v2 data).
+- **bin2 flats** (calibration inventory).
+
+**Sandbox tools (gitignored, findable tomorrow):** `sandbox/tools/bingain_inventory.py`,
+`bingain_rn_measure.py`, `bingain_bg_closure.py`, `bingain_common.py`, `bingain_stageB_run.py`,
+`bingain_stageC_run.py`, `bingain_stageC_chi2.py`. Artifacts: `tmp/bingain_stageB/`, `tmp/bingain_stageC/`,
+`tmp/bingain_acceptance/`.
+
+---
+
+## NEXT SESSION — open items (historical backlog)
 
 **Resume here when Milan data unblocks k'':** filtered V/B/R draft + Newton/Brno FITS FILTER capture
 (see IN-FLIGHT section above). Until then, other HIGH items below remain valid but k'' is the designed
