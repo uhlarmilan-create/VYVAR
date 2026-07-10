@@ -25,11 +25,14 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
         return
 
     from hrd_analysis import (
+        HRD_CAPTION,
+        HRD_EMPTY_FIELD_MSG,
         _f,
         annotate_field_image,
         build_hrd_dataframe,
         ensure_clean_field_background_png,
         get_top_interesting_stars,
+        hrd_parallax_params_from_cfg,
     )
 
     st.subheader("Field Hertzsprung–Russell diagram")
@@ -52,9 +55,12 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
         gdb = Path("")
 
     gaia_for_build = gdb if gdb.is_file() else Path("/nonexistent/vyvar_gaia_placeholder.db")
+    pmin, psnr = hrd_parallax_params_from_cfg(cfg)
     with st.spinner("Loading data…"):
         try:
-            hrd_df = build_hrd_dataframe(ms_csv, gaia_for_build)
+            hrd_df = build_hrd_dataframe(
+                ms_csv, gaia_for_build, parallax_min_mas=pmin, parallax_snr_min=psnr
+            )
         except Exception as exc:  # noqa: BLE001
             st.error(f"Error loading HRD: {exc}")
             logger.exception("render_hrd_tab build_hrd_dataframe")
@@ -64,7 +70,10 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
         st.info("Empty star catalog.")
         return
 
-    top_stars = get_top_interesting_stars(hrd_df)
+    platesolve_dir = photometry_dir.parent
+    obs_group = platesolve_dir.name
+    enrich_cache = platesolve_dir / "_hrd_cache" / "hrd_enrich.json"
+    top_stars = get_top_interesting_stars(hrd_df, cfg=cfg, cache_path=enrich_cache)
     reliable = hrd_df[hrd_df["hrd_reliable"] == True]  # noqa: E712
     unreliable = hrd_df[hrd_df["hrd_reliable"] != True]
 
@@ -84,7 +93,7 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
                 y=gapp,
                 mode="markers",
                 marker=dict(size=4, color="gray", opacity=0.35),
-                name="No parallax (G)",
+                name="No/low-quality parallax (apparent G)",
                 customdata=unreliable[["catalog_id"]].astype(str).values,
                 hovertemplate=(
                     "ID: %{customdata[0]}<br>"
@@ -130,17 +139,20 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
         )
 
     cat_colors = {
-        "Reddest": "red",
-        "Bluest": "blue",
-        "Red giant branch": "orange",
+        "Very hot": "blue",
+        "Hot luminous": "cyan",
+        "Very cool": "red",
         "White dwarf": "lightblue",
-        "Carbon/Mira": "darkred",
-        "WR / hot blue": "cyan",
+        "Red giant": "orange",
+        "Red supergiant": "darkorange",
         "Binary candidate": "lime",
     }
 
-    if not top_stars.empty:
-        for cat, grp in top_stars.groupby("category"):
+    is_empty = bool(top_stars.get("_empty_field", pd.Series([False])).any()) if not top_stars.empty else True
+    plot_stars = top_stars[~top_stars.get("_empty_field", pd.Series(False)).astype(bool)] if not top_stars.empty else top_stars
+
+    if not plot_stars.empty:
+        for cat, grp in plot_stars.groupby("category"):
             xs: list[float] = []
             ys: list[float] = []
             labels: list[str] = []
@@ -164,7 +176,11 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
                 cids.append(cid)
             if not xs:
                 continue
-            col = cat_colors.get(str(cat).split("/")[0], "yellow")
+            col = "yellow"
+            for key, ccol in cat_colors.items():
+                if str(cat).startswith(key):
+                    col = ccol
+                    break
             fig.add_trace(
                 go.Scatter(
                     x=xs,
@@ -188,27 +204,34 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
 
     fig.update_yaxes(autorange="reversed", title="M<sub>G</sub> [mag] / G [mag]")
     fig.update_xaxes(title="BP − RP [mag]")
+    title = f"Field HRD -- {obs_group}" if obs_group else "Field Hertzsprung–Russell diagram"
     fig.update_layout(
-        title="Field Hertzsprung–Russell diagram",
+        title=title,
         template="plotly_dark",
         height=600,
         legend=dict(font=dict(size=9)),
     )
     st.plotly_chart(fig, width="stretch")
+    st.caption(HRD_CAPTION)
 
-    if not top_stars.empty:
-        st.subheader("Interesting stars")
-        display_cols = ["catalog_id", "category", "mag_g", "abs_mag_g", "bp_rp", "teff", "logg"]
-        show = top_stars[[c for c in display_cols if c in top_stars.columns]]
+    if is_empty:
+        st.info(HRD_EMPTY_FIELD_MSG)
+    elif not top_stars.empty:
+        st.subheader("Extreme objects")
+        display_cols = [
+            c
+            for c in ("category", "catalog_id", "simbad_id", "mag_g", "abs_mag_g", "bp_rp", "teff", "logg", "src")
+            if c in top_stars.columns
+        ]
+        show = top_stars[display_cols]
         st.dataframe(show, width="stretch", hide_index=True)
 
-    platesolve_dir = photometry_dir.parent
     _cache = photometry_dir / "_hrd_cache"
     _cache.mkdir(parents=True, exist_ok=True)
     bg_png = ensure_clean_field_background_png(platesolve_dir, photometry_dir, cache_dir=_cache)
-    if bg_png is not None and not top_stars.empty:
+    if bg_png is not None and not plot_stars.empty:
         try:
-            annotated = annotate_field_image(bg_png, top_stars, hrd_df)
+            annotated = annotate_field_image(bg_png, plot_stars, hrd_df)
             st.subheader("Field image — interesting stars")
             st.image(str(annotated), width="stretch")
         except Exception as exc:  # noqa: BLE001

@@ -4397,8 +4397,11 @@ class _PhotometryReportBuilder:
             from config import AppConfig
 
             from hrd_analysis import (
+                HRD_CAPTION,
+                HRD_EMPTY_FIELD_MSG,
                 build_hrd_dataframe,
                 get_top_interesting_stars,
+                hrd_parallax_params_from_cfg,
                 plot_hrd_matplotlib,
             )
         except (ImportError, ModuleNotFoundError) as exc:
@@ -4407,6 +4410,7 @@ class _PhotometryReportBuilder:
             return
 
         gdb = Path(str(getattr(AppConfig(), "gaia_db_path", "") or "").strip())
+        cfg = AppConfig()
         ms_csv = self.platesolve_dir / "masterstars_full_match.csv"
         if not ms_csv.is_file():
             logging.error("PDF HRD: missing %s", ms_csv.name)
@@ -4431,12 +4435,14 @@ class _PhotometryReportBuilder:
             ArithmeticError,
         )
         try:
-            hrd_df = build_hrd_dataframe(ms_csv, gdb)
+            pmin, psnr = hrd_parallax_params_from_cfg(cfg)
+            hrd_df = build_hrd_dataframe(ms_csv, gdb, parallax_min_mas=pmin, parallax_snr_min=psnr)
             if hrd_df.empty:
                 self._report_hrd_unavailable_page(c, "no field stars in masterstars catalog")
                 return
-            top = get_top_interesting_stars(hrd_df)
-            plot_hrd_matplotlib(hrd_df, top, output_path=hrd_png)
+            enrich_cache = self.platesolve_dir / "_hrd_cache" / "hrd_enrich.json"
+            top = get_top_interesting_stars(hrd_df, cfg=cfg, cache_path=enrich_cache)
+            plot_hrd_matplotlib(hrd_df, top, output_path=hrd_png, obs_group=self.obs_group)
         except _hrd_build_errors as exc:
             logging.exception("PDF HRD: build/plot failed")
             self._report_hrd_unavailable_page(c, str(exc))
@@ -4463,18 +4469,78 @@ class _PhotometryReportBuilder:
             sc = min(max_w / float(iw), max_h / float(ih))
             dw, dh = iw * sc, ih * sc
             c.drawImage(ir, self.M_LEFT, y - dh, width=dw, height=dh, mask="auto")
-            y -= dh + 0.35 * self.cm
+            y -= dh + 0.25 * self.cm
 
-        if top is not None and not top.empty:
+        c.setFont(self.FONT_REG, 7)
+        c.setFillColor(self.colors.HexColor("#555555"))
+        approx_chars = max(40, int(self.USE_W / (7 * 0.45)))
+        for line in textwrap.wrap(HRD_CAPTION, width=approx_chars) or [HRD_CAPTION]:
+            c.drawString(self.M_LEFT, y, line)
+            y -= 0.32 * self.cm
+        y -= 0.15 * self.cm
+        c.setFillColor(self.colors.black)
+
+        is_empty = bool(top.get("_empty_field", pd.Series([False])).any()) if not top.empty else True
+        if is_empty:
+            tab_cols = ["category"]
+            rows_t: list[list[str]] = [tab_cols, [HRD_EMPTY_FIELD_MSG]]
+            col_ws = [self.USE_W]
+            rt = self.Table(rows_t, colWidths=col_ws, repeatRows=0)
+            rt.setStyle(
+                self.TableStyle(
+                    [
+                        ("FONTNAME", (0, 0), (-1, -1), self.FONT_REG),
+                        ("FONTSIZE", (0, 0), (-1, -1), 7),
+                        ("GRID", (0, 0), (-1, -1), 0.2, self.colors.HexColor("#cccccc")),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ]
+                )
+            )
+            _, th = rt.wrap(self.USE_W, y - self.M_BOTTOM)
+            rt.drawOn(c, self.M_LEFT, y - th)
+            y -= th + 0.3 * self.cm
+        elif top is not None and not top.empty:
             tab_cols = [
-                c for c in ("category", "catalog_id", "mag_g", "abs_mag_g", "bp_rp", "teff", "logg") if c in top.columns
+                c
+                for c in (
+                    "category",
+                    "catalog_id",
+                    "simbad_id",
+                    "mag_g",
+                    "abs_mag_g",
+                    "bp_rp",
+                    "teff",
+                    "logg",
+                    "src",
+                )
+                if c in top.columns
             ]
             if tab_cols:
-                rows_t: list[list[str]] = [tab_cols]
+                rows_t = [tab_cols]
                 for _, rr in top.iterrows():
                     rows_t.append([str(rr.get(c, "") or "") for c in tab_cols])
-                base_w = [3.0 * self.cm, 5.0 * self.cm, 2.0 * self.cm, 2.0 * self.cm, 2.0 * self.cm, 2.2 * self.cm, 2.0 * self.cm]
+                base_w = [
+                    2.8 * self.cm,
+                    4.2 * self.cm,
+                    3.2 * self.cm,
+                    1.6 * self.cm,
+                    1.6 * self.cm,
+                    1.6 * self.cm,
+                    1.6 * self.cm,
+                    1.4 * self.cm,
+                    1.2 * self.cm,
+                ]
                 col_ws = base_w[: len(tab_cols)]
+                total_w = sum(col_ws)
+                if total_w > self.USE_W and "simbad_id" in tab_cols:
+                    tab_cols.remove("simbad_id")
+                    rows_t = [tab_cols] + [[str(rr.get(c, "") or "") for c in tab_cols] for _, rr in top.iterrows()]
+                    col_ws = base_w[: len(tab_cols)]
+                    total_w = sum(col_ws)
+                if total_w > self.USE_W:
+                    fs = 6.0
+                else:
+                    fs = 6.5
                 rt = self.Table(rows_t, colWidths=col_ws, repeatRows=1)
                 rt.setStyle(
                     self.TableStyle(
@@ -4482,9 +4548,9 @@ class _PhotometryReportBuilder:
                             ("BACKGROUND", (0, 0), (-1, 0), self.C_TITLE),
                             ("TEXTCOLOR", (0, 0), (-1, 0), self.colors.white),
                             ("FONTNAME", (0, 0), (-1, 0), self.FONT_BOLD),
-                            ("FONTSIZE", (0, 0), (-1, 0), 7),
+                            ("FONTSIZE", (0, 0), (-1, 0), max(6.0, fs - 0.5)),
                             ("FONTNAME", (0, 1), (-1, -1), self.FONT_REG),
-                            ("FONTSIZE", (0, 1), (-1, -1), 6.5),
+                            ("FONTSIZE", (0, 1), (-1, -1), fs),
                             ("GRID", (0, 0), (-1, -1), 0.2, self.colors.HexColor("#cccccc")),
                             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                         ]

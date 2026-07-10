@@ -16,6 +16,89 @@ from infolog import log_event
 
 logger = logging.getLogger(__name__)
 
+# HRD extreme-object thresholds (Stage 2) — Pecaut & Mamajek (2013, ApJS 208, 9) intrinsic-color
+# scale; Gaia BP-RP breakpoints from their updated online table (2024 revision).
+# GSP-Phot teff/logg provenance: Andrae et al. (2023, A&A 674, A27); incomplete at color extremes.
+HRD_BP_RP_VERY_HOT = -0.3  # Pecaut & Mamajek: early-O/B intrinsic BP-RP floor (Gaia era)
+HRD_BP_RP_HOT_LUM = -0.1
+HRD_BP_RP_VERY_COOL = 3.0  # late-M / carbon-star regime (Pecaut & Mamajek sequence tail)
+HRD_BP_RP_WD = 0.3
+HRD_BP_RP_GIANT = 1.5
+HRD_TEFF_VERY_HOT = 25000.0
+HRD_TEFF_VERY_COOL = 3000.0
+HRD_LOGG_GIANT = 3.5
+HRD_LOGG_SUPERGIANT = 1.5
+HRD_ABS_MAG_LUMINOUS = 0.0
+HRD_ABS_MAG_WD = 10.0
+
+HRD_EMPTY_FIELD_MSG = "No extreme objects in this field (all stars near the main sequence)"
+HRD_CAPTION = (
+    "HRD positions use Gaia DR3 catalog values (BP-RP, M_G). Differences between filter sessions "
+    "reflect which stars DAO detected in that band (detection selection), not the measured photometry. "
+    "Gray points use apparent G (no reliable distance) and appear fainter than the absolute-magnitude "
+    "sequence by their distance modulus."
+)
+
+HRD_PARALLAX_MIN_MAS_DEFAULT = 0.15
+HRD_PARALLAX_SNR_MIN_DEFAULT = 5.0
+
+
+def hrd_parallax_params_from_cfg(cfg: Any | None) -> tuple[float, float]:
+    """Resolve HRD parallax gate from config (defaults: 0.15 mas floor, SNR 5)."""
+    pmin = HRD_PARALLAX_MIN_MAS_DEFAULT
+    snr = HRD_PARALLAX_SNR_MIN_DEFAULT
+    if cfg is not None:
+        try:
+            pmin = float(getattr(cfg, "hrd_parallax_min_mas", pmin))
+        except (TypeError, ValueError):
+            pmin = HRD_PARALLAX_MIN_MAS_DEFAULT
+        try:
+            snr = float(getattr(cfg, "hrd_parallax_snr_min", snr))
+        except (TypeError, ValueError):
+            snr = HRD_PARALLAX_SNR_MIN_DEFAULT
+        pmin = max(0.0, min(10.0, pmin))
+        snr = max(1.0, min(20.0, snr))
+    return pmin, snr
+
+
+def is_hrd_parallax_reliable(
+    parallax_mas: float | None,
+    parallax_over_error: float | None,
+    *,
+    parallax_min_mas: float = HRD_PARALLAX_MIN_MAS_DEFAULT,
+    parallax_snr_min: float = HRD_PARALLAX_SNR_MIN_DEFAULT,
+) -> bool:
+    """True when parallax passes the HRD M_G reliability gate."""
+    try:
+        p = float(parallax_mas)
+        snr = float(parallax_over_error)
+    except (TypeError, ValueError):
+        return False
+    if not (math.isfinite(p) and math.isfinite(snr)):
+        return False
+    return p >= float(parallax_min_mas) and snr >= float(parallax_snr_min)
+
+_LABEL_VERY_HOT = "Very hot (O/B candidate)"
+_LABEL_HOT_LUM = "Hot luminous (WR/OB? candidate)"
+_LABEL_VERY_COOL = "Very cool (late-M/C candidate)"
+_LABEL_WD = "White dwarf candidate"
+_LABEL_RG = "Red giant"
+_LABEL_RSG = "Red supergiant"
+_LABEL_BINARY = "Binary candidate (Gaia NSS)"
+
+# Stage-2 priority (luminosity-informed; most specific wins).
+_LABEL_PRIORITY: tuple[str, ...] = (
+    _LABEL_WD,
+    _LABEL_RSG,
+    _LABEL_RG,
+    _LABEL_HOT_LUM,
+    _LABEL_VERY_HOT,
+    _LABEL_VERY_COOL,
+    _LABEL_BINARY,
+)
+
+_SIMBAD_OTYPE_PREFIXES = ("WR", "WD", "C", "S", "LP", "EB", "RG", "AGB", "PN", "HV")
+
 
 def _f(val: Any) -> float | None:
     if val is None or (isinstance(val, float) and not math.isfinite(val)):
@@ -160,43 +243,99 @@ def _spectral_class(row: pd.Series) -> str:
     return ""
 
 
-def _classify_star(row: pd.Series) -> str:
+def _is_reliable(row: pd.Series) -> bool:
+    return bool(row.get("hrd_reliable"))
+
+
+def _nss_is_binary(row: pd.Series) -> bool:
+    try:
+        return int(float(row.get("non_single_star", 0))) == 1
+    except (TypeError, ValueError):
+        return False
+
+
+def _simbad_suffix(otype: Any) -> str:
+    ot = str(otype or "").strip()
+    if not ot:
+        return ""
+    up = ot.upper()
+    for pref in _SIMBAD_OTYPE_PREFIXES:
+        if up.startswith(pref) or pref in up.split("*")[0]:
+            return f" (SIMBAD: {ot})"
+    return ""
+
+
+def _stage2_labels(row: pd.Series) -> list[str]:
+    """Return all Stage-2 category labels satisfied by one star (before priority pick)."""
     bp_rp = _f(row.get("bp_rp"))
     logg = _f(row.get("logg_gspphot"))
     abs_g = _f(row.get("abs_mag_g"))
     teff = _f(row.get("teff_gspphot"))
-    nss = row.get("non_single_star", 0)
+    reliable = _is_reliable(row)
+    labels: list[str] = []
 
-    if bp_rp is not None and bp_rp > 3.0:
-        return "Carbon/Mira candidate"
+    if reliable and bp_rp is not None and abs_g is not None:
+        if bp_rp < HRD_BP_RP_WD and abs_g > HRD_ABS_MAG_WD:
+            labels.append(_LABEL_WD)
+        if bp_rp < HRD_BP_RP_HOT_LUM and abs_g < HRD_ABS_MAG_LUMINOUS:
+            labels.append(_LABEL_HOT_LUM)
 
-    if bp_rp is not None and bp_rp > 1.5 and logg is not None and logg < 3.5:
-        if logg < 1.5:
-            return "Red supergiant"
-        return "Red giant branch"
+    if teff is not None and teff >= HRD_TEFF_VERY_HOT:
+        labels.append(_LABEL_VERY_HOT)
+    elif teff is None and bp_rp is not None and bp_rp <= HRD_BP_RP_VERY_HOT:
+        labels.append(_LABEL_VERY_HOT)
 
-    # White dwarf — blue and faint (abs_mag > 10)
-    if bp_rp is not None and bp_rp < 0.3 and abs_g is not None and abs_g > 10.0:
-        return "White dwarf"
+    is_giant_branch = (
+        bp_rp is not None
+        and logg is not None
+        and bp_rp > HRD_BP_RP_GIANT
+        and logg < HRD_LOGG_GIANT
+    )
+    if is_giant_branch:
+        if logg < HRD_LOGG_SUPERGIANT:
+            labels.append(_LABEL_RSG)
+        else:
+            labels.append(_LABEL_RG)
 
-    if bp_rp is not None and bp_rp < -0.1 and abs_g is not None and abs_g < 0.0:
-        return "WR / hot blue"
+    if not is_giant_branch:
+        if teff is not None and teff <= HRD_TEFF_VERY_COOL:
+            labels.append(_LABEL_VERY_COOL)
+        elif bp_rp is not None and bp_rp >= HRD_BP_RP_VERY_COOL:
+            labels.append(_LABEL_VERY_COOL)
 
-    try:
-        if int(float(nss)) == 1:
-            return "Binary candidate"
-    except (TypeError, ValueError):
-        pass
-    _ = teff
-    return ""
+    if _nss_is_binary(row):
+        labels.append(_LABEL_BINARY)
+
+    return labels
+
+
+def _pick_label(labels: list[str], simbad_otype: Any = None) -> str:
+    if not labels:
+        return ""
+    chosen = ""
+    best = len(_LABEL_PRIORITY) + 1
+    for lab in labels:
+        try:
+            idx = _LABEL_PRIORITY.index(lab)
+        except ValueError:
+            continue
+        if idx < best:
+            best = idx
+            chosen = lab
+    suffix = _simbad_suffix(simbad_otype)
+    return f"{chosen}{suffix}" if chosen else ""
+
+
+def _classify_star(row: pd.Series) -> str:
+    return _pick_label(_stage2_labels(row), row.get("simbad_otype"))
 
 
 def build_hrd_dataframe(
     masterstars_csv: Path,
     gaia_db_path: Path,
     *,
-    parallax_min_mas: float = 1.0,
-    parallax_snr_min: float = 5.0,
+    parallax_min_mas: float = HRD_PARALLAX_MIN_MAS_DEFAULT,
+    parallax_snr_min: float = HRD_PARALLAX_SNR_MIN_DEFAULT,
 ) -> pd.DataFrame:
     """Build HRD dataframe from masterstars CSV + optional Gaia SQLite enrichment."""
     ms = read_vyvar_csv(masterstars_csv, low_memory=False)
@@ -259,6 +398,10 @@ def build_hrd_dataframe(
     p = pd.to_numeric(ms.get("parallax"), errors="coerce")
     snr = pd.to_numeric(ms.get("parallax_over_error"), errors="coerce")
     g = pd.to_numeric(ms.get("phot_g_mean_mag"), errors="coerce")
+    # Parallax reliability: SNR primary filter (Bailer-Jones et al. 2021, AJ 161, 147); mas floor
+    # excludes only the near-zero regime where 1/parallax breaks down (not a distance-quality cut).
+    # DR3 zero-point bias is negligible at SNR>=5 for ~0.4 mas (Lindegren et al. 2021, A&A 649, A4).
+    # No zero-point correction or Bayesian distances here (diagnostic HRD only).
     ok = (
         np.isfinite(p)
         & np.isfinite(snr)
@@ -275,78 +418,270 @@ def build_hrd_dataframe(
     return ms
 
 
-def _fmt(val: Any, spec: str) -> str:
+def _fmt(val: Any, spec: str, *, na: bool = False) -> str:
+    missing = "N/A" if na else "\u2014"
+    if val is None or (isinstance(val, str) and not str(val).strip()):
+        return missing
     try:
         f = float(val)
-        return format(f, spec) if math.isfinite(f) else "—"
+        return format(f, spec) if math.isfinite(f) else missing
     except (TypeError, ValueError):
-        return "—"
+        return missing
 
 
-def _make_row(row: pd.Series, category: str) -> dict[str, Any]:
+def _make_row(row: pd.Series, category: str, *, table_na: bool = False) -> dict[str, Any]:
+    simbad_id = str(row.get("simbad_main_id") or "").strip()
+    simbad_otype = str(row.get("simbad_otype") or "").strip()
+    simbad_disp = simbad_id
+    if simbad_otype:
+        simbad_disp = f"{simbad_id} ({simbad_otype})" if simbad_id else simbad_otype
+    src = str(row.get("enrich_source") or "local").strip() or "local"
     return {
         "catalog_id": str(row.get("catalog_id", "")),
         "category": category,
-        "mag_g": _fmt(row.get("phot_g_mean_mag"), ".2f"),
-        "abs_mag_g": _fmt(row.get("abs_mag_g"), ".2f"),
-        "bp_rp": _fmt(row.get("bp_rp"), ".3f"),
-        "teff": _fmt(row.get("teff_gspphot"), ".0f"),
-        "logg": _fmt(row.get("logg_gspphot"), ".2f"),
+        "simbad_id": simbad_disp,
+        "mag_g": _fmt(row.get("phot_g_mean_mag"), ".2f", na=table_na),
+        "abs_mag_g": _fmt(row.get("abs_mag_g"), ".2f", na=table_na),
+        "bp_rp": _fmt(row.get("bp_rp"), ".3f", na=table_na),
+        "teff": _fmt(row.get("teff_gspphot"), ".0f", na=table_na),
+        "logg": _fmt(row.get("logg_gspphot"), ".2f", na=table_na),
+        "src": src if src else "N/A",
         "ra_deg": _fmt(row.get("ra_deg"), ".4f"),
         "dec_deg": _fmt(row.get("dec_deg"), ".4f"),
         "x_px": _fmt(row.get("x"), ".0f"),
         "y_px": _fmt(row.get("y"), ".0f"),
+        "_empty_field": False,
     }
 
 
-def get_top_interesting_stars(hrd_df: pd.DataFrame) -> pd.DataFrame:
-    """Return highlighted stars for PDF/UI tables."""
+def _empty_field_table() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "catalog_id": "",
+                "category": HRD_EMPTY_FIELD_MSG,
+                "simbad_id": "",
+                "mag_g": "",
+                "abs_mag_g": "",
+                "bp_rp": "",
+                "teff": "",
+                "logg": "",
+                "src": "",
+                "_empty_field": True,
+            }
+        ]
+    )
+
+
+def _nss_mask(df: pd.DataFrame) -> pd.Series:
+    if "non_single_star" in df.columns:
+        return pd.to_numeric(df["non_single_star"], errors="coerce").fillna(0).astype(int) == 1
+    return pd.Series(False, index=df.index)
+
+
+def _stage1_net_masks(df: pd.DataFrame) -> dict[str, pd.Series]:
+    """Stage-1 candidate nets (not mutually exclusive)."""
+    bp = pd.to_numeric(df.get("bp_rp"), errors="coerce")
+    abs_g = pd.to_numeric(df.get("abs_mag_g"), errors="coerce")
+    reliable = df.get("hrd_reliable", pd.Series(False, index=df.index)).astype(bool)
+    return {
+        "blue": bp <= -0.1,
+        "red": bp >= 2.5,
+        "wd": reliable & (bp < 0.5) & (abs_g > 9.0),
+        "luminous": reliable & (abs_g < -2.0),
+        "nss": _nss_mask(df),
+    }
+
+
+def _physics_net_mask(df: pd.DataFrame) -> pd.Series:
+    nets = _stage1_net_masks(df)
+    return nets["blue"] | nets["red"] | nets["wd"] | nets["luminous"]
+
+
+def _stage1_candidate_mask(df: pd.DataFrame) -> pd.Series:
+    nets = _stage1_net_masks(df)
+    return nets["blue"] | nets["red"] | nets["wd"] | nets["luminous"] | nets["nss"]
+
+
+def _add_extremity_columns(df: pd.DataFrame) -> pd.DataFrame:
+    work = df.copy()
+    work["bp_rp"] = pd.to_numeric(work.get("bp_rp"), errors="coerce")
+    work["abs_mag_g"] = pd.to_numeric(work.get("abs_mag_g"), errors="coerce")
+    med = float(work["bp_rp"].median()) if work["bp_rp"].notna().any() else 0.0
+    work["_ext_bp"] = (work["bp_rp"] - med).abs()
+    work["_ext_abs"] = work["abs_mag_g"].abs()
+    return work
+
+
+def _shrink_net_reservations(alloc: dict[str, int], budget: int) -> dict[str, int]:
+    """Round-robin shrink per-net reservations until sum <= budget."""
+    nets = list(alloc.keys())
+    while sum(alloc.values()) > budget:
+        changed = False
+        for net in nets:
+            if sum(alloc.values()) <= budget:
+                break
+            if alloc.get(net, 0) > 0:
+                alloc[net] -= 1
+                changed = True
+        if not changed:
+            break
+    return alloc
+
+
+def _select_stage1_candidates(
+    df: pd.DataFrame,
+    max_candidates: int,
+    *,
+    min_per_net: int = 4,
+) -> pd.DataFrame:
+    """Stage-1 candidate pick with per-net reserved slots then global extremity fill.
+
+    Each net (blue, red, WD-box, luminous, NSS) receives up to ``min_per_net`` guaranteed
+    slots in the enrich budget, ranked within the net (luminous: ascending ``abs_mag_g``;
+    NSS: input order). NSS reservations are applied last among nets. If total reservations
+    exceed ``max_candidates``, shrink round-robin (blue -> red -> wd -> luminous -> nss)
+    until the sum fits, then fill any remaining budget from global |bp_rp - median| ranking.
+    """
+    if df.empty:
+        return df
+    work = _add_extremity_columns(df)
+    mask = _stage1_candidate_mask(work)
+    cand = work.loc[mask].copy()
+    if cand.empty:
+        return cand
+
+    cap = max(1, int(max_candidates))
+    reserve = max(0, int(min_per_net))
+    net_masks = _stage1_net_masks(cand)
+    net_order = ("blue", "red", "wd", "luminous", "nss")
+
+    alloc = {net: min(reserve, int(net_masks[net].sum())) for net in net_order}
+    if sum(alloc.values()) > cap:
+        alloc = _shrink_net_reservations(dict(alloc), cap)
+
+    selected_idx: set[Any] = set()
+    parts: list[pd.DataFrame] = []
+
+    def _take(pool: pd.DataFrame, n: int) -> pd.DataFrame:
+        if n <= 0 or pool.empty:
+            return pool.iloc[0:0]
+        return pool.head(n)
+
+    for net in net_order:
+        n = alloc.get(net, 0)
+        if n <= 0:
+            continue
+        pool = cand.loc[net_masks[net] & ~cand.index.isin(selected_idx)].copy()
+        if net == "luminous":
+            pool = pool.sort_values("abs_mag_g", ascending=True, na_position="last")
+        elif net == "nss":
+            pool = pool.sort_index()
+        else:
+            pool = pool.sort_values(["_ext_bp", "_ext_abs"], ascending=[False, False])
+        pick = _take(pool, n)
+        if not pick.empty:
+            selected_idx.update(pick.index)
+            parts.append(pick)
+
+    remaining = cap - sum(len(p) for p in parts)
+    if remaining > 0:
+        pool = cand.loc[~cand.index.isin(selected_idx)].sort_values(
+            ["_ext_bp", "_ext_abs"], ascending=[False, False]
+        )
+        parts.append(_take(pool, remaining))
+
+    if not parts:
+        return pd.DataFrame()
+    out = pd.concat(parts, ignore_index=True)
+    return out.drop(columns=["_ext_bp", "_ext_abs"], errors="ignore")
+
+
+def _category_base(label: str) -> str:
+    return str(label or "").split(" (SIMBAD")[0].strip()
+
+
+def _apply_category_cap(classified: list[tuple[pd.Series, str]], max_per_category: int) -> list[dict[str, Any]]:
+    """Keep at most max_per_category rows per Stage-2 label (extremity order preserved)."""
+    cap = max(1, int(max_per_category))
+    counts: dict[str, int] = {}
     results: list[dict[str, Any]] = []
+    for row, label in classified:
+        base = _category_base(label)
+        if counts.get(base, 0) >= cap:
+            continue
+        counts[base] = counts.get(base, 0) + 1
+        results.append(_make_row(row, label, table_na=True))
+    return results
+
+
+def get_top_interesting_stars(
+    hrd_df: pd.DataFrame,
+    *,
+    cfg: Any | None = None,
+    cache_path: Path | None = None,
+) -> pd.DataFrame:
+    """Return extreme-object table rows for PDF/UI (Stage 1 net -> enrich -> Stage 2 classify)."""
     if hrd_df is None or hrd_df.empty:
         return pd.DataFrame()
-    df = hrd_df.copy()
-    df["bp_rp"] = pd.to_numeric(df.get("bp_rp"), errors="coerce")
-    df["abs_mag_g"] = pd.to_numeric(df.get("abs_mag_g"), errors="coerce")
-    df["logg_gspphot"] = pd.to_numeric(df.get("logg_gspphot"), errors="coerce")
-    if "non_single_star" in df.columns:
-        nss = pd.to_numeric(df["non_single_star"], errors="coerce").fillna(0).astype(int)
-    else:
-        nss = pd.Series(0, index=df.index, dtype=int)
 
-    red = df.nlargest(2, "bp_rp", keep="all")
-    for _, r in red.iterrows():
-        results.append(_make_row(r, "Reddest"))
+    max_candidates = 20
+    max_per_category = 3
+    min_per_net = 4
+    enrich_enabled = True
+    simbad_enabled = True
+    if cfg is not None:
+        try:
+            max_candidates = int(getattr(cfg, "hrd_enrich_max_candidates", max_candidates))
+        except (TypeError, ValueError):
+            max_candidates = 20
+        max_candidates = max(1, min(100, int(max_candidates)))
+        try:
+            max_per_category = int(getattr(cfg, "hrd_max_per_category", max_per_category))
+        except (TypeError, ValueError):
+            max_per_category = 3
+        max_per_category = max(1, min(20, int(max_per_category)))
+        try:
+            min_per_net = int(getattr(cfg, "hrd_min_per_net", min_per_net))
+        except (TypeError, ValueError):
+            min_per_net = 4
+        min_per_net = max(0, min(20, int(min_per_net)))
+        enrich_enabled = bool(getattr(cfg, "hrd_online_enrich_enabled", True))
+        simbad_enabled = bool(getattr(cfg, "hrd_simbad_enrich_enabled", True))
 
-    blue = df[df["bp_rp"].notna()].nsmallest(2, "bp_rp")
-    for _, r in blue.iterrows():
-        results.append(_make_row(r, "Bluest"))
+    candidates = _select_stage1_candidates(hrd_df, max_candidates, min_per_net=min_per_net)
+    if candidates.empty:
+        return _empty_field_table()
 
-    giants = df[(df["bp_rp"] > 1.5) & (df["logg_gspphot"] < 3.5) & df["logg_gspphot"].notna()].nlargest(2, "bp_rp")
-    for _, r in giants.iterrows():
-        results.append(_make_row(r, "Red giant branch"))
+    if enrich_enabled or simbad_enabled:
+        from hrd_enrich import enrich_candidates  # noqa: PLC0415
 
-    wd = df[
-        (df["bp_rp"] < 0.3) & (df["abs_mag_g"] > 10.0) & df["abs_mag_g"].notna()
-    ].nsmallest(2, "bp_rp")
-    for _, r in wd.iterrows():
-        results.append(_make_row(r, "White dwarf"))
+        candidates = enrich_candidates(
+            candidates,
+            cache_path,
+            enabled=enrich_enabled,
+            simbad_enabled=simbad_enabled,
+        )
 
-    carbon = df[df["bp_rp"] > 3.0].nlargest(2, "bp_rp")
-    for _, r in carbon.iterrows():
-        results.append(_make_row(r, "Carbon/Mira"))
+    scored = _add_extremity_columns(candidates)
+    scored = scored.sort_values(["_ext_bp", "_ext_abs"], ascending=[False, False])
+    classified: list[tuple[pd.Series, str]] = []
+    seen: set[str] = set()
+    for _, row in scored.iterrows():
+        cid = str(row.get("catalog_id", "")).strip()
+        if cid in seen:
+            continue
+        label = _pick_label(_stage2_labels(row), row.get("simbad_otype"))
+        if not label:
+            continue
+        seen.add(cid)
+        classified.append((row, label))
 
-    wr = df[(df["bp_rp"] < -0.1) & (df["abs_mag_g"] < 0.0) & df["abs_mag_g"].notna()].nsmallest(2, "abs_mag_g")
-    for _, r in wr.iterrows():
-        results.append(_make_row(r, "WR / hot blue"))
-
-    binary = df[nss == 1].head(3)
-    for _, r in binary.iterrows():
-        results.append(_make_row(r, "Binary candidate"))
+    results = _apply_category_cap(classified, max_per_category)
 
     if not results:
-        return pd.DataFrame()
-    out = pd.DataFrame(results).drop_duplicates(subset=["catalog_id"])
-    return out
+        return _empty_field_table()
+    return pd.DataFrame(results)
 
 
 def plot_hrd_matplotlib(
@@ -354,6 +689,7 @@ def plot_hrd_matplotlib(
     top_stars: pd.DataFrame,
     *,
     output_path: Path | None = None,
+    obs_group: str = "",
 ) -> Path:
     """Render HRD scatter to PNG (matplotlib Agg)."""
     import matplotlib
@@ -401,12 +737,16 @@ def plot_hrd_matplotlib(
             s=3,
             alpha=0.2,
             linewidths=0,
-            label=f"No parallax ({len(unreliable_plot)})",
+            label=f"No/low-quality parallax (apparent G) ({len(unreliable_plot)})",
             zorder=1,
         )
 
     if top_stars is not None and not top_stars.empty:
-        for _, star in top_stars.iterrows():
+        if "_empty_field" in top_stars.columns:
+            plot_stars = top_stars[~top_stars["_empty_field"].astype(bool)]
+        else:
+            plot_stars = top_stars
+        for _, star in plot_stars.iterrows():
             cid = normalize_gaia_source_id(star.get("catalog_id", ""))
             match = hrd_df[hrd_df["catalog_id"] == cid]
             if match.empty:
@@ -444,7 +784,8 @@ def plot_hrd_matplotlib(
     ax.invert_yaxis()
     ax.set_xlabel("BP − RP  [mag]", color="white", fontsize=11)
     ax.set_ylabel("M$_G$ / G  [mag]", color="white", fontsize=11)
-    ax.set_title("Field Hertzsprung\u2013Russell diagram", color="white", fontsize=13)
+    title = f"Field HRD -- {obs_group}" if str(obs_group or "").strip() else "Field Hertzsprung\u2013Russell diagram"
+    ax.set_title(title, color="white", fontsize=13)
     ax.tick_params(colors="white")
     for spine in ax.spines.values():
         spine.set_edgecolor("#444")
@@ -643,15 +984,13 @@ def annotate_field_image(
     draw = ImageDraw.Draw(img)
 
     category_colors: dict[str, tuple[int, int, int]] = {
-        "Reddest": (255, 80, 80),
-        "Bluest": (80, 80, 255),
-        "Red giant branch": (255, 140, 0),
-        "White dwarf": (220, 220, 255),
-        "Carbon/Mira": (180, 0, 0),
-        "WR / hot blue": (0, 200, 255),
-        "Binary candidate": (0, 255, 100),
-        "Carbon/Mira candidate": (180, 0, 0),
-        "Red supergiant": (255, 100, 0),
+        _LABEL_VERY_HOT: (80, 80, 255),
+        _LABEL_HOT_LUM: (0, 200, 255),
+        _LABEL_VERY_COOL: (255, 80, 80),
+        _LABEL_WD: (220, 220, 255),
+        _LABEL_RG: (255, 140, 0),
+        _LABEL_RSG: (255, 100, 0),
+        _LABEL_BINARY: (0, 255, 100),
     }
 
     w, h = img.size
@@ -675,7 +1014,12 @@ def annotate_field_image(
         cat_raw = str(star.get("category", "")).strip()
         color = category_colors.get(cat_raw)
         if color is None:
-            pref = cat_raw.split("/")[0].strip()
+            for key, col in category_colors.items():
+                if cat_raw.startswith(key.split(" (")[0]):
+                    color = col
+                    break
+        if color is None:
+            pref = cat_raw.split("(")[0].strip()
             color = category_colors.get(pref, (255, 255, 0))
         radius = 18
         draw.ellipse(
