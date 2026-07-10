@@ -1,4 +1,4 @@
-CURSOR RESULT ó 2026-07-10 14:05 UTC+2
+CURSOR RESULT ù 2026-07-10 14:05 UTC+2
 
 What I did
 Implemented TODO-12e-HRD: enrichment cache v2 (SIMBAD sp_type, Gaia DSC), identification tiers
@@ -48,8 +48,6 @@ Fixes: embedded MK lum class parse (`M3.5IabFe-1`); exclude `s*r` from Very-cool
 None.
 
 ## Files changed
-(pending commit)
-- hrd_enrich.py, hrd_analysis.py, config.py, ui_hrd.py, photometry_report.py
-- citations.py, CITATIONS.bib, scripts/todo12_hrd_validate.py
-- tests/test_hrd_ident_tiers.py, tests/test_hrd_extreme.py
-- docs: config_schema, VYVAR_PARAMS, STATE, JOURNAL, ROADMAP
+- Code commit `9d7e37d`: hrd_enrich.py, hrd_analysis.py, config.py, ui_hrd.py, photometry_report.py, citations.py, CITATIONS.bib, scripts/todo12_hrd_validate.py, tests/
+- Docs commit `0bd19f4`: docs + CURSOR_RESULT_todo12e_hrd.md
+- Pushed to origin/main
