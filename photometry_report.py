@@ -4562,6 +4562,7 @@ class _PhotometryReportBuilder:
                 c
                 for c in (
                     "category",
+                    "ident",
                     "catalog_id",
                     "simbad_id",
                     "mag_g",
@@ -4573,14 +4574,17 @@ class _PhotometryReportBuilder:
                 )
                 if c in top.columns
             ]
+            # Hidden overflow columns (dropped first when width tight)
+            _drop_order = ("ident_detail", "simbad_id")
             if tab_cols:
                 rows_t = [tab_cols]
                 for _, rr in top.iterrows():
                     rows_t.append([str(rr.get(c, "") or "") for c in tab_cols])
                 base_w = [
                     2.8 * self.cm,
-                    4.2 * self.cm,
-                    3.2 * self.cm,
+                    1.4 * self.cm,
+                    4.0 * self.cm,
+                    3.0 * self.cm,
                     1.6 * self.cm,
                     1.6 * self.cm,
                     1.6 * self.cm,
@@ -4590,9 +4594,13 @@ class _PhotometryReportBuilder:
                 ]
                 col_ws = base_w[: len(tab_cols)]
                 total_w = sum(col_ws)
-                if total_w > self.USE_W and "simbad_id" in tab_cols:
-                    tab_cols.remove("simbad_id")
-                    rows_t = [tab_cols] + [[str(rr.get(c, "") or "") for c in tab_cols] for _, rr in top.iterrows()]
+                for drop_col in _drop_order:
+                    if total_w <= self.USE_W or drop_col not in tab_cols:
+                        break
+                    tab_cols.remove(drop_col)
+                    rows_t = [tab_cols] + [
+                        [str(rr.get(c, "") or "") for c in tab_cols] for _, rr in top.iterrows()
+                    ]
                     col_ws = base_w[: len(tab_cols)]
                     total_w = sum(col_ws)
                 if total_w > self.USE_W:

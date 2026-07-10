@@ -139,6 +139,8 @@ class AppConfig:
     hrd_min_per_net: int = 4
     #: Include Gaia NSS binary candidates in HRD Stage-1/2 (default off; reversible flag).
     hrd_nss_category_enabled: bool = False
+    #: Gaia DSC probability floor for HRD "likely" white-dwarf tier (clamp 0.5..1.0).
+    hrd_dsc_confirm_prob: float = 0.90
 
     #: Fine blind index (Newton / ~1.3″/px rigs); built by ``build_blind_index.py``.
     blind_index_fine_path: str = ""
@@ -757,6 +759,13 @@ class AppConfig:
         self.hrd_nss_category_enabled = bool(
             data.get("hrd_nss_category_enabled", self.hrd_nss_category_enabled)
         )
+        try:
+            self.hrd_dsc_confirm_prob = float(
+                data.get("hrd_dsc_confirm_prob", self.hrd_dsc_confirm_prob)
+            )
+        except (TypeError, ValueError):
+            self.hrd_dsc_confirm_prob = 0.90
+        self.hrd_dsc_confirm_prob = max(0.5, min(1.0, float(self.hrd_dsc_confirm_prob)))
 
         gaia_dir = self.project_root / "GAIA_DR3"
         _fine_default = str(gaia_dir / "gaia_triangles_fine.pkl")
@@ -2006,6 +2015,7 @@ class AppConfig:
             "hrd_max_per_category": int(self.hrd_max_per_category),
             "hrd_min_per_net": int(self.hrd_min_per_net),
             "hrd_nss_category_enabled": bool(self.hrd_nss_category_enabled),
+            "hrd_dsc_confirm_prob": float(self.hrd_dsc_confirm_prob),
             "blind_index_fine_path": str(self.blind_index_fine_path or ""),
             "blind_index_wide_path": str(self.blind_index_wide_path or ""),
             "blind_index_select_mode": str(self.blind_index_select_mode or "auto"),

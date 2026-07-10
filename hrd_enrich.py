@@ -18,7 +18,17 @@ from infolog import log_event
 logger = logging.getLogger(__name__)
 
 _GAIA_BATCH = 50
+CACHE_VERSION = 2
 # DR4 migration: replace gaiadr3.gaia_source TAP table name and cache filename when DR4 ships.
+
+_GAIA_CACHE_KEYS = (
+    "teff_gspphot",
+    "logg_gspphot",
+    "classprob_dsc_combmod_whitedwarf",
+    "classprob_dsc_combmod_binarystar",
+    "spectraltype_esphs",
+)
+_SIMBAD_CACHE_KEYS = ("simbad_main_id", "simbad_otype", "simbad_sp_type")
 
 
 def _safe_float(val: Any) -> float | None:
@@ -42,8 +52,13 @@ def _load_cache(cache_path: Path) -> dict[str, dict[str, Any]]:
         return {}
     try:
         raw = json.loads(cache_path.read_text(encoding="utf-8"))
-        if isinstance(raw, dict):
-            return {str(k): v for k, v in raw.items() if isinstance(v, dict)}
+        if not isinstance(raw, dict):
+            return {}
+        if int(raw.get("cache_version", 0)) != CACHE_VERSION:
+            return {}
+        entries = raw.get("entries")
+        if isinstance(entries, dict):
+            return {str(k): v for k, v in entries.items() if isinstance(v, dict)}
     except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
         logger.debug("HRD enrich cache read failed (%s): %s", cache_path, exc)
     return {}
@@ -52,7 +67,8 @@ def _load_cache(cache_path: Path) -> dict[str, dict[str, Any]]:
 def _save_cache(cache_path: Path, data: dict[str, dict[str, Any]]) -> None:
     try:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
-        cache_path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+        payload = {"cache_version": CACHE_VERSION, "entries": data}
+        cache_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     except OSError as exc:
         logger.debug("HRD enrich cache write failed (%s): %s", cache_path, exc)
 
@@ -68,6 +84,16 @@ def _normalize_ids(source_ids: list[Any]) -> list[str]:
     return out
 
 
+def _needs_gaia_fetch(cache: dict[str, dict[str, Any]], sid: str) -> bool:
+    hit = cache.get(sid, {})
+    return any(k not in hit for k in _GAIA_CACHE_KEYS)
+
+
+def _needs_simbad_fetch(cache: dict[str, dict[str, Any]], sid: str) -> bool:
+    hit = cache.get(sid, {})
+    return any(k not in hit for k in _SIMBAD_CACHE_KEYS)
+
+
 def _fetch_gaia_tap(source_ids: list[str], *, timeout_s: float) -> dict[str, dict[str, Any]]:
     if not source_ids:
         return {}
@@ -81,8 +107,14 @@ def _fetch_gaia_tap(source_ids: list[str], *, timeout_s: float) -> dict[str, dic
             chunk = source_ids[i0 : i0 + _GAIA_BATCH]
             id_list = ",".join(str(int(s)) for s in chunk)
             adql = (
-                "SELECT source_id, teff_gspphot, logg_gspphot "
-                f"FROM gaiadr3.gaia_source WHERE source_id IN ({id_list})"
+                "SELECT gs.source_id, gs.teff_gspphot, gs.logg_gspphot, "
+                "ap.classprob_dsc_combmod_whitedwarf, "
+                "ap.classprob_dsc_combmod_binarystar, "
+                "ap.spectraltype_esphs "
+                "FROM gaiadr3.gaia_source AS gs "
+                "LEFT JOIN gaiadr3.astrophysical_parameters AS ap "
+                "ON gs.source_id = ap.source_id "
+                f"WHERE gs.source_id IN ({id_list})"
             )
             job = Gaia.launch_job_async(adql)
             table = job.get_results()
@@ -92,11 +124,21 @@ def _fetch_gaia_tap(source_ids: list[str], *, timeout_s: float) -> dict[str, dic
                 sid = normalize_gaia_source_id(row["source_id"])
                 if not sid:
                     continue
-                teff = row["teff_gspphot"]
-                logg = row["logg_gspphot"]
                 out[sid] = {
-                    "teff_gspphot": _safe_float(teff),
-                    "logg_gspphot": _safe_float(logg),
+                    "teff_gspphot": _safe_float(row["teff_gspphot"]),
+                    "logg_gspphot": _safe_float(row["logg_gspphot"]),
+                    "classprob_dsc_combmod_whitedwarf": _safe_float(
+                        row["classprob_dsc_combmod_whitedwarf"]
+                    ),
+                    "classprob_dsc_combmod_binarystar": _safe_float(
+                        row["classprob_dsc_combmod_binarystar"]
+                    ),
+                    "spectraltype_esphs": (
+                        str(row["spectraltype_esphs"]).strip()
+                        if row["spectraltype_esphs"] is not None
+                        and str(row["spectraltype_esphs"]).strip()
+                        else None
+                    ),
                     "fetched_at_utc": _utc_now_iso(),
                     "enrich_source": "gaia_tap",
                 }
@@ -119,10 +161,13 @@ def _fetch_simbad(source_ids: list[str], *, timeout_s: float) -> dict[str, dict[
 
         s = Simbad()
         try:
-            s.add_votable_fields("otype", "main_id")
+            s.add_votable_fields("otype", "main_id", "sp_type")
         except Exception as exc:  # noqa: BLE001 - SIMBAD server field list varies by version
-            logger.debug("SIMBAD votable fields (otype/main_id) unavailable: %s", exc)
-            s.add_votable_fields("otype")
+            logger.debug("SIMBAD votable fields (otype/main_id/sp_type) unavailable: %s", exc)
+            try:
+                s.add_votable_fields("otype", "main_id")
+            except Exception:  # noqa: BLE001
+                s.add_votable_fields("otype")
         out: dict[str, dict[str, Any]] = {}
         for sid in source_ids:
             ident = f"Gaia DR3 {sid}"
@@ -133,6 +178,7 @@ def _fetch_simbad(source_ids: list[str], *, timeout_s: float) -> dict[str, dict[
                 out[sid] = {
                     "simbad_main_id": None,
                     "simbad_otype": None,
+                    "simbad_sp_type": None,
                     "fetched_at_utc": _utc_now_iso(),
                     "enrich_source": "n/a",
                 }
@@ -141,6 +187,7 @@ def _fetch_simbad(source_ids: list[str], *, timeout_s: float) -> dict[str, dict[
                 out[sid] = {
                     "simbad_main_id": None,
                     "simbad_otype": None,
+                    "simbad_sp_type": None,
                     "fetched_at_utc": _utc_now_iso(),
                     "enrich_source": "n/a",
                 }
@@ -148,9 +195,11 @@ def _fetch_simbad(source_ids: list[str], *, timeout_s: float) -> dict[str, dict[
             row = res[0]
             main_id = str(row.get("MAIN_ID") or row.get("main_id") or "").strip() or None
             otype = str(row.get("OTYPE") or row.get("otype") or "").strip() or None
+            sp_type = str(row.get("SP_TYPE") or row.get("sp_type") or "").strip() or None
             out[sid] = {
                 "simbad_main_id": main_id,
                 "simbad_otype": otype,
+                "simbad_sp_type": sp_type,
                 "fetched_at_utc": _utc_now_iso(),
                 "enrich_source": "simbad",
             }
@@ -172,7 +221,7 @@ def enrich_candidates(
     simbad_enabled: bool = True,
     timeout_s: float = 20.0,
 ) -> pd.DataFrame:
-    """Merge online teff/logg (Gaia TAP) and SIMBAD otype into candidate rows (fail-open)."""
+    """Merge online teff/logg/DSC (Gaia TAP) and SIMBAD id/otype/sp_type into candidates (fail-open)."""
     if candidates_df is None or candidates_df.empty:
         return candidates_df if candidates_df is not None else pd.DataFrame()
 
@@ -189,12 +238,8 @@ def enrich_candidates(
     cache_file = Path(cache_path) if cache_path is not None else None
     cache: dict[str, dict[str, Any]] = _load_cache(cache_file) if cache_file is not None else {}
 
-    need_gaia = [sid for sid in ids if sid not in cache or "teff_gspphot" not in cache.get(sid, {})]
-    need_simbad = (
-        [sid for sid in ids if sid not in cache or "simbad_otype" not in cache.get(sid, {})]
-        if simbad_enabled
-        else []
-    )
+    need_gaia = [sid for sid in ids if _needs_gaia_fetch(cache, sid)]
+    need_simbad = [sid for sid in ids if simbad_enabled and _needs_simbad_fetch(cache, sid)]
 
     skip_reason: str | None = None
     if need_gaia:
@@ -207,8 +252,8 @@ def enrich_candidates(
             for sid in need_gaia:
                 if sid not in gaia_hits:
                     prev = cache.get(sid, {})
-                    prev.setdefault("teff_gspphot", None)
-                    prev.setdefault("logg_gspphot", None)
+                    for k in _GAIA_CACHE_KEYS:
+                        prev.setdefault(k, None)
                     prev["fetched_at_utc"] = _utc_now_iso()
                     prev["enrich_source"] = prev.get("enrich_source") or "n/a"
                     cache[sid] = prev
@@ -226,8 +271,8 @@ def enrich_candidates(
             for sid in need_simbad:
                 if sid not in sim_hits:
                     prev = cache.get(sid, {})
-                    prev.setdefault("simbad_main_id", None)
-                    prev.setdefault("simbad_otype", None)
+                    for k in _SIMBAD_CACHE_KEYS:
+                        prev.setdefault(k, None)
                     prev["fetched_at_utc"] = _utc_now_iso()
                     cache[sid] = prev
         except Exception as exc:  # noqa: BLE001 - SIMBAD fail-open; Gaia rows still usable
@@ -243,8 +288,12 @@ def enrich_candidates(
 
     teff_vals: list[Any] = []
     logg_vals: list[Any] = []
+    wd_prob_vals: list[Any] = []
+    bin_prob_vals: list[Any] = []
+    esphs_vals: list[str] = []
     simbad_ids: list[str] = []
     simbad_otypes: list[str] = []
+    simbad_sp_types: list[str] = []
     src_vals: list[str] = []
 
     for _, row in out.iterrows():
@@ -259,13 +308,21 @@ def enrich_candidates(
             src = "n/a"
         teff_vals.append(teff)
         logg_vals.append(logg)
+        wd_prob_vals.append(hit.get("classprob_dsc_combmod_whitedwarf"))
+        bin_prob_vals.append(hit.get("classprob_dsc_combmod_binarystar"))
+        esphs_vals.append(str(hit.get("spectraltype_esphs") or ""))
         simbad_ids.append(str(hit.get("simbad_main_id") or ""))
         simbad_otypes.append(str(hit.get("simbad_otype") or ""))
+        simbad_sp_types.append(str(hit.get("simbad_sp_type") or ""))
         src_vals.append(src)
 
     out["teff_gspphot"] = teff_vals
     out["logg_gspphot"] = logg_vals
+    out["classprob_dsc_combmod_whitedwarf"] = wd_prob_vals
+    out["classprob_dsc_combmod_binarystar"] = bin_prob_vals
+    out["spectraltype_esphs"] = esphs_vals
     out["simbad_main_id"] = simbad_ids
     out["simbad_otype"] = simbad_otypes
+    out["simbad_sp_type"] = simbad_sp_types
     out["enrich_source"] = src_vals
     return out

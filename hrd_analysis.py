@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -105,6 +106,217 @@ _LABEL_PRIORITY: tuple[str, ...] = (
 )
 
 _SIMBAD_OTYPE_PREFIXES = ("WR", "WD", "C", "S", "LP", "EB", "RG", "AGB", "PN", "HV")
+
+_LUM_CLASS_RE = re.compile(r"(IAB|IB|IA|I|II|III|IV|V)\s*$", re.IGNORECASE)
+_LUM_CLASS_EMBED_RE = re.compile(r"\d(?:\.\d)?(IAB|IB|IA|I|II|III|IV|V)", re.IGNORECASE)
+_IDENT_TIERS = ("confirmed", "likely", "candidate")
+
+# Display names for confirmed-tier labels (drop "candidate").
+_CONFIRMED_NAME: dict[str, str] = {
+    _LABEL_WD: "White dwarf",
+    _LABEL_RSG: "Red supergiant",
+    _LABEL_RG: "Red giant",
+    _LABEL_VERY_HOT: "Very hot (O/B)",
+    _LABEL_VERY_COOL: "Very cool (late-M/C)",
+    _LABEL_HOT_LUM: "Hot luminous (WR/OB?)",
+    _LABEL_BINARY: "Binary (Gaia NSS)",
+}
+
+
+def hrd_dsc_confirm_prob_from_cfg(cfg: Any | None) -> float:
+    """Resolve HRD DSC 'likely' probability floor (default 0.90, clamp 0.5..1.0)."""
+    prob = 0.90
+    if cfg is not None:
+        try:
+            prob = float(getattr(cfg, "hrd_dsc_confirm_prob", prob))
+        except (TypeError, ValueError):
+            prob = 0.90
+    return max(0.5, min(1.0, float(prob)))
+
+
+def _sp_normalized(sp: str | None) -> str:
+    return str(sp or "").upper().replace(" ", "")
+
+
+def _parse_luminosity_class(sp_type: str | None) -> str | None:
+    if not sp_type or not str(sp_type).strip():
+        return None
+    s = _sp_normalized(sp_type)
+    m = _LUM_CLASS_RE.search(s)
+    if m:
+        return m.group(1).upper()
+    m2 = _LUM_CLASS_EMBED_RE.search(s)
+    if m2:
+        return m2.group(1).upper()
+    return None
+
+
+def _effective_logg(row: pd.Series) -> tuple[float | None, str]:
+    """Gaia logg wins; else SIMBAD MK luminosity class substitute for Stage-2 only."""
+    logg_gaia = _f(row.get("logg_gspphot"))
+    if logg_gaia is not None:
+        return logg_gaia, "gaia"
+    lc = _parse_luminosity_class(str(row.get("simbad_sp_type") or ""))
+    if lc is None:
+        return None, "n/a"
+    if lc in ("I", "IA", "IAB", "IB", "II"):
+        return 1.0, "simbad_lumclass"
+    if lc == "III":
+        return 3.0, "simbad_lumclass"
+    if lc in ("IV", "V"):
+        return 4.5, "simbad_lumclass"
+    return None, "n/a"
+
+
+def _is_wd_sp(sp: str | None) -> bool:
+    s = _sp_normalized(sp)
+    return len(s) >= 2 and s[0] == "D" and s[1] in "ABCQXZO"
+
+
+def _is_kmc_s_type(sp: str | None) -> bool:
+    s = _sp_normalized(sp)
+    return bool(s) and s[0] in "KMCS"
+
+
+def _is_m5_plus_or_cs(sp: str | None) -> bool:
+    s = _sp_normalized(sp)
+    if not s:
+        return False
+    if s.startswith("C") or s.startswith("S"):
+        return True
+    m = re.match(r"M(\d+)", s)
+    return bool(m and int(m.group(1)) >= 5)
+
+
+def _is_hot_sp(sp: str | None) -> bool:
+    s = _sp_normalized(sp)
+    if s.startswith("O"):
+        return True
+    m = re.match(r"B([0-9])", s)
+    return bool(m and int(m.group(1)) <= 2)
+
+
+def _is_wr_sp(sp: str | None) -> bool:
+    s = _sp_normalized(sp)
+    return s.startswith(("WN", "WC", "WO"))
+
+
+def _otype_confirmed(otype: str | None) -> str | None:
+    ot = str(otype or "").strip()
+    if not ot or ot.endswith("?"):
+        return None
+    return ot
+
+
+def _match_literature_confirmed(base_label: str, otype: str | None, sp_type: str | None) -> str | None:
+    """Return ident_detail when literature confirms the Stage-2 category."""
+    ot = _otype_confirmed(otype)
+    sp = str(sp_type or "").strip()
+    ot_up = (ot or "").upper().replace(" ", "")
+    sp_n = _sp_normalized(sp)
+    lc = _parse_luminosity_class(sp)
+
+    if base_label == _LABEL_WD:
+        if ot_up.startswith("WD"):
+            return f"{sp or ot}, SIMBAD"
+        if _is_wd_sp(sp):
+            return f"{sp}, SIMBAD"
+    elif base_label == _LABEL_RSG:
+        if ot and ("S*R" in ot_up or ot_up == "S*R"):
+            return f"{sp or ot}, SIMBAD"
+        if lc in ("I", "IA", "IAB", "IB") and _is_kmc_s_type(sp):
+            return f"{sp}, SIMBAD"
+    elif base_label == _LABEL_RG:
+        if ot_up.startswith("RG"):
+            return f"{sp or ot}, SIMBAD"
+        if lc in ("II", "III") and sp_n and sp_n[0] in "KM":
+            return f"{sp}, SIMBAD"
+    elif base_label == _LABEL_VERY_COOL:
+        if ot:
+            ot_clean = ot_up.replace(" ", "")
+            if ot_clean.startswith(("LP", "MI")):
+                return f"{sp or ot}, SIMBAD"
+            if ot_clean.startswith("C*") or (ot_clean.startswith("C") and "C*" not in ot_clean[:2]):
+                return f"{sp or ot}, SIMBAD"
+            if ot_clean.startswith("S*") and not any(x in ot_clean for x in ("S*R", "S*B")):
+                return f"{sp or ot}, SIMBAD"
+        if _is_m5_plus_or_cs(sp):
+            return f"{sp}, SIMBAD"
+    elif base_label == _LABEL_VERY_HOT:
+        if ot_up.startswith("BE") or "S*B" in ot_up:
+            return f"{sp or ot}, SIMBAD"
+        if _is_hot_sp(sp):
+            return f"{sp}, SIMBAD"
+    elif base_label == _LABEL_HOT_LUM:
+        if ot_up.startswith("WR"):
+            return "SIMBAD"
+        if _is_wr_sp(sp):
+            return f"{sp}, SIMBAD"
+    elif base_label == _LABEL_BINARY:
+        if ot and ("*" in ot or "BIN" in ot_up or ot_up.startswith("EB")):
+            return f"{sp or ot}, SIMBAD"
+    return None
+
+
+def _dsc_likely_detail(row: pd.Series, base_label: str, threshold: float) -> str | None:
+    if base_label != _LABEL_WD:
+        return None
+    p = _f(row.get("classprob_dsc_combmod_whitedwarf"))
+    if p is not None and p >= float(threshold):
+        return f"likely, DSC p={p:.2f}"
+    return None
+
+
+def _render_ident_label(base_label: str, tier: str, ident_detail: str) -> str:
+    if tier == "confirmed":
+        if base_label == _LABEL_HOT_LUM:
+            return "Wolf-Rayet (SIMBAD)"
+        short = _CONFIRMED_NAME.get(base_label, base_label.replace(" candidate", ""))
+        if ident_detail:
+            return f"{short} ({ident_detail})"
+        return short
+    if tier == "likely" and base_label == _LABEL_WD:
+        return f"White dwarf ({ident_detail})"
+    return base_label
+
+
+def _finalize_ident(
+    row: pd.Series,
+    base_label: str,
+    *,
+    dsc_threshold: float,
+    enrichment_active: bool,
+) -> tuple[str, str, str, str]:
+    """Return (tier, display_category, ident_detail, logg_source)."""
+    _, logg_source = _effective_logg(row)
+    if not enrichment_active:
+        return "candidate", base_label, "", logg_source
+
+    lit = _match_literature_confirmed(
+        base_label, row.get("simbad_otype"), row.get("simbad_sp_type")
+    )
+    if lit:
+        return (
+            "confirmed",
+            _render_ident_label(base_label, "confirmed", lit),
+            lit,
+            logg_source,
+        )
+
+    dsc = _dsc_likely_detail(row, base_label, dsc_threshold)
+    if dsc:
+        return (
+            "likely",
+            _render_ident_label(base_label, "likely", dsc),
+            dsc,
+            logg_source,
+        )
+
+    detail = ""
+    ot = str(row.get("simbad_otype") or "").strip()
+    if ot.endswith("?"):
+        detail = f"SIMBAD {ot} (uncertain)"
+    return "candidate", base_label, detail, logg_source
 
 
 def _f(val: Any) -> float | None:
@@ -275,7 +487,7 @@ def _simbad_suffix(otype: Any) -> str:
 def _stage2_labels(row: pd.Series, *, nss_enabled: bool = False) -> list[str]:
     """Return all Stage-2 category labels satisfied by one star (before priority pick)."""
     bp_rp = _f(row.get("bp_rp"))
-    logg = _f(row.get("logg_gspphot"))
+    logg, _ = _effective_logg(row)
     abs_g = _f(row.get("abs_mag_g"))
     teff = _f(row.get("teff_gspphot"))
     reliable = _is_reliable(row)
@@ -316,7 +528,7 @@ def _stage2_labels(row: pd.Series, *, nss_enabled: bool = False) -> list[str]:
     return labels
 
 
-def _pick_label(labels: list[str], simbad_otype: Any = None) -> str:
+def _pick_base_label(labels: list[str]) -> str:
     if not labels:
         return ""
     chosen = ""
@@ -329,6 +541,13 @@ def _pick_label(labels: list[str], simbad_otype: Any = None) -> str:
         if idx < best:
             best = idx
             chosen = lab
+    return chosen
+
+
+def _pick_label(labels: list[str], simbad_otype: Any = None) -> str:
+    chosen = _pick_base_label(labels)
+    if not chosen:
+        return ""
     suffix = _simbad_suffix(simbad_otype)
     return f"{chosen}{suffix}" if chosen else ""
 
@@ -436,16 +655,28 @@ def _fmt(val: Any, spec: str, *, na: bool = False) -> str:
         return missing
 
 
-def _make_row(row: pd.Series, category: str, *, table_na: bool = False) -> dict[str, Any]:
+def _make_row(
+    row: pd.Series,
+    category: str,
+    *,
+    ident: str = "candidate",
+    ident_detail: str = "",
+    table_na: bool = False,
+) -> dict[str, Any]:
     simbad_id = str(row.get("simbad_main_id") or "").strip()
     simbad_otype = str(row.get("simbad_otype") or "").strip()
     simbad_disp = simbad_id
     if simbad_otype:
         simbad_disp = f"{simbad_id} ({simbad_otype})" if simbad_id else simbad_otype
+    if ident_detail and ident != "confirmed":
+        simbad_disp = f"{simbad_disp}; {ident_detail}" if simbad_disp else ident_detail
     src = str(row.get("enrich_source") or "local").strip() or "local"
+    logg_src = str(row.get("_logg_source") or "n/a").strip() or "n/a"
     return {
         "catalog_id": str(row.get("catalog_id", "")),
         "category": category,
+        "ident": ident if ident in _IDENT_TIERS else "candidate",
+        "ident_detail": ident_detail,
         "simbad_id": simbad_disp,
         "mag_g": _fmt(row.get("phot_g_mean_mag"), ".2f", na=table_na),
         "abs_mag_g": _fmt(row.get("abs_mag_g"), ".2f", na=table_na),
@@ -453,6 +684,7 @@ def _make_row(row: pd.Series, category: str, *, table_na: bool = False) -> dict[
         "teff": _fmt(row.get("teff_gspphot"), ".0f", na=table_na),
         "logg": _fmt(row.get("logg_gspphot"), ".2f", na=table_na),
         "src": src if src else "N/A",
+        "logg_source": logg_src,
         "ra_deg": _fmt(row.get("ra_deg"), ".4f"),
         "dec_deg": _fmt(row.get("dec_deg"), ".4f"),
         "x_px": _fmt(row.get("x"), ".0f"),
@@ -467,6 +699,8 @@ def _empty_field_table() -> pd.DataFrame:
             {
                 "catalog_id": "",
                 "category": HRD_EMPTY_FIELD_MSG,
+                "ident": "",
+                "ident_detail": "",
                 "simbad_id": "",
                 "mag_g": "",
                 "abs_mag_g": "",
@@ -616,17 +850,44 @@ def _category_base(label: str) -> str:
     return str(label or "").split(" (SIMBAD")[0].strip()
 
 
-def _apply_category_cap(classified: list[tuple[pd.Series, str]], max_per_category: int) -> list[dict[str, Any]]:
-    """Keep at most max_per_category rows per Stage-2 label (extremity order preserved)."""
+def _display_to_base_label(display: str) -> str:
+    """Map rendered category string back to Stage-2 base label (for cap / annotation colors)."""
+    s = str(display or "").strip()
+    if s.startswith("Wolf-Rayet"):
+        return _LABEL_HOT_LUM
+    for base in _LABEL_PRIORITY:
+        short = _CONFIRMED_NAME.get(base, "")
+        if short and s.startswith(short):
+            return base
+        stem = base.split(" (")[0]
+        if s.startswith(stem):
+            return base
+    return _category_base(s)
+
+
+def _apply_category_cap(
+    classified: list[tuple[pd.Series, str, str, str, str, str]],
+    max_per_category: int,
+) -> list[dict[str, Any]]:
+    """Keep at most max_per_category rows per Stage-2 base label (extremity order preserved)."""
     cap = max(1, int(max_per_category))
     counts: dict[str, int] = {}
     results: list[dict[str, Any]] = []
-    for row, label in classified:
-        base = _category_base(label)
-        if counts.get(base, 0) >= cap:
+    for row, base_label, display, tier, ident_detail, logg_src in classified:
+        if counts.get(base_label, 0) >= cap:
             continue
-        counts[base] = counts.get(base, 0) + 1
-        results.append(_make_row(row, label, table_na=True))
+        counts[base_label] = counts.get(base_label, 0) + 1
+        row_out = row.copy()
+        row_out["_logg_source"] = logg_src
+        results.append(
+            _make_row(
+                row_out,
+                display,
+                ident=tier,
+                ident_detail=ident_detail,
+                table_na=True,
+            )
+        )
     return results
 
 
@@ -645,6 +906,7 @@ def get_top_interesting_stars(
     min_per_net = 4
     enrich_enabled = True
     simbad_enabled = True
+    dsc_threshold = hrd_dsc_confirm_prob_from_cfg(cfg)
     if cfg is not None:
         try:
             max_candidates = int(getattr(cfg, "hrd_enrich_max_candidates", max_candidates))
@@ -681,19 +943,26 @@ def get_top_interesting_stars(
             simbad_enabled=simbad_enabled,
         )
 
+    enrichment_active = bool(enrich_enabled or simbad_enabled)
     scored = _add_extremity_columns(candidates)
     scored = scored.sort_values(["_ext_bp", "_ext_abs"], ascending=[False, False])
-    classified: list[tuple[pd.Series, str]] = []
+    classified: list[tuple[pd.Series, str, str, str, str, str]] = []
     seen: set[str] = set()
     for _, row in scored.iterrows():
         cid = str(row.get("catalog_id", "")).strip()
         if cid in seen:
             continue
-        label = _pick_label(_stage2_labels(row, nss_enabled=nss_enabled), row.get("simbad_otype"))
-        if not label:
+        base = _pick_base_label(_stage2_labels(row, nss_enabled=nss_enabled))
+        if not base:
             continue
+        tier, display, ident_detail, logg_src = _finalize_ident(
+            row,
+            base,
+            dsc_threshold=dsc_threshold,
+            enrichment_active=enrichment_active,
+        )
         seen.add(cid)
-        classified.append((row, label))
+        classified.append((row, base, display, tier, ident_detail, logg_src))
 
     results = _apply_category_cap(classified, max_per_category)
 
@@ -1163,7 +1432,7 @@ def annotate_field_image(
         if not (radius < x < w - radius and radius < y < h - radius):
             continue
         cat_raw = str(star.get("category", "")).strip()
-        base = _category_base(cat_raw)
+        base = _display_to_base_label(cat_raw)
         color = category_colors.get(base)
         if color is None:
             for key, col in category_colors.items():

@@ -161,6 +161,9 @@ def test_enrichment_merge_and_cache_roundtrip(tmp_path: Path) -> None:
         "4035720806645181440": {
             "teff_gspphot": 5500.0,
             "logg_gspphot": 4.2,
+            "classprob_dsc_combmod_whitedwarf": None,
+            "classprob_dsc_combmod_binarystar": None,
+            "spectraltype_esphs": None,
             "fetched_at_utc": "2026-07-10T00:00:00+00:00",
             "enrich_source": "gaia_tap",
         }
@@ -169,6 +172,7 @@ def test_enrichment_merge_and_cache_roundtrip(tmp_path: Path) -> None:
         "4035720806645181440": {
             "simbad_main_id": "HD 123",
             "simbad_otype": "EB*",
+            "simbad_sp_type": None,
             "fetched_at_utc": "2026-07-10T00:00:00+00:00",
             "enrich_source": "simbad",
         }
@@ -182,7 +186,8 @@ def test_enrichment_merge_and_cache_roundtrip(tmp_path: Path) -> None:
     assert cache.is_file()
 
     cached = json.loads(cache.read_text(encoding="utf-8"))
-    assert "4035720806645181440" in cached
+    assert cached.get("cache_version") == 2
+    assert "4035720806645181440" in cached.get("entries", {})
 
     cand2 = pd.DataFrame([{"catalog_id": "4035720806645181440"}])
     with patch("hrd_enrich._fetch_gaia_tap") as mock_gaia:
@@ -198,8 +203,8 @@ def test_enrichment_negative_result_cached(tmp_path: Path) -> None:
     with patch("hrd_enrich._fetch_gaia_tap", return_value={}):
         enrich_candidates(cand, cache, enabled=True, simbad_enabled=False)
     data = json.loads(cache.read_text(encoding="utf-8"))
-    assert sid in data
-    assert data[sid].get("teff_gspphot") is None
+    assert sid in data.get("entries", {})
+    assert data["entries"][sid].get("teff_gspphot") is None
 
 
 def test_enrichment_fail_open_on_exception(tmp_path: Path) -> None:
@@ -228,6 +233,7 @@ def test_hrd_config_defaults() -> None:
     assert cfg.hrd_max_per_category == 3
     assert cfg.hrd_min_per_net == 4
     assert cfg.hrd_nss_category_enabled is False
+    assert cfg.hrd_dsc_confirm_prob == 0.90
 
 
 def test_nss_default_off_no_binary_rows() -> None:

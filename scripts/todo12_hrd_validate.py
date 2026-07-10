@@ -27,7 +27,8 @@ from hrd_analysis import (
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "tmp" / "todo12_hrd"
-PRE12D = OUT / "pre12d"
+PRE12E = OUT / "pre12e"
+RS_PER_CID = "458407464445792384"
 
 
 def _alignment_check_rsg(
@@ -108,6 +109,7 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
         "hrd_parallax_min_mas",
         "hrd_parallax_snr_min",
         "hrd_nss_category_enabled",
+        "hrd_dsc_confirm_prob",
     ):
         setattr(run_cfg, attr, getattr(cfg, attr))
     if offline:
@@ -163,6 +165,47 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
                         platesolve_dir,
                         png_from_fits=from_fits,
                     )
+    ident_tiers = {"confirmed": 0, "likely": 0, "candidate": 0}
+    ident_rows: list[dict] = []
+    if not empty and "ident" in top.columns:
+        for _, tr in top.iterrows():
+            tier = str(tr.get("ident", "candidate") or "candidate")
+            ident_tiers[tier] = ident_tiers.get(tier, 0) + 1
+            ident_rows.append(
+                {
+                    "catalog_id": str(tr.get("catalog_id", "")),
+                    "category": str(tr.get("category", "")),
+                    "ident": tier,
+                    "logg_source": str(tr.get("logg_source", "")),
+                }
+            )
+    rs_per: dict = {"catalog_id": RS_PER_CID}
+    if not empty:
+        hit = top[top["catalog_id"].astype(str) == RS_PER_CID]
+        if not hit.empty:
+            rs_per = {
+                "catalog_id": RS_PER_CID,
+                "category": str(hit.iloc[0].get("category", "")),
+                "ident": str(hit.iloc[0].get("ident", "")),
+                "logg_source": str(hit.iloc[0].get("logg_source", "")),
+            }
+        else:
+            rs_per = {"catalog_id": RS_PER_CID, "in_table": False}
+    dsc_wd_probs: list[float | None] = []
+    if not offline and cache.is_file():
+        try:
+            raw = json.loads(cache.read_text(encoding="utf-8"))
+            entries = raw.get("entries", raw)
+            for tr in ident_rows:
+                sid = tr["catalog_id"]
+                p = entries.get(sid, {}).get("classprob_dsc_combmod_whitedwarf")
+                if p is not None:
+                    try:
+                        dsc_wd_probs.append(float(p))
+                    except (TypeError, ValueError):
+                        pass
+        except (OSError, json.JSONDecodeError):
+            pass
     result: dict = {
         "label": label,
         "obs_group": obs,
@@ -179,6 +222,10 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
         "rsg_alignment": align,
         "offline": offline,
         "hrd_nss_category_enabled": bool(run_cfg.hrd_nss_category_enabled),
+        "ident_tiers": ident_tiers,
+        "ident_rows": ident_rows,
+        "rs_per_row": rs_per,
+        "dsc_wd_probs_sample": dsc_wd_probs[:5],
     }
     if label.startswith("draft425") and not offline:
         from hrd_enrich import enrich_candidates  # noqa: PLC0415
@@ -219,12 +266,12 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
 
 def main() -> int:
     gdb = Path(AppConfig().gaia_db_path)
-    if OUT.is_dir() and any(OUT.iterdir()) and not PRE12D.is_dir():
-        PRE12D.mkdir(parents=True, exist_ok=True)
+    if OUT.is_dir() and any(OUT.iterdir()) and not PRE12E.is_dir():
+        PRE12E.mkdir(parents=True, exist_ok=True)
         for item in OUT.iterdir():
             if item.name.startswith("pre12"):
                 continue
-            dest = PRE12D / item.name
+            dest = PRE12E / item.name
             if item.is_dir():
                 shutil.copytree(item, dest, dirs_exist_ok=True)
             else:

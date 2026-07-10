@@ -398,6 +398,8 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
                 [
                     citation_line("pecaut2013", bib=bib),
                     citation_line("andrae2023", bib=bib),
+                    citation_line("delchambre2023", bib=bib),
+                    citation_line("creevey2023", bib=bib),
                     citation_line("lindegren2021", bib=bib),
                     citation_line("bailerjones2021", bib=bib),
                 ],

@@ -220,7 +220,18 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
         st.subheader("Extreme objects")
         display_cols = [
             c
-            for c in ("category", "catalog_id", "simbad_id", "mag_g", "abs_mag_g", "bp_rp", "teff", "logg", "src")
+            for c in (
+                "category",
+                "ident",
+                "catalog_id",
+                "simbad_id",
+                "mag_g",
+                "abs_mag_g",
+                "bp_rp",
+                "teff",
+                "logg",
+                "src",
+            )
             if c in top_stars.columns
         ]
         show = top_stars[display_cols]
