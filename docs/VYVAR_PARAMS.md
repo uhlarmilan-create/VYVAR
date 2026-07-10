@@ -256,6 +256,7 @@ no UI yet).
 | `hrd_parallax_snr_min` | 5.0 | 1.0 … 20.0 | hrd_analysis.py | intentionally-hidden |
 | `hrd_max_per_category` | 3 | 1 … 20 | hrd_analysis.py | intentionally-hidden |
 | `hrd_min_per_net` | 4 | 0 … 20 | hrd_analysis.py | intentionally-hidden |
+| `hrd_nss_category_enabled` | False | — | hrd_analysis.py | intentionally-hidden |
 | `vsx_local_db_path` | 'C:\\ASTRO\\python\\VYVAR\\VSX\\vyvar_vsx_local_v2.db' (dataclass '') | — | ui_aperture_photometry.py:1416, ui_masterstar_qa.py:595, ui_settings.py:230 | yes |
 | `exoplanet_local_db_path` | `exoplanets/vyvar_exoplanet_local.db` (dataclass default) | — | ui_settings.py, pipeline.py `detect_stars_and_match_catalog` | yes |
 | `exoplanet_match_max_sep_arcsec` | 3.0 | 0.5 … 30.0 | pipeline.py `detect_stars_and_match_catalog` | intentionally-hidden |

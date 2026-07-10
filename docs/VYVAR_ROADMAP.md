@@ -546,7 +546,9 @@ next calibration lever.
   parallax gate 0.15 mas + SNR 5 (config-driven); per-category cap 3; NSS deprioritized in enrich budget;
   apparent-G legend/caption fix (chi Per / draft_425 cluster admitted to M_G plane). **TODO-12c (2026-07-10):**
   luminosity-first Stage-2 label priority (RSG before Very cool); Stage-1 per-net reserved slots
-  (`hrd_min_per_net=4`). Arc **DONE** — see `CURSOR_RESULT_todo12_hrd.md`, `_todo12b_hrd.md`, `_todo12c_hrd.md`.
+  (`hrd_min_per_net=4`). **TODO-12d (2026-07-10):** `hrd_nss_category_enabled=False` drops NSS/binary
+  from table; annotated MASTERSTAR field image (scale guard, short labels, legend) wired to PDF HRD page.
+  Arc **DONE** — see `CURSOR_RESULT_todo12_hrd.md`, `_todo12b_hrd.md`, `_todo12c_hrd.md`, `_todo12d_hrd.md`.
   · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
   · TODO-PIXEL-XCHECK-BINNING binning-aware pixel cross-check (cosmetic log) ·

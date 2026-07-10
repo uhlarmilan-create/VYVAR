@@ -1,7 +1,13 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-10** — TODO-12 HRD arc **DONE** (12/12b/12c): extreme-object table, online
-enrichment, parallax gate, label priority fix; pytest **696 passed**, 15 skipped.
+Last updated: **2026-07-10** — TODO-12 HRD arc **DONE** (12/12b/12c/12d): extreme-object table,
+online enrichment, parallax gate, label priority, NSS category off-by-default, annotated field image
++ PDF wiring; pytest **698 passed**, 15 skipped.
+
+**2026-07-10 snapshot (TODO-12d):** `hrd_nss_category_enabled=False` (default) drops Gaia NSS binary
+rows from Stage-1/2; draft_425 table 7 rows/setup (was 10 with 3 Binary). Annotated field image uses
+MASTERSTAR FITS 1:1 PNG + pixel-scale guard; PDF HRD page embeds annotated field (overflow 0).
+RSG alignment check draft_425 B: peak/bg 6.4 (was 1.9 on field_map before FITS background fix).
 
 **2026-07-10 snapshot (TODO-12c):** Stage-2 priority RSG>RG before Very cool; `hrd_min_per_net=4`
 per-net Stage-1 reservations; draft_425 RSG count 3/setup (was 2 + mislabeled s*r); luminous-net

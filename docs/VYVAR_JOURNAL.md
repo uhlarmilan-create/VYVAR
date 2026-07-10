@@ -2,6 +2,23 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-10 — TODO-12d-HRD (NSS flag off, annotated field image + PDF)
+
+**Item A:** `hrd_nss_category_enabled=False` (config-only, reversible). NSS excluded from Stage-1 nets
+and Stage-2 when off; existing NSS tests parametrize flag ON.
+
+**Item B:** `annotate_field_image` — MASTERSTAR NAXIS scale guard; skip when alignment unknown; short
+labels (WD/RSG/RG/HOT/HOT-LUM/COOL/NSS); scaled markers/fonts; legend strip; SIMBAD main_id under label.
+Background for annotation skips `field_map.png` (bbox padding breaks pixel scale); prefers MASTERSTAR
+FITS→PNG 1:1. PDF `_report_hrd_page` embeds annotated field beside HRD plot.
+
+**draft_425:** table 7 rows/setup, 0 Binary (pre-12d: 10 rows, 3 Binary). RSG alignment B: ratio 6.4
+PASS (field_map-only scale: 1.9 FAIL → fixed by FITS background).
+
+**pytest:** 698 passed, 15 skipped. PDF overflow 0 (draft_425 B_20_2). Milan authorized commit+push.
+
+---
+
 ## 2026-07-10 — TODO-12c-HRD (label priority + per-net reservations, arc close)
 
 **Fix:** Stage-2 priority now RSG/RG before Very cool; cool label suppressed when logg indicates giant
