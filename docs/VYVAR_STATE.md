@@ -1,6 +1,24 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-09** — SESSION-CLOSE-0709: Sigma budget Phase A **DONE (wide rig)**; sparse-comp
+Last updated: **2026-07-10** — TODO-12 HRD arc **DONE** (12/12b/12c): extreme-object table, online
+enrichment, parallax gate, label priority fix; pytest **696 passed**, 15 skipped.
+
+**2026-07-10 snapshot (TODO-12c):** Stage-2 priority RSG>RG before Very cool; `hrd_min_per_net=4`
+per-net Stage-1 reservations; draft_425 RSG count 3/setup (was 2 + mislabeled s*r); luminous-net
+stars reach enrichment (teff mostly NaN, none >=25k — acceptable for reddened OB). pytest **696 passed**.
+
+**2026-07-10 snapshot (TODO-12b):** Parallax gate promoted to config (`hrd_parallax_min_mas=0.15`,
+`hrd_parallax_snr_min=5`); draft_425 reliable count B/V/R 7989/6651/8011 (was ~1015/795/1021); chi Per
+M supergiants in table; binaries capped (<=3 per category, NSS fills budget last). pytest **693 passed**,
+15 skipped; PDF overflow 0.
+
+**2026-07-10 snapshot:** TODO-12-HRD: absolute extreme-object selection (Stage 1 net + Stage 2 classify);
+`hrd_enrich.py` Gaia TAP + SIMBAD fail-open cache per setup; PDF/UI titles `Field HRD -- <obs_group>`;
+lite Gaia DB teff/logg confirmed NULL (211712600 rows, 0 non-null). draft_425 B/V/R HRD membership
+differs (19/20/19 candidates); PDF overflow verify 0 violations (draft_425 B_20_2). pytest **691 passed**,
+15 skipped.
+
+**2026-07-09 snapshot:** SESSION-CLOSE-0709: Sigma budget Phase A **DONE (wide rig)**; sparse-comp
 diagnostics + proposed gate redesign recorded; draft_426 equipment verified eq4 (no DB change).
 
 **2026-07-09 snapshot:** SESSION-CLOSE-0709: draft_426 FITS headers (INSTRUME=C5A-150M, 3552×2664 @

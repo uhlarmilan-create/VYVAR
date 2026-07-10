@@ -540,7 +540,14 @@ next calibration lever.
 - **TODO-14 — PDF size optimization** (29 MB → < 10 MB).
 - ~~**TODO-MASTERSTAR-QA — FORCED_APERTURE cyan overlay** in the QA UI.~~ **SUPERSEDED (`7f0dc86`)** — `FORCED_APERTURE` proc rows no longer produced.
 - **Misc LOW:** TODO-7 plate-solver refactor · TODO-11 auto-trigger watchdog (`night_run`
-  foundation exists) · TODO-12 HRD classification (after new DB) · TODO-20 mean-stack
+  foundation exists) · ~~TODO-12 HRD classification (after new DB)~~ **DONE (2026-07-10):** session-aware
+  HRD extreme-object table; online Gaia TAP + SIMBAD enrichment for candidates only (lite DB teff/logg
+  NULL); absolute thresholds (Pecaut & Mamajek 2013; Andrae et al. 2023). **TODO-12b (2026-07-10):**
+  parallax gate 0.15 mas + SNR 5 (config-driven); per-category cap 3; NSS deprioritized in enrich budget;
+  apparent-G legend/caption fix (chi Per / draft_425 cluster admitted to M_G plane). **TODO-12c (2026-07-10):**
+  luminosity-first Stage-2 label priority (RSG before Very cool); Stage-1 per-net reserved slots
+  (`hrd_min_per_net=4`). Arc **DONE** — see `CURSOR_RESULT_todo12_hrd.md`, `_todo12b_hrd.md`, `_todo12c_hrd.md`.
+  · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
   · TODO-PIXEL-XCHECK-BINNING binning-aware pixel cross-check (cosmetic log) ·
   **TODO-RECUT-HARNESS-FIDELITY** — **CLOSED (superseded, 2026-07-08):** draft_387 zaloha no longer

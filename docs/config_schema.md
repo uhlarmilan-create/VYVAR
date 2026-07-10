@@ -199,6 +199,13 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | calibration_library_root | str | "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary" |  |
 | database_path | str | "C:\\ASTRO\\python\\VYVAR\\vyvar.sqlite3" |  |
 | gaia_db_path | str | "" | Path to local Gaia DR3 SQLite database (must contain table ``gaia_dr3`` with indexes on ra/dec). |
+| hrd_online_enrich_enabled | bool | true | HRD extreme-object online Gaia TAP enrichment (candidates only; fail-open). |
+| hrd_simbad_enrich_enabled | bool | true | HRD SIMBAD otype label refinement for extreme candidates (additive only). |
+| hrd_enrich_max_candidates | int | 20 | Max Stage-1 HRD extreme candidates for online enrichment (clamp 1..100). |
+| hrd_parallax_min_mas | float | 0.15 | HRD M_G reliability parallax floor (mas); clamp 0.0..10.0. |
+| hrd_parallax_snr_min | float | 5.0 | HRD M_G reliability parallax SNR floor; clamp 1.0..20.0. |
+| hrd_max_per_category | int | 3 | Max table rows per Stage-2 HRD category; clamp 1..20. |
+| hrd_min_per_net | int | 4 | Min reserved Stage-1 enrich slots per candidate net; clamp 0..20. |
 | blind_index_fine_path | str | "…/GAIA_DR3/gaia_triangles_fine.pkl" | Fine blind triangle index (Newton-scale rigs). |
 | blind_index_wide_path | str | "…/GAIA_DR3/gaia_triangles_wide.pkl" | Wide blind triangle index (Carl-Zeiss-scale rigs). |
 | blind_index_path | str | *(deprecated)* | Alias of ``blind_index_fine_path`` after load; not serialized. |

@@ -2,6 +2,51 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-10 — TODO-12c-HRD (label priority + per-net reservations, arc close)
+
+**Fix:** Stage-2 priority now RSG/RG before Very cool; cool label suppressed when logg indicates giant
+branch. Stage-1 `hrd_min_per_net=4` reserves slots per net (luminous ranked by M_G).
+
+**draft_425:** RSG rows 3/setup (pre-12c: 2 RSG + 1 mislabeled Very cool/s*r). One remaining
+Very cool/s*r row where Gaia logg is N/A (honest fallback). Luminous-net teff mostly NaN; none >=25k.
+
+**pytest:** 696 passed, 15 skipped. Milan authorized commit+push of full 12/12b/12c arc.
+
+---
+
+## 2026-07-10 — TODO-12b-HRD (parallax gate, category cap, apparent-G legend)
+
+**Motivation:** draft_425 chi & h Persei (d ~ 2.3 kpc, pi ~ 0.43 mas) — old 1.0 mas floor excluded the
+entire cluster from M_G plane.
+
+**Changes:** `hrd_parallax_min_mas=0.15` + `hrd_parallax_snr_min=5` (config); `hrd_max_per_category=3`;
+NSS deprioritized in Stage-1 enrich budget; legend/caption clarify apparent-G gray points.
+
+**draft_425 before/after reliable:** B 1015→7989, V 795→6651, R 1021→8011. Table: red supergiants
+appear (2 on B/R, 3 on V); binaries 9→0 on B (cap + physics-first budget). No Very hot / Hot luminous
+rows (reported, not threshold-tuned). draft_424 reliable 2474→3515 (modest).
+
+**pytest:** 693 passed, 15 skipped (+2 gate/cap tests). PDF overflow 0.
+
+---
+
+## 2026-07-10 — TODO-12-HRD (session-aware extreme objects + online DR3 enrichment)
+
+**Scope:** Report-layer HRD only — no photometry proc/summary/trust changes. Lite local Gaia DB keeps
+`teff_gspphot`/`logg_gspphot` NULL; online Gaia TAP fetches astrophysical params for Stage-1 candidates
+only (max 20 default). SIMBAD `otype` refines labels (fail-open).
+
+**Part 0 verification:** draft_425 B/V/R each has per-setup `masterstars_full_match.csv` (19251 / 8381 /
+17268 rows); DAO filter via `flux` (14574 / 7847 / 12474 HRD rows). Local DB: 211712600 sources, 0 teff, 0 logg.
+
+**Real-data:** draft_425 B/V/R + draft_424 HRD PNGs under `tmp/todo12_hrd/`; candidate counts differ across
+filters (detection selection). Offline enrich flag: table renders with `N/A` teff/logg, no errors.
+
+**pytest:** 691 passed, 15 skipped (+10 HRD tests). session_baseline_check `--fast` PASS. PDF overflow 0
+(draft_425 B_20_2 verify).
+
+---
+
 ## 2026-07-09 — SESSION-CLOSE-0709 (equipment verify, sigma closeout, session close)
 
 **Day arc:** DAO-RECONCILE close (3.5% accounting bug → 89.7–98.3% real completeness, 2-pass closed) →
