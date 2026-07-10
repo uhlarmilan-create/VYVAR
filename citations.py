@@ -130,6 +130,7 @@ class RunCitationContext:
     use_catalog_recovery_verify: bool = False
     use_frame_quality_gate: bool = False
     use_k2_literature: bool = False
+    use_hrd_extreme: bool = True
 
 
 def _vsx_db_configured(cfg: AppConfig | None) -> bool:
@@ -214,6 +215,7 @@ def build_run_citation_context(
     use_frame_quality_gate = use_frame_quality_gate or bool(meta.get("frame_quality_gate_used", False))
     _k2m = str(getattr(cfg, "k2_mode", "off") or "off").strip().lower() if cfg else "off"
     use_k2 = _k2m not in ("0", "false", "no", "off", "none")
+    use_hrd = bool(getattr(cfg, "hrd_online_enrich_enabled", True)) if cfg else True
 
     return RunCitationContext(
         use_vsx=use_vsx,
@@ -235,6 +237,7 @@ def build_run_citation_context(
         use_catalog_recovery_verify=use_catalog_recovery,
         use_frame_quality_gate=use_frame_quality_gate,
         use_k2_literature=use_k2,
+        use_hrd_extreme=use_hrd,
     )
 
 
@@ -384,6 +387,19 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
                 [
                     citation_line("lang2010", bib=bib),
                     citation_line("gaia2023", bib=bib),
+                ],
+            )
+        )
+
+    if ctx.use_hrd_extreme:
+        sections.append(
+            (
+                "FIELD ASTROPHYSICS (HRD)",
+                [
+                    citation_line("pecaut2013", bib=bib),
+                    citation_line("andrae2023", bib=bib),
+                    citation_line("lindegren2021", bib=bib),
+                    citation_line("bailerjones2021", bib=bib),
                 ],
             )
         )

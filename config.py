@@ -123,6 +123,21 @@ class AppConfig:
     #: Path to local Gaia DR3 SQLite database (must contain table ``gaia_dr3`` with indexes on ra/dec).
     gaia_db_path: str = ""
 
+    #: HRD extreme-object online enrichment (Gaia TAP teff/logg for candidates only).
+    hrd_online_enrich_enabled: bool = True
+    #: HRD SIMBAD otype refinement for extreme candidates (additive label only).
+    hrd_simbad_enrich_enabled: bool = True
+    #: Max Stage-1 extreme candidates sent to online enrichment (1..100).
+    hrd_enrich_max_candidates: int = 20
+    #: HRD parallax floor (mas) for M_G reliability; SNR is the primary quality filter.
+    hrd_parallax_min_mas: float = 0.15
+    #: HRD parallax SNR floor for M_G reliability.
+    hrd_parallax_snr_min: float = 5.0
+    #: Max table rows per Stage-2 category label (1..20).
+    hrd_max_per_category: int = 3
+    #: Min reserved Stage-1 enrich slots per candidate net (0..20); NSS net filled last.
+    hrd_min_per_net: int = 4
+
     #: Fine blind index (Newton / ~1.3″/px rigs); built by ``build_blind_index.py``.
     blind_index_fine_path: str = ""
     #: Wide blind index (Carl-Zeiss / ~9.77″/px rigs); built by ``build_blind_index.py``.
@@ -697,6 +712,46 @@ class AppConfig:
             pass
 
         self.gaia_db_path = str(data.get("gaia_db_path", data.get("GAIA_DB_PATH", "")) or "").strip()
+
+        self.hrd_online_enrich_enabled = bool(
+            data.get("hrd_online_enrich_enabled", self.hrd_online_enrich_enabled)
+        )
+        self.hrd_simbad_enrich_enabled = bool(
+            data.get("hrd_simbad_enrich_enabled", self.hrd_simbad_enrich_enabled)
+        )
+        try:
+            self.hrd_enrich_max_candidates = int(
+                data.get("hrd_enrich_max_candidates", self.hrd_enrich_max_candidates)
+            )
+        except (TypeError, ValueError):
+            self.hrd_enrich_max_candidates = 20
+        self.hrd_enrich_max_candidates = max(1, min(100, int(self.hrd_enrich_max_candidates)))
+        try:
+            self.hrd_parallax_min_mas = float(
+                data.get("hrd_parallax_min_mas", self.hrd_parallax_min_mas)
+            )
+        except (TypeError, ValueError):
+            self.hrd_parallax_min_mas = 0.15
+        self.hrd_parallax_min_mas = max(0.0, min(10.0, float(self.hrd_parallax_min_mas)))
+        try:
+            self.hrd_parallax_snr_min = float(
+                data.get("hrd_parallax_snr_min", self.hrd_parallax_snr_min)
+            )
+        except (TypeError, ValueError):
+            self.hrd_parallax_snr_min = 5.0
+        self.hrd_parallax_snr_min = max(1.0, min(20.0, float(self.hrd_parallax_snr_min)))
+        try:
+            self.hrd_max_per_category = int(
+                data.get("hrd_max_per_category", self.hrd_max_per_category)
+            )
+        except (TypeError, ValueError):
+            self.hrd_max_per_category = 3
+        self.hrd_max_per_category = max(1, min(20, int(self.hrd_max_per_category)))
+        try:
+            self.hrd_min_per_net = int(data.get("hrd_min_per_net", self.hrd_min_per_net))
+        except (TypeError, ValueError):
+            self.hrd_min_per_net = 4
+        self.hrd_min_per_net = max(0, min(20, int(self.hrd_min_per_net)))
 
         gaia_dir = self.project_root / "GAIA_DR3"
         _fine_default = str(gaia_dir / "gaia_triangles_fine.pkl")
@@ -1938,6 +1993,13 @@ class AppConfig:
             "cal_diag_hard_sigma": float(self.cal_diag_hard_sigma),
             "cal_diag_sat_warn_frac": float(self.cal_diag_sat_warn_frac),
             "gaia_db_path": str(self.gaia_db_path or ""),
+            "hrd_online_enrich_enabled": bool(self.hrd_online_enrich_enabled),
+            "hrd_simbad_enrich_enabled": bool(self.hrd_simbad_enrich_enabled),
+            "hrd_enrich_max_candidates": int(self.hrd_enrich_max_candidates),
+            "hrd_parallax_min_mas": float(self.hrd_parallax_min_mas),
+            "hrd_parallax_snr_min": float(self.hrd_parallax_snr_min),
+            "hrd_max_per_category": int(self.hrd_max_per_category),
+            "hrd_min_per_net": int(self.hrd_min_per_net),
             "blind_index_fine_path": str(self.blind_index_fine_path or ""),
             "blind_index_wide_path": str(self.blind_index_wide_path or ""),
             "blind_index_select_mode": str(self.blind_index_select_mode or "auto"),
