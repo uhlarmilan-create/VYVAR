@@ -3,16 +3,23 @@
 from __future__ import annotations
 
 import json
+import math
 import shutil
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
+from PIL import Image
 
 from config import AppConfig
 from hrd_analysis import (
+    _LABEL_BINARY,
     _select_stage1_candidates,
     _stage1_net_masks,
+    annotate_field_image,
     build_hrd_dataframe,
+    ensure_clean_field_background_png,
+    field_annotation_pixel_scale,
     get_top_interesting_stars,
     hrd_parallax_params_from_cfg,
     plot_hrd_matplotlib,
@@ -20,7 +27,74 @@ from hrd_analysis import (
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "tmp" / "todo12_hrd"
-PRE12C = OUT / "pre12c"
+PRE12D = OUT / "pre12d"
+
+
+def _alignment_check_rsg(
+    label: str,
+    hrd_df: pd.DataFrame,
+    top: pd.DataFrame,
+    ann_png: Path,
+    platesolve_dir: Path,
+    *,
+    png_from_fits: bool,
+) -> dict:
+    """Crop ~100 px around brightest RSG; verify star peak vs local background."""
+    empty = bool(top.get("_empty_field", False).any()) if not top.empty else True
+    if empty:
+        return {"skipped": "empty field table"}
+    rsg = top[top["category"].astype(str).str.contains("Red supergiant", na=False)]
+    if rsg.empty:
+        return {"skipped": "no RSG row in table"}
+    rsg = rsg.copy()
+    rsg["_mag"] = pd.to_numeric(rsg.get("mag_g"), errors="coerce")
+    row = rsg.sort_values("_mag", ascending=True, na_position="last").iloc[0]
+    cid = str(row.get("catalog_id", ""))
+    match = hrd_df[hrd_df["catalog_id"].astype(str) == cid]
+    if match.empty:
+        return {"skipped": f"catalog_id {cid} not in hrd_df"}
+    hr = match.iloc[0]
+    x_raw = float(hr["x"])
+    y_raw = float(hr["y"])
+    img = np.asarray(Image.open(str(ann_png)).convert("L"), dtype=np.float64)
+    h, w = img.shape
+    sx, sy, ok = field_annotation_pixel_scale(
+        platesolve_dir, w, h, png_from_fits=png_from_fits
+    )
+    if not ok:
+        return {"skipped": "annotation scale guard failed"}
+    x = int(round(x_raw * sx))
+    y = int(round(y_raw * sy))
+    half = 50
+    x0, x1 = max(0, x - half), min(w, x + half)
+    y0, y1 = max(0, y - half), min(h, y + half)
+    crop = img[y0:y1, x0:x1]
+    crop_path = OUT / f"{label.replace(' ', '_')}_rsg_align_crop.png"
+    Image.fromarray(crop.astype(np.uint8)).save(str(crop_path))
+    yy, xx = np.ogrid[: crop.shape[0], : crop.shape[1]]
+    cx, cy = x - x0, y - y0
+    r = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
+    inner = crop[r <= 10]
+    outer = crop[(r > 15) & (r <= 45)]
+    if inner.size == 0 or outer.size == 0:
+        return {"skipped": "crop too small", "crop": str(crop_path), "x": x, "y": y}
+    peak_inner = float(np.max(inner))
+    bg_med = float(np.median(outer))
+    ratio = peak_inner / bg_med if bg_med > 0 else math.inf
+    return {
+        "catalog_id": cid,
+        "x_px": x,
+        "y_px": y,
+        "x_raw": x_raw,
+        "y_raw": y_raw,
+        "scale_x": sx,
+        "scale_y": sy,
+        "peak_inner": peak_inner,
+        "bg_median_outer": bg_med,
+        "peak_bg_ratio": ratio,
+        "aligned": ratio >= 2.0,
+        "crop": str(crop_path),
+    }
 
 
 def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: AppConfig, *, offline: bool) -> dict:
@@ -33,6 +107,7 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
         "hrd_min_per_net",
         "hrd_parallax_min_mas",
         "hrd_parallax_snr_min",
+        "hrd_nss_category_enabled",
     ):
         setattr(run_cfg, attr, getattr(cfg, attr))
     if offline:
@@ -55,6 +130,39 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
     for cat, sid in zip(cats, simbad_ids):
         if "Very cool" in cat and "s*r" in str(sid):
             otype_conflicts.append(f"{cat} | {sid}")
+    ann_path: str | None = None
+    align: dict = {"skipped": "not draft425 or empty"}
+    plot_stars = top[~top.get("_empty_field", False).astype(bool)] if not empty else pd.DataFrame()
+    if not plot_stars.empty:
+        cache_dir = platesolve_dir / "_hrd_cache"
+        phot_dir = platesolve_dir / "photometry"
+        if not phot_dir.is_dir():
+            phot_dir = platesolve_dir
+        bg_png, from_fits = ensure_clean_field_background_png(
+            platesolve_dir, phot_dir, cache_dir=cache_dir
+        )
+        if bg_png is not None:
+            ann_out = OUT / f"{label.replace(' ', '_')}_field_annotated.png"
+            ann = annotate_field_image(
+                bg_png,
+                plot_stars,
+                hrd_df,
+                platesolve_dir=platesolve_dir,
+                output_path=ann_out,
+                nss_category_enabled=bool(run_cfg.hrd_nss_category_enabled),
+                png_from_fits=from_fits,
+            )
+            if ann is not None:
+                ann_path = str(ann)
+                if label.startswith("draft425"):
+                    align = _alignment_check_rsg(
+                        label,
+                        hrd_df,
+                        top,
+                        ann,
+                        platesolve_dir,
+                        png_from_fits=from_fits,
+                    )
     result: dict = {
         "label": label,
         "obs_group": obs,
@@ -63,21 +171,27 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
         "candidates_table": 0 if empty else len(top),
         "empty_field": empty,
         "categories": cats,
+        "binary_rows": sum(_LABEL_BINARY in str(c) for c in cats),
         "enrich_src": enrich_src,
         "simbad_otype_conflicts": otype_conflicts,
         "png": str(png),
+        "field_annotated_png": ann_path,
+        "rsg_alignment": align,
         "offline": offline,
+        "hrd_nss_category_enabled": bool(run_cfg.hrd_nss_category_enabled),
     }
     if label.startswith("draft425") and not offline:
         from hrd_enrich import enrich_candidates  # noqa: PLC0415
 
-        nets = _stage1_net_masks(hrd_df)
+        nss_on = bool(run_cfg.hrd_nss_category_enabled)
+        nets = _stage1_net_masks(hrd_df, nss_enabled=nss_on)
         lum = hrd_df.loc[nets["luminous"]].copy()
         if not lum.empty:
             cand = _select_stage1_candidates(
                 hrd_df,
                 int(run_cfg.hrd_enrich_max_candidates),
                 min_per_net=int(run_cfg.hrd_min_per_net),
+                nss_enabled=nss_on,
             )
             cand_ids = set(cand["catalog_id"].astype(str))
             enriched = enrich_candidates(
@@ -105,12 +219,12 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
 
 def main() -> int:
     gdb = Path(AppConfig().gaia_db_path)
-    if OUT.is_dir() and any(OUT.iterdir()) and not PRE12C.is_dir():
-        PRE12C.mkdir(parents=True, exist_ok=True)
+    if OUT.is_dir() and any(OUT.iterdir()) and not PRE12D.is_dir():
+        PRE12D.mkdir(parents=True, exist_ok=True)
         for item in OUT.iterdir():
-            if item.name in ("pre12b", "pre12c"):
+            if item.name.startswith("pre12"):
                 continue
-            dest = PRE12C / item.name
+            dest = PRE12D / item.name
             if item.is_dir():
                 shutil.copytree(item, dest, dirs_exist_ok=True)
             else:

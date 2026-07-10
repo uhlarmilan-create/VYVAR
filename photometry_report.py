@@ -501,6 +501,7 @@ class _PhotometryReportBuilder:
             "tess_blend": (1200, 72),
             "logo": (400, 85),
             "hrd": (1000, 75),
+            "hrd_field": (900, 72),
         }
 
         # ---------------------------------------------------------------------
@@ -4399,7 +4400,9 @@ class _PhotometryReportBuilder:
             from hrd_analysis import (
                 HRD_CAPTION,
                 HRD_EMPTY_FIELD_MSG,
+                annotate_field_image,
                 build_hrd_dataframe,
+                ensure_clean_field_background_png,
                 get_top_interesting_stars,
                 hrd_parallax_params_from_cfg,
                 plot_hrd_matplotlib,
@@ -4455,6 +4458,7 @@ class _PhotometryReportBuilder:
         c.drawString(self.M_LEFT, y0 - 0.5 * self.cm, "Field astrophysics (Hertzsprung–Russell diagram)")
         c.setFillColor(self.colors.black)
         y = y0 - 1.1 * self.cm
+        hrd_plot_bottom = y
 
         if hrd_png.is_file():
             try:
@@ -4469,7 +4473,61 @@ class _PhotometryReportBuilder:
             sc = min(max_w / float(iw), max_h / float(ih))
             dw, dh = iw * sc, ih * sc
             c.drawImage(ir, self.M_LEFT, y - dh, width=dw, height=dh, mask="auto")
+            hrd_plot_bottom = y - dh
             y -= dh + 0.25 * self.cm
+
+            ann_png: Path | None = None
+            is_empty = bool(top.get("_empty_field", pd.Series([False])).any()) if not top.empty else True
+            plot_stars = (
+                top[~top.get("_empty_field", False).astype(bool)] if not is_empty and not top.empty else pd.DataFrame()
+            )
+            if not plot_stars.empty:
+                try:
+                    bg_png, from_fits = ensure_clean_field_background_png(
+                        self.platesolve_dir,
+                        self.photometry_dir,
+                        cache_dir=self.cache_dir,
+                    )
+                    if bg_png is not None:
+                        ann_out = self.cache_dir / "hrd_field_annotated_report.png"
+                        nss_on = bool(getattr(cfg, "hrd_nss_category_enabled", False))
+                        ann_result = annotate_field_image(
+                            bg_png,
+                            plot_stars,
+                            hrd_df,
+                            platesolve_dir=self.platesolve_dir,
+                            output_path=ann_out,
+                            nss_category_enabled=nss_on,
+                            png_from_fits=from_fits,
+                        )
+                        if ann_result is not None and ann_result.is_file():
+                            ann_png = ann_result
+                except Exception:  # noqa: BLE001
+                    logging.exception("PDF HRD: annotated field image failed")
+
+            if ann_png is not None:
+                try:
+                    fmw, fjq = self._IMAGE_PDF_SETTINGS["hrd_field"]
+                    fbuf, _ff = self._compress_image_for_pdf(ann_png, fmw, fjq)
+                    air = self.ImageReader(fbuf)
+                except Exception:  # noqa: BLE001
+                    air = self.ImageReader(str(ann_png))
+                aiw, aih = air.getSize()
+                gap = 0.35 * self.cm
+                max_w_ann = max(1.0, self.USE_W - dw - gap)
+                max_h_ann = y0 - 1.1 * self.cm - hrd_plot_bottom
+                if max_h_ann < 2.0 * self.cm:
+                    max_h_ann = (self.PAGE_H - self.M_TOP - self.M_BOTTOM - 3.0 * self.cm) * 0.62
+                asc = min(max_w_ann / float(aiw), max_h_ann / float(aih))
+                adw, adh = aiw * asc, aih * asc
+                ax = self.M_LEFT + dw + gap
+                ay = y0 - 1.1 * self.cm - adh
+                c.drawImage(air, ax, ay, width=adw, height=adh, mask="auto")
+                c.setFont(self.FONT_REG, 7)
+                c.setFillColor(self.colors.HexColor("#555555"))
+                cap = "Extreme objects marked on the MASTERSTAR field"
+                c.drawString(ax, ay - 0.28 * self.cm, cap)
+                c.setFillColor(self.colors.black)
 
         c.setFont(self.FONT_REG, 7)
         c.setFillColor(self.colors.HexColor("#555555"))

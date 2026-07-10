@@ -43,6 +43,13 @@ HRD_PARALLAX_MIN_MAS_DEFAULT = 0.15
 HRD_PARALLAX_SNR_MIN_DEFAULT = 5.0
 
 
+def hrd_nss_category_enabled(cfg: Any | None) -> bool:
+    """True when Gaia NSS binary category is active in HRD Stage-1/2."""
+    if cfg is None:
+        return False
+    return bool(getattr(cfg, "hrd_nss_category_enabled", False))
+
+
 def hrd_parallax_params_from_cfg(cfg: Any | None) -> tuple[float, float]:
     """Resolve HRD parallax gate from config (defaults: 0.15 mas floor, SNR 5)."""
     pmin = HRD_PARALLAX_MIN_MAS_DEFAULT
@@ -265,7 +272,7 @@ def _simbad_suffix(otype: Any) -> str:
     return ""
 
 
-def _stage2_labels(row: pd.Series) -> list[str]:
+def _stage2_labels(row: pd.Series, *, nss_enabled: bool = False) -> list[str]:
     """Return all Stage-2 category labels satisfied by one star (before priority pick)."""
     bp_rp = _f(row.get("bp_rp"))
     logg = _f(row.get("logg_gspphot"))
@@ -303,7 +310,7 @@ def _stage2_labels(row: pd.Series) -> list[str]:
         elif bp_rp is not None and bp_rp >= HRD_BP_RP_VERY_COOL:
             labels.append(_LABEL_VERY_COOL)
 
-    if _nss_is_binary(row):
+    if nss_enabled and _nss_is_binary(row):
         labels.append(_LABEL_BINARY)
 
     return labels
@@ -479,28 +486,33 @@ def _nss_mask(df: pd.DataFrame) -> pd.Series:
     return pd.Series(False, index=df.index)
 
 
-def _stage1_net_masks(df: pd.DataFrame) -> dict[str, pd.Series]:
+def _stage1_net_masks(df: pd.DataFrame, *, nss_enabled: bool = False) -> dict[str, pd.Series]:
     """Stage-1 candidate nets (not mutually exclusive)."""
     bp = pd.to_numeric(df.get("bp_rp"), errors="coerce")
     abs_g = pd.to_numeric(df.get("abs_mag_g"), errors="coerce")
     reliable = df.get("hrd_reliable", pd.Series(False, index=df.index)).astype(bool)
-    return {
+    nets: dict[str, pd.Series] = {
         "blue": bp <= -0.1,
         "red": bp >= 2.5,
         "wd": reliable & (bp < 0.5) & (abs_g > 9.0),
         "luminous": reliable & (abs_g < -2.0),
-        "nss": _nss_mask(df),
     }
+    if nss_enabled:
+        nets["nss"] = _nss_mask(df)
+    return nets
 
 
-def _physics_net_mask(df: pd.DataFrame) -> pd.Series:
-    nets = _stage1_net_masks(df)
+def _physics_net_mask(df: pd.DataFrame, *, nss_enabled: bool = False) -> pd.Series:
+    nets = _stage1_net_masks(df, nss_enabled=nss_enabled)
     return nets["blue"] | nets["red"] | nets["wd"] | nets["luminous"]
 
 
-def _stage1_candidate_mask(df: pd.DataFrame) -> pd.Series:
-    nets = _stage1_net_masks(df)
-    return nets["blue"] | nets["red"] | nets["wd"] | nets["luminous"] | nets["nss"]
+def _stage1_candidate_mask(df: pd.DataFrame, *, nss_enabled: bool = False) -> pd.Series:
+    nets = _stage1_net_masks(df, nss_enabled=nss_enabled)
+    mask = nets["blue"] | nets["red"] | nets["wd"] | nets["luminous"]
+    if nss_enabled:
+        mask = mask | nets["nss"]
+    return mask
 
 
 def _add_extremity_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -534,6 +546,7 @@ def _select_stage1_candidates(
     max_candidates: int,
     *,
     min_per_net: int = 4,
+    nss_enabled: bool = False,
 ) -> pd.DataFrame:
     """Stage-1 candidate pick with per-net reserved slots then global extremity fill.
 
@@ -546,15 +559,17 @@ def _select_stage1_candidates(
     if df.empty:
         return df
     work = _add_extremity_columns(df)
-    mask = _stage1_candidate_mask(work)
+    mask = _stage1_candidate_mask(work, nss_enabled=nss_enabled)
     cand = work.loc[mask].copy()
     if cand.empty:
         return cand
 
     cap = max(1, int(max_candidates))
     reserve = max(0, int(min_per_net))
-    net_masks = _stage1_net_masks(cand)
-    net_order = ("blue", "red", "wd", "luminous", "nss")
+    net_masks = _stage1_net_masks(cand, nss_enabled=nss_enabled)
+    net_order: tuple[str, ...] = ("blue", "red", "wd", "luminous")
+    if nss_enabled:
+        net_order = net_order + ("nss",)
 
     alloc = {net: min(reserve, int(net_masks[net].sum())) for net in net_order}
     if sum(alloc.values()) > cap:
@@ -649,7 +664,10 @@ def get_top_interesting_stars(
         enrich_enabled = bool(getattr(cfg, "hrd_online_enrich_enabled", True))
         simbad_enabled = bool(getattr(cfg, "hrd_simbad_enrich_enabled", True))
 
-    candidates = _select_stage1_candidates(hrd_df, max_candidates, min_per_net=min_per_net)
+    nss_enabled = hrd_nss_category_enabled(cfg)
+    candidates = _select_stage1_candidates(
+        hrd_df, max_candidates, min_per_net=min_per_net, nss_enabled=nss_enabled
+    )
     if candidates.empty:
         return _empty_field_table()
 
@@ -671,7 +689,7 @@ def get_top_interesting_stars(
         cid = str(row.get("catalog_id", "")).strip()
         if cid in seen:
             continue
-        label = _pick_label(_stage2_labels(row), row.get("simbad_otype"))
+        label = _pick_label(_stage2_labels(row, nss_enabled=nss_enabled), row.get("simbad_otype"))
         if not label:
             continue
         seen.add(cid)
@@ -815,16 +833,42 @@ def plot_hrd_matplotlib(
     return outp
 
 
-def resolve_clean_field_image_path(platesolve_dir: Path, photometry_dir: Path) -> Path | None:
-    """Prefer clean masterstar PNGs; ``field_map*.png`` only as last resort (overlay squares)."""
+def resolve_clean_field_image_path(
+    platesolve_dir: Path,
+    photometry_dir: Path,
+    *,
+    allow_field_map: bool = True,
+) -> Path | None:
+    """Prefer clean masterstar PNGs; ``field_map*.png`` only when allowed (not for HRD annotate)."""
     ps = Path(platesolve_dir)
     pt = Path(photometry_dir)
     for p in (ps / "masterstar_best.png", ps / "masterstar.png", pt.parent / "masterstar_best.png"):
         if p.is_file():
             return p
-    for p in sorted(pt.parent.rglob("field_map*.png")):
+    if allow_field_map:
+        for p in sorted(pt.parent.rglob("field_map*.png")):
+            if p.is_file():
+                return p
+    return None
+
+
+def _resolve_masterstar_fits_path(platesolve_dir: Path | None) -> Path | None:
+    if platesolve_dir is None:
+        return None
+    ps = Path(platesolve_dir)
+    candidates: list[Path] = []
+    for name in ("MASTERSTAR.fits", "masterstar.fits"):
+        p = ps / name
         if p.is_file():
-            return p
+            candidates.append(p)
+    candidates.extend(sorted(ps.glob("MASTERSTAR*.fits")))
+    seen: set[Path] = set()
+    for fits_path in candidates:
+        fp = fits_path.resolve()
+        if fp in seen:
+            continue
+        seen.add(fp)
+        return fp
     return None
 
 
@@ -915,22 +959,25 @@ def ensure_clean_field_background_png(
     photometry_dir: Path,
     *,
     cache_dir: Path | None = None,
-) -> Path | None:
+) -> tuple[Path | None, bool]:
     """
     Resolve a clean field snapshot for HRD annotations.
 
-    Order: ``masterstar_best.png``, ``masterstar.png``, duplicate parent path,
-    then any ``field_map*.png`` under the platesolve setup directory.
-    If none exist, try top-3 frames from ``qc_metrics.csv`` (calibrated/ or processed/) as FITS→PNG.
+    Returns ``(path, is_fits_derived)``. ``is_fits_derived`` is True only for PNGs
+    rendered 1:1 from a science FITS via ``fits_first_image_to_png``.
     """
-    hit = resolve_clean_field_image_path(platesolve_dir, photometry_dir)
+    hit = resolve_clean_field_image_path(platesolve_dir, photometry_dir, allow_field_map=False)
     if hit is not None:
-        return hit
+        return hit, False
 
     pt = Path(photometry_dir)
     cache = Path(cache_dir or (pt / "_hrd_cache"))
     cache.mkdir(parents=True, exist_ok=True)
     out_png = cache / "hrd_field_from_fits.png"
+
+    ms_fits = _resolve_masterstar_fits_path(Path(platesolve_dir))
+    if ms_fits is not None and fits_first_image_to_png(ms_fits, out_png):
+        return out_png, True
 
     try:
         draft_dir = _draft_dir_from_photometry(pt)
@@ -943,14 +990,14 @@ def ensure_clean_field_background_png(
                 "HRD: no clean PNG and no qc_metrics.csv under %s (calibrated/ or processed/)",
                 draft_dir,
             )
-            return None
+            return None, False
         dfq = pd.read_csv(qc_csv, low_memory=False)
         if dfq.empty or "dst" not in dfq.columns:
-            return None
+            return None, False
         m = dfq["dst"].astype(str).str.contains(str(obs_group), regex=False)
         dfq = dfq.loc[m].copy()
         if dfq.empty:
-            return None
+            return None, False
         dfq["FWHM_PX"] = pd.to_numeric(dfq.get("fwhm_px"), errors="coerce")
         dfq["ELONGATION"] = pd.to_numeric(dfq.get("elongation"), errors="coerce")
         if "n_stars_detected" in dfq.columns:
@@ -964,22 +1011,110 @@ def ensure_clean_field_background_png(
         for _, row in best.iterrows():
             fp = row["_fits_path"]
             if isinstance(fp, Path) and fp.is_file() and fits_first_image_to_png(fp, out_png):
-                return out_png
+                return out_png, True
     except Exception:  # noqa: BLE001
         logger.exception("ensure_clean_field_background_png failed")
 
+    return None, False
+
+
+def _resolve_masterstar_naxis(platesolve_dir: Path | None) -> tuple[int, int] | None:
+    """Read MASTERSTAR FITS NAXIS1/NAXIS2 from platesolve directory."""
+    fits_path = _resolve_masterstar_fits_path(platesolve_dir)
+    if fits_path is None:
+        return None
+    try:
+        from astropy.io import fits
+
+        with fits.open(str(fits_path), memmap=False) as hdul:
+            hdr = hdul[0].header
+            n1 = int(hdr.get("NAXIS1") or 0)
+            n2 = int(hdr.get("NAXIS2") or 0)
+        if n1 > 0 and n2 > 0:
+            return n1, n2
+    except Exception:  # noqa: BLE001
+        logger.debug("Could not read NAXIS from %s", fits_path, exc_info=True)
     return None
+
+
+def _field_png_is_fits_derived(png_path: Path) -> bool:
+    return Path(png_path).name == "hrd_field_from_fits.png"
+
+
+def field_annotation_pixel_scale(
+    platesolve_dir: Path | None,
+    png_w: int,
+    png_h: int,
+    *,
+    png_from_fits: bool,
+) -> tuple[float, float, bool]:
+    """Return (scale_x, scale_y, ok_to_draw). Never draw when ok_to_draw is False."""
+    naxis = _resolve_masterstar_naxis(platesolve_dir)
+    if naxis is not None:
+        nx, ny = naxis
+        if nx > 0 and ny > 0:
+            return png_w / float(nx), png_h / float(ny), True
+    if png_from_fits:
+        return 1.0, 1.0, True
+    log_event(
+        "HRD annotation skipped: background PNG size unknown vs MASTERSTAR FITS "
+        "(no MASTERSTAR*.fits and PNG not FITS-derived)"
+    )
+    return 1.0, 1.0, False
+
+
+def _category_short_label(category: str, *, nss_enabled: bool) -> str:
+    base = _category_base(category)
+    short_map = {
+        _LABEL_WD: "WD",
+        _LABEL_RSG: "RSG",
+        _LABEL_RG: "RG",
+        _LABEL_HOT_LUM: "HOT-LUM",
+        _LABEL_VERY_HOT: "HOT",
+        _LABEL_VERY_COOL: "COOL",
+        _LABEL_BINARY: "NSS",
+    }
+    if base == _LABEL_BINARY and not nss_enabled:
+        return "?"
+    return short_map.get(base, base[:8] if base else "?")
+
+
+def _annotation_font(size: int):
+    from PIL import ImageFont
+
+    candidates = (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "C:/Windows/Fonts/DejaVuSans.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+    )
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
 
 
 def annotate_field_image(
     field_image_path: str | Path,
     top_stars: pd.DataFrame,
     hrd_df: pd.DataFrame,
-) -> Path:
-    """Mark interesting stars on a field PNG/JPEG."""
+    *,
+    platesolve_dir: Path | None = None,
+    output_path: Path | None = None,
+    nss_category_enabled: bool = False,
+    png_from_fits: bool = False,
+) -> Path | None:
+    """Mark interesting stars on a field PNG/JPEG. Returns None when alignment is unknown."""
     from PIL import Image, ImageDraw
 
     field_image_path = Path(field_image_path)
+    if not field_image_path.is_file():
+        return None
+    if not png_from_fits:
+        png_from_fits = _field_png_is_fits_derived(field_image_path)
+
     img = Image.open(str(field_image_path)).convert("RGB")
     draw = ImageDraw.Draw(img)
 
@@ -994,10 +1129,24 @@ def annotate_field_image(
     }
 
     w, h = img.size
+    sx, sy, ok = field_annotation_pixel_scale(
+        platesolve_dir, w, h, png_from_fits=png_from_fits
+    )
+    if not ok:
+        return None
+
+    radius = max(12, int(round(w / 150)))
+    font_size = max(10, int(round(w / 120)))
+    font = _annotation_font(font_size)
+    line_gap = max(2, font_size // 4)
+
+    out_path = Path(output_path) if output_path is not None else field_image_path.parent / "hrd_field_annotated.png"
     if top_stars is None or top_stars.empty:
-        out_path = field_image_path.parent / "hrd_field_annotated.png"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         img.save(str(out_path))
         return out_path
+
+    used_categories: set[str] = set()
 
     for _, star in top_stars.iterrows():
         cid = normalize_gaia_source_id(star.get("catalog_id", ""))
@@ -1005,31 +1154,76 @@ def annotate_field_image(
         if match.empty:
             continue
         r = match.iloc[0]
-        x = _f(r.get("x"))
-        y = _f(r.get("y"))
-        if x is None or y is None:
+        x_raw = _f(r.get("x"))
+        y_raw = _f(r.get("y"))
+        if x_raw is None or y_raw is None:
             continue
-        if not (10 < x < w - 10 and 10 < y < h - 10):
+        x = x_raw * sx
+        y = y_raw * sy
+        if not (radius < x < w - radius and radius < y < h - radius):
             continue
         cat_raw = str(star.get("category", "")).strip()
-        color = category_colors.get(cat_raw)
+        base = _category_base(cat_raw)
+        color = category_colors.get(base)
         if color is None:
             for key, col in category_colors.items():
                 if cat_raw.startswith(key.split(" (")[0]):
                     color = col
                     break
         if color is None:
-            pref = cat_raw.split("(")[0].strip()
-            color = category_colors.get(pref, (255, 255, 0))
-        radius = 18
+            color = (255, 255, 0)
+        if base:
+            used_categories.add(base)
         draw.ellipse(
             [x - radius, y - radius, x + radius, y + radius],
             outline=color,
-            width=2,
+            width=max(2, radius // 9),
         )
-        label = cat_raw.split()[0] if cat_raw else "?"
-        draw.text((x + radius + 3, y - 8), label, fill=color)
+        label = _category_short_label(cat_raw, nss_enabled=nss_category_enabled)
+        simbad_id = str(r.get("simbad_main_id") or star.get("simbad_id") or "").strip()
+        if simbad_id and "(" in simbad_id:
+            simbad_id = simbad_id.split("(")[0].strip()
+        lines = [label]
+        if simbad_id:
+            lines.append(simbad_id[:24])
+        ty = y - radius - 2
+        for line in lines:
+            draw.text((x + radius + 3, ty), line, fill=color, font=font)
+            ty += font_size + line_gap
 
-    out_path = field_image_path.parent / "hrd_field_annotated.png"
+    if used_categories:
+        legend_x, legend_y = 8, 8
+        pad = 4
+        entries = sorted(
+            used_categories,
+            key=lambda lab: _LABEL_PRIORITY.index(lab) if lab in _LABEL_PRIORITY else 99,
+        )
+        if nss_category_enabled and _LABEL_BINARY not in entries:
+            pass
+        lh = font_size + line_gap
+        box_h = pad * 2 + lh * len(entries)
+        box_w = max(80, int(w * 0.12))
+        draw.rectangle(
+            [legend_x, legend_y, legend_x + box_w, legend_y + box_h],
+            fill=(24, 24, 24),
+            outline=(180, 180, 180),
+        )
+        for i, lab in enumerate(entries):
+            col = category_colors.get(lab, (255, 255, 0))
+            yy = legend_y + pad + i * lh
+            dot_r = max(4, font_size // 3)
+            draw.ellipse(
+                [legend_x + pad, yy, legend_x + pad + dot_r * 2, yy + dot_r * 2],
+                fill=col,
+                outline=col,
+            )
+            draw.text(
+                (legend_x + pad + dot_r * 2 + 4, yy - 1),
+                _category_short_label(lab, nss_enabled=nss_category_enabled),
+                fill=(240, 240, 240),
+                font=font,
+            )
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(str(out_path))
     return out_path

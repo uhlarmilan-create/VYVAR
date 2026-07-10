@@ -228,11 +228,20 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
 
     _cache = photometry_dir / "_hrd_cache"
     _cache.mkdir(parents=True, exist_ok=True)
-    bg_png = ensure_clean_field_background_png(platesolve_dir, photometry_dir, cache_dir=_cache)
+    bg_png, from_fits = ensure_clean_field_background_png(platesolve_dir, photometry_dir, cache_dir=_cache)
     if bg_png is not None and not plot_stars.empty:
         try:
-            annotated = annotate_field_image(bg_png, plot_stars, hrd_df)
-            st.subheader("Field image — interesting stars")
-            st.image(str(annotated), width="stretch")
+            nss_on = bool(getattr(cfg, "hrd_nss_category_enabled", False)) if cfg else False
+            annotated = annotate_field_image(
+                bg_png,
+                plot_stars,
+                hrd_df,
+                platesolve_dir=platesolve_dir,
+                nss_category_enabled=nss_on,
+                png_from_fits=from_fits,
+            )
+            if annotated is not None:
+                st.subheader("Field image — interesting stars")
+                st.image(str(annotated), width="stretch")
         except Exception as exc:  # noqa: BLE001
             st.caption(f"Field annotation failed: {exc}")

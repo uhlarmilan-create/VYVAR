@@ -50,8 +50,8 @@ def test_stage1_hits_each_criterion_and_respects_cap() -> None:
         ]
     )
     mask = _stage1_candidate_mask(df)
-    assert mask.sum() == 5
-    assert not bool(mask.iloc[5])
+    assert mask.sum() == 4
+    assert not bool(mask.iloc[4])
     capped = _select_stage1_candidates(df, 3, min_per_net=0)
     assert len(capped) == 3
 
@@ -227,6 +227,49 @@ def test_hrd_config_defaults() -> None:
     assert cfg.hrd_parallax_snr_min == 5.0
     assert cfg.hrd_max_per_category == 3
     assert cfg.hrd_min_per_net == 4
+    assert cfg.hrd_nss_category_enabled is False
+
+
+def test_nss_default_off_no_binary_rows() -> None:
+    nss_rows = [
+        {
+            "catalog_id": f"n{i}",
+            "bp_rp": 0.9,
+            "abs_mag_g": 5.0,
+            "hrd_reliable": True,
+            "logg_gspphot": 4.0,
+            "non_single_star": 1,
+            "phot_g_mean_mag": 12.0,
+            "x": 100.0 + i * 10,
+            "y": 200.0,
+        }
+        for i in range(5)
+    ]
+    df = pd.DataFrame(nss_rows)
+    cfg = AppConfig()
+    cfg.hrd_online_enrich_enabled = False
+    cfg.hrd_simbad_enrich_enabled = False
+    assert cfg.hrd_nss_category_enabled is False
+    top = get_top_interesting_stars(df, cfg=cfg, cache_path=None)
+    assert len(top) == 1
+    assert bool(top.iloc[0]["_empty_field"])
+    assert not any(_LABEL_BINARY in str(c) for c in top.get("category", []))
+
+
+def test_nss_enabled_stage1_includes_binary_net() -> None:
+    df = pd.DataFrame(
+        [
+            {
+                "catalog_id": "5",
+                "bp_rp": 0.9,
+                "abs_mag_g": 6.0,
+                "hrd_reliable": True,
+                "non_single_star": 1,
+            }
+        ]
+    )
+    assert not bool(_stage1_candidate_mask(df).iloc[0])
+    assert bool(_stage1_candidate_mask(df, nss_enabled=True).iloc[0])
 
 
 def test_parallax_gate_default_and_clamps() -> None:
@@ -273,6 +316,7 @@ def test_category_cap_and_nss_deprioritized() -> None:
     cfg.hrd_simbad_enrich_enabled = False
     cfg.hrd_enrich_max_candidates = 6
     cfg.hrd_max_per_category = 3
+    cfg.hrd_nss_category_enabled = True
     top = get_top_interesting_stars(df, cfg=cfg, cache_path=None)
     cats = top["category"].tolist()
     assert sum("Red giant" in c for c in cats) == 2

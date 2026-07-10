@@ -137,6 +137,8 @@ class AppConfig:
     hrd_max_per_category: int = 3
     #: Min reserved Stage-1 enrich slots per candidate net (0..20); NSS net filled last.
     hrd_min_per_net: int = 4
+    #: Include Gaia NSS binary candidates in HRD Stage-1/2 (default off; reversible flag).
+    hrd_nss_category_enabled: bool = False
 
     #: Fine blind index (Newton / ~1.3″/px rigs); built by ``build_blind_index.py``.
     blind_index_fine_path: str = ""
@@ -752,6 +754,9 @@ class AppConfig:
         except (TypeError, ValueError):
             self.hrd_min_per_net = 4
         self.hrd_min_per_net = max(0, min(20, int(self.hrd_min_per_net)))
+        self.hrd_nss_category_enabled = bool(
+            data.get("hrd_nss_category_enabled", self.hrd_nss_category_enabled)
+        )
 
         gaia_dir = self.project_root / "GAIA_DR3"
         _fine_default = str(gaia_dir / "gaia_triangles_fine.pkl")
@@ -2000,6 +2005,7 @@ class AppConfig:
             "hrd_parallax_snr_min": float(self.hrd_parallax_snr_min),
             "hrd_max_per_category": int(self.hrd_max_per_category),
             "hrd_min_per_net": int(self.hrd_min_per_net),
+            "hrd_nss_category_enabled": bool(self.hrd_nss_category_enabled),
             "blind_index_fine_path": str(self.blind_index_fine_path or ""),
             "blind_index_wide_path": str(self.blind_index_wide_path or ""),
             "blind_index_select_mode": str(self.blind_index_select_mode or "auto"),
