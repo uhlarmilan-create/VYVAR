@@ -1,8 +1,12 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-10** — TODO-12 HRD arc **DONE** (12/12b/12c/12d/12e): extreme-object table,
-online enrichment, parallax gate, label priority, NSS off-by-default, annotated field image,
-identification tiers (confirmed/likely/candidate); pytest **717 passed**, 15 skipped.
+Last updated: **2026-07-10** — TODO-12 HRD arc **DONE** (12/12b/12c/12d/12e/12f): extreme-object table,
+identification tiers, annotated field image, PDF/UI **Extreme objects -- details** section;
+pytest **723 passed**, 15 skipped.
+
+**2026-07-10 snapshot (TODO-12f):** `_make_row` extended (dist, parallax, raw SpT/otype, DSC p,
+teff_source); PDF follow-on page per object; UI expander with full column set; validate
+summary.json stamped with `generated_at_utc` + `git_head`. PDF +1 page (390), overflow 0.
 
 **2026-07-10 snapshot (TODO-12e):** Enrichment cache v2 (+ SIMBAD sp_type, Gaia DSC WD prob);
 `ident` tier column; RS Per (`458407464445792384`) RSG confirmed via SIMBAD lum class (was Very cool);

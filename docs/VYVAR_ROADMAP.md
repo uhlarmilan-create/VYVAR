@@ -550,7 +550,9 @@ next calibration lever.
   from table; annotated MASTERSTAR field image (scale guard, short labels, legend) wired to PDF HRD page.
   **TODO-12e (2026-07-10):** identification tiers (confirmed/likely/candidate); enrichment cache v2
   (+ SIMBAD sp_type, Gaia DSC); SIMBAD lum-class logg substitute (RS Per RSG fix).
-  Arc **DONE** — see `CURSOR_RESULT_todo12_hrd.md` … `_todo12e_hrd.md`.
+  **TODO-12f (2026-07-10):** PDF/UI `Extreme objects -- details` per-object blocks; extended row
+  payload (dist, parallax, raw SpT/otype, DSC p); validate summary stamps.
+  Arc **DONE** — see `CURSOR_RESULT_todo12_hrd.md` … `_todo12f_hrd.md`.
   · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
   · TODO-PIXEL-XCHECK-BINNING binning-aware pixel cross-check (cosmetic log) ·

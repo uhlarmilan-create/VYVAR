@@ -2,6 +2,18 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-10 — TODO-12f-HRD (Extreme objects -- details in PDF + UI)
+
+**Row payload:** dist_pc (reliable parallax only), parallax_mas/snr, sp_type_raw, otype_raw,
+dsc_wd_p, teff_source, ra_dec_sex; compact overview table unchanged.
+
+**PDF:** follow-on page(s) `Extreme objects -- details` (page 25 on draft_425 B); naive-distance
+caveat cites Bailer-Jones 2021. **UI:** expander with full detail columns.
+
+**Validate:** summary.json top-level `generated_at_utc` + `git_head` stamps.
+
+---
+
 ## 2026-07-10 — TODO-12e-HRD (identification/confirmation tiers)
 
 **Enrichment:** cache v2; SIMBAD `sp_type`; Gaia TAP LEFT JOIN `astrophysical_parameters` for DSC
