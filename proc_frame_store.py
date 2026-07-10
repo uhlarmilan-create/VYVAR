@@ -11,6 +11,7 @@ Design:
 
 Proc schema note (2026-06-25): ``sky_adu_per_px_annulus`` holds per-star annulus sky (ADU/px)
 for the Howell err model; ``noise_floor_adu`` remains the DAO detection floor (MASTERSTAR / SNR table).
+F-BINGAIN-1 (2026-07-10): ``sigma_bkg_ap`` / ``err_bkg_source`` — empirical background noise provenance.
 """
 
 from __future__ import annotations
@@ -40,6 +41,8 @@ PROC_STORE_COLS = [
     "flux",
     "noise_floor_adu",
     "sky_adu_per_px_annulus",
+    "sigma_bkg_ap",
+    "err_bkg_source",
     "aperture_r_px",
     "flux_small",
     "flux_large",
@@ -123,6 +126,7 @@ _NUMERIC_COLS = (
     "dao_flux",
     "noise_floor_adu",
     "sky_adu_per_px_annulus",
+    "sigma_bkg_ap",
     "aperture_r_px",
     "peak_max_adu",
     "saturate_limit_adu_85pct",

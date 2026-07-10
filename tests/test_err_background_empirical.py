@@ -1,0 +1,306 @@
+"""F-BINGAIN-1: empirical background-noise term (empty-aperture scatter)."""
+
+from __future__ import annotations
+
+import math
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from config import AppConfig
+from photometry_core import (
+    ERR_BKG_MODE_EMPIRICAL,
+    ERR_BKG_MODE_HOWELL,
+    ERR_BKG_SOURCE_COL,
+    ERR_BKG_SOURCE_EMPIRICAL,
+    ERR_BKG_SOURCE_HOWELL_FALLBACK,
+    ERR_BKG_SOURCE_HOWELL_SCALED,
+    SIGMA_BKG_AP_COL,
+    _clamp_bkg_scale_r,
+    _clamp_err_empty_apertures_n,
+    _howell_bkg_variance_adu2,
+    _normalize_err_background_mode,
+    _photometric_error,
+    _photometric_error_with_bkg_mode,
+    bkg_scale_ratio_empirical_over_howell,
+    compute_setup_bkg_scale_r,
+    compute_snr_optimal_aperture_table,
+    enhance_catalog_dataframe_aperture_bpm,
+    finalize_hybrid_bkg_fallback_proc_dir,
+    measure_empty_aperture_sigma_bkg,
+    scaled_sigma_bkg_ap_from_howell,
+)
+
+
+def test_clamp_err_empty_apertures_n() -> None:
+    assert _clamp_err_empty_apertures_n(8) == 16
+    assert _clamp_err_empty_apertures_n(64) == 64
+    assert _clamp_err_empty_apertures_n(512) == 256
+
+
+def test_normalize_err_background_mode() -> None:
+    assert _normalize_err_background_mode("howell") == ERR_BKG_MODE_HOWELL
+    assert _normalize_err_background_mode("legacy") == ERR_BKG_MODE_HOWELL
+    assert _normalize_err_background_mode("empirical") == ERR_BKG_MODE_EMPIRICAL
+    assert _normalize_err_background_mode(None) == ERR_BKG_MODE_EMPIRICAL
+
+
+def test_howell_mode_byte_identical() -> None:
+    flux, sky, area, g, rn = 5000.0, 1200.0, math.pi * 5.0**2, 12.48, 14.08
+    legacy = _photometric_error(flux, sky, area, gain=g, read_noise=rn)
+    err, src = _photometric_error_with_bkg_mode(
+        flux,
+        err_background_mode=ERR_BKG_MODE_HOWELL,
+        sky_pp=sky,
+        area=area,
+        gain=g,
+        read_noise=rn,
+        sigma_bkg_ap=999.0,
+    )
+    assert src == ERR_BKG_MODE_HOWELL
+    assert err == pytest.approx(legacy, rel=0, abs=1e-15)
+
+
+def test_empirical_mode_formula() -> None:
+    flux, g, sig_ap = 8000.0, 12.48, 42.0
+    err, src = _photometric_error_with_bkg_mode(
+        flux,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+        sky_pp=0.0,
+        area=math.pi * 6.0**2,
+        gain=g,
+        read_noise=14.0,
+        sigma_bkg_ap=sig_ap,
+    )
+    var = flux / g + sig_ap**2
+    assert src == ERR_BKG_SOURCE_EMPIRICAL
+    assert err == pytest.approx(math.sqrt(var) / flux, rel=1e-12)
+
+
+def test_empty_aperture_white_noise_matches_analytic() -> None:
+    rng = np.random.default_rng(42)
+    sigma_px = 3.5
+    ny, nx = 400, 400
+    data = rng.normal(1000.0, sigma_px, size=(ny, nx))
+    r_ap = 5.0
+    r_in, r_out = 12.0, 18.0
+    sig_ap, n_valid, reason = measure_empty_aperture_sigma_bkg(
+        data,
+        np.array([]),
+        np.array([]),
+        r_ap,
+        r_in,
+        r_out,
+        n_apertures=48,
+        min_valid=16,
+        rng=rng,
+    )
+    assert reason == ""
+    assert n_valid >= 16
+    area = math.pi * r_ap**2
+    expected = math.sqrt(area) * sigma_px
+    assert sig_ap == pytest.approx(expected, rel=0.25)
+
+
+def test_correlated_noise_empirical_exceeds_howell_reconstruction() -> None:
+    """Low-frequency common-mode + white noise: empirical > level-based Howell background."""
+    rng = np.random.default_rng(7)
+    sky_pp = 1200.0
+    g, rn = 12.48, 14.08
+    ny, nx = 480, 480
+    data = rng.normal(sky_pp, 2.5, size=(ny, nx))
+    coarse = rng.normal(0.0, 35.0, size=(ny // 8, nx // 8))
+    coarse = np.repeat(np.repeat(coarse, 8, axis=0), 8, axis=1)[:ny, :nx]
+    data = data + coarse
+    r_ap = 5.0
+    sig_ap, _, reason = measure_empty_aperture_sigma_bkg(
+        data,
+        np.array([]),
+        np.array([]),
+        r_ap,
+        12.0,
+        18.0,
+        n_apertures=64,
+        min_valid=16,
+        rng=rng,
+    )
+    assert reason == ""
+    area = math.pi * r_ap**2
+    howell_bkg_adu = math.sqrt(sky_pp / g * area + (rn / g) ** 2 * area)
+    assert sig_ap > howell_bkg_adu * 1.15
+
+
+def test_crowding_fallback() -> None:
+    rng = np.random.default_rng(1)
+    data = rng.normal(500.0, 2.0, size=(80, 80))
+    xs = np.linspace(10, 70, 40)
+    ys = np.linspace(10, 70, 40)
+    xx, yy = np.meshgrid(xs, ys)
+    sig_ap, n_valid, reason = measure_empty_aperture_sigma_bkg(
+        data,
+        xx.ravel(),
+        yy.ravel(),
+        6.0,
+        14.0,
+        20.0,
+        n_apertures=32,
+        min_valid=16,
+        rng=rng,
+    )
+    assert not math.isfinite(sig_ap)
+    assert n_valid < 16
+    assert "crowding" in reason
+
+
+def test_enhance_catalog_emits_provenance_columns() -> None:
+    rng = np.random.default_rng(99)
+    ny, nx = 256, 256
+    data = rng.normal(800.0, 2.5, size=(ny, nx)).astype(np.float32)
+    n_stars = 12
+    xs = rng.uniform(40, nx - 40, size=n_stars)
+    ys = rng.uniform(40, ny - 40, size=n_stars)
+    df = pd.DataFrame(
+        {
+            "x": xs,
+            "y": ys,
+            "flux": rng.uniform(5000, 15000, size=n_stars),
+            "catalog_id": [f"G{i:012d}" for i in range(n_stars)],
+            "peak_max_adu": np.full(n_stars, 100.0),
+        }
+    )
+    hdr = {"FWHM": 4.2}
+    out = enhance_catalog_dataframe_aperture_bpm(
+        df,
+        data,
+        hdr,
+        aperture_enabled=True,
+        aperture_fwhm_factor=1.7,
+        annulus_inner_fwhm=4.0,
+        annulus_outer_fwhm=6.0,
+        nonlinearity_peak_percentile=20.0,
+        nonlinearity_fwhm_ratio=1.25,
+        master_dark_path=None,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+        err_empty_apertures_n=32,
+        err_empty_apertures_min=8,
+    )
+    assert SIGMA_BKG_AP_COL in out.columns
+    assert ERR_BKG_SOURCE_COL in out.columns
+    src = out[ERR_BKG_SOURCE_COL].astype(str)
+    assert (src == ERR_BKG_SOURCE_EMPIRICAL).any() or (src == ERR_BKG_SOURCE_HOWELL_FALLBACK).any()
+    sig = pd.to_numeric(out[SIGMA_BKG_AP_COL], errors="coerce")
+    if (src == ERR_BKG_SOURCE_EMPIRICAL).any():
+        assert sig[src == ERR_BKG_SOURCE_EMPIRICAL].notna().all()
+
+
+def test_config_defaults_and_clamps() -> None:
+    cfg = AppConfig()
+    assert cfg.err_background_mode == "empirical"
+    assert cfg.err_empty_apertures_n == 64
+    assert cfg.err_empty_apertures_min == 16
+    cfg.err_empty_apertures_n = 8
+    cfg.err_empty_apertures_min = 300
+    # Re-apply clamp logic mirrors __post_init__ bounds
+    cfg.err_empty_apertures_n = max(16, min(256, int(cfg.err_empty_apertures_n)))
+    cfg.err_empty_apertures_min = max(1, min(256, int(cfg.err_empty_apertures_min)))
+    assert cfg.err_empty_apertures_n == 16
+    assert cfg.err_empty_apertures_min == 256
+
+
+def test_bkg_scale_ratio_and_clamp() -> None:
+    flux, sky, area, g, rn = 5000.0, 1200.0, math.pi * 5.0**2, 12.48, 14.08
+    hb = _howell_bkg_variance_adu2(sky, area, gain=g, read_noise=rn)
+    sig = 50.0
+    r = bkg_scale_ratio_empirical_over_howell(sig, sky, area, gain=g, read_noise=rn)
+    assert r == pytest.approx(sig * sig / hb, rel=1e-9)
+    assert _clamp_bkg_scale_r(0.01) == 0.05
+    assert _clamp_bkg_scale_r(99.0) == 2.0
+    r_med, n = compute_setup_bkg_scale_r([0.5, 0.6, 0.7])
+    assert n == 3
+    assert r_med == pytest.approx(0.6)
+
+
+def test_scaled_sigma_bkg_ap_from_howell() -> None:
+    sky, area, g, rn, r_setup = 1200.0, math.pi * 4.0**2, 12.48, 14.08, 0.5
+    hb = _howell_bkg_variance_adu2(sky, area, gain=g, read_noise=rn)
+    sig = scaled_sigma_bkg_ap_from_howell(sky, area, gain=g, read_noise=rn, r_setup=r_setup)
+    assert sig == pytest.approx(math.sqrt(r_setup * hb), rel=1e-9)
+
+
+def test_finalize_hybrid_bkg_fallback(tmp_path: Path) -> None:
+    area = math.pi * 3.0**2
+    g, rn = 12.48, 14.08
+    sky = 800.0
+    hb = _howell_bkg_variance_adu2(sky, area, gain=g, read_noise=rn)
+    sig_emp = math.sqrt(0.55 * hb)
+    df = pd.DataFrame(
+        [
+            {
+                "catalog_id": "1",
+                "dao_flux": 5000.0,
+                "sky_adu_per_px_annulus": sky,
+                "aperture_r_px": 3.0,
+                "aperture_area_px": area,
+                SIGMA_BKG_AP_COL: sig_emp,
+                ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_EMPIRICAL,
+            },
+            {
+                "catalog_id": "2",
+                "dao_flux": 4000.0,
+                "sky_adu_per_px_annulus": sky,
+                "aperture_r_px": 3.0,
+                "aperture_area_px": area,
+                SIGMA_BKG_AP_COL: float("nan"),
+                ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_HOWELL_FALLBACK,
+            },
+        ]
+    )
+    p = tmp_path / "proc_test.csv"
+    df.to_csv(p, index=False)
+    stats = finalize_hybrid_bkg_fallback_proc_dir(tmp_path, gain=g, read_noise=rn, setup_label="test")
+    assert stats["n_scaled_rows"] == 1
+    out = pd.read_csv(p)
+    assert out.loc[1, ERR_BKG_SOURCE_COL] == ERR_BKG_SOURCE_HOWELL_SCALED
+    assert math.isfinite(float(out.loc[1, SIGMA_BKG_AP_COL]))
+
+
+def test_finalize_zero_empirical_keeps_raw_fallback(tmp_path: Path) -> None:
+    area = math.pi * 3.0**2
+    df = pd.DataFrame(
+        [
+            {
+                "catalog_id": "2",
+                "dao_flux": 4000.0,
+                "sky_adu_per_px_annulus": 800.0,
+                "aperture_r_px": 3.0,
+                "aperture_area_px": area,
+                SIGMA_BKG_AP_COL: float("nan"),
+                ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_HOWELL_FALLBACK,
+            },
+        ]
+    )
+    p = tmp_path / "proc_test.csv"
+    df.to_csv(p, index=False)
+    stats = finalize_hybrid_bkg_fallback_proc_dir(tmp_path, gain=12.48, read_noise=14.08)
+    assert stats.get("r_setup") is None
+    out = pd.read_csv(p)
+    assert out.loc[0, ERR_BKG_SOURCE_COL] == ERR_BKG_SOURCE_HOWELL_FALLBACK
+
+
+def test_snr_table_uses_measured_bkg_var() -> None:
+    legacy = compute_snr_optimal_aperture_table(
+        fwhm_px=4.0,
+        sky_adu_per_px=1200.0,
+        gain=12.0,
+        read_noise=14.0,
+    )
+    measured = compute_snr_optimal_aperture_table(
+        fwhm_px=4.0,
+        sky_adu_per_px=1200.0,
+        gain=12.0,
+        read_noise=14.0,
+        bkg_var_adu2_per_px=25.0,
+    )
+    assert legacy["table"] != measured["table"]

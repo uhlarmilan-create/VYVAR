@@ -262,6 +262,8 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
         "broeg2005",
         "collins2017",
         "howell1989",
+        "merline1995",
+        "labbe2003",
         "honeycutt1992",
         "stetson1987",
         "henden_kaitchuck1982",

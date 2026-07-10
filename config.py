@@ -569,6 +569,13 @@ class AppConfig:
     #: CCD read noise (e-) — used in noise model.
     read_noise: float = 10.0
 
+    #: F-BINGAIN-1: background error term — ``empirical`` (empty-aperture scatter) or ``howell`` (legacy).
+    err_background_mode: str = "empirical"
+    #: Number of random empty apertures per frame/radius for ``sigma_bkg_ap`` (clamped 16..256).
+    err_empty_apertures_n: int = 64
+    #: Minimum valid empty apertures before Howell fallback for that frame.
+    err_empty_apertures_min: int = 16
+
     #: MASTERSTAR: stack N frames and pick best N for ePSF/catalog build.
     masterstar_best_of_n: int = 10
 
@@ -1373,6 +1380,25 @@ class AppConfig:
             self.read_noise = float(_rn) if math.isfinite(_rn) and _rn >= 0 else 10.0
         except (TypeError, ValueError):
             self.read_noise = 10.0
+        _ebm = str(data.get("err_background_mode", self.err_background_mode) or "empirical").strip().lower()
+        if _ebm in ("howell", "legacy"):
+            self.err_background_mode = "howell"
+        else:
+            self.err_background_mode = "empirical"
+        try:
+            self.err_empty_apertures_n = max(
+                16,
+                min(256, int(data.get("err_empty_apertures_n", self.err_empty_apertures_n))),
+            )
+        except (TypeError, ValueError):
+            self.err_empty_apertures_n = 64
+        try:
+            self.err_empty_apertures_min = max(
+                1,
+                min(256, int(data.get("err_empty_apertures_min", self.err_empty_apertures_min))),
+            )
+        except (TypeError, ValueError):
+            self.err_empty_apertures_min = 16
         try:
             self.masterstar_best_of_n = max(
                 1,
@@ -2146,6 +2172,9 @@ class AppConfig:
             "cog_ac_factor_max": float(self.cog_ac_factor_max),
             "gain": float(self.gain),
             "read_noise": float(self.read_noise),
+            "err_background_mode": str(self.err_background_mode),
+            "err_empty_apertures_n": int(self.err_empty_apertures_n),
+            "err_empty_apertures_min": int(self.err_empty_apertures_min),
             "masterstar_best_of_n": int(self.masterstar_best_of_n),
             "sky_adu_fallback": float(self.sky_adu_fallback),
             "phase01_comparison_max_psf_chi2": float(self.phase01_comparison_max_psf_chi2),

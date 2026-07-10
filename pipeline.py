@@ -219,6 +219,9 @@ def _apply_aperture_catalog_enhancements_from_st(
             r_large_px=r_large_px,
             snr_aperture_table=st.get("snr_aperture_table"),
             cog_params=cog_params,
+            err_background_mode=str(st.get("err_background_mode", "empirical")),
+            err_empty_apertures_n=int(st.get("err_empty_apertures_n", 64)),
+            err_empty_apertures_min=int(st.get("err_empty_apertures_min", 16)),
         )
     except Exception as exc:  # noqa: BLE001
         from except_fix_counters import get_except_fix_counters
@@ -9755,6 +9758,9 @@ def export_per_frame_catalogs(
         "cog_ac_factor_max": float(_cfg_ap.cog_ac_factor_max),
         "gain": float(_cfg_ap.gain),
         "read_noise": float(_cfg_ap.read_noise),
+        "err_background_mode": str(_cfg_ap.err_background_mode),
+        "err_empty_apertures_n": int(_cfg_ap.err_empty_apertures_n),
+        "err_empty_apertures_min": int(_cfg_ap.err_empty_apertures_min),
     }
 
     use_ram_inputs = aligned_ram is not None
@@ -10556,6 +10562,23 @@ def export_per_frame_catalogs(
         _vyvar_df_to_csv(pd.DataFrame(index_rows), index_path)
     n_ok = sum(1 for r in rows_out if r.get("status") == "ok")
     n_master_ref = sum(1 for r in rows_out if r.get("catalog_match_mode") == "master_reference")
+    _hybrid_stats: dict[str, Any] = {}
+    if (
+        str(_ap_st.get("err_background_mode", "empirical")).strip().lower() == "empirical"
+        and write_sidecar_csv_next_to_fits
+        and not defer_disk_writes
+    ):
+        try:
+            from photometry_core import finalize_hybrid_bkg_fallback_proc_dir
+
+            _hybrid_stats = finalize_hybrid_bkg_fallback_proc_dir(
+                root,
+                gain=float(_ap_st.get("gain", _cfg_ap.gain)),
+                read_noise=float(_ap_st.get("read_noise", _cfg_ap.read_noise)),
+                setup_label=str(root.name),
+            )
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("[PHOT] hybrid bkg fallback finalize skipped: %s", exc)
     return {
         "written": int(n_ok),
         "per_frame_dir": str(root),
@@ -10565,6 +10588,7 @@ def export_per_frame_catalogs(
         "mirror_flat_platesolve_folder": bool(mirror_flat_platesolve_folder),
         "frames_master_reference_match": int(n_master_ref),
         "deferred_csv_writes": list(deferred_csv_writes) if defer_disk_writes else [],
+        "hybrid_bkg_fallback": _hybrid_stats,
     }
 
 

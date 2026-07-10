@@ -55,6 +55,17 @@ _MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
 # Explicit annulus sky (ADU/px) for Howell err; ``noise_floor_adu`` remains detection-floor legacy.
 SKY_ADU_PER_PX_ANNULUS_COL = "sky_adu_per_px_annulus"
 
+# F-BINGAIN-1: empirical background noise (empty-aperture scatter) + provenance.
+SIGMA_BKG_AP_COL = "sigma_bkg_ap"
+ERR_BKG_SOURCE_COL = "err_bkg_source"
+ERR_BKG_MODE_EMPIRICAL = "empirical"
+ERR_BKG_MODE_HOWELL = "howell"
+ERR_BKG_SOURCE_EMPIRICAL = "empirical"
+ERR_BKG_SOURCE_HOWELL_FALLBACK = "howell_fallback"
+ERR_BKG_SOURCE_HOWELL_SCALED = "howell_scaled"
+BKG_SCALE_R_CLAMP_LO = 0.05
+BKG_SCALE_R_CLAMP_HI = 2.0
+
 # Per-target LC time provenance (F-BJD-1): labels BJD recompute path, does not alter time values.
 TIME_BASE_COL = "time_base"
 TIME_BASE_BJD_TDB = "BJD_TDB"
@@ -642,6 +653,361 @@ def _flux_to_mag(flux: float) -> float:
     return -2.5 * math.log10(flux)
 
 
+def _clamp_err_empty_apertures_n(n: int) -> int:
+    """Clamp ``err_empty_apertures_n`` to registry range 16..256."""
+    try:
+        v = int(n)
+    except (TypeError, ValueError):
+        v = 64
+    return max(16, min(256, v))
+
+
+def _clamp_err_empty_apertures_min(n: int) -> int:
+    try:
+        v = int(n)
+    except (TypeError, ValueError):
+        v = 16
+    return max(1, min(256, v))
+
+
+def _normalize_err_background_mode(mode: str | None) -> str:
+    m = str(mode or ERR_BKG_MODE_EMPIRICAL).strip().lower()
+    if m in (ERR_BKG_MODE_HOWELL, "legacy"):
+        return ERR_BKG_MODE_HOWELL
+    return ERR_BKG_MODE_EMPIRICAL
+
+
+def _robust_scatter_mad(values: np.ndarray) -> float:
+    """Sigma-clipped MAD scatter (Labbe et al. 2003 empty-aperture convention)."""
+    arr = np.asarray(values, dtype=np.float64)
+    arr = arr[np.isfinite(arr)]
+    if arr.size < 3:
+        return float("nan")
+    med = float(np.median(arr))
+    mad = float(np.median(np.abs(arr - med)))
+    if mad <= 0:
+        return 0.0
+    return mad / _MAD_CONSISTENCY
+
+
+def _build_star_exclusion_mask(
+    shape: tuple[int, ...],
+    star_x: np.ndarray,
+    star_y: np.ndarray,
+    exclusion_radius_px: float,
+    edge_margin_px: float,
+) -> np.ndarray:
+    """Boolean mask: True where empty apertures must not be placed."""
+    ny, nx = int(shape[0]), int(shape[1])
+    blocked = np.zeros((ny, nx), dtype=bool)
+    em = int(math.ceil(max(0.0, float(edge_margin_px))))
+    if em > 0:
+        blocked[:em, :] = True
+        blocked[-em:, :] = True
+        blocked[:, :em] = True
+        blocked[:, -em:] = True
+    ex_r = float(exclusion_radius_px)
+    if ex_r <= 0:
+        return blocked
+    ex_r2 = ex_r * ex_r
+    xs = np.asarray(star_x, dtype=np.float64)
+    ys = np.asarray(star_y, dtype=np.float64)
+    ok = np.isfinite(xs) & np.isfinite(ys)
+    for xi, yi in zip(xs[ok], ys[ok]):
+        x0 = max(0, int(math.floor(float(xi) - ex_r)) - 1)
+        x1 = min(nx, int(math.ceil(float(xi) + ex_r)) + 2)
+        y0 = max(0, int(math.floor(float(yi) - ex_r)) - 1)
+        y1 = min(ny, int(math.ceil(float(yi) + ex_r)) + 2)
+        yy, xx = np.ogrid[y0:y1, x0:x1]
+        dist2 = (xx - float(xi)) ** 2 + (yy - float(yi)) ** 2
+        blocked[y0:y1, x0:x1] |= dist2 <= ex_r2
+    return blocked
+
+
+def measure_empty_aperture_sigma_bkg(
+    data: np.ndarray,
+    star_x: np.ndarray,
+    star_y: np.ndarray,
+    r_ap: float,
+    r_in: float,
+    r_out: float,
+    *,
+    n_apertures: int = 64,
+    min_valid: int = 16,
+    rng: np.random.Generator | None = None,
+) -> tuple[float, int, str]:
+    """Empirical aperture background noise via random empty apertures (Labbe et al. 2003).
+
+    Each placement uses the same annulus sky subtraction as production science apertures
+    (``_annulus_sky_subtracted_flux``). The robust scatter of net sums is ``sigma_bkg_ap``
+    [ADU] and already includes background Poisson, read noise, resampling covariance,
+    pedestal offsets, and the Merline & Howell (1995) sky-estimation term — do **not**
+    add a separate RN or annulus term (would double-count).
+
+    Community pattern: photutils ``calc_total_error`` separates ``sigma_bkg`` from source
+    Poisson ``sqrt(I/g_eff)``; SExtractor ``FLUXERR`` uses ``A*sigma_bkg^2 + F/g``; correlated
+    resampling noise motivates aperture-scale measurement (Fruchter & Hook 2002; Casertano
+    et al. 2000).
+
+    Returns:
+        (sigma_bkg_ap, n_valid, reason) — reason non-empty when measurement failed.
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+    n_target = _clamp_err_empty_apertures_n(n_apertures)
+    n_min = _clamp_err_empty_apertures_min(min_valid)
+    if not (
+        math.isfinite(r_ap)
+        and r_ap > 0
+        and math.isfinite(r_in)
+        and r_in > 0
+        and math.isfinite(r_out)
+        and r_out > r_in
+    ):
+        return float("nan"), 0, "invalid_annulus_geometry"
+
+    d = np.asarray(data, dtype=np.float64)
+    if d.ndim != 2 or d.size == 0:
+        return float("nan"), 0, "empty_image"
+
+    margin_px = max(2.0, float(r_out) - float(r_in))
+    excl_r = float(r_out) + margin_px
+    edge_margin = float(r_out) + float(r_ap) + 1.0
+    blocked = _build_star_exclusion_mask(d.shape, star_x, star_y, excl_r, edge_margin)
+    free_y, free_x = np.nonzero(~blocked)
+    if free_x.size < n_min:
+        return float("nan"), 0, f"crowding: only {int(free_x.size)} candidate pixels (< {n_min})"
+
+    n_try = min(int(free_x.size), max(n_target * 8, n_target))
+    idx = rng.choice(free_x.size, size=n_try, replace=False)
+    net_sums: list[float] = []
+    for j in idx:
+        xc = float(free_x[j]) + 0.5
+        yc = float(free_y[j]) + 0.5
+        flux_net, _, _ = _annulus_sky_subtracted_flux(d, xc, yc, float(r_ap), float(r_in), float(r_out))
+        if math.isfinite(flux_net):
+            net_sums.append(float(flux_net))
+        if len(net_sums) >= n_target:
+            break
+
+    n_valid = len(net_sums)
+    if n_valid < n_min:
+        return float("nan"), n_valid, f"crowding: {n_valid} valid empty apertures (< {n_min})"
+    sigma = _robust_scatter_mad(np.asarray(net_sums, dtype=np.float64))
+    if not math.isfinite(sigma) or sigma < 0:
+        return float("nan"), n_valid, "non_finite_scatter"
+    return float(sigma), n_valid, ""
+
+
+def estimate_star_free_per_pixel_variance_adu2(
+    data: np.ndarray,
+    star_x: np.ndarray | None = None,
+    star_y: np.ndarray | None = None,
+    exclusion_radius_px: float = 12.0,
+) -> float | None:
+    """Robust per-pixel background variance [ADU²/px] from star-free pixels in one frame."""
+    d = np.asarray(data, dtype=np.float64)
+    if d.ndim != 2 or d.size == 0:
+        return None
+    xs = np.asarray(star_x if star_x is not None else [], dtype=np.float64)
+    ys = np.asarray(star_y if star_y is not None else [], dtype=np.float64)
+    blocked = _build_star_exclusion_mask(
+        d.shape,
+        xs,
+        ys,
+        float(exclusion_radius_px),
+        float(exclusion_radius_px),
+    )
+    vals = d[~blocked]
+    vals = vals[np.isfinite(vals)]
+    if vals.size < 64:
+        return None
+    med = float(np.median(vals))
+    resid = vals - med
+    sig = _robust_scatter_mad(resid)
+    if not math.isfinite(sig) or sig < 0:
+        return None
+    return float(sig * sig)
+
+
+def _howell_variance_adu2(
+    flux: float,
+    sky_pp: float,
+    area: float,
+    gain: float = 1.0,
+    read_noise: float = 10.0,
+) -> float:
+    """Total variance [ADU²] from Howell (1989) eq. 2 (legacy level-based background term)."""
+    if not math.isfinite(flux) or flux <= 0:
+        return float("nan")
+    if not math.isfinite(sky_pp) or sky_pp < 0:
+        sky_pp = 0.0
+    if not math.isfinite(area) or area <= 0:
+        return float("nan")
+    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
+    rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
+    return flux / g + max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
+
+
+def _howell_bkg_variance_adu2(
+    sky_pp: float,
+    area: float,
+    gain: float = 1.0,
+    read_noise: float = 10.0,
+) -> float:
+    """Background + read-noise variance [ADU²] from Howell (1989) eq. 2 (excludes source Poisson F/g)."""
+    if not math.isfinite(sky_pp) or sky_pp < 0:
+        sky_pp = 0.0
+    if not math.isfinite(area) or area <= 0:
+        return float("nan")
+    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
+    rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
+    return max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
+
+
+def _clamp_bkg_scale_r(r: float) -> float:
+    if not math.isfinite(r):
+        return float("nan")
+    return float(max(BKG_SCALE_R_CLAMP_LO, min(BKG_SCALE_R_CLAMP_HI, float(r))))
+
+
+def bkg_scale_ratio_empirical_over_howell(
+    sigma_bkg_ap: float,
+    sky_pp: float,
+    area: float,
+    *,
+    gain: float = 1.0,
+    read_noise: float = 10.0,
+) -> float:
+    """Per-measurement r = sigma_bkg_ap² / howell_bkg_variance for hybrid fallback calibration."""
+    sig = float(sigma_bkg_ap)
+    if not math.isfinite(sig) or sig < 0:
+        return float("nan")
+    hb = _howell_bkg_variance_adu2(sky_pp, area, gain=gain, read_noise=read_noise)
+    if not math.isfinite(hb) or hb <= 0:
+        return float("nan")
+    return float(sig * sig / hb)
+
+
+def compute_setup_bkg_scale_r(ratios: list[float]) -> tuple[float, int]:
+    """Median empirical/Howell background variance ratio; clamped to [0.05, 2.0]."""
+    ok = [float(r) for r in ratios if math.isfinite(float(r)) and float(r) > 0]
+    if not ok:
+        return float("nan"), 0
+    return _clamp_bkg_scale_r(float(np.median(np.asarray(ok, dtype=np.float64)))), len(ok)
+
+
+def scaled_sigma_bkg_ap_from_howell(
+    sky_pp: float,
+    area: float,
+    *,
+    gain: float = 1.0,
+    read_noise: float = 10.0,
+    r_setup: float,
+) -> float:
+    """Calibrated fallback: sqrt(r_setup * howell_bkg_variance) [ADU] at aperture scale."""
+    r_c = _clamp_bkg_scale_r(float(r_setup))
+    hb = _howell_bkg_variance_adu2(sky_pp, area, gain=gain, read_noise=read_noise)
+    if not math.isfinite(r_c) or not math.isfinite(hb) or hb < 0:
+        return float("nan")
+    return float(math.sqrt(r_c * hb))
+
+
+def finalize_hybrid_bkg_fallback_proc_dir(
+    proc_dir: Path,
+    *,
+    gain: float = 1.0,
+    read_noise: float = 10.0,
+    setup_label: str = "",
+) -> dict[str, Any]:
+    """Post-pass: replace raw Howell fallback rows with setup-calibrated ``howell_scaled``.
+
+    ``r_setup`` = median over rows with empirical ``sigma_bkg_ap`` of
+    ``sigma_bkg_ap² / (A·sky/g + A·(RN/g)²)``.  Raw ``howell_fallback`` remains only when
+    no empirical frames exist in the setup (Casertano et al. 2000 transferred correction).
+    """
+    from infolog import log_event
+
+    proc_dir = Path(proc_dir)
+    ratios: list[float] = []
+    files = sorted(proc_dir.glob("proc_*.csv"))
+    for proc_path in files:
+        try:
+            df = pd.read_csv(proc_path, low_memory=False)
+        except Exception:  # noqa: BLE001
+            continue
+        if df.empty:
+            continue
+        for _, row in df.iterrows():
+            src = str(row.get(ERR_BKG_SOURCE_COL, "")).strip()
+            if src != ERR_BKG_SOURCE_EMPIRICAL:
+                continue
+            sig = float(pd.to_numeric(row.get(SIGMA_BKG_AP_COL), errors="coerce"))
+            sky = _sky_pp_for_photometric_error(row)
+            area = float(pd.to_numeric(row.get("aperture_area_px"), errors="coerce"))
+            if not math.isfinite(area) or area <= 0:
+                r_ap = float(pd.to_numeric(row.get("aperture_r_px"), errors="coerce"))
+                area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
+            rv = bkg_scale_ratio_empirical_over_howell(sig, sky, area, gain=gain, read_noise=read_noise)
+            if math.isfinite(rv) and rv > 0:
+                ratios.append(rv)
+
+    r_setup, n_ratios = compute_setup_bkg_scale_r(ratios)
+    stats: dict[str, Any] = {
+        "setup": setup_label or str(proc_dir),
+        "n_ratio_samples": n_ratios,
+        "r_setup": float(r_setup) if math.isfinite(r_setup) else None,
+        "n_files": len(files),
+        "n_scaled_rows": 0,
+        "n_raw_fallback_rows": 0,
+    }
+    if not math.isfinite(r_setup):
+        return stats
+
+    if not hasattr(finalize_hybrid_bkg_fallback_proc_dir, "_logged_setups"):
+        finalize_hybrid_bkg_fallback_proc_dir._logged_setups = set()  # type: ignore[attr-defined]
+    _logged: set[str] = finalize_hybrid_bkg_fallback_proc_dir._logged_setups  # type: ignore[attr-defined]
+    _key = setup_label or str(proc_dir.resolve())
+    if _key not in _logged:
+        log_event(
+            f"[PHOT] err_bkg howell_scaled setup={_key} r_setup={r_setup:.4f} "
+            f"(n_empirical_ratios={n_ratios}, clamp=[{BKG_SCALE_R_CLAMP_LO},{BKG_SCALE_R_CLAMP_HI}])"
+        )
+        _logged.add(_key)
+
+    for proc_path in files:
+        try:
+            df = pd.read_csv(proc_path, low_memory=False)
+        except Exception:  # noqa: BLE001
+            continue
+        if df.empty or ERR_BKG_SOURCE_COL not in df.columns:
+            continue
+        changed = False
+        src_col = df[ERR_BKG_SOURCE_COL].astype(str)
+        for i in range(len(df)):
+            if src_col.iloc[i] != ERR_BKG_SOURCE_HOWELL_FALLBACK:
+                continue
+            row = df.iloc[i]
+            sky = _sky_pp_for_photometric_error(row)
+            area = float(pd.to_numeric(row.get("aperture_area_px"), errors="coerce"))
+            if not math.isfinite(area) or area <= 0:
+                r_ap = float(pd.to_numeric(row.get("aperture_r_px"), errors="coerce"))
+                area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
+            sig_scaled = scaled_sigma_bkg_ap_from_howell(
+                sky, area, gain=gain, read_noise=read_noise, r_setup=r_setup
+            )
+            if math.isfinite(sig_scaled) and sig_scaled >= 0:
+                df.at[df.index[i], SIGMA_BKG_AP_COL] = sig_scaled
+                df.at[df.index[i], ERR_BKG_SOURCE_COL] = ERR_BKG_SOURCE_HOWELL_SCALED
+                stats["n_scaled_rows"] += 1
+                changed = True
+            else:
+                stats["n_raw_fallback_rows"] += 1
+        if changed:
+            df.to_csv(proc_path, index=False)
+    return stats
+
+
 def _photometric_error(
     flux: float,
     sky_pp: float,
@@ -653,18 +1019,43 @@ def _photometric_error(
 
     Units at boundary: ``flux`` and ``sky_pp`` in ADU (per px for sky); ``gain`` in e-/ADU;
     ``read_noise`` in e-; internal variance in ADU². Returns dimensionless err/flux.
+    Legacy ``howell`` mode — byte-identical to pre F-BINGAIN-1 behaviour.
     """
+    variance = _howell_variance_adu2(flux, sky_pp, area, gain=gain, read_noise=read_noise)
+    if not math.isfinite(variance) or variance < 0:
+        return float("nan")
     if not math.isfinite(flux) or flux <= 0:
         return float("nan")
-    if not math.isfinite(sky_pp) or sky_pp < 0:
-        sky_pp = 0.0
+    return math.sqrt(variance) / flux
+
+
+def _photometric_error_with_bkg_mode(
+    flux: float,
+    *,
+    err_background_mode: str,
+    sky_pp: float,
+    area: float,
+    gain: float = 1.0,
+    read_noise: float = 10.0,
+    sigma_bkg_ap: float | None = None,
+) -> tuple[float, str]:
+    """Relative err/flux with empirical or legacy Howell background term.
+
+    Empirical (default): ``var = F/g + sigma_bkg_ap^2`` — photutils/SExtractor pattern with
+    measured ``sigma_bkg`` at aperture scale (Labbe et al. 2003).
+    """
+    mode = _normalize_err_background_mode(err_background_mode)
+    if not math.isfinite(flux) or flux <= 0:
+        return float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK
     g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
-    rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
-    # Howell (1989) PASP 101:616, eq. 2 — CCD photometric error
-    # variance = F/g + sky/g * A + (RN/g)^2 * A  (variance in ADU²)
-    # F=flux[ADU], sky=sky_pp[ADU/px], g=gain[e-/ADU], A=area[px], RN=read noise[e-]
-    variance = flux / g + max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
-    return math.sqrt(variance) / flux if flux > 0 else float("nan")
+    sig_ap = float(sigma_bkg_ap) if sigma_bkg_ap is not None else float("nan")
+    if mode == ERR_BKG_MODE_EMPIRICAL and math.isfinite(sig_ap) and sig_ap >= 0:
+        variance = flux / g + sig_ap * sig_ap
+        if math.isfinite(variance) and variance >= 0:
+            return math.sqrt(variance) / flux, ERR_BKG_SOURCE_EMPIRICAL
+    err = _photometric_error(flux, sky_pp, area, gain=gain, read_noise=read_noise)
+    src = ERR_BKG_MODE_HOWELL if mode == ERR_BKG_MODE_HOWELL else ERR_BKG_SOURCE_HOWELL_FALLBACK
+    return err, src
 
 
 def _sky_pp_for_photometric_error(row: Any) -> float:
@@ -693,10 +1084,17 @@ def compute_snr_optimal_aperture_table(
     r_max_fwhm: float = 2.5,
     r_step_px: float = 0.05,
     zero_point: float = 25.0,
+    bkg_var_adu2_per_px: float | None = None,
 ) -> dict[str, Any]:
     """SNR-optimal circular aperture radius per magnitude bin (Gaussian PSF enclosed flux).
 
-    SNR = F(r)/g / sqrt(F(r)/g + N_pix·sky/g + N_pix·(RN/g)²)  (dimensionless; flux and noise in e⁻).
+    SNR = F(r)/g / sqrt(F(r)/g + N_pix·bkg_var/g)  (dimensionless; flux and noise in e⁻).
+
+    When ``bkg_var_adu2_per_px`` is supplied, per-pixel background variance is taken from
+    measured star-free pixels (same frame) instead of reconstructing ``sky/g + (RN/g)²``.
+    Residual limitation: a per-pixel metric ignores aperture-scale covariance on resampled
+    frames (Fruchter & Hook 2002); acceptable here because ranking, not absolute SNR,
+    drives the optimal-radius choice.
     """
     # SNR-optimal aperture selection
     # Howell (1989) PASP 101:616, §3 — SNR(r) = F(r) / sqrt(F(r)/g + pi*r^2*sky/g + pi*r^2*(RN/g)^2)
@@ -708,6 +1106,12 @@ def compute_snr_optimal_aperture_table(
         sky = 0.0
     g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
     rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
+    use_meas_bkg = (
+        bkg_var_adu2_per_px is not None
+        and math.isfinite(float(bkg_var_adu2_per_px))
+        and float(bkg_var_adu2_per_px) >= 0
+    )
+    bkg_var_px = float(bkg_var_adu2_per_px) if use_meas_bkg else float("nan")
 
     sigma = fw / 2.355
     r_min_px = float(r_min_fwhm) * fw
@@ -726,9 +1130,13 @@ def compute_snr_optimal_aperture_table(
             enclosed = flux_total * (1.0 - np.exp(-(float(r) ** 2) / (2.0 * sigma**2)))
             area = math.pi * float(r) ** 2
             n_photon = enclosed / g
-            n_sky = area * sky / g
-            n_read = area * (rn / g) ** 2
-            noise = math.sqrt(max(n_photon + n_sky + n_read, 1e-12))
+            if use_meas_bkg:
+                n_bkg = area * bkg_var_px / g
+            else:
+                n_sky = area * sky / g
+                n_read = area * (rn / g) ** 2
+                n_bkg = n_sky + n_read
+            noise = math.sqrt(max(n_photon + n_bkg, 1e-12))
             snr = (enclosed / g) / noise if noise > 0 else 0.0
             if snr > best_snr:
                 best_snr = snr
@@ -1231,6 +1639,70 @@ def estimate_median_sky_adu_per_px_for_snr_table(
     return med if math.isfinite(med) and med > 0 else float(fallback)
 
 
+def _median_bkg_var_adu2_per_px_from_proc_cache(
+    csv_cache: dict[str, pd.DataFrame],
+) -> float | None:
+    """Median per-pixel background variance [ADU²/px] from empirical ``sigma_bkg_ap`` in proc CSVs."""
+    vals: list[float] = []
+    for _df in csv_cache.values():
+        if _df is None or _df.empty:
+            continue
+        if SIGMA_BKG_AP_COL not in _df.columns or "aperture_r_px" not in _df.columns:
+            continue
+        sig = pd.to_numeric(_df[SIGMA_BKG_AP_COL], errors="coerce")
+        rap = pd.to_numeric(_df["aperture_r_px"], errors="coerce")
+        ok = sig.notna() & rap.notna() & (rap > 0) & (sig >= 0)
+        if not ok.any():
+            continue
+        area = math.pi * rap[ok].to_numpy(dtype=np.float64) ** 2
+        var_ap = sig[ok].to_numpy(dtype=np.float64) ** 2
+        with np.errstate(divide="ignore", invalid="ignore"):
+            var_px = var_ap / np.maximum(area, 1e-12)
+        vals.extend([float(v) for v in var_px if math.isfinite(float(v)) and float(v) >= 0])
+    if not vals:
+        return None
+    med = float(np.nanmedian(np.asarray(vals, dtype=np.float64)))
+    return med if math.isfinite(med) and med >= 0 else None
+
+
+def _median_bkg_var_from_aligned_frames(
+    *,
+    aligned_fits_paths: Sequence[Path | str] | None = None,
+    aligned_ram_frames: Sequence[tuple[str, Any, Any]] | None = None,
+    max_frames: int = 6,
+) -> float | None:
+    """Median star-free per-pixel variance across aligned frames (no catalog — edge patches)."""
+    vals: list[float] = []
+    n_max = max(1, int(max_frames))
+
+    if aligned_ram_frames:
+        for _name, _hdr, arr in list(aligned_ram_frames)[:n_max]:
+            v = estimate_star_free_per_pixel_variance_adu2(arr)
+            if v is not None:
+                vals.append(float(v))
+
+    if aligned_fits_paths:
+        for raw in list(aligned_fits_paths)[:n_max]:
+            p = Path(raw)
+            if not p.is_file():
+                continue
+            try:
+                with astrofits.open(p, memmap=True) as hdul:
+                    d = hdul[0].data
+                if d is None:
+                    continue
+                v = estimate_star_free_per_pixel_variance_adu2(d)
+                if v is not None:
+                    vals.append(float(v))
+            except Exception:  # noqa: BLE001
+                continue
+
+    if not vals:
+        return None
+    med = float(np.nanmedian(np.asarray(vals, dtype=np.float64)))
+    return med if math.isfinite(med) and med >= 0 else None
+
+
 def precompute_and_save_snr_aperture_table_for_draft(
     draft_dir: Path | str,
     *,
@@ -1329,11 +1801,22 @@ def precompute_and_save_snr_aperture_table_for_draft(
         int(n_sky) if n_sky > 0 else 0,
     )
 
+    bkg_var_px = _median_bkg_var_from_aligned_frames(
+        aligned_fits_paths=aligned_fits_paths,
+        aligned_ram_frames=aligned_ram_frames,
+    )
+    if bkg_var_px is not None:
+        logging.info(
+            "[PIPELINE] SNR table: measured star-free bkg var = %.4g ADU²/px (per-pixel; ranking-only)",
+            float(bkg_var_px),
+        )
+
     snr_table = compute_snr_optimal_aperture_table(
         fwhm_px=float(fwhm_px),
         sky_adu_per_px=float(sky_adu),
         gain=float(gain_p),
         read_noise=float(rn_p),
+        bkg_var_adu2_per_px=bkg_var_px,
     )
     out_path = dd / "aperture_snr_table.json"
     with out_path.open("w", encoding="utf-8") as f:
@@ -1388,6 +1871,7 @@ def read_flux_from_csv(
     read_noise: float = 10.0,
     use_apcorr_flux: bool = False,
     variable_target_catalog_ids: frozenset[str] | None = None,
+    err_background_mode: str = ERR_BKG_MODE_EMPIRICAL,
 ) -> pd.DataFrame:
     """Krok 2: Načítaj flux z per-frame CSV (dao_flux).
 
@@ -1645,16 +2129,25 @@ def read_flux_from_csv(
         except Exception:  # noqa: BLE001
             base["sky_annulus_r_out_px"] = float("nan")
 
-        # Chyba — fotónový šum + sky šum
+        # Chyba — fotónový šum + background (empirical empty-aperture or Howell legacy)
         r_ap = base["aperture_r_px"]
         area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
-        base["err"] = _photometric_error(
+        _sig_bkg = float(pd.to_numeric(row_csv.get(SIGMA_BKG_AP_COL), errors="coerce"))
+        if not math.isfinite(_sig_bkg):
+            _sig_bkg = None
+        _err, _err_src = _photometric_error_with_bkg_mode(
             flux,
-            sky_pp if math.isfinite(sky_pp) else 0.0,
-            area,
+            err_background_mode=err_background_mode,
+            sky_pp=sky_pp if math.isfinite(sky_pp) else 0.0,
+            area=area if math.isfinite(area) else 0.0,
             gain=gain,
             read_noise=read_noise,
+            sigma_bkg_ap=_sig_bkg,
         )
+        base["err"] = _err
+        base[ERR_BKG_SOURCE_COL] = _err_src
+        if _sig_bkg is not None:
+            base[SIGMA_BKG_AP_COL] = _sig_bkg
         base["flag"] = "saturated" if is_sat else "normal"
 
         rows.append(base)
@@ -6855,6 +7348,7 @@ def _phase2a_prepare_shared_state(
     )
 
     _median_sky = _median_sky_from_phase2a_csv_cache(_phase2a_csv_cache)
+    _bkg_var_px = _median_bkg_var_adu2_per_px_from_proc_cache(_phase2a_csv_cache)
     _snr_ap_table: dict[str, Any] | None = None
     if force_aperture_px is None and bool(_cfg.aperture_photometry_enabled):
         _snr_ap_table = compute_snr_optimal_aperture_table(
@@ -6862,6 +7356,7 @@ def _phase2a_prepare_shared_state(
             sky_adu_per_px=float(_median_sky),
             gain=float(_gain_phot),
             read_noise=float(_rn_phot),
+            bkg_var_adu2_per_px=_bkg_var_px,
         )
         _tbl = _snr_ap_table.get("table") or {}
         logging.info(
@@ -7003,6 +7498,7 @@ def _phase2a_prepare_shared_state(
             read_noise=float(_rn_phot),
             use_apcorr_flux=bool(getattr(_cfg, "cog_aperture_correction_enabled", False)),
             variable_target_catalog_ids=_variable_target_cids,
+            err_background_mode=str(getattr(_cfg, "err_background_mode", ERR_BKG_MODE_EMPIRICAL)),
         )
         if not _df_all.empty:
             _flux_matrix_rows.append(_df_all)
@@ -7541,6 +8037,7 @@ def _phase2a_process_one_target(
                 read_noise=float(_rn_phot),
                 use_apcorr_flux=bool(getattr(_cfg, "cog_aperture_correction_enabled", False)),
                 variable_target_catalog_ids=state.variable_target_catalog_ids,
+                err_background_mode=str(getattr(_cfg, "err_background_mode", ERR_BKG_MODE_EMPIRICAL)),
             )
             if not df_frame.empty:
                 if (chip_fw is None or chip_fh is None) and ("x" in df_frame.columns and "y" in df_frame.columns):
@@ -10050,6 +10547,9 @@ def enhance_catalog_dataframe_aperture_bpm(
     r_large_px: float | None = None,
     snr_aperture_table: dict[str, Any] | None = None,
     cog_params: dict[str, Any] | None = None,
+    err_background_mode: str = ERR_BKG_MODE_EMPIRICAL,
+    err_empty_apertures_n: int = 64,
+    err_empty_apertures_min: int = 16,
 ) -> pd.DataFrame:
     """Replace DAO ``flux`` with aperture photometry when enabled; add linearity/BPM flags.
 
@@ -10205,6 +10705,69 @@ def enhance_catalog_dataframe_aperture_bpm(
                         out["flux_large"] = flux_lg.astype(np.float64)
                     except (ValueError, TypeError) as _ma_exc:
                         logging.debug("[PHOT] multi-aperture flux_small/flux_large skipped: %s", _ma_exc)
+
+            # F-BINGAIN-1: per-frame empirical background noise at production aperture radii.
+            _bkg_mode = _normalize_err_background_mode(err_background_mode)
+            _n_empty = _clamp_err_empty_apertures_n(err_empty_apertures_n)
+            _n_empty_min = _clamp_err_empty_apertures_min(err_empty_apertures_min)
+            _sigma_by_r: dict[float, tuple[float, str]] = {}
+            if _bkg_mode == ERR_BKG_MODE_EMPIRICAL:
+                if r_ap_arr is not None:
+                    _unique_r = np.unique(np.round(r_ap_arr[np.isfinite(r_ap_arr) & (r_ap_arr > 0)], 4))
+                else:
+                    _unique_r = np.array([float(r_ap)], dtype=np.float64)
+                for _r_u in _unique_r:
+                    if not math.isfinite(float(_r_u)) or float(_r_u) <= 0:
+                        continue
+                    _ri = max(float(_r_u) + 0.5, float(annulus_inner_fwhm) * fw)
+                    _ro = max(_ri + 0.5, float(annulus_outer_fwhm) * fw)
+                    _sig, _nv, _reason = measure_empty_aperture_sigma_bkg(
+                        d,
+                        np.asarray(x, dtype=np.float64),
+                        np.asarray(y, dtype=np.float64),
+                        float(_r_u),
+                        float(_ri),
+                        float(_ro),
+                        n_apertures=_n_empty,
+                        min_valid=_n_empty_min,
+                    )
+                    if math.isfinite(_sig) and _sig >= 0:
+                        _sigma_by_r[float(_r_u)] = (float(_sig), ERR_BKG_SOURCE_EMPIRICAL)
+                    else:
+                        _sigma_by_r[float(_r_u)] = (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK)
+                        if not hasattr(enhance_catalog_dataframe_aperture_bpm, "_err_bkg_logged"):
+                            enhance_catalog_dataframe_aperture_bpm._err_bkg_logged = set()
+                        _log_id = str(hdr.get("FRAME") or hdr.get("VY_FRAME") or id(hdr))
+                        if _log_id not in enhance_catalog_dataframe_aperture_bpm._err_bkg_logged:
+                            log_event(
+                                f"[PHOT] err_bkg empirical fallback (howell): r_ap={float(_r_u):.2f}px "
+                                f"n_valid={_nv} reason={_reason or 'unknown'}"
+                            )
+                            enhance_catalog_dataframe_aperture_bpm._err_bkg_logged.add(_log_id)
+
+                _sigma_col = np.full(n, np.nan, dtype=np.float64)
+                _src_col = np.full(n, ERR_BKG_SOURCE_HOWELL_FALLBACK, dtype=object)
+                if r_ap_arr is not None:
+                    for _i in range(n):
+                        _r_key = round(float(r_ap_arr[_i]), 4)
+                        _sig_v, _src_v = _sigma_by_r.get(
+                            _r_key,
+                            (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK),
+                        )
+                        _sigma_col[_i] = _sig_v
+                        _src_col[_i] = _src_v
+                else:
+                    _sig_v, _src_v = _sigma_by_r.get(
+                        round(float(r_ap), 4),
+                        (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK),
+                    )
+                    _sigma_col[:] = _sig_v
+                    _src_col[:] = _src_v
+                out[SIGMA_BKG_AP_COL] = _sigma_col
+                out[ERR_BKG_SOURCE_COL] = _src_col
+            elif _bkg_mode == ERR_BKG_MODE_HOWELL:
+                out[SIGMA_BKG_AP_COL] = np.full(n, np.nan, dtype=np.float64)
+                out[ERR_BKG_SOURCE_COL] = np.full(n, ERR_BKG_MODE_HOWELL, dtype=object)
 
             # Per-frame curve-of-growth aperture correction (gated; never overwrites dao_flux).
             if cog_params is not None:
