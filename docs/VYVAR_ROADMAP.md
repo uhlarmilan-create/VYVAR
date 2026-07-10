@@ -75,7 +75,8 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 
 | ID | Sev | Notes |
 |----|-----|-------|
-| **F-BINGAIN-1** | MED | **LATENT (not live).** Stage A diag 2026-07-07: draft_424 bin2 **12/12** frames gain via `header_index_mapped` **3.17 e-/ADU**; scaled-db (`exponent=2`) path **0%**. **A4 (2026-07-09):** draft_426 bin4 check-star χ²=0.04–0.33; header GAIN=12.48 (session truth); σ_ratio≈1.13 → χ²_pred≈0.78. **SESSION-CLOSE-0709:** FITS headers unambiguously identify **eq4 C5A-150M/IMX411** (INSTRUME + 3552×2664 @ bin4 → 14208×10656); OBS_DRAFT already eq4 — **gain accounting EXCLUDED** as equipment-attribution error. Corrected-gain hypothesis (gain=16) **worsens** χ². Open candidates: **RN scaling mode** (RN=14.08 = 4× bin1 — sum-mode assumption to verify), **sky/area accounting** in binned pixels, **stack hypothesis** (IMAGETYP=OBJECT, NCOMBINE absent on sampled frames — not stacked subs). Forensics: `scripts/bin4_sigma_forensics.py`, `tmp/sigma_budget/bin4_sigma_forensics.json`. |
+| **F-BINGAIN-1** | — | **RESOLVED (2026-07-10).** Empirical empty-aperture `sigma_bkg_ap` + hybrid `howell_scaled` fallback (Casertano transferred correction). **Acceptance (regate 2026-07-10):** Part 1 decomposition shows V0611 LC err is **ensemble-dominated (84–91%)**, not background-dominated in any band (bkg share 7–10%) — original blanket chi2 gate was invalid. Refined gates G1–G4 PASS (see JOURNAL). B_20_2: 0% raw fallback after hybrid (r_setup≈0.166). **Follow-up:** `sigma_arrays_from_lc_and_proc` ignores `sigma_bkg_ap` (chi2 harness mismatch) — wire empirical photon term before SIGMA-NEWTON work. |
+| **SIGMA-BUDGET-EMPIRICAL** | MED | **OPEN.** `scripts/chi2_sigma_gate.py:sigma_arrays_from_lc_and_proc` recomputes Howell photon sigma from proc rows and ignores proc `sigma_bkg_ap` / empirical LC err. Production chi2 validation must use LC `err` column (as `bingain_fix_validate.py` now does) until harness updated. Blocks unified sigma-budget vs production err audit. |
 | **F-EXCEPT-TIER1** | — | **CLOSED (2026-07-08)** — 40 fixes + EXCEPT-BULK; census `docs/VYVAR_EXCEPT_CENSUS.md` all **625 EVIDENCE**. |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
@@ -305,11 +306,14 @@ next calibration lever.
    phase/PRNU strongest candidate (6.5 → 4.5 mmag); **~4.5 mmag rig constant** remains. Committed:
    `sigma_budget.py`, `scripts/chi2_sigma_gate.py`, `scripts/select_constant_calibrators.py`,
    `scripts/sigma_floor_attribution.py`, `scripts/bin4_sigma_forensics.py`, `scripts/fix_telescope_diameter.py`,
-   `scripts/fix_draft_equipment.py`. **Remaining scoped:** Newton bin4 chi2 deficit (F-BINGAIN-1).
+   `scripts/fix_draft_equipment.py`. **F-BINGAIN-1 fix landed (2026-07-10):** empirical background err term;
+   Newton bin4 chi2 gate re-validation pending Milan review on reprocessed drafts.
    **Open decisions (Milan):**
    - **PROD-SIGMA-FLOOR:** add per-rig `sigma_sys` floor to production err (changes outputs → re-anchor;
      bright-star AAVSO error bars currently underestimated by floor) — separate session.
-   - **SIGMA-NEWTON:** extend chi2 gate to Newton rigs once bin4 sigma is fixed.
+   - **SIGMA-NEWTON:** extend chi2 gate to Newton rigs — **unblocked** post F-BINGAIN-1 regate; V0611 i/r
+     underdispersion (χ²≈0.25) measured as **ensemble-SEM dominated (85–91%)**, not photon/bkg — Newton
+     gate work should target ensemble/scint/floor budget, not empirical bkg term.
    Blocks TODO-GS8 + TODO-MULTISET for IVW flip. **`delta_mag` flux-sum canonical until Newton gate passes.**
 
 3. **EXTERNAL-XVAL — external validation campaign (MEDIUM).** VYVAR vs external tools (AstroImageJ

@@ -21,6 +21,9 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | bpm_dark_mad_sigma | float | 5.0 | Master-dark column BPM: MAD multiplier for ``*_dark_bpm.json`` (see ``importer``). |
 | gain | float | 1.0 | CCD gain (e-/ADU) — used in noise model / SNR estimates. |
 | read_noise | float | 10.0 | CCD read noise (e-) — used in noise model. |
+| err_background_mode | str | empirical | Background error term: ``empirical`` (empty-aperture ``sigma_bkg_ap``) or ``howell`` (legacy level-based). |
+| err_empty_apertures_n | int | 64 | Random empty apertures per frame/radius for empirical background noise (clamped 16..256). |
+| err_empty_apertures_min | int | 16 | Minimum valid empty apertures before Howell fallback for that frame. |
 | sky_adu_fallback | float | 1581.6 | Fallback sky background level (ADU) when no sky estimate is available. |
 
 ## Observer / Location

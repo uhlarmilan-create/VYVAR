@@ -2,7 +2,56 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
-## 2026-07-10 — TODO-12f-HRD (Extreme objects -- details in PDF + UI)
+## 2026-07-10 — F-BINGAIN-1 acceptance regate (decomposition + hybrid fallback)
+
+**Part 1 decomposition (V0611 draft_426, archive LC):** LC err² is **ensemble-dominated**
+(84–91% median share); background term 7–10% in all g/i/r bands — **no band meets G1 threshold
+(≥40% background).** Original acceptance gate “V0611 chi2 ∈ [0.8,1.2] all bands” silently assumed
+background dominance; invalid per measured budgets. i/r underdispersion (χ²≈0.25) re-attributed to
+ensemble SEM (~90%), not empirical-bkg fix failure → feeds **SIGMA-NEWTON** scope.
+
+**Refined gates (G1–G4):** G2 PASS i/r (|Δχ²|<0.1); g direction toward unity (1.23→1.11, G3); draft_424
+pooled 0.074→0.216 toward 1 (G3); wide-rig err ratio ~1 (G4). **Hybrid B_20_2:** r_setup=0.166,
+0% raw howell_fallback, 24.7% howell_scaled.
+
+**Code:** `howell_scaled` fallback, `finalize_hybrid_bkg_fallback_proc_dir`, validate LC-err chi2,
+`scripts/bingain_err_decompose.py`. pytest 737 passed.
+
+---
+
+## 2026-07-10 — F-BINGAIN-1 Stage C (resampling correlation vs accounting)
+
+**Diagnostic only.** Sandbox: `sandbox/tools/bingain_stageC_run.py`, `bingain_common.py`,
+`bingain_stageC_chi2.py`. Artifacts: `tmp/bingain_stageC/`.
+
+**Multi-stage closure draft_426:** pre (`non_calibrated`) ratio 0.10–0.65; post (`detrended_aligned`)
+0.06–0.47; post/pre 0.58–0.72 (partial bilinear correlation, not full 0.44/pass). Gain Theil-Sen
+3.5–7.1% from header 12.48 — **gain leg PASS**. z_90_4 anomalously low (0.06 post) — separate follow-up.
+
+**Aperture r_ap:** g 0.54, i 0.25, r 0.22, z 0.08 (matches closure). Chi2 sandbox: V0611 g reaches
+**0.805** with sqrt(r_ap) photon scale (prod 0.040); SS Cam overshoots (2.3–4.9). **Recommendation:**
+empirical per-frame background noise term (option a), not RN-only fix. Stage B bias acquisition
+still useful (sigma budget / darks expiry) but not critical path for chi2 deficit.
+
+---
+
+**Diagnostic only — no production changes.** Sandbox: `sandbox/tools/bingain_rn_measure.py`,
+`bingain_bg_closure.py`, `bingain_stageB_run.py`. Artifacts: `tmp/bingain_stageB/`.
+
+**STOP Part 0:** local Archive has **307** C5A bin4 science frames but **zero** bias/dark cal frames;
+**0** pair-difference pairs. Empirical RN not measured. Milan acquisition: >=6 bin4 bias (or matched
+darks) at GAIN=12.48 e-/ADU, T~-15 C; optional bin1 at same gain for sum-vs-average ratio.
+
+**draft_426 resolver (unchanged):** GAIN=12.48 (header), RN=14.08 e- (db, 4x3.52 bin1).
+
+**Background-variance closure:** var_meas/model = 0.07–0.47 with RN=14.08; RN=10 changes ratio
+<0.3% (sky Poisson dominates); RN_implied clamps to 0 -> **sky/area accounting** lead candidate.
+
+**Chi2 sandbox:** production check-star chi2/dof 0.04–0.67; sigma_ratio 1.13 -> chi2_pred 0.78
+(A4 consistent). Vendor RN=10 hypothesis moves chi2 <1% vs 14.08 — RN fix alone insufficient without
+pair-difference measurement. Fix proposal written; enactment blocked on cal-frame acquisition.
+
+---
 
 **Row payload:** dist_pc (reliable parallax only), parallax_mas/snr, sp_type_raw, otype_raw,
 dsc_wd_p, teff_source, ra_dec_sex; compact overview table unchanged.
@@ -4883,3 +4932,26 @@ matches in both reductions -> shared frame-level artifact (cosmic-ray-like on ta
 
 **Byte-identity:** simple-differential change retired old photometry SHA anchors by design; validation
 asset is empirical SIPS/AIJ cross-validation. Optional fresh anchor cut -- Milan call (ROADMAP).
+
+---
+
+## 2026-07-10 — F-BINGAIN-1 FIX (empirical background-noise term)
+
+**Scope:** Milan-approved option (a) from Stage C — production change to `err` column.
+
+**Implementation:**
+- `measure_empty_aperture_sigma_bkg()` — random star-free apertures, same annulus sky subtraction as science; robust MAD scatter → `sigma_bkg_ap` [ADU].
+- `_photometric_error_with_bkg_mode()` — empirical: `var = F/g + sigma_bkg_ap²`; howell: byte-identical legacy.
+- `enhance_catalog_dataframe_aperture_bpm` emits `sigma_bkg_ap`, `err_bkg_source` per proc-CSV row.
+- `read_flux_from_csv` consumes empirical columns; `compute_snr_optimal_aperture_table` optional measured star-free per-pixel bkg variance.
+- Config: `err_background_mode`, `err_empty_apertures_n`, `err_empty_apertures_min`.
+- Citations: Merline & Howell 1995, Fruchter & Hook 2002, Casertano et al. 2000, Labbé et al. 2003.
+
+**Part 0 (pedestal / detrending trace):**
+- Stage C photon-transfer with free intercept `var = (level - P)/g` — sandbox script path; draft_426 FITS not in local Archive for numeric P table this session.
+- Detrending trace: `pipeline.py:_calibrate_one_light_apply_masters_in_ram` L14643–14646 subtracts dark only when `md_data is not None`; Stage B inventory = **0 C5A bias/dark frames** → **no bias/dark subtracted** → pedestal remains in level by construction. Pre-calibrated draft_426 photometry input is `detrended_aligned/lights` (alignment/detrend only).
+
+**Validation:** pytest **733 passed** (+10 new unit tests). Draft chi2 before/after matrix **not run** — `Archive/Drafts/` empty locally. **STOP before commit** per task acceptance gate.
+
+**Open:** Milan review of chi2 on reprocessed draft_426 (V0611 target 0.8–1.2); PROD-SIGMA-FLOOR separate.
+

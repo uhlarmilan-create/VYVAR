@@ -429,6 +429,9 @@ no UI yet).
 |-----|---------|-------------|-------------|---------|
 | `gain` | 1.0 | — | — | intentionally-hidden |
 | `read_noise` | 10.0 | — | — | intentionally-hidden |
+| `err_background_mode` | `empirical` | `empirical` \| `howell` | — | intentionally-hidden |
+| `err_empty_apertures_n` | 64 | 16..256 | — | intentionally-hidden |
+| `err_empty_apertures_min` | 16 | 1..256 | — | intentionally-hidden |
 | `sky_adu_fallback` | 1581.6 | — | — | intentionally-hidden |
 
 ## Sensor / saturation

@@ -1,8 +1,15 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-10** — TODO-12 HRD arc **DONE** (12/12b/12c/12d/12e/12f): extreme-object table,
-identification tiers, annotated field image, PDF/UI **Extreme objects -- details** section;
-pytest **723 passed**, 15 skipped.
+Last updated: **2026-07-10** — F-BINGAIN-1 **FIX landed** (empirical background-noise term in photometric
+err model); pytest **733 passed**, 15 skipped. Draft chi2 acceptance gate **pending** re-run on
+draft_424/425/426 (local Archive empty).
+
+**2026-07-10 snapshot (F-BINGAIN-1 FIX):** Production `err` uses empty-aperture `sigma_bkg_ap`
+(Labbe et al. 2003) + source Poisson `F/g`; config keys `err_background_mode` (default `empirical`),
+`err_empty_apertures_n` (64, clamp 16..256), `err_empty_apertures_min` (16). Proc-CSV columns
+`sigma_bkg_ap`, `err_bkg_source`. Howell legacy preserved as `howell` mode + crowding fallback.
+PROD-SIGMA-FLOOR unchanged (separate Milan decision). **Not committed** — STOP: draft chi2 gate
+not executed (no draft data in workspace Archive).
 
 **2026-07-10 snapshot (TODO-12f):** `_make_row` extended (dist, parallax, raw SpT/otype, DSC p,
 teff_source); PDF follow-on page per object; UI expander with full column set; validate
