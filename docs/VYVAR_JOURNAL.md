@@ -2,6 +2,16 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-10 (večer) — TODO-12g-HRD: catalog-color field (Gaia tinted)
+
+**Cíl:** vizualizační vrstva — monochromatické MASTERSTAR pole obarvené katalogovou chrominancí
+(Gaia BP-RP / Teff), bez dopadu na fotometrii. Modul `hrd_colorfield.py`: Planckian locus (Wyman
+et al. 2013 CMFs) + PCHIP BP-RP→Teff (Pecaut & Mamajek 2013); Gaussian splat matched hvězd;
+UI expander v HRD tabu; validate PNG pro draft_424 a draft_425 B. Config: `hrd_color_field_enabled`,
+`hrd_color_saturation`. PDF mimo scope.
+
+---
+
 ## 2026-07-10 — SESSION-CLOSE-0710 (HRD arc + F-BINGAIN-1, session close)
 
 **Denní oblouk:** TODO-12 HRD (12→12f: absolutní extrémní objekty, obohacení Gaia TAP/SIMBAD,

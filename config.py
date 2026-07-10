@@ -141,6 +141,10 @@ class AppConfig:
     hrd_nss_category_enabled: bool = False
     #: Gaia DSC probability floor for HRD "likely" white-dwarf tier (clamp 0.5..1.0).
     hrd_dsc_confirm_prob: float = 0.90
+    #: HRD catalog-color field tinting (Gaia BP-RP chrominance x mono luminance).
+    hrd_color_field_enabled: bool = True
+    #: Desaturation toward white for catalog-color field (0=gray, 1=full Planckian chroma).
+    hrd_color_saturation: float = 0.7
 
     #: Fine blind index (Newton / ~1.3″/px rigs); built by ``build_blind_index.py``.
     blind_index_fine_path: str = ""
@@ -773,6 +777,16 @@ class AppConfig:
         except (TypeError, ValueError):
             self.hrd_dsc_confirm_prob = 0.90
         self.hrd_dsc_confirm_prob = max(0.5, min(1.0, float(self.hrd_dsc_confirm_prob)))
+        self.hrd_color_field_enabled = bool(
+            data.get("hrd_color_field_enabled", self.hrd_color_field_enabled)
+        )
+        try:
+            self.hrd_color_saturation = float(
+                data.get("hrd_color_saturation", self.hrd_color_saturation)
+            )
+        except (TypeError, ValueError):
+            self.hrd_color_saturation = 0.7
+        self.hrd_color_saturation = max(0.0, min(1.0, float(self.hrd_color_saturation)))
 
         gaia_dir = self.project_root / "GAIA_DR3"
         _fine_default = str(gaia_dir / "gaia_triangles_fine.pkl")
@@ -2042,6 +2056,8 @@ class AppConfig:
             "hrd_min_per_net": int(self.hrd_min_per_net),
             "hrd_nss_category_enabled": bool(self.hrd_nss_category_enabled),
             "hrd_dsc_confirm_prob": float(self.hrd_dsc_confirm_prob),
+            "hrd_color_field_enabled": bool(self.hrd_color_field_enabled),
+            "hrd_color_saturation": float(self.hrd_color_saturation),
             "blind_index_fine_path": str(self.blind_index_fine_path or ""),
             "blind_index_wide_path": str(self.blind_index_wide_path or ""),
             "blind_index_select_mode": str(self.blind_index_select_mode or "auto"),

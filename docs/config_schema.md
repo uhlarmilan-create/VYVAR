@@ -211,6 +211,8 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | hrd_min_per_net | int | 4 | Min reserved Stage-1 enrich slots per candidate net; clamp 0..20. |
 | hrd_nss_category_enabled | bool | false | Include Gaia NSS binary candidates in HRD Stage-1/2 (default off). |
 | hrd_dsc_confirm_prob | float | 0.90 | Gaia DSC probability floor for HRD "likely" WD tier; clamp 0.5..1.0. |
+| hrd_color_field_enabled | bool | true | HRD catalog-color field (Gaia BP-RP tint x mono luminance); visualization only. |
+| hrd_color_saturation | float | 0.7 | Catalog-color field Planckian desaturation toward white; clamp 0..1. |
 | blind_index_fine_path | str | "…/GAIA_DR3/gaia_triangles_fine.pkl" | Fine blind triangle index (Newton-scale rigs). |
 | blind_index_wide_path | str | "…/GAIA_DR3/gaia_triangles_wide.pkl" | Wide blind triangle index (Carl-Zeiss-scale rigs). |
 | blind_index_path | str | *(deprecated)* | Alias of ``blind_index_fine_path`` after load; not serialized. |

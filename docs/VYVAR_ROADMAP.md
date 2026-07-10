@@ -591,6 +591,8 @@ next calibration lever.
   **TODO-12f (2026-07-10):** PDF/UI `Extreme objects -- details` per-object blocks; extended row
   payload (dist, parallax, raw SpT/otype, DSC p); validate summary stamps.
   Arc **DONE** — see `CURSOR_RESULT_todo12_hrd.md` … `_todo12f_hrd.md`.
+  **TODO-12g (2026-07-10):** catalog-color field rendering (mono luminance x Gaia BP-RP chrominance;
+  Wyman et al. 2013 CMFs; Pecaut & Mamajek BP-RP->Teff; UI expander + validate PNGs; no photometry/PDF).
   · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
   · TODO-PIXEL-XCHECK-BINNING binning-aware pixel cross-check (cosmetic log) ·

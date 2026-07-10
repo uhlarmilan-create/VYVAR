@@ -285,3 +285,21 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
                 st.image(str(annotated), width="stretch")
         except Exception as exc:  # noqa: BLE001
             st.caption(f"Field annotation failed: {exc}")
+
+    from hrd_colorfield import HRD_COLORFIELD_CAPTION, hrd_color_field_enabled, render_catalog_color_field
+
+    if hrd_color_field_enabled(cfg):
+        color_cache = _cache / "hrd_field_color.png"
+        with st.expander("Catalog-color field (Gaia tinted)"):
+            st.caption(HRD_COLORFIELD_CAPTION)
+            try:
+                color_png = render_catalog_color_field(
+                    platesolve_dir, photometry_dir, cfg, color_cache
+                )
+                if color_png is not None and color_png.is_file():
+                    st.image(str(color_png), width="stretch")
+                else:
+                    st.info("Catalog-color field not available for this setup.")
+            except Exception as exc:  # noqa: BLE001
+                st.caption(f"Catalog-color field failed: {exc}")
+                logger.exception("render_hrd_tab catalog color field")

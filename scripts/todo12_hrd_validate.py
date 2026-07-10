@@ -26,6 +26,7 @@ from hrd_analysis import (
     hrd_parallax_params_from_cfg,
     plot_hrd_matplotlib,
 )
+from hrd_colorfield import color_field_stats, timed_render_catalog_color_field
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "tmp" / "todo12_hrd"
@@ -45,6 +46,81 @@ def _git_head_short() -> str:
     except Exception:  # noqa: BLE001
         return "unknown"
 RS_PER_CID = "458407464445792384"
+
+
+def _zoom_crop(src: Path, center_xy: tuple[int, int], half: int, out: Path, zoom: int = 3) -> Path | None:
+    """Extract a region and upscale for eyeball checks."""
+    if not src.is_file():
+        return None
+    img = Image.open(str(src)).convert("RGB")
+    w, h = img.size
+    cx, cy = center_xy
+    x0, x1 = max(0, cx - half), min(w, cx + half)
+    y0, y1 = max(0, cy - half), min(h, cy + half)
+    crop = img.crop((x0, y0, x1, y1))
+    nw = max(1, crop.width * zoom)
+    nh = max(1, crop.height * zoom)
+    crop = crop.resize((nw, nh), Image.Resampling.NEAREST)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    crop.save(str(out))
+    return out
+
+
+def _color_field_crops(
+    label: str,
+    color_png: Path,
+    hrd_df: pd.DataFrame,
+    top: pd.DataFrame,
+    platesolve_dir: Path,
+    *,
+    png_from_fits: bool,
+) -> dict:
+    """3x zoom crops: red giant + blue main-sequence region."""
+    if not color_png.is_file() or hrd_df.empty:
+        return {"skipped": "no color png or empty hrd_df"}
+    img = np.asarray(Image.open(str(color_png)).convert("RGB"))
+    h, w = img.shape[:2]
+    sx, sy, ok = field_annotation_pixel_scale(platesolve_dir, w, h, png_from_fits=True)
+    if not ok:
+        return {"skipped": "scale guard failed"}
+
+    crops: dict = {}
+    # Red giant / RSG: brightest in table if present
+    rsg = top[top["category"].astype(str).str.contains("Red supergiant|Red giant", na=False, regex=True)]
+    if not rsg.empty:
+        rsg = rsg.copy()
+        rsg["_mag"] = pd.to_numeric(rsg.get("mag_g"), errors="coerce")
+        row = rsg.sort_values("_mag", ascending=True, na_position="last").iloc[0]
+        cid = str(row.get("catalog_id", ""))
+        match = hrd_df[hrd_df["catalog_id"].astype(str) == cid]
+        if not match.empty:
+            hr = match.iloc[0]
+            x = int(round(float(hr["x"]) * sx))
+            y = int(round(float(hr["y"]) * sy))
+            p = OUT / f"{label.replace(' ', '_')}_color_crop_red_giant.png"
+            _zoom_crop(color_png, (x, y), 40, p, zoom=3)
+            crops["red_giant"] = {"catalog_id": cid, "x": x, "y": y, "path": str(p)}
+
+    # Blue MS: coolest BP-RP among reliable parallax stars in upper half of field
+    rel = hrd_df[hrd_df.get("hrd_reliable", False) == True].copy()  # noqa: E712
+    if not rel.empty:
+        rel["bp_rp_n"] = pd.to_numeric(rel.get("bp_rp"), errors="coerce")
+        rel = rel[np.isfinite(rel["bp_rp_n"])]
+        rel = rel[rel["bp_rp_n"] <= rel["bp_rp_n"].quantile(0.15)]
+        if not rel.empty:
+            hr = rel.sort_values("bp_rp_n").iloc[0]
+            x = int(round(float(hr["x"]) * sx))
+            y = int(round(float(hr["y"]) * sy))
+            p = OUT / f"{label.replace(' ', '_')}_color_crop_blue_ms.png"
+            _zoom_crop(color_png, (x, y), 40, p, zoom=3)
+            crops["blue_ms"] = {
+                "catalog_id": str(hr.get("catalog_id", "")),
+                "bp_rp": float(hr["bp_rp_n"]),
+                "x": x,
+                "y": y,
+                "path": str(p),
+            }
+    return crops
 
 
 def _alignment_check_rsg(
@@ -149,13 +225,16 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
         if "Very cool" in cat and "s*r" in str(sid):
             otype_conflicts.append(f"{cat} | {sid}")
     ann_path: str | None = None
+    color_path: str | None = None
+    color_stats: dict = {}
+    color_crops: dict = {}
     align: dict = {"skipped": "not draft425 or empty"}
     plot_stars = top[~top.get("_empty_field", False).astype(bool)] if not empty else pd.DataFrame()
+    phot_dir = platesolve_dir / "photometry"
+    if not phot_dir.is_dir():
+        phot_dir = platesolve_dir
     if not plot_stars.empty:
         cache_dir = platesolve_dir / "_hrd_cache"
-        phot_dir = platesolve_dir / "photometry"
-        if not phot_dir.is_dir():
-            phot_dir = platesolve_dir
         bg_png, from_fits = ensure_clean_field_background_png(
             platesolve_dir, phot_dir, cache_dir=cache_dir
         )
@@ -181,6 +260,22 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
                         platesolve_dir,
                         png_from_fits=from_fits,
                     )
+    if label in ("draft424", "draft425_B"):
+        color_out = OUT / f"{label.replace(' ', '_')}_field_color.png"
+        color_png, elapsed = timed_render_catalog_color_field(
+            platesolve_dir, phot_dir, run_cfg, color_out
+        )
+        if color_png is not None:
+            color_path = str(color_png)
+            color_stats = color_field_stats(platesolve_dir, phot_dir, render_seconds=elapsed)
+            color_crops = _color_field_crops(
+                label,
+                color_png,
+                hrd_df,
+                top,
+                platesolve_dir,
+                png_from_fits=True,
+            )
     ident_tiers = {"confirmed": 0, "likely": 0, "candidate": 0}
     ident_rows: list[dict] = []
     if not empty and "ident" in top.columns:
@@ -235,6 +330,9 @@ def _run_setup(label: str, ms_csv: Path, platesolve_dir: Path, gdb: Path, cfg: A
         "simbad_otype_conflicts": otype_conflicts,
         "png": str(png),
         "field_annotated_png": ann_path,
+        "field_color_png": color_path,
+        "field_color_stats": color_stats,
+        "field_color_crops": color_crops,
         "rsg_alignment": align,
         "offline": offline,
         "hrd_nss_category_enabled": bool(run_cfg.hrd_nss_category_enabled),
