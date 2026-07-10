@@ -1,4 +1,4 @@
-CURSOR RESULT ó 2026-07-10 15:30 UTC+2
+CURSOR RESULT ù 2026-07-10 15:30 UTC+2
 
 What I did
 Extended HRD row payload with catalog/astrophysics detail fields; added PDF follow-on
@@ -44,4 +44,6 @@ SpT=DA2.3 | otype=WD* | DSC WD p=1 | pix=(2495, 966)
 None.
 
 ## Files changed
-(pending commit)
+- Code commit `51e5d64`: hrd_analysis.py, photometry_report.py, ui_hrd.py, scripts/todo12_hrd_validate.py, tests/test_hrd_details.py
+- Docs commit `eb8a381`: docs + CURSOR_RESULT_todo12f_hrd.md
+- Pushed to origin/main
