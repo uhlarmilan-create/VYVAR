@@ -1,8 +1,12 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-10** — TODO-12 HRD arc **DONE** (12/12b/12c/12d): extreme-object table,
-online enrichment, parallax gate, label priority, NSS category off-by-default, annotated field image
-+ PDF wiring; pytest **698 passed**, 15 skipped.
+Last updated: **2026-07-10** — TODO-12 HRD arc **DONE** (12/12b/12c/12d/12e): extreme-object table,
+online enrichment, parallax gate, label priority, NSS off-by-default, annotated field image,
+identification tiers (confirmed/likely/candidate); pytest **717 passed**, 15 skipped.
+
+**2026-07-10 snapshot (TODO-12e):** Enrichment cache v2 (+ SIMBAD sp_type, Gaia DSC WD prob);
+`ident` tier column; RS Per (`458407464445792384`) RSG confirmed via SIMBAD lum class (was Very cool);
+WD row confirmed via otype WD*; `hrd_dsc_confirm_prob=0.90`. draft_425 B: 5 confirmed / 2 candidate.
 
 **2026-07-10 snapshot (TODO-12d):** `hrd_nss_category_enabled=False` (default) drops Gaia NSS binary
 rows from Stage-1/2; draft_425 table 7 rows/setup (was 10 with 3 Binary). Annotated field image uses

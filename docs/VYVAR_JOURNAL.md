@@ -2,6 +2,19 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-10 — TODO-12e-HRD (identification/confirmation tiers)
+
+**Enrichment:** cache v2; SIMBAD `sp_type`; Gaia TAP LEFT JOIN `astrophysical_parameters` for DSC
+WD/binary probs + `spectraltype_esphs`. Citations: Delchambre et al. 2023 (DSC), Creevey et al. 2023 (ESP-HS).
+
+**Tiers:** confirmed (literature), likely (DSC WD p>=0.90), candidate (photometric). Table `ident` column.
+SIMBAD MK lum class substitutes for missing Gaia logg at classification (RS Per fix).
+
+**draft_425 B:** WD confirmed (DA2.3); RS Per RSG confirmed (M3.5IabFe-1, logg_source=simbad_lumclass);
+otype conflicts 0 (was RS Per Very cool/s*r). pytest 717 passed; PDF overflow 0.
+
+---
+
 ## 2026-07-10 — TODO-12d-HRD (NSS flag off, annotated field image + PDF)
 
 **Item A:** `hrd_nss_category_enabled=False` (config-only, reversible). NSS excluded from Stage-1 nets

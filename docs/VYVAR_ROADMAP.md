@@ -548,7 +548,9 @@ next calibration lever.
   luminosity-first Stage-2 label priority (RSG before Very cool); Stage-1 per-net reserved slots
   (`hrd_min_per_net=4`). **TODO-12d (2026-07-10):** `hrd_nss_category_enabled=False` drops NSS/binary
   from table; annotated MASTERSTAR field image (scale guard, short labels, legend) wired to PDF HRD page.
-  Arc **DONE** — see `CURSOR_RESULT_todo12_hrd.md`, `_todo12b_hrd.md`, `_todo12c_hrd.md`, `_todo12d_hrd.md`.
+  **TODO-12e (2026-07-10):** identification tiers (confirmed/likely/candidate); enrichment cache v2
+  (+ SIMBAD sp_type, Gaia DSC); SIMBAD lum-class logg substitute (RS Per RSG fix).
+  Arc **DONE** — see `CURSOR_RESULT_todo12_hrd.md` … `_todo12e_hrd.md`.
   · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
   · TODO-PIXEL-XCHECK-BINNING binning-aware pixel cross-check (cosmetic log) ·

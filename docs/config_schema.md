@@ -207,6 +207,7 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | hrd_max_per_category | int | 3 | Max table rows per Stage-2 HRD category; clamp 1..20. |
 | hrd_min_per_net | int | 4 | Min reserved Stage-1 enrich slots per candidate net; clamp 0..20. |
 | hrd_nss_category_enabled | bool | false | Include Gaia NSS binary candidates in HRD Stage-1/2 (default off). |
+| hrd_dsc_confirm_prob | float | 0.90 | Gaia DSC probability floor for HRD "likely" WD tier; clamp 0.5..1.0. |
 | blind_index_fine_path | str | "…/GAIA_DR3/gaia_triangles_fine.pkl" | Fine blind triangle index (Newton-scale rigs). |
 | blind_index_wide_path | str | "…/GAIA_DR3/gaia_triangles_wide.pkl" | Wide blind triangle index (Carl-Zeiss-scale rigs). |
 | blind_index_path | str | *(deprecated)* | Alias of ``blind_index_fine_path`` after load; not serialized. |
