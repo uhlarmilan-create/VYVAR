@@ -23,11 +23,11 @@ if str(_ROOT) not in sys.path:
 from config import AppConfig  # noqa: E402
 from gaia_catalog_id import normalize_gaia_source_id  # noqa: E402
 from photometry_core import (  # noqa: E402
-    _PSF_ERR_MAG_SCALE,
     run_full_photometry_pipeline,
 )
 from scripts.bingain_err_decompose import _gain_from_lights  # noqa: E402
 from scripts.bingain_fix_validate import resolve_archive_root  # noqa: E402
+from mag_constants import MAG_ERR_SCALE  # noqa: E402
 from scripts.sigma_sem_cause import (  # noqa: E402
     _ensemble_sem_from_lc_err,
     _photon_err_mag_per_frame,
@@ -39,7 +39,7 @@ from ui_aperture_photometry import _find_phase2a_paths  # noqa: E402
 DRAFT_ID = 426
 SETUPS = ("g_60_4", "i_70_4", "r_60_4", "z_90_4")
 EVIDENCE_NAME = "draft_000426_stale_20260626"
-_MAG = 2.5 / math.log(10.0)
+_MAG = MAG_ERR_SCALE
 OUT_META = _ROOT / "tmp" / "draft_426_regen"
 
 

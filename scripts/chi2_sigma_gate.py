@@ -29,6 +29,7 @@ from photometry_core import (
     _sky_pp_for_photometric_error,
     _photometric_error_with_bkg_mode,
 )
+from mag_constants import MAG_ERR_SCALE
 from sigma_budget import (
     SIGMA_VARIANT_HOWELL_ONLY,
     SIGMA_VARIANT_HOWELL_SCINT_FULL,
@@ -45,7 +46,7 @@ from sigma_budget import (
 
 CHI2_DOF_LO = 0.8
 CHI2_DOF_HI = 1.2
-_MAG_ERR_SCALE = 2.5 / math.log(10.0)
+_MAG_ERR_SCALE = MAG_ERR_SCALE
 
 CalibratorEnsembleInput = tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
 

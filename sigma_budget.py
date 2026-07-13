@@ -18,8 +18,10 @@ _TURBULENCE_SCALE_HEIGHT_M = 8000.0
 _YOUNG_PREFACTOR = 10.0e-6
 OSBORN_CY_DEFAULT = 1.5
 
+from mag_constants import MAG_ERR_SCALE
+
 # Relative intensity fluctuation -> magnitude (small-signal limit)
-_REL_FLUX_TO_MAG = 2.5 / math.log(10.0)
+_REL_FLUX_TO_MAG = MAG_ERR_SCALE
 
 SIGMA_VARIANT_HOWELL_ONLY = "howell_only"
 SIGMA_VARIANT_HOWELL_SCINT_FULL = "howell_scint_full"
@@ -180,7 +182,7 @@ def relative_flux_err_to_mag_sigma(err_rel: float) -> float:
     """Convert relative flux error to differential magnitude sigma."""
     if not math.isfinite(err_rel) or err_rel <= 0:
         return float("nan")
-    return float(_REL_FLUX_TO_MAG * err_rel)
+    return float(MAG_ERR_SCALE * err_rel)
 
 
 def parse_setup_exposure_s(setup_name: str) -> float | None:
