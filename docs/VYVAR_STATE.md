@@ -1,12 +1,26 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-13** -- PROD-SIGMA-FLOOR wired; re-anchor in progress. **pytest 794 passed**, 15 skipped.
+Last updated: **2026-07-13** -- ANCHOR-CHAIN-ACCEPT: explicit baseline chain + exact c4 validation; anchor accepted.
+**pytest 796 passed**, 15 skipped.
 
-**2026-07-13 snapshot (PROD-SIGMA-FLOOR):** c4-corrected ensemble SEM + per-rig ``sigma_sys``
-in production LC ``err`` (``sigma_floor_core.py``). Newton equipment_id=4 floor **18.0 mmag**
-[15.6, 20.2]; wide equipment_id=1 **un-floored** (bootstrap unstable vs SIGMA-A3 6.5 mmag band).
-draft_424 re-anchored: snapshot ``draft_000424_snapshot_sigma_floor_20260713``;
-core SHA ``bf3743a1...``; ``session_baseline_check --full`` **PASS**.
+**2026-07-13 snapshot (ANCHOR-ERR-VERIFY):** Investigated ~1.5-1.7x
+wide err rise on contested snapshot ``draft_000424_snapshot_sigma_floor_20260713`` vs
+``draft_000424_snapshot_20260708_full``. **Newton floor leak NOT confirmed:**
+``sigma_sys_mag=0.0`` on all 178 LCs; ``pipeline_meta.sigma_floor`` equipment_id=1 floor=0.0.
+Err shift explained by **F-BINGAIN-1 + SEM unit fix** (old anchor git ``750c856`` predates
+both); attributing rise to c4 alone is incorrect. **Part C STOP** -- no re-cut, no push.
+Result: ``CURSOR_RESULT_anchor_err_verify.md``.
+
+**2026-07-13 snapshot (ANCHOR-CHAIN-ACCEPT -- anchor ACCEPTED):** Cut intermediate baseline
+``draft_000424_snapshot_intermediate_b5364e6_20260713`` (git ``b5364e6``; core ``373e8235``;
+extended ``0243f719``) and validated the c4-only delta exactly per epoch (23542/23542 epochs,
+0 outliers at abs tol 2e-6). Accepted anchor remains
+``draft_000424_snapshot_sigma_floor_20260713`` (git ``8fb21b3``; core ``bf3743a1``; extended
+``dec5c637``). Result: ``CURSOR_RESULT_anchor_chain.md``.
+
+**2026-07-13 snapshot (PROD-SIGMA-FLOOR -- accepted anchor):** c4-corrected ensemble SEM
++ per-rig ``sigma_sys`` in production LC ``err`` (``sigma_floor_core.py``). Newton
+equipment_id=4 floor **18.0 mmag** [15.6, 20.2]; wide equipment_id=1 **un-floored**.
 Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``; result: ``CURSOR_RESULT_sigma_floor.md``.
 
 **2026-07-13 snapshot (MASTERSTAR-EPOCH-FIX):** Collection-layer exclusion of

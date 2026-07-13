@@ -1,7 +1,7 @@
 # VYVAR -- Production sigma_sys floor specification
 
 Date: 2026-07-13  
-Status: **IMPLEMENTED** (c4 + per-rig floor wiring; re-anchor pending Milan review)
+Status: **ACCEPTED** (ANCHOR-CHAIN-ACCEPT 2026-07-13; exact c4 validation PASS)
 
 Cross-ref: `docs/VYVAR_SIGMA_BUDGET_SPEC.md` (Broeg IVW / scintillation arc still parked).
 
@@ -86,6 +86,22 @@ Fail-safe: unknown equipment_id -> floor 0.0, one-time INFO log.
 
 ---
 
+## Anchor chain (draft_424, wide eq1)
+
+For acceptance the baseline chain must be explicit; comparing against a pre-bingain anchor
+confounds approved err-model changes.
+
+| Snapshot | Purpose | git_hash | core_sha (prefix) | extended_sha (prefix) |
+|----------|---------|----------|-------------------|-----------------------|
+| ``draft_000424_snapshot_20260708_full`` | Historical anchor (pre-bingain, pre-unit-fix) | ``750c856`` | ``92939fab`` | ``76642318`` |
+| ``draft_000424_snapshot_intermediate_b5364e6_20260713`` | Acceptance baseline: bingain + unit fix + masterstar exclusion, **no c4/floor** | ``b5364e6`` | ``373e8235`` | ``0243f719`` |
+| ``draft_000424_snapshot_sigma_floor_20260713`` | Accepted anchor: intermediate + **c4** (eq1 floor=0) + Newton floor (eq4) | ``8fb21b3`` | ``bf3743a1`` | ``dec5c637`` |
+
+Exact validation (intermediate -> accepted): per-epoch c4 predictor matched all 23542 epochs
+within abs diff <= 2e-6 (max 9.97e-7; median 2.93e-7). See ``tmp/anchor_chain/c2_exact_c4_validation.json``.
+
+---
+
 ## Fitted defaults (2026-07-13)
 
 Committed in ``config.json`` (CI in fit JSON):
@@ -94,6 +110,18 @@ Committed in ``config.json`` (CI in fit JSON):
 |--------------|-----|----------------|--------|
 | 1 | QHY294MM wide | -- | **un-floored** (bootstrap unstable; point fit below SIGMA-A3 CI) |
 | 4 | C5A-150M Newton | 18.0 [15.6, 20.2] | committed 0.018 mag |
+
+### Wide rig: point fit 4.8 mmag vs SIGMA-A3 band 6.5 mmag [5.5, 7.5]
+
+These are **not contradictory**. SIGMA-A3 measured a pooled floor-like excess in the
+**legacy** err model (Howell photon only; ensemble SEM added in the wrong domain). Production
+now includes F-BINGAIN-1 empirical background in ``err_photon_bkg`` and c4-corrected ensemble
+SEM in the correct relative-flux domain. That combination absorbs part of what SIGMA-A3
+attributed to a separate white ``sigma_sys`` term. The fit script therefore finds a lower
+residual floor (~4.8 mmag) with an unstable bootstrap; per the instability rule the wide rig
+correctly remains **un-floored** (config 0.0). Expect wide per-point ``err`` to rise vs a
+pre-bingain anchor when comparing snapshots; that shift is **not** evidence that the Newton
+18 mmag floor leaked onto equipment_id=1 (see ``CURSOR_RESULT_anchor_err_verify.md``).
 
 ---
 

@@ -52,7 +52,9 @@ Correlated noise **not** added to per-point LC err (PZQ 2006 limitation statemen
 | extended | ``dec5c637...`` | 535 |
 
 Science compare vs old anchor (``draft_000424_snapshot_20260708_full``): **0 science failures**
-(non-err columns identical; err diverges by design from c4 + wide un-floored / c4-only on 424).
+(non-err columns identical; err diverges by design, but the 07-08 reference predates approved
+F-BINGAIN-1 and the SEM unit fix, so this comparison is not a valid acceptance reference for
+isolating the c4 delta).
 
 **Err median by mag tertile (old vs new anchor, 178 LCs pooled):**
 
@@ -62,7 +64,11 @@ Science compare vs old anchor (``draft_000424_snapshot_20260708_full``): **0 sci
 | mid | 12.69 - 13.72 | 0.0376 | 0.0635 | 1.69 |
 | bright | 13.72 - 21.37 | 0.0858 | 0.1439 | 1.68 |
 
-Wide rig (eq 1): c4-only inflation (no sigma_sys committed). Artifact: ``tmp/reanchor_424/err_tertiles.json``.
+Wide rig (eq 1): err shift vs 07-08 is dominated by **approved** F-BINGAIN-1 photon term
+(median bingain/howell ~1.63) plus the SEM unit fix (ensemble carrier -8%). The **only**
+unapproved delta is c4; it was later validated exactly against an intermediate baseline
+at ``origin/main`` (``b5364e6``) using a per-epoch predictor (zero outliers at 2e-6).
+See ``CURSOR_RESULT_anchor_chain.md``.
 
 Snapshot locked: ``Archive/Drafts/draft_000424_snapshot_sigma_floor_20260713``.
 ``session_baseline_check.py`` SHA constants updated.

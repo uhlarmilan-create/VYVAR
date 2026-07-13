@@ -81,7 +81,9 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **426-REGEN** | — | **DONE (2026-07-13); baseline SUPERSEDED by MASTERSTAR-EPOCH-FIX.** Stale at ``Archive/evidence/draft_000426_stale_20260626``. |
 | **MASTERSTAR-EPOCH** | HIGH | **CLOSED (2026-07-13).** ``proc_MASTERSTAR.csv`` excluded from epoch collection; draft_426 regen 25 epochs. Result: ``CURSOR_RESULT_masterstar_epoch.md``. |
 | **COMP-POOL-R** | MED | **VERDICT (2026-07-13):** r_60_4 legitimately sparse (2 comps on HEAD, byte-identical procs); June 8 not reproducible. r baseline **PENDING** (check_kmag). Milan: sparse-aware check-star design. Result: ``CURSOR_RESULT_comp_pool_r.md``. |
-| **PROD-SIGMA-FLOOR** | HIGH | **DONE (2026-07-13):** c4 SEM + Newton floor 18 mmag; wide un-floored. Re-anchor PASS (core ``bf3743a1``). Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``; result: ``CURSOR_RESULT_sigma_floor.md``. |
+| **ANCHOR-CHAIN-ACCEPT** | HIGH | **DONE (2026-07-13):** Intermediate baseline ``b5364e6`` cut; exact c4 validation 23542/23542 PASS; anchor **ACCEPTED** (core ``bf3743a1``). Comparator hardening + tests. Result: ``CURSOR_RESULT_anchor_chain.md``. **READY-FOR-PUSH** (Milan review). |
+| **ANCHOR-ERR-VERIFY** | HIGH | **DONE (2026-07-13):** Floor leak **not confirmed**; err rise = bingain + unit fix vs stale anchor. Result: ``CURSOR_RESULT_anchor_err_verify.md``. |
+| **PROD-SIGMA-FLOOR** | HIGH | **DONE (2026-07-13):** c4 SEM + Newton floor 18 mmag; wide un-floored. Anchor accepted via ANCHOR-CHAIN-ACCEPT. Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``. |
 | **PROVENANCE-GUARD** | — | **DONE (2026-07-13).** ``provenance_guard.py``; harness refuse + VL-PROVENANCE ledger. |
 | **STALE-LC-SWEEP** | — | **CLOSED via regen (2026-07-13).** Evidence preserved; draft_426 on HEAD. |
 | **SIGMA-SEM-CAUSE** | — | **DONE (2026-07-13); SUPERSEDED.** Trends confirmed; dominant-cause attribution retracted -- see SIGMA-PROV-FORENSIC. Result: ``CURSOR_RESULT_sigma_sem_cause.md``. |
@@ -286,7 +288,8 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ## NEXT SESSION — entry point (2026-07-13 close)
 
-**Start here:** Milan review of PROD-SIGMA-FLOOR + COMP-POOL-R local chain before push.
+**Start here:** ANCHOR-CHAIN-ACCEPT closed (anchor accepted; exact c4 validation PASS).
+**READY-FOR-PUSH** for local chain after Milan review of ``CURSOR_RESULT_anchor_chain.md``.
 
 **PROD-SIGMA-FLOOR DONE (2026-07-13):** c4 SEM + Newton
 ``sigma_sys`` 18 mmag (equipment 4); wide un-floored. Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``.

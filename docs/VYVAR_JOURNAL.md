@@ -2,6 +2,50 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-13 -- ANCHOR-CHAIN-ACCEPT
+
+**Goal:** Make the draft_424 anchor baseline chain explicit and accept the sigma-floor snapshot
+only after exact validation of the c4-only delta.
+
+**Part A (07-10 snapshot):** No ``draft_000424_snapshot_20260710*`` exists on disk. F-BINGAIN
+closeout claimed re-anchor for err divergence, but the only retained draft_424 snapshots are
+``20260708_full``, ``20260708_hybrid_deprecated``, and ``sigma_floor_20260713``. Verdict: process
+gap (snapshot never physically cut or not retained).
+
+**Part B (intermediate baseline):** Cut ``draft_000424_snapshot_intermediate_b5364e6_20260713``
+at git ``b5364e6`` (two runs byte-identical). core ``373e8235...``; extended ``0243f719...``.
+
+**Part C.2 (exact c4 validation):** intermediate -> sigma-floor snapshot: 23542/23542 epochs
+within abs diff <= 2e-6 (median 2.93e-7; max 9.97e-7; 0 outliers).
+
+**Acceptance:** ``draft_000424_snapshot_sigma_floor_20260713`` accepted (core ``bf3743a1...``;
+git ``8fb21b3``). Comparator hardening: designed-err envelope/exact-predictor checks in
+``tests/photometry_sha.py`` + tests.
+
+Result: ``CURSOR_RESULT_anchor_chain.md``; artifacts ``tmp/anchor_chain/``.
+
+---
+
+## 2026-07-13 -- ANCHOR-ERR-VERIFY
+
+**Question:** Does ~1.5-1.7x wide err rise on ``draft_000424_snapshot_sigma_floor_20260713``
+indicate Newton 18 mmag floor leaking onto equipment_id=1?
+
+**Finding:** **No.** ``sigma_sys_mag=0.0`` on all 178 LCs; runtime floor eq1=0.0. Per-tertile
+``sigma_add`` is **not** constant (~17 / 51 / 116 mmag faint/mid/bright) -- not floor signature.
+Worked frame: err_new reproduced exactly by bingain photon (ratio ~1.64) + c4 SEM + unit fix;
+adding 0.018 mag floor would yield err=0.0215 vs observed 0.0136.
+
+**Confound:** Old anchor git ``750c856`` predates F-BINGAIN-1 (``3b33b03``) and SEM unit fix
+(``26396ab``). Comparing July-8 vs PROD-SIGMA-FLOOR bundles three err-model changes.
+
+**Verdict:** Part C STOP -- no code fix, no re-cut, no push. Anchor **NOT ACCEPTED**.
+Recommend intermediate baseline at ``origin/main`` before isolating c4/floor delta.
+
+Result: ``CURSOR_RESULT_anchor_err_verify.md``; artifact ``tmp/reanchor_424/worked_frame.json``.
+
+---
+
 ## 2026-07-13 -- PROD-SIGMA-FLOOR
 
 **Wiring:** c4 ensemble SEM + per-rig ``sigma_sys`` in LC ``err``; ``sigma_sys_mag`` column +
