@@ -217,6 +217,7 @@ Parameters defined in config.json. Defaults from AppConfig in config.py (datacla
 | hrd_color_chroma_snr | float | 3.0 | Chroma SNR gate softness (0=off); clamp 0..20. |
 | hrd_color_white_point | string | field_median | ``d65`` absolute or ``field_median`` relative von Kries white point. |
 | hrd_color_chroma_boost | float | 1.6 | Chroma distance-from-white boost (display enhancement); clamp 1.0..3.0. |
+| hrd_color_bg_box_px | int | 96 | Local-background box size (px) for chroma SNR gate; clamp 32..512. |
 | blind_index_fine_path | str | "…/GAIA_DR3/gaia_triangles_fine.pkl" | Fine blind triangle index (Newton-scale rigs). |
 | blind_index_wide_path | str | "…/GAIA_DR3/gaia_triangles_wide.pkl" | Wide blind triangle index (Carl-Zeiss-scale rigs). |
 | blind_index_path | str | *(deprecated)* | Alias of ``blind_index_fine_path`` after load; not serialized. |

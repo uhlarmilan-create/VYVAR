@@ -59,6 +59,100 @@ _DEFAULT_KERNEL_SIGMA_PX = 2.5
 _STRETCH_LO_PCT = 5.0
 _STRETCH_HI_PCT = 99.5
 _LOW_L_FRAC_FOR_SIGMA = 0.15
+_MAD_TO_SIGMA = 1.4826
+_DEFAULT_BG_BOX_PX = 96
+_G2_GRID_COLS = 8
+_G2_GRID_ROWS = 6
+
+
+def _sigma_clipped_median_sigma(patch: np.ndarray) -> tuple[float, float]:
+    """Robust median and MAD-based sigma for a 1-D patch."""
+    flat = np.asarray(patch, dtype=np.float64).ravel()
+    flat = flat[np.isfinite(flat)]
+    if flat.size == 0:
+        return 0.0, 1e-4
+    med = float(np.median(flat))
+    mad = float(np.median(np.abs(flat - med)))
+    sigma = max(_MAD_TO_SIGMA * mad, 0.02 * max(med, 1e-3), 1e-4)
+    if flat.size >= 8:
+        keep = np.abs(flat - med) < 3.0 * sigma
+        if int(keep.sum()) >= 4:
+            flat = flat[keep]
+            med = float(np.median(flat))
+            mad = float(np.median(np.abs(flat - med)))
+            sigma = max(_MAD_TO_SIGMA * mad, 0.02 * max(med, 1e-3), 1e-4)
+    return med, sigma
+
+
+def build_local_background_maps(
+    luminance: np.ndarray,
+    box_px: int,
+    *,
+    star_mask: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Coarse sigma-clipped median bg + MAD sigma, bilinear upsampled to full resolution.
+
+    When ``star_mask`` is provided (True = background pixel), stellar pixels are excluded
+    from each box so dense clusters do not inflate the local sky estimate.
+    """
+    from scipy.interpolate import RegularGridInterpolator
+
+    l = np.asarray(luminance, dtype=np.float64)
+    h, w = l.shape
+    sm = None
+    if star_mask is not None:
+        sm = np.asarray(star_mask, dtype=bool)
+        if sm.shape != (h, w):
+            sm = None
+    box = int(np.clip(int(box_px), 32, 512))
+    ny = max(1, int(math.ceil(h / box)))
+    nx = max(1, int(math.ceil(w / box)))
+    bg_grid = np.zeros((ny, nx), dtype=np.float64)
+    sig_grid = np.zeros((ny, nx), dtype=np.float64)
+    for j in range(ny):
+        y0, y1 = j * box, min(h, (j + 1) * box)
+        for i in range(nx):
+            x0, x1 = i * box, min(w, (i + 1) * box)
+            patch = l[y0:y1, x0:x1]
+            if sm is not None:
+                use = sm[y0:y1, x0:x1]
+                patch = patch[use] if int(use.sum()) >= 8 else patch
+            med, sigma = _sigma_clipped_median_sigma(patch)
+            bg_grid[j, i] = med
+            sig_grid[j, i] = sigma
+    gy = np.arange(ny, dtype=np.float64)
+    gx = np.arange(nx, dtype=np.float64)
+    bg_itp = RegularGridInterpolator((gy, gx), bg_grid, bounds_error=False, fill_value=None)
+    sig_itp = RegularGridInterpolator((gy, gx), sig_grid, bounds_error=False, fill_value=None)
+    yy = np.linspace(0, ny - 1, h)
+    xx = np.linspace(0, nx - 1, w)
+    gyy, gxx = np.meshgrid(yy, xx, indexing="ij")
+    pts = np.stack([gyy.ravel(), gxx.ravel()], axis=-1)
+    bg_local = bg_itp(pts).reshape(h, w)
+    sigma_local = sig_itp(pts).reshape(h, w)
+    sigma_local = np.maximum(sigma_local, 0.02 * np.maximum(bg_local, 1e-3))
+    sigma_local = np.maximum(sigma_local, 1e-4)
+    return bg_local, sigma_local
+
+
+def make_tapered_gaussian_stamp(sigma_px: float) -> tuple[np.ndarray, int]:
+    """Gaussian splat kernel clipped to zero at radius R >= 3*sigma.
+
+    Weight = exp(-r^2/2s^2) - exp(-R^2/2s^2), clipped >= 0.
+    Renormalized so the center peak is 1.0 (same per-star amplitude semantics as 12g2).
+    """
+    sigma = max(0.5, float(sigma_px))
+    radius = int(math.ceil(3.0 * sigma))
+    yy, xx = np.mgrid[-radius : radius + 1, -radius : radius + 1]
+    r2 = (xx * xx + yy * yy).astype(np.float64)
+    r_outer = float(radius)
+    inner = np.exp(-0.5 * r2 / (sigma * sigma))
+    outer = math.exp(-0.5 * r_outer * r_outer / (sigma * sigma))
+    stamp = np.maximum(inner - outer, 0.0)
+    peak = stamp[radius, radius]
+    if peak > 0:
+        stamp = stamp / peak
+    return stamp, radius
 
 
 def _piecewise_gaussian(x: np.ndarray, mean: float, stddev_1: float, stddev_2: float) -> np.ndarray:
@@ -179,19 +273,28 @@ def apply_chroma_boost(rgb: np.ndarray, boost: float) -> np.ndarray:
 def apply_chroma_snr_gate(
     luminance: np.ndarray,
     chroma: np.ndarray,
-    sigma_bg: float,
     snr_softness: float,
+    *,
+    sigma_bg: float = 0.05,
+    bg_local: np.ndarray | None = None,
+    sigma_local: np.ndarray | None = None,
 ) -> np.ndarray:
-    """Blend chroma toward neutral white where L lacks SNR.
+    """Blend chroma toward neutral white where signal above local sky lacks SNR.
 
-    s = (L - bg) / sigma_bg with bg=0 in percentile-stretched space;
-    w = s / (s + snr_softness); chroma_out = w * chroma + (1 - w) * 1.
-    snr_softness=0 disables the gate (12g behavior).
+    Local gate (12g5+): s = max(0, L - bg_local) / sigma_local;
+    legacy absolute gate when bg_local is None: s = L / sigma_bg.
+    w = s / (s + snr_softness). snr_softness=0 disables the gate.
     """
     if snr_softness <= 0:
         return chroma
-    sig = max(float(sigma_bg), 1e-6)
-    s = np.maximum(luminance, 0.0) / sig
+    l = np.maximum(np.asarray(luminance, dtype=np.float64), 0.0)
+    if bg_local is not None and sigma_local is not None:
+        s = np.maximum(l - np.asarray(bg_local, dtype=np.float64), 0.0) / np.maximum(
+            np.asarray(sigma_local, dtype=np.float64), 1e-6
+        )
+    else:
+        sig = max(float(sigma_bg), 1e-6)
+        s = l / sig
     w = s / (s + float(snr_softness))
     return w[..., np.newaxis] * chroma + (1.0 - w[..., np.newaxis]) * 1.0
 
@@ -247,6 +350,17 @@ def hrd_color_chroma_boost_from_cfg(cfg: Any | None) -> float:
     except (TypeError, ValueError):
         return default
     return float(np.clip(val, 1.0, 3.0))
+
+
+def hrd_color_bg_box_px_from_cfg(cfg: Any | None) -> int:
+    default = _DEFAULT_BG_BOX_PX
+    if cfg is None:
+        return default
+    try:
+        val = int(getattr(cfg, "hrd_color_bg_box_px", default))
+    except (TypeError, ValueError):
+        return default
+    return int(np.clip(val, 32, 512))
 
 
 def hrd_color_chroma_snr_from_cfg(cfg: Any | None) -> float:
@@ -447,9 +561,7 @@ def splat_chroma_layer(
     rgb_acc = np.zeros((h, w, 3), dtype=np.float64)
     w_acc = np.zeros((h, w), dtype=np.float64)
     sigma = max(0.5, float(sigma_px))
-    radius = int(math.ceil(3.0 * sigma))
-    yy, xx = np.mgrid[-radius : radius + 1, -radius : radius + 1]
-    stamp = np.exp(-0.5 * (xx * xx + yy * yy) / (sigma * sigma))
+    stamp, radius = make_tapered_gaussian_stamp(sigma)
 
     for x0, y0, rgb, amp in zip(xs, ys, rgbs, amplitudes, strict=False):
         if not (math.isfinite(x0) and math.isfinite(y0) and math.isfinite(amp) and amp > 0):
@@ -571,6 +683,7 @@ def render_catalog_color_field(
     saturation = hrd_color_saturation_from_cfg(cfg)
     chroma_snr = hrd_color_chroma_snr_from_cfg(cfg)
     chroma_boost = hrd_color_chroma_boost_from_cfg(cfg)
+    bg_box_px = hrd_color_bg_box_px_from_cfg(cfg)
     highlight_mode = hrd_color_highlight_mode_from_cfg(cfg)
     white_point_mode = hrd_color_white_point_from_cfg(cfg)
 
@@ -602,7 +715,16 @@ def render_catalog_color_field(
 
     sigma = _estimate_kernel_sigma_px(ps, pt)
     chroma = splat_chroma_layer((h, w), xs, ys, rgbs, amps, sigma_px=sigma)
-    chroma = apply_chroma_snr_gate(luminance, chroma, sigma_bg, chroma_snr)
+    star_bg_mask = build_star_exclusion_mask(h, w, xs, ys, exclude_r=12.0)
+    bg_local, sigma_local = build_local_background_maps(luminance, bg_box_px, star_mask=star_bg_mask)
+    chroma = apply_chroma_snr_gate(
+        luminance,
+        chroma,
+        chroma_snr,
+        sigma_bg=sigma_bg,
+        bg_local=bg_local,
+        sigma_local=sigma_local,
+    )
     rgb = compose_catalog_color_rgb(luminance, chroma, highlight_mode=highlight_mode)
 
     caption = build_colorfield_caption(
@@ -627,6 +749,108 @@ def render_catalog_color_field(
         log_event("HRD color field: PNG not written -- skipped")
         return None
     return out_png
+
+
+def build_star_exclusion_mask(
+    h: int,
+    w: int,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    *,
+    exclude_r: float = 8.0,
+) -> np.ndarray:
+    """True where pixel is background (not within exclude_r of any star)."""
+    mask = np.ones((h, w), dtype=bool)
+    rad = int(math.ceil(exclude_r))
+    r2 = float(exclude_r) * float(exclude_r)
+    dy, dx = np.ogrid[-rad : rad + 1, -rad : rad + 1]
+    disk = (dx * dx + dy * dy) <= r2
+    for x0, y0 in zip(xs, ys, strict=False):
+        if not (math.isfinite(x0) and math.isfinite(y0)):
+            continue
+        xi = int(round(x0))
+        yi = int(round(y0))
+        y_lo = max(0, yi - rad)
+        y_hi = min(h, yi + rad + 1)
+        x_lo = max(0, xi - rad)
+        x_hi = min(w, xi + rad + 1)
+        sy0 = y_lo - (yi - rad)
+        sy1 = sy0 + (y_hi - y_lo)
+        sx0 = x_lo - (xi - rad)
+        sx1 = sx0 + (x_hi - x_lo)
+        patch = disk[sy0:sy1, sx0:sx1]
+        mask[y_lo:y_hi, x_lo:x_hi] &= ~patch
+    return mask
+
+
+def background_neutrality_grid(
+    img_rgb: np.ndarray,
+    star_mask: np.ndarray | None = None,
+    *,
+    ncols: int = _G2_GRID_COLS,
+    nrows: int = _G2_GRID_ROWS,
+) -> dict[str, Any]:
+    """Hardened G2: worst-patch mean |R-B|/L over an ncols x nrows star-masked grid."""
+    img = np.asarray(img_rgb, dtype=np.float64)
+    if img.max() > 1.5:
+        img = img / 255.0
+    h, w = img.shape[:2]
+    sm = star_mask if star_mask is not None else np.ones((h, w), dtype=bool)
+    metrics = np.full((nrows, ncols), np.nan, dtype=np.float64)
+    cells: list[dict[str, Any]] = []
+    worst = 0.0
+    worst_ij = (0, 0)
+    worst_xy = (0, 0)
+    for j in range(nrows):
+        y0, y1 = int(j * h / nrows), int((j + 1) * h / nrows)
+        for i in range(ncols):
+            x0, x1 = int(i * w / ncols), int((i + 1) * w / ncols)
+            patch = img[y0:y1, x0:x1]
+            pm = sm[y0:y1, x0:x1]
+            px = patch[pm]
+            if px.shape[0] < 10:
+                continue
+            lum = np.maximum(px.mean(axis=1), 1e-3)
+            val = float(np.mean(np.abs(px[:, 0] - px[:, 2]) / lum))
+            metrics[j, i] = val
+            cells.append(
+                {
+                    "col": i,
+                    "row": j,
+                    "cx": (x0 + x1) // 2,
+                    "cy": (y0 + y1) // 2,
+                    "metric": val,
+                }
+            )
+            if val > worst:
+                worst = val
+                worst_ij = (i, j)
+                worst_xy = ((x0 + x1) // 2, (y0 + y1) // 2)
+    valid = len(cells) > 0
+    return {
+        "worst_patch_metric": worst if valid else float("nan"),
+        "worst_location_xy": worst_xy,
+        "worst_grid_ij": worst_ij,
+        "metrics_grid": metrics,
+        "cells": cells,
+        "n_valid_cells": len(cells),
+        "pass": valid and worst < 0.03,
+    }
+
+
+def save_g2_heatmap_png(metrics: np.ndarray, out_path: Path, *, vmax: float = 0.06) -> None:
+    """Cheap heatmap: red = worst tint, blue = neutral."""
+    from PIL import Image
+
+    m = np.nan_to_num(np.asarray(metrics, dtype=np.float64), nan=0.0)
+    scale = max(vmax, float(np.max(m)) if m.size else vmax, 1e-6)
+    gray = np.clip(m / scale, 0.0, 1.0)
+    rgb = np.zeros((*gray.shape, 3), dtype=np.uint8)
+    rgb[..., 0] = (gray * 255.0).astype(np.uint8)
+    rgb[..., 2] = ((1.0 - gray) * 255.0).astype(np.uint8)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(rgb, mode="RGB").save(str(out_path))
 
 
 # Backward-compatible alias for UI imports.

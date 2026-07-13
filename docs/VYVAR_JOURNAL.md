@@ -2,6 +2,21 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-11 — TODO-12g5-HRD: local-bg SNR gate, stamp taper, hardened G2
+
+**Problém (Milan review draft_424 @ boost 2.2):** hnědé čtvercové fleky přes jasné/mléčné
+pozadí; draft_425 V vypadá dobře. Root cause: (1) chroma SNR gate měřil absolutní luminanci
+`L/sigma_bg`, ne signál nad lokálním nebem — na vignetovaném jasném poli je gate otevřený
+všude; (2) Gaussian splat stamp měl nenulovou váhu na hraně boxu → viditelné čtverce při silné
+chroma na jasném pozadí; (3) G2 QA vzorkoval jeden tmavý rohový patch (<0.009) zatímco střed
+rámu měl worst-patch ~0.06 — blind spot.
+
+**Fix:** lokální bg mapa (sigma-clipped median + MAD sigma v box gridu `hrd_color_bg_box_px`,
+default 96); gate `s=max(0,L-bg_local)/sigma_local`; tapered stamp `exp(-r²/2s²)-exp(-R²/2s²)`
+s R≥3σ; hardened G2 = 8×6 grid star-masked patches, worst-patch |R-B|/L < 0.03 + heatmap PNG.
+
+---
+
 ## 2026-07-11 — TODO-12g4-HRD: chroma boost (catalog-color field)
 
 **Problém:** field_median vs d65 renders prakticky nerozlišitelné -- většina hvězd sedí u white

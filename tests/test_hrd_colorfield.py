@@ -15,13 +15,18 @@ from hrd_colorfield import (
     TEFF_MIN_K,
     apply_chroma_boost,
     apply_chroma_snr_gate,
+    background_neutrality_grid,
     build_colorfield_caption,
+    build_local_background_maps,
+    build_star_exclusion_mask,
     compose_catalog_color_rgb,
+    hrd_color_bg_box_px_from_cfg,
     hrd_color_chroma_boost_from_cfg,
     hrd_color_chroma_snr_from_cfg,
     hrd_color_highlight_mode_from_cfg,
     hrd_color_saturation_from_cfg,
     hrd_color_white_point_from_cfg,
+    make_tapered_gaussian_stamp,
     render_catalog_color_field,
     splat_chroma_layer,
     teff_from_bp_rp,
@@ -94,7 +99,7 @@ def test_hue_preserving_scale_preserves_rb_ratio():
 def test_chroma_snr_gate_neutralizes_zero_signal():
     l = np.array([[0.0, 0.5]])
     chroma = np.array([[[1.5, 0.9, 0.8], [1.2, 1.0, 0.9]]])
-    out = apply_chroma_snr_gate(l, chroma, sigma_bg=0.05, snr_softness=3.0)
+    out = apply_chroma_snr_gate(l, chroma, 3.0, sigma_bg=0.05)
     assert np.allclose(out[0, 0], [1.0, 1.0, 1.0], atol=1e-6)
     assert not np.allclose(out[0, 1], [1.0, 1.0, 1.0])
 
@@ -208,3 +213,83 @@ def test_chroma_boost_config_clamp():
     assert hrd_color_chroma_boost_from_cfg(_Cfg(hrd_color_chroma_boost=0.5)) == 1.0
     assert hrd_color_chroma_boost_from_cfg(_Cfg(hrd_color_chroma_boost=5.0)) == 3.0
     assert hrd_color_chroma_boost_from_cfg(None) == 1.6
+
+
+def test_bg_box_px_config_clamp():
+    assert hrd_color_bg_box_px_from_cfg(_Cfg(hrd_color_bg_box_px=10)) == 32
+    assert hrd_color_bg_box_px_from_cfg(_Cfg(hrd_color_bg_box_px=999)) == 512
+    assert hrd_color_bg_box_px_from_cfg(None) == 96
+
+
+def test_local_bg_map_reproduces_gradient():
+    h, w = 384, 384
+    yy, xx = np.mgrid[0:h, 0:w]
+    lum = 0.1 + 0.8 * (xx / max(w - 1, 1))
+    bg, sig = build_local_background_maps(lum, 96)
+    corr = float(np.corrcoef(bg.ravel(), lum.ravel())[0, 1])
+    assert corr > 0.995
+    assert np.nanmean(np.abs(bg - lum)) < 0.05
+    assert np.all(sig > 0)
+
+
+def test_tapered_stamp_zero_at_boundary():
+    stamp, radius = make_tapered_gaussian_stamp(2.0)
+    assert stamp.shape == (2 * radius + 1, 2 * radius + 1)
+    assert stamp[radius, radius] == 1.0
+    edge_vals = np.concatenate(
+        [
+            stamp[0, :],
+            stamp[-1, :],
+            stamp[:, 0],
+            stamp[:, -1],
+        ]
+    )
+    assert np.all(edge_vals <= 1e-12)
+
+
+def test_local_snr_gate_suppresses_faint_splat_sky_tint():
+    h, w = 200, 200
+    luminance = np.full((h, w), 0.55)
+    chroma = np.ones((h, w, 3), dtype=np.float64)
+    chroma[..., 0] = 1.22
+    chroma[..., 2] = 0.84
+    bg_local, sigma_local = build_local_background_maps(luminance, 64)
+    old = apply_chroma_snr_gate(luminance, chroma, 3.0, sigma_bg=0.05)
+    new = apply_chroma_snr_gate(
+        luminance, chroma, 3.0, bg_local=bg_local, sigma_local=sigma_local
+    )
+    old_rgb = compose_catalog_color_rgb(luminance, old, highlight_mode="soft")
+    new_rgb = compose_catalog_color_rgb(luminance, new, highlight_mode="soft")
+    old_worst = background_neutrality_grid(old_rgb)["worst_patch_metric"]
+    new_worst = background_neutrality_grid(new_rgb)["worst_patch_metric"]
+    assert new_worst < 0.01
+    assert old_worst > 0.03
+
+
+def test_local_snr_gate_passes_bright_star_chroma():
+    h, w = 64, 64
+    luminance = np.full((h, w), 0.35)
+    luminance[32, 32] = 0.95
+    chroma = np.ones((h, w, 3))
+    chroma[32, 32] = [1.45, 0.92, 0.78]
+    bg_local, sigma_local = build_local_background_maps(luminance, 32)
+    out = apply_chroma_snr_gate(
+        luminance, chroma, 3.0, bg_local=bg_local, sigma_local=sigma_local
+    )
+    assert not np.allclose(out[32, 32], [1.0, 1.0, 1.0], atol=0.05)
+
+
+def test_snr_zero_preserves_splat_chroma():
+    shape = (48, 48)
+    xs = np.array([24.0])
+    ys = np.array([24.0])
+    rgb = np.array([[1.35, 0.9, 0.82]])
+    amps = np.array([1.0])
+    chroma = splat_chroma_layer(shape, xs, ys, rgb, amps, sigma_px=2.0)
+    lum = np.full(shape, 0.4)
+    lum[24, 24] = 0.9
+    bg, sig = build_local_background_maps(lum, 48)
+    out = apply_chroma_snr_gate(lum, chroma, 0.0, bg_local=bg, sigma_local=sig)
+    assert np.array_equal(out, chroma)
+    boosted = apply_chroma_boost(rgb, 1.0)
+    assert np.array_equal(boosted, rgb)

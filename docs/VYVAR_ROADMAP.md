@@ -597,6 +597,9 @@ next calibration lever.
   speckle), field-median white point (relative colors; reddened chi/h Per B stars correctly near
   neutral under absolute D65); saturation default 0.85.
   **TODO-12g4 (2026-07-11):** chroma boost (distance-from-white expansion, default 1.6, caption-disclosed)
+  — validate draft_424 + draft_425 V at boost 1.0/1.6/2.2; draft_424 blotchy at 2.2.
+  **TODO-12g5 (2026-07-11):** local-background SNR gate (`hrd_color_bg_box_px`), tapered splat stamp,
+  hardened G2 (8×6 worst-patch grid + heatmap); fixes draft_424 sky blotches at high boost.
   for visible Teff contrast when stars sit near the white point; display enhancement only.
   · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
