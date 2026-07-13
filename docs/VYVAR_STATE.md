@@ -1,9 +1,15 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-13** — SESSION-CLOSE-0713. **HEAD `1b1864b`** on `origin/main`.
-**pytest 760 passed**, 15 skipped. **session_baseline_check --fast:** PASS.
+Last updated: **2026-07-13** -- SIGMA-NEWTON baseline run. **pytest 763 passed**, 15 skipped.
 
-**2026-07-13 snapshot (SESSION-CLOSE — color-WB arc CLOSED):** Catalog-color field arc **12g → 12g6
+**2026-07-13 snapshot (SIGMA-NEWTON):** **SIGMA-BUDGET-EMPIRICAL FIXED** + Newton chi2 gate run on
+draft_426 (g/i/r). Harness ``production_lc_err`` defines Newton baseline: V0611 g chi2=**1.23**,
+i=**0.24**, r=**0.25**; g pooled median=**2.95** (bimodal: SS Cam outlier chi2=122). i/r
+underdispersion **attributed** to ensemble SEM ~**2x** empirical kmag scatter (not SEM formula bug).
+**Milan decisions still open:** PROD-SIGMA-FLOOR, ensemble-scale factor on i/r, SS Cam trust band.
+Artifacts: ``tmp/sigma_newton/``; result: ``CURSOR_RESULT_sigma_newton.md``.
+
+**2026-07-13 snapshot (SESSION-CLOSE -- color-WB arc CLOSED):** Catalog-color field arc **12g -> 12g6
 DONE** on `origin/main` (`16e26c2` caption stamps, `0608739` boost default 2.2, `2aaf858` dirty-hash
 suffix). **Final defaults:** `field_median` white point, `hrd_color_chroma_boost` **2.2**,
 `hrd_color_chroma_snr` 3.0, `hrd_color_bg_box_px` 96, `hrd_color_saturation` 0.85. **Canonical
@@ -12,12 +18,9 @@ outputs:** `tmp/colorfield_final/` + `manifest.json` (4 renders @ boost 2.2, G2 
 Milan reopens (optional PDF wiring parked). Result files: `CURSOR_RESULT_todo12g*_hrd.md`,
 `CURSOR_RESULT_close_0713.md`.
 
-**NEXT SESSION entry point:** **SIGMA-NEWTON** (unblocked; prerequisite: **SIGMA-BUDGET-EMPIRICAL**
-harness or LC `err`-based χ²). Seed: V0611 i/r ensemble SEM ~**91%** share, χ²≈**0.25** (~2×
-underdispersed); g_60_4 **pooled** χ²≈**2.99** vs V0611 g χ²≈**1.11** — per-star heterogeneity,
-examine both tails. Milan pending: **PROD-SIGMA-FLOOR**, **SS Cam trust band**. Milan data: eq4
-bin4 bias/darks (≥6, GAIN=12.48, T~-15 °C); new darks before ~2026-07-21; BVR night dX≥0.3;
-bin2 flats.
+**NEXT SESSION entry point:** **PROD-SIGMA-FLOOR** brief + SS Cam trust band (Milan decisions from
+SIGMA-NEWTON). Newton baseline **defined** (see snapshot above). Milan data unchanged: eq4 bin4
+bias/darks; new darks before ~2026-07-21; BVR night dX>=0.3; bin2 flats.
 
 **2026-07-10 snapshot (SESSION-CLOSE-0710):** Two workstreams **DONE** that day:
 (1) **TODO-12 HRD arc** 12/12b/12c/12d/12e/12f — session-aware extreme-object table, enrichment,

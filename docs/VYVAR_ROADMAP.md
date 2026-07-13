@@ -75,8 +75,8 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 
 | ID | Sev | Notes |
 |----|-----|-------|
-| **F-BINGAIN-1** | — | **RESOLVED (2026-07-10).** Empirical empty-aperture `sigma_bkg_ap` + hybrid `howell_scaled` fallback. Regate PASS (decomposition-driven gates G1–G4). Result chain: `CURSOR_RESULT_bingain_fix.md`, `CURSOR_RESULT_bingain_acceptance.md`, `CURSOR_RESULT_bingain_regate.md`. **Follow-up:** **SIGMA-BUDGET-EMPIRICAL** (MED) — harness ignores `sigma_bkg_ap`. |
-| **SIGMA-BUDGET-EMPIRICAL** | MED | **OPEN.** `scripts/chi2_sigma_gate.py:sigma_arrays_from_lc_and_proc` recomputes Howell photon sigma from proc rows and ignores proc `sigma_bkg_ap` / empirical LC err. Production chi2 validation must use LC `err` column (as `bingain_fix_validate.py` now does) until harness updated. Blocks unified sigma-budget vs production err audit. |
+| **F-BINGAIN-1** | — | **RESOLVED (2026-07-10).** Empirical empty-aperture `sigma_bkg_ap` + hybrid `howell_scaled` fallback. Regate PASS (decomposition-driven gates G1–G4). Result chain: `CURSOR_RESULT_bingain_fix.md`, `CURSOR_RESULT_bingain_acceptance.md`, `CURSOR_RESULT_bingain_regate.md`. Harness aligned 2026-07-13 (**SIGMA-BUDGET-EMPIRICAL FIXED**). |
+| **SIGMA-BUDGET-EMPIRICAL** | — | **FIXED (2026-07-13).** ``chi2_sigma_gate.sigma_arrays_from_lc_and_proc`` uses proc ``sigma_bkg_ap`` / ``err_bkg_source``; ``production_lc_err`` variant added. Tests in ``tests/test_sigma_budget.py``. Result: ``CURSOR_RESULT_sigma_newton.md``. |
 | **F-EXCEPT-TIER1** | — | **CLOSED (2026-07-08)** — 40 fixes + EXCEPT-BULK; census `docs/VYVAR_EXCEPT_CENSUS.md` all **625 EVIDENCE**. |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
@@ -278,10 +278,8 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ## NEXT SESSION — entry point (2026-07-13 close)
 
-**Start here:** **SIGMA-NEWTON** — extend chi2 gate to Newton rigs (unblocked post F-BINGAIN-1 regate).
-**Prerequisite (ROADMAP deferred row):** wire **SIGMA-BUDGET-EMPIRICAL** harness (`sigma_arrays_from_lc_and_proc`
-must use proc `sigma_bkg_ap` / empirical photon term) **or** validate via production LC `err` column
-(as `scripts/bingain_fix_validate.py` now does).
+**Start here:** **PROD-SIGMA-FLOOR** + SS Cam trust band (Milan decisions from SIGMA-NEWTON baseline).
+**SIGMA-NEWTON DONE (2026-07-13):** see ``CURSOR_RESULT_sigma_newton.md``; artifacts ``tmp/sigma_newton/``.
 
 **Seed numbers from regate decomposition (do not use blanket per-setup gates):**
 - V0611 **i/r:** ensemble SEM share ~**91%**, χ²≈**0.25** (~2× underdispersed) — target ensemble/scint/floor budget, not empirical bkg.
@@ -345,9 +343,11 @@ next calibration lever.
    **Open decisions (Milan):**
    - **PROD-SIGMA-FLOOR:** add per-rig `sigma_sys` floor to production err (changes outputs → re-anchor;
      bright-star AAVSO error bars currently underestimated by floor) — separate session.
-   - **SIGMA-NEWTON:** extend chi2 gate to Newton rigs — **unblocked** post F-BINGAIN-1 regate; V0611 i/r
-     underdispersion (χ²≈0.25) measured as **ensemble-SEM dominated (85–91%)**, not photon/bkg — Newton
-     gate work should target ensemble/scint/floor budget, not empirical bkg term.
+   - **SIGMA-NEWTON:** **DONE (2026-07-13).** Newton baseline on draft_426 g/i/r via ``production_lc_err``.
+     N2 PASS: i/r underdispersion = ensemble SEM ~2x empirical scatter (chi2_predicted 0.23 vs 0.24).
+     N3 PASS: g_60_4 pooled 2.95 bimodal (SS Cam chi2=122 + underdispersed tail). Harness sanity PASS.
+     **Milan open:** ensemble-scale factor (~0.5 on i/r), PROD-SIGMA-FLOOR, SS Cam trust band.
+     Result: ``CURSOR_RESULT_sigma_newton.md``.
    Blocks TODO-GS8 + TODO-MULTISET for IVW flip. **`delta_mag` flux-sum canonical until Newton gate passes.**
 
 3. **EXTERNAL-XVAL — external validation campaign (MEDIUM).** VYVAR vs external tools (AstroImageJ

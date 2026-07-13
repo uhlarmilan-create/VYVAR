@@ -2,6 +2,24 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-13 -- SIGMA-NEWTON: empirical harness + Newton chi2 baseline (draft_426)
+
+**Part A:** ``chi2_sigma_gate.sigma_arrays_from_lc_and_proc`` now uses proc ``sigma_bkg_ap`` (via
+``_photometric_error_with_bkg_mode``); ``production_lc_err`` variant = LC ``err`` column.
+**Part B:** draft_426 g/i/r gate run (V0611 + 6 check stars/setup). Gates N1-N4 PASS (baseline
+defined; i/r attribution conclusive; g heterogeneity localized; harness matches bingain acceptance).
+
+**Key numbers:** V0611 production_lc_err chi2/dof: g **1.23**, i **0.24**, r **0.25**. g pooled
+**2.95** (SS Cam chi2=122 outlier). i/r underdispersion: LC err ~**2.1x** empirical kmag scatter
+predicts chi2~0.23 vs observed ~0.24; ensemble share 85-91%. SEM implements std/sqrt(n) correctly
+(``photometry_core.py:3113-3115``).
+
+**Milan candidate (not coded):** ~0.5x ensemble scatter scale on i/r setups.
+
+Result: ``CURSOR_RESULT_sigma_newton.md``; artifacts ``tmp/sigma_newton/``.
+
+---
+
 ## 2026-07-13 — SESSION-CLOSE-0713: color-WB arc close (12g–12g6)
 
 **Oblouk:** catalog-color field od TODO-12g po 12g6 na `origin/main` — vizualizační vrstva hotová,
