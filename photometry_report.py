@@ -2635,6 +2635,13 @@ class _PhotometryReportBuilder:
                 f"  SNR-optimal aperture: median target r={_ap_med:.2f}px "
                 f"(var x{_var_factor:.2f}); comp/check r x{_comp_factor:.2f}",
             )
+        _sf_meta = (self._pipeline_meta or {}).get("sigma_floor")
+        if isinstance(_sf_meta, dict):
+            methods_lines.insert(
+                2 if len(methods_lines) > 2 else len(methods_lines),
+                "  Per-point uncertainties include a per-rig systematic floor; correlated "
+                "(red) noise is reported separately and is not included in per-point bars.",
+            )
         if _pu_ver != "?" or _ap_ver != "?":
             for i, ln in enumerate(methods_lines):
                 if ln.strip().startswith("Bradley et al."):

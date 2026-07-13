@@ -1,6 +1,13 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-13** -- MASTERSTAR-EPOCH-FIX + baseline redo. **pytest 779 passed**, 15 skipped.
+Last updated: **2026-07-13** -- PROD-SIGMA-FLOOR wired; re-anchor in progress. **pytest 794 passed**, 15 skipped.
+
+**2026-07-13 snapshot (PROD-SIGMA-FLOOR):** c4-corrected ensemble SEM + per-rig ``sigma_sys``
+in production LC ``err`` (``sigma_floor_core.py``). Newton equipment_id=4 floor **18.0 mmag**
+[15.6, 20.2]; wide equipment_id=1 **un-floored** (bootstrap unstable vs SIGMA-A3 6.5 mmag band).
+draft_424 re-anchored: snapshot ``draft_000424_snapshot_sigma_floor_20260713``;
+core SHA ``bf3743a1...``; ``session_baseline_check --full`` **PASS**.
+Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``; result: ``CURSOR_RESULT_sigma_floor.md``.
 
 **2026-07-13 snapshot (MASTERSTAR-EPOCH-FIX):** Collection-layer exclusion of
 ``proc_MASTERSTAR.csv`` from epoch sets (``is_masterstar_proc_name`` in

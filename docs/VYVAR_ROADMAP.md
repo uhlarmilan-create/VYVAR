@@ -81,6 +81,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **426-REGEN** | — | **DONE (2026-07-13); baseline SUPERSEDED by MASTERSTAR-EPOCH-FIX.** Stale at ``Archive/evidence/draft_000426_stale_20260626``. |
 | **MASTERSTAR-EPOCH** | HIGH | **CLOSED (2026-07-13).** ``proc_MASTERSTAR.csv`` excluded from epoch collection; draft_426 regen 25 epochs. Result: ``CURSOR_RESULT_masterstar_epoch.md``. |
 | **COMP-POOL-R** | MED | **VERDICT (2026-07-13):** r_60_4 legitimately sparse (2 comps on HEAD, byte-identical procs); June 8 not reproducible. r baseline **PENDING** (check_kmag). Milan: sparse-aware check-star design. Result: ``CURSOR_RESULT_comp_pool_r.md``. |
+| **PROD-SIGMA-FLOOR** | HIGH | **DONE (2026-07-13):** c4 SEM + Newton floor 18 mmag; wide un-floored. Re-anchor PASS (core ``bf3743a1``). Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``; result: ``CURSOR_RESULT_sigma_floor.md``. |
 | **PROVENANCE-GUARD** | — | **DONE (2026-07-13).** ``provenance_guard.py``; harness refuse + VL-PROVENANCE ledger. |
 | **STALE-LC-SWEEP** | — | **CLOSED via regen (2026-07-13).** Evidence preserved; draft_426 on HEAD. |
 | **SIGMA-SEM-CAUSE** | — | **DONE (2026-07-13); SUPERSEDED.** Trends confirmed; dominant-cause attribution retracted -- see SIGMA-PROV-FORENSIC. Result: ``CURSOR_RESULT_sigma_sem_cause.md``. |
@@ -285,8 +286,11 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ## NEXT SESSION — entry point (2026-07-13 close)
 
-**Start here:** **PROD-SIGMA-FLOOR** using **corrected** draft_426 fresh baseline
-(``tmp/sigma_newton_fresh/sigma_newton_fresh_summary.json``, post-MASTERSTAR-EPOCH-FIX).
+**Start here:** Milan review of PROD-SIGMA-FLOOR + COMP-POOL-R local chain before push.
+
+**PROD-SIGMA-FLOOR DONE (2026-07-13):** c4 SEM + Newton
+``sigma_sys`` 18 mmag (equipment 4); wide un-floored. Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``.
+Result: ``CURSOR_RESULT_sigma_floor.md``.
 
 **MASTERSTAR-EPOCH-FIX DONE:** phantom ``proc_MASTERSTAR.csv`` epoch excluded at collection;
 draft_426 regen **25 vs 25** shared epochs with stale. Fresh Newton (supersedes ``a6b19df``):

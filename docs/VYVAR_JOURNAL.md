@@ -2,6 +2,19 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-13 -- PROD-SIGMA-FLOOR
+
+**Wiring:** c4 ensemble SEM + per-rig ``sigma_sys`` in LC ``err``; ``sigma_sys_mag`` column +
+``pipeline_meta.sigma_floor``. Newton floor **18.0 mmag** (eq 4); wide **un-floored** (unstable
+bootstrap; point fit ~4.8 mmag below SIGMA-A3 [5.5, 7.5] band).
+
+**PZQ:** report-only red-noise diagnostic per rig (not in per-point bars).
+
+Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``; artifacts ``tmp/sigma_floor/``.
+Result: ``CURSOR_RESULT_sigma_floor.md``. Re-anchor draft_424 in progress.
+
+---
+
 ## 2026-07-13 -- COMP-POOL-R
 
 **Finding:** r_60_4 regen yields **2** Phase-1 comps (tier 3) vs June **8** (tier 2) on

@@ -4,6 +4,9 @@ Date: 2026-06-15
 Status: **PARKED** -- sandbox only; no production wiring until chi-squared/dof ~ 1 on constant calibrator  
 Blocks: Broeg-canonical IVW ensemble combine; TODO-GS8; TODO-MULTISET multi-rig IVW
 
+**Production floor (2026-07-13):** per-rig ``sigma_sys`` wired for Newton rigs; see
+``docs/VYVAR_SIGMA_FLOOR_SPEC.md``. Scintillation + Broeg IVW remain parked here.
+
 ---
 
 ## Load-bearing gate
