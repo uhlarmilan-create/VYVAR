@@ -1,13 +1,21 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-13** -- 426-REGEN + PROVENANCE-GUARD complete. **pytest 775 passed**, 15 skipped.
+Last updated: **2026-07-13** -- MASTERSTAR-EPOCH-FIX + baseline redo. **pytest 779 passed**, 15 skipped.
 
-**2026-07-13 snapshot (426-REGEN + PROVENANCE-GUARD):** draft_426 **regenerated** on HEAD
-(stale at ``Archive/evidence/draft_000426_stale_20260626``). All setups provenance-stamped.
-**Fresh Newton baseline:** V0611 chi2 g=**3.20**, i=**2.17**, r=**131.6*** (r check_kmag
-missing -- flagged). PROVENANCE-GUARD live (``provenance_guard.py``, VL-PROVENANCE).
-**AAVSO:** stale g/i/r/z exports had inflated err bars; resubmission Milan decision.
-Result: ``CURSOR_RESULT_426_regen.md``; artifacts ``tmp/sigma_newton_fresh/``.
+**2026-07-13 snapshot (MASTERSTAR-EPOCH-FIX):** Collection-layer exclusion of
+``proc_MASTERSTAR.csv`` from epoch sets (``is_masterstar_proc_name`` in
+``proc_frame_store.py``; belt-and-braces log in phase2a). draft_426 regen **25 epochs**
+aligned with stale June cut (proc artifact retained on disk for SNR/noise_floor).
+**Fresh Newton baseline superseded** (retracts ``a6b19df`` / contaminated 26-epoch regen):
+V0611 chi2 g=**3.69**, i=**2.01**, r=**PENDING (COMP-POOL-R; no check_kmag sidecar)**. Artifacts:
+``tmp/sigma_newton_fresh/``. Result: ``CURSOR_RESULT_masterstar_epoch.md``.
+**ANCHOR 424:** clean (no phantom epoch); no extra re-cut for MASTERSTAR -- bundled
+re-anchor (unit fix + PROD-SIGMA-FLOOR) unchanged.
+
+**2026-07-13 snapshot (426-REGEN + PROVENANCE-GUARD -- SUPERSEDED baseline):** draft_426
+regenerated; stale at ``Archive/evidence/draft_000426_stale_20260626``. **Retracted:**
+26-epoch fresh Newton numbers in ``CURSOR_RESULT_426_regen.md`` / commit ``a6b19df``
+(phantom ``proc_MASTERSTAR.csv`` epoch). PROVENANCE-GUARD remains live.
 
 **2026-07-13 snapshot (SIGMA-PROV-FORENSIC):** draft_426 archive LC **stale pre-Fix-A err**
 (semantic LC/normalize **7.46x** on i; provenance absent, mtime 2026-06-26). Fresh i_70_4 rerun:
@@ -31,8 +39,8 @@ outputs:** `tmp/colorfield_final/` + `manifest.json` (4 renders @ boost 2.2, G2 
 Milan reopens (optional PDF wiring parked). Result files: `CURSOR_RESULT_todo12g*_hrd.md`,
 `CURSOR_RESULT_close_0713.md`.
 
-**NEXT SESSION entry point:** **PROD-SIGMA-FLOOR** design using fresh baseline
-(``tmp/sigma_newton_fresh/``) + one re-anchor. Review r_60_4 check_kmag regression.
+**NEXT SESSION entry point:** **PROD-SIGMA-FLOOR** design using corrected fresh baseline
+(``tmp/sigma_newton_fresh/``, post-MASTERSTAR-EPOCH-FIX) + one re-anchor.
 
 **2026-07-10 snapshot (SESSION-CLOSE-0710):** Two workstreams **DONE** that day:
 (1) **TODO-12 HRD arc** 12/12b/12c/12d/12e/12f — session-aware extreme-object table, enrichment,

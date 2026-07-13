@@ -78,7 +78,8 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **F-BINGAIN-1** | — | **RESOLVED (2026-07-10).** Empirical empty-aperture `sigma_bkg_ap` + hybrid `howell_scaled` fallback. Regate PASS (decomposition-driven gates G1–G4). Result chain: `CURSOR_RESULT_bingain_fix.md`, `CURSOR_RESULT_bingain_acceptance.md`, `CURSOR_RESULT_bingain_regate.md`. Harness aligned 2026-07-13 (**SIGMA-BUDGET-EMPIRICAL FIXED**). |
 | **SIGMA-BUDGET-EMPIRICAL** | — | **FIXED (2026-07-13).** ``chi2_sigma_gate.sigma_arrays_from_lc_and_proc`` uses proc ``sigma_bkg_ap`` / ``err_bkg_source``; ``production_lc_err`` variant added. Tests in ``tests/test_sigma_budget.py``. Result: ``CURSOR_RESULT_sigma_newton.md``. |
 | **SIGMA-PROV-FORENSIC** | HIGH | **DONE (2026-07-13).** draft_426 archive LC **stale pre-Fix-A err** (semantic 7.46x i); fresh i_70_4 rerun: V0611 chi2=**2.13**, err=**0.0175 mag**. P2/P3 quantitative predictions FAIL. Part C unit fix landed. Result: ``CURSOR_RESULT_sigma_prov_forensic.md``. |
-| **426-REGEN** | — | **DONE (2026-07-13).** draft_426 regenerated g/i/r/z; stale at ``Archive/evidence/draft_000426_stale_20260626``. Fresh baseline ``tmp/sigma_newton_fresh/``. Result: ``CURSOR_RESULT_426_regen.md``. |
+| **426-REGEN** | — | **DONE (2026-07-13); baseline SUPERSEDED by MASTERSTAR-EPOCH-FIX.** Stale at ``Archive/evidence/draft_000426_stale_20260626``. |
+| **MASTERSTAR-EPOCH** | HIGH | **CLOSED (2026-07-13).** ``proc_MASTERSTAR.csv`` excluded from epoch collection; draft_426 regen 25 epochs. Result: ``CURSOR_RESULT_masterstar_epoch.md``. |
 | **PROVENANCE-GUARD** | — | **DONE (2026-07-13).** ``provenance_guard.py``; harness refuse + VL-PROVENANCE ledger. |
 | **STALE-LC-SWEEP** | — | **CLOSED via regen (2026-07-13).** Evidence preserved; draft_426 on HEAD. |
 | **SIGMA-SEM-CAUSE** | — | **DONE (2026-07-13); SUPERSEDED.** Trends confirmed; dominant-cause attribution retracted -- see SIGMA-PROV-FORENSIC. Result: ``CURSOR_RESULT_sigma_sem_cause.md``. |
@@ -283,11 +284,15 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ## NEXT SESSION — entry point (2026-07-13 close)
 
-**Start here:** **PROD-SIGMA-FLOOR** using **regenerated** draft_426 fresh baseline
-(``tmp/sigma_newton_fresh/sigma_newton_fresh_summary.json``).
+**Start here:** **PROD-SIGMA-FLOOR** using **corrected** draft_426 fresh baseline
+(``tmp/sigma_newton_fresh/sigma_newton_fresh_summary.json``, post-MASTERSTAR-EPOCH-FIX).
 
-**426-REGEN DONE:** stale preserved; g/i/r/z regenerated with provenance. Fresh Newton:
-V0611 chi2 g=**3.20**, i=**2.17** (replaces invalidated N1). r check_kmag anomaly flagged.
+**MASTERSTAR-EPOCH-FIX DONE:** phantom ``proc_MASTERSTAR.csv`` epoch excluded at collection;
+draft_426 regen **25 vs 25** shared epochs with stale. Fresh Newton (supersedes ``a6b19df``):
+V0611 chi2 g=**3.69**, i=**2.01**, r=**PENDING (COMP-POOL-R)**.
+
+**426-REGEN DONE (baseline retracted):** stale preserved; regen pipeline provenance-stamped.
+Pre-fix 26-epoch baseline in ``CURSOR_RESULT_426_regen.md`` is **invalid** for science compare.
 
 **PROVENANCE-GUARD DONE:** systemic guard after second provenance-class incident.
 

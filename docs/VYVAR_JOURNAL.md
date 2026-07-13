@@ -2,6 +2,30 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-13 -- MASTERSTAR-EPOCH-FIX
+
+**Finding:** ``proc_MASTERSTAR.csv`` (stacked reference sidecar) entered phase2a epoch sets
+via ``proc_*.csv`` glob / ProcFrameStore, yielding 26 vs 25 epochs on draft_426 regen.
+
+**Root cause:** Producer writes sidecar when ``MASTERSTAR.fits`` sits under
+``detrended_aligned/lights`` (``export_per_frame_catalogs``); artifact post-dated June LC cut
+(2026-07-10 vs LC 2026-06-26). Collector had no MASTERSTAR exclusion.
+
+**Fix:** ``is_masterstar_proc_name`` + filter in ``list_proc_csvs`` / ``ProcFrameStore.build``;
+phase2a belt-and-braces log. Artifact production unchanged (SNR / noise_floor consumer).
+
+**Exposure:** draft_424/425 clean; draft_426 proc present but LC phantom cleared after regen.
+Anchor 424 not affected by phantom epoch.
+
+**Baseline:** Fresh Newton redo -- V0611 i chi2 **2.01** (25 epochs); supersedes ``a6b19df``.
+
+**r_60_4 follow-up:** check_kmag sidecars still 0 -- sparse comp pool (2 good vs stale 8), not
+``check_star_min_epochs`` / phantom epoch. Flagged for separate investigation.
+
+Result: ``CURSOR_RESULT_masterstar_epoch.md``.
+
+---
+
 ## 2026-07-13 -- 426-REGEN + PROVENANCE-GUARD
 
 **426-REGEN:** Stale draft_426 moved to ``Archive/evidence/draft_000426_stale_20260626``;
