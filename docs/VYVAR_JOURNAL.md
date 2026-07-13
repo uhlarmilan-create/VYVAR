@@ -2,6 +2,21 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-13 -- 426-REGEN + PROVENANCE-GUARD
+
+**426-REGEN:** Stale draft_426 moved to ``Archive/evidence/draft_000426_stale_20260626``;
+regenerated g/i/r/z on HEAD with provenance. Frame delta: ``proc_MASTERSTAR.csv`` epoch now
+included (proc_*.csv glob). Fresh Newton baseline in ``tmp/sigma_newton_fresh/`` (V0611 i
+chi2=2.17). r_60_4 check_kmag sidecars missing (0 vs stale 6) -- flagged, not auto-fixed.
+
+**PROVENANCE-GUARD:** ``provenance_guard.py`` + harness wiring + VL-PROVENANCE ledger item.
+
+**AAVSO:** stale exports had inflated err bars; resubmission Milan decision.
+
+Result: ``CURSOR_RESULT_426_regen.md``.
+
+---
+
 ## 2026-07-13 -- SIGMA-PROV-FORENSIC: stale-LC proof + fresh Newton + unit fix
 
 **Root cause:** draft_426 archive LCs carry **pre-Fix-A** ensemble err (brightness spread, not

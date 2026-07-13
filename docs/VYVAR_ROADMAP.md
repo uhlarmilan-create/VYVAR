@@ -78,7 +78,9 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **F-BINGAIN-1** | — | **RESOLVED (2026-07-10).** Empirical empty-aperture `sigma_bkg_ap` + hybrid `howell_scaled` fallback. Regate PASS (decomposition-driven gates G1–G4). Result chain: `CURSOR_RESULT_bingain_fix.md`, `CURSOR_RESULT_bingain_acceptance.md`, `CURSOR_RESULT_bingain_regate.md`. Harness aligned 2026-07-13 (**SIGMA-BUDGET-EMPIRICAL FIXED**). |
 | **SIGMA-BUDGET-EMPIRICAL** | — | **FIXED (2026-07-13).** ``chi2_sigma_gate.sigma_arrays_from_lc_and_proc`` uses proc ``sigma_bkg_ap`` / ``err_bkg_source``; ``production_lc_err`` variant added. Tests in ``tests/test_sigma_budget.py``. Result: ``CURSOR_RESULT_sigma_newton.md``. |
 | **SIGMA-PROV-FORENSIC** | HIGH | **DONE (2026-07-13).** draft_426 archive LC **stale pre-Fix-A err** (semantic 7.46x i); fresh i_70_4 rerun: V0611 chi2=**2.13**, err=**0.0175 mag**. P2/P3 quantitative predictions FAIL. Part C unit fix landed. Result: ``CURSOR_RESULT_sigma_prov_forensic.md``. |
-| **STALE-LC-SWEEP** | HIGH | draft_000426 g/i/r semantic stale-err (2.7-7.5x); strict mtime sweep empty. AAVSO exports from 426 carried inflated bars. Controls 424/425 post-Fix-A OK. |
+| **426-REGEN** | — | **DONE (2026-07-13).** draft_426 regenerated g/i/r/z; stale at ``Archive/evidence/draft_000426_stale_20260626``. Fresh baseline ``tmp/sigma_newton_fresh/``. Result: ``CURSOR_RESULT_426_regen.md``. |
+| **PROVENANCE-GUARD** | — | **DONE (2026-07-13).** ``provenance_guard.py``; harness refuse + VL-PROVENANCE ledger. |
+| **STALE-LC-SWEEP** | — | **CLOSED via regen (2026-07-13).** Evidence preserved; draft_426 on HEAD. |
 | **SIGMA-SEM-CAUSE** | — | **DONE (2026-07-13); SUPERSEDED.** Trends confirmed; dominant-cause attribution retracted -- see SIGMA-PROV-FORENSIC. Result: ``CURSOR_RESULT_sigma_sem_cause.md``. |
 | **F-EXCEPT-TIER1** | — | **CLOSED (2026-07-08)** — 40 fixes + EXCEPT-BULK; census `docs/VYVAR_EXCEPT_CENSUS.md` all **625 EVIDENCE**. |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
@@ -281,22 +283,15 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ## NEXT SESSION — entry point (2026-07-13 close)
 
-**Start here:** **PROD-SIGMA-FLOOR** re-anchor (unit fix landed) + SS Cam trust band on **fresh** numbers.
+**Start here:** **PROD-SIGMA-FLOOR** using **regenerated** draft_426 fresh baseline
+(``tmp/sigma_newton_fresh/sigma_newton_fresh_summary.json``).
 
-**SIGMA-PROV-FORENSIC DONE (2026-07-13):** draft_426 archive LC **INVALIDATED** (stale pre-Fix-A
-err; semantic 7.46x on i). Fresh i_70_4: V0611 chi2=**2.13**, err=**0.0175 mag**. Unit fix at
-``_combine_err_with_ensemble_scatter_keyed`` landed (re-anchor required). Result:
-``CURSOR_RESULT_sigma_prov_forensic.md``.
+**426-REGEN DONE:** stale preserved; g/i/r/z regenerated with provenance. Fresh Newton:
+V0611 chi2 g=**3.20**, i=**2.17** (replaces invalidated N1). r check_kmag anomaly flagged.
 
-**Retracted:** SIGMA-NEWTON draft_426 baseline; SIGMA-SEM-CAUSE dominant mag/flux attribution.
+**PROVENANCE-GUARD DONE:** systemic guard after second provenance-class incident.
 
-**Fresh Newton baseline (i_70_4, production_lc_err):** V0611 chi2=**2.13** (mild overdispersion);
-pooled check stars **2.1-24.9** (SS Cam outlier). PROD-SIGMA-FLOOR motivated by fresh overdispersion.
-
-**Milan decisions pending:**
-- **PROD-SIGMA-FLOOR** — per-rig `sigma_sys` floor + **one re-anchor** (unit fix + floor together).
-- **SS Cam trust band** — fresh chi2=**24.9** (was 122 on stale LC); sparse gate redesign still open.
-- **draft_426 regenerate vs archive** — stale tree is forensic evidence until Milan decides.
+**AAVSO:** stale draft_426 exports may have inflated err bars; resubmission Milan decision.
 
 **Follow-ups (code, no block on SIGMA-NEWTON start if using LC err):**
 - **SIGMA-BUDGET-EMPIRICAL** (MED) — chi2 harness mismatch tracked in deferred table.
