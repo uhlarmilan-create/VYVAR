@@ -15,7 +15,9 @@ from __future__ import annotations
 import json
 import logging
 import math
+import subprocess
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
@@ -39,6 +41,9 @@ HRD_COLORFIELD_CAPTION_FIELD_MEDIAN = (
     " white point = field median Teff (~{teff:.0f} K); colors are relative to the field average."
 )
 HRD_COLORFIELD_CAPTION_CHROMA_BOOST = " chroma enhanced x{boost:.1f}."
+HRD_COLORFIELD_CAPTION_STAMP = " rendered {ts} UTC @ {git_hash}."
+
+_REPO_ROOT = Path(__file__).resolve().parent
 
 TEFF_MIN_K = 2500.0
 TEFF_MAX_K = 40000.0
@@ -63,6 +68,21 @@ _MAD_TO_SIGMA = 1.4826
 _DEFAULT_BG_BOX_PX = 96
 _G2_GRID_COLS = 8
 _G2_GRID_ROWS = 6
+
+
+def _repo_short_git_hash() -> str:
+    """Short HEAD hash for caption provenance; never raises."""
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=_REPO_ROOT,
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+        ).strip()
+        return out or "nogit"
+    except Exception:  # noqa: BLE001
+        return "nogit"
 
 
 def _sigma_clipped_median_sigma(patch: np.ndarray) -> tuple[float, float]:
@@ -321,12 +341,25 @@ def build_colorfield_caption(
     white_point: WhitePointMode,
     field_median_teff_k: float | None = None,
     chroma_boost: float = 1.0,
+    rendered_at_utc: datetime | None = None,
+    git_short_hash: str | None = None,
 ) -> str:
     cap = HRD_COLORFIELD_CAPTION_BASE
     if white_point == "field_median" and field_median_teff_k is not None:
         cap += HRD_COLORFIELD_CAPTION_FIELD_MEDIAN.format(teff=float(field_median_teff_k))
     if float(chroma_boost) > 1.0 + 1e-9:
         cap += HRD_COLORFIELD_CAPTION_CHROMA_BOOST.format(boost=float(chroma_boost))
+    when = rendered_at_utc or datetime.now(timezone.utc)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    else:
+        when = when.astimezone(timezone.utc)
+    when = when.replace(second=0, microsecond=0)
+    ghash = git_short_hash if git_short_hash is not None else _repo_short_git_hash()
+    cap += HRD_COLORFIELD_CAPTION_STAMP.format(
+        ts=when.strftime("%Y-%m-%d %H:%M"),
+        git_hash=ghash,
+    )
     return cap
 
 
@@ -342,7 +375,7 @@ def hrd_color_saturation_from_cfg(cfg: Any | None) -> float:
 
 
 def hrd_color_chroma_boost_from_cfg(cfg: Any | None) -> float:
-    default = 1.6
+    default = 2.2
     if cfg is None:
         return default
     try:
@@ -647,6 +680,8 @@ def render_catalog_color_field(
     photometry_dir: Path,
     cfg: Any,
     out_png: Path,
+    *,
+    rendered_at_utc: datetime | None = None,
 ) -> Path | None:
     """Render mono luminance x Gaia chrominance field PNG. Fail-open on missing inputs."""
     if not hrd_color_field_enabled(cfg):
@@ -727,10 +762,14 @@ def render_catalog_color_field(
     )
     rgb = compose_catalog_color_rgb(luminance, chroma, highlight_mode=highlight_mode)
 
+    stamp_utc = rendered_at_utc
+    if stamp_utc is None:
+        stamp_utc = datetime.now(timezone.utc)
     caption = build_colorfield_caption(
         white_point=white_point_mode,
         field_median_teff_k=field_median_teff,
         chroma_boost=chroma_boost,
+        rendered_at_utc=stamp_utc,
     )
     img_u8 = (rgb * 255.0).astype(np.uint8)
     img_u8 = _draw_caption(img_u8, caption)

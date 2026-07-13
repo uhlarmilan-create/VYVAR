@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import math
+import re
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -203,16 +205,46 @@ def test_chroma_boost_clamp_at_max():
 
 
 def test_caption_chroma_boost_suffix():
-    cap_off = build_colorfield_caption(white_point="d65", chroma_boost=1.0)
-    cap_on = build_colorfield_caption(white_point="field_median", field_median_teff_k=4817.0, chroma_boost=1.6)
+    stamp = datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc)
+    cap_off = build_colorfield_caption(
+        white_point="d65", chroma_boost=1.0, rendered_at_utc=stamp, git_short_hash="c5685c6"
+    )
+    cap_on = build_colorfield_caption(
+        white_point="field_median",
+        field_median_teff_k=4817.0,
+        chroma_boost=1.6,
+        rendered_at_utc=stamp,
+        git_short_hash="c5685c6",
+    )
     assert "chroma enhanced" not in cap_off
     assert "chroma enhanced x1.6" in cap_on
+    assert " rendered 2026-07-11 12:00 UTC @ c5685c6." in cap_on
+
+
+def test_caption_render_stamp_parseable():
+    stamp = datetime(2026, 7, 13, 9, 30, tzinfo=timezone.utc)
+    cap = build_colorfield_caption(
+        white_point="field_median",
+        field_median_teff_k=5000.0,
+        chroma_boost=2.2,
+        rendered_at_utc=stamp,
+        git_short_hash="abc1234",
+    )
+    m = re.search(
+        r" rendered (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) UTC @ ([0-9a-f]{4,40}|nogit)\.$",
+        cap,
+    )
+    assert m is not None
+    assert m.group(1) == "2026-07-13 09:30"
+    assert m.group(2) == "abc1234"
+    assert "chroma enhanced x2.2" in cap
+    assert "white point = field median Teff" in cap
 
 
 def test_chroma_boost_config_clamp():
     assert hrd_color_chroma_boost_from_cfg(_Cfg(hrd_color_chroma_boost=0.5)) == 1.0
     assert hrd_color_chroma_boost_from_cfg(_Cfg(hrd_color_chroma_boost=5.0)) == 3.0
-    assert hrd_color_chroma_boost_from_cfg(None) == 1.6
+    assert hrd_color_chroma_boost_from_cfg(None) == 2.2
 
 
 def test_bg_box_px_config_clamp():
