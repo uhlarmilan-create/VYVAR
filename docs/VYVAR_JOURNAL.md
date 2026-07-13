@@ -2,7 +2,24 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
-## 2026-07-13 -- SIGMA-SEM-CAUSE: ensemble SEM inflation attribution
+## 2026-07-13 -- SIGMA-PROV-FORENSIC: stale-LC proof + fresh Newton + unit fix
+
+**Root cause:** draft_426 archive LCs carry **pre-Fix-A** ensemble err (brightness spread, not
+Honeycutt residual SEM). Semantic fingerprint: i_70_4 LC/normalize **7.46x**; LC-implied ensemble
+0.0482 mag vs normalize 0.0067 mag. Strict P1 mtime leg FAIL (2026-06-26); semantic P1 PASS.
+
+**Fresh i_70_4 (current HEAD):** V0611 err **0.0175 mag** (P2 FAIL vs 0.009-0.010); chi2 **2.13**
+(P3 FAIL vs 6-8). Sign flip stale 0.24 -> fresh 2.13. Pooled check stars 2.1-24.9.
+
+**Part C:** unit-consistent err quadrature landed; re-anchor required.
+
+**Retractions:** SIGMA-NEWTON draft_426 baseline; SIGMA-SEM-CAUSE dominant mag/flux attribution.
+
+Result: ``CURSOR_RESULT_sigma_prov_forensic.md``; ``tmp/sigma_prov_forensic/``.
+
+---
+
+## 2026-07-13 -- SIGMA-SEM-CAUSE: ensemble SEM inflation attribution (SUPERSEDED)
 
 **Question:** WHY is LC err ~2x empirical scatter on i/r (chi2~0.24)? Not the 0.5x scale shortcut.
 

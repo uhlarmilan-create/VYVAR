@@ -77,7 +77,9 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 |----|-----|-------|
 | **F-BINGAIN-1** | — | **RESOLVED (2026-07-10).** Empirical empty-aperture `sigma_bkg_ap` + hybrid `howell_scaled` fallback. Regate PASS (decomposition-driven gates G1–G4). Result chain: `CURSOR_RESULT_bingain_fix.md`, `CURSOR_RESULT_bingain_acceptance.md`, `CURSOR_RESULT_bingain_regate.md`. Harness aligned 2026-07-13 (**SIGMA-BUDGET-EMPIRICAL FIXED**). |
 | **SIGMA-BUDGET-EMPIRICAL** | — | **FIXED (2026-07-13).** ``chi2_sigma_gate.sigma_arrays_from_lc_and_proc`` uses proc ``sigma_bkg_ap`` / ``err_bkg_source``; ``production_lc_err`` variant added. Tests in ``tests/test_sigma_budget.py``. Result: ``CURSOR_RESULT_sigma_newton.md``. |
-| **SIGMA-SEM-CAUSE** | — | **DONE (2026-07-13).** Comp-residual trends confirmed (lag-1~0.56-0.64); AM detrend does not fix chi2; LC-implied ensemble 4-7x > normalize on i/r (mag/flux join). C3 FAIL. Result: ``CURSOR_RESULT_sigma_sem_cause.md``. |
+| **SIGMA-PROV-FORENSIC** | HIGH | **DONE (2026-07-13).** draft_426 archive LC **stale pre-Fix-A err** (semantic 7.46x i); fresh i_70_4 rerun: V0611 chi2=**2.13**, err=**0.0175 mag**. P2/P3 quantitative predictions FAIL. Part C unit fix landed. Result: ``CURSOR_RESULT_sigma_prov_forensic.md``. |
+| **STALE-LC-SWEEP** | HIGH | draft_000426 g/i/r semantic stale-err (2.7-7.5x); strict mtime sweep empty. AAVSO exports from 426 carried inflated bars. Controls 424/425 post-Fix-A OK. |
+| **SIGMA-SEM-CAUSE** | — | **DONE (2026-07-13); SUPERSEDED.** Trends confirmed; dominant-cause attribution retracted -- see SIGMA-PROV-FORENSIC. Result: ``CURSOR_RESULT_sigma_sem_cause.md``. |
 | **F-EXCEPT-TIER1** | — | **CLOSED (2026-07-08)** — 40 fixes + EXCEPT-BULK; census `docs/VYVAR_EXCEPT_CENSUS.md` all **625 EVIDENCE**. |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
@@ -279,19 +281,22 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ## NEXT SESSION — entry point (2026-07-13 close)
 
-**Start here:** **PROD-SIGMA-FLOOR** + **unit-consistent ensemble err assembly** (Milan; see
-SIGMA-SEM-CAUSE) + SS Cam trust band.
-**SIGMA-SEM-CAUSE DONE (2026-07-13):** trend confirmed; AM detrend insufficient; LC-implied
-ensemble 4-7x > normalize on i/r. Result: ``CURSOR_RESULT_sigma_sem_cause.md``.
-**SIGMA-NEWTON DONE (2026-07-13):** see ``CURSOR_RESULT_sigma_newton.md``.
+**Start here:** **PROD-SIGMA-FLOOR** re-anchor (unit fix landed) + SS Cam trust band on **fresh** numbers.
 
-**Seed numbers from regate decomposition (do not use blanket per-setup gates):**
-- V0611 **i/r:** ensemble SEM share ~**91%**, χ²≈**0.25** (~2× underdispersed) — target ensemble/scint/floor budget, not empirical bkg.
-- **g_60_4 pooled** χ²≈**2.99** vs V0611 g χ²≈**1.11** — heterogeneous per-star budget; examine both tails.
+**SIGMA-PROV-FORENSIC DONE (2026-07-13):** draft_426 archive LC **INVALIDATED** (stale pre-Fix-A
+err; semantic 7.46x on i). Fresh i_70_4: V0611 chi2=**2.13**, err=**0.0175 mag**. Unit fix at
+``_combine_err_with_ensemble_scatter_keyed`` landed (re-anchor required). Result:
+``CURSOR_RESULT_sigma_prov_forensic.md``.
 
-**Milan decisions pending (Claude prepares one-screen briefs at session open):**
-- **PROD-SIGMA-FLOOR** — per-rig `sigma_sys` floor in production err (re-anchor if adopted).
-- **SS Cam trust band** — YELLOW; sparse gate redesign proposed (check scatter CI + temporal comp_rms).
+**Retracted:** SIGMA-NEWTON draft_426 baseline; SIGMA-SEM-CAUSE dominant mag/flux attribution.
+
+**Fresh Newton baseline (i_70_4, production_lc_err):** V0611 chi2=**2.13** (mild overdispersion);
+pooled check stars **2.1-24.9** (SS Cam outlier). PROD-SIGMA-FLOOR motivated by fresh overdispersion.
+
+**Milan decisions pending:**
+- **PROD-SIGMA-FLOOR** — per-rig `sigma_sys` floor + **one re-anchor** (unit fix + floor together).
+- **SS Cam trust band** — fresh chi2=**24.9** (was 122 on stale LC); sparse gate redesign still open.
+- **draft_426 regenerate vs archive** — stale tree is forensic evidence until Milan decides.
 
 **Follow-ups (code, no block on SIGMA-NEWTON start if using LC err):**
 - **SIGMA-BUDGET-EMPIRICAL** (MED) — chi2 harness mismatch tracked in deferred table.
@@ -347,12 +352,9 @@ next calibration lever.
    **Open decisions (Milan):**
    - **PROD-SIGMA-FLOOR:** add per-rig `sigma_sys` floor to production err (changes outputs → re-anchor;
      bright-star AAVSO error bars currently underestimated by floor) — separate session.
-   - **SIGMA-NEWTON:** **DONE (2026-07-13).** Newton baseline on draft_426 g/i/r via ``production_lc_err``.
-     N2 PASS: i/r underdispersion = ensemble SEM ~2x empirical scatter (chi2_predicted 0.23 vs 0.24).
-     N3 PASS: g_60_4 pooled 2.95 bimodal (SS Cam chi2=122 + underdispersed tail). Harness sanity PASS.
-     **Milan open:** unit-consistent err assembly (SIGMA-SEM-CAUSE), PROD-SIGMA-FLOOR, SS Cam trust
-     band (chi2=122, 98% ensemble, sparse 2-comp -- pending SEM-cause outcome).
-     Result: ``CURSOR_RESULT_sigma_newton.md``.
+   - **SIGMA-NEWTON:** archive draft_426 baseline **INVALIDATED** (SIGMA-PROV-FORENSIC). Fresh
+     i_70_4 baseline: V0611 chi2=**2.13**, err=**0.0175 mag**. Unit fix landed; re-anchor with
+     PROD-SIGMA-FLOOR. Result: ``CURSOR_RESULT_sigma_prov_forensic.md``.
    Blocks TODO-GS8 + TODO-MULTISET for IVW flip. **`delta_mag` flux-sum canonical until Newton gate passes.**
 
 3. **EXTERNAL-XVAL — external validation campaign (MEDIUM).** VYVAR vs external tools (AstroImageJ

@@ -1,19 +1,19 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-13** -- SIGMA-SEM-CAUSE complete. **pytest 769 passed**, 15 skipped.
+Last updated: **2026-07-13** -- SIGMA-PROV-FORENSIC complete. **pytest 770 passed**, 15 skipped.
 
-**2026-07-13 snapshot (SIGMA-SEM-CAUSE):** Trend/autocorr in comp residuals **confirmed**
-(lag-1 ~0.56-0.64 on i/r/g). Simple AM detrend **does not** fix i/r chi2. Dominant cause of
-LC underdispersion: **LC-implied ensemble 4-7x larger than ensemble_normalize** (mag/flux join at
-``photometry_core.py:3233``). **Rejected:** ~0.5x scale shortcut. SS Cam trust band tied to
-chi2=122 / 98% ensemble / sparse 2-comp path. Result: ``CURSOR_RESULT_sigma_sem_cause.md``.
+**2026-07-13 snapshot (SIGMA-PROV-FORENSIC):** draft_426 archive LC **stale pre-Fix-A err**
+(semantic LC/normalize **7.46x** on i; provenance absent, mtime 2026-06-26). Fresh i_70_4 rerun:
+V0611 err=**0.0175 mag**, chi2=**2.13** (stale: 0.055 mag, chi2=0.24). **Unit fix landed**
+(mag SEM -> rel flux at ``_combine_err_with_ensemble_scatter_keyed``); re-anchor pending with
+PROD-SIGMA-FLOOR. **Retracted:** SIGMA-NEWTON draft_426 baseline; SIGMA-SEM-CAUSE dominant
+mag/flux cause. Result: ``CURSOR_RESULT_sigma_prov_forensic.md``.
 
-**2026-07-13 snapshot (SIGMA-NEWTON):** **SIGMA-BUDGET-EMPIRICAL FIXED** + Newton chi2 gate run on
-draft_426 (g/i/r). Harness ``production_lc_err`` defines Newton baseline: V0611 g chi2=**1.23**,
-i=**0.24**, r=**0.25**; g pooled median=**2.95** (bimodal: SS Cam outlier chi2=122). i/r
-underdispersion **attributed** to ensemble SEM ~**2x** empirical kmag scatter (not SEM formula bug).
-**Milan decisions still open:** PROD-SIGMA-FLOOR, **unit-consistent err assembly** (not 0.5x scale),
-SS Cam trust band. Artifacts: ``tmp/sigma_sem_cause/``.
+**2026-07-13 snapshot (SIGMA-SEM-CAUSE -- SUPERSEDED):** See SIGMA-PROV-FORENSIC for root cause.
+Trend/autocorr confirmed; AM detrend insufficient. Result: ``CURSOR_RESULT_sigma_sem_cause.md``.
+
+**2026-07-13 snapshot (SIGMA-NEWTON -- archive baseline INVALIDATED):** Harness fixed; fresh
+baseline from SIGMA-PROV-FORENSIC Part B. Result: ``CURSOR_RESULT_sigma_newton.md``.
 
 **2026-07-13 snapshot (SESSION-CLOSE -- color-WB arc CLOSED):** Catalog-color field arc **12g -> 12g6
 DONE** on `origin/main` (`16e26c2` caption stamps, `0608739` boost default 2.2, `2aaf858` dirty-hash
@@ -24,9 +24,8 @@ outputs:** `tmp/colorfield_final/` + `manifest.json` (4 renders @ boost 2.2, G2 
 Milan reopens (optional PDF wiring parked). Result files: `CURSOR_RESULT_todo12g*_hrd.md`,
 `CURSOR_RESULT_close_0713.md`.
 
-**NEXT SESSION entry point:** **PROD-SIGMA-FLOOR** brief + SS Cam trust band (Milan decisions from
-SIGMA-NEWTON). Newton baseline **defined** (see snapshot above). Milan data unchanged: eq4 bin4
-bias/darks; new darks before ~2026-07-21; BVR night dX>=0.3; bin2 flats.
+**NEXT SESSION entry point:** **PROD-SIGMA-FLOOR** + one re-anchor (unit fix landed) + SS Cam trust
+on fresh numbers (chi2=24.9 on fresh i_70_4). Fresh Newton baseline: see SIGMA-PROV-FORENSIC snapshot.
 
 **2026-07-10 snapshot (SESSION-CLOSE-0710):** Two workstreams **DONE** that day:
 (1) **TODO-12 HRD arc** 12/12b/12c/12d/12e/12f — session-aware extreme-object table, enrichment,
