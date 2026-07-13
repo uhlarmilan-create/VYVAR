@@ -795,6 +795,8 @@ def main() -> None:
         sys.path.insert(0, str(_root))
 
     ap = argparse.ArgumentParser(description="Chi2/dof sigma-budget gate on a target LC CSV")
+    from scripts.provenance_guard import add_allow_unstamped_arg  # noqa: PLC0415
+
     ap.add_argument("--lc", type=Path, required=True, help="Target lightcurve CSV")
     ap.add_argument("--proc-dir", type=Path, required=True, help="Directory of proc_*.csv frames")
     ap.add_argument("--catalog-id", required=True, help="Gaia source id for sigma lookup")
@@ -802,7 +804,22 @@ def main() -> None:
     ap.add_argument("--setup", default="")
     ap.add_argument("--f-resid", type=float, default=0.0)
     ap.add_argument("--out-dir", type=Path, default=Path("tmp/sigma_budget"))
+    add_allow_unstamped_arg(ap)
     args = ap.parse_args()
+
+    if args.draft_id is not None and args.setup:
+        from scripts.provenance_guard import assert_stamped  # noqa: PLC0415
+
+        cfg = AppConfig()
+        phot_dir = (
+            Path(cfg.archive_root)
+            / "Drafts"
+            / f"draft_{int(args.draft_id):06d}"
+            / "platesolve"
+            / str(args.setup)
+            / "photometry"
+        )
+        assert_stamped(phot_dir, draft_id=args.draft_id, setup=args.setup, allow_unstamped=args.allow_unstamped)
 
     lc_df = pd.read_csv(args.lc, low_memory=False)
     meta_path = args.proc_dir.parent / "pipeline_meta.json"

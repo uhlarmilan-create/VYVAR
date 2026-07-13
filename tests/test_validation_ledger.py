@@ -21,6 +21,7 @@ REQUIRED_IDS = frozenset(
         "VL-XVAL-V0612",
         "VL-DETERMINISM-425",
         "VL-SHA-CUT1",
+        "VL-PROVENANCE",
         "VL-TRUST-BASELINE",
     }
 )

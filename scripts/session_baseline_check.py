@@ -225,6 +225,18 @@ def run_full_baseline(report: SessionReport) -> None:
     if not snapshot.is_dir():
         report.add("full-snapshot", "FAIL", f"missing {snapshot}")
         return
+    snap_meta_path = snapshot / "platesolve" / SETUP / "photometry" / "pipeline_meta.json"
+    if snap_meta_path.is_file():
+        from scripts.provenance_guard import parseable_git_hash, provenance_block  # noqa: PLC0415
+
+        snap_meta = json.loads(snap_meta_path.read_text(encoding="utf-8"))
+        gh = parseable_git_hash(provenance_block(snap_meta))
+        if gh:
+            report.add("full-provenance", "PASS", f"anchor git_hash={gh[:12]}...")
+        else:
+            report.add("full-provenance", "FAIL", "anchor snapshot missing provenance git_hash")
+    else:
+        report.add("full-provenance", "FAIL", f"missing {snap_meta_path.name}")
     for req, label in [
         (ps / "MASTERSTAR.fits", "MASTERSTAR.fits"),
         (ps / "variable_targets.csv", "variable_targets.csv"),

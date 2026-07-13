@@ -21,6 +21,11 @@ from check_star_kmag import resolve_proc_csv_dir  # noqa: E402
 from config import AppConfig  # noqa: E402
 from photometry_core import ERR_BKG_MODE_EMPIRICAL, ERR_BKG_MODE_HOWELL  # noqa: E402
 from scripts.chi2_sigma_gate import reduced_chi2_constant  # noqa: E402
+from scripts.provenance_guard import (  # noqa: E402
+    add_allow_unstamped_arg,
+    assert_stamped,
+    stamp_output_meta,
+)
 from scripts.sparse_comp_diag import SS_CAM_CID, V0611_CID, _check_star_chi2_rows  # noqa: E402
 from sigma_budget import (  # noqa: E402
     SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE,
@@ -257,6 +262,7 @@ def main() -> int:
         help="Root with tmp/bingain_acceptance/<draft>/<setup>/photometry/lightcurves outputs.",
     )
     ap.add_argument("--out", type=Path, default=Path("tmp/bingain_fix/validation_report.json"))
+    add_allow_unstamped_arg(ap)
     args = ap.parse_args()
 
     cfg = AppConfig()
@@ -274,11 +280,17 @@ def main() -> int:
         "config_archive_root": str(Path(cfg.archive_root).resolve()),
         "drafts": {},
     }
+    guard_flags: list[dict[str, Any]] = []
 
     for did in args.drafts:
         setups = args.setups or default_setups.get(did, [])
         report["drafts"][str(did)] = {}
         for setup in setups:
+            phot_dir = archive_root / "Drafts" / f"draft_{did:06d}" / "platesolve" / setup / "photometry"
+            guard = assert_stamped(
+                phot_dir, draft_id=did, setup=setup, allow_unstamped=args.allow_unstamped,
+            )
+            guard_flags.append({"draft_id": did, "setup": setup, **guard})
             after_lc = None
             if args.after_lc_root is not None:
                 after_lc = (
@@ -332,6 +344,18 @@ def main() -> int:
                 )
             report["drafts"][str(did)][setup] = entry
 
+    stamped_all = all(g.get("stamped") for g in guard_flags) if guard_flags else True
+    report = stamp_output_meta(
+        report,
+        {
+            "stamped": stamped_all,
+            "provenance_unstamped": any(g.get("provenance_unstamped") for g in guard_flags),
+            "git_hash": None,
+        },
+    )
+    report["provenance_guard_details"] = guard_flags
+    if any(g.get("provenance_unstamped") for g in guard_flags):
+        print("WARNING: PROVENANCE-GUARD --allow-unstamped: one or more setups lack provenance block.")
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report, indent=2))

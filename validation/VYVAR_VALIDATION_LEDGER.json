@@ -100,6 +100,16 @@
       "notes": "2026-06-11 lock; core 3f7c9e7a / full d5b72d08 where fixture present."
     },
     {
+      "id": "VL-PROVENANCE",
+      "area": "provenance",
+      "description": "Harness refuses unstamped pipeline_meta; session baseline --full checks anchor provenance",
+      "verification": "tests/test_provenance_guard.py + scripts/session_baseline_check.py --full full-provenance step",
+      "passes": true,
+      "last_verified": "2026-07-13",
+      "commit": null,
+      "notes": "PROVENANCE-GUARD (426-REGEN task): provenance_guard.py wired into chi2_sigma_gate and bingain_fix_validate."
+    },
+    {
       "id": "VL-TRUST-BASELINE",
       "area": "trust",
       "description": "Trust baseline on reference draft",
