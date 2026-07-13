@@ -4,30 +4,26 @@
 from __future__ import annotations
 
 import logging
+import math
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from photometry_core import (
+    _PSF_ERR_MAG_SCALE,
     _combine_err_with_ensemble_scatter_keyed,
     _ensemble_scatter_by_source_file,
 )
 
 
-def _legacy_positional_combine(
-    err_photon: np.ndarray,
-    ensemble_scatter: np.ndarray | None,
-) -> np.ndarray:
-    """Pre-G2-F004 positional pairing (shape guard only)."""
-    err = np.asarray(err_photon, dtype=np.float64).copy()
-    if ensemble_scatter is None:
-        return err
-    _ens_sc = np.asarray(ensemble_scatter, dtype=np.float64)
-    if _ens_sc.shape != err.shape:
-        return err
-    _ens_sc = np.where(np.isfinite(_ens_sc), _ens_sc, 0.0)
-    return np.sqrt(np.square(err) + np.square(_ens_sc))
+def _scatter_mag_to_rel(sc_mag: float) -> float:
+    return sc_mag / _PSF_ERR_MAG_SCALE if sc_mag > 0.0 else 0.0
+
+
+def _expected_combine(err_rel: float, scatter_mag: float) -> float:
+    sc_rel = _scatter_mag_to_rel(scatter_mag)
+    return math.sqrt(err_rel * err_rel + sc_rel * sc_rel)
 
 
 def _make_all_frames(target_cid: str, source_files: list[str]) -> pd.DataFrame:
@@ -44,22 +40,39 @@ def _make_all_frames(target_cid: str, source_files: list[str]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def test_keyed_matches_positional_when_order_aligned() -> None:
-    """Do-no-harm: coincident orderings -> identical err vs legacy positional combine."""
+def test_keyed_domain_consistent_quadrature() -> None:
+    """Photon err (rel flux) and ensemble SEM (mag) combine in one domain."""
+    err_photon = np.array([0.01, 0.02])
+    scatter_mag_by_file = {"proc_a.csv": 0.01, "proc_b.csv": 0.02}
+    keyed, unmatched = _combine_err_with_ensemble_scatter_keyed(
+        err_photon, ["proc_a.csv", "proc_b.csv"], scatter_mag_by_file,
+    )
+    assert not np.any(unmatched)
+    assert keyed[0] == pytest.approx(_expected_combine(0.01, 0.01))
+    assert keyed[1] == pytest.approx(_expected_combine(0.02, 0.02))
+
+
+def test_keyed_matches_hand_computation_vector() -> None:
+    """Vector case: keyed join matches per-epoch hand combine in rel-flux domain."""
     target_cid = "458415401545371264"
     files = [f"proc_{i:04d}.csv" for i in range(12)]
-    scatter = np.array(
+    scatter_mag = np.array(
         [0.005, 0.006, np.nan, 0.004, 0.0, 0.007, 0.003, 0.008, 0.002, 0.001, 0.009, 0.004]
     )
     err_photon = np.linspace(0.01, 0.05, 12)
     all_frames = _make_all_frames(target_cid, files)
-    scatter_by_file = _ensemble_scatter_by_source_file(all_frames, target_cid, scatter)
+    scatter_by_file = _ensemble_scatter_by_source_file(all_frames, target_cid, scatter_mag)
     keyed, unmatched = _combine_err_with_ensemble_scatter_keyed(
         err_photon, files, scatter_by_file, target_name="chi_h_sim"
     )
-    legacy = _legacy_positional_combine(err_photon, scatter)
+    expected = np.array(
+        [
+            _expected_combine(float(ep), float(sm)) if math.isfinite(sm) else float(ep)
+            for ep, sm in zip(err_photon, scatter_mag, strict=True)
+        ]
+    )
     assert not np.any(unmatched)
-    assert np.allclose(keyed, legacy, rtol=0.0, atol=0.0, equal_nan=True)
+    assert np.allclose(keyed, expected, rtol=0.0, atol=0.0, equal_nan=True)
 
 
 def test_adversarial_reorder_pairs_correct_epoch() -> None:
@@ -78,9 +91,9 @@ def test_adversarial_reorder_pairs_correct_epoch() -> None:
     assert not np.any(unmatched)
     expected = np.array(
         [
-            np.sqrt(0.3**2 + 0.03**2),
-            np.sqrt(0.1**2 + 0.01**2),
-            np.sqrt(0.2**2 + 0.02**2),
+            _expected_combine(0.3, 0.03),
+            _expected_combine(0.1, 0.01),
+            _expected_combine(0.2, 0.02),
         ]
     )
     assert np.allclose(keyed, expected)
@@ -98,8 +111,8 @@ def test_dropped_epoch_flagged_photon_only_warning(caplog: pytest.LogCaptureFixt
         )
 
     assert unmatched.tolist() == [False, False, True]
-    assert keyed[0] == np.sqrt(0.1**2 + 0.01**2)
-    assert keyed[1] == np.sqrt(0.2**2 + 0.02**2)
+    assert keyed[0] == _expected_combine(0.1, 0.01)
+    assert keyed[1] == _expected_combine(0.2, 0.02)
     assert keyed[2] == 0.3
     assert any("[G2-F004]" in r.message and "V-test" in r.message for r in caplog.records)
 
@@ -119,4 +132,5 @@ def test_empty_source_file_unmatched() -> None:
         np.array([0.1, 0.2]), ["proc_a.csv", ""], scatter_by_file
     )
     assert unmatched.tolist() == [False, True]
+    assert keyed[0] == _expected_combine(0.1, 0.01)
     assert keyed[1] == 0.2
