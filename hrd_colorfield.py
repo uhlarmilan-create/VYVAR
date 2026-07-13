@@ -71,10 +71,10 @@ _G2_GRID_ROWS = 6
 
 
 def _repo_short_git_hash() -> str:
-    """Short HEAD hash for caption provenance; never raises."""
+    """Short HEAD hash for caption provenance; appends -dirty when tree is unclean."""
     try:
         out = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
+            ["git", "describe", "--always", "--dirty", "--abbrev=7"],
             cwd=_REPO_ROOT,
             text=True,
             stderr=subprocess.DEVNULL,

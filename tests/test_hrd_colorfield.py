@@ -231,7 +231,7 @@ def test_caption_render_stamp_parseable():
         git_short_hash="abc1234",
     )
     m = re.search(
-        r" rendered (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) UTC @ ([0-9a-f]{4,40}|nogit)\.$",
+        r" rendered (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) UTC @ ([0-9a-f]{4,40}(?:-dirty)?|nogit)\.$",
         cap,
     )
     assert m is not None
@@ -239,6 +239,17 @@ def test_caption_render_stamp_parseable():
     assert m.group(2) == "abc1234"
     assert "chroma enhanced x2.2" in cap
     assert "white point = field median Teff" in cap
+
+
+def test_caption_render_stamp_dirty_hash():
+    stamp = datetime(2026, 7, 13, 10, 0, tzinfo=timezone.utc)
+    cap = build_colorfield_caption(
+        white_point="d65",
+        chroma_boost=2.2,
+        rendered_at_utc=stamp,
+        git_short_hash="c5685c6-dirty",
+    )
+    assert " rendered 2026-07-13 10:00 UTC @ c5685c6-dirty." in cap
 
 
 def test_chroma_boost_config_clamp():
