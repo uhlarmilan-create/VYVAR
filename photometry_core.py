@@ -3112,8 +3112,9 @@ def ensemble_normalize(
             if cid_j in comp_ref_map and math.isfinite(comp_ref_map[cid_j])
         ]
         if len(comp_resid) >= 2:
-            _resid_arr = np.asarray(comp_resid, dtype=np.float64)
-            ensemble_scatter[i] = float(np.std(_resid_arr, ddof=1) / math.sqrt(len(comp_resid)))
+            from sigma_floor_core import ensemble_sem_mag_from_residuals  # noqa: PLC0415
+
+            ensemble_scatter[i] = float(ensemble_sem_mag_from_residuals(comp_resid))
         else:
             ensemble_scatter[i] = 0.0
         delta_mag[i] = target_mag_inst[i] - ens_med
@@ -3208,36 +3209,41 @@ def _combine_err_with_ensemble_scatter_keyed(
     source_files: list[str] | np.ndarray,
     scatter_by_file: dict[str, float],
     *,
+    sigma_sys_mag: float = 0.0,
     target_name: str = "",
 ) -> tuple[np.ndarray, np.ndarray]:
     """Join photon ``err`` with ensemble scatter by EXACT ``source_file`` match (G2-F004).
 
     Domain contract: ``err_photon`` is relative flux (err/flux); ``scatter_by_file`` values are
-    ensemble SEM in magnitudes (Honeycutt residual std/sqrt(n) from ``ensemble_normalize``).
-    Ensemble SEM is converted to relative flux via ``sem_rel = sem_mag / _PSF_ERR_MAG_SCALE`` before
-    quadrature so both terms share the relative-flux domain written to LC ``err``.
+    ensemble SEM in magnitudes (Honeycutt residual std/sqrt(n) with c4 correction from
+    ``ensemble_normalize``). Per-rig ``sigma_sys_mag`` (mag) is added in quadrature after SEM.
 
-    Matched epoch, finite scatter -> ``sqrt(err^2 + scatter_rel^2)``.
-    Matched epoch, NaN scatter -> scatter treated as 0.0 (photon-only), same as legacy
+    err_total^2 = err_photon^2 + sem_rel^2 + sigma_sys_rel^2 (relative-flux domain).
+
+    Matched epoch, finite scatter -> quadrature with SEM (+ floor when configured).
+    Matched epoch, NaN scatter -> scatter treated as 0.0 (photon-only + floor), same as legacy
     ``np.where(isfinite, scatter, 0.0)``.
-    Unmatched ``source_file`` -> photon-only err, ``err_scatter_unmatched`` True, WARNING logged.
+    Unmatched ``source_file`` -> photon-only err (+ floor), ``err_scatter_unmatched`` True,
+    WARNING logged.
     """
+    from sigma_floor_core import combine_production_err_rel  # noqa: PLC0415
+
     err_out = np.asarray(err_photon, dtype=np.float64).copy()
     unmatched = np.zeros(len(err_out), dtype=bool)
-    if not scatter_by_file:
-        return err_out, unmatched
+    _floor = float(sigma_sys_mag) if math.isfinite(float(sigma_sys_mag)) and float(sigma_sys_mag) > 0 else 0.0
 
     n_unmatched = 0
     for i, sf in enumerate(np.asarray(source_files, dtype=object)):
         key = str(sf).strip()
-        if not key or key not in scatter_by_file:
+        sc_mag = 0.0
+        if key and scatter_by_file and key in scatter_by_file:
+            sc = float(scatter_by_file[key])
+            sc_mag = float(sc) if math.isfinite(sc) else 0.0
+        elif scatter_by_file:
             unmatched[i] = True
             n_unmatched += 1
-            continue
-        sc = float(scatter_by_file[key])
-        sc_mag = float(sc) if math.isfinite(sc) else 0.0
-        sc_rel = sc_mag / _PSF_ERR_MAG_SCALE if sc_mag > 0.0 else 0.0
-        err_out[i] = float(np.sqrt(np.square(err_out[i]) + sc_rel * sc_rel))
+        ep = float(err_out[i]) if math.isfinite(err_out[i]) else float("nan")
+        err_out[i] = combine_production_err_rel(ep, sc_mag, sigma_sys_mag=_floor)
 
     if n_unmatched > 0:
         logging.warning(
@@ -4506,6 +4512,7 @@ def save_lightcurve_csv(
     wcs_untrusted: np.ndarray | None = None,
     time_base: str = TIME_BASE_BJD_TDB,
     err_method: list[str] | None = None,
+    sigma_sys_mag: float | None = None,
 ) -> None:
     """Uloží lightcurve CSV.
 
@@ -4639,6 +4646,8 @@ def save_lightcurve_csv(
     df["lunar_risk"] = [str(lunar_risk or "UNKNOWN")] * n
     if err_method is not None:
         df["err_method"] = [str(m) for m in err_method]
+    _ssm = float(sigma_sys_mag) if sigma_sys_mag is not None and math.isfinite(float(sigma_sys_mag)) else float("nan")
+    df["sigma_sys_mag"] = np.round(np.full(n, _ssm, dtype=np.float64), 6)
     df.to_csv(output_path, index=False)
 
 
@@ -6080,6 +6089,7 @@ class _Phase2AState:
     stability_run_flags: dict[str, Any] = field(default_factory=dict)
     variable_target_catalog_ids: frozenset[str] = field(default_factory=frozenset)
     snr_ap_table: dict[str, Any] | None = None
+    equipment_id: int | None = None
 
 
 def _build_phase2a_dynamic_params(
@@ -6157,6 +6167,10 @@ def _build_phase2a_dynamic_params(
     if _plate is None or not math.isfinite(float(_plate)):
         _plate = None
 
+    from sigma_floor_core import resolve_sigma_sys_mag  # noqa: PLC0415
+
+    _ssm = resolve_sigma_sys_mag(state.equipment_id, state._cfg, rig_label=str(state.obs_group or ""))
+
     return {
         "fwhm_px": float(state.fwhm_px) if state.fwhm_px is not None and math.isfinite(float(state.fwhm_px)) else None,
         "plate_scale_arcsec_px": float(_plate) if _plate is not None else None,
@@ -6167,6 +6181,13 @@ def _build_phase2a_dynamic_params(
         "n_stars_dao": vy_ndao,
         "safe_bbox": safe_bbox,
         "aperture_r_px": aperture_r_px,
+        "sigma_floor": {
+            "equipment_id": state.equipment_id,
+            "sigma_sys_mag": float(_ssm),
+            "c4_correction": True,
+            "err_model": "err_photon^2 + sem_ens^2 + sigma_sys^2 (rel flux)",
+            "red_noise_diagnostic": "report-only (PZQ 2006); not in per-point bars",
+        },
     }
 
 
@@ -7633,6 +7654,7 @@ def _phase2a_prepare_shared_state(
         obs_group=obs_group,
         _gain_phot=_gain_phot,
         _rn_phot=_rn_phot,
+        equipment_id=_equipment_id,
         sat_limit_resolved=sat_limit_resolved,
         _aligned_dir_2a=_aligned_dir_2a,
         _cfg=_cfg,
@@ -8511,10 +8533,18 @@ def _phase2a_process_one_target(
     # Per-point uncertainty = photon/SNR base error (term-1) ⊕ ensemble zeropoint uncertainty
     # (term-3, ``ensemble_scatter``). Joined by EXACT ``source_file`` (G2-F004), not positional index.
     _src_for_err = target_frames["source_file"].astype(str).tolist()
+    from sigma_floor_core import resolve_sigma_sys_mag  # noqa: PLC0415
+
+    _sigma_sys_mag = resolve_sigma_sys_mag(
+        state.equipment_id,
+        _cfg,
+        rig_label=str(state.obs_group or ""),
+    )
     err, err_scatter_unmatched_arr = _combine_err_with_ensemble_scatter_keyed(
         err,
         _src_for_err,
         _ensemble_scatter_by_file,
+        sigma_sys_mag=_sigma_sys_mag,
         target_name=str(target_name),
     )
     ap_arr = target_frames["aperture_r_px"].to_numpy(dtype=float)
@@ -8704,6 +8734,7 @@ def _phase2a_process_one_target(
         wcs_untrusted=wcs_untrusted_arr,
         time_base=time_base,
         err_method=err_method_rows,
+        sigma_sys_mag=_sigma_sys_mag,
     )
     if _have_psf_cols:
         try:
