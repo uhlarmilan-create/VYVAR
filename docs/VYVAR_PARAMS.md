@@ -263,7 +263,7 @@ no UI yet).
 | `hrd_color_highlight_mode` | soft | scale, soft | hrd_colorfield.py | intentionally-hidden |
 | `hrd_color_chroma_snr` | 3.0 | 0 … 20 | hrd_colorfield.py | intentionally-hidden |
 | `hrd_color_white_point` | field_median | d65, field_median | hrd_colorfield.py | intentionally-hidden |
-| `hrd_color_chroma_boost` | 1.6 | 1.0 … 3.0 | hrd_colorfield.py | intentionally-hidden |
+| `hrd_color_chroma_boost` | 2.2 | 1.0 … 3.0 | hrd_colorfield.py | intentionally-hidden |
 | `hrd_color_bg_box_px` | 96 | 32 … 512 | hrd_colorfield.py | intentionally-hidden |
 | `vsx_local_db_path` | 'C:\\ASTRO\\python\\VYVAR\\VSX\\vyvar_vsx_local_v2.db' (dataclass '') | — | ui_aperture_photometry.py:1416, ui_masterstar_qa.py:595, ui_settings.py:230 | yes |
 | `exoplanet_local_db_path` | `exoplanets/vyvar_exoplanet_local.db` (dataclass default) | — | ui_settings.py, pipeline.py `detect_stars_and_match_catalog` | yes |

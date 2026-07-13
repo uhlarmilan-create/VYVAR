@@ -2,6 +2,20 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-11 — TODO-12g6-HRD: caption stamps, boost default 2.2, canonical re-render
+
+**Decisions:** Milan approved `hrd_color_chroma_boost` default **2.2** after fixed draft_424 @2.2
+(hardened G2 pass) and chi/h Per @2.2 visual OK. 425 V @1.6 cluster-retention **89.1%** accepted
+as academic given 2.2 default.
+
+**Caption stamps:** every burned caption appends `rendered YYYY-MM-DD HH:MM UTC @ {git_short}` —
+stale-evidence lesson #3 (identical filenames across pre/post runs in `tmp/todo12_hrd/`).
+
+**Hygiene:** archived `tmp/todo12_hrd/` → `tmp/todo12_hrd_archive_0711/`; canonical flat set in
+`tmp/colorfield_final/` + `manifest.json`.
+
+---
+
 ## 2026-07-11 — TODO-12g5-HRD: local-bg SNR gate, stamp taper, hardened G2
 
 **Problém (Milan review draft_424 @ boost 2.2):** hnědé čtvercové fleky přes jasné/mléčné

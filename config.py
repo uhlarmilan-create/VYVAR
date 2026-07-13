@@ -152,7 +152,7 @@ class AppConfig:
     #: White point: ``d65`` absolute Planckian or ``field_median`` relative von Kries scaling.
     hrd_color_white_point: str = "field_median"
     #: Chroma distance-from-white boost (display enhancement; caption-disclosed).
-    hrd_color_chroma_boost: float = 1.6
+    hrd_color_chroma_boost: float = 2.2
     #: Local-background box size (px) for chroma SNR gate grid; clamp 32..512.
     hrd_color_bg_box_px: int = 96
 
@@ -813,7 +813,7 @@ class AppConfig:
                 data.get("hrd_color_chroma_boost", self.hrd_color_chroma_boost)
             )
         except (TypeError, ValueError):
-            self.hrd_color_chroma_boost = 1.6
+            self.hrd_color_chroma_boost = 2.2
         self.hrd_color_chroma_boost = max(1.0, min(3.0, float(self.hrd_color_chroma_boost)))
         try:
             self.hrd_color_bg_box_px = int(

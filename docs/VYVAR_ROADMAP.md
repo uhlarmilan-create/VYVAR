@@ -600,6 +600,8 @@ next calibration lever.
   — validate draft_424 + draft_425 V at boost 1.0/1.6/2.2; draft_424 blotchy at 2.2.
   **TODO-12g5 (2026-07-11):** local-background SNR gate (`hrd_color_bg_box_px`), tapered splat stamp,
   hardened G2 (8×6 worst-patch grid + heatmap); fixes draft_424 sky blotches at high boost.
+  **TODO-12g6 (2026-07-11):** caption provenance stamps (UTC + git short hash); boost default 2.2;
+  archive overlapping `tmp/todo12_hrd/` runs; canonical `tmp/colorfield_final/` + manifest.
   for visible Teff contrast when stars sit near the white point; display enhancement only.
   · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
