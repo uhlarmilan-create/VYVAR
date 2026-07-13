@@ -501,6 +501,8 @@ class AppConfig:
     k2_mode: str = "literature"
     #: Optional per-band k'' overrides (mag/airmass/BP-RP); empty dict uses ``k2_extinction`` converter.
     k2_defaults_bprp: dict[str, float] = field(default_factory=dict)
+    #: Per-equipment systematic white floor (mag) for production LC err; key = equipment_id str.
+    sigma_sys_mag: dict[str, float] = field(default_factory=dict)
     #: Hard plausibility ceiling for fitted k'' (v2 pre-gate).
     k2_ceiling: float = 0.1
     #: Enable per-night k'' fit (v2; off in v1 activation bundle).
@@ -1492,6 +1494,17 @@ class AppConfig:
                 if math.isfinite(fv):
                     parsed[str(k)] = fv
             self.k2_defaults_bprp = parsed
+        _ssm = data.get("sigma_sys_mag", self.sigma_sys_mag)
+        if isinstance(_ssm, dict):
+            parsed_ssm: dict[str, float] = {}
+            for k, v in _ssm.items():
+                try:
+                    fv = float(v)
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(fv) and fv >= 0:
+                    parsed_ssm[str(k)] = fv
+            self.sigma_sys_mag = parsed_ssm
         self.k2_fit_enabled = bool(data.get("k2_fit_enabled", self.k2_fit_enabled))
         try:
             self.k2_ceiling = max(0.0, float(data.get("k2_ceiling", self.k2_ceiling)))
@@ -2330,6 +2343,7 @@ class AppConfig:
             "apply_color_term": str(self.apply_color_term),
             "k2_mode": str(self.k2_mode),
             "k2_defaults_bprp": dict(self.k2_defaults_bprp),
+            "sigma_sys_mag": dict(self.sigma_sys_mag),
             "k2_ceiling": float(self.k2_ceiling),
             "k2_fit_enabled": bool(self.k2_fit_enabled),
             "k2_fit_min_detectability": float(self.k2_fit_min_detectability),

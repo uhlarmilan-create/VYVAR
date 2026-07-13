@@ -253,5 +253,8 @@
   "crowding_blend_tighten_threshold": 0.04,
   "crowding_comp_availability_loosen_count": 500.0,
   "crowding_tighten_min_fwhm_px": 3.0,
-  "global_comp_pool_enabled": true
+  "global_comp_pool_enabled": true,
+  "sigma_sys_mag": {
+    "4": 0.018
+  }
 }
