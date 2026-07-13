@@ -77,6 +77,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 |----|-----|-------|
 | **F-BINGAIN-1** | — | **RESOLVED (2026-07-10).** Empirical empty-aperture `sigma_bkg_ap` + hybrid `howell_scaled` fallback. Regate PASS (decomposition-driven gates G1–G4). Result chain: `CURSOR_RESULT_bingain_fix.md`, `CURSOR_RESULT_bingain_acceptance.md`, `CURSOR_RESULT_bingain_regate.md`. Harness aligned 2026-07-13 (**SIGMA-BUDGET-EMPIRICAL FIXED**). |
 | **SIGMA-BUDGET-EMPIRICAL** | — | **FIXED (2026-07-13).** ``chi2_sigma_gate.sigma_arrays_from_lc_and_proc`` uses proc ``sigma_bkg_ap`` / ``err_bkg_source``; ``production_lc_err`` variant added. Tests in ``tests/test_sigma_budget.py``. Result: ``CURSOR_RESULT_sigma_newton.md``. |
+| **SIGMA-SEM-CAUSE** | — | **DONE (2026-07-13).** Comp-residual trends confirmed (lag-1~0.56-0.64); AM detrend does not fix chi2; LC-implied ensemble 4-7x > normalize on i/r (mag/flux join). C3 FAIL. Result: ``CURSOR_RESULT_sigma_sem_cause.md``. |
 | **F-EXCEPT-TIER1** | — | **CLOSED (2026-07-08)** — 40 fixes + EXCEPT-BULK; census `docs/VYVAR_EXCEPT_CENSUS.md` all **625 EVIDENCE**. |
 | **GAIA-ID-FLOAT-GUARD** | MED | **CLOSED** (verified 2x clone + live tree, 2026-07-07). |
 | **F-HOWELL-3** | MED/HIGH | **FIXED (Stage C)** | `sky_adu_per_px_annulus`; draft_424 science byte-identical |
@@ -278,8 +279,11 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ## NEXT SESSION — entry point (2026-07-13 close)
 
-**Start here:** **PROD-SIGMA-FLOOR** + SS Cam trust band (Milan decisions from SIGMA-NEWTON baseline).
-**SIGMA-NEWTON DONE (2026-07-13):** see ``CURSOR_RESULT_sigma_newton.md``; artifacts ``tmp/sigma_newton/``.
+**Start here:** **PROD-SIGMA-FLOOR** + **unit-consistent ensemble err assembly** (Milan; see
+SIGMA-SEM-CAUSE) + SS Cam trust band.
+**SIGMA-SEM-CAUSE DONE (2026-07-13):** trend confirmed; AM detrend insufficient; LC-implied
+ensemble 4-7x > normalize on i/r. Result: ``CURSOR_RESULT_sigma_sem_cause.md``.
+**SIGMA-NEWTON DONE (2026-07-13):** see ``CURSOR_RESULT_sigma_newton.md``.
 
 **Seed numbers from regate decomposition (do not use blanket per-setup gates):**
 - V0611 **i/r:** ensemble SEM share ~**91%**, χ²≈**0.25** (~2× underdispersed) — target ensemble/scint/floor budget, not empirical bkg.
@@ -346,7 +350,8 @@ next calibration lever.
    - **SIGMA-NEWTON:** **DONE (2026-07-13).** Newton baseline on draft_426 g/i/r via ``production_lc_err``.
      N2 PASS: i/r underdispersion = ensemble SEM ~2x empirical scatter (chi2_predicted 0.23 vs 0.24).
      N3 PASS: g_60_4 pooled 2.95 bimodal (SS Cam chi2=122 + underdispersed tail). Harness sanity PASS.
-     **Milan open:** ensemble-scale factor (~0.5 on i/r), PROD-SIGMA-FLOOR, SS Cam trust band.
+     **Milan open:** unit-consistent err assembly (SIGMA-SEM-CAUSE), PROD-SIGMA-FLOOR, SS Cam trust
+     band (chi2=122, 98% ensemble, sparse 2-comp -- pending SEM-cause outcome).
      Result: ``CURSOR_RESULT_sigma_newton.md``.
    Blocks TODO-GS8 + TODO-MULTISET for IVW flip. **`delta_mag` flux-sum canonical until Newton gate passes.**
 

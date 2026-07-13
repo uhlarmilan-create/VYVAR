@@ -2,6 +2,24 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-13 -- SIGMA-SEM-CAUSE: ensemble SEM inflation attribution
+
+**Question:** WHY is LC err ~2x empirical scatter on i/r (chi2~0.24)? Not the 0.5x scale shortcut.
+
+**Findings:** Comp residual lag-1 autocorr ~0.56-0.64 (trend content confirmed). Per-comp AM
+trend fraction higher on i/r (0.27) than g (0.19). Simple AM detrend does NOT fix chi2.
+LC-implied ensemble SEM **4-7x** larger than ``ensemble_normalize`` on i (mag/flux quadrature
+at ``photometry_core.py:3233``). Split-half flux-sum test is a different estimand.
+
+**Gates:** C0-C1-C2-C4 PASS; **C3 FAIL** (no detrend/split-half repair). Verdict: hypothesis
+partial -- trends present, AM detrend insufficient.
+
+**SS Cam:** excluded from pooled stats; chi2=122 separate sparse-path issue.
+
+Result: ``CURSOR_RESULT_sigma_sem_cause.md``; ``tmp/sigma_sem_cause/``.
+
+---
+
 ## 2026-07-13 -- SIGMA-NEWTON: empirical harness + Newton chi2 baseline (draft_426)
 
 **Part A:** ``chi2_sigma_gate.sigma_arrays_from_lc_and_proc`` now uses proc ``sigma_bkg_ap`` (via
@@ -14,7 +32,8 @@ defined; i/r attribution conclusive; g heterogeneity localized; harness matches 
 predicts chi2~0.23 vs observed ~0.24; ensemble share 85-91%. SEM implements std/sqrt(n) correctly
 (``photometry_core.py:3113-3115``).
 
-**Milan candidate (not coded):** ~0.5x ensemble scatter scale on i/r setups.
+**Milan candidate (superseded by SIGMA-SEM-CAUSE):** ~~0.5x ensemble scatter scale~~ -- rejected;
+use unit-consistent err assembly instead.
 
 Result: ``CURSOR_RESULT_sigma_newton.md``; artifacts ``tmp/sigma_newton/``.
 
