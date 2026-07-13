@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Reduced chi-squared/dof harness for sigma-budget diagnostics (sandbox)."""
+"""Reduced chi-squared/dof harness for sigma-budget diagnostics (sandbox).
+
+Variant ``production_lc_err`` is the acceptance-authoritative chi2 path: it uses the LC
+``err`` column (production uncertainty, including empirical ``sigma_bkg_ap`` and ensemble
+SEM). Analytic Howell-family variants are for budget attribution only.
+"""
 
 from __future__ import annotations
 
@@ -17,17 +22,25 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
-from photometry_core import _sky_pp_for_photometric_error
+from photometry_core import (
+    ERR_BKG_MODE_EMPIRICAL,
+    ERR_BKG_SOURCE_COL,
+    SIGMA_BKG_AP_COL,
+    _sky_pp_for_photometric_error,
+    _photometric_error_with_bkg_mode,
+)
 from sigma_budget import (
     SIGMA_VARIANT_HOWELL_ONLY,
     SIGMA_VARIANT_HOWELL_SCINT_FULL,
     SIGMA_VARIANT_HOWELL_SCINT_FRESID,
     SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR,
     SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE,
+    SIGMA_VARIANT_PRODUCTION_LC_ERR,
     combine_sigma_mag_quadrature,
+    howell_sigma,
     relative_flux_err_to_mag_sigma,
     resolve_rig_scintillation_params,
-    total_sigma,
+    scintillation_sigma,
 )
 
 CHI2_DOF_LO = 0.8
@@ -477,6 +490,7 @@ def plot_chi2_vs_g(
         SIGMA_VARIANT_HOWELL_SCINT_FRESID: "#72B7B2",
         SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR: "#54A24B",
         SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE: "#B279A2",
+        SIGMA_VARIANT_PRODUCTION_LC_ERR: "#F58518",
     }
     for v in sorted({r.variant for r in results}):
         sub = [r for r in results if r.variant == v and r.mag_g is not None and math.isfinite(r.chi2_dof)]
@@ -526,6 +540,116 @@ def load_proc_row_for_source(proc_dir: Path, source_file: str, catalog_id: str) 
     return None if sub.empty else sub.iloc[0]
 
 
+def production_lc_err_sigma_mag(lc_df: pd.DataFrame) -> np.ndarray:
+    """Magnitude sigma from production LC ``err`` (relative flux -> mag domain)."""
+    err_rel = pd.to_numeric(lc_df.get("err"), errors="coerce").to_numpy(dtype=np.float64)
+    n = len(lc_df)
+    out = np.full(n, np.nan, dtype=np.float64)
+    for i in range(n):
+        e = float(err_rel[i])
+        if math.isfinite(e) and e > 0:
+            out[i] = _MAG_ERR_SCALE * e
+    return out
+
+
+def _proc_aperture_area_px(row: pd.Series) -> float:
+    area = float(pd.to_numeric(row.get("aperture_area_px"), errors="coerce"))
+    if math.isfinite(area) and area > 0:
+        return area
+    r = float(pd.to_numeric(row.get("aperture_r_px"), errors="coerce"))
+    return math.pi * r * r if math.isfinite(r) and r > 0 else float("nan")
+
+
+def _relative_flux_sigma_with_bkg(
+    flux: float,
+    sky_pp: float,
+    area: float,
+    *,
+    sigma_bkg_ap: float | None,
+    err_bkg_source: str | None,
+    gain: float,
+    read_noise: float,
+) -> tuple[float, str]:
+    """Howell-family photon+background relative flux sigma mirroring production err assembly."""
+    sig_ap = (
+        float(sigma_bkg_ap)
+        if sigma_bkg_ap is not None and math.isfinite(float(sigma_bkg_ap))
+        else float("nan")
+    )
+    if math.isfinite(sig_ap) and sig_ap >= 0:
+        err_rel, src = _photometric_error_with_bkg_mode(
+            flux,
+            err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+            sky_pp=sky_pp,
+            area=area,
+            gain=gain,
+            read_noise=read_noise,
+            sigma_bkg_ap=sig_ap,
+        )
+        proc_src = str(err_bkg_source or "").strip()
+        bkg_src = proc_src if proc_src else src
+        return err_rel, bkg_src
+    err_rel = howell_sigma(flux, sky_pp, area, gain=gain, read_noise=read_noise)
+    return err_rel, "analytic_fallback"
+
+
+def _total_sigma_with_bkg(
+    flux: float,
+    sky_pp: float,
+    area: float,
+    *,
+    sigma_bkg_ap: float | None,
+    err_bkg_source: str | None,
+    gain: float,
+    read_noise: float,
+    telescope_diameter_m: float,
+    airmass: float,
+    exposure_s: float,
+    altitude_m: float,
+    c_y: float,
+    f_resid: float = 0.0,
+    variant: str = SIGMA_VARIANT_HOWELL_ONLY,
+) -> tuple[float, float, float, str]:
+    """Like ``total_sigma`` but with empirical ``sigma_bkg_ap`` when present on the proc row."""
+    sig_h, bkg_src = _relative_flux_sigma_with_bkg(
+        flux,
+        sky_pp,
+        area,
+        sigma_bkg_ap=sigma_bkg_ap,
+        err_bkg_source=err_bkg_source,
+        gain=gain,
+        read_noise=read_noise,
+    )
+    sig_s_full = scintillation_sigma(
+        telescope_diameter_m=telescope_diameter_m,
+        airmass=airmass,
+        exposure_s=exposure_s,
+        altitude_m=altitude_m,
+        c_y=c_y,
+    )
+    if variant == SIGMA_VARIANT_HOWELL_ONLY:
+        return sig_h, sig_h, 0.0, bkg_src
+    f = 1.0 if variant == SIGMA_VARIANT_HOWELL_SCINT_FULL else float(f_resid)
+    if not math.isfinite(f) or f < 0:
+        f = 0.0
+    f = min(f, 1.0)
+    sig_s = sig_s_full * f if math.isfinite(sig_s_full) else float("nan")
+    if not math.isfinite(sig_h):
+        return float("nan"), sig_h, sig_s, bkg_src
+    if not math.isfinite(sig_s):
+        return sig_h, sig_h, sig_s, bkg_src
+    return math.sqrt(sig_h * sig_h + sig_s * sig_s), sig_h, sig_s, bkg_src
+
+
+def _bkg_term_source_summary(sources: list[str]) -> dict[str, Any]:
+    counts: dict[str, int] = {}
+    for src in sources:
+        key = str(src or "unknown").strip() or "unknown"
+        counts[key] = counts.get(key, 0) + 1
+    primary = max(counts, key=lambda k: counts[k]) if counts else "analytic_fallback"
+    return {"primary": primary, "counts": counts, "n_frames": int(len(sources))}
+
+
 def sigma_arrays_from_lc_and_proc(
     lc_df: pd.DataFrame,
     proc_dir: Path,
@@ -550,43 +674,51 @@ def sigma_arrays_from_lc_and_proc(
         SIGMA_VARIANT_HOWELL_SCINT_FRESID: np.full(n, np.nan),
         SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR: np.full(n, np.nan),
         SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE: np.full(n, np.nan),
+        SIGMA_VARIANT_PRODUCTION_LC_ERR: production_lc_err_sigma_mag(lc_df),
     }
+    bkg_sources: list[str] = []
     for i, sf in enumerate(lc_df.get("source_file", pd.Series([""] * n)).astype(str).tolist()):
+        err_lc = float(pd.to_numeric(lc_df.iloc[i].get("err"), errors="coerce"))
+        if math.isfinite(err_lc) and err_lc > 0:
+            variants[SIGMA_VARIANT_PRODUCTION_LC_ERR][i] = _MAG_ERR_SCALE * err_lc
         row = load_proc_row_for_source(proc_dir, sf, catalog_id)
         am = float(pd.to_numeric(lc_df.iloc[i].get("airmass"), errors="coerce"))
         if not math.isfinite(am) or am < 1.0:
             am = 1.0
         if row is None:
-            err = float(pd.to_numeric(lc_df.iloc[i].get("err"), errors="coerce"))
-            if math.isfinite(err) and err > 0:
-                variants[SIGMA_VARIANT_HOWELL_ONLY][i] = _MAG_ERR_SCALE * err
+            if math.isfinite(err_lc) and err_lc > 0:
+                variants[SIGMA_VARIANT_HOWELL_ONLY][i] = _MAG_ERR_SCALE * err_lc
             continue
         flux = float(pd.to_numeric(row.get("dao_flux"), errors="coerce"))
         if not math.isfinite(flux) or flux <= 0:
             continue
         sky = float(_sky_pp_for_photometric_error(row))
-        area = float(pd.to_numeric(row.get("aperture_area_px"), errors="coerce"))
-        if not math.isfinite(area) or area <= 0:
-            r = float(pd.to_numeric(row.get("aperture_r_px"), errors="coerce"))
-            area = math.pi * r * r if math.isfinite(r) and r > 0 else float("nan")
-        sig_h, _, _ = total_sigma(
-            flux, sky, area, gain=gain, read_noise=read_noise,
-            telescope_diameter_m=rig_params.telescope_diameter_m, airmass=am,
-            exposure_s=rig_params.exposure_s, altitude_m=rig_params.altitude_m,
-            c_y=rig_params.c_y, variant=SIGMA_VARIANT_HOWELL_ONLY,
+        area = _proc_aperture_area_px(row)
+        sig_bkg_raw = float(pd.to_numeric(row.get(SIGMA_BKG_AP_COL), errors="coerce"))
+        sig_bkg_ap = sig_bkg_raw if math.isfinite(sig_bkg_raw) else None
+        err_bkg_source = str(row.get(ERR_BKG_SOURCE_COL, "")).strip() or None
+        common = dict(
+            flux=flux,
+            sky_pp=sky,
+            area=area,
+            sigma_bkg_ap=sig_bkg_ap,
+            err_bkg_source=err_bkg_source,
+            gain=gain,
+            read_noise=read_noise,
+            telescope_diameter_m=rig_params.telescope_diameter_m,
+            airmass=am,
+            exposure_s=rig_params.exposure_s,
+            altitude_m=rig_params.altitude_m,
+            c_y=rig_params.c_y,
         )
-        sig_t_full, _, sig_s = total_sigma(
-            flux, sky, area, gain=gain, read_noise=read_noise,
-            telescope_diameter_m=rig_params.telescope_diameter_m, airmass=am,
-            exposure_s=rig_params.exposure_s, altitude_m=rig_params.altitude_m,
-            c_y=rig_params.c_y, variant=SIGMA_VARIANT_HOWELL_SCINT_FULL,
+        sig_h, _, _, bkg_src = _total_sigma_with_bkg(**common, variant=SIGMA_VARIANT_HOWELL_ONLY)
+        sig_t_full, _, sig_s, _ = _total_sigma_with_bkg(
+            **common, variant=SIGMA_VARIANT_HOWELL_SCINT_FULL,
         )
-        sig_t_fr, _, _ = total_sigma(
-            flux, sky, area, gain=gain, read_noise=read_noise,
-            telescope_diameter_m=rig_params.telescope_diameter_m, airmass=am,
-            exposure_s=rig_params.exposure_s, altitude_m=rig_params.altitude_m,
-            c_y=rig_params.c_y, f_resid=f_resid, variant=SIGMA_VARIANT_HOWELL_SCINT_FRESID,
+        sig_t_fr, _, _, _ = _total_sigma_with_bkg(
+            **common, f_resid=f_resid, variant=SIGMA_VARIANT_HOWELL_SCINT_FRESID,
         )
+        bkg_sources.append(bkg_src)
         sh[i] = relative_flux_err_to_mag_sigma(sig_h)
         ss[i] = relative_flux_err_to_mag_sigma(sig_s)
         variants[SIGMA_VARIANT_HOWELL_ONLY][i] = sh[i]
@@ -614,6 +746,7 @@ def sigma_arrays_from_lc_and_proc(
         "ensemble_sem_from_production": sem_prod,
         "ensemble_sem_clamp_fraction": clamp_frac,
         "ensemble_sem_agreement": agreement,
+        "bkg_term_source": _bkg_term_source_summary(bkg_sources),
     }
     return mags, variants, sh, ss, meta
 

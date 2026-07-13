@@ -26,6 +26,8 @@ SIGMA_VARIANT_HOWELL_SCINT_FULL = "howell_scint_full"
 SIGMA_VARIANT_HOWELL_SCINT_FRESID = "howell_scint_fresid"
 SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR = "howell_scint_fresid_floor"
 SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE = "howell_scint_fresid_floor_ensemble"
+# Acceptance-authoritative harness variant: LC ``err`` column (production uncertainty).
+SIGMA_VARIANT_PRODUCTION_LC_ERR = "production_lc_err"
 
 
 def combine_sigma_mag_quadrature(
