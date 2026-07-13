@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-13** — SESSION-CLOSE-0713. **HEAD `2aaf858`** on `origin/main` (post-push).
+Last updated: **2026-07-13** — SESSION-CLOSE-0713. **HEAD `1b1864b`** on `origin/main`.
 **pytest 760 passed**, 15 skipped. **session_baseline_check --fast:** PASS.
 
 **2026-07-13 snapshot (SESSION-CLOSE — color-WB arc CLOSED):** Catalog-color field arc **12g → 12g6
