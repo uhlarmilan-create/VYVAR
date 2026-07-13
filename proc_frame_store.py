@@ -96,6 +96,20 @@ PROC_CSV_GLOB = "proc_*.csv"
 """Canonical glob for per-frame proc CSV. Matches both naming conventions:
 calibrated (proc_<obj>_Light_*.csv) and pre-cal (proc_<obj>_*.csv)."""
 
+_MASTERSTAR_PROC_STEMS = frozenset({"masterstar"})
+
+
+def is_masterstar_proc_name(name: str | Path) -> bool:
+    """True when ``name`` is the stacked-reference proc sidecar, not a science epoch.
+
+    Matches ``proc_MASTERSTAR.csv`` and case variants from ``proc_csv_path_for_aligned_fits``.
+    """
+    stem = Path(name).stem.casefold()
+    if not stem.startswith("proc_"):
+        return False
+    ref = stem[5:]
+    return ref in _MASTERSTAR_PROC_STEMS
+
 
 def proc_csv_path_for_aligned_fits(base_path: Path | str) -> Path:
     """Map aligned FITS path to canonical per-frame proc CSV: ``proc_<stem>.csv``.
@@ -118,7 +132,7 @@ def list_proc_csvs(proc_dir: Path | str, *, recursive: bool = False) -> list[Pat
     """
     root = Path(proc_dir).expanduser()
     it = root.rglob(PROC_CSV_GLOB) if recursive else root.glob(PROC_CSV_GLOB)
-    return sorted(it)
+    return sorted(p for p in it if not is_masterstar_proc_name(p))
 
 
 _NUMERIC_COLS = (
@@ -181,7 +195,11 @@ class ProcFrameStore:
         if glob_pattern == PROC_CSV_GLOB:
             paths = list_proc_csvs(proc_csv_dir, recursive=True)
         else:
-            paths = sorted(Path(proc_csv_dir).rglob(glob_pattern))
+            paths = sorted(
+                p
+                for p in Path(proc_csv_dir).rglob(glob_pattern)
+                if not is_masterstar_proc_name(p)
+            )
         if not paths:
             logging.warning(
                 "[ProcFrameStore] No files matching %s in %s",

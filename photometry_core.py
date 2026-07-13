@@ -24,6 +24,7 @@ from proc_frame_store import (
     PROC_CSV_GLOB,
     PROC_STORE_COLS,
     ProcFrameStore,
+    is_masterstar_proc_name,
     proc_csv_path_for_aligned_fits,
 )
 from config import (
@@ -6286,7 +6287,9 @@ def _load_adaptive_blend_map(masterstar_fits_path: Path) -> dict[str, tuple[bool
     }
 
 
-_PSF_ERR_MAG_SCALE = 1.0857362
+from mag_constants import MAG_ERR_SCALE
+
+_PSF_ERR_MAG_SCALE = MAG_ERR_SCALE
 
 
 def _route_lc_per_frame_err(
@@ -7022,6 +7025,15 @@ def _phase2a_prepare_shared_state(
         csv_files = sorted(Path(k) for k in proc_frame_store.keys())
     else:
         csv_files = sorted(Path(per_frame_csv_dir).glob("proc_*.csv"))
+    _ms_epoch_drop = [p for p in csv_files if is_masterstar_proc_name(p)]
+    if _ms_epoch_drop:
+        logging.warning(
+            "[MASTERSTAR-EPOCH] phase2a filtered %d masterstar proc from epoch set "
+            "(canonical list_proc_csvs / ProcFrameStore filter was bypassed): %s",
+            len(_ms_epoch_drop),
+            ", ".join(p.name for p in _ms_epoch_drop[:3]),
+        )
+        csv_files = [p for p in csv_files if not is_masterstar_proc_name(p)]
     # Round-2 B.2: optional whole-frame transparency/PSF-collapse gate (default OFF -> no-op).
     if getattr(_cfg, "frame_quality_gate_enabled", False):
         _kept_csv, _rejected_csv = _frame_quality_gate_select(csv_files, _cfg, proc_frame_store)
