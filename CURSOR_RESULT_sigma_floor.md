@@ -89,6 +89,12 @@ Snapshot locked: ``Archive/Drafts/draft_000424_snapshot_sigma_floor_20260713``.
 
 794 passed, 15 skipped (+15 new in ``tests/test_sigma_floor.py``).
 
-## Commits
+## Commits (local; NOT pushed -- await Milan review)
 
-Logical units prepared; **NOT pushed** (await Milan review per task + COMP-POOL-R ``8fb21b3``).
+``9f77124`` feat(sigma): c4 + production err wiring + tests  
+``ac76f57`` config: sigma_sys_mag (Newton eq 4 = 0.018 mag)  
+``b28a8e2`` anchor: session_baseline SHA lock + VL-ANCHOR-424  
+``3eaf508`` docs: spec, STATE/ROADMAP/JOURNAL, CITATIONS, report note  
+``811738f`` scripts: fit_sigma_floor + reanchor_424; CURSOR_RESULT  
+
+Chain includes prior ``8fb21b3`` (COMP-POOL-R). Push authorized by Milan only.
