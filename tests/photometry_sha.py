@@ -9,6 +9,7 @@ Verified via ``scripts/session_baseline_check.py --full``.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 from pathlib import Path
 
@@ -181,6 +182,8 @@ def compare_photometry_science_meaningful(
     root_b: Path,
     *,
     setups: tuple[str, ...] = ("B_20_2", "L_20_2", "R_20_2", "V_20_2"),
+    err_designed: bool = False,
+    err_accept: dict | None = None,
 ) -> dict:
     """Tolerance-based photometry compare for re-baseline / additive gates."""
     root_a = Path(root_a)
@@ -243,6 +246,101 @@ def compare_photometry_science_meaningful(
             "only_a_targets": sorted(set(lca) - set(lcb)),
         }
 
+    # Optional: designed err acceptance (err is otherwise treated as QC-only).
+    # When callers explicitly declare err as designed-divergent, they must supply
+    # either an exact predictor (per-epoch expected err) or a bounded ratio envelope.
+    err_check: dict[str, object] = {"enabled": bool(err_designed)}
+    if err_designed:
+        if not isinstance(err_accept, dict) or not err_accept.get("mode"):
+            err_check = {
+                "enabled": True,
+                "ok": False,
+                "mode": None,
+                "reason": "err_designed=True requires err_accept={mode: envelope|exact_pred, ...}",
+            }
+        else:
+            mode = str(err_accept.get("mode", "")).strip().lower()
+            err_check = {"enabled": True, "mode": mode, "ok": True}
+            try:
+                if mode == "envelope":
+                    min_r = float(err_accept.get("min_ratio"))
+                    max_r = float(err_accept.get("max_ratio"))
+                    if not (math.isfinite(min_r) and math.isfinite(max_r) and 0 < min_r <= max_r):
+                        raise ValueError("bad envelope bounds")
+                    # Per-tertile median ratio check (by mag_calib in B).
+                    rows = []
+                    for setup in setups:
+                        for tid, pa in _lc_map(root_a, setup).items():
+                            pb = _lc_map(root_b, setup).get(tid)
+                            if pb is None or not pb.exists():
+                                continue
+                            da = pd.read_csv(pa, usecols=["source_file", "err", "mag_calib"], low_memory=False)
+                            db = pd.read_csv(pb, usecols=["source_file", "err", "mag_calib"], low_memory=False)
+                            m = db.merge(da, on="source_file", suffixes=("_b", "_a"))
+                            mag = pd.to_numeric(m["mag_calib_b"], errors="coerce")
+                            ea = pd.to_numeric(m["err_a"], errors="coerce")
+                            eb = pd.to_numeric(m["err_b"], errors="coerce")
+                            ok = mag.notna() & ea.notna() & eb.notna() & (eb > 0)
+                            if ok.any():
+                                rows.append(pd.DataFrame({"mag": mag[ok], "ratio": (ea[ok] / eb[ok])}))
+                    if not rows:
+                        raise ValueError("no err rows to compare")
+                    df = pd.concat(rows, ignore_index=True)
+                    q33, q66 = df["mag"].quantile([1 / 3, 2 / 3])
+                    tert = {}
+                    ok_env = True
+                    for name, mask in [
+                        ("faint", df["mag"] <= q33),
+                        ("mid", (df["mag"] > q33) & (df["mag"] <= q66)),
+                        ("bright", df["mag"] > q66),
+                    ]:
+                        r = float(df.loc[mask, "ratio"].median())
+                        tert[name] = r
+                        if not (min_r <= r <= max_r):
+                            ok_env = False
+                    err_check.update(
+                        {
+                            "min_ratio": min_r,
+                            "max_ratio": max_r,
+                            "tertile_median_ratios": tert,
+                            "ok": bool(ok_env),
+                        }
+                    )
+                elif mode == "exact_pred":
+                    pred_path = err_accept.get("predicted_err_json")
+                    if not pred_path:
+                        raise ValueError("missing predicted_err_json")
+                    p = Path(str(pred_path))
+                    pred = json.loads(p.read_text(encoding="utf-8"))
+                    tol = float(err_accept.get("abs_tol", 2e-6))
+                    if not (math.isfinite(tol) and tol > 0):
+                        tol = 2e-6
+                    n_bad = 0
+                    max_abs = 0.0
+                    # pred schema: { "setups": { setup: { tid: { source_file: err_pred }}}}
+                    pred_setups = (pred.get("setups") or {}) if isinstance(pred, dict) else {}
+                    for setup in setups:
+                        pm = (pred_setups.get(setup) or {}) if isinstance(pred_setups, dict) else {}
+                        lca = _lc_map(root_a, setup)
+                        for tid, pa in lca.items():
+                            p_tid = pm.get(tid) or {}
+                            if not isinstance(p_tid, dict):
+                                continue
+                            da = pd.read_csv(pa, usecols=["source_file", "err"], low_memory=False)
+                            for sf, ea in zip(da["source_file"].astype(str), pd.to_numeric(da["err"], errors="coerce"), strict=True):
+                                ep = p_tid.get(sf)
+                                if ep is None:
+                                    continue
+                                diff = abs(float(ea) - float(ep))
+                                if diff > tol:
+                                    n_bad += 1
+                                    max_abs = max(max_abs, diff)
+                    err_check.update({"abs_tol": tol, "n_bad": int(n_bad), "max_abs_diff": float(max_abs), "ok": n_bad == 0})
+                else:
+                    raise ValueError(f"unknown err_accept mode: {mode}")
+            except Exception as exc:  # noqa: BLE001
+                err_check.update({"ok": False, "reason": str(exc)[:200]})
+
     return {
         "setups": per_setup,
         "summary": {
@@ -252,6 +350,7 @@ def compare_photometry_science_meaningful(
             "science_failures": len(science_failures),
             "science_failure_sample": science_failures[:5],
             "time_failures": len(time_failures),
-            "benign": len(science_failures) == 0 and len(time_failures) == 0,
+            "err_check": err_check,
+            "benign": (len(science_failures) == 0 and len(time_failures) == 0 and (not err_designed or bool(err_check.get("ok", False)))),
         },
     }
