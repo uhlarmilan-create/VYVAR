@@ -151,6 +151,8 @@ class AppConfig:
     hrd_color_chroma_snr: float = 3.0
     #: White point: ``d65`` absolute Planckian or ``field_median`` relative von Kries scaling.
     hrd_color_white_point: str = "field_median"
+    #: Chroma distance-from-white boost (display enhancement; caption-disclosed).
+    hrd_color_chroma_boost: float = 1.6
 
     #: Fine blind index (Newton / ~1.3″/px rigs); built by ``build_blind_index.py``.
     blind_index_fine_path: str = ""
@@ -804,6 +806,13 @@ class AppConfig:
         self.hrd_color_chroma_snr = max(0.0, min(20.0, float(self.hrd_color_chroma_snr)))
         _wp = str(data.get("hrd_color_white_point", self.hrd_color_white_point) or "field_median").strip().lower()
         self.hrd_color_white_point = "d65" if _wp == "d65" else "field_median"
+        try:
+            self.hrd_color_chroma_boost = float(
+                data.get("hrd_color_chroma_boost", self.hrd_color_chroma_boost)
+            )
+        except (TypeError, ValueError):
+            self.hrd_color_chroma_boost = 1.6
+        self.hrd_color_chroma_boost = max(1.0, min(3.0, float(self.hrd_color_chroma_boost)))
 
         gaia_dir = self.project_root / "GAIA_DR3"
         _fine_default = str(gaia_dir / "gaia_triangles_fine.pkl")
@@ -2078,6 +2087,7 @@ class AppConfig:
             "hrd_color_highlight_mode": str(self.hrd_color_highlight_mode),
             "hrd_color_chroma_snr": float(self.hrd_color_chroma_snr),
             "hrd_color_white_point": str(self.hrd_color_white_point),
+            "hrd_color_chroma_boost": float(self.hrd_color_chroma_boost),
             "blind_index_fine_path": str(self.blind_index_fine_path or ""),
             "blind_index_wide_path": str(self.blind_index_wide_path or ""),
             "blind_index_select_mode": str(self.blind_index_select_mode or "auto"),

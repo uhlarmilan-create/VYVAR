@@ -2,6 +2,17 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-11 — TODO-12g4-HRD: chroma boost (catalog-color field)
+
+**Problém:** field_median vs d65 renders prakticky nerozlišitelné -- většina hvězd sedí u white
+pointu, chroma amplituda je limitující faktor (pastel). Milan review draft_425 V + draft_424.
+
+**Fix:** `hrd_color_chroma_boost` (default 1.6, clamp 1..3): expand distance from white po WP a
+desaturaci, před SNR gate. Caption `chroma enhanced x{N}.` Standardní display astro practice;
+není colorimetrická pravda, musí být vidět na obrázku.
+
+---
+
 ## 2026-07-10 (večer) — TODO-12g2-HRD: catalog-color field polish
 
 **Problém (Milan review draft425_B):** fyzikálně správné, vizuálně ploché -- per-channel clip

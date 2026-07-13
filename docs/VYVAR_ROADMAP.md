@@ -596,6 +596,8 @@ next calibration lever.
   **TODO-12g2 (2026-07-10):** polish -- hue-preserving highlight scale, chroma SNR gate (background
   speckle), field-median white point (relative colors; reddened chi/h Per B stars correctly near
   neutral under absolute D65); saturation default 0.85.
+  **TODO-12g4 (2026-07-11):** chroma boost (distance-from-white expansion, default 1.6, caption-disclosed)
+  for visible Teff contrast when stars sit near the white point; display enhancement only.
   · TODO-20 mean-stack
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
   · TODO-PIXEL-XCHECK-BINNING binning-aware pixel cross-check (cosmetic log) ·

@@ -38,6 +38,7 @@ HRD_COLORFIELD_CAPTION_BASE = (
 HRD_COLORFIELD_CAPTION_FIELD_MEDIAN = (
     " white point = field median Teff (~{teff:.0f} K); colors are relative to the field average."
 )
+HRD_COLORFIELD_CAPTION_CHROMA_BOOST = " chroma enhanced x{boost:.1f}."
 
 TEFF_MIN_K = 2500.0
 TEFF_MAX_K = 40000.0
@@ -157,6 +158,24 @@ def teff_to_srgb_chroma(
     return rgb
 
 
+def apply_chroma_boost(rgb: np.ndarray, boost: float) -> np.ndarray:
+    """Expand per-star chromaticity distance from white (display enhancement).
+
+    Applied after white-point and desaturation, before splat/SNR gate::
+        rgb_boosted = 1 - (1 - rgb) * boost; clip; hue-preserving unit-max renorm.
+    boost=1.0 returns the input unchanged (12g2-identical chromaticities).
+    """
+    out = np.asarray(rgb, dtype=np.float64)
+    if float(boost) <= 1.0 + 1e-12:
+        return out.copy()
+    b = float(np.clip(boost, 1.0, 3.0))
+    boosted = 1.0 - (1.0 - out) * b
+    boosted = np.clip(boosted, 0.0, 1.0)
+    mx = np.max(boosted, axis=-1, keepdims=True)
+    mx = np.where(mx > 0, mx, 1.0)
+    return boosted / mx
+
+
 def apply_chroma_snr_gate(
     luminance: np.ndarray,
     chroma: np.ndarray,
@@ -198,10 +217,13 @@ def build_colorfield_caption(
     *,
     white_point: WhitePointMode,
     field_median_teff_k: float | None = None,
+    chroma_boost: float = 1.0,
 ) -> str:
     cap = HRD_COLORFIELD_CAPTION_BASE
     if white_point == "field_median" and field_median_teff_k is not None:
         cap += HRD_COLORFIELD_CAPTION_FIELD_MEDIAN.format(teff=float(field_median_teff_k))
+    if float(chroma_boost) > 1.0 + 1e-9:
+        cap += HRD_COLORFIELD_CAPTION_CHROMA_BOOST.format(boost=float(chroma_boost))
     return cap
 
 
@@ -214,6 +236,17 @@ def hrd_color_saturation_from_cfg(cfg: Any | None) -> float:
     except (TypeError, ValueError):
         return default
     return float(np.clip(val, 0.0, 1.0))
+
+
+def hrd_color_chroma_boost_from_cfg(cfg: Any | None) -> float:
+    default = 1.6
+    if cfg is None:
+        return default
+    try:
+        val = float(getattr(cfg, "hrd_color_chroma_boost", default))
+    except (TypeError, ValueError):
+        return default
+    return float(np.clip(val, 1.0, 3.0))
 
 
 def hrd_color_chroma_snr_from_cfg(cfg: Any | None) -> float:
@@ -537,6 +570,7 @@ def render_catalog_color_field(
 
     saturation = hrd_color_saturation_from_cfg(cfg)
     chroma_snr = hrd_color_chroma_snr_from_cfg(cfg)
+    chroma_boost = hrd_color_chroma_boost_from_cfg(cfg)
     highlight_mode = hrd_color_highlight_mode_from_cfg(cfg)
     white_point_mode = hrd_color_white_point_from_cfg(cfg)
 
@@ -552,6 +586,7 @@ def render_catalog_color_field(
     rgbs = teff_to_srgb_chroma(
         teffs, saturation=saturation, white_point_rgb=white_point_rgb
     )
+    rgbs = apply_chroma_boost(rgbs, chroma_boost)
     flux = colorable["flux_use"].to_numpy(dtype=np.float64)
     flux = np.where(np.isfinite(flux) & (flux > 0), flux, 1.0)
     amps = np.sqrt(flux)
@@ -571,7 +606,9 @@ def render_catalog_color_field(
     rgb = compose_catalog_color_rgb(luminance, chroma, highlight_mode=highlight_mode)
 
     caption = build_colorfield_caption(
-        white_point=white_point_mode, field_median_teff_k=field_median_teff
+        white_point=white_point_mode,
+        field_median_teff_k=field_median_teff,
+        chroma_boost=chroma_boost,
     )
     img_u8 = (rgb * 255.0).astype(np.uint8)
     img_u8 = _draw_caption(img_u8, caption)
