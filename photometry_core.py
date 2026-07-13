@@ -3211,7 +3211,12 @@ def _combine_err_with_ensemble_scatter_keyed(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Join photon ``err`` with ensemble scatter by EXACT ``source_file`` match (G2-F004).
 
-    Matched epoch, finite scatter -> ``sqrt(err^2 + scatter^2)``.
+    Domain contract: ``err_photon`` is relative flux (err/flux); ``scatter_by_file`` values are
+    ensemble SEM in magnitudes (Honeycutt residual std/sqrt(n) from ``ensemble_normalize``).
+    Ensemble SEM is converted to relative flux via ``sem_rel = sem_mag / _PSF_ERR_MAG_SCALE`` before
+    quadrature so both terms share the relative-flux domain written to LC ``err``.
+
+    Matched epoch, finite scatter -> ``sqrt(err^2 + scatter_rel^2)``.
     Matched epoch, NaN scatter -> scatter treated as 0.0 (photon-only), same as legacy
     ``np.where(isfinite, scatter, 0.0)``.
     Unmatched ``source_file`` -> photon-only err, ``err_scatter_unmatched`` True, WARNING logged.
@@ -3229,8 +3234,9 @@ def _combine_err_with_ensemble_scatter_keyed(
             n_unmatched += 1
             continue
         sc = float(scatter_by_file[key])
-        sc_eff = float(sc) if math.isfinite(sc) else 0.0
-        err_out[i] = float(np.sqrt(np.square(err_out[i]) + sc_eff * sc_eff))
+        sc_mag = float(sc) if math.isfinite(sc) else 0.0
+        sc_rel = sc_mag / _PSF_ERR_MAG_SCALE if sc_mag > 0.0 else 0.0
+        err_out[i] = float(np.sqrt(np.square(err_out[i]) + sc_rel * sc_rel))
 
     if n_unmatched > 0:
         logging.warning(
