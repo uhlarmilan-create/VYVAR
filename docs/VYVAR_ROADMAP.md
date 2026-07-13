@@ -276,7 +276,7 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ---
 
-## NEXT SESSION — entry point (2026-07-10 close)
+## NEXT SESSION — entry point (2026-07-13 close)
 
 **Start here:** **SIGMA-NEWTON** — extend chi2 gate to Newton rigs (unblocked post F-BINGAIN-1 regate).
 **Prerequisite (ROADMAP deferred row):** wire **SIGMA-BUDGET-EMPIRICAL** harness (`sigma_arrays_from_lc_and_proc`
@@ -295,7 +295,7 @@ must use proc `sigma_bkg_ap` / empirical photon term) **or** validate via produc
 - **SIGMA-BUDGET-EMPIRICAL** (MED) — chi2 harness mismatch tracked in deferred table.
 - **z-band closure anomaly** (Stage C post/pre ratio ~0.06) — separate from F-BINGAIN-1.
 - **Teff=N/A unit cosmetic** (quickwin).
-- **summary.json freshness stamps** — **DONE today** (TODO-12f: `generated_at_utc`, `git_head`).
+- **Colorfield PDF wiring** — parked; only if Milan asks (12g–12g6 arc CLOSED).
 
 **Milan data tasks:**
 - eq4 **bin4 bias/darks** (≥6 frames, GAIN=12.48, T~-15 °C) for empirical RN measurement (Stage B blocked at 0 pairs).

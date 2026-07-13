@@ -2,6 +2,26 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-13 — SESSION-CLOSE-0713: color-WB arc close (12g–12g6)
+
+**Oblouk:** catalog-color field od TODO-12g po 12g6 na `origin/main` — vizualizační vrstva hotová,
+téma **UZAVŘENO** (PDF wiring jen na vyžádání).
+
+**Root cause recap (draft_424 blotches @ boost 2.2):** absolutní-L SNR gate (`L/sigma_bg`) otevřený
+na vignetovaném jasném pozadí; Gaussian splat s nenulovou váhou na hraně boxu; single-patch G2
+v tmavém rohu (blind spot ~0.015 vs střed ~0.06). Fix 12g5: lokální bg mapa, tapered stamp,
+hardened 8×6 G2.
+
+**12g6:** caption stamps `rendered YYYY-MM-DD HH:MM UTC @ {hash}` — tři stale-evidence incidenty
+(identické názvy souborů přes pre/post běhy v `tmp/todo12_hrd/`) → systémová oprava. Kanonické
+rendery z dirty tree razily `c5685c6` bez `-dirty` — po close doplněn `git describe --dirty` suffix.
+Default boost **2.2** (Milan po fixed 424). 425 V @1.6 cluster retention 89.1% akceptováno jako
+akademické (default 2.2). Archiv `tmp/todo12_hrd_archive_0711/`; finál `tmp/colorfield_final/`.
+
+**NEXT:** SIGMA-NEWTON (viz ROADMAP).
+
+---
+
 ## 2026-07-11 — TODO-12g6-HRD: caption stamps, boost default 2.2, canonical re-render
 
 **Decisions:** Milan approved `hrd_color_chroma_boost` default **2.2** after fixed draft_424 @2.2

@@ -1,9 +1,25 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-10** — SESSION-CLOSE-0710. **HEAD `5803bed`** on `origin/main`.
-**pytest 737 passed**, 15 skipped. **session_baseline_check --fast:** PASS.
+Last updated: **2026-07-13** — SESSION-CLOSE-0713. **HEAD `2aaf858`** on `origin/main` (post-push).
+**pytest 760 passed**, 15 skipped. **session_baseline_check --fast:** PASS.
 
-**2026-07-10 snapshot (SESSION-CLOSE):** Two workstreams **DONE** today:
+**2026-07-13 snapshot (SESSION-CLOSE — color-WB arc CLOSED):** Catalog-color field arc **12g → 12g6
+DONE** on `origin/main` (`16e26c2` caption stamps, `0608739` boost default 2.2, `2aaf858` dirty-hash
+suffix). **Final defaults:** `field_median` white point, `hrd_color_chroma_boost` **2.2**,
+`hrd_color_chroma_snr` 3.0, `hrd_color_bg_box_px` 96, `hrd_color_saturation` 0.85. **Canonical
+outputs:** `tmp/colorfield_final/` + `manifest.json` (4 renders @ boost 2.2, G2 worst < 0.03).
+**Archive:** `tmp/todo12_hrd_archive_0711/` (all prior `todo12_hrd/` runs). Topic closed unless
+Milan reopens (optional PDF wiring parked). Result files: `CURSOR_RESULT_todo12g*_hrd.md`,
+`CURSOR_RESULT_close_0713.md`.
+
+**NEXT SESSION entry point:** **SIGMA-NEWTON** (unblocked; prerequisite: **SIGMA-BUDGET-EMPIRICAL**
+harness or LC `err`-based χ²). Seed: V0611 i/r ensemble SEM ~**91%** share, χ²≈**0.25** (~2×
+underdispersed); g_60_4 **pooled** χ²≈**2.99** vs V0611 g χ²≈**1.11** — per-star heterogeneity,
+examine both tails. Milan pending: **PROD-SIGMA-FLOOR**, **SS Cam trust band**. Milan data: eq4
+bin4 bias/darks (≥6, GAIN=12.48, T~-15 °C); new darks before ~2026-07-21; BVR night dX≥0.3;
+bin2 flats.
+
+**2026-07-10 snapshot (SESSION-CLOSE-0710):** Two workstreams **DONE** that day:
 (1) **TODO-12 HRD arc** 12/12b/12c/12d/12e/12f — session-aware extreme-object table, enrichment,
 identification tiers, PDF/UI details, summary.json freshness stamps (`generated_at_utc`, `git_head`).
 (2) **F-BINGAIN-1 RESOLVED** — empirical empty-aperture `sigma_bkg_ap` in production `err` (IRAF/SExtractor/
@@ -14,11 +30,6 @@ gates). Result files: `CURSOR_RESULT_todo12_hrd.md` … `_todo12f_hrd.md`, `CURS
 **Byte-identity baseline (F-BINGAIN-1):** Re-anchored for documented **`err` column divergence**
 (empirical bkg term); **non-err proc-CSV science columns verified byte-identical** on patch-only
 acceptance (draft_426 g, draft_424/425 all setups). LC `err` is the authoritative production uncertainty.
-
-**NEXT SESSION entry point:** **SIGMA-NEWTON** (unblocked; prerequisite: wire **SIGMA-BUDGET-EMPIRICAL**
-harness or use LC `err` — see ROADMAP). Seed numbers: V0611 i/r ensemble SEM ~91% share, χ²≈0.25
-(~2× underdispersed); g_60_4 **pooled** χ²≈2.99 vs V0611 g χ²≈1.11 — heterogeneous budget per star
-(examine both tails; no blanket gate). Milan pending: **PROD-SIGMA-FLOOR**, **SS Cam trust band**.
 
 **2026-07-10 snapshot (TODO-12f):** `_make_row` extended (dist, parallax, raw SpT/otype, DSC p,
 teff_source); PDF follow-on page per object; UI expander with full column set; validate
