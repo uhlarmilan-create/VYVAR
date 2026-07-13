@@ -2,6 +2,18 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-13 -- COMP-POOL-R
+
+**Finding:** r_60_4 regen yields **2** Phase-1 comps (tier 3) vs June **8** (tier 2) on
+**byte-identical** proc CSVs. check_kmag sidecars 0 (``n_comp_min`` ensemble needs >=3 others).
+
+**Verdict:** legitimately sparse on HEAD; June 8 not reproducible without threshold retuning.
+**No fix.** Milan: sparse-aware check-star design question flagged.
+
+Result: ``CURSOR_RESULT_comp_pool_r.md``; artifacts ``tmp/comp_pool_r/``.
+
+---
+
 ## 2026-07-13 -- MASTERSTAR-EPOCH-FIX
 
 **Finding:** ``proc_MASTERSTAR.csv`` (stacked reference sidecar) entered phase2a epoch sets

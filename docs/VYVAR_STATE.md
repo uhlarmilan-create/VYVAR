@@ -39,8 +39,12 @@ outputs:** `tmp/colorfield_final/` + `manifest.json` (4 renders @ boost 2.2, G2 
 Milan reopens (optional PDF wiring parked). Result files: `CURSOR_RESULT_todo12g*_hrd.md`,
 `CURSOR_RESULT_close_0713.md`.
 
-**NEXT SESSION entry point:** **PROD-SIGMA-FLOOR** design using corrected fresh baseline
-(``tmp/sigma_newton_fresh/``, post-MASTERSTAR-EPOCH-FIX) + one re-anchor.
+**COMP-POOL-R verdict:** r_60_4 Phase-1 pool on HEAD = **2 tier-3 comps** (byte-identical
+procs vs June); June **8 tier-2 comps not reproducible**. Not a named exclusion bug --
+**sparse field**; check_kmag blocked at ``n_comp_min``. r chi2 baseline **PENDING**.
+Result: ``CURSOR_RESULT_comp_pool_r.md``.
+
+**NEXT SESSION entry point:** **PROD-SIGMA-FLOOR** + sparse-aware check-star design (Milan).
 
 **2026-07-10 snapshot (SESSION-CLOSE-0710):** Two workstreams **DONE** that day:
 (1) **TODO-12 HRD arc** 12/12b/12c/12d/12e/12f — session-aware extreme-object table, enrichment,

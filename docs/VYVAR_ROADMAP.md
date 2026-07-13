@@ -80,6 +80,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **SIGMA-PROV-FORENSIC** | HIGH | **DONE (2026-07-13).** draft_426 archive LC **stale pre-Fix-A err** (semantic 7.46x i); fresh i_70_4 rerun: V0611 chi2=**2.13**, err=**0.0175 mag**. P2/P3 quantitative predictions FAIL. Part C unit fix landed. Result: ``CURSOR_RESULT_sigma_prov_forensic.md``. |
 | **426-REGEN** | — | **DONE (2026-07-13); baseline SUPERSEDED by MASTERSTAR-EPOCH-FIX.** Stale at ``Archive/evidence/draft_000426_stale_20260626``. |
 | **MASTERSTAR-EPOCH** | HIGH | **CLOSED (2026-07-13).** ``proc_MASTERSTAR.csv`` excluded from epoch collection; draft_426 regen 25 epochs. Result: ``CURSOR_RESULT_masterstar_epoch.md``. |
+| **COMP-POOL-R** | MED | **VERDICT (2026-07-13):** r_60_4 legitimately sparse (2 comps on HEAD, byte-identical procs); June 8 not reproducible. r baseline **PENDING** (check_kmag). Milan: sparse-aware check-star design. Result: ``CURSOR_RESULT_comp_pool_r.md``. |
 | **PROVENANCE-GUARD** | — | **DONE (2026-07-13).** ``provenance_guard.py``; harness refuse + VL-PROVENANCE ledger. |
 | **STALE-LC-SWEEP** | — | **CLOSED via regen (2026-07-13).** Evidence preserved; draft_426 on HEAD. |
 | **SIGMA-SEM-CAUSE** | — | **DONE (2026-07-13); SUPERSEDED.** Trends confirmed; dominant-cause attribution retracted -- see SIGMA-PROV-FORENSIC. Result: ``CURSOR_RESULT_sigma_sem_cause.md``. |
