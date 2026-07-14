@@ -11,6 +11,7 @@ from scipy import stats
 from check_star_kmag import (
     evaluate_k_colour_caveat,
     select_external_check_star,
+    build_comp_photon_mag_from_frames,
 )
 from sparse_trust_core import (
     check_model_ratio_ci,
@@ -136,3 +137,54 @@ def test_detrend_kmag_changes_series() -> None:
     km = 0.05 * am + np.random.default_rng(0).normal(0, 0.001, n)
     dt = detrend_kmag_airmass(km, am)
     assert float(np.std(dt)) < float(np.std(km))
+
+
+def test_build_comp_photon_matches_production_err() -> None:
+    """Sidecar photon derivation mirrors production empirical-bkg relative err."""
+    import math
+
+    import pandas as pd
+    from config import AppConfig
+    from mag_constants import MAG_ERR_SCALE
+    from photometry_core import (
+        ERR_BKG_MODE_EMPIRICAL,
+        _photometric_error_with_bkg_mode,
+        _sky_pp_for_photometric_error,
+    )
+
+    row = pd.Series(
+        {
+            "catalog_id": "999",
+            "source_file": "proc_test.csv",
+            "dao_flux": 1_949_529.187,
+            "sigma_bkg_ap": 174.983269,
+            "aperture_r_px": 5.0,
+            "sky_adu_per_px_annulus": 1200.0,
+        }
+    )
+    flux = float(row["dao_flux"])
+    sig_ap = float(row["sigma_bkg_ap"])
+    area = math.pi * float(row["aperture_r_px"]) ** 2
+    sky = _sky_pp_for_photometric_error(row)
+    prod, _ = _photometric_error_with_bkg_mode(
+        flux,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+        sky_pp=sky,
+        area=area,
+        gain=1.0,
+        read_noise=10.0,
+        sigma_bkg_ap=sig_ap,
+    )
+    mag = build_comp_photon_mag_from_frames(
+        pd.DataFrame([row]), ["999"], ["proc_test.csv"], cfg=AppConfig(),
+    )["999"][0]
+    derived_rel = float(mag) / MAG_ERR_SCALE
+    assert derived_rel == pytest.approx(prod, rel=1e-9)
+
+    row_with_err = row.copy()
+    row_with_err["err"] = prod
+    mag2 = build_comp_photon_mag_from_frames(
+        pd.DataFrame([row_with_err]), ["999"], ["proc_test.csv"], cfg=AppConfig(),
+    )["999"][0]
+    assert float(mag2) / MAG_ERR_SCALE == pytest.approx(prod, rel=1e-12)
+

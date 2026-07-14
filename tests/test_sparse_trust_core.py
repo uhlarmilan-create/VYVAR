@@ -59,6 +59,17 @@ def test_trust_band_green_red_yellow() -> None:
     assert "R_lo>=" in flags[0]
     y, _ = trust_band(R_hi=2.0, R_lo=1.0, stability_p=0.005, x2_pair_mag2=0.0, n_comps=2, cfg=cfg)
     assert y == "YELLOW"
+    r_stab, flags_stab = trust_band(
+        R_hi=1.0, R_lo=0.5, stability_p=0.0, x2_pair_mag2=0.0005, n_comps=2, cfg=cfg,
+    )
+    assert r_stab == "RED"
+    assert "comp_pair_unstable" in flags_stab
+    y_ss, flags_ss = trust_band(
+        R_hi=3.886057, R_lo=1.224253, stability_p=0.0, x2_pair_mag2=0.00029601, n_comps=2, cfg=cfg,
+    )
+    assert y_ss == "YELLOW"
+    assert "comp_pair_unstable" not in flags_ss
+    assert "R_hi_exceeds_T_green" in flags_ss
     y1, f1 = trust_band(R_hi=1.0, R_lo=0.5, stability_p=0.5, x2_pair_mag2=0.0, n_comps=1, cfg=cfg)
     assert y1 == "YELLOW"
     assert "single_comp" in f1
