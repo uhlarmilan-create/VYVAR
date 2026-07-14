@@ -107,6 +107,38 @@ def check_star_scatter(photometry_dir: Path, target_id: str) -> tuple[float, int
         return float("nan"), 0
 
 
+def read_sparse_trust_sidecar(photometry_dir: Path, target_id: str) -> dict[str, Any] | None:
+    """Read sparse-trust columns from check_kmag sidecar (first row scalars)."""
+    p = Path(photometry_dir) / "lightcurves" / f"check_kmag_{target_id}.csv"
+    if not p.is_file():
+        return None
+    try:
+        sdf = pd.read_csv(p, low_memory=False, nrows=1)
+    except Exception:  # noqa: BLE001
+        return None
+    if sdf.empty or "check_sparse" not in sdf.columns:
+        return None
+    row = sdf.iloc[0]
+
+    def _f(col: str) -> float:
+        return float(pd.to_numeric(row.get(col, float("nan")), errors="coerce"))
+
+    sparse_raw = row.get("check_sparse", 0)
+    check_sparse = str(sparse_raw).strip().lower() in ("1", "true", "yes")
+    flags_raw = str(row.get("sparse_flags", "") or "").strip()
+    flags = tuple(x for x in flags_raw.split(";") if x)
+    return {
+        "check_sparse": check_sparse,
+        "trust_R": _f("trust_R"),
+        "trust_R_lo": _f("trust_R_lo"),
+        "trust_R_hi": _f("trust_R_hi"),
+        "comp_stability_p": _f("comp_stability_p"),
+        "x2_pair_mag2": _f("x2_pair_mag2"),
+        "triangulation_clipped": str(row.get("triangulation_clipped", 0)).strip() in ("1", "true"),
+        "sparse_flags": flags,
+    }
+
+
 def _escalating_soft_count(soft: list[str]) -> int:
     """Soft warnings that count toward the ``len(soft) >= 3`` RED escalation guard."""
     return sum(1 for s in soft if not str(s).startswith("short baseline"))
@@ -129,6 +161,9 @@ def classify_warnings(
     color_term_off: bool = False,
     n_alignment_failed: int = 0,
     n_wcs_untrusted: int = 0,
+    sparse_trust_band: str | None = None,
+    sparse_trust_flags: tuple[str, ...] | None = None,
+    use_sparse_check_trust: bool = False,
 ) -> tuple[list[str], list[str]]:
     """Return (hard_labels, soft_labels) for one target."""
     hard: list[str] = []
@@ -178,6 +213,15 @@ def classify_warnings(
         hard.append("no check-star verification")
     elif 0 < n_chk < min_chk:
         soft.append(f"insufficient check-star verification (n={n_chk})")
+    elif use_sparse_check_trust and sparse_trust_band:
+        band = str(sparse_trust_band).strip().upper()
+        flag_txt = "; ".join(sparse_trust_flags) if sparse_trust_flags else ""
+        if "single_comp" in (sparse_trust_flags or ()):
+            soft.append("sparse check: single_comp (no ensemble)")
+        elif band == "RED":
+            hard.append(f"sparse check trust RED ({flag_txt or 'CI/stability'})")
+        elif band == "YELLOW":
+            soft.append(f"sparse check trust YELLOW ({flag_txt or 'marginal CI/stability'})")
     elif math.isfinite(check_scatter):
         if check_scatter >= _CHECK_HARD_LO:
             hard.append(f"check-star scatter {check_scatter:.3f} mag (high)")
@@ -273,9 +317,27 @@ def evaluate_target(
     color_term_off: bool = False,
     n_alignment_failed: int = 0,
     n_wcs_untrusted: int = 0,
+    sparse_trust: dict[str, Any] | None = None,
+    cfg: Any | None = None,
 ) -> dict[str, Any]:
     th = thresholds or CompTrustThresholds.from_bounds(3, 8)
     lq = str(lc_quality or "").strip().lower() or "—"
+    sparse_band: str | None = None
+    sparse_flags: tuple[str, ...] = ()
+    use_sparse = False
+    if sparse_trust and bool(sparse_trust.get("check_sparse")):
+        from sparse_trust_core import sparse_trust_config_from_app, trust_band  # noqa: PLC0415
+
+        use_sparse = True
+        sparse_band, sparse_flags = trust_band(
+            R_hi=float(sparse_trust.get("trust_R_hi", float("nan"))),
+            R_lo=float(sparse_trust.get("trust_R_lo", float("nan"))),
+            stability_p=float(sparse_trust.get("comp_stability_p", float("nan"))),
+            x2_pair_mag2=float(sparse_trust.get("x2_pair_mag2", float("nan"))),
+            n_comps=int(sparse_trust.get("n_comps", 2) or 2),
+            triangulation_clipped=bool(sparse_trust.get("triangulation_clipped")),
+            cfg=sparse_trust_config_from_app(cfg),
+        )
     hard, soft = classify_warnings(
         n_clean=int(n_clean),
         check_scatter=float(check_scatter),
@@ -292,6 +354,9 @@ def evaluate_target(
         color_term_off=bool(color_term_off),
         n_alignment_failed=int(n_alignment_failed),
         n_wcs_untrusted=int(n_wcs_untrusted),
+        sparse_trust_band=sparse_band,
+        sparse_trust_flags=sparse_flags,
+        use_sparse_check_trust=use_sparse,
     )
     trust = trust_level(int(n_clean), hard, soft, th)
     reason = build_reason(
@@ -313,6 +378,8 @@ def evaluate_target(
         "n_soft": len(soft),
         "min_comps": th.min_comps,
         "strong_comps": th.strong,
+        "sparse_trust_band": sparse_band,
+        "sparse_trust_flags": list(sparse_flags),
     }
 
 
@@ -384,6 +451,9 @@ def compute_trust_for_photometry_dir(
         n_frames = int(nf_raw) if math.isfinite(float(nf_raw)) else None
         chk, n_chk = check_star_scatter(phot, cid)
         _cm = comp_meta.get(cid, {})
+        _sparse_side = read_sparse_trust_sidecar(phot, cid)
+        if _sparse_side is not None:
+            _sparse_side["n_comps"] = int(_cm.get("comp_pool_n_final", 0) or n_clean)
         _clip_iters = int(_cm.get("comp_clip_iterations", 0))
         _sparse_fb = bool(_cm.get("sparse_fallback_used", False))
         _stab_sus_raw = pd.to_numeric(row.get("n_stability_suspect"), errors="coerce")
@@ -412,6 +482,8 @@ def compute_trust_for_photometry_dir(
             color_term_off=_color_term_off,
             n_alignment_failed=_n_af,
             n_wcs_untrusted=_n_wut,
+            sparse_trust=_sparse_side,
+            cfg=cfg,
         )
         per_target[cid] = info
         conf_counts[info["trust"]] = conf_counts.get(info["trust"], 0) + 1

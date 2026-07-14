@@ -8646,6 +8646,7 @@ def _phase2a_process_one_target(
 
     try:
         from check_star_kmag import (  # noqa: PLC0415
+            build_comp_photon_mag_from_frames,
             check_kmag_sidecar_path,
             compute_check_ensemble_mag_calib,
             save_check_kmag_sidecar,
@@ -8659,8 +8660,9 @@ def _phase2a_process_one_target(
                 if _chk_series is not None and np.isfinite(_chk_series).any():
                     _ext_lc[_chk_cid] = _chk_series
             if _chk_cid in _ext_lc:
-                _chk_n_min = max(1, min(3, len(comp_ids)))
-                _chk_mag = compute_check_ensemble_mag_calib(
+                _phot_ids = list(dict.fromkeys(list(comp_ids) + [_chk_cid]))
+                _comp_photon = build_comp_photon_mag_from_frames(all_frames, _phot_ids, src_files)
+                _chk_result = compute_check_ensemble_mag_calib(
                     _chk_cid,
                     list(comp_ids),
                     _ext_lc,
@@ -8670,16 +8672,19 @@ def _phase2a_process_one_target(
                     comp_tier_map=comp_tier_map,
                     tier_weights=tier_weights,
                     cfg=_cfg,
-                    n_comp_min=_chk_n_min,
+                    n_comp_min=2,
                     n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
+                    comp_photon_mag=_comp_photon,
+                    sigma_sys_mag=_sigma_sys_mag,
                 )
-                if _chk_mag is not None and np.isfinite(_chk_mag).any():
+                if _chk_result is not None and np.isfinite(_chk_result.kmag).any():
                     save_check_kmag_sidecar(
                         check_kmag_sidecar_path(lc_dir, target_cid),
                         check_cid=_chk_cid,
                         bjd=bjd,
                         source_files=src_files,
-                        kmag=_chk_mag,
+                        kmag=_chk_result.kmag,
+                        ensemble=_chk_result,
                     )
     except (ImportError, KeyError, TypeError, ValueError, AttributeError, OSError) as _ck_exc:
         logging.debug("[CHECK-KMAG] sidecar skipped for %s: %s", target_cid, _ck_exc)

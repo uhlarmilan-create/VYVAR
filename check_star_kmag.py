@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -356,6 +357,24 @@ def comp_ensemble_maps(
     return comp_catalog_mag, comp_tier_map, comp_rms_map, tier_weights
 
 
+@dataclass(frozen=True, slots=True)
+class CheckEnsembleResult:
+    """Check-star ensemble output + sparse-trust sidecar metadata."""
+
+    kmag: np.ndarray
+    check_sparse: bool = False
+    n_comps: int = 0
+    trust_R: float = float("nan")
+    trust_R_lo: float = float("nan")
+    trust_R_hi: float = float("nan")
+    comp_stability_p: float = float("nan")
+    x2_pair_mag2: float = float("nan")
+    triangulation_clipped: bool = False
+    zp_sem_ratio: float | None = None
+    single_comp: bool = False
+    sparse_flags: tuple[str, ...] = ()
+
+
 def compute_check_ensemble_mag_calib(
     check_cid: str,
     comp_ids: list[str],
@@ -369,16 +388,26 @@ def compute_check_ensemble_mag_calib(
     cfg: AppConfig,
     n_comp_min: int | None = None,
     n_comp_max: int | None = None,
-) -> np.ndarray | None:
+    comp_photon_mag: dict[str, np.ndarray] | None = None,
+    sigma_sys_mag: float = 0.0,
+) -> CheckEnsembleResult | None:
     """Ensemble-standardize the check star, excluding it from its own ensemble."""
     cid = str(normalize_gaia_source_id(check_cid) or "").strip()
     if not cid or cid not in comp_lc:
         return None
     other_ids = [c for c in comp_ids if c != cid and c in comp_lc]
-    _min_other = max(1, int(n_comp_min if n_comp_min is not None else 3))
+    _min_other = max(2, int(n_comp_min if n_comp_min is not None else 2))
     _max_other = int(n_comp_max if n_comp_max is not None else cfg.phase01_comparison_n_comp_max)
-    if len(other_ids) < _min_other:
+    if len(other_ids) < 1:
         return None
+    if len(other_ids) < 2:
+        return CheckEnsembleResult(
+            kmag=np.full(len(comp_lc[cid]), float("nan")),
+            check_sparse=True,
+            n_comps=len(other_ids),
+            single_comp=True,
+            sparse_flags=("single_comp",),
+        )
     other_lc = {c: comp_lc[c] for c in other_ids}
     other_cat = {c: comp_catalog_mag[c] for c in other_ids if c in comp_catalog_mag}
     other_quality = {
@@ -387,8 +416,16 @@ def compute_check_ensemble_mag_calib(
         if c in comp_quality and str(comp_quality[c].get("quality", "")).strip().lower() != "excluded"
     }
     if len(other_quality) < _min_other:
+        if len(other_quality) < 2:
+            return CheckEnsembleResult(
+                kmag=np.full(len(comp_lc[cid]), float("nan")),
+                check_sparse=True,
+                n_comps=len(other_quality),
+                single_comp=len(other_quality) < 2,
+                sparse_flags=("single_comp",) if len(other_quality) < 2 else (),
+            )
         return None
-    mag_calib, _, _ = ensemble_normalize(
+    mag_calib, _, ensemble_scatter = ensemble_normalize(
         comp_lc[cid],
         other_lc,
         other_cat,
@@ -401,7 +438,125 @@ def compute_check_ensemble_mag_calib(
     )
     if not np.isfinite(mag_calib).any():
         return None
-    return mag_calib
+
+    n_other = len(other_quality)
+    check_sparse = n_other <= 2
+    sparse_stats = None
+    sparse_flags: tuple[str, ...] = ()
+    zp_ratio: float | None = None
+    if comp_photon_mag is not None and n_other >= 2:
+        from sparse_trust_core import (  # noqa: PLC0415
+            compute_sparse_trust_stats,
+            sparse_trust_config_from_app,
+            trust_band,
+        )
+
+        phot = dict(comp_photon_mag)
+        phot["__check__"] = phot.get(cid, np.full(len(comp_lc[cid]), float("nan")))
+        use_ids = list(other_quality.keys())[:2]
+        comp_mags = {c: comp_lc[c] for c in use_ids}
+        sparse_stats = compute_sparse_trust_stats(
+            kmag=mag_calib,
+            m_K=comp_lc[cid],
+            comp_mags=comp_mags,
+            comp_photon_mag=phot,
+            sigma_sys_mag=float(sigma_sys_mag),
+            n_comps=n_other,
+            cfg=sparse_trust_config_from_app(cfg),
+        )
+        _, sparse_flags = trust_band(
+            R_hi=sparse_stats.trust_R_hi,
+            R_lo=sparse_stats.trust_R_lo,
+            stability_p=sparse_stats.comp_stability_p,
+            x2_pair_mag2=sparse_stats.x2_pair_mag2,
+            n_comps=n_other,
+            triangulation_clipped=sparse_stats.triangulation_clipped,
+            cfg=sparse_trust_config_from_app(cfg),
+        )
+        if n_other in (3, 4):
+            sem_med = float(np.nanmedian(ensemble_scatter[np.isfinite(ensemble_scatter)]))
+            if math.isfinite(sem_med) and sem_med > 0 and comp_photon_mag:
+                from sparse_trust_core import sigma_zp_per_epoch, triangulate_variances  # noqa: PLC0415
+
+                c1, c2 = use_ids[0], use_ids[1] if len(use_ids) > 1 else use_ids[0]
+                tri = triangulate_variances(
+                    float(np.nanvar(comp_lc[cid] - comp_lc[c1], ddof=1)),
+                    float(np.nanvar(comp_lc[cid] - comp_lc[c2], ddof=1)),
+                    float(np.nanvar(comp_lc[c1] - comp_lc[c2], ddof=1)),
+                )
+                x2_c1 = max(tri.sig2_C1, 0.0)
+                x2_c2 = max(tri.sig2_C2, 0.0)
+                flux = np.vstack(
+                    [
+                        10.0 ** (-0.4 * np.asarray(comp_lc[c1], dtype=float)),
+                        10.0 ** (-0.4 * np.asarray(comp_lc[c2], dtype=float)),
+                    ]
+                )
+                phot_stack = np.vstack(
+                    [
+                        comp_photon_mag.get(c1, np.full(len(comp_lc[c1]), float("nan"))),
+                        comp_photon_mag.get(c2, np.full(len(comp_lc[c2]), float("nan"))),
+                    ]
+                )
+                tri_zp = sigma_zp_per_epoch(flux, phot_stack, np.array([x2_c1, x2_c2]))
+                tri_med = float(np.nanmedian(tri_zp[np.isfinite(tri_zp)]))
+                if math.isfinite(tri_med) and tri_med > 0:
+                    zp_ratio = sem_med / tri_med
+
+    if sparse_stats is not None:
+        return CheckEnsembleResult(
+            kmag=mag_calib,
+            check_sparse=check_sparse,
+            n_comps=n_other,
+            trust_R=sparse_stats.trust_R,
+            trust_R_lo=sparse_stats.trust_R_lo,
+            trust_R_hi=sparse_stats.trust_R_hi,
+            comp_stability_p=sparse_stats.comp_stability_p,
+            x2_pair_mag2=sparse_stats.x2_pair_mag2,
+            triangulation_clipped=sparse_stats.triangulation_clipped,
+            zp_sem_ratio=zp_ratio,
+            sparse_flags=sparse_flags,
+        )
+    return CheckEnsembleResult(
+        kmag=mag_calib,
+        check_sparse=check_sparse,
+        n_comps=n_other,
+        zp_sem_ratio=zp_ratio,
+    )
+
+
+def build_comp_photon_mag_from_frames(
+    all_frames: pd.DataFrame,
+    star_ids: list[str],
+    source_files: list[str],
+) -> dict[str, np.ndarray]:
+    """Per-epoch photon sigma (mag) aligned to ``source_files`` order."""
+    from sparse_trust_core import rel_flux_err_to_photon_mag  # noqa: PLC0415
+
+    n = len(source_files)
+    out: dict[str, np.ndarray] = {}
+    if all_frames.empty or n <= 0:
+        return out
+    work = all_frames.copy()
+    if "catalog_id" in work.columns:
+        work["_nid"] = work["catalog_id"].map(lambda x: str(normalize_gaia_source_id(x) or "").strip())
+    else:
+        work["_nid"] = work.get("name", pd.Series(dtype=str)).astype(str)
+    sf_col = "source_file" if "source_file" in work.columns else None
+    for cid in star_ids:
+        arr = np.full(n, float("nan"), dtype=float)
+        sub = work[work["_nid"] == str(cid).strip()]
+        if sub.empty or sf_col is None:
+            out[cid] = arr
+            continue
+        by_sf = {
+            str(r[sf_col]).strip(): float(pd.to_numeric(r.get("err", float("nan")), errors="coerce"))
+            for _, r in sub.iterrows()
+        }
+        err_rel = np.asarray([by_sf.get(str(sf).strip(), float("nan")) for sf in source_files], dtype=float)
+        arr = rel_flux_err_to_photon_mag(err_rel)
+        out[cid] = arr
+    return out
 
 
 def check_kmag_sidecar_path(lc_dir: Path | str, target_cid: str) -> Path:
@@ -415,18 +570,38 @@ def save_check_kmag_sidecar(
     bjd: np.ndarray,
     source_files: list[str],
     kmag: np.ndarray,
+    ensemble: CheckEnsembleResult | None = None,
 ) -> None:
     n = min(len(bjd), len(source_files), len(kmag))
     if n <= 0:
         return
-    df = pd.DataFrame(
-        {
-            "check_catalog_id": [str(check_cid)] * n,
-            "bjd": np.asarray(bjd[:n], dtype=float),
-            "source_file": [str(s) for s in source_files[:n]],
-            "kmag": np.round(np.asarray(kmag[:n], dtype=float), 6),
-        }
-    )
+    row: dict[str, object] = {
+        "check_catalog_id": [str(check_cid)] * n,
+        "bjd": np.asarray(bjd[:n], dtype=float),
+        "source_file": [str(s) for s in source_files[:n]],
+        "kmag": np.round(np.asarray(kmag[:n], dtype=float), 6),
+    }
+    if ensemble is not None:
+        row["check_sparse"] = [int(bool(ensemble.check_sparse))] * n
+        row["trust_R"] = [round(float(ensemble.trust_R), 6) if math.isfinite(float(ensemble.trust_R)) else ""] * n
+        row["trust_R_lo"] = [
+            round(float(ensemble.trust_R_lo), 6) if math.isfinite(float(ensemble.trust_R_lo)) else ""
+        ] * n
+        row["trust_R_hi"] = [
+            round(float(ensemble.trust_R_hi), 6) if math.isfinite(float(ensemble.trust_R_hi)) else ""
+        ] * n
+        row["comp_stability_p"] = [
+            round(float(ensemble.comp_stability_p), 6) if math.isfinite(float(ensemble.comp_stability_p)) else ""
+        ] * n
+        row["x2_pair_mag2"] = [
+            round(float(ensemble.x2_pair_mag2), 8) if math.isfinite(float(ensemble.x2_pair_mag2)) else ""
+        ] * n
+        row["triangulation_clipped"] = [int(bool(ensemble.triangulation_clipped))] * n
+        if ensemble.zp_sem_ratio is not None and math.isfinite(float(ensemble.zp_sem_ratio)):
+            row["zp_sem_ratio"] = [round(float(ensemble.zp_sem_ratio), 6)] * n
+        if ensemble.sparse_flags:
+            row["sparse_flags"] = [";".join(ensemble.sparse_flags)] * n
+    df = pd.DataFrame(row)
     path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(path, index=False)
     logging.debug("[CHECK-KMAG] wrote %s (%d rows)", path.name, n)
@@ -587,7 +762,7 @@ def kmag_values_for_export(
     if check_cid not in comp_ids:
         comp_ids.append(check_cid)
     other_ids = [c for c in comp_ids if c != check_cid]
-    if len(other_ids) < 3 or proc_dir is None or not proc_dir.is_dir():
+    if len(other_ids) < 2 or proc_dir is None or not proc_dir.is_dir():
         return (["na"] * n_rows, "na")
 
     comp_lc = build_aligned_comp_inst(
@@ -602,7 +777,7 @@ def kmag_values_for_export(
     comp_quality = check_comparison_stability(
         {c: comp_lc[c] for c in other_ids if c in comp_lc},
         comp_rms_map=comp_rms_map,
-        n_comp_min=3,
+        n_comp_min=2,
         outlier_sigma=3.0,
         common_mode_detrend=True,
     )
@@ -615,7 +790,7 @@ def kmag_values_for_export(
                 elif q2 in ("good", "suspect"):
                     comp_quality[cid]["quality"] = q2
 
-    kmag_arr = compute_check_ensemble_mag_calib(
+    kmag_result = compute_check_ensemble_mag_calib(
         check_cid,
         comp_ids,
         comp_lc,
@@ -625,9 +800,11 @@ def kmag_values_for_export(
         comp_tier_map=comp_tier_map,
         tier_weights=tier_weights,
         cfg=cfg,
+        n_comp_min=2,
     )
-    if kmag_arr is None:
+    if kmag_result is None:
         return (["na"] * n_rows, "na")
+    kmag_arr = kmag_result.kmag
 
     per_row = [_fmt_kmag(float(kmag_arr[i])) if i < len(kmag_arr) else "na" for i in range(n_rows)]
     if not any(v != "na" for v in per_row):

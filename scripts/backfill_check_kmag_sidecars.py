@@ -97,12 +97,15 @@ def main() -> int:
         comp_lc = build_aligned_comp_inst(proc_dir, comp_ids, source_files, cfg, "aperture", csv_cache=proc_cache)
         other_ids = [c for c in comp_ids if c != check_cid]
         other_lc = {c: comp_lc[c] for c in other_ids if c in comp_lc}
-        comp_quality = check_comparison_stability(other_lc, comp_rms_map=rms, n_comp_min=3, outlier_sigma=3.0, common_mode_detrend=True)
+        comp_quality = check_comparison_stability(other_lc, comp_rms_map=rms, n_comp_min=2, outlier_sigma=3.0, common_mode_detrend=True)
         for cid, q in cq_map.items():
             if cid in comp_quality and q == "excluded":
                 comp_quality[cid]["quality"] = "excluded"
-        kmag = compute_check_ensemble_mag_calib(check_cid, comp_ids, comp_lc, cat, comp_quality, comp_rms_map=rms, comp_tier_map=tier, tier_weights=tw, cfg=cfg)
-        if kmag is None:
+        kmag_result = compute_check_ensemble_mag_calib(
+            check_cid, comp_ids, comp_lc, cat, comp_quality,
+            comp_rms_map=rms, comp_tier_map=tier, tier_weights=tw, cfg=cfg, n_comp_min=2,
+        )
+        if kmag_result is None:
             continue
         bjd = pd.to_numeric(lc_df["bjd"], errors="coerce").to_numpy(dtype=float)
         save_check_kmag_sidecar(
@@ -110,7 +113,8 @@ def main() -> int:
             check_cid=check_cid,
             bjd=bjd,
             source_files=source_files,
-            kmag=kmag,
+            kmag=kmag_result.kmag,
+            ensemble=kmag_result,
         )
         n_ok += 1
 

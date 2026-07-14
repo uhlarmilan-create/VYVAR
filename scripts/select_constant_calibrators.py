@@ -167,16 +167,16 @@ def build_loo_differential_lc(
     )
     other_lc = {c: comp_lc[c] for c in comp_ids if c != cid and c in comp_lc}
     comp_quality = check_comparison_stability(
-        other_lc, comp_rms_map=rms, n_comp_min=3, outlier_sigma=3.0, common_mode_detrend=True,
+        other_lc, comp_rms_map=rms, n_comp_min=2, outlier_sigma=3.0, common_mode_detrend=True,
     )
-    kmag = compute_check_ensemble_mag_calib(
+    kmag_result = compute_check_ensemble_mag_calib(
         cid, comp_ids, comp_lc, cat, comp_quality,
-        comp_rms_map=rms, comp_tier_map=tier, tier_weights=tw, cfg=cfg,
+        comp_rms_map=rms, comp_tier_map=tier, tier_weights=tw, cfg=cfg, n_comp_min=2,
     )
-    if kmag is None:
+    if kmag_result is None:
         return None
-    out = lc_df.iloc[: len(kmag)].copy()
-    out["delta_mag"] = np.asarray(kmag, dtype=float)
+    out = lc_df.iloc[: len(kmag_result.kmag)].copy()
+    out["delta_mag"] = np.asarray(kmag_result.kmag, dtype=float)
     return out
 
 

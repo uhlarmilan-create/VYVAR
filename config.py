@@ -236,6 +236,10 @@ class AppConfig:
     comp_trust_min_comps: int = 5
     #: Minimum check-star epochs before trust scatter thresholds apply.
     check_star_min_epochs: int = 5
+    #: Sparse-trust CI band thresholds (docs/VYVAR_SPARSE_TRUST_SPEC.md).
+    sparse_trust_T_green: float = 1.5
+    sparse_trust_T_red: float = 4.0
+    sparse_trust_X2_RED: float = 0.0004
     #: Artefact floor for check-star selection metric (comp_rms / p2p_rms).
     check_select_rms_floor: float = 1e-4
     #: Phase-1 comp selection: drop candidates with comp_rms below this (isolated_bin artefact).
@@ -1934,6 +1938,9 @@ class AppConfig:
         if int(self.lc_quality_short_min_frames) > int(self.lc_quality_min_frames):
             self.lc_quality_short_min_frames = int(self.lc_quality_min_frames)
         _i01("check_star_min_epochs", 5, 3, 50)
+        _f01("sparse_trust_T_green", 1.5, 0.5, 10.0)
+        _f01("sparse_trust_T_red", 4.0, 1.0, 20.0)
+        _f01("sparse_trust_X2_RED", 0.0004, 0.0, 0.01)
         _f01("check_select_rms_floor", 1e-4, 0.0, 0.01)
         _f01("comp_select_rms_floor", 1e-6, 0.0, 0.01)
         _f01("phase01_comparison_max_comp_rms", 0.05, 0.01, 0.5)
@@ -2178,6 +2185,9 @@ class AppConfig:
             "lc_quality_min_normal_frac": float(self.lc_quality_min_normal_frac),
             "comp_trust_min_comps": int(self.comp_trust_min_comps),
             "check_star_min_epochs": int(self.check_star_min_epochs),
+            "sparse_trust_T_green": float(self.sparse_trust_T_green),
+            "sparse_trust_T_red": float(self.sparse_trust_T_red),
+            "sparse_trust_X2_RED": float(self.sparse_trust_X2_RED),
             "check_select_rms_floor": float(self.check_select_rms_floor),
             "comp_select_rms_floor": float(self.comp_select_rms_floor),
             "sysrem_n_iter": int(self.sysrem_n_iter),
