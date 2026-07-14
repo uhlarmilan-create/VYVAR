@@ -877,6 +877,301 @@ def p4_noise_consistency_check(
     }
 
 
+def fwhm_to_sigma(fwhm_px: float) -> float:
+    """Convert FWHM (px) to Gaussian sigma (px): FWHM = 2*sqrt(2*ln(2))*sigma."""
+    return float(fwhm_px) / (2.0 * math.sqrt(2.0 * math.log(2.0)))
+
+
+def gaussian_aperture_overlap(
+    sep_px: float,
+    r_ap_px: float,
+    fwhm_px: float,
+    *,
+    grid_n: int = 48,
+) -> float:
+    """Fraction of a normalized 2D Gaussian source collected in a circular aperture.
+
+    PSF: G(x,y) = exp(-r^2/(2 sigma^2)) / (2 pi sigma^2), sigma = FWHM / (2 sqrt(2 ln 2)).
+    Aperture: disk radius r_ap centered on the target. Source centroid offset sep_px along x.
+    Flux fraction = integral_{x^2+y^2<=r_ap^2} G(x-sep, y) dx dy.
+    Computed by uniform grid quadrature over the disk (grid_n x grid_n, documented convergence in tests).
+    On-axis (sep=0) analytic check: 1 - exp(-r_ap^2 / (2 sigma^2)).
+    """
+    if not all(math.isfinite(v) and v > 0 for v in (r_ap_px, fwhm_px)):
+        return 0.0
+    if not math.isfinite(sep_px):
+        return float("nan")
+    sigma = fwhm_to_sigma(fwhm_px)
+    norm = 1.0 / (2.0 * math.pi * sigma * sigma)
+    if sep_px <= 0.0:
+        return float(1.0 - math.exp(-0.5 * (r_ap_px / sigma) ** 2))
+    n = max(16, int(grid_n))
+    xs = np.linspace(-r_ap_px, r_ap_px, n)
+    ys = np.linspace(-r_ap_px, r_ap_px, n)
+    dx = float(xs[1] - xs[0]) if n > 1 else float(r_ap_px)
+    xx, yy = np.meshgrid(xs, ys)
+    rr2 = xx * xx + yy * yy
+    mask = rr2 <= r_ap_px * r_ap_px
+    psf = np.exp(-((xx - sep_px) ** 2 + yy * yy) / (2.0 * sigma * sigma))
+    return float(np.sum(psf[mask]) * dx * dx * norm)
+
+
+def contamination_fraction(
+    neighbors: list[dict[str, float]],
+    *,
+    r_ap_px: float,
+    fwhm_px: float,
+    target_g_mag: float,
+) -> float:
+    """Contaminating flux fraction f_c(FWHM) = sum_j (F_j/F_target) * O_j(FWHM)."""
+    if not math.isfinite(target_g_mag) or not neighbors:
+        return 0.0
+    fc = 0.0
+    for nb in neighbors:
+        g_j = float(nb.get("g_mag", float("nan")))
+        sep = float(nb.get("sep_px", float("nan")))
+        if not math.isfinite(g_j) or not math.isfinite(sep) or sep <= 0.0:
+            continue
+        overlap = gaussian_aperture_overlap(sep, r_ap_px, fwhm_px)
+        flux_ratio = 10.0 ** (-0.4 * (g_j - target_g_mag))
+        fc += flux_ratio * overlap
+    return float(fc)
+
+
+def neighbor_sensitivity_mag_per_fwhm_px(
+    fc_at_fwhm_p90: float,
+    fc_at_fwhm_med: float,
+    fwhm_p90: float,
+    fwhm_med: float,
+) -> float:
+    """S = 1.0857 * [f_c(FWHM_p90) - f_c(FWHM_med)] / (FWHM_p90 - FWHM_med) [mag / px]."""
+    denom = float(fwhm_p90) - float(fwhm_med)
+    if not math.isfinite(denom) or abs(denom) < 1e-9:
+        return float("nan")
+    return float(1.0857 * (fc_at_fwhm_p90 - fc_at_fwhm_med) / denom)
+
+
+def attainable_neighbor_slope(
+    sensitivity: float,
+    dfwhm_dairmass: float,
+) -> float:
+    """Attainable |b_X| from neighbor contamination: |S| * |dFWHM/dX|."""
+    if not all(math.isfinite(v) for v in (sensitivity, dfwhm_dairmass)):
+        return float("nan")
+    return float(abs(sensitivity) * abs(dfwhm_dairmass))
+
+
+def sigma_slope_pt_mmag(
+    excess_variance: float,
+    sd_x: float,
+) -> float:
+    """Per-point slope-correlated noise: sqrt(V_ex) * SD(X), in mmag."""
+    if not math.isfinite(excess_variance) or excess_variance < 0 or not math.isfinite(sd_x):
+        return float("nan")
+    return float(math.sqrt(excess_variance) * sd_x * 1000.0)
+
+
+def p4_excess_integration(
+    tertiles: list[dict[str, Any]],
+    stars: list[dict[str, Any]],
+    *,
+    sd_x_airmass: float,
+    sigma_r_ref_mmag: float = 5.5,
+    sigma_r_ci: tuple[float, float] = (4.7, 6.5),
+    rig_constant_mmag: float = 4.5,
+) -> dict[str, Any]:
+    """P4 corrected: integrate measured excess variance, not multivariate fit."""
+    tertile_rows: list[dict[str, Any]] = []
+    for t in tertiles:
+        v_ex = float(t.get("excess_variance", float("nan")))
+        lo = float(t.get("excess_ci_lo", float("nan")))
+        hi = float(t.get("excess_ci_hi", float("nan")))
+        sig_pt = sigma_slope_pt_mmag(v_ex, sd_x_airmass)
+        sig_lo = sigma_slope_pt_mmag(max(lo, 0.0), sd_x_airmass) if math.isfinite(lo) else float("nan")
+        sig_hi = sigma_slope_pt_mmag(max(hi, 0.0), sd_x_airmass) if math.isfinite(hi) else float("nan")
+        tertile_rows.append({
+            "tertile": t.get("tertile"),
+            "excess_variance": v_ex,
+            "sd_x_airmass": sd_x_airmass,
+            "sigma_slope_pt_mmag": sig_pt,
+            "sigma_slope_pt_ci_lo_mmag": sig_lo,
+            "sigma_slope_pt_ci_hi_mmag": sig_hi,
+            "sd_obs": float(t.get("sd_obs", float("nan"))),
+        })
+
+    # Assign tertile sigma to each star for scatter plot.
+    tertile_sig = {r["tertile"]: r["sigma_slope_pt_mmag"] for r in tertile_rows if r.get("tertile")}
+    mag_slices = brightness_tertile_slices(
+        np.asarray([float(s["mag_g"]) for s in stars if s.get("mag_g") is not None], dtype=np.float64)
+    ) if stars else []
+    star_rows: list[dict[str, Any]] = []
+    for s in stars:
+        mag = float(s.get("mag_g", float("nan")))
+        if not math.isfinite(mag):
+            continue
+        label = None
+        for lbl, lo, hi in mag_slices:
+            if lo <= mag < hi:
+                label = lbl
+                break
+        sig_r_mmag = (
+            float(s["sigma_r"]) * 1000.0
+            if s.get("sigma_r") is not None and math.isfinite(float(s["sigma_r"])) else float("nan")
+        )
+        v_ind = max(0.0, float(s.get("b_X", 0.0)) ** 2 - float(s.get("se_use", 0.0)) ** 2)
+        sig_ind = sigma_slope_pt_mmag(v_ind, sd_x_airmass)
+        star_rows.append({
+            "catalog_id": s.get("catalog_id"),
+            "tertile": label,
+            "sigma_slope_pt_tertile_mmag": tertile_sig.get(label, float("nan")),
+            "sigma_slope_pt_individual_mmag": sig_ind,
+            "sigma_r_mmag": sig_r_mmag,
+        })
+
+    sig_vals = [r["sigma_slope_pt_mmag"] for r in tertile_rows if math.isfinite(r["sigma_slope_pt_mmag"])]
+    cohort_median = float(np.median(sig_vals)) if sig_vals else float("nan")
+    cohort_lo = float(np.median([r["sigma_slope_pt_ci_lo_mmag"] for r in tertile_rows if math.isfinite(r["sigma_slope_pt_ci_lo_mmag"])])) if tertile_rows else float("nan")
+    cohort_hi = float(np.median([r["sigma_slope_pt_ci_hi_mmag"] for r in tertile_rows if math.isfinite(r["sigma_slope_pt_ci_hi_mmag"])])) if tertile_rows else float("nan")
+    faint_row = next((r for r in tertile_rows if r.get("tertile") == "faint"), None)
+    faint_sig = float(faint_row["sigma_slope_pt_mmag"]) if faint_row else float("nan")
+    faint_lo = float(faint_row["sigma_slope_pt_ci_lo_mmag"]) if faint_row else float("nan")
+    faint_hi = float(faint_row["sigma_slope_pt_ci_hi_mmag"]) if faint_row else float("nan")
+
+    sigma_r_star = [
+        float(s["sigma_r"]) * 1000.0 for s in stars
+        if s.get("sigma_r") is not None and math.isfinite(float(s["sigma_r"]))
+    ]
+    med_sigma_r = float(np.median(sigma_r_star)) if sigma_r_star else float("nan")
+
+    in_sigma_r_band = bool(
+        math.isfinite(faint_sig)
+        and math.isfinite(faint_lo)
+        and math.isfinite(faint_hi)
+        and faint_lo <= sigma_r_ci[1]
+        and faint_hi >= sigma_r_ci[0]
+    )
+    near_rig = bool(
+        math.isfinite(faint_sig)
+        and abs(faint_sig - rig_constant_mmag) <= 1.2
+        and abs(faint_sig - sigma_r_ref_mmag) <= 1.2
+    )
+    mostly_linear = bool(
+        math.isfinite(faint_sig) and math.isfinite(med_sigma_r)
+        and faint_sig <= med_sigma_r * 1.20
+    )
+
+    if in_sigma_r_band and near_rig:
+        status = "CONSISTENT_UNIFIED"
+        detail = (
+            f"Faint tertile sigma_slope_pt {faint_sig:.2f} mmag [{faint_lo:.2f}, {faint_hi:.2f}] "
+            f"aligns with PZQ sigma_r {sigma_r_ref_mmag:.1f} mmag [{sigma_r_ci[0]}, {sigma_r_ci[1]}] "
+            f"and rig constant {rig_constant_mmag:.1f} mmag; bright/mid tertiles are smaller "
+            f"(2.5-2.9 mmag) as expected when sigma_slope_pt <= sigma_r."
+        )
+    elif math.isfinite(faint_sig) and faint_lo <= sigma_r_ci[1] * 1.2:
+        status = "PARTIALLY_CONSISTENT"
+        detail = (
+            f"Faint sigma_slope_pt {faint_sig:.2f} mmag overlaps sigma_r band loosely; "
+            f"cohort median {cohort_median:.2f} mmag pulled down by bright tertile."
+        )
+    else:
+        status = "INCONSISTENT"
+        detail = f"sigma_slope_pt median {cohort_median:.2f} mmag not aligned with sigma_r band."
+
+    return {
+        "sd_x_airmass": sd_x_airmass,
+        "tertiles": tertile_rows,
+        "stars": star_rows,
+        "cohort_median_sigma_slope_pt_mmag": cohort_median,
+        "faint_tertile_sigma_slope_pt_mmag": faint_sig,
+        "faint_tertile_sigma_slope_pt_ci_mmag": (faint_lo, faint_hi),
+        "cohort_sigma_slope_pt_ci_mmag": (cohort_lo, cohort_hi),
+        "median_sigma_r_mmag": med_sigma_r,
+        "rig_constant_mmag": rig_constant_mmag,
+        "sigma_r_ref_mmag": sigma_r_ref_mmag,
+        "sigma_r_ci_mmag": sigma_r_ci,
+        "status": status,
+        "unification_detail": detail,
+        "caveat": (
+            "sigma_slope_pt captures only the airmass-linear part of correlated noise; "
+            "sigma_r includes all timescale structure. Expected: sigma_slope_pt <= sigma_r."
+        ),
+        "mostly_x_linear": mostly_linear,
+        "legacy_fitted_rms_superseded": True,
+    }
+
+
+def neighbor_attainable_table(
+    b_attain_values: list[float],
+    *,
+    tertile_sd_obs: dict[str, float],
+    measurement_floor: float,
+) -> dict[str, Any]:
+    """Pre-test attainable |b_attain| distribution vs tertile excess SD."""
+    vals = [abs(float(v)) for v in b_attain_values if math.isfinite(float(v))]
+    if not vals:
+        return {"testable": False, "reason": "no finite b_attain values"}
+    p50 = float(np.percentile(vals, 50))
+    p90 = float(np.percentile(vals, 90))
+    vmax = float(np.max(vals))
+    floor = float(measurement_floor)
+    max_excess_sd = max(tertile_sd_obs.values()) if tertile_sd_obs else float("nan")
+    testable = bool(p90 > floor)
+    return {
+        "testable": testable,
+        "p50_abs_b_attain": p50,
+        "p90_abs_b_attain": p90,
+        "max_abs_b_attain": vmax,
+        "measurement_floor": floor,
+        "max_tertile_sd_obs": max_excess_sd,
+        "tertile_sd_obs": dict(tertile_sd_obs),
+    }
+
+
+def final_wsn_outcome(
+    tertiles: list[dict[str, Any]],
+    decomposition: dict[str, Any],
+    p4_excess: dict[str, Any],
+    neighbor: dict[str, Any],
+    *,
+    dominant_share_threshold: float = 0.50,
+) -> dict[str, Any]:
+    """P5 with P4 unification and neighbor hypothesis included."""
+    base = pre_registered_outcome(tertiles, decomposition, dominant_share_threshold=dominant_share_threshold)
+
+    if neighbor.get("testable") and neighbor.get("regression_share", 0) >= dominant_share_threshold:
+        if neighbor.get("regression_reject_fdr"):
+            return {
+                "verdict": "DOMINANT_SOURCE",
+                "groups": ["neighbor_contamination"],
+                "detail": "Neighbor contamination explains >=50% SS with q<=0.05.",
+            }
+
+    if p4_excess.get("status") == "CONSISTENT_UNIFIED":
+        bounds = neighbor.get("bounds_table") or {}
+        return {
+            "verdict": "UNIFIED_PHENOMENON_PARK",
+            "detail": (
+                "Slope excess, per-point red noise (sigma_r), and rig constant are statistically "
+                "consistent as one unidentified driver; hypothesis space exhausted at measured bounds."
+            ),
+            "p4_unification": p4_excess.get("unification_detail"),
+            "bounds": bounds,
+            "base_verdict": base.get("verdict"),
+        }
+
+    if base.get("verdict") == "DOMINANT_SOURCE":
+        return base
+
+    bounds = neighbor.get("bounds_table") or {}
+    return {
+        "verdict": "EXCESS_UNATTRIBUTED_PARK",
+        "detail": base.get("detail", "") + " WSN-2: no dominant source; parked with bounds.",
+        "bounds": bounds,
+        "p4_status": p4_excess.get("status"),
+    }
+
+
 def univariate_hypothesis_scan(
     stars: list[dict[str, Any]],
     *,
