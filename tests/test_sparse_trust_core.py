@@ -16,6 +16,7 @@ from sparse_trust_core import (
     photon_corrected_excess,
     sigma_zp_per_epoch,
     triangulate_variances,
+    triangulation_hat_ci,
     trust_band,
 )
 
@@ -131,14 +132,9 @@ def test_s1_synthetic_triangulation_coverage(n_epochs: int) -> None:
         tri = triangulate_variances(s2_kc1, s2_kc2, s2_c1c2)
         if tri.triangulation_clipped:
             clip += 1
-        # chi2 CI on sig_K (variance domain)
-        hat = tri.sig2_K
-        if not math.isfinite(hat):
-            continue
-        df = n - 1
-        lo = hat * df / stats.chi2.ppf(0.975, df)
-        hi = hat * df / stats.chi2.ppf(0.025, df)
-        if lo <= sig_k**2 <= hi:
+        true_var = sig_k**2
+        _, lo, hi = triangulation_hat_ci(s2_kc1, s2_kc2, s2_c1c2, n)
+        if math.isfinite(lo) and math.isfinite(hi) and lo <= true_var <= hi:
             ok += 1
     rate = ok / n_trials
     assert rate >= 0.93, f"n={n_epochs}: coverage {rate:.3f}, clip_rate={clip/n_trials:.3f}"

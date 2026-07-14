@@ -91,6 +91,34 @@ def diff_variance(m_a: np.ndarray, m_b: np.ndarray) -> float:
     return float(np.var(a - b, ddof=1))
 
 
+def triangulation_hat_ci(
+    s2_KC1: float,
+    s2_KC2: float,
+    s2_C1C2: float,
+    n_epochs: int,
+) -> tuple[float, float, float]:
+    """Conservative chi2 CI on triangulated sig2_K from pairwise sample variances."""
+    n = int(n_epochs)
+    if n < 2:
+        return float("nan"), float("nan"), float("nan")
+    df = n - 1
+
+    def _pair_ci(s2: float) -> tuple[float, float]:
+        if not math.isfinite(float(s2)) or float(s2) <= 0:
+            return float(s2), float(s2)
+        chi_hi = float(stats.chi2.ppf(0.975, df))
+        chi_lo = float(stats.chi2.ppf(0.025, df))
+        return float(s2) * df / chi_hi, float(s2) * df / chi_lo
+
+    kc1_lo, kc1_hi = _pair_ci(s2_KC1)
+    kc2_lo, kc2_hi = _pair_ci(s2_KC2)
+    c12_lo, c12_hi = _pair_ci(s2_C1C2)
+    hat = (float(s2_KC1) + float(s2_KC2) - float(s2_C1C2)) / 2.0
+    lo = (kc1_lo + kc2_lo - c12_hi) / 2.0
+    hi = (kc1_hi + kc2_hi - c12_lo) / 2.0
+    return max(0.0, hat), max(0.0, lo), max(0.0, hi)
+
+
 def triangulate_variances(
     s2_KC1: float,
     s2_KC2: float,
