@@ -66,10 +66,9 @@ contribution per hypothesis from measured inputs -- drift spans, FWHM ranges, fl
 scenarios {0.3%, 1%}. Any term whose attainable maximum is below the measurement floor
 is marked untestable-here (not "absent").
 
-P4 **Cross-checks:** (a) integrate the fitted positional/FWHM terms over the night ->
-predicted per-point correlated noise; compare against PZQ sigma_r 5.5 mmag and the
-4.5 mmag rig constant (order-of-magnitude consistency, stated numerically). (b) The
-colour term must respect the K2 bound (H4).
+P4 **Cross-checks:** (a) **Corrected (WSN-2):** integrate measured excess per tertile:
+sigma_slope_pt = sqrt(V_ex) * SD(X) [mmag]; compare to PZQ sigma_r and rig constant (star scatter
+plot). Legacy fitted-component RMS check superseded (was noise absorption). (b) Colour H4 bound.
 
 P5 **Pre-registered outcomes:**
 - A term group explains >= 50% of excess variance with q <= 0.05 -> named dominant source;

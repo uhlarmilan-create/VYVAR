@@ -83,6 +83,9 @@ at 1% flat gradient.
 **FAILED** (ratio 6.45). Consistent with overfit absorption (Part 3.2); fitted terms do not
 integrate to PZQ red-noise scale.
 
+**SUPERSEDED (WSN-2):** P4 fitted-RMS check replaced by excess-integration sigma_slope_pt;
+see CURSOR_RESULT_wsn2.md. Faint tertile sigma_slope_pt 5.17 mmag aligns with sigma_r/rig constant.
+
 **P5 re-verdict:** **EXCESS_UNATTRIBUTED** (honest). Real excess in all tertiles; no pre-registered
 dominant source >=50% SS with FDR. P4 failure + CV collapse indicate multivariate shares are not
 trustworthy magnitude estimates. H1 flat-drift at detector p90 is testable in principle (eps=1%)

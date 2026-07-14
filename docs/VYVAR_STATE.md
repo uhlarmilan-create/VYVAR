@@ -3,13 +3,11 @@
 Last updated: **2026-07-14** -- WSN-FIX corrected WIDE-SLOPE-NOISE on draft_424 wide_CLEAR.
 CAL-LEDGER-BUNDLE local (5817c9b..); CAL-DIAG closeout pushed `237dd34`.
 
-**2026-07-14 snapshot (WIDE-SLOPE-NOISE / WSN-FIX):** Prior EXCESS_UNATTRIBUTED verdict
-**SUPERSEDED** (inverted tertile labels + WLS residual SE). Corrected run: n=148, SD(b_X)=0.0948.
-P1: excess in all tertiles with physical SE ordering (faint median SE ~0.10 mag/airmass). P3 H1:
-detector drift p90 13.6 px (path c on calibrated lights); eps=1% flat scenario testable. P2: max
-in-sample share 4% (spatial); CV collapse / P4 FAIL (35 mmag fitted vs 5.5 mmag sigma_r). P5:
-**EXCESS_UNATTRIBUTED** (honest). Spec **APPROVED** (Milan, 2026-07-14). Result:
-`CURSOR_RESULT_wsn_fix.md`; artifacts: `tmp/wide_slope_noise/`. **NOT PUSHED.**
+**2026-07-14 snapshot (WIDE-SLOPE-NOISE / WSN-2 PARKED):** WSN chain complete on draft_424
+wide_CLEAR. P4 excess integration: faint sigma_slope_pt 5.17 mmag aligns with sigma_r 5.5 mmag
+and rig constant 4.5 mmag (unified phenomenon). Neighbor contamination untestable-here (p90
+|b_attain| << SE floor). P5: **UNIFIED_PHENOMENON_PARK** -- driver unknown, bounds recorded.
+Spec APPROVED; pushed to origin/main. Result: `CURSOR_RESULT_wsn2.md`.
 
 **2026-07-14 snapshot (CAL-LEDGER-BUNDLE):** Section-10 ledger items CAL-AGE-CLOCK, RN-HEADER-NONE,
 CAL-PASSTHRU-DEAD verified/closed; mtime WARN centralized in `resolve_master_age`; 6 library
