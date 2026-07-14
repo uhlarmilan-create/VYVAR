@@ -1,7 +1,15 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-14** -- CAL-LEDGER-BUNDLE closeout (section-10 items verified + docs sweep).
-CAL-DIAG closeout pushed `237dd34`. Bundle commits local pending Milan review.
+Last updated: **2026-07-14** -- WSN-FIX corrected WIDE-SLOPE-NOISE on draft_424 wide_CLEAR.
+CAL-LEDGER-BUNDLE local (5817c9b..); CAL-DIAG closeout pushed `237dd34`.
+
+**2026-07-14 snapshot (WIDE-SLOPE-NOISE / WSN-FIX):** Prior EXCESS_UNATTRIBUTED verdict
+**SUPERSEDED** (inverted tertile labels + WLS residual SE). Corrected run: n=148, SD(b_X)=0.0948.
+P1: excess in all tertiles with physical SE ordering (faint median SE ~0.10 mag/airmass). P3 H1:
+detector drift p90 13.6 px (path c on calibrated lights); eps=1% flat scenario testable. P2: max
+in-sample share 4% (spatial); CV collapse / P4 FAIL (35 mmag fitted vs 5.5 mmag sigma_r). P5:
+**EXCESS_UNATTRIBUTED** (honest). Spec **APPROVED** (Milan, 2026-07-14). Result:
+`CURSOR_RESULT_wsn_fix.md`; artifacts: `tmp/wide_slope_noise/`. **NOT PUSHED.**
 
 **2026-07-14 snapshot (CAL-LEDGER-BUNDLE):** Section-10 ledger items CAL-AGE-CLOCK, RN-HEADER-NONE,
 CAL-PASSTHRU-DEAD verified/closed; mtime WARN centralized in `resolve_master_age`; 6 library

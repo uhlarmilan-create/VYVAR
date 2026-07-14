@@ -2,6 +2,18 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- WIDE-SLOPE-NOISE / WSN-FIX (wide b_X scatter decomposition, report-only)
+
+**WSN-FIX:** Retracted prior EXCESS_UNATTRIBUTED (inverted tertile labels; WLS residual SE ~100x
+too small for faint). Corrected SE via analytic propagation + bootstrap; tertile bright = lower
+mag_g. Detector drift on calibrated pre-align lights (path c): p90 span 13.6 px vs 0.21 px aligned.
+P1 excess remains in all tertiles with physical SEs. P2: no group >=50% SS (max spatial 4%);
+chi2_red 2.2; P4 FAIL (35 mmag fitted vs 5.5 mmag sigma_r); CV shares collapse. P5:
+**EXCESS_UNATTRIBUTED** (honest). Spec APPROVED (Milan, 2026-07-14). Result:
+`CURSOR_RESULT_wsn_fix.md`; prior `CURSOR_RESULT_wide_slope_noise.md` marked SUPERSEDED.
+
+---
+
 ## 2026-07-14 -- CAL-LEDGER-BUNDLE (section-10 closeout + docs sweep)
 
 **Part 0:** Pushed CAL-DIAG closeout `b08f1cc..237dd34` to `origin/main`; `session_baseline_check.py --fast` PASS on `237dd34`.

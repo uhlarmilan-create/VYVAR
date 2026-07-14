@@ -332,6 +332,7 @@ Pre-fix 26-epoch baseline in ``CURSOR_RESULT_426_regen.md`` is **invalid** for s
 | Item | Priority / status | Action |
 |------|-------------------|--------|
 | k'' second-order extinction (wide, eq1) | **LOW PRIORITY -- subdominance** (2026-07-14 K2-STATS-FIX) | wide_CLEAR n=147; T1 rho=-0.013 q=0.877; colour slope spread <=0.031 vs b_X scatter 0.094; bootstrap bound B=0.076 (plausible k'' NOT excluded). Action: none; revisit if dominant slope-noise removed or filtered wide dataset. Result: CURSOR_RESULT_k2_stats_fix.md. |
+| **WIDE-SLOPE-NOISE** | **Report-only DONE (2026-07-14, WSN-FIX)** | draft_424 wide_CLEAR; prior verdict superseded; corrected P5 **EXCESS_UNATTRIBUTED** (honest). Detector drift p90 13.6 px; P4 FAIL; max P2 share 4%. Spec **APPROVED** (Milan); `CURSOR_RESULT_wsn_fix.md`; `tmp/wide_slope_noise/`. |
 | k'' second-order extinction (Newton, eq4) | **OPEN, suggestive** (2026-07-14 K2-COHORT) | T1 rho=-0.325 (n=19, power 0.40, literature-expected sign); T2 rho=+0.470 p=0.043 raw; consistent with SEM-CAUSE D1.3 subset. Action: re-test when >=46 Newton constant stars (accumulates with future nights; no dedicated task). BVR night dX>=0.3 remains fit gate. |
 | PROC_STORE_COLS / err | **Resolved-by-explanation** | ``err`` never persisted to proc CSV is **DESIGN** (in-memory at export); closeout flag recorded, no action. |
 | Newton binned-uncertainty caveat | **Recorded** | SIGMA_FLOOR_SPEC + PDF wording (per-point bars honest; binned Newton quantities underestimated). |
