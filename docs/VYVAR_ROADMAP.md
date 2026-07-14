@@ -156,10 +156,10 @@ licensing decision.
 
 ---
 
-## IN-FLIGHT — CAL-DIAG (calibration-time radiometry gate) — **IMPLEMENTED / VALIDATED (2026-07-07)**
+## IN-FLIGHT — CAL-DIAG (calibration-time radiometry gate) — **IMPLEMENTED (pending Milan review)**
 
-**Agreed 2026-07-07 (Milan + Claude).** Spec: `docs/VYVAR_CAL_DIAG_SPEC.md` v1.1.
-Grounding: `CURSOR_RESULT_caldiag_flow.md`. Implementation: `CURSOR_RESULT_caldiag_impl.md`.
+**Agreed 2026-07-07; spec APPROVED 2026-07-14 (Milan).** Spec: `docs/VYVAR_CAL_DIAG_SPEC.md` v1.1.
+Grounding: `CURSOR_RESULT_caldiag_flow.md`. Implementation: `CURSOR_RESULT_cal_diag_impl.md`.
 
 Camera-agnostic calibration-time diagnostic gate (shipped):
 
@@ -169,16 +169,17 @@ Camera-agnostic calibration-time diagnostic gate (shipped):
    SUM vs MEAN dark-resample mismatch with loud auto-correction (SUM -> MEAN retry) or fail-closed abort.
 3. **Provenance** — `VY_DKRSMP` = `SUM` | `MEAN_AUTOCORRECTED` | `PASSTHROUGH`; `archive/<draft>/cal_diag.json`.
 
-**Validation:** 14 pytest gate tests; full `pytest tests/` green; draft_424 regression PASS (150/150
-`VY_DKRSMP=SUM`, 0 WARN/FAIL, calibrated arrays + photometry science byte-identical).
+**Validation (2026-07-14 re-verify on HEAD 13341b3):** 14 pytest gate tests; full `pytest tests/` green;
+draft_424 regression PASS (150/150 `VY_DKRSMP=SUM`, 0 WARN/FAIL; photometry core SHA
+`bf3743a1...` unchanged). **NOT PUSHED** -- Milan review first.
 
-**Related ledger (NOT part of this gate — remain open):**
+**Related ledger (spec section 10 -- NOT part of this gate; tracked separately):**
 
 | ID | Sev | Summary |
 |----|-----|---------|
-| **CAL-AGE-CLOCK** | — | **FIXED**: import scan + get_calibration_status use `resolve_master_age` (header `VY_CDATE`→`DATE-OBS`→`DATEOBS`, naive→UTC); mtime fallback warns once per scan. |
-| **RN-HEADER-NONE** | — | **FIXED** (`1830527`): SNR precompute passes MASTERSTAR header to `resolve_read_noise` (bin2 RN×bin parity with Phase 2A). draft_424 validated: max aperture shift 2.2%, LC byte-identical. |
-| **CAL-PASSTHRU-DEAD** | — | **FIXED** (`21c20e3`): removed `allow_passthrough` from `get_processed_master` (tests-only dead branch). |
+| **CAL-AGE-CLOCK** | MED | **Parked then FIXED (2026-07-08):** header-age unified (`resolve_master_age`). |
+| **RN-HEADER-NONE** | LOW/MED | **Parked then FIXED (`1830527`):** SNR precompute passes header to `resolve_read_noise`. |
+| **CAL-PASSTHRU-DEAD** | LOW | **Parked then FIXED (`21c20e3`):** removed dead `allow_passthrough` branch. |
 
 Flat-norm Stage 2 and other ROADMAP calibration items unchanged (D1/D2/D3 codify current behavior).
 

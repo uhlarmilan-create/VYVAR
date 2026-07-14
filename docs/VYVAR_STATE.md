@@ -1,7 +1,11 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-14** -- K2-STATS-FIX: honest bootstrap CIs; wide k'' **LOW PRIORITY**
-(subdominance). Overall k'' priority **UNCHANGED**. SPARSE-TRUST arc CLOSED at ed59dfd.
+Last updated: **2026-07-14** -- CAL-DIAG-IMPL closeout: spec APPROVED; re-validated HEAD 13341b3.
+K2-STATS-FIX on main. **NOT PUSHED** (Milan review).
+
+**2026-07-14 snapshot (CAL-DIAG-IMPL closeout):** CAL-DIAG gate re-verified per v1.1 on HEAD
+13341b3 (code landed 2026-07-07). draft_424: 150/150 VY_DKRSMP=SUM; core SHA bf3743a1
+unchanged. Result: CURSOR_RESULT_cal_diag_impl.md. **NOT PUSHED.**
 
 **2026-07-14 snapshot (K2-STATS-FIX):** Retracted invalid naive-WLS CI table (2.12e-6 bound).
 Bootstrap CIs authoritative. wide eq1: LOW PRIORITY subdominance (B=0.076; plausible k'' not

@@ -1,17 +1,15 @@
-CURSOR RESULT -- 2026-07-14 K2-STATS-FIX
+CURSOR RESULT -- 2026-07-14 CAL-DIAG-IMPL
 
 What I did
-Fixed overdispersion-honest k2_eff CIs (bootstrap authoritative), wide re-verdict as LOW
-PRIORITY subdominance, process record, internal-consistency guard. Pushed 036a570..c8aed4b.
+Part 0 baseline PASS on 13341b3. Re-validated CAL-DIAG v1.1 (implemented 2026-07-07); spec
+APPROVED 2026-07-14; draft_424 regression PASS. Docs closeout only; NOT PUSHED.
 
 ## Output / findings
-Bootstrap wide CI [-0.076,+0.046], B=0.076; plausible k'' NOT excluded. Naive WLS CIs retracted.
-HEAD c8aed4b; baseline PASS 830 passed.
+HEAD 13341b3; 14/14 gate tests; 150/150 VY_DKRSMP=SUM; core SHA bf3743a1 unchanged.
 
 ## Errors (if any)
-None.
+None blocking.
 
 ## Files changed
-k2_cohort_core.py, scripts/k2_cohort_run.py, tests/test_k2_cohort_core.py,
-docs (ROADMAP, STATE, JOURNAL, K2_BAND_AWARE_SPEC), CURSOR_RESULT_k2_*.md
-Commits: 4e91c7a, 3c9b5f1, c8aed4b
+docs/VYVAR_CAL_DIAG_SPEC.md, docs/VYVAR_DECISIONS.md, docs/VYVAR_ROADMAP.md,
+docs/VYVAR_STATE.md, docs/VYVAR_JOURNAL.md, CURSOR_RESULT_cal_diag_impl.md

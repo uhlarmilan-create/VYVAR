@@ -2,6 +2,16 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- CAL-DIAG-IMPL closeout (spec approval + re-validation)
+
+Spec v1.1 status flipped to **APPROVED (Milan, 2026-07-14)**. Implementation already on main
+(commits 0268547..3d1508b, 2026-07-07); re-validated on HEAD 13341b3 without code changes.
+14/14 gate pytest; draft_424 calibrate 150/150 VY_DKRSMP=SUM; photometry core SHA bf3743a1
+unchanged. MP variant (a): parent pre-gate via `run_cal_diag_pregate`. NOT PUSHED -- Milan review.
+Result: CURSOR_RESULT_cal_diag_impl.md.
+
+---
+
 ## 2026-07-14 -- K2-STATS-FIX (honest CIs, wide re-verdict)
 
 Retracted invalid naive-WLS k2_eff CIs (photon-weight SE ignored star-to-star overdispersion;
