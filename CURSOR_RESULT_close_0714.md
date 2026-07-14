@@ -62,7 +62,7 @@ Runtime: ~50 min (2778s pipeline step).
 
 ## Part 3 -- Close
 
-**Pushed:** `db2e386` on `origin/main` (close commits `0f1c941..db2e386`; code baseline `114c423`).
+**Final origin/main:** `5d4bce0` (close commits `0f1c941`, `db2e386`, `5d4bce0`; code baseline `114c423`).
 
 ## Errors (if any)
 
