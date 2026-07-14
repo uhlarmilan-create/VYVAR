@@ -342,7 +342,9 @@ next calibration lever.
    comp_rms is **field-wide-scale** (~0.41–1.0 mag headline on SS Cam/V0611) — offset structure that
    **~95% cancels** in differential (cancellation_factor ~0.02–0.08 on draft_426). **Temporal component**
    8–12 mmag (healthy). Check scatter 0.037 mag on SS Cam g_60_4 with CI [0.032, 0.040] — healthy vs
-   gate. **PROPOSED (not enacted):** sparse trust should evaluate (a) check scatter vs its CI and
+   gate. **IMPLEMENTED (2026-07-14):** sparse trust evaluates check scatter via chi2 CI on kmag variance
+   ratio R and comp-pair stability (`sparse_trust_core.py`, `docs/VYVAR_SPARSE_TRUST_SPEC.md`). Field-wide
+   comp_rms remains diagnostic-only on sparse path. **Pending:** Milan review + S2-S4 on regen sidecars.
    (b) the **temporal** component of comp_rms — never the field-wide headline against the 0.1 per-target
    gate (different quantities). SS Cam stays **YELLOW**; band decision **OPEN** pending Milan review.
    **Do NOT reverse-engineer RED.** Diagnostic: `scripts/sparse_comp_diag.py`

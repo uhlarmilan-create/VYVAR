@@ -1,6 +1,15 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-13** -- ANCHOR-CHAIN-ACCEPT: explicit baseline chain + exact c4 validation; anchor accepted.
+Last updated: **2026-07-14** -- SPARSE-TRUST + PZQ-SIGMA-R implemented (report + core + wiring); validation pending Milan review.
+**pytest 803 passed**, 11 skipped (fast suite).
+
+**2026-07-14 snapshot (SPARSE-TRUST):** Check-star ensemble at n>=2 with Howell 1988 triangulation,
+CI-based sparse trust bands, sidecar columns (`check_sparse`, `trust_R`, ...). PZQ sigma_r report-only
+diagnostic: ``scripts/pzq_sigma_r_report.py`` -> ``tmp/pzq_sigma_r/``. Spec:
+``docs/VYVAR_SPARSE_TRUST_SPEC.md``; core: ``sparse_trust_core.py``. **No production err change.**
+Result: ``CURSOR_RESULT_sparse_trust.md``. **Not pushed** -- awaiting Milan review.
+
+**2026-07-13 snapshot (ANCHOR-CHAIN-ACCEPT):** explicit baseline chain + exact c4 validation; anchor accepted.
 **pytest 796 passed**, 15 skipped.
 
 **2026-07-13 snapshot (ANCHOR-ERR-VERIFY):** Investigated ~1.5-1.7x

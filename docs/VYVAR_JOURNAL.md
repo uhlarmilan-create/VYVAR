@@ -2,6 +2,25 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- SPARSE-TRUST + PZQ-SIGMA-R
+
+**Goal:** Sparse-field check-star validation at n>=2 with CI-based trust bands; PZQ sigma_r report.
+
+**Part 1 (PZQ report-only):** ``scripts/pzq_sigma_r_report.py`` reads ``tmp/sigma_floor/sigma_floor_fit.json``;
+36 stars, 3 rig figures -> ``tmp/pzq_sigma_r/pzq_sigma_r_summary.json``. k'' probe (Spearman sigma_r vs
+|colour offset|) when sem_cause artifacts present.
+
+**Part 2 (implementation):** ``sparse_trust_core.py`` (triangulation, photon correction, chi2 CI,
+stability test, trust band). ``compute_check_ensemble_mag_calib`` accepts n>=2; sidecar columns wired;
+``trust_flag_core`` sparse path consumes sidecar CI stats (no field-wide comp_rms gate).
+
+**Part 3 (validation):** S1 unit+synthetic tests in ``tests/test_sparse_trust_core.py`` (7 fast + 3 slow);
+``scripts/sparse_trust_validate.py`` for S2-S4 on draft paths. S2-S4 require regen sidecars on anchor drafts.
+
+Result: ``CURSOR_RESULT_sparse_trust.md``. Commits local; **not pushed**.
+
+---
+
 ## 2026-07-13 -- ANCHOR-CHAIN-ACCEPT
 
 **Goal:** Make the draft_424 anchor baseline chain explicit and accept the sigma-floor snapshot
