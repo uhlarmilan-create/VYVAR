@@ -1,6 +1,6 @@
 # VYVAR -- CAL-DIAG: Calibration-time radiometry gate (spec)
 
-Status: **v1.1 -- Cursor review incorporated; awaiting Milan final approval.**
+Status: **v1.1 -- APPROVED (Milan, 2026-07-14).** Implementation on main; pending Milan review push.
 Date: 2026-07-07. Workstream agreed 2026-07-07 (ROADMAP "IN-FLIGHT -- CAL-DIAG";
 DECISIONS "CAL-DIAG" entry).
 Grounding: `CURSOR_RESULT_caldiag_flow.md` (read-only live-tree trace) + Cursor spec review

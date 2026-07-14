@@ -376,8 +376,9 @@ when users build masters at arbitrary binning -- not assume per-camera SUM/MEAN 
 radiometric validation. **F-BINGAIN-1 RN sub-question** (db 7.6 e- scaled x2 -> 15.2 e- if DB
 already read-mode-0) resolves here, not via ad-hoc param_resolver exponent change.
 
-**Status:** spec written and Cursor-reviewed 2026-07-07 (`docs/VYVAR_CAL_DIAG_SPEC.md`, v1.1);
-grounding trace `CURSOR_RESULT_caldiag_flow.md`. Awaiting Milan implementation go.
+**Status:** **IMPLEMENTED (2026-07-07); re-validated 2026-07-14 on HEAD 13341b3.** Spec v1.1
+**APPROVED (Milan, 2026-07-14).** Grounding trace `CURSOR_RESULT_caldiag_flow.md`. Result:
+`CURSOR_RESULT_cal_diag_impl.md`. **NOT PUSHED** -- pending Milan review of 2026-07-14 closeout.
 
 ---
 
