@@ -1,7 +1,13 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-14** -- SPARSE-TRUST-COMPLETE: S1-S4 PASS (0 GREEN->RED flips); anchor SHA verified.
-**pytest 806 passed**, 15 skipped (full suite).
+Last updated: **2026-07-14** -- SPARSE-CHECK-POOL: external K sourcing; r_60_4 R computed; SS Cam YELLOW.
+**pytest 811 passed**, 11 skipped (fast).
+
+**2026-07-14 snapshot (SPARSE-CHECK-POOL):** Amendment 1 merged. External K on sparse branch;
+r_60_4 kmag + R on all 6 targets (SS Cam R=2.01 [1.22,3.89] YELLOW). S2: 0 flips, 0 band
+changes vs completion. S4: anchor SHA bf3743a1 unchanged. PZQ cross-check: wide sigma_r ~5.5
+mmag ~ SIGMA-A4 rig constant ~4.5 mmag; Newton g sigma_r ~18.8 ~ floor 18.0 mmag. k'' priority
+UNCHANGED (underpowered null). Result: CURSOR_RESULT_sparse_check_pool.md. **NOT PUSHED.**
 
 **2026-07-14 snapshot (SPARSE-TRUST-COMPLETE):** Validation complete. S2: 0 flips on 160 n>=5
 targets. S4: anchor core SHA bf3743a1... unchanged. S3: r_60_4 sidecars + SS Cam YELLOW

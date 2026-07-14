@@ -47,7 +47,7 @@ SS Cam sparse-path, stars with < 15 epochs.
 |-----|---------------|--------------|
 | Wide Carl-Zeiss | draft_424 / NoFilter_60_2 | 1 |
 | Newton | draft_426 g_60_4 + i_70_4 pooled | 4 |
-| Newton r | pending COMP-POOL-R / SPARSE-TRUST | 4 |
+| Newton r | draft_426 r_60_4 sparse trust (COMP-POOL-R) | 4 |
 
 **Method:** 1-D bisection on pooled reduced chi2/dof - 1 for ``sigma_sys_mag``;
 bootstrap >= 500 resamples (16% CI). Anti-circularity: random half A fit / half B validate
@@ -68,6 +68,14 @@ Fit ``sigma_N^2 = sigma_w^2/N + sigma_r^2`` (Pont, Zucker & Queloz 2006; key ``p
 **Not wired into per-point err.** Figures: ``tmp/sigma_floor/pzq_*.png``.
 
 Correlated noise does not average as ``1/sqrt(N)``; per-point bars use white floor only.
+
+**Cross-checks (2026-07-14 PZQ report, tmp/pzq_sigma_r/):**
+(a) Wide Carl-Zeiss median sigma_r ~ 5.5 mmag [4.7, 6.5] is consistent with the ~4.5 mmag
+unexplained rig constant from SIGMA-A4 (two independent methods, same quantity).
+(b) Newton g median sigma_r ~ 18.8 mmag ~ fitted production floor 18.0 mmag: the Newton
+white floor absorbs predominantly **correlated** noise; per-point err bars are honest, but
+binned/averaged Newton quantities remain underestimated even with the floor. PDF/report
+wording must state this explicitly when quoting Newton binned scatter or PZQ on Newton rigs.
 
 ---
 

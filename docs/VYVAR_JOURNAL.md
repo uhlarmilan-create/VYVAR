@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- SPARSE-CHECK-POOL (Amendment 1)
+
+External K sourcing on sparse branch; r_60_4 all 6 targets kmag+R computed (SS Cam
+R=2.01 [1.22,3.89] YELLOW, chi2_prod=21.38). S2 zero band changes vs completion. Result:
+CURSOR_RESULT_sparse_check_pool.md.
+
+---
+
 ## 2026-07-14 -- SPARSE-TRUST-COMPLETE
 
 S1-S4 validation PASS (see tmp/sparse_trust_validation/validation_summary.json). S2: zero
