@@ -69,9 +69,15 @@ def _sidecar_tuple(phot: Path, tid: str, comp_n: int) -> dict[str, Any]:
     n_epochs = int(km.notna().sum())
     return {
         "status": "ok",
+        "K_id": str(row.get("check_catalog_id", "") or ""),
+        "k_source": str(row.get("k_source", "") or ""),
+        "k_colour_offset": float(pd.to_numeric(row.get("k_colour_offset", float("nan")), errors="coerce")),
+        "k_tier_excluded": int(pd.to_numeric(row.get("k_tier_excluded", 0), errors="coerce") or 0),
+        "k_colour_caveat": int(pd.to_numeric(row.get("k_colour_caveat", 0), errors="coerce") or 0),
         "R": float(pd.to_numeric(row.get("trust_R", float("nan")), errors="coerce")),
         "R_lo": float(pd.to_numeric(row.get("trust_R_lo", float("nan")), errors="coerce")),
         "R_hi": float(pd.to_numeric(row.get("trust_R_hi", float("nan")), errors="coerce")),
+        "R_detrend": float(pd.to_numeric(row.get("trust_R_detrend", float("nan")), errors="coerce")),
         "comp_stability_p": float(pd.to_numeric(row.get("comp_stability_p", float("nan")), errors="coerce")),
         "x2_pair_mag2": float(pd.to_numeric(row.get("x2_pair_mag2", float("nan")), errors="coerce")),
         "n_comps": int(comp_n),
@@ -115,7 +121,14 @@ def run_s2(cfg: Any) -> dict[str, Any]:
     )
     pool_n = _pool_n_map(comp_df)
     flips: list[dict[str, Any]] = []
+    band_changes: list[dict[str, Any]] = []
     rows: list[dict[str, Any]] = []
+    baseline_path = OUT_DIR / "s2_flip_report_completion_baseline.csv"
+    baseline_bands: dict[str, str] = {}
+    if baseline_path.is_file():
+        bdf = pd.read_csv(baseline_path, dtype=str)
+        if "target" in bdf.columns and "new_band" in bdf.columns:
+            baseline_bands = dict(zip(bdf["target"].astype(str), bdf["new_band"].astype(str), strict=False))
     for tid, old_band in old_trust.items():
         n_pool = int(pool_n.get(tid, 0))
         if n_pool < 5:
@@ -137,12 +150,17 @@ def run_s2(cfg: Any) -> dict[str, Any]:
         )
         if old_band == "GREEN" and new_band == "RED":
             flips.append({"target": tid, "old": old_band, "new": new_band, **sparse})
+        if baseline_bands and tid in baseline_bands and str(baseline_bands[tid]) != new_band:
+            band_changes.append(
+                {"target": tid, "completion_band": baseline_bands[tid], "amendment_band": new_band}
+            )
     return {
-        "pass": len(flips) == 0,
+        "pass": len(flips) == 0 and len(band_changes) == 0,
         "work_dir": str(WORK424),
         "anchor_read_only": str(anchor_phot),
         "n_n5": len(rows),
         "flips": flips,
+        "band_changes_vs_completion": band_changes,
         "flip_report": rows,
     }
 
@@ -165,13 +183,14 @@ def run_s3(cfg: Any) -> dict[str, Any]:
     ss = _sidecar_tuple(WORK426_R, SS_CAM_CID, ss_pool)
     ss["production_lc_err_chi2"] = chi2_prod
     ss["sparse_trust_band"] = _trust_band_from_sidecar(WORK426_R, SS_CAM_CID, cfg)
+    ss["pass_kmag"] = int(ss.get("N_epochs", 0) or 0) > 0 and math.isfinite(float(ss.get("R", float("nan"))))
     sparse_targets = []
     for tid in comp_df["target_catalog_id"].astype(str).unique():
         nf = int(pool_n.get(str(tid), 0))
         if nf <= 2:
             sparse_targets.append({"target": tid, **_sidecar_tuple(WORK426_R, tid, nf)})
     return {
-        "pass": ss.get("status") == "ok",
+        "pass": any(t.get("N_epochs", 0) > 0 for t in sparse_targets) and ss.get("pass_kmag"),
         "work_dir": str(WORK426_R),
         "r_60_4_sparse_targets": sparse_targets,
         "SS_Cam": ss,
