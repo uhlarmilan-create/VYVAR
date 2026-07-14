@@ -12,7 +12,7 @@ Part 0 (closeout): origin/main 43ea830 -> 7886157
   7886157 docs: SPARSE-TRUST-CLOSEOUT push confirmation and SS Cam branch check
   Part 0 baseline PASS: 7886157, 815 passed, 15 skipped
 
-Part 3 (docs arc close): origin/main 7886157 -> f30f05e
+Part 3 (docs arc close): origin/main 7886157 -> d290c30
   eb1ea7d docs: close SPARSE-TRUST arc, SS Cam YELLOW confirmed by Milan
 
 ## SS Cam record confirmation
@@ -50,7 +50,7 @@ docs/VYVAR_SIGMA_FLOOR_SPEC.md
 docs/VYVAR_SPARSE_TRUST_SPEC.md
 CURSOR_RESULT_arc_close.md
 
-Docs commit: eb1ea7d. Final HEAD: 74e0a6b.
+Docs commit: eb1ea7d. Final HEAD: f30f05e.
 
 ## Errors (if any)
 
