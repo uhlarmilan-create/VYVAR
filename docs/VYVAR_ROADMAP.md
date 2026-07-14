@@ -80,7 +80,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **SIGMA-PROV-FORENSIC** | HIGH | **DONE (2026-07-13).** draft_426 archive LC **stale pre-Fix-A err** (semantic 7.46x i); fresh i_70_4 rerun: V0611 chi2=**2.13**, err=**0.0175 mag**. P2/P3 quantitative predictions FAIL. Part C unit fix landed. Result: ``CURSOR_RESULT_sigma_prov_forensic.md``. |
 | **426-REGEN** | — | **DONE (2026-07-13); baseline SUPERSEDED by MASTERSTAR-EPOCH-FIX.** Stale at ``Archive/evidence/draft_000426_stale_20260626``. |
 | **MASTERSTAR-EPOCH** | HIGH | **CLOSED (2026-07-13).** ``proc_MASTERSTAR.csv`` excluded from epoch collection; draft_426 regen 25 epochs. Result: ``CURSOR_RESULT_masterstar_epoch.md``. |
-| **COMP-POOL-R** | MED | **VERDICT (2026-07-13):** r_60_4 legitimately sparse (2 comps on HEAD, byte-identical procs); June 8 not reproducible. r baseline **PENDING** (check_kmag). Milan: sparse-aware check-star design. Result: ``CURSOR_RESULT_comp_pool_r.md``. |
+| **COMP-POOL-R** | MED | **VERDICT (2026-07-13):** r_60_4 legitimately sparse (2 comps on HEAD). **r baseline (2026-07-14):** production_lc_err chi2=21.38 (spec-3.4 model); SS Cam sparse trust **YELLOW** (single_comp, n=2 pool). Result: ``CURSOR_RESULT_sparse_trust_complete.md``. |
 | **ANCHOR-CHAIN-ACCEPT** | HIGH | **DONE (2026-07-13):** Intermediate baseline ``b5364e6`` cut; exact c4 validation 23542/23542 PASS; anchor **ACCEPTED** (core ``bf3743a1``). Comparator hardening + tests. Result: ``CURSOR_RESULT_anchor_chain.md``. **READY-FOR-PUSH** (Milan review). |
 | **ANCHOR-ERR-VERIFY** | HIGH | **DONE (2026-07-13):** Floor leak **not confirmed**; err rise = bingain + unit fix vs stale anchor. Result: ``CURSOR_RESULT_anchor_err_verify.md``. |
 | **PROD-SIGMA-FLOOR** | HIGH | **DONE (2026-07-13):** c4 SEM + Newton floor 18 mmag; wide un-floored. Anchor accepted via ANCHOR-CHAIN-ACCEPT. Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``. |
@@ -342,9 +342,9 @@ next calibration lever.
    comp_rms is **field-wide-scale** (~0.41–1.0 mag headline on SS Cam/V0611) — offset structure that
    **~95% cancels** in differential (cancellation_factor ~0.02–0.08 on draft_426). **Temporal component**
    8–12 mmag (healthy). Check scatter 0.037 mag on SS Cam g_60_4 with CI [0.032, 0.040] — healthy vs
-   gate. **IMPLEMENTED (2026-07-14):** sparse trust evaluates check scatter via chi2 CI on kmag variance
-   ratio R and comp-pair stability (`sparse_trust_core.py`, `docs/VYVAR_SPARSE_TRUST_SPEC.md`). Field-wide
-   comp_rms remains diagnostic-only on sparse path. **Pending:** Milan review + S2-S4 on regen sidecars.
+   gate.    **IMPLEMENTED + VALIDATED (2026-07-14):** sparse trust CI bands; S2 0 flips on n>=5;
+   SS Cam r_60_4 YELLOW (single_comp, chi2=21.4). k'' probe: wide rho=-0.125 (DOWN). Result:
+   CURSOR_RESULT_sparse_trust_complete.md. **Pending Milan enable review.**
    (b) the **temporal** component of comp_rms — never the field-wide headline against the 0.1 per-target
    gate (different quantities). SS Cam stays **YELLOW**; band decision **OPEN** pending Milan review.
    **Do NOT reverse-engineer RED.** Diagnostic: `scripts/sparse_comp_diag.py`

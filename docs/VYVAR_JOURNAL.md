@@ -2,6 +2,15 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- SPARSE-TRUST-COMPLETE
+
+S1-S4 validation PASS (see tmp/sparse_trust_validation/validation_summary.json). S2: zero
+GREEN->RED flips on draft_424 n>=5. S4: anchor SHA bf3743a1 unchanged. S3: SS Cam sparse trust
+YELLOW (single_comp, chi2=21.38). PZQ full report tmp/pzq_sigma_r/; k'' wide rho=-0.125 (DOWN).
+Result: CURSOR_RESULT_sparse_trust_complete.md.
+
+---
+
 ## 2026-07-14 -- SPARSE-TRUST + PZQ-SIGMA-R
 
 **Goal:** Sparse-field check-star validation at n>=2 with CI-based trust bands; PZQ sigma_r report.

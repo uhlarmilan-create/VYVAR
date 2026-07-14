@@ -1,7 +1,12 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-14** -- SPARSE-TRUST + PZQ-SIGMA-R implemented (report + core + wiring); validation pending Milan review.
-**pytest 803 passed**, 11 skipped (fast suite).
+Last updated: **2026-07-14** -- SPARSE-TRUST-COMPLETE: S1-S4 PASS (0 GREEN->RED flips); anchor SHA verified.
+**pytest 806 passed**, 15 skipped (full suite).
+
+**2026-07-14 snapshot (SPARSE-TRUST-COMPLETE):** Validation complete. S2: 0 flips on 160 n>=5
+targets. S4: anchor core SHA bf3743a1... unchanged. S3: r_60_4 sidecars + SS Cam YELLOW
+(single_comp at n=2 pool). PZQ report: tmp/pzq_sigma_r/. Result:
+CURSOR_RESULT_sparse_trust_complete.md. **NOT PUSHED.**
 
 **2026-07-14 snapshot (SPARSE-TRUST):** Check-star ensemble at n>=2 with Howell 1988 triangulation,
 CI-based sparse trust bands, sidecar columns (`check_sparse`, `trust_R`, ...). PZQ sigma_r report-only
