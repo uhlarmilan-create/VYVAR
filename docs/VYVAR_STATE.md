@@ -1,12 +1,18 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-14** -- K2-COHORT report-only: k'' priority **DOWN** (wide_CLEAR
-n=147 null; pre-registered FDR). SPARSE-TRUST arc CLOSED at ed59dfd.
+Last updated: **2026-07-14** -- K2-COHORT-CORRECT: k'' priority **UNCHANGED** (verbatim
+pre-registered rule; initial DOWN retracted). SPARSE-TRUST arc CLOSED at ed59dfd.
+
+**2026-07-14 snapshot (K2-COHORT-CORRECT):** Verdict correction only (no re-run). Three tested
+cells: wide_CLEAR (power 0.999, null), Newton_g (power 0.47), Newton_i (power 0.40). Frozen rule
+requires each cell >=80% power for DOWN; fails -> **UNCHANGED** with per-cell power stated.
+Per-rig record: wide k'' deprioritized-by-evidence; Newton k'' OPEN suggestive. Result:
+CURSOR_RESULT_k2_cohort_correct.md.
 
 **2026-07-14 snapshot (K2-COHORT):** Full-cohort k'' signature test on archive drafts
-424/425/426. wide_CLEAR 148 stars (139 epochs); T1 rho=-0.013 q=0.877; verdict **DOWN**
-(only power-adequate cell null). Newton g/i indicative only (n=23/19, underpowered).
-425 B/V/R excluded (N<20). Result: CURSOR_RESULT_k2_cohort.md. **NOT PUSHED.**
+424/425/426. wide_CLEAR 148 stars (139 epochs); T1 rho=-0.013 q=0.877. Initial DOWN verdict
+retracted (see K2-COHORT-CORRECT). Newton g/i indicative only (n=23/19, underpowered).
+425 B/V/R excluded (N<20). Result: CURSOR_RESULT_k2_cohort.md.
 
 **2026-07-14 snapshot (SPARSE-TRUST arc close):** Arc CLOSED. Spec + Amendment 1 implemented;
 S1-S4 validated; external K sourcing live; r baseline filled; SS Cam YELLOW confirmed (R=2.008

@@ -2,12 +2,27 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- K2-COHORT-CORRECT (verdict retraction, per-rig record)
+
+Verdict correction without re-run. Frozen pre-registered rule applied verbatim: DOWN only if ALL
+tested cells null AND **each** cell >=80% power. Newton g/i underpowered (0.47/0.40) -> clause
+fails -> **UNCHANGED** (initial DOWN retracted). Process note: pre-registered rules applied as
+written; ambiguities at application time recorded; **stricter** reading taken (underpowered cells
+do not waive the "each cell" power requirement).
+
+Per-rig: wide (eq1) k'' deprioritized-by-evidence (null, bound |k2_eff|<2.12e-6); Newton (eq4)
+k'' OPEN suggestive (T1 rho=-0.325 expected sign; T2 rho=+0.470 p=0.043 raw). Result:
+CURSOR_RESULT_k2_cohort_correct.md.
+
+---
+
 ## 2026-07-14 -- K2-COHORT (full-cohort k'' test)
 
 Full-cohort archive report-only test. wide_CLEAR n=148 (LOO delta_mag per host target);
-T1 rho=-0.013 q=0.877; T2 rho=-0.193 q=0.114. Pre-registered FDR rule: **k'' priority DOWN**
-(only power-adequate cell null). Newton g/i underpowered. 425 filtered excluded N<20.
-Artifacts: tmp/k2_cohort/. Result: CURSOR_RESULT_k2_cohort.md. Not pushed.
+T1 rho=-0.013 q=0.877; T2 rho=-0.193 q=0.114. Pre-registered FDR rule initially read as
+**k'' priority DOWN** (misapplied power clause; retracted in K2-COHORT-CORRECT). Newton g/i
+underpowered. 425 filtered excluded N<20. Artifacts: tmp/k2_cohort/. Result:
+CURSOR_RESULT_k2_cohort.md.
 
 ---
 

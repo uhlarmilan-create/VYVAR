@@ -39,9 +39,13 @@ CLEAR/V: no strong literature sign (|rho| gate only for UP).
 
 | cell | n_T1 | rho | p | q_FDR | k2_eff | k2_eff_se | lever_excl |
 |------|------|-----|---|-------|--------|-----------|------------|
-| wide_CLEAR | 147 | -0.013 | 0.877 | 0.877 | -0.040 | (WLS) | 0 stars |
-| Newton_g | 23 | -0.044 | 0.840 | 0.877 | -0.057 | (WLS) | -- |
-| Newton_i | 19 | -0.325 | 0.175 | 0.350 | -0.036 | (WLS) | -- |
+| wide_CLEAR | 147 | -0.013 | 0.877 | 0.877 | -0.040 | 1.08e-6 | 0 stars |
+| Newton_g | 23 | -0.044 | 0.840 | 0.877 | -0.057 | 2.34e-5 | -- |
+| Newton_i | 19 | -0.325 | 0.175 | 0.350 | -0.036 | 3.13e-5 | -- |
+
+95% CI [mag/airmass/mag_colour] from WLS (k2_eff +/- 1.96*k2_eff_se): wide_CLEAR
+[-0.040002, -0.039998]; Newton_g [-0.057494, -0.057362]; Newton_i [-0.036010, -0.035888].
+See CURSOR_RESULT_k2_cohort_correct.md for sensitivity bounds and colour-range table.
 
 Figures: tmp/k2_cohort/figures/t1_wide_CLEAR.png (and per-cell PNGs where n>=2).
 
@@ -62,11 +66,18 @@ T2 wide_CLEAR raw p=0.019 but q=0.114 (does not trigger UP; T1 is physics gate).
 
 ## Verdict
 
-**k'' priority DOWN** (pre-registered rule).
+**k'' priority UNCHANGED** (verbatim pre-registered rule).
 
-Deciding cell: wide_CLEAR (only power-adequate cell: n=147, power~0.999 for rho=0.4).
-T1 null: rho=-0.013, q=0.877. T2 null after FDR: q=0.114.
-Newton g/i underpowered (n=23/19; power~0.47/0.40) -- do not count toward DOWN or UP.
+Retraction: the initial DOWN verdict misapplied the frozen rule by treating underpowered nulls
+as excluded from the "each cell >=80% power" requirement; corrected here without re-running
+anything.
+
+Three tested cells: wide_CLEAR (power 0.999, null), Newton_g (power 0.47), Newton_i (power 0.40).
+DOWN clause requires each tested cell >=80% power; Newton g/i fail -> **UNCHANGED** with per-cell
+power stated (not DOWN).
+
+wide_CLEAR T1 null: rho=-0.013, q=0.877. T2 null after FDR: q=0.114.
+Newton g/i underpowered (n=23/19) -- suggestive probes only (see per-rig record in ROADMAP).
 
 Next step (if priority were UP): K2 design review vs K2_BAND_AWARE_SPEC; coefficient fit
 awaits Milan BVR night dX>=0.3. Empirical k2_eff seeds recorded in spec (not significant).
