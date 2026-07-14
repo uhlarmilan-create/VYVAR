@@ -22,6 +22,7 @@ Then ``(light − dark) / flat`` runs at matching resolution.
 # (overrides misleading FITS headers; set to 1 for full-chip masters).
 CALIBRATION_LIBRARY_NATIVE_BINNING: int = 1
 
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,6 +35,10 @@ from astropy.io import fits
 
 from database import VyvarDatabase
 from infolog import log_event
+
+logger = logging.getLogger(__name__)
+
+_master_age_mtime_warned: set[str] = set()
 
 
 class MasterResamplingError(ValueError):
@@ -96,7 +101,34 @@ def _header_capture_datetime(hdr: fits.Header) -> tuple[datetime | None, str | N
     return None, None
 
 
-def resolve_master_age(file_path: str | Path) -> MasterAgeInfo:
+def reset_master_age_mtime_warnings() -> None:
+    """Clear one-time mtime-fallback warnings (for tests and repeated scans)."""
+    _master_age_mtime_warned.clear()
+
+
+def _warn_master_age_mtime_fallback(
+    path: Path,
+    *,
+    warnings: list[str] | None = None,
+) -> None:
+    key = str(path.resolve())
+    if key in _master_age_mtime_warned:
+        return
+    _master_age_mtime_warned.add(key)
+    msg = (
+        f"Master age: no resolvable header date for {path.name}; "
+        "using filesystem mtime fallback."
+    )
+    if warnings is not None:
+        warnings.append(msg)
+    logger.warning(msg)
+
+
+def resolve_master_age(
+    file_path: str | Path,
+    *,
+    warnings: list[str] | None = None,
+) -> MasterAgeInfo:
     """Age of master in days from header capture date, else filesystem mtime."""
     p = Path(file_path)
     now = datetime.now(timezone.utc)
@@ -123,6 +155,8 @@ def resolve_master_age(file_path: str | Path) -> MasterAgeInfo:
             dt = now
             source = "mtime"
             header_key = None
+        if p.is_file():
+            _warn_master_age_mtime_fallback(p, warnings=warnings)
     age = (now - dt).total_seconds() / 86400.0
     return MasterAgeInfo(
         age_days=max(0.0, float(age)),
@@ -132,9 +166,13 @@ def resolve_master_age(file_path: str | Path) -> MasterAgeInfo:
     )
 
 
-def get_master_age_days(file_path: str | Path) -> float:
+def get_master_age_days(
+    file_path: str | Path,
+    *,
+    warnings: list[str] | None = None,
+) -> float:
     """Age of master in days from header date or filesystem mtime."""
-    return resolve_master_age(file_path).age_days
+    return resolve_master_age(file_path, warnings=warnings).age_days
 
 
 def read_master_binning_from_header(header: fits.Header) -> int:

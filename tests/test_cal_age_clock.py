@@ -9,12 +9,12 @@ from pathlib import Path
 import pytest
 from astropy.io import fits
 
-from calibration import get_master_age_days, resolve_master_age
-from importer import (
-    _age_days,
-    _reset_master_age_mtime_warnings,
-    get_calibration_status,
+from calibration import (
+    get_master_age_days,
+    reset_master_age_mtime_warnings,
+    resolve_master_age,
 )
+from importer import _age_days, get_calibration_status
 
 
 def _write_master(path: Path, *, cdate: str | None = None, date_obs: str | None = None) -> None:
@@ -65,7 +65,7 @@ def test_copy_scenario_header_old_mtime_fresh_rejected(cal_lib: Path) -> None:
     mtime_age = (datetime.now(timezone.utc).timestamp() - os.path.getmtime(p)) / 86400.0
     assert mtime_age < 5.0
 
-    _reset_master_age_mtime_warnings()
+    reset_master_age_mtime_warnings()
     age = _age_days(p)
     assert age is not None
     assert age > 90.0
@@ -77,7 +77,7 @@ def test_header_fresh_mtime_old_accepted(cal_lib: Path) -> None:
     _write_master(p, cdate=fresh)
     _mtime_days_ago(p, 200.0)
 
-    _reset_master_age_mtime_warnings()
+    reset_master_age_mtime_warnings()
     age = _age_days(p)
     assert age is not None
     assert age <= 90.0
@@ -89,7 +89,7 @@ def test_no_header_date_mtime_fallback_warns(cal_lib: Path, caplog: pytest.LogCa
     _mtime_days_ago(p, 5.0)
 
     warnings: list[str] = []
-    _reset_master_age_mtime_warnings()
+    reset_master_age_mtime_warnings()
     age = _age_days(p, warnings=warnings)
     assert age is not None
     assert 4.0 <= age <= 6.0
@@ -130,17 +130,33 @@ def test_naive_date_obs_treated_as_utc(tmp_path: Path) -> None:
     assert info.capture_utc.tzinfo is not None
 
 
-def test_smart_scan_uses_header_age_not_mtime(cal_lib: Path, tmp_path: Path) -> None:
+def test_get_master_age_days_mtime_fallback_warns_once(
+    cal_lib: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Library UI path warns once when header date is missing."""
+    p = cal_lib / "ui_legacy.fits"
+    _write_master(p)
+    _mtime_days_ago(p, 5.0)
+
+    reset_master_age_mtime_warnings()
+    with caplog.at_level("WARNING", logger="calibration"):
+        age1 = get_master_age_days(p)
+        age2 = get_master_age_days(p)
+    assert 4.0 <= age1 <= 6.0
+    assert age2 == pytest.approx(age1, abs=0.01)
+    warn_msgs = [r.message for r in caplog.records if "mtime fallback" in r.message]
+    assert len(warn_msgs) == 1
+    assert p.name in warn_msgs[0]
+
+
+def test_smart_scan_uses_header_age_not_mtime(cal_lib: Path) -> None:
     p = cal_lib / "md_scan.fits"
     old = (datetime.now(timezone.utc) - timedelta(days=150)).strftime("%Y-%m-%dT%H:%M:%SZ")
     _write_master(p, cdate=old)
     _mtime_days_ago(p, 2.0)
 
-    source = tmp_path / "source"
-    source.mkdir()
-    # minimal empty source ù scan still evaluates library paths via observation groups if lights exist
-    # Direct status check mirrors import path
-    _reset_master_age_mtime_warnings()
+    reset_master_age_mtime_warnings()
     stt = get_calibration_status(p, kind="Master Dark", validity_days=90)
     assert stt.status == "expired"
 

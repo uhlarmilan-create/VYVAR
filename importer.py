@@ -17,7 +17,7 @@ from astropy.io import fits
 from astropy.visualization import ZScaleInterval
 
 
-from calibration import resolve_master_age
+from calibration import resolve_master_age, reset_master_age_mtime_warnings
 from database import DraftTechnicalMetadataError, VyvarDatabase
 from fits_suffixes import path_suffix_is_fits
 from infolog import log_event
@@ -924,11 +924,8 @@ def _find_matching_master_in_library(
     return best
 
 
-_master_age_mtime_warned: set[str] = set()
-
-
 def _reset_master_age_mtime_warnings() -> None:
-    _master_age_mtime_warned.clear()
+    reset_master_age_mtime_warnings()
 
 
 def _age_days(
@@ -936,22 +933,11 @@ def _age_days(
     *,
     warnings: list[str] | None = None,
 ) -> float | None:
-    """Master age in days — same clock as library UI (:func:`calibration.get_master_age_days`)."""
+    """Master age in days -- same clock as library UI (:func:`calibration.get_master_age_days`)."""
     try:
-        info = resolve_master_age(path)
+        info = resolve_master_age(path, warnings=warnings)
     except OSError:
         return None
-    if info.source == "mtime":
-        key = str(path.resolve())
-        if key not in _master_age_mtime_warned:
-            _master_age_mtime_warned.add(key)
-            msg = (
-                f"Master age: no resolvable header date for {path.name}; "
-                "using filesystem mtime fallback."
-            )
-            if warnings is not None:
-                warnings.append(msg)
-            logger.warning(msg)
     return float(info.age_days)
 
 
