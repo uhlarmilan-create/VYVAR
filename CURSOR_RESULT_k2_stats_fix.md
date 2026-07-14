@@ -73,7 +73,8 @@ invalid CI table and 2.12e-6 sensitivity bound.
 
 ## Push hash + baseline PASS
 
-(pending)
+Pushed `036a570..c8aed4b` to origin/main (Milan-authorized).
+HEAD `c8aed4b`; session_baseline_check --fast PASS (830 passed, 15 skipped).
 
 ## Errors (if any)
 
@@ -90,4 +91,4 @@ CURSOR_RESULT_k2_stats_fix.md
 
 ## pytest count
 
-(pending)
+830 passed, 15 skipped (session_baseline_check --fast on c8aed4b).
