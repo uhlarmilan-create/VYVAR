@@ -677,6 +677,11 @@ def run_analysis(out_dir: Path, cfg: AppConfig) -> dict[str, Any]:
         for c in cells_out
         if not c.get("excluded")
     ]
+    report_warnings: list[str] = []
+    for rs in report_stats:
+        ck = rs.get("cell_key", "?")
+        for w in rs.get("warnings") or []:
+            report_warnings.append(f"{ck}: {w}")
 
     payload = _stamp({
         "pre_registered_rule": PRE_REGISTERED_RULE,
@@ -689,6 +694,7 @@ def run_analysis(out_dir: Path, cfg: AppConfig) -> dict[str, Any]:
         "fdr_family": fdr_entries,
         "verdict": verdict_block,
         "report_stats": report_stats,
+        "report_warnings": report_warnings,
     })
     write_summary_json(payload, out_dir / "cohort_table.json")
     write_summary_json(payload, out_dir / "k2_cohort_summary.json")

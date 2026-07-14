@@ -9,8 +9,10 @@ import pytest
 
 from k2_cohort_core import (
     benjamini_hochberg_fdr,
+    check_k2_internal_consistency,
     extract_cell_report_stats,
     k2_eff_ci95,
+    k2_eff_honest_uncertainties,
     k2_priority_verdict,
     lag1_autocorrelation,
     photon_weighted_airmass_slope,
@@ -121,23 +123,85 @@ def test_k2_eff_ci95_half_width() -> None:
 
 
 def test_extract_cell_report_stats_from_summary_shape() -> None:
+    rng = np.random.default_rng(0)
+    stars = [
+        {
+            "colour_offset_signed": float(xi),
+            "b_X": float(-0.04 * xi + rng.normal(0, 0.05)),
+            "b_X_se": 0.002,
+            "t1_lever_excluded": False,
+        }
+        for xi in rng.normal(0, 0.2, 30)
+    ]
     cell = {
         "cell_key": "wide_CLEAR",
-        "stars": [
-            {"colour_offset_signed": -0.3, "b_X": 0.01, "t1_lever_excluded": False},
-            {"colour_offset_signed": 0.4, "b_X": -0.02, "t1_lever_excluded": False},
-        ],
-        "t1": {
-            "k2_eff_mag_per_airmass_per_colour": -0.04,
-            "k2_eff_se": 0.002,
-            "spearman": {"rho": -0.01},
-            "n_stars_t1": 2,
-        },
+        "stars": stars,
         "t1_fdr": {"q_value": 0.88},
         "t2_fdr": {"rho": -0.19, "q_value": 0.11},
         "spearman_power_rho0.4": 0.999,
     }
-    stats = extract_cell_report_stats(cell)
-    assert stats["k2_eff"] == pytest.approx(-0.04)
-    assert stats["ci_half_width"] == pytest.approx(0.00392, rel=1e-3)
-    assert stats["colour_span"] == pytest.approx(0.63, rel=1e-2)
+    stats = extract_cell_report_stats(cell, n_bootstrap=200, seed=0)
+    assert stats["bootstrap_authoritative"] is True
+    assert math.isfinite(float(stats["bootstrap_ci_lo"]))
+    assert math.isfinite(float(stats["chi2_red"]))
+    assert float(stats["chi2_red"]) > 1.0
+
+
+def test_check_k2_internal_consistency_flags_stop() -> None:
+    warnings = check_k2_internal_consistency(-0.04, 1.0e-6, -0.013)
+    assert warnings
+    assert "INTERNAL_INCONSISTENCY" in warnings[0]
+
+
+def test_check_k2_internal_consistency_silent_when_coherent() -> None:
+    warnings = check_k2_internal_consistency(-0.04, 0.05, -0.35)
+    assert warnings == []
+
+
+def _overdispersed_stars(
+    rng: np.random.Generator,
+    *,
+    n: int,
+    true_slope: float,
+    scatter: float,
+    err: float,
+) -> list[dict[str, float | bool]]:
+    x = rng.normal(0.0, 0.25, n)
+    y = true_slope * x + rng.normal(0.0, scatter, n)
+    return [
+        {
+            "colour_offset_signed": float(xi),
+            "b_X": float(yi),
+            "b_X_se": float(err),
+            "t1_lever_excluded": False,
+        }
+        for xi, yi in zip(x, y, strict=False)
+    ]
+
+
+def test_overdispersed_null_bootstrap_coverage() -> None:
+    """Naive photon-weight WLS SE fails; bootstrap null coverage ~95%."""
+    boot_covers = 0
+    naive_covers = 0
+    n_trials = 50
+    for trial in range(n_trials):
+        rng = np.random.default_rng(1000 + trial)
+        stars = _overdispersed_stars(
+            rng, n=60, true_slope=0.0, scatter=0.09, err=0.002,
+        )
+        honest = k2_eff_honest_uncertainties(stars, n_bootstrap=400, seed=trial)
+        if honest["bootstrap_ci_lo"] <= 0.0 <= honest["bootstrap_ci_hi"]:
+            boot_covers += 1
+        naive_ci = k2_eff_ci95(float(honest["k2_eff"]), float(honest["se_naive"]))
+        if naive_ci["ci_lo"] <= 0.0 <= naive_ci["ci_hi"]:
+            naive_covers += 1
+    assert boot_covers / n_trials >= 0.75
+    assert naive_covers / n_trials <= 0.25
+
+
+def test_overdispersed_known_slope_bootstrap_finds_truth() -> None:
+    rng = np.random.default_rng(42)
+    stars = _overdispersed_stars(rng, n=80, true_slope=0.05, scatter=0.08, err=0.001)
+    honest = k2_eff_honest_uncertainties(stars, n_bootstrap=600, seed=42)
+    assert honest["se_naive"] < 0.01
+    assert honest["bootstrap_ci_lo"] <= 0.05 <= honest["bootstrap_ci_hi"]
