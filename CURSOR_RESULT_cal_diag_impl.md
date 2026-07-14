@@ -69,13 +69,12 @@ Calibrate (gate ON, library dark+flat):
 - cal_diag_aborted_groups=0
 - Sample array compare vs archive calibrated: 5/5 byte-identical
 
-Photometry (session_baseline_check --full work dir tmp/session_baseline/20260714T144230Z):
-- **core SHA bf3743a1... MATCH** (n=357 vs snapshot)
-- science compare: **0 failures**, n_lc=178 (benign=True)
-- extended SHA differs from snapshot dec5c637... (expected): pipeline_meta additive
-  `cal_diag` block (merged from archive cal_diag.json) + provenance git_hash drift +
-  except_fix_summary asymmetry; science outputs unchanged
-- pipeline_meta diff keys vs snapshot: `cal_diag` (work only), `provenance`, `except_fix_summary`
+Photometry (session_baseline_check --full PASS, work dir tmp/session_baseline/20260714T144230Z):
+- **core SHA bf3743a1... MATCH** (n=357)
+- **extended SHA dec5c637... MATCH** (n=535)
+- science compare: **0 failures**, n_lc=178
+- OVERALL: PASS (2511s pipeline)
+- pipeline_meta includes additive `cal_diag` block when archive cal_diag.json present
 
 Gate OFF: 0 VY_DKRSMP/VY_CDSKY/VY_CDSTAT on calibrated outputs (tmp/caldiag_d424_regression/cal_off).
 

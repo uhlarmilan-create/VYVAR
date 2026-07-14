@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-13",
+  "updated": "2026-07-14",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -25,8 +25,8 @@
       "description": "draft_424 coherent content anchor reproduces via session baseline --full",
       "verification": "scripts/session_baseline_check.py --full (science-meaningful compare + photometry SHA vs Archive/Drafts/draft_000424_snapshot_sigma_floor_20260713; core bf3743a1... n=357; extended dec5c637... n=535). Anchor chain acceptance: intermediate baseline Archive/Drafts/draft_000424_snapshot_intermediate_b5364e6_20260713 (b5364e6; core 373e8235... ext 0243f719...) and exact per-epoch c4 predictor validation (tmp/anchor_chain/c2_exact_c4_validation.json; 23542/23542 epochs within abs 2e-6).",
       "passes": true,
-      "last_verified": "2026-07-13",
-      "commit": "b5cfd8d",
+      "last_verified": "2026-07-14",
+      "commit": "13341b3",
       "notes": "Accepted anchor: PROD-SIGMA-FLOOR (c4 SEM + Newton sigma_sys floor; wide un-floored, eq1 floor=0). Supersedes draft_000424_snapshot_20260708_full (750c856; core 92939fab...) which predates approved bingain + SEM unit fix; acceptance validated against intermediate b5364e6 snapshot."
     },
     {
@@ -35,8 +35,8 @@
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
-      "last_verified": "2026-07-13",
-      "commit": "b5cfd8d",
+      "last_verified": "2026-07-14",
+      "commit": "13341b3",
       "notes": "Set by Part B --full run in DEV-PROCESS-AB task."
     },
     {
