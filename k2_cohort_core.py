@@ -197,6 +197,93 @@ def expected_k2_sign(band: str) -> float | None:
     return -1.0  # default negative for standard filters (g, r, B, R)
 
 
+def k2_eff_ci95(
+    k2_eff: float,
+    k2_se: float,
+    *,
+    z: float = 1.96,
+) -> dict[str, float]:
+    """Two-sided 95% CI for WLS k2_eff [mag / airmass / mag_colour]."""
+    eff = float(k2_eff)
+    se = float(k2_se)
+    if not (math.isfinite(eff) and math.isfinite(se) and se >= 0):
+        return {
+            "k2_eff": eff,
+            "k2_eff_se": se,
+            "ci_lo": float("nan"),
+            "ci_hi": float("nan"),
+            "ci_half_width": float("nan"),
+        }
+    half = z * se
+    return {
+        "k2_eff": eff,
+        "k2_eff_se": se,
+        "ci_lo": eff - half,
+        "ci_hi": eff + half,
+        "ci_half_width": half,
+    }
+
+
+def colour_offset_percentiles(
+    stars: list[dict[str, Any]],
+    *,
+    key: str = "colour_offset_signed",
+) -> dict[str, float | int]:
+    """p5/p95 of signed colour offsets in a cohort cell."""
+    vals = [
+        float(s[key])
+        for s in stars
+        if s.get(key) is not None and math.isfinite(float(s[key]))
+    ]
+    if not vals:
+        return {"n": 0, "p5": float("nan"), "p95": float("nan"), "span": float("nan")}
+    arr = np.asarray(vals, dtype=np.float64)
+    p5 = float(np.percentile(arr, 5))
+    p95 = float(np.percentile(arr, 95))
+    return {"n": len(vals), "p5": p5, "p95": p95, "span": p95 - p5}
+
+
+def extract_cell_report_stats(cell: dict[str, Any]) -> dict[str, Any]:
+    """Report-only statistics from one cohort cell (no re-analysis)."""
+    t1 = cell.get("t1") or {}
+    k2 = float(t1.get("k2_eff_mag_per_airmass_per_colour", float("nan")))
+    se = float(t1.get("k2_eff_se", float("nan")))
+    ci = k2_eff_ci95(k2, se)
+    stars = [s for s in cell.get("stars", []) if not s.get("t1_lever_excluded")]
+    colour = colour_offset_percentiles(stars)
+    bx = [
+        float(s["b_X"])
+        for s in stars
+        if s.get("b_X") is not None and math.isfinite(float(s["b_X"]))
+    ]
+    bx_std = float(np.std(np.asarray(bx, dtype=np.float64))) if len(bx) >= 2 else float("nan")
+    span = float(colour.get("span", float("nan")))
+    max_slope_spread = abs(k2) * span if math.isfinite(k2) and math.isfinite(span) else float("nan")
+    sp = t1.get("spearman") or {}
+    t1_fdr = cell.get("t1_fdr") or {}
+    t2_fdr = cell.get("t2_fdr") or {}
+    return {
+        "cell_key": cell.get("cell_key"),
+        "n_t1": int(t1.get("n_stars_t1", 0) or 0),
+        "k2_eff": ci["k2_eff"],
+        "k2_eff_se": ci["k2_eff_se"],
+        "ci_lo": ci["ci_lo"],
+        "ci_hi": ci["ci_hi"],
+        "ci_half_width": ci["ci_half_width"],
+        "sensitivity_exclude_abs_k2_gt": ci["ci_half_width"],
+        "colour_p5": colour["p5"],
+        "colour_p95": colour["p95"],
+        "colour_span": colour["span"],
+        "b_X_std": bx_std,
+        "max_slope_spread_at_k2_eff": max_slope_spread,
+        "rho_t1": float(sp.get("rho", float("nan"))),
+        "q_t1": float(t1_fdr.get("q_value", float("nan"))),
+        "rho_t2": float(t2_fdr.get("rho", float("nan"))),
+        "q_t2": float(t2_fdr.get("q_value", float("nan"))),
+        "power_rho0.4": float(cell.get("spearman_power_rho0.4", float("nan"))),
+    }
+
+
 def k2_priority_verdict(
     cells: list[dict[str, Any]],
     *,
@@ -205,18 +292,24 @@ def k2_priority_verdict(
     rho_power: float = 0.4,
     alpha: float = 0.05,
     power_target: float = 0.8,
+    min_cell_n: int = 10,
 ) -> dict[str, Any]:
-    """Apply pre-registered UP/DOWN/UNCHANGED rule to per-cell test results."""
+    """Apply pre-registered UP/DOWN/UNCHANGED rule to per-cell test results.
+
+    DOWN requires every tested (rig, band) cell to be null and each to have >= power_target
+    (verbatim frozen rule: "each cell had >= 80% power").
+    """
     min_n_power = spearman_min_n_for_power(rho_alt=rho_power, alpha=alpha, power=power_target)
     up_hits: list[str] = []
-    down_eligible: list[str] = []
-    down_null: list[str] = []
+    tested: list[str] = []
+    tested_null: list[str] = []
+    tested_power_adequate: list[str] = []
     for cell in cells:
         key = cell.get("cell_key", "")
         if cell.get("excluded"):
             continue
         n = int(cell.get("n_t1", 0) or 0)
-        if n < 10:
+        if n < min_cell_n:
             cell["status"] = "excluded_for_power"
             continue
         power_frac = spearman_power_at_n(n, rho_alt=rho_power, alpha=alpha)
@@ -246,13 +339,18 @@ def k2_priority_verdict(
         t1_null = not (t1.get("reject") and abs(float(t1.get("rho", 0))) >= rho_up_threshold)
         t2_null = not t2.get("reject")
         both_null = t1_null and t2_null
+        tested.append(key)
+        if both_null:
+            tested_null.append(key)
         if cell["power_adequate"]:
-            down_eligible.append(key)
-            if both_null:
-                down_null.append(key)
+            tested_power_adequate.append(key)
     if up_hits:
         verdict = "UP"
-    elif down_eligible and len(down_null) == len(down_eligible) and down_eligible:
+    elif (
+        tested
+        and len(tested_null) == len(tested)
+        and len(tested_power_adequate) == len(tested)
+    ):
         verdict = "DOWN"
     else:
         verdict = "UNCHANGED"
@@ -260,6 +358,10 @@ def k2_priority_verdict(
         "verdict": verdict,
         "min_n_for_80pct_power_rho0.4": min_n_power,
         "up_hits": up_hits,
-        "down_eligible_cells": down_eligible,
-        "down_null_cells": down_null,
+        "tested_cells": tested,
+        "tested_null_cells": tested_null,
+        "tested_power_adequate_cells": tested_power_adequate,
+        # Legacy keys retained for summary JSON readers.
+        "down_eligible_cells": tested_power_adequate,
+        "down_null_cells": [k for k in tested_null if k in tested_power_adequate],
     }
