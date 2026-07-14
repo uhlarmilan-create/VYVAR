@@ -169,17 +169,17 @@ Camera-agnostic calibration-time diagnostic gate (shipped):
    SUM vs MEAN dark-resample mismatch with loud auto-correction (SUM -> MEAN retry) or fail-closed abort.
 3. **Provenance** — `VY_DKRSMP` = `SUM` | `MEAN_AUTOCORRECTED` | `PASSTHROUGH`; `archive/<draft>/cal_diag.json`.
 
-**Validation (2026-07-14 re-verify on HEAD 13341b3):** 14 pytest gate tests; full `pytest tests/` green;
+**Validation (2026-07-14 re-verify on HEAD 13341b3; pushed `237dd34`):** 14 pytest gate tests; full `pytest tests/` green;
 draft_424 regression PASS (150/150 `VY_DKRSMP=SUM`, 0 WARN/FAIL; photometry core SHA
-`bf3743a1...` unchanged). **NOT PUSHED** -- Milan review first.
+`bf3743a1...` unchanged).
 
-**Related ledger (spec section 10 -- NOT part of this gate; tracked separately):**
+**Related ledger (spec section 10 -- RESOLVED 2026-07-14 CAL-LEDGER-BUNDLE):**
 
 | ID | Sev | Summary |
 |----|-----|---------|
-| **CAL-AGE-CLOCK** | MED | **Parked then FIXED (2026-07-08):** header-age unified (`resolve_master_age`). |
-| **RN-HEADER-NONE** | LOW/MED | **Parked then FIXED (`1830527`):** SNR precompute passes header to `resolve_read_noise`. |
-| **CAL-PASSTHRU-DEAD** | LOW | **Parked then FIXED (`21c20e3`):** removed dead `allow_passthrough` branch. |
+| **CAL-AGE-CLOCK** | MED | **RESOLVED** (`5143485`, `ee89de8`; warn centralized in bundle). `resolve_master_age` unifies import scan + library UI on header `VY_CDATE`/`DATE-OBS` with mtime fallback + one-time WARN. |
+| **RN-HEADER-NONE** | LOW/MED | **RESOLVED** (`1830527`; bundle test). SNR precompute passes MASTERSTAR header to `resolve_read_noise` (bin-scaled RN). |
+| **CAL-PASSTHRU-DEAD** | LOW | **RESOLVED** (`21c20e3`). Dead `allow_passthrough` branch removed; no production or test callers. |
 
 Flat-norm Stage 2 and other ROADMAP calibration items unchanged (D1/D2/D3 codify current behavior).
 
@@ -336,7 +336,7 @@ Pre-fix 26-epoch baseline in ``CURSOR_RESULT_426_regen.md`` is **invalid** for s
 | PROC_STORE_COLS / err | **Resolved-by-explanation** | ``err`` never persisted to proc CSV is **DESIGN** (in-memory at export); closeout flag recorded, no action. |
 | Newton binned-uncertainty caveat | **Recorded** | SIGMA_FLOOR_SPEC + PDF wording (per-point bars honest; binned Newton quantities underestimated). |
 | Milan data tasks | **Unchanged** | eq4 bin4 bias/darks (>=6, GAIN 12.48, T~-15 C); fresh darks before ~2026-07-21; BVR night dX>=0.3; bin2 flats. |
-| EXCEPT-BULK-2 optional pass | **Parked** | Batch closed 2026-07-08; optional follow-up pass remains parked as before. |
+| EXCEPT-BULK-2 | **CLOSED (2026-07-08)** | 98/98 applied per `VYVAR_EXCEPT_CENSUS.md` (`97affe3`); batch closed -- no optional pass remains. |
 | DAO-RECONCILE | **Parked (CLOSED 2026-07-09)** | Remains parked; REOPEN if missed@G90 becomes material on new rig/config. |
 | PSF enablement | **Gated** | Production PSF OFF; real-field enablement gated on Newton dense-field draft. |
 

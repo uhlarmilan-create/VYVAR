@@ -260,11 +260,15 @@ Clamps: `rel_tol` [0, 0.2]; `hard_sigma` [3, 10]; `sat_warn_frac` [0.5, 1.0].
 
 ## 10. New ledger items discovered by the flow trace (NOT part of this gate)
 
-| ID | Sev | Finding |
-|----|-----|---------|
-| CAL-AGE-CLOCK | MED | Two validity age clocks: import scan uses filesystem **mtime** (importer.py:873-879) while the library UI uses header capture date (`get_master_age_days`, calibration.py:79-98). Copying a library to another machine resets mtime and revives expired masters. Proposal: unify on header `VY_CDATE`/`DATE-OBS` with mtime fallback. |
-| RN-HEADER-NONE | LOW/MED | `photometry_core.py:1211` (SNR aperture table helper) calls `resolve_read_noise(header=None)` -> DB RN unscaled by binning, inconsistent with Phase 2A (header passed, photometry_core.py:6664-6665). Small fix: pass the light/masterstar header. Affects SNR-optimal aperture planning on binned data, not the LC error model. |
-| CAL-PASSTHRU-DEAD | LOW | `allow_passthrough` synthetic master in `get_processed_master` (calibration.py:441-452) has no production caller -- remove or mark test-only. |
+**Status: RESOLVED (2026-07-14 CAL-LEDGER-BUNDLE).** Implementation commits: CAL-AGE-CLOCK
+`5143485`/`ee89de8` (+ bundle warn centralization); RN-HEADER-NONE `1830527`; CAL-PASSTHRU-DEAD
+`21c20e3`. Result: `CURSOR_RESULT_cal_ledger_bundle.md`.
+
+| ID | Sev | Finding | Resolution |
+|----|-----|---------|------------|
+| CAL-AGE-CLOCK | MED | Two validity age clocks (mtime vs header). | **RESOLVED:** `resolve_master_age` in `calibration.py`; import scan + library UI share header-first clock with mtime fallback + one-time WARN. |
+| RN-HEADER-NONE | LOW/MED | SNR aperture table called `resolve_read_noise(header=None)`. | **RESOLVED:** MASTERSTAR header passed at precompute call site; bin-scaled RN matches Phase 2A. |
+| CAL-PASSTHRU-DEAD | LOW | Dead `allow_passthrough` synthetic master branch. | **RESOLVED:** branch removed; grep shows zero callers in `.py` tree. |
 
 ---
 

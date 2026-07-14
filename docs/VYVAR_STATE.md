@@ -1,11 +1,16 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-14** -- CAL-DIAG-IMPL closeout: spec APPROVED; re-validated HEAD 13341b3.
-K2-STATS-FIX on main. **NOT PUSHED** (Milan review).
+Last updated: **2026-07-14** -- CAL-LEDGER-BUNDLE closeout (section-10 items verified + docs sweep).
+CAL-DIAG closeout pushed `237dd34`. Bundle commits local pending Milan review.
+
+**2026-07-14 snapshot (CAL-LEDGER-BUNDLE):** Section-10 ledger items CAL-AGE-CLOCK, RN-HEADER-NONE,
+CAL-PASSTHRU-DEAD verified/closed; mtime WARN centralized in `resolve_master_age`; 6 library
+masters scanned, 0 validity verdict changes. RN fix affects `aperture_snr_table.json` only (LC err
+untouched). Result: CURSOR_RESULT_cal_ledger_bundle.md. **NOT PUSHED** (post-Part-0 commits).
 
 **2026-07-14 snapshot (CAL-DIAG-IMPL closeout):** CAL-DIAG gate re-verified per v1.1 on HEAD
 13341b3 (code landed 2026-07-07). draft_424: 150/150 VY_DKRSMP=SUM; core SHA bf3743a1
-unchanged. Result: CURSOR_RESULT_cal_diag_impl.md. **NOT PUSHED.**
+unchanged. Pushed `237dd34`. Result: CURSOR_RESULT_cal_diag_impl.md.
 
 **2026-07-14 snapshot (K2-STATS-FIX):** Retracted invalid naive-WLS CI table (2.12e-6 bound).
 Bootstrap CIs authoritative. wide eq1: LOW PRIORITY subdominance (B=0.076; plausible k'' not

@@ -2,12 +2,36 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- CAL-LEDGER-BUNDLE (section-10 closeout + docs sweep)
+
+**Part 0:** Pushed CAL-DIAG closeout `b08f1cc..237dd34` to `origin/main`; `session_baseline_check.py --fast` PASS on `237dd34`.
+
+**Part 1 (CAL-AGE-CLOCK):** Verified header-first clock (`5143485`/`ee89de8`); centralized one-time
+mtime-fallback WARN in `calibration.resolve_master_age` (import scan + library UI). Live library:
+6 FITS paths (3 unique masters), **0 validity verdict changes** (all `VY_CDATE` 2026-04-22;
+header age ~82.9 d vs mtime ~82.6 d; both valid at 90/200 d limits). Tests: `tests/test_cal_age_clock.py` (10).
+
+**Part 2 (RN-HEADER-NONE):** Verified `1830527` -- MASTERSTAR header passed to `resolve_read_noise` in
+SNR precompute. Added header-unavailable regression test. **Impact:** persisted `aperture_snr_table.json`
+read_noise only; Phase 2A LC `err` and science columns unchanged (JOURNAL 2026-07-08 draft_424 byte-identical proof).
+
+**Part 3 (CAL-PASSTHRU-DEAD):** Verified `21c20e3` -- `allow_passthrough` absent from all `.py`; only stale
+audit doc references remain.
+
+**Part 4 (docs):** ROADMAP standing list EXCEPT-BULK-2 row corrected to **CLOSED** (98/98, `97affe3`).
+Root cause: stale "optional pass parked" line survived SPARSE-TRUST arc-close standing-list verification
+because Part 2 re-asserted the pre-BULK-2 wording without cross-checking CENSUS closure status.
+
+Result: `CURSOR_RESULT_cal_ledger_bundle.md`. Post-Part-0 commits **NOT PUSHED** -- Milan review.
+
+---
+
 ## 2026-07-14 -- CAL-DIAG-IMPL closeout (spec approval + re-validation)
 
 Spec v1.1 status flipped to **APPROVED (Milan, 2026-07-14)**. Implementation already on main
 (commits 0268547..3d1508b, 2026-07-07); re-validated on HEAD 13341b3 without code changes.
 14/14 gate pytest; draft_424 calibrate 150/150 VY_DKRSMP=SUM; photometry core SHA bf3743a1
-unchanged. MP variant (a): parent pre-gate via `run_cal_diag_pregate`. NOT PUSHED -- Milan review.
+unchanged. MP variant (a): parent pre-gate via `run_cal_diag_pregate`. Pushed `237dd34`.
 Result: CURSOR_RESULT_cal_diag_impl.md.
 
 ---
