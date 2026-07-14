@@ -1,7 +1,11 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-14** -- SPARSE-CHECK-POOL: external K sourcing; r_60_4 R computed; SS Cam YELLOW.
-**pytest 811 passed**, 11 skipped (fast).
+Last updated: **2026-07-14** -- SPARSE-TRUST chain **PUSHED** to origin/main at `43ea830`.
+Closeout: SS Cam YELLOW per spec (x2_pair <= X2_RED); S3 table complete. **pytest 816** fast.
+
+**2026-07-14 snapshot (SPARSE-TRUST-CLOSEOUT):** Pushed `7ed7459..43ea830`. session_baseline
+--fast PASS. SS Cam band YELLOW (R=2.008, x2=0.000296 < 4e-4; stability RED not triggered).
+Result: CURSOR_RESULT_sparse_trust_closeout.md. SS Cam **OPEN** for Milan.
 
 **2026-07-14 snapshot (SPARSE-CHECK-POOL):** Amendment 1 merged. External K on sparse branch;
 r_60_4 kmag + R on all 6 targets (SS Cam R=2.01 [1.22,3.89] YELLOW). S2: 0 flips, 0 band
