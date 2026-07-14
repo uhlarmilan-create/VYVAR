@@ -2,6 +2,22 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- K2-STATS-FIX (honest CIs, wide re-verdict)
+
+Retracted invalid naive-WLS k2_eff CIs (photon-weight SE ignored star-to-star overdispersion;
+37,000-sigma slope vs rho=-0.013 internal contradiction). Recomputed from tmp/k2_cohort/ star
+data: chi2_red >> 1 on all cells; bootstrap CI authoritative (2000 draws).
+
+Pre-registration lesson #2: effect-size bases for power claims must be derived from the physical
+effect propagated through the measured noise model (attainable rho), not a generic rho=0.4. Guard:
+internal-consistency check (|k2_eff/se| > 5 while |rho| < 0.1) now raises report warning.
+
+wide re-verdict: **LOW PRIORITY -- subdominance** (not "deprioritized-by-evidence" with B=2.12e-6).
+Plausible k'' 0.02-0.04 NOT excluded (B=0.076). Newton unchanged OPEN suggestive. Overall UNCHANGED.
+Result: CURSOR_RESULT_k2_stats_fix.md.
+
+---
+
 ## 2026-07-14 -- K2-COHORT-CORRECT (verdict retraction, per-rig record)
 
 Verdict correction without re-run. Frozen pre-registered rule applied verbatim: DOWN only if ALL
@@ -10,9 +26,8 @@ fails -> **UNCHANGED** (initial DOWN retracted). Process note: pre-registered ru
 written; ambiguities at application time recorded; **stricter** reading taken (underpowered cells
 do not waive the "each cell" power requirement).
 
-Per-rig: wide (eq1) k'' deprioritized-by-evidence (null, bound |k2_eff|<2.12e-6); Newton (eq4)
-k'' OPEN suggestive (T1 rho=-0.325 expected sign; T2 rho=+0.470 p=0.043 raw). Result:
-CURSOR_RESULT_k2_cohort_correct.md.
+Per-rig (wide record superseded by K2-STATS-FIX): Newton (eq4) k'' OPEN suggestive (T1 rho=-0.325
+expected sign; T2 rho=+0.470 p=0.043 raw). Result: CURSOR_RESULT_k2_cohort_correct.md.
 
 ---
 

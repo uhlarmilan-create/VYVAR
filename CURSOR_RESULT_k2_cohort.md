@@ -45,7 +45,10 @@ CLEAR/V: no strong literature sign (|rho| gate only for UP).
 
 95% CI [mag/airmass/mag_colour] from WLS (k2_eff +/- 1.96*k2_eff_se): wide_CLEAR
 [-0.040002, -0.039998]; Newton_g [-0.057494, -0.057362]; Newton_i [-0.036010, -0.035888].
-See CURSOR_RESULT_k2_cohort_correct.md for sensitivity bounds and colour-range table.
+
+**RETRACTED (K2-STATS-FIX):** naive WLS CIs above are invalid (photon-weight SE ignores
+overdispersion; 37,000-sigma slope incompatible with rho=-0.013). Superseded by bootstrap CIs
+in CURSOR_RESULT_k2_stats_fix.md.
 
 Figures: tmp/k2_cohort/figures/t1_wide_CLEAR.png (and per-cell PNGs where n>=2).
 

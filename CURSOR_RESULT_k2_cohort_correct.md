@@ -72,6 +72,9 @@ measured per-star b_X scatter SD 0.094 mag/airmass.
 docs/K2_BAND_AWARE_SPEC.md updated: CIs per cell; wide seed marked "consistent with zero,
 bound |k2_eff| < 2.12e-6"; overall verdict UNCHANGED; per-rig notes.
 
+**RETRACTED (K2-STATS-FIX):** naive WLS CI table and bound |k2_eff| < 2.12e-6 superseded.
+Bootstrap CIs and wide LOW PRIORITY subdominance record in CURSOR_RESULT_k2_stats_fix.md.
+
 ## Push hash + baseline PASS
 
 Pushed `be930ea..c5b6d3d` to origin/main (Milan-authorized).
