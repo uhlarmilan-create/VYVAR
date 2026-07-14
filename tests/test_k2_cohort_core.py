@@ -9,6 +9,8 @@ import pytest
 
 from k2_cohort_core import (
     benjamini_hochberg_fdr,
+    extract_cell_report_stats,
+    k2_eff_ci95,
     k2_priority_verdict,
     lag1_autocorrelation,
     photon_weighted_airmass_slope,
@@ -86,3 +88,56 @@ def test_k2_priority_verdict_unchanged_underpowered() -> None:
     }]
     v = k2_priority_verdict(cells)
     assert v["verdict"] == "UNCHANGED"
+
+
+def test_k2_priority_verdict_unchanged_mixed_power_null() -> None:
+    """Verbatim rule: DOWN needs each tested cell >=80% power, not only power-adequate subset."""
+    cells = [
+        {
+            "cell_key": "wide_CLEAR",
+            "excluded": False,
+            "n_t1": 147,
+            "t1_fdr": {"rho": -0.01, "q_value": 0.9, "reject": False, "expected_sign": None},
+            "t2_fdr": {"rho": -0.19, "q_value": 0.11, "reject": False},
+        },
+        {
+            "cell_key": "Newton_g",
+            "excluded": False,
+            "n_t1": 23,
+            "t1_fdr": {"rho": -0.04, "q_value": 0.9, "reject": False, "expected_sign": -1.0},
+            "t2_fdr": {"rho": -0.14, "q_value": 0.8, "reject": False},
+        },
+    ]
+    v = k2_priority_verdict(cells)
+    assert v["verdict"] == "UNCHANGED"
+    assert "wide_CLEAR" in v["tested_cells"]
+    assert "Newton_g" in v["tested_cells"]
+
+
+def test_k2_eff_ci95_half_width() -> None:
+    ci = k2_eff_ci95(-0.04, 1.0e-6)
+    assert ci["ci_half_width"] == pytest.approx(1.96e-6, rel=1e-6)
+    assert ci["ci_lo"] == pytest.approx(-0.04 - 1.96e-6, rel=1e-6)
+
+
+def test_extract_cell_report_stats_from_summary_shape() -> None:
+    cell = {
+        "cell_key": "wide_CLEAR",
+        "stars": [
+            {"colour_offset_signed": -0.3, "b_X": 0.01, "t1_lever_excluded": False},
+            {"colour_offset_signed": 0.4, "b_X": -0.02, "t1_lever_excluded": False},
+        ],
+        "t1": {
+            "k2_eff_mag_per_airmass_per_colour": -0.04,
+            "k2_eff_se": 0.002,
+            "spearman": {"rho": -0.01},
+            "n_stars_t1": 2,
+        },
+        "t1_fdr": {"q_value": 0.88},
+        "t2_fdr": {"rho": -0.19, "q_value": 0.11},
+        "spearman_power_rho0.4": 0.999,
+    }
+    stats = extract_cell_report_stats(cell)
+    assert stats["k2_eff"] == pytest.approx(-0.04)
+    assert stats["ci_half_width"] == pytest.approx(0.00392, rel=1e-3)
+    assert stats["colour_span"] == pytest.approx(0.63, rel=1e-2)

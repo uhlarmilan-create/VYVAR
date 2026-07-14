@@ -29,6 +29,7 @@ from gaia_catalog_id import normalize_gaia_source_id  # noqa: E402
 from k2_cohort_core import (  # noqa: E402
     benjamini_hochberg_fdr,
     expected_k2_sign,
+    extract_cell_report_stats,
     k2_priority_verdict,
     lag1_autocorrelation,
     photon_weighted_airmass_slope,
@@ -671,6 +672,11 @@ def run_analysis(out_dir: Path, cfg: AppConfig) -> dict[str, Any]:
 
     verdict_block = k2_priority_verdict(cells_out, fdr_q=FDR_Q)
     min_n = spearman_min_n_for_power()
+    report_stats = [
+        extract_cell_report_stats(c)
+        for c in cells_out
+        if not c.get("excluded")
+    ]
 
     payload = _stamp({
         "pre_registered_rule": PRE_REGISTERED_RULE,
@@ -682,6 +688,7 @@ def run_analysis(out_dir: Path, cfg: AppConfig) -> dict[str, Any]:
         "cells": cells_out,
         "fdr_family": fdr_entries,
         "verdict": verdict_block,
+        "report_stats": report_stats,
     })
     write_summary_json(payload, out_dir / "cohort_table.json")
     write_summary_json(payload, out_dir / "k2_cohort_summary.json")
