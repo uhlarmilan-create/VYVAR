@@ -62,7 +62,7 @@ Runtime: ~50 min (2778s pipeline step).
 
 ## Part 3 -- Close
 
-**Pushed:** doc close commit on `origin/main` (see git log).
+**Pushed:** `0f1c941` on `origin/main` (`114c423..0f1c941`).
 
 ## Errors (if any)
 
