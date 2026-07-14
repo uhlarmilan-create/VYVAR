@@ -1,7 +1,7 @@
 # VYVAR SPARSE-TRUST SPEC -- check-star ensembles and trust bands for sparse comp fields
 
-Status: DRAFT for implementation (task SPARSE-TRUST). Author: Claude, approved direction
-by Milan 2026-07-13. ASCII-only. All symbols in magnitude domain unless stated; conversions
+Status: **IMPLEMENTED (2026-07-14).** Arc CLOSED. Author: Claude, approved direction
+by Milan 2026-07-13; SS Cam YELLOW confirmed Milan 2026-07-14. ASCII-only. All symbols in magnitude domain unless stated; conversions
 via canonical MAG_ERR_SCALE only.
 
 Changelog:

@@ -2,6 +2,16 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- SPARSE-TRUST arc close
+
+**Arc CLOSED.** Milan confirmed SS Cam **YELLOW** (evidence-based). Verdict numbers: R=2.008
+[1.224, 3.886], p_stab=0.0, x2_pair=2.96e-4 mag^2 (17.2 mmag pair excess, 26% below X2_RED cap),
+production_lc_err chi2=21.38, n=2, N=25, external K 1112110935816253440. X2_RED not adjusted
+post-hoc. r_60_4: all 6 sparse targets YELLOW (R~2.0-2.9). Pushed closeout `0b2f0ba`, `7886157`;
+docs arc-close commit follows. Result: CURSOR_RESULT_arc_close.md.
+
+---
+
 ## 2026-07-14 -- SPARSE-CHECK-POOL (Amendment 1)
 
 External K sourcing on sparse branch; r_60_4 all 6 targets kmag+R computed (SS Cam

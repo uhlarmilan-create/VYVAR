@@ -80,9 +80,19 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **SIGMA-PROV-FORENSIC** | HIGH | **DONE (2026-07-13).** draft_426 archive LC **stale pre-Fix-A err** (semantic 7.46x i); fresh i_70_4 rerun: V0611 chi2=**2.13**, err=**0.0175 mag**. P2/P3 quantitative predictions FAIL. Part C unit fix landed. Result: ``CURSOR_RESULT_sigma_prov_forensic.md``. |
 | **426-REGEN** | — | **DONE (2026-07-13); baseline SUPERSEDED by MASTERSTAR-EPOCH-FIX.** Stale at ``Archive/evidence/draft_000426_stale_20260626``. |
 | **MASTERSTAR-EPOCH** | HIGH | **CLOSED (2026-07-13).** ``proc_MASTERSTAR.csv`` excluded from epoch collection; draft_426 regen 25 epochs. Result: ``CURSOR_RESULT_masterstar_epoch.md``. |
-| **COMP-POOL-R** | MED | **VERDICT (2026-07-14):** r baseline filled: production_lc_err chi2=21.38; sparse trust
-   R=2.01 [1.22,3.89] YELLOW (external K, n=2, N=25). SS Cam band **OPEN** (Milan confirms).
-   Result: ``CURSOR_RESULT_sparse_check_pool.md``. |
+| **COMP-POOL-R** | MED | **RESOLVED (2026-07-14):** r baseline filled; sparse trust validated. SS Cam
+   **RESOLVED: YELLOW** (Milan confirmed 2026-07-14, evidence-based): R=2.008 [1.224, 3.886],
+   p_stab=0.0, x2_pair=2.96e-4 mag^2 (=17.2 mmag pair excess, 26% below X2_RED cap of 20 mmag),
+   production_lc_err chi2=21.38, n=2, N=25, external K ``1112110935816253440``. Near-boundary note:
+   regular spec outcome, not an artifact; X2_RED was NOT adjusted post-hoc to flip the verdict
+   (recorded to preempt future re-litigation). Practical effect: AAVSO submissions from this target
+   carry the caution flag. **r_60_4 field:** all 6 sparse targets YELLOW with R~2.0-2.9; two
+   comp-pair groups (one clean: p~1, x2=0; one carrying the 17 mmag excess); coherent with Newton
+   overdispersion that the white floor covers at per-point level only. Result:
+   ``CURSOR_RESULT_sparse_check_pool.md``, ``CURSOR_RESULT_arc_close.md``. |
+| **SPARSE-TRUST** | — | **CLOSED (2026-07-14).** Spec + Amendment 1 implemented; S1-S4 validated; external K
+   sourcing live; r baseline row filled; SS Cam resolved YELLOW. Spec: ``docs/VYVAR_SPARSE_TRUST_SPEC.md``.
+   Result: ``CURSOR_RESULT_arc_close.md``. |
 | **ANCHOR-CHAIN-ACCEPT** | HIGH | **DONE (2026-07-13):** Intermediate baseline ``b5364e6`` cut; exact c4 validation 23542/23542 PASS; anchor **ACCEPTED** (core ``bf3743a1``). Comparator hardening + tests. Result: ``CURSOR_RESULT_anchor_chain.md``. **READY-FOR-PUSH** (Milan review). |
 | **ANCHOR-ERR-VERIFY** | HIGH | **DONE (2026-07-13):** Floor leak **not confirmed**; err rise = bingain + unit fix vs stale anchor. Result: ``CURSOR_RESULT_anchor_err_verify.md``. |
 | **PROD-SIGMA-FLOOR** | HIGH | **DONE (2026-07-13):** c4 SEM + Newton floor 18 mmag; wide un-floored. Anchor accepted via ANCHOR-CHAIN-ACCEPT. Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``. |
@@ -288,10 +298,12 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ---
 
-## NEXT SESSION — entry point (2026-07-13 close)
+## NEXT SESSION — entry point (2026-07-14 SPARSE-TRUST arc close)
 
-**Start here:** ANCHOR-CHAIN-ACCEPT closed (anchor accepted; exact c4 validation PASS).
-**READY-FOR-PUSH** for local chain after Milan review of ``CURSOR_RESULT_anchor_chain.md``.
+**Start here:** SPARSE-TRUST arc **CLOSED** (2026-07-14). SS Cam trust band **RESOLVED: YELLOW**
+(Milan confirmed). Standing open items below. Result: ``CURSOR_RESULT_arc_close.md``.
+
+**Prior close (2026-07-13):** ANCHOR-CHAIN-ACCEPT closed (anchor accepted; exact c4 validation PASS).
 
 **PROD-SIGMA-FLOOR DONE (2026-07-13):** c4 SEM + Newton
 ``sigma_sys`` 18 mmag (equipment 4); wide un-floored. Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``.
@@ -314,10 +326,29 @@ Pre-fix 26-epoch baseline in ``CURSOR_RESULT_426_regen.md`` is **invalid** for s
 - **Teff=N/A unit cosmetic** (quickwin).
 - **Colorfield PDF wiring** — parked; only if Milan asks (12g–12g6 arc CLOSED).
 
+**Standing open items (verified 2026-07-14 SPARSE-TRUST arc close):**
+
+| Item | Priority / status | Action |
+|------|-------------------|--------|
+| k'' second-order extinction | **UNCHANGED** | Re-test sigma_r vs colour x airmass with a larger cohort (underpowered null at n=12 recorded). |
+| PROC_STORE_COLS / err | **Resolved-by-explanation** | ``err`` never persisted to proc CSV is **DESIGN** (in-memory at export); closeout flag recorded, no action. |
+| Newton binned-uncertainty caveat | **Recorded** | SIGMA_FLOOR_SPEC + PDF wording (per-point bars honest; binned Newton quantities underestimated). |
+| Milan data tasks | **Unchanged** | eq4 bin4 bias/darks (>=6, GAIN 12.48, T~-15 C); fresh darks before ~2026-07-21; BVR night dX>=0.3; bin2 flats. |
+| EXCEPT-BULK-2 optional pass | **Parked** | Batch closed 2026-07-08; optional follow-up pass remains parked as before. |
+| DAO-RECONCILE | **Parked (CLOSED 2026-07-09)** | Remains parked; REOPEN if missed@G90 becomes material on new rig/config. |
+| PSF enablement | **Gated** | Production PSF OFF; real-field enablement gated on Newton dense-field draft. |
+
+**FUTURE -- rig-aware X2_RED (design note, NOT implemented):** SS Cam 17.2 mmag pair excess ~
+Newton sigma_r 18.8 mmag ~ fitted floor 18.0 mmag suggests the unstable pair reflects rig-level
+correlated noise, not bad stars. On rigs where sigma_r ~ 20 mmag, the fixed X2_RED = (0.02)^2 sits
+exactly at the rig noise level and pairs will graze it for rig reasons. Candidate (NOT implemented
+now): X2_RED_eff = max((0.02)^2, k * sigma_r^2) once sigma_r is reliably measured across multiple
+nights. Prerequisite: multi-night sigma_r on eq4.
+
 **Milan data tasks:**
-- eq4 **bin4 bias/darks** (≥6 frames, GAIN=12.48, T~-15 °C) for empirical RN measurement (Stage B blocked at 0 pairs).
+- eq4 **bin4 bias/darks** (>=6 frames, GAIN=12.48, T~-15 C) for empirical RN measurement (Stage B blocked at 0 pairs).
 - **New darks** before ~**2026-07-21** expiry.
-- **BVR night** with dX ≥ 0.3 (home rig; k'' NIGHT_FIT v2 data).
+- **BVR night** with dX >= 0.3 (home rig; k'' NIGHT_FIT v2 data).
 - **bin2 flats** (calibration inventory).
 
 **Sandbox tools (gitignored, findable tomorrow):** `sandbox/tools/bingain_inventory.py`,
@@ -333,24 +364,16 @@ Pre-fix 26-epoch baseline in ``CURSOR_RESULT_426_regen.md`` is **invalid** for s
 (see IN-FLIGHT section above). Until then, other HIGH items below remain valid but k'' is the designed
 next calibration lever.
 
-0. **Phase-1b — comp_rms gate authoritative for N_good — gate-authority DONE (2026-06-16).** RMS
-   fallback no longer relaxes above `max_comp_rms` (the `0.15` step removed); auto-routing counts
-   gate-passers via `_count_gate_passing_comps` instead of raw `len(result)`. Matrix re-run `185831`:
-   SS Cam flips default->sparse_fallback; V0612 / BO CVn / V0842 Her unchanged. No threshold re-tuning.
-   **STILL OPEN:** the SS Cam trust **band** (it landed YELLOW; check scatter 0.043 < 0.05) is
-   **UNRESOLVED** — see item 1. Do not treat RED as the answer.
+0. **Phase-1b — comp_rms gate authoritative for N_good — DONE (2026-06-16).** Gate-authority shipped;
+   SS Cam sparse_fallback routing unchanged. SS Cam trust band **RESOLVED: YELLOW** (2026-07-14, Milan
+   confirmed) — see COMP-POOL-R / SPARSE-TRUST ledger rows.
 
-1. **Phase-2 comp degradation — sparse-comp sanity (DIAGNOSTICS DONE, gate redesign PROPOSED).** Sparse
-   comp_rms is **field-wide-scale** (~0.41–1.0 mag headline on SS Cam/V0611) — offset structure that
-   **~95% cancels** in differential (cancellation_factor ~0.02–0.08 on draft_426). **Temporal component**
-   8–12 mmag (healthy). Check scatter 0.037 mag on SS Cam g_60_4 with CI [0.032, 0.040] — healthy vs
-   gate.    **IMPLEMENTED + VALIDATED (2026-07-14):** sparse trust CI bands; S2 0 flips on n>=5;
-   SS Cam r_60_4 **YELLOW** (R=2.01 [1.22,3.89], external K, chi2_prod=21.4). k'' UNCHANGED
-   (wide rho=-0.125 p=0.70 n=12; re-test larger cohort). Result:
-   CURSOR_RESULT_sparse_check_pool.md. **SS Cam band OPEN** pending Milan.
-   (b) the **temporal** component of comp_rms — never the field-wide headline against the 0.1 per-target
-   gate (different quantities). SS Cam stays **YELLOW**; band decision **OPEN** pending Milan review.
-   **Do NOT reverse-engineer RED.** Diagnostic: `scripts/sparse_comp_diag.py`
+1. **Phase-2 comp degradation — sparse-comp sanity — CLOSED (2026-07-14 SPARSE-TRUST arc).** Sparse
+   trust CI bands implemented + validated (S1-S4 PASS). SS Cam r_60_4 **RESOLVED: YELLOW**
+   (R=2.008 [1.224, 3.886], external K, chi2_prod=21.38, n=2, N=25). Field-wide comp_rms headline
+   remains a diagnostic only (offset structure ~95% cancels in differential). k'' priority **UNCHANGED**
+   (underpowered null at n=12; re-test larger cohort). Results: CURSOR_RESULT_sparse_check_pool.md,
+   CURSOR_RESULT_arc_close.md. Diagnostic: `scripts/sparse_comp_diag.py`
    (`tmp/sigma_budget/sparse_comp_diag.json`).
 
 2. ~~**Sigma budget Phase A (wide rig)**~~ **DONE (2026-07-09, wide rig; Newton bin4 open).**

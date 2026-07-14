@@ -135,8 +135,12 @@ pre-bingain anchor when comparing snapshots; that shift is **not** evidence that
 
 ## FUTURE -- SPARSE-TRUST
 
-Howell, Warnock & Mitchell 1988 two-comp night-difference variance with photon correction
-(reserved; not implemented here). See ROADMAP SPARSE-TRUST row.
+**IMPLEMENTED (2026-07-14).** Howell, Warnock & Mitchell 1988 triangulation + CI trust bands;
+external K sourcing (Amendment 1). Spec: ``docs/VYVAR_SPARSE_TRUST_SPEC.md``. Arc CLOSED;
+see ROADMAP SPARSE-TRUST row and ``CURSOR_RESULT_arc_close.md``.
+
+**FUTURE design note (rig-aware X2_RED):** candidate X2_RED_eff = max((0.02)^2, k * sigma_r^2)
+once multi-night sigma_r on eq4 is available. Not implemented.
 
 ---
 
