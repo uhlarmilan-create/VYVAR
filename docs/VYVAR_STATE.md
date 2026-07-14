@@ -1,13 +1,16 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-14** -- K2-COHORT-CORRECT: k'' priority **UNCHANGED** (verbatim
-pre-registered rule; initial DOWN retracted). SPARSE-TRUST arc CLOSED at ed59dfd.
+Last updated: **2026-07-14** -- K2-STATS-FIX: honest bootstrap CIs; wide k'' **LOW PRIORITY**
+(subdominance). Overall k'' priority **UNCHANGED**. SPARSE-TRUST arc CLOSED at ed59dfd.
+
+**2026-07-14 snapshot (K2-STATS-FIX):** Retracted invalid naive-WLS CI table (2.12e-6 bound).
+Bootstrap CIs authoritative. wide eq1: LOW PRIORITY subdominance (B=0.076; plausible k'' not
+excluded). Newton eq4: OPEN suggestive (unchanged). Result: CURSOR_RESULT_k2_stats_fix.md.
 
 **2026-07-14 snapshot (K2-COHORT-CORRECT):** Verdict correction only (no re-run). Three tested
 cells: wide_CLEAR (power 0.999, null), Newton_g (power 0.47), Newton_i (power 0.40). Frozen rule
 requires each cell >=80% power for DOWN; fails -> **UNCHANGED** with per-cell power stated.
-Per-rig record: wide k'' deprioritized-by-evidence; Newton k'' OPEN suggestive. Result:
-CURSOR_RESULT_k2_cohort_correct.md.
+Per-rig record superseded for wide by K2-STATS-FIX. Result: CURSOR_RESULT_k2_cohort_correct.md.
 
 **2026-07-14 snapshot (K2-COHORT):** Full-cohort k'' signature test on archive drafts
 424/425/426. wide_CLEAR 148 stars (139 epochs); T1 rho=-0.013 q=0.877. Initial DOWN verdict

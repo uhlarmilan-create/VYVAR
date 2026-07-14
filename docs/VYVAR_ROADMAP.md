@@ -330,7 +330,7 @@ Pre-fix 26-epoch baseline in ``CURSOR_RESULT_426_regen.md`` is **invalid** for s
 
 | Item | Priority / status | Action |
 |------|-------------------|--------|
-| k'' second-order extinction (wide, eq1) | **Deprioritized-by-evidence** (2026-07-14 K2-COHORT) | wide_CLEAR n=147, power 0.999; T1 rho=-0.013 q=0.877; T2 q=0.114; 95% bound |k2_eff|<2.12e-6 mag/airmass/mag_colour. Action: none; revisit only if filtered wide dataset appears. Result: CURSOR_RESULT_k2_cohort_correct.md. |
+| k'' second-order extinction (wide, eq1) | **LOW PRIORITY -- subdominance** (2026-07-14 K2-STATS-FIX) | wide_CLEAR n=147; T1 rho=-0.013 q=0.877; colour slope spread <=0.031 vs b_X scatter 0.094; bootstrap bound B=0.076 (plausible k'' NOT excluded). Action: none; revisit if dominant slope-noise removed or filtered wide dataset. Result: CURSOR_RESULT_k2_stats_fix.md. |
 | k'' second-order extinction (Newton, eq4) | **OPEN, suggestive** (2026-07-14 K2-COHORT) | T1 rho=-0.325 (n=19, power 0.40, literature-expected sign); T2 rho=+0.470 p=0.043 raw; consistent with SEM-CAUSE D1.3 subset. Action: re-test when >=46 Newton constant stars (accumulates with future nights; no dedicated task). BVR night dX>=0.3 remains fit gate. |
 | PROC_STORE_COLS / err | **Resolved-by-explanation** | ``err`` never persisted to proc CSV is **DESIGN** (in-memory at export); closeout flag recorded, no action. |
 | Newton binned-uncertainty caveat | **Recorded** | SIGMA_FLOOR_SPEC + PDF wording (per-point bars honest; binned Newton quantities underestimated). |
@@ -373,7 +373,7 @@ next calibration lever.
    trust CI bands implemented + validated (S1-S4 PASS). SS Cam r_60_4 **RESOLVED: YELLOW**
    (R=2.008 [1.224, 3.886], external K, chi2_prod=21.38, n=2, N=25). Field-wide comp_rms headline
    remains a diagnostic only (offset structure ~95% cancels in differential). k'' per-rig:
-   wide **deprioritized-by-evidence** (null, adequate power); Newton **OPEN suggestive**
+   wide **LOW PRIORITY (subdominance argument)**; Newton **OPEN suggestive**
    (underpowered T1+T2 probes). Overall priority **UNCHANGED** (verbatim pre-registered rule).
    Results: CURSOR_RESULT_k2_cohort_correct.md, CURSOR_RESULT_k2_cohort.md,
    CURSOR_RESULT_sparse_check_pool.md, CURSOR_RESULT_arc_close.md. Diagnostic:
