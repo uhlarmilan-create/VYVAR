@@ -74,7 +74,8 @@ bound |k2_eff| < 2.12e-6"; overall verdict UNCHANGED; per-rig notes.
 
 ## Push hash + baseline PASS
 
-(pending push -- filled after commit)
+Pushed `be930ea..c5b6d3d` to origin/main (Milan-authorized).
+HEAD `c5b6d3d`; session_baseline_check --fast PASS (826 passed, 15 skipped).
 
 ## Errors (if any)
 
@@ -94,4 +95,4 @@ CURSOR_RESULT_k2_cohort_correct.md
 
 ## pytest count
 
-(pending full run -- filled after push)
+826 passed, 15 skipped (session_baseline_check --fast on c5b6d3d).
