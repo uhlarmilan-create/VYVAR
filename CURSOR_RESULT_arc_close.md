@@ -12,8 +12,8 @@ Part 0 (closeout): origin/main 43ea830 -> 7886157
   7886157 docs: SPARSE-TRUST-CLOSEOUT push confirmation and SS Cam branch check
   Part 0 baseline PASS: 7886157, 815 passed, 15 skipped
 
-Part 3 (docs arc close): origin/main 7886157 -> 882c176
-  882c176 docs: close SPARSE-TRUST arc, SS Cam YELLOW confirmed by Milan
+Part 3 (docs arc close): origin/main 7886157 -> eb1ea7d
+  eb1ea7d docs: close SPARSE-TRUST arc, SS Cam YELLOW confirmed by Milan
 
 ## SS Cam record confirmation
 
