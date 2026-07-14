@@ -317,6 +317,117 @@ def select_check_star(
         return None
 
 
+def _target_mag_from_row(comp_df: pd.DataFrame, target_cid: str) -> float:
+    if comp_df is None or comp_df.empty:
+        return float("nan")
+    if "target_catalog_id" in comp_df.columns:
+        sub = comp_df[comp_df["target_catalog_id"].astype(str).str.strip() == str(target_cid).strip()]
+        if not sub.empty and "target_mag" in sub.columns:
+            v = float(pd.to_numeric(sub.iloc[0].get("target_mag"), errors="coerce"))
+            if math.isfinite(v):
+                return v
+    for col in ("mag", "catalog_mag", "target_mag"):
+        if col in comp_df.columns:
+            v = float(pd.to_numeric(comp_df[col].iloc[0], errors="coerce"))
+            if math.isfinite(v):
+                return v
+    return float("nan")
+
+
+def _ensemble_median_bprp(comp_df: pd.DataFrame, ensemble_ids: set[str]) -> float:
+    if comp_df is None or comp_df.empty or "bp_rp" not in comp_df.columns:
+        return float("nan")
+    ens = _norm_ensemble_id_set(ensemble_ids)
+    cids = comp_df["catalog_id"].map(lambda x: str(normalize_gaia_source_id(x) or "").strip())
+    sub = comp_df[cids.isin(ens)]
+    br = pd.to_numeric(sub.get("bp_rp"), errors="coerce")
+    if br.notna().any():
+        return float(br.median())
+    return float("nan")
+
+
+def _p2p_good_mask(df: pd.DataFrame, cfg: AppConfig | None) -> pd.Series:
+    _cfg = cfg or AppConfig()
+    thr = float(getattr(_cfg, "phase01_comparison_max_comp_rms", 0.1) or 0.1)
+    work = df.copy()
+    p2p = pd.to_numeric(work.get("p2p_rms", work.get("comp_rms")), errors="coerce")
+    return p2p.notna() & (p2p <= thr)
+
+
+def select_external_check_star(
+    pool_df: pd.DataFrame,
+    *,
+    ensemble_ids: set[str],
+    target_mag: float,
+    target_bprp: float | None = None,
+    ensemble_bprp_median: float | None = None,
+    cfg: AppConfig | None = None,
+) -> ExternalCheckSelection | None:
+    """Pick external K for sparse branch (Amendment 1 section 2.1)."""
+    if pool_df is None or pool_df.empty:
+        return None
+    df = normalize_comp_df_export_columns(pool_df)
+    df = _exclude_ensemble_members(df, ensemble_ids)
+    df = _drop_rms_artefacts(df, cfg=cfg, floor_override=None)
+    df = _apply_crowding_exclusion(df, cfg)
+    if df.empty:
+        return None
+    good_p2p = _p2p_good_mask(df, cfg)
+    df = df.loc[good_p2p].copy()
+    if df.empty:
+        return None
+    _cfg = cfg or AppConfig()
+    colour_win = float(getattr(_cfg, "comp_max_delta_bprp", 0.79) or 0.79)
+    if "mag" not in df.columns and "catalog_mag" in df.columns:
+        df["mag"] = pd.to_numeric(df["catalog_mag"], errors="coerce")
+    if "mag" in df.columns:
+        df["mag"] = pd.to_numeric(df["mag"], errors="coerce")
+    else:
+        df["mag"] = float("nan")
+    if "p2p_rms" in df.columns:
+        df["p2p_rms"] = pd.to_numeric(df["p2p_rms"], errors="coerce")
+    elif "comp_rms" in df.columns:
+        df["p2p_rms"] = pd.to_numeric(df["comp_rms"], errors="coerce")
+    tm = float(target_mag) if math.isfinite(float(target_mag)) else float("nan")
+    if math.isfinite(tm) and "mag" in df.columns:
+        df["_dmag"] = (df["mag"] - tm).abs()
+        df = df.sort_values(["_dmag", "p2p_rms", "catalog_id"], ascending=[True, True, True], kind="mergesort")
+    else:
+        df = df.sort_values(["p2p_rms", "catalog_id"], ascending=[True, True], kind="mergesort")
+    row = df.iloc[0]
+    cid = str(normalize_gaia_source_id(row.get("catalog_id", "")) or "").strip()
+    k_bprp = float(pd.to_numeric(row.get("bp_rp"), errors="coerce"))
+    med = float(ensemble_bprp_median) if ensemble_bprp_median is not None else float("nan")
+    k_colour_offset = abs(k_bprp - med) if math.isfinite(k_bprp) and math.isfinite(med) else float("nan")
+    tier_excluded = False
+    k_source = "comp_pool_external"
+    t_bp = float(target_bprp) if target_bprp is not None and math.isfinite(float(target_bprp)) else float("nan")
+    if math.isfinite(t_bp) and math.isfinite(k_bprp) and abs(k_bprp - t_bp) > colour_win:
+        tier_excluded = True
+        k_source = "tier_excluded"
+    return ExternalCheckSelection(
+        row=row,
+        k_source=k_source,
+        k_tier_excluded=tier_excluded,
+        k_colour_offset=k_colour_offset,
+    )
+
+
+def evaluate_k_colour_caveat(
+    k_colour_offset: float,
+    *,
+    colour_window: float,
+    airmass_range: float,
+) -> bool:
+    return (
+        math.isfinite(float(k_colour_offset))
+        and math.isfinite(float(colour_window))
+        and math.isfinite(float(airmass_range))
+        and float(k_colour_offset) > float(colour_window)
+        and float(airmass_range) > 0.2
+    )
+
+
 def comp_ensemble_maps(
     comp_df: pd.DataFrame,
     cfg: AppConfig,
@@ -358,6 +469,14 @@ def comp_ensemble_maps(
 
 
 @dataclass(frozen=True, slots=True)
+class ExternalCheckSelection:
+  row: pd.Series
+  k_source: str
+  k_tier_excluded: bool
+  k_colour_offset: float
+
+
+@dataclass(frozen=True, slots=True)
 class CheckEnsembleResult:
     """Check-star ensemble output + sparse-trust sidecar metadata."""
 
@@ -373,6 +492,13 @@ class CheckEnsembleResult:
     zp_sem_ratio: float | None = None
     single_comp: bool = False
     sparse_flags: tuple[str, ...] = ()
+    k_source: str = ""
+    k_colour_offset: float = float("nan")
+    k_tier_excluded: bool = False
+    k_colour_caveat: bool = False
+    trust_R_detrend: float = float("nan")
+    trust_R_detrend_lo: float = float("nan")
+    trust_R_detrend_hi: float = float("nan")
 
 
 def compute_check_ensemble_mag_calib(
@@ -390,40 +516,114 @@ def compute_check_ensemble_mag_calib(
     n_comp_max: int | None = None,
     comp_photon_mag: dict[str, np.ndarray] | None = None,
     sigma_sys_mag: float = 0.0,
+    airmass: np.ndarray | None = None,
+    k_source: str = "",
+    k_colour_offset: float = float("nan"),
+    k_tier_excluded: bool = False,
+    sparse_external_k: bool = False,
 ) -> CheckEnsembleResult | None:
-    """Ensemble-standardize the check star, excluding it from its own ensemble."""
+    """Ensemble-standardize the check star; K external on sparse branch (Amendment 1)."""
     cid = str(normalize_gaia_source_id(check_cid) or "").strip()
     if not cid or cid not in comp_lc:
         return None
     other_ids = [c for c in comp_ids if c != cid and c in comp_lc]
-    _min_other = max(2, int(n_comp_min if n_comp_min is not None else 2))
-    _max_other = int(n_comp_max if n_comp_max is not None else cfg.phase01_comparison_n_comp_max)
-    if len(other_ids) < 1:
-        return None
-    if len(other_ids) < 2:
-        return CheckEnsembleResult(
-            kmag=np.full(len(comp_lc[cid]), float("nan")),
-            check_sparse=True,
-            n_comps=len(other_ids),
-            single_comp=True,
-            sparse_flags=("single_comp",),
-        )
-    other_lc = {c: comp_lc[c] for c in other_ids}
-    other_cat = {c: comp_catalog_mag[c] for c in other_ids if c in comp_catalog_mag}
     other_quality = {
         c: comp_quality[c]
         for c in other_ids
         if c in comp_quality and str(comp_quality[c].get("quality", "")).strip().lower() != "excluded"
     }
-    if len(other_quality) < _min_other:
-        if len(other_quality) < 2:
-            return CheckEnsembleResult(
-                kmag=np.full(len(comp_lc[cid]), float("nan")),
-                check_sparse=True,
-                n_comps=len(other_quality),
-                single_comp=len(other_quality) < 2,
-                sparse_flags=("single_comp",) if len(other_quality) < 2 else (),
+    n_ensemble = len(other_quality)
+    _min_other = max(2, int(n_comp_min if n_comp_min is not None else 2))
+    _max_other = int(n_comp_max if n_comp_max is not None else cfg.phase01_comparison_n_comp_max)
+
+    k_meta = {
+        "k_source": str(k_source or ""),
+        "k_colour_offset": float(k_colour_offset),
+        "k_tier_excluded": bool(k_tier_excluded),
+        "k_colour_caveat": False,
+    }
+    colour_win = float(getattr(cfg, "comp_max_delta_bprp", 0.79) or 0.79)
+    if airmass is not None:
+        am = np.asarray(airmass, dtype=np.float64)
+        am_ok = am[np.isfinite(am)]
+        am_range = float(am_ok.max() - am_ok.min()) if am_ok.size >= 2 else float("nan")
+        k_meta["k_colour_caveat"] = evaluate_k_colour_caveat(
+            float(k_colour_offset), colour_window=colour_win, airmass_range=am_range,
+        )
+
+    if n_ensemble < 1:
+        return None
+
+    if n_ensemble == 1 and (sparse_external_k or n_ensemble < _min_other):
+        c1 = next(iter(other_quality))
+        m_k = np.asarray(comp_lc[cid], dtype=np.float64)
+        m_c1 = np.asarray(comp_lc[c1], dtype=np.float64)
+        mag_calib = m_k - m_c1
+        if not np.isfinite(mag_calib).any():
+            return None
+        sparse_stats = None
+        sparse_flags: tuple[str, ...] = ("single_comp",)
+        if comp_photon_mag is not None:
+            from sparse_trust_core import (  # noqa: PLC0415
+                compute_sparse_trust_stats,
+                sparse_trust_config_from_app,
+                trust_band,
             )
+
+            phot = dict(comp_photon_mag)
+            phot["__check__"] = phot.get(cid, np.full(m_k.size, float("nan")))
+            sparse_stats = compute_sparse_trust_stats(
+                kmag=mag_calib,
+                m_K=m_k,
+                comp_mags={c1: m_c1},
+                comp_photon_mag=phot,
+                sigma_sys_mag=float(sigma_sys_mag),
+                n_comps=1,
+                cfg=sparse_trust_config_from_app(cfg),
+                airmass=airmass,
+            )
+            _, sparse_flags = trust_band(
+                R_hi=sparse_stats.trust_R_hi,
+                R_lo=sparse_stats.trust_R_lo,
+                stability_p=sparse_stats.comp_stability_p,
+                x2_pair_mag2=sparse_stats.x2_pair_mag2,
+                n_comps=1,
+                triangulation_clipped=False,
+                cfg=sparse_trust_config_from_app(cfg),
+            )
+        if sparse_stats is not None:
+            return CheckEnsembleResult(
+                kmag=mag_calib,
+                check_sparse=True,
+                n_comps=1,
+                trust_R=sparse_stats.trust_R,
+                trust_R_lo=sparse_stats.trust_R_lo,
+                trust_R_hi=sparse_stats.trust_R_hi,
+                comp_stability_p=sparse_stats.comp_stability_p,
+                x2_pair_mag2=sparse_stats.x2_pair_mag2,
+                triangulation_clipped=False,
+                single_comp=True,
+                sparse_flags=sparse_flags,
+                trust_R_detrend=sparse_stats.trust_R_detrend,
+                trust_R_detrend_lo=sparse_stats.trust_R_detrend_lo,
+                trust_R_detrend_hi=sparse_stats.trust_R_detrend_hi,
+                **k_meta,
+            )
+        return CheckEnsembleResult(
+            kmag=mag_calib,
+            check_sparse=True,
+            n_comps=1,
+            single_comp=True,
+            sparse_flags=sparse_flags,
+            **k_meta,
+        )
+
+    if n_ensemble < _min_other and not sparse_external_k:
+        return None
+
+    other_lc = {c: comp_lc[c] for c in other_quality}
+    other_cat = {c: comp_catalog_mag[c] for c in other_quality if c in comp_catalog_mag}
+    if len(other_quality) < 2:
         return None
     mag_calib, _, ensemble_scatter = ensemble_normalize(
         comp_lc[cid],
@@ -433,7 +633,7 @@ def compute_check_ensemble_mag_calib(
         comp_rms_map=comp_rms_map,
         comp_tier_map=comp_tier_map,
         tier_weights=tier_weights,
-        n_comp_min=_min_other,
+        n_comp_min=max(2, min(_min_other, len(other_quality))),
         n_comp_max=_max_other,
     )
     if not np.isfinite(mag_calib).any():
@@ -463,6 +663,7 @@ def compute_check_ensemble_mag_calib(
             sigma_sys_mag=float(sigma_sys_mag),
             n_comps=n_other,
             cfg=sparse_trust_config_from_app(cfg),
+            airmass=airmass,
         )
         _, sparse_flags = trust_band(
             R_hi=sparse_stats.trust_R_hi,
@@ -516,12 +717,19 @@ def compute_check_ensemble_mag_calib(
             triangulation_clipped=sparse_stats.triangulation_clipped,
             zp_sem_ratio=zp_ratio,
             sparse_flags=sparse_flags,
+            single_comp=n_other == 1,
+            trust_R_detrend=sparse_stats.trust_R_detrend,
+            trust_R_detrend_lo=sparse_stats.trust_R_detrend_lo,
+            trust_R_detrend_hi=sparse_stats.trust_R_detrend_hi,
+            **k_meta,
         )
     return CheckEnsembleResult(
         kmag=mag_calib,
         check_sparse=check_sparse,
         n_comps=n_other,
         zp_sem_ratio=zp_ratio,
+        single_comp=n_other == 1,
+        **k_meta,
     )
 
 
@@ -529,8 +737,15 @@ def build_comp_photon_mag_from_frames(
     all_frames: pd.DataFrame,
     star_ids: list[str],
     source_files: list[str],
+    *,
+    cfg: AppConfig | None = None,
 ) -> dict[str, np.ndarray]:
     """Per-epoch photon sigma (mag) aligned to ``source_files`` order."""
+    from photometry_core import (  # noqa: PLC0415
+        ERR_BKG_MODE_EMPIRICAL,
+        _photometric_error_with_bkg_mode,
+        _sky_pp_for_photometric_error,
+    )
     from sparse_trust_core import rel_flux_err_to_photon_mag  # noqa: PLC0415
 
     n = len(source_files)
@@ -543,16 +758,34 @@ def build_comp_photon_mag_from_frames(
     else:
         work["_nid"] = work.get("name", pd.Series(dtype=str)).astype(str)
     sf_col = "source_file" if "source_file" in work.columns else None
+    _cfg = cfg or AppConfig()
+    bkg_mode = str(getattr(_cfg, "err_background_mode", ERR_BKG_MODE_EMPIRICAL) or ERR_BKG_MODE_EMPIRICAL)
+
+    def _row_rel_err(row: pd.Series) -> float:
+        e = float(pd.to_numeric(row.get("err", float("nan")), errors="coerce"))
+        if math.isfinite(e) and e > 0:
+            return e
+        flux = float(pd.to_numeric(row.get("dao_flux", row.get("flux", float("nan"))), errors="coerce"))
+        sig_ap = float(pd.to_numeric(row.get("sigma_bkg_ap", float("nan")), errors="coerce"))
+        sky = _sky_pp_for_photometric_error(row)
+        r_px = float(pd.to_numeric(row.get("aperture_r_px", float("nan")), errors="coerce"))
+        area = math.pi * r_px * r_px if math.isfinite(r_px) and r_px > 0 else math.pi * 9.0
+        err_rel, _ = _photometric_error_with_bkg_mode(
+            flux,
+            err_background_mode=bkg_mode,
+            sky_pp=sky,
+            area=area,
+            sigma_bkg_ap=sig_ap,
+        )
+        return float(err_rel)
+
     for cid in star_ids:
         arr = np.full(n, float("nan"), dtype=float)
         sub = work[work["_nid"] == str(cid).strip()]
         if sub.empty or sf_col is None:
             out[cid] = arr
             continue
-        by_sf = {
-            str(r[sf_col]).strip(): float(pd.to_numeric(r.get("err", float("nan")), errors="coerce"))
-            for _, r in sub.iterrows()
-        }
+        by_sf = {str(r[sf_col]).strip(): _row_rel_err(r) for _, r in sub.iterrows()}
         err_rel = np.asarray([by_sf.get(str(sf).strip(), float("nan")) for sf in source_files], dtype=float)
         arr = rel_flux_err_to_photon_mag(err_rel)
         out[cid] = arr
@@ -601,6 +834,26 @@ def save_check_kmag_sidecar(
             row["zp_sem_ratio"] = [round(float(ensemble.zp_sem_ratio), 6)] * n
         if ensemble.sparse_flags:
             row["sparse_flags"] = [";".join(ensemble.sparse_flags)] * n
+        if ensemble.k_source:
+            row["k_source"] = [str(ensemble.k_source)] * n
+        if math.isfinite(float(ensemble.k_colour_offset)):
+            row["k_colour_offset"] = [round(float(ensemble.k_colour_offset), 6)] * n
+        row["k_tier_excluded"] = [int(bool(ensemble.k_tier_excluded))] * n
+        row["k_colour_caveat"] = [int(bool(ensemble.k_colour_caveat))] * n
+        if math.isfinite(float(ensemble.trust_R_detrend)):
+            row["trust_R_detrend"] = [
+                round(float(ensemble.trust_R_detrend), 6) if math.isfinite(float(ensemble.trust_R_detrend)) else ""
+            ] * n
+            row["trust_R_detrend_lo"] = [
+                round(float(ensemble.trust_R_detrend_lo), 6)
+                if math.isfinite(float(ensemble.trust_R_detrend_lo))
+                else ""
+            ] * n
+            row["trust_R_detrend_hi"] = [
+                round(float(ensemble.trust_R_detrend_hi), 6)
+                if math.isfinite(float(ensemble.trust_R_detrend_hi))
+                else ""
+            ] * n
     df = pd.DataFrame(row)
     path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(path, index=False)

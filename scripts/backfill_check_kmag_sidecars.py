@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import shutil
 import sys
 from pathlib import Path
@@ -21,10 +22,14 @@ from check_star_kmag import (
     check_kmag_sidecar_path,
     compute_check_ensemble_mag_calib,
     comp_ensemble_maps,
+    field_check_star_candidate_pool,
     resolve_proc_csv_dir,
     save_check_kmag_sidecar,
     select_check_star,
+    select_external_check_star,
     build_aligned_comp_inst,
+    _ensemble_median_bprp,
+    _target_mag_from_row,
 )
 from gaia_catalog_id import normalize_gaia_source_id
 from photometry_core import (
@@ -103,6 +108,7 @@ def backfill_photometry(
         dtype={"catalog_id": str, "target_catalog_id": str},
     )
     comp_index = {_norm_id(tid): sub.copy() for tid, sub in comp_all.groupby("target_catalog_id")}
+    field_pool = field_check_star_candidate_pool(comp_all, target_comps=None)
     proc_cache: dict[str, pd.DataFrame] = {}
     n_ok = 0
     for lc_path in sorted(lc_src.glob("lightcurve_*.csv")):
@@ -132,7 +138,34 @@ def backfill_photometry(
             if comp_quality_full
             else set()
         )
-        chk = select_check_star(comp_df, ensemble_ids=ens_ids, cfg=cfg, n_comp_min=2)
+        n_ens = len(ens_ids)
+        sparse_branch = n_ens <= 2
+        target_mag = _target_mag_from_row(comp_df, target_cid)
+        target_bprp = float("nan")
+        if not comp_df.empty and "bp_rp" in comp_df.columns:
+            br = pd.to_numeric(comp_df.get("bp_rp"), errors="coerce")
+            if br.notna().any():
+                target_bprp = float(br.iloc[0])
+        k_source = ""
+        k_colour_offset = float("nan")
+        k_tier_excluded = False
+        chk = None
+        if sparse_branch:
+            ext = select_external_check_star(
+                field_check_star_candidate_pool(field_pool, target_comps=comp_df),
+                ensemble_ids=ens_ids,
+                target_mag=target_mag,
+                target_bprp=target_bprp if math.isfinite(target_bprp) else None,
+                ensemble_bprp_median=_ensemble_median_bprp(comp_df, ens_ids),
+                cfg=cfg,
+            )
+            if ext is not None:
+                chk = ext.row
+                k_source = ext.k_source
+                k_colour_offset = ext.k_colour_offset
+                k_tier_excluded = ext.k_tier_excluded
+        else:
+            chk = select_check_star(comp_df, ensemble_ids=ens_ids, cfg=cfg, n_comp_min=3)
         sidecar_path = check_kmag_sidecar_path(lc_out, target_cid)
         existing_src_side = check_kmag_sidecar_path(lc_src, target_cid)
         check_cid = ""
@@ -142,7 +175,21 @@ def backfill_photometry(
                 check_cid = _norm_id(sdf.get("check_catalog_id", [""]).iloc[0])
             except Exception:  # noqa: BLE001
                 check_cid = ""
-        if chk is None and not check_cid and len(comp_df) >= 2:
+        if chk is None and not check_cid and len(comp_df) >= 2 and sparse_branch:
+            ext = select_external_check_star(
+                field_check_star_candidate_pool(field_pool, target_comps=comp_df),
+                ensemble_ids=ens_ids,
+                target_mag=target_mag,
+                target_bprp=target_bprp if math.isfinite(target_bprp) else None,
+                ensemble_bprp_median=_ensemble_median_bprp(comp_df, ens_ids),
+                cfg=cfg,
+            )
+            if ext is not None:
+                chk = ext.row
+                k_source = ext.k_source
+                k_colour_offset = ext.k_colour_offset
+                k_tier_excluded = ext.k_tier_excluded
+        if chk is None and not check_cid and len(comp_df) >= 2 and not sparse_branch:
             df_pick = comp_df.copy()
             if "comp_rms" in df_pick.columns:
                 df_pick["comp_rms"] = pd.to_numeric(df_pick["comp_rms"], errors="coerce")
@@ -155,9 +202,10 @@ def backfill_photometry(
             continue
         if not check_cid:
             check_cid = _norm_id(chk.get("catalog_id", ""))
-        comp_ids = [_norm_id(c) for c in comp_df["catalog_id"].tolist() if _norm_id(c)]
-        if check_cid not in comp_ids:
-            comp_ids.append(check_cid)
+        if not check_cid:
+            check_cid = _norm_id(chk.get("catalog_id", ""))
+        ensemble_ids_list = sorted(_norm_id(c) for c in ens_ids if _norm_id(c))
+        comp_ids = list(dict.fromkeys(ensemble_ids_list + ([check_cid] if check_cid else [])))
         source_files = lc_df["source_file"].astype(str).tolist()
         comp_lc = build_aligned_comp_inst(proc_dir, comp_ids, source_files, cfg, "aperture", csv_cache=proc_cache)
         other_ids = [c for c in comp_ids if c != check_cid]
@@ -170,11 +218,18 @@ def backfill_photometry(
                 comp_quality[cid]["quality"] = "excluded"
         photon_ids = list(dict.fromkeys(comp_ids + [check_cid]))
         frames = _load_proc_frames(proc_dir, photon_ids, source_files)
-        comp_photon = build_comp_photon_mag_from_frames(frames, photon_ids, source_files)
+        comp_photon = build_comp_photon_mag_from_frames(frames, photon_ids, source_files, cfg=cfg)
+        airmass_arr = pd.to_numeric(lc_df.get("airmass"), errors="coerce").to_numpy(dtype=float)
         kmag_result = compute_check_ensemble_mag_calib(
             check_cid, comp_ids, comp_lc, cat, comp_quality,
-            comp_rms_map=rms, comp_tier_map=tier, tier_weights=tw, cfg=cfg, n_comp_min=2,
+            comp_rms_map=rms, comp_tier_map=tier, tier_weights=tw, cfg=cfg,
+            n_comp_min=3 if not sparse_branch else 2,
             comp_photon_mag=comp_photon, sigma_sys_mag=sigma_sys,
+            airmass=airmass_arr,
+            k_source=k_source,
+            k_colour_offset=k_colour_offset,
+            k_tier_excluded=k_tier_excluded,
+            sparse_external_k=sparse_branch,
         )
         if kmag_result is None:
             continue
@@ -199,6 +254,7 @@ def main() -> int:
     parser.add_argument("--out-phot", type=Path, help="writable work photometry dir (sidecars only)")
     parser.add_argument("--copy-tree", action="store_true", help="copy full photometry tree to out-phot first")
     parser.add_argument("--proc-dir", type=Path, help="override proc CSV directory")
+    parser.add_argument("--equipment-id", type=int, default=None, help="rig equipment_id for sigma_sys")
     args = parser.parse_args()
 
     cfg = AppConfig()
