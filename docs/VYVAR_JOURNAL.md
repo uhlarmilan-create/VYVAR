@@ -2,6 +2,15 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- K2-COHORT (full-cohort k'' test)
+
+Full-cohort archive report-only test. wide_CLEAR n=148 (LOO delta_mag per host target);
+T1 rho=-0.013 q=0.877; T2 rho=-0.193 q=0.114. Pre-registered FDR rule: **k'' priority DOWN**
+(only power-adequate cell null). Newton g/i underpowered. 425 filtered excluded N<20.
+Artifacts: tmp/k2_cohort/. Result: CURSOR_RESULT_k2_cohort.md. Not pushed.
+
+---
+
 ## 2026-07-14 -- SPARSE-TRUST arc close
 
 **Arc CLOSED.** Milan confirmed SS Cam **YELLOW** (evidence-based). Verdict numbers: R=2.008

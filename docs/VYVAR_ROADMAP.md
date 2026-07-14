@@ -330,7 +330,7 @@ Pre-fix 26-epoch baseline in ``CURSOR_RESULT_426_regen.md`` is **invalid** for s
 
 | Item | Priority / status | Action |
 |------|-------------------|--------|
-| k'' second-order extinction | **UNCHANGED** | Re-test sigma_r vs colour x airmass with a larger cohort (underpowered null at n=12 recorded). |
+| k'' second-order extinction | **DOWN** (2026-07-14 K2-COHORT) | Full-cohort archive test: wide_CLEAR n=147 T1 rho=-0.013 q=0.877 (null, power~1.0); Newton g/i underpowered. Verdict DOWN per pre-registered FDR rule. BVR night dX>=0.3 remains fit gate. Result: CURSOR_RESULT_k2_cohort.md. |
 | PROC_STORE_COLS / err | **Resolved-by-explanation** | ``err`` never persisted to proc CSV is **DESIGN** (in-memory at export); closeout flag recorded, no action. |
 | Newton binned-uncertainty caveat | **Recorded** | SIGMA_FLOOR_SPEC + PDF wording (per-point bars honest; binned Newton quantities underestimated). |
 | Milan data tasks | **Unchanged** | eq4 bin4 bias/darks (>=6, GAIN 12.48, T~-15 C); fresh darks before ~2026-07-21; BVR night dX>=0.3; bin2 flats. |
@@ -371,8 +371,9 @@ next calibration lever.
 1. **Phase-2 comp degradation — sparse-comp sanity — CLOSED (2026-07-14 SPARSE-TRUST arc).** Sparse
    trust CI bands implemented + validated (S1-S4 PASS). SS Cam r_60_4 **RESOLVED: YELLOW**
    (R=2.008 [1.224, 3.886], external K, chi2_prod=21.38, n=2, N=25). Field-wide comp_rms headline
-   remains a diagnostic only (offset structure ~95% cancels in differential). k'' priority **UNCHANGED**
-   (underpowered null at n=12; re-test larger cohort). Results: CURSOR_RESULT_sparse_check_pool.md,
+   remains a diagnostic only (offset structure ~95% cancels in differential). k'' priority **DOWN**
+   (2026-07-14 K2-COHORT: wide n=147 null rho=-0.013 q=0.877; Newton g/i underpowered).
+   Results: CURSOR_RESULT_k2_cohort.md, CURSOR_RESULT_sparse_check_pool.md,
    CURSOR_RESULT_arc_close.md. Diagnostic: `scripts/sparse_comp_diag.py`
    (`tmp/sigma_budget/sparse_comp_diag.json`).
 
