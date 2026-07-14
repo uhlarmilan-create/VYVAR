@@ -76,8 +76,11 @@ See `CITATIONS.bib` for full references. Key algorithms:
 ## Running Tests
 
 ```bash
-python -m pytest tests/test_photometry_core.py -v
+python -m pytest tests/ -v
+python -m pytest tests/ -v -m slow   # include slow integration tests
 ```
+
+Full suite (2026-07-14): **852 passed**, 15 skipped.
 
 ## License
 

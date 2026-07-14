@@ -1,129 +1,69 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-14** -- WSN-FIX corrected WIDE-SLOPE-NOISE on draft_424 wide_CLEAR.
-CAL-LEDGER-BUNDLE local (5817c9b..); CAL-DIAG closeout pushed `237dd34`.
+Last updated: **2026-07-14** (SESSION-CLOSE-0714). Git: **`114c423`** on `origin/main`.
+pytest: **852 passed**, 15 skipped (`session_baseline_check --fast` PASS).
 
-**2026-07-14 snapshot (WIDE-SLOPE-NOISE / WSN-2 PARKED):** WSN chain complete on draft_424
-wide_CLEAR. P4 excess integration: faint sigma_slope_pt 5.17 mmag aligns with sigma_r 5.5 mmag
-and rig constant 4.5 mmag (unified phenomenon). Neighbor contamination untestable-here (p90
-|b_attain| << SE floor). P5: **UNIFIED_PHENOMENON_PARK** -- driver unknown, bounds recorded.
-Spec APPROVED; pushed to origin/main. Result: `CURSOR_RESULT_wsn2.md`.
+## Current snapshot (post-0714)
 
-**2026-07-14 snapshot (CAL-LEDGER-BUNDLE):** Section-10 ledger items CAL-AGE-CLOCK, RN-HEADER-NONE,
-CAL-PASSTHRU-DEAD verified/closed; mtime WARN centralized in `resolve_master_age`; 6 library
-masters scanned, 0 validity verdict changes. RN fix affects `aperture_snr_table.json` only (LC err
-untouched). Result: CURSOR_RESULT_cal_ledger_bundle.md. **NOT PUSHED** (post-Part-0 commits).
+**Anchor (ACCEPTED):** `draft_000424_snapshot_sigma_floor_20260713`; git **`8fb21b3`**; photometry
+core SHA **`bf3743a1...`**; extended **`dec5c637`**. Chain-validated (ANCHOR-CHAIN-ACCEPT: exact
+c4 delta 23542/23542 epochs, 0 outliers). Result: `CURSOR_RESULT_anchor_chain.md`.
 
-**2026-07-14 snapshot (CAL-DIAG-IMPL closeout):** CAL-DIAG gate re-verified per v1.1 on HEAD
-13341b3 (code landed 2026-07-07). draft_424: 150/150 VY_DKRSMP=SUM; core SHA bf3743a1
-unchanged. Pushed `237dd34`. Result: CURSOR_RESULT_cal_diag_impl.md.
+**Err model (production):** empirical empty-aperture background (`sigma_bkg_ap`, F-BINGAIN-1) +
+hybrid Howell fallback; **c4** small-sample SEM; mag/flux **unit fix** at combine; per-rig
+`sigma_sys` in LC `err` (`sigma_floor_core.py`, `sigma_sys_mag` column). Newton eq4 floor
+**18.0 mmag** [15.6, 20.2]; wide eq1 **un-floored** (bootstrap ~4.8 mmag, below SIGMA-A3 band --
+unstable). Spec: `docs/VYVAR_SIGMA_FLOOR_SPEC.md`.
 
-**2026-07-14 snapshot (K2-STATS-FIX):** Retracted invalid naive-WLS CI table (2.12e-6 bound).
-Bootstrap CIs authoritative. wide eq1: LOW PRIORITY subdominance (B=0.076; plausible k'' not
-excluded). Newton eq4: OPEN suggestive (unchanged). Result: CURSOR_RESULT_k2_stats_fix.md.
+**SPARSE-TRUST (live):** check-star ensemble at n>=2, Howell 1988 triangulation, CI trust bands,
+sidecar columns (`check_sparse`, `trust_R`, ...). External K sourcing on sparse branch. SS Cam
+r_60_4 **YELLOW confirmed** (R=2.008 [1.224, 3.886], Milan 2026-07-14). Spec:
+`docs/VYVAR_SPARSE_TRUST_SPEC.md`. Arc closed `7886157`.
 
-**2026-07-14 snapshot (K2-COHORT-CORRECT):** Verdict correction only (no re-run). Three tested
-cells: wide_CLEAR (power 0.999, null), Newton_g (power 0.47), Newton_i (power 0.40). Frozen rule
-requires each cell >=80% power for DOWN; fails -> **UNCHANGED** with per-cell power stated.
-Per-rig record superseded for wide by K2-STATS-FIX. Result: CURSOR_RESULT_k2_cohort_correct.md.
+**k'' per-rig record:** wide eq1 **LOW PRIORITY subdominance** (K2-STATS-FIX: T1 rho=-0.013,
+bootstrap colour bound B=0.076 vs b_X scatter 0.094; plausible k'' not excluded but not dominant).
+Newton eq4 **OPEN suggestive** (T1 rho=-0.325, n=19, power 0.40; T2 rho=+0.470 raw p=0.043;
+underpowered for pre-registered DOWN). Results: `CURSOR_RESULT_k2_stats_fix.md`,
+`CURSOR_RESULT_k2_cohort_correct.md`.
 
-**2026-07-14 snapshot (K2-COHORT):** Full-cohort k'' signature test on archive drafts
-424/425/426. wide_CLEAR 148 stars (139 epochs); T1 rho=-0.013 q=0.877. Initial DOWN verdict
-retracted (see K2-COHORT-CORRECT). Newton g/i indicative only (n=23/19, underpowered).
-425 B/V/R excluded (N<20). Result: CURSOR_RESULT_k2_cohort.md.
+**CAL-DIAG:** gate default ON; v1.1 closeout re-verified on `237dd34` (150/150 VY_DKRSMP=SUM;
+core SHA unchanged). Section-10 ledger items closed in CAL-LEDGER-BUNDLE (`5817c9b..b268a6c`).
+Spec: `docs/VYVAR_CAL_DIAG_SPEC.md`.
 
-**2026-07-14 snapshot (SPARSE-TRUST arc close):** Arc CLOSED. Spec + Amendment 1 implemented;
-S1-S4 validated; external K sourcing live; r baseline filled; SS Cam YELLOW confirmed (R=2.008
-[1.224, 3.886], p_stab=0.0, x2_pair=2.96e-4 mag^2, chi2_prod=21.38, n=2, N=25, K=1112110935816253440).
-AAVSO caution flag applies. Standing list reconciled in ROADMAP. Result: CURSOR_RESULT_arc_close.md.
+**WIDE-SLOPE-NOISE: PARKED** (verdict **UNIFIED_PHENOMENON_PARK**, `114c423`). Faint tertile
+sigma_slope_pt **5.17 mmag** aligns with PZQ sigma_r **5.5 mmag** and rig constant **4.5 mmag**
+(one unidentified ~5 mmag driver; mechanism unknown). Neighbor contamination **untestable-here**
+(pre-test gate). Bounds table: `CURSOR_RESULT_wsn2.md`. Spec **APPROVED**:
+`docs/VYVAR_WIDE_SLOPE_NOISE_SPEC.md`. Prior EXCESS_UNATTRIBUTED retractions documented in
+`CURSOR_RESULT_wsn_fix.md`, `CURSOR_RESULT_wide_slope_noise.md`.
 
-**2026-07-14 snapshot (SPARSE-TRUST-CLOSEOUT):** Pushed `7ed7459..43ea830` then `0b2f0ba`, `7886157`.
-session_baseline --fast PASS. SS Cam band YELLOW (R=2.008, x2=0.000296 < 4e-4; stability RED not triggered).
-Result: CURSOR_RESULT_sparse_trust_closeout.md.
+**Guards inventory:** PROVENANCE-GUARD (`scripts/provenance_guard.py` -- refuses unstamped
+pipeline_meta for harness runs); designed-err envelope (`tests/photometry_sha.py`); masterstar
+epoch exclusion (`proc_frame_store.is_masterstar_proc_name`); k2 internal-consistency warning
+(`k2_cohort_core.check_k2_internal_consistency` -- flags STOP when naive CI contradicts physics).
 
-**2026-07-14 snapshot (SPARSE-CHECK-POOL):** Amendment 1 merged. External K on sparse branch;
-r_60_4 kmag + R on all 6 targets (SS Cam R=2.01 [1.22,3.89] YELLOW). S2: 0 flips, 0 band
-changes vs completion. S4: anchor SHA bf3743a1 unchanged. PZQ cross-check: wide sigma_r ~5.5
-mmag ~ SIGMA-A4 rig constant ~4.5 mmag; Newton g sigma_r ~18.8 ~ floor 18.0 mmag. k'' priority
-UNCHANGED (underpowered null). Result: CURSOR_RESULT_sparse_check_pool.md. **NOT PUSHED.**
+**Next session:** Data-gated backlog only (see ROADMAP). Startup ritual: `git pull` -> STATE ->
+ROADMAP -> `session_baseline_check.py --fast` -> await Milan data (**fresh darks ~2026-07-21**
+first).
 
-**2026-07-14 snapshot (SPARSE-TRUST-COMPLETE):** Validation complete. S2: 0 flips on 160 n>=5
-targets. S4: anchor core SHA bf3743a1... unchanged. S3: r_60_4 sidecars + SS Cam YELLOW
-(single_comp at n=2 pool). PZQ report: tmp/pzq_sigma_r/. Result:
-CURSOR_RESULT_sparse_trust_complete.md. **NOT PUSHED.**
+## Session history (0713-0714, compressed)
 
-**2026-07-14 snapshot (SPARSE-TRUST):** Check-star ensemble at n>=2 with Howell 1988 triangulation,
-CI-based sparse trust bands, sidecar columns (`check_sparse`, `trust_R`, ...). PZQ sigma_r report-only
-diagnostic: ``scripts/pzq_sigma_r_report.py`` -> ``tmp/pzq_sigma_r/``. Spec:
-``docs/VYVAR_SPARSE_TRUST_SPEC.md``; core: ``sparse_trust_core.py``. **No production err change.**
-Result: ``CURSOR_RESULT_sparse_trust.md``. **Not pushed** -- awaiting Milan review.
+| Date | Arc | Outcome | Ref |
+|------|-----|---------|-----|
+| 2026-07-14 | SESSION-CLOSE-0714 | Docs refresh; tree clean | `CURSOR_RESULT_close_0714.md` |
+| 2026-07-14 | WSN-2 | UNIFIED_PHENOMENON_PARK; P4 excess integration | `114c423`, `CURSOR_RESULT_wsn2.md` |
+| 2026-07-14 | WSN-FIX | SE/tertile/drift fixes; honest P2/P4 | `928a300`, `CURSOR_RESULT_wsn_fix.md` |
+| 2026-07-14 | WSN initial | EXCESS_UNATTRIBUTED **SUPERSEDED** | `59478bb`, `CURSOR_RESULT_wide_slope_noise.md` |
+| 2026-07-14 | CAL-LEDGER-BUNDLE | Section-10 closed; RN header fix | `b268a6c`, `CURSOR_RESULT_cal_ledger_bundle.md` |
+| 2026-07-14 | CAL-DIAG closeout | Gate verified; pushed `237dd34` | `CURSOR_RESULT_cal_diag_impl.md` |
+| 2026-07-14 | K2-STATS-FIX | Bootstrap CIs authoritative; wide subdominance | `13341b3`, `CURSOR_RESULT_k2_stats_fix.md` |
+| 2026-07-14 | K2-COHORT | Full cohort; DOWN retracted | `CURSOR_RESULT_k2_cohort_correct.md` |
+| 2026-07-14 | SPARSE-TRUST arc | CLOSED; SS Cam YELLOW | `7886157`, `CURSOR_RESULT_arc_close.md` |
+| 2026-07-13 | ANCHOR-CHAIN-ACCEPT | Anchor accepted | `7ed7459`, `CURSOR_RESULT_anchor_chain.md` |
+| 2026-07-13 | PROD-SIGMA-FLOOR | c4 + sigma_sys shipped | `8fb21b3`, `CURSOR_RESULT_sigma_floor.md` |
+| 2026-07-13 | SESSION-CLOSE-0713 | Color-WB arc CLOSED | `601689d`, `CURSOR_RESULT_close_0713.md` |
 
-**2026-07-13 snapshot (ANCHOR-CHAIN-ACCEPT):** explicit baseline chain + exact c4 validation; anchor accepted.
-**pytest 796 passed**, 15 skipped.
-
-**2026-07-13 snapshot (ANCHOR-ERR-VERIFY):** Investigated ~1.5-1.7x
-wide err rise on contested snapshot ``draft_000424_snapshot_sigma_floor_20260713`` vs
-``draft_000424_snapshot_20260708_full``. **Newton floor leak NOT confirmed:**
-``sigma_sys_mag=0.0`` on all 178 LCs; ``pipeline_meta.sigma_floor`` equipment_id=1 floor=0.0.
-Err shift explained by **F-BINGAIN-1 + SEM unit fix** (old anchor git ``750c856`` predates
-both); attributing rise to c4 alone is incorrect. **Part C STOP** -- no re-cut, no push.
-Result: ``CURSOR_RESULT_anchor_err_verify.md``.
-
-**2026-07-13 snapshot (ANCHOR-CHAIN-ACCEPT -- anchor ACCEPTED):** Cut intermediate baseline
-``draft_000424_snapshot_intermediate_b5364e6_20260713`` (git ``b5364e6``; core ``373e8235``;
-extended ``0243f719``) and validated the c4-only delta exactly per epoch (23542/23542 epochs,
-0 outliers at abs tol 2e-6). Accepted anchor remains
-``draft_000424_snapshot_sigma_floor_20260713`` (git ``8fb21b3``; core ``bf3743a1``; extended
-``dec5c637``). Result: ``CURSOR_RESULT_anchor_chain.md``.
-
-**2026-07-13 snapshot (PROD-SIGMA-FLOOR -- accepted anchor):** c4-corrected ensemble SEM
-+ per-rig ``sigma_sys`` in production LC ``err`` (``sigma_floor_core.py``). Newton
-equipment_id=4 floor **18.0 mmag** [15.6, 20.2]; wide equipment_id=1 **un-floored**.
-Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``; result: ``CURSOR_RESULT_sigma_floor.md``.
-
-**2026-07-13 snapshot (MASTERSTAR-EPOCH-FIX):** Collection-layer exclusion of
-``proc_MASTERSTAR.csv`` from epoch sets (``is_masterstar_proc_name`` in
-``proc_frame_store.py``; belt-and-braces log in phase2a). draft_426 regen **25 epochs**
-aligned with stale June cut (proc artifact retained on disk for SNR/noise_floor).
-**Fresh Newton baseline superseded** (retracts ``a6b19df`` / contaminated 26-epoch regen):
-V0611 chi2 g=**3.69**, i=**2.01**, r=**PENDING (COMP-POOL-R; no check_kmag sidecar)**. Artifacts:
-``tmp/sigma_newton_fresh/``. Result: ``CURSOR_RESULT_masterstar_epoch.md``.
-**ANCHOR 424:** clean (no phantom epoch); no extra re-cut for MASTERSTAR -- bundled
-re-anchor (unit fix + PROD-SIGMA-FLOOR) unchanged.
-
-**2026-07-13 snapshot (426-REGEN + PROVENANCE-GUARD -- SUPERSEDED baseline):** draft_426
-regenerated; stale at ``Archive/evidence/draft_000426_stale_20260626``. **Retracted:**
-26-epoch fresh Newton numbers in ``CURSOR_RESULT_426_regen.md`` / commit ``a6b19df``
-(phantom ``proc_MASTERSTAR.csv`` epoch). PROVENANCE-GUARD remains live.
-
-**2026-07-13 snapshot (SIGMA-PROV-FORENSIC):** draft_426 archive LC **stale pre-Fix-A err**
-(semantic LC/normalize **7.46x** on i; provenance absent, mtime 2026-06-26). Fresh i_70_4 rerun:
-V0611 err=**0.0175 mag**, chi2=**2.13** (stale: 0.055 mag, chi2=0.24). **Unit fix landed**
-(mag SEM -> rel flux at ``_combine_err_with_ensemble_scatter_keyed``); re-anchor pending with
-PROD-SIGMA-FLOOR. **Retracted:** SIGMA-NEWTON draft_426 baseline; SIGMA-SEM-CAUSE dominant
-mag/flux cause. Result: ``CURSOR_RESULT_sigma_prov_forensic.md``.
-
-**2026-07-13 snapshot (SIGMA-SEM-CAUSE -- SUPERSEDED):** See SIGMA-PROV-FORENSIC for root cause.
-Trend/autocorr confirmed; AM detrend insufficient. Result: ``CURSOR_RESULT_sigma_sem_cause.md``.
-
-**2026-07-13 snapshot (SIGMA-NEWTON -- archive baseline INVALIDATED):** Harness fixed; fresh
-baseline from SIGMA-PROV-FORENSIC Part B. Result: ``CURSOR_RESULT_sigma_newton.md``.
-
-**2026-07-13 snapshot (SESSION-CLOSE -- color-WB arc CLOSED):** Catalog-color field arc **12g -> 12g6
-DONE** on `origin/main` (`16e26c2` caption stamps, `0608739` boost default 2.2, `2aaf858` dirty-hash
-suffix). **Final defaults:** `field_median` white point, `hrd_color_chroma_boost` **2.2**,
-`hrd_color_chroma_snr` 3.0, `hrd_color_bg_box_px` 96, `hrd_color_saturation` 0.85. **Canonical
-outputs:** `tmp/colorfield_final/` + `manifest.json` (4 renders @ boost 2.2, G2 worst < 0.03).
-**Archive:** `tmp/todo12_hrd_archive_0711/` (all prior `todo12_hrd/` runs). Topic closed unless
-Milan reopens (optional PDF wiring parked). Result files: `CURSOR_RESULT_todo12g*_hrd.md`,
-`CURSOR_RESULT_close_0713.md`.
-
-**COMP-POOL-R verdict:** r_60_4 Phase-1 pool on HEAD = **2 tier-3 comps** (byte-identical
-procs vs June); June **8 tier-2 comps not reproducible**. Not a named exclusion bug --
-**sparse field**; check_kmag blocked at ``n_comp_min``. r chi2 baseline **PENDING**.
-Result: ``CURSOR_RESULT_comp_pool_r.md``.
-
-**NEXT SESSION entry point:** **PROD-SIGMA-FLOOR** + sparse-aware check-star design (Milan).
+## Earlier session history
 
 **2026-07-10 snapshot (SESSION-CLOSE-0710):** Two workstreams **DONE** that day:
 (1) **TODO-12 HRD arc** 12/12b/12c/12d/12e/12f — session-aware extreme-object table, enrichment,
@@ -581,7 +521,7 @@ Astier et al. 2013, Lacroix et al. 2025, Guy et al. 2010, Stetson 1987, Mighell 
 - **Cross-validation:** CLOSED for the aperture path (offline `xval_run.py`: sep reproduces
   VYVAR to 0.2 %/frame); in-pipeline `sep_xval` retired 2026-06-03; PSF cross-val deferred.
 - **Trust distribution (draft_000365 baseline):** GREEN 69 / YELLOW 59 / RED 15.
-- **Tests:** **261 passed / 14 skipped** (last full `tests/` run; incl. BLE001 + mid-exposure JD).
+- **Tests:** **852 passed / 15 skipped** (last full `tests/` run incl. `-m slow`; 2026-07-14 close).
 - **Lint:** `ruff check . --select BLE001,E722` clean (`pyproject.toml` + pre-commit + pytest).
 - **Reporting:** R1 overflow guarantee holds (0 violations); R3 (aperture-vs-PSF overlay) pending.
 
@@ -589,21 +529,14 @@ Astier et al. 2013, Lacroix et al. 2025, Guy et al. 2010, Stetson 1987, Mighell 
 
 ## Top of mind
 
-**Next when resuming:** band-aware k'' (second-order extinction) — classifier shipped (`fe9b375`), CT
-rewiring + CV/CR flip **blocked on Milan data** (filtered draft; Newton/Brno FITS FILTER strings).
-Comp-select grow-redesign **do not revisit** — rejected (~45% regressions; sandbox only).
+**Next when resuming:** Data-gated backlog only (ROADMAP). Startup: `git pull` -> STATE ->
+ROADMAP -> `session_baseline_check.py --fast` -> await Milan data (fresh darks ~2026-07-21 first).
 
 **Simple differential photometry is PRODUCTION** (SIPS/AIJ cross-validated). Canonical column:
 `delta_mag` flux-sum; reporting `mag_calib` via `apply_reporting_postprocess`. Broeg IVW **PARKED**
 until sigma budget validates (`docs/VYVAR_SIGMA_BUDGET_SPEC.md`).
 
-**Recent shipped (2026-06-23–25):** exoplanet local DB + passive annotation (`c169675`); matched hosts
-promoted to active targets with string-safe Gaia ids (`1616b18`); EQUIP-BINNING gain/RN scaling
-(`b19cd7e`); G7-F003b report cfg parity (`795faef`); additive `band_classify.py` (`fe9b375`).
+**Band-aware k'' v1 ACTIVATED** (literature path); NIGHT_FIT v2 gated on filtered draft + dX>=0.3.
 
-**Deferred findings (none blocking — ROADMAP):** GAIA-ID-FLOAT-GUARD (MED); G7-F003c (per-draft cfg
-snapshot drift); EQUIP-BINNING-ASYM; TIER1-OBSLOC-ZERO (null-island guard); TIER1-UI-DEBT (38 sites);
-299-defensive broad-except cluster.
-
-**Also parked (ROADMAP):** sigma budget; FWHM external validation; frame-level CR rejection;
-TODO-MULTISET; Brno/Milan overlay; PSF / NEIGHBOR-SUB.
+**Deferred findings (none blocking -- see ROADMAP parked rows):** GAIA-ID-FLOAT-GUARD; G7-F003c;
+EQUIP-BINNING-ASYM; dense-field astroalign cap (cross-rig regression pending).

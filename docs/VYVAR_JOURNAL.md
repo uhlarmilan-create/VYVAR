@@ -2,6 +2,38 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-14 -- SESSION-CLOSE-0714
+
+**Scope:** Full sync, documentation refresh, integrity gate, clean tree. Baseline HEAD **`114c423`**
+(852 passed / 15 skipped at close).
+
+**Arcs summarized (0714):**
+- **SPARSE-TRUST:** arc CLOSED (`7886157`); external K on sparse branch; SS Cam r_60_4 YELLOW
+  confirmed (R=2.008 [1.224, 3.886]); sidecar columns live. Spec: `docs/VYVAR_SPARSE_TRUST_SPEC.md`.
+- **k'' cohort:** full-cohort report (`f5d5fd4`); initial DOWN verdict **retracted** (`aabc597`,
+  `036a570`) -- frozen rule requires each cell >=80% power; Newton g/i underpowered (0.47/0.40).
+  **K2-STATS-FIX** (`4e91c7a`, `13341b3`): naive-WLS CIs retracted; bootstrap authoritative; wide
+  **LOW PRIORITY subdominance** (B=0.076); Newton **OPEN suggestive**. Process lessons: (1) apply
+  pre-registered rules verbatim at verdict time; (2) power/effect-size bases must use attainable rho
+  through measured noise model, not generic placeholders.
+- **CAL-DIAG:** spec v1.1 APPROVED (`b08f1cc`); closeout re-verify 150/150 SUM (`237dd34`).
+- **CAL-LEDGER-BUNDLE:** section-10 items CAL-AGE-CLOCK, RN-HEADER-NONE, CAL-PASSTHRU-DEAD closed
+  (`b268a6c`); EXCEPT-BULK-2 ROADMAP row corrected (was stale "optional pass").
+- **WIDE-SLOPE-NOISE:** initial EXCESS_UNATTRIBUTED **retracted** (`59478bb`); WSN-FIX honest
+  P2/P4 (`928a300`); WSN-2 P4 excess integration (`851949a`, `114c423`) -- faint tertile 5.17 mmag
+  aligns sigma_r 5.5 mmag and rig constant 4.5 mmag; **UNIFIED_PHENOMENON_PARK**; neighbor test
+  untestable-here. Bounds: `CURSOR_RESULT_wsn2.md`.
+
+**Integrity:** `session_baseline_check.py --full` PASS on final HEAD; full pytest incl. slow recorded
+in close result.
+
+**Docs:** STATE consolidated snapshot; ROADMAP standing list reduced to data-gated backlog + parked
+rows; CHANGELOG 0713/0714 user-facing entries; README test pointer updated.
+
+Result: `CURSOR_RESULT_close_0714.md`.
+
+---
+
 ## 2026-07-14 -- WIDE-SLOPE-NOISE / WSN-2 (park, pushed)
 
 WSN-2: P4 corrected to sigma_slope_pt from excess (faint 5.17 mmag ~ sigma_r 5.5 ~ rig 4.5 mmag).
@@ -30,7 +62,7 @@ audit doc references remain.
 Root cause: stale "optional pass parked" line survived SPARSE-TRUST arc-close standing-list verification
 because Part 2 re-asserted the pre-BULK-2 wording without cross-checking CENSUS closure status.
 
-Result: `CURSOR_RESULT_cal_ledger_bundle.md`. Post-Part-0 commits **NOT PUSHED** -- Milan review.
+Result: `CURSOR_RESULT_cal_ledger_bundle.md`. Pushed `b268a6c`.
 
 ---
 
@@ -125,7 +157,7 @@ stability test, trust band). ``compute_check_ensemble_mag_calib`` accepts n>=2; 
 **Part 3 (validation):** S1 unit+synthetic tests in ``tests/test_sparse_trust_core.py`` (7 fast + 3 slow);
 ``scripts/sparse_trust_validate.py`` for S2-S4 on draft paths. S2-S4 require regen sidecars on anchor drafts.
 
-Result: ``CURSOR_RESULT_sparse_trust.md``. Commits local; **not pushed**.
+Result: ``CURSOR_RESULT_sparse_trust.md``. Pushed with SPARSE-TRUST arc (`7ed7459..7886157`).
 
 ---
 

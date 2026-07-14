@@ -8,6 +8,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Sparse trust (2026-07-14):** check-star ensemble at n>=2 with Howell 1988 triangulation;
+  CI-based trust bands; sidecar columns (`check_sparse`, `trust_R`, `trust_band`, ...); external K
+  sourcing on sparse branch (`sparse_trust_core.py`, `docs/VYVAR_SPARSE_TRUST_SPEC.md`).
+- **CAL-DIAG gate (2026-07-14):** calibration-time radiometry gate default ON; `VY_DKRSMP`
+  provenance in `cal_diag.json` (`docs/VYVAR_CAL_DIAG_SPEC.md`).
+- **k2 cohort diagnostics (2026-07-14):** full-cohort k'' signature report; bootstrap CIs with
+  overdispersion-honest weighting; internal-consistency warning (`k2_cohort_core.py`).
+- **Wide slope noise study (2026-07-14):** report-only diagnostic on draft_424 wide_CLEAR
+  (`wide_slope_noise_core.py`; spec `docs/VYVAR_WIDE_SLOPE_NOISE_SPEC.md`; parked verdict).
 - Unit test suite `tests/test_photometry_core.py` (11 tests, Howell/Broeg/Stetson validation)
 - Scientific citations in AAVSO and VAR.ASTRO export headers
 - `resolve_draft_dir()` canonical utility in `utils.py`
@@ -16,6 +25,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - RGB camera support planned (TODO-45, IMX533 de-Bayer → G channel)
 
 ### Changed
+- **Err model re-anchor (2026-07-13):** c4-corrected ensemble SEM; per-rig `sigma_sys` floor in
+  production LC `err` (`sigma_sys_mag` column); Newton eq4 floor 18.0 mmag; wide eq1 un-floored;
+  accepted anchor `draft_000424_snapshot_sigma_floor_20260713` (core `bf3743a1`, git `8fb21b3`).
 - Airmass fit now runs AFTER outlier detection (TODO-29)
 - Airmass detrend applied on CT-corrected magnitudes (TODO-30)
 - Complete UI translation to English (~766 strings)

@@ -3,10 +3,8 @@
 Single source of truth for **open** tasks. Closed work lives in `VYVAR_JOURNAL.md`;
 durable rationale in `VYVAR_DECISIONS.md`; current architecture in `VYVAR_STATE.md`.
 
-Reconciled against the full development log on **2026-06-09** — de-duplicated, and
-stale-closed items removed (e.g. GS6b had been listed as open in a side register but was
-closed 2026-05-20). **Session close 2026-06-25:** band-aware k'' design parked; blockers + deferred
-findings recorded below.
+Reconciled against the full development log on **2026-07-14** (SESSION-CLOSE-0714) -- standing
+open-items table reduced to data-gated backlog + parked rows with revisit triggers.
 
 Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, not a history.
 
@@ -93,7 +91,7 @@ CV/CR→clear behavioral flip + band-aware k'' correction path.
 | **SPARSE-TRUST** | — | **CLOSED (2026-07-14).** Spec + Amendment 1 implemented; S1-S4 validated; external K
    sourcing live; r baseline row filled; SS Cam resolved YELLOW. Spec: ``docs/VYVAR_SPARSE_TRUST_SPEC.md``.
    Result: ``CURSOR_RESULT_arc_close.md``. |
-| **ANCHOR-CHAIN-ACCEPT** | HIGH | **DONE (2026-07-13):** Intermediate baseline ``b5364e6`` cut; exact c4 validation 23542/23542 PASS; anchor **ACCEPTED** (core ``bf3743a1``). Comparator hardening + tests. Result: ``CURSOR_RESULT_anchor_chain.md``. **READY-FOR-PUSH** (Milan review). |
+| **ANCHOR-CHAIN-ACCEPT** | HIGH | **DONE (2026-07-13):** Intermediate baseline ``b5364e6`` cut; exact c4 validation 23542/23542 PASS; anchor **ACCEPTED** (core ``bf3743a1``). Pushed `7ed7459`. Result: ``CURSOR_RESULT_anchor_chain.md``. |
 | **ANCHOR-ERR-VERIFY** | HIGH | **DONE (2026-07-13):** Floor leak **not confirmed**; err rise = bingain + unit fix vs stale anchor. Result: ``CURSOR_RESULT_anchor_err_verify.md``. |
 | **PROD-SIGMA-FLOOR** | HIGH | **DONE (2026-07-13):** c4 SEM + Newton floor 18 mmag; wide un-floored. Anchor accepted via ANCHOR-CHAIN-ACCEPT. Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``. |
 | **PROVENANCE-GUARD** | — | **DONE (2026-07-13).** ``provenance_guard.py``; harness refuse + VL-PROVENANCE ledger. |
@@ -299,65 +297,49 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ---
 
-## NEXT SESSION — entry point (2026-07-14 SPARSE-TRUST arc close)
+## NEXT SESSION — entry point (2026-07-14 SESSION-CLOSE)
 
-**Start here:** SPARSE-TRUST arc **CLOSED** (2026-07-14). SS Cam trust band **RESOLVED: YELLOW**
-(Milan confirmed). Standing open items below. Result: ``CURSOR_RESULT_arc_close.md``.
+**Start here:** All 0713/0714 code arcs **CLOSED or PARKED** on `origin/main` **`114c423`**.
+Functional work is **data-gated only** until Milan delivers calibration/night data. Startup ritual:
+`git pull` -> STATE -> ROADMAP -> `session_baseline_check.py --fast`.
 
-**Prior close (2026-07-13):** ANCHOR-CHAIN-ACCEPT closed (anchor accepted; exact c4 validation PASS).
+**0714 arcs closed (commit refs):**
 
-**PROD-SIGMA-FLOOR DONE (2026-07-13):** c4 SEM + Newton
-``sigma_sys`` 18 mmag (equipment 4); wide un-floored. Spec: ``docs/VYVAR_SIGMA_FLOOR_SPEC.md``.
-Result: ``CURSOR_RESULT_sigma_floor.md``.
+| Arc | Final status | Ref |
+|-----|--------------|-----|
+| SPARSE-TRUST | CLOSED; SS Cam YELLOW confirmed | `7886157`, `CURSOR_RESULT_arc_close.md` |
+| K2-COHORT / K2-STATS-FIX | wide LOW PRIORITY; Newton OPEN suggestive; DOWN retracted | `13341b3`, `CURSOR_RESULT_k2_stats_fix.md` |
+| CAL-DIAG + CAL-LEDGER-BUNDLE | Gate ON; section-10 resolved | `237dd34`, `b268a6c` |
+| WIDE-SLOPE-NOISE | PARKED unified ~5 mmag phenomenon | `114c423`, `CURSOR_RESULT_wsn2.md` |
+| PROD-SIGMA-FLOOR + anchor | ACCEPTED `8fb21b3` / core `bf3743a1` | `CURSOR_RESULT_anchor_chain.md` |
 
-**MASTERSTAR-EPOCH-FIX DONE:** phantom ``proc_MASTERSTAR.csv`` epoch excluded at collection;
-draft_426 regen **25 vs 25** shared epochs with stale. Fresh Newton (supersedes ``a6b19df``):
-V0611 chi2 g=**3.69**, i=**2.01**, r=**PENDING (COMP-POOL-R)**.
+**Standing open items — data-gated backlog (exact list):**
 
-**426-REGEN DONE (baseline retracted):** stale preserved; regen pipeline provenance-stamped.
-Pre-fix 26-epoch baseline in ``CURSOR_RESULT_426_regen.md`` is **invalid** for science compare.
+| Item | Priority | Action / trigger |
+|------|----------|------------------|
+| eq4 **bin4 bias/darks** | HIGH (Milan) | >=6 frames, GAIN=12.48, T~-15 C; empirical RN (Stage B blocked at 0 pairs) |
+| **Fresh darks** | HIGH (Milan) | Before ~**2026-07-21** expiry |
+| **BVR night** dX >= 0.3 | HIGH (Milan) | Home rig; k'' NIGHT_FIT v2 gate |
+| **bin2 flats** | MED (Milan) | Calibration inventory |
+| Newton nights for k'' n>=46 | MED (accumulates) | Re-test OPEN suggestive eq4 signature when constant-star pool reaches pre-registered power |
+| PSF dense-field enablement | MED (gated) | Production PSF OFF; enable on Newton dense-field draft when available |
 
-**PROVENANCE-GUARD DONE:** systemic guard after second provenance-class incident.
+**Parked rows (revisit triggers):**
 
-**AAVSO:** stale draft_426 exports may have inflated err bars; resubmission Milan decision.
-
-**Follow-ups (code, no block on SIGMA-NEWTON start if using LC err):**
-- **SIGMA-BUDGET-EMPIRICAL** (MED) — chi2 harness mismatch tracked in deferred table.
-- **z-band closure anomaly** (Stage C post/pre ratio ~0.06) — separate from F-BINGAIN-1.
-- **Teff=N/A unit cosmetic** (quickwin).
-- **Colorfield PDF wiring** — parked; only if Milan asks (12g–12g6 arc CLOSED).
-
-**Standing open items (verified 2026-07-14 SPARSE-TRUST arc close):**
-
-| Item | Priority / status | Action |
-|------|-------------------|--------|
-| k'' second-order extinction (wide, eq1) | **LOW PRIORITY -- subdominance** (2026-07-14 K2-STATS-FIX) | wide_CLEAR n=147; T1 rho=-0.013 q=0.877; colour slope spread <=0.031 vs b_X scatter 0.094; bootstrap bound B=0.076 (plausible k'' NOT excluded). Action: none; revisit if dominant slope-noise removed or filtered wide dataset. Result: CURSOR_RESULT_k2_stats_fix.md. |
-| **WIDE-SLOPE-NOISE** | **PARKED (2026-07-14, pushed)** | draft_424 wide_CLEAR unified-phenomenon park: sigma_slope_pt ~ sigma_r ~ rig constant; neighbor untestable. Bounds table in CURSOR_RESULT_wsn2.md. Revisit: new flats, defocus, EPD decorrelation. |
-| k'' second-order extinction (Newton, eq4) | **OPEN, suggestive** (2026-07-14 K2-COHORT) | T1 rho=-0.325 (n=19, power 0.40, literature-expected sign); T2 rho=+0.470 p=0.043 raw; consistent with SEM-CAUSE D1.3 subset. Action: re-test when >=46 Newton constant stars (accumulates with future nights; no dedicated task). BVR night dX>=0.3 remains fit gate. |
-| PROC_STORE_COLS / err | **Resolved-by-explanation** | ``err`` never persisted to proc CSV is **DESIGN** (in-memory at export); closeout flag recorded, no action. |
-| Newton binned-uncertainty caveat | **Recorded** | SIGMA_FLOOR_SPEC + PDF wording (per-point bars honest; binned Newton quantities underestimated). |
-| Milan data tasks | **Unchanged** | eq4 bin4 bias/darks (>=6, GAIN 12.48, T~-15 C); fresh darks before ~2026-07-21; BVR night dX>=0.3; bin2 flats. |
-| EXCEPT-BULK-2 | **CLOSED (2026-07-08)** | 98/98 applied per `VYVAR_EXCEPT_CENSUS.md` (`97affe3`); batch closed -- no optional pass remains. |
-| DAO-RECONCILE | **Parked (CLOSED 2026-07-09)** | Remains parked; REOPEN if missed@G90 becomes material on new rig/config. |
-| PSF enablement | **Gated** | Production PSF OFF; real-field enablement gated on Newton dense-field draft. |
-
-**FUTURE -- rig-aware X2_RED (design note, NOT implemented):** SS Cam 17.2 mmag pair excess ~
-Newton sigma_r 18.8 mmag ~ fitted floor 18.0 mmag suggests the unstable pair reflects rig-level
-correlated noise, not bad stars. On rigs where sigma_r ~ 20 mmag, the fixed X2_RED = (0.02)^2 sits
-exactly at the rig noise level and pairs will graze it for rig reasons. Candidate (NOT implemented
-now): X2_RED_eff = max((0.02)^2, k * sigma_r^2) once sigma_r is reliably measured across multiple
-nights. Prerequisite: multi-night sigma_r on eq4.
-
-**Milan data tasks:**
-- eq4 **bin4 bias/darks** (>=6 frames, GAIN=12.48, T~-15 C) for empirical RN measurement (Stage B blocked at 0 pairs).
-- **New darks** before ~**2026-07-21** expiry.
-- **BVR night** with dX >= 0.3 (home rig; k'' NIGHT_FIT v2 data).
-- **bin2 flats** (calibration inventory).
-
-**Sandbox tools (gitignored, findable tomorrow):** `sandbox/tools/bingain_inventory.py`,
-`bingain_rn_measure.py`, `bingain_bg_closure.py`, `bingain_common.py`, `bingain_stageB_run.py`,
-`bingain_stageC_run.py`, `bingain_stageC_chi2.py`. Artifacts: `tmp/bingain_stageB/`, `tmp/bingain_stageC/`,
-`tmp/bingain_acceptance/`.
+| Item | Status | Revisit when |
+|------|--------|--------------|
+| k'' wide eq1 | **LOW PRIORITY subdominance** (`13341b3`) | Filtered wide dataset or dominant slope-noise removed |
+| **WIDE-SLOPE-NOISE** | **PARKED** (`114c423`) | New flats, defocus study, EPD decorrelation; bounds in `CURSOR_RESULT_wsn2.md` |
+| k'' Newton eq4 | **OPEN suggestive** (`036a570`) | >=46 Newton constant stars (see data-gated row) |
+| DAO-RECONCILE | Parked CLOSED 2026-07-09 | missed@G90 material on new rig/config |
+| Colorfield PDF wiring | Parked | Milan reopens 12g-12g6 arc |
+| Broeg IVW / sigma budget IVW flip | Parked | Sigma budget validates on Newton gate |
+| rig-aware X2_RED (design note) | NOT implemented | Multi-night sigma_r on eq4 stabilizes rig noise estimate |
+| dense-field astroalign cap | OPEN MED | Cross-rig regression data (home + narrow rigs) |
+| EXTERNAL-XVAL / FWHM claim | MED | External validation campaign |
+| Frame-level CR rejection | MED | Shared V0612 anomaly class |
+| TODO-MULTISET | FUTURE | Per-rig config for multi-rig production |
+| Publication workstream | LAST | After functional backlog; see PUBLICATION section |
 
 ---
 
