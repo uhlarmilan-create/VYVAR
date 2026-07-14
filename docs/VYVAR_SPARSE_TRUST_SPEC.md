@@ -4,6 +4,10 @@ Status: DRAFT for implementation (task SPARSE-TRUST). Author: Claude, approved d
 by Milan 2026-07-13. ASCII-only. All symbols in magnitude domain unless stated; conversions
 via canonical MAG_ERR_SCALE only.
 
+Changelog:
+- 2026-07-14 Amendment 1 (SPARSE-CHECK-POOL): external check-star K sourcing (section 2.1),
+  revised n semantics (K external; n=1 branch with 2-star R test), scope guard, S3 revision.
+
 ## 1. Scope and motivation
 
 Current behavior: `compute_check_ensemble_mag_calib` returns None when the good-comp pool
@@ -37,6 +41,43 @@ good comps C_1..C_n (n >= 2), N epochs (frames) after standard gating.
   For small errors, sigma_ZP(t)^2 = sum_i w_i(t)^2 * sigma_i(t)^2 where sigma_i is the
   TOTAL per-epoch noise of comp i (photon + its share of unmodeled noise).
 - kmag(t) = m_K(t) - ZP(t) (existing definition).
+
+### 2.1 Check-star sourcing (Amendment 1)
+
+K is selected from stars that are: (a) constant (VSX-negative and low variability index
+per existing check-star criteria), (b) Phase-2A p2p quality good, (c) above the SNR floor
+used for comps, (d) NOT a member of the comp ensemble C_1..C_n. The Phase-1 colour window
+and tier membership are NOT required for K; tier-excluded stars are eligible.
+
+Selection order among eligible candidates: closest in brightness to the target (comparable
+photon noise), tie-break by lowest p2p. The sidecar records: `k_source`
+(`comp_pool_external` / `tier_excluded` / ...), `k_colour_offset` (BP-RP offset from the
+ensemble median), and `k_tier_excluded` flag.
+
+Colour caveat: an external K with large colour offset can carry a differential-extinction
+trend of its own; an elevated R (3.4) may then reflect K's colour term, not ZP failure.
+Therefore: (i) `k_colour_caveat = true` when |k_colour_offset| exceeds the comp colour
+window AND the night's airmass range > 0.2; (ii) report R both raw and after a linear
+airmass detrend of kmag -- the BAND uses raw R (no silent detrending of evidence), the
+detrended value is a diagnostic column only.
+
+n counts ENSEMBLE COMPS ONLY (K is external and never counted):
+
+- n >= 2: full sparse branch (triangulation 3.1-3.3, tests 3.4-3.5, band 4) -- reachable
+  on an n=2 pool when K is external.
+- n == 1: triangulation impossible (single difference series K-C1 cannot separate
+  sigma_K from sigma_C1). kmag = m_K - m_C1 IS produced, with the 2-star model test:
+  R = var(d_KC1) / mean_t(p_K^2 + p_C1^2 + sigma_sys_rig^2 [+ both stars' floor share]),
+  chi2 CI as in 3.4. Band capped at YELLOW (`single_comp`), but R [R_lo, R_hi] is
+  recorded -- numbers instead of NaN. RED is still possible downward-only in reporting
+  language ("YELLOW, evidence consistent with RED") but the band value stays YELLOW.
+- n == 0: no check output; trust capped YELLOW with reason `no_comps` only if the target
+  LC itself exists (edge case; do not fabricate).
+
+Scope guard (Amendment 1): external-K sourcing applies to the SPARSE branch (n <= 2
+ensemble) in this iteration. The n >= 3 path keeps its current check-star selection
+unchanged (unifying K sourcing across all n is a FUTURE item -- changing wide-rig check
+stars would invalidate S2 comparisons and is not needed now).
 
 ## 3. Estimators (n = 2 branch; generalizes to small n)
 
@@ -110,15 +151,16 @@ n (comp count); flags.
 
     GREEN:  R_hi <= T_green            AND stability p >= 0.01  AND n >= 2
     YELLOW: not GREEN and not RED      (includes: CI straddles T_green; n == 2 with
-            marginal stability 0.001 <= p < 0.01; any clipped-flag present)
+            marginal stability 0.001 <= p < 0.01; any clipped-flag present; n == 1
+            with band capped at YELLOW but R recorded)
     RED:    R_lo >= T_red              OR stability p < 0.001 with
             x2_pair > X2_RED (comps mutually unstable at a level that invalidates ZP)
 
 Defaults (config, all overridable): T_green = 1.5, T_red = 4.0, X2_RED = (0.02 mag)^2.
 Rationale: T_green tolerates the PZQ red component not captured by the white model at
 single-epoch scale; T_red = 4 corresponds to err underestimated 2x -- beyond honest.
-n == 1: no check ensemble possible (triangulation needs 3 series) -> trust capped YELLOW
-with reason `single_comp`, kmag not produced. Sparse outputs carry `check_sparse = (n<=2)`.
+n == 1: band capped YELLOW (`single_comp`); kmag and R [R_lo, R_hi] ARE produced.
+Sparse outputs carry `check_sparse = (n<=2)`.
 
 Existing rule preserved: bands never RED-reversed by any field-wide quantity; check
 scatter is always judged against its own CI, not a bare threshold.
@@ -134,8 +176,9 @@ scatter is always judged against its own CI, not a bare threshold.
 3. Trust evaluation consumes the new statistics; field-wide comp_rms headline removed
    from the sparse trust path (kept as an informational diagnostic only, clearly labeled).
 4. Sidecar and LC columns: `check_sparse`, `trust_R`, `trust_R_lo`, `trust_R_hi`,
-   `comp_stability_p`, `x2_pair_mag2`, flags. PDF/report: sparse targets show the CI-based
-   verdict with n and N.
+   `trust_R_detrend` (diagnostic), `comp_stability_p`, `x2_pair_mag2`, `k_source`,
+   `k_colour_offset`, `k_tier_excluded`, `k_colour_caveat`, flags. PDF/report: sparse
+   targets show the CI-based verdict with n and N.
 
 ## 6. Validation protocol (mandatory before enabling)
 
@@ -146,9 +189,11 @@ S1 Synthetic: Gaussian injections with known sig_K, sig_C1, sig_C2 (unequal phot
    reported.
 S2 Real GREEN control: draft_424 wide targets with n >= 5 -- new trust bands must agree
    with existing verdicts (no regressions to RED on healthy targets; report any flips).
-S3 Real sparse: draft_426 r_60_4 (n=2) -- sidecars produced, baseline chi2 row filled,
-   band computed. SS Cam -- band from fresh chi2 evidence; expected YELLOW or RED by the
-   numbers, not by decree.
+S3 Real sparse: draft_426 r_60_4 (n=2 ensemble) -- sidecars with external K must produce
+   kmag and a computed band on >= 1 target; SS Cam gets computed R [R_lo, R_hi]. Bands are
+   whatever the numbers say. Baseline chi2 row filled (production_lc_err alongside spec-3.4).
+S2 re-verify after Amendment 1: wide path bit-for-bit unaffected (zero band changes on
+   n>=5 targets vs pre-amendment run, not only zero GREEN->RED flips).
 S4 No production err change: LC `err` column byte-identical on draft_424 anchor
    (this feature adds columns and trust logic only). Anchor SHA must NOT move.
 
