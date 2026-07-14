@@ -62,7 +62,7 @@ Runtime: ~50 min (2778s pipeline step).
 
 ## Part 3 -- Close
 
-**Final origin/main:** `5d4bce0` (close commits `0f1c941`, `db2e386`, `5d4bce0`; code baseline `114c423`).
+**Final origin/main:** `79dd8d6` (SESSION-CLOSE-0714 doc commits; code baseline `114c423`).
 
 ## Errors (if any)
 
