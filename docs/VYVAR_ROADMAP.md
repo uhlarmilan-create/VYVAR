@@ -297,11 +297,26 @@ From the run-414 V0454 diagnostic (`CURSOR_RESULT_414_diag.md`) + the C1 diagnos
 
 ---
 
-## NEXT SESSION — entry point (2026-07-14 SESSION-CLOSE)
+## NEXT SESSION — entry point (2026-07-15 ARCHIVE-CLEANUP)
 
-**Start here:** All 0713/0714 code arcs **CLOSED or PARKED** on `origin/main` **`114c423`**.
-Functional work is **data-gated only** until Milan delivers calibration/night data. Startup ritual:
-`git pull` -> STATE -> ROADMAP -> `session_baseline_check.py --fast`.
+**Start here:** `Archive/` cleared; anchor offline at `C:\ASTRO\backups\` (see VL-ANCHOR-424).
+`--fast` daily; `--full` SUSPENDED until new anchor. First functional step: import new measurement
+dataset into `Archive/Drafts/draft_NNNNNN`.
+
+**Re-anchor row (OPEN -- pending new data):**
+
+| Item | Status | Action |
+|------|--------|--------|
+| **VL-ANCHOR-424 / --full** | **SUSPENDED offline** | Cut new snapshot from first post-cleanup draft; compare core SHA; restore `passes: true`; golden reference for c-python port = offline zip (core `bf3743a1...`) |
+| eq4 bin4 bias/darks | HIGH (Milan) | >=6 frames, GAIN=12.48, T~-15 C |
+| Fresh darks | HIGH (Milan) | Before ~2026-07-21 expiry |
+| BVR night dX>=0.3 | HIGH (Milan) | Home rig; k'' NIGHT_FIT v2 |
+| bin2 flats | MED (Milan) | Calibration inventory |
+
+**0714 arcs (code unchanged):** SPARSE-TRUST CLOSED; k'' wide LOW / Newton OPEN; CAL-DIAG ON;
+WSN PARKED. See session history in STATE.
+
+## NEXT SESSION — entry point (2026-07-14 SESSION-CLOSE, superseded)
 
 **0714 arcs closed (commit refs):**
 

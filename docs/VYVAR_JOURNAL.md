@@ -2,6 +2,29 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-15 -- ARCHIVE-CLEANUP
+
+**Milan decision:** Clear entire `Archive/` drafts tree for new measurements. Preserve ONE offline
+compressed copy of the accepted anchor (`draft_000424_snapshot_sigma_floor_20260713`, core
+`bf3743a1...`) as golden reference for future c-python port validation. Suspend `--full` baseline
+(ledger `status: suspended_offline`) rather than silent FAIL; keep `--fast` as daily ritual.
+
+**Inventory:** 10 draft/snapshot trees + 1 evidence tree (~50.6 GB total). Raw FITS in
+`draft_000424/Raw`, `draft_000425/426/427/non_calibrated` (sole in-repo copies; observatory
+originals not audited). No unknown top-level Archive entries.
+
+**Backup:** `C:\ASTRO\backups\vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip`
+(257667235 bytes; SHA256 verified; core SHA match on extract).
+
+**Wipe:** All Archive draft/evidence trees deleted; skeleton `Archive/Drafts/` + `Archive/evidence/`
+recreated empty.
+
+**Code:** `session_baseline_check.py --full` reads VL-ANCHOR-424 suspend flag; tests added.
+
+Result: `CURSOR_RESULT_archive_cleanup.md`.
+
+---
+
 ## 2026-07-14 -- SESSION-CLOSE-0714
 
 **Scope:** Full sync, documentation refresh, integrity gate, clean tree. Baseline HEAD **`114c423`**

@@ -1,15 +1,42 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-14** (SESSION-CLOSE-0714). Code baseline **`114c423`**; close pushed (see `CURSOR_RESULT_close_0714.md`).
+Last updated: **2026-07-15** (ARCHIVE-CLEANUP). Git: **`dcd88bf`** baseline; see `CURSOR_RESULT_archive_cleanup.md`.
 pytest: **852 passed**, 15 skipped (`session_baseline_check --fast` PASS).
 
-## Current snapshot (post-0714)
+## Current snapshot (post-0715 archive cleanup)
 
-**Anchor (ACCEPTED):** `draft_000424_snapshot_sigma_floor_20260713`; git **`8fb21b3`**; photometry
-core SHA **`bf3743a1...`**; extended **`dec5c637`**. Chain-validated (ANCHOR-CHAIN-ACCEPT: exact
-c4 delta 23542/23542 epochs, 0 outliers). Result: `CURSOR_RESULT_anchor_chain.md`.
+**Archive:** `Archive/Drafts/` and `Archive/evidence/` **cleared** (2026-07-15, Milan). ~50.6 GB
+freed; empty skeleton retained for next `night_run` imports. Prior draft trees removed.
 
-**Err model (production):** empirical empty-aperture background (`sigma_bkg_ap`, F-BINGAIN-1) +
+**Anchor (OFFLINE golden reference):** accepted snapshot core SHA **`bf3743a1...`** (git **`8fb21b3`**).
+Offline backup: `C:\ASTRO\backups\vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip`
+(SHA256 `8706c0d6...`; core SHA re-verified on extract). Ledger: VL-ANCHOR-424
+`status: suspended_offline`. **Next in-Archive anchor:** first post-cleanup measurement dataset.
+
+**Baseline checks:** `--fast` daily ritual (unchanged). `--full` **SUSPENDED** pending new anchor
+(ledger-driven; not FAIL). Re-enable when new snapshot cut + VL-ANCHOR-424 `passes: true`.
+
+**Err model (production):** unchanged -- empirical bkg + c4 SEM + unit fix + Newton floor 18.0 mmag;
+wide un-floored. Spec: `docs/VYVAR_SIGMA_FLOOR_SPEC.md`.
+
+**SPARSE-TRUST (live):** unchanged on code path. Spec: `docs/VYVAR_SPARSE_TRUST_SPEC.md`.
+
+**k'' / CAL-DIAG / WSN:** unchanged status from 0714 close (see session history table).
+
+**Guards inventory:** PROVENANCE-GUARD; designed-err envelope; masterstar epoch exclusion;
+k2 internal-consistency warning.
+
+**Next session:** Import first new measurement run into empty `Archive/Drafts/`; startup ritual:
+`git pull` -> STATE -> ROADMAP -> `session_baseline_check.py --fast` -> await Milan data.
+
+## Prior snapshot (post-0714, pre-archive-wipe)
+
+**Anchor (was in-Archive ACCEPTED):** `draft_000424_snapshot_sigma_floor_20260713`; core `bf3743a1...`.
+Now offline only (see above).
+
+## 0714 arc detail (code unchanged)
+
+**Err model:** empirical empty-aperture background (`sigma_bkg_ap`, F-BINGAIN-1) +
 hybrid Howell fallback; **c4** small-sample SEM; mag/flux **unit fix** at combine; per-rig
 `sigma_sys` in LC `err` (`sigma_floor_core.py`, `sigma_sys_mag` column). Newton eq4 floor
 **18.0 mmag** [15.6, 20.2]; wide eq1 **un-floored** (bootstrap ~4.8 mmag, below SIGMA-A3 band --
@@ -37,20 +64,11 @@ sigma_slope_pt **5.17 mmag** aligns with PZQ sigma_r **5.5 mmag** and rig consta
 `docs/VYVAR_WIDE_SLOPE_NOISE_SPEC.md`. Prior EXCESS_UNATTRIBUTED retractions documented in
 `CURSOR_RESULT_wsn_fix.md`, `CURSOR_RESULT_wide_slope_noise.md`.
 
-**Guards inventory:** PROVENANCE-GUARD (`scripts/provenance_guard.py` -- refuses unstamped
-pipeline_meta for harness runs); designed-err envelope (`tests/photometry_sha.py`); masterstar
-epoch exclusion (`proc_frame_store.is_masterstar_proc_name`); k2 internal-consistency warning
-(`k2_cohort_core.check_k2_internal_consistency` -- flags STOP when naive CI contradicts physics).
-
-**Next session:** Data-gated backlog only (see ROADMAP). Startup ritual: `git pull` -> STATE ->
-ROADMAP -> `session_baseline_check.py --fast` -> await Milan data (**fresh darks ~2026-07-21**
-first).
-
-## Session history (0713-0714, compressed)
+## Session history (0713-0715, compressed)
 
 | Date | Arc | Outcome | Ref |
 |------|-----|---------|-----|
-| 2026-07-14 | SESSION-CLOSE-0714 | Docs refresh; tree clean | `CURSOR_RESULT_close_0714.md` |
+| 2026-07-15 | ARCHIVE-CLEANUP | Archive wiped; anchor offline; --full SUSPENDED | `CURSOR_RESULT_archive_cleanup.md` |
 | 2026-07-14 | WSN-2 | UNIFIED_PHENOMENON_PARK; P4 excess integration | `114c423`, `CURSOR_RESULT_wsn2.md` |
 | 2026-07-14 | WSN-FIX | SE/tertile/drift fixes; honest P2/P4 | `928a300`, `CURSOR_RESULT_wsn_fix.md` |
 | 2026-07-14 | WSN initial | EXCESS_UNATTRIBUTED **SUPERSEDED** | `59478bb`, `CURSOR_RESULT_wide_slope_noise.md` |
