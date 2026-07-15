@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""F-428 A3 v2: separation diagnostic for unmatched DET_* rows (read-only).
+"""F-428 A3 v3: separation + coordinate forensics for unmatched DET_* rows (read-only).
 
 Uses masterstars ra_deg/dec_deg (never pixel x/y) and field-bounded Gaia DB nearest-neighbor
 with cos(dec)-scaled RA separation. Self-check gates before reporting.
+
+v3 adds coordinate forensics (--forensics): provenance, systematic-offset test with WCS
+recompute, and vt↔ms violation source vs Gaia DB.
 """
 from __future__ import annotations
 
@@ -14,6 +17,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from astropy.io import fits
+from astropy.wcs import WCS
 
 _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
@@ -21,6 +26,7 @@ if str(_ROOT) not in sys.path:
 
 from config import AppConfig
 from gaia_catalog_id import normalize_gaia_source_id
+from pipeline import _all_pix2world_icrs_deg
 from scripts.repair_catalog_ids import _pick_gaia_table, _sep_arcsec
 
 # Phase-0 census from draft_428 infolog (2026-07-15 UI run)
@@ -110,6 +116,249 @@ def _classify_excluded_vt_row(
     return "other"
 
 
+def _delta_stats(
+    ra_arr: np.ndarray,
+    dec_arr: np.ndarray,
+    gra: np.ndarray,
+    gdec: np.ndarray,
+) -> dict[str, float]:
+    """Vector delta to nearest Gaia for each row (ΔRA·cos(dec), ΔDec in arcsec)."""
+    n = len(ra_arr)
+    dra_arc: list[float] = []
+    ddec_arc: list[float] = []
+    mag_arc: list[float] = []
+    for i in range(n):
+        ra = float(ra_arr[i])
+        dec = float(dec_arr[i])
+        if not (math.isfinite(ra) and math.isfinite(dec)):
+            continue
+        sep, idx = _nearest_gaia_brute(ra, dec, gra, gdec)
+        if idx is None or not math.isfinite(sep):
+            continue
+        g_ra = float(gra[idx])
+        g_de = float(gdec[idx])
+        dra = (ra - g_ra) * math.cos(math.radians(dec)) * 3600.0
+        dde = (dec - g_de) * 3600.0
+        dra_arc.append(dra)
+        ddec_arc.append(dde)
+        mag_arc.append(sep)
+    if not dra_arc:
+        return {}
+    dra_a = np.asarray(dra_arc, dtype=float)
+    dde_a = np.asarray(ddec_arc, dtype=float)
+    mag_a = np.asarray(mag_arc, dtype=float)
+    vm_ra = float(np.mean(dra_a))
+    vm_de = float(np.mean(dde_a))
+    vm_mag = float(math.hypot(vm_ra, vm_de))
+    mean_abs = float(np.mean(mag_a))
+    return {
+        "n": float(len(dra_a)),
+        "vector_mean_dra_arcsec": vm_ra,
+        "vector_mean_ddec_arcsec": vm_de,
+        "vector_mean_magnitude_arcsec": vm_mag,
+        "mean_abs_delta_arcsec": mean_abs,
+        "p50_abs_delta_arcsec": float(np.percentile(mag_a, 50)),
+    }
+
+
+def _field_center_dist_arcmin(ra_arr: np.ndarray, dec_arr: np.ndarray) -> np.ndarray:
+    ra_c = float(np.nanmedian(ra_arr))
+    dec_c = float(np.nanmedian(dec_arr))
+    dra = (ra_arr - ra_c) * np.cos(np.radians(dec_c)) * 60.0
+    dde = (dec_arr - dec_c) * 60.0
+    return np.sqrt(dra * dra + dde * dde)
+
+
+def _run_coord_forensics(
+    *,
+    ms: pd.DataFrame,
+    unmatched: pd.DataFrame,
+    vt: pd.DataFrame,
+    ms_by_cid: dict[str, pd.Series],
+    gra: np.ndarray,
+    gdec: np.ndarray,
+    gaia_by_id: dict[str, tuple[float, float]],
+    masterstar_fits: Path | None,
+    self_violations: list[str],
+    self_match_max_arcsec: float,
+    stale_wcs_p50_pass_arcsec: float,
+) -> tuple[list[str], list[str]]:
+    """Return (forensics lines, fail reasons)."""
+    lines: list[str] = []
+    fail: list[str] = []
+
+    lines.append("# F-428-COORD forensics (v3)")
+    lines.append(f"inputs: masterstars rows={len(ms)} unmatched_DET={len(unmatched)} variable_targets={len(vt)}")
+    lines.append(f"inputs: MASTERSTAR.fits={masterstar_fits}")
+    lines.append(f"inputs: stale_wcs_p50_pass_threshold={stale_wcs_p50_pass_arcsec}\"")
+    lines.append("")
+    lines.append("# T1.1 Provenance of masterstars ra_deg/dec_deg")
+    lines.append(
+        "matched_rows (Gaia catalog_id assigned): ra_deg/dec_deg retained from DAO detection "
+        "pix2world at catalog match time (pipeline.py:8245 initial + ~8498-8500 df_out); "
+        "NOT overwritten with Gaia catalog RA/Dec; optimizer _write_match "
+        "(astrometry_optimizer.py ~488-503) updates catalog_id/mag only."
+    )
+    lines.append(
+        "unmatched_DET_rows: ra_deg/dec_deg from initial DAO detection WCS pix2world "
+        "(pipeline.py:8245 _all_pix2world_icrs_deg(wcs_obj, x, y)); "
+        "optimize_masterstar_matches refits MASTERSTAR.fits WCS (Grip loop ~676-704, "
+        "SIP refit ~588+) but does NOT rewrite ra_deg/dec_deg on unmatched rows before export "
+        "(astrometry_optimizer.py export ~1169-1178 — pre-fix behavior)."
+    )
+    lines.append(
+        "WCS rescale path DOES recompute all coords: pipeline.py:3894-3907 "
+        "(masterstars_full_match.csv ra_deg/dec_deg recomputed after WCS rescale)."
+    )
+
+    lines.append("")
+    lines.append("# T1.2 Systematic-offset test (unmatched DET_* only)")
+    u_ra = pd.to_numeric(unmatched["ra_deg"], errors="coerce").to_numpy(dtype=float)
+    u_de = pd.to_numeric(unmatched["dec_deg"], errors="coerce").to_numpy(dtype=float)
+    stored = _delta_stats(u_ra, u_de, gra, gdec)
+    if stored:
+        lines.append(f"stored_coords n={int(stored['n'])}")
+        lines.append(
+            f"  vector_mean: dRA*cos(dec)={stored['vector_mean_dra_arcsec']:.3f}\" "
+            f"dDec={stored['vector_mean_ddec_arcsec']:.3f}\" magnitude={stored['vector_mean_magnitude_arcsec']:.3f}\""
+        )
+        lines.append(f"  mean_|Δ|={stored['mean_abs_delta_arcsec']:.3f}\" p50_|Δ|={stored['p50_abs_delta_arcsec']:.3f}\"")
+        if stored["vector_mean_magnitude_arcsec"] < 0.5 * stored["mean_abs_delta_arcsec"]:
+            lines.append(
+                "  interpretation: vector mean << mean |Δ| with p50 still large → "
+                "NOT a single rigid shift; per-star large nearest-Gaia offsets (unmatched DAO)"
+            )
+        elif abs(stored["vector_mean_dra_arcsec"]) < 1.0 and abs(stored["vector_mean_ddec_arcsec"]) < 1.0:
+            lines.append("  interpretation: vector mean ≈ 0 → isotropic scatter (not a single rigid shift)")
+        dist_arcmin = _field_center_dist_arcmin(u_ra, u_de)
+        seps = []
+        for i in range(len(u_ra)):
+            sep, _ = _nearest_gaia_brute(float(u_ra[i]), float(u_de[i]), gra, gdec)
+            if math.isfinite(sep):
+                seps.append(sep)
+        if seps and len(seps) == len(dist_arcmin):
+            corr = float(np.corrcoef(dist_arcmin[: len(seps)], np.asarray(seps))[0, 1])
+            lines.append(f"  corr(|Δ|, dist_from_field_center_arcmin)={corr:.4f} (rotation/scaling signature if |corr|>0.3)")
+
+    recomp_p50 = float("nan")
+    if masterstar_fits is not None and masterstar_fits.is_file():
+        try:
+            with fits.open(masterstar_fits, memmap=False) as hdul:
+                w = WCS(hdul[0].header)
+            if getattr(w, "has_celestial", False):
+                ux = pd.to_numeric(unmatched["x"], errors="coerce").to_numpy(dtype=float)
+                uy = pd.to_numeric(unmatched["y"], errors="coerce").to_numpy(dtype=float)
+                rr, dd = _all_pix2world_icrs_deg(w, ux, uy)
+                recomputed = _delta_stats(rr, dd, gra, gdec)
+                if recomputed:
+                    recomp_p50 = float(recomputed["p50_abs_delta_arcsec"])
+                    lines.append("")
+                    lines.append(
+                        f"recomputed_from_final_WCS (MASTERSTAR.fits={masterstar_fits}) n={int(recomputed['n'])}"
+                    )
+                    lines.append(
+                        f"  vector_mean magnitude={recomputed['vector_mean_magnitude_arcsec']:.3f}\" "
+                        f"mean_|Δ|={recomputed['mean_abs_delta_arcsec']:.3f}\" "
+                        f"p50_|Δ|={recomp_p50:.3f}\""
+                    )
+                    if recomp_p50 < stale_wcs_p50_pass_arcsec:
+                        lines.append(
+                            f"  STALE-WCS PASS: recomputed p50 {recomp_p50:.3f}\" < {stale_wcs_p50_pass_arcsec}\" "
+                            f"(stored p50={stored.get('p50_abs_delta_arcsec', float('nan')):.3f}\")"
+                        )
+                    else:
+                        lines.append(
+                            f"  STALE-WCS FAIL: recomputed p50 {recomp_p50:.3f}\" >= {stale_wcs_p50_pass_arcsec}\""
+                        )
+                        fail.append(
+                            f"recomputed p50 {recomp_p50:.3f}\" >= {stale_wcs_p50_pass_arcsec}\" (stale-WCS not confirmed)"
+                        )
+            else:
+                lines.append("recomputed_from_final_WCS: MASTERSTAR.fits has no celestial WCS")
+        except Exception as exc:  # noqa: BLE001
+            lines.append(f"recomputed_from_final_WCS: ERROR {exc!s}")
+    else:
+        lines.append(f"recomputed_from_final_WCS: skipped (no MASTERSTAR.fits at {masterstar_fits})")
+
+    if stored and stored.get("p50_abs_delta_arcsec", 0) >= stale_wcs_p50_pass_arcsec:
+        if math.isfinite(recomp_p50) and recomp_p50 < stale_wcs_p50_pass_arcsec:
+            pass  # pass condition met
+        elif not math.isfinite(recomp_p50):
+            fail.append(
+                f"stored p50 {stored['p50_abs_delta_arcsec']:.3f}\" high but WCS recompute unavailable"
+            )
+
+    lines.append("")
+    lines.append("# T1.3 vt↔ms violation source (which side deviates from Gaia DB)")
+    check_ids = set(vt["_cid_norm"].dropna().astype(str))
+    vt_dev = 0
+    ms_dev = 0
+    both_dev = 0
+    no_gaia = 0
+    for cid in sorted(check_ids):
+        if not cid or cid not in ms_by_cid:
+            continue
+        vt_rows = vt[vt["_cid_norm"] == cid]
+        if vt_rows.empty:
+            continue
+        vrow = vt_rows.iloc[0]
+        mrow = ms_by_cid[cid]
+        ra_v = float(vrow["ra_deg"])
+        dec_v = float(vrow["dec_deg"])
+        ra_m = float(mrow["ra_deg"])
+        dec_m = float(mrow["dec_deg"])
+        sep_vm = _sep_arcsec(ra_v, dec_v, ra_m, dec_m)
+        if sep_vm <= self_match_max_arcsec:
+            continue
+        gcoords = gaia_by_id.get(cid)
+        if gcoords is None:
+            no_gaia += 1
+            name = str(vrow.get("vsx_name") or vrow.get("name") or cid)
+            lines.append(f"  {name} cid={cid}: vt-ms={sep_vm:.3f}\" — Gaia DB lookup miss")
+            continue
+        g_ra, g_de = gcoords
+        sep_vg = _sep_arcsec(ra_v, dec_v, g_ra, g_de)
+        sep_mg = _sep_arcsec(ra_m, dec_m, g_ra, g_de)
+        name = str(vrow.get("vsx_name") or vrow.get("name") or cid)
+        if sep_vg > sep_mg:
+            vt_dev += 1
+            side = "vt_deviates"
+        elif sep_mg > sep_vg:
+            ms_dev += 1
+            side = "ms_deviates"
+        else:
+            both_dev += 1
+            side = "tie"
+        lines.append(
+            f"  {name} cid={cid}: vt-ms={sep_vm:.3f}\" vt-gaia={sep_vg:.3f}\" ms-gaia={sep_mg:.3f}\" → {side}"
+        )
+    lines.append(
+        f"violations_analyzed: vt_deviates={vt_dev} ms_deviates={ms_dev} tie={both_dev} no_gaia_db={no_gaia}"
+    )
+    if vt_dev > ms_dev:
+        lines.append("summary: vt (VSX catalog positions) deviates from Gaia more often than ms (expected)")
+
+    return lines, fail
+
+
+def _load_gaia_by_id(con: sqlite3.Connection, table: str, ids: set[str]) -> dict[str, tuple[float, float]]:
+    out: dict[str, tuple[float, float]] = {}
+    if not ids:
+        return out
+    chunk = 400
+    id_list = sorted(ids)
+    for i in range(0, len(id_list), chunk):
+        part = id_list[i : i + chunk]
+        placeholders = ",".join("?" * len(part))
+        q = f"SELECT source_id, ra, dec FROM {table} WHERE source_id IN ({placeholders})"
+        rows = con.execute(q, part).fetchall()
+        for sid, ra, dec in rows:
+            key = normalize_gaia_source_id(str(sid))
+            if key:
+                out[key] = (float(ra), float(dec))
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="F-428 A3 v2 unmatched DET_* / excluded-target diagnostic")
     ap.add_argument(
@@ -136,6 +385,22 @@ def main() -> int:
     ap.add_argument("--self-match-max-arcsec", type=float, default=2.0)
     ap.add_argument("--median-self-check-arcsec", type=float, default=15.0)
     ap.add_argument("--out", type=Path, default=_ROOT / "tmp/f428_unmatched_sep_v2.txt")
+    ap.add_argument(
+        "--forensics",
+        action="store_true",
+        help="Emit coordinate forensics (v3) to --forensics-out",
+    )
+    ap.add_argument(
+        "--forensics-out",
+        type=Path,
+        default=_ROOT / "tmp/f428_coord_forensics.txt",
+    )
+    ap.add_argument(
+        "--masterstar-fits",
+        type=Path,
+        default=_ROOT / "Archive/Drafts/draft_000428/platesolve/NoFilter_60_2/MASTERSTAR.fits",
+    )
+    ap.add_argument("--stale-wcs-p50-pass-arcsec", type=float, default=20.0)
     args = ap.parse_args()
 
     ms_path = Path(args.masterstars)
@@ -171,13 +436,14 @@ def main() -> int:
     table = _pick_gaia_table(con)
     total_gaia = int(con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
     gaia_field, (ra_min, ra_max, dec_min, dec_max), bbox_params = _load_gaia_field(con, table, ms, pad_deg=0.02)
+    gaia_by_id = _load_gaia_by_id(con, table, set(vt["_cid_norm"].dropna().astype(str)) | set(ms["cid_norm"].dropna()))
     con.close()
 
     gra = gaia_field["ra"].to_numpy(dtype=float)
     gdec = gaia_field["dec"].to_numpy(dtype=float)
 
     lines: list[str] = []
-    lines.append("# F-428 A3 diagnostic v2")
+    lines.append("# F-428 A3 diagnostic v2" + (" + v3 forensics" if args.forensics else ""))
     lines.append(f"gaia_db: {gdb.resolve()}")
     lines.append(f"gaia_table: {table} (total rows in DB: {total_gaia})")
     lines.append(
@@ -334,6 +600,24 @@ def main() -> int:
 
     # Sanity gates
     fail_reasons: list[str] = []
+    forensics_lines: list[str] = []
+    fore_fail: list[str] = []
+    if args.forensics:
+        forensics_lines, fore_fail = _run_coord_forensics(
+            ms=ms,
+            unmatched=unmatched,
+            vt=vt,
+            ms_by_cid=ms_by_cid,
+            gra=gra,
+            gdec=gdec,
+            gaia_by_id=gaia_by_id,
+            masterstar_fits=Path(args.masterstar_fits) if args.masterstar_fits else None,
+            self_violations=self_violations,
+            self_match_max_arcsec=float(args.self_match_max_arcsec),
+            stale_wcs_p50_pass_arcsec=float(args.stale_wcs_p50_pass_arcsec),
+        )
+        fail_reasons.extend(fore_fail)
+
     if gaia_seps:
         med = float(np.median(np.asarray(gaia_seps)))
         if med >= float(args.median_self_check_arcsec):
@@ -366,6 +650,21 @@ def main() -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(text, encoding="utf-8")
     print(text)
+
+    if args.forensics:
+        ftext = "\n".join(forensics_lines) + "\n"
+        ftext += "\n"
+        fore_only_fail = list(fore_fail) if args.forensics else []
+        if fore_only_fail:
+            ftext += "DIAG SELF-CHECK FAIL\n"
+            for fr in fore_only_fail:
+                ftext += f"  - {fr}\n"
+        else:
+            ftext += "DIAG SELF-CHECK PASS (forensics stale-WCS criterion)\n"
+        args.forensics_out.parent.mkdir(parents=True, exist_ok=True)
+        args.forensics_out.write_text(ftext, encoding="utf-8")
+        print(ftext, file=sys.stderr)
+
     return 1 if fail_reasons else 0
 
 

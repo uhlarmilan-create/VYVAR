@@ -8563,6 +8563,17 @@ def detect_stars_and_match_catalog(
                     df_out, n_matched, match_sep_used = df_tight, n_tight, _tight_sec
 
         _run_full_match_pass()
+        if vsx_df is not None and not vsx_df.empty:
+            try:
+                from photometry_core import stamp_vsx_known_variable_on_masterstars  # noqa: PLC0415
+
+                df_out, _vsx_stamp = stamp_vsx_known_variable_on_masterstars(
+                    df_out,
+                    vsx_df,
+                    log_fn=log_event,
+                )
+            except Exception as _vsx_exc:  # noqa: BLE001
+                log_event(f"MASTERSTAR VSX catalog_id stamp (post-match) skipped: {_vsx_exc!s}")
         if n >= 8:
             _dao_match_rate = float(n_matched) / float(max(1, n))
             if _dao_match_rate < 0.88:
@@ -12064,6 +12075,19 @@ def generate_masterstar_and_catalog(
         for _idcol in ("catalog_id", "name"):
             if _idcol in df_final.columns:
                 df_final[_idcol] = df_final[_idcol].astype(str)
+    try:
+        _vt_stamp_path = platesolve_dir / "variable_targets.csv"
+        if _vt_stamp_path.is_file():
+            from photometry_core import stamp_vsx_known_variable_on_masterstars  # noqa: PLC0415
+
+            _vt_stamp_df = pd.read_csv(_vt_stamp_path, low_memory=False, dtype={"catalog_id": str})
+            df_final, _vsx_stamp_final = stamp_vsx_known_variable_on_masterstars(
+                df_final,
+                _vt_stamp_df,
+                log_fn=log_event,
+            )
+    except Exception as _vsx_final_exc:  # noqa: BLE001
+        log_event(f"MASTERSTAR VSX catalog_id stamp (post-optimizer) skipped: {_vsx_final_exc!s}")
     df_final = _annotate_masterstars_flux_zones(
         df_final,
         noise_floor_adu=det_meta.get("noise_floor_adu"),

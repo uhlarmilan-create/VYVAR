@@ -68,7 +68,7 @@ Matched masterstars vs Gaia DB by source_id: p50 **2.05″** (sanity: astrometry
 
 ## T3 — Commit
 
-**Hash:** `adbeca31de33a44ded83f1cd58cd0354ebc3a991` (`adbeca3`)  
+**Hash:** `d3ca22350e48b4c21c7850be7447b24167c5533d` (`d3ca223`)  
 **Status:** committed locally; **push pending Milan OK** (per task).
 
 ---

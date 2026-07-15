@@ -1,15 +1,17 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-15** (F-428 closeout). F-428 fix batch committed locally; push + T4 revalidation pending Milan OK.
-pytest: **859 passed**, 16 skipped.
+Last updated: **2026-07-15** (F-428 MS-STAMP fix; COORD forensics). F-428 fix batch + MS-STAMP committed; push authorized; T4 UI revalidation pending Milan.
+pytest: **866 passed**, 16 skipped.
 
-## Current snapshot (post-F-428 closeout)
+## Current snapshot (post-F-428 MS-STAMP / COORD forensics)
 
 **F-428:** Fix batch landed (VSX path, repair flood, TAP retry, AC/excluded visibility, UTC infolog).
-A3 v2 diagnostic: unmatched DET_* median nearest-Gaia **81″** (real offset, not query bug); radius decision OPEN.
-**T4:** Milan UI re-run on clean tree = anchor-candidate run (draft_428 provenance was `git_dirty=true`).
+**MS-STAMP:** catalog_id join for `vsx_known_variable` (draft_428 dry-run 46→197 id_join).
+**COORD:** v3 forensics rejected stale-WCS for unmatched DET (recomputed p50≈81″); no coord code change — optional matched-row Gaia refresh for Milan.
+A3 diagnostic: unmatched DET_* p50 nearest-Gaia **81″** (intrinsic to unmatched DAO, not WCS refresh bug).
+**T4:** Milan UI re-run validates MS-STAMP + prior fix batch. See `CURSOR_RESULT_428_msstamp_coord.md`.
 
-**Archive:** `draft_000428` available for revalidation. See `CURSOR_RESULT_428_closeout.md`.
+**Archive:** `draft_000428` available for revalidation. See `CURSOR_RESULT_428_closeout.md`, `CURSOR_RESULT_428_msstamp_coord.md`.
 
 **Anchor (OFFLINE golden reference):** accepted snapshot core SHA **`bf3743a1...`** (git **`8fb21b3`**).
 Offline backup: `C:\ASTRO\backups\vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip`

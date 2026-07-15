@@ -5166,6 +5166,95 @@ def _edge_ok_from_masterstar_pipeline(
     return ok.fillna(False).astype(bool), bool(edge_filter_failed)
 
 
+def stamp_vsx_known_variable_on_masterstars(
+    ms_df: pd.DataFrame,
+    variable_targets_df: pd.DataFrame | None,
+    *,
+    log_fn: Any | None = None,
+    positional_fallback_arcsec: float = 8.0,
+) -> tuple[pd.DataFrame, dict[str, int]]:
+    """Set ``vsx_known_variable`` on masterstars by catalog_id join (primary).
+
+    Positional matching is used only for variable-target rows without a Gaia ``catalog_id``.
+    """
+    from gaia_catalog_id import normalize_gaia_source_id_series
+
+    out = ms_df.copy()
+    if "vsx_known_variable" not in out.columns:
+        out["vsx_known_variable"] = False
+    else:
+        out["vsx_known_variable"] = (
+            pd.to_numeric(out["vsx_known_variable"], errors="coerce").fillna(0).astype(bool)
+        )
+
+    stats = {"id_join": 0, "positional_fallback": 0}
+    if variable_targets_df is None or getattr(variable_targets_df, "empty", True):
+        return out, stats
+
+    vt = variable_targets_df.copy()
+    vt_ids: set[str] = set()
+    if "catalog_id" in vt.columns:
+        vt_ids = {
+            str(x).strip()
+            for x in normalize_gaia_source_id_series(vt["catalog_id"]).tolist()
+            if str(x).strip()
+        }
+
+    if vt_ids:
+        ms_cid = normalize_gaia_source_id_series(out.get("catalog_id", pd.Series([""] * len(out))))
+        id_hit = ms_cid.isin(vt_ids)
+        stats["id_join"] = int(id_hit.sum())
+        out.loc[id_hit, "vsx_known_variable"] = True
+
+    vt_no_id = vt
+    if "catalog_id" in vt.columns:
+        vt_no_id = vt[normalize_gaia_source_id_series(vt["catalog_id"]).eq("")]
+    if (
+        not vt_no_id.empty
+        and "ra_deg" in vt_no_id.columns
+        and "dec_deg" in vt_no_id.columns
+        and "ra_deg" in out.columns
+        and "dec_deg" in out.columns
+    ):
+        try:
+            from astropy.coordinates import SkyCoord  # noqa: PLC0415
+            import astropy.units as u  # noqa: PLC0415
+
+            v_ra = pd.to_numeric(vt_no_id["ra_deg"], errors="coerce")
+            v_de = pd.to_numeric(vt_no_id["dec_deg"], errors="coerce")
+            ok_v = v_ra.notna() & v_de.notna()
+            if bool(ok_v.any()):
+                ms_ra = pd.to_numeric(out["ra_deg"], errors="coerce")
+                ms_de = pd.to_numeric(out["dec_deg"], errors="coerce")
+                ok_m = ms_ra.notna() & ms_de.notna()
+                if bool(ok_m.any()):
+                    ms_coo = SkyCoord(
+                        ra=ms_ra.loc[ok_m].astype(float).to_numpy() * u.deg,
+                        dec=ms_de.loc[ok_m].astype(float).to_numpy() * u.deg,
+                        frame="icrs",
+                    )
+                    vt_coo = SkyCoord(
+                        ra=v_ra.loc[ok_v].astype(float).to_numpy() * u.deg,
+                        dec=v_de.loc[ok_v].astype(float).to_numpy() * u.deg,
+                        frame="icrs",
+                    )
+                    _idx, sep2d, _ = ms_coo.match_to_catalog_sky(vt_coo)
+                    near = sep2d <= (float(positional_fallback_arcsec) * u.arcsec)
+                    pos_idx = out.index[ok_m][np.asarray(near, dtype=bool)]
+                    stats["positional_fallback"] = int(len(pos_idx))
+                    if len(pos_idx):
+                        out.loc[pos_idx, "vsx_known_variable"] = True
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("[PHOT] VSX positional fallback stamp skipped: %s", exc)
+
+    if log_fn is not None:
+        log_fn(
+            f"MASTERSTAR vsx_known_variable stamp: catalog_id join={stats['id_join']} "
+            f"positional_fallback={stats['positional_fallback']}"
+        )
+    return out, stats
+
+
 def resolve_variable_targets_csv(
     *,
     comparison_stars_csv: Path | str | None = None,

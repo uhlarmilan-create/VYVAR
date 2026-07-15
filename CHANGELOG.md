@@ -8,6 +8,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **F-428 MS-STAMP (2026-07-15):** `stamp_vsx_known_variable_on_masterstars()` — catalog_id join
+  for masterstars VSX flag; diag v3 forensics (`scripts/diag_428_unmatched_sep.py --forensics`).
 - **F-428 fix batch (2026-07-15):** VSX `variable_targets.csv` path resolution; repair-catalog-ID
   placeholder skip + summary line; HRD Gaia TAP retry (`hrd_enrich_tap_timeout_s`); UTC infolog;
   `photometry_summary.csv` AC status columns; `excluded_targets.csv` sidecar; diagnostic
