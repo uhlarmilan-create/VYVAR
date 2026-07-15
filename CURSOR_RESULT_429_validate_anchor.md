@@ -71,7 +71,24 @@ Script: `scripts/pass2_contamination_428_429.py`.
 
 ---
 
-## Part D — Anchor pair 430/431 (**IN PROGRESS**)
+## Part D — Anchor pair (**RESTART** 2026-07-16)
+
+**Disqualified attempt:** in-flight run on `draft_000430` killed. Mixed commits (`fc177be` during
+run start, `a3536a0` landed mid-run); tree dirty during run 1. **Non-anchor** — ledger
+`VL-ANCHOR-DQ-430`; draft retained on disk for reference only.
+
+**Fresh pair:** `scripts/anchor_pair_run.py` from clean git worktree (`launch_anchor_pair_clean.py`).
+Dynamic draft IDs + snapshot name `draft_{run1}_snapshot_wcsinv_{date}`. Gates: `git_dirty=false`,
+`git_hash` match, `matched_world2pix_identity_*` in both metas, core SHA run1==run2 (incl. `err`).
+`--finalize` cuts snapshot, adds `VL-ANCHOR-WCSINV`, re-enables `--full`.
+
+Monitor: `tmp/anchor_pair_run.log`, `tmp/anchor_pair_run/anchor_pair_report.json`.
+
+**Standing QA series (first two entries):** reported in `identity_qa_series` when pair completes.
+
+---
+
+## Part D — Anchor pair (original attempt — superseded)
 
 **Rationale:** 429↔428 byte-identity void — WCS-INV legitimately changed detection census. RUNBOOK
 two-fresh-runs rule → same-commit headless pair.

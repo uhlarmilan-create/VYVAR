@@ -194,7 +194,10 @@ def _ledger_item(ledger_id: str) -> dict[str, Any] | None:
 
 
 def _full_baseline_suspend_message() -> str | None:
-    """Return suspend message when VL-ANCHOR-424 is offline; else None."""
+    """Return suspend message when no in-Archive anchor is active; else None."""
+    wcs = _ledger_item("VL-ANCHOR-WCSINV")
+    if wcs and wcs.get("passes") and wcs.get("status") != "suspended_offline":
+        return None
     item = _ledger_item(ANCHOR_LEDGER_ID)
     if not item or item.get("status") != "suspended_offline":
         return None

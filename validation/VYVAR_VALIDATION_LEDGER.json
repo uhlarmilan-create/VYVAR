@@ -127,6 +127,17 @@
       "last_verified": "2026-06-11",
       "commit": null,
       "notes": "Historical PASS on draft_387 zaloha anchor. Original draft_387 zaloha NO LONGER EXISTS (Milan 2026-07-08). Re-point verification at draft_424 on next verification."
+    },
+    {
+      "id": "VL-ANCHOR-DQ-430",
+      "area": "anchors",
+      "description": "Disqualified anchor attempt draft_000430 (mixed commits fc177be/a3536a0; dirty tree)",
+      "verification": "CURSOR_RESULT_429_validate_anchor.md Part D restart",
+      "passes": false,
+      "last_verified": "2026-07-16",
+      "commit": "a3536a0",
+      "status": "disqualified_non_anchor",
+      "notes": "In-flight run killed 2026-07-16; draft_000430 retained on disk for reference only. Not part of anchor chain. Superseded by fresh pair on clean a3536a0+."
     }
   ]
 }

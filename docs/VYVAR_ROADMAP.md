@@ -211,7 +211,7 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 | F-429-AC-SUMMARY | LOW | **FIXED** (`fc177be`) | `[AC] run summary` via `log_event` |
 | F-429-TAP-RETRY | LOW | **VERIFIED** | 429 `_hrd_cache` `enrich_attempts=3`; INFO per retry added |
 | VALIDATE-429 | HIGH | **DONE** | draft_429 checklist; A1 FAILED-AS-WRITTEN (`git_dirty`); superseded by anchor pair |
-| VL-ANCHOR-430 | HIGH | **IN PROGRESS** | Headless 430/431; **git_dirty=false hard gate**; identity QA p95/p99 in meta |
+| VL-ANCHOR-430 | HIGH | **DISQUALIFIED / RESTART** | draft_000430 non-anchor (mixed commits, dirty tree); fresh pair via `anchor_pair_run.py` |
 
 ---
 

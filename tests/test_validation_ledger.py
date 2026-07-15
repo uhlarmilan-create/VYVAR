@@ -23,6 +23,7 @@ REQUIRED_IDS = frozenset(
         "VL-SHA-CUT1",
         "VL-PROVENANCE",
         "VL-TRUST-BASELINE",
+        "VL-ANCHOR-DQ-430",
     }
 )
 
