@@ -2,6 +2,25 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-16 -- F-431 root closure (T1 + T4; T2/T3/anchor pending)
+
+Ledger: PASS2-CONTAMINATION **DOWNGRADED**; 429 = unprovenanced quality target. T1: residual =
+order-2 ADU surface (DAO 9115→2816; ablation). T4: stamp-after-VT, SysRem honor, Labbe seed,
+dirty-file provenance, NightRun match=2.0, RUNBOOK pair v2. T2/T3/anchor **blocked**. Result:
+`CURSOR_RESULT_431_root_closure.md`, `tmp/f431_lost_transform.md`.
+
+---
+
+## 2026-07-16 -- FORENSIC-HEADLESS (431/432) — ANCHOR BLOCKED
+
+Read-only + one discriminator. Config 429↔431 = density+SysRem only (no path/worktree drift).
+F-428 fixes ON on both chains; C1 stamp chronologically bypassed. F3 UI-parity `night_run`
+(draft_433) still 428-class; MASTERSTAR pixels ≡431≡428; 429 alone has `cal≠proc` Light_008.
+SHA: unseeded Labbe + forced SysRem. Ledger **F-431-HEADLESS-DIVERGENCE** HIGH. Result:
+`CURSOR_RESULT_headless_forensics.md`.
+
+---
+
 ## 2026-07-16 -- VALIDATE-429 + F-429 fixes + anchor pair (IN PROGRESS)
 
 draft_429 validated on `695348b` (Milan UI). Pass-2 contamination CONFIRMED (428 vs 429). Regression

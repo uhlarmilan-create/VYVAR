@@ -50,7 +50,9 @@ class NightRunParams:
     plate_fov_deg: float | None = None
     dao_fwhm_px: float | None = None
     dao_threshold_sigma: float | None = None
-    catalog_match_max_sep_arcsec: float = 25.0
+    # UI RUN VYVAR hardcodes cat_match_arc=2.0; pipeline floors with max(10, sep) for
+    # MASTERSTAR initial match — so NightRun default follows UI intent (effective 10").
+    catalog_match_max_sep_arcsec: float = 2.0
     max_catalog_rows: int = 12000
     max_extra_platesolve: int = 0
     min_detected_stars: int = 100

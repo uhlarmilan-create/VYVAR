@@ -27,7 +27,22 @@ Exit **0** = PASS, **1** = FAIL. Concise summary table printed at end.
 | `run_full_photometry_pipeline` | **Production path** and **exclusive anchor-cut recipe** from 2026-07-08. Builds `ProcFrameStore`, Phase 0+1 comp selection, Phase 2A LCs — single coherent artifact tree. |
 | Phase-2A-only rerun | Legacy validation shortcut (QUICKWINS-0708 Item 4). Skips `ProcFrameStore`; must **not** be used for anchor cuts. Produced the retired hybrid snapshot (`draft_000424_snapshot_20260708_hybrid_deprecated`). |
 
-**Two-fresh-runs rule:** before locking any photometry anchor, run the full production path **twice** independently; both must match the stored snapshot (science comparator + photometry SHA). Run 1 = anchor cut; run 2 = verification (`session_baseline_check.py --full`).
+**Two-fresh-runs rule:** before locking any photometry anchor, run the full production path
+**twice** and both must match (science comparator + photometry SHA).
+
+### Pair protocol v2 (F-431 — preferred for SHA gates)
+
+Prefer the **draft_387 same-draft** precedent over two independent imports:
+
+1. **Import once** (one `draft_id`, one Raw/calibrated tree).
+2. Run photometry stages **twice** over that same draft (or wipe only photometry/LC outputs
+   between passes — keep processed + MASTERSTAR if testing photometry-only SHA).
+3. Byte-compare core photometry SHA (incl. seeded Labbe `err`).
+4. Cut snapshot from the first photometry pass only after SHA match.
+
+Two-import pair runs remain allowed for end-to-end smoke, but SHA mismatches that only touch
+`err` / SysRem were historically contaminated by unseeded Labbe + forced SysRem — see
+`CURSOR_RESULT_headless_forensics.md`. `anchor_pair_run` now honors `config.sysrem_enabled`.
 
 **Retired anchor:** `Archive/Drafts/draft_000424_snapshot_20260708_hybrid_deprecated` — hybrid artifact (2026-06-24 comp CSV + 2026-07-07 Phase-2A-only LCs); not a valid anchor.
 

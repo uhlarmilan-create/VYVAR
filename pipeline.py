@@ -12163,19 +12163,7 @@ def generate_masterstar_and_catalog(
         _wcs_rt_p99 = None
         _wcs_rt_pass = None
         _identity_qa = {}
-    try:
-        _vt_stamp_path = platesolve_dir / "variable_targets.csv"
-        if _vt_stamp_path.is_file():
-            from photometry_core import stamp_vsx_known_variable_on_masterstars  # noqa: PLC0415
-
-            _vt_stamp_df = pd.read_csv(_vt_stamp_path, low_memory=False, dtype={"catalog_id": str})
-            df_final, _vsx_stamp_final = stamp_vsx_known_variable_on_masterstars(
-                df_final,
-                _vt_stamp_df,
-                log_fn=log_event,
-            )
-    except Exception as _vsx_final_exc:  # noqa: BLE001
-        log_event(f"MASTERSTAR VSX catalog_id stamp (post-finalize) skipped: {_vsx_final_exc!s}")
+    # VSX stamp deferred until after write_photometry_plan_files (VT CSV created there).
     df_final = _annotate_masterstars_flux_zones(
         df_final,
         noise_floor_adu=det_meta.get("noise_floor_adu"),
@@ -12390,6 +12378,32 @@ def generate_masterstar_and_catalog(
         n_comparison_stars=int(n_comparison_stars),
         require_non_variable=bool(require_non_variable_comparisons),
     )
+    # F-431 / C1: stamp AFTER VT exists (write_photometry_plan_files).
+    try:
+        _vt_stamp_path = platesolve_dir / "variable_targets.csv"
+        if _vt_stamp_path.is_file():
+            from photometry_core import stamp_vsx_known_variable_on_masterstars  # noqa: PLC0415
+
+            _ms_for_stamp = pd.read_csv(
+                csv_path, low_memory=False, dtype={"catalog_id": str, "name": str}
+            )
+            _vt_stamp_df = pd.read_csv(_vt_stamp_path, low_memory=False, dtype={"catalog_id": str})
+            _ms_for_stamp, _vsx_stamp_final = stamp_vsx_known_variable_on_masterstars(
+                _ms_for_stamp,
+                _vt_stamp_df,
+                log_fn=log_event,
+            )
+            _vyvar_df_to_csv(_ms_for_stamp, csv_path)
+            df_final = _ms_for_stamp
+            log_event(
+                f"MASTERSTAR VSX catalog_id stamp (post-VT): "
+                f"id_join={_vsx_stamp_final.get('id_join')} "
+                f"positional_fallback={_vsx_stamp_final.get('positional_fallback')}"
+            )
+        else:
+            log_event("MASTERSTAR VSX stamp skipped: variable_targets.csv missing after photometry plan.")
+    except Exception as _vsx_final_exc:  # noqa: BLE001
+        log_event(f"MASTERSTAR VSX catalog_id stamp (post-VT) skipped: {_vsx_final_exc!s}")
     # Multi-filter support: keep comparison stars consistent across platesolve/<setup>/ folders.
     try:
         _sync_comparison_stars_across_setups(Path(platesolve_dir).parent)

@@ -340,10 +340,14 @@ no UI yet).
 | `savgol_detrend_enabled` | False | — | ui_settings.py:553, ui_settings.py:895 | yes |
 | `savgol_polyorder` | 2 | — | — | intentionally-hidden |
 | `savgol_window_frac` | 0.5 | — | — | intentionally-hidden |
-| `sysrem_enabled` | False | — | — | intentionally-hidden |
+| `sysrem_enabled` | False | — | — | intentionally-hidden; `anchor_pair_run` honors this (no longer forces True — F-431) |
 | `sysrem_n_iter` | 3 | — | — | intentionally-hidden |
 | `temporal_bin_window` | 0 | 0 … 51 | — | intentionally-hidden |
 | `temporal_binning_enabled` | False | — | ui_settings.py:542, ui_settings.py:893 | yes |
+
+**NightRun / catalog match:** `NightRunParams.catalog_match_max_sep_arcsec` default **2.0**
+(UI `cat_match_arc`). Pipeline floors MASTERSTAR initial match with `max(10, sep)` → effective **10″**.
+Prior default 25″ was a UI/headless divergence (not the F-431 census root).
 
 ## Phase 2A output
 
@@ -438,7 +442,7 @@ no UI yet).
 | `gain` | 1.0 | — | — | intentionally-hidden |
 | `read_noise` | 10.0 | — | — | intentionally-hidden |
 | `err_background_mode` | `empirical` | `empirical` \| `howell` | — | intentionally-hidden |
-| `err_empty_apertures_n` | 64 | 16..256 | — | intentionally-hidden |
+| `err_empty_apertures_n` | 64 | 16..256 | — | intentionally-hidden; Labbe RNG seed = frame content hash (F-431) |
 | `err_empty_apertures_min` | 16 | 1..256 | — | intentionally-hidden |
 | `sky_adu_fallback` | 1581.6 | — | — | intentionally-hidden |
 

@@ -57,8 +57,8 @@ def _run_night(source: Path, *, run_index: int, log_path: Path) -> dict[str, Any
         equipment_id=1,
         telescope_id=1,
         config_path=None,
-        sysrem_enabled=True,
-        sysrem_n_iter=3,
+        # Honor config.json / AppConfig (do not force SysRem — F-431 SHA nondeterminism).
+        sysrem_enabled=None,
         dry_run=False,
         progress_cb=lambda msg: print(msg, flush=True),
     )

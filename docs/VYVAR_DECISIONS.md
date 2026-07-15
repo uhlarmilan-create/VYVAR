@@ -8,23 +8,31 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ## F-428-PASS2-CONTAMINATION — draft_428 census products unreliable (2026-07-16)
 
-**Decision.** draft_428 census-level products (comp pools sized from masterstar table, faint-target
-counts, unmatched DET population) were **contaminated** by Gaia-targeted DAO pass-2 running through
-the corrupt forward SIP (~12″ / ~5 px bookkeeping offset per v5). Evidence: 428 `n_raw_dao=8927` vs
-429 `2816`; unmatched 2724 vs 179; 1172 matched catalog_ids present only in 428 with median mag 15.1
-and median sep-to-Gaia 17″. **Per-target photometry of well-detected stars is unaffected** (v5
-flux/identity correct). **draft_429 is the first healthy post-WCS-INV cleanup run.**
+**Status (amended 2026-07-16 / F-431):** **DOWNGRADED** as the *primary census driver*.
+Draft_433 (`715391b`, FIX 2 / WCS-INV active, clean tree, UI-parity match sep) still reproduces the
+**6699-class** inflated census. Primary driver of pass-1 inflation is therefore the **absent
+preprocess ADU mutation** that distinguishes 429 (`cal≠proc` Light_008 / MASTERSTAR) from the
+deterministic repo path (`cal≡proc`). Keep both facts below.
 
-**Density override coupling.** The inflated 428 matched census also **flipped automatic
-`DENSITY_OVERRIDES`** (428 snapshot: `annulus_inner_fwhm=5.75`, tighter comp gates
-`comp_max_delta_bprp=0.64`, `phase01_comparison_max_comp_rms=0.08`, `min_dist_arcsec=90` vs 429
-defaults 4.75 / 0.79 / 0.10 / 60). Contamination changed the perceived field density profile; **429
-default profile is the healthy state**. **Watch item:** BO CVn field sits near the density
-threshold — inter-night override flapping is possible; monitor `config_snapshot` on future drafts.
+**Original finding (still true, secondary for census).** On draft_428, Gaia-targeted DAO pass-2
+ran through a corrupt forward SIP (~12″ / ~5 px bookkeeping offset per v5). Evidence retained:
+428 `n_raw_dao=8927` vs 429 `2816`; unmatched 2724 vs 179; 1172 matched catalog_ids only in 428
+(median mag 15.1, median sep-to-Gaia 17″). **Per-target photometry of well-detected stars is
+unaffected** (v5 flux/identity correct). The WCS inversion asymmetry on 428 was a **real, fixed**
+defect (`F-428-WCS-INV`); it is **not** sufficient to explain the 8927→2816 pass-1 collapse once
+FIX 2 is live (see F-431-HEADLESS-DIVERGENCE / `CURSOR_RESULT_headless_forensics.md`).
 
-**Anchor implication.** 429↔428 byte-identity is formally void; new anchor requires a fresh
-same-commit headless pair (430/431) per RUNBOOK two-fresh-runs rule. **`git_dirty=false` hard gate**
-on both anchor drafts before snapshot cut.
+**Density override coupling.** Inflated matched census still flips automatic `DENSITY_OVERRIDES`
+(428/431: `annulus_inner_fwhm=5.75`, tighter comp gates vs 429 defaults). Monitor
+`config_snapshot` near the density threshold.
+
+**429 provenance.** draft_429 remains the **census QUALITY target** (3054 / 2875), but is an
+**unprovenanced anomaly** (`git_dirty=true`, dirty file list never recorded). Deterministic repo
+state today is the **6699-class**. Do not treat 429 as a golden clean-SHA run until the lost ADU
+transform is restored in committed shared preprocess.
+
+**Anchor implication.** New anchor requires healthy-census tree under protocol v2 +
+`git_dirty=false` hard gate. Anchor arc **BLOCKED** until F-431 root closure.
 
 ---
 

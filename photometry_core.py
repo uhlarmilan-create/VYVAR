@@ -725,6 +725,28 @@ def _build_star_exclusion_mask(
     return blocked
 
 
+def _labbe_content_seed_from_header(hdr: Any, *, r_ap: float) -> int:
+    """Stable Labbe RNG seed from frame identity + aperture radius (F-431)."""
+    import hashlib
+
+    def _hget(key: str) -> str:
+        try:
+            return str(hdr.get(key) or "")
+        except Exception:  # noqa: BLE001
+            return ""
+
+    parts = [
+        _hget("DATE-OBS"),
+        _hget("FILENAME"),
+        _hget("FRAME"),
+        _hget("NAXIS1"),
+        _hget("NAXIS2"),
+        f"{float(r_ap):.4f}",
+    ]
+    digest = hashlib.sha256("|".join(parts).encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "little", signed=False) % (2**63 - 1)
+
+
 def measure_empty_aperture_sigma_bkg(
     data: np.ndarray,
     star_x: np.ndarray,
@@ -736,6 +758,7 @@ def measure_empty_aperture_sigma_bkg(
     n_apertures: int = 64,
     min_valid: int = 16,
     rng: np.random.Generator | None = None,
+    seed: int | None = None,
 ) -> tuple[float, int, str]:
     """Empirical aperture background noise via random empty apertures (Labbe et al. 2003).
 
@@ -750,11 +773,15 @@ def measure_empty_aperture_sigma_bkg(
     resampling noise motivates aperture-scale measurement (Fruchter & Hook 2002; Casertano
     et al. 2000).
 
+    Args:
+        seed: When ``rng`` is None, seed the Generator (F-431). Prefer a content-derived
+            seed from the caller so same-draft re-photometry is byte-stable.
+
     Returns:
         (sigma_bkg_ap, n_valid, reason) — reason non-empty when measurement failed.
     """
     if rng is None:
-        rng = np.random.default_rng()
+        rng = np.random.default_rng(int(seed) if seed is not None else None)
     n_target = _clamp_err_empty_apertures_n(n_apertures)
     n_min = _clamp_err_empty_apertures_min(min_valid)
     if not (
@@ -6083,8 +6110,12 @@ _GIT_PROVENANCE_WARNED = False
 _REPO_ROOT_FOR_PROVENANCE = Path(__file__).resolve().parent
 
 
-def _resolve_git_provenance() -> tuple[str | None, bool | None]:
-    """Return (HEAD hash, dirty flag) from repo root; nulls when git unavailable."""
+def _resolve_git_provenance() -> tuple[str | None, bool | None, list[dict[str, str]]]:
+    """Return (HEAD hash, dirty flag, dirty file rows) from repo root; nulls when git unavailable.
+
+    When dirty, each row is ``{path, content_sha256}`` for tracked/untracked paths listed by
+    ``git status --porcelain`` (F-431 provenance hardening).
+    """
     global _GIT_PROVENANCE_WARNED
     try:
         head = subprocess.check_output(
@@ -6100,19 +6131,50 @@ def _resolve_git_provenance() -> tuple[str | None, bool | None]:
             stderr=subprocess.DEVNULL,
         )
         dirty = bool(status.strip())
-        return (head or None), dirty
+        dirty_files: list[dict[str, str]] = []
+        if dirty:
+            import hashlib
+
+            for line in status.splitlines():
+                if not line.strip():
+                    continue
+                # porcelain: XY PATH or XY ORIG -> PATH
+                path_part = line[3:].strip() if len(line) > 3 else line.strip()
+                if " -> " in path_part:
+                    path_part = path_part.split(" -> ", 1)[-1].strip()
+                path_part = path_part.strip('"')
+                fp = _REPO_ROOT_FOR_PROVENANCE / path_part
+                sha = ""
+                try:
+                    if fp.is_file():
+                        h = hashlib.sha256()
+                        with fp.open("rb") as fh:
+                            for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                                h.update(chunk)
+                        sha = h.hexdigest()
+                    elif fp.is_dir():
+                        sha = "DIR"
+                    else:
+                        sha = "MISSING"
+                except OSError:
+                    sha = "UNREADABLE"
+                dirty_files.append({"path": path_part.replace("\\", "/"), "content_sha256": sha})
+                if len(dirty_files) >= 200:
+                    dirty_files.append({"path": "…truncated…", "content_sha256": ""})
+                    break
+        return (head or None), dirty, dirty_files
     except Exception:  # noqa: BLE001
         if not _GIT_PROVENANCE_WARNED:
             LOGGER.warning(
                 "[PHOT] pipeline provenance: git unavailable; git_hash/git_dirty set to null"
             )
             _GIT_PROVENANCE_WARNED = True
-        return None, None
+        return None, None, []
 
 
 def _build_pipeline_provenance_block(cfg: Any, *, entry_point: str) -> dict[str, Any]:
     """Run provenance stamped into ``pipeline_meta.json`` (last writer wins)."""
-    git_hash, git_dirty = _resolve_git_provenance()
+    git_hash, git_dirty, dirty_files = _resolve_git_provenance()
     if hasattr(cfg, "to_dict"):
         config_snapshot = cfg.to_dict()
     elif hasattr(cfg, "to_json"):
@@ -6121,13 +6183,17 @@ def _build_pipeline_provenance_block(cfg: Any, *, entry_point: str) -> dict[str,
         from dataclasses import asdict
 
         config_snapshot = asdict(cfg)
-    return {
+    block: dict[str, Any] = {
         "git_hash": git_hash,
         "git_dirty": git_dirty,
         "config_snapshot": config_snapshot,
         "stamped_at_utc": datetime.now(timezone.utc).isoformat(),
         "entry_point": entry_point,
+        "labbe_rng_seed_policy": "content_frame_hash_v1",
     }
+    if git_dirty is True:
+        block["git_dirty_files"] = dirty_files
+    return block
 
 
 def merge_photometry_pipeline_meta(
@@ -10959,6 +11025,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                         continue
                     _ri = max(float(_r_u) + 0.5, float(annulus_inner_fwhm) * fw)
                     _ro = max(_ri + 0.5, float(annulus_outer_fwhm) * fw)
+                    _seed = _labbe_content_seed_from_header(hdr, r_ap=float(_r_u))
                     _sig, _nv, _reason = measure_empty_aperture_sigma_bkg(
                         d,
                         np.asarray(x, dtype=np.float64),
@@ -10968,6 +11035,12 @@ def enhance_catalog_dataframe_aperture_bpm(
                         float(_ro),
                         n_apertures=_n_empty,
                         min_valid=_n_empty_min,
+                        seed=int(_seed),
+                    )
+                    if not hasattr(enhance_catalog_dataframe_aperture_bpm, "_labbe_seeds"):
+                        enhance_catalog_dataframe_aperture_bpm._labbe_seeds = []
+                    enhance_catalog_dataframe_aperture_bpm._labbe_seeds.append(
+                        {"r_ap": float(_r_u), "seed": int(_seed), "n_valid": int(_nv)}
                     )
                     if math.isfinite(_sig) and _sig >= 0:
                         _sigma_by_r[float(_r_u)] = (float(_sig), ERR_BKG_SOURCE_EMPIRICAL)

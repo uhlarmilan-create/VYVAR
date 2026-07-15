@@ -212,6 +212,7 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 | F-429-TAP-RETRY | LOW | **VERIFIED** | 429 `_hrd_cache` `enrich_attempts=3`; INFO per retry added |
 | VALIDATE-429 | HIGH | **DONE** | draft_429 checklist; A1 FAILED-AS-WRITTEN (`git_dirty`); superseded by anchor pair |
 | VL-ANCHOR-430 | HIGH | **DISQUALIFIED / RESTART** | draft_000430 non-anchor (mixed commits, dirty tree); fresh pair via `anchor_pair_run.py` |
+| **F-431-HEADLESS-DIVERGENCE** | **HIGH** | **IN PROGRESS** | T1: lost ADU = order-2 sky surface (DAO 9115→2816). T2: await Milan clean UI. T3: **gated**. T4 partial landed (stamp-after-VT, SysRem honor, Labbe seed, dirty-file list, NightRun match=2.0, RUNBOOK v2). Anchor blocked. `CURSOR_RESULT_431_root_closure.md`. |
 
 ---
 

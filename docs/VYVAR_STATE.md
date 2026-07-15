@@ -1,34 +1,21 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-16** (VALIDATE-429 + F-429 fixes; anchor pair **IN PROGRESS**). pytest: **873 passed**, 16 skipped.
+Last updated: **2026-07-16** (F-431 T1+T4 landed; **T2/T3/anchor BLOCKED**).
 
-## Current snapshot (post-VALIDATE-429)
+## Current snapshot (F-431 root closure — partial)
 
-**draft_429 validated** on `695348b` (Milan UI, NoFilter|60|2, 139 frames, 167 targets, 164 LCs).
-WCS-INV guards confirmed live. **First healthy post-cleanup census** (2875 matched, 179 unmatched).
+**Anchor arc: BLOCKED** until T2 (Milan clean UI) + T3 (restore order-2 sky surface in shared
+preprocess) deliver healthy census under committed code.
 
-**F-429 regressions fixed** (`fc177be`, pushed): VSX stamp post-finalize (STAMP-WIRE), `[AC] run summary`
-infolog (AC-SUMMARY), Gaia TAP retry INFO lines (TAP-RETRY verified on 429 `_hrd_cache` attempts=3).
+**T1 done:** lost ADU transform ≈ order-2 background surface; DAO cal 9115 → MS 2816.
+`tmp/f431_lost_transform.md`.
 
-**F-428 arc:** **CLOSED** — pass-2 contamination CONFIRMED on draft_428; 429 validated. See
-`CURSOR_RESULT_429_validate_anchor.md`.
+**T4 done (rides without T3):** VSX stamp after VT write; `anchor_pair_run` honors SysRem;
+Labbe content-hash seed + `git_dirty_files` provenance; NightRun match sep 2.0; RUNBOOK pair v2.
 
-**Anchor pair 430/431:** headless runs from `D:\BO_CVn` **IN PROGRESS** (`scripts/anchor_pair_430_431.py`).
-Gate: byte-identical core SHA; cut `draft_000430_snapshot_wcsinv_20260716`; re-enable `--full`.
+**429:** unprovenanced quality target (`git_dirty=true`). Deterministic path = 6699-class.
 
-**Prior F-428 WCS-INV (`695348b`):** round-trip gate, SIP inverse regen, `finalize_masterstar_sky_coords`,
-post-match identity gate (`wcs_invertibility.py`).
-
-**Archive:** `draft_000428`, `draft_000429` on disk.
-
-**Anchor (OFFLINE golden reference):** accepted snapshot core SHA **`bf3743a1...`** (git **`8fb21b3`**).
-Offline backup: `C:\ASTRO\backups\vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip`.
-Ledger: VL-ANCHOR-424 `status: suspended_offline`. **Next in-Archive anchor:** draft_430 pair cut (pending).
-
-**Baseline checks:** `--fast` daily. `--full` **SUSPENDED** until 430/431 pair completes + snapshot cut.
-
-**Next session:** await anchor pair completion; verify 430==431 SHA; cut snapshot; update
-`session_baseline_check.py` expectations + VL-ANCHOR ledger row.
+**Next:** Milan UI clean run → T2 verdict → T3 with sign-off → protocol-v2 anchor.
 
 ## Prior snapshot (post-0714, pre-archive-wipe)
 
