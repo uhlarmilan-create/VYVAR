@@ -129,6 +129,8 @@ class AppConfig:
     hrd_simbad_enrich_enabled: bool = True
     #: Max Stage-1 extreme candidates sent to online enrichment (1..100).
     hrd_enrich_max_candidates: int = 20
+    #: Per-attempt Gaia TAP timeout (seconds) for HRD online enrichment.
+    hrd_enrich_tap_timeout_s: float = 20.0
     #: HRD parallax floor (mas) for M_G reliability; SNR is the primary quality filter.
     hrd_parallax_min_mas: float = 0.15
     #: HRD parallax SNR floor for M_G reliability.
@@ -757,6 +759,13 @@ class AppConfig:
         except (TypeError, ValueError):
             self.hrd_enrich_max_candidates = 20
         self.hrd_enrich_max_candidates = max(1, min(100, int(self.hrd_enrich_max_candidates)))
+        try:
+            self.hrd_enrich_tap_timeout_s = float(
+                data.get("hrd_enrich_tap_timeout_s", self.hrd_enrich_tap_timeout_s)
+            )
+        except (TypeError, ValueError):
+            self.hrd_enrich_tap_timeout_s = 20.0
+        self.hrd_enrich_tap_timeout_s = max(5.0, min(120.0, float(self.hrd_enrich_tap_timeout_s)))
         try:
             self.hrd_parallax_min_mas = float(
                 data.get("hrd_parallax_min_mas", self.hrd_parallax_min_mas)
@@ -2105,6 +2114,7 @@ class AppConfig:
             "hrd_online_enrich_enabled": bool(self.hrd_online_enrich_enabled),
             "hrd_simbad_enrich_enabled": bool(self.hrd_simbad_enrich_enabled),
             "hrd_enrich_max_candidates": int(self.hrd_enrich_max_candidates),
+            "hrd_enrich_tap_timeout_s": float(self.hrd_enrich_tap_timeout_s),
             "hrd_parallax_min_mas": float(self.hrd_parallax_min_mas),
             "hrd_parallax_snr_min": float(self.hrd_parallax_snr_min),
             "hrd_max_per_category": int(self.hrd_max_per_category),

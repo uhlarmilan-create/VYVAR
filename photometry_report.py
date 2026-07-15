@@ -4545,6 +4545,25 @@ class _PhotometryReportBuilder:
         y -= 0.15 * self.cm
         c.setFillColor(self.colors.black)
 
+        _enrich_skip_note = ""
+        _summary_json = self.platesolve_dir / "_hrd_cache" / "summary.json"
+        if _summary_json.is_file():
+            try:
+                import json as _json_hrd
+
+                _sum = _json_hrd.loads(_summary_json.read_text(encoding="utf-8"))
+                _sr = _sum.get("enrich_skip_reason") or _sum.get("skip_reason")
+                if _sr:
+                    _enrich_skip_note = f"enrichment unavailable: {_sr}"
+            except Exception:  # noqa: BLE001
+                pass
+        if _enrich_skip_note:
+            c.setFont(self.FONT_REG, 8)
+            c.setFillColor(self.colors.HexColor("#884400"))
+            c.drawString(self.M_LEFT, y, _enrich_skip_note)
+            y -= 0.45 * self.cm
+            c.setFillColor(self.colors.black)
+
         is_empty = bool(top.get("_empty_field", pd.Series([False])).any()) if not top.empty else True
         if is_empty:
             tab_cols = ["category"]

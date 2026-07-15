@@ -7,6 +7,7 @@
   "calibration_library_native_binning": 1,
   "calibration_master_ccd_temp_tolerance_c": 0.5,
   "gaia_db_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3.db",
+  "hrd_enrich_tap_timeout_s": 20.0,
   "blind_index_fine_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\gaia_triangles_fine.pkl",
   "blind_index_wide_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\gaia_triangles_wide.pkl",
   "blind_index_select_mode": "auto",

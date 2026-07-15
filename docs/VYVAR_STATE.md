@@ -1,12 +1,15 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-15** (ARCHIVE-CLEANUP). Git: **`dcd88bf`** baseline; see `CURSOR_RESULT_archive_cleanup.md`.
-pytest: **852 passed**, 15 skipped (`session_baseline_check --fast` PASS).
+Last updated: **2026-07-15** (F-428 closeout). F-428 fix batch committed locally; push + T4 revalidation pending Milan OK.
+pytest: **859 passed**, 16 skipped.
 
-## Current snapshot (post-0715 archive cleanup)
+## Current snapshot (post-F-428 closeout)
 
-**Archive:** `Archive/Drafts/` and `Archive/evidence/` **cleared** (2026-07-15, Milan). ~50.6 GB
-freed; empty skeleton retained for next `night_run` imports. Prior draft trees removed.
+**F-428:** Fix batch landed (VSX path, repair flood, TAP retry, AC/excluded visibility, UTC infolog).
+A3 v2 diagnostic: unmatched DET_* median nearest-Gaia **81″** (real offset, not query bug); radius decision OPEN.
+**T4:** Milan UI re-run on clean tree = anchor-candidate run (draft_428 provenance was `git_dirty=true`).
+
+**Archive:** `draft_000428` available for revalidation. See `CURSOR_RESULT_428_closeout.md`.
 
 **Anchor (OFFLINE golden reference):** accepted snapshot core SHA **`bf3743a1...`** (git **`8fb21b3`**).
 Offline backup: `C:\ASTRO\backups\vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip`

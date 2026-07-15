@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import re
 import shutil
 import sqlite3
 from pathlib import Path
@@ -20,6 +21,9 @@ import pandas as pd
 
 def _default_log(msg: str) -> None:
     print(msg)
+
+
+_DET_PLACEHOLDER_RE = re.compile(r"^DET_\d+$", re.IGNORECASE)
 
 
 def _pick_gaia_table(con: sqlite3.Connection) -> str:
@@ -46,6 +50,8 @@ def repair_csv_catalog_ids_from_gaia_db(
     backup: bool = True,
     max_sep_arcsec: float = 10.0,
     log_fn: Callable[[str], None] | None = None,
+    skip_unmatched_placeholders: bool = False,
+    box_deg: float = 0.001,
 ) -> dict[str, Any]:
     """Repair Gaia IDs in-place using Gaia DB RA/DEC nearest match.
 
@@ -89,11 +95,22 @@ def repair_csv_catalog_ids_from_gaia_db(
         repaired = 0
         warnings = 0
         per_row: list[dict[str, Any]] = []
+        checked = 0
+        kept_placeholder = 0
+        no_gaia_in_box = 0
+        over_max_sep = 0
+        invalid_coords = 0
 
         for i in range(len(df)):
             row = df.iloc[i]
             old_raw = str(row.get(str(id_col), "") or "").strip()
             vsx_name = str(row.get("vsx_name", "") or row.get("name", "") or "").strip()
+
+            if skip_unmatched_placeholders and (
+                not old_raw or old_raw.lower() in ("nan", "none") or _DET_PLACEHOLDER_RE.match(old_raw)
+            ):
+                kept_placeholder += 1
+                continue
 
             ra = row.get("ra_deg", row.get("ra", float("nan")))
             dec = row.get("dec_deg", row.get("dec", float("nan")))
@@ -117,13 +134,13 @@ def repair_csv_catalog_ids_from_gaia_db(
             if ok_id:
                 continue
 
+            checked += 1
+
             if not (math.isfinite(ra_f) and math.isfinite(dec_f)):
-                warnings += 1
-                log(f"REPAIR WARNING: {vsx_name or '(row)'} nemá platné RA/DEC -> ponechané catalog_id={old_raw!s}")
+                invalid_coords += 1
                 continue
 
-            # Step 3: nearest by RA/DEC in a small box (±0.001 deg)
-            box = 0.001
+            box = float(box_deg)
             r = con.execute(
                 f"""
                 SELECT source_id, ra, dec
@@ -138,8 +155,7 @@ def repair_csv_catalog_ids_from_gaia_db(
             ).fetchone()
 
             if not r or r[0] is None:
-                warnings += 1
-                log(f"REPAIR WARNING: {vsx_name or '(row)'}: nenašiel som Gaia zdroj v boxe +/-{box} deg -> ponechané {old_raw}")
+                no_gaia_in_box += 1
                 continue
 
             new_id = int(r[0])
@@ -148,6 +164,7 @@ def repair_csv_catalog_ids_from_gaia_db(
             sep = _sep_arcsec(ra_f, dec_f, ra2, dec2) if (math.isfinite(ra2) and math.isfinite(dec2)) else float("nan")
 
             if math.isfinite(sep) and sep > float(max_sep_arcsec):
+                over_max_sep += 1
                 warnings += 1
                 log(
                     f"REPAIR WARNING: {old_raw} -> {new_id} ({vsx_name}, sep={sep:.2f}) presahuje max_sep_arcsec={max_sep_arcsec:.1f} -> NEOPRAVUJEM"
@@ -159,6 +176,13 @@ def repair_csv_catalog_ids_from_gaia_db(
                 repaired += 1
                 log(f"REPAIR: {old_raw} -> {new_id} ({vsx_name}, sep={sep:.2f})")
                 per_row.append({"row": int(i), "vsx_name": vsx_name, "old": old_raw, "new": str(new_id), "sep_arcsec": sep})
+
+        log(
+            "REPAIR summary: "
+            f"checked={checked} repaired={repaired} kept_placeholder={kept_placeholder} "
+            f"no_gaia_in_box={no_gaia_in_box} over_max_sep={over_max_sep}"
+            + (f" invalid_coords={invalid_coords}" if invalid_coords else "")
+        )
 
         if repaired and backup:
             bak = vt_path.with_suffix(vt_path.suffix + ".bak")
@@ -175,6 +199,11 @@ def repair_csv_catalog_ids_from_gaia_db(
             "rows": int(len(df)),
             "repaired": int(repaired),
             "warnings": int(warnings),
+            "checked": int(checked),
+            "kept_placeholder": int(kept_placeholder),
+            "no_gaia_in_box": int(no_gaia_in_box),
+            "over_max_sep": int(over_max_sep),
+            "invalid_coords": int(invalid_coords),
             "details": per_row,
         }
     finally:

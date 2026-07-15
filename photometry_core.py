@@ -1216,6 +1216,32 @@ def _require_comparison_stars_per_target_schema(comp_df: pd.DataFrame, csv_path:
     )
 
 
+LAST_EXCLUDED_TARGETS: pd.DataFrame = pd.DataFrame(
+    columns=["name", "vsx_name", "vsx_type", "ra_deg", "dec_deg", "mag", "reason"]
+)
+
+
+def _ac_summary_fields(ac_result: dict[str, Any] | None) -> dict[str, Any]:
+    ac = ac_result if isinstance(ac_result, dict) else {}
+    applied = bool(ac.get("ok"))
+    fields: dict[str, Any] = {
+        "ac_applied": applied,
+        "ac_skip_reason": "" if applied else str(ac.get("reason", "") or ""),
+    }
+    if applied:
+        for key, src in (
+            ("ac_delta_m_corr", "delta_m_corr"),
+            ("ac_scatter", "scatter_mag"),
+        ):
+            val = ac.get(src)
+            try:
+                fields[key] = float(val) if val is not None else float("nan")
+            except (TypeError, ValueError):
+                fields[key] = float("nan")
+        fields["ac_n_ref"] = int(ac.get("n_ref_stars") or 0)
+    return fields
+
+
 def _phase2a_empty_comp_summary_row(
     *,
     target_cid: str,
@@ -1237,6 +1263,8 @@ def _phase2a_empty_comp_summary_row(
         "am_detrended": False,
         "lc_csv": "",
         "lc_png": "",
+        "ac_applied": False,
+        "ac_skip_reason": "no_comps",
     }
 
 
@@ -5138,6 +5166,49 @@ def _edge_ok_from_masterstar_pipeline(
     return ok.fillna(False).astype(bool), bool(edge_filter_failed)
 
 
+def resolve_variable_targets_csv(
+    *,
+    comparison_stars_csv: Path | str | None = None,
+    vsx_targets_csv: Path | str | None = None,
+    platesolve_dir: Path | str | None = None,
+    masterstar_fits_path: Path | str | None = None,
+) -> Path | None:
+    """Locate ``variable_targets.csv`` for VSX crossmatch (UI + headless layouts)."""
+    if vsx_targets_csv is not None:
+        explicit = Path(vsx_targets_csv)
+        if explicit.is_file():
+            LOGGER.info("[PHOT] variable_targets.csv resolved (explicit): %s", explicit)
+            return explicit
+
+    candidates: list[Path] = []
+    if comparison_stars_csv:
+        comp_parent = Path(comparison_stars_csv).resolve().parent
+        candidates.append(comp_parent / "variable_targets.csv")
+        candidates.append(comp_parent.parent / "variable_targets.csv")
+    if platesolve_dir is not None:
+        candidates.append(Path(platesolve_dir).resolve() / "variable_targets.csv")
+    if masterstar_fits_path is not None:
+        candidates.append(Path(masterstar_fits_path).resolve().parent / "variable_targets.csv")
+
+    tried: list[str] = []
+    seen: set[str] = set()
+    for cand in candidates:
+        key = str(cand.resolve()) if cand.is_absolute() else str(cand)
+        if key in seen:
+            continue
+        seen.add(key)
+        tried.append(key)
+        if cand.is_file():
+            LOGGER.info("[PHOT] variable_targets.csv resolved: %s", cand)
+            return cand
+
+    LOGGER.warning(
+        "[PHOT] variable_targets.csv not found (VSX crossmatch disabled); tried: %s",
+        "; ".join(tried) if tried else "(no candidates)",
+    )
+    return None
+
+
 def auto_export_variability_candidates_csv(
     *,
     masterstar_fits_path: Path,
@@ -5149,6 +5220,8 @@ def auto_export_variability_candidates_csv(
     csv_cache: dict[str, pd.DataFrame] | None = None,
     ms_header: Any | None = None,
     ms_data: np.ndarray | None = None,
+    vsx_targets_csv: Path | None = None,
+    platesolve_dir: Path | None = None,
 ) -> Path | None:
     """
     Pipeline variability detection (no UI): compute RMS + VDI and export candidates CSV.
@@ -5225,12 +5298,12 @@ def auto_export_variability_candidates_csv(
         except Exception:  # noqa: BLE001
             comp_ids = []
 
-    vsx_targets_csv = None
-    try:
-        if comparison_stars_csv:
-            vsx_targets_csv = Path(comparison_stars_csv).parent / "variable_targets.csv"
-    except Exception:  # noqa: BLE001
-        vsx_targets_csv = None
+    vsx_targets_csv = resolve_variable_targets_csv(
+        comparison_stars_csv=comparison_stars_csv,
+        vsx_targets_csv=vsx_targets_csv,
+        platesolve_dir=platesolve_dir,
+        masterstar_fits_path=masterstar_fits_path,
+    )
 
     cfg_run = dict(cfg_dict)
     cfg_run["variability_sigma_threshold"] = float(sigma_thr)
@@ -8965,6 +9038,7 @@ def _phase2a_process_one_target(
             "ct_corr": float(ct_corr) if bool(ct_ok) and math.isfinite(float(ct_corr)) else float("nan"),
             "ct_c1": float(c1) if bool(ct_ok) and math.isfinite(float(c1)) else float("nan"),
             "ct_n_comp": int(ct_n_comp) if bool(ct_ok) else 0,
+            **_ac_summary_fields(ac_result if bool(_cfg.aperture_correction_enabled) else {"ok": False, "reason": "disabled"}),
         }
     )
     n_lc += 1
@@ -9021,6 +9095,23 @@ def _phase2a_finalize_exports(
         cfg=_cfg,
         plate_scale_arcsec=float(plate_scale_arcsec),
     )
+
+    if summary_rows:
+        from collections import Counter
+
+        _ac_applied = sum(1 for r in summary_rows if r.get("ac_applied"))
+        _ac_skipped = len(summary_rows) - _ac_applied
+        _ac_reasons = Counter(
+            str(r.get("ac_skip_reason") or "unknown")
+            for r in summary_rows
+            if not r.get("ac_applied")
+        )
+        logging.info(
+            "[AC] run summary: applied=%d skipped=%d (%s)",
+            _ac_applied,
+            _ac_skipped,
+            dict(_ac_reasons),
+        )
 
     # Draft-level comp QA (read-only w.r.t. photometry; before AAVSO/VarAstro export).
     if bool(getattr(_cfg, "comp_qa_enabled", True)):
@@ -9248,6 +9339,7 @@ def _phase2a_finalize_exports(
             csv_cache=_phase2a_csv_cache,
             ms_header=_ms_header,
             ms_data=_ms_data,
+            platesolve_dir=Path(masterstar_fits_path).resolve().parent,
         )
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0177] Auto variability-candidates CSV export fails - rms_candidates.csv not produced: %s', exc)
@@ -11329,6 +11421,7 @@ def select_active_targets(
         [name, catalog_id, ra_deg, dec_deg, vsx_name, vsx_type, vsx_period,
          x, y, mag, b_v, bp_rp, zone_flag, skip_photometry]
     """
+    global LAST_EXCLUDED_TARGETS
     # Auto-repair poškodených Gaia ID pred načítaním (ak je dostupná lokálna Gaia DB).
     _auto_repair_catalog_ids(vt_path=Path(variable_targets_csv), gaia_db_path=gaia_db_path, log_fn=log_event)
 
@@ -11474,6 +11567,25 @@ def select_active_targets(
     no_catalog_id = 0
     matched_rows: list[dict] = []
     matched_vt_idx: set[Any] = set()
+    excluded_rows: list[dict[str, Any]] = []
+
+    def _excluded_target_row(vrow: pd.Series, reason: str, *, mag: float | None = None) -> dict[str, Any]:
+        mag_val = mag
+        if mag_val is None:
+            mag_val = float(pd.to_numeric(vrow.get("mag", float("nan")), errors="coerce"))
+        return {
+            "name": str(vrow.get("name", "") or ""),
+            "vsx_name": str(vrow.get("vsx_name", "") or ""),
+            "vsx_type": str(vrow.get("vsx_type", "") or ""),
+            "ra_deg": float(vrow.get("ra_deg", float("nan"))),
+            "dec_deg": float(vrow.get("dec_deg", float("nan"))),
+            "mag": mag_val,
+            "reason": reason,
+        }
+
+    for _, vrow_off in vt.loc[~in_frame].iterrows():
+        excluded_rows.append(_excluded_target_row(vrow_off, "out_of_frame"))
+
     for vidx, vrow in vt_in.iterrows():
         ra_v = float(vrow["ra_deg"])
         dec_v = float(vrow["dec_deg"])
@@ -11515,6 +11627,7 @@ def select_active_targets(
             catalog_id_norm = _gaia_id_str(cid_raw)
         if not catalog_id_norm:
             no_catalog_id += 1
+            excluded_rows.append(_excluded_target_row(vrow, "no_catalog_id"))
             continue
         mag_for_skip = float(
             pd.to_numeric(
@@ -11534,6 +11647,7 @@ def select_active_targets(
                 catalog_id_norm,
                 mag_for_skip,
             )
+            excluded_rows.append(_excluded_target_row(vrow, "saturated", mag=mag_for_skip))
             continue
         skip_ph = zone_flag == "saturated"
         rec = {
@@ -11590,12 +11704,29 @@ def select_active_targets(
         "skip_photometry",
     ]
     n_excluded_no_dao_match = int((~vt_in.index.isin(matched_vt_idx)).sum())
+    for vidx, vrow in vt_in.loc[~vt_in.index.isin(matched_vt_idx)].iterrows():
+        excluded_rows.append(_excluded_target_row(vrow, "no_dao_gaia_match"))
     if n_excluded_no_dao_match:
+        _ex_names = [
+            str(vt_in.loc[i].get("vsx_name") or vt_in.loc[i].get("name") or "")
+            for i in vt_in.index
+            if i not in matched_vt_idx
+        ]
+        _ex_names = [n for n in _ex_names if n]
+        _preview = ", ".join(_ex_names[:30])
+        if len(_ex_names) > 30:
+            _preview += ", ..."
         logging.info(
-            "[Faza 0] Excluded %d VSX targets without masterstar (DAO+Gaia) match - not in active_targets",
+            "[Faza 0] Excluded %d VSX targets without masterstar (DAO+Gaia) match - not in active_targets: %s",
             n_excluded_no_dao_match,
+            _preview,
         )
     if not matched_rows:
+        LAST_EXCLUDED_TARGETS = (
+            pd.DataFrame(excluded_rows)
+            if excluded_rows
+            else pd.DataFrame(columns=["name", "vsx_name", "vsx_type", "ra_deg", "dec_deg", "mag", "reason"])
+        )
         log_event(
             "select_active_targets: linear=0 noisy1=0 noisy2=0 noisy3=0 saturated=0 "
             f"no_catalog_id={no_catalog_id} out_of_frame={out_of_frame}"
@@ -11647,6 +11778,11 @@ def select_active_targets(
     logging.info(
         f"[FÁZA 0] active_targets: {len(result)} / {len(vt)} VSX hviezd "
         f"(in_frame={int(in_frame.sum())}, masterstar_matched={len(matched_rows)}, excluded_no_dao_match={n_excluded_no_dao_match})"
+    )
+    LAST_EXCLUDED_TARGETS = (
+        pd.DataFrame(excluded_rows)
+        if excluded_rows
+        else pd.DataFrame(columns=["name", "vsx_name", "vsx_type", "ra_deg", "dec_deg", "mag", "reason"])
     )
     result = _ensure_active_target_display_names(result)
     return result.reset_index(drop=True)
@@ -13274,6 +13410,11 @@ def run_phase0_and_phase1(
         pass
     active.to_csv(active_csv, index=False)
     logging.info(f"[FÁZA 0] Uložené: {active_csv} ({len(active)} cieľov)")
+    _excluded = LAST_EXCLUDED_TARGETS
+    if _excluded is not None and not _excluded.empty:
+        excluded_csv = output_dir / "excluded_targets.csv"
+        _excluded.to_csv(excluded_csv, index=False)
+        logging.info(f"[FÁZA 0] Uložené: {excluded_csv} ({len(_excluded)} excluded)")
     _p(f"Fáza 0 hotová: {len(active)} aktívnych cieľov")
 
     if active.empty:

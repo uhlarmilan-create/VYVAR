@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import logging
 import math
+import subprocess
+import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,6 +47,49 @@ def _safe_float(val: Any) -> float | None:
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _git_head_short() -> str:
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        return out.strip() or "unknown"
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+
+
+def _write_enrich_summary(
+    cache_path: Path | None,
+    *,
+    skip_reason: str | None,
+    attempts: int,
+) -> None:
+    if cache_path is None:
+        return
+    summary_path = cache_path.parent / "summary.json"
+    payload: dict[str, Any] = {}
+    if summary_path.is_file():
+        try:
+            raw = json.loads(summary_path.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                payload = raw
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            payload = {}
+    payload["generated_at_utc"] = _utc_now_iso()
+    payload["git_head"] = _git_head_short()
+    payload["enrich_attempts"] = int(attempts)
+    if skip_reason:
+        payload["enrich_skip_reason"] = str(skip_reason)
+    else:
+        payload.pop("enrich_skip_reason", None)
+    try:
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    except OSError as exc:
+        logger.debug("HRD enrich summary write failed (%s): %s", summary_path, exc)
 
 
 def _load_cache(cache_path: Path) -> dict[str, dict[str, Any]]:
@@ -152,6 +197,30 @@ def _fetch_gaia_tap(source_ids: list[str], *, timeout_s: float) -> dict[str, dic
             raise TimeoutError(f"Gaia TAP timed out after {timeout_s}s") from exc
 
 
+def _fetch_gaia_tap_with_retry(
+    source_ids: list[str],
+    *,
+    timeout_s: float,
+    max_attempts: int = 3,
+    backoffs: tuple[float, ...] = (5.0, 15.0),
+) -> tuple[dict[str, dict[str, Any]], int]:
+    """Bounded retry wrapper for Gaia TAP (fail-open callers catch final exception)."""
+    last_exc: Exception | None = None
+    attempts = 0
+    for attempt in range(max(1, int(max_attempts))):
+        attempts = attempt + 1
+        try:
+            return _fetch_gaia_tap(source_ids, timeout_s=timeout_s), attempts
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            if attempt < max_attempts - 1:
+                delay = backoffs[attempt] if attempt < len(backoffs) else backoffs[-1]
+                time.sleep(max(0.0, float(delay)))
+    assert last_exc is not None
+    setattr(last_exc, "tap_attempts", attempts)
+    raise last_exc
+
+
 def _fetch_simbad(source_ids: list[str], *, timeout_s: float) -> dict[str, dict[str, Any]]:
     if not source_ids:
         return {}
@@ -242,9 +311,10 @@ def enrich_candidates(
     need_simbad = [sid for sid in ids if simbad_enabled and _needs_simbad_fetch(cache, sid)]
 
     skip_reason: str | None = None
+    tap_attempts = 0
     if need_gaia:
         try:
-            gaia_hits = _fetch_gaia_tap(need_gaia, timeout_s=timeout_s)
+            gaia_hits, tap_attempts = _fetch_gaia_tap_with_retry(need_gaia, timeout_s=timeout_s)
             for sid, payload in gaia_hits.items():
                 prev = cache.get(sid, {})
                 prev.update(payload)
@@ -259,7 +329,8 @@ def enrich_candidates(
                     cache[sid] = prev
         except Exception as exc:  # noqa: BLE001 - network/TAP fail-open for whole enrich pass
             skip_reason = f"Gaia TAP: {exc}"
-            logger.debug("HRD Gaia enrich failed: %s", exc)
+            tap_attempts = int(getattr(exc, "tap_attempts", tap_attempts or 3))
+            logger.warning("HRD Gaia enrich failed after %d attempt(s): %s", tap_attempts, exc)
 
     if simbad_enabled and need_simbad and skip_reason is None:
         try:
@@ -282,6 +353,12 @@ def enrich_candidates(
 
     if skip_reason:
         log_event(f"HRD enrichment skipped: {skip_reason}")
+
+    _write_enrich_summary(
+        cache_file,
+        skip_reason=skip_reason,
+        attempts=tap_attempts if need_gaia else 0,
+    )
 
     if cache_file is not None and cache:
         _save_cache(cache_file, cache)

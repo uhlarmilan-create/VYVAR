@@ -129,6 +129,8 @@ import itertools
 # Aperturná fotometria Fáz 0–2A (active_targets.csv, zone_flag, skip_photometry) je v ``photometry_core``
 # — ``run_phase0_and_phase1`` / ``run_phase2a``, nie v tomto súbore.
 
+_EPSF_SKIP_LOGGED: set[str] = set()
+
 
 def _photometry_mode_run_flags(
     cfg: AppConfig | None = None,
@@ -145,9 +147,13 @@ def _photometry_mode_run_flags(
     if _run_epsf and platesolve_dir is not None:
         _epsf_fits = Path(platesolve_dir) / "masterstar_epsf.fits"
         if not _epsf_fits.is_file():
-            log_event(
-                "photometry_mode includes epsf but no ePSF model found — skipping PSF photometry"
-            )
+            _ps_key = str(Path(platesolve_dir).resolve())
+            if _ps_key not in _EPSF_SKIP_LOGGED:
+                _EPSF_SKIP_LOGGED.add(_ps_key)
+                logging.getLogger("pipeline").info(
+                    "photometry_mode includes epsf but no ePSF model found at %s — skipping PSF photometry",
+                    _epsf_fits,
+                )
             _run_epsf = False
     return _run_aperture, _run_epsf
 
@@ -12031,6 +12037,7 @@ def generate_masterstar_and_catalog(
                     backup=True,
                     max_sep_arcsec=2.0,
                     log_fn=log_event,
+                    skip_unmatched_placeholders=True,
                 )
                 if int(rep.get("repaired") or 0) > 0:
                     log_event(

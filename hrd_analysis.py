@@ -1080,6 +1080,7 @@ def get_top_interesting_stars(
             cache_path,
             enabled=enrich_enabled,
             simbad_enabled=simbad_enabled,
+            timeout_s=float(getattr(cfg, "hrd_enrich_tap_timeout_s", 20.0)),
         )
 
     enrichment_active = bool(enrich_enabled or simbad_enabled)

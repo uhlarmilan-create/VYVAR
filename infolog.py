@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -70,6 +71,7 @@ def save_infolog_to_disk(draft_dir: str | Path, entries: list[str] | None = None
         with path.open("w", encoding="utf-8") as f:
             f.write(f"# VYVAR Infolog — {ts}\n")
             f.write(f"# Draft: {root}\n")
+            f.write("# timestamps: UTC\n")
             f.write("#" + "=" * 60 + "\n\n")
             for entry in lines:
                 if isinstance(entry, dict):
@@ -122,6 +124,7 @@ def ensure_infolog_logging() -> None:
         return
 
     fmt = logging.Formatter("%(asctime)s  %(levelname)s  [%(name)s]  %(message)s", datefmt="%H:%M:%S")
+    fmt.converter = time.gmtime
     h = InfologHandler()
     h.setLevel(logging.INFO)
     h.setFormatter(fmt)

@@ -252,6 +252,7 @@ no UI yet).
 | `hrd_online_enrich_enabled` | True | — | hrd_enrich.py, hrd_analysis.py | intentionally-hidden |
 | `hrd_simbad_enrich_enabled` | True | — | hrd_enrich.py, hrd_analysis.py | intentionally-hidden |
 | `hrd_enrich_max_candidates` | 20 | 1 … 100 | hrd_analysis.py | intentionally-hidden |
+| `hrd_enrich_tap_timeout_s` | 20.0 | 5 … 120 | hrd_enrich.py, hrd_analysis.py | intentionally-hidden |
 | `hrd_parallax_min_mas` | 0.15 | 0.0 … 10.0 | hrd_analysis.py | intentionally-hidden |
 | `hrd_parallax_snr_min` | 5.0 | 1.0 … 20.0 | hrd_analysis.py | intentionally-hidden |
 | `hrd_max_per_category` | 3 | 1 … 20 | hrd_analysis.py | intentionally-hidden |

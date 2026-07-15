@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **F-428 fix batch (2026-07-15):** VSX `variable_targets.csv` path resolution; repair-catalog-ID
+  placeholder skip + summary line; HRD Gaia TAP retry (`hrd_enrich_tap_timeout_s`); UTC infolog;
+  `photometry_summary.csv` AC status columns; `excluded_targets.csv` sidecar; diagnostic
+  `scripts/diag_428_unmatched_sep.py`.
 - **Sparse trust (2026-07-14):** check-star ensemble at n>=2 with Howell 1988 triangulation;
   CI-based trust bands; sidecar columns (`check_sparse`, `trust_R`, `trust_band`, ...); external K
   sourcing on sparse branch (`sparse_trust_core.py`, `docs/VYVAR_SPARSE_TRUST_SPEC.md`).

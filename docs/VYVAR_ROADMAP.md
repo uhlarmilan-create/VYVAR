@@ -183,6 +183,23 @@ Flat-norm Stage 2 and other ROADMAP calibration items unchanged (D1/D2/D3 codify
 
 ---
 
+## CLOSED — F-428 fix batch (draft_428 forensics, 2026-07-15)
+
+Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence: `infolog_20260715_130441.txt`.
+
+| ID | Severity | Status | Notes |
+|----|----------|--------|-------|
+| F-428-VSXFLAG | HIGH | **FIXED** | `variable_targets.csv` path probe (platesolve setup dir vs `photometry/`) |
+| F-428-REPAIR-FLOOD | MED | **FIXED** | Skip `DET_*` placeholders; aggregated `REPAIR summary:` |
+| F-428-TAP | MED | **FIXED** | TAP retry + `hrd_enrich_tap_timeout_s`; summary.json + PDF note |
+| F-428-EPSF-LOGNOISE | LOW | **FIXED** | ePSF skip logged once per run |
+| F-428-LOGTZ | LOW | **FIXED** | Infolog timestamps unified UTC |
+| F-428-AC-VISIBILITY | MED | **FIXED** | `ac_applied` / `ac_skip_reason` in summary CSV |
+| F-428-EXCLUDED-VISIBILITY | MED | **FIXED** | `excluded_targets.csv` + INFO name list |
+| F-428-A3-RADIUS | — | **OPEN** (Milan) | v2 diagnostic: DET_* p50 nearest-Gaia=81.053″; 0/2724 within 1× FWHM; self-check FAIL (valid input). Script: `scripts/diag_428_unmatched_sep.py`, output `tmp/f428_unmatched_sep_v2.txt` |
+
+---
+
 ## IN-FLIGHT — EXCEPT batch (silent broad-except census) — **CLOSED (2026-07-08)**
 
 **Ledger:** `docs/VYVAR_EXCEPT_CENSUS.md` — **625 EVIDENCE** (all tranches); **40 fix-batch** sites

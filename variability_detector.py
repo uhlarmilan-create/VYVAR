@@ -547,8 +547,11 @@ def compute_rms_variability(
                             str(r.get("vsx_type", "") or ""),
                         )
         except Exception as exc:  # noqa: BLE001
-            logging.warning("[EXC-0575] intent unclear (str(r.get('vsx_type', '') or ''), / ) / except Exception:  # noqa: BLE0...: %s", exc)
-            pass
+            logging.warning(
+                "[VSX] variable_targets.csv load failed (%s): %s",
+                vsx_targets_csv,
+                exc,
+            )
     out["vsx_match"] = out.index.isin(vsx_ids)
     out["vsx_name"] = out.index.map(lambda c: (vsx_meta.get(str(c), ("", ""))[0]))
     out["vsx_type"] = out.index.map(lambda c: (vsx_meta.get(str(c), ("", ""))[1]))
