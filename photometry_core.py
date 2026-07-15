@@ -9201,6 +9201,9 @@ def _phase2a_finalize_exports(
             _ac_skipped,
             dict(_ac_reasons),
         )
+        log_event(
+            f"[AC] run summary: applied={_ac_applied} skipped={_ac_skipped} ({dict(_ac_reasons)})"
+        )
 
     # Draft-level comp QA (read-only w.r.t. photometry; before AAVSO/VarAstro export).
     if bool(getattr(_cfg, "comp_qa_enabled", True)):

@@ -61,6 +61,62 @@ def test_stamp_vsx_positional_fallback_without_catalog_id() -> None:
     assert bool(out.iloc[0]["vsx_known_variable"]) is True
 
 
+def test_stamp_post_finalize_after_optimizer_assigns_ids() -> None:
+    """F-429-STAMP-WIRE: stamp after finalize must id-join when catalog_id present."""
+    cid = "1400549806859236864"
+    ms_pre = pd.DataFrame(
+        {
+            "catalog_id": [cid],
+            "name": [cid],
+            "ra_deg": [202.5],
+            "dec_deg": [42.5],
+            "x": [500.0],
+            "y": [600.0],
+            "vsx_known_variable": [False],
+            "coord_source": ["gaia_catalog"],
+        }
+    )
+    vt = pd.DataFrame(
+        {
+            "catalog_id": [cid],
+            "vsx_name": ["BO CVn"],
+            "ra_deg": [202.0],
+            "dec_deg": [42.0],
+        }
+    )
+    out, stats = stamp_vsx_known_variable_on_masterstars(ms_pre, vt)
+    assert stats["id_join"] == 1
+    assert stats["positional_fallback"] == 0
+    assert bool(out.iloc[0]["vsx_known_variable"]) is True
+
+
+def test_stamp_before_optimizer_has_zero_id_join() -> None:
+    """Early stamp (pre-optimizer) should not id-join when catalog_id still empty."""
+    cid = "1400549806859236864"
+    ms = pd.DataFrame(
+        {
+            "catalog_id": [""],
+            "name": ["DET_0001"],
+            "ra_deg": [202.5],
+            "dec_deg": [42.5],
+            "x": [500.0],
+            "y": [600.0],
+            "vsx_known_variable": [False],
+        }
+    )
+    vt = pd.DataFrame(
+        {
+            "catalog_id": [cid],
+            "vsx_name": ["BO CVn"],
+            "ra_deg": [202.0],
+            "dec_deg": [42.0],
+        }
+    )
+    out, stats = stamp_vsx_known_variable_on_masterstars(ms, vt)
+    assert stats["id_join"] == 0
+    assert bool(out.iloc[0]["vsx_known_variable"]) is False
+
+
 def test_draft428_dry_run_stamp_prediction() -> None:
     """Dry-run: count vt IDs present in masterstars (post-fix expectation)."""
     from pathlib import Path

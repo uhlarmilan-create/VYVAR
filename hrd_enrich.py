@@ -205,6 +205,8 @@ def _fetch_gaia_tap_with_retry(
     backoffs: tuple[float, ...] = (5.0, 15.0),
 ) -> tuple[dict[str, dict[str, Any]], int]:
     """Bounded retry wrapper for Gaia TAP (fail-open callers catch final exception)."""
+    from infolog import log_event
+
     last_exc: Exception | None = None
     attempts = 0
     for attempt in range(max(1, int(max_attempts))):
@@ -215,6 +217,10 @@ def _fetch_gaia_tap_with_retry(
             last_exc = exc
             if attempt < max_attempts - 1:
                 delay = backoffs[attempt] if attempt < len(backoffs) else backoffs[-1]
+                log_event(
+                    f"Gaia TAP attempt {attempts}/{max_attempts} failed ({exc!s}); "
+                    f"retry in {delay:.0f}s"
+                )
                 time.sleep(max(0.0, float(delay)))
     assert last_exc is not None
     setattr(last_exc, "tap_attempts", attempts)
