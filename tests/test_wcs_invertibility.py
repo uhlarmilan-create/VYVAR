@@ -97,3 +97,21 @@ def test_post_match_identity_gate_drops_bad_assignment():
     assert counts["ok"] >= 1
     assert counts["fail"] >= 1
     assert str(out.loc[1, "catalog_id"]).strip() == ""
+
+
+def test_evaluate_matched_world2pix_identity_px_near_zero():
+    import pandas as pd
+
+    from wcs_invertibility import evaluate_matched_world2pix_identity_px
+
+    w = _tan_wcs()
+    x0, y0 = 256.0, 256.0
+    ra, de = w.all_pix2world(x0, y0, 0)
+    df = pd.DataFrame({"x": [x0], "y": [y0], "catalog_id": ["CID1"]})
+    stats = evaluate_matched_world2pix_identity_px(
+        df,
+        w,
+        gaia_ra_dec_by_cid={"CID1": (float(ra), float(de))},
+    )
+    assert stats["matched_world2pix_identity_n"] == 1
+    assert stats["matched_world2pix_identity_p99_px"] < 0.01

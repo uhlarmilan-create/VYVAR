@@ -24,6 +24,14 @@ DRAFT_IDS = (430, 431)
 SNAPSHOT_NAME = "draft_000430_snapshot_wcsinv_20260716"
 OUT_DIR = _ROOT / "tmp" / "anchor_pair_430_431"
 
+_IDENTITY_QA_KEYS = (
+    "matched_world2pix_identity_n",
+    "matched_world2pix_identity_p50_px",
+    "matched_world2pix_identity_p95_px",
+    "matched_world2pix_identity_p99_px",
+    "matched_world2pix_identity_max_px",
+)
+
 
 def _git_head() -> str:
     try:
@@ -73,6 +81,39 @@ def _draft_root(draft_id: int) -> Path:
     return Path(cfg.archive_root) / "Drafts" / f"draft_{draft_id:06d}"
 
 
+def _read_pipeline_meta(draft_id: int) -> dict[str, Any]:
+    meta_path = _draft_root(draft_id) / "platesolve" / SETUP / "photometry" / "pipeline_meta.json"
+    if not meta_path.is_file():
+        return {}
+    try:
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _provenance_gate(draft_id: int) -> dict[str, Any]:
+    root = _draft_root(draft_id)
+    if not root.is_dir():
+        return {
+            "draft_id": draft_id,
+            "missing": True,
+            "provenance_clean": False,
+        }
+    meta = _read_pipeline_meta(draft_id)
+    prov = meta.get("provenance") or {}
+    git_dirty = prov.get("git_dirty")
+    return {
+        "draft_id": draft_id,
+        "git_hash": prov.get("git_hash"),
+        "git_dirty": git_dirty,
+        "provenance_clean": git_dirty is False,
+        "entry_point": prov.get("entry_point"),
+        "identity_qa": {k: meta.get(k) for k in _IDENTITY_QA_KEYS if k in meta},
+        "wcs_roundtrip_pass": meta.get("wcs_roundtrip_pass"),
+        "wcs_roundtrip_p99_px": meta.get("wcs_roundtrip_p99_px"),
+    }
+
+
 def _compare_pair(a: int, b: int) -> dict[str, Any]:
     ra, rb = _draft_root(a), _draft_root(b)
     core_a, n_core_a = compute_photometry_sha(ra, include_comp_qa=False)
@@ -119,6 +160,7 @@ def _cut_snapshot(draft_id: int) -> dict[str, Any]:
         "extended_n": ext_n,
         "git_head": _git_head(),
         "pipeline_meta_provenance": (meta.get("provenance") or {}),
+        "identity_qa": {k: meta.get(k) for k in _IDENTITY_QA_KEYS if k in meta},
     }
 
 
@@ -136,6 +178,7 @@ def main() -> int:
         "source": str(args.source),
         "setup": SETUP,
         "runs": [],
+        "provenance_gates": [],
     }
 
     if not args.skip_runs:
@@ -150,6 +193,24 @@ def main() -> int:
             if not payload["success"]:
                 print(f"ERROR: draft {draft_id} failed", file=sys.stderr)
                 break
+
+    for draft_id in DRAFT_IDS:
+        gate = _provenance_gate(draft_id)
+        report["provenance_gates"].append(gate)
+        print(json.dumps({"provenance_gate": gate}, indent=2))
+
+    prov_ok = all(g.get("provenance_clean") for g in report["provenance_gates"])
+    report["provenance_all_clean"] = prov_ok
+    if not prov_ok:
+        dirty = [g for g in report["provenance_gates"] if not g.get("provenance_clean")]
+        print(
+            "STOP: pipeline_meta git_dirty must be false on BOTH 430 and 431 — no snapshot cut",
+            file=sys.stderr,
+        )
+        print(f"Dirty drafts: {dirty}", file=sys.stderr)
+        out_path = OUT_DIR / "anchor_pair_report.json"
+        out_path.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
+        return 3
 
     cmp = _compare_pair(DRAFT_IDS[0], DRAFT_IDS[1])
     report["pair_compare"] = cmp

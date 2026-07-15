@@ -348,3 +348,93 @@ def apply_post_match_identity_gate_df(
             f"fail={counts.get('fail', 0)} (FWHM={fwhm_px:.2f}px)"
         )
     return out, counts
+
+
+def evaluate_matched_world2pix_identity_px(
+    df: Any,
+    wcs_obj: WCS,
+    *,
+    gaia_ra_dec_by_cid: dict[str, tuple[float, float]] | None = None,
+    gaia_db_path: str | None = None,
+    log_fn: Any | None = None,
+) -> dict[str, Any]:
+    """Distribution of sep(world2pix(Gaia[cid]), x/y) over matched masterstar rows (px)."""
+    import pandas as pd
+
+    from gaia_catalog_id import normalize_gaia_source_id
+
+    empty: dict[str, Any] = {
+        "matched_world2pix_identity_n": 0,
+        "matched_world2pix_identity_p50_px": float("nan"),
+        "matched_world2pix_identity_p95_px": float("nan"),
+        "matched_world2pix_identity_p99_px": float("nan"),
+        "matched_world2pix_identity_max_px": float("nan"),
+    }
+    if df is None or getattr(df, "empty", True):
+        return empty
+
+    cid_raw = df.get("catalog_id", pd.Series([""] * len(df), index=df.index))
+    cid_norm = cid_raw.map(normalize_gaia_source_id).astype(str).str.strip()
+    matched = cid_norm.ne("") & cid_norm.ne("nan")
+    if not bool(matched.any()):
+        return empty
+
+    coords = dict(gaia_ra_dec_by_cid or {})
+    ids = sorted({c for c in cid_norm[matched].tolist() if c})
+    gdb = str(gaia_db_path or "").strip()
+    if gdb and ids:
+        missing = [i for i in ids if i not in coords]
+        if missing:
+            try:
+                import sqlite3
+
+                from scripts.repair_catalog_ids import _pick_gaia_table
+
+                con = sqlite3.connect(gdb)
+                table = _pick_gaia_table(con)
+                for i0 in range(0, len(missing), 400):
+                    part = missing[i0 : i0 + 400]
+                    ph = ",".join("?" * len(part))
+                    for sid, ra, de in con.execute(
+                        f"SELECT source_id, ra, dec FROM {table} WHERE source_id IN ({ph})",
+                        part,
+                    ):
+                        key = normalize_gaia_source_id(str(sid))
+                        if key:
+                            coords[key] = (float(ra), float(de))
+                con.close()
+            except Exception as exc:  # noqa: BLE001
+                if log_fn:
+                    log_fn(f"matched_world2pix_identity_px: Gaia DB lookup skipped ({exc!s})")
+
+    seps: list[float] = []
+    for idx in df.index[matched]:
+        key = str(cid_norm.loc[idx] or "").strip()
+        g = coords.get(key)
+        if g is None:
+            continue
+        xv = float(pd.to_numeric(df.at[idx, "x"], errors="coerce"))
+        yv = float(pd.to_numeric(df.at[idx, "y"], errors="coerce"))
+        _verdict, dpx = post_match_pixel_sep(xv, yv, g[0], g[1], wcs_obj, fwhm_px=3.5)
+        if math.isfinite(dpx):
+            seps.append(float(dpx))
+
+    if not seps:
+        return empty
+
+    arr = np.asarray(seps, dtype=np.float64)
+    out = {
+        "matched_world2pix_identity_n": int(arr.size),
+        "matched_world2pix_identity_p50_px": float(np.percentile(arr, 50)),
+        "matched_world2pix_identity_p95_px": float(np.percentile(arr, 95)),
+        "matched_world2pix_identity_p99_px": float(np.percentile(arr, 99)),
+        "matched_world2pix_identity_max_px": float(np.max(arr)),
+    }
+    if log_fn:
+        log_fn(
+            "matched_world2pix_identity_px: "
+            f"n={out['matched_world2pix_identity_n']} "
+            f"p95={out['matched_world2pix_identity_p95_px']:.3f} "
+            f"p99={out['matched_world2pix_identity_p99_px']:.3f}"
+        )
+    return out

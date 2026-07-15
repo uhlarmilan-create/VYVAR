@@ -210,8 +210,8 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 | F-429-STAMP-WIRE | MED | **FIXED** (`fc177be`) | VSX stamp after `finalize_masterstar_sky_coords`; tests added |
 | F-429-AC-SUMMARY | LOW | **FIXED** (`fc177be`) | `[AC] run summary` via `log_event` |
 | F-429-TAP-RETRY | LOW | **VERIFIED** | 429 `_hrd_cache` `enrich_attempts=3`; INFO per retry added |
-| VALIDATE-429 | HIGH | **DONE** | draft_429 checklist PASS; `CURSOR_RESULT_429_validate_anchor.md` |
-| VL-ANCHOR-430 | HIGH | **IN PROGRESS** | Headless pair 430/431 from `D:\BO_CVn`; snapshot cut pending |
+| VALIDATE-429 | HIGH | **DONE** | draft_429 checklist; A1 FAILED-AS-WRITTEN (`git_dirty`); superseded by anchor pair |
+| VL-ANCHOR-430 | HIGH | **IN PROGRESS** | Headless 430/431; **git_dirty=false hard gate**; identity QA p95/p99 in meta |
 
 ---
 

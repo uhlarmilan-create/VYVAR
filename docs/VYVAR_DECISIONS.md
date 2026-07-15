@@ -15,8 +15,16 @@ the corrupt forward SIP (~12″ / ~5 px bookkeeping offset per v5). Evidence: 42
 and median sep-to-Gaia 17″. **Per-target photometry of well-detected stars is unaffected** (v5
 flux/identity correct). **draft_429 is the first healthy post-WCS-INV cleanup run.**
 
+**Density override coupling.** The inflated 428 matched census also **flipped automatic
+`DENSITY_OVERRIDES`** (428 snapshot: `annulus_inner_fwhm=5.75`, tighter comp gates
+`comp_max_delta_bprp=0.64`, `phase01_comparison_max_comp_rms=0.08`, `min_dist_arcsec=90` vs 429
+defaults 4.75 / 0.79 / 0.10 / 60). Contamination changed the perceived field density profile; **429
+default profile is the healthy state**. **Watch item:** BO CVn field sits near the density
+threshold — inter-night override flapping is possible; monitor `config_snapshot` on future drafts.
+
 **Anchor implication.** 429↔428 byte-identity is formally void; new anchor requires a fresh
-same-commit headless pair (430/431) per RUNBOOK two-fresh-runs rule.
+same-commit headless pair (430/431) per RUNBOOK two-fresh-runs rule. **`git_dirty=false` hard gate**
+on both anchor drafts before snapshot cut.
 
 ---
 

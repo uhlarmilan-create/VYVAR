@@ -12130,8 +12130,13 @@ def generate_masterstar_and_catalog(
                 df_final[_idcol] = df_final[_idcol].astype(str)
     _wcs_rt_p99: float | None = None
     _wcs_rt_pass: bool | None = None
+    _identity_qa: dict[str, Any] = {}
     try:
-        from wcs_invertibility import evaluate_wcs_roundtrip, finalize_masterstar_sky_coords
+        from wcs_invertibility import (
+            evaluate_matched_world2pix_identity_px,
+            evaluate_wcs_roundtrip,
+            finalize_masterstar_sky_coords,
+        )
 
         with fits.open(masterstar_fits, memmap=False) as _hf:
             _hdr_fin = _hf[0].header
@@ -12147,10 +12152,17 @@ def generate_masterstar_and_catalog(
         _rt_fin = evaluate_wcs_roundtrip(_w_fin, naxis1=_nax1f, naxis2=_nax2f)
         _wcs_rt_p99 = _rt_fin.get("wcs_roundtrip_p99_px")
         _wcs_rt_pass = bool(_rt_fin.get("pass"))
+        _identity_qa = evaluate_matched_world2pix_identity_px(
+            df_final,
+            _w_fin,
+            gaia_db_path=str(_cfg_ms.gaia_db_path or ""),
+            log_fn=log_event,
+        )
     except Exception as _fin_exc:  # noqa: BLE001
         log_event(f"MASTERSTAR coordinate finalization / round-trip QA skipped: {_fin_exc!s}")
         _wcs_rt_p99 = None
         _wcs_rt_pass = None
+        _identity_qa = {}
     try:
         _vt_stamp_path = platesolve_dir / "variable_targets.csv"
         if _vt_stamp_path.is_file():
@@ -12231,6 +12243,8 @@ def generate_masterstar_and_catalog(
         if _wcs_rt_p99 is not None:
             _meta_patch["wcs_roundtrip_p99_px"] = float(_wcs_rt_p99)
             _meta_patch["wcs_roundtrip_pass"] = bool(_wcs_rt_pass)
+        if _identity_qa:
+            _meta_patch.update(_identity_qa)
         try:
             _cone_df = None
             _cone_csv = Path(platesolve_dir) / "field_catalog_cone.csv"

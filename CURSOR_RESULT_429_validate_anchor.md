@@ -11,14 +11,14 @@ pair 430/431 from `D:\BO_CVn` (Part D **IN PROGRESS**). Docs updated (Part E).
 
 | # | Item | Result | Evidence |
 |---|------|--------|----------|
-| A1 | `pipeline_meta.json` provenance | **PASS** (note: `git_dirty=true`) | `Archive/Drafts/draft_000429/platesolve/NoFilter_60_2/photometry/pipeline_meta.json`: `git_hash=695348b87b2…`, `entry_point=run_phase2a`, `wcs_roundtrip_p99_px≈1.13e-11`, `wcs_roundtrip_pass=true`. `git_dirty=true` reflects Milan's working tree at run time (uncommitted local files), not code drift. |
+| A1 | `pipeline_meta.json` provenance | **FAILED-AS-WRITTEN** → superseded by anchor pair | `git_dirty=true` on 429 (`695348b`); **provenance gap** — dirty file list not persisted in meta (Milan dev tree state unknown). **Hard gate:** 430/431 must have `git_dirty=false` or no snapshot cut. |
 | A2 | Config snapshot diff 428 vs 429 | **PASS** (no user drift) | 5 keys differ — all map to **code-default / auto density overrides**, not `config.json` edits: `annulus_inner_fwhm` 5.75→4.75, `comp_max_delta_bprp` 0.64→0.79, `phase01_comparison_max_comp_rms` 0.08→0.1, `phase01_comparison_min_dist_arcsec` 90→60, `hrd_enrich_tap_timeout_s` null→20.0 (new persisted field). 428 values match `DENSITY_OVERRIDES` deltas in `config.py`; 429 matches current defaults at `695348b`. |
 | A3 | `variability_candidates.csv` | **PASS** | 2 rows; 0 known VSX in candidates; both `vsx_known_variable=False`. `ms_vsx_true=87` (positional stamp bug — fixed in `fc177be`). **+3 CSV arithmetic:** `Gaia≤10″=242 → CSV=245` because 3 VSX rows without resolvable Gaia ID are appended to the export (245 total = 242 Gaia-matched + 3 no-ID appendix; 1 additional row has empty `catalog_id` in VT). |
 | A4 | `excluded_targets.csv` | **PASS** | 78 rows: `out_of_frame=47`, `no_dao_gaia_match=30`, `no_catalog_id=1` — reconciles Phase-0 line `select_active_targets: … out_of_frame=47 excluded_no_dao_match=30` + 1 no-ID (`infolog_20260715_181704.txt` 15:24:47). |
 | A5 | PDF overflow + HRD note | **PASS** | PDF: `VYVAR_report_NoFilter_60_2_20260715.pdf` emitted 16:17:04; Milan run overflow **0**. HRD page: `HRD enrichment skipped: Gaia TAP timed out after 20.0s` (`infolog` 16:09:32); `_hrd_cache/summary.json` records skip reason. |
 | A6 | masterstars coords + v5 forensics | **PASS** | `coord_source`: gaia_catalog=2875, final_wcs=179. Matched sep vs Gaia DB: median 0.0″, p95 ~8e-11″, 0 rows >2″. v5 on 429: **`MISASSIGNED_164 n=0`** (`tmp/f429_coord_forensics_v5.txt`) — zero CATALOG_PROJECTION_OFF in the 164-cohort; priority T2 offsets ~1–7″ sep_wcs_gaia (residual peak-test on 6 stars, not census misassignment). |
 | A7 | `[BORDER] Glob found 0 aligned` | **PASS (benign)** | Fires pre-alignment in 428 and 429 (`infolog_429` 15:10:28, 15:10:31) — stage-order artifact before detrended frames exist. **LOW ledger row:** BORDER-PREALIGN (silence or reorder). |
-| A8 | BO CVn `lc_median_mag` 9.639→9.756 | **Quantified** | Same 4 comp IDs both drafts; `n_good_comp` 4→3. Comp `1499053747922698240` (G≈10.79, highest Δmag) retained in assignment table but dropped from **good** ensemble in 429 (`comp_rms` 0.0106→0.0118). 3-comp median ZP shifts +0.118 mag — bounded by losing the faintest comp from the active ensemble (not a missing catalog star). Config snapshot comp RMS gate also relaxed 0.08→0.10 between snapshots; ensemble clip path is the operative 4→3 change. |
+| A8 | BO CVn `lc_median_mag` 9.639→9.756 | **Quantified** | Same 4 comp IDs both drafts; **n_good_comp 4→3** via **ensemble sigma-clip** (not the relaxed `max_comp_rms` gate 0.08→0.10). Comp `1499053747922698240` (G≈10.79, faintest) clipped from active ensemble. **+0.118 mag** median ZP shift bounded by faintest-comp loss. |
 
 ### Infolog evidence (429, `infolog_20260715_181704.txt`)
 
@@ -79,10 +79,12 @@ two-fresh-runs rule → same-commit headless pair.
 | Step | Status |
 |------|--------|
 | Post-C commit | **DONE** `fc177be` |
-| Headless run 430 | **RUNNING** (`scripts/anchor_pair_430_431.py`, source `D:\BO_CVn`, started 2026-07-15 ~18:49 local) |
+| **git_dirty hard gate** | **430 AND 431 must be clean** — else STOP, no snapshot |
+| Headless run 430 | **RUNNING** |
 | Headless run 431 | Pending |
-| 430==431 core SHA gate | Pending |
-| Snapshot cut `draft_000430_snapshot_wcsinv_20260716` | Pending |
+| 430==431 core SHA gate (incl. `err`) | Pending |
+| **matched_world2pix_identity p95/p99** | New standing QA — `pipeline_meta.json` + anchor report |
+| Snapshot cut `draft_000430_snapshot_wcsinv_20260716` | Pending (requires clean provenance + SHA gate) |
 | VL-ANCHOR ledger + `--full` re-enable | Pending |
 | `session_baseline_check` SHA update | Pending |
 
