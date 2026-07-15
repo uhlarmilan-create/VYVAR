@@ -67,3 +67,10 @@ def test_ledger_item_schema(ledger: dict) -> None:
         lv = it["last_verified"]
         if lv is not None:
             assert ISO_DATE_RE.match(lv), f"{it['id']}.last_verified not ISO date: {lv!r}"
+        if "status" in it:
+            assert isinstance(it["status"], str), f"{it['id']}.status must be str"
+        if "offline_backup" in it:
+            ob = it["offline_backup"]
+            assert isinstance(ob, dict), f"{it['id']}.offline_backup must be dict"
+            for key in ("path", "sha256", "verified_utc"):
+                assert key in ob, f"{it['id']}.offline_backup missing {key}"

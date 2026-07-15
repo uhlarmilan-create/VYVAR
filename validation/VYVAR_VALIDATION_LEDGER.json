@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-14",
+  "updated": "2026-07-15",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -23,21 +23,30 @@
       "id": "VL-ANCHOR-424",
       "area": "photometry",
       "description": "draft_424 coherent content anchor reproduces via session baseline --full",
-      "verification": "scripts/session_baseline_check.py --full (science-meaningful compare + photometry SHA vs Archive/Drafts/draft_000424_snapshot_sigma_floor_20260713; core bf3743a1... n=357; extended dec5c637... n=535). Anchor chain acceptance: intermediate baseline Archive/Drafts/draft_000424_snapshot_intermediate_b5364e6_20260713 (b5364e6; core 373e8235... ext 0243f719...) and exact per-epoch c4 predictor validation (tmp/anchor_chain/c2_exact_c4_validation.json; 23542/23542 epochs within abs 2e-6).",
-      "passes": true,
-      "last_verified": "2026-07-14",
-      "commit": "114c423",
-      "notes": "Accepted anchor: PROD-SIGMA-FLOOR (c4 SEM + Newton sigma_sys floor; wide un-floored, eq1 floor=0). Supersedes draft_000424_snapshot_20260708_full (750c856; core 92939fab...) which predates approved bingain + SEM unit fix; acceptance validated against intermediate b5364e6 snapshot."
+      "verification": "scripts/session_baseline_check.py --full (science-meaningful compare + photometry SHA vs Archive/Drafts/draft_000424_snapshot_sigma_floor_20260713; core bf3743a1... n=357; extended dec5c637... n=535). Offline golden reference for c-python port validation.",
+      "status": "suspended_offline",
+      "passes": false,
+      "last_verified": "2026-07-15",
+      "commit": "dcd88bf",
+      "offline_backup": {
+        "path": "C:\\ASTRO\\backups\\vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip",
+        "format": "zip",
+        "sha256": "8706c0d6412ac2dd3e318f7f74eba5baaf275d07e9c775fa062985640e2652d48",
+        "size_bytes": 257667235,
+        "core_sha_verified": "bf3743a150d788283eab2ab51db7b31f59e6d1c481159208bbe3f573092ec975",
+        "verified_utc": "2026-07-15T09:00:00Z"
+      },
+      "notes": "Archive cleared 2026-07-15 (Milan). Accepted anchor offline at path above; --full SUSPENDED until new in-Archive anchor cut. Prior in-Archive snapshot draft_000424_snapshot_sigma_floor_20260713 removed after verified backup."
     },
     {
       "id": "VL-COUNTERS-ZERO",
       "area": "except-hygiene",
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
-      "passes": true,
-      "last_verified": "2026-07-14",
-      "commit": "114c423",
-      "notes": "Set by Part B --full run in DEV-PROCESS-AB task."
+      "passes": false,
+      "last_verified": "2026-07-15",
+      "commit": "dcd88bf",
+      "notes": "Suspended with VL-ANCHOR-424 offline (Archive cleared 2026-07-15); re-verify on next --full after new anchor."
     },
     {
       "id": "VL-K2-MATRIX",

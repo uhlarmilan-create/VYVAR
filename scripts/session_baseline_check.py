@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Session-start baseline check (--fast default; --full for draft_424 anchor re-verify).
 
-Exit 0 = PASS, 1 = FAIL. ASCII output; concise summary table at end.
+Exit 0 = PASS or SUSPENDED, 1 = FAIL. ASCII output; concise summary table at end.
 """
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LEDGER_PATH = REPO_ROOT / "validation" / "VYVAR_VALIDATION_LEDGER.json"
+ANCHOR_LEDGER_ID = "VL-ANCHOR-424"
 
 DRAFT_ID = 424
 SETUP = "NoFilter_60_2"
@@ -57,6 +58,10 @@ class SessionReport:
     @property
     def ok(self) -> bool:
         return not any(r.status == "FAIL" for r in self.results)
+
+    @property
+    def suspended(self) -> bool:
+        return any(r.status == "SUSPENDED" for r in self.results)
 
 
 def _run_git(*args: str) -> str:
@@ -177,6 +182,30 @@ def check_ledger_hint(report: SessionReport) -> None:
         report.add("ledger-todo", "WARN", ", ".join(todo))
 
 
+def _load_ledger() -> dict[str, Any]:
+    return json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+
+
+def _ledger_item(ledger_id: str) -> dict[str, Any] | None:
+    for it in _load_ledger().get("items", []):
+        if it.get("id") == ledger_id:
+            return it
+    return None
+
+
+def _full_baseline_suspend_message() -> str | None:
+    """Return suspend message when VL-ANCHOR-424 is offline; else None."""
+    item = _ledger_item(ANCHOR_LEDGER_ID)
+    if not item or item.get("status") != "suspended_offline":
+        return None
+    backup = item.get("offline_backup") or {}
+    path = backup.get("path") or "unknown"
+    return (
+        "full baseline SUSPENDED pending new anchor "
+        f"(Archive cleared 2026-07-15; golden reference offline at {path})"
+    )
+
+
 def provenance_block_hash(phot_dir: Path) -> str:
     meta_path = phot_dir / "pipeline_meta.json"
     if not meta_path.is_file():
@@ -201,6 +230,11 @@ def _update_ledger_on_full_pass(commit: str) -> None:
 
 
 def run_full_baseline(report: SessionReport) -> None:
+    suspend_msg = _full_baseline_suspend_message()
+    if suspend_msg:
+        report.add("full-baseline", "SUSPENDED", suspend_msg)
+        return
+
     if str(REPO_ROOT) not in sys.path:
         sys.path.insert(0, str(REPO_ROOT))
 
@@ -369,7 +403,12 @@ def print_summary(report: SessionReport) -> None:
         detail = r.detail.replace("\n", " ")[:80]
         print(f"{r.name:<28} {r.status:<6} {detail}")
     print("-" * 72)
-    overall = "PASS" if report.ok else "FAIL"
+    if report.suspended:
+        overall = "SUSPENDED"
+    elif report.ok:
+        overall = "PASS"
+    else:
+        overall = "FAIL"
     print(f"OVERALL: {overall}")
     print()
 
@@ -397,6 +436,8 @@ def main(argv: list[str] | None = None) -> int:
         run_full_baseline(report)
 
     print_summary(report)
+    if report.suspended:
+        return 0
     return 0 if report.ok else 1
 
 

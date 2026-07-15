@@ -96,6 +96,10 @@ def test_verify_draft_equipment_scores_c5a_geometry(tmp_path):
     assert scores[4] > scores[2]
 
 
+@pytest.mark.skipif(
+    not (ROOT / "Archive" / "Drafts" / "draft_000426").is_dir(),
+    reason="requires on-disk draft_000426 (skipped after ARCHIVE-CLEANUP 2026-07-15)",
+)
 def test_fix_draft_equipment_real_draft426_dry_run():
     proc = subprocess.run(
         [
