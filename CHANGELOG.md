@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **VALIDATE-429 (2026-07-16):** Forensics scripts `validate_429_wcsinv.py`, `pass2_contamination_428_429.py`,
+  `anchor_pair_430_431.py`; CURSOR_RESULT_429_validate_anchor.md.
+- **F-429 fixes (2026-07-16):** VSX stamp wired post-finalize; `[AC] run summary` infolog; Gaia TAP
+  retry INFO lines (`fc177be`).
 - **F-428 WCS-INV (2026-07-16):** Round-trip invertibility gate, SIP inverse regen, coordinate
   finalization (`coord_source`), post-match pixel identity gate (`wcs_invertibility.py`).
 - **F-428 COORD v5 (2026-07-16):** MASTERSTAR peak test + direction stats

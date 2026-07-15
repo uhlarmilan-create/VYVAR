@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-16 -- VALIDATE-429 + F-429 fixes + anchor pair (IN PROGRESS)
+
+draft_429 validated on `695348b` (Milan UI). Pass-2 contamination CONFIRMED (428 vs 429). Regression
+fixes shipped `fc177be`: VSX stamp post-finalize, AC run summary infolog, TAP retry INFO. Headless
+anchor pair 430/431 started from `D:\BO_CVn`. Result: `CURSOR_RESULT_429_validate_anchor.md`.
+
+---
+
 ## 2026-07-16 -- F-428-WCS-INV fix batch
 
 Shipped `wcs_invertibility.py`: round-trip gate (p99<0.2px), SIP AP/BP regen, optimizer SIP refit

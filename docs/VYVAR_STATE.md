@@ -1,41 +1,34 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-16** (F-428-WCS-INV fix batch). **F-428-COORD CLOSED** (WCS-INV guards shipped); T4 UI re-run pending Milan.
-pytest: **866 passed**, 16 skipped.
+Last updated: **2026-07-16** (VALIDATE-429 + F-429 fixes; anchor pair **IN PROGRESS**). pytest: **873 passed**, 16 skipped.
 
-## Current snapshot (post-F-428 WCS-INV)
+## Current snapshot (post-VALIDATE-429)
 
-**F-428 MS-STAMP:** Fixed in `8e01e3d` (catalog_id join; dry-run 46→197).
+**draft_429 validated** on `695348b` (Milan UI, NoFilter|60|2, 139 frames, 167 targets, 164 LCs).
+WCS-INV guards confirmed live. **First healthy post-cleanup census** (2875 matched, 179 unmatched).
 
-**F-428 COORD:** v5 RECLASSIFY-PROJECTION accepted; **WCS-INV fix batch shipped** — round-trip gate,
-SIP inverse regen, `finalize_masterstar_sky_coords` + `coord_source`, post-match pixel identity gate.
-Module: `wcs_invertibility.py`. See `CURSOR_RESULT_428_wcsinv.md`, `docs/VYVAR_DECISIONS.md`.
+**F-429 regressions fixed** (`fc177be`, pushed): VSX stamp post-finalize (STAMP-WIRE), `[AC] run summary`
+infolog (AC-SUMMARY), Gaia TAP retry INFO lines (TAP-RETRY verified on 429 `_hrd_cache` attempts=3).
 
-**T4 / anchor:** **UNBLOCK** — Milan single UI re-run of draft_428 required before anchor arc opens.
-See validation checklist in `CURSOR_RESULT_428_wcsinv.md`.
+**F-428 arc:** **CLOSED** — pass-2 contamination CONFIRMED on draft_428; 429 validated. See
+`CURSOR_RESULT_429_validate_anchor.md`.
 
-**Archive:** `draft_000428` available for revalidation. See `CURSOR_RESULT_428_closeout.md`, `CURSOR_RESULT_428_msstamp_coord.md`.
+**Anchor pair 430/431:** headless runs from `D:\BO_CVn` **IN PROGRESS** (`scripts/anchor_pair_430_431.py`).
+Gate: byte-identical core SHA; cut `draft_000430_snapshot_wcsinv_20260716`; re-enable `--full`.
+
+**Prior F-428 WCS-INV (`695348b`):** round-trip gate, SIP inverse regen, `finalize_masterstar_sky_coords`,
+post-match identity gate (`wcs_invertibility.py`).
+
+**Archive:** `draft_000428`, `draft_000429` on disk.
 
 **Anchor (OFFLINE golden reference):** accepted snapshot core SHA **`bf3743a1...`** (git **`8fb21b3`**).
-Offline backup: `C:\ASTRO\backups\vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip`
-(SHA256 `8706c0d6...`; core SHA re-verified on extract). Ledger: VL-ANCHOR-424
-`status: suspended_offline`. **Next in-Archive anchor:** first post-cleanup measurement dataset.
+Offline backup: `C:\ASTRO\backups\vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip`.
+Ledger: VL-ANCHOR-424 `status: suspended_offline`. **Next in-Archive anchor:** draft_430 pair cut (pending).
 
-**Baseline checks:** `--fast` daily ritual (unchanged). `--full` **SUSPENDED** pending new anchor
-(ledger-driven; not FAIL). Re-enable when new snapshot cut + VL-ANCHOR-424 `passes: true`.
+**Baseline checks:** `--fast` daily. `--full` **SUSPENDED** until 430/431 pair completes + snapshot cut.
 
-**Err model (production):** unchanged -- empirical bkg + c4 SEM + unit fix + Newton floor 18.0 mmag;
-wide un-floored. Spec: `docs/VYVAR_SIGMA_FLOOR_SPEC.md`.
-
-**SPARSE-TRUST (live):** unchanged on code path. Spec: `docs/VYVAR_SPARSE_TRUST_SPEC.md`.
-
-**k'' / CAL-DIAG / WSN:** unchanged status from 0714 close (see session history table).
-
-**Guards inventory:** PROVENANCE-GUARD; designed-err envelope; masterstar epoch exclusion;
-k2 internal-consistency warning.
-
-**Next session:** Import first new measurement run into empty `Archive/Drafts/`; startup ritual:
-`git pull` -> STATE -> ROADMAP -> `session_baseline_check.py --fast` -> await Milan data.
+**Next session:** await anchor pair completion; verify 430==431 SHA; cut snapshot; update
+`session_baseline_check.py` expectations + VL-ANCHOR ledger row.
 
 ## Prior snapshot (post-0714, pre-archive-wipe)
 

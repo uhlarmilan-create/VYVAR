@@ -197,8 +197,30 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 | F-428-AC-VISIBILITY | MED | **FIXED** | `ac_applied` / `ac_skip_reason` in summary CSV |
 | F-428-EXCLUDED-VISIBILITY | MED | **FIXED** | `excluded_targets.csv` + INFO name list |
 | F-428-MS-STAMP | MED | **FIXED** | `vsx_known_variable` via `catalog_id` join (`stamp_vsx_known_variable_on_masterstars`); draft_428 dry-run: 46→**197** id_join (**207** total) |
-| F-428-COORD | MED | **CLOSED** (WCS-INV) | v5 RECLASSIFY-PROJECTION + fix batch: `wcs_invertibility.py`, SIP Gaia-sky refit, coord finalization, identity gate. T4 UI re-run pending Milan. |
+| F-428-COORD | MED | **CLOSED** (WCS-INV) | v5 RECLASSIFY-PROJECTION + fix batch: `wcs_invertibility.py`, SIP Gaia-sky refit, coord finalization, identity gate. draft_429 validated. |
 | F-428-A3-RADIUS | — | **OPEN** (Milan) | Deeper/wider field DB (GAIA-DR4 ~Dec 2026); v5 T4 Poisson vs control reconciled (non-uniform cone export). |
+| F-428-PASS2-CONTAM | — | **CLOSED** | 428 pass-2 census contamination CONFIRMED; see DECISIONS + `CURSOR_RESULT_429_validate_anchor.md`. |
+
+---
+
+## CLOSED — F-429 validate + regressions (2026-07-16)
+
+| ID | Sev | Status | Notes |
+|----|-----|--------|-------|
+| F-429-STAMP-WIRE | MED | **FIXED** (`fc177be`) | VSX stamp after `finalize_masterstar_sky_coords`; tests added |
+| F-429-AC-SUMMARY | LOW | **FIXED** (`fc177be`) | `[AC] run summary` via `log_event` |
+| F-429-TAP-RETRY | LOW | **VERIFIED** | 429 `_hrd_cache` `enrich_attempts=3`; INFO per retry added |
+| VALIDATE-429 | HIGH | **DONE** | draft_429 checklist PASS; `CURSOR_RESULT_429_validate_anchor.md` |
+| VL-ANCHOR-430 | HIGH | **IN PROGRESS** | Headless pair 430/431 from `D:\BO_CVn`; snapshot cut pending |
+
+---
+
+## OPEN — low priority hygiene
+
+| ID | Sev | Item |
+|----|-----|------|
+| BORDER-PREALIGN | LOW | `[BORDER] Glob found 0 aligned frames` fires pre-alignment (428/429 benign); silence or reorder stage |
+| A-DURABLE-UI | LOW | Save watched `.py` during alignment — pending Milan confirmation on 429 run |
 
 ---
 

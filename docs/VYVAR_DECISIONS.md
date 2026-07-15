@@ -6,6 +6,20 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## F-428-PASS2-CONTAMINATION — draft_428 census products unreliable (2026-07-16)
+
+**Decision.** draft_428 census-level products (comp pools sized from masterstar table, faint-target
+counts, unmatched DET population) were **contaminated** by Gaia-targeted DAO pass-2 running through
+the corrupt forward SIP (~12″ / ~5 px bookkeeping offset per v5). Evidence: 428 `n_raw_dao=8927` vs
+429 `2816`; unmatched 2724 vs 179; 1172 matched catalog_ids present only in 428 with median mag 15.1
+and median sep-to-Gaia 17″. **Per-target photometry of well-detected stars is unaffected** (v5
+flux/identity correct). **draft_429 is the first healthy post-WCS-INV cleanup run.**
+
+**Anchor implication.** 429↔428 byte-identity is formally void; new anchor requires a fresh
+same-commit headless pair (430/431) per RUNBOOK two-fresh-runs rule.
+
+---
+
 ## F-428-WCS-INV — MASTERSTAR WCS invertibility gate + coordinate finalization (2026-07-16)
 
 **Decision.** After F-428 COORD v5 (`RECLASSIFY-PROJECTION`), encode three durable guards:
