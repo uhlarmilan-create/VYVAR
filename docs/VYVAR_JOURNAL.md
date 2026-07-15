@@ -2,6 +2,27 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-16 -- F-428-WCS-INV fix batch
+
+Shipped `wcs_invertibility.py`: round-trip gate (p99<0.2px), SIP AP/BP regen, optimizer SIP refit
+on Gaia sky coords, `finalize_masterstar_sky_coords` + `coord_source`, post-match pixel identity
+gate. F-428-COORD closed in ROADMAP; F-428-A3-RADIUS stays OPEN. pytest 871 pass. Milan T4 UI
+re-run pending. Result: `CURSOR_RESULT_428_wcsinv.md`.
+
+---
+
+## 2026-07-16 -- F-428-COORD forensics v5
+
+Read-only peak test on `MASTERSTAR.fits` for 184 vt↔ms violation rows. **Gate:
+RECLASSIFY-PROJECTION.** All 160 testable v4 MISASSIGNED rows: real DAO peak at ms x/y; Gaia
+`catalog_id` WCS→pixel within aperture (~1.3 px median on 7 priority targets); vt/active_targets
+coords match Gaia (~0.24″). v4 metric `sep(pix2world(x,y), Gaia)` ~12″ — sky bookkeeping offset,
+not wrong-star flux. T4 unmatched DET: SPURIOUS-UNIFORM (det/control NN p50 ratio 1.07). LC CSVs
+lack per-frame x/y (T3 inconclusive). Contact sheet: `tmp/f428_priority_contact_sheet.png`.
+T4 re-run + anchor UNBLOCK pending Milan review. Result: `CURSOR_RESULT_428_coord_v5.md`.
+
+---
+
 ## 2026-07-15 -- ARCHIVE-CLEANUP
 
 **Milan decision:** Clear entire `Archive/` drafts tree for new measurements. Preserve ONE offline

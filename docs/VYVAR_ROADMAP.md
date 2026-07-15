@@ -196,9 +196,9 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 | F-428-LOGTZ | LOW | **FIXED** | Infolog timestamps unified UTC |
 | F-428-AC-VISIBILITY | MED | **FIXED** | `ac_applied` / `ac_skip_reason` in summary CSV |
 | F-428-EXCLUDED-VISIBILITY | MED | **FIXED** | `excluded_targets.csv` + INFO name list |
-| F-428-A3-RADIUS | — | **OPEN** (Milan) | v3 forensics: unmatched DET p50=81″ **not** fixable by WCS refresh (recomputed p50=81.141″); radius input still valid on stored coords. Script: `scripts/diag_428_unmatched_sep.py --forensics`, `tmp/f428_coord_forensics.txt` |
 | F-428-MS-STAMP | MED | **FIXED** | `vsx_known_variable` via `catalog_id` join (`stamp_vsx_known_variable_on_masterstars`); draft_428 dry-run: 46→**197** id_join (**207** total) |
-| F-428-COORD | MED | **OPEN** (Milan) | T1.2 stale-WCS **not confirmed**; no code change. Optional: matched-row Gaia coords fixes 176/179 vt↔ms violations (metadata only) |
+| F-428-COORD | MED | **CLOSED** (WCS-INV) | v5 RECLASSIFY-PROJECTION + fix batch: `wcs_invertibility.py`, SIP Gaia-sky refit, coord finalization, identity gate. T4 UI re-run pending Milan. |
+| F-428-A3-RADIUS | — | **OPEN** (Milan) | Deeper/wider field DB (GAIA-DR4 ~Dec 2026); v5 T4 Poisson vs control reconciled (non-uniform cone export). |
 
 ---
 

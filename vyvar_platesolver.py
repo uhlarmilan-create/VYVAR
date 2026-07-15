@@ -694,6 +694,12 @@ def _fit_sip_on_matches(
     w_sip = w_lin.deepcopy()
     w_sip.wcs.ctype = ["RA---TAN-SIP", "DEC--TAN-SIP"]
     w_sip.sip = Sip(a, b, None, None, (crpix1, crpix2))
+    try:
+        from wcs_invertibility import ensure_sip_inverse_coefficients
+
+        w_sip = ensure_sip_inverse_coefficients(w_sip)
+    except Exception:  # noqa: BLE001
+        pass
 
     rms_lin = _wcs_pixel_rms_linear(w_lin, x_obs, y_obs, world)
     rms_sip = _wcs_pixel_rms_full(w_sip, x_obs, y_obs, world)

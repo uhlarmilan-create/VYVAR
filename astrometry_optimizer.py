@@ -463,11 +463,24 @@ def optimize_masterstar_matches(
         log_event(f"Astrometry optimizer initial jump skipped: {exc!s}")
     log_event("Astrometry optimizer: adaptive rematch radius enabled (center=5.0\", edge>800px => 10–15\").")
     cid_series = df.get("catalog_id", pd.Series([""] * len(df), index=df.index)).copy()
+    _fwhm_hdr = float(hdr.get("VY_FWHM") or hdr.get("DAO_FWHM") or 3.5)
+    if not math.isfinite(_fwhm_hdr) or _fwhm_hdr <= 0:
+        _fwhm_hdr = 3.5
+    _identity_warn = 0
+    _identity_fail = 0
 
     def _is_unmatched_row(row_idx: int) -> bool:
         return _norm_id(cid_series.iloc[row_idx]) == ""
 
-    def _write_match(row_idx: int, picked_idx: int, sep_arcsec: float) -> None:
+    def _write_match(row_idx: int, picked_idx: int, sep_arcsec: float) -> bool:
+        dpx = float(math.hypot(float(gx0[picked_idx]) - float(x[row_idx]), float(gy0[picked_idx]) - float(y[row_idx])))
+        if dpx > 3.0 * _fwhm_hdr:
+            nonlocal _identity_fail
+            _identity_fail += 1
+            return False
+        if dpx > 1.5 * _fwhm_hdr:
+            nonlocal _identity_warn
+            _identity_warn += 1
         sid = _norm_id(gdf.iloc[picked_idx]["source_id"])
         used_ids.add(sid)
         cid_series.iloc[row_idx] = sid
@@ -481,6 +494,7 @@ def optimize_masterstar_matches(
         df.at[row_idx, "b_v"] = _bpr
         df.at[row_idx, "bp_rp"] = _bpr
         df.at[row_idx, "match_sep_arcsec"] = float(sep_arcsec)
+        return True
 
     def _refit_displacement_from_all_matches() -> None:
         """Re-fit pixel-space polynomial from every star that already has a catalog_id (The Grip)."""
@@ -598,10 +612,9 @@ def optimize_masterstar_matches(
             from utils import strip_celestial_wcs_keys
 
             cid2 = normalize_gaia_source_id_series(df.get("catalog_id", pd.Series([""] * len(df))))
-            okm = cid2.ne("") & pd.to_numeric(df.get("ra_deg"), errors="coerce").notna() & pd.to_numeric(
-                df.get("dec_deg"), errors="coerce"
+            okm = cid2.ne("") & pd.to_numeric(df.get("x"), errors="coerce").notna() & pd.to_numeric(
+                df.get("y"), errors="coerce"
             ).notna()
-            okm &= pd.to_numeric(df.get("x"), errors="coerce").notna() & pd.to_numeric(df.get("y"), errors="coerce").notna()
             mdf = df.loc[okm].copy()
             n_pairs = int(len(mdf))
             if n_pairs < 25:
@@ -609,8 +622,27 @@ def optimize_masterstar_matches(
                 return {}
             x_obs = pd.to_numeric(mdf["x"], errors="coerce").to_numpy(dtype=np.float64)
             y_obs = pd.to_numeric(mdf["y"], errors="coerce").to_numpy(dtype=np.float64)
-            ra_obs = pd.to_numeric(mdf["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
-            de_obs = pd.to_numeric(mdf["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
+            ra_gaia: list[float] = []
+            de_gaia: list[float] = []
+            for sid_raw in cid2.loc[okm].tolist():
+                sid = _norm_id(sid_raw)
+                j = gmap.get(sid)
+                if j is None:
+                    ra_gaia.append(float("nan"))
+                    de_gaia.append(float("nan"))
+                    continue
+                ra_gaia.append(float(g_ra[j]))
+                de_gaia.append(float(g_de[j]))
+            ra_arr = np.asarray(ra_gaia, dtype=np.float64)
+            de_arr = np.asarray(de_gaia, dtype=np.float64)
+            good_sky = np.isfinite(ra_arr) & np.isfinite(de_arr)
+            if int(good_sky.sum()) < 25:
+                log_event(f"Astrometry optimizer {tag}: WCS refit skipped (Gaia sky coords <25).")
+                return {}
+            x_obs = x_obs[good_sky]
+            y_obs = y_obs[good_sky]
+            ra_obs = ra_arr[good_sky]
+            de_obs = de_arr[good_sky]
             world = _SkyCoord(ra=ra_obs * _u.deg, dec=de_obs * _u.deg, frame="icrs")
             sip_order = max(2, int(_SIP_MIN_ORDER))
             w_lin = _fit_wcs_from_points((x_obs, y_obs), world, projection="TAN")
@@ -623,21 +655,27 @@ def optimize_masterstar_matches(
                 sip_force_rms_guard_ratio=sip_force_rms_guard_ratio,
             )
             w_out = w_sip if w_sip is not None else w_lin
-            wh = w_out.to_header(relax=True)
-            # EXC-0010 / EXCEPT-FIX-3 #8: validate core WCS-key copyability BEFORE opening/
-            # stripping the FITS. On a core-key failure skip the refit (keep the pre-refit WCS)
-            # rather than flushing a half-written WCS. See docs/VYVAR_EXCEPT_CENSUS.md (EXC-0010).
-            from astropy.io.fits import Header as _Header
-            from wcs_header_io import copy_wcs_header_keys
+            from wcs_invertibility import apply_wcs_refit_with_invertibility_gate
 
-            _refit_ctx = f"astrometry {tag} SIP refit"
-            if copy_wcs_header_keys(_Header(), wh, context=_refit_ctx):
-                log_event(f"Astrometry optimizer {tag}: WCS refit skipped (core WCS key copy failed)")
-                return {}
+            nax1 = int(hdr.get("NAXIS1") or data.shape[1] if data.ndim >= 2 else 0)
+            nax2 = int(hdr.get("NAXIS2") or data.shape[0] if data.ndim >= 1 else 0)
+            with fits.open(fits_path, memmap=False) as _hprev:
+                prev_hdr = _hprev[0].header.copy()
+            applied, gate_meta = apply_wcs_refit_with_invertibility_gate(
+                fits_path=str(fits_path),
+                wcs_candidate=w_out,
+                previous_header=prev_hdr,
+                context=f"astrometry {tag} SIP refit",
+                naxis1=nax1,
+                naxis2=nax2,
+                log_fn=log_event,
+            )
+            meta = dict(meta)
+            meta.update(gate_meta)
+            if not applied:
+                return meta
             with fits.open(fits_path, mode="update", memmap=False) as hdul2:
                 hh = hdul2[0].header
-                strip_celestial_wcs_keys(hh)
-                copy_wcs_header_keys(hh, wh, context=_refit_ctx)
                 hh["VY_SIPRF"] = (True, f"WCS refit ({tag}, SIP{int(sip_order)})")
                 if meta.get("rms_linear_px") is not None and meta.get("rms_sip_px") is not None:
                     hh.add_history(
@@ -1170,6 +1208,24 @@ def optimize_masterstar_matches(
     if "catalog_id" in df.columns:
         export_df = df.copy()
         export_df["catalog_id"] = catalog_id_series_for_masterstars_export(export_df)
+    try:
+        from wcs_invertibility import finalize_masterstar_sky_coords
+
+        with fits.open(fits_path, memmap=False) as _hf:
+            _wfin = WCS(_hf[0].header)
+        export_df = finalize_masterstar_sky_coords(
+            export_df,
+            _wfin,
+            gaia_db_path=gaia_db_path,
+            log_fn=log_event,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log_event(f"Astrometry optimizer coordinate finalization skipped: {exc!s}")
+    if _identity_warn or _identity_fail:
+        log_event(
+            f"Astrometry optimizer post-match identity gate: warn={_identity_warn} fail={_identity_fail} "
+            f"(FWHM={_fwhm_hdr:.2f}px thresholds warn>{1.5 * _fwhm_hdr:.1f}px fail>{3.0 * _fwhm_hdr:.1f}px)"
+        )
     export_df.to_csv(out_path, index=False)
     n_all = int(len(df))
     n_match = int(

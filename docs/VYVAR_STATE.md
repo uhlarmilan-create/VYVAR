@@ -1,15 +1,18 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-15** (F-428 MS-STAMP fix; COORD forensics). F-428 fix batch + MS-STAMP committed; push authorized; T4 UI revalidation pending Milan.
+Last updated: **2026-07-16** (F-428-WCS-INV fix batch). **F-428-COORD CLOSED** (WCS-INV guards shipped); T4 UI re-run pending Milan.
 pytest: **866 passed**, 16 skipped.
 
-## Current snapshot (post-F-428 MS-STAMP / COORD forensics)
+## Current snapshot (post-F-428 WCS-INV)
 
-**F-428:** Fix batch landed (VSX path, repair flood, TAP retry, AC/excluded visibility, UTC infolog).
-**MS-STAMP:** catalog_id join for `vsx_known_variable` (draft_428 dry-run 46→197 id_join).
-**COORD:** v3 forensics rejected stale-WCS for unmatched DET (recomputed p50≈81″); no coord code change — optional matched-row Gaia refresh for Milan.
-A3 diagnostic: unmatched DET_* p50 nearest-Gaia **81″** (intrinsic to unmatched DAO, not WCS refresh bug).
-**T4:** Milan UI re-run validates MS-STAMP + prior fix batch. See `CURSOR_RESULT_428_msstamp_coord.md`.
+**F-428 MS-STAMP:** Fixed in `8e01e3d` (catalog_id join; dry-run 46→197).
+
+**F-428 COORD:** v5 RECLASSIFY-PROJECTION accepted; **WCS-INV fix batch shipped** — round-trip gate,
+SIP inverse regen, `finalize_masterstar_sky_coords` + `coord_source`, post-match pixel identity gate.
+Module: `wcs_invertibility.py`. See `CURSOR_RESULT_428_wcsinv.md`, `docs/VYVAR_DECISIONS.md`.
+
+**T4 / anchor:** **UNBLOCK** — Milan single UI re-run of draft_428 required before anchor arc opens.
+See validation checklist in `CURSOR_RESULT_428_wcsinv.md`.
 
 **Archive:** `draft_000428` available for revalidation. See `CURSOR_RESULT_428_closeout.md`, `CURSOR_RESULT_428_msstamp_coord.md`.
 

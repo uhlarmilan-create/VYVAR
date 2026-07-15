@@ -8563,6 +8563,43 @@ def detect_stars_and_match_catalog(
                     df_out, n_matched, match_sep_used = df_tight, n_tight, _tight_sec
 
         _run_full_match_pass()
+
+        def _apply_post_match_identity_gate() -> None:
+            nonlocal df_out, n_matched
+            try:
+                from gaia_catalog_id import normalize_gaia_source_id
+                from wcs_invertibility import apply_post_match_identity_gate_df
+
+                _fwhm_gate = float(_fwhm_used)
+                if not math.isfinite(_fwhm_gate) or _fwhm_gate <= 0:
+                    _fwhm_gate = 3.5
+                _cid_col = cat_df.get("catalog_id", cat_df.get("source_id", pd.Series(dtype=object)))
+                _ra_c = pd.to_numeric(cat_df["ra_deg"], errors="coerce")
+                _de_c = pd.to_numeric(cat_df["dec_deg"], errors="coerce")
+                _gmap: dict[str, tuple[float, float]] = {}
+                for _i in range(len(cat_df)):
+                    _k = normalize_gaia_source_id(str(_cid_col.iloc[_i] if hasattr(_cid_col, "iloc") else ""))
+                    if _k and math.isfinite(float(_ra_c.iloc[_i])) and math.isfinite(float(_de_c.iloc[_i])):
+                        _gmap[_k] = (float(_ra_c.iloc[_i]), float(_de_c.iloc[_i]))
+                df_out, _idc = apply_post_match_identity_gate_df(
+                    df_out,
+                    wcs_obj,
+                    gaia_ra_dec_by_cid=_gmap,
+                    fwhm_px=_fwhm_gate,
+                    log_fn=log_event,
+                )
+                n_matched = int(
+                    df_out.get("catalog_id", pd.Series([""] * len(df_out)))
+                    .fillna("")
+                    .astype(str)
+                    .str.strip()
+                    .ne("")
+                    .sum()
+                )
+            except Exception as _idg_exc:  # noqa: BLE001
+                log_event(f"post_match_identity_gate skipped: {_idg_exc!s}")
+
+        _apply_post_match_identity_gate()
         if vsx_df is not None and not vsx_df.empty:
             try:
                 from photometry_core import stamp_vsx_known_variable_on_masterstars  # noqa: PLC0415
@@ -11785,6 +11822,33 @@ def generate_masterstar_and_catalog(
             "(derive-or-None; no rig/global constant written to header)."
         )
 
+    try:
+        from wcs_invertibility import evaluate_wcs_roundtrip
+
+        _nax1 = int(hdr.get("NAXIS1") or (data.shape[1] if data.ndim >= 2 else 0))
+        _nax2 = int(hdr.get("NAXIS2") or (data.shape[0] if data.ndim >= 1 else 0))
+        if _has_valid_wcs(hdr) and _nax1 > 0 and _nax2 > 0:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FITSFixedWarning)
+                _w_rt = WCS(hdr)
+            _rt0 = evaluate_wcs_roundtrip(_w_rt, naxis1=_nax1, naxis2=_nax2)
+            if isinstance(solve_meta, dict):
+                solve_meta["wcs_roundtrip_p99_px"] = _rt0.get("wcs_roundtrip_p99_px")
+                solve_meta["wcs_roundtrip_pass"] = bool(_rt0.get("pass"))
+            if not _rt0.get("pass"):
+                log_event(
+                    f"WARNING: MASTERSTAR initial-solve WCS round-trip p99="
+                    f"{_rt0.get('wcs_roundtrip_p99_px'):.4f}px (threshold "
+                    f"{_rt0.get('p99_threshold_px')}px) — provenance flag set; continuing."
+                )
+            else:
+                log_event(
+                    f"MASTERSTAR WCS round-trip PASS (initial solve): p99="
+                    f"{_rt0.get('wcs_roundtrip_p99_px'):.4f}px"
+                )
+    except Exception as _rt_exc:  # noqa: BLE001
+        log_event(f"MASTERSTAR WCS round-trip check skipped: {_rt_exc!s}")
+
     if masterstar_platesolve_only:
         _cfg_early = app_config or AppConfig()
         try:
@@ -12088,6 +12152,29 @@ def generate_masterstar_and_catalog(
             )
     except Exception as _vsx_final_exc:  # noqa: BLE001
         log_event(f"MASTERSTAR VSX catalog_id stamp (post-optimizer) skipped: {_vsx_final_exc!s}")
+    _wcs_rt_p99: float | None = None
+    _wcs_rt_pass: bool | None = None
+    try:
+        from wcs_invertibility import evaluate_wcs_roundtrip, finalize_masterstar_sky_coords
+
+        with fits.open(masterstar_fits, memmap=False) as _hf:
+            _hdr_fin = _hf[0].header
+            _w_fin = WCS(_hdr_fin)
+        df_final = finalize_masterstar_sky_coords(
+            df_final,
+            _w_fin,
+            gaia_db_path=str(_cfg_ms.gaia_db_path or ""),
+            log_fn=log_event,
+        )
+        _nax1f = int(_hdr_fin.get("NAXIS1") or 0)
+        _nax2f = int(_hdr_fin.get("NAXIS2") or 0)
+        _rt_fin = evaluate_wcs_roundtrip(_w_fin, naxis1=_nax1f, naxis2=_nax2f)
+        _wcs_rt_p99 = _rt_fin.get("wcs_roundtrip_p99_px")
+        _wcs_rt_pass = bool(_rt_fin.get("pass"))
+    except Exception as _fin_exc:  # noqa: BLE001
+        log_event(f"MASTERSTAR coordinate finalization / round-trip QA skipped: {_fin_exc!s}")
+        _wcs_rt_p99 = None
+        _wcs_rt_pass = None
     df_final = _annotate_masterstars_flux_zones(
         df_final,
         noise_floor_adu=det_meta.get("noise_floor_adu"),
@@ -12152,6 +12239,9 @@ def generate_masterstar_and_catalog(
             "n_gaia_detected": int(_n_gaia_det_opt),
             "n_gaia_undetected": int(_cat_rows_opt - _n_gaia_det_opt),
         }
+        if _wcs_rt_p99 is not None:
+            _meta_patch["wcs_roundtrip_p99_px"] = float(_wcs_rt_p99)
+            _meta_patch["wcs_roundtrip_pass"] = bool(_wcs_rt_pass)
         try:
             _cone_df = None
             _cone_csv = Path(platesolve_dir) / "field_catalog_cone.csv"

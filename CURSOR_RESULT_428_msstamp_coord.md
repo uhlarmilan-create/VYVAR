@@ -72,4 +72,4 @@ None.
 - `docs/VYVAR_ROADMAP.md`, `docs/VYVAR_STATE.md`, `CHANGELOG.md`
 - `CURSOR_RESULT_428_msstamp_coord.md`
 
-Commit: (see git log after push)
+Commit: `8e01e3d` (includes prior F-428 batch `d3ca223`); pushed to origin/main.

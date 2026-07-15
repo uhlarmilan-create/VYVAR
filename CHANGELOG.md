@@ -8,6 +8,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **F-428 WCS-INV (2026-07-16):** Round-trip invertibility gate, SIP inverse regen, coordinate
+  finalization (`coord_source`), post-match pixel identity gate (`wcs_invertibility.py`).
+- **F-428 COORD v5 (2026-07-16):** MASTERSTAR peak test + direction stats
+  (`scripts/diag_428_coord_forensics_v5.py`); RECLASSIFY-PROJECTION — Gaia WCS→pixel agrees with
+  ms x/y (~1.3 px); v4 angular MISASSIGNED reframed as coordinate bookkeeping offset; T4 control
+  SPURIOUS-UNIFORM (ratio 1.07).
+- **F-428 COORD v4 (2026-07-16):** Pixel-space identity forensics (`scripts/diag_428_coord_forensics_v4.py`);
+  164 MISASSIGNED-ID STOP verdict on draft_428.
 - **F-428 MS-STAMP (2026-07-15):** `stamp_vsx_known_variable_on_masterstars()` — catalog_id join
   for masterstars VSX flag; diag v3 forensics (`scripts/diag_428_unmatched_sep.py --forensics`).
 - **F-428 fix batch (2026-07-15):** VSX `variable_targets.csv` path resolution; repair-catalog-ID

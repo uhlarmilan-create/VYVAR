@@ -6,6 +6,34 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## F-428-WCS-INV — MASTERSTAR WCS invertibility gate + coordinate finalization (2026-07-16)
+
+**Decision.** After F-428 COORD v5 (`RECLASSIFY-PROJECTION`), encode three durable guards:
+
+1. **Round-trip invertibility gate** (`wcs_invertibility.py`): after every plate solve (WARN +
+   provenance flag) and after every optimizer SIP refit (FAIL-CLOSED — keep previous WCS). Metric:
+   p99\|pix − world2pix(pix2world(pix))\| on a 9×9 grid; threshold 0.2 px. Persist
+   `wcs_roundtrip_p99_px` / `wcs_roundtrip_pass` in `pipeline_meta.json`.
+
+2. **SIP inverse regeneration** (FIX 2): forward SIP fit (`A/B`) must ship with fitted `AP/BP` in
+   the same step (`ensure_sip_inverse_coefficients`). Optimizer SIP refit pairs DAO `(x,y)` with
+   **Gaia catalog sky** (not stale `ra_deg`/`dec_deg` on the row) — root cause of v4/v5 bookkeeping
+   offset while `world2pix(Gaia)` agreed with pixels.
+
+3. **Coordinate finalization** (`finalize_masterstar_sky_coords`): matched rows → Gaia catalog
+   `ra_deg`/`dec_deg` + `coord_source=gaia_catalog`; unmatched → `final_wcs` pix2world. Post-match
+   identity sep gate in pixel space (WARN > 1.5×FWHM, drop assignment > 3×FWHM).
+
+**Why.** v5 showed `world2pix(Gaia[cid])` within ~1.3 px of ms `x/y` while `pix2world(x,y)` was
+~12″ from Gaia — science flux/identity correct, sky columns wrong. Internal round-trip can still
+pass (astropy numerical world2pix); the identity gate + finalization close the bookkeeping chain.
+Angle histogram concentration (97/160 in two bins) is SIP-field distortion pattern, not isotropic
+confusion. Photometry/LC science columns unchanged by this batch.
+
+**Radius / field DB.** F-428-A3-RADIUS remains OPEN (deeper/wider field DB; GAIA-DR4 ~Dec 2026).
+
+---
+
 ## Second-order extinction k'' — band-aware v1 (2026-07-07)
 
 **Decision.** Ship k'' as a **deterministic, provenance-tagged correction** (not a per-night free
