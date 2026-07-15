@@ -55,7 +55,7 @@ Snapshots contain platesolve/photometry outputs only (no raw FITS).
 | Field | Value |
 |-------|-------|
 | Size | 257667235 bytes (0.240 GB compressed) |
-| SHA256 | 8706c0d6412ac2dd3e318f7f74eba5baaf275d07e9c775fa062985640e2652d48 |
+| SHA256 | 8706c0d6412ac2dd3e318f7f74eba5baf275d07e9c775fa062985640e2652d48 |
 | Extract core SHA | bf3743a150d788283eab2ab51db7b31f59e6d1c481159208bbe3f573092ec975 |
 | n (core) | 357 |
 | Match expected | **YES** |
