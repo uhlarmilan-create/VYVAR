@@ -1,0 +1,52 @@
+{
+  "discriminator": {
+    "script": "scripts/forensic_disc_ui_match2.py",
+    "note": "night_run with UI-parity catalog_match_max_sep_arcsec=2.0 (floors to 10\") + sysrem_enabled=False; app.py does not call night_run (deferred)",
+    "draft_id": 433,
+    "params": {
+      "catalog_match_max_sep_arcsec": 2.0,
+      "sysrem_enabled": false
+    },
+    "census": {
+      "n_ms": 6699,
+      "matched": 3993,
+      "unmatched": 2706,
+      "vsx_true": 46
+    },
+    "identity_qa": {
+      "matched_world2pix_identity_n": 3993,
+      "matched_world2pix_identity_p95_px": 6.239767838184102,
+      "matched_world2pix_identity_p99_px": 9.19825384923795
+    },
+    "class": "SICK_428_CLASS",
+    "masterstar_pixel_identical_to_431": true,
+    "masterstar_pixel_identical_to_429": false
+  },
+  "processed_vs_calibrated_light008": {
+    "428": {
+      "cal_mean": 1971.9342102572903,
+      "proc_mean": 1971.9342102572903,
+      "cal_eq_proc": true,
+      "maxabs": 0.0
+    },
+    "429": {
+      "cal_mean": 1971.9342102572903,
+      "proc_mean": 1880.6212641544014,
+      "cal_eq_proc": false,
+      "maxabs": 16660.6689453125
+    },
+    "431": {
+      "cal_mean": 1971.9342102572903,
+      "proc_mean": 1971.9342102572903,
+      "cal_eq_proc": true,
+      "maxabs": 0.0
+    },
+    "433": {
+      "cal_mean": 1971.9342102572903,
+      "proc_mean": 1971.9342102572903,
+      "cal_eq_proc": true,
+      "maxabs": 0.0
+    }
+  },
+  "implication": "UI-parity match_sep does NOT restore healthy census. Sick stack (cal==proc Light_008) is deterministic for current night_run. Healthy 429 has mutated processed frames (cal!=proc) not produced by current preprocess_calibrated_one (pixel copy only)."
+}

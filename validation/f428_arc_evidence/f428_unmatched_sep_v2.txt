@@ -1,0 +1,140 @@
+# F-428 A3 diagnostic v2 + v3 forensics
+gaia_db: C:\ASTRO\python\VYVAR\GAIA_DR3\vyvar_gaia_dr3.db
+gaia_table: gaia_dr3 (total rows in DB: 211712600)
+gaia_field_query_bbox: RA [205.63237, 213.31965] DEC [39.14957, 43.08799] (pad=0.02 deg)
+gaia_rows_in_bbox: 13427
+masterstars: C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\masterstars_full_match.csv
+coord_columns_used: masterstars/variable_targets -> ra_deg, dec_deg (NOT x/y pixels)
+unmatched_DET_rows: 2724 / 6699 (name~'^DET_\d+$' AND empty catalog_id)
+FWHM=2.3976px × 2.6"/px = 6.234"
+nearest_gaia_sep_p50: 81.053"
+nearest_gaia_sep_p75: 106.862"
+nearest_gaia_sep_p90: 132.006"
+nearest_gaia_sep_p95: 149.703"
+nearest_gaia_sep_p99: 186.683"
+nearest_gaia_sep_max: 223.007"
+within_1x_fwhm: 0/2724
+within_1.5x_fwhm: 4/2724
+within_2x_fwhm: 5/2724
+
+# Self-match check (catalog_id present in masterstars)
+self_match_checked: 249 catalog_ids with vt row + ms row
+self_match_violations: 179 (threshold 2.0")
+  VIOLATION ASASSN-V J140909.62+391704.6 cid=1485516006708222208 vt-ms sep=11.433" (vt ra/dec=212.290527,39.284538; ms ra/dec=212.289624,39.281440)
+  VIOLATION Gaia DR3 1485540612577549568 cid=1485540612577549568 vt-ms sep=13.911" (vt ra/dec=212.534241,39.455421; ms ra/dec=212.533583,39.451591)
+  VIOLATION Gaia DR3 1485552329248338816 cid=1485552329248338816 vt-ms sep=9.973" (vt ra/dec=212.608475,39.718658; ms ra/dec=212.608537,39.715889)
+  VIOLATION Gaia DR3 1485560025830226432 cid=1485560025830226432 vt-ms sep=12.998" (vt ra/dec=211.950058,39.290230; ms ra/dec=211.947976,39.286999)
+  VIOLATION Gaia DR3 1485574899299782528 cid=1485574899299782528 vt-ms sep=11.828" (vt ra/dec=211.952866,39.410389; ms ra/dec=211.951072,39.407410)
+  VIOLATION Gaia DR3 1485609538212672000 cid=1485609538212672000 vt-ms sep=7.042" (vt ra/dec=212.255020,39.764290; ms ra/dec=212.253588,39.762673)
+  VIOLATION Gaia DR3 1485913828055470592 cid=1485913828055470592 vt-ms sep=15.933" (vt ra/dec=213.075836,39.733391; ms ra/dec=213.079116,39.729754)
+  VIOLATION Gaia DR3 1485929083779282048 cid=1485929083779282048 vt-ms sep=9.433" (vt ra/dec=212.858398,39.824692; ms ra/dec=212.860067,39.822406)
+  VIOLATION Gaia DR3 1485984368598279808 cid=1485984368598279808 vt-ms sep=6.948" (vt ra/dec=212.756088,40.160610; ms ra/dec=212.757088,40.158838)
+  VIOLATION Gaia DR3 1485987254816323328 cid=1485987254816323328 vt-ms sep=10.099" (vt ra/dec=212.891724,40.155170; ms ra/dec=212.893702,40.152808)
+  VIOLATION Gaia DR3 1485988010730568192 cid=1485988010730568192 vt-ms sep=9.438" (vt ra/dec=212.980606,40.188240; ms ra/dec=212.983129,40.186463)
+  VIOLATION Gaia DR3 1486136822757775616 cid=1486136822757775744 vt-ms sep=9.472" (vt ra/dec=213.218506,40.941799; ms ra/dec=213.221989,40.941775)
+  VIOLATION Gaia DR3 1486137131995421440 cid=1486137131995421440 vt-ms sep=5.520" (vt ra/dec=213.196213,40.972698; ms ra/dec=213.197894,40.973558)
+  VIOLATION Gaia DR3 1496226044533492864 cid=1496226044533492864 vt-ms sep=17.864" (vt ra/dec=210.093689,39.407551; ms ra/dec=210.087657,39.405848)
+  VIOLATION Gaia DR3 1496241609494910976 cid=1496241609494910976 vt-ms sep=13.760" (vt ra/dec=209.671997,39.589272; ms ra/dec=209.667658,39.587420)
+  VIOLATION Gaia DR3 1496248206564680064 cid=1496248206564680064 vt-ms sep=10.235" (vt ra/dec=209.769318,39.688980; ms ra/dec=209.765662,39.688565)
+  VIOLATION FY CVn cid=1496278752372040832 vt-ms sep=12.872" (vt ra/dec=209.177185,39.576580; ms ra/dec=209.173064,39.574939)
+  VIOLATION Gaia DR3 1496280126761597440 cid=1496280126761597440 vt-ms sep=12.919" (vt ra/dec=209.290894,39.662449; ms ra/dec=209.286578,39.661092)
+  VIOLATION Gaia DR3 1496282153986140032 cid=1496282153986140032 vt-ms sep=12.145" (vt ra/dec=209.147736,39.647591; ms ra/dec=209.143748,39.646194)
+  VIOLATION Gaia DR3 1496286139715833088 cid=1496286139715833088 vt-ms sep=12.408" (vt ra/dec=209.492065,39.504311; ms ra/dec=209.488126,39.502686)
+  VIOLATION FZ CVn cid=1496293286541396480 vt-ms sep=13.476" (vt ra/dec=209.550827,39.742641; ms ra/dec=209.546565,39.740832)
+  VIOLATION Gaia DR3 1496735393295120000 cid=1496735393295120000 vt-ms sep=45.608" (vt ra/dec=206.066864,39.178020; ms ra/dec=206.054691,39.169567)
+  VIOLATION Gaia DR3 1496777965010561408 cid=1496777965010561408 vt-ms sep=26.837" (vt ra/dec=206.737244,39.382439; ms ra/dec=206.730665,39.376987)
+  VIOLATION Gaia DR3 1496779992235769216 cid=1496779992235769216 vt-ms sep=26.678" (vt ra/dec=207.026215,39.200481; ms ra/dec=207.017053,39.198358)
+  VIOLATION R CVn cid=1496795041799526400 vt-ms sep=12.890" (vt ra/dec=207.237671,39.542561; ms ra/dec=207.240242,39.545542)
+  VIOLATION Gaia DR3 1496846925005421056 cid=1496846925005421056 vt-ms sep=28.820" (vt ra/dec=206.343643,39.715229; ms ra/dec=206.336399,39.709481)
+  VIOLATION Gaia DR3 1496877883129723648 cid=1496877883129723648 vt-ms sep=19.726" (vt ra/dec=206.850281,39.988220; ms ra/dec=206.845681,39.984025)
+  VIOLATION Gaia DR3 1496880666268505216 cid=1496880666268505216 vt-ms sep=21.224" (vt ra/dec=206.599197,40.007721; ms ra/dec=206.594028,40.003353)
+  VIOLATION Gaia DR3 1496921279479636352 cid=1496921279479636352 vt-ms sep=18.436" (vt ra/dec=208.471146,39.241390; ms ra/dec=208.465297,39.243780)
+  VIOLATION Gaia DR3 1496930968925861248 cid=1496930968925861248 vt-ms sep=59.745" (vt ra/dec=208.773956,39.443432; ms ra/dec=208.752470,39.443752)
+  ... 149 more violations
+
+# Excluded VSX population (variable_targets catalog_id NOT IN active_targets, dedup)
+variable_targets_rows: 244 (unique catalog_id: 244)
+active_targets_rows: 180 (unique catalog_id: 180)
+excluded_set_size: 69
+phase0_census_reference: linear=115 noisy1=11 noisy2=11 noisy3=41 saturated=2 no_catalog_id=1 out_of_frame=47 excluded_no_dao_match=17
+phase0_excluded_sum(out_of_frame+no_dao+no_catalog_id+saturated): 67 (active 180 + excluded = 247 vs vt 244)
+excluded_class_breakdown (vt-not-in-active heuristic):
+  no_catalog_id: 1
+  no_dao_gaia_match: 20
+  out_of_frame: 48
+
+# Excluded target detail (nearest Gaia + nearest masterstar match by cid when available)
+  Gaia DR3 1496757314807841920 cid=1496757314807841920 mag=14.400 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=317.149" ms_match=DET_5209 sep=622.115"
+  Gaia DR3 1496767480994315776 cid=1496767480994315776 mag=12.360 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=204.199" ms_match=1496769134557795200 sep=312.076"
+  HAT-188-0002410 cid=1496779545558567808 mag=13.808 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=234.544" ms_match=1496779992235769216 sep=231.973"
+  Gaia DR3 1496735393295120000 cid=1496735393295120000 mag=12.710 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.290" ms_match=1496735393295120000 sep=45.608"
+  FR CVn cid=1496733984545821696 mag=11.300 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=1.892" ms_match=1496736389727532416 sep=278.255"
+  Gaia DR3 1496779992235769216 cid=1496779992235769216 mag=12.420 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.474" ms_match=1496779992235769216 sep=26.678"
+  Gaia DR3 1497520547676190464 cid=1497520547676190464 mag=14.080 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.322" ms_match=1497523949290289792 sep=267.653"
+  Gaia DR3 1485466532981821568 cid=1485466532981821568 mag=13.960 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.199" ms_match=1485572464054960256 sep=241.347"
+  Gaia DR3 1496921279479636352 cid=1496921279479636352 mag=12.560 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=1.868" ms_match=1496921279479636352 sep=18.436"
+  Gaia DR3 1496254047720190464 cid=1496254047720190464 mag=14.110 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.294" ms_match=1496260782229436544 sep=317.650"
+  Gaia DR3 1496734362502944512 cid=1496734362502944512 mag=8.820 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=1.917" ms_match=1496739653902654464 sep=286.059"
+  ASASSN-V J140909.62+391704.6 cid=1485516006708222208 mag=13.500 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=1.278" ms_match=1485516006708222208 sep=11.433"
+  Gaia DR3 1485560025830226432 cid=1485560025830226432 mag=13.600 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.128" ms_match=1485560025830226432 sep=12.998"
+  Gaia DR3 1497535116205236736 cid=1497535116205236736 mag=13.730 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.579" ms_match=1497535116205236736 sep=14.836"
+  Gaia DR3 1497491273179203456 cid=1497491273179203456 mag=13.980 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.805" ms_match=1497491273179203456 sep=15.589"
+  Gaia DR3 1496930968925861248 cid=1496930968925861248 mag=14.170 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=3.548" ms_match=1496930968925861248 sep=59.745"
+  Gaia DR3 1499857834519139968 cid=1499857834519139968 mag=12.640 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.486" ms_match=1499857834519139968 sep=23.589"
+  Gaia DR3 1499861545370861696 cid=1499861545370861696 mag=11.850 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=1.209" ms_match=1499857834519139968 sep=288.522"
+  Gaia DR3 1499848007633969664 cid=1499848007633969664 mag=14.000 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.970" ms_match=1499859311987891328 sep=196.164"
+  Gaia DR3 1499864775186780288 cid=1499864775186780288 mag=14.490 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.143" ms_match=1499864053631766400 sep=167.695"
+  Gaia DR3 1485922795947189376 cid=1485922795947189376 mag=12.570 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=1.011" ms_match=1485923036465357184 sep=231.966"
+  Gaia DR3 1499883638682689920 cid=1499883638682689920 mag=14.010 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.125" ms_match=1499883638682689408 sep=37.002"
+  HAT-188-0000323 cid=1497245497969274240 mag=12.358 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=1.071" ms_match=1497245497970801664 sep=14.032"
+  Gaia DR3 1497763299228100096 cid=1497763299228100096 mag=14.490 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.034" ms_match=1497763058709931008 sep=66.325"
+  Gaia DR3 1497644277093974400 cid=1497644277093974400 mag=14.480 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.196" ms_match=1497644277093974400 sep=67.319"
+  SN 2019ein cid= mag=14.000 (col=vsx_mag_max) reason=no_catalog_id nearest_gaia=76.900" ms_match=1497122799344999680 sep=150.710"
+  Gaia DR3 1485970109306907904 cid=1485970109306907904 mag=12.440 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=288.534" ms_match=1486014845686239744 sep=476.790"
+  Gaia DR3 1499943562066312704 cid=1499943562066312704 mag=12.750 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=1.841" ms_match=1499939164019800960 sep=453.446"
+  Gaia DR3 1500132643706606720 cid=1500132643706606720 mag=13.810 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.728" ms_match=1499966239493637248 sep=614.051"
+  Gaia DR3 1500282142928547968 cid=1500282142928547968 mag=14.460 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.867" ms_match=1500270220099332864 sep=204.770"
+  Gaia DR3 1497379535310161792 cid=1497379535310161792 mag=14.170 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.395" ms_match=1497378916835340928 sep=119.408"
+  CSS_J134226.1+404932 cid=1500161334088126080 mag=14.150 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=165.770" ms_match=1499977268969637760 sep=712.344"
+  Gaia DR3 1486124075294864000 cid=1486124075294864000 mag=12.820 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.208" ms_match=1486136822757775744 sep=279.604"
+  Gaia DR3 1486136822757775616 cid=1486136822757775744 mag=15.243 (col=mag) reason=out_of_frame nearest_gaia=1.133" ms_match=1486136822757775744 sep=9.472"
+  Gaia DR3 1497923827925178368 cid=1497923827925178368 mag=14.470 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=1.016" ms_match=1497923965364132480 sep=103.533"
+  Gaia DR3 1486137131995421440 cid=1486137131995421440 mag=13.452 (col=mag) reason=out_of_frame nearest_gaia=0.929" ms_match=1486137131995421440 sep=5.520"
+  Gaia DR3 1497391698657524480 cid=1497391698657524480 mag=14.470 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.159" ms_match=1497391114541971712 sep=179.930"
+  Gaia DR3 1500327978819506944 cid=1500327978819506944 mag=13.920 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.088" ms_match=1500327978819506944 sep=38.612"
+  Gaia DR3 1500186279258158720 cid=1500186279258158720 mag=13.270 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.292" ms_match=1500186622855543680 sep=112.223"
+  Gaia DR3 1498163040424489216 cid=1498163040424489216 mag=13.100 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.805" ms_match=1498163040424489216 sep=13.659"
+  Gaia DR3 1498141668666708480 cid=1498141668666708480 mag=14.250 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.907" ms_match=1498141668666708992 sep=55.842"
+  Gaia DR3 1498751485303339776 cid=1498751485303339776 mag=14.450 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=4.073" ms_match=1498751450943601280 sep=53.583"
+  Gaia DR3 1500631233574163968 cid=1500631233574163968 mag=12.340 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=340.478" ms_match=1500617700133109376 sep=612.632"
+  Gaia DR3 1498341092588681856 cid=1498341092588681856 mag=14.140 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.440" ms_match=1498341092588681856 sep=89.993"
+  ASASSN-V J134242.66+414830.5 cid=1500628111133814016 mag=13.290 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.099" ms_match=1500628111133814016 sep=14.319"
+  FT CVn cid=1500489435229902848 mag=14.500 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.080" ms_match=1500488022184002432 sep=166.323"
+  Gaia DR3 1501955152948739200 cid=1501955152948739200 mag=14.260 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=2.635" ms_match=1501955221668216320 sep=65.203"
+  Gaia DR3 1499140884218407040 cid=1499140884218407040 mag=14.210 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=1.314" ms_match=1499140884218407040 sep=68.745"
+  Gaia DR3 1501399281101828736 cid=1501399281101828736 mag=13.720 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=465.231" ms_match=1500680612814016512 sep=768.426"
+  Gaia DR3 1504281650833985920 cid=1504281650833985920 mag=13.440 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=356.093" ms_match=1504280070285995008 sep=447.147"
+  Gaia DR3 1498513166158147968 cid=1498513166158147968 mag=14.040 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=1.416" ms_match=1498513269237363456 sep=41.237"
+  Gaia DR3 1504281135437886080 cid=1504281135437886080 mag=12.280 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.096" ms_match=1504281135437886080 sep=31.399"
+  Gaia DR3 1499231731366546688 cid=1499231731366546688 mag=13.940 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.759" ms_match=1499418132947222528 sep=214.653"
+  Gaia DR3 1504301510762717440 cid=1504301510762717440 mag=12.690 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.677" ms_match=1504301510762717440 sep=34.404"
+  Gaia DR3 1499081819828174080 cid=1499081819828174080 mag=14.460 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=0.552" ms_match=1499078486933552000 sep=256.870"
+  Gaia DR3 1499064433800590592 cid=1499064433800590592 mag=13.670 (col=vsx_mag_max) reason=no_dao_gaia_match nearest_gaia=2.138" ms_match=1499064399440851968 sep=17.785"
+  Gaia DR3 1500799153911377024 cid=1500799153911377024 mag=13.859 (col=mag) reason=out_of_frame nearest_gaia=0.214" ms_match=1500799153911377024 sep=8.727"
+  Gaia DR3 1500800974977512320 cid=1500800974977512320 mag=14.400 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.265" ms_match=1500753970855424640 sep=61.317"
+  ZTF J140304.93+430017.3 cid=1499255199067891840 mag=13.290 (col=mag) reason=out_of_frame nearest_gaia=0.132" ms_match=1499255199067891840 sep=7.222"
+  Gaia DR3 1501542183253256576 cid=1501542183253256576 mag=13.600 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.287" ms_match=1501539292739025536 sep=406.530"
+  Gaia DR3 1499267671652918272 cid=1499267671652918272 mag=14.140 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=2.594" ms_match=1499262105375283328 sep=175.014"
+  Gaia DR3 1502247142005688704 cid=1502247142005688704 mag=13.720 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.211" ms_match=1502236318688121216 sep=566.776"
+  Gaia DR3 1504510349252682112 cid=1504510349252682112 mag=14.390 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.411" ms_match=1504504130140036480 sep=244.231"
+  Gaia DR3 1499347248807171968 cid=1499347248807171968 mag=12.280 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=0.284" ms_match=1499254236995219200 sep=240.452"
+  Gaia DR3 1499442597080888576 cid=1499442597080888576 mag=14.350 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=82.271" ms_match=1499112296916115328 sep=492.299"
+  GO CVn cid=1499312511111731200 mag=13.200 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=230.930" ms_match=1499311789557240832 sep=230.930"
+  Gaia DR3 1499293200938748416 cid=1499293200938748416 mag=11.060 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=187.474" ms_match=1499290658318125952 sep=296.497"
+  Gaia DR3 1502128222951637120 cid=1502128222951637120 mag=14.190 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=270.279" ms_match=1499122982794703744 sep=690.028"
+  Gaia DR3 1504559621117457152 cid=1504559621117457152 mag=13.990 (col=vsx_mag_max) reason=out_of_frame nearest_gaia=321.317" ms_match=1498552606841877504 sep=436.466"
+
+DIAG SELF-CHECK FAIL
+  - recomputed p50 81.141" >= 20.0" (stale-WCS not confirmed)
+  - median nearest-Gaia sep 81.053" >= 15.0" (unmatched DET_* positions are systematically offset from catalog; not a query bug)
+  - 179 self-match violations (threshold 2.0")

@@ -1,0 +1,24 @@
+{
+  "f4_empty_aperture_labbe": {
+    "function": "photometry_core.measure_empty_aperture_sigma_bkg (~L738)",
+    "seeding": "if rng is None: np.random.default_rng() — OS entropy, NOT draft-id / path / content",
+    "effect": "nondeterministic sigma_bkg_ap → nondeterministic per-point err on LCs"
+  },
+  "f4_sysrem": {
+    "function": "photometry_core.run_sysrem_field (~L14081)",
+    "init": "a = np.ones(n_stars) — deterministic; iteration order fixed over sorted lightcurve_*.csv stems",
+    "rng": "none",
+    "nondeterminism_source": "weights W=1/err^2 inherit Labbe err RNG noise → delta_mag_sysrem drifts when SysRem enabled",
+    "anchor_pair": "scripts/anchor_pair_run.py forces sysrem_enabled=True (contrary to config.json False / UI 429)"
+  },
+  "f4_sha_mismatch_431_432": {
+    "columns": ["err", "delta_mag_sysrem"],
+    "root_cause": "unseeded empty-aperture RNG + SysRem forced on; science mag columns byte-stable (benign science compare)",
+    "not_draft_id_seeded": true
+  },
+  "f4_pair_protocol_v2_proposal_do_not_implement": {
+    "current": "two full imports (draft A then draft B) — diverges from RUNBOOK draft_387 same-draft re-run",
+    "proposed_v2": "import ONCE → run photometry stages twice over same draft → byte-compare core SHA",
+    "hardening_later": "content-derived seed for empty-aperture RNG (hash of draft_id+frame+aperture params)"
+  }
+}

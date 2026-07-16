@@ -1,0 +1,1 @@
+cid,name,v4_class,t2_class,match_origin,x,y,x_gaia_proj,y_gaia_proj,sep_proj_px,sep_wcs_gaia_arcsec,sep_vt_gaia_arcsec,sep_stored_gaia_arcsec,sep_wcs_stored_arcsec,delta_ra_cosdec_arcsec,delta_dec_arcsec,peak_sep_from_xy_px,peak_flux_xy,peak_flux_gaia,peak_snr_xy,peak_snr_gaia,match_sep_arcsec,dist_field_center_arcmin

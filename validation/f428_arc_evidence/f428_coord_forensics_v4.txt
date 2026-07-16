@@ -1,0 +1,234 @@
+# F-428-COORD forensics v4 (read-only)
+inputs: masterstars=C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\masterstars_full_match.csv
+inputs: variable_targets=C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\variable_targets.csv
+inputs: active_targets=C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\photometry\active_targets.csv
+inputs: MASTERSTAR.fits=C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\MASTERSTAR.fits
+inputs: gaia_db=C:\ASTRO\python\VYVAR\GAIA_DR3\vyvar_gaia_dr3.db table=gaia_dr3 total_rows=211712600
+inputs: stale_wcs_threshold=1.5px = 3.90"
+
+# v3 interpretation corrections (carried forward)
+- vector_mean~0 + high mean|d| => isotropic offsets, NOT rigid shift
+- recompute-invariance (p50~81" stored vs final WCS) => unmatched DET coords likely fine; test Gaia coverage
+- matched rows split: ms-gaia~0 (detection-time Gaia coords) vs ms-gaia large (optimizer assigned id without coord refresh)
+
+# T1 — Pixel-space identity test
+violating_rows (vt-ms > 2.0"): 184
+classification_histogram: {"CONSISTENT": 20, "MISASSIGNED-ID": 164}
+MISASSIGNED-ID count: 164
+STALE-COORDS count: 0
+CONSISTENT count: 20
+T1_subclass: {"sep_wcs_eq_stored_vs_gaia": 177, "stored_gaia_lt1_arcsec": 3, "wcs_stored_lt1_arcsec": 177}
+  wcs_stored_lt1: stored ra/dec tracks final-WCS(x/y); catalog_id Gaia position offset
+  stored_gaia_lt1: stored ra/dec forced to Gaia; x/y does not match (metadata/pixel split)
+
+## Priority active targets
+  FY CVn cid=1496278752372040832 class=MISASSIGNED-ID sep_wcs_gaia=11.803" sep_stored_gaia=12.627" sep_vt_ms=12.872" active=True
+  FZ CVn cid=1496293286541396480 class=MISASSIGNED-ID sep_wcs_gaia=12.772" sep_stored_gaia=13.525" sep_vt_ms=13.476" active=True
+  CSS_J134925.3+393524 cid=1497169940906156032 class=MISASSIGNED-ID sep_wcs_gaia=18.177" sep_stored_gaia=19.112" sep_vt_ms=19.273" active=True
+  CSS_J140918.7+423422 cid=1498486880958321024 class=MISASSIGNED-ID sep_wcs_gaia=13.942" sep_stored_gaia=14.774" sep_vt_ms=13.796" active=True
+  NSVS 5096293 cid=1498298211635183744 class=MISASSIGNED-ID sep_wcs_gaia=6.452" sep_stored_gaia=6.362" sep_vt_ms=7.709" active=True
+  RX CVn cid=1500424804562041984 class=MISASSIGNED-ID sep_wcs_gaia=8.448" sep_stored_gaia=8.937" sep_vt_ms=8.977" active=True
+  R CVn cid=1496795041799526400 class=MISASSIGNED-ID sep_wcs_gaia=13.909" sep_stored_gaia=13.001" sep_vt_ms=12.890" active=True
+
+## 10 random non-target violations
+  Gaia DR3 1486137131995421440 cid=1486137131995421440 class=MISASSIGNED-ID sep_wcs=5.548" sep_stored=5.861"
+  Gaia DR3 1496779992235769216 cid=1496779992235769216 class=MISASSIGNED-ID sep_wcs=25.558" sep_stored=26.480"
+  Gaia DR3 1497491273179203456 cid=1497491273179203456 class=MISASSIGNED-ID sep_wcs=14.604" sep_stored=15.221"
+  Gaia DR3 1497644277093974400 cid=1497644277093974400 class=MISASSIGNED-ID sep_wcs=67.204" sep_stored=67.487"
+  Gaia DR3 1498341092588681856 cid=1498341092588681856 class=MISASSIGNED-ID sep_wcs=89.792" sep_stored=89.751"
+  Gaia DR3 1499140884218407040 cid=1499140884218407040 class=MISASSIGNED-ID sep_wcs=69.878" sep_stored=69.912"
+  ZTF J140304.93+430017.3 cid=1499255199067891840 class=MISASSIGNED-ID sep_wcs=6.623" sep_stored=7.276"
+  Gaia DR3 1499857834519139968 cid=1499857834519139968 class=MISASSIGNED-ID sep_wcs=22.422" sep_stored=23.191"
+  ASASSN-V J134242.66+414830.5 cid=1500628111133814016 class=MISASSIGNED-ID sep_wcs=14.524" sep_stored=14.222"
+  Gaia DR3 1504281135437886080 cid=1504281135437886080 class=MISASSIGNED-ID sep_wcs=30.310" sep_stored=31.429"
+
+## MISASSIGNED-ID explicit list
+  ASASSN-V J140909.62+391704.6 cid=1485516006708222208 sep_wcs_gaia=11.198" sep_stored_gaia=11.504" x=256.2 y=1394.3
+  Gaia DR3 1485540612577549568 cid=1485540612577549568 sep_wcs_gaia=12.645" sep_stored_gaia=12.880" x=187.5 y=1330.8
+  Gaia DR3 1485552329248338816 cid=1485552329248338816 sep_wcs_gaia=9.621" sep_stored_gaia=9.806" x=167.8 y=1233.1
+  Gaia DR3 1485560025830226432 cid=1485560025830226432 sep_wcs_gaia=12.496" sep_stored_gaia=12.978" x=353.7 y=1393.0
+  Gaia DR3 1485574899299782528 cid=1485574899299782528 sep_wcs_gaia=11.162" sep_stored_gaia=11.619" x=353.2 y=1348.6
+  Gaia DR3 1485609538212672000 cid=1485609538212672000 sep_wcs_gaia=6.571" sep_stored_gaia=6.937" x=268.6 y=1217.0
+  Gaia DR3 1485913828055470592 cid=1485913828055470592 sep_wcs_gaia=15.930" sep_stored_gaia=15.961" x=34.4 y=1225.8
+  Gaia DR3 1485929083779282048 cid=1485929083779282048 sep_wcs_gaia=9.553" sep_stored_gaia=9.600" x=97.2 y=1192.8
+  Gaia DR3 1485984368598279808 cid=1485984368598279808 sep_wcs_gaia=6.126" sep_stored_gaia=6.210" x=128.6 y=1069.3
+  Gaia DR3 1485987254816323328 cid=1485987254816323328 sep_wcs_gaia=10.095" sep_stored_gaia=10.169" x=90.0 y=1070.9
+  Gaia DR3 1485988010730568192 cid=1485988010730568192 sep_wcs_gaia=9.378" sep_stored_gaia=9.435" x=65.1 y=1058.1
+  Gaia DR3 1486136822757775616 cid=1486136822757775744 sep_wcs_gaia=7.729" sep_stored_gaia=8.040" x=4.2 y=778.5
+  Gaia DR3 1486137131995421440 cid=1486137131995421440 sep_wcs_gaia=5.548" sep_stored_gaia=5.861" x=11.2 y=767.0
+  Gaia DR3 1496226044533492864 cid=1496226044533492864 sep_wcs_gaia=16.086" sep_stored_gaia=16.864" x=883.6 y=1346.8
+  Gaia DR3 1496241609494910976 cid=1496241609494910976 sep_wcs_gaia=13.078" sep_stored_gaia=13.861" x=1002.0 y=1277.9
+  Gaia DR3 1496248206564680064 cid=1496248206564680064 sep_wcs_gaia=9.323" sep_stored_gaia=9.988" x=973.5 y=1241.2
+  FY CVn cid=1496278752372040832 sep_wcs_gaia=11.803" sep_stored_gaia=12.627" x=1142.4 y=1279.4
+  Gaia DR3 1496280126761597440 cid=1496280126761597440 sep_wcs_gaia=12.086" sep_stored_gaia=12.867" x=1109.5 y=1248.4
+  Gaia DR3 1496282153986140032 cid=1496282153986140032 sep_wcs_gaia=11.428" sep_stored_gaia=12.236" x=1150.1 y=1252.9
+  Gaia DR3 1496286139715833088 cid=1496286139715833088 sep_wcs_gaia=11.626" sep_stored_gaia=12.442" x=1053.5 y=1308.0
+  FZ CVn cid=1496293286541396480 sep_wcs_gaia=12.772" sep_stored_gaia=13.525" x=1035.3 y=1220.7
+  Gaia DR3 1496735393295120000 cid=1496735393295120000 sep_wcs_gaia=44.877" sep_stored_gaia=45.875" x=2036.3 y=1391.2
+  Gaia DR3 1496777965010561408 cid=1496777965010561408 sep_wcs_gaia=25.783" sep_stored_gaia=26.754" x=1839.3 y=1325.5
+  Gaia DR3 1496779992235769216 cid=1496779992235769216 sep_wcs_gaia=25.558" sep_stored_gaia=26.480" x=1760.9 y=1395.4
+  R CVn cid=1496795041799526400 sep_wcs_gaia=13.909" sep_stored_gaia=13.001" x=1691.4 y=1270.6
+  Gaia DR3 1496846925005421056 cid=1496846925005421056 sep_wcs_gaia=28.015" sep_stored_gaia=28.970" x=1944.7 y=1197.1
+  Gaia DR3 1496877883129723648 cid=1496877883129723648 sep_wcs_gaia=18.773" sep_stored_gaia=19.672" x=1795.4 y=1103.8
+  Gaia DR3 1496880666268505216 cid=1496880666268505216 sep_wcs_gaia=20.324" sep_stored_gaia=21.235" x=1866.0 y=1093.0
+  Gaia DR3 1496921279479636352 cid=1496921279479636352 sep_wcs_gaia=16.935" sep_stored_gaia=17.294" x=1347.1 y=1395.5
+  Gaia DR3 1496930968925861248 cid=1496930968925861248 sep_wcs_gaia=56.368" sep_stored_gaia=57.070" x=1263.1 y=1324.4
+  Gaia DR3 1496965569182317952 cid=1496965569182317952 sep_wcs_gaia=16.526" sep_stored_gaia=17.455" x=1475.7 y=1335.8
+  Gaia DR3 1496968421040578944 cid=1496968421040578944 sep_wcs_gaia=16.378" sep_stored_gaia=17.308" x=1513.9 y=1309.2
+  Gaia DR3 1496993675448311808 cid=1496993675448311808 sep_wcs_gaia=10.525" sep_stored_gaia=11.402" x=1423.4 y=1231.0
+  Gaia DR3 1497010168122706688 cid=1497010168122706688 sep_wcs_gaia=12.399" sep_stored_gaia=13.215" x=1461.2 y=1174.5
+  Gaia DR3 1497061570291342464 cid=1497061570291342464 sep_wcs_gaia=9.236" sep_stored_gaia=9.969" x=1140.9 y=1138.8
+  Gaia DR3 1497070744341492864 cid=1497070744341492864 sep_wcs_gaia=9.387" sep_stored_gaia=10.043" x=1084.0 y=1046.9
+  Gaia DR3 1497094418201167744 cid=1497094418201167744 sep_wcs_gaia=7.911" sep_stored_gaia=8.393" x=1148.1 y=920.3
+  Gaia DR3 1497114175050663040 cid=1497114175050663040 sep_wcs_gaia=14.387" sep_stored_gaia=15.092" x=1393.3 y=1059.6
+  Gaia DR3 1497158396033960064 cid=1497158396033960064 sep_wcs_gaia=10.750" sep_stored_gaia=11.211" x=1220.7 y=843.5
+  Gaia DR3 1497164580786846976 cid=1497164580786846976 sep_wcs_gaia=5.416" sep_stored_gaia=5.908" x=1246.0 y=788.7
+  CSS_J134925.3+393524 cid=1497169940906156032 sep_wcs_gaia=18.177" sep_stored_gaia=19.112" x=1659.6 y=1256.9
+  Gaia DR3 1497181623217208064 cid=1497181623217208064 sep_wcs_gaia=11.898" sep_stored_gaia=12.760" x=1577.1 y=1138.6
+  Gaia DR3 1497225981639401984 cid=1497225981639401984 sep_wcs_gaia=9.700" sep_stored_gaia=10.497" x=1590.7 y=994.0
+  Gaia DR3 1497227287309482624 cid=1497227287309482624 sep_wcs_gaia=8.841" sep_stored_gaia=9.605" x=1532.1 y=1007.3
+  HAT-188-0000323 cid=1497245497970801664 sep_wcs_gaia=7.434" sep_stored_gaia=8.274" x=1674.4 y=1053.8
+  Gaia DR3 1497265873295605120 cid=1497265873295605120 sep_wcs_gaia=4.861" sep_stored_gaia=5.099" x=1710.7 y=942.0
+  Gaia DR3 1497297690413358720 cid=1497297690413358720 sep_wcs_gaia=8.680" sep_stored_gaia=9.393" x=1631.6 y=859.3
+  Gaia DR3 1497303909525988352 cid=1497303909525988352 sep_wcs_gaia=7.821" sep_stored_gaia=8.461" x=1643.3 y=776.1
+  FW CVn cid=1497343732462852864 sep_wcs_gaia=7.375" sep_stored_gaia=0.000" x=1298.7 y=838.5
+  Gaia DR3 1497345278651080576 cid=1497345278651080576 sep_wcs_gaia=4.983" sep_stored_gaia=5.535" x=1302.7 y=804.9
+  Gaia DR3 1497347718192483840 cid=1497347718192483840 sep_wcs_gaia=5.985" sep_stored_gaia=6.465" x=1358.0 y=795.8
+  Gaia DR3 1497419495685871488 cid=1497419495685871488 sep_wcs_gaia=6.063" sep_stored_gaia=6.446" x=1430.3 y=633.2
+  Gaia DR3 1497420045441686528 cid=1497420045441686528 sep_wcs_gaia=16.316" sep_stored_gaia=16.756" x=1416.0 y=621.1
+  Gaia DR3 1497424851508532992 cid=1497424851508532992 sep_wcs_gaia=5.446" sep_stored_gaia=5.712" x=1341.0 y=563.4
+  Gaia DR3 1497436125799224960 cid=1497436125799224448 sep_wcs_gaia=7.149" sep_stored_gaia=6.767" x=1458.0 y=573.2
+  Gaia DR3 1497491273179203456 cid=1497491273179203456 sep_wcs_gaia=14.604" sep_stored_gaia=15.221" x=492.4 y=1386.3
+  Gaia DR3 1497498763602158720 cid=1497498763602158720 sep_wcs_gaia=11.421" sep_stored_gaia=12.009" x=500.1 y=1298.6
+  Gaia DR3 1497513469570146432 cid=1497513469570146432 sep_wcs_gaia=10.891" sep_stored_gaia=11.480" x=559.5 y=1271.4
+  Gaia DR3 1497525907795379456 cid=1497525907795379456 sep_wcs_gaia=12.852" sep_stored_gaia=13.576" x=740.7 y=1346.2
+  Gaia DR3 1497535116205236736 cid=1497535116205236736 sep_wcs_gaia=14.045" sep_stored_gaia=14.829" x=800.9 y=1387.8
+  HAT-188-0001788 cid=1497561779362267392 sep_wcs_gaia=10.176" sep_stored_gaia=10.755" x=581.1 y=1241.5
+  Gaia DR3 1497600399708129792 cid=1497600399708129792 sep_wcs_gaia=7.677" sep_stored_gaia=8.087" x=363.1 y=1179.3
+  Gaia DR3 1497603835681942400 cid=1497603835681942400 sep_wcs_gaia=8.755" sep_stored_gaia=9.160" x=386.8 y=1160.5
+  Gaia DR3 1497623248934145536 cid=1497623248934145536 sep_wcs_gaia=6.530" sep_stored_gaia=6.908" x=340.0 y=1161.1
+  Gaia DR3 1497639123133258752 cid=1497639123133258752 sep_wcs_gaia=5.496" sep_stored_gaia=5.687" x=288.0 y=1004.3
+  Gaia DR3 1497644277093974400 cid=1497644277093974400 sep_wcs_gaia=67.204" sep_stored_gaia=67.487" x=371.0 y=1040.7
+  HAT-188-0000203 cid=1497683722074089728 sep_wcs_gaia=12.229" sep_stored_gaia=0.000" x=603.3 y=1001.4
+  Gaia DR3 1497704131758182400 cid=1497704131758182400 sep_wcs_gaia=6.485" sep_stored_gaia=6.615" x=394.7 y=906.9
+  Gaia DR3 1497704372276351360 cid=1497704372276351360 sep_wcs_gaia=6.624" sep_stored_gaia=6.724" x=368.7 y=918.9
+  Gaia DR3 1497729317446890240 cid=1497729317446890240 sep_wcs_gaia=11.886" sep_stored_gaia=12.552" x=830.6 y=1289.2
+  Gaia DR3 1497871669842349184 cid=1497871669842349184 sep_wcs_gaia=12.387" sep_stored_gaia=12.469" x=622.1 y=988.4
+  Gaia DR3 1497888471754387072 cid=1497888471754387072 sep_wcs_gaia=8.200" sep_stored_gaia=8.517" x=682.5 y=922.9
+  Gaia DR3 1497912008175205760 cid=1497912008175205760 sep_wcs_gaia=7.728" sep_stored_gaia=7.844" x=550.8 y=804.4
+  Gaia DR3 1497940389319020928 cid=1497940389319020928 sep_wcs_gaia=9.023" sep_stored_gaia=9.215" x=731.6 y=861.4
+  Gaia DR3 1497960008729614976 cid=1497960008729614976 sep_wcs_gaia=5.045" sep_stored_gaia=5.034" x=746.1 y=758.1
+  Gaia DR3 1497971450522478080 cid=1497971450522478080 sep_wcs_gaia=6.911" sep_stored_gaia=7.104" x=774.9 y=689.2
+  ZTF J140300.57+413339.3 cid=1498000793739050368 sep_wcs_gaia=6.004" sep_stored_gaia=6.001" x=690.9 y=555.9
+  ASASSN-V J140843.29+402701.8 cid=1498027456896444928 sep_wcs_gaia=4.210" sep_stored_gaia=4.305" x=292.7 y=963.9
+  Gaia DR3 1498032473418221952 cid=1498032473418221952 sep_wcs_gaia=5.933" sep_stored_gaia=5.984" x=308.8 y=904.2
+  Gaia DR3 1498058827337611392 cid=1498058827337611392 sep_wcs_gaia=4.300" sep_stored_gaia=4.538" x=116.8 y=765.5
+  Gaia DR3 1498105384781489920 cid=1498105384781489920 sep_wcs_gaia=4.458" sep_stored_gaia=4.365" x=379.7 y=713.1
+  Gaia DR3 1498135552633294976 cid=1498135552633294976 sep_wcs_gaia=5.494" sep_stored_gaia=5.758" x=281.1 y=620.5
+  Gaia DR3 1498139469643451136 cid=1498139469643451136 sep_wcs_gaia=7.679" sep_stored_gaia=7.716" x=320.4 y=583.5
+  Gaia DR3 1498143180495215488 cid=1498143180495215488 sep_wcs_gaia=8.452" sep_stored_gaia=8.773" x=267.6 y=572.8
+  Gaia DR3 1498163040424489216 cid=1498163040424489216 sep_wcs_gaia=13.640" sep_stored_gaia=14.184" x=0.3 y=598.0
+  Gaia DR3 1498183274013681536 cid=1498183274013681536 sep_wcs_gaia=11.192" sep_stored_gaia=11.753" x=88.3 y=519.0
+  Gaia DR3 1498229629597339776 cid=1498229629597339776 sep_wcs_gaia=10.005" sep_stored_gaia=10.566" x=154.2 y=471.8
+  Gaia DR3 1498231038346636416 cid=1498231038346636416 sep_wcs_gaia=11.454" sep_stored_gaia=12.017" x=116.3 y=497.5
+  NSVS 5096293 cid=1498298211635183744 sep_wcs_gaia=6.452" sep_stored_gaia=6.362" x=447.6 y=666.7
+  Gaia DR3 1498311298398914816 cid=1498311298398914816 sep_wcs_gaia=5.482" sep_stored_gaia=5.376" x=467.9 y=632.5
+  Gaia DR3 1498322916287022976 cid=1498322916287022976 sep_wcs_gaia=6.140" sep_stored_gaia=5.986" x=466.2 y=541.9
+  Gaia DR3 1498341092588681856 cid=1498341092588681856 sep_wcs_gaia=89.792" sep_stored_gaia=89.751" x=345.3 y=457.1
+  Gaia DR3 1498360952517410688 cid=1498360952517410688 sep_wcs_gaia=4.339" sep_stored_gaia=4.232" x=389.3 y=349.5
+  Gaia DR3 1498364251052277248 cid=1498364251052277248 sep_wcs_gaia=16.884" sep_stored_gaia=17.029" x=522.6 y=549.3
+  Gaia DR3 1498371844554437376 cid=1498371844554437376 sep_wcs_gaia=4.036" sep_stored_gaia=3.836" x=512.7 y=504.3
+  ASASSN-V J140619.34+422109.5 cid=1498425548825498112 sep_wcs_gaia=4.535" sep_stored_gaia=5.014" x=463.3 y=264.1
+  Gaia DR3 1498453002256280832 cid=1498453002256280832 sep_wcs_gaia=6.793" sep_stored_gaia=7.356" x=320.0 y=321.4
+  Gaia DR3 1498453414573142016 cid=1498453414573142016 sep_wcs_gaia=6.041" sep_stored_gaia=6.550" x=322.2 y=308.8
+  Gaia DR3 1498472209350080000 cid=1498472209350080000 sep_wcs_gaia=11.615" sep_stored_gaia=12.417" x=204.9 y=252.1
+  CSS_J140918.7+423422 cid=1498486880958321024 sep_wcs_gaia=13.942" sep_stored_gaia=14.774" x=260.0 y=180.8
+  Gaia DR3 1498513166158147968 cid=1498513269237363456 sep_wcs_gaia=9.423" sep_stored_gaia=10.153" x=354.9 y=184.9
+  Gaia DR3 1498529074716971776 cid=1498529074716971776 sep_wcs_gaia=8.885" sep_stored_gaia=9.607" x=417.4 y=151.7
+  Gaia DR3 1498531686057111040 cid=1498531686057111040 sep_wcs_gaia=14.921" sep_stored_gaia=15.732" x=376.6 y=99.9
+  Gaia DR3 1498589513496406912 cid=1498589513496406912 sep_wcs_gaia=6.925" sep_stored_gaia=7.371" x=989.1 y=859.3
+  ZTF J140033.29+405446.7 cid=1498617482323461376 sep_wcs_gaia=10.476" sep_stored_gaia=10.821" x=863.3 y=792.9
+  Gaia DR3 1498698193348806144 cid=1498698193348806144 sep_wcs_gaia=4.146" sep_stored_gaia=4.455" x=1057.5 y=635.1
+  ASASSN-V J135757.22+412518.4 cid=1498699086702005376 sep_wcs_gaia=5.583" sep_stored_gaia=5.851" x=1039.9 y=602.3
+  Gaia DR3 1498723688274975104 cid=1498723688274975104 sep_wcs_gaia=8.671" sep_stored_gaia=8.796" x=804.4 y=647.4
+  Gaia DR3 1498732106410850944 cid=1498732106410850944 sep_wcs_gaia=6.614" sep_stored_gaia=6.804" x=868.2 y=634.8
+  Gaia DR3 1498751450943601280 cid=1498751450943601280 sep_wcs_gaia=6.228" sep_stored_gaia=6.214" x=700.8 y=552.3
+  Gaia DR3 1498795809366255488 cid=1498795809366255488 sep_wcs_gaia=4.181" sep_stored_gaia=4.195" x=850.1 y=459.6
+  GH CVn cid=1498804639818507904 sep_wcs_gaia=4.703" sep_stored_gaia=4.769" x=941.9 y=453.0
+  Gaia DR3 1498824568466764288 cid=1498824568466764288 sep_wcs_gaia=4.850" sep_stored_gaia=4.823" x=881.4 y=398.1
+  Gaia DR3 1498835391784358272 cid=1498835391784358272 sep_wcs_gaia=27.145" sep_stored_gaia=27.180" x=812.8 y=278.3
+  CSS_J135929.8+421520 cid=1498842882207281152 sep_wcs_gaia=5.803" sep_stored_gaia=5.723" x=928.3 y=297.5
+  Gaia DR3 1498857072779075200 cid=1498857072779075200 sep_wcs_gaia=5.250" sep_stored_gaia=5.611" x=1191.6 y=686.0
+  Gaia DR3 1498874424446929280 cid=1498874424446929280 sep_wcs_gaia=7.075" sep_stored_gaia=7.339" x=1254.4 y=614.1
+  Gaia DR3 1498878753773944576 cid=1498878753773944576 sep_wcs_gaia=7.473" sep_stored_gaia=7.824" x=1275.0 y=581.9
+  Gaia DR3 1498882533345167488 cid=1498882533345167488 sep_wcs_gaia=6.316" sep_stored_gaia=6.534" x=1215.5 y=542.0
+  Gaia DR3 1498905004614111744 cid=1498905004614111744 sep_wcs_gaia=4.930" sep_stored_gaia=5.023" x=1070.5 y=439.2
+  Gaia DR3 1498973724090771712 cid=1498973724090771712 sep_wcs_gaia=5.354" sep_stored_gaia=5.381" x=1201.3 y=309.6
+  Gaia DR3 1499084499887740160 cid=1499084499887740160 sep_wcs_gaia=4.279" sep_stored_gaia=4.212" x=1232.8 y=187.3
+  Gaia DR3 1499140884218407040 cid=1499140884218407040 sep_wcs_gaia=69.878" sep_stored_gaia=69.912" x=664.2 y=384.1
+  Gaia DR3 1499213280187092352 cid=1499213280187092352 sep_wcs_gaia=4.739" sep_stored_gaia=4.890" x=768.9 y=214.2
+  ASASSN-V J140306.55+424921.8 cid=1499244513189283712 sep_wcs_gaia=5.661" sep_stored_gaia=6.092" x=680.7 y=91.0
+  ZTF J140304.93+430017.3 cid=1499255199067891840 sep_wcs_gaia=6.623" sep_stored_gaia=7.276" x=682.3 y=23.5
+  Gaia DR3 1499278078357014656 cid=1499278078357014656 sep_wcs_gaia=6.698" sep_stored_gaia=7.350" x=526.6 y=117.3
+  Gaia DR3 1499294845909337344 cid=1499294845909337344 sep_wcs_gaia=8.555" sep_stored_gaia=9.275" x=559.0 y=53.6
+  Gaia DR3 1499857834519139968 cid=1499857834519139968 sep_wcs_gaia=22.422" sep_stored_gaia=23.191" x=2080.7 y=1186.3
+  Gaia DR3 1499869001434118656 cid=1499869001434118656 sep_wcs_gaia=26.348" sep_stored_gaia=27.248" x=1988.7 y=1067.7
+  Gaia DR3 1499883638682689920 cid=1499883638682689408 sep_wcs_gaia=19.652" sep_stored_gaia=0.000" x=1874.8 y=1062.9
+  Gaia DR3 1499892159897789824 cid=1499892159897789824 sep_wcs_gaia=24.531" sep_stored_gaia=25.373" x=1873.8 y=942.4
+  Gaia DR3 1499974932507448448 cid=1499974932507448448 sep_wcs_gaia=19.945" sep_stored_gaia=20.773" x=2009.2 y=790.2
+  Gaia DR3 1500291007741051520 cid=1500291007741051520 sep_wcs_gaia=10.778" sep_stored_gaia=11.479" x=1775.1 y=793.9
+  Gaia DR3 1500311657943843072 cid=1500311657943843072 sep_wcs_gaia=8.097" sep_stored_gaia=8.700" x=1686.8 y=725.3
+  Gaia DR3 1500311761023032320 cid=1500311761023032320 sep_wcs_gaia=8.701" sep_stored_gaia=9.368" x=1690.5 y=714.0
+  Gaia DR3 1500323099736658048 cid=1500323099736658048 sep_wcs_gaia=17.398" sep_stored_gaia=18.071" x=1758.1 y=665.4
+  Gaia DR3 1500327978819506944 cid=1500327978819506944 sep_wcs_gaia=39.296" sep_stored_gaia=38.686" x=1735.7 y=666.0
+  Gaia DR3 1500327978819506944 cid=1500327978820046464 sep_wcs_gaia=6.734" sep_stored_gaia=7.269" x=1740.1 y=668.0
+  Gaia DR3 1500373574192295808 cid=1500373574192295808 sep_wcs_gaia=7.636" sep_stored_gaia=8.321" x=1838.3 y=631.5
+  Gaia DR3 1500380858456833536 cid=1500380858456833536 sep_wcs_gaia=9.764" sep_stored_gaia=10.392" x=1782.5 y=589.3
+  Gaia DR3 1500397694728616960 cid=1500397694728616960 sep_wcs_gaia=5.551" sep_stored_gaia=6.118" x=1783.6 y=492.7
+  Gaia DR3 1500410236033012352 cid=1500410236033012352 sep_wcs_gaia=6.028" sep_stored_gaia=5.694" x=1614.0 y=622.7
+  RX CVn cid=1500424804562041984 sep_wcs_gaia=8.448" sep_stored_gaia=8.937" x=1678.1 y=593.9
+  Gaia DR3 1500430989314972032 cid=1500430989314972032 sep_wcs_gaia=9.347" sep_stored_gaia=9.609" x=1581.1 y=544.2
+  CSS_J134948.9+415037 cid=1500461157165243648 sep_wcs_gaia=10.121" sep_stored_gaia=10.444" x=1594.5 y=429.0
+  Gaia DR3 1500499640072148992 cid=1500499640072148992 sep_wcs_gaia=6.649" sep_stored_gaia=7.038" x=1706.3 y=405.9
+  Gaia DR3 1500516094090243712 cid=1500516094090243712 sep_wcs_gaia=5.664" sep_stored_gaia=5.827" x=1645.9 y=318.3
+  Gaia DR3 1500550526844642688 cid=1500550526844642688 sep_wcs_gaia=15.096" sep_stored_gaia=15.817" x=1994.5 y=607.8
+  ASASSN-V J134242.66+414830.5 cid=1500628111133814016 sep_wcs_gaia=14.524" sep_stored_gaia=14.222" x=2080.9 y=414.4
+  Gaia DR3 1500657282551698560 cid=1500657282551698560 sep_wcs_gaia=14.676" sep_stored_gaia=15.179" x=2026.6 y=285.9
+  Gaia DR3 1500690886375824512 cid=1500690886375824512 sep_wcs_gaia=6.262" sep_stored_gaia=6.729" x=1815.7 y=331.6
+  Gaia DR3 1500693841313325696 cid=1500693841313325696 sep_wcs_gaia=9.473" sep_stored_gaia=9.894" x=1784.0 y=326.9
+  Gaia DR3 1500700335303879680 cid=1500700335303879680 sep_wcs_gaia=7.643" sep_stored_gaia=8.062" x=1796.7 y=261.7
+  Gaia DR3 1500702087650511232 cid=1500702087650511232 sep_wcs_gaia=7.799" sep_stored_gaia=8.294" x=1855.7 y=319.9
+  Gaia DR3 1500705484968035968 cid=1500705484968035968 sep_wcs_gaia=7.599" sep_stored_gaia=8.048" x=1853.2 y=263.5
+  Gaia DR3 1500746446072739200 cid=1500746446072739200 sep_wcs_gaia=4.575" sep_stored_gaia=4.838" x=1762.1 y=90.7
+  Gaia DR3 1500799153911377024 cid=1500799153911377024 sep_wcs_gaia=8.482" sep_stored_gaia=8.652" x=1825.3 y=19.1
+  Gaia DR3 1501955221668216320 cid=1501955221668216320 sep_wcs_gaia=8.605" sep_stored_gaia=8.752" x=1455.0 y=391.1
+  Gaia DR3 1501957455051193472 cid=1501957455051193472 sep_wcs_gaia=8.402" sep_stored_gaia=8.579" x=1436.7 y=349.6
+  Gaia DR3 1504281135437886080 cid=1504281135437886080 sep_wcs_gaia=30.310" sep_stored_gaia=31.429" x=10.3 y=175.9
+  Gaia DR3 1504293848541056896 cid=1504293848541056896 sep_wcs_gaia=25.775" sep_stored_gaia=26.865" x=57.8 y=160.3
+  Gaia DR3 1504301510762717440 cid=1504301510762717440 sep_wcs_gaia=33.717" sep_stored_gaia=34.930" x=9.8 y=113.4
+  Gaia DR3 1504485335363167488 cid=1504485335363167488 sep_wcs_gaia=24.225" sep_stored_gaia=25.282" x=138.4 y=121.7
+
+# T2 — Gaia DB coverage vs frame footprint
+db_bbox: RA [0.000002, 359.999999] DEC [-89.985816, 89.977102]
+db_provenance_json: C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\field_catalog_cone_meta.json
+  cone_radius_deg=13.635045258216406
+  plate_solve_fov_deg=1.0
+frame_footprint (final WCS corners): RA [205.581621, 213.304598] DEC [39.146497, 43.053311]
+unmatched_DET_total: 2724
+unmatched inside db_bbox: 2724 (100.0%)
+unmatched outside db_bbox: 0 (0.0%)
+inside_nearest_gaia_p50 (sqlite field slice): 81.053"
+outside_nearest_gaia_p50: nan"
+field_catalog_cone_in_frame: n=4379 ()
+field_catalog_cone_nn_p50_unmatched_DET: 131.105"
+field_catalog_cone_nn_within_20arcsec: 11/2724
+unmatched_DET interpretation: spurious DAO detections without catalog association (not missing DB rows — 4379 catalog sources in frame, mag<=15.26)
+COVERAGE VERDICT (81" unmatched population): CONFIRMED
+  radius decision reframed: no match-radius change helps; wider/deeper field DB build is actionable item
+
+# T3 — Magnitude-consistency backstop
+reference_fit_n (ms-gaia<=0.5"): 246
+violation_rows |mag_resid|>0.5mag: 71
+
+DIAG SELF-CHECK FAIL
+  - T1 MISASSIGNED-ID: 164 rows — STOP gate

@@ -1,0 +1,206 @@
+# F-428-COORD forensics (v3)
+inputs: masterstars rows=6699 unmatched_DET=2724 variable_targets=244
+inputs: MASTERSTAR.fits=C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\MASTERSTAR.fits
+inputs: stale_wcs_p50_pass_threshold=20.0"
+
+# T1.1 Provenance of masterstars ra_deg/dec_deg
+matched_rows (Gaia catalog_id assigned): ra_deg/dec_deg from Gaia catalog at detect_stars_and_match_catalog catalog match (pipeline.py ~8496-8500); NOT refreshed by astrometry optimizer _write_match (astrometry_optimizer.py ~488-503 updates catalog_id/mag only).
+unmatched_DET_rows: ra_deg/dec_deg from initial DAO detection WCS pix2world (pipeline.py:8245 _all_pix2world_icrs_deg(wcs_obj, x, y)); optimize_masterstar_matches refits MASTERSTAR.fits WCS (Grip loop ~676-704, SIP refit ~588+) but does NOT rewrite ra_deg/dec_deg on unmatched rows before export (astrometry_optimizer.py export ~1169-1178 — pre-fix behavior).
+WCS rescale path DOES recompute all coords: pipeline.py:3894-3907 (masterstars_full_match.csv ra_deg/dec_deg recomputed after WCS rescale).
+post-fix: astrometry_optimizer._finalize_masterstar_sky_coords — matched=gaia_catalog, unmatched=final_wcs + coord_source column.
+
+# T1.2 Systematic-offset test (unmatched DET_* only)
+stored_coords n=2724
+  vector_mean: dRA*cos(dec)=0.073" dDec=0.087" magnitude=0.114"
+  mean_|Δ|=84.771" p50_|Δ|=81.053"
+  interpretation: vector mean << mean |Δ| → consistent with rigid shift (stale WCS)
+  corr(|Δ|, dist_from_field_center_arcmin)=0.0034 (rotation/scaling signature if |corr|>0.3)
+
+recomputed_from_final_WCS (MASTERSTAR.fits=C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\MASTERSTAR.fits) n=2724
+  vector_mean magnitude=0.226" mean_|Δ|=84.777" p50_|Δ|=81.141"
+  STALE-WCS FAIL: recomputed p50 81.141" >= 20.0"
+
+# T1.3 vt↔ms violation source (which side deviates from Gaia DB)
+  ASASSN-V J140909.62+391704.6 cid=1485516006708222208: vt-ms=11.433" vt-gaia=1.278" ms-gaia=11.504" → ms_deviates
+  Gaia DR3 1485540612577549568 cid=1485540612577549568: vt-ms=13.911" vt-gaia=1.855" ms-gaia=12.880" → ms_deviates
+  Gaia DR3 1485552329248338816 cid=1485552329248338816: vt-ms=9.973" vt-gaia=0.428" ms-gaia=9.806" → ms_deviates
+  Gaia DR3 1485560025830226432 cid=1485560025830226432: vt-ms=12.998" vt-gaia=0.128" ms-gaia=12.978" → ms_deviates
+  Gaia DR3 1485574899299782528 cid=1485574899299782528: vt-ms=11.828" vt-gaia=0.278" ms-gaia=11.619" → ms_deviates
+  Gaia DR3 1485609538212672000 cid=1485609538212672000: vt-ms=7.042" vt-gaia=0.138" ms-gaia=6.937" → ms_deviates
+  Gaia DR3 1485913828055470592 cid=1485913828055470592: vt-ms=15.933" vt-gaia=0.080" ms-gaia=15.961" → ms_deviates
+  Gaia DR3 1485929083779282048 cid=1485929083779282048: vt-ms=9.433" vt-gaia=0.397" ms-gaia=9.600" → ms_deviates
+  Gaia DR3 1485984368598279808 cid=1485984368598279808: vt-ms=6.948" vt-gaia=0.830" ms-gaia=6.210" → ms_deviates
+  Gaia DR3 1485987254816323328 cid=1485987254816323328: vt-ms=10.099" vt-gaia=0.138" ms-gaia=10.169" → ms_deviates
+  Gaia DR3 1485988010730568192 cid=1485988010730568192: vt-ms=9.438" vt-gaia=0.043" ms-gaia=9.435" → ms_deviates
+  Gaia DR3 1486136822757775616 cid=1486136822757775744: vt-ms=9.472" vt-gaia=1.476" ms-gaia=8.040" → ms_deviates
+  Gaia DR3 1486137131995421440 cid=1486137131995421440: vt-ms=5.520" vt-gaia=0.929" ms-gaia=5.861" → ms_deviates
+  Gaia DR3 1496226044533492864 cid=1496226044533492864: vt-ms=17.864" vt-gaia=1.094" ms-gaia=16.864" → ms_deviates
+  Gaia DR3 1496241609494910976 cid=1496241609494910976: vt-ms=13.760" vt-gaia=0.392" ms-gaia=13.861" → ms_deviates
+  Gaia DR3 1496248206564680064 cid=1496248206564680064: vt-ms=10.235" vt-gaia=0.326" ms-gaia=9.988" → ms_deviates
+  FY CVn cid=1496278752372040832: vt-ms=12.872" vt-gaia=0.245" ms-gaia=12.627" → ms_deviates
+  Gaia DR3 1496280126761597440 cid=1496280126761597440: vt-ms=12.919" vt-gaia=0.065" ms-gaia=12.867" → ms_deviates
+  Gaia DR3 1496282153986140032 cid=1496282153986140032: vt-ms=12.145" vt-gaia=0.414" ms-gaia=12.236" → ms_deviates
+  Gaia DR3 1496286139715833088 cid=1496286139715833088: vt-ms=12.408" vt-gaia=0.144" ms-gaia=12.442" → ms_deviates
+  FZ CVn cid=1496293286541396480: vt-ms=13.476" vt-gaia=0.270" ms-gaia=13.525" → ms_deviates
+  Gaia DR3 1496735393295120000 cid=1496735393295120000: vt-ms=45.608" vt-gaia=0.290" ms-gaia=45.875" → ms_deviates
+  Gaia DR3 1496777965010561408 cid=1496777965010561408: vt-ms=26.837" vt-gaia=0.287" ms-gaia=26.754" → ms_deviates
+  Gaia DR3 1496779992235769216 cid=1496779992235769216: vt-ms=26.678" vt-gaia=0.474" ms-gaia=26.480" → ms_deviates
+  R CVn cid=1496795041799526400: vt-ms=12.890" vt-gaia=0.127" ms-gaia=13.001" → ms_deviates
+  Gaia DR3 1496846925005421056 cid=1496846925005421056: vt-ms=28.820" vt-gaia=0.472" ms-gaia=28.970" → ms_deviates
+  Gaia DR3 1496877883129723648 cid=1496877883129723648: vt-ms=19.726" vt-gaia=0.213" ms-gaia=19.672" → ms_deviates
+  Gaia DR3 1496880666268505216 cid=1496880666268505216: vt-ms=21.224" vt-gaia=0.485" ms-gaia=21.235" → ms_deviates
+  Gaia DR3 1496921279479636352 cid=1496921279479636352: vt-ms=18.436" vt-gaia=1.868" ms-gaia=17.294" → ms_deviates
+  Gaia DR3 1496930968925861248 cid=1496930968925861248: vt-ms=59.745" vt-gaia=3.548" ms-gaia=57.070" → ms_deviates
+  Gaia DR3 1496965569182317952 cid=1496965569182317952: vt-ms=17.340" vt-gaia=0.277" ms-gaia=17.455" → ms_deviates
+  Gaia DR3 1496968421040578944 cid=1496968421040578944: vt-ms=16.934" vt-gaia=0.690" ms-gaia=17.308" → ms_deviates
+  Gaia DR3 1496993675448311808 cid=1496993675448311808: vt-ms=11.244" vt-gaia=0.373" ms-gaia=11.402" → ms_deviates
+  Gaia DR3 1497010168122706688 cid=1497010168122706688: vt-ms=12.787" vt-gaia=0.475" ms-gaia=13.215" → ms_deviates
+  Gaia DR3 1497061570291342464 cid=1497061570291342464: vt-ms=10.163" vt-gaia=0.208" ms-gaia=9.969" → ms_deviates
+  Gaia DR3 1497070744341492864 cid=1497070744341492864: vt-ms=10.074" vt-gaia=0.100" ms-gaia=10.043" → ms_deviates
+  Gaia DR3 1497094418201167744 cid=1497094418201167744: vt-ms=11.746" vt-gaia=3.907" ms-gaia=8.393" → ms_deviates
+  Gaia DR3 1497114175050663040 cid=1497114175050663040: vt-ms=15.236" vt-gaia=0.358" ms-gaia=15.092" → ms_deviates
+  Gaia DR3 1497121459315202560 cid=1497121459315202560: vt-ms=4.405" vt-gaia=1.090" ms-gaia=3.551" → ms_deviates
+  Gaia DR3 1497158396033960064 cid=1497158396033960064: vt-ms=11.335" vt-gaia=0.162" ms-gaia=11.211" → ms_deviates
+  Gaia DR3 1497164580786846976 cid=1497164580786846976: vt-ms=6.153" vt-gaia=0.592" ms-gaia=5.908" → ms_deviates
+  CSS_J134925.3+393524 cid=1497169940906156032: vt-ms=19.273" vt-gaia=0.207" ms-gaia=19.112" → ms_deviates
+  Gaia DR3 1497181623217208064 cid=1497181623217208064: vt-ms=12.635" vt-gaia=0.201" ms-gaia=12.760" → ms_deviates
+  Gaia DR3 1497225981639401984 cid=1497225981639401984: vt-ms=11.001" vt-gaia=0.512" ms-gaia=10.497" → ms_deviates
+  Gaia DR3 1497227287309482624 cid=1497227287309482624: vt-ms=11.669" vt-gaia=2.064" ms-gaia=9.605" → ms_deviates
+  Gaia DR3 1497265873295605120 cid=1497265873295605120: vt-ms=5.927" vt-gaia=0.842" ms-gaia=5.099" → ms_deviates
+  Gaia DR3 1497297690413358720 cid=1497297690413358720: vt-ms=9.469" vt-gaia=0.122" ms-gaia=9.393" → ms_deviates
+  Gaia DR3 1497303909525988352 cid=1497303909525988352: vt-ms=8.814" vt-gaia=0.381" ms-gaia=8.461" → ms_deviates
+  FW CVn cid=1497343732462852864: vt-ms=2.164" vt-gaia=2.164" ms-gaia=0.000" → vt_deviates
+  Gaia DR3 1497345278651080576 cid=1497345278651080576: vt-ms=5.713" vt-gaia=0.180" ms-gaia=5.535" → ms_deviates
+  Gaia DR3 1497347718192483840 cid=1497347718192483840: vt-ms=6.712" vt-gaia=0.275" ms-gaia=6.465" → ms_deviates
+  HAT-188-0001516 cid=1497350638770267520: vt-ms=4.510" vt-gaia=1.374" ms-gaia=3.878" → ms_deviates
+  Gaia DR3 1497419495685871488 cid=1497419495685871488: vt-ms=6.771" vt-gaia=0.369" ms-gaia=6.446" → ms_deviates
+  Gaia DR3 1497420045441686528 cid=1497420045441686528: vt-ms=15.941" vt-gaia=1.092" ms-gaia=16.756" → ms_deviates
+  Gaia DR3 1497424851508532992 cid=1497424851508532992: vt-ms=5.525" vt-gaia=0.508" ms-gaia=5.712" → ms_deviates
+  Gaia DR3 1497436125799224960 cid=1497436125799224448: vt-ms=8.869" vt-gaia=15.061" ms-gaia=6.767" → vt_deviates
+  Gaia DR3 1497440970522358528 cid=1497440970522358528: vt-ms=2.996" vt-gaia=0.520" ms-gaia=3.272" → ms_deviates
+  Gaia DR3 1497491273179203456 cid=1497491273179203456: vt-ms=15.589" vt-gaia=0.805" ms-gaia=15.221" → ms_deviates
+  Gaia DR3 1497498763602158720 cid=1497498763602158720: vt-ms=12.389" vt-gaia=0.436" ms-gaia=12.009" → ms_deviates
+  Gaia DR3 1497513469570146432 cid=1497513469570146432: vt-ms=11.371" vt-gaia=0.113" ms-gaia=11.480" → ms_deviates
+  Gaia DR3 1497525907795379456 cid=1497525907795379456: vt-ms=14.020" vt-gaia=0.568" ms-gaia=13.576" → ms_deviates
+  Gaia DR3 1497535116205236736 cid=1497535116205236736: vt-ms=14.836" vt-gaia=0.579" ms-gaia=14.829" → ms_deviates
+  HAT-188-0001788 cid=1497561779362267392: vt-ms=11.626" vt-gaia=0.940" ms-gaia=10.755" → ms_deviates
+  Gaia DR3 1497600399708129792 cid=1497600399708129792: vt-ms=8.275" vt-gaia=0.347" ms-gaia=8.087" → ms_deviates
+  Gaia DR3 1497603835681942400 cid=1497603835681942400: vt-ms=9.191" vt-gaia=0.032" ms-gaia=9.160" → ms_deviates
+  Gaia DR3 1497623248934145536 cid=1497623248934145536: vt-ms=6.860" vt-gaia=0.120" ms-gaia=6.908" → ms_deviates
+  Gaia DR3 1497639123133258752 cid=1497639123133258752: vt-ms=5.856" vt-gaia=0.199" ms-gaia=5.687" → ms_deviates
+  Gaia DR3 1497644277093974400 cid=1497644277093974400: vt-ms=67.319" vt-gaia=0.196" ms-gaia=67.487" → ms_deviates
+  HAT-188-0000203 cid=1497683722074089728: vt-ms=4.904" vt-gaia=4.904" ms-gaia=0.000" → vt_deviates
+  Gaia DR3 1497704131758182400 cid=1497704131758182400: vt-ms=5.883" vt-gaia=1.505" ms-gaia=6.615" → ms_deviates
+  Gaia DR3 1497704372276351360 cid=1497704372276351360: vt-ms=6.925" vt-gaia=0.359" ms-gaia=6.724" → ms_deviates
+  Gaia DR3 1497729317446890240 cid=1497729317446890240: vt-ms=12.720" vt-gaia=0.247" ms-gaia=12.552" → ms_deviates
+  Gaia DR3 1497871669842349184 cid=1497871669842349184: vt-ms=12.512" vt-gaia=0.130" ms-gaia=12.469" → ms_deviates
+  Gaia DR3 1497888471754387072 cid=1497888471754387072: vt-ms=8.960" vt-gaia=0.457" ms-gaia=8.517" → ms_deviates
+  Gaia DR3 1497912008175205760 cid=1497912008175205760: vt-ms=8.031" vt-gaia=0.273" ms-gaia=7.844" → ms_deviates
+  Gaia DR3 1497940389319020928 cid=1497940389319020928: vt-ms=9.543" vt-gaia=0.338" ms-gaia=9.215" → ms_deviates
+  Gaia DR3 1497960008729614976 cid=1497960008729614976: vt-ms=5.729" vt-gaia=0.701" ms-gaia=5.034" → ms_deviates
+  Gaia DR3 1497971450522478080 cid=1497971450522478080: vt-ms=7.194" vt-gaia=0.132" ms-gaia=7.104" → ms_deviates
+  ZTF J140300.57+413339.3 cid=1498000793739050368: vt-ms=6.154" vt-gaia=0.162" ms-gaia=6.001" → ms_deviates
+  Gaia DR3 1498011960654465536 cid=1498011960654465536: vt-ms=3.861" vt-gaia=0.840" ms-gaia=3.564" → ms_deviates
+  ASASSN-V J140843.29+402701.8 cid=1498027456896444928: vt-ms=4.323" vt-gaia=0.048" ms-gaia=4.305" → ms_deviates
+  Gaia DR3 1498032473418221952 cid=1498032473418221952: vt-ms=6.068" vt-gaia=0.084" ms-gaia=5.984" → ms_deviates
+  Gaia DR3 1498058827337611392 cid=1498058827337611392: vt-ms=4.523" vt-gaia=0.092" ms-gaia=4.538" → ms_deviates
+  ZTF J141004.59+410003.7 cid=1498064771572297856: vt-ms=3.604" vt-gaia=0.122" ms-gaia=3.507" → ms_deviates
+  Gaia DR3 1498105384781489920 cid=1498105384781489920: vt-ms=4.817" vt-gaia=0.474" ms-gaia=4.365" → ms_deviates
+  Gaia DR3 1498120159470525696 cid=1498120159470525696: vt-ms=2.368" vt-gaia=1.062" ms-gaia=1.780" → ms_deviates
+  Gaia DR3 1498135552633294976 cid=1498135552633294976: vt-ms=5.990" vt-gaia=0.277" ms-gaia=5.758" → ms_deviates
+  Gaia DR3 1498139469643451136 cid=1498139469643451136: vt-ms=7.702" vt-gaia=0.219" ms-gaia=7.716" → ms_deviates
+  Gaia DR3 1498143180495215488 cid=1498143180495215488: vt-ms=8.925" vt-gaia=0.182" ms-gaia=8.773" → ms_deviates
+  Gaia DR3 1498163040424489216 cid=1498163040424489216: vt-ms=13.659" vt-gaia=0.805" ms-gaia=14.184" → ms_deviates
+  Gaia DR3 1498183274013681536 cid=1498183274013681536: vt-ms=11.339" vt-gaia=0.457" ms-gaia=11.753" → ms_deviates
+  Gaia DR3 1498229629597339776 cid=1498229629597339776: vt-ms=9.593" vt-gaia=0.974" ms-gaia=10.566" → ms_deviates
+  Gaia DR3 1498231038346636416 cid=1498231038346636416: vt-ms=11.723" vt-gaia=0.750" ms-gaia=12.017" → ms_deviates
+  NSVS 5096293 cid=1498298211635183744: vt-ms=7.709" vt-gaia=1.347" ms-gaia=6.362" → ms_deviates
+  Gaia DR3 1498311298398914816 cid=1498311298398914816: vt-ms=7.002" vt-gaia=1.667" ms-gaia=5.376" → ms_deviates
+  Gaia DR3 1498322916287022976 cid=1498322916287022976: vt-ms=6.239" vt-gaia=0.320" ms-gaia=5.986" → ms_deviates
+  Gaia DR3 1498341092588681856 cid=1498341092588681856: vt-ms=89.993" vt-gaia=0.440" ms-gaia=89.751" → ms_deviates
+  Gaia DR3 1498360952517410688 cid=1498360952517410688: vt-ms=4.399" vt-gaia=0.315" ms-gaia=4.232" → ms_deviates
+  Gaia DR3 1498364251052277248 cid=1498364251052277248: vt-ms=16.892" vt-gaia=0.747" ms-gaia=17.029" → ms_deviates
+  Gaia DR3 1498371844554437376 cid=1498371844554437376: vt-ms=5.105" vt-gaia=1.278" ms-gaia=3.836" → ms_deviates
+  Gaia DR3 1498399779021762176 cid=1498399779021762176: vt-ms=2.712" vt-gaia=0.742" ms-gaia=2.468" → ms_deviates
+  Gaia DR3 1498408094078428288 cid=1498408094078428288: vt-ms=2.773" vt-gaia=1.102" ms-gaia=3.267" → ms_deviates
+  ASASSN-V J140619.34+422109.5 cid=1498425548825498112: vt-ms=4.961" vt-gaia=0.061" ms-gaia=5.014" → ms_deviates
+  Gaia DR3 1498453002256280832 cid=1498453002256280832: vt-ms=7.094" vt-gaia=0.772" ms-gaia=7.356" → ms_deviates
+  Gaia DR3 1498453414573142016 cid=1498453414573142016: vt-ms=7.170" vt-gaia=3.950" ms-gaia=6.550" → ms_deviates
+  Gaia DR3 1498472209350080000 cid=1498472209350080000: vt-ms=12.387" vt-gaia=0.218" ms-gaia=12.417" → ms_deviates
+  CSS_J140918.7+423422 cid=1498486880958321024: vt-ms=13.796" vt-gaia=0.990" ms-gaia=14.774" → ms_deviates
+  Gaia DR3 1498529074716971776 cid=1498529074716971776: vt-ms=8.770" vt-gaia=0.943" ms-gaia=9.607" → ms_deviates
+  Gaia DR3 1498531686057111040 cid=1498531686057111040: vt-ms=15.746" vt-gaia=0.026" ms-gaia=15.732" → ms_deviates
+  Gaia DR3 1498589513496406912 cid=1498589513496406912: vt-ms=7.680" vt-gaia=0.448" ms-gaia=7.371" → ms_deviates
+  ZTF J140033.29+405446.7 cid=1498617482323461376: vt-ms=10.889" vt-gaia=0.120" ms-gaia=10.821" → ms_deviates
+  Gaia DR3 1498698193348806144 cid=1498698193348806144: vt-ms=4.034" vt-gaia=0.437" ms-gaia=4.455" → ms_deviates
+  ASASSN-V J135757.22+412518.4 cid=1498699086702005376: vt-ms=5.810" vt-gaia=0.152" ms-gaia=5.851" → ms_deviates
+  Gaia DR3 1498723688274975104 cid=1498723688274975104: vt-ms=9.022" vt-gaia=0.438" ms-gaia=8.796" → ms_deviates
+  Gaia DR3 1498732106410850944 cid=1498732106410850944: vt-ms=6.953" vt-gaia=0.260" ms-gaia=6.804" → ms_deviates
+  Gaia DR3 1498744544636143104 cid=1498744544636143104: vt-ms=5.620" vt-gaia=2.852" ms-gaia=3.841" → ms_deviates
+  Gaia DR3 1498751450943601280 cid=1498751450943601280: vt-ms=6.202" vt-gaia=0.060" ms-gaia=6.214" → ms_deviates
+  Gaia DR3 1498783199341798016 cid=1498783199341798016: vt-ms=2.835" vt-gaia=0.185" ms-gaia=2.837" → ms_deviates
+  Gaia DR3 1498795809366255488 cid=1498795809366255488: vt-ms=4.365" vt-gaia=0.287" ms-gaia=4.195" → ms_deviates
+  GH CVn cid=1498804639818507904: vt-ms=4.913" vt-gaia=0.198" ms-gaia=4.769" → ms_deviates
+  Gaia DR3 1498824568466764288 cid=1498824568466764288: vt-ms=4.923" vt-gaia=0.238" ms-gaia=4.823" → ms_deviates
+  Gaia DR3 1498835391784358272 cid=1498835391784358272: vt-ms=26.383" vt-gaia=0.823" ms-gaia=27.180" → ms_deviates
+  CSS_J135929.8+421520 cid=1498842882207281152: vt-ms=5.701" vt-gaia=0.063" ms-gaia=5.723" → ms_deviates
+  Gaia DR3 1498857072779075200 cid=1498857072779075200: vt-ms=6.091" vt-gaia=0.699" ms-gaia=5.611" → ms_deviates
+  Gaia DR3 1498874424446929280 cid=1498874424446929280: vt-ms=7.547" vt-gaia=0.554" ms-gaia=7.339" → ms_deviates
+  Gaia DR3 1498878753773944576 cid=1498878753773944576: vt-ms=7.821" vt-gaia=0.309" ms-gaia=7.824" → ms_deviates
+  Gaia DR3 1498882533345167488 cid=1498882533345167488: vt-ms=6.953" vt-gaia=0.534" ms-gaia=6.534" → ms_deviates
+  Gaia DR3 1498905004614111744 cid=1498905004614111744: vt-ms=5.107" vt-gaia=0.639" ms-gaia=5.023" → ms_deviates
+  Gaia DR3 1498973724090771712 cid=1498973724090771712: vt-ms=4.621" vt-gaia=1.363" ms-gaia=5.381" → ms_deviates
+  Gaia DR3 1499006984318088320 cid=1499006984318088320: vt-ms=3.939" vt-gaia=0.502" ms-gaia=3.480" → ms_deviates
+  ZTF J135636.59+422135.5 cid=1499021174889970816: vt-ms=3.401" vt-gaia=0.174" ms-gaia=3.227" → ms_deviates
+  Gaia DR3 1499074466844182016 cid=1499074466844182016: vt-ms=2.330" vt-gaia=0.274" ms-gaia=2.339" → ms_deviates
+  Gaia DR3 1499081063913928576 cid=1499081063913928576: vt-ms=2.581" vt-gaia=0.525" ms-gaia=2.661" → ms_deviates
+  Gaia DR3 1499084499887740160 cid=1499084499887740160: vt-ms=4.366" vt-gaia=0.583" ms-gaia=4.212" → ms_deviates
+  Gaia DR3 1499119546820866176 cid=1499119546820866176: vt-ms=2.996" vt-gaia=1.398" ms-gaia=3.004" → ms_deviates
+  Gaia DR3 1499140884218407040 cid=1499140884218407040: vt-ms=68.745" vt-gaia=1.314" ms-gaia=69.912" → ms_deviates
+  Gaia DR3 1499210016011946496 cid=1499210016011946496: vt-ms=3.681" vt-gaia=0.130" ms-gaia=3.625" → ms_deviates
+  Gaia DR3 1499213280187092352 cid=1499213280187092352: vt-ms=4.737" vt-gaia=0.291" ms-gaia=4.890" → ms_deviates
+  Gaia DR3 1499215032533749888 cid=1499215032533749888: vt-ms=2.151" vt-gaia=0.789" ms-gaia=1.432" → ms_deviates
+  ASASSN-V J140306.55+424921.8 cid=1499244513189283712: vt-ms=6.474" vt-gaia=0.628" ms-gaia=6.092" → ms_deviates
+  ZTF J140304.93+430017.3 cid=1499255199067891840: vt-ms=7.222" vt-gaia=0.132" ms-gaia=7.276" → ms_deviates
+  Gaia DR3 1499278078357014656 cid=1499278078357014656: vt-ms=7.131" vt-gaia=0.325" ms-gaia=7.350" → ms_deviates
+  Gaia DR3 1499294845909337344 cid=1499294845909337344: vt-ms=9.021" vt-gaia=0.305" ms-gaia=9.275" → ms_deviates
+  Gaia DR3 1499857834519139968 cid=1499857834519139968: vt-ms=23.589" vt-gaia=0.486" ms-gaia=23.191" → ms_deviates
+  Gaia DR3 1499869001434118656 cid=1499869001434118656: vt-ms=27.617" vt-gaia=0.734" ms-gaia=27.248" → ms_deviates
+  Gaia DR3 1499892159897789824 cid=1499892159897789824: vt-ms=25.933" vt-gaia=1.125" ms-gaia=25.373" → ms_deviates
+  Gaia DR3 1499974932507448448 cid=1499974932507448448: vt-ms=20.754" vt-gaia=0.102" ms-gaia=20.773" → ms_deviates
+  Gaia DR3 1500291007741051520 cid=1500291007741051520: vt-ms=11.344" vt-gaia=0.348" ms-gaia=11.479" → ms_deviates
+  Gaia DR3 1500311657943843072 cid=1500311657943843072: vt-ms=8.797" vt-gaia=0.499" ms-gaia=8.700" → ms_deviates
+  Gaia DR3 1500311761023032320 cid=1500311761023032320: vt-ms=9.529" vt-gaia=0.972" ms-gaia=9.368" → ms_deviates
+  Gaia DR3 1500323099736658048 cid=1500323099736658048: vt-ms=18.313" vt-gaia=0.270" ms-gaia=18.071" → ms_deviates
+  Gaia DR3 1500327978819506944 cid=1500327978819506944: vt-ms=38.612" vt-gaia=0.088" ms-gaia=38.686" → ms_deviates
+  Gaia DR3 1500373574192295808 cid=1500373574192295808: vt-ms=8.232" vt-gaia=0.286" ms-gaia=8.321" → ms_deviates
+  Gaia DR3 1500380858456833536 cid=1500380858456833536: vt-ms=10.887" vt-gaia=0.571" ms-gaia=10.392" → ms_deviates
+  Gaia DR3 1500397694728616960 cid=1500397694728616960: vt-ms=6.532" vt-gaia=0.523" ms-gaia=6.118" → ms_deviates
+  Gaia DR3 1500410236033012352 cid=1500410236033012352: vt-ms=5.502" vt-gaia=0.194" ms-gaia=5.694" → ms_deviates
+  RX CVn cid=1500424804562041984: vt-ms=8.977" vt-gaia=0.182" ms-gaia=8.937" → ms_deviates
+  Gaia DR3 1500430989314972032 cid=1500430989314972032: vt-ms=10.483" vt-gaia=0.889" ms-gaia=9.609" → ms_deviates
+  CSS_J134948.9+415037 cid=1500461157165243648: vt-ms=9.645" vt-gaia=1.757" ms-gaia=10.444" → ms_deviates
+  Gaia DR3 1500499640072148992 cid=1500499640072148992: vt-ms=6.513" vt-gaia=3.204" ms-gaia=7.038" → ms_deviates
+  Gaia DR3 1500516094090243712 cid=1500516094090243712: vt-ms=6.315" vt-gaia=0.490" ms-gaia=5.827" → ms_deviates
+  Gaia DR3 1500540768678968832 cid=1500540768678968832: vt-ms=3.774" vt-gaia=0.275" ms-gaia=3.784" → ms_deviates
+  Gaia DR3 1500550526844642688 cid=1500550526844642688: vt-ms=15.949" vt-gaia=0.350" ms-gaia=15.817" → ms_deviates
+  ASASSN-V J134242.66+414830.5 cid=1500628111133814016: vt-ms=14.319" vt-gaia=0.099" ms-gaia=14.222" → ms_deviates
+  Gaia DR3 1500657282551698560 cid=1500657282551698560: vt-ms=15.637" vt-gaia=0.508" ms-gaia=15.179" → ms_deviates
+  Gaia DR3 1500690886375824512 cid=1500690886375824512: vt-ms=6.759" vt-gaia=0.161" ms-gaia=6.729" → ms_deviates
+  Gaia DR3 1500693841313325696 cid=1500693841313325696: vt-ms=10.103" vt-gaia=0.235" ms-gaia=9.894" → ms_deviates
+  Gaia DR3 1500700335303879680 cid=1500700335303879680: vt-ms=8.280" vt-gaia=0.427" ms-gaia=8.062" → ms_deviates
+  Gaia DR3 1500702087650511232 cid=1500702087650511232: vt-ms=8.318" vt-gaia=0.730" ms-gaia=8.294" → ms_deviates
+  Gaia DR3 1500705484968035968 cid=1500705484968035968: vt-ms=8.111" vt-gaia=0.168" ms-gaia=8.048" → ms_deviates
+  Gaia DR3 1500746446072739200 cid=1500746446072739200: vt-ms=4.911" vt-gaia=0.119" ms-gaia=4.838" → ms_deviates
+  Gaia DR3 1500799153911377024 cid=1500799153911377024: vt-ms=8.727" vt-gaia=0.214" ms-gaia=8.652" → ms_deviates
+  Gaia DR3 1501955221668216320 cid=1501955221668216320: vt-ms=9.711" vt-gaia=1.585" ms-gaia=8.752" → ms_deviates
+  Gaia DR3 1501957455051193472 cid=1501957455051193472: vt-ms=9.211" vt-gaia=1.476" ms-gaia=8.579" → ms_deviates
+  Gaia DR3 1502098570497419520 cid=1502098570497419520: vt-ms=2.806" vt-gaia=0.092" ms-gaia=2.867" → ms_deviates
+  Gaia DR3 1504281135437886080 cid=1504281135437886080: vt-ms=31.399" vt-gaia=0.096" ms-gaia=31.429" → ms_deviates
+  Gaia DR3 1504293848541056896 cid=1504293848541056896: vt-ms=26.858" vt-gaia=1.384" ms-gaia=26.865" → ms_deviates
+  Gaia DR3 1504301510762717440 cid=1504301510762717440: vt-ms=34.404" vt-gaia=0.677" ms-gaia=34.930" → ms_deviates
+  Gaia DR3 1504485335363167488 cid=1504485335363167488: vt-ms=25.294" vt-gaia=0.027" ms-gaia=25.282" → ms_deviates
+violations_analyzed: vt_deviates=3 ms_deviates=176 tie=0 no_gaia_db=0
+
+DIAG SELF-CHECK FAIL
+  - recomputed p50 81.141" >= 20.0" (stale-WCS not confirmed)

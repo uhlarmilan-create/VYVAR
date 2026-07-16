@@ -91,6 +91,18 @@ def test_run_full_baseline_suspended_short_circuit(ledger_path: Path) -> None:
     assert report.results[0].status == "SUSPENDED"
 
 
+def test_except_fix_allowlist_is_draft_scoped() -> None:
+    """B3: empty_comp_drop allowlist must be draft-keyed, not a global exemption."""
+    import scripts.session_baseline_check as sbc
+
+    by_draft = sbc.EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT
+    assert 435 in by_draft
+    assert by_draft[435] == {"phase2a_empty_comp_drop": 1}
+    # Other drafts have no allowlist — a nonzero counter would fail the gate.
+    assert by_draft.get(999, {}) == {}
+    assert by_draft.get(424, {}) == {}
+
+
 def test_main_full_exit_zero_when_suspended(monkeypatch: pytest.MonkeyPatch) -> None:
     import scripts.session_baseline_check as sbc
 

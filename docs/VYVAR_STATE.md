@@ -1,6 +1,19 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-16** (Anchor #3 PASSED — draft_435 sky-surface snapshot + LABBE-DET).
+Last updated: **2026-07-16** (ARCHIVE BACKUP + CLEANUP — drafts 428–434 purged).
+
+## Data items (top)
+
+1. **Fresh darks** — expiry ~**2026-07-21** (do first when scheduling next night).
+2. **Anchor offline zips** (`C:\ASTRO\backups\`):
+   - `draft_000435_snapshot_skysurface_20260716.zip` SHA256
+     `a35d22354666e359ce1bdd9a6eb207d5d768466a67fcdb77c22425eabb3f84a0` (~4.82 GB)
+   - `draft_000435_anchor_live_20260716.zip` SHA256
+     `a4bb42d255e542b4a516197d5efe1a6304602b331680ac554caf41a244070faf` (~4.82 GB)
+   - Historical: `vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip` (untouched)
+3. **Archive freed** ~**48.7 GB** (drafts 428–434 + pass1 photometry backup). In-Archive
+   remain: `draft_000435` + `draft_000435_snapshot_skysurface_20260716`.
+4. F-428 arc evidence: `validation/f428_arc_evidence/` (moved from `tmp/`).
 
 ## Current snapshot (Anchor #3 ACTIVE)
 
@@ -12,9 +25,7 @@ Census 2552/2842/169; identity p95 baseline **1.54 px**. Ledger `VL-ANCHOR-WCSIN
 **Root cause of prior STOP:** ensemble SEM join / dict-order nondeterminism in phase2a `err`
 (not Labbe placements). Labbe hardened anyway (canonical stars + SeedSequence + dump).
 
-**Milan:** zip snapshot to `C:\ASTRO\backups\`; then drafts **428–434** deletable.
-
-**INVARIANTS P1:** unblocked — start after push.
+**INVARIANTS P1:** unblocked (seed started).
 
 ---
 

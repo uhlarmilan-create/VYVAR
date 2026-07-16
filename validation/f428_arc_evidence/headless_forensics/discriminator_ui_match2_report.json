@@ -1,0 +1,44 @@
+{
+  "success": true,
+  "draft_id": 433,
+  "errors": [],
+  "n_lightcurves": 185,
+  "n_frames": 139,
+  "elapsed_phases": {
+    "config": 0.01312398910522461,
+    "smart_scan_source": 0.4512767791748047,
+    "smart_import_session": 1.1827702522277832,
+    "calibration": 113.2145402431488,
+    "memory_profile": 0.09569382667541504,
+    "ram_qc": 0.0,
+    "pointing_scan": 3.8444461822509766,
+    "auto_fwhm": 0.0,
+    "masterstar_resolve": 0.1718301773071289,
+    "preprocess_prep": 0.001001119613647461,
+    "preprocess": 12.033225297927856,
+    "platesolve_align_masterstar": 1170.1285870075226,
+    "discover_obs_groups": 0.0034341812133789062,
+    "photometry_NoFilter_60_2": 2035.5845038890839,
+    "total": 4235.229880094528
+  },
+  "params": {
+    "catalog_match_max_sep_arcsec": 2.0,
+    "sysrem_enabled": false
+  },
+  "census": {
+    "n_ms": 6699,
+    "matched": 3993,
+    "unmatched": 2706,
+    "vsx_true": 46
+  },
+  "identity_qa": {
+    "matched_world2pix_identity_n": 3993,
+    "matched_world2pix_identity_p95_px": 6.239767838184102,
+    "matched_world2pix_identity_p99_px": 9.19825384923795
+  },
+  "provenance": {
+    "git_hash": "715391b9d30a56ba2697d3b7b112826da34d7eba",
+    "git_dirty": true,
+    "entry_point": "run_phase2a"
+  }
+}

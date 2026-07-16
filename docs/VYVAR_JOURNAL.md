@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-16 -- ARCHIVE BACKUP + CLEANUP (F-428→anchor arc closed)
+
+Offline zips of draft_435 snapshot + live anchor under `C:\ASTRO\backups\`; drafts 428–434
+deleted (~48.7 GB freed). Counter allowlist narrowed to draft_435 only. Evidence moved to
+`validation/f428_arc_evidence/`. Result: `CURSOR_RESULT_archive_backup_push.md`.
+
+---
+
 ## 2026-07-16 -- LABBE-DET + Anchor #3 PASS (draft_435 sky-surface)
 
 Root cause of `err` nondeterminism: ensemble SEM / source_file join + dict iteration (not

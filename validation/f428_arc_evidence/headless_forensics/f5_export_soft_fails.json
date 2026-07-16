@@ -1,0 +1,23 @@
+{
+  "f5_soft_export_failures_431_432": [
+    {
+      "catalog_id": "1497007144465726080",
+      "format": "aperture export (lightcurve CSV pack)",
+      "root_cause": "LC CSV missing",
+      "on_429": "LC absent (not an export-batch failure target on 429)"
+    },
+    {
+      "catalog_id": "1497121459315202560",
+      "format": "aperture export",
+      "root_cause": "no exportable LC points (flags/mag empty); CSV present ~26 KB on 431",
+      "on_429": "LC absent"
+    },
+    {
+      "catalog_id": "1498278351706325248",
+      "format": "aperture export",
+      "root_cause": "LC CSV missing",
+      "on_429": "LC absent"
+    }
+  ],
+  "classification": "symptom-of-sick-census — IDs appear in contaminated 184-target set; not present as healthy 429 programme LCs / export fails"
+}
