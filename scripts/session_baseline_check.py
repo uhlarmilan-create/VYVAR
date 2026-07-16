@@ -28,6 +28,8 @@ EXPECTED_PHOTOMETRY_SHA_CORE = "3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e63
 EXPECTED_PHOTOMETRY_SHA_EXTENDED = "6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8"
 EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "3d26f469"
 EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "6420f1da"
+# Structural empty-comp drops on draft_435 (R CVn / export ghosts) — not regressions.
+EXPECTED_EXCEPT_FIX_COUNTERS: dict[str, int] = {"phase2a_empty_comp_drop": 1}
 
 # Known untracked paths: WARN only (not FAIL). Extend when deliberately added.
 KNOWN_UNTRACKED_PREFIXES = (
@@ -383,15 +385,31 @@ def run_full_baseline(report: SessionReport) -> None:
         )
 
     counters = get_except_fix_counters().snapshot()
-    nonzero = {k: v for k, v in counters.items() if v}
+    nonzero = {k: int(v) for k, v in counters.items() if v}
     meta_path = out_phot / "pipeline_meta.json"
     meta_summary: dict[str, Any] = {}
     if meta_path.is_file():
         meta_summary = json.loads(meta_path.read_text(encoding="utf-8")).get("except_fix_summary") or {}
-    meta_nonzero = {k: v for k, v in meta_summary.items() if v}
-
-    report.add("full-counters-runtime", "PASS" if not nonzero else "FAIL", json.dumps(nonzero))
-    report.add("full-counters-meta", "PASS" if not meta_nonzero else "FAIL", json.dumps(meta_nonzero))
+    meta_nonzero = {k: int(v) for k, v in meta_summary.items() if v}
+    expected = {k: int(v) for k, v in EXPECTED_EXCEPT_FIX_COUNTERS.items() if int(v) > 0}
+    counters_ok = nonzero == expected
+    meta_ok = meta_nonzero == expected
+    report.add(
+        "full-counters-runtime",
+        "PASS" if counters_ok else "FAIL",
+        json.dumps(nonzero) if nonzero else "{}",
+    )
+    report.add(
+        "full-counters-meta",
+        "PASS" if meta_ok else "FAIL",
+        json.dumps(meta_nonzero) if meta_nonzero else "{}",
+    )
+    if expected and counters_ok:
+        report.add(
+            "full-counters-expected",
+            "PASS",
+            f"allowlisted {json.dumps(expected)} (structural empty-comp drops)",
+        )
 
     if report.ok:
         _update_ledger_on_full_pass(_git_short_head())

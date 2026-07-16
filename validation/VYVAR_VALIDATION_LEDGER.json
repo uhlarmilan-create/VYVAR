@@ -43,9 +43,9 @@
       "area": "except-hygiene",
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
-      "passes": false,
-      "last_verified": "2026-07-15",
-      "commit": "dcd88bf",
+      "passes": true,
+      "last_verified": "2026-07-16",
+      "commit": "ded815b",
       "notes": "Re-verify on next --full against draft_435 sky-surface anchor."
     },
     {
@@ -146,7 +146,7 @@
       "verification": "scripts/session_baseline_check.py --full (core 3d26f469\u2026 n=333; extended 6420f1da\u2026 n=499). Census fingerprint n_raw_dao=2552 matched=2842 targets=169; identity p95 baseline 1.54 px.",
       "passes": true,
       "last_verified": "2026-07-16",
-      "commit": "10d610c",
+      "commit": "ded815b",
       "notes": "Cut after LABBE-DET err determinism fix; dual full-photometry SHA gate PASS on HEAD 10d610c. Alias: VL-ANCHOR-SKYSURFACE.",
       "census_fingerprint": {
         "n_raw_dao": 2552,
