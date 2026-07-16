@@ -52,13 +52,18 @@ other counts still FAIL. Test: `test_except_fix_allowlist_is_draft_scoped`.
 
 ## B4 / B5 — Git + STATE
 
-See commit hashes below. STATE data items: zip paths + SHA256, freed size, darks ~2026-07-21
-on top. JOURNAL closes F-428→anchor arc.
+Pushed to `origin/main`. HEAD `b962859`.
 
-## Files changed
-- `.gitignore` (`.worktrees/`)
-- `scripts/session_baseline_check.py` (draft-scoped allowlist)
-- `tests/test_session_baseline_check.py`
-- `validation/VYVAR_VALIDATION_LEDGER.json`, `validation/f428_arc_evidence/**`
-- `docs/VYVAR_STATE.md`, `docs/VYVAR_JOURNAL.md`
-- `CURSOR_RESULT_*.md` (versioned)
+```
+b962859 chore(archive): backup draft_435 anchor + purge drafts 428-434
+0015d29 docs(journal): record LABBE-DET and Anchor #3 PASS
+95f262e fix(qa): allowlist draft_435 empty_comp_drop in --full counters
+ded815b chore(anchor): cut draft_435 sky-surface anchor and re-enable --full
+10d610c fix(labbe-det): canonicalize ensemble SEM join and Labbe RNG purity
+```
+
+`--fast` OVERALL PASS (889 passed, 19 skipped) before push. Allowlist narrowing is in
+`b962859` (same commit as archive chore; draft-scoped `EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT`).
+
+STATE data items: zip paths + SHA256, freed size, darks ~2026-07-21 on top. JOURNAL closes
+F-428→anchor arc.
