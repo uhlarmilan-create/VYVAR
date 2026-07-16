@@ -1198,7 +1198,13 @@ def export_all_method_lightcurve_reports(
     for method in _methods:
         lc_path = lc_csv_path(_lc_dir, target_cid, method)
         if not lc_path.is_file():
-            record_export_failure(export_failures, _tid, method, "LC CSV missing")
+            # F-435-EXPORT-GHOSTS: active_targets may lack an LC (no comps / dropped).
+            # Skip with INFO — do not record as export failure.
+            logging.info(
+                "[EXPORT] skip %s %s: no LC CSV (not a photometry product)",
+                _tid or target_cid,
+                method,
+            )
             continue
         try:
             lc_df = pd.read_csv(lc_path, low_memory=False)

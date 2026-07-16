@@ -714,7 +714,11 @@ def _build_star_exclusion_mask(
     xs = np.asarray(star_x, dtype=np.float64)
     ys = np.asarray(star_y, dtype=np.float64)
     ok = np.isfinite(xs) & np.isfinite(ys)
-    for xi, yi in zip(xs[ok], ys[ok]):
+    # Canonical order: mask is OR-commutative, but keep draw/debug paths order-stable.
+    order = np.lexsort((xs[ok], ys[ok]))
+    xs_s = xs[ok][order]
+    ys_s = ys[ok][order]
+    for xi, yi in zip(xs_s, ys_s):
         x0 = max(0, int(math.floor(float(xi) - ex_r)) - 1)
         x1 = min(nx, int(math.ceil(float(xi) + ex_r)) + 2)
         y0 = max(0, int(math.floor(float(yi) - ex_r)) - 1)
@@ -725,8 +729,67 @@ def _build_star_exclusion_mask(
     return blocked
 
 
+def _canonicalize_star_xy(
+    star_x: np.ndarray,
+    star_y: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, str]:
+    """Sort finite (x,y) pairs and return (xs, ys, sha256 hex of canonical list)."""
+    import hashlib
+
+    xs = np.asarray(star_x, dtype=np.float64).ravel()
+    ys = np.asarray(star_y, dtype=np.float64).ravel()
+    n = min(xs.size, ys.size)
+    xs, ys = xs[:n], ys[:n]
+    ok = np.isfinite(xs) & np.isfinite(ys)
+    xs, ys = xs[ok], ys[ok]
+    if xs.size == 0:
+        return xs, ys, hashlib.sha256(b"").hexdigest()
+    order = np.lexsort((xs, ys))
+    xs, ys = xs[order], ys[order]
+    # Deduplicate exact duplicates after sort (stable membership).
+    if xs.size > 1:
+        keep = np.empty(xs.size, dtype=bool)
+        keep[0] = True
+        keep[1:] = (xs[1:] != xs[:-1]) | (ys[1:] != ys[:-1])
+        xs, ys = xs[keep], ys[keep]
+    blob = np.column_stack([xs, ys]).astype("<f8", copy=False).tobytes()
+    return xs, ys, hashlib.sha256(blob).hexdigest()
+
+
+def _labbe_debug_dump_enabled() -> bool:
+    import os
+
+    return str(os.environ.get("VYVAR_LABBE_DEBUG_DUMP", "")).strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def _labbe_debug_dump_path() -> Path:
+    import os
+
+    raw = str(os.environ.get("VYVAR_LABBE_DEBUG_DUMP_PATH", "")).strip()
+    if raw:
+        return Path(raw)
+    return Path("tmp") / "labbe_debug_dump.jsonl"
+
+
+def _labbe_append_debug_record(record: dict[str, Any]) -> None:
+    if not _labbe_debug_dump_enabled():
+        return
+    path = _labbe_debug_dump_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, sort_keys=True, default=str) + "\n")
+    except OSError:
+        pass
+
+
 def _labbe_content_seed_from_header(hdr: Any, *, r_ap: float) -> int:
-    """Stable Labbe RNG seed from frame identity + aperture radius (F-431)."""
+    """Stable Labbe RNG seed from frame identity + aperture radius (F-431 / LABBE-DET)."""
     import hashlib
 
     def _hget(key: str) -> str:
@@ -759,6 +822,8 @@ def measure_empty_aperture_sigma_bkg(
     min_valid: int = 16,
     rng: np.random.Generator | None = None,
     seed: int | None = None,
+    frame_id: str | None = None,
+    star_list_source: str = "in_memory",
 ) -> tuple[float, int, str]:
     """Empirical aperture background noise via random empty apertures (Labbe et al. 2003).
 
@@ -768,20 +833,32 @@ def measure_empty_aperture_sigma_bkg(
     pedestal offsets, and the Merline & Howell (1995) sky-estimation term — do **not**
     add a separate RN or annulus term (would double-count).
 
-    Community pattern: photutils ``calc_total_error`` separates ``sigma_bkg`` from source
-    Poisson ``sqrt(I/g_eff)``; SExtractor ``FLUXERR`` uses ``A*sigma_bkg^2 + F/g``; correlated
-    resampling noise motivates aperture-scale measurement (Fruchter & Hook 2002; Casertano
-    et al. 2000).
+    Determinism (LABBE-DET): star list is canonicalized (sorted by x,y); when ``rng`` is
+    None a child Generator is derived via ``SeedSequence`` from ``seed`` (and r_ap) so
+    draws are independent of call order / shared parent RNG.
 
     Args:
         seed: When ``rng`` is None, seed the Generator (F-431). Prefer a content-derived
             seed from the caller so same-draft re-photometry is byte-stable.
+        frame_id / star_list_source: optional debug-dump metadata
+            (``VYVAR_LABBE_DEBUG_DUMP=1``).
 
     Returns:
         (sigma_bkg_ap, n_valid, reason) — reason non-empty when measurement failed.
     """
+    import hashlib
+
+    xs_c, ys_c, star_list_hash = _canonicalize_star_xy(star_x, star_y)
+    seed_value = int(seed) if seed is not None else None
     if rng is None:
-        rng = np.random.default_rng(int(seed) if seed is not None else None)
+        if seed_value is None:
+            rng = np.random.default_rng(None)
+        else:
+            # Independent child RNG keyed on content seed + r_ap (order-independent).
+            ss = np.random.SeedSequence(
+                [int(seed_value), int(round(float(r_ap) * 10000.0)) & 0xFFFFFFFF]
+            )
+            rng = np.random.default_rng(ss)
     n_target = _clamp_err_empty_apertures_n(n_apertures)
     n_min = _clamp_err_empty_apertures_min(min_valid)
     if not (
@@ -801,29 +878,88 @@ def measure_empty_aperture_sigma_bkg(
     margin_px = max(2.0, float(r_out) - float(r_in))
     excl_r = float(r_out) + margin_px
     edge_margin = float(r_out) + float(r_ap) + 1.0
-    blocked = _build_star_exclusion_mask(d.shape, star_x, star_y, excl_r, edge_margin)
+    blocked = _build_star_exclusion_mask(d.shape, xs_c, ys_c, excl_r, edge_margin)
+    mask_hash = hashlib.sha256(np.ascontiguousarray(blocked).view(np.uint8)).hexdigest()
     free_y, free_x = np.nonzero(~blocked)
+    labbe_input_hash = hashlib.sha256(
+        f"{star_list_hash}|{mask_hash}|{float(r_ap):.4f}|{seed_value}".encode("utf-8")
+    ).hexdigest()
+
     if free_x.size < n_min:
+        _labbe_append_debug_record(
+            {
+                "frame_id": frame_id,
+                "r_ap": float(r_ap),
+                "seed_value": seed_value,
+                "star_list_source": star_list_source,
+                "n_stars": int(xs_c.size),
+                "star_list_hash": star_list_hash,
+                "mask_hash": mask_hash,
+                "labbe_input_hash": labbe_input_hash,
+                "n_attempted": 0,
+                "n_valid_apertures": 0,
+                "first5_aperture_xy": [],
+                "sigma_result": None,
+                "reason": f"crowding: only {int(free_x.size)} candidate pixels (< {n_min})",
+            }
+        )
         return float("nan"), 0, f"crowding: only {int(free_x.size)} candidate pixels (< {n_min})"
 
     n_try = min(int(free_x.size), max(n_target * 8, n_target))
     idx = rng.choice(free_x.size, size=n_try, replace=False)
     net_sums: list[float] = []
+    first5: list[list[float]] = []
     for j in idx:
         xc = float(free_x[j]) + 0.5
         yc = float(free_y[j]) + 0.5
         flux_net, _, _ = _annulus_sky_subtracted_flux(d, xc, yc, float(r_ap), float(r_in), float(r_out))
         if math.isfinite(flux_net):
             net_sums.append(float(flux_net))
+            if len(first5) < 5:
+                first5.append([xc, yc])
         if len(net_sums) >= n_target:
             break
 
     n_valid = len(net_sums)
     if n_valid < n_min:
+        _labbe_append_debug_record(
+            {
+                "frame_id": frame_id,
+                "r_ap": float(r_ap),
+                "seed_value": seed_value,
+                "star_list_source": star_list_source,
+                "n_stars": int(xs_c.size),
+                "star_list_hash": star_list_hash,
+                "mask_hash": mask_hash,
+                "labbe_input_hash": labbe_input_hash,
+                "n_attempted": int(n_try),
+                "n_valid_apertures": int(n_valid),
+                "first5_aperture_xy": first5,
+                "sigma_result": None,
+                "reason": f"crowding: {n_valid} valid empty apertures (< {n_min})",
+            }
+        )
         return float("nan"), n_valid, f"crowding: {n_valid} valid empty apertures (< {n_min})"
     sigma = _robust_scatter_mad(np.asarray(net_sums, dtype=np.float64))
     if not math.isfinite(sigma) or sigma < 0:
         return float("nan"), n_valid, "non_finite_scatter"
+    _labbe_append_debug_record(
+        {
+            "frame_id": frame_id,
+            "r_ap": float(r_ap),
+            "seed_value": seed_value,
+            "star_list_source": star_list_source,
+            "n_stars": int(xs_c.size),
+            "star_list_hash": star_list_hash,
+            "mask_hash": mask_hash,
+            "labbe_input_hash": labbe_input_hash,
+            "n_attempted": int(n_try),
+            "n_valid_apertures": int(n_valid),
+            "first5_aperture_xy": first5,
+            "sigma_result": float(sigma),
+            "reason": "",
+        }
+    )
     return float(sigma), n_valid, ""
 
 
@@ -2350,13 +2486,16 @@ def temporal_bin_comp_lc(
         return dict(comp_lc)
 
     if not comp_quality:
-        active_cids = [cid for cid in comp_lc]
+        active_cids = sorted(comp_lc.keys(), key=str)
     else:
-        active_cids = [
-            cid
-            for cid, q in comp_quality.items()
-            if q.get("quality") != "excluded" and cid in comp_lc
-        ]
+        active_cids = sorted(
+            (
+                cid
+                for cid, q in comp_quality.items()
+                if q.get("quality") != "excluded" and cid in comp_lc
+            ),
+            key=str,
+        )
     if len(active_cids) < 3:
         return dict(comp_lc)
 
@@ -2452,11 +2591,12 @@ def pytics_iterative_weights(
     if not enabled:
         return dict(comp_rms_map)
 
-    # Only use non-excluded comps
-    active_cids = [
-        cid for cid, q in comp_quality.items()
+    # Only use non-excluded comps (canonical cid order — LABBE-DET / SEM determinism).
+    active_cids = sorted(
+        cid
+        for cid, q in comp_quality.items()
         if q.get("quality") != "excluded" and cid in comp_lc
-    ]
+    )
     if len(active_cids) < 3:
         return dict(comp_rms_map)
 
@@ -2556,7 +2696,10 @@ def _common_mode_detrend_comp_lc(
     """
     if comp_bjd is None or not comp_lc:
         return (
-            {cid: np.asarray(lc, dtype=np.float64).copy() for cid, lc in comp_lc.items()},
+            {
+                cid: np.asarray(comp_lc[cid], dtype=np.float64).copy()
+                for cid in sorted(comp_lc.keys(), key=str)
+            },
             dict(comp_bjd or {}),
         )
 
@@ -2565,7 +2708,8 @@ def _common_mode_detrend_comp_lc(
     _all_bjd: list[np.ndarray] = []
     _all_mag_matrix: list[np.ndarray] = []
     _active_cids: list[str] = []
-    for cid, lc in comp_lc.items():
+    for cid in sorted(comp_lc.keys(), key=str):
+        lc = comp_lc[cid]
         bjd_arr = comp_bjd.get(cid)
         if bjd_arr is None:
             continue
@@ -2582,11 +2726,16 @@ def _common_mode_detrend_comp_lc(
 
     if len(_all_mag_matrix) < 2:
         return (
-            {cid: np.asarray(lc, dtype=np.float64).copy() for cid, lc in comp_lc.items()},
+            {
+                cid: np.asarray(comp_lc[cid], dtype=np.float64).copy()
+                for cid in sorted(comp_lc.keys(), key=str)
+            },
             dict(comp_bjd),
         )
 
-    _ref_bjd = _all_bjd[int(np.argmax([len(x) for x in _all_bjd]))]
+    # Prefer longest series; break ties by cid order (already sorted) for determinism.
+    _ref_idx = int(np.argmax([len(x) for x in _all_bjd]))
+    _ref_bjd = _all_bjd[_ref_idx]
     _stack = []
     for b_arr, m_arr in zip(_all_bjd, _all_mag_matrix, strict=True):
         _stack.append(np.interp(_ref_bjd, b_arr, m_arr))
@@ -2595,7 +2744,7 @@ def _common_mode_detrend_comp_lc(
 
     _detrended_lc: dict[str, np.ndarray] = {}
     _detrended_bjd: dict[str, np.ndarray] = {}
-    for cid in comp_lc:
+    for cid in sorted(comp_lc.keys(), key=str):
         b = comp_bjd.get(cid)
         m = comp_lc.get(cid)
         if b is None or m is None:
@@ -2616,10 +2765,13 @@ def _comp_lc_frame_ensemble_residual(comp_lc: dict[str, np.ndarray]) -> dict[str
 
     Same principle as Phase-1 ``comp_rms`` (flux / bin median): comp intrinsic scatter
     is only visible after the shared per-frame signal is removed.
+
+    Uses sorted cid order and truncates to a common length only after sorting keys so
+    PYTHONHASHSEED / dict insertion order cannot change the residual field.
     """
     if not comp_lc:
         return {}
-    cids = list(comp_lc.keys())
+    cids = sorted(comp_lc.keys(), key=str)
     arrays = [np.asarray(comp_lc[c], dtype=np.float64) for c in cids]
     lengths = [int(a.size) for a in arrays if a.size > 0]
     if not lengths:
@@ -3065,7 +3217,9 @@ def ensemble_normalize(
     tier_weights = tier_weights or {1: 1.0, 2: 0.85, 3: 0.50, 4: 0.25}
 
     p2p_thr = float("nan")
-    for q in comp_quality.values():
+    # Canonical: prefer a shared threshold; take first finite from sorted cids (not dict.values order).
+    for _cid in sorted(comp_quality.keys(), key=str):
+        q = comp_quality[_cid]
         t = q.get("p2p_threshold")
         if t is not None and math.isfinite(float(t)):
             p2p_thr = float(t)
@@ -3240,7 +3394,11 @@ def _ensemble_scatter_by_source_file(
     target_cid: str,
     ensemble_scatter: np.ndarray | None,
 ) -> dict[str, float]:
-    """Map proc CSV filename -> ensemble_scatter (G2-F004 epoch-level join key)."""
+    """Map proc CSV filename -> ensemble_scatter (G2-F004 epoch-level join key).
+
+    Must use the same ``source_file`` sort as ``_get_lc`` so indices of
+    ``ensemble_scatter`` (built from sorted target LC) map to the correct files.
+    """
     if ensemble_scatter is None:
         return {}
     sc = np.asarray(ensemble_scatter, dtype=np.float64)
@@ -3249,6 +3407,8 @@ def _ensemble_scatter_by_source_file(
     sub = all_frames[all_frames["catalog_id"] == target_cid]
     if sub.empty:
         return {}
+    if "source_file" in sub.columns:
+        sub = sub.sort_values(["source_file"], kind="mergesort")
     out: dict[str, float] = {}
     for i, sf in enumerate(sub["source_file"].astype(str).str.strip().tolist()):
         if i >= len(sc):
@@ -6632,13 +6792,21 @@ def _route_lc_per_frame_err(
 
 
 def _get_lc(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
-    sub = all_frames[all_frames["catalog_id"] == cid]["mag_inst"].to_numpy(dtype=float)
-    return sub
+    sub = all_frames[all_frames["catalog_id"] == cid]
+    if sub.empty:
+        return np.array([], dtype=float)
+    if "source_file" in sub.columns:
+        sub = sub.sort_values(["source_file"], kind="mergesort")
+    return sub["mag_inst"].to_numpy(dtype=float)
 
 
 def _get_comp_bjd_series(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
     """BJD (or JD) time series for a comp, same row order as ``_get_lc``."""
     sub = all_frames[all_frames["catalog_id"] == cid]
+    if sub.empty:
+        return np.array([], dtype=float)
+    if "source_file" in sub.columns:
+        sub = sub.sort_values(["source_file"], kind="mergesort")
     if "bjd" in sub.columns:
         return sub["bjd"].to_numpy(dtype=float)
     if "jd" in sub.columns:
@@ -8801,8 +8969,11 @@ def _phase2a_process_one_target(
             },
         )
 
-    # Časové hodnoty targetu
+    # Časové hodnoty targetu — sort by source_file so ensemble_scatter index aligns
+    # with ``_get_lc`` / ``_ensemble_scatter_by_source_file`` (LABBE-DET / SEM determinism).
     target_frames = all_frames[all_frames["catalog_id"] == target_cid]
+    if not target_frames.empty and "source_file" in target_frames.columns:
+        target_frames = target_frames.sort_values(["source_file"], kind="mergesort")
     _measured_ap_target = _measured_aperture_from_proc_cache(target_cid, state._phase2a_csv_cache)
     if math.isfinite(_measured_ap_target) and _measured_ap_target > 0 and not target_frames.empty:
         target_frames = target_frames.copy()
@@ -9428,11 +9599,12 @@ def _phase2a_finalize_exports(
                 continue
             lc_csv = lc_csv_path(lc_dir, target_cid, "aperture")
             if not lc_csv.is_file():
-                record_export_failure(
-                    _export_failures,
+                # F-435-EXPORT-GHOSTS: active_targets may include stars that never got an LC
+                # (no comps / empty_comp_drop). Do not enqueue as export failure.
+                logging.info(
+                    "[EXPORT] skip %s aperture: no LC CSV (not a photometry product; "
+                    "typically no comps / dropped)",
                     target_cid,
-                    "aperture",
-                    "LC CSV missing",
                 )
                 n_export_skip += 1
                 continue
@@ -11094,6 +11266,12 @@ def enhance_catalog_dataframe_aperture_bpm(
                     _ri = max(float(_r_u) + 0.5, float(annulus_inner_fwhm) * fw)
                     _ro = max(_ri + 0.5, float(annulus_outer_fwhm) * fw)
                     _seed = _labbe_content_seed_from_header(hdr, r_ap=float(_r_u))
+                    _frame_id = str(
+                        hdr.get("DATE-OBS")
+                        or hdr.get("FILENAME")
+                        or hdr.get("FRAME")
+                        or ""
+                    )
                     _sig, _nv, _reason = measure_empty_aperture_sigma_bkg(
                         d,
                         np.asarray(x, dtype=np.float64),
@@ -11104,6 +11282,8 @@ def enhance_catalog_dataframe_aperture_bpm(
                         n_apertures=_n_empty,
                         min_valid=_n_empty_min,
                         seed=int(_seed),
+                        frame_id=_frame_id,
+                        star_list_source="catalog_df_in_memory",
                     )
                     if not hasattr(enhance_catalog_dataframe_aperture_bpm, "_labbe_seeds"):
                         enhance_catalog_dataframe_aperture_bpm._labbe_seeds = []
