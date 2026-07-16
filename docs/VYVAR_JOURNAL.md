@@ -2,6 +2,16 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-16 -- LABBE-DET + Anchor #3 PASS (draft_435 sky-surface)
+
+Root cause of `err` nondeterminism: ensemble SEM / source_file join + dict iteration (not
+Labbe). Dual full-photometry SHA gate PASS on `10d610c`. Snapshot
+`draft_000435_snapshot_skysurface_20260716` (core `3d26f469…`). `--full` re-enabled
+(`VL-ANCHOR-WCSINV`). Pushed `10d610c..95f262e`. Results: `CURSOR_RESULT_labbe_det.md`,
+`CURSOR_RESULT_invariants_P1.md` (P1 seed).
+
+---
+
 ## 2026-07-16 -- Anchor #3 STOP (draft_435 SHA / Labbe err)
 
 draft_435 HEALTHY class OK; protocol v2 SHA gate **FAIL**. Isolation: phase2a-only with fixed
