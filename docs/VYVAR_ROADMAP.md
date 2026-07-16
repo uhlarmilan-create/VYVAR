@@ -12,8 +12,8 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## QUEUED — VYVAR-INVARIANTS (starts after Anchor #3)
 
-**Status:** **QUEUED** (2026-07-16). Premise in DECISIONS. Do **not** start until Anchor #3
-closes (HEALTHY UI on `89842ff` + protocol-v2 snapshot).
+**Status:** **UNBLOCKED** (2026-07-16). Anchor #3 ACTIVE (`VL-ANCHOR-WCSINV` /
+`draft_000435_snapshot_skysurface_20260716`). Begin **P1** now.
 
 | Phase | Pri | Deliverable |
 |-------|-----|-------------|
@@ -365,7 +365,8 @@ dataset into `Archive/Drafts/draft_NNNNNN`.
 
 | Item | Status | Action |
 |------|--------|--------|
-| **VL-ANCHOR-424 / --full** | **SUSPENDED offline** | Cut new snapshot from first post-cleanup draft; compare core SHA; restore `passes: true`; golden reference for c-python port = offline zip (core `bf3743a1...`) |
+| **VL-ANCHOR-424 / --full** | **SUPERSEDED offline** | Historical zip only; live anchor = VL-ANCHOR-WCSINV / draft_435 sky-surface |
+| **VL-ANCHOR-WCSINV / --full** | **ACTIVE** | `draft_000435_snapshot_skysurface_20260716`; core `3d26f469…` |
 | eq4 bin4 bias/darks | HIGH (Milan) | >=6 frames, GAIN=12.48, T~-15 C |
 | Fresh darks | HIGH (Milan) | Before ~2026-07-21 expiry |
 | BVR night dX>=0.3 | HIGH (Milan) | Home rig; k'' NIGHT_FIT v2 |

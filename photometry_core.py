@@ -6424,6 +6424,44 @@ def _build_pipeline_provenance_block(cfg: Any, *, entry_point: str) -> dict[str,
     return block
 
 
+def _sky_surface_meta_from_qc(draft_dir: Path | None) -> dict[str, Any]:
+    """Read preprocess sky-surface summary from draft ``qc_metrics.csv`` for pipeline_meta."""
+    if draft_dir is None:
+        return {}
+    try:
+        from pipeline import find_qc_metrics_csv  # noqa: PLC0415
+
+        qc_path = find_qc_metrics_csv(Path(draft_dir))
+        if qc_path is None or not qc_path.is_file():
+            return {}
+        qdf = pd.read_csv(qc_path, low_memory=False)
+        if qdf.empty or "sky_surface_applied" not in qdf.columns:
+            return {}
+        applied = qdf["sky_surface_applied"].fillna(False).astype(bool)
+        n_applied = int(applied.sum())
+        order = 0
+        if "sky_surface_order" in qdf.columns and n_applied > 0:
+            order = int(
+                pd.to_numeric(qdf.loc[applied, "sky_surface_order"], errors="coerce").dropna().mode().iloc[0]
+            )
+        p2p_med = float("nan")
+        if "sky_surface_p2p_adu" in qdf.columns and n_applied > 0:
+            p2p_med = float(
+                pd.to_numeric(qdf.loc[applied, "sky_surface_p2p_adu"], errors="coerce").median()
+            )
+        out: dict[str, Any] = {
+            "sky_surface_order": int(order),
+            "sky_surface_n_applied": n_applied,
+            "sky_surface_n_frames": int(len(qdf)),
+        }
+        if math.isfinite(p2p_med):
+            out["sky_surface_p2p_median_adu"] = p2p_med
+        return out
+    except Exception as exc:  # noqa: BLE001
+        logging.debug("[SKY-SURFACE] meta from qc_metrics skipped: %s", exc)
+        return {}
+
+
 def merge_photometry_pipeline_meta(
     photometry_dir: Path | str,
     updates: dict[str, Any],
@@ -9931,6 +9969,7 @@ def run_phase2a(
             ),
             **_cal_meta,
             **_cal_diag_meta,
+            **_sky_surface_meta_from_qc(_draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))),
         },
         _cfg,
         entry_point="run_phase2a",

@@ -1,17 +1,27 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-16** (Anchor #3 STOP — SHA gate failed on `err` / Labbe).
+Last updated: **2026-07-16** (Anchor #3 PASSED — draft_435 sky-surface snapshot + LABBE-DET).
 
-## Current snapshot (Anchor #3 STOP)
+## Current snapshot (Anchor #3 ACTIVE)
 
-**draft_435 HEALTHY** (architect: 2552/2842/169, p95=1.54, `git_dirty_code=false`) but
-**protocol-v2 SHA gate FAILED**. Diff census: **only `err`** differs on 166/166 LCs when
-comps are held fixed (mag/flux stable). Labbe content seed is live but not sufficient for
-byte-identical `err`. Pass-1 photometry restored on draft_435. **No snapshot / no --full.**
+**draft_000435_snapshot_skysurface_20260716** — Anchor #3. Dual full-photometry SHA gate
+**PASS** on HEAD `10d610c` (LABBE-DET). Core `3d26f469…` n=333; extended `6420f1da…` n=499.
+Census 2552/2842/169; identity p95 baseline **1.54 px**. Ledger `VL-ANCHOR-WCSINV` ACTIVE;
+`VL-ANCHOR-424` superseded (offline zip historical). `--full` re-enabled against 435.
 
-See `CURSOR_RESULT_anchor435_closeout.md`. Next: harden Labbe determinism → re-run SHA gate.
+**Root cause of prior STOP:** ensemble SEM join / dict-order nondeterminism in phase2a `err`
+(not Labbe placements). Labbe hardened anyway (canonical stars + SeedSequence + dump).
 
-**INVARIANTS P1:** still queued (blocked on Anchor #3).
+**Milan:** zip snapshot to `C:\ASTRO\backups\`; then drafts **428–434** deletable.
+
+**INVARIANTS P1:** unblocked — start after push.
+
+---
+
+## Prior: Anchor #3 STOP (superseded)
+
+**draft_435 HEALTHY** but protocol-v2 SHA gate FAILED on `err` only (166/166 LCs). See
+`CURSOR_RESULT_anchor435_closeout.md`. Fixed in LABBE-DET (`CURSOR_RESULT_labbe_det.md`).
 
 ---
 

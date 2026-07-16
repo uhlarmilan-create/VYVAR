@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-15",
+  "updated": "2026-07-16",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -24,7 +24,7 @@
       "area": "photometry",
       "description": "draft_424 coherent content anchor reproduces via session baseline --full",
       "verification": "scripts/session_baseline_check.py --full (science-meaningful compare + photometry SHA vs Archive/Drafts/draft_000424_snapshot_sigma_floor_20260713; core bf3743a1... n=357; extended dec5c637... n=535). Offline golden reference for c-python port validation.",
-      "status": "suspended_offline",
+      "status": "superseded_offline",
       "passes": false,
       "last_verified": "2026-07-15",
       "commit": "dcd88bf",
@@ -36,7 +36,7 @@
         "core_sha_verified": "bf3743a150d788283eab2ab51db7b31f59e6d1c481159208bbe3f573092ec975",
         "verified_utc": "2026-07-15T09:00:00Z"
       },
-      "notes": "Archive cleared 2026-07-15 (Milan). Accepted anchor offline at path above; --full SUSPENDED until new in-Archive anchor cut. Prior in-Archive snapshot draft_000424_snapshot_sigma_floor_20260713 removed after verified backup."
+      "notes": "Archive cleared 2026-07-15 (Milan). Accepted anchor offline at path above; --full SUSPENDED until new in-Archive anchor cut. Prior in-Archive snapshot draft_000424_snapshot_sigma_floor_20260713 removed after verified backup. Superseded 2026-07-16 by VL-ANCHOR-WCSINV / draft_000435_snapshot_skysurface_20260716 (offline zip remains historical)."
     },
     {
       "id": "VL-COUNTERS-ZERO",
@@ -46,7 +46,7 @@
       "passes": false,
       "last_verified": "2026-07-15",
       "commit": "dcd88bf",
-      "notes": "Suspended with VL-ANCHOR-424 offline (Archive cleared 2026-07-15); re-verify on next --full after new anchor."
+      "notes": "Re-verify on next --full against draft_435 sky-surface anchor."
     },
     {
       "id": "VL-K2-MATRIX",
@@ -138,6 +138,34 @@
       "commit": "a3536a0",
       "status": "disqualified_non_anchor",
       "notes": "In-flight run killed 2026-07-16; draft_000430 retained on disk for reference only. Not part of anchor chain. Superseded by fresh pair on clean a3536a0+."
+    },
+    {
+      "id": "VL-ANCHOR-WCSINV",
+      "area": "photometry",
+      "description": "In-Archive BO CVn Anchor #3 sky-surface snapshot draft_000435_snapshot_skysurface_20260716",
+      "verification": "scripts/session_baseline_check.py --full (core 3d26f469\u2026 n=333; extended 6420f1da\u2026 n=499). Census fingerprint n_raw_dao=2552 matched=2842 targets=169; identity p95 baseline 1.54 px.",
+      "passes": true,
+      "last_verified": "2026-07-16",
+      "commit": "10d610c",
+      "notes": "Cut after LABBE-DET err determinism fix; dual full-photometry SHA gate PASS on HEAD 10d610c. Alias: VL-ANCHOR-SKYSURFACE.",
+      "census_fingerprint": {
+        "n_raw_dao": 2552,
+        "matched": 2842,
+        "targets": 169
+      },
+      "identity_p95_baseline_px": 1.536099044764055,
+      "core_sha": "3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96",
+      "extended_sha": "6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8"
+    },
+    {
+      "id": "F-435-EXPORT-GHOSTS",
+      "area": "export",
+      "description": "active_targets with no LC enqueued as export failures (LC CSV missing)",
+      "verification": "phase2a empty_comp_drop + export INFO skip (no record_export_failure)",
+      "passes": true,
+      "last_verified": "2026-07-16",
+      "commit": "10d610c",
+      "notes": "Root cause: 1496795041799526400/\u20266080/\u20265248 never get LCs (no comps / empty_comp_drop). Fixed: INFO skip instead of export failure."
     }
   ]
 }

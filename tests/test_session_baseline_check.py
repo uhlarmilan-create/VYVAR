@@ -25,9 +25,13 @@ def test_suspend_message_when_offline(ledger_path: Path) -> None:
     import scripts.session_baseline_check as sbc
 
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    # Remove active WCSINV so suspend falls through to offline anchor id.
+    ledger["items"] = [it for it in ledger["items"] if it["id"] != "VL-ANCHOR-WCSINV"]
     for it in ledger["items"]:
         if it["id"] == "VL-ANCHOR-424":
+            it["id"] = "VL-ANCHOR-WCSINV"
             it["status"] = "suspended_offline"
+            it["passes"] = False
             it["offline_backup"] = {"path": r"C:\ASTRO\backups\test_anchor.zip"}
     ledger_path.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
 
@@ -41,9 +45,25 @@ def test_suspend_message_none_when_active(ledger_path: Path) -> None:
     import scripts.session_baseline_check as sbc
 
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    found = False
     for it in ledger["items"]:
-        if it["id"] == "VL-ANCHOR-424":
+        if it["id"] == "VL-ANCHOR-WCSINV":
+            it["passes"] = True
             it.pop("status", None)
+            found = True
+    if not found:
+        ledger["items"].append(
+            {
+                "id": "VL-ANCHOR-WCSINV",
+                "area": "photometry",
+                "description": "test",
+                "verification": "test",
+                "passes": True,
+                "last_verified": "2026-07-16",
+                "commit": None,
+                "notes": "",
+            }
+        )
     ledger_path.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
 
     assert sbc._full_baseline_suspend_message() is None
@@ -53,9 +73,12 @@ def test_run_full_baseline_suspended_short_circuit(ledger_path: Path) -> None:
     import scripts.session_baseline_check as sbc
 
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    ledger["items"] = [it for it in ledger["items"] if it["id"] != "VL-ANCHOR-WCSINV"]
     for it in ledger["items"]:
         if it["id"] == "VL-ANCHOR-424":
+            it["id"] = "VL-ANCHOR-WCSINV"
             it["status"] = "suspended_offline"
+            it["passes"] = False
             it["offline_backup"] = {"path": r"C:\ASTRO\backups\test_anchor.zip"}
     ledger_path.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
 

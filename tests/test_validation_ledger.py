@@ -14,6 +14,7 @@ REQUIRED_IDS = frozenset(
     {
         "VL-PYTEST-FULL",
         "VL-ANCHOR-424",
+        "VL-ANCHOR-WCSINV",
         "VL-COUNTERS-ZERO",
         "VL-K2-MATRIX",
         "VL-CALDIAG-424",
@@ -24,6 +25,7 @@ REQUIRED_IDS = frozenset(
         "VL-PROVENANCE",
         "VL-TRUST-BASELINE",
         "VL-ANCHOR-DQ-430",
+        "F-435-EXPORT-GHOSTS",
     }
 )
 

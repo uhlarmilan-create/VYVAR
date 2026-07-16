@@ -12158,6 +12158,23 @@ def generate_masterstar_and_catalog(
             gaia_db_path=str(_cfg_ms.gaia_db_path or ""),
             log_fn=log_event,
         )
+        _p95 = _identity_qa.get("matched_world2pix_identity_p95_px")
+        try:
+            _p95f = float(_p95) if _p95 is not None else float("nan")
+        except (TypeError, ValueError):
+            _p95f = float("nan")
+        # Standing series WARN (Anchor #3 / draft_435 baseline p95≈1.54 px): soft threshold only.
+        _IDENTITY_P95_WARN_PX = 2.0
+        if math.isfinite(_p95f) and _p95f > _IDENTITY_P95_WARN_PX:
+            logging.warning(
+                "[IDENTITY-QA] matched_world2pix_identity_p95_px=%.3f exceeds WARN threshold %.1f px "
+                "(series baseline draft_435 p95≈1.54; no FAIL)",
+                _p95f,
+                _IDENTITY_P95_WARN_PX,
+            )
+            log_event(
+                f"IDENTITY-QA WARN: p95={_p95f:.3f} px > {_IDENTITY_P95_WARN_PX:.1f} px threshold"
+            )
     except Exception as _fin_exc:  # noqa: BLE001
         log_event(f"MASTERSTAR coordinate finalization / round-trip QA skipped: {_fin_exc!s}")
         _wcs_rt_p99 = None
@@ -16845,6 +16862,22 @@ def preprocess_calibrated_to_processed(
 
     produced = [Path(r["dst"]) for r in rows if r.get("dst")]
     df = pd.DataFrame(rows)
+
+    if sky_surface_order > 0 and not df.empty and "sky_surface_applied" in df.columns:
+        _applied = df["sky_surface_applied"].fillna(False).astype(bool)
+        n_applied = int(_applied.sum())
+        n_tot = int(len(df))
+        p2p_med = float("nan")
+        if "sky_surface_p2p_adu" in df.columns and n_applied > 0:
+            p2p_med = float(
+                pd.to_numeric(df.loc[_applied, "sky_surface_p2p_adu"], errors="coerce").median()
+            )
+        log_event(
+            f"sky surface: order={sky_surface_order} applied={n_applied}/{n_tot} "
+            f"p2p median={p2p_med:.2f} ADU"
+            if math.isfinite(p2p_med)
+            else f"sky surface: order={sky_surface_order} applied={n_applied}/{n_tot} p2p median=n/a"
+        )
 
     if temporal_sigma_clip:
         try:

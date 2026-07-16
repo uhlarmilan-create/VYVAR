@@ -18,16 +18,16 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LEDGER_PATH = REPO_ROOT / "validation" / "VYVAR_VALIDATION_LEDGER.json"
-ANCHOR_LEDGER_ID = "VL-ANCHOR-424"
+ANCHOR_LEDGER_ID = "VL-ANCHOR-WCSINV"
 
-DRAFT_ID = 424
+DRAFT_ID = 435
 SETUP = "NoFilter_60_2"
-SNAPSHOT_NAME = "draft_000424_snapshot_sigma_floor_20260713"
-# Content anchors (PROD-SIGMA-FLOOR re-anchor 2026-07-13; c4 + Newton floor; wide un-floored).
-EXPECTED_PHOTOMETRY_SHA_CORE = "bf3743a150d788283eab2ab51db7b31f59e6d1c481159208bbe3f573092ec975"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED = "dec5c637724e0ca536e97a01194ab8cc06df9471ce4813fcfd26024b9e880fd1"
-EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = EXPECTED_PHOTOMETRY_SHA_CORE[:8]
-EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = EXPECTED_PHOTOMETRY_SHA_EXTENDED[:8]
+SNAPSHOT_NAME = "draft_000435_snapshot_skysurface_20260716"
+# Content anchors (Anchor #3 / sky-surface; LABBE-DET err-stable dual pass on 10d610c).
+EXPECTED_PHOTOMETRY_SHA_CORE = "3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED = "6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8"
+EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "3d26f469"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "6420f1da"
 
 # Known untracked paths: WARN only (not FAIL). Extend when deliberately added.
 KNOWN_UNTRACKED_PREFIXES = (
@@ -224,10 +224,11 @@ def _update_ledger_on_full_pass(commit: str) -> None:
     ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     for it in ledger.get("items", []):
-        if it["id"] in ("VL-ANCHOR-424", "VL-COUNTERS-ZERO"):
+        if it["id"] in (ANCHOR_LEDGER_ID, "VL-COUNTERS-ZERO"):
             it["passes"] = True
             it["last_verified"] = today
             it["commit"] = commit
+            it.pop("status", None)
     ledger["updated"] = today
     LEDGER_PATH.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
 
@@ -426,7 +427,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--full",
         action="store_true",
-        help="Deliberate full tier: draft_424 headless run + anchor + counters (~25 min)",
+        help="Deliberate full tier: draft_435 headless run + anchor + counters (~25 min)",
     )
     args = parser.parse_args(argv)
 
