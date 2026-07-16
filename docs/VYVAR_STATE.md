@@ -1,15 +1,24 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-16** (T3 landed; Anchor #3 + INVARIANTS program gated on Milan UI).
+Last updated: **2026-07-16** (Anchor #3 STOP — SHA gate failed on `err` / Labbe).
 
-## Current snapshot (T3-RESTORE — FIX A+B committed; next gates)
+## Current snapshot (Anchor #3 STOP)
 
-**Anchor arc: BLOCKED** on Milan clean UI post-T3 run (`89842ff`). Anchor #3 protocol-v2 cut
-**not** executed until HEALTHY classification.
+**draft_435 HEALTHY** (architect: 2552/2842/169, p95=1.54, `git_dirty_code=false`) but
+**protocol-v2 SHA gate FAILED**. Diff census: **only `err`** differs on 166/166 LCs when
+comps are held fixed (mag/flux stable). Labbe content seed is live but not sufficient for
+byte-identical `err`. Pass-1 photometry restored on draft_435. **No snapshot / no --full.**
 
-**Queued (starts after Anchor #3):** **VYVAR-INVARIANTS** — machine-enforced contracts
-(DECISIONS premise recorded). P1 golden E2E equivalence first; P2–P4 follow as separate
-commits. Not started — task timing is post-anchor.
+See `CURSOR_RESULT_anchor435_closeout.md`. Next: harden Labbe determinism → re-run SHA gate.
+
+**INVARIANTS P1:** still queued (blocked on Anchor #3).
+
+---
+
+## Prior: T3-RESTORE — FIX A+B committed; next gates
+
+**T3 FIX A+B** on `89842ff` (+ docs `3db0879`). Sky-surface headers + `qc_metrics.csv` confirmed
+on draft_435.
 
 **T3 FIX A (done):** order-2 sky-surface subtract in shared ``preprocess_calibrated_to_processed``
 (``preprocess_sky_surface_order`` default **2**). Empirical vs draft_429 Light_008: DAO pass-1

@@ -2,6 +2,15 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-16 -- Anchor #3 STOP (draft_435 SHA / Labbe err)
+
+draft_435 HEALTHY class OK; protocol v2 SHA gate **FAIL**. Isolation: phase2a-only with fixed
+comps → 166/166 LCs differ **only in `err`**. Seed policy stamped; FILENAME header None;
+exclusion-star sensitivity confirmed. No snapshot. Result:
+`CURSOR_RESULT_anchor435_closeout.md`.
+
+---
+
 ## 2026-07-16 -- VYVAR-INVARIANTS commissioned (QUEUED; gated on Anchor #3)
 
 Premise recorded in DECISIONS: audits demoted; machine-enforced contracts are the guard.
