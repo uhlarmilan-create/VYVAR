@@ -327,6 +327,8 @@ class AppConfig:
     moffat_chi2_limit: float = 50.0
     #: When True, QC headers are written on ``calibrated/lights`` FITS in-place; ``processed/`` is not created.
     skip_processed_directory: bool = False
+    #: Per calibrated light: subtract source-masked sigma-clipped polynomial sky surface in preprocess (0=off, default 2).
+    preprocess_sky_surface_order: int = 2
     #: In-place QC reject threshold for estimated FWHM [pix] (``skip_processed_directory`` path).
     qc_fwhm_limit: float = 8.0
     #: In-place QC reject threshold for elongation a/b (``skip_processed_directory`` path).
@@ -1323,6 +1325,11 @@ class AppConfig:
             data.get("skip_processed_directory", self.skip_processed_directory)
         )
         try:
+            _sso = int(data.get("preprocess_sky_surface_order", self.preprocess_sky_surface_order))
+            self.preprocess_sky_surface_order = max(0, min(2, _sso))
+        except (TypeError, ValueError):
+            self.preprocess_sky_surface_order = 2
+        try:
             _ems = int(data.get("epsf_min_stars", self.epsf_min_stars))
             self.epsf_min_stars = max(10, _ems)
         except (TypeError, ValueError):
@@ -2237,6 +2244,7 @@ class AppConfig:
             "psf_adaptive_snr_lo": float(self.psf_adaptive_snr_lo),
             "moffat_chi2_limit": float(self.moffat_chi2_limit),
             "skip_processed_directory": bool(self.skip_processed_directory),
+            "preprocess_sky_surface_order": int(self.preprocess_sky_surface_order),
             "qc_fwhm_limit": float(self.qc_fwhm_limit),
             "qc_elong_limit": float(self.qc_elong_limit),
             "epsf_min_stars": int(self.epsf_min_stars),

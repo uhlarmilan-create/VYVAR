@@ -6,6 +6,42 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## T3-PREPROCESS-SKY-SURFACE — order-2 shared preprocess (2026-07-16)
+
+**Milan sign-off (commissioning T3-RESTORE).** Per calibrated light frame, fit a 2D polynomial
+surface of order 2 to the background (source-masked + sigma-clipped fit), subtract it in the
+shared ``calibrated → processed`` step used by BOTH chains (UI and headless route through
+``preprocess_calibrated_to_processed`` → ``_preprocess_calibrated_one``). Config:
+``preprocess_sky_surface_order`` (int, 0 = off, **default 2**). Subtract the **full** fitted
+surface including the constant term (pedestal convention: Δ median ≈ −96 ADU on BO CVn
+Light_008 vs draft_429).
+
+**Rationale.** DAOStarFinder and Labbe background assume a locally flat field. The lost
+429-era preprocess step removed large-scale gradient; without it the deterministic repo path
+inflates pass-1 DAO (~8927) and flips automatic ``DENSITY_OVERRIDES``. Restoring the surface in
+shared preprocess targets **429-class** census/quality without per-chain drift.
+
+**Provenance.** Per-frame ``VYSKYORD`` / ``VYSKYP2P`` FITS headers; preprocess row stats in QC
+dataframe.
+
+**Dirty gate (paired).** ``git_dirty_code`` (import-relevant ``*.py`` only) gates anchor /
+FAIL-CLOSED; ``git_dirty`` + scratch lists remain for transparency.
+
+**Empirical gap (honest).** Cal-only surface fit vs draft_429 oracle MS: DAO pass-1 sim **2579**
+vs logged **2816** (~8%); smooth-field residual p99 **173 ADU** vs oracle **52 ADU**. Frame
+median shift differs from meta ``sky_adu`` (~1478 Labbe annulus). Full MS residual unavailable
+at preprocess time; Milan UI run is acceptance gate.
+
+---
+
+## F-431-HEADLESS-DIVERGENCE — CLOSED (2026-07-16 / T3)
+
+**Root cause:** lost unprovenanced order-2 preprocess ADU step (``cal≡proc`` on deterministic
+path). **Resolution:** shared ``_fit_subtract_preprocess_sky_surface`` in
+``preprocess_calibrated_to_processed``. See `CURSOR_RESULT_t3_restore_anchor.md`.
+
+---
+
 ## F-428-PASS2-CONTAMINATION — draft_428 census products unreliable (2026-07-16)
 
 **Status (amended 2026-07-16 / F-431):** **DOWNGRADED** as the *primary census driver*.

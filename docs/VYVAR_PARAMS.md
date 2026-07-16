@@ -25,6 +25,7 @@ no UI yet).
 | `psf_grouper_enabled` | False | — | — | **intentionally-hidden** | OK in config.json |
 | `psf_spatial_enabled` | False | — | — | **intentionally-hidden** | OK in config.json |
 | `skip_processed_directory` | False | — | — | **intentionally-hidden** | OK in config.json |
+| `preprocess_sky_surface_order` | 2 | 0–2 | — | **intentionally-hidden** (UI Settings deferred) | OK in config.json; 0=off |
 | `qc_fwhm_limit` | 8.0 | — | — | **intentionally-hidden** | OK in config.json |
 | `qc_elong_limit` | 1.8 | — | — | **intentionally-hidden** | OK in config.json |
 | `frame_quality_gate_enabled` | False | — | ui_settings.py (Photometry → Data quality) | **yes** | Round-2 B.2; default OFF → byte-identical |

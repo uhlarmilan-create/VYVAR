@@ -1,23 +1,31 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-16** (F-431 T1+T4 landed; **T2/T3/anchor BLOCKED**).
+Last updated: **2026-07-16** (T3-RESTORE FIX A+B landed; Milan UI validation pending).
 
-## Current snapshot (F-431 root closure — partial)
+## Current snapshot (T3-RESTORE — FIX A+B committed)
 
-**Anchor arc: BLOCKED** until T2 (Milan clean UI) + T3 (restore order-2 sky surface in shared
-preprocess) deliver healthy census under committed code.
+**Anchor arc: BLOCKED** on Milan clean UI post-T3 run (T2 verdict). Anchor #3 protocol-v2 cut
+**not** executed until HEALTHY classification.
 
-**T1 done:** lost ADU transform ≈ order-2 background surface; DAO cal 9115 → MS 2816.
-`tmp/f431_lost_transform.md`.
+**T3 FIX A (done):** order-2 sky-surface subtract in shared ``preprocess_calibrated_to_processed``
+(``preprocess_sky_surface_order`` default **2**). Empirical vs draft_429 Light_008: DAO pass-1
+sim **2579** (2500–3000 band), smooth residual p99 **173 ADU**; ~237 below 429 logged 2816
+(cal-only mask/clip gap documented).
 
-**T4 done (rides without T3):** VSX stamp after VT write; `anchor_pair_run` honors SysRem;
-Labbe content-hash seed + `git_dirty_files` provenance; NightRun match sep 2.0; RUNBOOK pair v2.
+**T3 FIX B (done):** ``git_dirty_code`` / scratch vs import-relevant root ``*.py`` classifier;
+anchor / FAIL-CLOSED gates trip on ``git_dirty_code`` only.
 
-**429:** unprovenanced quality target (`git_dirty=true`). Deterministic path = 6699-class.
+**T2 verdict (434 baseline):** draft_434 on ``1e2e8d6`` = **UI-SICK** (6699-class). Milan re-run
+after push expected: cal≠proc, ~2875 matched, sky ~1478 meta, identity p95 < 1 px,
+``git_dirty_code=false``.
 
-**Next:** Milan UI clean run → T2 verdict → T3 with sign-off → protocol-v2 anchor.
+**T4 (prior):** VSX stamp after VT write; Labbe content-hash seed; NightRun match sep 2.0.
 
-## Prior snapshot (post-0714, pre-archive-wipe)
+**429:** unprovenanced quality target; deterministic pre-T3 path = 6699-class.
+
+**Next:** Milan UI RUN VYVAR → HEALTHY? → anchor #3 protocol-v2.
+
+## Prior snapshot (F-431 root closure — partial)
 
 **Anchor (was in-Archive ACCEPTED):** `draft_000424_snapshot_sigma_floor_20260713`; core `bf3743a1...`.
 Now offline only (see above).

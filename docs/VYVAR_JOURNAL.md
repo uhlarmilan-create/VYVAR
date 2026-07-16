@@ -2,6 +2,15 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-16 -- T3-RESTORE (FIX A+B; anchor #3 gated on Milan HEALTHY)
+
+T3 FIX A: ``preprocess_sky_surface_order`` default 2 in shared preprocess. FIX B:
+``git_dirty_code`` classifier + anchor gate. Empirical 429 Light_008: DAO sim 2579 (band pass),
+p99 smooth residual 173 ADU. T2 verdict 434 UI-SICK recorded. Anchor #3 **not run** — awaits Milan
+post-push UI. Result: `CURSOR_RESULT_t3_restore_anchor.md`.
+
+---
+
 ## 2026-07-16 -- F-431 root closure (T1 + T4; T2/T3/anchor pending)
 
 Ledger: PASS2-CONTAMINATION **DOWNGRADED**; 429 = unprovenanced quality target. T1: residual =

@@ -6110,6 +6110,57 @@ _GIT_PROVENANCE_WARNED = False
 _REPO_ROOT_FOR_PROVENANCE = Path(__file__).resolve().parent
 
 
+def _is_import_relevant_py_path(path: str) -> bool:
+    """True for repo-root ``*.py`` modules imported by the pipeline (not scripts/tests/docs)."""
+    p = path.replace("\\", "/").lstrip("./")
+    if not p.endswith(".py"):
+        return False
+    if p.startswith((".worktrees/", "scripts/", "docs/", "tmp/", "tests/", "sandbox/")):
+        return False
+    return "/" not in p
+
+
+def _porcelain_status_by_path(porcelain: str) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for line in porcelain.splitlines():
+        if not line.strip() or len(line) < 4:
+            continue
+        status = line[:2]
+        path_part = line[3:].strip()
+        if " -> " in path_part:
+            path_part = path_part.split(" -> ", 1)[-1].strip()
+        path_part = path_part.strip('"').replace("\\", "/")
+        out[path_part] = status
+    return out
+
+
+def classify_git_dirty_paths(
+    porcelain: str,
+    dirty_files: Sequence[dict[str, str]],
+) -> tuple[bool, list[str], list[str]]:
+    """Split dirty paths into import-relevant code vs scratch (F-431 / T3 dirty-gate).
+
+    ``dirty_code`` = tracked modifications to import-relevant ``*.py`` OR untracked
+    import-relevant ``*.py`` (repo root only). Everything else is ``dirty_scratch``.
+    """
+    status_by_path = _porcelain_status_by_path(porcelain)
+    code_paths: list[str] = []
+    scratch_paths: list[str] = []
+    for entry in dirty_files:
+        path = str(entry.get("path") or "").replace("\\", "/")
+        if not path or path == "…truncated…":
+            continue
+        status = status_by_path.get(path, "??")
+        is_import_py = _is_import_relevant_py_path(path)
+        is_untracked = status.startswith("??")
+        is_tracked_mod = not is_untracked
+        if is_import_py and (is_tracked_mod or is_untracked):
+            code_paths.append(path)
+        else:
+            scratch_paths.append(path)
+    return bool(code_paths), code_paths, scratch_paths
+
+
 def _resolve_git_provenance() -> tuple[str | None, bool | None, list[dict[str, str]]]:
     """Return (HEAD hash, dirty flag, dirty file rows) from repo root; nulls when git unavailable.
 
@@ -6193,6 +6244,23 @@ def _build_pipeline_provenance_block(cfg: Any, *, entry_point: str) -> dict[str,
     }
     if git_dirty is True:
         block["git_dirty_files"] = dirty_files
+        try:
+            porcelain = subprocess.check_output(
+                ["git", "status", "--porcelain"],
+                cwd=_REPO_ROOT_FOR_PROVENANCE,
+                text=True,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception:  # noqa: BLE001
+            porcelain = ""
+        code_dirty, code_paths, scratch_paths = classify_git_dirty_paths(porcelain, dirty_files)
+        block["git_dirty_code"] = code_dirty
+        block["git_dirty_code_files"] = code_paths
+        block["git_dirty_scratch_files"] = scratch_paths
+    elif git_dirty is False:
+        block["git_dirty_code"] = False
+    else:
+        block["git_dirty_code"] = None
     return block
 
 

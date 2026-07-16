@@ -19,6 +19,8 @@ if str(_ROOT) not in sys.path:
 
 from tests.photometry_sha import compare_photometry_science_meaningful, compute_photometry_sha
 
+from photometry_core import _resolve_git_provenance, classify_git_dirty_paths
+
 SETUP = "NoFilter_60_2"
 DEFAULT_SOURCE = Path(r"D:\BO_CVn")
 OUT_DIR = _ROOT / "tmp" / "anchor_pair_run"
@@ -114,15 +116,20 @@ def _provenance_gate(draft_id: int, *, expected_git: str) -> dict[str, Any]:
     meta = _read_pipeline_meta(draft_id)
     prov = meta.get("provenance") or {}
     git_dirty = prov.get("git_dirty")
+    git_dirty_code = prov.get("git_dirty_code")
     git_hash = str(prov.get("git_hash") or "")
     identity_qa = {k: meta.get(k) for k in _IDENTITY_QA_KEYS if k in meta}
     qa_ok = all(k in identity_qa for k in _IDENTITY_QA_KEYS)
     hash_ok = git_hash.startswith(expected_git) or expected_git.startswith(git_hash[: len(expected_git)])
-    clean = git_dirty is False
+    # Anchor / FAIL-CLOSED: trip on import-relevant code dirt only (T3 dirty-gate).
+    clean = git_dirty_code is False if git_dirty_code is not None else git_dirty is False
     return {
         "draft_id": draft_id,
         "git_hash": git_hash,
         "git_dirty": git_dirty,
+        "git_dirty_code": git_dirty_code,
+        "git_dirty_code_files": prov.get("git_dirty_code_files") or [],
+        "git_dirty_scratch_files": prov.get("git_dirty_scratch_files") or [],
         "git_hash_ok": hash_ok,
         "provenance_clean": clean,
         "identity_qa": identity_qa,
@@ -272,9 +279,21 @@ def main() -> int:
 
     porcelain = _git_status_porcelain().strip()
     if porcelain and not args.skip_runs:
-        print("ERROR: git working tree not clean — anchor runs require empty porcelain", file=sys.stderr)
-        print(porcelain, file=sys.stderr)
-        return 1
+        _, git_dirty, dirty_files = _resolve_git_provenance()
+        if git_dirty:
+            code_dirty, code_paths, scratch_paths = classify_git_dirty_paths(porcelain, dirty_files)
+            if code_dirty:
+                print(
+                    "ERROR: git_dirty_code — import-relevant .py modifications block anchor runs",
+                    file=sys.stderr,
+                )
+                for p in code_paths:
+                    print(f"  code: {p}", file=sys.stderr)
+                return 1
+            print(
+                f"NOTE: scratch-only dirt allowed ({len(scratch_paths)} paths); git_dirty_code=false",
+                flush=True,
+            )
 
     report: dict[str, Any] = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),

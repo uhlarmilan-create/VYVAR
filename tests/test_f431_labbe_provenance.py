@@ -52,5 +52,6 @@ def test_provenance_includes_dirty_files_when_dirty(tmp_path: Path, monkeypatch)
 
     block = _build_pipeline_provenance_block(_Cfg(), entry_point="test")
     assert block["git_dirty"] is True
+    assert block["git_dirty_code"] is True
     assert block["git_dirty_files"][0]["path"] == "foo.py"
     assert block["labbe_rng_seed_policy"] == "content_frame_hash_v1"

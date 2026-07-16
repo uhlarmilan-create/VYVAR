@@ -16303,6 +16303,126 @@ def _analyze_calibrated_qc_one(src: Path) -> dict[str, Any]:
         return {"src": str(src), "status": f"error: {exc}"}
 
 
+def _fit_subtract_preprocess_sky_surface(
+    data: Any,
+    *,
+    order: int,
+    fwhm_px: float | None = None,
+    subsample_step: int = 4,
+    calm_adu: float = 100.0,
+) -> tuple[Any, dict[str, Any]]:
+    """Fit and subtract a 2D polynomial sky correction (shared calibrated→processed preprocess).
+
+  Star-masked + sigma-clipped fit on calm background pixels (|cal−median| < ``calm_adu``).
+  Fits order-N to ``median(cal) − cal`` on the fit set, then **subtracts** the surface from
+  the frame (429-class gradient removal; full surface including constant term).
+    """
+    import numpy as np
+    from astropy.stats import sigma_clip, sigma_clipped_stats
+    from photutils.detection import DAOStarFinder
+
+    arr = np.asarray(data, dtype=np.float32)
+    order_i = int(order)
+    if order_i <= 0:
+        return arr.copy(), {"sky_surface_order": 0, "sky_surface_applied": False}
+
+    order_i = min(2, max(1, order_i))
+    h, w = arr.shape
+    finite = np.isfinite(arr)
+    fill = float(np.nanmedian(arr[finite])) if finite.any() else 0.0
+    work = np.where(finite, arr, fill)
+
+    mask = np.ones((h, w), dtype=bool)
+    margin = 40
+    if h > 2 * margin and w > 2 * margin:
+        mask[:margin, :] = False
+        mask[-margin:, :] = False
+        mask[:, :margin] = False
+        mask[:, -margin:] = False
+
+    fwhm_eff = max(
+        1.2,
+        float(fwhm_px) if fwhm_px is not None and math.isfinite(float(fwhm_px)) else 2.5,
+    )
+    _, med, std = sigma_clipped_stats(work, sigma=3.0, maxiters=3)
+    data0 = np.nan_to_num((work - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+    thr = max(3.0 * float(std), 1e-6)
+    finder = DAOStarFinder(
+        fwhm=float(fwhm_eff),
+        threshold=float(thr),
+        brightest=5000,
+        **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
+    )
+    tbl = finder(data0)
+    stamp_r = int(max(4, round(3.5 * fwhm_eff)))
+    if tbl is not None and len(tbl) > 0:
+        yy, xx = np.ogrid[:h, :w]
+        r2 = stamp_r * stamp_r
+        for row in tbl:
+            cy = int(round(float(row["ycentroid"])))
+            cx = int(round(float(row["xcentroid"])))
+            if 0 <= cy < h and 0 <= cx < w:
+                mask &= (yy - cy) ** 2 + (xx - cx) ** 2 > r2
+
+    bg_median, _, _ = sigma_clipped_stats(work, mask=mask, sigma=3.0, maxiters=5)
+    calm_thr = max(5.0, float(calm_adu))
+    fit_mask = mask & (np.abs(work - float(bg_median)) < calm_thr)
+
+    step = max(1, int(subsample_step))
+    yy_s, xx_s = np.mgrid[0:h:step, 0:w:step]
+    z_s = (float(bg_median) - work[::step, ::step]).astype(np.float64)
+    m_s = fit_mask[::step, ::step]
+    use_mask = m_s & np.isfinite(z_s)
+    min_coef = (order_i + 1) * (order_i + 2) // 2
+    if int(np.count_nonzero(use_mask)) < min_coef + 10:
+        return arr.copy(), {
+            "sky_surface_order": order_i,
+            "sky_surface_applied": False,
+            "sky_surface_skip_reason": "insufficient_fit_pixels",
+        }
+
+    z_samples = z_s[use_mask]
+    clipped = sigma_clip(z_samples, sigma=3.0, maxiters=5, masked=True)
+    good = ~clipped.mask
+    x_fit = xx_s[use_mask][good].astype(np.float64)
+    y_fit = yy_s[use_mask][good].astype(np.float64)
+    z_fit = z_samples[good]
+    if z_fit.size < min_coef + 5:
+        return arr.copy(), {
+            "sky_surface_order": order_i,
+            "sky_surface_applied": False,
+            "sky_surface_skip_reason": "clipped_insufficient",
+        }
+
+    cols: list[np.ndarray] = []
+    for i in range(order_i + 1):
+        for j in range(order_i + 1 - i):
+            cols.append((x_fit**i) * (y_fit**j))
+    coef, *_ = np.linalg.lstsq(np.column_stack(cols), z_fit, rcond=None)
+
+    yy_f, xx_f = np.mgrid[0:h, 0:w]
+    cols_f: list[np.ndarray] = []
+    x_flat = xx_f.ravel().astype(np.float64)
+    y_flat = yy_f.ravel().astype(np.float64)
+    for i in range(order_i + 1):
+        for j in range(order_i + 1 - i):
+            cols_f.append((x_flat**i) * (y_flat**j))
+    surf = (np.column_stack(cols_f) @ coef).reshape(h, w).astype(np.float32)
+
+    out = (work - surf).astype(np.float32)
+    out = np.where(finite, out, np.nan).astype(np.float32)
+    return out, {
+        "sky_surface_order": order_i,
+        "sky_surface_applied": True,
+        "sky_surface_p2p_adu": float(np.nanmax(surf) - np.nanmin(surf)),
+        "sky_surface_median_adu": float(np.nanmedian(surf)),
+        "sky_surface_n_fit_pixels": int(z_fit.size),
+        "sky_surface_fwhm_px": float(fwhm_eff),
+        "sky_surface_bg_median_adu": float(bg_median),
+        "sky_surface_calm_adu": float(calm_thr),
+    }
+
+
 def _preprocess_calibrated_one(
     src: Path,
     *,
@@ -16313,6 +16433,7 @@ def _preprocess_calibrated_one(
     inject_pointing_ra_deg: float | None,
     inject_pointing_dec_deg: float | None,
     inject_pointing_only_if_missing: bool,
+    sky_surface_order: int = 0,
 ) -> dict[str, Any]:
     import numpy as np
 
@@ -16329,6 +16450,12 @@ def _preprocess_calibrated_one(
             data = np.array(hdul[0].data, dtype=np.float32, copy=True)
 
         data3 = np.asarray(data, dtype=np.float32)
+        sky_stats: dict[str, Any] = {"sky_surface_order": 0, "sky_surface_applied": False}
+        if int(sky_surface_order) > 0:
+            data3, sky_stats = _fit_subtract_preprocess_sky_surface(
+                data3,
+                order=int(sky_surface_order),
+            )
         bg_m = {"bg_median": float(np.nanmedian(data3)), "method": -1.0}
 
         if reject_fwhm_px is not None or reject_elongation is not None:
@@ -16355,6 +16482,12 @@ def _preprocess_calibrated_one(
         if nsd is not None:
             hdr["VY_NSTAR"] = (int(nsd), "Approx. star detections (QC)")
         hdr["VY_QC"] = (status, "QC status")
+        if sky_stats.get("sky_surface_applied"):
+            hdr["VYSKYORD"] = (int(sky_stats["sky_surface_order"]), "Preprocess sky surface polynomial order")
+            hdr["VYSKYP2P"] = (
+                float(sky_stats["sky_surface_p2p_adu"]),
+                "Preprocess sky surface peak-to-peak [ADU]",
+            )
 
         if (
             inject_pointing_ra_deg is not None
@@ -16386,6 +16519,7 @@ def _preprocess_calibrated_one(
             "n_sources": qc.get("n_sources"),
             "n_stars_detected": qc.get("n_stars_detected"),
             "bg_median": bg_m.get("bg_median"),
+            **sky_stats,
         }
     except Exception as exc:  # noqa: BLE001
         return {"src": str(src), "dst": str(dst), "status": f"error: {exc}"}
@@ -16549,6 +16683,7 @@ def preprocess_calibrated_to_processed(
     """Pre-process calibrated lights into /processed with proc_ prefix.
 
     Steps:
+    - Optional order-N polynomial sky-surface subtract (``preprocess_sky_surface_order``; default 2)
     - QC metrics: FWHM + elongation (best-effort)
 
     Optional ``inject_pointing_*``: write ``VYTARGRA`` / ``VYTARGDE`` (deg ICRS) into saved FITS headers
@@ -16649,6 +16784,12 @@ def preprocess_calibrated_to_processed(
             )
 
     total = len(fits_files)
+    sky_surface_order = int(getattr(cfg, "preprocess_sky_surface_order", 0) or 0)
+    if sky_surface_order > 0:
+        log_event(
+            f"Preprocess sky-surface subtract: order={sky_surface_order} "
+            f"(source-masked sigma-clipped fit)"
+        )
     n_workers = _vyvar_qc_preprocess_workers()
     if n_workers > 1 and total > 1:
         LOGGER.info(
@@ -16670,6 +16811,7 @@ def preprocess_calibrated_to_processed(
                     inject_pointing_ra_deg=inject_pointing_ra_deg,
                     inject_pointing_dec_deg=inject_pointing_dec_deg,
                     inject_pointing_only_if_missing=inject_pointing_only_if_missing,
+                    sky_surface_order=sky_surface_order,
                 ): src
                 for src in fits_files
             }
@@ -16697,6 +16839,7 @@ def preprocess_calibrated_to_processed(
                     inject_pointing_ra_deg=inject_pointing_ra_deg,
                     inject_pointing_dec_deg=inject_pointing_dec_deg,
                     inject_pointing_only_if_missing=inject_pointing_only_if_missing,
+                    sky_surface_order=sky_surface_order,
                 )
             )
 

@@ -102,11 +102,14 @@ def _provenance_gate(draft_id: int) -> dict[str, Any]:
     meta = _read_pipeline_meta(draft_id)
     prov = meta.get("provenance") or {}
     git_dirty = prov.get("git_dirty")
+    git_dirty_code = prov.get("git_dirty_code")
+    clean = git_dirty_code is False if git_dirty_code is not None else git_dirty is False
     return {
         "draft_id": draft_id,
         "git_hash": prov.get("git_hash"),
         "git_dirty": git_dirty,
-        "provenance_clean": git_dirty is False,
+        "git_dirty_code": git_dirty_code,
+        "provenance_clean": clean,
         "entry_point": prov.get("entry_point"),
         "identity_qa": {k: meta.get(k) for k in _IDENTITY_QA_KEYS if k in meta},
         "wcs_roundtrip_pass": meta.get("wcs_roundtrip_pass"),
@@ -204,7 +207,7 @@ def main() -> int:
     if not prov_ok:
         dirty = [g for g in report["provenance_gates"] if not g.get("provenance_clean")]
         print(
-            "STOP: pipeline_meta git_dirty must be false on BOTH 430 and 431 — no snapshot cut",
+            "STOP: pipeline_meta git_dirty_code must be false on BOTH 430 and 431 — no snapshot cut",
             file=sys.stderr,
         )
         print(f"Dirty drafts: {dirty}", file=sys.stderr)
