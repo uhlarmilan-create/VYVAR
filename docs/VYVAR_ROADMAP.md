@@ -10,6 +10,22 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
+## QUEUED — VYVAR-INVARIANTS (starts after Anchor #3)
+
+**Status:** **QUEUED** (2026-07-16). Premise in DECISIONS. Do **not** start until Anchor #3
+closes (HEALTHY UI on `89842ff` + protocol-v2 snapshot).
+
+| Phase | Pri | Deliverable |
+|-------|-----|-------------|
+| **P1** | HIGH | Golden mini-dataset + slow pytest: UI↔night_run byte identity, census bands, double-photometry SHA, physics asserts |
+| **P2** | HIGH | `docs/VYVAR_INVARIANTS.md` registry + runtime gates (flux, flatness, WCS WARN, stage DAG, RNG, provenance schema, config↔behavior) |
+| **P3** | MED | PROCESS: recurrence tests, forensic promotion, weekly invariants report |
+| **P4** | MED | STATE honest scope statement |
+
+Separate commits per phase; pytest green each. Result files: `CURSOR_RESULT_invariants_P<n>.md`.
+
+---
+
 ## IN-FLIGHT / ACTIVATED — band-aware k'' (second-order extinction) v1
 
 **Status:** **ACTIVATED v1 (2026-07-07).** Spec: `docs/VYVAR_K2_DESIGN_SPEC.md`. Code: `k2_extinction.py`,

@@ -1,11 +1,15 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-16** (T3-RESTORE FIX A+B landed; Milan UI validation pending).
+Last updated: **2026-07-16** (T3 landed; Anchor #3 + INVARIANTS program gated on Milan UI).
 
-## Current snapshot (T3-RESTORE — FIX A+B committed)
+## Current snapshot (T3-RESTORE — FIX A+B committed; next gates)
 
-**Anchor arc: BLOCKED** on Milan clean UI post-T3 run (T2 verdict). Anchor #3 protocol-v2 cut
+**Anchor arc: BLOCKED** on Milan clean UI post-T3 run (`89842ff`). Anchor #3 protocol-v2 cut
 **not** executed until HEALTHY classification.
+
+**Queued (starts after Anchor #3):** **VYVAR-INVARIANTS** — machine-enforced contracts
+(DECISIONS premise recorded). P1 golden E2E equivalence first; P2–P4 follow as separate
+commits. Not started — task timing is post-anchor.
 
 **T3 FIX A (done):** order-2 sky-surface subtract in shared ``preprocess_calibrated_to_processed``
 (``preprocess_sky_surface_order`` default **2**). Empirical vs draft_429 Light_008: DAO pass-1

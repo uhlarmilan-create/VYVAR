@@ -6,6 +6,28 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## VYVAR-INVARIANTS — machine-enforced contracts (2026-07-16)
+
+**Premise (Milan sign-off by commissioning).** Static audits cannot catch integration-class
+defects (ordering, path assumptions, transform relationships, cross-entry divergence,
+unprovenanced code). Every defect found in the F-428/F-431 arc was caught by a
+**measurement**, not by reading code. This program converts VYVAR's physics/math contracts
+into machine-enforced invariants.
+
+**Goal (honest):** not "zero bugs" (unattainable); rather (a) no defect reaches science output
+silently, and (b) no defect class recurs once fixed. After P1–P3 the guarantee is: silent-wrong
+science requires simultaneously fooling independent guards (flux conservation, WCS identity,
+census bands, SHA determinism, golden UI↔night_run equivalence); every ledger defect class has
+a recurrence guard. Audits continue for dead code / style / docs / obvious logic only.
+
+**Timing.** Starts **after Anchor #3 closes**. Phases land as separate commits; pytest green
+each. Order: P1 golden E2E equivalence → P2 contract registry / runtime gates → P3 PROCESS
+recurrence discipline → P4 STATE scope statement.
+
+**Out of scope:** UI Settings block (parallel), new science features.
+
+---
+
 ## T3-PREPROCESS-SKY-SURFACE — order-2 shared preprocess (2026-07-16)
 
 **Milan sign-off (commissioning T3-RESTORE).** Per calibrated light frame, fit a 2D polynomial

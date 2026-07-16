@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-16 -- VYVAR-INVARIANTS commissioned (QUEUED; gated on Anchor #3)
+
+Premise recorded in DECISIONS: audits demoted; machine-enforced contracts are the guard.
+Program **not started** — task timing is post-anchor. ROADMAP QUEUED P1→P4. Result:
+`CURSOR_RESULT_invariants_queued.md`.
+
+---
+
 ## 2026-07-16 -- T3-RESTORE (FIX A+B; anchor #3 gated on Milan HEALTHY)
 
 T3 FIX A: ``preprocess_sky_surface_order`` default 2 in shared preprocess. FIX B:
