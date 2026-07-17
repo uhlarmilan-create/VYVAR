@@ -11,12 +11,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
+_ROOT = _bootstrap.REPO_ROOT
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from gaia_catalog_id import normalize_gaia_source_id
-from scripts.repair_catalog_ids import _pick_gaia_table, _sep_arcsec
+from repair_catalog_ids import _pick_gaia_table, _sep_arcsec
 
 D428 = _ROOT / "Archive/Drafts/draft_000428/platesolve/NoFilter_60_2"
 D429 = _ROOT / "Archive/Drafts/draft_000429/platesolve/NoFilter_60_2"

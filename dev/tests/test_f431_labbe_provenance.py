@@ -43,7 +43,7 @@ def test_provenance_includes_dirty_files_when_dirty(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(
         pc,
         "_resolve_git_provenance",
-        lambda: ("deadbeef", True, [{"path": "foo.py", "content_sha256": "abc"}]),
+        lambda: ("deadbeef", True, [{"path": "src_py/foo.py", "content_sha256": "abc"}]),
     )
 
     class _Cfg:
@@ -53,5 +53,5 @@ def test_provenance_includes_dirty_files_when_dirty(tmp_path: Path, monkeypatch)
     block = _build_pipeline_provenance_block(_Cfg(), entry_point="test")
     assert block["git_dirty"] is True
     assert block["git_dirty_code"] is True
-    assert block["git_dirty_files"][0]["path"] == "foo.py"
+    assert block["git_dirty_files"][0]["path"] == "src_py/foo.py"
     assert block["labbe_rng_seed_policy"] == "content_frame_hash_v1"

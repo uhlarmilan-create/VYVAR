@@ -10,11 +10,12 @@ import anthropic
 from pathlib import Path
 from datetime import datetime
 
-REPO_ROOT = Path(__file__).parent.parent
+# dev/orchestrator/vyvar_orchestrator.py -> repo root is parents[2] after the reorg.
+REPO_ROOT = Path(__file__).resolve().parents[2]
 STATE_FILE  = REPO_ROOT / "docs" / "VYVAR_STATE.md"
 TASK_FILE   = REPO_ROOT / "CURSOR_TASK.md"
 RESULT_FILE = REPO_ROOT / "CURSOR_RESULT.md"
-LOG_FILE    = REPO_ROOT / "orchestrator" / "session.log"
+LOG_FILE    = REPO_ROOT / "dev" / "orchestrator" / "session.log"
 
 SYSTEM_PROMPT = """You are Claude, architect of the VYVAR astronomical photometry pipeline.
 You work in a team: Milan (product owner), Cursor (implementor), Claude (you = architect).

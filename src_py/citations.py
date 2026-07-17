@@ -15,7 +15,7 @@ try:
 except ImportError:  # pragma: no cover
     AppConfig = Any  # type: ignore[misc, assignment]
 
-_PROJECT_ROOT = Path(__file__).resolve().parent
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent  # src_py -> repo root (CITATIONS.bib)
 _DEFAULT_BIB = _PROJECT_ROOT / "CITATIONS.bib"
 
 _ENTRY_START = re.compile(r"@\w+\s*\{\s*([^,\s]+)\s*,", re.IGNORECASE)

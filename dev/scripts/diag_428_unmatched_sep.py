@@ -20,14 +20,17 @@ import pandas as pd
 from astropy.io import fits
 from astropy.wcs import WCS
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
+_ROOT = _bootstrap.REPO_ROOT
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from config import AppConfig
 from gaia_catalog_id import normalize_gaia_source_id
 from pipeline import _all_pix2world_icrs_deg
-from scripts.repair_catalog_ids import _pick_gaia_table, _sep_arcsec
+from repair_catalog_ids import _pick_gaia_table, _sep_arcsec
 
 # Phase-0 census from draft_428 infolog (2026-07-15 UI run)
 PHASE0_CENSUS = {

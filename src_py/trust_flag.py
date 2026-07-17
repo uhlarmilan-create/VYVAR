@@ -9,7 +9,7 @@ import pandas as pd
 
 from trust_flag_core import run_trust_flag_for_photometry_dir
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent  # src_py -> repo root (tmp/ output defaults)
 
 
 def main() -> int:

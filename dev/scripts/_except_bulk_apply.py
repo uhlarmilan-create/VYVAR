@@ -18,7 +18,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Literal
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
+REPO_ROOT = _bootstrap.REPO_ROOT
 CENSUS_PATH = REPO_ROOT / "docs" / "VYVAR_EXCEPT_CENSUS.md"
 BULK_STAMP = "EXCEPT-BULK-2 2026-07-08"
 COMMENT_PREFIX = "# EXC-"

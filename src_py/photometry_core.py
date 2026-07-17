@@ -5706,7 +5706,7 @@ def auto_export_variability_candidates_csv(
     try:
         import sqlite3  # noqa: PLC0415
 
-        from scripts.repair_catalog_ids import _pick_gaia_table, _sep_arcsec  # noqa: PLC0415
+        from repair_catalog_ids import _pick_gaia_table, _sep_arcsec  # noqa: PLC0415
         from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
 
         gdb = Path(str(cfg.gaia_db_path or "").strip())
@@ -6267,17 +6267,22 @@ def _phase2a_observer_location_dict(
 
 
 _GIT_PROVENANCE_WARNED = False
-_REPO_ROOT_FOR_PROVENANCE = Path(__file__).resolve().parent
+# src_py/photometry_core.py -> repo root is parent.parent (git cwd + porcelain path base).
+_REPO_ROOT_FOR_PROVENANCE = Path(__file__).resolve().parent.parent
 
 
 def _is_import_relevant_py_path(path: str) -> bool:
-    """True for repo-root ``*.py`` modules imported by the pipeline (not scripts/tests/docs)."""
+    """True for VYVAR modules imported by the pipeline: ``src_py/*.py`` plus the root ``app.py`` shim.
+
+    Everything under ``dev/`` (tests, scripts, tools, validation, sandbox, orchestrator) and
+    ``tmp/`` / ``docs/`` is scratch: it never trips the FAIL-CLOSED dirty-code gate (T3 FIX B).
+    """
     p = path.replace("\\", "/").lstrip("./")
     if not p.endswith(".py"):
         return False
-    if p.startswith((".worktrees/", "scripts/", "docs/", "tmp/", "tests/", "sandbox/")):
-        return False
-    return "/" not in p
+    if p == "app.py":  # thin root Streamlit shim (the only import-relevant module at repo root)
+        return True
+    return p.startswith("src_py/")
 
 
 def _porcelain_status_by_path(porcelain: str) -> dict[str, str]:
@@ -11555,7 +11560,7 @@ def _auto_repair_catalog_ids(
     - Vytvor `.bak` zálohu iba ak sa niečo reálne opravilo.
     """
     try:
-        from scripts.repair_catalog_ids import repair_catalog_ids_from_gaia_db  # noqa: PLC0415
+        from repair_catalog_ids import repair_catalog_ids_from_gaia_db  # noqa: PLC0415
 
         _log = log_fn or log_event
         if not gaia_db_path:
@@ -14403,7 +14408,7 @@ def run_phase0_and_phase1(
     )
     # Best-effort: repair Gaia IDs in suspected_variables.csv via RA/DEC + local Gaia DB.
     try:
-        from scripts.repair_catalog_ids import repair_csv_catalog_ids_from_gaia_db  # noqa: PLC0415
+        from repair_catalog_ids import repair_csv_catalog_ids_from_gaia_db  # noqa: PLC0415
 
         _gdb = str(_cfg_base.gaia_db_path or "").strip()
         if _gdb:

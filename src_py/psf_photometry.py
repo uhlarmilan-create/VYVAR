@@ -653,7 +653,7 @@ def _epsf_augment_candidates_from_detected_pool(
     dense-field ePSF builds share the same bright/isolated star pick as the elongation
     diagnostic (cone isolation, SNR, saturation, per-frame cap).
     """
-    diag_path = Path(__file__).resolve().parent / "scripts" / "diagnose_psf_elongation_362.py"
+    diag_path = Path(__file__).resolve().parent.parent / "dev" / "scripts" / "diagnose_psf_elongation_362.py"
     if not diag_path.is_file():
         LOGGER.warning("[ePSF] broad-pool augment: diagnostic script missing at %s", diag_path)
         funnel["n_broad_pool_reason"] = "diagnostic script missing"

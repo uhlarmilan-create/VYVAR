@@ -95,7 +95,9 @@ class AppConfig:
     SQLite schema is intentionally not defined yet.
     """
 
-    project_root: Path = field(default_factory=lambda: Path(__file__).resolve().parent)
+    # src_py/config.py -> repo root is parent.parent; project_root anchors config.json,
+    # Archive/, CalibrationLibrary/, vyvar.sqlite3, GAIA_DR3/ discovery (all at repo root).
+    project_root: Path = field(default_factory=lambda: Path(__file__).resolve().parent.parent)
 
     # Calibration validity defaults (days)
     masterdark_validity_days: int = 90

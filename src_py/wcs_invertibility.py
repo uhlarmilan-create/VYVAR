@@ -271,7 +271,7 @@ def finalize_masterstar_sky_coords(
         try:
             import sqlite3
 
-            from scripts.repair_catalog_ids import _pick_gaia_table
+            from repair_catalog_ids import _pick_gaia_table
 
             con = sqlite3.connect(gdb)
             table = _pick_gaia_table(con)
@@ -388,7 +388,7 @@ def evaluate_matched_world2pix_identity_px(
             try:
                 import sqlite3
 
-                from scripts.repair_catalog_ids import _pick_gaia_table
+                from repair_catalog_ids import _pick_gaia_table
 
                 con = sqlite3.connect(gdb)
                 table = _pick_gaia_table(con)

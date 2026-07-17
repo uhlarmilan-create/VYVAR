@@ -17,8 +17,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# Add repo root to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the VYVAR module roots to path (src_py + dev) for standalone execution.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
 
 logging.basicConfig(level=logging.WARNING)  # suppress pipeline logs during bench
 

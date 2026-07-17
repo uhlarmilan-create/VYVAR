@@ -43,7 +43,7 @@ HRD_COLORFIELD_CAPTION_FIELD_MEDIAN = (
 HRD_COLORFIELD_CAPTION_CHROMA_BOOST = " chroma enhanced x{boost:.1f}."
 HRD_COLORFIELD_CAPTION_STAMP = " rendered {ts} UTC @ {git_hash}."
 
-_REPO_ROOT = Path(__file__).resolve().parent
+_REPO_ROOT = Path(__file__).resolve().parent.parent  # src_py -> repo root (git cwd for stamp)
 
 TEFF_MIN_K = 2500.0
 TEFF_MAX_K = 40000.0

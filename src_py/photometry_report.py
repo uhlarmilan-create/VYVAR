@@ -2396,7 +2396,7 @@ class _PhotometryReportBuilder:
         y -= 1.25 * self.cm
         logo_path = None
         try:
-            logo_path = (Path(__file__).resolve().parent / "img" / "VYVAR_logo.png").resolve()
+            logo_path = (Path(__file__).resolve().parent.parent / "img" / "VYVAR_logo.png").resolve()
         except Exception:  # noqa: BLE001
             logo_path = None
         if logo_path and Path(logo_path).exists():

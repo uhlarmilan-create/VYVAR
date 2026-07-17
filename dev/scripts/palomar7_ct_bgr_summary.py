@@ -5,7 +5,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
+_ROOT = _bootstrap.REPO_ROOT
 sys.path.insert(0, str(_ROOT / "scripts"))
 import ct_bgr_summary  # noqa: E402
 

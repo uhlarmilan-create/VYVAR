@@ -6,7 +6,8 @@ Run: python scripts/test_border_bbox.py
 
 from pathlib import Path
 import sys, os
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
 
 from pipeline import write_photometry_plan_files
 

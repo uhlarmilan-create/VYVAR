@@ -9,7 +9,10 @@ import numpy as np
 import pandas as pd
 from scipy.stats import linregress
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
+ROOT = _bootstrap.REPO_ROOT
 DRAFT = ROOT / "Archive/Drafts/draft_000342/platesolve/NoFilter_60_2/photometry"
 LC_DIR = DRAFT / "lightcurves"
 PROC_DIR = ROOT / "Archive/Drafts/draft_000342/detrended_aligned/lights/NoFilter_60_2"

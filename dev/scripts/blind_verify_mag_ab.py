@@ -11,9 +11,10 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[1]
-
-
+_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
+_ROOT = _bootstrap.REPO_ROOT
 def _run_harness(
     *,
     mag: float,

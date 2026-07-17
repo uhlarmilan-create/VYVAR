@@ -142,7 +142,7 @@ def test_auto_export_excludes_known_vsx_candidate(tmp_path: Path, monkeypatch) -
 
 
 def test_repair_skips_det_placeholders_and_summarizes(tmp_path: Path) -> None:
-    from scripts.repair_catalog_ids import repair_csv_catalog_ids_from_gaia_db
+    from repair_catalog_ids import repair_csv_catalog_ids_from_gaia_db
 
     csv_path = tmp_path / "masterstars_full_match.csv"
     csv_path.write_text(

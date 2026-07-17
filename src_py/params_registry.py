@@ -22,7 +22,7 @@ from typing import Any
 
 import config
 
-REGISTRY_PATH = Path(__file__).resolve().parent / "dev" / "validation" / "params_registry.json"
+REGISTRY_PATH = Path(__file__).resolve().parent.parent / "dev" / "validation" / "params_registry.json"
 
 TIERS = ("basic", "advanced", "expert")
 PHASES = (

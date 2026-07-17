@@ -69,7 +69,10 @@ _AAVSO_OBSCODE_PLACEHOLDER = "UMIA"
 _VALID_DATE_SCALES = frozenset({"BJD", "JD", "HJD"})
 _VALID_OBSTYPE = frozenset({"CCD", "DSLR", "Visual"})
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
+_PROJECT_ROOT = _bootstrap.REPO_ROOT
 _CONFIG_PATH = _PROJECT_ROOT / "config.json"
 
 

@@ -12092,7 +12092,7 @@ def generate_masterstar_and_catalog(
             log_event("MASTERSTAR optimizer: forced final re-match pass completed.")
             # Final safety: repair any residual precision-loss IDs in masterstars_full_match.csv via Gaia RA/DEC lookup.
             try:
-                from scripts.repair_catalog_ids import repair_csv_catalog_ids_from_gaia_db  # noqa: PLC0415
+                from repair_catalog_ids import repair_csv_catalog_ids_from_gaia_db  # noqa: PLC0415
 
                 rep = repair_csv_catalog_ids_from_gaia_db(
                     csv_path=Path(csv_path),
@@ -16221,7 +16221,7 @@ def _vyvar_parallel_worker_count(app_config: AppConfig | None = None) -> int:
             pass
     from config import recommended_vyvar_parallel_workers
 
-    data = load_config_json(Path(__file__).resolve().parent)
+    data = load_config_json(Path(__file__).resolve().parent.parent)  # src_py -> repo root (config.json)
     try:
         res_gb = float(data.get("per_frame_mp_reserve_ram_gb", 1.5))
         if not math.isfinite(res_gb) or res_gb < 0:

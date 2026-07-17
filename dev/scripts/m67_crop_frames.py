@@ -10,7 +10,10 @@ from pathlib import Path
 import numpy as np
 from astropy.io import fits
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
+_ROOT = _bootstrap.REPO_ROOT
 M67_RA = 132.846
 M67_DEC = 11.814
 DEFAULT_HALF_PX = 900  # ~1800 px @ ~2 arcsec/px ≈ 1 deg
