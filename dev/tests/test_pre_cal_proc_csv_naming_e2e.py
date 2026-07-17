@@ -20,7 +20,7 @@ from proc_frame_store import (
     proc_csv_path_for_aligned_fits,
 )
 
-_REPO = Path(__file__).resolve().parents[1]
+_REPO = Path(__file__).resolve().parents[2]
 _DRAFT381 = _REPO / "Archive" / "Drafts" / "draft_000381"
 _SETUP = "V_20_2"
 _CHI_H_GLOB = "Chi_H*.fits"

@@ -92,7 +92,7 @@ def test_citation_lines_vsx_when_configured() -> None:
     from pathlib import Path
 
     cfg = AppConfig()
-    vsx = Path(__file__).resolve().parents[1] / "VSX" / "vyvar_vsx_local.db"
+    vsx = Path(__file__).resolve().parents[2] / "VSX" / "vyvar_vsx_local.db"
     if not vsx.is_file():
         return
     cfg.vsx_local_db_path = str(vsx)

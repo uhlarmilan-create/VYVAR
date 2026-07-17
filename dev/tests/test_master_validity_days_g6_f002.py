@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+import config
+import database
 from config import AppConfig
 
 _EXPECTED_DARK = 90
@@ -16,7 +18,7 @@ _EXPECTED_FLAT = 200
 
 
 def _post_init_fallback_literals() -> tuple[int, int]:
-    src = Path(__file__).resolve().parents[1] / "config.py"
+    src = Path(config.__file__).resolve()
     text = src.read_text(encoding="utf-8")
     dark_m = re.search(
         r'data\.get\("masterdark_validity_days",\s*(\d+)\)',
@@ -31,7 +33,7 @@ def _post_init_fallback_literals() -> tuple[int, int]:
 
 
 def _db_seed_literals() -> tuple[str, str]:
-    src = Path(__file__).resolve().parents[1] / "database.py"
+    src = Path(database.__file__).resolve()
     text = src.read_text(encoding="utf-8")
     dark_m = re.search(
         r'\("masterdark_validity_days",\s*"(\d+)"\)',

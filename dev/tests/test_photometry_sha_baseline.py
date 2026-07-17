@@ -18,7 +18,7 @@ from tests.photometry_sha import (
     compute_photometry_sha,
 )
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
 _DRAFT387 = _ROOT / "Archive" / "Drafts" / "draft_000387"
 _RECUT = _ROOT / "tmp" / "rebaseline_387_sparse_fb_cut1"
 

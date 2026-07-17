@@ -16,7 +16,7 @@ from photometry_core import precompute_and_save_snr_aperture_table_for_draft
 def test_snr_table_read_noise_unscaled_when_header_unavailable(tmp_path: Path) -> None:
     """When MASTERSTAR header cannot be read, RN stays DB bin1 (legacy SNR-table path)."""
     missing = tmp_path / "missing_MASTERSTAR.fits"
-    db_path = Path(__file__).resolve().parents[1] / "vyvar.sqlite3"
+    db_path = Path(__file__).resolve().parents[2] / "vyvar.sqlite3"
     if not db_path.is_file():
         pytest.skip("vyvar.sqlite3 not available")
 
@@ -43,7 +43,7 @@ def test_snr_table_read_noise_doubles_with_bin2_header(tmp_path: Path) -> None:
     hdu.header["YBINNING"] = 2
     hdu.writeto(ms, overwrite=True)
 
-    db_path = Path(__file__).resolve().parents[1] / "vyvar.sqlite3"
+    db_path = Path(__file__).resolve().parents[2] / "vyvar.sqlite3"
     if not db_path.is_file():
         pytest.skip("vyvar.sqlite3 not available")
 

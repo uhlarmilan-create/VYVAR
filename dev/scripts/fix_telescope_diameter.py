@@ -7,9 +7,12 @@ import argparse
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
+# dev/scripts/<x>.py -> repo root is parents[2]. VYVAR modules live under src_py after the
+# reorg (repo root before it); add both so flat imports resolve when run standalone.
+_REPO = Path(__file__).resolve().parents[2]
+for _p in (_REPO / "src_py", _REPO):
+    if _p.is_dir() and str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402

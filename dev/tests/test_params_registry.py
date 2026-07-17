@@ -11,7 +11,8 @@ from pathlib import Path
 
 import params_registry as pr
 
-_ROOT = Path(__file__).resolve().parent.parent
+_ROOT = Path(__file__).resolve().parent.parent  # dev/ (holds tools/, validation/)
+_REPO = Path(__file__).resolve().parents[2]  # repo root (holds docs/)
 
 
 def _registry() -> dict:
@@ -112,7 +113,7 @@ def test_generated_params_md_is_fresh(tmp_path) -> None:
     # excluding only the volatile timestamp/HEAD header line. Doc freshness is a tested
     # property, not a discipline.
     gen = _load_gen_module()
-    committed = (_ROOT / "docs" / "VYVAR_PARAMS.md").read_text(encoding="utf-8")
+    committed = (_REPO / "docs" / "VYVAR_PARAMS.md").read_text(encoding="utf-8")
     regenerated = gen.build_markdown()
 
     # exercise the write path into a throwaway dir (faithful "regenerate in a temp dir")

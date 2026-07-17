@@ -12,7 +12,7 @@ from scipy.spatial import KDTree
 import sys
 from pathlib import Path
 
-_GAIA = Path(__file__).resolve().parents[1] / "GAIA_DR3"
+_GAIA = Path(__file__).resolve().parents[2] / "GAIA_DR3"
 if str(_GAIA) not in sys.path:
     sys.path.insert(0, str(_GAIA))
 

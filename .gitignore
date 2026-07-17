@@ -42,7 +42,7 @@ hard_copy_*.patch
 hard_copy_*.bundle
 
 # Scratch workspaces (one-off artifacts + helper scripts)
-/sandbox/
+/dev/sandbox/
 /tmp/
 .worktrees/
 
@@ -52,8 +52,8 @@ hard_copy_*.bundle
 tmpp/
 _p2a_*/
 _comp_sel_*/
-scripts/_alg*_verify_*.py
-scripts/_*_verify_*.py
+dev/scripts/_alg*_verify_*.py
+dev/scripts/_*_verify_*.py
 _comp_sel_body.txt
 _p2a_body_indented.txt
 _p2a_extract.txt
@@ -68,9 +68,9 @@ photometry_dir_*.txt
 *_console.txt
 
 # Secrets (never commit)
-orchestrator/api_key.txt
+dev/orchestrator/api_key.txt
 **/api_key.txt
 GAIA_DR3/_*
 
 # Validation harness generated FITS + truth sidecars
-tests/validation/data/
+dev/tests/validation/data/

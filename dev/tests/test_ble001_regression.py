@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_ruff_ble001_e722_clean() -> None:

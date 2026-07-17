@@ -161,9 +161,9 @@ def test_comp_exclusion_does_not_use_exoplanet_columns():
 
 
 def test_catalog_known_variable_not_includes_exoplanet():
-    from pathlib import Path
+    import pipeline
 
-    text = Path(__file__).resolve().parents[1] / "pipeline.py"
+    text = Path(pipeline.__file__).resolve()
     for line in text.read_text(encoding="utf-8").splitlines():
         if "catalog_known_variable" in line and "exo" in line.lower():
             raise AssertionError(f"exo referenced on catalog_known_variable line: {line.strip()}")

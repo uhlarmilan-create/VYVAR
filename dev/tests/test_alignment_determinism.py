@@ -8,10 +8,13 @@ from pathlib import Path
 
 import numpy as np
 
+import utils
 from utils import seeded_numpy_default_rng, VYVAR_RANDOM_SEED
 from vyvar_alignment_frame import _alignment_run_astroalign_points
 
-ROOT = Path(__file__).resolve().parents[1]
+# Subprocess children import production modules; point cwd at wherever utils physically
+# lives (repo root before the src_py move, src_py after) so `-c` finds it.
+ROOT = Path(utils.__file__).resolve().parent
 
 
 def _synthetic_point_sets() -> tuple[np.ndarray, np.ndarray]:

@@ -19,8 +19,13 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+# dev/tools/gen_params_md.py -> repo root is parents[2].
+ROOT = Path(__file__).resolve().parents[2]
+# Phase A: VYVAR modules still live at repo root; Phase B: under src_py. Cover both so
+# `import params_registry` resolves regardless of layout.
+for _p in (ROOT, ROOT / "src_py"):
+    if _p.is_dir() and str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 import params_registry as pr  # noqa: E402
 

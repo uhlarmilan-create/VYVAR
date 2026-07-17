@@ -121,7 +121,7 @@ def test_draft428_dry_run_stamp_prediction() -> None:
     """Dry-run: count vt IDs present in masterstars (post-fix expectation)."""
     from pathlib import Path
 
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     ms_path = root / "Archive/Drafts/draft_000428/platesolve/NoFilter_60_2/masterstars_full_match.csv"
     vt_path = root / "Archive/Drafts/draft_000428/platesolve/NoFilter_60_2/variable_targets.csv"
     if not ms_path.is_file() or not vt_path.is_file():

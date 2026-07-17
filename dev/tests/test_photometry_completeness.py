@@ -7,7 +7,7 @@ import pytest
 
 from night_run import audit_photometry_completeness
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
 _DRAFT_385 = _ROOT / "Archive" / "Drafts" / "draft_000385"
 _DRAFT_386 = _ROOT / "Archive" / "Drafts" / "draft_000386"
 

@@ -2,10 +2,10 @@
 target-version = "py312"
 line-length = 120
 exclude = [
-    "sandbox",
+    "dev/sandbox",
     "tmp",
     "Archive",
-    "scripts/archive",
+    "dev/scripts/archive",
     ".venv",
     "venv",
     ".ruff_cache",
@@ -18,4 +18,8 @@ select = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["dev/tests"]
+# src_py holds the VYVAR modules (flat imports); dev/ makes the tests/scripts/validation/tools
+# namespace packages importable as before (e.g. `from tests.photometry_sha import ...`); "."
+# keeps the root app.py shim importable. Phase A modules still live at root, hence ".".
+pythonpath = [".", "src_py", "dev"]

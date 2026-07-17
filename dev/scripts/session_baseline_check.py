@@ -16,8 +16,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-LEDGER_PATH = REPO_ROOT / "validation" / "VYVAR_VALIDATION_LEDGER.json"
+# dev/scripts/session_baseline_check.py -> repo root is parents[2].
+REPO_ROOT = Path(__file__).resolve().parents[2]
+LEDGER_PATH = REPO_ROOT / "dev" / "validation" / "VYVAR_VALIDATION_LEDGER.json"
+
+
+def _ensure_import_paths() -> None:
+    """Put the VYVAR module roots on sys.path for direct (non-pytest) execution.
+
+    src_py holds the flat VYVAR modules (config, photometry_core, ...); dev/ makes the
+    tests/scripts namespace packages importable (tests.photometry_sha, scripts.provenance_guard);
+    repo root is kept for the Phase-A layout where modules still live at the root.
+    """
+    for _p in (REPO_ROOT / "src_py", REPO_ROOT / "dev", REPO_ROOT):
+        if _p.is_dir() and str(_p) not in sys.path:
+            sys.path.insert(0, str(_p))
 ANCHOR_LEDGER_ID = "VL-ANCHOR-WCSINV"
 
 DRAFT_ID = 435
@@ -38,11 +51,11 @@ EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
 # Known untracked paths: WARN only (not FAIL). Extend when deliberately added.
 KNOWN_UNTRACKED_PREFIXES = (
     ".worktrees/",
-    "CURSOR_RESULT",
+    "dev/results/CURSOR_RESULT",
     "docs/VYVAR_CODE_AUDIT.md",
     "docs/round2_figs/",
-    "scripts/dy_peg_night_run_bvr.py",
-    "scripts/qatar8_night_run_v.py",
+    "dev/scripts/dy_peg_night_run_bvr.py",
+    "dev/scripts/qatar8_night_run_v.py",
 )
 
 
@@ -124,8 +137,7 @@ def check_git_state(report: SessionReport) -> None:
 
 
 def check_config_paths(report: SessionReport) -> None:
-    if str(REPO_ROOT) not in sys.path:
-        sys.path.insert(0, str(REPO_ROOT))
+    _ensure_import_paths()
     from config import AppConfig  # noqa: PLC0415
 
     cfg = AppConfig()
@@ -245,8 +257,7 @@ def run_full_baseline(report: SessionReport) -> None:
         report.add("full-baseline", "SUSPENDED", suspend_msg)
         return
 
-    if str(REPO_ROOT) not in sys.path:
-        sys.path.insert(0, str(REPO_ROOT))
+    _ensure_import_paths()
 
     from config import AppConfig  # noqa: PLC0415
     from database import VyvarDatabase  # noqa: PLC0415

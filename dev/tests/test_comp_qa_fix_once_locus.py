@@ -13,7 +13,7 @@ from config import AppConfig
 from tests.comp_qa_legacy_iterative import compute_comp_qa_iterative_locus
 from trust_flag_core import comp_thresholds_from_config, trust_level, classify_warnings
 
-_DRAFT = Path(__file__).resolve().parents[1] / "Archive" / "Drafts" / "draft_000366"
+_DRAFT = Path(__file__).resolve().parents[2] / "Archive" / "Drafts" / "draft_000366"
 _PHOT = _DRAFT / "platesolve" / "NoFilter_60_2" / "photometry"
 _PROC = _DRAFT / "detrended_aligned" / "lights" / "NoFilter_60_2"
 

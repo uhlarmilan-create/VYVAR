@@ -11,12 +11,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import photometry_core
 from photometry_core import (
     _ensemble_scatter_by_source_file,
     measure_empty_aperture_sigma_bkg,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+# Subprocess children import production modules; point cwd at wherever photometry_core
+# physically lives (repo root before the src_py move, src_py after) so `-c` finds it.
+ROOT = Path(photometry_core.__file__).resolve().parent
 
 
 def _synthetic_frame() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
