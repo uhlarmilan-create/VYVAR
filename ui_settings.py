@@ -9,6 +9,7 @@ import streamlit as st
 
 from config import AppConfig, save_config_json
 import ui_dao_stars as ui_dao_stars
+import ui_params_dashboard as ui_params_dashboard
 import ui_photometry as ui_photometry
 from masterstar_context import (
     load_masterstar_context,
@@ -23,6 +24,35 @@ def _detail_help(title: str, *, phase: str, used_in: str, compute: str | None = 
         st.markdown(f"**Where and how it is used:** {used_in}")
         if compute:
             st.markdown(f"**Derivation / computation:** {compute}")
+
+
+def _load_latest_pipeline_meta(
+    cfg: AppConfig,
+    pipeline: Any,
+    draft_id: Any,
+    draft_dir_override: Path | None,
+) -> dict[str, Any] | None:
+    """Best-effort load of the newest run pipeline_meta.json for resolved-value display."""
+    import json
+
+    try:
+        base: Path | None = None
+        if draft_dir_override is not None:
+            base = Path(draft_dir_override)
+        elif draft_id is not None:
+            base = Path(cfg.archive_root) / f"draft_{int(draft_id):06d}"
+        if base is None or not base.exists():
+            return None
+        metas = sorted(
+            base.glob("platesolve/*/photometry/pipeline_meta.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        if not metas:
+            return None
+        return json.loads(metas[0].read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def render_settings_dashboard(
@@ -44,8 +74,17 @@ def render_settings_dashboard(
     )
     ms_ctx = load_masterstar_context(ms_path)
 
-    tab_ov, tab_paths, tab_cal, tab_qc, tab_aln, tab_ap, tab_p01, tab_tools = st.tabs(
+    # Global deviation counter at the top of the Settings dashboard (FULL config vs defaults).
+    try:
+        ui_params_dashboard.render_modified_counter(cfg)
+    except Exception as exc:  # noqa: BLE001
+        st.caption(f"(parameter deviation counter unavailable: {exc})")
+
+    (
+        tab_params, tab_ov, tab_paths, tab_cal, tab_qc, tab_aln, tab_ap, tab_p01, tab_tools
+    ) = st.tabs(
         [
+            "Parameters",
             "Overview",
             "Paths and catalogs",
             "Calibration",
@@ -56,6 +95,10 @@ def render_settings_dashboard(
             "Tools",
         ]
     )
+
+    with tab_params:
+        _pipeline_meta_for_params = _load_latest_pipeline_meta(cfg, pipeline, draft_id, draft_dir_override)
+        ui_params_dashboard.render_params_dashboard(cfg, pipeline_meta=_pipeline_meta_for_params)
 
     with tab_ov:
         st.markdown("### Active draft and MASTERSTAR")
