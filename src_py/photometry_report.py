@@ -204,6 +204,136 @@ def config_deviation_model(pipeline_meta: dict[str, Any] | None) -> dict[str, An
     }
 
 
+def full_config_snapshot_model(pipeline_meta: dict[str, Any] | None) -> dict[str, Any]:
+    """Full as-run config snapshot (every key) grouped by phase, for the report appendix.
+
+    This is the honest "copy of the config file" taken from the run (``provenance.config_snapshot``),
+    not from disk. Legacy drafts with no snapshot fall back to the live AppConfig with a visible
+    warning; never crashes. Keys not present in the registry are grouped under ``other``.
+    """
+    import params_registry as pr  # noqa: PLC0415
+
+    snapshot: dict[str, Any] | None = None
+    meta = pipeline_meta if isinstance(pipeline_meta, dict) else {}
+    raw_prov = meta.get("provenance")
+    if isinstance(raw_prov, dict):
+        raw = raw_prov.get("config_snapshot")
+        if isinstance(raw, dict) and raw:
+            snapshot = raw
+
+    if snapshot is not None:
+        cfg_dict = dict(snapshot)
+        source_label = "run snapshot"
+        fallback = False
+    else:
+        try:
+            from config import AppConfig  # noqa: PLC0415
+
+            cfg_dict = AppConfig().to_dict()
+        except Exception:  # noqa: BLE001
+            cfg_dict = {}
+        source_label = "live (no run snapshot)"
+        fallback = True
+
+    try:
+        registry = pr.load_registry()
+    except Exception:  # noqa: BLE001
+        registry = {}
+    phase_of = {k: e.get("phase") for k, e in registry.items()}
+
+    by_phase: dict[str, list[tuple[str, Any]]] = {}
+    for key in sorted(cfg_dict.keys()):
+        phase = phase_of.get(key) or "other"
+        by_phase.setdefault(phase, []).append((key, cfg_dict[key]))
+
+    ordered = [p for p in pr.PHASES if p in by_phase]
+    if "other" in by_phase:
+        ordered.append("other")
+
+    return {
+        "source_label": source_label,
+        "fallback": fallback,
+        "n_keys": len(cfg_dict),
+        "phases": ordered,
+        "by_phase": by_phase,
+    }
+
+
+def resolved_facts_model(pipeline_meta: dict[str, Any] | None) -> dict[str, Any]:
+    """Run-effective resolved facts block for the report.
+
+    Reports the values the run ACTUALLY used: site (id/name/lat/lon/alt + source), gain and
+    read noise (+source), saturation, plate scale, frame dims, binning, filter, exposure.
+    Sourced from ``pipeline_meta.resolved_facts`` (written by the Phase 2A resolver capture),
+    with graceful fallback to ``observer_location`` / ``dynamic_params`` for legacy drafts and a
+    visible warning. Never crashes.
+    """
+    meta = pipeline_meta if isinstance(pipeline_meta, dict) else {}
+    rf = meta.get("resolved_facts") if isinstance(meta.get("resolved_facts"), dict) else {}
+    obs = meta.get("observer_location") if isinstance(meta.get("observer_location"), dict) else {}
+    dyn = meta.get("dynamic_params") if isinstance(meta.get("dynamic_params"), dict) else {}
+
+    warnings: list[str] = []
+    fallback = not bool(rf)
+    if fallback:
+        warnings.append(
+            "no resolved_facts block in provenance (legacy draft) - values below are recovered "
+            "from observer_location / dynamic_params where available; some may be blank."
+        )
+
+    def _fmt(v: Any) -> str:
+        if v is None:
+            return "-"
+        if isinstance(v, float):
+            return f"{v:g}"
+        return str(v)
+
+    def _src(res: dict[str, Any], extra: str | None = None) -> str:
+        s = res.get("source") if isinstance(res, dict) else None
+        key = res.get("key") if isinstance(res, dict) else None
+        parts = [str(s)] if s else []
+        if key:
+            parts.append(f"[{key}]")
+        if extra:
+            parts.append(extra)
+        return " ".join(parts) if parts else "-"
+
+    site = rf.get("site") if isinstance(rf.get("site"), dict) else {}
+    site_id = site.get("location_id", obs.get("location_id"))
+    site_name = site.get("name", obs.get("name"))
+    site_lat = site.get("lat", obs.get("lat"))
+    site_lon = site.get("lon", obs.get("lon"))
+    site_alt = site.get("alt_m", obs.get("alt_m"))
+    site_source = site.get("source") or obs.get("source") or "-"
+
+    gain = rf.get("gain") if isinstance(rf.get("gain"), dict) else {}
+    rn = rf.get("read_noise") if isinstance(rf.get("read_noise"), dict) else {}
+    gain_val = gain.get("value", dyn.get("gain"))
+    rn_val = rn.get("value", dyn.get("read_noise"))
+    plate = rf.get("plate_scale_arcsec_per_px", dyn.get("plate_scale_arcsec_px"))
+
+    rows: list[dict[str, str]] = [
+        {
+            "label": "Site (LOCATION)",
+            "value": f"id={_fmt(site_id)} {_fmt(site_name)} | lat={_fmt(site_lat)} lon={_fmt(site_lon)} alt={_fmt(site_alt)} m",
+            "source": str(site_source),
+        },
+        {"label": "Gain (e-/ADU)", "value": _fmt(gain_val), "source": _src(gain) if gain else "-"},
+        {"label": "Read noise (e-)", "value": _fmt(rn_val), "source": _src(rn) if rn else "-"},
+        {"label": "Saturation (ADU)", "value": _fmt(rf.get("saturation_adu")), "source": "-"},
+        {"label": "Plate scale (arcsec/px)", "value": _fmt(plate), "source": "-"},
+        {
+            "label": "Frame (px)",
+            "value": f"{_fmt(rf.get('frame_width_px'))} x {_fmt(rf.get('frame_height_px'))}",
+            "source": "-",
+        },
+        {"label": "Binning", "value": _fmt(rf.get("binning")), "source": "-"},
+        {"label": "Filter", "value": _fmt(rf.get("filter")), "source": "FITS / obs_group"},
+        {"label": "Exposure (s)", "value": _fmt(rf.get("exptime_s")), "source": "FITS"},
+    ]
+    return {"fallback": fallback, "warnings": warnings, "rows": rows}
+
+
 def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[str]:
     """Text lines for PDF / tests — Flux Dilution (Gaia) subsection."""
     enabled = bool(getattr(cfg, "gs11_dilution_enabled", False)) if cfg is not None else False
@@ -5507,6 +5637,148 @@ class _PhotometryReportBuilder:
         self._page_footer(c)
         c.showPage()
 
+    def _report_resolved_facts_page(self, c: "canvas.Canvas") -> None:
+        """Resolved-facts block: values the run actually used (site/gain/RN/plate/frame/etc.)."""
+        model = resolved_facts_model(self._pipeline_meta)
+
+        c.setPageSize(self.landscape(self.A4))
+        y = self.PAGE_H - self.M_TOP
+        c.setFont(self.FONT_BOLD, 16)
+        c.setFillColor(self.C_TITLE)
+        c.drawString(self.M_LEFT, y - 0.45 * self.cm, "Configuration - resolved facts (as run)")
+        c.setFillColor(self.colors.black)
+        y -= 1.2 * self.cm
+
+        c.setFont(self.FONT_OBL, 8)
+        c.drawString(
+            self.M_LEFT, y,
+            "Values the run actually used, resolved from FITS / WCS / DB at run time "
+            "(config values are only fallbacks).",
+        )
+        y -= 0.6 * self.cm
+
+        if model["fallback"]:
+            c.setFont(self.FONT_BOLD, 9)
+            c.setFillColor(self.colors.HexColor("#b00000"))
+            for w in model["warnings"]:
+                for ln in textwrap.wrap(w, width=150):
+                    c.drawString(self.M_LEFT, y, ln)
+                    y -= 0.4 * self.cm
+            c.setFillColor(self.colors.black)
+            y -= 0.2 * self.cm
+
+        col_lbl = self.M_LEFT
+        col_val = self.M_LEFT + 7.0 * self.cm
+        col_src = self.M_LEFT + 20.0 * self.cm
+        c.setFont(self.FONT_BOLD, 8.5)
+        c.setFillColor(self.C_TITLE)
+        c.drawString(col_lbl, y, "fact")
+        c.drawString(col_val, y, "run value")
+        c.drawString(col_src, y, "source")
+        c.setFillColor(self.colors.black)
+        y -= 0.45 * self.cm
+
+        c.setFont(self.FONT_REG, 9)
+        for row in model["rows"]:
+            if y < self._layout_y_floor() + 1.0 * self.cm:
+                y = self._layout_page_break(c)
+            c.drawString(col_lbl, y, str(row["label"]))
+            c.drawString(col_val, y, str(row["value"])[:80])
+            c.drawString(col_src, y, str(row["source"])[:42])
+            y -= 0.45 * self.cm
+
+        self._page_footer(c)
+        c.showPage()
+
+    def _report_full_config_snapshot_pages(self, c: "canvas.Canvas") -> None:
+        """Appendix: the complete as-run config snapshot, grouped by phase, multi-column."""
+        model = full_config_snapshot_model(self._pipeline_meta)
+
+        def _fmt(v: Any) -> str:
+            if isinstance(v, bool):
+                return "True" if v else "False"
+            if isinstance(v, float):
+                return f"{v:g}"
+            if isinstance(v, dict):
+                s = "{}" if not v else json.dumps(v, sort_keys=True)
+            elif v is None:
+                s = "None"
+            else:
+                s = str(v)
+            return s if len(s) <= 34 else s[:31] + "..."
+
+        n_cols = 3
+        col_gap = 0.4 * self.cm
+        col_w = (self.USE_W - (n_cols - 1) * col_gap) / n_cols
+        col_x = [self.M_LEFT + i * (col_w + col_gap) for i in range(n_cols)]
+        row_h = 0.34 * self.cm
+
+        c.setPageSize(self.landscape(self.A4))
+        y_top = self.PAGE_H - self.M_TOP
+
+        def _new_page(title: str) -> tuple[float, int]:
+            c.setPageSize(self.landscape(self.A4))
+            yy = self.PAGE_H - self.M_TOP
+            c.setFont(self.FONT_BOLD, 16)
+            c.setFillColor(self.C_TITLE)
+            c.drawString(self.M_LEFT, yy - 0.45 * self.cm, title)
+            c.setFillColor(self.colors.black)
+            return yy - 1.2 * self.cm, 0
+
+        y, col = _new_page("Full configuration snapshot (as run)")
+        c.setFont(self.FONT_OBL, 8)
+        c.drawString(
+            self.M_LEFT, y,
+            f"Complete as-run configuration ({model['n_keys']} keys) from "
+            "provenance.config_snapshot, grouped by phase. This is the copy of the config "
+            "taken from the run, not from disk.",
+        )
+        y -= 0.55 * self.cm
+        if model["fallback"]:
+            c.setFont(self.FONT_BOLD, 9)
+            c.setFillColor(self.colors.HexColor("#b00000"))
+            c.drawString(
+                self.M_LEFT, y,
+                "provenance snapshot missing - showing live config, not run config",
+            )
+            c.setFillColor(self.colors.black)
+            y -= 0.5 * self.cm
+        content_top = y
+        floor = self._layout_y_floor() + 0.8 * self.cm
+
+        def _advance(yy: float, cc: int) -> tuple[float, int]:
+            """Move down one row; wrap to the next column / page when the column is full."""
+            yy -= row_h
+            if yy < floor:
+                cc += 1
+                if cc >= n_cols:
+                    self._page_footer(c)
+                    c.showPage()
+                    ny, _ = _new_page("Full configuration snapshot (cont.)")
+                    return ny, 0
+                return content_top, cc
+            return yy, cc
+
+        for phase in model["phases"]:
+            entries = model["by_phase"].get(phase, [])
+            # phase header
+            if y < floor:
+                y, col = _advance(y, col)
+            c.setFont(self.FONT_BOLD, 8.5)
+            c.setFillColor(self.C_TITLE)
+            c.drawString(col_x[col], y, f"[{phase}] ({len(entries)})")
+            c.setFillColor(self.colors.black)
+            y, col = _advance(y, col)
+            c.setFont(self.FONT_REG, 7)
+            for key, val in entries:
+                c.drawString(col_x[col], y, f"{key} = {_fmt(val)}")
+                y, col = _advance(y, col)
+            # blank line between phases
+            y, col = _advance(y, col)
+
+        self._page_footer(c)
+        c.showPage()
+
     def build_pdf(self) -> Path:
 
         self._overflow_violations.clear()
@@ -5655,6 +5927,14 @@ class _PhotometryReportBuilder:
             self._report_configuration_page(c)
         except Exception as exc:  # noqa: BLE001
             logging.warning("PDF Configuration page skipped (non-fatal): %s", exc)
+        try:
+            self._report_resolved_facts_page(c)
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("PDF resolved-facts page skipped (non-fatal): %s", exc)
+        try:
+            self._report_full_config_snapshot_pages(c)
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("PDF full-config snapshot appendix skipped (non-fatal): %s", exc)
 
         c.save()
         if self._verify_overflow and self._overflow_violations:

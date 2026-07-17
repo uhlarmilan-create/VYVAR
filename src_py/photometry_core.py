@@ -6266,6 +6266,113 @@ def _phase2a_observer_location_dict(
     }
 
 
+def _fits_header_facts(header: Any) -> dict[str, Any]:
+    """Best-effort filter / exptime / binning from a FITS header (metadata only)."""
+    out: dict[str, Any] = {"filter": None, "exptime_s": None, "binning": None}
+    if header is None:
+        return out
+    try:
+        _flt = header.get("FILTER")
+        if _flt is not None and str(_flt).strip():
+            out["filter"] = str(_flt).strip()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        _exp = header.get("EXPTIME", header.get("EXPOSURE"))
+        if _exp is not None and str(_exp).strip() != "":
+            out["exptime_s"] = float(_exp)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        _xb = header.get("XBINNING")
+        _yb = header.get("YBINNING")
+        if _xb is not None and _yb is not None:
+            out["binning"] = f"{int(float(_xb))}x{int(float(_yb))}"
+        elif _xb is not None:
+            out["binning"] = f"{int(float(_xb))}x{int(float(_xb))}"
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
+def _build_phase2a_resolved_facts(
+    *,
+    cfg: Any,
+    gain_res: Any,
+    rn_res: Any,
+    gain_value: float | None,
+    rn_value: float | None,
+    site: Any,
+    sat_limit: float | None,
+    plate_scale_arcsec: float | None,
+    frame_width_px: int | None,
+    frame_height_px: int | None,
+    ms_header: Any,
+    obs_group: str,
+) -> dict[str, Any]:
+    """Run-effective resolved facts for ``pipeline_meta.resolved_facts`` (metadata only).
+
+    Records the values the run ACTUALLY used (with sources for gain/read-noise/site) so the
+    report can show an honest "resolved facts" block. Numeric behaviour is unchanged: this is
+    never read by the science path and the anchor comparator ignores ``pipeline_meta.json``.
+    """
+    def _num_or_none(v: Any) -> float | None:
+        try:
+            f = float(v)
+            return f if math.isfinite(f) else None
+        except (TypeError, ValueError):
+            return None
+
+    _hdr = _fits_header_facts(ms_header)
+    if not _hdr.get("filter"):
+        _hdr["filter"] = str(obs_group or "") or None
+
+    # Site: coordinates from the per-draft resolver when it succeeded, else config; id/name
+    # mirror pipeline_meta.observer_location (drawn from cfg).
+    site_ok = bool(getattr(site, "ok", False))
+    if site_ok:
+        site_lat = _num_or_none(getattr(site, "lat", None))
+        site_lon = _num_or_none(getattr(site, "lon", None))
+        site_alt = _num_or_none(getattr(site, "elev", None))
+    else:
+        site_lat = _num_or_none(getattr(cfg, "observer_lat", None))
+        site_lon = _num_or_none(getattr(cfg, "observer_lon", None))
+        site_alt = _num_or_none(getattr(cfg, "observer_alt_m", None))
+    try:
+        loc_id = int(getattr(cfg, "observer_location_id", 0) or 0)
+    except (TypeError, ValueError):
+        loc_id = 0
+
+    return {
+        "site": {
+            "location_id": loc_id,
+            "name": str(getattr(cfg, "observer_location_name", "") or "").strip(),
+            "lat": site_lat,
+            "lon": site_lon,
+            "alt_m": site_alt,
+            "source": str(getattr(site, "source", "unresolved")),
+            "ok": site_ok,
+        },
+        "gain": {
+            "value": _num_or_none(gain_value),
+            "source": (getattr(gain_res, "source", None) if getattr(gain_res, "ok", False) else "default"),
+            "key": getattr(gain_res, "key", None),
+        },
+        "read_noise": {
+            "value": _num_or_none(rn_value),
+            "source": (getattr(rn_res, "source", None) if getattr(rn_res, "ok", False) else "default"),
+            "key": getattr(rn_res, "key", None),
+        },
+        "saturation_adu": _num_or_none(sat_limit),
+        "plate_scale_arcsec_per_px": _num_or_none(plate_scale_arcsec),
+        "frame_width_px": int(frame_width_px) if frame_width_px else None,
+        "frame_height_px": int(frame_height_px) if frame_height_px else None,
+        "binning": _hdr["binning"],
+        "filter": _hdr["filter"],
+        "exptime_s": _hdr["exptime_s"],
+    }
+
+
 _GIT_PROVENANCE_WARNED = False
 # src_py/photometry_core.py -> repo root is parent.parent (git cwd + porcelain path base).
 _REPO_ROOT_FOR_PROVENANCE = Path(__file__).resolve().parent.parent
@@ -6589,6 +6696,11 @@ class _Phase2AState:
     variable_target_catalog_ids: frozenset[str] = field(default_factory=frozenset)
     snr_ap_table: dict[str, Any] | None = None
     equipment_id: int | None = None
+    #: Run-effective resolved facts (metadata only; PARAM-OWNERSHIP-WAVE-A STEP 4).
+    #: gain/read-noise/site sources, saturation, plate scale, frame dims, binning,
+    #: filter, exptime -- captured from the resolvers for the honest full-config report.
+    #: Never read by the science path; the anchor comparator ignores pipeline_meta.
+    resolved_facts: dict[str, Any] = field(default_factory=dict)
 
 
 def _build_phase2a_dynamic_params(
@@ -8138,6 +8250,22 @@ def _phase2a_prepare_shared_state(
     if _k2_src_enum.value != "none" and math.isfinite(float(_k2_bprp)):
         log_event(f"[K2] obs_group {obs_group}: k2={float(_k2_bprp):.6f} source={_k2_src_enum.value}")
 
+    # Run-effective resolved facts for the honest full-config report (metadata only).
+    _resolved_facts = _build_phase2a_resolved_facts(
+        cfg=_cfg,
+        gain_res=_gain_res,
+        rn_res=_rn_res,
+        gain_value=_gain_phot,
+        rn_value=_rn_phot,
+        site=_site,
+        sat_limit=sat_limit_resolved,
+        plate_scale_arcsec=_plate_scale_arcsec,
+        frame_width_px=chip_fw,
+        frame_height_px=chip_fh,
+        ms_header=_ms_header,
+        obs_group=obs_group,
+    )
+
     return _Phase2AState(
         at_df=at_df,
         comp_df=comp_df,
@@ -8186,6 +8314,7 @@ def _phase2a_prepare_shared_state(
         k2_source=str(_k2_src_enum.value),
         variable_target_catalog_ids=_variable_target_cids,
         snr_ap_table=_snr_ap_table,
+        resolved_facts=_resolved_facts,
     )
 
 
@@ -9969,6 +10098,7 @@ def run_phase2a(
                 site_source=state.site_source,
             ),
             "dynamic_params": _dyn,
+            "resolved_facts": state.resolved_facts,
             "common_mode_stability_detrend": bool(
                 state.stability_run_flags.get("common_mode_detrend_applied")
             ),
