@@ -73,6 +73,40 @@ def test_full_snapshot_none_meta_does_not_crash() -> None:
     assert isinstance(model["by_phase"], dict)
 
 
+def test_full_snapshot_completeness_note_trigger() -> None:
+    reg = pr.load_registry()
+    # Complete snapshot (every registry key present) -> no omitted keys, no note.
+    complete = {k: 0 for k in reg}
+    m = full_config_snapshot_model({"provenance": {"config_snapshot": complete}})
+    assert m["registry_count"] == len(reg)
+    assert m["omitted_keys"] == []
+    # Incomplete snapshot -> omitted_keys names exactly the missing registry keys.
+    partial = dict(list(complete.items())[:-3])
+    m2 = full_config_snapshot_model({"provenance": {"config_snapshot": partial}})
+    assert m2["omitted_keys"] == sorted(set(reg) - set(partial))
+    assert len(m2["omitted_keys"]) == 3
+
+
+def test_complete_config_snapshot_covers_all_public_fields() -> None:
+    import dataclasses
+    import json
+
+    import photometry_core as pc
+    from config import AppConfig
+
+    cfg = AppConfig()
+    snap = pc._complete_config_snapshot(cfg, cfg.to_dict())
+
+    public = {f.name for f in dataclasses.fields(cfg) if not f.name.startswith("_")}
+    assert public <= set(snap), f"missing public fields: {sorted(public - set(snap))}"
+    assert set(pr.load_registry()) <= set(snap), "snapshot must cover every registry key"
+    # backfilled derived fields are present and JSON-safe (Path -> str)
+    assert "project_root" in snap and isinstance(snap["project_root"], str)
+    assert "qc_preprocess_workers" in snap
+    assert "plate_solve_fov_deg" in snap
+    json.dumps(snap)  # must be JSON-serializable (would raise on a stray Path)
+
+
 # --------------------------------------------------------------------------- #
 # resolved_facts_model                                                         #
 # --------------------------------------------------------------------------- #

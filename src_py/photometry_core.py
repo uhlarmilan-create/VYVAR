@@ -6495,6 +6495,49 @@ def _resolve_git_provenance() -> tuple[str | None, bool | None, list[dict[str, s
         return None, None, []
 
 
+def _json_safe_snapshot_value(v: Any) -> Any:
+    """Coerce an AppConfig field value to a JSON-serializable form for the snapshot."""
+    from pathlib import Path as _P
+
+    if v is None or isinstance(v, (bool, int, float, str)):
+        return v
+    if isinstance(v, _P):
+        return str(v)
+    if isinstance(v, dict):
+        return {str(k): _json_safe_snapshot_value(x) for k, x in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [_json_safe_snapshot_value(x) for x in v]
+    return str(v)
+
+
+def _complete_config_snapshot(cfg: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Backfill the provenance snapshot so it covers EVERY public AppConfig field.
+
+    ``AppConfig.to_json()`` is a hand-maintained serializer that omits a handful of
+    derived/runtime fields (e.g. project_root, qc_preprocess_workers, plate_solve_fov_deg,
+    blind_index_path, and a few knobs), so ``to_dict()`` yielded fewer keys than the 304-entry
+    registry. For an honest, complete provenance snapshot we backfill any missing public field
+    from ``getattr(cfg, name)`` (JSON-coerced). This does NOT touch ``to_json()`` / config.json
+    (save/load semantics unchanged) and is metadata only -- the anchor comparator ignores
+    pipeline_meta.json, so fresh snapshots become complete without any numeric behaviour change.
+    """
+    try:
+        import dataclasses
+
+        names = [f.name for f in dataclasses.fields(cfg) if not f.name.startswith("_")]
+    except Exception:  # noqa: BLE001
+        return snapshot
+    out = dict(snapshot)
+    for name in names:
+        if name in out:
+            continue
+        try:
+            out[name] = _json_safe_snapshot_value(getattr(cfg, name))
+        except Exception:  # noqa: BLE001
+            continue
+    return out
+
+
 def _build_pipeline_provenance_block(cfg: Any, *, entry_point: str) -> dict[str, Any]:
     """Run provenance stamped into ``pipeline_meta.json`` (last writer wins)."""
     git_hash, git_dirty, dirty_files = _resolve_git_provenance()
@@ -6506,6 +6549,7 @@ def _build_pipeline_provenance_block(cfg: Any, *, entry_point: str) -> dict[str,
         from dataclasses import asdict
 
         config_snapshot = asdict(cfg)
+    config_snapshot = _complete_config_snapshot(cfg, config_snapshot)
     block: dict[str, Any] = {
         "git_hash": git_hash,
         "git_dirty": git_dirty,

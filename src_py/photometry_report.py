@@ -250,10 +250,15 @@ def full_config_snapshot_model(pipeline_meta: dict[str, Any] | None) -> dict[str
     if "other" in by_phase:
         ordered.append("other")
 
+    reg_keys = set(registry)
+    omitted_keys = sorted(reg_keys - set(cfg_dict))
+
     return {
         "source_label": source_label,
         "fallback": fallback,
         "n_keys": len(cfg_dict),
+        "registry_count": len(reg_keys),
+        "omitted_keys": omitted_keys,
         "phases": ordered,
         "by_phase": by_phase,
     }
@@ -5743,6 +5748,22 @@ class _PhotometryReportBuilder:
             )
             c.setFillColor(self.colors.black)
             y -= 0.5 * self.cm
+        # Honesty note: snapshot may cover fewer keys than the 304-entry registry (legacy runs
+        # written before the complete-snapshot writer; fresh runs record the full field set).
+        omitted = model.get("omitted_keys") or []
+        if omitted:
+            c.setFont(self.FONT_OBL, 8)
+            c.setFillColor(self.colors.HexColor("#b00000"))
+            note = (
+                f"{len(omitted)} keys omitted from snapshot: not recorded by the run that wrote "
+                f"it (fresh runs record all {model.get('registry_count', 0)}). Omitted: "
+                + ", ".join(omitted)
+            )
+            for ln in textwrap.wrap(note, width=170)[:3]:
+                c.drawString(self.M_LEFT, y, ln)
+                y -= 0.4 * self.cm
+            c.setFillColor(self.colors.black)
+            y -= 0.1 * self.cm
         content_top = y
         floor = self._layout_y_floor() + 0.8 * self.cm
 
