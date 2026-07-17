@@ -89,6 +89,10 @@ def build_markdown(*, generated_at: str | None = None, git_head: str | None = No
         "Source: `validation/params_registry.json` (editorial metadata) + "
         "`dataclasses.fields(AppConfig)` (defaults and types, from code)."
     )
+    lines.append(
+        "Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` "
+        "(per-parameter plain-language explanations, hand-authored)."
+    )
     lines.append("")
     lines.append(f"{VOLATILE_PREFIX}{generated_at} at git HEAD {git_head}._")
     lines.append("")

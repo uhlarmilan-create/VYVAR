@@ -3,8 +3,9 @@
 <!-- GENERATED FILE -- DO NOT EDIT BY HAND. -->
 Regenerate with `python tools/gen_params_md.py`. Hand edits will be overwritten.
 Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fields(AppConfig)` (defaults and types, from code).
+Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 
-_Generated 2026-07-17T15:40:54Z at git HEAD 083c8e0._
+_Generated 2026-07-17T19:05:37Z at git HEAD 4882f5c._
 
 ## Summary
 
