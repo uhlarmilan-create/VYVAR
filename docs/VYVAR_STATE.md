@@ -1,6 +1,23 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-17** (PARAMS-REGISTRY-UI arc pushed; UI block wave 1 done).
+Last updated: **2026-07-17** (REPO-REORG + PARAM-SOURCE-AUDIT + wave-A ownership; layout stabilized).
+
+## Repository layout (REPO-REORG -- DONE, gate PASS)
+
+Root tidied into a stable layout: production code in `src_py/`, dev material in
+`dev/` (`dev/tests|tools|validation|scripts|sandbox|orchestrator`), all Cursor
+result/task docs in `dev/results/`, scratch in `tmp/` (gitignored). Root `app.py`
+is a thin Streamlit shim. Commits `c611353` (dev/ move) + `8f4d7b4` (src_py/ move).
+Anchor #3 `--full` gate **PASS byte-identical** on `8f4d7b4` (core `3d26f469...`
+n=333; extended `6420f1da...` n=499; git_dirty_code=false). Milan UI smoke
+confirmed (app launched via root shim, Settings + Parameters tab render,
+modified-counter=10) plus e2e draft_000436 anchor run. See CLAUDE.md /
+VYVAR_PROCESS.md for the map; result `CURSOR_RESULT_repo_reorg.md`.
+
+Parameter provenance mapped in PARAM-SOURCE-AUDIT (`dev/results/PARAM_SOURCE_AUDIT.md`
++ `param_source_audit.csv`, 304 keys): one config.json + DB reference tables +
+FITS-resolved values; DB `SETTINGS` table found vestigial. Wave-A ownership arc
+adds the `owner` axis and fixes the config-write render side-effect.
 
 ## UI block
 

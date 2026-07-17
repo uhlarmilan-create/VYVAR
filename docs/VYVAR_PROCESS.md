@@ -8,6 +8,23 @@ discipline lives here; open harness items **DEV-PROCESS-A/B** are spec'd in ROAD
 `docs/VYVAR_CLAUDE_OPERATING_PRINCIPLES.md` (the last governs how Claude reasons and answers; it is
 not optional context).
 
+## Repository layout & ritual paths (post REPO-REORG, 2026-07-17)
+
+Production code lives in `src_py/`; development material in `dev/`
+(`dev/tests`, `dev/tools`, `dev/validation`, `dev/scripts`, `dev/sandbox`,
+`dev/orchestrator`); disposable scratch in `tmp/` (gitignored). See CLAUDE.md
+for the full map.
+
+- **Session baseline / anchor gate:** `python dev/scripts/session_baseline_check.py --fast`
+  (git/config/ledger + pytest) and `--full` (headless `run_full_photometry_pipeline`
+  byte-identical anchor gate).
+- **Registry -> docs:** `python dev/tools/gen_params_md.py` regenerates
+  `docs/VYVAR_PARAMS.md` from `dev/validation/params_registry.json`.
+- **Ledger:** `dev/validation/VYVAR_VALIDATION_LEDGER.json`.
+- **Result-file location rule:** ALL `CURSOR_RESULT_*.md` and `CURSOR_TASK_*.md`
+  working documents go in `dev/results/` (never at the repo root). Sandbox
+  harnesses stay in `tmp/`.
+
 ---
 
 ## Definition of Done (every change)

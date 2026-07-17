@@ -2,6 +2,29 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-17 -- REPO-REORG (src_py/ + dev/ layout, anchor-gated)
+
+Repository root tidied into a stable layout. All VYVAR modules moved to `src_py/`
+(flat imports preserved; path visibility solved at entry points via a root `app.py`
+shim + `dev/scripts/_bootstrap.py` + pytest `pythonpath`). All dev material moved
+under `dev/` (`tests`, `tools`, `validation`, `scripts`, `sandbox`, `orchestrator`),
+and every Cursor result/task doc into `dev/results/`. `git_dirty_code` classifier
+updated from root `*.py` to `src_py/*.py` (+ root `app.py`). One authorized science
+import edit: `repair_catalog_ids.py` moved into `src_py/` with its 6 lazy imports
+de-qualified. Commits: `c611353` (Phase A dev/ move, ~99.4% pure renames), `8f4d7b4`
+(Phase B src_py/ move + entry shims + `__file__` audit). Phase C anchor gate
+`session_baseline_check.py --full` **PASS byte-identical** (core `3d26f469...` n=333;
+extended `6420f1da...` n=499; census 2552/2842; git_dirty_code=false;
+except_fix_counters allowlisted). Milan UI smoke confirmed (root-shim launch,
+Settings + Parameters tab render, modified-counter=10) + e2e draft_000436 anchor run.
+Result: `CURSOR_RESULT_repo_reorg.md`.
+
+Follow-ups same day: PARAM-SOURCE-AUDIT (`dev/results/PARAM_SOURCE_AUDIT.md` +
+`param_source_audit.csv`, 304-key provenance map; commit `1345722`) and
+PARAM-OWNERSHIP-WAVE-A (owner axis + config-write guard + honest full-config report).
+
+---
+
 ## 2026-07-17 -- PARAMS-REGISTRY-UI arc (UI block wave 1: parameters)
 
 Config <-> UI parity turned into a tested property. `validation/params_registry.json`: 304
