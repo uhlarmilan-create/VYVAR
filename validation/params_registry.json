@@ -1,0 +1,3348 @@
+{
+  "aavso_filter_map": {
+    "help": "AAVSO Filter Map (observer parameter).",
+    "kind": "static",
+    "label": "AAVSO Filter Map",
+    "phase": "observer",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aavso_observer_code": {
+    "help": "AAVSO Observer Code (observer parameter).",
+    "kind": "static",
+    "label": "AAVSO Observer Code",
+    "phase": "observer",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "alignment_detection_sigma": {
+    "help": "Alignment Detection Sigma (alignment parameter).",
+    "kind": "static",
+    "label": "Alignment Detection Sigma",
+    "phase": "alignment",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "alignment_max_control_points": {
+    "help": "Alignment Max Control Points (alignment parameter).",
+    "kind": "static",
+    "label": "Alignment Max Control Points",
+    "phase": "alignment",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "alignment_max_stars": {
+    "help": "Alignment Max Stars (alignment parameter).",
+    "kind": "static",
+    "label": "Alignment Max Stars",
+    "phase": "alignment",
+    "range": [
+      10.0,
+      5000.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "annulus_inner_fwhm": {
+    "help": "Annulus Inner FWHM (photometry parameter).",
+    "kind": "resolved",
+    "label": "Annulus Inner FWHM",
+    "phase": "photometry",
+    "range": [
+      1.0,
+      10.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "annulus_outer_fwhm": {
+    "help": "Annulus Outer FWHM (photometry parameter).",
+    "kind": "resolved",
+    "label": "Annulus Outer FWHM",
+    "phase": "photometry",
+    "range": [
+      1.5,
+      12.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_comp_factor": {
+    "help": "Aperture Comp Factor (photometry parameter).",
+    "kind": "static",
+    "label": "Aperture Comp Factor",
+    "phase": "photometry",
+    "range": [
+      0.25,
+      3.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_correction_enabled": {
+    "help": "Aperture Correction Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "Aperture Correction Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_correction_max_contamination": {
+    "help": "Aperture Correction Max Contamination (photometry parameter).",
+    "kind": "static",
+    "label": "Aperture Correction Max Contamination",
+    "phase": "photometry",
+    "range": [
+      0.0,
+      2.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_correction_max_scatter_mag": {
+    "help": "Aperture Correction Max Scatter Mag (photometry parameter).",
+    "kind": "static",
+    "label": "Aperture Correction Max Scatter Mag",
+    "phase": "photometry",
+    "range": [
+      0.0,
+      2.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_correction_min_ref_stars": {
+    "help": "Aperture Correction Min Ref Stars (photometry parameter).",
+    "kind": "static",
+    "label": "Aperture Correction Min Ref Stars",
+    "phase": "photometry",
+    "range": [
+      1.0,
+      50.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_fwhm_factor": {
+    "help": "Aperture FWHM Factor (photometry parameter).",
+    "kind": "resolved",
+    "label": "Aperture FWHM Factor",
+    "phase": "photometry",
+    "range": [
+      0.5,
+      6.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_fwhm_factor_large": {
+    "help": "Aperture FWHM Factor Large (photometry parameter).",
+    "kind": "resolved",
+    "label": "Aperture FWHM Factor Large",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_fwhm_factor_medium": {
+    "help": "Aperture FWHM Factor Medium (photometry parameter).",
+    "kind": "resolved",
+    "label": "Aperture FWHM Factor Medium",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_fwhm_factor_small": {
+    "help": "Aperture FWHM Factor Small (photometry parameter).",
+    "kind": "resolved",
+    "label": "Aperture FWHM Factor Small",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_photometry_enabled": {
+    "help": "Aperture Photometry Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "Aperture Photometry Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_variable_factor": {
+    "help": "Aperture Variable Factor (photometry parameter).",
+    "kind": "static",
+    "label": "Aperture Variable Factor",
+    "phase": "photometry",
+    "range": [
+      0.25,
+      3.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "apply_color_term": {
+    "help": "Apply Color Term (extinction parameter).",
+    "kind": "static",
+    "label": "Apply Color Term",
+    "phase": "extinction",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "archive_root": {
+    "help": "Archive Root (paths parameter).",
+    "kind": "static",
+    "label": "Archive Root",
+    "phase": "paths",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "auto_fwhm_enabled": {
+    "help": "Auto FWHM Enabled (qc parameter).",
+    "kind": "static",
+    "label": "Auto FWHM Enabled",
+    "phase": "qc",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "auto_fwhm_k_factor": {
+    "help": "Auto FWHM K Factor (qc parameter).",
+    "kind": "static",
+    "label": "Auto FWHM K Factor",
+    "phase": "qc",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "auto_fwhm_k_max": {
+    "help": "Auto FWHM K Max (qc parameter).",
+    "kind": "static",
+    "label": "Auto FWHM K Max",
+    "phase": "qc",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "auto_fwhm_k_min": {
+    "help": "Auto FWHM K Min (qc parameter).",
+    "kind": "static",
+    "label": "Auto FWHM K Min",
+    "phase": "qc",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_cluster_coherence_cap": {
+    "help": "Blind Cluster Coherence Cap (detection parameter).",
+    "kind": "static",
+    "label": "Blind Cluster Coherence Cap",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_cluster_eps_deg": {
+    "help": "Blind Cluster Eps Deg (detection parameter).",
+    "kind": "static",
+    "label": "Blind Cluster Eps Deg",
+    "phase": "detection",
+    "range": [
+      0.1,
+      5.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_cluster_min_samples": {
+    "help": "Blind Cluster Min Samples (detection parameter).",
+    "kind": "static",
+    "label": "Blind Cluster Min Samples",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_cluster_min_votes": {
+    "help": "Blind Cluster Min Votes (detection parameter).",
+    "kind": "static",
+    "label": "Blind Cluster Min Votes",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_cluster_vote_span": {
+    "help": "Blind Cluster Vote Span (detection parameter).",
+    "kind": "static",
+    "label": "Blind Cluster Vote Span",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_img_select_mode": {
+    "help": "Blind Img Select Mode (detection parameter).",
+    "kind": "static",
+    "label": "Blind Img Select Mode",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_img_star_budget": {
+    "help": "Blind Img Star Budget (detection parameter).",
+    "kind": "static",
+    "label": "Blind Img Star Budget",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_index_fine_path": {
+    "help": "Blind Index Fine Path (paths parameter).",
+    "kind": "static",
+    "label": "Blind Index Fine Path",
+    "phase": "paths",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "blind_index_path": {
+    "help": "Blind Index Path (paths parameter).",
+    "kind": "static",
+    "label": "Blind Index Path",
+    "phase": "paths",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "blind_index_select_mode": {
+    "help": "Blind Index Select Mode (paths parameter).",
+    "kind": "static",
+    "label": "Blind Index Select Mode",
+    "phase": "paths",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "blind_index_wide_path": {
+    "help": "Blind Index Wide Path (paths parameter).",
+    "kind": "static",
+    "label": "Blind Index Wide Path",
+    "phase": "paths",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "blind_prefilter_min": {
+    "help": "Blind Prefilter Min (detection parameter).",
+    "kind": "static",
+    "label": "Blind Prefilter Min",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_scale_tol_frac": {
+    "help": "Blind Scale Tol Frac (detection parameter).",
+    "kind": "static",
+    "label": "Blind Scale Tol Frac",
+    "phase": "detection",
+    "range": [
+      0.02,
+      0.5
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_use_rig_prior": {
+    "help": "Blind Use Rig Prior (detection parameter).",
+    "kind": "static",
+    "label": "Blind Use Rig Prior",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_verify_early_accept": {
+    "help": "Blind Verify Early Accept (detection parameter).",
+    "kind": "static",
+    "label": "Blind Verify Early Accept",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_verify_early_floor": {
+    "help": "Blind Verify Early Floor (detection parameter).",
+    "kind": "static",
+    "label": "Blind Verify Early Floor",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_verify_early_fraction": {
+    "help": "Blind Verify Early Fraction (detection parameter).",
+    "kind": "static",
+    "label": "Blind Verify Early Fraction",
+    "phase": "detection",
+    "range": [
+      0.0,
+      0.95
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_verify_enabled": {
+    "help": "Blind Verify Enabled (detection parameter).",
+    "kind": "static",
+    "label": "Blind Verify Enabled",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_verify_inmemory_catalog": {
+    "help": "Blind Verify Inmemory Catalog (detection parameter).",
+    "kind": "static",
+    "label": "Blind Verify Inmemory Catalog",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_verify_match_tol_px": {
+    "help": "Blind Verify Match Tol PX (detection parameter).",
+    "kind": "static",
+    "label": "Blind Verify Match Tol PX",
+    "phase": "detection",
+    "range": [
+      0.5,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_verify_min_fraction": {
+    "help": "Blind Verify Min Fraction (detection parameter).",
+    "kind": "static",
+    "label": "Blind Verify Min Fraction",
+    "phase": "detection",
+    "range": [
+      0.05,
+      0.95
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_verify_min_matches": {
+    "help": "Blind Verify Min Matches (detection parameter).",
+    "kind": "static",
+    "label": "Blind Verify Min Matches",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "blind_verify_top_n": {
+    "help": "Blind Verify Top N (detection parameter).",
+    "kind": "static",
+    "label": "Blind Verify Top N",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "bpm_dark_mad_sigma": {
+    "help": "Bpm Dark Mad Sigma (calibration parameter).",
+    "kind": "static",
+    "label": "Bpm Dark Mad Sigma",
+    "phase": "calibration",
+    "range": [
+      2.0,
+      12.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "cal_diag_autocorrect_enabled": {
+    "help": "Cal Diag Autocorrect Enabled (calibration parameter).",
+    "kind": "static",
+    "label": "Cal Diag Autocorrect Enabled",
+    "phase": "calibration",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "cal_diag_gate_enabled": {
+    "help": "Cal Diag Gate Enabled (calibration parameter).",
+    "kind": "static",
+    "label": "Cal Diag Gate Enabled",
+    "phase": "calibration",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "cal_diag_hard_sigma": {
+    "help": "Cal Diag Hard Sigma (calibration parameter).",
+    "kind": "static",
+    "label": "Cal Diag Hard Sigma",
+    "phase": "calibration",
+    "range": [
+      3.0,
+      10.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "cal_diag_rel_tol": {
+    "help": "Cal Diag Rel Tol (calibration parameter).",
+    "kind": "static",
+    "label": "Cal Diag Rel Tol",
+    "phase": "calibration",
+    "range": [
+      0.0,
+      0.2
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "cal_diag_sat_warn_frac": {
+    "help": "Cal Diag Sat Warn Frac (calibration parameter).",
+    "kind": "static",
+    "label": "Cal Diag Sat Warn Frac",
+    "phase": "calibration",
+    "range": [
+      0.5,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "calibration_library_native_binning": {
+    "help": "Calibration Library Native Binning (calibration parameter).",
+    "kind": "static",
+    "label": "Calibration Library Native Binning",
+    "phase": "calibration",
+    "range": [
+      1.0,
+      16.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "calibration_library_root": {
+    "help": "Calibration Library Root (paths parameter).",
+    "kind": "static",
+    "label": "Calibration Library Root",
+    "phase": "paths",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "calibration_master_ccd_temp_tolerance_c": {
+    "help": "Calibration Master CCD TEMP Tolerance C (calibration parameter).",
+    "kind": "static",
+    "label": "Calibration Master CCD TEMP Tolerance C",
+    "phase": "calibration",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "catalog_query_max_rows": {
+    "help": "Catalog Query Max Rows (detection parameter).",
+    "kind": "static",
+    "label": "Catalog Query Max Rows",
+    "phase": "detection",
+    "range": [
+      1000.0,
+      500000.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "check_select_rms_floor": {
+    "help": "Check Select RMS Floor (trust parameter).",
+    "kind": "static",
+    "label": "Check Select RMS Floor",
+    "phase": "trust",
+    "range": [
+      0.0,
+      0.01
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "check_star_min_epochs": {
+    "help": "Check Star Min Epochs (trust parameter).",
+    "kind": "static",
+    "label": "Check Star Min Epochs",
+    "phase": "trust",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "cog_ac_factor_max": {
+    "help": "COG Ac Factor Max (photometry parameter).",
+    "kind": "static",
+    "label": "COG Ac Factor Max",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "cog_aperture_correction_enabled": {
+    "help": "COG Aperture Correction Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "COG Aperture Correction Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "cog_isolation_fwhm": {
+    "help": "COG Isolation FWHM (photometry parameter).",
+    "kind": "static",
+    "label": "COG Isolation FWHM",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "cog_ladder_step_px": {
+    "help": "COG Ladder Step PX (photometry parameter).",
+    "kind": "static",
+    "label": "COG Ladder Step PX",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "cog_min_stars": {
+    "help": "COG Min Stars (photometry parameter).",
+    "kind": "static",
+    "label": "COG Min Stars",
+    "phase": "photometry",
+    "range": [
+      1.0,
+      500.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "cog_ref_fwhm": {
+    "help": "COG Ref FWHM (photometry parameter).",
+    "kind": "static",
+    "label": "COG Ref FWHM",
+    "phase": "photometry",
+    "range": [
+      1.5,
+      10.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "cog_sat_frac": {
+    "help": "COG Sat Frac (photometry parameter).",
+    "kind": "static",
+    "label": "COG Sat Frac",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "cog_snr_min": {
+    "help": "COG SNR Min (photometry parameter).",
+    "kind": "static",
+    "label": "COG SNR Min",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "comp_clip_sigma": {
+    "help": "Comp Clip Sigma (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Clip Sigma",
+    "phase": "comp_selection",
+    "range": [
+      3.0,
+      10.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_contamination_penalty_k": {
+    "help": "Comp Contamination Penalty K (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Contamination Penalty K",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_iterative_clip_enabled": {
+    "help": "Comp Iterative Clip Enabled (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Iterative Clip Enabled",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_max_delta_bprp": {
+    "help": "Comp Max Delta BPRP (comp_selection parameter).",
+    "kind": "resolved",
+    "label": "Comp Max Delta BPRP",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      5.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_max_slope_mmag_hr": {
+    "help": "Comp Max Slope Mmag Hr (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Max Slope Mmag Hr",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      500.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_qa_enabled": {
+    "help": "Comp Qa Enabled (trust parameter).",
+    "kind": "static",
+    "label": "Comp Qa Enabled",
+    "phase": "trust",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_select_rms_floor": {
+    "help": "Comp Select RMS Floor (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Select RMS Floor",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_slope_significance_k": {
+    "help": "Comp Slope Significance K (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Slope Significance K",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      10.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_sparse_fallback_enabled": {
+    "help": "Comp Sparse Fallback Enabled (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Sparse Fallback Enabled",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_sparse_fallback_min": {
+    "help": "Comp Sparse Fallback Min (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Sparse Fallback Min",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_tier1_bprp_limit": {
+    "help": "Comp Tier1 BPRP Limit (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Tier1 BPRP Limit",
+    "phase": "comp_selection",
+    "range": [
+      0.02,
+      5.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_tier1_weight": {
+    "help": "Comp Tier1 Weight (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Tier1 Weight",
+    "phase": "comp_selection",
+    "range": [
+      0.01,
+      1.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_tier2_bprp_limit": {
+    "help": "Comp Tier2 BPRP Limit (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Tier2 BPRP Limit",
+    "phase": "comp_selection",
+    "range": [
+      0.05,
+      5.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_tier2_weight": {
+    "help": "Comp Tier2 Weight (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Tier2 Weight",
+    "phase": "comp_selection",
+    "range": [
+      0.01,
+      1.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_tier3_bprp_limit": {
+    "help": "Comp Tier3 BPRP Limit (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Tier3 BPRP Limit",
+    "phase": "comp_selection",
+    "range": [
+      0.05,
+      5.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_tier3_weight": {
+    "help": "Comp Tier3 Weight (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Tier3 Weight",
+    "phase": "comp_selection",
+    "range": [
+      0.01,
+      1.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_tier4_bprp_limit": {
+    "help": "Comp Tier4 BPRP Limit (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Tier4 BPRP Limit",
+    "phase": "comp_selection",
+    "range": [
+      0.05,
+      5.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_tier4_weight": {
+    "help": "Comp Tier4 Weight (comp_selection parameter).",
+    "kind": "static",
+    "label": "Comp Tier4 Weight",
+    "phase": "comp_selection",
+    "range": [
+      0.01,
+      1.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "comp_trust_min_comps": {
+    "help": "Comp Trust Min Comps (trust parameter).",
+    "kind": "static",
+    "label": "Comp Trust Min Comps",
+    "phase": "trust",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "crowding_blend_tighten_threshold": {
+    "help": "Crowding Blend Tighten Threshold (detection parameter).",
+    "kind": "static",
+    "label": "Crowding Blend Tighten Threshold",
+    "phase": "detection",
+    "range": [
+      0.0,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "crowding_classifier_enabled": {
+    "help": "Crowding Classifier Enabled (detection parameter).",
+    "kind": "static",
+    "label": "Crowding Classifier Enabled",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "crowding_comp_availability_loosen_count": {
+    "help": "Crowding Comp Availability Loosen Count (detection parameter).",
+    "kind": "static",
+    "label": "Crowding Comp Availability Loosen Count",
+    "phase": "detection",
+    "range": [
+      0.0,
+      1000000.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "crowding_tighten_min_fwhm_px": {
+    "help": "Crowding Tighten Min FWHM PX (detection parameter).",
+    "kind": "static",
+    "label": "Crowding Tighten Min FWHM PX",
+    "phase": "detection",
+    "range": [
+      0.0,
+      30.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "dao_qc_in_calibrate": {
+    "help": "DAO QC In Calibrate (calibration parameter).",
+    "kind": "static",
+    "label": "DAO QC In Calibrate",
+    "phase": "calibration",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "database_path": {
+    "help": "Database Path (paths parameter).",
+    "kind": "static",
+    "label": "Database Path",
+    "phase": "paths",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "debug_platesolver": {
+    "help": "Debug Platesolver (detection parameter).",
+    "kind": "static",
+    "label": "Debug Platesolver",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "democratic_detrend_enabled": {
+    "help": "Democratic Detrend Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "Democratic Detrend Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "democratic_sg_window_frac": {
+    "help": "Democratic SG Window Frac (photometry parameter).",
+    "kind": "static",
+    "label": "Democratic SG Window Frac",
+    "phase": "photometry",
+    "range": [
+      0.05,
+      0.95
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "epsf_min_stars": {
+    "help": "EPSF Min Stars (detection parameter).",
+    "kind": "static",
+    "label": "EPSF Min Stars",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "err_background_mode": {
+    "help": "Err Background Mode (photometry parameter).",
+    "kind": "static",
+    "label": "Err Background Mode",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "err_empty_apertures_min": {
+    "help": "Err Empty Apertures Min (photometry parameter).",
+    "kind": "static",
+    "label": "Err Empty Apertures Min",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "err_empty_apertures_n": {
+    "help": "Err Empty Apertures N (photometry parameter).",
+    "kind": "static",
+    "label": "Err Empty Apertures N",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "exoplanet_local_db_path": {
+    "help": "Exoplanet Local Db Path (paths parameter).",
+    "kind": "static",
+    "label": "Exoplanet Local Db Path",
+    "phase": "paths",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "exoplanet_match_max_sep_arcsec": {
+    "help": "Exoplanet Match Max Sep Arcsec (detection parameter).",
+    "kind": "static",
+    "label": "Exoplanet Match Max Sep Arcsec",
+    "phase": "detection",
+    "range": [
+      0.5,
+      30.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "export_arcsec_per_px": {
+    "help": "Export Arcsec Per PX (export parameter).",
+    "kind": "static",
+    "label": "Export Arcsec Per PX",
+    "phase": "export",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "field_density_adaptive_enabled": {
+    "help": "Field Density Adaptive Enabled (detection parameter).",
+    "kind": "static",
+    "label": "Field Density Adaptive Enabled",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "field_density_dense_threshold": {
+    "help": "Field Density Dense Threshold (detection parameter).",
+    "kind": "static",
+    "label": "Field Density Dense Threshold",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "field_density_sparse_threshold": {
+    "help": "Field Density Sparse Threshold (detection parameter).",
+    "kind": "static",
+    "label": "Field Density Sparse Threshold",
+    "phase": "detection",
+    "range": [
+      1.0,
+      50000.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "frame_align_residual_gate_enabled": {
+    "help": "Frame Align Residual Gate Enabled (qc parameter).",
+    "kind": "static",
+    "label": "Frame Align Residual Gate Enabled",
+    "phase": "qc",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "frame_align_residual_max_frac": {
+    "help": "Frame Align Residual Max Frac (qc parameter).",
+    "kind": "static",
+    "label": "Frame Align Residual Max Frac",
+    "phase": "qc",
+    "range": [
+      0.05,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "frame_align_residual_min_keep_frames": {
+    "help": "Frame Align Residual Min Keep Frames (qc parameter).",
+    "kind": "static",
+    "label": "Frame Align Residual Min Keep Frames",
+    "phase": "qc",
+    "range": [
+      3.0,
+      100000.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "frame_height_px": {
+    "help": "Frame Height PX (detection parameter).",
+    "kind": "resolved",
+    "label": "Frame Height PX",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "frame_quality_fwhm_factor": {
+    "help": "Frame Quality FWHM Factor (qc parameter).",
+    "kind": "static",
+    "label": "Frame Quality FWHM Factor",
+    "phase": "qc",
+    "range": [
+      0.8,
+      3.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "frame_quality_gate_enabled": {
+    "help": "Frame Quality Gate Enabled (qc parameter).",
+    "kind": "static",
+    "label": "Frame Quality Gate Enabled",
+    "phase": "qc",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "frame_quality_min_keep_frames": {
+    "help": "Frame Quality Min Keep Frames (qc parameter).",
+    "kind": "static",
+    "label": "Frame Quality Min Keep Frames",
+    "phase": "qc",
+    "range": [
+      3.0,
+      100000.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "frame_quality_ratio_k": {
+    "help": "Frame Quality Ratio K (qc parameter).",
+    "kind": "static",
+    "label": "Frame Quality Ratio K",
+    "phase": "qc",
+    "range": [
+      2.0,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "frame_width_px": {
+    "help": "Frame Width PX (detection parameter).",
+    "kind": "resolved",
+    "label": "Frame Width PX",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "gaia_db_path": {
+    "help": "Gaia Db Path (paths parameter).",
+    "kind": "static",
+    "label": "Gaia Db Path",
+    "phase": "paths",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "gain": {
+    "help": "Gain (photometry parameter).",
+    "kind": "resolved",
+    "label": "Gain",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "global_comp_pool_enabled": {
+    "help": "Global Comp Pool Enabled (comp_selection parameter).",
+    "kind": "static",
+    "label": "Global Comp Pool Enabled",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "gs11_comp_max_dilution": {
+    "help": "GS11 Comp Max Dilution (photometry parameter).",
+    "kind": "static",
+    "label": "GS11 Comp Max Dilution",
+    "phase": "photometry",
+    "range": [
+      0.01,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "gs11_comp_suspect_dilution": {
+    "help": "GS11 Comp Suspect Dilution (photometry parameter).",
+    "kind": "static",
+    "label": "GS11 Comp Suspect Dilution",
+    "phase": "photometry",
+    "range": [
+      0.01,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "gs11_dilution_aperture_arcsec": {
+    "help": "GS11 Dilution Aperture Arcsec (photometry parameter).",
+    "kind": "static",
+    "label": "GS11 Dilution Aperture Arcsec",
+    "phase": "photometry",
+    "range": [
+      0.0,
+      120.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "gs11_dilution_enabled": {
+    "help": "GS11 Dilution Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "GS11 Dilution Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "gs11_dilution_mag_limit_delta": {
+    "help": "GS11 Dilution Mag Limit Delta (photometry parameter).",
+    "kind": "static",
+    "label": "GS11 Dilution Mag Limit Delta",
+    "phase": "photometry",
+    "range": [
+      0.5,
+      15.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "gs11_target_min_dilution": {
+    "help": "GS11 Target Min Dilution (photometry parameter).",
+    "kind": "static",
+    "label": "GS11 Target Min Dilution",
+    "phase": "photometry",
+    "range": [
+      0.01,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_color_bg_box_px": {
+    "help": "HRD Color Bg Box PX (reports parameter).",
+    "kind": "static",
+    "label": "HRD Color Bg Box PX",
+    "phase": "reports",
+    "range": [
+      32.0,
+      512.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_color_chroma_boost": {
+    "help": "HRD Color Chroma Boost (reports parameter).",
+    "kind": "static",
+    "label": "HRD Color Chroma Boost",
+    "phase": "reports",
+    "range": [
+      1.0,
+      3.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_color_chroma_snr": {
+    "help": "HRD Color Chroma SNR (reports parameter).",
+    "kind": "static",
+    "label": "HRD Color Chroma SNR",
+    "phase": "reports",
+    "range": [
+      0.0,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_color_field_enabled": {
+    "help": "HRD Color Field Enabled (reports parameter).",
+    "kind": "static",
+    "label": "HRD Color Field Enabled",
+    "phase": "reports",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_color_highlight_mode": {
+    "help": "HRD Color Highlight Mode (reports parameter).",
+    "kind": "static",
+    "label": "HRD Color Highlight Mode",
+    "phase": "reports",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_color_saturation": {
+    "help": "HRD Color Saturation (reports parameter).",
+    "kind": "static",
+    "label": "HRD Color Saturation",
+    "phase": "reports",
+    "range": [
+      0.0,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_color_white_point": {
+    "help": "HRD Color White Point (reports parameter).",
+    "kind": "static",
+    "label": "HRD Color White Point",
+    "phase": "reports",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_dsc_confirm_prob": {
+    "help": "HRD DSC Confirm Prob (reports parameter).",
+    "kind": "static",
+    "label": "HRD DSC Confirm Prob",
+    "phase": "reports",
+    "range": [
+      0.5,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_enrich_max_candidates": {
+    "help": "HRD Enrich Max Candidates (reports parameter).",
+    "kind": "static",
+    "label": "HRD Enrich Max Candidates",
+    "phase": "reports",
+    "range": [
+      1.0,
+      100.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_enrich_tap_timeout_s": {
+    "help": "HRD Enrich Tap Timeout S (reports parameter).",
+    "kind": "static",
+    "label": "HRD Enrich Tap Timeout S",
+    "phase": "reports",
+    "range": [
+      5.0,
+      120.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_max_per_category": {
+    "help": "HRD Max Per Category (reports parameter).",
+    "kind": "static",
+    "label": "HRD Max Per Category",
+    "phase": "reports",
+    "range": [
+      1.0,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_min_per_net": {
+    "help": "HRD Min Per Net (reports parameter).",
+    "kind": "static",
+    "label": "HRD Min Per Net",
+    "phase": "reports",
+    "range": [
+      0.0,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_nss_category_enabled": {
+    "help": "HRD NSS Category Enabled (reports parameter).",
+    "kind": "static",
+    "label": "HRD NSS Category Enabled",
+    "phase": "reports",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_online_enrich_enabled": {
+    "help": "HRD Online Enrich Enabled (reports parameter).",
+    "kind": "static",
+    "label": "HRD Online Enrich Enabled",
+    "phase": "reports",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_parallax_min_mas": {
+    "help": "HRD Parallax Min Mas (reports parameter).",
+    "kind": "static",
+    "label": "HRD Parallax Min Mas",
+    "phase": "reports",
+    "range": [
+      0.0,
+      10.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_parallax_snr_min": {
+    "help": "HRD Parallax SNR Min (reports parameter).",
+    "kind": "static",
+    "label": "HRD Parallax SNR Min",
+    "phase": "reports",
+    "range": [
+      1.0,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "hrd_simbad_enrich_enabled": {
+    "help": "HRD Simbad Enrich Enabled (reports parameter).",
+    "kind": "static",
+    "label": "HRD Simbad Enrich Enabled",
+    "phase": "reports",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "k2_ceiling": {
+    "help": "K2 Ceiling (extinction parameter).",
+    "kind": "static",
+    "label": "K2 Ceiling",
+    "phase": "extinction",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "k2_defaults_bprp": {
+    "help": "K2 Defaults BPRP (extinction parameter).",
+    "kind": "static",
+    "label": "K2 Defaults BPRP",
+    "phase": "extinction",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "k2_fit_consistency_sigma": {
+    "help": "K2 Fit Consistency Sigma (extinction parameter).",
+    "kind": "static",
+    "label": "K2 Fit Consistency Sigma",
+    "phase": "extinction",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "k2_fit_enabled": {
+    "help": "K2 Fit Enabled (extinction parameter).",
+    "kind": "static",
+    "label": "K2 Fit Enabled",
+    "phase": "extinction",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "k2_fit_lit_factor": {
+    "help": "K2 Fit Lit Factor (extinction parameter).",
+    "kind": "static",
+    "label": "K2 Fit Lit Factor",
+    "phase": "extinction",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "k2_fit_min_detectability": {
+    "help": "K2 Fit Min Detectability (extinction parameter).",
+    "kind": "static",
+    "label": "K2 Fit Min Detectability",
+    "phase": "extinction",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "k2_mode": {
+    "help": "K2 Mode (extinction parameter).",
+    "kind": "static",
+    "label": "K2 Mode",
+    "phase": "extinction",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "lc_quality_min_frames": {
+    "help": "Lc Quality Min Frames (trust parameter).",
+    "kind": "static",
+    "label": "Lc Quality Min Frames",
+    "phase": "trust",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "lc_quality_min_normal_frac": {
+    "help": "Lc Quality Min Normal Frac (trust parameter).",
+    "kind": "static",
+    "label": "Lc Quality Min Normal Frac",
+    "phase": "trust",
+    "range": [
+      0.1,
+      1.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "lc_quality_short_min_frames": {
+    "help": "Lc Quality Short Min Frames (trust parameter).",
+    "kind": "static",
+    "label": "Lc Quality Short Min Frames",
+    "phase": "trust",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "masterdark_validity_days": {
+    "help": "Masterdark Validity Days (calibration parameter).",
+    "kind": "static",
+    "label": "Masterdark Validity Days",
+    "phase": "calibration",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "masterflat_validity_days": {
+    "help": "Masterflat Validity Days (calibration parameter).",
+    "kind": "static",
+    "label": "Masterflat Validity Days",
+    "phase": "calibration",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "masterstar_accept_mode": {
+    "help": "Masterstar Accept Mode (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Accept Mode",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_best_of_n": {
+    "help": "Masterstar Best Of N (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Best Of N",
+    "phase": "detection",
+    "range": [
+      1.0,
+      25.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_catalog_recovery_min": {
+    "help": "Masterstar Catalog Recovery Min (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Catalog Recovery Min",
+    "phase": "detection",
+    "range": [
+      0.4,
+      0.95
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_centre_rms_max_px": {
+    "help": "Masterstar Centre RMS Max PX (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Centre RMS Max PX",
+    "phase": "detection",
+    "range": [
+      0.5,
+      5.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_dao_pass2_sigma": {
+    "help": "Masterstar DAO Pass2 Sigma (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar DAO Pass2 Sigma",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_dao_threshold_sigma": {
+    "help": "Masterstar DAO Threshold Sigma (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar DAO Threshold Sigma",
+    "phase": "detection",
+    "range": [
+      0.1,
+      6.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_detection_cap_adaptive": {
+    "help": "Masterstar Detection Cap Adaptive (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Detection Cap Adaptive",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_detection_cap_k": {
+    "help": "Masterstar Detection Cap K (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Detection Cap K",
+    "phase": "detection",
+    "range": [
+      0.01,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_detection_cap_max": {
+    "help": "Masterstar Detection Cap Max (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Detection Cap Max",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_detection_cap_min": {
+    "help": "Masterstar Detection Cap Min (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Detection Cap Min",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_distortion_benign_ratio_max": {
+    "help": "Masterstar Distortion Benign Ratio Max (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Distortion Benign Ratio Max",
+    "phase": "detection",
+    "range": [
+      2.0,
+      5.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_false_alarm_p_max": {
+    "help": "Masterstar False Alarm P Max (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar False Alarm P Max",
+    "phase": "detection",
+    "range": [
+      1e-12,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_log_astroalign": {
+    "help": "Masterstar Log Astroalign (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Log Astroalign",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_min_matched_floor": {
+    "help": "Masterstar Min Matched Floor (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Min Matched Floor",
+    "phase": "detection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_odds_k": {
+    "help": "Masterstar Odds K (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Odds K",
+    "phase": "detection",
+    "range": [
+      1.0,
+      100.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_odds_match_floor": {
+    "help": "Masterstar Odds Match Floor (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Odds Match Floor",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_odds_min_quadrants": {
+    "help": "Masterstar Odds Min Quadrants (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Odds Min Quadrants",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_optimizer_mirror_extra_log": {
+    "help": "Masterstar Optimizer Mirror Extra Log (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Optimizer Mirror Extra Log",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_platesolve_nn_refine_max_rms_px": {
+    "help": "Masterstar Platesolve NN Refine Max RMS PX (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Platesolve NN Refine Max RMS PX",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_platesolve_prewrite_relaxed_rms_max_px": {
+    "help": "Masterstar Platesolve Prewrite Relaxed RMS Max PX (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Platesolve Prewrite Relaxed RMS Max PX",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_platesolve_prewrite_rms_max_px": {
+    "help": "Masterstar Platesolve Prewrite RMS Max PX (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Platesolve Prewrite RMS Max PX",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_platesolve_sip_max_order": {
+    "help": "Masterstar Platesolve SIP Max Order (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Platesolve SIP Max Order",
+    "phase": "detection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_platesolve_sip_min_order": {
+    "help": "Masterstar Platesolve SIP Min Order (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Platesolve SIP Min Order",
+    "phase": "detection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_prematch_peak_sigma_floor": {
+    "help": "Masterstar Prematch Peak Sigma Floor (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Prematch Peak Sigma Floor",
+    "phase": "detection",
+    "range": [
+      0.5,
+      6.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_quality_crowded_n_cat_min": {
+    "help": "Masterstar Quality Crowded N Cat Min (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Quality Crowded N Cat Min",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_sibling_min_matched": {
+    "help": "Masterstar Sibling Min Matched (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Sibling Min Matched",
+    "phase": "detection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_sibling_min_quadrants": {
+    "help": "Masterstar Sibling Min Quadrants (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Sibling Min Quadrants",
+    "phase": "detection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_sibling_recovery_enabled": {
+    "help": "Masterstar Sibling Recovery Enabled (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Sibling Recovery Enabled",
+    "phase": "detection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_sibling_rms_max_px": {
+    "help": "Masterstar Sibling RMS Max PX (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Sibling RMS Max PX",
+    "phase": "detection",
+    "range": [
+      0.5,
+      10.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_sibling_stack_n": {
+    "help": "Masterstar Sibling Stack N (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Sibling Stack N",
+    "phase": "detection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_sip_force_rms_guard_ratio": {
+    "help": "Masterstar SIP Force RMS Guard Ratio (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar SIP Force RMS Guard Ratio",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_solver_use_draft_median_if_hint_sep_deg": {
+    "help": "Masterstar Solver Use Draft Median If Hint Sep Deg (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Solver Use Draft Median If Hint Sep Deg",
+    "phase": "detection",
+    "range": [
+      0.0,
+      180.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "masterstar_use_best_frame_fwhm": {
+    "help": "Masterstar Use Best Frame FWHM (detection parameter).",
+    "kind": "static",
+    "label": "Masterstar Use Best Frame FWHM",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "moffat_chi2_limit": {
+    "help": "Moffat Chi2 Limit (photometry parameter).",
+    "kind": "static",
+    "label": "Moffat Chi2 Limit",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "neighbor_sub_centroid_max_fwhm": {
+    "help": "Neighbor Sub Centroid Max FWHM (photometry parameter).",
+    "kind": "static",
+    "label": "Neighbor Sub Centroid Max FWHM",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "neighbor_sub_chi2_max": {
+    "help": "Neighbor Sub Chi2 Max (photometry parameter).",
+    "kind": "static",
+    "label": "Neighbor Sub Chi2 Max",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "neighbor_sub_max_neighbor_overmag": {
+    "help": "Neighbor Sub Max Neighbor Overmag (photometry parameter).",
+    "kind": "static",
+    "label": "Neighbor Sub Max Neighbor Overmag",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "neighbor_sub_max_target_undermag": {
+    "help": "Neighbor Sub Max Target Undermag (photometry parameter).",
+    "kind": "static",
+    "label": "Neighbor Sub Max Target Undermag",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "neighbor_sub_min_recovered_snr": {
+    "help": "Neighbor Sub Min Recovered SNR (photometry parameter).",
+    "kind": "static",
+    "label": "Neighbor Sub Min Recovered SNR",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "neighbor_sub_nn_contam_dmag": {
+    "help": "Neighbor Sub NN Contam Dmag (photometry parameter).",
+    "kind": "static",
+    "label": "Neighbor Sub NN Contam Dmag",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "neighbor_sub_refuse_sep_fwhm": {
+    "help": "Neighbor Sub Refuse Sep FWHM (photometry parameter).",
+    "kind": "static",
+    "label": "Neighbor Sub Refuse Sep FWHM",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "neighbor_sub_regime_dmag_min": {
+    "help": "Neighbor Sub Regime Dmag Min (photometry parameter).",
+    "kind": "static",
+    "label": "Neighbor Sub Regime Dmag Min",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "neighbor_sub_regime_sep_max": {
+    "help": "Neighbor Sub Regime Sep Max (photometry parameter).",
+    "kind": "static",
+    "label": "Neighbor Sub Regime Sep Max",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "neighbor_sub_residual_rms_max": {
+    "help": "Neighbor Sub Residual RMS Max (photometry parameter).",
+    "kind": "static",
+    "label": "Neighbor Sub Residual RMS Max",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "nonlinearity_fwhm_ratio": {
+    "help": "Nonlinearity FWHM Ratio (photometry parameter).",
+    "kind": "static",
+    "label": "Nonlinearity FWHM Ratio",
+    "phase": "photometry",
+    "range": [
+      1.01,
+      3.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "nonlinearity_peak_percentile": {
+    "help": "Nonlinearity Peak Percentile (photometry parameter).",
+    "kind": "static",
+    "label": "Nonlinearity Peak Percentile",
+    "phase": "photometry",
+    "range": [
+      0.0,
+      50.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "observer_alt_m": {
+    "help": "Observer Alt M (observer parameter).",
+    "kind": "static",
+    "label": "Observer Alt M",
+    "phase": "observer",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "observer_code": {
+    "help": "Observer Code (observer parameter).",
+    "kind": "static",
+    "label": "Observer Code",
+    "phase": "observer",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "observer_lat": {
+    "help": "Observer Lat (observer parameter).",
+    "kind": "static",
+    "label": "Observer Lat",
+    "phase": "observer",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "observer_location_id": {
+    "help": "Observer Location ID (observer parameter).",
+    "kind": "static",
+    "label": "Observer Location ID",
+    "phase": "observer",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "observer_location_name": {
+    "help": "Observer Location Name (observer parameter).",
+    "kind": "static",
+    "label": "Observer Location Name",
+    "phase": "observer",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "observer_lon": {
+    "help": "Observer Lon (observer parameter).",
+    "kind": "static",
+    "label": "Observer Lon",
+    "phase": "observer",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "observer_name": {
+    "help": "Observer Name (observer parameter).",
+    "kind": "static",
+    "label": "Observer Name",
+    "phase": "observer",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "per_frame_mp_reserve_ram_gb": {
+    "help": "Per Frame MP Reserve RAM Gb (system parameter).",
+    "kind": "static",
+    "label": "Per Frame MP Reserve RAM Gb",
+    "phase": "system",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "phase01_chip_interior_margin_px": {
+    "help": "Phase01 Chip Interior Margin PX (detection parameter).",
+    "kind": "static",
+    "label": "Phase01 Chip Interior Margin PX",
+    "phase": "detection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase01_comparison_exclude_gaia_extobj": {
+    "help": "Phase01 Comparison Exclude Gaia Extobj (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison Exclude Gaia Extobj",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_exclude_gaia_nss": {
+    "help": "Phase01 Comparison Exclude Gaia NSS (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison Exclude Gaia NSS",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_fov_fraction": {
+    "help": "Phase01 Comparison FOV Fraction (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison FOV Fraction",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_isolation_radius_px": {
+    "help": "Phase01 Comparison Isolation Radius PX (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison Isolation Radius PX",
+    "phase": "comp_selection",
+    "range": [
+      1.0,
+      200.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_mag_bright_threshold": {
+    "help": "Phase01 Comparison Mag Bright Threshold (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison Mag Bright Threshold",
+    "phase": "comp_selection",
+    "range": [
+      6.0,
+      18.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_max_comp_rms": {
+    "help": "Phase01 Comparison Max Comp RMS (comp_selection parameter).",
+    "kind": "resolved",
+    "label": "Phase01 Comparison Max Comp RMS",
+    "phase": "comp_selection",
+    "range": [
+      0.01,
+      0.5
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_max_dist_deg": {
+    "help": "Phase01 Comparison Max Dist Deg (comp_selection parameter).",
+    "kind": "resolved",
+    "label": "Phase01 Comparison Max Dist Deg",
+    "phase": "comp_selection",
+    "range": [
+      0.05,
+      10.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_max_fwhm_factor": {
+    "help": "Phase01 Comparison Max FWHM Factor (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison Max FWHM Factor",
+    "phase": "comp_selection",
+    "range": [
+      0.5,
+      5.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_max_mag_diff": {
+    "help": "Phase01 Comparison Max Mag Diff (comp_selection parameter).",
+    "kind": "resolved",
+    "label": "Phase01 Comparison Max Mag Diff",
+    "phase": "comp_selection",
+    "range": [
+      0.05,
+      5.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_max_mag_diff_absolute": {
+    "help": "Phase01 Comparison Max Mag Diff Absolute (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison Max Mag Diff Absolute",
+    "phase": "comp_selection",
+    "range": [
+      1.0,
+      10.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_max_mag_diff_bright_floor": {
+    "help": "Phase01 Comparison Max Mag Diff Bright Floor (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison Max Mag Diff Bright Floor",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      4.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_max_psf_chi2": {
+    "help": "Phase01 Comparison Max PSF Chi2 (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison Max PSF Chi2",
+    "phase": "comp_selection",
+    "range": [
+      1.0,
+      500.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_min_dist_arcsec": {
+    "help": "Phase01 Comparison Min Dist Arcsec (comp_selection parameter).",
+    "kind": "resolved",
+    "label": "Phase01 Comparison Min Dist Arcsec",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      600.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_min_frames_frac": {
+    "help": "Phase01 Comparison Min Frames Frac (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison Min Frames Frac",
+    "phase": "comp_selection",
+    "range": [
+      0.05,
+      0.95
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_n_comp_max": {
+    "help": "Phase01 Comparison N Comp Max (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison N Comp Max",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_n_comp_min": {
+    "help": "Phase01 Comparison N Comp Min (comp_selection parameter).",
+    "kind": "resolved",
+    "label": "Phase01 Comparison N Comp Min",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_proximity_tiebreak": {
+    "help": "Phase01 Comparison Proximity Tiebreak (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison Proximity Tiebreak",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_rms_bin_mag": {
+    "help": "Phase01 Comparison RMS Bin Mag (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison RMS Bin Mag",
+    "phase": "comp_selection",
+    "range": [
+      0.0001,
+      0.05
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_comparison_rms_outlier_sigma": {
+    "help": "Phase01 Comparison RMS Outlier Sigma (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Comparison RMS Outlier Sigma",
+    "phase": "comp_selection",
+    "range": [
+      1.0,
+      10.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "phase01_ct_extrapolation_tol": {
+    "help": "Phase01 CT Extrapolation Tol (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 CT Extrapolation Tol",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase01_ct_min_comp": {
+    "help": "Phase01 CT Min Comp (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 CT Min Comp",
+    "phase": "comp_selection",
+    "range": [
+      2.0,
+      30.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase01_flux_col": {
+    "help": "Phase01 Flux Col (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Flux Col",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase01_match_radius_arcsec": {
+    "help": "Phase01 Match Radius Arcsec (detection parameter).",
+    "kind": "static",
+    "label": "Phase01 Match Radius Arcsec",
+    "phase": "detection",
+    "range": [
+      3.0,
+      30.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase01_plate_scale_arcsec_per_px": {
+    "help": "Phase01 Plate Scale Arcsec Per PX (detection parameter).",
+    "kind": "resolved",
+    "label": "Phase01 Plate Scale Arcsec Per PX",
+    "phase": "detection",
+    "range": [
+      0.0,
+      30.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase01_tier1_mag": {
+    "help": "Phase01 Tier1 Mag (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Tier1 Mag",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase01_tier2_mag": {
+    "help": "Phase01 Tier2 Mag (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Tier2 Mag",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase01_tier3_mag": {
+    "help": "Phase01 Tier3 Mag (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Tier3 Mag",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase01_tier4_mag": {
+    "help": "Phase01 Tier4 Mag (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Tier4 Mag",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase01_use_bprp_primary": {
+    "help": "Phase01 Use BPRP Primary (comp_selection parameter).",
+    "kind": "static",
+    "label": "Phase01 Use BPRP Primary",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "phase2a_airmass_before_outlier": {
+    "help": "Phase2a Airmass Before Outlier (photometry parameter).",
+    "kind": "static",
+    "label": "Phase2a Airmass Before Outlier",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "photometry_mode": {
+    "help": "Photometry Mode (photometry parameter).",
+    "kind": "static",
+    "label": "Photometry Mode",
+    "phase": "photometry",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "plate_scale_arcsec_per_px": {
+    "help": "Plate Scale Arcsec Per PX (detection parameter).",
+    "kind": "resolved",
+    "label": "Plate Scale Arcsec Per PX",
+    "phase": "detection",
+    "range": [
+      0.1,
+      30.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "plate_solve_fov_deg": {
+    "help": "Plate Solve FOV Deg (detection parameter).",
+    "kind": "resolved",
+    "label": "Plate Solve FOV Deg",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "platesolve_anisotropy_threshold": {
+    "help": "Platesolve Anisotropy Threshold (detection parameter).",
+    "kind": "static",
+    "label": "Platesolve Anisotropy Threshold",
+    "phase": "detection",
+    "range": [
+      1.01,
+      5.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "preprocess_sky_surface_order": {
+    "help": "Preprocess Sky Surface Order (qc parameter).",
+    "kind": "static",
+    "label": "Preprocess Sky Surface Order",
+    "phase": "qc",
+    "range": [
+      0.0,
+      2.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "project_root": {
+    "help": "Project Root (paths parameter).",
+    "kind": "static",
+    "label": "Project Root",
+    "phase": "paths",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "psf_adaptive_enabled": {
+    "help": "PSF Adaptive Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Adaptive Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_adaptive_resolve_fwhm": {
+    "help": "PSF Adaptive Resolve FWHM (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Adaptive Resolve FWHM",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_adaptive_snr_lo": {
+    "help": "PSF Adaptive SNR Lo (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Adaptive SNR Lo",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_chi2_threshold": {
+    "help": "PSF Chi2 Threshold (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Chi2 Threshold",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_group_sep_fwhm": {
+    "help": "PSF Group Sep FWHM (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Group Sep FWHM",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_grouper_enabled": {
+    "help": "PSF Grouper Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Grouper Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_neighbor_include_fwhm": {
+    "help": "PSF Neighbor Include FWHM (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Neighbor Include FWHM",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_neighbor_sub_enabled": {
+    "help": "PSF Neighbor Sub Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Neighbor Sub Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_photometry_enabled": {
+    "help": "PSF Photometry Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Photometry Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_quality_fallback_enabled": {
+    "help": "PSF Quality Fallback Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Quality Fallback Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_spatial_enabled": {
+    "help": "PSF Spatial Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Spatial Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_spatial_grid": {
+    "help": "PSF Spatial Grid (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Spatial Grid",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_spatial_min_stars_per_cell": {
+    "help": "PSF Spatial Min Stars Per Cell (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Spatial Min Stars Per Cell",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "psf_spatial_order": {
+    "help": "PSF Spatial Order (photometry parameter).",
+    "kind": "static",
+    "label": "PSF Spatial Order",
+    "phase": "photometry",
+    "range": [
+      0.0,
+      2.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "pytics_enabled": {
+    "help": "PYTICS Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "PYTICS Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "pytics_n_iter": {
+    "help": "PYTICS N Iter (photometry parameter).",
+    "kind": "static",
+    "label": "PYTICS N Iter",
+    "phase": "photometry",
+    "range": [
+      1.0,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "qc_after_calibrate_enabled": {
+    "help": "QC After Calibrate Enabled (qc parameter).",
+    "kind": "static",
+    "label": "QC After Calibrate Enabled",
+    "phase": "qc",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto"
+  },
+  "qc_dao_detection_sigma": {
+    "help": "QC DAO Detection Sigma (qc parameter).",
+    "kind": "static",
+    "label": "QC DAO Detection Sigma",
+    "phase": "qc",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "qc_elong_limit": {
+    "help": "QC Elong Limit (qc parameter).",
+    "kind": "static",
+    "label": "QC Elong Limit",
+    "phase": "qc",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "qc_fwhm_limit": {
+    "help": "QC FWHM Limit (qc parameter).",
+    "kind": "static",
+    "label": "QC FWHM Limit",
+    "phase": "qc",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "qc_max_background_rms": {
+    "help": "QC Max Background RMS (qc parameter).",
+    "kind": "static",
+    "label": "QC Max Background RMS",
+    "phase": "qc",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "qc_max_hfr": {
+    "help": "QC Max HFR (qc parameter).",
+    "kind": "static",
+    "label": "QC Max HFR",
+    "phase": "qc",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "qc_min_stars": {
+    "help": "QC Min Stars (qc parameter).",
+    "kind": "static",
+    "label": "QC Min Stars",
+    "phase": "qc",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "qc_preprocess_workers": {
+    "help": "QC Preprocess Workers (system parameter).",
+    "kind": "resolved",
+    "label": "QC Preprocess Workers",
+    "phase": "system",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "read_noise": {
+    "help": "Read Noise (photometry parameter).",
+    "kind": "resolved",
+    "label": "Read Noise",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "saturate_limit_fraction": {
+    "help": "Saturate Limit Fraction (detection parameter).",
+    "kind": "static",
+    "label": "Saturate Limit Fraction",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "save_lightcurve_png": {
+    "help": "Save Lightcurve Png (photometry parameter).",
+    "kind": "static",
+    "label": "Save Lightcurve Png",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "savgol_detrend_enabled": {
+    "help": "Savgol Detrend Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "Savgol Detrend Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "savgol_polyorder": {
+    "help": "Savgol Polyorder (photometry parameter).",
+    "kind": "static",
+    "label": "Savgol Polyorder",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "savgol_window_frac": {
+    "help": "Savgol Window Frac (photometry parameter).",
+    "kind": "static",
+    "label": "Savgol Window Frac",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "sigma_sys_mag": {
+    "help": "Sigma Sys Mag (photometry parameter).",
+    "kind": "static",
+    "label": "Sigma Sys Mag",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "sips_dao_fwhm_px": {
+    "help": "Sips DAO FWHM PX (detection parameter).",
+    "kind": "static",
+    "label": "Sips DAO FWHM PX",
+    "phase": "detection",
+    "range": [
+      1.0,
+      8.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "sips_dao_threshold_sigma": {
+    "help": "Sips DAO Threshold Sigma (detection parameter).",
+    "kind": "static",
+    "label": "Sips DAO Threshold Sigma",
+    "phase": "detection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "skip_processed_directory": {
+    "help": "Skip Processed Directory (system parameter).",
+    "kind": "static",
+    "label": "Skip Processed Directory",
+    "phase": "system",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "sky_adu_fallback": {
+    "help": "Sky ADU Fallback (photometry parameter).",
+    "kind": "static",
+    "label": "Sky ADU Fallback",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "sparse_trust_T_green": {
+    "help": "Sparse Trust T Green (trust parameter).",
+    "kind": "static",
+    "label": "Sparse Trust T Green",
+    "phase": "trust",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "sparse_trust_T_red": {
+    "help": "Sparse Trust T Red (trust parameter).",
+    "kind": "static",
+    "label": "Sparse Trust T Red",
+    "phase": "trust",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "sparse_trust_X2_RED": {
+    "help": "Sparse Trust X2 RED (trust parameter).",
+    "kind": "static",
+    "label": "Sparse Trust X2 RED",
+    "phase": "trust",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "sysrem_enabled": {
+    "help": "SYSREM Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "SYSREM Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "sysrem_n_iter": {
+    "help": "SYSREM N Iter (photometry parameter).",
+    "kind": "static",
+    "label": "SYSREM N Iter",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "temporal_bin_window": {
+    "help": "Temporal Bin Window (photometry parameter).",
+    "kind": "static",
+    "label": "Temporal Bin Window",
+    "phase": "photometry",
+    "range": [
+      0.0,
+      51.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom"
+  },
+  "temporal_binning_enabled": {
+    "help": "Temporal Binning Enabled (photometry parameter).",
+    "kind": "static",
+    "label": "Temporal Binning Enabled",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "tess_enabled": {
+    "help": "TESS Enabled (export parameter).",
+    "kind": "static",
+    "label": "TESS Enabled",
+    "phase": "export",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "trust_flag_enabled": {
+    "help": "Trust Flag Enabled (trust parameter).",
+    "kind": "static",
+    "label": "Trust Flag Enabled",
+    "phase": "trust",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_clip_ratio_min": {
+    "help": "Variability Clip Ratio Min (detection parameter).",
+    "kind": "static",
+    "label": "Variability Clip Ratio Min",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_comp_floor_factor": {
+    "help": "Variability Comp Floor Factor (detection parameter).",
+    "kind": "static",
+    "label": "Variability Comp Floor Factor",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_mag_limit": {
+    "help": "Variability Mag Limit (detection parameter).",
+    "kind": "static",
+    "label": "Variability Mag Limit",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_min_amplitude_mag": {
+    "help": "Variability Min Amplitude Mag (detection parameter).",
+    "kind": "static",
+    "label": "Variability Min Amplitude Mag",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_min_frames": {
+    "help": "Variability Min Frames (detection parameter).",
+    "kind": "static",
+    "label": "Variability Min Frames",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_min_frames_frac": {
+    "help": "Variability Min Frames Frac (detection parameter).",
+    "kind": "static",
+    "label": "Variability Min Frames Frac",
+    "phase": "detection",
+    "range": [
+      0.05,
+      0.99
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_min_points_rms": {
+    "help": "Variability Min Points RMS (detection parameter).",
+    "kind": "static",
+    "label": "Variability Min Points RMS",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_min_rms_pct": {
+    "help": "Variability Min RMS Pct (detection parameter).",
+    "kind": "static",
+    "label": "Variability Min RMS Pct",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_p85_filter": {
+    "help": "Variability P85 Filter (detection parameter).",
+    "kind": "static",
+    "label": "Variability P85 Filter",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_sigma_clip": {
+    "help": "Variability Sigma Clip (detection parameter).",
+    "kind": "static",
+    "label": "Variability Sigma Clip",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_sigma_threshold": {
+    "help": "Variability Sigma Threshold (detection parameter).",
+    "kind": "static",
+    "label": "Variability Sigma Threshold",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_slope_floor": {
+    "help": "Variability Slope Floor (detection parameter).",
+    "kind": "static",
+    "label": "Variability Slope Floor",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_smoothness_max": {
+    "help": "Variability Smoothness Max (detection parameter).",
+    "kind": "static",
+    "label": "Variability Smoothness Max",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "variability_vdi_z_threshold": {
+    "help": "Variability VDI Z Threshold (detection parameter).",
+    "kind": "static",
+    "label": "Variability VDI Z Threshold",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "verify_mag_limit": {
+    "help": "Verify Mag Limit (detection parameter).",
+    "kind": "static",
+    "label": "Verify Mag Limit",
+    "phase": "detection",
+    "range": [
+      8.0,
+      18.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "vsx_local_db_path": {
+    "help": "VSX Local Db Path (paths parameter).",
+    "kind": "static",
+    "label": "VSX Local Db Path",
+    "phase": "paths",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "hidden"
+  },
+  "vsx_variable_targets_mag_limit": {
+    "help": "VSX Variable Targets Mag Limit (detection parameter).",
+    "kind": "static",
+    "label": "VSX Variable Targets Mag Limit",
+    "phase": "detection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  }
+}
