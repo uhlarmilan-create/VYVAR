@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 import copy
 import json
@@ -54,7 +56,37 @@ def resolve_comp_sparse_fallback_min(
     return max(2, min(int(n_comp_max), int(raw)))
 
 
+class ConfigPersistError(RuntimeError):
+    """Raised when config.json persistence is attempted outside an explicit UI save action."""
+
+
+# CONFIG-WRITE-GUARD (PARAM-OWNERSHIP-WAVE-A STEP 1): config.json must be persisted ONLY from
+# explicit user save actions in the Streamlit UI layer. The headless / pipeline path may resolve
+# and USE any values it needs, but must never write them back to config.json (run-effective values
+# belong in provenance). UI save handlers wrap their write in ``ui_config_persist()``; every other
+# caller (pipeline, night-run, baseline check) trips ``ConfigPersistError``.
+_CONFIG_PERSIST_ALLOWED = False
+
+
+@contextmanager
+def ui_config_persist() -> Iterator[None]:
+    """Context in which ``save_config_json`` is permitted (explicit UI save action only)."""
+    global _CONFIG_PERSIST_ALLOWED
+    prev = _CONFIG_PERSIST_ALLOWED
+    _CONFIG_PERSIST_ALLOWED = True
+    try:
+        yield
+    finally:
+        _CONFIG_PERSIST_ALLOWED = prev
+
+
 def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
+    if not _CONFIG_PERSIST_ALLOWED:
+        raise ConfigPersistError(
+            "config.json may be persisted only from an explicit UI save action "
+            "(wrap the write in config.ui_config_persist()). The pipeline/headless path "
+            "must not write config.json; run-effective values belong in provenance."
+        )
     path = config_json_path(project_root)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 

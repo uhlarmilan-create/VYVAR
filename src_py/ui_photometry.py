@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from config import AppConfig, save_config_json
+from config import AppConfig, save_config_json, ui_config_persist
 
 
 def _detail_help(title: str, *, phase: str, used_in: str, compute: str | None = None) -> None:
@@ -49,7 +49,8 @@ def render_photometry_dashboard(cfg: AppConfig) -> None:
 
     if selected_mode != _current_mode:
         cfg.photometry_mode = selected_mode
-        save_config_json(cfg.project_root, cfg.to_json())
+        with ui_config_persist():
+            save_config_json(cfg.project_root, cfg.to_json())
         st.info(
             f"Photometry mode set to '{selected_mode}'. "
             "This takes effect on the next RUN VYVAR."
@@ -102,7 +103,8 @@ def render_photometry_dashboard(cfg: AppConfig) -> None:
         cfg.aperture_photometry_enabled = bool(aperture_on)
         cfg.save_lightcurve_png = bool(save_png)
         cfg.psf_photometry_enabled = bool(psf_on)
-        save_config_json(cfg.project_root, cfg.to_json())
+        with ui_config_persist():
+            save_config_json(cfg.project_root, cfg.to_json())
         cfg.ensure_base_dirs()
         st.success("Saved to `config.json`. Refreshing UI…")
         st.rerun()

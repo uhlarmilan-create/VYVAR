@@ -188,9 +188,10 @@ def _apply_and_save(cfg: Any, auto_keys: list[str], entry_by_key: dict[str, Any]
         kind = pr.infer_widget_kind(key, types.get(key, ""), entry)
         cur = getattr(cfg, key, None)
         setattr(cfg, key, _coerce_for_save(key, kind, st.session_state[skey], entry, cur))
-    from config import save_config_json
+    from config import save_config_json, ui_config_persist
 
-    save_config_json(cfg.project_root, cfg.to_json())
+    with ui_config_persist():
+        save_config_json(cfg.project_root, cfg.to_json())
     cfg.ensure_base_dirs()
 
 

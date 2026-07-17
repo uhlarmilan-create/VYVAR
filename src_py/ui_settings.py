@@ -7,7 +7,7 @@ from typing import Any
 
 import streamlit as st
 
-from config import AppConfig, save_config_json
+from config import AppConfig, save_config_json, ui_config_persist
 import ui_dao_stars as ui_dao_stars
 import ui_params_dashboard as ui_params_dashboard
 import ui_photometry as ui_photometry
@@ -1136,7 +1136,8 @@ def render_settings_dashboard(
         cfg.phase01_comparison_exclude_gaia_extobj = bool(p01_ex_ext)
         cfg.phase01_chip_interior_margin_px = int(max(0, min(2000, p01_chip)))
 
-        save_config_json(cfg.project_root, cfg.to_json())
+        with ui_config_persist():
+            save_config_json(cfg.project_root, cfg.to_json())
         cfg.ensure_base_dirs()
         st.success("Saved to `config.json`. Refreshing UI…")
         st.rerun()

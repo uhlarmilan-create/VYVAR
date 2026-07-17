@@ -8,7 +8,7 @@ from typing import Any
 
 import streamlit as st
 
-from config import AppConfig, save_config_json
+from config import AppConfig, save_config_json, ui_config_persist
 from masterstar_context import load_masterstar_context, resolve_masterstar_fits_path
 from platesolve_ui_paths import masterstars_csv_in_dir
 
@@ -301,7 +301,8 @@ Apply these values manually in the sliders above, or click **Apply suggestions**
             cfg.masterstar_dao_threshold_sigma = float(_sug["masterstar_dao_threshold_sigma"])
             cfg.masterstar_prematch_peak_sigma_floor = float(_sug["masterstar_prematch_peak_sigma_floor"])
             cfg.phase01_comparison_max_dist_deg = float(_sug["phase01_comparison_max_dist_deg"])
-            save_config_json(cfg.project_root, cfg.to_json())
+            with ui_config_persist():
+                save_config_json(cfg.project_root, cfg.to_json())
             st.success("Suggestions saved to `config.json`. Refresh the page to reload sliders.")
             st.rerun()
 
@@ -359,7 +360,8 @@ Apply these values manually in the sliders above, or click **Apply suggestions**
             cfg.masterstar_sibling_rms_max_px = float(sibling_rms)
             cfg.masterstar_sibling_min_quadrants = int(sibling_quad)
             cfg.masterstar_sibling_stack_n = int(sibling_stk)
-            save_config_json(cfg.project_root, cfg.to_json())
+            with ui_config_persist():
+                save_config_json(cfg.project_root, cfg.to_json())
             st.success(
                 "Saved. The next **MASTERSTARS** / worker run will use the new values "
                 "(this session still holds the previous `cfg` in memory)."

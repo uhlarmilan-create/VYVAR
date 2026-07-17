@@ -15,7 +15,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from config import AppConfig, save_config_json
+from config import AppConfig, save_config_json, ui_config_persist
 from database import (
     DraftTechnicalMetadataError,
     get_observer_location_by_id,
@@ -2036,7 +2036,14 @@ def render_live_view(
 
         if loc_labels:
             _sel_loc_id = int(location_options[import_location_label])
-            if _sel_loc_id != int(cfg.observer_location_id):
+            # CONFIG-WRITE-GUARD: persist ONLY on a genuine user change of the selectbox, never as a
+            # render side-effect. On first render the selectbox defaults to the DB IS_DEFAULT location,
+            # which can differ from config.json (that mismatch used to auto-rewrite config.json on load).
+            # Baseline the tracker to the current selection on first render so a plain render never saves.
+            _loc_tracker = "vyvar_varstrem_location_persisted_id"
+            if _loc_tracker not in st.session_state:
+                st.session_state[_loc_tracker] = _sel_loc_id
+            elif _sel_loc_id != int(st.session_state[_loc_tracker]):
                 _loc_row = get_observer_location_by_id(str(cfg.database_path), _sel_loc_id)
                 if _loc_row is not None:
                     cfg.observer_location_id = int(_loc_row["id"])
@@ -2044,11 +2051,13 @@ def render_live_view(
                     cfg.observer_lon = float(_loc_row["lon"])
                     cfg.observer_alt_m = float(_loc_row["alt_m"])
                     cfg.observer_location_name = str(_loc_row.get("name") or "")
-                    save_config_json(cfg.project_root, cfg.to_json())
+                    with ui_config_persist():
+                        save_config_json(cfg.project_root, cfg.to_json())
                     LOGGER.info(
                         f"Observer location set: {cfg.observer_location_name} "
                         f"(lat={cfg.observer_lat}, lon={cfg.observer_lon}, alt={cfg.observer_alt_m}m)"
                     )
+                st.session_state[_loc_tracker] = _sel_loc_id
         try:
             _ui_optics = parse_ui_optics_from_labels(
                 equipment_label=import_equipment_label,
