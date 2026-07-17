@@ -6,11 +6,26 @@ entry validates against the schema (enum fields, range shape, ASCII-only text).
 """
 from __future__ import annotations
 
+import importlib.util
+from pathlib import Path
+
 import params_registry as pr
+
+_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _registry() -> dict:
     return pr.load_registry()
+
+
+def _load_gen_module():
+    spec = importlib.util.spec_from_file_location(
+        "gen_params_md", _ROOT / "tools" / "gen_params_md.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def test_registry_covers_every_public_field_exactly_once() -> None:
@@ -90,6 +105,31 @@ def test_strings_are_ascii_only() -> None:
         if isinstance(unit, str) and not unit.isascii():
             bad.append(f"{key}: unit contains non-ASCII text")
     assert not bad, "Registry entries with non-ASCII strings:\n" + "\n".join(bad)
+
+
+def test_generated_params_md_is_fresh(tmp_path) -> None:
+    # Regenerating in a temp dir must reproduce the committed VYVAR_PARAMS.md exactly,
+    # excluding only the volatile timestamp/HEAD header line. Doc freshness is a tested
+    # property, not a discipline.
+    gen = _load_gen_module()
+    committed = (_ROOT / "docs" / "VYVAR_PARAMS.md").read_text(encoding="utf-8")
+    regenerated = gen.build_markdown()
+
+    # exercise the write path into a throwaway dir (faithful "regenerate in a temp dir")
+    tmp_out = tmp_path / "VYVAR_PARAMS.md"
+    tmp_out.write_text(regenerated, encoding="utf-8")
+
+    got = gen.strip_volatile(tmp_out.read_text(encoding="utf-8"))
+    want = gen.strip_volatile(committed)
+    if got != want:  # produce a compact, actionable diff head
+        import difflib
+
+        diff = "\n".join(
+            list(difflib.unified_diff(want.splitlines(), got.splitlines(), lineterm=""))[:40]
+        )
+        raise AssertionError(
+            "docs/VYVAR_PARAMS.md is stale; run `python tools/gen_params_md.py`.\n" + diff
+        )
 
 
 def test_basic_tier_keys_are_auto_widgets() -> None:
