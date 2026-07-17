@@ -149,3 +149,29 @@ None.
 `_except_bulk_apply.py`, `_except_census_scan.py`, `session_baseline_check.py`,
 `test_git_dirty_code_classifier.py`, `VYVAR_RUNBOOK.md`, `VYVAR_PROCESS.md` edited;
 `dev/tests/test_docs_layout.py` added. No science/numeric change (docs + dev tooling only).
+
+---
+
+# PUSH (DOCS-CLEANUP-PUSH)
+
+Milan authorized the push (review verdict PASS).
+
+- Final gate: `928 passed, 19 skipped, 31 warnings in 321.65s`.
+- Pushed the 4 DOCS-CLEANUP commits to origin/main: `6d63441..850b1f6  HEAD -> main`.
+- Pushed HEAD (4-commit stack): **`850b1f6e557a468b429339c4bb709ca059e19cec`**.
+- `git log --oneline 6d63441..850b1f6`:
+  ```
+  850b1f6 docs(result): DOCS-CLEANUP result file
+  e5f376a test(docs): docs-layout guard + PROCESS rule
+  05db1d2 chore(docs): remove round2_figs and sample_reports
+  3182593 chore(docs): move audit/result artifacts to dev/results
+  ```
+- Working tree (`git status -sb`): `## main...origin/main` (in sync), only pre-existing
+  untracked scratch remains:
+  ```
+  ?? dev/scripts/dy_peg_night_run_bvr.py
+  ?? dev/scripts/forensic_disc_ui_match2.py
+  ?? dev/scripts/qatar8_night_run_v.py
+  ```
+- This `docs(result): DOCS-CLEANUP push report` commit is pushed on top of `850b1f6`;
+  its hash is the final origin/main HEAD reported in the CURSOR chat.
