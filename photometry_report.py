@@ -146,6 +146,64 @@ def resolve_report_config(
     return live, "live (no run snapshot)"
 
 
+def config_deviation_model(pipeline_meta: dict[str, Any] | None) -> dict[str, Any]:
+    """Build the PDF Configuration-page model from a run provenance snapshot.
+
+    Deviations only: keys whose run/snapshot value differs from the current dataclass
+    default. Sourced from ``provenance.config_snapshot`` when present; otherwise falls
+    back to the live AppConfig with a visible warning (legacy drafts). Unknown/legacy
+    snapshot keys are collected separately (never crash the page).
+    """
+    import params_registry as pr  # noqa: PLC0415
+
+    snapshot: dict[str, Any] | None = None
+    prov: dict[str, Any] = {}
+    meta = pipeline_meta if isinstance(pipeline_meta, dict) else {}
+    raw_prov = meta.get("provenance")
+    if isinstance(raw_prov, dict):
+        prov = raw_prov
+        raw = prov.get("config_snapshot")
+        if isinstance(raw, dict) and raw:
+            snapshot = raw
+
+    if snapshot is not None:
+        cfg_dict = dict(snapshot)
+        source_label = "run snapshot"
+        fallback = False
+    else:
+        try:
+            from config import AppConfig
+
+            cfg_dict = AppConfig().to_dict()
+        except Exception:  # noqa: BLE001
+            cfg_dict = {}
+        source_label = "live (no run snapshot)"
+        fallback = True
+        prov = {}
+
+    dev = pr.compute_deviations(cfg_dict)
+    header = {
+        "git_hash": prov.get("git_hash"),
+        "git_dirty_code": prov.get("git_dirty_code"),
+        "stamped_at_utc": prov.get("stamped_at_utc"),
+        "entry_point": prov.get("entry_point"),
+        "n_modified": len(dev["modified"]),
+    }
+    fingerprint = {
+        "preprocess_sky_surface_order": cfg_dict.get("preprocess_sky_surface_order"),
+        "seed_policy": prov.get("labbe_rng_seed_policy"),
+        "density_profile": meta.get("field_density_class") or meta.get("density_class"),
+    }
+    return {
+        "source_label": source_label,
+        "fallback": fallback,
+        "rows": dev["modified"],
+        "unknown_keys": dev["unknown"],
+        "header": header,
+        "fingerprint": fingerprint,
+    }
+
+
 def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[str]:
     """Text lines for PDF / tests — Flux Dilution (Gaia) subsection."""
     enabled = bool(getattr(cfg, "gs11_dilution_enabled", False)) if cfg is not None else False
@@ -5332,6 +5390,123 @@ class _PhotometryReportBuilder:
         self._page_footer(c)
         c.showPage()
 
+    def _report_configuration_page(self, c: "canvas.Canvas") -> None:
+        """Configuration page: run-vs-default deviations from the provenance snapshot."""
+        model = config_deviation_model(self._pipeline_meta)
+
+        def _fmt(v: Any) -> str:
+            if isinstance(v, bool):
+                return "True" if v else "False"
+            if isinstance(v, float):
+                return f"{v:g}"
+            if isinstance(v, dict):
+                return "{}" if not v else json.dumps(v, sort_keys=True)
+            if v is None:
+                return "None"
+            s = str(v)
+            return s if len(s) <= 48 else s[:45] + "..."
+
+        c.setPageSize(self.landscape(self.A4))
+        y = self.PAGE_H - self.M_TOP
+        c.setFont(self.FONT_BOLD, 16)
+        c.setFillColor(self.C_TITLE)
+        c.drawString(self.M_LEFT, y - 0.45 * self.cm, "Configuration")
+        c.setFillColor(self.colors.black)
+        y -= 1.2 * self.cm
+
+        if model["fallback"]:
+            c.setFont(self.FONT_BOLD, 10)
+            c.setFillColor(self.colors.HexColor("#b00000"))
+            c.drawString(
+                self.M_LEFT, y,
+                "provenance snapshot missing - showing live config, not run config",
+            )
+            c.setFillColor(self.colors.black)
+            y -= 0.6 * self.cm
+
+        hdr = model["header"]
+        fp = model["fingerprint"]
+        c.setFont(self.FONT_REG, 9)
+        header_lines = [
+            f"git_hash: {_fmt(hdr['git_hash'])}    git_dirty_code: {_fmt(hdr['git_dirty_code'])}"
+            f"    stamped_at_utc: {_fmt(hdr['stamped_at_utc'])}",
+            f"entry_point: {_fmt(hdr['entry_point'])}    parameters modified: {hdr['n_modified']}",
+            f"fingerprint: preprocess_sky_surface_order={_fmt(fp['preprocess_sky_surface_order'])}"
+            f", seed_policy={_fmt(fp['seed_policy'])}, density_profile={_fmt(fp['density_profile'])}",
+        ]
+        for ln in header_lines:
+            c.drawString(self.M_LEFT, y, ln)
+            y -= 0.42 * self.cm
+        y -= 0.2 * self.cm
+
+        c.setFont(self.FONT_OBL, 8)
+        c.drawString(
+            self.M_LEFT, y,
+            "Defaults are evaluated against current code; for exact run-time semantics "
+            "consult the git hash above.",
+        )
+        y -= 0.6 * self.cm
+
+        col_key = self.M_LEFT
+        col_run = self.M_LEFT + 12.0 * self.cm
+        col_def = self.M_LEFT + 20.0 * self.cm
+
+        def _draw_table_header(yy: float) -> float:
+            c.setFont(self.FONT_BOLD, 8.5)
+            c.setFillColor(self.C_TITLE)
+            c.drawString(col_key, yy, "key")
+            c.drawString(col_run, yy, "run value")
+            c.drawString(col_def, yy, "default")
+            c.setFillColor(self.colors.black)
+            return yy - 0.4 * self.cm
+
+        rows = model["rows"]
+        c.setFont(self.FONT_BOLD, 10)
+        c.drawString(self.M_LEFT, y, f"Deviations from defaults ({len(rows)})")
+        y -= 0.55 * self.cm
+        y = _draw_table_header(y)
+        c.setFont(self.FONT_REG, 8)
+        if not rows:
+            c.drawString(col_key, y, "(none - run config matches code defaults)")
+            y -= 0.4 * self.cm
+        for row in rows:
+            if y < self._layout_y_floor() + 1.0 * self.cm:
+                y = self._layout_page_break(c)
+                c.setFont(self.FONT_BOLD, 16)
+                c.setFillColor(self.C_TITLE)
+                c.drawString(self.M_LEFT, y - 0.45 * self.cm, "Configuration (cont.)")
+                c.setFillColor(self.colors.black)
+                y -= 1.2 * self.cm
+                y = _draw_table_header(y)
+                c.setFont(self.FONT_REG, 8)
+            c.drawString(col_key, y, _fmt(row["key"]))
+            c.drawString(col_run, y, _fmt(row["value"]))
+            c.drawString(col_def, y, _fmt(row["default"]))
+            y -= 0.36 * self.cm
+
+        unknown = model["unknown_keys"]
+        if unknown:
+            y -= 0.3 * self.cm
+            if y < self._layout_y_floor() + 1.0 * self.cm:
+                y = self._layout_page_break(c)
+                y -= 0.5 * self.cm
+            c.setFont(self.FONT_BOLD, 8.5)
+            c.drawString(self.M_LEFT, y, f"Unknown / legacy snapshot keys ({len(unknown)}):")
+            y -= 0.4 * self.cm
+            c.setFont(self.FONT_REG, 7.5)
+            for ln in textwrap.wrap(", ".join(unknown), width=140) or ["(none)"]:
+                c.drawString(self.M_LEFT, y, ln)
+                y -= 0.32 * self.cm
+
+        y = max(y, self._layout_y_floor() + 0.4 * self.cm)
+        c.setFont(self.FONT_OBL, 7.5)
+        c.drawString(
+            self.M_LEFT, self._layout_y_floor() + 0.05 * self.cm,
+            "Full run configuration snapshot: photometry/pipeline_meta.json (provenance.config_snapshot).",
+        )
+        self._page_footer(c)
+        c.showPage()
+
     def build_pdf(self) -> Path:
 
         self._overflow_violations.clear()
@@ -5476,6 +5651,10 @@ class _PhotometryReportBuilder:
         self._report_candidates_table(c)
         self._report_tess_section(c)
         self._report_abbreviations(c)
+        try:
+            self._report_configuration_page(c)
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("PDF Configuration page skipped (non-fatal): %s", exc)
 
         c.save()
         if self._verify_overflow and self._overflow_violations:
