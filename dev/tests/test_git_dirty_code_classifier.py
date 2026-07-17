@@ -37,12 +37,12 @@ def test_scratch_only_draft_434_class() -> None:
     """draft_434-style dirt: md/png/docs/dev-scripts — not import-relevant code."""
     porcelain = (
         "?? dev/results/CURSOR_RESULT_anchor_evidence.md\n"
-        "?? docs/VYVAR_CODE_AUDIT.md\n"
+        "?? dev/results/VYVAR_CODE_AUDIT.md\n"
         "?? dev/scripts/forensic_disc_ui_match2.py\n"
     )
     files = [
         {"path": "dev/results/CURSOR_RESULT_anchor_evidence.md", "content_sha256": "a"},
-        {"path": "docs/VYVAR_CODE_AUDIT.md", "content_sha256": "b"},
+        {"path": "dev/results/VYVAR_CODE_AUDIT.md", "content_sha256": "b"},
         {"path": "dev/scripts/forensic_disc_ui_match2.py", "content_sha256": "c"},
     ]
     code_dirty, code_paths, scratch = classify_git_dirty_paths(porcelain, files)

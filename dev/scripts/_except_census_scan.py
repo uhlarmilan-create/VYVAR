@@ -320,7 +320,7 @@ def main() -> None:
 
     all_sites.sort(key=lambda s: (s.file, s.line))
 
-    out = ROOT / "docs" / "VYVAR_EXCEPT_CENSUS.md"
+    out = ROOT / "dev" / "results" / "VYVAR_EXCEPT_CENSUS.md"
 
     # Stable-ID mode: if a census already exists, preserve its EXC IDs AND its curated
     # tranche prose/dispositions, updating ONLY the `file:line` per row so line numbers

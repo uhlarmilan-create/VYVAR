@@ -52,7 +52,6 @@ EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
 KNOWN_UNTRACKED_PREFIXES = (
     ".worktrees/",
     "dev/results/CURSOR_RESULT",
-    "docs/VYVAR_CODE_AUDIT.md",
     "docs/round2_figs/",
     "dev/scripts/dy_peg_night_run_bvr.py",
     "dev/scripts/qatar8_night_run_v.py",

@@ -1,6 +1,6 @@
 # VYVAR — Runbook (Chi_and_H zaloha-only)
 
-**Canonical procedure:** `docs/VYVAR_CHIANDH_BASELINE_RUNBOOK.md` (full checklist).
+**Canonical procedure:** `dev/results/VYVAR_CHIANDH_BASELINE_RUNBOOK.md` (full checklist).
 
 ## Session baseline check (every session)
 

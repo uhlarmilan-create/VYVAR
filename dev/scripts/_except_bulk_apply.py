@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Apply EXCEPT-BULK dispositions across the VYVAR census (conservative policy, 2026-07-08).
 
-Reads docs/VYVAR_EXCEPT_CENSUS.md, maps each EXC site to delete-dead / log / comment /
+Reads dev/results/VYVAR_EXCEPT_CENSUS.md, maps each EXC site to delete-dead / log / comment /
 approved narrow actions, edits production modules, and marks census rows disposition-DONE.
 
 Does NOT run automatically; invoke explicitly with --phase and optional --dry-run.
@@ -22,7 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
 REPO_ROOT = _bootstrap.REPO_ROOT
-CENSUS_PATH = REPO_ROOT / "docs" / "VYVAR_EXCEPT_CENSUS.md"
+CENSUS_PATH = REPO_ROOT / "dev" / "results" / "VYVAR_EXCEPT_CENSUS.md"
 BULK_STAMP = "EXCEPT-BULK-2 2026-07-08"
 COMMENT_PREFIX = "# EXC-"
 
