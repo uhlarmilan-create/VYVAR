@@ -167,3 +167,69 @@ wave-A edits) - not introduced here.
 Per-step commits above. No numeric science change: STEP 1/2/3 touch config-persistence,
 registry metadata, and UI only; STEP 4 adds provenance METADATA only (comparator
 ignores pipeline_meta.json).
+
+---
+
+# PUSH + SNAPSHOT GAP (WAVE-A-PUSH)
+
+## STEP 1 - 292 snapshot keys vs 304 registry entries: answer
+The Full Config Snapshot page rendered 292 keys because `AppConfig.to_dict()` simply
+delegates to `AppConfig.to_json()` (`config.py:2467-2468`), and `to_json()` is a
+hand-maintained explicit dict that never listed 12 of the 304 public fields:
+`blind_index_path`, `masterstar_dao_pass2_sigma`, `masterstar_use_best_frame_fwhm`,
+`phase01_comparison_fov_fraction`, `phase01_tier1_mag`..`phase01_tier4_mag`,
+`plate_solve_fov_deg`, `project_root`, `qc_preprocess_workers`, `saturate_limit_fraction`.
+This is **case (b)**, not a legacy-draft artifact: a FRESH `AppConfig().to_dict()` also
+yields 292, and the set `registry - fresh_to_dict` equals `registry - draft_435_snapshot`
+exactly (the same 12), with `fresh - draft_435` empty. So the draft_435 snapshot was
+complete relative to what the writer could emit; the gap lived entirely in the serializer.
+Several of the 12 are intentionally NOT persisted to config.json (`plate_solve_fov_deg`
+is hardcoded to 1.0 in `__post_init__` and resolved from FITS+DB at runtime;
+`blind_index_path` is a derived alias of `blind_index_fine_path`; `qc_preprocess_workers`
+is computed at runtime; `project_root` is a machine-specific absolute path), so the fix
+must NOT push them into `to_json()`/config.json.
+
+**Writer fix (metadata-only, commit `cd2859e`):** the provenance `config_snapshot` is now
+completed by dataclass introspection in `_build_pipeline_provenance_block` -- after
+`to_dict()`, `_complete_config_snapshot()` backfills every missing public field from
+`getattr(cfg, name)` (JSON-coerced, Path->str). Fresh snapshots now hold all 304 keys.
+`to_json()`/config.json save-load semantics are untouched; `pipeline_meta.json` is outside
+the anchor SHA set, so there is no numeric behaviour change. Verified: fresh
+`_complete_config_snapshot(cfg, cfg.to_dict())` = 304 and covers every registry key.
+
+**Honesty note (same commit):** `full_config_snapshot_model` now returns `registry_count`
+and `omitted_keys`; the Full Config Snapshot PDF page renders
+`"N keys omitted from snapshot: ..."` whenever the snapshot covers fewer keys than the
+registry (e.g. legacy drafts such as draft_435, which flags exactly the 12 above). Unit
+tests added in `test_wave_a_report_config.py`: `test_full_snapshot_completeness_note_trigger`
+(note fires only when incomplete) and `test_complete_config_snapshot_covers_all_public_fields`
+(writer covers all 304 + JSON-serializable). All 10 wave-A report tests pass.
+
+## STEP 2 - test-hygiene TODO recorded
+Added a "Test-hygiene backlog" entry to `docs/VYVAR_STATE.md` for the order-dependent
+`dev/tests/test_g7_f003c_report_cfg_snapshot.py` (2 tests): `_factory` monkeypatch
+self-recurses through `config.AppConfig`; passes in the full suite, fails in isolation;
+confirmed pre-existing. Repro: `python -m pytest dev/tests/test_g7_f003c_report_cfg_snapshot.py -q`.
+
+## STEP 3 - push (authorized)
+Full suite green before push: `924 passed, 19 skipped, 31 warnings in 213.55s`.
+Pushed stack `git log --oneline 62410c8..HEAD` (13 commits, oldest first):
+```
+c611353 chore(layout): move dev-side dirs and Cursor results into dev/
+8f4d7b4 chore(layout): move VYVAR modules into src_py/ with entry shims
+1345722 docs(audit): PARAM-SOURCE-AUDIT parameter provenance map
+cdd2277 docs(ledger): record REPO-REORG anchor gate PASS
+860ebf7 chore(config): ratify observer block Jirny (id=2)
+10ce982 docs(layout): stamp REPO-REORG src_py/ + dev/ layout and Phase D closeout
+083c8e0 fix(config): CONFIG-WRITE-GUARD - config.json persists only from explicit UI save
+c4b6885 feat(params): add ownership axis to the parameter registry
+d4c7953 feat(ui): regroup Parameters dashboard by ownership
+5e311d4 feat(report): honest full-config report (snapshot appendix + resolved facts)
+640b80f docs(result): PARAM-OWNERSHIP-WAVE-A result file
+cd2859e fix(report): snapshot completeness note + full provenance snapshot writer
+<this docs(result) commit>
+```
+Pushed HEAD hash, clean-tree confirmation, and final pytest line reported at push time
+in CURSOR chat / git log; the 5 untracked scratch files (`dev/scripts/*_night_run*.py`,
+`docs/VYVAR_CODE_AUDIT.md`, `docs/round2_figs/v0454_lc_vyvar.png`) are pre-existing and
+deliberately left untracked.

@@ -19,6 +19,16 @@ Parameter provenance mapped in PARAM-SOURCE-AUDIT (`dev/results/PARAM_SOURCE_AUD
 FITS-resolved values; DB `SETTINGS` table found vestigial. Wave-A ownership arc
 adds the `owner` axis and fixes the config-write render side-effect.
 
+## Test-hygiene backlog
+
+- `dev/tests/test_g7_f003c_report_cfg_snapshot.py` (2 tests) is order-dependent: its
+  `_factory` monkeypatch self-recurses through `config.AppConfig` when the qc-metrics
+  path constructs `AppConfig()`. Passes in the full suite, fails in isolation. Confirmed
+  pre-existing (reproduces on committed code with no wave-A edits). Repro:
+  `python -m pytest dev/tests/test_g7_f003c_report_cfg_snapshot.py -q`. Fix later:
+  make `_factory` bind the real `AppConfig` (e.g. capture it before patching) instead of
+  re-importing the patched name.
+
 ## UI block
 
 **Wave 1 (parameters): DONE.** Machine-readable registry (304 entries) with parity /
