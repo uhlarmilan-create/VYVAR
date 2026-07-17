@@ -103,5 +103,56 @@ every closeout commit.
 
 ## STEP 4 - push
 
-**Awaiting authorization.** Not pushed. Will push all 6 commits to origin/main
-on Milan's explicit "push" confirmation and report the pushed HEAD hash here.
+Superseded by PARAMS-REGISTRY-PUSH below (Milan authorized the push via that task).
+
+---
+
+# PUSH (PARAMS-REGISTRY-PUSH, 2026-07-17)
+
+Milan authorized the push. Committed the two doc steps first, then pushed.
+
+## Doc commits added before push
+
+- `20cd3e1` `docs(result): PARAMS-REGISTRY-CLOSEOUT provenance + hidden-tier rule`
+  (this result file).
+- `8080cc3` `docs: stamp PARAMS-REGISTRY-UI arc (DECISIONS/JOURNAL/STATE)`:
+  - DECISIONS: COMP-TRUST-MIN-COMPS entry (3 vs default 5 = INTENTIONAL).
+  - JOURNAL: PARAMS-REGISTRY-UI arc entry (registry 304, guard tests, dashboard
+    basic 12 / advanced 75 / expert 217, PDF Configuration page, min_comps closed).
+  - STATE: UI block wave 1 (parameters) DONE; next data dashboards wave.
+
+## Final pytest
+
+`python -m pytest -q` -> **903 passed, 19 skipped, 31 warnings in 240.17s**. Green.
+
+## Push
+
+`git push origin HEAD:main` -> `e782786..8080cc3  HEAD -> main`.
+
+Pushed HEAD: **`8080cc3`**.
+
+`git log --oneline e782786..HEAD` (8 commits, newest first):
+
+```
+8080cc3 docs: stamp PARAMS-REGISTRY-UI arc (DECISIONS/JOURNAL/STATE)
+20cd3e1 docs(result): PARAMS-REGISTRY-CLOSEOUT provenance + hidden-tier rule
+4b6c012 PARAMS-REGISTRY-CLOSEOUT STEP 2: hidden implies expert tier
+3d08213 docs(result): PARAMS-REGISTRY-UI closeout
+e37826d PARAMS-REGISTRY-UI STEP 4: PDF Configuration page in SUMMARY MEASURE REPORT
+547008a PARAMS-REGISTRY-UI STEP 3: tiered Parameters dashboard generated from registry
+addb05a PARAMS-REGISTRY-UI STEP 2: generated VYVAR_PARAMS.md + freshness test
+548e7ae PARAMS-REGISTRY-UI STEP 1: machine-readable params registry + parity guard test
+```
+
+## Working tree after push
+
+Clean with respect to tracked files (no staged/unstaged modifications). Only
+pre-existing untracked files remain, none related to this arc:
+`docs/VYVAR_CODE_AUDIT.md`, `docs/round2_figs/v0454_lc_vyvar.png`,
+`scripts/dy_peg_night_run_bvr.py`, `scripts/forensic_disc_ui_match2.py`,
+`scripts/qatar8_night_run_v.py`.
+
+## Note
+
+This PUSH section was added as a 9th commit (`docs(result)`) immediately after
+the 8-commit push and pushed on top; see that commit hash in the chat report.
