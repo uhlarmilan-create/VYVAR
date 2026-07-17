@@ -24,6 +24,13 @@ for the full map.
 - **Result-file location rule:** ALL `CURSOR_RESULT_*.md` and `CURSOR_TASK_*.md`
   working documents go in `dev/results/` (never at the repo root). Sandbox
   harnesses stay in `tmp/`.
+- **`docs/` rule:** `docs/` holds ONLY living documentation and specs -- how the
+  project is designed, set up, and operated (state, roadmap, journal, process,
+  decisions, runbook, code map, schemas, calibration/validation, and `*_SPEC` /
+  design / policy / rule docs). Historical audit outputs, one-off investigation
+  writeups, and target- or draft-specific analyses are work results and belong in
+  `dev/results/`. `docs/` contains no subdirectories and no `CURSOR_*` files. The
+  `dev/tests/test_docs_layout.py` guard enforces this.
 
 ---
 
