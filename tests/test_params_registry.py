@@ -140,3 +140,14 @@ def test_basic_tier_keys_are_auto_widgets() -> None:
         if e.get("tier") == "basic" and e.get("widget") != "auto"
     ]
     assert not bad, f"basic-tier keys must be widget=auto: {sorted(bad)}"
+
+
+def test_hidden_widget_implies_expert_tier() -> None:
+    # Cosmetic rule: tier has no UX meaning for a key that never renders, so every
+    # widget=hidden entry is pinned to tier=expert to avoid confusion at review time.
+    reg = _registry()
+    bad = [
+        key for key, e in reg.items()
+        if e.get("widget") == "hidden" and e.get("tier") != "expert"
+    ]
+    assert not bad, f"widget=hidden keys must be tier=expert: {sorted(bad)}"

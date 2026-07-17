@@ -345,7 +345,7 @@
     "label": "Blind Index Fine Path",
     "phase": "paths",
     "range": null,
-    "tier": "advanced",
+    "tier": "expert",
     "unit": null,
     "widget": "hidden"
   },
@@ -355,7 +355,7 @@
     "label": "Blind Index Path",
     "phase": "paths",
     "range": null,
-    "tier": "advanced",
+    "tier": "expert",
     "unit": null,
     "widget": "hidden"
   },
@@ -375,7 +375,7 @@
     "label": "Blind Index Wide Path",
     "phase": "paths",
     "range": null,
-    "tier": "advanced",
+    "tier": "expert",
     "unit": null,
     "widget": "hidden"
   },
@@ -1115,7 +1115,7 @@
     "label": "Exoplanet Local Db Path",
     "phase": "paths",
     "range": null,
-    "tier": "advanced",
+    "tier": "expert",
     "unit": null,
     "widget": "hidden"
   },
@@ -1286,7 +1286,7 @@
     "label": "Gaia Db Path",
     "phase": "paths",
     "range": null,
-    "tier": "advanced",
+    "tier": "expert",
     "unit": null,
     "widget": "hidden"
   },
@@ -3331,7 +3331,7 @@
     "label": "VSX Local Db Path",
     "phase": "paths",
     "range": null,
-    "tier": "advanced",
+    "tier": "expert",
     "unit": null,
     "widget": "hidden"
   },

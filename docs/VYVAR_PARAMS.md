@@ -4,12 +4,12 @@
 Regenerate with `python tools/gen_params_md.py`. Hand edits will be overwritten.
 Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fields(AppConfig)` (defaults and types, from code).
 
-_Generated 2026-07-17T07:14:27Z at git HEAD 548e7ae._
+_Generated 2026-07-17T09:12:41Z at git HEAD 3d08213._
 
 ## Summary
 
 - Entries: 304
-- Tier: basic 12, advanced 81, expert 211
+- Tier: basic 12, advanced 75, expert 217
 - Kind: static 284, derived 0, resolved 20
 - Widget: auto 128, custom 162, hidden 14
 
@@ -34,16 +34,16 @@ Columns: key, default, range, tier, kind, widget, label. `kind=resolved` means t
 | key | default | range | tier | kind | widget | label |
 |-----|---------|-------|------|------|--------|-------|
 | `archive_root` | (resolved at runtime) | - | expert | static | hidden | Archive Root |
-| `blind_index_fine_path` |  | - | advanced | static | hidden | Blind Index Fine Path |
-| `blind_index_path` |  | - | advanced | static | hidden | Blind Index Path |
+| `blind_index_fine_path` |  | - | expert | static | hidden | Blind Index Fine Path |
+| `blind_index_path` |  | - | expert | static | hidden | Blind Index Path |
 | `blind_index_select_mode` | auto | - | expert | static | hidden | Blind Index Select Mode |
-| `blind_index_wide_path` |  | - | advanced | static | hidden | Blind Index Wide Path |
+| `blind_index_wide_path` |  | - | expert | static | hidden | Blind Index Wide Path |
 | `calibration_library_root` | (resolved at runtime) | - | expert | static | hidden | Calibration Library Root |
 | `database_path` | (resolved at runtime) | - | expert | static | hidden | Database Path |
-| `exoplanet_local_db_path` | exoplanets/vyvar_exoplanet_local.db | - | advanced | static | hidden | Exoplanet Local Db Path |
-| `gaia_db_path` |  | - | advanced | static | hidden | Gaia Db Path |
+| `exoplanet_local_db_path` | exoplanets/vyvar_exoplanet_local.db | - | expert | static | hidden | Exoplanet Local Db Path |
+| `gaia_db_path` |  | - | expert | static | hidden | Gaia Db Path |
 | `project_root` | VYVAR | - | expert | static | hidden | Project Root |
-| `vsx_local_db_path` |  | - | advanced | static | hidden | VSX Local Db Path |
+| `vsx_local_db_path` |  | - | expert | static | hidden | VSX Local Db Path |
 
 ## calibration
 
