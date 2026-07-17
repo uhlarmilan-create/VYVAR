@@ -73,6 +73,18 @@ def test_enum_fields_are_valid() -> None:
     assert not bad, "Registry entries with invalid enum values:\n" + "\n".join(bad)
 
 
+def test_owner_axis_full_coverage_and_valid_enum() -> None:
+    # Ownership axis (PARAM-OWNERSHIP-WAVE-A): every entry declares exactly one owner
+    # from the fixed vocabulary. Failures name the offending keys.
+    reg = _registry()
+    missing = sorted(k for k, e in reg.items() if "owner" not in e)
+    assert not missing, f"registry entries with no owner: {missing}"
+    bad = sorted(
+        f"{k}={e.get('owner')!r}" for k, e in reg.items() if e.get("owner") not in pr.OWNERS
+    )
+    assert not bad, f"registry entries with owner not in {pr.OWNERS}:\n" + "\n".join(bad)
+
+
 def test_range_is_null_or_ordered_numeric_pair() -> None:
     reg = _registry()
     bad: list[str] = []

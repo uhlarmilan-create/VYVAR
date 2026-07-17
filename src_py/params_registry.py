@@ -32,8 +32,14 @@ PHASES = (
 )
 KINDS = ("static", "derived", "resolved")
 WIDGETS = ("auto", "custom", "hidden")
+# Storage-and-ownership axis (PARAM-OWNERSHIP-WAVE-A): who owns the value at run time.
+#   db_static     -- observatory/site/detector facts owned by DB reference tables (read-only here).
+#   config_runtime-- algorithm-behavior knobs the user tunes in config.json / the dashboard.
+#   fits_dynamic  -- resolved from FITS/WCS at run time (config value is a fallback only).
+#   internal      -- plumbing (paths, worker counts, project_root); not user-facing.
+OWNERS = ("db_static", "config_runtime", "fits_dynamic", "internal")
 
-ENTRY_KEYS = ("tier", "phase", "label", "help", "unit", "kind", "range", "widget")
+ENTRY_KEYS = ("tier", "phase", "label", "help", "unit", "kind", "range", "widget", "owner")
 
 # str-typed fields whose values are drawn from a fixed vocabulary (selectbox).
 LITERAL_OPTIONS: dict[str, tuple[str, ...]] = {
