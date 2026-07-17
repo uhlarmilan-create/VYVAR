@@ -51,3 +51,44 @@ def test_count_modified_returns_report() -> None:
     assert isinstance(n, int) and n >= 0
     assert set(dev.keys()) == {"modified", "unknown"}
     assert len(dev["modified"]) == n
+
+
+def test_owner_groups_partition_every_key() -> None:
+    # Ownership grouping (PARAM-OWNERSHIP-WAVE-A STEP 3) must cover every registry key exactly
+    # once across the four owners.
+    reg = pr.load_registry()
+    groups = upd.group_keys_by_owner(reg)
+    assert set(groups.keys()) == set(pr.OWNERS)
+    flat = [k for keys in groups.values() for k in keys]
+    assert sorted(flat) == sorted(reg.keys())
+    assert len(flat) == len(set(flat)), "a key landed in more than one owner group"
+    # locked distribution seeded from the audit CSV
+    dist = {o: len(groups[o]) for o in pr.OWNERS}
+    assert dist == {"db_static": 9, "config_runtime": 277, "fits_dynamic": 7, "internal": 11}, dist
+
+
+def test_editable_keys_are_config_runtime_auto_only() -> None:
+    reg = pr.load_registry()
+    editable = set(upd.editable_config_keys(reg))
+    assert editable, "expected at least one editable config key"
+    for key in editable:
+        assert reg[key]["owner"] == "config_runtime"
+        assert reg[key]["widget"] == "auto"
+    # editable keys never overlap the read-only / hidden groups
+    groups = upd.group_keys_by_owner(reg)
+    for owner in ("db_static", "fits_dynamic", "internal"):
+        assert not (editable & set(groups[owner])), f"editable set overlaps {owner}"
+
+
+def test_modified_counter_counts_config_runtime_only() -> None:
+    # A db_static deviation (e.g. observer_location_name) must NOT inflate the editable counter.
+    import config
+
+    cfg = config.AppConfig()
+    cfg.observer_location_name = "SomeSiteThatIsNotDefault"
+    n_cfg, dev_cfg = upd.count_modified(cfg, owners=("config_runtime",))
+    assert len(dev_cfg["modified"]) == n_cfg
+    assert all(
+        pr.load_registry()[m["key"]]["owner"] == "config_runtime" for m in dev_cfg["modified"]
+    )
+    assert "observer_location_name" not in {m["key"] for m in dev_cfg["modified"]}

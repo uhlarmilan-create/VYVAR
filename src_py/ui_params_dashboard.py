@@ -54,25 +54,62 @@ def plan_auto_widgets(registry: dict[str, Any] | None = None) -> dict[str, str]:
     return plan
 
 
-def count_modified(cfg: Any) -> tuple[int, dict[str, Any]]:
-    """Return (N modified, deviation report) for the FULL config vs dataclass defaults."""
+def count_modified(cfg: Any, owners: tuple[str, ...] | None = None) -> tuple[int, dict[str, Any]]:
+    """Return (N modified, deviation report) for config vs dataclass defaults.
+
+    ``owners`` restricts the count (and the returned ``modified`` list) to registry keys
+    with one of the given owners; ``None`` counts every key. The dashboard counter passes
+    ``("config_runtime",)`` so dead db_static fallbacks (e.g. observer_* on a fresh config)
+    no longer inflate the number.
+    """
     cfg_dict = cfg.to_dict() if hasattr(cfg, "to_dict") else dict(cfg)
     dev = pr.compute_deviations(cfg_dict)
+    if owners is not None:
+        reg = pr.load_registry()
+        want = set(owners)
+        dev = {
+            "modified": [m for m in dev["modified"] if reg.get(m["key"], {}).get("owner") in want],
+            "unknown": dev["unknown"],
+        }
     return len(dev["modified"]), dev
+
+
+def group_keys_by_owner(registry: dict[str, Any] | None = None) -> dict[str, list[str]]:
+    """Map each owner to its sorted list of registry keys (pure; unit tested)."""
+    reg = registry if registry is not None else pr.load_registry()
+    groups: dict[str, list[str]] = {o: [] for o in pr.OWNERS}
+    for key, entry in reg.items():
+        groups.setdefault(entry.get("owner", "config_runtime"), []).append(key)
+    return {o: sorted(v) for o, v in groups.items()}
+
+
+def editable_config_keys(registry: dict[str, Any] | None = None) -> list[str]:
+    """Sorted widget=auto keys owned by config_runtime -- the only keys this dashboard saves."""
+    reg = registry if registry is not None else pr.load_registry()
+    return sorted(
+        k for k, e in reg.items() if e.get("widget") == "auto" and e.get("owner") == "config_runtime"
+    )
 
 
 # --------------------------------------------------------------------------- #
 # Streamlit rendering                                                          #
 # --------------------------------------------------------------------------- #
 def render_modified_counter(cfg: Any) -> int:
-    """Render the global 'N parameters modified' badge; returns the count."""
-    n, dev = count_modified(cfg)
+    """Render the 'N editable parameters modified' badge; returns the count.
+
+    Counts owner=config_runtime keys ONLY: observatory facts (db_static) and FITS-resolved
+    values (fits_dynamic) are not user-editable here, so counting their fallbacks was
+    misleading.
+    """
+    n, _dev = count_modified(cfg, owners=("config_runtime",))
     if n == 0:
-        st.caption("**0 parameters modified** - configuration matches code defaults.")
+        st.caption(
+            "**0 editable parameters modified** - config-owned parameters match code defaults."
+        )
     else:
         st.caption(
-            f"**{n} parameter(s) modified** vs code defaults "
-            "(counts all keys, including custom/hidden ones)."
+            f"**{n} editable parameter(s) modified** vs code defaults "
+            "(config-owned keys only; observatory facts and FITS-resolved values excluded)."
         )
     return n
 
@@ -195,8 +232,40 @@ def _apply_and_save(cfg: Any, auto_keys: list[str], entry_by_key: dict[str, Any]
     cfg.ensure_base_dirs()
 
 
+def _render_db_static_card(cfg: Any, key: str, entry: dict[str, Any], defaults: dict[str, Any]) -> None:
+    """Read-only observatory-fact card (owner=db_static). Never editable here."""
+    cur = getattr(cfg, key, defaults.get(key))
+    st.markdown(
+        f"**{entry['label']}** (`{key}`) - observatory fact  \n"
+        f"DB-resolved value: `{pr.default_repr(cur)}`"
+    )
+    st.caption(
+        f"{entry.get('help', '')} Managed in **Settings -> Observatory / Database Explorer**, "
+        "not on this dashboard."
+    )
+
+
+def _render_fits_dynamic_card(
+    cfg: Any, key: str, entry: dict[str, Any], defaults: dict[str, Any], pipeline_meta: dict[str, Any] | None
+) -> None:
+    """Read-only runtime-resolved card (owner=fits_dynamic). Config value is a fallback."""
+    cur = getattr(cfg, key, defaults.get(key))
+    runtime = _resolved_runtime_value(key, pipeline_meta)
+    if runtime is not None:
+        val_txt = f"last-run value: `{runtime}` (resolved from FITS/WCS, from provenance)"
+    else:
+        val_txt = f"config fallback: `{pr.default_repr(cur)}` (fallback only - resolved from FITS/WCS at run time)"
+    st.markdown(f"**{entry['label']}** (`{key}`) - resolved at runtime  \n{val_txt}")
+    st.caption(entry.get("help", ""))
+
+
 def render_params_dashboard(cfg: Any, *, pipeline_meta: dict[str, Any] | None = None) -> None:
-    """Render the tiered parameter dashboard (mounted as the first Settings tab)."""
+    """Render the ownership-grouped parameter dashboard (mounted as the first Settings tab).
+
+    Groups by the registry ``owner`` axis: config_runtime keys are editable (tiered exactly
+    as before), db_static keys are read-only observatory facts, fits_dynamic keys are
+    read-only runtime-resolved values, and internal keys are not rendered.
+    """
     registry = pr.load_registry()
     types = pr.appconfig_field_types()
     defaults = pr.appconfig_defaults()
@@ -204,48 +273,49 @@ def render_params_dashboard(cfg: Any, *, pipeline_meta: dict[str, Any] | None = 
     st.markdown("### Parameters (generated from registry)")
     render_modified_counter(cfg)
     st.caption(
-        "Generated from `validation/params_registry.json`. Hand-built composite editors "
-        "(`widget=custom`) live in the other Settings tabs and remain authoritative; "
-        "`kind=resolved` parameters are shown read-only (runtime value auto-derived)."
+        "Grouped by ownership. **Config** keys are editable here; **Observatory facts** "
+        "(DB-owned) and **Resolved at runtime** (FITS/WCS) are read-only; internal plumbing "
+        "keys are not shown. Hand-built composite editors (`widget=custom`) live in the other "
+        "Settings tabs and remain authoritative."
     )
 
-    def _auto(tier: str, phase: str | None = None) -> list[str]:
+    def _cfg_auto(tier: str, phase: str | None = None) -> list[str]:
         return sorted(
             k for k, e in registry.items()
-            if e.get("tier") == tier and e.get("widget") == "auto"
+            if e.get("tier") == tier and e.get("widget") == "auto" and e.get("owner") == "config_runtime"
             and (phase is None or e.get("phase") == phase)
         )
 
-    all_auto = sorted(k for k, e in registry.items() if e.get("widget") == "auto")
+    config_auto = editable_config_keys(registry)
 
-    # BASIC -- always visible, flat
+    # ---- CONFIG (owner=config_runtime): editable, tiered ------------------------------------
+    st.markdown("## Config (editable)")
+
     st.markdown("#### Basic")
-    basic_keys = _auto("basic")
+    basic_keys = _cfg_auto("basic")
     if not basic_keys:
         st.caption("(none)")
     for key in basic_keys:
         _render_auto_widget(cfg, key, registry[key], types, defaults, pipeline_meta)
 
-    # ADVANCED -- one expander per phase, collapsed
     st.markdown("#### Advanced")
-    adv_phases = [p for p in pr.PHASES if _auto("advanced", p)]
+    adv_phases = [p for p in pr.PHASES if _cfg_auto("advanced", p)]
     for phase in adv_phases:
-        phase_keys = _auto("advanced", phase)
+        phase_keys = _cfg_auto("advanced", phase)
         with st.expander(f"{phase} ({len(phase_keys)})", expanded=False):
             _section_reset_button(defaults, phase_keys, f"adv_{phase}")
             for key in phase_keys:
                 _render_auto_widget(cfg, key, registry[key], types, defaults, pipeline_meta)
 
-    # EXPERT -- single collapsed section, grouped by phase, with a warning
-    expert_keys = _auto("expert")
+    expert_keys = _cfg_auto("expert")
     with st.expander(f"Expert ({len(expert_keys)}) - changes affect science output", expanded=False):
         st.warning(
             "Expert parameters can change scientific results. Edit only if you understand "
             "the impact; every change is recorded in the run provenance snapshot."
         )
-        exp_phases = [p for p in pr.PHASES if _auto("expert", p)]
+        exp_phases = [p for p in pr.PHASES if _cfg_auto("expert", p)]
         for phase in exp_phases:
-            phase_keys = _auto("expert", phase)
+            phase_keys = _cfg_auto("expert", phase)
             st.markdown(f"**{phase}**")
             _section_reset_button(defaults, phase_keys, f"exp_{phase}")
             for key in phase_keys:
@@ -253,9 +323,34 @@ def render_params_dashboard(cfg: Any, *, pipeline_meta: dict[str, Any] | None = 
 
     st.divider()
     if st.button("Save parameter dashboard to config.json", type="primary", key=f"{_KEY_PREFIX}save"):
-        _apply_and_save(cfg, all_auto, registry, types)
+        _apply_and_save(cfg, config_auto, registry, types)
         st.success("Saved to `config.json`. Refreshing UI...")
         st.rerun()
+
+    # ---- OBSERVATORY FACTS (owner=db_static): read-only -------------------------------------
+    groups = group_keys_by_owner(registry)
+    st.markdown("## Observatory facts (DB-owned, read-only)")
+    st.caption(
+        "Site and identity facts resolved from the database reference tables. Edit them in the "
+        "relevant Settings tab / Database Explorer; this dashboard never writes them."
+    )
+    db_keys = [k for k in groups.get("db_static", []) if registry[k].get("widget") != "hidden"]
+    if not db_keys:
+        st.caption("(none)")
+    for key in db_keys:
+        _render_db_static_card(cfg, key, registry[key], defaults)
+
+    # ---- RESOLVED AT RUNTIME (owner=fits_dynamic): read-only --------------------------------
+    st.markdown("## Resolved at runtime (FITS/WCS, read-only)")
+    st.caption(
+        "Values the pipeline resolves from FITS headers / WCS per run; the config value is only "
+        "a fallback. Where a run provenance is available, its resolved value is shown."
+    )
+    fits_keys = [k for k in groups.get("fits_dynamic", []) if registry[k].get("widget") != "hidden"]
+    if not fits_keys:
+        st.caption("(none)")
+    for key in fits_keys:
+        _render_fits_dynamic_card(cfg, key, registry[key], defaults, pipeline_meta)
 
 
 def _section_reset_button(defaults: dict[str, Any], keys: list[str], tag: str) -> None:
