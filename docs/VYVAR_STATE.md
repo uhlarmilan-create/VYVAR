@@ -1,6 +1,17 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-16** (ARCHIVE BACKUP + CLEANUP — drafts 428–434 purged).
+Last updated: **2026-07-17** (PARAMS-REGISTRY-UI arc pushed; UI block wave 1 done).
+
+## UI block
+
+**Wave 1 (parameters): DONE.** Machine-readable registry (304 entries) with parity /
+freshness / hidden-tier guard tests, generated `VYVAR_PARAMS.md`, tiered Parameters
+dashboard (basic 12 / advanced 75 / expert 217), PDF Configuration page in the SUMMARY
+MEASURE REPORT. min_comps=3 closed as intentional (DECISIONS). Results:
+`CURSOR_RESULT_params_registry_ui.md`, `CURSOR_RESULT_params_closeout.md`.
+
+**Next: data dashboards wave** - identity QA series, trust/census fingerprint, AC status,
+excluded_targets, VSX stamp, sky-surface stats, export skips. Spec by Claude next session.
 
 ## Data items (top)
 

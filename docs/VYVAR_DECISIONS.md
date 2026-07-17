@@ -6,6 +6,17 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## COMP-TRUST-MIN-COMPS — 3 vs code default 5 is INTENTIONAL (2026-07-17)
+
+`comp_trust_min_comps=3` (config.json) vs code default 5: INTENTIONAL. Since 1c80219
+(2026-06-16, Phase-1 graceful comp degradation) the key is the GREEN trust threshold, not
+a hard RED floor; 1-4 good comps yield YELLOW with sigma scaling by N (see
+VYVAR_COMP_DEGRADATION_SPEC.md). GREEN at 3 vs spec example 5 validated by matrix 164157.
+Config page in SUMMARY MEASURE REPORT will permanently list this as a deviation from code
+defaults - that is correct behavior.
+
+---
+
 ## VYVAR-INVARIANTS — machine-enforced contracts (2026-07-16)
 
 **Premise (Milan sign-off by commissioning).** Static audits cannot catch integration-class

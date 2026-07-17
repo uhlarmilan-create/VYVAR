@@ -2,6 +2,22 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-17 -- PARAMS-REGISTRY-UI arc (UI block wave 1: parameters)
+
+Config <-> UI parity turned into a tested property. `validation/params_registry.json`: 304
+entries (one per public AppConfig field), with parity / freshness / hidden-tier guard tests
+(`tests/test_params_registry.py`). Defaults and types stay in code (`dataclasses.fields`),
+never duplicated. Generated `docs/VYVAR_PARAMS.md` via `tools/gen_params_md.py`. New tiered
+Parameters dashboard `ui_params_dashboard.py` (basic 12 / advanced 75 / expert 217), mounted
+as the first Settings tab, with deviation markers, per-parameter / per-section reset, and a
+global "N modified" counter. PDF Configuration page added to the SUMMARY MEASURE REPORT
+(deviations-only from provenance.config_snapshot; live-config fallback); verified on
+draft_000435 (page 186/187, 10 deviations, 0 unknown keys). min_comps provenance closed as
+intentional (see DECISIONS COMP-TRUST-MIN-COMPS). No science-path changes. Results:
+`CURSOR_RESULT_params_registry_ui.md`, `CURSOR_RESULT_params_closeout.md`.
+
+---
+
 ## 2026-07-16 -- ARCHIVE BACKUP + CLEANUP (F-428→anchor arc closed)
 
 Offline zips of draft_435 snapshot + live anchor under `C:\ASTRO\backups\`; drafts 428–434
