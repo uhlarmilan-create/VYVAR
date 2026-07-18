@@ -358,6 +358,13 @@ def run_full_baseline(report: SessionReport) -> None:
 
     reset_except_fix_counters()
     db = VyvarDatabase(cfg.database_path)
+    # DB-SEED-SPLIT: fresh DBs are empty; ensure the author reference observatory rows
+    # exist so the anchor draft's optics/location FKs resolve. INSERT OR IGNORE => no-op
+    # on the author's populated production DB, so the anchor stays byte-identical (and a
+    # run over a fresh DB now also proves the seed split preserved the anchor context).
+    from tools.reference_seed import seed_reference_observatory  # noqa: PLC0415
+
+    seed_reference_observatory(db)
     t0 = datetime.now(timezone.utc)
     try:
         run_full_photometry_pipeline(

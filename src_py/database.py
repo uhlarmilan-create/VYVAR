@@ -2686,38 +2686,23 @@ class VyvarDatabase:
         self.conn.commit()
 
     def initialize_database(self) -> None:
-        """Populate default seed data for required reference tables."""
-        db = self.conn
+        """Reference tables are created (schema) but intentionally EMPTY on a fresh DB.
 
-        # 1. Tabulka EQUIPMENTS
-        db.execute(
-            "INSERT OR IGNORE INTO EQUIPMENTS (ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE) "
-            "VALUES (1, 'QHY294MM', 'Camera1', 'IMX492', '4164*2796', 4.63)"
-        )
-        db.execute(
-            "INSERT OR IGNORE INTO EQUIPMENTS (ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE) "
-            "VALUES (4, 'C5A-150M', 'C5A-150M', 'CMOS', '4096*4096', 3.76)"
-        )
-        # 2. Tabulka TELESCOPE
-        db.execute(
-            "INSERT OR IGNORE INTO TELESCOPE (ID, TELESCOPENAME, ALIAS, DIAMETER, FOCAL) "
-            "VALUES (1, 'Carl-Zeiss', 'Teleobjektiv1', 72.0, 200.0)"
-        )
-        db.execute(
-            "INSERT OR IGNORE INTO TELESCOPE (ID, TELESCOPENAME, ALIAS, DIAMETER, FOCAL) "
-            "VALUES (6, 'AZ800', 'AZ800', 800.0, 5480.0)"
-        )
-        # 3. Tabulka LOCATION
-        db.execute(
-            "INSERT OR IGNORE INTO LOCATION (ID, PLACENAME, LATITUDE, LONGITUDE, ALTITUDE) "
-            "VALUES (1, 'Dablice', 50.073658, 14.418540, 355.5)"
-        )
-        # 4. Tabulka SCANNING
-        db.execute(
-            "INSERT OR IGNORE INTO SCANNING (ID, EXPTIME, FILTERS, BINNING, SENSORTEMP) "
-            "VALUES (1, 120.0, 'Clear', 11, -10.0)"
-        )
-        db.commit()
+        Product decision (DB-SEED-SPLIT, 2026-07-18): a new user's fresh database must
+        be empty -- they create their own Location / Telescope / Equipment in Settings.
+        The author's observatory rows are a REFERENCE FIXTURE for the anchor/test
+        machinery, not product content; they were moved out of the runtime package to
+        ``dev/tools/reference_seed.py::seed_reference_observatory(db)``. The ``--full``
+        anchor harness and pytest fixtures that need the anchor context call that helper
+        explicitly (it uses ``INSERT OR IGNORE``, so it is a no-op on an already
+        populated DB such as the author's production DB).
+
+        The schema itself is created by ``_create_tables`` (run just before this in
+        ``__init__``); this method is deliberately a no-op kept for API stability and
+        as the documented seam where seeding used to live.
+        """
+        # Intentionally no rows: fresh reference tables stay empty.
+        return
 
     def _ensure_obs_files_indexes(self) -> None:
         """Performance indexes for staging tables used heavily in the pipeline."""
