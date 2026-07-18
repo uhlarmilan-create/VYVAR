@@ -57,6 +57,28 @@ always see how a result was produced, even years later.
 Safety: config.json can only be written by an explicit Save action in the
 UI. Pipeline runs never modify it.
 
+## Editing without the UI
+
+You can open config.json in any text editor and change values by hand. The
+file is written grouped into sections (one per pipeline stage) with a short
+comment above every group and every key, so you can see what each setting
+does without leaving the editor. A few rules:
+
+- `//` line comments are allowed and ignored on load (block comments `/* */`
+  and trailing commas are NOT allowed - keep it otherwise strict JSON).
+- Unknown keys are ignored with a warning that suggests the closest real key
+  (a typo safety net); the pipeline still runs with defaults for them.
+- After editing, check your file with the standalone validator:
+
+    python dev/scripts/validate_config.py
+
+  It reports syntax errors (with line numbers), unknown keys (with
+  suggestions), out-of-range values and type mismatches, and exits non-zero
+  if anything is wrong.
+- Saving from the UI regenerates the file (grouping and comments included)
+  from the parameter registry, so any custom comments you add by hand are not
+  preserved across a UI save.
+
 ## How to read the tables
 
 Type column: see the four categories above. Source column: where the value

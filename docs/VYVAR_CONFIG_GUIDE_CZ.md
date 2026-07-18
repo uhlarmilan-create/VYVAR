@@ -58,6 +58,29 @@ vznikl, i po letech.
 Bezpecnost: config.json muze zapsat pouze vyslovna akce Ulozit v UI. Behy
 pipeline ho nikdy nemeni.
 
+## Editace bez UI
+
+config.json muzete otevrit v libovolnem textovem editoru a menit hodnoty
+rucne. Soubor se uklada rozdeleny do sekci (jedna na kazdou fazi pipeline) s
+kratkym komentarem nad kazdou skupinou i kazdym klicem, takze vidite, co
+ktere nastaveni dela, primo v editoru. Nekolik pravidel:
+
+- Radkove komentare `//` jsou povolene a pri nacteni se ignoruji (blokove
+  komentare `/* */` ani carky navic povolene NEJSOU - jinak jde o striktni
+  JSON).
+- Nezname klice se ignoruji s varovanim, ktere navrhne nejblizsi platny klic
+  (pojistka proti preklepum); pipeline pro ne bezi s vychozimi hodnotami.
+- Po editaci soubor zkontrolujte samostatnym validatorem:
+
+    python dev/scripts/validate_config.py
+
+  Nahlasi syntakticke chyby (s cisly radku), nezname klice (s navrhy),
+  hodnoty mimo rozsah a nespravne typy a skonci nenulovym kodem, pokud je
+  neco spatne.
+- Ulozeni z UI soubor znovu vygeneruje (vcetne skupin a komentaru) z registru
+  parametru, takze vlastni komentare pridane rucne se pri ulozeni z UI
+  nezachovaji.
+
 ## Jak cist tabulky
 
 Sloupec Typ: ctyri kategorie vyse. Sloupec Odkud se bere: skutecny zdroj
