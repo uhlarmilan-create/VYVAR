@@ -1,0 +1,305 @@
+key,n_readers,effective,in_config_json,ever_changed,clamp_note,gated_feature,test_touched,family,tier,phase,disposition,merge_group,risk,hardcode_candidate,justification
+aavso_filter_map,2,yes,yes,no,,,no,aavso,expert,observer,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+aavso_observer_code,1,yes,yes,no,,,no,aavso,basic,observer,KEEP,,LOW,,"Effective, tunable (1 readers)."
+alignment_detection_sigma,6,yes,yes,no,,,no,alignment_detection,advanced,alignment,KEEP,,LOW,,"Effective, tunable (6 readers)."
+alignment_max_control_points,9,yes,yes,no,clamped,,yes,alignment,expert,alignment,KEEP,,LOW,,"Effective, tunable (9 readers); test-pinned."
+alignment_max_stars,6,yes,yes,no,clamped,,no,alignment,advanced,alignment,KEEP,,LOW,,"Effective, tunable (6 readers)."
+annulus_inner_fwhm,12,yes,yes,no,,,yes,annulus,advanced,photometry,KEEP,,LOW,,"Effective, tunable (12 readers); test-pinned."
+annulus_outer_fwhm,15,yes,yes,no,,,yes,annulus,advanced,photometry,KEEP,,LOW,,"Effective, tunable (15 readers); test-pinned."
+aperture_comp_factor,4,yes,yes,no,clamped,,yes,aperture,advanced,photometry,KEEP,,LOW,,"Effective, tunable (4 readers); test-pinned."
+aperture_correction_enabled,7,yes,yes,no,,,yes,aperture_correction,expert,photometry,KEEP,,LOW,,"Effective, tunable (7 readers); test-pinned."
+aperture_correction_max_contamination,2,yes,yes,no,clamped,,no,aperture_correction,expert,photometry,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+aperture_correction_max_scatter_mag,1,yes,yes,no,clamped,,no,aperture_correction,expert,photometry,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+aperture_correction_min_ref_stars,1,yes,yes,no,clamped,,no,aperture_correction,expert,photometry,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+aperture_fwhm_factor,23,yes,yes,no,clamped,,yes,aperture_fwhm_factor,advanced,photometry,KEEP,,LOW,,"Effective, tunable (23 readers); test-pinned."
+aperture_fwhm_factor_large,5,yes,yes,no,,,no,aperture_fwhm_factor,expert,photometry,MERGE,aperture_snr_sizing,LOW,,max radius of the SNR aperture sizing sweep (pipeline.py:188); pairs with _small. Collapse to aperture_snr_sizing.
+aperture_fwhm_factor_medium,0,no,yes,no,,,no,aperture_fwhm_factor,expert,photometry,DELETE-DEAD,,LOW,,0 readers; SNR sizing uses only _small/_large (pipeline.py:187-188); medium never consumed.
+aperture_fwhm_factor_small,5,yes,yes,no,,,no,aperture_fwhm_factor,expert,photometry,MERGE,aperture_snr_sizing,LOW,,min radius of the SNR aperture sizing sweep (pipeline.py:187); pairs with _large. Collapse to a 2-entry aperture_snr_sizing map (drop dead _medium).
+aperture_photometry_enabled,9,yes,yes,no,,,no,aperture,advanced,photometry,KEEP,,LOW,,"Effective, tunable (9 readers)."
+aperture_variable_factor,4,yes,yes,no,clamped,,no,aperture,advanced,photometry,KEEP,,LOW,,"Effective, tunable (4 readers)."
+apply_color_term,5,yes,yes,yes,,,yes,apply,expert,extinction,KEEP,,LOW,,"Effective, tunable (5 readers); ever_changed=yes; test-pinned."
+archive_root,26,yes,yes,no,,,yes,archive,expert,paths,KEEP,,LOW,,"Effective, tunable (26 readers); test-pinned."
+auto_fwhm_enabled,6,yes,yes,no,,,no,auto_fwhm,advanced,qc,KEEP,,LOW,,"Effective, tunable (6 readers)."
+auto_fwhm_k_factor,8,yes,yes,no,clamped,,no,auto_fwhm,advanced,qc,KEEP,,LOW,,"Effective, tunable (8 readers)."
+auto_fwhm_k_max,1,yes,yes,no,,,no,auto_fwhm,advanced,qc,KEEP,,LOW,,"Effective, tunable (1 readers)."
+auto_fwhm_k_min,1,yes,yes,no,clamped,,no,auto_fwhm,advanced,qc,KEEP,,LOW,,"Effective, tunable (1 readers)."
+blind_cluster_coherence_cap,1,yes,yes,no,clamped,,no,blind_cluster,expert,detection,HARDCODE,,LOW,,"blind-solver DBSCAN internal (config.py:986); single reader; solver mechanics, not user tuning."
+blind_cluster_eps_deg,1,yes,yes,no,clamped,,no,blind_cluster,expert,detection,HARDCODE,,LOW,,blind-solver DBSCAN epsilon (config.py:963); solver internal.
+blind_cluster_min_samples,1,yes,yes,no,clamped,,no,blind_cluster,expert,detection,HARDCODE,,LOW,,blind-solver DBSCAN min_samples (config.py:972); solver internal.
+blind_cluster_min_votes,1,yes,yes,no,clamped,,no,blind_cluster,expert,detection,HARDCODE,,LOW,,blind-solver vote threshold (config.py:956); solver internal.
+blind_cluster_vote_span,1,yes,yes,no,clamped,,no,blind_cluster,expert,detection,HARDCODE,,LOW,,blind-solver vote span (config.py:979); solver internal.
+blind_img_select_mode,2,yes,yes,no,,,no,blind,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+blind_img_star_budget,2,yes,yes,no,clamped,,no,blind,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+blind_index_fine_path,5,yes,yes,yes,,,yes,blind_index,expert,paths,KEEP,,LOW,,"Effective, tunable (5 readers); ever_changed=yes; test-pinned."
+blind_index_path,2,yes,no,no,,,yes,blind_index,expert,paths,KEEP,,LOW,,"Effective, tunable (2 readers); test-pinned."
+blind_index_select_mode,2,yes,yes,no,,,no,blind_index,expert,paths,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+blind_index_wide_path,3,yes,yes,yes,,,yes,blind_index,expert,paths,KEEP,,LOW,,"Effective, tunable (3 readers); ever_changed=yes; test-pinned."
+blind_prefilter_min,1,yes,yes,no,clamped,,no,blind,expert,detection,HARDCODE,,LOW,,blind-solver prefilter floor; internal.
+blind_scale_tol_frac,1,yes,yes,no,clamped,,no,blind,expert,detection,HARDCODE,,LOW,,blind-solver scale gate tolerance; internal robustness constant.
+blind_use_rig_prior,1,yes,yes,no,,,yes,blind,expert,detection,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+blind_verify_early_accept,1,yes,yes,no,clamped,,no,blind_verify,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+blind_verify_early_floor,1,yes,yes,no,clamped,,no,blind_verify,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+blind_verify_early_fraction,1,yes,yes,no,clamped,,yes,blind_verify,expert,detection,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+blind_verify_enabled,4,yes,yes,no,,,no,blind_verify,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+blind_verify_inmemory_catalog,1,yes,yes,no,,,yes,blind_verify,expert,detection,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+blind_verify_match_tol_px,2,yes,yes,no,clamped,,no,blind_verify,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+blind_verify_min_fraction,1,yes,yes,no,clamped,,no,blind_verify,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+blind_verify_min_matches,2,yes,yes,no,clamped,,no,blind_verify,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+blind_verify_top_n,2,yes,yes,no,clamped,,no,blind_verify,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+bpm_dark_mad_sigma,5,yes,yes,no,clamped,,no,bpm,expert,calibration,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+cal_diag_autocorrect_enabled,1,yes,yes,no,,,no,cal_diag,expert,calibration,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+cal_diag_gate_enabled,5,yes,yes,no,,,yes,cal_diag,advanced,calibration,KEEP,,LOW,,"Effective, tunable (5 readers); test-pinned."
+cal_diag_hard_sigma,1,yes,yes,no,,,no,cal_diag,expert,calibration,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+cal_diag_rel_tol,1,yes,yes,no,,,no,cal_diag,expert,calibration,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+cal_diag_sat_warn_frac,1,yes,yes,no,,,no,cal_diag,expert,calibration,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+calibration_library_native_binning,5,yes,yes,no,clamped,,no,calibration,advanced,calibration,KEEP,,LOW,,"Effective, tunable (5 readers)."
+calibration_library_root,9,yes,yes,no,,,no,calibration,expert,paths,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+calibration_master_ccd_temp_tolerance_c,0,no,yes,no,,,yes,calibration,expert,calibration,DELETE-DEAD,,MED,,0 production readers (config.py clamp + to_dict only); calibration match does not read it; test_calibration_library_match.py:328 only asserts the default -> retune test if removed.
+catalog_query_max_rows,5,yes,yes,no,clamped,,no,catalog,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+check_select_rms_floor,1,yes,yes,no,,,no,check,expert,trust,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+check_star_min_epochs,4,yes,yes,no,,,no,check,advanced,trust,KEEP,,LOW,,"Effective, tunable (4 readers)."
+cog_ac_factor_max,3,gated,yes,no,,cog_aperture_correction_enabled,no,cog,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by cog_aperture_correction_enabled. Keep with its gate.
+cog_aperture_correction_enabled,5,gated,yes,no,,cog_aperture_correction_enabled,no,cog,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by cog_aperture_correction_enabled. Keep with its gate.
+cog_isolation_fwhm,3,gated,yes,no,,cog_aperture_correction_enabled,no,cog,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by cog_aperture_correction_enabled. Keep with its gate.
+cog_ladder_step_px,3,gated,yes,no,,cog_aperture_correction_enabled,no,cog,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by cog_aperture_correction_enabled. Keep with its gate.
+cog_min_stars,3,gated,yes,no,clamped,cog_aperture_correction_enabled,no,cog,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by cog_aperture_correction_enabled. Keep with its gate.
+cog_ref_fwhm,3,gated,yes,no,clamped,cog_aperture_correction_enabled,no,cog,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by cog_aperture_correction_enabled. Keep with its gate.
+cog_sat_frac,3,gated,yes,no,,cog_aperture_correction_enabled,no,cog,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by cog_aperture_correction_enabled. Keep with its gate.
+cog_snr_min,3,gated,yes,no,,cog_aperture_correction_enabled,no,cog,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by cog_aperture_correction_enabled. Keep with its gate.
+comp_clip_sigma,4,yes,yes,no,clamped,,no,comp,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (4 readers)."
+comp_contamination_penalty_k,1,yes,yes,no,,,no,comp,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+comp_iterative_clip_enabled,1,yes,yes,no,,,yes,comp,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+comp_max_delta_bprp,11,yes,yes,no,,,no,comp,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (11 readers)."
+comp_max_slope_mmag_hr,2,yes,yes,no,clamped,,no,comp,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+comp_qa_enabled,2,yes,yes,no,,,yes,comp,expert,trust,KEEP,,LOW,,"Effective, tunable (2 readers); test-pinned."
+comp_select_rms_floor,1,yes,yes,no,,,no,comp_select,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+comp_slope_significance_k,6,yes,yes,no,clamped,,no,comp,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (6 readers)."
+comp_sparse_fallback_enabled,3,yes,yes,no,,,yes,comp_sparse,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (3 readers); test-pinned."
+comp_sparse_fallback_min,3,yes,yes,no,,,yes,comp_sparse,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (3 readers); test-pinned."
+comp_tier1_bprp_limit,6,yes,yes,no,,,no,comp_tier,advanced,comp_selection,MERGE,comp_tiers,MED,,"Row 1 of a 4-row comp tier table (bprp_limit column); read together comp_selection_per_target.py:258-260/1962-1964, photometry_core.py:12578-12580, export_reports.py:1068-1070. Collapse to one structured comp_tiers key. Effective; ~6 readers each -> MED, anchor-gate."
+comp_tier1_weight,6,yes,yes,no,,,no,comp_tier,advanced,comp_selection,MERGE,comp_tiers,MED,,"Row 1 weight column of the comp tier table; read check_star_kmag.py:436-439, comp_selection_per_target.py:2268-2271, photometry_core.py:8597-8600. Collapse into comp_tiers."
+comp_tier2_bprp_limit,6,yes,yes,no,,,no,comp_tier,advanced,comp_selection,MERGE,comp_tiers,MED,,"Row 2 of a 4-row comp tier table (bprp_limit column); read together comp_selection_per_target.py:258-260/1962-1964, photometry_core.py:12578-12580, export_reports.py:1068-1070. Collapse to one structured comp_tiers key. Effective; ~6 readers each -> MED, anchor-gate."
+comp_tier2_weight,6,yes,yes,no,,,no,comp_tier,advanced,comp_selection,MERGE,comp_tiers,MED,,"Row 2 weight column of the comp tier table; read check_star_kmag.py:436-439, comp_selection_per_target.py:2268-2271, photometry_core.py:8597-8600. Collapse into comp_tiers."
+comp_tier3_bprp_limit,6,yes,yes,no,,,no,comp_tier,advanced,comp_selection,MERGE,comp_tiers,MED,,"Row 3 of a 4-row comp tier table (bprp_limit column); read together comp_selection_per_target.py:258-260/1962-1964, photometry_core.py:12578-12580, export_reports.py:1068-1070. Collapse to one structured comp_tiers key. Effective; ~6 readers each -> MED, anchor-gate."
+comp_tier3_weight,6,yes,yes,no,,,no,comp_tier,advanced,comp_selection,MERGE,comp_tiers,MED,,"Row 3 weight column of the comp tier table; read check_star_kmag.py:436-439, comp_selection_per_target.py:2268-2271, photometry_core.py:8597-8600. Collapse into comp_tiers."
+comp_tier4_bprp_limit,2,yes,yes,no,,,no,comp_tier,advanced,comp_selection,MERGE,comp_tiers,MED,,"Row 4 of a 4-row comp tier table (bprp_limit column); read together comp_selection_per_target.py:258-260/1962-1964, photometry_core.py:12578-12580, export_reports.py:1068-1070. Collapse to one structured comp_tiers key. Effective; ~6 readers each -> MED, anchor-gate."
+comp_tier4_weight,6,yes,yes,no,,,no,comp_tier,advanced,comp_selection,MERGE,comp_tiers,MED,,"Row 4 weight column of the comp tier table; read check_star_kmag.py:436-439, comp_selection_per_target.py:2268-2271, photometry_core.py:8597-8600. Collapse into comp_tiers."
+comp_trust_min_comps,7,yes,yes,yes,,,yes,comp_trust,advanced,trust,KEEP,,LOW,,"Effective, tunable (7 readers); ever_changed=yes; test-pinned."
+crowding_blend_tighten_threshold,3,gated,yes,no,clamped,crowding_classifier_enabled,no,crowding,expert,detection,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by crowding_classifier_enabled. Keep with its gate.
+crowding_classifier_enabled,1,gated,yes,no,,crowding_classifier_enabled,no,crowding,expert,detection,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by crowding_classifier_enabled. Keep with its gate.
+crowding_comp_availability_loosen_count,3,gated,yes,no,clamped,crowding_classifier_enabled,no,crowding,expert,detection,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by crowding_classifier_enabled. Keep with its gate.
+crowding_tighten_min_fwhm_px,1,gated,yes,no,clamped,crowding_classifier_enabled,no,crowding,expert,detection,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by crowding_classifier_enabled. Keep with its gate.
+dao_qc_in_calibrate,5,yes,yes,no,,,no,dao,expert,calibration,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+database_path,60,yes,yes,no,,,yes,database,expert,paths,KEEP,,LOW,,"Effective, tunable (60 readers); test-pinned."
+debug_platesolver,8,yes,yes,no,,,yes,debug,expert,detection,KEEP,,LOW,,"Effective, tunable (8 readers); test-pinned."
+democratic_detrend_enabled,5,yes,yes,no,,,yes,democratic,advanced,photometry,KEEP,,LOW,,"Effective, tunable (5 readers); test-pinned."
+democratic_sg_window_frac,2,gated,yes,no,clamped,savgol_detrend_enabled/democratic-detrend (default OFF),no,democratic,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by savgol_detrend_enabled/democratic-detrend (default OFF). Keep with its gate.
+epsf_min_stars,1,yes,yes,no,clamped,,no,epsf,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+err_background_mode,8,yes,yes,no,,,yes,err,expert,photometry,KEEP,,LOW,,"Effective, tunable (8 readers); test-pinned."
+err_empty_apertures_min,3,yes,yes,no,clamped,,yes,err,expert,photometry,KEEP,,LOW,,"Effective, tunable (3 readers); test-pinned."
+err_empty_apertures_n,3,yes,yes,no,clamped,,yes,err,expert,photometry,KEEP,,LOW,,"Effective, tunable (3 readers); test-pinned."
+exoplanet_local_db_path,9,yes,yes,no,,,no,exoplanet,expert,paths,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+exoplanet_match_max_sep_arcsec,7,yes,yes,no,clamped,,no,exoplanet,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+export_arcsec_per_px,0,no,yes,no,,,no,export,expert,export,DELETE-DB-DUP,,LOW,,0 src readers (dev export scripts only); derivable from WCS/optics; redundant with plate scale.
+field_density_adaptive_enabled,1,yes,yes,no,,,no,field,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+field_density_dense_threshold,1,yes,yes,no,clamped,,no,field,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+field_density_sparse_threshold,1,yes,yes,no,clamped,,no,field,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+frame_align_residual_gate_enabled,5,yes,yes,no,,,no,frame_align,expert,qc,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+frame_align_residual_max_frac,6,gated,yes,no,clamped,frame_align_residual_gate_enabled,no,frame_align,expert,qc,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by frame_align_residual_gate_enabled. Keep with its gate.
+frame_align_residual_min_keep_frames,6,gated,yes,no,clamped,frame_align_residual_gate_enabled,no,frame_align,expert,qc,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by frame_align_residual_gate_enabled. Keep with its gate.
+frame_height_px,5,no,yes,no,,,yes,frame,expert,detection,DELETE-DEAD,,MED,,Inert on real runs: NAXIS2 overrides (photometry_core.py:11681-11692). Fallback only; test-constructed -> MED.
+frame_quality_fwhm_factor,5,gated,yes,no,clamped,frame_quality_gate_enabled,no,frame_quality,expert,qc,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by frame_quality_gate_enabled. Keep with its gate.
+frame_quality_gate_enabled,6,yes,yes,no,,,yes,frame_quality,expert,qc,KEEP,,LOW,,"Effective, tunable (6 readers); test-pinned."
+frame_quality_min_keep_frames,7,gated,yes,no,clamped,frame_quality_gate_enabled,yes,frame_quality,expert,qc,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by frame_quality_gate_enabled. Keep with its gate.
+frame_quality_ratio_k,5,gated,yes,no,clamped,frame_quality_gate_enabled,no,frame_quality,expert,qc,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by frame_quality_gate_enabled. Keep with its gate.
+frame_width_px,5,no,yes,no,,,yes,frame,expert,detection,DELETE-DEAD,,MED,,Inert on real runs: MASTERSTAR NAXIS1 overrides (photometry_core.py:11681-11692). Fallback only; test-constructed -> MED.
+gaia_db_path,39,yes,yes,yes,,,yes,gaia,expert,paths,KEEP,,LOW,,"Effective, tunable (39 readers); ever_changed=yes; test-pinned."
+gain,47,no,yes,no,,,yes,gain,expert,photometry,DELETE-DB-DUP,,HIGH,,FITS EGAIN/GAIN then DB EQUIPMENTS.GAIN_ADU authoritative (param_resolver.py:375-451); cfg.gain is last-resort fallback. 47 fallback readers + test_touched -> HIGH; anchor-gate.
+global_comp_pool_enabled,1,yes,yes,no,,,no,global,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+gs11_comp_max_dilution,2,yes,yes,no,,,yes,gs11,expert,photometry,KEEP,,LOW,,"Effective, tunable (2 readers); test-pinned."
+gs11_comp_suspect_dilution,1,yes,yes,no,,,yes,gs11,expert,photometry,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+gs11_dilution_aperture_arcsec,4,yes,yes,no,,,no,gs11,expert,photometry,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+gs11_dilution_enabled,8,yes,yes,no,,,yes,gs11,expert,photometry,KEEP,,LOW,,"Effective, tunable (8 readers); test-pinned."
+gs11_dilution_mag_limit_delta,3,yes,yes,no,,,yes,gs11,expert,photometry,KEEP,,LOW,,"Effective, tunable (3 readers); test-pinned."
+gs11_target_min_dilution,2,yes,yes,no,,,yes,gs11,expert,photometry,KEEP,,LOW,,"Effective, tunable (2 readers); test-pinned."
+hrd_color_bg_box_px,1,yes,yes,no,clamped,,no,hrd_color,expert,reports,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+hrd_color_chroma_boost,1,yes,yes,no,clamped,,no,hrd_color,expert,reports,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+hrd_color_chroma_snr,1,yes,yes,no,clamped,,no,hrd_color,expert,reports,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+hrd_color_field_enabled,1,yes,yes,no,,,no,hrd_color,expert,reports,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+hrd_color_highlight_mode,2,yes,yes,no,,,no,hrd_color,expert,reports,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+hrd_color_saturation,1,yes,yes,no,clamped,,no,hrd_color,expert,reports,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+hrd_color_white_point,2,yes,yes,no,,,no,hrd_color,expert,reports,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+hrd_dsc_confirm_prob,1,yes,yes,no,clamped,,yes,hrd,expert,reports,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+hrd_enrich_max_candidates,1,yes,yes,no,clamped,,yes,hrd_enrich,expert,reports,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+hrd_enrich_tap_timeout_s,1,yes,yes,no,clamped,,no,hrd_enrich,expert,reports,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+hrd_max_per_category,1,yes,yes,no,clamped,,yes,hrd,expert,reports,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+hrd_min_per_net,1,yes,yes,no,clamped,,yes,hrd,expert,reports,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+hrd_nss_category_enabled,3,yes,yes,no,,,yes,hrd,expert,reports,KEEP,,LOW,,"Effective, tunable (3 readers); test-pinned."
+hrd_online_enrich_enabled,2,yes,yes,no,,,yes,hrd,expert,reports,KEEP,,LOW,,"Effective, tunable (2 readers); test-pinned."
+hrd_parallax_min_mas,1,yes,yes,no,clamped,,yes,hrd_parallax,expert,reports,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+hrd_parallax_snr_min,1,yes,yes,no,clamped,,yes,hrd_parallax,expert,reports,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+hrd_simbad_enrich_enabled,1,yes,yes,no,,,yes,hrd,expert,reports,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+k2_ceiling,0,gated,yes,no,clamped,k2_fit_enabled (v2 plausibility bound),no,k2,expert,extinction,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by k2_fit_enabled (v2 plausibility bound). Keep with its gate.
+k2_defaults_bprp,1,yes,yes,no,,,yes,k2,expert,extinction,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+k2_fit_consistency_sigma,0,gated,yes,no,clamped,k2_fit_enabled,no,k2_fit,expert,extinction,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by k2_fit_enabled. Keep with its gate.
+k2_fit_enabled,0,gated,yes,no,,k2_fit_enabled,no,k2_fit,expert,extinction,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by k2_fit_enabled. Keep with its gate.
+k2_fit_lit_factor,0,gated,yes,no,clamped,k2_fit_enabled,no,k2_fit,expert,extinction,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by k2_fit_enabled. Keep with its gate.
+k2_fit_min_detectability,0,gated,yes,no,clamped,k2_fit_enabled,no,k2_fit,expert,extinction,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by k2_fit_enabled. Keep with its gate.
+k2_mode,6,yes,yes,no,,,yes,k2,advanced,extinction,KEEP,,LOW,,"Effective, tunable (6 readers); test-pinned."
+lc_quality_min_frames,5,yes,yes,no,,,no,lc,advanced,trust,KEEP,,LOW,,"Effective, tunable (5 readers)."
+lc_quality_min_normal_frac,4,yes,yes,no,,,no,lc,advanced,trust,KEEP,,LOW,,"Effective, tunable (4 readers)."
+lc_quality_short_min_frames,6,yes,yes,no,,,no,lc,advanced,trust,KEEP,,LOW,,"Effective, tunable (6 readers)."
+masterdark_validity_days,9,yes,yes,yes,,,yes,masterdark,basic,calibration,KEEP,,MED,,config.json authoritative; DB SETTINGS copy is vestigial (0 readers). Keep config key; delete SETTINGS table row on DB side. ever_changed=yes.
+masterflat_validity_days,9,yes,yes,yes,,,yes,masterflat,basic,calibration,KEEP,,MED,,config.json authoritative; DB SETTINGS copy vestigial. Keep config key; delete SETTINGS side. ever_changed=yes.
+masterstar_accept_mode,4,yes,yes,no,,,no,masterstar,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+masterstar_best_of_n,1,yes,yes,no,clamped,,no,masterstar,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+masterstar_catalog_recovery_min,5,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (5 readers)."
+masterstar_centre_rms_max_px,5,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (5 readers)."
+masterstar_dao_pass2_sigma,2,yes,no,no,,,no,masterstar_dao,expert,detection,KEEP,,LOW,,"Effective, tunable (2 readers)."
+masterstar_dao_threshold_sigma,11,yes,yes,no,clamped,,no,masterstar_dao,advanced,detection,KEEP,,LOW,,"Effective, tunable (11 readers)."
+masterstar_detection_cap_adaptive,1,yes,yes,no,,,no,masterstar,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+masterstar_detection_cap_k,1,yes,yes,no,clamped,,no,masterstar,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+masterstar_detection_cap_max,1,yes,yes,no,clamped,,no,masterstar,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+masterstar_detection_cap_min,1,yes,yes,no,clamped,,no,masterstar,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+masterstar_distortion_benign_ratio_max,4,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (4 readers)."
+masterstar_false_alarm_p_max,1,yes,yes,no,clamped,,no,masterstar,expert,detection,HARDCODE,,LOW,,odds false-alarm ceiling; solver internal.
+masterstar_log_astroalign,0,no,yes,no,,,no,masterstar,expert,detection,DELETE-DEAD,,LOW,,0 readers; logging toggle never wired (config.py:1694 + to_dict only).
+masterstar_min_matched_floor,5,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (5 readers)."
+masterstar_odds_k,1,yes,yes,no,clamped,,no,masterstar,expert,detection,HARDCODE,,LOW,,odds-verification internal constant (single reader); solver mechanics.
+masterstar_odds_match_floor,1,yes,yes,no,clamped,,no,masterstar,expert,detection,HARDCODE,,LOW,,odds-verification floor; solver internal.
+masterstar_odds_min_quadrants,1,yes,yes,no,clamped,,no,masterstar,expert,detection,HARDCODE,,LOW,,odds-verification quadrant floor; solver internal.
+masterstar_optimizer_mirror_extra_log,1,yes,yes,no,,,no,masterstar,expert,detection,HARDCODE,,LOW,,debug-log toggle; becomes constant False.
+masterstar_platesolve_nn_refine_max_rms_px,1,yes,yes,no,,,no,masterstar,expert,detection,HARDCODE,,LOW,,NN-refine RMS ceiling; solver internal.
+masterstar_platesolve_prewrite_relaxed_rms_max_px,1,yes,yes,no,,,no,masterstar,expert,detection,HARDCODE,,LOW,,relaxed prewrite RMS gate; solver internal.
+masterstar_platesolve_prewrite_rms_max_px,1,yes,yes,no,,,no,masterstar,expert,detection,HARDCODE,,LOW,,prewrite RMS gate; solver internal.
+masterstar_platesolve_sip_max_order,5,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (5 readers)."
+masterstar_platesolve_sip_min_order,5,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (5 readers)."
+masterstar_prematch_peak_sigma_floor,10,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (10 readers)."
+masterstar_quality_crowded_n_cat_min,1,yes,yes,no,clamped,,no,masterstar,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+masterstar_sibling_min_matched,4,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (4 readers)."
+masterstar_sibling_min_quadrants,4,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (4 readers)."
+masterstar_sibling_recovery_enabled,4,yes,yes,no,,,yes,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (4 readers); test-pinned."
+masterstar_sibling_rms_max_px,4,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (4 readers)."
+masterstar_sibling_stack_n,4,yes,yes,no,clamped,,no,masterstar,advanced,detection,KEEP,,LOW,,"Effective, tunable (4 readers)."
+masterstar_sip_force_rms_guard_ratio,3,yes,yes,no,,,no,masterstar,expert,detection,HARDCODE,,LOW,,SIP-vs-linear guard ratio; solver internal.
+masterstar_solver_use_draft_median_if_hint_sep_deg,1,yes,yes,no,clamped,,no,masterstar,expert,detection,HARDCODE,,LOW,,solver hint-fallback threshold; internal.
+masterstar_use_best_frame_fwhm,1,yes,no,no,,,no,masterstar,expert,detection,KEEP,,LOW,,"Effective, tunable (1 readers)."
+moffat_chi2_limit,1,yes,yes,no,,,no,moffat,expert,photometry,HARDCODE,,LOW,,Moffat fit acceptance chi2; internal QC constant.
+neighbor_sub_centroid_max_fwhm,1,gated,yes,no,,psf_neighbor_sub_enabled,no,neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_neighbor_sub_enabled. Keep with its gate.
+neighbor_sub_chi2_max,1,gated,yes,no,,psf_neighbor_sub_enabled,no,neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_neighbor_sub_enabled. Keep with its gate.
+neighbor_sub_max_neighbor_overmag,1,gated,yes,no,,psf_neighbor_sub_enabled,no,neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_neighbor_sub_enabled. Keep with its gate.
+neighbor_sub_max_target_undermag,1,gated,yes,no,,psf_neighbor_sub_enabled,no,neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_neighbor_sub_enabled. Keep with its gate.
+neighbor_sub_min_recovered_snr,1,gated,yes,no,,psf_neighbor_sub_enabled,no,neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_neighbor_sub_enabled. Keep with its gate.
+neighbor_sub_nn_contam_dmag,1,gated,yes,no,,psf_neighbor_sub_enabled,no,neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_neighbor_sub_enabled. Keep with its gate.
+neighbor_sub_refuse_sep_fwhm,1,gated,yes,no,,psf_neighbor_sub_enabled,no,neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_neighbor_sub_enabled. Keep with its gate.
+neighbor_sub_regime_dmag_min,1,gated,yes,no,,psf_neighbor_sub_enabled,no,neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_neighbor_sub_enabled. Keep with its gate.
+neighbor_sub_regime_sep_max,1,gated,yes,no,,psf_neighbor_sub_enabled,no,neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_neighbor_sub_enabled. Keep with its gate.
+neighbor_sub_residual_rms_max,1,gated,yes,no,,psf_neighbor_sub_enabled,no,neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_neighbor_sub_enabled. Keep with its gate.
+nonlinearity_fwhm_ratio,9,yes,yes,no,clamped,,no,nonlinearity,advanced,photometry,KEEP,,LOW,,"Effective, tunable (9 readers)."
+nonlinearity_peak_percentile,9,yes,yes,no,clamped,,no,nonlinearity,advanced,photometry,KEEP,,LOW,,"Effective, tunable (9 readers)."
+observer_alt_m,13,no,yes,yes,,,yes,observer,basic,observer,DELETE-DB-DUP,,HIGH,,Science reads draft LOCATION.ALTITUDE; cfg mirror. ever_changed=yes + test -> HIGH.
+observer_code,4,yes,yes,no,,,yes,observer,basic,observer,KEEP,,LOW,,"Effective, tunable (4 readers); test-pinned."
+observer_lat,14,no,yes,yes,,,yes,observer,basic,observer,DELETE-DB-DUP,,HIGH,,"Science reads draft LOCATION.LATITUDE (param_resolver.py:639-647), not cfg. ever_changed=yes + test -> HIGH; Milan call."
+observer_location_id,5,yes,yes,yes,clamped,,yes,observer,basic,observer,KEEP,,LOW,,db_static FK selector that hydrates the LOCATION row (config.py:1231-1244); the one observer key to keep as the pointer.
+observer_location_name,6,no,yes,yes,,,yes,observer,basic,observer,DELETE-DB-DUP,,HIGH,,Mirror of LOCATION.PLACENAME; hydrated from observer_location_id (config.py:1231-1244). ever_changed=yes -> HIGH.
+observer_lon,14,no,yes,yes,,,yes,observer,basic,observer,DELETE-DB-DUP,,HIGH,,Science reads draft LOCATION.LONGITUDE; cfg is UI/export mirror. ever_changed=yes + test -> HIGH.
+observer_name,4,yes,yes,no,,,no,observer,basic,observer,KEEP,,LOW,,"Effective, tunable (4 readers)."
+per_frame_mp_reserve_ram_gb,2,yes,yes,no,,,no,per,expert,system,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+phase01_chip_interior_margin_px,7,yes,yes,no,clamped,,no,phase01,advanced,detection,KEEP,,LOW,,"Effective, tunable (7 readers)."
+phase01_comparison_exclude_gaia_extobj,5,yes,yes,no,,,no,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (5 readers)."
+phase01_comparison_exclude_gaia_nss,5,yes,yes,no,,,no,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (5 readers)."
+phase01_comparison_fov_fraction,1,yes,no,no,,,no,phase01_comparison,expert,comp_selection,KEEP,,LOW,,"Effective, tunable (1 readers)."
+phase01_comparison_isolation_radius_px,1,yes,yes,no,,,no,phase01_comparison,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+phase01_comparison_mag_bright_threshold,4,yes,yes,no,,,no,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (4 readers)."
+phase01_comparison_max_comp_rms,7,yes,yes,no,,,no,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (7 readers)."
+phase01_comparison_max_dist_deg,10,yes,yes,no,,,no,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (10 readers)."
+phase01_comparison_max_fwhm_factor,1,yes,yes,no,,,no,phase01_comparison,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+phase01_comparison_max_mag_diff,7,yes,yes,no,,,no,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (7 readers)."
+phase01_comparison_max_mag_diff_absolute,3,yes,yes,no,,,no,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (3 readers)."
+phase01_comparison_max_mag_diff_bright_floor,4,yes,yes,no,,,no,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (4 readers)."
+phase01_comparison_max_psf_chi2,1,yes,yes,no,,,no,phase01_comparison,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+phase01_comparison_min_dist_arcsec,6,yes,yes,no,,,no,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (6 readers)."
+phase01_comparison_min_frames_frac,7,yes,yes,no,,,no,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (7 readers)."
+phase01_comparison_n_comp_max,16,yes,yes,no,,,yes,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (16 readers); test-pinned."
+phase01_comparison_n_comp_min,13,yes,yes,no,,,yes,phase01_comparison,advanced,comp_selection,KEEP,,LOW,,"Effective, tunable (13 readers); test-pinned."
+phase01_comparison_proximity_tiebreak,0,no,yes,no,,,no,phase01_comparison,expert,comp_selection,DELETE-DEAD,,LOW,,0 readers; experimental proximity tie-break never wired into comp selection.
+phase01_comparison_rms_bin_mag,0,no,yes,no,,,no,phase01_comparison,expert,comp_selection,DELETE-DEAD,,LOW,,0 readers; experimental rms-bin knob never consumed.
+phase01_comparison_rms_outlier_sigma,1,yes,yes,no,,,no,phase01_comparison,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+phase01_ct_extrapolation_tol,1,yes,yes,no,clamped,,no,phase01_ct,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+phase01_ct_min_comp,3,yes,yes,no,clamped,,no,phase01_ct,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+phase01_flux_col,2,yes,yes,no,,,no,phase01,expert,comp_selection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+phase01_match_radius_arcsec,4,yes,yes,no,,,no,phase01,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+phase01_plate_scale_arcsec_per_px,11,no,yes,no,,,no,phase01,expert,detection,DELETE-DB-DUP,,MED,,WCS-superseded fallback for Phase-0/1 (photometry_core.py:10063). Derivable from optics.
+phase01_tier1_mag,1,yes,no,no,,,no,phase01_tier,expert,comp_selection,MERGE,phase01_tiers,LOW,,Row 1 of a 4-row Phase-0/1 magnitude tier table; read in ONE place photometry_core.py:14918-14921; not in config.json. Clean collapse to phase01_tiers table.
+phase01_tier2_mag,1,yes,no,no,,,no,phase01_tier,expert,comp_selection,MERGE,phase01_tiers,LOW,,Row 2 of a 4-row Phase-0/1 magnitude tier table; read in ONE place photometry_core.py:14918-14921; not in config.json. Clean collapse to phase01_tiers table.
+phase01_tier3_mag,1,yes,no,no,,,no,phase01_tier,expert,comp_selection,MERGE,phase01_tiers,LOW,,Row 3 of a 4-row Phase-0/1 magnitude tier table; read in ONE place photometry_core.py:14918-14921; not in config.json. Clean collapse to phase01_tiers table.
+phase01_tier4_mag,1,yes,no,no,,,no,phase01_tier,expert,comp_selection,MERGE,phase01_tiers,LOW,,Row 4 of a 4-row Phase-0/1 magnitude tier table; read in ONE place photometry_core.py:14918-14921; not in config.json. Clean collapse to phase01_tiers table.
+phase01_use_bprp_primary,2,yes,yes,no,,,yes,phase01,expert,comp_selection,KEEP,,LOW,,"Effective, tunable (2 readers); test-pinned."
+phase2a_airmass_before_outlier,1,yes,yes,no,,,no,phase2a,expert,photometry,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+photometry_mode,8,yes,yes,no,,,no,photometry,basic,photometry,KEEP,,LOW,,"Effective, tunable (8 readers)."
+plate_scale_arcsec_per_px,13,no,yes,no,,,yes,plate_scale,expert,detection,DELETE-DB-DUP,,HIGH,,WCS/CD then DB optics authoritative (photometry_core.py:10060-10169); cfg is fallback/label. test_touched -> HIGH.
+plate_solve_fov_deg,28,yes,no,no,,,yes,plate_solve,expert,detection,KEEP,,LOW,,"Effective, tunable (28 readers); test-pinned."
+platesolve_anisotropy_threshold,1,yes,yes,no,clamped,,no,platesolve,expert,detection,HARDCODE,,LOW,,plate-solve anisotropy gate; solver internal.
+preprocess_sky_surface_order,4,yes,yes,no,clamped,,yes,preprocess,expert,qc,KEEP,,LOW,,"Effective, tunable (4 readers); test-pinned."
+project_root,8,yes,no,no,,,yes,project,expert,paths,KEEP,,LOW,,"Effective, tunable (8 readers); test-pinned."
+psf_adaptive_enabled,9,gated,yes,no,,psf_photometry_enabled,yes,psf,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_adaptive_resolve_fwhm,1,gated,yes,no,,psf_photometry_enabled,no,psf,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_adaptive_snr_lo,1,gated,yes,no,,psf_photometry_enabled,no,psf,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_chi2_threshold,4,gated,yes,no,,psf_photometry_enabled,no,psf,advanced,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_group_sep_fwhm,1,gated,yes,no,,psf_photometry_enabled,no,psf,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_grouper_enabled,1,gated,yes,no,,psf_photometry_enabled,no,psf,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_neighbor_include_fwhm,1,gated,yes,no,,psf_photometry_enabled,no,psf_neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_neighbor_sub_enabled,1,gated,yes,no,,psf_photometry_enabled,yes,psf_neighbor,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_photometry_enabled,18,gated,yes,no,,psf_photometry_enabled,yes,psf,advanced,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_quality_fallback_enabled,1,gated,yes,no,,psf_photometry_enabled,no,psf,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_spatial_enabled,1,gated,yes,no,,psf_photometry_enabled,yes,psf,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_spatial_grid,0,gated,yes,no,,psf_photometry_enabled,no,psf,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_spatial_min_stars_per_cell,0,gated,yes,no,,psf_photometry_enabled,no,psf,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+psf_spatial_order,1,gated,yes,no,clamped,psf_photometry_enabled,yes,psf,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by psf_photometry_enabled. Keep with its gate.
+pytics_enabled,5,yes,yes,no,,,yes,pytics,advanced,photometry,KEEP,,LOW,,"Effective, tunable (5 readers); test-pinned."
+pytics_n_iter,2,yes,yes,no,clamped,,no,pytics,expert,photometry,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+qc_after_calibrate_enabled,6,yes,yes,no,,,no,qc,basic,qc,KEEP,,LOW,,"Effective, tunable (6 readers)."
+qc_dao_detection_sigma,1,yes,yes,no,,,no,qc_dao,expert,qc,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+qc_elong_limit,1,yes,yes,no,,,no,qc,expert,qc,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+qc_fwhm_limit,1,yes,yes,no,,,no,qc,expert,qc,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+qc_max_background_rms,1,yes,yes,no,,,no,qc,expert,qc,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+qc_max_hfr,6,yes,yes,no,,,no,qc,advanced,qc,KEEP,,LOW,,"Effective, tunable (6 readers)."
+qc_min_stars,6,yes,yes,no,clamped,,no,qc,advanced,qc,KEEP,,LOW,,"Effective, tunable (6 readers)."
+qc_preprocess_workers,7,yes,no,no,,,yes,qc,expert,system,KEEP,,LOW,,"Effective, tunable (7 readers); test-pinned."
+read_noise,26,no,yes,no,,,yes,read,expert,photometry,DELETE-DB-DUP,,HIGH,,DB EQUIPMENTS.READNOISE_E then FITS authoritative (param_resolver.py:490-514); cfg.read_noise dead fallback. test_touched -> HIGH; anchor-gate.
+saturate_limit_fraction,1,yes,no,no,,,no,saturate,expert,detection,KEEP,,LOW,,"Effective, tunable (1 readers)."
+save_lightcurve_png,6,yes,yes,no,,,no,save,advanced,photometry,KEEP,,LOW,,"Effective, tunable (6 readers)."
+savgol_detrend_enabled,5,gated,yes,no,,savgol_detrend_enabled,yes,savgol,advanced,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by savgol_detrend_enabled. Keep with its gate.
+savgol_polyorder,2,gated,yes,no,,savgol_detrend_enabled,no,savgol,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by savgol_detrend_enabled. Keep with its gate.
+savgol_window_frac,2,gated,yes,no,,savgol_detrend_enabled,no,savgol,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by savgol_detrend_enabled. Keep with its gate.
+sigma_sys_mag,3,yes,yes,no,,,yes,sigma,expert,photometry,KEEP,,LOW,,"Effective, tunable (3 readers); test-pinned."
+sips_dao_fwhm_px,24,yes,yes,no,clamped,,no,sips_dao,advanced,detection,KEEP,,LOW,,"Effective, tunable (24 readers)."
+sips_dao_threshold_sigma,19,yes,yes,no,,,no,sips_dao,advanced,detection,KEEP,,LOW,,"Effective, tunable (19 readers)."
+skip_processed_directory,6,yes,yes,no,,,yes,skip,expert,system,KEEP,,LOW,,"Effective, tunable (6 readers); test-pinned."
+sky_adu_fallback,1,yes,yes,no,,,no,sky,expert,photometry,HARDCODE,,LOW,,last-resort sky ADU when annulus fails; internal fallback constant.
+sparse_trust_T_green,1,yes,yes,no,,,no,sparse,expert,trust,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+sparse_trust_T_red,1,yes,yes,no,,,no,sparse,expert,trust,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+sparse_trust_X2_RED,1,yes,yes,no,,,no,sparse,expert,trust,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+sysrem_enabled,5,gated,yes,no,,sysrem_enabled,yes,sysrem,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by sysrem_enabled. Keep with its gate.
+sysrem_n_iter,4,gated,yes,no,clamped,sysrem_enabled,no,sysrem,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by sysrem_enabled. Keep with its gate.
+temporal_bin_window,2,gated,yes,no,clamped,temporal_binning_enabled,no,temporal,expert,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by temporal_binning_enabled. Keep with its gate.
+temporal_binning_enabled,5,gated,yes,yes,,temporal_binning_enabled,yes,temporal_binning,advanced,photometry,KEEP-GATED,,LOW,,Feature gated OFF awaiting validation; controlled by temporal_binning_enabled. Keep with its gate.
+tess_enabled,7,yes,yes,no,,,no,tess,advanced,export,KEEP,,LOW,,"Effective, tunable (7 readers)."
+trust_flag_enabled,2,yes,yes,no,,,yes,trust,expert,trust,KEEP,,LOW,,"Effective, tunable (2 readers); test-pinned."
+variability_clip_ratio_min,1,yes,yes,no,,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+variability_comp_floor_factor,1,yes,yes,no,,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+variability_mag_limit,3,yes,yes,no,,,yes,variability,expert,detection,KEEP,,LOW,,"Effective, tunable (3 readers); test-pinned."
+variability_min_amplitude_mag,1,yes,yes,no,,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+variability_min_frames,6,yes,yes,no,clamped,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+variability_min_frames_frac,4,yes,yes,no,clamped,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+variability_min_points_rms,1,yes,yes,no,,,yes,variability,expert,detection,KEEP,,LOW,,"Effective, tunable (1 readers); test-pinned."
+variability_min_rms_pct,1,yes,yes,no,,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+variability_p85_filter,1,yes,yes,no,,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+variability_sigma_clip,1,yes,yes,no,,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+variability_sigma_threshold,6,yes,yes,no,,,yes,variability,expert,detection,KEEP,,LOW,,"Effective, tunable (6 readers); test-pinned."
+variability_slope_floor,1,yes,yes,no,,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+variability_smoothness_max,1,yes,yes,no,,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+variability_vdi_z_threshold,1,yes,yes,no,,,no,variability,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+verify_mag_limit,2,yes,yes,no,clamped,,no,verify,expert,detection,KEEP,,LOW,yes,Effective tunable knob; expert-tier and never moved in config history -> HARDCODE candidate for Milan's tuning-appetite call (kept KEEP pending decision).
+vsx_local_db_path,15,yes,yes,no,,,yes,vsx,expert,paths,KEEP,,LOW,,"Effective, tunable (15 readers); test-pinned."
+vsx_variable_targets_mag_limit,9,yes,yes,no,,,no,vsx,advanced,detection,KEEP,,LOW,,"Effective, tunable (9 readers)."
