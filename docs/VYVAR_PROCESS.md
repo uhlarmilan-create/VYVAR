@@ -175,6 +175,10 @@ that choice is recorded in PARAMS, not left implicit.
 > It still holds real overrides — **do not gitignore it**; the durable fix is a separate
 > session-state store (ROADMAP).
 
+> DOCS-FIX-ARC1 (2026-07-18): dev docs stay ASCII-only, but the GitHub front-door
+> `README.md` and its Czech twin `README_CZ.md` are **exempt** — proper UTF-8 (diacritics)
+> is allowed there so the public-facing / CZ-user docs read correctly.
+
 ## Shared-core / no duplicated logic
 
 A capability has **one** implementation in a core module, called by both the pipeline and any
