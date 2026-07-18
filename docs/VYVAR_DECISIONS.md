@@ -1359,7 +1359,7 @@ detrend; Burdanov et al. 2014 / ε Indi 2020 practice; Everett & Howell 2001).
 - Legacy fields/anchors (h&chi Per, DY Peg, BO CVn) and old-SHA re-cut framing are **retired**; we
   are on the new catalog + new pkl.
 - Fix mis-attribution: ALG-3 is **Hartley & Wilson 2023, MNRAS 526, 3482** (not Broeg-Bischoff &
-  Dreizler) at docstring + config.py:452 + config_schema.md:145, and the UI caption ("after
+  Dreizler) at docstring + config.py:452 + dev/results/config_schema.md:145 (archived), and the UI caption ("after
   ensemble" -> ALG-3 runs BEFORE ensemble).
 - **Supersede** proposed `comp_color_window_bprp` param (PARAMS 2026-06-15): reuse existing
   tier ladder (`comp_tier1_bprp_limit` 0.15 -> tier2 0.30 -> tier3 0.55 -> cap

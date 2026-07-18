@@ -6,7 +6,7 @@ State and process docs live under `docs/`:
 
 - `docs/VYVAR_STATE.md` — entry point (current snapshot)
 - `docs/VYVAR_ROADMAP.md`, `docs/VYVAR_JOURNAL.md`, `docs/VYVAR_DECISIONS.md`
-- `docs/VYVAR_PROCESS.md`, `docs/VYVAR_PARAMS.md`, `docs/config_schema.md`
+- `docs/VYVAR_PROCESS.md`, `docs/VYVAR_PARAMS.md`
 - `docs/VYVAR_CONFIG_GUIDE_EN.md` / `docs/VYVAR_CONFIG_GUIDE_CZ.md` — plain-language guide to all 269 registered configuration parameters (config.json persists 249 of them) (EN + CZ)
 - `docs/VYVAR_CLAUDE_OPERATING_PRINCIPLES.md` — Claude operating charter (session-init required read)
 

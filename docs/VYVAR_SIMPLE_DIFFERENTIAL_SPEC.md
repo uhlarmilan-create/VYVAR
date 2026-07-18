@@ -22,7 +22,7 @@ Status: **Workstream A landed** (DoD-A PASS). **Workstream B** ù grounded fix au
 
 ## Workstream A ù promote differential (DONE)
 
-1. **Binning OFF default** ù `config.py`, `config.json`, `ui_settings.py`, `config_schema.md`.
+1. **Binning OFF default** ù `config.py`, `config.json`, `ui_settings.py`, `dev/results/config_schema.md` (archived).
 2. **Phase-1 selector** ù `_assign_comp_tiers_to_pool` ? `_select_comps_by_color_then_rms` +
    `comp_select_rms_floor` (retired `_select_comps_tiered` on BP-RP path).
 3. **Defaults:** `apply_color_term` off; tier ladder [0.15, 0.30, 0.55] ? cap 0.79; n_comp 3/8;
