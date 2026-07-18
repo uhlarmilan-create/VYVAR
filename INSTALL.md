@@ -123,13 +123,13 @@ Start the app from the repository root:
 streamlit run app.py
 ```
 
-The database ships self-initialised with the author's example reference rows
-(equipment such as `QHY294MM`, telescopes such as `Carl-Zeiss`, and the location
-`Dablice`). These are examples, not your setup. In the app:
+A fresh database is **empty** of observatory reference rows (Location /
+Telescope / Equipment). Schema is created automatically; you fill the records.
+In the app:
 
-1. Open **Settings** and create your own **Location**, **Telescope**, and
-   **Equipment**, then select them. Do not submit observations under the seeded
-   example rows.
+1. Open **Settings** and create your **Location**, **Telescope**, and
+   **Equipment**, then select them. Until you do, the site choice may be
+   empty/unresolved — that is expected.
 2. Import your first night and run the pipeline.
 
 ## Troubleshooting

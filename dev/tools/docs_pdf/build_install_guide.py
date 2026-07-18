@@ -127,14 +127,14 @@ st.append(P("Linux:", M))
 st.append(Preformatted("source .venv/bin/activate\nstreamlit run app.py", CODE))
 st.append(P("V prohlizeci se otevre http://localhost:8501 s hlavnim panelem VYVAR Dashboard. V leve navigaci najdete: Pipeline (zpracovani noci), Calibration Library (mastery), Database Explorer a Settings (nastaveni).", B))
 st.append(P("5. Prvotni nastaveni observatore (JEDNORAZOVE, NUTNE)", H1))
-st.append(P("VYVAR uklada fakta o observatori do databaze - bez nich neumi pocitat airmass ani parovat kalibrace. V Settings postupne zalozte:", B))
+st.append(P("VYVAR uklada fakta o observatori do databaze - bez nich neumi pocitat airmass ani parovat kalibrace. Cerstva databaze je PRAZDNA - observator patri vam, zalozte v Settings postupne:", B))
 st.append(tab([
  ["Krok","Kde","Co vyplnit"],
  ["1 Stanoviste (Location)","Settings -> Observatory","nazev, zem. sirka a delka (stupne), nadm. vyska (m)"],
  ["2 Dalekohled (Telescope)","Settings -> Observatory","nazev, prumer (mm), ohniskova vzdalenost (mm)"],
  ["3 Kamera (Equipment)","Settings -> Observatory","model, rozmer pixelu (um), gain, saturacni strop (ADU, je-li znam)"],
 ], [42,46,80]))
-st.append(P("Vyber aktualniho stanoviste se pak provadi prepinacem v zahlavi Settings; aplikace ho ulozi do config.json.", B))
+st.append(P("Vyber aktualniho stanoviste se provadi prepinacem v zahlavi Settings; aplikace ho ulozi do config.json. Dokud vlastni stanoviste nevyberete, muze byt volba prazdna/nevyresena - to je v poradku a vyberem se srovna.", B))
 st.append(Spacer(1,3))
 st.append(P("6. Kalibrace: darky a flaty", H1))
 st.append(P("Pred prvni noci nahrajte do Calibration Library sve kalibracni snimky (dark frames pro pouzivane expozice a teploty, flat fieldy pro pouzivane filtry). Knihovna si mastery postavi a paruje je automaticky podle binningu, expozice, teploty a filtru. Bez darku/flatu pipeline noc odmitne kalibrovat - to je zamer (ochrana dat), ne chyba.", B))
@@ -177,7 +177,7 @@ st.append(Spacer(1,6))
 st.append(box("Poznamka pro uzivatele KStars/Ekos (Linux)", [
  "Snimate-li pres KStars/Ekos, VYVAR muze bezet primo na temze linuxovem stroji - odpada prenos dat. Archivni cestu ve fazi 4 nasmerujte na slozku, kam Ekos uklada snimky, a noci importujte primo z ni."]))
 st.append(Spacer(1,4))
-st.append(P("Tato prirucka odpovida instalatoru verze 1.0 (Windows + Linux, vc. stavby katalogu). Pripadne odchylky po prvnim ostrem testu (Lenovo) budou promitnuty do verze 1.1.", M))
+st.append(P("Tato prirucka odpovida instalatoru verze 1.0 (Windows + Linux, vc. stavby katalogu; v1.2 - cerstva databaze je prazdna, zaznamy zaklada uzivatel). Pripadne odchylky po prvnim ostrem testu (Lenovo) budou promitnuty do verze 1.1.", M))
 
 doc = SimpleDocTemplate(os.path.join(ROOT,'docs','VYVAR_INSTALL_GUIDE_CZ.pdf'), pagesize=A4,
     leftMargin=20*mm, rightMargin=20*mm, topMargin=16*mm, bottomMargin=16*mm,

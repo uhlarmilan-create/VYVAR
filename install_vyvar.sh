@@ -206,20 +206,33 @@ phase_smoke() {
     head2 "6/7 SMOKE (import app + database self-init)"
     "$VENV_PY" - <<'PYEOF'
 import os, sys
+from pathlib import Path
 sys.path.insert(0, os.path.join(os.getcwd(), "src_py"))
 import app  # import-only; main() runs only under `streamlit run`
 from config import AppConfig
 from database import VyvarDatabase
 cfg = AppConfig()
-db = VyvarDatabase(cfg.database_path)
+db_path = Path(cfg.database_path)
+was_new = not db_path.exists()
+db = VyvarDatabase(db_path)
 tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-db.conn.close()
 missing = {"EQUIPMENTS","TELESCOPE","LOCATION","OBSERVATION","OBS_DRAFT"} - tables
 assert not missing, f"DB self-init missing tables: {sorted(missing)}"
-print(f"SMOKE OK: app import + DB self-init at {cfg.database_path} ({len(tables)} tables)")
+counts = {
+    t: int(db.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0])
+    for t in ("EQUIPMENTS", "TELESCOPE", "LOCATION")
+}
+db.conn.close()
+if was_new:
+    nonempty = {t: n for t, n in counts.items() if n}
+    assert not nonempty, f"fresh DB must have empty reference tables; found {nonempty}"
+print(
+    f"SMOKE OK: app import + DB self-init at {db_path} "
+    f"({len(tables)} tables; ref counts={counts}; fresh={was_new})"
+)
 PYEOF
     if [ $? -ne 0 ]; then fail "smoke run failed."; return 1; fi
-    ok "app imports and the database self-initialises"
+    ok "app imports and the database self-initialises (fresh DB = empty reference tables)"
     return 0
 }
 
@@ -230,12 +243,12 @@ phase_finish() {
     echo "    streamlit run app.py"
     echo ""
     echo "Then, in the app:"
-    echo "    1) Settings -> create your Location, Telescope and Equipment, then select them"
-    echo "       (the DB ships with the author example rows, e.g. location 'Dablice' - do not"
-    echo "        submit under those)."
+    echo "    1) Settings -> create YOUR Location, Telescope and Equipment, then select them."
+    echo "       A fresh database is EMPTY of observatory rows - there are no author"
+    echo "       example locations to avoid."
     echo "    2) Import your first night and run the pipeline."
     echo ""
-    info "Full walk-through:  VYVAR_INSTALL_GUIDE_CZ.pdf"
+    info "Full walk-through:  docs/VYVAR_INSTALL_GUIDE_CZ.pdf"
     info "Every config key:   docs/VYVAR_CONFIG_GUIDE_CZ.md / docs/VYVAR_CONFIG_GUIDE_EN.md"
     info "Install reference:   INSTALL.md"
     if [ "$CATALOG_MODE" = "skip" ]; then

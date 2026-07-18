@@ -299,18 +299,33 @@ function Invoke-PhaseSmoke {
     Write-Head '6/7 SMOKE (import app + database self-init)'
     $py = @'
 import sys, os
+from pathlib import Path
 sys.path.insert(0, os.path.join(os.getcwd(), "src_py"))
 import app  # import-only; main() runs only under `streamlit run`
 from config import AppConfig
 from database import VyvarDatabase
 cfg = AppConfig()
-db = VyvarDatabase(cfg.database_path)
+db_path = Path(cfg.database_path)
+was_new = not db_path.exists()
+db = VyvarDatabase(db_path)
 tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-db.conn.close()
 need = {"EQUIPMENTS","TELESCOPE","LOCATION","OBSERVATION","OBS_DRAFT"}
 missing = need - tables
 assert not missing, f"DB self-init missing tables: {sorted(missing)}"
-print(f"SMOKE OK: app import + DB self-init at {cfg.database_path} ({len(tables)} tables)")
+# Fresh file => product contract: reference tables EMPTY (user creates their own).
+# Re-run against an already-populated DB is a no-op check (author/production keep their rows).
+counts = {
+    t: int(db.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0])
+    for t in ("EQUIPMENTS", "TELESCOPE", "LOCATION")
+}
+db.conn.close()
+if was_new:
+    nonempty = {t: n for t, n in counts.items() if n}
+    assert not nonempty, f"fresh DB must have empty reference tables; found {nonempty}"
+print(
+    f"SMOKE OK: app import + DB self-init at {db_path} "
+    f"({len(tables)} tables; ref counts={counts}; fresh={was_new})"
+)
 '@
     $tmp = Join-Path $env:TEMP ("vyvar_smoke_{0}.py" -f ([guid]::NewGuid().ToString('N')))
     Set-Content -LiteralPath $tmp -Value $py -Encoding UTF8
@@ -321,7 +336,7 @@ print(f"SMOKE OK: app import + DB self-init at {cfg.database_path} ({len(tables)
         Remove-Item -LiteralPath $tmp -ErrorAction SilentlyContinue
     }
     if ($rc -ne 0) { Write-Fail 'smoke run failed (see traceback above).'; return $false }
-    Write-Ok 'app imports and the database self-initialises (empty of your data - see below)'
+    Write-Ok 'app imports and the database self-initialises (fresh DB = empty reference tables)'
     return $true
 }
 
@@ -334,12 +349,12 @@ function Invoke-PhaseFinish($catalog) {
     Write-Host '    streamlit run app.py' -ForegroundColor White
     Write-Host ''
     Write-Host 'Then, in the app:' -ForegroundColor White
-    Write-Host '    1) Settings -> create your Location, Telescope and Equipment,' -ForegroundColor White
-    Write-Host '       then select them (the DB ships with the author example rows,' -ForegroundColor White
-    Write-Host '       e.g. location "Dablice" - do not submit under those).' -ForegroundColor White
+    Write-Host '    1) Settings -> create YOUR Location, Telescope and Equipment,' -ForegroundColor White
+    Write-Host '       then select them. A fresh database is EMPTY of observatory' -ForegroundColor White
+    Write-Host '       rows - there are no author example locations to avoid.' -ForegroundColor White
     Write-Host '    2) Import your first night and run the pipeline.' -ForegroundColor White
     Write-Host ''
-    Write-Info 'Full walk-through:  VYVAR_INSTALL_GUIDE_CZ.pdf'
+    Write-Info 'Full walk-through:  docs\VYVAR_INSTALL_GUIDE_CZ.pdf'
     Write-Info 'Every config key:   docs\VYVAR_CONFIG_GUIDE_CZ.md (CZ) / docs\VYVAR_CONFIG_GUIDE_EN.md (EN)'
     Write-Info 'Install reference:   INSTALL.md'
     if ($catalog.Mode -eq 'skip') {
