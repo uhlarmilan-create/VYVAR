@@ -1114,7 +1114,7 @@
     "help": "Export Arcsec Per PX (export parameter).",
     "kind": "static",
     "label": "Export Arcsec Per PX",
-    "owner": "config_runtime",
+    "owner": "fits_dynamic",
     "phase": "export",
     "range": null,
     "tier": "expert",

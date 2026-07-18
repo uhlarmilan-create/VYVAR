@@ -1233,27 +1233,10 @@ class AppConfig:
         except (TypeError, ValueError):
             self.observer_location_id = 1
         self.observer_location_id = max(0, self.observer_location_id)
-        try:
-            self.observer_lat = float(data.get("observer_lat", self.observer_lat))
-            if not math.isfinite(self.observer_lat):
-                self.observer_lat = 0.0
-        except (TypeError, ValueError):
-            self.observer_lat = 0.0
-        try:
-            self.observer_lon = float(data.get("observer_lon", self.observer_lon))
-            if not math.isfinite(self.observer_lon):
-                self.observer_lon = 0.0
-        except (TypeError, ValueError):
-            self.observer_lon = 0.0
-        try:
-            self.observer_alt_m = float(data.get("observer_alt_m", self.observer_alt_m))
-            if not math.isfinite(self.observer_alt_m):
-                self.observer_alt_m = 0.0
-        except (TypeError, ValueError):
-            self.observer_alt_m = 0.0
-        self.observer_location_name = str(
-            data.get("observer_location_name", self.observer_location_name) or ""
-        ).strip()
+        # WAVE-B STEP 5 (DELETE-DB-DUP): observer_lat/lon/alt_m/name are DB-authoritative
+        # (draft LOCATION via observer_location_id). They are no longer loaded from or saved to
+        # config.json; the fields remain as run-time hydrated mirrors (block below) with the
+        # dataclass site defaults as fallback. Science reads the draft LOCATION row, not cfg.
         if self.observer_location_id > 0:
             try:
                 from database import get_observer_location_by_id
@@ -1262,24 +1245,21 @@ class AppConfig:
                     str(self.database_path), int(self.observer_location_id)
                 )
                 if loc is not None:
-                    if not self.observer_location_name:
-                        self.observer_location_name = str(loc.get("name") or "")
-                    if self.observer_lat == 0.0 and self.observer_lon == 0.0:
-                        self.observer_lat = float(loc.get("lat", 0.0) or 0.0)
-                        self.observer_lon = float(loc.get("lon", 0.0) or 0.0)
-                        self.observer_alt_m = float(loc.get("alt_m", 0.0) or 0.0)
+                    # DB LOCATION is authoritative (WAVE-B STEP 5): overwrite the mirror
+                    # unconditionally when a row is found.
+                    self.observer_location_name = str(loc.get("name") or "")
+                    self.observer_lat = float(loc.get("lat", 0.0) or 0.0)
+                    self.observer_lon = float(loc.get("lon", 0.0) or 0.0)
+                    self.observer_alt_m = float(loc.get("alt_m", 0.0) or 0.0)
             except (sqlite3.Error, TypeError, ValueError) as exc:
                 logging.getLogger(__name__).warning(
                     "Observer location DB hydrate failed (location_id=%s); "
-                    "using config.json observer coordinates: %s",
+                    "using dataclass site-default observer coordinates: %s",
                     self.observer_location_id,
                     exc,
                 )
-        try:
-            v = float(data.get("export_arcsec_per_px", self.export_arcsec_per_px))
-            self.export_arcsec_per_px = v if math.isfinite(v) and v > 0 else 1.3
-        except Exception:  # noqa: BLE001
-            self.export_arcsec_per_px = 1.3
+        # WAVE-B STEP 5 (DELETE-DB-DUP): export_arcsec_per_px derivable from WCS/optics; no longer
+        # loaded from or saved to config.json. Field keeps its dataclass default as a label fallback.
         self.psf_photometry_enabled = bool(data.get("psf_photometry_enabled", self.psf_photometry_enabled))
         try:
             _pso = int(data.get("psf_spatial_order", self.psf_spatial_order))
@@ -1482,16 +1462,10 @@ class AppConfig:
         self.aperture_correction_max_scatter_mag = max(
             0.0, min(2.0, float(self.aperture_correction_max_scatter_mag))
         )
-        try:
-            _g = float(data.get("gain", self.gain))
-            self.gain = float(_g) if math.isfinite(_g) and _g > 0 else 1.0
-        except (TypeError, ValueError):
-            self.gain = 1.0
-        try:
-            _rn = float(data.get("read_noise", self.read_noise))
-            self.read_noise = float(_rn) if math.isfinite(_rn) and _rn >= 0 else 10.0
-        except (TypeError, ValueError):
-            self.read_noise = 10.0
+        # WAVE-B STEP 5 (DELETE-DB-DUP): gain (FITS EGAIN then DB EQUIPMENTS.GAIN_ADU) and
+        # read_noise (DB EQUIPMENTS.READNOISE_E then FITS) are resolver-authoritative via
+        # param_resolver at run time; no longer loaded from or saved to config.json. The fields
+        # keep their dataclass defaults as last-resort fallbacks.
         _ebm = str(data.get("err_background_mode", self.err_background_mode) or "empirical").strip().lower()
         if _ebm in ("howell", "legacy"):
             self.err_background_mode = "howell"
@@ -2065,8 +2039,9 @@ class AppConfig:
         # at 5.0. phase01_* keeps lo=0.0 because 0.0 is the "auto / unset" sentinel
         # (consumed as ``phase01_plate_scale_arcsec_per_px or 1.3``); clamping it to 0.1
         # would turn "auto" into a real 0.1"/px scale.
-        _f01("phase01_plate_scale_arcsec_per_px", 0.0, 0.0, 30.0)
-        _f01("plate_scale_arcsec_per_px", 1.3, 0.1, 30.0)
+        # WAVE-B STEP 5 (DELETE-DB-DUP): plate_scale_arcsec_per_px (WCS/CD then DB optics) and
+        # phase01_plate_scale_arcsec_per_px (WCS-superseded) resolve at run time; no longer loaded
+        # from or saved to config.json. Fields keep their dataclass defaults as fallbacks.
         _f01("phase01_match_radius_arcsec", 10.0, 3.0, 30.0)
         _f01("exoplanet_match_max_sep_arcsec", 3.0, 0.5, 30.0)
         _f01("phase01_comparison_max_psf_chi2", 50.0, 1.0, 500.0)
@@ -2315,11 +2290,6 @@ class AppConfig:
             "aavso_observer_code": str(self.aavso_observer_code),
             "aavso_filter_map": dict(self.aavso_filter_map),
             "observer_location_id": int(self.observer_location_id),
-            "observer_lat": float(self.observer_lat),
-            "observer_lon": float(self.observer_lon),
-            "observer_alt_m": float(self.observer_alt_m),
-            "observer_location_name": str(self.observer_location_name),
-            "export_arcsec_per_px": float(self.export_arcsec_per_px),
             "psf_photometry_enabled": bool(self.psf_photometry_enabled),
             "psf_spatial_order": int(self.psf_spatial_order),
             "psf_chi2_threshold": float(self.psf_chi2_threshold),
@@ -2370,8 +2340,6 @@ class AppConfig:
             "cog_sat_frac": float(self.cog_sat_frac),
             "cog_ladder_step_px": float(self.cog_ladder_step_px),
             "cog_ac_factor_max": float(self.cog_ac_factor_max),
-            "gain": float(self.gain),
-            "read_noise": float(self.read_noise),
             "err_background_mode": str(self.err_background_mode),
             "err_empty_apertures_n": int(self.err_empty_apertures_n),
             "err_empty_apertures_min": int(self.err_empty_apertures_min),
@@ -2494,8 +2462,6 @@ class AppConfig:
             "gs11_comp_suspect_dilution": float(self.gs11_comp_suspect_dilution),
             "gs11_target_min_dilution": float(self.gs11_target_min_dilution),
             "phase01_chip_interior_margin_px": int(self.phase01_chip_interior_margin_px),
-            "phase01_plate_scale_arcsec_per_px": float(self.phase01_plate_scale_arcsec_per_px),
-            "plate_scale_arcsec_per_px": float(self.plate_scale_arcsec_per_px),
             "phase01_match_radius_arcsec": float(self.phase01_match_radius_arcsec),
             "variability_min_frames": int(self.variability_min_frames),
             "variability_min_frames_frac": float(self.variability_min_frames_frac),

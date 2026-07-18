@@ -882,8 +882,7 @@ class VyvarDatabase:
         self._create_tables()
         self.initialize_database()
         self._ensure_obs_files_indexes()
-        self._ensure_settings_table()
-        self._seed_default_settings()
+        self._drop_settings_table()
 
     def _enable_foreign_keys(self) -> None:
         self.conn.execute("PRAGMA foreign_keys = ON;")
@@ -2659,44 +2658,12 @@ class VyvarDatabase:
             self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN FOCAL REAL;")
             self.conn.commit()
 
-    def _ensure_settings_table(self) -> None:
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS SETTINGS (
-                KEY TEXT PRIMARY KEY,
-                VALUE TEXT
-            );
-            """
-        )
-        self.conn.commit()
-
-    def _seed_default_settings(self) -> None:
-        self.conn.execute(
-            "INSERT OR IGNORE INTO SETTINGS (KEY, VALUE) VALUES (?, ?);",
-            ("masterdark_validity_days", "90"),
-        )
-        self.conn.execute(
-            "INSERT OR IGNORE INTO SETTINGS (KEY, VALUE) VALUES (?, ?);",
-            ("masterflat_validity_days", "200"),
-        )
-        self.conn.commit()
-
-    def get_setting_int(self, key: str, default: int) -> int:
-        cursor = self.conn.execute("SELECT VALUE FROM SETTINGS WHERE KEY = ?;", (key,))
-        row = cursor.fetchone()
-        if row is None:
-            return default
-        try:
-            return int(row["VALUE"])
-        except (TypeError, ValueError):
-            return default
-
-    def set_setting(self, key: str, value: str) -> None:
-        self.conn.execute(
-            "INSERT INTO SETTINGS (KEY, VALUE) VALUES (?, ?) "
-            "ON CONFLICT(KEY) DO UPDATE SET VALUE=excluded.VALUE;",
-            (key, value),
-        )
+    def _drop_settings_table(self) -> None:
+        # WAVE-B STEP 5: the SETTINGS table was vestigial. It only ever held
+        # masterdark_validity_days / masterflat_validity_days, which are config.json-authoritative
+        # (cfg.masterdark_validity_days / cfg.masterflat_validity_days). Nothing read SETTINGS at
+        # run time, so drop it on open (idempotent migration for existing DBs).
+        self.conn.execute("DROP TABLE IF EXISTS SETTINGS;")
         self.conn.commit()
 
     def _ensure_observation_import_columns(self) -> None:

@@ -5,7 +5,7 @@ Regenerate with `python tools/gen_params_md.py`. Hand edits will be overwritten.
 Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fields(AppConfig)` (defaults and types, from code).
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 
-_Generated 2026-07-18T10:18:26Z at git HEAD 03d640c._
+_Generated 2026-07-18T10:29:01Z at git HEAD c828c9c._
 
 ## Summary
 
@@ -13,7 +13,7 @@ _Generated 2026-07-18T10:18:26Z at git HEAD 03d640c._
 - Tier: basic 12, advanced 68, expert 209
 - Kind: static 271, derived 0, resolved 18
 - Widget: auto 114, custom 159, hidden 16
-- Owner: db_static 9, config_runtime 262, fits_dynamic 5, internal 13
+- Owner: db_static 9, config_runtime 261, fits_dynamic 6, internal 13
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -360,7 +360,7 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 
 | key | default | range | tier | kind | owner | widget | label |
 |-----|---------|-------|------|------|-------|--------|-------|
-| `export_arcsec_per_px` | 1.3 | - | expert | static | config_runtime | auto | Export Arcsec Per PX |
+| `export_arcsec_per_px` | 1.3 | - | expert | static | fits_dynamic | auto | Export Arcsec Per PX |
 | `tess_enabled` | False | - | advanced | static | config_runtime | auto | TESS Enabled |
 
 ## system
