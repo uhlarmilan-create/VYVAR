@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-18** (WAVE-B-PARAM-REDUCTION: 304 -> 269 registered params, anchor-gated).
+Last updated: **2026-07-18** (WAVE-B-PARAM-REDUCTION 304->269 + CONFIG-HUMAN-EDIT: grouped/commented config.json).
 
 ## Repository layout (REPO-REORG -- DONE, gate PASS)
 
@@ -28,6 +28,17 @@ source; vestigial DB `SETTINGS` table dropped), HARDCODE 20 solver internals, IN
 "never-touched expert" pool was explicitly REJECTED (stays KEEP; universality). Commits
 `617b76f`/`08e5684`/`03d640c`/`c828c9c`/`d6c0d55`/`715e754` + STEP 7 docs. Result:
 `CURSOR_RESULT_wave_b_reduction.md`.
+
+**CONFIG-HUMAN-EDIT -- DONE (pending final gate/push).** config.json is now a
+generated, grouped, commented JSONC-lite file editable by hand without the UI: the loader
+tolerates `//` line comments and warns on unknown keys (difflib suggestion), the writer
+emits a file header + pipeline-ordered sections (basic->advanced->expert) with a comment
+for every group and key. Per-key help was ported from CONFIG_GUIDE_EN into the registry
+`help` field (single source of truth); section comments come from `__meta__.phase_help`. A
+standalone `dev/scripts/validate_config.py` reports syntax/unknown-key/range/type problems.
+Live config.json migrated value-identical (249 keys). Commits `1307b73` (help port),
+`742fee5` (loader), `86c6748` (writer + migration), `0b75a69` (validator). Result:
+`CURSOR_RESULT_config_human_edit.md`.
 
 ## Test-hygiene backlog
 

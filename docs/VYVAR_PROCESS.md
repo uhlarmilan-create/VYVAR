@@ -164,6 +164,13 @@ Run a parity check whenever parameters are added or changed: list keys in `confi
 surfaced in the UI (and vice-versa). Default-OFF experimental flags may stay UI-hidden, but
 that choice is recorded in PARAMS, not left implicit.
 
+> CONFIG-HUMAN-EDIT (2026-07-18): `config.json` is written as a **generated, grouped,
+> commented JSONC-lite** document (loader tolerates `//` line comments; writer regenerates
+> grouping + comments on every UI save). Per-key and per-section explanations come from the
+> **registry `help` / `__meta__.phase_help`** fields — the single source of truth for config
+> comments, dashboard tooltips and the guides. Edit key explanations in the registry, not by
+> hand. Validate a hand-edited file with `python dev/scripts/validate_config.py`.
+
 > Note: `config.json` also gets session/UI state rewritten each run (the CONFIG-CHURN issue).
 > It still holds real overrides — **do not gitignore it**; the durable fix is a separate
 > session-state store (ROADMAP).

@@ -2,6 +2,28 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-18 -- CONFIG-HUMAN-EDIT (grouped, commented, hand-editable config.json)
+
+config.json turned into a generated grouped + commented JSONC-lite document so a user can
+edit it in a text editor without the UI. STEP 1 ported the per-key Explanation column of
+CONFIG_GUIDE_EN into the registry `help` field (269 entries; single source of truth for
+config comments, dashboard tooltips and guides), replacing the mechanical placeholders,
+with a guard that help is non-empty/ASCII/non-placeholder -- `1307b73`. STEP 2 made the
+loader tolerate `//` line comments via a string-aware state-machine stripper (URLs and //
+inside values survive; no trailing commas/block comments) and WARN on unknown keys with a
+difflib suggestion while staying silent on migrated legacy aliases; strict vs commented
+file -> identical AppConfig -- `742fee5`. STEP 3 rewrote save_config_json to emit a file
+header (static->DB, dynamic->FITS, guide/validator pointers) + pipeline-ordered sections
+(basic->advanced->expert) each with a group comment (registry `__meta__.phase_help`) and a
+per-key help comment; migrated the live config.json value-identical (249 keys; old parse ==
+new parse); save->load->save is a fixed point -- `86c6748`. STEP 4 added
+`dev/scripts/validate_config.py` (syntax/unknown/range/type checks, non-zero exit) and the
+"Editing without the UI" paragraph in both guides -- `0b75a69`. STEP 5 docs
+(PROCESS/STATE/JOURNAL) + result `CURSOR_RESULT_config_human_edit.md`. Anchor `--full` gate
+re-run at end (loader sits on every run's startup path). No science-path values changed.
+
+---
+
 ## 2026-07-18 -- WAVE-B-PARAM-REDUCTION (delete/merge/wire/consolidate, anchor-gated)
 
 Parameter surface reduced 304 -> 269 registered entries (config.json persists 249),
