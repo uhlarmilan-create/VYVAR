@@ -225,6 +225,7 @@ python -m pytest
 | All 269 parameters (reference) | `docs/VYVAR_PARAMS.md` |
 | Parameter handbook (Czech, PDF) | `docs/VYVAR_PARAMETER_HANDBOOK_CZ.pdf` |
 | Install & first-run guide (Czech, PDF) | `docs/VYVAR_INSTALL_GUIDE_CZ.pdf` |
+| Technical pipeline description (Czech, PDF) | `docs/VYVAR_FLOW_CZ.pdf` |
 | Pipeline manual (Czech) | `docs/VYVAR_PIPELINE_CZ.md` |
 | Magnitude calibration data-flow (Czech) | `docs/VYVAR_CALIBRATION.md` |
 | Operating runbook | `docs/VYVAR_RUNBOOK.md` |
