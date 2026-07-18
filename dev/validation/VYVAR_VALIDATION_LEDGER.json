@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-17",
+  "updated": "2026-07-18",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -44,8 +44,8 @@
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
-      "last_verified": "2026-07-17",
-      "commit": "8f4d7b4",
+      "last_verified": "2026-07-18",
+      "commit": "0b75a69",
       "notes": "Re-verify on next --full against draft_435 sky-surface anchor."
     },
     {
@@ -145,8 +145,8 @@
       "description": "In-Archive BO CVn Anchor #3 sky-surface snapshot draft_000435_snapshot_skysurface_20260716",
       "verification": "scripts/session_baseline_check.py --full (core 3d26f469\u2026 n=333; extended 6420f1da\u2026 n=499). Census fingerprint n_raw_dao=2552 matched=2842 targets=169; identity p95 baseline 1.54 px.",
       "passes": true,
-      "last_verified": "2026-07-17",
-      "commit": "8f4d7b4",
+      "last_verified": "2026-07-18",
+      "commit": "0b75a69",
       "notes": "Cut after LABBE-DET err determinism fix; dual full-photometry SHA gate PASS on HEAD 10d610c. Alias: VL-ANCHOR-SKYSURFACE. Offline zips: C:\\\\ASTRO\\\\backups\\\\draft_000435_snapshot_skysurface_20260716.zip + draft_000435_anchor_live_20260716.zip. F-428 arc evidence moved to validation/f428_arc_evidence/.",
       "census_fingerprint": {
         "n_raw_dao": 2552,
