@@ -375,9 +375,8 @@ class AppConfig:
     # Aperture/annulus radii are computed as factor × fwhm_gaussian_px.
     #: Legacy single aperture factor — used where multi-aperture (B+C) is not active.
     aperture_fwhm_factor: float = 1.9
-    #: Multi-aperture (Method B+C foundation): small / medium / large radii as FWHM multiples.
+    #: Multi-aperture (Method B+C foundation): small / large radii as FWHM multiples.
     aperture_fwhm_factor_small: float = 1.5
-    aperture_fwhm_factor_medium: float = 2.5
     aperture_fwhm_factor_large: float = 4.0
     #: TODO-44: Role-aware scale on SNR-optimal radius (SIPS-style); 1.0 = no change.
     aperture_variable_factor: float = 1.0
@@ -394,8 +393,6 @@ class AppConfig:
     masterstar_solver_use_draft_median_if_hint_sep_deg: float = 1.0
     #: Saturation safety fraction applied to equipment_saturate_adu before classifying MASTERSTAR zones.
     saturate_limit_fraction: float = 0.85
-    #: Log zarovnanie (astroalign): referenčný rámec a počty kontrolných bodov.
-    masterstar_log_astroalign: bool = True
     #: After astrometry optimizer mirror-orientation warning, log an extra hint line.
     masterstar_optimizer_mirror_extra_log: bool = True
     #: Enable verbose debug logs for plate solving / blind solver / hint plumbing.
@@ -501,10 +498,6 @@ class AppConfig:
     phase01_comparison_n_comp_max: int = 8
     phase01_comparison_max_comp_rms: float = 0.1
     phase01_comparison_min_dist_arcsec: float = 60.0
-    #: RMS bin width (mag) for comp tie-break within a colour tier (~1 mmag default).
-    phase01_comparison_rms_bin_mag: float = 0.001
-    #: When True, sort by binned RMS then ``dist_deg`` among near-equal-stability comps (off by default).
-    phase01_comparison_proximity_tiebreak: bool = False
     phase01_comparison_min_frames_frac: float = 0.2
     phase01_comparison_exclude_gaia_nss: bool = True
     phase01_comparison_exclude_gaia_extobj: bool = True
@@ -1379,7 +1372,6 @@ class AppConfig:
         self.aperture_fwhm_factor = max(0.5, min(6.0, float(self.aperture_fwhm_factor)))
         for _apt_key in (
             "aperture_fwhm_factor_small",
-            "aperture_fwhm_factor_medium",
             "aperture_fwhm_factor_large",
         ):
             try:
@@ -1691,7 +1683,6 @@ class AppConfig:
         except (TypeError, ValueError):
             self.masterstar_solver_use_draft_median_if_hint_sep_deg = 1.0
         self.masterstar_solver_use_draft_median_if_hint_sep_deg = max(0.0, min(180.0, float(self.masterstar_solver_use_draft_median_if_hint_sep_deg)))
-        self.masterstar_log_astroalign = bool(data.get("masterstar_log_astroalign", self.masterstar_log_astroalign))
         self.masterstar_optimizer_mirror_extra_log = bool(
             data.get("masterstar_optimizer_mirror_extra_log", self.masterstar_optimizer_mirror_extra_log)
         )
@@ -1995,13 +1986,6 @@ class AppConfig:
         _f01("comp_select_rms_floor", 1e-6, 0.0, 0.01)
         _f01("phase01_comparison_max_comp_rms", 0.05, 0.01, 0.5)
         _f01("phase01_comparison_min_dist_arcsec", 60.0, 0.0, 600.0)
-        _f01("phase01_comparison_rms_bin_mag", 0.001, 0.0001, 0.05)
-        self.phase01_comparison_proximity_tiebreak = bool(
-            data.get(
-                "phase01_comparison_proximity_tiebreak",
-                self.phase01_comparison_proximity_tiebreak,
-            )
-        )
         _f01("phase01_comparison_min_frames_frac", 0.3, 0.05, 0.95)
         self.phase01_comparison_exclude_gaia_nss = bool(
             data.get("phase01_comparison_exclude_gaia_nss", self.phase01_comparison_exclude_gaia_nss)
@@ -2285,7 +2269,6 @@ class AppConfig:
             "photometry_mode": str(self.photometry_mode),
             "aperture_fwhm_factor": float(self.aperture_fwhm_factor),
             "aperture_fwhm_factor_small": float(self.aperture_fwhm_factor_small),
-            "aperture_fwhm_factor_medium": float(self.aperture_fwhm_factor_medium),
             "aperture_fwhm_factor_large": float(self.aperture_fwhm_factor_large),
             "aperture_variable_factor": float(self.aperture_variable_factor),
             "aperture_comp_factor": float(self.aperture_comp_factor),
@@ -2322,7 +2305,6 @@ class AppConfig:
             "masterstar_solver_use_draft_median_if_hint_sep_deg": float(
                 self.masterstar_solver_use_draft_median_if_hint_sep_deg
             ),
-            "masterstar_log_astroalign": bool(self.masterstar_log_astroalign),
             "masterstar_optimizer_mirror_extra_log": bool(self.masterstar_optimizer_mirror_extra_log),
             "masterstar_platesolve_sip_max_order": int(self.masterstar_platesolve_sip_max_order),
             "masterstar_platesolve_sip_min_order": int(self.masterstar_platesolve_sip_min_order),
@@ -2393,10 +2375,6 @@ class AppConfig:
             "phase01_comparison_n_comp_max": int(self.phase01_comparison_n_comp_max),
             "phase01_comparison_max_comp_rms": float(self.phase01_comparison_max_comp_rms),
             "phase01_comparison_min_dist_arcsec": float(self.phase01_comparison_min_dist_arcsec),
-            "phase01_comparison_rms_bin_mag": float(self.phase01_comparison_rms_bin_mag),
-            "phase01_comparison_proximity_tiebreak": bool(
-                self.phase01_comparison_proximity_tiebreak
-            ),
             "phase01_comparison_min_frames_frac": float(self.phase01_comparison_min_frames_frac),
             "phase01_comparison_exclude_gaia_nss": bool(self.phase01_comparison_exclude_gaia_nss),
             "phase01_comparison_exclude_gaia_extobj": bool(self.phase01_comparison_exclude_gaia_extobj),

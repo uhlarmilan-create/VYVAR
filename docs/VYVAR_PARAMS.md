@@ -5,15 +5,15 @@ Regenerate with `python tools/gen_params_md.py`. Hand edits will be overwritten.
 Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fields(AppConfig)` (defaults and types, from code).
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 
-_Generated 2026-07-17T19:05:37Z at git HEAD 4882f5c._
+_Generated 2026-07-18T09:51:04Z at git HEAD 617b76f._
 
 ## Summary
 
-- Entries: 304
-- Tier: basic 12, advanced 75, expert 217
-- Kind: static 284, derived 0, resolved 20
-- Widget: auto 128, custom 162, hidden 14
-- Owner: db_static 9, config_runtime 277, fits_dynamic 7, internal 11
+- Entries: 300
+- Tier: basic 12, advanced 75, expert 213
+- Kind: static 281, derived 0, resolved 19
+- Widget: auto 127, custom 159, hidden 14
+- Owner: db_static 9, config_runtime 273, fits_dynamic 7, internal 11
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -143,7 +143,6 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `masterstar_detection_cap_min` | 250 | - | expert | static | config_runtime | custom | Masterstar Detection Cap Min |
 | `masterstar_distortion_benign_ratio_max` | 3.2 | 2 .. 5 | advanced | static | config_runtime | custom | Masterstar Distortion Benign Ratio Max |
 | `masterstar_false_alarm_p_max` | 1e-06 | 1e-12 .. 1 | expert | static | config_runtime | custom | Masterstar False Alarm P Max |
-| `masterstar_log_astroalign` | True | - | expert | static | config_runtime | custom | Masterstar Log Astroalign |
 | `masterstar_min_matched_floor` | 40 | - | advanced | static | config_runtime | custom | Masterstar Min Matched Floor |
 | `masterstar_odds_k` | 12.0 | 1 .. 100 | expert | static | config_runtime | custom | Masterstar Odds K |
 | `masterstar_odds_match_floor` | 30 | - | expert | static | config_runtime | custom | Masterstar Odds Match Floor |
@@ -203,7 +202,6 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `aperture_correction_min_ref_stars` | 3 | 1 .. 50 | expert | static | config_runtime | auto | Aperture Correction Min Ref Stars |
 | `aperture_fwhm_factor` | 1.9 | 0.5 .. 6 | advanced | resolved | config_runtime | auto | Aperture FWHM Factor |
 | `aperture_fwhm_factor_large` | 4.0 | - | expert | resolved | config_runtime | auto | Aperture FWHM Factor Large |
-| `aperture_fwhm_factor_medium` | 2.5 | - | expert | resolved | config_runtime | auto | Aperture FWHM Factor Medium |
 | `aperture_fwhm_factor_small` | 1.5 | - | expert | resolved | config_runtime | auto | Aperture FWHM Factor Small |
 | `aperture_photometry_enabled` | True | - | advanced | static | config_runtime | auto | Aperture Photometry Enabled |
 | `aperture_variable_factor` | 1.0 | 0.25 .. 3 | advanced | static | config_runtime | auto | Aperture Variable Factor |
@@ -308,8 +306,6 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `phase01_comparison_min_frames_frac` | 0.2 | 0.05 .. 0.95 | advanced | static | config_runtime | custom | Phase01 Comparison Min Frames Frac |
 | `phase01_comparison_n_comp_max` | 8 | - | advanced | static | config_runtime | custom | Phase01 Comparison N Comp Max |
 | `phase01_comparison_n_comp_min` | 3 | - | advanced | resolved | config_runtime | custom | Phase01 Comparison N Comp Min |
-| `phase01_comparison_proximity_tiebreak` | False | - | expert | static | config_runtime | custom | Phase01 Comparison Proximity Tiebreak |
-| `phase01_comparison_rms_bin_mag` | 0.001 | 0.0001 .. 0.05 | expert | static | config_runtime | custom | Phase01 Comparison RMS Bin Mag |
 | `phase01_comparison_rms_outlier_sigma` | 3.0 | 1 .. 10 | expert | static | config_runtime | custom | Phase01 Comparison RMS Outlier Sigma |
 | `phase01_ct_extrapolation_tol` | 0.0 | - | expert | static | config_runtime | auto | Phase01 CT Extrapolation Tol |
 | `phase01_ct_min_comp` | 7 | 2 .. 30 | expert | static | config_runtime | auto | Phase01 CT Min Comp |

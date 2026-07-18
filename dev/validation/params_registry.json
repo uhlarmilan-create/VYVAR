@@ -177,17 +177,6 @@
     "unit": null,
     "widget": "auto"
   },
-  "aperture_fwhm_factor_medium": {
-    "help": "Aperture FWHM Factor Medium (photometry parameter).",
-    "kind": "resolved",
-    "label": "Aperture FWHM Factor Medium",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto"
-  },
   "aperture_fwhm_factor_small": {
     "help": "Aperture FWHM Factor Small (photometry parameter).",
     "kind": "resolved",
@@ -2016,17 +2005,6 @@
     "unit": null,
     "widget": "custom"
   },
-  "masterstar_log_astroalign": {
-    "help": "Masterstar Log Astroalign (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar Log Astroalign",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
   "masterstar_min_matched_floor": {
     "help": "Masterstar Min Matched Floor (detection parameter).",
     "kind": "static",
@@ -2713,31 +2691,6 @@
     "phase": "comp_selection",
     "range": null,
     "tier": "advanced",
-    "unit": null,
-    "widget": "custom"
-  },
-  "phase01_comparison_proximity_tiebreak": {
-    "help": "Phase01 Comparison Proximity Tiebreak (comp_selection parameter).",
-    "kind": "static",
-    "label": "Phase01 Comparison Proximity Tiebreak",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "phase01_comparison_rms_bin_mag": {
-    "help": "Phase01 Comparison RMS Bin Mag (comp_selection parameter).",
-    "kind": "static",
-    "label": "Phase01 Comparison RMS Bin Mag",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.0001,
-      0.05
-    ],
-    "tier": "expert",
     "unit": null,
     "widget": "custom"
   },
