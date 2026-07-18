@@ -142,3 +142,29 @@ Finding: the live pip index now offers numpy 2.5.1 (minor bump, still <3), not 2
 the scout table stated. CYCLE 1 was scoped to the 2.4.x patch, so 2.5.1 was NOT adopted
 here - it is a candidate for a future in-range cycle (still requires pytest + --full).
 astropy 8.0.1 / photutils 3.0.0 remain gated CYCLE 2 cross-major work.
+
+## PUSH (2026-07-18)
+
+Pushed the DEPS arc stack to origin/main (fast-forward d437bcd..488b02b).
+
+Preflight: origin/main had not moved (d437bcd); clean fast-forward. Working tree clean
+except 3 known untracked scratch scripts (dy_peg_night_run_bvr.py,
+forensic_disc_ui_match2.py, qatar8_night_run_v.py).
+
+Outgoing commits (git log --oneline d437bcd..HEAD):
+  488b02b docs(readme): drop concrete anchor SHAs, keep generic SHA-256 baseline wording
+  a5a9235 chore(deps): CYCLE 1 numpy 2.4.4 in-range refresh - byte-identical PASS
+  30c803f feat(deps-policy): add DEPS_POLICY.md + informational deps-outdated WARN in --fast
+  eb63314 docs(scout): archive DEPS-SCOUT dependency landscape + Cursor verification
+
+Gates:
+- pytest: 963 passed, 19 skipped.
+- session_baseline_check.py --fast: OVERALL PASS. WARNs all expected (pre-existing
+  git-untracked scratch + ledger-todo VL-ANCHOR-424/DQ-430, plus the deps-outdated
+  informational line this stack introduced by design).
+- SCIENCE-PATH RULE: no src_py/ files in the outgoing stack -> --full not required; it
+  was nonetheless run byte-identical PASS for the numpy 2.4.4 change (anchor 435,
+  photometry-sha-core 3d26f469 n=333, extended 6420f1da n=499).
+
+Post-push: HEAD == origin/main == 488b02b; working tree clean (bar the 3 known scratch
+scripts).
