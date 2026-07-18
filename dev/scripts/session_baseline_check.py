@@ -198,6 +198,57 @@ def check_ledger_hint(report: SessionReport) -> None:
         report.add("ledger-todo", "WARN", ", ".join(todo))
 
 
+# Packages with explicit major-holding pins in requirements.txt. Outdated
+# versions here are informational only (upgrades are gated per DEPS_POLICY.md).
+_TRACKED_DEPS = ("numpy", "astropy", "photutils")
+
+
+def check_deps_outdated(report: SessionReport) -> None:
+    """Informational: surface outdated tracked deps. Never FAILs (WARN/PASS/SKIP).
+
+    Upgrades are a deliberate, gated ritual (see docs/DEPS_POLICY.md); this line
+    is a nudge, not a blocker. Best-effort: offline or slow index => SKIP.
+    """
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-m", "pip", "list", "--outdated", "--format=json"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        report.add("deps-outdated", "SKIP", "pip list --outdated timed out (offline?)")
+        return
+    except Exception as exc:  # noqa: BLE001 - informational check must never break session
+        report.add("deps-outdated", "SKIP", f"unavailable: {exc}")
+        return
+    if proc.returncode != 0:
+        report.add("deps-outdated", "SKIP", "pip list --outdated unavailable (offline?)")
+        return
+    try:
+        rows = json.loads(proc.stdout or "[]")
+    except json.JSONDecodeError:
+        report.add("deps-outdated", "SKIP", "could not parse pip output")
+        return
+    by_name = {str(r.get("name", "")).lower(): r for r in rows if isinstance(r, dict)}
+    tracked_hits = []
+    for name in _TRACKED_DEPS:
+        r = by_name.get(name)
+        if r:
+            tracked_hits.append(f"{name} {r.get('version')}->{r.get('latest_version')}")
+    if tracked_hits:
+        extra = len(rows) - len(tracked_hits)
+        suffix = f" (+{extra} other)" if extra > 0 else ""
+        report.add(
+            "deps-outdated",
+            "WARN",
+            "; ".join(tracked_hits) + suffix + " - gated upgrade, see docs/DEPS_POLICY.md",
+        )
+    else:
+        report.add("deps-outdated", "PASS", f"tracked deps current ({len(rows)} other outdated)")
+
+
 def _load_ledger() -> dict[str, Any]:
     return json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
 
@@ -471,6 +522,7 @@ def main(argv: list[str] | None = None) -> int:
     check_config_paths(report)
     check_pytest(report)
     check_ledger_hint(report)
+    check_deps_outdated(report)
     if args.full:
         run_full_baseline(report)
 
