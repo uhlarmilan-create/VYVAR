@@ -166,28 +166,6 @@
     "unit": null,
     "widget": "auto"
   },
-  "aperture_fwhm_factor_large": {
-    "help": "Aperture FWHM Factor Large (photometry parameter).",
-    "kind": "resolved",
-    "label": "Aperture FWHM Factor Large",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto"
-  },
-  "aperture_fwhm_factor_small": {
-    "help": "Aperture FWHM Factor Small (photometry parameter).",
-    "kind": "resolved",
-    "label": "Aperture FWHM Factor Small",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto"
-  },
   "aperture_photometry_enabled": {
     "help": "Aperture Photometry Enabled (photometry parameter).",
     "kind": "static",
@@ -196,6 +174,17 @@
     "phase": "photometry",
     "range": null,
     "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
+  "aperture_snr_sizing": {
+    "help": "SNR aperture sizing sweep bounds {small, large} as FWHM multiples. Merged from aperture_fwhm_factor_small/_large (WAVE-B STEP 4).",
+    "kind": "resolved",
+    "label": "Aperture SNR Sizing",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
     "unit": null,
     "widget": "auto"
   },
@@ -808,6 +797,17 @@
     "unit": null,
     "widget": "auto"
   },
+  "comp_color_tiers": {
+    "help": "Comparison-star colour tiers: 4-row table of {bprp: |dBP-RP| Gaia limit, w: ensemble weight}. Merged from comp_tier1..4_bprp_limit/weight (WAVE-B STEP 4).",
+    "kind": "static",
+    "label": "Comp Color Tiers",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
   "comp_contamination_penalty_k": {
     "help": "Comp Contamination Penalty K (comp_selection parameter).",
     "kind": "static",
@@ -915,118 +915,6 @@
     "owner": "config_runtime",
     "phase": "comp_selection",
     "range": null,
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto"
-  },
-  "comp_tier1_bprp_limit": {
-    "help": "Comp Tier1 BPRP Limit (comp_selection parameter).",
-    "kind": "static",
-    "label": "Comp Tier1 BPRP Limit",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.02,
-      5.0
-    ],
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto"
-  },
-  "comp_tier1_weight": {
-    "help": "Comp Tier1 Weight (comp_selection parameter).",
-    "kind": "static",
-    "label": "Comp Tier1 Weight",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.01,
-      1.0
-    ],
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto"
-  },
-  "comp_tier2_bprp_limit": {
-    "help": "Comp Tier2 BPRP Limit (comp_selection parameter).",
-    "kind": "static",
-    "label": "Comp Tier2 BPRP Limit",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.05,
-      5.0
-    ],
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto"
-  },
-  "comp_tier2_weight": {
-    "help": "Comp Tier2 Weight (comp_selection parameter).",
-    "kind": "static",
-    "label": "Comp Tier2 Weight",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.01,
-      1.0
-    ],
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto"
-  },
-  "comp_tier3_bprp_limit": {
-    "help": "Comp Tier3 BPRP Limit (comp_selection parameter).",
-    "kind": "static",
-    "label": "Comp Tier3 BPRP Limit",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.05,
-      5.0
-    ],
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto"
-  },
-  "comp_tier3_weight": {
-    "help": "Comp Tier3 Weight (comp_selection parameter).",
-    "kind": "static",
-    "label": "Comp Tier3 Weight",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.01,
-      1.0
-    ],
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto"
-  },
-  "comp_tier4_bprp_limit": {
-    "help": "Comp Tier4 BPRP Limit (comp_selection parameter).",
-    "kind": "static",
-    "label": "Comp Tier4 BPRP Limit",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.05,
-      5.0
-    ],
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto"
-  },
-  "comp_tier4_weight": {
-    "help": "Comp Tier4 Weight (comp_selection parameter).",
-    "kind": "static",
-    "label": "Comp Tier4 Weight",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.01,
-      1.0
-    ],
     "tier": "advanced",
     "unit": null,
     "widget": "auto"
@@ -2772,43 +2660,10 @@
     "unit": null,
     "widget": "auto"
   },
-  "phase01_tier1_mag": {
-    "help": "Phase01 Tier1 Mag (comp_selection parameter).",
+  "phase01_tiers": {
+    "help": "Phase-0/1 magnitude tiers: list of |dmag| bounds for candidate tiering. Merged from phase01_tier1..4_mag (WAVE-B STEP 4).",
     "kind": "static",
-    "label": "Phase01 Tier1 Mag",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto"
-  },
-  "phase01_tier2_mag": {
-    "help": "Phase01 Tier2 Mag (comp_selection parameter).",
-    "kind": "static",
-    "label": "Phase01 Tier2 Mag",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto"
-  },
-  "phase01_tier3_mag": {
-    "help": "Phase01 Tier3 Mag (comp_selection parameter).",
-    "kind": "static",
-    "label": "Phase01 Tier3 Mag",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto"
-  },
-  "phase01_tier4_mag": {
-    "help": "Phase01 Tier4 Mag (comp_selection parameter).",
-    "kind": "static",
-    "label": "Phase01 Tier4 Mag",
+    "label": "Phase01 Tiers",
     "owner": "config_runtime",
     "phase": "comp_selection",
     "range": null,

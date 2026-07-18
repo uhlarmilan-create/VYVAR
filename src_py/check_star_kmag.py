@@ -432,11 +432,12 @@ def comp_ensemble_maps(
     comp_df: pd.DataFrame,
     cfg: AppConfig,
 ) -> tuple[dict[str, float], dict[str, int], dict[str, float], dict[int, float]]:
+    _cfg_tw = cfg.comp_tier_weights()
     tier_weights = {
-        1: float(cfg.comp_tier1_weight),
-        2: float(cfg.comp_tier2_weight),
-        3: float(cfg.comp_tier3_weight),
-        4: float(cfg.comp_tier4_weight),
+        1: float(_cfg_tw[0]),
+        2: float(_cfg_tw[1]),
+        3: float(_cfg_tw[2]),
+        4: float(_cfg_tw[3]),
     }
     for k in list(tier_weights.keys()):
         try:

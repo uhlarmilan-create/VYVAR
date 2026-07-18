@@ -878,11 +878,21 @@ def render_settings_dashboard(
             compute="Dynamic threshold: `max(|Δmag|, floor for bright)` per `config.py` logic.",
         )
         st.subheader("Color filter — Gaia BP-RP")
+        # comp_color_tiers (WAVE-B STEP 4): unpack the structured key into per-tier slider values.
+        _ui_tier_lims = cfg.comp_tier_bprp_limits()
+        _ui_tier_w = cfg.comp_tier_weights()
+
+        def _ui_tier_lim(idx: int, dflt: float) -> float:
+            return float((_ui_tier_lims[idx] if idx < len(_ui_tier_lims) else 0.0) or dflt)
+
+        def _ui_tier_wt(idx: int, dflt: float) -> float:
+            return float((_ui_tier_w[idx] if idx < len(_ui_tier_w) else 0.0) or dflt)
+
         tier1_bprp = st.slider(
             "Tier1 |ΔBP-RP| limit",
             min_value=0.05,
             max_value=0.50,
-            value=float(getattr(cfg, "comp_tier1_bprp_limit", 0.25) or 0.25),
+            value=_ui_tier_lim(0, 0.25),
             step=0.01,
             help="Tier1 comp stars: |BP-RP(comp) − BP-RP(target)| ≤ this value.",
         )
@@ -890,21 +900,21 @@ def render_settings_dashboard(
             "Tier2 |ΔBP-RP| limit",
             min_value=0.10,
             max_value=0.80,
-            value=float(getattr(cfg, "comp_tier2_bprp_limit", 0.48) or 0.48),
+            value=_ui_tier_lim(1, 0.48),
             step=0.01,
         )
         tier3_bprp = st.slider(
             "Tier3 |ΔBP-RP| limit",
             min_value=0.20,
             max_value=1.20,
-            value=float(getattr(cfg, "comp_tier3_bprp_limit", 0.79) or 0.79),
+            value=_ui_tier_lim(2, 0.79),
             step=0.01,
         )
         tier4_bprp = st.slider(
             "Tier4 |ΔBP-RP| limit (informational bound)",
             min_value=0.50,
             max_value=2.00,
-            value=float(getattr(cfg, "comp_tier4_bprp_limit", 1.10) or 1.10),
+            value=_ui_tier_lim(3, 1.10),
             step=0.05,
         )
         comp_dbprp = st.slider(
@@ -919,28 +929,28 @@ def render_settings_dashboard(
             "comp_tier1_weight",
             min_value=0.50,
             max_value=1.00,
-            value=float(getattr(cfg, "comp_tier1_weight", 1.00) or 1.00),
+            value=_ui_tier_wt(0, 1.00),
             step=0.05,
         )
         tier2_w = st.slider(
             "comp_tier2_weight",
             min_value=0.50,
             max_value=1.00,
-            value=float(getattr(cfg, "comp_tier2_weight", 0.85) or 0.85),
+            value=_ui_tier_wt(1, 0.85),
             step=0.05,
         )
         tier3_w = st.slider(
             "comp_tier3_weight",
             min_value=0.10,
             max_value=0.75,
-            value=float(getattr(cfg, "comp_tier3_weight", 0.50) or 0.50),
+            value=_ui_tier_wt(2, 0.50),
             step=0.05,
         )
         tier4_w = st.slider(
             "comp_tier4_weight",
             min_value=0.05,
             max_value=0.50,
-            value=float(getattr(cfg, "comp_tier4_weight", 0.25) or 0.25),
+            value=_ui_tier_wt(3, 0.25),
             step=0.05,
         )
         p01_ncmin = st.slider(
@@ -1111,15 +1121,13 @@ def render_settings_dashboard(
         cfg.phase01_comparison_mag_bright_threshold = float(max(6.0, min(18.0, p01_mag_b)))
         cfg.phase01_comparison_max_mag_diff_bright_floor = float(max(0.0, min(4.0, p01_mag_bf)))
         cfg.phase01_comparison_max_mag_diff_absolute = float(max(1.5, min(5.0, p01_mag_abs)))
-        cfg.comp_tier1_bprp_limit = float(max(0.05, min(0.50, tier1_bprp)))
-        cfg.comp_tier2_bprp_limit = float(max(0.10, min(0.80, tier2_bprp)))
-        cfg.comp_tier3_bprp_limit = float(max(0.20, min(1.20, tier3_bprp)))
-        cfg.comp_tier4_bprp_limit = float(max(0.50, min(2.00, tier4_bprp)))
+        cfg.comp_color_tiers = [
+            {"bprp": float(max(0.05, min(0.50, tier1_bprp))), "w": float(max(0.50, min(1.00, tier1_w)))},
+            {"bprp": float(max(0.10, min(0.80, tier2_bprp))), "w": float(max(0.50, min(1.00, tier2_w)))},
+            {"bprp": float(max(0.20, min(1.20, tier3_bprp))), "w": float(max(0.10, min(0.75, tier3_w)))},
+            {"bprp": float(max(0.50, min(2.00, tier4_bprp))), "w": float(max(0.05, min(0.50, tier4_w)))},
+        ]
         cfg.comp_max_delta_bprp = float(max(0.20, min(2.0, comp_dbprp)))
-        cfg.comp_tier1_weight = float(max(0.50, min(1.00, tier1_w)))
-        cfg.comp_tier2_weight = float(max(0.50, min(1.00, tier2_w)))
-        cfg.comp_tier3_weight = float(max(0.10, min(0.75, tier3_w)))
-        cfg.comp_tier4_weight = float(max(0.05, min(0.50, tier4_w)))
         cfg.phase01_comparison_n_comp_min = int(max(2, min(12, p01_ncmin)))
         cfg.phase01_comparison_n_comp_max = int(max(3, min(20, p01_ncmax)))
         if cfg.phase01_comparison_n_comp_max < cfg.phase01_comparison_n_comp_min:

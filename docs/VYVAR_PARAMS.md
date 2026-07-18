@@ -5,15 +5,15 @@ Regenerate with `python tools/gen_params_md.py`. Hand edits will be overwritten.
 Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fields(AppConfig)` (defaults and types, from code).
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 
-_Generated 2026-07-18T10:01:59Z at git HEAD 08e5684._
+_Generated 2026-07-18T10:18:26Z at git HEAD 03d640c._
 
 ## Summary
 
-- Entries: 300
-- Tier: basic 12, advanced 75, expert 213
-- Kind: static 281, derived 0, resolved 19
-- Widget: auto 125, custom 159, hidden 16
-- Owner: db_static 9, config_runtime 273, fits_dynamic 5, internal 13
+- Entries: 289
+- Tier: basic 12, advanced 68, expert 209
+- Kind: static 271, derived 0, resolved 18
+- Widget: auto 114, custom 159, hidden 16
+- Owner: db_static 9, config_runtime 262, fits_dynamic 5, internal 13
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -201,9 +201,8 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `aperture_correction_max_scatter_mag` | 0.03 | 0 .. 2 | expert | static | config_runtime | auto | Aperture Correction Max Scatter Mag |
 | `aperture_correction_min_ref_stars` | 3 | 1 .. 50 | expert | static | config_runtime | auto | Aperture Correction Min Ref Stars |
 | `aperture_fwhm_factor` | 1.9 | 0.5 .. 6 | advanced | resolved | config_runtime | auto | Aperture FWHM Factor |
-| `aperture_fwhm_factor_large` | 4.0 | - | expert | resolved | config_runtime | auto | Aperture FWHM Factor Large |
-| `aperture_fwhm_factor_small` | 1.5 | - | expert | resolved | config_runtime | auto | Aperture FWHM Factor Small |
 | `aperture_photometry_enabled` | True | - | advanced | static | config_runtime | auto | Aperture Photometry Enabled |
+| `aperture_snr_sizing` | {"large": 4.0, "small": 1.5} | - | expert | resolved | config_runtime | auto | Aperture SNR Sizing |
 | `aperture_variable_factor` | 1.0 | 0.25 .. 3 | advanced | static | config_runtime | auto | Aperture Variable Factor |
 | `cog_ac_factor_max` | 5.0 | - | expert | static | config_runtime | custom | COG Ac Factor Max |
 | `cog_aperture_correction_enabled` | False | - | expert | static | config_runtime | custom | COG Aperture Correction Enabled |
@@ -273,6 +272,7 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | key | default | range | tier | kind | owner | widget | label |
 |-----|---------|-------|------|------|-------|--------|-------|
 | `comp_clip_sigma` | 5.0 | 3 .. 10 | advanced | static | config_runtime | auto | Comp Clip Sigma |
+| `comp_color_tiers` | [{'bprp': 0.15, 'w': 1.0}, {'bprp': 0.3, 'w': 0.85}, {'bprp': 0.55, 'w': 0.5}, {'bprp': 1.1, 'w': 0.25}] | - | advanced | static | config_runtime | auto | Comp Color Tiers |
 | `comp_contamination_penalty_k` | 3.0 | 0 .. 20 | expert | static | config_runtime | auto | Comp Contamination Penalty K |
 | `comp_iterative_clip_enabled` | False | - | advanced | static | config_runtime | auto | Comp Iterative Clip Enabled |
 | `comp_max_delta_bprp` | 0.79 | 0 .. 5 | advanced | resolved | config_runtime | auto | Comp Max Delta BPRP |
@@ -281,14 +281,6 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `comp_slope_significance_k` | 3.0 | 0 .. 10 | advanced | static | config_runtime | auto | Comp Slope Significance K |
 | `comp_sparse_fallback_enabled` | True | - | advanced | static | config_runtime | auto | Comp Sparse Fallback Enabled |
 | `comp_sparse_fallback_min` | 0 | - | advanced | static | config_runtime | auto | Comp Sparse Fallback Min |
-| `comp_tier1_bprp_limit` | 0.15 | 0.02 .. 5 | advanced | static | config_runtime | auto | Comp Tier1 BPRP Limit |
-| `comp_tier1_weight` | 1.0 | 0.01 .. 1 | advanced | static | config_runtime | auto | Comp Tier1 Weight |
-| `comp_tier2_bprp_limit` | 0.3 | 0.05 .. 5 | advanced | static | config_runtime | auto | Comp Tier2 BPRP Limit |
-| `comp_tier2_weight` | 0.85 | 0.01 .. 1 | advanced | static | config_runtime | auto | Comp Tier2 Weight |
-| `comp_tier3_bprp_limit` | 0.55 | 0.05 .. 5 | advanced | static | config_runtime | auto | Comp Tier3 BPRP Limit |
-| `comp_tier3_weight` | 0.5 | 0.01 .. 1 | advanced | static | config_runtime | auto | Comp Tier3 Weight |
-| `comp_tier4_bprp_limit` | 1.1 | 0.05 .. 5 | advanced | static | config_runtime | auto | Comp Tier4 BPRP Limit |
-| `comp_tier4_weight` | 0.25 | 0.01 .. 1 | advanced | static | config_runtime | auto | Comp Tier4 Weight |
 | `global_comp_pool_enabled` | True | - | expert | static | config_runtime | auto | Global Comp Pool Enabled |
 | `phase01_comparison_exclude_gaia_extobj` | True | - | advanced | static | config_runtime | custom | Phase01 Comparison Exclude Gaia Extobj |
 | `phase01_comparison_exclude_gaia_nss` | True | - | advanced | static | config_runtime | custom | Phase01 Comparison Exclude Gaia NSS |
@@ -310,10 +302,7 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `phase01_ct_extrapolation_tol` | 0.0 | - | expert | static | config_runtime | auto | Phase01 CT Extrapolation Tol |
 | `phase01_ct_min_comp` | 7 | 2 .. 30 | expert | static | config_runtime | auto | Phase01 CT Min Comp |
 | `phase01_flux_col` | dao_flux | - | expert | static | config_runtime | auto | Phase01 Flux Col |
-| `phase01_tier1_mag` | 0.5 | - | expert | static | config_runtime | auto | Phase01 Tier1 Mag |
-| `phase01_tier2_mag` | 1.0 | - | expert | static | config_runtime | auto | Phase01 Tier2 Mag |
-| `phase01_tier3_mag` | 1.5 | - | expert | static | config_runtime | auto | Phase01 Tier3 Mag |
-| `phase01_tier4_mag` | 2.0 | - | expert | static | config_runtime | auto | Phase01 Tier4 Mag |
+| `phase01_tiers` | [0.5, 1.0, 1.5, 2.0] | - | expert | static | config_runtime | auto | Phase01 Tiers |
 | `phase01_use_bprp_primary` | True | - | expert | static | config_runtime | auto | Phase01 Use BPRP Primary |
 
 ## trust

@@ -375,9 +375,11 @@ class AppConfig:
     # Aperture/annulus radii are computed as factor × fwhm_gaussian_px.
     #: Legacy single aperture factor — used where multi-aperture (B+C) is not active.
     aperture_fwhm_factor: float = 1.9
-    #: Multi-aperture (Method B+C foundation): small / large radii as FWHM multiples.
-    aperture_fwhm_factor_small: float = 1.5
-    aperture_fwhm_factor_large: float = 4.0
+    #: SNR aperture sizing sweep bounds (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large):
+    #: min ("small") and max ("large") radii as FWHM multiples.
+    aperture_snr_sizing: dict[str, float] = field(
+        default_factory=lambda: {"small": 1.5, "large": 4.0}
+    )
     #: TODO-44: Role-aware scale on SNR-optimal radius (SIPS-style); 1.0 = no change.
     aperture_variable_factor: float = 1.0
     aperture_comp_factor: float = 1.1
@@ -506,23 +508,22 @@ class AppConfig:
     phase01_use_bprp_primary: bool = True
     #: Max |ΔBP-RP| v efektívnom farebnom priestore (hard filter pri výbere comp).
     comp_max_delta_bprp: float = 0.79
-    #: Tier limity |ΔBP-RP| (Gaia BP-RP ako primárny farebný filter pri výbere comp).
-    comp_tier1_bprp_limit: float = 0.15
-    comp_tier2_bprp_limit: float = 0.3
-    comp_tier3_bprp_limit: float = 0.55
-    comp_tier4_bprp_limit: float = 1.10
-    #: Tier váhy pre ensemble/AC (multiplikátor k Broeg 1/σ²).
-    comp_tier1_weight: float = 1.00
-    comp_tier2_weight: float = 0.85
-    comp_tier3_weight: float = 0.50
-    comp_tier4_weight: float = 0.25
+    #: Comparison-star colour tiers (WAVE-B STEP 4 merge of comp_tier{1..4}_{bprp_limit,weight}).
+    #: 4-row table; each row {"bprp": |dBP-RP| limit (Gaia), "w": ensemble/AC weight}.
+    comp_color_tiers: list[dict[str, float]] = field(
+        default_factory=lambda: [
+            {"bprp": 0.15, "w": 1.00},
+            {"bprp": 0.30, "w": 0.85},
+            {"bprp": 0.55, "w": 0.50},
+            {"bprp": 1.10, "w": 0.25},
+        ]
+    )
     #: Exponential contamination penalty in comp score: score *= exp(-k * contamination_idx).
     comp_contamination_penalty_k: float = 3.0
-    # Tier mag/BV limits (config-driven, replaces hardcoded tuples)
-    phase01_tier1_mag: float = 0.50
-    phase01_tier2_mag: float = 1.00
-    phase01_tier3_mag: float = 1.50
-    phase01_tier4_mag: float = 2.00
+    #: Phase-0/1 magnitude tiers (WAVE-B STEP 4 merge of phase01_tier{1..4}_mag): |dmag| bounds.
+    phase01_tiers: list[float] = field(
+        default_factory=lambda: [0.50, 1.00, 1.50, 2.00]
+    )
     phase01_plate_scale_arcsec_per_px: float = 1.3
     #: Plate scale (arcsec/px) for Phase 2A metadata, GS11, dilution; Set 1 default 1.3.
     plate_scale_arcsec_per_px: float = 1.3
@@ -1370,17 +1371,31 @@ class AppConfig:
         except (TypeError, ValueError):
             self.aperture_fwhm_factor = 2.75
         self.aperture_fwhm_factor = max(0.5, min(6.0, float(self.aperture_fwhm_factor)))
-        for _apt_key in (
-            "aperture_fwhm_factor_small",
-            "aperture_fwhm_factor_large",
-        ):
+        # aperture_snr_sizing (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large).
+        # New structured form wins; legacy scalar keys are accepted for one transition release.
+        _asz = data.get("aperture_snr_sizing")
+
+        def _set_snr_sizing(slot: str, raw: Any) -> None:
             try:
-                _av = float(data.get(_apt_key, getattr(self, _apt_key)))
-                if not math.isfinite(_av) or _av <= 0:
-                    raise ValueError
-                setattr(self, _apt_key, max(0.5, min(6.0, float(_av))))
-            except (TypeError, ValueError, AttributeError):
-                pass
+                v = float(raw)
+            except (TypeError, ValueError):
+                return
+            if math.isfinite(v) and v > 0:
+                self.aperture_snr_sizing[slot] = max(0.5, min(6.0, v))
+
+        if isinstance(_asz, dict):
+            for _slot in ("small", "large"):
+                if _slot in _asz:
+                    _set_snr_sizing(_slot, _asz[_slot])
+        elif "aperture_fwhm_factor_small" in data or "aperture_fwhm_factor_large" in data:
+            logging.warning(
+                "[DEPRECATED] aperture_fwhm_factor_small/large in config.json are merged into "
+                "aperture_snr_sizing (WAVE-B STEP 4)."
+            )
+            if "aperture_fwhm_factor_small" in data:
+                _set_snr_sizing("small", data["aperture_fwhm_factor_small"])
+            if "aperture_fwhm_factor_large" in data:
+                _set_snr_sizing("large", data["aperture_fwhm_factor_large"])
         try:
             self.aperture_variable_factor = max(
                 0.25,
@@ -1937,14 +1952,63 @@ class AppConfig:
         _f01("phase01_comparison_max_mag_diff_bright_floor", 1.25, 0.0, 4.0)
         _f01("phase01_comparison_max_mag_diff_absolute", 3.0, 1.0, 10.0)
         _f01("comp_max_delta_bprp", 0.79, 0.0, 5.0)
-        _f01("comp_tier1_bprp_limit", 0.15, 0.02, 5.0)
-        _f01("comp_tier2_bprp_limit", 0.30, 0.05, 5.0)
-        _f01("comp_tier3_bprp_limit", 0.55, 0.05, 5.0)
-        _f01("comp_tier4_bprp_limit", 1.10, 0.05, 5.0)
-        _f01("comp_tier1_weight", 1.00, 0.01, 1.00)
-        _f01("comp_tier2_weight", 0.85, 0.01, 1.00)
-        _f01("comp_tier3_weight", 0.50, 0.01, 1.00)
-        _f01("comp_tier4_weight", 0.25, 0.01, 1.00)
+        # comp_color_tiers (WAVE-B STEP 4 merge of comp_tier{1..4}_{bprp_limit,weight}).
+        # New structured form wins; legacy scalar keys are accepted for one transition release.
+        _cct_defaults = [
+            {"bprp": 0.15, "w": 1.00},
+            {"bprp": 0.30, "w": 0.85},
+            {"bprp": 0.55, "w": 0.50},
+            {"bprp": 1.10, "w": 0.25},
+        ]
+
+        def _clamp_tier_row(bprp: float, w: float) -> dict[str, float]:
+            return {
+                "bprp": max(0.02, min(5.0, float(bprp))),
+                "w": max(0.01, min(1.0, float(w))),
+            }
+
+        _cct_raw = data.get("comp_color_tiers")
+        _legacy_tier = any(
+            f"comp_tier{i}_bprp_limit" in data or f"comp_tier{i}_weight" in data
+            for i in (1, 2, 3, 4)
+        )
+        if isinstance(_cct_raw, list) and _cct_raw:
+            _rows: list[dict[str, float]] = []
+            for _row in _cct_raw:
+                if not isinstance(_row, dict):
+                    continue
+                try:
+                    _rows.append(_clamp_tier_row(_row["bprp"], _row["w"]))
+                except (KeyError, TypeError, ValueError):
+                    continue
+            if _rows:
+                self.comp_color_tiers = _rows
+        elif _legacy_tier:
+            logging.warning(
+                "[DEPRECATED] comp_tier{1..4}_{bprp_limit,weight} in config.json are merged into "
+                "comp_color_tiers (WAVE-B STEP 4)."
+            )
+            _rows = []
+            for i in (1, 2, 3, 4):
+                _d = _cct_defaults[i - 1]
+                try:
+                    _b = float(data.get(f"comp_tier{i}_bprp_limit", _d["bprp"]))
+                    _w = float(data.get(f"comp_tier{i}_weight", _d["w"]))
+                except (TypeError, ValueError):
+                    _b, _w = _d["bprp"], _d["w"]
+                _rows.append(_clamp_tier_row(_b, _w))
+            self.comp_color_tiers = _rows
+        # phase01_tiers (WAVE-B STEP 4 merge of phase01_tier{1..4}_mag; previously code-default-only).
+        _pt_raw = data.get("phase01_tiers")
+        if isinstance(_pt_raw, list) and _pt_raw:
+            _mags: list[float] = []
+            for _m in _pt_raw:
+                try:
+                    _mags.append(max(0.0, min(10.0, float(_m))))
+                except (TypeError, ValueError):
+                    continue
+            if _mags:
+                self.phase01_tiers = _mags
         _f01("comp_contamination_penalty_k", 3.0, 0.0, 20.0)
         _f01("calibration_master_ccd_temp_tolerance_c", 0.5, 0.01, 20.0)
         self.cal_diag_gate_enabled = bool(
@@ -2122,6 +2186,19 @@ class AppConfig:
 
         self.tess_enabled = bool(data.get("tess_enabled", self.tess_enabled))
 
+    # --- structured-key accessors (WAVE-B STEP 4) ---------------------------------- #
+    def comp_tier_bprp_limits(self) -> list[float]:
+        """|dBP-RP| colour limit per comp tier, row order, from ``comp_color_tiers``."""
+        return [float(t.get("bprp", 0.0)) for t in self.comp_color_tiers]
+
+    def comp_tier_weights(self) -> list[float]:
+        """Ensemble/AC weight per comp tier, row order, from ``comp_color_tiers``."""
+        return [float(t.get("w", 0.0)) for t in self.comp_color_tiers]
+
+    def phase01_tier_mags(self) -> list[float]:
+        """Phase-0/1 |dmag| tier bounds, row order, from ``phase01_tiers``."""
+        return [float(x) for x in self.phase01_tiers]
+
     def to_json(self) -> dict[str, Any]:
         return {
             "archive_root": str(self.archive_root),
@@ -2275,8 +2352,10 @@ class AppConfig:
             "epsf_min_stars": int(self.epsf_min_stars),
             "photometry_mode": str(self.photometry_mode),
             "aperture_fwhm_factor": float(self.aperture_fwhm_factor),
-            "aperture_fwhm_factor_small": float(self.aperture_fwhm_factor_small),
-            "aperture_fwhm_factor_large": float(self.aperture_fwhm_factor_large),
+            "aperture_snr_sizing": {
+                "small": float(self.aperture_snr_sizing.get("small", 1.5)),
+                "large": float(self.aperture_snr_sizing.get("large", 4.0)),
+            },
             "aperture_variable_factor": float(self.aperture_variable_factor),
             "aperture_comp_factor": float(self.aperture_comp_factor),
             "aperture_correction_enabled": bool(self.aperture_correction_enabled),
@@ -2367,14 +2446,11 @@ class AppConfig:
                 self.phase01_comparison_max_mag_diff_absolute
             ),
             "comp_max_delta_bprp": float(self.comp_max_delta_bprp),
-            "comp_tier1_bprp_limit": float(self.comp_tier1_bprp_limit),
-            "comp_tier2_bprp_limit": float(self.comp_tier2_bprp_limit),
-            "comp_tier3_bprp_limit": float(self.comp_tier3_bprp_limit),
-            "comp_tier4_bprp_limit": float(self.comp_tier4_bprp_limit),
-            "comp_tier1_weight": float(self.comp_tier1_weight),
-            "comp_tier2_weight": float(self.comp_tier2_weight),
-            "comp_tier3_weight": float(self.comp_tier3_weight),
-            "comp_tier4_weight": float(self.comp_tier4_weight),
+            "comp_color_tiers": [
+                {"bprp": float(t.get("bprp", 0.0)), "w": float(t.get("w", 0.0))}
+                for t in self.comp_color_tiers
+            ],
+            "phase01_tiers": [float(x) for x in self.phase01_tiers],
             "comp_contamination_penalty_k": float(self.comp_contamination_penalty_k),
             "phase01_comparison_n_comp_min": int(self.phase01_comparison_n_comp_min),
             "phase01_comparison_n_comp_max": int(self.phase01_comparison_n_comp_max),

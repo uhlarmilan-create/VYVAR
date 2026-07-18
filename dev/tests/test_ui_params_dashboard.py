@@ -64,9 +64,11 @@ def test_owner_groups_partition_every_key() -> None:
     assert len(flat) == len(set(flat)), "a key landed in more than one owner group"
     # locked distribution seeded from the audit CSV; WAVE-B STEP 2 removed 4 dead
     # config_runtime keys (277 -> 273); STEP 3 internalized frame_width_px/frame_height_px
-    # (fits_dynamic 7 -> 5, internal 11 -> 13).
+    # (fits_dynamic 7 -> 5, internal 11 -> 13); STEP 4 merged 14 config_runtime scalars into
+    # 3 structured config_runtime keys (comp_color_tiers, phase01_tiers, aperture_snr_sizing):
+    # 273 - 14 + 3 = 262.
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 273, "fits_dynamic": 5, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 262, "fits_dynamic": 5, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

@@ -8593,11 +8593,12 @@ def _phase2a_process_one_target(
         _normalize_gaia_id(r["catalog_id"]): float(r.get("mag", float("nan")))
         for _, r in target_comps.iterrows()
     }
+    _cfg_tw = _cfg.comp_tier_weights()
     tier_weights = {
-        1: float(_cfg.comp_tier1_weight),
-        2: float(_cfg.comp_tier2_weight),
-        3: float(_cfg.comp_tier3_weight),
-        4: float(_cfg.comp_tier4_weight),
+        1: float(_cfg_tw[0]),
+        2: float(_cfg_tw[1]),
+        3: float(_cfg_tw[2]),
+        4: float(_cfg_tw[3]),
     }
     for _k in list(tier_weights.keys()):
         try:
@@ -12574,10 +12575,11 @@ def _bprp_tier_ladder_for_selection(
 ) -> list[float]:
     """Tier-ladder colour windows: tier1 -> tier2 -> tier3 -> comp_max_delta_bprp cap."""
     if cfg is not None:
+        _tier_lims = cfg.comp_tier_bprp_limits()
         raw = [
-            float(getattr(cfg, "comp_tier1_bprp_limit", 0.15)),
-            float(getattr(cfg, "comp_tier2_bprp_limit", 0.30)),
-            float(getattr(cfg, "comp_tier3_bprp_limit", 0.55)),
+            float(_tier_lims[0]),
+            float(_tier_lims[1]),
+            float(_tier_lims[2]),
             float(getattr(cfg, "comp_max_delta_bprp", max_delta_bprp)),
         ]
     else:
@@ -14895,6 +14897,7 @@ def run_full_photometry_pipeline(
             int(_fh_pipe),
             _frame_hw_src,
         )
+    _pt_mags = _cfg.phase01_tier_mags()
     p01 = run_phase0_and_phase1(
         variable_targets_csv=Path(variable_targets_csv),
         masterstars_csv=Path(masterstars_csv),
@@ -14915,10 +14918,10 @@ def run_full_photometry_pipeline(
         ),
         max_mag_diff=float(_cfg.phase01_comparison_max_mag_diff),
         comp_max_delta_bprp=float(_cfg.comp_max_delta_bprp),
-        max_mag_diff_t1=float(_cfg.phase01_tier1_mag),
-        max_mag_diff_t2=float(_cfg.phase01_tier2_mag),
-        max_mag_diff_t3=float(_cfg.phase01_tier3_mag),
-        max_mag_diff_t4=float(_cfg.phase01_tier4_mag),
+        max_mag_diff_t1=float(_pt_mags[0]),
+        max_mag_diff_t2=float(_pt_mags[1]),
+        max_mag_diff_t3=float(_pt_mags[2]),
+        max_mag_diff_t4=float(_pt_mags[3]),
         n_comp_min=int(_cfg.phase01_comparison_n_comp_min),
         n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
         max_comp_rms=float(_cfg.phase01_comparison_max_comp_rms),

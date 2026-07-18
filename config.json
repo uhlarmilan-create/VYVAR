@@ -140,8 +140,10 @@
   "epsf_min_stars": 30,
   "photometry_mode": "both",
   "aperture_fwhm_factor": 1.9,
-  "aperture_fwhm_factor_small": 1.5,
-  "aperture_fwhm_factor_large": 4.0,
+  "aperture_snr_sizing": {
+    "small": 1.5,
+    "large": 4.0
+  },
   "aperture_variable_factor": 1.0,
   "aperture_comp_factor": 1.1,
   "aperture_correction_enabled": true,
@@ -208,14 +210,24 @@
   "phase01_comparison_max_mag_diff_bright_floor": 1.5,
   "phase01_comparison_max_mag_diff_absolute": 3.0,
   "comp_max_delta_bprp": 0.79,
-  "comp_tier1_bprp_limit": 0.15,
-  "comp_tier2_bprp_limit": 0.3,
-  "comp_tier3_bprp_limit": 0.55,
-  "comp_tier4_bprp_limit": 1.1,
-  "comp_tier1_weight": 1.0,
-  "comp_tier2_weight": 0.85,
-  "comp_tier3_weight": 0.5,
-  "comp_tier4_weight": 0.25,
+  "comp_color_tiers": [
+    {
+      "bprp": 0.15,
+      "w": 1.0
+    },
+    {
+      "bprp": 0.3,
+      "w": 0.85
+    },
+    {
+      "bprp": 0.55,
+      "w": 0.5
+    },
+    {
+      "bprp": 1.1,
+      "w": 0.25
+    }
+  ],
   "comp_contamination_penalty_k": 3.0,
   "phase01_comparison_n_comp_min": 3,
   "phase01_comparison_n_comp_max": 8,

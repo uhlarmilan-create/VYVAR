@@ -254,10 +254,11 @@ def _resolve_target_color_for_comp_selection(
         _vnm = str(target.get("vsx_name", "") or target.get("name", "") or "").strip() or (target_cid or "?")
         log_event(f"TARGET {_vnm} nemá BP-RP → TIER filter len podľa mag")
 
+    _tier_lims = _cfg.comp_tier_bprp_limits()
     TIER_DEFS = [
-        (1, float(_cfg.comp_tier1_bprp_limit or 0.25)),
-        (2, float(_cfg.comp_tier2_bprp_limit or 0.48)),
-        (3, float(_cfg.comp_tier3_bprp_limit or 0.79)),
+        (1, float(_tier_lims[0] or 0.25)),
+        (2, float(_tier_lims[1] or 0.48)),
+        (3, float(_tier_lims[2] or 0.79)),
         (4, 999.0),
     ]
 
@@ -1959,9 +1960,10 @@ def _assign_comp_tiers_to_pool(
         else:
             return "color_rms"
         mx = float(pd.to_numeric(fc[_col], errors="coerce").max())
-        t1 = float(_cfg_w.comp_tier1_bprp_limit)
-        t2 = float(_cfg_w.comp_tier2_bprp_limit)
-        t3 = float(_cfg_w.comp_tier3_bprp_limit)
+        _wlims = _cfg_w.comp_tier_bprp_limits()
+        t1 = float(_wlims[0])
+        t2 = float(_wlims[1])
+        t3 = float(_wlims[2])
         cap = float(_cfg_w.comp_max_delta_bprp)
         if mx <= t1:
             return "color_rms_t1"
@@ -2264,11 +2266,12 @@ def _assemble_comp_selection_result_rows(
         except Exception:  # noqa: BLE001
             rms_f = float("nan")
         if math.isfinite(rms_f) and rms_f > 1e-6:
+            _asm_w = _cfg_asm.comp_tier_weights()
             _tw_map = {
-                1: float(_cfg_asm.comp_tier1_weight or 1.00),
-                2: float(_cfg_asm.comp_tier2_weight or 0.85),
-                3: float(_cfg_asm.comp_tier3_weight or 0.50),
-                4: float(_cfg_asm.comp_tier4_weight or 0.25),
+                1: float(_asm_w[0] or 1.00),
+                2: float(_asm_w[1] or 0.85),
+                3: float(_asm_w[2] or 0.50),
+                4: float(_asm_w[3] or 0.25),
             }
             try:
                 _tier_i = int(pd.to_numeric(r.get("comp_tier", 4), errors="coerce") or 4)

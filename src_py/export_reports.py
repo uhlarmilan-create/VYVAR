@@ -1065,9 +1065,18 @@ def export_lightcurve_reports(
     v_lines.append("#\n")
     v_lines.extend(_varastro_alg_lines(fresh_cfg, photometry_dir=_phot_dir, lc_method=_export_method))
     _cfg_tier = fresh_cfg
-    _t1 = float(getattr(_cfg_tier, "comp_tier1_bprp_limit", 0.25) or 0.25)
-    _t2 = float(getattr(_cfg_tier, "comp_tier2_bprp_limit", 0.48) or 0.48)
-    _t3 = float(getattr(_cfg_tier, "comp_tier3_bprp_limit", 0.79) or 0.79)
+    _tier_lims = (
+        _cfg_tier.comp_tier_bprp_limits()
+        if hasattr(_cfg_tier, "comp_tier_bprp_limits")
+        else []
+    )
+
+    def _tier_lim(idx: int, dflt: float) -> float:
+        return float((_tier_lims[idx] if idx < len(_tier_lims) else 0.0) or dflt)
+
+    _t1 = _tier_lim(0, 0.25)
+    _t2 = _tier_lim(1, 0.48)
+    _t3 = _tier_lim(2, 0.79)
     v_lines.append(
         f"#   Tier system (|ΔBP-RP| Gaia): "
         f"T1≤{_t1:.2f}(w=1.00) T2≤{_t2:.2f}(w=0.85) T3≤{_t3:.2f}(w=0.50) T4>{_t3:.2f}(w=0.25)\n"
