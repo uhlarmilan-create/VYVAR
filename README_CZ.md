@@ -127,7 +127,7 @@ reprodukuje aperturní extrakci VYVAR na **~0,2 % na snímek** a t?i nezávislé eng
 + sep + VYVAR) reprodukují RMS v?decké k?ivky na ~1 % bez systematického offsetu.
 
 **Kotevní disciplína.** Výstupy fotometrie jsou drženy na byte-identické **regresní referenci
-SHA-256** (zmrazené sady `770966c3…` / `edbd97e7…`), podpo?ené v?decky smysluplným numerickým
+SHA-256**, podpo?ené v?decky smysluplným numerickým
 komparátorem na úrovni ~`1e-6`, takže refaktoring nebo zm?na konfigurace bu? p?esn? reprodukuje
 zmrazená v?decká ?ísla, nebo je ozna?en.
 

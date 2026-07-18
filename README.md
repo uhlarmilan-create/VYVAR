@@ -131,9 +131,8 @@ detection, apertures, and background: a SExtractor-class mesh-background pipelin
 offset.
 
 **Anchor discipline.** Photometry outputs are held to a byte-identical **SHA-256 regression
-baseline** (frozen reference sets `770966c3…` / `edbd97e7…`), backed by a science-meaningful
-numeric comparator at the ~`1e-6` level, so a refactor or a config change either reproduces the
-frozen science numbers exactly or is flagged.
+baseline**, backed by a science-meaningful numeric comparator at the ~`1e-6` level, so a refactor
+or a config change either reproduces the frozen science numbers exactly or is flagged.
 
 ---
 
