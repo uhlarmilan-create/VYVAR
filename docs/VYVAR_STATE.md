@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-17** (REPO-REORG + PARAM-SOURCE-AUDIT + wave-A ownership; layout stabilized).
+Last updated: **2026-07-18** (WAVE-B-PARAM-REDUCTION: 304 -> 269 registered params, anchor-gated).
 
 ## Repository layout (REPO-REORG -- DONE, gate PASS)
 
@@ -19,6 +19,16 @@ Parameter provenance mapped in PARAM-SOURCE-AUDIT (`dev/results/PARAM_SOURCE_AUD
 FITS-resolved values; DB `SETTINGS` table found vestigial. Wave-A ownership arc
 adds the `owner` axis and fixes the config-write render side-effect.
 
+**WAVE-B-PARAM-REDUCTION -- DONE (pending final gate/push).** Registered params
+reduced 304 -> 269 (config.json persists 249), per the PARAM-BUDGET-AUDIT dispositions
+(Milan-approved): DELETE-DEAD 4, MERGE 14 -> 3 structured keys (`comp_color_tiers`,
+`phase01_tiers`, `aperture_snr_sizing`), DELETE-DB-DUP 9 (DB/FITS resolver now sole
+source; vestigial DB `SETTINGS` table dropped), HARDCODE 20 solver internals, INTERNALIZE
+2 frame dims, and WIRE-IN `calibration_master_ccd_temp_tolerance_c` (bug fix). The 80-key
+"never-touched expert" pool was explicitly REJECTED (stays KEEP; universality). Commits
+`617b76f`/`08e5684`/`03d640c`/`c828c9c`/`d6c0d55`/`715e754` + STEP 7 docs. Result:
+`CURSOR_RESULT_wave_b_reduction.md`.
+
 ## Test-hygiene backlog
 
 - `dev/tests/test_g7_f003c_report_cfg_snapshot.py` (2 tests) is order-dependent: its
@@ -31,10 +41,10 @@ adds the `owner` axis and fixes the config-write render side-effect.
 
 ## UI block
 
-**Wave 1 (parameters): DONE.** Machine-readable registry (304 entries) with parity /
-freshness / hidden-tier guard tests, generated `VYVAR_PARAMS.md`, tiered Parameters
-dashboard (basic 12 / advanced 75 / expert 217), PDF Configuration page in the SUMMARY
-MEASURE REPORT. min_comps=3 closed as intentional (DECISIONS). Results:
+**Wave 1 (parameters): DONE.** Machine-readable registry (269 entries post WAVE-B) with
+parity / freshness / hidden-tier guard tests, generated `VYVAR_PARAMS.md`, tiered
+Parameters dashboard, PDF Configuration page in the SUMMARY MEASURE REPORT. min_comps=3
+closed as intentional (DECISIONS). Results:
 `CURSOR_RESULT_params_registry_ui.md`, `CURSOR_RESULT_params_closeout.md`.
 
 **Next: data dashboards wave** - identity QA series, trust/census fingerprint, AC status,

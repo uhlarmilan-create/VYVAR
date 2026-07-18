@@ -1,9 +1,10 @@
 # Pruvodce konfiguraci VYVAR (config.json) - CZ
 
 _Sesterky dokument: `VYVAR_CONFIG_GUIDE_EN.md` (anglicky). Vychazi z registru
-parametru (`dev/validation/params_registry.json`, 304 polozek) a z auditu
-zdroju parametru (`dev/results/PARAM_SOURCE_AUDIT.md`), stav k 17. 7. 2026.
-Pri zmene parametru aktualizujte tohoto pruvodce spolu s registrem._
+parametru (`dev/validation/params_registry.json`, 269 polozek) a z auditu
+zdroju parametru (`dev/results/PARAM_SOURCE_AUDIT.md`), stav k 18. 7. 2026
+(po redukci parametru WAVE-B). Pri zmene parametru aktualizujte tohoto
+pruvodce spolu s registrem._
 
 ## Co je config.json?
 
@@ -18,19 +19,29 @@ jsou tri druhu a tento pruvodce kazdy z nich oznacuje:
 
 - **Staticky (databaze)** - fakta o vasi observatori: stanoviste,
   dalekohled, kamera, katalogy. Ziji v databazovych tabulkach (LOCATION,
-  TELESCOPE, EQUIPMENTS) a spravuji se v aplikaci. Kopie nekterych z nich
-  se z historickych duvodu jeste objevuji v config.json, ale autoritativnim
-  zdrojem je databaze.
+  TELESCOPE, EQUIPMENTS) a spravuji se v aplikaci, ktera je autoritativnim
+  zdrojem. WAVE-B odstranila devet kopii techto fakt z config.json, takze
+  se edituji jen na jednom miste: souradnice a nazev stanoviste
+  (observer_lat / observer_lon / observer_alt_m / observer_location_name,
+  hydratovane z radku LOCATION vybraneho pres observer_location_id), gain a
+  read_noise detektoru (vyhodnocovane nejdrive z DB/FITS) a popisky meritka
+  (plate_scale_arcsec_per_px, phase01_plate_scale_arcsec_per_px,
+  export_arcsec_per_px, odvozene z WCS/optiky).
 - **Dynamicky (FITS / za behu)** - hodnoty zmerene nebo spocitane pro kazdy
   beh: gain kamery, sumove cteni (read noise), rozmer snimku, uhlove
   meritko (plate scale), binning, filtr, expozice. VYVAR je cte z hlavicek
-  FITS souboru nebo je odvodi (napr. z astrometrickeho reseni). Editace
-  jejich zaloznich hodnot v config.json na skutecny beh zpravidla nema vliv.
+  FITS souboru nebo je odvodi (napr. z astrometrickeho reseni). Po WAVE-B
+  uz nemaji zalohu v config.json.
 - **Nastaveni (config.json)** - skutecne uzivatelske ladeni chovani
-  pipeline. To je vetsina (277 z 304 parametru). Nektere jsou oznacene
-  "auto-uprava za behu": nastavena hodnota je zaklad, ktery si pipeline
-  muze prizpusobit poli (napr. povolovani/zprisnovani kriterii srovnavacich
-  hvezd podle hustoty hvezd).
+  pipeline. To je vetsina z 269 registrovanych parametru (config.json jich
+  uklada 249; zbytek jsou fakta z databaze, hodnoty z FITS/za behu nebo
+  interni zazemi). Nektere jsou oznacene "auto-uprava za behu": nastavena
+  hodnota je zaklad, ktery si pipeline muze prizpusobit poli (napr.
+  povolovani/zprisnovani kriterii srovnavacich hvezd podle hustoty hvezd).
+  WAVE-B take zafixovala 20 internich parametru slepeho/astrometrickeho
+  resice, ktere se v praxi nikdy neladily, a slucila 14 skalaru urovni a
+  apertur do 3 strukturovanych klicu (comp_color_tiers, phase01_tiers,
+  aperture_snr_sizing).
 - **Interni** - technicke zazemi (cesty k souborum, hodnoty specificke pro
   pocitac). Nechte je byt, pokud presne nevite proc.
 
@@ -63,12 +74,12 @@ Kdo pozoroval a odkud. Jde o fakta observatore: identifikuji vas v exportech pro
 |---|---|---|---|---|---|
 | `aavso_filter_map` | {} | Staticky (databaze) | config.json | sestaveni a validace konfigurace (`config.py:1196`) | Volitelna mapa vasich nazvu filtru na oficialni AAVSO kody pouzite v exportu (napr. 'NoFilter' -> 'CV'). |
 | `aavso_observer_code` | UMIA | Staticky (databaze) | config.json | sestaveni a validace konfigurace (`config.py:1193`) | Vas oficialni AAVSO kod pozorovatele (UMIA); vklada se do kazdeho AAVSO exportu, aby bylo pozorovani pripsano vam. |
-| `observer_alt_m` | 275.0 | Staticky (databaze) | config.json (autoritativni kopie v DB) | hlavni UI aplikace (`app.py:2045`) | Nadmorska vyska stanoviste v metrech; soucast definice stanoviste pro vypocet airmass a casovych korekci. |
+| `observer_alt_m` | 275.0 | Staticky (databaze) | databaze (LOCATION) | hlavni UI aplikace (`app.py:2045`) | Nadmorska vyska stanoviste v metrech; soucast definice stanoviste pro vypocet airmass a casovych korekci. WAVE-B odstranila kopii v config.json - hydratuje se z DB podle observer_location_id. |
 | `observer_code` | (prazdne) | Staticky (databaze) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:9690`) | Kratky identifikator pozorovatele tisteny v reportech a exportech (odlisny od AAVSO kodu). |
-| `observer_lat` | 50.1121658 | Staticky (databaze) | config.json (autoritativni kopie v DB) | hlavni UI aplikace (`app.py:2043`) | Zemepisna sirka stanoviste ve stupnich. Vedecke behy berou stanoviste ze zaznamu LOCATION daneho draftu; tato kopie slouzi UI a exportum. |
+| `observer_lat` | 50.1121658 | Staticky (databaze) | databaze (LOCATION) | hlavni UI aplikace (`app.py:2043`) | Zemepisna sirka stanoviste ve stupnich. Vedecke behy berou stanoviste ze zaznamu LOCATION daneho draftu. WAVE-B odstranila kopii v config.json - hydratuje se z DB podle observer_location_id. |
 | `observer_location_id` | 2 | Staticky (databaze) | config.json (autoritativni kopie v DB) | hlavni UI aplikace (`app.py:1965`) | Databazove ID aktualne vybraneho stanoviste (radek tabulky LOCATION). |
-| `observer_location_name` | (prazdne) | Staticky (databaze) | config.json (autoritativni kopie v DB) | hlavni UI aplikace (`app.py:2046`) | Citelny nazev vybraneho stanoviste (napr. Jirny, Dablice). |
-| `observer_lon` | 14.6982547 | Staticky (databaze) | config.json (autoritativni kopie v DB) | hlavni UI aplikace (`app.py:2044`) | Zemepisna delka stanoviste ve stupnich; jak si vedecky beh stanoviste vyhodnocuje, viz observer_lat. |
+| `observer_location_name` | (prazdne) | Staticky (databaze) | databaze (LOCATION) | hlavni UI aplikace (`app.py:2046`) | Citelny nazev vybraneho stanoviste (napr. Jirny, Dablice). WAVE-B odstranila kopii v config.json - hydratuje se z DB podle observer_location_id. |
+| `observer_lon` | 14.6982547 | Staticky (databaze) | databaze (LOCATION) | hlavni UI aplikace (`app.py:2044`) | Zemepisna delka stanoviste ve stupnich; jak si vedecky beh stanoviste vyhodnocuje, viz observer_lat. WAVE-B odstranila kopii v config.json - hydratuje se z DB podle observer_location_id. |
 | `observer_name` | Unknown Observer | Staticky (databaze) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:9691`) | Cele jmeno pozorovatele tistene v reportech. |
 
 ## Cesty k souborum a katalogum
@@ -149,15 +160,8 @@ Hledani hvezd na snimcich, urceni oblohovych souradnic (plate solving vcetne sle
 
 | Parametr | Vychozi | Typ | Odkud se bere | Kde se pouziva | Vysvetleni |
 |---|---|---|---|---|---|
-| `blind_cluster_coherence_cap` | 25 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:986`) | Horni mez kontrol koherence clusteru pri hlasovani slepeho solveru o kandidatnich pozicich; chrani vypocetni cas na neprehlednych polich. |
-| `blind_cluster_eps_deg` | 1.0; rozsah 0.1 .. 5 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:963`) | Polomer (stupne), ve kterem se kandidatni pozice slepeho reseni slucuji do jednoho clusteru pri hlasovani. |
-| `blind_cluster_min_samples` | 3 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:972`) | Minimalni pocet kandidatnich hlasu potrebnych k vytvoreni platneho clusteru pozic ve slepem solveru. |
-| `blind_cluster_min_votes` | 4 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:956`) | Minimalni pocet hlasu, ktery clusterovana pozice potrebuje, aby ji slepy solver prijal jako polohu pole. |
-| `blind_cluster_vote_span` | 12 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:979`) | Kolik nejlepe hodnocenych shod indexu prispiva hlasy do clusterovani pozic. |
 | `blind_img_select_mode` | per_cell | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:941`) | Strategie vyberu detekovanych hvezd pro slepy solver ('per_cell' je rovnomerne rozprostre po snimku). |
 | `blind_img_star_budget` | 80 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:935`) | Maximalni pocet hvezd ze snimku predanych slepemu solveru; rozpocet drzi reseni rychle. |
-| `blind_prefilter_min` | 4 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:930`) | Minimalni pocet zasahu predfiltru (quad shody), aby byl slepy kandidat vubec uvazovan. |
-| `blind_scale_tol_frac` | 0.1; rozsah 0.02 .. 0.5 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:949`) | Povolena relativni odchylka meritka snimku od prioru sestavy pri overovani kandidatu slepeho reseni. |
 | `blind_use_rig_prior` | True | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:945`) | Pouziva zname meritko sestavy jako prior k brzkemu zamitnuti neverohodnych kandidatu slepeho reseni. |
 | `blind_verify_early_accept` | 30 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:909`) | Pocet overenych shod hvezd, pri kterem se slepy solver predcasne zastavi a reseni prijme. |
 | `blind_verify_early_floor` | 0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:916`) | Minimalni pocet shod, nez smi predcasne prijeti vubec nastat. |
@@ -179,8 +183,8 @@ Hledani hvezd na snimcich, urceni oblohovych souradnic (plate solving vcetne sle
 | `field_density_adaptive_enabled` | True | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2069`) | Hlavni vypinac adaptace na hustotu: profily ridke/normalni/huste pole automaticky povoluji ci zprisnuji kriteria srovnavacich hvezd. |
 | `field_density_dense_threshold` | 1000.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2060`) | Pocet sparovanych hvezd, nad kterym se pole povazuje za huste (prisnejsi kriteria). |
 | `field_density_sparse_threshold` | 300.0; rozsah 1 .. 50000 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2053`) | Pocet sparovanych hvezd, pod kterym se pole povazuje za ridke (volnejsi kriteria, aby soubor vubec vznikl). |
-| `frame_height_px` | 1397 | Dynamicky (FITS / za behu) | FITS hlavicka | fotometricke jadro (Phase 2A) (`photometry_core.py:14713`) | Vyska snimku v pixelech; za behu se meri z FITS NAXIS2, hodnota v configu je jen zaloha. |
-| `frame_width_px` | 2082 | Dynamicky (FITS / za behu) | FITS hlavicka | fotometricke jadro (Phase 2A) (`photometry_core.py:14712`) | Sirka snimku v pixelech; za behu se meri z FITS NAXIS1. |
+| `frame_height_px` | 1397 | Interni | FITS hlavicka | fotometricke jadro (Phase 2A) (`photometry_core.py:14713`) | Vyska snimku v pixelech; za behu se meri z FITS NAXIS2. WAVE-B ji internalizovala (uz se neuklada do config.json). |
+| `frame_width_px` | 2082 | Interni | FITS hlavicka | fotometricke jadro (Phase 2A) (`photometry_core.py:14712`) | Sirka snimku v pixelech; za behu se meri z FITS NAXIS1. WAVE-B ji internalizovala (uz se neuklada do config.json). |
 | `masterstar_accept_mode` | odds | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1775`) | Strategie prijeti astrometrickeho reseni masterstar ('odds' = statisticky test pomeru sanci). |
 | `masterstar_best_of_n` | 10; rozsah 1 .. 25 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1476`) | Kolik nejlepsich snimku se sklada/uvazuje pri stavbe reference masterstar. |
 | `masterstar_catalog_recovery_min` | 0.65; rozsah 0.4 .. 0.95 | Nastaveni (config.json) | config.json | UI masterstar/DAO (`ui_dao_stars.py:353`) | Minimalni podil katalogovych hvezd, ktery musi masterstar znovu najit, aby bylo reseni duveryhodne. |
@@ -192,16 +196,7 @@ Hledani hvezd na snimcich, urceni oblohovych souradnic (plate solving vcetne sle
 | `masterstar_detection_cap_max` | 800 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1827`) | Horni mez adaptivniho stropu detekce. |
 | `masterstar_detection_cap_min` | 250 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1820`) | Dolni mez adaptivniho stropu detekce. |
 | `masterstar_distortion_benign_ratio_max` | 3.2; rozsah 2 .. 5 | Nastaveni (config.json) | config.json | UI masterstar/DAO (`ui_dao_stars.py:356`) | Limit pomeru zkresleni okraj/stred, ktery se jeste povazuje za neskodny pro optiku. |
-| `masterstar_false_alarm_p_max` | 1e-06; rozsah 1e-12 .. 1 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1799`) | Maximalni pravdepodobnost falesneho poplachu testu prijeti astrometrie. |
-| `masterstar_log_astroalign` | True | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1662`) | Rozsirene logovani kroku parovani astroalign. |
 | `masterstar_min_matched_floor` | 40 | Nastaveni (config.json) | config.json | UI masterstar/DAO (`ui_dao_stars.py:354`) | Absolutni minimum sparovanych hvezd, ktereho musi reseni masterstar dosahnout. |
-| `masterstar_odds_k` | 12.0; rozsah 1 .. 100 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1785`) | Konstanta sily testu pomeru sanci pri prijimani reseni. |
-| `masterstar_odds_match_floor` | 30 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1778`) | Minimalni pocet shod vyzadovany rezimem prijeti pres pomer sanci. |
-| `masterstar_odds_min_quadrants` | 3 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1792`) | Sparovane hvezdy musi pokryvat aspon tolik kvadrantu snimku (ochrana pred resenim z jednoho rohu). |
-| `masterstar_optimizer_mirror_extra_log` | True | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1663`) | Rozsirene logovani prace optimalizatoru se zrcadlenim. |
-| `masterstar_platesolve_nn_refine_max_rms_px` | None | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1716`) | Volitelny strop RMS pro krok zjemneni nejblizsim sousedem pri plate solvingu; None strop vypina. |
-| `masterstar_platesolve_prewrite_relaxed_rms_max_px` | 35.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1713`) | Uvolneny limit RMS pro zapis predbezneho WCS, kdyz prisny limit tesne neprojde. |
-| `masterstar_platesolve_prewrite_rms_max_px` | 30.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1710`) | Prisny limit RMS (px) pro zapis WCS reseni do masterstar. |
 | `masterstar_platesolve_sip_max_order` | 4 | Nastaveni (config.json) | config.json | UI masterstar/DAO (`ui_dao_stars.py:351`) | Nejvyssi rad SIP polynomu zkresleni, ktery smi solver fitovat. |
 | `masterstar_platesolve_sip_min_order` | 3 | Nastaveni (config.json) | config.json | UI masterstar/DAO (`ui_dao_stars.py:352`) | Nejnizsi rad SIP zkresleni, ktery solver zkousi. |
 | `masterstar_prematch_peak_sigma_floor` | 1.8; rozsah 0.5 .. 6 | Nastaveni (config.json) | config.json | kalibrace a zpracovani snimku (`pipeline.py:14006`) | Minimalni vyznamnost piku hvezd pouzitych ve fazi predbezneho parovani. |
@@ -211,15 +206,12 @@ Hledani hvezd na snimcich, urceni oblohovych souradnic (plate solving vcetne sle
 | `masterstar_sibling_recovery_enabled` | True | Nastaveni (config.json) | config.json | UI masterstar/DAO (`ui_dao_stars.py:357`) | Povoli zachrannou cestu pres sibling stack, kdyz hlavni reseni masterstar selze. |
 | `masterstar_sibling_rms_max_px` | 2.0; rozsah 0.5 .. 10 | Nastaveni (config.json) | config.json | UI masterstar/DAO (`ui_dao_stars.py:359`) | Limit RMS pro prijeti zachranneho sibling reseni. |
 | `masterstar_sibling_stack_n` | 10 | Nastaveni (config.json) | config.json | UI masterstar/DAO (`ui_dao_stars.py:361`) | Kolik snimku sklada zachranny sibling stack. |
-| `masterstar_sip_force_rms_guard_ratio` | 1.15 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1720`) | Ochranny pomer rozhodujici, kdy je vyssi rad SIP ospravedlnen zlepsenim RMS. |
-| `masterstar_solver_use_draft_median_if_hint_sep_deg` | 1.0; rozsah 0 .. 180 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1651`) | Pouzije median pointingu draftu jako napovedu reseni, kdyz je napoveda z hlavicky dal nez tolik stupnu. |
 | `masterstar_use_best_frame_fwhm` | True | Nastaveni (config.json) | pouze vychozi v kodu | kalibrace a zpracovani snimku (`pipeline.py:11889`) | Pouziva FWHM nejlepsiho snimku pro detekcni jadra masterstar misto prumeru. |
 | `phase01_chip_interior_margin_px` | 50 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:14732`) | Okraj (px) od hrany cipu, ve kterem se hvezdy vylucuji z vyberu srovnavacich (okrajove efekty). |
 | `phase01_match_radius_arcsec` | 10.0; rozsah 3 .. 30 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:11998`) | Uhlovy polomer (arcsec) pro parovani detekovanych hvezd se zaznamy katalogu Gaia. |
-| `phase01_plate_scale_arcsec_per_px` | 1.3; rozsah 0 .. 30 | Dynamicky (FITS / za behu) | vypocteno z WCS | fotometricke jadro (Phase 2A) (`photometry_core.py:10063`) | Meritko snimku pro Phase 1; za behu se vyhodnoti z WCS reseni, config je zaloha pro nevyresena data. |
-| `plate_scale_arcsec_per_px` | 1.3; rozsah 0.1 .. 30 | Dynamicky (FITS / za behu) | vypocteno z WCS | fotometricke jadro (Phase 2A) (`photometry_core.py:9934`) | Globalni meritko snimku (arcsec/px); za behu se vyhodnoti z WCS - cislo prevadejici pixely na uhly na obloze. |
+| `phase01_plate_scale_arcsec_per_px` | 1.3; rozsah 0 .. 30 | Dynamicky (FITS / za behu) | vypocteno z WCS | fotometricke jadro (Phase 2A) (`photometry_core.py:10063`) | Meritko snimku pro Phase 1; za behu se vyhodnoti z WCS reseni. WAVE-B odstranila jeho zalohu v config.json - resolver je autoritativni. |
+| `plate_scale_arcsec_per_px` | 1.3; rozsah 0.1 .. 30 | Dynamicky (FITS / za behu) | vypocteno z WCS | fotometricke jadro (Phase 2A) (`photometry_core.py:9934`) | Globalni meritko snimku (arcsec/px); za behu se vyhodnoti z WCS - cislo prevadejici pixely na uhly na obloze. WAVE-B odstranila jeho zalohu v config.json. |
 | `plate_solve_fov_deg` | 1.0 | Dynamicky (FITS / za behu) | vypocteno (FITS + optika z DB) | hlavni UI aplikace (`app.py:2155`) | Odhad zorneho pole (stupne) predavany plate solveru; pocita se z rozmeru snimku a optiky. |
-| `platesolve_anisotropy_threshold` | 1.3; rozsah 1.01 .. 5 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1886`) | Maximalni anizotropie meritek os WCS reseni, nez je oznaceno za podezrele. |
 | `saturate_limit_fraction` | 0.85 | Nastaveni (config.json) | pouze vychozi v kodu | kalibrace a zpracovani snimku (`pipeline.py:6097`) | Podil saturacni urovne detektoru, nad kterym se hvezda povazuje za saturovanou a vylouci se z fotometrie. |
 | `sips_dao_fwhm_px` | 2.5; rozsah 1 .. 8 | Nastaveni (config.json) | config.json | hlavni UI aplikace (`app.py:529`) | Predpokladane FWHM hvezd (px) pro detekcni preset DAO ve stylu SIPS. |
 | `sips_dao_threshold_sigma` | 3.5 | Nastaveni (config.json) | config.json | hlavni UI aplikace (`app.py:530`) | Detekcni prah (sigma) presetu DAO ve stylu SIPS. |
@@ -253,10 +245,8 @@ Mereni jasnosti hvezd: velikost apertury, oblozne mezikruzi (annulus), model chy
 | `aperture_correction_max_contamination` | 0.15; rozsah 0 .. 2 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:8656`) | Maximalni kontaminace sousedy, kterou smi mit referencni hvezda pro aperturni korekci. |
 | `aperture_correction_max_scatter_mag` | 0.03; rozsah 0 .. 2 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:8657`) | Maximalni rozptyl (mag) povoleny mezi referencnimi hvezdami aperturni korekce. |
 | `aperture_correction_min_ref_stars` | 3; rozsah 1 .. 50 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:8655`) | Minimalni pocet referencnich hvezd pro vypocet aperturni korekce. |
-| `aperture_fwhm_factor` | 1.9; rozsah 0.5 .. 6 | Nastaveni + auto-uprava za behu | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:7393`) | Zakladni polomer apertury v nasobcich FWHM; tabulka SNR-optimalnich velikosti muze efektivni polomer prizpusobit po hvezdach. |
-| `aperture_fwhm_factor_large` | 4.0 | Nastaveni + auto-uprava za behu | config.json | sestaveni a validace konfigurace (`config.py:2257`) | Aperturni faktor pro tridu nejjasnejsich hvezd pri velikostech po tridach. |
-| `aperture_fwhm_factor_medium` | 2.5 | Nastaveni + auto-uprava za behu | config.json | sestaveni a validace konfigurace (`config.py:2256`) | Aperturni faktor pro tridu stredne jasnych hvezd. |
-| `aperture_fwhm_factor_small` | 1.5 | Nastaveni + auto-uprava za behu | config.json | sestaveni a validace konfigurace (`config.py:2255`) | Aperturni faktor pro tridu nejslabsich hvezd (male apertury maximalizuji SNR slabych hvezd). |
+| `aperture_fwhm_factor` | 1.9; rozsah 0.5 .. 6 | Nastaveni + auto-uprava za behu | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:7393`) | Zakladni polomer apertury v nasobcich FWHM; SNR-optimalni sweep velikosti muze efektivni polomer prizpusobit po hvezdach. |
+| `aperture_snr_sizing` | {small: 1.5, large: 4.0} | Nastaveni + auto-uprava za behu | config.json | pipeline (`pipeline.py`) | Meze SNR-optimalniho sweepu velikosti apertury v nasobcich FWHM: 'small' je minimalni polomer (nejlepsi pro slabe hvezdy), 'large' maximalni. WAVE-B slucila puvodni skalary aperture_fwhm_factor_small/_large do tohoto mapovani (stredni trida neexistuje). |
 | `aperture_photometry_enabled` | True | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:7899`) | Hlavni vypinac aperturni fotometrie - produkcni merici metody VYVAR. |
 | `aperture_variable_factor` | 1.0; rozsah 0.25 .. 3 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:7091`) | Nasobitel velikosti apertury pro promennou (cilovou) hvezdu. |
 | `cog_ac_factor_max` | 5.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1439`) | Horni mez faktoru aperturni korekce metodou curve-of-growth. |
@@ -272,14 +262,13 @@ Mereni jasnosti hvezd: velikost apertury, oblozne mezikruzi (annulus), model chy
 | `err_background_mode` | empirical | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1456`) | Jak se odhaduje clen sumu pozadi v modelu chyb ('empirical' = mereni z prazdnych apertur na snimku). |
 | `err_empty_apertures_min` | 16 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1469`) | Minimalni pocet prazdnych apertur pro platny empiricky odhad pozadi. |
 | `err_empty_apertures_n` | 64 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1462`) | Kolik prazdnych apertur se na snimek umisti pro empiricke mereni sumu pozadi. |
-| `gain` | 1.0 | Dynamicky (FITS / za behu) | FITS hlavicka | kalibrace a zpracovani snimku (`pipeline.py:309`) | Gain detektoru (e-/ADU) prevadejici county na elektrony v modelu chyb; vyhodnocuje se z FITS hlavicky (s krizovou kontrolou proti DB), config je posledni zaloha. |
+| `gain` | 1.0 | Dynamicky (FITS / za behu) | FITS hlavicka | kalibrace a zpracovani snimku (`pipeline.py:309`) | Gain detektoru (e-/ADU) prevadejici county na elektrony v modelu chyb; vyhodnocuje se z FITS hlavicky (s krizovou kontrolou proti DB). WAVE-B odstranila jeho zalohu v config.json - resolver je autoritativni. |
 | `gs11_comp_max_dilution` | 0.9; rozsah 0.01 .. 1 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1944`) | Maximalni dilution (kontaminace toku), kterou smi mit srovnavaci hvezda v modelu GS11. |
 | `gs11_comp_suspect_dilution` | 0.98; rozsah 0.01 .. 1 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1944`) | Uroven dilution, pri ktere je srovnavaci hvezda oznacena za podezrelou. |
 | `gs11_dilution_aperture_arcsec` | 0.0; rozsah 0 .. 120 | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:165`) | Apertura (arcsec) pro vypocet dilution z katalogu; 0 ji odvodi z fotometricke apertury. |
 | `gs11_dilution_enabled` | False | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:144`) | Zapina odhad dilution z katalogu (kolik svetla sousedu protece do apertur). |
 | `gs11_dilution_mag_limit_delta` | 5.0; rozsah 0.5 .. 15 | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:183`) | O kolik magnitud slabsi nez hvezda jeste dilution scitani pocita sousedy. |
 | `gs11_target_min_dilution` | 0.5; rozsah 0.01 .. 1 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:6096`) | Minimalni prijatelna dilution cile, nez je cil oznacen jako silne blendovany. |
-| `moffat_chi2_limit` | 50.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1322`) | Limit chi-kvadrat fitu Moffatova profilu v diagnostice tvaru hvezd. |
 | `neighbor_sub_centroid_max_fwhm` | 1.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2233`) | Maximalni posun centroidu (FWHM) povoleny po odectu souseda. |
 | `neighbor_sub_chi2_max` | 120.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2230`) | Strop chi-kvadrat fitu modelu souseda. |
 | `neighbor_sub_max_neighbor_overmag` | 0.3 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2235`) | Pojistka: fitovany soused nesmi vyjit jasnejsi, nez se ceka, o vic nez tolik (mag). |
@@ -310,13 +299,12 @@ Mereni jasnosti hvezd: velikost apertury, oblozne mezikruzi (annulus), model chy
 | `psf_spatial_order` | 0; rozsah 0 .. 2 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1259`) | Rad polynomu prostorove zmeny PSF (0 = konstantni PSF). |
 | `pytics_enabled` | True | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:125`) | Zapina iteracni kalibraci srovnavacich hvezd ve stylu PyTICS pri stavbe svetelne krivky. |
 | `pytics_n_iter` | 5; rozsah 1 .. 20 | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:124`) | Pocet iteraci kalibrace ve stylu PyTICS. |
-| `read_noise` | 10.0 | Dynamicky (FITS / za behu) | databaze (EQUIPMENTS) | kalibrace a zpracovani snimku (`pipeline.py:310`) | Sumove cteni detektoru (elektrony) v modelu chyb; vyhodnocuje se nejdrive z DB (vlastnost kamery), pak z FITS, config nakonec. |
+| `read_noise` | 10.0 | Dynamicky (FITS / za behu) | databaze (EQUIPMENTS) | kalibrace a zpracovani snimku (`pipeline.py:310`) | Sumove cteni detektoru (elektrony) v modelu chyb; vyhodnocuje se nejdrive z DB (vlastnost kamery), pak z FITS. WAVE-B odstranila jeho zalohu v config.json. |
 | `save_lightcurve_png` | False | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:7386`) | Behem behu uklada i PNG nahledy svetelnych krivek jednotlivych cilu. |
 | `savgol_detrend_enabled` | False | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:309`) | Volitelny detrend vyhlazenim Savitzky-Golay; vychozi VYPNUTO ze stejneho duvodu jako ostatni detrendy. |
 | `savgol_polyorder` | 2 | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:315`) | Rad polynomu filtru Savitzky-Golay. |
 | `savgol_window_frac` | 0.5 | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:314`) | Sirka okna (podil serie) filtru Savitzky-Golay. |
 | `sigma_sys_mag` | {} | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1519`) | Systematicke dno chyb (mag) po pasmech pridavane kvadraticky ke statistickym chybam (napr. {'4': 0.018} pro pasmo 4). |
-| `sky_adu_fallback` | 1581.6 | Nastaveni (config.json) | config.json | kalibrace a zpracovani snimku (`pipeline.py:14005`) | Zalozni uroven oblohy (ADU) pouzita, kdyz vlastni odhad oblohy snimku neni k dispozici. |
 | `sysrem_enabled` | False | Nastaveni (config.json) | config.json | rizeni nocniho behu (`night_run.py:527`) | Volitelne odstraneni systematik SysRem (Tamuz+ 2005); vychozi VYPNUTO - overeno jako rizikove pro zachovani skutecne promennosti. |
 | `sysrem_n_iter` | 3 | Nastaveni (config.json) | config.json | rizeni nocniho behu (`night_run.py:529`) | Pocet iteraci SysRem, je-li zapnut. |
 | `temporal_bin_window` | 0; rozsah 0 .. 51 | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:106`) | Sirka casoveho binu pro casove binovani (0 = zadne). |
@@ -337,14 +325,7 @@ Vyber souboru stalych hvezd, vuci nimz se cil meri (diferencialni fotometrie). K
 | `comp_slope_significance_k` | 3.0; rozsah 0 .. 10 | Nastaveni (config.json) | config.json | UI Nastaveni (`ui_settings.py:1092`) | Statisticka vyznamnost, od ktere se trend srovnavaci hvezdy pocita jako skutecny drift. |
 | `comp_sparse_fallback_enabled` | True | Nastaveni (config.json) | config.json | UI Nastaveni (`ui_settings.py:1128`) | Povoli zachrannou cestu pro ridka pole, kdyz prisna kriteria daji prilis malo srovnavacich hvezd. |
 | `comp_sparse_fallback_min` | 0 | Nastaveni (config.json) | config.json | UI Nastaveni (`ui_settings.py:1131`) | Minimalni pocet srovnavacich hvezd, o ktery zachranna cesta usiluje (0 = vezmi co je). |
-| `comp_tier1_bprp_limit` | 0.15; rozsah 0.02 .. 5 | Nastaveni (config.json) | config.json | vyber srovnavacich hvezd (`comp_selection_per_target.py:258`) | Limit shody barvy BP-RP pro uroven 1 (nejlepsi shoda, plna vaha). |
-| `comp_tier1_weight` | 1.0; rozsah 0.01 .. 1 | Nastaveni (config.json) | config.json | kontrolni hvezda (`check_star_kmag.py:436`) | Vaha srovnavacich hvezd urovne 1 v souboru. |
-| `comp_tier2_bprp_limit` | 0.3; rozsah 0.05 .. 5 | Nastaveni (config.json) | config.json | vyber srovnavacich hvezd (`comp_selection_per_target.py:259`) | Limit BP-RP pro uroven 2. |
-| `comp_tier2_weight` | 0.85; rozsah 0.01 .. 1 | Nastaveni (config.json) | config.json | kontrolni hvezda (`check_star_kmag.py:437`) | Vaha urovne 2 v souboru. |
-| `comp_tier3_bprp_limit` | 0.55; rozsah 0.05 .. 5 | Nastaveni (config.json) | config.json | vyber srovnavacich hvezd (`comp_selection_per_target.py:260`) | Limit BP-RP pro uroven 3. |
-| `comp_tier3_weight` | 0.5; rozsah 0.01 .. 1 | Nastaveni (config.json) | config.json | kontrolni hvezda (`check_star_kmag.py:438`) | Vaha urovne 3 v souboru. |
-| `comp_tier4_bprp_limit` | 1.1; rozsah 0.05 .. 5 | Nastaveni (config.json) | config.json | UI Nastaveni (`ui_settings.py:1117`) | Limit BP-RP pro uroven 4 (nejvolnejsi shoda barvy, nejnizsi vaha). |
-| `comp_tier4_weight` | 0.25; rozsah 0.01 .. 1 | Nastaveni (config.json) | config.json | kontrolni hvezda (`check_star_kmag.py:439`) | Vaha urovne 4 v souboru. |
+| `comp_color_tiers` | [{bprp: 0.15, w: 1.0}, {bprp: 0.3, w: 0.85}, {bprp: 0.55, w: 0.5}, {bprp: 1.1, w: 0.25}] | Nastaveni (config.json) | config.json | vyber srovnavacich hvezd (`comp_selection_per_target.py:258`) | Urovne shody barvy pro srovnavaci hvezdy jako seznam kroku: kazdy ma limit rozdilu barvy BP-RP (`bprp`) a vahu (`w`) v souboru. Prvni krok je nejtesnejsi shoda s plnou vahou, dalsi jsou volnejsi s nizsi vahou. WAVE-B slucila puvodnich 8 skalaru comp_tier{1..4}_bprp_limit/_weight do teto jedne struktury. |
 | `global_comp_pool_enabled` | True | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2098`) | Stavi jeden spolecny fond srovnavacich hvezd pro cele pole misto plne oddelenych fondu po cilech. |
 | `phase01_comparison_exclude_gaia_extobj` | True | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:12656`) | Vylucuje objekty oznacene v Gaia jako rozlehle (galaxie) z kandidatu na srovnavaci hvezdy. |
 | `phase01_comparison_exclude_gaia_nss` | True | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:12654`) | Vylucuje zdroje Gaia non-single-star (dvojhvezdy) z kandidatu na srovnavaci hvezdy. |
@@ -362,16 +343,11 @@ Vyber souboru stalych hvezd, vuci nimz se cil meri (diferencialni fotometrie). K
 | `phase01_comparison_min_frames_frac` | 0.2; rozsah 0.05 .. 0.95 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:14752`) | Minimalni podil snimku, na kterych musi byt srovnavaci hvezda zmerena. |
 | `phase01_comparison_n_comp_max` | 8 | Nastaveni (config.json) | config.json | kontrolni hvezda (`check_star_kmag.py:537`) | Maximalni velikost souboru; dle literatury se prinos scintilace nasycuje kolem 6-8 srovnavacich hvezd. |
 | `phase01_comparison_n_comp_min` | 3 | Nastaveni + auto-uprava za behu | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:14748`) | Minimalni pocet srovnavacich hvezd, o ktery vyber usiluje; adaptace ho na ridkych polich muze snizit. |
-| `phase01_comparison_proximity_tiebreak` | False | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1967`) | Pouziva vzdalenost od cile jako rozhodujici kriterium mezi jinak rovnocennymi kandidaty. |
-| `phase01_comparison_rms_bin_mag` | 0.001; rozsah 0.0001 .. 0.05 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2364`) | Sirka binu jasnosti ve vztahu RMS vs jasnost pouzitem pri skorovani kandidatu. |
 | `phase01_comparison_rms_outlier_sigma` | 3.0; rozsah 1 .. 10 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:14753`) | Uroven sigma pro oznaceni srovnavaci hvezdy za odlehlou v RMS vuci svemu binu jasnosti. |
 | `phase01_ct_extrapolation_tol` | 0.0 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:8927`) | Povolena extrapolace barevneho rozsahu vztahu barevneho clenu (0 = zadna extrapolace). |
 | `phase01_ct_min_comp` | 7; rozsah 2 .. 30 | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:249`) | Minimalni pocet srovnavacich hvezd pro fit vztahu barevneho clenu. |
 | `phase01_flux_col` | dao_flux | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:14763`) | Ktery sloupec toku syti statistiku srovnavacich hvezd Phase 1 (dao_flux = tok z detekcni faze). |
-| `phase01_tier1_mag` | 0.5 | Nastaveni (config.json) | pouze vychozi v kodu | fotometricke jadro (Phase 2A) (`photometry_core.py:14744`) | Mez rozdilu jasnosti urovne 1 pri trideni kandidatu podle jasnosti. |
-| `phase01_tier2_mag` | 1.0 | Nastaveni (config.json) | pouze vychozi v kodu | fotometricke jadro (Phase 2A) (`photometry_core.py:14745`) | Mez rozdilu jasnosti urovne 2. |
-| `phase01_tier3_mag` | 1.5 | Nastaveni (config.json) | pouze vychozi v kodu | fotometricke jadro (Phase 2A) (`photometry_core.py:14746`) | Mez rozdilu jasnosti urovne 3. |
-| `phase01_tier4_mag` | 2.0 | Nastaveni (config.json) | pouze vychozi v kodu | fotometricke jadro (Phase 2A) (`photometry_core.py:14747`) | Mez rozdilu jasnosti urovne 4. |
+| `phase01_tiers` | [0.5, 1.0, 1.5, 2.0] | Nastaveni (config.json) | pouze vychozi v kodu | fotometricke jadro (Phase 2A) (`photometry_core.py:14744`) | Meze rozdilu jasnosti (mag) pro trideni kandidatu na srovnavaci hvezdy do urovni podle jasnosti, jako rostouci seznam. WAVE-B slucila puvodni skalary phase01_tier{1..4}_mag do tohoto jednoho seznamu. |
 | `phase01_use_bprp_primary` | True | Nastaveni (config.json) | config.json | UI aperturni fotometrie (`ui_aperture_photometry.py:1701`) | Pouziva Gaia BP-RP primo jako hlavni barevne kriterium (misto pocitaneho B-V) - podlozena navrhova volba VYVAR. |
 
 ## Duveryhodnost a kvalita vysledku
@@ -437,7 +413,7 @@ Vystupy pro okolni svet: odesilani do AAVSO/VarAstro a krizova analyza s TESS.
 
 | Parametr | Vychozi | Typ | Odkud se bere | Kde se pouziva | Vysvetleni |
 |---|---|---|---|---|---|
-| `export_arcsec_per_px` | 1.3 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1253`) | Popisek meritka zapisovany do metadat exportu; vedecka hodnota pochazi z WCS. |
+| `export_arcsec_per_px` | 1.3 | Dynamicky (FITS / za behu) | vypocteno z WCS | sestaveni a validace konfigurace (`config.py:1253`) | Popisek meritka zapisovany do metadat exportu; vedecka hodnota pochazi z WCS. WAVE-B odstranila jeho zalohu v config.json. |
 | `tess_enabled` | False | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2100`) | Zapina blok krizove analyzy s TESS (porovnani vasi svetelne krivky s daty TESS). |
 
 ## System a vykon

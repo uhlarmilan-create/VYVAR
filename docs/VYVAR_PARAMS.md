@@ -5,7 +5,7 @@ Regenerate with `python tools/gen_params_md.py`. Hand edits will be overwritten.
 Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fields(AppConfig)` (defaults and types, from code).
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 
-_Generated 2026-07-18T10:51:10Z at git HEAD d6c0d55._
+_Generated 2026-07-18T11:07:05Z at git HEAD 715e754._
 
 ## Summary
 

@@ -2,6 +2,27 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-18 -- WAVE-B-PARAM-REDUCTION (delete/merge/wire/consolidate, anchor-gated)
+
+Parameter surface reduced 304 -> 269 registered entries (config.json persists 249),
+acting on the PARAM-BUDGET-AUDIT dispositions (`param_budget_audit.csv`) as approved by
+Milan. Anchor-gated, one commit per step, full pytest green throughout. STEP 1 WIRE-IN
+`calibration_master_ccd_temp_tolerance_c` at both importer call sites (bug fix: dark
+selection tolerance was silently hardcoded; no-op for current runs, effective 0.5) --
+`617b76f`. STEP 2 DELETE-DEAD 4 (`aperture_fwhm_factor_medium`, `masterstar_log_astroalign`,
+`phase01_comparison_proximity_tiebreak`, `phase01_comparison_rms_bin_mag`) -- `08e5684`.
+STEP 3 INTERNALIZE frame dims (`frame_width_px`/`frame_height_px` -> internal/hidden/expert,
+dropped from config.json; still resolve from FITS NAXIS) -- `03d640c`. STEP 4 MERGE 14 -> 3
+(`comp_color_tiers`, `phase01_tiers`, `aperture_snr_sizing`; backward-compat loader for old
+scalars) -- `c828c9c`. STEP 5 DELETE-DB-DUP 9 (gain/read_noise/plate-scale/observer mirrors
+-> DB/FITS resolver authoritative) + drop vestigial DB SETTINGS table + focal precedence
+confirmed already DB-first -- `d6c0d55`. STEP 6 HARDCODE 20 solver internals to module-level
+constants -- `715e754`. STEP 7 docs & metadata sync (VYVAR_PARAMS regen 269, CONFIG_GUIDE
+EN/CZ hand-update, DECISIONS WAVE-B entry, sips_dao_fwhm claim retracted -> code uses
+registered `sips_dao_fwhm_px` everywhere). Result: `CURSOR_RESULT_wave_b_reduction.md`.
+
+---
+
 ## 2026-07-17 -- REPO-REORG (src_py/ + dev/ layout, anchor-gated)
 
 Repository root tidied into a stable layout. All VYVAR modules moved to `src_py/`

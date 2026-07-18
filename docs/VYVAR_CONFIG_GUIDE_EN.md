@@ -1,10 +1,10 @@
 # VYVAR Configuration Guide (config.json) - EN
 
 _Companion document: `VYVAR_CONFIG_GUIDE_CZ.md` (Czech). Generated from the
-parameter registry (`dev/validation/params_registry.json`, 304 entries) and
+parameter registry (`dev/validation/params_registry.json`, 269 entries) and
 the parameter source audit (`dev/results/PARAM_SOURCE_AUDIT.md`), state as of
-2026-07-17. When parameters change, update this guide together with the
-registry._
+2026-07-18 (post WAVE-B parameter reduction). When parameters change, update
+this guide together with the registry._
 
 ## What is config.json?
 
@@ -19,19 +19,28 @@ parameters, and this guide labels every one of them:
 
 - **Static (database)** - facts about your observatory: observing site,
   telescope, camera, catalogs. They live in database tables (LOCATION,
-  TELESCOPE, EQUIPMENTS) and are managed in the app. Copies of some of them
-  still appear in config.json for historical reasons, but the database is
-  the authoritative source.
+  TELESCOPE, EQUIPMENTS) and are managed in the app, which is the
+  authoritative source. WAVE-B removed nine config.json copies of such facts
+  so there is only one place to edit them: the observer site coordinates and
+  name (observer_lat / observer_lon / observer_alt_m / observer_location_name,
+  hydrated from the LOCATION row selected by observer_location_id), the
+  detector gain and read_noise (resolved DB/FITS-first), and the plate-scale
+  labels (plate_scale_arcsec_per_px, phase01_plate_scale_arcsec_per_px,
+  export_arcsec_per_px, derived from the WCS/optics).
 - **Dynamic (FITS / runtime)** - values measured or computed for each run:
   detector gain, read noise, frame size, plate scale, binning, filter,
   exposure time. VYVAR reads them from the FITS file headers or derives
-  them (e.g. from the astrometric solution). Editing their config.json
-  fallbacks normally has no effect on a real run.
+  them (e.g. from the astrometric solution). These no longer carry
+  config.json fallbacks after WAVE-B.
 - **Setting (config.json)** - the genuine user-tunable behavior of the
-  pipeline. This is the majority (277 of 304 parameters). A few of them are
-  marked "runtime auto-adjust": the configured value is a base that the
-  pipeline may adapt to the field (for example star-density based
-  loosening/tightening of comparison-star criteria).
+  pipeline. This is the majority of the 269 registered parameters (config.json
+  persists 249 of them; the rest are database facts, FITS/runtime values, or
+  internal plumbing). A few settings are marked "runtime auto-adjust": the
+  configured value is a base that the pipeline may adapt to the field (for
+  example star-density based loosening/tightening of comparison-star criteria).
+  WAVE-B also hardcoded 20 blind/plate-solve solver internals that were never
+  tuned in practice, and merged 14 tier/aperture scalars into 3 structured
+  keys (comp_color_tiers, phase01_tiers, aperture_snr_sizing).
 - **Internal** - plumbing (file paths, machine-specific values). Leave
   these alone unless you know exactly why.
 
@@ -64,12 +73,12 @@ Who observed and from where. These are observatory facts: they identify you in A
 |---|---|---|---|---|---|
 | `aavso_filter_map` | {} | Static (database) | config.json | config assembly & validation (`config.py:1196`) | Optional mapping of your local filter names to official AAVSO filter codes used in exports (e.g. 'NoFilter' -> 'CV'). |
 | `aavso_observer_code` | UMIA | Static (database) | config.json | config assembly & validation (`config.py:1193`) | Your official AAVSO observer code (UMIA); stamped into every AAVSO submission so the observation is credited to you. |
-| `observer_alt_m` | 275.0 | Static (database) | config.json (authoritative copy in DB) | main application UI (`app.py:2045`) | Altitude of the observing site above sea level in meters; part of the site definition used for airmass and time corrections. |
+| `observer_alt_m` | 275.0 | Static (database) | database (LOCATION) | main application UI (`app.py:2045`) | Altitude of the observing site above sea level in meters; part of the site definition used for airmass and time corrections. WAVE-B removed the config.json copy - hydrated from the LOCATION row. |
 | `observer_code` | (empty) | Static (database) | config.json | photometry engine (Phase 2A) (`photometry_core.py:9690`) | Short observer identifier printed in reports and exports (separate from the AAVSO code). |
-| `observer_lat` | 50.1121658 | Static (database) | config.json (authoritative copy in DB) | main application UI (`app.py:2043`) | Latitude of the observing site in degrees. Science runs take the site from the draft's LOCATION record; this copy serves the UI and exports. |
-| `observer_location_id` | 2 | Static (database) | config.json (authoritative copy in DB) | main application UI (`app.py:1965`) | Database ID of the currently selected observing site (LOCATION table row). |
-| `observer_location_name` | (empty) | Static (database) | config.json (authoritative copy in DB) | main application UI (`app.py:2046`) | Human-readable name of the selected observing site (e.g. Jirny, Dablice). |
-| `observer_lon` | 14.6982547 | Static (database) | config.json (authoritative copy in DB) | main application UI (`app.py:2044`) | Longitude of the observing site in degrees; see observer_lat for how science runs resolve the site. |
+| `observer_lat` | 50.1121658 | Static (database) | database (LOCATION) | main application UI (`app.py:2043`) | Latitude of the observing site in degrees. Hydrated from the draft's LOCATION record; WAVE-B removed the config.json copy. |
+| `observer_location_id` | 2 | Static (database) | config.json | main application UI (`app.py:1965`) | Database ID of the currently selected observing site (LOCATION table row). This id stays in config.json and drives the hydration of the coordinates. |
+| `observer_location_name` | (empty) | Static (database) | database (LOCATION) | main application UI (`app.py:2046`) | Human-readable name of the selected observing site (e.g. Jirny, Dablice). WAVE-B removed the config.json copy - hydrated from the LOCATION row. |
+| `observer_lon` | 14.6982547 | Static (database) | database (LOCATION) | main application UI (`app.py:2044`) | Longitude of the observing site in degrees; hydrated from the LOCATION row (WAVE-B removed the config.json copy). |
 | `observer_name` | Unknown Observer | Static (database) | config.json | photometry engine (Phase 2A) (`photometry_core.py:9691`) | Full observer name printed in reports. |
 
 ## File & catalog paths
@@ -150,15 +159,8 @@ Finding stars on the frames, solving the sky coordinates (plate solving, includi
 
 | Parameter | Default | Type | Source | Used in | Explanation |
 |---|---|---|---|---|---|
-| `blind_cluster_coherence_cap` | 25 | Setting (config.json) | config.json | config assembly & validation (`config.py:986`) | Upper bound on cluster coherence checks when the blind solver votes on candidate sky positions; guards runtime on messy fields. |
-| `blind_cluster_eps_deg` | 1.0; range 0.1 .. 5 | Setting (config.json) | config.json | config assembly & validation (`config.py:963`) | Radius (degrees) within which blind-solve candidate positions are grouped into one cluster during voting. |
-| `blind_cluster_min_samples` | 3 | Setting (config.json) | config.json | config assembly & validation (`config.py:972`) | Minimum candidate votes needed to form a valid position cluster in the blind solver. |
-| `blind_cluster_min_votes` | 4 | Setting (config.json) | config.json | config assembly & validation (`config.py:956`) | Minimum votes a clustered position needs before the blind solver accepts it as the field location. |
-| `blind_cluster_vote_span` | 12 | Setting (config.json) | config.json | config assembly & validation (`config.py:979`) | How many top-ranked index matches contribute votes to position clustering. |
 | `blind_img_select_mode` | per_cell | Setting (config.json) | config.json | config assembly & validation (`config.py:941`) | Strategy for picking which detected stars feed the blind solver ('per_cell' spreads them evenly across the frame). |
 | `blind_img_star_budget` | 80 | Setting (config.json) | config.json | config assembly & validation (`config.py:935`) | Maximum number of image stars handed to the blind solver; a budget keeps solving fast. |
-| `blind_prefilter_min` | 4 | Setting (config.json) | config.json | config assembly & validation (`config.py:930`) | Minimum quad-match prefilter hits before a blind candidate is even considered. |
-| `blind_scale_tol_frac` | 0.1; range 0.02 .. 0.5 | Setting (config.json) | config.json | config assembly & validation (`config.py:949`) | Allowed fractional deviation of image scale from the rig prior when validating blind-solve candidates. |
 | `blind_use_rig_prior` | True | Setting (config.json) | config.json | config assembly & validation (`config.py:945`) | Uses the known rig plate scale as a prior to reject implausible blind-solve candidates early. |
 | `blind_verify_early_accept` | 30 | Setting (config.json) | config.json | config assembly & validation (`config.py:909`) | Number of verified star matches at which the blind solver stops early and accepts the solution. |
 | `blind_verify_early_floor` | 0 | Setting (config.json) | config.json | config assembly & validation (`config.py:916`) | Minimum matches required before early acceptance may trigger at all. |
@@ -180,8 +182,8 @@ Finding stars on the frames, solving the sky coordinates (plate solving, includi
 | `field_density_adaptive_enabled` | True | Setting (config.json) | config.json | config assembly & validation (`config.py:2069`) | Master switch of density adaptation: sparse/normal/dense field profiles automatically loosen or tighten comparison-star criteria. |
 | `field_density_dense_threshold` | 1000.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:2060`) | Matched-star count above which the field is treated as dense (tighter criteria). |
 | `field_density_sparse_threshold` | 300.0; range 1 .. 50000 | Setting (config.json) | config.json | config assembly & validation (`config.py:2053`) | Matched-star count below which the field is treated as sparse (looser criteria so an ensemble can still be formed). |
-| `frame_height_px` | 1397 | Dynamic (FITS / runtime) | FITS header | photometry engine (Phase 2A) (`photometry_core.py:14713`) | Frame height in pixels; measured from FITS NAXIS2 at run time, the config value is only a fallback. |
-| `frame_width_px` | 2082 | Dynamic (FITS / runtime) | FITS header | photometry engine (Phase 2A) (`photometry_core.py:14712`) | Frame width in pixels; measured from FITS NAXIS1 at run time. |
+| `frame_height_px` | 1397 | Internal | FITS header | photometry engine (Phase 2A) (`photometry_core.py:14713`) | Frame height in pixels; measured from FITS NAXIS2 at run time. WAVE-B internalized it (no longer stored in config.json). |
+| `frame_width_px` | 2082 | Internal | FITS header | photometry engine (Phase 2A) (`photometry_core.py:14712`) | Frame width in pixels; measured from FITS NAXIS1 at run time. WAVE-B internalized it (no longer stored in config.json). |
 | `masterstar_accept_mode` | odds | Setting (config.json) | config.json | config assembly & validation (`config.py:1775`) | Acceptance strategy of the masterstar plate solution ('odds' = statistical odds-ratio test). |
 | `masterstar_best_of_n` | 10; range 1 .. 25 | Setting (config.json) | config.json | config assembly & validation (`config.py:1476`) | How many best frames are stacked/considered when building the masterstar reference. |
 | `masterstar_catalog_recovery_min` | 0.65; range 0.4 .. 0.95 | Setting (config.json) | config.json | Masterstar/DAO UI (`ui_dao_stars.py:353`) | Minimum fraction of catalog stars the masterstar must recover for the solution to be trusted. |
@@ -193,16 +195,7 @@ Finding stars on the frames, solving the sky coordinates (plate solving, includi
 | `masterstar_detection_cap_max` | 800 | Setting (config.json) | config.json | config assembly & validation (`config.py:1827`) | Upper clamp of the adaptive detection cap. |
 | `masterstar_detection_cap_min` | 250 | Setting (config.json) | config.json | config assembly & validation (`config.py:1820`) | Lower clamp of the adaptive detection cap. |
 | `masterstar_distortion_benign_ratio_max` | 3.2; range 2 .. 5 | Setting (config.json) | config.json | Masterstar/DAO UI (`ui_dao_stars.py:356`) | Limit on the edge-to-centre distortion ratio still considered benign for the optics. |
-| `masterstar_false_alarm_p_max` | 1e-06; range 1e-12 .. 1 | Setting (config.json) | config.json | config assembly & validation (`config.py:1799`) | Maximum false-alarm probability of the astrometric acceptance test. |
-| `masterstar_log_astroalign` | True | Setting (config.json) | config.json | config assembly & validation (`config.py:1662`) | Extra logging of the astroalign matching step. |
 | `masterstar_min_matched_floor` | 40 | Setting (config.json) | config.json | Masterstar/DAO UI (`ui_dao_stars.py:354`) | Absolute floor of matched stars a masterstar solution must reach. |
-| `masterstar_odds_k` | 12.0; range 1 .. 100 | Setting (config.json) | config.json | config assembly & validation (`config.py:1785`) | Strength constant of the odds-ratio acceptance test. |
-| `masterstar_odds_match_floor` | 30 | Setting (config.json) | config.json | config assembly & validation (`config.py:1778`) | Minimum matches required by the odds-ratio acceptance mode. |
-| `masterstar_odds_min_quadrants` | 3 | Setting (config.json) | config.json | config assembly & validation (`config.py:1792`) | Matched stars must cover at least this many frame quadrants (guards against one-corner solutions). |
-| `masterstar_optimizer_mirror_extra_log` | True | Setting (config.json) | config.json | config assembly & validation (`config.py:1663`) | Extra logging of the solver optimizer's mirror handling. |
-| `masterstar_platesolve_nn_refine_max_rms_px` | None | Setting (config.json) | config.json | config assembly & validation (`config.py:1716`) | Optional RMS cap for the nearest-neighbour refinement step of plate solving; None disables the cap. |
-| `masterstar_platesolve_prewrite_relaxed_rms_max_px` | 35.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:1713`) | Relaxed RMS limit for writing a provisional WCS when the strict limit narrowly fails. |
-| `masterstar_platesolve_prewrite_rms_max_px` | 30.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:1710`) | Strict RMS limit (px) for writing the WCS solution into the masterstar. |
 | `masterstar_platesolve_sip_max_order` | 4 | Setting (config.json) | config.json | Masterstar/DAO UI (`ui_dao_stars.py:351`) | Highest SIP distortion polynomial order the solver may fit. |
 | `masterstar_platesolve_sip_min_order` | 3 | Setting (config.json) | config.json | Masterstar/DAO UI (`ui_dao_stars.py:352`) | Lowest SIP distortion order tried by the solver. |
 | `masterstar_prematch_peak_sigma_floor` | 1.8; range 0.5 .. 6 | Setting (config.json) | config.json | calibration & frame processing (`pipeline.py:14006`) | Minimum peak significance of stars used in the pre-match stage. |
@@ -212,15 +205,12 @@ Finding stars on the frames, solving the sky coordinates (plate solving, includi
 | `masterstar_sibling_recovery_enabled` | True | Setting (config.json) | config.json | Masterstar/DAO UI (`ui_dao_stars.py:357`) | Enables the sibling-stack recovery path when the primary masterstar solve fails. |
 | `masterstar_sibling_rms_max_px` | 2.0; range 0.5 .. 10 | Setting (config.json) | config.json | Masterstar/DAO UI (`ui_dao_stars.py:359`) | RMS limit for accepting a sibling recovery solution. |
 | `masterstar_sibling_stack_n` | 10 | Setting (config.json) | config.json | Masterstar/DAO UI (`ui_dao_stars.py:361`) | How many frames the sibling recovery stack combines. |
-| `masterstar_sip_force_rms_guard_ratio` | 1.15 | Setting (config.json) | config.json | config assembly & validation (`config.py:1720`) | Guard ratio deciding when a higher SIP order is justified by an RMS improvement. |
-| `masterstar_solver_use_draft_median_if_hint_sep_deg` | 1.0; range 0 .. 180 | Setting (config.json) | config.json | config assembly & validation (`config.py:1651`) | Falls back to the draft's median pointing as the solve hint when the header hint is further away than this (degrees). |
 | `masterstar_use_best_frame_fwhm` | True | Setting (config.json) | code default only | calibration & frame processing (`pipeline.py:11889`) | Uses the best frame's FWHM for masterstar detection kernels instead of an average. |
 | `phase01_chip_interior_margin_px` | 50 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:14732`) | Margin (px) from the chip edge inside which stars are excluded from comparison selection (edge effects). |
 | `phase01_match_radius_arcsec` | 10.0; range 3 .. 30 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:11998`) | Sky radius (arcsec) for matching detected stars to Gaia catalog entries. |
-| `phase01_plate_scale_arcsec_per_px` | 1.3; range 0 .. 30 | Dynamic (FITS / runtime) | computed from WCS | photometry engine (Phase 2A) (`photometry_core.py:10063`) | Phase-1 plate scale; resolved from the WCS solution at run time, config is a fallback for unsolved data. |
-| `plate_scale_arcsec_per_px` | 1.3; range 0.1 .. 30 | Dynamic (FITS / runtime) | computed from WCS | photometry engine (Phase 2A) (`photometry_core.py:9934`) | Global plate scale (arcsec/px); resolved from the WCS at run time - the number that converts pixels to sky angles. |
+| `phase01_plate_scale_arcsec_per_px` | 1.3; range 0 .. 30 | Dynamic (FITS / runtime) | computed from WCS | photometry engine (Phase 2A) (`photometry_core.py:10063`) | Phase-1 plate scale; resolved from the WCS solution at run time. WAVE-B removed its config.json fallback - the resolver is authoritative. |
+| `plate_scale_arcsec_per_px` | 1.3; range 0.1 .. 30 | Dynamic (FITS / runtime) | computed from WCS | photometry engine (Phase 2A) (`photometry_core.py:9934`) | Global plate scale (arcsec/px); resolved from the WCS at run time - the number that converts pixels to sky angles. WAVE-B removed its config.json fallback. |
 | `plate_solve_fov_deg` | 1.0 | Dynamic (FITS / runtime) | computed (FITS + DB optics) | main application UI (`app.py:2155`) | Field-of-view estimate (degrees) fed to the plate solver; computed from frame size and optics. |
-| `platesolve_anisotropy_threshold` | 1.3; range 1.01 .. 5 | Setting (config.json) | config.json | config assembly & validation (`config.py:1886`) | Maximum axis-scale anisotropy of a WCS solution before it is treated as suspicious. |
 | `saturate_limit_fraction` | 0.85 | Setting (config.json) | code default only | calibration & frame processing (`pipeline.py:6097`) | Fraction of the detector's saturation level above which a star is treated as saturated and excluded from photometry. |
 | `sips_dao_fwhm_px` | 2.5; range 1 .. 8 | Setting (config.json) | config.json | main application UI (`app.py:529`) | Assumed star FWHM (px) for the SIPS-style DAO detection preset. |
 | `sips_dao_threshold_sigma` | 3.5 | Setting (config.json) | config.json | main application UI (`app.py:530`) | Detection threshold (sigma) of the SIPS-style DAO preset. |
@@ -254,10 +244,8 @@ Measuring star brightness: aperture sizing, sky annulus, error model, aperture c
 | `aperture_correction_max_contamination` | 0.15; range 0 .. 2 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:8656`) | Maximum neighbour contamination a reference star may have to be used for aperture correction. |
 | `aperture_correction_max_scatter_mag` | 0.03; range 0 .. 2 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:8657`) | Maximum scatter (mag) allowed among aperture-correction reference stars. |
 | `aperture_correction_min_ref_stars` | 3; range 1 .. 50 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:8655`) | Minimum reference stars required to compute an aperture correction. |
-| `aperture_fwhm_factor` | 1.9; range 0.5 .. 6 | Setting + runtime auto-adjust | config.json | photometry engine (Phase 2A) (`photometry_core.py:7393`) | Base aperture radius in FWHM units; the SNR-optimal sizing table may adapt the effective radius per star. |
-| `aperture_fwhm_factor_large` | 4.0 | Setting + runtime auto-adjust | config.json | config assembly & validation (`config.py:2257`) | Aperture factor used for the brightest star class in per-class sizing. |
-| `aperture_fwhm_factor_medium` | 2.5 | Setting + runtime auto-adjust | config.json | config assembly & validation (`config.py:2256`) | Aperture factor for the medium-brightness star class. |
-| `aperture_fwhm_factor_small` | 1.5 | Setting + runtime auto-adjust | config.json | config assembly & validation (`config.py:2255`) | Aperture factor for the faintest star class (small apertures maximize SNR of faint stars). |
+| `aperture_fwhm_factor` | 1.9; range 0.5 .. 6 | Setting + runtime auto-adjust | config.json | photometry engine (Phase 2A) (`photometry_core.py:7393`) | Base aperture radius in FWHM units; the SNR-optimal sizing sweep may adapt the effective radius per star. |
+| `aperture_snr_sizing` | {small: 1.5, large: 4.0} | Setting + runtime auto-adjust | config.json | pipeline (`pipeline.py`) | SNR-optimal aperture sizing sweep bounds as FWHM multiples: 'small' is the minimum radius (best for faint stars), 'large' the maximum. WAVE-B merged the former aperture_fwhm_factor_small/_large scalars into this mapping (there is no medium class). |
 | `aperture_photometry_enabled` | True | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:7899`) | Master switch of aperture photometry - the production measurement method of VYVAR. |
 | `aperture_variable_factor` | 1.0; range 0.25 .. 3 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:7091`) | Aperture size multiplier applied to the variable (target) star. |
 | `cog_ac_factor_max` | 5.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:1439`) | Upper clamp of the curve-of-growth aperture-correction factor. |
@@ -273,14 +261,13 @@ Measuring star brightness: aperture sizing, sky annulus, error model, aperture c
 | `err_background_mode` | empirical | Setting (config.json) | config.json | config assembly & validation (`config.py:1456`) | How the background-noise term of the error model is estimated ('empirical' = measured from empty apertures on the frame). |
 | `err_empty_apertures_min` | 16 | Setting (config.json) | config.json | config assembly & validation (`config.py:1469`) | Minimum empty apertures required for a valid empirical background estimate. |
 | `err_empty_apertures_n` | 64 | Setting (config.json) | config.json | config assembly & validation (`config.py:1462`) | How many empty apertures are placed per frame for the empirical background noise measurement. |
-| `gain` | 1.0 | Dynamic (FITS / runtime) | FITS header | calibration & frame processing (`pipeline.py:309`) | Detector gain (e-/ADU) converting counts to electrons in the error model; resolved from the FITS header (cross-checked against the DB), config is the last fallback. |
+| `gain` | 1.0 | Dynamic (FITS / runtime) | FITS header | calibration & frame processing (`pipeline.py:309`) | Detector gain (e-/ADU) converting counts to electrons in the error model; resolved from the FITS header (cross-checked against the DB). WAVE-B removed its config.json fallback - the resolver is authoritative. |
 | `gs11_comp_max_dilution` | 0.9; range 0.01 .. 1 | Setting (config.json) | config.json | config assembly & validation (`config.py:1944`) | Maximum dilution (flux contamination) a comparison star may have under the GS11 dilution model. |
 | `gs11_comp_suspect_dilution` | 0.98; range 0.01 .. 1 | Setting (config.json) | config.json | config assembly & validation (`config.py:1944`) | Dilution level at which a comparison star is marked suspect. |
 | `gs11_dilution_aperture_arcsec` | 0.0; range 0 .. 120 | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:165`) | Aperture (arcsec) used when computing catalog-based dilution; 0 derives it from the photometric aperture. |
 | `gs11_dilution_enabled` | False | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:144`) | Enables catalog-based dilution estimation (how much neighbour light leaks into apertures). |
 | `gs11_dilution_mag_limit_delta` | 5.0; range 0.5 .. 15 | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:183`) | How many magnitudes fainter than the star the dilution census still counts neighbours. |
 | `gs11_target_min_dilution` | 0.5; range 0.01 .. 1 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:6096`) | Minimum acceptable target dilution before the target is flagged as badly blended. |
-| `moffat_chi2_limit` | 50.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:1322`) | Chi-square limit of the Moffat profile fit used in star shape diagnostics. |
 | `neighbor_sub_centroid_max_fwhm` | 1.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:2233`) | Maximum centroid shift (FWHM) allowed after neighbour subtraction. |
 | `neighbor_sub_chi2_max` | 120.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:2230`) | Chi-square cap of the neighbour-model fit. |
 | `neighbor_sub_max_neighbor_overmag` | 0.3 | Setting (config.json) | config.json | config assembly & validation (`config.py:2235`) | Guard: the fitted neighbour must not come out brighter than expected by more than this (mag). |
@@ -311,13 +298,12 @@ Measuring star brightness: aperture sizing, sky annulus, error model, aperture c
 | `psf_spatial_order` | 0; range 0 .. 2 | Setting (config.json) | config.json | config assembly & validation (`config.py:1259`) | Polynomial order of PSF spatial variation (0 = constant PSF). |
 | `pytics_enabled` | True | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:125`) | Enables the PyTICS-style iterative comparison calibration step of light-curve construction. |
 | `pytics_n_iter` | 5; range 1 .. 20 | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:124`) | Iteration count of the PyTICS-style calibration. |
-| `read_noise` | 10.0 | Dynamic (FITS / runtime) | database (EQUIPMENTS) | calibration & frame processing (`pipeline.py:310`) | Detector read noise (electrons) in the error model; resolved DB-first (equipment-intrinsic), then FITS, config last. |
+| `read_noise` | 10.0 | Dynamic (FITS / runtime) | database (EQUIPMENTS) | calibration & frame processing (`pipeline.py:310`) | Detector read noise (electrons) in the error model; resolved DB-first (equipment-intrinsic), then FITS. WAVE-B removed its config.json fallback. |
 | `save_lightcurve_png` | False | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:7386`) | Also saves per-target light-curve PNG previews during the run. |
 | `savgol_detrend_enabled` | False | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:309`) | Optional Savitzky-Golay smoothing detrend; OFF by default for the same reason as other detrends. |
 | `savgol_polyorder` | 2 | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:315`) | Polynomial order of the Savitzky-Golay filter. |
 | `savgol_window_frac` | 0.5 | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:314`) | Window width (fraction of the series) of the Savitzky-Golay filter. |
 | `sigma_sys_mag` | {} | Setting (config.json) | config.json | config assembly & validation (`config.py:1519`) | Per-band systematic error floor (mag) added in quadrature to statistical errors (e.g. {'4': 0.018} for band 4). |
-| `sky_adu_fallback` | 1581.6 | Setting (config.json) | config.json | calibration & frame processing (`pipeline.py:14005`) | Fallback sky level (ADU) used when a frame's own sky estimate is unavailable. |
 | `sysrem_enabled` | False | Setting (config.json) | config.json | night-run orchestration (`night_run.py:527`) | Optional SysRem systematics removal (Tamuz+ 2005); OFF by default - validated as risky for preserving real variability. |
 | `sysrem_n_iter` | 3 | Setting (config.json) | config.json | night-run orchestration (`night_run.py:529`) | Number of SysRem iterations when enabled. |
 | `temporal_bin_window` | 0; range 0 .. 51 | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:106`) | Time-bin width for temporal binning (0 = none). |
@@ -338,14 +324,7 @@ Choosing the ensemble of constant stars against which the target is measured (di
 | `comp_slope_significance_k` | 3.0; range 0 .. 10 | Setting (config.json) | config.json | Settings UI (`ui_settings.py:1092`) | Statistical significance required before a comparison star's trend counts as real drift. |
 | `comp_sparse_fallback_enabled` | True | Setting (config.json) | config.json | Settings UI (`ui_settings.py:1128`) | Allows the sparse-field fallback path when strict criteria yield too few comparisons. |
 | `comp_sparse_fallback_min` | 0 | Setting (config.json) | config.json | Settings UI (`ui_settings.py:1131`) | Minimum comparisons the sparse fallback aims for (0 = take what exists). |
-| `comp_tier1_bprp_limit` | 0.15; range 0.02 .. 5 | Setting (config.json) | config.json | comparison-star selection (`comp_selection_per_target.py:258`) | BP-RP color-match limit of tier 1 (best color match, full weight). |
-| `comp_tier1_weight` | 1.0; range 0.01 .. 1 | Setting (config.json) | config.json | check-star handling (`check_star_kmag.py:436`) | Ensemble weight of tier-1 comparisons. |
-| `comp_tier2_bprp_limit` | 0.3; range 0.05 .. 5 | Setting (config.json) | config.json | comparison-star selection (`comp_selection_per_target.py:259`) | BP-RP limit of tier 2. |
-| `comp_tier2_weight` | 0.85; range 0.01 .. 1 | Setting (config.json) | config.json | check-star handling (`check_star_kmag.py:437`) | Ensemble weight of tier-2 comparisons. |
-| `comp_tier3_bprp_limit` | 0.55; range 0.05 .. 5 | Setting (config.json) | config.json | comparison-star selection (`comp_selection_per_target.py:260`) | BP-RP limit of tier 3. |
-| `comp_tier3_weight` | 0.5; range 0.01 .. 1 | Setting (config.json) | config.json | check-star handling (`check_star_kmag.py:438`) | Ensemble weight of tier-3 comparisons. |
-| `comp_tier4_bprp_limit` | 1.1; range 0.05 .. 5 | Setting (config.json) | config.json | Settings UI (`ui_settings.py:1117`) | BP-RP limit of tier 4 (loosest color match, lowest weight). |
-| `comp_tier4_weight` | 0.25; range 0.01 .. 1 | Setting (config.json) | config.json | check-star handling (`check_star_kmag.py:439`) | Ensemble weight of tier-4 comparisons. |
+| `comp_color_tiers` | [{bprp: 0.15, w: 1.0}, {bprp: 0.3, w: 0.85}, {bprp: 0.55, w: 0.5}, {bprp: 1.1, w: 0.25}] | Setting (config.json) | config.json | comparison-star selection (`comp_selection_per_target.py`) | Ordered color-match tiers for comparison weighting. Each entry is a BP-RP color-match limit ('bprp', tighter = better color match) and the ensemble weight ('w') for stars in that tier. WAVE-B merged the eight comp_tier{1..4}_bprp_limit / _weight scalars into this list of dicts. |
 | `global_comp_pool_enabled` | True | Setting (config.json) | config.json | config assembly & validation (`config.py:2098`) | Builds one field-wide comparison pool reused across targets instead of fully per-target pools. |
 | `phase01_comparison_exclude_gaia_extobj` | True | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:12656`) | Excludes Gaia-flagged extended objects (galaxies) from comparison candidates. |
 | `phase01_comparison_exclude_gaia_nss` | True | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:12654`) | Excludes Gaia non-single-star (binary) sources from comparison candidates. |
@@ -363,16 +342,11 @@ Choosing the ensemble of constant stars against which the target is measured (di
 | `phase01_comparison_min_frames_frac` | 0.2; range 0.05 .. 0.95 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:14752`) | Minimum fraction of frames a comparison must be measured on. |
 | `phase01_comparison_n_comp_max` | 8 | Setting (config.json) | config.json | check-star handling (`check_star_kmag.py:537`) | Maximum ensemble size; literature shows scintillation gains saturate around 6-8 comparisons. |
 | `phase01_comparison_n_comp_min` | 3 | Setting + runtime auto-adjust | config.json | photometry engine (Phase 2A) (`photometry_core.py:14748`) | Minimum comparisons the selector aims for; density adaptation may lower it on sparse fields. |
-| `phase01_comparison_proximity_tiebreak` | False | Setting (config.json) | config.json | config assembly & validation (`config.py:1967`) | Uses distance to the target as the tiebreak among otherwise equal candidates. |
-| `phase01_comparison_rms_bin_mag` | 0.001; range 0.0001 .. 0.05 | Setting (config.json) | config.json | config assembly & validation (`config.py:2364`) | Magnitude bin width of the RMS-vs-magnitude relation used in candidate scoring. |
 | `phase01_comparison_rms_outlier_sigma` | 3.0; range 1 .. 10 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:14753`) | Sigma level for flagging a comparison as an RMS outlier vs its brightness bin. |
 | `phase01_ct_extrapolation_tol` | 0.0 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:8927`) | Allowed color-range extrapolation of the color-term relation (0 = no extrapolation). |
 | `phase01_ct_min_comp` | 7; range 2 .. 30 | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:249`) | Minimum comparisons required to fit a color-term relation. |
 | `phase01_flux_col` | dao_flux | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:14763`) | Which flux column feeds Phase-1 comparison statistics (dao_flux = detection-stage flux). |
-| `phase01_tier1_mag` | 0.5 | Setting (config.json) | code default only | photometry engine (Phase 2A) (`photometry_core.py:14744`) | Brightness-difference bound of magnitude tier 1 in candidate tiering. |
-| `phase01_tier2_mag` | 1.0 | Setting (config.json) | code default only | photometry engine (Phase 2A) (`photometry_core.py:14745`) | Brightness-difference bound of magnitude tier 2. |
-| `phase01_tier3_mag` | 1.5 | Setting (config.json) | code default only | photometry engine (Phase 2A) (`photometry_core.py:14746`) | Brightness-difference bound of magnitude tier 3. |
-| `phase01_tier4_mag` | 2.0 | Setting (config.json) | code default only | photometry engine (Phase 2A) (`photometry_core.py:14747`) | Brightness-difference bound of magnitude tier 4. |
+| `phase01_tiers` | [0.5, 1.0, 1.5, 2.0] | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py`) | Brightness-difference bounds (mag) of the candidate magnitude tiers, ascending. WAVE-B merged the phase01_tier{1..4}_mag scalars into this list. |
 | `phase01_use_bprp_primary` | True | Setting (config.json) | config.json | Aperture photometry UI (`ui_aperture_photometry.py:1701`) | Uses Gaia BP-RP directly as the primary color criterion (instead of a computed B-V) - the grounded design choice of VYVAR. |
 
 ## Trust & quality flags
@@ -438,7 +412,7 @@ Output for the outside world: AAVSO/VarAstro submission and TESS cross-analysis.
 
 | Parameter | Default | Type | Source | Used in | Explanation |
 |---|---|---|---|---|---|
-| `export_arcsec_per_px` | 1.3 | Setting (config.json) | config.json | config assembly & validation (`config.py:1253`) | Plate-scale label written into export metadata; the science value comes from the WCS. |
+| `export_arcsec_per_px` | 1.3 | Dynamic (FITS / runtime) | computed from WCS / optics | main application UI | Plate-scale label written into export metadata; the science value comes from the WCS. WAVE-B removed its config.json fallback (derivable from WCS/optics). |
 | `tess_enabled` | False | Setting (config.json) | config.json | config assembly & validation (`config.py:2100`) | Enables the TESS cross-analysis block (comparing your light curve against TESS data). |
 
 ## System & performance

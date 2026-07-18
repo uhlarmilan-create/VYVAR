@@ -6,6 +6,59 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## WAVE-B-PARAM-REDUCTION — cut/merge/wire the 304-key surface to 269 (2026-07-18)
+
+**Milan sign-off (post PARAM-BUDGET-AUDIT).** Acting on the audit dispositions in
+`dev/results/param_budget_audit.csv`, the registered-parameter surface was reduced
+from 304 to 269 entries (config.json persists 249). Executed as anchor-gated steps,
+one commit each, full pytest green throughout, and closed by the `--full` anchor gate
+vs `draft_435` (fallback removals touch the science path; byte-identical was required).
+
+**What was cut and why.**
+- **DELETE-DEAD (4):** `aperture_fwhm_factor_medium`, `masterstar_log_astroalign`,
+  `phase01_comparison_proximity_tiebreak`, `phase01_comparison_rms_bin_mag` — no live
+  readers; removed from AppConfig, registry, generated docs, config.json.
+- **MERGE 14 -> 3:** eight `comp_tier{1..4}_bprp_limit/_weight` scalars -> one
+  `comp_color_tiers` list-of-dicts; four `phase01_tier{1..4}_mag` -> one `phase01_tiers`
+  list; `aperture_fwhm_factor_small/_large` -> one `aperture_snr_sizing` mapping. Loader
+  accepts the OLD scalar keys for one transition release (deprecation log) and maps them
+  into the structured key; save writes only the new form.
+- **DELETE-DB-DUP (9):** `gain`, `read_noise`, `plate_scale_arcsec_per_px`,
+  `phase01_plate_scale_arcsec_per_px`, `export_arcsec_per_px`, and the observer mirrors
+  (`observer_lat/lon/alt_m/location_name`) removed from config.json persistence in both
+  directions. The AppConfig fields remain as run-time hydrated mirrors; the DB/FITS
+  resolver is now the ONLY authoritative source. The vestigial DB `SETTINGS` table (no
+  production readers) is dropped via idempotent migration; dead `get_setting_int` /
+  `set_setting` removed. Masterdark/flat validity days confirmed config-authoritative.
+- **HARDCODE (20):** blind/plate-solve solver internals that were never tuned in practice
+  moved to module-level constants in `vyvar_blind_solver.py`, `vyvar_platesolver.py`,
+  `pipeline.py`; removed from AppConfig, registry, config.json, generated docs.
+
+**WIRE-IN finding (bug fix).** `calibration_master_ccd_temp_tolerance_c` was registered
+but never passed to `find_best_calibration_library_path`; the dark-selection tolerance was
+silently hardcoded. Now wired from `cfg` at both importer call sites. No-op for current
+runs (key absent from Milan's config.json -> effective value stays 0.5).
+
+**INTERNALIZE (2).** `frame_width_px` / `frame_height_px` stay as AppConfig fields (they
+still resolve from FITS NAXIS at run time) but leave the USER parameter space:
+owner=internal, widget=hidden, tier=expert, and dropped from config.json persistence.
+
+**Focal-length precedence.** The two resolution paths were audited and already resolve
+DB-optics-first with FITS-header fallback (`param_resolver.resolve_focal_mm`); no code
+change was needed — the audit note was stale.
+
+**The 80-key "never-touched expert" hardcode pool: REJECTED — stays KEEP.** Universality
+argument: those keys are legitimate scientific knobs that apply across all sites/targets;
+the fact that Milan has not re-tuned them from defaults is evidence they are well-chosen
+defaults, not evidence they are dead. They remain user-visible expert parameters.
+
+**sips_dao_fwhm clarification.** The audit's bonus `sips_dao_fwhm` claim is RETRACTED: the
+code uses the registered `sips_dao_fwhm_px` everywhere (config.py, pipeline.py,
+photometry_core.py, vyvar_platesolver.py, night_run.py, app.py) — there is no bare
+`sips_dao_fwhm` key.
+
+---
+
 ## COMP-TRUST-MIN-COMPS — 3 vs code default 5 is INTENTIONAL (2026-07-17)
 
 `comp_trust_min_comps=3` (config.json) vs code default 5: INTENTIONAL. Since 1c80219
