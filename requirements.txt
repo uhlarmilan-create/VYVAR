@@ -1,10 +1,12 @@
 streamlit
 pandas
-numpy
+numpy>=2.4,<3
 psutil
 scipy
-astropy
-photutils
+astropy>=7.2,<8
+photutils>=2.3,<3
+matplotlib
+scikit-image
 pillow
 plotly
 lightkurve
@@ -13,3 +15,9 @@ astroalign
 reproject
 pytest
 reportlab
+
+# Optional extras (guarded imports; not needed for the core pipeline):
+#   pyarrow      - faster parquet CSV fast-path (pipeline.py)
+#   sep-pjw      - Source Extractor python; only the cross-validation harness (xval_run.py)
+#   cupy-cudaXXX - GPU plate-solve path (needs CUDA; choose the wheel matching your CUDA)
+# pyraf is intentionally omitted (IRAF; Linux-only, guarded, LC cross-val only).
