@@ -14,7 +14,7 @@ astroquery
 astroalign
 reproject
 pytest
-reportlab
+reportlab   # runtime: SUMMARY MEASURE REPORT PDFs (pdf_report.py, photometry_report.py); also used by dev/tools/docs_pdf/ builders
 
 # Optional extras (guarded imports; not needed for the core pipeline):
 #   pyarrow      - faster parquet CSV fast-path (pipeline.py)

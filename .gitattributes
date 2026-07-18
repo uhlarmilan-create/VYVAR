@@ -1,0 +1,2 @@
+# Keep binary assets byte-exact: never apply EOL normalization to PDFs.
+*.pdf binary
