@@ -86,6 +86,10 @@ def test_database_self_initialises_on_fresh_file(tmp_path: Path) -> None:
         names = {r[0] for r in rows}
         missing = _REQUIRED_TABLES - names
         assert not missing, f"fresh DB missing reference tables: {sorted(missing)}"
+        # Product contract (DB-SEED-SPLIT): schema only — no author observatory rows.
+        for table in ("EQUIPMENTS", "TELESCOPE", "LOCATION"):
+            n = int(db.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+            assert n == 0, f"fresh DB {table} must be empty; got {n}"
     finally:
         db.conn.close()
 
@@ -94,9 +98,10 @@ def test_location_hydration_is_graceful_for_missing_and_present_ids(tmp_path: Pa
     db_path = tmp_path / "vyvar.sqlite3"
     VyvarDatabase(db_path).conn.close()  # self-init then release the handle
 
-    # Never raises, regardless of whether the DB has rows.
+    # Never raises; fresh DB has zero locations.
     locations = get_observer_locations(db_path)
-    assert isinstance(locations, list)
+    assert locations == []
 
-    # A clearly absent id must return None, not raise (dangling-reference safety).
+    # Shipped config may still point at observer_location_id=2; hydrate must return None.
+    assert get_observer_location_by_id(db_path, 2) is None
     assert get_observer_location_by_id(db_path, 10_000_000) is None

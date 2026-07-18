@@ -69,9 +69,11 @@ def test_draft_manifest_roundtrip(tmp_path: Path):
 
 def test_record_draft_calibration_provenance_db_and_manifest(tmp_path: Path, monkeypatch):
     from database import VyvarDatabase
+    from tools.reference_seed import seed_reference_observatory
 
     db_path = tmp_path / "test.db"
     db = VyvarDatabase(db_path)
+    seed_reference_observatory(db)
     draft_id = db.create_draft(
         {
             "id_equipments": 1,
@@ -168,6 +170,7 @@ def test_map_masterstar_db_candidates_pre_calibrated(tmp_path: Path):
     from database import VyvarDatabase
     from draft_provenance import CALIBRATION_MODE_PRE, write_draft_manifest
     from pipeline import get_masterstar_candidates, resolve_obs_file_to_processed_fits
+    from tools.reference_seed import seed_reference_observatory
 
     ap = tmp_path / "draft_ms"
     setup = ap / "non_calibrated" / "lights" / "V_20_2"
@@ -178,6 +181,7 @@ def test_map_masterstar_db_candidates_pre_calibrated(tmp_path: Path):
     f2.write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
 
     db = VyvarDatabase(tmp_path / "t.db")
+    seed_reference_observatory(db)
     draft_id = db.create_draft(
         {
             "id_equipments": 1,

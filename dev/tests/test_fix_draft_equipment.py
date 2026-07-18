@@ -12,6 +12,7 @@ import pytest
 from astropy.io import fits
 
 from database import VyvarDatabase
+from tools.reference_seed import seed_reference_observatory
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -27,6 +28,8 @@ def _load_fix_module():
 
 def _seed_equipment_db(db_path: Path) -> VyvarDatabase:
     db = VyvarDatabase(db_path)
+    # Reference fixture (C5A-150M id=4, Carl-Zeiss id=1, ...) — not product seed.
+    seed_reference_observatory(db)
     db.conn.execute(
         """
         INSERT OR IGNORE INTO EQUIPMENTS
