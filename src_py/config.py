@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields as _dc_fields
 import copy
+import difflib
 import json
 import logging
 import math
@@ -19,14 +20,142 @@ def config_json_path(project_root: Path) -> Path:
     return project_root / "config.json"
 
 
+# CONFIG-HUMAN-EDIT STEP 2: legacy config.json keys the loader migrates silently. These are
+# NOT AppConfig fields, so the unknown-key typo warning must skip them (they have explicit
+# migration paths in __post_init__). Two families: uppercase env-style aliases superseded by
+# lowercase fields, and the WAVE-B scalar tier/aperture keys merged into structured keys.
+_LEGACY_CONFIG_KEYS: frozenset[str] = frozenset({
+    "GAIA_DB_PATH",
+    "BLIND_INDEX_PATH",
+    "BLIND_INDEX_FINE_PATH",
+    "BLIND_INDEX_WIDE_PATH",
+    "VSX_LOCAL_DB_PATH",
+    "EXOPLANET_LOCAL_DB_PATH",
+    "aperture_fwhm_factor_small",
+    "aperture_fwhm_factor_large",
+    "aperture_fwhm_factor_medium",
+    "comp_tier1_bprp_limit",
+    "comp_tier2_bprp_limit",
+    "comp_tier3_bprp_limit",
+    "comp_tier4_bprp_limit",
+    "comp_tier1_weight",
+    "comp_tier2_weight",
+    "comp_tier3_weight",
+    "comp_tier4_weight",
+    "phase01_tier1_mag",
+    "phase01_tier2_mag",
+    "phase01_tier3_mag",
+    "phase01_tier4_mag",
+})
+
+
+def strip_jsonc_comments(text: str) -> str:
+    """Remove ``//`` line comments that sit OUTSIDE string literals (JSONC-lite).
+
+    A small character state machine so ``//`` inside a string value (e.g. a URL like
+    ``"http://x"``) is preserved. Only ``//`` to end-of-line is stripped; block comments
+    ``/* */`` and trailing commas are intentionally NOT supported so the format stays
+    strict elsewhere and diffs/tools stay sane. Newlines are preserved so line numbers in
+    validator error messages stay accurate.
+    """
+    out: list[str] = []
+    i = 0
+    n = len(text)
+    in_str = False
+    escape = False
+    while i < n:
+        c = text[i]
+        if in_str:
+            out.append(c)
+            if escape:
+                escape = False
+            elif c == "\\":
+                escape = True
+            elif c == '"':
+                in_str = False
+            i += 1
+            continue
+        if c == '"':
+            in_str = True
+            out.append(c)
+            i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            while i < n and text[i] not in "\r\n":
+                i += 1
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def parse_config_text(text: str) -> dict[str, Any]:
+    """Parse config.json text tolerating ``//`` line comments; raises json.JSONDecodeError."""
+    parsed = json.loads(strip_jsonc_comments(text))
+    if not isinstance(parsed, dict):
+        raise json.JSONDecodeError("config.json top level must be a JSON object", text, 0)
+    return parsed
+
+
+_APPCONFIG_FIELD_NAMES_CACHE: tuple[str, ...] | None = None
+
+
+def _appconfig_field_names() -> tuple[str, ...] | None:
+    """Public AppConfig field names, cached. Returns None if AppConfig is unavailable.
+
+    Some report tests monkeypatch ``config.AppConfig`` with a plain factory function; in
+    that case ``dataclasses.fields`` raises and we fall back to the last good cache (or
+    None), so the best-effort typo net never breaks an unrelated test.
+    """
+    global _APPCONFIG_FIELD_NAMES_CACHE
+    try:
+        names = tuple(
+            sorted(f.name for f in _dc_fields(AppConfig) if not f.name.startswith("_"))
+        )
+    except TypeError:
+        return _APPCONFIG_FIELD_NAMES_CACHE
+    _APPCONFIG_FIELD_NAMES_CACHE = names
+    return names
+
+
+def _warn_unknown_config_keys(data: dict[str, Any]) -> None:
+    """Log a WARN for each config.json key that is neither a field nor a known legacy alias.
+
+    Typo safety net for hand editors: names the unknown key and the closest registered
+    key (difflib). Migrated/legacy keys stay silent (they are in the allowlist).
+    """
+    field_names = _appconfig_field_names()
+    if field_names is None:
+        return  # cannot resolve the known-key set right now; skip the best-effort typo net
+    known = set(field_names) | _LEGACY_CONFIG_KEYS
+    for key in data:
+        if key in known:
+            continue
+        near = difflib.get_close_matches(key, list(field_names), n=1)
+        hint = f" (did you mean '{near[0]}'?)" if near else ""
+        logging.warning(
+            "config.json: unknown key '%s' is ignored%s. See docs/VYVAR_CONFIG_GUIDE_EN.md "
+            "or run 'python dev/scripts/validate_config.py'.",
+            key,
+            hint,
+        )
+
+
 def load_config_json(project_root: Path) -> dict[str, Any]:
     path = config_json_path(project_root)
     if not path.exists():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        data = parse_config_text(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        logging.warning(
+            "config.json could not be parsed (%s); using defaults. Run "
+            "'python dev/scripts/validate_config.py' to locate the error.",
+            exc,
+        )
         return {}
+    _warn_unknown_config_keys(data)
+    return data
 
 
 def resolve_comp_sparse_fallback_enabled(cfg: AppConfig | None) -> bool:
