@@ -1312,12 +1312,12 @@
     "help": "Frame Height PX (detection parameter).",
     "kind": "resolved",
     "label": "Frame Height PX",
-    "owner": "fits_dynamic",
+    "owner": "internal",
     "phase": "detection",
     "range": null,
     "tier": "expert",
     "unit": null,
-    "widget": "auto"
+    "widget": "hidden"
   },
   "frame_quality_fwhm_factor": {
     "help": "Frame Quality FWHM Factor (qc parameter).",
@@ -1376,12 +1376,12 @@
     "help": "Frame Width PX (detection parameter).",
     "kind": "resolved",
     "label": "Frame Width PX",
-    "owner": "fits_dynamic",
+    "owner": "internal",
     "phase": "detection",
     "range": null,
     "tier": "expert",
     "unit": null,
-    "widget": "auto"
+    "widget": "hidden"
   },
   "gaia_db_path": {
     "help": "Gaia Db Path (paths parameter).",

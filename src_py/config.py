@@ -2009,8 +2009,15 @@ class AppConfig:
         _f01("phase01_comparison_max_fwhm_factor", 1.5, 0.5, 5.0)
         _f01("phase01_comparison_isolation_radius_px", 25.0, 1.0, 200.0)
         _f01("phase01_comparison_rms_outlier_sigma", 3.0, 1.0, 10.0)
-        _i01("frame_width_px", 2082, 100, 20000)
-        _i01("frame_height_px", 1397, 100, 20000)
+        # WAVE-B STEP 3: frame_width_px / frame_height_px are INTERNAL. Frame geometry
+        # resolves from FITS NAXIS1/2 at run time; the dataclass default is the only
+        # fallback. They are no longer loaded from or saved to config.json. Warn once if a
+        # legacy config.json still carries them.
+        if "frame_width_px" in data or "frame_height_px" in data:
+            logging.warning(
+                "[DEPRECATED] frame_width_px/frame_height_px in config.json are ignored; "
+                "frame dimensions resolve from FITS NAXIS at run time (WAVE-B STEP 3)."
+            )
 
         _chip_m = data.get("phase01_chip_interior_margin_px")
         if _chip_m is None and "phase01_suspected_interior_margin_px" in data:
@@ -2295,8 +2302,6 @@ class AppConfig:
             "phase01_comparison_max_fwhm_factor": float(self.phase01_comparison_max_fwhm_factor),
             "phase01_comparison_isolation_radius_px": float(self.phase01_comparison_isolation_radius_px),
             "phase01_comparison_rms_outlier_sigma": float(self.phase01_comparison_rms_outlier_sigma),
-            "frame_width_px": int(self.frame_width_px),
-            "frame_height_px": int(self.frame_height_px),
             "annulus_inner_fwhm": float(self.annulus_inner_fwhm),
             "annulus_outer_fwhm": float(self.annulus_outer_fwhm),
             "nonlinearity_peak_percentile": float(self.nonlinearity_peak_percentile),

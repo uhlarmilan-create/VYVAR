@@ -5,15 +5,15 @@ Regenerate with `python tools/gen_params_md.py`. Hand edits will be overwritten.
 Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fields(AppConfig)` (defaults and types, from code).
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 
-_Generated 2026-07-18T09:51:04Z at git HEAD 617b76f._
+_Generated 2026-07-18T10:01:59Z at git HEAD 08e5684._
 
 ## Summary
 
 - Entries: 300
 - Tier: basic 12, advanced 75, expert 213
 - Kind: static 281, derived 0, resolved 19
-- Widget: auto 127, custom 159, hidden 14
-- Owner: db_static 9, config_runtime 273, fits_dynamic 7, internal 11
+- Widget: auto 125, custom 159, hidden 16
+- Owner: db_static 9, config_runtime 273, fits_dynamic 5, internal 13
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -129,8 +129,8 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `field_density_adaptive_enabled` | True | - | expert | static | config_runtime | custom | Field Density Adaptive Enabled |
 | `field_density_dense_threshold` | 1000.0 | - | expert | static | config_runtime | custom | Field Density Dense Threshold |
 | `field_density_sparse_threshold` | 300.0 | 1 .. 50000 | expert | static | config_runtime | custom | Field Density Sparse Threshold |
-| `frame_height_px` | 1397 | - | expert | resolved | fits_dynamic | auto | Frame Height PX |
-| `frame_width_px` | 2082 | - | expert | resolved | fits_dynamic | auto | Frame Width PX |
+| `frame_height_px` | 1397 | - | expert | resolved | internal | hidden | Frame Height PX |
+| `frame_width_px` | 2082 | - | expert | resolved | internal | hidden | Frame Width PX |
 | `masterstar_accept_mode` | odds | - | expert | static | config_runtime | custom | Masterstar Accept Mode |
 | `masterstar_best_of_n` | 10 | 1 .. 25 | expert | static | config_runtime | custom | Masterstar Best Of N |
 | `masterstar_catalog_recovery_min` | 0.65 | 0.4 .. 0.95 | advanced | static | config_runtime | custom | Masterstar Catalog Recovery Min |

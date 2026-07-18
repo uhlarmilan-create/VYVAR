@@ -167,8 +167,6 @@
   "phase01_comparison_max_fwhm_factor": 1.5,
   "phase01_comparison_isolation_radius_px": 25.0,
   "phase01_comparison_rms_outlier_sigma": 3.0,
-  "frame_width_px": 2082,
-  "frame_height_px": 1397,
   "annulus_inner_fwhm": 4.75,
   "annulus_outer_fwhm": 9.0,
   "nonlinearity_peak_percentile": 20.0,
