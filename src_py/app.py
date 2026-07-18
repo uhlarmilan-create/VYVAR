@@ -236,6 +236,7 @@ def _run_vyvar_full_pipeline(
             db=pipeline.db,
             id_equipments=int(import_equipment_id),
             id_telescope=int(import_telescope_id),
+            calibration_master_ccd_temp_tolerance_c=cfg.calibration_master_ccd_temp_tolerance_c,
         )
         st.session_state["vyvar_smart_plan"] = plan
         st.session_state.pop("vyvar_post_cal_archive_path", None)
@@ -2096,6 +2097,7 @@ def render_live_view(
                             db=pipeline.db,
                             id_equipments=import_equipment_id,
                             id_telescope=import_telescope_id,
+                            calibration_master_ccd_temp_tolerance_c=cfg.calibration_master_ccd_temp_tolerance_c,
                         )
                         st.session_state["vyvar_smart_plan"] = plan
                         sync_optics_session(

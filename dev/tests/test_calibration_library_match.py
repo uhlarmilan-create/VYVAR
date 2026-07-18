@@ -326,3 +326,32 @@ def test_config_temp_tolerance_default() -> None:
 
     cfg = AppConfig()
     assert cfg.calibration_master_ccd_temp_tolerance_c == 0.5
+
+
+def test_dark_selection_honors_nondefault_tolerance(tmp_path: Path) -> None:
+    """WAVE-B STEP 1: the CCD-temp tolerance (now fed from cfg into smart_scan_source)
+    governs library dark selection. Synthetic darks at dT 0.4 / 0.6 / 5.0 C from the light
+    CCD_TEMP; a nondefault tolerance changes which rows qualify (rejected at 0.5, some
+    accepted at 0.7, and a 5.0 gap rejected even at a bounded 1.0)."""
+    light_temp = -10.0
+
+    # dT = 0.4: accepted at the default 0.5 tolerance.
+    db04 = VyvarDatabase(tmp_path / "d04.db")
+    d04 = tmp_path / "dark_dt04.fits"
+    assert _register(db04, d04, kind="dark", ccd_temp=light_temp - 0.4)
+    hit04 = _find(db04, ccd_temp=light_temp, temp_tolerance=0.5)
+    assert hit04 is not None and Path(hit04).resolve() == d04.resolve()
+
+    # dT = 0.6: rejected at 0.5 but accepted at a nondefault 0.7 -> proves the knob is live.
+    db06 = VyvarDatabase(tmp_path / "d06.db")
+    d06 = tmp_path / "dark_dt06.fits"
+    assert _register(db06, d06, kind="dark", ccd_temp=light_temp - 0.6)
+    assert _find(db06, ccd_temp=light_temp, temp_tolerance=0.5) is None
+    hit06 = _find(db06, ccd_temp=light_temp, temp_tolerance=0.7)
+    assert hit06 is not None and Path(hit06).resolve() == d06.resolve()
+
+    # dT = 5.0: rejected even at a generous-but-bounded 1.0 tolerance.
+    db50 = VyvarDatabase(tmp_path / "d50.db")
+    d50 = tmp_path / "dark_dt50.fits"
+    assert _register(db50, d50, kind="dark", ccd_temp=light_temp - 5.0)
+    assert _find(db50, ccd_temp=light_temp, temp_tolerance=1.0) is None

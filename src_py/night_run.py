@@ -552,6 +552,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 db=pipeline.db,
                 id_equipments=eq_id,
                 id_telescope=tel_id,
+                calibration_master_ccd_temp_tolerance_c=cfg.calibration_master_ccd_temp_tolerance_c,
             )
             _t("smart_scan_source", t0)
             lights_bad = any(
@@ -576,6 +577,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             db=pipeline.db,
             id_equipments=eq_id,
             id_telescope=tel_id,
+            calibration_master_ccd_temp_tolerance_c=cfg.calibration_master_ccd_temp_tolerance_c,
         )
         _t("smart_scan_source", t0)
 

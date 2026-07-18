@@ -1208,11 +1208,16 @@ def smart_scan_source(
     db: VyvarDatabase | None = None,
     id_equipments: int | None = None,
     id_telescope: int | None = None,
+    # Dark master |dT| tolerance (deg C). Production callers pass
+    # ``cfg.calibration_master_ccd_temp_tolerance_c``; the 0.5 literal is a documented
+    # last-resort default for dev scripts/tests that do not thread config (WAVE-B STEP 1).
     calibration_master_ccd_temp_tolerance_c: float = 0.5,
 ) -> SmartImportPlan:
     """Scan source for lights/darks/flats and decide calibration paths.
 
     With ``db``, refreshes ``FITS_HEADER_CACHE`` (header metadata only) for fast rescans; no observation/draft writes.
+    The temperature tolerance governs library dark selection; flat selection code is unchanged
+    (it shares the same tolerance, a no-op at the 0.5 default).
     """
     root = Path(source_root)
     try:
