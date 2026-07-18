@@ -979,11 +979,22 @@ class AppConfig:
     def __post_init__(self) -> None:
         data = load_config_json(self.project_root)
 
-        self.archive_root = Path(data.get("archive_root", str(self.project_root / "Archive")))
-        self.calibration_library_root = Path(
-            data.get("calibration_library_root", str(self.project_root / "CalibrationLibrary"))
+        # A blank ("" / whitespace) path value means "use the project-root default" -- the
+        # same as omitting the key. This keeps a relocated/fresh install working: the
+        # installer and hand-editors may blank these to drop the author's absolute paths,
+        # and Path("") would otherwise resolve to "." (e.g. database_path="." would make
+        # sqlite3.connect fail on first run).
+        def _path_or_default(key: str, default: Path) -> Path:
+            raw = str(data.get(key) or "").strip()
+            return Path(raw) if raw else default
+
+        self.archive_root = _path_or_default("archive_root", self.project_root / "Archive")
+        self.calibration_library_root = _path_or_default(
+            "calibration_library_root", self.project_root / "CalibrationLibrary"
         )
-        self.database_path = Path(data.get("database_path", str(self.project_root / "vyvar.sqlite3")))
+        self.database_path = _path_or_default(
+            "database_path", self.project_root / "vyvar.sqlite3"
+        )
 
         self.masterdark_validity_days = int(data.get("masterdark_validity_days", 90))
         self.masterflat_validity_days = int(data.get("masterflat_validity_days", 200))
