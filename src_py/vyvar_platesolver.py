@@ -63,6 +63,15 @@ LOGGER = logging.getLogger(__name__)
 GAIA_EPOCH = 2016.0
 PM_CORRECTION_MIN_MASYR = 10.0
 
+# WAVE-B STEP 6 (HARDCODE): plate-solve / odds-verification internals, formerly AppConfig knobs.
+# Fixed to their long-standing defaults (never tuned in config history); solver mechanics.
+_BLIND_PREFILTER_MIN = 4                 # was cfg.blind_prefilter_min (4); prefilter floor
+_MASTERSTAR_ODDS_MATCH_FLOOR = 30        # was cfg.masterstar_odds_match_floor (30)
+_MASTERSTAR_ODDS_K = 12.0                # was cfg.masterstar_odds_k (12.0)
+_MASTERSTAR_ODDS_MIN_QUADRANTS = 3       # was cfg.masterstar_odds_min_quadrants (3)
+_MASTERSTAR_FALSE_ALARM_P_MAX = 1e-6     # was cfg.masterstar_false_alarm_p_max (1e-6)
+_MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO = 1.15  # was cfg.masterstar_sip_force_rms_guard_ratio (1.15)
+
 
 def _apply_proper_motion(
     ra: float,
@@ -1690,7 +1699,7 @@ def _verify_blind_candidates(
     _scale_tol = _scale_tol_frac(_cfg)
     _use_inmem = bool(getattr(_cfg, "blind_verify_inmemory_catalog", True))
     _verify_mag = float(getattr(_cfg, "verify_mag_limit", 14.0))
-    _prefilter_min = int(getattr(_cfg, "blind_prefilter_min", 4))
+    _prefilter_min = _BLIND_PREFILTER_MIN  # WAVE-B STEP 6: hardcoded solver internal
     _early_accept = int(getattr(_cfg, "blind_verify_early_accept", 30))
     _early_floor_cfg = int(getattr(_cfg, "blind_verify_early_floor", 0))
     _early_fraction = float(getattr(_cfg, "blind_verify_early_fraction", 0.0))
@@ -3690,7 +3699,7 @@ def _solve_wcs_validate_and_refine(
             edge_rms=_dist_assess.get("distortion_edge_rms_px"),
             recovery_min=float(_recovery_min),
             matched_floor=int(
-                getattr(_cfg_val, "masterstar_odds_match_floor", 30)
+                _MASTERSTAR_ODDS_MATCH_FLOOR
                 if str(getattr(_cfg_val, "masterstar_accept_mode", "odds")).strip().lower() == "odds"
                 else _matched_floor
             ),
@@ -3698,9 +3707,9 @@ def _solve_wcs_validate_and_refine(
             hint_sep_deg=float(_hint_sep_deg),
             hint_sep_limit=float(hint_sep_limit),
             fov_diameter_deg=float(fov_diameter_deg),
-            odds_k=float(getattr(_cfg_val, "masterstar_odds_k", 12.0)),
-            odds_min_quadrants=int(getattr(_cfg_val, "masterstar_odds_min_quadrants", 3)),
-            false_alarm_p_max=float(getattr(_cfg_val, "masterstar_false_alarm_p_max", 1e-6)),
+            odds_k=float(_MASTERSTAR_ODDS_K),
+            odds_min_quadrants=int(_MASTERSTAR_ODDS_MIN_QUADRANTS),
+            false_alarm_p_max=float(_MASTERSTAR_FALSE_ALARM_P_MAX),
             crowded_n_cat_min=int(getattr(_cfg_val, "masterstar_quality_crowded_n_cat_min", 800)),
         )
         _verified = bool(_accept.get("masterstar_verified", False))
@@ -4367,7 +4376,8 @@ def solve_wcs_with_local_gaia(
     _ms_sip_guard_r: float | None = masterstar_sip_force_rms_guard_ratio
     if _is_masterstar:
         if _ms_sip_guard_r is None:
-            _ms_sip_guard_r = _cfg_ps.masterstar_sip_force_rms_guard_ratio
+            # WAVE-B STEP 6: hardcoded solver internal (was cfg.masterstar_sip_force_rms_guard_ratio).
+            _ms_sip_guard_r = _MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO
     else:
         _ms_sip_guard_r = None
 

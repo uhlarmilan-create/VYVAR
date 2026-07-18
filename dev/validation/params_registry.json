@@ -268,64 +268,6 @@
     "unit": null,
     "widget": "custom"
   },
-  "blind_cluster_coherence_cap": {
-    "help": "Blind Cluster Coherence Cap (detection parameter).",
-    "kind": "static",
-    "label": "Blind Cluster Coherence Cap",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "blind_cluster_eps_deg": {
-    "help": "Blind Cluster Eps Deg (detection parameter).",
-    "kind": "static",
-    "label": "Blind Cluster Eps Deg",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.1,
-      5.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "blind_cluster_min_samples": {
-    "help": "Blind Cluster Min Samples (detection parameter).",
-    "kind": "static",
-    "label": "Blind Cluster Min Samples",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "blind_cluster_min_votes": {
-    "help": "Blind Cluster Min Votes (detection parameter).",
-    "kind": "static",
-    "label": "Blind Cluster Min Votes",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "blind_cluster_vote_span": {
-    "help": "Blind Cluster Vote Span (detection parameter).",
-    "kind": "static",
-    "label": "Blind Cluster Vote Span",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
   "blind_img_select_mode": {
     "help": "Blind Img Select Mode (detection parameter).",
     "kind": "static",
@@ -391,31 +333,6 @@
     "tier": "expert",
     "unit": null,
     "widget": "hidden"
-  },
-  "blind_prefilter_min": {
-    "help": "Blind Prefilter Min (detection parameter).",
-    "kind": "static",
-    "label": "Blind Prefilter Min",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "blind_scale_tol_frac": {
-    "help": "Blind Scale Tol Frac (detection parameter).",
-    "kind": "static",
-    "label": "Blind Scale Tol Frac",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.02,
-      0.5
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
   },
   "blind_use_rig_prior": {
     "help": "Blind Use Rig Prior (detection parameter).",
@@ -1879,20 +1796,6 @@
     "unit": null,
     "widget": "custom"
   },
-  "masterstar_false_alarm_p_max": {
-    "help": "Masterstar False Alarm P Max (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar False Alarm P Max",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      1e-12,
-      1.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
   "masterstar_min_matched_floor": {
     "help": "Masterstar Min Matched Floor (detection parameter).",
     "kind": "static",
@@ -1901,86 +1804,6 @@
     "phase": "detection",
     "range": null,
     "tier": "advanced",
-    "unit": null,
-    "widget": "custom"
-  },
-  "masterstar_odds_k": {
-    "help": "Masterstar Odds K (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar Odds K",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      1.0,
-      100.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "masterstar_odds_match_floor": {
-    "help": "Masterstar Odds Match Floor (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar Odds Match Floor",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "masterstar_odds_min_quadrants": {
-    "help": "Masterstar Odds Min Quadrants (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar Odds Min Quadrants",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "masterstar_optimizer_mirror_extra_log": {
-    "help": "Masterstar Optimizer Mirror Extra Log (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar Optimizer Mirror Extra Log",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "masterstar_platesolve_nn_refine_max_rms_px": {
-    "help": "Masterstar Platesolve NN Refine Max RMS PX (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar Platesolve NN Refine Max RMS PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "masterstar_platesolve_prewrite_relaxed_rms_max_px": {
-    "help": "Masterstar Platesolve Prewrite Relaxed RMS Max PX (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar Platesolve Prewrite Relaxed RMS Max PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "masterstar_platesolve_prewrite_rms_max_px": {
-    "help": "Masterstar Platesolve Prewrite RMS Max PX (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar Platesolve Prewrite RMS Max PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
     "unit": null,
     "widget": "custom"
   },
@@ -2089,48 +1912,12 @@
     "unit": null,
     "widget": "custom"
   },
-  "masterstar_sip_force_rms_guard_ratio": {
-    "help": "Masterstar SIP Force RMS Guard Ratio (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar SIP Force RMS Guard Ratio",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "masterstar_solver_use_draft_median_if_hint_sep_deg": {
-    "help": "Masterstar Solver Use Draft Median If Hint Sep Deg (detection parameter).",
-    "kind": "static",
-    "label": "Masterstar Solver Use Draft Median If Hint Sep Deg",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.0,
-      180.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
   "masterstar_use_best_frame_fwhm": {
     "help": "Masterstar Use Best Frame FWHM (detection parameter).",
     "kind": "static",
     "label": "Masterstar Use Best Frame FWHM",
     "owner": "config_runtime",
     "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom"
-  },
-  "moffat_chi2_limit": {
-    "help": "Moffat Chi2 Limit (photometry parameter).",
-    "kind": "static",
-    "label": "Moffat Chi2 Limit",
-    "owner": "config_runtime",
-    "phase": "photometry",
     "range": null,
     "tier": "expert",
     "unit": null,
@@ -2729,20 +2516,6 @@
     "unit": null,
     "widget": "auto"
   },
-  "platesolve_anisotropy_threshold": {
-    "help": "Platesolve Anisotropy Threshold (detection parameter).",
-    "kind": "static",
-    "label": "Platesolve Anisotropy Threshold",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      1.01,
-      5.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto"
-  },
   "preprocess_sky_surface_order": {
     "help": "Preprocess Sky Surface Order (qc parameter).",
     "kind": "static",
@@ -3150,17 +2923,6 @@
     "tier": "expert",
     "unit": null,
     "widget": "hidden"
-  },
-  "sky_adu_fallback": {
-    "help": "Sky ADU Fallback (photometry parameter).",
-    "kind": "static",
-    "label": "Sky ADU Fallback",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto"
   },
   "sparse_trust_T_green": {
     "help": "Sparse Trust T Green (trust parameter).",

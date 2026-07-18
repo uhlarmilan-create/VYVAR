@@ -636,7 +636,7 @@ def _fill_psf_catalog_columns(
                     error=_error_map,
                     saturate_limit_adu=float(getattr(_cfg, "saturate_limit_adu", 65000)),
                     peak_col="peak_dao",
-                    chi2_limit=float(getattr(_cfg, "moffat_chi2_limit", 50.0)),
+                    chi2_limit=float(_MOFFAT_CHI2_LIMIT),  # WAVE-B STEP 6: hardcoded QC internal
                 )
 
                 # Moffat aperture correction
@@ -847,6 +847,18 @@ pointing_hint_from_header = _pointing_hint_from_header
 
 
 LOGGER = logging.getLogger(__name__)
+
+# WAVE-B STEP 6 (HARDCODE): solver / QC internals, formerly AppConfig knobs. Fixed to their
+# long-standing defaults (never tuned in config history); solver mechanics, not user tuning.
+_MOFFAT_CHI2_LIMIT = 50.0                              # was cfg.moffat_chi2_limit (50.0)
+_SKY_ADU_FALLBACK = 1581.6                             # was cfg.sky_adu_fallback (1581.6)
+_MASTERSTAR_SOLVER_USE_DRAFT_MEDIAN_IF_HINT_SEP_DEG = 1.0  # was cfg.masterstar_solver_use_draft_median_if_hint_sep_deg (1.0)
+_MASTERSTAR_OPTIMIZER_MIRROR_EXTRA_LOG = True         # was cfg.masterstar_optimizer_mirror_extra_log (True)
+_MASTERSTAR_PLATESOLVE_PREWRITE_RMS_MAX_PX = 30.0     # was cfg.masterstar_platesolve_prewrite_rms_max_px (30.0)
+_MASTERSTAR_PLATESOLVE_PREWRITE_RELAXED_RMS_MAX_PX = 35.0  # was cfg.masterstar_platesolve_prewrite_relaxed_rms_max_px (35.0)
+_MASTERSTAR_PLATESOLVE_NN_REFINE_MAX_RMS_PX = None    # was cfg.masterstar_platesolve_nn_refine_max_rms_px (None)
+_MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO = 1.15          # was cfg.masterstar_sip_force_rms_guard_ratio (1.15)
+_PLATESOLVE_ANISOTROPY_THRESHOLD = 1.3                # was cfg.platesolve_anisotropy_threshold (1.3)
 
 
 def _pipeline_ui_info(msg: str) -> None:
@@ -11515,7 +11527,7 @@ def generate_masterstar_and_catalog(
             except (TypeError, ValueError):
                 pass
         try:
-            _hint_sep_thr = float(_cfg_ms.masterstar_solver_use_draft_median_if_hint_sep_deg)
+            _hint_sep_thr = float(_MASTERSTAR_SOLVER_USE_DRAFT_MEDIAN_IF_HINT_SEP_DEG)
         except (TypeError, ValueError):
             _hint_sep_thr = 1.0
         if not math.isfinite(_hint_sep_thr) or _hint_sep_thr < 0:
@@ -11568,9 +11580,9 @@ def generate_masterstar_and_catalog(
                 pass
         if _fov_ms_solve is None:
             _fov_ms_solve = float(_cfg_ms.plate_solve_fov_deg)
-        _prms = _cfg_ms.masterstar_platesolve_prewrite_rms_max_px
-        _prms_r = _cfg_ms.masterstar_platesolve_prewrite_relaxed_rms_max_px
-        _nnrms = _cfg_ms.masterstar_platesolve_nn_refine_max_rms_px
+        _prms = _MASTERSTAR_PLATESOLVE_PREWRITE_RMS_MAX_PX
+        _prms_r = _MASTERSTAR_PLATESOLVE_PREWRITE_RELAXED_RMS_MAX_PX
+        _nnrms = _MASTERSTAR_PLATESOLVE_NN_REFINE_MAX_RMS_PX
         # MASTERSTAR platesolve: always single best processed FITS (copy mode).
         _ms_vyvar_max_rows = 30000
 
@@ -11640,7 +11652,7 @@ def generate_masterstar_and_catalog(
             )
 
         try:
-            _aniso_thr = float(_cfg_ms.platesolve_anisotropy_threshold)
+            _aniso_thr = float(_PLATESOLVE_ANISOTROPY_THRESHOLD)
         except (TypeError, ValueError):
             _aniso_thr = 1.3
         if not math.isfinite(_aniso_thr) or _aniso_thr <= 0:
@@ -12067,7 +12079,7 @@ def generate_masterstar_and_catalog(
 
         _gdb_opt = str(_cfg_ms.gaia_db_path or "").strip()
         if _gdb_opt:
-            _mir_extra = bool(_cfg_ms.masterstar_optimizer_mirror_extra_log)
+            _mir_extra = bool(_MASTERSTAR_OPTIMIZER_MIRROR_EXTRA_LOG)
             csv_path = optimize_masterstar_matches(
                 masterstars_csv=temp_csv,
                 masterstar_fits=masterstar_fits,
@@ -12076,7 +12088,7 @@ def generate_masterstar_and_catalog(
                 gaia_mag_limit=float(_ms_faintest_mag_eff),
                 gaia_max_catalog_rows=int(_ms_max_catalog_rows_eff),
                 mirror_orientation_extra_log=_mir_extra,
-                sip_force_rms_guard_ratio=_cfg_ms.masterstar_sip_force_rms_guard_ratio,
+                sip_force_rms_guard_ratio=_MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO,
             )
             # Force one more pass after WCS displacement update for final edge recovery.
             csv_path = optimize_masterstar_matches(
@@ -12087,7 +12099,7 @@ def generate_masterstar_and_catalog(
                 gaia_mag_limit=float(_ms_faintest_mag_eff),
                 gaia_max_catalog_rows=int(_ms_max_catalog_rows_eff),
                 mirror_orientation_extra_log=_mir_extra,
-                sip_force_rms_guard_ratio=_cfg_ms.masterstar_sip_force_rms_guard_ratio,
+                sip_force_rms_guard_ratio=_MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO,
             )
             log_event("MASTERSTAR optimizer: forced final re-match pass completed.")
             # Final safety: repair any residual precision-loss IDs in masterstars_full_match.csv via Gaia RA/DEC lookup.
@@ -14002,7 +14014,7 @@ def _astrometry_align_impl_body(
                         _aligned_for_sky = sorted(_iter_fits_recursive(aligned_root))
                     except Exception:  # noqa: BLE001
                         _aligned_for_sky = []
-                _sky_fb = float(_catalog_app_cfg.sky_adu_fallback)
+                _sky_fb = float(_SKY_ADU_FALLBACK)
                 _prematch_k = float(_catalog_app_cfg.masterstar_prematch_peak_sigma_floor)
                 precompute_and_save_snr_aperture_table_for_draft(
                     _draft_dir_snr_pre,

@@ -193,11 +193,7 @@ def _rig_prior_enabled(cfg: Any | None) -> bool:
 
 
 def _scale_tol_frac(cfg: Any | None) -> float:
-    try:
-        v = float(getattr(cfg or AppConfig(), "blind_scale_tol_frac", 0.10))
-    except (TypeError, ValueError):
-        v = 0.10
-    return max(0.02, min(0.50, v))
+    return max(0.02, min(0.50, _BLIND_SCALE_TOL_FRAC))
 
 
 def _use_gnomonic_triangles(fov_deg: float | None, *, use_rig_prior: bool) -> bool:
@@ -332,6 +328,15 @@ _CACHED_INDEX: dict = {}  # module-level cache: path → {tree, metadata}
 
 CLUSTER_RADIUS_DEG = 1.0  # default DBSCAN eps / legacy greedy cluster radius
 _CAND_DEDUP_DEG = 0.3
+
+# WAVE-B STEP 6 (HARDCODE): blind-solver internals, formerly AppConfig knobs. Fixed to their
+# long-standing defaults (never tuned in config history); solver mechanics, not user tuning.
+_BLIND_SCALE_TOL_FRAC = 0.10        # was cfg.blind_scale_tol_frac (0.10); scale-gate tolerance
+_BLIND_CLUSTER_EPS_DEG = 1.0        # was cfg.blind_cluster_eps_deg (1.0); DBSCAN epsilon (deg)
+_BLIND_CLUSTER_MIN_VOTES = 4        # was cfg.blind_cluster_min_votes (4); vote threshold
+_BLIND_CLUSTER_MIN_SAMPLES = 3      # was cfg.blind_cluster_min_samples (3); DBSCAN min_samples
+_BLIND_CLUSTER_VOTE_SPAN = 12       # was cfg.blind_cluster_vote_span (12); vote span
+_BLIND_CLUSTER_COHERENCE_CAP = 25   # was cfg.blind_cluster_coherence_cap (25); coherence cap
 
 
 def _sky_cell_vote_winner(
@@ -855,30 +860,14 @@ def _pick_cluster_representative(
 
 
 def _blind_cluster_params(app_config: Any | None) -> tuple[float, int, int, int, int]:
-    cfg = app_config or AppConfig()
-    try:
-        eps = float(getattr(cfg, "blind_cluster_eps_deg", CLUSTER_RADIUS_DEG))
-    except (TypeError, ValueError):
-        eps = CLUSTER_RADIUS_DEG
-    if not math.isfinite(eps) or eps <= 0:
-        eps = CLUSTER_RADIUS_DEG
-    try:
-        min_votes = int(getattr(cfg, "blind_cluster_min_votes", 4))
-    except (TypeError, ValueError):
-        min_votes = 4
-    try:
-        min_samples = int(getattr(cfg, "blind_cluster_min_samples", 3))
-    except (TypeError, ValueError):
-        min_samples = 3
-    try:
-        vote_span = int(getattr(cfg, "blind_cluster_vote_span", 12))
-    except (TypeError, ValueError):
-        vote_span = 12
-    try:
-        coh_cap = int(getattr(cfg, "blind_cluster_coherence_cap", 50))
-    except (TypeError, ValueError):
-        coh_cap = 50
-    return eps, max(2, min_votes), max(2, min_samples), max(0, vote_span), max(5, coh_cap)
+    # WAVE-B STEP 6: solver-internal DBSCAN params are now module constants (see top of file).
+    return (
+        _BLIND_CLUSTER_EPS_DEG,
+        max(2, _BLIND_CLUSTER_MIN_VOTES),
+        max(2, _BLIND_CLUSTER_MIN_SAMPLES),
+        max(0, _BLIND_CLUSTER_VOTE_SPAN),
+        max(5, _BLIND_CLUSTER_COHERENCE_CAP),
+    )
 
 
 def _hits_unit_sphere_xyz(hits: list[_MatchHit]) -> np.ndarray:

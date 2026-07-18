@@ -68,9 +68,10 @@ def test_owner_groups_partition_every_key() -> None:
     # 3 structured config_runtime keys (comp_color_tiers, phase01_tiers, aperture_snr_sizing):
     # 273 - 14 + 3 = 262. STEP 5 (DELETE-DB-DUP) moved export_arcsec_per_px config_runtime ->
     # fits_dynamic (262 -> 261, fits_dynamic 5 -> 6); the other 8 dup keys were already
-    # db_static/fits_dynamic.
+    # db_static/fits_dynamic. STEP 6 (HARDCODE) removed 20 config_runtime solver-internal keys
+    # (261 -> 241).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 261, "fits_dynamic": 6, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 241, "fits_dynamic": 6, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

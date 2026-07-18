@@ -216,26 +216,15 @@ class AppConfig:
     blind_verify_early_floor: int = 0
     #: Early-exit when accepted candidate fraction ≥ this (0 = use absolute ``early_floor`` only).
     blind_verify_early_fraction: float = 0.20
-    #: Cheap pre-filter: skip full greedy match if fewer than this many rough hits.
-    blind_prefilter_min: int = 4
     #: Brightest central stars used for blind image kNN triangles (matches index local kNN).
     blind_img_star_budget: int = 80
     #: Image star pick: ``per_cell`` (mirror index SPC/cell) or ``central`` (legacy rig-prior cone).
     blind_img_select_mode: str = "per_cell"
     #: When True, use known plate scale / FOV as hard gates (pre-vote ratio + verify WCS scale).
     blind_use_rig_prior: bool = True
-    #: Allowed fractional deviation |L3_img/L3_cat - 1| and |fitted_scale/known - 1| (rig prior).
-    blind_scale_tol_frac: float = 0.10
-    #: DBSCAN vote clusters: minimum members to emit a verify candidate (wide truth ~11).
-    blind_cluster_min_votes: int = 4
-    #: DBSCAN neighborhood radius in degrees (haversine); default matches CLUSTER_RADIUS_DEG.
-    blind_cluster_eps_deg: float = 1.0
-    #: DBSCAN min_samples (core point threshold).
-    blind_cluster_min_samples: int = 3
-    #: Also verify DBSCAN clusters with vote count <= min_votes + span (truth-sized clumps).
-    blind_cluster_vote_span: int = 12
-    #: Max verify candidates from the vote-span band (shape-coherent, not count-dominant).
-    blind_cluster_coherence_cap: int = 25
+    # WAVE-B STEP 6: blind_prefilter_min, blind_scale_tol_frac, blind_cluster_{min_votes,eps_deg,
+    # min_samples,vote_span,coherence_cap} hardcoded as solver internals (module constants in
+    # vyvar_blind_solver.py / vyvar_platesolver.py).
 
     #: Path to local VSX subset SQLite (table ``vsx_data``: oid, ra_deg, dec_deg, …) for variable-star flags.
     vsx_local_db_path: str = ""
@@ -357,8 +346,7 @@ class AppConfig:
     #: Faint-star threshold: below this SNR a good PSF (local background) can beat a
     #: contaminated aperture annulus → prefer PSF.
     psf_adaptive_snr_lo: float = 15.0
-    #: Reduced χ² cutoff for Moffat2D (Step 1) fit acceptance (``moffat_fit_ok``).
-    moffat_chi2_limit: float = 50.0
+    # WAVE-B STEP 6: moffat_chi2_limit hardcoded (module constant _MOFFAT_CHI2_LIMIT in pipeline.py).
     #: When True, QC headers are written on ``calibrated/lights`` FITS in-place; ``processed/`` is not created.
     skip_processed_directory: bool = False
     #: Per calibrated light: subtract source-masked sigma-clipped polynomial sky surface in preprocess (0=off, default 2).
@@ -391,12 +379,11 @@ class AppConfig:
     #: Master-dark column BPM: MAD multiplier for ``*_dark_bpm.json`` (see ``importer``).
     bpm_dark_mad_sigma: float = 5.0
 
-    #: If plate-solve hint RA/Dec vs draft median separation exceeds this (deg), use draft median for solver.
-    masterstar_solver_use_draft_median_if_hint_sep_deg: float = 1.0
+    # WAVE-B STEP 6: masterstar_solver_use_draft_median_if_hint_sep_deg hardcoded
+    # (module constant in pipeline.py).
     #: Saturation safety fraction applied to equipment_saturate_adu before classifying MASTERSTAR zones.
     saturate_limit_fraction: float = 0.85
-    #: After astrometry optimizer mirror-orientation warning, log an extra hint line.
-    masterstar_optimizer_mirror_extra_log: bool = True
+    # WAVE-B STEP 6: masterstar_optimizer_mirror_extra_log hardcoded (module constant in pipeline.py).
     #: Enable verbose debug logs for plate solving / blind solver / hint plumbing.
     debug_platesolver: bool = False
     #: VYVAR plate-solve na MASTERSTAR: max. SIP stupeň (2–5). Solver skúša **nadol** po ``masterstar_platesolve_sip_min_order`` (napr. 5→4→3).
@@ -411,14 +398,9 @@ class AppConfig:
     masterstar_use_best_frame_fwhm: bool = True
     #: MASTERSTAR DAO pass 2: lokálny prah v σ pri cielených Gaia pozíciách bez DAO zhody (min. 1.5 v kóde).
     masterstar_dao_pass2_sigma: float = 1.9
-    #: MASTERSTAR: horná hranica px RMS pred zápisom WCS (pred relaxáciou). ``None`` = predvolené 14 px.
-    masterstar_platesolve_prewrite_rms_max_px: float | None = 30.0
-    #: MASTERSTAR: pri dobrom match_rate akceptovať RMS až do tejto hodnoty [px]. ``None`` = 22 px.
-    masterstar_platesolve_prewrite_relaxed_rms_max_px: float | None = 35.0
-    #: MASTERSTAR: NN WCS refine sa aplikuje len ak RMS ≤ tejto hodnote [px]. ``None`` = 7.5 px.
-    masterstar_platesolve_nn_refine_max_rms_px: float | None = None
-    #: Pri ``force_apply`` SIP: zamietnuť ak ``rms_sip > rms_linear * ratio``. ``None`` = bez stráže (pôvodné správanie).
-    masterstar_sip_force_rms_guard_ratio: float | None = 1.15
+    # WAVE-B STEP 6: masterstar_platesolve_prewrite_rms_max_px / _prewrite_relaxed_rms_max_px /
+    # _nn_refine_max_rms_px and masterstar_sip_force_rms_guard_ratio hardcoded as solver internals
+    # (module constants in pipeline.py / vyvar_platesolver.py).
     #: MASTERSTAR verified-solve: min. catalog recovery (Gaia-in-frame with DAO match at 2.5 px).
     masterstar_catalog_recovery_min: float = 0.65
     #: MASTERSTAR verified-solve: absolute floor on tight-matched catalog stars (not fraction-only pass).
@@ -430,14 +412,9 @@ class AppConfig:
 
     #: MASTERSTAR accept gate: ``odds`` (Bayesian false-alarm) or legacy ``fraction``.
     masterstar_accept_mode: str = "odds"
-    #: Odds gate: absolute floor on tight matches (with ``masterstar_odds_k * expected_random``).
-    masterstar_odds_match_floor: int = 30
-    #: Odds gate: require n_matched >= k * expected_random matches by chance.
-    masterstar_odds_k: float = 12.0
-    #: Odds gate: minimum quadrants with tight matches.
-    masterstar_odds_min_quadrants: int = 3
-    #: Odds gate: maximum false-alarm probability (binom tail).
-    masterstar_false_alarm_p_max: float = 1e-6
+    # WAVE-B STEP 6: masterstar_odds_match_floor / _odds_k / _odds_min_quadrants /
+    # _false_alarm_p_max hardcoded as odds-verification internals (module constants in
+    # vyvar_platesolver.py).
     #: Quality flag: n_cat_in_frame at or above this -> ``crowded``.
     masterstar_quality_crowded_n_cat_min: int = 800
     #: Adaptive DAO detection cap for dense fields (scales with catalog richness).
@@ -457,8 +434,7 @@ class AppConfig:
     #: Median-stack frame count for sibling stacking rescue when single-frame odds fail.
     masterstar_sibling_stack_n: int = 10
 
-    #: Pomer sx/sy (arcsec/px) — nad týmto sa považuje WCS za príliš anizotropný (VYVAR retry / diagnostika).
-    platesolve_anisotropy_threshold: float = 1.3
+    # WAVE-B STEP 6: platesolve_anisotropy_threshold hardcoded (module constant in pipeline.py).
 
     #: Paralelizmus (QC, preprocess, combined, per-frame CSV, alignment, calibrate MP): jedna hodnota
     #: počítaná v ``__post_init__``; nie v ``config.json``. Runtime override: ``VYVAR_PARALLEL_WORKERS`` alebo legacy env v pipeline.
@@ -631,8 +607,7 @@ class AppConfig:
     #: MASTERSTAR: stack N frames and pick best N for ePSF/catalog build.
     masterstar_best_of_n: int = 10
 
-    #: Fallback sky background level (ADU) when no sky estimate is available.
-    sky_adu_fallback: float = 1581.6
+    # WAVE-B STEP 6: sky_adu_fallback hardcoded (module constant _SKY_ADU_FALLBACK in pipeline.py).
 
     #: Aperture correction: reject comp stars with scatter above this (mag).
     #: Phase 1 comp gate: max reduced chi2 for PSF fit acceptance in comp selection.
@@ -952,11 +927,7 @@ class AppConfig:
         except (TypeError, ValueError):
             self.blind_verify_early_fraction = 0.20
         self.blind_verify_early_fraction = max(0.0, min(0.95, float(self.blind_verify_early_fraction)))
-        try:
-            self.blind_prefilter_min = int(data.get("blind_prefilter_min", self.blind_prefilter_min))
-        except (TypeError, ValueError):
-            self.blind_prefilter_min = 4
-        self.blind_prefilter_min = max(2, min(20, int(self.blind_prefilter_min)))
+        # WAVE-B STEP 6: blind_prefilter_min hardcoded (solver internal).
         try:
             self.blind_img_star_budget = int(
                 data.get("blind_img_star_budget", self.blind_img_star_budget)
@@ -971,50 +942,9 @@ class AppConfig:
         self.blind_use_rig_prior = bool(
             data.get("blind_use_rig_prior", self.blind_use_rig_prior)
         )
-        try:
-            self.blind_scale_tol_frac = float(
-                data.get("blind_scale_tol_frac", self.blind_scale_tol_frac)
-            )
-        except (TypeError, ValueError):
-            self.blind_scale_tol_frac = 0.10
-        self.blind_scale_tol_frac = max(0.02, min(0.50, float(self.blind_scale_tol_frac)))
-        try:
-            self.blind_cluster_min_votes = int(
-                data.get("blind_cluster_min_votes", self.blind_cluster_min_votes)
-            )
-        except (TypeError, ValueError):
-            self.blind_cluster_min_votes = 4
-        self.blind_cluster_min_votes = max(2, min(50, int(self.blind_cluster_min_votes)))
-        try:
-            self.blind_cluster_eps_deg = float(
-                data.get("blind_cluster_eps_deg", self.blind_cluster_eps_deg)
-            )
-        except (TypeError, ValueError):
-            self.blind_cluster_eps_deg = 1.0
-        if not math.isfinite(self.blind_cluster_eps_deg) or self.blind_cluster_eps_deg <= 0:
-            self.blind_cluster_eps_deg = 1.0
-        self.blind_cluster_eps_deg = max(0.1, min(5.0, float(self.blind_cluster_eps_deg)))
-        try:
-            self.blind_cluster_min_samples = int(
-                data.get("blind_cluster_min_samples", self.blind_cluster_min_samples)
-            )
-        except (TypeError, ValueError):
-            self.blind_cluster_min_samples = 3
-        self.blind_cluster_min_samples = max(2, min(20, int(self.blind_cluster_min_samples)))
-        try:
-            self.blind_cluster_vote_span = int(
-                data.get("blind_cluster_vote_span", self.blind_cluster_vote_span)
-            )
-        except (TypeError, ValueError):
-            self.blind_cluster_vote_span = 12
-        self.blind_cluster_vote_span = max(0, min(50, int(self.blind_cluster_vote_span)))
-        try:
-            self.blind_cluster_coherence_cap = int(
-                data.get("blind_cluster_coherence_cap", self.blind_cluster_coherence_cap)
-            )
-        except (TypeError, ValueError):
-            self.blind_cluster_coherence_cap = 50
-        self.blind_cluster_coherence_cap = max(5, min(200, int(self.blind_cluster_coherence_cap)))
+        # WAVE-B STEP 6: blind_scale_tol_frac and blind_cluster_{min_votes,eps_deg,min_samples,
+        # vote_span,coherence_cap} hardcoded as solver internals (module constants in
+        # vyvar_blind_solver.py).
 
         self.vsx_local_db_path = str(
             data.get("vsx_local_db_path", data.get("VSX_LOCAL_DB_PATH", "")) or ""
@@ -1324,11 +1254,7 @@ class AppConfig:
             self.psf_adaptive_snr_lo = float(data.get("psf_adaptive_snr_lo", self.psf_adaptive_snr_lo))
         except (TypeError, ValueError):
             self.psf_adaptive_snr_lo = 15.0
-        try:
-            _mcl = float(data.get("moffat_chi2_limit", self.moffat_chi2_limit))
-            self.moffat_chi2_limit = _mcl if math.isfinite(_mcl) and _mcl > 0 else 50.0
-        except (TypeError, ValueError):
-            self.moffat_chi2_limit = 50.0
+        # WAVE-B STEP 6: moffat_chi2_limit hardcoded (solver/QC internal).
         self.skip_processed_directory = bool(
             data.get("skip_processed_directory", self.skip_processed_directory)
         )
@@ -1492,11 +1418,7 @@ class AppConfig:
             )
         except (TypeError, ValueError):
             self.masterstar_best_of_n = 10
-        try:
-            _sky = float(data.get("sky_adu_fallback", self.sky_adu_fallback))
-            self.sky_adu_fallback = float(_sky) if math.isfinite(_sky) and _sky >= 0 else 1581.6
-        except (TypeError, ValueError):
-            self.sky_adu_fallback = 1581.6
+        # WAVE-B STEP 6: sky_adu_fallback hardcoded (module constant in pipeline.py).
         try:
             self.phase01_ct_min_comp = max(
                 2,
@@ -1660,21 +1582,8 @@ class AppConfig:
             self.bpm_dark_mad_sigma = 5.0
         self.bpm_dark_mad_sigma = max(2.0, min(12.0, float(self.bpm_dark_mad_sigma)))
 
-        try:
-            self.masterstar_solver_use_draft_median_if_hint_sep_deg = float(
-                data.get(
-                    "masterstar_solver_use_draft_median_if_hint_sep_deg",
-                    self.masterstar_solver_use_draft_median_if_hint_sep_deg,
-                )
-            )
-            if not math.isfinite(self.masterstar_solver_use_draft_median_if_hint_sep_deg):
-                self.masterstar_solver_use_draft_median_if_hint_sep_deg = 1.0
-        except (TypeError, ValueError):
-            self.masterstar_solver_use_draft_median_if_hint_sep_deg = 1.0
-        self.masterstar_solver_use_draft_median_if_hint_sep_deg = max(0.0, min(180.0, float(self.masterstar_solver_use_draft_median_if_hint_sep_deg)))
-        self.masterstar_optimizer_mirror_extra_log = bool(
-            data.get("masterstar_optimizer_mirror_extra_log", self.masterstar_optimizer_mirror_extra_log)
-        )
+        # WAVE-B STEP 6: masterstar_solver_use_draft_median_if_hint_sep_deg and
+        # masterstar_optimizer_mirror_extra_log hardcoded (module constants in pipeline.py).
         self.debug_platesolver = bool(data.get("debug_platesolver", self.debug_platesolver))
         try:
             self.masterstar_platesolve_sip_max_order = int(
@@ -1707,37 +1616,9 @@ class AppConfig:
             self.masterstar_prematch_peak_sigma_floor = 3.2
         self.masterstar_prematch_peak_sigma_floor = max(0.5, min(6.0, float(self.masterstar_prematch_peak_sigma_floor)))
 
-        def _opt_pos_float(key: str, lo: float, hi: float) -> float | None:
-            raw = data.get(key)
-            if raw is None or raw == "":
-                return None
-            try:
-                v = float(raw)
-            except (TypeError, ValueError):
-                return None
-            if not math.isfinite(v) or v <= 0:
-                return None
-            return max(lo, min(hi, v))
-
-        self.masterstar_platesolve_prewrite_rms_max_px = _opt_pos_float(
-            "masterstar_platesolve_prewrite_rms_max_px", 1.0, 80.0
-        )
-        self.masterstar_platesolve_prewrite_relaxed_rms_max_px = _opt_pos_float(
-            "masterstar_platesolve_prewrite_relaxed_rms_max_px", 1.0, 120.0
-        )
-        self.masterstar_platesolve_nn_refine_max_rms_px = _opt_pos_float(
-            "masterstar_platesolve_nn_refine_max_rms_px", 0.5, 50.0
-        )
-
-        _msiprg = data.get("masterstar_sip_force_rms_guard_ratio", self.masterstar_sip_force_rms_guard_ratio)
-        if _msiprg is None or _msiprg == "":
-            self.masterstar_sip_force_rms_guard_ratio = None
-        else:
-            try:
-                v = float(_msiprg)
-                self.masterstar_sip_force_rms_guard_ratio = v if math.isfinite(v) and v > 0 else 1.15
-            except (TypeError, ValueError):
-                self.masterstar_sip_force_rms_guard_ratio = 1.15
+        # WAVE-B STEP 6: masterstar_platesolve_prewrite_rms_max_px / _prewrite_relaxed_rms_max_px /
+        # _nn_refine_max_rms_px and masterstar_sip_force_rms_guard_ratio hardcoded as solver internals
+        # (module constants in pipeline.py / vyvar_platesolver.py).
 
         try:
             self.masterstar_catalog_recovery_min = float(
@@ -1786,36 +1667,9 @@ class AppConfig:
         )
         _mode = str(data.get("masterstar_accept_mode", self.masterstar_accept_mode) or "odds").strip().lower()
         self.masterstar_accept_mode = _mode if _mode in ("odds", "fraction") else "odds"
-        try:
-            self.masterstar_odds_match_floor = int(
-                data.get("masterstar_odds_match_floor", self.masterstar_odds_match_floor)
-            )
-        except (TypeError, ValueError):
-            self.masterstar_odds_match_floor = 30
-        self.masterstar_odds_match_floor = max(1, min(500, int(self.masterstar_odds_match_floor)))
-        try:
-            self.masterstar_odds_k = float(data.get("masterstar_odds_k", self.masterstar_odds_k))
-            if not math.isfinite(self.masterstar_odds_k):
-                self.masterstar_odds_k = 12.0
-        except (TypeError, ValueError):
-            self.masterstar_odds_k = 12.0
-        self.masterstar_odds_k = max(1.0, min(100.0, float(self.masterstar_odds_k)))
-        try:
-            self.masterstar_odds_min_quadrants = int(
-                data.get("masterstar_odds_min_quadrants", self.masterstar_odds_min_quadrants)
-            )
-        except (TypeError, ValueError):
-            self.masterstar_odds_min_quadrants = 3
-        self.masterstar_odds_min_quadrants = max(1, min(4, int(self.masterstar_odds_min_quadrants)))
-        try:
-            self.masterstar_false_alarm_p_max = float(
-                data.get("masterstar_false_alarm_p_max", self.masterstar_false_alarm_p_max)
-            )
-            if not math.isfinite(self.masterstar_false_alarm_p_max):
-                self.masterstar_false_alarm_p_max = 1e-6
-        except (TypeError, ValueError):
-            self.masterstar_false_alarm_p_max = 1e-6
-        self.masterstar_false_alarm_p_max = max(1e-12, min(1.0, float(self.masterstar_false_alarm_p_max)))
+        # WAVE-B STEP 6: masterstar_odds_match_floor / _odds_k / _odds_min_quadrants /
+        # _false_alarm_p_max hardcoded as odds-verification internals (module constants in
+        # vyvar_platesolver.py).
         try:
             self.masterstar_quality_crowded_n_cat_min = int(
                 data.get("masterstar_quality_crowded_n_cat_min", self.masterstar_quality_crowded_n_cat_min)
@@ -1894,15 +1748,7 @@ class AppConfig:
             self.masterstar_sibling_stack_n = 10
         self.masterstar_sibling_stack_n = max(2, min(50, int(self.masterstar_sibling_stack_n)))
 
-        try:
-            self.platesolve_anisotropy_threshold = float(
-                data.get("platesolve_anisotropy_threshold", self.platesolve_anisotropy_threshold)
-            )
-            if not math.isfinite(self.platesolve_anisotropy_threshold):
-                self.platesolve_anisotropy_threshold = 1.3
-        except (TypeError, ValueError):
-            self.platesolve_anisotropy_threshold = 1.3
-        self.platesolve_anisotropy_threshold = max(1.01, min(5.0, float(self.platesolve_anisotropy_threshold)))
+        # WAVE-B STEP 6: platesolve_anisotropy_threshold hardcoded (module constant in pipeline.py).
 
         def _f01(key: str, default: float, lo: float, hi: float) -> None:
             try:
@@ -2225,16 +2071,9 @@ class AppConfig:
             "blind_verify_early_accept": int(self.blind_verify_early_accept),
             "blind_verify_early_floor": int(self.blind_verify_early_floor),
             "blind_verify_early_fraction": float(self.blind_verify_early_fraction),
-            "blind_prefilter_min": int(self.blind_prefilter_min),
             "blind_img_star_budget": int(self.blind_img_star_budget),
             "blind_img_select_mode": str(self.blind_img_select_mode),
             "blind_use_rig_prior": bool(self.blind_use_rig_prior),
-            "blind_scale_tol_frac": float(self.blind_scale_tol_frac),
-            "blind_cluster_min_votes": int(self.blind_cluster_min_votes),
-            "blind_cluster_eps_deg": float(self.blind_cluster_eps_deg),
-            "blind_cluster_min_samples": int(self.blind_cluster_min_samples),
-            "blind_cluster_vote_span": int(self.blind_cluster_vote_span),
-            "blind_cluster_coherence_cap": int(self.blind_cluster_coherence_cap),
             "debug_platesolver": bool(self.debug_platesolver),
             "vsx_local_db_path": str(self.vsx_local_db_path or ""),
             "vsx_variable_targets_mag_limit": float(self.vsx_variable_targets_mag_limit),
@@ -2314,7 +2153,6 @@ class AppConfig:
             "psf_adaptive_enabled": bool(self.psf_adaptive_enabled),
             "psf_adaptive_resolve_fwhm": float(self.psf_adaptive_resolve_fwhm),
             "psf_adaptive_snr_lo": float(self.psf_adaptive_snr_lo),
-            "moffat_chi2_limit": float(self.moffat_chi2_limit),
             "skip_processed_directory": bool(self.skip_processed_directory),
             "preprocess_sky_surface_order": int(self.preprocess_sky_surface_order),
             "qc_fwhm_limit": float(self.qc_fwhm_limit),
@@ -2344,7 +2182,6 @@ class AppConfig:
             "err_empty_apertures_n": int(self.err_empty_apertures_n),
             "err_empty_apertures_min": int(self.err_empty_apertures_min),
             "masterstar_best_of_n": int(self.masterstar_best_of_n),
-            "sky_adu_fallback": float(self.sky_adu_fallback),
             "phase01_comparison_max_psf_chi2": float(self.phase01_comparison_max_psf_chi2),
             "phase01_comparison_max_fwhm_factor": float(self.phase01_comparison_max_fwhm_factor),
             "phase01_comparison_isolation_radius_px": float(self.phase01_comparison_isolation_radius_px),
@@ -2354,34 +2191,10 @@ class AppConfig:
             "nonlinearity_peak_percentile": float(self.nonlinearity_peak_percentile),
             "nonlinearity_fwhm_ratio": float(self.nonlinearity_fwhm_ratio),
             "bpm_dark_mad_sigma": float(self.bpm_dark_mad_sigma),
-            "masterstar_solver_use_draft_median_if_hint_sep_deg": float(
-                self.masterstar_solver_use_draft_median_if_hint_sep_deg
-            ),
-            "masterstar_optimizer_mirror_extra_log": bool(self.masterstar_optimizer_mirror_extra_log),
             "masterstar_platesolve_sip_max_order": int(self.masterstar_platesolve_sip_max_order),
             "masterstar_platesolve_sip_min_order": int(self.masterstar_platesolve_sip_min_order),
             "masterstar_dao_threshold_sigma": float(self.masterstar_dao_threshold_sigma),
             "masterstar_prematch_peak_sigma_floor": float(self.masterstar_prematch_peak_sigma_floor),
-            "masterstar_platesolve_prewrite_rms_max_px": (
-                float(self.masterstar_platesolve_prewrite_rms_max_px)
-                if self.masterstar_platesolve_prewrite_rms_max_px is not None
-                else None
-            ),
-            "masterstar_platesolve_prewrite_relaxed_rms_max_px": (
-                float(self.masterstar_platesolve_prewrite_relaxed_rms_max_px)
-                if self.masterstar_platesolve_prewrite_relaxed_rms_max_px is not None
-                else None
-            ),
-            "masterstar_platesolve_nn_refine_max_rms_px": (
-                float(self.masterstar_platesolve_nn_refine_max_rms_px)
-                if self.masterstar_platesolve_nn_refine_max_rms_px is not None
-                else None
-            ),
-            "masterstar_sip_force_rms_guard_ratio": (
-                float(self.masterstar_sip_force_rms_guard_ratio)
-                if self.masterstar_sip_force_rms_guard_ratio is not None
-                else None
-            ),
             "masterstar_catalog_recovery_min": float(self.masterstar_catalog_recovery_min),
             "masterstar_min_matched_floor": int(self.masterstar_min_matched_floor),
             "masterstar_centre_rms_max_px": float(self.masterstar_centre_rms_max_px),
@@ -2389,10 +2202,6 @@ class AppConfig:
                 self.masterstar_distortion_benign_ratio_max
             ),
             "masterstar_accept_mode": str(self.masterstar_accept_mode),
-            "masterstar_odds_match_floor": int(self.masterstar_odds_match_floor),
-            "masterstar_odds_k": float(self.masterstar_odds_k),
-            "masterstar_odds_min_quadrants": int(self.masterstar_odds_min_quadrants),
-            "masterstar_false_alarm_p_max": float(self.masterstar_false_alarm_p_max),
             "masterstar_quality_crowded_n_cat_min": int(self.masterstar_quality_crowded_n_cat_min),
             "masterstar_detection_cap_adaptive": bool(self.masterstar_detection_cap_adaptive),
             "masterstar_detection_cap_min": int(self.masterstar_detection_cap_min),
@@ -2403,7 +2212,6 @@ class AppConfig:
             "masterstar_sibling_rms_max_px": float(self.masterstar_sibling_rms_max_px),
             "masterstar_sibling_min_quadrants": int(self.masterstar_sibling_min_quadrants),
             "masterstar_sibling_stack_n": int(self.masterstar_sibling_stack_n),
-            "platesolve_anisotropy_threshold": float(self.platesolve_anisotropy_threshold),
             "phase01_comparison_max_dist_deg": float(self.phase01_comparison_max_dist_deg),
             "phase01_comparison_max_mag_diff": float(self.phase01_comparison_max_mag_diff),
             "phase01_comparison_mag_bright_threshold": float(self.phase01_comparison_mag_bright_threshold),

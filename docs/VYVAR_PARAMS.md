@@ -5,15 +5,15 @@ Regenerate with `python tools/gen_params_md.py`. Hand edits will be overwritten.
 Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fields(AppConfig)` (defaults and types, from code).
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 
-_Generated 2026-07-18T10:29:01Z at git HEAD c828c9c._
+_Generated 2026-07-18T10:51:10Z at git HEAD d6c0d55._
 
 ## Summary
 
-- Entries: 289
-- Tier: basic 12, advanced 68, expert 209
-- Kind: static 271, derived 0, resolved 18
-- Widget: auto 114, custom 159, hidden 16
-- Owner: db_static 9, config_runtime 261, fits_dynamic 6, internal 13
+- Entries: 269
+- Tier: basic 12, advanced 68, expert 189
+- Kind: static 251, derived 0, resolved 18
+- Widget: auto 112, custom 141, hidden 16
+- Owner: db_static 9, config_runtime 241, fits_dynamic 6, internal 13
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -99,15 +99,8 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 
 | key | default | range | tier | kind | owner | widget | label |
 |-----|---------|-------|------|------|-------|--------|-------|
-| `blind_cluster_coherence_cap` | 25 | - | expert | static | config_runtime | custom | Blind Cluster Coherence Cap |
-| `blind_cluster_eps_deg` | 1.0 | 0.1 .. 5 | expert | static | config_runtime | custom | Blind Cluster Eps Deg |
-| `blind_cluster_min_samples` | 3 | - | expert | static | config_runtime | custom | Blind Cluster Min Samples |
-| `blind_cluster_min_votes` | 4 | - | expert | static | config_runtime | custom | Blind Cluster Min Votes |
-| `blind_cluster_vote_span` | 12 | - | expert | static | config_runtime | custom | Blind Cluster Vote Span |
 | `blind_img_select_mode` | per_cell | - | expert | static | config_runtime | custom | Blind Img Select Mode |
 | `blind_img_star_budget` | 80 | - | expert | static | config_runtime | custom | Blind Img Star Budget |
-| `blind_prefilter_min` | 4 | - | expert | static | config_runtime | custom | Blind Prefilter Min |
-| `blind_scale_tol_frac` | 0.1 | 0.02 .. 0.5 | expert | static | config_runtime | custom | Blind Scale Tol Frac |
 | `blind_use_rig_prior` | True | - | expert | static | config_runtime | custom | Blind Use Rig Prior |
 | `blind_verify_early_accept` | 30 | - | expert | static | config_runtime | custom | Blind Verify Early Accept |
 | `blind_verify_early_floor` | 0 | - | expert | static | config_runtime | custom | Blind Verify Early Floor |
@@ -142,15 +135,7 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `masterstar_detection_cap_max` | 800 | - | expert | static | config_runtime | custom | Masterstar Detection Cap Max |
 | `masterstar_detection_cap_min` | 250 | - | expert | static | config_runtime | custom | Masterstar Detection Cap Min |
 | `masterstar_distortion_benign_ratio_max` | 3.2 | 2 .. 5 | advanced | static | config_runtime | custom | Masterstar Distortion Benign Ratio Max |
-| `masterstar_false_alarm_p_max` | 1e-06 | 1e-12 .. 1 | expert | static | config_runtime | custom | Masterstar False Alarm P Max |
 | `masterstar_min_matched_floor` | 40 | - | advanced | static | config_runtime | custom | Masterstar Min Matched Floor |
-| `masterstar_odds_k` | 12.0 | 1 .. 100 | expert | static | config_runtime | custom | Masterstar Odds K |
-| `masterstar_odds_match_floor` | 30 | - | expert | static | config_runtime | custom | Masterstar Odds Match Floor |
-| `masterstar_odds_min_quadrants` | 3 | - | expert | static | config_runtime | custom | Masterstar Odds Min Quadrants |
-| `masterstar_optimizer_mirror_extra_log` | True | - | expert | static | config_runtime | custom | Masterstar Optimizer Mirror Extra Log |
-| `masterstar_platesolve_nn_refine_max_rms_px` | None | - | expert | static | config_runtime | custom | Masterstar Platesolve NN Refine Max RMS PX |
-| `masterstar_platesolve_prewrite_relaxed_rms_max_px` | 35.0 | - | expert | static | config_runtime | custom | Masterstar Platesolve Prewrite Relaxed RMS Max PX |
-| `masterstar_platesolve_prewrite_rms_max_px` | 30.0 | - | expert | static | config_runtime | custom | Masterstar Platesolve Prewrite RMS Max PX |
 | `masterstar_platesolve_sip_max_order` | 4 | - | advanced | static | config_runtime | custom | Masterstar Platesolve SIP Max Order |
 | `masterstar_platesolve_sip_min_order` | 3 | - | advanced | static | config_runtime | custom | Masterstar Platesolve SIP Min Order |
 | `masterstar_prematch_peak_sigma_floor` | 1.8 | 0.5 .. 6 | advanced | static | config_runtime | custom | Masterstar Prematch Peak Sigma Floor |
@@ -160,15 +145,12 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `masterstar_sibling_recovery_enabled` | True | - | advanced | static | config_runtime | custom | Masterstar Sibling Recovery Enabled |
 | `masterstar_sibling_rms_max_px` | 2.0 | 0.5 .. 10 | advanced | static | config_runtime | custom | Masterstar Sibling RMS Max PX |
 | `masterstar_sibling_stack_n` | 10 | - | advanced | static | config_runtime | custom | Masterstar Sibling Stack N |
-| `masterstar_sip_force_rms_guard_ratio` | 1.15 | - | expert | static | config_runtime | custom | Masterstar SIP Force RMS Guard Ratio |
-| `masterstar_solver_use_draft_median_if_hint_sep_deg` | 1.0 | 0 .. 180 | expert | static | config_runtime | custom | Masterstar Solver Use Draft Median If Hint Sep Deg |
 | `masterstar_use_best_frame_fwhm` | True | - | expert | static | config_runtime | custom | Masterstar Use Best Frame FWHM |
 | `phase01_chip_interior_margin_px` | 50 | - | advanced | static | config_runtime | auto | Phase01 Chip Interior Margin PX |
 | `phase01_match_radius_arcsec` | 10.0 | 3 .. 30 | expert | static | config_runtime | auto | Phase01 Match Radius Arcsec |
 | `phase01_plate_scale_arcsec_per_px` | 1.3 | 0 .. 30 | expert | resolved | fits_dynamic | auto | Phase01 Plate Scale Arcsec Per PX |
 | `plate_scale_arcsec_per_px` | 1.3 | 0.1 .. 30 | expert | resolved | fits_dynamic | auto | Plate Scale Arcsec Per PX |
 | `plate_solve_fov_deg` | 1.0 | - | expert | resolved | fits_dynamic | auto | Plate Solve FOV Deg |
-| `platesolve_anisotropy_threshold` | 1.3 | 1.01 .. 5 | expert | static | config_runtime | auto | Platesolve Anisotropy Threshold |
 | `saturate_limit_fraction` | 0.85 | - | expert | static | config_runtime | auto | Saturate Limit Fraction |
 | `sips_dao_fwhm_px` | 2.5 | 1 .. 8 | advanced | static | config_runtime | custom | Sips DAO FWHM PX |
 | `sips_dao_threshold_sigma` | 3.5 | - | advanced | static | config_runtime | custom | Sips DAO Threshold Sigma |
@@ -224,7 +206,6 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `gs11_dilution_enabled` | False | - | expert | static | config_runtime | custom | GS11 Dilution Enabled |
 | `gs11_dilution_mag_limit_delta` | 5.0 | 0.5 .. 15 | expert | static | config_runtime | custom | GS11 Dilution Mag Limit Delta |
 | `gs11_target_min_dilution` | 0.5 | 0.01 .. 1 | expert | static | config_runtime | custom | GS11 Target Min Dilution |
-| `moffat_chi2_limit` | 50.0 | - | expert | static | config_runtime | custom | Moffat Chi2 Limit |
 | `neighbor_sub_centroid_max_fwhm` | 1.0 | - | expert | static | config_runtime | custom | Neighbor Sub Centroid Max FWHM |
 | `neighbor_sub_chi2_max` | 120.0 | - | expert | static | config_runtime | custom | Neighbor Sub Chi2 Max |
 | `neighbor_sub_max_neighbor_overmag` | 0.3 | - | expert | static | config_runtime | custom | Neighbor Sub Max Neighbor Overmag |
@@ -261,7 +242,6 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `savgol_polyorder` | 2 | - | expert | static | config_runtime | custom | Savgol Polyorder |
 | `savgol_window_frac` | 0.5 | - | expert | static | config_runtime | custom | Savgol Window Frac |
 | `sigma_sys_mag` | {} | - | expert | static | config_runtime | auto | Sigma Sys Mag |
-| `sky_adu_fallback` | 1581.6 | - | expert | static | config_runtime | auto | Sky ADU Fallback |
 | `sysrem_enabled` | False | - | expert | static | config_runtime | custom | SYSREM Enabled |
 | `sysrem_n_iter` | 3 | - | expert | static | config_runtime | custom | SYSREM N Iter |
 | `temporal_bin_window` | 0 | 0 .. 51 | expert | static | config_runtime | custom | Temporal Bin Window |
