@@ -8,6 +8,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **CONFIG-HUMAN-EDIT (2026-07-18):** `config.json` is now a grouped, commented, `//`-tolerant
+  JSONC-lite document that can be edited without the UI; standalone validator
+  `dev/scripts/validate_config.py`; registry `help` / `__meta__.phase_help` as the single source
+  of config comments, tooltips and guides.
+- **README front door (2026-07-18):** rewritten `README.md` plus Czech twin `README_CZ.md`
+  (user docs EN+CZ); root `LICENSE` (proprietary, all rights reserved).
 - **VALIDATE-429 (2026-07-16):** Forensics scripts `validate_429_wcsinv.py`, `pass2_contamination_428_429.py`,
   `anchor_pair_430_431.py`; CURSOR_RESULT_429_validate_anchor.md.
 - **F-429 fixes (2026-07-16):** VSX stamp wired post-finalize; `[AC] run summary` infolog; Gaia TAP
@@ -43,6 +49,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - RGB camera support planned (TODO-45, IMX533 de-Bayer → G channel)
 
 ### Changed
+- **WAVE-B parameter reduction (2026-07-18):** registered configuration parameters consolidated
+  to 269 (config.json persists 249); dead, hardcoded and DB-duplicated keys deleted or merged;
+  Config <-> registry parity kept green as a tested property.
+- **REPO-REORG (2026-07-17):** all production modules moved under `src_py/` (imports stay flat);
+  developer material (tests/tools/validation/scripts/sandbox/orchestrator/results) moved under
+  `dev/`; root `app.py` is now a thin shim onto `src_py/app.py`. Anchor #3 byte-identical gate
+  PASS on `8f4d7b4`. (Older entries above/below that cite `scripts/` predate this move.)
 - **Err model re-anchor (2026-07-13):** c4-corrected ensemble SEM; per-rig `sigma_sys` floor in
   production LC `err` (`sigma_sys_mag` column); Newton eq4 floor 18.0 mmag; wide eq1 un-floored;
   accepted anchor `draft_000424_snapshot_sigma_floor_20260713` (core `bf3743a1`, git `8fb21b3`).

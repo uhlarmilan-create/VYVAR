@@ -6,7 +6,7 @@ Jazyk: cestina, ASCII (bez diakritiky) -- stejne jako `VYVAR_PIPELINE_CZ.md`.
 Vsechny vzorce a cisla jsou ukotveny v aktualnim kodu (overeno po `be3e193`).
 
 **Souvisejici:** `VYVAR_PIPELINE_CZ.md` (pipeline manual), `VYVAR_DECISIONS.md` (Path A + DAO+Gaia),
-`VYVAR_FULL_AUDIT_LEDGER.md` (G5-F011), `CITATIONS.bib` (literatura pro ensemble, chyby, CT, AC).
+`dev/results/VYVAR_FULL_AUDIT_LEDGER.md` (G5-F011), `CITATIONS.bib` (literatura pro ensemble, chyby, CT, AC).
 
 ---
 
@@ -188,7 +188,7 @@ exportem pri CT-off config). Ulozeni: `save_lightcurve_csv` ~3809-3854.
 (nemenny scatter), nemenù `err` ani `lc_rms` (viz sekce 4).
 
 **Rozhodnuti:** `VYVAR_DECISIONS.md` (Path A, 2026-06-22); audit G5-F011 v
-`VYVAR_FULL_AUDIT_LEDGER.md`.
+`dev/results/VYVAR_FULL_AUDIT_LEDGER.md`.
 
 ---
 
@@ -264,7 +264,7 @@ CT (`ct_correction`) a AC (`delta_m_corr`) jsou **konstantni posuvy** per cil/no
 | Dokument | Obsah |
 |----------|-------|
 | `VYVAR_DECISIONS.md` | DAO+Gaia matched only (2026-06-22); Path A `mag_calib_final` |
-| `VYVAR_FULL_AUDIT_LEDGER.md` | G5-F011 FIXED (`be3e193`); G5-F003 superseded |
+| `dev/results/VYVAR_FULL_AUDIT_LEDGER.md` | G5-F011 FIXED (`be3e193`); G5-F003 superseded |
 | `VYVAR_PIPELINE_CZ.md` | Pipeline manual (CQ-C, PSF, blind solver) ù odkazuje sem |
 | `VYVAR_CANONICAL_COMBINATION_LOGIC.md` | Ensemble flux-sum vs IVW (Broeg) |
 | `CITATIONS.bib` | Broeg 2005, Howell 1989, Honeycutt 1992, Savitzky-Golay, democratic detrender |

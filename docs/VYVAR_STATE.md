@@ -628,7 +628,7 @@ Astier et al. 2013, Lacroix et al. 2025, Guy et al. 2010, Stetson 1987, Mighell 
 - **Cross-validation:** CLOSED for the aperture path (offline `xval_run.py`: sep reproduces
   VYVAR to 0.2 %/frame); in-pipeline `sep_xval` retired 2026-06-03; PSF cross-val deferred.
 - **Trust distribution (draft_000365 baseline):** GREEN 69 / YELLOW 59 / RED 15.
-- **Tests:** **852 passed / 15 skipped** (last full `tests/` run incl. `-m slow`; 2026-07-14 close).
+- **Tests:** **963 passed / 19 skipped** (full `dev/tests/` run; 2026-07-18, DOCS-FIX-ARC1).
 - **Lint:** `ruff check . --select BLE001,E722` clean (`pyproject.toml` + pre-commit + pytest).
 - **Reporting:** R1 overflow guarantee holds (0 violations); R3 (aperture-vs-PSF overlay) pending.
 

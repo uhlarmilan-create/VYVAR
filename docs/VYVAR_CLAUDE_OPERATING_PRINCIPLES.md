@@ -86,8 +86,8 @@ these steps bridge the gap.
 
 1. `git pull`; confirm and note the current HEAD.
 2. Read STATE + the latest JOURNAL entries (and ROADMAP for what's next), and this file.
-3. **Baseline check before any new work:** `python scripts/session_baseline_check.py` (add `--full`
-   after science-touching changes). Confirms pytest green, config paths, and known-good draft_424
+3. **Baseline check before any new work:** `python dev/scripts/session_baseline_check.py` (add `--full`
+   after science-touching changes). Confirms pytest green, config paths, and known-good draft_435
    anchor on the deliberate full tier. Do not start new work until the fast tier passes.
 4. Pick the highest-priority open item from ROADMAP.
 5. **Leave a clean state at session end:** descriptive git commit + a JOURNAL entry, so the next

@@ -7,7 +7,7 @@ State and process docs live under `docs/`:
 - `docs/VYVAR_STATE.md` — entry point (current snapshot)
 - `docs/VYVAR_ROADMAP.md`, `docs/VYVAR_JOURNAL.md`, `docs/VYVAR_DECISIONS.md`
 - `docs/VYVAR_PROCESS.md`, `docs/VYVAR_PARAMS.md`, `docs/config_schema.md`
-- `docs/VYVAR_CONFIG_GUIDE_EN.md` / `docs/VYVAR_CONFIG_GUIDE_CZ.md` — plain-language guide to all 304 config.json parameters (EN + CZ)
+- `docs/VYVAR_CONFIG_GUIDE_EN.md` / `docs/VYVAR_CONFIG_GUIDE_CZ.md` — plain-language guide to all 269 registered configuration parameters (config.json persists 249 of them) (EN + CZ)
 - `docs/VYVAR_CLAUDE_OPERATING_PRINCIPLES.md` — Claude operating charter (session-init required read)
 
 **Session init:** read STATE, ROADMAP, latest JOURNAL, PROCESS, and CLAUDE_OPERATING_PRINCIPLES
@@ -24,7 +24,8 @@ State and process docs live under `docs/`:
   `dev/orchestrator/`, and `dev/results/` for ALL `CURSOR_RESULT_*.md` /
   `CURSOR_TASK_*.md` working documents (current and future).
 - Root keeps only: `config.json`, `pyproject.toml`, `requirements.txt`,
-  `.gitignore`, `CLAUDE.md`, `CHANGELOG.md`, `CITATIONS.bib`, and the `app.py` shim.
+  `.gitignore`, `README.md`, `README_CZ.md`, `LICENSE`, `CLAUDE.md`,
+  `CHANGELOG.md`, `CITATIONS.bib`, and the `app.py` shim.
 - `tmp/` -- gitignored disposable scratch (helpers, one-off harnesses, outputs).
   Nothing tracked lives here.
 - UNTOUCHED data roots: `GAIA_DR3/`, `Archive/`, `docs/`, `exoplanets/`,

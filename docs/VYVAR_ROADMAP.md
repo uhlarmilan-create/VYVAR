@@ -494,7 +494,7 @@ next calibration lever.
     `validation/VYVAR_VALIDATION_LEDGER.json` + `tests/test_validation_ledger.py` (frozen
     required-ID guard). Rules: agents edit only `passes` / `last_verified` / `commit` / `notes`.
 15. ~~**DEV-PROCESS-B — session-start baseline-check script**~~ **DONE (2026-07-08)** —
-    `scripts/session_baseline_check.py` (`--fast` / `--full`); `--full` re-verifies draft_424
+    `dev/scripts/session_baseline_check.py` (`--fast` / `--full`); `--full` re-verifies the draft_435
     science anchor + `except_fix_counters` zero-check; documented in RUNBOOK + CLAUDE_OPERATING_PRINCIPLES.
 16. **INSTALL-MANUAL** — user install + catalog build guide; Lenovo T460 + TODO-LIB.
 13. ~~**Per-frame proc export perf (DAO pre-filter + Moffat gate)**~~ **DONE (2026-06-12)** —
@@ -711,10 +711,10 @@ next calibration lever.
   MASTERSTAR (improves WCS/FWHM only, not LC SNR) · TODO-CACHE-CENTRAL centralize `csv_cache`
   · TODO-PIXEL-XCHECK-BINNING binning-aware pixel cross-check (cosmetic log) ·
   **TODO-RECUT-HARNESS-FIDELITY** — **CLOSED (superseded, 2026-07-08):** draft_387 zaloha no longer
-  exists (Milan confirmed); frozen-anchor premise dead. Current regression references: draft_424
-  provenance anchor `e1a7a311…` + `session_baseline_check.py --full`; rebaseline cut1 SHAs where
-  fixture present (`tests/test_photometry_sha_baseline.py`). Historical SHA constants in
-  `tests/photometry_sha.py` retained (self-skipping).
+  exists (Milan confirmed); frozen-anchor premise dead. Current regression references: the draft_435
+  skysurface anchor + `dev/scripts/session_baseline_check.py --full`; rebaseline cut1 SHAs where
+  fixture present (`dev/tests/test_photometry_sha_baseline.py`). Historical SHA constants in
+  `dev/tests/photometry_sha.py` retained (self-skipping).
   **TODO-INSTALL-MANUAL — inštalačný manuál + inštalátor pre nového užívateľa (vrátane
   katalógov)** · TODO-PLATESCALE-PERSET focal×pixel per-set plate-scale fallback.
 
@@ -782,7 +782,7 @@ inštalátor → rovnaký výsledok na T460; manuál a inštalátor konzistentn�
 | **Exoplanet / TOI catalog** | **DONE** — NASA Exoplanet Archive TAP (14,185 rows), TOI annotation live; see JOURNAL 2026-07-08 EXO entry |
 | **Newton-V colour-term** | Per-rig c1 from field BP-RP |
 | **Meridian-flip handling** | Qatar-8 class |
-| **`[TODO-RECUT-HARNESS-FIDELITY]`** | **CLOSED (superseded 2026-07-08)** — draft_387 zaloha gone; use draft_424 + DEV-PROCESS-B --full |
+| **`[TODO-RECUT-HARNESS-FIDELITY]`** | **CLOSED (superseded 2026-07-08)** — draft_387 zaloha gone; use draft_435 + DEV-PROCESS-B --full |
 | **Pre-filled camera catalog** | New-user onboarding — sensor-keyed research, camera-keyed rows; **PARKED** (see below) |
 
 **Backlog (unchanged):** broad-except Tier-1 (~25); B-V legacy removal Stages 2–4; TODO-46 (skip

@@ -1,6 +1,6 @@
 # VYVAR validation harness
 
-Inject-and-recover validation under `tests/validation/` verifies cited VYVAR algorithms
+Inject-and-recover validation under `dev/tests/validation/` verifies cited VYVAR algorithms
 against **known synthetic ground truth**. This module is **not production**; it generates
 its own FITS and sidecars and must not alter draft photometry byte-identity.
 
@@ -21,12 +21,12 @@ python -m tests.validation.recover --all
 
 Outputs:
 
-- `tests/validation/data/validation_report.json`
-- `tests/validation/data/validation_report.md`
+- `dev/tests/validation/data/validation_report.json`
+- `dev/tests/validation/data/validation_report.md`
 
 Partial runs: `--tier-a`, `--tier-b`, `--v3`, `--a9`.
 
-See also `tests/validation/README.md` for the full matrix.
+See also `dev/tests/validation/README.md` for the full matrix.
 
 ## What it proves
 
@@ -44,10 +44,10 @@ See also `tests/validation/README.md` for the full matrix.
 A9 defines the **plain-aperture contamination map** (the problem) and scores the joint-fit
 NEIGHBOR-SUB core (`psf_neighbor_sub.neighbor_sub_target_flux`) per cell vs zone-specific PASS rules.
 
-- Generator: `tests/validation/gen_a9.py` (truth sidecar; grid sep x delta_mag)
+- Generator: `dev/tests/validation/gen_a9.py` (truth sidecar; grid sep x delta_mag)
 - Measurement: VYVAR `_catalog_only_fixed_aperture_flux` with AppConfig radii (not raw photutils)
 - Contexts: **coarse** (FWHM 3.2 px, 1.30"/px) and **fine** (FWHM 6.4 px, 0.65"/px)
-- Reports: `tests/validation/data/tier_a9/a9_envelope.json` + `.md` + plain/gain heatmap PNGs
+- Reports: `dev/tests/validation/data/tier_a9/a9_envelope.json` + `.md` + plain/gain heatmap PNGs
 - Scoring: `measure_cell(mode="neighbor_sub")` -- HIGH_VALUE cells must recover (>=80% contamination
   reduction); REFUSE cells must guard-refuse; CLEAN cells no-op
 - PSF variants: legacy `mismatch` (stress test) and EPSF-audit `realistic` (see diagnostic below)
@@ -62,7 +62,7 @@ Coarse neighbor_sub pass rates (2026-06-08): **ideal 85.7%**, **legacy mismatch 
 python -m tests.validation.run_a9_mismatch_diagnostic
 ```
 
-Report: `tests/validation/data/tier_a9/a9_mismatch_diagnostic.md`
+Report: `dev/tests/validation/data/tier_a9/a9_mismatch_diagnostic.md`
 
 **Legacy `mismatch`:** fit beta=2.0 vs inject beta=2.5; neighbour inject FWHM x1.12 (model/star
 **0.89** on neighbour -- inverted vs field ePSF audit). Over-aggressive; not a realistic field test.
@@ -146,7 +146,7 @@ bad-comp rejection (B2), trust gating (B3), color-term sign/magnitude (B4), cali
 - Photometry numeric SHA on `draft_000366`: core subset (283 LC+comp_quality+comparison) must
   remain unchanged when only validation / diagnostic code is added (**`770966c3...`**). Full
   reference including comp_qa sidecars: **`edbd97e7...`** (426 files; post CQ-C fix-once locus).
-- pytest `tests/`: **226 passed / 6 skipped** (+ 3 slow CQ-C draft_366 tests; V3d / V3e / …).
+- pytest `dev/tests/`: **226 passed / 6 skipped** (+ 3 slow CQ-C draft_366 tests; V3d / V3e / …).
 
 ## V3d fine-scale PSF (2026-06-09, publication-grade)
 
@@ -169,7 +169,7 @@ correction from bright-star truth. Three pillars vs mag 12-17 (30 noise realizat
 | `run_v3d_weight_proof` | sky-only fit weights fix mid-mag bias |
 | `run_v3d_sandwich_proof` | sandwich reported uncertainty (P3) |
 
-Reports under `tests/validation/data/tier_v3d/`. Production `psf_photometry_enabled` OFF.
+Reports under `dev/tests/validation/data/tier_v3d/`. Production `psf_photometry_enabled` OFF.
 
 ## V3e ePSF FWHM QC (2026-06-08, EPSF-1)
 

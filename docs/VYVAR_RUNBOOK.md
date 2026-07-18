@@ -9,14 +9,14 @@ Run at session start **before any new work** (see `docs/VYVAR_CLAUDE_OPERATING_P
 ```text
 git pull
 # read docs/VYVAR_STATE.md + latest JOURNAL
-python scripts/session_baseline_check.py          # --fast (default, ~3 min)
-python scripts/session_baseline_check.py --full   # after science-touching changes (~25 min)
+python dev/scripts/session_baseline_check.py          # --fast (default, ~3 min)
+python dev/scripts/session_baseline_check.py --full   # after science-touching changes (~25 min)
 ```
 
 | Tier | What it checks |
 |------|----------------|
 | **--fast** | Git tree (FAIL on staged changes); config paths; full `pytest -q`; validation ledger + TODO hint for `passes=false` items |
-| **--full** | Everything in --fast, plus headless **draft_424** via `run_full_photometry_pipeline` into `tmp/session_baseline/<timestamp>/` (archive inputs read-only); **content anchor gate**: science-meaningful compare vs `draft_000424_snapshot_20260708_full` + photometry SHA (core `92939fab…` / extended `76642318…`); `except_fix_counters` all-zero; updates ledger `VL-ANCHOR-424` + `VL-COUNTERS-ZERO` on PASS. **Provenance block hash** printed informational only (git-bound; not a cross-commit gate). |
+| **--full** | Everything in --fast, plus headless **draft_435** via `run_full_photometry_pipeline` into `tmp/session_baseline/<timestamp>/` (archive inputs read-only); **content anchor gate**: science-meaningful compare vs `draft_000435_snapshot_skysurface_20260716` + photometry SHA (core `3d26f469…` / extended `6420f1da…`); `except_fix_counters` all-zero; updates ledger `VL-ANCHOR-WCSINV` + `VL-COUNTERS-ZERO` on PASS. **Provenance block hash** printed informational only (git-bound; not a cross-commit gate). |
 
 Exit **0** = PASS, **1** = FAIL. Concise summary table printed at end.
 
