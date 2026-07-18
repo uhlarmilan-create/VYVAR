@@ -7,6 +7,7 @@ entry validates against the schema (enum fields, range shape, ASCII-only text).
 from __future__ import annotations
 
 import importlib.util
+import re
 from pathlib import Path
 
 import params_registry as pr
@@ -143,6 +144,29 @@ def test_generated_params_md_is_fresh(tmp_path) -> None:
         raise AssertionError(
             "docs/VYVAR_PARAMS.md is stale; run `python tools/gen_params_md.py`.\n" + diff
         )
+
+
+def test_help_is_nonempty_ascii_and_not_placeholder() -> None:
+    # CONFIG-HUMAN-EDIT STEP 1: help is the single source of truth for config.json
+    # comments + dashboard tooltips, ported from VYVAR_CONFIG_GUIDE_EN.md. It must be a
+    # real explanation, never the old mechanical placeholder ("<Label> (<phase> parameter).").
+    reg = _registry()
+    placeholder = re.compile(r"\(\w+ parameter\)\.\s*$")
+    empty: list[str] = []
+    non_ascii: list[str] = []
+    stale: list[str] = []
+    for key, entry in reg.items():
+        help_txt = entry.get("help")
+        if not isinstance(help_txt, str) or not help_txt.strip():
+            empty.append(key)
+            continue
+        if not help_txt.isascii():
+            non_ascii.append(key)
+        if placeholder.search(help_txt):
+            stale.append(key)
+    assert not empty, f"registry entries with empty help: {sorted(empty)}"
+    assert not non_ascii, f"registry entries with non-ASCII help: {sorted(non_ascii)}"
+    assert not stale, f"registry entries still using placeholder help: {sorted(stale)}"
 
 
 def test_basic_tier_keys_are_auto_widgets() -> None:

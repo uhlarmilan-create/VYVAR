@@ -1,6 +1,6 @@
 {
   "aavso_filter_map": {
-    "help": "AAVSO Filter Map (observer parameter).",
+    "help": "Optional mapping of your local filter names to official AAVSO filter codes used in exports (e.g. 'NoFilter' -> 'CV').",
     "kind": "static",
     "label": "AAVSO Filter Map",
     "owner": "db_static",
@@ -11,7 +11,7 @@
     "widget": "auto"
   },
   "aavso_observer_code": {
-    "help": "AAVSO Observer Code (observer parameter).",
+    "help": "Your official AAVSO observer code (UMIA); stamped into every AAVSO submission so the observation is credited to you.",
     "kind": "static",
     "label": "AAVSO Observer Code",
     "owner": "db_static",
@@ -22,7 +22,7 @@
     "widget": "auto"
   },
   "alignment_detection_sigma": {
-    "help": "Alignment Detection Sigma (alignment parameter).",
+    "help": "Detection sensitivity of the star finder used to pick alignment control stars.",
     "kind": "static",
     "label": "Alignment Detection Sigma",
     "owner": "config_runtime",
@@ -33,7 +33,7 @@
     "widget": "custom"
   },
   "alignment_max_control_points": {
-    "help": "Alignment Max Control Points (alignment parameter).",
+    "help": "Maximum number of control points the aligner may use per frame; more is robuster but slower.",
     "kind": "static",
     "label": "Alignment Max Control Points",
     "owner": "config_runtime",
@@ -44,7 +44,7 @@
     "widget": "custom"
   },
   "alignment_max_stars": {
-    "help": "Alignment Max Stars (alignment parameter).",
+    "help": "Cap on stars considered by the alignment matcher.",
     "kind": "static",
     "label": "Alignment Max Stars",
     "owner": "config_runtime",
@@ -58,7 +58,7 @@
     "widget": "custom"
   },
   "annulus_inner_fwhm": {
-    "help": "Annulus Inner FWHM (photometry parameter).",
+    "help": "Inner radius of the sky annulus in FWHM units; density adaptation may tighten it on dense fields.",
     "kind": "resolved",
     "label": "Annulus Inner FWHM",
     "owner": "config_runtime",
@@ -72,7 +72,7 @@
     "widget": "auto"
   },
   "annulus_outer_fwhm": {
-    "help": "Annulus Outer FWHM (photometry parameter).",
+    "help": "Outer radius of the sky annulus in FWHM units.",
     "kind": "resolved",
     "label": "Annulus Outer FWHM",
     "owner": "config_runtime",
@@ -86,7 +86,7 @@
     "widget": "auto"
   },
   "aperture_comp_factor": {
-    "help": "Aperture Comp Factor (photometry parameter).",
+    "help": "Aperture size multiplier applied to comparison stars.",
     "kind": "static",
     "label": "Aperture Comp Factor",
     "owner": "config_runtime",
@@ -100,7 +100,7 @@
     "widget": "auto"
   },
   "aperture_correction_enabled": {
-    "help": "Aperture Correction Enabled (photometry parameter).",
+    "help": "Enables aperture correction: transferring flux measured in a small aperture to the total-flux scale using bright reference stars.",
     "kind": "static",
     "label": "Aperture Correction Enabled",
     "owner": "config_runtime",
@@ -111,7 +111,7 @@
     "widget": "auto"
   },
   "aperture_correction_max_contamination": {
-    "help": "Aperture Correction Max Contamination (photometry parameter).",
+    "help": "Maximum neighbour contamination a reference star may have to be used for aperture correction.",
     "kind": "static",
     "label": "Aperture Correction Max Contamination",
     "owner": "config_runtime",
@@ -125,7 +125,7 @@
     "widget": "auto"
   },
   "aperture_correction_max_scatter_mag": {
-    "help": "Aperture Correction Max Scatter Mag (photometry parameter).",
+    "help": "Maximum scatter (mag) allowed among aperture-correction reference stars.",
     "kind": "static",
     "label": "Aperture Correction Max Scatter Mag",
     "owner": "config_runtime",
@@ -139,7 +139,7 @@
     "widget": "auto"
   },
   "aperture_correction_min_ref_stars": {
-    "help": "Aperture Correction Min Ref Stars (photometry parameter).",
+    "help": "Minimum reference stars required to compute an aperture correction.",
     "kind": "static",
     "label": "Aperture Correction Min Ref Stars",
     "owner": "config_runtime",
@@ -153,7 +153,7 @@
     "widget": "auto"
   },
   "aperture_fwhm_factor": {
-    "help": "Aperture FWHM Factor (photometry parameter).",
+    "help": "Base aperture radius in FWHM units; the SNR-optimal sizing sweep may adapt the effective radius per star.",
     "kind": "resolved",
     "label": "Aperture FWHM Factor",
     "owner": "config_runtime",
@@ -167,7 +167,7 @@
     "widget": "auto"
   },
   "aperture_photometry_enabled": {
-    "help": "Aperture Photometry Enabled (photometry parameter).",
+    "help": "Master switch of aperture photometry - the production measurement method of VYVAR.",
     "kind": "static",
     "label": "Aperture Photometry Enabled",
     "owner": "config_runtime",
@@ -178,7 +178,7 @@
     "widget": "auto"
   },
   "aperture_snr_sizing": {
-    "help": "SNR aperture sizing sweep bounds {small, large} as FWHM multiples. Merged from aperture_fwhm_factor_small/_large (WAVE-B STEP 4).",
+    "help": "SNR-optimal aperture sizing sweep bounds as FWHM multiples: 'small' is the minimum radius (best for faint stars), 'large' the maximum. WAVE-B merged the former aperture_fwhm_factor_small/_large scalars into this mapping (there is no medium class).",
     "kind": "resolved",
     "label": "Aperture SNR Sizing",
     "owner": "config_runtime",
@@ -189,7 +189,7 @@
     "widget": "auto"
   },
   "aperture_variable_factor": {
-    "help": "Aperture Variable Factor (photometry parameter).",
+    "help": "Aperture size multiplier applied to the variable (target) star.",
     "kind": "static",
     "label": "Aperture Variable Factor",
     "owner": "config_runtime",
@@ -203,7 +203,7 @@
     "widget": "auto"
   },
   "apply_color_term": {
-    "help": "Apply Color Term (extinction parameter).",
+    "help": "Whether a color-term transformation is applied to magnitudes ('off' keeps instrumental system).",
     "kind": "static",
     "label": "Apply Color Term",
     "owner": "config_runtime",
@@ -214,7 +214,7 @@
     "widget": "auto"
   },
   "archive_root": {
-    "help": "Archive Root (paths parameter).",
+    "help": "Root folder of the observation archive (raw and processed drafts). Resolved per machine at startup.",
     "kind": "static",
     "label": "Archive Root",
     "owner": "internal",
@@ -225,7 +225,7 @@
     "widget": "hidden"
   },
   "auto_fwhm_enabled": {
-    "help": "Auto FWHM Enabled (qc parameter).",
+    "help": "Automatically derives the frame-quality FWHM limit from the night's own seeing statistics instead of a fixed number.",
     "kind": "static",
     "label": "Auto FWHM Enabled",
     "owner": "config_runtime",
@@ -236,7 +236,7 @@
     "widget": "custom"
   },
   "auto_fwhm_k_factor": {
-    "help": "Auto FWHM K Factor (qc parameter).",
+    "help": "Multiplier applied to the night's median FWHM when deriving the automatic quality limit.",
     "kind": "static",
     "label": "Auto FWHM K Factor",
     "owner": "config_runtime",
@@ -247,7 +247,7 @@
     "widget": "custom"
   },
   "auto_fwhm_k_max": {
-    "help": "Auto FWHM K Max (qc parameter).",
+    "help": "Upper clamp of the automatic FWHM limit multiplier.",
     "kind": "static",
     "label": "Auto FWHM K Max",
     "owner": "config_runtime",
@@ -258,7 +258,7 @@
     "widget": "custom"
   },
   "auto_fwhm_k_min": {
-    "help": "Auto FWHM K Min (qc parameter).",
+    "help": "Lower clamp of the automatic FWHM limit multiplier.",
     "kind": "static",
     "label": "Auto FWHM K Min",
     "owner": "config_runtime",
@@ -269,7 +269,7 @@
     "widget": "custom"
   },
   "blind_img_select_mode": {
-    "help": "Blind Img Select Mode (detection parameter).",
+    "help": "Strategy for picking which detected stars feed the blind solver ('per_cell' spreads them evenly across the frame).",
     "kind": "static",
     "label": "Blind Img Select Mode",
     "owner": "config_runtime",
@@ -280,7 +280,7 @@
     "widget": "custom"
   },
   "blind_img_star_budget": {
-    "help": "Blind Img Star Budget (detection parameter).",
+    "help": "Maximum number of image stars handed to the blind solver; a budget keeps solving fast.",
     "kind": "static",
     "label": "Blind Img Star Budget",
     "owner": "config_runtime",
@@ -291,7 +291,7 @@
     "widget": "custom"
   },
   "blind_index_fine_path": {
-    "help": "Blind Index Fine Path (paths parameter).",
+    "help": "Path to the fine-scale astrometric index used by the blind plate solver for narrow-field rigs.",
     "kind": "static",
     "label": "Blind Index Fine Path",
     "owner": "internal",
@@ -302,7 +302,7 @@
     "widget": "hidden"
   },
   "blind_index_path": {
-    "help": "Blind Index Path (paths parameter).",
+    "help": "Legacy single-index path for the blind solver; superseded by the fine/wide pair with automatic selection.",
     "kind": "static",
     "label": "Blind Index Path",
     "owner": "internal",
@@ -313,7 +313,7 @@
     "widget": "hidden"
   },
   "blind_index_select_mode": {
-    "help": "Blind Index Select Mode (paths parameter).",
+    "help": "How the blind solver picks its index: 'auto' chooses fine or wide by the rig's field of view; can be forced manually.",
     "kind": "static",
     "label": "Blind Index Select Mode",
     "owner": "config_runtime",
@@ -324,7 +324,7 @@
     "widget": "hidden"
   },
   "blind_index_wide_path": {
-    "help": "Blind Index Wide Path (paths parameter).",
+    "help": "Path to the wide-field astrometric index used by the blind plate solver for wide rigs (e.g. the 200mm Zeiss).",
     "kind": "static",
     "label": "Blind Index Wide Path",
     "owner": "internal",
@@ -335,7 +335,7 @@
     "widget": "hidden"
   },
   "blind_use_rig_prior": {
-    "help": "Blind Use Rig Prior (detection parameter).",
+    "help": "Uses the known rig plate scale as a prior to reject implausible blind-solve candidates early.",
     "kind": "static",
     "label": "Blind Use Rig Prior",
     "owner": "config_runtime",
@@ -346,7 +346,7 @@
     "widget": "custom"
   },
   "blind_verify_early_accept": {
-    "help": "Blind Verify Early Accept (detection parameter).",
+    "help": "Number of verified star matches at which the blind solver stops early and accepts the solution.",
     "kind": "static",
     "label": "Blind Verify Early Accept",
     "owner": "config_runtime",
@@ -357,7 +357,7 @@
     "widget": "custom"
   },
   "blind_verify_early_floor": {
-    "help": "Blind Verify Early Floor (detection parameter).",
+    "help": "Minimum matches required before early acceptance may trigger at all.",
     "kind": "static",
     "label": "Blind Verify Early Floor",
     "owner": "config_runtime",
@@ -368,7 +368,7 @@
     "widget": "custom"
   },
   "blind_verify_early_fraction": {
-    "help": "Blind Verify Early Fraction (detection parameter).",
+    "help": "Fraction of catalog stars that must match for early acceptance.",
     "kind": "static",
     "label": "Blind Verify Early Fraction",
     "owner": "config_runtime",
@@ -382,7 +382,7 @@
     "widget": "custom"
   },
   "blind_verify_enabled": {
-    "help": "Blind Verify Enabled (detection parameter).",
+    "help": "Verifies every blind-solve candidate against the Gaia catalog before trusting it - the safety net of blind solving.",
     "kind": "static",
     "label": "Blind Verify Enabled",
     "owner": "config_runtime",
@@ -393,7 +393,7 @@
     "widget": "custom"
   },
   "blind_verify_inmemory_catalog": {
-    "help": "Blind Verify Inmemory Catalog (detection parameter).",
+    "help": "Keeps the verification catalog in memory for speed instead of re-querying the database.",
     "kind": "static",
     "label": "Blind Verify Inmemory Catalog",
     "owner": "config_runtime",
@@ -404,7 +404,7 @@
     "widget": "custom"
   },
   "blind_verify_match_tol_px": {
-    "help": "Blind Verify Match Tol PX (detection parameter).",
+    "help": "Pixel tolerance when matching image stars to catalog positions during verification.",
     "kind": "static",
     "label": "Blind Verify Match Tol PX",
     "owner": "config_runtime",
@@ -418,7 +418,7 @@
     "widget": "custom"
   },
   "blind_verify_min_fraction": {
-    "help": "Blind Verify Min Fraction (detection parameter).",
+    "help": "Minimum fraction of stars that must match for a blind solution to pass verification.",
     "kind": "static",
     "label": "Blind Verify Min Fraction",
     "owner": "config_runtime",
@@ -432,7 +432,7 @@
     "widget": "custom"
   },
   "blind_verify_min_matches": {
-    "help": "Blind Verify Min Matches (detection parameter).",
+    "help": "Absolute minimum of matched stars for a verified blind solution.",
     "kind": "static",
     "label": "Blind Verify Min Matches",
     "owner": "config_runtime",
@@ -443,7 +443,7 @@
     "widget": "custom"
   },
   "blind_verify_top_n": {
-    "help": "Blind Verify Top N (detection parameter).",
+    "help": "How many best blind candidates get the full verification treatment.",
     "kind": "static",
     "label": "Blind Verify Top N",
     "owner": "config_runtime",
@@ -454,7 +454,7 @@
     "widget": "custom"
   },
   "bpm_dark_mad_sigma": {
-    "help": "Bpm Dark Mad Sigma (calibration parameter).",
+    "help": "Sensitivity of bad-pixel detection on the master dark: pixels deviating more than this many robust sigmas are mapped as defective.",
     "kind": "static",
     "label": "Bpm Dark Mad Sigma",
     "owner": "config_runtime",
@@ -468,7 +468,7 @@
     "widget": "auto"
   },
   "cal_diag_autocorrect_enabled": {
-    "help": "Cal Diag Autocorrect Enabled (calibration parameter).",
+    "help": "Lets the calibration diagnostic auto-correct a detected master-dark convention mismatch (e.g. SUM vs MEAN stacking) instead of aborting.",
     "kind": "static",
     "label": "Cal Diag Autocorrect Enabled",
     "owner": "config_runtime",
@@ -479,7 +479,7 @@
     "widget": "auto"
   },
   "cal_diag_gate_enabled": {
-    "help": "Cal Diag Gate Enabled (calibration parameter).",
+    "help": "Master switch of the calibration diagnostic gate: sanity-checks the sky level after dark subtraction and fails closed on nonsense.",
     "kind": "static",
     "label": "Cal Diag Gate Enabled",
     "owner": "config_runtime",
@@ -490,7 +490,7 @@
     "widget": "auto"
   },
   "cal_diag_hard_sigma": {
-    "help": "Cal Diag Hard Sigma (calibration parameter).",
+    "help": "Hard limit (in sigmas) of the post-calibration sky sanity check; beyond it the frame set is rejected.",
     "kind": "static",
     "label": "Cal Diag Hard Sigma",
     "owner": "config_runtime",
@@ -504,7 +504,7 @@
     "widget": "auto"
   },
   "cal_diag_rel_tol": {
-    "help": "Cal Diag Rel Tol (calibration parameter).",
+    "help": "Relative tolerance of the pre-subtraction dark-vs-frame level cross-check (2% by default).",
     "kind": "static",
     "label": "Cal Diag Rel Tol",
     "owner": "config_runtime",
@@ -518,7 +518,7 @@
     "widget": "auto"
   },
   "cal_diag_sat_warn_frac": {
-    "help": "Cal Diag Sat Warn Frac (calibration parameter).",
+    "help": "Fraction of the saturation limit at which the diagnostic starts warning about a too-bright master or frame.",
     "kind": "static",
     "label": "Cal Diag Sat Warn Frac",
     "owner": "config_runtime",
@@ -532,7 +532,7 @@
     "widget": "auto"
   },
   "calibration_library_native_binning": {
-    "help": "Calibration Library Native Binning (calibration parameter).",
+    "help": "Binning in which the calibration library masters were built; masters get resampled (with provenance flag) when a draft uses another binning.",
     "kind": "static",
     "label": "Calibration Library Native Binning",
     "owner": "config_runtime",
@@ -546,7 +546,7 @@
     "widget": "auto"
   },
   "calibration_library_root": {
-    "help": "Calibration Library Root (paths parameter).",
+    "help": "Root folder of the calibration library (master darks/flats organized by camera, binning and temperature). Resolved per machine.",
     "kind": "static",
     "label": "Calibration Library Root",
     "owner": "internal",
@@ -557,7 +557,7 @@
     "widget": "hidden"
   },
   "calibration_master_ccd_temp_tolerance_c": {
-    "help": "Calibration Master CCD TEMP Tolerance C (calibration parameter).",
+    "help": "Maximum allowed CCD temperature difference (deg C) between a master dark and the light frames it calibrates.",
     "kind": "static",
     "label": "Calibration Master CCD TEMP Tolerance C",
     "owner": "config_runtime",
@@ -568,7 +568,7 @@
     "widget": "auto"
   },
   "catalog_query_max_rows": {
-    "help": "Catalog Query Max Rows (detection parameter).",
+    "help": "Cap on rows returned by a single Gaia catalog query; protects memory on very dense fields.",
     "kind": "static",
     "label": "Catalog Query Max Rows",
     "owner": "config_runtime",
@@ -582,7 +582,7 @@
     "widget": "auto"
   },
   "check_select_rms_floor": {
-    "help": "Check Select RMS Floor (trust parameter).",
+    "help": "RMS floor in check-star selection scoring.",
     "kind": "static",
     "label": "Check Select RMS Floor",
     "owner": "config_runtime",
@@ -596,7 +596,7 @@
     "widget": "auto"
   },
   "check_star_min_epochs": {
-    "help": "Check Star Min Epochs (trust parameter).",
+    "help": "Minimum epochs the check star must cover for its quality verdict to count.",
     "kind": "static",
     "label": "Check Star Min Epochs",
     "owner": "config_runtime",
@@ -607,7 +607,7 @@
     "widget": "auto"
   },
   "cog_ac_factor_max": {
-    "help": "COG Ac Factor Max (photometry parameter).",
+    "help": "Upper clamp of the curve-of-growth aperture-correction factor.",
     "kind": "static",
     "label": "COG Ac Factor Max",
     "owner": "config_runtime",
@@ -618,7 +618,7 @@
     "widget": "custom"
   },
   "cog_aperture_correction_enabled": {
-    "help": "COG Aperture Correction Enabled (photometry parameter).",
+    "help": "Enables the curve-of-growth variant of aperture correction (experimental alternative).",
     "kind": "static",
     "label": "COG Aperture Correction Enabled",
     "owner": "config_runtime",
@@ -629,7 +629,7 @@
     "widget": "custom"
   },
   "cog_isolation_fwhm": {
-    "help": "COG Isolation FWHM (photometry parameter).",
+    "help": "Isolation radius (FWHM) a star needs to serve as a curve-of-growth reference.",
     "kind": "static",
     "label": "COG Isolation FWHM",
     "owner": "config_runtime",
@@ -640,7 +640,7 @@
     "widget": "custom"
   },
   "cog_ladder_step_px": {
-    "help": "COG Ladder Step PX (photometry parameter).",
+    "help": "Radius step (px) of the curve-of-growth aperture ladder.",
     "kind": "static",
     "label": "COG Ladder Step PX",
     "owner": "config_runtime",
@@ -651,7 +651,7 @@
     "widget": "custom"
   },
   "cog_min_stars": {
-    "help": "COG Min Stars (photometry parameter).",
+    "help": "Minimum stars needed to fit a curve of growth.",
     "kind": "static",
     "label": "COG Min Stars",
     "owner": "config_runtime",
@@ -665,7 +665,7 @@
     "widget": "custom"
   },
   "cog_ref_fwhm": {
-    "help": "COG Ref FWHM (photometry parameter).",
+    "help": "Reference FWHM used to normalize the curve of growth.",
     "kind": "static",
     "label": "COG Ref FWHM",
     "owner": "config_runtime",
@@ -679,7 +679,7 @@
     "widget": "custom"
   },
   "cog_sat_frac": {
-    "help": "COG Sat Frac (photometry parameter).",
+    "help": "Saturation-fraction cutoff for curve-of-growth reference stars.",
     "kind": "static",
     "label": "COG Sat Frac",
     "owner": "config_runtime",
@@ -690,7 +690,7 @@
     "widget": "custom"
   },
   "cog_snr_min": {
-    "help": "COG SNR Min (photometry parameter).",
+    "help": "Minimum SNR of a curve-of-growth reference star.",
     "kind": "static",
     "label": "COG SNR Min",
     "owner": "config_runtime",
@@ -701,7 +701,7 @@
     "widget": "custom"
   },
   "comp_clip_sigma": {
-    "help": "Comp Clip Sigma (comp_selection parameter).",
+    "help": "Sigma-clipping level applied to comparison-star series before ensemble statistics.",
     "kind": "static",
     "label": "Comp Clip Sigma",
     "owner": "config_runtime",
@@ -715,7 +715,7 @@
     "widget": "auto"
   },
   "comp_color_tiers": {
-    "help": "Comparison-star colour tiers: 4-row table of {bprp: |dBP-RP| Gaia limit, w: ensemble weight}. Merged from comp_tier1..4_bprp_limit/weight (WAVE-B STEP 4).",
+    "help": "Ordered color-match tiers for comparison weighting. Each entry is a BP-RP color-match limit ('bprp', tighter = better color match) and the ensemble weight ('w') for stars in that tier. WAVE-B merged the eight comp_tier{1..4}_bprp_limit / _weight scalars into this list of dicts.",
     "kind": "static",
     "label": "Comp Color Tiers",
     "owner": "config_runtime",
@@ -726,7 +726,7 @@
     "widget": "auto"
   },
   "comp_contamination_penalty_k": {
-    "help": "Comp Contamination Penalty K (comp_selection parameter).",
+    "help": "Weight penalty strength for contaminated comparison stars in ensemble weighting.",
     "kind": "static",
     "label": "Comp Contamination Penalty K",
     "owner": "config_runtime",
@@ -740,7 +740,7 @@
     "widget": "auto"
   },
   "comp_iterative_clip_enabled": {
-    "help": "Comp Iterative Clip Enabled (comp_selection parameter).",
+    "help": "Iterative re-clipping of the comparison ensemble (drop-and-reweigh loop); ON in production since the Brno fix of 2026-06-14.",
     "kind": "static",
     "label": "Comp Iterative Clip Enabled",
     "owner": "config_runtime",
@@ -751,7 +751,7 @@
     "widget": "auto"
   },
   "comp_max_delta_bprp": {
-    "help": "Comp Max Delta BPRP (comp_selection parameter).",
+    "help": "Maximum Gaia BP-RP color difference between a comparison star and the target - the primary defense against extinction systematics on unfiltered data; density adaptation adjusts it.",
     "kind": "resolved",
     "label": "Comp Max Delta BPRP",
     "owner": "config_runtime",
@@ -765,7 +765,7 @@
     "widget": "auto"
   },
   "comp_max_slope_mmag_hr": {
-    "help": "Comp Max Slope Mmag Hr (comp_selection parameter).",
+    "help": "Maximum linear trend (mmag/hour) a comparison star may show before being rejected as drifting.",
     "kind": "static",
     "label": "Comp Max Slope Mmag Hr",
     "owner": "config_runtime",
@@ -779,7 +779,7 @@
     "widget": "auto"
   },
   "comp_qa_enabled": {
-    "help": "Comp Qa Enabled (trust parameter).",
+    "help": "Per-epoch quality assessment of the comparison ensemble feeding the trust verdict.",
     "kind": "static",
     "label": "Comp Qa Enabled",
     "owner": "config_runtime",
@@ -790,7 +790,7 @@
     "widget": "auto"
   },
   "comp_select_rms_floor": {
-    "help": "Comp Select RMS Floor (comp_selection parameter).",
+    "help": "Numerical floor of comparison RMS in weighting (prevents division blow-ups).",
     "kind": "static",
     "label": "Comp Select RMS Floor",
     "owner": "config_runtime",
@@ -801,7 +801,7 @@
     "widget": "auto"
   },
   "comp_slope_significance_k": {
-    "help": "Comp Slope Significance K (comp_selection parameter).",
+    "help": "Statistical significance required before a comparison star's trend counts as real drift.",
     "kind": "static",
     "label": "Comp Slope Significance K",
     "owner": "config_runtime",
@@ -815,7 +815,7 @@
     "widget": "auto"
   },
   "comp_sparse_fallback_enabled": {
-    "help": "Comp Sparse Fallback Enabled (comp_selection parameter).",
+    "help": "Allows the sparse-field fallback path when strict criteria yield too few comparisons.",
     "kind": "static",
     "label": "Comp Sparse Fallback Enabled",
     "owner": "config_runtime",
@@ -826,7 +826,7 @@
     "widget": "auto"
   },
   "comp_sparse_fallback_min": {
-    "help": "Comp Sparse Fallback Min (comp_selection parameter).",
+    "help": "Minimum comparisons the sparse fallback aims for (0 = take what exists).",
     "kind": "static",
     "label": "Comp Sparse Fallback Min",
     "owner": "config_runtime",
@@ -837,7 +837,7 @@
     "widget": "auto"
   },
   "comp_trust_min_comps": {
-    "help": "Comp Trust Min Comps (trust parameter).",
+    "help": "GREEN trust threshold of ensemble size (default 5 per literature; production runs 3 with sigma scaled by N - see DECISIONS). Fewer comps degrade to YELLOW, not RED.",
     "kind": "static",
     "label": "Comp Trust Min Comps",
     "owner": "config_runtime",
@@ -848,7 +848,7 @@
     "widget": "auto"
   },
   "crowding_blend_tighten_threshold": {
-    "help": "Crowding Blend Tighten Threshold (detection parameter).",
+    "help": "Blend-fraction level above which the (experimental) crowding classifier would tighten comparison criteria.",
     "kind": "static",
     "label": "Crowding Blend Tighten Threshold",
     "owner": "config_runtime",
@@ -862,7 +862,7 @@
     "widget": "custom"
   },
   "crowding_classifier_enabled": {
-    "help": "Crowding Classifier Enabled (detection parameter).",
+    "help": "Experimental crowding classifier switch; OFF pending validation on Newton dense-field data.",
     "kind": "static",
     "label": "Crowding Classifier Enabled",
     "owner": "config_runtime",
@@ -873,7 +873,7 @@
     "widget": "custom"
   },
   "crowding_comp_availability_loosen_count": {
-    "help": "Crowding Comp Availability Loosen Count (detection parameter).",
+    "help": "Comparison-star availability level treated as plentiful when the crowding logic decides about loosening.",
     "kind": "static",
     "label": "Crowding Comp Availability Loosen Count",
     "owner": "config_runtime",
@@ -887,7 +887,7 @@
     "widget": "custom"
   },
   "crowding_tighten_min_fwhm_px": {
-    "help": "Crowding Tighten Min FWHM PX (detection parameter).",
+    "help": "Minimum FWHM (px) below which crowding-driven tightening is not applied (undersampled images).",
     "kind": "static",
     "label": "Crowding Tighten Min FWHM PX",
     "owner": "config_runtime",
@@ -901,7 +901,7 @@
     "widget": "custom"
   },
   "dao_qc_in_calibrate": {
-    "help": "DAO QC In Calibrate (calibration parameter).",
+    "help": "Runs the star-detection based QC directly during calibration so bad frames are flagged as early as possible.",
     "kind": "static",
     "label": "DAO QC In Calibrate",
     "owner": "config_runtime",
@@ -912,7 +912,7 @@
     "widget": "auto"
   },
   "database_path": {
-    "help": "Database Path (paths parameter).",
+    "help": "Path to the main VYVAR SQLite database (drafts, equipment, locations, results). Resolved per machine.",
     "kind": "static",
     "label": "Database Path",
     "owner": "internal",
@@ -923,7 +923,7 @@
     "widget": "hidden"
   },
   "debug_platesolver": {
-    "help": "Debug Platesolver (detection parameter).",
+    "help": "Verbose diagnostic logging of the plate solver; for troubleshooting only.",
     "kind": "static",
     "label": "Debug Platesolver",
     "owner": "config_runtime",
@@ -934,7 +934,7 @@
     "widget": "auto"
   },
   "democratic_detrend_enabled": {
-    "help": "Democratic Detrend Enabled (photometry parameter).",
+    "help": "Optional 'democratic' detrend of the light curve (median trend of the field); OFF by default - detrending can eat real variability.",
     "kind": "static",
     "label": "Democratic Detrend Enabled",
     "owner": "config_runtime",
@@ -945,7 +945,7 @@
     "widget": "custom"
   },
   "democratic_sg_window_frac": {
-    "help": "Democratic SG Window Frac (photometry parameter).",
+    "help": "Window width (fraction of the night) of the democratic detrend smoother.",
     "kind": "static",
     "label": "Democratic SG Window Frac",
     "owner": "config_runtime",
@@ -959,7 +959,7 @@
     "widget": "custom"
   },
   "epsf_min_stars": {
-    "help": "EPSF Min Stars (detection parameter).",
+    "help": "Minimum suitable stars required to build an empirical PSF model (ePSF) for PSF photometry.",
     "kind": "static",
     "label": "EPSF Min Stars",
     "owner": "config_runtime",
@@ -970,7 +970,7 @@
     "widget": "custom"
   },
   "err_background_mode": {
-    "help": "Err Background Mode (photometry parameter).",
+    "help": "How the background-noise term of the error model is estimated ('empirical' = measured from empty apertures on the frame).",
     "kind": "static",
     "label": "Err Background Mode",
     "owner": "config_runtime",
@@ -981,7 +981,7 @@
     "widget": "auto"
   },
   "err_empty_apertures_min": {
-    "help": "Err Empty Apertures Min (photometry parameter).",
+    "help": "Minimum empty apertures required for a valid empirical background estimate.",
     "kind": "static",
     "label": "Err Empty Apertures Min",
     "owner": "config_runtime",
@@ -992,7 +992,7 @@
     "widget": "auto"
   },
   "err_empty_apertures_n": {
-    "help": "Err Empty Apertures N (photometry parameter).",
+    "help": "How many empty apertures are placed per frame for the empirical background noise measurement.",
     "kind": "static",
     "label": "Err Empty Apertures N",
     "owner": "config_runtime",
@@ -1003,7 +1003,7 @@
     "widget": "auto"
   },
   "exoplanet_local_db_path": {
-    "help": "Exoplanet Local Db Path (paths parameter).",
+    "help": "Path to the local NASA Exoplanet Archive database used to cross-match detected stars with known exoplanet hosts.",
     "kind": "static",
     "label": "Exoplanet Local Db Path",
     "owner": "internal",
@@ -1014,7 +1014,7 @@
     "widget": "hidden"
   },
   "exoplanet_match_max_sep_arcsec": {
-    "help": "Exoplanet Match Max Sep Arcsec (detection parameter).",
+    "help": "Maximum sky separation (arcsec) for identifying a detected star with a known exoplanet host.",
     "kind": "static",
     "label": "Exoplanet Match Max Sep Arcsec",
     "owner": "config_runtime",
@@ -1028,7 +1028,7 @@
     "widget": "auto"
   },
   "export_arcsec_per_px": {
-    "help": "Export Arcsec Per PX (export parameter).",
+    "help": "Plate-scale label written into export metadata; the science value comes from the WCS. WAVE-B removed its config.json fallback (derivable from WCS/optics).",
     "kind": "static",
     "label": "Export Arcsec Per PX",
     "owner": "fits_dynamic",
@@ -1039,7 +1039,7 @@
     "widget": "auto"
   },
   "field_density_adaptive_enabled": {
-    "help": "Field Density Adaptive Enabled (detection parameter).",
+    "help": "Master switch of density adaptation: sparse/normal/dense field profiles automatically loosen or tighten comparison-star criteria.",
     "kind": "static",
     "label": "Field Density Adaptive Enabled",
     "owner": "config_runtime",
@@ -1050,7 +1050,7 @@
     "widget": "custom"
   },
   "field_density_dense_threshold": {
-    "help": "Field Density Dense Threshold (detection parameter).",
+    "help": "Matched-star count above which the field is treated as dense (tighter criteria).",
     "kind": "static",
     "label": "Field Density Dense Threshold",
     "owner": "config_runtime",
@@ -1061,7 +1061,7 @@
     "widget": "custom"
   },
   "field_density_sparse_threshold": {
-    "help": "Field Density Sparse Threshold (detection parameter).",
+    "help": "Matched-star count below which the field is treated as sparse (looser criteria so an ensemble can still be formed).",
     "kind": "static",
     "label": "Field Density Sparse Threshold",
     "owner": "config_runtime",
@@ -1075,7 +1075,7 @@
     "widget": "custom"
   },
   "frame_align_residual_gate_enabled": {
-    "help": "Frame Align Residual Gate Enabled (qc parameter).",
+    "help": "Optional gate dropping frames whose alignment residuals are unusually large (poorly registered frames).",
     "kind": "static",
     "label": "Frame Align Residual Gate Enabled",
     "owner": "config_runtime",
@@ -1086,7 +1086,7 @@
     "widget": "auto"
   },
   "frame_align_residual_max_frac": {
-    "help": "Frame Align Residual Max Frac (qc parameter).",
+    "help": "Maximum fraction of frames the alignment-residual gate may drop; protects against discarding the night.",
     "kind": "static",
     "label": "Frame Align Residual Max Frac",
     "owner": "config_runtime",
@@ -1100,7 +1100,7 @@
     "widget": "auto"
   },
   "frame_align_residual_min_keep_frames": {
-    "help": "Frame Align Residual Min Keep Frames (qc parameter).",
+    "help": "Minimum number of frames that must survive the alignment-residual gate.",
     "kind": "static",
     "label": "Frame Align Residual Min Keep Frames",
     "owner": "config_runtime",
@@ -1114,7 +1114,7 @@
     "widget": "auto"
   },
   "frame_height_px": {
-    "help": "Frame Height PX (detection parameter).",
+    "help": "Frame height in pixels; measured from FITS NAXIS2 at run time. WAVE-B internalized it (no longer stored in config.json).",
     "kind": "resolved",
     "label": "Frame Height PX",
     "owner": "internal",
@@ -1125,7 +1125,7 @@
     "widget": "hidden"
   },
   "frame_quality_fwhm_factor": {
-    "help": "Frame Quality FWHM Factor (qc parameter).",
+    "help": "Scaling of the FWHM threshold used by the frame-quality gate.",
     "kind": "static",
     "label": "Frame Quality FWHM Factor",
     "owner": "config_runtime",
@@ -1139,7 +1139,7 @@
     "widget": "auto"
   },
   "frame_quality_gate_enabled": {
-    "help": "Frame Quality Gate Enabled (qc parameter).",
+    "help": "Optional gate excluding frames of clearly worse sharpness than the night's typical seeing.",
     "kind": "static",
     "label": "Frame Quality Gate Enabled",
     "owner": "config_runtime",
@@ -1150,7 +1150,7 @@
     "widget": "auto"
   },
   "frame_quality_min_keep_frames": {
-    "help": "Frame Quality Min Keep Frames (qc parameter).",
+    "help": "Minimum number of frames that must survive the frame-quality gate.",
     "kind": "static",
     "label": "Frame Quality Min Keep Frames",
     "owner": "config_runtime",
@@ -1164,7 +1164,7 @@
     "widget": "auto"
   },
   "frame_quality_ratio_k": {
-    "help": "Frame Quality Ratio K (qc parameter).",
+    "help": "How many times worse than the typical frame a frame must be before the quality gate drops it.",
     "kind": "static",
     "label": "Frame Quality Ratio K",
     "owner": "config_runtime",
@@ -1178,7 +1178,7 @@
     "widget": "auto"
   },
   "frame_width_px": {
-    "help": "Frame Width PX (detection parameter).",
+    "help": "Frame width in pixels; measured from FITS NAXIS1 at run time. WAVE-B internalized it (no longer stored in config.json).",
     "kind": "resolved",
     "label": "Frame Width PX",
     "owner": "internal",
@@ -1189,7 +1189,7 @@
     "widget": "hidden"
   },
   "gaia_db_path": {
-    "help": "Gaia Db Path (paths parameter).",
+    "help": "Path to the local full-sky Gaia DR3 SQLite database (40M+ stars) used for star identification and comparison selection.",
     "kind": "static",
     "label": "Gaia Db Path",
     "owner": "internal",
@@ -1200,7 +1200,7 @@
     "widget": "hidden"
   },
   "gain": {
-    "help": "Gain (photometry parameter).",
+    "help": "Detector gain (e-/ADU) converting counts to electrons in the error model; resolved from the FITS header (cross-checked against the DB). WAVE-B removed its config.json fallback - the resolver is authoritative.",
     "kind": "resolved",
     "label": "Gain",
     "owner": "fits_dynamic",
@@ -1211,7 +1211,7 @@
     "widget": "auto"
   },
   "global_comp_pool_enabled": {
-    "help": "Global Comp Pool Enabled (comp_selection parameter).",
+    "help": "Builds one field-wide comparison pool reused across targets instead of fully per-target pools.",
     "kind": "static",
     "label": "Global Comp Pool Enabled",
     "owner": "config_runtime",
@@ -1222,7 +1222,7 @@
     "widget": "auto"
   },
   "gs11_comp_max_dilution": {
-    "help": "GS11 Comp Max Dilution (photometry parameter).",
+    "help": "Maximum dilution (flux contamination) a comparison star may have under the GS11 dilution model.",
     "kind": "static",
     "label": "GS11 Comp Max Dilution",
     "owner": "config_runtime",
@@ -1236,7 +1236,7 @@
     "widget": "custom"
   },
   "gs11_comp_suspect_dilution": {
-    "help": "GS11 Comp Suspect Dilution (photometry parameter).",
+    "help": "Dilution level at which a comparison star is marked suspect.",
     "kind": "static",
     "label": "GS11 Comp Suspect Dilution",
     "owner": "config_runtime",
@@ -1250,7 +1250,7 @@
     "widget": "custom"
   },
   "gs11_dilution_aperture_arcsec": {
-    "help": "GS11 Dilution Aperture Arcsec (photometry parameter).",
+    "help": "Aperture (arcsec) used when computing catalog-based dilution; 0 derives it from the photometric aperture.",
     "kind": "static",
     "label": "GS11 Dilution Aperture Arcsec",
     "owner": "config_runtime",
@@ -1264,7 +1264,7 @@
     "widget": "custom"
   },
   "gs11_dilution_enabled": {
-    "help": "GS11 Dilution Enabled (photometry parameter).",
+    "help": "Enables catalog-based dilution estimation (how much neighbour light leaks into apertures).",
     "kind": "static",
     "label": "GS11 Dilution Enabled",
     "owner": "config_runtime",
@@ -1275,7 +1275,7 @@
     "widget": "custom"
   },
   "gs11_dilution_mag_limit_delta": {
-    "help": "GS11 Dilution Mag Limit Delta (photometry parameter).",
+    "help": "How many magnitudes fainter than the star the dilution census still counts neighbours.",
     "kind": "static",
     "label": "GS11 Dilution Mag Limit Delta",
     "owner": "config_runtime",
@@ -1289,7 +1289,7 @@
     "widget": "custom"
   },
   "gs11_target_min_dilution": {
-    "help": "GS11 Target Min Dilution (photometry parameter).",
+    "help": "Minimum acceptable target dilution before the target is flagged as badly blended.",
     "kind": "static",
     "label": "GS11 Target Min Dilution",
     "owner": "config_runtime",
@@ -1303,7 +1303,7 @@
     "widget": "custom"
   },
   "hrd_color_bg_box_px": {
-    "help": "HRD Color Bg Box PX (reports parameter).",
+    "help": "Background sampling box (px) for star colors in the color HR diagram.",
     "kind": "static",
     "label": "HRD Color Bg Box PX",
     "owner": "config_runtime",
@@ -1317,7 +1317,7 @@
     "widget": "custom"
   },
   "hrd_color_chroma_boost": {
-    "help": "HRD Color Chroma Boost (reports parameter).",
+    "help": "Chroma amplification of the HRD star colors for visual clarity.",
     "kind": "static",
     "label": "HRD Color Chroma Boost",
     "owner": "config_runtime",
@@ -1331,7 +1331,7 @@
     "widget": "custom"
   },
   "hrd_color_chroma_snr": {
-    "help": "HRD Color Chroma SNR (reports parameter).",
+    "help": "Minimum color SNR before a star gets a saturated color in the HRD.",
     "kind": "static",
     "label": "HRD Color Chroma SNR",
     "owner": "config_runtime",
@@ -1345,7 +1345,7 @@
     "widget": "custom"
   },
   "hrd_color_field_enabled": {
-    "help": "HRD Color Field Enabled (reports parameter).",
+    "help": "Renders the color HR diagram of the observed field in the report.",
     "kind": "static",
     "label": "HRD Color Field Enabled",
     "owner": "config_runtime",
@@ -1356,7 +1356,7 @@
     "widget": "custom"
   },
   "hrd_color_highlight_mode": {
-    "help": "HRD Color Highlight Mode (reports parameter).",
+    "help": "Highlight style of interesting objects in the HRD ('soft' = gentle emphasis).",
     "kind": "static",
     "label": "HRD Color Highlight Mode",
     "owner": "config_runtime",
@@ -1367,7 +1367,7 @@
     "widget": "custom"
   },
   "hrd_color_saturation": {
-    "help": "HRD Color Saturation (reports parameter).",
+    "help": "Base color saturation of HRD points.",
     "kind": "static",
     "label": "HRD Color Saturation",
     "owner": "config_runtime",
@@ -1381,7 +1381,7 @@
     "widget": "custom"
   },
   "hrd_color_white_point": {
-    "help": "HRD Color White Point (reports parameter).",
+    "help": "White-point reference of HRD colors ('field_median' balances to the field's median color).",
     "kind": "static",
     "label": "HRD Color White Point",
     "owner": "config_runtime",
@@ -1392,7 +1392,7 @@
     "widget": "custom"
   },
   "hrd_dsc_confirm_prob": {
-    "help": "HRD DSC Confirm Prob (reports parameter).",
+    "help": "Probability threshold for confirming a candidate's HRD-based classification.",
     "kind": "static",
     "label": "HRD DSC Confirm Prob",
     "owner": "config_runtime",
@@ -1406,7 +1406,7 @@
     "widget": "custom"
   },
   "hrd_enrich_max_candidates": {
-    "help": "HRD Enrich Max Candidates (reports parameter).",
+    "help": "Cap on objects sent to online enrichment services per report.",
     "kind": "static",
     "label": "HRD Enrich Max Candidates",
     "owner": "config_runtime",
@@ -1420,7 +1420,7 @@
     "widget": "custom"
   },
   "hrd_enrich_tap_timeout_s": {
-    "help": "HRD Enrich Tap Timeout S (reports parameter).",
+    "help": "Timeout (s) of TAP queries during online enrichment.",
     "kind": "static",
     "label": "HRD Enrich Tap Timeout S",
     "owner": "config_runtime",
@@ -1434,7 +1434,7 @@
     "widget": "custom"
   },
   "hrd_max_per_category": {
-    "help": "HRD Max Per Category (reports parameter).",
+    "help": "Maximum highlighted objects per category in the HRD legend.",
     "kind": "static",
     "label": "HRD Max Per Category",
     "owner": "config_runtime",
@@ -1448,7 +1448,7 @@
     "widget": "custom"
   },
   "hrd_min_per_net": {
-    "help": "HRD Min Per Net (reports parameter).",
+    "help": "Minimum objects kept per detection net when trimming HRD highlights.",
     "kind": "static",
     "label": "HRD Min Per Net",
     "owner": "config_runtime",
@@ -1462,7 +1462,7 @@
     "widget": "custom"
   },
   "hrd_nss_category_enabled": {
-    "help": "HRD NSS Category Enabled (reports parameter).",
+    "help": "Adds the Gaia non-single-star category to HRD highlights.",
     "kind": "static",
     "label": "HRD NSS Category Enabled",
     "owner": "config_runtime",
@@ -1473,7 +1473,7 @@
     "widget": "custom"
   },
   "hrd_online_enrich_enabled": {
-    "help": "HRD Online Enrich Enabled (reports parameter).",
+    "help": "Online enrichment of interesting HRD objects from Gaia archive services.",
     "kind": "static",
     "label": "HRD Online Enrich Enabled",
     "owner": "config_runtime",
@@ -1484,7 +1484,7 @@
     "widget": "custom"
   },
   "hrd_parallax_min_mas": {
-    "help": "HRD Parallax Min Mas (reports parameter).",
+    "help": "Minimum parallax (mas) for placing a star in the absolute-magnitude HRD.",
     "kind": "static",
     "label": "HRD Parallax Min Mas",
     "owner": "config_runtime",
@@ -1498,7 +1498,7 @@
     "widget": "custom"
   },
   "hrd_parallax_snr_min": {
-    "help": "HRD Parallax SNR Min (reports parameter).",
+    "help": "Minimum parallax SNR for a trustworthy HRD position.",
     "kind": "static",
     "label": "HRD Parallax SNR Min",
     "owner": "config_runtime",
@@ -1512,7 +1512,7 @@
     "widget": "custom"
   },
   "hrd_simbad_enrich_enabled": {
-    "help": "HRD Simbad Enrich Enabled (reports parameter).",
+    "help": "SIMBAD lookups for object types of HRD highlights.",
     "kind": "static",
     "label": "HRD Simbad Enrich Enabled",
     "owner": "config_runtime",
@@ -1523,7 +1523,7 @@
     "widget": "custom"
   },
   "k2_ceiling": {
-    "help": "K2 Ceiling (extinction parameter).",
+    "help": "Upper cap of the fitted second-order extinction coefficient k2 (mag per airmass per color unit).",
     "kind": "static",
     "label": "K2 Ceiling",
     "owner": "config_runtime",
@@ -1534,7 +1534,7 @@
     "widget": "custom"
   },
   "k2_defaults_bprp": {
-    "help": "K2 Defaults BPRP (extinction parameter).",
+    "help": "Per-band literature defaults of k2 keyed by BP-RP, used when fitting is off or fails.",
     "kind": "static",
     "label": "K2 Defaults BPRP",
     "owner": "config_runtime",
@@ -1545,7 +1545,7 @@
     "widget": "custom"
   },
   "k2_fit_consistency_sigma": {
-    "help": "K2 Fit Consistency Sigma (extinction parameter).",
+    "help": "Consistency requirement (sigma) between the fitted k2 and expectations before the fit is trusted.",
     "kind": "static",
     "label": "K2 Fit Consistency Sigma",
     "owner": "config_runtime",
@@ -1556,7 +1556,7 @@
     "widget": "custom"
   },
   "k2_fit_enabled": {
-    "help": "K2 Fit Enabled (extinction parameter).",
+    "help": "Enables per-night fitting of the second-order extinction coefficient (v2 NIGHT_FIT; OFF until validated).",
     "kind": "static",
     "label": "K2 Fit Enabled",
     "owner": "config_runtime",
@@ -1567,7 +1567,7 @@
     "widget": "custom"
   },
   "k2_fit_lit_factor": {
-    "help": "K2 Fit Lit Factor (extinction parameter).",
+    "help": "Allowed multiple of the literature k2 value; fits outside it are rejected as unphysical.",
     "kind": "static",
     "label": "K2 Fit Lit Factor",
     "owner": "config_runtime",
@@ -1578,7 +1578,7 @@
     "widget": "custom"
   },
   "k2_fit_min_detectability": {
-    "help": "K2 Fit Min Detectability (extinction parameter).",
+    "help": "Minimum detectability (signal strength) the night must offer for a k2 fit to be attempted.",
     "kind": "static",
     "label": "K2 Fit Min Detectability",
     "owner": "config_runtime",
@@ -1589,7 +1589,7 @@
     "widget": "custom"
   },
   "k2_mode": {
-    "help": "K2 Mode (extinction parameter).",
+    "help": "Source of k2: 'literature' (defaults) or fitted per night when the fit program is enabled.",
     "kind": "static",
     "label": "K2 Mode",
     "owner": "config_runtime",
@@ -1600,7 +1600,7 @@
     "widget": "custom"
   },
   "lc_quality_min_frames": {
-    "help": "Lc Quality Min Frames (trust parameter).",
+    "help": "Minimum frames for a full-quality light-curve verdict.",
     "kind": "static",
     "label": "Lc Quality Min Frames",
     "owner": "config_runtime",
@@ -1611,7 +1611,7 @@
     "widget": "auto"
   },
   "lc_quality_min_normal_frac": {
-    "help": "Lc Quality Min Normal Frac (trust parameter).",
+    "help": "Minimum fraction of normal (unflagged) points a light curve needs.",
     "kind": "static",
     "label": "Lc Quality Min Normal Frac",
     "owner": "config_runtime",
@@ -1625,7 +1625,7 @@
     "widget": "auto"
   },
   "lc_quality_short_min_frames": {
-    "help": "Lc Quality Short Min Frames (trust parameter).",
+    "help": "Frame floor of the short-baseline quality track for brief series.",
     "kind": "static",
     "label": "Lc Quality Short Min Frames",
     "owner": "config_runtime",
@@ -1636,7 +1636,7 @@
     "widget": "auto"
   },
   "masterdark_validity_days": {
-    "help": "Masterdark Validity Days (calibration parameter).",
+    "help": "How many days a master dark stays valid; older masters trigger a warning to shoot new darks (currently ~21.7. deadline).",
     "kind": "static",
     "label": "Masterdark Validity Days",
     "owner": "config_runtime",
@@ -1647,7 +1647,7 @@
     "widget": "auto"
   },
   "masterflat_validity_days": {
-    "help": "Masterflat Validity Days (calibration parameter).",
+    "help": "How many days a master flat stays valid before VYVAR asks for a fresh one.",
     "kind": "static",
     "label": "Masterflat Validity Days",
     "owner": "config_runtime",
@@ -1658,7 +1658,7 @@
     "widget": "auto"
   },
   "masterstar_accept_mode": {
-    "help": "Masterstar Accept Mode (detection parameter).",
+    "help": "Acceptance strategy of the masterstar plate solution ('odds' = statistical odds-ratio test).",
     "kind": "static",
     "label": "Masterstar Accept Mode",
     "owner": "config_runtime",
@@ -1669,7 +1669,7 @@
     "widget": "custom"
   },
   "masterstar_best_of_n": {
-    "help": "Masterstar Best Of N (detection parameter).",
+    "help": "How many best frames are stacked/considered when building the masterstar reference.",
     "kind": "static",
     "label": "Masterstar Best Of N",
     "owner": "config_runtime",
@@ -1683,7 +1683,7 @@
     "widget": "custom"
   },
   "masterstar_catalog_recovery_min": {
-    "help": "Masterstar Catalog Recovery Min (detection parameter).",
+    "help": "Minimum fraction of catalog stars the masterstar must recover for the solution to be trusted.",
     "kind": "static",
     "label": "Masterstar Catalog Recovery Min",
     "owner": "config_runtime",
@@ -1697,7 +1697,7 @@
     "widget": "custom"
   },
   "masterstar_centre_rms_max_px": {
-    "help": "Masterstar Centre RMS Max PX (detection parameter).",
+    "help": "Maximum RMS (px) of star positions near the frame centre for an acceptable astrometric solution.",
     "kind": "static",
     "label": "Masterstar Centre RMS Max PX",
     "owner": "config_runtime",
@@ -1711,7 +1711,7 @@
     "widget": "custom"
   },
   "masterstar_dao_pass2_sigma": {
-    "help": "Masterstar DAO Pass2 Sigma (detection parameter).",
+    "help": "Detection sigma of the second, deeper DAO pass on the masterstar stack.",
     "kind": "static",
     "label": "Masterstar DAO Pass2 Sigma",
     "owner": "config_runtime",
@@ -1722,7 +1722,7 @@
     "widget": "custom"
   },
   "masterstar_dao_threshold_sigma": {
-    "help": "Masterstar DAO Threshold Sigma (detection parameter).",
+    "help": "Primary DAO detection threshold (sigma) on the masterstar; lower finds fainter stars but more noise.",
     "kind": "static",
     "label": "Masterstar DAO Threshold Sigma",
     "owner": "config_runtime",
@@ -1736,7 +1736,7 @@
     "widget": "custom"
   },
   "masterstar_detection_cap_adaptive": {
-    "help": "Masterstar Detection Cap Adaptive (detection parameter).",
+    "help": "Adapts the detection cap to field density instead of a fixed count.",
     "kind": "static",
     "label": "Masterstar Detection Cap Adaptive",
     "owner": "config_runtime",
@@ -1747,7 +1747,7 @@
     "widget": "custom"
   },
   "masterstar_detection_cap_k": {
-    "help": "Masterstar Detection Cap K (detection parameter).",
+    "help": "Scaling constant of the adaptive detection cap.",
     "kind": "static",
     "label": "Masterstar Detection Cap K",
     "owner": "config_runtime",
@@ -1761,7 +1761,7 @@
     "widget": "custom"
   },
   "masterstar_detection_cap_max": {
-    "help": "Masterstar Detection Cap Max (detection parameter).",
+    "help": "Upper clamp of the adaptive detection cap.",
     "kind": "static",
     "label": "Masterstar Detection Cap Max",
     "owner": "config_runtime",
@@ -1772,7 +1772,7 @@
     "widget": "custom"
   },
   "masterstar_detection_cap_min": {
-    "help": "Masterstar Detection Cap Min (detection parameter).",
+    "help": "Lower clamp of the adaptive detection cap.",
     "kind": "static",
     "label": "Masterstar Detection Cap Min",
     "owner": "config_runtime",
@@ -1783,7 +1783,7 @@
     "widget": "custom"
   },
   "masterstar_distortion_benign_ratio_max": {
-    "help": "Masterstar Distortion Benign Ratio Max (detection parameter).",
+    "help": "Limit on the edge-to-centre distortion ratio still considered benign for the optics.",
     "kind": "static",
     "label": "Masterstar Distortion Benign Ratio Max",
     "owner": "config_runtime",
@@ -1797,7 +1797,7 @@
     "widget": "custom"
   },
   "masterstar_min_matched_floor": {
-    "help": "Masterstar Min Matched Floor (detection parameter).",
+    "help": "Absolute floor of matched stars a masterstar solution must reach.",
     "kind": "static",
     "label": "Masterstar Min Matched Floor",
     "owner": "config_runtime",
@@ -1808,7 +1808,7 @@
     "widget": "custom"
   },
   "masterstar_platesolve_sip_max_order": {
-    "help": "Masterstar Platesolve SIP Max Order (detection parameter).",
+    "help": "Highest SIP distortion polynomial order the solver may fit.",
     "kind": "static",
     "label": "Masterstar Platesolve SIP Max Order",
     "owner": "config_runtime",
@@ -1819,7 +1819,7 @@
     "widget": "custom"
   },
   "masterstar_platesolve_sip_min_order": {
-    "help": "Masterstar Platesolve SIP Min Order (detection parameter).",
+    "help": "Lowest SIP distortion order tried by the solver.",
     "kind": "static",
     "label": "Masterstar Platesolve SIP Min Order",
     "owner": "config_runtime",
@@ -1830,7 +1830,7 @@
     "widget": "custom"
   },
   "masterstar_prematch_peak_sigma_floor": {
-    "help": "Masterstar Prematch Peak Sigma Floor (detection parameter).",
+    "help": "Minimum peak significance of stars used in the pre-match stage.",
     "kind": "static",
     "label": "Masterstar Prematch Peak Sigma Floor",
     "owner": "config_runtime",
@@ -1844,7 +1844,7 @@
     "widget": "custom"
   },
   "masterstar_quality_crowded_n_cat_min": {
-    "help": "Masterstar Quality Crowded N Cat Min (detection parameter).",
+    "help": "Catalog-star count above which the masterstar quality checks switch to crowded-field mode.",
     "kind": "static",
     "label": "Masterstar Quality Crowded N Cat Min",
     "owner": "config_runtime",
@@ -1855,7 +1855,7 @@
     "widget": "custom"
   },
   "masterstar_sibling_min_matched": {
-    "help": "Masterstar Sibling Min Matched (detection parameter).",
+    "help": "Minimum matches a sibling (recovery) solution needs.",
     "kind": "static",
     "label": "Masterstar Sibling Min Matched",
     "owner": "config_runtime",
@@ -1866,7 +1866,7 @@
     "widget": "custom"
   },
   "masterstar_sibling_min_quadrants": {
-    "help": "Masterstar Sibling Min Quadrants (detection parameter).",
+    "help": "Quadrant coverage required from a sibling solution.",
     "kind": "static",
     "label": "Masterstar Sibling Min Quadrants",
     "owner": "config_runtime",
@@ -1877,7 +1877,7 @@
     "widget": "custom"
   },
   "masterstar_sibling_recovery_enabled": {
-    "help": "Masterstar Sibling Recovery Enabled (detection parameter).",
+    "help": "Enables the sibling-stack recovery path when the primary masterstar solve fails.",
     "kind": "static",
     "label": "Masterstar Sibling Recovery Enabled",
     "owner": "config_runtime",
@@ -1888,7 +1888,7 @@
     "widget": "custom"
   },
   "masterstar_sibling_rms_max_px": {
-    "help": "Masterstar Sibling RMS Max PX (detection parameter).",
+    "help": "RMS limit for accepting a sibling recovery solution.",
     "kind": "static",
     "label": "Masterstar Sibling RMS Max PX",
     "owner": "config_runtime",
@@ -1902,7 +1902,7 @@
     "widget": "custom"
   },
   "masterstar_sibling_stack_n": {
-    "help": "Masterstar Sibling Stack N (detection parameter).",
+    "help": "How many frames the sibling recovery stack combines.",
     "kind": "static",
     "label": "Masterstar Sibling Stack N",
     "owner": "config_runtime",
@@ -1913,7 +1913,7 @@
     "widget": "custom"
   },
   "masterstar_use_best_frame_fwhm": {
-    "help": "Masterstar Use Best Frame FWHM (detection parameter).",
+    "help": "Uses the best frame's FWHM for masterstar detection kernels instead of an average.",
     "kind": "static",
     "label": "Masterstar Use Best Frame FWHM",
     "owner": "config_runtime",
@@ -1924,7 +1924,7 @@
     "widget": "custom"
   },
   "neighbor_sub_centroid_max_fwhm": {
-    "help": "Neighbor Sub Centroid Max FWHM (photometry parameter).",
+    "help": "Maximum centroid shift (FWHM) allowed after neighbour subtraction.",
     "kind": "static",
     "label": "Neighbor Sub Centroid Max FWHM",
     "owner": "config_runtime",
@@ -1935,7 +1935,7 @@
     "widget": "custom"
   },
   "neighbor_sub_chi2_max": {
-    "help": "Neighbor Sub Chi2 Max (photometry parameter).",
+    "help": "Chi-square cap of the neighbour-model fit.",
     "kind": "static",
     "label": "Neighbor Sub Chi2 Max",
     "owner": "config_runtime",
@@ -1946,7 +1946,7 @@
     "widget": "custom"
   },
   "neighbor_sub_max_neighbor_overmag": {
-    "help": "Neighbor Sub Max Neighbor Overmag (photometry parameter).",
+    "help": "Guard: the fitted neighbour must not come out brighter than expected by more than this (mag).",
     "kind": "static",
     "label": "Neighbor Sub Max Neighbor Overmag",
     "owner": "config_runtime",
@@ -1957,7 +1957,7 @@
     "widget": "custom"
   },
   "neighbor_sub_max_target_undermag": {
-    "help": "Neighbor Sub Max Target Undermag (photometry parameter).",
+    "help": "Guard: the target must not lose more than this (mag) by the subtraction.",
     "kind": "static",
     "label": "Neighbor Sub Max Target Undermag",
     "owner": "config_runtime",
@@ -1968,7 +1968,7 @@
     "widget": "custom"
   },
   "neighbor_sub_min_recovered_snr": {
-    "help": "Neighbor Sub Min Recovered SNR (photometry parameter).",
+    "help": "Minimum SNR the target must retain after neighbour subtraction.",
     "kind": "static",
     "label": "Neighbor Sub Min Recovered SNR",
     "owner": "config_runtime",
@@ -1979,7 +1979,7 @@
     "widget": "custom"
   },
   "neighbor_sub_nn_contam_dmag": {
-    "help": "Neighbor Sub NN Contam Dmag (photometry parameter).",
+    "help": "Brightness difference within which a nearest neighbour counts as contaminating.",
     "kind": "static",
     "label": "Neighbor Sub NN Contam Dmag",
     "owner": "config_runtime",
@@ -1990,7 +1990,7 @@
     "widget": "custom"
   },
   "neighbor_sub_refuse_sep_fwhm": {
-    "help": "Neighbor Sub Refuse Sep FWHM (photometry parameter).",
+    "help": "Below this separation (FWHM) subtraction is refused - the pair is too blended to fix.",
     "kind": "static",
     "label": "Neighbor Sub Refuse Sep FWHM",
     "owner": "config_runtime",
@@ -2001,7 +2001,7 @@
     "widget": "custom"
   },
   "neighbor_sub_regime_dmag_min": {
-    "help": "Neighbor Sub Regime Dmag Min (photometry parameter).",
+    "help": "Brightness-difference bound defining the regime where neighbour subtraction applies.",
     "kind": "static",
     "label": "Neighbor Sub Regime Dmag Min",
     "owner": "config_runtime",
@@ -2012,7 +2012,7 @@
     "widget": "custom"
   },
   "neighbor_sub_regime_sep_max": {
-    "help": "Neighbor Sub Regime Sep Max (photometry parameter).",
+    "help": "Separation bound (FWHM) of the neighbour-subtraction regime.",
     "kind": "static",
     "label": "Neighbor Sub Regime Sep Max",
     "owner": "config_runtime",
@@ -2023,7 +2023,7 @@
     "widget": "custom"
   },
   "neighbor_sub_residual_rms_max": {
-    "help": "Neighbor Sub Residual RMS Max (photometry parameter).",
+    "help": "Residual RMS cap after subtraction for the result to be accepted.",
     "kind": "static",
     "label": "Neighbor Sub Residual RMS Max",
     "owner": "config_runtime",
@@ -2034,7 +2034,7 @@
     "widget": "custom"
   },
   "nonlinearity_fwhm_ratio": {
-    "help": "Nonlinearity FWHM Ratio (photometry parameter).",
+    "help": "FWHM ratio threshold of the detector nonlinearity diagnostic (bright stars growing fatter than faint ones).",
     "kind": "static",
     "label": "Nonlinearity FWHM Ratio",
     "owner": "config_runtime",
@@ -2048,7 +2048,7 @@
     "widget": "auto"
   },
   "nonlinearity_peak_percentile": {
-    "help": "Nonlinearity Peak Percentile (photometry parameter).",
+    "help": "Peak-brightness percentile at which the nonlinearity diagnostic samples star shapes.",
     "kind": "static",
     "label": "Nonlinearity Peak Percentile",
     "owner": "config_runtime",
@@ -2062,7 +2062,7 @@
     "widget": "auto"
   },
   "observer_alt_m": {
-    "help": "Observer Alt M (observer parameter).",
+    "help": "Altitude of the observing site above sea level in meters; part of the site definition used for airmass and time corrections. WAVE-B removed the config.json copy - hydrated from the LOCATION row.",
     "kind": "static",
     "label": "Observer Alt M",
     "owner": "db_static",
@@ -2073,7 +2073,7 @@
     "widget": "auto"
   },
   "observer_code": {
-    "help": "Observer Code (observer parameter).",
+    "help": "Short observer identifier printed in reports and exports (separate from the AAVSO code).",
     "kind": "static",
     "label": "Observer Code",
     "owner": "db_static",
@@ -2084,7 +2084,7 @@
     "widget": "auto"
   },
   "observer_lat": {
-    "help": "Observer Lat (observer parameter).",
+    "help": "Latitude of the observing site in degrees. Hydrated from the draft's LOCATION record; WAVE-B removed the config.json copy.",
     "kind": "static",
     "label": "Observer Lat",
     "owner": "db_static",
@@ -2095,7 +2095,7 @@
     "widget": "auto"
   },
   "observer_location_id": {
-    "help": "Observer Location ID (observer parameter).",
+    "help": "Database ID of the currently selected observing site (LOCATION table row). This id stays in config.json and drives the hydration of the coordinates.",
     "kind": "static",
     "label": "Observer Location ID",
     "owner": "db_static",
@@ -2106,7 +2106,7 @@
     "widget": "auto"
   },
   "observer_location_name": {
-    "help": "Observer Location Name (observer parameter).",
+    "help": "Human-readable name of the selected observing site (e.g. Jirny, Dablice). WAVE-B removed the config.json copy - hydrated from the LOCATION row.",
     "kind": "static",
     "label": "Observer Location Name",
     "owner": "db_static",
@@ -2117,7 +2117,7 @@
     "widget": "auto"
   },
   "observer_lon": {
-    "help": "Observer Lon (observer parameter).",
+    "help": "Longitude of the observing site in degrees; hydrated from the LOCATION row (WAVE-B removed the config.json copy).",
     "kind": "static",
     "label": "Observer Lon",
     "owner": "db_static",
@@ -2128,7 +2128,7 @@
     "widget": "auto"
   },
   "observer_name": {
-    "help": "Observer Name (observer parameter).",
+    "help": "Full observer name printed in reports.",
     "kind": "static",
     "label": "Observer Name",
     "owner": "db_static",
@@ -2139,7 +2139,7 @@
     "widget": "auto"
   },
   "per_frame_mp_reserve_ram_gb": {
-    "help": "Per Frame MP Reserve RAM Gb (system parameter).",
+    "help": "RAM (GB) kept free per worker when sizing per-frame parallelism.",
     "kind": "static",
     "label": "Per Frame MP Reserve RAM Gb",
     "owner": "config_runtime",
@@ -2150,7 +2150,7 @@
     "widget": "hidden"
   },
   "phase01_chip_interior_margin_px": {
-    "help": "Phase01 Chip Interior Margin PX (detection parameter).",
+    "help": "Margin (px) from the chip edge inside which stars are excluded from comparison selection (edge effects).",
     "kind": "static",
     "label": "Phase01 Chip Interior Margin PX",
     "owner": "config_runtime",
@@ -2161,7 +2161,7 @@
     "widget": "auto"
   },
   "phase01_comparison_exclude_gaia_extobj": {
-    "help": "Phase01 Comparison Exclude Gaia Extobj (comp_selection parameter).",
+    "help": "Excludes Gaia-flagged extended objects (galaxies) from comparison candidates.",
     "kind": "static",
     "label": "Phase01 Comparison Exclude Gaia Extobj",
     "owner": "config_runtime",
@@ -2172,7 +2172,7 @@
     "widget": "custom"
   },
   "phase01_comparison_exclude_gaia_nss": {
-    "help": "Phase01 Comparison Exclude Gaia NSS (comp_selection parameter).",
+    "help": "Excludes Gaia non-single-star (binary) sources from comparison candidates.",
     "kind": "static",
     "label": "Phase01 Comparison Exclude Gaia NSS",
     "owner": "config_runtime",
@@ -2183,7 +2183,7 @@
     "widget": "custom"
   },
   "phase01_comparison_fov_fraction": {
-    "help": "Phase01 Comparison FOV Fraction (comp_selection parameter).",
+    "help": "Fraction of the field of view around the target within which comparisons are searched.",
     "kind": "static",
     "label": "Phase01 Comparison FOV Fraction",
     "owner": "config_runtime",
@@ -2194,7 +2194,7 @@
     "widget": "custom"
   },
   "phase01_comparison_isolation_radius_px": {
-    "help": "Phase01 Comparison Isolation Radius PX (comp_selection parameter).",
+    "help": "Isolation radius (px): a comparison must have no bright neighbour inside it.",
     "kind": "static",
     "label": "Phase01 Comparison Isolation Radius PX",
     "owner": "config_runtime",
@@ -2208,7 +2208,7 @@
     "widget": "custom"
   },
   "phase01_comparison_mag_bright_threshold": {
-    "help": "Phase01 Comparison Mag Bright Threshold (comp_selection parameter).",
+    "help": "Brightness above which the stricter bright-star mag-difference floor applies.",
     "kind": "static",
     "label": "Phase01 Comparison Mag Bright Threshold",
     "owner": "config_runtime",
@@ -2222,7 +2222,7 @@
     "widget": "custom"
   },
   "phase01_comparison_max_comp_rms": {
-    "help": "Phase01 Comparison Max Comp RMS (comp_selection parameter).",
+    "help": "Maximum night RMS of a comparison-star series; density adaptation may tighten it.",
     "kind": "resolved",
     "label": "Phase01 Comparison Max Comp RMS",
     "owner": "config_runtime",
@@ -2236,7 +2236,7 @@
     "widget": "custom"
   },
   "phase01_comparison_max_dist_deg": {
-    "help": "Phase01 Comparison Max Dist Deg (comp_selection parameter).",
+    "help": "Maximum sky distance (deg) of a comparison from the target; density adaptation adds to the FOV-derived base.",
     "kind": "resolved",
     "label": "Phase01 Comparison Max Dist Deg",
     "owner": "config_runtime",
@@ -2250,7 +2250,7 @@
     "widget": "custom"
   },
   "phase01_comparison_max_fwhm_factor": {
-    "help": "Phase01 Comparison Max FWHM Factor (comp_selection parameter).",
+    "help": "Maximum FWHM ratio vs the field median a comparison may have (rejects defocused/blended shapes).",
     "kind": "static",
     "label": "Phase01 Comparison Max FWHM Factor",
     "owner": "config_runtime",
@@ -2264,7 +2264,7 @@
     "widget": "custom"
   },
   "phase01_comparison_max_mag_diff": {
-    "help": "Phase01 Comparison Max Mag Diff (comp_selection parameter).",
+    "help": "Base maximum brightness difference (mag) between comparison and target; adapted by density profile.",
     "kind": "resolved",
     "label": "Phase01 Comparison Max Mag Diff",
     "owner": "config_runtime",
@@ -2278,7 +2278,7 @@
     "widget": "custom"
   },
   "phase01_comparison_max_mag_diff_absolute": {
-    "help": "Phase01 Comparison Max Mag Diff Absolute (comp_selection parameter).",
+    "help": "Hard ceiling of the brightness difference no adaptation may exceed.",
     "kind": "static",
     "label": "Phase01 Comparison Max Mag Diff Absolute",
     "owner": "config_runtime",
@@ -2292,7 +2292,7 @@
     "widget": "custom"
   },
   "phase01_comparison_max_mag_diff_bright_floor": {
-    "help": "Phase01 Comparison Max Mag Diff Bright Floor (comp_selection parameter).",
+    "help": "Mag-difference floor applied to bright stars regardless of adaptation.",
     "kind": "static",
     "label": "Phase01 Comparison Max Mag Diff Bright Floor",
     "owner": "config_runtime",
@@ -2306,7 +2306,7 @@
     "widget": "custom"
   },
   "phase01_comparison_max_psf_chi2": {
-    "help": "Phase01 Comparison Max PSF Chi2 (comp_selection parameter).",
+    "help": "Maximum PSF-fit chi-square of a comparison star (shape sanity).",
     "kind": "static",
     "label": "Phase01 Comparison Max PSF Chi2",
     "owner": "config_runtime",
@@ -2320,7 +2320,7 @@
     "widget": "custom"
   },
   "phase01_comparison_min_dist_arcsec": {
-    "help": "Phase01 Comparison Min Dist Arcsec (comp_selection parameter).",
+    "help": "Minimum distance (arcsec) between comparison and target to avoid mutual contamination; density-adapted.",
     "kind": "resolved",
     "label": "Phase01 Comparison Min Dist Arcsec",
     "owner": "config_runtime",
@@ -2334,7 +2334,7 @@
     "widget": "custom"
   },
   "phase01_comparison_min_frames_frac": {
-    "help": "Phase01 Comparison Min Frames Frac (comp_selection parameter).",
+    "help": "Minimum fraction of frames a comparison must be measured on.",
     "kind": "static",
     "label": "Phase01 Comparison Min Frames Frac",
     "owner": "config_runtime",
@@ -2348,7 +2348,7 @@
     "widget": "custom"
   },
   "phase01_comparison_n_comp_max": {
-    "help": "Phase01 Comparison N Comp Max (comp_selection parameter).",
+    "help": "Maximum ensemble size; literature shows scintillation gains saturate around 6-8 comparisons.",
     "kind": "static",
     "label": "Phase01 Comparison N Comp Max",
     "owner": "config_runtime",
@@ -2359,7 +2359,7 @@
     "widget": "custom"
   },
   "phase01_comparison_n_comp_min": {
-    "help": "Phase01 Comparison N Comp Min (comp_selection parameter).",
+    "help": "Minimum comparisons the selector aims for; density adaptation may lower it on sparse fields.",
     "kind": "resolved",
     "label": "Phase01 Comparison N Comp Min",
     "owner": "config_runtime",
@@ -2370,7 +2370,7 @@
     "widget": "custom"
   },
   "phase01_comparison_rms_outlier_sigma": {
-    "help": "Phase01 Comparison RMS Outlier Sigma (comp_selection parameter).",
+    "help": "Sigma level for flagging a comparison as an RMS outlier vs its brightness bin.",
     "kind": "static",
     "label": "Phase01 Comparison RMS Outlier Sigma",
     "owner": "config_runtime",
@@ -2384,7 +2384,7 @@
     "widget": "custom"
   },
   "phase01_ct_extrapolation_tol": {
-    "help": "Phase01 CT Extrapolation Tol (comp_selection parameter).",
+    "help": "Allowed color-range extrapolation of the color-term relation (0 = no extrapolation).",
     "kind": "static",
     "label": "Phase01 CT Extrapolation Tol",
     "owner": "config_runtime",
@@ -2395,7 +2395,7 @@
     "widget": "auto"
   },
   "phase01_ct_min_comp": {
-    "help": "Phase01 CT Min Comp (comp_selection parameter).",
+    "help": "Minimum comparisons required to fit a color-term relation.",
     "kind": "static",
     "label": "Phase01 CT Min Comp",
     "owner": "config_runtime",
@@ -2409,7 +2409,7 @@
     "widget": "auto"
   },
   "phase01_flux_col": {
-    "help": "Phase01 Flux Col (comp_selection parameter).",
+    "help": "Which flux column feeds Phase-1 comparison statistics (dao_flux = detection-stage flux).",
     "kind": "static",
     "label": "Phase01 Flux Col",
     "owner": "config_runtime",
@@ -2420,7 +2420,7 @@
     "widget": "auto"
   },
   "phase01_match_radius_arcsec": {
-    "help": "Phase01 Match Radius Arcsec (detection parameter).",
+    "help": "Sky radius (arcsec) for matching detected stars to Gaia catalog entries.",
     "kind": "static",
     "label": "Phase01 Match Radius Arcsec",
     "owner": "config_runtime",
@@ -2434,7 +2434,7 @@
     "widget": "auto"
   },
   "phase01_plate_scale_arcsec_per_px": {
-    "help": "Phase01 Plate Scale Arcsec Per PX (detection parameter).",
+    "help": "Phase-1 plate scale; resolved from the WCS solution at run time. WAVE-B removed its config.json fallback - the resolver is authoritative.",
     "kind": "resolved",
     "label": "Phase01 Plate Scale Arcsec Per PX",
     "owner": "fits_dynamic",
@@ -2448,7 +2448,7 @@
     "widget": "auto"
   },
   "phase01_tiers": {
-    "help": "Phase-0/1 magnitude tiers: list of |dmag| bounds for candidate tiering. Merged from phase01_tier1..4_mag (WAVE-B STEP 4).",
+    "help": "Brightness-difference bounds (mag) of the candidate magnitude tiers, ascending. WAVE-B merged the phase01_tier{1..4}_mag scalars into this list.",
     "kind": "static",
     "label": "Phase01 Tiers",
     "owner": "config_runtime",
@@ -2459,7 +2459,7 @@
     "widget": "auto"
   },
   "phase01_use_bprp_primary": {
-    "help": "Phase01 Use BPRP Primary (comp_selection parameter).",
+    "help": "Uses Gaia BP-RP directly as the primary color criterion (instead of a computed B-V) - the grounded design choice of VYVAR.",
     "kind": "static",
     "label": "Phase01 Use BPRP Primary",
     "owner": "config_runtime",
@@ -2470,7 +2470,7 @@
     "widget": "auto"
   },
   "phase2a_airmass_before_outlier": {
-    "help": "Phase2a Airmass Before Outlier (photometry parameter).",
+    "help": "Order switch: apply the airmass detrend before (True) or after (False) outlier rejection in Phase 2A.",
     "kind": "static",
     "label": "Phase2a Airmass Before Outlier",
     "owner": "config_runtime",
@@ -2481,7 +2481,7 @@
     "widget": "auto"
   },
   "photometry_mode": {
-    "help": "Photometry Mode (photometry parameter).",
+    "help": "Which measurement families run: aperture, PSF, or both.",
     "kind": "static",
     "label": "Photometry Mode",
     "owner": "config_runtime",
@@ -2492,7 +2492,7 @@
     "widget": "auto"
   },
   "plate_scale_arcsec_per_px": {
-    "help": "Plate Scale Arcsec Per PX (detection parameter).",
+    "help": "Global plate scale (arcsec/px); resolved from the WCS at run time - the number that converts pixels to sky angles. WAVE-B removed its config.json fallback.",
     "kind": "resolved",
     "label": "Plate Scale Arcsec Per PX",
     "owner": "fits_dynamic",
@@ -2506,7 +2506,7 @@
     "widget": "auto"
   },
   "plate_solve_fov_deg": {
-    "help": "Plate Solve FOV Deg (detection parameter).",
+    "help": "Field-of-view estimate (degrees) fed to the plate solver; computed from frame size and optics.",
     "kind": "resolved",
     "label": "Plate Solve FOV Deg",
     "owner": "fits_dynamic",
@@ -2517,7 +2517,7 @@
     "widget": "auto"
   },
   "preprocess_sky_surface_order": {
-    "help": "Preprocess Sky Surface Order (qc parameter).",
+    "help": "Polynomial order of the flux-conserving sky-surface background model subtracted before photometry (2 = gentle 2D gradient removal; part of the draft_435 anchor).",
     "kind": "static",
     "label": "Preprocess Sky Surface Order",
     "owner": "config_runtime",
@@ -2531,7 +2531,7 @@
     "widget": "auto"
   },
   "project_root": {
-    "help": "Project Root (paths parameter).",
+    "help": "VYVAR installation root; derived from the code location, never edit.",
     "kind": "static",
     "label": "Project Root",
     "owner": "internal",
@@ -2542,7 +2542,7 @@
     "widget": "hidden"
   },
   "psf_adaptive_enabled": {
-    "help": "PSF Adaptive Enabled (photometry parameter).",
+    "help": "Adaptive per-star routing between PSF and aperture measurement (PSF program is OFF pending the Newton dense-field gate).",
     "kind": "static",
     "label": "PSF Adaptive Enabled",
     "owner": "config_runtime",
@@ -2553,7 +2553,7 @@
     "widget": "custom"
   },
   "psf_adaptive_resolve_fwhm": {
-    "help": "PSF Adaptive Resolve FWHM (photometry parameter).",
+    "help": "Separation (FWHM) below which the adaptive router prefers PSF for blended pairs.",
     "kind": "static",
     "label": "PSF Adaptive Resolve FWHM",
     "owner": "config_runtime",
@@ -2564,7 +2564,7 @@
     "widget": "custom"
   },
   "psf_adaptive_snr_lo": {
-    "help": "PSF Adaptive SNR Lo (photometry parameter).",
+    "help": "SNR below which the adaptive router prefers PSF measurement.",
     "kind": "static",
     "label": "PSF Adaptive SNR Lo",
     "owner": "config_runtime",
@@ -2575,7 +2575,7 @@
     "widget": "custom"
   },
   "psf_chi2_threshold": {
-    "help": "PSF Chi2 Threshold (photometry parameter).",
+    "help": "Chi-square limit of an acceptable PSF fit.",
     "kind": "static",
     "label": "PSF Chi2 Threshold",
     "owner": "config_runtime",
@@ -2586,7 +2586,7 @@
     "widget": "custom"
   },
   "psf_group_sep_fwhm": {
-    "help": "PSF Group Sep FWHM (photometry parameter).",
+    "help": "Separation (FWHM) within which stars are fitted together as a PSF group.",
     "kind": "static",
     "label": "PSF Group Sep FWHM",
     "owner": "config_runtime",
@@ -2597,7 +2597,7 @@
     "widget": "custom"
   },
   "psf_grouper_enabled": {
-    "help": "PSF Grouper Enabled (photometry parameter).",
+    "help": "Enables simultaneous group fitting of close stars in PSF photometry.",
     "kind": "static",
     "label": "PSF Grouper Enabled",
     "owner": "config_runtime",
@@ -2608,7 +2608,7 @@
     "widget": "custom"
   },
   "psf_neighbor_include_fwhm": {
-    "help": "PSF Neighbor Include FWHM (photometry parameter).",
+    "help": "Radius (FWHM) within which neighbours are included in a PSF fit.",
     "kind": "static",
     "label": "PSF Neighbor Include FWHM",
     "owner": "config_runtime",
@@ -2619,7 +2619,7 @@
     "widget": "custom"
   },
   "psf_neighbor_sub_enabled": {
-    "help": "PSF Neighbor Sub Enabled (photometry parameter).",
+    "help": "Enables PSF-model neighbour subtraction before aperture measurement of blended targets.",
     "kind": "static",
     "label": "PSF Neighbor Sub Enabled",
     "owner": "config_runtime",
@@ -2630,7 +2630,7 @@
     "widget": "custom"
   },
   "psf_photometry_enabled": {
-    "help": "PSF Photometry Enabled (photometry parameter).",
+    "help": "Master switch of PSF photometry (currently OFF; enablement gated on the Newton dense-field validation).",
     "kind": "static",
     "label": "PSF Photometry Enabled",
     "owner": "config_runtime",
@@ -2641,7 +2641,7 @@
     "widget": "custom"
   },
   "psf_quality_fallback_enabled": {
-    "help": "PSF Quality Fallback Enabled (photometry parameter).",
+    "help": "Falls back to the aperture measurement when a PSF fit fails quality checks.",
     "kind": "static",
     "label": "PSF Quality Fallback Enabled",
     "owner": "config_runtime",
@@ -2652,7 +2652,7 @@
     "widget": "custom"
   },
   "psf_spatial_enabled": {
-    "help": "PSF Spatial Enabled (photometry parameter).",
+    "help": "Enables spatially varying PSF models across the frame.",
     "kind": "static",
     "label": "PSF Spatial Enabled",
     "owner": "config_runtime",
@@ -2663,7 +2663,7 @@
     "widget": "custom"
   },
   "psf_spatial_grid": {
-    "help": "PSF Spatial Grid (photometry parameter).",
+    "help": "Grid of spatial PSF cells (e.g. 3x3).",
     "kind": "static",
     "label": "PSF Spatial Grid",
     "owner": "config_runtime",
@@ -2674,7 +2674,7 @@
     "widget": "custom"
   },
   "psf_spatial_min_stars_per_cell": {
-    "help": "PSF Spatial Min Stars Per Cell (photometry parameter).",
+    "help": "Minimum stars per cell to build a local PSF model.",
     "kind": "static",
     "label": "PSF Spatial Min Stars Per Cell",
     "owner": "config_runtime",
@@ -2685,7 +2685,7 @@
     "widget": "custom"
   },
   "psf_spatial_order": {
-    "help": "PSF Spatial Order (photometry parameter).",
+    "help": "Polynomial order of PSF spatial variation (0 = constant PSF).",
     "kind": "static",
     "label": "PSF Spatial Order",
     "owner": "config_runtime",
@@ -2699,7 +2699,7 @@
     "widget": "custom"
   },
   "pytics_enabled": {
-    "help": "PYTICS Enabled (photometry parameter).",
+    "help": "Enables the PyTICS-style iterative comparison calibration step of light-curve construction.",
     "kind": "static",
     "label": "PYTICS Enabled",
     "owner": "config_runtime",
@@ -2710,7 +2710,7 @@
     "widget": "custom"
   },
   "pytics_n_iter": {
-    "help": "PYTICS N Iter (photometry parameter).",
+    "help": "Iteration count of the PyTICS-style calibration.",
     "kind": "static",
     "label": "PYTICS N Iter",
     "owner": "config_runtime",
@@ -2724,7 +2724,7 @@
     "widget": "custom"
   },
   "qc_after_calibrate_enabled": {
-    "help": "QC After Calibrate Enabled (qc parameter).",
+    "help": "Runs the full QC pass right after calibration and stores per-frame quality metrics.",
     "kind": "static",
     "label": "QC After Calibrate Enabled",
     "owner": "config_runtime",
@@ -2735,7 +2735,7 @@
     "widget": "auto"
   },
   "qc_dao_detection_sigma": {
-    "help": "QC DAO Detection Sigma (qc parameter).",
+    "help": "Detection sensitivity (sigma above background) of the star finder used by QC to count stars per frame.",
     "kind": "static",
     "label": "QC DAO Detection Sigma",
     "owner": "config_runtime",
@@ -2746,7 +2746,7 @@
     "widget": "auto"
   },
   "qc_elong_limit": {
-    "help": "QC Elong Limit (qc parameter).",
+    "help": "Maximum acceptable star elongation; higher values indicate trailing (guiding/wind) and flag the frame.",
     "kind": "static",
     "label": "QC Elong Limit",
     "owner": "config_runtime",
@@ -2757,7 +2757,7 @@
     "widget": "auto"
   },
   "qc_fwhm_limit": {
-    "help": "QC FWHM Limit (qc parameter).",
+    "help": "Absolute upper FWHM limit (px) a frame may have before being flagged as too soft (used when auto-FWHM is off).",
     "kind": "static",
     "label": "QC FWHM Limit",
     "owner": "config_runtime",
@@ -2768,7 +2768,7 @@
     "widget": "auto"
   },
   "qc_max_background_rms": {
-    "help": "QC Max Background RMS (qc parameter).",
+    "help": "Optional cap on background noise RMS per frame; None disables the check.",
     "kind": "static",
     "label": "QC Max Background RMS",
     "owner": "config_runtime",
@@ -2779,7 +2779,7 @@
     "widget": "auto"
   },
   "qc_max_hfr": {
-    "help": "QC Max HFR (qc parameter).",
+    "help": "Maximum half-flux radius per frame - an alternative sharpness measure familiar from capture software.",
     "kind": "static",
     "label": "QC Max HFR",
     "owner": "config_runtime",
@@ -2790,7 +2790,7 @@
     "widget": "auto"
   },
   "qc_min_stars": {
-    "help": "QC Min Stars (qc parameter).",
+    "help": "Minimum number of detected stars a frame needs to be considered usable.",
     "kind": "static",
     "label": "QC Min Stars",
     "owner": "config_runtime",
@@ -2801,7 +2801,7 @@
     "widget": "auto"
   },
   "qc_preprocess_workers": {
-    "help": "QC Preprocess Workers (system parameter).",
+    "help": "Number of parallel preprocessing workers; computed from CPU/RAM at startup, overridable by the VYVAR_PARALLEL_WORKERS environment variable.",
     "kind": "resolved",
     "label": "QC Preprocess Workers",
     "owner": "internal",
@@ -2812,7 +2812,7 @@
     "widget": "hidden"
   },
   "read_noise": {
-    "help": "Read Noise (photometry parameter).",
+    "help": "Detector read noise (electrons) in the error model; resolved DB-first (equipment-intrinsic), then FITS. WAVE-B removed its config.json fallback.",
     "kind": "resolved",
     "label": "Read Noise",
     "owner": "fits_dynamic",
@@ -2823,7 +2823,7 @@
     "widget": "auto"
   },
   "saturate_limit_fraction": {
-    "help": "Saturate Limit Fraction (detection parameter).",
+    "help": "Fraction of the detector's saturation level above which a star is treated as saturated and excluded from photometry.",
     "kind": "static",
     "label": "Saturate Limit Fraction",
     "owner": "config_runtime",
@@ -2834,7 +2834,7 @@
     "widget": "auto"
   },
   "save_lightcurve_png": {
-    "help": "Save Lightcurve Png (photometry parameter).",
+    "help": "Also saves per-target light-curve PNG previews during the run.",
     "kind": "static",
     "label": "Save Lightcurve Png",
     "owner": "config_runtime",
@@ -2845,7 +2845,7 @@
     "widget": "auto"
   },
   "savgol_detrend_enabled": {
-    "help": "Savgol Detrend Enabled (photometry parameter).",
+    "help": "Optional Savitzky-Golay smoothing detrend; OFF by default for the same reason as other detrends.",
     "kind": "static",
     "label": "Savgol Detrend Enabled",
     "owner": "config_runtime",
@@ -2856,7 +2856,7 @@
     "widget": "custom"
   },
   "savgol_polyorder": {
-    "help": "Savgol Polyorder (photometry parameter).",
+    "help": "Polynomial order of the Savitzky-Golay filter.",
     "kind": "static",
     "label": "Savgol Polyorder",
     "owner": "config_runtime",
@@ -2867,7 +2867,7 @@
     "widget": "custom"
   },
   "savgol_window_frac": {
-    "help": "Savgol Window Frac (photometry parameter).",
+    "help": "Window width (fraction of the series) of the Savitzky-Golay filter.",
     "kind": "static",
     "label": "Savgol Window Frac",
     "owner": "config_runtime",
@@ -2878,7 +2878,7 @@
     "widget": "custom"
   },
   "sigma_sys_mag": {
-    "help": "Sigma Sys Mag (photometry parameter).",
+    "help": "Per-band systematic error floor (mag) added in quadrature to statistical errors (e.g. {'4': 0.018} for band 4).",
     "kind": "static",
     "label": "Sigma Sys Mag",
     "owner": "config_runtime",
@@ -2889,7 +2889,7 @@
     "widget": "auto"
   },
   "sips_dao_fwhm_px": {
-    "help": "Sips DAO FWHM PX (detection parameter).",
+    "help": "Assumed star FWHM (px) for the SIPS-style DAO detection preset.",
     "kind": "static",
     "label": "Sips DAO FWHM PX",
     "owner": "config_runtime",
@@ -2903,7 +2903,7 @@
     "widget": "custom"
   },
   "sips_dao_threshold_sigma": {
-    "help": "Sips DAO Threshold Sigma (detection parameter).",
+    "help": "Detection threshold (sigma) of the SIPS-style DAO preset.",
     "kind": "static",
     "label": "Sips DAO Threshold Sigma",
     "owner": "config_runtime",
@@ -2914,7 +2914,7 @@
     "widget": "custom"
   },
   "skip_processed_directory": {
-    "help": "Skip Processed Directory (system parameter).",
+    "help": "Skips drafts whose processed directory already exists (resume behavior).",
     "kind": "static",
     "label": "Skip Processed Directory",
     "owner": "config_runtime",
@@ -2925,7 +2925,7 @@
     "widget": "hidden"
   },
   "sparse_trust_T_green": {
-    "help": "Sparse Trust T Green (trust parameter).",
+    "help": "Check-star T-statistic bound for GREEN trust on sparse fields.",
     "kind": "static",
     "label": "Sparse Trust T Green",
     "owner": "config_runtime",
@@ -2936,7 +2936,7 @@
     "widget": "auto"
   },
   "sparse_trust_T_red": {
-    "help": "Sparse Trust T Red (trust parameter).",
+    "help": "Check-star T-statistic bound beyond which sparse-field trust turns RED.",
     "kind": "static",
     "label": "Sparse Trust T Red",
     "owner": "config_runtime",
@@ -2947,7 +2947,7 @@
     "widget": "auto"
   },
   "sparse_trust_X2_RED": {
-    "help": "Sparse Trust X2 RED (trust parameter).",
+    "help": "Excess-variance bound turning sparse-field trust RED.",
     "kind": "static",
     "label": "Sparse Trust X2 RED",
     "owner": "config_runtime",
@@ -2958,7 +2958,7 @@
     "widget": "auto"
   },
   "sysrem_enabled": {
-    "help": "SYSREM Enabled (photometry parameter).",
+    "help": "Optional SysRem systematics removal (Tamuz+ 2005); OFF by default - validated as risky for preserving real variability.",
     "kind": "static",
     "label": "SYSREM Enabled",
     "owner": "config_runtime",
@@ -2969,7 +2969,7 @@
     "widget": "custom"
   },
   "sysrem_n_iter": {
-    "help": "SYSREM N Iter (photometry parameter).",
+    "help": "Number of SysRem iterations when enabled.",
     "kind": "static",
     "label": "SYSREM N Iter",
     "owner": "config_runtime",
@@ -2980,7 +2980,7 @@
     "widget": "custom"
   },
   "temporal_bin_window": {
-    "help": "Temporal Bin Window (photometry parameter).",
+    "help": "Time-bin width for temporal binning (0 = none).",
     "kind": "static",
     "label": "Temporal Bin Window",
     "owner": "config_runtime",
@@ -2994,7 +2994,7 @@
     "widget": "custom"
   },
   "temporal_binning_enabled": {
-    "help": "Temporal Binning Enabled (photometry parameter).",
+    "help": "Temporal binning of light curves; OFF by design - injection testing proved it harmful (24/25 targets worse).",
     "kind": "static",
     "label": "Temporal Binning Enabled",
     "owner": "config_runtime",
@@ -3005,7 +3005,7 @@
     "widget": "custom"
   },
   "tess_enabled": {
-    "help": "TESS Enabled (export parameter).",
+    "help": "Enables the TESS cross-analysis block (comparing your light curve against TESS data).",
     "kind": "static",
     "label": "TESS Enabled",
     "owner": "config_runtime",
@@ -3016,7 +3016,7 @@
     "widget": "auto"
   },
   "trust_flag_enabled": {
-    "help": "Trust Flag Enabled (trust parameter).",
+    "help": "Master switch of the per-epoch trust flag written into results and exports.",
     "kind": "static",
     "label": "Trust Flag Enabled",
     "owner": "config_runtime",
@@ -3027,7 +3027,7 @@
     "widget": "auto"
   },
   "variability_clip_ratio_min": {
-    "help": "Variability Clip Ratio Min (detection parameter).",
+    "help": "Minimum surviving-points ratio after sigma clipping for a star to stay in variability analysis.",
     "kind": "static",
     "label": "Variability Clip Ratio Min",
     "owner": "config_runtime",
@@ -3038,7 +3038,7 @@
     "widget": "auto"
   },
   "variability_comp_floor_factor": {
-    "help": "Variability Comp Floor Factor (detection parameter).",
+    "help": "How many times above the comparison-star noise floor a star must scatter to count as variable.",
     "kind": "static",
     "label": "Variability Comp Floor Factor",
     "owner": "config_runtime",
@@ -3049,7 +3049,7 @@
     "widget": "auto"
   },
   "variability_mag_limit": {
-    "help": "Variability Mag Limit (detection parameter).",
+    "help": "Faint magnitude limit of the variability search.",
     "kind": "static",
     "label": "Variability Mag Limit",
     "owner": "config_runtime",
@@ -3060,7 +3060,7 @@
     "widget": "auto"
   },
   "variability_min_amplitude_mag": {
-    "help": "Variability Min Amplitude Mag (detection parameter).",
+    "help": "Minimum amplitude (mag) for a variability candidate.",
     "kind": "static",
     "label": "Variability Min Amplitude Mag",
     "owner": "config_runtime",
@@ -3071,7 +3071,7 @@
     "widget": "auto"
   },
   "variability_min_frames": {
-    "help": "Variability Min Frames (detection parameter).",
+    "help": "Minimum frames a star must appear on to be analysed for variability.",
     "kind": "static",
     "label": "Variability Min Frames",
     "owner": "config_runtime",
@@ -3082,7 +3082,7 @@
     "widget": "auto"
   },
   "variability_min_frames_frac": {
-    "help": "Variability Min Frames Frac (detection parameter).",
+    "help": "Minimum fraction of the night's frames a star must cover for variability analysis.",
     "kind": "static",
     "label": "Variability Min Frames Frac",
     "owner": "config_runtime",
@@ -3096,7 +3096,7 @@
     "widget": "auto"
   },
   "variability_min_points_rms": {
-    "help": "Variability Min Points RMS (detection parameter).",
+    "help": "Minimum points needed before an RMS-based variability statistic is computed.",
     "kind": "static",
     "label": "Variability Min Points RMS",
     "owner": "config_runtime",
@@ -3107,7 +3107,7 @@
     "widget": "auto"
   },
   "variability_min_rms_pct": {
-    "help": "Variability Min RMS Pct (detection parameter).",
+    "help": "Percentile floor of the RMS-vs-magnitude relation used to normalize variability scores.",
     "kind": "static",
     "label": "Variability Min RMS Pct",
     "owner": "config_runtime",
@@ -3118,7 +3118,7 @@
     "widget": "auto"
   },
   "variability_p85_filter": {
-    "help": "Variability P85 Filter (detection parameter).",
+    "help": "Percentile filter removing the noisiest tail before variability statistics.",
     "kind": "static",
     "label": "Variability P85 Filter",
     "owner": "config_runtime",
@@ -3129,7 +3129,7 @@
     "widget": "auto"
   },
   "variability_sigma_clip": {
-    "help": "Variability Sigma Clip (detection parameter).",
+    "help": "Sigma-clipping level applied to light curves before variability metrics.",
     "kind": "static",
     "label": "Variability Sigma Clip",
     "owner": "config_runtime",
@@ -3140,7 +3140,7 @@
     "widget": "auto"
   },
   "variability_sigma_threshold": {
-    "help": "Variability Sigma Threshold (detection parameter).",
+    "help": "Significance (sigma) a star's scatter must exceed to be flagged as a variability candidate.",
     "kind": "static",
     "label": "Variability Sigma Threshold",
     "owner": "config_runtime",
@@ -3151,7 +3151,7 @@
     "widget": "auto"
   },
   "variability_slope_floor": {
-    "help": "Variability Slope Floor (detection parameter).",
+    "help": "Minimum slope of the excess-scatter trend considered meaningful in candidate scoring.",
     "kind": "static",
     "label": "Variability Slope Floor",
     "owner": "config_runtime",
@@ -3162,7 +3162,7 @@
     "widget": "auto"
   },
   "variability_smoothness_max": {
-    "help": "Variability Smoothness Max (detection parameter).",
+    "help": "Maximum smoothness score - very smooth curves are more likely trends/artifacts than stellar variability.",
     "kind": "static",
     "label": "Variability Smoothness Max",
     "owner": "config_runtime",
@@ -3173,7 +3173,7 @@
     "widget": "auto"
   },
   "variability_vdi_z_threshold": {
-    "help": "Variability VDI Z Threshold (detection parameter).",
+    "help": "Z-score threshold of the variability detection index (VDI).",
     "kind": "static",
     "label": "Variability VDI Z Threshold",
     "owner": "config_runtime",
@@ -3184,7 +3184,7 @@
     "widget": "auto"
   },
   "verify_mag_limit": {
-    "help": "Verify Mag Limit (detection parameter).",
+    "help": "Faint limit of catalog stars used for blind-solve verification.",
     "kind": "static",
     "label": "Verify Mag Limit",
     "owner": "config_runtime",
@@ -3198,7 +3198,7 @@
     "widget": "auto"
   },
   "vsx_local_db_path": {
-    "help": "VSX Local Db Path (paths parameter).",
+    "help": "Path to the local AAVSO VSX database of known variable stars, used to identify variables in the field.",
     "kind": "static",
     "label": "VSX Local Db Path",
     "owner": "internal",
@@ -3209,7 +3209,7 @@
     "widget": "hidden"
   },
   "vsx_variable_targets_mag_limit": {
-    "help": "VSX Variable Targets Mag Limit (detection parameter).",
+    "help": "Faint limit for automatically adopting VSX-known variables in the field as measurement targets.",
     "kind": "static",
     "label": "VSX Variable Targets Mag Limit",
     "owner": "config_runtime",
