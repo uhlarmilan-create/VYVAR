@@ -1,4 +1,4 @@
-DEPS-SCOUT ó dependency landscape vs VYVAR (2026-07-18)
+DEPS-SCOUT ù dependency landscape vs VYVAR (2026-07-18)
 
 Author: Claude (web-research scout). Grounding: photutils changelog (readthedocs, fetched
 2026-07-18), astropy 8.0 changelog + PyPI, NumPy release info; VYVAR usage mapped by grep on
@@ -52,7 +52,7 @@ aperture_photometry + Circular{Aperture,Annulus} (photometry core); detect_sourc
 - Independent confidence: our own cross-validation (draft_310) ALREADY ran against photutils
   3.0.0 with Delta < 0.001 mag agreement.
 
-## photutils 3.1 (unreleased) ó watchlist
+## photutils 3.1 (unreleased) ù watchlist
 
 - Aperture photometry ~2-25x faster + thread-parallelizable (#2292); ApertureStats ~5-15x
   (#2314). Our per-frame aperture loops dominate the ~2000 s full run - material runtime
@@ -121,6 +121,24 @@ DAOStarFinder call sites in src_py/: pipeline.py (7145, 7414, 8146, 16382), vyva
 (246, 283), vyvar_platesolver.py (4822, 6174), plus utils.py / ui_dao_stars.py /
 wide_slope_noise_core.py.
 
-## CYCLE 1 execution log
+## CYCLE 1 execution log (2026-07-18)
 
-See the "CYCLE 1 result" section appended below after the numpy 2.4.4 in-range refresh + gates.
+Executed by Cursor. In-range refresh: numpy 2.4.3 -> 2.4.4 (pip install numpy==2.4.4;
+astropy 7.2.0 and photutils 2.3.0 held). Pin unchanged (numpy>=2.4,<3 already permits it).
+
+Gates at HEAD 30c803f:
+- pytest: 963 passed, 19 skipped (246.9 s) - identical to pre-upgrade baseline.
+- session_baseline_check.py --full: OVERALL PASS (2278 s pipeline).
+  - full-science-compare: n_lc=166 failures=0
+  - full-snapshot-sha-core:    3d26f4692ac81fc5... n=333
+  - full-photometry-sha-core:  3d26f4692ac81fc5... n=333  (matches)
+  - full-photometry-sha-extended: 6420f1daa53a0d5d... n=499
+  - counters: expected {"phase2a_empty_comp_drop": 1} (structural)
+  - Ledger anchor items auto-stamped commit=30c803f, last_verified=2026-07-18.
+
+Verdict: numpy 2.4.4 is BYTE-IDENTICAL vs anchor 435. Validated for production.
+
+Finding: the live pip index now offers numpy 2.5.1 (minor bump, still <3), not 2.4.4 as
+the scout table stated. CYCLE 1 was scoped to the 2.4.x patch, so 2.5.1 was NOT adopted
+here - it is a candidate for a future in-range cycle (still requires pytest + --full).
+astropy 8.0.1 / photutils 3.0.0 remain gated CYCLE 2 cross-major work.

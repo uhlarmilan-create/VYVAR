@@ -6,6 +6,33 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## Dependency policy + CYCLE 1 in-range refresh (numpy 2.4.4) (2026-07-18)
+
+**Context (DEPS-SCOUT / DEPS-POLICY).** Grounded in Claude's dependency-landscape
+scout (`dev/results/DEPS_SCOUT.md`), Cursor-verified against tree `d437bcd`.
+
+- **Policy adopted.** Upgrades are a gated ritual, not accidents. `docs/DEPS_POLICY.md`
+  is the reference: pin majors in `requirements.txt`; a candidate cycle is fresh env
+  -> `pytest` -> `session_baseline_check.py --full` (byte-identical anchor gate).
+  Byte-identical = free upgrade + (pin move if needed) + DECISIONS entry; a diff is a
+  documented finding (adopt-and-re-anchor, or hold and report upstream). Neither
+  outcome is a failure. `--fast` gains an **informational** `deps-outdated` line
+  (WARN/PASS/SKIP only, offline-tolerant, never blocks).
+- **CYCLE 1 result = byte-identical PASS.** numpy 2.4.3 -> 2.4.4 (in-range, within
+  the existing `numpy>=2.4,<3` pin, so no pin move). `pytest` 963 passed / 19 skipped;
+  `--full` vs anchor 435 PASS at HEAD `30c803f`: `full-science-compare` n_lc=166
+  failures=0, `full-photometry-sha-core` `3d26f4692ac81fc5...` (n=333), extended
+  `6420f1daa53a0d5d...` (n=499), pipeline 2278 s. Ledger anchor items auto-stamped
+  `commit=30c803f, last_verified=2026-07-18`. numpy 2.4.4 is validated for production.
+- **Finding for the next cycle.** The scout's table listed numpy latest as 2.4.4, but
+  the live index now offers **numpy 2.5.1** (a minor bump, still within `<3`). CYCLE 1
+  was scoped to the 2.4.x patch, so 2.5.1 was deliberately **not** adopted here; it is
+  a candidate for a future in-range cycle (minor bump -> still needs pytest + `--full`).
+  astropy 8.0.1 and photutils 3.0.0 remain gated cross-major work (CYCLE 2, after the
+  INSTALL/Lenovo arc).
+
+---
+
 ## License, repo visibility & distribution model (2026-07-18)
 
 **Milan decision (DOCS-FIX-ARC1).**
