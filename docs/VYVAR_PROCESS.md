@@ -29,8 +29,10 @@ for the full map.
   decisions, runbook, code map, schemas, calibration/validation, and `*_SPEC` /
   design / policy / rule docs). Historical audit outputs, one-off investigation
   writeups, and target- or draft-specific analyses are work results and belong in
-  `dev/results/`. `docs/` contains no subdirectories and no `CURSOR_*` files. The
-  `dev/tests/test_docs_layout.py` guard enforces this.
+  `dev/results/`. `docs/` contains no subdirectories and no `CURSOR_*` files. It is
+  Markdown-only, except for PDF guides (`*.pdf`) that a committed builder under
+  `dev/tools/docs_pdf/` regenerates (e.g. the CZ parameter handbook and install
+  guide). The `dev/tests/test_docs_layout.py` guard enforces this.
 
 ---
 
