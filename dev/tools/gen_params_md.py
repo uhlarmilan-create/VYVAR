@@ -93,6 +93,11 @@ def build_markdown(*, generated_at: str | None = None, git_head: str | None = No
         "Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` "
         "(per-parameter plain-language explanations, hand-authored)."
     )
+    lines.append(
+        "In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter "
+        "reasoning, ranges, math and literature; regenerate with "
+        "`python dev/tools/docs_pdf/build_parameter_handbook.py`)."
+    )
     lines.append("")
     lines.append(f"{VOLATILE_PREFIX}{generated_at} at git HEAD {git_head}._")
     lines.append("")

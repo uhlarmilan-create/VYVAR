@@ -6,10 +6,11 @@ idempotent - it is safe to re-run (a healthy `.venv` is reused, catalog files ar
 verified rather than recopied, and `config.json` is rewritten from its current
 contents).
 
-For a narrated, screenshot-by-screenshot walk-through in Czech, see
-`VYVAR_INSTALL_GUIDE_CZ.pdf`. For what every configuration key means, see
+For a narrated, step-by-step walk-through in Czech, see
+`docs/VYVAR_INSTALL_GUIDE_CZ.pdf`. For what every configuration key means, see
 `docs/VYVAR_CONFIG_GUIDE_EN.md` (English) or `docs/VYVAR_CONFIG_GUIDE_CZ.md`
-(Czech). For a project overview, see `README.md` / `README_CZ.md`.
+(Czech), or the in-depth `docs/VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech). For a
+project overview, see `README.md` / `README_CZ.md`.
 
 ## Prerequisites
 

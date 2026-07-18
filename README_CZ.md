@@ -221,6 +221,8 @@ python -m pytest
 | Pr?vodce konfigurací (anglicky) | `docs/VYVAR_CONFIG_GUIDE_EN.md` |
 | Pr?vodce konfigurací (?esky) | `docs/VYVAR_CONFIG_GUIDE_CZ.md` |
 | Všech 269 parametr? (reference) | `docs/VYVAR_PARAMS.md` |
+| Prirucka parametru (cesky, PDF) | `docs/VYVAR_PARAMETER_HANDBOOK_CZ.pdf` |
+| Instalacni a spousteci prirucka (cesky, PDF) | `docs/VYVAR_INSTALL_GUIDE_CZ.pdf` |
 | Manuál pipeline (?esky) | `docs/VYVAR_PIPELINE_CZ.md` |
 | Datový tok kalibrace magnitud (?esky) | `docs/VYVAR_CALIBRATION.md` |
 | Provozní runbook | `docs/VYVAR_RUNBOOK.md` |

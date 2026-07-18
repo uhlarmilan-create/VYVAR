@@ -4,8 +4,9 @@
 Regenerate with `python tools/gen_params_md.py`. Hand edits will be overwritten.
 Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fields(AppConfig)` (defaults and types, from code).
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
+In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-07-18T12:37:16Z at git HEAD df93984._
+_Generated 2026-07-18T19:47:22Z at git HEAD aa0f6cf._
 
 ## Summary
 
