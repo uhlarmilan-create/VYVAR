@@ -6,6 +6,25 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## License, repo visibility & distribution model (2026-07-18)
+
+**Milan decision (DOCS-FIX-ARC1).**
+
+- **License = proprietary, all rights reserved.** VYVAR ships under a short
+  proprietary `LICENSE` at the repo root: Copyright (c) 2026 Milan Uhlár; no use,
+  copying, modification, or distribution without prior written permission; no
+  warranty. The `README.md` / `README_CZ.md` license sections match this text.
+  Rationale: VYVAR is not (yet) an open-source release; keep all rights with the
+  author until a deliberate licensing decision is made.
+- **Repository visibility = private** (already applied on the remote). The GitHub
+  front-door README is written for eventual public reading, but the repo stays
+  private for now.
+- **Compiled-library distribution = deferred (recorded, not adopted).** The idea of
+  shipping VYVAR as a compiled/obfuscated library instead of source was considered
+  and explicitly parked; revisit only if/when a distribution need arises.
+
+---
+
 ## WAVE-B-PARAM-REDUCTION — cut/merge/wire the 304-key surface to 269 (2026-07-18)
 
 **Milan sign-off (post PARAM-BUDGET-AUDIT).** Acting on the audit dispositions in
