@@ -38,23 +38,32 @@ from pathlib import Path
 _GAIA_DR3_DIR = Path(__file__).resolve().parent
 
 
-def _find_vyvar_root(start: Path) -> Path:
-    """Walk upward from *start* until a directory contains ``gaia_catalog_id.py``."""
+def _find_vyvar_root(start: Path) -> tuple[Path, Path]:
+    """Walk upward from *start* to locate ``gaia_catalog_id.py``.
+
+    Post REPO-REORG (2026-07) the VYVAR modules live under ``src_py/``. Return
+    ``(repo_root, module_dir)`` where *module_dir* is the directory that actually
+    holds ``gaia_catalog_id.py`` (``<root>/src_py`` on the current layout, or the
+    root itself on the legacy flat layout).
+    """
     here = start.resolve()
     for candidate in (here, *here.parents):
+        if (candidate / "src_py" / "gaia_catalog_id.py").is_file():
+            return candidate, candidate / "src_py"
         if (candidate / "gaia_catalog_id.py").is_file():
-            return candidate
+            return candidate, candidate
     raise SystemExit(
-        "build_gaia_catalog.py needs gaia_catalog_id.py from the VYVAR repo. "
-        "Run this script from inside your VYVAR clone "
+        "build_gaia_catalog.py needs gaia_catalog_id.py from the VYVAR repo "
+        "(src_py/gaia_catalog_id.py). Run this script from inside your VYVAR clone "
         "(e.g. `python GAIA_DR3/build_gaia_catalog.py --out <path>`), "
         "and use --out to write the DB anywhere you like."
     )
 
 
-_VYVAR_ROOT = _find_vyvar_root(_GAIA_DR3_DIR)
-if str(_VYVAR_ROOT) not in sys.path:
-    sys.path.insert(0, str(_VYVAR_ROOT))
+_VYVAR_ROOT, _VYVAR_SRC = _find_vyvar_root(_GAIA_DR3_DIR)
+for _p in (_VYVAR_SRC, _VYVAR_ROOT):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 import pandas as pd
 from astroquery.gaia import Gaia
