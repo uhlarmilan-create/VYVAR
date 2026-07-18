@@ -169,6 +169,22 @@ def test_help_is_nonempty_ascii_and_not_placeholder() -> None:
     assert not stale, f"registry entries still using placeholder help: {sorted(stale)}"
 
 
+def test_phase_help_covers_every_phase_ascii() -> None:
+    # CONFIG-HUMAN-EDIT STEP 3: the __meta__.phase_help block backs the config.json section
+    # comments. Every pipeline phase must have a non-empty ASCII one-liner.
+    ph = pr.load_phase_help()
+    missing = [p for p in pr.PHASES if not str(ph.get(p, "")).strip()]
+    assert not missing, f"phases with no phase_help: {missing}"
+    non_ascii = [p for p, v in ph.items() if isinstance(v, str) and not v.isascii()]
+    assert not non_ascii, f"phase_help with non-ASCII text: {non_ascii}"
+
+
+def test_meta_block_excluded_from_registry_view() -> None:
+    # load_registry must strip reserved __-prefixed keys so parity with fields holds.
+    reg = pr.load_registry()
+    assert not any(k.startswith("__") for k in reg), "reserved meta keys leaked into registry view"
+
+
 def test_basic_tier_keys_are_auto_widgets() -> None:
     # Basic-tier params must be renderable by the generated dashboard.
     reg = _registry()

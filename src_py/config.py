@@ -12,6 +12,7 @@ import logging
 import math
 import os
 import sqlite3
+import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -209,6 +210,139 @@ def ui_config_persist() -> Iterator[None]:
         _CONFIG_PERSIST_ALLOWED = prev
 
 
+# CONFIG-HUMAN-EDIT STEP 3: config.json is written as a grouped, commented, JSONC-lite
+# document so a user can edit it in a text editor without the UI. Sections follow pipeline
+# order; within a section keys are ordered basic -> advanced -> expert then alphabetically.
+_CONFIG_SECTION_ORDER = (
+    "observer", "calibration", "qc", "alignment", "detection", "photometry",
+    "comp_selection", "trust", "extinction", "reports", "export", "system", "paths",
+)
+_CONFIG_SECTION_TITLES = {
+    "observer": "Observer & export identity",
+    "calibration": "Calibration",
+    "qc": "Frame quality control (QC)",
+    "alignment": "Alignment",
+    "detection": "Detection, plate solving & masterstar",
+    "photometry": "Photometry",
+    "comp_selection": "Comparison-star selection",
+    "trust": "Trust & quality flags",
+    "extinction": "Atmospheric extinction & color",
+    "reports": "Reports & HRD",
+    "export": "Export",
+    "system": "System & performance",
+    "paths": "File & catalog paths",
+}
+_CONFIG_TIER_ORDER = {"basic": 0, "advanced": 1, "expert": 2}
+_CONFIG_COMMENT_WIDTH = 78
+
+
+def _config_header_lines() -> list[str]:
+    """The file-header comment block explaining the static/dynamic model + how to edit."""
+    para = [
+        "VYVAR config.json -- pipeline settings, safe to edit in a text editor.",
+        "",
+        "This file holds ONLY user-tunable pipeline settings. Two other kinds of values "
+        "live elsewhere and are NOT in this file:",
+        "  - Static observatory facts (site coordinates, telescope, camera, catalogs) live "
+        "in the DATABASE and are managed in the app (Settings -> Observatory).",
+        "  - Dynamic per-run values (gain, read noise, frame size, plate scale, filter, "
+        "exposure) are read from the FITS headers at run time and appear in the report's "
+        "Resolved Facts section.",
+        "",
+        "Editing without the UI: '//' line comments are allowed (they are ignored on load). "
+        "Trailing commas and block comments are NOT allowed. Unknown keys are ignored with "
+        "a warning that suggests the closest real key. After editing, validate with:",
+        "    python dev/scripts/validate_config.py",
+        "Full explanations of every key: docs/VYVAR_CONFIG_GUIDE_EN.md (English) and "
+        "docs/VYVAR_CONFIG_GUIDE_CZ.md (Czech).",
+        "",
+        "NOTE: saving from the UI regenerates this file, its grouping and its comments from "
+        "the parameter registry -- any custom comments you add here are not preserved.",
+    ]
+    bar = "// " + "=" * (_CONFIG_COMMENT_WIDTH - 3)
+    lines = [bar]
+    for p in para:
+        if p == "":
+            lines.append("//")
+            continue
+        for w in textwrap.wrap(p, width=_CONFIG_COMMENT_WIDTH - 3):
+            lines.append("// " + w)
+    lines.append(bar)
+    return lines
+
+
+def _comment_block(text: str, indent: str) -> list[str]:
+    prefix = indent + "// "
+    avail = max(20, _CONFIG_COMMENT_WIDTH - len(prefix))
+    return [prefix + w for w in (textwrap.wrap(text, width=avail) or [""])]
+
+
+def render_config_jsonc(data: dict[str, Any]) -> str:
+    """Render ``data`` as the canonical grouped + commented config.json (JSONC-lite).
+
+    Deterministic: file header, then sections in pipeline order each opened by a group
+    comment, keys ordered basic->advanced->expert then alphabetical, every key preceded by
+    its one-line registry help. Values are emitted verbatim (json) so a save->load round
+    trip is value-preserving. Keys not in the registry go to a trailing 'Other' section so
+    the writer never drops data.
+    """
+    try:
+        import params_registry as _pr  # lazy: params_registry imports config at module load
+
+        registry = _pr.load_registry()
+        phase_help = _pr.load_phase_help()
+    except Exception:  # noqa: BLE001 -- writer must never fail on registry issues
+        registry = {}
+        phase_help = {}
+
+    by_phase: dict[str, list[str]] = {}
+    other: list[str] = []
+    for key in data:
+        entry = registry.get(key)
+        phase = entry.get("phase") if entry else None
+        if phase in _CONFIG_SECTION_ORDER:
+            by_phase.setdefault(phase, []).append(key)
+        else:
+            other.append(key)
+
+    sections: list[tuple[str, str, list[str]]] = []
+    for phase in _CONFIG_SECTION_ORDER:
+        keys = by_phase.get(phase)
+        if not keys:
+            continue
+        keys_sorted = sorted(
+            keys,
+            key=lambda k: (_CONFIG_TIER_ORDER.get((registry.get(k) or {}).get("tier"), 1), k),
+        )
+        sections.append((_CONFIG_SECTION_TITLES[phase], phase_help.get(phase, ""), keys_sorted))
+    if other:
+        sections.append(("Other", "", sorted(other)))
+
+    total_keys = sum(len(keys) for _, _, keys in sections)
+    lines: list[str] = list(_config_header_lines())
+    lines.append("{")
+    indent = "  "
+    idx = 0
+    for si, (title, ph, keys) in enumerate(sections):
+        if si > 0:
+            lines.append("")
+        lines.append(f"{indent}// === {title} ===")
+        if ph:
+            lines.extend(_comment_block(ph, indent))
+        for key in keys:
+            entry = registry.get(key)
+            help_txt = (entry or {}).get("help") if entry else ""
+            if help_txt:
+                lines.extend(_comment_block(help_txt, indent))
+            idx += 1
+            comma = "," if idx < total_keys else ""
+            key_str = json.dumps(key, ensure_ascii=False)
+            val_str = json.dumps(data[key], ensure_ascii=False)
+            lines.append(f"{indent}{key_str}: {val_str}{comma}")
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
 def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
     if not _CONFIG_PERSIST_ALLOWED:
         raise ConfigPersistError(
@@ -217,7 +351,7 @@ def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
             "must not write config.json; run-effective values belong in provenance."
         )
     path = config_json_path(project_root)
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    path.write_text(render_config_jsonc(data), encoding="utf-8")
 
 
 def recommended_vyvar_parallel_workers(*, reserve_ram_gb: float = 1.5) -> int:

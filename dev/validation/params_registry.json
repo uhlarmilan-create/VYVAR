@@ -1,4 +1,21 @@
 {
+  "__meta__": {
+    "phase_help": {
+      "alignment": "Registering all frames of a series onto a common pixel grid so each star keeps the same coordinates throughout the night.",
+      "calibration": "Removing the camera signature from raw frames with master darks and flats, plus sanity gates that catch a wrong or stale master.",
+      "comp_selection": "Choosing the ensemble of constant stars for differential photometry: color, brightness, distance, stability, isolation and coverage. Several limits adapt to field density.",
+      "detection": "Finding stars, solving sky coordinates (including the blind solver), building the masterstar catalog, matching Gaia, and classifying field density and variability.",
+      "export": "Output for the outside world: AAVSO/VarAstro submission and TESS cross-analysis.",
+      "extinction": "Correcting for the atmosphere: second-order extinction (k2) that depends on star color and airmass, and optional color-term handling.",
+      "observer": "Who observed and from where: AAVSO identity and observing-site coordinates. Observatory facts; the database LOCATION table is the source of truth.",
+      "paths": "Where VYVAR finds its data on disk: star catalogs, plate-solve indexes, the archive and the calibration library. Machine-specific plumbing - set once, then forget.",
+      "photometry": "Measuring star brightness: aperture sizing, sky annulus, error model, aperture correction, optional PSF photometry and detrending. The heart of the pipeline.",
+      "qc": "Automatic per-frame checks (sharpness, elongation, background, star counts) and optional gates that drop bad frames, plus the sky-surface preprocess.",
+      "reports": "What appears in the PDF summary report: the color HR diagram of the field, optional online enrichment (SIMBAD, Gaia), and its visual tuning.",
+      "system": "Machine-level behavior: parallel workers and RAM reserves. Computed from your hardware; override only when you must.",
+      "trust": "How VYVAR grades its own results: GREEN/YELLOW/RED trust of the comparison ensemble and check star, minimum epochs and frames, and light-curve quality thresholds."
+    }
+  },
   "aavso_filter_map": {
     "help": "Optional mapping of your local filter names to official AAVSO filter codes used in exports (e.g. 'NoFilter' -> 'CV').",
     "kind": "static",

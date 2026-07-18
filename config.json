@@ -1,273 +1,740 @@
+// ===========================================================================
+// VYVAR config.json -- pipeline settings, safe to edit in a text editor.
+//
+// This file holds ONLY user-tunable pipeline settings. Two other kinds of
+// values live elsewhere and are NOT in this file:
+//   - Static observatory facts (site coordinates, telescope, camera,
+// catalogs) live in the DATABASE and are managed in the app (Settings ->
+// Observatory).
+//   - Dynamic per-run values (gain, read noise, frame size, plate scale,
+// filter, exposure) are read from the FITS headers at run time and appear in
+// the report's Resolved Facts section.
+//
+// Editing without the UI: '//' line comments are allowed (they are ignored on
+// load). Trailing commas and block comments are NOT allowed. Unknown keys are
+// ignored with a warning that suggests the closest real key. After editing,
+// validate with:
+//     python dev/scripts/validate_config.py
+// Full explanations of every key: docs/VYVAR_CONFIG_GUIDE_EN.md (English) and
+// docs/VYVAR_CONFIG_GUIDE_CZ.md (Czech).
+//
+// NOTE: saving from the UI regenerates this file, its grouping and its
+// comments from the parameter registry -- any custom comments you add here
+// are not preserved.
+// ===========================================================================
 {
-  "archive_root": "C:\\ASTRO\\python\\VYVAR\\Archive",
-  "calibration_library_root": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary",
-  "database_path": "C:\\ASTRO\\python\\VYVAR\\vyvar.sqlite3",
-  "masterdark_validity_days": 90,
-  "masterflat_validity_days": 200,
-  "calibration_library_native_binning": 1,
-  "calibration_master_ccd_temp_tolerance_c": 0.5,
-  "cal_diag_gate_enabled": true,
-  "cal_diag_autocorrect_enabled": true,
-  "cal_diag_rel_tol": 0.02,
-  "cal_diag_hard_sigma": 5.0,
-  "cal_diag_sat_warn_frac": 0.9,
-  "gaia_db_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3.db",
-  "hrd_online_enrich_enabled": true,
-  "hrd_simbad_enrich_enabled": true,
-  "hrd_enrich_max_candidates": 20,
-  "hrd_enrich_tap_timeout_s": 20.0,
-  "hrd_parallax_min_mas": 0.15,
-  "hrd_parallax_snr_min": 5.0,
-  "hrd_max_per_category": 3,
-  "hrd_min_per_net": 4,
-  "hrd_nss_category_enabled": false,
-  "hrd_dsc_confirm_prob": 0.9,
-  "hrd_color_field_enabled": true,
-  "hrd_color_saturation": 0.85,
-  "hrd_color_highlight_mode": "soft",
-  "hrd_color_chroma_snr": 3.0,
-  "hrd_color_white_point": "field_median",
-  "hrd_color_chroma_boost": 2.2,
-  "hrd_color_bg_box_px": 96,
-  "blind_index_fine_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\gaia_triangles_fine.pkl",
-  "blind_index_wide_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\gaia_triangles_wide.pkl",
-  "blind_index_select_mode": "auto",
-  "blind_verify_enabled": true,
-  "blind_verify_top_n": 15,
-  "blind_verify_match_tol_px": 2.5,
-  "blind_verify_min_matches": 12,
-  "blind_verify_min_fraction": 0.15,
-  "blind_verify_inmemory_catalog": true,
-  "verify_mag_limit": 14.0,
-  "blind_verify_early_accept": 30,
-  "blind_verify_early_floor": 0,
-  "blind_verify_early_fraction": 0.2,
-  "blind_img_star_budget": 80,
-  "blind_img_select_mode": "per_cell",
-  "blind_use_rig_prior": true,
-  "debug_platesolver": false,
-  "vsx_local_db_path": "C:\\ASTRO\\python\\VYVAR\\VSX\\vyvar_vsx_local_v2.db",
-  "vsx_variable_targets_mag_limit": 14.5,
-  "exoplanet_local_db_path": "exoplanets/vyvar_exoplanet_local.db",
-  "exoplanet_match_max_sep_arcsec": 3.0,
-  "catalog_query_max_rows": 15000,
-  "per_frame_mp_reserve_ram_gb": 1.5,
-  "alignment_max_stars": 160,
-  "alignment_max_control_points": 80,
-  "alignment_detection_sigma": 5.0,
-  "qc_dao_detection_sigma": 5.0,
-  "sips_dao_fwhm_px": 2.5,
-  "sips_dao_threshold_sigma": 3.5,
-  "qc_after_calibrate_enabled": true,
-  "dao_qc_in_calibrate": true,
-  "qc_max_hfr": 5.0,
-  "qc_min_stars": 10,
-  "qc_max_background_rms": null,
-  "auto_fwhm_enabled": true,
-  "auto_fwhm_k_factor": 1.5,
-  "auto_fwhm_k_min": 1.0,
-  "auto_fwhm_k_max": 4.0,
-  "frame_quality_gate_enabled": false,
-  "frame_quality_ratio_k": 5.0,
-  "frame_quality_fwhm_factor": 1.0,
-  "frame_quality_min_keep_frames": 10,
-  "frame_align_residual_gate_enabled": false,
-  "frame_align_residual_max_frac": 0.25,
-  "frame_align_residual_min_keep_frames": 10,
-  "aperture_photometry_enabled": true,
-  "save_lightcurve_png": false,
-  "phase2a_airmass_before_outlier": false,
-  "sysrem_enabled": false,
-  "comp_qa_enabled": true,
-  "trust_flag_enabled": true,
-  "lc_quality_min_frames": 20,
-  "lc_quality_short_min_frames": 3,
-  "lc_quality_min_normal_frac": 0.5,
-  "comp_trust_min_comps": 3,
-  "check_star_min_epochs": 5,
-  "sparse_trust_T_green": 1.5,
-  "sparse_trust_T_red": 4.0,
-  "sparse_trust_X2_RED": 0.0004,
-  "check_select_rms_floor": 0.0001,
-  "comp_select_rms_floor": 1e-06,
-  "sysrem_n_iter": 3,
-  "observer_name": "Milan Uhlar",
-  "observer_code": "UMIA",
+  // === Observer & export identity ===
+  // Who observed and from where: AAVSO identity and observing-site
+  // coordinates. Observatory facts; the database LOCATION table is the source
+  // of truth.
+  // Your official AAVSO observer code (UMIA); stamped into every AAVSO
+  // submission so the observation is credited to you.
   "aavso_observer_code": "UMIA",
-  "aavso_filter_map": {},
+  // Short observer identifier printed in reports and exports (separate from
+  // the AAVSO code).
+  "observer_code": "UMIA",
+  // Database ID of the currently selected observing site (LOCATION table
+  // row). This id stays in config.json and drives the hydration of the
+  // coordinates.
   "observer_location_id": 2,
-  "psf_photometry_enabled": false,
-  "psf_spatial_order": 0,
-  "psf_chi2_threshold": 50.0,
-  "psf_grouper_enabled": false,
-  "psf_group_sep_fwhm": 1.5,
-  "psf_neighbor_include_fwhm": 3.0,
-  "psf_neighbor_sub_enabled": false,
-  "neighbor_sub_chi2_max": 120.0,
-  "neighbor_sub_residual_rms_max": 150.0,
-  "neighbor_sub_refuse_sep_fwhm": 0.8,
-  "neighbor_sub_centroid_max_fwhm": 1.0,
-  "neighbor_sub_nn_contam_dmag": 2.5,
-  "neighbor_sub_max_neighbor_overmag": 0.3,
-  "neighbor_sub_max_target_undermag": 0.2,
-  "neighbor_sub_min_recovered_snr": 5.0,
-  "neighbor_sub_regime_dmag_min": 2.5,
-  "neighbor_sub_regime_sep_max": 1.1,
-  "psf_spatial_enabled": false,
-  "psf_spatial_grid": "3x3",
-  "psf_spatial_min_stars_per_cell": 25,
-  "psf_quality_fallback_enabled": true,
-  "psf_adaptive_enabled": false,
-  "psf_adaptive_resolve_fwhm": 2.0,
-  "psf_adaptive_snr_lo": 15.0,
-  "skip_processed_directory": false,
-  "preprocess_sky_surface_order": 2,
-  "qc_fwhm_limit": 8.0,
-  "qc_elong_limit": 1.8,
-  "epsf_min_stars": 30,
-  "photometry_mode": "both",
-  "aperture_fwhm_factor": 1.9,
-  "aperture_snr_sizing": {
-    "small": 1.5,
-    "large": 4.0
-  },
-  "aperture_variable_factor": 1.0,
-  "aperture_comp_factor": 1.1,
-  "aperture_correction_enabled": true,
-  "aperture_correction_min_ref_stars": 3,
-  "aperture_correction_max_contamination": 0.15,
-  "aperture_correction_max_scatter_mag": 0.03,
-  "cog_aperture_correction_enabled": false,
-  "cog_ref_fwhm": 4.5,
-  "cog_min_stars": 8,
-  "cog_isolation_fwhm": 6.0,
-  "cog_snr_min": 50.0,
-  "cog_sat_frac": 0.85,
-  "cog_ladder_step_px": 0.5,
-  "cog_ac_factor_max": 5.0,
-  "err_background_mode": "empirical",
-  "err_empty_apertures_n": 64,
-  "err_empty_apertures_min": 16,
-  "masterstar_best_of_n": 10,
-  "phase01_comparison_max_psf_chi2": 50.0,
-  "phase01_comparison_max_fwhm_factor": 1.5,
-  "phase01_comparison_isolation_radius_px": 25.0,
-  "phase01_comparison_rms_outlier_sigma": 3.0,
-  "annulus_inner_fwhm": 4.75,
-  "annulus_outer_fwhm": 9.0,
-  "nonlinearity_peak_percentile": 20.0,
-  "nonlinearity_fwhm_ratio": 1.25,
+  // Full observer name printed in reports.
+  "observer_name": "Milan Uhlar",
+  // Optional mapping of your local filter names to official AAVSO filter
+  // codes used in exports (e.g. 'NoFilter' -> 'CV').
+  "aavso_filter_map": {},
+
+  // === Calibration ===
+  // Removing the camera signature from raw frames with master darks and
+  // flats, plus sanity gates that catch a wrong or stale master.
+  // How many days a master dark stays valid; older masters trigger a warning
+  // to shoot new darks (currently ~21.7. deadline).
+  "masterdark_validity_days": 90,
+  // How many days a master flat stays valid before VYVAR asks for a fresh
+  // one.
+  "masterflat_validity_days": 200,
+  // Master switch of the calibration diagnostic gate: sanity-checks the sky
+  // level after dark subtraction and fails closed on nonsense.
+  "cal_diag_gate_enabled": true,
+  // Binning in which the calibration library masters were built; masters get
+  // resampled (with provenance flag) when a draft uses another binning.
+  "calibration_library_native_binning": 1,
+  // Sensitivity of bad-pixel detection on the master dark: pixels deviating
+  // more than this many robust sigmas are mapped as defective.
   "bpm_dark_mad_sigma": 5.0,
-  "masterstar_platesolve_sip_max_order": 4,
-  "masterstar_platesolve_sip_min_order": 3,
-  "masterstar_dao_threshold_sigma": 2.1,
-  "masterstar_prematch_peak_sigma_floor": 1.8,
+  // Lets the calibration diagnostic auto-correct a detected master-dark
+  // convention mismatch (e.g. SUM vs MEAN stacking) instead of aborting.
+  "cal_diag_autocorrect_enabled": true,
+  // Hard limit (in sigmas) of the post-calibration sky sanity check; beyond
+  // it the frame set is rejected.
+  "cal_diag_hard_sigma": 5.0,
+  // Relative tolerance of the pre-subtraction dark-vs-frame level cross-check
+  // (2% by default).
+  "cal_diag_rel_tol": 0.02,
+  // Fraction of the saturation limit at which the diagnostic starts warning
+  // about a too-bright master or frame.
+  "cal_diag_sat_warn_frac": 0.9,
+  // Maximum allowed CCD temperature difference (deg C) between a master dark
+  // and the light frames it calibrates.
+  "calibration_master_ccd_temp_tolerance_c": 0.5,
+  // Runs the star-detection based QC directly during calibration so bad
+  // frames are flagged as early as possible.
+  "dao_qc_in_calibrate": true,
+
+  // === Frame quality control (QC) ===
+  // Automatic per-frame checks (sharpness, elongation, background, star
+  // counts) and optional gates that drop bad frames, plus the sky-surface
+  // preprocess.
+  // Runs the full QC pass right after calibration and stores per-frame
+  // quality metrics.
+  "qc_after_calibrate_enabled": true,
+  // Automatically derives the frame-quality FWHM limit from the night's own
+  // seeing statistics instead of a fixed number.
+  "auto_fwhm_enabled": true,
+  // Multiplier applied to the night's median FWHM when deriving the automatic
+  // quality limit.
+  "auto_fwhm_k_factor": 1.5,
+  // Upper clamp of the automatic FWHM limit multiplier.
+  "auto_fwhm_k_max": 4.0,
+  // Lower clamp of the automatic FWHM limit multiplier.
+  "auto_fwhm_k_min": 1.0,
+  // Maximum half-flux radius per frame - an alternative sharpness measure
+  // familiar from capture software.
+  "qc_max_hfr": 5.0,
+  // Minimum number of detected stars a frame needs to be considered usable.
+  "qc_min_stars": 10,
+  // Optional gate dropping frames whose alignment residuals are unusually
+  // large (poorly registered frames).
+  "frame_align_residual_gate_enabled": false,
+  // Maximum fraction of frames the alignment-residual gate may drop; protects
+  // against discarding the night.
+  "frame_align_residual_max_frac": 0.25,
+  // Minimum number of frames that must survive the alignment-residual gate.
+  "frame_align_residual_min_keep_frames": 10,
+  // Scaling of the FWHM threshold used by the frame-quality gate.
+  "frame_quality_fwhm_factor": 1.0,
+  // Optional gate excluding frames of clearly worse sharpness than the
+  // night's typical seeing.
+  "frame_quality_gate_enabled": false,
+  // Minimum number of frames that must survive the frame-quality gate.
+  "frame_quality_min_keep_frames": 10,
+  // How many times worse than the typical frame a frame must be before the
+  // quality gate drops it.
+  "frame_quality_ratio_k": 5.0,
+  // Polynomial order of the flux-conserving sky-surface background model
+  // subtracted before photometry (2 = gentle 2D gradient removal; part of the
+  // draft_435 anchor).
+  "preprocess_sky_surface_order": 2,
+  // Detection sensitivity (sigma above background) of the star finder used by
+  // QC to count stars per frame.
+  "qc_dao_detection_sigma": 5.0,
+  // Maximum acceptable star elongation; higher values indicate trailing
+  // (guiding/wind) and flag the frame.
+  "qc_elong_limit": 1.8,
+  // Absolute upper FWHM limit (px) a frame may have before being flagged as
+  // too soft (used when auto-FWHM is off).
+  "qc_fwhm_limit": 8.0,
+  // Optional cap on background noise RMS per frame; None disables the check.
+  "qc_max_background_rms": null,
+
+  // === Alignment ===
+  // Registering all frames of a series onto a common pixel grid so each star
+  // keeps the same coordinates throughout the night.
+  // Detection sensitivity of the star finder used to pick alignment control
+  // stars.
+  "alignment_detection_sigma": 5.0,
+  // Cap on stars considered by the alignment matcher.
+  "alignment_max_stars": 160,
+  // Maximum number of control points the aligner may use per frame; more is
+  // robuster but slower.
+  "alignment_max_control_points": 80,
+
+  // === Detection, plate solving & masterstar ===
+  // Finding stars, solving sky coordinates (including the blind solver),
+  // building the masterstar catalog, matching Gaia, and classifying field
+  // density and variability.
+  // Minimum fraction of catalog stars the masterstar must recover for the
+  // solution to be trusted.
   "masterstar_catalog_recovery_min": 0.65,
-  "masterstar_min_matched_floor": 40,
+  // Maximum RMS (px) of star positions near the frame centre for an
+  // acceptable astrometric solution.
   "masterstar_centre_rms_max_px": 1.2,
+  // Primary DAO detection threshold (sigma) on the masterstar; lower finds
+  // fainter stars but more noise.
+  "masterstar_dao_threshold_sigma": 2.1,
+  // Limit on the edge-to-centre distortion ratio still considered benign for
+  // the optics.
   "masterstar_distortion_benign_ratio_max": 3.2,
-  "masterstar_accept_mode": "odds",
-  "masterstar_quality_crowded_n_cat_min": 800,
-  "masterstar_detection_cap_adaptive": true,
-  "masterstar_detection_cap_min": 250,
-  "masterstar_detection_cap_max": 800,
-  "masterstar_detection_cap_k": 0.08,
-  "masterstar_sibling_recovery_enabled": true,
+  // Absolute floor of matched stars a masterstar solution must reach.
+  "masterstar_min_matched_floor": 40,
+  // Highest SIP distortion polynomial order the solver may fit.
+  "masterstar_platesolve_sip_max_order": 4,
+  // Lowest SIP distortion order tried by the solver.
+  "masterstar_platesolve_sip_min_order": 3,
+  // Minimum peak significance of stars used in the pre-match stage.
+  "masterstar_prematch_peak_sigma_floor": 1.8,
+  // Minimum matches a sibling (recovery) solution needs.
   "masterstar_sibling_min_matched": 40,
-  "masterstar_sibling_rms_max_px": 2.0,
+  // Quadrant coverage required from a sibling solution.
   "masterstar_sibling_min_quadrants": 3,
+  // Enables the sibling-stack recovery path when the primary masterstar solve
+  // fails.
+  "masterstar_sibling_recovery_enabled": true,
+  // RMS limit for accepting a sibling recovery solution.
+  "masterstar_sibling_rms_max_px": 2.0,
+  // How many frames the sibling recovery stack combines.
   "masterstar_sibling_stack_n": 10,
-  "phase01_comparison_max_dist_deg": 1.5,
-  "phase01_comparison_max_mag_diff": 1.5,
-  "phase01_comparison_mag_bright_threshold": 12.75,
-  "phase01_comparison_max_mag_diff_bright_floor": 1.5,
-  "phase01_comparison_max_mag_diff_absolute": 3.0,
-  "comp_max_delta_bprp": 0.79,
-  "comp_color_tiers": [
-    {
-      "bprp": 0.15,
-      "w": 1.0
-    },
-    {
-      "bprp": 0.3,
-      "w": 0.85
-    },
-    {
-      "bprp": 0.55,
-      "w": 0.5
-    },
-    {
-      "bprp": 1.1,
-      "w": 0.25
-    }
-  ],
-  "comp_contamination_penalty_k": 3.0,
-  "phase01_comparison_n_comp_min": 3,
-  "phase01_comparison_n_comp_max": 8,
-  "phase01_comparison_max_comp_rms": 0.1,
-  "phase01_comparison_min_dist_arcsec": 60.0,
-  "phase01_comparison_min_frames_frac": 0.2,
-  "phase01_comparison_exclude_gaia_nss": true,
-  "phase01_comparison_exclude_gaia_extobj": true,
-  "phase01_use_bprp_primary": true,
-  "phase01_ct_min_comp": 7,
-  "apply_color_term": "off",
-  "k2_mode": "literature",
-  "k2_defaults_bprp": {},
-  "sigma_sys_mag": {
-    "4": 0.018
-  },
-  "k2_ceiling": 0.1,
-  "k2_fit_enabled": false,
-  "k2_fit_min_detectability": 3.0,
-  "k2_fit_consistency_sigma": 2.0,
-  "k2_fit_lit_factor": 4.0,
-  "phase01_ct_extrapolation_tol": 0.0,
-  "phase01_flux_col": "dao_flux",
-  "temporal_binning_enabled": false,
-  "temporal_bin_window": 0,
-  "savgol_detrend_enabled": false,
-  "savgol_window_frac": 0.5,
-  "savgol_polyorder": 2,
-  "democratic_detrend_enabled": false,
-  "democratic_sg_window_frac": 0.5,
-  "pytics_enabled": true,
-  "pytics_n_iter": 5,
-  "comp_max_slope_mmag_hr": 5.0,
-  "comp_slope_significance_k": 3.0,
-  "comp_sparse_fallback_enabled": true,
-  "comp_sparse_fallback_min": 0,
-  "comp_iterative_clip_enabled": true,
-  "comp_clip_sigma": 5.0,
-  "gs11_dilution_enabled": false,
-  "gs11_dilution_aperture_arcsec": 0.0,
-  "gs11_dilution_mag_limit_delta": 5.0,
-  "gs11_comp_max_dilution": 0.9,
-  "gs11_comp_suspect_dilution": 0.98,
-  "gs11_target_min_dilution": 0.5,
+  // Margin (px) from the chip edge inside which stars are excluded from
+  // comparison selection (edge effects).
   "phase01_chip_interior_margin_px": 50,
-  "phase01_match_radius_arcsec": 10.0,
-  "variability_min_frames": 30,
-  "variability_min_frames_frac": 0.5,
-  "variability_sigma_clip": 5.0,
-  "variability_p85_filter": 85,
-  "variability_slope_floor": 0.02,
-  "variability_sigma_threshold": 2.3,
-  "variability_comp_floor_factor": 1.5,
-  "variability_smoothness_max": 0.8,
-  "variability_mag_limit": 14.5,
-  "variability_min_rms_pct": 1.5,
-  "variability_min_amplitude_mag": 0.01,
-  "variability_clip_ratio_min": 0.8,
-  "variability_vdi_z_threshold": 3.0,
-  "variability_min_points_rms": 20,
-  "tess_enabled": false,
-  "field_density_sparse_threshold": 300.0,
-  "field_density_dense_threshold": 1000.0,
-  "field_density_adaptive_enabled": true,
-  "crowding_classifier_enabled": false,
+  // Assumed star FWHM (px) for the SIPS-style DAO detection preset.
+  "sips_dao_fwhm_px": 2.5,
+  // Detection threshold (sigma) of the SIPS-style DAO preset.
+  "sips_dao_threshold_sigma": 3.5,
+  // Faint limit for automatically adopting VSX-known variables in the field
+  // as measurement targets.
+  "vsx_variable_targets_mag_limit": 14.5,
+  // Strategy for picking which detected stars feed the blind solver
+  // ('per_cell' spreads them evenly across the frame).
+  "blind_img_select_mode": "per_cell",
+  // Maximum number of image stars handed to the blind solver; a budget keeps
+  // solving fast.
+  "blind_img_star_budget": 80,
+  // Uses the known rig plate scale as a prior to reject implausible blind-
+  // solve candidates early.
+  "blind_use_rig_prior": true,
+  // Number of verified star matches at which the blind solver stops early and
+  // accepts the solution.
+  "blind_verify_early_accept": 30,
+  // Minimum matches required before early acceptance may trigger at all.
+  "blind_verify_early_floor": 0,
+  // Fraction of catalog stars that must match for early acceptance.
+  "blind_verify_early_fraction": 0.2,
+  // Verifies every blind-solve candidate against the Gaia catalog before
+  // trusting it - the safety net of blind solving.
+  "blind_verify_enabled": true,
+  // Keeps the verification catalog in memory for speed instead of re-querying
+  // the database.
+  "blind_verify_inmemory_catalog": true,
+  // Pixel tolerance when matching image stars to catalog positions during
+  // verification.
+  "blind_verify_match_tol_px": 2.5,
+  // Minimum fraction of stars that must match for a blind solution to pass
+  // verification.
+  "blind_verify_min_fraction": 0.15,
+  // Absolute minimum of matched stars for a verified blind solution.
+  "blind_verify_min_matches": 12,
+  // How many best blind candidates get the full verification treatment.
+  "blind_verify_top_n": 15,
+  // Cap on rows returned by a single Gaia catalog query; protects memory on
+  // very dense fields.
+  "catalog_query_max_rows": 15000,
+  // Blend-fraction level above which the (experimental) crowding classifier
+  // would tighten comparison criteria.
   "crowding_blend_tighten_threshold": 0.04,
+  // Experimental crowding classifier switch; OFF pending validation on Newton
+  // dense-field data.
+  "crowding_classifier_enabled": false,
+  // Comparison-star availability level treated as plentiful when the crowding
+  // logic decides about loosening.
   "crowding_comp_availability_loosen_count": 500.0,
+  // Minimum FWHM (px) below which crowding-driven tightening is not applied
+  // (undersampled images).
   "crowding_tighten_min_fwhm_px": 3.0,
-  "global_comp_pool_enabled": true
+  // Verbose diagnostic logging of the plate solver; for troubleshooting only.
+  "debug_platesolver": false,
+  // Minimum suitable stars required to build an empirical PSF model (ePSF)
+  // for PSF photometry.
+  "epsf_min_stars": 30,
+  // Maximum sky separation (arcsec) for identifying a detected star with a
+  // known exoplanet host.
+  "exoplanet_match_max_sep_arcsec": 3.0,
+  // Master switch of density adaptation: sparse/normal/dense field profiles
+  // automatically loosen or tighten comparison-star criteria.
+  "field_density_adaptive_enabled": true,
+  // Matched-star count above which the field is treated as dense (tighter
+  // criteria).
+  "field_density_dense_threshold": 1000.0,
+  // Matched-star count below which the field is treated as sparse (looser
+  // criteria so an ensemble can still be formed).
+  "field_density_sparse_threshold": 300.0,
+  // Acceptance strategy of the masterstar plate solution ('odds' =
+  // statistical odds-ratio test).
+  "masterstar_accept_mode": "odds",
+  // How many best frames are stacked/considered when building the masterstar
+  // reference.
+  "masterstar_best_of_n": 10,
+  // Adapts the detection cap to field density instead of a fixed count.
+  "masterstar_detection_cap_adaptive": true,
+  // Scaling constant of the adaptive detection cap.
+  "masterstar_detection_cap_k": 0.08,
+  // Upper clamp of the adaptive detection cap.
+  "masterstar_detection_cap_max": 800,
+  // Lower clamp of the adaptive detection cap.
+  "masterstar_detection_cap_min": 250,
+  // Catalog-star count above which the masterstar quality checks switch to
+  // crowded-field mode.
+  "masterstar_quality_crowded_n_cat_min": 800,
+  // Sky radius (arcsec) for matching detected stars to Gaia catalog entries.
+  "phase01_match_radius_arcsec": 10.0,
+  // Minimum surviving-points ratio after sigma clipping for a star to stay in
+  // variability analysis.
+  "variability_clip_ratio_min": 0.8,
+  // How many times above the comparison-star noise floor a star must scatter
+  // to count as variable.
+  "variability_comp_floor_factor": 1.5,
+  // Faint magnitude limit of the variability search.
+  "variability_mag_limit": 14.5,
+  // Minimum amplitude (mag) for a variability candidate.
+  "variability_min_amplitude_mag": 0.01,
+  // Minimum frames a star must appear on to be analysed for variability.
+  "variability_min_frames": 30,
+  // Minimum fraction of the night's frames a star must cover for variability
+  // analysis.
+  "variability_min_frames_frac": 0.5,
+  // Minimum points needed before an RMS-based variability statistic is
+  // computed.
+  "variability_min_points_rms": 20,
+  // Percentile floor of the RMS-vs-magnitude relation used to normalize
+  // variability scores.
+  "variability_min_rms_pct": 1.5,
+  // Percentile filter removing the noisiest tail before variability
+  // statistics.
+  "variability_p85_filter": 85,
+  // Sigma-clipping level applied to light curves before variability metrics.
+  "variability_sigma_clip": 5.0,
+  // Significance (sigma) a star's scatter must exceed to be flagged as a
+  // variability candidate.
+  "variability_sigma_threshold": 2.3,
+  // Minimum slope of the excess-scatter trend considered meaningful in
+  // candidate scoring.
+  "variability_slope_floor": 0.02,
+  // Maximum smoothness score - very smooth curves are more likely
+  // trends/artifacts than stellar variability.
+  "variability_smoothness_max": 0.8,
+  // Z-score threshold of the variability detection index (VDI).
+  "variability_vdi_z_threshold": 3.0,
+  // Faint limit of catalog stars used for blind-solve verification.
+  "verify_mag_limit": 14.0,
+
+  // === Photometry ===
+  // Measuring star brightness: aperture sizing, sky annulus, error model,
+  // aperture correction, optional PSF photometry and detrending. The heart of
+  // the pipeline.
+  // Which measurement families run: aperture, PSF, or both.
+  "photometry_mode": "both",
+  // Inner radius of the sky annulus in FWHM units; density adaptation may
+  // tighten it on dense fields.
+  "annulus_inner_fwhm": 4.75,
+  // Outer radius of the sky annulus in FWHM units.
+  "annulus_outer_fwhm": 9.0,
+  // Aperture size multiplier applied to comparison stars.
+  "aperture_comp_factor": 1.1,
+  // Base aperture radius in FWHM units; the SNR-optimal sizing sweep may
+  // adapt the effective radius per star.
+  "aperture_fwhm_factor": 1.9,
+  // Master switch of aperture photometry - the production measurement method
+  // of VYVAR.
+  "aperture_photometry_enabled": true,
+  // Aperture size multiplier applied to the variable (target) star.
+  "aperture_variable_factor": 1.0,
+  // Optional 'democratic' detrend of the light curve (median trend of the
+  // field); OFF by default - detrending can eat real variability.
+  "democratic_detrend_enabled": false,
+  // FWHM ratio threshold of the detector nonlinearity diagnostic (bright
+  // stars growing fatter than faint ones).
+  "nonlinearity_fwhm_ratio": 1.25,
+  // Peak-brightness percentile at which the nonlinearity diagnostic samples
+  // star shapes.
+  "nonlinearity_peak_percentile": 20.0,
+  // Chi-square limit of an acceptable PSF fit.
+  "psf_chi2_threshold": 50.0,
+  // Master switch of PSF photometry (currently OFF; enablement gated on the
+  // Newton dense-field validation).
+  "psf_photometry_enabled": false,
+  // Enables the PyTICS-style iterative comparison calibration step of light-
+  // curve construction.
+  "pytics_enabled": true,
+  // Also saves per-target light-curve PNG previews during the run.
+  "save_lightcurve_png": false,
+  // Optional Savitzky-Golay smoothing detrend; OFF by default for the same
+  // reason as other detrends.
+  "savgol_detrend_enabled": false,
+  // Temporal binning of light curves; OFF by design - injection testing
+  // proved it harmful (24/25 targets worse).
+  "temporal_binning_enabled": false,
+  // Enables aperture correction: transferring flux measured in a small
+  // aperture to the total-flux scale using bright reference stars.
+  "aperture_correction_enabled": true,
+  // Maximum neighbour contamination a reference star may have to be used for
+  // aperture correction.
+  "aperture_correction_max_contamination": 0.15,
+  // Maximum scatter (mag) allowed among aperture-correction reference stars.
+  "aperture_correction_max_scatter_mag": 0.03,
+  // Minimum reference stars required to compute an aperture correction.
+  "aperture_correction_min_ref_stars": 3,
+  // SNR-optimal aperture sizing sweep bounds as FWHM multiples: 'small' is
+  // the minimum radius (best for faint stars), 'large' the maximum. WAVE-B
+  // merged the former aperture_fwhm_factor_small/_large scalars into this
+  // mapping (there is no medium class).
+  "aperture_snr_sizing": {"small": 1.5, "large": 4.0},
+  // Upper clamp of the curve-of-growth aperture-correction factor.
+  "cog_ac_factor_max": 5.0,
+  // Enables the curve-of-growth variant of aperture correction (experimental
+  // alternative).
+  "cog_aperture_correction_enabled": false,
+  // Isolation radius (FWHM) a star needs to serve as a curve-of-growth
+  // reference.
+  "cog_isolation_fwhm": 6.0,
+  // Radius step (px) of the curve-of-growth aperture ladder.
+  "cog_ladder_step_px": 0.5,
+  // Minimum stars needed to fit a curve of growth.
+  "cog_min_stars": 8,
+  // Reference FWHM used to normalize the curve of growth.
+  "cog_ref_fwhm": 4.5,
+  // Saturation-fraction cutoff for curve-of-growth reference stars.
+  "cog_sat_frac": 0.85,
+  // Minimum SNR of a curve-of-growth reference star.
+  "cog_snr_min": 50.0,
+  // Window width (fraction of the night) of the democratic detrend smoother.
+  "democratic_sg_window_frac": 0.5,
+  // How the background-noise term of the error model is estimated
+  // ('empirical' = measured from empty apertures on the frame).
+  "err_background_mode": "empirical",
+  // Minimum empty apertures required for a valid empirical background
+  // estimate.
+  "err_empty_apertures_min": 16,
+  // How many empty apertures are placed per frame for the empirical
+  // background noise measurement.
+  "err_empty_apertures_n": 64,
+  // Maximum dilution (flux contamination) a comparison star may have under
+  // the GS11 dilution model.
+  "gs11_comp_max_dilution": 0.9,
+  // Dilution level at which a comparison star is marked suspect.
+  "gs11_comp_suspect_dilution": 0.98,
+  // Aperture (arcsec) used when computing catalog-based dilution; 0 derives
+  // it from the photometric aperture.
+  "gs11_dilution_aperture_arcsec": 0.0,
+  // Enables catalog-based dilution estimation (how much neighbour light leaks
+  // into apertures).
+  "gs11_dilution_enabled": false,
+  // How many magnitudes fainter than the star the dilution census still
+  // counts neighbours.
+  "gs11_dilution_mag_limit_delta": 5.0,
+  // Minimum acceptable target dilution before the target is flagged as badly
+  // blended.
+  "gs11_target_min_dilution": 0.5,
+  // Maximum centroid shift (FWHM) allowed after neighbour subtraction.
+  "neighbor_sub_centroid_max_fwhm": 1.0,
+  // Chi-square cap of the neighbour-model fit.
+  "neighbor_sub_chi2_max": 120.0,
+  // Guard: the fitted neighbour must not come out brighter than expected by
+  // more than this (mag).
+  "neighbor_sub_max_neighbor_overmag": 0.3,
+  // Guard: the target must not lose more than this (mag) by the subtraction.
+  "neighbor_sub_max_target_undermag": 0.2,
+  // Minimum SNR the target must retain after neighbour subtraction.
+  "neighbor_sub_min_recovered_snr": 5.0,
+  // Brightness difference within which a nearest neighbour counts as
+  // contaminating.
+  "neighbor_sub_nn_contam_dmag": 2.5,
+  // Below this separation (FWHM) subtraction is refused - the pair is too
+  // blended to fix.
+  "neighbor_sub_refuse_sep_fwhm": 0.8,
+  // Brightness-difference bound defining the regime where neighbour
+  // subtraction applies.
+  "neighbor_sub_regime_dmag_min": 2.5,
+  // Separation bound (FWHM) of the neighbour-subtraction regime.
+  "neighbor_sub_regime_sep_max": 1.1,
+  // Residual RMS cap after subtraction for the result to be accepted.
+  "neighbor_sub_residual_rms_max": 150.0,
+  // Order switch: apply the airmass detrend before (True) or after (False)
+  // outlier rejection in Phase 2A.
+  "phase2a_airmass_before_outlier": false,
+  // Adaptive per-star routing between PSF and aperture measurement (PSF
+  // program is OFF pending the Newton dense-field gate).
+  "psf_adaptive_enabled": false,
+  // Separation (FWHM) below which the adaptive router prefers PSF for blended
+  // pairs.
+  "psf_adaptive_resolve_fwhm": 2.0,
+  // SNR below which the adaptive router prefers PSF measurement.
+  "psf_adaptive_snr_lo": 15.0,
+  // Separation (FWHM) within which stars are fitted together as a PSF group.
+  "psf_group_sep_fwhm": 1.5,
+  // Enables simultaneous group fitting of close stars in PSF photometry.
+  "psf_grouper_enabled": false,
+  // Radius (FWHM) within which neighbours are included in a PSF fit.
+  "psf_neighbor_include_fwhm": 3.0,
+  // Enables PSF-model neighbour subtraction before aperture measurement of
+  // blended targets.
+  "psf_neighbor_sub_enabled": false,
+  // Falls back to the aperture measurement when a PSF fit fails quality
+  // checks.
+  "psf_quality_fallback_enabled": true,
+  // Enables spatially varying PSF models across the frame.
+  "psf_spatial_enabled": false,
+  // Grid of spatial PSF cells (e.g. 3x3).
+  "psf_spatial_grid": "3x3",
+  // Minimum stars per cell to build a local PSF model.
+  "psf_spatial_min_stars_per_cell": 25,
+  // Polynomial order of PSF spatial variation (0 = constant PSF).
+  "psf_spatial_order": 0,
+  // Iteration count of the PyTICS-style calibration.
+  "pytics_n_iter": 5,
+  // Polynomial order of the Savitzky-Golay filter.
+  "savgol_polyorder": 2,
+  // Window width (fraction of the series) of the Savitzky-Golay filter.
+  "savgol_window_frac": 0.5,
+  // Per-band systematic error floor (mag) added in quadrature to statistical
+  // errors (e.g. {'4': 0.018} for band 4).
+  "sigma_sys_mag": {"4": 0.018},
+  // Optional SysRem systematics removal (Tamuz+ 2005); OFF by default -
+  // validated as risky for preserving real variability.
+  "sysrem_enabled": false,
+  // Number of SysRem iterations when enabled.
+  "sysrem_n_iter": 3,
+  // Time-bin width for temporal binning (0 = none).
+  "temporal_bin_window": 0,
+
+  // === Comparison-star selection ===
+  // Choosing the ensemble of constant stars for differential photometry:
+  // color, brightness, distance, stability, isolation and coverage. Several
+  // limits adapt to field density.
+  // Sigma-clipping level applied to comparison-star series before ensemble
+  // statistics.
+  "comp_clip_sigma": 5.0,
+  // Ordered color-match tiers for comparison weighting. Each entry is a BP-RP
+  // color-match limit ('bprp', tighter = better color match) and the ensemble
+  // weight ('w') for stars in that tier. WAVE-B merged the eight
+  // comp_tier{1..4}_bprp_limit / _weight scalars into this list of dicts.
+  "comp_color_tiers": [{"bprp": 0.15, "w": 1.0}, {"bprp": 0.3, "w": 0.85}, {"bprp": 0.55, "w": 0.5}, {"bprp": 1.1, "w": 0.25}],
+  // Iterative re-clipping of the comparison ensemble (drop-and-reweigh loop);
+  // ON in production since the Brno fix of 2026-06-14.
+  "comp_iterative_clip_enabled": true,
+  // Maximum Gaia BP-RP color difference between a comparison star and the
+  // target - the primary defense against extinction systematics on unfiltered
+  // data; density adaptation adjusts it.
+  "comp_max_delta_bprp": 0.79,
+  // Statistical significance required before a comparison star's trend counts
+  // as real drift.
+  "comp_slope_significance_k": 3.0,
+  // Allows the sparse-field fallback path when strict criteria yield too few
+  // comparisons.
+  "comp_sparse_fallback_enabled": true,
+  // Minimum comparisons the sparse fallback aims for (0 = take what exists).
+  "comp_sparse_fallback_min": 0,
+  // Excludes Gaia-flagged extended objects (galaxies) from comparison
+  // candidates.
+  "phase01_comparison_exclude_gaia_extobj": true,
+  // Excludes Gaia non-single-star (binary) sources from comparison
+  // candidates.
+  "phase01_comparison_exclude_gaia_nss": true,
+  // Brightness above which the stricter bright-star mag-difference floor
+  // applies.
+  "phase01_comparison_mag_bright_threshold": 12.75,
+  // Maximum night RMS of a comparison-star series; density adaptation may
+  // tighten it.
+  "phase01_comparison_max_comp_rms": 0.1,
+  // Maximum sky distance (deg) of a comparison from the target; density
+  // adaptation adds to the FOV-derived base.
+  "phase01_comparison_max_dist_deg": 1.5,
+  // Base maximum brightness difference (mag) between comparison and target;
+  // adapted by density profile.
+  "phase01_comparison_max_mag_diff": 1.5,
+  // Hard ceiling of the brightness difference no adaptation may exceed.
+  "phase01_comparison_max_mag_diff_absolute": 3.0,
+  // Mag-difference floor applied to bright stars regardless of adaptation.
+  "phase01_comparison_max_mag_diff_bright_floor": 1.5,
+  // Minimum distance (arcsec) between comparison and target to avoid mutual
+  // contamination; density-adapted.
+  "phase01_comparison_min_dist_arcsec": 60.0,
+  // Minimum fraction of frames a comparison must be measured on.
+  "phase01_comparison_min_frames_frac": 0.2,
+  // Maximum ensemble size; literature shows scintillation gains saturate
+  // around 6-8 comparisons.
+  "phase01_comparison_n_comp_max": 8,
+  // Minimum comparisons the selector aims for; density adaptation may lower
+  // it on sparse fields.
+  "phase01_comparison_n_comp_min": 3,
+  // Weight penalty strength for contaminated comparison stars in ensemble
+  // weighting.
+  "comp_contamination_penalty_k": 3.0,
+  // Maximum linear trend (mmag/hour) a comparison star may show before being
+  // rejected as drifting.
+  "comp_max_slope_mmag_hr": 5.0,
+  // Numerical floor of comparison RMS in weighting (prevents division blow-
+  // ups).
+  "comp_select_rms_floor": 1e-06,
+  // Builds one field-wide comparison pool reused across targets instead of
+  // fully per-target pools.
+  "global_comp_pool_enabled": true,
+  // Isolation radius (px): a comparison must have no bright neighbour inside
+  // it.
+  "phase01_comparison_isolation_radius_px": 25.0,
+  // Maximum FWHM ratio vs the field median a comparison may have (rejects
+  // defocused/blended shapes).
+  "phase01_comparison_max_fwhm_factor": 1.5,
+  // Maximum PSF-fit chi-square of a comparison star (shape sanity).
+  "phase01_comparison_max_psf_chi2": 50.0,
+  // Sigma level for flagging a comparison as an RMS outlier vs its brightness
+  // bin.
+  "phase01_comparison_rms_outlier_sigma": 3.0,
+  // Allowed color-range extrapolation of the color-term relation (0 = no
+  // extrapolation).
+  "phase01_ct_extrapolation_tol": 0.0,
+  // Minimum comparisons required to fit a color-term relation.
+  "phase01_ct_min_comp": 7,
+  // Which flux column feeds Phase-1 comparison statistics (dao_flux =
+  // detection-stage flux).
+  "phase01_flux_col": "dao_flux",
+  // Uses Gaia BP-RP directly as the primary color criterion (instead of a
+  // computed B-V) - the grounded design choice of VYVAR.
+  "phase01_use_bprp_primary": true,
+
+  // === Trust & quality flags ===
+  // How VYVAR grades its own results: GREEN/YELLOW/RED trust of the
+  // comparison ensemble and check star, minimum epochs and frames, and light-
+  // curve quality thresholds.
+  // Minimum epochs the check star must cover for its quality verdict to
+  // count.
+  "check_star_min_epochs": 5,
+  // GREEN trust threshold of ensemble size (default 5 per literature;
+  // production runs 3 with sigma scaled by N - see DECISIONS). Fewer comps
+  // degrade to YELLOW, not RED.
+  "comp_trust_min_comps": 3,
+  // Minimum frames for a full-quality light-curve verdict.
+  "lc_quality_min_frames": 20,
+  // Minimum fraction of normal (unflagged) points a light curve needs.
+  "lc_quality_min_normal_frac": 0.5,
+  // Frame floor of the short-baseline quality track for brief series.
+  "lc_quality_short_min_frames": 3,
+  // RMS floor in check-star selection scoring.
+  "check_select_rms_floor": 0.0001,
+  // Per-epoch quality assessment of the comparison ensemble feeding the trust
+  // verdict.
+  "comp_qa_enabled": true,
+  // Check-star T-statistic bound for GREEN trust on sparse fields.
+  "sparse_trust_T_green": 1.5,
+  // Check-star T-statistic bound beyond which sparse-field trust turns RED.
+  "sparse_trust_T_red": 4.0,
+  // Excess-variance bound turning sparse-field trust RED.
+  "sparse_trust_X2_RED": 0.0004,
+  // Master switch of the per-epoch trust flag written into results and
+  // exports.
+  "trust_flag_enabled": true,
+
+  // === Atmospheric extinction & color ===
+  // Correcting for the atmosphere: second-order extinction (k2) that depends
+  // on star color and airmass, and optional color-term handling.
+  // Source of k2: 'literature' (defaults) or fitted per night when the fit
+  // program is enabled.
+  "k2_mode": "literature",
+  // Whether a color-term transformation is applied to magnitudes ('off' keeps
+  // instrumental system).
+  "apply_color_term": "off",
+  // Upper cap of the fitted second-order extinction coefficient k2 (mag per
+  // airmass per color unit).
+  "k2_ceiling": 0.1,
+  // Per-band literature defaults of k2 keyed by BP-RP, used when fitting is
+  // off or fails.
+  "k2_defaults_bprp": {},
+  // Consistency requirement (sigma) between the fitted k2 and expectations
+  // before the fit is trusted.
+  "k2_fit_consistency_sigma": 2.0,
+  // Enables per-night fitting of the second-order extinction coefficient (v2
+  // NIGHT_FIT; OFF until validated).
+  "k2_fit_enabled": false,
+  // Allowed multiple of the literature k2 value; fits outside it are rejected
+  // as unphysical.
+  "k2_fit_lit_factor": 4.0,
+  // Minimum detectability (signal strength) the night must offer for a k2 fit
+  // to be attempted.
+  "k2_fit_min_detectability": 3.0,
+
+  // === Reports & HRD ===
+  // What appears in the PDF summary report: the color HR diagram of the
+  // field, optional online enrichment (SIMBAD, Gaia), and its visual tuning.
+  // Background sampling box (px) for star colors in the color HR diagram.
+  "hrd_color_bg_box_px": 96,
+  // Chroma amplification of the HRD star colors for visual clarity.
+  "hrd_color_chroma_boost": 2.2,
+  // Minimum color SNR before a star gets a saturated color in the HRD.
+  "hrd_color_chroma_snr": 3.0,
+  // Renders the color HR diagram of the observed field in the report.
+  "hrd_color_field_enabled": true,
+  // Highlight style of interesting objects in the HRD ('soft' = gentle
+  // emphasis).
+  "hrd_color_highlight_mode": "soft",
+  // Base color saturation of HRD points.
+  "hrd_color_saturation": 0.85,
+  // White-point reference of HRD colors ('field_median' balances to the
+  // field's median color).
+  "hrd_color_white_point": "field_median",
+  // Probability threshold for confirming a candidate's HRD-based
+  // classification.
+  "hrd_dsc_confirm_prob": 0.9,
+  // Cap on objects sent to online enrichment services per report.
+  "hrd_enrich_max_candidates": 20,
+  // Timeout (s) of TAP queries during online enrichment.
+  "hrd_enrich_tap_timeout_s": 20.0,
+  // Maximum highlighted objects per category in the HRD legend.
+  "hrd_max_per_category": 3,
+  // Minimum objects kept per detection net when trimming HRD highlights.
+  "hrd_min_per_net": 4,
+  // Adds the Gaia non-single-star category to HRD highlights.
+  "hrd_nss_category_enabled": false,
+  // Online enrichment of interesting HRD objects from Gaia archive services.
+  "hrd_online_enrich_enabled": true,
+  // Minimum parallax (mas) for placing a star in the absolute-magnitude HRD.
+  "hrd_parallax_min_mas": 0.15,
+  // Minimum parallax SNR for a trustworthy HRD position.
+  "hrd_parallax_snr_min": 5.0,
+  // SIMBAD lookups for object types of HRD highlights.
+  "hrd_simbad_enrich_enabled": true,
+
+  // === Export ===
+  // Output for the outside world: AAVSO/VarAstro submission and TESS cross-
+  // analysis.
+  // Enables the TESS cross-analysis block (comparing your light curve against
+  // TESS data).
+  "tess_enabled": false,
+
+  // === System & performance ===
+  // Machine-level behavior: parallel workers and RAM reserves. Computed from
+  // your hardware; override only when you must.
+  // RAM (GB) kept free per worker when sizing per-frame parallelism.
+  "per_frame_mp_reserve_ram_gb": 1.5,
+  // Skips drafts whose processed directory already exists (resume behavior).
+  "skip_processed_directory": false,
+
+  // === File & catalog paths ===
+  // Where VYVAR finds its data on disk: star catalogs, plate-solve indexes,
+  // the archive and the calibration library. Machine-specific plumbing - set
+  // once, then forget.
+  // Root folder of the observation archive (raw and processed drafts).
+  // Resolved per machine at startup.
+  "archive_root": "C:\\ASTRO\\python\\VYVAR\\Archive",
+  // Path to the fine-scale astrometric index used by the blind plate solver
+  // for narrow-field rigs.
+  "blind_index_fine_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\gaia_triangles_fine.pkl",
+  // How the blind solver picks its index: 'auto' chooses fine or wide by the
+  // rig's field of view; can be forced manually.
+  "blind_index_select_mode": "auto",
+  // Path to the wide-field astrometric index used by the blind plate solver
+  // for wide rigs (e.g. the 200mm Zeiss).
+  "blind_index_wide_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\gaia_triangles_wide.pkl",
+  // Root folder of the calibration library (master darks/flats organized by
+  // camera, binning and temperature). Resolved per machine.
+  "calibration_library_root": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary",
+  // Path to the main VYVAR SQLite database (drafts, equipment, locations,
+  // results). Resolved per machine.
+  "database_path": "C:\\ASTRO\\python\\VYVAR\\vyvar.sqlite3",
+  // Path to the local NASA Exoplanet Archive database used to cross-match
+  // detected stars with known exoplanet hosts.
+  "exoplanet_local_db_path": "exoplanets/vyvar_exoplanet_local.db",
+  // Path to the local full-sky Gaia DR3 SQLite database (40M+ stars) used for
+  // star identification and comparison selection.
+  "gaia_db_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3.db",
+  // Path to the local AAVSO VSX database of known variable stars, used to
+  // identify variables in the field.
+  "vsx_local_db_path": "C:\\ASTRO\\python\\VYVAR\\VSX\\vyvar_vsx_local_v2.db"
 }

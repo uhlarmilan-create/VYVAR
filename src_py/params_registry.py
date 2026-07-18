@@ -57,9 +57,28 @@ LITERAL_OPTIONS: dict[str, tuple[str, ...]] = {
 
 
 def load_registry(path: Path | None = None) -> dict[str, dict[str, Any]]:
-    """Load the registry JSON, keyed by AppConfig field name."""
+    """Load the registry JSON, keyed by AppConfig field name.
+
+    Reserved ``__``-prefixed top-level keys (e.g. ``__meta__``) carry editorial metadata
+    that is NOT a parameter and are stripped here, so parity with AppConfig fields holds.
+    """
     p = path or REGISTRY_PATH
-    return json.loads(p.read_text(encoding="utf-8"))
+    raw = json.loads(p.read_text(encoding="utf-8"))
+    return {k: v for k, v in raw.items() if not k.startswith("__")}
+
+
+def load_registry_meta(path: Path | None = None) -> dict[str, Any]:
+    """Return the reserved ``__meta__`` block of the registry (editorial metadata)."""
+    p = path or REGISTRY_PATH
+    raw = json.loads(p.read_text(encoding="utf-8"))
+    meta = raw.get("__meta__")
+    return meta if isinstance(meta, dict) else {}
+
+
+def load_phase_help(path: Path | None = None) -> dict[str, str]:
+    """One-line group descriptions per pipeline phase (config.json section comments)."""
+    ph = load_registry_meta(path).get("phase_help")
+    return ph if isinstance(ph, dict) else {}
 
 
 def appconfig_fields() -> list[dataclasses.Field]:
