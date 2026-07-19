@@ -915,8 +915,23 @@ VYVAR's existing trust harness; keep everything else as VYVAR already does it. *
 ### COG (curve-of-growth) aperture correction: implemented, default OFF
 Per-frame encircled-energy correction removes the constant target↔comp enclosed-flux bias and
 the seeing-correlated systematic from per-star SNR-optimal radii. Byte-identical when OFF.
-**Decision: ship gated, leave OFF** until the mixed-frame guard is wired (a partial-success
-night could mix corrected + uncorrected frames — see ROADMAP: APCORR-MIXEDFRAME).
+**Decision: ship gated, leave OFF** until validation on real nights. Mixed-frame guard is
+wired (see `APCORR-MIXEDFRAME-ALLORNOTHING` below).
+
+### APCORR-MIXEDFRAME-ALLORNOTHING (2026-07-19)
+**Context.** With `cog_aperture_correction_enabled=True`, a night that only partially succeeds
+at COG (`cog_ok=False` on some frames) would otherwise route corrected flux on some epochs and
+raw `dao_flux` on others → a step in the light curve that is not astrophysical.
+
+**Decision.** Night-level all-or-nothing gate after per-frame COG AC computation: if **any**
+science frame of the night lacks a usable correction (`cog_ok=False` or missing `cog_ok`),
+COG application is **disabled for the entire night** — every Phase 2A row takes the standard
+Metoda B AC chain. Log:
+`[APCORR] COG night fallback: N/M frames without cog_ok -> whole night uses standard AC`.
+Provenance: `cog_night_fallback=true` (plus counts) in `photometry/pipeline_meta.json`.
+Per-frame `fallback_ee` remains a FUTURE refinement (noted on ROADMAP closure).
+
+**Status:** implemented; COG still default OFF pending enablement validation.
 
 ### `skip_processed_directory` flow
 Raw → Calibrated → QC-in-place (VY_* headers on calibrated) → Aligned → proc CSV → LC, skipping

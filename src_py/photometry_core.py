@@ -2048,6 +2048,68 @@ def _coerce_bool_cell(v: Any) -> bool:
     return s in ("true", "1", "yes", "y", "t")
 
 
+def _frame_has_usable_cog(df: pd.DataFrame | None) -> bool:
+    """True when a proc-frame CSV carries a usable COG correction (``cog_ok``).
+
+    Per-frame ``fallback_ee`` wiring is a FUTURE refinement (APCORR-MIXEDFRAME);
+    tonight a frame is usable only when ``cog_ok`` is True on at least one row.
+    """
+    if df is None or getattr(df, "empty", True):
+        return False
+    if "cog_ok" not in df.columns:
+        return False
+    try:
+        series = df["cog_ok"]
+    except Exception:  # noqa: BLE001
+        return False
+    for v in series.tolist():
+        if _coerce_bool_cell(v):
+            return True
+    return False
+
+
+def evaluate_cog_night_apcorr_gate(
+    frame_dfs: list[pd.DataFrame | None] | tuple[pd.DataFrame | None, ...],
+    *,
+    enabled: bool,
+) -> dict[str, Any]:
+    """Night-level all-or-nothing COG aperture-correction gate.
+
+    Design: ``APCORR-MIXEDFRAME-ALLORNOTHING`` (DECISIONS). When COG is enabled
+    and any science frame of the night lacks a usable correction, COG application
+    is disabled for the entire night so light curves cannot mix corrected and
+    uncorrected frames.
+
+    Returns a dict with:
+      ``use_apcorr_flux`` — pass to :func:`read_flux_from_csv`
+      ``cog_night_fallback`` — provenance flag for ``pipeline_meta``
+      ``n_without_cog_ok``, ``n_frames`` — counts for the log line
+    """
+    if not enabled:
+        return {
+            "use_apcorr_flux": False,
+            "cog_night_fallback": False,
+            "n_without_cog_ok": 0,
+            "n_frames": 0,
+        }
+    frames = list(frame_dfs)
+    n_frames = len(frames)
+    n_bad = sum(1 for df in frames if not _frame_has_usable_cog(df))
+    if n_frames == 0 or n_bad > 0:
+        return {
+            "use_apcorr_flux": False,
+            "cog_night_fallback": True,
+            "n_without_cog_ok": int(n_bad),
+            "n_frames": int(n_frames),
+        }
+    return {
+        "use_apcorr_flux": True,
+        "cog_night_fallback": False,
+        "n_without_cog_ok": 0,
+        "n_frames": int(n_frames),
+    }
+
+
 def read_flux_from_csv(
     frame_csv_path: Path,
     star_ids: list[str],
@@ -6745,6 +6807,16 @@ class _Phase2AState:
     #: filter, exptime -- captured from the resolvers for the honest full-config report.
     #: Never read by the science path; the anchor comparator ignores pipeline_meta.
     resolved_facts: dict[str, Any] = field(default_factory=dict)
+    #: Night-level COG gate (APCORR-MIXEDFRAME-ALLORNOTHING). When True, Phase 2A
+    #: routes ``dao_flux_apcorr`` into mag_inst; when False, every row uses
+    #: standard ``dao_flux`` (Metoda B AC chain). Default False matches
+    #: ``cog_aperture_correction_enabled`` default OFF.
+    use_apcorr_flux: bool = False
+    #: Provenance: True when COG was enabled but any frame lacked ``cog_ok`` and
+    #: the whole night fell back to the standard AC path.
+    cog_night_fallback: bool = False
+    cog_night_fallback_n_without_ok: int = 0
+    cog_night_fallback_n_frames: int = 0
 
 
 def _build_phase2a_dynamic_params(
@@ -7830,6 +7902,10 @@ def _phase2a_prepare_shared_state(
                     "psf_ac_n_used",
                     "psf_ac_applied",
                     "catalog_match_mode",
+                    # COG aperture correction (latent; present only when COG was run)
+                    "ac_factor",
+                    "dao_flux_apcorr",
+                    "cog_ok",
                 ]
             )
         )
@@ -8177,6 +8253,22 @@ def _phase2a_prepare_shared_state(
         len(at_df),
     )
 
+    # APCORR-MIXEDFRAME-ALLORNOTHING: night-level COG gate before any LC flux routing.
+    _cog_enabled = bool(getattr(_cfg, "cog_aperture_correction_enabled", False))
+    _cog_frame_dfs = [_phase2a_csv_cache.get(str(_p)) for _p in csv_files]
+    _cog_gate = evaluate_cog_night_apcorr_gate(_cog_frame_dfs, enabled=_cog_enabled)
+    _use_apcorr_flux = bool(_cog_gate["use_apcorr_flux"])
+    _cog_night_fallback = bool(_cog_gate["cog_night_fallback"])
+    _cog_n_bad = int(_cog_gate["n_without_cog_ok"])
+    _cog_n_frames = int(_cog_gate["n_frames"])
+    if _cog_night_fallback and _cog_enabled:
+        logging.info(
+            "[APCORR] COG night fallback: %d/%d frames without cog_ok "
+            "-> whole night uses standard AC",
+            _cog_n_bad,
+            _cog_n_frames,
+        )
+
     # PERF-8: one read_flux_from_csv pass per frame for all LC stars (not per target).
     _flux_matrix_rows: list[pd.DataFrame] = []
     _t_flux_matrix = time.perf_counter()
@@ -8198,7 +8290,7 @@ def _phase2a_prepare_shared_state(
             lookup=_lookup_row,
             gain=float(_gain_phot),
             read_noise=float(_rn_phot),
-            use_apcorr_flux=bool(getattr(_cfg, "cog_aperture_correction_enabled", False)),
+            use_apcorr_flux=_use_apcorr_flux,
             variable_target_catalog_ids=_variable_target_cids,
             err_background_mode=str(getattr(_cfg, "err_background_mode", ERR_BKG_MODE_EMPIRICAL)),
         )
@@ -8359,6 +8451,10 @@ def _phase2a_prepare_shared_state(
         variable_target_catalog_ids=_variable_target_cids,
         snr_ap_table=_snr_ap_table,
         resolved_facts=_resolved_facts,
+        use_apcorr_flux=_use_apcorr_flux,
+        cog_night_fallback=_cog_night_fallback,
+        cog_night_fallback_n_without_ok=_cog_n_bad,
+        cog_night_fallback_n_frames=_cog_n_frames,
     )
 
 
@@ -8756,7 +8852,7 @@ def _phase2a_process_one_target(
                 lookup=_lookup_row,
                 gain=float(_gain_phot),
                 read_noise=float(_rn_phot),
-                use_apcorr_flux=bool(getattr(_cfg, "cog_aperture_correction_enabled", False)),
+                use_apcorr_flux=bool(state.use_apcorr_flux),
                 variable_target_catalog_ids=state.variable_target_catalog_ids,
                 err_background_mode=str(getattr(_cfg, "err_background_mode", ERR_BKG_MODE_EMPIRICAL)),
             )
@@ -10147,6 +10243,9 @@ def run_phase2a(
             "common_mode_stability_detrend": bool(
                 state.stability_run_flags.get("common_mode_detrend_applied")
             ),
+            "cog_night_fallback": bool(state.cog_night_fallback),
+            "cog_night_fallback_n_without_ok": int(state.cog_night_fallback_n_without_ok),
+            "cog_night_fallback_n_frames": int(state.cog_night_fallback_n_frames),
             **_cal_meta,
             **_cal_diag_meta,
             **_sky_surface_meta_from_qc(_draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))),

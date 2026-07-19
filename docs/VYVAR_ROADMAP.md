@@ -524,12 +524,12 @@ next calibration lever.
   NOT a priority: the canonical publishable unit is a single night (see DECISIONS,
   product-scope boundary). Build only if a long-baseline science case demands it.
   Dep: AAVSO validation (GS6b ✓). ~2–4 days. → **PUBLICATION** workstream.
-- **APCORR-MIXEDFRAME — latent (COG default OFF); blocks enabling COG in production.** With
-  `cog_aperture_correction_enabled=True`, `cog_ok=False` frames keep *uncorrected* flux
-  alongside corrected ones → cross-frame step in the LC. The QA dashboard `IS_REJECTED` path
-  is separate and clean (rejected frames are dropped before calibration, never enter the LC).
-  Fix = drop `cog_ok=False` frames / wire the nightly `fallback_ee` / all-or-nothing per
-  night. (Rationale in DECISIONS.)
+- ~~**APCORR-MIXEDFRAME**~~ **DONE (2026-07-19)** — all-or-nothing COG per night
+  (`APCORR-MIXEDFRAME-ALLORNOTHING` in DECISIONS). After per-frame COG AC, if any science
+  frame lacks usable `cog_ok`, Phase 2A disables COG for the entire night (standard Metoda B
+  AC path for every row); provenance `cog_night_fallback` in `pipeline_meta.json`. COG remains
+  default OFF pending validation. **FUTURE refinement:** per-frame `fallback_ee` wiring (not
+  in this closure).
 - **PSF on fine-scale (Newton ≈ 0.65″/px) data.** Infrastructure is DONE and default **OFF**
   (wiring `psf_flux`→Phase 2A, adaptive selector, per-star quality + auto-fallback, spatial
   grid, grouper — all lose to aperture at 9.77″/px, correctly kept off). OPEN:

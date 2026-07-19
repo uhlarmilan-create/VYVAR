@@ -88,6 +88,9 @@ Census 2552/2842/169; identity p95 baseline **1.54 px**. Ledger `VL-ANCHOR-WCSIN
 `VL-P1-GOLD` active (core `074ae881...` n=333; extended `66285d3f...` n=497). Opt-in
 `VYVAR_INVARIANTS_P1=1`. Result: `dev/results/CURSOR_RESULT_invariants_p1.md`.
 
+**APCORR-MIXEDFRAME:** **DONE (2026-07-19)** — night-level all-or-nothing COG gate
+(`cog_night_fallback` provenance); COG still default OFF.
+
 ---
 
 ## Prior: Anchor #3 STOP (superseded)
