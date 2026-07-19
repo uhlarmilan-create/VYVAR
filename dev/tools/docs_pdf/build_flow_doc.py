@@ -5,7 +5,12 @@
 # pipeline documentation (v3, full-depth edition). Content changes are made
 # HERE and the PDF is regenerated as part of the docs-revision ritual.
 import os
+import sys
 ROOT = os.getcwd()
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
+from flow_doc_facts import DOC_CONFIG_FACTS, DOC_FUNCTIONS, ANCHOR_ID  # noqa: E402,F401
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors

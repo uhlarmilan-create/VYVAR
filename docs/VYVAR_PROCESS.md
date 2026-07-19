@@ -24,15 +24,48 @@ for the full map.
 - **Result-file location rule:** ALL `CURSOR_RESULT_*.md` and `CURSOR_TASK_*.md`
   working documents go in `dev/results/` (never at the repo root). Sandbox
   harnesses stay in `tmp/`.
-- **`docs/` rule:** `docs/` holds ONLY living documentation and specs -- how the
-  project is designed, set up, and operated (state, roadmap, journal, process,
-  decisions, runbook, code map, schemas, calibration/validation, and `*_SPEC` /
-  design / policy / rule docs). Historical audit outputs, one-off investigation
-  writeups, and target- or draft-specific analyses are work results and belong in
+- **`docs/` rule:** `docs/` holds ONLY the user-facing living documentation family
+  -- how the project is designed, set up, and operated (state, roadmap, journal,
+  process, decisions, runbook, code map, schemas, calibration/validation, config
+  guides). Development/design `*_SPEC.md` artifacts live in `dev/results/specs/`
+  (never in `docs/`). Historical audit outputs, one-off investigation writeups,
+  and target- or draft-specific analyses are work results and belong in
   `dev/results/`. `docs/` contains no subdirectories and no `CURSOR_*` files. It is
   Markdown-only, except for PDF guides (`*.pdf`) that a committed builder under
-  `dev/tools/docs_pdf/` regenerates (e.g. the CZ parameter handbook and install
-  guide). The `dev/tests/test_docs_layout.py` guard enforces this.
+  `dev/tools/docs_pdf/` regenerates (e.g. the CZ parameter handbook, install
+  guide, and FLOW pipeline doc). The `dev/tests/test_docs_layout.py` and
+  `dev/tests/test_docs_sync_guard.py` guards enforce this.
+
+---
+
+## DOCS-SYNC ritual (mandatory)
+
+Whenever code or behavior changes, **all affected documentation must be updated
+in the same work** -- not as a later habit. Drift turns tests red.
+
+1. **CURSOR task** must include a "Docs impact" assessment (which docs will
+   change, or why none).
+2. **RESULT file** must include a **"Docs impact:"** section -- either the list
+   of updated documents, or the explicit line `Docs impact: none (reason)`. A
+   RESULT without this section is incomplete.
+3. **Docs impact checklist** (walk each item):
+   - **STATE** -- always (snapshot of what is true now).
+   - **DECISIONS** -- if a decision was made or reversed.
+   - **ROADMAP** -- item status changes.
+   - **FLOW builder + PDF** -- if pipeline flow, algorithms, or parameter
+     semantics/defaults changed: edit `dev/tools/docs_pdf/build_flow_doc.py`,
+     update `dev/tools/docs_pdf/flow_doc_facts.py`, regenerate
+     `docs/VYVAR_FLOW_CZ.pdf`.
+   - **CONFIG_GUIDE / parameter handbook** -- if parameters were
+     added/renamed/re-defaulted.
+   - **INSTALL guide** -- if setup / first-run changed.
+4. **Machine guard:** `dev/tests/test_docs_sync_guard.py` enforces the
+   config-facts and function-name layers automatically (plus zero `*_SPEC*.md`
+   under `docs/`). A red docs-sync test blocks the commit like any other
+   invariant.
+5. **Layout rule:** `*_SPEC.md` files live in `dev/results/specs/`
+   (development artifacts), never in `docs/`. `docs/` holds the user-facing
+   family only.
 
 ---
 

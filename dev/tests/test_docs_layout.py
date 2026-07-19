@@ -1,9 +1,10 @@
-"""Guard: docs/ holds living documentation only.
+"""Guard: docs/ holds living user-facing documentation only.
 
-Milan's rule (DOCS-CLEANUP, 2026-07-17): docs/ contains ONLY documentation of how
-the project is designed, set up, and operated -- living state/process/decision docs
-plus specs. Audit/investigation/result artifacts belong in dev/results/. No
-subdirectories, no CURSOR_* working documents.
+Milan's rule (DOCS-CLEANUP, 2026-07-17; DOCS-SYNC 2026-07-19): docs/ contains ONLY
+documentation of how the project is designed, set up, and operated -- living
+state/process/decision docs. Development *_SPEC.md artifacts live in
+dev/results/specs/. Audit/investigation/result artifacts belong in dev/results/.
+No subdirectories, no CURSOR_* working documents.
 
 Allowed file types: Markdown (*.md) plus PDF guides (*.pdf) that a committed builder
 under dev/tools/docs_pdf/ regenerates (DOCS-PDF, 2026-07-18).
