@@ -2166,6 +2166,31 @@
     "unit": null,
     "widget": "hidden"
   },
+  "per_frame_sat_min_clean_frac": {
+    "help": "Minimum fraction of unsaturated frames required to measure a target when per-frame saturation is enabled (clamped 0.1..1.0).",
+    "kind": "static",
+    "label": "Per Frame Sat Min Clean Frac",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": [
+      0.1,
+      1.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
+  "per_frame_saturation_enabled": {
+    "help": "When true, target saturation uses per-frame clean fraction instead of whole-star master zone skip (default false keeps legacy zone skip).",
+    "kind": "static",
+    "label": "Per Frame Saturation Enabled",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom"
+  },
   "phase01_chip_interior_margin_px": {
     "help": "Margin (px) from the chip edge inside which stars are excluded from comparison selection (edge effects).",
     "kind": "static",

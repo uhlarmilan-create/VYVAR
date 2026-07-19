@@ -5947,6 +5947,196 @@ def _phase2a_coerce_skip_photometry(df: pd.DataFrame) -> pd.Series:
     return pd.Series(False, index=df.index, dtype=bool)
 
 
+def decide_target_saturation_policy(
+    *,
+    zone_flag: str,
+    legacy_skip: bool,
+    frame_saturated: list[bool] | tuple[bool, ...] | np.ndarray | None,
+    enabled: bool,
+    min_clean_frac: float = 0.5,
+    likely_saturated: bool = False,
+) -> dict[str, Any]:
+    """Per-target saturation gate (PER-FRAME-SAT-GATED).
+
+    When ``enabled`` is False: legacy whole-star skip (zone / skip_photometry).
+    When True: master zone saturation is advisory; skip only if clean_frac
+    (fraction of frames without saturation) is below ``min_clean_frac``.
+    Missing per-frame peak/sat data falls back to legacy zone behavior.
+    """
+    zf = str(zone_flag or "").strip().lower()
+    legacy = bool(legacy_skip) or zf == "saturated"
+    advisory = bool(legacy) or zf in ("saturated", "likely_saturated") or bool(likely_saturated)
+    thr = float(min_clean_frac)
+    if not math.isfinite(thr):
+        thr = 0.5
+    thr = max(0.1, min(1.0, thr))
+
+    if not enabled:
+        return {
+            "skip_photometry": bool(legacy),
+            "skip_reason": "zone_flag" if legacy else "",
+            "sat_clean_frac": float("nan"),
+            "per_frame_sat_fallback": False,
+            "n_frames": 0,
+            "n_clean": 0,
+        }
+
+    if frame_saturated is None:
+        return {
+            "skip_photometry": bool(legacy),
+            "skip_reason": "zone_flag" if legacy else "",
+            "sat_clean_frac": float("nan"),
+            "per_frame_sat_fallback": True,
+            "n_frames": 0,
+            "n_clean": 0,
+        }
+
+    flags = [bool(x) for x in list(frame_saturated)]
+    n = len(flags)
+    if n == 0:
+        return {
+            "skip_photometry": bool(legacy),
+            "skip_reason": "zone_flag" if legacy else "",
+            "sat_clean_frac": float("nan"),
+            "per_frame_sat_fallback": True,
+            "n_frames": 0,
+            "n_clean": 0,
+        }
+
+    n_clean = int(sum(1 for s in flags if not s))
+    clean_frac = float(n_clean) / float(n)
+    if not advisory:
+        return {
+            "skip_photometry": False,
+            "skip_reason": "",
+            "sat_clean_frac": clean_frac,
+            "per_frame_sat_fallback": False,
+            "n_frames": n,
+            "n_clean": n_clean,
+        }
+    if clean_frac >= thr:
+        return {
+            "skip_photometry": False,
+            "skip_reason": "",
+            "sat_clean_frac": clean_frac,
+            "per_frame_sat_fallback": False,
+            "n_frames": n,
+            "n_clean": n_clean,
+        }
+    return {
+        "skip_photometry": True,
+        "skip_reason": "per_frame_saturation",
+        "sat_clean_frac": clean_frac,
+        "per_frame_sat_fallback": False,
+        "n_frames": n,
+        "n_clean": n_clean,
+    }
+
+
+def _per_frame_sat_flags_for_catalog_id(
+    catalog_id: str,
+    csv_files: list[Path],
+    csv_cache: dict[str, Any],
+    *,
+    sat_limit_adu: float | None,
+) -> list[bool] | None:
+    """Return per-frame saturation bools for a target, or None if data unavailable."""
+    cid = _normalize_gaia_id(catalog_id)
+    if not cid:
+        return None
+    flags: list[bool] = []
+    n_matched = 0
+    for path in csv_files:
+        df = csv_cache.get(str(path))
+        if df is None or getattr(df, "empty", True):
+            continue
+        if "catalog_id" not in df.columns:
+            return None
+        ids = df["catalog_id"].astype(str).map(_normalize_gaia_id)
+        m = ids.eq(cid)
+        if not bool(m.any()):
+            continue
+        row = df.loc[m].iloc[0]
+        n_matched += 1
+        if "is_saturated" in df.columns:
+            flags.append(_coerce_bool_cell(row.get("is_saturated")))
+            continue
+        if "likely_saturated" in df.columns and _coerce_bool_cell(row.get("likely_saturated")):
+            flags.append(True)
+            continue
+        peak = float(pd.to_numeric(row.get("peak_max_adu"), errors="coerce"))
+        lim = float(sat_limit_adu) if sat_limit_adu is not None else float("nan")
+        if math.isfinite(peak) and math.isfinite(lim) and lim > 0:
+            flags.append(bool(peak > lim))
+            continue
+        # Matched row but no usable sat diagnostic -> cannot evaluate.
+        return None
+    if n_matched == 0 or len(flags) == 0:
+        return None
+    return flags
+
+
+def apply_per_frame_saturation_to_active_targets(
+    at_df: pd.DataFrame,
+    *,
+    csv_files: list[Path],
+    csv_cache: dict[str, Any],
+    sat_limit_adu: float | None,
+    enabled: bool,
+    min_clean_frac: float,
+) -> dict[str, Any]:
+    """Mutate ``at_df`` skip columns per PER-FRAME-SAT-GATED; return night meta.
+
+    When ``enabled`` is False: no-op (INV-CFG-01 — no new markers).
+    """
+    if not enabled:
+        return {}
+
+    meta: dict[str, Any] = {
+        "per_frame_sat_enabled": True,
+        "per_frame_sat_min_clean_frac": float(min_clean_frac),
+        "per_frame_sat_n_targets": int(len(at_df)),
+        "per_frame_sat_n_fallback": 0,
+        "per_frame_sat_n_rescued": 0,
+        "per_frame_sat_n_skipped": 0,
+    }
+    at_df["sat_clean_frac"] = float("nan")
+    at_df["skip_reason"] = ""
+    at_df["per_frame_sat_fallback"] = False
+
+    for idx, row in at_df.iterrows():
+        cid = _normalize_gaia_id(row.get("catalog_id", ""))
+        zf = str(row.get("zone_flag", "") or "").strip()
+        legacy = bool(row.get("skip_photometry", False))
+        likely = (
+            _coerce_bool_cell(row.get("likely_saturated"))
+            if "likely_saturated" in at_df.columns
+            else False
+        )
+        flags = _per_frame_sat_flags_for_catalog_id(
+            cid, csv_files, csv_cache, sat_limit_adu=sat_limit_adu
+        )
+        dec = decide_target_saturation_policy(
+            zone_flag=zf,
+            legacy_skip=legacy,
+            frame_saturated=flags,
+            enabled=True,
+            min_clean_frac=float(min_clean_frac),
+            likely_saturated=likely,
+        )
+        at_df.at[idx, "skip_photometry"] = bool(dec["skip_photometry"])
+        at_df.at[idx, "skip_reason"] = str(dec["skip_reason"] or "")
+        at_df.at[idx, "sat_clean_frac"] = float(dec["sat_clean_frac"])
+        at_df.at[idx, "per_frame_sat_fallback"] = bool(dec["per_frame_sat_fallback"])
+        if dec["per_frame_sat_fallback"]:
+            meta["per_frame_sat_n_fallback"] = int(meta["per_frame_sat_n_fallback"]) + 1
+        if (not dec["skip_photometry"]) and legacy:
+            meta["per_frame_sat_n_rescued"] = int(meta["per_frame_sat_n_rescued"]) + 1
+        if dec["skip_photometry"] and str(dec["skip_reason"]) == "per_frame_saturation":
+            meta["per_frame_sat_n_skipped"] = int(meta["per_frame_sat_n_skipped"]) + 1
+    return meta
+
+
 def build_rms_mag_model(
     summary_rows: list[dict],
     *,
@@ -6817,6 +7007,8 @@ class _Phase2AState:
     cog_night_fallback: bool = False
     cog_night_fallback_n_without_ok: int = 0
     cog_night_fallback_n_frames: int = 0
+    #: PER-FRAME-SAT-GATED night meta (empty when flag OFF — INV-CFG-01).
+    per_frame_sat_meta: dict[str, Any] = field(default_factory=dict)
 
 
 def _build_phase2a_dynamic_params(
@@ -8033,6 +8225,35 @@ def _phase2a_prepare_shared_state(
         logging.error('[EXC-0168] alignment_report.csv alignment_failed/reason not propagated into frame_time_lookup: %s', exc)
         pass
 
+    # PER-FRAME-SAT-GATED: when ON, revise target skip_photometry from per-frame
+    # clean fraction before aperture/FWHM star-set selection. OFF = no-op.
+    _pfs_enabled = bool(getattr(_cfg, "per_frame_saturation_enabled", False))
+    _pfs_min = float(getattr(_cfg, "per_frame_sat_min_clean_frac", 0.5))
+    _sat_limit_early = sat_limit_adu if sat_limit_adu is not None else _sat_limit_peak_adu()
+    _per_frame_sat_meta = apply_per_frame_saturation_to_active_targets(
+        at_df,
+        csv_files=csv_files,
+        csv_cache=_phase2a_csv_cache,
+        sat_limit_adu=_sat_limit_early,
+        enabled=_pfs_enabled,
+        min_clean_frac=_pfs_min,
+    )
+    if _pfs_enabled:
+        try:
+            at_df.to_csv(active_targets_csv, index=False)
+        except Exception as exc:  # noqa: BLE001
+            logging.error(
+                "[EXC-PFS] active_targets.csv rewrite after per-frame sat failed: %s",
+                exc,
+            )
+        logging.info(
+            "[PER-FRAME-SAT] enabled: rescued=%s skipped=%s fallback=%s (min_clean_frac=%.3f)",
+            _per_frame_sat_meta.get("per_frame_sat_n_rescued"),
+            _per_frame_sat_meta.get("per_frame_sat_n_skipped"),
+            _per_frame_sat_meta.get("per_frame_sat_n_fallback"),
+            _pfs_min,
+        )
+
     # Krok 1: Globálna fixná apertúra — všetky hviezdy (target + comp), faktor × FWHM
     # Ciele so skip_photometry (saturované) nepatria do výpočtu apertúr / FWHM z targetov.
     _at_cols = [c for c in ("catalog_id", "x", "y", "mag") if c in at_df.columns]
@@ -8455,6 +8676,7 @@ def _phase2a_prepare_shared_state(
         cog_night_fallback=_cog_night_fallback,
         cog_night_fallback_n_without_ok=_cog_n_bad,
         cog_night_fallback_n_frames=_cog_n_frames,
+        per_frame_sat_meta=dict(_per_frame_sat_meta or {}),
     )
 
 
@@ -8628,32 +8850,44 @@ def _phase2a_process_one_target(
         skip_photo = str(_sp).strip().lower() in ("1", "true", "yes", "t")
     _zf_row = str(target_row.get("zone_flag", "")).strip()
     _zf_low = _zf_row.lower()
-    if _zf_low == "saturated":
+    # When per-frame sat is ON, skip_photometry already encodes the decision;
+    # do not re-force whole-star skip from master zone_flag.
+    _pfs_on = bool(getattr(_cfg, "per_frame_saturation_enabled", False))
+    if (not _pfs_on) and _zf_low == "saturated":
         skip_photo = True
     if progress_cb is not None and (
         ti == 1 or ti == _nt or (_nt > 1 and ti % max(1, _nt // 12) == 0)
     ):
         _p2(f"Fáza 2A: cieľ {ti}/{_nt}: {target_name[:50]}")
     if skip_photo:
-        _skip_reason = "saturovaný cieľ"
+        _sr_col = str(target_row.get("skip_reason", "") or "").strip()
+        _skip_reason = _sr_col if _sr_col else "saturovaný cieľ"
         logging.info(f"[FÁZA 2A] Preskakujem fotometriu ({_skip_reason}): {target_name}")
-        summary_rows.append(
-            {
-                "catalog_id": target_cid,
-                "vsx_name": target_name,
-                "zone_flag": _zf_row,
-                "n_frames": 0,
-                "n_good_comp": 0,
-                "n_saturated": 0,
-                "lc_rms": float("nan"),
-                "lc_median_mag": float("nan"),
-                "aperture_px": float("nan"),
-                "am_slope": float("nan"),
-                "am_detrended": False,
-                "lc_csv": "",
-                "lc_png": "",
-            }
-        )
+        _skip_sum: dict[str, Any] = {
+            "catalog_id": target_cid,
+            "vsx_name": target_name,
+            "zone_flag": _zf_row,
+            "n_frames": 0,
+            "n_good_comp": 0,
+            "n_saturated": 0,
+            "lc_rms": float("nan"),
+            "lc_median_mag": float("nan"),
+            "aperture_px": float("nan"),
+            "am_slope": float("nan"),
+            "am_detrended": False,
+            "lc_csv": "",
+            "lc_png": "",
+        }
+        if _pfs_on:
+            _skip_sum["skip_reason"] = _sr_col or (
+                "zone_flag" if _zf_low == "saturated" else ""
+            )
+            _scf = float(pd.to_numeric(target_row.get("sat_clean_frac"), errors="coerce"))
+            _skip_sum["sat_clean_frac"] = _scf
+            _skip_sum["per_frame_sat_fallback"] = bool(
+                target_row.get("per_frame_sat_fallback", False)
+            )
+        summary_rows.append(_skip_sum)
         return summary_rows, n_lc
     logging.info(
         f"[FÁZA 2A] Spúšťam: target={target_name}, "
@@ -9707,47 +9941,54 @@ def _phase2a_process_one_target(
             _tiers = pd.to_numeric(target_comps["comp_tier"], errors="coerce")
             _n_tier12 = int(_tiers.isin([1, 2]).sum())
 
-    summary_rows.append(
-        {
-            "catalog_id": target_cid,
-            "vsx_name": target_name,
-            "vsx_type": target_vsx_type,
-            "zone_flag": str(target_row.get("zone_flag", "")).strip(),
-            "n_frames": len(bjd),
-            "n_good_comp": n_good_comp,
-            "n_tier12": _n_tier12,
-            "comp_path": _comp_path,
-            "n_stability_good": n_stability_good,
-            "n_stability_suspect": n_stability_suspect,
-            "n_saturated": n_sat,
-            "n_alignment_failed": n_alignment_failed,
-            "alignment_failed_frac": alignment_failed_frac,
-            "n_wcs_untrusted": n_wcs_untrusted,
-            "wcs_untrusted_frac": wcs_untrusted_frac,
-            "lc_rms": _lc_rms_full,
-            "lc_rms_ooe": _lc_rms_ooe,
-            "lc_median_mag": float(np.median(finite_calib)) if len(finite_calib) > 0 else float("nan"),
-            "aperture_px": _measured_ap if math.isfinite(_measured_ap) else float(apertures_px.get(target_cid, float("nan"))),
-            "aperture_px_planned": float(apertures_px.get(target_cid, float("nan"))),
-            "am_slope": float("nan"),
-            "am_detrended": False,
-            "dilution_factor": float(_dilution_result.get("dilution_factor", 1.0)),
-            "dilution_delta_mag": float(_dilution_result.get("dilution_delta_mag", 0.0)),
-            "n_neighbors_aperture": int(_dilution_result.get("n_neighbors", 0)),
-            "gs11_aperture_arcsec": float(_dilution_result.get("aperture_arcsec", float("nan"))),
-            "gs11_dilution_skipped": bool(_dilution_result.get("dilution_skipped", False)),
-            "gs11_dilution_skip_reason": str(_dilution_result.get("dilution_skip_reason", "") or ""),
-            "mag_median_pre_gs11": _mag_pre_gs11,
-            "mag_median_post_gs11": _mag_post_gs11,
-            "lc_csv": str(lc_csv),
-            "lc_png": str(lc_png),
-            "ct_ok": bool(ct_ok),
-            "ct_corr": float(ct_corr) if bool(ct_ok) and math.isfinite(float(ct_corr)) else float("nan"),
-            "ct_c1": float(c1) if bool(ct_ok) and math.isfinite(float(c1)) else float("nan"),
-            "ct_n_comp": int(ct_n_comp) if bool(ct_ok) else 0,
-            **_ac_summary_fields(ac_result if bool(_cfg.aperture_correction_enabled) else {"ok": False, "reason": "disabled"}),
-        }
-    )
+    _sum_row: dict[str, Any] = {
+        "catalog_id": target_cid,
+        "vsx_name": target_name,
+        "vsx_type": target_vsx_type,
+        "zone_flag": str(target_row.get("zone_flag", "")).strip(),
+        "n_frames": len(bjd),
+        "n_good_comp": n_good_comp,
+        "n_tier12": _n_tier12,
+        "comp_path": _comp_path,
+        "n_stability_good": n_stability_good,
+        "n_stability_suspect": n_stability_suspect,
+        "n_saturated": n_sat,
+        "n_alignment_failed": n_alignment_failed,
+        "alignment_failed_frac": alignment_failed_frac,
+        "n_wcs_untrusted": n_wcs_untrusted,
+        "wcs_untrusted_frac": wcs_untrusted_frac,
+        "lc_rms": _lc_rms_full,
+        "lc_rms_ooe": _lc_rms_ooe,
+        "lc_median_mag": float(np.median(finite_calib)) if len(finite_calib) > 0 else float("nan"),
+        "aperture_px": _measured_ap if math.isfinite(_measured_ap) else float(apertures_px.get(target_cid, float("nan"))),
+        "aperture_px_planned": float(apertures_px.get(target_cid, float("nan"))),
+        "am_slope": float("nan"),
+        "am_detrended": False,
+        "dilution_factor": float(_dilution_result.get("dilution_factor", 1.0)),
+        "dilution_delta_mag": float(_dilution_result.get("dilution_delta_mag", 0.0)),
+        "n_neighbors_aperture": int(_dilution_result.get("n_neighbors", 0)),
+        "gs11_aperture_arcsec": float(_dilution_result.get("aperture_arcsec", float("nan"))),
+        "gs11_dilution_skipped": bool(_dilution_result.get("dilution_skipped", False)),
+        "gs11_dilution_skip_reason": str(_dilution_result.get("dilution_skip_reason", "") or ""),
+        "mag_median_pre_gs11": _mag_pre_gs11,
+        "mag_median_post_gs11": _mag_post_gs11,
+        "lc_csv": str(lc_csv),
+        "lc_png": str(lc_png),
+        "ct_ok": bool(ct_ok),
+        "ct_corr": float(ct_corr) if bool(ct_ok) and math.isfinite(float(ct_corr)) else float("nan"),
+        "ct_c1": float(c1) if bool(ct_ok) and math.isfinite(float(c1)) else float("nan"),
+        "ct_n_comp": int(ct_n_comp) if bool(ct_ok) else 0,
+        **_ac_summary_fields(ac_result if bool(_cfg.aperture_correction_enabled) else {"ok": False, "reason": "disabled"}),
+    }
+    if _pfs_on:
+        _sum_row["skip_reason"] = str(target_row.get("skip_reason", "") or "")
+        _sum_row["sat_clean_frac"] = float(
+            pd.to_numeric(target_row.get("sat_clean_frac"), errors="coerce")
+        )
+        _sum_row["per_frame_sat_fallback"] = bool(
+            target_row.get("per_frame_sat_fallback", False)
+        )
+    summary_rows.append(_sum_row)
     n_lc += 1
     lc_rms = float(summary_rows[-1]["lc_rms"])
     lc_rms_ooe = float(summary_rows[-1].get("lc_rms_ooe", float("nan")))
@@ -10310,6 +10551,9 @@ def run_phase2a(
                 "cog_night_fallback_n_frames": int(state.cog_night_fallback_n_frames),
             },
         )
+    # INV-CFG-01: per-frame sat markers present only when enabled.
+    if bool(getattr(_cfg, "per_frame_saturation_enabled", False)) and state.per_frame_sat_meta:
+        merge_photometry_pipeline_meta(output_dir, dict(state.per_frame_sat_meta))
 
     # Per target loop
     # _phase2a_process_single_target (inline): ZP → CT → (outlier → airmass | airmass → outlier) → export.

@@ -18,6 +18,7 @@ sys.path.insert(0, str(SRC))
 
 from invariants_runtime import (  # noqa: E402
     COG_META_KEYS,
+    PER_FRAME_SAT_META_KEYS,
     WIRED_INV_IDS,
     InvariantViolation,
     check_dark_resample_flux_conservation,
@@ -265,3 +266,30 @@ def test_inv_rng01_no_naked_global_rng() -> None:
 
 def test_cog_meta_keys_constant_matches_cfg_gate() -> None:
     assert "cog_night_fallback" in COG_META_KEYS
+
+
+def test_cfg01_per_frame_sat_markers_absent_when_off() -> None:
+    from invariants_runtime import validate_config_behavior
+
+    meta = {
+        "provenance": {
+            "git_hash": "abc",
+            "entry_point": "run_phase2a",
+            "labbe_rng_seed_policy": "content_frame_hash_v1",
+            "config_snapshot": {
+                "cog_aperture_correction_enabled": False,
+                "psf_photometry_enabled": False,
+                "temporal_binning_enabled": False,
+                "per_frame_saturation_enabled": False,
+            },
+        },
+        "invariants": [],
+    }
+    validate_config_behavior(meta, None)
+    assert meta["invariants"][-1]["ok"] is True
+    meta_bad = dict(meta)
+    meta_bad["per_frame_sat_enabled"] = True
+    meta_bad["invariants"] = []
+    with pytest.raises(InvariantViolation):
+        validate_config_behavior(meta_bad, None)
+    assert "per_frame_sat_enabled" in PER_FRAME_SAT_META_KEYS

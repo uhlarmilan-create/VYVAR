@@ -6,6 +6,32 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## PER-FRAME-SAT-GATED — per-frame target saturation behind flag (2026-07-19)
+
+**Context re-scope.** The original M67 evidence (76 Green / 49 Red whole-star drops)
+came from an ASTROPHOTO dataset with long exposures — an extreme case, not
+representative of photometric nights (Milan, 2026-07-19). Severity re-graded
+**HIGH → MED**. The principle stands: a star's usability is a per-frame fact
+(`peak_max_adu` is already measured per frame), while today the TARGET-level drop
+comes from the MASTERSTAR zone of one reference exposure (`skip_photometry` via
+`zone_flag`). Failure mode both ways: a target saturated on 30% of frames is dropped
+wholly (loses 70% good data); a borderline target clean on the master can carry
+saturated rows. The M67 dataset is gone; **real validation is DEFERRED** to the
+next dataset containing saturated bright stars (ROADMAP revisit trigger).
+
+**Design shipped (default OFF).** New flags `per_frame_saturation_enabled=false`
+and `per_frame_sat_min_clean_frac=0.5` (clamp [0.1, 1.0]). When OFF: byte-identical
+to today's zone-based `skip_photometry` (comps keep their existing per-frame >10%
+rule). When ON, for TARGETS only: master zone `saturated` / `likely_saturated` is
+advisory; compute clean fraction from per-frame sat flags; ≥ threshold → measure
+(saturated rows keep flag `saturated`, mask-first); < threshold → skip with
+`skip_reason=per_frame_saturation`; missing per-frame peak data → fail-safe fallback
+to zone behavior + `per_frame_sat_fallback=true`. Provenance: `sat_clean_frac` on
+`photometry_summary` (outside photometry SHA / science comparator file set).
+INV-CFG-01 extended: flag OFF ⇒ none of the new markers appear.
+
+---
+
 ## Dependency policy + CYCLE 1 in-range refresh (numpy 2.4.4) (2026-07-18)
 
 **Context (DEPS-SCOUT / DEPS-POLICY).** Grounded in Claude's dependency-landscape

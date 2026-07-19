@@ -565,9 +565,14 @@ next calibration lever.
     four latent findings **FIXED** — PSF-ERR-DECOUPLED, PSF-AC-FALLBACK, PSF-FLAG-VESTIGIAL,
     PSF-LEGACY-SELECTOR. Enablement checklist: real-field Newton draft + ERR/AC gates DONE;
     production PSF still OFF (`psf_photometry_enabled=False`).
-- **Per-frame saturation (not whole-star skip).** Whole-star `zone_flag=saturated` from the
-  longest-exposure masterstar drops comps/targets with viable unsaturated frames (76 Green/49 Red
-  on M67). Same "silent wrong drop" class as the cross-group MASTERSTAR bug.
+- **Per-frame saturation (not whole-star skip).** Implemented gated OFF
+  (`per_frame_saturation_enabled`, default false) + synthetic validation
+  (PER-FRAME-SAT-GATED, 2026-07-19). Master zone remains the default whole-star
+  skip; when ON, targets use clean-frame fraction vs
+  `per_frame_sat_min_clean_frac`. **Validation pending** the next photometric
+  night containing saturated bright stars (M67 astrophoto evidence re-graded
+  HIGH→MED — extreme long-exposure case, dataset gone). Keep open until that
+  revisit.
 
 ## MEDIUM
 

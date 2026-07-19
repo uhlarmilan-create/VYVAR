@@ -26,6 +26,7 @@ DOC_CONFIG_FACTS: dict[str, object] = {
     "pytics_enabled": True,
     "pytics_n_iter": 5,
     "psf_photometry_enabled": False,
+    "per_frame_saturation_enabled": False,
     "epsf_min_stars": 30,
     "psf_chi2_threshold": 50.0,
     "cal_diag_gate_enabled": True,

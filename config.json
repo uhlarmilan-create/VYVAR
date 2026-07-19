@@ -395,6 +395,12 @@
   "cog_sat_frac": 0.85,
   // Minimum SNR of a curve-of-growth reference star.
   "cog_snr_min": 50.0,
+  // When true, target saturation uses the fraction of clean frames instead of
+  // whole-star master-zone skip (default false = legacy).
+  "per_frame_saturation_enabled": false,
+  // Minimum fraction of unsaturated frames required to measure a target when
+  // per_frame_saturation_enabled is true (clamped 0.1..1.0).
+  "per_frame_sat_min_clean_frac": 0.5,
   // Window width (fraction of the night) of the democratic detrend smoother.
   "democratic_sg_window_frac": 0.5,
   // How the background-noise term of the error model is estimated

@@ -855,6 +855,14 @@ class AppConfig:
     #: Maximum allowed per-star ac_factor (safety clamp).
     cog_ac_factor_max: float = 5.0
 
+    #: Per-frame target saturation gate (PER-FRAME-SAT-GATED). Default OFF keeps
+    #: whole-star skip_photometry from master zone_flag. When ON, targets use the
+    #: fraction of unsaturated frames vs per_frame_sat_min_clean_frac.
+    per_frame_saturation_enabled: bool = False
+    #: Minimum fraction of clean (unsaturated) frames required to measure a target
+    #: when per_frame_saturation_enabled is True. Clamped to [0.1, 1.0].
+    per_frame_sat_min_clean_frac: float = 0.5
+
     #: CCD gain (e-/ADU) — used in noise model / SNR estimates.
     gain: float = 1.0
     #: CCD read noise (e-) — used in noise model.
@@ -1659,6 +1667,19 @@ class AppConfig:
             self.cog_ac_factor_max = _v if math.isfinite(_v) and _v >= 1.0 else 5.0
         except (TypeError, ValueError):
             self.cog_ac_factor_max = 5.0
+        self.per_frame_saturation_enabled = bool(
+            data.get("per_frame_saturation_enabled", self.per_frame_saturation_enabled)
+        )
+        try:
+            _v = float(data.get("per_frame_sat_min_clean_frac", self.per_frame_sat_min_clean_frac))
+            self.per_frame_sat_min_clean_frac = (
+                _v if math.isfinite(_v) else 0.5
+            )
+        except (TypeError, ValueError):
+            self.per_frame_sat_min_clean_frac = 0.5
+        self.per_frame_sat_min_clean_frac = max(
+            0.1, min(1.0, float(self.per_frame_sat_min_clean_frac))
+        )
         self.aperture_correction_max_scatter_mag = max(
             0.0, min(2.0, float(self.aperture_correction_max_scatter_mag))
         )
@@ -2452,6 +2473,8 @@ class AppConfig:
             "cog_sat_frac": float(self.cog_sat_frac),
             "cog_ladder_step_px": float(self.cog_ladder_step_px),
             "cog_ac_factor_max": float(self.cog_ac_factor_max),
+            "per_frame_saturation_enabled": bool(self.per_frame_saturation_enabled),
+            "per_frame_sat_min_clean_frac": float(self.per_frame_sat_min_clean_frac),
             "err_background_mode": str(self.err_background_mode),
             "err_empty_apertures_n": int(self.err_empty_apertures_n),
             "err_empty_apertures_min": int(self.err_empty_apertures_min),

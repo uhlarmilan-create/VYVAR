@@ -314,6 +314,7 @@ st.append(tab([
  ["noisy1-3","slaby signal (odstupnovane) - meri se, badge v UI, vstup do trustu"],
  ["likely_saturated / saturated","peak u/za limitem - cil se z fotometrie vyrazuje (skip_photometry), komp nikdy"],
 ], [44,124]))
+st.append(P("Pripravena per-frame varianta (per_frame_saturation_enabled, default OFF): misto celohvezdneho vyrazeni rozhoduje podil cistych snimku (prah per_frame_sat_min_clean_frac); validace ceka na dataset se saturovanymi hvezdami.", B))
 st.append(P("Zivotni cyklus cile: navrzen (VSX/exoplanet/rucne) -> obohacen (Gaia ID, BP-RP, zone) -> aktivni (active_targets.csv) -> zmeren (LC CSV) -> znamkovan (trust) -> reportovan/exportovan. V kazdem kroku je stav viditelny v UI (badges) a v CSV - zadny cil nemizi tise; i skip_photometry ma zapsany duvod.", B))
 st.append(fn("photometry_core.py: select_active_targets, _active_target_zone_flag, _enrich_active_targets_bp_rp, stamp_vsx_known_variable_on_masterstars, resolve_variable_targets_csv; VSX/vsx_make.py, exoplanets/exoplanet_make.py (offline stavba katalogu)"))
 st.append(par("vsx_variable_targets_mag_limit=14.5, exoplanet_match_max_sep_arcsec=3.0"))

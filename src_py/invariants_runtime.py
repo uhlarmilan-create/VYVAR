@@ -56,6 +56,15 @@ COG_META_KEYS = (
     "cog_night_fallback_n_frames",
 )
 
+PER_FRAME_SAT_META_KEYS = (
+    "per_frame_sat_enabled",
+    "per_frame_sat_min_clean_frac",
+    "per_frame_sat_n_targets",
+    "per_frame_sat_n_fallback",
+    "per_frame_sat_n_rescued",
+    "per_frame_sat_n_skipped",
+)
+
 
 class InvariantViolation(RuntimeError):
     """FAIL-CLOSED invariant breach."""
@@ -349,6 +358,38 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
         for k in COG_META_KEYS:
             if k in meta:
                 issues.append(f"cog meta key present while COG disabled: {k}")
+
+    if not _cfg_flag(meta, "per_frame_saturation_enabled", False):
+        for k in PER_FRAME_SAT_META_KEYS:
+            if k in meta:
+                issues.append(
+                    f"per-frame-sat meta key present while per_frame_saturation_enabled=False: {k}"
+                )
+        if photometry_dir is not None:
+            import pandas as pd
+
+            p = Path(photometry_dir) / "photometry_summary.csv"
+            if p.is_file():
+                try:
+                    df = pd.read_csv(p, nrows=20, low_memory=False)
+                except Exception:  # noqa: BLE001
+                    df = None
+                if df is not None:
+                    for col in ("sat_clean_frac", "per_frame_sat_fallback"):
+                        if col in df.columns:
+                            issues.append(
+                                f"{col} in photometry_summary.csv while "
+                                "per_frame_saturation_enabled=False"
+                            )
+                    if "skip_reason" in df.columns:
+                        vals = {
+                            str(v).strip().lower() for v in df["skip_reason"].tolist()
+                        }
+                        if "per_frame_saturation" in vals:
+                            issues.append(
+                                "skip_reason=per_frame_saturation in "
+                                "photometry_summary.csv while flag OFF"
+                            )
 
     if not _cfg_flag(meta, "temporal_binning_enabled", False):
         if meta.get("temporal_binning_applied") is True:

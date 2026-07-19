@@ -6,15 +6,15 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-07-18T19:47:22Z at git HEAD aa0f6cf._
+_Generated 2026-07-19T21:55:42Z at git HEAD 6a68fae._
 
 ## Summary
 
-- Entries: 269
-- Tier: basic 12, advanced 68, expert 189
-- Kind: static 251, derived 0, resolved 18
-- Widget: auto 112, custom 141, hidden 16
-- Owner: db_static 9, config_runtime 241, fits_dynamic 6, internal 13
+- Entries: 271
+- Tier: basic 12, advanced 70, expert 189
+- Kind: static 253, derived 0, resolved 18
+- Widget: auto 112, custom 143, hidden 16
+- Owner: db_static 9, config_runtime 243, fits_dynamic 6, internal 13
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -219,6 +219,8 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `neighbor_sub_residual_rms_max` | 150.0 | - | expert | static | config_runtime | custom | Neighbor Sub Residual RMS Max |
 | `nonlinearity_fwhm_ratio` | 1.25 | 1.01 .. 3 | advanced | static | config_runtime | auto | Nonlinearity FWHM Ratio |
 | `nonlinearity_peak_percentile` | 20.0 | 0 .. 50 | advanced | static | config_runtime | auto | Nonlinearity Peak Percentile |
+| `per_frame_sat_min_clean_frac` | 0.5 | 0.1 .. 1 | advanced | static | config_runtime | custom | Per Frame Sat Min Clean Frac |
+| `per_frame_saturation_enabled` | False | - | advanced | static | config_runtime | custom | Per Frame Saturation Enabled |
 | `phase2a_airmass_before_outlier` | False | - | expert | static | config_runtime | auto | Phase2a Airmass Before Outlier |
 | `photometry_mode` | both | - | basic | static | config_runtime | auto | Photometry Mode |
 | `psf_adaptive_enabled` | False | - | expert | static | config_runtime | custom | PSF Adaptive Enabled |

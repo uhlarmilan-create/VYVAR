@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-18** (WAVE-B-PARAM-REDUCTION 304->269 + CONFIG-HUMAN-EDIT: grouped/commented config.json).
+Last updated: **2026-07-19** (PER-FRAME-SAT-GATED: per-frame target sat decisions behind flag, default OFF; registry 271).
 
 ## Repository layout (REPO-REORG -- DONE, gate PASS)
 
