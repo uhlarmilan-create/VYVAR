@@ -17,7 +17,7 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 | Phase | Pri | Deliverable |
 |-------|-----|-------------|
-| **P1** | HIGH | Golden mini-dataset + slow pytest: UI↔night_run byte identity, census bands, double-photometry SHA, physics asserts |
+| **P1** | HIGH | **DONE (2026-07-19).** Golden mini `draft_000435_p1mini` (16-frame stride) + `test_invariants_p1_golden.py` (headless SHA, UI-order identity, census bands, physics). Ledger `VL-P1-GOLD`. Result: `dev/results/CURSOR_RESULT_invariants_p1.md`. |
 | **P2** | HIGH | `docs/VYVAR_INVARIANTS.md` registry + runtime gates (flux, flatness, WCS WARN, stage DAG, RNG, provenance schema, config↔behavior) |
 | **P3** | MED | PROCESS: recurrence tests, forensic promotion, weekly invariants report |
 | **P4** | MED | STATE honest scope statement |

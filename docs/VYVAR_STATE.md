@@ -84,7 +84,9 @@ Census 2552/2842/169; identity p95 baseline **1.54 px**. Ledger `VL-ANCHOR-WCSIN
 **Root cause of prior STOP:** ensemble SEM join / dict-order nondeterminism in phase2a `err`
 (not Labbe placements). Labbe hardened anyway (canonical stars + SeedSequence + dump).
 
-**INVARIANTS P1:** unblocked (seed started).
+**INVARIANTS P1:** **DONE (2026-07-19).** Golden mini `draft_000435_p1mini` +
+`VL-P1-GOLD` active (core `074ae881...` n=333; extended `66285d3f...` n=497). Opt-in
+`VYVAR_INVARIANTS_P1=1`. Result: `dev/results/CURSOR_RESULT_invariants_p1.md`.
 
 ---
 

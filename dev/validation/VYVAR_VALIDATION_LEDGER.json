@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-18",
+  "updated": "2026-07-19",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -166,6 +166,35 @@
       "last_verified": "2026-07-16",
       "commit": "10d610c",
       "notes": "Root cause: 1496795041799526400/\u20266080/\u20265248 never get LCs (no comps / empty_comp_drop). Fixed: INFO skip instead of export failure."
+    },
+    {
+      "id": "VL-P1-GOLD",
+      "area": "invariants",
+      "description": "INVARIANTS P1 golden mini draft_000435_p1mini (16-frame DATE-OBS stride from draft_000435)",
+      "verification": "VYVAR_INVARIANTS_P1=1 pytest dev/tests/test_invariants_p1_golden.py -q (headless SHA + UI-order identity + census bands + physics)",
+      "passes": true,
+      "last_verified": "2026-07-19",
+      "commit": "fbe1be9",
+      "notes": "Locked after two independent wipe+rebuild+headless runs produced byte-identical science outputs. Scope: photometry-ready (in-draft Raw/darks/flats have no local masters; CalibrationLibrary). Chain coverage matches session_baseline --full (run_full_photometry_pipeline). Variability no-op and short-baseline lc_quality are expected at n=16.",
+      "mini_name": "draft_000435_p1mini",
+      "source_draft": "draft_000435",
+      "setup": "NoFilter_60_2",
+      "n_frames": 16,
+      "selection": "even_stride_date_obs_first_included_aligned_only",
+      "inputs_manifest_sha256": "86ab0d9ea6e41264323badb291dfba77756192370cd3486db0f5eb049088bb91",
+      "core_sha": "074ae881e0f589b41a998db3bd64e87cb8179e3dae2e8bce87dc234fb0adfeec",
+      "core_n": 333,
+      "extended_sha": "66285d3f601e70a472aed90834d6f3298eb0f53a7330bc0a12602c634fdd03ba",
+      "extended_n": 497,
+      "census": {
+        "dao_pass1_vy_ndao": 2552,
+        "n_detected_mean": 2777.5625,
+        "n_matched_mean": 2638.5625,
+        "identity_n_parent": 2842,
+        "identity_p95_parent": 1.536099044764055,
+        "n_summary_targets": 169
+      },
+      "lock_timings_s": {"run1": 611.6, "run2": 574.7}
     }
   ]
 }

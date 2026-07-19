@@ -26,6 +26,7 @@ REQUIRED_IDS = frozenset(
         "VL-TRUST-BASELINE",
         "VL-ANCHOR-DQ-430",
         "F-435-EXPORT-GHOSTS",
+        "VL-P1-GOLD",
     }
 )
 

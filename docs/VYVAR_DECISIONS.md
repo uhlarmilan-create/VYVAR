@@ -116,6 +116,34 @@ defaults - that is correct behavior.
 
 ---
 
+## INVARIANTS-P1-GOLDEN-MINI (2026-07-19)
+
+**Mini source.** In-Archive `draft_000435` (live draft). Fail-early requires
+calibrated lights + detrended_aligned proc products + platesolve
+MASTERSTAR/catalogs. Raw lights exist (150) but in-draft `Raw/darks` and
+`Raw/flats` are empty (masters come from CalibrationLibrary at import time).
+
+**Scope note.** Mini starts at **photometry-ready** stage: 16 calibrated + matching
+`proc_*.fits/csv` + parent platesolve catalogs/MASTERSTAR. Chain coverage matches
+`session_baseline_check --full` (`run_full_photometry_pipeline`). Calibrate → QC →
+align are not re-run on the mini (would require local masters + QC DB state); the
+UI-order test still exercises UI path discovery (`_find_phase2a_paths`) vs headless
+direct paths for the photometry composition. Dual-entry divergence remains an
+F-431-class STOP (report, do not silent-fix).
+
+**Size / selection.** 16 frames, even DATE-OBS stride across the time-sorted list of
+frames that have both calibrated and aligned products (QC-rejected frames excluded),
+first frame included. Same masters/catalogs/config as parent night.
+
+**Expected at n=16.** Variability detection no-ops (`variability_min_frames=30`);
+`lc_quality` may classify short-baseline — both correct, not failures.
+
+**Reproducibility before lock.** Build + full headless run twice from scratch;
+science outputs byte-identical; only then register `VL-P1-GOLD`. Confirmed
+2026-07-19 (run1 611.6 s, run2 574.7 s; core/ext SHAs identical).
+
+---
+
 ## VYVAR-INVARIANTS — machine-enforced contracts (2026-07-16)
 
 **Premise (Milan sign-off by commissioning).** Static audits cannot catch integration-class
