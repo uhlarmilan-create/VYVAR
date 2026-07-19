@@ -571,12 +571,13 @@ next calibration lever.
 
 ## MEDIUM
 
-- **TODO-COMP-P2P-RESIDUAL — evaluate p2p outlier on common-mode-removed residual.** The p2p
-  stability check (`check_comparison_stability`) still fires on the raw comp LC; on nights with a
-  shared airmass/transparency ramp, `rms_p2p` ≈ the ramp range (same methodological class as the
-  pre-B2 slope bug). **Separate science-changing task:** mirror the Honeycutt common-mode removal
-  before p2p scoring; own footprint + optional anchor re-cut. Comp-slope fix (B2+B1) is **DONE**
-  pending Milan acceptance; p2p deferred deliberately.
+- ~~**TODO-COMP-P2P-RESIDUAL**~~ **DONE (already implemented; found stale 2026-07-19).**
+  `check_comparison_stability` (`photometry_core.py`) computes p2p on
+  `_comp_lc_frame_ensemble_residual` output with `_common_mode_detrend_comp_lc` applied
+  (`common_mode_detrend=True` default). Docstring: "Abbeho point-to-point scatter on
+  common-mode-detrended comp residuals"; run flag `common_mode_detrend_applied` logged.
+  Caller audit: production call sites (`photometry_core`, `check_star_kmag`, `method_lc_output`)
+  and tracked scripts all pass `common_mode_detrend=True`; no caller disables it.
 - **Expose comp_qa / trust as Settings toggles** + write their defaults to
   `config.json`. These are **user-facing** QA features (the trust badge is observer-facing),
   currently config-only and UI-hidden. Add a "Data quality & validation" Settings section for
