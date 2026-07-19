@@ -28,7 +28,7 @@ Separate commits per phase; pytest green each. Result files: `CURSOR_RESULT_inva
 
 ## IN-FLIGHT / ACTIVATED — band-aware k'' (second-order extinction) v1
 
-**Status:** **ACTIVATED v1 (2026-07-07).** Spec: `docs/VYVAR_K2_DESIGN_SPEC.md`. Code: `k2_extinction.py`,
+**Status:** **ACTIVATED v1 (2026-07-07).** Spec: `dev/results/specs/VYVAR_K2_DESIGN_SPEC.md`. Code: `k2_extinction.py`,
 `k2_mode=literature` default, band_classify CT wiring + CV/CR flip, LC provenance columns.
 **NIGHT_FIT = v2 open** (`k2_fit_enabled` OFF; pre-gate spec'd, sandbox machinery in `tmp/k2_*`).
 
@@ -172,7 +172,7 @@ licensing decision.
 
 ## IN-FLIGHT — CAL-DIAG (calibration-time radiometry gate) — **IMPLEMENTED (pending Milan review)**
 
-**Agreed 2026-07-07; spec APPROVED 2026-07-14 (Milan).** Spec: `docs/VYVAR_CAL_DIAG_SPEC.md` v1.1.
+**Agreed 2026-07-07; spec APPROVED 2026-07-14 (Milan).** Spec: `dev/results/specs/VYVAR_CAL_DIAG_SPEC.md` v1.1.
 Grounding: `CURSOR_RESULT_caldiag_flow.md`. Implementation: `CURSOR_RESULT_cal_diag_impl.md`.
 
 Camera-agnostic calibration-time diagnostic gate (shipped):

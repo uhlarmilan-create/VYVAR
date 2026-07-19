@@ -104,3 +104,8 @@ E3. If Milan wants the 50+ page target strictly: next expansion candidates
     are (a) real screenshots/figures from a report (needs image embedding in
     builder), (b) per-chapter "how to read this in the UI" walk-throughs,
     (c) an expanded worked example per rig. Content-first; no filler.
+
+ADDENDUM (this commit): D1 was stale at time of writing --
+DAO-RECONCILE was already CLOSED 2026-07-09 (completeness 89.7-98.3%,
+miss@G90 live as QA health signal). D1 is void.
+

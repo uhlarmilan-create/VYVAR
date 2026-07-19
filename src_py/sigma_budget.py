@@ -1,7 +1,7 @@
 """Diagnostic sigma budget: Howell (production) + Young/Osborn scintillation.
 
 Sandbox/diagnostic only -- not wired into production LC export.
-See docs/VYVAR_SIGMA_BUDGET_SPEC.md.
+See dev/results/specs/VYVAR_SIGMA_BUDGET_SPEC.md.
 """
 
 from __future__ import annotations

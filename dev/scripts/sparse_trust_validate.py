@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SPARSE-TRUST validation S2-S4 (see docs/VYVAR_SPARSE_TRUST_SPEC.md Section 6)."""
+"""SPARSE-TRUST validation S2-S4 (see dev/results/specs/VYVAR_SPARSE_TRUST_SPEC.md Section 6)."""
 
 from __future__ import annotations
 

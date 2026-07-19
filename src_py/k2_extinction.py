@@ -5,7 +5,7 @@ BP-RP units via Jordi et al. 2010 colour slopes:
 
     k2_bprp = k''_native * d(C_native)/d(C_bprp)
 
-See ``docs/VYVAR_K2_DESIGN_SPEC.md`` v1.1.
+See ``dev/results/specs/VYVAR_K2_DESIGN_SPEC.md`` v1.1.
 """
 from __future__ import annotations
 

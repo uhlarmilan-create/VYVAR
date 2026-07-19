@@ -1,6 +1,6 @@
 """Sparse-field check-star trust - Howell 1988 triangulation + CI-based trust bands.
 
-See docs/VYVAR_SPARSE_TRUST_SPEC.md. Citation: howellwarnockmitchell1988 (CITATIONS.bib).
+See dev/results/specs/VYVAR_SPARSE_TRUST_SPEC.md. Citation: howellwarnockmitchell1988 (CITATIONS.bib).
 """
 from __future__ import annotations
 

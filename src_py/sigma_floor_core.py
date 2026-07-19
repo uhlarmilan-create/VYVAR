@@ -4,7 +4,7 @@ Production error model (relative-flux domain for LC ``err``):
 
     err_total^2 = err_photon_bkg^2 + sem_ens_rel^2 + sigma_sys_rel^2
 
-See docs/VYVAR_SIGMA_FLOOR_SPEC.md.
+See dev/results/specs/VYVAR_SIGMA_FLOOR_SPEC.md.
 """
 
 from __future__ import annotations

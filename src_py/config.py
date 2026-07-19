@@ -524,7 +524,7 @@ class AppConfig:
     comp_trust_min_comps: int = 5
     #: Minimum check-star epochs before trust scatter thresholds apply.
     check_star_min_epochs: int = 5
-    #: Sparse-trust CI band thresholds (docs/VYVAR_SPARSE_TRUST_SPEC.md).
+    #: Sparse-trust CI band thresholds (dev/results/specs/VYVAR_SPARSE_TRUST_SPEC.md).
     sparse_trust_T_green: float = 1.5
     sparse_trust_T_red: float = 4.0
     sparse_trust_X2_RED: float = 0.0004

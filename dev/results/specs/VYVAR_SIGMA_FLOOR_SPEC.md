@@ -3,7 +3,7 @@
 Date: 2026-07-13  
 Status: **ACCEPTED** (ANCHOR-CHAIN-ACCEPT 2026-07-13; exact c4 validation PASS)
 
-Cross-ref: `docs/VYVAR_SIGMA_BUDGET_SPEC.md` (Broeg IVW / scintillation arc still parked).
+Cross-ref: `dev/results/specs/VYVAR_SIGMA_BUDGET_SPEC.md` (Broeg IVW / scintillation arc still parked).
 
 ---
 
@@ -136,7 +136,7 @@ pre-bingain anchor when comparing snapshots; that shift is **not** evidence that
 ## FUTURE -- SPARSE-TRUST
 
 **IMPLEMENTED (2026-07-14).** Howell, Warnock & Mitchell 1988 triangulation + CI trust bands;
-external K sourcing (Amendment 1). Spec: ``docs/VYVAR_SPARSE_TRUST_SPEC.md``. Arc CLOSED;
+external K sourcing (Amendment 1). Spec: ``dev/results/specs/VYVAR_SPARSE_TRUST_SPEC.md``. Arc CLOSED;
 see ROADMAP SPARSE-TRUST row and ``CURSOR_RESULT_arc_close.md``.
 
 **FUTURE design note (rig-aware X2_RED):** candidate X2_RED_eff = max((0.02)^2, k * sigma_r^2)

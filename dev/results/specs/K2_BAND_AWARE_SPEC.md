@@ -1,6 +1,6 @@
 # K2 band-aware spec (empirical cohort notes)
 
-Authoritative design spec: **`docs/VYVAR_K2_DESIGN_SPEC.md`** (v1.1).
+Authoritative design spec: **`dev/results/specs/VYVAR_K2_DESIGN_SPEC.md`** (v1.1).
 
 ## K2-COHORT empirical seed (2026-07-14, report-only)
 
