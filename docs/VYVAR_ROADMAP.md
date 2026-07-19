@@ -841,6 +841,10 @@ EQUIPMENTS row and set it as default, instead of hand-entering specs. Lowers the
 
 ## Dropped / resolved (do not re-open)
 
+- ~~**GAPS A1 / AUTO-VSX-LIMIT**~~ **DONE (report layer, 2026-07-19).** PDF compares
+  `vsx_variable_targets_mag_limit` to measured field depth (`G_lim_90`, SNR5) and
+  warns when the limit is deeper by >0.3 mag. No selection-behavior change; no new
+  config keys. **FUTURE:** opt-in automation of the limit from depth.
 - **TODO-GS9 — Ground-LC period analysis in the PDF** — **closed: descoped 2026-06-09.**
   Lomb-Scargle/BLS + folded diagram on VYVAR's own Phase-2A LC as a PDF science product is
   out of scope; period finding/classification is downstream (Peranso, VStar, Period04). See

@@ -158,8 +158,10 @@ def test_resolved_facts_legacy_fallback_to_dynamic_params() -> None:
 def test_resolved_facts_empty_meta_does_not_crash() -> None:
     model = resolved_facts_model(None)
     assert model["fallback"] is True
-    assert len(model["rows"]) == 9
+    # 9 core facts + AUTO-VSX-LIMIT depth comparison row
+    assert len(model["rows"]) == 10
     assert all(set(r.keys()) == {"label", "value", "source"} for r in model["rows"])
+    assert any(r["label"] == "VSX limit vs field depth" for r in model["rows"])
 
 
 # --------------------------------------------------------------------------- #

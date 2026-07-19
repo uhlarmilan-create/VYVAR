@@ -9,12 +9,9 @@ type. Priorities are suggestions only.
 ## A. Program (code to write)
 
 A1. AUTO-VSX-LIMIT - derive vsx_variable_targets_mag_limit from measured depth.
-    The doc (ch 8.3, 13.5, quick-reference) says the limiting magnitude
-    (SNR=5 crossing, crowding_index) is "the planned basis of an automatic
-    VSX query limit". Today the limit is a static 14.5. Task: report-level
-    suggestion first (print G_lim_90 and SNR5 limit next to the configured
-    value + warn on mismatch), config automation later (opt-in flag).
-    Effort: small. Validation: existing drafts, no new data needed.
+    **DONE (report layer, 2026-07-19):** PDF report compares configured VSX limit
+    to G_lim_90 + SNR5 and warns on mismatch; Phase 0 selection unchanged.
+    **FUTURE:** opt-in config automation of the limit itself.
 
 A2. SIGMA-SYS-PER-RIG - sigma_sys_mag has only band "4" (wide, 18 mmag).
     Newton and Brno filtered bands have no calibrated floor, so their err

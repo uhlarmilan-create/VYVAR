@@ -264,7 +264,155 @@ def full_config_snapshot_model(pipeline_meta: dict[str, Any] | None) -> dict[str
     }
 
 
-def resolved_facts_model(pipeline_meta: dict[str, Any] | None) -> dict[str, Any]:
+# AUTO-VSX-LIMIT (report layer): warn when configured VSX query limit is deeper
+# than measured field depth by more than this margin (mag). Informational only.
+VSX_DEPTH_WARN_MARGIN_MAG = 0.3
+
+
+def _finite_mag_or_none(v: Any) -> float | None:
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(x):
+        return None
+    return float(x)
+
+
+def vsx_limit_vs_depth_status(
+    limit: float | None,
+    g_lim_90: float | None,
+    snr5: float | None,
+    *,
+    margin: float = VSX_DEPTH_WARN_MARGIN_MAG,
+) -> dict[str, Any]:
+    """Compare configured VSX mag limit to measured field depth (pure; no I/O).
+
+    WARN when ``limit > min(available depths) + margin``. Missing depths yield
+    ``status='n/a'`` (never crashes). Does not change Phase 0 target selection.
+    """
+    lim = _finite_mag_or_none(limit)
+    g90 = _finite_mag_or_none(g_lim_90)
+    s5 = _finite_mag_or_none(snr5)
+    depths = [d for d in (g90, s5) if d is not None]
+    g90_s = f"{g90:.2f}" if g90 is not None else "n/a"
+    s5_s = f"{s5:.2f}" if s5 is not None else "n/a"
+    lim_s = f"{lim:.1f}" if lim is not None else "n/a"
+    line = f"VSX limit: {lim_s} | field depth: G_lim_90={g90_s}, SNR5={s5_s}"
+    if lim is None or not depths:
+        return {
+            "status": "n/a",
+            "warn": False,
+            "message": "",
+            "line": line,
+            "limit": lim,
+            "g_lim_90": g90,
+            "snr5": s5,
+            "depth_min": None,
+        }
+    depth_min = float(min(depths))
+    warn = bool(lim > depth_min + float(margin))
+    msg = "VSX limit deeper than measured field depth" if warn else ""
+    return {
+        "status": "warn" if warn else "ok",
+        "warn": warn,
+        "message": msg,
+        "line": line,
+        "limit": lim,
+        "g_lim_90": g90,
+        "snr5": s5,
+        "depth_min": depth_min,
+    }
+
+
+def load_field_depth_metrics(
+    pipeline_meta: dict[str, Any] | None,
+    photometry_dir: Path | str | None = None,
+    *,
+    draft_dir: Path | str | None = None,
+    obs_group: str | None = None,
+    cfg: Any = None,
+    db: Any = None,
+    draft_id: int | None = None,
+) -> dict[str, Any]:
+    """Obtain G_lim_90 and SNR5 side-effect-free for the report (AUTO-VSX-LIMIT).
+
+    Prefers existing artifacts (``pipeline_meta`` dao_reconcile keys;
+    ``crowding_index.json`` Part A ``frame_limit_mag``). Optionally computes
+    crowding Part A in memory when artifacts are missing and a DB handle is
+    available. Never writes science files.
+    """
+    meta = pipeline_meta if isinstance(pipeline_meta, dict) else {}
+    g90 = _finite_mag_or_none(meta.get("g_lim_90"))
+    snr5: float | None = None
+    snr5_source = "missing"
+
+    search_dirs: list[Path] = []
+    if photometry_dir is not None:
+        p = Path(photometry_dir)
+        search_dirs.append(p)
+        search_dirs.append(p.parent)  # platesolve/<setup>
+    if draft_dir is not None and obs_group:
+        search_dirs.append(Path(draft_dir) / "platesolve" / str(obs_group))
+        search_dirs.append(Path(draft_dir) / "platesolve" / str(obs_group) / "photometry")
+
+    seen: set[str] = set()
+    for d in search_dirs:
+        key = str(d.resolve()) if d.exists() else str(d)
+        if key in seen:
+            continue
+        seen.add(key)
+        ci_path = d / "crowding_index.json"
+        if not ci_path.is_file():
+            continue
+        try:
+            raw = json.loads(ci_path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        if not isinstance(raw, dict):
+            continue
+        snr5 = _finite_mag_or_none(raw.get("frame_limit_mag"))
+        if snr5 is not None:
+            snr5_source = f"artifact:{ci_path.name}"
+            break
+
+    if snr5 is None and draft_dir is not None and obs_group and db is not None and draft_id is not None:
+        try:
+            from crowding_index import compute_crowding_index  # noqa: PLC0415
+            from database import get_gaia_db_max_g_mag  # noqa: PLC0415
+
+            gaia_path = getattr(cfg, "gaia_db_path", None) if cfg is not None else None
+            if gaia_path:
+                gmax = float(get_gaia_db_max_g_mag(str(gaia_path)))
+                res, _ = compute_crowding_index(
+                    Path(draft_dir),
+                    str(obs_group),
+                    db,
+                    int(draft_id),
+                    gaia_db_max_g=gmax,
+                )
+                snr5 = _finite_mag_or_none(res.get("frame_limit_mag"))
+                if snr5 is not None:
+                    snr5_source = "compute_crowding_index(in-memory)"
+        except Exception as exc:  # noqa: BLE001
+            logging.debug("[AUTO-VSX-LIMIT] in-memory SNR5 compute skipped: %s", exc)
+
+    return {
+        "g_lim_90": g90,
+        "snr5": snr5,
+        "g_lim_90_source": "pipeline_meta" if g90 is not None else "missing",
+        "snr5_source": snr5_source if snr5 is not None else "missing",
+    }
+
+
+def resolved_facts_model(
+    pipeline_meta: dict[str, Any] | None,
+    *,
+    photometry_dir: Path | str | None = None,
+    cfg: Any = None,
+    draft_dir: Path | str | None = None,
+    obs_group: str | None = None,
+) -> dict[str, Any]:
     """Run-effective resolved facts block for the report.
 
     Reports the values the run ACTUALLY used: site (id/name/lat/lon/alt + source), gain and
@@ -336,7 +484,37 @@ def resolved_facts_model(pipeline_meta: dict[str, Any] | None) -> dict[str, Any]
         {"label": "Filter", "value": _fmt(rf.get("filter")), "source": "FITS / obs_group"},
         {"label": "Exposure (s)", "value": _fmt(rf.get("exptime_s")), "source": "FITS"},
     ]
-    return {"fallback": fallback, "warnings": warnings, "rows": rows}
+
+    # AUTO-VSX-LIMIT (report-only): configured VSX mag limit vs measured field depth.
+    vsx_limit = None
+    if cfg is not None:
+        vsx_limit = _finite_mag_or_none(getattr(cfg, "vsx_variable_targets_mag_limit", None))
+    if vsx_limit is None:
+        prov = meta.get("provenance") if isinstance(meta.get("provenance"), dict) else {}
+        snap = prov.get("config_snapshot") if isinstance(prov.get("config_snapshot"), dict) else {}
+        vsx_limit = _finite_mag_or_none(snap.get("vsx_variable_targets_mag_limit"))
+    depth = load_field_depth_metrics(
+        meta,
+        photometry_dir,
+        draft_dir=draft_dir,
+        obs_group=obs_group,
+        cfg=cfg,
+    )
+    vsx_status = vsx_limit_vs_depth_status(vsx_limit, depth.get("g_lim_90"), depth.get("snr5"))
+    rows.append(
+        {
+            "label": "VSX limit vs field depth",
+            "value": str(vsx_status["line"]),
+            "source": "report check",
+        }
+    )
+
+    return {
+        "fallback": fallback,
+        "warnings": warnings,
+        "rows": rows,
+        "vsx_depth": vsx_status,
+    }
 
 
 def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[str]:
@@ -2581,6 +2759,32 @@ class _PhotometryReportBuilder:
             # EXC-0252: T2 -- report/export may omit or misstate (c.drawString(self.M_LEFT, y, calibration_mode_repor... (EXCEPT-BULK 2026-07-08)
             pass
         c.drawString(self.M_LEFT, y, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # AUTO-VSX-LIMIT cover WARN (informational; does not alter target selection).
+        try:
+            _depth = load_field_depth_metrics(
+                self._pipeline_meta,
+                self.photometry_dir,
+                draft_dir=self.draft_dir,
+                obs_group=self.obs_group,
+                cfg=self._cfg,
+            )
+            _lim = None
+            if self._cfg is not None:
+                _lim = _finite_mag_or_none(
+                    getattr(self._cfg, "vsx_variable_targets_mag_limit", None)
+                )
+            _vsx = vsx_limit_vs_depth_status(
+                _lim, _depth.get("g_lim_90"), _depth.get("snr5")
+            )
+            if bool(_vsx.get("warn")) and _vsx.get("message"):
+                y -= 0.55 * self.cm
+                c.setFont(self.FONT_BOLD, 11)
+                c.setFillColor(self.colors.HexColor("#b00000"))
+                c.drawString(self.M_LEFT, y, f"WARN: {_vsx['message']}")
+                c.setFillColor(self.colors.black)
+        except Exception as exc:  # noqa: BLE001
+            logging.debug("[AUTO-VSX-LIMIT] cover badge skipped: %s", exc)
 
         var_rows = self._variability_cover_rows()
         if var_rows:
@@ -5574,6 +5778,36 @@ class _PhotometryReportBuilder:
             y -= 0.42 * self.cm
         y -= 0.2 * self.cm
 
+        # AUTO-VSX-LIMIT: one-line depth comparison on the config page.
+        try:
+            _depth = load_field_depth_metrics(
+                self._pipeline_meta,
+                self.photometry_dir,
+                draft_dir=self.draft_dir,
+                obs_group=self.obs_group,
+                cfg=self._cfg,
+            )
+            _lim = None
+            if self._cfg is not None:
+                _lim = _finite_mag_or_none(
+                    getattr(self._cfg, "vsx_variable_targets_mag_limit", None)
+                )
+            _vsx = vsx_limit_vs_depth_status(
+                _lim, _depth.get("g_lim_90"), _depth.get("snr5")
+            )
+            c.setFont(self.FONT_REG, 9)
+            c.drawString(self.M_LEFT, y, str(_vsx["line"])[:140])
+            y -= 0.42 * self.cm
+            if bool(_vsx.get("warn")) and _vsx.get("message"):
+                c.setFont(self.FONT_BOLD, 9)
+                c.setFillColor(self.colors.HexColor("#b00000"))
+                c.drawString(self.M_LEFT, y, f"WARN: {_vsx['message']}")
+                c.setFillColor(self.colors.black)
+                y -= 0.42 * self.cm
+            y -= 0.1 * self.cm
+        except Exception as exc:  # noqa: BLE001
+            logging.debug("[AUTO-VSX-LIMIT] config page line skipped: %s", exc)
+
         c.setFont(self.FONT_OBL, 8)
         c.drawString(
             self.M_LEFT, y,
@@ -5644,7 +5878,13 @@ class _PhotometryReportBuilder:
 
     def _report_resolved_facts_page(self, c: "canvas.Canvas") -> None:
         """Resolved-facts block: values the run actually used (site/gain/RN/plate/frame/etc.)."""
-        model = resolved_facts_model(self._pipeline_meta)
+        model = resolved_facts_model(
+            self._pipeline_meta,
+            photometry_dir=self.photometry_dir,
+            cfg=self._cfg,
+            draft_dir=self.draft_dir,
+            obs_group=self.obs_group,
+        )
 
         c.setPageSize(self.landscape(self.A4))
         y = self.PAGE_H - self.M_TOP
@@ -5672,6 +5912,14 @@ class _PhotometryReportBuilder:
             c.setFillColor(self.colors.black)
             y -= 0.2 * self.cm
 
+        _vsx = model.get("vsx_depth") if isinstance(model.get("vsx_depth"), dict) else {}
+        if bool(_vsx.get("warn")) and _vsx.get("message"):
+            c.setFont(self.FONT_BOLD, 9)
+            c.setFillColor(self.colors.HexColor("#b00000"))
+            c.drawString(self.M_LEFT, y, f"WARN: {_vsx['message']}")
+            c.setFillColor(self.colors.black)
+            y -= 0.5 * self.cm
+
         col_lbl = self.M_LEFT
         col_val = self.M_LEFT + 7.0 * self.cm
         col_src = self.M_LEFT + 20.0 * self.cm
@@ -5688,7 +5936,7 @@ class _PhotometryReportBuilder:
             if y < self._layout_y_floor() + 1.0 * self.cm:
                 y = self._layout_page_break(c)
             c.drawString(col_lbl, y, str(row["label"]))
-            c.drawString(col_val, y, str(row["value"])[:80])
+            c.drawString(col_val, y, str(row["value"])[:90])
             c.drawString(col_src, y, str(row["source"])[:42])
             y -= 0.45 * self.cm
 
