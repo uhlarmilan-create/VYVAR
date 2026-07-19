@@ -164,6 +164,24 @@ recurrence discipline → P4 STATE scope statement.
 
 **Out of scope:** UI Settings block (parallel), new science features.
 
+### INVARIANTS-P2-REGISTRY (2026-07-19)
+
+**Delivered.** Human registry `docs/VYVAR_INVARIANTS.md` + runtime library
+`src_py/invariants_runtime.py`. Wired gates (check-only): INV-FLUX-01/02 (FAIL),
+INV-FLAT-01 (WARN), INV-WCS-01 (WARN), INV-DAG-01 (FAIL; cold-start / gap allowed for
+sparse stamps), INV-RNG-01 (TEST AST; zero hits), INV-PROV-01 + INV-CFG-01 (FAIL end-of-run).
+INV-FLUX-03 / INV-SHA-01 / INV-WCS-00 are registry-only pointers.
+
+**Meta / SHA scope.** `pipeline_meta.json` is outside core/extended photometry SHA and the
+`--full` science comparator (`dev/tests/photometry_sha.py`). Invariants/stages blocks are
+written into `pipeline_meta.json` freely; science outputs remain the byte-identity contract.
+
+**FLOW 4.5 correction (doc-drift evidence).** Builder prose claimed sky-surface preprocess was
+"flux-conserving / mean-preserving". Code and T3 decision subtract the **full** fitted surface
+including the constant term (pedestal; Δ median ~ −96 ADU on the reference frame). Registry
+INV-FLUX-03 now owns that claim; FLOW regenerated accordingly. This is the class of
+prose-physics drift the facts guard cannot catch.
+
 ---
 
 ## T3-PREPROCESS-SKY-SURFACE — order-2 shared preprocess (2026-07-16)
@@ -173,7 +191,7 @@ surface of order 2 to the background (source-masked + sigma-clipped fit), subtra
 shared ``calibrated → processed`` step used by BOTH chains (UI and headless route through
 ``preprocess_calibrated_to_processed`` → ``_preprocess_calibrated_one``). Config:
 ``preprocess_sky_surface_order`` (int, 0 = off, **default 2**). Subtract the **full** fitted
-surface including the constant term (pedestal convention: Δ median ≈ −96 ADU on BO CVn
+surface including the constant term (pedestal convention: Δ median ~ −96 ADU on BO CVn
 Light_008 vs draft_429).
 
 **Rationale.** DAOStarFinder and Labbe background assume a locally flat field. The lost
@@ -398,7 +416,7 @@ there is nothing to "recover", so the residual gate is a **permanent quality gat
 self-deactivates once "Fix C" succeeds. (The earlier "self-deactivating" wording is superseded below.)
 
 **Decision — log a SEPARATE perf/robustness ticket (not Fix C recovery).** astroalign at the production
-mcp≈200 on dense fields is ~654 s/frame (and still fails); cap to ~50 (astroalign's design point) →
+mcp~200 on dense fields is ~654 s/frame (and still fails); cap to ~50 (astroalign's design point) →
 ~3–10 s. Two integration shapes — additive recovery rung (keeps the 147 byte-identical, does **not** fix
 slowness) vs primary cap (fixes slowness, changes the 147 transforms → needs a **cross-rig regression,
 home + narrow rigs**, before adoption). Deferred until cross-rig data is available. See ROADMAP.
@@ -428,7 +446,7 @@ permanent gate. See C1 decision above.]**
 frame-selection point, a per-frame residual = median (over bright matched sources, 10≤mag≤13) of the
 deviation of (x,y) from each source's robust across-night median position, and write it as
 `align_residual_px` in `alignment_report.csv`. *Why this metric:* the across-night median reference is
-dominated by the well-aligned majority, so a translation-mis-aligned frame's residual ≈ its full shift
+dominated by the well-aligned majority, so a translation-mis-aligned frame's residual ~ its full shift
 — it reproduces the diagnostic's clean separation (astroalign ~0.36 px vs phase_corr ~2.13 px) without
 needing the alignment transform's internal control points. *Why always-on:* it is additive QC metadata
 (does not feed photometry → baseline byte-identical) and is a direct measure of frame quality.
@@ -525,10 +543,10 @@ near-target comps / per-side normalization when a flip is detected). Evidence: `
 ## Aperture-skirt fix REJECTED; transparency frame-quality gate ADOPTED (default-OFF) (2026-06-17)
 
 **B.1 aperture-skirt — not implemented.** The SNR-optimal science aperture (~5 px) captures only
-EE≈0.65 of a defocused star (curve-of-growth on bright isolated pre-flip stars), so the premise
+EE~0.65 of a defocused star (curve-of-growth on bright isolated pre-flip stars), so the premise
 "aperture under-captures the skirt" is true. But the decisive test refutes the *fix*: differential
 frame-to-frame scatter is **flat** from r=5 px to the EE≥0.99 plateau (~24→27 mmag; minimum ~21 mmag
-at r≈6 px, within noise), and a per-frame FWHM-adaptive aperture is **worse** (30–32 mmag). The
+at r~6 px, within noise), and a per-frame FWHM-adaptive aperture is **worse** (30–32 mmag). The
 ±5–7% skirt-fraction swing (~48 mmag nominal) is **common-mode PSF breathing** that differential
 photometry already cancels; the bright-star floor is not aperture-limited. Grounded decision: widening
 the aperture is not justified (a 5→6 px bump is within noise). Evidence: `CURSOR_RESULT_round2.md`,
@@ -696,7 +714,7 @@ data-driven radiometry gate, not per-camera constants.
 
 ## Photometry method & scale
 
-### Plate scale is WCS-derived (≈ 9.77″/px on the wide rig), not 1.3
+### Plate scale is WCS-derived (~ 9.77″/px on the wide rig), not 1.3
 The project-wide `1.3″/px` belief was wrong — it was a Newton 300/1200 + C3-26000 (binned 2×)
 placeholder leaking onto the wide Carl-Zeiss/QHY294MM field via a global config default. The
 resolver is **solved WCS/CD authoritative → config only as last resort** (sane clamp widened
@@ -947,7 +965,7 @@ default false); legacy `processed/` removal pending validation.**
   For **NoFilter/broadband** this is justified: without a filter the colour term is a
   *first-order* systematic (no bandpass to cancel it), and colour systematics don't average
   down like random scatter. Grounded in Henden & Kaitchuck (1982) and the AAVSO CCD Guide.
-- **Proximity** is enforced only as the distance gate (`max_dist_deg` ≈ 1.5°, `min_dist_arcsec`
+- **Proximity** is enforced only as the distance gate (`max_dist_deg` ~ 1.5°, `min_dist_arcsec`
   60″). A proximity ranking tie-break was implemented and **reverted**: because Broeg `1/σ²`
   weights are order-independent, any RMS-bin tie-break necessarily trades stability for
   proximity, violating the agreed order. **Status: settled 2026-06-02** (revert restored the
@@ -965,7 +983,7 @@ stage (photometry byte-identical); outputs per-comp flags + per-target `n_clean`
 Detection-independent signals (Gaia density, `blend_frac` at depth, comp availability) replace
 the erratic stars/Mpx class; LOOSEN on comp scarcity, TIGHTEN on real blend fraction, with a
 **sampling gate (FWHM ≥ 3 px)**. The wide rig is floor-limited (scintillation/undersampling at
-FWHM ≈ 2.6 px), so tightening there only cuts good comps. **Decision: keep OFF for the wide rig;
+FWHM ~ 2.6 px), so tightening there only cuts good comps. **Decision: keep OFF for the wide rig;
 enable on the well-sampled Newton cluster.**
 
 ## Trust & validation
@@ -1070,9 +1088,9 @@ Pipeline for Amateur Variable Star Observers* (PASP / AN).
 
 ### APCORR-COLOR — extrapolation hard-block; NoFilter CT still off (2026-06-03)
 **Prototype (draft_000366, NoFilter):** `VYVAR_CT_PROTOTYPE=1` measured would-be CT without
-changing production LCs. Findings supersede earlier roadmap estimates (`c1 ≈ −1.0`,
-cat−inst ~0.12–0.16 mag): median c1 ≈ −0.07 (all) / −0.36 (nonzero) / −0.53 (gate-passers);
-median |ct_corr| ≈ 0.019 mag (p90 ≈ 0.5 mag); cat−inst scatter 0.078→0.053 mag; only ~11%
+changing production LCs. Findings supersede earlier roadmap estimates (`c1 ~ −1.0`,
+cat−inst ~0.12–0.16 mag): median c1 ~ −0.07 (all) / −0.36 (nonzero) / −0.53 (gate-passers);
+median |ct_corr| ~ 0.019 mag (p90 ~ 0.5 mag); cat−inst scatter 0.078→0.053 mag; only ~11%
 pass numeric gates; worst cases up to ~4.8 mag on extrapolated red targets. **NoFilter CT
 enable remains parked.**
 
@@ -1485,7 +1503,7 @@ load-bearing; not grounded in differential-photometry physics.
 | `airmass_detrend_lc` | *(removed)* | Least-squares fit **`mag = a·airmass + b` on the target's own curve**. **Not** a comp-derived extinction coefficient. **[2026-06-19 — fully removed]** wiring helper `_apply_airmass_detrend_helper` (T1-2) and functions `airmass_detrend_lc`/`airmass_detrend_lc_piecewise` (T1-7) deleted; per-target airmass detrend no longer runs (Phase-2A summary reports `am_detrended=False`), per the grounded fix below. |
 | `detect_outliers` | `photometry_core.py:3323-3360` | Global median + MAD on all finite mags; **no VSX/feature mask**. Eclipse dimming → `outlier_lo` (`mag > med + thr`, `:3354-3356`). V0612 DoD-A LC: **2× `outlier_lo`** (ingress). |
 | `delta_mag` export | `save_lightcurve_csv` `:7594`, `:3814` | **Unchanged** by outlier/airmass stages; only `mag_calib*` columns are rewritten (`:7486-7496`). |
-| Shape preservation | DoD-A LC `tmp/phase10/.../lightcurve_1111749368289526912.csv` | `corr(delta_mag, mag_calib_raw)` **0.998**; historical `corr(delta_mag, mag_calib)` **0.59** after target-fit airmass detrend (slope ≈ **0.78** mag/airmass) — detrend path since removed. |
+| Shape preservation | DoD-A LC `tmp/phase10/.../lightcurve_1111749368289526912.csv` | `corr(delta_mag, mag_calib_raw)` **0.998**; historical `corr(delta_mag, mag_calib)` **0.59** after target-fit airmass detrend (slope ~ **0.78** mag/airmass) — detrend path since removed. |
 
 **Grounded fix (three parts):**
 

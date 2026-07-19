@@ -12176,6 +12176,7 @@ def generate_masterstar_and_catalog(
         except (TypeError, ValueError):
             _p95f = float("nan")
         # Standing series WARN (Anchor #3 / draft_435 baseline p95≈1.54 px): soft threshold only.
+        # INV-WCS-01: same band, recorded into pipeline_meta invariants at merge below.
         _IDENTITY_P95_WARN_PX = 2.0
         if math.isfinite(_p95f) and _p95f > _IDENTITY_P95_WARN_PX:
             logging.warning(
@@ -12187,6 +12188,17 @@ def generate_masterstar_and_catalog(
             log_event(
                 f"IDENTITY-QA WARN: p95={_p95f:.3f} px > {_IDENTITY_P95_WARN_PX:.1f} px threshold"
             )
+        try:
+            from invariants_runtime import check_wcs_identity_p95  # noqa: PLC0415
+            from invariants_runtime import inv_check  # noqa: PLC0415
+
+            _ok_w, _det_w = check_wcs_identity_p95(_p95f if math.isfinite(_p95f) else None)
+            _inv_meta_wcs: dict = {"invariants": []}
+            inv_check(_inv_meta_wcs, "INV-WCS-01", _ok_w, policy="WARN", detail=_det_w)
+            _identity_qa = dict(_identity_qa or {})
+            _identity_qa["_inv_wcs_01"] = _inv_meta_wcs.get("invariants") or []
+        except Exception as _inv_wcs_exc:  # noqa: BLE001
+            logging.debug("[INV-WCS-01] record skipped: %s", _inv_wcs_exc)
     except Exception as _fin_exc:  # noqa: BLE001
         log_event(f"MASTERSTAR coordinate finalization / round-trip QA skipped: {_fin_exc!s}")
         _wcs_rt_p99 = None
@@ -12261,7 +12273,12 @@ def generate_masterstar_and_catalog(
             _meta_patch["wcs_roundtrip_p99_px"] = float(_wcs_rt_p99)
             _meta_patch["wcs_roundtrip_pass"] = bool(_wcs_rt_pass)
         if _identity_qa:
+            _inv_wcs_recs = _identity_qa.pop("_inv_wcs_01", None)
             _meta_patch.update(_identity_qa)
+            if _inv_wcs_recs:
+                _meta_patch.setdefault("invariants", [])
+                if isinstance(_meta_patch["invariants"], list):
+                    _meta_patch["invariants"].extend(list(_inv_wcs_recs))
         try:
             _cone_df = None
             _cone_csv = Path(platesolve_dir) / "field_catalog_cone.csv"
@@ -12316,6 +12333,17 @@ def generate_masterstar_and_catalog(
             _cfg_ms,
             entry_point="generate_masterstar_and_catalog",
         )
+        # INV-DAG-01: masterstar stage stamp (cold-start OK if earlier stages absent).
+        try:
+            from invariants_runtime import stamp_stage_on_disk  # noqa: PLC0415
+
+            stamp_stage_on_disk(
+                Path(platesolve_dir) / "photometry",
+                "masterstar",
+                enforce_upstream=True,
+            )
+        except Exception as _dag_exc:  # noqa: BLE001
+            logging.debug("[INV-DAG-01] masterstar stamp skipped: %s", _dag_exc)
     log_event(
         f"MASTERSTAR katalóg: {Path(csv_path).name} — {len(df_final)} riadkov "
         f"(DAO + katalóg na celom poli; žiadne orezanie podľa vzdialenosti od stredu snímku)."
@@ -16440,6 +16468,14 @@ def _fit_subtract_preprocess_sky_surface(
 
     out = (work - surf).astype(np.float32)
     out = np.where(finite, out, np.nan).astype(np.float32)
+    # INV-FLAT-01: residual large-scale flatness after full-surface subtract (WARN band).
+    _flat_p99 = float("nan")
+    try:
+        from invariants_runtime import residual_large_scale_p99_adu  # noqa: PLC0415
+
+        _flat_p99 = float(residual_large_scale_p99_adu(out))
+    except Exception:  # noqa: BLE001
+        _flat_p99 = float("nan")
     return out, {
         "sky_surface_order": order_i,
         "sky_surface_applied": True,
@@ -16449,6 +16485,7 @@ def _fit_subtract_preprocess_sky_surface(
         "sky_surface_fwhm_px": float(fwhm_eff),
         "sky_surface_bg_median_adu": float(bg_median),
         "sky_surface_calm_adu": float(calm_thr),
+        "residual_flatness_p99_adu": _flat_p99,
     }
 
 

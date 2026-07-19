@@ -91,6 +91,10 @@ Census 2552/2842/169; identity p95 baseline **1.54 px**. Ledger `VL-ANCHOR-WCSIN
 **APCORR-MIXEDFRAME:** **DONE (2026-07-19)** — night-level all-or-nothing COG gate
 (`cog_night_fallback` provenance); COG still default OFF.
 
+**INVARIANTS P2:** **DONE (2026-07-19).** Contract registry `docs/VYVAR_INVARIANTS.md` +
+runtime gates in `invariants_runtime.py` (meta-only; science SHA untouched). FLOW 4.5
+sky-surface pedestal wording corrected (was wrongly "flux-conserving").
+
 ---
 
 ## Prior: Anchor #3 STOP (superseded)

@@ -545,6 +545,16 @@ def get_processed_master(
         dark_resample_mode=_drm,
     )
 
+    # INV-FLUX-01: dark block-sum downscale must conserve total flux (FAIL-CLOSED).
+    if kind == "dark" and bf > 1 and _drm == "sum":
+        from invariants_runtime import check_dark_resample_flux_conservation  # noqa: PLC0415
+        from invariants_runtime import inv_check  # noqa: PLC0415
+
+        _ok_fx, _det_fx = check_dark_resample_flux_conservation(
+            data, out, block_factor=int(bf), mode="sum"
+        )
+        inv_check({"invariants": []}, "INV-FLUX-01", _ok_fx, policy="FAIL", detail=_det_fx)
+
     if light_shape is not None:
         eh, ew = int(light_shape[0]), int(light_shape[1])
         if out.shape[0] != eh or out.shape[1] != ew:
@@ -571,6 +581,12 @@ def get_processed_master(
         )
         flat_median_adu_before_norm = fm_pre
         flat_normalized_at_calibrate = True
+        # INV-FLUX-02: normalized flat mean ≈ 1.0 (FAIL-CLOSED).
+        from invariants_runtime import check_flat_mean_near_one  # noqa: PLC0415
+        from invariants_runtime import inv_check  # noqa: PLC0415
+
+        _ok_fl, _det_fl = check_flat_mean_near_one(out)
+        inv_check({"invariants": []}, "INV-FLUX-02", _ok_fl, policy="FAIL", detail=_det_fl)
     elif kind == "flat":
         flat_median_adu_before_norm = float(np.nanmedian(out))
 

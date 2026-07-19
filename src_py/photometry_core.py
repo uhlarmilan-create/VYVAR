@@ -10084,6 +10084,56 @@ def _phase2a_finalize_exports(
     if any(v > 0 for v in _ef_snap.values()):
         logging.error("[EXCEPT-FIX] Phase 2A terminal-failure counters: %s", _ef_snap)
 
+    # INV-DAG-01 + INV-FLAT-01 + INV-PROV-01 / INV-CFG-01 end-of-run gates.
+    try:
+        from invariants_runtime import (  # noqa: PLC0415
+            FLATNESS_P99_WARN_ADU,
+            inv_check,
+            load_pipeline_meta,
+            run_end_of_run_invariants,
+            save_pipeline_meta,
+            stamp_pipeline_stage,
+        )
+
+        _inv_meta = load_pipeline_meta(output_dir)
+        stamp_pipeline_stage(_inv_meta, "phase2a", enforce_upstream=True)
+        # INV-FLAT-01 from preprocess residual flatness column in qc_metrics (WARN).
+        try:
+            _dd = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
+            from pipeline import find_qc_metrics_csv  # noqa: PLC0415
+
+            _qc_p = find_qc_metrics_csv(_dd) if _dd is not None else None
+            if _qc_p is not None and _qc_p.is_file():
+                _qdf = pd.read_csv(_qc_p, low_memory=False)
+                if "residual_flatness_p99_adu" in _qdf.columns:
+                    _p99s = pd.to_numeric(
+                        _qdf["residual_flatness_p99_adu"], errors="coerce"
+                    ).to_numpy(dtype=float)
+                    _p99s = _p99s[np.isfinite(_p99s)]
+                    if _p99s.size:
+                        _p99_max = float(np.nanmax(_p99s))
+                        _ok_fl = _p99_max <= float(FLATNESS_P99_WARN_ADU)
+                        inv_check(
+                            _inv_meta,
+                            "INV-FLAT-01",
+                            _ok_fl,
+                            policy="WARN",
+                            detail=(
+                                f"max residual_flatness_p99={_p99_max:.1f} ADU "
+                                f"(band={FLATNESS_P99_WARN_ADU:g}; n={int(_p99s.size)})"
+                            ),
+                        )
+        except Exception as _flat_exc:  # noqa: BLE001
+            logging.debug("[INV-FLAT-01] skipped: %s", _flat_exc)
+        save_pipeline_meta(output_dir, _inv_meta)
+        run_end_of_run_invariants(output_dir, stamp_postprocess=True)
+    except Exception as _inv_end_exc:  # noqa: BLE001
+        from invariants_runtime import InvariantViolation  # noqa: PLC0415
+
+        if isinstance(_inv_end_exc, InvariantViolation):
+            raise
+        logging.warning("[INV] end-of-run validation skipped: %s", _inv_end_exc)
+
     return {
         "n_targets": len(at_df),
         "n_frames": n_frames,
@@ -10243,9 +10293,6 @@ def run_phase2a(
             "common_mode_stability_detrend": bool(
                 state.stability_run_flags.get("common_mode_detrend_applied")
             ),
-            "cog_night_fallback": bool(state.cog_night_fallback),
-            "cog_night_fallback_n_without_ok": int(state.cog_night_fallback_n_without_ok),
-            "cog_night_fallback_n_frames": int(state.cog_night_fallback_n_frames),
             **_cal_meta,
             **_cal_diag_meta,
             **_sky_surface_meta_from_qc(_draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))),
@@ -10253,6 +10300,16 @@ def run_phase2a(
         _cfg,
         entry_point="run_phase2a",
     )
+    # INV-CFG-01: cog meta keys present only when COG is enabled.
+    if bool(getattr(_cfg, "cog_aperture_correction_enabled", False)):
+        merge_photometry_pipeline_meta(
+            output_dir,
+            {
+                "cog_night_fallback": bool(state.cog_night_fallback),
+                "cog_night_fallback_n_without_ok": int(state.cog_night_fallback_n_without_ok),
+                "cog_night_fallback_n_frames": int(state.cog_night_fallback_n_frames),
+            },
+        )
 
     # Per target loop
     # _phase2a_process_single_target (inline): ZP → CT → (outlier → airmass | airmass → outlier) → export.
@@ -15052,6 +15109,14 @@ def run_full_photometry_pipeline(
             "output_dir": str(Path(output_dir)),
             "error": "Fáza 0+1 nevygenerovala active_targets/comparison_stars CSV.",
         }
+
+    # INV-DAG-01: phase01 stamp after successful Phase 0+1.
+    try:
+        from invariants_runtime import stamp_stage_on_disk  # noqa: PLC0415
+
+        stamp_stage_on_disk(Path(output_dir), "phase01", enforce_upstream=True)
+    except Exception as _dag_p01_exc:  # noqa: BLE001
+        logging.debug("[INV-DAG-01] phase01 stamp skipped: %s", _dag_p01_exc)
 
     # ── FÁZA 2A ──
     _p("Fáza 2A: aperture photometry + lightcurves…")

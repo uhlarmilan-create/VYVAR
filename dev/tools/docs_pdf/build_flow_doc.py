@@ -225,7 +225,7 @@ st.append(box("Jak se pozna spatny master (a proc na tom zalezi)", [
  "Dark z jine expozice/teploty: rezidualni temny proud vytvori falesny 'signal' zavisly na teple noci - fotometrie se posune systematicky a NEODHALITELNE pouhym pohledem. Proto fail-closed: radeji noc zastavit nez tise znehodnotit.",
  "Stary flat (prach se pohnul): 'donut' artefakty se objevi/zmizi -> lokalni fotometricke chyby hvezd, ktere na artefakt padnou. Hlida se stari flatu (200 dnu) a QC per snimek."]))
 st.append(P("4.5 Sky-surface preprocess (soucast anchoru draft_435)", H2))
-st.append(P("Po kalibraci se na cely snimek fituje robustni polynomialni plocha radu 2 (6 clenu; preprocess_sky_surface_order=2) a odecita se TVAR pozadi se zachovanim urovne (flux-conserving - stredni hodnota snimku se nemeni). Odstranuje velkoplosny gradient (Mesic nizko, svitani) a zbytkove zakriveni po flatu. Vyssi rad je ZAMERNE zakazan: polynom radu 3+ by zacal pozirat plosne objekty (mlhoviny) a lokalni struktury pozadi. Krok je soucasti anchoru draft_435, tj. jeho zmena je vedecka zmena s povinnym vysvetlitelnym diffem.", B))
+st.append(P("Po kalibraci se na cely snimek fituje robustni polynomialni plocha radu 2 (6 clenu; preprocess_sky_surface_order=2) a odecita se CELA fitovana plocha vcetne konstantniho clenu (pedestal konvence dle T3 rozhodnuti; median snimku se posouva o fitovany pedestal, na referencnim snimku ~ -96 ADU). Odstranuje velkoplosny gradient (Mesic nizko, svitani) i zbytkove zakriveni po flatu; tvar i uroven pozadi jsou pak konzistentni pro DAO detekci a Labbe empiricke pozadi. Vyssi rad je ZAMERNE zakazan: polynom radu 3+ by zacal pozirat plosne objekty (mlhoviny) a lokalni struktury pozadi. Krok je soucasti anchoru draft_435, tj. jeho zmena je vedecka zmena s povinnym vysvetlitelnym diffem. (Kontrakt: docs/VYVAR_INVARIANTS.md INV-FLUX-03.)", B))
 st.append(fn("calibration.py: get_processed_master, normalize_flat_master, resample_master_to_light_binning, infer_spatial_block_factor / infer_spatial_upscale_factor, resolve_master_age, get_master_age_days; cal_diag.py: CalDiagSession a brany; importer.py: find_best_calibration_library_path; database.py: registrace masteru (povinna CCD_TEMP)"))
 st.append(par("cal_diag_gate_enabled=true, cal_diag_autocorrect_enabled=true, cal_diag_rel_tol=0.02, cal_diag_hard_sigma=5.0, cal_diag_sat_warn_frac=0.9, calibration_master_ccd_temp_tolerance_c=0.5, masterdark_validity_days=90, masterflat_validity_days=200, calibration_library_native_binning=1, bpm_dark_mad_sigma=5.0, dao_qc_in_calibrate=true, preprocess_sky_surface_order=2"))
 
@@ -839,6 +839,7 @@ st.append(tab([
  ["VYVAR_DECISIONS.md","rozhodnuti + zduvodneni + NEGATIVNI vysledky (proc neco NEdelame)"],
  ["VYVAR_ROADMAP.md","otevrena prace a poradi"],
  ["VYVAR_PROCESS.md","jak se vyviji (ritual, gating, parita parametru)"],
+ ["VYVAR_INVARIANTS.md","strojove vynucovane kontrakty (flux, WCS, DAG, RNG, provenance, config)"],
  ["VYVAR_CONFIG_GUIDE_EN/CZ.md + VYVAR_PARAMETER_HANDBOOK_CZ.pdf","plne vysvetleni kazdeho parametru"],
  ["VYVAR_INSTALL_GUIDE_CZ.pdf","instalace a prvni spusteni"],
  ["CITATIONS.bib","kanonicky seznam citaci (gating dle behu)"],
