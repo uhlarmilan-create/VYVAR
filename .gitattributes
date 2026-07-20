@@ -1,2 +1,6 @@
-# Keep binary assets byte-exact: never apply EOL normalization to PDFs.
+# EOL: normalize text to LF in the repo; let Git checkout native EOLs locally.
+* text=auto
+
+# Keep binary assets byte-exact: never apply EOL normalization.
 *.pdf binary
+*.png binary
