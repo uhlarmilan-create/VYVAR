@@ -6,7 +6,7 @@ slope notes differed (ASCII sigma vs U+03C3). Two independent --full runs were
 byte-identical; snapshot patched locally; ledger/constants/docs updated; recurrence
 test + PROCESS gate rule added.
 
-## Step 1 — sigma-notes-only proof
+## Step 1 - sigma-notes-only proof
 
 Script: `dev/scripts/anchor_recut_sigma_proof.py --step1-only`
 Run dir: `tmp/session_baseline/20260720T153735Z` vs snapshot `draft_000435_snapshot_skysurface_20260716`
@@ -29,7 +29,7 @@ Sample unified diff (only changed line in each file):
 
 Full proof JSON: `tmp/anchor_recut/anchor_recut_report.json` (step1 section).
 
-## Step 2 — two-run reproducibility (HEAD c514e7f)
+## Step 2 - two-run reproducibility (HEAD c514e7f)
 
 | | Run A | Run B |
 |---|-------|-------|
@@ -40,7 +40,7 @@ Full proof JSON: `tmp/anchor_recut/anchor_recut_report.json` (step1 section).
 | Extended n | 499 | 499 |
 | Cross-run byte identity | PASS | PASS |
 
-## Step 3 — re-cut VL-ANCHOR-WCSINV
+## Step 3 - re-cut VL-ANCHOR-WCSINV
 
 New anchor SHAs (locked in ledger + `session_baseline_check.py` + P1 seed test):
 
@@ -51,13 +51,13 @@ Snapshot patched locally (19 comp_quality files copied from run A; Archive gitig
 Superseded SHAs retained in ledger `notes` + `superseded_*_sha` fields.
 VL-P1-GOLD untouched.
 
-## Step 4 — recurrence guards
+## Step 4 - recurrence guards
 
-**4a.** `dev/tests/test_recur_shatext_templates.py` — 3 tests PASS (slope note templates ASCII-only; sync with photometry_core source).
+**4a.** `dev/tests/test_recur_shatext_templates.py` - 3 tests PASS (slope note templates ASCII-only; sync with photometry_core source).
 
-**4b.** `docs/VYVAR_PROCESS.md` Verification gates — string-literal rule added (science modules in src_py require --full before push; comments exempt).
+**4b.** `docs/VYVAR_PROCESS.md` Verification gates - string-literal rule added (science modules in src_py require --full before push; comments exempt).
 
-## Step 5 — gates
+## Step 5 - gates
 
 | Gate | Result |
 |------|--------|
@@ -69,11 +69,11 @@ VL-P1-GOLD untouched.
 
 ## Docs impact
 
-- `docs/VYVAR_DECISIONS.md` — ANCHOR-RECUT-SIGMA-NOTES (origin ecbae90, gate-spec miss, coverage hole, fixes)
-- `docs/VYVAR_STATE.md` — anchor line + header (new SHA prefixes)
-- `docs/VYVAR_PROCESS.md` — string-literal gate sentence
-- `dev/tools/docs_pdf/build_flow_doc.py` + `docs/VYVAR_FLOW_CZ.pdf` — ch 17.3 SHA prefixes 03d8fb64 / bbfcc92e
-- `dev/validation/VYVAR_VALIDATION_LEDGER.json` — VL-ANCHOR-WCSINV refresh
+- `docs/VYVAR_DECISIONS.md` - ANCHOR-RECUT-SIGMA-NOTES (origin ecbae90, gate-spec miss, coverage hole, fixes)
+- `docs/VYVAR_STATE.md` - anchor line + header (new SHA prefixes)
+- `docs/VYVAR_PROCESS.md` - string-literal gate sentence
+- `dev/tools/docs_pdf/build_flow_doc.py` + `docs/VYVAR_FLOW_CZ.pdf` - ch 17.3 SHA prefixes 03d8fb64 / bbfcc92e
+- `dev/validation/VYVAR_VALIDATION_LEDGER.json` - VL-ANCHOR-WCSINV refresh
 - ROADMAP: no change
 
 ## Recurrence
