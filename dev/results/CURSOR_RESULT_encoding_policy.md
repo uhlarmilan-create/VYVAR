@@ -92,8 +92,22 @@ PASS (RESULT lives in commit 1 so it does not pollute this proof).
 | P1 golden | 7 passed |
 | git status | clean except allowlisted untracked |
 
-## Untracked left alone
+## Untracked left alone (pre-push)
 
 - dev/scripts/dy_peg_night_run_bvr.py (allowlisted)
 - dev/scripts/qatar8_night_run_v.py (allowlisted)
-- dev/scripts/forensic_disc_ui_match2.py (no Milan box)
+- dev/scripts/forensic_disc_ui_match2.py -- COMMITTED at push time (Milan box)
+
+## PUSH (2026-07-20)
+
+- Forensic script migration needed: NO (already ASCII; --check status=ascii)
+- Forensic commit: `0d9232c` chore(scripts): track forensic_disc_ui_match2.py ...
+- Pre-push --fast: OVERALL PASS (1034 passed, 17 skipped; ascii guard green)
+- origin/main pre-push: still `96b3c26`
+- `git push origin main`: `96b3c26..0d9232c`
+- Pushed stack (oldest -> newest):
+  - `ecbae90` chore(encoding): ASCII migration + guard + PROCESS
+  - `d9f1894` chore(eol): * text=auto + editorconfig
+  - `0d9232c` chore(scripts): track forensic_disc_ui_match2.py
+  - (this RESULT append rides as the final bookkeeping commit)
+- Still untracked by design: dy_peg_night_run_bvr.py, qatar8_night_run_v.py
