@@ -97,3 +97,18 @@ None blocking. Snapshot lives under gitignored `/Archive/`; local patch required
 - `dev/tools/docs_pdf/build_flow_doc.py`
 - `docs/VYVAR_FLOW_CZ.pdf`
 - `dev/results/CURSOR_RESULT_anchor_recut.md`
+
+## Push (2026-07-20, Milan authorized)
+
+- **origin/main tip:** `fb8d756` (local tip matches)
+- **Stack pushed:** `2a7ff26` (A) -> `07108b8` (B) -> `c514e7f` (C) -> `fc7d5dc` (recut) -> `fb8d756` (RESULT bookkeeping + ASCII fold anchor_recut)
+- **Pre-push --fast:** OVERALL PASS (1058 passed, 17 skipped)
+- **origin/main before push:** `9c23d84` (unchanged as required)
+
+## Docs impact (push bookkeeping)
+
+n/a
+
+## Recurrence (push bookkeeping)
+
+n/a
