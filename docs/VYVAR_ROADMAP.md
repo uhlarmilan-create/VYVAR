@@ -19,8 +19,8 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 |-------|-----|-------------|
 | **P1** | HIGH | **DONE (2026-07-19).** Golden mini `draft_000435_p1mini` (16-frame stride) + `test_invariants_p1_golden.py` (headless SHA, UI-order identity, census bands, physics). Ledger `VL-P1-GOLD`. Result: `dev/results/CURSOR_RESULT_invariants_p1.md`. |
 | **P2** | HIGH | **DONE (2026-07-19).** `docs/VYVAR_INVARIANTS.md` registry + `invariants_runtime.py` wired gates (flux, flatness, WCS WARN, stage DAG, RNG AST, provenance schema, config<->behavior). Result: `dev/results/CURSOR_RESULT_invariants_P2.md`. |
-| **P3** | MED | PROCESS: recurrence tests, forensic promotion, weekly invariants report |
-| **P4** | MED | STATE honest scope statement |
+| **P3** | MED | **DONE (2026-07-20).** PROCESS recurrence + forensic promotion rubric + weekly `invariants_report.py`; pilot PROMOTE+ARCHIVE of `forensic_disc_ui_match2.py`. Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`. |
+| **P4** | MED | **DONE (2026-07-20).** STATE honest-scope statement (GUARANTEED / NOT guaranteed); GAPS D2 void addendum; P1-P4 program closed. Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`. |
 
 Separate commits per phase; pytest green each. Result files: `CURSOR_RESULT_invariants_P<n>.md`.
 

@@ -6,6 +6,20 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## INVARIANTS-P3P4-CLOSEOUT - recurrence/forensic rubric + honest scope (2026-07-20)
+
+**Delivered.** Invariants program P1-P4 closed.
+
+- **P3:** PROCESS "Recurrence and forensic discipline" (recurrence rule + RESULT
+  `Recurrence:` field; forensic PROMOTE/ARCHIVE/DELETE rubric; weekly
+  `dev/tools/invariants_report.py` cadence). Pilot: `forensic_disc_ui_match2.py`
+  -> **PROMOTE+ARCHIVE** (cat_match_arc=2.0 parity asserted in
+  `test_ui_chain_byte_identity`; script header state ARCHIVED).
+- **P4:** STATE pinned "Invariants program -- honest scope" (GUARANTEED vs NOT
+  guaranteed; claim-verified). GAPS D2 void addendum (EXCEPT-BULK-2 already
+  closed 2026-07-08).
+- Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`.
+
 ## K2-NIGHT-FIT-V2-IMPLEMENTED - gated NIGHT_FIT fitter + synthetic recovery (2026-07-20)
 
 **Scope finding.** The v2 fit path was never in production: `k2_extinction.py` had v1

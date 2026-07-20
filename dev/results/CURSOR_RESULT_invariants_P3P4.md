@@ -83,8 +83,20 @@ Exit code: 0 (guard subprocesses all PASS).
 
 ## P4 honest-scope verification notes
 
-(filled in commit 2)
+All listed GUARANTEED / NOT-guaranteed claims held on tree verification;
+nothing dropped or amended:
+
+- `DOC_CONFIG_FACTS` len=42; `DOC_FUNCTIONS` len=18 (matches STATE wording).
+- `WIRED_INV_IDS` = FLUX-01/02, FLAT-01, WCS-01, DAG-01, RNG-01, PROV-01,
+  CFG-01 (8 wired; matches INVARIANTS.md).
+- Ledger has `VL-ANCHOR-WCSINV` + `VL-P1-GOLD` active.
+- `sigma_sys_mag` config = `{'4': 0.018}` only (GAPS A2 gap stands).
+- GAPS D2 void: EXCEPT-BULK-2 closed 2026-07-08 per VYVAR_EXCEPT_CENSUS
+  (98/98; 24 delete-dead -> comment-only).
 
 ## P4 gates
 
-(filled in commit 2)
+| Gate | Result |
+|------|--------|
+| --fast | OVERALL PASS (1034 passed, 17 skipped) |
+| FLOW/facts | none |

@@ -1,6 +1,38 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-20** (ENCODING-POLICY: ASCII-only tracked text + guard; EOL normalize follow-up. Prior: K2-NIGHT-FIT-V2 gated OFF, B2-blocked).
+Last updated: **2026-07-20** (INVARIANTS P3+P4 closeout: recurrence/forensic discipline + weekly report; honest-scope pinned. Prior: ENCODING-POLICY; K2-NIGHT-FIT-V2 gated OFF).
+
+## Invariants program -- honest scope
+
+Pinned at P4 closeout (2026-07-20). Claims verified against the tree
+(`flow_doc_facts` counts, `WIRED_INV_IDS`, ledger IDs, `sigma_sys_mag` keys).
+Full program P1-P4: DONE. Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`.
+
+### GUARANTEED today
+
+- Anchor byte-identity of the science file set via `--full` (`VL-ANCHOR-WCSINV`,
+  draft_435).
+- Golden-mini E2E equivalence incl. UI-order vs headless byte identity on that
+  night (`VL-P1-GOLD`).
+- Wired runtime gates: FLUX-01/02 FAIL, FLAT-01 WARN, WCS-01 WARN, DAG-01 FAIL,
+  PROV-01 + CFG-01 end-of-run FAIL; RNG AST guard.
+- Docs<->code sync on 42 config facts + 18 function names + docs layout + FLOW
+  PDF presence (`test_docs_sync_guard`).
+- ASCII-only tracked text + LF-normalized repo (guards in `--fast`).
+
+### NOT guaranteed (honest gaps)
+
+- Behavior on rigs/configs outside the anchor night (Newton dense field, Brno)
+  until their own validation data exist.
+- Gated features under ON: `per_frame_saturation`, k2 NIGHT_FIT, COG, PSF branch
+  -- implemented and synthetically tested where stated, NOT real-data validated.
+- UI widget-level interactions beyond the encoded UI call sequence of the P1
+  test.
+- Multi-night behavior (single night is the canonical unit).
+- Registry-only invariants (no runtime wiring yet): the non-`[wired]` IDs in
+  `docs/VYVAR_INVARIANTS.md`.
+- `sigma_sys` floors exist for band `"4"` only (other bands lack the systematic
+  term -- GAPS A2).
 
 ## Repository layout (REPO-REORG -- DONE, gate PASS)
 

@@ -103,3 +103,8 @@ ADDENDUM (this commit): D1 was stale at time of writing --
 DAO-RECONCILE was already CLOSED 2026-07-09 (completeness 89.7-98.3%,
 miss@G90 live as QA health signal). D1 is void.
 
+ADDENDUM (2026-07-20): D2 was stale at time of writing --
+EXCEPT-BULK-2 completed 2026-07-08 (98/98 applied, 24 delete-dead
+downgraded to comment-only; batch CLOSED per VYVAR_EXCEPT_CENSUS).
+D2 is void.
+
