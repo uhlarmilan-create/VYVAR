@@ -25,14 +25,35 @@ _FIELD = re.compile(
 )
 
 
+def plain_ascii_citation_text(text: str) -> str:
+    """Render bib export notes to plain ASCII (no LaTeX leaks in headers)."""
+    s = str(text or "")
+    for src, dst in (
+        (r"\ensuremath{\Delta}", "Delta"),
+        (r"\ensuremath\Delta", "Delta"),
+        (r"\Delta", "Delta"),
+        (r"\_", "_"),
+        (r"\&", "&"),
+        (r"\%", "%"),
+        (r"\-", "-"),
+        ("\u2014", "-"),  # em dash
+        ("\u2013", "-"),  # en dash
+        ("\u00b4", "'"),
+        ("\u2018", "'"),
+        ("\u2019", "'"),
+        ("\u201c", '"'),
+        ("\u201d", '"'),
+    ):
+        s = s.replace(src, dst)
+    return s.replace("\\", "")
+
+
 def _strip_bib_value(raw: str) -> str:
     s = str(raw or "").strip().rstrip(",")
     if len(s) >= 2 and s[0] == "{" and s[-1] == "}" or len(s) >= 2 and s[0] == '"' and s[-1] == '"':
         s = s[1:-1]
-    return (
-        s.replace(r"\&", "&")
-        .replace(r"\%", "%")
-        .replace(r"{\'a}", "a")
+    return plain_ascii_citation_text(
+        s.replace(r"{\'a}", "a")
         .replace(r"{\'e}", "e")
         .replace(r"{\'i}", "i")
         .replace(r"{\'o}", "o")
@@ -100,16 +121,19 @@ def citation_line(key: str, *, bib: dict[str, dict[str, str]] | None = None) -> 
     entry = db.get(key, {})
     export = str(entry.get("export", "") or "").strip()
     if export:
-        return export
+        return plain_ascii_citation_text(export)
     author = str(entry.get("author", "Unknown")).split(" and ")[0]
     year = str(entry.get("year", "?"))
     journal = str(entry.get("journal", entry.get("title", "")))
-    return f"{author} ({year}) - {journal}"
+    return plain_ascii_citation_text(f"{author} ({year}) - {journal}")
 
 
 @dataclass
 class RunCitationContext:
-    """Flags for methods actually used in a photometry run."""
+    """Flags for methods actually used in a photometry run.
+
+    Single source for conditional citations AND the methods ON/OFF matrix.
+    """
 
     use_vsx: bool = False
     use_psf: bool = False
@@ -131,6 +155,15 @@ class RunCitationContext:
     use_frame_quality_gate: bool = False
     use_k2_literature: bool = False
     use_hrd_extreme: bool = True
+    use_ensemble_flux_sum: bool = True
+    use_aperture_correction_b: bool = True
+    use_cog_ac: bool = False
+    use_per_frame_sat: bool = False
+    use_empirical_background: bool = True
+    color_term_mode: str = "off"
+    k2_mode: str = "off"
+    k2_source_label: str = "none"
+    k2_value: float | None = None
 
 
 def _vsx_db_configured(cfg: AppConfig | None) -> bool:
@@ -216,6 +249,15 @@ def build_run_citation_context(
     _k2m = str(getattr(cfg, "k2_mode", "off") or "off").strip().lower() if cfg else "off"
     use_k2 = _k2m not in ("0", "false", "no", "off", "none")
     use_hrd = bool(getattr(cfg, "hrd_online_enrich_enabled", True)) if cfg else True
+    use_ac_b = bool(getattr(cfg, "aperture_correction_enabled", True)) if cfg else True
+    use_cog = bool(getattr(cfg, "cog_aperture_correction_enabled", False)) if cfg else False
+    use_pfs = bool(getattr(cfg, "per_frame_saturation_enabled", False)) if cfg else False
+    _ebm = str(getattr(cfg, "err_background_mode", "empirical") or "empirical").strip().lower() if cfg else "empirical"
+    use_emp_bkg = _ebm == "empirical"
+    _ct = str(getattr(cfg, "apply_color_term", "off") or "off").strip().lower() if cfg else "off"
+    if _ct in ("0", "false", "no"):
+        _ct = "off"
+    k2_src_label, k2_val = _resolve_k2_matrix_fields(cfg, meta, k2_mode=_k2m, use_k2=use_k2)
 
     return RunCitationContext(
         use_vsx=use_vsx,
@@ -238,7 +280,66 @@ def build_run_citation_context(
         use_frame_quality_gate=use_frame_quality_gate,
         use_k2_literature=use_k2,
         use_hrd_extreme=use_hrd,
+        use_ensemble_flux_sum=True,
+        use_aperture_correction_b=use_ac_b,
+        use_cog_ac=use_cog,
+        use_per_frame_sat=use_pfs,
+        use_empirical_background=use_emp_bkg,
+        color_term_mode=_ct,
+        k2_mode=_k2m if use_k2 else "off",
+        k2_source_label=k2_src_label,
+        k2_value=k2_val,
     )
+
+
+def _resolve_k2_matrix_fields(
+    cfg: AppConfig | None,
+    meta: dict[str, Any],
+    *,
+    k2_mode: str,
+    use_k2: bool,
+) -> tuple[str, float | None]:
+    """Return (source_label literature|fit|none, optional k2 value) for the matrix."""
+    if not use_k2:
+        return "none", None
+    k2_block = meta.get("k2") if isinstance(meta.get("k2"), dict) else {}
+    src_raw = str(
+        k2_block.get("k2_source")
+        or k2_block.get("source")
+        or meta.get("k2_source")
+        or ""
+    ).strip()
+    val_raw = k2_block.get("k2_value", meta.get("k2_value", meta.get("k2_bprp")))
+    if not src_raw and cfg is not None:
+        try:
+            from k2_extinction import resolve_k2_bprp_value  # noqa: PLC0415
+
+            og = str(meta.get("obs_group") or meta.get("setup") or "").strip()
+            v, src_enum = resolve_k2_bprp_value(cfg, og)
+            src_raw = str(getattr(src_enum, "value", src_enum) or "")
+            val_raw = v
+        except Exception:  # noqa: BLE001
+            src_raw = k2_mode
+    src_l = src_raw.lower()
+    if "fit" in src_l:
+        label = "fit"
+    elif src_l in ("none", "off", ""):
+        label = "literature" if k2_mode not in ("off", "none") else "none"
+        if src_l in ("none", "off", "") and k2_mode in ("literature", "fit_else_literature"):
+            label = "literature"
+    elif "lit" in src_l or src_l == "literature_default":
+        label = "literature"
+    else:
+        label = src_l or ("literature" if k2_mode == "literature" else k2_mode)
+    val: float | None = None
+    try:
+        if val_raw is not None and str(val_raw).strip() != "":
+            fv = float(val_raw)
+            if fv == fv:  # not NaN
+                val = fv
+    except (TypeError, ValueError):
+        val = None
+    return label, val
 
 
 def load_pipeline_meta(photometry_dir: Path | str | None) -> dict[str, Any]:
@@ -411,33 +512,88 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
     return sections
 
 
+def build_methods_matrix_lines(ctx: RunCitationContext) -> list[str]:
+    """ASCII methods ON/OFF matrix from the same RunCitationContext flags as citations."""
+
+    def _on(flag: bool, detail: str = "") -> str:
+        if not flag:
+            return "OFF"
+        return f"ON ({detail})" if detail else "ON"
+
+    ct_mode = str(ctx.color_term_mode or "off").strip().lower()
+    ct_on = ct_mode not in ("off", "0", "false", "no", "none", "")
+    if ctx.use_k2_literature:
+        if ctx.k2_value is not None:
+            k2_state = f"ON ({ctx.k2_source_label}, {float(ctx.k2_value):.3f})"
+        else:
+            k2_state = f"ON ({ctx.k2_source_label})"
+    else:
+        k2_state = "OFF"
+
+    pairs = [
+        ("ensemble flux-sum", _on(bool(ctx.use_ensemble_flux_sum))),
+        ("PyTICS", _on(bool(ctx.use_pytics))),
+        ("iterative comp clip", _on(bool(ctx.use_iterative_comp_clip))),
+        ("temporal binning", _on(bool(ctx.use_temporal_binning))),
+        ("SavGol detrend", _on(bool(ctx.use_savgol))),
+        ("Democratic detrender", _on(bool(ctx.use_democratic))),
+        ("SysRem", _on(bool(ctx.use_sysrem))),
+        ("color term", _on(ct_on, ct_mode)),
+        ("k2", k2_state),
+        ("aperture correction Metoda B", _on(bool(ctx.use_aperture_correction_b))),
+        ("COG AC", _on(bool(ctx.use_cog_ac))),
+        ("dilution GS11", _on(bool(ctx.use_gs11))),
+        ("PSF branch", _on(bool(ctx.use_psf))),
+        ("per-frame saturation", _on(bool(ctx.use_per_frame_sat))),
+        ("empirical background mode", _on(bool(ctx.use_empirical_background))),
+        ("trust gate", _on(bool(ctx.use_trust))),
+    ]
+    return [f"{name}: {state}" for name, state in pairs]
+
+
 def emit_export_citation_lines(
     ctx: RunCitationContext,
     *,
     comment_prefix: str = "#",
 ) -> list[str]:
-    """AAVSO / VarAstro comment header block."""
+    """Slim AAVSO / VarAstro comment header: matrix + ON-method citations only."""
     p = comment_prefix
     lines: list[str] = [
         f"{p}\n",
         f"{p} Pipeline: VYVAR - Automated Differential Photometry Pipeline\n",
         f"{p}\n",
-        f"{p} ALGORITHMS & REFERENCES (from CITATIONS.bib):\n",
-        f"{p}\n",
+        f"{p} METHODS MATRIX (this run):\n",
     ]
+    for row in build_methods_matrix_lines(ctx):
+        lines.append(f"{p}   {row}\n")
+    lines.append(f"{p}\n")
     for title, items in _sections_for_context(ctx):
+        if title != "METHODS - this run":
+            continue
         lines.append(f"{p} [{title}]\n")
         for item in items:
-            lines.append(f"{p}   {item}\n")
+            lines.append(f"{p}   {plain_ascii_citation_text(item)}\n")
         lines.append(f"{p}\n")
+    lines.append(f"{p} Full algorithm references: SUMMARY MEASURE REPORT (PDF)\n")
+    lines.append(f"{p}\n")
     return lines
 
 
 def emit_pdf_methods_sections(ctx: RunCitationContext) -> list[tuple[str, list[str]]]:
-    """PDF Methods section: (section_title, bullet_lines)."""
-    out: list[tuple[str, list[str]]] = []
+    """PDF Methods section: matrix + full citation blocks."""
+    out: list[tuple[str, list[str]]] = [
+        (
+            "Methods Matrix (This Run)",
+            [f"  {row}" for row in build_methods_matrix_lines(ctx)],
+        )
+    ]
     for title, items in _sections_for_context(ctx):
-        out.append((title.replace(" - ", " - ").title(), [f"  {it}" for it in items]))
+        out.append(
+            (
+                title.replace(" - ", " - ").title(),
+                [f"  {plain_ascii_citation_text(it)}" for it in items],
+            )
+        )
     return out
 
 

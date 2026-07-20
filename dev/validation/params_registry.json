@@ -28,7 +28,7 @@
     "widget": "auto"
   },
   "aavso_observer_code": {
-    "help": "Your official AAVSO observer code (UMIA); stamped into every AAVSO submission so the observation is credited to you.",
+    "help": "Your official AAVSO observer code (e.g. UMIA). Stamped into every AAVSO export as #OBSCODE. A warning is emitted ONLY when this value is missing/empty; any explicitly configured code (including UMIA) is accepted with no placeholder warning.",
     "kind": "static",
     "label": "AAVSO Observer Code",
     "owner": "db_static",

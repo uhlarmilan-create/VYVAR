@@ -347,7 +347,6 @@ def _fmt_opt_int(v: Any, *, na: str = "na") -> str:
 
 
 # Default AAVSO observer placeholder when config is unset (must trigger export/validator warning).
-_AAVSO_OBSCODE_PLACEHOLDER = "UMIA"
 
 # Built-in filter/setup name -> AAVSO Extended FILT code (uppercase keys).
 # User overrides via ``AppConfig.aavso_filter_map`` (merged on lookup).
@@ -958,21 +957,13 @@ def export_lightcurve_reports(
     a_lines.append("#TYPE=Extended\n")
     _obc = str(observer_code).strip()
     if not _obc:
+        # Fail-open for local files: still write OBSCODE= empty; warn only when unset.
         a_lines.append(
-            "#WARNING=OBSCODE is not set - configure observer_code before AAVSO submit\n"
+            "#WARNING=observer code not set - AAVSO submission requires an "
+            "observer code (config: aavso_observer_code)\n"
         )
         logging.warning(
-            "[EXPORT] OBSCODE is empty for %s - set observer_code in config before submit",
-            str(vsx_name),
-        )
-    elif _obc.upper() == _AAVSO_OBSCODE_PLACEHOLDER:
-        a_lines.append(
-            f"#WARNING=OBSCODE is default placeholder {_AAVSO_OBSCODE_PLACEHOLDER} "
-            "- set your AAVSO observer code in config\n"
-        )
-        logging.warning(
-            "[EXPORT] OBSCODE is default placeholder %s for %s",
-            _AAVSO_OBSCODE_PLACEHOLDER,
+            "[EXPORT] observer code not set for %s - set aavso_observer_code in config",
             str(vsx_name),
         )
     a_lines.append(f"#OBSCODE={_obc}\n")

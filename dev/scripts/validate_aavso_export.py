@@ -65,7 +65,6 @@ _VALID_FILTERS = frozenset(
 )
 _VALID_TRANS = frozenset({"YES", "NO"})
 _VALID_MTYPE = frozenset({"STD", "DIFF", "DIF", "ABS"})
-_AAVSO_OBSCODE_PLACEHOLDER = "UMIA"
 _VALID_DATE_SCALES = frozenset({"BJD", "JD", "HJD"})
 _VALID_OBSTYPE = frozenset({"CCD", "DSLR", "Visual"})
 
@@ -157,12 +156,8 @@ def check_header(header_dict: dict[str, str], filepath: Path) -> tuple[list[str]
     obscode = header_dict.get("OBSCODE", "")
     if not obscode:
         warnings.append(
-            f"HEADER: OBSCODE is empty - set observer_code in config before AAVSO submit ({name})"
-        )
-    elif obscode.upper() == _AAVSO_OBSCODE_PLACEHOLDER:
-        warnings.append(
-            f"HEADER: OBSCODE is default placeholder {_AAVSO_OBSCODE_PLACEHOLDER} "
-            f"- set your AAVSO observer code in config ({name})"
+            f"HEADER: observer code not set - AAVSO submission requires an "
+            f"observer code (config: aavso_observer_code) ({name})"
         )
 
     warn_msg = header_dict.get("WARNING", "")

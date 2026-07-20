@@ -6,6 +6,29 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## EXPORT-HEADER-SLIM - methods matrix + slim AAVSO/VarAstro headers (2026-07-20)
+
+**Decision.** AAVSO and VarAstro text exports drop unconditional citation blocks
+(`[CORE]`, `[CATALOGS & TIME]`, `[SOFTWARE]`, `[FIELD ASTROPHYSICS]`). They keep
+format/site/observer fields, a machine-generated `# METHODS MATRIX (this run):`
+ON/OFF block, `# [METHODS - this run]` one-line citations only for methods that
+are ON, and a pointer to the SUMMARY MEASURE REPORT (PDF). The full citation
+block plus the same matrix remain in the PDF methods section.
+
+**Single-source rule.** The matrix is built from the same `RunCitationContext`
+flag->method mapping that gates conditional citations in `citations.py` (extend
+that mapping when a gated method is missing -- one source, no drift).
+
+**Citation corrections (CITATIONS.bib, verified vs FLOW ch 19 / ADS):**
+- AstroImageJ: Collins, Kielkopf, Stassun & Hessman (2017) AJ 153, 77
+  (bibcode 2017AJ....153...77C) -- was wrongly PASP 129, 144502 / Stelzer.
+- Jordi et al. (2010): A&A 523, A48 (bibcode 2010A&A...523A..48J) -- was wrongly
+  A&A 515, A16. FLOW ch 19 already had 523/A48.
+- Emitting notes are plain-ASCII (strip LaTeX `\_`, `\Delta` / `\ensuremath\Delta`).
+
+**OBSCODE warning:** warn ONLY when observer code is missing/empty in config.
+Any explicitly set value (including UMIA) emits no warning.
+
 ## INVARIANTS-P3P4-CLOSEOUT - recurrence/forensic rubric + honest scope (2026-07-20)
 
 **Delivered.** Invariants program P1-P4 closed.

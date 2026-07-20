@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-20** (INVARIANTS P3+P4 closeout: recurrence/forensic discipline + weekly report; honest-scope pinned. Prior: ENCODING-POLICY; K2-NIGHT-FIT-V2 gated OFF).
+Last updated: **2026-07-20** (PUBLICATION-PREP: field PNG cleanup; vsx_out_of_scope_types; slim export headers + methods matrix. Prior: INVARIANTS P3+P4; ENCODING-POLICY).
 
 ## Invariants program -- honest scope
 
@@ -16,7 +16,7 @@ Full program P1-P4: DONE. Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`
   night (`VL-P1-GOLD`).
 - Wired runtime gates: FLUX-01/02 FAIL, FLAT-01 WARN, WCS-01 WARN, DAG-01 FAIL,
   PROV-01 + CFG-01 end-of-run FAIL; RNG AST guard.
-- Docs<->code sync on 42 config facts + 18 function names + docs layout + FLOW
+- Docs<->code sync on 43 config facts + 18 function names + docs layout + FLOW
   PDF presence (`test_docs_sync_guard`).
 - ASCII-only tracked text + LF-normalized repo (guards in `--fast`).
 
