@@ -88,7 +88,7 @@ def resolve_masterstar_fits_path(
 def load_masterstar_context(fits_path: Path | None) -> MasterstarContext:
     ctx = MasterstarContext(fits_path=fits_path)
     if fits_path is None or not fits_path.is_file():
-        ctx.error = "MASTERSTAR.fits sa nenašiel (skontroluj draft v Pipeline alebo DB cestu)."
+        ctx.error = "MASTERSTAR.fits sa nenasiel (skontroluj draft v Pipeline alebo DB cestu)."
         return ctx
     ctx.exists = True
     try:
@@ -163,23 +163,23 @@ def masterstar_context_markdown(ctx: MasterstarContext) -> str:
     """Short markdown block for Streamlit."""
     if ctx.error and not ctx.exists:
         return f"**MASTERSTAR:** _{ctx.error}_"
-    lines = ["**MASTERSTAR (odčítané z FITS)**"]
+    lines = ["**MASTERSTAR (odcitane z FITS)**"]
     if ctx.fits_path:
-        lines.append(f"- Súbor: `{ctx.fits_path}`")
+        lines.append(f"- Subor: `{ctx.fits_path}`")
     if ctx.chip_width and ctx.chip_height:
-        lines.append(f"- Čip: **{ctx.chip_width}×{ctx.chip_height}** px")
+        lines.append(f"- Cip: **{ctx.chip_width}x{ctx.chip_height}** px")
     if ctx.vy_fwhm_px is not None:
         lines.append(f"- `VY_FWHM` (DAO odhad): **{ctx.vy_fwhm_px:.3f}** px")
     if ctx.vy_fwhm_gauss_px is not None:
         lines.append(f"- `VY_FWHM_GAUSS`: **{ctx.vy_fwhm_gauss_px:.3f}** px")
     if ctx.pixel_scale_arcsec is not None:
-        lines.append(f"- Mierka (WCS priemer osí): **{ctx.pixel_scale_arcsec:.4f}** arcsec/px")
+        lines.append(f"- Mierka (WCS priemer osi): **{ctx.pixel_scale_arcsec:.4f}** arcsec/px")
     if ctx.ra_deg is not None and ctx.dec_deg is not None:
-        lines.append(f"- Stred WCS: **RA={ctx.ra_deg:.5f}°, Dec={ctx.dec_deg:.5f}°**")
+        lines.append(f"- Stred WCS: **RA={ctx.ra_deg:.5f} deg, Dec={ctx.dec_deg:.5f} deg**")
     if ctx.vy_psolv is not None:
         lines.append(f"- `VY_PSOLV` (plate-solve OK): **{ctx.vy_psolv}**")
     if ctx.header_snippet:
-        lines.append("- Ďalšie kľúče: " + ", ".join(f"`{k}`" for k in ctx.header_snippet))
+        lines.append("- Dalsie kluce: " + ", ".join(f"`{k}`" for k in ctx.header_snippet))
     if ctx.error:
-        lines.append(f"- _Varovanie pri čítaní: {ctx.error}_")
+        lines.append(f"- _Varovanie pri citani: {ctx.error}_")
     return "\n".join(lines)

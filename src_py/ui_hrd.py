@@ -1,4 +1,4 @@
-"""Streamlit tab: field Hertzsprung–Russell diagram (HRD) from masterstars + Gaia."""
+"""Streamlit tab: field Hertzsprung-Russell diagram (HRD) from masterstars + Gaia."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
         hrd_parallax_params_from_cfg,
     )
 
-    st.subheader("Field Hertzsprung–Russell diagram")
+    st.subheader("Field Hertzsprung-Russell diagram")
 
     photometry_dir = Path(photometry_dir)
     ms_csv = photometry_dir / "masterstars_full_match.csv"
@@ -51,12 +51,12 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
     if cfg is not None:
         gdb = Path(str(getattr(cfg, "gaia_db_path", "") or "").strip())
     if not gdb.is_file():
-        st.warning("Set **Gaia DB path** in Settings (`gaia_db_path`) — without it, teff/log g/parallax are not filled in.")
+        st.warning("Set **Gaia DB path** in Settings (`gaia_db_path`) - without it, teff/log g/parallax are not filled in.")
         gdb = Path("")
 
     gaia_for_build = gdb if gdb.is_file() else Path("/nonexistent/vyvar_gaia_placeholder.db")
     pmin, psnr = hrd_parallax_params_from_cfg(cfg)
-    with st.spinner("Loading data…"):
+    with st.spinner("Loading data..."):
         try:
             hrd_df = build_hrd_dataframe(
                 ms_csv, gaia_for_build, parallax_min_mas=pmin, parallax_snr_min=psnr
@@ -122,7 +122,7 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
                     colorscale="RdYlBu_r",
                     cmin=-0.5,
                     cmax=4.0,
-                    colorbar=dict(title="BP−RP"),
+                    colorbar=dict(title="BP-RP"),
                     opacity=0.75,
                 ),
                 name="Reliable (M_G)",
@@ -203,8 +203,8 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
             )
 
     fig.update_yaxes(autorange="reversed", title="M<sub>G</sub> [mag] / G [mag]")
-    fig.update_xaxes(title="BP − RP [mag]")
-    title = f"Field HRD -- {obs_group}" if obs_group else "Field Hertzsprung–Russell diagram"
+    fig.update_xaxes(title="BP - RP [mag]")
+    title = f"Field HRD -- {obs_group}" if obs_group else "Field Hertzsprung-Russell diagram"
     fig.update_layout(
         title=title,
         template="plotly_dark",
@@ -281,7 +281,7 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
                 png_from_fits=from_fits,
             )
             if annotated is not None:
-                st.subheader("Field image — interesting stars")
+                st.subheader("Field image - interesting stars")
                 st.image(str(annotated), width="stretch")
         except Exception as exc:  # noqa: BLE001
             st.caption(f"Field annotation failed: {exc}")

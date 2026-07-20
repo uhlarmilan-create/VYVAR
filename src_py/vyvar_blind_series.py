@@ -14,7 +14,7 @@ from config import AppConfig
 from infolog import log_event
 from vyvar_blind_solver import find_blind_candidates, find_blind_hint
 
-# Ordering defaults per tier name — no PKL preload (density for sort only).
+# Ordering defaults per tier name - no PKL preload (density for sort only).
 _TIER_ORDER_DEFAULTS: dict[str, dict[str, float | int]] = {
     "fine": {"cell_deg": 1.0, "stars_per_cell": 95, "target_density_deg2": 95.0},
     "wide": {"cell_deg": 2.0, "stars_per_cell": 16, "target_density_deg2": 4.0},
@@ -33,7 +33,7 @@ def estimate_rho_img_deg2(
     img_budget: int,
     log_L3_max: float | None = None,
 ) -> float:
-    """ρ_img ≈ budget / central selection area (matches diagnose / runbook)."""
+    """rho_img ~ budget / central selection area (matches diagnose / runbook)."""
     scale = max(float(plate_scale_arcsec_per_px), 1e-6)
     l3_max = float(log_L3_max) if log_L3_max is not None else 2.75
     L3_max_arcsec = 10.0 ** l3_max
@@ -152,7 +152,7 @@ def solve_blind_with_series(
 
     tiers = build_tiers_from_config(cfg)
     if not tiers:
-        log_event("WARNING: blind index fine/wide paths missing — falling back to fine only.")
+        log_event("WARNING: blind index fine/wide paths missing - falling back to fine only.")
         return _solve_single(
             dao_df,
             cfg=cfg,

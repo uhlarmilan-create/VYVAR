@@ -26,11 +26,11 @@ def _make_flat_ensemble(n_comp: int, n_frames: int, *, trend_cid: str | None, sl
 
 
 def test_slope_filter_keeps_insignificant_post_common_mode_slope():
-    """Shared linear trend: post-detrend residual large but insignificant → kept."""
+    """Shared linear trend: post-detrend residual large but insignificant -> kept."""
     n_frames = 44
     bjd = np.linspace(2459000.0, 2459000.5, n_frames)
     rng = np.random.default_rng(1)
-    shared_slope = 0.10  # mag/day → ~4167 mmag/hr common mode
+    shared_slope = 0.10  # mag/day -> ~4167 mmag/hr common mode
     comp_lc: dict[str, np.ndarray] = {}
     comp_bjd: dict[str, np.ndarray] = {}
     for i in range(2):
@@ -52,7 +52,7 @@ def test_slope_filter_keeps_insignificant_post_common_mode_slope():
 
 
 def test_slope_filter_excludes_significant_divergent_comp():
-    """Comp diverging from ensemble after common-mode removal → excluded."""
+    """Comp diverging from ensemble after common-mode removal -> excluded."""
     comp_lc, comp_bjd = _make_flat_ensemble(5, 30, trend_cid="trend", slope_mag_per_day=0.144)
     q = check_comparison_stability(
         comp_lc,

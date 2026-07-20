@@ -1,4 +1,4 @@
-"""Ring buffer + logging handler for the Streamlit «Infolog» tab (session-global in-process)."""
+"""Ring buffer + logging handler for the Streamlit <<Infolog>> tab (session-global in-process)."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def log_event(message: str) -> None:
         line = f"{ts}  {message}"
         with _lock:
             _lines.append(line)
-    except Exception as exc:  # noqa: BLE001 — Infolog must never crash the pipeline
+    except Exception as exc:  # noqa: BLE001 - Infolog must never crash the pipeline
         logging.getLogger(__name__).debug("log_event append failed: %s", exc)
 
 
@@ -69,7 +69,7 @@ def save_infolog_to_disk(draft_dir: str | Path, entries: list[str] | None = None
         path = root / f"infolog_{ts}.txt"
         lines = list(entries) if entries is not None else get_lines()
         with path.open("w", encoding="utf-8") as f:
-            f.write(f"# VYVAR Infolog — {ts}\n")
+            f.write(f"# VYVAR Infolog - {ts}\n")
             f.write(f"# Draft: {root}\n")
             f.write("# timestamps: UTC\n")
             f.write("#" + "=" * 60 + "\n\n")
@@ -99,8 +99,8 @@ def last_job_snapshot(obj: Any) -> None:
     except (TypeError, ValueError):
         text = repr(obj)
     if len(text) > 120_000:
-        text = text[:120_000] + "\n… [truncated]"
-    log_event("— Posledný výstup (JSON) —\n" + text)
+        text = text[:120_000] + "\n... [truncated]"
+    log_event("- Posledny vystup (JSON) -\n" + text)
 
 
 class InfologHandler(logging.Handler):

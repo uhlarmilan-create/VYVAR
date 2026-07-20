@@ -80,9 +80,9 @@ def read_vyvar_csv(path: Any, **kwargs: Any) -> pd.DataFrame:
 
 
 def normalize_gaia_source_id(val) -> str:
-    """Vráti desiatkový reťazec ID alebo ``\"\"``; zjednotí int, float, ``4.62e+17``, úvodzovky."""
+    """Vrati desiatkovy retazec ID alebo ``\"\"``; zjednoti int, float, ``4.62e+17``, uvodzovky."""
     # Safe: normalize_gaia_source_id handles NaN/empty/scientific notation;
-    #        non-numeric strings returned as-is — callers must validate.
+    #        non-numeric strings returned as-is - callers must validate.
     if val is None:
         return ""
     if isinstance(val, dict):
@@ -178,7 +178,7 @@ def normalize_gaia_id_set(
 
 
 def masterstar_row_gaia_key(row: pd.Series) -> str:
-    """Kľúč pre join s kuželom: najprv ``name`` ak vyzerá ako Gaia source_id (CSV často pokazí ``catalog_id`` floatom)."""
+    """Kluc pre join s kuzelom: najprv ``name`` ak vyzera ako Gaia source_id (CSV casto pokazi ``catalog_id`` floatom)."""
     name_k = normalize_gaia_source_id(row.get("name"))
     if name_k and re.fullmatch(r"\d{12,22}", name_k):
         return name_k
@@ -189,13 +189,13 @@ def masterstar_row_gaia_key(row: pd.Series) -> str:
 
 
 def _catalog_id_empty_to_blank(s: pd.Series) -> pd.Series:
-    """NaN / ``nan`` → ``\"\"`` pre zápis do CSV (``na_rep=\"\"``)."""
+    """NaN / ``nan`` -> ``\"\"`` pre zapis do CSV (``na_rep=\"\"``)."""
     out = s.map(normalize_gaia_source_id).astype(object)
     return out.where(out.map(lambda x: bool(str(x).strip())), "")
 
 
 def catalog_id_series_for_masterstars_export(df: pd.DataFrame) -> pd.Series:
-    """Stĺpec ``catalog_id`` do CSV ako desiatkový reťazec; pri platnom číselnom ``name`` berie ID odtiaľ."""
+    """Stlpec ``catalog_id`` do CSV ako desiatkovy retazec; pri platnom ciselnom ``name`` berie ID odtial."""
     if "catalog_id" not in df.columns:
         return pd.Series([""] * len(df), index=df.index, dtype=object)
     cid = _catalog_id_empty_to_blank(df["catalog_id"])

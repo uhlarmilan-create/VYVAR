@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from reportlab.pdfgen import canvas
     from reportlab.platypus import Paragraph
 
-# Gaia ID musí byť str — float64 stráca cifry
+# Gaia ID musi byt str - float64 straca cifry
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
 # Time + airmass columns only (PDF cover airmass summary from lightcurve_*.csv).
@@ -518,7 +518,7 @@ def resolved_facts_model(
 
 
 def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[str]:
-    """Text lines for PDF / tests — Flux Dilution (Gaia) subsection."""
+    """Text lines for PDF / tests - Flux Dilution (Gaia) subsection."""
     enabled = bool(getattr(cfg, "gs11_dilution_enabled", False)) if cfg is not None else False
     gs11: dict[str, Any] = {}
     if isinstance(pipeline_meta, dict):
@@ -530,19 +530,19 @@ def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[st
     if not enabled:
         return ["  Flux dilution correction: disabled"]
     ap = float(gs11.get("aperture_arcsec", float("nan")))
-    ap_s = f"{ap:.1f} arcsec" if math.isfinite(ap) else "—"
+    ap_s = f"{ap:.1f} arcsec" if math.isfinite(ap) else "-"
     try:
         med = float(gs11.get("median_correction_mmag", 0.0))
     except (TypeError, ValueError):
         med = float("nan")
-    med_s = f"{med:.1f} mmag" if math.isfinite(med) else "—"
+    med_s = f"{med:.1f} mmag" if math.isfinite(med) else "-"
     return [
         "  Flux Dilution Assessment (Gaia DR3)",
         "  Status:                 enabled",
         f"  Aperture used:          {ap_s}",
         f"  Comps GS11-rejected:    {int(gs11.get('comps_gs11_rejected', 0) or 0)}",
         f"  Targets corrected:      {int(gs11.get('targets_corrected', 0) or 0)}  "
-        f"(median Δm = {med_s})",
+        f"(median Deltam = {med_s})",
         f"  Targets skipped (D<0.50): {int(gs11.get('targets_skipped_low_d', 0) or 0)}",
     ]
 
@@ -572,7 +572,7 @@ def _publication_lc_mag_column(columns: Any) -> str | None:
 
 
 def _resolve_candidate_lc_mag_for_plot(df: pd.DataFrame) -> tuple[str, pd.Series] | None:
-    """Magnitude column + values for candidate LC PNG — canonical ``mag_calib_final`` when present."""
+    """Magnitude column + values for candidate LC PNG - canonical ``mag_calib_final`` when present."""
     if df is None or df.empty:
         return None
     ycol = _publication_lc_mag_column(df.columns)
@@ -883,7 +883,7 @@ class _PhotometryReportBuilder:
     def _vsx_type_sort_rank(self, val: Any) -> int:
         """Sort key: EA, EB, EW, ROT, VAR, then other non-empty types, then unknown/nan."""
         s0 = str(val if val is not None else "").strip().upper()
-        if not s0 or s0 in ("NAN", "NONE", "—", "-"):
+        if not s0 or s0 in ("NAN", "NONE", "-", "-"):
             return 99
         s = s0
         for sep in ("/", ",", ";", " ", "("):
@@ -1091,7 +1091,7 @@ class _PhotometryReportBuilder:
                 alt_moon = float(lunar.get("lunar_altitude_deg", float("nan")))
             except (TypeError, ValueError):
                 alt_moon = float("nan")
-            risk = str(lunar.get("lunar_risk", "") or "").strip().upper() or "—"
+            risk = str(lunar.get("lunar_risk", "") or "").strip().upper() or "-"
             reason = str(lunar.get("lunar_risk_reason", "") or "").strip()
 
             lunar_lines: list[tuple[str, str, float]] = []
@@ -1100,12 +1100,12 @@ class _PhotometryReportBuilder:
                     (f"Lunar phase:       {phase:.1f}%  ({age:.1f} days since new moon)", self.FONT_REG, 9.0)
                 )
             else:
-                lunar_lines.append(("Lunar phase:       —", self.FONT_REG, 9.0))
+                lunar_lines.append(("Lunar phase:       -", self.FONT_REG, 9.0))
             lunar_lines.append(
                 (
                     f"Lunar separation:  {sep:.1f}\u00b0 from field center"
                     if math.isfinite(sep)
-                    else "Lunar separation:  —",
+                    else "Lunar separation:  -",
                     self.FONT_REG,
                     9.0,
                 )
@@ -1114,7 +1114,7 @@ class _PhotometryReportBuilder:
                 (
                     f"Lunar altitude:    {alt_moon:.1f}\u00b0 at session midpoint"
                     if math.isfinite(alt_moon)
-                    else "Lunar altitude:    —",
+                    else "Lunar altitude:    -",
                     self.FONT_REG,
                     9.0,
                 )
@@ -1211,10 +1211,10 @@ class _PhotometryReportBuilder:
     def _build_comp_pool_cover_rows(self, ) -> list[tuple[str, str]]:
         rows_out: list[tuple[str, str]] = []
         if getattr(self.comp_df, "empty", True):
-            rows_out.append(("Comparison pool", "— (no comparison_stars_per_target.csv)"))
+            rows_out.append(("Comparison pool", "- (no comparison_stars_per_target.csv)"))
             return rows_out
         if "catalog_id" not in self.comp_df.columns:
-            rows_out.append(("Comparison pool", "—"))
+            rows_out.append(("Comparison pool", "-"))
             return rows_out
         ids = self.comp_df["catalog_id"].map(_norm_cid).astype(str)
         tcol = pd.to_numeric(self.comp_df.get("comp_tier"), errors="coerce")
@@ -1223,7 +1223,7 @@ class _PhotometryReportBuilder:
         gdf = pd.DataFrame({"_id": ids, "_t": tcol, "comp_rms": rms, "mag": magv})
         gdf = gdf[gdf["_id"].astype(str).str.len() > 0].copy()
         if gdf.empty:
-            rows_out.append(("Comparison pool", "—"))
+            rows_out.append(("Comparison pool", "-"))
             return rows_out
         gdf["_t"] = gdf["_t"].fillna(99).astype(int)
         best_tier = gdf.groupby("_id", sort=False)["_t"].min()
@@ -1238,11 +1238,11 @@ class _PhotometryReportBuilder:
         n_t2 = int((best_tier == 2).sum())
         n_t3p = int((best_tier >= 3).sum())
         rows_out.append(("Unique comparison stars", f"{n_unique:d}"))
-        rows_out.append(("Median comp_rms (per star)", f"{med_rms_pool:.6f}" if np.isfinite(med_rms_pool) else "—"))
+        rows_out.append(("Median comp_rms (per star)", f"{med_rms_pool:.6f}" if np.isfinite(med_rms_pool) else "-"))
         if np.isfinite(mn_mag) and np.isfinite(mx_mag):
-            rows_out.append(("Comp mag range", f"{mn_mag:.3f} – {mx_mag:.3f}"))
+            rows_out.append(("Comp mag range", f"{mn_mag:.3f} - {mx_mag:.3f}"))
         else:
-            rows_out.append(("Comp mag range", "—"))
+            rows_out.append(("Comp mag range", "-"))
         rows_out.append(("Tier 1 comp stars", f"{n_t1:d}"))
         rows_out.append(("Tier 2 comp stars", f"{n_t2:d}"))
         rows_out.append(("Tier 3+ comp stars", f"{n_t3p:d}"))
@@ -1270,7 +1270,7 @@ class _PhotometryReportBuilder:
         if n_good or n_susp or n_rej:
             rows_out.append(("Good / suspect / rejected (comp_quality)", f"{n_good:d} / {n_susp:d} / {n_rej:d}"))
         else:
-            rows_out.append(("Good / suspect / rejected (comp_quality)", "—"))
+            rows_out.append(("Good / suspect / rejected (comp_quality)", "-"))
         return rows_out
 
     def _load_variability_candidates_by_cid(self) -> dict[str, dict[str, Any]]:
@@ -1317,9 +1317,9 @@ class _PhotometryReportBuilder:
             if not code:
                 code = str(getattr(cfg, "observer_code", "") or getattr(cfg, "aavso_observer_code", "") or "").strip()
         if not name:
-            name = "—"
+            name = "-"
         if not code:
-            code = "—"
+            code = "-"
         return name, code
 
     def _resolve_plate_scale_arcsec(self) -> float:
@@ -1375,8 +1375,8 @@ class _PhotometryReportBuilder:
                 cam = cam or str(eq.get("camera", eq.get("equipment_name", "")) or "").strip()
         parts = [p for p in (tel, cam) if p]
         if parts:
-            return " · ".join(parts)
-        return str(self.obs_group or "—")
+            return " . ".join(parts)
+        return str(self.obs_group or "-")
 
     def _build_night_qc_summary(self) -> dict[str, Any]:
         qc = self._load_obs_files_for_obs()
@@ -1475,7 +1475,7 @@ class _PhotometryReportBuilder:
     def _resolve_check_kname(self, check_cid: str, target_cid: str) -> str:
         cc = self._norm_cid(check_cid)
         if not cc:
-            return "—"
+            return "-"
         if not self.comp_df.empty and "_tcid" in self.comp_df.columns:
             sub = self.comp_df[self.comp_df["_tcid"].astype(str).eq(self._norm_cid(target_cid))]
             if not sub.empty and "catalog_id" in sub.columns:
@@ -1493,7 +1493,7 @@ class _PhotometryReportBuilder:
         return cc
 
     def _check_star_report_for(self, target_cid: str) -> dict[str, str]:
-        out = {"kname": "—", "kmag": "—", "scatter": "—"}
+        out = {"kname": "-", "kmag": "-", "scatter": "-"}
         cid = self._norm_cid(target_cid)
         if not cid:
             return out
@@ -1510,7 +1510,7 @@ class _PhotometryReportBuilder:
                     med = float(np.nanmedian(km))
                     sc = float(np.nanstd(km)) if int(km.notna().sum()) > 1 else float("nan")
                     out["kmag"] = f"{med:.3f}" if np.isfinite(med) else "na"
-                    out["scatter"] = f"{sc:.4f} mag" if np.isfinite(sc) else "—"
+                    out["scatter"] = f"{sc:.4f} mag" if np.isfinite(sc) else "-"
                     chk = str(sdf["check_catalog_id"].iloc[0] if "check_catalog_id" in sdf.columns else "")
                     out["kname"] = self._resolve_check_kname(chk, cid)
                     return out
@@ -1738,7 +1738,7 @@ class _PhotometryReportBuilder:
             from PIL import Image as PILImage  # pillow
         except Exception as exc:  # noqa: BLE001
             # EXC-0241: T2 -- report/export may omit or misstate (try: / from PIL import Image as PILImage  # pillow ... (EXCEPT-BULK 2026-07-08)
-            logging.warning("PIL (pillow) nie je dostupný, kompresiu obrázkov preskakujem (%s)", exc)
+            logging.warning("PIL (pillow) nie je dostupny, kompresiu obrazkov preskakujem (%s)", exc)
             return src if src.exists() else None
 
         try:
@@ -1765,7 +1765,7 @@ class _PhotometryReportBuilder:
             return dst
         except Exception as exc:  # noqa: BLE001
             # EXC-0242: T2 -- report/export may omit or misstate (im.save(dst, format='JPEG', quality=int(quality), o... (EXCEPT-BULK 2026-07-08)
-            logging.warning("JPEG príprava zlyhala pre %s: %s", src, exc)
+            logging.warning("JPEG priprava zlyhala pre %s: %s", src, exc)
             return src if src.exists() else None
     def _plot_lightcurve_to_jpeg(self, lc_csv: Path, out_jpg: Path) -> Path | None:
         """Fallback: generate lightcurve plot from CSV when PNG is missing."""
@@ -1776,7 +1776,7 @@ class _PhotometryReportBuilder:
             import matplotlib.pyplot as plt
         except Exception as exc:  # noqa: BLE001
             # EXC-0243: T2 -- report/export may omit or misstate (matplotlib.use('Agg') / import matplotlib.pyplot as... (EXCEPT-BULK 2026-07-08)
-            logging.warning("matplotlib nie je dostupný, krivku z CSV nevygenerujem (%s)", exc)
+            logging.warning("matplotlib nie je dostupny, krivku z CSV nevygenerujem (%s)", exc)
             return None
 
         try:
@@ -1902,7 +1902,7 @@ class _PhotometryReportBuilder:
             import matplotlib.pyplot as plt
         except Exception as exc:  # noqa: BLE001
             # EXC-0246: T2 -- report/export may omit or misstate (matplotlib.use('Agg') / import matplotlib.pyplot as... (EXCEPT-BULK 2026-07-08)
-            logging.warning("matplotlib nie je dostupný, overlay LC nevygenerujem (%s)", exc)
+            logging.warning("matplotlib nie je dostupny, overlay LC nevygenerujem (%s)", exc)
             return None
 
         aperture_csv = Path(aperture_csv)
@@ -2027,7 +2027,7 @@ class _PhotometryReportBuilder:
         try:
             c.setFont(self.FONT_REG, 9)
             c.setFillColor(self.colors.HexColor("#1a1a2e"))
-            left_txt = f"VYVAR — {self._report_draft_lbl} — {self.obs_group}"
+            left_txt = f"VYVAR - {self._report_draft_lbl} - {self.obs_group}"
             c.drawString(self.M_LEFT, 0.45 * self.cm, left_txt)
             if getattr(self, "_cfg_source_label", "") == "live (no run snapshot)":
                 c.setFont(self.FONT_REG, 7)
@@ -2040,7 +2040,7 @@ class _PhotometryReportBuilder:
             pass
 
     def _layout_y_floor(self) -> float:
-        """Minimum y (pt) for body content — leave room for footer."""
+        """Minimum y (pt) for body content - leave room for footer."""
         return float(self.M_BOTTOM + 0.55 * self.cm)
 
     def _record_overflow(self, kind: str, detail: str) -> None:
@@ -2110,7 +2110,7 @@ class _PhotometryReportBuilder:
     def _pdf_id_display(self, text: Any, *, break_digits: bool = True) -> str:
         s = str(text if text is not None else "").strip()
         if not s:
-            return "—"
+            return "-"
         if break_digits and s.isdigit() and len(s) > 12:
             return self._pdf_break_long(s, 10)
         if len(s) > 48:
@@ -2355,18 +2355,18 @@ class _PhotometryReportBuilder:
         s = str(line or "").strip()
         if not s:
             return ""
-        if "žiadny záznam" in s.lower():
-            return "—"
-        return s.replace("ďalších", "more").replace("Ďalších", "more")
+        if "ziadny zaznam" in s.lower():
+            return "-"
+        return s.replace("dalsich", "more").replace("Dalsich", "more")
     def _katalogy_positive_lines(self, text: Any) -> list[str]:
         out: list[str] = []
         for raw in str(text or "").splitlines():
             line = raw.strip()
             if not line:
                 continue
-            if line.startswith("🔭"):
+            if line.startswith("[telescope]"):
                 continue
-            if "žiadny záznam" in line:
+            if "ziadny zaznam" in line:
                 continue
             if "no match" in line.lower():
                 continue
@@ -2374,9 +2374,9 @@ class _PhotometryReportBuilder:
         return out
     def _katalogy_cell_for_pdf(self, text: Any) -> str:
         pos = [self._sanitize_katalogy_pdf_line(x) for x in self._katalogy_positive_lines(text)]
-        pos = [x for x in pos if x and x != "—"]
+        pos = [x for x in pos if x and x != "-"]
         if not pos:
-            return "—"
+            return "-"
         head = pos[:3]
         extra = len(pos) - 3
         body = "\n".join(head)
@@ -2477,7 +2477,7 @@ class _PhotometryReportBuilder:
                         )
                 ax0.set_xlabel("Magnitude")
                 ax0.set_ylabel("RMS (%)")
-                ax0.set_title("RMS Hockey Stick — variability candidates highlighted")
+                ax0.set_title("RMS Hockey Stick - variability candidates highlighted")
                 ax0.legend(framealpha=0.8)
                 ax0.grid(True, alpha=0.3)
                 outp = cache_dir_hs / "hockey_stick.png"
@@ -2546,7 +2546,7 @@ class _PhotometryReportBuilder:
         else:
             df["_rms_plot"] = df[rms_col].astype(float)
 
-        # Match UI hockey stick: mag 8–15, RMS 0.8–10 %, log Y-axis.
+        # Match UI hockey stick: mag 8-15, RMS 0.8-10 %, log Y-axis.
         df[mag_col] = pd.to_numeric(df[mag_col], errors="coerce")
         df["_rms_plot"] = pd.to_numeric(df["_rms_plot"], errors="coerce")
         df = df[
@@ -2571,7 +2571,7 @@ class _PhotometryReportBuilder:
             except Exception:  # noqa: BLE001
                 vdf = pd.DataFrame()
             id_v = self._col_pick(vdf, ("catalog_id", "Catalog_ID", "gaia_id")) if not vdf.empty else None
-            kat_v = self._col_pick(vdf, ("katalogy", "katalógy", "katalogy", "catalog_match")) if not vdf.empty else None
+            kat_v = self._col_pick(vdf, ("katalogy", "katalogy", "katalogy", "catalog_match")) if not vdf.empty else None
             if id_v and id_v in vdf.columns:
                 for _, vr in vdf.iterrows():
                     nk = self._norm_cid(str(vr.get(id_v, "") or ""))
@@ -2589,12 +2589,12 @@ class _PhotometryReportBuilder:
                 return False
             row = df.iloc[i]
             vn = str(row.get(vsx_n_col, "") or "").strip()
-            if not vn or vn in ("nan", "—", "-", "None"):
+            if not vn or vn in ("nan", "-", "-", "None"):
                 return False
             vt = ""
             if vsx_t_col and vsx_t_col in df.columns:
                 vt = str(row.get(vsx_t_col, "") or "").strip()
-            if vt in ("", "nan", "—", "-", "None", "ROT"):
+            if vt in ("", "nan", "-", "-", "None", "ROT"):
                 return False
             return True
 
@@ -2683,7 +2683,7 @@ class _PhotometryReportBuilder:
             ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, _: f"{y:.1f}"))
             ax.set_xlabel("Magnitude")
             ax.set_ylabel("RMS (%)")
-            ax.set_title("RMS Hockey Stick — variability candidates highlighted")
+            ax.set_title("RMS Hockey Stick - variability candidates highlighted")
             ax.grid(True, alpha=0.3, color="#9ca3af", which="both")
 
             legend_handles = [
@@ -2744,7 +2744,7 @@ class _PhotometryReportBuilder:
         )
         y -= 0.35 * self.cm
         ps = self._resolve_plate_scale_arcsec()
-        ps_txt = f"{ps:.3f} arcsec/px" if np.isfinite(ps) else "—"
+        ps_txt = f"{ps:.3f} arcsec/px" if np.isfinite(ps) else "-"
         c.drawString(self.M_LEFT, y, f"Plate scale:     {ps_txt}")
         y -= 0.6 * self.cm
         try:
@@ -2821,14 +2821,14 @@ class _PhotometryReportBuilder:
 
         rows = [
             ("Light curves", self.lc_count_display),
-            ("Median lc_rms", f"{self.med_rms:.4f}" if np.isfinite(self.med_rms) else "—"),
+            ("Median lc_rms", f"{self.med_rms:.4f}" if np.isfinite(self.med_rms) else "-"),
             ("RMS < 0.05 mag", f"{self.rms_lt_005:d}"),
-            ("Avg good comp", f"{self.avg_good_comp:.2f}" if np.isfinite(self.avg_good_comp) else "—"),
-            ("Best lc_rms", f"{self.best_rms:.4f}" if np.isfinite(self.best_rms) else "—"),
-            ("Worst lc_rms", f"{self.worst_rms:.4f}" if np.isfinite(self.worst_rms) else "—"),
-            ("Avg BP-RP", f"{self.avg_bp_rp:.3f}" if np.isfinite(self.avg_bp_rp) else "—"),
+            ("Avg good comp", f"{self.avg_good_comp:.2f}" if np.isfinite(self.avg_good_comp) else "-"),
+            ("Best lc_rms", f"{self.best_rms:.4f}" if np.isfinite(self.best_rms) else "-"),
+            ("Worst lc_rms", f"{self.worst_rms:.4f}" if np.isfinite(self.worst_rms) else "-"),
+            ("Avg BP-RP", f"{self.avg_bp_rp:.3f}" if np.isfinite(self.avg_bp_rp) else "-"),
             ("Setups", f"{self.setups:d}"),
-            ("Exports", f"AAVSO {self.n_aavso:d} · VAR.ASTRO {self.n_varastro:d}"),
+            ("Exports", f"AAVSO {self.n_aavso:d} . VAR.ASTRO {self.n_varastro:d}"),
         ]
         c.setFont(self.FONT_REG, 12)
         for k, v in rows:
@@ -2840,8 +2840,8 @@ class _PhotometryReportBuilder:
             y -= 0.55 * self.cm
 
         y -= 0.4 * self.cm
-        fwhm_txt = f"{self.fwhm_px:.3f}px" if np.isfinite(self.fwhm_px) else "—"
-        ap_txt = f"{self.aperture_px:.2f}px" if np.isfinite(self.aperture_px) else "—"
+        fwhm_txt = f"{self.fwhm_px:.3f}px" if np.isfinite(self.fwhm_px) else "-"
+        ap_txt = f"{self.aperture_px:.2f}px" if np.isfinite(self.aperture_px) else "-"
         c.setFont(self.FONT_REG, 11)
         c.drawString(self.M_LEFT, y, f"FWHM: {fwhm_txt}   |   Aperture: {ap_txt}")
         y -= 0.35 * self.cm
@@ -2890,11 +2890,11 @@ class _PhotometryReportBuilder:
                     )
                 )
             else:
-                kv.append(("Airmass (min / max / median)", "—"))
+                kv.append(("Airmass (min / max / median)", "-"))
             sky_m = float("nan")
             if not qc_df0.empty and "SKY_LEVEL" in qc_df0.columns:
                 sky_m = float(np.nanmedian(pd.to_numeric(qc_df0["SKY_LEVEL"], errors="coerce")))
-            kv.append(("Sky background (median)", f"{sky_m:.2f}" if np.isfinite(sky_m) else "—"))
+            kv.append(("Sky background (median)", f"{sky_m:.2f}" if np.isfinite(sky_m) else "-"))
             nq = self._night_qc
             n_used = int(nq.get("n_used", 0) or 0)
             n_rej = int(nq.get("n_rejected", 0) or 0)
@@ -2902,13 +2902,13 @@ class _PhotometryReportBuilder:
             if n_tot > 0:
                 kv.append(("Frames (used / rejected / total)", f"{n_used:d} / {n_rej:d} / {n_tot:d}"))
             else:
-                kv.append(("Frames (used / rejected / total)", "—"))
+                kv.append(("Frames (used / rejected / total)", "-"))
             bjd_min = float(nq.get("bjd_min", float("nan")))
             bjd_max = float(nq.get("bjd_max", float("nan")))
             if np.isfinite(bjd_min) and np.isfinite(bjd_max):
-                kv.append(("BJD(TDB) span (session)", f"{bjd_min:.5f} → {bjd_max:.5f}"))
+                kv.append(("BJD(TDB) span (session)", f"{bjd_min:.5f} -> {bjd_max:.5f}"))
             else:
-                kv.append(("BJD(TDB) span (session)", "—"))
+                kv.append(("BJD(TDB) span (session)", "-"))
             fmin = float(nq.get("fwhm_min", float("nan")))
             fmed = float(nq.get("fwhm_med", float("nan")))
             fmax = float(nq.get("fwhm_max", float("nan")))
@@ -2920,11 +2920,11 @@ class _PhotometryReportBuilder:
                     )
                 )
             else:
-                kv.append(("FWHM px (min / med / max)", "—"))
+                kv.append(("FWHM px (min / med / max)", "-"))
             nf_med = float("nan")
             if "n_frames" in self.summary_df.columns:
                 nf_med = float(np.nanmedian(pd.to_numeric(self.summary_df["n_frames"], errors="coerce")))
-            kv.append(("LC points (median per target)", f"{int(round(nf_med)):d}" if np.isfinite(nf_med) else "—"))
+            kv.append(("LC points (median per target)", f"{int(round(nf_med)):d}" if np.isfinite(nf_med) else "-"))
             ms_fits = self.platesolve_dir / "MASTERSTAR.fits"
             if ms_fits.is_file():
                 try:
@@ -2934,9 +2934,9 @@ class _PhotometryReportBuilder:
                         _hsw = hdul[0].header.get("VY_HSWN")
                         _hsep = hdul[0].header.get("VY_HSEP")
                     if _hsw is not None and bool(_hsw):
-                        _sep_s = "—"
+                        _sep_s = "-"
                         try:
-                            _sep_s = f"{float(_hsep[0] if isinstance(_hsep, tuple) else _hsep):.3f}°"
+                            _sep_s = f"{float(_hsep[0] if isinstance(_hsep, tuple) else _hsep):.3f} deg"
                         except (TypeError, ValueError):
                             pass
                         kv.append(
@@ -3432,7 +3432,7 @@ class _PhotometryReportBuilder:
         # Charts use per-frame QC from OBS_FILES (FWHM_PX vs frame_index), same source as FITS QA dashboard.
         used = self._resolve_masterstar_used_frame(qc_df)
 
-        # FWHM limit line: same default as FITS QA dashboard (auto MAD when enabled, else median×1.05 for n≥5).
+        # FWHM limit line: same default as FITS QA dashboard (auto MAD when enabled, else medianx1.05 for n>=5).
         fwhm_limit = float(self._qa_fwhm_limit_px(qc_df))
         lim_active = bool(np.isfinite(fwhm_limit) and float(fwhm_limit) > 0.0)
 
@@ -3462,7 +3462,7 @@ class _PhotometryReportBuilder:
                 ax1.axhline(y=float(fwhm_limit), color="#c0392b", linestyle="--", linewidth=1.3)
             ax1.set_xlabel("Frame Index")
             ax1.set_ylabel("FWHM (px)")
-            ax1.set_title("FWHM — green ≤ limit, red > limit")
+            ax1.set_title("FWHM - green <= limit, red > limit")
             ax1.grid(True, alpha=0.25)
 
             # Sky plot: prefer DB flag (REJECTED_AUTO) if available, else robust outlier visualization.
@@ -3533,7 +3533,7 @@ class _PhotometryReportBuilder:
             else:
                 c.drawString(self.M_LEFT, y0, f"Used frame: {used_fn}  (Frame {used_fr})")
         else:
-            c.drawString(self.M_LEFT, y0, "Used frame: — (could not infer from available metadata)")
+            c.drawString(self.M_LEFT, y0, "Used frame: - (could not infer from available metadata)")
         c.setFillColor(self.colors.black)
 
         self._page_footer(c)
@@ -3542,7 +3542,7 @@ class _PhotometryReportBuilder:
         bv_src = str(row.get("bv_source", "") or "").strip().lower()
         cid = self._norm_cid(row.get("catalog_id", ""))
         if not cid:
-            return "—"
+            return "-"
         if bv_src in ("gaia_bprp", "gaia_teff", "unknown", ""):
             return cid
         if bv_src == "tycho2":
@@ -3689,9 +3689,9 @@ class _PhotometryReportBuilder:
 
         def _fmt(v: Any, nd: int) -> str:
             x = pd.to_numeric(v, errors="coerce")
-            return f"{float(x):.{nd}f}" if np.isfinite(x) else "—"
+            return f"{float(x):.{nd}f}" if np.isfinite(x) else "-"
 
-        # Relative weights via apply_comp_w_rel_for_display (excluded → w_rel=0).
+        # Relative weights via apply_comp_w_rel_for_display (excluded -> w_rel=0).
         w_rel_by_row: dict[int, float] = {}
         try:
             if "comp_weight" in sub.columns:
@@ -3732,14 +3732,14 @@ class _PhotometryReportBuilder:
                     break
             if not stav and q_quality:
                 if q_quality == "suspect":
-                    stav = f"suspect — {q_note}" if q_note else "suspect"
+                    stav = f"suspect - {q_note}" if q_note else "suspect"
                 else:
                     stav = q_quality
             _cts0 = str(r.get("color_tier_src", "") or "").strip().lower()
             _cts_lbl = (
                 "BP-RP"
                 if _cts0 == "bprp"
-                else ("BV→" if _cts0 == "bv_converted" else ("?" if _cts0 == "unknown" else ("—" if not _cts0 else _cts0[:5])))
+                else ("BV->" if _cts0 == "bv_converted" else ("?" if _cts0 == "unknown" else ("-" if not _cts0 else _cts0[:5])))
             )
             bv_src_cell = (
                 "G-bp"
@@ -3760,12 +3760,12 @@ class _PhotometryReportBuilder:
             )
             tail = [
                 _fmt(r.get("bp_rp"), 3),
-                _fmt(r.get("delta_bprp_abs"), 3) if "delta_bprp_abs" in sub.columns else "—",
+                _fmt(r.get("delta_bprp_abs"), 3) if "delta_bprp_abs" in sub.columns else "-",
                 _cts_lbl,
                 _fmt(r.get("dist_deg"), 4),
                 str(int(pd.to_numeric(r.get("comp_n_frames"), errors="coerce")))
                 if np.isfinite(pd.to_numeric(r.get("comp_n_frames"), errors="coerce"))
-                else "—",
+                else "-",
                 _fmt(r.get("comp_rms"), 4),
                 _fmt(rms_p2p_map.get(ccid, float("nan")), 4),
                 _fmt(
@@ -3789,7 +3789,7 @@ class _PhotometryReportBuilder:
             )
         return out, excluded_note
     def _should_trigger_tess_report(self, bullets: str) -> bool:
-        if not bullets or str(bullets).strip() in ("", "—"):
+        if not bullets or str(bullets).strip() in ("", "-"):
             return True
         VAR_CATS = [
             "VSX",
@@ -3807,7 +3807,7 @@ class _PhotometryReportBuilder:
             for cat in VAR_CATS:
                 if (
                     line0.startswith(cat)
-                    and "žiadny záznam" not in line0
+                    and "ziadny zaznam" not in line0
                     and "no match" not in line0.lower()
                 ):
                     return False
@@ -3902,7 +3902,7 @@ class _PhotometryReportBuilder:
                 )
                 ax.set_xlabel("BJD(TDB) - BJD0")
                 ax.set_ylabel(ylab)
-                ax.set_title(f"Light curve — {str(cid)[:20]}")
+                ax.set_title(f"Light curve - {str(cid)[:20]}")
                 ax.invert_yaxis()
                 ax.grid(True, alpha=0.3)
                 png_path = cache_dir_in / f"lc_{str(cid)[:18]}.png"
@@ -3931,9 +3931,9 @@ class _PhotometryReportBuilder:
         c.setFont(self.FONT_REG, 9)
         try:
             mag0 = candidate_row.get("mag")
-            mag_txt = f"{float(mag0):.3f}" if mag0 is not None and np.isfinite(float(mag0)) else "—"
+            mag_txt = f"{float(mag0):.3f}" if mag0 is not None and np.isfinite(float(mag0)) else "-"
         except Exception:  # noqa: BLE001
-            mag_txt = "—"
+            mag_txt = "-"
         c.drawString(
             self.M_LEFT,
             y,
@@ -3947,7 +3947,7 @@ class _PhotometryReportBuilder:
         c.setFillColor(self.colors.black)
         y -= 0.5 * self.cm
         c.setFont(self.FONT_REG, 8)
-        for ln in (bullets or "—").split("\n")[:12]:
+        for ln in (bullets or "-").split("\n")[:12]:
             c.drawString(self.M_LEFT, y, str(ln)[:110])
             y -= 0.35 * self.cm
         y -= 0.2 * self.cm
@@ -3981,7 +3981,7 @@ class _PhotometryReportBuilder:
         c.setFillColor(self.colors.black)
         if self._use_bprp_primary:
             bp_disp = float(pd.to_numeric(sd.get("bp_rp"), errors="coerce"))
-            bpt = f"{bp_disp:.3f}" if np.isfinite(bp_disp) else "—"
+            bpt = f"{bp_disp:.3f}" if np.isfinite(bp_disp) else "-"
             c.drawString(self.M_LEFT, yy, f"{vsx_name}  |  {vsx_type}  |  {zone_flag}  |  BP-RP: {bpt}")
         else:
             c.drawString(self.M_LEFT, yy, f"{vsx_name}  |  {vsx_type}  |  {zone_flag}")
@@ -3991,8 +3991,8 @@ class _PhotometryReportBuilder:
             pd.to_numeric(sd.get("n_stability_good", sd.get("good_comp")), errors="coerce") or 0
         )
         ap_px = float(pd.to_numeric(sd.get("aperture_px"), errors="coerce"))
-        rms_txt = f"{lc_rms:.4f}" if np.isfinite(lc_rms) else "—"
-        ap_txt = f"{ap_px:.1f}px" if np.isfinite(ap_px) else "—"
+        rms_txt = f"{lc_rms:.4f}" if np.isfinite(lc_rms) else "-"
+        ap_txt = f"{ap_px:.1f}px" if np.isfinite(ap_px) else "-"
         c.setFont(self.FONT_REG, 8)
         c.setFillColor(self.colors.HexColor("#444444"))
         c.drawString(
@@ -4005,9 +4005,9 @@ class _PhotometryReportBuilder:
         n_sat = int(pd.to_numeric(sd.get("n_saturated"), errors="coerce") or 0)
         reason = ""
         if n_sat > 0:
-            reason = " — saturated / outlier-dominated"
+            reason = " - saturated / outlier-dominated"
         elif str(sd.get("skip_reason", "") or "").strip():
-            reason = f" — {str(sd.get('skip_reason')).strip()}"
+            reason = f" - {str(sd.get('skip_reason')).strip()}"
         c.setFont(self.FONT_REG, 8)
         c.drawString(self.M_LEFT, yy, f"Light curve not available{reason}.")
         c.setStrokeColor(self.colors.HexColor("#cccccc"))
@@ -4057,7 +4057,7 @@ class _PhotometryReportBuilder:
             c.drawString(
                 self.M_LEFT,
                 y - 0.28 * self.cm,
-                "No catalog match found — potential new variable",
+                "No catalog match found - potential new variable",
             )
             y -= 0.38 * self.cm
         return y
@@ -4108,7 +4108,7 @@ class _PhotometryReportBuilder:
         if not np.isfinite(dm):
             c.setFont(self.FONT_REG, 7)
             c.setFillColor(self.colors.HexColor("#777777"))
-            c.drawString(self.M_LEFT, y, "Aperture correction: not applied (missing ΔM)")
+            c.drawString(self.M_LEFT, y, "Aperture correction: not applied (missing DeltaM)")
             c.setFillColor(self.colors.black)
             return y - 14.0
 
@@ -4121,11 +4121,11 @@ class _PhotometryReportBuilder:
         # Row 2
         c.setFont(self.FONT_REG, 7)
         c.setFillColor(self.colors.HexColor("#444444"))
-        sc_txt = f"{float(sc):.4f}" if np.isfinite(sc) else "—"
+        sc_txt = f"{float(sc):.4f}" if np.isfinite(sc) else "-"
         c.drawString(
             self.M_LEFT,
             y,
-            f"ΔM = {float(dm):+.4f} mag  |  scatter = {sc_txt} mag  |  n_ref = {int(n_ref)}",
+            f"DeltaM = {float(dm):+.4f} mag  |  scatter = {sc_txt} mag  |  n_ref = {int(n_ref)}",
         )
         y -= 11.0
 
@@ -4145,7 +4145,7 @@ class _PhotometryReportBuilder:
             y,
             "Method B: weighted mean offset between instrumental magnitude and Gaia catalog "
             "magnitude for n_ref reference stars (comp stars with good Phase-2A stability). "
-            "ΔM is applied to all target magnitudes. Scatter = 1σ of ref star residuals.",
+            "DeltaM is applied to all target magnitudes. Scatter = 1sigma of ref star residuals.",
         )
         y -= 10.0
 
@@ -4166,14 +4166,14 @@ class _PhotometryReportBuilder:
             bp_rp_f = float(bp_rp_val)
         except Exception:  # noqa: BLE001
             bp_rp_f = float("nan")
-        bp_rp_txt = f"{bp_rp_f:.3f}" if np.isfinite(bp_rp_f) else "—"
+        bp_rp_txt = f"{bp_rp_f:.3f}" if np.isfinite(bp_rp_f) else "-"
 
         b_v_val = star_data.get("b_v", float("nan"))
         try:
             b_v_f = float(b_v_val)
         except Exception:  # noqa: BLE001
             b_v_f = float("nan")
-        b_v_txt = f"{b_v_f:.2f}" if np.isfinite(b_v_f) else "—"
+        b_v_txt = f"{b_v_f:.2f}" if np.isfinite(b_v_f) else "-"
 
         vtype_short = vsx_type if len(vsx_type) <= 64 else (vsx_type[:61] + "...")
         exo_host = str(star_data.get("exo_host_name", "") or "").strip()
@@ -4202,11 +4202,11 @@ class _PhotometryReportBuilder:
             or 0
         )
         ap_px = float(pd.to_numeric(star_data.get("aperture_px"), errors="coerce"))
-        rms_txt = f"{lc_rms:.4f}" if np.isfinite(lc_rms) else "—"
-        ap_txt = f"{ap_px:.1f}px" if np.isfinite(ap_px) else "—"
+        rms_txt = f"{lc_rms:.4f}" if np.isfinite(lc_rms) else "-"
+        ap_txt = f"{ap_px:.1f}px" if np.isfinite(ap_px) else "-"
         metrics = (
             f"lc_rms (OOE): {rms_txt}   |   stable comp: {good_comp:d}   |   aperture: {ap_txt}   |   "
-            f"comp_path: {str(star_data.get('comp_path', '—') or '—')}   |   "
+            f"comp_path: {str(star_data.get('comp_path', '-') or '-')}   |   "
             "Vizier: https://vizier.cds.unistra.fr/viz-bin/Vsx"
         )
         metrics_style = self._get_para_style("star_metrics", fontSize=9, textColor=self.colors.HexColor("#666666"))
@@ -4223,17 +4223,17 @@ class _PhotometryReportBuilder:
         n_pt = int(star_data.get("n_points", 0) or 0)
         merr_v = star_data.get("merr_med", float("nan"))
         lqf = str(star_data.get("lc_quality_flag", "") or "").strip()
-        merr_txt = f"{float(merr_v):.4f}" if np.isfinite(float(pd.to_numeric(merr_v, errors="coerce"))) else "—"
-        extra1 = f"n_points: {n_pt:d}  |  MERR (median): {merr_txt}  |  LC quality: {lqf or '—'}"
+        merr_txt = f"{float(merr_v):.4f}" if np.isfinite(float(pd.to_numeric(merr_v, errors="coerce"))) else "-"
+        extra1 = f"n_points: {n_pt:d}  |  MERR (median): {merr_txt}  |  LC quality: {lqf or '-'}"
         extra_style = self._get_para_style("star_extra", fontSize=8, textColor=self.colors.HexColor("#555555"))
         y_cursor = self._draw_paragraph_block(
             c, self.M_LEFT, y_cursor, self.USE_W, self._pdf_escape(extra1), extra_style, paginate=False, gap_pt=0.08 * self.cm
         )
         if trust:
-            reason_short = trust_reason.split(" — ")[0].strip()
+            reason_short = trust_reason.split(" - ")[0].strip()
             if len(reason_short) > 100:
                 reason_short = reason_short[:97] + "..."
-            trust_line = f"TRUST: {trust} — {reason_short}" if reason_short else f"TRUST: {trust}"
+            trust_line = f"TRUST: {trust} - {reason_short}" if reason_short else f"TRUST: {trust}"
             trust_color = {
                 "GREEN": "#1b5e20",
                 "YELLOW": "#e65100",
@@ -4258,7 +4258,7 @@ class _PhotometryReportBuilder:
             )
         chk = star_data.get("check_star") if isinstance(star_data.get("check_star"), dict) else {}
         chk_line = (
-            f"Check star: {chk.get('kname', '—')}  |  KMAG: {chk.get('kmag', '—')}  |  scatter: {chk.get('scatter', '—')}"
+            f"Check star: {chk.get('kname', '-')}  |  KMAG: {chk.get('kmag', '-')}  |  scatter: {chk.get('scatter', '-')}"
         )
         var_line = str(star_data.get("variability_line", "") or "")
         y_cursor = self._draw_paragraph_block(
@@ -4336,7 +4336,7 @@ class _PhotometryReportBuilder:
                     "mag",
                     "BP-RP",
                     "dBPRP",
-                    "colΔ",
+                    "colDelta",
                     "dist_deg",
                     "n_frames",
                     "comp_rms",
@@ -4350,7 +4350,7 @@ class _PhotometryReportBuilder:
                 foot = (
                     "status = Phase-2A LC stability; comp_rms = Phase-1 flux scatter; "
                     "rms_p2p = Abbe p2p on inst. mag (matches exclusion footnote); "
-                    "tier = Phase-1 colour tier; colΔ = tier colour source; catalog_id = Gaia/AP/TY."
+                    "tier = Phase-1 colour tier; colDelta = tier colour source; catalog_id = Gaia/AP/TY."
                 )
             else:
                 headers = [
@@ -4361,7 +4361,7 @@ class _PhotometryReportBuilder:
                     "B-V src",
                     "BP-RP",
                     "dBPRP",
-                    "colΔ",
+                    "colDelta",
                     "dist_deg",
                     "n_frames",
                     "comp_rms",
@@ -4558,7 +4558,7 @@ class _PhotometryReportBuilder:
                     x = pd.to_numeric(r.get(cn), errors="coerce")
                     row_out.append(
                         self.Paragraph(
-                            self._pdf_escape(f"{float(x):.3f}" if np.isfinite(float(x)) else "—"),
+                            self._pdf_escape(f"{float(x):.3f}" if np.isfinite(float(x)) else "-"),
                             cell_style,
                         )
                     )
@@ -4566,7 +4566,7 @@ class _PhotometryReportBuilder:
                     x = pd.to_numeric(r.get(cn), errors="coerce")
                     row_out.append(
                         self.Paragraph(
-                            self._pdf_escape(f"{float(x):.4f}" if np.isfinite(float(x)) else "—"),
+                            self._pdf_escape(f"{float(x):.4f}" if np.isfinite(float(x)) else "-"),
                             cell_style,
                         )
                     )
@@ -4574,7 +4574,7 @@ class _PhotometryReportBuilder:
                     x = int(pd.to_numeric(r.get(cn), errors="coerce") or 0)
                     row_out.append(self.Paragraph(self._pdf_escape(str(x)), cell_style))
                 elif cn == "lc_quality_flag":
-                    row_out.append(self.Paragraph(self._pdf_escape(_cell_txt(r.get(cn)) or "—"), cell_style))
+                    row_out.append(self.Paragraph(self._pdf_escape(_cell_txt(r.get(cn)) or "-"), cell_style))
                 else:
                     row_out.append(self.Paragraph(self._pdf_escape(_cell_txt(r.get(cn))), cell_style))
             data.append(row_out)
@@ -4632,7 +4632,7 @@ class _PhotometryReportBuilder:
                 c.drawString(
                     self.M_LEFT,
                     y - 0.5 * self.cm,
-                    "Summary of all stars (vsx_type order, then lc_rms) — continued",
+                    "Summary of all stars (vsx_type order, then lc_rms) - continued",
                 )
                 c.setFillColor(self.colors.black)
                 y -= 1.0 * self.cm
@@ -4681,7 +4681,7 @@ class _PhotometryReportBuilder:
         c.showPage()
 
     def _report_psf_summary_section(self, c: "canvas.Canvas") -> None:
-        """ePSF summary table (top stars by PSF OK %) — non-fatal if data missing."""
+        """ePSF summary table (top stars by PSF OK %) - non-fatal if data missing."""
         try:
             from photometry_core import load_epsf_metrics_for_draft
         except Exception as exc:  # noqa: BLE001
@@ -4717,12 +4717,12 @@ class _PhotometryReportBuilder:
         c.drawString(
             self.M_LEFT,
             y - 0.35 * self.cm,
-            f"χ² acceptance threshold: {chi_thr:.0f}  |  stars in table: {len(epsf_df)}",
+            f"chi^2 acceptance threshold: {chi_thr:.0f}  |  stars in table: {len(epsf_df)}",
         )
         y -= 0.75 * self.cm
 
         id_col = "vsx_name" if "vsx_name" in top.columns else "catalog_id"
-        hdr = ["Star", "PSF OK", "Frames", "PSF %", "mean χ²", "min χ²"]
+        hdr = ["Star", "PSF OK", "Frames", "PSF %", "mean chi^2", "min chi^2"]
         data: list[list[str]] = [hdr]
         for _, r in top.iterrows():
             n_ok = int(pd.to_numeric(r.get("n_psf_ok"), errors="coerce") or 0)
@@ -4738,9 +4738,9 @@ class _PhotometryReportBuilder:
                     ),
                     f"{n_ok}/{n_fr}",
                     str(n_fr),
-                    f"{float(pct):.1f}" if pd.notna(pct) else "—",
-                    f"{float(mchi):.1f}" if pd.notna(mchi) else "—",
-                    f"{float(mnchi):.1f}" if pd.notna(mnchi) else "—",
+                    f"{float(pct):.1f}" if pd.notna(pct) else "-",
+                    f"{float(mchi):.1f}" if pd.notna(mchi) else "-",
+                    f"{float(mnchi):.1f}" if pd.notna(mnchi) else "-",
                 ]
             )
 
@@ -4787,7 +4787,7 @@ class _PhotometryReportBuilder:
         y0 = self.PAGE_H - self.M_TOP
         c.setFont(self.FONT_BOLD, 14)
         c.setFillColor(self.C_TITLE)
-        c.drawString(self.M_LEFT, y0 - 0.5 * self.cm, "Field astrophysics (Hertzsprung–Russell diagram)")
+        c.drawString(self.M_LEFT, y0 - 0.5 * self.cm, "Field astrophysics (Hertzsprung-Russell diagram)")
         c.setFillColor(self.colors.black)
         c.setFont(self.FONT_REG, 11)
         c.drawString(self.M_LEFT, y0 - 1.1 * self.cm, f"HRD panel unavailable: {reason}")
@@ -4859,7 +4859,7 @@ class _PhotometryReportBuilder:
         y0 = self.PAGE_H - self.M_TOP
         c.setFont(self.FONT_BOLD, 14)
         c.setFillColor(self.C_TITLE)
-        c.drawString(self.M_LEFT, y0 - 0.5 * self.cm, "Field astrophysics (Hertzsprung–Russell diagram)")
+        c.drawString(self.M_LEFT, y0 - 0.5 * self.cm, "Field astrophysics (Hertzsprung-Russell diagram)")
         c.setFillColor(self.colors.black)
         y = y0 - 1.1 * self.cm
         hrd_plot_bottom = y
@@ -5117,7 +5117,7 @@ class _PhotometryReportBuilder:
                 break
         if fmp is None:
             logging.warning(
-                "PDF field map: field_map.png not found under %s or %s — skipping page",
+                "PDF field map: field_map.png not found under %s or %s - skipping page",
                 self.platesolve_dir,
                 self.photometry_dir,
             )
@@ -5246,7 +5246,7 @@ class _PhotometryReportBuilder:
         rms_c = self._col_pick(vdf, ("rms_pct", "rms_pct_lc", "RMS_PCT"))
         dm_c = self._col_pick(vdf, ("detection_method", "DETECTION_METHOD"))
         vs_c = self._col_pick(vdf, ("variability_score", "VARIABILITY_SCORE"))
-        kat_c = self._col_pick(vdf, ("katalogy", "katalógy", "katalogy", "catalog_match"))
+        kat_c = self._col_pick(vdf, ("katalogy", "katalogy", "katalogy", "catalog_match"))
         zn_c = self._col_pick(vdf, ("zone", "zone_flag", "ZONE"))
 
         # catalog_id ~0.28 self.USE_W; katalogy column width drives Paragraph.wrap row heights.
@@ -5268,19 +5268,19 @@ class _PhotometryReportBuilder:
                 line = raw_line.strip()
                 if not line:
                     continue
-                if line.startswith("🔭"):
+                if line.startswith("[telescope]"):
                     continue
-                if "žiadny záznam" in line:
+                if "ziadny zaznam" in line:
                     continue
                 if "no match" in line.lower():
                     continue
                 out.append(self._sanitize_katalogy_pdf_line(line))
-            return [x for x in out if x and x != "—"]
+            return [x for x in out if x and x != "-"]
 
         def _kat_cell(raw: Any) -> Paragraph:
             pos = _katalogy_paragraph_source_lines(raw)
             if not pos:
-                return self.Paragraph("—", kat_style)
+                return self.Paragraph("-", kat_style)
             lines = [escape(str(x)[:500]) for x in pos[:4]]
             extra = len(pos) - 4
             if extra > 0:
@@ -5319,14 +5319,14 @@ class _PhotometryReportBuilder:
             cid_full = self._norm_cid(rr.get(idc)) if idc else ""
             data_rows.append(
                 [
-                    cid_full if cid_full else "—",
-                    f"{float(mag_v):.3f}" if mag_c and np.isfinite(mag_v) else "—",
-                    f"{float(bp_v):.3f}" if bprp_c and np.isfinite(bp_v) else "—",
-                    f"{float(rms_v):.2f}" if rms_c and np.isfinite(rms_v) else "—",
-                    _short(rr.get(dm_c), 9) if dm_c else "—",
-                    f"{float(vs_v):.4f}" if vs_c and np.isfinite(vs_v) else "—",
-                    _kat_cell(raw_kat) if kat_c else self.Paragraph("—", kat_style),
-                    _short(rr.get(zn_c), 8) if zn_c else "—",
+                    cid_full if cid_full else "-",
+                    f"{float(mag_v):.3f}" if mag_c and np.isfinite(mag_v) else "-",
+                    f"{float(bp_v):.3f}" if bprp_c and np.isfinite(bp_v) else "-",
+                    f"{float(rms_v):.2f}" if rms_c and np.isfinite(rms_v) else "-",
+                    _short(rr.get(dm_c), 9) if dm_c else "-",
+                    f"{float(vs_v):.4f}" if vs_c and np.isfinite(vs_v) else "-",
+                    _kat_cell(raw_kat) if kat_c else self.Paragraph("-", kat_style),
+                    _short(rr.get(zn_c), 8) if zn_c else "-",
                 ]
             )
 
@@ -5427,7 +5427,7 @@ class _PhotometryReportBuilder:
 
         def _fmt_metric(v: Any) -> str:
             x = pd.to_numeric(v, errors="coerce")
-            return f"{float(x):.4g}" if np.isfinite(x) else "—"
+            return f"{float(x):.4g}" if np.isfinite(x) else "-"
 
         cand_dirs = sorted([p for p in tess_root.iterdir() if p.is_dir() and not p.name.startswith(".")])
         if not cand_dirs:
@@ -5454,7 +5454,7 @@ class _PhotometryReportBuilder:
             disp = _vsx_display_for_cid(cid)
             c.setFont(self.FONT_BOLD, 14)
             c.setFillColor(self.C_TITLE)
-            c.drawString(self.M_LEFT, y - 0.45 * self.cm, f"TESS Analysis — {disp}")
+            c.drawString(self.M_LEFT, y - 0.45 * self.cm, f"TESS Analysis - {disp}")
             c.setFillColor(self.colors.black)
             y -= 0.95 * self.cm
 
@@ -5472,9 +5472,9 @@ class _PhotometryReportBuilder:
 
             pc = float(pd.to_numeric(jd.get("period_consensus"), errors="coerce"))
             p2c = float(pd.to_numeric(jd.get("period_2p_consensus"), errors="coerce"))
-            ptxt = f"{pc:.6f}" if np.isfinite(pc) else "—"
-            p2txt = f"{p2c:.6f}" if np.isfinite(p2c) else "—"
-            rel = str(jd.get("period_reliability", "") or "").strip() or "—"
+            ptxt = f"{pc:.6f}" if np.isfinite(pc) else "-"
+            p2txt = f"{p2c:.6f}" if np.isfinite(p2c) else "-"
+            rel = str(jd.get("period_reliability", "") or "").strip() or "-"
             nsec = int(pd.to_numeric(jd.get("total_sectors_found"), errors="coerce") or 0)
 
             cid_disp = str(jd.get("catalog_id", cid))
@@ -5520,7 +5520,7 @@ class _PhotometryReportBuilder:
 
             def _fmt_period_cell(v: Any) -> str:
                 x = pd.to_numeric(v, errors="coerce")
-                return f"{float(x):.6f}" if np.isfinite(x) and float(x) > 0.0 else "—"
+                return f"{float(x):.6f}" if np.isfinite(x) and float(x) > 0.0 else "-"
 
             def _tess_blend_tail_h(sec: dict[str, Any]) -> float:
                 blend_raw = sec.get("blend_check_path")
@@ -5551,9 +5551,9 @@ class _PhotometryReportBuilder:
                     rows_t.append(
                         [
                             sec_lab,
-                            str(n_pt) if n_pt else "—",
+                            str(n_pt) if n_pt else "-",
                             _fmt_period_cell(s.get("period_ls")),
-                            str(s.get("period_method_used") or "").strip() or "—",
+                            str(s.get("period_method_used") or "").strip() or "-",
                             _fmt_period_cell(s.get("period_anova")),
                             _fmt_period_cell(s.get("period_consensus")),
                         ]
@@ -5602,7 +5602,7 @@ class _PhotometryReportBuilder:
                     y = self.PAGE_H - self.M_TOP
                     c.setFont(self.FONT_BOLD, 12)
                     c.setFillColor(self.C_TITLE)
-                    c.drawString(self.M_LEFT, y - 0.4 * self.cm, f"TESS Analysis — {disp} (continued)")
+                    c.drawString(self.M_LEFT, y - 0.4 * self.cm, f"TESS Analysis - {disp} (continued)")
                     c.setFillColor(self.colors.black)
                     y -= 0.85 * self.cm
 
@@ -5688,11 +5688,11 @@ class _PhotometryReportBuilder:
             ("self.obs_group", "Observation group (filter + exposure combination)"),
             ("comp_rms", "Phase-1 detrended relative-flux scatter (comparison star stability)"),
             ("rms_p2p", "Abbe point-to-point RMS on comparison-star inst. magnitudes (Phase-2A)"),
-            ("period_reliability", "reliable / uncertain / noise — quality flag for TESS period"),
+            ("period_reliability", "reliable / uncertain / noise - quality flag for TESS period"),
             ("RMS candidate", "Star with RMS significantly above the noise envelope"),
             ("ROT", "Rotational variable"),
             ("SNR", "Signal-to-noise ratio"),
-            ("TESS", "Transiting Exoplanet Survey Satellite (NASA) — used for period analysis"),
+            ("TESS", "Transiting Exoplanet Survey Satellite (NASA) - used for period analysis"),
             ("tier", "Comparison star colour tier (1=closest BP-RP match, 4=most distant)"),
             ("VAR", "Variable (type unconfirmed)"),
             ("VAR.ASTRO", "Slovak variable star reporting format"),
@@ -5703,7 +5703,7 @@ class _PhotometryReportBuilder:
             ("zone_flag", "linear = DAO-detected; saturated = likely saturated on MASTERSTAR"),
             (
                 "Aperture correction Method B",
-                "Ensemble-based aperture correction using stable reference stars; ΔM = offset applied, "
+                "Ensemble-based aperture correction using stable reference stars; DeltaM = offset applied, "
                 "scatter = stability of correction",
             ),
             ("FWHM", "Full Width at Half Maximum (PSF size in pixels)"),
@@ -6055,7 +6055,7 @@ class _PhotometryReportBuilder:
         # Build PDF
         c = self.canvas.Canvas(str(self.output_pdf), pagesize=self.landscape(self.A4))
 
-        # 1–2) Cover + observation summary
+        # 1-2) Cover + observation summary
         self._report_cover_page(c)
         self._report_observation_summary(c)
 
@@ -6091,7 +6091,7 @@ class _PhotometryReportBuilder:
                 _n_frames = int(pd.to_numeric(row.get("n_frames"), errors="coerce") or 0)
                 if _n_frames <= 0 or (not np.isfinite(float(_lc_rms))):
                     logging.debug(
-                        "[PDF] Skip LC page — no data: %s (n_frames=%d, lc_rms=%s)",
+                        "[PDF] Skip LC page - no data: %s (n_frames=%d, lc_rms=%s)",
                         vsx_name,
                         _n_frames,
                         _lc_rms,

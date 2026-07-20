@@ -46,7 +46,7 @@ def main() -> int:
         obs_group=obs_group,
         output_pdf=None,
         report_draft_label="draft_000303",
-        report_title="VYVAR — Summary Measure Report",
+        report_title="VYVAR - Summary Measure Report",
     )
     if pdf_path is None:
         print("ERROR: generate_photometry_report returned None (reportlab missing?)", file=sys.stderr)

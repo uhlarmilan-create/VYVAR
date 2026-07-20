@@ -1,4 +1,4 @@
-CURSOR RESULT ù 2026-07-10 15:30 UTC+2
+CURSOR RESULT - 2026-07-10 15:30 UTC+2
 
 What I did
 Extended HRD row payload with catalog/astrophysics detail fields; added PDF follow-on

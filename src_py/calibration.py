@@ -3,19 +3,19 @@ from __future__ import annotations
 """Master calibration resampling (software binning) for VYVAR.
 
 **CalibrationLibrary** convention: master dark / flat FITS are stored as a **native** stack of
-calibration frames (no software bin-down to match light binning). Prefer sensor **1×1** readout for
+calibration frames (no software bin-down to match light binning). Prefer sensor **1x1** readout for
 darks/flats; header ``XBINNING``/``YBINNING`` reflect the calibration frames.
 
-At **calibrate time**, masters are resampled in RAM (temporary arrays) to match each light’s
+At **calibrate time**, masters are resampled in RAM (temporary arrays) to match each light's
 ``XBINNING`` and image shape:
 
-- **Dark** — **sum** over each ``block_factor``×``block_factor`` block (charge-like quantity).
-- **Flat** — **arithmetic mean** over each block only (e.g. four pixels for 1×1 master → 2×2 light).
+- **Dark** - **sum** over each ``block_factor``x``block_factor`` block (charge-like quantity).
+- **Flat** - **arithmetic mean** over each block only (e.g. four pixels for 1x1 master -> 2x2 light).
   Spatial re-binning must **not** use sum or median on the flat; mean preserves relative illumination.
   Median normalization to ~1 is applied **after** resample for new library flats marked ``VYFLNRD=1``;
   legacy flats were normalized at stack time and are only resampled here.
 
-Then ``(light − dark) / flat`` runs at matching resolution.
+Then ``(light - dark) / flat`` runs at matching resolution.
 """
 
 # Native binning assumed for masters **read from CalibrationLibrary** when matching to lights
@@ -190,9 +190,9 @@ def read_master_binning_from_fits(path: str | Path) -> int:
 
 
 def infer_spatial_block_factor(master_shape: tuple[int, int], light_shape: tuple[int, int]) -> int | None:
-    """Infer integer downscale factor ``k`` when master is ~k×``light`` in each axis (after edge crop).
+    """Infer integer downscale factor ``k`` when master is ~kx``light`` in each axis (after edge crop).
 
-    Handles common mismatches (e.g. 1×1 master flat 2795×4164 vs 2×2 light 1397×2082) when FITS
+    Handles common mismatches (e.g. 1x1 master flat 2795x4164 vs 2x2 light 1397x2082) when FITS
     ``XBINNING`` on the light is missing or 1. Returns ``None`` when shapes already match or cannot infer.
     """
     mh, mw = int(master_shape[0]), int(master_shape[1])
@@ -213,10 +213,10 @@ def infer_spatial_block_factor(master_shape: tuple[int, int], light_shape: tuple
 
 
 def infer_spatial_upscale_factor(master_shape: tuple[int, int], light_shape: tuple[int, int]) -> int | None:
-    """Return integer ``k`` when light is ~``k``×``k`` master pixels (hardware / binned master vs binned light).
+    """Return integer ``k`` when light is ~``k``x``k`` master pixels (hardware / binned master vs binned light).
 
-    Used to expand a binned master (e.g. 698×1041) to the light grid (e.g. 1397×2082) with ``k``=2.
-    Allows up to ``k−1`` rows/cols padding on the light vs ``k``×master (trim mismatch).
+    Used to expand a binned master (e.g. 698x1041) to the light grid (e.g. 1397x2082) with ``k``=2.
+    Allows up to ``k-1`` rows/cols padding on the light vs ``k``xmaster (trim mismatch).
     """
     mh, mw = int(master_shape[0]), int(master_shape[1])
     lh, lw = int(light_shape[0]), int(light_shape[1])
@@ -246,7 +246,7 @@ def align_resampled_master_to_light_shape(
 ) -> np.ndarray | None:
     """If resampled master is an integer factor smaller than the light (each axis), expand by ``kron`` then crop/pad.
 
-    Each master pixel is replicated to a k×k block (same as constant bias/gain per hardware superpixel).
+    Each master pixel is replicated to a kxk block (same as constant bias/gain per hardware superpixel).
     This is **not** the same as :func:`resample_master_to_light_binning` (no block mean/sum/median here).
     Returns ``None`` if alignment is not possible.
     """
@@ -283,8 +283,8 @@ def resample_master_to_light_binning(
 ) -> tuple[np.ndarray, int]:
     """Bin a 2D master down so one output pixel matches ``light_binning`` / ``master_binning``.
 
-    - **Dark:** ``np.sum`` over each *block_factor*×*block_factor* block (axes 1 and 3 after reshape).
-    - **Flat:** ``np.mean`` over each block — **only** the plain average of those pixels (e.g. four
+    - **Dark:** ``np.sum`` over each *block_factor*x*block_factor* block (axes 1 and 3 after reshape).
+    - **Flat:** ``np.mean`` over each block - **only** the plain average of those pixels (e.g. four
       pixels for ``block_factor==2``). Never ``sum`` or ``median`` for flat spatial re-binning.
 
     If the array is not an exact multiple of ``block_factor`` (e.g. one extra row), the **trailing**
@@ -299,11 +299,11 @@ def resample_master_to_light_binning(
     lb = max(1, int(light_binning))
     if lb < mb:
         raise MasterResamplingError(
-            f"Light binning {lb}× je menšia ako master binning {mb}× — upsampling nie je podporovaný."
+            f"Light binning {lb}x je mensia ako master binning {mb}x - upsampling nie je podporovany."
         )
     if lb % mb != 0:
         raise MasterResamplingError(
-            f"Light binning {lb} musí byť celočíselný násobok master binningu {mb}."
+            f"Light binning {lb} musi byt celociselny nasobok master binningu {mb}."
         )
     bf = lb // mb
     if bf == 1:
@@ -311,14 +311,14 @@ def resample_master_to_light_binning(
 
     a = np.asarray(data, dtype=np.float32)
     if a.ndim != 2:
-        raise MasterResamplingError(f"Očakávaný 2D master, dostal som tvar {a.shape}.")
+        raise MasterResamplingError(f"Ocakavany 2D master, dostal som tvar {a.shape}.")
 
     h, w = int(a.shape[0]), int(a.shape[1])
     h_trim = (h // bf) * bf
     w_trim = (w // bf) * bf
     if h_trim < bf or w_trim < bf:
         raise MasterResamplingError(
-            f"Rozmer masteru {h}×{w} je po prispôsobení bloku {bf}×{bf} príliš malý."
+            f"Rozmer masteru {h}x{w} je po prisposobeni bloku {bf}x{bf} prilis maly."
         )
     if h_trim != h or w_trim != w:
         a = a[:h_trim, :w_trim]
@@ -331,7 +331,7 @@ def resample_master_to_light_binning(
         else:
             out = np.sum(v, axis=(1, 3)).astype(np.float32, copy=False)
     else:
-        # Flat: block **mean** only — not sum (would skew flat field) and not median (not a block average).
+        # Flat: block **mean** only - not sum (would skew flat field) and not median (not a block average).
         out = np.mean(v, axis=(1, 3)).astype(np.float32, copy=False)
     return out, bf
 
@@ -403,18 +403,18 @@ def normalize_flat_master(
         if np.isfinite(gmed) and abs(gmed) > 0:
             m = (m / gmed).astype(np.float32)
         log_event(
-            f"Master flat: globálny medián (normalizačný faktor): {gmed:.6g} ADU "
-            f"(ne-2D dáta, len globálna normalizácia)."
+            f"Master flat: globalny median (normalizacny faktor): {gmed:.6g} ADU "
+            f"(ne-2D data, len globalna normalizacia)."
         )
         header["VYFLTNRM"] = ("GLOBAL", "Master flat normalization mode")
         if np.isfinite(gmed):
             header["VYFLTMD"] = (float(gmed), "Global median ADU before normalization")
         bad = (m <= 0) | ~np.isfinite(m)
         if np.any(bad):
-            log_event(f"Master flat: {int(np.sum(bad))} pixelov nastavených na 1.0 (≤0 alebo neplatné).")
+            log_event(f"Master flat: {int(np.sum(bad))} pixelov nastavenych na 1.0 (<=0 alebo neplatne).")
         m = np.where(bad, np.float32(1.0), m).astype(np.float32)
         mean_a = float(np.nanmean(m))
-        log_event(f"Master flat: po normalizácii priemer ≈ {mean_a:.4f} (cieľ ~1.0).")
+        log_event(f"Master flat: po normalizacii priemer ~ {mean_a:.4f} (ciel ~1.0).")
         return m
 
     h, w = int(m.shape[0]), int(m.shape[1])
@@ -436,7 +436,7 @@ def normalize_flat_master(
     )
     if hdr_pat and bin_factor > 1:
         log_event(
-            "Master flat: po binovaní sa používa globálna normalizácia (binovanie zmieša Bayer vrstvy)."
+            "Master flat: po binovani sa pouziva globalna normalizacia (binovanie zmiesa Bayer vrstvy)."
         )
 
     if use_bayer and pat is not None:
@@ -455,11 +455,11 @@ def normalize_flat_master(
             if np.isfinite(mv) and mv > 0:
                 sl /= mv
             else:
-                log_event(f"Master flat: varovanie — neplatný medián pre dlaždicu {lab}, preskočené delenie.")
-        note = f"Bayer {pat}" + (" (predvolené RGGB z EQUIPMENTS)" if assumed_pat else "")
+                log_event(f"Master flat: varovanie - neplatny median pre dlazdicu {lab}, preskocene delenie.")
+        note = f"Bayer {pat}" + (" (predvolene RGGB z EQUIPMENTS)" if assumed_pat else "")
         log_event(
-            "Master flat: normalizácia po Bayer dlaždiciach "
-            f"({note}); mediány ADU pred norm: "
+            "Master flat: normalizacia po Bayer dlazdiciach "
+            f"({note}); mediany ADU pred norm: "
             f"{labels[0]}={medians[0]:.6g}, {labels[1]}={medians[1]:.6g}, "
             f"{labels[2]}={medians[2]:.6g}, {labels[3]}={medians[3]:.6g}."
         )
@@ -473,23 +473,23 @@ def normalize_flat_master(
         if np.isfinite(gmed) and abs(gmed) > 0:
             m = (m / gmed).astype(np.float32)
         else:
-            log_event("Master flat: varovanie — globálny medián neplatný, normalizácia preskočená.")
-        log_event(f"Master flat: globálny medián (normalizačný faktor): {gmed:.6g} ADU.")
+            log_event("Master flat: varovanie - globalny median neplatny, normalizacia preskocena.")
+        log_event(f"Master flat: globalny median (normalizacny faktor): {gmed:.6g} ADU.")
         header["VYFLTNRM"] = ("GLOBAL", "Global median flat normalization")
         if np.isfinite(gmed):
             header["VYFLTMD"] = (float(gmed), "Global median ADU before normalization")
 
     bad = (m <= 0) | ~np.isfinite(m)
     if np.any(bad):
-        log_event(f"Master flat: {int(np.sum(bad))} pixelov nastavených na 1.0 (≤0 alebo neplatné).")
+        log_event(f"Master flat: {int(np.sum(bad))} pixelov nastavenych na 1.0 (<=0 alebo neplatne).")
     m = np.where(bad, np.float32(1.0), m).astype(np.float32)
 
     gfin = float(np.nanmedian(m))
     if np.isfinite(gfin) and abs(gfin - 1.0) > 0.02 and abs(gfin) > 0:
         m = (m / gfin).astype(np.float32)
-        log_event(f"Master flat: dodatočná škála 1/{gfin:.4f} aby globálny medián ≈ 1.0.")
+        log_event(f"Master flat: dodatocna skala 1/{gfin:.4f} aby globalny median ~ 1.0.")
     mean_a = float(np.nanmean(m))
-    log_event(f"Master flat: po normalizácii medián={float(np.nanmedian(m)):.4f}, priemer ≈ {mean_a:.4f}.")
+    log_event(f"Master flat: po normalizacii median={float(np.nanmedian(m)):.4f}, priemer ~ {mean_a:.4f}.")
     return m
 
 
@@ -507,8 +507,8 @@ def get_processed_master(
 ) -> ProcessedMasterResult:
     """Load a master FITS and optionally bin it to match the light's ``XBINNING``.
 
-    - **dark** — sum over each bin block (total charge / dark current preserved).
-    - **flat** — mean over each bin block (spatial resample), then **median normalization** to ~1
+    - **dark** - sum over each bin block (total charge / dark current preserved).
+    - **flat** - mean over each bin block (spatial resample), then **median normalization** to ~1
       **after** resample when ``VYFLNRD=1`` on disk (new saves). Legacy flats normalize in pipeline.
 
     Pass ``master_binning=CALIBRATION_LIBRARY_NATIVE_BINNING`` (or a positive int) when applying
@@ -520,7 +520,7 @@ def get_processed_master(
     """
     p = Path(master_path)
     if not p.is_file():
-        raise MasterResamplingError(f"Master súbor neexistuje: {p}")
+        raise MasterResamplingError(f"Master subor neexistuje: {p}")
 
     with fits.open(p, memmap=False) as hdul:
         hdr = hdul[0].header
@@ -563,8 +563,8 @@ def get_processed_master(
                 out = aligned
             else:
                 raise MasterResamplingError(
-                    f"Po resamplingu má master ({p.name}) tvar {out.shape[0]}×{out.shape[1]}, "
-                    f"ale light „{light_filename or p.name}“ má {eh}×{ew} — kalibráciu zastavujem."
+                    f"Po resamplingu ma master ({p.name}) tvar {out.shape[0]}x{out.shape[1]}, "
+                    f"ale light '{light_filename or p.name}' ma {eh}x{ew} - kalibraciu zastavujem."
                 )
 
     flat_median_adu_before_norm: float | None = None
@@ -581,7 +581,7 @@ def get_processed_master(
         )
         flat_median_adu_before_norm = fm_pre
         flat_normalized_at_calibrate = True
-        # INV-FLUX-02: normalized flat mean ≈ 1.0 (FAIL-CLOSED).
+        # INV-FLUX-02: normalized flat mean ~ 1.0 (FAIL-CLOSED).
         from invariants_runtime import check_flat_mean_near_one  # noqa: PLC0415
         from invariants_runtime import inv_check  # noqa: PLC0415
 

@@ -1,4 +1,4 @@
-"""VYVAR run citation emitter — single source: CITATIONS.bib."""
+"""VYVAR run citation emitter - single source: CITATIONS.bib."""
 
 from __future__ import annotations
 
@@ -32,35 +32,35 @@ def _strip_bib_value(raw: str) -> str:
     return (
         s.replace(r"\&", "&")
         .replace(r"\%", "%")
-        .replace(r"{\'a}", "á")
-        .replace(r"{\'e}", "é")
-        .replace(r"{\'i}", "í")
-        .replace(r"{\'o}", "ó")
-        .replace(r"{\'u}", "ú")
-        .replace(r"{\'n}", "ń")
-        .replace(r"{\'c}", "ć")
-        .replace(r"{\'s}", "ś")
-        .replace(r"{\'z}", "ź")
-        .replace(r"{\'l}", "ł")
-        .replace(r"{\'y}", "ý")
-        .replace(r"{\'r}", "ř")
-        .replace(r"{\'A}", "Á")
-        .replace(r"{\'E}", "É")
-        .replace(r"{\'I}", "Í")
-        .replace(r"{\'O}", "Ó")
-        .replace(r"{\'U}", "Ú")
-        .replace(r"{\'N}", "Ń")
-        .replace(r"{\'C}", "Ć")
-        .replace(r"{\'S}", "Ś")
-        .replace(r"{\'Z}", "Ź")
-        .replace(r"{\'L}", "Ł")
-        .replace(r"{\'Y}", "Ý")
-        .replace(r"{\'R}", "Ř")
-        .replace(r"\H{o}", "ő")
-        .replace(r"\H{O}", "Ő")
-        .replace(r"\H{u}", "ű")
-        .replace(r"\H{U}", "Ű")
-        .replace(r"{\'a}", "á")
+        .replace(r"{\'a}", "a")
+        .replace(r"{\'e}", "e")
+        .replace(r"{\'i}", "i")
+        .replace(r"{\'o}", "o")
+        .replace(r"{\'u}", "u")
+        .replace(r"{\'n}", "n")
+        .replace(r"{\'c}", "c")
+        .replace(r"{\'s}", "s")
+        .replace(r"{\'z}", "z")
+        .replace(r"{\'l}", "l")
+        .replace(r"{\'y}", "y")
+        .replace(r"{\'r}", "r")
+        .replace(r"{\'A}", "A")
+        .replace(r"{\'E}", "E")
+        .replace(r"{\'I}", "I")
+        .replace(r"{\'O}", "O")
+        .replace(r"{\'U}", "U")
+        .replace(r"{\'N}", "N")
+        .replace(r"{\'C}", "C")
+        .replace(r"{\'S}", "S")
+        .replace(r"{\'Z}", "Z")
+        .replace(r"{\'L}", "L")
+        .replace(r"{\'Y}", "Y")
+        .replace(r"{\'R}", "R")
+        .replace(r"\H{o}", "o")
+        .replace(r"\H{O}", "O")
+        .replace(r"\H{u}", "u")
+        .replace(r"\H{U}", "U")
+        .replace(r"{\'a}", "a")
         .replace("{", "")
         .replace("}", "")
     )
@@ -104,7 +104,7 @@ def citation_line(key: str, *, bib: dict[str, dict[str, str]] | None = None) -> 
     author = str(entry.get("author", "Unknown")).split(" and ")[0]
     year = str(entry.get("year", "?"))
     journal = str(entry.get("journal", entry.get("title", "")))
-    return f"{author} ({year}) — {journal}"
+    return f"{author} ({year}) - {journal}"
 
 
 @dataclass
@@ -269,7 +269,7 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
         "henden_kaitchuck1982",
         "aavso_ccd_guide",
         "eastman2010",
-        # CORE-candidates (not wired): kastenyoung1989 — airmass column provenance only
+        # CORE-candidates (not wired): kastenyoung1989 - airmass column provenance only
     ]
     sections.append(("CORE", [citation_line(k, bib=bib) for k in core]))
 
@@ -316,7 +316,7 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
             ]
         )
     if optional:
-        sections.append(("METHODS — this run", optional))
+        sections.append(("METHODS - this run", optional))
 
     if ctx.use_psf:
         sections.append(
@@ -420,7 +420,7 @@ def emit_export_citation_lines(
     p = comment_prefix
     lines: list[str] = [
         f"{p}\n",
-        f"{p} Pipeline: VYVAR — Automated Differential Photometry Pipeline\n",
+        f"{p} Pipeline: VYVAR - Automated Differential Photometry Pipeline\n",
         f"{p}\n",
         f"{p} ALGORITHMS & REFERENCES (from CITATIONS.bib):\n",
         f"{p}\n",
@@ -437,7 +437,7 @@ def emit_pdf_methods_sections(ctx: RunCitationContext) -> list[tuple[str, list[s
     """PDF Methods section: (section_title, bullet_lines)."""
     out: list[tuple[str, list[str]]] = []
     for title, items in _sections_for_context(ctx):
-        out.append((title.replace(" — ", " — ").title(), [f"  {it}" for it in items]))
+        out.append((title.replace(" - ", " - ").title(), [f"  {it}" for it in items]))
     return out
 
 
@@ -452,15 +452,15 @@ def emit_varastro_method_summary_lines(ctx: RunCitationContext) -> list[str]:
         f"{citation_line('honeycutt1992', bib=bib).strip()}\n",
     ]
     if ctx.use_temporal_binning:
-        lines.append(f"# ALG: Temporal binning — {citation_line('pont2006', bib=bib)}\n")
+        lines.append(f"# ALG: Temporal binning - {citation_line('pont2006', bib=bib)}\n")
     if ctx.use_pytics:
-        lines.append(f"# ALG: PyTICS — {citation_line('marconi2026', bib=bib)}\n")
+        lines.append(f"# ALG: PyTICS - {citation_line('marconi2026', bib=bib)}\n")
     if ctx.use_sysrem:
-        lines.append(f"# ALG: SysRem — {citation_line('tamuz2005', bib=bib)}\n")
+        lines.append(f"# ALG: SysRem - {citation_line('tamuz2005', bib=bib)}\n")
     if ctx.use_savgol:
-        lines.append(f"# ALG: Savitzky-Golay — {citation_line('savitzky1964', bib=bib)}\n")
+        lines.append(f"# ALG: Savitzky-Golay - {citation_line('savitzky1964', bib=bib)}\n")
     if ctx.use_democratic:
-        lines.append(f"# ALG: Democratic Detrender — {citation_line('hippke2024', bib=bib)}\n")
+        lines.append(f"# ALG: Democratic Detrender - {citation_line('hippke2024', bib=bib)}\n")
     if ctx.use_psf:
-        lines.append(f"# ALG: ePSF — {citation_line('anderson2000', bib=bib)}\n")
+        lines.append(f"# ALG: ePSF - {citation_line('anderson2000', bib=bib)}\n")
     return lines

@@ -1,4 +1,4 @@
-CURSOR RESULT — 2026-07-13 10:30 UTC+2
+CURSOR RESULT - 2026-07-13 10:30 UTC+2
 
 What I did
 Implemented TODO-12g4 chroma boost for catalog-color field: `apply_chroma_boost()` after white-point

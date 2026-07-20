@@ -160,7 +160,7 @@ def main() -> int:
         json.dump(results, open("_repro_ab2_result.json", "w", encoding="utf-8"), indent=2, default=str)
 
     print("\n" + "=" * 84)
-    print("SAMPLING-GATED TIGHTEN VALIDATION — 361/362 recovery (+ 360 neutrality)")
+    print("SAMPLING-GATED TIGHTEN VALIDATION - 361/362 recovery (+ 360 neutrality)")
     print("=" * 84)
     for draft, entry in results.items():
         print(f"\nDRAFT {draft}")

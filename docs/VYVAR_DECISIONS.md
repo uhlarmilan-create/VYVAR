@@ -1,12 +1,12 @@
-# VYVAR — Decisions & rationale
+# VYVAR - Decisions & rationale
 
 Durable design decisions and *why* they hold. This is the reference for "why is it like
-this" — it should not be reopened without a new decision recorded here. Per-draft validation
+this" - it should not be reopened without a new decision recorded here. Per-draft validation
 numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVAR_ROADMAP.md`.
 
 ---
 
-## K2-NIGHT-FIT-V2-IMPLEMENTED — gated NIGHT_FIT fitter + synthetic recovery (2026-07-20)
+## K2-NIGHT-FIT-V2-IMPLEMENTED - gated NIGHT_FIT fitter + synthetic recovery (2026-07-20)
 
 **Scope finding.** The v2 fit path was never in production: `k2_extinction.py` had v1
 literature machinery only; the four `k2_fit_*` keys existed since v1 for forward
@@ -16,16 +16,16 @@ GAPS C1 (prove the fitter) is delivered by the synthetic suite against the real
 production fitter.
 
 **Adherence.** Model on Honeycutt residuals uses the S5-identifiable form
-`k2*(C-Cref)*dX` (dX = X−mean(X) after frame+star CM removal). Pre-gate: monotonic
-airmass refuse; detectability `sigma_k2_pred ≤ |k2_lit|/k2_fit_min_detectability`;
+`k2*(C-Cref)*dX` (dX = X-mean(X) after frame+star CM removal). Pre-gate: monotonic
+airmass refuse; detectability `sigma_k2_pred <= |k2_lit|/k2_fit_min_detectability`;
 outer colour/brightness tertile + arc consistency within
-`k2_fit_consistency_sigma * max(sigma_boot, 0.10·|k2|)`; plausibility ceiling +
-literature factor/sign. Any failure → LITERATURE_DEFAULT with
+`k2_fit_consistency_sigma * max(sigma_boot, 0.10.|k2|)`; plausibility ceiling +
+literature factor/sign. Any failure -> LITERATURE_DEFAULT with
 `k2_fit_refuse_reason`. Default `k2_fit_enabled=false` is byte-identical.
 
-**Synthetic validation (summary).** Recovery sweep over k2∈{0,0.02,0.05,0.08} ×
-spread∈{0.2,0.5,1.0} × noise∈{5,15,30} mmag: accepted fits within
-`max(2·σ_boot, 0.005)`; non-detectable cells refuse with `detectability`. Explicit
+**Synthetic validation (summary).** Recovery sweep over k2in{0,0.02,0.05,0.08} x
+spreadin{0.2,0.5,1.0} x noisein{5,15,30} mmag: accepted fits within
+`max(2.sigma_boot, 0.005)`; non-detectable cells refuse with `detectability`. Explicit
 REFUSE: monotonic X; absurd k2=0.5; tertile-split injection; zero-signal clean.
 Draft-427 fixture: `fixture_source=synthesized_from_decisions` (sandbox JSON gone;
 signature from SPEC S1/S6 + recon notes) fails items 3/4.
@@ -34,12 +34,12 @@ signature from SPEC S1/S6 + recon notes) fails items 3/4.
 
 ---
 
-## PER-FRAME-SAT-GATED — per-frame target saturation behind flag (2026-07-19)
+## PER-FRAME-SAT-GATED - per-frame target saturation behind flag (2026-07-19)
 
 **Context re-scope.** The original M67 evidence (76 Green / 49 Red whole-star drops)
-came from an ASTROPHOTO dataset with long exposures — an extreme case, not
+came from an ASTROPHOTO dataset with long exposures - an extreme case, not
 representative of photometric nights (Milan, 2026-07-19). Severity re-graded
-**HIGH → MED**. The principle stands: a star's usability is a per-frame fact
+**HIGH -> MED**. The principle stands: a star's usability is a per-frame fact
 (`peak_max_adu` is already measured per frame), while today the TARGET-level drop
 comes from the MASTERSTAR zone of one reference exposure (`skip_photometry` via
 `zone_flag`). Failure mode both ways: a target saturated on 30% of frames is dropped
@@ -51,12 +51,12 @@ next dataset containing saturated bright stars (ROADMAP revisit trigger).
 and `per_frame_sat_min_clean_frac=0.5` (clamp [0.1, 1.0]). When OFF: byte-identical
 to today's zone-based `skip_photometry` (comps keep their existing per-frame >10%
 rule). When ON, for TARGETS only: master zone `saturated` / `likely_saturated` is
-advisory; compute clean fraction from per-frame sat flags; ≥ threshold → measure
-(saturated rows keep flag `saturated`, mask-first); < threshold → skip with
-`skip_reason=per_frame_saturation`; missing per-frame peak data → fail-safe fallback
+advisory; compute clean fraction from per-frame sat flags; >= threshold -> measure
+(saturated rows keep flag `saturated`, mask-first); < threshold -> skip with
+`skip_reason=per_frame_saturation`; missing per-frame peak data -> fail-safe fallback
 to zone behavior + `per_frame_sat_fallback=true`. Provenance: `sat_clean_frac` on
 `photometry_summary` (outside photometry SHA / science comparator file set).
-INV-CFG-01 extended: flag OFF ⇒ none of the new markers appear.
+INV-CFG-01 extended: flag OFF => none of the new markers appear.
 
 ---
 
@@ -92,7 +92,7 @@ scout (`dev/results/DEPS_SCOUT.md`), Cursor-verified against tree `d437bcd`.
 **Milan decision (DOCS-FIX-ARC1).**
 
 - **License = proprietary, all rights reserved.** VYVAR ships under a short
-  proprietary `LICENSE` at the repo root: Copyright (c) 2026 Milan Uhlár; no use,
+  proprietary `LICENSE` at the repo root: Copyright (c) 2026 Milan Uhlar; no use,
   copying, modification, or distribution without prior written permission; no
   warranty. The `README.md` / `README_CZ.md` license sections match this text.
   Rationale: VYVAR is not (yet) an open-source release; keep all rights with the
@@ -106,7 +106,7 @@ scout (`dev/results/DEPS_SCOUT.md`), Cursor-verified against tree `d437bcd`.
 
 ---
 
-## WAVE-B-PARAM-REDUCTION — cut/merge/wire the 304-key surface to 269 (2026-07-18)
+## WAVE-B-PARAM-REDUCTION - cut/merge/wire the 304-key surface to 269 (2026-07-18)
 
 **Milan sign-off (post PARAM-BUDGET-AUDIT).** Acting on the audit dispositions in
 `dev/results/param_budget_audit.csv`, the registered-parameter surface was reduced
@@ -116,7 +116,7 @@ vs `draft_435` (fallback removals touch the science path; byte-identical was req
 
 **What was cut and why.**
 - **DELETE-DEAD (4):** `aperture_fwhm_factor_medium`, `masterstar_log_astroalign`,
-  `phase01_comparison_proximity_tiebreak`, `phase01_comparison_rms_bin_mag` — no live
+  `phase01_comparison_proximity_tiebreak`, `phase01_comparison_rms_bin_mag` - no live
   readers; removed from AppConfig, registry, generated docs, config.json.
 - **MERGE 14 -> 3:** eight `comp_tier{1..4}_bprp_limit/_weight` scalars -> one
   `comp_color_tiers` list-of-dicts; four `phase01_tier{1..4}_mag` -> one `phase01_tiers`
@@ -145,21 +145,21 @@ owner=internal, widget=hidden, tier=expert, and dropped from config.json persist
 
 **Focal-length precedence.** The two resolution paths were audited and already resolve
 DB-optics-first with FITS-header fallback (`param_resolver.resolve_focal_mm`); no code
-change was needed — the audit note was stale.
+change was needed - the audit note was stale.
 
-**The 80-key "never-touched expert" hardcode pool: REJECTED — stays KEEP.** Universality
+**The 80-key "never-touched expert" hardcode pool: REJECTED - stays KEEP.** Universality
 argument: those keys are legitimate scientific knobs that apply across all sites/targets;
 the fact that Milan has not re-tuned them from defaults is evidence they are well-chosen
 defaults, not evidence they are dead. They remain user-visible expert parameters.
 
 **sips_dao_fwhm clarification.** The audit's bonus `sips_dao_fwhm` claim is RETRACTED: the
 code uses the registered `sips_dao_fwhm_px` everywhere (config.py, pipeline.py,
-photometry_core.py, vyvar_platesolver.py, night_run.py, app.py) — there is no bare
+photometry_core.py, vyvar_platesolver.py, night_run.py, app.py) - there is no bare
 `sips_dao_fwhm` key.
 
 ---
 
-## COMP-TRUST-MIN-COMPS — 3 vs code default 5 is INTENTIONAL (2026-07-17)
+## COMP-TRUST-MIN-COMPS - 3 vs code default 5 is INTENTIONAL (2026-07-17)
 
 `comp_trust_min_comps=3` (config.json) vs code default 5: INTENTIONAL. Since 1c80219
 (2026-06-16, Phase-1 graceful comp degradation) the key is the GREEN trust threshold, not
@@ -179,7 +179,7 @@ MASTERSTAR/catalogs. Raw lights exist (150) but in-draft `Raw/darks` and
 
 **Scope note.** Mini starts at **photometry-ready** stage: 16 calibrated + matching
 `proc_*.fits/csv` + parent platesolve catalogs/MASTERSTAR. Chain coverage matches
-`session_baseline_check --full` (`run_full_photometry_pipeline`). Calibrate → QC →
+`session_baseline_check --full` (`run_full_photometry_pipeline`). Calibrate -> QC ->
 align are not re-run on the mini (would require local masters + QC DB state); the
 UI-order test still exercises UI path discovery (`_find_phase2a_paths`) vs headless
 direct paths for the photometry composition. Dual-entry divergence remains an
@@ -190,7 +190,7 @@ frames that have both calibrated and aligned products (QC-rejected frames exclud
 first frame included. Same masters/catalogs/config as parent night.
 
 **Expected at n=16.** Variability detection no-ops (`variability_min_frames=30`);
-`lc_quality` may classify short-baseline — both correct, not failures.
+`lc_quality` may classify short-baseline - both correct, not failures.
 
 **Reproducibility before lock.** Build + full headless run twice from scratch;
 science outputs byte-identical; only then register `VL-P1-GOLD`. Confirmed
@@ -198,7 +198,7 @@ science outputs byte-identical; only then register `VL-P1-GOLD`. Confirmed
 
 ---
 
-## VYVAR-INVARIANTS — machine-enforced contracts (2026-07-16)
+## VYVAR-INVARIANTS - machine-enforced contracts (2026-07-16)
 
 **Premise (Milan sign-off by commissioning).** Static audits cannot catch integration-class
 defects (ordering, path assumptions, transform relationships, cross-entry divergence,
@@ -207,14 +207,14 @@ unprovenanced code). Every defect found in the F-428/F-431 arc was caught by a
 into machine-enforced invariants.
 
 **Goal (honest):** not "zero bugs" (unattainable); rather (a) no defect reaches science output
-silently, and (b) no defect class recurs once fixed. After P1–P3 the guarantee is: silent-wrong
+silently, and (b) no defect class recurs once fixed. After P1-P3 the guarantee is: silent-wrong
 science requires simultaneously fooling independent guards (flux conservation, WCS identity,
-census bands, SHA determinism, golden UI↔night_run equivalence); every ledger defect class has
+census bands, SHA determinism, golden UI<->night_run equivalence); every ledger defect class has
 a recurrence guard. Audits continue for dead code / style / docs / obvious logic only.
 
 **Timing.** Starts **after Anchor #3 closes**. Phases land as separate commits; pytest green
-each. Order: P1 golden E2E equivalence → P2 contract registry / runtime gates → P3 PROCESS
-recurrence discipline → P4 STATE scope statement.
+each. Order: P1 golden E2E equivalence -> P2 contract registry / runtime gates -> P3 PROCESS
+recurrence discipline -> P4 STATE scope statement.
 
 **Out of scope:** UI Settings block (parallel), new science features.
 
@@ -232,20 +232,20 @@ written into `pipeline_meta.json` freely; science outputs remain the byte-identi
 
 **FLOW 4.5 correction (doc-drift evidence).** Builder prose claimed sky-surface preprocess was
 "flux-conserving / mean-preserving". Code and T3 decision subtract the **full** fitted surface
-including the constant term (pedestal; Δ median ~ −96 ADU on the reference frame). Registry
+including the constant term (pedestal; Delta median ~ -96 ADU on the reference frame). Registry
 INV-FLUX-03 now owns that claim; FLOW regenerated accordingly. This is the class of
 prose-physics drift the facts guard cannot catch.
 
 ---
 
-## T3-PREPROCESS-SKY-SURFACE — order-2 shared preprocess (2026-07-16)
+## T3-PREPROCESS-SKY-SURFACE - order-2 shared preprocess (2026-07-16)
 
 **Milan sign-off (commissioning T3-RESTORE).** Per calibrated light frame, fit a 2D polynomial
 surface of order 2 to the background (source-masked + sigma-clipped fit), subtract it in the
-shared ``calibrated → processed`` step used by BOTH chains (UI and headless route through
-``preprocess_calibrated_to_processed`` → ``_preprocess_calibrated_one``). Config:
+shared ``calibrated -> processed`` step used by BOTH chains (UI and headless route through
+``preprocess_calibrated_to_processed`` -> ``_preprocess_calibrated_one``). Config:
 ``preprocess_sky_surface_order`` (int, 0 = off, **default 2**). Subtract the **full** fitted
-surface including the constant term (pedestal convention: Δ median ~ −96 ADU on BO CVn
+surface including the constant term (pedestal convention: Delta median ~ -96 ADU on BO CVn
 Light_008 vs draft_429).
 
 **Rationale.** DAOStarFinder and Labbe background assume a locally flat field. The lost
@@ -266,28 +266,28 @@ at preprocess time; Milan UI run is acceptance gate.
 
 ---
 
-## F-431-HEADLESS-DIVERGENCE — CLOSED (2026-07-16 / T3)
+## F-431-HEADLESS-DIVERGENCE - CLOSED (2026-07-16 / T3)
 
-**Root cause:** lost unprovenanced order-2 preprocess ADU step (``cal≡proc`` on deterministic
+**Root cause:** lost unprovenanced order-2 preprocess ADU step (``cal==proc`` on deterministic
 path). **Resolution:** shared ``_fit_subtract_preprocess_sky_surface`` in
 ``preprocess_calibrated_to_processed``. See `CURSOR_RESULT_t3_restore_anchor.md`.
 
 ---
 
-## F-428-PASS2-CONTAMINATION — draft_428 census products unreliable (2026-07-16)
+## F-428-PASS2-CONTAMINATION - draft_428 census products unreliable (2026-07-16)
 
 **Status (amended 2026-07-16 / F-431):** **DOWNGRADED** as the *primary census driver*.
 Draft_433 (`715391b`, FIX 2 / WCS-INV active, clean tree, UI-parity match sep) still reproduces the
 **6699-class** inflated census. Primary driver of pass-1 inflation is therefore the **absent
-preprocess ADU mutation** that distinguishes 429 (`cal≠proc` Light_008 / MASTERSTAR) from the
-deterministic repo path (`cal≡proc`). Keep both facts below.
+preprocess ADU mutation** that distinguishes 429 (`cal!=proc` Light_008 / MASTERSTAR) from the
+deterministic repo path (`cal==proc`). Keep both facts below.
 
 **Original finding (still true, secondary for census).** On draft_428, Gaia-targeted DAO pass-2
-ran through a corrupt forward SIP (~12″ / ~5 px bookkeeping offset per v5). Evidence retained:
+ran through a corrupt forward SIP (~12 arcsec / ~5 px bookkeeping offset per v5). Evidence retained:
 428 `n_raw_dao=8927` vs 429 `2816`; unmatched 2724 vs 179; 1172 matched catalog_ids only in 428
-(median mag 15.1, median sep-to-Gaia 17″). **Per-target photometry of well-detected stars is
+(median mag 15.1, median sep-to-Gaia 17 arcsec). **Per-target photometry of well-detected stars is
 unaffected** (v5 flux/identity correct). The WCS inversion asymmetry on 428 was a **real, fixed**
-defect (`F-428-WCS-INV`); it is **not** sufficient to explain the 8927→2816 pass-1 collapse once
+defect (`F-428-WCS-INV`); it is **not** sufficient to explain the 8927->2816 pass-1 collapse once
 FIX 2 is live (see F-431-HEADLESS-DIVERGENCE / `CURSOR_RESULT_headless_forensics.md`).
 
 **Density override coupling.** Inflated matched census still flips automatic `DENSITY_OVERRIDES`
@@ -304,26 +304,26 @@ transform is restored in committed shared preprocess.
 
 ---
 
-## F-428-WCS-INV — MASTERSTAR WCS invertibility gate + coordinate finalization (2026-07-16)
+## F-428-WCS-INV - MASTERSTAR WCS invertibility gate + coordinate finalization (2026-07-16)
 
 **Decision.** After F-428 COORD v5 (`RECLASSIFY-PROJECTION`), encode three durable guards:
 
 1. **Round-trip invertibility gate** (`wcs_invertibility.py`): after every plate solve (WARN +
-   provenance flag) and after every optimizer SIP refit (FAIL-CLOSED — keep previous WCS). Metric:
-   p99\|pix − world2pix(pix2world(pix))\| on a 9×9 grid; threshold 0.2 px. Persist
+   provenance flag) and after every optimizer SIP refit (FAIL-CLOSED - keep previous WCS). Metric:
+   p99\|pix - world2pix(pix2world(pix))\| on a 9x9 grid; threshold 0.2 px. Persist
    `wcs_roundtrip_p99_px` / `wcs_roundtrip_pass` in `pipeline_meta.json`.
 
 2. **SIP inverse regeneration** (FIX 2): forward SIP fit (`A/B`) must ship with fitted `AP/BP` in
    the same step (`ensure_sip_inverse_coefficients`). Optimizer SIP refit pairs DAO `(x,y)` with
-   **Gaia catalog sky** (not stale `ra_deg`/`dec_deg` on the row) — root cause of v4/v5 bookkeeping
+   **Gaia catalog sky** (not stale `ra_deg`/`dec_deg` on the row) - root cause of v4/v5 bookkeeping
    offset while `world2pix(Gaia)` agreed with pixels.
 
-3. **Coordinate finalization** (`finalize_masterstar_sky_coords`): matched rows → Gaia catalog
-   `ra_deg`/`dec_deg` + `coord_source=gaia_catalog`; unmatched → `final_wcs` pix2world. Post-match
-   identity sep gate in pixel space (WARN > 1.5×FWHM, drop assignment > 3×FWHM).
+3. **Coordinate finalization** (`finalize_masterstar_sky_coords`): matched rows -> Gaia catalog
+   `ra_deg`/`dec_deg` + `coord_source=gaia_catalog`; unmatched -> `final_wcs` pix2world. Post-match
+   identity sep gate in pixel space (WARN > 1.5xFWHM, drop assignment > 3xFWHM).
 
 **Why.** v5 showed `world2pix(Gaia[cid])` within ~1.3 px of ms `x/y` while `pix2world(x,y)` was
-~12″ from Gaia — science flux/identity correct, sky columns wrong. Internal round-trip can still
+~12 arcsec from Gaia - science flux/identity correct, sky columns wrong. Internal round-trip can still
 pass (astropy numerical world2pix); the identity gate + finalization close the bookkeeping chain.
 Angle histogram concentration (97/160 in two bins) is SIP-field distortion pattern, not isotropic
 confusion. Photometry/LC science columns unchanged by this batch.
@@ -332,29 +332,29 @@ confusion. Photometry/LC science columns unchanged by this batch.
 
 ---
 
-## Second-order extinction k'' — band-aware v1 (2026-07-07)
+## Second-order extinction k'' - band-aware v1 (2026-07-07)
 
 **Decision.** Ship k'' as a **deterministic, provenance-tagged correction** (not a per-night free
-parameter in v1). Source hierarchy: `night_fit` (v2 only, pre-gate) → `literature_default` → `none`.
+parameter in v1). Source hierarchy: `night_fit` (v2 only, pre-gate) -> `literature_default` -> `none`.
 
-**Q1 — default `k2_mode=literature`.** Population-mean Smith/Henden coefficients; explicit
+**Q1 - default `k2_mode=literature`.** Population-mean Smith/Henden coefficients; explicit
 `k2_source`/`k2_value` on every LC row; independent of `apply_color_term` (CT default remains off).
 
-**Q2 — v1 scope:** `band_classify` CT wiring + CV/CR flip + literature k'' path. NIGHT_FIT machinery
+**Q2 - v1 scope:** `band_classify` CT wiring + CV/CR flip + literature k'' path. NIGHT_FIT machinery
 stays in sandbox; `k2_fit_enabled=OFF` until a feasible dataset exists (K2-DATA-BLOCKER).
 
-**Q3 — draft_425 validation** under snapshot discipline (manifest + raw-light checksum sample).
+**Q3 - draft_425 validation** under snapshot discipline (manifest + raw-light checksum sample).
 
 **OSC tri-colour (BLUE/GREEN/RED, TG/TB/TR):** `STANDARD_FILTER` for CT eligibility only; **k2=none**
-— no citable k'' for Bayer RGB bandpasses (`k2_none_tokens` second check in `k2_extinction.py`).
+- no citable k'' for Bayer RGB bandpasses (`k2_none_tokens` second check in `k2_extinction.py`).
 
 **Mandatory ordering.** k'' on comp instrumental mags **before** `fit_color_term_c1`; k'' on target
-`mag_calib` **before** `apply_color_term` — otherwise fitted c1 absorbs k''×X_bar (CT bias).
+`mag_calib` **before** `apply_color_term` - otherwise fitted c1 absorbs k''xX_bar (CT bias).
 
-**Missing data (fail-soft).** No finite Gaia BP-RP → no k'' (`k2_source=none`); no finite airmass →
+**Missing data (fail-soft).** No finite Gaia BP-RP -> no k'' (`k2_source=none`); no finite airmass ->
 skip that frame; never invent default colour.
 
-**Converter.** `k2_bprp = k''_native × d(C_native)/d(C_bprp)` (Jordi et al. 2010 slopes in
+**Converter.** `k2_bprp = k''_native x d(C_native)/d(C_bprp)` (Jordi et al. 2010 slopes in
 `k2_extinction.py`; B-band uses cited `d(B-V)/d(BP-RP)`).
 
 Spec: `docs/VYVAR_K2_DESIGN_SPEC.md` v1.1.
@@ -364,16 +364,16 @@ Spec: `docs/VYVAR_K2_DESIGN_SPEC.md` v1.1.
 ## Colour: raw Gaia BP-RP only; B-V / Riello citation removed (2026-06-25)
 
 **Decision.** Johnson B-V is **deprecated** for tiering and reporting. Colour comes from raw
-Gaia `bp_rp` on matched stars; no BP-RP → B-V transform is implemented or desired. The PDF
+Gaia `bp_rp` on matched stars; no BP-RP -> B-V transform is implemented or desired. The PDF
 report and citation emitter no longer cite Riello 2021 as a B-V transform. The legacy `b_v`
-column plumbing remains (mostly NaN) — removal is a separate bounded task.
+column plumbing remains (mostly NaN) - removal is a separate bounded task.
 
 **Err model (F-HOWELL-3, Stage C FIXED 2026-06-25).** Proc export writes explicit
 `sky_adu_per_px_annulus` (annulus median ADU/px) alongside legacy `noise_floor_adu` (detection
 floor on MASTERSTAR). `_photometric_error` prefers the annulus column; falls back to
 `noise_floor_adu` on older proc CSVs. Verified on draft_424: canonical LC science byte-identical;
-sky-dominated faint targets show ~12–14% err inflation if detection floor were used instead of
-annulus. Edge case (`photometry_mode=epsf` without ePSF): aperture enhance skipped — rare;
+sky-dominated faint targets show ~12-14% err inflation if detection floor were used instead of
+annulus. Edge case (`photometry_mode=epsf` without ePSF): aperture enhance skipped - rare;
 structural insurance via explicit column + fallback.
 
 **Time provenance (F-BJD-1, Stage D FIXED 2026-06-25).** `_recompute_bjd_hjd_with_status` returns
@@ -386,34 +386,34 @@ excludes `time_base` from science diffs.
 ---
 
 **Decision.** VYVAR measures variable targets only when they have a **masterstar (DAO+Gaia) cross-match**.
-VSX entries without such a match are **excluded upstream** in Fáza 0 (`select_active_targets`), not
+VSX entries without such a match are **excluded upstream** in Faza 0 (`select_active_targets`), not
 measured via forced aperture at VSX catalog coordinates. The former `catalog_only` / `forced_aperture`
 Phase 2A branch, `lc_source` provenance column, and `catalog_only_n_comps` config are **removed**.
 
 **Variable-target flux rule (strict).** Active variable targets are measured **only on a direct DAO
 `catalog_id` hit** in the per-frame proc CSV (`read_flux_from_csv`). If the target `catalog_id` is
-missing from the frame catalog → **nondetection / NaN** (`no_data`). **No XY fallback** for variable
+missing from the frame catalog -> **nondetection / NaN** (`no_data`). **No XY fallback** for variable
 targets (prevents wrong-neighbor grabs on intermittent DAO frames). Comp stars retain the legacy
-`_lookup_star_in_csv` path with the bright-neighbor reject (`fallback_mag > −8.0`).
+`_lookup_star_in_csv` path with the bright-neighbor reject (`fallback_mag > -8.0`).
 
 **Removed knobs.** `phase2a_variable_xy_fallback_mag_tol`, `_phase2a_variable_xy_fallback_expected_mag`.
 
 **Shared helper preserved.** `_catalog_only_fixed_aperture_flux` was **renamed** to
-`_annulus_sky_subtracted_flux` (body unchanged) — it remains the annulus sky-subtraction primitive for
+`_annulus_sky_subtracted_flux` (body unchanged) - it remains the annulus sky-subtraction primitive for
 DAO PSF local-sky (`psf_photometry.py`) and neighbor-sub residual aperture (`psf_neighbor_sub.py`).
 
 **Unchanged.** Saturated targets still get `skip_photometry=True` / zero-frame skip in Phase 2A.
 
 **Supersedes.** G2-F001 forced-aperture routing (`f42ce89`) and G2-F002 catalog_only WCS placement
-(`0dd59d7`) — both paths deleted rather than maintained in parallel.
+(`0dd59d7`) - both paths deleted rather than maintained in parallel.
 
 **Validation (strip-FORCED + Phase-2A vs draft 419, Jirny comp lists).** `mag_inst` byte-identical
 **360/360** B stable pool; **346/350** R (4 frames = intermittent-DAO NaN gaps, intended). `mag_calib`
 byte-identical **357/360** B and **344/350** R. One B target (`458415401545371264`) shows a **uniform
 ~30 mmag zeropoint shift** on all 12 frames (`mag_inst` unchanged): comp_qa correctly **excludes**
-intermittent forced-only comp `458412790204894208` (10/12 DAO, 2 frames FORCED_APERTURE-only in 419) →
-ensemble 8→7 comps. **Accepted** as intended DAO-only effect (variability shape preserved; `lc_rms`
-slightly improved). R outlier `458470858164631936` frame 0041: wrong-neighbor XY closed → NaN gap.
+intermittent forced-only comp `458412790204894208` (10/12 DAO, 2 frames FORCED_APERTURE-only in 419) ->
+ensemble 8->7 comps. **Accepted** as intended DAO-only effect (variability shape preserved; `lc_rms`
+slightly improved). R outlier `458470858164631936` frame 0041: wrong-neighbor XY closed -> NaN gap.
 
 **Future backlog (not this fix).** Comp selection should exclude intermittently-DAO comps upfront
 (e.g. `458412790204894208`, listed `comp_n_frames=12` but DAO-only 10/12) so comp_qa need not drop
@@ -429,11 +429,11 @@ each `lightcurve_*.csv` alongside provenance columns (`mag_calib`, `mag_calib_ct
 `mag_calib_ac`, `mag_calib_raw`).
 
 **Consumers.** AAVSO export, VarAstro MAG column, main per-star PDF LC plots, candidate PDF LC
-figures — all read `mag_calib_final` (`export_reports.py`, `photometry_report.py`).
+figures - all read `mag_calib_final` (`export_reports.py`, `photometry_report.py`).
 VarAstro `delta_mag` remains the ensemble differential (not CT/AC adjusted).
 
 **Not changed.** `lc_rms`, `lc_rms_ooe`, comp_qa, trust gate continue to use `mag_calib`
-(CT/AC are per-target/night constants → scatter invariant). Variability detection uses
+(CT/AC are per-target/night constants -> scatter invariant). Variability detection uses
 instrumental `dao_flux` from proc CSVs.
 
 **Supersedes.** Split consumer model (export AC-only vs PDF CT-only) flagged as G5-F011;
@@ -447,97 +447,97 @@ G5-F003 candidate-figure AC precedence is subsumed by this column.
 
 **Finding (measured, run-414 g, production alignment path; `CURSOR_RESULT_fixC_diag.md`).** The 14
 late-night frames Fix B drops are **PSF-degraded**, not "good data that only failed alignment". bad-14
-median **FWHM 8.60 px = 1.85× the good baseline 4.64 px**; concentration flux_large/flux **13.1 vs 1.65**
-(8× worse); **corr(FWHM, alignment-residual) = 0.95** across 161 frames. The bloated-donut centroid noise
+median **FWHM 8.60 px = 1.85x the good baseline 4.64 px**; concentration flux_large/flux **13.1 vs 1.65**
+(8x worse); **corr(FWHM, alignment-residual) = 0.95** across 161 frames. The bloated-donut centroid noise
 (~2.4 px) is the single root: it breaks astroalign's asterism matching (the **misalignment is a symptom**)
-and it is exactly what B.2 (concentration) and Fix-B (alignment residual) measure — two downstream
+and it is exactly what B.2 (concentration) and Fix-B (alignment residual) measure - two downstream
 symptoms of one cause. Most likely cause: **late-night focus drift on the deliberately-defocused rig**
 (a pure transparency/flux drop would not bloat FWHM); the post-flip half may not have been refocused
 (observer question).
 
-**Decision — Fix C "alignment recovery" is NOT APPLICABLE; close it.** The frames are **not recoverable
-to sub-px**: residual geometry on the matched subset is incoherent ~2.4 px scatter (rotation ~0°, scale
-~1.0, |t| ~0.1 px; a similarity fit does not reduce it; no radial trend) + ~50 % source loss — centroid
+**Decision - Fix C "alignment recovery" is NOT APPLICABLE; close it.** The frames are **not recoverable
+to sub-px**: residual geometry on the matched subset is incoherent ~2.4 px scatter (rotation ~0 deg, scale
+~1.0, |t| ~0.1 px; a similarity fit does not reduce it; no radial trend) + ~50 % source loss - centroid
 noise, not a fixable transform. Their centroid floor (~2.4 px) is **above the 1.37 px gate**, so even a
-perfect alignment would still be flagged. Candidate tests confirm it: control-point cap 50 → 3/14, cap 80
-→ 2/14, cap+isolation → 1/14; per-frame WCS is absent (0/162) so WCS-reproject is unavailable;
+perfect alignment would still be flagged. Candidate tests confirm it: control-point cap 50 -> 3/14, cap 80
+-> 2/14, cap+isolation -> 1/14; per-frame WCS is absent (0/162) so WCS-reproject is unavailable;
 translation-refinement is inapplicable to incoherent scatter. Force-aligning bloated PSFs would not yield
 science-grade photometry and would risk the 147 working frames / all rigs. **Diagnose-before-fix
 prevented shipping a useless, risky alignment change.**
 
-**Decision — Fix B + B.2 are the correct, PERMANENT handling.** They reject genuinely unusable frames;
+**Decision - Fix B + B.2 are the correct, PERMANENT handling.** They reject genuinely unusable frames;
 there is nothing to "recover", so the residual gate is a **permanent quality gate**, not a stop-gap that
 self-deactivates once "Fix C" succeeds. (The earlier "self-deactivating" wording is superseded below.)
 
-**Decision — log a SEPARATE perf/robustness ticket (not Fix C recovery).** astroalign at the production
-mcp~200 on dense fields is ~654 s/frame (and still fails); cap to ~50 (astroalign's design point) →
-~3–10 s. Two integration shapes — additive recovery rung (keeps the 147 byte-identical, does **not** fix
-slowness) vs primary cap (fixes slowness, changes the 147 transforms → needs a **cross-rig regression,
+**Decision - log a SEPARATE perf/robustness ticket (not Fix C recovery).** astroalign at the production
+mcp~200 on dense fields is ~654 s/frame (and still fails); cap to ~50 (astroalign's design point) ->
+~3-10 s. Two integration shapes - additive recovery rung (keeps the 147 byte-identical, does **not** fix
+slowness) vs primary cap (fixes slowness, changes the 147 transforms -> needs a **cross-rig regression,
 home + narrow rigs**, before adoption). Deferred until cross-rig data is available. See ROADMAP.
 
-**Watch-item.** Mildly-bloated near-threshold frames kept by the gate (e.g. g_0231, FWHM 5.12 = 1.10×):
-differential photometry largely cancels common-mode FWHM changes, so likely benign — watch the LC near
-the good→bad transition.
+**Watch-item.** Mildly-bloated near-threshold frames kept by the gate (e.g. g_0231, FWHM 5.12 = 1.10x):
+differential photometry largely cancels common-mode FWHM changes, so likely benign - watch the LC near
+the good->bad transition.
 
 ---
 
 ## Fix B: reject-on-alignment-residual frame gate is rig-agnostic + cause-correct; default-OFF (2026-06-18)
 
 > **[Updated by C1, 2026-06-18.]** The "Problem"/"always-on"/"Self-deactivating" clauses below assumed
-> the frames were *recoverable* once "Fix C" fixed alignment. **C1 refuted that** — the frames are
-> PSF/FWHM-bloated (FWHM 1.85×; corr(FWHM,residual)=0.95) and **unrecoverable** (centroid floor ~2.4 px >
+> the frames were *recoverable* once "Fix C" fixed alignment. **C1 refuted that** - the frames are
+> PSF/FWHM-bloated (FWHM 1.85x; corr(FWHM,residual)=0.95) and **unrecoverable** (centroid floor ~2.4 px >
 > 1.37 px gate). Fix B is therefore a **permanent quality gate**, and the alignment residual is a
 > *symptom* of PSF bloat (alongside B.2), not a signal awaiting a future alignment fix. See the C1
 > decision above.
 
 **Problem.** run-414 D-A/D-B: the catastrophic V0454 LC outliers are 13 phase_correlation frames
 mis-aligned ~2.1 px (translation-only fallback after astroalign failed on the dense field). The frames'
-photometry data is fine — only the alignment failed. ~~They are recoverable once alignment is fixed
-(Fix C), but until then they must not reach photometry.~~ **[C1: not recoverable — PSF/FWHM bloat;
+photometry data is fine - only the alignment failed. ~~They are recoverable once alignment is fixed
+(Fix C), but until then they must not reach photometry.~~ **[C1: not recoverable - PSF/FWHM bloat;
 permanent gate. See C1 decision above.]**
 
-**Decision 1 — record a per-frame alignment residual as always-on QC.** Compute, at the Phase-2A
-frame-selection point, a per-frame residual = median (over bright matched sources, 10≤mag≤13) of the
+**Decision 1 - record a per-frame alignment residual as always-on QC.** Compute, at the Phase-2A
+frame-selection point, a per-frame residual = median (over bright matched sources, 10<=mag<=13) of the
 deviation of (x,y) from each source's robust across-night median position, and write it as
 `align_residual_px` in `alignment_report.csv`. *Why this metric:* the across-night median reference is
 dominated by the well-aligned majority, so a translation-mis-aligned frame's residual ~ its full shift
-— it reproduces the diagnostic's clean separation (astroalign ~0.36 px vs phase_corr ~2.13 px) without
+- it reproduces the diagnostic's clean separation (astroalign ~0.36 px vs phase_corr ~2.13 px) without
 needing the alignment transform's internal control points. *Why always-on:* it is additive QC metadata
-(does not feed photometry → baseline byte-identical) and is a direct measure of frame quality.
+(does not feed photometry -> baseline byte-identical) and is a direct measure of frame quality.
 **[C1: it is a *symptom* of PSF/FWHM bloat (corr=0.95), not a signal a future "Fix C" will lower.]**
 
-**Decision 2 — gate threshold is RELATIVE (rig-agnostic), not a fixed pixel value.** Reject if
-residual > `frame_align_residual_max_frac × science-aperture-radius-px`. *Why relative:* a fixed px
+**Decision 2 - gate threshold is RELATIVE (rig-agnostic), not a fixed pixel value.** Reject if
+residual > `frame_align_residual_max_frac x science-aperture-radius-px`. *Why relative:* a fixed px
 threshold would mis-generalize across rigs/plate-scales/focus; expressing it as a fraction of the
 aperture radius ties it to where flux physically leaves the aperture. *Default 0.25:* on run-414 the
-good/bad gap (1.206→1.450 px) is 0.22–0.27 × the 5.47 px aperture radius, and physically residual
-≳~0.2× aperture-radius is where the defocused-donut flux starts leaving the science aperture; 0.25
-(→1.37 px) sits in the gap. Safety floor (`min_keep_frames`, default 10) makes the gate a no-op rather
+good/bad gap (1.206->1.450 px) is 0.22-0.27 x the 5.47 px aperture radius, and physically residual
+>=~0.2x aperture-radius is where the defocused-donut flux starts leaving the science aperture; 0.25
+(->1.37 px) sits in the gap. Safety floor (`min_keep_frames`, default 10) makes the gate a no-op rather
 than nuke a marginal night.
 
-**Decision 3 — default-OFF; method-agnostic; keep distinct from B.2.** Default-OFF ⇒ byte-identical
+**Decision 3 - default-OFF; method-agnostic; keep distinct from B.2.** Default-OFF => byte-identical
 (verified: 70 targets 0 diff, V0454 max|diff|=0). ON drops 14 frames = all 13 phase_correlation **+ 1
 mis-aligned astroalign** (dr=1.648, itself an LC outlier): the gate keys on *measured residual*, not on
 the alignment method, so it correctly catches a bad astroalign frame and would spare a well-aligned
-phase_correlation frame — this is desired, not a defect. **Relationship to B.2 (kept separate):** the
+phase_correlation frame - this is desired, not a defect. **Relationship to B.2 (kept separate):** the
 residual gate (alignment quality) is the cause-correct signal; B.2 (flux_large/flux concentration) is
 the aperture-integrity symptom and also catches genuine transparency collapse the residual gate would
 miss. On run-414 the residual gate is a strict superset of B.2 (overlap 13, residual-only the 1
 astroalign, B.2-only 0). Consolidation is deferred (a future question), not done here. ~~**Self-
 deactivating:** once Fix C makes astroalign succeed on these frames their residual drops below
-threshold and the guard stops rejecting them — a safety net, not a permanent exclusion.~~ **[Corrected
-by C1, 2026-06-18: the gate is PERMANENT — the frames are PSF/FWHM-bloated (centroid floor ~2.4 px >
+threshold and the guard stops rejecting them - a safety net, not a permanent exclusion.~~ **[Corrected
+by C1, 2026-06-18: the gate is PERMANENT - the frames are PSF/FWHM-bloated (centroid floor ~2.4 px >
 1.37 px threshold) and unrecoverable; there is no "Fix C" that lowers their residual. See C1 above.]**
 
 ---
 
-## Per-point `err` = photon ⊕ ensemble-ZP residual SEM (NOT std of comp instrumental mags) (2026-06-18)
+## Per-point `err` = photon (+) ensemble-ZP residual SEM (NOT std of comp instrumental mags) (2026-06-18)
 
-**Bug.** The LC `err` term-3 was `ensemble_scatter/√n_ens` with `ensemble_scatter = np.std(comp_vals)`
+**Bug.** The LC `err` term-3 was `ensemble_scatter/sqrtn_ens` with `ensemble_scatter = np.std(comp_vals)`
 on the comparison stars' **instrumental** magnitudes (`photometry_core.py:2552,:2567`). The std of
-comps' instrumental mags is dominated by their **brightness spread** — a fixed ensemble-composition
-number, ~constant frame-to-frame — not by per-point uncertainty. For V0454's 2 comps (instrumental Δ
-1.655 mag) it injected a constant **0.585 mag** onto every point, ~23× the empirical 0.025 mag
+comps' instrumental mags is dominated by their **brightness spread** - a fixed ensemble-composition
+number, ~constant frame-to-frame - not by per-point uncertainty. For V0454's 2 comps (instrumental Delta
+1.655 mag) it injected a constant **0.585 mag** onto every point, ~23x the empirical 0.025 mag
 differential scatter. The LC centres were always correct (flux-sum zeropoint `ens_med`); only the error
 bars were wrong. This is a distinct error-propagation bug that **shares the sparse/colour-mismatched-comp
 structural root** with trust-RED (a thin, brightness-spread ensemble amplifies it) but is not the same
@@ -547,21 +547,21 @@ issue.
 **ensemble zeropoint standard error** from the comps' residuals: for each comp, residual = its
 instrumental mag minus its **own across-night median** (`comp_ref_map`), so the comps' brightness and
 constant colour offsets cancel and only the genuine per-frame zeropoint scatter remains; the per-point
-contribution is `std(residuals, ddof=1)/√n` (Honeycutt 1992 PASP 104:435, `honeycutt1992`). The former
-`comp_rms_med/√n_ens` term-2 is **dropped** to avoid double-counting the same ensemble-ZP quantity. The
-photon/SNR base term-1 is **kept** (correctly large/NaN when a mis-centred aperture tanks SNR — that is
+contribution is `std(residuals, ddof=1)/sqrtn` (Honeycutt 1992 PASP 104:435, `honeycutt1992`). The former
+`comp_rms_med/sqrtn_ens` term-2 is **dropped** to avoid double-counting the same ensemble-ZP quantity. The
+photon/SNR base term-1 is **kept** (correctly large/NaN when a mis-centred aperture tanks SNR - that is
 Fix B's domain). Small-n robustness: a near-zero residual SEM leaves `err` = photon base (the floor).
 
 **Consumers (Step-1 audit).** `err` does **not** feed the trust verdict, `lc_rms` (empirical
-`np.std(mags)`), the production Broeg ensemble combine (`1/comp_rms²` weights), or production
-sigma-clipping — so trust and production weights are unaffected. It feeds AAVSO/VarAstro export MAGERR +
+`np.std(mags)`), the production Broeg ensemble combine (`1/comp_rms^2` weights), or production
+sigma-clipping - so trust and production weights are unaffected. It feeds AAVSO/VarAstro export MAGERR +
 the PDF median-error (intended; now correct) and **SysRem's inverse-variance weights**
-(`run_sysrem_field`, `W=1/err²`, Tamuz 2005) — `sysrem_enabled` is **default-OFF**, and the fix
+(`run_sysrem_field`, `W=1/err^2`, Tamuz 2005) - `sysrem_enabled` is **default-OFF**, and the fix
 *improves* its weighting (mis-aligned frames down-weighted instead of the old ~uniform weighting). No
 SysRem code change.
 
 **Verification (run-414 g, re-run vs committed artifacts).** `mag_calib`/`delta_mag` **byte-identical**
-(max|diff|=0); V0454 `err` 0.581→0.013 vs empirical 0.025 (mis-cal 23.5×→0.5×); err now tracks
+(max|diff|=0); V0454 `err` 0.581->0.013 vs empirical 0.025 (mis-cal 23.5x->0.5x); err now tracks
 brightness (corr(err,mag) +0.75), no fixed baseline; the 13 mis-aligned frames still flagged via the
 photon term. Evidence: `CURSOR_RESULT_414_diag.md`, `tmp/fixA_verify.py`.
 
@@ -574,20 +574,20 @@ decomposes into a **real eclipse egress that dominates ~4:1** plus a **secondary
 post-fainter meridian-flip step**. The egress and the flip coincide in time (egress is pre-flip,
 plateau is post-flip) but are cleanly separated by their comp-dependence:
 
-- **Egress is real (comp-invariant).** Differential curves vs comps spanning 141–1840 px overlay in
-  the pre-flip branch: pre-flip rise mean −0.288, **std 0.088 mag**; ~0.369 mag of the rise occurs
+- **Egress is real (comp-invariant).** Differential curves vs comps spanning 141-1840 px overlay in
+  the pre-flip branch: pre-flip rise mean -0.288, **std 0.088 mag**; ~0.369 mag of the rise occurs
   *within the single pre-flip orientation* (no flip involved); SIPS independently reproduces the same
-  egress→plateau on the same aligned frames.
+  egress->plateau on the same aligned frames.
 - **Flip step is instrumental (comp/position-dependent).** Post-flip offsets fan out with comp
-  position: near-centre comps −0.25, mid/far −0.38…−0.53 (**std 0.174 mag** across comps). Check stars
+  position: near-centre comps -0.25, mid/far -0.38...-0.53 (**std 0.174 mag** across comps). Check stars
   near V0454 show a cross-flip step **median +0.100 mag (post-fainter)**, growing with separation
-  (~0 co-located → +0.2 at ~450 px). Boundary continuity (D3) shows the post-flip plateau sits +0.144
+  (~0 co-located -> +0.2 at ~450 px). Boundary continuity (D3) shows the post-flip plateau sits +0.144
   mag below the extrapolated egress (part natural turnover, part step).
 
 **Consequence.** The VYVAR-0.450 vs SIPS-0.548 amplitude gap (0.098 mag) is a **comp-choice / flip-step
-artifact, not a pixel-data disagreement** — SIPS used the identical aligned frames; its comp simply
+artifact, not a pixel-data disagreement** - SIPS used the identical aligned frames; its comp simply
 carried a flip step opposite to VYVAR's near-centre ensemble (measuring V0454 against far comps yields
-~0.55 mag, SIPS-like). Root cause = **uncorrected flat-field under the 180° p→−p flip mapping**,
+~0.55 mag, SIPS-like). Root cause = **uncorrected flat-field under the 180 deg p->-p flip mapping**,
 exacerbated by non-cal data. This grounds the ROADMAP **flip-aware comp selection** candidate (prefer
 near-target comps / per-side normalization when a flip is detected). Evidence: `tmp/v0454_flip_diag.md`
 (throwaway), `docs/round2_figs/v0454_flip_diag.png`, JOURNAL 2026-06-17 end-of-day.
@@ -596,28 +596,28 @@ near-target comps / per-side normalization when a flip is detected). Evidence: `
 
 ## Aperture-skirt fix REJECTED; transparency frame-quality gate ADOPTED (default-OFF) (2026-06-17)
 
-**B.1 aperture-skirt — not implemented.** The SNR-optimal science aperture (~5 px) captures only
+**B.1 aperture-skirt - not implemented.** The SNR-optimal science aperture (~5 px) captures only
 EE~0.65 of a defocused star (curve-of-growth on bright isolated pre-flip stars), so the premise
 "aperture under-captures the skirt" is true. But the decisive test refutes the *fix*: differential
-frame-to-frame scatter is **flat** from r=5 px to the EE≥0.99 plateau (~24→27 mmag; minimum ~21 mmag
-at r~6 px, within noise), and a per-frame FWHM-adaptive aperture is **worse** (30–32 mmag). The
-±5–7% skirt-fraction swing (~48 mmag nominal) is **common-mode PSF breathing** that differential
+frame-to-frame scatter is **flat** from r=5 px to the EE>=0.99 plateau (~24->27 mmag; minimum ~21 mmag
+at r~6 px, within noise), and a per-frame FWHM-adaptive aperture is **worse** (30-32 mmag). The
++-5-7% skirt-fraction swing (~48 mmag nominal) is **common-mode PSF breathing** that differential
 photometry already cancels; the bright-star floor is not aperture-limited. Grounded decision: widening
-the aperture is not justified (a 5→6 px bump is within noise). Evidence: `CURSOR_RESULT_round2.md`,
+the aperture is not justified (a 5->6 px bump is within noise). Evidence: `CURSOR_RESULT_round2.md`,
 `tmp/b1_cog_diag.py`.
 
-**B.2 transparency frame-quality gate — adopted behind a default-OFF flag.** A per-frame
+**B.2 transparency frame-quality gate - adopted behind a default-OFF flag.** A per-frame
 PSF-concentration statistic, median `flux_large / flux` over bright unsaturated sources, cleanly
-separates transparency/PSF-collapsed frames (ratio ~11–16, FWHM at the rail, science aperture
+separates transparency/PSF-collapsed frames (ratio ~11-16, FWHM at the rail, science aperture
 catching only noise) from clear-but-faint frames (ratio stays ~2.7 as flux falls equally in both
 apertures). Grounded in the curve-of-growth / SNR-optimal aperture framework (Howell 1989). The gate
-rejects whole frames whose ratio is a robust outlier (`z>k`, primary) guarded by `FWHM ≥ factor·median`
-(spares sharp frames); safety floor on min kept frames. **Default OFF ⇒ baseline byte-identical**
+rejects whole frames whose ratio is a robust outlier (`z>k`, primary) guarded by `FWHM >= factor.median`
+(spares sharp frames); safety floor on min kept frames. **Default OFF => baseline byte-identical**
 (preserves the UI test). Params `frame_quality_{gate_enabled,ratio_k,fwhm_factor,min_keep_frames}`
 (config + ui_settings + VYVAR_PARAMS); `howell1989` gated. Isolated measurement (draft_413 g, ON vs
-OFF): LC scatter for bright targets drops **median −257 mmag** (14/15 improved; a flat field star
-0.342→0.035 mag); **trust unchanged (RED)** because RED is set by the structural check-star/thin-comp/
-colour-term-off gates, not LC scatter — the gate is a precision win, not a trust-flip. Scope: Phase 2A
+OFF): LC scatter for bright targets drops **median -257 mmag** (14/15 improved; a flat field star
+0.342->0.035 mag); **trust unchanged (RED)** because RED is set by the structural check-star/thin-comp/
+colour-term-off gates, not LC scatter - the gate is a precision win, not a trust-flip. Scope: Phase 2A
 (target LC/trust); Phase-0+1 comp selection not gated yet. Evidence: `CURSOR_RESULT_round2.md`,
 `tmp/b2_measure.py`, `docs/round2_figs/`.
 
@@ -626,9 +626,9 @@ colour-term-off gates, not LC scatter — the gate is a precision win, not a tru
 ## variable_targets selection is spatial-first (frame bbox), and it also purges variables from the comp pool (2026-06-17)
 
 VSX `variable_targets` are selected from the **frame footprint** (frame bbox + the 50 px in-frame
-margin) via `_query_vsx_local_frame_bbox`, **not** the 3.5° cone box. The cone hit
+margin) via `_query_vsx_local_frame_bbox`, **not** the 3.5 deg cone box. The cone hit
 `catalog_query_max_rows=15000` with **no `ORDER BY`** and silently dropped a contiguous Dec slice
-(the northern half of the field, incl. bright named variables — V0454 CrA m9.9, KQ/KM/KT CrA).
+(the northern half of the field, incl. bright named variables - V0454 CrA m9.9, KQ/KM/KT CrA).
 Completeness must not depend on row order; the bbox is sub-degree so the SQL result is tiny and the
 cap never bites.
 
@@ -636,7 +636,7 @@ cap never bites.
 `variable_targets` list drives the **global comparison-pool veto**
 (`build_global_comp_pool(..., variable_target_catalog_ids=...)`). The now-complete list correctly
 removes newly-recognised variables from the comparison ensemble, which shifts a minority of
-previously-measured targets (draft_413 g: 6/19, max |Δmag|=0.122) — both by dropping a
+previously-measured targets (draft_413 g: 6/19, max |Deltamag|=0.122) - both by dropping a
 variable-as-comp directly and by lowering surviving comps' field-wide RMS (the variables had
 inflated ensemble scatter) so weights re-rank. This is a comp-purity **improvement**, deterministic,
 and accepted as the correct behaviour. Byte-identity vs the capped baseline is therefore *not* a
@@ -651,7 +651,7 @@ global-pool path. Evidence: `CURSOR_RESULT_round1.md`, `tmp/fix2_e2e_oldnew.py`,
 yield gate. Its verdict is taken against **measurable** targets: a missing target (active, no
 summary row) counts as honest *unmeasurable* (does NOT fail) when it is fainter than the achieved
 detection depth (faintest measured target's catalog mag); a missing target at-or-above depth is a
-*measurable miss* and still fails (the silent-truncation guard — draft_383/385-style cut-short runs
+*measurable miss* and still fails (the silent-truncation guard - draft_383/385-style cut-short runs
 must fail). Depth is derived from the data, so **no new threshold/param** is introduced.
 Conservative fallbacks (no mag, nothing measured) treat misses as measurable so truncation can never
 masquerade as honest. This unblocks honest RED nights (g 19/22 = 86.4% now PASS) without weakening
@@ -682,11 +682,11 @@ TESS cross-check.
 **Decision (Milan).** The unit VYVAR produces, validates, and submits is a **single-night
 light curve**. This is the regime cross-validated against SIPS/AIJ (V0612, wide rig) and the
 unit a user processes per session. **Multi-night global matching / inter-night zeropoint
-(TODO-GS8) is descoped from HIGH to FUTURE / nice-to-have** — built only if a long-baseline
+(TODO-GS8) is descoped from HIGH to FUTURE / nice-to-have** - built only if a long-baseline
 science case requires it. Consistent with the TODO-GS9 (downstream period analysis) scope
 boundary: stitching and long-baseline analysis live outside VYVAR's core submission path.
 
-## CAL-DIAG — calibration-time radiometry gate (agreed 2026-07-07)
+## CAL-DIAG - calibration-time radiometry gate (agreed 2026-07-07)
 
 **Decision (Milan).** Add a camera-agnostic calibration-time diagnostic. Spec:
 `docs/VYVAR_CAL_DIAG_SPEC.md` (v1.1, 2026-07-07). VYVAR must verify radiometry from data
@@ -768,11 +768,11 @@ data-driven radiometry gate, not per-camera constants.
 
 ## Photometry method & scale
 
-### Plate scale is WCS-derived (~ 9.77″/px on the wide rig), not 1.3
-The project-wide `1.3″/px` belief was wrong — it was a Newton 300/1200 + C3-26000 (binned 2×)
+### Plate scale is WCS-derived (~ 9.77 arcsec/px on the wide rig), not 1.3
+The project-wide `1.3 arcsec/px` belief was wrong - it was a Newton 300/1200 + C3-26000 (binned 2x)
 placeholder leaking onto the wide Carl-Zeiss/QHY294MM field via a global config default. The
-resolver is **solved WCS/CD authoritative → config only as last resort** (sane clamp widened
-to `0.1–30.0`). WCS-dependent geometry (ePSF isolation, FOV / `max_dist_deg`, TESS context) is
+resolver is **solved WCS/CD authoritative -> config only as last resort** (sane clamp widened
+to `0.1-30.0`). WCS-dependent geometry (ePSF isolation, FOV / `max_dist_deg`, TESS context) is
 now correct; pixel-based geometry (aperture / annulus / SNR-optimal table / field density) was
 immune. **Status: settled (2026-05-29/30).** Any residual `1.3` in old `pipeline_meta` is stale
 run metadata, overwritten on a clean re-run (see ROADMAP: WIDE-RIG-REPROCESS).
@@ -847,9 +847,9 @@ and plate-solve hint readers keep `VY_FWHM`. Validated: numeric SHA `770966c3...
 h & chi Per L crowding 77/87 -> 58/53 is_blended.
 
 ### Aperture is the validated workhorse; PSF validated-but-gated
-At 9.77″/px the PSF is well-sampled and stable across the field, so a single ePSF already
-captures it and aperture wins. Every PSF variant — single ePSF, spatial `GriddedPSFModel`,
-`SourceGrouper` joint fit, per-star adaptive selector — was implemented and **lost to aperture**
+At 9.77 arcsec/px the PSF is well-sampled and stable across the field, so a single ePSF already
+captures it and aperture wins. Every PSF variant - single ePSF, spatial `GriddedPSFModel`,
+`SourceGrouper` joint fit, per-star adaptive selector - was implemented and **lost to aperture**
 at this scale (single ePSF ~3x worse comp RMS; grid starves cells; grouper diverges on
 sub-resolution blends). **Decision: keep all PSF flags OFF in production on the wide rig.**
 On fine-scale synthetic truth (draft-367-like), PSF is now **publication-grade** (accuracy,
@@ -858,13 +858,13 @@ characterization gate. **Status: settled on wide; fine-scale validated-but-gated
 
 ### Full-frame DAO over fixed-position stamp photometry (overnight-batch model)
 Every frame runs full-frame `DAOStarFinder` + match (the "master fast path" skips the per-frame
-Gaia cone, not the detection). The SIPS-style speedup considered 2026-04-22 — read flux only at
-fixed catalog positions, no full-frame finder — is **deliberately not adopted.** Full-frame
+Gaia cone, not the detection). The SIPS-style speedup considered 2026-04-22 - read flux only at
+fixed catalog positions, no full-frame finder - is **deliberately not adopted.** Full-frame
 detection buys QC that fixed positions lose: per-frame local centroiding (absorbs WCS / drift /
 resampling offsets), shape-roundness rejection of cosmics, hot pixels and CCD columns,
 match-count sanity against a bad solve, new-source detection, and completeness diagnostics. The
 compute cost is accepted because **VYVAR runs as an overnight batch** after the session ends,
-while the observer sleeps — the binding constraint is a *trustworthy* Summary Measure Report by
+while the observer sleeps - the binding constraint is a *trustworthy* Summary Measure Report by
 morning, not wall-clock throughput. The same logic licenses PSF's extra cost when it is enabled
 on fine-scale data: accuracy and robustness over speed. **Corollary:** performance work is
 welcome only where it does not trade away QC (I/O, parallelism, caching); the per-frame
@@ -877,38 +877,38 @@ rows with empty `catalog_id` are dropped **before** aperture / Moffat / PSF work
 (`_proc_drop_unmatched_dao_rows`; key on `catalog_id`, not `source_type`). They were never written
 to `proc_*.csv` anyway (final `_proc_catalog_keep_matched_rows_only`); this is pure wasted compute.
 
-**Moffat fit is Step 1 of the two-step ePSF path only** — gate `if _run_epsf:` (not
+**Moffat fit is Step 1 of the two-step ePSF path only** - gate `if _run_epsf:` (not
 `_run_aperture`). In aperture-only production (`psf_photometry_enabled=False`), `moffat_*` columns
 are omitted; LC / comp-QA readers do not consume them. **LC byte-identical** when `VY_FWHM` /
 `VY_FWHM_GAUSS` drives aperture radius (verified `draft_000389` B_60_1). Chi_and_H photometry SHA
 unchanged (`proc_*.csv` not in SHA set).
 
 ### What VYVAR deliberately does NOT adopt from SIPS (2026-06-02)
-Comparison against SIPS (Moravian Instruments; v4.4 manual + Pejcha & Cagaš 2022, A&A 667,
-A53) confirmed the two tools share a photometric **family** — both do full-frame per-frame star
+Comparison against SIPS (Moravian Instruments; v4.4 manual + Pejcha & Cagas 2022, A&A 667,
+A53) confirmed the two tools share a photometric **family** - both do full-frame per-frame star
 detection, intensity-weighted sub-pixel centroids, per-star automatic apertures, robust
 background, saturation invalidation, and a flux-summed ensemble. SIPS's speed comes from
-**native C/C++ + multicore**, not an algorithmic shortcut — which *validates* VYVAR's full-frame
+**native C/C++ + multicore**, not an algorithmic shortcut - which *validates* VYVAR's full-frame
 DAO choice rather than contradicting it.
 
 **Deliberately not adopted:**
 - **Fixed-position stamp photometry** (read flux at catalog x,y only; no per-frame finder). See
-  the full-frame DAO decision above — QC and trust over throughput.
-- **Neural-network variable detection (VDI/NN).** Against the trust mission — VYVAR keeps
+  the full-frame DAO decision above - QC and trust over throughput.
+- **Neural-network variable detection (VDI/NN).** Against the trust mission - VYVAR keeps
   explainable statistics (Sokolovsky indices, RMS hockey-stick, independent cross-validation),
   not a black box.
 - **UCAC4-based calibration.** A step back from VYVAR's native Gaia DR3 + BP-RP (deeper, modern,
   colour-complete).
 - **SPL scripting / REST API.** Different stack; VYVAR is Python/Streamlit.
 
-**Worth borrowing — scoped in ROADMAP, not core changes:**
+**Worth borrowing - scoped in ROADMAP, not core changes:**
 - **Wide-field WCS distortion check** (MEDIUM): confirm SIP / higher-order terms on the wide
   rig; SIPS uses a 3rd-order 2D polynomial (Monomial/Legendre).
-- **Spatial term in ensemble calibration** (LOW): SIPS's `x1·X + y1·Y + …` field-gradient terms
-  — relevant only for a future whole-field absolute mode, not the current per-target differential
+- **Spatial term in ensemble calibration** (LOW): SIPS's `x1.X + y1.Y + ...` field-gradient terms
+  - relevant only for a future whole-field absolute mode, not the current per-target differential
   path.
 
-The Pejcha & Cagaš paper is a **citation / positioning reference for the GS7 paper**, not a
+The Pejcha & Cagas paper is a **citation / positioning reference for the GS7 paper**, not a
 source to copy. Where VYVAR is already ahead: Gaia-native catalog, independent cross-val +
 per-target trust gate, comp_qa, literature-backed comp selection, and reproducibility/citation
 discipline. **Status: settled 2026-06-02.**
@@ -935,7 +935,7 @@ Same problem domain, same accuracy class.
   verdict and no independent second-extractor cross-check in-product. VYVAR adds comp_qa
   (Sokolovsky leave-one-out locus), a **production per-target trust gate** (comp health +
   check-star scatter + `lc_quality_flag`; see Trust & validation below), and **offline-only**
-  SEP cross-validation (~0.2%/frame via `xval_run.py` — validation study, not a pipeline trust axis).
+  SEP cross-validation (~0.2%/frame via `xval_run.py` - validation study, not a pipeline trust axis).
 - **Reproducibility / provenance.** VYVAR has SHA-256 byte-identity on photometry artifacts, a
   citation emitter, and a decision log. CoLiTecVS is a compact closed all-in-one -- by the
   authors' own note you cannot isolate and test a single internal stage.
@@ -985,7 +985,7 @@ VYVAR's existing trust harness; keep everything else as VYVAR already does it. *
 2026-06-09.**
 
 ### COG (curve-of-growth) aperture correction: implemented, default OFF
-Per-frame encircled-energy correction removes the constant target↔comp enclosed-flux bias and
+Per-frame encircled-energy correction removes the constant target<->comp enclosed-flux bias and
 the seeing-correlated systematic from per-star SNR-optimal radii. Byte-identical when OFF.
 **Decision: ship gated, leave OFF** until validation on real nights. Mixed-frame guard is
 wired (see `APCORR-MIXEDFRAME-ALLORNOTHING` below).
@@ -993,11 +993,11 @@ wired (see `APCORR-MIXEDFRAME-ALLORNOTHING` below).
 ### APCORR-MIXEDFRAME-ALLORNOTHING (2026-07-19)
 **Context.** With `cog_aperture_correction_enabled=True`, a night that only partially succeeds
 at COG (`cog_ok=False` on some frames) would otherwise route corrected flux on some epochs and
-raw `dao_flux` on others → a step in the light curve that is not astrophysical.
+raw `dao_flux` on others -> a step in the light curve that is not astrophysical.
 
 **Decision.** Night-level all-or-nothing gate after per-frame COG AC computation: if **any**
 science frame of the night lacks a usable correction (`cog_ok=False` or missing `cog_ok`),
-COG application is **disabled for the entire night** — every Phase 2A row takes the standard
+COG application is **disabled for the entire night** - every Phase 2A row takes the standard
 Metoda B AC chain. Log:
 `[APCORR] COG night fallback: N/M frames without cog_ok -> whole night uses standard AC`.
 Provenance: `cog_night_fallback=true` (plus counts) in `photometry/pipeline_meta.json`.
@@ -1006,28 +1006,28 @@ Per-frame `fallback_ee` remains a FUTURE refinement (noted on ROADMAP closure).
 **Status:** implemented; COG still default OFF pending enablement validation.
 
 ### `skip_processed_directory` flow
-Raw → Calibrated → QC-in-place (VY_* headers on calibrated) → Aligned → proc CSV → LC, skipping
-the `processed/` copy. Saves ~1.5 GB and ~20–30 % per draft. **Status: Phase 1 shipped (gated,
+Raw -> Calibrated -> QC-in-place (VY_* headers on calibrated) -> Aligned -> proc CSV -> LC, skipping
+the `processed/` copy. Saves ~1.5 GB and ~20-30 % per draft. **Status: Phase 1 shipped (gated,
 default false); legacy `processed/` removal pending validation.**
 
 ## Comp-star selection & QA
 
 ### Selection priority: stability > colour > proximity; proximity is a GATE, not a rank
 - **Stability** is enforced as a hard `max_comp_rms` cap + iterative MAD filter, and as the
-  Broeg (2005) `1/σ²` ensemble weight — which dominates the actual measurement.
-- **Colour** (`|ΔBP-RP|`) is a hard cut (≤ 0.79) + tier, and is the **primary pick sort key**.
+  Broeg (2005) `1/sigma^2` ensemble weight - which dominates the actual measurement.
+- **Colour** (`|DeltaBP-RP|`) is a hard cut (<= 0.79) + tier, and is the **primary pick sort key**.
   For **NoFilter/broadband** this is justified: without a filter the colour term is a
   *first-order* systematic (no bandpass to cancel it), and colour systematics don't average
   down like random scatter. Grounded in Henden & Kaitchuck (1982) and the AAVSO CCD Guide.
-- **Proximity** is enforced only as the distance gate (`max_dist_deg` ~ 1.5°, `min_dist_arcsec`
-  60″). A proximity ranking tie-break was implemented and **reverted**: because Broeg `1/σ²`
+- **Proximity** is enforced only as the distance gate (`max_dist_deg` ~ 1.5 deg, `min_dist_arcsec`
+  60 arcsec). A proximity ranking tie-break was implemented and **reverted**: because Broeg `1/sigma^2`
   weights are order-independent, any RMS-bin tie-break necessarily trades stability for
   proximity, violating the agreed order. **Status: settled 2026-06-02** (revert restored the
   comp set byte-for-byte).
 
-### comp_qa — Sokolovsky leave-one-out self-consistency QA
-Per-comp variability indices on the zero-median LOO differential light curve: `σ_IQR`
-(amplitude), `1/η` von Neumann (slow drift), `spike` (dropouts), flagged against a
+### comp_qa - Sokolovsky leave-one-out self-consistency QA
+Per-comp variability indices on the zero-median LOO differential light curve: `sigma_IQR`
+(amplitude), `1/eta` von Neumann (slow drift), `spike` (dropouts), flagged against a
 **magnitude-dependent locus** (0.5-mag bins) rather than a flat floor. Grounded in Broeg (2005)
 + Sokolovsky et al. (2017) + Howell (1989). The flat-floor v1 over-flagged faint comps; the
 locus version is correct. **Status: productionized 2026-06-02** as a read-only post-Phase-2A
@@ -1036,32 +1036,32 @@ stage (photometry byte-identical); outputs per-comp flags + per-target `n_clean`
 ### Crowding classifier: gated infra, NOT enabled on the wide rig
 Detection-independent signals (Gaia density, `blend_frac` at depth, comp availability) replace
 the erratic stars/Mpx class; LOOSEN on comp scarcity, TIGHTEN on real blend fraction, with a
-**sampling gate (FWHM ≥ 3 px)**. The wide rig is floor-limited (scintillation/undersampling at
+**sampling gate (FWHM >= 3 px)**. The wide rig is floor-limited (scintillation/undersampling at
 FWHM ~ 2.6 px), so tightening there only cuts good comps. **Decision: keep OFF for the wide rig;
 enable on the well-sampled Newton cluster.**
 
 ## Trust & validation
 
-### Production trust gate — hard/soft model, inform-only (v1)
+### Production trust gate - hard/soft model, inform-only (v1)
 
 Per-target GREEN/YELLOW/RED from **comp-set quality** (`n_clean` from comp_qa Sokolovsky LOO),
-**check-star scatter**, and **`lc_quality_flag`**. **No SEP / xval axis in production** — SEP vs
+**check-star scatter**, and **`lc_quality_flag`**. **No SEP / xval axis in production** - SEP vs
 DAO cross-validation is an offline harness only (`xval_run.py`, `assign_sep_confidence` in
 `xval_harness_core.py`); see Cross-validation CLOSED below.
 
 **Hard** warnings (real red flags: `n_clean == 0`, no check star, bad `lc_quality` e.g. saturated,
-check ≥ 0.05) vs **soft** (thin comps, sparse_fallback, marginal check 0.02–0.05, short_baseline).
-RED = any hard OR ≥ 3 escalating soft; YELLOW = any soft; GREEN = `n_clean ≥ strong` + check OK +
+check >= 0.05) vs **soft** (thin comps, sparse_fallback, marginal check 0.02-0.05, short_baseline).
+RED = any hard OR >= 3 escalating soft; YELLOW = any soft; GREEN = `n_clean >= strong` + check OK +
 no warnings. Thresholds derive from `comp_trust_min_comps` / `phase01_comparison_n_comp_max`.
-**Unevaluated targets → RED** (fail-closed). **`lc_quality="noisy"` is informational only** —
+**Unevaluated targets -> RED** (fail-closed). **`lc_quality="noisy"` is informational only** -
 variability-driven (counting it as a hard warning wrongly demoted real variables). **v1 is
 inform-only** (RED is surfaced, not auto-dropped from exports). **Status: shipped 2026-06-02;
-SEP axis removed from production 2026-06-03** (trust gate v2 — supersedes the earlier harness-era
+SEP axis removed from production 2026-06-03** (trust gate v2 - supersedes the earlier harness-era
 gate that also read `xval_results.csv` / `sep_confidence`).
 
 ### Cross-validation CLOSED (aperture path); SEP is the independent witness
 draft_000365 triple-validated (photutils + sep + dao): the science number reproduces to ~1 %,
-and **sep matches VYVAR extraction to 0.2 %/frame** (a SExtractor mesh-background pipeline ≡
+and **sep matches VYVAR extraction to 0.2 %/frame** (a SExtractor mesh-background pipeline ==
 VYVAR aperture photometry). photutils-annulus inflates on crowded/faint targets and is NOT a
 reliable independent witness; sep is. VYVAR `lc_rms` is consistent with and slightly
 conservative vs the raw differential floor (never under-reports noise). **IRAF/PyRAF closed as
@@ -1083,27 +1083,27 @@ unchanged. Harness helpers live in `xval_harness_core.py` (shared with `xval_run
 ## Calibration & parameters
 
 ### Single authoritative parameter resolver (provenance)
-`param_resolver.py`: equipment-intrinsic (gain/RN/pixel/focal/saturation) = **DB(valid) →
-header(cross-check warn) → config**; observation-specific = header → DB → config; site
-(lat/lon/elev) = **per-draft `ID_LOCATION` → header → config (flagged, never silent)**. BJD /
+`param_resolver.py`: equipment-intrinsic (gain/RN/pixel/focal/saturation) = **DB(valid) ->
+header(cross-check warn) -> config**; observation-specific = header -> DB -> config; site
+(lat/lon/elev) = **per-draft `ID_LOCATION` -> header -> config (flagged, never silent)**. BJD /
 airmass are now **config-independent** (derive from the draft's own site). `config.json`
-`observer_location` is UI / last-session state only — moot for the science. **Status: settled
+`observer_location` is UI / last-session state only - moot for the science. **Status: settled
 2026-05-30.** Closes TODO-GEO (ROADMAP 2026-06-09).
 
 ## Catalogs
 
-### Retire APASS/Tycho B-V → pure Gaia BP-RP
+### Retire APASS/Tycho B-V -> pure Gaia BP-RP
 APASS/Tycho B-V is reached only via the last-resort `lookup_bv_from_local_db` fallback; no
 production algorithm needs it (colour term + tiers are already BP-RP-native; ~3 % of targets
-on 362). **Stage 1 done** (fallback disconnected in 4 callers; determinism verified — the
+on 362). **Stage 1 done** (fallback disconnected in 4 callers; determinism verified - the
 earlier ~45 % comp diff was run-context drift, not the disconnect). **Recommended scope = A+B**
 (also retire all Johnson B-V dual-mode).
 
 **B-V A+B executed (2026-06-03):** Johnson B-V retired; comp tiering and hard colour filter
-are **Gaia BP-RP only**. Targets without `bp_rp` → T4 / magnitude-proxy (accepted minority).
+are **Gaia BP-RP only**. Targets without `bp_rp` -> T4 / magnitude-proxy (accepted minority).
 `lookup_bv_from_local_db`, `bp_rp_to_bv`, `teff_to_bv`, dual-mode config (`phase01_use_bprp_primary`,
 `*_bv_limit`, `phase01_tier*_bv`) removed from production. `VSX/vsx_make.py` builds VSX-only;
-regenerate `vyvar_vsx_local.db` on the catalog machine (see JOURNAL). Stages 2–4 complete.
+regenerate `vyvar_vsx_local.db` on the catalog machine (see JOURNAL). Stages 2-4 complete.
 
 ## Reporting & export
 
@@ -1111,11 +1111,11 @@ regenerate `vyvar_vsx_local.db` on the catalog machine (see JOURNAL). Stages 2�
 MTYPE = **STD** with `TRANS=NO` (every prior file was mislabeled DIFF); table-driven FILT map
 with `#WARNING` on unknown filters (no silent CV); honest `meth=` label; **KMAG = measured
 ensemble-standardized check-star magnitude** (per-row sidecar; check star excluded from its own
-ensemble). **Routing: eclipsing → VarAstro (LC); pulsating/all → AAVSO.**
+ensemble). **Routing: eclipsing -> VarAstro (LC); pulsating/all -> AAVSO.**
 
 ### Citations: `CITATIONS.bib` is the single source of truth
 One conditional emitter (`citations.py`) shared by the AAVSO export, VarAstro export, and PDF
-Methods — cites **only methods that actually ran**. CORE (always) + a gated **DATA-QUALITY
+Methods - cites **only methods that actually ran**. CORE (always) + a gated **DATA-QUALITY
 GATE** section (Sokolovsky / von Neumann when comp_qa/trust on). SEP/SExtractor citations are
 offline-harness only (see *In-pipeline sep_xval retired*, 2026-06-03). Comp-selection rationale cited via Broeg, Henden & Kaitchuck, AAVSO CCD
 Guide. **Status: settled 2026-06-02.** Runtime DATA-QUALITY GATE cites Sokolovsky / von Neumann
@@ -1123,54 +1123,54 @@ when comp_qa/trust run; SEP citations are harness-only after 2026-06-03 (see DEC
 *In-pipeline sep_xval retired*).
 
 ### PDF: R1 overflow guarantee
-Wrapping `Paragraph` + pagination + layout guard → **0 overflow violations**. Aperture-only
+Wrapping `Paragraph` + pagination + layout guard -> **0 overflow violations**. Aperture-only
 default output is byte-stable. Trust badge + per-method overlays are additive and must preserve
 the 0-overflow guarantee.
 
 ## Strategic
 
-### Comet photometry — feasible, but a future parallel phase (do NOT start yet)
-Architecture is sound and reuses the front-end (calibrate → platesolve → star-stack → Gaia ZP),
+### Comet photometry - feasible, but a future parallel phase (do NOT start yet)
+Architecture is sound and reuses the front-end (calibrate -> platesolve -> star-stack -> Gaia ZP),
 then forks into comet-rate stacking + extended coma photometry + ICQ/COBS export. Mature tools
 exist (KOPR, Tycho-Tracker, Comphot); VYVAR's value is workflow integration + a Gaia zeropoint,
 not novel science. **Decision: analysis only; start only after the variable-star pipeline is
-finished.** The B-V/APASS removal does not block it (Gaia→V Riello gives V-equivalent comps).
+finished.** The B-V/APASS removal does not block it (Gaia->V Riello gives V-equivalent comps).
 
-### Brand / paper title — locked
+### Brand / paper title - locked
 The name **VYVAR** is final. Working title: *VYVAR: An Automated Differential Photometry
 Pipeline for Amateur Variable Star Observers* (PASP / AN).
 
-### APCORR-COLOR — extrapolation hard-block; NoFilter CT still off (2026-06-03)
+### APCORR-COLOR - extrapolation hard-block; NoFilter CT still off (2026-06-03)
 **Prototype (draft_000366, NoFilter):** `VYVAR_CT_PROTOTYPE=1` measured would-be CT without
-changing production LCs. Findings supersede earlier roadmap estimates (`c1 ~ −1.0`,
-cat−inst ~0.12–0.16 mag): median c1 ~ −0.07 (all) / −0.36 (nonzero) / −0.53 (gate-passers);
-median |ct_corr| ~ 0.019 mag (p90 ~ 0.5 mag); cat−inst scatter 0.078→0.053 mag; only ~11%
+changing production LCs. Findings supersede earlier roadmap estimates (`c1 ~ -1.0`,
+cat-inst ~0.12-0.16 mag): median c1 ~ -0.07 (all) / -0.36 (nonzero) / -0.53 (gate-passers);
+median |ct_corr| ~ 0.019 mag (p90 ~ 0.5 mag); cat-inst scatter 0.078->0.053 mag; only ~11%
 pass numeric gates; worst cases up to ~4.8 mag on extrapolated red targets. **NoFilter CT
 enable remains parked.**
 
 **Correctness fix (all filters):** `_check_color_term_extrapolation` now **returns False**
-when target BP-RP lies outside the comp BP-RP range (± `phase01_ct_extrapolation_tol`, default
+when target BP-RP lies outside the comp BP-RP range (+- `phase01_ct_extrapolation_tol`, default
 0). Call site skips `apply_color_term` (`ct_ok=False`, uncorrected fallback) instead of
 warn-only. Targets are never dropped or NaN'd. `should_apply_color_term` NoFilter skip unchanged.
 
-## Colour term — validation & production (2026-06-03)
+## Colour term - validation & production (2026-06-03)
 
 ### In-range CT apply path validated (machinery + science-grade)
-Machinery-grade on M67 Blue (astro-RGB); science-grade on h & χ Per photometric B/V/Rc.
+Machinery-grade on M67 Blue (astro-RGB); science-grade on h & chi Per photometric B/V/Rc.
 **Acceptance evidence = comp-scatter reduction scaling with `|c1|` + physical `|c1|` ordering
-(Rc<V<B) + `stderr_ratio` ≤ 0.5** — not `|c1|` magnitude.
+(Rc<V<B) + `stderr_ratio` <= 0.5** - not `|c1|` magnitude.
 
-### Retraction: "photometric → small `|c1|≪1`" expectation is wrong
+### Retraction: "photometric -> small `|c1|<<1`" expectation is wrong
 c1 is relative to Gaia G; a large B term (~1) is physical. Validate via fit quality + scatter
 reduction + ordering, not absolute c1 size.
 
 ### `phase01_ct_min_comp = 7` default retained
-Do **not** flip on single-field evidence. M67 Green favoured lower; h & χ Per (n_comp~140) shows
-the gate is moot in rich fields. Settle via cross-field experiment. `stderr_ratio ≤ 0.5` is the
+Do **not** flip on single-field evidence. M67 Green favoured lower; h & chi Per (n_comp~140) shows
+the gate is moot in rich fields. Settle via cross-field experiment. `stderr_ratio <= 0.5` is the
 real quality guard.
 
 ### Exposure-merge not adopted as a CT fix
-Refuted on M67 — degrades c1 stderr. Same-filter/different-exposure stays exposure-aware for the
+Refuted on M67 - degrades c1 stderr. Same-filter/different-exposure stays exposure-aware for the
 c1 fit.
 
 ### Red CT on M67 is data-limited (saturation)
@@ -1186,9 +1186,9 @@ Frames live in `non_calibrated/lights/`; all consumers read via one source root.
 `calibration_mode=pre_calibrated` recorded end-to-end.
 
 ### Conceptual (science output): G-referenced magnitudes
-VYVAR colour terms are relative to Gaia G → corrected magnitude is G-referenced, not standard
+VYVAR colour terms are relative to Gaia G -> corrected magnitude is G-referenced, not standard
 Johnson/Sloan. AAVSO-standard B/V/Rc requires a standard catalog (APASS) or a documented
-G→standard transform — to resolve before science submission.
+G->standard transform - to resolve before science submission.
 
 ### trust_flag_core Phase E (2026-06-08)
 
@@ -1200,7 +1200,7 @@ G→standard transform — to resolve before science submission.
   **2026-06-10 (draft_382 check-star audit):** 15 hard-RED check-star targets on 12-15 frame
   sessions are not genuine variables (8 crowding-blend, 4 short-baseline-outlier, 2 metric-mismatch,
   1 thin-pool). Follow-ups CS-1..4 logged in ROADMAP (frame-blind 0.05 gate, select/gate metric
-  mismatch, ensemble-exclusion gap, crowding caveat) — record only; not fixed with #3.
+  mismatch, ensemble-exclusion gap, crowding caveat) - record only; not fixed with #3.
 - **Finding C (C1 chosen):** keep `np.nanstd(km)` ddof=0; 0.02/0.05 thresholds calibrated to
   population std. Revisit ddof+threshold co-calibration on ROADMAP (not this pass).
 - **Finding D:** `len(soft) >= 3 -> RED` kept as forward guard (today max 2 soft).
@@ -1218,7 +1218,7 @@ per-frame arrays, pairwise boundaries, same-length Series `.tolist()` pairs).
 cross-DataFrame UI zips) or on untested display code. `strict=False` preserves today's
 truncate-to-shortest behavior; `strict=True` adds a defensive length assertion only.
 
-### comp_qa_core CQ-C — fix-once magnitude locus (2026-06-09, Phase F)
+### comp_qa_core CQ-C - fix-once magnitude locus (2026-06-09, Phase F)
 
 The comp QA magnitude locus was rebuilt from an accumulating `dropped_global`, coupling per-target
 flag thresholds to target processing order (circular: drops shaped the locus that shaped drops).
@@ -1275,33 +1275,33 @@ Terminal (no noisy/good sub-verdict); YELLOW trust; **exportable** to AAVSO; **e
 `len(soft)>=3` RED escalation. Implementation: `VYVAR_LC_QUALITY_SHORT_BASELINE_SPEC.md`.
 Follow-up: vsx_type-aware frame thresholds (out of scope).
 
-### Comp selection — proximity tie-break reverted (2026-06-08)
+### Comp selection - proximity tie-break reverted (2026-06-08)
 
 `dist_score` removed from `comp_selection_per_target.py`: the proximity tie-break was
-deliberately reverted (Broeg 2005; Henden & Kaitchuck 1982; AAVSO CCD Guide) — proximity
-belongs as a **gate**, not a ranking criterion — so the orphaned local and its
+deliberately reverted (Broeg 2005; Henden & Kaitchuck 1982; AAVSO CCD Guide) - proximity
+belongs as a **gate**, not a ranking criterion - so the orphaned local and its
 `optimal_dist_arcsec` helper were removed. Final comp ranking sorts by `comp_rms`
-(`out.sort_values(["comp_rms", "catalog_id"], …)`).
+(`out.sort_values(["comp_rms", "catalog_id"], ...)`).
 
-## Blind plate-solve — rig prior (2026-06-04)
+## Blind plate-solve - rig prior (2026-06-04)
 
-Telescope + camera are always known in VYVAR → **plate scale and FOV are legitimate priors**, not
+Telescope + camera are always known in VYVAR -> **plate scale and FOV are legitimate priors**, not
 unknowns to search (ASTAP / astrometry.net `--scale` model). `blind_use_rig_prior=True` (default)
 enforces: (1) pre-vote `L3_image/L3_catalog` ratio gate, (2) post-fit WCS scale consistency in verify,
 (3) FOV-derived central selection and triangle size caps (not index `log_L3_max`), (4) gnomonic
-triangle sides when FOV ≥ 2°. Full scale-blind mode remains via `blind_use_rig_prior=False`. Index
+triangle sides when FOV >= 2 deg. Full scale-blind mode remains via `blind_use_rig_prior=False`. Index
 **series** (`fine` / `wide` density tiers, all mag14) selects tier from known scale.
 
-## Trust / comp QA — Chi_and_H diagnostic (2026-06-04)
+## Trust / comp QA - Chi_and_H diagnostic (2026-06-04)
 
-- **CT result locked:** reproduced on clean fresh run draft_380 (B −1.08, V −0.38, Rc −0.02);
+- **CT result locked:** reproduced on clean fresh run draft_380 (B -1.08, V -0.38, Rc -0.02);
   CT-toggle/decoupling verified end-to-end on all filters (~371 targets, 0 "nan", comps + check-star LCs).
 - **n_clean=0 / trust RED on Chi_and_H is draft-specific plumbing, NOT a cleaning-gate regression**
   (draft_366 baseline reproduces original n_clean/trust with current code). Root cause: hardcoded
-  `proc_*_Light_*.csv` glob in `load_proc_pivot` — the **pre-cal-naming class** again. The fix belongs in
+  `proc_*_Light_*.csv` glob in `load_proc_pivot` - the **pre-cal-naming class** again. The fix belongs in
   a **single canonical pre-cal proc-CSV resolution**, not a one-off per consumer.
 
-## Chi_and_H catalog policy — zaloha-only (2026-06-11)
+## Chi_and_H catalog policy - zaloha-only (2026-06-11)
 
 **Adopted:** `chiandh_night_run_bvr.py` and the anchor recipe use **only** paths from
 `config.json` pointing at `GAIA_DR3/zaloha/` (G<=16) + zaloha blind PKLs. **No field DB, no
@@ -1326,19 +1326,19 @@ class (draft_385, draft_383).
 
 ## Trust / check-star correctness (2026-06-11)
 
-**Findings A/B closed** (`VYVAR_TRUST_CHECKSTAR_HARDENING_SPEC.md`): un-evaluated trust → RED;
+**Findings A/B closed** (`VYVAR_TRUST_CHECKSTAR_HARDENING_SPEC.md`): un-evaluated trust -> RED;
 `check_star_min_epochs=5`; `check_star_scatter` uses `ddof=1`. **Finding E re-checked:**
 `short_baseline` remains non-escalating YELLOW.
 
 **CS-3 (circular check):** Phase-2A check-star selection used column-based ensemble exclusion
-that was dead code — on draft_387 ~97% of selected checks were still ensemble members. Fix:
+that was dead code - on draft_387 ~97% of selected checks were still ensemble members. Fix:
 `ensemble_member_ids()` + `select_check_star(..., ensemble_ids=...)`. Spec:
 `VYVAR_CHECKSTAR_SELECTION_SPEC.md`.
 
 **CS-2:** `check_select_rms_floor` guards artefact `comp_rms~0` rankings. **CS-4:** drop
 candidates with `contamination_idx > aperture_correction_max_contamination` when column present.
 
-**Reserved check-star (hold-one-out by design):** PARKED — would change which stars enter the
+**Reserved check-star (hold-one-out by design):** PARKED - would change which stars enter the
 ensemble and **move the photometry anchor**; requires explicit re-cut if ever adopted.
 
 ## Broad-except regression guard (2026-06-11)
@@ -1346,23 +1346,23 @@ ensemble and **move the photometry anchor**; requires explicit re-cut if ever ad
 **Enforced:** ruff `BLE001` + `E722` in `pyproject.toml` `select`; `.pre-commit-config.yaml`;
 `tests/test_ble001_regression.py`. Existing sites grandfathered with `# noqa: BLE001` (168 added);
 4 bare `except:` narrowed to `except Exception:`; 8 `photometry_core` parse paths narrowed.
-Critical LC/completeness path reviewed — no silent swallow found.
+Critical LC/completeness path reviewed - no silent swallow found.
 
-## Comparison-star trust floor — ADOPTED (2026-06-11, Option B)
+## Comparison-star trust floor - ADOPTED (2026-06-11, Option B)
 
-**Spec:** `VYVAR_COMP_FLOOR_POLICY_SPEC.md`. **Trust-only split** — byte-identity-neutral w.r.t.
+**Spec:** `VYVAR_COMP_FLOOR_POLICY_SPEC.md`. **Trust-only split** - byte-identity-neutral w.r.t.
 photometry (anchor `203254fd` / `95a5515a` unchanged).
 
 **Adopted:**
 
-- `comp_trust_min_comps = 5` (config + Settings Data quality) — trust RED floor via `n_clean`.
+- `comp_trust_min_comps = 5` (config + Settings Data quality) - trust RED floor via `n_clean`.
 - `phase01_comparison_n_comp_min` stays **3** (Phase-1 selection / ensemble unchanged).
-- Trust `strong = min(comp_trust_min_comps + 2, phase01_comparison_n_comp_max)` → **7** at defaults.
-- `n_clean` 5-6 → thin comp soft YELLOW; 3-4 → RED.
+- Trust `strong = min(comp_trust_min_comps + 2, phase01_comparison_n_comp_max)` -> **7** at defaults.
+- `n_clean` 5-6 -> thin comp soft YELLOW; 3-4 -> RED.
 - **Trust baseline on draft_387:** **1382 YELLOW / 106 RED** (floor-5; 1488 rows). Pre-floor-5
   1400/88 superseded.
 
-**Not adopted (Option A):** raising Phase-1 selection floor to 5 — would move photometry SHA
+**Not adopted (Option A):** raising Phase-1 selection floor to 5 - would move photometry SHA
 (draft_387 footprint: 45 per-setup hits at 3-4 comps); anchor re-cut required if ever pursued.
 
 **Literature rationale:** Broeg weighted ensemble; AAVSO ~12-20 good comps; robustness floor ~5+.
@@ -1376,24 +1376,24 @@ parked (ROADMAP).
 **Adopted (science-changing on long baselines):**
 
 - **Common-mode detrend before slope test** (`check_comparison_stability`, default ON): fit a line
-  to the per-frame median of active comp LCs, subtract for slope evaluation only — ensemble
+  to the per-frame median of active comp LCs, subtract for slope evaluation only - ensemble
   magnitudes unchanged. Formal basis: Honeycutt (1992) ensemble `em(e)` term; Broeg (2005)
   artificial-comparison framing; Sokolovsky (2017) indices judged vs the comp population.
 - **BJD sort before `np.interp`** (B2): frame/proc order is not monotonic in BJD; unsorted xp
   corrupted the common-mode estimate (Step A: 97 vs 237 mmag/hr on DY Peg).
 - **Significance gate** (B1): exclude on slope only if **both** `|slope| > comp_max_slope_mmag_hr`
-  **and** `|slope|/stderr ≥ comp_slope_significance_k` (default 3.0) on the **post-detrend**
+  **and** `|slope|/stderr >= comp_slope_significance_k` (default 3.0) on the **post-detrend**
   residual. Large-but-insignificant slopes (noise / imperfect common-mode removal) are kept.
 - **`comp_slope_significance_k`** in config + Settings + `VYVAR_PARAMS.md`.
 - **Honeycutt 1992** citation emitted only when common-mode stability detrend runs
   (`pipeline_meta.common_mode_stability_detrend`); remains in VarAstro flux-sum line (Collins +
   Honeycutt combination).
 
-**Thin fields unchanged:** when `n_good < n_comp_min`, slope/p2p flags → `suspect` with
-`kept: n_good<min` — ensemble membership unchanged. DY Peg (2 comps) stays RED via comp_qa
+**Thin fields unchanged:** when `n_good < n_comp_min`, slope/p2p flags -> `suspect` with
+`kept: n_good<min` - ensemble membership unchanged. DY Peg (2 comps) stays RED via comp_qa
 `n_clean` skip, not this change.
 
-**Anchor footprint (`draft_000387`):** 12 frames/setup (<20 guard) → detrend + slope paths never
+**Anchor footprint (`draft_000387`):** 12 frames/setup (<20 guard) -> detrend + slope paths never
 exercised; **0** historical `slope=` comp notes; **LC byte-identical** on re-run expectation.
 Re-baseline (Step D) waits for Milan acceptance of bounded diff on longer-baseline validation
 (e.g. DY Peg `draft_000390`: slope notes removed, ensemble unchanged).
@@ -1405,21 +1405,21 @@ precision). Ship the same CM-residual clip machinery as a **per-target sparse-on
 `comp_sparse_fallback_enabled` (**default ON** from 2026-06-11 re-baseline lock; alias
 `comp_iterative_clip_enabled`).
 
-1. Run default a-priori selection unchanged; if `≥ comp_sparse_fallback_min` comps → stop.
+1. Run default a-priori selection unchanged; if `>= comp_sparse_fallback_min` comps -> stop.
 2. Else if flag ON: generous masterstars pool (no global RMS pre-filter / no a-priori comp_rms gate),
-   iterative leave-one-out 5σ-MAD on CM-removed residuals; recover LC if `≥ n_comp_min`.
+   iterative leave-one-out 5sigma-MAD on CM-removed residuals; recover LC if `>= n_comp_min`.
 3. Provenance: `comp_path`, funnel columns on `comparison_stars_per_target.csv`.
-4. Trust: all `sparse_fallback` targets → **YELLOW**; default-path targets unchanged.
+4. Trust: all `sparse_fallback` targets -> **YELLOW**; default-path targets unchanged.
 
-**Anchor re-baseline (2026-06-11):** Three-way reconcile (`203254fd…` vs current code flag-OFF
+**Anchor re-baseline (2026-06-11):** Three-way reconcile (`203254fd...` vs current code flag-OFF
 class vs flag-ON) on in-SHA artefacts. Rich `draft_000387` has **0 default-starved targets** in
-full photometry — fallback **inert** (all `comp_path=default`; 0 recovery LCs). Raw SHA moves to
-`3f7c9e7a…` / `d5b72d08…` (two-run repro). Drift vs old cut is benign: `comp_path` provenance,
-BJD/HJD ~1.9×10⁻⁹ d, per-frame `err` QC recalc (~2.5× scale, mag/flux byte-identical). Accept via
-`compare_photometry_science_meaningful` (PROCESS) — not raw `filecmp` vs `203254fd…`.
+full photometry - fallback **inert** (all `comp_path=default`; 0 recovery LCs). Raw SHA moves to
+`3f7c9e7a...` / `d5b72d08...` (two-run repro). Drift vs old cut is benign: `comp_path` provenance,
+BJD/HJD ~1.9x10-^9 d, per-frame `err` QC recalc (~2.5x scale, mag/flux byte-identical). Accept via
+`compare_photometry_science_meaningful` (PROCESS) - not raw `filecmp` vs `203254fd...`.
 
 **Baseline comparison method:** raw byte SHA for lock/repro; science-meaningful tolerance gate for
-regression vs prior anchor (provenance + QC excluded; BJD/HJD ≤1e-6 d; mag/flux ≤1e-6).
+regression vs prior anchor (provenance + QC excluded; BJD/HJD <=1e-6 d; mag/flux <=1e-6).
 
 ### Plate-solver: scoped robustness + Brno production fix (2026-06-14)
 
@@ -1428,37 +1428,37 @@ regression vs prior anchor (provenance + QC excluded; BJD/HJD ≤1e-6 d; mag/flu
 | Flag | Default | Rationale |
 |------|---------|-----------|
 | `solver_use_cone_for_sip` | ON | SIP pass 2 rematches on **deep Gaia cone** (not triangle slice) |
-| `solver_fits_header_hint_sep_escape` | ON | Verified-strong escape only (see below) — not match% alone |
-| `solver_apply_roworder_yflip` | **OFF** | **Rejected** — regression gate: ~**320 px** home-rig star displacement (77% LCs broken) |
+| `solver_fits_header_hint_sep_escape` | ON | Verified-strong escape only (see below) - not match% alone |
+| `solver_apply_roworder_yflip` | **OFF** | **Rejected** - regression gate: ~**320 px** home-rig star displacement (77% LCs broken) |
 | `solver_legacy_masterstar_mirror_sweep` | ON | Single orientation resolver (home + Brno); mirror sweep retained |
 
-**ROWORDER `BOTTOM-UP` Y-flip rejected** — anchor regression gate showed it displaces home-rig stars
+**ROWORDER `BOTTOM-UP` Y-flip rejected** - anchor regression gate showed it displaces home-rig stars
 ~320 px. Kept **OFF**; legacy mirror sweep is the orientation resolver.
 
-**Brno 83.1% match retracted as a target** — draft_399 / lower detection count (154 vs 250) artifact;
+**Brno 83.1% match retracted as a target** - draft_399 / lower detection count (154 vs 250) artifact;
 never production-validated on `generate_masterstar_and_catalog`. **Policy:** do not chase high match%;
 pass an **overlay-confirmed** correct-but-distortion-limited solve at lower match when appropriate.
 
 **Stale-hint cone recenter (real Brno blocker):** Gaia cone was built at `VY_TARG` while the linear
-WCS center was **0.228°** off. When header hint vs solved center offset **≥ 0.05°**, solver
+WCS center was **0.228 deg** off. When header hint vs solved center offset **>= 0.05 deg**, solver
 re-queries Gaia at the **solved WCS center** and re-runs full-pair refit.
 
-**hint_sep escape only on verified-strong solves:** cone recenter applied + **≥ 75%** brightest-N
-match + RMS **≤ 2 px** (+ overlay confirmation for distortion-limited passes) — **never on match%
+**hint_sep escape only on verified-strong solves:** cone recenter applied + **>= 75%** brightest-N
+match + RMS **<= 2 px** (+ overlay confirmation for distortion-limited passes) - **never on match%
 alone**.
 
 **Anchor gate:** same-harness legacy-vs-scoped re-cut on `draft_000387`: **0 science failures**
 (B) vs (A); B WCS **~0.003 px**. Re-cut vs archive alone is **not** a reliable gate (~2.26 mag B
-harness drift, internally deterministic) — use **`sandbox/anchor387_legacy_vs_scoped_gate.py`**.
+harness drift, internally deterministic) - use **`sandbox/anchor387_legacy_vs_scoped_gate.py`**.
 
 **Anchor re-baseline:** **3f7c9e7a (core) / d5b72d08 (full)** with sparse-only fallback default ON.
 **Science-meaningful comparator** adopted (numeric tolerance on BJD/mag/flux; excludes provenance
 columns).
 
-**SIP guard:** `force_apply` on MASTERSTAR requires `rms_sip ≤ rms_linear`. Distortion-limited fields
+**SIP guard:** `force_apply` on MASTERSTAR requires `rms_sip <= rms_linear`. Distortion-limited fields
 may remain linear when SIP regresses.
 
-**Equipment:** C5A-150M (id=4, 3.76 µm), AZ800 (id=6, F=5480 mm) seeded in `initialize_database()`.
+**Equipment:** C5A-150M (id=4, 3.76 um), AZ800 (id=6, F=5480 mm) seeded in `initialize_database()`.
 
 ### Per-set astrometry fault isolation (2026-06-14)
 
@@ -1467,42 +1467,42 @@ abort astrometry for sibling sets or block photometry on sets that already produ
 
 **Mechanism:** `astrometry_align_and_build_masterstar` loops jobs with try/except; merges survivor
 reports via `_merge_astrometry_group_reports`; attaches `skipped_subgroups` for failed setups.
-All-fail still raises. **Single-group path unchanged** — one set, nothing to continue to.
+All-fail still raises. **Single-group path unchanged** - one set, nothing to continue to.
 
 **RUN VYVAR:** photometry stage hard-fails only when **no** set completed; partial success logs OK +
 skipped/failed sets (including astrometry skips from `skipped_subgroups`).
 
-**Fail-closed on skipped set:** exception before catalog / `per_frame_catalog_index.csv` write — no
+**Fail-closed on skipped set:** exception before catalog / `per_frame_catalog_index.csv` write - no
 half-written MASTERSTAR downstream.
 
 **TASK 2 (shipped 2026-06-14):** catalog-recovery verification gate + hint-as-prior on MASTERSTAR.
 
-**Accept gate (VERIFIED):** `catalog_recovery_tight ≥ masterstar_catalog_recovery_min` (default **0.65**),
-`n_matched_tight ≥ masterstar_min_matched_floor` (default **40**), and distortion healthy
-(`distortion_limited_benign` **or** `centre_rms ≤ masterstar_centre_rms_max_px`, default **1.20 px**).
+**Accept gate (VERIFIED):** `catalog_recovery_tight >= masterstar_catalog_recovery_min` (default **0.65**),
+`n_matched_tight >= masterstar_min_matched_floor` (default **40**), and distortion healthy
+(`distortion_limited_benign` **or** `centre_rms <= masterstar_centre_rms_max_px`, default **1.20 px**).
 Detection-denominated `_match_rate` / brightest-N remain **informational only**.
 
 **hint_sep:** once VERIFIED, stale pointing offset is **`hint_sep_warn`** (non-fatal; PDF cover note via
-`VY_HSWN`). Hard reject only when **not VERIFIED** and `hint_sep > max(1.5°, fov_diameter_deg)`.
-Stacked FITS-header escape blocks (≥85% match + RMS ≤2 px) **removed** — superseded by this rule.
+`VY_HSWN`). Hard reject only when **not VERIFIED** and `hint_sep > max(1.5 deg, fov_diameter_deg)`.
+Stacked FITS-header escape blocks (>=85% match + RMS <=2 px) **removed** - superseded by this rule.
 
-**Distortion benign ratio:** edge/centre cap **2.50 → 3.20** (`masterstar_distortion_benign_ratio_max`;
+**Distortion benign ratio:** edge/centre cap **2.50 -> 3.20** (`masterstar_distortion_benign_ratio_max`;
 Brno `r` ratio ~3.0).
 
 **Citations:** Lang et al. 2010 (Astrometry.net) emitted when catalog-recovery verification runs.
 
-**Supersedes** hint_sep escape paragraphs above (≥75% brightest-N + RMS ≤2 px widen) and TASK 2 blocked note.
+**Supersedes** hint_sep escape paragraphs above (>=75% brightest-N + RMS <=2 px widen) and TASK 2 blocked note.
 
 ### Plate-solver: scoped robustness lock (2026-06-14, superseded)
 
 ### Iterative ensemble-relative comp clip (2026-06-12, superseded by sparse-only fallback)
 
 **Decision:** Retire binding a-priori `comp_rms` cuts (global pool pre-filter + per-target gate)
-for sparse-field recovery. Replace with **generous candidate intake + iterative 5σ-MAD clip on
+for sparse-field recovery. Replace with **generous candidate intake + iterative 5sigma-MAD clip on
 CM-removed ensemble residuals** (Gilliland & Brown 1988; Broeg 2005; Honeycutt 1992 common-mode
-detrend; Burdanov et al. 2014 / ε Indi 2020 practice; Everett & Howell 2001).
+detrend; Burdanov et al. 2014 / epsilon Indi 2020 practice; Everett & Howell 2001).
 
-**Superseded:** wholesale flag — use sparse-only fallback above.
+**Superseded:** wholesale flag - use sparse-only fallback above.
 
 ---
 
@@ -1536,7 +1536,7 @@ detrend; Burdanov et al. 2014 / ε Indi 2020 practice; Everett & Howell 2001).
 
 ---
 
-## Decision-grounding rule (2026-06-15, ADOPTED — Milan)
+## Decision-grounding rule (2026-06-15, ADOPTED - Milan)
 
 Any design fork Claude brings to Milan must be grounded in physics/math, peer-reviewed literature,
 or documented field practice. Bare engineering preference is not sufficient; no "recommended" label
@@ -1545,7 +1545,7 @@ without a cited basis. Grounding may supersede earlier recommendations. Method c
 
 ---
 
-## Reporting-column fix — grounded synthesis (2026-06-15, supersedes B1/B2)
+## Reporting-column fix - grounded synthesis (2026-06-15, supersedes B1/B2)
 
 **Earlier B1/B2 framing withdrawn:** "guard the airmass detrend" treated a non-physical step as
 load-bearing; not grounded in differential-photometry physics.
@@ -1554,32 +1554,32 @@ load-bearing; not grounded in differential-photometry physics.
 
 | function | file:line | finding |
 |----------|-----------|---------|
-| `airmass_detrend_lc` | *(removed)* | Least-squares fit **`mag = a·airmass + b` on the target's own curve**. **Not** a comp-derived extinction coefficient. **[2026-06-19 — fully removed]** wiring helper `_apply_airmass_detrend_helper` (T1-2) and functions `airmass_detrend_lc`/`airmass_detrend_lc_piecewise` (T1-7) deleted; per-target airmass detrend no longer runs (Phase-2A summary reports `am_detrended=False`), per the grounded fix below. |
-| `detect_outliers` | `photometry_core.py:3323-3360` | Global median + MAD on all finite mags; **no VSX/feature mask**. Eclipse dimming → `outlier_lo` (`mag > med + thr`, `:3354-3356`). V0612 DoD-A LC: **2× `outlier_lo`** (ingress). |
+| `airmass_detrend_lc` | *(removed)* | Least-squares fit **`mag = a.airmass + b` on the target's own curve**. **Not** a comp-derived extinction coefficient. **[2026-06-19 - fully removed]** wiring helper `_apply_airmass_detrend_helper` (T1-2) and functions `airmass_detrend_lc`/`airmass_detrend_lc_piecewise` (T1-7) deleted; per-target airmass detrend no longer runs (Phase-2A summary reports `am_detrended=False`), per the grounded fix below. |
+| `detect_outliers` | `photometry_core.py:3323-3360` | Global median + MAD on all finite mags; **no VSX/feature mask**. Eclipse dimming -> `outlier_lo` (`mag > med + thr`, `:3354-3356`). V0612 DoD-A LC: **2x `outlier_lo`** (ingress). |
 | `delta_mag` export | `save_lightcurve_csv` `:7594`, `:3814` | **Unchanged** by outlier/airmass stages; only `mag_calib*` columns are rewritten (`:7486-7496`). |
-| Shape preservation | DoD-A LC `tmp/phase10/.../lightcurve_1111749368289526912.csv` | `corr(delta_mag, mag_calib_raw)` **0.998**; historical `corr(delta_mag, mag_calib)` **0.59** after target-fit airmass detrend (slope ~ **0.78** mag/airmass) — detrend path since removed. |
+| Shape preservation | DoD-A LC `tmp/phase10/.../lightcurve_1111749368289526912.csv` | `corr(delta_mag, mag_calib_raw)` **0.998**; historical `corr(delta_mag, mag_calib)` **0.59** after target-fit airmass detrend (slope ~ **0.78** mag/airmass) - detrend path since removed. |
 
 **Grounded fix (three parts):**
 
 1. **Reported mag = validated differential + ensemble zero-point** (`delta_mag + ZP_ensemble` per
-   frame from colour-matched comps; Honeycutt 1992 ensemble — already cited). For V0612,
+   frame from colour-matched comps; Honeycutt 1992 ensemble - already cited). For V0612,
    pre-detrend `mag_calib_raw` already matches `delta_mag` shape (corr 0.998); implementation must
    make that the shipping curve, not hope post-hoc guards salvage a target-fit detrend.
-2. **Remove per-target airmass detrend from the variable reporting path** — redundant after
+2. **Remove per-target airmass detrend from the variable reporting path** - redundant after
    colour-matched differential (Plavchan et al. arXiv:0704.3584; Dhillon PHY217); signal-absorbing
-   when fitted to the target (confirmed above). Any residual extinction → comp ensemble, not target LSQ.
-3. **Mask-first known-variable guard on `detect_outliers`** — clip out-of-eclipse only; extend mask
+   when fitted to the target (confirmed above). Any residual extinction -> comp ensemble, not target LSQ.
+3. **Mask-first known-variable guard on `detect_outliers`** - clip out-of-eclipse only; extend mask
    around ingress/egress (TESS subdwarf recipe arXiv:2402.16018; democratic detrender clips
-   out-of-transit only — arXiv:2411.09753). Required regardless of (1–2).
+   out-of-transit only - arXiv:2411.09753). Required regardless of (1-2).
 
-**DoD-B (2026-06-15): PASS** — ``apply_reporting_postprocess``; V0612 ``mag_calib`` corr **0.958** /
+**DoD-B (2026-06-15): PASS** - ``apply_reporting_postprocess``; V0612 ``mag_calib`` corr **0.958** /
 pre **0.011** (was 0.57); ingress 24/24 ``normal``. Harness: ``tmp/phase11/dod_b_workstream_b.json``.
 
-**Tier-2 (PARKED):** comp-ensemble-derived k for wide delta-airmass — ROADMAP.
+**Tier-2 (PARKED):** comp-ensemble-derived k for wide delta-airmass - ROADMAP.
 
 ---
 
-## Canonical ensemble combination — A vs B resolved (2026-06-15)
+## Canonical ensemble combination - A vs B resolved (2026-06-15)
 
 **Decision-grounding:** Gauss-Markov / Broeg (2005) AN 326:134; SPECULOOS-South arXiv:2005.02423;
 Howell (1989) sigma budget. Flux-sum equals inverse-variance weighting only in the photon-limited,
@@ -1587,45 +1587,45 @@ all-constant limit.
 
 **Resolution (conditional, not taste):**
 
-1. **Canonical science product = Broeg inverse-variance estimate** — *when* sigma is complete and
-   error bars are validated (chi²/dof ~ 1 on a constant star).
+1. **Canonical science product = Broeg inverse-variance estimate** - *when* sigma is complete and
+   error bars are validated (chi^2/dof ~ 1 on a constant star).
 2. **`delta_mag` (flux-sum) retained as AIJ-validation / diagnostic column** (`tot_C_cnts` parity);
    not the primary science export once sigma is trusted. The ~0.002 corr gap vs ``mag_calib`` on
    V0612 is the expected weighting difference, not a bug.
 3. **Load-bearing work = sigma budget** (photon + read + sky + scintillation + Broeg intrinsic
-   inflation) — same machinery required for TODO-GS8 / TODO-MULTISET multi-rig combine.
+   inflation) - same machinery required for TODO-GS8 / TODO-MULTISET multi-rig combine.
 
-### Read-only audit — current code vs Broeg-canonical (2026-06-15)
+### Read-only audit - current code vs Broeg-canonical (2026-06-15)
 
 | Question | Finding | Anchor |
 |----------|---------|--------|
-| **1. What sigma feeds `ZP_weighted`?** | **Not** the per-frame Howell CCD ``err``. Weights use **night-level `comp_rms`** = RMS of **detrended relative flux** around 1.0 (dimensionless stability metric from Phase 1 / global pool), mapped into ``w = 1/rms² × tier_weight``. **No scintillation**; dark only via read-noise in the separate LC ``err`` column, not in weights. | ``comp_pool_rms.py:356-380``; ``comp_selection_per_target.py:1556``; ``ensemble_normalize`` ``:2437-2446``; ``_photometric_error`` ``:636-656`` (photon+sky+read only) |
-| **2. Broeg iteration / variable comp inflation?** | **Partial.** ``pytics_iterative_weights`` (default **on**, ``config.json``) iteratively **inflates `comp_rms`** from per-comp residual scatter vs weighted ZP — Broeg-like, but on **stability RMS**, not per-frame photon sigma. ``check_comparison_stability`` MAD-filters high p2p comps (excludes/suspects), does not iteratively drop variables inside ``ensemble_normalize``. **Ensemble combination itself is flux-sum** (explicitly *not* Broeg-weighted — comment: 1/rms² deforms extinction slope). | ``:2409-2418``; ``pytics_iterative_weights`` ``:1821-1906``; ``check_comparison_stability`` ``:1914+`` |
-| **3. Error bars validated (chi²/dof ~ 1)?** | **No production gate.** LC ``err`` = Howell photon+sky+read per frame; **not** propagated into ensemble weights; **no** chi²/dof check on constant stars in the Phase-2A export path (Mighell χ²-gamma cited export-only per ``VYVAR_MATH_PHYS_AUDIT.md``). DoD-B constant gate used no-regression + RMS ratio, not chi². | ``:1428-1434``; ``VYVAR_MATH_PHYS_AUDIT.md`` Mighell row |
+| **1. What sigma feeds `ZP_weighted`?** | **Not** the per-frame Howell CCD ``err``. Weights use **night-level `comp_rms`** = RMS of **detrended relative flux** around 1.0 (dimensionless stability metric from Phase 1 / global pool), mapped into ``w = 1/rms^2 x tier_weight``. **No scintillation**; dark only via read-noise in the separate LC ``err`` column, not in weights. | ``comp_pool_rms.py:356-380``; ``comp_selection_per_target.py:1556``; ``ensemble_normalize`` ``:2437-2446``; ``_photometric_error`` ``:636-656`` (photon+sky+read only) |
+| **2. Broeg iteration / variable comp inflation?** | **Partial.** ``pytics_iterative_weights`` (default **on**, ``config.json``) iteratively **inflates `comp_rms`** from per-comp residual scatter vs weighted ZP - Broeg-like, but on **stability RMS**, not per-frame photon sigma. ``check_comparison_stability`` MAD-filters high p2p comps (excludes/suspects), does not iteratively drop variables inside ``ensemble_normalize``. **Ensemble combination itself is flux-sum** (explicitly *not* Broeg-weighted - comment: 1/rms^2 deforms extinction slope). | ``:2409-2418``; ``pytics_iterative_weights`` ``:1821-1906``; ``check_comparison_stability`` ``:1914+`` |
+| **3. Error bars validated (chi^2/dof ~ 1)?** | **No production gate.** LC ``err`` = Howell photon+sky+read per frame; **not** propagated into ensemble weights; **no** chi^2/dof check on constant stars in the Phase-2A export path (Mighell chi^2-gamma cited export-only per ``VYVAR_MATH_PHYS_AUDIT.md``). DoD-B constant gate used no-regression + RMS ratio, not chi^2. | ``:1428-1434``; ``VYVAR_MATH_PHYS_AUDIT.md`` Mighell row |
 
-**Outcome:** sigma **incomplete** for Broeg-canonical ensemble combine → **hold flux-sum for `delta_mag`**
+**Outcome:** sigma **incomplete** for Broeg-canonical ensemble combine -> **hold flux-sum for `delta_mag`**
 (AI/diagnostic); **reporting `mag_calib` already uses partial Broeg (ZP offset only)**. Do **not**
 promote inverse-variance **ensemble combine** until: (a) weights use validated per-frame sigma
-(Howell + scintillation + inflation), (b) chi²/dof ~ 1 on a constant calibrator. That sigma fix
+(Howell + scintillation + inflation), (b) chi^2/dof ~ 1 on a constant calibrator. That sigma fix
 is load-bearing for GS8/MULTISET regardless.
 
 **Citations added (sandbox, 2026-06-15):** `young1967`, `osborn2015`, `dravins1998`,
 `murray2020speculoos` in `CITATIONS.bib`. Spec: `docs/VYVAR_SIGMA_BUDGET_SPEC.md`;
 sandbox: `tmp/phase12/`.
 
-### Sigma-budget work item — χ² audit + sandbox (2026-06-15)
+### Sigma-budget work item - chi^2 audit + sandbox (2026-06-15)
 
-**Read-only χ² audit:** Mighell (1999) is **export-only** (`citations.py` PSF block); no
-production χ²/dof on constant stars. PSF `reduced_chi2` and trust `check_star_scatter` are
-unrelated. **Verdict:** promote **new** reduced-χ²/dof gate (not Mighell χ²-gamma as-is).
+**Read-only chi^2 audit:** Mighell (1999) is **export-only** (`citations.py` PSF block); no
+production chi^2/dof on constant stars. PSF `reduced_chi2` and trust `check_star_scatter` are
+unrelated. **Verdict:** promote **new** reduced-chi^2/dof gate (not Mighell chi^2-gamma as-is).
 
 **Sandbox shipped:** Osborn eq. (7) scintillation + Howell quadrature + Broeg inflation helpers;
-chi² gate harness. **Not production** until χ²/dof ~ 1 on verified-constant calibrator.
+chi^2 gate harness. **Not production** until chi^2/dof ~ 1 on verified-constant calibrator.
 `delta_mag` unchanged.
 
 ---
 
-## draft_409 trust/consistency cleanup — Fixes 1-3 (2026-06-16)
+## draft_409 trust/consistency cleanup - Fixes 1-3 (2026-06-16)
 
 ### Comp stability on ensemble residual (not raw `mag_inst`)
 
@@ -1646,7 +1646,7 @@ SNR-opt sizing prefers observed-band catalog `mag` over Gaia G (`_APERTURE_SIZIN
 (`lc_rms_ooe`, brightest tertile). Full undemeaned `lc_rms` retained but not the headline for
 variables (eclipse-dominated otherwise).
 
-**Validation:** draft_409 V0612 cross-validated vs SIPS — eclipse shape + single bright outlier at
+**Validation:** draft_409 V0612 cross-validated vs SIPS - eclipse shape + single bright outlier at
 ~JD 2461200.385 match in both reductions (frame-level artifact, not VYVAR bug).
 
 ---

@@ -147,7 +147,7 @@ def main() -> int:
             if str(nm).split("_")[0] not in ("B", "V", "R"):
                 continue
             p = setups[nm]
-            print(f"Photometry {nm} …", flush=True)
+            print(f"Photometry {nm} ...", flush=True)
             phot_results[nm] = run_full_photometry_pipeline(
                 masterstar_fits_path=Path(p["masterstar_fits"]),
                 variable_targets_csv=Path(p["obs_group_dir"]) / "variable_targets.csv",

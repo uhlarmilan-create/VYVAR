@@ -39,7 +39,7 @@ def _render_universal_main_table(
     order_sql: str = "ORDER BY ID",
     extra_caption: str | None = None,
 ) -> None:
-    """``st.data_editor`` with dynamic rows + Save → SQL (non-OBS reference tables)."""
+    """``st.data_editor`` with dynamic rows + Save -> SQL (non-OBS reference tables)."""
     conn = pipeline.db.conn
     df = pd.read_sql_query(f"SELECT * FROM {sql_name} {order_sql};", conn)
     if sql_name == "TELESCOPE" and "ACTIVE" in df.columns and not df.empty:
@@ -52,17 +52,17 @@ def _render_universal_main_table(
     if sql_name in ("EQUIPMENTS", "TELESCOPE", "LOCATION") and "IS_DEFAULT" in df.columns:
         st.caption(
             "**IS_DEFAULT:** exactly one row is the default (pre-selected in Scan Source). "
-            "Check a different row and **Save** to move the default — the previous one is cleared automatically."
+            "Check a different row and **Save** to move the default - the previous one is cleared automatically."
         )
     if sql_name == "TELESCOPE":
         st.caption(
-            "**TELESCOPE.ACTIVE:** only **0** or **1** — **1** = active, **0** = soft-delete (inactive). "
-            "Deleting a row in the editor **does not remove** the record — sets **ACTIVE = 0**."
+            "**TELESCOPE.ACTIVE:** only **0** or **1** - **1** = active, **0** = soft-delete (inactive). "
+            "Deleting a row in the editor **does not remove** the record - sets **ACTIVE = 0**."
         )
     elif sql_name == "EQUIPMENTS":
         st.caption(
             "**EQUIPMENTS.ACTIVE:** **1** / **YES** = active; **0** / **NO** = soft-delete (only active rows in Draft picker). "
-            "Deleting a row in the editor **does not DELETE** in SQL — sets **ACTIVE = 0**. "
+            "Deleting a row in the editor **does not DELETE** in SQL - sets **ACTIVE = 0**. "
             "Physical ``DELETE`` is not performed from this editor (``FINAL_DATA`` / hash integrity)."
         )
     else:
@@ -78,7 +78,7 @@ def _render_universal_main_table(
             ok = _row_active_for_style(r, "ACTIVE")
             return ["" if ok else "color: #6c757d; text-decoration: line-through" for _ in r.index]
 
-        with st.expander("Preview — inactive rows are gray", expanded=False):
+        with st.expander("Preview - inactive rows are gray", expanded=False):
             st.dataframe(df.style.apply(_grey_inactive, axis=1), width="stretch")
 
     disabled = [c for c in df.columns if c == "ID" or c not in editable]

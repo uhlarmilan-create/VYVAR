@@ -80,7 +80,7 @@ merged = at321[["catalog_id", "zone_flag", "mag"]].merge(
     how="inner",
 )
 changed = merged[merged["zone_flag"] != merged["zone_346"]]
-print(f"\nStars that changed zone_flag (321→346): {len(changed)}")
+print(f"\nStars that changed zone_flag (321->346): {len(changed)}")
 if len(changed):
     print("\nTransition counts (zone_321 -> zone_346):")
     print(changed.groupby(["zone_flag", "zone_346"]).size().sort_values(ascending=False))

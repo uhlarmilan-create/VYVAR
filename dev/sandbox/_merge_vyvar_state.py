@@ -1,4 +1,4 @@
-"""One-shot merge script for VYVAR_STATE.md — UTF-8 safe."""
+"""One-shot merge script for VYVAR_STATE.md - UTF-8 safe."""
 from __future__ import annotations
 
 import subprocess
@@ -46,7 +46,7 @@ def main() -> None:
     local_lines = LOCAL.read_text(encoding="utf-8").splitlines()
 
     i_repo_open = line_index(repo_lines, "## Open TODOs (backlog)")
-    i_repo_known = line_index(repo_lines, "## Known issues / poznámky")
+    i_repo_known = line_index(repo_lines, "## Known issues / poznamky")
 
     session_27 = slice_lines(repo_lines, 0, i_repo_open)
     open_todos_repo = strip_section_heading(
@@ -54,14 +54,14 @@ def main() -> None:
     )
     known_repo = strip_section_heading(
         slice_lines(repo_lines, i_repo_known, len(repo_lines)),
-        "## Known issues / poznámky",
+        "## Known issues / poznamky",
     )
 
     i_loc_open = line_index(local_lines, "## Open TODOs (backlog)")
     i_loc_known = line_index(local_lines, "## Known issues / next session")
-    i_loc_20 = line_index(local_lines, "# VYVAR SESSION SUMMARY — 20.5.2026")
-    i_loc_19 = line_index(local_lines, "# VYVAR SESSION SUMMARY — 19.5.2026")
-    i_loc_18 = line_index(local_lines, "# VYVAR SESSION SUMMARY — 18.5.2026")
+    i_loc_20 = line_index(local_lines, "# VYVAR SESSION SUMMARY - 20.5.2026")
+    i_loc_19 = line_index(local_lines, "# VYVAR SESSION SUMMARY - 19.5.2026")
+    i_loc_18 = line_index(local_lines, "# VYVAR SESSION SUMMARY - 18.5.2026")
 
     session_21 = slice_lines(local_lines, 0, i_loc_open)
     open_todos_local = strip_section_heading(
@@ -82,29 +82,29 @@ def main() -> None:
 
     merged_open = f"""## Open TODOs (backlog)
 
-_Merged from repo (27.5.2026) and local archive (21.5.2026). CLOSED items marked ✅._
+_Merged from repo (27.5.2026) and local archive (21.5.2026). CLOSED items marked [OK]._
 
-### Active (repo — 27.5.2026)
+### Active (repo - 27.5.2026)
 
 {open_todos_repo}
 
-### Active (local — 21.5.2026)
+### Active (local - 21.5.2026)
 
 {open_todos_local}
 
-### Reference — CLOSED / completed (from local archive)
+### Reference - CLOSED / completed (from local archive)
 
 | ID | Status | Notes |
 |----|--------|-------|
-| TODO-GS6b | ✅ CLOSED | AAVSO Extended Format validator (`scripts/validate_aavso_export.py`) — 20.5.2026 |
-| CQ-1, CQ-2, CQ-4 | ✅ CLOSED | `run_phase2a`, `render_live_view`, `solve_wcs_with_local_gaia` splits — 20.5.2026 |
-| PERF-9 | ✅ CLOSED | Vectorized haversine VSX match — 20.5.2026 |
-| TODO-23, TODO-25, TODO-16, TODO-17 | ✅ CLOSED | Adaptive match radius, Gaia completeness UI, crossmatch coords — 20.5.2026 |
-| TODO-ALG-2, TODO-ALG-3, TODO-ALG-4, TODO-ALG-5 | ✅ CLOSED | Savitzky-Golay, temporal binning, Democratic Detrender, PyTICS — 20.5.2026 |
-| TODO-44, TODO-8 | ✅ CLOSED | Role-aware aperture; ePSF infrastructure — 20.5.2026 (Bootes → TODO-8-BOO) |
-| PERF-1 … PERF-10 | ✅ CLOSED | Performance series — 19.5.2026 |
-| CQ-3, TODO-35 | ✅ CLOSED | Comp selection split; SysRem MVP — 19.5.2026 |
-| TODO-ALG-2 … TODO-ALG-5, TODO-44, TODO-8 | ✅ CLOSED | See 19.5.2026 session backlog table |
+| TODO-GS6b | [OK] CLOSED | AAVSO Extended Format validator (`scripts/validate_aavso_export.py`) - 20.5.2026 |
+| CQ-1, CQ-2, CQ-4 | [OK] CLOSED | `run_phase2a`, `render_live_view`, `solve_wcs_with_local_gaia` splits - 20.5.2026 |
+| PERF-9 | [OK] CLOSED | Vectorized haversine VSX match - 20.5.2026 |
+| TODO-23, TODO-25, TODO-16, TODO-17 | [OK] CLOSED | Adaptive match radius, Gaia completeness UI, crossmatch coords - 20.5.2026 |
+| TODO-ALG-2, TODO-ALG-3, TODO-ALG-4, TODO-ALG-5 | [OK] CLOSED | Savitzky-Golay, temporal binning, Democratic Detrender, PyTICS - 20.5.2026 |
+| TODO-44, TODO-8 | [OK] CLOSED | Role-aware aperture; ePSF infrastructure - 20.5.2026 (Bootes -> TODO-8-BOO) |
+| PERF-1 ... PERF-10 | [OK] CLOSED | Performance series - 19.5.2026 |
+| CQ-3, TODO-35 | [OK] CLOSED | Comp selection split; SysRem MVP - 19.5.2026 |
+| TODO-ALG-2 ... TODO-ALG-5, TODO-44, TODO-8 | [OK] CLOSED | See 19.5.2026 session backlog table |
 """
 
     merged_known = f"""## Known issues / next session
@@ -121,9 +121,9 @@ _Merged from repo (27.5.2026) and local (21.5.2026)._
 """
 
     parts = [
-        "# VYVAR — Development State",
+        "# VYVAR - Development State",
         "",
-        "Last updated: 2026-05-27 (merged: repo session 27.5.2026 + local archive 17.5–21.5.2026)",
+        "Last updated: 2026-05-27 (merged: repo session 27.5.2026 + local archive 17.5-21.5.2026)",
         "",
         "---",
         "",

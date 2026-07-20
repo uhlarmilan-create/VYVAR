@@ -98,7 +98,7 @@ def test_except_fix_allowlist_is_draft_scoped() -> None:
     by_draft = sbc.EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT
     assert 435 in by_draft
     assert by_draft[435] == {"phase2a_empty_comp_drop": 1}
-    # Other drafts have no allowlist — a nonzero counter would fail the gate.
+    # Other drafts have no allowlist - a nonzero counter would fail the gate.
     assert by_draft.get(999, {}) == {}
     assert by_draft.get(424, {}) == {}
 

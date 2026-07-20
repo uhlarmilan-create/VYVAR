@@ -1,4 +1,4 @@
-"""DAO-STARS: úprava hlavných MASTERSTAR parametrov detekcie / SIP (config.json)."""
+"""DAO-STARS: uprava hlavnych MASTERSTAR parametrov detekcie / SIP (config.json)."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from platesolve_ui_paths import masterstars_csv_in_dir
 
 
 def _detail_help(title: str, *, phase: str, used_in: str, compute: str | None = None) -> None:
-    with st.expander(f"❓ {title}", expanded=False):
+    with st.expander(f"? {title}", expanded=False):
         st.markdown(f"**Phase / process:** {phase}")
         st.markdown(f"**Where and how it is used:** {used_in}")
         if compute:
@@ -101,8 +101,8 @@ def render_dao_stars_dashboard(
 
     st.markdown("#### Pre-filter peak (SNR before matching)")
     st.caption(
-        "Keeps detections with local peak above **median + k×σ**. **Lower k** → more faint stars before Gaia matching. "
-        "Range **0.5–6.0**."
+        "Keeps detections with local peak above **median + kxsigma**. **Lower k** -> more faint stars before Gaia matching. "
+        "Range **0.5-6.0**."
     )
     s_floor = st.slider(
         "masterstar_prematch_peak_sigma_floor (k)",
@@ -111,19 +111,19 @@ def render_dao_stars_dashboard(
         value=min(max(cur_sf, 0.5), 6.0),
         step=0.1,
         key="vyvar_dao_stars_prematch_k",
-        help="SNR filter before Gaia matching: peak > median + k×σ of local background.",
+        help="SNR filter before Gaia matching: peak > median + kxsigma of local background.",
     )
     _detail_help(
         "masterstar_prematch_peak_sigma_floor",
-        phase="MASTERSTAR — pre-filter detections before Gaia match.",
+        phase="MASTERSTAR - pre-filter detections before Gaia match.",
         used_in="Reduces faint artifacts before spatial matching; affects prematch speed and stability.",
-        compute="Per peak: compare to median + k×σ in the neighborhood.",
+        compute="Per peak: compare to median + kxsigma in the neighborhood.",
     )
 
     st.markdown("#### DAO threshold (plate-solve + catalog)")
     st.caption(
-        "**DAOStarFinder:** threshold = **k × RMS**. **Lower k** → more candidates (including noise). "
-        "Same **k** is used in the solver and the subsequent catalog. Range **0.1–6.0**."
+        "**DAOStarFinder:** threshold = **k x RMS**. **Lower k** -> more candidates (including noise). "
+        "Same **k** is used in the solver and the subsequent catalog. Range **0.1-6.0**."
     )
     dao_sig = st.slider(
         "masterstar_dao_threshold_sigma (k)",
@@ -132,7 +132,7 @@ def render_dao_stars_dashboard(
         value=min(max(cur_ds, 0.1), 6.0),
         step=0.05,
         key="vyvar_dao_stars_dao_sigma",
-        help="DAOStarFinder: threshold = k × frame RMS.",
+        help="DAOStarFinder: threshold = k x frame RMS.",
     )
     _detail_help(
         "masterstar_dao_threshold_sigma",
@@ -142,8 +142,8 @@ def render_dao_stars_dashboard(
     )
 
     st.info(
-        "With many detections, relax **k** and **DAO σ** only when **WCS is already good** "
-        "(low px RMS in Infolog). Poor plate-solve stretches matching to a large **match_sep** — "
+        "With many detections, relax **k** and **DAO sigma** only when **WCS is already good** "
+        "(low px RMS in Infolog). Poor plate-solve stretches matching to a large **match_sep** - "
         "that skews diagnostics."
     )
 
@@ -195,7 +195,7 @@ def render_dao_stars_dashboard(
     )
     _detail_help(
         "masterstar_catalog_recovery_min / min_matched_floor / centre_rms_max_px",
-        phase="MASTERSTAR — post-solve QA before WCS persist.",
+        phase="MASTERSTAR - post-solve QA before WCS persist.",
         used_in="Replaces detection-denominated match% as the accept gate; hint_sep is warning-only when verified.",
         compute="catalog_recovery_tight = n_matched_tight / n_cat_in_frame at wcs_final.",
     )
@@ -256,7 +256,7 @@ def render_dao_stars_dashboard(
     )
     if st.button("Suggest from MASTERSTAR", key="vyvar_dao_stars_suggest_ms"):
         if ms_path is None or not ms_path.is_file():
-            st.warning("No MASTERSTAR.fits for the active draft — run MASTERSTAR / plate-solve first.")
+            st.warning("No MASTERSTAR.fits for the active draft - run MASTERSTAR / plate-solve first.")
         else:
             ctx = load_masterstar_context(ms_path)
             fwhm = ctx.vy_fwhm_gauss_px or ctx.vy_fwhm_px
@@ -289,10 +289,10 @@ def render_dao_stars_dashboard(
         n_d = int(_meta.get("n_stars", 0))
         st.info(
             f"""Suggested from MASTERSTAR (FWHM={fwhm_d:.2f}px, N={n_d} stars):
-· aperture_fwhm_factor: {float(_sug['aperture_fwhm_factor']):.2f}
-· dao_threshold_sigma: {float(_sug['masterstar_dao_threshold_sigma']):.1f}
-· prematch_peak_sigma: {float(_sug['masterstar_prematch_peak_sigma_floor']):.1f}
-· max_dist_deg: {float(_sug['phase01_comparison_max_dist_deg']):.2f}°
+. aperture_fwhm_factor: {float(_sug['aperture_fwhm_factor']):.2f}
+. dao_threshold_sigma: {float(_sug['masterstar_dao_threshold_sigma']):.1f}
+. prematch_peak_sigma: {float(_sug['masterstar_prematch_peak_sigma_floor']):.1f}
+. max_dist_deg: {float(_sug['phase01_comparison_max_dist_deg']):.2f} deg
 
 Apply these values manually in the sliders above, or click **Apply suggestions** to write to config.json."""
         )
@@ -308,7 +308,7 @@ Apply these values manually in the sliders above, or click **Apply suggestions**
 
     st.markdown("#### SIP at plate-solve (MASTERSTAR)")
     st.caption(
-        "Solver tries **from higher order downward** to the lower bound (e.g. 5→4→3). **Min** must not exceed **max**."
+        "Solver tries **from higher order downward** to the lower bound (e.g. 5->4->3). **Min** must not exceed **max**."
     )
     _sip_opts = [2, 3, 4, 5]
     _cur_hi = min(max(int(getattr(cfg, "masterstar_platesolve_sip_max_order", 5)), 2), 5)
@@ -330,7 +330,7 @@ Apply these values manually in the sliders above, or click **Apply suggestions**
         )
     _detail_help(
         "masterstar_platesolve_sip_max_order / min_order",
-        phase="MASTERSTAR — SIP distortion during WCS solve (Astrometry.net / solve-field).",
+        phase="MASTERSTAR - SIP distortion during WCS solve (Astrometry.net / solve-field).",
         used_in="Solver tries SIP orders from max down to min until RMS/validity pass; higher order = more flexible, risk of overfit.",
         compute="SIP polynomial order iteration; RMS limits may be in `config.json` (`masterstar_platesolve_prewrite_*`).",
     )
@@ -369,6 +369,6 @@ Apply these values manually in the sliders above, or click **Apply suggestions**
     with c2:
         st.caption(
             f"In memory: prematch **k={cfg.masterstar_prematch_peak_sigma_floor:.2f}**, "
-            f"DAO **σ={cfg.masterstar_dao_threshold_sigma:.2f}**, "
-            f"SIP **{cfg.masterstar_platesolve_sip_max_order}→{cfg.masterstar_platesolve_sip_min_order}**."
+            f"DAO **sigma={cfg.masterstar_dao_threshold_sigma:.2f}**, "
+            f"SIP **{cfg.masterstar_platesolve_sip_max_order}->{cfg.masterstar_platesolve_sip_min_order}**."
         )

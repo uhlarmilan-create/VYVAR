@@ -182,7 +182,7 @@ def apply_wcs_refit_with_invertibility_gate(
     if not gate.get("pass"):
         _log(
             f"WCS invertibility gate FAIL ({context}): p99={gate.get('wcs_roundtrip_p99_px'):.4f}px "
-            f">= {p99_threshold_px}px — keeping previous WCS."
+            f">= {p99_threshold_px}px - keeping previous WCS."
         )
         return False, gate
     from utils import strip_celestial_wcs_keys
@@ -190,7 +190,7 @@ def apply_wcs_refit_with_invertibility_gate(
 
     wh = w_try.to_header(relax=True)
     if copy_wcs_header_keys(fits.Header(), wh, context=f"{context} pre-write"):
-        _log(f"WCS invertibility gate FAIL ({context}): header copy probe failed — keeping previous WCS.")
+        _log(f"WCS invertibility gate FAIL ({context}): header copy probe failed - keeping previous WCS.")
         gate["pass"] = False
         return False, gate
     with fits.open(fits_path, mode="update", memmap=False) as hdul:
@@ -198,7 +198,7 @@ def apply_wcs_refit_with_invertibility_gate(
         strip_celestial_wcs_keys(hh)
         failed = copy_wcs_header_keys(hh, wh, context=context)
         if failed:
-            _log(f"WCS invertibility gate FAIL ({context}): core keys {failed} — keeping previous WCS.")
+            _log(f"WCS invertibility gate FAIL ({context}): core keys {failed} - keeping previous WCS.")
             gate["pass"] = False
             return False, gate
         hh["VY_WCSRT"] = (True, f"Round-trip p99={gate.get('wcs_roundtrip_p99_px', float('nan')):.4f}px")

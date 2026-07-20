@@ -1,10 +1,10 @@
 """VYVAR plate solving: ICRS hints from FITS/UI and optional in-process solver (local Gaia DR3).
 
-RA/Dec come from the FITS header (``VY_TARG*``, object keywords, …) or, if missing, from the in-process blind solver.
+RA/Dec come from the FITS header (``VY_TARG*``, object keywords, ...) or, if missing, from the in-process blind solver.
 The optional ``solve_wcs_with_local_gaia`` path matches DAO detections to a local Gaia DR3 cone/box and
 fits a **TAN** (gnomonic / tangent-plane) WCS via ``fit_wcs_from_points``, then optionally **SIP**
 (Simple Imaging Polynomial) distortion up to 3rd order so wide-field optics match Gaia DR3 across the
-full chip—not only near the centre (pure CD+CRPIX is only linear on the tangent plane).
+full chip-not only near the centre (pure CD+CRPIX is only linear on the tangent plane).
 """
 
 from __future__ import annotations
@@ -195,7 +195,7 @@ def _get_masterstar_wcs_parity(masterstar_fits_path: Path) -> str | None:
         return "native"
     except Exception as e:  # noqa: BLE001
         # EXC-0592: T4 -- WCS parity detection fail surfaced as WARNING + None (EXCEPT-BULK 2026-07-08)
-        log_event(f"WARNING: Nemôžem zistiť WCS paritu z MASTERSTAR: {e}")
+        log_event(f"WARNING: Nemozem zistit WCS paritu z MASTERSTAR: {e}")
         return None
 
 
@@ -330,7 +330,7 @@ def parse_user_ra_string_to_deg(text: str) -> float:
     """
     raw = (text or "").strip()
     if not raw:
-        raise ValueError("RA je prázdne — zadaj hodnotu alebo spusti krok 1 (Analyze).")
+        raise ValueError("RA je prazdne - zadaj hodnotu alebo spusti krok 1 (Analyze).")
     s_norm = " ".join(raw.split())
     sn = raw.replace(" ", "")
 
@@ -338,21 +338,21 @@ def parse_user_ra_string_to_deg(text: str) -> float:
     if dec_only.match(sn):
         x = float(sn)
         if not math.isfinite(x):
-            raise ValueError("RA nie je platné číslo")
+            raise ValueError("RA nie je platne cislo")
         return x
 
     if ":" in raw or (s_norm.count(" ") >= 1 and not dec_only.match(sn)):
         try:
             return float(Angle(s_norm.replace(":", " "), unit=u.hourangle).degree)
         except (ValueError, TypeError) as e:
-            raise ValueError(f"RA (HMS) sa nepodarilo rozparsovať: {e}") from e
+            raise ValueError(f"RA (HMS) sa nepodarilo rozparsovat: {e}") from e
 
     if re.fullmatch(r"\d+(\.\d+)?", sn):
         if "." in sn:
             x = float(sn)
             if math.isfinite(x) and -0.001 <= x <= 360.001:
                 return x
-            raise ValueError(f"RA „{raw}“ — neplatné desatinné stupne.")
+            raise ValueError(f"RA '{raw}' - neplatne desatinne stupne.")
         m6 = re.fullmatch(r"(\d{6})(\.\d+)?", sn)
         if m6:
             body = m6.group(1)
@@ -367,12 +367,12 @@ def parse_user_ra_string_to_deg(text: str) -> float:
             iv = int(sn)
             if 0 <= iv <= 360:
                 return float(iv)
-        raise ValueError(f"RA „{raw}“ — očakávam HMS (HH MM SS / HHMMSS[.ss]) alebo stupne 0–360.")
+        raise ValueError(f"RA '{raw}' - ocakavam HMS (HH MM SS / HHMMSS[.ss]) alebo stupne 0-360.")
 
     try:
         return float(Angle(s_norm.replace(":", " "), unit=u.hourangle).degree)
     except (ValueError, TypeError) as e:
-        raise ValueError(f"RA sa nepodarilo rozparsovať: {e}") from e
+        raise ValueError(f"RA sa nepodarilo rozparsovat: {e}") from e
 
 
 def parse_user_dec_string_to_deg(text: str) -> float:
@@ -383,14 +383,14 @@ def parse_user_dec_string_to_deg(text: str) -> float:
     """
     raw = (text or "").strip()
     if not raw:
-        raise ValueError("Dec je prázdne — zadaj hodnotu alebo spusti krok 1 (Analyze).")
+        raise ValueError("Dec je prazdne - zadaj hodnotu alebo spusti krok 1 (Analyze).")
     s_norm = " ".join(raw.split())
 
     if ":" in raw or s_norm.count(" ") >= 1:
         try:
             return float(Angle(s_norm.replace(":", " "), unit=u.deg).degree)
         except (ValueError, TypeError) as e:
-            raise ValueError(f"Dec (DMS) sa nepodarilo rozparsovať: {e}") from e
+            raise ValueError(f"Dec (DMS) sa nepodarilo rozparsovat: {e}") from e
 
     sn = raw.replace(" ", "")
     if sn.startswith("+"):
@@ -399,7 +399,7 @@ def parse_user_dec_string_to_deg(text: str) -> float:
     if dec_float.match(sn):
         x = float(sn)
         if not math.isfinite(x) or x < -90.001 or x > 90.001:
-            raise ValueError("Dec mimo rozsahu −90…+90°")
+            raise ValueError("Dec mimo rozsahu -90...+90 deg")
         return x
 
     m = re.fullmatch(r"(-?)(\d{2})(\d{2})(\d{2})(\.\d+)?", sn)
@@ -409,22 +409,22 @@ def parse_user_dec_string_to_deg(text: str) -> float:
         mi = int(m.group(3))
         se = float(m.group(4) + (m.group(5) or ""))
         if d > 90 or mi >= 60 or se >= 60.0001:
-            raise ValueError(f"Dec „{raw}“ — neplatné DMS v kompaktnom tvare DDMMSS.")
+            raise ValueError(f"Dec '{raw}' - neplatne DMS v kompaktnom tvare DDMMSS.")
         v = sign * (d + mi / 60.0 + se / 3600.0)
         if v < -90 or v > 90:
-            raise ValueError("Dec mimo rozsahu −90…+90°")
+            raise ValueError("Dec mimo rozsahu -90...+90 deg")
         return v
 
     if re.fullmatch(r"-?\d+", sn):
         iv = int(sn)
         if -90 <= iv <= 90:
             return float(iv)
-        raise ValueError("Dec ako celé číslo musí byť v rozsahu −90…+90.")
+        raise ValueError("Dec ako cele cislo musi byt v rozsahu -90...+90.")
 
     try:
         return float(Angle(s_norm.replace(":", " "), unit=u.deg).degree)
     except (ValueError, TypeError) as e:
-        raise ValueError(f"Dec sa nepodarilo rozparsovať: {e}") from e
+        raise ValueError(f"Dec sa nepodarilo rozparsovat: {e}") from e
 
 
 def resolve_pointing_for_vyvar(
@@ -447,8 +447,8 @@ def resolve_pointing_for_vyvar(
         dec_u = parse_user_dec_string_to_deg(user_dec_text)
     except ValueError as exc:
         raise PointingRequiredError(
-            "Pre pokračovanie (plate solve / katalóg) chýba platná RA a Dec: "
-            "buď ich má FITS v hlavičke (VY_TARG*, OBJECT, …), alebo ich zadaj v UI."
+            "Pre pokracovanie (plate solve / katalog) chyba platna RA a Dec: "
+            "bud ich ma FITS v hlavicke (VY_TARG*, OBJECT, ...), alebo ich zadaj v UI."
         ) from exc
     return ResolvedPointing(ra_u, dec_u, "user_ui")
 
@@ -482,7 +482,7 @@ def _empirical_median_plate_scale_arcsec_per_px(
     max_stars: int = 42,
     max_pairs: int = 450,
 ) -> float | None:
-    """Median sky_separation[arcsec] / pixel_distance from Gaia–DAO pairs (robust plate scale check)."""
+    """Median sky_separation[arcsec] / pixel_distance from Gaia-DAO pairs (robust plate scale check)."""
     n = min(int(len(xs)), int(len(ys)), int(len(ra_deg)), int(len(de_deg)), int(max_stars))
     if n < 8:
         return None
@@ -651,7 +651,7 @@ def _fit_sip_on_matches(
         meta["reason"] = "non_finite"
         return None, meta
 
-    # One sigma-clip on |Δpix| before fitting (rejects bad pairings).
+    # One sigma-clip on |Deltapix| before fitting (rejects bad pairings).
     r0 = np.hypot(dx, dy)
     med = float(np.median(r0))
     mad = float(np.median(np.abs(r0 - med))) + 1e-9
@@ -665,7 +665,7 @@ def _fit_sip_on_matches(
     dim = MtM.shape[0]
     try:
         if float(np.linalg.cond(MtM)) > 1e13:
-            # SIP fallback: high-order SIP often ill-conditioned on wide fields — step down 5→4→3→2.
+            # SIP fallback: high-order SIP often ill-conditioned on wide fields - step down 5->4->3->2.
             if int(max_order) > 2:
                 for fo in range(int(max_order) - 1, 1, -1):
                     w2, m2 = _fit_sip_on_matches(
@@ -767,7 +767,7 @@ def _fit_sip_on_matches_masterstar_try_orders(
     force_apply: bool,
     sip_force_rms_guard_ratio: float | None = 1.15,
 ) -> tuple[WCS | None, dict[str, Any]]:
-    """MASTERSTAR: skúšaj SIP od ``sip_max_order`` nadol po ``sip_min_order`` (typicky 5→4→3), prvý úspešný."""
+    """MASTERSTAR: skusaj SIP od ``sip_max_order`` nadol po ``sip_min_order`` (typicky 5->4->3), prvy uspesny."""
     metaacc: dict[str, Any] = {"sip_orders_tried_masterstar": []}
     hi = max(2, min(5, int(sip_max_order)))
     lo = max(2, min(5, int(sip_min_order)))
@@ -792,7 +792,7 @@ def _fit_sip_on_matches_masterstar_try_orders(
             out = {**last_m, **metaacc, "sip_chosen_order": chosen}
             if chosen != hi:
                 log_event(
-                    f"VYVAR MASTERSTAR: SIP stupeň {chosen} (najvyšší úspešný; v config max={hi}, "
+                    f"VYVAR MASTERSTAR: SIP stupen {chosen} (najvyssi uspesny; v config max={hi}, "
                     f"min={lo})."
                 )
             return w_sip, out
@@ -1122,7 +1122,7 @@ def _greedy_pixel_nn_one_to_one(
     """Nearest unused catalog position in pixel space (within ``max_px``).
 
     By default processes detections in array order; pass ``order_idx`` (e.g. argsort(-flux)) so
-    brighter sources claim Gaia neighbours first — critical for robust WCS refits on crowded fields.
+    brighter sources claim Gaia neighbours first - critical for robust WCS refits on crowded fields.
     """
     from scipy.spatial import cKDTree
 
@@ -1725,7 +1725,7 @@ def _verify_blind_candidates(
     xs_dao = np.asarray(dao_df["x"].values, dtype=np.float64)
     ys_dao = np.asarray(dao_df["y"].values, dtype=np.float64)
     fov_f = max(0.05, float(fov_deg))
-    # Match-fraction uses brightest detections only — full 5σ lists can be 5000+ and collapse fraction.
+    # Match-fraction uses brightest detections only - full 5sigma lists can be 5000+ and collapse fraction.
     _dao_mult = 30 if (_rig_prior and fov_f >= 2.0) else 4
     _cap = max(int(min_matches) * _dao_mult, 60)
     if _rig_prior and fov_f >= 2.0:
@@ -2118,9 +2118,9 @@ def _verify_blind_candidates(
     verify_s = time.monotonic() - t0
     _n_checked = sum(1 for r in verified_rows if not r.get("prefilter_skip"))
     log_event(
-        f"INFO: Blind verify: {len(deduped)} kandidátov, "
-        f"{sum(1 for r in verified_rows if r.get('accepted'))} akceptovaných, "
-        f"{_n_checked} plne overených, verify={verify_s:.2f}s load={catalog_load_s:.2f}s"
+        f"INFO: Blind verify: {len(deduped)} kandidatov, "
+        f"{sum(1 for r in verified_rows if r.get('accepted'))} akceptovanych, "
+        f"{_n_checked} plne overenych, verify={verify_s:.2f}s load={catalog_load_s:.2f}s"
     )
     max_false_n_matched = max(
         (int(r.get("n_matched", 0)) for r in verified_rows if not r.get("accepted")),
@@ -2165,7 +2165,7 @@ def _log_wcs_orientation_header_hints(wcs_obj: WCS, hdr: fits.Header) -> None:
     """Heuristics for mirrored / flipped acquisition (SIPS etc.)."""
     try:
         xb, yb = fits_binning_xy_from_header(hdr)
-        log_event(f"WCS diag: FITS binning ≈ {int(xb)}×{int(yb)} (XBINNING/YBINNING) — over zhodu s efektívnym pixelom pri mierke.")
+        log_event(f"WCS diag: FITS binning ~ {int(xb)}x{int(yb)} (XBINNING/YBINNING) - over zhodu s efektivnym pixelom pri mierke.")
     except Exception:  # noqa: BLE001
         # EXC-0597: T3 -- WCS diag block (wraps fits_binning_xy_from_header) skipped (EXCEPT-BULK 2026-07-08)
         pass
@@ -2173,27 +2173,27 @@ def _log_wcs_orientation_header_hints(wcs_obj: WCS, hdr: fits.Header) -> None:
         scales = wcs_obj.celestial.proj_plane_pixel_scales()
         sx = abs(float(scales[0].to(u.arcsec).value))
         sy = abs(float(scales[1].to(u.arcsec).value))
-        log_event(f"WCS diag: riešená mierka ≈ {sx:.4f} × {sy:.4f} arcsec/pix (celestná projekčná rovina).")
+        log_event(f"WCS diag: riesena mierka ~ {sx:.4f} x {sy:.4f} arcsec/pix (celestna projekcna rovina).")
         if sy > 0 and abs(sx / sy - 1.0) > 0.15:
             log_event(
-                f"VAROVANIE: Anizotropná mierka ({sx:.3f} × {sy:.3f} arcsec/px) "
-                f"— WCS je pravdepodobne nesprávny. Skontroluj plate-solve v MASTERSTAR QA tabe."
+                f"VAROVANIE: Anizotropna mierka ({sx:.3f} x {sy:.3f} arcsec/px) "
+                f"- WCS je pravdepodobne nespravny. Skontroluj plate-solve v MASTERSTAR QA tabe."
             )
     except Exception:  # noqa: BLE001
         # EXC-0598: T3 -- WCS diag block (wraps proj_plane_pixel_scales) skipped (EXCEPT-BULK 2026-07-08)
         pass
     try:
         det = float(np.linalg.det(np.asarray(wcs_obj.wcs.get_pc(), dtype=np.float64)))
-        log_event(f"WCS diag: det(PC) ≈ {det:.6f} (záporné ⇒ možné zrkadlenie osí v CD/PC).")
+        log_event(f"WCS diag: det(PC) ~ {det:.6f} (zaporne => mozne zrkadlenie osi v CD/PC).")
         if det < 0 and abs(det) > 1e-4:
             log_event(
-                "WCS orientácia: determinant PC < 0 — možné zrkadlenie osí (SIPS / kamera); "
-                "ak stred sedí a okraj nie, skontroluj rotáciu alebo mierku."
+                "WCS orientacia: determinant PC < 0 - mozne zrkadlenie osi (SIPS / kamera); "
+                "ak stred sedi a okraj nie, skontroluj rotaciu alebo mierku."
             )
         elif det < 0:
             log_event(
-                "WCS diag: det(PC) je záporný len numericky (~0) — ignoruj ako signál zrkadlenia; "
-                "over radšej pomer mierky sx/sy a zhodu s optikou."
+                "WCS diag: det(PC) je zaporny len numericky (~0) - ignoruj ako signal zrkadlenia; "
+                "over radsej pomer mierky sx/sy a zhodu s optikou."
             )
     except Exception:  # noqa: BLE001
         # EXC-0599: T3 -- WCS diag block (wraps det computation) skipped (EXCEPT-BULK 2026-07-08)
@@ -2204,7 +2204,7 @@ def _log_wcs_orientation_header_hints(wcs_obj: WCS, hdr: fits.Header) -> None:
         v = hdr[key]
         if v in (None, "", 0, "0", False):
             continue
-        log_event(f"WCS orientácia: FITS {key}={v!r} — over zhodu katalógu s obrázkom.")
+        log_event(f"WCS orientacia: FITS {key}={v!r} - over zhodu katalogu s obrazkom.")
         break
 
 
@@ -2248,7 +2248,7 @@ def _apply_fits_roworder_to_detections(
 
 
 def _sip_match_max_px(max_px_coarse: float) -> float:
-    """Match radius for SIP fitting — wide enough to include edge stars (distortion constraints)."""
+    """Match radius for SIP fitting - wide enough to include edge stars (distortion constraints)."""
     return max(15.0, min(48.0, float(max_px_coarse) * 0.55))
 
 
@@ -2585,7 +2585,7 @@ def _refit_linear_and_sip_on_full_pairs(
     ransac_min_pairs: int,
     rng_seed: int,
 ) -> tuple[WCS, list[float], list[float], list[float], list[float], dict[str, Any]]:
-    """Greedy wide match → linear refit → optional SIP on **all** matched pairs (not tight subset)."""
+    """Greedy wide match -> linear refit -> optional SIP on **all** matched pairs (not tight subset)."""
     meta: dict[str, Any] = {}
     px, py, pra, pde, max_px_sip = _greedy_match_pairs_for_sip(
         w_lin, ra_all, de_all, xs, ys, max_px_coarse=max_px_coarse
@@ -2650,10 +2650,10 @@ def _gaia_triangle_greedy_orientation_probe(
     max_px_coarse_override: float | None = None,
     expected_scale_rel_tol_override: float | None = None,
 ) -> dict[str, Any] | None:
-    """Triangle match → TAN init → optional catalog crop → coarse greedy match (one orientation)."""
+    """Triangle match -> TAN init -> optional catalog crop -> coarse greedy match (one orientation)."""
     cat_df = cat_df_in.copy().reset_index(drop=True)
-    # Performance: triangle search only uses the brightest ~16–24 Gaia rows, so avoid building a SkyCoord for
-    # the full catalog (can be 5k–20k rows). Build it only for the subset we will actually combine.
+    # Performance: triangle search only uses the brightest ~16-24 Gaia rows, so avoid building a SkyCoord for
+    # the full catalog (can be 5k-20k rows). Build it only for the subset we will actually combine.
     ra_all = cat_df["ra_deg"].to_numpy(dtype=np.float64, copy=False)
     de_all = cat_df["dec_deg"].to_numpy(dtype=np.float64, copy=False)
     n_cat = int(len(cat_df))
@@ -2672,7 +2672,7 @@ def _gaia_triangle_greedy_orientation_probe(
     de_r = np.deg2rad(de_s)
     sin_de = np.sin(de_r)
     cos_de = np.cos(de_r)
-    # cos(angle) = sin d1 sin d2 + cos d1 cos d2 cos(Δra)
+    # cos(angle) = sin d1 sin d2 + cos d1 cos d2 cos(Deltara)
     dra = ra_r[:, None] - ra_r[None, :]
     cosang = (sin_de[:, None] * sin_de[None, :]) + (cos_de[:, None] * cos_de[None, :] * np.cos(dra))
     cosang = np.clip(cosang, -1.0, 1.0)
@@ -2683,7 +2683,7 @@ def _gaia_triangle_greedy_orientation_probe(
     expected_scale_rel_tol = (
         float(expected_scale_rel_tol_override)
         if expected_scale_rel_tol_override is not None and math.isfinite(float(expected_scale_rel_tol_override)) and float(expected_scale_rel_tol_override) > 0
-        else 0.08  # striktnejší — zamietne 13.7% odchýlku
+        else 0.08  # striktnejsi - zamietne 13.7% odchylku
     )
     ang_tol_rad = 0.08
     # Keep a small set of best triangle candidates by ratio error. This reduces the chance that a
@@ -3026,15 +3026,15 @@ def _maybe_repair_masterstar_anisotropic_plate_scale(
     _force = ratio >= 1.18
     if (not _force) and math.isfinite(rms_before) and rms_after > rms_before * 1.12:
         log_event(
-            f"VYVAR MASTERSTAR: anizotropná mierka (pomer osí {ratio:.3f}) — oprava CD zamieta "
-            f"(RMS {rms_after:.2f}px > {rms_before:.2f}px × 1.12)."
+            f"VYVAR MASTERSTAR: anizotropna mierka (pomer osi {ratio:.3f}) - oprava CD zamieta "
+            f"(RMS {rms_after:.2f}px > {rms_before:.2f}px x 1.12)."
         )
         return None, meta
 
     log_event(
-        f"VYVAR MASTERSTAR: anizotropná lineárna mierka sx/sy (pomer {ratio:.3f}) vs očakávaná ~{tgt:.3f}″/px — "
-        f"CD stĺpce zosúladené na cieľ a SIP znovu prepočítané (RMS na pároch {rms_before:.2f} → {rms_after:.2f} px). "
-        f"Modrá projekcia Gaia v QA používa túto WCS; predtým „zlá Gaia“ mohla byť len z deformovaného CD so SIP."
+        f"VYVAR MASTERSTAR: anizotropna linearna mierka sx/sy (pomer {ratio:.3f}) vs ocakavana ~{tgt:.3f} arcsec/px - "
+        f"CD stlpce zosuladene na ciel a SIP znovu prepocitane (RMS na paroch {rms_before:.2f} -> {rms_after:.2f} px). "
+        f"Modra projekcia Gaia v QA pouziva tuto WCS; predtym 'zla Gaia' mohla byt len z deformovaneho CD so SIP."
     )
     meta["plate_scale_aniso_repair"] = True
     return w_try, meta
@@ -3163,7 +3163,7 @@ def _solve_wcs_build_catalog(
         fov_diameter_fallback_deg=float(fov_diameter_deg),
     )
     cone_r = max(float(cone_r), float(required_corners_radius))
-    # FOV fallback from caller/config can be wildly wrong (e.g. default 7°) and must not override
+    # FOV fallback from caller/config can be wildly wrong (e.g. default 7 deg) and must not override
     # optics-derived cone when we have a plausible focal length + pixel pitch.
     _r_fov = catalog_cone_radius_from_fov_diameter_deg(float(fov_diameter_deg))
     _has_optics = (
@@ -3188,10 +3188,10 @@ def _solve_wcs_build_catalog(
     dec_deg = float(de0)
     calc_radius = float(cone_r)
     calculated_radius = calc_radius
-    log_event(f"📐 FOV Check: Center={ra_deg:.3f},{dec_deg:.3f} | REQUIRED RADIUS for corners: {calc_radius:.3f} deg")
+    log_event(f"[tri] FOV Check: Center={ra_deg:.3f},{dec_deg:.3f} | REQUIRED RADIUS for corners: {calc_radius:.3f} deg")
     log_gaia_query(float(ra0), float(de0), calculated_radius)
     log_event(
-        f"CATALOG SEARCH: Ra={ra0}, Dec={de0}, Radius={cone_r:.2f} deg (vypočítané pre {_foc_log}mm)"
+        f"CATALOG SEARCH: Ra={ra0}, Dec={de0}, Radius={cone_r:.2f} deg (vypocitane pre {_foc_log}mm)"
     )
 
     # Gaia rectangular prefilter around the cone (fast idx_ra/idx_dec); then filter by angular radius.
@@ -3216,7 +3216,7 @@ def _solve_wcs_build_catalog(
         except (TypeError, ValueError):
             _focal_for_mag = None
 
-    # Dynamický mag cap (per-frame aj MASTERSTAR): malé FOV + dlhé ohnisko potrebuje hlbší katalóg.
+    # Dynamicky mag cap (per-frame aj MASTERSTAR): male FOV + dlhe ohnisko potrebuje hlbsi katalog.
     if _focal_for_mag is not None:
         focal = float(_focal_for_mag)
         if focal >= 800:
@@ -3226,7 +3226,7 @@ def _solve_wcs_build_catalog(
         else:
             _mag_cap = min(float(max_cat_mag), 13.0)
     else:
-        # Neznáme ohnisko → konzervatívne podľa FOV plochy
+        # Nezname ohnisko -> konzervativne podla FOV plochy
         if _fov_area_deg2 < 2.0:
             _mag_cap = min(float(max_cat_mag), 15.0)
         elif _fov_area_deg2 < 10.0:
@@ -3235,8 +3235,8 @@ def _solve_wcs_build_catalog(
             _mag_cap = min(float(max_cat_mag), 12.0)
 
     log_event(
-        f"INFO: Dynamický mag_cap={float(_mag_cap):.1f} "
-        f"(FOV={_fov_area_deg2:.3f} deg², focal={_foc_mm}mm)"
+        f"INFO: Dynamicky mag_cap={float(_mag_cap):.1f} "
+        f"(FOV={_fov_area_deg2:.3f} deg^2, focal={_foc_mm}mm)"
     )
     _hint_is_blind_cone = "blind solver" in str(_coord_src or "").strip().lower()
     # If expected scale came from DB/config (expected_plate_scale_arcsec_per_px) and hint is blind,
@@ -3244,7 +3244,7 @@ def _solve_wcs_build_catalog(
     _allow_cone_clip_to_fov = not (bool(_hint_is_blind_cone) and bool(_exp_scale_from_expected_arg))
 
     if _fov_area_deg2 < 10.0 and bool(_allow_cone_clip_to_fov):
-        # Pre všetky zostavy: obmedzí kužeľ na FOV+20 % (nie veľký default ~7°+)
+        # Pre vsetky zostavy: obmedzi kuzel na FOV+20 % (nie velky default ~7 deg+)
         _sc_fov: float | None = float(_exp_scale) if _exp_scale is not None else None
         if (
             _sc_fov is None
@@ -3269,14 +3269,14 @@ def _solve_wcs_build_catalog(
             _fov_r = 0.5 * math.hypot(_fov_x, _fov_y) * 1.2  # s 20% okrajom
             cone_r = min(float(cone_r), float(_fov_r))
             log_event(
-                f"VYVAR platesolve: FOV={_fov_area_deg2:.3f} deg² < 10 → "
-                f"cone_r obmedzený na {cone_r:.3f}° (FOV+20%)"
+                f"VYVAR platesolve: FOV={_fov_area_deg2:.3f} deg^2 < 10 -> "
+                f"cone_r obmedzeny na {cone_r:.3f} deg (FOV+20%)"
             )
             ra_min = ra0f - float(cone_r)
             ra_max = ra0f + float(cone_r)
             de_min = de0f - float(cone_r)
             de_max = de0f + float(cone_r)
-    # VŽDY obmedz cone_r na FOV+20% ak je _exp_scale k dispozícii; potom SQL box (RA šírka podľa |dec|)
+    # VZDY obmedz cone_r na FOV+20% ak je _exp_scale k dispozicii; potom SQL box (RA sirka podla |dec|)
     # (but skip this when blind hint + expected scale from DB/config).
     if bool(_allow_cone_clip_to_fov) and _exp_scale is not None and naxis1 is not None and naxis2 is not None:
         _fov_x_deg = float(naxis1) * float(_exp_scale) / 3600.0
@@ -3284,14 +3284,14 @@ def _solve_wcs_build_catalog(
         _fov_r_deg = 0.5 * math.hypot(_fov_x_deg, _fov_y_deg) * 1.2
         if float(cone_r) > _fov_r_deg:
             cone_r = _fov_r_deg
-            log_event(f"VYVAR: cone_r clipped to FOV+20% = {cone_r:.3f}°")
+            log_event(f"VYVAR: cone_r clipped to FOV+20% = {cone_r:.3f} deg")
         ra_min = ra0f - float(cone_r) / math.cos(math.radians(abs(de0f)))
         ra_max = ra0f + float(cone_r) / math.cos(math.radians(abs(de0f)))
         de_min = de0f - float(cone_r)
         de_max = de0f + float(cone_r)
     elif (not bool(_allow_cone_clip_to_fov)) and _exp_scale is not None:
         log_event(
-            "VYVAR platesolve: vynechávam cone_r clip na FOV+20% (blind hint + expected scale z DB/config môže byť nesprávna)."
+            "VYVAR platesolve: vynechavam cone_r clip na FOV+20% (blind hint + expected scale z DB/config moze byt nespravna)."
         )
     rows_g = query_local_gaia(
         root,
@@ -3308,7 +3308,7 @@ def _solve_wcs_build_catalog(
             f"VYVAR platesolve: proper motion correction applied to {_pm_corr_count} Gaia stars (epoch {GAIA_EPOCH:.1f} -> {_obs_year:.2f})."
         )
     if not rows_g:
-        raise _SolveWcsCatalogError("VYVAR solver: Gaia query v okolí hintu vrátil 0 hviezd.")
+        raise _SolveWcsCatalogError("VYVAR solver: Gaia query v okoli hintu vratil 0 hviezd.")
     cat_df = pd.DataFrame(rows_g)
     # Normalize to the solver's expected catalog schema.
     cat_df = cat_df.rename(columns={"source_id": "catalog_id", "ra": "ra_deg", "dec": "dec_deg", "g_mag": "mag"})
@@ -3332,9 +3332,9 @@ def _solve_wcs_build_catalog(
             else cat_df
         )
     _n_cat_raw = int(len(cat_df))
-    log_event(f"SQL GAIA: Nájdených {_n_cat_raw} hviezd pre box okolo hintu (≈ r {float(cone_r):.3f}°).")
+    log_event(f"SQL GAIA: Najdenych {_n_cat_raw} hviezd pre box okolo hintu (~ r {float(cone_r):.3f} deg).")
     if len(cat_df) < 8:
-        raise _SolveWcsCatalogError(f"VYVAR solver: v Gaia výreze málo hviezd ({len(cat_df)}).")
+        raise _SolveWcsCatalogError(f"VYVAR solver: v Gaia vyreze malo hviezd ({len(cat_df)}).")
 
     cat_df_cone_full = cat_df.sort_values("mag", na_position="last").reset_index(drop=True)
     # Brighter catalog subset for triangle matching to reduce ambiguity.
@@ -3356,7 +3356,7 @@ def _solve_wcs_build_catalog(
             if len(cand) >= 24:
                 cat_df_tri = cand.sort_values("mag", na_position="last").reset_index(drop=True)
                 log_event(
-                    f"VYVAR platesolve: triangle catalog mag_cap={float(tri_cap):.1f} → {len(cat_df_tri)} hviezd (z {_n_cat_raw})."
+                    f"VYVAR platesolve: triangle catalog mag_cap={float(tri_cap):.1f} -> {len(cat_df_tri)} hviezd (z {_n_cat_raw})."
                 )
     except Exception:  # noqa: BLE001
         cat_df_tri = cat_df_cone_full
@@ -3384,13 +3384,13 @@ def _solve_wcs_build_catalog(
             n_max = min(int(n_max), int(max_catalog_rows))
         except (TypeError, ValueError):
             pass
-    log_event(f"GAIA dynamic cap: fov_area≈{_fov_area:.4f} deg² -> max_catalog_rows={n_max}")
+    log_event(f"GAIA dynamic cap: fov_area~{_fov_area:.4f} deg^2 -> max_catalog_rows={n_max}")
     _cat_pool = min(int(n_max), len(cat_df_cone_full))
     cat_df = cat_df_cone_full.head(int(n_max)).copy().reset_index(drop=True)
     c_cat = SkyCoord(ra=cat_df["ra_deg"].to_numpy() * u.deg, dec=cat_df["dec_deg"].to_numpy() * u.deg, frame="icrs")
     n_cat = len(c_cat)
     if n_cat < 6:
-        raise _SolveWcsCatalogError("VYVAR solver: po zoradení podľa mag je v kuželi príliš málo hviezd.")
+        raise _SolveWcsCatalogError("VYVAR solver: po zoradeni podla mag je v kuzeli prilis malo hviezd.")
 
     return cat_df, cat_df_tri, c_cat, float(cone_r), cat_df_cone_full, float(eff_max_cat_mag)
 
@@ -3761,11 +3761,11 @@ def _solve_wcs_validate_and_refine(
     _sip_reason = str(sip_meta.get("reason", "") or "").strip().lower()
     if (not bool(sip_meta.get("sip_applied", False))) and _sip_reason == "ill_conditioned":
         log_event(
-            "VYVAR platesolve: SIP zlyhal (ill_conditioned) — opakujem s jednoduchším lineárnym WCS (očakávané pri niektorých stackoch)."
+            "VYVAR platesolve: SIP zlyhal (ill_conditioned) - opakujem s jednoduchsim linearnym WCS (ocakavane pri niektorych stackoch)."
         )
 
-    # MASTERSTAR stack: lineárny TAN + široké pole často dáva RMS > 5 px na prvom párovaní, ale match_rate je dobrý;
-    # astrometry_optimizer a širší katalógový match to potom stiahnu. Bežné snímky: prísnych 5 px.
+    # MASTERSTAR stack: linearny TAN + siroke pole casto dava RMS > 5 px na prvom parovani, ale match_rate je dobry;
+    # astrometry_optimizer a sirsi katalogovy match to potom stiahnu. Bezne snimky: prisnych 5 px.
     _rms_max_accept = (
         float(masterstar_prewrite_rms_max_px)
         if (_is_masterstar and masterstar_prewrite_rms_max_px is not None)
@@ -3789,7 +3789,7 @@ def _solve_wcs_validate_and_refine(
         _rms_bad = False
         log_event(
             f"VYVAR MASTERSTAR: RMS {float(_rms_px):.2f}px > {_rms_max_accept:.0f}px, "
-            f"ale match_rate={_match_rate * 100.0:.1f}% — akceptujem do {_rms_relaxed_cap:.0f} px pred ďalšími krokmi."
+            f"ale match_rate={_match_rate * 100.0:.1f}% - akceptujem do {_rms_relaxed_cap:.0f} px pred dalsimi krokmi."
         )
         sip_meta["prewrite_rms_relaxed_for_masterstar"] = True
     if _is_masterstar:
@@ -3846,7 +3846,7 @@ def _solve_wcs_validate_and_refine(
         rms_nn = float(meta_nn["rms_px"])
         log_event(f"WCS Refined: Mean residual error = {rms_nn:.2f} pixels")
         # NN refit can latch onto wrong Gaia neighbours when max_match_px is large; a high RMS means
-        # the new TAN is worse than triangle+SIP — applying it destroys downstream catalog matching (~0% Gaia).
+        # the new TAN is worse than triangle+SIP - applying it destroys downstream catalog matching (~0% Gaia).
         _rms_nn_max = (
             float(masterstar_nn_refine_max_rms_px)
             if (_is_masterstar and masterstar_nn_refine_max_rms_px is not None)
@@ -3858,13 +3858,13 @@ def _solve_wcs_validate_and_refine(
         mdy = meta_nn.get("mean_dy")
         if mdx is not None and mdy is not None and (abs(float(mdx)) > 0.35 or abs(float(mdy)) > 0.35):
             log_event(
-                f"WCS refine hint: stredný posun dx={float(mdx):.2f}, dy={float(mdy):.2f} px "
-                "(jednotný offset); rozdielny posun po poli → rotácia / mierka / flip."
+                f"WCS refine hint: stredny posun dx={float(mdx):.2f}, dy={float(mdy):.2f} px "
+                "(jednotny offset); rozdielny posun po poli -> rotacia / mierka / flip."
             )
         if not accept_nn:
             log_event(
-                f"VYVAR: NN WCS refine zamietnutý (rms={rms_nn:.2f}px > {_rms_nn_max:.1f}px) — "
-                "ponechávam WCS pred NN (inak často kolaps zhody s Gaia v MASTERSTAR kroku)."
+                f"VYVAR: NN WCS refine zamietnuty (rms={rms_nn:.2f}px > {_rms_nn_max:.1f}px) - "
+                "ponechavam WCS pred NN (inak casto kolaps zhody s Gaia v MASTERSTAR kroku)."
             )
             sip_meta["wcs_nn_refined"] = False
             sip_meta["wcs_nn_rejected"] = True
@@ -3912,10 +3912,10 @@ def _solve_wcs_validate_and_refine(
                 pairs_de = np.asarray(world_r.dec.deg, dtype=np.float64).tolist()
             else:
                 log_event(
-                    "WARNING: NN-refine accepted but pairs/world missing — skipping refine-pairs export."
+                    "WARNING: NN-refine accepted but pairs/world missing - skipping refine-pairs export."
                 )
 
-    # Po NN/SIP ešte raz zrátaj páry na rovnakom súbore detekcií (``n_img``) oproti asociačnému Gaia výrezu.
+    # Po NN/SIP este raz zrataj pary na rovnakom subore detekcii (``n_img``) oproti asociacnemu Gaia vyrezu.
     try:
         _ra_cat2 = cat_df_assoc["ra_deg"].to_numpy(dtype=np.float64)
         _de_cat2 = cat_df_assoc["dec_deg"].to_numpy(dtype=np.float64)
@@ -3936,7 +3936,7 @@ def _solve_wcs_validate_and_refine(
         _matched_all = int(len(pairs_x))
         sip_meta["match_rate_n_matched_all"] = int(_matched_all)
         sip_meta["match_rate_full_frame"] = float(_matched_all) / float(max(1, int(n_img)))
-        # User-facing match%: najjasnejšie hviezdy (Gaia je tu takmer úplná); slabé DAO špičky bez Gaia by inak znižili %.
+        # User-facing match%: najjasnejsie hviezdy (Gaia je tu takmer uplna); slabe DAO spicky bez Gaia by inak znizili %.
         _nrate = min(200, int(n_img))
         if _nrate >= 6:
             _bx = np.asarray(xs, dtype=np.float64)[: int(_nrate)]
@@ -3964,7 +3964,7 @@ def _solve_wcs_validate_and_refine(
         log_event(
             f"VYVAR platesolve final: Gaia match_rate={_match_rate * 100.0:.1f}% "
             f"({int(_matched_n)}/{int(sip_meta.get('match_rate_n_used', n_img))} "
-            f"{sip_meta.get('match_rate_scope')!s}) | all-frame≈{float(sip_meta.get('match_rate_full_frame', 0.0)) * 100.0:.1f}%"
+            f"{sip_meta.get('match_rate_scope')!s}) | all-frame~{float(sip_meta.get('match_rate_full_frame', 0.0)) * 100.0:.1f}%"
         )
     except Exception as exc:  # noqa: BLE001
         # EXC-0605 / EXCEPT-FIX-3 #10: surface the final match-rate QA computation failure and
@@ -4239,7 +4239,7 @@ def _solve_wcs_write_results(
             ) from exc
 
     if not fits_header_has_celestial_wcs(_hdr_written or hdr0):
-        raise _SolveWcsWriteError("VYVAR solver: WCS po zápise stále neplatný.")
+        raise _SolveWcsWriteError("VYVAR solver: WCS po zapise stale neplatny.")
 
 
 
@@ -4324,14 +4324,14 @@ def solve_wcs_with_local_gaia(
 ) -> dict[str, Any]:
     """Plate-solve by matching DAO stars to **local Gaia DR3** (SQLite); writes WCS into the FITS primary HDU.
 
-    **RA/Dec:** najprv z FITS hlavičky (``VY_TARG*``, ``RA``/``DEC``, …); ak chýbajú, použije sa hint z argumentov
-    ``hint_ra_deg`` / ``hint_dec_deg``; ak stále chýba, spustí sa **blind** trojuholníkový solver
+    **RA/Dec:** najprv z FITS hlavicky (``VY_TARG*``, ``RA``/``DEC``, ...); ak chybaju, pouzije sa hint z argumentov
+    ``hint_ra_deg`` / ``hint_dec_deg``; ak stale chyba, spusti sa **blind** trojuholnikovy solver
     (``blind_index_path``).
 
-    **Mierka:** FOCALLEN+PIXSIZE alebo SECPIX/PIXSCALE/SCALE v hlavičke alebo argument
+    **Mierka:** FOCALLEN+PIXSIZE alebo SECPIX/PIXSCALE/SCALE v hlavicke alebo argument
     ``expected_plate_scale_arcsec_per_px`` (napr. MASTERSTAR).
 
-    ``fit_wcs_from_points(..., projection=\"TAN\")`` len zostaví **lineárny** TAN; SIP sa dopočíta po zhode hviezd.
+    ``fit_wcs_from_points(..., projection=\"TAN\")`` len zostavi **linearny** TAN; SIP sa dopocita po zhode hviezd.
     """
     from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
@@ -4354,7 +4354,7 @@ def solve_wcs_with_local_gaia(
         f"app_config={'passed' if app_config is not None else 'default'}"
     )
 
-    # SIP order: 2–5; MASTERSTAR skúša nadol po masterstar_sip_min_order (napr. 5→4→3).
+    # SIP order: 2-5; MASTERSTAR skusa nadol po masterstar_sip_min_order (napr. 5->4->3).
     if enable_sip:
         try:
             _smo = int(sip_max_order)
@@ -4383,20 +4383,20 @@ def solve_wcs_with_local_gaia(
 
     root = Path(gaia_db_path).expanduser().resolve()
     if not root.is_file():
-        return {"solved": False, "reason": "VYVAR solver: nastav platnú cestu GAIA_DB_PATH (.db) v Settings."}
+        return {"solved": False, "reason": "VYVAR solver: nastav platnu cestu GAIA_DB_PATH (.db) v Settings."}
 
     with fits.open(fp, memmap=False) as hdul:
         hdr0 = hdul[0].header.copy()
         data = np.asarray(hdul[0].data, dtype=np.float32)
     if data.ndim != 2:
-        return {"solved": False, "reason": "VYVAR solver: očakávam 2D primary image."}
+        return {"solved": False, "reason": "VYVAR solver: ocakavam 2D primary image."}
 
     h, w = int(data.shape[0]), int(data.shape[1])
     naxis1 = int(hdr0.get("NAXIS1", 0) or 0) or w
     naxis2 = int(hdr0.get("NAXIS2", 0) or 0) or h
 
     # Derive a reliable FOV diameter from optics when available. This protects against a wrong
-    # config/UI `fov_diameter_deg` (often a wide default like 7°) which would break blind hints
+    # config/UI `fov_diameter_deg` (often a wide default like 7 deg) which would break blind hints
     # and Gaia cone sizing for narrow-field telescopes.
     fov_diameter_deg_eff = float(fov_diameter_deg)
     try:
@@ -4419,13 +4419,13 @@ def solve_wcs_with_local_gaia(
                         if (not math.isfinite(_caller)) or (_caller <= 0) or (_caller > _diag_eff * 3.0) or (_caller < _diag_eff / 3.0):
                             fov_diameter_deg_eff = _diag_eff
                             log_event(
-                                f"INFO: FOV override from optics: caller={_caller if math.isfinite(_caller) else 'n/a'}° "
-                                f"→ diag_from_optics={_diag_eff:.3f}° (F={_foc0:g}mm, Px_eff={_eff_um0:g}µm)."
+                                f"INFO: FOV override from optics: caller={_caller if math.isfinite(_caller) else 'n/a'} deg "
+                                f"-> diag_from_optics={_diag_eff:.3f} deg (F={_foc0:g}mm, Px_eff={_eff_um0:g}um)."
                             )
     except Exception as _fov_exc:  # noqa: BLE001
         log_event(
-            f"WARNING: optics-based FOV override failed ({_fov_exc}) — falling back to caller "
-            f"fov_diameter_deg={float(fov_diameter_deg):g}°."
+            f"WARNING: optics-based FOV override failed ({_fov_exc}) - falling back to caller "
+            f"fov_diameter_deg={float(fov_diameter_deg):g} deg."
         )
 
     # RA/Dec: FITS header first, then caller hint, then blind solver.
@@ -4502,7 +4502,7 @@ def solve_wcs_with_local_gaia(
                 )
         except Exception:  # noqa: BLE001
             pass
-        log_event("INFO: FITS nemá RA/Dec — spúšťam blind solver.")
+        log_event("INFO: FITS nema RA/Dec - spustam blind solver.")
         try:
             from vyvar_blind_series import solve_blind_with_series
 
@@ -4547,12 +4547,12 @@ def solve_wcs_with_local_gaia(
     if ra0 is None or de0 is None:
         return {
             "solved": False,
-            "reason": "VYVAR solver: FITS nemá RA/Dec a blind solver nenašiel zhodu.",
+            "reason": "VYVAR solver: FITS nema RA/Dec a blind solver nenasiel zhodu.",
         }
 
     log_event(f"INFO: Solver using center hint from {_coord_src}: RA={float(ra0)}, Dec={float(de0)}.")
 
-    # 3) MASTERSTAR: vyžadujeme platný VY_FWHM v hlavičke (žiadne dopĺňanie).
+    # 3) MASTERSTAR: vyzadujeme platny VY_FWHM v hlavicke (ziadne doplnanie).
     if _is_masterstar:
         _vyf_raw = hdr0.get("VY_FWHM")
         _vyf_ok = False
@@ -4565,7 +4565,7 @@ def solve_wcs_with_local_gaia(
         if not _vyf_ok:
             return {
                 "solved": False,
-                "reason": "VYVAR solver: MASTERSTAR.fits musí mať v hlavičke platný VY_FWHM (px).",
+                "reason": "VYVAR solver: MASTERSTAR.fits musi mat v hlavicke platny VY_FWHM (px).",
             }
 
     _ep_um: float | None = None
@@ -4625,7 +4625,7 @@ def solve_wcs_with_local_gaia(
 
     if _ep_um is not None:
         log_event(
-            f"VYVAR platesolve: efektívny pixel pre mierku / odvodenia = {_ep_um:.4g} um (súbor {fp.name})"
+            f"VYVAR platesolve: efektivny pixel pre mierku / odvodenia = {_ep_um:.4g} um (subor {fp.name})"
         )
 
     _exp_scale: float | None = None
@@ -4638,8 +4638,8 @@ def solve_wcs_with_local_gaia(
                 _exp_scale_from_expected_arg = True
                 if _is_masterstar:
                     log_event(
-                        f"MASTERSTAR: očakávaná mierka z config/UI = {_es:.4f} arcsec/px "
-                        f"(prepíše odvodzovanie z FOCALLEN×PIXSIZE v hlavičke pre filter trojuholníkov)."
+                        f"MASTERSTAR: ocakavana mierka z config/UI = {_es:.4f} arcsec/px "
+                        f"(prepise odvodzovanie z FOCALLENxPIXSIZE v hlavicke pre filter trojuholnikov)."
                     )
         except (TypeError, ValueError):
             _exp_scale = None
@@ -4681,22 +4681,22 @@ def solve_wcs_with_local_gaia(
         return {
             "solved": False,
             "reason": (
-                "VYVAR solver: chýba platná mierka — v hlavičke FOCALLEN+PIXSIZE alebo SECPIX/PIXSCALE/SCALE "
-                "(arcsec/px); pre MASTERSTAR musí byť mierka v súbore, pre ostatné snímky môže pomôcť "
-                "expected plate scale z konfigurácie."
+                "VYVAR solver: chyba platna mierka - v hlavicke FOCALLEN+PIXSIZE alebo SECPIX/PIXSCALE/SCALE "
+                "(arcsec/px); pre MASTERSTAR musi byt mierka v subore, pre ostatne snimky moze pomoct "
+                "expected plate scale z konfiguracie."
             ),
         }
     _coord_src_l2 = str(_coord_src or "").strip().lower()
     _hint_is_blind = "blind solver" in _coord_src_l2
     if _hint_is_blind:
         log_event(
-            f"VYVAR platesolve: očakávaná mierka ≈ {_exp_scale:.3f} arcsec/px — "
-            "blind hint: mierku použijem len ako slabý hint; pri slabom matchi povolím fallback bez scale filtra."
+            f"VYVAR platesolve: ocakavana mierka ~ {_exp_scale:.3f} arcsec/px - "
+            "blind hint: mierku pouzijem len ako slaby hint; pri slabom matchi povolim fallback bez scale filtra."
         )
     else:
         log_event(
-            f"VYVAR platesolve: očakávaná mierka z pixel×ohnisko ≈ {_exp_scale:.3f} arcsec/px — "
-            "filtrujem trojuholníky mimo tejto mierky (proti 10× omylom zhody)."
+            f"VYVAR platesolve: ocakavana mierka z pixelxohnisko ~ {_exp_scale:.3f} arcsec/px - "
+            "filtrujem trojuholniky mimo tejto mierky (proti 10x omylom zhody)."
         )
 
     _xbin = 1
@@ -4775,7 +4775,7 @@ def solve_wcs_with_local_gaia(
 
     finite = np.isfinite(working_data)
     if not np.any(finite):
-        return {"solved": False, "reason": "VYVAR solver: prázdne dáta."}
+        return {"solved": False, "reason": "VYVAR solver: prazdne data."}
 
     std = float(clipped_std)
 
@@ -4794,7 +4794,7 @@ def solve_wcs_with_local_gaia(
     _dao_fw = dao_detection_fwhm_pixels(hdr0, configured_fallback=3.0)
     if _dao_fw is None:
         _dao_fw = 3.5
-        log_event("VYVAR: VY_FWHM sa nepodarilo získať — DAO FWHM fallback=3.5 px.")
+        log_event("VYVAR: VY_FWHM sa nepodarilo ziskat - DAO FWHM fallback=3.5 px.")
     # Adaptive to per-frame noise via sigma-clipped std; sigma comes from explicit arg or AppConfig.
     try:
         _sig_in = float(dao_threshold_sigma)
@@ -4803,7 +4803,7 @@ def solve_wcs_with_local_gaia(
     sig_req = float(_sig_in if math.isfinite(_sig_in) and _sig_in > 0 else _sig_cfg)
     log_event(f"DEBUG: Threshold set to {sig_req * std:.2f} (using clipped_std={std:.2f})")
     log_event(
-        f"Detekcia hviezd: Použité FWHM={float(_dao_fw):.2f}, Sigma={float(sig_req):.2f}"
+        f"Detekcia hviezd: Pouzite FWHM={float(_dao_fw):.2f}, Sigma={float(sig_req):.2f}"
     )
     sig_try: list[float] = []
     for s in (sig_req, 2.0, 1.2, 1.0):
@@ -4838,10 +4838,10 @@ def solve_wcs_with_local_gaia(
         used_sig = float(best_sig)
     if used_sig < sig_req - 1e-9:
         log_event(
-            f"VYVAR platesolve: DAO fallback sigma {sig_req:.2f} -> {used_sig:.2f} (pre slabé/šumové pole)."
+            f"VYVAR platesolve: DAO fallback sigma {sig_req:.2f} -> {used_sig:.2f} (pre slabe/sumove pole)."
         )
     if tbl is None or len(tbl) < 6:
-        return {"solved": False, "reason": "VYVAR solver: málo DAO detekcií (skús nižší prah σ)."}
+        return {"solved": False, "reason": "VYVAR solver: malo DAO detekcii (skus nizsi prah sigma)."}
 
     tbl = tbl[np.isfinite(tbl["xcentroid"]) & np.isfinite(tbl["ycentroid"]) & np.isfinite(tbl["flux"])]
     flux_arr = np.asarray(tbl["flux"], dtype=np.float64)
@@ -4871,7 +4871,7 @@ def solve_wcs_with_local_gaia(
         )
     n_img = len(xs)
     if n_img < 6:
-        return {"solved": False, "reason": "VYVAR solver: po orezaní málo hviezd na snímke."}
+        return {"solved": False, "reason": "VYVAR solver: po orezani malo hviezd na snimke."}
 
     xs_native = np.asarray(xs, dtype=np.float64, copy=True)
     ys_native = np.asarray(ys, dtype=np.float64, copy=True)
@@ -4895,7 +4895,7 @@ def solve_wcs_with_local_gaia(
     if probe0 is None:
         return {
             "solved": False,
-            "reason": "VYVAR solver: nenašiel som zhodný trojuholník (skús iný FOV alebo presnejší RA/Dec).",
+            "reason": "VYVAR solver: nenasiel som zhodny trojuholnik (skus iny FOV alebo presnejsi RA/Dec).",
         }
     # If we only have a blind hint, the DB/config plate scale can be wrong (common after equipment DB edits).
     # When the initial probe match is weak, retry without scale filtering / with wide scale tolerance.
@@ -4907,7 +4907,7 @@ def solve_wcs_with_local_gaia(
     _hint_is_blind2 = "blind solver" in _coord_src_l3
     if _hint_is_blind2 and _probe_rate0 < 0.06:
         log_event(
-            f"INFO: Blind hint + weak initial probe ({_probe_rate0 * 100.0:.1f}%) — retry triangle probe "
+            f"INFO: Blind hint + weak initial probe ({_probe_rate0 * 100.0:.1f}%) - retry triangle probe "
             "bez scale filtra (wide tolerance)."
         )
         probe_relaxed = _gaia_triangle_greedy_orientation_probe(
@@ -4931,14 +4931,14 @@ def solve_wcs_with_local_gaia(
                 _pr2 = 0.0
             if _pr2 > _probe_rate0 + 0.02:
                 log_event(
-                    f"INFO: Relaxed probe improved match_rate {(_probe_rate0 * 100.0):.1f}% → {(_pr2 * 100.0):.1f}%."
+                    f"INFO: Relaxed probe improved match_rate {(_probe_rate0 * 100.0):.1f}% -> {(_pr2 * 100.0):.1f}%."
                 )
                 probe0 = probe_relaxed
 
     ori_candidates: list[tuple[str, bool, bool, dict[str, Any]]] = [("native", False, False, probe0)]
     _probe_rate0 = float(probe0["match_rate"])
-    # Slabý native match: vždy otestovať zrkadlá. MASTERSTAR: legacy path vždy porovná zrkadlá
-    # (anchor-validated); ROWORDER skip len keď explicitne vypnutý legacy režim.
+    # Slaby native match: vzdy otestovat zrkadla. MASTERSTAR: legacy path vzdy porovna zrkadla
+    # (anchor-validated); ROWORDER skip len ked explicitne vypnuty legacy rezim.
     _preferred = str(preferred_mirror or "").strip().lower() or None
     if _preferred not in {"native", "mirror_x", "mirror_y", "mirror_xy"}:
         _preferred = None
@@ -4957,8 +4957,8 @@ def solve_wcs_with_local_gaia(
         )
         if _roworder_native_ok:
             log_event(
-                f"INFO: FITS ROWORDER native parity {float(_probe_rate0) * 100.0:.1f}% — "
-                "mirror sweep preskočený (fallback len pri native < 10%)."
+                f"INFO: FITS ROWORDER native parity {float(_probe_rate0) * 100.0:.1f}% - "
+                "mirror sweep preskoceny (fallback len pri native < 10%)."
             )
     if _mirror_sweep:
         mirrors = [("mirror_x", True, False), ("mirror_y", False, True), ("mirror_xy", True, True)]
@@ -4997,7 +4997,7 @@ def solve_wcs_with_local_gaia(
                     try:
                         if float(pr.get("match_rate", 0.0) or 0.0) > 0.50:
                             log_event(
-                                f"INFO: Preferred mirror '{name}' potvrdený ({float(pr.get('match_rate', 0.0)) * 100.0:.1f}%) — skracujem probe."
+                                f"INFO: Preferred mirror '{name}' potvrdeny ({float(pr.get('match_rate', 0.0)) * 100.0:.1f}%) - skracujem probe."
                             )
                             break
                     except Exception:  # noqa: BLE001
@@ -5009,8 +5009,8 @@ def solve_wcs_with_local_gaia(
     )
     if _is_masterstar and len(ori_candidates) > 1:
         log_event(
-            f"VYVAR MASTERSTAR mirror sweep: native={_probe_rate0 * 100.0:.1f}% → "
-            f"výber={_best_name} ({float(best['match_rate']) * 100.0:.1f}%)."
+            f"VYVAR MASTERSTAR mirror sweep: native={_probe_rate0 * 100.0:.1f}% -> "
+            f"vyber={_best_name} ({float(best['match_rate']) * 100.0:.1f}%)."
         )
 
     cat_df = best["cat_df"]
@@ -5023,8 +5023,8 @@ def solve_wcs_with_local_gaia(
 
     if best_fx or best_fy:
         log_event(
-            f"VYVAR mirror probe: native match_rate={_probe_rate0 * 100.0:.1f}% → "
-            f"winner={_best_name} ({float(best['match_rate']) * 100.0:.1f}%) → "
+            f"VYVAR mirror probe: native match_rate={_probe_rate0 * 100.0:.1f}% -> "
+            f"winner={_best_name} ({float(best['match_rate']) * 100.0:.1f}%) -> "
             "native-pixel WCS refit (CD/PC vs. DAO/SIPS frame)."
         )
         pxa_m = np.asarray(pairs_x, dtype=np.float64)
@@ -5182,7 +5182,7 @@ def solve_wcs_with_local_gaia(
             wcs_final = w_lin
             sip_meta["sip_pass1_deferred"] = True
 
-            # Refine pass 2: wide greedy match → refit TAN+SIP (deep cone when enabled).
+            # Refine pass 2: wide greedy match -> refit TAN+SIP (deep cone when enabled).
             if bool(solver_use_cone_for_sip):
                 _ra_sip = cat_df_cone_full["ra_deg"].to_numpy(dtype=np.float64)
                 _de_sip = cat_df_cone_full["dec_deg"].to_numpy(dtype=np.float64)
@@ -5243,16 +5243,16 @@ def solve_wcs_with_local_gaia(
                         pairs_x, pairs_y, pairs_ra, pairs_de = prx, pry, prra, prde
                         log_event(
                             "VYVAR full-pair refit: ADOPTED "
-                            f"rms {rms_prev:.2f}→{rms_new:.2f}px "
-                            f"pairs {n_coarse}→{len(prx)} "
-                            f"match_rate {_mr_before_refine * 100.0:.1f}%→{_mr_full_pairs * 100.0:.1f}%"
+                            f"rms {rms_prev:.2f}->{rms_new:.2f}px "
+                            f"pairs {n_coarse}->{len(prx)} "
+                            f"match_rate {_mr_before_refine * 100.0:.1f}%->{_mr_full_pairs * 100.0:.1f}%"
                         )
                     else:
                         sip_meta["refine_full_pairs_applied"] = False
                         sip_meta["refine_full_pairs_rejected"] = "rms_regression"
                         log_event(
                             "VYVAR full-pair refit: REJECTED rms_regression "
-                            f"rms {rms_prev:.2f}→{rms_new:.2f}px (limit {rms_prev * 1.08:.2f}px) "
+                            f"rms {rms_prev:.2f}->{rms_new:.2f}px (limit {rms_prev * 1.08:.2f}px) "
                             f"pairs={len(prx)} match_rate={_mr_full_pairs * 100.0:.1f}%"
                         )
                 except Exception as _ref_exc:  # noqa: BLE001
@@ -5264,7 +5264,7 @@ def solve_wcs_with_local_gaia(
                 sip_meta["refine_full_pairs_skipped"] = "too_few_pairs"
                 log_event(
                     f"VYVAR full-pair refit: SKIPPED too_few_pairs n={len(prx)} "
-                    f"(gate ≥5, coarse had {n_coarse})"
+                    f"(gate >=5, coarse had {n_coarse})"
                 )
         except Exception:  # noqa: BLE001
             wcs_final = wcs_init
@@ -5287,8 +5287,8 @@ def solve_wcs_with_local_gaia(
             sip_meta["cone_hint_vs_wcs_center_deg"] = _off_deg
             if math.isfinite(_off_deg) and _off_deg >= 0.05:
                 log_event(
-                    f"VYVAR MASTERSTAR cone recenter: header hint vs WCS center = {_off_deg:.3f}° "
-                    "— Gaia re-query at solved center + full-pair refit pass 3."
+                    f"VYVAR MASTERSTAR cone recenter: header hint vs WCS center = {_off_deg:.3f} deg "
+                    "- Gaia re-query at solved center + full-pair refit pass 3."
                 )
                 (
                     _cat_df_rc,
@@ -5346,7 +5346,7 @@ def solve_wcs_with_local_gaia(
                 _mr_rc = float(len(prx3)) / float(max(1, int(n_img)))
                 log_event(
                     f"VYVAR cone recenter refit: n_pairs={len(prx3)} "
-                    f"match_rate {_mr_before_rc * 100.0:.1f}%→{_mr_rc * 100.0:.1f}%"
+                    f"match_rate {_mr_before_rc * 100.0:.1f}%->{_mr_rc * 100.0:.1f}%"
                 )
                 if len(prx3) >= 5:
                     world_m3 = SkyCoord(
@@ -5372,15 +5372,15 @@ def solve_wcs_with_local_gaia(
                         sip_meta["cone_recenter_match_rate"] = float(_mr_rc)
                         sip_meta.update(sip_pass3)
                         log_event(
-                            f"VYVAR cone recenter refit: ADOPTED rms {rms_prev3:.2f}→{rms_new3:.2f}px "
+                            f"VYVAR cone recenter refit: ADOPTED rms {rms_prev3:.2f}->{rms_new3:.2f}px "
                             f"pairs {len(prx3)} match_rate={_mr_rc * 100.0:.1f}%"
                         )
                     else:
                         sip_meta["cone_recenter_refit_applied"] = False
                         log_event(
                             f"VYVAR cone recenter refit: REJECTED "
-                            f"rms {rms_prev3:.2f}→{rms_new3:.2f}px "
-                            f"match {_mr_before_rc * 100.0:.1f}%→{_mr_rc * 100.0:.1f}%"
+                            f"rms {rms_prev3:.2f}->{rms_new3:.2f}px "
+                            f"match {_mr_before_rc * 100.0:.1f}%->{_mr_rc * 100.0:.1f}%"
                         )
         except Exception as _rc_exc:  # noqa: BLE001
             sip_meta["cone_recenter_error"] = repr(_rc_exc)
@@ -5397,8 +5397,8 @@ def solve_wcs_with_local_gaia(
                     np.asarray(pairs_de, dtype=np.float64),
                 )
                 if _emp_s is not None and math.isfinite(_emp_s) and float(_emp_s) > 0:
-                    # Ak sa empiria líši od optickej mierky z hlavičky >10 %, never jej (zlé páry / konfúzia
-                    # dávali napr. ~12"/px namiesto ~9.55"/px a rozbíjali FITS WCS).
+                    # Ak sa empiria lisi od optickej mierky z hlavicky >10 %, never jej (zle pary / konfuzia
+                    # davali napr. ~12"/px namiesto ~9.55"/px a rozbijali FITS WCS).
                     if _exp_scale is not None:
                         try:
                             _rel_hdr = abs(float(_emp_s) / float(_exp_scale) - 1.0)
@@ -5406,8 +5406,8 @@ def solve_wcs_with_local_gaia(
                             _rel_hdr = 1.0
                         if _rel_hdr > 0.10:
                             log_event(
-                                f"VYVAR: empirická mierka z párov {float(_emp_s):.3f} arcsec/px vs hlavička "
-                                f"{float(_exp_scale):.3f} (Δ {_rel_hdr*100:.1f}%) — CD škálovanie z párov preskočené."
+                                f"VYVAR: empiricka mierka z parov {float(_emp_s):.3f} arcsec/px vs hlavicka "
+                                f"{float(_exp_scale):.3f} (Delta {_rel_hdr*100:.1f}%) - CD skalovanie z parov preskocene."
                             )
                             _emp_s = None
                 if _emp_s is not None and math.isfinite(_emp_s) and float(_emp_s) > 0:
@@ -5422,7 +5422,7 @@ def solve_wcs_with_local_gaia(
                         sip_meta["cd_rescaled_to_empirical_scale"] = True
                         sip_meta["plate_scale_empirical_arcsec_per_px"] = float(_emp_s)
                         log_event(
-                            f"VYVAR WCS: CD/PC škálované podľa empirie z párov hviezd ≈ {float(_emp_s):.3f} arcsec/px"
+                            f"VYVAR WCS: CD/PC skalovane podla empirie z parov hviezd ~ {float(_emp_s):.3f} arcsec/px"
                         )
             except Exception:  # noqa: BLE001
                 pass
@@ -5438,12 +5438,12 @@ def solve_wcs_with_local_gaia(
                 wcs_final = w_adj
                 sip_meta["cd_rescaled_to_expected_scale"] = True
                 log_event(
-                    f"VYVAR WCS: CD/PC škálované podľa optickej mierky {float(_exp_scale):.3f} arcsec/px"
+                    f"VYVAR WCS: CD/PC skalovane podla optickej mierky {float(_exp_scale):.3f} arcsec/px"
                 )
         elif (not _cd_rescaled_any) and (_exp_scale is not None) and (not bool(_allow_expected_cd_rescale)):
             log_event(
-                f"VYVAR WCS: vynechávam CD/PC škálovanie podľa očakávanej mierky {float(_exp_scale):.3f} arcsec/px "
-                "(blind hint + expected scale z DB/config môže byť nesprávna)."
+                f"VYVAR WCS: vynechavam CD/PC skalovanie podla ocakavanej mierky {float(_exp_scale):.3f} arcsec/px "
+                "(blind hint + expected scale z DB/config moze byt nespravna)."
             )
 
     # Critical: if match rate is low but solution is not rejected, force SIP4 refit to fix edge residuals.
@@ -5495,13 +5495,13 @@ def solve_wcs_with_local_gaia(
                 sip_meta.update(sip_force)
                 sip_meta["sip_force_low_match_rate"] = True
                 log_event(
-                    "VYVAR: Low match_rate → forcing SIP refit (TAN-SIP) for edge correction."
+                    "VYVAR: Low match_rate -> forcing SIP refit (TAN-SIP) for edge correction."
                 )
         except Exception:  # noqa: BLE001
             pass
 
-    # So SIP: CD/PC škálovanie podľa optiky sa v bloku vyššie preskočí (sip is not None). Zlý lineárny fit potom
-    # môže dať nefyzikálnu anizotropiu sx≠sy (napr. 7.7×12.4″/px) — QA potom „posúva“ modrú Gaia vs. raster.
+    # So SIP: CD/PC skalovanie podla optiky sa v bloku vyssie preskoci (sip is not None). Zly linearny fit potom
+    # moze dat nefyzikalnu anizotropiu sx!=sy (napr. 7.7x12.4 arcsec/px) - QA potom 'posuva' modru Gaia vs. raster.
     if _is_masterstar and _exp_scale is not None and len(pairs_x) >= max(12, int(ransac_min_pairs)):
         try:
             w_rep, rep_meta = _maybe_repair_masterstar_anisotropic_plate_scale(
@@ -5525,11 +5525,11 @@ def solve_wcs_with_local_gaia(
             pass
 
     # Association QA + the post-solve NN refine (``_solve_wcs_validate_and_refine``) use the FULL
-    # deep cone catalog ``cat_df_cone_full`` — not the bright-only triangle slice — otherwise faint
+    # deep cone catalog ``cat_df_cone_full`` - not the bright-only triangle slice - otherwise faint
     # DAO peaks look "unmatched" and match% is misleadingly low.
     # NOTE (robustness audit): ``cat_df_assoc`` feeds the NN pair re-matching that can refine the
     # final WCS/SIP, so it MUST remain the deep cone. An earlier slice-rebuild here referenced
-    # out-of-scope bbox names (``ra_min``/``de_min``/``_obs_year`` — locals of
+    # out-of-scope bbox names (``ra_min``/``de_min``/``_obs_year`` - locals of
     # ``_solve_wcs_build_catalog``) and therefore NameError'd on every call, silently falling back
     # to this exact assignment. Removed the dead block to drop the latent NameError WITHOUT changing
     # the catalog that drives the solve (guaranteed no-op vs prior runtime behaviour).
@@ -5604,8 +5604,8 @@ def solve_wcs_with_local_gaia(
             )
             if _bl_fb is not None:
                 log_event(
-                    "INFO: MASTERSTAR validation failed — blind fallback retry "
-                    f"(prior hint {float(ra0):.4f},{float(de0):.4f} → blind {float(_bl_fb[0]):.4f},{float(_bl_fb[1]):.4f})."
+                    "INFO: MASTERSTAR validation failed - blind fallback retry "
+                    f"(prior hint {float(ra0):.4f},{float(de0):.4f} -> blind {float(_bl_fb[0]):.4f},{float(_bl_fb[1]):.4f})."
                 )
                 return solve_wcs_with_local_gaia(
                     fits_path,
@@ -5729,7 +5729,7 @@ def solve_wcs_with_local_gaia(
 
 
 # ---------------------------------------------------------------------------
-# Pass 2 — sibling-WCS recovery (validated in sandbox/sibling_wcs_recovery_test.py)
+# Pass 2 - sibling-WCS recovery (validated in sandbox/sibling_wcs_recovery_test.py)
 # ---------------------------------------------------------------------------
 
 SIBLING_WCS_TIGHT_PX: float = 2.5
@@ -5754,7 +5754,7 @@ FILTER_EFFECTIVE_WAVELENGTH_NM: dict[str, float] = {
 
 
 def filter_code_from_setup_name(setup: str) -> str:
-    """Extract filter token from setup folder name (e.g. ``g_60_4`` → ``g``)."""
+    """Extract filter token from setup folder name (e.g. ``g_60_4`` -> ``g``)."""
     s = str(setup or "").strip()
     if not s or s.casefold() == "(root)":
         return ""

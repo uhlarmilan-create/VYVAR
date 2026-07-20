@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sky-gradient / TODO-SKY-PLANE decision metric — drafts 361 & 362 (read-only)."""
+"""Sky-gradient / TODO-SKY-PLANE decision metric - drafts 361 & 362 (read-only)."""
 from __future__ import annotations
 
 import json
@@ -392,7 +392,7 @@ def run_draft(draft_id: int, *, cfg: AppConfig, db: VyvarDatabase) -> dict[str, 
 
 def _format_report(results: list[dict[str, Any]], *, psf_flags: dict[str, bool]) -> str:
     lines = [
-        "SKY GRADIENT / TODO-SKY-PLANE — drafts 361 & 362 (NoFilter_60_2)",
+        "SKY GRADIENT / TODO-SKY-PLANE - drafts 361 & 362 (NoFilter_60_2)",
         f"Generated: {datetime.now(timezone.utc).isoformat(timespec='seconds')}",
         "Decision metric: plane-vs-median sky difference vs photometric error (not raw gradient alone).",
         f"PSF flags unchanged: {psf_flags}",
@@ -403,7 +403,7 @@ def _format_report(results: list[dict[str, Any]], *, psf_flags: dict[str, bool])
         fg = r["frame_gradient"]
         lm = r["local_metric"]
         sep = r.get("comp_target_separation_deg") or {}
-        lines.append(f"=== Draft {did} ({r['setup']}) — {r.get('rig')} ===")
+        lines.append(f"=== Draft {did} ({r['setup']}) - {r.get('rig')} ===")
         lines.append(
             f"  Plate scale {r['plate_scale_arcsec_px']:.3f} \"/px | FWHM {r['fwhm_px']:.2f} px"
             f" | annulus {r['ann_in_px']:.1f}-{r['ann_out_px']:.1f} px | {r['n_frames_total']} frames"
@@ -442,10 +442,10 @@ def _format_report(results: list[dict[str, Any]], *, psf_flags: dict[str, bool])
         )
         if sep:
             lines.append(
-                f"  Comp-target separation: nearest comp median {sep.get('nearest_comp_deg_median', float('nan')):.3f}°"
-                f" (p90 {sep.get('nearest_comp_deg_p90', float('nan')):.3f}°)"
-                f" | all pairs median {sep.get('all_target_comp_deg_median', float('nan')):.3f}°"
-                f" — wide field -> local sky tilts differ between comp and target."
+                f"  Comp-target separation: nearest comp median {sep.get('nearest_comp_deg_median', float('nan')):.3f} deg"
+                f" (p90 {sep.get('nearest_comp_deg_p90', float('nan')):.3f} deg)"
+                f" | all pairs median {sep.get('all_target_comp_deg_median', float('nan')):.3f} deg"
+                f" - wide field -> local sky tilts differ between comp and target."
             )
         lines.append("")
     lines.append("=== VERDICT INPUT ===")

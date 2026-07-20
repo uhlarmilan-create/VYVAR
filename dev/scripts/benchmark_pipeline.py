@@ -73,7 +73,7 @@ def run_benchmarks(draft_path: str, setup: str) -> None:
     print(f"  {'Total rows / MB':<55} {total_rows:,} rows / {total_mb:.1f} MB")
 
     pivot = pd.DataFrame()
-    with bench("Build flux pivot (stars × frames)"):
+    with bench("Build flux pivot (stars x frames)"):
         long = pd.concat(
             [
                 d[["catalog_id", "dao_flux"]].assign(frame=i)
@@ -114,7 +114,7 @@ def run_benchmarks(draft_path: str, setup: str) -> None:
                     _ = h[0].header.copy()
                     _ = h[0].data.copy() if h[0].data is not None else None
     else:
-        print("  (no processed FITS found — skipping)")
+        print("  (no processed FITS found - skipping)")
 
     # ------------------------------------------------------------------ #
     # 3. Gaia DB
@@ -162,7 +162,7 @@ def run_benchmarks(draft_path: str, setup: str) -> None:
                     ).fetchall()
         print(f"  {'Batch returned':<55} {len(rows)} rows")
     else:
-        print("  (active_targets.csv or Gaia DB not found — skipping)")
+        print("  (active_targets.csv or Gaia DB not found - skipping)")
 
     # ------------------------------------------------------------------ #
     # 4. Phase 2A simulation
@@ -177,7 +177,7 @@ def run_benchmarks(draft_path: str, setup: str) -> None:
         t_n = len(summary_df)
         target_cids = summary_df["catalog_id"].dropna().tolist()[:20]
 
-        with bench(f"Per-target flux lookup — Python loop (T={min(t_n, 20)}, N={n_frames})"):
+        with bench(f"Per-target flux lookup - Python loop (T={min(t_n, 20)}, N={n_frames})"):
             for cid in target_cids:
                 for df in all_dfs:
                     if "catalog_id" not in df.columns or "dao_flux" not in df.columns:
@@ -186,12 +186,12 @@ def run_benchmarks(draft_path: str, setup: str) -> None:
                     if not row.empty:
                         _ = row["dao_flux"].iloc[0]
 
-        with bench(f"Per-target flux lookup — pivot slice (T={min(t_n, 20)})"):
+        with bench(f"Per-target flux lookup - pivot slice (T={min(t_n, 20)})"):
             for cid in target_cids:
                 if cid in pivot.index:
                     _ = pivot.loc[cid].values
     else:
-        print("  (comparison_stars or summary CSV not found — skipping)")
+        print("  (comparison_stars or summary CSV not found - skipping)")
 
     # ------------------------------------------------------------------ #
     # 5. Variability matrix
@@ -207,7 +207,7 @@ def run_benchmarks(draft_path: str, setup: str) -> None:
         except Exception as exc:  # noqa: BLE001
             print(f"  (skipped: {exc})")
 
-    # Test cache path speedup (TODO-PERF-6 — same as Phase 2A after RUN VYVAR)
+    # Test cache path speedup (TODO-PERF-6 - same as Phase 2A after RUN VYVAR)
     with bench("load_field_flux_matrix WITH cache (simulated)"):
         try:
             cache = {str(csv_files[i]): all_dfs[i] for i in range(len(csv_files))}

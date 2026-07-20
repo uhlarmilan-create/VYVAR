@@ -1,4 +1,4 @@
-"""DAO vs Gaia→pixel reziduály pre MASTERSTAR (použitie z UI aj z CLI)."""
+"""DAO vs Gaia->pixel rezidualy pre MASTERSTAR (pouzitie z UI aj z CLI)."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from gaia_catalog_id import masterstar_row_gaia_key, normalize_gaia_source_id
 
 
 def resolve_paths_from_archive(archive_root: Path | str) -> tuple[Path, Path, Path | None]:
-    """Vráti (MASTERSTAR.fits, masterstars csv, field_catalog_cone alebo None)."""
+    """Vrati (MASTERSTAR.fits, masterstars csv, field_catalog_cone alebo None)."""
     root = Path(archive_root)
     ps = root / "platesolve"
     fits_path = ps / "MASTERSTAR.fits"
@@ -36,7 +36,7 @@ def _load_wcs_from_fits(fits_path: Path):
         simplefilter("ignore", FITSFixedWarning)
         w = WCS(hdr)
     if not getattr(w, "has_celestial", False):
-        raise ValueError("FITS nemá použiteľný celestný WCS (has_celestial=False).")
+        raise ValueError("FITS nema pouzitelny celestny WCS (has_celestial=False).")
     return w, hdr
 
 
@@ -62,17 +62,17 @@ def _stats_lines(dx: np.ndarray, dy: np.ndarray, label: str) -> list[str]:
     lines: list[str] = []
     ok = np.isfinite(dx) & np.isfinite(dy)
     if not np.any(ok):
-        lines.append(f"{label}: žiadne platné páry.")
+        lines.append(f"{label}: ziadne platne pary.")
         return lines
     ddx = dx[ok]
     ddy = dy[ok]
     dr = np.hypot(ddx, ddy)
     lines.append(f"\n=== {label} (N={int(np.sum(ok))}) ===")
     lines.append(
-        f"  dx [px]: median={np.median(ddx):+.4f}  MAD≈{np.median(np.abs(ddx - np.median(ddx))) * 1.4826:.4f}"
+        f"  dx [px]: median={np.median(ddx):+.4f}  MAD~{np.median(np.abs(ddx - np.median(ddx))) * 1.4826:.4f}"
     )
     lines.append(
-        f"  dy [px]: median={np.median(ddy):+.4f}  MAD≈{np.median(np.abs(ddy - np.median(ddy))) * 1.4826:.4f}"
+        f"  dy [px]: median={np.median(ddy):+.4f}  MAD~{np.median(np.abs(ddy - np.median(ddy))) * 1.4826:.4f}"
     )
     lines.append(f"  |dr| [px]: median={np.median(dr):.4f}  RMS={float(np.sqrt(np.mean(dr**2))):.4f}")
     lines.append(
@@ -87,7 +87,7 @@ def _worst_table_lines(ms: pd.DataFrame, cols: list[str], n: int) -> list[str]:
     if n <= 0 or ms.empty or "dr" not in ms.columns:
         return lines
     sub = ms[cols].copy().sort_values("dr", ascending=False).head(n)
-    lines.append(f"\n--- Top {len(sub)} najhorších (podľa |dr|) ---")
+    lines.append(f"\n--- Top {len(sub)} najhorsich (podla |dr|) ---")
     buf = StringIO()
     with pd.option_context("display.max_columns", None, "display.width", 200):
         buf.write(sub.to_string(index=False))
@@ -102,7 +102,7 @@ def run_masterstar_wcs_dao_diagnostic(
     cone_path: Path | str | None = None,
     worst_n: int = 12,
 ) -> str:
-    """Vráti viacriadkový textový report (round-trip WCS + DAO vs Gaia→pixel ak je kužeľ)."""
+    """Vrati viacriadkovy textovy report (round-trip WCS + DAO vs Gaia->pixel ak je kuzel)."""
     fits_path = Path(fits_path)
     csv_path = Path(csv_path)
     cone_p: Path | None = Path(cone_path) if cone_path else None
@@ -110,9 +110,9 @@ def run_masterstar_wcs_dao_diagnostic(
         cone_p = None
 
     if not fits_path.is_file():
-        raise ValueError(f"Chýba FITS: {fits_path}")
+        raise ValueError(f"Chyba FITS: {fits_path}")
     if not csv_path.is_file():
-        raise ValueError(f"Chýba CSV: {csv_path}")
+        raise ValueError(f"Chyba CSV: {csv_path}")
 
     out: list[str] = []
 
@@ -120,7 +120,7 @@ def run_masterstar_wcs_dao_diagnostic(
     ms = pd.read_csv(csv_path)
     need = {"x", "y", "ra_deg", "dec_deg"}
     if not need.issubset(set(ms.columns)):
-        raise ValueError(f"V CSV chýbajú stĺpce {need - set(ms.columns)}.")
+        raise ValueError(f"V CSV chybaju stlpce {need - set(ms.columns)}.")
 
     x_dao = pd.to_numeric(ms["x"], errors="coerce").to_numpy(dtype=np.float64)
     y_dao = pd.to_numeric(ms["y"], errors="coerce").to_numpy(dtype=np.float64)
@@ -130,19 +130,19 @@ def run_masterstar_wcs_dao_diagnostic(
     x_rt, y_rt = _world_to_pix_xy(w, ra_csv, de_csv)
     dx_rt = x_dao - x_rt
     dy_rt = y_dao - y_rt
-    out.extend(_stats_lines(dx_rt, dy_rt, "Round-trip: DAO(x,y) − world_to_pixel(CSV ra_deg/dec_deg z DAO)"))
+    out.extend(_stats_lines(dx_rt, dy_rt, "Round-trip: DAO(x,y) - world_to_pixel(CSV ra_deg/dec_deg z DAO)"))
 
     med_rt = float(np.median(np.hypot(dx_rt, dy_rt)[np.isfinite(dx_rt) & np.isfinite(dy_rt)]))
 
     if "catalog_id" not in ms.columns:
-        out.append("\n(Stĺpec catalog_id chýba — preskočená Gaia→pixel časť.)")
-        out.append("\n--- Stručný záver ---")
+        out.append("\n(Stlpec catalog_id chyba - preskocena Gaia->pixel cast.)")
+        out.append("\n--- Strucny zaver ---")
         if math.isfinite(med_rt) and med_rt > 0.5:
             out.append(
-                f"Round-trip median |dr|={med_rt:.2f} px — WCS sa môže líšiť od stavu pri exporte CSV alebo SIP/konvencia."
+                f"Round-trip median |dr|={med_rt:.2f} px - WCS sa moze lisit od stavu pri exporte CSV alebo SIP/konvencia."
             )
         elif math.isfinite(med_rt):
-            out.append(f"Round-trip median |dr|={med_rt:.3f} px — WCS je interne konzistentný s CSV ra/dec (DAO).")
+            out.append(f"Round-trip median |dr|={med_rt:.3f} px - WCS je interne konzistentny s CSV ra/dec (DAO).")
         out.append(f"\nFITS: {fits_path.resolve()}")
         out.append(f"CSV:  {csv_path.resolve()}")
         out.append(f"Cone: {str(cone_p.resolve()) if cone_p is not None else '(n/a)'}")
@@ -158,13 +158,13 @@ def run_masterstar_wcs_dao_diagnostic(
 
     if cone_p is None:
         out.append(
-            "Bez field_catalog_cone.csv nie sú k dispozícii skutočné Gaia RA/Dec z kužela — "
-            "spusti pipeline s exportom kužela alebo zadaj cestu v CLI (--cone)."
+            "Bez field_catalog_cone.csv nie su k dispozicii skutocne Gaia RA/Dec z kuzela - "
+            "spusti pipeline s exportom kuzela alebo zadaj cestu v CLI (--cone)."
         )
     else:
         fc = pd.read_csv(cone_p)
         if "catalog_id" not in fc.columns or "ra_deg" not in fc.columns or "dec_deg" not in fc.columns:
-            raise ValueError("field_catalog_cone.csv očakáva stĺpce catalog_id, ra_deg, dec_deg.")
+            raise ValueError("field_catalog_cone.csv ocakava stlpce catalog_id, ra_deg, dec_deg.")
 
         fc = fc.copy()
         fc["_k"] = fc["catalog_id"].map(normalize_gaia_source_id)
@@ -176,12 +176,12 @@ def run_masterstar_wcs_dao_diagnostic(
         hit = sub["_k"].isin(cmap.index)
         n_hit = int(hit.sum())
         out.append(
-            f"Z toho nájdených v field_catalog_cone.csv: {n_hit} "
-            f"(join kľúč: normalizovaný catalog_id, príp. stĺpec name ak je číselný Gaia ID)"
+            f"Z toho najdenych v field_catalog_cone.csv: {n_hit} "
+            f"(join kluc: normalizovany catalog_id, prip. stlpec name ak je ciselny Gaia ID)"
         )
 
         if n_hit == 0:
-            out.append("Žiadny prienik catalog_id — skontroluj, či kužeľ patrí k tomu istému behu pipeline.")
+            out.append("Ziadny prienik catalog_id - skontroluj, ci kuzel patri k tomu istemu behu pipeline.")
         else:
             sub = sub.loc[hit]
             _keys = sub["_k"].to_numpy(dtype=object)
@@ -192,7 +192,7 @@ def run_masterstar_wcs_dao_diagnostic(
             yd = pd.to_numeric(sub["y"], errors="coerce").to_numpy(dtype=np.float64)
             dx_g = xd - x_g
             dy_g = yd - y_g
-            out.extend(_stats_lines(dx_g, dy_g, "DAO − world_to_pixel(Gaia RA/Dec z field_catalog_cone)"))
+            out.extend(_stats_lines(dx_g, dy_g, "DAO - world_to_pixel(Gaia RA/Dec z field_catalog_cone)"))
 
             dr = np.hypot(dx_g, dy_g)
             med_dr = float(np.median(dr[np.isfinite(dr)])) if np.any(np.isfinite(dr)) else float("nan")
@@ -221,10 +221,10 @@ def run_masterstar_wcs_dao_diagnostic(
             if "match_sep_arcsec" in sub.columns:
                 sep = pd.to_numeric(sub["match_sep_arcsec"], errors="coerce").to_numpy(dtype=np.float64)
                 out.append(
-                    "\n(Poznámka: riadky s veľkým match_sep_arcsec sú často „zlé páry“ voči Gaia — "
-                    "umelo zväčšujú median |dr| nižšie.)"
+                    "\n(Poznamka: riadky s velkym match_sep_arcsec su casto 'zle pary' voci Gaia - "
+                    "umelo zvacsuju median |dr| nizsie.)"
                 )
-                for thr_arc, label in ((1.0, "≤1.0″"), (2.0, "≤2.0″"), (5.0, "≤5.0″")):
+                for thr_arc, label in ((1.0, "<=1.0 arcsec"), (2.0, "<=2.0 arcsec"), (5.0, "<=5.0 arcsec")):
                     m = np.isfinite(dx_g) & np.isfinite(dy_g) & np.isfinite(sep) & (sep <= thr_arc)
                     n_sub = int(np.count_nonzero(m))
                     if n_sub >= 8:
@@ -232,7 +232,7 @@ def run_masterstar_wcs_dao_diagnostic(
                             _stats_lines(
                                 dx_g[m],
                                 dy_g[m],
-                                f"DAO − Gaia→pixel (iba match_sep_arcsec {label}, N={n_sub})",
+                                f"DAO - Gaia->pixel (iba match_sep_arcsec {label}, N={n_sub})",
                             )
                         )
                         if thr_arc == 2.0:
@@ -240,36 +240,36 @@ def run_masterstar_wcs_dao_diagnostic(
                             med_dr_tight_2as = float(np.median(dr_t)) if np.any(np.isfinite(dr_t)) else float("nan")
                 if math.isfinite(med_dr_tight_2as):
                     out.append(
-                        f"\nPre zhody ≤2″: median |dr|={med_dr_tight_2as:.3f} px "
-                        f"(lepší indikátor WCS než zmiešaná množina so širokými separáciami)."
+                        f"\nPre zhody <=2 arcsec: median |dr|={med_dr_tight_2as:.3f} px "
+                        f"(lepsi indikator WCS nez zmiesana mnozina so sirokymi separaciami)."
                     )
 
-    out.append("\n--- Stručný záver ---")
+    out.append("\n--- Strucny zaver ---")
     if math.isfinite(med_rt) and med_rt > 0.5:
         out.append(
-            f"Round-trip median |dr|={med_rt:.2f} px — WCS v súbore sa pravdepodobne líši od stavu pri exporte CSV, "
-            "alebo je problém so SIP/konvenciou pixlov."
+            f"Round-trip median |dr|={med_rt:.2f} px - WCS v subore sa pravdepodobne lisi od stavu pri exporte CSV, "
+            "alebo je problem so SIP/konvenciou pixlov."
         )
     elif math.isfinite(med_rt):
-        out.append(f"Round-trip median |dr|={med_rt:.3f} px — WCS je interne konzistentný s CSV ra/dec (DAO).")
+        out.append(f"Round-trip median |dr|={med_rt:.3f} px - WCS je interne konzistentny s CSV ra/dec (DAO).")
 
     if math.isfinite(med_dr):
         if med_dr > 2.0:
             out.append(
-                f"Gaia→pixel (všetky spárované v joini) median |dr|={med_dr:.2f} px — "
-                "pri veľkom match_sep_arcsec ide často o zlé páry, nie čisto o WCS; pozri filtrované bloky vyššie."
+                f"Gaia->pixel (vsetky sparovane v joini) median |dr|={med_dr:.2f} px - "
+                "pri velkom match_sep_arcsec ide casto o zle pary, nie cisto o WCS; pozri filtrovane bloky vyssie."
             )
         else:
             out.append(
-                f"Gaia→pixel median |dr|={med_dr:.2f} px — pod ~2 px často akceptovateľné; over vizuálne na jasných hviezdach."
+                f"Gaia->pixel median |dr|={med_dr:.2f} px - pod ~2 px casto akceptovatelne; over vizualne na jasnych hviezdach."
             )
         if math.isfinite(med_dr_tight_2as) and med_dr > med_dr_tight_2as + 0.5:
             out.append(
-                f"Pre úzke zhody (≤2″) bol median |dr|≈{med_dr_tight_2as:.2f} px oproti {med_dr:.2f} px celkom — "
-                "globálna hodnota bola zmazaná širokými zhodami."
+                f"Pre uzke zhody (<=2 arcsec) bol median |dr|~{med_dr_tight_2as:.2f} px oproti {med_dr:.2f} px celkom - "
+                "globalna hodnota bola zmazana sirokymi zhodami."
             )
     elif cone_p is not None:
-        out.append("Gaia→pixel: bez platných párov pre súhrn median |dr|.")
+        out.append("Gaia->pixel: bez platnych parov pre suhrn median |dr|.")
 
     out.append(f"\nFITS: {fits_path.resolve()}")
     out.append(f"CSV:  {csv_path.resolve()}")

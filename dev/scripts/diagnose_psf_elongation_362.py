@@ -97,7 +97,7 @@ def _resolve_plate_scale_arcsec(
     telescope_id: int | None,
     cfg: AppConfig,
 ) -> tuple[float, str]:
-    """Plate scale (arcsec/px) — WCS-first, then param_resolver optics chain."""
+    """Plate scale (arcsec/px) - WCS-first, then param_resolver optics chain."""
     wcs_ps = _read_plate_scale_arcsec_px_from_fits(masterstar_fits)
     if wcs_ps is not None and math.isfinite(wcs_ps) and 0.1 <= wcs_ps <= 30.0:
         return float(wcs_ps), "WCS/CD (MASTERSTAR)"
@@ -437,13 +437,13 @@ def _verdict(med_elong: float, p75_elong: float, pa_circ_std: float) -> str:
 def _part_b_mag_bins(proc_dir: Path, masterstars_csv: Path) -> tuple[pd.DataFrame, str, pd.DataFrame]:
     proc_files = sorted(proc_dir.glob("proc_*.csv"))
     if not proc_files:
-        return pd.DataFrame(), "No proc_*.csv files — Part B skipped.", pd.DataFrame()
+        return pd.DataFrame(), "No proc_*.csv files - Part B skipped.", pd.DataFrame()
 
     sample = pd.read_csv(proc_files[0], nrows=0)
     need = {"catalog_id", "dao_flux", "psf_flux", "psf_fit_ok"}
     if not need.issubset(sample.columns):
         missing = sorted(need - set(sample.columns))
-        return pd.DataFrame(), f"proc CSV missing columns {missing} — Part B skipped.", pd.DataFrame()
+        return pd.DataFrame(), f"proc CSV missing columns {missing} - Part B skipped.", pd.DataFrame()
 
     ms = pd.read_csv(masterstars_csv, low_memory=False, usecols=lambda c: c in ("catalog_id", "mag", "catalog_mag", "phot_g_mean_mag"))
     ms["_cid"] = ms["catalog_id"].map(_norm_cid)
@@ -472,7 +472,7 @@ def _part_b_mag_bins(proc_dir: Path, masterstars_csv: Path) -> tuple[pd.DataFram
     )
     all_df = all_df.loc[ok]
     if all_df.empty:
-        return pd.DataFrame(), "No paired psf_fit_ok + dao_flux frames — Part B skipped.", pd.DataFrame()
+        return pd.DataFrame(), "No paired psf_fit_ok + dao_flux frames - Part B skipped.", pd.DataFrame()
 
     mag_map = ms.set_index("_cid")["catalog_mag_bin"].to_dict()
     cm_proc = pd.to_numeric(all_df.get("phot_g_mean_mag"), errors="coerce")
@@ -505,7 +505,7 @@ def _part_b_mag_bins(proc_dir: Path, masterstars_csv: Path) -> tuple[pd.DataFram
         )
 
     if not rows:
-        return pd.DataFrame(), "No stars with >=5 paired frames after filtering — Part B skipped.", pd.DataFrame()
+        return pd.DataFrame(), "No stars with >=5 paired frames after filtering - Part B skipped.", pd.DataFrame()
 
     star_df = pd.DataFrame(rows)
     star_df["ratio_psf_aper"] = star_df["rms_psf"] / star_df["rms_aperture"].replace(0, np.nan)
@@ -783,7 +783,7 @@ def run_diagnostic(*, draft_id: int, out_dir: Path | None = None) -> str:
             bjd_arr,
             elong_arr,
             "BJD",
-            "Median elongation (major/minor σ)",
+            "Median elongation (major/minor sigma)",
             f"Draft {draft_id}: per-frame PSF elongation vs BJD",
             f"d{draft_id}_elongation_vs_bjd.png",
         )
@@ -791,7 +791,7 @@ def run_diagnostic(*, draft_id: int, out_dir: Path | None = None) -> str:
             am_arr,
             elong_arr,
             "Airmass",
-            "Median elongation (major/minor σ)",
+            "Median elongation (major/minor sigma)",
             f"Draft {draft_id}: per-frame PSF elongation vs airmass",
             f"d{draft_id}_elongation_vs_airmass.png",
         )
@@ -799,7 +799,7 @@ def run_diagnostic(*, draft_id: int, out_dir: Path | None = None) -> str:
             bjd_arr,
             pa_arr,
             "BJD",
-            "Circular-median PA (deg, 0–180)",
+            "Circular-median PA (deg, 0-180)",
             f"Draft {draft_id}: per-frame PSF PA vs BJD",
             f"d{draft_id}_pa_vs_bjd.png",
         )
@@ -810,7 +810,7 @@ def run_diagnostic(*, draft_id: int, out_dir: Path | None = None) -> str:
 
     report_path = out_dir / f"d{draft_id}_psf_elongation_report.md"
     lines: list[str] = []
-    lines.append(f"# PSF elongation diagnostic — draft {draft_id}")
+    lines.append(f"# PSF elongation diagnostic - draft {draft_id}")
     lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     lines.append("")
     lines.append("## Resolved header")
@@ -835,7 +835,7 @@ def run_diagnostic(*, draft_id: int, out_dir: Path | None = None) -> str:
         lines.append("- median n_stars/frame used: **N/A (no successful fits)**")
     lines.append(f"- stacked ePSF epsf_asymmetry (meta): **{epsf_asym:.4f}**" if math.isfinite(epsf_asym) else "- stacked ePSF epsf_asymmetry: **missing in meta**")
     lines.append("")
-    lines.append("## Part A — per-frame elongation")
+    lines.append("## Part A - per-frame elongation")
     lines.append(f"- Gaussian fit attempts: {n_attempt}; dropped (fail/chi2): {n_drop} ({drop_rate:.1f}%)")
     if not elong_stats.empty:
         lines.append(
@@ -863,7 +863,7 @@ def run_diagnostic(*, draft_id: int, out_dir: Path | None = None) -> str:
     )
     lines.append(f"- **Verdict:** {verdict}")
     lines.append("")
-    lines.append("## Part B — aperture vs PSF RMS by magnitude")
+    lines.append("## Part B - aperture vs PSF RMS by magnitude")
     if part_b_note:
         lines.append(f"- **Skipped:** {part_b_note}")
     elif not part_b_df.empty:

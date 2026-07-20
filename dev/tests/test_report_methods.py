@@ -58,6 +58,6 @@ def test_multi_method_suffixed_paths() -> None:
 
 
 def test_report_title_suffix_only_when_multi() -> None:
-    base = "VYVAR — Summary Measure Report"
+    base = "VYVAR - Summary Measure Report"
     assert report_title(base, "aperture", active_methods=["aperture"]) == base
     assert report_title(base, "psf", active_methods=["aperture", "psf"]).endswith("[PSF photometry]")

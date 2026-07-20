@@ -11,7 +11,7 @@ inputs: stale_wcs_threshold=1.5px = 3.90"
 - recompute-invariance (p50~81" stored vs final WCS) => unmatched DET coords likely fine; test Gaia coverage
 - matched rows split: ms-gaia~0 (detection-time Gaia coords) vs ms-gaia large (optimizer assigned id without coord refresh)
 
-# T1 — Pixel-space identity test
+# T1 - Pixel-space identity test
 violating_rows (vt-ms > 2.0"): 184
 classification_histogram: {"CONSISTENT": 20, "MISASSIGNED-ID": 164}
 MISASSIGNED-ID count: 164
@@ -208,7 +208,7 @@ T1_subclass: {"sep_wcs_eq_stored_vs_gaia": 177, "stored_gaia_lt1_arcsec": 3, "wc
   Gaia DR3 1504301510762717440 cid=1504301510762717440 sep_wcs_gaia=33.717" sep_stored_gaia=34.930" x=9.8 y=113.4
   Gaia DR3 1504485335363167488 cid=1504485335363167488 sep_wcs_gaia=24.225" sep_stored_gaia=25.282" x=138.4 y=121.7
 
-# T2 — Gaia DB coverage vs frame footprint
+# T2 - Gaia DB coverage vs frame footprint
 db_bbox: RA [0.000002, 359.999999] DEC [-89.985816, 89.977102]
 db_provenance_json: C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\field_catalog_cone_meta.json
   cone_radius_deg=13.635045258216406
@@ -222,13 +222,13 @@ outside_nearest_gaia_p50: nan"
 field_catalog_cone_in_frame: n=4379 ()
 field_catalog_cone_nn_p50_unmatched_DET: 131.105"
 field_catalog_cone_nn_within_20arcsec: 11/2724
-unmatched_DET interpretation: spurious DAO detections without catalog association (not missing DB rows — 4379 catalog sources in frame, mag<=15.26)
+unmatched_DET interpretation: spurious DAO detections without catalog association (not missing DB rows - 4379 catalog sources in frame, mag<=15.26)
 COVERAGE VERDICT (81" unmatched population): CONFIRMED
   radius decision reframed: no match-radius change helps; wider/deeper field DB build is actionable item
 
-# T3 — Magnitude-consistency backstop
+# T3 - Magnitude-consistency backstop
 reference_fit_n (ms-gaia<=0.5"): 246
 violation_rows |mag_resid|>0.5mag: 71
 
 DIAG SELF-CHECK FAIL
-  - T1 MISASSIGNED-ID: 164 rows — STOP gate
+  - T1 MISASSIGNED-ID: 164 rows - STOP gate

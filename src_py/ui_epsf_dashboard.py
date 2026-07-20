@@ -105,7 +105,7 @@ def _render_epsf_dashboard_body(
     epsf_fits: Path,
 ) -> None:
     """Metrics table + aperture vs PSF LC overlay."""
-    st.caption(f"Model: `{epsf_fits}` · setup: `{setup_name}`")
+    st.caption(f"Model: `{epsf_fits}` . setup: `{setup_name}`")
 
     proc_dir = _find_proc_csv_dir(draft_dir, setup_name)
     if proc_dir is None:
@@ -114,7 +114,7 @@ def _render_epsf_dashboard_body(
 
     from photometry_core import load_epsf_metrics_for_draft
 
-    with st.spinner("Loading ePSF metrics…"):
+    with st.spinner("Loading ePSF metrics..."):
         epsf_df = load_epsf_metrics_for_draft(proc_dir, active_targets_df)
 
     if epsf_df.empty:
@@ -125,8 +125,8 @@ def _render_epsf_dashboard_body(
     c1.metric("Stars with PSF stats", f"{len(epsf_df)}")
     c2.metric("Stars > 50% PSF frames", f"{int((epsf_df['pct_psf_ok'] > 50).sum())}")
     med_chi2 = pd.to_numeric(epsf_df["median_chi2"], errors="coerce").median()
-    c3.metric("Median χ² (per star)", f"{med_chi2:.1f}" if pd.notna(med_chi2) else "—")
-    c4.metric("χ² threshold", f"{float(getattr(cfg, 'psf_chi2_threshold', 50.0)):.0f}")
+    c3.metric("Median chi^2 (per star)", f"{med_chi2:.1f}" if pd.notna(med_chi2) else "-")
+    c4.metric("chi^2 threshold", f"{float(getattr(cfg, 'psf_chi2_threshold', 50.0)):.0f}")
 
     st.markdown("**Per-star ePSF metrics**")
     display_cols = [
@@ -147,8 +147,8 @@ def _render_epsf_dashboard_body(
             "pct_psf_ok": st.column_config.ProgressColumn(
                 "PSF %", min_value=0, max_value=100
             ),
-            "mean_chi2": st.column_config.NumberColumn("mean χ²", format="%.1f"),
-            "min_chi2": st.column_config.NumberColumn("min χ²", format="%.1f"),
+            "mean_chi2": st.column_config.NumberColumn("mean chi^2", format="%.1f"),
+            "min_chi2": st.column_config.NumberColumn("min chi^2", format="%.1f"),
             "psf_dao_ratio": st.column_config.NumberColumn("PSF/DAO ratio", format="%.3f"),
         },
     )
@@ -222,7 +222,7 @@ def _render_epsf_dashboard_body(
         )
 
     fig.update_layout(
-        title=f"Aperture vs PSF — {_label(selected_cid)}",
+        title=f"Aperture vs PSF - {_label(selected_cid)}",
         xaxis_title="BJD",
         yaxis_title="mag",
         yaxis_autorange="reversed",
@@ -233,7 +233,7 @@ def _render_epsf_dashboard_body(
 
 def _epsf_meta_caption(epsf_fits: Path | None) -> str:
     if epsf_fits is None or not epsf_fits.is_file():
-        return "No ePSF model found — click **RUN ePSF** to build one."
+        return "No ePSF model found - click **RUN ePSF** to build one."
     meta_json = epsf_fits.parent / "masterstar_epsf_meta.json"
     if not meta_json.is_file():
         return f"Model: `{epsf_fits.name}` (no meta JSON)"
@@ -243,10 +243,10 @@ def _epsf_meta_caption(epsf_fits: Path | None) -> str:
         fwhm_s = f"{float(fwhm):.2f}px" if fwhm is not None else "?"
         return (
             f"Model: {meta.get('n_stars_used', '?')} PSF stars, "
-            f"FWHM {fwhm_s}, oversampling {meta.get('oversampling', '?')}×"
+            f"FWHM {fwhm_s}, oversampling {meta.get('oversampling', '?')}x"
         )
     except Exception:  # noqa: BLE001
-        # EXC-0511: T3 -- UI diagnostic/plot only (f'FWHM {fwhm_s}, oversampling {meta.get('oversampling', '?')}×... (EXCEPT-BULK 2026-07-08)
+        # EXC-0511: T3 -- UI diagnostic/plot only (f'FWHM {fwhm_s}, oversampling {meta.get('oversampling', '?')}x... (EXCEPT-BULK 2026-07-08)
         return f"Model: `{epsf_fits.name}`"
 
 
@@ -257,12 +257,12 @@ def render_epsf_dashboard(
     draft_id: int | None = None,
 ) -> None:
     """Standalone ePSF dashboard tab."""
-    st.header("🔬 ePSF Photometry")
+    st.header("[microscope] ePSF Photometry")
 
     if not bool(getattr(cfg, "psf_photometry_enabled", False)):
         st.warning(
-            "⚠️ `psf_photometry_enabled` is **False** in Settings — PSF columns will be "
-            "empty after export. Enable PSF in Settings → Tools before **RUN ePSF**."
+            "! `psf_photometry_enabled` is **False** in Settings - PSF columns will be "
+            "empty after export. Enable PSF in Settings -> Tools before **RUN ePSF**."
         )
 
     resolved = resolve_draft_dir_path(
@@ -305,7 +305,7 @@ def render_epsf_dashboard(
     _col_btn, _col_info = st.columns([1, 3])
     with _col_btn:
         _run_epsf = st.button(
-            "⚡ RUN ePSF Photometry",
+            "! RUN ePSF Photometry",
             type="primary",
             key=f"epsf_run_btn_{selected_setup}",
             help="Build ePSF model from MASTERSTAR + re-export per-frame catalogs with PSF columns",
@@ -325,7 +325,7 @@ def render_epsf_dashboard(
         else:
             st.session_state["vyvar_pending_job"] = {
                 "kind": "run_epsf",
-                "label": "RUN ePSF Photometry…",
+                "label": "RUN ePSF Photometry...",
                 "archive_path": str(draft_path),
                 "masterstar_fits_path": str(ms_fits),
                 "masterstars_csv_path": str(ms_csv),

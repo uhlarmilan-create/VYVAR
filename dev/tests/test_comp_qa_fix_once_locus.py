@@ -1,4 +1,4 @@
-"""CQ-C: fix-once comp_qa magnitude locus — order independence + bounded diff."""
+"""CQ-C: fix-once comp_qa magnitude locus - order independence + bounded diff."""
 from __future__ import annotations
 
 import hashlib

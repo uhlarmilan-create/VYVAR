@@ -61,7 +61,7 @@ def aavso_export_path(
     *,
     active_methods: list[str] | None = None,
 ) -> Path:
-    """AAVSO .txt path — aperture-only runs keep legacy filenames."""
+    """AAVSO .txt path - aperture-only runs keep legacy filenames."""
     out = Path(reports_dir) / "aavso"
     m = str(method or "aperture").strip().lower()
     if m == "aperture" or not multi_method_reports_active(list(active_methods or ["aperture"])):

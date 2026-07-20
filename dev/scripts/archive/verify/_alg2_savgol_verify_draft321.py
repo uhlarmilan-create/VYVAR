@@ -1,4 +1,4 @@
-"""Phase 2A replay draft_000321 — TODO-ALG-2 Savitzky-Golay verify (2 runs)."""
+"""Phase 2A replay draft_000321 - TODO-ALG-2 Savitzky-Golay verify (2 runs)."""
 from __future__ import annotations
 
 import logging

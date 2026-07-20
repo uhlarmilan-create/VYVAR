@@ -3,7 +3,7 @@ TODO-MULTISET regression test: comp star selection must be deterministic
 and stable across pipeline runs on the same input data.
 
 Uses draft_000344 vs draft_000345: same night; draft_345 is re-photometry on
-copied draft_344 input (common-mode detrend added) — the correct "same data,
+copied draft_344 input (common-mode detrend added) - the correct "same data,
 two runs" pair. Those tests require identical comp sets.
 
 Also uses draft_000321 vs draft_000348 when present on disk: different pipeline
@@ -29,7 +29,7 @@ DRAFTS_AVAILABLE = (
 )
 SKIP_NO_DATA = pytest.mark.skipif(
     not DRAFTS_AVAILABLE,
-    reason="draft_000344 and draft_000345 not present in Archive/Drafts — copy them to run determinism tests",
+    reason="draft_000344 and draft_000345 not present in Archive/Drafts - copy them to run determinism tests",
 )
 
 DRAFT_321 = Path(r"C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000321")
@@ -66,7 +66,7 @@ def test_comp_sets_are_deterministic():
     cs345 = load_comp_sets(PHOT_345)
 
     common = set(cs344) & set(cs345)
-    assert len(common) > 0, "No common targets between drafts — check input data"
+    assert len(common) > 0, "No common targets between drafts - check input data"
 
     mismatches = []
     for tid in common:
@@ -106,7 +106,7 @@ def test_comp_count_stable():
 
     assert len(regressions) == 0, (
         f"{len(regressions)} targets lost comps:\n"
-        + "\n".join(f"  {t}: {n344} → {n345}" for t, n344, n345 in regressions[:10])
+        + "\n".join(f"  {t}: {n344} -> {n345}" for t, n344, n345 in regressions[:10])
     )
 
 
@@ -121,7 +121,7 @@ def test_bo_cvn_has_comps():
     else:
         bo = s345[s345["name"].str.contains("BO CVn", na=False)]
 
-    assert len(bo) > 0, "BO CVn not in photometry_summary — primary target missing"
+    assert len(bo) > 0, "BO CVn not in photometry_summary - primary target missing"
     assert bo["n_good_comp"].values[0] >= 3, (
         f"BO CVn has only {bo['n_good_comp'].values[0]} good comps (need >=3)"
     )
@@ -171,6 +171,6 @@ def test_comp_count_regression_321_348():
             regressions.append((tid, n321, n348))
 
     assert len(regressions) == 0, (
-        f"{len(regressions)}/{len(common)} targets lost more than half their comps (321 → 348):\n"
-        + "\n".join(f"  {t}: {n321} → {n348}" for t, n321, n348 in regressions[:10])
+        f"{len(regressions)}/{len(common)} targets lost more than half their comps (321 -> 348):\n"
+        + "\n".join(f"  {t}: {n321} -> {n348}" for t, n321, n348 in regressions[:10])
     )

@@ -13,7 +13,7 @@ import pandas as pd
 DB_NAME = "vyvar_exoplanet_local.db"
 MAG_LIMIT = None          # rez podla TESS/V magnitudy hostitela; None = bez rezu (cely katalog)
 TAP_BASE = "https://exoplanetarchive.ipac.caltech.edu/TAP/sync"
-HTTP_TIMEOUT_S = 300      # NEA TAP byva pomalsie pri *; tabulky su male, ale necháme rezervu
+HTTP_TIMEOUT_S = 300      # NEA TAP byva pomalsie pri *; tabulky su male, ale nechame rezervu
 
 # Zdrojove NEA TAP tabulky:
 #   pscomppars = potvrdene planety, JEDEN riadok na planetu (composite parametre)

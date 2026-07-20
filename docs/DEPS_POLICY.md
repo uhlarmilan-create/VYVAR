@@ -1,10 +1,10 @@
-# VYVAR — Dependency upgrade policy
+# VYVAR - Dependency upgrade policy
 
 How VYVAR moves its scientific dependencies (numpy, astropy, photutils, and the
 rest of `requirements.txt`) forward **without ever silently changing the
 numbers**. The governing idea: every upgrade is either proven byte-identical
 against the anchor, or it becomes a documented, deliberate re-anchor. No upgrade
-is applied by accident, and no upgrade is feared — both outcomes produce
+is applied by accident, and no upgrade is feared - both outcomes produce
 knowledge.
 
 ## Why we pin majors
@@ -24,7 +24,7 @@ below.
    `dev/results/DEPS_SCOUT.md`-style artifact.
 2. **Fresh environment.** Install the candidate versions in a clean venv.
 3. **Full test suite.** `python -m pytest -q` must stay green.
-4. **Anchor gate.** `python dev/scripts/session_baseline_check.py --full` —
+4. **Anchor gate.** `python dev/scripts/session_baseline_check.py --full` -
    headless `run_full_photometry_pipeline` on the anchor dataset, compared
    byte-for-byte (SHA) against the recorded anchor (currently draft_435).
 5. **Decide from the result:**
@@ -45,27 +45,27 @@ exactly how a dependency touches our science, on our data.
 
 - **In-range refresh** (patch/minor within the current pin, e.g. numpy
   2.4.3 ? 2.4.4): run pytest + `--full`. Expected byte-identical; if so, just
-  record it — no pin move needed since the range already permits it.
+  record it - no pin move needed since the range already permits it.
 - **Cross-major** (e.g. photutils 2.x ? 3.x, astropy 7.x ? 8.x): full scout +
   code migration (kwarg renames, default freezes) **before** the gate, then
-  pytest + `--full`. Byte-identity is *not* guaranteed — performance refactors
-  can legitimately reorder float ops — so budget for an adopt-and-re-anchor.
+  pytest + `--full`. Byte-identity is *not* guaranteed - performance refactors
+  can legitimately reorder float ops - so budget for an adopt-and-re-anchor.
 
 ## The `--fast` nudge
 
 `python dev/scripts/session_baseline_check.py --fast` surfaces an
 **informational** `deps-outdated` line (`pip list --outdated`, filtered to the
-pinned scientific packages). It is WARN/PASS/SKIP only — it **never** fails the
+pinned scientific packages). It is WARN/PASS/SKIP only - it **never** fails the
 session and is offline-tolerant (SKIP if no index). It exists to keep the
 candidate list visible, not to pressure an upgrade.
 
 ## Current watchlist (see `dev/results/DEPS_SCOUT.md` for detail)
 
-- **photutils 3.0** — cross-major. Blockers to handle before adopting: the
+- **photutils 3.0** - cross-major. Blockers to handle before adopting: the
   `min_separation` default change (#2216, pass `min_separation=0` at every
   `DAOStarFinder` site to freeze 2.x behavior) and deprecated kwargs on the
   science path (`brightest=` ? `n_brightest`, `roundlo=/roundhi=` ?
   `roundness_range`). Scheduled as CYCLE 2, after the INSTALL/Lenovo arc.
-- **astropy 8.0** — cross-major, bundle with the photutils cycle; no
+- **astropy 8.0** - cross-major, bundle with the photutils cycle; no
   photometry-numeric change flagged for our paths.
-- **numpy 2.4.4** — in-range patch; validated in CYCLE 1 (see DECISIONS).
+- **numpy 2.4.4** - in-range patch; validated in CYCLE 1 (see DECISIONS).

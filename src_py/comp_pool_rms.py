@@ -1,6 +1,6 @@
-"""Globálny RMS výpočet pre comp pool (jedna pass naprieč framami).
+"""Globalny RMS vypocet pre comp pool (jedna pass napriec framami).
 
-Oddelené od ``photometry_core`` kvôli objemu a cyklickým importom.
+Oddelene od ``photometry_core`` kvoli objemu a cyklickym importom.
 """
 
 from __future__ import annotations
@@ -91,9 +91,9 @@ def compute_global_pool_rms_map(
     max_comp_rms: float = 0.05,
     apply_rms_prefilter: bool = True,
 ) -> dict[str, float]:
-    """Vráti ``{star_id: comp_rms}`` po rovnakom flux→RMS reťazci ako Fáza 1 (bez per-target ensemble).
+    """Vrati ``{star_id: comp_rms}`` po rovnakom flux->RMS retazci ako Faza 1 (bez per-target ensemble).
 
-    ``star_id`` zodpovedá ``name`` stĺpcu v per-frame CSV (fallback ``catalog_id``).
+    ``star_id`` zodpoveda ``name`` stlpcu v per-frame CSV (fallback ``catalog_id``).
     """
     if not cand_ids:
         return {}
@@ -144,7 +144,7 @@ def compute_global_pool_rms_map(
             )
             if have_edge_cols and not _edge_log_done:
                 logging.info(
-                    "[GLOBAL COMP POOL RMS] chip=%sx%s px — edge kontrola zo sky_annulus_r_out_px",
+                    "[GLOBAL COMP POOL RMS] chip=%sx%s px - edge kontrola zo sky_annulus_r_out_px",
                     int(_chip_w_eff),
                     int(_chip_h_eff),
                 )
@@ -295,7 +295,7 @@ def compute_global_pool_rms_map(
             continue
 
     logging.info(
-        "[PERF-4] comp_pool_rms: %d frames loaded, %d paths × %d candidates",
+        "[PERF-4] comp_pool_rms: %d frames loaded, %d paths x %d candidates",
         int(n_frames_loaded),
         len(per_frame_csv_paths),
         len(cand_ids),
@@ -337,7 +337,7 @@ def compute_global_pool_rms_map(
         for _cid, _chi2_vals in psf_chi2_map.items():
             valid = [v for v in _chi2_vals if math.isfinite(v) and v > 0]
             if len(valid) < 3:
-                continue  # not enough valid PSF data — skip filter
+                continue  # not enough valid PSF data - skip filter
             _med_chi2 = float(np.median(valid))
             if _med_chi2 > max_psf_chi2:
                 _b_rejected.add(_cid)
@@ -389,16 +389,16 @@ def compute_global_pool_rms_map(
             rms_v = float("nan")
         nfr = int(len(flux_map.get(cid, [])))
         if math.isfinite(rms_v) and rms_v < float(ISOLATED_BIN_RMS_FLOOR) and nfr >= int(ISOLATED_BIN_MIN_FRAMES):
-            # Isolated brightness-bin normalization artefact → flat LC; do not use as comp.
+            # Isolated brightness-bin normalization artefact -> flat LC; do not use as comp.
             rms_map.pop(cid, None)
             LOGGER.debug(
-                "[POOL_RMS] %s: comp_rms < %.1e at %d frames → isolated bin → excluded",
+                "[POOL_RMS] %s: comp_rms < %.1e at %d frames -> isolated bin -> excluded",
                 str(cid),
                 float(ISOLATED_BIN_RMS_FLOOR),
                 int(nfr),
             )
 
-    # Global-pool RMS uses field-wide normalization; do not prefilter here — per-target
+    # Global-pool RMS uses field-wide normalization; do not prefilter here - per-target
     # Phase-1 applies max_comp_rms on the target-specific candidate subset.
     if apply_rms_prefilter and math.isfinite(max_comp_rms) and max_comp_rms > 0:
         pass  # intentionally disabled (see comment above)
@@ -412,13 +412,13 @@ def attach_comp_rms_to_pool_rows(
     *,
     id_col: str,
 ) -> pd.DataFrame:
-    """Pridá stĺpec ``comp_rms`` podľa ID zhody s ``rms_map``."""
+    """Prida stlpec ``comp_rms`` podla ID zhody s ``rms_map``."""
     if pool.empty or not rms_map:
         return pool
     out = pool.copy()
     keys = out[id_col].astype(str).str.strip()
 
-    # Build canonical normalized-id → rms map (min catalog_id wins on collision)
+    # Build canonical normalized-id -> rms map (min catalog_id wins on collision)
     _norm_rms: dict[str, float] = {}
     _norm_key: dict[str, str] = {}
     for rk, rv in sorted(rms_map.items(), key=lambda kv: (float(kv[1]), str(kv[0]))):

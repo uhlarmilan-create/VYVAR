@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowded-subset grouper science test + adaptive-selector validation — draft 364.
+"""Crowded-subset grouper science test + adaptive-selector validation - draft 364.
 
 READ-ONLY: loads existing ePSF; no production/config changes.
 Part A: single vs grouped forced PSF on crowded deep-cone stars.

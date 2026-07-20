@@ -6,7 +6,7 @@ gaia_rows_in_bbox: 13427
 masterstars: C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\masterstars_full_match.csv
 coord_columns_used: masterstars/variable_targets -> ra_deg, dec_deg (NOT x/y pixels)
 unmatched_DET_rows: 2724 / 6699 (name~'^DET_\d+$' AND empty catalog_id)
-FWHM=2.3976px × 2.6"/px = 6.234"
+FWHM=2.3976px x 2.6"/px = 6.234"
 nearest_gaia_sep_p50: 81.053"
 nearest_gaia_sep_p75: 106.862"
 nearest_gaia_sep_p90: 132.006"

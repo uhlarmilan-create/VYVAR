@@ -44,7 +44,7 @@ import logging
 
 SNR_LIMIT = 5.0
 APERTURE_FWHM_FACTOR = 1.9  # AppConfig default; aperture radius = factor * FWHM
-GAIN_FALLBACK = 3.17        # eq 1 (QHY294MM) — used when a draft has no equipment row
+GAIN_FALLBACK = 3.17        # eq 1 (QHY294MM) - used when a draft has no equipment row
 RN_FALLBACK = 7.6
 
 

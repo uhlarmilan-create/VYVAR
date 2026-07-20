@@ -1,4 +1,4 @@
-CURSOR RESULT ù 2026-07-19
+CURSOR RESULT - 2026-07-19
 
 What I did
 Three-part small-fixes batch on `main`: APCORR-MIXEDFRAME all-or-nothing COG night gate;
@@ -7,7 +7,7 @@ not pushed. FLOW builder wording (ch 11.5 + 13.5) updated once and PDF regenerat
 
 ## Output / findings
 
-### Part 1 ù APCORR-MIXEDFRAME
+### Part 1 - APCORR-MIXEDFRAME
 - Night gate: `evaluate_cog_night_apcorr_gate` in `photometry_core.py`; if any science frame
   lacks usable `cog_ok`, `use_apcorr_flux=False` for the whole night.
 - Provenance: `cog_night_fallback` (+ counts) in `photometry/pipeline_meta.json`.
@@ -19,7 +19,7 @@ not pushed. FLOW builder wording (ch 11.5 + 13.5) updated once and PDF regenerat
   - `full-photometry-sha-core` `3d26f4692ac81fc5...` n=333
   - `full-photometry-sha-extended` `6420f1daa53a0d5d...` n=499
   - pipeline 2205 s; pytest 982 passed / 24 skipped
-- Commit 1: `b0575c9` `fix(apcorr): all-or-nothing COG per night ù no mixed-frame LC step`
+- Commit 1: `b0575c9` `fix(apcorr): all-or-nothing COG per night - no mixed-frame LC step`
 
 #### Docs impact (Part 1)
 - **DECISIONS:** new entry `APCORR-MIXEDFRAME-ALLORNOTHING` (2026-07-19); COG section updated.
@@ -28,13 +28,13 @@ not pushed. FLOW builder wording (ch 11.5 + 13.5) updated once and PDF regenerat
 - **FLOW:** ch 11.5 / quick-ref COG wording updated in builder (regenerated with Part 2).
 - **facts:** no `flow_doc_facts.py` key changes.
 
-### Part 2 ù AUTO-VSX-LIMIT
-- Pure compare: `vsx_limit_vs_depth_status(limit, g_lim_90, snr5)` ù WARN if
+### Part 2 - AUTO-VSX-LIMIT
+- Pure compare: `vsx_limit_vs_depth_status(limit, g_lim_90, snr5)` - WARN if
   `limit > min(depths) + 0.3`.
 - Depth load: `load_field_depth_metrics` (pipeline_meta `g_lim_90`;
   `crowding_index.json` SNR5; optional in-memory compute; never writes science files).
 - Report: resolved-facts + config page line
-  `VSX limit: ù | field depth: G_lim_90=ù, SNR5=ù`; title-page WARN badge when warranted.
+  `VSX limit: - | field depth: G_lim_90=-, SNR5=-`; title-page WARN badge when warranted.
 - No new config keys; Phase 0 selection untouched.
 - Unit/smoke: `dev/tests/test_auto_vsx_limit_report.py` (+ wave_a row-count update).
 - **P1 golden (`VYVAR_INVARIANTS_P1=1`): 5 passed** in 482 s (SHAs match VL-P1-GOLD).
@@ -47,11 +47,11 @@ not pushed. FLOW builder wording (ch 11.5 + 13.5) updated once and PDF regenerat
 - **facts:** none.
 - **STATE / DECISIONS:** not required for this report-only part.
 
-### Part 3 ù TODO-COMP-P2P-RESIDUAL (docs-only)
+### Part 3 - TODO-COMP-P2P-RESIDUAL (docs-only)
 - Caller audit: **no** caller passes `common_mode_detrend=False`.
   Production: `photometry_core.py` (~8989), `check_star_kmag.py` (~1036),
   `method_lc_output.py` (~118) all `True`. Tracked `dev/scripts/*` same.
-- Evidence: docstring at `check_comparison_stability` (~2900ù2903); residual via
+- Evidence: docstring at `check_comparison_stability` (~2900-2903); residual via
   `_comp_lc_frame_ensemble_residual`; CM via `_common_mode_detrend_comp_lc` when
   `comp_bjd` present; flag `common_mode_detrend_applied` (~2917).
 - ROADMAP MEDIUM item ? **DONE (already implemented; found stale 2026-07-19)**.
@@ -78,7 +78,7 @@ None blocking. (Benign EXC-0030 Gaia BP-RP Row.get noise during `--full` Phase 2
   `dev/tests/test_auto_vsx_limit_report.py`,
   `dev/tests/test_wave_a_report_config.py`,
   `docs/VYVAR_ROADMAP.md`, `dev/results/FLOW_DOC_V3_GAPS.md`
-- Commit 3: `docs(roadmap): close TODO-COMP-P2P-RESIDUAL as stale ó CM-detrended p2p already in production`
+- Commit 3: `docs(roadmap): close TODO-COMP-P2P-RESIDUAL as stale - CM-detrended p2p already in production`
   (`docs/VYVAR_ROADMAP.md`, `dev/tools/docs_pdf/build_flow_doc.py`,
   `docs/VYVAR_FLOW_CZ.pdf`, this RESULT)
 

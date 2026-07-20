@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only ePSF quality diagnostic — draft 364 Luminance_180_2.
+"""Read-only ePSF quality diagnostic - draft 364 Luminance_180_2.
 
 Locates WHERE the current ePSF fails to describe stellar profiles (residual structure,
 radial mismatch, correlations). No production/config changes.
@@ -49,7 +49,7 @@ SAT_FRAC = 0.85
 MAD_SCALE = 1.4826
 
 # EPSFBuilder kwargs actually passed in psf_photometry._epsf_build_imagepsf_from_stars
-# (others are photutils defaults — recorded in Part 1 report).
+# (others are photutils defaults - recorded in Part 1 report).
 EPSF_BUILDER_EXPLICIT = {
     "maxiters": 15,
     "progress_bar": False,
@@ -234,15 +234,15 @@ def _classify_stack(stack: np.ndarray, fwhm_px: float, box_half: int) -> tuple[s
     quadrupole = abs(quad_a - quad_b) > 0.0003 and abs(quad_a - quad_b) > ring_amp
 
     if quadrupole or lopsided:
-        label = "lopsided (quadrupole / asymmetry — core elongation mismatch)"
+        label = "lopsided (quadrupole / asymmetry - core elongation mismatch)"
     elif abs(inner_mean) < 0.002 and ring_amp < 0.002:
         label = "flat (model OK)"
     elif lopsided and abs(inner_mean) < ring_amp:
         label = "lopsided (asymmetry)"
     elif (inner_mean > 0.004 or center_val > 0.004) and abs(inner_mean) >= ring_amp:
-        label = "central peak (core mismatch — model narrower/brighter core)"
+        label = "central peak (core mismatch - model narrower/brighter core)"
     elif (inner_mean < -0.004 or center_val < -0.004) and abs(inner_mean) >= ring_amp:
-        label = "central dip (core FWHM mismatch — model too wide in core)"
+        label = "central dip (core FWHM mismatch - model too wide in core)"
     elif ring_amp > abs(inner_mean) and ring_amp > 0.003:
         label = "ring at ~1-2 FWHM (wing or truncation mismatch)"
     else:
@@ -262,7 +262,7 @@ def _spearman(x: np.ndarray, y: np.ndarray) -> tuple[float, float]:
 def _part1_report(meta: dict[str, Any], fwhm_px: float, cutout_size: int) -> list[str]:
     qc = meta.get("epsf_qc") or {}
     lines = [
-        "PART 1 — CURRENT BUILD CONFIG (values actually used)",
+        "PART 1 - CURRENT BUILD CONFIG (values actually used)",
         "",
         "EPSFBuilder (explicit in _epsf_build_imagepsf_from_stars):",
         f"  oversampling: {meta.get('oversampling')}",
@@ -270,7 +270,7 @@ def _part1_report(meta: dict[str, Any], fwhm_px: float, cutout_size: int) -> lis
         f"  smoothing_kernel: {meta.get('smoothing_kernel')} (quadratic when osamp<=2)",
         f"  progress_bar: {EPSF_BUILDER_EXPLICIT['progress_bar']}",
         "",
-        "EPSFBuilder (photutils defaults — not overridden in code):",
+        "EPSFBuilder (photutils defaults - not overridden in code):",
         f"  shape: {EPSF_BUILDER_DEFAULTS['shape']}",
         f"  recentering_func: {EPSF_BUILDER_DEFAULTS['recentering_func']}",
         f"  recentering_maxiters: {EPSF_BUILDER_DEFAULTS['recentering_maxiters']}",
@@ -279,13 +279,13 @@ def _part1_report(meta: dict[str, Any], fwhm_px: float, cutout_size: int) -> lis
         f"  center_accuracy: {EPSF_BUILDER_DEFAULTS['center_accuracy']}",
         "",
         "Extraction / cutout (ePSF build):",
-        f"  cutout_size: {cutout_size} (= odd(5×FWHM) from fwhm_px={fwhm_px:.3f})",
+        f"  cutout_size: {cutout_size} (= odd(5xFWHM) from fwhm_px={fwhm_px:.3f})",
         f"  fit_shape (PSFPhotometry, stored meta): {meta.get('fit_shape')}",
-        f"    (= odd(2×FWHM+1) via _fit_shape_for_cutout)",
+        f"    (= odd(2xFWHM+1) via _fit_shape_for_cutout)",
         "",
         "Candidate selection (_epsf_prepare_stars):",
-        f"  isolation: 3.0×FWHM = {meta.get('isolation_radius_px', float('nan')):.2f} px, delta_mag<=2.5 (cone catalog)",
-        "  SNR cut: not applied in _epsf_prepare_stars (broad-pool frame picks use SNR≥50)",
+        f"  isolation: 3.0xFWHM = {meta.get('isolation_radius_px', float('nan')):.2f} px, delta_mag<=2.5 (cone catalog)",
+        "  SNR cut: not applied in _epsf_prepare_stars (broad-pool frame picks use SNR>=50)",
         "  peak/saturation: likely_saturated=False; is_saturated excluded if present",
         f"  n_stars_used (extracted for EPSFBuilder): {meta.get('n_stars_used')}",
         f"  n_stars_after_join: {meta.get('n_stars_after_join')}",
@@ -296,7 +296,7 @@ def _part1_report(meta: dict[str, Any], fwhm_px: float, cutout_size: int) -> lis
         f"  oversampling: {meta.get('oversampling')}",
         f"  asymmetry: {qc.get('epsf_asymmetry')} (= mean quadrant std / peak on built ePSF)",
         f"  FWHM ratio (model/input): {qc.get('epsf_vs_input_fwhm_ratio')}",
-        "    definition: radial-profile half-max radius on oversampled ePSF ×2/osamp, divided by input fwhm_px",
+        "    definition: radial-profile half-max radius on oversampled ePSF x2/osamp, divided by input fwhm_px",
         f"  epsf_sum_native: {meta.get('epsf_sum_native')}",
         f"  epsf_norm_factor: {meta.get('epsf_norm_factor')}",
         "",
@@ -329,7 +329,7 @@ def main() -> None:
         epsf_data = np.asarray(hd[0].data, dtype=np.float64)
     psf_model = ImagePSF(epsf_data, oversampling=osamp)
 
-    # Residual box: >= 4×FWHM (~25 px)
+    # Residual box: >= 4xFWHM (~25 px)
     box_half = max(12, int(math.ceil(2.0 * fwhm_px)))
 
     with fits.open(masterstar_fits, memmap=True) as hd:
@@ -539,7 +539,7 @@ def main() -> None:
     r_phase, p_phase = _spearman(rec_df["subpix_phase"].to_numpy(dtype=float), y)
     r_frame, p_frame = _spearman(rec_df["frame_idx"].to_numpy(dtype=float), y)
 
-    # Frame-correlated: ANOVA-style — fraction of variance between frames
+    # Frame-correlated: ANOVA-style - fraction of variance between frames
     frame_means = rec_df.groupby("frame_idx")["frac_resid"].mean()
     grand = float(rec_df["frac_resid"].mean())
     ss_between = float(((frame_means - grand) ** 2 * rec_df.groupby("frame_idx").size()).sum())
@@ -564,11 +564,11 @@ def main() -> None:
     axes[0].set_title(f"Mean flux-normalized residual (N={len(stack_list)})")
     axes[0].set_xlabel("x (px)")
     axes[0].set_ylabel("y (px)")
-    plt.colorbar(im, ax=axes[0], fraction=0.046, label="(data−flux·PSF)/flux")
+    plt.colorbar(im, ax=axes[0], fraction=0.046, label="(data-flux.PSF)/flux")
     axes[1].plot(r_cent, stack_prof, "k-", lw=2, label="mean residual radial")
     axes[1].axhline(0, color="gray", ls="--", lw=0.8)
-    axes[1].axvline(fwhm_px, color="orange", ls=":", label="1×FWHM")
-    axes[1].axvline(2 * fwhm_px, color="orange", ls="--", label="2×FWHM")
+    axes[1].axvline(fwhm_px, color="orange", ls=":", label="1xFWHM")
+    axes[1].axvline(2 * fwhm_px, color="orange", ls="--", label="2xFWHM")
     axes[1].set_xlabel("radius (px)")
     axes[1].set_ylabel("mean normalized residual")
     axes[1].legend(fontsize=8)
@@ -586,7 +586,7 @@ def main() -> None:
     ax2.axvline(model_fwhm_native, color="red", ls=":", alpha=0.6, label="model FWHM")
     ax2.set_xlabel("radius (px)")
     ax2.set_ylabel("normalized surface brightness")
-    ax2.set_title(f"Profile overlay — {width_verdict}")
+    ax2.set_title(f"Profile overlay - {width_verdict}")
     ax2.legend(fontsize=8)
     fig2.tight_layout()
     prof_png = out_dir / "d364_epsf_stellar_vs_model_profile.png"
@@ -595,11 +595,11 @@ def main() -> None:
 
     report_lines = _part1_report(meta, fwhm_px, cutout_size)
     report_lines += [
-        "PART 2 — RESIDUAL ANALYSIS",
+        "PART 2 - RESIDUAL ANALYSIS",
         "",
         f"Diagnostic stars: {len(stars_df)} selected (COG pool cap {TARGET_N_STARS})",
-        f"Successful star×frame fits: {len(rec_df)}",
-        f"Residual box: {2 * box_half + 1} px (half={box_half}, ≥4×FWHM)",
+        f"Successful starxframe fits: {len(rec_df)}",
+        f"Residual box: {2 * box_half + 1} px (half={box_half}, >=4xFWHM)",
         "",
         "(a) Mean residual map classification:",
         f"  {classification}",
@@ -610,21 +610,21 @@ def main() -> None:
         f"  median peak |resid| as % of peak: {med_peak_pct:.2f}%",
         "",
         "(c) Stellar vs model radial profile:",
-        f"  FWHM stellar≈{fwhm_stellar:.2f} px, model≈{fwhm_model:.2f} px → {width_verdict}",
-        f"  mean(stellar−model) core (r<FWHM): {inner_d:+.5f}",
-        f"  mean(stellar−model) wings (1–2 FWHM): {wing_d:+.5f}",
+        f"  FWHM stellar~{fwhm_stellar:.2f} px, model~{fwhm_model:.2f} px -> {width_verdict}",
+        f"  mean(stellar-model) core (r<FWHM): {inner_d:+.5f}",
+        f"  mean(stellar-model) wings (1-2 FWHM): {wing_d:+.5f}",
         "",
-        "(d) Spearman ρ vs fractional residual:",
+        "(d) Spearman rho vs fractional residual:",
     ]
     for name, (rv, pv) in corrs.items():
-        report_lines.append(f"  {name}: ρ={rv:.4f}, p={pv:.2e}")
+        report_lines.append(f"  {name}: rho={rv:.4f}, p={pv:.2e}")
     report_lines += [
-        f"  dominant driver: {dominant[0]} (|ρ|={abs(dominant[1][0]):.4f})",
+        f"  dominant driver: {dominant[0]} (|rho|={abs(dominant[1][0]):.4f})",
         "",
         "(e) Frame correlation:",
-        f"  Spearman(frame_idx, frac_resid): ρ={r_frame:.4f}, p={p_frame:.2e}",
-        f"  between-frame η² (fraction of total variance): {eta2_frame:.4f}",
-        f"  frame-correlated: {'YES (moderate Spearman, but eta2={:.4f} — mostly star-to-star scatter)'.format(eta2_frame) if (math.isfinite(r_frame) and abs(r_frame) > 0.15 and p_frame < 0.05) else 'weak/no'}",
+        f"  Spearman(frame_idx, frac_resid): rho={r_frame:.4f}, p={p_frame:.2e}",
+        f"  between-frame eta^2 (fraction of total variance): {eta2_frame:.4f}",
+        f"  frame-correlated: {'YES (moderate Spearman, but eta2={:.4f} - mostly star-to-star scatter)'.format(eta2_frame) if (math.isfinite(r_frame) and abs(r_frame) > 0.15 and p_frame < 0.05) else 'weak/no'}",
         "",
         "PNG outputs:",
         f"  {map_png}",

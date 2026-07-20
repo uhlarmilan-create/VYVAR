@@ -8,7 +8,7 @@ venv/
 .env
 .env.*
 
-# Lokálne dáta / výstupy (veľké alebo citlivé)
+# Lokalne data / vystupy (velke alebo citlive)
 *.sqlite3
 *.db
 *.db-shm
@@ -16,15 +16,15 @@ venv/
 /Archive/
 CalibrationLibrary/
 
-# FITS a podobné (veľké binárne súbory)
+# FITS a podobne (velke binarne subory)
 *.fits
 *.fit
 *.fts
 
-# Veľké cache/indexy (necommitovať)
+# Velke cache/indexy (necommitovat)
 *.pkl
 
-# IDE / nástroje
+# IDE / nastroje
 .idea/
 .vscode/
 .cursor/
@@ -37,7 +37,7 @@ dist/
 build/
 *.egg-info/
 
-# Lokálne hard-copy exporty
+# Lokalne hard-copy exporty
 hard_copy_*.patch
 hard_copy_*.bundle
 

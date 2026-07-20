@@ -107,7 +107,7 @@ def _process_variability_frame(
         n0 = int(len(sub))
         sub = sub[~sub["edge_fail"].fillna(False).astype(bool)]
         n1 = int(len(sub))
-        logging.info("[VARIABILITY] edge_fail filter: vyradených %s meraní", int(n0 - n1))
+        logging.info("[VARIABILITY] edge_fail filter: vyradenych %s merani", int(n0 - n1))
 
     if "zone" in sub.columns:
         sub["zone"] = sub["zone"].fillna("").astype(str).str.strip()
@@ -284,7 +284,7 @@ def load_field_flux_matrix(
     csv_cache: dict[str, pd.DataFrame] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
     """
-    Načíta všetky proc_*.csv a zostaví pivot tabuľku.
+    Nacita vsetky proc_*.csv a zostavi pivot tabulku.
 
     Returns:
       flux_matrix_df: index=catalog_id, columns=frame_stem, values=flux_col
@@ -386,7 +386,7 @@ def compute_rms_variability(
     comp_rms_map: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
-    RMS metóda — pre každú hviezdu vypočíta relatívnu RMS.
+    RMS metoda - pre kazdu hviezdu vypocita relativnu RMS.
     """
     if flux_matrix.empty:
         return pd.DataFrame()
@@ -492,7 +492,7 @@ def compute_rms_variability(
             total_rms = float(np.std(vals_clean))
             smooth_map[str(cid)] = (p2p_rms / total_rms) if (math.isfinite(total_rms) and total_rms > 0) else float("nan")
 
-        # Amplitúda = p95 - p05 z mag hodnôt (robustný odhad peak-to-peak)
+        # Amplituda = p95 - p05 z mag hodnot (robustny odhad peak-to-peak)
         flux_arr = vals_clean
         flux_arr = flux_arr[np.isfinite(flux_arr) & (flux_arr > 0)]
         # Safe: np.percentile only called when flux_arr.size >= 10; stars with <10 frames get amplitude=nan by design.
@@ -639,7 +639,7 @@ def compute_rms_variability(
     upper = np.power(10.0, log_exp + float(sigma_threshold) * float(sigma_log if math.isfinite(sigma_log) and sigma_log > 0 else 0.0))
     upper = np.asarray(upper, dtype=float)
 
-    # Comp noise floor (TODO-26): per-mag-bin P90 of comp rms_pct; upper never below floor × factor.
+    # Comp noise floor (TODO-26): per-mag-bin P90 of comp rms_pct; upper never below floor x factor.
     _comp_id_set: set[str] = set()
     if comp_catalog_ids:
         for _cid in comp_catalog_ids:
@@ -676,7 +676,7 @@ def compute_rms_variability(
             _u12 = upper[_mask_mag12]
             _med_u12 = float(np.nanmedian(_u12)) if _u12.size else float("nan")
             LOGGER.info(
-                "[VARIABILITY] Comp noise floor applied: P90 @ mag12=%.1f%% → upper_envelope @ mag12=%.1f%%",
+                "[VARIABILITY] Comp noise floor applied: P90 @ mag12=%.1f%% -> upper_envelope @ mag12=%.1f%%",
                 _p90_12,
                 _med_u12,
             )
@@ -777,7 +777,7 @@ def compute_vdi(
     config: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
     """
-    VDI (Variability Detection Index) — počet prechodov cez median.
+    VDI (Variability Detection Index) - pocet prechodov cez median.
     """
     cfg = config or {}
     try:
@@ -834,12 +834,12 @@ def compute_vdi(
         meta.index = meta.index.astype(str)
         out = out.set_index("catalog_id").join(meta, how="left").reset_index()
 
-    # Premenné hviezdy majú NÍZKE VDI (málo prechodov cez medián)
-    # → negatívne z-score → kandidát ak z < -threshold
+    # Premenne hviezdy maju NIZKE VDI (malo prechodov cez median)
+    # -> negativne z-score -> kandidat ak z < -threshold
     out["is_variable_candidate"] = pd.to_numeric(out["vdi_z_score"], errors="coerce") < -float(vdi_z_thr)
     if "mag" not in out.columns:
         out["mag"] = np.nan
-    # Najlepší kandidáti majú najnižšie (najnegatívnejšie) z-score
+    # Najlepsi kandidati maju najnizsie (najnegativnejsie) z-score
     out = out.sort_values("vdi_z_score", ascending=True, na_position="last").reset_index(drop=True)
     return out[["catalog_id", "mag", "vdi_score", "vdi_z_score", "is_variable_candidate", "n_frames_used"]]
 

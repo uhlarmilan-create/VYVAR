@@ -1,4 +1,4 @@
-CURSOR RESULT ù 2026-07-18 WAVE-B-PARAM-REDUCTION
+CURSOR RESULT - 2026-07-18 WAVE-B-PARAM-REDUCTION
 
 What I did
 Executed the anchor-gated WAVE-B parameter reduction per the PARAM-BUDGET-AUDIT
@@ -9,7 +9,7 @@ anchor gate vs draft_435.
 
 ## Per-step commits + diff --stat
 
-STEP 1 ù WIRE-IN calibration CCD-temp tolerance (bug fix) ù `617b76f`
+STEP 1 - WIRE-IN calibration CCD-temp tolerance (bug fix) - `617b76f`
 ```
  dev/tests/test_calibration_library_match.py | 29 +++++++++++++++++++++++++++++
  src_py/app.py                               |  2 ++
@@ -24,9 +24,9 @@ default `temp_tolerance: float = 0.5` was KEPT as a documented last-resort fallb
 `test_dark_selection_honors_nondefault_tolerance` proves selection honors a non-default
 tolerance (synthetic library rows at deltaT 0.4 / 0.6 / 5.0).
 NO-OP for current runs: the key is absent from Milan's config.json, so the effective
-value stays 0.5 ù identical to the previously hardcoded default.
+value stays 0.5 - identical to the previously hardcoded default.
 
-STEP 2 ù DELETE-DEAD 4 keys ù `08e5684`
+STEP 2 - DELETE-DEAD 4 keys - `08e5684`
 ```
  config.json                           |  4 ---
  dev/tests/test_ui_params_dashboard.py |  6 +++--
@@ -39,7 +39,7 @@ Removed `aperture_fwhm_factor_medium`, `masterstar_log_astroalign`,
 `phase01_comparison_proximity_tiebreak`, `phase01_comparison_rms_bin_mag` from AppConfig,
 registry, generated docs, and config.json.
 
-STEP 3 ù INTERNALIZE frame dims ù `03d640c`
+STEP 3 - INTERNALIZE frame dims - `03d640c`
 ```
  config.json                           |  2 --
  dev/tests/test_ui_params_dashboard.py |  6 +++---
@@ -55,7 +55,7 @@ registry owner->internal, widget->hidden, tier->expert; removed from config.json
 persistence (save excludes, load ignores with a one-line deprecation log). Guard test
 `test_wave_b_internalized.py` asserts save output contains neither key.
 
-STEP 4 ù MERGE 14 -> 3 structured keys ù `c828c9c`
+STEP 4 - MERGE 14 -> 3 structured keys - `c828c9c`
 ```
  config.json                           |  32 ++++--
  dev/tests/test_ui_params_dashboard.py |   6 +-
@@ -85,7 +85,7 @@ renders the structured keys via the existing JSON/custom widget path (simpler; n
 widget). Guard tests `test_wave_b_merged_keys.py` cover defaults, accessors, save payload,
 and legacy-scalar backward compatibility.
 
-STEP 5 ù DELETE-DB-DUP 9 keys + drop SETTINGS table + focal precedence ù `d6c0d55`
+STEP 5 - DELETE-DB-DUP 9 keys + drop SETTINGS table + focal precedence - `d6c0d55`
 ```
  config.json                                        |  9 ---
  dev/tests/test_config_observer_location_hydrate.py | 75 ++++++++++++++--------
@@ -99,7 +99,7 @@ STEP 5 ù DELETE-DB-DUP 9 keys + drop SETTINGS table + focal precedence ù `d6c0d5
  9 files changed, 117 insertions(+), 168 deletions(-)
 ```
 
-STEP 6 ù HARDCODE 20 solver internals ù `715e754`
+STEP 6 - HARDCODE 20 solver internals - `715e754`
 ```
  config.json                           |  20 ---
  dev/tests/test_ui_params_dashboard.py |   5 +-
@@ -112,7 +112,7 @@ STEP 6 ù HARDCODE 20 solver internals ù `715e754`
  8 files changed, 95 insertions(+), 553 deletions(-)
 ```
 
-STEP 7 ù docs & metadata sync ù `df93984`
+STEP 7 - docs & metadata sync - `df93984`
 ```
  docs/VYVAR_CONFIG_GUIDE_CZ.md | 100 ++++++++++++++++--------------------------
  docs/VYVAR_CONFIG_GUIDE_EN.md | 100 ++++++++++++++++--------------------------
@@ -134,7 +134,7 @@ figure was an estimate that assumed the DB-dup/internal entries would also leave
 registry; keeping them registered (so the honest full-config report can still render them)
 is the reason the true landing point is 269.
 
-## The 20 HARDCODE locations (name ù old default ù module:line)
+## The 20 HARDCODE locations (name - old default - module:line)
 
 vyvar_blind_solver.py:
 - `blind_scale_tol_frac` = 0.10  -> `_BLIND_SCALE_TOL_FRAC` (vyvar_blind_solver.py:334)
@@ -171,7 +171,7 @@ Keys: `gain`, `read_noise`, `plate_scale_arcsec_per_px`,
 `phase01_plate_scale_arcsec_per_px`, `export_arcsec_per_px`, `observer_lat`,
 `observer_lon`, `observer_alt_m`, `observer_location_name`.
 
-Mechanism: the AppConfig fields remain as run-time hydrated mirrors ù the existing
+Mechanism: the AppConfig fields remain as run-time hydrated mirrors - the existing
 hydration/resolver paths are untouched (observer_* hydrate from the DB LOCATION row
 selected by `observer_location_id`; gain/read_noise/plate-scale resolve via
 `param_resolver` DB/FITS-first). What changed is ONLY config.json persistence: the loader
@@ -180,7 +180,7 @@ Milan's config.json. Registry keeps the entries (owner db_static / fits_dynamic,
 widget) so the honest full-config report and the wave-A dashboard still render them.
 Byte-identical safety: on draft_435 gain/read_noise/plate-scale already resolve DB/FITS
 first (config was never consulted), and the observer coordinates in the DB LOCATION row
-for id=2 match the dataclass defaults exactly ù so removing the unused config.json copies
+for id=2 match the dataclass defaults exactly - so removing the unused config.json copies
 cannot change one byte. Guard test `test_db_dup_keys_absent_from_save_payload` asserts
 none of the 9 ever appears in save_config_json output; `test_db_dup_keys_still_appconfig_fields`
 asserts they remain AppConfig fields. Tests that previously pinned cfg values
@@ -198,7 +198,7 @@ days are config-authoritative after the drop.
 UNIFIED-BY-VERIFICATION (no code change needed). Both resolution paths already resolve
 DB-optics-first with FITS-header fallback via `param_resolver.resolve_focal_mm`
 (static-fact model); the audit's "two opposite-order paths" note was stale. No code
-comment indicated a deliberate header-first site, so nothing was STOPped ù the desired end
+comment indicated a deliberate header-first site, so nothing was STOPped - the desired end
 state was already in place and is now documented.
 
 ## sips_dao_fwhm clarification
@@ -231,7 +231,7 @@ ledger-todo                  WARN   VL-ANCHOR-424, VL-ANCHOR-DQ-430
 OVERALL: PASS
 ```
 
-### session_baseline_check.py --full (MANDATORY anchor gate vs draft_435) ù PASS byte-identical
+### session_baseline_check.py --full (MANDATORY anchor gate vs draft_435) - PASS byte-identical
 ```
 git-branch                   PASS   main
 git-head                     PASS   df93984
@@ -274,4 +274,4 @@ test_config_observer_location_hydrate.py, test_master_validity_days_g6_f002.py.
 config.json. Commits: 617b76f, 08e5684, 03d640c, c828c9c, d6c0d55, 715e754, df93984
 (on top of audit fbac9bc).
 
-## STEP 9 ù push: GATED, awaiting Milan's explicit "push".
+## STEP 9 - push: GATED, awaiting Milan's explicit "push".

@@ -1,4 +1,4 @@
-"""MASTERSTAR QA: projekcia masterstars cez WCS, metriky a náhľad mapy (DAO / MATCH / Gaia)."""
+"""MASTERSTAR QA: projekcia masterstars cez WCS, metriky a nahlad mapy (DAO / MATCH / Gaia)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from pipeline import AstroPipeline
 from utils import resolve_draft_dir
 
 
-@st.cache_data(show_spinner="Loading VSX from local database…")
+@st.cache_data(show_spinner="Loading VSX from local database...")
 def _cached_msqa_vsx_chip_table(
     _fits_mtime: float,
     _vsx_mtime: float,
@@ -28,9 +28,9 @@ def _cached_msqa_vsx_chip_table(
     vsx_db_path: str,
     plate_solve_fov_deg: float,
 ) -> pd.DataFrame:
-    """VSX v kuželi ako pri katalógu + world_to_pixel do súradníc snímku.
+    """VSX v kuzeli ako pri katalogu + world_to_pixel do suradnic snimku.
 
-    ``_fits_mtime`` / ``_vsx_mtime`` sú súčasť kľúča cache (Streamlit), nie použité v tele funkcie.
+    ``_fits_mtime`` / ``_vsx_mtime`` su sucast kluca cache (Streamlit), nie pouzite v tele funkcie.
     """
     from astropy.coordinates import SkyCoord
     import astropy.units as u
@@ -152,7 +152,7 @@ def _masterstar_reference_basename(
         if infologs:
             try:
                 for line in infologs[0].read_text(encoding="utf-8", errors="replace").splitlines():
-                    if "MASTERSTAR: čistá kópia" in line and "zdroj" in line:
+                    if "MASTERSTAR: cista kopia" in line and "zdroj" in line:
                         m = re.search(r"zdroj\s+(\S+\.fits)", line, flags=re.IGNORECASE)
                         if m:
                             ref = m.group(1).strip()
@@ -253,10 +253,10 @@ def render_masterstar_qa(
     st.subheader("MASTERSTARS Diagnostic")
     st.caption(
         "**Goal:** verify that the **MASTERSTAR catalog** (masterstars_full_match.csv) projects reliably "
-        "through WCS from **MASTERSTAR.fits** — record counts, match rate, and Gaia query radius check."
+        "through WCS from **MASTERSTAR.fits** - record counts, match rate, and Gaia query radius check."
     )
 
-    # Draft root: override → Drafts/draft_{id} → session archives (MASTERSTAR QA order).
+    # Draft root: override -> Drafts/draft_{id} -> session archives (MASTERSTAR QA order).
     _session_draft_id = st.session_state.get("vyvar_last_draft_id")
     _did = _session_draft_id if _session_draft_id is not None else draft_id
     ap_path: Path | None = None
@@ -370,7 +370,7 @@ def render_masterstar_qa(
 
         ms_df = read_vyvar_csv(csv_path_ms, low_memory=False)
         if ms_df.empty or "ra_deg" not in ms_df.columns or "dec_deg" not in ms_df.columns:
-            st.warning("MASTERSTAR CSV has no ra_deg/dec_deg — mapping not possible.")
+            st.warning("MASTERSTAR CSV has no ra_deg/dec_deg - mapping not possible.")
             return
 
         with fits.open(fits_path_ms, memmap=False) as hdul:
@@ -382,7 +382,7 @@ def render_masterstar_qa(
             simplefilter("ignore", FITSFixedWarning)
             w = WCS(hdr)
         if not getattr(w, "has_celestial", False):
-            st.warning("Current FITS has no usable WCS — mapping not possible.")
+            st.warning("Current FITS has no usable WCS - mapping not possible.")
             return
 
         try:
@@ -395,11 +395,11 @@ def render_masterstar_qa(
             if q_radius_deg > 0 and q_radius_deg < min_radius_deg:
                 st.error("GAIA QUERY RADIUS TOO SMALL - EDGES WILL FAIL!")
                 st.caption(
-                    f"Query r={q_radius_deg:.3f}° < half-diagonal={min_radius_deg:.3f}° "
-                    f"(diag≈{diag_deg:.3f}°)."
+                    f"Query r={q_radius_deg:.3f} deg < half-diagonal={min_radius_deg:.3f} deg "
+                    f"(diag~{diag_deg:.3f} deg)."
                 )
         except Exception:  # noqa: BLE001
-            # EXC-0527: T3 -- UI diagnostic/plot only (f'(diag≈{diag_deg:.3f}°).' / ) / except Exception:  # noqa: BL... (EXCEPT-BULK 2026-07-08)
+            # EXC-0527: T3 -- UI diagnostic/plot only (f'(diag~{diag_deg:.3f} deg).' / ) / except Exception:  # noqa: BL... (EXCEPT-BULK 2026-07-08)
             pass
 
         coo = SkyCoord(
@@ -533,7 +533,7 @@ def render_masterstar_qa(
         with m1:
             st.metric("Stars mapped in frame", n_all)
         with m2:
-            st.metric("DAO→Gaia Match (%)", f"{match_rate:.2f}")
+            st.metric("DAO->Gaia Match (%)", f"{match_rate:.2f}")
         with m3:
             if _gaia_dao_pct is not None:
                 _g50_txt = _g_lim_50_display or (
@@ -565,7 +565,7 @@ def render_masterstar_qa(
                 if _gaia_dao_raw_pct is not None:
                     _help_lines.append(f"Raw (cone legacy): {_gaia_dao_raw_pct:.1f}%")
                 st.metric(
-                    "Gaia→DAO Completeness (%)",
+                    "Gaia->DAO Completeness (%)",
                     f"{_gaia_dao_pct:.1f}",
                     help="\n".join(_help_lines),
                 )
@@ -580,7 +580,7 @@ def render_masterstar_qa(
                     int(_denom) - _undetected if _denom and _n_gaia_undetected is not None else int(n_ok)
                 )
                 st.metric(
-                    "Gaia→DAO Completeness (%) raw",
+                    "Gaia->DAO Completeness (%) raw",
                     f"{_gaia_dao_raw_pct:.1f}",
                     help=(
                         f"raw (unlimited denominator)\n"
@@ -589,7 +589,7 @@ def render_masterstar_qa(
                     ),
                 )
             else:
-                st.metric("Gaia→DAO Completeness (%)", "—")
+                st.metric("Gaia->DAO Completeness (%)", "-")
         with m4:
             st.metric("Reference Star Density (stars/MPix)", f"{ref_density:.1f}")
             if ref_density > 1500.0:
@@ -598,7 +598,7 @@ def render_masterstar_qa(
                     unsafe_allow_html=True,
                 )
         st.caption(
-            f"With **catalog_id**: **{n_ok}** · without **catalog_id**: **{max(0, n_all - n_ok)}** "
+            f"With **catalog_id**: **{n_ok}** . without **catalog_id**: **{max(0, n_all - n_ok)}** "
             f"(all rows with finite WCS projection)."
         )
         _n_unmatched_rows = max(0, n_all - n_ok)
@@ -614,21 +614,21 @@ def render_masterstar_qa(
         _thresh_pct = _gaia_dao_pct if _gaia_dao_pct is not None else None
         if _thresh_pct is not None:
             if _thresh_pct >= 90.0:
-                st.caption("✅ Completeness: EXCELLENT (≥90% in-frame Gaia stars detected)")
+                st.caption("[OK] Completeness: EXCELLENT (>=90% in-frame Gaia stars detected)")
             elif _thresh_pct >= 80.0:
-                st.caption("⚠️ Completeness: GOOD (80–90%)")
+                st.caption("! Completeness: GOOD (80-90%)")
             else:
                 _miss_n = int(_n_gaia_missed) if _n_gaia_missed is not None else "?"
                 st.caption(
-                    f"❌ Completeness: LOW (<80%) — {_miss_n} genuinely-missed stars above the frame "
+                    f"[X] Completeness: LOW (<80%) - {_miss_n} genuinely-missed stars above the frame "
                     "limit; check DAO threshold/FWHM; 2-pass recovery candidate"
                 )
         elif _gaia_dao_raw_pct is not None and _gaia_dao_is_raw_only:
-            st.caption("Gaia→DAO: legacy/raw metric (unlimited cone denominator) — re-run MASTERSTAR for corrected buckets")
+            st.caption("Gaia->DAO: legacy/raw metric (unlimited cone denominator) - re-run MASTERSTAR for corrected buckets")
         elif _cone_rows and _cone_rows > 0:
-            st.caption("Gaia→DAO: pipeline_meta.json missing — raw ratio from MASTERSTAR rows")
+            st.caption("Gaia->DAO: pipeline_meta.json missing - raw ratio from MASTERSTAR rows")
         else:
-            st.caption("Gaia→DAO: field_catalog_cone.csv unavailable")
+            st.caption("Gaia->DAO: field_catalog_cone.csv unavailable")
         if match_rate >= 90.0:
             st.markdown(
                 "<div style='color:#39FF14;font-weight:900;font-size:1.2rem;'>Astrometry quality: EXCELLENT (Lock OK)</div>",
@@ -700,7 +700,7 @@ def render_masterstar_qa(
             "**VSX** (below) = yellow squares from local SQLite."
         )
         if proc_csv is not None and proc_csv.is_file():
-            st.caption(f"Layer source: `{proc_csv.name}` — resolved via **{proc_note}**.")
+            st.caption(f"Layer source: `{proc_csv.name}` - resolved via **{proc_note}**.")
         else:
             st.warning(
                 f"Layer fallback: masterstars WCS projection (proc CSV not found; {proc_note}). "
@@ -751,7 +751,7 @@ def render_masterstar_qa(
                     value=14.0,
                     step=0.25,
                     key="vyvar_msqa_vsx_mag_limit",
-                    help="Shows records where derived magnitude (mag_max or mag_min) is **≤** this value. "
+                    help="Shows records where derived magnitude (mag_max or mag_min) is **<=** this value. "
                     "Entries without magnitude in DB are always shown.",
                 )
             with c_v2:
@@ -784,7 +784,7 @@ def render_masterstar_qa(
                 vsx_filt = None
             if show_vsx:
                 st.caption(
-                    f"VSX in field (before mag filter): **{len(vsx_chip_all)}** · after slider: **{len(vsx_filt) if vsx_filt is not None else 0}**"
+                    f"VSX in field (before mag filter): **{len(vsx_chip_all)}** . after slider: **{len(vsx_filt) if vsx_filt is not None else 0}**"
                 )
 
         if "source_type" in ms_plot.columns:
@@ -794,13 +794,13 @@ def render_masterstar_qa(
             n_dao_only = int((~st_up.isin({"GAIA_MATCHED", "FORCED_APERTURE"})).sum())
             st.caption(
                 f"Layer in frame (**{len(ms_plot)}** rows): "
-                f"GAIA_MATCHED **{n_gaia_m}** · FORCED_APERTURE **{n_forced}** · DAO_ONLY **{n_dao_only}**"
+                f"GAIA_MATCHED **{n_gaia_m}** . FORCED_APERTURE **{n_forced}** . DAO_ONLY **{n_dao_only}**"
             )
         else:
             n_ok_frame = int(ms_plot["matched"].sum()) if "matched" in ms_plot.columns else 0
             n_in_frame = int(len(ms_plot))
             st.caption(
-                f"Green (Gaia matched, in frame): **{n_ok_frame}** · "
+                f"Green (Gaia matched, in frame): **{n_ok_frame}** . "
                 f"Red (DAO only, in frame): **{max(0, n_in_frame - n_ok_frame)}**"
             )
 
@@ -836,7 +836,7 @@ def render_masterstar_qa(
             dao_match_xy_source="measured" if use_meas_xy else "reproj",
             vsx_chip_df=vsx_filt if (show_vsx and vsx_filt is not None and not vsx_filt.empty) else None,
         )
-        cap = f"{note}(map Δx×{scx_q:.4f}, Δy×{scy_q:.4f}) — {fits_path_ms.name}"
+        cap = f"{note}(map Deltaxx{scx_q:.4f}, Deltayx{scy_q:.4f}) - {fits_path_ms.name}"
         _img_key = f"ms_map_{os.path.getmtime(str(csv_path_ms)):.6f}"
         try:
             if has_field_cat and cone_path_ui.is_file():
@@ -851,7 +851,7 @@ def render_masterstar_qa(
             st.image(png_bytes, caption=cap, width="stretch")
 
         if show_vsx and vsx_filt is not None and not vsx_filt.empty:
-            st.caption("**Interactive VSX preview** — tooltip on hover over yellow square (same downsampling as map above).")
+            st.caption("**Interactive VSX preview** - tooltip on hover over yellow square (same downsampling as map above).")
             _disp, _scx_p, _scy_p = downsample_array_2d(raw, 1600)
             _rgb = percentile_stretch_rgb(_disp, 1.0, 99.0)
             _xs, _ys, _nm, _mg, _vt = msqa_prepare_vsx_plotly_series(vsx_filt, _scx_p, _scy_p)
@@ -860,7 +860,7 @@ def render_masterstar_qa(
         elif show_vsx and _vsx_path_ok:
             st.info("No VSX stars in this field at the current magnitude limit (or DB empty in cone).")
 
-        with st.expander("WCS / DAO diagnostics (DAO residuals vs Gaia→pixel)", expanded=False):
+        with st.expander("WCS / DAO diagnostics (DAO residuals vs Gaia->pixel)", expanded=False):
             st.caption(
                 "Same logic as ``scripts/diagnose_masterstar_wcs_dao.py``: round-trip WCS from CSV and "
                 "compare centroids to Gaia positions from ``field_catalog_cone.csv`` (if present)."

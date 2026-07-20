@@ -17,7 +17,7 @@ def main() -> None:
     comp = pd.read_csv(
         ps / "comparison_stars.csv",
         low_memory=False,
-        dtype={"catalog_id": str, "name": str},  # Gaia ID musí byť str — float64 stráca cifry
+        dtype={"catalog_id": str, "name": str},  # Gaia ID musi byt str - float64 straca cifry
     )
     comp_ids = [normalize_gaia_source_id(x) for x in comp["catalog_id"].astype(str).tolist()]
 

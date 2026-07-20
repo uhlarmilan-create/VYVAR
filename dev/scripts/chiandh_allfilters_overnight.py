@@ -3,7 +3,7 @@
 
 Fresh import from Archive/Chi_and_H (pre-calibrated, equipment set #2), coordinate hint
 injection, standard vyvar_gaia_dr3.db, full photometry (decoupled CT path, apply_color_term=auto).
-No VYVAR_CT_PROTOTYPE — presel opt-in only.
+No VYVAR_CT_PROTOTYPE - presel opt-in only.
 
 Outputs (repo root):
   ct_summary_chiandh_allfilters.csv
@@ -78,7 +78,7 @@ def _restore_config(orig: dict[str, Any]) -> None:
 
 
 def _fresh_app_config():
-    """Reload config from disk — avoid stale in-memory clone after JSON patch."""
+    """Reload config from disk - avoid stale in-memory clone after JSON patch."""
     from config import AppConfig
 
     cfg = AppConfig()
@@ -474,7 +474,7 @@ def _ct_summary_for_setup(*, draft_dir: Path, setup: str, cfg) -> dict[str, Any]
             "n_ct_ok": "",
             "n_pathB_blocked": "",
             "gate_apply": False,
-            "gate_reason": "L/Clear/luminance — CT toggle off",
+            "gate_reason": "L/Clear/luminance - CT toggle off",
         }
 
     comp_df = pd.read_csv(ps_dir / "comparison_stars.csv", low_memory=False)

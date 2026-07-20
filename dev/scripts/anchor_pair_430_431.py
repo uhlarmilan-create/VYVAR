@@ -210,7 +210,7 @@ def main() -> int:
     if not prov_ok:
         dirty = [g for g in report["provenance_gates"] if not g.get("provenance_clean")]
         print(
-            "STOP: pipeline_meta git_dirty_code must be false on BOTH 430 and 431 — no snapshot cut",
+            "STOP: pipeline_meta git_dirty_code must be false on BOTH 430 and 431 - no snapshot cut",
             file=sys.stderr,
         )
         print(f"Dirty drafts: {dirty}", file=sys.stderr)
@@ -223,7 +223,7 @@ def main() -> int:
     print(json.dumps(cmp, indent=2, default=str))
 
     if not cmp["byte_identical_core"]:
-        print("STOP: 430 != 431 on core SHA — no anchor cut", file=sys.stderr)
+        print("STOP: 430 != 431 on core SHA - no anchor cut", file=sys.stderr)
         out_path = OUT_DIR / "anchor_pair_report.json"
         out_path.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
         return 2

@@ -8,7 +8,7 @@ Workflow:
 - Save ``masterstars_full_match.csv``.
 
 Non-negotiable rules (Zeiss wide-field / MASTERSTAR):
-- SIP distortion refit order is ``_SIP_MIN_ORDER`` (default 3 — stabilejšie pri horšom počiatočnom matchi ako SIP5).
+- SIP distortion refit order is ``_SIP_MIN_ORDER`` (default 3 - stabilejsie pri horsom pociatocnom matchi ako SIP5).
 - **The Grip**: **5** iterative rematch+refit+WCS cycles; each cycle tightens sky radius and refits SIP.
 - **Pass 0** sky gate starts at **5.0 arcsec**; after the first coarse refit, subsequent
   grip iterations use a **tighter** center radius.
@@ -49,7 +49,7 @@ _GRIP_ITERATIONS: int = 5
 _PASS0_CENTER_ARCSEC: float = 5.0
 _BRIGHT_MAG_ANCHOR: float = 10.5  # g_mag < 10.5 = bright anchor (Zeiss wide-field)
 _BRIGHT_MAX_MATCH_DPX: float = 5.0
-# Post PC parity flip: only small matched-only pixel shift (RA/Dec v CSV sú pred flipom — NN jump na všetky detekcie klamal ~600px).
+# Post PC parity flip: only small matched-only pixel shift (RA/Dec v CSV su pred flipom - NN jump na vsetky detekcie klamal ~600px).
 _POST_FLIP_JUMP_MAX_ABS_PX: float = 25.0
 _POST_FLIP_JUMP_MAX_HYPOT_PX: float = 35.0
 _POST_FLIP_MATCHED_MIN: int = 20
@@ -57,7 +57,7 @@ _FITS_KEY_OPT_PARITY_FLIP: str = "VY_OPTPF"
 
 
 def _optimizer_parity_flip_already_in_fits(fits_path: Path) -> bool:
-    """True if optimizer už raz flipol PC na tomto FITS (druhý beh nesmie znova prepínať)."""
+    """True if optimizer uz raz flipol PC na tomto FITS (druhy beh nesmie znova prepinat)."""
     try:
         with fits.open(fits_path, memmap=False) as hdul:
             h = hdul[0].header
@@ -85,7 +85,7 @@ def _first_existing_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
 def _apply_wcs_pc_parity_flip_to_primary(fits_path: Path, *, set_vy_optpf: bool = True) -> bool:
     """Negate PC matrix column 0 in primary HDU WCS (toggle handedness), flush FITS.
 
-    ``set_vy_optpf=True`` značí úspešný *zámerný* flip optimizéra; pri revert-e daj ``False`` a kľúč sa nepridá.
+    ``set_vy_optpf=True`` znaci uspesny *zamerny* flip optimizera; pri revert-e daj ``False`` a kluc sa neprida.
     """
     try:
         with fits.open(fits_path, mode="update", memmap=False) as hdul:
@@ -214,7 +214,7 @@ def _backfill_bp_rp_from_gdf_and_db(
 
     The optimizer's field Gaia query uses a sky rectangle + ``ORDER BY g_mag LIMIT``, so many
     ``catalog_id`` values from DAO matching are absent from ``gdf``. ``_write_match`` only sets
-    colors for newly assigned pairs — existing rows keep empty ``bp_rp``. This pass copies from
+    colors for newly assigned pairs - existing rows keep empty ``bp_rp``. This pass copies from
     ``gdf`` when the id is present, then batch-looks up remaining ids in SQLite by ``source_id``.
     """
     if df.empty or "catalog_id" not in df.columns:
@@ -373,7 +373,7 @@ def optimize_masterstar_matches(
             continue
         if not (np.isfinite(x[i]) and np.isfinite(y[i])):
             continue
-        # Align with MASTERSTAR detect_stars match tolerance (~8″); 2″ was too strict after WCS handoff.
+        # Align with MASTERSTAR detect_stars match tolerance (~8 arcsec); 2 arcsec was too strict after WCS handoff.
         if pd.notna(sep.iloc[i]) and float(sep.iloc[i]) >= 8.0:
             continue
         matched_idx.append(i)
@@ -395,7 +395,7 @@ def optimize_masterstar_matches(
     dy = y[mm] - gdf["y_wcs"].to_numpy(dtype=np.float64)[gg]
     g_mag_c = pd.to_numeric(gdf.get("g_mag"), errors="coerce").to_numpy(dtype=np.float64)[gg]
     # Center model build: allow higher residuals in the first round (strict 1px cuts are too aggressive).
-    # Rule: never drop bright anchors (g_mag < 10) for RMS — keep them even if resid > 3px.
+    # Rule: never drop bright anchors (g_mag < 10) for RMS - keep them even if resid > 3px.
     mdl_x0, mdl_y0 = _fit_poly_model(x[mm], y[mm], dx, dy)
     try:
         rx = dx - _eval_poly(mdl_x0, x[mm], y[mm])
@@ -432,7 +432,7 @@ def optimize_masterstar_matches(
     gy0 = gdf["y_wcs"].to_numpy(dtype=np.float64)
     gx_corr = gx0 + _eval_poly(mdl_x, gx0, gy0)
     gy_corr = gy0 + _eval_poly(mdl_y, gx0, gy0)
-    # Initial jump (before any Grip rematch): median dx/dy over ALL detection↔nearest-Gaia candidates.
+    # Initial jump (before any Grip rematch): median dx/dy over ALL detection<->nearest-Gaia candidates.
     # Without this global shift the center hole persists. Kept additive across displacement refits.
     mdx0_pass0 = 0.0
     mdy0_pass0 = 0.0
@@ -461,7 +461,7 @@ def optimize_masterstar_matches(
     except Exception as exc:  # noqa: BLE001
         # EXC-0009: T4 -- initial-jump estimation fail surfaced as 'skipped' (EXCEPT-BULK 2026-07-08)
         log_event(f"Astrometry optimizer initial jump skipped: {exc!s}")
-    log_event("Astrometry optimizer: adaptive rematch radius enabled (center=5.0\", edge>800px => 10–15\").")
+    log_event("Astrometry optimizer: adaptive rematch radius enabled (center=5.0\", edge>800px => 10-15\").")
     cid_series = df.get("catalog_id", pd.Series([""] * len(df), index=df.index)).copy()
     _fwhm_hdr = float(hdr.get("VY_FWHM") or hdr.get("DAO_FWHM") or 3.5)
     if not math.isfinite(_fwhm_hdr) or _fwhm_hdr <= 0:
@@ -725,7 +725,7 @@ def optimize_masterstar_matches(
             log_event(
                 f"VYVAR optimizer: Grip{grip_it + 1} SIP regression "
                 f"(lin={_rms_lin:.3f} sip={_rms_sip:.3f} ratio={_rms_sip / _rms_lin:.3f}) "
-                f"— stopping Grip loop, keeping best linear WCS."
+                f"- stopping Grip loop, keeping best linear WCS."
             )
             _grip_regression_break = True
             break
@@ -744,7 +744,7 @@ def optimize_masterstar_matches(
             grip_no_progress += 1
             if grip_no_progress >= 2:
                 log_event(
-                    "Astrometry optimizer: predčasný koniec Grip (2× po sebe 0 nových zhôd) — šetrim čas."
+                    "Astrometry optimizer: predcasny koniec Grip (2x po sebe 0 novych zhod) - setrim cas."
                 )
                 break
         else:
@@ -791,7 +791,7 @@ def optimize_masterstar_matches(
                 log_event(f"Astrometry optimizer: Grip regression FITS restore failed: {exc!s}")
     n_pass1, n_pass2, n_bright_grip = int(grip_sum_a), int(grip_sum_b), int(grip_sum_c)
     do_parity_flip = False
-    # Orientation sanity check: mirrored sky coords for bright unmatched corner stars → optional WCS parity fix.
+    # Orientation sanity check: mirrored sky coords for bright unmatched corner stars -> optional WCS parity fix.
     try:
         flux_col = pd.to_numeric(df.get("flux"), errors="coerce") if "flux" in df.columns else pd.Series(np.nan, index=df.index)
         cid_dbg = normalize_gaia_source_id_series(df.get("catalog_id", pd.Series([""] * len(df))))
@@ -831,13 +831,13 @@ def optimize_masterstar_matches(
                     f"Astrometry optimizer orientation test: corner unmatched={int(cand_dbg.size)} "
                     f"base@25\"={base_rate*100.0:.1f}% mirror@25\"={mir_rate*100.0:.1f}%."
                 )
-                # Prísnejšie: slabý base_rate + výraznejší mirror, aby sa neflipovalo pri šume (648px jump bol falošný pozitív).
+                # Prisnejsie: slaby base_rate + vyraznejsi mirror, aby sa neflipovalo pri sume (648px jump bol falosny pozitiv).
                 if mir_rate > base_rate + 0.25 and (base_rate < 0.38 or mir_rate >= 0.42):
                     do_parity_flip = True
                     log_event("Astrometry optimizer orientation warning: mirrored RA/Dec matches markedly better (possible WCS parity issue).")
                     if mirror_orientation_extra_log:
                         log_event(
-                            "MASTERSTAR: skontrolujte parity / zrkadlenie v optike alebo znovu plate solve s konzistentným RA/Dec hintom."
+                            "MASTERSTAR: skontrolujte parity / zrkadlenie v optike alebo znovu plate solve s konzistentnym RA/Dec hintom."
                         )
     except Exception as exc:  # noqa: BLE001
         # EXC-0014: T4 -- orientation test fail surfaced as 'skipped' (EXCEPT-BULK-2 2026-07-08)
@@ -845,7 +845,7 @@ def optimize_masterstar_matches(
 
     if do_parity_flip and _optimizer_parity_flip_already_in_fits(fits_path):
         log_event(
-            "Astrometry optimizer: parity flip preskočený (VY_OPTPF v FITS — už jedna úprava PC na tomto MASTERSTAR)."
+            "Astrometry optimizer: parity flip preskoceny (VY_OPTPF v FITS - uz jedna uprava PC na tomto MASTERSTAR)."
         )
         do_parity_flip = False
 
@@ -861,12 +861,12 @@ def optimize_masterstar_matches(
             float(mdy0_pass0),
         )
         if not _apply_wcs_pc_parity_flip_to_primary(fits_path, set_vy_optpf=True):
-            log_event("Astrometry optimizer: zápis parity flip na disk zlyhal.")
+            log_event("Astrometry optimizer: zapis parity flip na disk zlyhal.")
             do_parity_flip = False
 
     if do_parity_flip:
         log_event(
-            "Astrometry optimizer: aplikovaný WCS parity flip na MASTERSTAR.fits — obnova Gaia→px a korekcia len zo spárovaných."
+            "Astrometry optimizer: aplikovany WCS parity flip na MASTERSTAR.fits - obnova Gaia->px a korekcia len zo sparovanych."
         )
         try:
             with fits.open(fits_path, memmap=False) as _hf:
@@ -935,14 +935,14 @@ def optimize_masterstar_matches(
                 )
                 if not jmp_ok:
                     log_event(
-                        f"Astrometry optimizer post-flip: matched-only offset neakceptovateľný "
+                        f"Astrometry optimizer post-flip: matched-only offset neakceptovatelny "
                         f"(n={n_m}, dx={mdx_pf:.2f}, dy={mdy_pf:.2f} px; "
-                        f"max |.|≤{_POST_FLIP_JUMP_MAX_ABS_PX}, hypot≤{_POST_FLIP_JUMP_MAX_HYPOT_PX}) — REVERT parity."
+                        f"max |.|<={_POST_FLIP_JUMP_MAX_ABS_PX}, hypot<={_POST_FLIP_JUMP_MAX_HYPOT_PX}) - REVERT parity."
                     )
                     _rev_ok = _apply_wcs_pc_parity_flip_to_primary(fits_path, set_vy_optpf=False)
                     if not _rev_ok:
                         log_event(
-                            "Astrometry optimizer: varovanie — revert parity na disk zlyhal; obnovujem stav pred flipom v RAM."
+                            "Astrometry optimizer: varovanie - revert parity na disk zlyhal; obnovujem stav pred flipom v RAM."
                         )
                     (
                         gx0,
@@ -962,7 +962,7 @@ def optimize_masterstar_matches(
                     gx_corr = gx_base + mdx0_pass0
                     gy_corr = gy_base + mdy0_pass0
                     log_event(
-                        f"Astrometry optimizer post-flip offset (medián z {n_m} spárovaných): "
+                        f"Astrometry optimizer post-flip offset (median z {n_m} sparovanych): "
                         f"dx={mdx_pf:.2f}px dy={mdy_pf:.2f}px."
                     )
                     _refit_displacement_from_all_matches()
@@ -1054,7 +1054,7 @@ def optimize_masterstar_matches(
     df["snr50_ok"] = snr50_ok.astype(bool)
     n_red_noise = int((~is_gaia & ~snr50_ok).sum())
     log_event(
-        f"Astrometry optimizer diagnostics: {n_red_noise} DAO-only stars below 50σ (kept in CSV by design)."
+        f"Astrometry optimizer diagnostics: {n_red_noise} DAO-only stars below 50sigma (kept in CSV by design)."
     )
 
     # Final SIP refit after pass3 edge recovery (Grip already ran SIP each iteration).
@@ -1070,7 +1070,7 @@ def optimize_masterstar_matches(
             gx2 = np.asarray(gx2, dtype=np.float64)
             gy2 = np.asarray(gy2, dtype=np.float64)
             added4 = 0
-            search_radius4 = 30.0  # arcsec (20–30")
+            search_radius4 = 30.0  # arcsec (20-30")
             for i in range(len(df)):
                 if not _is_unmatched_row(i):
                     continue
@@ -1099,7 +1099,7 @@ def optimize_masterstar_matches(
         log_event(f"Astrometry optimizer pass4 skipped: {exc!s}")
 
     # Final global shift correction (post parity flip + post pass3/pass4):
-    # If the remaining Gaia→pixel residual median is large, fix CRPIX and re-match once.
+    # If the remaining Gaia->pixel residual median is large, fix CRPIX and re-match once.
     try:
         sep_col2 = _first_existing_col(df, ["match_sep_arcsec", "sep_arcsec", "gaia_sep_arcsec", "MATCH_SEP_ARCSEC"])
         sep_s = pd.to_numeric(df.get(sep_col2), errors="coerce") if sep_col2 is not None else pd.Series(np.nan, index=df.index)
@@ -1151,7 +1151,7 @@ def optimize_masterstar_matches(
                                     )
                                     _hdu_up.flush()
                                 log_event(
-                                    f"Astrometry optimizer global shift applied: CRPIX1+= {mdx:.2f}px CRPIX2+= {mdy:.2f}px — re-matching @15\"."
+                                    f"Astrometry optimizer global shift applied: CRPIX1+= {mdx:.2f}px CRPIX2+= {mdy:.2f}px - re-matching @15\"."
                                 )
                             except Exception as exc:  # noqa: BLE001
                                 log_event(f"Astrometry optimizer global shift write failed: {exc!s}")

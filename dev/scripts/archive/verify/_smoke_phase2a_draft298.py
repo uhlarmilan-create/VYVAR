@@ -1,4 +1,4 @@
-"""Smoke: Fáza 2A na draft_000298 + DEBUG log pre _catalog_only_merge_frame_flux (jeden Gaia ID)."""
+"""Smoke: Faza 2A na draft_000298 + DEBUG log pre _catalog_only_merge_frame_flux (jeden Gaia ID)."""
 from __future__ import annotations
 
 import logging

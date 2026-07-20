@@ -1,7 +1,7 @@
 #!/bin/bash
-# VYVAR Cross-Validation Setup — Kubuntu 24.04 / Python 3.12
+# VYVAR Cross-Validation Setup - Kubuntu 24.04 / Python 3.12
 # Run: bash install_vyvar_crossval_lenovo.sh
-# Milan Lenovo T460 — /home/milan/Public/vyvar_catalogs
+# Milan Lenovo T460 - /home/milan/Public/vyvar_catalogs
 
 set -e
 echo "=== VYVAR Cross-Validation Setup ==="
@@ -36,9 +36,9 @@ pip install \
     sep \
     regions
 
-# 4. IRAF via AstroConda (lightweight — only iraf.noao.digiphot.apphot)
+# 4. IRAF via AstroConda (lightweight - only iraf.noao.digiphot.apphot)
 # Modern approach: use pyraf or ccdproc instead of full IRAF
-pip install pyraf || echo "pyraf optional — skipping if fails"
+pip install pyraf || echo "pyraf optional - skipping if fails"
 pip install ccdproc
 
 # 5. Verify SExtractor

@@ -14,42 +14,42 @@ from astropy.io import fits
 
 from gaia_catalog_id import normalize_gaia_source_id
 
-# Gaia ID musí byť str — float64 stráca cifry
+# Gaia ID musi byt str - float64 straca cifry
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
-# ── KONFIGURÁCIA ── upravuj podľa potreby ──────────────────────────
+# -- KONFIGURACIA -- upravuj podla potreby --------------------------
 DRAFT_ID = 248
 ARCHIVE_ROOT = Path(r"C:\ASTRO\python\VYVAR\Archive")
 OBS_GROUP = "NoFilter_60_2"
 USE_SANDBOX = True
 OVERSAMPLING = 2
 MIN_STARS = 15
-DRY_RUN = False  # True = len vypíše čo by spravil, nezapíše CSV
-# QHY294PROM, Read Mode 0, Gain setting 0 → 3.17 e⁻/ADU
+DRY_RUN = False  # True = len vypise co by spravil, nezapise CSV
+# QHY294PROM, Read Mode 0, Gain setting 0 -> 3.17 e-/ADU
 # Zdroj: DB EQUIPMENTS.GAIN_ADU (get_equipment_cosmic_params)
-# Fallback ak DB vráti None alebo 0:
+# Fallback ak DB vrati None alebo 0:
 GAIN_FALLBACK_E_PER_ADU = 3.17
-BORDER_WIDTH = 3  # pixely okraja pre lokálny odhad oblohy v cutoute
+BORDER_WIDTH = 3  # pixely okraja pre lokalny odhad oblohy v cutoute
 SATURATE_PEAK_FRAC = 0.85  # Skip COMP PSF if peak_max_adu > frac * saturate_limit_adu
 SUMMARY_MIN_MED_PSF_FLUX = 100.0  # Drop numerical dust in psf_summary.csv
-SUMMARY_MIN_N_FIT_OK = 5  # Require enough good frames per star in summary (používa sa s n_fit_ok_report)
-MAX_COMP_PEAK_ADU = 40_000  # vyraď príliš jasné COMP
-# Engine: ``psf_fit_ok`` = konvergencia ∧ (χ² < PSF_VAR_CHI2_MAX pre VAR, χ² < PSF_COMP_CHI2_MAX pre COMP).
-# Reporting v step_4 používa rovnaké prahy pri ``n_fit_ok_report``.
-PSF_VAR_CHI2_MAX = 1000.0  # VAR — svetelná krivka: akceptuj vyššie χ² (error mapa často podhodnotená pri jasných)
-PSF_COMP_CHI2_MAX = 20.0  # COMP — prísnejší prah
-MIN_COMP_SEPARATION_PX = 3 * 3.2  # ~10 px = 3× FWHM (crowding filter)
-# Krok 5: štyri COMP hviezdy pre frame-wise ZP z psf_summary (med_psf_flux).
+SUMMARY_MIN_N_FIT_OK = 5  # Require enough good frames per star in summary (pouziva sa s n_fit_ok_report)
+MAX_COMP_PEAK_ADU = 40_000  # vyrad prilis jasne COMP
+# Engine: ``psf_fit_ok`` = konvergencia and (chi^2 < PSF_VAR_CHI2_MAX pre VAR, chi^2 < PSF_COMP_CHI2_MAX pre COMP).
+# Reporting v step_4 pouziva rovnake prahy pri ``n_fit_ok_report``.
+PSF_VAR_CHI2_MAX = 1000.0  # VAR - svetelna krivka: akceptuj vyssie chi^2 (error mapa casto podhodnotena pri jasnych)
+PSF_COMP_CHI2_MAX = 20.0  # COMP - prisnejsi prah
+MIN_COMP_SEPARATION_PX = 3 * 3.2  # ~10 px = 3x FWHM (crowding filter)
+# Krok 5: styri COMP hviezdy pre frame-wise ZP z psf_summary (med_psf_flux).
 COMP_CALIB_CATALOG_IDS: tuple[str, ...] = (
     "1496835173974894848",
     "1499921468754586112",
     "1498311264039176192",
     "1497439905370466816",
 )
-PSF_CAL_MAG_ZP_OFFSET = 20.0  # arbitrárny offset pre relatívnu krivku (mag)
-# ──────────────────────────────────────────────────────────────────
+PSF_CAL_MAG_ZP_OFFSET = 20.0  # arbitrarny offset pre relativnu krivku (mag)
+# ------------------------------------------------------------------
 
-# Cielené VAR hviezdy pre tento test (ak neprázdne, nahradí variable_targets.csv v step_2_load_targets)
+# Cielene VAR hviezdy pre tento test (ak neprazdne, nahradi variable_targets.csv v step_2_load_targets)
 PSF_TARGET_OVERRIDE: list[dict[str, Any]] = [
     {
         "catalog_id": 1498486880958321200,
@@ -57,7 +57,7 @@ PSF_TARGET_OVERRIDE: list[dict[str, Any]] = [
         "vsx_type": "EW",
         "x": 265.155,
         "y": 177.707,
-        "note": "Slabá EW mag=12.75 — hlavný PSF test",
+        "note": "Slaba EW mag=12.75 - hlavny PSF test",
     },
     {
         "catalog_id": 1497418258735289300,
@@ -65,11 +65,11 @@ PSF_TARGET_OVERRIDE: list[dict[str, Any]] = [
         "vsx_type": "EW",
         "x": 1444.436,
         "y": 641.743,
-        "note": "EW mag=11.0 — porovnanie s draft 247",
+        "note": "EW mag=11.0 - porovnanie s draft 247",
     },
 ]
 
-# Jediné povolené importy z projektu:
+# Jedine povolene importy z projektu:
 from astropy.table import Table  # noqa: E402
 from photutils.psf import ImagePSF, PSFPhotometry  # noqa: E402
 
@@ -147,7 +147,7 @@ def subtract_local_sky(cutout: np.ndarray, border_width: int = 3) -> tuple[np.nd
 
 
 def _header_egain_only(hdr: Any) -> float | None:
-    """Pozitívny e-/ADU len z ``EGAIN`` (``GAIN`` z INDI často 0 — neberieme)."""
+    """Pozitivny e-/ADU len z ``EGAIN`` (``GAIN`` z INDI casto 0 - neberieme)."""
     if "EGAIN" not in hdr:
         return None
     try:
@@ -160,7 +160,7 @@ def _header_egain_only(hdr: Any) -> float | None:
 
 
 def get_gain_from_header(hdr: Any, *, db_gain_e_per_adu: float | None) -> tuple[float, str]:
-    """Priorita: DB ``GAIN_ADU`` → FITS ``EGAIN`` → ``GAIN_FALLBACK_E_PER_ADU``."""
+    """Priorita: DB ``GAIN_ADU`` -> FITS ``EGAIN`` -> ``GAIN_FALLBACK_E_PER_ADU``."""
     if db_gain_e_per_adu is not None and math.isfinite(float(db_gain_e_per_adu)) and float(db_gain_e_per_adu) > 0:
         return float(db_gain_e_per_adu), "DB"
     eg = _header_egain_only(hdr)
@@ -170,7 +170,7 @@ def get_gain_from_header(hdr: Any, *, db_gain_e_per_adu: float | None) -> tuple[
 
 
 def _vy_qcrms_from_header(hdr: Any) -> float | None:
-    """Kladné ``VY_QCRMS`` z hlavičky (ADU), alebo None."""
+    """Kladne ``VY_QCRMS`` z hlavicky (ADU), alebo None."""
     if "VY_QCRMS" not in hdr:
         return None
     try:
@@ -183,7 +183,7 @@ def _vy_qcrms_from_header(hdr: Any) -> float | None:
 
 
 def _vy_fwhm_from_header(hdr: Any) -> float:
-    """``VY_FWHM`` [px]; NaN ak chýba alebo neplatné."""
+    """``VY_FWHM`` [px]; NaN ak chyba alebo neplatne."""
     if "VY_FWHM" not in hdr:
         return float("nan")
     try:
@@ -209,7 +209,7 @@ def _draft_equipment_id(db: VyvarDatabase, draft_id: int) -> int | None:
 
 
 def _draft_db_gain_e_per_adu(db: VyvarDatabase | None, draft_id: int) -> float | None:
-    """``EQUIPMENTS.GAIN_ADU`` pre ``OBS_DRAFT.ID_EQUIPMENTS``, ak je kladné."""
+    """``EQUIPMENTS.GAIN_ADU`` pre ``OBS_DRAFT.ID_EQUIPMENTS``, ak je kladne."""
     if db is None:
         return None
     eq_id = _draft_equipment_id(db, draft_id)
@@ -259,8 +259,8 @@ def _load_psf_photometry_bundle(epsf_path: Path) -> tuple[PSFPhotometry, int]:
     if cutout_size % 2 == 0 or cutout_size < 3:
         raise ValueError(f"cutout_size must be odd and >= 3, got {cutout_size}")
     psf_data = np.asarray(fits.getdata(ep), dtype=np.float64)
-    # Pozn.: súčet pixelov ePSF gridu (napr. ~4 pri oversampling=2) nie je priamo „flux v ADU“;
-    # PSFPhotometry škáluje amplitúdu voči dátam. Pre ``psf_flux_norm`` by sa použil integrál modelu z Photutils, nie len ``sum(psf_data)``.
+    # Pozn.: sucet pixelov ePSF gridu (napr. ~4 pri oversampling=2) nie je priamo 'flux v ADU';
+    # PSFPhotometry skaluje amplitudu voci datam. Pre ``psf_flux_norm`` by sa pouzil integral modelu z Photutils, nie len ``sum(psf_data)``.
     psf_model = ImagePSF(psf_data, oversampling=osamp)
     fit_shape = _fit_shape_for_cutout(cutout_size)
     phot = PSFPhotometry(psf_model, fit_shape=fit_shape, progress_bar=False)
@@ -410,7 +410,7 @@ def _psf_stars_local_cutouts(
 
 
 def _print_chi2_distribution(chi: pd.Series) -> None:
-    """Histogram text: všetky riadky výsledku (vrátane NaN po preskočení fitu)."""
+    """Histogram text: vsetky riadky vysledku (vratane NaN po preskoceni fitu)."""
     c = pd.to_numeric(chi, errors="coerce")
     n_nan = int(c.isna().sum())
     finite = c.dropna()
@@ -423,13 +423,13 @@ def _print_chi2_distribution(chi: pd.Series) -> None:
     n_35 = int(np.sum((pos >= 3) & (pos < 5)))
     n_520 = int(np.sum((pos >= 5) & (pos <= 20)))
     n_gt20 = int(np.sum(pos > 20))
-    print("  chi2 distribúcia (všetky riadky výsledku):")
+    print("  chi2 distribucia (vsetky riadky vysledku):")
     print(f"    chi2 < 1:    {n_lt1}")
-    print(f"    chi2 1–3:    {n_13}   ← ideálna zóna")
-    print(f"    chi2 3–5:    {n_35}   ← akceptovateľné")
-    print(f"    chi2 5–20:   {n_520}   ← problematické")
-    print(f"    chi2 > 20:   {n_gt20}   ← divergencia")
-    print(f"    chi2 = 0:    {n0}   ← numerický artefakt")
+    print(f"    chi2 1-3:    {n_13}   <- idealna zona")
+    print(f"    chi2 3-5:    {n_35}   <- akceptovatelne")
+    print(f"    chi2 5-20:   {n_520}   <- problematicke")
+    print(f"    chi2 > 20:   {n_gt20}   <- divergencia")
+    print(f"    chi2 = 0:    {n0}   <- numericky artefakt")
     print(f"    chi2 = NaN:  {n_nan}")
 
 
@@ -442,22 +442,22 @@ def _comp_fail_reason_psf(
     peak_adu: float,
     sat_lim_adu: float,
 ) -> str:
-    """Krátky text pre diagnostiku zlyhaného COMP fitu."""
+    """Kratky text pre diagnostiku zlyhaneho COMP fitu."""
     if not (math.isfinite(x) and math.isfinite(y)):
-        return "neplatná pozícia"
+        return "neplatna pozicia"
     xi, yi = int(round(x)), int(round(y))
     parts: list[str] = []
     if xi < half_cs or yi < half_cs or xi >= fw - half_cs or yi >= fh - half_cs:
-        parts.append("okraj čipu")
+        parts.append("okraj cipu")
     if (
         math.isfinite(peak_adu)
         and math.isfinite(sat_lim_adu)
         and sat_lim_adu > 0
         and peak_adu > float(SATURATE_PEAK_FRAC) * sat_lim_adu
     ):
-        parts.append("blízko saturácie")
+        parts.append("blizko saturacie")
     if not parts:
-        parts.append("blend / PSF nezhoda / iné")
+        parts.append("blend / PSF nezhoda / ine")
     return ", ".join(parts)
 
 
@@ -484,13 +484,13 @@ def _print_dry_run_two_frame_report(
     chi_comp_all = chi[comp_m & chi.notna()]
     med_v_all = float(chi_var_all.median()) if len(chi_var_all) else float("nan")
     med_c_all = float(chi_comp_all.median()) if len(chi_comp_all) else float("nan")
-    print("\n═══ DRY-RUN report (2 framy) ═══")
-    print(f"  chi2 median VAR (fit_ok only): {med_v_ok:.3f}  |  (všetky konečné): {med_v_all:.3f}")
-    print(f"  chi2 median COMP (fit_ok only): {med_c_ok:.3f}  |  (všetky konečné): {med_c_all:.3f}")
+    print("\n=== DRY-RUN report (2 framy) ===")
+    print(f"  chi2 median VAR (fit_ok only): {med_v_ok:.3f}  |  (vsetky konecne): {med_v_all:.3f}")
+    print(f"  chi2 median COMP (fit_ok only): {med_c_ok:.3f}  |  (vsetky konecne): {med_c_all:.3f}")
     print(f"  fit_ok: {n_ok}/{n} ({pct:.1f}%)")
     _print_chi2_distribution(chi)
 
-    print(f"  prvých 5 COMP s ≥2 platnými psf+dao bodmi — dao_rms_pct vs psf_rms_pct (n={len(bundle)} framov):")
+    print(f"  prvych 5 COMP s >=2 platnymi psf+dao bodmi - dao_rms_pct vs psf_rms_pct (n={len(bundle)} framov):")
     shown = 0
     for raw_cid in comp_df["catalog_id"].tolist():
         cid = normalize_gaia_source_id(raw_cid)
@@ -534,11 +534,11 @@ def _print_dry_run_two_frame_report(
         if shown >= 5:
             break
     if shown == 0:
-        print("    (žiadna COMP s dvoma platnými PSF aj dao bodmi v týchto framoch)")
+        print("    (ziadna COMP s dvoma platnymi PSF aj dao bodmi v tychto framoch)")
 
 
 def _proc_metrics_by_catalog(proc_df: pd.DataFrame) -> dict[str, dict[str, float]]:
-    """catalog_id → peak_max_adu, dao_flux, saturate_limit_adu from per-frame proc CSV."""
+    """catalog_id -> peak_max_adu, dao_flux, saturate_limit_adu from per-frame proc CSV."""
     out: dict[str, dict[str, float]] = {}
     if proc_df is None or proc_df.empty or "catalog_id" not in proc_df.columns:
         return out
@@ -560,7 +560,7 @@ def _proc_metrics_by_catalog(proc_df: pd.DataFrame) -> dict[str, dict[str, float
 
 
 def _comp_catalog_sat_peak(comp_df: pd.DataFrame) -> tuple[dict[str, float], dict[str, float]]:
-    """From comparison_stars.csv: catalog_id → saturate_limit_adu and peak_max_adu (catalog)."""
+    """From comparison_stars.csv: catalog_id -> saturate_limit_adu and peak_max_adu (catalog)."""
     lims: dict[str, float] = {}
     peaks: dict[str, float] = {}
     if comp_df is None or comp_df.empty or "catalog_id" not in comp_df.columns:
@@ -582,7 +582,7 @@ def _comp_catalog_sat_peak(comp_df: pd.DataFrame) -> tuple[dict[str, float], dic
 
 def _print_table(df: pd.DataFrame, cols: list[str], *, max_rows: int = 30) -> None:
     if df.empty:
-        print("  (prázdne)")
+        print("  (prazdne)")
         return
     show = df.copy()
     for c in cols:
@@ -593,12 +593,12 @@ def _print_table(df: pd.DataFrame, cols: list[str], *, max_rows: int = 30) -> No
         show = show.head(max_rows)
     print(show.to_string(index=False))
     if len(df) > max_rows:
-        print(f"  ... +{len(df) - max_rows} ďalších riadkov")
+        print(f"  ... +{len(df) - max_rows} dalsich riadkov")
 
 
 def flag_blended_stars(comp_df: pd.DataFrame, *, fwhm_px: float = 3.2) -> pd.Series:
-    """True kde má COMP suseda bližšie než ``MIN_COMP_SEPARATION_PX`` (predvolene 3× ``fwhm_px``)."""
-    _ = fwhm_px  # voliteľné API; prah je z konfigurácie
+    """True kde ma COMP suseda blizsie nez ``MIN_COMP_SEPARATION_PX`` (predvolene 3x ``fwhm_px``)."""
+    _ = fwhm_px  # volitelne API; prah je z konfiguracie
     min_sep = float(MIN_COMP_SEPARATION_PX)
     if comp_df.empty or len(comp_df) < 2:
         return pd.Series(False, index=comp_df.index, dtype=bool)
@@ -641,7 +641,7 @@ def _paths() -> dict[str, Path]:
 
 
 def step_1_build_epsf() -> Path:
-    print("═══ KROK 1: Budovanie ePSF modelu ═══")
+    print("=== KROK 1: Budovanie ePSF modelu ===")
     p = _paths()
     masterstar_fits = p["masterstar_fits"]
     masterstars_csv = p["masterstars_csv"]
@@ -672,7 +672,7 @@ def step_1_build_epsf() -> Path:
         except Exception:  # noqa: BLE001
             pass
 
-    print(f"✓ ePSF uložený: {epsf_path}")
+    print(f"[OK] ePSF ulozeny: {epsf_path}")
 
     meta_fp = p["epsf_meta"]
     try:
@@ -692,13 +692,13 @@ def step_1_build_epsf() -> Path:
         for k in extra:
             print(f"  {k:<12}: {meta[k]}")
     except Exception as exc:  # noqa: BLE001
-        print(f"  (meta JSON sa nepodarilo načítať: {exc})")
+        print(f"  (meta JSON sa nepodarilo nacitat: {exc})")
 
     return Path(epsf_path)
 
 
 def step_2_load_targets() -> tuple[pd.DataFrame, pd.DataFrame]:
-    print("═══ KROK 2: Načítanie VAR + COMP hviezd ═══")
+    print("=== KROK 2: Nacitanie VAR + COMP hviezd ===")
     p = _paths()
     var_path = p["variable_targets"]
     comp_path = p["comparison_stars"]
@@ -711,7 +711,7 @@ def step_2_load_targets() -> tuple[pd.DataFrame, pd.DataFrame]:
     if PSF_TARGET_OVERRIDE:
         var_df = pd.DataFrame(PSF_TARGET_OVERRIDE)
         var_df["role"] = "VAR"
-        print(f"PSF_TARGET_OVERRIDE aktívny: {len(var_df)} cielených VAR hviezd")
+        print(f"PSF_TARGET_OVERRIDE aktivny: {len(var_df)} cielenych VAR hviezd")
         for _, r in var_df.iterrows():
             try:
                 nm = str(r.get("vsx_name", "") or "").strip()
@@ -719,7 +719,7 @@ def step_2_load_targets() -> tuple[pd.DataFrame, pd.DataFrame]:
                 x = float(r.get("x"))
                 y = float(r.get("y"))
                 note = str(r.get("note", "") or "").strip()
-                print(f"  🎯 {nm} ({vt}) x={x:.1f} y={y:.1f} — {note}")
+                print(f"  [target] {nm} ({vt}) x={x:.1f} y={y:.1f} - {note}")
             except Exception:  # noqa: BLE001
                 pass
         print()
@@ -756,12 +756,12 @@ def step_2_load_targets() -> tuple[pd.DataFrame, pd.DataFrame]:
     else:
         peak_adu = pd.Series(np.nan, index=comp_df.index)
     comp_df = comp_df[peak_adu.isna() | (peak_adu < float(MAX_COMP_PEAK_ADU))].copy()
-    print(f"  Vyradené príliš jasné COMP (peak>={MAX_COMP_PEAK_ADU}): {n_before - len(comp_df)}")
+    print(f"  Vyradene prilis jasne COMP (peak>={MAX_COMP_PEAK_ADU}): {n_before - len(comp_df)}")
 
     blended = flag_blended_stars(comp_df, fwhm_px=3.2)
     n_bl = int(blended.sum())
     comp_df = comp_df[~blended].reset_index(drop=True)
-    print(f"  Vyradené blendované COMP (<{MIN_COMP_SEPARATION_PX:.0f}px od suseda): {n_bl}")
+    print(f"  Vyradene blendovane COMP (<{MIN_COMP_SEPARATION_PX:.0f}px od suseda): {n_bl}")
 
     print(f"  COMP po filtroch: {len(comp_df)}")
     print()
@@ -777,7 +777,7 @@ def step_2_load_targets() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def _build_frame_xy_lookup(proc_df: pd.DataFrame) -> tuple[dict[str, tuple[float, float]], dict[str, tuple[float, float]]]:
-    """Return (by_catalog_id, by_name) → (x,y)."""
+    """Return (by_catalog_id, by_name) -> (x,y)."""
     by_cid: dict[str, tuple[float, float]] = {}
     by_name: dict[str, tuple[float, float]] = {}
     if proc_df is None or proc_df.empty:
@@ -810,7 +810,7 @@ def step_3_run_psf_on_frames(
     *,
     max_frames: int | None = None,
 ) -> None:
-    print("═══ KROK 3: PSF fotometria na framoch ═══")
+    print("=== KROK 3: PSF fotometria na framoch ===")
     p = _paths()
     epsf_data_dir = p["epsf_data_dir"]
     output_psf_dir = p["output_psf_dir"]
@@ -822,7 +822,7 @@ def step_3_run_psf_on_frames(
     frames = sorted(epsf_data_dir.glob("proc_*.csv"))
     if max_frames is not None:
         frames = frames[: int(max_frames)]
-    print(f"Nájdených framov: {len(frames)}")
+    print(f"Najdenych framov: {len(frames)}")
     if not frames:
         return
 
@@ -830,10 +830,10 @@ def step_3_run_psf_on_frames(
     db: VyvarDatabase | None = None
     if db_path.is_file():
         db = VyvarDatabase(db_path)
-        print(f"  DB (záložný gain): {db_path}")
+        print(f"  DB (zalozny gain): {db_path}")
     else:
         print(
-            f"  VAROVANIE: databáza neexistuje ({db_path}) — gain z EGAIN alebo GAIN_FALLBACK_E_PER_ADU ({GAIN_FALLBACK_E_PER_ADU})"
+            f"  VAROVANIE: databaza neexistuje ({db_path}) - gain z EGAIN alebo GAIN_FALLBACK_E_PER_ADU ({GAIN_FALLBACK_E_PER_ADU})"
         )
     db_gain_e_per_adu: float | None = None
     try:
@@ -841,7 +841,7 @@ def step_3_run_psf_on_frames(
         if db_gain_e_per_adu is not None:
             print(f"  Gain z DB (GAIN_ADU): {db_gain_e_per_adu:g} e/ADU")
         else:
-            print("  Gain z DB: nie je — použije sa FITS EGAIN alebo GAIN_FALLBACK_E_PER_ADU")
+            print("  Gain z DB: nie je - pouzije sa FITS EGAIN alebo GAIN_FALLBACK_E_PER_ADU")
     finally:
         if db is not None:
             try:
@@ -887,7 +887,7 @@ def step_3_run_psf_on_frames(
         try:
             fits_path = csv_path.with_suffix(".fits")
             if not fits_path.is_file():
-                print("  ✗ FITS nenájdený, preskočujem")
+                print("  x FITS nenajdeny, preskocujem")
                 continue
 
             with fits.open(fits_path, memmap=False) as hdul:
@@ -897,7 +897,7 @@ def step_3_run_psf_on_frames(
             gain, gain_src = get_gain_from_header(hdr, db_gain_e_per_adu=db_gain_e_per_adu)
             if gain_src == "fallback" and not warned_fallback_gain:
                 print(
-                    f"  VAROVANIE: chýba GAIN_ADU v DB a EGAIN vo FITS — používam GAIN_FALLBACK_E_PER_ADU={GAIN_FALLBACK_E_PER_ADU} e/ADU."
+                    f"  VAROVANIE: chyba GAIN_ADU v DB a EGAIN vo FITS - pouzivam GAIN_FALLBACK_E_PER_ADU={GAIN_FALLBACK_E_PER_ADU} e/ADU."
                 )
                 warned_fallback_gain = True
 
@@ -905,7 +905,7 @@ def step_3_run_psf_on_frames(
             vy_fwhm = _vy_fwhm_from_header(hdr)
 
             # PSFPhotometry model here does not fit a background term; subtract a robust global background
-            # so the fitted flux corresponds to source flux (not background×area).
+            # so the fitted flux corresponds to source flux (not backgroundxarea).
             try:
                 bg = float(np.nanmedian(frame_data))
             except Exception:  # noqa: BLE001
@@ -948,7 +948,7 @@ def step_3_run_psf_on_frames(
                 ys.append(y)
             upd["x"] = xs
             upd["y"] = ys
-            print(f"  pozície: per-frame={used_pf}, fallback(master)={used_fb}")
+            print(f"  pozicie: per-frame={used_pf}, fallback(master)={used_fb}")
 
             upd_ann = upd.copy()
             upd_ann["_ord"] = np.arange(len(upd_ann), dtype=np.int64)
@@ -991,9 +991,9 @@ def step_3_run_psf_on_frames(
 
             upd_ann["_skip_pre"] = skip_pre
             if n_sat:
-                print(f"  Preskočené saturované COMP (pred fitom): {n_sat}")
+                print(f"  Preskocene saturovane COMP (pred fitom): {n_sat}")
             if n_edge:
-                print(f"  Preskočené COMP pri okraji (cutout {cutout_size}×{cutout_size}): {n_edge}")
+                print(f"  Preskocene COMP pri okraji (cutout {cutout_size}x{cutout_size}): {n_edge}")
 
             upd_fit = upd_ann[~upd_ann["_skip_pre"]].copy()
             upd_skip = upd_ann[upd_ann["_skip_pre"]].copy()
@@ -1083,7 +1083,7 @@ def step_3_run_psf_on_frames(
             chi_var_med = float(chi[var_mask & okm].dropna().median()) if (var_mask & okm).any() else float("nan")
             chi_comp_med = float(chi[comp_mask & okm].dropna().median()) if (comp_mask & okm).any() else float("nan")
             print(
-                f"  ✓ fit_ok: {n_var_ok}/{n_var} VAR, {n_comp_ok}/{n_comp} COMP | "
+                f"  [OK] fit_ok: {n_var_ok}/{n_var} VAR, {n_comp_ok}/{n_comp} COMP | "
                 f"chi2 med (VAR/COMP/all): {chi_var_med:.2f} / {chi_comp_med:.2f} / {chi_med:.2f}"
             )
 
@@ -1113,7 +1113,7 @@ def step_3_run_psf_on_frames(
                     "_xc", ascending=False
                 )
                 if not bad_comp.empty:
-                    print("  Failed COMP (chi2>5), prvých 5:")
+                    print("  Failed COMP (chi2>5), prvych 5:")
                     for _, rr in bad_comp.head(5).iterrows():
                         cid = normalize_gaia_source_id(rr.get("catalog_id"))
                         mx = proc_meta.get(cid, {})
@@ -1132,7 +1132,7 @@ def step_3_run_psf_on_frames(
 
             out_fp = output_psf_dir / f"{frame_stem}_psf.csv"
             if DRY_RUN:
-                print(f"  [DRY_RUN] neukladám: {out_fp.name}")
+                print(f"  [DRY_RUN] neukladam: {out_fp.name}")
             else:
                 res.to_csv(out_fp, index=False)
 
@@ -1141,31 +1141,31 @@ def step_3_run_psf_on_frames(
             total_ok += int(res["psf_fit_ok"].fillna(False).astype(bool).sum())
         except Exception as exc:  # noqa: BLE001
             n_failed += 1
-            print(f"  ✗ CHYBA: {exc}")
+            print(f"  x CHYBA: {exc}")
             print(traceback.format_exc())
             continue
 
     if DRY_RUN and max_frames is not None and int(max_frames) == 2 and dry_bundle:
         _print_dry_run_two_frame_report(dry_bundle, comp_df)
 
-    print("═══ SÚHRN ═══")
-    print(f"Framov spracovaných : {n_processed}/{len(frames)}")
+    print("=== SUHRN ===")
+    print(f"Framov spracovanych : {n_processed}/{len(frames)}")
     print(f"Framov zlyhalo      : {n_failed}")
-    print(f"Celkových PSF fitov : {total_fits}")
+    print(f"Celkovych PSF fitov : {total_fits}")
     if total_fits > 0:
         pct = 100.0 * float(total_ok) / float(total_fits)
-        print(f"Úspešných fitov     : {total_ok} ({pct:.1f}%)")
+        print(f"Uspesnych fitov     : {total_ok} ({pct:.1f}%)")
     else:
-        print("Úspešných fitov     : 0 (—)")
+        print("Uspesnych fitov     : 0 (-)")
 
 
 def step_4_build_summary() -> None:
-    print("═══ KROK 4: PSF súhrnná štatistika ═══")
+    print("=== KROK 4: PSF suhrnna statistika ===")
     p = _paths()
     out_dir = p["output_psf_dir"]
     files = sorted(out_dir.glob("*_psf.csv"))
     if not files:
-        print("Žiadne *_psf.csv súbory.")
+        print("Ziadne *_psf.csv subory.")
         return
     frames: list[pd.DataFrame] = []
     for fp in files:
@@ -1174,11 +1174,11 @@ def step_4_build_summary() -> None:
         except Exception:  # noqa: BLE001
             continue
     if not frames:
-        print("Žiadne načítateľné *_psf.csv súbory.")
+        print("Ziadne nacitatelne *_psf.csv subory.")
         return
     df = pd.concat(frames, ignore_index=True)
     if df.empty:
-        print("Súhrn prázdny.")
+        print("Suhrn prazdny.")
         return
 
     df["catalog_id"] = df["catalog_id"].map(normalize_gaia_source_id)
@@ -1189,7 +1189,7 @@ def step_4_build_summary() -> None:
     if "psf_converged" in df.columns:
         df["psf_converged"] = df["psf_converged"].fillna(False).astype(bool)
     else:
-        # Staré CSV: stĺpec neexistuje — „fit sa pokúsil“ ≈ konečné χ² a flux z fitu (nie preskočený cutout).
+        # Stare CSV: stlpec neexistuje - 'fit sa pokusil' ~ konecne chi^2 a flux z fitu (nie preskoceny cutout).
         ch0 = pd.to_numeric(df["psf_chi2"], errors="coerce")
         fl0 = pd.to_numeric(df["psf_flux"], errors="coerce")
         df["psf_converged"] = ch0.notna() & fl0.notna()
@@ -1245,7 +1245,7 @@ def step_4_build_summary() -> None:
     mn_id = normalize_gaia_source_id("1591057651117374976")
     mn = out[out["catalog_id"].astype(str) == mn_id]
     if mn.empty:
-        print(f"  MN Boo ({mn_id}) pred filtrom: (nie je v agregácii — žiadne *_psf riadky)")
+        print(f"  MN Boo ({mn_id}) pred filtrom: (nie je v agregacii - ziadne *_psf riadky)")
     else:
         r0 = mn.iloc[0]
         print(
@@ -1256,7 +1256,7 @@ def step_4_build_summary() -> None:
 
     keep = (med_flux > float(SUMMARY_MIN_MED_PSF_FLUX)) & (n_rep >= int(SUMMARY_MIN_N_FIT_OK))
     out_save = out.loc[keep].copy()
-    print(f"Po čistení súhrnu: {len(out_save)} hviezd (pred čistením: {n_before})")
+    print(f"Po cisteni suhrnu: {len(out_save)} hviezd (pred cistenim: {n_before})")
     disp = out_save.copy()
     disp["strict/report/frames"] = (
         disp["n_fit_ok_strict"].astype(str)
@@ -1276,25 +1276,25 @@ def step_4_build_summary() -> None:
     print(disp[show_cols].to_string(index=False))
 
     if DRY_RUN:
-        print("[DRY_RUN] neukladám psf_summary.csv")
+        print("[DRY_RUN] neukladam psf_summary.csv")
     else:
         out_fp = out_dir / "psf_summary.csv"
         out_save.to_csv(out_fp, index=False)
-        print(f"✓ uložené: {out_fp}")
+        print(f"[OK] ulozene: {out_fp}")
 
 
 def step_5_calibrate_lightcurve() -> None:
-    """Kalibrácia PSF fluxov podľa COMP (median flux_norm / ZP_frame) → CSV + MN Boo plot."""
-    print("═══ KROK 5: Kalibrácia svetelných kriviek (COMP ZP) ═══")
+    """Kalibracia PSF fluxov podla COMP (median flux_norm / ZP_frame) -> CSV + MN Boo plot."""
+    print("=== KROK 5: Kalibracia svetelnych kriviek (COMP ZP) ===")
     p = _paths()
     out_dir = p["output_psf_dir"]
     summary_fp = out_dir / "psf_summary.csv"
     psf_files = sorted(out_dir.glob("*_psf.csv"))
     if not psf_files:
-        print("Žiadne *_psf.csv — krok 5 preskočený.")
+        print("Ziadne *_psf.csv - krok 5 preskoceny.")
         return
     if not summary_fp.is_file():
-        print(f"Chýba {summary_fp} — spusti krok 4 alebo vygeneruj súhrn. Krok 5 preskočený.")
+        print(f"Chyba {summary_fp} - spusti krok 4 alebo vygeneruj suhrn. Krok 5 preskoceny.")
         return
 
     summary = pd.read_csv(summary_fp, low_memory=False, dtype=_GAIA_ID_DTYPE)
@@ -1311,7 +1311,7 @@ def step_5_calibrate_lightcurve() -> None:
     comp_ids = [c for c in comp_ids if c]
     for c in comp_ids:
         if c not in med_by_cid or not math.isfinite(med_by_cid[c]) or med_by_cid[c] <= 0:
-            print(f"  Upozornenie: COMP {c} nemá platné med_psf_flux v súhrne.")
+            print(f"  Upozornenie: COMP {c} nema platne med_psf_flux v suhrne.")
 
     var_catalog_ids: set[str] = set()
     name_by_cid: dict[str, str] = {}
@@ -1379,7 +1379,7 @@ def step_5_calibrate_lightcurve() -> None:
             frame_rows.append((stem, bjd, cid, raw_fl, n_comp_used, zp, chi2, fit_ok))
 
     if not var_catalog_ids:
-        print("V *_psf.csv nie sú žiadne VAR riadky — krok 5 končí.")
+        print("V *_psf.csv nie su ziadne VAR riadky - krok 5 konci.")
         return
 
     def _mag_cal(fcal: float) -> float:
@@ -1388,7 +1388,7 @@ def step_5_calibrate_lightcurve() -> None:
         return -2.5 * math.log10(fcal) + float(PSF_CAL_MAG_ZP_OFFSET)
 
     if DRY_RUN:
-        print("[DRY_RUN] neukladám lightcurves/*.csv ani *_psf_cal.png")
+        print("[DRY_RUN] neukladam lightcurves/*.csv ani *_psf_cal.png")
 
     if not DRY_RUN:
         lc_dir = out_dir / "lightcurves"
@@ -1433,8 +1433,8 @@ def step_5_calibrate_lightcurve() -> None:
         rms = float(np.std(mags, ddof=1)) if mags.size > 1 else float("nan")
         rms_s = f"{rms:.4f}" if math.isfinite(rms) else "nan"
 
-        print(f"VAR hviezda {name}: {n_cal}/{n_frames_total} framov kalibrovaných")
-        print(f"  ZP rozsah: {zp_lo} - {zp_hi} (ideálne blízko 1.0)")
+        print(f"VAR hviezda {name}: {n_cal}/{n_frames_total} framov kalibrovanych")
+        print(f"  ZP rozsah: {zp_lo} - {zp_hi} (idealne blizko 1.0)")
         print(f"  psf_mag_cal RMS: {rms_s} mag")
 
         if not DRY_RUN:
@@ -1442,7 +1442,7 @@ def step_5_calibrate_lightcurve() -> None:
             out_df = out_df.sort_values(["bjd_tdb_mid", "frame_stem"], na_position="last")
             cal_fp = lc_dir / f"{cid}_psf_cal.csv"
             out_df.to_csv(cal_fp, index=False)
-            print(f"  ✓ {cal_fp.name}")
+            print(f"  [OK] {cal_fp.name}")
 
     if DRY_RUN or not frame_rows:
         return
@@ -1451,10 +1451,10 @@ def step_5_calibrate_lightcurve() -> None:
     try:
         import matplotlib.pyplot as plt  # noqa: PLC0415
     except Exception as exc:  # noqa: BLE001
-        print(f"matplotlib nedostupné ({exc}) — plot preskočený.")
+        print(f"matplotlib nedostupne ({exc}) - plot preskoceny.")
         return
 
-    # Prefer názvy z PSF_TARGET_OVERRIDE, inak z name_by_cid, inak samotné ID.
+    # Prefer nazvy z PSF_TARGET_OVERRIDE, inak z name_by_cid, inak samotne ID.
     override_name_by_cid: dict[str, str] = {}
     try:
         for d in PSF_TARGET_OVERRIDE:
@@ -1491,12 +1491,12 @@ def step_5_calibrate_lightcurve() -> None:
         ax.set_ylabel("psf_mag_cal")
         ax.invert_yaxis()
         ax.grid(True, alpha=0.3)
-        ax.set_title(f"{nm} — PSF kalibrovaná krivka")
+        ax.set_title(f"{nm} - PSF kalibrovana krivka")
 
         plot_fp = lc_dir / f"{nm_file}_psf_cal.png"
         fig.savefig(plot_fp, dpi=150, bbox_inches="tight")
         plt.close(fig)
-        print(f"✓ plot: {plot_fp}")
+        print(f"[OK] plot: {plot_fp}")
 
 
 def main() -> int:
@@ -1505,23 +1505,23 @@ def main() -> int:
     parser.add_argument(
         "--skip-build",
         action="store_true",
-        help="Preskočí budovanie ePSF (použije existujúci)",
+        help="Preskoci budovanie ePSF (pouzije existujuci)",
     )
     parser.add_argument(
         "--only-build",
         action="store_true",
-        help="Len postaví ePSF model, bez fotometrie",
+        help="Len postavi ePSF model, bez fotometrie",
     )
     parser.add_argument(
         "--frames",
         type=int,
         default=None,
-        help="Spracuj len prvých N framov (pre rýchly test)",
+        help="Spracuj len prvych N framov (pre rychly test)",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Nič nezapisuj, len vypíš čo by sa stalo",
+        help="Nic nezapisuj, len vypis co by sa stalo",
     )
     args = parser.parse_args()
 
@@ -1541,7 +1541,7 @@ def main() -> int:
         epsf_path = step_1_build_epsf()
     else:
         epsf_path = p["epsf_fits"]
-        print(f"[--skip-build] Používam existujúci ePSF: {epsf_path}")
+        print(f"[--skip-build] Pouzivam existujuci ePSF: {epsf_path}")
 
     if args.only_build:
         print("[--only-build] Koniec.")
@@ -1552,12 +1552,12 @@ def main() -> int:
     # Special mode: --frames 0 means "skip PSF fitting, run only calibration"
     # (useful when *_psf.csv + psf_summary.csv already exist and you only want step 5 outputs).
     if args.frames is not None and int(args.frames) == 0:
-        print("[--frames 0] Preskakujem krok 3+4, spúšťam len krok 5 (kalibrácia).")
+        print("[--frames 0] Preskakujem krok 3+4, spustam len krok 5 (kalibracia).")
         step_5_calibrate_lightcurve()
         return 0
 
     if args.frames:
-        print(f"[--frames {args.frames}] Obmedzujem na prvých {args.frames} framov")
+        print(f"[--frames {args.frames}] Obmedzujem na prvych {args.frames} framov")
 
     step_3_run_psf_on_frames(var_df, comp_df, epsf_path, max_frames=args.frames)
     step_4_build_summary()

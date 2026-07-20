@@ -84,14 +84,14 @@ def loo_dmag(wide: pd.DataFrame, focus: str, comps: list[str]) -> tuple[np.ndarr
 def vyvar_quality(lc_dir: Path, target_id: str, comp_id: str) -> tuple[str, str]:
     p = lc_dir / f"comp_quality_{target_id}.json"
     if not p.is_file():
-        return "—", ""
+        return "-", ""
     raw = json.loads(p.read_text(encoding="utf-8"))
     ent = raw.get(comp_id, raw.get(norm_id(comp_id)))
     if isinstance(ent, str):
         return ent, ""
     if isinstance(ent, dict):
-        return str(ent.get("quality", "—")), str(ent.get("note", ""))[:60]
-    return "—", ""
+        return str(ent.get("quality", "-")), str(ent.get("note", ""))[:60]
+    return "-", ""
 
 
 def main() -> int:
@@ -154,8 +154,8 @@ def main() -> int:
             short = cid[-6:]
             fr = str(row.get("flag_reason", ""))
             title = (
-                f"{tname}  comp …{short}  QA:{fr}  "
-                f"σ_IQR={si:.4f} invNV={inv:.2f} spike={spk:.2f}  "
+                f"{tname}  comp ...{short}  QA:{fr}  "
+                f"sigma_IQR={si:.4f} invNV={inv:.2f} spike={spk:.2f}  "
                 f"VYVAR:{vq}"
             )
             if vnote:
@@ -165,7 +165,7 @@ def main() -> int:
             ax.axhline(0, color="#888", lw=0.6)
             ax.invert_yaxis()
             ax.set_xlabel("hours from start")
-            ax.set_ylabel("LOO Δmag")
+            ax.set_ylabel("LOO Deltamag")
             kept = str(vq).strip().lower() != "excluded"
             ax.set_title(title, fontsize=7, color="#c0392b" if kept else "#555555")
             ip += 1

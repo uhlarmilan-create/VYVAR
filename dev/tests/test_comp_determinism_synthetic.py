@@ -1,8 +1,8 @@
 """
-Synthetic regression test for comparison-star selection determinism (P0–P4).
+Synthetic regression test for comparison-star selection determinism (P0-P4).
 
 Exercises ``photometry_core.select_comparison_stars_per_target`` without archive
-draft data. Uses short ``catalog_id`` strings (G001…) so Gaia ID normalization in
+draft data. Uses short ``catalog_id`` strings (G001...) so Gaia ID normalization in
 the pipeline matches per-frame CSV rows.
 """
 
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import comp_selection_per_target  # noqa: F401 — determinism modules under test
+import comp_selection_per_target  # noqa: F401 - determinism modules under test
 import comp_pool_rms  # noqa: F401
 from config import AppConfig
 from photometry_core import select_comparison_stars_per_target

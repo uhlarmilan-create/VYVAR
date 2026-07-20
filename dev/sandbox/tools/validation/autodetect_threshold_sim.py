@@ -26,7 +26,7 @@ def decision(d):
         return "PROMPT (no/low match)"
     if d.autofill:
         return f"AUTO-FILL id={d.matched_id}"
-    return f"PRE-FILL id={d.matched_id} (UNCONFIRMED — verify)"
+    return f"PRE-FILL id={d.matched_id} (UNCONFIRMED - verify)"
 
 
 for draft in (360, 363):

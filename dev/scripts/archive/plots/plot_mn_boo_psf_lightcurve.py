@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Zožeň PSF svetelnú krivku pre MN Boo (alebo iný catalog_id) z draft *_psf.csv."""
+"""Zozen PSF svetelnu krivku pre MN Boo (alebo iny catalog_id) z draft *_psf.csv."""
 from __future__ import annotations
 
 import argparse
@@ -38,7 +38,7 @@ def main() -> int:
     )
     files = sorted(psf_dir.glob("*_psf.csv"))
     if not files:
-        raise SystemExit(f"Žiadne *_psf.csv v {psf_dir}")
+        raise SystemExit(f"Ziadne *_psf.csv v {psf_dir}")
 
     rows: list[dict] = []
     cid = int(args.catalog_id)
@@ -63,7 +63,7 @@ def main() -> int:
 
     out = pd.DataFrame(rows).sort_values("bjd_tdb_mid").reset_index(drop=True)
     if out.empty:
-        raise SystemExit(f"Žiadne riadky pre catalog_id={cid}")
+        raise SystemExit(f"Ziadne riadky pre catalog_id={cid}")
 
     out_csv = psf_dir / f"lightcurve_psf_{cid}.csv"
     out.to_csv(out_csv, index=False)
@@ -81,11 +81,11 @@ def main() -> int:
     m = np.isfinite(err) & (err > 0) & ok
     ax0.errorbar(bjd, flx, yerr=np.where(m, err, np.nan), fmt=".", capsize=0, alpha=0.7, color="C0")
     ax0.set_ylabel("PSF flux (ADU)")
-    ax0.set_title(f"MN Boo — PSF light curve (N={len(out)})")
+    ax0.set_title(f"MN Boo - PSF light curve (N={len(out)})")
     ax0.grid(True, alpha=0.3)
 
     ax1.scatter(bjd, rel_mag, s=12, alpha=0.7, c="C1")
-    ax1.set_ylabel("Δmag vs median(PSF flux)")
+    ax1.set_ylabel("Deltamag vs median(PSF flux)")
     ax1.set_xlabel("BJD_TDB (mid)")
     ax1.grid(True, alpha=0.3)
     ax1.invert_yaxis()

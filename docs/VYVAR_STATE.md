@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-20** (K2-NIGHT-FIT-V2: NIGHT_FIT fitter + synthetic recovery gated OFF; activation still B2-blocked).
+Last updated: **2026-07-20** (ENCODING-POLICY: ASCII-only tracked text + guard; EOL normalize follow-up. Prior: K2-NIGHT-FIT-V2 gated OFF, B2-blocked).
 
 ## Repository layout (REPO-REORG -- DONE, gate PASS)
 
@@ -63,21 +63,21 @@ excluded_targets, VSX stamp, sky-surface stats, export skips. Spec by Claude nex
 
 ## Data items (top)
 
-1. **Fresh darks** — expiry ~**2026-07-21** (do first when scheduling next night).
+1. **Fresh darks** - expiry ~**2026-07-21** (do first when scheduling next night).
 2. **Anchor offline zips** (`C:\ASTRO\backups\`):
    - `draft_000435_snapshot_skysurface_20260716.zip` SHA256
      `a35d22354666e359ce1bdd9a6eb207d5d768466a67fcdb77c22425eabb3f84a0` (~4.82 GB)
    - `draft_000435_anchor_live_20260716.zip` SHA256
      `a4bb42d255e542b4a516197d5efe1a6304602b331680ac554caf41a244070faf` (~4.82 GB)
    - Historical: `vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip` (untouched)
-3. **Archive freed** ~**48.7 GB** (drafts 428–434 + pass1 photometry backup). In-Archive
+3. **Archive freed** ~**48.7 GB** (drafts 428-434 + pass1 photometry backup). In-Archive
    remain: `draft_000435` + `draft_000435_snapshot_skysurface_20260716`.
 4. F-428 arc evidence: `validation/f428_arc_evidence/` (moved from `tmp/`).
 
 ## Current snapshot (Anchor #3 ACTIVE)
 
-**draft_000435_snapshot_skysurface_20260716** — Anchor #3. Dual full-photometry SHA gate
-**PASS** on HEAD `10d610c` (LABBE-DET). Core `3d26f469…` n=333; extended `6420f1da…` n=499.
+**draft_000435_snapshot_skysurface_20260716** - Anchor #3. Dual full-photometry SHA gate
+**PASS** on HEAD `10d610c` (LABBE-DET). Core `3d26f469...` n=333; extended `6420f1da...` n=499.
 Census 2552/2842/169; identity p95 baseline **1.54 px**. Ledger `VL-ANCHOR-WCSINV` ACTIVE;
 `VL-ANCHOR-424` superseded (offline zip historical). `--full` re-enabled against 435.
 
@@ -88,7 +88,7 @@ Census 2552/2842/169; identity p95 baseline **1.54 px**. Ledger `VL-ANCHOR-WCSIN
 `VL-P1-GOLD` active (core `074ae881...` n=333; extended `66285d3f...` n=497). Opt-in
 `VYVAR_INVARIANTS_P1=1`. Result: `dev/results/CURSOR_RESULT_invariants_p1.md`.
 
-**APCORR-MIXEDFRAME:** **DONE (2026-07-19)** — night-level all-or-nothing COG gate
+**APCORR-MIXEDFRAME:** **DONE (2026-07-19)** - night-level all-or-nothing COG gate
 (`cog_night_fallback` provenance); COG still default OFF.
 
 **INVARIANTS P2:** **DONE (2026-07-19).** Contract registry `docs/VYVAR_INVARIANTS.md` +
@@ -104,30 +104,30 @@ sky-surface pedestal wording corrected (was wrongly "flux-conserving").
 
 ---
 
-## Prior: T3-RESTORE — FIX A+B committed; next gates
+## Prior: T3-RESTORE - FIX A+B committed; next gates
 
 **T3 FIX A+B** on `89842ff` (+ docs `3db0879`). Sky-surface headers + `qc_metrics.csv` confirmed
 on draft_435.
 
 **T3 FIX A (done):** order-2 sky-surface subtract in shared ``preprocess_calibrated_to_processed``
 (``preprocess_sky_surface_order`` default **2**). Empirical vs draft_429 Light_008: DAO pass-1
-sim **2579** (2500–3000 band), smooth residual p99 **173 ADU**; ~237 below 429 logged 2816
+sim **2579** (2500-3000 band), smooth residual p99 **173 ADU**; ~237 below 429 logged 2816
 (cal-only mask/clip gap documented).
 
 **T3 FIX B (done):** ``git_dirty_code`` / scratch vs import-relevant root ``*.py`` classifier;
 anchor / FAIL-CLOSED gates trip on ``git_dirty_code`` only.
 
 **T2 verdict (434 baseline):** draft_434 on ``1e2e8d6`` = **UI-SICK** (6699-class). Milan re-run
-after push expected: cal≠proc, ~2875 matched, sky ~1478 meta, identity p95 < 1 px,
+after push expected: cal!=proc, ~2875 matched, sky ~1478 meta, identity p95 < 1 px,
 ``git_dirty_code=false``.
 
 **T4 (prior):** VSX stamp after VT write; Labbe content-hash seed; NightRun match sep 2.0.
 
 **429:** unprovenanced quality target; deterministic pre-T3 path = 6699-class.
 
-**Next:** Milan UI RUN VYVAR → HEALTHY? → anchor #3 protocol-v2.
+**Next:** Milan UI RUN VYVAR -> HEALTHY? -> anchor #3 protocol-v2.
 
-## Prior snapshot (F-431 root closure — partial)
+## Prior snapshot (F-431 root closure - partial)
 
 **Anchor (was in-Archive ACCEPTED):** `draft_000424_snapshot_sigma_floor_20260713`; core `bf3743a1...`.
 Now offline only (see above).
@@ -182,11 +182,11 @@ sigma_slope_pt **5.17 mmag** aligns with PZQ sigma_r **5.5 mmag** and rig consta
 ## Earlier session history
 
 **2026-07-10 snapshot (SESSION-CLOSE-0710):** Two workstreams **DONE** that day:
-(1) **TODO-12 HRD arc** 12/12b/12c/12d/12e/12f — session-aware extreme-object table, enrichment,
+(1) **TODO-12 HRD arc** 12/12b/12c/12d/12e/12f - session-aware extreme-object table, enrichment,
 identification tiers, PDF/UI details, summary.json freshness stamps (`generated_at_utc`, `git_head`).
-(2) **F-BINGAIN-1 RESOLVED** — empirical empty-aperture `sigma_bkg_ap` in production `err` (IRAF/SExtractor/
+(2) **F-BINGAIN-1 RESOLVED** - empirical empty-aperture `sigma_bkg_ap` in production `err` (IRAF/SExtractor/
 photutils-aligned); hybrid `howell_scaled` fallback for crowded fields; regate PASS (decomposition-driven
-gates). Result files: `CURSOR_RESULT_todo12_hrd.md` … `_todo12f_hrd.md`, `CURSOR_RESULT_bingain_fix.md`,
+gates). Result files: `CURSOR_RESULT_todo12_hrd.md` ... `_todo12f_hrd.md`, `CURSOR_RESULT_bingain_fix.md`,
 `CURSOR_RESULT_bingain_acceptance.md`, `CURSOR_RESULT_bingain_regate.md`.
 
 **Byte-identity baseline (F-BINGAIN-1):** Re-anchored for documented **`err` column divergence**
@@ -208,7 +208,7 @@ RSG alignment check draft_425 B: peak/bg 6.4 (was 1.9 on field_map before FITS b
 
 **2026-07-10 snapshot (TODO-12c):** Stage-2 priority RSG>RG before Very cool; `hrd_min_per_net=4`
 per-net Stage-1 reservations; draft_425 RSG count 3/setup (was 2 + mislabeled s*r); luminous-net
-stars reach enrichment (teff mostly NaN, none >=25k — acceptable for reddened OB). pytest **696 passed**.
+stars reach enrichment (teff mostly NaN, none >=25k - acceptable for reddened OB). pytest **696 passed**.
 
 **2026-07-10 snapshot (TODO-12b):** Parallax gate promoted to config (`hrd_parallax_min_mas=0.15`,
 `hrd_parallax_snr_min=5`); draft_425 reliable count B/V/R 7989/6651/8011 (was ~1015/795/1021); chi Per
@@ -224,22 +224,22 @@ differs (19/20/19 candidates); PDF overflow verify 0 violations (draft_425 B_20_
 **2026-07-09 snapshot:** SESSION-CLOSE-0709: Sigma budget Phase A **DONE (wide rig)**; sparse-comp
 diagnostics + proposed gate redesign recorded; draft_426 equipment verified eq4 (no DB change).
 
-**2026-07-09 snapshot:** SESSION-CLOSE-0709: draft_426 FITS headers (INSTRUME=C5A-150M, 3552×2664 @
-bin4) verify OBS_DRAFT eq4 — GAIN=12.48 anomaly is F-BINGAIN-1 not wrong equipment;
+**2026-07-09 snapshot:** SESSION-CLOSE-0709: draft_426 FITS headers (INSTRUME=C5A-150M, 3552x2664 @
+bin4) verify OBS_DRAFT eq4 - GAIN=12.48 anomaly is F-BINGAIN-1 not wrong equipment;
 `scripts/fix_draft_equipment.py` + tests. Sigma Phase A wide-rig DONE (6.5 mmag floor, k2 attribution
-zero, ~4.5 mmag rig constant). Sparse-comp: ~95% field-wide offset cancels; temporal 8–12 mmag healthy.
+zero, ~4.5 mmag rig constant). Sparse-comp: ~95% field-wide offset cancels; temporal 8-12 mmag healthy.
 pytest **681 passed**, 15 skipped. Pushed to origin/main (Milan-authorized 2026-07-09).
 
-**2026-07-09 snapshot (prior):** SIGMA-A4: wide-rig floor attribution (k2 pooled R²≈0, floor_after k2=6.5 mmag
-unchanged); Newton bin4 forensics (header gain 12.48, σ_ratio≈1.13, χ²_pred≈0.78); hypothesis
-gain/RN correction moves χ² away from 1. pytest **679 passed**, 15 skipped.
+**2026-07-09 snapshot (prior):** SIGMA-A4: wide-rig floor attribution (k2 pooled R^2~0, floor_after k2=6.5 mmag
+unchanged); Newton bin4 forensics (header gain 12.48, sigma_ratio~1.13, chi^2_pred~0.78); hypothesis
+gain/RN correction moves chi^2 away from 1. pytest **679 passed**, 15 skipped.
 
 **2026-07-09 snapshot (prior):** SIGMA-A3: variant (e) `howell_scint_fresid_floor_ensemble` (+ Honeycutt ensemble SEM);
 dual SEM paths (LC decomposition + production `ensemble_normalize`); draft_424 joint refit (d) unchanged
-f_resid=0.74 sigma_floor=10.5 mmag, joint (e) f_resid=0.0 sigma_floor=6.5 mmag — prediction
+f_resid=0.74 sigma_floor=10.5 mmag, joint (e) f_resid=0.0 sigma_floor=6.5 mmag - prediction
 **floor_did_not_collapse**. pytest **674 passed**, 15 skipped.
 
-**2026-07-09 snapshot (prior):** SIGMA-A2: rig fixes (TELESCOPE.DIAMETER 72→200 mm, alt<=0 guard),
+**2026-07-09 snapshot (prior):** SIGMA-A2: rig fixes (TELESCOPE.DIAMETER 72->200 mm, alt<=0 guard),
 `sigma_floor` variant + joint (f_resid, sigma_floor) fit with bootstrap CIs; draft_424 rerun
 D=0.2 m alt=275 m, joint fit f_resid=0.74 sigma_floor=10.5 mmag. G9.3 calibrator not saturation-flagged
 (fill_max=0.53). pytest **669 passed**, 15 skipped. Pushed e2c9466 (A) + 0b901aa (A2).
@@ -252,7 +252,7 @@ No production wiring; `delta_mag` flux-sum canonical. pytest **666 passed**, 15 
 
 **2026-07-09 snapshot (prior):** DAO-RECONCILE-CLOSE: flat-curve no-crossing censoring fix (draft_426
 G_lim was spurious 13.0, now `>=17.5 no crossing`); 2-pass DAO recovery CLOSED
-(not-worth-complexity); PUB-QC-MISSRESIDUAL parked. Completeness 89.7–98.3% across rigs;
+(not-worth-complexity); PUB-QC-MISSRESIDUAL parked. Completeness 89.7-98.3% across rigs;
 miss@G90 health signals live in QA dashboard. pytest **661 passed**, 15 skipped. Chain pushed
 to origin/main (Milan-authorized 2026-07-09).
 
@@ -263,14 +263,14 @@ draft_425 B/R: G_lim_50 censored at 17.5 (was spurious 19.25). All-drafts diag:
 `tmp/dao_reconcile/cross_draft_summary.json`. pytest **659 passed**, 15 skipped. Chain pushed
 to origin/main (Milan-authorized 2026-07-09).
 
-**2026-07-09 snapshot (prior):** DAO-RECONCILE-2 (`bd6244a`…`b7df7c6`): footprint Gaia reference +
-Fleming (1995) completeness curve; `completeness_50` headline. draft_424 R-2: G_lim_50≈14.97,
-completeness_50≈89.7%, genuinely-missed=353 (R-1: 96k @ 3.4% — population bug). All-drafts
+**2026-07-09 snapshot (prior):** DAO-RECONCILE-2 (`bd6244a`...`b7df7c6`): footprint Gaia reference +
+Fleming (1995) completeness curve; `completeness_50` headline. draft_424 R-2: G_lim_50~14.97,
+completeness_50~89.7%, genuinely-missed=353 (R-1: 96k @ 3.4% - population bug). All-drafts
 diag: `tmp/dao_reconcile/cross_draft_summary.json`. pytest **653 passed**, 15 skipped. Anchor
 unchanged (`92939fab` / `76642318`). Unpushed local chain.
 
 **2026-07-08 snapshot:** draft_424 coherent anchor `draft_000424_snapshot_20260708_full`
-(`run_full_photometry_pipeline`; core SHA `92939fab…` n=357). Hybrid snapshot retired.
+(`run_full_photometry_pipeline`; core SHA `92939fab...` n=357). Hybrid snapshot retired.
 `session_baseline_check.py --full` OVERALL PASS (run-2 verification). Ledger VL-ANCHOR-424 +
 VL-COUNTERS-ZERO **passing**. Full pytest **631 passed**, 15 skipped. Local chain unpushed until
 PROC-STORE-TRUST-FIX push (Milan-authorized 2026-07-08).
@@ -293,7 +293,7 @@ BULK-2; batch **CLOSED**. Census: `docs/VYVAR_EXCEPT_CENSUS.md`.
 **Done 2026-07-08 (CAL-AGE-CLOCK):** `resolve_master_age` unified import scan + library UI.
 
 **Done 2026-07-08 (PROV-FIX):** `provenance` block in `pipeline_meta.json` via
-`merge_photometry_pipeline_meta` when `cfg` passed — `git_hash`, `git_dirty`, full
+`merge_photometry_pipeline_meta` when `cfg` passed - `git_hash`, `git_dirty`, full
 `AppConfig.to_dict()` snapshot, `stamped_at_utc`, `entry_point`; last-writer-wins at
 `run_phase2a` and `generate_masterstar_and_catalog`. Archaeology: never-wired (not regression).
 No secrets in `AppConfig` (post-`c26e351` credentials reset).
@@ -304,7 +304,7 @@ NIGHT_FIT deferred (`k2_fit_enabled` OFF). Spec: `docs/VYVAR_K2_DESIGN_SPEC.md`.
 424/425/427 matrix **PASS** (`tmp/k2_land/validation_report.json`, 2026-07-07).
 
 **Done 2026-07-07 (CAL-DIAG-IMPL):** Calibration-time radiometry gate per `VYVAR_CAL_DIAG_SPEC.md`
-v1.1 — Check A (SUM/MEAN convention) + Check B (post-dark sky sanity); parent pre-gate for MP
+v1.1 - Check A (SUM/MEAN convention) + Check B (post-dark sky sanity); parent pre-gate for MP
 variant (a); provenance headers `VY_DKRSMP`/`VY_CDSKY`/`VY_CDSTAT` + `archive/<draft>/cal_diag.json`.
 14 gate unit tests; `549 passed` full suite; draft_424: **150/150** frames `VY_DKRSMP=SUM`, 0
 WARN/FAIL, calibrated arrays and photometry science byte-identical to baseline. **RN-HEADER-NONE**
@@ -316,73 +316,73 @@ GAIA-ID guard closed. Commits: `4f18f02` (Fable B+C), `d594b27` (session close).
 
 **Done 2026-07-07 (Fable audit B+C):** Kasten & Young (1989) airmass attribution corrected;
 `kastenyoung1989` in `CITATIONS.bib`. GAIA-ID-FLOAT-GUARD closed (live-tree parity check).
-F-BINGAIN-1 Stage A diagnostic only — no exponent change yet.
+F-BINGAIN-1 Stage A diagnostic only - no exponent change yet.
 
 **Done 2026-06-25 (F-BJD-1 Stage D):** per-target LC column `time_base` labels BJD recompute path;
-`_recompute_bjd_hjd_with_status` reports cause (`BJD_TDB` vs `JD_FALLBACK`). Purely additive —
+`_recompute_bjd_hjd_with_status` reports cause (`BJD_TDB` vs `JD_FALLBACK`). Purely additive -
 `bjd`/`hjd`/`jd` byte-identical. Closes the 2026-06-25 citation/error-model audit.
 
 **Done 2026-06-25 (F-HOWELL-3 Stage C):** explicit annulus-sky column for Howell err; `_photometric_error`
 reads `sky_adu_per_px_annulus` with legacy `noise_floor_adu` fallback. Verified on real draft_424
 (`run_full_photometry_pipeline`): 178/178 LCs science-identical; sky-dominated err inflation measured
-**~12–14%** (detection vs annulus) on faint targets.
+**~12-14%** (detection vs annulus) on faint targets.
 
-**Done 2026-06-25 (citation audit Stage A):** F-RIELLO-1 — B-V/Riello report citation removed
+**Done 2026-06-25 (citation audit Stage A):** F-RIELLO-1 - B-V/Riello report citation removed
 (BP-RP is raw Gaia); F-HOWELL-1 units comment; F-CITE-HONEYCUTT Honeycutt in CORE (`5a1bae0`).
 
 **In-flight / gated:** NIGHT_FIT k'' pre-gate (v2; K2-DATA-BLOCKER). See ROADMAP ACTIVATED v1.
 
-**Done this session (prior):** band classifier (`fe9b375`) — now wired with k'' v1.
+**Done this session (prior):** band classifier (`fe9b375`) - now wired with k'' v1.
 
-**In-flight / PARKED — band-aware k'' (second-order extinction):** **ACTIVATED v1** — see STATE
+**In-flight / PARKED - band-aware k'' (second-order extinction):** **ACTIVATED v1** - see STATE
 2026-07-07 K2 paragraph and `VYVAR_K2_DESIGN_SPEC.md`. NIGHT_FIT = v2.
 
-Prior: **2026-06-22** — Forced-aperture / catalog_only removed; DAO+Gaia photometry only. Variable
-targets measured **only on direct DAO `catalog_id` hit** (miss → nondetection/NaN; no XY fallback).
-Unmatched VSX excluded in Fáza 0. Validated do-no-harm vs draft 419. See DECISIONS.
+Prior: **2026-06-22** - Forced-aperture / catalog_only removed; DAO+Gaia photometry only. Variable
+targets measured **only on direct DAO `catalog_id` hit** (miss -> nondetection/NaN; no XY fallback).
+Unmatched VSX excluded in Faza 0. Validated do-no-harm vs draft 419. See DECISIONS.
 
-Prior: **2026-06-19** — Stage B held pending validation (forced-aperture removal draft).
+Prior: **2026-06-19** - Stage B held pending validation (forced-aperture removal draft).
 
-Prior: **2026-06-18** — **Fix C / Phase C1: dense-field alignment DIAGNOSED → root = PSF/FWHM
+Prior: **2026-06-18** - **Fix C / Phase C1: dense-field alignment DIAGNOSED -> root = PSF/FWHM
 bloat; recovery NOT APPLICABLE.** The 14 late-night (post-flip, back-half) frames Fix B drops are **not**
-"good data that only failed alignment" — they are **PSF-degraded**: median **FWHM 8.60 px = 1.85× the
+"good data that only failed alignment" - they are **PSF-degraded**: median **FWHM 8.60 px = 1.85x the
 good baseline 4.64 px**, concentration flux_large/flux **13.1 vs 1.65**, **corr(FWHM,
 alignment-residual)=0.95** (161 frames; `tmp/phaseC1/fixC_root_cause.png`). The bloated-donut centroid
-noise (~2.4 px) is the single root — it breaks astroalign (misalignment is the *symptom*) and is what
+noise (~2.4 px) is the single root - it breaks astroalign (misalignment is the *symptom*) and is what
 B.2 (concentration) + Fix-B (residual) measure. Likely **late-night focus drift on the defocused rig**
 (a transparency/flux drop alone would not bloat FWHM); post-flip-half-not-refocused is an observer
-question. **Not recoverable to sub-px** (centroid floor ~2.4 px > 1.37 px gate; cap50→3/14, WCS absent
-0/162, translation-refine inapplicable). **Fix B + B.2 are the correct PERMANENT quality gate** — not a
-stop-gap awaiting Fix C. Logged a SEPARATE control-point-cap perf ticket (astroalign mcp≈200 → ~654
-s/frame on dense fields; cap ~50 → ~3–10 s; ROADMAP). **A.B.: Fix A `005716d` + Fix B `fa03410` pushed
+question. **Not recoverable to sub-px** (centroid floor ~2.4 px > 1.37 px gate; cap50->3/14, WCS absent
+0/162, translation-refine inapplicable). **Fix B + B.2 are the correct PERMANENT quality gate** - not a
+stop-gap awaiting Fix C. Logged a SEPARATE control-point-cap perf ticket (astroalign mcp~200 -> ~654
+s/frame on dense fields; cap ~50 -> ~3-10 s; ROADMAP). **A.B.: Fix A `005716d` + Fix B `fa03410` pushed
 to origin/main this session (Milan-authorized).** `CURSOR_RESULT_fixC_diag.md`. See DECISIONS/JOURNAL.
-Prior: 2026-06-18 — **Fix B: reject-on-alignment-residual frame gate** (default-OFF;
-`frame_align_residual_gate_enabled`). Two additive pieces: (1) **always-on QC** — a per-frame
+Prior: 2026-06-18 - **Fix B: reject-on-alignment-residual frame gate** (default-OFF;
+`frame_align_residual_gate_enabled`). Two additive pieces: (1) **always-on QC** - a per-frame
 **alignment residual** (median deviation of bright matched sources from their across-night median
 position) is computed at the Phase-2A frame-selection point and recorded as `align_residual_px` in
-`alignment_report.csv` (additive metadata → photometry byte-identical); it reproduces the run-414
+`alignment_report.csv` (additive metadata -> photometry byte-identical); it reproduces the run-414
 diagnostic separation (astroalign med **0.358**/max **1.648** px vs phase_corr min **1.450**/med
-**2.130** px). (2) **gate (default-OFF)** — rejects frames whose residual exceeds
-`frame_align_residual_max_frac × science-aperture-radius-px` (**rig-agnostic** fraction, default
-**0.25** → 1.37 px, in the 1.206→1.450 px good/bad gap; safety floor `min_keep_frames`). Verified on
+**2.130** px). (2) **gate (default-OFF)** - rejects frames whose residual exceeds
+`frame_align_residual_max_frac x science-aperture-radius-px` (**rig-agnostic** fraction, default
+**0.25** -> 1.37 px, in the 1.206->1.450 px good/bad gap; safety floor `min_keep_frames`). Verified on
 run-414 g: **OFF byte-identical** (70 targets, V0454 `mag_calib`/`delta_mag`/`err` max|diff|=0); **ON
 drops 14 frames = all 13 phase_correlation + 1 mis-aligned astroalign** (dr=1.648, itself an LC
-outlier) — V0454 outliers 22→10, the catastrophic +3.7 mag/NaN points gone (clean SIPS-grade egress;
-`tmp/fixB_v0454.png`). **B.2 cross-check:** residual gate ⊇ B.2 (overlap 13, residual-only the 1
-astroalign, B.2-only 0) — cause-correct (alignment) superset of B.2's aperture-integrity symptom; both
-kept distinct. **[C1 correction: PERMANENT gate, not "self-deactivating once Fix C fixes alignment" —
+outlier) - V0454 outliers 22->10, the catastrophic +3.7 mag/NaN points gone (clean SIPS-grade egress;
+`tmp/fixB_v0454.png`). **B.2 cross-check:** residual gate supset B.2 (overlap 13, residual-only the 1
+astroalign, B.2-only 0) - cause-correct (alignment) superset of B.2's aperture-integrity symptom; both
+kept distinct. **[C1 correction: PERMANENT gate, not "self-deactivating once Fix C fixes alignment" -
 the frames are PSF/FWHM-bloated and unrecoverable.]** See DECISIONS/JOURNAL.
-Prior: 2026-06-18 — **Fix A: per-point error model bug fixed** (default; no flag). The LC
-`err` term-3 was `np.std(comp instrumental mags)/√n` (`photometry_core.py:2567`) — for a sparse/
+Prior: 2026-06-18 - **Fix A: per-point error model bug fixed** (default; no flag). The LC
+`err` term-3 was `np.std(comp instrumental mags)/sqrtn` (`photometry_core.py:2567`) - for a sparse/
 brightness-spread ensemble this is the comps' brightness *spread* (a fixed ~0.58 mag floor on V0454,
-23× the empirical 0.025), not a per-point uncertainty. Replaced with the per-frame **ensemble-ZP
-standard error from comp residuals** (each comp vs its own across-night median → brightness/colour
-cancels; Honeycutt 1992); the redundant `comp_rms/√n` term-2 was dropped (no double-count); photon
+23x the empirical 0.025), not a per-point uncertainty. Replaced with the per-frame **ensemble-ZP
+standard error from comp residuals** (each comp vs its own across-night median -> brightness/colour
+cancels; Honeycutt 1992); the redundant `comp_rms/sqrtn` term-2 was dropped (no double-count); photon
 term-1 (incl. SNR-blowup on bad frames) kept. Verified on run-414 g: centres `mag_calib`/`delta_mag`
-**byte-identical**, V0454 err 0.581→0.013 (≈empirical), faint targets photon-dominated, the 13
+**byte-identical**, V0454 err 0.581->0.013 (~empirical), faint targets photon-dominated, the 13
 mis-aligned frames still flagged (Fix B). `err` does NOT feed trust/lc_rms/production-Broeg-combine;
-it does feed SysRem IVW weights (default-OFF) — improved, not broken. See DECISIONS/JOURNAL.
-Prior: 2026-06-17 (end-of-day) — clean committed **+ pushed** baseline at `955b850`
+it does feed SysRem IVW weights (default-OFF) - improved, not broken. See DECISIONS/JOURNAL.
+Prior: 2026-06-17 (end-of-day) - clean committed **+ pushed** baseline at `955b850`
 (8 commits: `1eea2d2` masterstar recovery, `e042bc1` A-durable, `d222eb7` B-cap, `2cc2b76`
 completeness gate, `63e57c0` log-flood, `a126980` B.2 gate, `15c699e`/`955b850` docs). `draft_413` =
 Boyden V454 CrA non-cal sandbox (g+r; **g fully validated** this session). Validated this session:
@@ -422,7 +422,7 @@ no history and no open-task detail -- those live in the linked files.
 | `docs/VYVAR_CALIBRATION.md` | Magnitude calibration data-flow (`mag_calib_final`, CT/AC, consumers). |
 | `docs/VYVAR_GAIA_DR3_AUDIT.md` | Gaia DR3 ingest audit (build schema, match, ref mag; 2026-06-10). |
 | `docs/VYVAR_LC_QUALITY_SHORT_BASELINE_SPEC.md` | `short_baseline` LC-quality spec #3 (rev b, ready; 2026-06-10). |
-| `docs/VYVAR_RUNBOOK.md` | Chi_and_H zaloha-only night-run procedure (alias → baseline runbook). |
+| `docs/VYVAR_RUNBOOK.md` | Chi_and_H zaloha-only night-run procedure (alias -> baseline runbook). |
 | `docs/VYVAR_CHIANDH_BASELINE_RUNBOOK.md` | Chi_and_H baseline re-cut procedure (byte-identity anchor; 2026-06-11). |
 | `docs/VYVAR_TRUST_CHECKSTAR_HARDENING_SPEC.md` | Trust Findings A/B + CS-1 hardening (2026-06-11). |
 | `docs/VYVAR_CHECKSTAR_SELECTION_SPEC.md` | Check-star selection CS-2..4 (2026-06-11). |
@@ -538,16 +538,16 @@ PM (`pmra`/`pmdec`) and `ruwe` are **NOT** in the DR3 catalog; **deferred to the
 (~Dec 2026). Platesolver PM propagation is present but a no-op against DR3. Fine-scale dense
 fields carry the GAIA-1 mis-association caveat until DR4 (DECISIONS).
 
-### Brno AZ800 / C5A-150M (production solver — 2026-06-14)
+### Brno AZ800 / C5A-150M (production solver - 2026-06-14)
 
 **Brno AZ800 / C5A-150M onboarded.** Production solver uses **catalog-recovery verification**
 (Gaia-in-frame / DAO at 2.5 px) as the MASTERSTAR accept gate; detection match% is informational.
-Stale FITS pointing (`VY_TARG`) → **`hint_sep_warn`** when VERIFIED (Lang et al. 2010 prior), not
-hard reject. Cone recenter at solved center when hint offset **≥ 0.05°** unchanged.
+Stale FITS pointing (`VY_TARG`) -> **`hint_sep_warn`** when VERIFIED (Lang et al. 2010 prior), not
+hard reject. Cone recenter at solved center when hint offset **>= 0.05 deg** unchanged.
 `generate_masterstar_and_catalog` passes `app_config` + scoped flags.
 
-**Brno `r_60_4`:** catalog recovery tight **~84%** → **VERIFIED** under new gate (was rejected on
-`hint_sep` + detection-denominated metrics). **`z_90_4`:** recovery **~34%** → stays rejected.
+**Brno `r_60_4`:** catalog recovery tight **~84%** -> **VERIFIED** under new gate (was rejected on
+`hint_sep` + detection-denominated metrics). **`z_90_4`:** recovery **~34%** -> stays rejected.
 **Open:** Milan overlay sign-off on `tmp/diag_overlay_r.png`; anchor + home-rig regression re-run.
 
 ### Comp sparse-only fallback (2026-06-11 lock)
@@ -571,16 +571,16 @@ Milan sign-off (see ROADMAP / JOURNAL).
 
 **Regeneration recipe (historical zaloha anchor)** (`docs/VYVAR_CHIANDH_BASELINE_RUNBOOK.md`):
 
-1. **Source data (must retain):** `Archive/Chi_and_H` — pre-calibrated FITS (only non-regenerable input).
+1. **Source data (must retain):** `Archive/Chi_and_H` - pre-calibrated FITS (only non-regenerable input).
 2. **Catalog + blind index:** `GAIA_DR3/zaloha/vyvar_gaia_dr3.db` (G<=16), zaloha blind PKLs
    (`gaia_triangles_fine.pkl`, `gaia_triangles_wide.pkl`). **Do not read** in-progress
    `GAIA_DR3/vyvar_gaia_dr3.db`.
 3. **Run:** `python scripts/chiandh_night_run_bvr.py` (#3 code; Newton bin2 ~1.30"/px).
-4. **Verify:** `compute_photometry_sha(draft_root)` core + full vs recorded SHAs (`3f7c9e7a…` /
-   `d5b72d08…`). For regression vs the historical cut, use
-   `compare_photometry_science_meaningful` (PROCESS) — excludes provenance/`err` QC drift.
+4. **Verify:** `compute_photometry_sha(draft_root)` core + full vs recorded SHAs (`3f7c9e7a...` /
+   `d5b72d08...`). For regression vs the historical cut, use
+   `compare_photometry_science_meaningful` (PROCESS) - excludes provenance/`err` QC drift.
 
-**Setups (filter-wheel labels):** `B_20_2`, `V_20_2`, `R_20_2`, `L_20_2` — **B/V/R/L** are wheel
+**Setups (filter-wheel labels):** `B_20_2`, `V_20_2`, `R_20_2`, `L_20_2` - **B/V/R/L** are wheel
 positions. **V** = visual/green (`G/` folder); **L** = clear/broadband (`L_20_2` in anchor).
 
 **Provenance at anchor cut (2026-06-11, zaloha):**
@@ -591,10 +591,10 @@ positions. **V** = visual/green (`G/` folder); **L** = clear/broadband (`L_20_2`
 | Catalog | `GAIA_DR3/zaloha/vyvar_gaia_dr3.db` (G<=16) + zaloha blind PKLs |
 | Rig | Newton 300/1200 + C3-26000, bin2 ~1.30"/px |
 | Ephemeral draft | `draft_000386` (~1401 LCs; deletable) |
-| Completeness gate | `night_run.audit_photometry_completeness` — >=90% summary/active per setup |
+| Completeness gate | `night_run.audit_photometry_completeness` - >=90% summary/active per setup |
 
 Scoped trust at cut (`comp_trust_min_comps=5`, floor-5 baseline): **1382 YELLOW / 106 RED**
-(1488 summary rows; re-trust on draft_387). Pre-floor-5 counts were 1400/88 — superseded.
+(1488 summary rows; re-trust on draft_387). Pre-floor-5 counts were 1400/88 - superseded.
 Anchor photometry SHA is numeric and trust-independent.
 - **Last science-validated wide draft:** `draft_000365` (V842 Her, 127 frames, 143 targets).
 - **CT science locked:** h & chi Per `draft_000380` (Johnson-Cousins B/V/Rc); details in JOURNAL.

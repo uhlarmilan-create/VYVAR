@@ -1,5 +1,5 @@
 """
-cross_validate_draft342.py — Independent cross-validation of VYVAR draft_342.
+cross_validate_draft342.py - Independent cross-validation of VYVAR draft_342.
 
 Compares VYVAR outputs against independent photutils/astroalign pipeline.
 Runs 10 validation tests, prints markdown report, saves CSV results.
@@ -25,7 +25,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# ── CONFIG ─────────────────────────────────────────────────────────────────────
+# -- CONFIG ---------------------------------------------------------------------
 
 DRAFT_DIR = Path(r"C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000342")
 FITS_DIR = DRAFT_DIR / "detrended_aligned/lights/NoFilter_60_2"
@@ -40,13 +40,13 @@ OBS_ALT_M = 275.0
 PLATE_SCALE_VYVAR_ARCSEC = 1.3  # config.json phase01_plate_scale_arcsec_per_px
 
 MAX_ASTROMETRY_OFFSET_ARCSEC = 2.0
-# T02: photutils vs DAO sky — ~5-10 mmag diff expected.
+# T02: photutils vs DAO sky - ~5-10 mmag diff expected.
 MAX_FLUX_SCATTER_MMAG = 35.0
 # T03: per-star annulus sky (noise_floor_adu); small geometry/method residuals remain.
 MAX_SKY_DIFF_ADU = 20.0
 # T04: photutils npix FWHM proxy is coarse vs DAO fwhm_estimate_px.
 MAX_FWHM_DIFF_PX = 1.5
-# T05: naive ensemble vs Broeg/PyTICS — larger diff expected.
+# T05: naive ensemble vs Broeg/PyTICS - larger diff expected.
 MAX_LC_RMS_DIFF_MMAG = 60.0
 MAX_BJD_DIFF_SEC = 1.0
 MAX_AIRMASS_DIFF = 0.05
@@ -65,7 +65,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 
 
-# ── REPORT ─────────────────────────────────────────────────────────────────────
+# -- REPORT ---------------------------------------------------------------------
 
 
 @dataclass
@@ -146,7 +146,7 @@ def save_csv_results(results: list[TestResult], output_path: Path) -> None:
     pd.DataFrame(rows).to_csv(output_path, index=False)
 
 
-# ── HELPERS ────────────────────────────────────────────────────────────────────
+# -- HELPERS --------------------------------------------------------------------
 
 
 def _haversine_arcsec(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
@@ -387,7 +387,7 @@ def _sky_pp_vyvar_style(
 
 
 def _noise_floor_adu_independent(data: np.ndarray, *, k_sigma: float = 10.0) -> float:
-    """DAO-style noise floor (median + k*sigma) — same definition as VYVAR noise_floor_adu."""
+    """DAO-style noise floor (median + k*sigma) - same definition as VYVAR noise_floor_adu."""
     from astropy.stats import sigma_clipped_stats
 
     arr = np.asarray(data, dtype=np.float64)
@@ -467,7 +467,7 @@ def _aperture_photometry_frame(
     return flux, sky_local
 
 
-# ── TESTS ──────────────────────────────────────────────────────────────────────
+# -- TESTS ----------------------------------------------------------------------
 
 
 def test_01_astrometry(vyvar: dict, fits_dir: Path) -> TestResult:
@@ -1085,7 +1085,7 @@ def test_10_variability(vyvar: dict) -> TestResult:
         return TestResult(name, False, 0.0, thresh, 0, f"SKIP: {exc}", [])
 
 
-# ── MAIN ───────────────────────────────────────────────────────────────────────
+# -- MAIN -----------------------------------------------------------------------
 
 
 def main(argv: list[str] | None = None) -> int:

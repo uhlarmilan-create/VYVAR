@@ -3,7 +3,7 @@
 Extracted from ``app.py`` ``_run_vyvar_full_pipeline``.
 Called by:
   - ``simulate_night_run.py`` (CLI / e2e test)
-  - ``app.py`` ``_run_vyvar_full_pipeline`` (UI wrapper — deferred)
+  - ``app.py`` ``_run_vyvar_full_pipeline`` (UI wrapper - deferred)
   - Future: TODO-11 auto-trigger watchdog
 
 No Streamlit dependencies. Progress via ``logging`` and optional callback.
@@ -51,7 +51,7 @@ class NightRunParams:
     dao_fwhm_px: float | None = None
     dao_threshold_sigma: float | None = None
     # UI RUN VYVAR hardcodes cat_match_arc=2.0; pipeline floors with max(10, sep) for
-    # MASTERSTAR initial match — so NightRun default follows UI intent (effective 10").
+    # MASTERSTAR initial match - so NightRun default follows UI intent (effective 10").
     catalog_match_max_sep_arcsec: float = 2.0
     max_catalog_rows: int = 12000
     max_extra_platesolve: int = 0
@@ -177,7 +177,7 @@ def _masterstar_candidate_path_for_job(
                 return str(hit.resolve())
     if not pre_cal and _has_raw_seg(Path(p)):
         LOGGER.warning(
-            "MASTERSTAR: could not map RAW/non_calibrated path to processed — %s",
+            "MASTERSTAR: could not map RAW/non_calibrated path to processed - %s",
             Path(p).name,
         )
         return ""
@@ -251,7 +251,7 @@ def _night_run_preprocess(
         if not p1:
             why = ["IS_REJECTED=0"]
             if _fwhm_lim > 0:
-                why.append("FWHM ≤ limit or FWHM is NULL")
+                why.append("FWHM <= limit or FWHM is NULL")
             raise FileNotFoundError("QC filter: no frames matching " + ", ".join(why) + ".")
         dfs_pp: list[pd.DataFrame] = []
         tot_pp = len(p1)
@@ -394,9 +394,9 @@ def audit_photometry_completeness(
     Compares ``photometry_summary.csv`` rows to ``active_targets.csv``, but the verdict is taken
     against **measurable** targets only. A target is counted *unmeasurable* (honest, must NOT fail
     the run) when it produced no summary row AND is fainter than the deepest target that *was*
-    measured — i.e. below the achieved per-setup detection depth (undetected / too faint / RED).
-    Targets that are missing yet bright enough to be measurable (≤ achieved depth) are *measurable
-    misses* and still fail the run — this preserves the silent-truncation guard (draft_383/385:
+    measured - i.e. below the achieved per-setup detection depth (undetected / too faint / RED).
+    Targets that are missing yet bright enough to be measurable (<= achieved depth) are *measurable
+    misses* and still fail the run - this preserves the silent-truncation guard (draft_383/385:
     e.g. 69/373), where a cut-short process drops bright, on-frame, detectable targets.
 
     Depth is taken from the data itself (faintest measured target's catalog mag), so no new
@@ -465,7 +465,7 @@ def audit_photometry_completeness(
                 unmeasurable_mask = (~is_measured) & at_mag.notna() & (at_mag > achieved_depth)
                 n_unmeasurable = int(unmeasurable_mask.sum())
             else:
-                # Nothing measured → cannot assert depth → all misses are measurable (truncation).
+                # Nothing measured -> cannot assert depth -> all misses are measurable (truncation).
                 n_unmeasurable = 0
             n_measurable_missing = int((~is_measured).sum()) - n_unmeasurable
             out["n_unmeasurable_missing"] = n_unmeasurable
@@ -514,7 +514,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
     def _t(label: str, t0: float) -> None:
         elapsed = time.time() - t0
         timings[label] = elapsed
-        LOGGER.info("[NightRun] ✓ %s — %.1fs", label, elapsed)
+        LOGGER.info("[NightRun] [OK] %s - %.1fs", label, elapsed)
 
     prog_cb = _make_progress_cb(params.progress_cb)
 
@@ -542,7 +542,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         ps_eq = int(eq_id)
 
         if params.dry_run:
-            _p(f"DRY RUN — scan only: {source}")
+            _p(f"DRY RUN - scan only: {source}")
             t0 = time.time()
             plan = smart_scan_source(
                 source_root=source,
@@ -562,7 +562,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 result.errors.append("Scan: no light frames found in source directory")
             else:
                 result.success = True
-                _p(f"DRY RUN OK — {len(plan.lights_files)} light file(s) in plan")
+                _p(f"DRY RUN OK - {len(plan.lights_files)} light file(s) in plan")
             result.phase_timings = timings
             return result
 
@@ -657,7 +657,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             mf_obs = {}
             dm_obs = {}
             _p(
-                "Step 3: skipped — pre-calibrated import; downstream reads non_calibrated/lights "
+                "Step 3: skipped - pre-calibrated import; downstream reads non_calibrated/lights "
                 "(no calibrated/ directory)"
             )
             _cal_out: dict[str, Any] = {"pre_calibrated_skip_calibration": True}
@@ -714,7 +714,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             and int(qsum.get("n_successful_fwhm") or 0) > 0
         )
         if not _perf10_ok:
-            _p("Step 5: RAM QC → OBS_FILES")
+            _p("Step 5: RAM QC -> OBS_FILES")
             t0 = time.time()
             qsum = run_draft_ram_calibration_qc_to_obs_files(
                 db=pipeline.db,
@@ -731,7 +731,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             )
             _t("ram_qc", t0)
         else:
-            LOGGER.info("[PERF-10] Step 5 skipped — DAO QC computed during calibration")
+            LOGGER.info("[PERF-10] Step 5 skipped - DAO QC computed during calibration")
             timings["ram_qc"] = 0.0
 
         # Step 6: Pointing
@@ -850,7 +850,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 result.warnings.append(f"MASTERSTAR DB path write: {exc}")
         _t("masterstar_resolve", t0)
 
-        # Steps 9–10: Coordinates + hash
+        # Steps 9-10: Coordinates + hash
         t0 = time.time()
         ira, ide = resolve_preprocess_target_coordinates(
             db=pipeline.db,
@@ -928,7 +928,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             job_ms["overwrite_qc_processing"] = True
 
         # Step 11: Preprocess
-        _p("Step 11: Preprocess (calibrated → processed)")
+        _p("Step 11: Preprocess (calibrated -> processed)")
         t0 = time.time()
         _night_run_preprocess(pending=job_ms, ap=ap, pipeline=pipeline, progress_cb=prog_cb)
         _t("preprocess", t0)
@@ -961,7 +961,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 return result
             _t("post_platesolve_hook", t0)
 
-        # Steps 13–14: Photometry
+        # Steps 13-14: Photometry
         from photometry_core import run_full_photometry_pipeline
         from ui_aperture_photometry import _find_phase2a_paths
 
@@ -1022,7 +1022,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 phot_errors.append(f"{nm}: missing {', '.join(missing)}")
                 continue
 
-            _p(f"Step 14: Photometry — {nm}")
+            _p(f"Step 14: Photometry - {nm}")
             t0 = time.time()
             try:
                 phot_result = run_full_photometry_pipeline(
@@ -1080,7 +1080,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                     completeness_issues.append(
                         f"{nm}: photometry_summary {n_sm}/{n_meas} measurable targets "
                         f"({mratio_s} coverage, min {_PHOTOMETRY_COMPLETENESS_MIN_RATIO:.0%} required; "
-                        f"{n_unmeas} of {n_at} active are below achieved depth → unmeasurable)"
+                        f"{n_unmeas} of {n_at} active are below achieved depth -> unmeasurable)"
                     )
 
             # Step 15: PDF per group
@@ -1091,7 +1091,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                     draft_dir=draft_dir,
                     obs_group=str(nm),
                     tess_results={},
-                    base_report_title="VYVAR — Summary Measure Report",
+                    base_report_title="VYVAR - Summary Measure Report",
                 )
                 for pdf_path in pdf_paths:
                     _p(f"PDF report: {Path(pdf_path).name}")
@@ -1120,7 +1120,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         timings["total"] = time.time() - t_run
         result.phase_timings = timings
         _p(
-            f"Night run complete — draft {draft_id}, {total_lc} light curve(s), "
+            f"Night run complete - draft {draft_id}, {total_lc} light curve(s), "
             f"{total_frames} frame(s)"
         )
         return result

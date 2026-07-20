@@ -114,7 +114,7 @@ src = root / "smoke_test_bprp_tier.py"
 dst = root / "tests" / "test_bprp_tier_smoke.py"
 if src.exists():
     src.rename(dst)
-    print("Phase 6: moved smoke_test_bprp_tier.py → tests/test_bprp_tier_smoke.py")
+    print("Phase 6: moved smoke_test_bprp_tier.py -> tests/test_bprp_tier_smoke.py")
 else:
     print("Phase 6: smoke_test_bprp_tier.py not found (skipped)")
 

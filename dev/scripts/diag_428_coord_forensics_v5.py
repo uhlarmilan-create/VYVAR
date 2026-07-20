@@ -42,7 +42,7 @@ PRIORITY_TARGETS = [
 STALE_WCS_PX = 1.5
 PLATE_SCALE = 2.6
 STAMP_HALF = 20  # 41x41
-# Aperture radius ~2 px; Gaia WCS projection within this of ms x/y ⇒ same physical star.
+# Aperture radius ~2 px; Gaia WCS projection within this of ms x/y => same physical star.
 SAME_STAR_PX = 2.5
 DISTINCT_STAR_PX = 3.0
 
@@ -393,12 +393,12 @@ def main() -> int:
         if "x" in cols or "ra_deg" in cols:
             t3_lines.append(f"  {name}: per-frame position columns present")
         else:
-            t3_lines.append(f"  {name}: LC has no x/y — n_frames={len(pd.read_csv(lc_path))} source_file only")
+            t3_lines.append(f"  {name}: LC has no x/y - n_frames={len(pd.read_csv(lc_path))} source_file only")
 
     align_path = Path(args.photometry_dir).parent / "alignment_report.csv"
     if align_path.is_file():
         ar = pd.read_csv(align_path)
-        t3_lines.append(f"  alignment_report: {len(ar)} rows, cols={list(ar.columns)} — no per-target centroid scatter")
+        t3_lines.append(f"  alignment_report: {len(ar)} rows, cols={list(ar.columns)} - no per-target centroid scatter")
 
     # T4 unmatched DET + control
     det_mask = ms["name"].astype(str).str.match(r"^DET_\d+$", na=False) & (
@@ -442,14 +442,14 @@ def main() -> int:
 
     ratio_det_ctrl = p50_det / max(p50_ctrl, 1e-6)
     # Poisson analytic uses uniform catalog density; field_catalog_cone is G-limited cone export
-    # (100k cap, ~13.6° radius) with strong central concentration — random control NN p50 tracks
-    # the actual in-frame catalog geometry (~122″) not the naive uniform-density estimate (~33″).
+    # (100k cap, ~13.6 deg radius) with strong central concentration - random control NN p50 tracks
+    # the actual in-frame catalog geometry (~122 arcsec) not the naive uniform-density estimate (~33 arcsec).
     poisson_vs_control_ratio = p50_ctrl / max(poisson_est, 1e-6)
     t4_poisson_note = (
         f"T4 Poisson reconciliation: analytic_uniform_p50~{poisson_est:.1f}\" assumes "
         f"uniform n={n_cat}/area={area_deg2:.3f}deg2; random_control_p50={p50_ctrl:.1f}\" "
         f"(ratio control/Poisson={poisson_vs_control_ratio:.2f}). Cone export is spatially "
-        f"non-uniform (100k cap, G≤15.26, ~13.6° radius) — control matches catalog geometry; "
+        f"non-uniform (100k cap, G<=15.26, ~13.6 deg radius) - control matches catalog geometry; "
         f"not a units bug. Feeds F-428-A3-RADIUS / GAIA-DR4 depth track only."
     )
     if ratio_det_ctrl > 2.5 and abs(p50_ctrl - poisson_est) / max(poisson_est, 1) > 0.5:
@@ -522,19 +522,19 @@ def main() -> int:
     lines.append(f"inputs: MASTERSTAR.fits={args.masterstar_fits.resolve()}")
     lines.append(f"inputs: gaia_db={gdb.resolve()}")
     lines.append("")
-    lines.append("# T1 — Direction statistics")
+    lines.append("# T1 - Direction statistics")
     lines.append(json.dumps(t1_mis, indent=2))
     lines.append(json.dumps(t1_con, indent=2))
     lines.append(f"match_origin_counts_MISASSIGNED: {json.dumps(origin_counts)}")
     if t1_mis.get("vector_mean_mag", 999) < 0.5 * t1_mis.get("mean_abs_delta", 1):
-        lines.append("T1 interpretation: MISASSIGNED set isotropic (vector mean << mean |delta|) — not rigid shift")
+        lines.append("T1 interpretation: MISASSIGNED set isotropic (vector mean << mean |delta|) - not rigid shift")
     if abs(t1_mis.get("corr_mag_vs_center_dist", 0)) > 0.3:
         lines.append(f"T1 interpretation: radius-correlated |delta| corr={t1_mis.get('corr_mag_vs_center_dist'):.3f}")
     else:
         lines.append(f"T1 interpretation: weak radius correlation corr={t1_mis.get('corr_mag_vs_center_dist', float('nan')):.3f}")
 
     lines.append("")
-    lines.append("# T2 — Peak test on MASTERSTAR.fits")
+    lines.append("# T2 - Peak test on MASTERSTAR.fits")
     lines.append(f"t2_class_histogram (MISASSIGNED n={len(mis)}): {json.dumps(t2_hist)}")
     pri_med_sep_proj = float(pri["sep_proj_px"].median()) if not pri.empty else float("nan")
     pri_med_sep_wcs = float(pri["sep_wcs_gaia_arcsec"].median()) if not pri.empty else float("nan")
@@ -549,11 +549,11 @@ def main() -> int:
     lines.append(f"contact_sheet: {args.contact_png.resolve()}")
 
     lines.append("")
-    lines.append("# T3 — Per-frame LC position evidence")
+    lines.append("# T3 - Per-frame LC position evidence")
     lines.extend(t3_lines if t3_lines else ["  (no data)"])
 
     lines.append("")
-    lines.append("# T4 — 81\" population closure")
+    lines.append("# T4 - 81\" population closure")
     lines.append(f"unmatched_DET: {len(unmatched)}")
     lines.append(f"field_catalog_in_frame: n={n_cat} area_deg2={area_deg2:.4f} poisson_est_p50~{poisson_est:.1f}\"")
     lines.append(f"det_nearest_catalog_p50: {p50_det:.3f}\"")
@@ -566,7 +566,7 @@ def main() -> int:
     fail: list[str] = []
     gate = "STOP"
     if t4_verdict == "DIAG-BUG":
-        fail.append("T4 control test suggests diagnostic bias — quarantine v3/v4 separations")
+        fail.append("T4 control test suggests diagnostic bias - quarantine v3/v4 separations")
         gate = "QUARANTINE"
     elif pri_conf > 0:
         fail.append(f"T2 GENUINE_CONFUSION on {pri_conf} priority targets")
@@ -574,10 +574,10 @@ def main() -> int:
     elif t2_dom >= max(1, int(0.6 * len(mis))) and t1_mis.get("vector_mean_mag", 999) < 0.5 * t1_mis.get("mean_abs_delta", 1):
         gate = "RECLASSIFY-PROJECTION"
         lines.append("")
-        lines.append("GATE: RECLASSIFY-PROJECTION — peak at ms x/y, not at Gaia projection; systematic not identity")
+        lines.append("GATE: RECLASSIFY-PROJECTION - peak at ms x/y, not at Gaia projection; systematic not identity")
         lines.append("draft_428 flux likely correct; T4 re-run + anchor UNBLOCK pending Milan contact sheet review")
     else:
-        fail.append("T2 mixed/ambiguous — Milan review required")
+        fail.append("T2 mixed/ambiguous - Milan review required")
         gate = "STOP"
 
     lines.append("")

@@ -1,4 +1,4 @@
-"""MASTERSTAR QA: downsampling + vrstvy DAO / MATCH / Gaia kužeľ na PNG (Streamlit)."""
+"""MASTERSTAR QA: downsampling + vrstvy DAO / MATCH / Gaia kuzel na PNG (Streamlit)."""
 
 from __future__ import annotations
 
@@ -119,9 +119,9 @@ def build_starfield_qa_png_mapping(
                     draw.ellipse((sx - rp, sy - rp, sx + rp, sy + rp), fill=fill, outline=fill, width=1)
                     draw.ellipse((sx - rb, sy - rb, sx + rb, sy + rb), outline=outline, width=1)
                     n_drawn += 1
-                note = f"Katalógový kužeľ: {n_drawn} bodov. "
+                note = f"Katalogovy kuzel: {n_drawn} bodov. "
         except Exception as exc:  # noqa: BLE001
-            note = f"Katalógový overlay: {exc}. "
+            note = f"Katalogovy overlay: {exc}. "
 
     if wcs_plot is not None:
         try:
@@ -142,7 +142,7 @@ def build_starfield_qa_png_mapping(
                     rr = float(rp) * float(scx)
                     outline = (60, 100, 200) if invert else (90, 140, 255)
                     draw.ellipse((sx0 - rr, sy0 - rr, sx0 + rr, sy0 + rr), outline=outline, width=2)
-                    note = note + f"Gaia query r≈{r_deg:.2f}° (VY_GAIR). "
+                    note = note + f"Gaia query r~{r_deg:.2f} deg (VY_GAIR). "
             except Exception:  # noqa: BLE001
                 # EXC-0112: ? -- intent unclear (draw.ellipse((sx0 - rr, sy0 - rr, sx0 + rr, sy0 + rr), outline=outline,... (EXCEPT-BULK 2026-07-08)
                 pass
@@ -226,7 +226,7 @@ def build_starfield_qa_png_mapping(
                     draw.text((x + r + 1, y - r), label, fill=fill)
 
         if str(dao_match_xy_source or "").strip().lower() == "measured":
-            note = note + "DAO/MATCH: merané x,y z CSV. "
+            note = note + "DAO/MATCH: merane x,y z CSV. "
 
     if vsx_chip_df is not None and not vsx_chip_df.empty and "x" in vsx_chip_df.columns and "y" in vsx_chip_df.columns:
         vdf = vsx_chip_df
@@ -242,7 +242,7 @@ def build_starfield_qa_png_mapping(
             draw.rectangle((x - s, y - s, x + s, y + s), outline=outline, width=2)
             n_v += 1
         if n_v:
-            note = note + f"VSX: {n_v} značiek (žltý štvorec). "
+            note = note + f"VSX: {n_v} znaciek (zlty stvorec). "
 
     buf = io.BytesIO()
     im.save(buf, format="PNG")
@@ -258,7 +258,7 @@ def build_msqa_vsx_plotly_figure(
     mag_labels: list[str],
     var_types: list[str],
 ) -> Any:
-    """Plotly: podkladový snímok + žlté štvorce VSX s hoverom (meno, magnitúda, typ)."""
+    """Plotly: podkladovy snimok + zlte stvorce VSX s hoverom (meno, magnituda, typ)."""
     import plotly.graph_objects as go
 
     rgb_u8 = np.asarray(rgb, dtype=np.uint8)
@@ -297,7 +297,7 @@ def build_msqa_vsx_plotly_figure(
                 customdata=cd,
                 hovertemplate=(
                     "<b>%{customdata[0]}</b><br>"
-                    "Magnitúda: %{customdata[1]}<br>"
+                    "Magnituda: %{customdata[1]}<br>"
                     "Typ premennosti: %{customdata[2]}<extra></extra>"
                 ),
                 name="VSX",
@@ -305,7 +305,7 @@ def build_msqa_vsx_plotly_figure(
         )
 
     fig.update_layout(
-        title=dict(text="VSX — hover myšou nad žltým štvorcom", font=dict(size=14)),
+        title=dict(text="VSX - hover mysou nad zltym stvorcom", font=dict(size=14)),
         margin=dict(l=4, r=4, t=40, b=4),
         xaxis=dict(
             showgrid=False,
@@ -333,7 +333,7 @@ def msqa_prepare_vsx_plotly_series(
     scx: float,
     scy: float,
 ) -> tuple[np.ndarray, np.ndarray, list[str], list[str], list[str]]:
-    """Z VSX tabuľky (stĺpce x,y v plnom rozlíšení snímku) urob série pre Plotly."""
+    """Z VSX tabulky (stlpce x,y v plnom rozliseni snimku) urob serie pre Plotly."""
     if vsx_filt is None or vsx_filt.empty:
         return (
             np.array([], dtype=float),
@@ -374,7 +374,7 @@ def msqa_prepare_vsx_plotly_series(
         ys_l.append(float(yv[i]))
         nam = str(nam_s.iloc[i])
         oid = str(oid_s.iloc[i])
-        names.append(nam if nam else (oid if oid else "—"))
+        names.append(nam if nam else (oid if oid else "-"))
         mmf, mnf = mm.iloc[i], mn.iloc[i]
         if pd.notna(mmf) and pd.notna(mnf):
             mag_labels.append(f"max {float(mmf):.2f}, min {float(mnf):.2f}")
@@ -383,9 +383,9 @@ def msqa_prepare_vsx_plotly_series(
         elif pd.notna(mnf):
             mag_labels.append(f"min {float(mnf):.2f}")
         else:
-            mag_labels.append("—")
+            mag_labels.append("-")
         vt = str(vt_s.iloc[i])
-        var_types.append(vt if vt else "—")
+        var_types.append(vt if vt else "-")
     return (
         np.asarray(xs_l, dtype=float),
         np.asarray(ys_l, dtype=float),

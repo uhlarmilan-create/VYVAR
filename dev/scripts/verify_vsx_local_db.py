@@ -127,7 +127,7 @@ def main() -> int:
     half = 0.25
     print(f"\n=== Step 7: cone query (draft {args.draft}) ===")
     print(f"center RA={ra_c:.6f} Dec={dec_c:.6f} from {src}")
-    print(f"box ±{half}°")
+    print(f"box +-{half} deg")
     rows = query_local_vsx(
         db,
         ra_min=ra_c - half,

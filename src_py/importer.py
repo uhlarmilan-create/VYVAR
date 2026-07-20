@@ -70,7 +70,7 @@ class SmartScanRow:
 
 
 def observation_group_key(filter_name: str, exposure_s: float, binning: int) -> str:
-    """Unique observation subgroup: (FILTER, EXPTIME, XBINNING) — binning from FITS via metadata."""
+    """Unique observation subgroup: (FILTER, EXPTIME, XBINNING) - binning from FITS via metadata."""
     flt = _filter_name_for_calibration_library_flat(filter_name)
     try:
         e = float(exposure_s)
@@ -192,7 +192,7 @@ class SmartImportPlan:
     quick_look: bool
     detected_filters: list[str]
     warnings: list[str]
-    #: (FILTER|EXPTIME|BINNING) → group detail dict (paths, scale, …)
+    #: (FILTER|EXPTIME|BINNING) -> group detail dict (paths, scale, ...)
     observation_groups: dict[str, dict[str, Any]] = field(default_factory=dict)
     masterflat_by_obs_key: dict[str, str | None] = field(default_factory=dict)
     dark_master_by_obs_key: dict[str, str | None] = field(default_factory=dict)
@@ -519,7 +519,7 @@ def _resolve_session_lights(
     """Resolve light FITS: prefer case-insensitive ``lights`` subfolder, else top-level light frames in ``root``.
 
     Returns:
-        (container_dir, fits_paths) — ``container_dir`` is the ``lights`` folder or ``root`` for flat layout.
+        (container_dir, fits_paths) - ``container_dir`` is the ``lights`` folder or ``root`` for flat layout.
 
     Raises:
         FileNotFoundError: if neither yields light FITS.
@@ -807,7 +807,7 @@ def _find_matching_master_in_library(
     if id_equipments is None or id_telescope is None:
         try:
             log_event(
-                f"CALIB LIB: cannot match {kind} master — missing equipment/telescope scope"
+                f"CALIB LIB: cannot match {kind} master - missing equipment/telescope scope"
             )
         except Exception:  # noqa: BLE001
             # EXC-0096: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
@@ -818,7 +818,7 @@ def _find_matching_master_in_library(
     if kind == "dark":
         if temp is None or not math.isfinite(float(temp)):
             try:
-                log_event("CALIB LIB: cannot match dark — light CCD_TEMP unknown")
+                log_event("CALIB LIB: cannot match dark - light CCD_TEMP unknown")
             except Exception:  # noqa: BLE001
                 # EXC-0097: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
                 pass
@@ -987,13 +987,13 @@ def _find_best_masterflat_for_filter(
             if p_hit.is_file() and _master_kind_matches(p_hit, "flat") and _looks_like_master(p_hit):
                 age = _age_days(p_hit, warnings=warnings)
                 if age is not None and age <= validity_days:
-                    return p_hit, f"MasterFlat (Filter {flt}): ✅ library DB ({int(age)} days old)"
+                    return p_hit, f"MasterFlat (Filter {flt}): [OK] library DB ({int(age)} days old)"
                 if age is not None:
                     return (
                         None,
-                        f"MasterFlat (Filter {flt}): ⚠️ library DB expirované ({int(age)} dní) — vygeneruj nový",
+                        f"MasterFlat (Filter {flt}): ! library DB expirovane ({int(age)} dni) - vygeneruj novy",
                     )
-                return p_hit, f"MasterFlat (Filter {flt}): ✅ library DB"
+                return p_hit, f"MasterFlat (Filter {flt}): [OK] library DB"
 
     candidates: list[Path] = []
     for root in roots:
@@ -1042,14 +1042,14 @@ def _find_best_masterflat_for_filter(
 
     if best_fresh:
         fp, age = best_fresh
-        return fp, f"MasterFlat (Filter {flt}): ✅ found ({int(age)} days old)"
+        return fp, f"MasterFlat (Filter {flt}): [OK] found ({int(age)} days old)"
     if best_any:
         _fp, age = best_any
         return (
             None,
-            f"MasterFlat (Filter {flt}): ⚠️ len expirovaný master ({int(age)} dní) — vygeneruj nový",
+            f"MasterFlat (Filter {flt}): ! len expirovany master ({int(age)} dni) - vygeneruj novy",
         )
-    return None, f"MasterFlat (Filter {flt}): ❌ MISSING!"
+    return None, f"MasterFlat (Filter {flt}): [X] MISSING!"
 
 
 def _write_master_to_library(
@@ -1107,7 +1107,7 @@ def _write_master_to_library(
     else:
         master, header = _generate_master_flat(files_for_stack)
 
-    # Binning keywords reflect the **calibration frames** used (prefer 1×1 for full-resolution masters).
+    # Binning keywords reflect the **calibration frames** used (prefer 1x1 for full-resolution masters).
     header["BINNING"] = binning
     header["XBINNING"] = binning
     header["YBINNING"] = binning
@@ -1291,9 +1291,9 @@ def smart_scan_source(
         _hdr0 = _hd0[0].header
     _xb0, _yb0 = fits_binning_xy_from_header(_hdr0)
     log_event(
-        f"Scan Source — prvý light v zozname: {first_light.name} | "
+        f"Scan Source - prvy light v zozname: {first_light.name} | "
         f"XBINNING={_hdr0.get('XBINNING')!r} YBINNING={_hdr0.get('YBINNING')!r} BINNING={_hdr0.get('BINNING')!r} "
-        f"→ {int(_xb0)}×{int(_yb0)}"
+        f"-> {int(_xb0)}x{int(_yb0)}"
     )
     metadata = extract_fits_metadata(first_light, db=db)
     scan_rows.append(
@@ -1399,7 +1399,7 @@ def smart_scan_source(
             if age_d is not None and age_d > masterdark_validity_days:
                 dark_master_by_obs_key[gk] = None
                 warnings.append(
-                    f"MasterDark pre skupinu {gk} je expirovaný ({int(age_d)} dní) — vygeneruj nový."
+                    f"MasterDark pre skupinu {gk} je expirovany ({int(age_d)} dni) - vygeneruj novy."
                 )
             else:
                 dark_master_by_obs_key[gk] = str(d_found)
@@ -1525,7 +1525,7 @@ def smart_scan_source(
     if dark_master is None and dark_found is not None:
         dark_master = str(dark_found)
     if dark_found is None and not dark_files:
-        masterdark_status = "MasterDark: ❌ MISSING!"
+        masterdark_status = "MasterDark: [X] MISSING!"
     elif dark_found is None:
         masterdark_status = "MasterDark: raw on source (will build if requested)"
     else:
@@ -1536,10 +1536,10 @@ def smart_scan_source(
             warnings=warnings,
         )
         if stt_dark.status == "expired":
-            masterdark_status = f"MasterDark: ⚠️ found but expired ({stt_dark.age_days} days old)"
+            masterdark_status = f"MasterDark: ! found but expired ({stt_dark.age_days} days old)"
             warnings.append(stt_dark.message)
         else:
-            masterdark_status = f"MasterDark: ✅ found ({stt_dark.age_days} days old)"
+            masterdark_status = f"MasterDark: [OK] found ({stt_dark.age_days} days old)"
 
     # Decision:
     # - Missing MasterDark => full Quick Look (Draft)
@@ -1585,12 +1585,12 @@ def generate_master_dark_from_source_dir(
     root = Path(source_dir)
     out_root = Path(calibration_library_root)
     if not root.is_dir():
-        return None, [f"❌ Adresár neexistuje: {root}"]
+        return None, [f"[X] Adresar neexistuje: {root}"]
     files_by_type = _collect_fits_by_type(root, db=db)
     dark_raw = [fp for fp in files_by_type.get("dark", []) if not _looks_like_master(fp)]
     if not dark_raw:
         return None, [
-            "❌ V zadanom adresári sa nenašli surové dark snímky (očakáva sa IMAGETYP obsahujúci „dark“, nie hotový master)."
+            "[X] V zadanom adresari sa nenasli surove dark snimky (ocakava sa IMAGETYP obsahujuci 'dark', nie hotovy master)."
         ]
     existing = _find_existing_master_for_raw_set(
         out_root,
@@ -1609,7 +1609,7 @@ def generate_master_dark_from_source_dir(
     ):
         existing = None
     if existing is not None:
-        messages.append(f"ℹ️ Master Dark už v knižnici existuje: {existing.name}")
+        messages.append(f"i Master Dark uz v kniznici existuje: {existing.name}")
         if _register_master_path_in_calibration_library(
             db,
             kind="dark",
@@ -1620,7 +1620,7 @@ def generate_master_dark_from_source_dir(
         ):
             return existing, messages
         messages.append(
-            "⚠️ Súbor existuje, ale registrácia pre iný set — generujem nový master pre zvolenú kameru/teleskop."
+            "! Subor existuje, ale registracia pre iny set - generujem novy master pre zvolenu kameru/teleskop."
         )
         existing = None
     out = _write_master_to_library(
@@ -1632,7 +1632,7 @@ def generate_master_dark_from_source_dir(
         id_equipments=id_equipments,
         id_telescope=id_telescope,
     )
-    messages.append(f"✅ Master Dark vytvorený: {out.name} ({len(dark_raw)} snímok)")
+    messages.append(f"[OK] Master Dark vytvoreny: {out.name} ({len(dark_raw)} snimok)")
     return out, messages
 
 
@@ -1644,17 +1644,17 @@ def generate_master_flat_from_source_dir(
     id_equipments: int | None = None,
     id_telescope: int | None = None,
 ) -> tuple[Path | None, list[str]]:
-    """Master flat: per-pixel **median** stack, then normalization. Naming ako v knižnici."""
+    """Master flat: per-pixel **median** stack, then normalization. Naming ako v kniznici."""
     messages: list[str] = []
     root = Path(source_dir)
     out_root = Path(calibration_library_root)
     if not root.is_dir():
-        return None, [f"❌ Adresár neexistuje: {root}"]
+        return None, [f"[X] Adresar neexistuje: {root}"]
     files_by_type = _collect_fits_by_type(root, db=db)
     flat_raw = [fp for fp in files_by_type.get("flat", []) if not _looks_like_master(fp)]
     if not flat_raw:
         return None, [
-            "❌ V zadanom adresári sa nenašli surové flat snímky (IMAGETYP obsahujúci „flat“, nie master)."
+            "[X] V zadanom adresari sa nenasli surove flat snimky (IMAGETYP obsahujuci 'flat', nie master)."
         ]
     existing = _find_existing_master_for_raw_set(
         out_root,
@@ -1673,7 +1673,7 @@ def generate_master_flat_from_source_dir(
     ):
         existing = None
     if existing is not None:
-        messages.append(f"ℹ️ Master Flat už v knižnici existuje: {existing.name}")
+        messages.append(f"i Master Flat uz v kniznici existuje: {existing.name}")
         if _register_master_path_in_calibration_library(
             db,
             kind="flat",
@@ -1684,7 +1684,7 @@ def generate_master_flat_from_source_dir(
         ):
             return existing, messages
         messages.append(
-            "⚠️ Súbor existuje, ale registrácia pre iný set — generujem nový master pre zvolenú kameru/teleskop."
+            "! Subor existuje, ale registracia pre iny set - generujem novy master pre zvolenu kameru/teleskop."
         )
         existing = None
     out = _write_master_to_library(
@@ -1696,7 +1696,7 @@ def generate_master_flat_from_source_dir(
         id_equipments=id_equipments,
         id_telescope=id_telescope,
     )
-    messages.append(f"✅ Master Flat vytvorený: {out.name} ({len(flat_raw)} snímok)")
+    messages.append(f"[OK] Master Flat vytvoreny: {out.name} ({len(flat_raw)} snimok)")
     return out, messages
 
 
@@ -1928,10 +1928,10 @@ def quicklook_preview_png_bytes(fits_path: str | Path) -> bytes:
 
 # --- CalibrationLibrary master stacking (no sigma-clipping on the stack axis) ---
 #
-# **Master dark — plain average (mean):** Low-signal frames; sigma-clipping would wrongly reject
+# **Master dark - plain average (mean):** Low-signal frames; sigma-clipping would wrongly reject
 # real hot pixels and harm thermal-noise subtraction SNR. We use per-pixel ``nanmean`` over frames.
 #
-# **Master flat — plain median:** Per-pixel ``nanmedian`` ignores dust motes / glints while preserving
+# **Master flat - plain median:** Per-pixel ``nanmedian`` ignores dust motes / glints while preserving
 # vignetting structure. Median normalization is deferred to :func:`calibration.get_processed_master`
 # (after resample to the light's binning) and flagged on disk with ``VYFLNRD=1``.
 
@@ -1952,7 +1952,7 @@ def _to_float32_frame(data: np.ndarray) -> np.ndarray:
 
 
 def _apply_binning_frame(arr: np.ndarray, bin_factor: int) -> np.ndarray:
-    """Average-block bin ``arr`` to match light binning (integer factor ≥ 1)."""
+    """Average-block bin ``arr`` to match light binning (integer factor >= 1)."""
     a = _to_float32_frame(arr)
     if bin_factor <= 1:
         return a
@@ -1972,7 +1972,7 @@ def _apply_binning_frame(arr: np.ndarray, bin_factor: int) -> np.ndarray:
 def _combine_stack_mean(stack: np.ndarray) -> np.ndarray:
     """Average stack for darks: ``stack`` (n, ny, nx) -> per-pixel mean along axis 0 (float32).
 
-    Intentionally **not** sigma-clipped — preserves hot pixels and optimizes SNR for bias/dark subtraction.
+    Intentionally **not** sigma-clipped - preserves hot pixels and optimizes SNR for bias/dark subtraction.
     """
     if stack.ndim != 3:
         raise ValueError(f"Expected stack (n, ny, nx), got {stack.shape}")
@@ -2011,7 +2011,7 @@ def _stack_calibration_frames(
 ) -> tuple[np.ndarray, fits.Header]:
     """Stack calibration frames: **mean** for dark, **median** for flat; optional memmap cube for RAM.
 
-    No sigma-clipping — see module comment above.
+    No sigma-clipping - see module comment above.
     """
     if combine not in ("mean", "median"):
         raise ValueError(f"combine must be 'mean' or 'median', got {combine!r}")

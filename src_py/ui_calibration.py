@@ -53,8 +53,8 @@ def render_calibration_equipment_header(
             telescope_name = r["TELESCOPENAME"]
             telescope_focal_mm = r["FOCAL"]
 
-    tn = str(telescope_name or "—").strip() or "—"
-    en = str(equipment_name or "—").strip() or "—"
+    tn = str(telescope_name or "-").strip() or "-"
+    en = str(equipment_name or "-").strip() or "-"
     try:
         tf = float(telescope_focal_mm) if telescope_focal_mm is not None else None
     except (TypeError, ValueError):
@@ -64,12 +64,12 @@ def render_calibration_equipment_header(
     except (TypeError, ValueError):
         pu = None
 
-    focal_s = f"{tf:g} mm" if tf is not None and math.isfinite(tf) else "—"
-    pix_s = f"{pu:g} µm" if pu is not None and math.isfinite(pu) else "—"
+    focal_s = f"{tf:g} mm" if tf is not None and math.isfinite(tf) else "-"
+    pix_s = f"{pu:g} um" if pu is not None and math.isfinite(pu) else "-"
 
     st.info(
         f"**Telescope:** {tn} ({focal_s})\n\n**Sensor:** {en} ({pix_s})",
-        icon="🔭",
+        icon="[telescope]",
     )
 
 
@@ -89,7 +89,7 @@ def render_calibration_library_flat_warnings(db: VyvarDatabase, plan: Any) -> No
             continue
         st.warning(
             f"Filter **{fl}** has no master in the library. A fallback will be used or the group will be skipped.",
-            icon="⚠️",
+            icon="!",
         )
 
 
@@ -150,7 +150,7 @@ def build_master_calibration_files_dataframe(plan: Any) -> pd.DataFrame:
             elif (d_bin == lb or mdp is None) and (f_bin == lb or mfp is None):
                 mode = "Direct pairing"
             else:
-                mode = "—"
+                mode = "-"
         else:
             mode = "; ".join(parts)
 
@@ -244,8 +244,8 @@ def build_multi_observation_status_dataframe(
     for (f, e) in sorted(combos.keys(), key=lambda x: (x[0], x[1])):
         gks = combos[(f, e)]
         if cal_phase == "running":
-            cal_st = "In progress…"
-            ps_st = "—"
+            cal_st = "In progress..."
+            ps_st = "-"
         elif ap is not None and ap.is_dir() and cal_phase == "done":
             n_cal = _count_calibrated_fits(ap, gks)
             cal_st = f"Done ({n_cal} FITS)" if n_cal > 0 else "No calibrated / draft"

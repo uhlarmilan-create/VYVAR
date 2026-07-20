@@ -2,7 +2,7 @@
 
 Shared helpers for the offline cross-validation harness (``xval_run.py``).
 
-Confidence thresholds and LOO differential utilities — not used by the production pipeline.
+Confidence thresholds and LOO differential utilities - not used by the production pipeline.
 """
 from __future__ import annotations
 

@@ -14,7 +14,7 @@ _DRAFT_386 = _ROOT / "Archive" / "Drafts" / "draft_000386"
 
 @pytest.mark.skipif(not (_DRAFT_385 / "platesolve").is_dir(), reason="draft_000385 not present")
 def test_truncated_draft_385_fails_completeness_gate():
-    """draft_385 R was 69/373 — must not pass the gate."""
+    """draft_385 R was 69/373 - must not pass the gate."""
     out = _DRAFT_385 / "platesolve" / "R_20_2" / "photometry"
     audit = audit_photometry_completeness(out)
     assert audit["n_active_targets"] == 373

@@ -237,7 +237,7 @@ class VariableStar:
     def change_lc_offset(self, new_value):
         self.__lc_offset = new_value
 
-    def first_minimum(self, jd):  # it´s return the first minimum after jd ( julian day )
+    def first_minimum(self, jd):  # it's return the first minimum after jd ( julian day )
         primary = True
         next_minimum = ceil((jd - self.__epoch) / self.__period) * self.__period + self.__epoch
         if next_minimum - self.__period * (1 - self.__sec_phase) >= jd:

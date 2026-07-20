@@ -118,7 +118,7 @@ def main() -> None:
         orch_text = re.sub(rf"(?<!self\.)(?<!\w){re.escape(name)}(?!\w)", f"self.{name}", orch_text)
     orch_text = orch_text.replace("self.self.", "self.")
 
-    builder = f'''"""PDF report builder — extracted from photometry_report.generate_photometry_report."""
+    builder = f'''"""PDF report builder - extracted from photometry_report.generate_photometry_report."""
 from __future__ import annotations
 
 # Re-export everything the builder body needs from photometry_report module at runtime
@@ -128,7 +128,7 @@ from photometry_report import *  # noqa: F403,F401
 
 '''
     # Circular import won't work. Embed full imports instead.
-    builder = '''"""PDF report builder — extracted from photometry_report (phase 1 split)."""
+    builder = '''"""PDF report builder - extracted from photometry_report (phase 1 split)."""
 from __future__ import annotations
 
 import hashlib

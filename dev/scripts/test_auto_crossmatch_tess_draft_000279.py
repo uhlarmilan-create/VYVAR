@@ -53,7 +53,7 @@ def main() -> None:
     if katalogy_col:
         col = katalogy_col[0]
         s = df2[col].astype(str)
-        filled = df2[col].notna() & (s.str.strip() != "") & (s != "—") & (s.str.lower() != "nan")
+        filled = df2[col].notna() & (s.str.strip() != "") & (s != "-") & (s.str.lower() != "nan")
         print(f"Stlpce '{col}': {int(filled.sum())}/{len(df2)} vyplnenych")
         first = df2.loc[filled].iloc[0] if bool(filled.any()) else None
         if first is not None:

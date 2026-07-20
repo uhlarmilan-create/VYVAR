@@ -157,12 +157,12 @@ def check_header(header_dict: dict[str, str], filepath: Path) -> tuple[list[str]
     obscode = header_dict.get("OBSCODE", "")
     if not obscode:
         warnings.append(
-            f"HEADER: OBSCODE is empty — set observer_code in config before AAVSO submit ({name})"
+            f"HEADER: OBSCODE is empty - set observer_code in config before AAVSO submit ({name})"
         )
     elif obscode.upper() == _AAVSO_OBSCODE_PLACEHOLDER:
         warnings.append(
             f"HEADER: OBSCODE is default placeholder {_AAVSO_OBSCODE_PLACEHOLDER} "
-            f"— set your AAVSO observer code in config ({name})"
+            f"- set your AAVSO observer code in config ({name})"
         )
 
     warn_msg = header_dict.get("WARNING", "")
@@ -273,7 +273,7 @@ def check_rows(rows: list[list[str]], filepath: Path) -> tuple[list[str], list[s
         if mag is None or not (1.0 <= mag <= 25.0):
             rep.error(
                 "mag_range",
-                f"ERROR row {i}: MAG must be float in 1.0–25.0, got '{mag_s}' in {fname}",
+                f"ERROR row {i}: MAG must be float in 1.0-25.0, got '{mag_s}' in {fname}",
             )
 
         if magerr_s.strip().lower() == "na":
@@ -294,7 +294,7 @@ def check_rows(rows: list[list[str]], filepath: Path) -> tuple[list[str], list[s
         elif filt == "UNKN":
             rep.warning(
                 "filter_unrecognized",
-                f"WARNING row {i}: FILTER=UNKN — unrecognized band; review before submit in {fname}",
+                f"WARNING row {i}: FILTER=UNKN - unrecognized band; review before submit in {fname}",
             )
 
         if trans not in _VALID_TRANS:
@@ -352,7 +352,7 @@ def _print_block(lines: list[str]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate VYVAR AAVSO Extended export files")
     g = parser.add_mutually_exclusive_group(required=True)
-    g.add_argument("--draft", type=int, help="Draft ID (e.g. 321 → draft_000321)")
+    g.add_argument("--draft", type=int, help="Draft ID (e.g. 321 -> draft_000321)")
     g.add_argument("--path", type=Path, help="Path to aavso/ dir or single .txt file")
     parser.add_argument(
         "--config",
@@ -398,7 +398,7 @@ def main() -> int:
         else:
             files_clean += 1
 
-        _print_block(["─" * 41])
+        _print_block(["-" * 41])
         _print_block([f"FILE: {fpath.name}"])
         _print_block([f"  Rows parsed: {n_rows}"])
 
@@ -407,34 +407,34 @@ def main() -> int:
 
         if header_only:
             for e in header_only:
-                _print_block([f"  ❌ {e.replace('HEADER: ', '')}"])
+                _print_block([f"  [X] {e.replace('HEADER: ', '')}"])
         else:
-            _print_block(["  ✅ Header OK"])
+            _print_block(["  [OK] Header OK"])
 
         for w in warns:
-            _print_block([f"  ⚠  {w}"])
+            _print_block([f"  !  {w}"])
         for e in row_errs:
-            _print_block([f"  ❌ {e}"])
+            _print_block([f"  [X] {e}"])
 
         if n_err == 0 and n_warn == 0:
             _print_block(["  RESULT: clean"])
         else:
             _print_block([f"  RESULT: {n_err} errors, {n_warn} warnings"])
 
-    _print_block(["─" * 41])
-    _print_block(["", "═" * 39])
+    _print_block(["-" * 41])
+    _print_block(["", "=" * 39])
     draft_label = label if args.draft is not None else "custom path"
-    _print_block([f"AAVSO VALIDATION SUMMARY — {draft_label}"])
+    _print_block([f"AAVSO VALIDATION SUMMARY - {draft_label}"])
     _print_block([f"  Files checked     : {len(files)}"])
     _print_block([f"  Files clean       : {files_clean}"])
     _print_block([f"  Files with errors : {files_with_errors}"])
     _print_block([f"  Total errors      : {total_errors}"])
     _print_block([f"  Total warnings    : {total_warnings}"])
     if total_errors == 0:
-        _print_block(["  EXIT: 0  (warnings only — review before submission)"])
+        _print_block(["  EXIT: 0  (warnings only - review before submission)"])
     else:
-        _print_block(["  EXIT: 1  (errors found — fix before submission)"])
-    _print_block(["═" * 39])
+        _print_block(["  EXIT: 1  (errors found - fix before submission)"])
+    _print_block(["=" * 39])
 
     return 1 if total_errors else 0
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wide field: true (WCS+Gaia) triangle shapes — center vs edge, flat vs gnomonic vs sky."""
+"""Wide field: true (WCS+Gaia) triangle shapes - center vs edge, flat vs gnomonic vs sky."""
 
 from __future__ import annotations
 
@@ -274,10 +274,10 @@ def _recommendation(
     if c_flat < shape_tol and e_flat < shape_tol:
         if v2 > 0 and vmin < 2.0:
             return (
-                "shape_ok; index_hashes_hit_truth_with_correct_sky_triangles — "
+                "shape_ok; index_hashes_hit_truth_with_correct_sky_triangles - "
                 "prioritize_quads_or_vote_clustering_not_central_kNN"
             )
-        return "shape_ok; index_sparse_or_wrong_hashes — tune_wide_index_or_quads"
+        return "shape_ok; index_sparse_or_wrong_hashes - tune_wide_index_or_quads"
     if e_gno < e_flat * 0.5:
         return "gnomonic_helps_edge; deploy_gnomonic_plus_central_kNN"
     if max(c_flat, e_flat) > 0.05:
@@ -359,7 +359,7 @@ def main() -> int:
         max_sep_px=float(args.match_tol_px),
     )
     if matched.empty:
-        print("ERROR: no DAO–Gaia matches")
+        print("ERROR: no DAO-Gaia matches")
         return 1
 
     dist_px = np.sqrt((matched["x"] - cx) ** 2 + (matched["y"] - cy) ** 2)

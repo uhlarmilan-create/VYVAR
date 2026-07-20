@@ -1,4 +1,4 @@
-"""Spoločná aktualizácia spodného stavového riadku (Streamlit session + rerender)."""
+"""Spolocna aktualizacia spodneho stavoveho riadku (Streamlit session + rerender)."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def vyvar_footer_running(
 def vyvar_footer_idle(
     *,
     process: str = "VYVAR",
-    status_detail: str = "Pripravený — spusti úlohu na záložke VAR-STREM.",
+    status_detail: str = "Pripraveny - spusti ulohu na zalozke VAR-STREM.",
 ) -> None:
     import streamlit as st
 
@@ -65,7 +65,7 @@ _BV_RELATED_UI_COL_EXACT = frozenset(
 
 
 def is_bv_related_phase01_ui_column(column_name: object) -> bool:
-    """True if this dataframe column is B–V / Johnson legacy metadata (hide when BP-RP is primary)."""
+    """True if this dataframe column is B-V / Johnson legacy metadata (hide when BP-RP is primary)."""
     low = str(column_name).strip().lower()
     if "bp_rp" in low:
         return False
@@ -79,12 +79,12 @@ def is_bv_related_phase01_ui_column(column_name: object) -> bool:
 
 
 def log_if_ui_hiding_bv_for_bprp_primary(*, bprp_primary_ui_active: bool) -> None:
-    """Log once when UI actually hides B–V columns (avoids spam on every Streamlit rerun)."""
+    """Log once when UI actually hides B-V columns (avoids spam on every Streamlit rerun)."""
     import streamlit as st
 
     from infolog import log_event
 
     prev = st.session_state.get("_vyvar_ui_bprp_primary_for_bv_log")
     if bprp_primary_ui_active and prev is not True:
-        log_event("[UI] B-V stĺpce skryté — BP-RP je primárny filter")
+        log_event("[UI] B-V stlpce skryte - BP-RP je primarny filter")
     st.session_state["_vyvar_ui_bprp_primary_for_bv_log"] = bool(bprp_primary_ui_active)

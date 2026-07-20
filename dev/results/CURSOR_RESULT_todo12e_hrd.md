@@ -1,4 +1,4 @@
-CURSOR RESULT ù 2026-07-10 14:05 UTC+2
+CURSOR RESULT - 2026-07-10 14:05 UTC+2
 
 What I did
 Implemented TODO-12e-HRD: enrichment cache v2 (SIMBAD sp_type, Gaia DSC), identification tiers

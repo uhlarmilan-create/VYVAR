@@ -81,7 +81,7 @@ def main() -> int:
         "has_ref_wcs": True,
     }
 
-    # ── Alignment (force regenerate aligned FITS + report) ──
+    # -- Alignment (force regenerate aligned FITS + report) --
     star_counts: list[dict] = []
     t0 = time.time()
     for i, fp in enumerate(files, start=1):
@@ -104,7 +104,7 @@ def main() -> int:
     pd.DataFrame(star_counts).to_csv(rep_path, index=False)
     print(f"[align] done: {len(files)} frames in {time.time()-t0:.1f}s report={rep_path}")
 
-    # ── Per-frame catalogs (regenerate) ──
+    # -- Per-frame catalogs (regenerate) --
     t1 = time.time()
     per = export_per_frame_catalogs(
         frames_root=aligned_root,
@@ -122,7 +122,7 @@ def main() -> int:
     )
     print(f"[csv] done: written={per.get('written')} in {time.time()-t1:.1f}s index={per.get('index_csv')}")
 
-    # ── Phase 0 + 1 ──
+    # -- Phase 0 + 1 --
     phase01_out = (platesolve_dir / "photometry" / "phase01").resolve()
     t2 = time.time()
     p01 = run_phase0_and_phase1(
@@ -136,7 +136,7 @@ def main() -> int:
     )
     print(f"[phase0+1] done in {time.time()-t2:.1f}s -> {phase01_out}")
 
-    # ── Phase 2A ──
+    # -- Phase 2A --
     active_targets_csv = Path(str(p01["active_targets_csv"]))
     comparison_stars_csv = Path(str(p01["comparison_stars_csv"]))
     phase2a_out = (platesolve_dir / "photometry" / "phase2a").resolve()

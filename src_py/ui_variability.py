@@ -182,7 +182,7 @@ def _get_candidate_row(
     draft_dir: Path | str | None = None,
     platesolve_dir: Path | str | None = None,
 ) -> dict | None:
-    """Vráti dict s ra, dec, mag pre cid z var_results."""
+    """Vrati dict s ra, dec, mag pre cid z var_results."""
     if var_results is None:
         return None
     try:
@@ -268,15 +268,15 @@ def _get_candidate_row(
 
 
 def _katalogy_positive_lines(text: str) -> list[str]:
-    """Lines that indicate a positive catalog match (VSX / ASAS-SN / Gaia var, …)."""
+    """Lines that indicate a positive catalog match (VSX / ASAS-SN / Gaia var, ...)."""
     out: list[str] = []
     for raw in str(text or "").splitlines():
         line = raw.strip()
         if not line:
             continue
-        if line.startswith("🔭"):
+        if line.startswith("[telescope]"):
             continue
-        if "žiadny záznam" in line.lower():
+        if "ziadny zaznam" in line.lower():
             continue
         if "no match" in line.lower():
             continue
@@ -285,32 +285,32 @@ def _katalogy_positive_lines(text: str) -> list[str]:
 
 
 def _should_trigger_tess(bullets_text: str) -> bool:
-    """Auto-TESS len pre kandidátov bez pozitívneho katalógového matchu."""
+    """Auto-TESS len pre kandidatov bez pozitivneho katalogoveho matchu."""
     return not bool(_katalogy_positive_lines(bullets_text))
 
 
 def _katalogy_display(bullets_text: str) -> str:
-    """Katalógy stĺpec: doplní vizuálnu značku ak sa spustí auto-TESS."""
+    """Katalogy stlpec: doplni vizualnu znacku ak sa spusti auto-TESS."""
     base = str(bullets_text).strip() if bullets_text is not None else ""
     if not base:
-        base = "—"
+        base = "-"
     if _should_trigger_tess(base):
-        suf = "\n🔭 TESS auto"
-        if "🔭 TESS auto" not in base:
+        suf = "\n[telescope] TESS auto"
+        if "[telescope] TESS auto" not in base:
             return base + suf
     return base
 
 
 def _katalogy_column_name(columns: Any) -> str | None:
     for c in columns:
-        cl = str(c).strip().lower().replace("ó", "o")
+        cl = str(c).strip().lower().replace("o", "o")
         if cl in ("katalogy", "katalog"):
             return str(c)
     return None
 
 
 def load_katalogy_map_from_disk(draft_dir: Path, obs_group: str) -> dict[str, str]:
-    """``catalog_id`` → katalógy text from ``variability_candidates.csv`` (pipeline ground truth)."""
+    """``catalog_id`` -> katalogy text from ``variability_candidates.csv`` (pipeline ground truth)."""
     out: dict[str, str] = {}
     paths = [
         Path(draft_dir) / "platesolve" / str(obs_group) / "variability_candidates.csv",
@@ -334,7 +334,7 @@ def load_katalogy_map_from_disk(draft_dir: Path, obs_group: str) -> dict[str, st
             if not cid:
                 continue
             txt = str(row.get(col, "") or "").strip()
-            if txt and txt.lower() not in ("—", "nan", "none"):
+            if txt and txt.lower() not in ("-", "nan", "none"):
                 out[cid] = txt
         if out:
             return out
@@ -342,7 +342,7 @@ def load_katalogy_map_from_disk(draft_dir: Path, obs_group: str) -> dict[str, st
 
 
 def load_tess_eligible_candidate_ids_from_disk(draft_dir: Path, obs_group: str) -> frozenset[str]:
-    """Kandidáti z CSV bez known VSX/Gaia flag a bez pozitívneho katalógového matchu (auto-TESS)."""
+    """Kandidati z CSV bez known VSX/Gaia flag a bez pozitivneho katalogoveho matchu (auto-TESS)."""
     ids: set[str] = set()
     paths = [
         Path(draft_dir) / "platesolve" / str(obs_group) / "photometry" / "variability_candidates.csv",
@@ -398,7 +398,7 @@ def tess_catalog_ids_for_auto_run(
     obs_group: str,
     memory_catalog_ids: list[str],
 ) -> list[str]:
-    """Auto-TESS: disk CSV ∩ memory, len bez known variable / katalógového matchu."""
+    """Auto-TESS: disk CSV intersect memory, len bez known variable / katalogoveho matchu."""
     eligible = load_tess_eligible_candidate_ids_from_disk(draft_dir, obs_group)
     if not eligible:
         return []
@@ -491,7 +491,7 @@ def count_edge_safe_combined_candidates(
     platesolve_dir: Path,
     cfg_dict: dict[str, Any],
 ) -> int:
-    """Počet kandidátov (RMS|VDI) bez VSX a s edge_ok — rovnaká logika ako v dashboarde."""
+    """Pocet kandidatov (RMS|VDI) bez VSX a s edge_ok - rovnaka logika ako v dashboarde."""
     if rms_df is None or rms_df.empty:
         return 0
     results_df = rms_df.copy()
@@ -536,8 +536,8 @@ def run_variability_detection_session(
     mag_limit: float,
 ) -> tuple[dict[str, Any], int, tuple[str, str, int, float, float]]:
     """
-    Načíta maticu fluxov, RMS + VDI (vždy obe). Nevolá Streamlit API.
-    Vracia (results dict ako var_results, počet edge-safe kandidátov, _var_run_sig).
+    Nacita maticu fluxov, RMS + VDI (vzdy obe). Nevola Streamlit API.
+    Vracia (results dict ako var_results, pocet edge-safe kandidatov, _var_run_sig).
     """
     cfg_dict = cfg.to_dict()
     per_frame_dir = draft_dir / "detrended_aligned" / "lights" / str(obs_group)
@@ -619,7 +619,7 @@ def run_variability_detection_session(
     try:
         rms_df2 = rms_df.copy()
         if "detection_method" not in rms_df2.columns:
-            rms_df2["detection_method"] = "—"
+            rms_df2["detection_method"] = "-"
         # RMS candidate flag (compute_rms_variability uses is_variable_candidate)
         if "is_variable_candidate" in rms_df2.columns:
             m_rms = rms_df2["is_variable_candidate"].fillna(False).astype(bool)
@@ -708,7 +708,7 @@ def _render_field_image_with_candidate(
     ax.scatter([float(x)], [float(y)], s=140, facecolors="none", edgecolors="#ff3333", linewidths=2.0)
     ax.scatter([float(x)], [float(y)], s=18, c="#ff3333", alpha=0.95)
     ax.text(float(x) + 18, float(y), str(label)[:24], color="#ff3333", fontsize=9, va="center")
-    ax.set_title("Star field (MASTERSTAR) — selected candidate", fontsize=11)
+    ax.set_title("Star field (MASTERSTAR) - selected candidate", fontsize=11)
     ax.axis("off")
 
     buf = BytesIO()
@@ -774,7 +774,7 @@ def _render_field_image_with_candidates(
         aspect="equal",
     )
 
-    # Known VSX in field (orange) — drawn under candidate markers
+    # Known VSX in field (orange) - drawn under candidate markers
     if vsx_xy_label:
         xs_v = [float(t[0]) for t in vsx_xy_label]
         ys_v = [float(t[1]) for t in vsx_xy_label]
@@ -813,7 +813,7 @@ def _render_field_image_with_candidates(
             LOGGER.debug("[VARIABILITY] Matplotlib overlay failed (non-critical): %s", exc)
 
     ax.set_title(
-        "Star field (MASTERSTAR) — red=candidates, orange=Known VSX, yellow=selected",
+        "Star field (MASTERSTAR) - red=candidates, orange=Known VSX, yellow=selected",
         fontsize=10,
     )
     ax.axis("off")
@@ -836,7 +836,7 @@ def _variability_crossmatch_dialog_body() -> None:
         return
     mag_f = float(mag) if isinstance(mag, (int, float)) and np.isfinite(mag) else None
     _vsx_dlg = str(getattr(AppConfig(), "vsx_local_db_path", "") or "").strip() or None
-    with st.spinner("Searching catalogs (up to 30 s)…"):
+    with st.spinner("Searching catalogs (up to 30 s)..."):
         res = check_candidate_in_catalogs(
             float(ra), float(dec), mag=mag_f, radius_arcsec=10.0, vsx_local_db_path=_vsx_dlg
         )
@@ -862,22 +862,22 @@ def _variability_crossmatch_dialog_body() -> None:
             lst = res.matches.get(cat, [])
             err = res.errors.get(cat)
             if err:
-                st.markdown(f":gray[**{cat}** — error: {err}]")
+                st.markdown(f":gray[**{cat}** - error: {err}]")
             elif not lst:
-                st.markdown(f":gray[**{cat}** — no match]")
+                st.markdown(f":gray[**{cat}** - no match]")
             else:
-                with st.expander(f"{cat} — {len(lst)} record(s)", expanded=True):
+                with st.expander(f"{cat} - {len(lst)} record(s)", expanded=True):
                     for m in lst:
                         st.markdown(
                             f"**{m.name}**  \n"
-                            f"type: {m.var_type or '—'} · P: {m.period} · amp: {m.amplitude} · "
-                            f"dr: {m.delta_r} · epoch: {m.epoch} · mag: {m.mag}"
+                            f"type: {m.var_type or '-'} . P: {m.period} . amp: {m.amplitude} . "
+                            f"dr: {m.delta_r} . epoch: {m.epoch} . mag: {m.mag}"
                         )
         bp = res.best_period()
         if bp is not None and np.isfinite(bp):
-            st.metric("Best period (VSX→ASAS-SN→ZTF priority…)", f"{bp:.6g} d")
+            st.metric("Best period (VSX->ASAS-SN->ZTF priority...)", f"{bp:.6g} d")
         else:
-            st.metric("Best period (VSX→ASAS-SN→ZTF priority…)", "—")
+            st.metric("Best period (VSX->ASAS-SN->ZTF priority...)", "-")
     with tab2:
         candidate_catalog_id = str(cid)
         candidate_ra = float(ra)
@@ -887,7 +887,7 @@ def _variability_crossmatch_dialog_body() -> None:
         _tess_allowed = bool(getattr(_tess_cfg_dialog, "tess_enabled", False))
         if not _tess_allowed:
             st.info(
-                "[TESS] TessCut download (lightkurve) is **disabled** — `tess_enabled`: false in `config.json` "
+                "[TESS] TessCut download (lightkurve) is **disabled** - `tess_enabled`: false in `config.json` "
                 "(VYVAR project root). To enable: set `\"tess_enabled\": true` and restart Streamlit."
             )
         tess_store: dict[str, TessResult] = st.session_state.setdefault("tess_results", {})
@@ -897,9 +897,9 @@ def _variability_crossmatch_dialog_body() -> None:
             c1, c2 = st.columns([2, 1])
             with c1:
                 st.info(
-                    "TESS typically provides 1–20+ sectors depending on ecliptic latitude and observing span. "
+                    "TESS typically provides 1-20+ sectors depending on ecliptic latitude and observing span. "
                     "Analysis downloads FFI cutouts (TessCut), subtracts background, cleans the LC, finds period "
-                    "(Lomb–Scargle in day windows or catalog hint) and saves CSV + PNG per sector."
+                    "(Lomb-Scargle in day windows or catalog hint) and saves CSV + PNG per sector."
                 )
             with c2:
                 if st.button(
@@ -924,7 +924,7 @@ def _variability_crossmatch_dialog_body() -> None:
                     if not photometry_dir:
                         st.error("Missing photometry path (var_photometry_dir).")
                     else:
-                        with st.spinner("Downloading TESS data…"):
+                        with st.spinner("Downloading TESS data..."):
                             progress_bar = st.progress(0)
                             status_text = st.empty()
 
@@ -960,7 +960,7 @@ def _variability_crossmatch_dialog_body() -> None:
                 with col_info:
                     st.caption(
                         f"Analyzed: {tess_result.total_sectors_found} "
-                        f"sectors · {tess_result.total_sectors_ok} OK"
+                        f"sectors . {tess_result.total_sectors_ok} OK"
                     )
                 with col_rerun:
                     if st.button(
@@ -982,18 +982,18 @@ def _variability_crossmatch_dialog_body() -> None:
                 m1.metric("Sectors found", str(tess_result.total_sectors_found))
                 m2.metric("Sectors OK", str(tess_result.total_sectors_ok))
                 bp = tess_result.best_period()
-                m3.metric("Period P", f"{bp:.6f} d" if bp is not None and np.isfinite(bp) else "—")
+                m3.metric("Period P", f"{bp:.6f} d" if bp is not None and np.isfinite(bp) else "-")
                 p2c = tess_result.period_2p_consensus
-                m4.metric("Period 2P", f"{p2c:.6f} d" if p2c is not None and np.isfinite(p2c) else "—")
+                m4.metric("Period 2P", f"{p2c:.6f} d" if p2c is not None and np.isfinite(p2c) else "-")
 
                 _rel = getattr(tess_result, "period_reliability", "unknown")
                 _rel_reason = getattr(tess_result, "period_reliability_reason", "")
                 _badge = {
-                    "reliable": "🟢 reliable",
-                    "uncertain": "🟡 uncertain",
-                    "noise": "🔴 noise / no period",
-                }.get(_rel, "⚪ unknown")
-                st.caption(f"Period reliability: {_badge}  —  {_rel_reason}")
+                    "reliable": "[green] reliable",
+                    "uncertain": "[yellow] uncertain",
+                    "noise": "[red] noise / no period",
+                }.get(_rel, "o unknown")
+                st.caption(f"Period reliability: {_badge}  -  {_rel_reason}")
 
                 ok_sectors = [s for s in tess_result.sectors if s.error is None]
                 if not ok_sectors:
@@ -1015,26 +1015,26 @@ def _variability_crossmatch_dialog_body() -> None:
                         "L-S",
                         f"{float(sector.period_found):.6f} d"
                         if sector.period_found is not None and np.isfinite(sector.period_found)
-                        else "—",
+                        else "-",
                     )
                     col2.metric(
                         "PDM",
                         f"{float(getattr(sector, 'period_pdm', None)):.6f} d"
                         if getattr(sector, "period_pdm", None) is not None and np.isfinite(float(sector.period_pdm))
-                        else "—",
+                        else "-",
                     )
                     col3.metric(
                         "BLS",
                         f"{float(getattr(sector, 'period_bls', None)):.6f} d"
                         if getattr(sector, "period_bls", None) is not None and np.isfinite(float(sector.period_bls))
-                        else "—",
+                        else "-",
                     )
                     col4.metric(
-                        "Consensus ★",
+                        "Consensus *",
                         f"{float(getattr(sector, 'period_consensus', None)):.6f} d"
                         if getattr(sector, "period_consensus", None) is not None
                         and np.isfinite(float(sector.period_consensus))
-                        else "—",
+                        else "-",
                         delta=str(getattr(sector, "period_method_used", "lomb-scargle") or "lomb-scargle"),
                         delta_color="off",
                     )
@@ -1043,7 +1043,7 @@ def _variability_crossmatch_dialog_body() -> None:
                         f"{float(getattr(sector, 'period_anova', None)):.6f} d"
                         if getattr(sector, "period_anova", None) is not None
                         and np.isfinite(float(getattr(sector, "period_anova", None)))
-                        else "—",
+                        else "-",
                     )
 
                     amp = getattr(sector, "amplitude_ppt", None)
@@ -1057,7 +1057,7 @@ def _variability_crossmatch_dialog_body() -> None:
                     if npts:
                         parts.append(f"LC points: **{npts}**")
                     if parts:
-                        st.caption("  ·  ".join(parts))
+                        st.caption("  .  ".join(parts))
 
                     if sector.lc_raw_path and Path(sector.lc_raw_path).exists():
                         try:
@@ -1097,18 +1097,18 @@ def _variability_crossmatch_dialog_body() -> None:
                             st.caption(f"Phased P = {float(pf):.6f} d")
                             st.image(str(sector.plot_phased_p_path))
                         else:
-                            st.caption("Phased P — unavailable")
+                            st.caption("Phased P - unavailable")
                     with col_2p:
                         if pf is not None and np.isfinite(pf) and sector.plot_phased_2p_path and Path(sector.plot_phased_2p_path).exists():
                             st.caption(f"Phased 2P = {float(pf) * 2.0:.6f} d")
                             st.image(str(sector.plot_phased_2p_path))
                         else:
-                            st.caption("Phased 2P — unavailable")
+                            st.caption("Phased 2P - unavailable")
                     blend_p = getattr(sector, "blend_check_path", None)
                     if blend_p and Path(str(blend_p)).is_file():
-                        st.image(str(blend_p), caption="Blend check — TESS vs Gaia sky")
+                        st.image(str(blend_p), caption="Blend check - TESS vs Gaia sky")
                     st.caption(
-                        "Compare P vs 2P — for EA/EB binaries, 2P is correct if you see two unequal minima"
+                        "Compare P vs 2P - for EA/EB binaries, 2P is correct if you see two unequal minima"
                     )
 
                     _acc_msg = st.session_state.get("accepted_period_msg", {})
@@ -1151,11 +1151,11 @@ def _variability_crossmatch_dialog_body() -> None:
                             else:
                                 st.warning("Enter a positive period.")
     with tab3:
-        st.info("Export LC data — will be implemented after TESS analysis")
+        st.info("Export LC data - will be implemented after TESS analysis")
 
 
 _variability_crossmatch_dialog = (
-    st.dialog("Candidate — catalog crossmatch")(_variability_crossmatch_dialog_body)
+    st.dialog("Candidate - catalog crossmatch")(_variability_crossmatch_dialog_body)
     if hasattr(st, "dialog")
     else _variability_crossmatch_dialog_body
 )
@@ -1170,7 +1170,7 @@ def render_variability_dashboard(
 ) -> None:
     import pandas as pd  # noqa: PLC0415
 
-    st.header("🔍 Variability Detection")
+    st.header("[search] Variability Detection")
     st.session_state.setdefault("tess_results", {})
     st.session_state.setdefault("accepted_period", {})
     st.session_state.setdefault("accepted_period_msg", {})
@@ -1191,7 +1191,7 @@ def render_variability_dashboard(
         return
 
     if st.session_state.get("var_analysis_done"):
-        _vts = str(st.session_state.get("var_analysis_timestamp") or "—")
+        _vts = str(st.session_state.get("var_analysis_timestamp") or "-")
         _nc = int(st.session_state.get("var_candidate_count_autorun", 0))
         st.success(
             f"Analysis complete: {_vts} | Candidates: {_nc} | Started automatically after Aperture Photometry"
@@ -1200,7 +1200,7 @@ def render_variability_dashboard(
         _vr = st.session_state.get("var_results") or {}
         _rms_m = _vr.get("rms_df")
         if isinstance(_rms_m, pd.DataFrame) and not _rms_m.empty:
-            st.info("Results from manual analysis — run Aperture Photometry for auto-update")
+            st.info("Results from manual analysis - run Aperture Photometry for auto-update")
 
     with st.expander("Debug", expanded=False):
         st.write(f"draft_dir: {draft_dir}")
@@ -1229,9 +1229,9 @@ def render_variability_dashboard(
     )
     mag_limit = float(cfg_dict.get("vsx_variable_targets_mag_limit", 13.0) or 13.0)
     st.caption(
-        f"Mag limit: {mag_limit:.1f} mag (from Settings → `vsx_variable_targets_mag_limit`)"
+        f"Mag limit: {mag_limit:.1f} mag (from Settings -> `vsx_variable_targets_mag_limit`)"
     )
-    min_frames_pct = 100  # všetky framy (bez slidera)
+    min_frames_pct = 100  # vsetky framy (bez slidera)
 
     per_frame_dir = draft_dir / "detrended_aligned" / "lights" / str(obs_group)
     platesolve_dir = draft_dir / "platesolve" / str(obs_group)
@@ -1245,7 +1245,7 @@ def render_variability_dashboard(
     _var_sig = (str(obs_group), str(flux_source), int(min_frames_pct), float(sigma_thr), float(mag_limit))
     if st.session_state.get("_var_run_sig") != _var_sig:
         try:
-            with st.spinner("Loading flux matrix and computing RMS + VDI…"):
+            with st.spinner("Loading flux matrix and computing RMS + VDI..."):
                 results, _n_cand_unused, sig = run_variability_detection_session(
                     cfg=cfg,
                     draft_dir=draft_dir,
@@ -1279,7 +1279,7 @@ def render_variability_dashboard(
 
                     shutil.copy2(str(_exported), str(_legacy_csv))
                     logging.info(
-                        "[VARIABILITY] Auto-exported variability_candidates.csv → %s (%d rows mirror)",
+                        "[VARIABILITY] Auto-exported variability_candidates.csv -> %s (%d rows mirror)",
                         str(_legacy_csv),
                         len(read_vyvar_csv(_exported)),
                     )
@@ -1324,7 +1324,7 @@ def render_variability_dashboard(
         results_df["is_candidate_combined"] = (
             results_df["is_variable_candidate_rms"] | results_df["is_variable_candidate_vdi"]
         )
-        results_df["detection_method"] = "—"
+        results_df["detection_method"] = "-"
         results_df.loc[results_df["is_variable_candidate_rms"], "detection_method"] = "RMS"
         results_df.loc[results_df["is_variable_candidate_vdi"], "detection_method"] = "VDI"
         results_df.loc[
@@ -1341,7 +1341,7 @@ def render_variability_dashboard(
         work["vsx_known_variable"] = work["vsx_known_variable"].fillna(False).astype(bool)
         work["gaia_dr3_variable_catalog"] = work["gaia_dr3_variable_catalog"].fillna(False).astype(bool)
 
-        # Per-star edge filter (annulus-aware) — avoid false candidates near chip border
+        # Per-star edge filter (annulus-aware) - avoid false candidates near chip border
         masterstar_fits = platesolve_dir / "MASTERSTAR.fits"
         edge_ok = _edge_ok_from_masterstar(masterstar_fits, work, cfg_dict)
         work["edge_ok"] = edge_ok.reindex(work.index).fillna(False).astype(bool)
@@ -1456,7 +1456,7 @@ def render_variability_dashboard(
         m3.metric(
             "VDI candidates",
             f"{n_vdi_candidates}",
-            help="Stars with high VDI score (variability detection index — LC shape analysis). Excludes known VSX stars.",
+            help="Stars with high VDI score (variability detection index - LC shape analysis). Excludes known VSX stars.",
         )
         m4.metric(
             "Combined",
@@ -1464,8 +1464,8 @@ def render_variability_dashboard(
             help="Candidates meeting RMS or VDI criteria, excluding known VSX and off-chip edge (edge_ok). Exported to variability_candidates.csv.",
         )
         st.caption(
-            f"Known VSX: {n_vsx} — detected as variable but already in catalog | "
-            f"Gaia variable: {n_gaia} — flagged in Gaia DR3 variable catalog"
+            f"Known VSX: {n_vsx} - detected as variable but already in catalog | "
+            f"Gaia variable: {n_gaia} - flagged in Gaia DR3 variable catalog"
         )
 
         # Keep only edge-safe candidates in the candidate table
@@ -1485,8 +1485,8 @@ def render_variability_dashboard(
         disk_katalogy = load_katalogy_map_from_disk(draft_dir, str(obs_group))
         bullets_map = _merge_katalogy_maps(bullets_map, disk_katalogy)
         st.session_state["var_catalog_bullets"] = bullets_map
-        cand["katalógy"] = cand["catalog_id"].astype(str).map(
-            lambda cid: _katalogy_display(bullets_map.get(str(cid), "—"))
+        cand["katalogy"] = cand["catalog_id"].astype(str).map(
+            lambda cid: _katalogy_display(bullets_map.get(str(cid), "-"))
         )
 
         show_cols = [
@@ -1499,7 +1499,7 @@ def render_variability_dashboard(
             "vdi_z_score",
             "detection_method",
             "variability_score",
-            "katalógy",
+            "katalogy",
             "zone",
             "Vizier",
         ]
@@ -1516,7 +1516,7 @@ def render_variability_dashboard(
         candidates_df["export"] = candidates_df["catalog_id"].astype(str).isin(sel_export)
 
         st.markdown(
-            "**Candidates** — check `export` to add to `variable_targets.csv`; "
+            "**Candidates** - check `export` to add to `variable_targets.csv`; "
             "pick a candidate in the list and click **Open crossmatch**."
         )
         disabled_cols = [c for c in candidates_df.columns if c != "export"]
@@ -1524,7 +1524,7 @@ def render_variability_dashboard(
             candidates_df,
             column_config={
                 "export": st.column_config.CheckboxColumn("export", default=False, help="Add to variable_targets.csv"),
-                "katalógy": st.column_config.TextColumn("Catalogs", width="large"),
+                "katalogy": st.column_config.TextColumn("Catalogs", width="large"),
             },
             disabled=disabled_cols,
             width="stretch",
@@ -1540,7 +1540,7 @@ def render_variability_dashboard(
         if st.toggle("Debug bullets_map", value=False):
             st.write(st.session_state.get("var_catalog_bullets", {}))
 
-        # ── Auto crossmatch ──────────────────────────
+        # -- Auto crossmatch --------------------------
         candidates = st.session_state.get("var_candidates", [])
         bullets_map = st.session_state.get("var_catalog_bullets", {})
 
@@ -1585,13 +1585,13 @@ def render_variability_dashboard(
                             vsx_local_db_path=_vsx_local_cm,
                         )
                         b = cr.catalog_summary_bullets()
-                        bullets_map[cid] = "\n".join(b) if b else "—"
+                        bullets_map[cid] = "\n".join(b) if b else "-"
                         xr = st.session_state.setdefault("var_crossmatch_results", {})
                         xr[cid] = cr
                     except Exception as exc:  # noqa: BLE001
                         bullets_map[cid] = f"Error: {exc}"
                 else:
-                    bullets_map[cid] = "—"
+                    bullets_map[cid] = "-"
 
                 pb.progress((i + 1) / len(missing))
 
@@ -1607,21 +1607,21 @@ def render_variability_dashboard(
             f"tess_enabled={getattr(cfg, 'tess_enabled', False)}"
         )
 
-        # ── Auto TESS trigger ────────────────────────
+        # -- Auto TESS trigger ------------------------
         # crossmatch_auto_done is set True, then st.rerun(), so this block runs on the next cycle.
         if st.session_state.get("crossmatch_auto_done"):
             tess_results = st.session_state.get("tess_results", {})
             photometry_dir = st.session_state.get("var_photometry_dir")
             if not photometry_dir:
                 st.warning(
-                    "⚠️ Auto-TESS: var_photometry_dir is not set — open Variability with a valid draft."
+                    "! Auto-TESS: var_photometry_dir is not set - open Variability with a valid draft."
                 )
-                logging.getLogger("pipeline").warning("[TESS] auto-TESS preskočený — var_photometry_dir chýba")
+                logging.getLogger("pipeline").warning("[TESS] auto-TESS preskoceny - var_photometry_dir chyba")
 
             if not bool(getattr(cfg, "tess_enabled", False)):
                 if not st.session_state.get("tess_auto_done"):
                     logging.getLogger("pipeline").info(
-                        "[TESS] preskočené — tess_enabled=False (Variability auto vetva)"
+                        "[TESS] preskocene - tess_enabled=False (Variability auto vetva)"
                     )
                     st.session_state["tess_auto_done"] = True
                     st.rerun()
@@ -1638,8 +1638,8 @@ def render_variability_dashboard(
                 )
                 if _memory_cids and not _cid_rows:
                     logging.getLogger("pipeline").info(
-                        "[TESS] auto-TESS preskočený — žiadny kandidát v variability_candidates.csv "
-                        "(alebo CSV chýba)"
+                        "[TESS] auto-TESS preskoceny - ziadny kandidat v variability_candidates.csv "
+                        "(alebo CSV chyba)"
                     )
                 _done_tess = {str(k) for k in (tess_results or {})}
                 _tess_photo = Path(str(photometry_dir)) if photometry_dir else None
@@ -1653,7 +1653,7 @@ def render_variability_dashboard(
                     cid
                     for cid in _cid_rows
                     if cid not in _done_tess
-                    and _should_trigger_tess(bullets_map.get(cid, "—"))
+                    and _should_trigger_tess(bullets_map.get(cid, "-"))
                     and photometry_dir
                     and not _tess_result_json_on_disk(cid)
                 ]
@@ -1662,20 +1662,20 @@ def render_variability_dashboard(
                     if photometry_dir:
                         if not _cid_rows:
                             logging.getLogger("pipeline").info(
-                                "[TESS] auto-TESS preskočený — žiadny kandidát bez katalógového "
+                                "[TESS] auto-TESS preskoceny - ziadny kandidat bez katalogoveho "
                                 "match v variability_candidates.csv"
                             )
                         else:
                             logging.getLogger("pipeline").info(
-                                "[TESS] auto-TESS — všetci oprávnení kandidáti už spracovaní "
-                                "(%d v CSV, %d hotových)",
+                                "[TESS] auto-TESS - vsetci opravneni kandidati uz spracovani "
+                                "(%d v CSV, %d hotovych)",
                                 len(_cid_rows),
                                 len(_done_tess),
                             )
                     st.session_state["tess_auto_done"] = True
                 else:
                     logging.getLogger("pipeline").info(
-                        f"[TESS] auto-TESS štart — {len(to_tess)} kandidátov: {to_tess}"
+                        f"[TESS] auto-TESS start - {len(to_tess)} kandidatov: {to_tess}"
                     )
                     st.session_state.setdefault("tess_auto_done", False)
 
@@ -1686,13 +1686,13 @@ def render_variability_dashboard(
                     _need_tess = [
                         c
                         for c in _cid_rows
-                        if _should_trigger_tess(bullets_map.get(c, "—"))
+                        if _should_trigger_tess(bullets_map.get(c, "-"))
                         and not _tess_result_json_on_disk(c)
                     ]
                     total_tess = len(_need_tess)
                     done = len([c for c in _need_tess if str(c) in _done_tess])
                     st.info(
-                        f"🔭 TESS analysis: {done}/{total_tess} done — processing {str(cid)[:16]}..."
+                        f"[telescope] TESS analysis: {done}/{total_tess} done - processing {str(cid)[:16]}..."
                     )
 
                     row = _get_candidate_row(
@@ -1723,7 +1723,7 @@ def render_variability_dashboard(
                                 )
                                 tess_results[cid] = tres
                                 logging.getLogger("pipeline").info(
-                                    f"[TESS] {cid} — sektory: {tres.total_sectors_found}, "
+                                    f"[TESS] {cid} - sektory: {tres.total_sectors_found}, "
                                     f"period: {tres.period_consensus}, error: {tres.error_global}"
                                 )
                             except Exception as exc:  # noqa: BLE001
@@ -1761,7 +1761,7 @@ def render_variability_dashboard(
                 return str(cid)
             r = sub.iloc[0]
             return (
-                f"{cid} · mag={float(pd.to_numeric(r.get('mag'), errors='coerce')):.2f} · "
+                f"{cid} . mag={float(pd.to_numeric(r.get('mag'), errors='coerce')):.2f} . "
                 f"rms={float(pd.to_numeric(r.get('rms_pct'), errors='coerce')):.1f}%"
             )
 
@@ -1769,8 +1769,8 @@ def render_variability_dashboard(
         if cm_cids:
             cx1, cx2 = st.columns([3, 1])
             with cx1:
-                # Bez on_change: pri zmene widgetu na inej záložke (napr. VSX checkbox v MASTERSTAR QA)
-                # Streamlit rerun spôsobil spúšťanie callbacku a otváranie tohto dialógu omylom.
+                # Bez on_change: pri zmene widgetu na inej zalozke (napr. VSX checkbox v MASTERSTAR QA)
+                # Streamlit rerun sposobil spustanie callbacku a otvaranie tohto dialogu omylom.
                 st.selectbox(
                     "Select candidate for catalog crossmatch (modal):",
                     options=cm_cids,
@@ -1790,14 +1790,14 @@ def render_variability_dashboard(
         else:
             st.caption("No candidates for crossmatch.")
 
-        # Dialóg len po explicitnom kliknutí „Otvoriť crossmatch“ (nie pri zmene selectboxu / rerune z iného tabu).
-        # Jeden dialóg na rerun: inak StreamlitDuplicateElementId (dva volania st.dialog v tom istom behu).
+        # Dialog len po explicitnom kliknuti 'Otvorit crossmatch' (nie pri zmene selectboxu / rerune z ineho tabu).
+        # Jeden dialog na rerun: inak StreamlitDuplicateElementId (dva volania st.dialog v tom istom behu).
         if st.session_state.pop("var_cm_open_requested", False):
             _variability_crossmatch_dialog()
 
         colA, colB = st.columns(2)
         with colA:
-            if st.button("📥 Export candidates CSV", key="var_export"):
+            if st.button("[inbox] Export candidates CSV", key="var_export"):
                 out_csv = draft_dir / "platesolve" / str(obs_group) / "variability_candidates.csv"
                 out_csv.parent.mkdir(parents=True, exist_ok=True)
                 candidates_df.drop(columns=["export"], errors="ignore").to_csv(out_csv, index=False)
@@ -1805,7 +1805,7 @@ def render_variability_dashboard(
         with colB:
             st.caption("")
 
-        if st.button("➕ Add selected to variable_targets.csv", key="var_add_to_var2"):
+        if st.button("+ Add selected to variable_targets.csv", key="var_add_to_var2"):
             selected_ids = list(st.session_state.get("selected_for_export") or [])
             if not selected_ids:
                 st.warning("No stars selected (export column).")
@@ -1863,7 +1863,7 @@ def render_variability_dashboard(
                             "notes": (
                                 f"VarDetect: RMS={float(pd.to_numeric(row.get('rms_pct'), errors='coerce')):.1f}% "
                                 f"smooth={float(pd.to_numeric(row.get('smoothness_ratio'), errors='coerce')):.2f} "
-                                f"method={row.get('detection_method','—')}"
+                                f"method={row.get('detection_method','-')}"
                             ),
                             "gaia_match_source": "variability_detection",
                         }
@@ -1890,7 +1890,7 @@ def render_variability_dashboard(
                         )
                     vt_df.to_csv(vt_path, index=False)
                     st.success(
-                        f"✅ Added {n_added} stars to variable_targets.csv\n"
+                        f"[OK] Added {n_added} stars to variable_targets.csv\n"
                         f"Run Aperture Photometry for full calibration."
                     )
                 else:
@@ -1901,7 +1901,7 @@ def render_variability_dashboard(
             f"{row.get('vsx_name', str(row.catalog_id)) or str(row.catalog_id)} "
             f"(mag={float(pd.to_numeric(row.mag, errors='coerce')):.2f}, "
             f"rms={float(pd.to_numeric(row.rms_pct, errors='coerce')):.1f}%, "
-            f"{row.get('detection_method','—')})": str(row.catalog_id)
+            f"{row.get('detection_method','-')})": str(row.catalog_id)
             for _, row in candidates_df.iterrows()
         }
         selected_cid = ""
@@ -1916,12 +1916,12 @@ def render_variability_dashboard(
         elif not candidates_df.empty and "catalog_id" in candidates_df.columns:
             selected_cid = str(candidates_df["catalog_id"].iloc[0])
 
-        st.subheader("📈 Candidate light curve")
+        st.subheader("[chart] Candidate light curve")
         if selected_cid:
 
             @st.cache_data(ttl=300, show_spinner=False)
             def load_candidate_lc(per_frame_dir_s: str, catalog_id: str, flux_col_in: str = "dao_flux") -> pd.DataFrame:
-                # Lokálny import: @st.cache_data na vnorenej funkcii neviaže spoľahlivo closure na import z modulu.
+                # Lokalny import: @st.cache_data na vnorenej funkcii neviaze spolahlivo closure na import z modulu.
                 from gaia_catalog_id import normalize_gaia_source_id as _norm_cid  # noqa: PLC0415
 
                 records: list[dict[str, Any]] = []
@@ -1971,7 +1971,7 @@ def render_variability_dashboard(
                     )
                 )
                 fig2.update_layout(
-                    title=f"Raw light curve — {selected_label_lc or str(selected_cid)}",
+                    title=f"Raw light curve - {selected_label_lc or str(selected_cid)}",
                     xaxis_title="BJD - BJD0",
                     yaxis_title="mag_inst (uncalibrated)",
                     yaxis_autorange="reversed",
@@ -1992,7 +1992,7 @@ def render_variability_dashboard(
             st.info("No candidates available to show a light curve.")
 
         # ---- Field map ----
-        st.subheader("🗺️ Star field (marked candidates)")
+        st.subheader("[map] Star field (marked candidates)")
         try:
             _field_map_df = results_df[
                 results_df["catalog_id"].astype(str) == str(selected_cid)
@@ -2047,7 +2047,7 @@ def render_variability_dashboard(
             )
             if png_bytes:
                 st.image(png_bytes, width="stretch")
-                st.caption("🔴 Candidates (new)   🟠 Known VSX   🟡 Selected candidate")
+                st.caption("[red] Candidates (new)   [orange] Known VSX   [yellow] Selected candidate")
             else:
                 st.info("Could not render field from MASTERSTAR.fits (missing astropy/matplotlib?).")
         else:

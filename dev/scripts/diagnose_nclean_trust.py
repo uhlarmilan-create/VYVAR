@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Diagnostic: n_clean=0 / trust RED — regression vs draft-specific (read-only)."""
+"""Diagnostic: n_clean=0 / trust RED - regression vs draft-specific (read-only)."""
 from __future__ import annotations
 
 import json
@@ -79,7 +79,7 @@ def _original_snapshot(phot_dir: Path) -> dict:
 
 def _rerun_comp_qa_trust(*, phot_dir: Path, proc_dir: Path, cfg: AppConfig) -> dict:
     bak = _backup_summary(phot_dir)
-    # copy summary to temp work — mutate in place then we'll restore
+    # copy summary to temp work - mutate in place then we'll restore
     work_sm = phot_dir / "photometry_summary.csv"
     df_before = pd.read_csv(work_sm, dtype=str, low_memory=False) if work_sm.is_file() else pd.DataFrame()
 
@@ -127,7 +127,7 @@ def _dump_380_comp_qa(*, phot_dir: Path, proc_dir: Path, cfg: AppConfig, out_csv
     if rows:
         pd.DataFrame(rows).to_csv(out_csv, index=False)
     else:
-        out_csv.write_text("EMPTY — no per_comp_rows (load_proc_pivot found no frames)\n", encoding="utf-8")
+        out_csv.write_text("EMPTY - no per_comp_rows (load_proc_pivot found no frames)\n", encoding="utf-8")
 
     # sample targets
     pt = qa.get("per_target", {})

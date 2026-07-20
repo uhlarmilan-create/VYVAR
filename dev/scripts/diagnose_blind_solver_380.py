@@ -223,7 +223,7 @@ def _plot_histogram(
     ax.axvline(med, color="crimson", linestyle="--", label=f"image median {med:.1f}\"")
     ax.set_xlabel("L3 side length (arcsec)")
     ax.set_ylabel("triangle count")
-    ax.set_title(f"Blind solver image log_L3 — {group}")
+    ax.set_title(f"Blind solver image log_L3 - {group}")
     ax.legend(loc="upper right")
     fig.tight_layout()
     out_png.parent.mkdir(parents=True, exist_ok=True)
@@ -255,12 +255,12 @@ def _plot_sky_scatter(
         linestyle="--",
         color="lime",
         linewidth=1.5,
-        label=f"truth ±{CLUSTER_RADIUS_DEG}°",
+        label=f"truth +-{CLUSTER_RADIUS_DEG} deg",
     )
     ax.add_patch(circle)
     ax.set_xlabel("RA (deg)")
     ax.set_ylabel("Dec (deg)")
-    ax.set_title(f"Blind solver vote sky-scatter — {group}")
+    ax.set_title(f"Blind solver vote sky-scatter - {group}")
     ax.legend(loc="best", fontsize=8)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
@@ -285,8 +285,8 @@ def _format_pass_lines(passes: list[dict[str, Any]]) -> list[str]:
         lines.append(
             f"  pass[{i}] dub={p.get('dub')} "
             f"votes={p.get('n_votes')} match_mult_mean={p.get('match_mult_mean', 0):.2f} "
-            f"near_truth<2°={p.get('votes_near_truth_2deg', 'n/a')} "
-            f"<5°={p.get('votes_near_truth_5deg', 'n/a')} "
+            f"near_truth<2 deg={p.get('votes_near_truth_2deg', 'n/a')} "
+            f"<5 deg={p.get('votes_near_truth_5deg', 'n/a')} "
             f"best_at_truth={p.get('best_count_at_truth', 'n/a')}"
         )
         lines.append(
@@ -324,20 +324,20 @@ def _votes_branch_verdict(group_sinks: list[dict[str, Any]]) -> str:
                 if int(p.get("best_count_at_truth", 0)) < int(p.get("best_count", 0)):
                     any_winner_elsewhere = True
 
-    support = f"match_mult_mean max={max_match_mult:.2f} (vysoká ≈ nediskriminuje)."
+    support = f"match_mult_mean max={max_match_mult:.2f} (vysoka ~ nediskriminuje)."
     if total_near_5 == 0:
         return (
-            f"VETVA 1: pravá konfigurácia chýba v indexe "
-            f"(votes_near_truth<5°=0 naprieč passmi; <2°={total_near_2}). "
-            f"Ďalší krok = hlbší/zhodný index alebo zhodná konštrukcia trojuholníkov. {support}"
+            f"VETVA 1: prava konfiguracia chyba v indexe "
+            f"(votes_near_truth<5 deg=0 napriec passmi; <2 deg={total_near_2}). "
+            f"Dalsi krok = hlbsi/zhodny index alebo zhodna konstrukcia trojuholnikov. {support}"
         )
     if any_winner_elsewhere or total_near_5 > 0:
         return (
-            f"VETVA 2: hlasy pri pravde existujú (<5°={total_near_5}, <2°={total_near_2}), "
-            f"ale víťazný klaster je inde → hash nediskriminuje / chýba geometrická verifikácia. "
-            f"Ďalší krok = spätná projekcia + match-fraction (+ prípadne quady). {support}"
+            f"VETVA 2: hlasy pri pravde existuju (<5 deg={total_near_5}, <2 deg={total_near_2}), "
+            f"ale vitazny klaster je inde -> hash nediskriminuje / chyba geometricka verifikacia. "
+            f"Dalsi krok = spatna projekcia + match-fraction (+ pripadne quady). {support}"
         )
-    return f"NEJEDNOZNAČNÉ: near_5={total_near_5}, near_2={total_near_2}. {support}"
+    return f"NEJEDNOZNACNE: near_5={total_near_5}, near_2={total_near_2}. {support}"
 
 
 def _hypothesis_verdict(groups: list[dict[str, Any]]) -> str:
@@ -346,27 +346,27 @@ def _hypothesis_verdict(groups: list[dict[str, Any]]) -> str:
     total_above = sum(int(g.get("n_above_max", 0)) for g in groups)
     total_in = sum(int(g.get("n_in_range", 0)) for g in groups)
     if total_passed == 0:
-        return "INCONCLUSIVE: žiadne trojuholníky neprešli tvar/FOV filtrom."
+        return "INCONCLUSIVE: ziadne trojuholniky nepresli tvar/FOV filtrom."
     pct_below = 100.0 * total_below / total_passed
     pct_in = 100.0 * total_in / total_passed
     if pct_below >= 50.0:
         return (
-            f"POTVRDENÉ: {pct_below:.0f}% obrazových trojuholníkov pod log_L3_min "
-            f"({total_below}/{total_passed}) → dolný-koniec clip je hlavný killer."
+            f"POTVRDENE: {pct_below:.0f}% obrazovych trojuholnikov pod log_L3_min "
+            f"({total_below}/{total_passed}) -> dolny-koniec clip je hlavny killer."
         )
     if pct_in >= 30.0:
         return (
-            f"VYVRÁTENÉ (dolný clip): {pct_in:.0f}% trojuholníkov v rozsahu indexu "
-            f"({total_in}/{total_passed}); príčina inde (hlasovanie / hĺbka indexu / falošné zhody)."
+            f"VYVRATENE (dolny clip): {pct_in:.0f}% trojuholnikov v rozsahu indexu "
+            f"({total_in}/{total_passed}); pricina inde (hlasovanie / hlbka indexu / falosne zhody)."
         )
     if total_above > total_below:
         return (
-            f"Čiastočne: viac trojuholníkov nad log_L3_max ({total_above}) než pod min ({total_below}); "
-            "horný koniec clip."
+            f"Ciastocne: viac trojuholnikov nad log_L3_max ({total_above}) nez pod min ({total_below}); "
+            "horny koniec clip."
         )
     return (
-        f"NEJEDNOZNAČNÉ: below_min={total_below}, above_max={total_above}, "
-        f"in_range={total_in} z {total_passed} — pozri per-group histogramy."
+        f"NEJEDNOZNACNE: below_min={total_below}, above_max={total_above}, "
+        f"in_range={total_in} z {total_passed} - pozri per-group histogramy."
     )
 
 
@@ -418,7 +418,7 @@ def _format_group_report(
         verdict = "HIT" if sep < HIT_THRESHOLD_DEG else "MISS"
         lines.append(
             f"  result: RA={hint[0]:.4f} Dec={hint[1]:.4f}  "
-            f"sep_from_truth={sep:.2f}°  {verdict} (threshold {HIT_THRESHOLD_DEG}°)"
+            f"sep_from_truth={sep:.2f} deg  {verdict} (threshold {HIT_THRESHOLD_DEG} deg)"
         )
         lines.append(f"  truth: RA={truth_ra} Dec={truth_dec}")
     passes = sink.get("passes") or []
@@ -431,8 +431,8 @@ def _format_group_report(
             lines.append("")
             lines.append(
                 f"  deciding pass: dub={deciding.get('dub')} "
-                f"votes_near_truth <2°={deciding.get('votes_near_truth_2deg', 'n/a')} "
-                f"<5°={deciding.get('votes_near_truth_5deg', 'n/a')} "
+                f"votes_near_truth <2 deg={deciding.get('votes_near_truth_2deg', 'n/a')} "
+                f"<5 deg={deciding.get('votes_near_truth_5deg', 'n/a')} "
                 f"best_at_truth={deciding.get('best_count_at_truth', 'n/a')}"
             )
     verified = sink.get("verified_candidates") or []
@@ -453,7 +453,7 @@ def _format_group_report(
                     and sep_t < float(near_truth.get("sep_from_truth_deg", 999))
                 ):
                     near_truth = {**row, "sep_from_truth_deg": sep_t}
-            sep_s = f" sep_truth={sep_t:.2f}°" if sep_t is not None else ""
+            sep_s = f" sep_truth={sep_t:.2f} deg" if sep_t is not None else ""
             lines.append(
                 f"  cand[{row.get('idx')}] RA={row.get('center_ra'):.3f} Dec={row.get('center_dec'):.3f} "
                 f"matched={row.get('n_matched')} n_cat={row.get('n_cat_in_frame', row.get('n_cat'))} "
@@ -466,7 +466,7 @@ def _format_group_report(
                 f"  nearest-to-truth: matched={near_truth.get('n_matched')} "
                 f"n_cat={near_truth.get('n_cat_in_frame', near_truth.get('n_cat'))} "
                 f"fraction={near_truth.get('fraction', 0):.3f} "
-                f"sep={near_truth.get('sep_from_truth_deg', 'n/a')}°"
+                f"sep={near_truth.get('sep_from_truth_deg', 'n/a')} deg"
             )
         winner = sink.get("verify_winner")
         if winner:
@@ -519,7 +519,7 @@ def main() -> int:
     tri_k = _index_k_neighbors({"k_neighbors": index_meta.get("k_neighbors")})
 
     report_lines = [
-        "Blind solver diagnostic — draft_000380 Chi_and_H",
+        "Blind solver diagnostic - draft_000380 Chi_and_H",
         f"started_utc: {datetime.now(timezone.utc).isoformat()}",
         f"draft: {draft}",
         f"index: {index_path}",
@@ -527,7 +527,7 @@ def main() -> int:
         "=== Index summary ===",
         f"mag_limit={index_meta.get('mag_limit')} tolerance={index_meta.get('tolerance')} "
         f"hash_dim={index_meta.get('hash_dim')} n_triangles={index_meta.get('n_triangles')} "
-        f"k_neighbors={index_meta.get('k_neighbors', 'legacy→8')}",
+        f"k_neighbors={index_meta.get('k_neighbors', 'legacy->8')}",
         f"log_L3 [{log_L3_min:.3f}, {log_L3_max:.3f}] dex  "
         f"arcsec [{index_meta['log_L3_min_arcsec']:.2f}, {index_meta['log_L3_max_arcsec']:.2f}]",
         "",

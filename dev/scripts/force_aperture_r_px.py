@@ -9,7 +9,7 @@ Usage:
   python scripts/force_aperture_r_px.py --draft draft_000312 --radius 7 --export-only
   python scripts/force_aperture_r_px.py --draft draft_000312 --radius 7 --phase2a-only
 
-Temporary diagnostic — promote to pipeline flag when stable.
+Temporary diagnostic - promote to pipeline flag when stable.
 """
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ def _fixed_snr_table(r_px: float, fwhm_px: float) -> dict:
         "r_min_px": r,
         "r_max_px": r,
         "fixed_radius_px": r,
-        "note": "force_aperture_r_px.py — uniform radius for all magnitudes",
+        "note": "force_aperture_r_px.py - uniform radius for all magnitudes",
     }
 
 
@@ -146,14 +146,14 @@ def remeasure_proc_csvs(
     for i, csv_path in enumerate(csv_files, 1):
         fits_path = aligned_dir / f"{csv_path.stem}.fits"
         if not fits_path.is_file():
-            LOGGER.warning("Skip %s — missing %s", csv_path.name, fits_path.name)
+            LOGGER.warning("Skip %s - missing %s", csv_path.name, fits_path.name)
             continue
         df = pd.read_csv(csv_path, low_memory=False, dtype=GAIA_PROC_CSV_READ_DTYPE)
         with fits.open(fits_path, memmap=True) as hdul:
             data = hdul[0].data
             hdr = hdul[0].header
         if "catalog_id" not in df.columns:
-            LOGGER.warning("Skip %s — no catalog_id column", csv_path.name)
+            LOGGER.warning("Skip %s - no catalog_id column", csv_path.name)
             continue
         cid_norm = df["catalog_id"].map(normalize_gaia_source_id)
         mask = cid_norm.isin(needed_cids)
@@ -172,7 +172,7 @@ def remeasure_proc_csvs(
         fw_use = float(fw_frame) if math.isfinite(float(fw_frame)) and float(fw_frame) > 0 else float(
             snr_table.get("fwhm_px", fwhm_px)
         )
-        # photutils here needs scalar r (not per-star array); fixed r_px via factor × FWHM.
+        # photutils here needs scalar r (not per-star array); fixed r_px via factor x FWHM.
         apt_factor = float(r_px) / fw_use
         sub_out = enhance_catalog_dataframe_aperture_bpm(
             sub,
@@ -269,7 +269,7 @@ def main() -> int:
 
     print("=" * 60)
     print(f"Force aperture r={r_px:.3f} px  draft={draft.name}  setup={setup}")
-    print(f"FWHM={fwhm_px:.3f} px  annulus={cfg.annulus_inner_fwhm:.2f}–{cfg.annulus_outer_fwhm:.2f}×FWHM")
+    print(f"FWHM={fwhm_px:.3f} px  annulus={cfg.annulus_inner_fwhm:.2f}-{cfg.annulus_outer_fwhm:.2f}xFWHM")
     print("=" * 60)
 
     _print_targets("BEFORE", summary)

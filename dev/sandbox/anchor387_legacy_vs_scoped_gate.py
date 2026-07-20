@@ -244,7 +244,7 @@ def main() -> int:
     if compare_only:
         if not TMP_LEGACY.is_dir() or not TMP_SCOPED.is_dir():
             raise SystemExit(
-                f"compare-only: missing {TMP_LEGACY} or {TMP_SCOPED} — run full gate first."
+                f"compare-only: missing {TMP_LEGACY} or {TMP_SCOPED} - run full gate first."
             )
         print("=== compare-only (skip re-cut; reuse tmp/) ===")
     else:

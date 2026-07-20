@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""BO CVn: SIPS V−C vs VYVAR delta_mag / mag_inst / mag_calib (same time axis).
+"""BO CVn: SIPS V-C vs VYVAR delta_mag / mag_inst / mag_calib (same time axis).
 
 Usage:
   python scripts/plot_bo_sips_vyvar_compare.py
@@ -111,20 +111,20 @@ def main() -> int:
                 break
     if not math.isfinite(ap_px):
         ap_px = float(np.nanmedian(lc["aperture_r_px"])) if "aperture_r_px" in lc.columns else float("nan")
-    ap_note = f"VYVAR SNR apertura BO ≈ {ap_px:.2f} px"
+    ap_note = f"VYVAR SNR apertura BO ~ {ap_px:.2f} px"
 
     fig, axes = plt.subplots(4, 1, figsize=(11, 11), sharex=True)
     fig.suptitle(
-        f"BO CVn — SIPS vs VYVAR (draft {draft.name}, {SETUP})\n"
-        f"{ap_note} | červené pásmo = 2. polovica noci (airmass rastie)",
+        f"BO CVn - SIPS vs VYVAR (draft {draft.name}, {SETUP})\n"
+        f"{ap_note} | cervene pasmo = 2. polovica noci (airmass rastie)",
         fontsize=11,
     )
 
     panels = [
-        ("SIPS V−C (demean)", sips_dm, sips_t, "#9467bd"),
-        ("VYVAR delta_mag — AIJ-like rel. (demean)", dm, t, "#2ca02c"),
-        ("VYVAR mag_inst — bez ZP (demean)", inst, t, "#d62728"),
-        ("VYVAR mag_calib — ZP, bez AM detrend (demean)", cal, t, "#ff7f0e"),
+        ("SIPS V-C (demean)", sips_dm, sips_t, "#9467bd"),
+        ("VYVAR delta_mag - AIJ-like rel. (demean)", dm, t, "#2ca02c"),
+        ("VYVAR mag_inst - bez ZP (demean)", inst, t, "#d62728"),
+        ("VYVAR mag_calib - ZP, bez AM detrend (demean)", cal, t, "#ff7f0e"),
     ]
 
     stats: list[str] = []
@@ -137,19 +137,19 @@ def main() -> int:
         r_all = rms(y[m]) * 1000.0
         r_2 = rms(y[sl2][np.isfinite(y[sl2])]) * 1000.0
         c2 = corr_am(y, sl2)
-        stats.append(f"{title[:28]:28s}  RMS={r_all:5.0f} ppt  2nd½={r_2:5.0f} ppt  r(am)₂={c2:+.2f}")
+        stats.append(f"{title[:28]:28s}  RMS={r_all:5.0f} ppt  2nd1/2={r_2:5.0f} ppt  r(am)_2={c2:+.2f}")
         if title.startswith("VYVAR mag_calib"):
             ax2 = ax.twinx()
             ax2.plot(t, am, color="#4682b4", alpha=0.45, lw=1.5, label="airmass")
             ax2.set_ylabel("airmass", fontsize=8, color="#4682b4")
             ax2.tick_params(axis="y", labelsize=7)
 
-    axes[-1].set_xlabel(f"Time — BJD − {JD0:.0f} (same night)")
+    axes[-1].set_xlabel(f"Time - BJD - {JD0:.0f} (same night)")
     fig.text(
         0.02,
         0.01,
         "\n".join(stats)
-        + f"\nZP frame jitter σ(mag_calib−mag_inst)={rms((lc['mag_calib']-lc['mag_inst']).to_numpy())*1000:.0f} ppt",
+        + f"\nZP frame jitter sigma(mag_calib-mag_inst)={rms((lc['mag_calib']-lc['mag_inst']).to_numpy())*1000:.0f} ppt",
         fontsize=7,
         family="monospace",
         va="bottom",

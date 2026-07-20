@@ -1,4 +1,4 @@
-"""Photometry core — zlúčený modul (photometry + photometry_phase2a)."""
+"""Photometry core - zluceny modul (photometry + photometry_phase2a)."""
 from __future__ import annotations
 
 import copy
@@ -51,7 +51,7 @@ from utils import iter_fits_paths_recursive as _iter_fits_recursive
 
 LOGGER = logging.getLogger(__name__)
 
-_MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
+_MAD_CONSISTENCY = 0.6745  # normalizacny faktor MAD -> sigma ekvivalent
 
 # Explicit annulus sky (ADU/px) for Howell err; ``noise_floor_adu`` remains detection-floor legacy.
 SKY_ADU_PER_PX_ANNULUS_COL = "sky_adu_per_px_annulus"
@@ -101,11 +101,11 @@ def _safe_polyfit(
         return None
 
 
-# Comp tier: Gaia BP-RP outside this band → unreliable vs field comps (use B-V fallback).
+# Comp tier: Gaia BP-RP outside this band -> unreliable vs field comps (use B-V fallback).
 _BPRP_VALID_MIN = 0.1
 _BPRP_VALID_MAX = 3.5
 
-# Gaia ID (`catalog_id`, VSX / masterstars `name`) musí byť str — float64 stráca cifry
+# Gaia ID (`catalog_id`, VSX / masterstars `name`) musi byt str - float64 straca cifry
 _GAIA_ID_DTYPE: dict[str, type] = dict(GAIA_PROC_CSV_READ_DTYPE)
 
 
@@ -136,7 +136,7 @@ _COMP_QUALITY_JSON_META_KEYS = frozenset(
 
 
 def parse_comp_quality_json_map(raw: dict[str, Any]) -> dict[str, dict[str, str]]:
-    """Return ``catalog_id`` → ``{quality, note}`` from ``comp_quality_*.json`` (strip metadata keys).
+    """Return ``catalog_id`` -> ``{quality, note}`` from ``comp_quality_*.json`` (strip metadata keys).
 
     Accepts legacy flat strings (``"good"``) and structured objects
     (``{"quality": "suspect", "note": "..."}``).
@@ -160,7 +160,7 @@ def parse_comp_quality_json_map(raw: dict[str, Any]) -> dict[str, dict[str, str]
 def comp_quality_quality_strings(
     qmap: dict[str, dict[str, str]] | dict[str, str] | None,
 ) -> dict[str, str]:
-    """Flatten parsed comp-quality map to ``catalog_id`` → quality string (for w_rel / export helpers)."""
+    """Flatten parsed comp-quality map to ``catalog_id`` -> quality string (for w_rel / export helpers)."""
     if not qmap:
         return {}
     out: dict[str, str] = {}
@@ -207,7 +207,7 @@ def _enrich_comp_bp_rp(
     *,
     gaia_prefetch: dict[str, dict[str, Any]] | None = None,
 ) -> pd.DataFrame:
-    """Doplní ``bp_rp`` pre comp hviezdy kde chýba (Gaia DR3 podľa ``source_id``)."""
+    """Doplni ``bp_rp`` pre comp hviezdy kde chyba (Gaia DR3 podla ``source_id``)."""
     if candidates is None or getattr(candidates, "empty", True):
         return pd.DataFrame()
 
@@ -293,7 +293,7 @@ def _enrich_comp_bp_rp(
     return df
 
 # ---------------------------------------------------------------------------
-# Pomocné funkcie
+# Pomocne funkcie
 # ---------------------------------------------------------------------------
 
 
@@ -311,13 +311,13 @@ def _build_csv_lookup(
     csv_df: pd.DataFrame,
     id_col: str,
 ) -> tuple[dict[str, pd.Series], pd.DataFrame]:
-    """Vytvorí dva lookup mechanizmy:
-    1. Primárny: dict {normalized_id → row}
-    2. Záložný: riadky s numerickými x,y pre nearest-neighbor match (plné stĺpce CSV).
+    """Vytvori dva lookup mechanizmy:
+    1. Primarny: dict {normalized_id -> row}
+    2. Zalozny: riadky s numerickymi x,y pre nearest-neighbor match (plne stlpce CSV).
 
-    Proc CSV z pipeline má ``catalog_id`` často ako float / vedeckú notáciu (strata presnosti),
-    zatiaľ čo ``name`` obsahuje presný Gaia ``source_id`` — indexujeme oboje (``setdefault``),
-    aby Fáza 2A netrafila NN na suseda namiesto správnej porovnávačky.
+    Proc CSV z pipeline ma ``catalog_id`` casto ako float / vedecku notaciu (strata presnosti),
+    zatial co ``name`` obsahuje presny Gaia ``source_id`` - indexujeme oboje (``setdefault``),
+    aby Faza 2A netrafila NN na suseda namiesto spravnej porovnavacky.
     """
     id_map: dict[str, pd.Series] = {}
     _id_series = csv_df[id_col]
@@ -336,7 +336,7 @@ def _build_csv_lookup(
             keys.add(cid)
         for k in keys:
             id_map.setdefault(k, row)
-    # Plná kópia: NN fallback musí vrátiť Series so všetkými stĺpcami (dao_flux, časy, …).
+    # Plna kopia: NN fallback musi vratit Series so vsetkymi stlpcami (dao_flux, casy, ...).
     xy_df = csv_df.copy()
     if "name" in xy_df.columns:
         _nk = xy_df["name"].map(normalize_gaia_source_id)
@@ -359,7 +359,7 @@ def _lookup_star_in_csv(
     *,
     xy_tol_px: float = 15.0,
 ) -> pd.Series | None:
-    """Hľadaj hviezdu v CSV — primárne cez ID, fallback cez x,y."""
+    """Hladaj hviezdu v CSV - primarne cez ID, fallback cez x,y."""
     cid_key = _normalize_gaia_id(cid)
     if cid_key and cid_key in id_map:
         return id_map[cid_key]
@@ -387,7 +387,7 @@ def _lookup_star_in_csv(
     _hit = xy_df.iloc[j]
     _mid = str(_hit.get("_cid_norm", ""))
     logging.debug(
-        "[FÁZA 2A] CSV NN fallback ok: requested_cid=%s matched_csv_id=%s dist_px=%.2f tol=%.1f",
+        "[FAZA 2A] CSV NN fallback ok: requested_cid=%s matched_csv_id=%s dist_px=%.2f tol=%.1f",
         cid,
         _mid,
         float(dists[j]),
@@ -397,13 +397,13 @@ def _lookup_star_in_csv(
 
 
 def _sat_limit_peak_adu(cfg: AppConfig | None = None) -> float | None:
-    """Hranica peak_max_adu z configu (voliteľné). Bez globálneho fallbacku — saturácia z FITS/DB v pipeline."""
+    """Hranica peak_max_adu z configu (volitelne). Bez globalneho fallbacku - saturacia z FITS/DB v pipeline."""
     _ = cfg
     return None
 
 
 def _mad_sigma(arr: np.ndarray) -> float:
-    """Robustný σ estimátor cez MAD / 0.6745."""
+    """Robustny sigma estimator cez MAD / 0.6745."""
     med = float(np.median(arr))
     mad = float(np.median(np.abs(arr - med)))
     if not math.isfinite(mad) or mad <= 0:
@@ -412,7 +412,7 @@ def _mad_sigma(arr: np.ndarray) -> float:
 
 
 def _aperture_to_mask_single(ap: Any) -> Any:
-    """photutils môže vrátiť jednu masku alebo zoznam (jedna pozícia → prvý prvok)."""
+    """photutils moze vratit jednu masku alebo zoznam (jedna pozicia -> prvy prvok)."""
     m = ap.to_mask(method="center")
     if isinstance(m, (list, tuple)):
         return m[0]
@@ -428,22 +428,22 @@ def measure_fwhm_from_masterstar(
     dao_fwhm_hint: float = 3.5,
     ms_data: np.ndarray | None = None,
 ) -> float:
-    """Zmeria skutočné Gaussian FWHM z MASTERSTAR FITS.
+    """Zmeria skutocne Gaussian FWHM z MASTERSTAR FITS.
 
-    Fituje 2D Gaussian na izolované, nesaturované hviezdy z ``star_positions``
-    a vracia mediánové FWHM v pixeloch. Toto je fyzikálne správne FWHM
-    (zodpovedá AIJ/IRAF definícii), na rozdiel od DAO odhadu ktorý
-    systematicky preceňuje FWHM.
+    Fituje 2D Gaussian na izolovane, nesaturovane hviezdy z ``star_positions``
+    a vracia medianove FWHM v pixeloch. Toto je fyzikalne spravne FWHM
+    (zodpoveda AIJ/IRAF definicii), na rozdiel od DAO odhadu ktory
+    systematicky precenuje FWHM.
 
     Args:
         masterstar_fits_path: Cesta k MASTERSTAR.fits
-        star_positions: DataFrame so stĺpcami x, y, mag (catalog_id voliteľný)
-        n_stars: Počet hviezd na fit (vyberie izolované, stredne jasné)
-        fit_box_fwhm: Veľkosť okna pre fit v jednotkách dao_fwhm_hint
-        dao_fwhm_hint: Hrubý DAO odhad pre určenie veľkosti okna
+        star_positions: DataFrame so stlpcami x, y, mag (catalog_id volitelny)
+        n_stars: Pocet hviezd na fit (vyberie izolovane, stredne jasne)
+        fit_box_fwhm: Velkost okna pre fit v jednotkach dao_fwhm_hint
+        dao_fwhm_hint: Hruby DAO odhad pre urcenie velkosti okna
 
     Returns:
-        Mediánové Gaussian FWHM v pixeloch.
+        Medianove Gaussian FWHM v pixeloch.
     """
     from astropy.modeling import fitting, models
 
@@ -459,7 +459,7 @@ def measure_fwhm_from_masterstar(
     df = star_positions.copy()
     if df.empty:
         logging.warning(
-            "[FÁZA 2A] Gaussian FWHM fit: prázdne star_positions, fallback dao_fwhm_hint=%.2f px",
+            "[FAZA 2A] Gaussian FWHM fit: prazdne star_positions, fallback dao_fwhm_hint=%.2f px",
             float(dao_fwhm_hint),
         )
         return float(dao_fwhm_hint)
@@ -468,7 +468,7 @@ def measure_fwhm_from_masterstar(
     df = df.dropna(subset=["x", "y"])
     if len(df) < 3:
         logging.warning(
-            "[FÁZA 2A] Gaussian FWHM fit: málo riadkov s x,y, fallback dao_fwhm_hint=%.2f px",
+            "[FAZA 2A] Gaussian FWHM fit: malo riadkov s x,y, fallback dao_fwhm_hint=%.2f px",
             float(dao_fwhm_hint),
         )
         return float(dao_fwhm_hint)
@@ -477,7 +477,7 @@ def measure_fwhm_from_masterstar(
     margin = box + 5
     if box < 3 or margin * 2 >= min(h, w):
         logging.warning(
-            "[FÁZA 2A] Gaussian FWHM fit: príliš malý/obrovský box=%s, fallback dao_fwhm_hint=%.2f px",
+            "[FAZA 2A] Gaussian FWHM fit: prilis maly/obrovsky box=%s, fallback dao_fwhm_hint=%.2f px",
             box,
             float(dao_fwhm_hint),
         )
@@ -486,7 +486,7 @@ def measure_fwhm_from_masterstar(
     df = df[(df["x"] > margin) & (df["x"] < w - margin) & (df["y"] > margin) & (df["y"] < h - margin)].copy()
     if len(df) < 3:
         logging.warning(
-            "[FÁZA 2A] Gaussian FWHM fit: málo hviezd po okrajovom filtri, fallback dao_fwhm_hint=%.2f px",
+            "[FAZA 2A] Gaussian FWHM fit: malo hviezd po okrajovom filtri, fallback dao_fwhm_hint=%.2f px",
             float(dao_fwhm_hint),
         )
         return float(dao_fwhm_hint)
@@ -501,7 +501,7 @@ def measure_fwhm_from_masterstar(
 
     if len(df) < 1:
         logging.warning(
-            "[FÁZA 2A] Gaussian FWHM fit: prázdny výber po mag, fallback dao_fwhm_hint=%.2f px",
+            "[FAZA 2A] Gaussian FWHM fit: prazdny vyber po mag, fallback dao_fwhm_hint=%.2f px",
             float(dao_fwhm_hint),
         )
         return float(dao_fwhm_hint)
@@ -573,7 +573,7 @@ def measure_fwhm_from_masterstar(
 
     if len(fwhm_values) < 3:
         logging.warning(
-            "[FÁZA 2A] Gaussian FWHM fit: len menej ako 3 hviezd (%s), fallback dao_fwhm_hint=%.2f px",
+            "[FAZA 2A] Gaussian FWHM fit: len menej ako 3 hviezd (%s), fallback dao_fwhm_hint=%.2f px",
             len(fwhm_values),
             float(dao_fwhm_hint),
         )
@@ -581,7 +581,7 @@ def measure_fwhm_from_masterstar(
 
     result = float(np.median(fwhm_values))
     logging.info(
-        "[FÁZA 2A] Gaussian FWHM z MASTERSTAR: %.3f px (z %s hviezd, DAO hint %.3f px)",
+        "[FAZA 2A] Gaussian FWHM z MASTERSTAR: %.3f px (z %s hviezd, DAO hint %.3f px)",
         result,
         len(fwhm_values),
         float(dao_fwhm_hint),
@@ -590,7 +590,7 @@ def measure_fwhm_from_masterstar(
 
 
 # ---------------------------------------------------------------------------
-# KROK 1: Globálna fixná apertura z PSF FWHM (MASTERSTAR VY_FWHM alebo fit)
+# KROK 1: Globalna fixna apertura z PSF FWHM (MASTERSTAR VY_FWHM alebo fit)
 # ---------------------------------------------------------------------------
 
 
@@ -603,24 +603,24 @@ def compute_optimal_apertures(
     annulus_inner_fwhm: float = 4.5,
     annulus_outer_fwhm: float = 6.0,
 ) -> dict[str, float]:
-    """Globálna fixná apertura = aperture_fwhm_factor × FWHM.
+    """Globalna fixna apertura = aperture_fwhm_factor x FWHM.
 
-    Fyzikálne zdôvodnenie:
-    - PSF FWHM (typicky ``VY_FWHM`` DAO z MASTERSTAR): r ≈ 1.75× FWHM zachytí väčšinu fluxu
-    - Konzistentná fixná apertura je robustnejšia ako per-hviezda
-      metódy v hustom poli (kontaminácia susedmi)
-    - Zodpovedá AIJ metodike: fixná apertura z FWHM
+    Fyzikalne zdovodnenie:
+    - PSF FWHM (typicky ``VY_FWHM`` DAO z MASTERSTAR): r ~ 1.75x FWHM zachyti vacsinu fluxu
+    - Konzistentna fixna apertura je robustnejsia ako per-hviezda
+      metody v hustom poli (kontaminacia susedmi)
+    - Zodpoveda AIJ metodike: fixna apertura z FWHM
 
     Args:
-        masterstar_fits_path: Nepoužíva sa — zachované pre kompatibilitu.
-        star_positions: DataFrame so stĺpcami catalog_id (voliteľne name).
-        fwhm_px: FWHM v pixeloch (Fáza 2A: ``VY_FWHM`` z hlavičky alebo Gaussian fit).
-        aperture_fwhm_factor: Násobok FWHM. Default 1.75.
-        annulus_inner_fwhm: Zachované pre kompatibilitu signatúry.
-        annulus_outer_fwhm: Zachované pre kompatibilitu signatúry.
+        masterstar_fits_path: Nepouziva sa - zachovane pre kompatibilitu.
+        star_positions: DataFrame so stlpcami catalog_id (volitelne name).
+        fwhm_px: FWHM v pixeloch (Faza 2A: ``VY_FWHM`` z hlavicky alebo Gaussian fit).
+        aperture_fwhm_factor: Nasobok FWHM. Default 1.75.
+        annulus_inner_fwhm: Zachovane pre kompatibilitu signatury.
+        annulus_outer_fwhm: Zachovane pre kompatibilitu signatury.
 
     Returns:
-        dict {catalog_id: apertura_px} — všetky hviezdy majú rovnakú hodnotu.
+        dict {catalog_id: apertura_px} - vsetky hviezdy maju rovnaku hodnotu.
     """
     _ = masterstar_fits_path
     _ = annulus_inner_fwhm
@@ -629,8 +629,8 @@ def compute_optimal_apertures(
     global_ap = float(aperture_fwhm_factor * fwhm_px)
 
     logging.info(
-        f"[FÁZA 2A] Globálna apertura: {global_ap:.3f}px "
-        f"({aperture_fwhm_factor:.2f}× FWHM={fwhm_px:.3f}px)"
+        f"[FAZA 2A] Globalna apertura: {global_ap:.3f}px "
+        f"({aperture_fwhm_factor:.2f}x FWHM={fwhm_px:.3f}px)"
     )
 
     result: dict[str, float] = {}
@@ -643,12 +643,12 @@ def compute_optimal_apertures(
 
 
 # ---------------------------------------------------------------------------
-# KROK 2: Aperturná fotometria per snímka — mediánový sky
+# KROK 2: Aperturna fotometria per snimka - medianovy sky
 # ---------------------------------------------------------------------------
 
 
 def _flux_to_mag(flux: float) -> float:
-    """Inštrumentálna magnitúda z flux."""
+    """Instrumentalna magnituda z flux."""
     if not math.isfinite(flux) or flux <= 0:
         return float("nan")
     return -2.5 * math.log10(flux)
@@ -830,7 +830,7 @@ def measure_empty_aperture_sigma_bkg(
     Each placement uses the same annulus sky subtraction as production science apertures
     (``_annulus_sky_subtracted_flux``). The robust scatter of net sums is ``sigma_bkg_ap``
     [ADU] and already includes background Poisson, read noise, resampling covariance,
-    pedestal offsets, and the Merline & Howell (1995) sky-estimation term — do **not**
+    pedestal offsets, and the Merline & Howell (1995) sky-estimation term - do **not**
     add a separate RN or annulus term (would double-count).
 
     Determinism (LABBE-DET): star list is canonicalized (sorted by x,y); when ``rng`` is
@@ -844,7 +844,7 @@ def measure_empty_aperture_sigma_bkg(
             (``VYVAR_LABBE_DEBUG_DUMP=1``).
 
     Returns:
-        (sigma_bkg_ap, n_valid, reason) — reason non-empty when measurement failed.
+        (sigma_bkg_ap, n_valid, reason) - reason non-empty when measurement failed.
     """
     import hashlib
 
@@ -969,7 +969,7 @@ def estimate_star_free_per_pixel_variance_adu2(
     star_y: np.ndarray | None = None,
     exclusion_radius_px: float = 12.0,
 ) -> float | None:
-    """Robust per-pixel background variance [ADU²/px] from star-free pixels in one frame."""
+    """Robust per-pixel background variance [ADU^2/px] from star-free pixels in one frame."""
     d = np.asarray(data, dtype=np.float64)
     if d.ndim != 2 or d.size == 0:
         return None
@@ -1001,7 +1001,7 @@ def _howell_variance_adu2(
     gain: float = 1.0,
     read_noise: float = 10.0,
 ) -> float:
-    """Total variance [ADU²] from Howell (1989) eq. 2 (legacy level-based background term)."""
+    """Total variance [ADU^2] from Howell (1989) eq. 2 (legacy level-based background term)."""
     if not math.isfinite(flux) or flux <= 0:
         return float("nan")
     if not math.isfinite(sky_pp) or sky_pp < 0:
@@ -1019,7 +1019,7 @@ def _howell_bkg_variance_adu2(
     gain: float = 1.0,
     read_noise: float = 10.0,
 ) -> float:
-    """Background + read-noise variance [ADU²] from Howell (1989) eq. 2 (excludes source Poisson F/g)."""
+    """Background + read-noise variance [ADU^2] from Howell (1989) eq. 2 (excludes source Poisson F/g)."""
     if not math.isfinite(sky_pp) or sky_pp < 0:
         sky_pp = 0.0
     if not math.isfinite(area) or area <= 0:
@@ -1043,7 +1043,7 @@ def bkg_scale_ratio_empirical_over_howell(
     gain: float = 1.0,
     read_noise: float = 10.0,
 ) -> float:
-    """Per-measurement r = sigma_bkg_ap² / howell_bkg_variance for hybrid fallback calibration."""
+    """Per-measurement r = sigma_bkg_ap^2 / howell_bkg_variance for hybrid fallback calibration."""
     sig = float(sigma_bkg_ap)
     if not math.isfinite(sig) or sig < 0:
         return float("nan")
@@ -1087,7 +1087,7 @@ def finalize_hybrid_bkg_fallback_proc_dir(
     """Post-pass: replace raw Howell fallback rows with setup-calibrated ``howell_scaled``.
 
     ``r_setup`` = median over rows with empirical ``sigma_bkg_ap`` of
-    ``sigma_bkg_ap² / (A·sky/g + A·(RN/g)²)``.  Raw ``howell_fallback`` remains only when
+    ``sigma_bkg_ap^2 / (A.sky/g + A.(RN/g)^2)``.  Raw ``howell_fallback`` remains only when
     no empirical frames exist in the setup (Casertano et al. 2000 transferred correction).
     """
     from infolog import log_event
@@ -1182,8 +1182,8 @@ def _photometric_error(
     """Relative photometric error from Poisson + read-noise variance (Howell 1989 eq. 2).
 
     Units at boundary: ``flux`` and ``sky_pp`` in ADU (per px for sky); ``gain`` in e-/ADU;
-    ``read_noise`` in e-; internal variance in ADU². Returns dimensionless err/flux.
-    Legacy ``howell`` mode — byte-identical to pre F-BINGAIN-1 behaviour.
+    ``read_noise`` in e-; internal variance in ADU^2. Returns dimensionless err/flux.
+    Legacy ``howell`` mode - byte-identical to pre F-BINGAIN-1 behaviour.
     """
     variance = _howell_variance_adu2(flux, sky_pp, area, gain=gain, read_noise=read_noise)
     if not math.isfinite(variance) or variance < 0:
@@ -1205,7 +1205,7 @@ def _photometric_error_with_bkg_mode(
 ) -> tuple[float, str]:
     """Relative err/flux with empirical or legacy Howell background term.
 
-    Empirical (default): ``var = F/g + sigma_bkg_ap^2`` — photutils/SExtractor pattern with
+    Empirical (default): ``var = F/g + sigma_bkg_ap^2`` - photutils/SExtractor pattern with
     measured ``sigma_bkg`` at aperture scale (Labbe et al. 2003).
     """
     mode = _normalize_err_background_mode(err_background_mode)
@@ -1252,16 +1252,16 @@ def compute_snr_optimal_aperture_table(
 ) -> dict[str, Any]:
     """SNR-optimal circular aperture radius per magnitude bin (Gaussian PSF enclosed flux).
 
-    SNR = F(r)/g / sqrt(F(r)/g + N_pix·bkg_var/g)  (dimensionless; flux and noise in e⁻).
+    SNR = F(r)/g / sqrt(F(r)/g + N_pix.bkg_var/g)  (dimensionless; flux and noise in e-).
 
     When ``bkg_var_adu2_per_px`` is supplied, per-pixel background variance is taken from
-    measured star-free pixels (same frame) instead of reconstructing ``sky/g + (RN/g)²``.
+    measured star-free pixels (same frame) instead of reconstructing ``sky/g + (RN/g)^2``.
     Residual limitation: a per-pixel metric ignores aperture-scale covariance on resampled
     frames (Fruchter & Hook 2002); acceptable here because ranking, not absolute SNR,
     drives the optimal-radius choice.
     """
     # SNR-optimal aperture selection
-    # Howell (1989) PASP 101:616, §3 — SNR(r) = F(r) / sqrt(F(r)/g + pi*r^2*sky/g + pi*r^2*(RN/g)^2)
+    # Howell (1989) PASP 101:616, S3 - SNR(r) = F(r) / sqrt(F(r)/g + pi*r^2*sky/g + pi*r^2*(RN/g)^2)
     fw = float(fwhm_px)
     if not math.isfinite(fw) or fw <= 0:
         fw = 3.5
@@ -1444,7 +1444,7 @@ def _phase2a_skip_empty_comps_target(
     _ctr = get_except_fix_counters()
     _ctr.phase2a_empty_comp_drop += 1
     logging.error(
-        "[FÁZA 2A] Target %s (%s): žiadne comp hviezdy — preskočené "
+        "[FAZA 2A] Target %s (%s): ziadne comp hviezdy - preskocene "
         "(phase2a_empty_comp_drop=%d)",
         target_name,
         target_cid,
@@ -1606,7 +1606,7 @@ def _resolve_photometric_aperture_px_for_gs11(
 
     1. Per-star map from Phase 2A SNR sizing (same build as ``apertures_px``).
     2. Derive from SNR table at ``target_g_mag`` via ``_aperture_radius_from_snr_table``.
-    3. Unavailable — caller must skip dilution (no fixed-pixel fallback).
+    3. Unavailable - caller must skip dilution (no fixed-pixel fallback).
     """
     cid = _normalize_gaia_id(target_cid) if target_cid else ""
     if cid and cid in apertures_px:
@@ -1634,7 +1634,7 @@ def _get_star_aperture_px(
     *,
     fallback_r: float,
 ) -> float:
-    """Vráti r_opt z SNR table pre danú hviezdu, alebo fallback."""
+    """Vrati r_opt z SNR table pre danu hviezdu, alebo fallback."""
     _ = catalog_id  # reserved for per-id overrides; lookup is mag-binned today
     if snr_table is None:
         return float(fallback_r)
@@ -1692,7 +1692,7 @@ def resolve_draft_dir_for_snr_aperture_table(
 def load_snr_aperture_table_from_draft_dir(
     draft_dir: Path | str | None,
 ) -> dict[str, Any] | None:
-    """Načíta ``aperture_snr_table.json`` z draft priečinka (ak existuje)."""
+    """Nacita ``aperture_snr_table.json`` z draft priecinka (ak existuje)."""
     if draft_dir is None or not str(draft_dir).strip():
         return None
     dd = Path(draft_dir)
@@ -1700,20 +1700,20 @@ def load_snr_aperture_table_from_draft_dir(
         return None
     path = dd / "aperture_snr_table.json"
     if not path.is_file():
-        logging.warning("[FÁZA 2A] aperture_snr_table.json nenájdená — používam globálnu apertúru")
+        logging.warning("[FAZA 2A] aperture_snr_table.json nenajdena - pouzivam globalnu aperturu")
         return None
     try:
         with path.open(encoding="utf-8") as f:
             table = json.load(f)
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0128] aperture_snr_table.json unreadable - Phase 2A uses global default aperture instead of p...: %s', exc)
-        logging.warning("[FÁZA 2A] aperture_snr_table.json nečitateľná (%s) — globálna apertúra", exc)
+        logging.warning("[FAZA 2A] aperture_snr_table.json necitatelna (%s) - globalna apertura", exc)
         return None
     if not isinstance(table, dict):
-        logging.warning("[FÁZA 2A] aperture_snr_table.json neplatný formát — globálna apertúra")
+        logging.warning("[FAZA 2A] aperture_snr_table.json neplatny format - globalna apertura")
         return None
     logging.info(
-        "[FÁZA 2A] Načítaná SNR aperture table: fwhm=%spx gain=%s sky=%s",
+        "[FAZA 2A] Nacitana SNR aperture table: fwhm=%spx gain=%s sky=%s",
         table.get("fwhm_px"),
         table.get("gain"),
         table.get("sky_adu_per_px"),
@@ -1726,7 +1726,7 @@ def _noise_floor_adu_from_image_array(
     *,
     prematch_peak_sigma_floor: float = 10.0,
 ) -> float | None:
-    """DAO-style noise floor (median + k×σ) for SNR table sky estimate."""
+    """DAO-style noise floor (median + kxsigma) for SNR table sky estimate."""
     from astropy.stats import sigma_clipped_stats
 
     arr = np.asarray(data, dtype=np.float64)
@@ -1792,7 +1792,7 @@ def estimate_median_sky_adu_per_px_for_snr_table(
     prematch_peak_sigma_floor: float = 10.0,
     fallback: float = 1581.6,
 ) -> float:
-    """Median DAO noise-floor estimate across aligned frames (pre–per-frame CSV)."""
+    """Median DAO noise-floor estimate across aligned frames (pre-per-frame CSV)."""
     vals: list[float] = []
     n_max = max(1, int(max_frames))
 
@@ -1834,7 +1834,7 @@ def estimate_median_sky_adu_per_px_for_snr_table(
 def _median_bkg_var_adu2_per_px_from_proc_cache(
     csv_cache: dict[str, pd.DataFrame],
 ) -> float | None:
-    """Median per-pixel background variance [ADU²/px] from empirical ``sigma_bkg_ap`` in proc CSVs."""
+    """Median per-pixel background variance [ADU^2/px] from empirical ``sigma_bkg_ap`` in proc CSVs."""
     vals: list[float] = []
     for _df in csv_cache.values():
         if _df is None or _df.empty:
@@ -1863,7 +1863,7 @@ def _median_bkg_var_from_aligned_frames(
     aligned_ram_frames: Sequence[tuple[str, Any, Any]] | None = None,
     max_frames: int = 6,
 ) -> float | None:
-    """Median star-free per-pixel variance across aligned frames (no catalog — edge patches)."""
+    """Median star-free per-pixel variance across aligned frames (no catalog - edge patches)."""
     vals: list[float] = []
     n_max = max(1, int(max_frames))
 
@@ -1921,7 +1921,7 @@ def precompute_and_save_snr_aperture_table_for_draft(
         fwhm_fallback_px=fwhm_fallback_px,
     )
     if fwhm_px is None or not math.isfinite(float(fwhm_px)) or float(fwhm_px) <= 0:
-        logging.warning("[PIPELINE] SNR table: no valid FWHM — skip precompute")
+        logging.warning("[PIPELINE] SNR table: no valid FWHM - skip precompute")
         return None
 
     gain_p = 1.0
@@ -1999,7 +1999,7 @@ def precompute_and_save_snr_aperture_table_for_draft(
     )
     if bkg_var_px is not None:
         logging.info(
-            "[PIPELINE] SNR table: measured star-free bkg var = %.4g ADU²/px (per-pixel; ranking-only)",
+            "[PIPELINE] SNR table: measured star-free bkg var = %.4g ADU^2/px (per-pixel; ranking-only)",
             float(bkg_var_px),
         )
 
@@ -2021,8 +2021,8 @@ def precompute_and_save_snr_aperture_table_for_draft(
         return float(v) if v is not None else float("nan")
 
     logging.info(
-        "[PIPELINE] aperture_snr_table.json uložená pred exportom CSV: "
-        "mag7→%.2fpx mag11→%.2fpx mag14→%.2fpx (%s)",
+        "[PIPELINE] aperture_snr_table.json ulozena pred exportom CSV: "
+        "mag7->%.2fpx mag11->%.2fpx mag14->%.2fpx (%s)",
         _r_at(7.0),
         _r_at(11.0),
         _r_at(14.0),
@@ -2032,7 +2032,7 @@ def precompute_and_save_snr_aperture_table_for_draft(
 
 
 def _coerce_bool_cell(v: Any) -> bool:
-    """Robustly coerce a CSV cell (bool / 'True' / 1 / NaN / '') to bool; NaN/empty → False."""
+    """Robustly coerce a CSV cell (bool / 'True' / 1 / NaN / '') to bool; NaN/empty -> False."""
     if isinstance(v, bool):
         return v
     if v is None:
@@ -2081,9 +2081,9 @@ def evaluate_cog_night_apcorr_gate(
     uncorrected frames.
 
     Returns a dict with:
-      ``use_apcorr_flux`` — pass to :func:`read_flux_from_csv`
-      ``cog_night_fallback`` — provenance flag for ``pipeline_meta``
-      ``n_without_cog_ok``, ``n_frames`` — counts for the log line
+      ``use_apcorr_flux`` - pass to :func:`read_flux_from_csv`
+      ``cog_night_fallback`` - provenance flag for ``pipeline_meta``
+      ``n_without_cog_ok``, ``n_frames`` - counts for the log line
     """
     if not enabled:
         return {
@@ -2127,19 +2127,19 @@ def read_flux_from_csv(
     variable_target_catalog_ids: frozenset[str] | None = None,
     err_background_mode: str = ERR_BKG_MODE_EMPIRICAL,
 ) -> pd.DataFrame:
-    """Krok 2: Načítaj flux z per-frame CSV (dao_flux).
+    """Krok 2: Nacitaj flux z per-frame CSV (dao_flux).
 
-    Namiesto čítania FITS a vlastnej aperturnej fotometrie používa
-    dao_flux ktorý pipeline vypočítala počas DAO detekcie.
-    dao_flux je sky-subtrahovaný flux zmeraný s aperture_r_px z CSV.
+    Namiesto citania FITS a vlastnej aperturnej fotometrie pouziva
+    dao_flux ktory pipeline vypocitala pocas DAO detekcie.
+    dao_flux je sky-subtrahovany flux zmerany s aperture_r_px z CSV.
 
     Returns:
         DataFrame: catalog_id, bjd, hjd, jd, airmass, mag_inst, err,
                    aperture_r_px, sky_pp, flag, source_file
 
     Args:
-        lookup: Voliteľný výstup z ``_build_csv_lookup`` pre zdieľaný ``csv_df``
-            (Fáza 2A — jedna výstavba lookupu na snímku namiesto 1× na target).
+        lookup: Volitelny vystup z ``_build_csv_lookup`` pre zdielany ``csv_df``
+            (Faza 2A - jedna vystavba lookupu na snimku namiesto 1x na target).
     """
     if csv_df is None:
         if not Path(frame_csv_path).is_file():
@@ -2148,7 +2148,7 @@ def read_flux_from_csv(
             # Keep Gaia IDs stable (avoid float/scientific precision loss in per-frame CSV).
             csv_df = pd.read_csv(frame_csv_path, low_memory=False, dtype=_GAIA_ID_DTYPE)
         except (OSError, ValueError) as exc:
-            logging.warning(f"[FÁZA 2A] Nemôžem čítať CSV {frame_csv_path}: {exc}")
+            logging.warning(f"[FAZA 2A] Nemozem citat CSV {frame_csv_path}: {exc}")
             return pd.DataFrame()
 
     if csv_df.empty:
@@ -2230,7 +2230,7 @@ def read_flux_from_csv(
             "wcs_untrusted": is_wcs_untrusted_catalog_match_mode(frame_catalog_match_mode),
             "mag_inst": float("nan"),
             "err": float("nan"),
-            # PSF photometry (b.5) columns — carried through so Phase 2A star-method / adaptive
+            # PSF photometry (b.5) columns - carried through so Phase 2A star-method / adaptive
             # routing can see them. Default NaN/False so a frame/CSV without PSF stays pure-aperture.
             "psf_flux": float("nan"),
             "psf_flux_err": float("nan"),
@@ -2285,7 +2285,7 @@ def read_flux_from_csv(
                     fallback_mag = _flux_to_mag(fallback_flux)
                     if math.isfinite(fallback_mag) and fallback_mag > -8.0:
                         logging.warning(
-                            "[FÁZA 2A] XY fallback wrong star: cid=%s, fallback_mag=%.2f > -8.0, "
+                            "[FAZA 2A] XY fallback wrong star: cid=%s, fallback_mag=%.2f > -8.0, "
                             "nastavujem NaN",
                             cid,
                             fallback_mag,
@@ -2293,7 +2293,7 @@ def read_flux_from_csv(
                         rows.append(base)
                         continue
 
-        # PSF photometry (b.5) — read per-star/per-frame PSF flux + quality if present.
+        # PSF photometry (b.5) - read per-star/per-frame PSF flux + quality if present.
         base["psf_flux"] = float(pd.to_numeric(row_csv.get("psf_flux"), errors="coerce"))
         base["psf_flux_err"] = float(pd.to_numeric(row_csv.get("psf_flux_err"), errors="coerce"))
         base["psf_snr"] = float(pd.to_numeric(row_csv.get("psf_snr"), errors="coerce"))
@@ -2313,18 +2313,18 @@ def read_flux_from_csv(
             base["catalog_match_mode"] = _row_cmm
             base["wcs_untrusted"] = is_wcs_untrusted_catalog_match_mode(_row_cmm)
 
-        # Časové značky
+        # Casove znacky
         base["bjd"] = float(row_csv.get("bjd_tdb_mid", float("nan")))
         base["hjd"] = float(row_csv.get("hjd_mid", float("nan")))
         base["jd"] = float(row_csv.get("jd_mid", float("nan")))
 
-        # Airmass fallback: ak frame_times nebolo dostupné, čítaj priamo z CSV riadku
+        # Airmass fallback: ak frame_times nebolo dostupne, citaj priamo z CSV riadku
         if not math.isfinite(am_frame):
             am_csv = float(row_csv.get("airmass", float("nan")))
             if math.isfinite(am_csv):
                 base["airmass"] = am_csv
 
-        # dao_flux — sky-subtrahovaný flux z DAO fotometrie
+        # dao_flux - sky-subtrahovany flux z DAO fotometrie
         flux = float(row_csv.get("dao_flux", float("nan")))
         if not math.isfinite(flux):
             rows.append(base)
@@ -2349,7 +2349,7 @@ def read_flux_from_csv(
                 _fv = float("nan")
             base[_fx] = _fv if math.isfinite(_fv) else float("nan")
 
-        # Apertura z CSV (tá čo pipeline použila pri DAO)
+        # Apertura z CSV (ta co pipeline pouzila pri DAO)
         ap_csv = float(row_csv.get("aperture_r_px", float("nan")))
         if math.isfinite(ap_csv) and ap_csv > 0:
             base["aperture_r_px"] = ap_csv
@@ -2359,7 +2359,7 @@ def read_flux_from_csv(
         if math.isfinite(sky_pp):
             base["sky_pp"] = sky_pp
 
-        # Saturácia
+        # Saturacia
         peak = float(row_csv.get("peak_max_adu", float("nan")))
         is_sat = math.isfinite(peak) and math.isfinite(_sat_lim) and peak > _sat_lim
 
@@ -2368,7 +2368,7 @@ def read_flux_from_csv(
             rows.append(base)
             continue
 
-        # Inštrumentálna magnitúda
+        # Instrumentalna magnituda
         base["mag_inst"] = _flux_to_mag(flux)
 
         # Geometry (for per-frame annulus-aware edge checks)
@@ -2383,7 +2383,7 @@ def read_flux_from_csv(
         except Exception:  # noqa: BLE001
             base["sky_annulus_r_out_px"] = float("nan")
 
-        # Chyba — fotónový šum + background (empirical empty-aperture or Howell legacy)
+        # Chyba - fotonovy sum + background (empirical empty-aperture or Howell legacy)
         r_ap = base["aperture_r_px"]
         area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
         _sig_bkg = float(pd.to_numeric(row_csv.get(SIGMA_BKG_AP_COL), errors="coerce"))
@@ -2524,24 +2524,24 @@ def temporal_bin_comp_lc(
 ) -> dict[str, np.ndarray]:
     """Optimized temporal binning of comparison star measurements (MNRAS 2023, 526, 3482).
 
-    Reference: Broeg-Bischoff & Dreizler (2023) MNRAS 526, 3482-3489 —
+    Reference: Broeg-Bischoff & Dreizler (2023) MNRAS 526, 3482-3489 -
     'Optimised temporal binning of comparison star measurements
     for differential photometry'
 
     Applies rolling-window median smoothing to comp star mag_inst series,
     reducing high-frequency shot noise before ensemble normalization.
-    Target star is never touched — real variability is preserved.
+    Target star is never touched - real variability is preserved.
 
     Args:
-        comp_lc:       dict[catalog_id → mag_inst array, length=n_frames]
-        comp_quality:  from check_comparison_stability() — excluded comps skipped;
-                       empty dict → all comps in comp_lc are active
+        comp_lc:       dict[catalog_id -> mag_inst array, length=n_frames]
+        comp_quality:  from check_comparison_stability() - excluded comps skipped;
+                       empty dict -> all comps in comp_lc are active
         all_frames:    concat DataFrame with 'catalog_id' + 'bjd' columns (reserved)
         window:        smoothing window in frames (0 = auto-optimize [3,5,7,9,11])
-        enabled:       False → return original comp_lc unchanged
+        enabled:       False -> return original comp_lc unchanged
 
     Returns:
-        dict[catalog_id → smoothed mag_inst array] (same keys, same length)
+        dict[catalog_id -> smoothed mag_inst array] (same keys, same length)
     """
     _ = all_frames  # frame-ordered LC; BJD-aware binning reserved for later
     if not enabled or len(comp_lc) < 3:
@@ -2633,9 +2633,9 @@ def pytics_iterative_weights(
     n_iter: int = 5,
     enabled: bool = True,
 ) -> dict[str, float]:
-    """Iterative comp star intercalibration — PyTICS (RASTI 2026).
+    """Iterative comp star intercalibration - PyTICS (RASTI 2026).
 
-    Reference: Marconi et al. (2026) RASTI —
+    Reference: Marconi et al. (2026) RASTI -
     'PyTICS: an iterative method for photometric light-curve
     intercalibration using comparison stars'
 
@@ -2643,17 +2643,17 @@ def pytics_iterative_weights(
         1. Compute per-frame ZP = weighted median of comp_lc
            (weights = 1/rms^2, Broeg 2005 prior)
         2. Per-comp residuals = comp_lc[cid] - ZP_frame
-        3. Per-comp scatter = std(residuals) → updated rms_map
-        4. Update weights → repeat n_iter times
+        3. Per-comp scatter = std(residuals) -> updated rms_map
+        4. Update weights -> repeat n_iter times
         5. Return refined comp_rms_map
 
-    Only 'good' and 'suspect' comps participate — 'excluded' stay excluded.
+    Only 'good' and 'suspect' comps participate - 'excluded' stay excluded.
     Returns original comp_rms_map unchanged if enabled=False or < 3 good comps.
     """
     if not enabled:
         return dict(comp_rms_map)
 
-    # Only use non-excluded comps (canonical cid order — LABBE-DET / SEM determinism).
+    # Only use non-excluded comps (canonical cid order - LABBE-DET / SEM determinism).
     active_cids = sorted(
         cid
         for cid, q in comp_quality.items()
@@ -2699,13 +2699,13 @@ def pytics_iterative_weights(
             LOGGER.debug("[ALG-5 PyTICS] converged at iteration %d", iteration + 1)
             break
 
-    # Build updated map — only update active comps, keep excluded untouched
+    # Build updated map - only update active comps, keep excluded untouched
     updated_map = dict(comp_rms_map)
     for cid, new_rms_val in zip(active_cids, rms_arr, strict=True):
         updated_map[cid] = float(new_rms_val)
 
     LOGGER.debug(
-        "[ALG-5 PyTICS] %d comps, %d frames, %d iter → max_Δrms=%.6f",
+        "[ALG-5 PyTICS] %d comps, %d frames, %d iter -> max_Deltarms=%.6f",
         len(active_cids),
         n_frames,
         iteration + 1,
@@ -2715,7 +2715,7 @@ def pytics_iterative_weights(
 
 
 # ---------------------------------------------------------------------------
-# KROK 3: Stability check porovnávačiek (Abbeho p2p scatter + MAD)
+# KROK 3: Stability check porovnavaciek (Abbeho p2p scatter + MAD)
 # ---------------------------------------------------------------------------
 
 # Observed-band / catalog mag before broad Gaia G for SNR-optimal aperture sizing.
@@ -2895,7 +2895,7 @@ def check_comparison_stability(
     common_mode_detrend: bool = True,
     stability_run_flags: dict[str, Any] | None = None,
 ) -> dict[str, dict]:
-    """Krok 3: Stability check porovnávačiek.
+    """Krok 3: Stability check porovnavaciek.
 
     Abbeho point-to-point scatter on **common-mode-detrended** comp residuals:
         rms_p2p = std(diff(mag_resid)) / sqrt(2)
@@ -2904,7 +2904,7 @@ def check_comparison_stability(
 
     Returns:
         dict {catalog_id: {"rms_p2p": float, "lc_rms": float, "quality": str, "p2p_threshold": float}}
-        quality: "good" / "suspect" / "excluded"; záznamy sú zoradené (good → suspect → excluded, v rámci good podľa rms_p2p).
+        quality: "good" / "suspect" / "excluded"; zaznamy su zoradene (good -> suspect -> excluded, v ramci good podla rms_p2p).
     """
     result: dict[str, dict[str, Any]] = {}
 
@@ -2926,7 +2926,7 @@ def check_comparison_stability(
         if stability_run_flags is not None:
             stability_run_flags["frame_ensemble_residual"] = True
 
-    # Vypočítaj metriky na per-frame differential reziduálnych radách
+    # Vypocitaj metriky na per-frame differential rezidualnych radach
     for cid, lc in comp_lc.items():
         resid = _detrended_lc.get(cid, lc)
         finite = np.asarray(resid, dtype=np.float64)[np.isfinite(resid)]
@@ -2943,7 +2943,7 @@ def check_comparison_stability(
         rms_p2p = float(np.std(diff) / math.sqrt(2)) if len(diff) > 1 else float("nan")
         result[cid] = {"rms_p2p": rms_p2p, "lc_rms": lc_rms, "quality": "good"}
 
-    # Ak hviezda má comp_rms≈0 z Phase 1 → označ ako suspect (pravdepodobný isolated-bin normalizačný artefakt).
+    # Ak hviezda ma comp_rms~0 z Phase 1 -> oznac ako suspect (pravdepodobny isolated-bin normalizacny artefakt).
     if comp_rms_map:
         for cid in result:
             try:
@@ -2964,7 +2964,7 @@ def check_comparison_stability(
         med = float(np.median(valid_p2p))
         sigma = _mad_sigma(valid_p2p)
         threshold = med + outlier_sigma * sigma
-        # Absolútny strop — comp hviezda s p2p RMS > 0.10 mag je vždy zlá
+        # Absolutny strop - comp hviezda s p2p RMS > 0.10 mag je vzdy zla
         _ABS_MAX_P2P = 0.10
         if math.isfinite(threshold):
             threshold = min(float(threshold), _ABS_MAX_P2P)
@@ -2979,7 +2979,7 @@ def check_comparison_stability(
             if not math.isfinite(info["rms_p2p"]):
                 continue
             if info["rms_p2p"] > threshold:
-                # Ak by sme mali menej ako n_comp_min good, označ ako suspect nie excluded
+                # Ak by sme mali menej ako n_comp_min good, oznac ako suspect nie excluded
                 if n_good < n_comp_min:
                     result[cid]["quality"] = "suspect"
                     result[cid]["note"] = "outlier (kept: n_good<min)"
@@ -2991,7 +2991,7 @@ def check_comparison_stability(
 
     # Slope filter: exclude comps with a night-long linear trend (slow drifts pass p2p RMS).
     if comp_bjd is not None and max_comp_slope_mmag_hr > 0:
-        from scipy.stats import linregress  # lazy import — scipy already in deps
+        from scipy.stats import linregress  # lazy import - scipy already in deps
 
         n_good_slope = sum(1 for v in result.values() if v["quality"] == "good")
         for cid, info in result.items():
@@ -3016,7 +3016,7 @@ def check_comparison_stability(
                 comp_slope_significance_k
             ):
                 logging.info(
-                    "Comp %s slope-excluded: %.1f mmag/hr (%.1fσ) > %s mmag/hr @ %sσ",
+                    "Comp %s slope-excluded: %.1f mmag/hr (%.1fsigma) > %s mmag/hr @ %ssigma",
                     cid,
                     slope_mmag_hr,
                     slope_sig,
@@ -3027,10 +3027,10 @@ def check_comparison_stability(
                 info["slope_sigma"] = slope_sig
                 if n_good_slope < n_comp_min:
                     info["quality"] = "suspect"
-                    note = f"slope={slope_mmag_hr:.1f} mmag/hr ({slope_sig:.1f}σ, kept: n_good<min)"
+                    note = f"slope={slope_mmag_hr:.1f} mmag/hr ({slope_sig:.1f}sigma, kept: n_good<min)"
                 else:
                     info["quality"] = "excluded"
-                    note = f"slope={slope_mmag_hr:.1f} mmag/hr ({slope_sig:.1f}σ)"
+                    note = f"slope={slope_mmag_hr:.1f} mmag/hr ({slope_sig:.1f}sigma)"
                 if info.get("note"):
                     info["note"] = f"{info['note']}; {note}"
                 else:
@@ -3042,11 +3042,11 @@ def check_comparison_stability(
     n_good_final = sum(1 for v in result.values() if v["quality"] == "good")
     thr_log = f"{threshold:.5f}" if math.isfinite(threshold) else "N/A"
     logging.info(
-        f"[FÁZA 2A] Stability check: {n_good_final}/{len(result)} good comp "
+        f"[FAZA 2A] Stability check: {n_good_final}/{len(result)} good comp "
         f"(p2p threshold={thr_log})"
     )
 
-    # Zoradenie: good (podľa rms_p2p), suspect, excluded — poradie v ensemble / PNG tabuľke
+    # Zoradenie: good (podla rms_p2p), suspect, excluded - poradie v ensemble / PNG tabulke
     sorted_result = dict(
         sorted(
             result.items(),
@@ -3066,12 +3066,12 @@ def compute_aperture_correction(
     max_contamination: float = 0.15,
     max_scatter_mag: float = 0.03,
 ) -> dict[str, Any]:
-    """Metóda B: medián ΔM_corr = mag_large − mag_small medzi referenčnými comp cez framy.
+    """Metoda B: median DeltaM_corr = mag_large - mag_small medzi referencnymi comp cez framy.
 
-    ``frame_results``: jeden DataFrame na snímku (výstup ``read_flux_from_csv``), riadky = hviezdy,
-    kľúč hviezdy je ``catalog_id`` (zhodné s Fázou 1).
+    ``frame_results``: jeden DataFrame na snimku (vystup ``read_flux_from_csv``), riadky = hviezdy,
+    kluc hviezdy je ``catalog_id`` (zhodne s Fazou 1).
 
-    Ref hviezdy pre ΔM_corr: preferuj T1, ak < min_ref_stars doplň T2; potom contamination filter.
+    Ref hviezdy pre DeltaM_corr: preferuj T1, ak < min_ref_stars dopln T2; potom contamination filter.
     """
     empty_out: dict[str, Any] = {
         "ok": False,
@@ -3093,7 +3093,7 @@ def compute_aperture_correction(
     if not frame_results:
         return _fail("no_frames")
 
-    # --- KROK A: referenčné hviezdy ---
+    # --- KROK A: referencne hviezdy ---
     df = comp_df.copy()
     if "comp_tier" not in df.columns:
         return _fail("no_comp_tier")
@@ -3134,7 +3134,7 @@ def compute_aperture_correction(
     if len(ref_ids) < int(min_ref_stars):
         return _fail("insufficient_ref_stars")
 
-    # --- KROK B: medián Δm per ref hviezda cez framy ---
+    # --- KROK B: median Deltam per ref hviezda cez framy ---
     delta_per_star: list[float] = []
     ref_used: list[str] = []
 
@@ -3195,7 +3195,7 @@ def compute_aperture_correction(
 
 
 # ---------------------------------------------------------------------------
-# KROK 4: Ensemble normalizácia
+# KROK 4: Ensemble normalizacia
 # ---------------------------------------------------------------------------
 
 
@@ -3251,23 +3251,23 @@ def ensemble_normalize(
     n_comp_min: int = 3,
     n_comp_max: int = 10,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Krok 4: Ensemble normalizácia per snímka.
+    """Krok 4: Ensemble normalizacia per snimka.
 
-    ``mag_ensemble`` = ``-2.5*log10(sum 10**(-0.4*m_comp))`` (súčet fluxov ako AIJ ``tot_C_cnts``).
+    ``mag_ensemble`` = ``-2.5*log10(sum 10**(-0.4*m_comp))`` (sucet fluxov ako AIJ ``tot_C_cnts``).
 
-    ``delta_mag = mag_inst(target) - mag_ensemble`` (tvar voči súčtu fluxov ako AIJ).
+    ``delta_mag = mag_inst(target) - mag_ensemble`` (tvar voci suctu fluxov ako AIJ).
 
-    ``mag_calib`` musí mať iný zeropoint ako samotný ``median(katalóg)``: súčet fluxov dáva
-    ``m_ensemble = -2.5 log10(Σ F_i)``, čo pri n comps zhruba zodpovedá ``m_i - 2.5 log10(n)``
-    pri podobných ``m_i`` — pripočítanie len ``median(cat)`` by posunulo krivku o ~``2.5 log10(n)``
-    mag. Preto ``mag_calib = mag_inst(target) + median_j(cat_mag_j - mag_inst_j)`` (klasický
-    diferenciálny posun); ``delta_mag`` ostáva oproti ``mag_ensemble`` z AIJ súčtu.
+    ``mag_calib`` musi mat iny zeropoint ako samotny ``median(katalog)``: sucet fluxov dava
+    ``m_ensemble = -2.5 log10(Sigma F_i)``, co pri n comps zhruba zodpoveda ``m_i - 2.5 log10(n)``
+    pri podobnych ``m_i`` - pripocitanie len ``median(cat)`` by posunulo krivku o ~``2.5 log10(n)``
+    mag. Preto ``mag_calib = mag_inst(target) + median_j(cat_mag_j - mag_inst_j)`` (klasicky
+    diferencialny posun); ``delta_mag`` ostava oproti ``mag_ensemble`` z AIJ suctu.
 
-    Výber comps: zoradenie podľa ``comp_rms`` (Fáza 1), prvých ``n_comp_min`` vždy;
-    ďalšie len ak ``rms_p2p`` < ``p2p_threshold`` z stability; max ``n_comp_max``.
+    Vyber comps: zoradenie podla ``comp_rms`` (Faza 1), prvych ``n_comp_min`` vzdy;
+    dalsie len ak ``rms_p2p`` < ``p2p_threshold`` z stability; max ``n_comp_max``.
 
     Returns:
-        (mag_calib, delta_mag, ensemble_scatter) — arrays dĺžky n_frames
+        (mag_calib, delta_mag, ensemble_scatter) - arrays dlzky n_frames
     """
     n_frames = len(target_mag_inst)
     mag_calib = np.full(n_frames, float("nan"))
@@ -3287,7 +3287,7 @@ def ensemble_normalize(
             p2p_thr = float(t)
             break
 
-    # Ensemble: good aj suspect; excluded nie. (RMS sa používa na výber poradia, nie na váhu fluxu.)
+    # Ensemble: good aj suspect; excluded nie. (RMS sa pouziva na vyber poradia, nie na vahu fluxu.)
     usable_all = [
         cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")
     ]
@@ -3314,14 +3314,14 @@ def ensemble_normalize(
 
     good_ids = selected[:n_comp_max]
     if not good_ids:
-        log_event("ensemble_normalize: no valid comp stars — returning all-NaN LC")
+        log_event("ensemble_normalize: no valid comp stars - returning all-NaN LC")
         return mag_calib, delta_mag, ensemble_scatter
 
     cat_mags = np.asarray([comp_catalog_mag.get(cid, float("nan")) for cid in good_ids])
     cat_offset = float(np.nanmedian(cat_mags))
     logging.debug(
-        f"[FÁZA 2A] Ensemble: {len(good_ids)} comps (good+suspect), "
-        f"catalog_mag median={cat_offset:.3f} (mag_calib zeropoint = median(cat−inst) per frame)"
+        f"[FAZA 2A] Ensemble: {len(good_ids)} comps (good+suspect), "
+        f"catalog_mag median={cat_offset:.3f} (mag_calib zeropoint = median(cat-inst) per frame)"
     )
 
     # Per-comp across-night reference = median of its own instrumental magnitudes. Referencing each
@@ -3357,10 +3357,10 @@ def ensemble_normalize(
 
         comp_vals = np.asarray([m for _, m in comp_pairs], dtype=np.float64)
 
-        # Combination = AIJ/Honeycutt flux sum (tot_C_cnts); Broeg 1/rms² applies to selection
+        # Combination = AIJ/Honeycutt flux sum (tot_C_cnts); Broeg 1/rms^2 applies to selection
         # ordering + catalog zeropoint offset below, not to ens_med.
-        # Priamy súčet fluxov — rovnaká metóda ako AIJ (tot_C_cnts = C2+C3+C4).
-        # Váhovaný priemer 1/rms² deformuje extinkčný slope ensemble → záporný slope.
+        # Priamy sucet fluxov - rovnaka metoda ako AIJ (tot_C_cnts = C2+C3+C4).
+        # Vahovany priemer 1/rms^2 deformuje extinkcny slope ensemble -> zaporny slope.
         comp_fluxes_list: list[float] = [10 ** (-0.4 * m) for _, m in comp_pairs]
         f_arr = np.asarray(comp_fluxes_list, dtype=np.float64)
 
@@ -3373,7 +3373,7 @@ def ensemble_normalize(
         # Per-point ensemble zeropoint uncertainty (Honeycutt 1992 PASP 104:435): the standard error
         # of the comps' per-frame residuals about the ensemble mean, where each residual is the comp's
         # deviation from its OWN across-night reference (``comp_ref_map``). This cancels the comps'
-        # brightness/colour spread — the previous ``np.std(comp_vals)`` on raw instrumental mags
+        # brightness/colour spread - the previous ``np.std(comp_vals)`` on raw instrumental mags
         # injected a fixed ~comp-brightness-difference floor (the inflated-err bug). Small n: a near-
         # zero residual SEM leaves err = photon base (the floor); we do not use comp_rms here (it is
         # dropped at the err-assembly site to avoid double-counting this same ensemble term).
@@ -3390,10 +3390,10 @@ def ensemble_normalize(
             ensemble_scatter[i] = 0.0
         delta_mag[i] = target_mag_inst[i] - ens_med
 
-        # Honeycutt (1992) PASP 104:435 — per-frame ensemble zeropoint from constant comps.
+        # Honeycutt (1992) PASP 104:435 - per-frame ensemble zeropoint from constant comps.
         # mag_calib[i] = target_inst + ZP_frame; delta_mag[i] = target_inst - ens_med (AIJ flux sum).
         # Hence mag_calib - delta_mag = ZP_frame + ens_med (frame-dependent; not identical zeropoints).
-        # ``delta_mag + median(cat)`` by bolo nesúladné s ``ens_med`` zo súčtu fluxov (−2.5 log ΣF).
+        # ``delta_mag + median(cat)`` by bolo nesuladne s ``ens_med`` zo suctu fluxov (-2.5 log SigmaF).
         zp_offs: list[float] = []
         zp_vals: list[float] = []
         weights: list[float] = []
@@ -3409,7 +3409,7 @@ def ensemble_normalize(
                     tw = float(tier_weights.get(tier_j, 0.25))
                     if not (math.isfinite(tw) and tw > 0):
                         tw = 0.25
-                    # Broeg, Fernandez & Neuhäuser (2005) AN 326:134
+                    # Broeg, Fernandez & Neuhauser (2005) AN 326:134
                     # Optimal weights: w_i = 1 / sigma_i^2 (inverse variance weighting)
                     weights.append((1.0 / (rms_j**2)) * tw)
         if weights:
@@ -3426,7 +3426,7 @@ def ensemble_normalize(
                     if _keep.sum() < len(z):
                         logging.debug(
                             "[ZP] Frame sigma-clip: %d/%d comps kept "
-                            "(rejected %d outliers, σ=%.4f)",
+                            "(rejected %d outliers, sigma=%.4f)",
                             int(_keep.sum()),
                             len(z),
                             int((~_keep).sum()),
@@ -3525,7 +3525,7 @@ def _combine_err_with_ensemble_scatter_keyed(
     if n_unmatched > 0:
         logging.warning(
             "[G2-F004] %s: %d/%d epochs missing ensemble_scatter for source_file "
-            "— photon-only err kept",
+            "- photon-only err kept",
             target_name or "?",
             n_unmatched,
             len(err_out),
@@ -3534,7 +3534,7 @@ def _combine_err_with_ensemble_scatter_keyed(
 
 
 # ---------------------------------------------------------------------------
-# Color term (BP-RP) — globálny shift na noc
+# Color term (BP-RP) - globalny shift na noc
 # ---------------------------------------------------------------------------
 
 
@@ -3550,14 +3550,14 @@ def fit_color_term_c1(
     """
     Fituje color term koeficient c1 z COMP hviezd.
 
-    Pre každú good/suspect COMP hviezdu:
-      x_i = bp_rp_i - median(bp_rp všetkých použitých COMP)
-      y_i = median(cat_mag_i - inst_mag_i)  [cez všetky framy]
+    Pre kazdu good/suspect COMP hviezdu:
+      x_i = bp_rp_i - median(bp_rp vsetkych pouzitych COMP)
+      y_i = median(cat_mag_i - inst_mag_i)  [cez vsetky framy]
 
-    Lineárny fit: y = c1 * x + ZP_offset
+    Linearny fit: y = c1 * x + ZP_offset
 
     Returns: (c1, c1_stderr, n_comp_used)
-    Pri chybe alebo málo COMP: (0.0, nan, 0)
+    Pri chybe alebo malo COMP: (0.0, nan, 0)
     """
     try:
         min_comp_i = int(min_comp)
@@ -3615,7 +3615,7 @@ def fit_color_term_c1(
     resid = y - (c1_init * x + zp_init)
     sig = _mad_sigma(resid)
     if not math.isfinite(sig) or sig <= 0:
-        # No robust scatter estimate → keep all
+        # No robust scatter estimate -> keep all
         mask = np.ones_like(resid, dtype=bool)
     else:
         mask = np.abs(resid) <= float(sigma_clip_sigma) * float(sig)
@@ -3640,7 +3640,7 @@ def fit_color_term_c1(
     bp_min = float(np.min(np.asarray(bp_vals, dtype=np.float64)))
     bp_max = float(np.max(np.asarray(bp_vals, dtype=np.float64)))
     logging.info(
-        "[COLOR TERM] c1=%.4f ± %.4f, bp_rp_range=[%.2f, %.2f], n_comp=%s, sigma_clip_removed=%s",
+        "[COLOR TERM] c1=%.4f +- %.4f, bp_rp_range=[%.2f, %.2f], n_comp=%s, sigma_clip_removed=%s",
         c1,
         c1_stderr,
         bp_min,
@@ -3659,10 +3659,10 @@ def apply_color_term(
     c1: float,
 ) -> tuple[np.ndarray, float, float]:
     """
-    Aplikuje color term korekciu na kalibrovanú krivku.
+    Aplikuje color term korekciu na kalibrovanu krivku.
 
     Vzorec:
-      bp_rp_comp_med = median(bp_rp použitých COMP)
+      bp_rp_comp_med = median(bp_rp pouzitych COMP)
       ct_correction  = c1 * (target_bp_rp - bp_rp_comp_med)
       mag_calib_ct   = mag_calib + ct_correction
 
@@ -3701,9 +3701,9 @@ def _check_color_term_extrapolation(
     *,
     extrapolation_tol: float = 0.0,
 ) -> bool:
-    """Return True when target BP-RP is within the comp BP-RP range (± ``extrapolation_tol``).
+    """Return True when target BP-RP is within the comp BP-RP range (+- ``extrapolation_tol``).
 
-    Return False when outside range → caller must skip CT (target kept, uncorrected).
+    Return False when outside range -> caller must skip CT (target kept, uncorrected).
     """
     finite_vals: list[float] = []
     for v in comp_bp_rp_values:
@@ -3747,17 +3747,17 @@ def should_apply_color_term(
     max_stderr_ratio: float = 0.5,
 ) -> tuple[bool, str]:
     """
-    Auto-rozhodnutie či aplikovať color term korekciu.
+    Auto-rozhodnutie ci aplikovat color term korekciu.
 
     Returns: (apply: bool, reason: str)
-    reason = krátky popis prečo sa CT aplikuje alebo nie
+    reason = kratky popis preco sa CT aplikuje alebo nie
     """
     from band_classify import classify_photometric_band, color_term_auto_from_band
 
     filter_raw = str(obs_group or "").split("|")[0].strip()
     band = classify_photometric_band(obs_group)
     if not color_term_auto_from_band(band):
-        return False, f"{band.value} ({filter_raw}) — CT nie je potrebný"
+        return False, f"{band.value} ({filter_raw}) - CT nie je potrebny"
 
     try:
         n_comp_i = int(n_comp)
@@ -3767,29 +3767,29 @@ def should_apply_color_term(
         return (
             False,
             (
-                f"Filter {filter_raw} — CT preskočený: "
-                f"málo COMP ({n_comp_i} < {int(min_comp_for_ct)})"
+                f"Filter {filter_raw} - CT preskoceny: "
+                f"malo COMP ({n_comp_i} < {int(min_comp_for_ct)})"
             ),
         )
 
     if not (float(c1) != 0.0 and abs(float(c1)) > 1e-6):
-        return False, f"Filter {filter_raw} — CT preskočený: c1 ≈ 0"
+        return False, f"Filter {filter_raw} - CT preskoceny: c1 ~ 0"
 
     stderr_ratio = abs(float(c1_stderr) / float(c1)) if float(c1) != 0.0 else float("inf")
     if not math.isfinite(stderr_ratio):
-        return False, f"Filter {filter_raw} — CT nespoľahlivý: stderr/c1=NaN"
+        return False, f"Filter {filter_raw} - CT nespolahlivy: stderr/c1=NaN"
     if float(stderr_ratio) > float(max_stderr_ratio):
         return (
             False,
             (
-                f"Filter {filter_raw} — CT nespoľahlivý: "
+                f"Filter {filter_raw} - CT nespolahlivy: "
                 f"stderr/c1={stderr_ratio:.2f} > {float(max_stderr_ratio):.2f}"
             ),
         )
 
     return True, (
-        f"Filter {filter_raw} — CT aplikovaný: "
-        f"c1={float(c1):+.4f} ± {float(c1_stderr):.4f} "
+        f"Filter {filter_raw} - CT aplikovany: "
+        f"c1={float(c1):+.4f} +- {float(c1_stderr):.4f} "
         f"(stderr/c1={stderr_ratio:.2f}, n_comp={n_comp_i})"
     )
 
@@ -3819,7 +3819,7 @@ def _is_nofilter_obs_group(obs_group: str) -> bool:
 
 
 def _is_broadband_photometric_filter(obs_group: str) -> bool:
-    """True for Johnson/Cousins/Sloan broadband filters (B/V/Rc/…); false for L/Clear/unknown."""
+    """True for Johnson/Cousins/Sloan broadband filters (B/V/Rc/...); false for L/Clear/unknown."""
     from band_classify import classify_photometric_band, color_term_auto_from_band
 
     band = classify_photometric_band(obs_group)
@@ -3833,7 +3833,7 @@ def resolve_apply_color_term(
     fits_filter: str | None = None,
     aavso_code: str | None = None,
 ) -> bool:
-    """User/config toggle: CT applies correction only — never limits the target set."""
+    """User/config toggle: CT applies correction only - never limits the target set."""
     from band_classify import classify_photometric_band, color_term_auto_from_band
 
     mode = str(getattr(cfg, "apply_color_term", "auto") or "auto").strip().lower()
@@ -3850,7 +3850,7 @@ def resolve_apply_color_term(
 
 
 def _target_display_name(row: Any, *, fallback_cid: str = "") -> str:
-    """VSX name when present, else Gaia ``catalog_id`` — never the literal ``nan``."""
+    """VSX name when present, else Gaia ``catalog_id`` - never the literal ``nan``."""
     if row is None:
         return str(fallback_cid or "").strip() or "unknown"
     for key in ("vsx_name", "name"):
@@ -3930,7 +3930,7 @@ def _group_comp_mag_inst_from_proc_csvs(
     comp_ids: list[str],
     csv_files: list[Path],
 ) -> dict[str, np.ndarray]:
-    """Inst magnitudes for global comp pool — one array per comp across all frames."""
+    """Inst magnitudes for global comp pool - one array per comp across all frames."""
     n = len(csv_files)
     out: dict[str, np.ndarray] = {cid: np.full(n, float("nan"), dtype=np.float64) for cid in comp_ids}
     id_set = set(comp_ids)
@@ -4212,7 +4212,7 @@ def _ensure_group_comp_pool_csv(
             draft_id=int(draft_id) if draft_id is not None else None,
             database_path=getattr(cfg, "database_path", None),
         )
-        log_event(f"[PHOT] Refreshed comparison_stars.csv pool ({n_pool}→spatial grid) for CT fit in {ps_dir.name}")
+        log_event(f"[PHOT] Refreshed comparison_stars.csv pool ({n_pool}->spatial grid) for CT fit in {ps_dir.name}")
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0137] comparison_stars.csv spatial pool refresh fails - CT fit uses stale/sparse comp pool: %s', exc)
         logging.warning("[PHOT] comparison_stars pool refresh failed: %s", exc)
@@ -4317,7 +4317,7 @@ def _color_term_cat_inst_scatter_pair(
     min_comp: int = 5,
     sigma_clip_sigma: float = 3.0,
 ) -> tuple[float, float]:
-    """Per-comp cat−inst scatter before/after removing the fitted c1·Δ(bp_rp) trend (sigma-clipped comps)."""
+    """Per-comp cat-inst scatter before/after removing the fitted c1.Delta(bp_rp) trend (sigma-clipped comps)."""
     try:
         min_comp_i = int(min_comp)
     except Exception:  # noqa: BLE001
@@ -4412,7 +4412,7 @@ def _append_ct_prototype_row(draft_dir: Path, row: dict[str, Any]) -> None:
 def _target_row_is_vsx_known_variable(target_row: pd.Series) -> bool:
     """True when target is a catalogued variable (VSX name/type), not a Gaia-only label."""
     vn = str(target_row.get("vsx_name", target_row.get("name", "")) or "").strip()
-    if vn and vn.lower() not in ("nan", "none", "—", "-"):
+    if vn and vn.lower() not in ("nan", "none", "-", "-"):
         if not vn.lower().startswith("gaia dr3"):
             return True
     vt = str(target_row.get("vsx_type", "") or "").strip()
@@ -4596,9 +4596,9 @@ def democratic_detrend_lc(
     min_points: int = 10,
     enabled: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Democratic Detrender — ensemble multi-model detrending (arXiv:2411.09753v2, 2026).
+    """Democratic Detrender - ensemble multi-model detrending (arXiv:2411.09753v2, 2026).
 
-    Reference: Caballero-Nieves et al. (2026) arXiv:2411.09753v2 —
+    Reference: Caballero-Nieves et al. (2026) arXiv:2411.09753v2 -
     'The democratic detrender: Ensemble-Based Removal of the
     Nuisance Signal in Stellar Time-Series Photometry'
 
@@ -4618,7 +4618,7 @@ def democratic_detrend_lc(
         window_frac:  SG window fraction (default 0.5)
         polyorder:    SG polynomial order (default 2)
         min_points:   minimum normal frames required
-        enabled:      False → return (mag_calib copy, zeros)
+        enabled:      False -> return (mag_calib copy, zeros)
 
     Returns:
         (mag_democratic, err_inflation)
@@ -4628,7 +4628,7 @@ def democratic_detrend_lc(
     if not enabled:
         return mag_calib.copy(), np.zeros(len(mag_calib))
 
-    from scipy.signal import savgol_filter  # lazy import — scipy already in deps
+    from scipy.signal import savgol_filter  # lazy import - scipy already in deps
 
     mag = np.asarray(mag_calib, dtype=float)
     bjd_arr = np.asarray(bjd, dtype=float)
@@ -4735,7 +4735,7 @@ def savgol_detrend_lc(
     applied to differential photometry detrending as in
     Aigrain & Irwin (2004) MNRAS 350, 331.
 
-    Runs AFTER airmass detrend — removes slow systematic trends
+    Runs AFTER airmass detrend - removes slow systematic trends
     (transparency drift, seeing variations) not captured by linear
     airmass model. Applied to residuals, not raw mag_calib.
 
@@ -4746,7 +4746,7 @@ def savgol_detrend_lc(
         window_frac:  SG window as fraction of n_normal frames (default 0.5)
         polyorder:    SG polynomial order (default 2)
         min_points:   minimum normal frames required (default 10)
-        enabled:      False → return mag_calib unchanged
+        enabled:      False -> return mag_calib unchanged
 
     Returns:
         mag_sg: detrended mag array (same length as input)
@@ -4755,7 +4755,7 @@ def savgol_detrend_lc(
     if not enabled:
         return mag_calib.copy()
 
-    from scipy.signal import savgol_filter  # lazy import — scipy already in deps
+    from scipy.signal import savgol_filter  # lazy import - scipy already in deps
 
     mag = np.asarray(mag_calib, dtype=float)
     normal_mask = np.array([f == "normal" for f in flags])
@@ -4771,10 +4771,10 @@ def savgol_detrend_lc(
     if window <= polyorder:
         return mag.copy()
 
-    # Warn if window covers more than 40% of the LC — risk of suppressing real variability
+    # Warn if window covers more than 40% of the LC - risk of suppressing real variability
     if window > 0.4 * n_normal:
         LOGGER.warning(
-            "[ALG-2 SG] window=%d is %.0f%% of n_normal=%d — "
+            "[ALG-2 SG] window=%d is %.0f%% of n_normal=%d - "
             "may suppress real variability; consider decreasing savgol_window_frac "
             "(current=%.2f) or disabling savgol_detrend_enabled",
             window,
@@ -4851,7 +4851,7 @@ def compute_mag_calib_final(
 
 
 # ---------------------------------------------------------------------------
-# KROK 6: Výstup — lightcurve CSV
+# KROK 6: Vystup - lightcurve CSV
 # ---------------------------------------------------------------------------
 
 
@@ -4898,7 +4898,7 @@ def save_lightcurve_csv(
     err_method: list[str] | None = None,
     sigma_sys_mag: float | None = None,
 ) -> None:
-    """Uloží lightcurve CSV.
+    """Ulozi lightcurve CSV.
 
     LC schema note: ``time_base`` labels the BJD/HJD recompute path (``BJD_TDB`` vs
     ``JD_FALLBACK``); it does not alter ``bjd``/``hjd``/``jd`` values.
@@ -5036,7 +5036,7 @@ def save_lightcurve_csv(
 
 
 # ---------------------------------------------------------------------------
-# KROK 6: Výstup — PNG grafy
+# KROK 6: Vystup - PNG grafy
 # ---------------------------------------------------------------------------
 
 
@@ -5052,7 +5052,7 @@ def save_lightcurve_png(
     delta_mag_mode: bool = False,
     delta_mag: np.ndarray | None = None,
 ) -> None:
-    """Uloží PNG graf svetelnej krivky s farebnými flagmi a comp status tabuľkou."""
+    """Ulozi PNG graf svetelnej krivky s farebnymi flagmi a comp status tabulkou."""
     try:
         import matplotlib
 
@@ -5060,11 +5060,11 @@ def save_lightcurve_png(
         import matplotlib.pyplot as plt
         import matplotlib.patches as mpatches
     except ImportError:
-        logging.warning("[FÁZA 2A] matplotlib nie je dostupný, PNG sa nevygeneruje")
+        logging.warning("[FAZA 2A] matplotlib nie je dostupny, PNG sa nevygeneruje")
         return
 
     y_data = delta_mag if (delta_mag_mode and delta_mag is not None) else mag_calib
-    y_label = "Δmag (ensemble)" if delta_mag_mode else "mag_calib"
+    y_label = "Deltamag (ensemble)" if delta_mag_mode else "mag_calib"
 
     flag_colors = {
         "normal": "#1a1a2e",
@@ -5080,11 +5080,11 @@ def save_lightcurve_png(
         figsize=(14, 5),
         gridspec_kw={"width_ratios": [3, 1]},
     )
-    fig.suptitle(f"VYVAR — {target_name}", fontsize=11, fontweight="bold")
+    fig.suptitle(f"VYVAR - {target_name}", fontsize=11, fontweight="bold")
 
     bjd_plot_all, bjd_axis_int = jd_series_relative(bjd)
 
-    # Svetelná krivka
+    # Svetelna krivka
     for flag, color in flag_colors.items():
         mask = np.array([f == flag for f in flags])
         if not mask.any():
@@ -5117,7 +5117,7 @@ def save_lightcurve_png(
     ]
     ax_lc.legend(handles=legend_patches, fontsize=7, loc="upper right")
 
-    # Comp quality tabuľka
+    # Comp quality tabulka
     ax_comp.axis("off")
     comp_lines = []
     for i, (_, info) in enumerate(comp_quality.items(), 1):
@@ -5154,7 +5154,7 @@ def save_cutout_png(
     size_px: int = 200,
     ms_data: np.ndarray | None = None,
 ) -> None:
-    """Uloží výrez 200×200px z MASTERSTAR okolo targetu."""
+    """Ulozi vyrez 200x200px z MASTERSTAR okolo targetu."""
     try:
         import matplotlib
 
@@ -5184,14 +5184,14 @@ def save_cutout_png(
     if cutout.size == 0:
         return
 
-    # Percentilová škála
+    # Percentilova skala
     vmin = float(np.percentile(cutout, 5))
     vmax = float(np.percentile(cutout, 99))
 
     fig, ax = plt.subplots(figsize=(4, 4))
     ax.imshow(cutout, origin="lower", cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
 
-    # Červený štvorecok pre target
+    # Cerveny stvorecok pre target
     cx = xc - x0
     cy = yc - y0
     rect = mpatches.Rectangle(
@@ -5221,7 +5221,7 @@ def save_field_map_png(
     percentile_hi: float = 99.5,
     ms_data: np.ndarray | None = None,
 ) -> None:
-    """Uloží prehľadový PNG celého poľa — červené=target, zelené=comp."""
+    """Ulozi prehladovy PNG celeho pola - cervene=target, zelene=comp."""
     try:
         import matplotlib
 
@@ -5260,7 +5260,7 @@ def save_field_map_png(
     except Exception:  # noqa: BLE001
         target_ids = set()
 
-    # Zelené štvorčeky — comp hviezdy (unikátne pozície)
+    # Zelene stvorceky - comp hviezdy (unikatne pozicie)
     comp_plotted: set[str] = set()
     skipped_as_target = 0
     for _, row in comp_df.iterrows():
@@ -5286,9 +5286,9 @@ def save_field_map_png(
         ax.add_patch(rect)
 
     if skipped_as_target > 0:
-        logging.info(f"[FIELD MAP] Skipped {int(skipped_as_target)} comp markers — star is a known target")
+        logging.info(f"[FIELD MAP] Skipped {int(skipped_as_target)} comp markers - star is a known target")
 
-    # Target hviezdy — DAO-matched only (exclude catalog_only from field map)
+    # Target hviezdy - DAO-matched only (exclude catalog_only from field map)
     for _, row in active_targets.iterrows():
         z = str(row.get("zone_flag", row.get("zone", "")) or "").strip().lower()
         if z == "catalog_only":
@@ -5310,7 +5310,7 @@ def save_field_map_png(
         ax.text(xc + 14, yc, name, color="red", fontsize=5, va="center")
 
     ax.set_title(
-        "VYVAR — Field Map (red=VSX target, green=comp star)",
+        "VYVAR - Field Map (red=VSX target, green=comp star)",
         fontsize=10,
     )
     ax.axis("off")
@@ -5329,7 +5329,7 @@ def save_target_field_map_png(
     percentile_hi: float = 99.5,
     ms_data: np.ndarray | None = None,
 ) -> None:
-    """Per-target field map: celé pole, červený štvorec=target, zelené krúžky=comp (číslované)."""
+    """Per-target field map: cele pole, cerveny stvorec=target, zelene kruzky=comp (cislovane)."""
     try:
         import matplotlib
 
@@ -5358,7 +5358,7 @@ def save_target_field_map_png(
     fig, ax = plt.subplots(figsize=(18, 12))
     ax.imshow(data, origin="lower", cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
 
-    # Target — štandard červený štvorec; catalog_only cyan prerušovaný krúžok
+    # Target - standard cerveny stvorec; catalog_only cyan prerusovany kruzok
     try:
         tx, ty = float(target_row["x"]), float(target_row["y"])
         _z_t = str(target_row.get("zone", "") or "").strip().lower()
@@ -5397,7 +5397,7 @@ def save_target_field_map_png(
     except (KeyError, TypeError, ValueError):
         pass
 
-    # Comp hviezdy — zelené krúžky s číslom (všetky, bez orezania)
+    # Comp hviezdy - zelene kruzky s cislom (vsetky, bez orezania)
     for i, (_, crow) in enumerate(comp_rows.iterrows(), 1):
         try:
             cx, cy = float(crow["x"]), float(crow["y"])
@@ -5423,7 +5423,7 @@ def save_target_field_map_png(
 
     target_name = str(target_row.get("vsx_name", target_row.get("catalog_id", "")))
     ax.set_title(
-        f"VYVAR — {target_name}\n"
+        f"VYVAR - {target_name}\n"
         f"(red=VSX target, cyan=catalog_only (no DAO), green=comp star)",
         fontsize=10,
     )
@@ -5434,7 +5434,7 @@ def save_target_field_map_png(
 
 
 # ---------------------------------------------------------------------------
-# Hlavný wrapper — run_phase2a
+# Hlavny wrapper - run_phase2a
 # ---------------------------------------------------------------------------
 
 
@@ -5806,7 +5806,7 @@ def auto_export_variability_candidates_csv(
         results_df["is_variable_candidate_rms"] | results_df["is_variable_candidate_vdi"]
     )
 
-    results_df["detection_method"] = "—"
+    results_df["detection_method"] = "-"
     results_df.loc[results_df["is_variable_candidate_rms"], "detection_method"] = "RMS"
     results_df.loc[results_df["is_variable_candidate_vdi"], "detection_method"] = "VDI"
     results_df.loc[
@@ -6194,7 +6194,7 @@ def apply_per_frame_saturation_to_active_targets(
 ) -> dict[str, Any]:
     """Mutate ``at_df`` skip columns per PER-FRAME-SAT-GATED; return night meta.
 
-    When ``enabled`` is False: no-op (INV-CFG-01 — no new markers).
+    When ``enabled`` is False: no-op (INV-CFG-01 - no new markers).
     """
     if not enabled:
         return {}
@@ -6779,7 +6779,7 @@ def classify_git_dirty_paths(
     scratch_paths: list[str] = []
     for entry in dirty_files:
         path = str(entry.get("path") or "").replace("\\", "/")
-        if not path or path == "…truncated…":
+        if not path or path == "...truncated...":
             continue
         status = status_by_path.get(path, "??")
         is_import_py = _is_import_relevant_py_path(path)
@@ -6842,7 +6842,7 @@ def _resolve_git_provenance() -> tuple[str | None, bool | None, list[dict[str, s
                     sha = "UNREADABLE"
                 dirty_files.append({"path": path_part.replace("\\", "/"), "content_sha256": sha})
                 if len(dirty_files) >= 200:
-                    dirty_files.append({"path": "…truncated…", "content_sha256": ""})
+                    dirty_files.append({"path": "...truncated...", "content_sha256": ""})
                     break
         return (head or None), dirty, dirty_files
     except Exception:  # noqa: BLE001
@@ -7114,7 +7114,7 @@ class _Phase2AState:
     cog_night_fallback: bool = False
     cog_night_fallback_n_without_ok: int = 0
     cog_night_fallback_n_frames: int = 0
-    #: PER-FRAME-SAT-GATED night meta (empty when flag OFF — INV-CFG-01).
+    #: PER-FRAME-SAT-GATED night meta (empty when flag OFF - INV-CFG-01).
     per_frame_sat_meta: dict[str, Any] = field(default_factory=dict)
     #: NIGHT_FIT v2 meta (empty when k2_fit_enabled=False).
     k2_fit_meta: dict[str, Any] = field(default_factory=dict)
@@ -7236,20 +7236,20 @@ def _phase2a_compute_lunar_context(state: _Phase2AState) -> dict[str, Any] | Non
         lon = float(_cfg.observer_lon)
         alt_m = float(_cfg.observer_alt_m)
     if lat == 0.0 and lon == 0.0:
-        logging.warning("Observer location not set — lunar context skipped")
+        logging.warning("Observer location not set - lunar context skipped")
         return None
     jd_vals = _phase2a_collect_session_jd_values(state.frame_time_lookup)
     if not jd_vals:
-        logging.warning("[PHASE 2A] No frame JD values — lunar context skipped")
+        logging.warning("[PHASE 2A] No frame JD values - lunar context skipped")
         return None
     try:
         jd_mid = get_jd_midpoint(jd_vals)
     except ValueError:
-        logging.warning("[PHASE 2A] JD midpoint unavailable — lunar context skipped")
+        logging.warning("[PHASE 2A] JD midpoint unavailable - lunar context skipped")
         return None
     ra_field, dec_field, src = _phase2a_resolve_field_center_ra_dec(state._ms_header, state.at_df)
     if not (math.isfinite(ra_field) and math.isfinite(dec_field)):
-        logging.warning("[PHASE 2A] Field center RA/Dec unavailable — lunar context skipped")
+        logging.warning("[PHASE 2A] Field center RA/Dec unavailable - lunar context skipped")
         return None
     lunar = get_lunar_context(
         jd_mid=float(jd_mid),
@@ -7262,7 +7262,7 @@ def _phase2a_compute_lunar_context(state: _Phase2AState) -> dict[str, Any] | Non
     lunar["field_center_source"] = str(src)
     lunar["jd_mid"] = float(jd_mid)
     logging.info(
-        "Lunar context: %s risk — phase %.1f%%, separation %.1f°, altitude %.1f°",
+        "Lunar context: %s risk - phase %.1f%%, separation %.1f deg, altitude %.1f deg",
         lunar["lunar_risk"],
         float(lunar["lunar_phase_pct"]),
         float(lunar["lunar_separation_deg"]),
@@ -7439,18 +7439,18 @@ def compute_lc_flux_method(
     resolve_fwhm: float = 2.0,
     snr_lo: float = 15.0,
 ) -> pd.Series:
-    """Per-star/per-frame adaptive flux-source choice ∈ {``aperture``, ``psf``} (b.4).
+    """Per-star/per-frame adaptive flux-source choice in {``aperture``, ``psf``} (b.4).
 
     CONSERVATIVE: default to aperture, switch to PSF only with positive evidence AND good
     PSF quality. ``blend_map`` is accepted for API compatibility (crowding_targets.csv)
-    but is not used for routing — resolvable-blend → PSF (former rule 2) was removed
-    because ``is_blended`` (nn ≤ 1.5 FWHM) and ``resolve_fwhm`` (≥ 2.0) are mutually
+    but is not used for routing - resolvable-blend -> PSF (former rule 2) was removed
+    because ``is_blended`` (nn <= 1.5 FWHM) and ``resolve_fwhm`` (>= 2.0) are mutually
     exclusive and grouped deblending showed no precision gain at 0.39"/px on draft 364.
 
     Rules (first match wins):
-      1. psf_quality == bad / not fit_ok / no finite psf_flux  → aperture (the b.5 fallback)
-      2. faint (aperture SNR ≤ snr_lo) AND psf_quality == good   → psf
-      3. else                                                    → aperture
+      1. psf_quality == bad / not fit_ok / no finite psf_flux  -> aperture (the b.5 fallback)
+      2. faint (aperture SNR <= snr_lo) AND psf_quality == good   -> psf
+      3. else                                                    -> aperture
     """
     n = len(all_frames)
     idx = all_frames.index
@@ -7462,7 +7462,7 @@ def compute_lc_flux_method(
     psf_q = all_frames.get("psf_quality", pd.Series("", index=idx)).astype(str).str.strip().str.lower()
     _ok_raw = all_frames.get("psf_fit_ok", pd.Series(False, index=idx))
     psf_ok = _ok_raw.map(_coerce_bool_cell).to_numpy(dtype=bool)
-    # Aperture SNR from the (mag) error: err_mag ≈ 1.0857 / SNR.
+    # Aperture SNR from the (mag) error: err_mag ~ 1.0857 / SNR.
     err = pd.to_numeric(all_frames.get("err", pd.Series(np.nan, index=idx)), errors="coerce").to_numpy(dtype=float)
     with np.errstate(divide="ignore", invalid="ignore"):
         snr_aper = np.where(np.isfinite(err) & (err > 0), 1.0857362 / err, np.inf)
@@ -7511,7 +7511,7 @@ def load_epsf_metrics_for_draft(
 ) -> pd.DataFrame:
     """Aggregate PSF fit metrics from ``proc_*.csv`` (vectorized groupby).
 
-    Returns per-``catalog_id`` stats: frame counts, PSF OK %, χ², mean fluxes, PSF/DAO ratio.
+    Returns per-``catalog_id`` stats: frame counts, PSF OK %, chi^2, mean fluxes, PSF/DAO ratio.
     """
     proc_dir = Path(per_frame_csv_dir)
     proc_files = sorted(proc_dir.glob("proc_*.csv"))
@@ -7820,7 +7820,7 @@ def _compute_frame_align_residuals(
 def _record_align_residuals_to_report(report_path: Path, residuals: dict[Path, float]) -> None:
     """Fix B (QC, always-on): add/refresh ``align_residual_px`` in ``alignment_report.csv``.
 
-    Additive metadata only — does not affect photometry (baseline stays byte-identical). Matches by
+    Additive metadata only - does not affect photometry (baseline stays byte-identical). Matches by
     frame stem (``alignment_report.file`` minus ``.fits`` == proc basename minus ``proc_``/``.csv``).
     Best-effort: any failure is logged and ignored so QC never breaks a run.
     """
@@ -7927,7 +7927,7 @@ def _phase2a_prepare_shared_state(
     else:
         _apt_fw = float(_cfg.aperture_fwhm_factor)
 
-    # Načítaj vstupy (Gaia ID ako string — float64 stráca cifry)
+    # Nacitaj vstupy (Gaia ID ako string - float64 straca cifry)
     if not Path(active_targets_csv).is_file():
         raise FileNotFoundError(f"active_targets_csv not found: {active_targets_csv}")
     if not Path(comparison_stars_csv).is_file():
@@ -7948,9 +7948,9 @@ def _phase2a_prepare_shared_state(
     at_df["skip_photometry"] = _phase2a_coerce_skip_photometry(at_df)
     _require_comparison_stars_per_target_schema(comp_df, Path(comparison_stars_csv))
 
-    # _phase2a_load_star_list (inline): chip dims, comp index, BP-RP map, CSV cache — through target loop below.
+    # _phase2a_load_star_list (inline): chip dims, comp index, BP-RP map, CSV cache - through target loop below.
 
-    # Open MASTERSTAR.fits once — reuse header + data throughout Phase 2A.
+    # Open MASTERSTAR.fits once - reuse header + data throughout Phase 2A.
     _ms_header: Any = None
     _ms_data: np.ndarray | None = None
     _ms_path = Path(masterstar_fits_path)
@@ -8011,9 +8011,9 @@ def _phase2a_prepare_shared_state(
             pass
 
     if "x" not in comp_df.columns or "y" not in comp_df.columns:
-        raise ValueError("comparison_stars_per_target.csv musí obsahovať stĺpce x, y pre Fázu 2A")
+        raise ValueError("comparison_stars_per_target.csv musi obsahovat stlpce x, y pre Fazu 2A")
 
-    # Pre-index comp_df podľa target catalog_id — raz pre celý cyklus (O(1) lookup per target).
+    # Pre-index comp_df podla target catalog_id - raz pre cely cyklus (O(1) lookup per target).
     _id_col_comp = "target_catalog_id" if "target_catalog_id" in comp_df.columns else "catalog_id"
     _comp_index: dict[str, pd.DataFrame] = {}
     if comp_df is not None and not comp_df.empty and _id_col_comp in comp_df.columns:
@@ -8024,7 +8024,7 @@ def _phase2a_prepare_shared_state(
     else:
         _comp_index = {}
 
-    # masterstars_full_match.csv — BP-RP map + comp pool pre catalog_only Phase 2A.
+    # masterstars_full_match.csv - BP-RP map + comp pool pre catalog_only Phase 2A.
     target_bp_rp_by_cid: dict[str, float] = {}
     masterstars_df = pd.DataFrame()
     try:
@@ -8070,14 +8070,14 @@ def _phase2a_prepare_shared_state(
             )
             if _crowd_csv is not None:
                 _ADAPTIVE_BLEND_CACHE.pop(str(Path(masterstar_fits_path)), None)
-                _p2(f"Fáza 2A: crowding_targets.csv ({_crowd_csv.name}) — adaptive blend map")
+                _p2(f"Faza 2A: crowding_targets.csv ({_crowd_csv.name}) - adaptive blend map")
         except Exception as _cr_exc:  # noqa: BLE001
             LOGGER.warning(
                 "[ePSF] crowding_targets generation failed (adaptive rule 2 disabled): %s",
                 _cr_exc,
             )
 
-    # Nájdi per-frame CSV (FITS sa nepoužíva)
+    # Najdi per-frame CSV (FITS sa nepouziva)
     if proc_frame_store is not None and len(proc_frame_store) > 0:
         csv_files = sorted(Path(k) for k in proc_frame_store.keys())
     else:
@@ -8139,22 +8139,22 @@ def _phase2a_prepare_shared_state(
                 f"Align-residual gate: {len(_rejected_ar)} mis-aligned frames rejected, "
                 f"{len(_kept_ar)} kept"
             )
-    # Len CSV — bez FITS (flux sa číta z dao_flux v CSV)
+    # Len CSV - bez FITS (flux sa cita z dao_flux v CSV)
     n_frames = len(csv_files)
     _n_total = int(len(at_df))
     logging.info("[PHASE 2A] %d targets (DAO+Gaia matched)", _n_total)
     _p2(f"Phase 2A: {_n_total} targets, {n_frames} frames - loading CSV cache...")
 
-    # Načítaj CSV cache raz pre celú Fázu 2A (read_flux_from_csv per target inak 82× na target).
+    # Nacitaj CSV cache raz pre celu Fazu 2A (read_flux_from_csv per target inak 82x na target).
     if proc_frame_store is not None and len(proc_frame_store) > 0:
         _phase2a_csv_cache = proc_frame_store
         logging.info(
             "[PERF-5] run_phase2a: using ProcFrameStore (%d frames, 0 disk reads)",
             len(proc_frame_store),
         )
-        _p2(f"Fáza 2A: ProcFrameStore {len(proc_frame_store)} CSV — výpočet FWHM / apertúr…")
+        _p2(f"Faza 2A: ProcFrameStore {len(proc_frame_store)} CSV - vypocet FWHM / apertur...")
     else:
-        logging.info("[FÁZA 2A] Načítavam CSV cache...")
+        logging.info("[FAZA 2A] Nacitavam CSV cache...")
         _t_cache = time.time()
         _phase2a_csv_cache: dict[str, pd.DataFrame] = {}
         _needed_cols_2a = list(
@@ -8175,7 +8175,7 @@ def _phase2a_prepare_shared_state(
                     "y",
                     "flux_small",
                     "flux_large",
-                    # Variability / auto-export (TODO-PERF-6) — same cache, no second disk read
+                    # Variability / auto-export (TODO-PERF-6) - same cache, no second disk read
                     "mag",
                     "bp_rp",
                     "b_v",
@@ -8216,7 +8216,7 @@ def _phase2a_prepare_shared_state(
                 _cols = [c for c in _needed_cols_2a if c in _hdr.columns]
                 if not _cols:
                     continue
-                # Gaia ID musí byť str — float64 stráca cifry
+                # Gaia ID musi byt str - float64 straca cifry
                 _dtype_2a: dict[str, type] = {}
                 if "catalog_id" in _cols:
                     _dtype_2a["catalog_id"] = str
@@ -8233,12 +8233,12 @@ def _phase2a_prepare_shared_state(
                 logging.error("[PHASE 2A] proc CSV cache skip %s: %s", _csv_path, exc)
                 continue
         logging.info(
-            f"[FÁZA 2A] CSV cache: {len(_phase2a_csv_cache)} súborov "
+            f"[FAZA 2A] CSV cache: {len(_phase2a_csv_cache)} suborov "
             f"({time.time() - _t_cache:.1f}s)"
         )
-        _p2(f"Fáza 2A: cache {len(_phase2a_csv_cache)} CSV — výpočet FWHM / apertúr…")
+        _p2(f"Faza 2A: cache {len(_phase2a_csv_cache)} CSV - vypocet FWHM / apertur...")
 
-    # Lookup (id_map + xy_df) raz na snímku — inak _build_csv_lookup 82× na target.
+    # Lookup (id_map + xy_df) raz na snimku - inak _build_csv_lookup 82x na target.
     _phase2a_lookup_cache: dict[str, tuple[dict[str, pd.Series], pd.DataFrame]] = {}
     for _cp in csv_files:
         _key = str(_cp)
@@ -8248,8 +8248,8 @@ def _phase2a_prepare_shared_state(
         _id_col_lu = "catalog_id" if "catalog_id" in _df_lu.columns else "name"
         _phase2a_lookup_cache[_key] = _build_csv_lookup(_df_lu, _id_col_lu)
 
-    # Čas + airmass (+ flip flag z alignment_report) z prvého platného riadku každého per-frame CSV
-    # (podľa stem FITS).
+    # Cas + airmass (+ flip flag z alignment_report) z prveho platneho riadku kazdeho per-frame CSV
+    # (podla stem FITS).
     frame_time_lookup: dict[str, dict[str, float]] = {}
     for csv_path in csv_files:
         stem = csv_path.stem
@@ -8363,8 +8363,8 @@ def _phase2a_prepare_shared_state(
             _pfs_min,
         )
 
-    # Krok 1: Globálna fixná apertúra — všetky hviezdy (target + comp), faktor × FWHM
-    # Ciele so skip_photometry (saturované) nepatria do výpočtu apertúr / FWHM z targetov.
+    # Krok 1: Globalna fixna apertura - vsetky hviezdy (target + comp), faktor x FWHM
+    # Ciele so skip_photometry (saturovane) nepatria do vypoctu apertur / FWHM z targetov.
     _at_cols = [c for c in ("catalog_id", "x", "y", "mag") if c in at_df.columns]
     _comp_cols = [c for c in ("catalog_id", "x", "y", "mag") if c in comp_df.columns]
     _at_use = at_df.loc[~at_df["skip_photometry"], _at_cols].copy() if _at_cols else at_df.iloc[0:0].copy()
@@ -8382,7 +8382,7 @@ def _phase2a_prepare_shared_state(
         ignore_index=True,
     ).drop_duplicates("catalog_id")
 
-    # Priorita: 1. VY_FWHM_GAUSS (2D fit v hlavičke), 2. VY_FWHM (DAO), 3. fit fallback
+    # Priorita: 1. VY_FWHM_GAUSS (2D fit v hlavicke), 2. VY_FWHM (DAO), 3. fit fallback
     _fwhm_from_header: float | None = None
     try:
         hdr = _ms_header
@@ -8406,18 +8406,18 @@ def _phase2a_prepare_shared_state(
                 if 0.5 < _fvg < 30.0:
                     _fwhm_from_header = _fvg
                     logging.info(
-                        f"[FÁZA 2A] FWHM z VY_FWHM_GAUSS (2D fit): {_fwhm_from_header:.3f} px"
+                        f"[FAZA 2A] FWHM z VY_FWHM_GAUSS (2D fit): {_fwhm_from_header:.3f} px"
                     )
             if _fwhm_from_header is None and vy_fwhm_dao is not None:
                 _fvd = float(vy_fwhm_dao)
                 if 0.5 < _fvd < 30.0:
                     _fwhm_from_header = _fvd
                     logging.info(
-                        f"[FÁZA 2A] FWHM z VY_FWHM (DAO): {_fwhm_from_header:.3f} px"
+                        f"[FAZA 2A] FWHM z VY_FWHM (DAO): {_fwhm_from_header:.3f} px"
                     )
     except Exception as _e:  # noqa: BLE001
         logging.error('[EXC-0170] MASTERSTAR header FWHM read throws - measured FWHM from stars used instead (logged warn...: %s', exc)
-        logging.warning(f"[FÁZA 2A] Nemôžem čítať FWHM z hlavičky: {_e}")
+        logging.warning(f"[FAZA 2A] Nemozem citat FWHM z hlavicky: {_e}")
 
     if _fwhm_from_header is not None:
         fwhm_px = _fwhm_from_header
@@ -8429,9 +8429,9 @@ def _phase2a_prepare_shared_state(
             dao_fwhm_hint=_fallback_hint,
             ms_data=_ms_data,
         )
-        logging.info(f"[FÁZA 2A] FWHM z Gaussian fit: {fwhm_px:.3f} px")
+        logging.info(f"[FAZA 2A] FWHM z Gaussian fit: {fwhm_px:.3f} px")
 
-    _p2(f"Fáza 2A: FWHM={float(fwhm_px):.3f} px — mapa poľa a svetelné krivky…")
+    _p2(f"Faza 2A: FWHM={float(fwhm_px):.3f} px - mapa pola a svetelne krivky...")
 
     # Gain / read noise for photometric errors and SNR aperture table.
     # Gain: header-first (e-/ADU or index-mapped) -> DB -> config. RN: DB-first.
@@ -8469,7 +8469,7 @@ def _phase2a_prepare_shared_state(
         _tbl = _snr_ap_table.get("table") or {}
         logging.info(
             "[PHASE 2A] SNR-optimal aperture table built: "
-            "mag 7→%.2fpx mag 11→%.2fpx mag 14→%.2fpx mag 17→%.2fpx",
+            "mag 7->%.2fpx mag 11->%.2fpx mag 14->%.2fpx mag 17->%.2fpx",
             float(_tbl.get(7.0, float("nan"))),
             float(_tbl.get(11.0, float("nan"))),
             float(_tbl.get(14.0, float("nan"))),
@@ -8494,14 +8494,14 @@ def _phase2a_prepare_shared_state(
     )
 
     if force_aperture_px is not None and force_aperture_px > 0:
-        # Fixná apertura pre všetky hviezdy — debug/kalibrácia
+        # Fixna apertura pre vsetky hviezdy - debug/kalibracia
         apertures_px = {
             _normalize_gaia_id(row.get("catalog_id", "")): float(force_aperture_px)
             for _, row in all_stars.iterrows()
             if _normalize_gaia_id(row.get("catalog_id", ""))
         }
         logging.info(
-            f"[FÁZA 2A] FORCE apertura: {force_aperture_px:.2f}px pre všetky hviezdy"
+            f"[FAZA 2A] FORCE apertura: {force_aperture_px:.2f}px pre vsetky hviezdy"
         )
     elif _snr_ap_table is not None:
         apertures_px = {}
@@ -8524,7 +8524,7 @@ def _phase2a_prepare_shared_state(
         if apertures_px:
             _rvals = list(apertures_px.values())
             logging.info(
-                "[FÁZA 2A] SNR per-star apertures: min=%.3fpx median=%.3fpx max=%.3fpx (N=%d)",
+                "[FAZA 2A] SNR per-star apertures: min=%.3fpx median=%.3fpx max=%.3fpx (N=%d)",
                 float(min(_rvals)),
                 float(np.median(_rvals)),
                 float(max(_rvals)),
@@ -8554,7 +8554,7 @@ def _phase2a_prepare_shared_state(
 
     sat_limit_resolved = sat_limit_adu if sat_limit_adu is not None else _sat_limit_peak_adu()
 
-    # Field map PNG (raz pre celé pole) — vždy; UI potrebuje mapu aj bez PNG kriviek
+    # Field map PNG (raz pre cele pole) - vzdy; UI potrebuje mapu aj bez PNG kriviek
     field_map_path = output_dir / "field_map.png"
     save_field_map_png(
         field_map_path,
@@ -8630,14 +8630,14 @@ def _phase2a_prepare_shared_state(
     if _flux_matrix_rows:
         _flux_matrix = pd.concat(_flux_matrix_rows, ignore_index=True)
         logging.info(
-            "[PERF-8] Flux matrix built: %d rows (%d stars × %d frames) in %.2fs",
+            "[PERF-8] Flux matrix built: %d rows (%d stars x %d frames) in %.2fs",
             len(_flux_matrix),
             len(_all_lc_ids_list),
             len(csv_files),
             time.perf_counter() - _t_flux_matrix,
         )
     else:
-        logging.warning("[PERF-8] Flux matrix empty — per-target per-frame fallback")
+        logging.warning("[PERF-8] Flux matrix empty - per-target per-frame fallback")
     logging.info(
         "[PERF-8] Flux matrix build time: included in photometry timing"
     )
@@ -8845,14 +8845,14 @@ def _recompute_bjd_hjd_with_status(
 
     if not math.isfinite(ra_deg) or not math.isfinite(dec_deg):
         LOGGER.warning(
-            "BJD-PERTARGET: invalid coords ra=%s dec=%s — using frame JD fallback",
+            "BJD-PERTARGET: invalid coords ra=%s dec=%s - using frame JD fallback",
             ra_deg,
             dec_deg,
         )
         return jd_arr.copy(), jd_arr.copy(), TIME_BASE_JD_FALLBACK
 
     if is_null_island_coords(lat, lon):
-        LOGGER.warning("BJD-PERTARGET: observer location not set — using frame JD fallback")
+        LOGGER.warning("BJD-PERTARGET: observer location not set - using frame JD fallback")
         return jd_arr.copy(), jd_arr.copy(), TIME_BASE_JD_FALLBACK
 
     try:
@@ -8887,7 +8887,7 @@ def _recompute_bjd_hjd_with_status(
             dec_deg,
         )
     except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("BJD-PERTARGET: batch recompute failed (%s) — frame JD fallback", exc)
+        LOGGER.warning("BJD-PERTARGET: batch recompute failed (%s) - frame JD fallback", exc)
         return jd_arr.copy(), jd_arr.copy(), TIME_BASE_JD_FALLBACK
 
     return bjd_out, hjd_out, TIME_BASE_BJD_TDB
@@ -8913,7 +8913,7 @@ def _recompute_bjd_hjd_per_target(
     config drift between sessions. ``cfg`` is used only as a legacy fallback.
 
     References:
-        Eastman, Siverd & Gaudi (2010) PASP 122, 935 — BJD standards
+        Eastman, Siverd & Gaudi (2010) PASP 122, 935 - BJD standards
         time_utils.compute_hjd_bjd() for scalar equivalence
     """
     bjd, hjd, _ = _recompute_bjd_hjd_with_status(jd_array, ra_deg, dec_deg, cfg, site=site)
@@ -8992,11 +8992,11 @@ def _phase2a_process_one_target(
     if progress_cb is not None and (
         ti == 1 or ti == _nt or (_nt > 1 and ti % max(1, _nt // 12) == 0)
     ):
-        _p2(f"Fáza 2A: cieľ {ti}/{_nt}: {target_name[:50]}")
+        _p2(f"Faza 2A: ciel {ti}/{_nt}: {target_name[:50]}")
     if skip_photo:
         _sr_col = str(target_row.get("skip_reason", "") or "").strip()
-        _skip_reason = _sr_col if _sr_col else "saturovaný cieľ"
-        logging.info(f"[FÁZA 2A] Preskakujem fotometriu ({_skip_reason}): {target_name}")
+        _skip_reason = _sr_col if _sr_col else "saturovany ciel"
+        logging.info(f"[FAZA 2A] Preskakujem fotometriu ({_skip_reason}): {target_name}")
         _skip_sum: dict[str, Any] = {
             "catalog_id": target_cid,
             "vsx_name": target_name,
@@ -9024,10 +9024,10 @@ def _phase2a_process_one_target(
         summary_rows.append(_skip_sum)
         return summary_rows, n_lc
     logging.info(
-        f"[FÁZA 2A] Spúšťam: target={target_name}, "
+        f"[FAZA 2A] Spustam: target={target_name}, "
         f"frames={len(csv_files)}, "
         f"apertura={_apt_fw * float(fwhm_px):.2f}px "
-        f"(FWHM={float(fwhm_px):.3f}px × {_apt_fw:.2f})"
+        f"(FWHM={float(fwhm_px):.3f}px x {_apt_fw:.2f})"
     )
 
     # Comp hviezdy pre tento target
@@ -9052,7 +9052,7 @@ def _phase2a_process_one_target(
             comp_ids.append(nc)
     all_ids = [target_cid] + comp_ids
 
-    # Katalógové magnitúdy comp hviezd
+    # Katalogove magnitudy comp hviezd
     comp_catalog_mag = {
         _normalize_gaia_id(r["catalog_id"]): float(r.get("mag", float("nan")))
         for _, r in target_comps.iterrows()
@@ -9141,7 +9141,7 @@ def _phase2a_process_one_target(
     except (ImportError, KeyError, TypeError, ValueError, AttributeError) as _ck_pref_exc:
         logging.debug("[CHECK-KMAG] preselect skipped for %s: %s", target_cid, _ck_pref_exc)
 
-    # Krok 2: Fotometria per snímka (PERF-8: slice shared flux matrix when built)
+    # Krok 2: Fotometria per snimka (PERF-8: slice shared flux matrix when built)
     frame_results: list[pd.DataFrame] = []
     if not _flux_matrix.empty:
         _id_set = set(all_ids)
@@ -9193,7 +9193,7 @@ def _phase2a_process_one_target(
                             if "edge_fail" in df_frame.columns:
                                 df_frame.loc[tmask, "edge_fail"] = True
                             logging.info(
-                                "[TARGET EDGE] %s: frame %s vyradený — annulus mimo čip (x=%.0f, y=%.0f, r_out=%.1fpx)",
+                                "[TARGET EDGE] %s: frame %s vyradeny - annulus mimo cip (x=%.0f, y=%.0f, r_out=%.1fpx)",
                                 str(target_name),
                                 str(csv_path.name),
                                 float(x_t),
@@ -9265,7 +9265,7 @@ def _phase2a_process_one_target(
                                 if "edge_fail" in df_frame.columns:
                                     df_frame.loc[tmask, "edge_fail"] = True
                                 logging.info(
-                                    "[TARGET EDGE] %s: frame %s vyradený — annulus mimo čip (x=%.0f, y=%.0f, r_out=%.1fpx)",
+                                    "[TARGET EDGE] %s: frame %s vyradeny - annulus mimo cip (x=%.0f, y=%.0f, r_out=%.1fpx)",
                                     str(target_name),
                                     str(csv_path.name),
                                     float(x_t),
@@ -9296,7 +9296,7 @@ def _phase2a_process_one_target(
             )
             if bool(ac_result.get("ok")):
                 log_event(
-                    f"[AC] ΔM_corr={float(ac_result['delta_m_corr']):.4f} "
+                    f"[AC] DeltaM_corr={float(ac_result['delta_m_corr']):.4f} "
                     f"scatter={float(ac_result['scatter_mag']):.4f} "
                     f"n_ref={int(ac_result['n_ref_stars'])}"
                 )
@@ -9312,11 +9312,11 @@ def _phase2a_process_one_target(
                 "ref_star_ids": [],
                 "reason": "exception",
             }
-    _ = ac_result  # Krokom 3: aplikácia na mag_calib / CSV
+    _ = ac_result  # Krokom 3: aplikacia na mag_calib / CSV
 
     all_frames = pd.concat(frame_results, ignore_index=True)
 
-    # Zostav časové rady per hviezda
+    # Zostav casove rady per hviezda
     target_lc = _get_lc(target_cid, all_frames)
     comp_lc = {cid: _get_lc(cid, all_frames) for cid in comp_ids}
 
@@ -9367,7 +9367,7 @@ def _phase2a_process_one_target(
         enabled=bool(_cfg.pytics_enabled),
     )
 
-    # Krok 4: Ensemble normalizácia
+    # Krok 4: Ensemble normalizacia
     mag_calib, delta_mag, ensemble_scatter = ensemble_normalize(
         target_lc,
         comp_lc,
@@ -9433,11 +9433,11 @@ def _phase2a_process_one_target(
             )
             if _ap_px is None:
                 logging.warning(
-                    "[GS11] target %s: photometric aperture unavailable — dilution skipped",
+                    "[GS11] target %s: photometric aperture unavailable - dilution skipped",
                     target_cid or "?",
                 )
                 log_event(
-                    f"[GS11] target {target_cid or '?'}: photometric aperture unavailable — dilution skipped"
+                    f"[GS11] target {target_cid or '?'}: photometric aperture unavailable - dilution skipped"
                 )
                 _dilution_skipped_ap = True
                 _ap_arcsec = float("nan")
@@ -9489,7 +9489,7 @@ def _phase2a_process_one_target(
         _mag_pre_gs11 = float("nan")
         _mag_post_gs11 = float("nan")
 
-    # ── Aperture correction (AC) ──
+    # -- Aperture correction (AC) --
     ac_ok = bool(ac_result.get("ok", False)) if isinstance(ac_result, dict) else False
     delta_m_corr = ac_result.get("delta_m_corr") if isinstance(ac_result, dict) else None
     if ac_ok and delta_m_corr is not None and np.isfinite(float(delta_m_corr)):
@@ -9497,7 +9497,7 @@ def _phase2a_process_one_target(
     else:
         mag_calib_ac = np.full_like(mag_calib, float("nan"))
 
-    # Sanity log znamienka: pri delta_m_corr < 0 má byť mag_calib_ac < mag_calib.
+    # Sanity log znamienka: pri delta_m_corr < 0 ma byt mag_calib_ac < mag_calib.
     if (not ac_sign_logged[0]) and ac_ok and delta_m_corr is not None and np.isfinite(float(delta_m_corr)):
         if len(mag_calib) > 0 and math.isfinite(float(mag_calib[0])) and math.isfinite(float(mag_calib_ac[0])):
             log_event(
@@ -9507,7 +9507,7 @@ def _phase2a_process_one_target(
             )
             ac_sign_logged[0] = True
 
-    # ── Color term (BP-RP) — global comp-pool fit; toggle controls correction only ──
+    # -- Color term (BP-RP) - global comp-pool fit; toggle controls correction only --
     target_bp_rp = float(target_bp_rp_by_cid.get(target_cid, float("nan")))
     comp_bp_rp: dict[str, float] = {}
     if "bp_rp" in target_comps.columns:
@@ -9587,7 +9587,7 @@ def _phase2a_process_one_target(
             )
         else:
             logging.info(
-                "[COLOR TERM] extrapolation → CT skipped (target kept, uncorrected)"
+                "[COLOR TERM] extrapolation -> CT skipped (target kept, uncorrected)"
             )
             mag_calib_ct = mag_calib.copy()
             ct_corr = 0.0
@@ -9658,7 +9658,7 @@ def _phase2a_process_one_target(
             },
         )
 
-    # Časové hodnoty targetu — sort by source_file so ensemble_scatter index aligns
+    # Casove hodnoty targetu - sort by source_file so ensemble_scatter index aligns
     # with ``_get_lc`` / ``_ensemble_scatter_by_source_file`` (LABBE-DET / SEM determinism).
     target_frames = all_frames[all_frames["catalog_id"] == target_cid]
     if not target_frames.empty and "source_file" in target_frames.columns:
@@ -9686,7 +9686,7 @@ def _phase2a_process_one_target(
 
     err = target_frames["err"].to_numpy(dtype=float)
     err, err_method_rows = _route_lc_per_frame_err(target_frames, err)
-    # Per-point uncertainty = photon/SNR base error (term-1) ⊕ ensemble zeropoint uncertainty
+    # Per-point uncertainty = photon/SNR base error (term-1) (+) ensemble zeropoint uncertainty
     # (term-3, ``ensemble_scatter``). Joined by EXACT ``source_file`` (G2-F004), not positional index.
     _src_for_err = target_frames["source_file"].astype(str).tolist()
     from sigma_floor_core import resolve_sigma_sys_mag  # noqa: PLC0415
@@ -9845,7 +9845,7 @@ def _phase2a_process_one_target(
     except (ImportError, KeyError, TypeError, ValueError, AttributeError, OSError) as _ck_exc:
         logging.debug("[CHECK-KMAG] sidecar skipped for %s: %s", target_cid, _ck_exc)
 
-    # Krok 6: Uloženie výstupov
+    # Krok 6: Ulozenie vystupov
     lc_csv = lc_dir / f"lightcurve_{target_cid}.csv"
     if isinstance(_lunar, dict):
         _lc_lunar_phase = float(_lunar.get("lunar_phase_pct", float("nan")))
@@ -9956,7 +9956,7 @@ def _phase2a_process_one_target(
         except Exception as _meth_exc:  # noqa: BLE001
             logging.error('[EXC-0173] All method-variant LC exports for target skipped when init block fails: %s', exc)
             logging.warning("[METHOD-LC] init failed for %s: %s", target_cid, _meth_exc)
-    # Kvalita comp pre UI (tabuľka „Porovnávacie hviezdy“)
+    # Kvalita comp pre UI (tabulka 'Porovnavacie hviezdy')
     _cq_path = lc_dir / f"comp_quality_{target_cid}.json"
     try:
         selected_tier = ""
@@ -10037,7 +10037,7 @@ def _phase2a_process_one_target(
         except Exception as exc:  # noqa: BLE001
             LOGGER.warning("[PHASE 2A] Optional artifact write failed (cutout PNG): %s", exc)
 
-    # Per-target field map s číslovanými comp hviezdami — vždy (UI)
+    # Per-target field map s cislovanymi comp hviezdami - vzdy (UI)
     try:
         _target_comp = _comp_index.get(target_cid, pd.DataFrame()).copy()
         _fm_target_path = lc_dir / f"field_map_{target_cid}.png"
@@ -10136,7 +10136,7 @@ def _phase2a_process_one_target(
     lc_rms_ooe = float(summary_rows[-1].get("lc_rms_ooe", float("nan")))
     r_ap = float(summary_rows[-1]["aperture_px"])
     logging.info(
-        f"[FÁZA 2A] {target_name}: "
+        f"[FAZA 2A] {target_name}: "
         f"lc_rms={lc_rms:.4f}, lc_rms_ooe={lc_rms_ooe:.4f}, "
         f"n_comp={n_good_comp} (stability_good={n_stability_good}), "
         f"apertura={r_ap:.2f}px (measured)"
@@ -10211,7 +10211,7 @@ def _phase2a_finalize_exports(
         try:
             from comp_qa_core import run_comp_qa_for_photometry_dir  # noqa: PLC0415
 
-            _p2("Comp QA (Sokolovsky locus)…")
+            _p2("Comp QA (Sokolovsky locus)...")
             run_comp_qa_for_photometry_dir(
                 photometry_dir=output_dir,
                 proc_dir=per_frame_csv_dir,
@@ -10229,7 +10229,7 @@ def _phase2a_finalize_exports(
         try:
             from trust_flag_core import run_trust_flag_for_photometry_dir  # noqa: PLC0415
 
-            _p2("Trust flag (GREEN/YELLOW/RED)…")
+            _p2("Trust flag (GREEN/YELLOW/RED)...")
             run_trust_flag_for_photometry_dir(
                 photometry_dir=output_dir,
                 lc_dir=lc_dir,
@@ -10241,15 +10241,15 @@ def _phase2a_finalize_exports(
             logging.error('[EXC-0175] Trust-flag stage failure - photometry_summary trust columns not refreshed: %s', exc)
             logging.warning("[TRUST] Stage failed (non-fatal): %s", exc)
 
-    logging.info(f"[FÁZA 2A] Hotovo: {n_lc} svetelných kriviek → {output_dir}")
+    logging.info(f"[FAZA 2A] Hotovo: {n_lc} svetelnych kriviek -> {output_dir}")
     logging.info(
-        f"[FÁZA 2A] Targety bez comp hviezd: "
+        f"[FAZA 2A] Targety bez comp hviezd: "
         f"{len(at_df) - n_lc}/{len(at_df)} "
-        f"(žiadne vhodné comp podľa aktuálnych filtrov)"
+        f"(ziadne vhodne comp podla aktualnych filtrov)"
     )
-    _p2(f"Fáza 2A hotovo: {n_lc} kriviek z {n_frames} snímok → {output_dir.name}")
+    _p2(f"Faza 2A hotovo: {n_lc} kriviek z {n_frames} snimok -> {output_dir.name}")
 
-    # Export lightcurve reports (AAVSO + VAR.ASTRO.CZ) — best effort, non-fatal.
+    # Export lightcurve reports (AAVSO + VAR.ASTRO.CZ) - best effort, non-fatal.
     try:
         from citations import build_run_citation_context, load_pipeline_meta  # noqa: PLC0415
         from export_reports import (  # noqa: PLC0415
@@ -10373,7 +10373,7 @@ def _phase2a_finalize_exports(
         logging.error('[EXC-0176] AAVSO/VarAstro lightcurve export batch fails - external report files missing: %s', exc)
         logging.warning("[EXPORT] init failed: %s", exc)
 
-    # Build flux pivot once — reuse in variability detection (TODO-PERF-6)
+    # Build flux pivot once - reuse in variability detection (TODO-PERF-6)
     _flux_pivot: pd.DataFrame | None = None
     try:
         LOGGER.info("[PHASE 2A] Building flux pivot for variability reuse...")
@@ -10550,12 +10550,12 @@ def run_phase2a(
     draft_id: int | None = None,
     proc_frame_store: ProcFrameStore | None = None,
 ) -> dict[str, Any]:
-    """Hlavný wrapper pre Fázu 2A.
+    """Hlavny wrapper pre Fazu 2A.
 
-    Globálny FWHM pre apertúru: ``VY_FWHM_GAUSS`` (2D fit z pipeline), inak ``VY_FWHM``
-    (DAO, pre apertúru porovnateľné s Gaussian FWHM), inak 2D Gaussian fit
-    (``measure_fwhm_from_masterstar``) s nápovedou z ``fwhm_px``.
-    Apertúrny polomer = ``aperture_fwhm_factor × FWHM`` (predvolene z ``cfg``).
+    Globalny FWHM pre aperturu: ``VY_FWHM_GAUSS`` (2D fit z pipeline), inak ``VY_FWHM``
+    (DAO, pre aperturu porovnatelne s Gaussian FWHM), inak 2D Gaussian fit
+    (``measure_fwhm_from_masterstar``) s napovedou z ``fwhm_px``.
+    Aperturny polomer = ``aperture_fwhm_factor x FWHM`` (predvolene z ``cfg``).
 
     Returns:
         dict: n_targets, n_frames, n_lightcurves, summary_csv, field_map_png
@@ -10576,7 +10576,7 @@ def run_phase2a(
         except UnicodeEncodeError:
             progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
 
-    _p2("Initializing shared state…")
+    _p2("Initializing shared state...")
     state = _phase2a_prepare_shared_state(
         output_dir=output_dir,
         lc_dir=lc_dir,
@@ -10696,7 +10696,7 @@ def run_phase2a(
     # INV-CFG-01: per-frame sat markers present only when enabled.
     if bool(getattr(_cfg, "per_frame_saturation_enabled", False)) and state.per_frame_sat_meta:
         merge_photometry_pipeline_meta(output_dir, dict(state.per_frame_sat_meta))
-    # NIGHT_FIT meta only when fit path was enabled (default OFF → absent).
+    # NIGHT_FIT meta only when fit path was enabled (default OFF -> absent).
     if bool(getattr(_cfg, "k2_fit_enabled", False)) and state.k2_fit_meta:
         merge_photometry_pipeline_meta(
             output_dir,
@@ -10708,7 +10708,7 @@ def run_phase2a(
         )
 
     # Per target loop
-    # _phase2a_process_single_target (inline): ZP → CT → (outlier → airmass | airmass → outlier) → export.
+    # _phase2a_process_single_target (inline): ZP -> CT -> (outlier -> airmass | airmass -> outlier) -> export.
     for ti, (_, target_row) in enumerate(at_df.iterrows(), start=1):
         summary_rows, n_lc = _phase2a_process_one_target(
             target_row=target_row,
@@ -10731,7 +10731,7 @@ def run_phase2a(
 
     if not _flux_matrix.empty:
         logging.info(
-            "[PERF-8] Per-target frame loops eliminated: %d targets × %d frames = %d calls saved",
+            "[PERF-8] Per-target frame loops eliminated: %d targets x %d frames = %d calls saved",
             _nt,
             len(csv_files),
             _nt * len(csv_files),
@@ -10764,7 +10764,7 @@ def run_phase2a(
 
 
 # ======================================================================
-# photometry.py (zlúčené do photometry_core)
+# photometry.py (zlucene do photometry_core)
 # ======================================================================
 
 from utils import (
@@ -10801,7 +10801,7 @@ def _get_plate_scale_from_cfg(
             _wcs_ps = None
         if _wcs_ps is not None and math.isfinite(float(_wcs_ps)) and float(_wcs_ps) > 0:
             logging.info(
-                "[FOV] _get_plate_scale_from_cfg → %.4f arcsec/px (solved WCS/CD)",
+                "[FOV] _get_plate_scale_from_cfg -> %.4f arcsec/px (solved WCS/CD)",
                 float(_wcs_ps),
             )
             return float(_wcs_ps)
@@ -10890,7 +10890,7 @@ def _get_plate_scale_from_cfg(
                     if sc is not None and math.isfinite(float(sc)) and float(sc) > 0:
                         result = float(sc)
                         logging.info(
-                            "[FOV] _get_plate_scale_from_cfg → %.4f arcsec/px (DB: eq/tel/bin=%s)",
+                            "[FOV] _get_plate_scale_from_cfg -> %.4f arcsec/px (DB: eq/tel/bin=%s)",
                             float(result),
                             int(binning),
                         )
@@ -10903,7 +10903,7 @@ def _get_plate_scale_from_cfg(
         if val > 0:
             result = val
             logging.warning(
-                "[FOV] _get_plate_scale_from_cfg → %.4f arcsec/px (config last-resort; no WCS/DB)",
+                "[FOV] _get_plate_scale_from_cfg -> %.4f arcsec/px (config last-resort; no WCS/DB)",
                 float(result),
             )
             return result
@@ -10915,14 +10915,14 @@ def _get_plate_scale_from_cfg(
         if val and float(val) > 0:
             result = float(val)
             logging.info(
-                "[FOV] _get_plate_scale_from_cfg → %.4f arcsec/px (None = fallback na max_dist_deg)",
+                "[FOV] _get_plate_scale_from_cfg -> %.4f arcsec/px (None = fallback na max_dist_deg)",
                 float(result),
             )
             return result
     except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[PHASE 2A] Plate scale from config failed (non-critical): %s", exc)
     logging.info(
-        "[FOV] _get_plate_scale_from_cfg → %.4f arcsec/px (None = fallback na max_dist_deg)",
+        "[FOV] _get_plate_scale_from_cfg -> %.4f arcsec/px (None = fallback na max_dist_deg)",
         -1.0,
     )
     return None
@@ -10938,8 +10938,8 @@ def _compute_fov_max_dist(
     """
     max_dist_deg = (FOV_diagonal / 2) * fov_fraction
 
-    Použi plate_solve_fov_deg_diagonal_from_scale z utils.
-    Ak plate_scale je None → vráť fallback_deg.
+    Pouzi plate_solve_fov_deg_diagonal_from_scale z utils.
+    Ak plate_scale je None -> vrat fallback_deg.
     """
     logging.info(
         "[FOV] compute: w=%d h=%d scale=%s fraction=%.2f fallback=%.3f",
@@ -10951,7 +10951,7 @@ def _compute_fov_max_dist(
     )
     if not plate_scale or float(plate_scale) <= 0:
         logging.debug(
-            "[FÁZA 0+1] plate_scale neznámy → max_dist fallback=%.3f°",
+            "[FAZA 0+1] plate_scale neznamy -> max_dist fallback=%.3f deg",
             float(fallback_deg),
         )
         return float(fallback_deg)
@@ -10963,8 +10963,8 @@ def _compute_fov_max_dist(
             raise ValueError(f"invalid diag_deg={diag_deg!r}")
         result = (float(diag_deg) / 2.0) * float(fov_fraction)
         logging.info(
-            "[FÁZA 0+1] FOV max_dist: scale=%.3f\"/px, "
-            "diag=%.3f°, fraction=%.2f → max_dist=%.3f°",
+            "[FAZA 0+1] FOV max_dist: scale=%.3f\"/px, "
+            "diag=%.3f deg, fraction=%.2f -> max_dist=%.3f deg",
             float(plate_scale),
             float(diag_deg),
             float(fov_fraction),
@@ -10974,7 +10974,7 @@ def _compute_fov_max_dist(
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0182] FOV max_dist degree calculation fails - comp/target cone uses hardcoded fallback radius: %s', exc)
         logging.warning(
-            "[FÁZA 0+1] FOV max_dist výpočet zlyhal (%s) → fallback=%.3f°",
+            "[FAZA 0+1] FOV max_dist vypocet zlyhal (%s) -> fallback=%.3f deg",
             exc,
             float(fallback_deg),
         )
@@ -11005,25 +11005,25 @@ def _resolve_plate_scale_arcsec_per_px(
             _fits_ps = None
     if _fits_ps is not None and math.isfinite(_fits_ps) and _lo <= float(_fits_ps) <= _hi:
         return float(_fits_ps)
-    # Config — last resort only (no usable WCS/CD in the FITS).
+    # Config - last resort only (no usable WCS/CD in the FITS).
     try:
         cfg_ps = float(cfg.phase01_plate_scale_arcsec_per_px)
     except (TypeError, ValueError):
         cfg_ps = 0.0
     if math.isfinite(cfg_ps) and _lo <= cfg_ps <= _hi:
         logging.warning(
-            "[PLATE SCALE] no usable WCS/CD scale — falling back to config %.3f arcsec/px",
+            "[PLATE SCALE] no usable WCS/CD scale - falling back to config %.3f arcsec/px",
             float(cfg_ps),
         )
         return float(cfg_ps)
     logging.warning(
-        "[PLATE SCALE] plate scale not derivable (WCS/CD + config exhausted) — returning None"
+        "[PLATE SCALE] plate scale not derivable (WCS/CD + config exhausted) - returning None"
     )
     return None
 
 
 def _cd_matrix_scale_arcsec_per_px(hdr: Any) -> float | None:
-    """Plate scale (arcsec/px) from the SOLVED astrometric WCS (CD/PC matrix → CDELT).
+    """Plate scale (arcsec/px) from the SOLVED astrometric WCS (CD/PC matrix -> CDELT).
 
     This is the authoritative source: it reflects the actual sky-to-pixel solution,
     independent of stale VY_PLTS / config values. Returns None if no usable WCS.
@@ -11077,7 +11077,7 @@ def _read_plate_scale_from_fits_path(
 ) -> float | None:
     """Plate scale (arcsec/px) from FITS, CD/WCS-FIRST.
 
-    Priority: (1) solved WCS/CD matrix; (2) VY_PLTS header — only if it agrees with
+    Priority: (1) solved WCS/CD matrix; (2) VY_PLTS header - only if it agrees with
     the CD value within 5% (else ignored, logged); (3) other header keywords, only
     when no usable CD/WCS exists. Clamp [0.1, 30.0] (covers fine ~0.3 and wide-field ~10).
     """
@@ -11111,13 +11111,13 @@ def _read_plate_scale_from_fits_path(
             vyf = None
         if vyf is not None and vyf > 0 and abs(vyf - cd_scale) / cd_scale > 0.05:
             logging.warning(
-                "[PLATE SCALE] VY_PLTS=%.3f disagrees with CD-derived %.3f arcsec/px (>5%%) — using CD.",
+                "[PLATE SCALE] VY_PLTS=%.3f disagrees with CD-derived %.3f arcsec/px (>5%%) - using CD.",
                 vyf,
                 cd_scale,
             )
         return float(cd_scale)
 
-    # (3) No usable WCS/CD — fall back to header keywords (still header, above config).
+    # (3) No usable WCS/CD - fall back to header keywords (still header, above config).
     try:
         for key in ("VY_PLTS", "VY_PLATESCALE", "PIXSCALE", "SECPIX", "SECPIX1", "SCALE", "CDELT1"):
             v = hdr.get(key)
@@ -11136,10 +11136,10 @@ def _read_plate_scale_from_fits_path(
         return None
     return None
 
-# Zlúčený modul: jedna Gaia/katalóg ID normalizácia (alias pre legacy kód v tomto súbore)
+# Zluceny modul: jedna Gaia/katalog ID normalizacia (alias pre legacy kod v tomto subore)
 _normalize_id_value = _normalize_gaia_id  # noqa: E402
 
-# Stĺpce načítavané z per-frame CSV pre bootstrap (78 % úspora pamäte)
+# Stlpce nacitavane z per-frame CSV pre bootstrap (78 % uspora pamate)
 _PHASE_USECOLS_PERFRAME: list[str] = [
     "name",
     "catalog_id",
@@ -11159,7 +11159,7 @@ _PHASE_USECOLS_PERFRAME: list[str] = [
 
 
 def _angular_distance_deg(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
-    """Uhlová vzdialenosť v stupňoch (haversine)."""
+    """Uhlova vzdialenost v stupnoch (haversine)."""
     r1, d1, r2, d2 = map(math.radians, [ra1, dec1, ra2, dec2])
     a = (
         math.sin((d2 - d1) / 2) ** 2
@@ -11186,7 +11186,7 @@ def _normalize_id_series(s: pd.Series) -> pd.Series:
 
 
 def _bool_col(series: pd.Series) -> pd.Series:
-    """Normalizuje stĺpec na bool bez ohľadu na True/False/'true'/'false'/1/0."""
+    """Normalizuje stlpec na bool bez ohladu na True/False/'true'/'false'/1/0."""
     return series.astype(str).str.strip().str.lower().isin(("true", "1", "yes", "y"))
 
 
@@ -11404,7 +11404,7 @@ def recommended_aperture_by_color(
     median_fwhm_neutral: float | None,
     median_fwhm_red: float | None,
 ) -> float | None:
-    """Return 2.5× median FWHM for the star's coarse color category."""
+    """Return 2.5x median FWHM for the star's coarse color category."""
     if bp_rp is None:
         return None
     try:
@@ -11501,11 +11501,11 @@ def compute_auto_fwhm_limit(
     k: float = 1.5,
 ) -> dict[str, Any]:
     """
-    Vypočíta automatický FWHM limit pomocou MAD štatistiky.
+    Vypocita automaticky FWHM limit pomocou MAD statistiky.
 
     Vracia dict:
         median_fwhm, mad, sigma_mad, auto_limit, k, n_total, n_kept, n_cut
-    (``auto_limit`` môže byť ``None`` pri príliš málo bodoch.)
+    (``auto_limit`` moze byt ``None`` pri prilis malo bodoch.)
     """
     arr = np.asarray(fwhm_values, dtype=np.float64)
     arr = arr[np.isfinite(arr) & (arr > 0)]
@@ -11545,10 +11545,10 @@ def compute_fwhm_gaussian_for_aperture_catalog(
     gaussian_fwhm_px_override: float | None,
     aperture_fwhm_factor: float,
 ) -> tuple[np.ndarray, float, float]:
-    """Vráti (fwhm_per_row, fwhm_moment_med, fwhm_gaussian) — rovnaký výpočet ako v ``enhance_catalog_dataframe_aperture_bpm``.
+    """Vrati (fwhm_per_row, fwhm_moment_med, fwhm_gaussian) - rovnaky vypocet ako v ``enhance_catalog_dataframe_aperture_bpm``.
 
-    Používa sa v ``pipeline._apply_aperture_catalog_enhancements_from_st`` pre multi-apertúru (r_small / r_large),
-    aby polomery zodpovedali hlavnej apertúre.
+    Pouziva sa v ``pipeline._apply_aperture_catalog_enhancements_from_st`` pre multi-aperturu (r_small / r_large),
+    aby polomery zodpovedali hlavnej aperture.
     """
     arr = np.asarray(data, dtype=np.float32)
     x = pd.to_numeric(df.get("x"), errors="coerce").to_numpy(dtype=np.float64)
@@ -11566,7 +11566,7 @@ def compute_fwhm_gaussian_for_aperture_catalog(
     if not math.isfinite(fwhm_moment_med) or fwhm_moment_med <= 0:
         fwhm_moment_med = float("nan")
 
-    DAO_TO_GAUSSIAN = 1.0 / 1.5  # 0.667 — fyzikálne odvodené, setup-nezávislé
+    DAO_TO_GAUSSIAN = 1.0 / 1.5  # 0.667 - fyzikalne odvodene, setup-nezavisle
     fwhm_gaussian: float | None = None
 
     if gaussian_fwhm_px_override is not None:
@@ -11586,8 +11586,8 @@ def compute_fwhm_gaussian_for_aperture_catalog(
                     fwhm_gaussian = _vy_f * DAO_TO_GAUSSIAN
                     if not bool(getattr(enhance_catalog_dataframe_aperture_bpm, "_did_log_fwhm", False)):
                         logging.info(
-                            f"[PHOT] FWHM z VY_FWHM (DAO): {_vy_f:.3f}px × {DAO_TO_GAUSSIAN:.3f} = "
-                            f"{float(fwhm_gaussian):.3f}px → apertura = "
+                            f"[PHOT] FWHM z VY_FWHM (DAO): {_vy_f:.3f}px x {DAO_TO_GAUSSIAN:.3f} = "
+                            f"{float(fwhm_gaussian):.3f}px -> apertura = "
                             f"{float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
                         )
                         enhance_catalog_dataframe_aperture_bpm._did_log_fwhm = True
@@ -11599,7 +11599,7 @@ def compute_fwhm_gaussian_for_aperture_catalog(
             fwhm_gaussian = fwhm_moment_med * 0.619
             if not bool(getattr(enhance_catalog_dataframe_aperture_bpm, "_did_log_fwhm", False)):
                 logging.info(
-                    f"[PHOT] FWHM fallback moment×0.619: {fwhm_gaussian:.3f}px → "
+                    f"[PHOT] FWHM fallback momentx0.619: {fwhm_gaussian:.3f}px -> "
                     f"apertura = {float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
                 )
                 enhance_catalog_dataframe_aperture_bpm._did_log_fwhm = True
@@ -11618,7 +11618,7 @@ def compute_fwhm_gaussian_for_aperture_catalog(
 
 
 def _sky_pp_from_annulus_image(d: np.ndarray, ann_img: np.ndarray) -> float:
-    """Local sky (ADU/px) from annulus mask image — matches batch annulus logic."""
+    """Local sky (ADU/px) from annulus mask image - matches batch annulus logic."""
     sky_pixels = d[ann_img > 0]
     if sky_pixels.size >= 5:
         sky_med = float(np.median(sky_pixels))
@@ -11676,7 +11676,7 @@ def _aperture_flux_sky_per_star(
             n_fail += 1
     if n_fail > 0:
         logging.warning(
-            "[FÁZA 2A] Per-star aperture: %d/%d positions failed or skipped",
+            "[FAZA 2A] Per-star aperture: %d/%d positions failed or skipped",
             n_fail,
             n,
         )
@@ -11708,12 +11708,12 @@ def compute_per_frame_cog_correction(
 ) -> dict[str, Any]:
     """Per-frame curve-of-growth (encircled-energy) aperture correction.
 
-    Builds an EE(r) curve (normalised to ``ref_fwhm × FWHM``) from bright, isolated,
+    Builds an EE(r) curve (normalised to ``ref_fwhm x FWHM``) from bright, isolated,
     unsaturated, high-SNR stars and returns a per-star multiplicative correction
     ``ac_factor = 1 / EE(r_star)`` that puts every star on the common ref-radius
     enclosed-flux scale (removing the per-star SNR-radius differential bias).
 
-    Returns dict: ``ac_factor`` (len n, ≥1.0), ``cog_ok``, ``n_cog``, ``ref_r_px``,
+    Returns dict: ``ac_factor`` (len n, >=1.0), ``cog_ok``, ``n_cog``, ``ref_r_px``,
     ``ee_radii``, ``ee_curve``. When fewer than ``min_stars`` COG stars are found and
     no ``fallback_ee`` is given, ``cog_ok=False`` and every ``ac_factor=1.0``.
     """
@@ -11763,7 +11763,7 @@ def compute_per_frame_cog_correction(
             dist, _ = tree.query(pts, k=2)
             nn[finite_xy] = dist[:, 1]
     except (ImportError, AttributeError, ValueError, TypeError):
-        logging.debug("[COG] cKDTree unavailable — isolation check skipped")
+        logging.debug("[COG] cKDTree unavailable - isolation check skipped")
 
     g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
     rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
@@ -11791,7 +11791,7 @@ def compute_per_frame_cog_correction(
         & (snr >= float(snr_min))
     )
     cog_idx = np.where(sel)[0]
-    # Cap to the highest-SNR subset — a robust median EE needs only a few dozen stars.
+    # Cap to the highest-SNR subset - a robust median EE needs only a few dozen stars.
     if int(max_stars) > 0 and cog_idx.size > int(max_stars):
         order = np.argsort(snr[cog_idx])[::-1][: int(max_stars)]
         cog_idx = cog_idx[order]
@@ -11832,7 +11832,7 @@ def compute_per_frame_cog_correction(
         ee_curve = np.asarray(ee_curve, dtype=np.float64)
         out["cog_ok"] = False  # fallback used; flag as not-fresh
     else:
-        return out  # too few COG stars and no fallback → no correction (ac_factor=1)
+        return out  # too few COG stars and no fallback -> no correction (ac_factor=1)
 
     out["ee_radii"] = ee_radii
     out["ee_curve"] = ee_curve
@@ -11880,8 +11880,8 @@ def enhance_catalog_dataframe_aperture_bpm(
     if n == 0:
         return out
 
-    # Pôvodný DAO flux z detect_stars_and_match_catalog (historicky v stĺpci ``flux``).
-    # ``dao_flux``: sky-subtrahovaný flux (po aperturnej fotometrii, ak je zapnutá).
+    # Povodny DAO flux z detect_stars_and_match_catalog (historicky v stlpci ``flux``).
+    # ``dao_flux``: sky-subtrahovany flux (po aperturnej fotometrii, ak je zapnuta).
     flux_dao = pd.to_numeric(out.get("flux"), errors="coerce").to_numpy(dtype=np.float64)
     if "dao_flux" not in out.columns:
         out["dao_flux"] = flux_dao
@@ -11897,7 +11897,7 @@ def enhance_catalog_dataframe_aperture_bpm(
 
     if aperture_enabled and math.isfinite(float(fwhm_gaussian_f)) and float(fwhm_gaussian_f) > 0:
         try:
-            # Lokálna implementácia: sky-subtracted flux cez CircularAperture + CircularAnnulus.
+            # Lokalna implementacia: sky-subtracted flux cez CircularAperture + CircularAnnulus.
             from photutils.aperture import CircularAnnulus, CircularAperture
             from photutils.aperture import aperture_photometry as _aphot
 
@@ -11934,7 +11934,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                 if not bool(getattr(enhance_catalog_dataframe_aperture_bpm, "_snr_ap_stats_logged", False)):
                     if _apertures_used:
                         logging.info(
-                            "[FÁZA 2A] SNR per-star apertures: min=%.2fpx median=%.2fpx max=%.2fpx (N=%d)",
+                            "[FAZA 2A] SNR per-star apertures: min=%.2fpx median=%.2fpx max=%.2fpx (N=%d)",
                             min(_apertures_used),
                             float(np.median(_apertures_used)),
                             max(_apertures_used),
@@ -11953,7 +11953,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                 d = np.where(np.isfinite(d), d, fill)
 
             if r_ap_arr is not None:
-                # photutils 2.3: CircularAperture.r must be scalar — one aperture per star.
+                # photutils 2.3: CircularAperture.r must be scalar - one aperture per star.
                 flux_arr, sky_pp_arr = _aperture_flux_sky_per_star(d, pos, r_ap_arr, r_in_arr, r_out_arr)
                 out["flux"] = flux_arr.astype(np.float64)
                 out["dao_flux"] = out["flux"]
@@ -11985,7 +11985,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                 out["noise_floor_adu"] = sky_pp_arr.astype(np.float64)
                 out[SKY_ADU_PER_PX_ANNULUS_COL] = sky_pp_arr.astype(np.float64)
 
-            # Multi-apertúra: rovnaký sky_pp_arr (ADU/px²) × plocha apertúry ako sky odčítanie.
+            # Multi-apertura: rovnaky sky_pp_arr (ADU/px^2) x plocha apertury ako sky odcitanie.
             if r_small_px is not None and r_large_px is not None:
                 try:
                     _rs = float(r_small_px)
@@ -12152,7 +12152,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                     out["cog_ok"] = False
         except Exception as _ap_exc:  # noqa: BLE001
             logging.warning(
-                "[FÁZA 2A] Aperture photometry failed — restoring pre-aperture flux: %s",
+                "[FAZA 2A] Aperture photometry failed - restoring pre-aperture flux: %s",
                 _ap_exc,
                 exc_info=True,
             )
@@ -12216,7 +12216,7 @@ def enhance_catalog_dataframe_aperture_bpm(
         _has_flux = _dao_num.notna() & (_dao_num != 0)
         out.loc[_forced_mask & _has_flux, "photometry_ok"] = True
 
-    # Multi-apertúra: stĺpce vždy existujú (NaN ak meranie neprebehlo alebo bolo vypnuté).
+    # Multi-apertura: stlpce vzdy existuju (NaN ak meranie neprebehlo alebo bolo vypnute).
     if n > 0:
         _nan_vec = np.full(n, np.nan, dtype=np.float64)
         if "flux_small" not in out.columns:
@@ -12235,10 +12235,10 @@ def _phase0_effective_frame_hw_px(
     frame_h_px: int,
     edge_margin_px: int,
 ) -> tuple[int, int]:
-    """``frame_w_px`` / ``frame_h_px`` z volania alebo väčšie — podľa max. x,y v VT a masterstars.
+    """``frame_w_px`` / ``frame_h_px`` z volania alebo vacsie - podla max. x,y v VT a masterstars.
 
-    Predvolené 2082×1397 často nezodpovedajú veľkému čipu; inak sa VSX ciele s veľkými pixelmi
-    (napr. DY Peg) vylúčia ešte pred cross-matchom, **bez** ohľadu na ``vsx_type`` (žiadny filter na SXPHE).
+    Predvolene 2082x1397 casto nezodpovedaju velkemu cipu; inak sa VSX ciele s velkymi pixelmi
+    (napr. DY Peg) vylucia este pred cross-matchom, **bez** ohladu na ``vsx_type`` (ziadny filter na SXPHE).
     """
     xs: list[float] = []
     ys: list[float] = []
@@ -12267,7 +12267,7 @@ def _active_target_zone_flag(ms_row: pd.Series, zone_val_raw: str) -> str:
     if sat:
         return "saturated"
     if not z:
-        return "neznáma_zóna"
+        return "neznama_zona"
     return z
 
 
@@ -12278,13 +12278,13 @@ def _auto_repair_catalog_ids(
     log_fn: Any = None,
     max_sep_arcsec: float = 10.0,
 ) -> dict[str, Any]:
-    """Auto-repair poškodené Gaia catalog_id v variable_targets.csv podľa RA/DEC.
+    """Auto-repair poskodene Gaia catalog_id v variable_targets.csv podla RA/DEC.
 
-    Bezpečnostné pravidlá:
-    - Ak `gaia_db_path` nie je nastavená alebo DB neexistuje → nič nerob.
-    - Ak `variable_targets.csv` nemá `catalog_id` alebo RA/DEC → nič nerob.
-    - Opravuj iba vtedy, keď najbližší Gaia zdroj je dostatočne blízko (`max_sep_arcsec`).
-    - Vytvor `.bak` zálohu iba ak sa niečo reálne opravilo.
+    Bezpecnostne pravidla:
+    - Ak `gaia_db_path` nie je nastavena alebo DB neexistuje -> nic nerob.
+    - Ak `variable_targets.csv` nema `catalog_id` alebo RA/DEC -> nic nerob.
+    - Opravuj iba vtedy, ked najblizsi Gaia zdroj je dostatocne blizko (`max_sep_arcsec`).
+    - Vytvor `.bak` zalohu iba ak sa nieco realne opravilo.
     """
     try:
         from repair_catalog_ids import repair_catalog_ids_from_gaia_db  # noqa: PLC0415
@@ -12320,7 +12320,7 @@ def _enrich_active_targets_bp_rp(
     *,
     gaia_db_path: str | Path | None,
 ) -> pd.DataFrame:
-    """Doplň ``bp_rp`` pre active targets z Gaia DR3 podľa ``catalog_id``."""
+    """Dopln ``bp_rp`` pre active targets z Gaia DR3 podla ``catalog_id``."""
     if targets_df is None or getattr(targets_df, "empty", True):
         return targets_df
 
@@ -12406,7 +12406,7 @@ def _resolve_frame_hw_px_from_masterstar(
     """Authoritative chip width/height for Phase 0+1 spatial culling.
 
     Priority: (1) MASTERSTAR FITS ``NAXIS1``/``NAXIS2``; (2) DB ``SCANNING`` via draft;
-    (3) caller defaults (global cfg knob / hardcoded 2082×1397).
+    (3) caller defaults (global cfg knob / hardcoded 2082x1397).
     """
     w_def, h_def = int(frame_w_px), int(frame_h_px)
     if ms_fits.is_file():
@@ -12456,10 +12456,10 @@ def _read_field_density_inputs(
     frame_w_px: int,
     frame_h_px: int,
 ) -> tuple[int, int, int, str, int | None]:
-    """Vráti ``(n_stars, chip_w, chip_h, source, n_stars_dao_raw)`` pre hustotu poľa.
+    """Vrati ``(n_stars, chip_w, chip_h, source, n_stars_dao_raw)`` pre hustotu pola.
 
-    ``n_stars``: počet riadkov v ``masterstars_csv`` s neprázdnym ``catalog_id`` (Gaia-matched).
-    ``n_stars_dao_raw``: ``VY_NDAO`` z MASTERSTAR FITS (iba referencia / JSON, nie klasifikácia).
+    ``n_stars``: pocet riadkov v ``masterstars_csv`` s neprazdnym ``catalog_id`` (Gaia-matched).
+    ``n_stars_dao_raw``: ``VY_NDAO`` z MASTERSTAR FITS (iba referencia / JSON, nie klasifikacia).
     ``source``: ``masterstars_gaia_matched`` | ``VY_NDAO_fallback`` | ``defaults``.
     """
     cw, ch = int(frame_w_px), int(frame_h_px)
@@ -12513,7 +12513,7 @@ def _refresh_variable_targets_xy(
     chip_w: int,
     chip_h: int,
 ) -> None:
-    """Prepočíta x/y stĺpce variable_targets.csv z aktuálneho MASTERSTAR WCS."""
+    """Prepocita x/y stlpce variable_targets.csv z aktualneho MASTERSTAR WCS."""
     from astropy.wcs import WCS
 
     if wcs is None or not isinstance(wcs, WCS):
@@ -12522,7 +12522,7 @@ def _refresh_variable_targets_xy(
     if not vt_path.is_file():
         return
 
-    logging.debug("[VT REFRESH] frame %s×%s px (MASTERSTAR → VT x,y)", chip_w, chip_h)
+    logging.debug("[VT REFRESH] frame %sx%s px (MASTERSTAR -> VT x,y)", chip_w, chip_h)
 
     df = pd.read_csv(vt_path, low_memory=False, dtype=_GAIA_ID_DTYPE)
     if "ra_deg" in df.columns:
@@ -12530,14 +12530,14 @@ def _refresh_variable_targets_xy(
     elif "ra" in df.columns:
         ra = pd.to_numeric(df["ra"], errors="coerce").to_numpy(dtype=np.float64)
     else:
-        logging.warning("[VT REFRESH] chýbajú stĺpce ra_deg / ra — x/y neaktualizované")
+        logging.warning("[VT REFRESH] chybaju stlpce ra_deg / ra - x/y neaktualizovane")
         return
     if "dec_deg" in df.columns:
         dec = pd.to_numeric(df["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
     elif "dec" in df.columns:
         dec = pd.to_numeric(df["dec"], errors="coerce").to_numpy(dtype=np.float64)
     else:
-        logging.warning("[VT REFRESH] chýbajú stĺpce dec_deg / dec — x/y neaktualizované")
+        logging.warning("[VT REFRESH] chybaju stlpce dec_deg / dec - x/y neaktualizovane")
         return
 
     try:
@@ -12553,10 +12553,10 @@ def _refresh_variable_targets_xy(
         from except_fix_counters import get_except_fix_counters
 
         get_except_fix_counters().vt_wcs_refresh_fail += 1
-        logging.error("[VT REFRESH] WCS prepočet zlyhal: %s — x/y ostávajú stale", e)
+        logging.error("[VT REFRESH] WCS prepocet zlyhal: %s - x/y ostavaju stale", e)
         return
 
-    logging.info("[VT REFRESH] x/y súradnice variable_targets.csv aktualizované z MASTERSTAR WCS")
+    logging.info("[VT REFRESH] x/y suradnice variable_targets.csv aktualizovane z MASTERSTAR WCS")
     xv = df["x"].to_numpy(dtype=np.float64, copy=False)
     yv = df["y"].to_numpy(dtype=np.float64, copy=False)
     if np.isfinite(xv).any() and np.isfinite(yv).any():
@@ -12569,7 +12569,7 @@ def _refresh_variable_targets_xy(
             float(np.nanmax(yv)),
         )
     else:
-        logging.info("[VT REFRESH] %d riadkov (žiadne platné x/y po prepočte)", len(df))
+        logging.info("[VT REFRESH] %d riadkov (ziadne platne x/y po prepocte)", len(df))
 
 
 def select_active_targets(
@@ -12587,42 +12587,42 @@ def select_active_targets(
     plate_scale_arcsec_px: float | None = None,
     cfg: Any | None = None,
 ) -> pd.DataFrame:
-    """Fáza 0: Filtruj VSX premenné → active_targets.
+    """Faza 0: Filtruj VSX premenne -> active_targets.
 
-    Pravidlá:
-    - Hviezda musí byť v snímke (``x,y`` aspoň ``edge_margin_px`` od okraja efektívneho poľa; to isté číslo
-      ako ``chip_interior_margin_px`` vo Fáze 0+1 — jednotné s porovnávačkami a suspected).
-    - Šírka/výška sa zväčší z dát ak treba
+    Pravidla:
+    - Hviezda musi byt v snimke (``x,y`` aspon ``edge_margin_px`` od okraja efektivneho pola; to iste cislo
+      ako ``chip_interior_margin_px`` vo Faze 0+1 - jednotne s porovnavackami a suspected).
+    - Sirka/vyska sa zvacsi z dat ak treba
     - Must match masterstars_full_match.csv (cross-match < match_radius_arcsec).
       VSX without masterstar (DAO+Gaia) match is excluded from active_targets.
-    - ``catalog_id`` z masterstars musí byť neprázdny (inak sa cieľ vynechá).
-    - **Žiadny filter na zónu** (linear / noisy / saturated všetky prejdú); kvalita je v ``zone_flag``,
-      saturované ciele majú ``skip_photometry=True`` pre Fázu 2A.
-    - **Žiadny filter na ``vsx_type``** (SXPHE, DSCT, … sa nevyhadzujú samé o sebe).
+    - ``catalog_id`` z masterstars musi byt neprazdny (inak sa ciel vynecha).
+    - **Ziadny filter na zonu** (linear / noisy / saturated vsetky prejdu); kvalita je v ``zone_flag``,
+      saturovane ciele maju ``skip_photometry=True`` pre Fazu 2A.
+    - **Ziadny filter na ``vsx_type``** (SXPHE, DSCT, ... sa nevyhadzuju same o sebe).
 
     Returns:
-        DataFrame s active targets — stĺpce z variable_targets + pridané zo masterstars:
+        DataFrame s active targets - stlpce z variable_targets + pridane zo masterstars:
         [name, catalog_id, ra_deg, dec_deg, vsx_name, vsx_type, vsx_period,
          x, y, mag, b_v, bp_rp, zone_flag, skip_photometry]
     """
     global LAST_EXCLUDED_TARGETS
-    # Auto-repair poškodených Gaia ID pred načítaním (ak je dostupná lokálna Gaia DB).
+    # Auto-repair poskodenych Gaia ID pred nacitanim (ak je dostupna lokalna Gaia DB).
     _auto_repair_catalog_ids(vt_path=Path(variable_targets_csv), gaia_db_path=gaia_db_path, log_fn=log_event)
 
-    # variable_targets.csv môže prísť zvonka a často má catalog_id ako float/scientific — čítaj ako string
+    # variable_targets.csv moze prist zvonka a casto ma catalog_id ako float/scientific - citaj ako string
     vt = pd.read_csv(variable_targets_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
-    # masterstars_full_match.csv často nesie presný Gaia source_id v "name" aj keď catalog_id je poškodený floatom
+    # masterstars_full_match.csv casto nesie presny Gaia source_id v "name" aj ked catalog_id je poskodeny floatom
     ms = pd.read_csv(masterstars_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
     if "catalog_id" in vt.columns:
         vt["catalog_id"] = vt["catalog_id"].apply(_normalize_gaia_id)
     # Normalizuj Gaia ID na string.
-    # POZOR: "name" v masterstars často obsahuje presný Gaia source_id; nesmieme ho prehnať cez float().
+    # POZOR: "name" v masterstars casto obsahuje presny Gaia source_id; nesmieme ho prehnat cez float().
     if "catalog_id" in ms.columns:
         ms["catalog_id"] = _normalize_id_series(ms["catalog_id"])
     if "name" in ms.columns:
         ms["name"] = ms["name"].fillna("").astype(str).str.strip()
 
-    # Normalizuj bool stĺpce v masterstars
+    # Normalizuj bool stlpce v masterstars
     for col in ("is_usable", "is_saturated", "is_noisy", "snr50_ok", "likely_saturated"):
         if col in ms.columns:
             ms[col] = _bool_col(ms[col])
@@ -12632,14 +12632,14 @@ def select_active_targets(
     )
     if fw != int(frame_w_px) or fh != int(frame_h_px):
         logging.info(
-            "[FÁZA 0] Rozmer čipu zväčšený z %s×%s na %s×%s px (max x,y z variable_targets/masterstars + okraj)",
+            "[FAZA 0] Rozmer cipu zvacseny z %sx%s na %sx%s px (max x,y z variable_targets/masterstars + okraj)",
             int(frame_w_px),
             int(frame_h_px),
             fw,
             fh,
         )
 
-    # Filter: v snímke (annulus-aware safe bbox, else fixed edge margin)
+    # Filter: v snimke (annulus-aware safe bbox, else fixed edge margin)
     vt["x"] = pd.to_numeric(vt["x"], errors="coerce")
     vt["y"] = pd.to_numeric(vt["y"], errors="coerce")
     if safe_bbox is not None:
@@ -12709,7 +12709,7 @@ def select_active_targets(
                 log_event(
                     f"[SELECT TARGETS] WCS scale {_actual_scale:.3f}\"/px deviates "
                     f"{_scale_ratio * 100.0:.1f}% from nominal {_plate_nominal:.3f}\"/px "
-                    f"— pixel-distance matching"
+                    f"- pixel-distance matching"
                 )
         except Exception as _wcs_exc:  # noqa: BLE001
             # EXC-0200: T4 -- Non-numeric Gaia id string returned as-is in select_active_targets helper (EXCEPT-BULK-2 2026-07-08)
@@ -12718,8 +12718,8 @@ def select_active_targets(
     if _use_pixel_dist:
         log_event("[SELECT TARGETS] Distance mode: pixel-fallback")
 
-    # TODO-23: adaptive matching radius — VSX/Gaia catalog → masterstars (not 1-pixel centroid match)
-    # Fixed: respect caller/config floor, adaptive with generous minimum (5× plate scale)
+    # TODO-23: adaptive matching radius - VSX/Gaia catalog -> masterstars (not 1-pixel centroid match)
+    # Fixed: respect caller/config floor, adaptive with generous minimum (5x plate scale)
     if _plate_nominal > 0:
         _adaptive = _plate_nominal * 5.0
         _cfg_floor = float(_cfg.phase01_match_radius_arcsec)
@@ -12727,7 +12727,7 @@ def select_active_targets(
     else:
         match_radius_arcsec = float(_cfg.phase01_match_radius_arcsec)
     LOGGER.debug(
-        '[TODO-23] match_radius=%.2f" (plate_scale=%s"/px, adaptive=5×, floor=%s")',
+        '[TODO-23] match_radius=%.2f" (plate_scale=%s"/px, adaptive=5x, floor=%s")',
         match_radius_arcsec,
         f"{float(plate_scale_arcsec_px):.3f}" if plate_scale_arcsec_px else "unknown",
         f"{float(_cfg.phase01_match_radius_arcsec):.2f}",
@@ -12775,7 +12775,7 @@ def select_active_targets(
         dec_v = float(vrow["dec_deg"])
         if not (math.isfinite(ra_v) and math.isfinite(dec_v)):
             continue
-        # Nájdi najbližší záznam v masterstars
+        # Najdi najblizsi zaznam v masterstars
         if _use_pixel_dist:
             x_v = float(vrow["x"])
             y_v = float(vrow["y"])
@@ -12797,7 +12797,7 @@ def select_active_targets(
         ms_row = ms.iloc[best_idx]
         zone_val_raw = str(ms_row.get("zone", "")).strip()
         zone_flag = _active_target_zone_flag(ms_row, zone_val_raw)
-        # Preferuj "name" (často obsahuje presný Gaia source_id aj keď catalog_id je poškodený float64).
+        # Preferuj "name" (casto obsahuje presny Gaia source_id aj ked catalog_id je poskodeny float64).
         name_raw = ms_row.get("name", "")
         name_norm = normalize_gaia_source_id(name_raw)
         if name_norm and re.fullmatch(r"\d{12,22}", str(name_norm)):
@@ -12807,7 +12807,7 @@ def select_active_targets(
             cid_raw = str(ms_row.get("catalog_id", ms_row.get("name", ""))).strip()
             catalog_id_norm = _normalize_gaia_id(ms_row.get("catalog_id", ms_row.get("name")))
         if not catalog_id_norm:
-            # Fallback na textový reťazec ak _normalize vráti prázdny ale máme nečíselný id
+            # Fallback na textovy retazec ak _normalize vrati prazdny ale mame neciselny id
             catalog_id_norm = _gaia_id_str(cid_raw)
         if not catalog_id_norm:
             no_catalog_id += 1
@@ -12827,7 +12827,7 @@ def select_active_targets(
         if (not snr50_ok_for_skip) and math.isfinite(mag_for_skip) and mag_for_skip < 8.0:
             logging.info(
                 "[SKIP] %s: mag=%.1f snr50_ok=False "
-                "— pravdepodobne saturovaná, skip",
+                "- pravdepodobne saturovana, skip",
                 catalog_id_norm,
                 mag_for_skip,
             )
@@ -12919,14 +12919,14 @@ def select_active_targets(
 
     result = pd.DataFrame(matched_rows) if matched_rows else pd.DataFrame(columns=_empty_cols)
     if "catalog_id" in result.columns:
-        # NEPOUŽÍVAŤ float() (precision loss). Použi robustnú normalizáciu.
+        # NEPOUZIVAT float() (precision loss). Pouzi robustnu normalizaciu.
         result["catalog_id"] = result["catalog_id"].apply(_normalize_gaia_id)
-    # Gaia BP-RP + rovnaká B-V hierarchia ako pre comp (nesmie prepísať všetky b_v z NaN bp_rp v masterstars).
+    # Gaia BP-RP + rovnaka B-V hierarchia ako pre comp (nesmie prepisat vsetky b_v z NaN bp_rp v masterstars).
     result = _enrich_active_targets_bp_rp(
         result,
         gaia_db_path=gaia_db_path,
     )
-    # Deduplicate by catalog_id — keep row with real VSX name over
+    # Deduplicate by catalog_id - keep row with real VSX name over
     # Gaia-placeholder (e.g. "V0842 Her" preferred over
     # "Gaia DR3 1400549806859236864")
     if "catalog_id" in result.columns:
@@ -12960,7 +12960,7 @@ def select_active_targets(
         f"excluded_no_dao_match={n_excluded_no_dao_match}"
     )
     logging.info(
-        f"[FÁZA 0] active_targets: {len(result)} / {len(vt)} VSX hviezd "
+        f"[FAZA 0] active_targets: {len(result)} / {len(vt)} VSX hviezd "
         f"(in_frame={int(in_frame.sum())}, masterstar_matched={len(matched_rows)}, excluded_no_dao_match={n_excluded_no_dao_match})"
     )
     LAST_EXCLUDED_TARGETS = (
@@ -13053,7 +13053,7 @@ def _enrich_target_bp_rp_from_gaia_db(
     vsx_local_db_path: str | None = None,
     gaia_prefetch: dict[str, dict[str, Any]] | None = None,
 ) -> pd.Series:
-    """Doplň ``bp_rp`` pre jeden active target (Fáza 1) z Gaia podľa ``source_id``."""
+    """Dopln ``bp_rp`` pre jeden active target (Faza 1) z Gaia podla ``source_id``."""
     out = target.copy()
     vsx = str(out.get("vsx_name", "") or "").strip() or str(out.get("name", "") or "").strip() or "?"
 
@@ -13110,14 +13110,14 @@ def _enrich_target_bp_rp_from_gaia_db(
                 con.close()
         except Exception as exc:  # noqa: BLE001
             logging.error('[EXC-0202] Outer Gaia SQL for target bp_rp logs failure - target keeps CSV bp_rp or NaN: %s', exc)
-            log_event(f"TARGET Gaia SQL: {vsx} — {exc!s}")
+            log_event(f"TARGET Gaia SQL: {vsx} - {exc!s}")
 
     if math.isfinite(bpr_nf):
         out["bp_rp"] = float(bpr_nf)
     elif math.isfinite(bpr_ms):
         out["bp_rp"] = float(bpr_ms)
     elif not gid:
-        log_event(f"TARGET bp_rp: {vsx} — bez platného Gaia catalog_id")
+        log_event(f"TARGET bp_rp: {vsx} - bez platneho Gaia catalog_id")
     return out
 
 
@@ -13153,8 +13153,8 @@ def _select_comps_by_color_then_rms(
     cfg: AppConfig | None = None,
 ) -> pd.DataFrame:
     """
-    Stupeň 1: farebný filter (|ΔBP-RP|) — tier ladder widen ak < n_comp_min
-    Stupeň 2: rank by comp_rms ASC (Broeg 1/rms equivalent)
+    Stupen 1: farebny filter (|DeltaBP-RP|) - tier ladder widen ak < n_comp_min
+    Stupen 2: rank by comp_rms ASC (Broeg 1/rms equivalent)
     Drop comp_rms < comp_select_rms_floor (isolated_bin artefact).
     """
     if candidates is None or getattr(candidates, "empty", True):
@@ -13229,9 +13229,9 @@ def _select_comps_tiered(
     """
     Vracia (selected_df, selection_note)
 
-    Greedy tier-based výber:
-    T1 → T2 → T3 → T4 (len ak treba)
-    Nikdy nemiešaj T3/T4 ak T1+T2 >= n_comp_min.
+    Greedy tier-based vyber:
+    T1 -> T2 -> T3 -> T4 (len ak treba)
+    Nikdy nemiesaj T3/T4 ak T1+T2 >= n_comp_min.
     Sort: comp_tier ASC, comp_rms ASC, catalog_id (proximity only via max_dist_deg gate).
     """
     _ = tier_weights  # reserved for future (selection is tier/rms-only; weights affect Phase 2A)
@@ -13249,21 +13249,21 @@ def _select_comps_tiered(
         pool["comp_tier"] = pd.to_numeric(pool["comp_tier"], errors="coerce").fillna(4).astype(int)
         pool["comp_rms"] = pd.to_numeric(pool["comp_rms"], errors="coerce")
 
-        # Zoraď: tier ASC, potom comp_rms ASC, potom catalog_id (stable tiebreak)
+        # Zorad: tier ASC, potom comp_rms ASC, potom catalog_id (stable tiebreak)
         pool = pool.sort_values(
             ["comp_tier", "comp_rms", "catalog_id"],
             ascending=[True, True, True],
             kind="mergesort",
         )
 
-        # Ber max n_comp_max (vždy)
+        # Ber max n_comp_max (vzdy)
         selected = pool.head(int(n_comp_max))
 
         n_t1t2 = len(selected[selected["comp_tier"] <= 2])
 
         if len(selected) >= int(n_comp_min):
-            # Máme dostatok — ale over:
-            # ak máme >= n_comp_min z T1+T2, odober T3/T4 z výberu
+            # Mame dostatok - ale over:
+            # ak mame >= n_comp_min z T1+T2, odober T3/T4 z vyberu
             if n_t1t2 >= int(n_comp_min):
                 selected = (
                     selected[selected["comp_tier"] <= 2]
@@ -13279,9 +13279,9 @@ def _select_comps_tiered(
                 elif max_tier == 2:
                     note = "t1t2"
                 else:
-                    note = "t1t2"  # T3/T4 boli odobrané
+                    note = "t1t2"  # T3/T4 boli odobrane
             else:
-                # T3/T4 boli potrebné — selected už obsahuje až n_comp_max
+                # T3/T4 boli potrebne - selected uz obsahuje az n_comp_max
                 if max_tier == 3:
                     note = "t3_fallback"
                 else:
@@ -13315,7 +13315,7 @@ def build_global_comp_pool(
     max_fwhm_factor: float = 1.5,
     edge_bad_frame_frac_max: float = 0.10,
 ) -> pd.DataFrame:
-    """Zostav globálny comp pool — statické filtre + RMS naprieč framami (raz pre pole)."""
+    """Zostav globalny comp pool - staticke filtre + RMS napriec framami (raz pre pole)."""
     pool = masterstars_df.copy()
     for _id_col in ("catalog_id", "name"):
         if _id_col in pool.columns:
@@ -13333,7 +13333,7 @@ def build_global_comp_pool(
 
     margin = int(chip_interior_margin_px)
     if "x" not in pool.columns or "y" not in pool.columns:
-        logging.warning("[GLOBAL COMP POOL] chýbajú x/y — prázdny pool")
+        logging.warning("[GLOBAL COMP POOL] chybaju x/y - prazdny pool")
         return pd.DataFrame()
     xn = pd.to_numeric(pool["x"], errors="coerce")
     yn = pd.to_numeric(pool["y"], errors="coerce")
@@ -13387,7 +13387,7 @@ def build_global_comp_pool(
                 pool = pool.loc[~_bool_col(pool[_ext_col])].copy()
 
     if pool.empty:
-        logging.warning("[GLOBAL COMP POOL] po statických filtroch 0 riadkov")
+        logging.warning("[GLOBAL COMP POOL] po statickych filtroch 0 riadkov")
         return pool.reset_index(drop=True)
 
     id_col = "name" if "name" in pool.columns else "catalog_id"
@@ -13416,12 +13416,12 @@ def build_global_comp_pool(
     pool = _dedupe_comp_pool_by_gaia_key(pool)
     if int(len(pool)) < _before_dedupe:
         logging.info(
-            "[GLOBAL COMP POOL] deduped Gaia catalog_id: %d → %d rows",
+            "[GLOBAL COMP POOL] deduped Gaia catalog_id: %d -> %d rows",
             _before_dedupe,
             int(len(pool)),
         )
     logging.info(
-        "[GLOBAL COMP POOL] %d kandidátov (z %d masterstars, po filtroch)",
+        "[GLOBAL COMP POOL] %d kandidatov (z %d masterstars, po filtroch)",
         len(pool),
         len(masterstars_df),
     )
@@ -13462,7 +13462,7 @@ def _warn_zero_compstars_edge(
     chip_fh: int | None,
     chip_interior_margin_px: int,
 ) -> None:
-    """Pri neúspešnom výbere comp (0 riadkov) — ak je cieľ blízko vnútorného okraja čipu, doplní kontext."""
+    """Pri neuspesnom vybere comp (0 riadkov) - ak je ciel blizko vnutorneho okraja cipu, doplni kontext."""
     try:
         tx = float(pd.to_numeric(target.get("x"), errors="coerce"))
         ty = float(pd.to_numeric(target.get("y"), errors="coerce"))
@@ -13488,7 +13488,7 @@ def _warn_zero_compstars_edge(
     if math.isfinite(dist) and dist < 100.0:
         logging.warning(
             "[COMP] %s: 0 comp stars, target je %.0fpx od okraja bbox "
-            "(edge position — geometricky obmedzené pole)",
+            "(edge position - geometricky obmedzene pole)",
             target_cid,
             float(dist),
         )
@@ -13538,7 +13538,7 @@ def select_comparison_stars_per_target(
     global_comp_pool_df: pd.DataFrame | None = None,
     fwhm_px: float = 3.7,
     max_dist_deg: float = 1.0,
-    max_mag_diff: float = 0.25,  # ±0.25 mag od targetu (základ; pri jasnom ciele viď ``mag_tol`` nižšie)
+    max_mag_diff: float = 0.25,  # +-0.25 mag od targetu (zaklad; pri jasnom ciele vid ``mag_tol`` nizsie)
     max_mag_diff_t1: float = 0.50,
     max_mag_diff_t2: float = 1.00,
     max_mag_diff_t3: float = 1.50,
@@ -13572,50 +13572,50 @@ def select_comparison_stars_per_target(
     gs11_comp_rejects_acc: list[int] | None = None,
     _selection_mode: str = "auto",
 ) -> pd.DataFrame:
-    """Fáza 1: Pre jeden target vyber najstabilnejšie porovnávacie hviezdy.
+    """Faza 1: Pre jeden target vyber najstabilnejsie porovnavacie hviezdy.
 
-    Postup (Možnosť D = B + C):
-    1. Priestorový + fotometrický filter kandidátov z masterstars
-    2. Načítaj flux zo všetkých per-frame CSV (len _PHASE_USECOLS_PERFRAME)
-    3. Normalizuj flux voči ensemble mediánu per snímka
-    4. Vypočítaj RMS scatter pre každého kandidáta
-    5. Iteratívny ensemble filter — vyraď top outlierov kým RMS neklesá
-    6. Vráť top n_comp_max najstabilnejších (min n_comp_min)
+    Postup (Moznost D = B + C):
+    1. Priestorovy + fotometricky filter kandidatov z masterstars
+    2. Nacitaj flux zo vsetkych per-frame CSV (len _PHASE_USECOLS_PERFRAME)
+    3. Normalizuj flux voci ensemble medianu per snimka
+    4. Vypocitaj RMS scatter pre kazdeho kandidata
+    5. Iterativny ensemble filter - vyrad top outlierov kym RMS neklesa
+    6. Vrat top n_comp_max najstabilnejsich (min n_comp_min)
 
     Args:
-        exclude_gaia_nss: Vylúč Gaia non-single stars (binárky, vizuálne dvojhviezdy).
-            Tieto majú variabilný flux nezávislý od počasia → scatter comp hviezdy.
-        exclude_gaia_extobj: Vylúč Gaia QSO a galaxie (gaia_qso, gaia_gal).
-            Nie sú bodové zdroje → systematické chyby v aperturnej fotometrii.
-        max_psf_chi2: Maximálny mediánový PSF chi² kandidáta cez všetky snímky.
-            Vysoké chi² = profil nie je čistý Gaussian = blend alebo rozšírený zdroj.
-            Použije sa len ak je stĺpec psf_chi2 dostupný v per-frame CSV.
+        exclude_gaia_nss: Vyluc Gaia non-single stars (binarky, vizualne dvojhviezdy).
+            Tieto maju variabilny flux nezavisly od pocasia -> scatter comp hviezdy.
+        exclude_gaia_extobj: Vyluc Gaia QSO a galaxie (gaia_qso, gaia_gal).
+            Nie su bodove zdroje -> systematicke chyby v aperturnej fotometrii.
+        max_psf_chi2: Maximalny medianovy PSF chi^2 kandidata cez vsetky snimky.
+            Vysoke chi^2 = profil nie je cisty Gaussian = blend alebo rozsireny zdroj.
+            Pouzije sa len ak je stlpec psf_chi2 dostupny v per-frame CSV.
             Nastavenie na float("inf") filter vypne.
-        max_fwhm_factor: Maximálny pomer fwhm_estimate_px kandidáta voči mediánu
-            všetkých hviezd na snímke. Hodnota > 1.5 indikuje blend dvoch blízkych
-            hviezd. Použije sa len ak je stĺpec fwhm_estimate_px dostupný.
+        max_fwhm_factor: Maximalny pomer fwhm_estimate_px kandidata voci medianu
+            vsetkych hviezd na snimke. Hodnota > 1.5 indikuje blend dvoch blizkych
+            hviezd. Pouzije sa len ak je stlpec fwhm_estimate_px dostupny.
             Nastavenie na float("inf") filter vypne.
-        isolation_radius_px: Polomer v pixeloch pre výpočet contamination indexu.
-            Súčet flux susedov / flux kandidáta v tomto polomere = contamination.
-            Výsledok vstupuje do combined score (soft penalizácia, nie hard exclusion).
-            Nastavenie na 0.0 vypne crowding penalizáciu úplne.
-        max_comp_rms: Maximálny povolený p2p RMS scatter comp hviezdy (mag).
-            Hviezdy s RMS > max_comp_rms sú odmietnuté bez ohľadu na ranking.
-            Default 0.05 mag (50 ppt) — štandardná fotometrická stabilita.
-        min_dist_arcsec: Minimálna vzdialenosť comp hviezdy od targetu v oblúkových
-            sekundách. Zabraňuje PSF overlap pri veľmi blízkych hviezdach.
-            Default 60 arcsec (ochrana aj proti lokálnym artefaktom okolo targetu).
-        mag_bright_threshold: Hranica ``mag`` cieľa (rovnaký systém ako ``target["mag"]``),
-            pod ktorou sa uplatní ``max_mag_diff_bright_floor`` (typicky jasné hviezdy ~9 mag).
-        max_mag_diff_bright_floor: Minimálna šírka |Δmag| pri jasných cieľoch; ``0`` vypne.
-        chip_fw / chip_fh / chip_interior_margin_px: spolu orežú kandidátov na comp hviezdy
-            blízko okraja čipu (rovnaká logika ako Fáza 0 a suspected). ``chip_interior_margin_px=0`` = vypnuté.
-        variable_target_catalog_ids: Gaia ``catalog_id`` zo ``variable_targets.csv`` — tieto hviezdy
-            sa nikdy neponúknu ako porovnávačky (VSX premenné vrátane ``catalog_only``).
+        isolation_radius_px: Polomer v pixeloch pre vypocet contamination indexu.
+            Sucet flux susedov / flux kandidata v tomto polomere = contamination.
+            Vysledok vstupuje do combined score (soft penalizacia, nie hard exclusion).
+            Nastavenie na 0.0 vypne crowding penalizaciu uplne.
+        max_comp_rms: Maximalny povoleny p2p RMS scatter comp hviezdy (mag).
+            Hviezdy s RMS > max_comp_rms su odmietnute bez ohladu na ranking.
+            Default 0.05 mag (50 ppt) - standardna fotometricka stabilita.
+        min_dist_arcsec: Minimalna vzdialenost comp hviezdy od targetu v oblukovych
+            sekundach. Zabranuje PSF overlap pri velmi blizkych hviezdach.
+            Default 60 arcsec (ochrana aj proti lokalnym artefaktom okolo targetu).
+        mag_bright_threshold: Hranica ``mag`` ciela (rovnaky system ako ``target["mag"]``),
+            pod ktorou sa uplatni ``max_mag_diff_bright_floor`` (typicky jasne hviezdy ~9 mag).
+        max_mag_diff_bright_floor: Minimalna sirka |Deltamag| pri jasnych cieloch; ``0`` vypne.
+        chip_fw / chip_fh / chip_interior_margin_px: spolu orezu kandidatov na comp hviezdy
+            blizko okraja cipu (rovnaka logika ako Faza 0 a suspected). ``chip_interior_margin_px=0`` = vypnute.
+        variable_target_catalog_ids: Gaia ``catalog_id`` zo ``variable_targets.csv`` - tieto hviezdy
+            sa nikdy neponuknu ako porovnavacky (VSX premenne vratane ``catalog_only``).
 
     Returns:
-        DataFrame s porovnávacími hviezdami pre tento target, zoradený podľa RMS ASC.
-        Prázdny DataFrame ak sa nenájde dostatok stabilných hviezd.
+        DataFrame s porovnavacimi hviezdami pre tento target, zoradeny podla RMS ASC.
+        Prazdny DataFrame ak sa nenajde dostatok stabilnych hviezd.
     """
     _ = fwhm_px
     from comp_selection_per_target import (  # noqa: PLC0415
@@ -13740,7 +13740,7 @@ def select_comparison_stars_per_target(
         mag_tol = max(mag_tol, float(max_mag_diff_bright_floor))
         if mag_tol > float(max_mag_diff):
             logging.debug(
-                "[FÁZA 1] Target %s: jasný cieľ (mag=%.2f < %.2f) → |Δmag| pás "
+                "[FAZA 1] Target %s: jasny ciel (mag=%.2f < %.2f) -> |Deltamag| pas "
                 "max(%.3f, floor %.3f) = %.3f",
                 target_cid or "?",
                 mag_t,
@@ -13839,7 +13839,7 @@ def select_comparison_stars_per_target(
         else:
             ms_arr_mag = pd.to_numeric(ms.get("mag", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
     except Exception as _iso_exc:  # noqa: BLE001
-        logging.warning(f"[FÁZA 1] Aperture izolácia preskočená (chyba): {_iso_exc!s}")
+        logging.warning(f"[FAZA 1] Aperture izolacia preskocena (chyba): {_iso_exc!s}")
         ms_arr_x = ms_arr_y = ms_arr_mag = np.array([], dtype=float)
 
     id_col = (
@@ -14011,7 +14011,7 @@ def select_comparison_stars_per_target(
 
     candidates = ms[_base_mask | det_mask].copy()
     if candidates.empty:
-        logging.warning(f"[FÁZA 1] {target_cid}: žiadni kandidáti po hard filtroch")
+        logging.warning(f"[FAZA 1] {target_cid}: ziadni kandidati po hard filtroch")
         _warn_zero_compstars_edge(
             target_cid=target_cid,
             target=target,
@@ -14265,22 +14265,22 @@ def run_phase0_and_phase1(
     draft_id: int | None = None,
     db: Any = None,
 ) -> dict[str, Any]:
-    """Spusti Fázu 0 + Fázu 1 a uloží výstupy.
+    """Spusti Fazu 0 + Fazu 1 a ulozi vystupy.
 
-    Výstupy (uložené do output_dir):
-      active_targets.csv              — VSX ciele + ``zone_flag`` / ``skip_photometry`` (saturované)
-      comparison_stars_per_target.csv — porovnávacie hviezdy pre každý cieľ
-      suspected_variables.csv         — kandidáti na nové premenné (vysoký RMS, nie VSX)
+    Vystupy (ulozene do output_dir):
+      active_targets.csv              - VSX ciele + ``zone_flag`` / ``skip_photometry`` (saturovane)
+      comparison_stars_per_target.csv - porovnavacie hviezdy pre kazdy ciel
+      suspected_variables.csv         - kandidati na nove premenne (vysoky RMS, nie VSX)
 
     Returns:
-        dict s kľúčmi:
+        dict s klucmi:
           n_active_targets, n_comparison_pairs,
           active_targets_csv, comparison_stars_csv, suspected_variables_csv,
           targets_without_comps (list catalog_id)
 
     Args:
-        chip_interior_margin_px: Min. počet pixelov od okraja čipu pre **všetky** kroky Fázy 0+1
-            (aktívne ciele, porovnávačky, suspected). ``0`` = bez priestorového orezania.
+        chip_interior_margin_px: Min. pocet pixelov od okraja cipu pre **vsetky** kroky Fazy 0+1
+            (aktivne ciele, porovnavacky, suspected). ``0`` = bez priestoroveho orezania.
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -14307,7 +14307,7 @@ def run_phase0_and_phase1(
     )
     if _frame_hw_src != "caller_default":
         logging.info(
-            "[PHASE 0+1] Frame dimensions %d×%d px from %s (caller default %d×%d)",
+            "[PHASE 0+1] Frame dimensions %dx%d px from %s (caller default %dx%d)",
             int(frame_w_px),
             int(frame_h_px),
             _frame_hw_src,
@@ -14327,7 +14327,7 @@ def run_phase0_and_phase1(
         float(_cfg_base.field_density_dense_threshold),
     )
     logging.info(
-        "[FIELD DENSITY] %.0f hviezd/Mpx → trieda: %s (n_stars=%d, chip=%d×%dpx, n_src=%s)",
+        "[FIELD DENSITY] %.0f hviezd/Mpx -> trieda: %s (n_stars=%d, chip=%dx%dpx, n_src=%s)",
         float(_density),
         _d_class,
         int(_n_field),
@@ -14337,7 +14337,7 @@ def run_phase0_and_phase1(
     )
     _adaptive_on = bool(_cfg_base.field_density_adaptive_enabled)
     _cfg_for_2a = copy.copy(_cfg_base)
-    # ── [CROWDING-CLASSIFIER] signal-based comp overrides (gated, default OFF) ──
+    # -- [CROWDING-CLASSIFIER] signal-based comp overrides (gated, default OFF) --
     # Replaces the detection/scale-locked stars/Mpx class with detection-independent
     # crowding_index signals. Additive sidecar (crowding_index.json); never overwrites
     # field_density.json. Falls back to the stars/Mpx path on any failure.
@@ -14382,8 +14382,8 @@ def run_phase0_and_phase1(
                 max_dist_deg = float(max_dist_deg) + float(_md_delta)
             _crowding_applied = True
             logging.info(
-                "[CROWDING CLASSIFIER] blend=%.4f (th=%.3f) fwhm=%.2fpx (gate>=%.1f→sampled=%s) "
-                "avail=%s (th=%.0f) bottleneck=%s → loosen=%s tighten=%s | legacy stars/Mpx class=%s",
+                "[CROWDING CLASSIFIER] blend=%.4f (th=%.3f) fwhm=%.2fpx (gate>=%.1f->sampled=%s) "
+                "avail=%s (th=%.0f) bottleneck=%s -> loosen=%s tighten=%s | legacy stars/Mpx class=%s",
                 float(_blend) if _blend is not None else float("nan"),
                 float(_cfg_base.crowding_blend_tighten_threshold),
                 float(fwhm_px),
@@ -14436,7 +14436,7 @@ def run_phase0_and_phase1(
                 pass
         except Exception as _exc:  # noqa: BLE001
             logging.warning(
-                "[CROWDING CLASSIFIER] signal computation failed (%s) — falling back to stars/Mpx",
+                "[CROWDING CLASSIFIER] signal computation failed (%s) - falling back to stars/Mpx",
                 _exc,
             )
             _crowding_applied = False
@@ -14499,13 +14499,13 @@ def run_phase0_and_phase1(
                 log_event(
                     f"[WCS SANITY] Scale {_actual_scale:.3f}\"/px deviates "
                     f"{_scale_ratio * 100.0:.1f}% from expected "
-                    f"{_expected_scale:.3f}\"/px — using pixel-distance fallback"
+                    f"{_expected_scale:.3f}\"/px - using pixel-distance fallback"
                 )
                 _wcs_scale_ok = False
         except Exception as _wcs_exc:  # noqa: BLE001
             logging.error('[EXC-0210] WCS scale sanity exception assumes scale OK - comp matching uses ra/dec haversine when ...: %s', exc)
             logging.warning(
-                "[WCS SANITY] check failed (non-fatal): %s — skipping check, assuming WCS scale OK "
+                "[WCS SANITY] check failed (non-fatal): %s - skipping check, assuming WCS scale OK "
                 "(radec-haversine distance mode).",
                 _wcs_exc,
             )
@@ -14514,9 +14514,9 @@ def run_phase0_and_phase1(
         f"{'pixel-fallback' if not _wcs_scale_ok else 'radec-haversine'}"
     )
 
-    # ── FÁZA 0 ──
-    _p("Fáza 0: výber aktívnych cieľov z VSX…")
-    logging.info("[FÁZA 0] Výber aktívnych cieľov...")
+    # -- FAZA 0 --
+    _p("Faza 0: vyber aktivnych cielov z VSX...")
+    logging.info("[FAZA 0] Vyber aktivnych cielov...")
     _cfg_p01 = _cfg_base
     # Load annulus-aware safe bbox from photometry_plan.json (if available).
     _safe_bbox: tuple[float, float, float, float] | None = None
@@ -14545,7 +14545,7 @@ def run_phase0_and_phase1(
                 with astrofits.open(_ms_for_catalog_only, memmap=False) as hdul:
                     _masterstar_wcs = WCS(hdul[0].header)
         except Exception as exc:  # noqa: BLE001
-            logging.warning("[VT REFRESH] MASTERSTAR WCS sa nepodarilo načítať: %s — x/y v variable_targets.csv bez zmeny", exc)
+            logging.warning("[VT REFRESH] MASTERSTAR WCS sa nepodarilo nacitat: %s - x/y v variable_targets.csv bez zmeny", exc)
             _masterstar_wcs = None
 
     _vt_p01 = Path(variable_targets_csv)
@@ -14594,13 +14594,13 @@ def run_phase0_and_phase1(
         logging.error('[EXC-0211] active_targets.csv catalog_id normalization fails - float-truncated IDs written to disk: %s', exc)
         pass
     active.to_csv(active_csv, index=False)
-    logging.info(f"[FÁZA 0] Uložené: {active_csv} ({len(active)} cieľov)")
+    logging.info(f"[FAZA 0] Ulozene: {active_csv} ({len(active)} cielov)")
     _excluded = LAST_EXCLUDED_TARGETS
     if _excluded is not None and not _excluded.empty:
         excluded_csv = output_dir / "excluded_targets.csv"
         _excluded.to_csv(excluded_csv, index=False)
-        logging.info(f"[FÁZA 0] Uložené: {excluded_csv} ({len(_excluded)} excluded)")
-    _p(f"Fáza 0 hotová: {len(active)} aktívnych cieľov")
+        logging.info(f"[FAZA 0] Ulozene: {excluded_csv} ({len(_excluded)} excluded)")
+    _p(f"Faza 0 hotova: {len(active)} aktivnych cielov")
 
     if active.empty:
         return {
@@ -14624,11 +14624,11 @@ def run_phase0_and_phase1(
         if _id_col in ms_df.columns:
             ms_df[_id_col] = _normalize_id_series(ms_df[_id_col])
 
-    # ── FÁZA 1 — per target ──
+    # -- FAZA 1 - per target --
     all_comp_rows: list[pd.DataFrame] = []
     targets_without_comps: list[str] = []
 
-    # PERF-5: unified ProcFrameStore — one disk read per proc_*.csv frame
+    # PERF-5: unified ProcFrameStore - one disk read per proc_*.csv frame
     _pfc_dir = Path(per_frame_csv_dir)
     _proc_glob = PROC_CSV_GLOB
     if not any(_pfc_dir.glob(_proc_glob)):
@@ -14641,7 +14641,7 @@ def run_phase0_and_phase1(
     )
     shared_csv_cache = _proc_store
     csv_paths = [Path(k) for k in _proc_store.keys()]
-    _p(f"Fáza 1: ProcFrameStore {len(_proc_store)} per-frame CSV — výber porovnávačiek ({len(active)} cieľov)…")
+    _p(f"Faza 1: ProcFrameStore {len(_proc_store)} per-frame CSV - vyber porovnavaciek ({len(active)} cielov)...")
 
     try:
         import streamlit as st  # noqa: PLC0415
@@ -14695,14 +14695,14 @@ def run_phase0_and_phase1(
                 flux_col=flux_col,
                 min_frames_frac=float(min_frames_frac),
                 fwhm_px=float(fwhm_px),
-                max_psf_chi2=float("inf"),  # global pool: skip PSF chi² (per-target filter unchanged)
+                max_psf_chi2=float("inf"),  # global pool: skip PSF chi^2 (per-target filter unchanged)
                 max_fwhm_factor=float(max_fwhm_factor),
             )
             if _global_pool_df is None or getattr(_global_pool_df, "empty", True):
                 _global_pool_df = None
         except Exception as _gcp_exc:  # noqa: BLE001
             logging.warning(
-                "[GLOBAL COMP POOL] zostavenie zlyhalo: %s — fallback na per-target masterstars",
+                "[GLOBAL COMP POOL] zostavenie zlyhalo: %s - fallback na per-target masterstars",
                 _gcp_exc,
             )
             _global_pool_df = None
@@ -14750,7 +14750,7 @@ def run_phase0_and_phase1(
                 _gaia_db_targets,
             )
             logging.info(
-                "[PERF-3] Comp Gaia prefetch: %d source_ids → %d hits",
+                "[PERF-3] Comp Gaia prefetch: %d source_ids -> %d hits",
                 _comp_source_ids_n,
                 len(_comp_gaia_prefetch),
             )
@@ -14799,7 +14799,7 @@ def run_phase0_and_phase1(
                 exclude_gaia_extobj=exclude_gaia_extobj,
                 mag_bright_threshold=mag_bright_threshold,
                 max_mag_diff_bright_floor=max_mag_diff_bright_floor,
-                max_psf_chi2=float("inf"),  # DAO-era proc CSV: chi² not ePSF yet
+                max_psf_chi2=float("inf"),  # DAO-era proc CSV: chi^2 not ePSF yet
                 max_fwhm_factor=max_fwhm_factor,
                 isolation_radius_px=isolation_radius_px,
                 flux_col=flux_col,
@@ -14832,7 +14832,7 @@ def run_phase0_and_phase1(
         except Exception as exc:  # noqa: BLE001
             # EXC-0215: T3 -- Prefetch coverage stats log after comp selection suppressed (EXCEPT-BULK-2 2026-07-08)
             logging.warning(
-                "[PHASE1] %s: neočakávaná chyba, preskakujem: %s",
+                "[PHASE1] %s: neocakavana chyba, preskakujem: %s",
                 str(target_row.get("catalog_id", "?")),
                 exc,
             )
@@ -14841,10 +14841,10 @@ def run_phase0_and_phase1(
 
     try:
         active.to_csv(active_csv, index=False)
-        logging.info("[FÁZA 0–1] active_targets.csv prepísané po doplnení bp_rp targetov (Gaia DB).")
+        logging.info("[FAZA 0-1] active_targets.csv prepisane po doplneni bp_rp targetov (Gaia DB).")
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0214] active_targets.csv rewrite after phase1 bp_rp enrichment fails - disk copy lacks update...: %s', exc)
-        log_event(f"active_targets.csv zápis po Fáze 1 zlyhal: {exc!s}")
+        log_event(f"active_targets.csv zapis po Faze 1 zlyhal: {exc!s}")
 
     comp_df = pd.concat(all_comp_rows, ignore_index=True) if all_comp_rows else pd.DataFrame()
     if "target_catalog_id" in comp_df.columns and "catalog_id" in comp_df.columns:
@@ -14910,7 +14910,7 @@ def run_phase0_and_phase1(
             ]
         )
 
-    # Fallback: doplň bp_rp pre COMP hviezdy bez Gaia farby pomocou lokálnej Gaia DB (sky-box okolo RA/Dec).
+    # Fallback: dopln bp_rp pre COMP hviezdy bez Gaia farby pomocou lokalnej Gaia DB (sky-box okolo RA/Dec).
     try:
         if (
             not comp_df.empty
@@ -15054,7 +15054,7 @@ def run_phase0_and_phase1(
                     n_found += 1
 
             if n_nan > 0:
-                log_event(f"COMP bp_rp fallback: {n_found}/{n_nan} hviezd doplnených z Gaia DB")
+                log_event(f"COMP bp_rp fallback: {n_found}/{n_nan} hviezd doplnenych z Gaia DB")
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0217] Whole comp bp_rp Gaia-DB fallback block fails - comps export with NaN bp_rp and wrong t...: %s', exc)
         pass
@@ -15091,10 +15091,10 @@ def run_phase0_and_phase1(
         {"comp_sparse_fallback_target_count": int(_sparse_target_n)},
     )
     logging.info(
-        f"[FÁZA 1] Uložené: {comp_csv} "
-        f"({len(comp_df)} riadkov, {len(all_comp_rows)} targetov s porovnávačkami)"
+        f"[FAZA 1] Ulozene: {comp_csv} "
+        f"({len(comp_df)} riadkov, {len(all_comp_rows)} targetov s porovnavackami)"
     )
-    logging.info(f"[FÁZA 1] Čas (comp selection): {time.time() - _t_phase1:.1f}s")
+    logging.info(f"[FAZA 1] Cas (comp selection): {time.time() - _t_phase1:.1f}s")
     _ps_p1 = float(
         plate_scale_arcsec_px
         if plate_scale_arcsec_px is not None
@@ -15110,9 +15110,9 @@ def run_phase0_and_phase1(
     )
     merge_photometry_pipeline_meta(output_dir, {"gs11_summary": _gs11_p1})
 
-    # ── Suspected variables ──
-    # Hviezdy s vysokým RMS (>3σ nad mediánom) ktoré nie sú VSX ani active targets
-    _p("Fáza 1: suspected variables (nové kandidáty)…")
+    # -- Suspected variables --
+    # Hviezdy s vysokym RMS (>3sigma nad medianom) ktore nie su VSX ani active targets
+    _p("Faza 1: suspected variables (nove kandidaty)...")
     suspected_csv = output_dir / "suspected_variables.csv"
     _active_ids: set[str] = set()
     for _ax in active["catalog_id"].tolist():
@@ -15154,7 +15154,7 @@ def run_phase0_and_phase1(
         logging.error('[EXC-0219] suspected_variables.csv catalog_id auto-repair from Gaia DB fails silently: %s', exc)
         pass
 
-    _p(f"Fáza 0+1 hotovo: {int(len(active))} cieľov, {int(len(comp_df))} párov porovnávačiek")
+    _p(f"Faza 0+1 hotovo: {int(len(active))} cielov, {int(len(comp_df))} parov porovnavaciek")
     return {
         "n_active_targets": int(len(active)),
         "n_comparison_pairs": int(len(comp_df)),
@@ -15207,13 +15207,13 @@ def run_sysrem_field(
 
     Returns:
         dict with keys:
-            'n_stars': int — number of LC files processed
-            'n_frames': int — number of frames (columns in matrix)
-            'n_iter': int — iterations applied
-            'rms_before': float — median RMS across stars before SysRem
-            'rms_after': float — median RMS across stars after SysRem
-            'rms_improvement_pct': float — (rms_before - rms_after) / rms_before * 100
-            'skipped': list[str] — catalog_ids skipped (missing columns etc.)
+            'n_stars': int - number of LC files processed
+            'n_frames': int - number of frames (columns in matrix)
+            'n_iter': int - iterations applied
+            'rms_before': float - median RMS across stars before SysRem
+            'rms_after': float - median RMS across stars after SysRem
+            'rms_improvement_pct': float - (rms_before - rms_after) / rms_before * 100
+            'skipped': list[str] - catalog_ids skipped (missing columns etc.)
     """
     lc_dir = Path(lc_dir)
     lc_files = sorted(lc_dir.glob("lightcurve_*.csv"))
@@ -15298,7 +15298,7 @@ def run_sysrem_field(
         R = R - np.where(np.isfinite(R), correction, 0.0)
 
         logging.info(
-            "[SysRem] Iteration %d/%d — median |c_j|=%.5f, median |a_i|=%.4f",
+            "[SysRem] Iteration %d/%d - median |c_j|=%.5f, median |a_i|=%.4f",
             iteration + 1,
             n_iter,
             float(np.median(np.abs(c))),
@@ -15317,7 +15317,7 @@ def run_sysrem_field(
     )
 
     logging.info(
-        "[SysRem] Done: %d stars × %d frames × %d iter | "
+        "[SysRem] Done: %d stars x %d frames x %d iter | "
         "RMS before=%.4f after=%.4f improvement=%.1f%%",
         n_stars,
         n_frames,
@@ -15367,9 +15367,9 @@ def run_full_photometry_pipeline(
     draft_id: int | None = None,
     progress_cb: Any = None,
 ) -> dict[str, Any]:
-    """Jedno-krokový wrapper: Fáza 0+1 + Fáza 2A ako jeden celok.
+    """Jedno-krokovy wrapper: Faza 0+1 + Faza 2A ako jeden celok.
 
-    UI to používa ako jednu akciu „RUN Aperture Photometry“ pre daný obs_group.
+    UI to pouziva ako jednu akciu 'RUN Aperture Photometry' pre dany obs_group.
     """
     _cfg = cfg or AppConfig()
 
@@ -15416,8 +15416,8 @@ def run_full_photometry_pipeline(
             logging.error('[EXC-0221] VY_FWHM/VY_FWHM_GAUSS header parse fails - pipeline uses default/config FWHM for phase0+1: %s', exc)
             pass
 
-    # ── FÁZA 0+1 ──
-    _p("Fáza 0+1: select targets + comparison stars…")
+    # -- FAZA 0+1 --
+    _p("Faza 0+1: select targets + comparison stars...")
     _plate_scale = _get_plate_scale_from_cfg(
         _cfg,
         db=db,
@@ -15432,7 +15432,7 @@ def run_full_photometry_pipeline(
         )
         if _plate_scale is not None and math.isfinite(float(_plate_scale)) and float(_plate_scale) > 0:
             logging.info(
-                "[FOV] plate_scale from MASTERSTAR.fits header → %.4f arcsec/px",
+                "[FOV] plate_scale from MASTERSTAR.fits header -> %.4f arcsec/px",
                 float(_plate_scale),
             )
     _fw_pipe, _fh_pipe, _frame_hw_src = _resolve_frame_hw_px_from_masterstar(
@@ -15444,7 +15444,7 @@ def run_full_photometry_pipeline(
     )
     if _frame_hw_src != "caller_default":
         logging.info(
-            "[PHASE 0+1] Pipeline frame dimensions %d×%d px from %s",
+            "[PHASE 0+1] Pipeline frame dimensions %dx%d px from %s",
             int(_fw_pipe),
             int(_fh_pipe),
             _frame_hw_src,
@@ -15503,7 +15503,7 @@ def run_full_photometry_pipeline(
             "phase01": p01,
             "phase2a": None,
             "output_dir": str(Path(output_dir)),
-            "error": "Fáza 0+1 nevygenerovala active_targets/comparison_stars CSV.",
+            "error": "Faza 0+1 nevygenerovala active_targets/comparison_stars CSV.",
         }
 
     # INV-DAG-01: phase01 stamp after successful Phase 0+1.
@@ -15514,8 +15514,8 @@ def run_full_photometry_pipeline(
     except Exception as _dag_p01_exc:  # noqa: BLE001
         logging.debug("[INV-DAG-01] phase01 stamp skipped: %s", _dag_p01_exc)
 
-    # ── FÁZA 2A ──
-    _p("Fáza 2A: aperture photometry + lightcurves…")
+    # -- FAZA 2A --
+    _p("Faza 2A: aperture photometry + lightcurves...")
     _cfg2a = p01.get("cfg_effective_for_photometry") or _cfg
     p2a = run_phase2a(
         masterstar_fits_path=Path(masterstar_fits_path),
@@ -15534,7 +15534,7 @@ def run_full_photometry_pipeline(
 
     sysrem_result: dict[str, Any] | None = None
     if bool(_cfg.sysrem_enabled):
-        _p("SysRem: removing systematic trends…")
+        _p("SysRem: removing systematic trends...")
         _sysrem_lc_dir = Path(output_dir) / "lightcurves"
         sysrem_result = run_sysrem_field(
             _sysrem_lc_dir,
@@ -15570,15 +15570,15 @@ def _write_suspected_variables(
     interior_margin_px: int | None = None,
     csv_cache: dict[str, pd.DataFrame] | None = None,
 ) -> None:
-    """Detekuj hviezdy s vysokým RMS scatter ktoré nie sú v VSX — suspected new variables.
+    """Detekuj hviezdy s vysokym RMS scatter ktore nie su v VSX - suspected new variables.
 
-    Zapíše suspected_variables.csv s kolumnami:
+    Zapise suspected_variables.csv s kolumnami:
     catalog_id, ra_deg, dec_deg, mag, comp_rms, n_frames, zone
 
-    Ak sú zadané ``interior_*``, vyhodí sa pool aj per-frame body pri okrajoch čipu
-    (rovnaký okraj ako pri aktívnych cieľoch a porovnávačkách vo ``run_phase0_and_phase1``).
+    Ak su zadane ``interior_*``, vyhodi sa pool aj per-frame body pri okrajoch cipu
+    (rovnaky okraj ako pri aktivnych cieloch a porovnavackach vo ``run_phase0_and_phase1``).
     """
-    # Usable hviezdy ktoré nie sú VSX ani active targets
+    # Usable hviezdy ktore nie su VSX ani active targets
     ms = ms_df.copy()
     for col in ("is_usable", "is_saturated", "is_noisy", "vsx_known_variable"):
         if col in ms.columns:
@@ -15611,7 +15611,7 @@ def _write_suspected_variables(
         _n_pool0 = int(len(pool))
         pool = pool[_ok].copy()
         logging.info(
-            "[SUSPECTED] Orezanie okrajov (rovnaké ako Fáza 0/1, MASTERSTAR x,y): %s → %s hviezd (margin %s px, pole %s×%s)",
+            "[SUSPECTED] Orezanie okrajov (rovnake ako Faza 0/1, MASTERSTAR x,y): %s -> %s hviezd (margin %s px, pole %sx%s)",
             _n_pool0,
             len(pool),
             _m,
@@ -15625,7 +15625,7 @@ def _write_suspected_variables(
         pd.DataFrame().to_csv(output_path, index=False)
         return
 
-    # Načítaj flux pre všetky hviezdy z poolu
+    # Nacitaj flux pre vsetky hviezdy z poolu
     flux_map: dict[str, list[float]] = {cid: [] for cid in pool_ids}
     n_frames = 0
     _cache_hits = 0
@@ -15665,7 +15665,7 @@ def _write_suspected_variables(
             if sub.empty:
                 continue
 
-            # Mag-bin normalizácia: medián zvlášť pre každý mag bin (0.5 mag šírka)
+            # Mag-bin normalizacia: median zvlast pre kazdy mag bin (0.5 mag sirka)
             mag_col_frame = "mag" if "mag" in df.columns else None
             if mag_col_frame and mag_col_frame in sub.columns:
                 sub = sub.copy()
@@ -15681,14 +15681,14 @@ def _write_suspected_variables(
                 if not bin_meds:
                     continue
             else:
-                # Fallback: globálny medián
+                # Fallback: globalny median
                 frame_med = float(sub[actual_flux].median())
                 if not math.isfinite(frame_med) or frame_med <= 0:
                     continue
                 bin_meds = {}
 
             n_frames += 1
-            # Jedna vzorka na hviezdu na snímok (CSV môže mať duplicitné riadky).
+            # Jedna vzorka na hviezdu na snimok (CSV moze mat duplicitne riadky).
             _agg: dict[str, dict[str, float]] = {}
             for _, row in sub.iterrows():
                 cid = str(row[name_c])
@@ -15738,7 +15738,7 @@ def _write_suspected_variables(
     )
     if _cache_misses > 0:
         logging.warning(
-            "[PERF-1] %d frames read from disk (not in shared_csv_cache) — "
+            "[PERF-1] %d frames read from disk (not in shared_csv_cache) - "
             "check if csv_cache is populated before calling _write_suspected_variables",
             _cache_misses,
         )
@@ -15785,7 +15785,7 @@ def _write_suspected_variables(
     med = float(np.median(rms_arr))
     mad_raw = float(np.median(np.abs(rms_arr - med)))
     if not math.isfinite(mad_raw) or mad_raw <= 0:
-        # Fallback: ak MAD=0, použi normalizovanú std ako estimátor
+        # Fallback: ak MAD=0, pouzi normalizovanu std ako estimator
         mad_sigma = float(np.std(rms_arr)) / _MAD_CONSISTENCY or 1e-9
     else:
         mad_sigma = mad_raw / _MAD_CONSISTENCY
@@ -15828,7 +15828,7 @@ def _write_suspected_variables(
         pass
     out_df.to_csv(output_path, index=False)
     logging.info(
-        f"[SUSPECTED] {len(out_df)} kandidátov na nové premenné → {output_path.name} "
+        f"[SUSPECTED] {len(out_df)} kandidatov na nove premenne -> {output_path.name} "
         f"(threshold RMS > {threshold:.4f})"
     )
 

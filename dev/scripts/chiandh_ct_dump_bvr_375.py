@@ -354,7 +354,7 @@ def main() -> int:
         summaries.append(summary)
         all_targets.extend(targets)
         print(
-            f"[{summary['filter']}] c1={summary['c1']:+.4f} ± {summary['c1_stderr']} "
+            f"[{summary['filter']}] c1={summary['c1']:+.4f} +- {summary['c1_stderr']} "
             f"stderr_ratio={summary['stderr_ratio']} n_comp={summary['n_comp']} "
             f"bp_rp=[{summary['comp_bp_rp_min']}, {summary['comp_bp_rp_max']}] "
             f"resid_rms={summary['resid_rms']} ct_ok={summary['n_ct_ok']}/{summary['n_in_range']} "

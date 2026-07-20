@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""T1 — Characterize lost ADU transform: MS(429) − cal Light_008."""
+"""T1 - Characterize lost ADU transform: MS(429) - cal Light_008."""
 from __future__ import annotations
 
 import json
@@ -171,7 +171,7 @@ def star_dipole_check(R: np.ndarray, cal: np.ndarray, n_stars: int = 80) -> dict
             continue
         patch = R[y - 4 : y + 5, x - 4 : x + 5]
         c = float(R[y, x])
-        # neighbors opposite sign from center → dipole-ish
+        # neighbors opposite sign from center -> dipole-ish
         neigh = np.concatenate([patch[0, :].ravel(), patch[-1, :].ravel(), patch[:, 0].ravel(), patch[:, -1].ravel()])
         if np.sign(c) != 0 and np.mean(np.sign(neigh) == -np.sign(c)) > 0.4 and abs(c) > 50:
             dipoles += 1
@@ -216,7 +216,7 @@ def main() -> int:
             "ms_median": float(np.median(ms)),
             "proc_median": float(np.median(proc)),
             "delta_median_ms_cal": float(np.median(ms) - np.median(cal)),
-            "meta_target_sky_note": "431 meta sky_adu~1565 vs 429~1478 (≈−87); residual median ≈ −91",
+            "meta_target_sky_note": "431 meta sky_adu~1565 vs 429~1478 (~-87); residual median ~ -91",
         },
     }
 
@@ -251,7 +251,7 @@ def main() -> int:
         "429_MASTERSTAR": dao_ms,
         "431_cal_Light008": dao_cal431,
         "431_MASTERSTAR": dao_ms431,
-        "expectation": "calibrated ≈8927, MS(429) ≈2816",
+        "expectation": "calibrated ~8927, MS(429) ~2816",
     }
 
     # classify operation
@@ -270,7 +270,7 @@ def main() -> int:
     fig, ax = plt.subplots(figsize=(9, 6))
     vmax = np.percentile(np.abs(R), 99)
     im = ax.imshow(R, origin="lower", cmap="RdBu_r", vmin=-vmax, vmax=vmax, interpolation="nearest")
-    ax.set_title(f"R = MS(429) − cal Light_008  (vmax=p99 |R|={vmax:.1f})")
+    ax.set_title(f"R = MS(429) - cal Light_008  (vmax=p99 |R|={vmax:.1f})")
     plt.colorbar(im, ax=ax, fraction=0.035)
     fig.tight_layout()
     fig.savefig(OUT / "residual_image.png", dpi=120)
@@ -308,10 +308,10 @@ def main() -> int:
 
     # markdown report
     lines = [
-        "# F-431 lost ADU transform — T1 characterization",
+        "# F-431 lost ADU transform - T1 characterization",
         "",
-        f"**Definition:** `R = MASTERSTAR(draft_429) − calibrated BO_CVn_Light_008` (same draft).",
-        f"MASTERSTAR ≡ processed Light_008: **{ms_eq_proc}**.",
+        f"**Definition:** `R = MASTERSTAR(draft_429) - calibrated BO_CVn_Light_008` (same draft).",
+        f"MASTERSTAR == processed Light_008: **{ms_eq_proc}**.",
         "",
         f"## Operation class (best guess): **{op_class}**",
         "",
@@ -325,7 +325,7 @@ def main() -> int:
         "",
         "### Maxabs localization",
         f"- fraction of top-20 |R| peaks at bright star cores: **{loc['fraction_at_bright_cores']:.2f}**",
-        f"- fraction near frame edge (±50 px): **{loc['fraction_near_edge']:.2f}**",
+        f"- fraction near frame edge (+-50 px): **{loc['fraction_near_edge']:.2f}**",
         f"- top-5 peaks: `{json.dumps(loc['top_peaks'][:5], indent=2)}`",
         "",
         "## 2. Spatial character",
@@ -333,15 +333,15 @@ def main() -> int:
         f"- order-1 surface: var_explained=`{fit1['variance_explained']:.3f}`, resid_std=`{fit1['resid_std']:.2f}` (raw std `{fit1['r_std']:.2f}`)",
         f"- order-2 surface: var_explained=`{fit2['variance_explained']:.3f}`, resid_std=`{fit2['resid_std']:.2f}`",
         f"- order-2 coefficients ({', '.join(fit2['names'])}): `{[round(c,6) for c in fit2['coef']]}`",
-        f"- impulsive fraction (|R|>8·MAD): `{impulse['frac_above_8mad']:.4f}` (n={impulse['n_above']})",
+        f"- impulsive fraction (|R|>8.MAD): `{impulse['frac_above_8mad']:.4f}` (n={impulse['n_above']})",
         f"- star dipole check: `{dipole}`",
         "",
         "## 3. Sky-level + DAO accounting",
         "",
-        f"- medians: cal=`{stats['sky_levels']['cal_median']:.2f}`, MS=`{stats['sky_levels']['ms_median']:.2f}`, Δ=`{stats['sky_levels']['delta_median_ms_cal']:.2f}`",
-        f"- matches meta sky 1565→1478 (~−87 ADU) within ~few ADU of median residual.",
+        f"- medians: cal=`{stats['sky_levels']['cal_median']:.2f}`, MS=`{stats['sky_levels']['ms_median']:.2f}`, Delta=`{stats['sky_levels']['delta_median_ms_cal']:.2f}`",
+        f"- matches meta sky 1565->1478 (~-87 ADU) within ~few ADU of median residual.",
         "",
-        "### DAO pass-1 simulation (`σ=2.1`, `FWHM=2.5`, masterstar-ish)",
+        "### DAO pass-1 simulation (`sigma=2.1`, `FWHM=2.5`, masterstar-ish)",
         "",
         f"| Image | n_pass1 | median | std | thr |",
         f"|-------|---------|--------|-----|-----|",
@@ -350,7 +350,7 @@ def main() -> int:
         f"| 431 cal Light_008 | {dao_cal431['n_pass1']} | {dao_cal431['median']:.1f} | {dao_cal431['std']:.2f} | {dao_cal431['threshold']:.2f} |",
         f"| 431 MASTERSTAR (=cal) | {dao_ms431['n_pass1']} | {dao_ms431['median']:.1f} | {dao_ms431['std']:.2f} | {dao_ms431['threshold']:.2f} |",
         "",
-        "Expect ≈8927 (sick) vs ≈2816 (healthy). Live draft metas used full masterstar detect (binning/pass-2);",
+        "Expect ~8927 (sick) vs ~2816 (healthy). Live draft metas used full masterstar detect (binning/pass-2);",
         "this sim is pass-1-only shared recipe on the two images.",
         "",
         "## 4. Figures",
@@ -370,7 +370,7 @@ def main() -> int:
             "(low-order surface explains most variance; not sparse hot pixels; not star dipoles).",
             "Candidate ops: pedestal/sky-median subtract with spatially varying model, polynomial",
             "background, or large-kernel background map subtracted from calibrated frames.",
-            "Current `_preprocess_calibrated_one` is a pure pixel copy — this op is missing.",
+            "Current `_preprocess_calibrated_one` is a pure pixel copy - this op is missing.",
         ]
     else:
         lines += [

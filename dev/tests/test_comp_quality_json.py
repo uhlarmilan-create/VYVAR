@@ -29,7 +29,7 @@ def test_parse_comp_quality_flat_and_structured():
 
 
 def test_stability_outlier_note_on_exclude():
-    """One noisy comp among stable comps → excluded with outlier note."""
+    """One noisy comp among stable comps -> excluded with outlier note."""
     rng = np.random.default_rng(1)
     n = 40
     bjd = np.linspace(2459000.0, 2459000.4, n)

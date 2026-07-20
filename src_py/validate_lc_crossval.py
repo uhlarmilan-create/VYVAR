@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# PyRAF — optional
+# PyRAF - optional
 iraf = None  # type: ignore[assignment,misc]
 IRAF_AVAILABLE = False
 
@@ -35,13 +35,13 @@ try:
     _iraf.apphot(_doprint=0)
     iraf = _iraf
     IRAF_AVAILABLE = True
-    logging.info("PyRAF available — IRAF LC will be computed")
+    logging.info("PyRAF available - IRAF LC will be computed")
 except Exception as exc:  # noqa: BLE001
     iraf = None
     IRAF_AVAILABLE = False
-    logging.warning("PyRAF not available — lc_rms_iraf will be NaN (%s)", exc)
+    logging.warning("PyRAF not available - lc_rms_iraf will be NaN (%s)", exc)
 
-# ── Hardcoded paths (Lenovo, draft_000310) ─────────────────────────────────────
+# -- Hardcoded paths (Lenovo, draft_000310) -------------------------------------
 DRAFT_DIR = Path("/home/milan/Public/VYVAR/draft_000310")
 PROC_DIR = DRAFT_DIR / "detrended_aligned/lights/NoFilter_60_2"
 FITS_DIR = DRAFT_DIR / "processed/lights/NoFilter_60_2"
@@ -79,8 +79,8 @@ SNR_TABLE: dict[float, float] = {
 }
 
 FWHM_PX = 2.3976  # from aperture_snr_table.json
-ANNULUS_INNER_PX = 4.75 * FWHM_PX  # 11.39px — matches VYVAR annulus_inner_fwhm
-ANNULUS_OUTER_PX = 9.0 * FWHM_PX  # 21.58px — matches VYVAR annulus_outer_fwhm
+ANNULUS_INNER_PX = 4.75 * FWHM_PX  # 11.39px - matches VYVAR annulus_inner_fwhm
+ANNULUS_OUTER_PX = 9.0 * FWHM_PX  # 21.58px - matches VYVAR annulus_outer_fwhm
 DANNULUS_PX = ANNULUS_OUTER_PX - ANNULUS_INNER_PX  # 10.19px
 
 logging.basicConfig(
@@ -153,7 +153,7 @@ def load_star_list() -> pd.DataFrame:
 
 
 def load_comp_map() -> dict[str, list[str]]:
-    """target_catalog_id → list of comp catalog_ids (comparison_stars_per_target.csv)."""
+    """target_catalog_id -> list of comp catalog_ids (comparison_stars_per_target.csv)."""
     comp_df = pd.read_csv(
         COMP_PER_TARGET_CSV,
         dtype={"catalog_id": str, "target_catalog_id": str},
@@ -353,7 +353,7 @@ def differential_lc_rms(
     flux_matrix: dict[str, np.ndarray],
     n_frames: int,
 ) -> tuple[float, int]:
-    """Broeg-style differential mag RMS (equal-weight comp ensemble, 3σ MAD clip)."""
+    """Broeg-style differential mag RMS (equal-weight comp ensemble, 3sigma MAD clip)."""
     target_flux = flux_matrix.get(target_cid, np.full(n_frames, np.nan))
     diff_mags: list[float] = []
 
@@ -461,7 +461,7 @@ def log_mag_bin_summary(df: pd.DataFrame) -> None:
         ]
         if len(sub):
             LOGGER.info(
-                "Mag %d-%d: N=%d | median Δ=%.4f | std Δ=%.4f",
+                "Mag %d-%d: N=%d | median Delta=%.4f | std Delta=%.4f",
                 mag_lo,
                 mag_hi,
                 len(sub),
@@ -502,12 +502,12 @@ def save_plot(df: pd.DataFrame, out_png: Path) -> None:
     ok_dp = np.isfinite(mag) & np.isfinite(dp)
     ok_di = np.isfinite(mag) & np.isfinite(di)
     if ok_dp.any():
-        ax2.scatter(mag[ok_dp], dp[ok_dp], s=18, alpha=0.7, c="steelblue", label="photutils − VYVAR")
+        ax2.scatter(mag[ok_dp], dp[ok_dp], s=18, alpha=0.7, c="steelblue", label="photutils - VYVAR")
     if ok_di.any():
-        ax2.scatter(mag[ok_di], di[ok_di], s=18, alpha=0.7, c="darkorange", label="IRAF − VYVAR")
+        ax2.scatter(mag[ok_di], di[ok_di], s=18, alpha=0.7, c="darkorange", label="IRAF - VYVAR")
     ax2.axhline(0.0, color="k", ls="--", lw=1)
     ax2.set_xlabel("Gaia mag")
-    ax2.set_ylabel("Δ lc_rms [mag]")
+    ax2.set_ylabel("Delta lc_rms [mag]")
     ax2.set_title("RMS offset vs magnitude")
     ax2.legend(loc="best", fontsize=8)
     ax2.grid(True, alpha=0.3)
@@ -562,7 +562,7 @@ def main() -> int:
     if valid_p.any():
         dp = out.loc[valid_p, "delta_phot"]
         LOGGER.info(
-            "photutils dao_flux (differential) vs VYVAR: median Δ=%.4f mag, std Δ=%.4f, N=%d",
+            "photutils dao_flux (differential) vs VYVAR: median Delta=%.4f mag, std Delta=%.4f, N=%d",
             float(dp.median()),
             float(dp.std()),
             int(valid_p.sum()),
@@ -572,7 +572,7 @@ def main() -> int:
     if iraf_valid > 0:
         iraf_delta = (out["lc_rms_iraf"] - out["lc_rms_vyvar"]).dropna()
         LOGGER.info(
-            "IRAF (differential) vs VYVAR: median Δ=%.4f mag, std Δ=%.4f, N=%d",
+            "IRAF (differential) vs VYVAR: median Delta=%.4f mag, std Delta=%.4f, N=%d",
             float(iraf_delta.median()),
             float(iraf_delta.std()),
             iraf_valid,

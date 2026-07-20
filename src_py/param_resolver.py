@@ -8,7 +8,7 @@ ONE place that decides, per physical parameter, which source wins:
       DB -> config.  Read-noise and other equipment-intrinsic params remain
       DB-SET (valid) -> HEADER (fallback + cross-check) -> config.
       (DB authority is required because plausible-but-wrong headers exist:
-      draft 363 carries XPIXSIZE=10.0 µm while the real IMX457 pitch is 3.76 µm —
+      draft 363 carries XPIXSIZE=10.0 um while the real IMX457 pitch is 3.76 um -
       a pure sanity range would accept 10.0; only the DB cross-check rejects it.)
     * SITE (lat/lon/elev): per-draft ID_LOCATION -> header SITELAT/LONG/ELEV ->
       config.  config is NOT a silent fallback: if neither the draft location nor
@@ -114,7 +114,7 @@ class SiteResult:
     warnings: list[str] = field(default_factory=list)
 
 
-# Null-island guard: |lat| and |lon| both below this → UNRESOLVED (sanity bound, not user pref).
+# Null-island guard: |lat| and |lon| both below this -> UNRESOLVED (sanity bound, not user pref).
 NULL_ISLAND_LAT_LON_THRESHOLD_DEG: float = 0.01
 
 
@@ -156,7 +156,7 @@ def _clamp(param: str, v: float) -> float:
 
 
 def _scale_bin1_to_binning(value: float, binning: int, exponent: int) -> float:
-    """Scale a bin1 per-pixel DB intrinsic by summed binning (gain: bin², RN: bin).
+    """Scale a bin1 per-pixel DB intrinsic by summed binning (gain: bin^2, RN: bin).
 
     ``READNOISE_E`` in EQUIPMENTS is per-pixel at bin1; scaled *bin for software-summed binning.
     """
@@ -214,7 +214,7 @@ def _scale_bin1_db_for_header(
         _warn_once(
             f"bin1_scale_skip_{param_label}",
             (
-                f"[RESOLVE {param_label}] binning unresolved — using raw DB bin1 value "
+                f"[RESOLVE {param_label}] binning unresolved - using raw DB bin1 value "
                 f"{raw:g} (no scaling)"
             ),
         )
@@ -714,7 +714,7 @@ def _apply_null_island_guard(
         detail += f" draft_id={draft_id}"
     if id_loc is not None:
         detail += f" ID_LOCATION={id_loc}"
-    msg = f"[RESOLVE site] null-island observer coordinates {detail} — treated as UNRESOLVED"
+    msg = f"[RESOLVE site] null-island observer coordinates {detail} - treated as UNRESOLVED"
     logger.error(msg)
     _warn_once("site_null_island", msg)
     res.warnings.append(msg)
@@ -779,7 +779,7 @@ def resolve_site(
             _warn_once(
                 "site_config_fallback",
                 "[RESOLVE site] no per-draft ID_LOCATION and no header SITELAT/LONG; "
-                "using config observer location as a FLAGGED fallback — verify it belongs to this session.",
+                "using config observer location as a FLAGGED fallback - verify it belongs to this session.",
             )
             logger.debug("[RESOLVE site] -> config (flagged) (%.4f,%.4f,%.0f)", res.lat, res.lon, res.elev or 0.0)
             return _apply_null_island_guard(res, db=db, draft_id=draft_id)
@@ -787,7 +787,7 @@ def resolve_site(
     res.source, res.ok = "unresolved", False
     _warn_once(
         "site_unresolved",
-        "[RESOLVE site] observer site unresolved (no draft location, no header, no config) — "
+        "[RESOLVE site] observer site unresolved (no draft location, no header, no config) - "
         "BJD/HJD/airmass left empty; surface in poor-FITS prompt.",
     )
     return res

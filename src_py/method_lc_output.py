@@ -368,5 +368,5 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
         method=method,
         time_base=str(ctx.time_base),
     )
-    LOGGER.info("[METHOD-LC] %s %s → %s", method, ctx.target_cid, out_path.name)
+    LOGGER.info("[METHOD-LC] %s %s -> %s", method, ctx.target_cid, out_path.name)
     return out_path

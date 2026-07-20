@@ -1,4 +1,4 @@
-"""UI: final approval step — persist OBSERVATION and archive key artifacts under ``finalized/``."""
+"""UI: final approval step - persist OBSERVATION and archive key artifacts under ``finalized/``."""
 
 from __future__ import annotations
 
@@ -43,10 +43,10 @@ def _copy_finalization_files(
                     shutil.copy2(src, dst)
                     copied.append(dst.name)
                 else:
-                    log_event(f"Finalizácia: preskočený chýbajúci súbor {src}")
+                    log_event(f"Finalizacia: preskoceny chybajuci subor {src}")
             except Exception as exc:  # noqa: BLE001
-                # EXC-0512: T3 -- UI diagnostic/plot only (else: / log_event(f'Finalizácia: preskočený chýbajúci súbor {s... (EXCEPT-BULK 2026-07-08)
-                log_event(f"Finalizácia: kopírovanie zlyhalo {src} → {dst}: {exc!s}")
+                # EXC-0512: T3 -- UI diagnostic/plot only (else: / log_event(f'Finalizacia: preskoceny chybajuci subor {s... (EXCEPT-BULK 2026-07-08)
+                log_event(f"Finalizacia: kopirovanie zlyhalo {src} -> {dst}: {exc!s}")
 
         pcsv = root / "processed"
         if pcsv.is_dir():
@@ -55,7 +55,7 @@ def _copy_finalization_files(
                 out_flat.mkdir(parents=True, exist_ok=True)
             except Exception as exc:  # noqa: BLE001
                 # EXC-0513: T3 -- UI diagnostic/plot only (try: / out_flat.mkdir(parents=True, exist_ok=True) / except Ex... (EXCEPT-BULK 2026-07-08)
-                log_event(f"Finalizácia: nemôžem vytvoriť {out_flat}: {exc!s}")
+                log_event(f"Finalizacia: nemozem vytvorit {out_flat}: {exc!s}")
             else:
                 for src in pcsv.rglob("*_catalog.csv"):
                     try:
@@ -65,10 +65,10 @@ def _copy_finalization_files(
                             copied.append(f"per_frame_csv/{dst.name}")
                     except Exception as exc:  # noqa: BLE001
                         # EXC-0514: T3 -- UI diagnostic/plot only (shutil.copy2(src, dst) / copied.append(f'per_frame_csv/{dst.na... (EXCEPT-BULK 2026-07-08)
-                        log_event(f"Finalizácia: kopírovanie zlyhalo {src}: {exc!s}")
+                        log_event(f"Finalizacia: kopirovanie zlyhalo {src}: {exc!s}")
     except Exception as exc:  # noqa: BLE001
         # EXC-0515: T3 -- UI diagnostic/plot only (except Exception as exc:  # noqa: BLE001 / log_event(f'Finaliz... (EXCEPT-BULK 2026-07-08)
-        log_event(f"Finalizácia: _copy_finalization_files: {exc!s}")
+        log_event(f"Finalizacia: _copy_finalization_files: {exc!s}")
     return copied
 
 
@@ -101,13 +101,13 @@ def _draft_location_name(db: Any, draft_id: int) -> str:
             (int(draft_id),),
         ).fetchone()
         if row is None:
-            return "—"
+            return "-"
         v = row["place_name"] if hasattr(row, "keys") else row[0]
         s = str(v).strip() if v is not None else ""
-        return s or "—"
+        return s or "-"
     except Exception:  # noqa: BLE001
-        # EXC-0517: T3 -- UI diagnostic/plot only (s = str(v).strip() if v is not None else '' / return s or '—' ... (EXCEPT-BULK 2026-07-08)
-        return "—"
+        # EXC-0517: T3 -- UI diagnostic/plot only (s = str(v).strip() if v is not None else '' / return s or '-' ... (EXCEPT-BULK 2026-07-08)
+        return "-"
 
 
 def _n_light_frames(db: Any, draft_id: int) -> int:
@@ -185,7 +185,7 @@ def render_finalization(
     n_cat = 0
     if archive_path and (archive_path / "processed").is_dir():
         n_cat = sum(1 for _ in (archive_path / "processed").rglob("*_catalog.csv"))
-    checks.append(("Per-frame CSV exists (at least 1 × *_catalog.csv in processed/)", n_cat >= 1))
+    checks.append(("Per-frame CSV exists (at least 1 x *_catalog.csv in processed/)", n_cat >= 1))
 
     comp_path = (archive_path / "platesolve" / "comparison_stars.csv") if archive_path else None
     checks.append(
@@ -204,10 +204,10 @@ def render_finalization(
     checks.append(("Draft is not already finalized", st_fin != "FINALIZED"))
 
     for label, ok in checks:
-        st.markdown(f"{'✅' if ok else '⚠️'} {label}")
+        st.markdown(f"{'[OK]' if ok else '!'} {label}")
 
     if not all(c[1] for c in checks):
-        st.warning("Some checks failed — you may still continue (your call).")
+        st.warning("Some checks failed - you may still continue (your call).")
 
     st.markdown("#### Observation summary")
     scan = _draft_scan_row(db, int(draft_id))
@@ -217,14 +217,14 @@ def render_finalization(
 
     ra_v = row.get("CENTEROFFIELDRA")
     de_v = row.get("CENTEROFFIELDDE")
-    ra_s = f"{float(ra_v):.6f}°" if ra_v is not None else "—"
-    de_s = f"{float(de_v):.6f}°" if de_v is not None else "—"
-    obj = str(row.get("OBJECT") or "").strip() or "—"
-    flt = str((scan or {}).get("filters") or "").strip() or "—"
+    ra_s = f"{float(ra_v):.6f} deg" if ra_v is not None else "-"
+    de_s = f"{float(de_v):.6f} deg" if de_v is not None else "-"
+    obj = str(row.get("OBJECT") or "").strip() or "-"
+    flt = str((scan or {}).get("filters") or "").strip() or "-"
     expt = (scan or {}).get("exptime")
-    expt_s = f"{float(expt):.2f} s" if expt is not None else "—"
+    expt_s = f"{float(expt):.2f} s" if expt is not None else "-"
     binv = (scan or {}).get("binning")
-    bin_s = str(int(binv)) if binv is not None else "—"
+    bin_s = str(int(binv)) if binv is not None else "-"
 
     c1, c2 = st.columns(2)
     with c1:
@@ -235,12 +235,12 @@ def render_finalization(
         st.markdown(f"**Binning:** {bin_s}")
         st.markdown(f"**Light frame count (OBS_FILES):** {n_frames}")
     with c2:
-        st.markdown(f"**DATE_OBS start:** {row.get('DATE_OBS_START') or '—'}")
-        st.markdown(f"**DATE_OBS end:** {row.get('DATE_OBS_END') or '—'}")
-        st.markdown(f"**Equipment:** {tel_eq.get('equipment_name') or '—'}")
-        st.markdown(f"**Telescope:** {tel_eq.get('telescope_name') or '—'}")
+        st.markdown(f"**DATE_OBS start:** {row.get('DATE_OBS_START') or '-'}")
+        st.markdown(f"**DATE_OBS end:** {row.get('DATE_OBS_END') or '-'}")
+        st.markdown(f"**Equipment:** {tel_eq.get('equipment_name') or '-'}")
+        st.markdown(f"**Telescope:** {tel_eq.get('telescope_name') or '-'}")
         st.markdown(f"**Location:** {loc_name}")
-        st.markdown(f"**Archive path:** `{archive_path or '—'}`")
+        st.markdown(f"**Archive path:** `{archive_path or '-'}`")
 
     st.markdown("#### Approval")
     approved_by = st.text_input(
@@ -269,7 +269,7 @@ def render_finalization(
             key="vyvar_finalization_confirm",
         )
         finalize_btn = st.button(
-            "✅ Approve and finalize",
+            "[OK] Approve and finalize",
             type="primary",
             disabled=not confirm,
             key="vyvar_finalization_go",
@@ -283,14 +283,14 @@ def render_finalization(
                     approved_by=approved_by.strip() or None,
                     notes=notes.strip() or None,
                 )
-                log_event(f"Finalizácia: draft {draft_id} → OBSERVATION {obs_id}")
+                log_event(f"Finalizacia: draft {draft_id} -> OBSERVATION {obs_id}")
 
                 if archive_path is None:
-                    st.warning("ARCHIVE_PATH is not set — skipping file copy.")
+                    st.warning("ARCHIVE_PATH is not set - skipping file copy.")
                     copied: list[str] = []
                 else:
                     copied = _copy_finalization_files(archive_path, int(draft_id), obs_id)
-                log_event(f"Finalizácia: skopírovaných {len(copied)} súborov")
+                log_event(f"Finalizacia: skopirovanych {len(copied)} suborov")
 
                 # --- Block B: Register field and comp star library ---
                 _draft_row = pipeline.db.fetch_obs_draft_by_id(int(draft_id))
@@ -317,7 +317,7 @@ def render_finalization(
                             f"FIELD_REGISTRY: field_id={_field_id} pre RA={_field_ra:.4f} Dec={_field_dec:.4f}"
                         )
                     except Exception as _fe:  # noqa: BLE001
-                        log_event(f"FIELD_REGISTRY zápis zlyhal (nekritické): {_fe}")
+                        log_event(f"FIELD_REGISTRY zapis zlyhal (nekriticke): {_fe}")
                         _field_id = None
 
                     if _field_id is not None:
@@ -328,7 +328,7 @@ def render_finalization(
                             _comp_df = pd.read_csv(
                                 _comp_path,
                                 low_memory=False,
-                                dtype={"catalog_id": str, "name": str},  # Gaia ID musí byť str — float64 stráca cifry
+                                dtype={"catalog_id": str, "name": str},  # Gaia ID musi byt str - float64 straca cifry
                             )
 
                             _sidecar_rms: dict[str, float] = {}
@@ -394,24 +394,24 @@ def render_finalization(
                                 observation_id=str(obs_id),
                             )
                             log_event(
-                                f"COMP_STAR_LIBRARY: {_n_upserted} hviezd uložených pre field_id={_field_id}"
+                                f"COMP_STAR_LIBRARY: {_n_upserted} hviezd ulozenych pre field_id={_field_id}"
                             )
 
                         except Exception as _ce:  # noqa: BLE001
                             # EXC-0520: T3 -- UI diagnostic/plot only () / except Exception as _ce:  # noqa: BLE001 / log_event(f'COM... (EXCEPT-BULK 2026-07-08)
-                            log_event(f"COMP_STAR_LIBRARY zápis zlyhal (nekritické): {_ce}")
+                            log_event(f"COMP_STAR_LIBRARY zapis zlyhal (nekriticke): {_ce}")
 
                 if approved_by.strip():
                     st.session_state["vyvar_observer_name"] = approved_by.strip()
 
                 st.success(
-                    f"✅ Observation finalized! OBSERVATION ID = {obs_id}. "
+                    f"[OK] Observation finalized! OBSERVATION ID = {obs_id}. "
                     f"Copied {len(copied)} file(s) to finalized/."
                 )
                 st.balloons()
             except Exception as exc:  # noqa: BLE001
                 st.error(f"Finalization error: {exc}")
-                log_event(f"Finalizácia zlyhala: {exc}")
+                log_event(f"Finalizacia zlyhala: {exc}")
 
 
 def render_known_field_banner(
@@ -437,17 +437,17 @@ def render_known_field_banner(
 
     if result is None:
         st.info(
-            f"🔭 New field (RA={ra:.4f}°, Dec={dec:.4f}°) — "
+            f"[telescope] New field (RA={ra:.4f} deg, Dec={dec:.4f} deg) - "
             "will be added to the field library after finalization."
         )
         return
 
     n_obs = result["n_observations"]
     n_comp = result["n_comp_stars"]
-    last_obs = result.get("last_observation_id") or "—"
+    last_obs = result.get("last_observation_id") or "-"
 
     st.success(
-        f"✅ **Known field!** This field was observed **{n_obs}×**. "
+        f"[OK] **Known field!** This field was observed **{n_obs}x**. "
         f"**{n_comp}** verified comparison stars are available "
         f"from prior observations (latest: `{last_obs}`)."
     )
@@ -491,7 +491,7 @@ def render_known_field_banner(
             st.code(str(_comp_csv_src), language=None)
         with col2:
             if st.button(
-                "📋 Use these comp stars",
+                "[clipboard] Use these comp stars",
                 key="vyvar_use_known_comp_stars",
                 help="Copies comparison_stars.csv into the current draft platesolve/",
             ):
@@ -502,14 +502,14 @@ def render_known_field_banner(
                     _dst.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(str(_comp_csv_src), _dst)
                     log_event(
-                        f"Comp hviezdy skopírované z knižnice: "
-                        f"{_comp_csv_src} → {_dst}"
+                        f"Comp hviezdy skopirovane z kniznice: "
+                        f"{_comp_csv_src} -> {_dst}"
                     )
                     st.success(
-                        f"✅ Copied {Path(str(_comp_csv_src)).name} "
-                        f"→ current draft platesolve/."
+                        f"[OK] Copied {Path(str(_comp_csv_src)).name} "
+                        f"-> current draft platesolve/."
                     )
                     st.rerun()
                 except Exception as exc:  # noqa: BLE001
                     st.error(f"Copy failed: {exc}")
-                    log_event(f"Kopírovanie comp CSV zlyhalo: {exc}")
+                    log_event(f"Kopirovanie comp CSV zlyhalo: {exc}")

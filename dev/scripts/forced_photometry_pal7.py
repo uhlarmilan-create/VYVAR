@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Forced photometry diagnostic — Palomar 7 draft 364 Luminance_180_2 (read-only)."""
+"""Forced photometry diagnostic - Palomar 7 draft 364 Luminance_180_2 (read-only)."""
 from __future__ import annotations
 
 import json
@@ -274,7 +274,7 @@ def _psf_worker(args: tuple) -> tuple[int, float]:
 def run() -> dict[str, Any]:
     cfg = AppConfig()
     if cfg.psf_photometry_enabled:
-        raise RuntimeError("psf_photometry_enabled must be false — this script loads ePSF directly")
+        raise RuntimeError("psf_photometry_enabled must be false - this script loads ePSF directly")
     db = VyvarDatabase(cfg.database_path)
     draft_dir = Path(cfg.archive_root) / "Drafts" / f"draft_{DRAFT_ID:06d}"
     ps_dir = draft_dir / "platesolve" / SETUP

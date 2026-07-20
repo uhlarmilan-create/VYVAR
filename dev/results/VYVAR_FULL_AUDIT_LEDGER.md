@@ -2,7 +2,7 @@
 
 **Status:** AUDIT-ONLY (read + log; no code edits during audit pass).
 **Started:** 2026-06-19
-**Last checkpoint:** Group 7 complete — UI shell (2026-06-19 local) — **7-group map complete**
+**Last checkpoint:** Group 7 complete - UI shell (2026-06-19 local) - **7-group map complete**
 
 Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 functions), targeted verification against `docs/VYVAR_CODE_AUDIT.md` DR2-DR6 threads, science-critical logic reads.
 
@@ -16,9 +16,9 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 2 | Group 1 repro: astroalign RANSAC unseeded | **FIXED** (`seeded_numpy_default_rng` + determinism tests) | `98de910` |
 | 3 | G2-F001 catalog_only silent drop in Phase 2A | **SUPERSEDED** (2026-06-22): forced-aperture / catalog_only path removed; VSX without DAO+Gaia match excluded upstream in `select_active_targets` | `7f0dc86` |
 | 4 | G2-F002 catalog_only placement rejects sibling WCS | **SUPERSEDED** (2026-06-22): catalog_only placement removed with forced-aperture path | `7f0dc86` |
-| — | **Forced-aperture removal — validated do-no-harm** | **DONE** (2026-06-22): strip-FORCED gate vs draft 419 — `mag_inst` 360/360 B; `mag_calib` 357/360 B (one +~30 mmag uniform zeropoint accepted); R XY wrong-star closed. Variable direct-hit-only rule. Backlog: upfront exclusion of intermittently-DAO comps at selection. | `7f0dc86` |
+| - | **Forced-aperture removal - validated do-no-harm** | **DONE** (2026-06-22): strip-FORCED gate vs draft 419 - `mag_inst` 360/360 B; `mag_calib` 357/360 B (one +~30 mmag uniform zeropoint accepted); R XY wrong-star closed. Variable direct-hit-only rule. Backlog: upfront exclusion of intermittently-DAO comps at selection. | `7f0dc86` |
 | 6 | G5-F001 / G4-F002 / G2-F005 / G5-F005 forced-aperture ledger hygiene | **RESOLVED/SUPERSEDED** (`7f0dc86`): no forced-aperture / catalog_only LCs; `export_reports.py` has no `lc_source`; PDF glossary forced-aperture prose obsolete | `7f0dc86` |
-| 7 | G5-F002 AC mag with uncorrected `err` | **RESOLVED (non-issue):** AC is constant `delta_m_corr`; `err` invariant; no `err_ac`; folding `ac_scatter` per-point would misrepresent correlated systematic as random | — |
+| 7 | G5-F002 AC mag with uncorrected `err` | **RESOLVED (non-issue):** AC is constant `delta_m_corr`; `err` invariant; no `err_ac`; folding `ac_scatter` per-point would misrepresent correlated systematic as random | - |
 | 8 | G5-F007 hardcoded 1.3 arcsec/px + `#SOFTWARE=VYVAR/1.0` | **FIXED:** derive-or-None plate scale from `pipeline_meta` / MASTERSTAR WCS; `VYVAR_SOFTWARE_VERSION` + `_aavso_software_header_line` | `6774f83` |
 | 9 | G5-F003 candidate LC PNG uses `mag_inst` | **FIXED:** `_resolve_candidate_lc_mag_for_plot` mirrors export AC precedence; calibrated y-label | `76c5a93` |
 | 10 | G5-F011 split CT/AC consumers (export vs PDF) | **FIXED:** canonical `mag_calib_final` = `mag_calib` + CT + AC; export + all publication figures; G5-F003 precedence subsumed | `be3e193` |
@@ -27,10 +27,10 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 13 | G5-F004 silent export failures | **FIXED:** `record_export_failure` + `log_export_batch_summary`; ERROR logging; Phase 2A batch collector | `efbb4de` |
 | 14 | G7-F001 / G7-F002 unwired Select Stars page | **RESOLVED:** delete `ui_select_stars.py` (phantom `max_bv_diff` / stale kwarg) | `3e1cad7` |
 | 15 | G6-F002 master validity_days mismatch | **FIXED:** unified default dark **90** / flat **200** (dataclass, `__post_init__`, DB seed, `config.json`); DB SETTINGS vestigial | `379e78f` |
-| 16 | G3-F002 query_local_gaia mag_limit None | **FIXED (Path A):** None ⇒ no cap; MASTER_SOURCES `mag_limit=None`; stale 11.5 default removed | `fb75867` |
-| 17 | G1-F001 / G1-F002 alignment_max_control_points | **FIXED:** decouple astroalign CP from detection ladder; `alignment_max_control_points=80`; Chi/h draft 419 `B_20_2` validation PASS — max Δtranslation **0.0275 px**, speedup **5.2–13.8×** (mean **8.6×**); not byte-identical, quality-validated | `2819e86` |
+| 16 | G3-F002 query_local_gaia mag_limit None | **FIXED (Path A):** None => no cap; MASTER_SOURCES `mag_limit=None`; stale 11.5 default removed | `fb75867` |
+| 17 | G1-F001 / G1-F002 alignment_max_control_points | **FIXED:** decouple astroalign CP from detection ladder; `alignment_max_control_points=80`; Chi/h draft 419 `B_20_2` validation PASS - max Deltatranslation **0.0275 px**, speedup **5.2-13.8x** (mean **8.6x**); not byte-identical, quality-validated | `2819e86` |
 | 18 | validate_alignment_control_points draft layouts | **DONE:** `non_calibrated` / `processed` / `calibrated` / `detrended_aligned` lights + default `platesolve/MASTERSTAR` ref | `65a608b` |
-| 19 | G2-F003 dilution aperture 3.0 fallback | **FIXED:** layered fallback map → SNR-derive → skip+flag; fixed 3.0 removed; Seager 2003 / Howell 2006 photometric aperture | `4b13e4a` |
+| 19 | G2-F003 dilution aperture 3.0 fallback | **FIXED:** layered fallback map -> SNR-derive -> skip+flag; fixed 3.0 removed; Seager 2003 / Howell 2006 photometric aperture | `4b13e4a` |
 | 20 | G1-F003 alignment identity / pixel-fallback | **FIXED:** ref-grid pixel NN gated on `VY_ALGN` (`dbf76d5`); failed-alignment epochs flagged in LC (`alignment_failed`) + summary + trust soft signal (`0a43dbf`); residual gate left OFF | `0a43dbf` |
 | 5 | G3-F001 calibration master silent mismatch | **FIXED** (scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity) | `9e3280e` |
 | 21 | G2-F004 err paired by positional index | **FIXED:** `_combine_err_with_ensemble_scatter_keyed` joins scatter by `source_file` | `8f86078` |
@@ -39,9 +39,9 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | 24 | G2-F002b per-frame WCS trust flag | **FIXED:** `catalog_match_mode` + `wcs_untrusted` LC cols; `n_wcs_untrusted` soft-YELLOW trust; NONDET modes split; do-no-harm vs draft 421 PASS | `977920f` |
 | 25 | G7-F003 `phase01_use_bprp_primary` non-persistable | **FIXED:** `AppConfig` field + `config.json` + PARAMS; `ui_aperture_photometry` reads `cfg.phase01_use_bprp_primary` | `31db3af` |
 | 26 | G7-F003b PDF report hardcoded BP-RP primary | **FIXED:** `photometry_report` reads `cfg.phase01_use_bprp_primary` (default True unchanged) | `795faef` |
-| 27 | EQUIP-BINNING DB bin1 fallback unscaled | **FIXED:** FITS equipment intrinsics win; DB bin1 fallback scaled (gain×bin², RN×bin, summed binning); draft 421 gain bit-identical; RN deliberate 1.3→2.6 (~3.9 mmag photon term, NOT do-no-harm); `db=None`→10.0 left unscaled by design | `b19cd7e` |
+| 27 | EQUIP-BINNING DB bin1 fallback unscaled | **FIXED:** FITS equipment intrinsics win; DB bin1 fallback scaled (gainxbin^2, RNxbin, summed binning); draft 421 gain bit-identical; RN deliberate 1.3->2.6 (~3.9 mmag photon term, NOT do-no-harm); `db=None`->10.0 left unscaled by design | `b19cd7e` |
 | 28 | EXOPLANET-XMATCH local host annotation | **DONE:** `exoplanets/exoplanet_make.py` builder (14185 rows CONFIRMED+TOI) + VYVAR read/match integration; informational `exo_*` cols only; draft 421 DB-off/on bit-identical; 1/36 hosts matched (TOI-7453.01, kept as comp); fast-path export gap fixed | `c169675` |
-| 29 | EXO-AS-TARGET exoplanet host promotion | **DONE:** masterstars→`variable_targets` merge; string Gaia id end-to-end (`…0528` true; `…0400` float artifact); dedup VSX∩exo; exclusion flip + proximity veto; draft 422 production-path validation PASS; TOI-1131 saturated at 60s V (observing) | `1616b18` |
+| 29 | EXO-AS-TARGET exoplanet host promotion | **DONE:** masterstars->`variable_targets` merge; string Gaia id end-to-end (`...0528` true; `...0400` float artifact); dedup VSXintersectexo; exclusion flip + proximity veto; draft 422 production-path validation PASS; TOI-1131 saturated at 60s V (observing) | `1616b18` |
 
 ---
 
@@ -50,8 +50,8 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
 | G1-F001 | **FIXED** | L4/L5 | `config.py`, `pipeline.py`, `vyvar_alignment_frame.py` | ~~`max_control_points` dead knob; ladder used `min(max_st, n_fit)`~~ **FIXED:** `alignment_max_control_points` is a real, read config (default 80); dead hardcoded 180 removed; plumbed via `_align_ctx`; ladder uses plumbed cap; detection ladder unchanged. Chi/h draft 419 `B_20_2` validated (not byte-identical). | Caller-facing knobs must bind to the live code path; silent dead params mislead tuning and perf work. |
-| G1-F002 | **FIXED** | L6 | `config.py`, `pipeline.py`, `vyvar_alignment_frame.py` | ~~Dense field: ~200 CP → ~654 s/frame~~ **FIXED:** control points decoupled from detection ladder, capped at cfg default 80. Chi/h 419 `B_20_2` PASS: max Δtranslation **0.0275 px**, speedup **5.2–13.8×** (mean **8.6×**); quality-validated, not byte-identical. | Iteration/control-point budgets need explicit wall-clock + count bounds on dense fields. |
-| G1-F003 | **FIXED** | L4 | `pipeline.py`, `photometry_core.py`, `trust_flag_core.py` | ~~Identity frames: ref-grid pixel-fallback wrong-star; silent LC~~ **FIXED:** pixel NN fallback gated on `VY_ALGN`; `alignment_report.csv` `aligned`/`reason` → per-epoch `alignment_failed` in LC + `n_alignment_failed` summary; trust soft when ≥5% or ≥2 epochs failed; sky-match identity epochs kept (correct flux); `frame_align_residual_gate` still OFF. Do-no-harm: fully-aligned drafts byte-identical `mag_inst` except new all-False `alignment_failed` column. | Failed alignment must not silently use reference-grid pixel matching; identity epochs visible in LC/trust without dropping valid sky-match flux. |
+| G1-F002 | **FIXED** | L6 | `config.py`, `pipeline.py`, `vyvar_alignment_frame.py` | ~~Dense field: ~200 CP -> ~654 s/frame~~ **FIXED:** control points decoupled from detection ladder, capped at cfg default 80. Chi/h 419 `B_20_2` PASS: max Deltatranslation **0.0275 px**, speedup **5.2-13.8x** (mean **8.6x**); quality-validated, not byte-identical. | Iteration/control-point budgets need explicit wall-clock + count bounds on dense fields. |
+| G1-F003 | **FIXED** | L4 | `pipeline.py`, `photometry_core.py`, `trust_flag_core.py` | ~~Identity frames: ref-grid pixel-fallback wrong-star; silent LC~~ **FIXED:** pixel NN fallback gated on `VY_ALGN`; `alignment_report.csv` `aligned`/`reason` -> per-epoch `alignment_failed` in LC + `n_alignment_failed` summary; trust soft when >=5% or >=2 epochs failed; sky-match identity epochs kept (correct flux); `frame_align_residual_gate` still OFF. Do-no-harm: fully-aligned drafts byte-identical `mag_inst` except new all-False `alignment_failed` column. | Failed alignment must not silently use reference-grid pixel matching; identity epochs visible in LC/trust without dropping valid sky-match flux. |
 | G1-F004 | **MED** | L1 | `vyvar_blind_series.py:212-216` | Blind verify tolerance scaled vs fixed `_ref = 1.3`/px (narrow-rig reference), not measured scale. | Scale-dependent tolerances must derive from equipment/WCS scale, not a universal literal. |
 | G1-F005 | **FIXED** | L3 | `optics_selection.py:50-64` | ~~`_first_db_optics_ids`: broad `except: pass` on DB queries~~ **FIXED:** typed excepts + WARNING log on EQUIPMENTS/TELESCOPE lookup failure; returns `None` with operator-visible reason. | DB failures on optics resolution must log; silent pass risks wrong rig. |
 | G1-F006 | **MED** | L4 | `vyvar_platesolver.py:2356-2440` | Odds accept gate (`masterstar_accept_mode=odds`) ignores legacy fraction/distortion when mode=odds - by design per DECISIONS. Thresholds from `config.py` (`masterstar_odds_k=12`, `matched_floor`, `false_alarm_p_max=1e-6`, quadrants>=3). | Document mode split; ensure UI exposes accept_mode if operators need fraction gate. |
@@ -68,7 +68,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 
 ## Coverage table (Group 1 modules)
 
-| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC† | TEST-ONLY† |
+| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC+ | TEST-ONLY+ |
 |--------|-------|-------|---------|------------------|------------|---------------|------------|
 | `pipeline.py` | 17012 | 231 | 231 | 11 | 11 | 0 | 0 |
 | `vyvar_platesolver.py` | 6405 | 91 | 91 | 0 | 0 | 0 | 0 |
@@ -81,7 +81,7 @@ Method: automated AST inventory + lens scans (L1-L11) on 9 modules (415 function
 | `platesolve_ui_paths.py` | 119 | 8 | 8 | 0 | 0 | 0 | 0 |
 | **Group 1 total** | - | **415** | **415** | **13** | **12** | **1** | **0** |
 
-† Reclassified 2026-06-20 (`tmp/reclassify_g1_g2_dead.py`). FLAGGED 14 + NEEDS-TEST 33 unchanged.
++ Reclassified 2026-06-20 (`tmp/reclassify_g1_g2_dead.py`). FLAGGED 14 + NEEDS-TEST 33 unchanged.
 
 ---
 
@@ -575,7 +575,7 @@ Flagged regions (MED): pipeline `generate_masterstar`, `detect_stars_and_match_c
 |----------|-------|----------|
 | `pipeline.py` alignment MP | `ProcessPoolExecutor` result order preserved via `pool.map` + sequential flush - deterministic for frame outputs | - |
 | `vyvar_blind_solver._dbscan_vote_labels` | DBSCAN frontier order depends on seed index loop (deterministic for fixed hits list) | LOW |
-| `vyvar_alignment_frame` astroalign | **FIXED Step 2:** `seeded_numpy_default_rng(VYVAR_RANDOM_SEED)` before `find_transform` | — |
+| `vyvar_alignment_frame` astroalign | **FIXED Step 2:** `seeded_numpy_default_rng(VYVAR_RANDOM_SEED)` before `find_transform` | - |
 | Alignment timestamps | `alignment_report.csv` metadata only - not in photometry columns | - |
 | Blind index pickle load | Deterministic given same index file | - |
 
@@ -603,10 +603,10 @@ Method (Group 2): automated AST inventory + lens scans (L1-L11) on 10 modules (3
 
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
-| G2-F001 | **SUPERSEDED** | L4 | `photometry_core.py` (removed) | ~~catalog_only forced-aperture routing~~ **SUPERSEDED** (`7f0dc86`): path deleted; unmatched VSX excluded in Fáza 0 (`select_active_targets`). Saturated `skip_photometry` unchanged. | Photometry is DAO+Gaia matched only; no forced-aperture LCs. |
+| G2-F001 | **SUPERSEDED** | L4 | `photometry_core.py` (removed) | ~~catalog_only forced-aperture routing~~ **SUPERSEDED** (`7f0dc86`): path deleted; unmatched VSX excluded in Faza 0 (`select_active_targets`). Saturated `skip_photometry` unchanged. | Photometry is DAO+Gaia matched only; no forced-aperture LCs. |
 | G2-F002 | **SUPERSEDED** | L4 | `photometry_core.py` (removed) | ~~catalog_only WCS placement~~ **SUPERSEDED** (`7f0dc86`): placement helpers deleted with forced-aperture path. | Unmatched VSX are excluded, not placed via VSX coords. |
-| G2-F002b | **FIXED** | L4 | `catalog_match_trust.py`, `pipeline.py`, `photometry_core.py`, `trust_flag_core.py` | ~~unsolved per-frame WCS nondetection without trust downgrade~~ **FIXED:** per-epoch `catalog_match_mode` + `wcs_untrusted` on LC; export modes `nondet_no_wcs` / `nondet_unaligned_sky`; `n_wcs_untrusted` soft-YELLOW trust (distinct from `alignment_failed`); flag-only — `mag_inst`/`mag_calib`/`err` bit-identical vs frozen draft 421 on production HEAD re-run. Real-data pixel-fallback firing pending wide-rig data. | Per-frame unsolved trust must downgrade, not silent nondetection. |
-| G2-F003 | **FIXED** | L1 | `photometry_core.py` | ~~`apertures_px.get(target_cid, 3.0)` dilution fallback~~ **FIXED:** `_resolve_photometric_aperture_px_for_gs11` — per-star map → `_aperture_radius_from_snr_table` derive → skip+flag (`dilution_skipped`); fixed 3.0 removed; grounded in Seager 2003 / Howell 2006 (photometric aperture for neighbor search). | Missing per-star aperture must fail loud or derive from SNR table, not a universal 3.0 px literal. |
+| G2-F002b | **FIXED** | L4 | `catalog_match_trust.py`, `pipeline.py`, `photometry_core.py`, `trust_flag_core.py` | ~~unsolved per-frame WCS nondetection without trust downgrade~~ **FIXED:** per-epoch `catalog_match_mode` + `wcs_untrusted` on LC; export modes `nondet_no_wcs` / `nondet_unaligned_sky`; `n_wcs_untrusted` soft-YELLOW trust (distinct from `alignment_failed`); flag-only - `mag_inst`/`mag_calib`/`err` bit-identical vs frozen draft 421 on production HEAD re-run. Real-data pixel-fallback firing pending wide-rig data. | Per-frame unsolved trust must downgrade, not silent nondetection. |
+| G2-F003 | **FIXED** | L1 | `photometry_core.py` | ~~`apertures_px.get(target_cid, 3.0)` dilution fallback~~ **FIXED:** `_resolve_photometric_aperture_px_for_gs11` - per-star map -> `_aperture_radius_from_snr_table` derive -> skip+flag (`dilution_skipped`); fixed 3.0 removed; grounded in Seager 2003 / Howell 2006 (photometric aperture for neighbor search). | Missing per-star aperture must fail loud or derive from SNR table, not a universal 3.0 px literal. |
 | G2-F004 | **FIXED** | L4 | `photometry_core.py` | ~~Fix-A `err` paired with `ensemble_scatter` by positional index~~ **FIXED:** `_combine_err_with_ensemble_scatter_keyed` joins by `source_file` (`8f86078`). | Error model pairing must use stable star keys, not parallel list order. |
 | G2-F005 | **RESOLVED** | L4 | `photometry_core.py` (removed) | ~~Log claimed catalog_only skip while downstream implied photometry~~ **RESOLVED** (`7f0dc86`): catalog_only Phase 2A branch removed; only DAO-matched targets measured. | Operator logs must match the actual branch taken for catalog_only targets. |
 | G2-P001 | **CLEAN** | - | `photometry_core.py:2454-2660` | `ensemble_normalize` verified against SPEC/Honeycutt ensemble ZP math. | Keep as reference implementation for comp ensemble detrend. |
@@ -616,7 +616,7 @@ Method (Group 2): automated AST inventory + lens scans (L1-L11) on 10 modules (3
 
 ## Coverage table (Group 2 modules)
 
-| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC† | TEST-ONLY† |
+| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC+ | TEST-ONLY+ |
 |--------|-------|-------|---------|------------------|------------|---------------|------------|
 | `photometry_core.py` | 13849 | 163 | 163 | 3 | 1 | 2 | 0 |
 | `psf_photometry.py` | 3080 | 44 | 44 | 3 | 1 | 0 | 2 |
@@ -630,7 +630,7 @@ Method (Group 2): automated AST inventory + lens scans (L1-L11) on 10 modules (3
 | `check_star_kmag.py` | 628 | 20 | 20 | 0 | 0 | 0 | 0 |
 | **Group 2 total** | - | **322** | **322** | **7** | **3** | **2** | **2** |
 
-† Reclassified 2026-06-20. FLAGGED 56 + NEEDS-TEST 105 unchanged.
++ Reclassified 2026-06-20. FLAGGED 56 + NEEDS-TEST 105 unchanged.
 
 ## Per-module function registry (Group 2)
 
@@ -1061,35 +1061,35 @@ Method (Group 3): automated AST inventory + lens scans (L1-L11) on 15 modules (3
 
 ### Per-equipment config state (roadmap note)
 
-Rig intrinsics live in SQLite `EQUIPMENTS` / `TELESCOPE` (`GAIN_ADU`, `READNOISE_E`, `PIXELSIZE`, `SENSORSIZE`, `SATURATE_ADU`, `FOCAL`) joined via `OBS_DRAFT`. `CALIBRATION_LIBRARY` rows optionally scoped by `(ID_EQUIPMENTS, ID_TELESCOPE)` with legacy NULL=global masters. Unified provenance resolver: `param_resolver.py` (header → DB → config). No separate per-equipment JSON blob beyond DB + draft provenance sidecars.
+Rig intrinsics live in SQLite `EQUIPMENTS` / `TELESCOPE` (`GAIN_ADU`, `READNOISE_E`, `PIXELSIZE`, `SENSORSIZE`, `SATURATE_ADU`, `FOCAL`) joined via `OBS_DRAFT`. `CALIBRATION_LIBRARY` rows optionally scoped by `(ID_EQUIPMENTS, ID_TELESCOPE)` with legacy NULL=global masters. Unified provenance resolver: `param_resolver.py` (header -> DB -> config). No separate per-equipment JSON blob beyond DB + draft provenance sidecars.
 
 ## Prioritized findings (Group 3 - deduplicated, severity-sorted)
 
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
-| G3-F001 | **HIGH** | L4 | `database.py:2047-2189`, `importer.py:709-838` | ~~`find_best_calibration_library_path` accepts `CCD_TEMP IS NULL`…~~ **FIXED** (fix log step 5): scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity; `_calibration_light_temp_c` reads raw CCD_TEMP. | Calibration master selection must require temperature match and equipment scope; NULL temp is not equivalent to a match. |
-| G3-F002 | **FIXED** | L1/L4 | `database.py:133-256`, `pipeline.py:11404-11411`, `4405` | ~~`query_local_gaia` defaulted `mag_limit=11.5` when omitted~~ **FIXED (Path A):** `mag_limit=None` ⇒ **no g_mag SQL cap**; explicit float unchanged (clamp/log). MASTER_SOURCES calls `mag_limit=None` (small det±0.01° bbox — **no max_rows** guard; dense-box risk negligible). `_query_gaia_local` when `max_mag is None` now full depth. | Gaia cone limits must derive from field depth / caller intent, not a universal 11.5 mag floor. |
-| G3-F003 | **MED** | L3 | `importer.py:692-693`, `733-734` | `_find_matching_master_in_library`: broad `except` on DB lookup and per-file `extract_fits_metadata` → skip candidate with no log at DEBUG only on metadata path. | Master discovery failures must log at operator-visible level; silent skip risks missing calibration. |
+| G3-F001 | **HIGH** | L4 | `database.py:2047-2189`, `importer.py:709-838` | ~~`find_best_calibration_library_path` accepts `CCD_TEMP IS NULL`...~~ **FIXED** (fix log step 5): scoped-only match; dark temp-required; flat no-exptime; registration/fallback parity; `_calibration_light_temp_c` reads raw CCD_TEMP. | Calibration master selection must require temperature match and equipment scope; NULL temp is not equivalent to a match. |
+| G3-F002 | **FIXED** | L1/L4 | `database.py:133-256`, `pipeline.py:11404-11411`, `4405` | ~~`query_local_gaia` defaulted `mag_limit=11.5` when omitted~~ **FIXED (Path A):** `mag_limit=None` => **no g_mag SQL cap**; explicit float unchanged (clamp/log). MASTER_SOURCES calls `mag_limit=None` (small det+-0.01 deg bbox - **no max_rows** guard; dense-box risk negligible). `_query_gaia_local` when `max_mag is None` now full depth. | Gaia cone limits must derive from field depth / caller intent, not a universal 11.5 mag floor. |
+| G3-F003 | **MED** | L3 | `importer.py:692-693`, `733-734` | `_find_matching_master_in_library`: broad `except` on DB lookup and per-file `extract_fits_metadata` -> skip candidate with no log at DEBUG only on metadata path. | Master discovery failures must log at operator-visible level; silent skip risks missing calibration. |
 | G3-F004 | **MED** | L3/L6 | `database.py:173-179`, `507-511`, `query_local_vsx` | Read-path side effects: `CREATE INDEX IF NOT EXISTS` + `commit` on first Gaia/VSX query can block large DBs mid-pipeline. | Index creation belongs to build/migration, not hot query paths. |
-| G3-F005 | **MED** | L1 | `param_resolver.py:85-87` | `GAIN_SETTING_INDEX_MAP` only maps equipment `1` (QHY294MM); other cameras with index-style GAIN headers lack map → DB-only path. | Equipment-specific header index maps must be DB-driven or complete per seeded rig. |
+| G3-F005 | **MED** | L1 | `param_resolver.py:85-87` | `GAIN_SETTING_INDEX_MAP` only maps equipment `1` (QHY294MM); other cameras with index-style GAIN headers lack map -> DB-only path. | Equipment-specific header index maps must be DB-driven or complete per seeded rig. |
 | G3-F006 | **MED** | L11 | `catalog_crossmatch.py:599-655` | Online catalog workers (Vizier/SIMBAD) use epoch-blind cone queries; no PM propagation at crossmatch layer (distinct from platesolver PM path). GAIA-1 deferred for DB build, not for operator crossmatch UI. | Crossmatch epoch/PM handling must be explicit per catalog epoch or flagged uncertain. |
-| G3-F007 | **MED** | L3 | `database.py:34-73` | `get_gaia_db_max_g_mag` returns `0.0` on query failure (logged once) — callers may treat as “empty DB” vs error. | Catalog depth probes must distinguish failure vs empty vs valid max. |
-| G3-F008 | **MED** | L4 | `calibration.py:441-452` | `get_processed_master(..., allow_passthrough=True)` synthesizes zero/one master if file missing — **no production callers** today but dangerous if wired. | Missing master must fail loud; synthetic passthrough corrupts all flux. |
-| G3-F009 | **LOW** | L5 | `database.py`, `importer.py`, `catalog_crossmatch.py` | ~~AST ref-count: ~189 DEAD…~~ **RECLASSIFIED** (2026-06-20): heuristic 207 → **25 TRULY-DEAD**, 182 LIVE-DYNAMIC (dispatch/registry/Qt/dunder); see DEAD reclassification section. | Dead API surface should be trimmed after UI dispatch audit; only TRULY-DEAD rows are removal candidates. |
-| G3-D001 | **DEFER** | L11 | `vyvar_platesolver.py:63` | Known DR4 forward hook: `GAIA_EPOCH=2016.0` → J2017.5 for DR4 build (**not a new finding**). | Epoch constant moves with DR4 rebuild; do not restart DR3. |
-| G3-D002 | **DEFER** | L11 | GAIA-1/GAIA-2 | `pmra/pmdec`, `ruwe` columns deferred to DR4 build per DECISIONS/ROADMAP — `build_gaia_catalog.py` schema omits them today; `query_local_gaia` optionally reads if present. | DR4 build adds columns; no DR3 rebuild. |
-| G3-P001 | **CLEAN** | - | `param_resolver.py` | Documented provenance chain (header → DB → config); site `ok=False` when unresolved; DB cross-check for plausible-but-wrong headers (draft 363 pixel case). | Reference pattern for rig-parameter authority. |
-| G3-P002 | **CLEAN** | - | `calibration.py:412-499` | Dark=block sum, flat=block mean, `VYFLNRD` normalize-after-resample; `infer_spatial_block_factor` for 2795×4164↔1397×2082; Bayer per-tile flat norm. | Calibration math verified; shape inference is principled not universal literals. |
-| G3-P003 | **CLEAN** | - | `gaia_catalog_id.py` | `normalize_gaia_source_id`, `read_vyvar_csv` str dtype, `masterstar_row_gaia_key` — ID integrity for 19-digit Gaia keys. | Gaia ID handling is the catalog join root. |
+| G3-F007 | **MED** | L3 | `database.py:34-73` | `get_gaia_db_max_g_mag` returns `0.0` on query failure (logged once) - callers may treat as 'empty DB' vs error. | Catalog depth probes must distinguish failure vs empty vs valid max. |
+| G3-F008 | **MED** | L4 | `calibration.py:441-452` | `get_processed_master(..., allow_passthrough=True)` synthesizes zero/one master if file missing - **no production callers** today but dangerous if wired. | Missing master must fail loud; synthetic passthrough corrupts all flux. |
+| G3-F009 | **LOW** | L5 | `database.py`, `importer.py`, `catalog_crossmatch.py` | ~~AST ref-count: ~189 DEAD...~~ **RECLASSIFIED** (2026-06-20): heuristic 207 -> **25 TRULY-DEAD**, 182 LIVE-DYNAMIC (dispatch/registry/Qt/dunder); see DEAD reclassification section. | Dead API surface should be trimmed after UI dispatch audit; only TRULY-DEAD rows are removal candidates. |
+| G3-D001 | **DEFER** | L11 | `vyvar_platesolver.py:63` | Known DR4 forward hook: `GAIA_EPOCH=2016.0` -> J2017.5 for DR4 build (**not a new finding**). | Epoch constant moves with DR4 rebuild; do not restart DR3. |
+| G3-D002 | **DEFER** | L11 | GAIA-1/GAIA-2 | `pmra/pmdec`, `ruwe` columns deferred to DR4 build per DECISIONS/ROADMAP - `build_gaia_catalog.py` schema omits them today; `query_local_gaia` optionally reads if present. | DR4 build adds columns; no DR3 rebuild. |
+| G3-P001 | **CLEAN** | - | `param_resolver.py` | Documented provenance chain (header -> DB -> config); site `ok=False` when unresolved; DB cross-check for plausible-but-wrong headers (draft 363 pixel case). | Reference pattern for rig-parameter authority. |
+| G3-P002 | **CLEAN** | - | `calibration.py:412-499` | Dark=block sum, flat=block mean, `VYFLNRD` normalize-after-resample; `infer_spatial_block_factor` for 2795x4164<->1397x2082; Bayer per-tile flat norm. | Calibration math verified; shape inference is principled not universal literals. |
+| G3-P003 | **CLEAN** | - | `gaia_catalog_id.py` | `normalize_gaia_source_id`, `read_vyvar_csv` str dtype, `masterstar_row_gaia_key` - ID integrity for 19-digit Gaia keys. | Gaia ID handling is the catalog join root. |
 | G3-P004 | **CLEAN** | - | `proc_frame_store.py` | Single read / column union for proc CSV; Gaia ID normalization; tested (`test_proc_frame_store.py`). | Proc IO cache pattern is sound. |
-| G3-P005 | **CLEAN** | - | `database.py:2795-2927` | `get_combined_metadata`: focal/pixel from header with DB fallback; binning inferred from `SENSORSIZE` when header lies — connects to G1 T2-2 fix downstream. | Rig geometry merge path is principled (not hardcoded 2082×1397). |
+| G3-P005 | **CLEAN** | - | `database.py:2795-2927` | `get_combined_metadata`: focal/pixel from header with DB fallback; binning inferred from `SENSORSIZE` when header lies - connects to G1 T2-2 fix downstream. | Rig geometry merge path is principled (not hardcoded 2082x1397). |
 | G3-P006 | **CLEAN** | - | `VSX/vsx_make.py` | Schema matches `query_local_vsx` consumers (`oid`, `ra_deg`, `dec_deg`, `var_type`, `period`, `mag_max/min`); incremental `INSERT OR IGNORE`. | VSX local build aligns with DB query layer. |
 
-**Cross-rig trace (Group 3 as source):** Universal literals `2082×1397`, `9.77″/px`, `1.3″/px` do **not** live in Group 3 hot paths (only `calibration.py` documents them as shape examples). Downstream patches (G1 T2-1/T2-2) consumed `get_combined_metadata` / `param_resolver` / header cache — root authority is here, not in photometry.
+**Cross-rig trace (Group 3 as source):** Universal literals `2082x1397`, `9.77 arcsec/px`, `1.3 arcsec/px` do **not** live in Group 3 hot paths (only `calibration.py` documents them as shape examples). Downstream patches (G1 T2-1/T2-2) consumed `get_combined_metadata` / `param_resolver` / header cache - root authority is here, not in photometry.
 
 ## Coverage table (Group 3 modules)
 
-| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC† | TEST-ONLY† |
+| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC+ | TEST-ONLY+ |
 |--------|-------|-------|---------|------------------|------------|---------------|------------|
 | `database.py` | 4181 | 151 | 151 | 72 | 13 | 59 | 0 |
 | `importer.py` | 2034 | 54 | 54 | 46 | 5 | 41 | 0 |
@@ -1108,7 +1108,7 @@ Rig intrinsics live in SQLite `EQUIPMENTS` / `TELESCOPE` (`GAIN_ADU`, `READNOISE
 | `VSX/vsx_make.py` | 195 | 4 | 4 | 2 | 0 | 2 | 0 |
 | **Group 3 total** | - | **367** | **367** | **207** | **25** | **182** | **0** |
 
-† **LIVE-DYNAMIC** / **TEST-ONLY**: reclassification of heuristic-DEAD rows only (2026-06-20 pass). These functions have callers via direct/symbol ref, string dispatch, `getattr`, Qt `.connect`, registry tuples (e.g. `_CATALOG_WORKERS`), dunder protocol, or CLI `__main__`. They are **not** removal candidates.
++ **LIVE-DYNAMIC** / **TEST-ONLY**: reclassification of heuristic-DEAD rows only (2026-06-20 pass). These functions have callers via direct/symbol ref, string dispatch, `getattr`, Qt `.connect`, registry tuples (e.g. `_CATALOG_WORKERS`), dunder protocol, or CLI `__main__`. They are **not** removal candidates.
 
 **Prior checkpoint** reported 189 heuristic DEAD (under-counted module sum); automated inventory is **207** zero-outside-ref private/public functions.
 
@@ -1127,9 +1127,9 @@ Flagged counts (9 FLAGGED) and NEEDS-TEST (142) unchanged from original lens pas
 | LIVE-DYNAMIC (reclassified from DEAD) | 182 |
 | TEST-ONLY (Group-3 subset) | 0 |
 
-**False-positive rate:** 182/207 ≈ **88%** of heuristic DEAD were live (mostly `database.py` / `importer.py` CRUD + `catalog_crossmatch.py` `_CATALOG_WORKERS` registry).
+**False-positive rate:** 182/207 ~ **88%** of heuristic DEAD were live (mostly `database.py` / `importer.py` CRUD + `catalog_crossmatch.py` `_CATALOG_WORKERS` registry).
 
-### TRULY-DEAD list (removal candidates — each still needs per-step do-no-harm before delete)
+### TRULY-DEAD list (removal candidates - each still needs per-step do-no-harm before delete)
 
 | Location | Function |
 |----------|----------|
@@ -1183,7 +1183,7 @@ Same mechanism pass on ledger DEAD samples:
 
 Artifacts: `tmp/reclassify_g1_g2_dead_results.json`, `tmp/reclassify_g1_g2_truly_dead.txt`.
 
-## Coverage table (Group 3 modules) — original heuristic (superseded)
+## Coverage table (Group 3 modules) - original heuristic (superseded)
 
 | Module | Lines | Funcs | Audited | DEAD | FLAGGED | NEEDS-TEST | CLEAN |
 |--------|-------|-------|---------|------|---------|------------|-------|
@@ -1298,7 +1298,7 @@ Flagged regions: `database.find_best_calibration_library_path`, `database.query_
 | `crossmatch_runner` | none | Batch CSV crossmatch untested |
 | `GAIA_DR3/build_gaia_catalog.py` | none | Build/resume TAP untested (offline script) |
 | `VSX/vsx_make.py` | verify script | Schema + mag_limit incremental untested in pytest |
-| `proc_frame_store` | `test_proc_frame_store.py` | Partial — column union / failed frame fallback |
+| `proc_frame_store` | `test_proc_frame_store.py` | Partial - column union / failed frame fallback |
 
 Inventory: 142 NEEDS-TEST + 9 FLAGGED + **25 TRULY-DEAD** (reclassified 2026-06-20; was 207 heuristic DEAD) across Group 3.
 
@@ -1306,12 +1306,12 @@ Inventory: 142 NEEDS-TEST + 9 FLAGGED + **25 TRULY-DEAD** (reclassified 2026-06-
 
 | Location | Issue | Severity |
 |----------|-------|----------|
-| `database.query_local_gaia` | Global `_GAIA_INDEX_CHECK_DONE` — first-query index side effect | MED |
+| `database.query_local_gaia` | Global `_GAIA_INDEX_CHECK_DONE` - first-query index side effect | MED |
 | `GAIA_DR3/build_gaia_catalog.py` | TAP download order deterministic; resume via `INSERT OR IGNORE` | - |
 | `importer._stack_calibration_frames` | Mean/median stack deterministic | - |
 | `catalog_crossmatch` ThreadPoolExecutor | Completion order non-deterministic for UI bullets only | LOW |
 | `gaia_catalog_id.normalize_gaia_source_id` | Pure string logic | - |
-| `fits_header_cache` | mtime-based freshness — reproducible given same files | - |
+| `fits_header_cache` | mtime-based freshness - reproducible given same files | - |
 
 ## Automation artifacts (Group 3, tmp/, gitignored)
 
@@ -1331,30 +1331,30 @@ Inventory: 142 NEEDS-TEST + 9 FLAGGED + **25 TRULY-DEAD** (reclassified 2026-06-
 
 ---
 
-## Group 4 checkpoint — Science / variability / QA (2026-06-20)
+## Group 4 checkpoint - Science / variability / QA (2026-06-20)
 
 **Status:** AUDIT-ONLY batch appended; no code edits in this pass.
 
 Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L11 emphasis) on 16 modules (166 functions); science-critical reads of variability/trust/comp_qa/xval/TESS/HRD paths; reconciliation with DECISIONS (trust gate, comp QA Sokolovsky LOO, SEP xval CLOSED).
 
-### Prioritized findings (Group 4 — deduplicated, severity-sorted)
+### Prioritized findings (Group 4 - deduplicated, severity-sorted)
 
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
 | G4-F001 | **RESOLVED (Option B)** | L4 | `trust_flag_core.py`, `xval_run.py`, docs | Docs described a 3-axis production trust gate including SEP/xval; production uses comp QA + check-star + `lc_quality_flag` only. **Fix (2026-06-19):** DECISIONS/JOURNAL/PIPELINE_CZ corrected; offline headers on `xval_*`; `tests/test_no_xval_in_production.py` guard. No production logic change. | Trust certification must include every axis documented as production, or docs must mark SEP as manual/offline-only. |
-| G4-F002 | **RESOLVED** | L4 | `photometry_core.py` (removed) | ~~`catalog_only` / `lc_source=forced_aperture` → `lc_quality_flag` noisy~~ **RESOLVED** (`7f0dc86`): no catalog_only or forced-aperture LCs remain. | Forced-aperture LCs must not be interpreted as astrophysical variability outside explicit `lc_source` / zone guards. |
-| G4-F003 | **MED** | L3 | `photometry_core.py:8363-8380`, `comp_qa` stage ~8355 | Trust and comp_qa stages wrapped in **non-fatal** `except` — failure logs warning and leaves summary without fresh trust/comp QA columns (not fail-open GREEN, but **silent skip** of verdict layer). | Science verdict stages must log at operator-visible level and surface “trust not evaluated” on failure. |
-| G4-F004 | **MED** | L11 | `comp_qa_core.py:27-46`, `loo_diff_series` | Sokolovsky LOO + mag-locus thresholds (`_SPIKE_HARD=3.0`, MAD with `n<2→nan`) are principled but **small-N / all-NaN comp sets** need adversarial tests before CLEAN. | LOO comp rejection must be validated on thin pools and sparse fields. |
-| G4-F005 | **MED** | L1/L4 | `xval_harness_core.py:14-19`, `assign_sep_confidence` | SEP/DAO ratio thresholds (`_R_SEP_CONFIRMED_HI=1.40`, etc.) are **hardcoded** from draft_000365 harness — not config-sourced; harness is offline-only. | Cross-val pass bounds must be config-visible and tied to equipment/depth when used for gating. |
-| G4-F006 | **MED** | L11 | `tess_verify.py`, `tess_runner.py` | TESS cross-match + comparison — epoch/coordinate handling needs explicit tests (Gaia epoch vs TESS BJD); not fully traced in audit pass. | External survey comparison must document epoch basis and tolerance. |
+| G4-F002 | **RESOLVED** | L4 | `photometry_core.py` (removed) | ~~`catalog_only` / `lc_source=forced_aperture` -> `lc_quality_flag` noisy~~ **RESOLVED** (`7f0dc86`): no catalog_only or forced-aperture LCs remain. | Forced-aperture LCs must not be interpreted as astrophysical variability outside explicit `lc_source` / zone guards. |
+| G4-F003 | **MED** | L3 | `photometry_core.py:8363-8380`, `comp_qa` stage ~8355 | Trust and comp_qa stages wrapped in **non-fatal** `except` - failure logs warning and leaves summary without fresh trust/comp QA columns (not fail-open GREEN, but **silent skip** of verdict layer). | Science verdict stages must log at operator-visible level and surface 'trust not evaluated' on failure. |
+| G4-F004 | **MED** | L11 | `comp_qa_core.py:27-46`, `loo_diff_series` | Sokolovsky LOO + mag-locus thresholds (`_SPIKE_HARD=3.0`, MAD with `n<2->nan`) are principled but **small-N / all-NaN comp sets** need adversarial tests before CLEAN. | LOO comp rejection must be validated on thin pools and sparse fields. |
+| G4-F005 | **MED** | L1/L4 | `xval_harness_core.py:14-19`, `assign_sep_confidence` | SEP/DAO ratio thresholds (`_R_SEP_CONFIRMED_HI=1.40`, etc.) are **hardcoded** from draft_000365 harness - not config-sourced; harness is offline-only. | Cross-val pass bounds must be config-visible and tied to equipment/depth when used for gating. |
+| G4-F006 | **MED** | L11 | `tess_verify.py`, `tess_runner.py` | TESS cross-match + comparison - epoch/coordinate handling needs explicit tests (Gaia epoch vs TESS BJD); not fully traced in audit pass. | External survey comparison must document epoch basis and tolerance. |
 | G4-F007 | **LOW** | L5 | `ui_variability.py:139`, `:700`, `validate_lc_crossval.py:102` | **3 TRULY-DEAD** UI/helper symbols after mechanism pass (see coverage). | Trim only after UI dispatch confirmation. |
-| G4-P001 | **CLEAN** | - | `trust_flag_core.py:35-36`, `write_trust_artifacts` | Missing trust-map entries default **RED** (`_UNEVALUATED_TRUST`) — fail-closed, not fail-open GREEN. | Conservative default for uncertified targets. |
+| G4-P001 | **CLEAN** | - | `trust_flag_core.py:35-36`, `write_trust_artifacts` | Missing trust-map entries default **RED** (`_UNEVALUATED_TRUST`) - fail-closed, not fail-open GREEN. | Conservative default for uncertified targets. |
 | G4-P002 | **CLEAN** | - | `ui_variability.py:609-618`, `photometry_core.py:4588+` | `catalog_only` excluded from variability candidate detection (sky-noise path). | Catalog-only LCs must not enter field-variability candidate pool. |
 | G4-P003 | **CLEAN** | - | `comp_qa_core.py` | Sokolovsky indices + mag-locus LOO QA read-only post-2A; aligns with DECISIONS comp-degradation spec. | Comp health gate is productionized and byte-neutral on photometry. |
 
 ### Coverage table (Group 4 modules)
 
-| Module | Funcs | Audited | TRULY-DEAD | LIVE-DYNAMIC† | FLAGGED | NEEDS-TEST |
+| Module | Funcs | Audited | TRULY-DEAD | LIVE-DYNAMIC+ | FLAGGED | NEEDS-TEST |
 |--------|-------|---------|------------|---------------|---------|------------|
 | `variability_detector.py` | 9 | 9 | 0 | 5 | 3 | 1 |
 | `ui_variability.py` | 30 | 30 | 2 | 14 | 11 | 3 |
@@ -1374,7 +1374,7 @@ Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L11 emphasis)
 | `method_lc_output.py` | 2 | 2 | 0 | 1 | 1 | 0 |
 | **Group 4 total** | **166** | **166** | **3** | **63** | **49** | **51** |
 
-† LIVE-DYNAMIC: heuristic-zero-ref functions reclassified live (Qt callbacks, registry refs). Full rows: `tmp/audit_group4_func_rows.md`.
++ LIVE-DYNAMIC: heuristic-zero-ref functions reclassified live (Qt callbacks, registry refs). Full rows: `tmp/audit_group4_func_rows.md`.
 
 ### TRULY-DEAD (Group 4)
 
@@ -1384,12 +1384,12 @@ Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L11 emphasis)
 | `ui_variability.py:700` | `_render_field_image_with_candidate` |
 | `validate_lc_crossval.py:102` | `_row_mag` |
 
-### Test-gap list (Group 4 — science-critical)
+### Test-gap list (Group 4 - science-critical)
 
 | Module / function | Existing test | Gap |
 |-------------------|---------------|-----|
 | `trust_flag_core.evaluate_target` / missing map | `test_trust_flag.py` + `test_no_xval_in_production.py` | SEP-absent production trust documented and guarded |
-| `classify_lc_quality` + `catalog_only` | none | Forced-aperture high RMS → `lc_quality_flag` path untested |
+| `classify_lc_quality` + `catalog_only` | none | Forced-aperture high RMS -> `lc_quality_flag` path untested |
 | `comp_qa_core` Sokolovsky LOO | scripts | No pytest for small-N comp pool / all-NaN LOO |
 | `assign_sep_confidence` | harness only | Threshold edges (1.40, 0.70) not unit-tested |
 | `variability_detector.compute_rms_variability` | none | Mag-bin envelope + candidate filters untested |
@@ -1408,27 +1408,27 @@ Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L11 emphasis)
 
 ### Automation artifacts (Group 4, tmp/, gitignored)
 
-- `tmp/audit_group4.py` — scan driver
-- `tmp/audit_group4_results.json` — inventory + lens hits
-- `tmp/audit_group4_func_rows.md` — function rows (166)
+- `tmp/audit_group4.py` - scan driver
+- `tmp/audit_group4_results.json` - inventory + lens hits
+- `tmp/audit_group4_func_rows.md` - function rows (166)
 
 **Checkpoint policy:** Milan + Claude review Group 4 batch before Group 5.
 
 ---
 
-## Group 5 checkpoint — Reporting / export (2026-06-20)
+## Group 5 checkpoint - Reporting / export (2026-06-20)
 
 **Status:** AUDIT-ONLY batch appended; no code edits in this pass.
 
 Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L3/L11 emphasis) on 6 modules (174 functions); targeted reads of `export_lightcurve_reports`, AAVSO/VarAstro column assembly, trust-note wiring, PDF overflow discipline, citations vs production trust gate (post G4-F001), `lc_source` / `forced_aperture` provenance (post G2-F001); reconciliation with DECISIONS export specs.
 
-### Prioritized findings (Group 5 — deduplicated, severity-sorted)
+### Prioritized findings (Group 5 - deduplicated, severity-sorted)
 
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
 | G5-F001 | **RESOLVED** | L4/L11 | `export_reports.py` (removed `lc_source` path) | ~~Export ignored `lc_source` / forced_aperture~~ **RESOLVED** (`7f0dc86`): forced-aperture / catalog_only LCs no longer exist; `export_reports.py` has no `lc_source` references. | Forced-aperture / catalog-only LCs must be labeled in every deliverable format or excluded consistently. |
 | G5-F002 | **RESOLVED (non-issue)** | L11 | `export_reports.py:609-621`, `861-862` | ~~AC mag with uncorrected `err`~~ **RESOLVED (non-issue):** AC is a constant `delta_m_corr` shift; `err` (photon+ensemble SEM) is invariant; no `err_ac` in pipeline; folding `ac_scatter` per-point would misrepresent correlated systematic as random. | Exported uncertainty must match the magnitude column actually submitted. |
-| G5-F003 | **FIXED** | L11 | `photometry_report.py` | ~~`_generate_candidate_lc_png` picks first `*mag*` → `mag_inst`~~ **FIXED** (`76c5a93`; superseded by G5-F011): candidate figures use `mag_calib_final`. | Report figures must use the same calibrated mag column as exports unless explicitly labeled instrumental. |
+| G5-F003 | **FIXED** | L11 | `photometry_report.py` | ~~`_generate_candidate_lc_png` picks first `*mag*` -> `mag_inst`~~ **FIXED** (`76c5a93`; superseded by G5-F011): candidate figures use `mag_calib_final`. | Report figures must use the same calibrated mag column as exports unless explicitly labeled instrumental. |
 | G5-F004 | **FIXED** | L3 | `export_reports.py`, `photometry_core.py` | ~~Export failures swallowed (continue + info log)~~ **FIXED** (`efbb4de`): `record_export_failure` + `log_export_batch_summary`; per-target ERROR log; Phase 2A batch collector; batch still completes. | Deliverable writes must surface failures at operator-visible level; missing export files must not be silent. |
 | G5-F005 | **RESOLVED** | L4 | `photometry_report.py` glossary | ~~PDF glossary missing `lc_source=forced_aperture`~~ **RESOLVED** (`7f0dc86`): forced-aperture LC provenance obsolete; glossary `zone_flag` is linear/saturated only; legacy display `zone_flag` on field maps is not export provenance. | Report labels must reflect `lc_source` semantics, not legacy zone-only wording. |
 | G5-F006 | **FIXED** | L11 | `photometry_report.py` | ~~PDF LC/glossary time labels use BJD without (TDB)~~ **FIXED** (`b74c301`): `_pdf_time_axis_label`; BJD(TDB) for bjd/bjd_tdb/bjd_tdb_mid columns; VarAstro unchanged. | Stated time system in labels must match the stored column and export headers. |
@@ -1437,15 +1437,15 @@ Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L3/L11 emphas
 | G5-F009 | **LOW** | L5 | `export_reports.py:106`, `387`, `494` | **3 TRULY-DEAD** helpers after mechanism pass (`_observer_location_configured`, `_test_is_eclipsing`, `_comp_quality_map_for_export`). | Trim only after confirming no dynamic/registry dispatch. |
 | G5-F010 | **LOW** | L5 | `photometry_report.py:522`, `1874` | **2 TRULY-DEAD** builder methods (`_lunar_risk_fill_color`, `_katalogy_cell_for_pdf`). | UI/PDF trim candidates after dispatch confirmation. |
 | G5-F011 | **FIXED** | L11 | `photometry_core.py`, `export_reports.py`, `photometry_report.py` | ~~Parallel CT/AC on `mag_calib`; export used AC, main PDF used CT~~ **FIXED** (`be3e193`): `mag_calib_final` = `mag_calib` + CT + AC; LC CSV + export + all publication LC figures; `lc_rms`/trust stay on `mag_calib`. | All publication-facing figures and export must use the same canonical calibrated magnitude. |
-| G5-P001 | **CLEAN** | - | `export_reports.py:677-679`, `41-78` | Per-draft `pipeline_meta.json` observer site preferred over session `cfg` for export coordinates — matches BJD/airmass site. | Exported observer location must match photometry time-system site. |
-| G5-P002 | **CLEAN** | - | `export_reports.py:794-803`, `958-963` | Trust notes use `format_export_trust_note` / `format_varastro_trust_comment` from `trust_flag_core` — **no SEP / 3-axis wording** in export comments (post G4-F001). | Export trust text must match production trust gate semantics. |
+| G5-P001 | **CLEAN** | - | `export_reports.py:677-679`, `41-78` | Per-draft `pipeline_meta.json` observer site preferred over session `cfg` for export coordinates - matches BJD/airmass site. | Exported observer location must match photometry time-system site. |
+| G5-P002 | **CLEAN** | - | `export_reports.py:794-803`, `958-963` | Trust notes use `format_export_trust_note` / `format_varastro_trust_comment` from `trust_flag_core` - **no SEP / 3-axis wording** in export comments (post G4-F001). | Export trust text must match production trust gate semantics. |
 | G5-P003 | **CLEAN** | - | `citations.py:353-366`, `tests/test_export_citations.py:124-138` | DATA-QUALITY GATE cites Sokolovsky + von Neumann for comp_qa/trust; **Barbary/Bertin (SEP) excluded** from export when trust/comp_qa on. | Methods/citations must not cite offline-only SEP axis as production. |
-| G5-P004 | **CLEAN** | - | `photometry_report.py:1545-1577`, `5072-5076` | PDF builder supports `verify_overflow` mode with `_bounds_check` / violation logging (“0 PDF overflow” discipline). | Long tables/names must not silently overflow page bounds. |
+| G5-P004 | **CLEAN** | - | `photometry_report.py:1545-1577`, `5072-5076` | PDF builder supports `verify_overflow` mode with `_bounds_check` / violation logging ('0 PDF overflow' discipline). | Long tables/names must not silently overflow page bounds. |
 | G5-P005 | **CLEAN** | - | `export_reports.py:854`, `914`, `1006` | AAVSO `#DATE=BJD` + VarAstro `# TIME SYSTEM: BJD(TDB)` align with LC `bjd` from `bjd_tdb_mid`. | Export time-system headers must match LC column semantics. |
 
 ### Coverage table (Group 5 modules)
 
-| Module | Funcs | Audited | TRULY-DEAD | LIVE-DYNAMIC† | FLAGGED | NEEDS-TEST |
+| Module | Funcs | Audited | TRULY-DEAD | LIVE-DYNAMIC+ | FLAGGED | NEEDS-TEST |
 |--------|-------|---------|------------|---------------|---------|------------|
 | `photometry_report.py` | 123 | 123 | 2 | 89 | 11 | 21 |
 | `export_reports.py` | 27 | 27 | 3 | 17 | 6 | 1 |
@@ -1455,7 +1455,7 @@ Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L3/L11 emphas
 | `jd_axis_format.py` | 2 | 2 | 0 | 0 | 2 | 0 |
 | **Group 5 total** | **174** | **174** | **5** | **111** | **20** | **38** |
 
-† LIVE-DYNAMIC: heuristic-zero-ref functions reclassified live (Qt/reportlab callbacks, registry refs). Full rows: `tmp/audit_group5_func_rows.md`.
++ LIVE-DYNAMIC: heuristic-zero-ref functions reclassified live (Qt/reportlab callbacks, registry refs). Full rows: `tmp/audit_group5_func_rows.md`.
 
 ### TRULY-DEAD (Group 5)
 
@@ -1467,29 +1467,29 @@ Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L3/L11 emphas
 | `export_reports.py:387` | `_test_is_eclipsing` |
 | `export_reports.py:494` | `_comp_quality_map_for_export` |
 
-### Test-gap list (Group 5 — deliverable-critical)
+### Test-gap list (Group 5 - deliverable-critical)
 
 | Module / function | Existing test | Gap |
 |-------------------|---------------|-----|
 | `export_lightcurve_reports` / AAVSO row assembly | `test_gs11_pipeline` (notes suffix only) | No pytest round-trip: full LC row mag/err/filter/BJD/airmass column order vs AAVSO Extended spec |
-| `_select_export_lc_rows` + `mag_calib_ac` | none | AC-on export must pair `mag_calib_ac` with correct uncertainty — untested |
+| `_select_export_lc_rows` + `mag_calib_ac` | none | AC-on export must pair `mag_calib_ac` with correct uncertainty - untested |
 | `catalog_only` / `forced_aperture` export | `test_phase2a_catalog_only_routing` (summary only) | No test that AAVSO/VarAstro labels or excludes forced-aperture LCs |
 | RED-trust export row | `test_trust_flag` (formatters only) | No test that `trust=` appears in AAVSO NOTES for RED targets with correct reason text |
-| `_generate_candidate_lc_png` | none | Candidate LC figure uses `mag_inst` — no test asserting calibrated mag |
+| `_generate_candidate_lc_png` | none | Candidate LC figure uses `mag_inst` - no test asserting calibrated mag |
 | `_is_eclipsing` / VarAstro gate | inline `_test_is_eclipsing` (dead) | Eclipsing-type filter not in pytest |
 | `pdf_report.generate_report` | `test_report_methods` (paths only) | No PDF byte/layout test; overflow verify not in CI |
-| `report_methods` path helpers | `test_report_methods.py` | Path naming only — no export content |
-| `jd_axis_format` | none | Display offset logic untested (low risk — not export column path) |
-| `emit_export_citation_lines` | `test_export_citations.py` | Citation presence only — not full VarAstro body reconciliation |
+| `report_methods` path helpers | `test_report_methods.py` | Path naming only - no export content |
+| `jd_axis_format` | none | Display offset logic untested (low risk - not export column path) |
+| `emit_export_citation_lines` | `test_export_citations.py` | Citation presence only - not full VarAstro body reconciliation |
 
 ### Reproducibility scan (Group 5)
 
 | Location | Issue | Severity |
 |----------|-------|----------|
-| `export_reports._bjd_to_datestr_yyyymmdd` | BJD(TDB) → UTC calendar for filename date tag; edge-of-night boundary could shift date tag vs observer night | LOW |
-| `export_reports` file naming | `safe_name` + first-LC `date_tag` — deterministic given LC order | - |
-| `photometry_report` PDF | Reportlab paragraph wrap — deterministic given data | - |
-| `citations.build_run_citation_context` | Config/meta driven — reproducible given same draft meta | - |
+| `export_reports._bjd_to_datestr_yyyymmdd` | BJD(TDB) -> UTC calendar for filename date tag; edge-of-night boundary could shift date tag vs observer night | LOW |
+| `export_reports` file naming | `safe_name` + first-LC `date_tag` - deterministic given LC order | - |
+| `photometry_report` PDF | Reportlab paragraph wrap - deterministic given data | - |
+| `citations.build_run_citation_context` | Config/meta driven - reproducible given same draft meta | - |
 | `jd_axis_format` | Pure numeric offset for display | - |
 
 ### Per-module function registry (Group 5)
@@ -1672,15 +1672,15 @@ Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L3/L11 emphas
 
 ### Automation artifacts (Group 5, tmp/, gitignored)
 
-- `tmp/audit_group5.py` — scan driver
-- `tmp/audit_group5_results.json` — inventory + lens hits
-- `tmp/audit_group5_func_rows.md` — function rows (174)
+- `tmp/audit_group5.py` - scan driver
+- `tmp/audit_group5_results.json` - inventory + lens hits
+- `tmp/audit_group5_func_rows.md` - function rows (174)
 
 **Checkpoint policy:** Milan + Claude review Group 5 batch before Group 6.
 
 ---
 
-## Group 6 checkpoint — Config / orchestration / utils (2026-06-19)
+## Group 6 checkpoint - Config / orchestration / utils (2026-06-19)
 
 **Module set (12 modules, 110 functions, ~4.9k LOC audited):**
 
@@ -1693,78 +1693,78 @@ Method: AST inventory + mechanism-aware DEAD pass + lens scans (L1/L3/L11 emphas
 | `vyvar_ui_status.py` | Footer status strings / BV column visibility helper |
 | `inspect_drafts.py` | CLI draft summary (plate scale hints) |
 | `lunar_context.py` | Lunar phase / separation for reports |
-| `orchestrator/vyvar_orchestrator.py` | Claude↔Cursor file bridge (dev) |
+| `orchestrator/vyvar_orchestrator.py` | Claude<->Cursor file bridge (dev) |
 | `scripts/_build_vyvar_params.py` | `VYVAR_PARAMS.md` registry generator |
 | `simulate_night_run.py` | Night-run simulation CLI |
 | `run_crowding_index.py` | Crowding index CLI |
 | `run_smoothness_report.py` | Smoothness report CLI |
 
-**Excluded (audited in prior groups):** `param_resolver.py`, `time_utils.py`, `draft_provenance.py`, `fits_suffixes.py`, `masterstar_context.py` (Group 3); `app.py` + `ui_*.py` shells (Group 7 scope — scanned for L7 parity only).
+**Excluded (audited in prior groups):** `param_resolver.py`, `time_utils.py`, `draft_provenance.py`, `fits_suffixes.py`, `masterstar_context.py` (Group 3); `app.py` + `ui_*.py` shells (Group 7 scope - scanned for L7 parity only).
 
-Method: AST inventory + lens scans (L1–L11) on 12 modules (110 functions), `__post_init__` science read, cross-check `docs/VYVAR_PARAMS.md` + live `config.json` vs `AppConfig` (script `tmp/audit_group6_parity.py`).
+Method: AST inventory + lens scans (L1-L11) on 12 modules (110 functions), `__post_init__` science read, cross-check `docs/VYVAR_PARAMS.md` + live `config.json` vs `AppConfig` (script `tmp/audit_group6_parity.py`).
 
-### Prioritized findings (Group 6 — deduplicated, severity-sorted)
+### Prioritized findings (Group 6 - deduplicated, severity-sorted)
 
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
-| G6-F001 | **HIGH** | L1/L2 | `config.py:439-441`, `540-541`, `211`, `1695-1702` | **Set-1 rig literals** as global defaults: `plate_scale_arcsec_per_px=1.3`, `phase01_plate_scale_arcsec_per_px=1.3`, `frame_width_px=2082`, `frame_height_px=1397`, `export_arcsec_per_px=1.3`. Wide-field (9.77″/px) requires explicit `config.json` overrides (TODO-MULTISET). Export path now derive-or-None (`G5-F007`) but config defaults still imply fine rig. | Cross-rig constants must not masquerade as universal defaults; derive-or-None or per-rig profiles. |
-| G6-F002 | **FIXED** | L4/L7 | `config.py`, `database.py`, `config.json` | ~~Calibration validity default mismatch (80/524 vs 60/200)~~ **FIXED:** single source **90/200** (dataclass, `__post_init__` fallback, DB seed, tracked json). **Verify:** DB `SETTINGS` seed is **vestigial** — `get_setting_int` has **zero callers**; live path is `cfg.masterdark_validity_days` / `cfg.masterflat_validity_days` → `importer.py`. | Default in dataclass, `__post_init__`, PARAMS, and UI must agree. |
-| G6-F003 | **HIGH** | L7 | `ui_select_stars.py:443`, `531`; `config.py` (no field) | UI reads **`cfg.phase01_comparison_max_bv_diff`** — **not an `AppConfig` field** (`hasattr` False). Comp-selection display / `max_bv_diff=` call will **AttributeError** when that path runs on a stock config. | Every UI `cfg.*` access must map to a declared config field or safe resolver. |
-| G6-F004 | **HIGH** | L7 | `ui_aperture_photometry.py:1657`, `ui_select_stars.py:618`; `config.py` (no field) | UI uses **`getattr(cfg, "phase01_use_bprp_primary", True)`** — not on `AppConfig`; always defaults True; cannot be persisted or tuned via config/PARAMS registry. | Hidden UI behavior via getattr bypass breaks config↔UI parity. |
-| G6-F005 | **MED** | L3 | `config.py:19-26` | `load_config_json` returns `{}` on `JSONDecodeError` with **no log** — corrupt `config.json` looks like “no overrides”. | Config load failures must log at operator-visible level. |
-| G6-F006 | **MED** | L3 | `config.py:1045-1046` | Observer location DB hydration (`get_observer_location_by_id`) on broad **`except: pass`** — bad DB/path leaves stale lat/lon silently. | DB failures on site resolution must log. |
-| G6-F007 | **MED** | L3/L4 | `config.py:666-667`, `1148-1149`, `2291-2292` | Silent **`pass`** on calibration temp tolerance parse, aperture tier parse, annulus crowding clamp — invalid JSON values retain prior silently. | Invalid config values should log + clamp explicitly. |
-| G6-F008 | **MED** | L1/L11 | `config.py:74-75`, `utils.py:408-417` | `recommended_vyvar_parallel_workers` RAM estimate hardcodes **2048×2048** frames; `per_frame_catalog_match_sep_arcsec_for_scale` uses **20″** fallback when scale unknown. | Worker/RAM and match tolerances should use cfg geometry or derive-or-None. |
-| G6-F009 | **MED** | L7 | `config.json` key `phase2a_variable_xy_fallback_mag_tol`; not in `AppConfig` | Orphan JSON key — edits have **no effect** on pipeline. | Every `config.json` key must bind to `AppConfig` or be removed. |
+| G6-F001 | **HIGH** | L1/L2 | `config.py:439-441`, `540-541`, `211`, `1695-1702` | **Set-1 rig literals** as global defaults: `plate_scale_arcsec_per_px=1.3`, `phase01_plate_scale_arcsec_per_px=1.3`, `frame_width_px=2082`, `frame_height_px=1397`, `export_arcsec_per_px=1.3`. Wide-field (9.77 arcsec/px) requires explicit `config.json` overrides (TODO-MULTISET). Export path now derive-or-None (`G5-F007`) but config defaults still imply fine rig. | Cross-rig constants must not masquerade as universal defaults; derive-or-None or per-rig profiles. |
+| G6-F002 | **FIXED** | L4/L7 | `config.py`, `database.py`, `config.json` | ~~Calibration validity default mismatch (80/524 vs 60/200)~~ **FIXED:** single source **90/200** (dataclass, `__post_init__` fallback, DB seed, tracked json). **Verify:** DB `SETTINGS` seed is **vestigial** - `get_setting_int` has **zero callers**; live path is `cfg.masterdark_validity_days` / `cfg.masterflat_validity_days` -> `importer.py`. | Default in dataclass, `__post_init__`, PARAMS, and UI must agree. |
+| G6-F003 | **HIGH** | L7 | `ui_select_stars.py:443`, `531`; `config.py` (no field) | UI reads **`cfg.phase01_comparison_max_bv_diff`** - **not an `AppConfig` field** (`hasattr` False). Comp-selection display / `max_bv_diff=` call will **AttributeError** when that path runs on a stock config. | Every UI `cfg.*` access must map to a declared config field or safe resolver. |
+| G6-F004 | **HIGH** | L7 | `ui_aperture_photometry.py:1657`, `ui_select_stars.py:618`; `config.py` (no field) | UI uses **`getattr(cfg, "phase01_use_bprp_primary", True)`** - not on `AppConfig`; always defaults True; cannot be persisted or tuned via config/PARAMS registry. | Hidden UI behavior via getattr bypass breaks config<->UI parity. |
+| G6-F005 | **MED** | L3 | `config.py:19-26` | `load_config_json` returns `{}` on `JSONDecodeError` with **no log** - corrupt `config.json` looks like 'no overrides'. | Config load failures must log at operator-visible level. |
+| G6-F006 | **MED** | L3 | `config.py:1045-1046` | Observer location DB hydration (`get_observer_location_by_id`) on broad **`except: pass`** - bad DB/path leaves stale lat/lon silently. | DB failures on site resolution must log. |
+| G6-F007 | **MED** | L3/L4 | `config.py:666-667`, `1148-1149`, `2291-2292` | Silent **`pass`** on calibration temp tolerance parse, aperture tier parse, annulus crowding clamp - invalid JSON values retain prior silently. | Invalid config values should log + clamp explicitly. |
+| G6-F008 | **MED** | L1/L11 | `config.py:74-75`, `utils.py:408-417` | `recommended_vyvar_parallel_workers` RAM estimate hardcodes **2048x2048** frames; `per_frame_catalog_match_sep_arcsec_for_scale` uses **20 arcsec** fallback when scale unknown. | Worker/RAM and match tolerances should use cfg geometry or derive-or-None. |
+| G6-F009 | **MED** | L7 | `config.json` key `phase2a_variable_xy_fallback_mag_tol`; not in `AppConfig` | Orphan JSON key - edits have **no effect** on pipeline. | Every `config.json` key must bind to `AppConfig` or be removed. |
 | G6-F010 | **MED** | L3 | `infolog.py:35-37`, `night_run.py:329-336` | Infolog `log_event` swallows all exceptions; `night_run` pending DAO FWHM/threshold parse failures **`pass`** without log. | Orchestration glue must not hide operator-actionable parse failures. |
-| G6-F011 | **MED** | L7 | `docs/VYVAR_PARAMS.md` summary | Registry reports **34 config-only (no UI)** keys marked `exposed \| no` — drift bucket (observer site fields, blind cluster tuning, neighbor-sub PSF knobs, etc.). Not all are intentional-hidden; PARAMS generator marks `no` when no `ui*.py` string match. | Config-only knobs need explicit intentional-hidden vs drift classification. |
+| G6-F011 | **MED** | L7 | `docs/VYVAR_PARAMS.md` summary | Registry reports **34 config-only (no UI)** keys marked `exposed \| no` - drift bucket (observer site fields, blind cluster tuning, neighbor-sub PSF knobs, etc.). Not all are intentional-hidden; PARAMS generator marks `no` when no `ui*.py` string match. | Config-only knobs need explicit intentional-hidden vs drift classification. |
 | G6-F012 | **LOW** | L5 | `inspect_drafts.py:46-109` | Diagnostic CLI: multiple **`except: pass`** on FITS/header reads (acceptable for CLI probe, but errors invisible). | Even diagnostics should print skip reason. |
-| G6-P001 | **CLEAN** | - | `utils.py:24-48`, `VYVAR_RANDOM_SEED=42` | `seeded_numpy_default_rng` patches astroalign nondeterminism — aligns with Group 1 fix `98de910`. | Reproducibility hooks belong in shared utils. |
-| G6-P002 | **CLEAN** | - | `utils.py:382-396`, `477-516` | `plate_scale_arcsec_per_pixel` + `catalog_cone_radius_deg_from_optics` derive cone from optics with `MIN_GAIA_CONE_RADIUS_DEG` floor — correct derive-or-fallback pattern. | Scale-dependent geometry should derive from optics/WCS. |
-| G6-P003 | **CLEAN** | - | `scripts/_build_vyvar_params.py` | Automated PARAMS registry from `config.py` + `ui*.py` scan — supports L7 parity workflow. | Registry tooling should stay in sync with `AppConfig` fields. |
-| G6-P004 | **CLEAN** | - | `config.py:645-646` | `plate_solve_fov_deg` intentionally **not** read from JSON — resolved from FITS+DB per comment (matches DECISIONS FOV authority). | FOV hints must not be stale JSON literals. |
+| G6-P001 | **CLEAN** | - | `utils.py:24-48`, `VYVAR_RANDOM_SEED=42` | `seeded_numpy_default_rng` patches astroalign nondeterminism - aligns with Group 1 fix `98de910`. | Reproducibility hooks belong in shared utils. |
+| G6-P002 | **CLEAN** | - | `utils.py:382-396`, `477-516` | `plate_scale_arcsec_per_pixel` + `catalog_cone_radius_deg_from_optics` derive cone from optics with `MIN_GAIA_CONE_RADIUS_DEG` floor - correct derive-or-fallback pattern. | Scale-dependent geometry should derive from optics/WCS. |
+| G6-P003 | **CLEAN** | - | `scripts/_build_vyvar_params.py` | Automated PARAMS registry from `config.py` + `ui*.py` scan - supports L7 parity workflow. | Registry tooling should stay in sync with `AppConfig` fields. |
+| G6-P004 | **CLEAN** | - | `config.py:645-646` | `plate_solve_fov_deg` intentionally **not** read from JSON - resolved from FITS+DB per comment (matches DECISIONS FOV authority). | FOV hints must not be stale JSON literals. |
 
-### Config ↔ UI parity mismatch list (L7 — concrete)
+### Config <-> UI parity mismatch list (L7 - concrete)
 
-**Registry snapshot** (`tmp/audit_group6_parity.py`, 2026-06-19): `AppConfig` fields **278** · `config.json` keys **252** · UI `cfg.*` refs **95** (16 `ui*.py` files) · `VYVAR_PARAMS.md` keys **259**.
+**Registry snapshot** (`tmp/audit_group6_parity.py`, 2026-06-19): `AppConfig` fields **278** . `config.json` keys **252** . UI `cfg.*` refs **95** (16 `ui*.py` files) . `VYVAR_PARAMS.md` keys **259**.
 
-**Summary (from `VYVAR_PARAMS.md`):** 82 exposed · 136 intentionally-hidden · **34 config-only (`exposed \| no`)** · **2 UI strings without `AppConfig` field**.
+**Summary (from `VYVAR_PARAMS.md`):** 82 exposed . 136 intentionally-hidden . **34 config-only (`exposed \| no`)** . **2 UI strings without `AppConfig` field**.
 
-#### A — UI references without `AppConfig` field (reverse drift)
+#### A - UI references without `AppConfig` field (reverse drift)
 
 | Symbol | UI location | Risk |
 |--------|-------------|------|
 | `phase01_comparison_max_bv_diff` | `ui_select_stars.py:443`, `531` | **AttributeError** on direct `cfg.` access |
 | `phase01_use_bprp_primary` | `ui_aperture_photometry.py:1657`, `ui_select_stars.py:618` | Silent default via `getattr(..., True)` only |
 
-#### B — `config.json` key not on `AppConfig`
+#### B - `config.json` key not on `AppConfig`
 
 | Key | Note |
 |-----|------|
 | `phase2a_variable_xy_fallback_mag_tol` | Present in repo `config.json`; no loader field |
 
-#### C — Dataclass vs `__post_init__` vs PARAMS default mismatches (selected)
+#### C - Dataclass vs `__post_init__` vs PARAMS default mismatches (selected)
 
 | Key | Dataclass default | `__post_init__` if JSON missing | PARAMS / UI |
 |-----|-------------------|----------------------------------|-------------|
 | `masterdark_validity_days` | 80 | **60** | 80 (UI yes) |
 | `masterflat_validity_days` | 524 | **200** | 524 (UI yes) |
 | `comp_iterative_clip_enabled` | False | loaded from JSON (often True) | PARAMS notes both |
-| Observer block (`observer_lat/lon/…`) | Jirny-ish literals | DB/json session values | PARAMS shows dataclass vs json drift |
+| Observer block (`observer_lat/lon/...`) | Jirny-ish literals | DB/json session values | PARAMS shows dataclass vs json drift |
 
-#### D — Config-only keys (`VYVAR_PARAMS.md` `exposed \| no`, 33 rows)
+#### D - Config-only keys (`VYVAR_PARAMS.md` `exposed \| no`, 33 rows)
 
 `aavso_filter_map`, `observer_alt_m`, `observer_code`, `observer_lat`, `observer_location_id`, `observer_location_name`, `observer_lon`, `observer_name`, `apply_color_term`, `blind_cluster_coherence_cap`, `blind_cluster_eps_deg`, `blind_cluster_min_samples`, `blind_cluster_min_votes`, `blind_cluster_vote_span`, `blind_img_select_mode`, `blind_img_star_budget`, `blind_scale_tol_frac`, `blind_use_rig_prior`, `check_select_rms_floor`, `neighbor_sub_centroid_max_fwhm`, `neighbor_sub_chi2_max`, `neighbor_sub_max_neighbor_overmag`, `neighbor_sub_max_target_undermag`, `neighbor_sub_min_recovered_snr`, `neighbor_sub_nn_contam_dmag`, `neighbor_sub_refuse_sep_fwhm`, `neighbor_sub_regime_dmag_min`, `neighbor_sub_regime_sep_max`, `neighbor_sub_residual_rms_max`, `psf_neighbor_sub_enabled`, `blind_index_select_mode`, `catalog_query_max_rows`, `dao_qc_in_calibrate`.
 
-(Plus `export_arcsec_per_px` marked intentionally-hidden in PARAMS — superseded in export code by derive-or-None but config default remains 1.3.)
+(Plus `export_arcsec_per_px` marked intentionally-hidden in PARAMS - superseded in export code by derive-or-None but config default remains 1.3.)
 
 ### Coverage table (Group 6 modules)
 
-| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC† | FLAGGED | NEEDS-TEST |
+| Module | Lines | Funcs | Audited | DEAD (heuristic) | TRULY-DEAD | LIVE-DYNAMIC+ | FLAGGED | NEEDS-TEST |
 |--------|-------|-------|---------|------------------|------------|---------------|---------|------------|
-| `config.py` | 2294 | 19‡ | 19 | 0 | 0 | 0 | 9 | 10 |
-| `utils.py` | 736 | 34 | 34 | 0 | 0 | 2§ | 6 | 14 |
-| `night_run.py` | 1128 | 19 | 19 | 0 | 0 | 2§ | 4 | 9 |
+| `config.py` | 2294 | 19++ | 19 | 0 | 0 | 0 | 9 | 10 |
+| `utils.py` | 736 | 34 | 34 | 0 | 0 | 2S | 6 | 14 |
+| `night_run.py` | 1128 | 19 | 19 | 0 | 0 | 2S | 4 | 9 |
 | `infolog.py` | 138 | 10 | 10 | 0 | 0 | 0 | 2 | 5 |
 | `vyvar_ui_status.py` | 90 | 4 | 4 | 0 | 0 | 0 | 0 | 1 |
 | `inspect_drafts.py` | 154 | 4 | 4 | 0 | 0 | 0 | 1 | 1 |
@@ -1776,29 +1776,29 @@ Method: AST inventory + lens scans (L1–L11) on 12 modules (110 functions), `__
 | `run_smoothness_report.py` | 61 | 1 | 1 | 0 | 0 | 0 | 0 | 1 |
 | **Group 6 total** | - | **110** | **110** | **0** | **0** | **4** | **22** | **49** |
 
-‡ `AppConfig.__post_init__` (~1.6k lines) is the primary load surface — counted as part of `config.py` audit, not separate func row.
+++ `AppConfig.__post_init__` (~1.6k lines) is the primary load surface - counted as part of `config.py` audit, not separate func row.
 
-§ LIVE-DYNAMIC: nested closures in `resolve_draft_dir` / `night_run` progress callbacks — heuristic zero-ref, live via parent.
+S LIVE-DYNAMIC: nested closures in `resolve_draft_dir` / `night_run` progress callbacks - heuristic zero-ref, live via parent.
 
-**Mechanism-aware DEAD:** Raw AST heuristic DEAD **0/110** — no removal candidates; config uses `_f01`/`_i01` helpers and density override tables (registry/dispatch). Do **not** apply Group-3-style 88% DEAD heuristic here.
+**Mechanism-aware DEAD:** Raw AST heuristic DEAD **0/110** - no removal candidates; config uses `_f01`/`_i01` helpers and density override tables (registry/dispatch). Do **not** apply Group-3-style 88% DEAD heuristic here.
 
 ### TRULY-DEAD (Group 6)
 
 None confirmed. CLI `main()` entries and orchestrator helpers are entrypoints or dev tooling.
 
-### Test-gap list (Group 6 — science-critical)
+### Test-gap list (Group 6 - science-critical)
 
 | Module / function | Existing test | Gap |
 |-------------------|---------------|-----|
-| `config.load_config_json` / corrupt JSON | — | `JSONDecodeError` → `{}` silent |
+| `config.load_config_json` / corrupt JSON | - | `JSONDecodeError` -> `{}` silent |
 | `AppConfig.__post_init__` round-trip | partial via integration | validity-day defaults 60/200 vs dataclass 80/524 |
-| `apply_density_overrides` / `apply_crowding_overrides` | — | additive override clamps |
-| `recommended_vyvar_parallel_workers` | — | RAM cap vs cfg frame size |
+| `apply_density_overrides` / `apply_crowding_overrides` | - | additive override clamps |
+| `recommended_vyvar_parallel_workers` | - | RAM cap vs cfg frame size |
 | `utils.plate_scale_arcsec_per_pixel` | indirect | unit edge cases |
-| `utils.per_frame_catalog_match_sep_arcsec_for_scale` | — | 20″ fallback when scale None |
+| `utils.per_frame_catalog_match_sep_arcsec_for_scale` | - | 20 arcsec fallback when scale None |
 | `utils.seeded_numpy_default_rng` | Group 1 alignment tests | direct unit test optional |
 | `night_run.run_night_pipeline` error paths | smoke scripts | headless failure surfacing |
-| `infolog.save_infolog_to_disk` | — | disk write failure path |
+| `infolog.save_infolog_to_disk` | - | disk write failure path |
 | `lunar_context.get_lunar_context` | `tests/test_lunar_context.py` | partial coverage |
 
 Inventory: **49 NEEDS-TEST** + **22 FLAGGED** across Group 6 (100% statused at module level).
@@ -1808,21 +1808,21 @@ Inventory: **49 NEEDS-TEST** + **22 FLAGGED** across Group 6 (100% statused at m
 | Area | Finding |
 |------|---------|
 | RNG | `utils.VYVAR_RANDOM_SEED=42`; `seeded_numpy_default_rng` for astroalign |
-| Parallelism | `recommended_vyvar_parallel_workers` uses `os.cpu_count()` + **psutil** free RAM — run-dependent worker cap |
-| Config authority | `AppConfig()` always merges `config.json` (session observer site, equipment-tuned overrides) — not a pure dataclass default |
+| Parallelism | `recommended_vyvar_parallel_workers` uses `os.cpu_count()` + **psutil** free RAM - run-dependent worker cap |
+| Config authority | `AppConfig()` always merges `config.json` (session observer site, equipment-tuned overrides) - not a pure dataclass default |
 | Orchestrator | `vyvar_orchestrator.py` local timestamps; no science RNG |
 | Night run | Delegates to `pipeline` / Group 1 reproducibility fixes |
 
 ### Automation artifacts (Group 6, tmp/, gitignored)
 
-- `tmp/audit_group6_parity.py` — config↔UI↔json parity driver
-- `tmp/audit_group6_parity.json` — full parity dump (189 keys with no `ui*.py` ref)
+- `tmp/audit_group6_parity.py` - config<->UI<->json parity driver
+- `tmp/audit_group6_parity.json` - full parity dump (189 keys with no `ui*.py` ref)
 
 **Checkpoint policy:** Milan + Claude review Group 6 batch before Group 7.
 
 ---
 
-## Group 7 checkpoint — UI shell (2026-06-19)
+## Group 7 checkpoint - UI shell (2026-06-19)
 
 **Module set (14 modules, 144 functions, ~9.8k LOC audited):**
 
@@ -1845,9 +1845,9 @@ Inventory: **49 NEEDS-TEST** + **22 FLAGGED** across Group 6 (100% statused at m
 
 **Excluded (audited in Group 4):** `ui_variability.py` (30), `ui_hrd.py` (1), `ui_masterstar_qa.py` (5). **Excluded (Group 6):** `vyvar_ui_status.py`.
 
-Method: AST inventory + lens scans (L1–L11) on 14 modules (144 functions), Phase B verification of G6-F003/F004 from UI source, parity cross-check vs `tmp/audit_group6_parity.json` + `VYVAR_PARAMS.md`.
+Method: AST inventory + lens scans (L1-L11) on 14 modules (144 functions), Phase B verification of G6-F003/F004 from UI source, parity cross-check vs `tmp/audit_group6_parity.json` + `VYVAR_PARAMS.md`.
 
-### Prioritized findings (Group 7 — deduplicated, severity-sorted)
+### Prioritized findings (Group 7 - deduplicated, severity-sorted)
 
 | ID | Sev | Lens | Location | What's wrong | Principle (not fix) |
 |----|-----|------|----------|--------------|---------------------|
@@ -1855,22 +1855,22 @@ Method: AST inventory + lens scans (L1–L11) on 14 modules (144 functions), Pha
 | G7-F002 | **RESOLVED** | L8/L7 | ~~`ui_select_stars.py:531`~~ **removed** | ~~Stale `max_bv_diff=` kwarg to `run_phase0_and_phase1`~~ **RESOLVED:** deleted with unwired Select Stars page. | UI must call core with the live signature; dead kwargs hide broken comp-color paths. |
 | G7-F003 | **FIXED** | L7 | `config.py`, `ui_aperture_photometry.py:1661` | ~~`phase01_use_bprp_primary` via `getattr` only~~ **FIXED:** real `AppConfig` bool (default True), `config.json`, PARAMS intentionally-hidden; LC viewer reads `cfg.phase01_use_bprp_primary`. | getattr defaults bypass config registry and mislead operators. |
 | G7-F003b | **FIXED** | L7 | `photometry_report.py` (~310) | ~~`self._use_bprp_primary = True` hardcoded~~ **FIXED:** reads `cfg.phase01_use_bprp_primary` via existing `self._cfg = AppConfig()`; default True preserves PDF wording. | Report colour-mode must follow the same config knob as Phase 2A display. |
-| G7-F003c | **LOW-MED** | L7 | `photometry_report.py` (`AppConfig()` at PDF-build) | **BACKLOG (deferred)** — builder re-loads `AppConfig()` from `config.json` at PDF-build time rather than receiving the cfg instance Phase 2A used. If `config.json` is edited between photometry run and PDF generation, the report can describe settings (bp_rp primary, plate scale, GS11, aperture factors, observer location) that differ from what the run actually used, with no detection. Proper fix: thread the run's cfg (or persist a per-draft config snapshot) into the report. Affects all cfg-derived report fields, not just `phase01_use_bprp_primary`. | Report cfg must match the run that produced the photometry artifacts. |
-| G7-F004 | **MED** | L3 | `app.py` (15+ `except: pass` lines), `ui_aperture_photometry.py`, `ui_quality_dashboard.py` | Broad **`except: pass`** / silent exception branches in action handlers (archive hash, PDF/report triggers, QC paths) — failures can present as **button did nothing**. | UI actions must surface errors to Infolog / `st.error`. |
-| G7-F005 | **MED** | L4 | `ui_settings.py:645-700` | Frame-quality / align-residual gates use **`getattr(..., False)`** defaults — **fail-open OFF by design** (byte-identical when unset); documented in PARAMS Round-2 B.2. Not a bug; monitor that toggles stay wired to `cfg` save path (`973-976`). | Safety gates default OFF only when explicitly documented. |
+| G7-F003c | **LOW-MED** | L7 | `photometry_report.py` (`AppConfig()` at PDF-build) | **BACKLOG (deferred)** - builder re-loads `AppConfig()` from `config.json` at PDF-build time rather than receiving the cfg instance Phase 2A used. If `config.json` is edited between photometry run and PDF generation, the report can describe settings (bp_rp primary, plate scale, GS11, aperture factors, observer location) that differ from what the run actually used, with no detection. Proper fix: thread the run's cfg (or persist a per-draft config snapshot) into the report. Affects all cfg-derived report fields, not just `phase01_use_bprp_primary`. | Report cfg must match the run that produced the photometry artifacts. |
+| G7-F004 | **MED** | L3 | `app.py` (15+ `except: pass` lines), `ui_aperture_photometry.py`, `ui_quality_dashboard.py` | Broad **`except: pass`** / silent exception branches in action handlers (archive hash, PDF/report triggers, QC paths) - failures can present as **button did nothing**. | UI actions must surface errors to Infolog / `st.error`. |
+| G7-F005 | **MED** | L4 | `ui_settings.py:645-700` | Frame-quality / align-residual gates use **`getattr(..., False)`** defaults - **fail-open OFF by design** (byte-identical when unset); documented in PARAMS Round-2 B.2. Not a bug; monitor that toggles stay wired to `cfg` save path (`973-976`). | Safety gates default OFF only when explicitly documented. |
 | G7-F006 | **MED** | L7 | `VYVAR_PARAMS.md`, Group 6 parity | **34 config-only (`exposed \| no`)** keys: **intentionally hidden** for blind-cluster tuning, neighbor-sub PSF, `dao_qc_in_calibrate`, observer export block (session `config.json` values). **Not accidental unexposed** for most; observer site uses DB location picker (`observer_location_id` in Settings) while lat/lon/name live in json without dedicated widgets. | Hidden keys need intentional-hidden classification vs drift. |
-| G7-F007 | **MED** | L8 | `ui_aperture_photometry.py:236+` | `_enrich_summary_with_zone_flags` / LC column picks (`mag_calib` vs `mag_calib_raw`) in UI — **display-layer** only (no ensemble math); risk is **label drift** vs export `mag_calib_final` (G5-F011), not duplicated photometry core. | Display columns must match publication canonical names. |
+| G7-F007 | **MED** | L8 | `ui_aperture_photometry.py:236+` | `_enrich_summary_with_zone_flags` / LC column picks (`mag_calib` vs `mag_calib_raw`) in UI - **display-layer** only (no ensemble math); risk is **label drift** vs export `mag_calib_final` (G5-F011), not duplicated photometry core. | Display columns must match publication canonical names. |
 | G7-F008 | **FIXED** | L3 | `ui_components.py:103-104`, `ui_aperture_photometry.py:77-78` | ~~Silent passes on archive-path probe / JD tick helper~~ **FIXED:** typed excepts + DEBUG log on skip (same commit as G1-F005). | Even minor UI helpers should log skip reason. |
-| G7-P001 | **CLEAN** | - | `ui_settings.py:973-1010` | Settings save writes frame-quality + align-residual + comp knobs back to `cfg` + `to_json()` — live round-trip for exposed controls. | Settings must persist to `AppConfig` + json. |
-| G7-P002 | **CLEAN** | - | `app.py` pipeline pending handlers | Photometry/platesolve/preprocess delegate to `pipeline` / `photometry_core` — **no** `ensemble_normalize` / `savgol` in UI shell (L8 scan clean on `app.py`). | UI orchestrates; core computes. |
+| G7-P001 | **CLEAN** | - | `ui_settings.py:973-1010` | Settings save writes frame-quality + align-residual + comp knobs back to `cfg` + `to_json()` - live round-trip for exposed controls. | Settings must persist to `AppConfig` + json. |
+| G7-P002 | **CLEAN** | - | `app.py` pipeline pending handlers | Photometry/platesolve/preprocess delegate to `pipeline` / `photometry_core` - **no** `ensemble_normalize` / `savgol` in UI shell (L8 scan clean on `app.py`). | UI orchestrates; core computes. |
 | G7-P003 | **CLEAN** | - | `app.py` L1 scan | **No** hardcoded `1.3` / `9.77` / `2082` rig literals in UI shell (rig values come from `cfg` or DB). | UI must not embed cross-rig literals. |
 
-### Config ↔ UI parity disposition (resolves G6-F003 / G6-F004)
+### Config <-> UI parity disposition (resolves G6-F003 / G6-F004)
 
 | Symbol | Access pattern | UI verdict | Severity |
 |--------|----------------|------------|----------|
-| `phase01_comparison_max_bv_diff` | ~~`ui_select_stars.py`~~ **removed** | **RESOLVED** (G7-F001) — no repo references |
-| `phase01_use_bprp_primary` | `ui_aperture_photometry.py:1661` | **FIXED** (G7-F003) — `AppConfig` + `config.json` |
+| `phase01_comparison_max_bv_diff` | ~~`ui_select_stars.py`~~ **removed** | **RESOLVED** (G7-F001) - no repo references |
+| `phase01_use_bprp_primary` | `ui_aperture_photometry.py:1661` | **FIXED** (G7-F003) - `AppConfig` + `config.json` |
 | `max_bv_diff=` kwarg | ~~`ui_select_stars.py`~~ **removed** | **RESOLVED** (G7-F002) |
 | 34 PARAMS `no` keys | No `ui*.py` string match | Mostly **intentionally-hidden** dev/json knobs; observer block is **session json + DB location id** | Documented (G7-F006) |
 
@@ -1878,12 +1878,12 @@ False positives from regex scan (`cfg.to_json`, `cfg.ensure_base_dirs`) are **me
 
 ### Coverage table (Group 7 modules)
 
-| Module | Funcs | Audited | TRULY-DEAD | LIVE-DYNAMIC† | FLAGGED | NEEDS-TEST |
+| Module | Funcs | Audited | TRULY-DEAD | LIVE-DYNAMIC+ | FLAGGED | NEEDS-TEST |
 |--------|-------|---------|------------|---------------|---------|------------|
 | `app.py` | 29 | 29 | 0 | 4 | 8 | 12 |
 | `ui_aperture_photometry.py` | 25 | 25 | 0 | 3 | 6 | 10 |
 | `ui_quality_dashboard.py` | 14 | 14 | 0 | 2 | 5 | 8 |
-| `ui_select_stars.py` | — | — | — | — | — | — | **deleted** (2026-06-22) |
+| `ui_select_stars.py` | - | - | - | - | - | - | **deleted** (2026-06-22) |
 | `ui_calibration_library.py` | 12 | 12 | 0 | 0 | 1 | 4 |
 | `ui_calibration.py` | 10 | 10 | 0 | 0 | 0 | 3 |
 | `ui_photometry_quality.py` | 10 | 10 | 0 | 1 | 2 | 4 |
@@ -1896,19 +1896,19 @@ False positives from regex scan (`cfg.to_json`, `cfg.ensure_base_dirs`) are **me
 | `ui_settings.py` | 2 | 2 | 0 | 0 | 1 | 3 |
 | **Group 7 total** | **131** | **131** | **0** | **11** | **26** | **48** |
 
-† LIVE-DYNAMIC: Streamlit callbacks, nested render closures, `@st.cache_data` wrappers — heuristic zero-ref, not removal candidates.
++ LIVE-DYNAMIC: Streamlit callbacks, nested render closures, `@st.cache_data` wrappers - heuristic zero-ref, not removal candidates.
 
 **Mechanism-aware DEAD:** **0 TRULY-DEAD** / 144 (Group 4 already logged 2 dead symbols in `ui_variability.py`).
 
-### Test-gap list (Group 7 — UI-critical)
+### Test-gap list (Group 7 - UI-critical)
 
 | Area | Gap |
 |------|-----|
-| `ui_settings` save → `config.json` round-trip | partial manual; no automated test |
-| `ui_select_stars` Phase 0+1 launch | ~~broken~~ | **removed** — unwired page deleted |
+| `ui_settings` save -> `config.json` round-trip | partial manual; no automated test |
+| `ui_select_stars` Phase 0+1 launch | ~~broken~~ | **removed** - unwired page deleted |
 | Frame-quality gate toggles | default OFF regression (byte-identical) |
 | `app.py` pending preprocess/platesolve error surfacing | headless parity with `night_run` |
-| QC dashboard analyze flow | exception → user-visible error |
+| QC dashboard analyze flow | exception -> user-visible error |
 
 Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
@@ -1916,16 +1916,16 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 | Area | Finding |
 |------|---------|
-| Session state | `st.session_state` keys (`vyvar_draft_dir_override`, variability caches) — run-order / draft dependent |
+| Session state | `st.session_state` keys (`vyvar_draft_dir_override`, variability caches) - run-order / draft dependent |
 | Draft override | Effective paths from session override vs `cfg.archive_root` |
 | No UI RNG | Science RNG remains in core/utils (Group 1/6) |
 
 ### Automation artifacts (Group 7, tmp/, gitignored)
 
-- `tmp/audit_group7_inventory.py` — scan driver
-- `tmp/audit_group7_results.json` — per-module lens + cfg ref dump
+- `tmp/audit_group7_inventory.py` - scan driver
+- `tmp/audit_group7_results.json` - per-module lens + cfg ref dump
 
-**Checkpoint policy:** Group 7 closes the systematic map — G1-F001/F002 closed after Chi/h validation PASS.
+**Checkpoint policy:** Group 7 closes the systematic map - G1-F001/F002 closed after Chi/h validation PASS.
 
 ---
 
@@ -1933,108 +1933,108 @@ Inventory: **52 NEEDS-TEST** + **29 FLAGGED** across Group 7.
 
 | Group | Scope | Funcs audited | HIGH findings (post fix-pass 2026-06-22) |
 |-------|--------|---------------|-------------------------------------------|
-| 1 | Alignment / platesolve / optics | 415 | HIGH **closed** — G1-F001/F002/F003 **FIXED** (`2819e86`, `dbf76d5`, `0a43dbf`); G1-F005 **FIXED**; open MED G1-F004–F007 |
+| 1 | Alignment / platesolve / optics | 415 | HIGH **closed** - G1-F001/F002/F003 **FIXED** (`2819e86`, `dbf76d5`, `0a43dbf`); G1-F005 **FIXED**; open MED G1-F004-F007 |
 | 2 | Photometry core | 322 | G2-F003/F004/F002b **FIXED** (`4b13e4a`, `8f86078`, `977920f`) |
 | 3 | Data / IO / catalog | 367 | G3-F001/F002 **FIXED** (`9e3280e`, `fb75867`) |
 | 4 | Science / variability / QA | 166 | G4-F001 trust partially **FIXED** |
-| 5 | Reporting / export | 174 | G5-F003–F011, F004 **FIXED** (`6774f83`…`efbb4de`); forced-aperture **RESOLVED** (`7f0dc86`); LOW dead helpers remain |
+| 5 | Reporting / export | 174 | G5-F003-F011, F004 **FIXED** (`6774f83`...`efbb4de`); forced-aperture **RESOLVED** (`7f0dc86`); LOW dead helpers remain |
 | 6 | Config / orchestration / utils | 110 | G6-F002 **FIXED** (`379e78f`); G6-F001 TODO-MULTISET; G6-F003/F004 parity |
 | 7 | UI shell | ~~144~~ **131** | G7-F001/F002 **RESOLVED** (`3e1cad7`); G7-F003 **FIXED** (`31db3af`); G7-F003b **FIXED** (`795faef`); G7-F008 **FIXED**; open G7-F003c |
-| **Total** | **7 groups** | **1728** | Fix-pass **DONE** (HIGH + numeric MED) — see queue below |
+| **Total** | **7 groups** | **1728** | Fix-pass **DONE** (HIGH + numeric MED) - see queue below |
 
 ---
 
-## Post-map fix-pass queue — DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003c, Tier-1 deferred backlog (see below).
+## Post-map fix-pass queue - DONE for HIGH + numeric MED (2026-06-22, f3b73e9..f235986). Open: G6-F001/TODO-MULTISET, G7-F003c, Tier-1 deferred backlog (see below).
 
-**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G7-F003b (`795faef`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`…`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`), Tier-1 broad-except STEP 2 core (`f950e3f`), EQUIP-BINNING DB bin1 scaling (`b19cd7e`), EXOPLANET-XMATCH local host annotation (`c169675`), EXO-AS-TARGET host promotion (`1616b18`). Integrační validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
+**Closed in fix-pass:** G1-F001/F002 (alignment caps `2819e86`), G1-F003 (`dbf76d5`, `0a43dbf`), G2-F003 (`4b13e4a`), G2-F004 (`8f86078`), G2-F002b (`977920f`), G7-F003 (`31db3af`), G7-F003b (`795faef`), G3-F001 (`9e3280e`), G3-F002 (`fb75867`), G5 export layer (`6774f83`...`efbb4de`), G6-F002 (`379e78f`), G7-F001/F002 (`3e1cad7`), G1-F005 + G7-F008 (`473f089`), forced-aperture removal (`7f0dc86`), Tier-1 broad-except STEP 2 core (`f950e3f`), EQUIP-BINNING DB bin1 scaling (`b19cd7e`), EXOPLANET-XMATCH local host annotation (`c169675`), EXO-AS-TARGET host promotion (`1616b18`). Integracni validace draft 421 PASS. Config json orphan tidy empty; `5e01c25` lists `alignment_max_control_points=80`.
 
-**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003c (report re-loads `AppConfig()` at PDF-build — cfg drift vs run), EQUIP-BINNING-ASYM (asymmetric binning scaling — deferred LOW), GAIA-ID-FLOAT-GUARD (catalog_id float64 read/normalize truncation — deferred MED), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites — deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback — deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
+**Still open:** G6-F001/TODO-MULTISET (rig literals), G7-F003c (report re-loads `AppConfig()` at PDF-build - cfg drift vs run), EQUIP-BINNING-ASYM (asymmetric binning scaling - deferred LOW), GAIA-ID-FLOAT-GUARD (catalog_id float64 read/normalize truncation - deferred MED), TIER1-UI-DEBT (38 SAFE UI/plotly `pass` sites - deferred LOW cosmetic), TIER1-OBSLOC-ZERO (0.0/0.0 observer fallback - deferred MED), broad-except 299-defensive pipeline/`photometry_core` `pass` cluster (existing phased-audit item).
 
-### G7-F003c — PDF report cfg reload vs run cfg (LOW-MED, deferred)
+### G7-F003c - PDF report cfg reload vs run cfg (LOW-MED, deferred)
 
-**Status:** OPEN (deferred; follow-up from G7-F003b review — do not fix in G7-F003b batch).
+**Status:** OPEN (deferred; follow-up from G7-F003b review - do not fix in G7-F003b batch).
 
 **Finding:** `photometry_report` builder re-loads `AppConfig()` from `config.json` at PDF-build time rather than receiving the cfg instance Phase 2A used. If `config.json` is edited between the photometry run and PDF generation, the report can describe settings (bp_rp primary, plate scale, GS11, aperture factors, observer location) that differ from what the run actually used, with no detection.
 
 **Remediation (future):** Thread the run's cfg (or persist a per-draft config snapshot) into the report instead of a fresh `AppConfig()` load. Affects all cfg-derived report fields, not just `phase01_use_bprp_primary`.
 
-### Tier-1 broad-except STEP 2 core — FIXED (2026-06-23)
+### Tier-1 broad-except STEP 2 core - FIXED (2026-06-23)
 
 **Status:** FIXED (`f950e3f`, 2026-06-23).
 
-**Scope (10 sites):** BATCH 1 MEDIUM core — `config.py` observer-location hydrate, `ui_quality_dashboard.py` Gain/RN panel, `app.py` saturate_adu (×2). BATCH 2 — `photometry_core.py` debug-only narrow (4 sites). BATCH 3 — `infolog.py` `log_event` (broad kept + DEBUG swallow log). Test: `tests/test_config_observer_location_hydrate.py`.
+**Scope (10 sites):** BATCH 1 MEDIUM core - `config.py` observer-location hydrate, `ui_quality_dashboard.py` Gain/RN panel, `app.py` saturate_adu (x2). BATCH 2 - `photometry_core.py` debug-only narrow (4 sites). BATCH 3 - `infolog.py` `log_event` (broad kept + DEBUG swallow log). Test: `tests/test_config_observer_location_hydrate.py`.
 
 **Commit:** `f950e3f`
 
-### TIER1-OBSLOC-ZERO — observer 0.0/0.0 fallback (MED, deferred)
+### TIER1-OBSLOC-ZERO - observer 0.0/0.0 fallback (MED, deferred)
 
-**Status:** OPEN (deferred; follow-up finding from STEP 2 review — do not fix in core batch).
+**Status:** OPEN (deferred; follow-up finding from STEP 2 review - do not fix in core batch).
 
 **Finding:** On DB observer-location hydrate failure, `config.py` falls back to json coords including `0.0/0.0`, which is a valid lat/lon pair but almost certainly a misconfiguration for any real rig. Silent use corrupts airmass / BJD / lunar dilution context.
 
 **Remediation (future):** Consider a louder/hard signal when observer location is `0.0/0.0` after hydrate (WARNING already added for DB failure; separate question is whether zero coords should block or escalate).
 
-### TIER1-UI-DEBT — deferred broad-except cleanup (LOW)
+### TIER1-UI-DEBT - deferred broad-except cleanup (LOW)
 
 **Status:** OPEN (deferred; not part of Tier-1 STEP 2 core batch).
 
-**Scope:** 38 SAFE UI/plotly optional-panel sites where `except Exception: pass` is cosmetic only — optional UI blocks, Plotly chart helpers, CLI tools. Examples: `ui_variability`, `ui_dao_stars`, `ui_masterstar_qa`, `ui_quality_dashboard` plotly paths, `ui_aperture_photometry` optional UI, `app.py:1584`, `config.py:2312`.
+**Scope:** 38 SAFE UI/plotly optional-panel sites where `except Exception: pass` is cosmetic only - optional UI blocks, Plotly chart helpers, CLI tools. Examples: `ui_variability`, `ui_dao_stars`, `ui_masterstar_qa`, `ui_quality_dashboard` plotly paths, `ui_aperture_photometry` optional UI, `app.py:1584`, `config.py:2312`.
 
 **Why deferred:** `ruff check . --select BLE001,E722` is already 0-unmarked (all broad handlers carry justified `# noqa: BLE001`; gate in `tests/test_ble001_regression.py`). These sites lack operator-visible diagnostics but do not affect photometric output or pipeline correctness.
 
 **Remediation (future):** Narrow to realistic exception types + optional DEBUG logging; no control-flow changes. Separate from the 299 pipeline/`photometry_core` defensive `pass` cluster (existing phased-audit item).
 
-### EQUIP-BINNING — DB bin1 fallback scaling — FIXED (2026-06-23)
+### EQUIP-BINNING - DB bin1 fallback scaling - FIXED (2026-06-23)
 
 **Status:** FIXED (`b19cd7e`, 2026-06-23).
 
-**Scope:** `param_resolver.py` — `_scale_bin1_to_binning`, `_binning_from_header`, `_scale_bin1_db_for_header`; DB-fallback branches in `resolve_gain` (exp=2) and `resolve_read_noise` (exp=1). FITS-present equipment intrinsics unchanged (already binned). Config fallback not scaled. Test: `tests/test_param_resolver_binning_scale.py`.
+**Scope:** `param_resolver.py` - `_scale_bin1_to_binning`, `_binning_from_header`, `_scale_bin1_db_for_header`; DB-fallback branches in `resolve_gain` (exp=2) and `resolve_read_noise` (exp=1). FITS-present equipment intrinsics unchanged (already binned). Config fallback not scaled. Test: `tests/test_param_resolver_binning_scale.py`.
 
-**Validation:** Draft 421 gain bit-identical (78/78 FITS gain 3.12). RN deliberate 1.3→2.6 on bin2 run (~3.9 mmag photon-term increase per epoch — NOT do-no-harm). `db=None`→caller 10.0 left unscaled by design.
+**Validation:** Draft 421 gain bit-identical (78/78 FITS gain 3.12). RN deliberate 1.3->2.6 on bin2 run (~3.9 mmag photon-term increase per epoch - NOT do-no-harm). `db=None`->caller 10.0 left unscaled by design.
 
-### EQUIP-BINNING-ASYM — asymmetric binning scaling (LOW, deferred)
+### EQUIP-BINNING-ASYM - asymmetric binning scaling (LOW, deferred)
 
-**Status:** OPEN (deferred; follow-up finding from EQUIP-BINNING fix review — do not fix in this batch).
+**Status:** OPEN (deferred; follow-up finding from EQUIP-BINNING fix review - do not fix in this batch).
 
-**Finding:** Asymmetric binning (`XBINNING != YBINNING`) currently → raw DB bin1 value + WARNING (no scaling). Physically the summed-binning factor is `bin_x × bin_y` for gain and depends on axis for RN, not `bin²`. All current rigs bin symmetrically (2×2) so no impact now; if asymmetric data ever arrives, the value is silently left at the wrong bin1 base (warned, not corrected).
+**Finding:** Asymmetric binning (`XBINNING != YBINNING`) currently -> raw DB bin1 value + WARNING (no scaling). Physically the summed-binning factor is `bin_x x bin_y` for gain and depends on axis for RN, not `bin^2`. All current rigs bin symmetrically (2x2) so no impact now; if asymmetric data ever arrives, the value is silently left at the wrong bin1 base (warned, not corrected).
 
-**Remediation (future):** Generalize `_scale_bin1_to_binning` to `bin_x × bin_y` when asymmetric data is in scope.
+**Remediation (future):** Generalize `_scale_bin1_to_binning` to `bin_x x bin_y` when asymmetric data is in scope.
 
-### GAIA-ID-FLOAT-GUARD — catalog_id float64 truncation (MED, deferred)
+### GAIA-ID-FLOAT-GUARD - catalog_id float64 truncation (MED, deferred)
 
-**Status:** OPEN (deferred; follow-up from EXO-AS-TARGET promotion audit — fixed in promotion path only).
+**Status:** OPEN (deferred; follow-up from EXO-AS-TARGET promotion audit - fixed in promotion path only).
 
-**Finding:** Default `pd.read_csv` without `dtype={'catalog_id': str}` infers float64 for 19-digit Gaia IDs; `normalize_gaia_source_id(float)` and `select_active_targets` `_gaia_id_str()` (`int(float(s))`) can silently truncate IDs above 2^53 (e.g. true `1625373404725030528` → artifact `1625373404725030400`). EXO-AS-TARGET hardened promotion + plan write; same pattern may exist at other read sites.
+**Finding:** Default `pd.read_csv` without `dtype={'catalog_id': str}` infers float64 for 19-digit Gaia IDs; `normalize_gaia_source_id(float)` and `select_active_targets` `_gaia_id_str()` (`int(float(s))`) can silently truncate IDs above 2^53 (e.g. true `1625373404725030528` -> artifact `1625373404725030400`). EXO-AS-TARGET hardened promotion + plan write; same pattern may exist at other read sites.
 
 **Remediation (future):** Audit all `catalog_id` reads for `read_vyvar_csv` / explicit `dtype=str`; reject or warn on float-typed inputs to `normalize_gaia_source_id`; eliminate `int(float())` Gaia id fallbacks.
 
-### EXOPLANET-XMATCH — local exoplanet host annotation — DONE (2026-06-23)
+### EXOPLANET-XMATCH - local exoplanet host annotation - DONE (2026-06-23)
 
 **Status:** DONE (`c169675`, 2026-06-23).
 
 **Scope:** `exoplanets/exoplanet_make.py` builder (separate from VYVAR core; local SQLite snapshot
 14185 rows: 6298 CONFIRMED + 7887 TOI). VYVAR: `database.py` reader + schema validate;
 `config.py` paths; `pipeline.py` query/annotate + fast-path `_apply_exo_host_columns_to_proc_df`;
-UI/report surfacing. Informational `exo_*` columns only — never comp exclusion / proximity veto /
+UI/report surfacing. Informational `exo_*` columns only - never comp exclusion / proximity veto /
 variability masks / trust / photometry numerics. Test: `tests/test_exoplanet_local_match.py`.
 
 **Validation:** Draft 421 DB-off vs DB-on B/R/V bit-identical (comp / mag / err / trust); 1/36
-Persei box hosts matched at 3″ (TOI-7453.01, kept as comp).
+Persei box hosts matched at 3 arcsec (TOI-7453.01, kept as comp).
 
-### EXO-AS-TARGET — exoplanet host promotion — DONE (2026-06-23)
+### EXO-AS-TARGET - exoplanet host promotion - DONE (2026-06-23)
 
 **Status:** DONE (`1616b18`, 2026-06-23).
 
-**Scope:** `pipeline.py` promotion from `masterstars_full_match` → merged `variable_targets.csv`;
-dedup VSX∩exo on exact Gaia string id; exclusion flip (`_vt_cid_exclude`, merged 10″ plan veto,
+**Scope:** `pipeline.py` promotion from `masterstars_full_match` -> merged `variable_targets.csv`;
+dedup VSXintersectexo on exact Gaia string id; exclusion flip (`_vt_cid_exclude`, merged 10 arcsec plan veto,
 `phase01_comparison_min_dist_arcsec`); `resolve_masterstars_metadata_csv` surfacing fix;
 `masterstar_row_gaia_key` string-safe id in promotion; `comp_qa_core` locus excludes skip targets
 without LC (do-no-harm). Tests: `tests/test_exoplanet_variable_targets_merge.py`; validator:
 `scripts/validate_exo_as_target_422.py`.
 
-**Validation:** Draft 422 `V_60_2` via `run_full_photometry_pipeline` — TOI-1131.01 promoted (8→9
+**Validation:** Draft 422 `V_60_2` via `run_full_photometry_pipeline` - TOI-1131.01 promoted (8->9
 active), true Gaia id `1625373404725030528`, excluded from comps; 8 VSX do-no-harm PASS.
 
 **Observing:** TOI-1131 saturated at 60 s V (target peak ~44.6 k ADU median; MASTERSTAR 58.5 k >
-85% of 65535) — shorter exposures needed for transit LC (not a code bug).
+85% of 65535) - shorter exposures needed for transit LC (not a code bug).
 

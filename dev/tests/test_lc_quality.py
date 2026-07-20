@@ -151,7 +151,7 @@ def test_no_model_no_rms_flag():
 def test_rms_model_fit():
     rows = []
     for mag in np.linspace(8.0, 16.0, 15):
-        # Fainter stars → higher RMS (Poisson-like, positive slope in log space)
+        # Fainter stars -> higher RMS (Poisson-like, positive slope in log space)
         rms = 10 ** (0.35 * mag - 1.2)
         rows.append(
             {

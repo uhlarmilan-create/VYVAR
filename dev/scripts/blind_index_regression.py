@@ -172,7 +172,7 @@ def main() -> int:
         sep = _sep(hint[0], hint[1], ra_t, dec_t) if hint else float("nan")
         ok = hint is not None and sep <= args.max_sep_deg
         rows.append((label, hint, sep, ok))
-        print(f"{label}: hint={hint} sep={sep:.3f}° {'OK' if ok else 'FAIL'}")
+        print(f"{label}: hint={hint} sep={sep:.3f} deg {'OK' if ok else 'FAIL'}")
 
     legacy_ok = rows[0][3]
     new_ok = rows[1][3]

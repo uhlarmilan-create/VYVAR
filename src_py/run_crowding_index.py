@@ -31,7 +31,7 @@ def main() -> None:
         draft_dir = ARCHIVE / f"draft_{d:06d}"
         ps = draft_dir / "platesolve" / SETUP
         if not (ps / "MASTERSTAR.fits").is_file():
-            print(f"[draft {d}] missing MASTERSTAR.fits — skip")
+            print(f"[draft {d}] missing MASTERSTAR.fits - skip")
             continue
         try:
             res, tgt = compute_crowding_index(draft_dir, SETUP, db, d, gaia_db_max_g=gaia_max_g)

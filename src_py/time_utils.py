@@ -66,14 +66,14 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
         if raw is None:
             _warn_once(
                 "date_obs_missing",
-                "VYVAR time_utils: DATE-OBS missing — jd_mid / HJD / BJD columns unavailable for affected frames.",
+                "VYVAR time_utils: DATE-OBS missing - jd_mid / HJD / BJD columns unavailable for affected frames.",
             )
             return None
         s = str(raw).strip()
         if not s:
             _warn_once(
                 "date_obs_empty",
-                "VYVAR time_utils: DATE-OBS missing — jd_mid / HJD / BJD columns unavailable for affected frames.",
+                "VYVAR time_utils: DATE-OBS missing - jd_mid / HJD / BJD columns unavailable for affected frames.",
             )
             return None
         try:
@@ -119,7 +119,7 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
         if not exptime_ok:
             _warn_once(
                 "exptime_missing_or_invalid",
-                "VYVAR time_utils: EXPTIME/EXPOSURE missing or <=0 — jd_mid equals shutter-open "
+                "VYVAR time_utils: EXPTIME/EXPOSURE missing or <=0 - jd_mid equals shutter-open "
                 "(not mid-exposure); BJD/HJD may be offset by up to EXPTIME/2 for affected frames.",
             )
             exptime = 0.0
@@ -191,7 +191,7 @@ def resolve_observer_location(
         logger.debug("Observer location resolved from: unknown")
         return None, None, None
     logger.debug(
-        "Observer location resolved from: %s (%.4f°N, %.4f°E, %.0fm)",
+        "Observer location resolved from: %s (%.4f degN, %.4f degE, %.0fm)",
         site.source,
         site.lat,
         site.lon,
@@ -275,7 +275,7 @@ def compute_time_columns(
         if lat is None or lon is None:
             _warn_once(
                 "observer_location_incomplete",
-                "VYVAR time_utils: observer site (SITELAT/SITELONG or LOCATION via draft) missing — "
+                "VYVAR time_utils: observer site (SITELAT/SITELONG or LOCATION via draft) missing - "
                 "jd_mid filled; hjd_mid / bjd_tdb_mid left empty until location is available.",
             )
         return {"jd_mid": jd, "hjd_mid": None, "bjd_tdb_mid": None}

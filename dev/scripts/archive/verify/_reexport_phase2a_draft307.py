@@ -66,7 +66,7 @@ def main() -> int:
 
     logging.getLogger().addHandler(_Tee())
 
-    print("[1/2] export_per_frame_catalogs …")
+    print("[1/2] export_per_frame_catalogs ...")
     t0 = time.time()
     per = export_per_frame_catalogs(
         frames_root=aligned,
@@ -94,7 +94,7 @@ def main() -> int:
         print(f"    sample {sample.name} catalog_id[0]={row['catalog_id'].iloc[0]!r}")
 
     fw = float(_load_fwhm(master_fits))
-    print(f"[2/2] run_phase2a fwhm={fw:.4f} …")
+    print(f"[2/2] run_phase2a fwhm={fw:.4f} ...")
     t1 = time.time()
     run_phase2a(
         masterstar_fits_path=master_fits,
@@ -114,10 +114,10 @@ def main() -> int:
     report_path.write_text(log_text, encoding="utf-8")
 
     xy = len(re.findall(r"XY fallback wrong star", log_text))
-    am_skip = len(re.findall(r"Airmass detrend preskočený", log_text))
+    am_skip = len(re.findall(r"Airmass detrend preskoceny", log_text))
     print(f"\n=== METRICS ===")
     print(f"XY fallback wrong star warnings: {xy}")
-    print(f"Airmass detrend preskočený warnings: {am_skip}")
+    print(f"Airmass detrend preskoceny warnings: {am_skip}")
     print(f"log saved: {report_path}")
 
     import pandas as pd
@@ -128,7 +128,7 @@ def main() -> int:
         det = df["am_detrended"].astype(str).str.lower().isin(("true", "1", "yes"))
         print(f"photometry_summary: am_detrended=True {int(det.sum())} / {len(df)} total")
 
-    # Hockey Stick (RMS) — same session as Variability UI
+    # Hockey Stick (RMS) - same session as Variability UI
     try:
         from ui_variability import run_variability_detection_session  # noqa: PLC0415
 

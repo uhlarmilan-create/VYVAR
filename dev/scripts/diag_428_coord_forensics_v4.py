@@ -426,7 +426,7 @@ def main() -> int:
         and cone_field_within_20 < 0.02 * max(1, len(unmatched))
     )
 
-    # T3 magnitude backstop — reference from ms rows with stored coords matching Gaia
+    # T3 magnitude backstop - reference from ms rows with stored coords matching Gaia
     good_ref = []
     for cid, row in ms_by_cid.items():
         g = ref_gaia.get(cid)
@@ -482,7 +482,7 @@ def main() -> int:
     lines.append("- recompute-invariance (p50~81\" stored vs final WCS) => unmatched DET coords likely fine; test Gaia coverage")
     lines.append("- matched rows split: ms-gaia~0 (detection-time Gaia coords) vs ms-gaia large (optimizer assigned id without coord refresh)")
     lines.append("")
-    lines.append("# T1 — Pixel-space identity test")
+    lines.append("# T1 - Pixel-space identity test")
     lines.append(f"violating_rows (vt-ms > {args.vt_ms_violation_arcsec}\"): {len(violation_ids)}")
     lines.append(f"classification_histogram: {json.dumps(hist, sort_keys=True)}")
     lines.append(f"MISASSIGNED-ID count: {len(misassigned)}")
@@ -531,7 +531,7 @@ def main() -> int:
             )
 
     lines.append("")
-    lines.append("# T2 — Gaia DB coverage vs frame footprint")
+    lines.append("# T2 - Gaia DB coverage vs frame footprint")
     lines.append(f"db_bbox: RA [{db_ra_min:.6f}, {db_ra_max:.6f}] DEC [{db_dec_min:.6f}, {db_dec_max:.6f}]")
     if cone_meta:
         lines.append(f"db_provenance_json: {cone_meta.get('_source', '')}")
@@ -552,24 +552,24 @@ def main() -> int:
     lines.append(f"field_catalog_cone_nn_within_20arcsec: {cone_field_within_20}/{len(unmatched)}")
     lines.append(
         "unmatched_DET interpretation: spurious DAO detections without catalog association "
-        "(not missing DB rows — 4379 catalog sources in frame, mag<=15.26)"
+        "(not missing DB rows - 4379 catalog sources in frame, mag<=15.26)"
     )
     lines.append(f"COVERAGE VERDICT (81\" unmatched population): {'CONFIRMED' if coverage_confirmed else 'REFUTED'}")
     if coverage_confirmed:
         lines.append("  radius decision reframed: no match-radius change helps; wider/deeper field DB build is actionable item")
 
     lines.append("")
-    lines.append("# T3 — Magnitude-consistency backstop")
+    lines.append("# T3 - Magnitude-consistency backstop")
     lines.append(f"reference_fit_n (ms-gaia<=0.5\"): {len(good_ref)}")
     lines.append(f"violation_rows |mag_resid|>0.5mag: {t3_outliers}")
 
     fail: list[str] = []
     if misassigned:
-        fail.append(f"T1 MISASSIGNED-ID: {len(misassigned)} rows — STOP gate")
+        fail.append(f"T1 MISASSIGNED-ID: {len(misassigned)} rows - STOP gate")
     if len(violation_ids) != sum(hist.values()) - hist.get("NO_GAIA_DB", 0):
         pass  # NO_GAIA_DB ok
     if len(violation_ids) == 0:
-        fail.append("T1: zero violation rows — unexpected")
+        fail.append("T1: zero violation rows - unexpected")
 
     lines.append("")
     if fail:
@@ -580,7 +580,7 @@ def main() -> int:
         if hist.get("STALE-COORDS", 0) == len(violation_ids) - hist.get("NO_GAIA_DB", 0):
             lines.append("DIAG SELF-CHECK PASS (T1 all STALE-COORDS; T4 audit in CURSOR_RESULT)")
         else:
-            lines.append("DIAG SELF-CHECK PASS (T1 no MISASSIGNED-ID; mixed classes — see histogram)")
+            lines.append("DIAG SELF-CHECK PASS (T1 no MISASSIGNED-ID; mixed classes - see histogram)")
 
     text = "\n".join(lines) + "\n"
     args.out.parent.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
-﻿============================================================
+============================================================
 VYVAR AUDIT - 04/08/2026 19:38:38
 ============================================================
 
@@ -943,12 +943,12 @@ DUPLIKAT: _iter_fits_recursive
   app.py:662: st.session_state["vyvar_pending_job"] = {
   app.py:701: pending = st.session_state.get("vyvar_pending_job")
   app.py:702: if pending:
-  app.py:706: "process": str(pending.get("label") or pending.get("kind") or "úloha"),
+  app.py:706: "process": str(pending.get("label") or pending.get("kind") or "uloha"),
   app.py:715: ap = Path(pending.get("archive_path", "")) if pending.get("archive_path") else None
   app.py:716: _hide_inline_job_status = str(pending.get("kind") or "").strip().lower() in {
-  app.py:724: else st.status(pending.get("label", "Running…"), expanded=False)
-  app.py:730: log_event(f"— Spúšťam: {pending.get('kind')} — {ap}")
-  app.py:742: "process": str(pending.get("label") or pending.get("kind") or "úloha"),
+  app.py:724: else st.status(pending.get("label", "Running..."), expanded=False)
+  app.py:730: log_event(f"- Spustam: {pending.get('kind')} - {ap}")
+  app.py:742: "process": str(pending.get("label") or pending.get("kind") or "uloha"),
   app.py:751: if pending.get("kind") == "analyze":
   app.py:768: _draft_a = pending.get("draft_id")
   app.py:773: _eq_a = pending.get("equipment_id")
@@ -998,9 +998,9 @@ DUPLIKAT: _iter_fits_recursive
   app.py:1146: elif pending.get("kind") == "masterstar_catalog_only":
   app.py:1153: _ms_fits_only = bool(pending.get("masterstar_fits_only"))
   app.py:1154: _ms_skip_build = bool(pending.get("masterstar_skip_build"))
-  app.py:1157: f"— MASTERSTAR (len FITS, bez solve): ui_action={pending.get('masterstar_ui_action')!r}, "
+  app.py:1157: f"- MASTERSTAR (len FITS, bez solve): ui_action={pending.get('masterstar_ui_action')!r}, "
   app.py:1158: f"build_mode={pending.get('masterstar_build_mode')!r}, "
-  app.py:1159: f"stack_n={pending.get('masterstar_stack_n')!r} — zápis do platesolve/…"
+  app.py:1159: f"stack_n={pending.get('masterstar_stack_n')!r} - zapis do platesolve/..."
   app.py:1164: f"(skip build z processed), draft_id={pending.get('draft_id')!r}."
   app.py:1171: pending.get("dao_fwhm_px", getattr(pipeline.config, "sips_dao_fwhm_px", 2.5)),
   app.py:1177: pending.get(
@@ -1025,10 +1025,10 @@ DUPLIKAT: _iter_fits_recursive
   app.py:1272: str(pending.get("setup_name")).strip()
   app.py:1273: if pending.get("setup_name") is not None
   app.py:1280: masterstar_skip_build=bool(pending.get("masterstar_skip_build")),
-  app.py:1294: f"✅ MASTERSTAR FITS dokončené [{pending.get('masterstar_ui_action', '?')}]: {_msf or outp.get('masterstar_fits')} "
-  app.py:1312: "process": str(pending.get("label") or pending.get("kind") or "úloha"),
-  app.py:1332: "process": str(pending.get("label") or pending.get("kind") or "úloha"),
-  app.py:1352: "process": str(pending.get("label") or pending.get("kind") or "úloha"),
+  app.py:1294: f"[OK] MASTERSTAR FITS dokoncene [{pending.get('masterstar_ui_action', '?')}]: {_msf or outp.get('masterstar_fits')} "
+  app.py:1312: "process": str(pending.get("label") or pending.get("kind") or "uloha"),
+  app.py:1332: "process": str(pending.get("label") or pending.get("kind") or "uloha"),
+  app.py:1352: "process": str(pending.get("label") or pending.get("kind") or "uloha"),
   app.py:1361: # Clear pending job and rerun into the normal UI view.
   app.py:1362: st.session_state.pop("vyvar_pending_job", None)
   app.py:1385: _pending_ra = st.session_state.get("vyvar_pending_center_ra")
@@ -1104,11 +1104,11 @@ DUPLIKAT: _iter_fits_recursive
 ### VYVAR_PLATESOLVER.PY (prvy 100 riadkov) ###
 """VYVAR plate solving: ICRS hints from FITS/UI and optional in-process solver (local Gaia DR3).
 
-RA/Dec must come from headers (``VY_TARG*``, object keywords, â€¦) or mandatory user input.
+RA/Dec must come from headers (``VY_TARG*``, object keywords, aEUR|) or mandatory user input.
 The optional ``solve_wcs_with_local_gaia`` path matches DAO detections to a local Gaia DR3 cone/box and
 fits a **TAN** (gnomonic / tangent-plane) WCS via ``fit_wcs_from_points``, then optionally **SIP**
 (Simple Imaging Polynomial) distortion up to 3rd order so wide-field optics match Gaia DR3 across the
-full chipâ€”not only near the centre (pure CD+CRPIX is only linear on the tangent plane).
+full chipaEUR'not only near the centre (pure CD+CRPIX is only linear on the tangent plane).
 """
 
 from __future__ import annotations

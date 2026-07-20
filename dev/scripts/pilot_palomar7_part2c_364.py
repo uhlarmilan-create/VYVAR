@@ -66,7 +66,7 @@ def main() -> int:
         if part_b_df.empty:
             print(f"Part B skipped: {note}", flush=True)
         else:
-            print("\nPart B — aperture vs PSF RMS by mag (Luminance_60_2):", flush=True)
+            print("\nPart B - aperture vs PSF RMS by mag (Luminance_60_2):", flush=True)
             print("mag_bin | N | median RMS_aperture | median RMS_psf | median psf/aper", flush=True)
             for _, r in part_b_df.iterrows():
                 print(

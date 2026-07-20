@@ -108,12 +108,12 @@ def resolve_draft_directory(
                 m = re.search(r"draft[_-]?(\d{1,8})", p.name, flags=re.IGNORECASE)
                 draft_id = int(m.group(1)) if m else None
             return p.resolve(), draft_id, ""
-        return None, draft_id, f"Pod adresárom nie je ``platesolve/``: {p}"
+        return None, draft_id, f"Pod adresarom nie je ``platesolve/``: {p}"
 
     if draft_id is not None:
         cand = (archive_root / "Drafts" / f"draft_{int(draft_id):06d}").resolve()
         if cand.is_dir() and (cand / "platesolve").is_dir():
             return cand, draft_id, ""
-        return None, draft_id, f"Draft {draft_id} neexistuje v archíve: {cand}"
+        return None, draft_id, f"Draft {draft_id} neexistuje v archive: {cand}"
 
-    return None, None, "Zadaj celú cestu k priečinku ``draft_XXXXXX`` alebo číslo draftu."
+    return None, None, "Zadaj celu cestu k priecinku ``draft_XXXXXX`` alebo cislo draftu."

@@ -1,4 +1,4 @@
-"""Phase 2A replay on draft_000321 — TODO-ALG-5 PyTICS verify."""
+"""Phase 2A replay on draft_000321 - TODO-ALG-5 PyTICS verify."""
 from __future__ import annotations
 
 import logging

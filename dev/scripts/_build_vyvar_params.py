@@ -1,4 +1,4 @@
-"""One-shot generator for VYVAR_PARAMS.md (config↔UI parity registry)."""
+"""One-shot generator for VYVAR_PARAMS.md (config<->UI parity registry)."""
 from __future__ import annotations
 
 import dataclasses
@@ -90,47 +90,47 @@ def _parse_clamps(src: str) -> dict[str, str]:
         src,
     ):
         key, lo, hi = m.group(1), m.group(2).strip(), m.group(3).strip()
-        clamps[key] = f"{lo} … {hi}"
+        clamps[key] = f"{lo} ... {hi}"
     # max(lo, min(hi, int(data.get("key"
     for m in re.finditer(
         r'self\.(\w+)\s*=\s*max\(\s*([^,]+),\s*min\(\s*([^,]+),\s*int\(data\.get\("([^"]+)"',
         src,
     ):
         lo, hi, key = m.group(2).strip(), m.group(3).strip(), m.group(4)
-        clamps.setdefault(key, f"{lo} … {hi}")
+        clamps.setdefault(key, f"{lo} ... {hi}")
     for m in re.finditer(
         r'self\.(\w+)\s*=\s*max\(\s*([^,]+),\s*min\(\s*([^,]+),\s*float\(data\.get\("([^"]+)"',
         src,
     ):
         lo, hi, key = m.group(2).strip(), m.group(3).strip(), m.group(4)
-        clamps.setdefault(key, f"{lo} … {hi}")
+        clamps.setdefault(key, f"{lo} ... {hi}")
     # explicit max/min on assignment lines
     for m in re.finditer(
         r'self\.(\w+)\s*=\s*max\(\s*([^,]+),\s*min\(\s*([^,]+),\s*float\([^)]+\)\s*\)',
         src,
     ):
         key, lo, hi = m.group(1), m.group(2).strip(), m.group(3).strip()
-        clamps.setdefault(key, f"{lo} … {hi}")
+        clamps.setdefault(key, f"{lo} ... {hi}")
     # UI save clamps in ui_settings (document separately if found)
     manual = {
-        "masterstar_prematch_peak_sigma_floor": "0.5 … 6.0 (UI slider)",
-        "masterstar_dao_threshold_sigma": "0.1 … 6.0 (UI slider)",
-        "aperture_fwhm_factor": "0.5 … 6.0",
-        "annulus_inner_fwhm": "1.0 … 10.0",
-        "annulus_outer_fwhm": "1.5 … 12.0",
-        "nonlinearity_peak_percentile": "0.0 … 50.0",
-        "nonlinearity_fwhm_ratio": "1.01 … 3.0",
-        "aperture_variable_factor": "0.5 … 2.0",
-        "aperture_comp_factor": "0.5 … 2.0",
-        "phase01_comparison_max_dist_deg": "0.05 … 10.0",
-        "phase01_comparison_max_mag_diff": "0.05 … 5.0",
-        "phase01_comparison_rms_bin_mag": "0.0001 … 0.05",
-        "sips_dao_fwhm_px": "1.0 … 8.0",
-        "calibration_library_native_binning": "1 … 16",
-        "alignment_max_stars": "10 … 5000",
-        "alignment_max_control_points": "12 … 500",
-        "catalog_query_max_rows": "1000 … 500000",
-        "psf_spatial_order": "0 … 2",
+        "masterstar_prematch_peak_sigma_floor": "0.5 ... 6.0 (UI slider)",
+        "masterstar_dao_threshold_sigma": "0.1 ... 6.0 (UI slider)",
+        "aperture_fwhm_factor": "0.5 ... 6.0",
+        "annulus_inner_fwhm": "1.0 ... 10.0",
+        "annulus_outer_fwhm": "1.5 ... 12.0",
+        "nonlinearity_peak_percentile": "0.0 ... 50.0",
+        "nonlinearity_fwhm_ratio": "1.01 ... 3.0",
+        "aperture_variable_factor": "0.5 ... 2.0",
+        "aperture_comp_factor": "0.5 ... 2.0",
+        "phase01_comparison_max_dist_deg": "0.05 ... 10.0",
+        "phase01_comparison_max_mag_diff": "0.05 ... 5.0",
+        "phase01_comparison_rms_bin_mag": "0.0001 ... 0.05",
+        "sips_dao_fwhm_px": "1.0 ... 8.0",
+        "calibration_library_native_binning": "1 ... 16",
+        "alignment_max_stars": "10 ... 5000",
+        "alignment_max_control_points": "12 ... 500",
+        "catalog_query_max_rows": "1000 ... 500000",
+        "psf_spatial_order": "0 ... 2",
         "psf_spatial_enabled": "master gate; spatial ePSF active iff enabled AND order>0",
     }
     clamps.update({k: v for k, v in manual.items() if k not in clamps})
@@ -381,7 +381,7 @@ def main() -> None:
     json_data = json.loads(json_path.read_text(encoding="utf-8")) if json_path.exists() else {}
     json_keys = set(json_data.keys())
 
-    # Fresh config with project root only (loads config.json — use dataclass defaults via inspection)
+    # Fresh config with project root only (loads config.json - use dataclass defaults via inspection)
     dc_defaults: dict[str, object] = {}
     for f in dataclasses.fields(AppConfig):
         if f.name in {"archive_root", "calibration_library_root", "database_path"}:
@@ -401,23 +401,23 @@ def main() -> None:
     for key in all_keys:
         if key in {"archive_root", "calibration_library_root", "database_path"}:
             continue
-        default_dc = dc_defaults.get(key, "—")
-        default_rt = runtime.get(key, "—")
-        default_json = json_data.get(key, "—")
-        if default_json != "—":
+        default_dc = dc_defaults.get(key, "-")
+        default_rt = runtime.get(key, "-")
+        default_json = json_data.get(key, "-")
+        if default_json != "-":
             default_str = repr(default_json)
-            if default_dc != "—" and repr(default_dc) != repr(default_json):
+            if default_dc != "-" and repr(default_dc) != repr(default_json):
                 default_str += f" (dataclass {repr(default_dc)})"
-        elif default_dc != "—":
+        elif default_dc != "-":
             default_str = repr(default_dc)
             if repr(default_rt) != repr(default_dc):
-                default_str += f" → runtime {repr(default_rt)}"
+                default_str += f" -> runtime {repr(default_rt)}"
         else:
             default_str = repr(default_rt)
 
-        clamp = clamps.get(key, "—")
+        clamp = clamps.get(key, "-")
         ui_locs = ui_hits.get(key, [])
-        ui_loc = ", ".join(ui_locs) if ui_locs else "—"
+        ui_loc = ", ".join(ui_locs) if ui_locs else "-"
         in_json = key in json_keys
 
         if ui_locs:
@@ -428,7 +428,7 @@ def main() -> None:
             exposed = "no"
 
         area = _area(key)
-        json_note = "" if in_json else " ⚠ not in config.json"
+        json_note = "" if in_json else " ! not in config.json"
         rows.append((area, key, default_str, clamp, ui_loc, exposed, json_note))
 
     # UI-only drift (config-like keys referenced in UI but not on AppConfig)
@@ -498,18 +498,18 @@ def main() -> None:
         grouped[row[0]].append(row)
 
     lines = [
-        "# VYVAR — Config ↔ UI parameter registry",
+        "# VYVAR - Config <-> UI parameter registry",
         "",
         "Generated **2026-06-02** from `config.py`, `config.json`, and `ui*.py`.",
-        "Registry required by `docs/VYVAR_PROCESS.md` Definition of Done §4.",
+        "Registry required by `docs/VYVAR_PROCESS.md` Definition of Done S4.",
         "",
-        "**Legend — exposed:** `yes` = Settings or tool UI widget; `intentionally-hidden` =",
+        "**Legend - exposed:** `yes` = Settings or tool UI widget; `intentionally-hidden` =",
         "dev/gated flag documented here (edit via `config.json`); `no` = drift (config-only,",
         "no UI yet).",
         "",
-        f"**Summary:** {sum(1 for r in rows if r[5]=='yes')} exposed · "
-        f"{sum(1 for r in rows if r[5]=='intentionally-hidden')} intentionally-hidden · "
-        f"{sum(1 for r in rows if r[5]=='no')} config-only (no UI) · "
+        f"**Summary:** {sum(1 for r in rows if r[5]=='yes')} exposed . "
+        f"{sum(1 for r in rows if r[5]=='intentionally-hidden')} intentionally-hidden . "
+        f"{sum(1 for r in rows if r[5]=='no')} config-only (no UI) . "
         f"{len(ui_only)} UI references without config key",
         "",
         "---",
@@ -569,7 +569,7 @@ def main() -> None:
             "",
         ]
         for k in ui_only:
-            lines.append(f"- `{k}` → {', '.join(ui_hits[k])}")
+            lines.append(f"- `{k}` -> {', '.join(ui_hits[k])}")
         lines.append("")
 
     out = ROOT / "docs" / "VYVAR_PARAMS.md"

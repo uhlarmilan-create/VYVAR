@@ -18,7 +18,7 @@ Get-ChildItem "$root\*.py" | ForEach-Object {
         Out-File $out -Append -Encoding UTF8
 }
 
-# 3. Interné importy
+# 3. Interne importy
 "`n### IMPORTY ###" | Out-File $out -Append -Encoding UTF8
 Get-ChildItem "$root\*.py" | ForEach-Object {
     $imports = Select-String -Path $_.FullName -Pattern "^from vyvar|^import vyvar|^from pipeline|^from database|^from config|^from utils|^from photometry|^from calibration|^from importer|^from astrometry|^from infolog|^from time_utils|^from psf_photometry|^from masterstar"

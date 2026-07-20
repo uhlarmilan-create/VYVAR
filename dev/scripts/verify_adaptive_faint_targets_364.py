@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Part B: faint-target adaptive selector verification — draft 364 Luminance_180_2."""
+"""Part B: faint-target adaptive selector verification - draft 364 Luminance_180_2."""
 from __future__ import annotations
 
 import importlib.util

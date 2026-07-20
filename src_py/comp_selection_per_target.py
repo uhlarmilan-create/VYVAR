@@ -87,7 +87,7 @@ def _pixel_distance_deg_vectorized(
     *,
     plate_scale_arcsec: float,
 ) -> np.ndarray:
-    """Euclidean pixel distance converted to degrees via plate scale; invalid → 999.0."""
+    """Euclidean pixel distance converted to degrees via plate scale; invalid -> 999.0."""
     x2 = np.asarray(x_arr, dtype=np.float64)
     y2 = np.asarray(y_arr, dtype=np.float64)
     scale = float(plate_scale_arcsec)
@@ -104,7 +104,7 @@ def _pixel_distance_deg_vectorized(
 def _angular_distance_deg_vectorized(
     ra_t: float, dec_t: float, ra_arr: np.ndarray, dec_arr: np.ndarray
 ) -> np.ndarray:
-    """Haversine distance (deg); invalid coords → 999.0 (PERF-9)."""
+    """Haversine distance (deg); invalid coords -> 999.0 (PERF-9)."""
     ra2 = np.asarray(ra_arr, dtype=np.float64)
     de2 = np.asarray(dec_arr, dtype=np.float64)
     ra1 = float(ra_t)
@@ -246,13 +246,13 @@ def _resolve_target_color_for_comp_selection(
         if math.isfinite(target_bprp_eff):
             log_event(f"[COMP] BP-RP={float(target_bprp_eff):.3f} for target {target_cid}")
         else:
-            log_event(f"[COMP] BP-RP=NaN for target {target_cid} → T4 / mag proxy")
+            log_event(f"[COMP] BP-RP=NaN for target {target_cid} -> T4 / mag proxy")
     except Exception:  # noqa: BLE001
         # EXC-0032: T3 -- BP-RP status log_event line for target never prints (EXCEPT-BULK-2 2026-07-08)
         pass
     if not math.isfinite(target_bprp_eff):
         _vnm = str(target.get("vsx_name", "") or target.get("name", "") or "").strip() or (target_cid or "?")
-        log_event(f"TARGET {_vnm} nemá BP-RP → TIER filter len podľa mag")
+        log_event(f"TARGET {_vnm} nema BP-RP -> TIER filter len podla mag")
 
     _tier_lims = _cfg.comp_tier_bprp_limits()
     TIER_DEFS = [
@@ -263,7 +263,7 @@ def _resolve_target_color_for_comp_selection(
     ]
 
     def _individual_tier(delta_bprp: float) -> int:
-        """Tier podľa |ΔBP-RP|; NaN → T4 (neznáma farba)."""
+        """Tier podla |DeltaBP-RP|; NaN -> T4 (neznama farba)."""
         if not np.isfinite(delta_bprp):
             return 4
         for tier, limit in TIER_DEFS:
@@ -289,7 +289,7 @@ def _adaptive_mag_filter(
     max_mag_diff: float,
     mag_diff_step: float = 0.25,
 ) -> tuple[pd.DataFrame, float]:
-    """Postupne uvoľňuje Δmag limit kým nie je dostatok kandidátov."""
+    """Postupne uvolnuje Deltamag limit kym nie je dostatok kandidatov."""
     if all_candidates is None or getattr(all_candidates, "empty", True):
         return pd.DataFrame(), float(mag_diff_start)
     target = float(target_mag)
@@ -345,7 +345,7 @@ def _filter_comp_candidates_spatial_static(
     plate_scale_arcsec: float = 1.3,
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
     """Returns (ms, _base_mask, det_mask)."""
-    # ── Krok 1: Filter kandidátov ──
+    # -- Krok 1: Filter kandidatov --
     _debug_bo = str(target_cid).strip() == "1498613634033133184"
     if _debug_bo:
                 print(f"[DEBUG BO CVn] Step A: global_comp_pool size = {int(len(ms))}")
@@ -390,13 +390,13 @@ def _filter_comp_candidates_spatial_static(
             )
         except Exception:  # noqa: BLE001
             pass
-    # Vylúč samotný target
+    # Vyluc samotny target
     if target_cid:
         cand_mask &= ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).astype(str) != target_cid
         if _debug_bo:
                         print(f"[DEBUG BO CVn] (exclude self) -> {int(cand_mask.sum())}")
 
-    # Jednotný vnútorný okraj čipu (premenné / comp / suspected rovnaké pravidlá)
+    # Jednotny vnutorny okraj cipu (premenne / comp / suspected rovnake pravidla)
     _cm = int(chip_interior_margin_px)
     if (
         _cm > 0
@@ -413,7 +413,7 @@ def _filter_comp_candidates_spatial_static(
         if _debug_bo:
                         print(f"[DEBUG BO CVn] (chip margin {int(_cm)} px) -> {int(cand_mask.sum())}")
 
-    # Hard filter: minimálna vzdialenosť od targetu
+    # Hard filter: minimalna vzdialenost od targetu
     if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0:
         min_dist_deg = float(min_dist_arcsec) / 3600.0
         cand_mask &= ms["_dist_deg"].ge(min_dist_deg)
@@ -429,18 +429,18 @@ def _filter_comp_candidates_spatial_static(
                 # EXC-0037: T3 -- BO CVn debug print after min_dist filter suppressed (EXCEPT-BULK-2 2026-07-08)
                 pass
 
-    # Žiadna hviezda zo zoznamu VSX cieľov (variable_targets) ako comp — vrátane catalog_only Gaia ID.
+    # Ziadna hviezda zo zoznamu VSX cielov (variable_targets) ako comp - vratane catalog_only Gaia ID.
     if _vt_gaia_ids:
         cand_mask &= ~ms["_norm_cid_vt"].isin(_vt_gaia_ids)
         if _debug_bo:
                         print(f"[DEBUG BO CVn] (exclude variable_targets IDs) -> {int(cand_mask.sum())}")
 
-    # Hard filter: |ΔMag| sa aplikuje adaptívne neskôr (na candidates_pre),
-    # aby bol robustný pre celé rozpätie magnitúd a riedke polia.
+    # Hard filter: |DeltaMag| sa aplikuje adaptivne neskor (na candidates_pre),
+    # aby bol robustny pre cele rozpatie magnitud a riedke polia.
     if "_mag" not in ms.columns:
         ms["_mag"] = pd.to_numeric(ms.get("mag", ms.get("phot_g_mean_mag")), errors="coerce")
 
-    # Hard farebný filter: |ΔBP-RP|
+    # Hard farebny filter: |DeltaBP-RP|
     if math.isfinite(max_delta_bprp_cfg) and max_delta_bprp_cfg > 0:
         _bpr_raw = pd.to_numeric(ms.get("bp_rp"), errors="coerce")
         _tcol = float(target_bprp_eff) if math.isfinite(float(target_bprp_eff)) else float("nan")
@@ -462,24 +462,24 @@ def _filter_comp_candidates_spatial_static(
         n_cf = int((_known_color & ~_color_ok).sum())
         if n_cf > 0:
             logging.debug(
-                f"[FÁZA 1] Target {target_cid}: |ΔBP-RP| filter odstránil "
-                f"{n_cf} kandidátov (threshold={float(max_delta_bprp_cfg):.2f})"
+                f"[FAZA 1] Target {target_cid}: |DeltaBP-RP| filter odstranil "
+                f"{n_cf} kandidatov (threshold={float(max_delta_bprp_cfg):.2f})"
             )
 
-    # Filter A: Gaia objektové flagy
+    # Filter A: Gaia objektove flagy
     _n_before_a = int(cand_mask.sum())
 
-    # gaia_nss=True → non-single star (binárka/dvojhviezda) → variabilný flux
+    # gaia_nss=True -> non-single star (binarka/dvojhviezda) -> variabilny flux
     if exclude_gaia_nss and "gaia_nss" in ms.columns:
         _nss_rej = cand_mask & _bool_col(ms["gaia_nss"])
         cand_mask &= ~_bool_col(ms["gaia_nss"])
         _n_rej = int(_nss_rej.sum())
         if _n_rej > 0:
             logging.info(
-                f"[FÁZA 1] Target {target_cid}: Filter A (gaia_nss) vylúčil {_n_rej} kandidátov"
+                f"[FAZA 1] Target {target_cid}: Filter A (gaia_nss) vylucil {_n_rej} kandidatov"
             )
 
-    # gaia_qso, gaia_gal → nie bodový zdroj → systematické chyby
+    # gaia_qso, gaia_gal -> nie bodovy zdroj -> systematicke chyby
     if exclude_gaia_extobj:
         _rej_ext_total = 0
         for _ext_col in ("gaia_qso", "gaia_gal"):
@@ -490,7 +490,7 @@ def _filter_comp_candidates_spatial_static(
                 _rej_ext_total += _rej
                 if _rej > 0:
                     logging.info(
-                        f"[FÁZA 1] Target {target_cid}: Filter A ({_ext_col}) vylúčil {_rej} kandidátov"
+                        f"[FAZA 1] Target {target_cid}: Filter A ({_ext_col}) vylucil {_rej} kandidatov"
                     )
 
         if _rej_ext_total == 0:
@@ -500,8 +500,8 @@ def _filter_comp_candidates_spatial_static(
     _rej_a_total = _n_before_a - _n_after_a
     if _rej_a_total > 0:
         logging.debug(
-            f"[FÁZA 1] Target {target_cid}: Filter A celkom vylúčil {_rej_a_total} kandidátov "
-            f"({_n_before_a} → {_n_after_a})"
+            f"[FAZA 1] Target {target_cid}: Filter A celkom vylucil {_rej_a_total} kandidatov "
+            f"({_n_before_a} -> {_n_after_a})"
         )
     if _debug_bo:
         try:
@@ -511,8 +511,8 @@ def _filter_comp_candidates_spatial_static(
             # EXC-0040: T3 -- BO CVn debug print after Filter A (nss/extobj) suppressed (EXCEPT-BULK-2 2026-07-08)
             pass
 
-    # Zahrň DET hviezdy (bez Gaia ID) ak majú snr50_ok a nie sú saturované.
-    # Tieto môžu byť stabilné comp hviezdy aj bez katalógového záznamu.
+    # Zahrn DET hviezdy (bez Gaia ID) ak maju snr50_ok a nie su saturovane.
+    # Tieto mozu byt stabilne comp hviezdy aj bez katalogoveho zaznamu.
     det_mask = (
         ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index)))
         .astype(str)
@@ -533,7 +533,7 @@ def _filter_comp_candidates_spatial_static(
 
     cand_mask = cand_mask | det_mask
 
-    # Base mask for tiered Δmag/ΔB-V selection (keeps all non-photometric filters).
+    # Base mask for tiered Deltamag/DeltaB-V selection (keeps all non-photometric filters).
     # NOTE: cand_mask already includes many filters + DET; we rebuild explicitly for clarity.
     _base_mask = (
         ms["_dist_deg"].le(max_dist_deg)
@@ -581,7 +581,7 @@ def _build_candidates_pre_adaptive_mag(
 ) -> tuple[pd.DataFrame, float] | None:
     """Returns (candidates_pre, used_mag_tol) or None if too few candidates."""
     # Start with a broad candidate set (emergency tier) for one-pass per-frame metrics.
-    # Apply adaptive Δmag filter here (changes only the INPUT to later filters).
+    # Apply adaptive Deltamag filter here (changes only the INPUT to later filters).
     candidates_pre = ms[_base_mask | det_mask].copy()
     _debug_bo = str(target_cid).strip() == "1498613634033133184"
     if _debug_bo:
@@ -614,12 +614,12 @@ def _build_candidates_pre_adaptive_mag(
         )
         if float(used_mag_tol) > float(mag_tol) + 1e-9:
             log_event(
-                f"[COMP] {target_cid}: Δmag uvoľnený {float(mag_tol):.2f} → {float(used_mag_tol):.2f} "
-                f"(pole má málo kandidátov)"
+                f"[COMP] {target_cid}: Deltamag uvolneny {float(mag_tol):.2f} -> {float(used_mag_tol):.2f} "
+                f"(pole ma malo kandidatov)"
             )
         logging.debug(
-            f"[FÁZA 1] Target {target_cid}: adaptive Δmag filter "
-            f"{_before_mag} → {int(len(candidates_pre))} (used_mag_tol={float(used_mag_tol):.2f})"
+            f"[FAZA 1] Target {target_cid}: adaptive Deltamag filter "
+            f"{_before_mag} -> {int(len(candidates_pre))} (used_mag_tol={float(used_mag_tol):.2f})"
         )
         if _debug_bo:
             print(
@@ -633,13 +633,13 @@ def _build_candidates_pre_adaptive_mag(
     if len(candidates_pre) < n_comp_min:
         if sparse_fallback_mode and len(candidates_pre) > 0:
             logging.info(
-                f"[FÁZA 1] Target {target_cid}: sparse fallback — "
-                f"{len(candidates_pre)} kandidátov (< n_comp_min={n_comp_min}), pokračujem."
+                f"[FAZA 1] Target {target_cid}: sparse fallback - "
+                f"{len(candidates_pre)} kandidatov (< n_comp_min={n_comp_min}), pokracujem."
             )
         else:
             logging.warning(
-                f"[FÁZA 1] Target {target_cid}: len {len(candidates_pre)} kandidátov "
-                f"< n_comp_min={n_comp_min} — preskakujem."
+                f"[FAZA 1] Target {target_cid}: len {len(candidates_pre)} kandidatov "
+                f"< n_comp_min={n_comp_min} - preskakujem."
             )
             _warn_zero_compstars_edge(
                 target_cid=target_cid,
@@ -693,7 +693,7 @@ def _bootstrap_phase1_csv_cache(
                     and "saturate_limit_adu_85pct" not in _use_cols
                 ):
                     _use_cols.append("saturate_limit_adu_85pct")
-                # Gaia ID musí byť str — float64 stráca cifry
+                # Gaia ID musi byt str - float64 straca cifry
                 _dtype_pf: dict[str, type] = {}
                 if "catalog_id" in _use_cols:
                     _dtype_pf["catalog_id"] = str
@@ -780,7 +780,7 @@ def _accumulate_per_frame_comp_metrics(
             if have_edge_cols and not _edge_log_done:
                 logging.info(
                     f"[EDGE CHECK] chip={int(_chip_w_eff)}x{int(_chip_h_eff)}px, "
-                    "annulus outer použitý per-frame z sky_annulus_r_out_px"
+                    "annulus outer pouzity per-frame z sky_annulus_r_out_px"
                 )
                 _edge_log_done = True
 
@@ -1086,7 +1086,7 @@ def _apply_comp_metric_hard_filters(
     cfg: Any | None = None,
     comp_quality_notes: dict[str, str] | None = None,
 ) -> Any:
-    # Filter SAT: vylúč kandidátov, ktorí sú nad 85% sat limitu vo viac než 10% framov
+    # Filter SAT: vyluc kandidatov, ktori su nad 85% sat limitu vo viac nez 10% framov
     _sat_rejected: set[str] = set()
     for cid in sorted(flux_map.keys()):
         total = int(peak_total_map.get(cid, 0) or 0)
@@ -1095,13 +1095,13 @@ def _apply_comp_metric_hard_filters(
             flux_map.pop(cid, None)
             _sat_rejected.add(cid)
             logging.info(
-                f"[FÁZA 1] Saturácia filter: vylúčený {cid} "
+                f"[FAZA 1] Saturacia filter: vyluceny {cid} "
                 f"({over}/{total} framov nad 85% limitom)"
             )
     if _sat_rejected:
-        logging.info(f"[FÁZA 1] Celkom vylúčených kvôli saturácii: {len(_sat_rejected)}")
+        logging.info(f"[FAZA 1] Celkom vylucenych kvoli saturacii: {len(_sat_rejected)}")
 
-    # Filter EDGE: vylúč kandidátov, ktorých sky annulus často vyčnieva mimo čip
+    # Filter EDGE: vyluc kandidatov, ktorych sky annulus casto vycnieva mimo cip
     _edge_rejected: set[str] = set()
     try:
         bad_thr = float(edge_bad_frame_frac_max)
@@ -1119,13 +1119,13 @@ def _apply_comp_metric_hard_filters(
                 flux_map.pop(cid, None)
                 _edge_rejected.add(cid)
                 logging.info(
-                    f"[FÁZA 1] Edge/annulus filter: vylúčený {cid} "
-                    f"({bad_e}/{total_e} framov mimo čip, frac={bad_frac:.2f} > {bad_thr:.2f})"
+                    f"[FAZA 1] Edge/annulus filter: vyluceny {cid} "
+                    f"({bad_e}/{total_e} framov mimo cip, frac={bad_frac:.2f} > {bad_thr:.2f})"
                 )
     if _edge_rejected:
-        logging.info(f"[FÁZA 1] Celkom vylúčených kvôli edge/annulus: {len(_edge_rejected)}")
+        logging.info(f"[FAZA 1] Celkom vylucenych kvoli edge/annulus: {len(_edge_rejected)}")
 
-    # Filter SNR: vylúč kandidátov s median SNR < 5σ
+    # Filter SNR: vyluc kandidatov s median SNR < 5sigma
     _snr_rejected: set[str] = set()
     for cid in sorted(flux_map.keys()):
         snrs = snr_map.get(cid, [])
@@ -1135,11 +1135,11 @@ def _apply_comp_metric_hard_filters(
                 flux_map.pop(cid, None)
                 _snr_rejected.add(cid)
                 logging.info(
-                    f"[FÁZA 1] SNR filter: vylúčený {cid} "
+                    f"[FAZA 1] SNR filter: vyluceny {cid} "
                     f"(median SNR={snr_median:.1f} < 5)"
                 )
 
-    # Filter B: PSF chi² a FWHM blend detekcia
+    # Filter B: PSF chi^2 a FWHM blend detekcia
     _global_fwhm_med = float(np.median(frame_fwhm_medians)) if frame_fwhm_medians else float("nan")
     _b_rejected: set[str] = set()
 
@@ -1147,13 +1147,13 @@ def _apply_comp_metric_hard_filters(
         for _cid, _chi2_vals in sorted(psf_chi2_map.items(), key=lambda kv: str(kv[0])):
             valid = [v for v in _chi2_vals if math.isfinite(v) and v > 0]
             if len(valid) < 3:
-                continue  # not enough valid PSF data — skip filter
+                continue  # not enough valid PSF data - skip filter
             _med_chi2 = float(np.median(valid))
             if _med_chi2 > max_psf_chi2:
                 _b_rejected.add(_cid)
                 logging.debug(
-                    f"[FÁZA 1] Blend filter (PSF chi²): vylúčený {_cid} "
-                    f"(median chi²={_med_chi2:.2f} > {max_psf_chi2:.2f})"
+                    f"[FAZA 1] Blend filter (PSF chi^2): vyluceny {_cid} "
+                    f"(median chi^2={_med_chi2:.2f} > {max_psf_chi2:.2f})"
                 )
 
     if math.isfinite(max_fwhm_factor) and math.isfinite(_global_fwhm_med) and _global_fwhm_med > 0:
@@ -1165,14 +1165,14 @@ def _apply_comp_metric_hard_filters(
             if _fwhm_ratio > max_fwhm_factor:
                 _b_rejected.add(_cid)
                 logging.debug(
-                    f"[FÁZA 1] Blend filter (FWHM): vylúčený {_cid} "
+                    f"[FAZA 1] Blend filter (FWHM): vyluceny {_cid} "
                     f"(median FWHM={_med_fwhm:.2f}px, ratio={_fwhm_ratio:.2f} > {max_fwhm_factor:.2f})"
                 )
 
     if _b_rejected:
         logging.info(
-            f"[FÁZA 1] Target {target_cid}: Filter B (PSF/FWHM) vylúčil "
-            f"{len(_b_rejected)} kandidátov: {sorted(_b_rejected)}"
+            f"[FAZA 1] Target {target_cid}: Filter B (PSF/FWHM) vylucil "
+            f"{len(_b_rejected)} kandidatov: {sorted(_b_rejected)}"
         )
         for _cid in _b_rejected:
             flux_map.pop(_cid, None)
@@ -1199,7 +1199,7 @@ def _apply_comp_metric_hard_filters(
                 flux_map.pop(cid, None)
                 _gs11_rejected.add(cid)
                 logging.debug(
-                    "[FÁZA 1] Comp %s GS11-rejected: D=%.4f < %.4f",
+                    "[FAZA 1] Comp %s GS11-rejected: D=%.4f < %.4f",
                     cid,
                     df,
                     _max_d,
@@ -1208,7 +1208,7 @@ def _apply_comp_metric_hard_filters(
                 _notes[cid] = f"dilution_suspect (D={df:.3f})"
         if _gs11_rejected:
             logging.info(
-                "[FÁZA 1] Target %s: GS11 dilution filter vylúčil %d kandidátov: %s",
+                "[FAZA 1] Target %s: GS11 dilution filter vylucil %d kandidatov: %s",
                 target_cid,
                 len(_gs11_rejected),
                 sorted(_gs11_rejected),
@@ -1224,23 +1224,23 @@ def _compute_comp_contamination_map(
     target_cid: str,
     isolation_radius_px: float,
 ) -> dict[str, float]:
-    # Filter C → Contamination index (soft penalizácia v scoringu)
-    # Namiesto hard-exclusion vypočítaj contamination ratio per kandidát.
-    # Hustá oblasť neba: hard filter by vylúčil väčšinu kandidátov.
-    # Riešenie: crowding sa prejaví ako penalizácia v combined score (Krok 5).
+    # Filter C -> Contamination index (soft penalizacia v scoringu)
+    # Namiesto hard-exclusion vypocitaj contamination ratio per kandidat.
+    # Husta oblast neba: hard filter by vylucil vacsinu kandidatov.
+    # Riesenie: crowding sa prejavi ako penalizacia v combined score (Krok 5).
     contamination_map: dict[str, float] = {}
     if isolation_radius_px > 0 and "x" in ms.columns and "y" in ms.columns:
         ms_reset = ms.reset_index(drop=True)
         _id_col_ms = "catalog_id" if "catalog_id" in ms_reset.columns else "name"
 
-        # Flux proxy: dao_flux > flux > phot_g_mean_mag (mag → relatívny flux)
+        # Flux proxy: dao_flux > flux > phot_g_mean_mag (mag -> relativny flux)
         _flux_col_ms = next((fc for fc in ("dao_flux", "flux") if fc in ms_reset.columns), None)
         _mag_col_ms = next(
             (mc for mc in ("phot_g_mean_mag", "catalog_mag", "mag") if mc in ms_reset.columns),
             None,
         )
 
-        # Zostavíme vektory pre rýchly výpočet vzdialeností
+        # Zostavime vektory pre rychly vypocet vzdialenosti
         _ms_x_all = pd.to_numeric(ms_reset["x"], errors="coerce").to_numpy(dtype=np.float64)
         _ms_y_all = pd.to_numeric(ms_reset["y"], errors="coerce").to_numpy(dtype=np.float64)
 
@@ -1258,7 +1258,7 @@ def _compute_comp_contamination_map(
             else np.full(len(ms_reset), np.nan, dtype=np.float64)
         )
 
-        # Lookup: catalog_id → riadok index v ms_reset
+        # Lookup: catalog_id -> riadok index v ms_reset
         _cid_to_idx: dict[str, int] = {}
         for _ri, _rrow in ms_reset.iterrows():
             _rcid = _normalize_id_value(_rrow.get(_id_col_ms, ""))
@@ -1286,7 +1286,7 @@ def _compute_comp_contamination_map(
                 & np.isfinite(_ms_flux_all)
                 & (_ms_flux_all > 0)
             )
-            # Zahrnúť len susedov do 3 mag od kandidáta
+            # Zahrnut len susedov do 3 mag od kandidata
             mag_cand = float(_ms_mag_all[_ci]) if _ci < len(_ms_mag_all) else float("nan")
             if math.isfinite(mag_cand):
                 _neighbor_mask = _neighbor_mask & (
@@ -1296,15 +1296,15 @@ def _compute_comp_contamination_map(
                 contamination_map[_cid] = 0.0
                 continue
 
-            # Contamination = súčet flux susedov / flux kandidáta
-            # (súčet, nie maximum — viac slabých susedov = väčší efekt)
+            # Contamination = sucet flux susedov / flux kandidata
+            # (sucet, nie maximum - viac slabych susedov = vacsi efekt)
             _neighbor_flux_sum = float(np.sum(_ms_flux_all[_neighbor_mask]))
             contamination_map[_cid] = min(_neighbor_flux_sum / _cflux, 2.0)  # cap na 2.0 (200%)
 
         if contamination_map:
             _cont_vals = list(contamination_map.values())
             logging.debug(
-                f"[FÁZA 1] Target {target_cid}: contamination index "
+                f"[FAZA 1] Target {target_cid}: contamination index "
                 f"median={float(np.median(_cont_vals)):.3f}, "
                 f"max={max(_cont_vals):.3f} "
                 f"(isolation_radius={isolation_radius_px:.0f}px)"
@@ -1403,7 +1403,7 @@ def _iterative_ensemble_clip_cm_residual(
     max_iter: int = 5,
     min_final: int | None = None,
 ) -> tuple[dict[str, float], dict[str, int]] | None:
-    """Ensemble-relative 5σ-MAD clip on CM-removed differential residuals."""
+    """Ensemble-relative 5sigma-MAD clip on CM-removed differential residuals."""
     _min_final = max(1, int(min_final if min_final is not None else n_comp_min))
     mag_lc, bjd_lc = _flux_series_to_mag_bjd(flux_map, bjd_map)
     active = sorted(mag_lc.keys())
@@ -1503,7 +1503,7 @@ def _iterative_ensemble_clip_cm_residual(
         "comp_clip_iterations": int(iterations),
     }
     logging.info(
-        "[COMP] Iterative ensemble clip: %d → %d comps (%d clipped, %d iter, σ=%.1f)",
+        "[COMP] Iterative ensemble clip: %d -> %d comps (%d clipped, %d iter, sigma=%.1f)",
         n_candidates,
         meta["comp_pool_n_final"],
         meta["comp_pool_n_clipped"],
@@ -1526,9 +1526,9 @@ def _detrend_and_compute_comp_rms_map(
     chip_interior_margin_px: int,
     skip_apriori_rms: bool = False,
 ) -> Any:
-    # ── Krok 2b: Airmass detrending ──
-    # Polynomický fit (stupeň 2) na časový rad relatívneho flux odstráni
-    # systematický airmass trend. Residuály = skutočná fotometrická variabilita.
+    # -- Krok 2b: Airmass detrending --
+    # Polynomicky fit (stupen 2) na casovy rad relativneho flux odstrani
+    # systematicky airmass trend. Residualy = skutocna fotometricka variabilita.
     for cid in sorted(flux_map.keys()):
         vals = flux_map[cid]
         if len(vals) < 6:
@@ -1554,7 +1554,7 @@ def _detrend_and_compute_comp_rms_map(
                 exc,
             )
 
-    # ── Krok 3: RMS scatter per kandidát ──
+    # -- Krok 3: RMS scatter per kandidat --
     rms_map: dict[str, float] = {}
     for cid, vals in sorted(flux_map.items(), key=lambda kv: str(kv[0])):
         if len(vals) < min_frames:
@@ -1565,8 +1565,8 @@ def _detrend_and_compute_comp_rms_map(
             rms_map[cid] = rms
 
     # Detekuj "isolated bin" artefakty:
-    # ak comp_rms vyjde nereálne nízke (typicky ~0), ale hviezda má veľa meraní,
-    # je to často dôsledok normalizácie v príliš riedkom brightness bine (norm_med ≈ raw_flux).
+    # ak comp_rms vyjde nerealne nizke (typicky ~0), ale hviezda ma vela merani,
+    # je to casto dosledok normalizacie v prilis riedkom brightness bine (norm_med ~ raw_flux).
     ISOLATED_BIN_RMS_FLOOR = 1e-4  # 0.1 mmag
     ISOLATED_BIN_MIN_FRAMES = 50
     for cid in sorted(rms_map.keys()):
@@ -1578,13 +1578,13 @@ def _detrend_and_compute_comp_rms_map(
         if math.isfinite(rms_v) and rms_v < float(ISOLATED_BIN_RMS_FLOOR) and nfr >= int(ISOLATED_BIN_MIN_FRAMES):
             rms_map.pop(cid, None)
             logging.debug(
-                "[COMP SELECT] %s: comp_rms < %.1e pri %d framoch → isolated bin → excluded",
+                "[COMP SELECT] %s: comp_rms < %.1e pri %d framoch -> isolated bin -> excluded",
                 str(cid),
                 float(ISOLATED_BIN_RMS_FLOOR),
                 int(nfr),
             )
 
-    # Zoradené RMS pre fallback kroky
+    # Zoradene RMS pre fallback kroky
     sorted_rms_map: dict[str, float] = dict(
         sorted(rms_map.items(), key=lambda kv: (float(kv[1]), str(kv[0])))
     )
@@ -1592,7 +1592,7 @@ def _detrend_and_compute_comp_rms_map(
     if skip_apriori_rms:
         if not rms_map:
             logging.warning(
-                f"[FÁZA 1] Target {target_cid}: iterative clip — no candidates with enough frames."
+                f"[FAZA 1] Target {target_cid}: iterative clip - no candidates with enough frames."
             )
             _warn_zero_compstars_edge(
                 target_cid=target_cid,
@@ -1604,22 +1604,22 @@ def _detrend_and_compute_comp_rms_map(
             return None, None
         return rms_map, sorted_rms_map
 
-    # Tvrdý RMS limit — odmietni nestabilné hviezdy bez ohľadu na ranking
+    # Tvrdy RMS limit - odmietni nestabilne hviezdy bez ohladu na ranking
     if math.isfinite(max_comp_rms) and max_comp_rms > 0:
         n_before = len(rms_map)
         rms_map = {cid: rms for cid, rms in sorted_rms_map.items() if rms <= max_comp_rms}
         n_rejected = n_before - len(rms_map)
         if n_rejected > 0:
             logging.info(
-                f"[FÁZA 1] Target {target_cid}: tvrdý RMS filter (>{max_comp_rms:.3f}) "
-                f"odmietol {n_rejected} kandidátov, zostáva {len(rms_map)}"
+                f"[FAZA 1] Target {target_cid}: tvrdy RMS filter (>{max_comp_rms:.3f}) "
+                f"odmietol {n_rejected} kandidatov, zostava {len(rms_map)}"
             )
 
-    # Fallback ak stále < n_comp_min: PER-TARGET GATE JE AUTORITATÍVNY.
-    # max_comp_rms je tvrdá kvalitatívna latka — žiadna selekčná cesta nesmie
-    # pustiť comp s comp_rms > max_comp_rms ako "dobrý". Predtým sa gate uvoľňoval
-    # krokmi [max, 0.08, 0.15], čo prijímalo nad-gate comp (known-issue (b)).
-    # Teraz vyberáme len spomedzi gate-passerov; nikdy nerelaxujeme nad gate.
+    # Fallback ak stale < n_comp_min: PER-TARGET GATE JE AUTORITATIVNY.
+    # max_comp_rms je tvrda kvalitativna latka - ziadna selekcna cesta nesmie
+    # pustit comp s comp_rms > max_comp_rms ako "dobry". Predtym sa gate uvolnoval
+    # krokmi [max, 0.08, 0.15], co prijimalo nad-gate comp (known-issue (b)).
+    # Teraz vyberame len spomedzi gate-passerov; nikdy nerelaxujeme nad gate.
     if len(rms_map) < n_comp_min and math.isfinite(max_comp_rms) and max_comp_rms > 0:
         rms_map = {
             cid: rms
@@ -1627,15 +1627,15 @@ def _detrend_and_compute_comp_rms_map(
             if rms <= float(max_comp_rms)
         }
         logging.info(
-            f"[FÁZA 1] Target {target_cid}: {len(rms_map)} comp pod gate "
-            f"(max_comp_rms={float(max_comp_rms):.3f}); gate autoritatívny, "
-            f"bez relaxácie nad gate."
+            f"[FAZA 1] Target {target_cid}: {len(rms_map)} comp pod gate "
+            f"(max_comp_rms={float(max_comp_rms):.3f}); gate autoritativny, "
+            f"bez relaxacie nad gate."
         )
 
     if len(rms_map) < n_comp_min:
         logging.warning(
-            f"[FÁZA 1] Target {target_cid}: len {len(rms_map)} kandidátov "
-            f"s dostatkom snímok < n_comp_min={n_comp_min}."
+            f"[FAZA 1] Target {target_cid}: len {len(rms_map)} kandidatov "
+            f"s dostatkom snimok < n_comp_min={n_comp_min}."
         )
         _warn_zero_compstars_edge(
             target_cid=target_cid,
@@ -1660,11 +1660,11 @@ def _ensemble_mad_filter_rms(
     chip_fh: int | None,
     chip_interior_margin_px: int,
 ) -> dict[str, float] | None:
-    # ── Krok 4: Iteratívny ensemble filter (robustný MAD) ──
-    # Prah = median + k × (MAD / 0.6745)
-    # MAD / 0.6745 = konzistentný estimátor σ robustný voči outlierom
+    # -- Krok 4: Iterativny ensemble filter (robustny MAD) --
+    # Prah = median + k x (MAD / 0.6745)
+    # MAD / 0.6745 = konzistentny estimator sigma robustny voci outlierom
     # k = rms_outlier_sigma (default 3.0)
-    _MAD_CONSISTENCY = 0.6745  # normalizačný faktor MAD → σ ekvivalent
+    _MAD_CONSISTENCY = 0.6745  # normalizacny faktor MAD -> sigma ekvivalent
     # Restrict to candidate IDs before ensemble outlier filtering.
     id_col_cand = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
     cand_ids = set(candidates[id_col_cand].astype(str).str.strip())
@@ -1675,7 +1675,7 @@ def _ensemble_mad_filter_rms(
     }
     if len(active) < 2:
         logging.warning(
-            f"[FÁZA 1] {target_cid}: len {len(active)} comp po RMS filtre "
+            f"[FAZA 1] {target_cid}: len {len(active)} comp po RMS filtre "
             f"< 2 (minimum for QA)."
         )
         _warn_zero_compstars_edge(
@@ -1693,9 +1693,9 @@ def _ensemble_mad_filter_rms(
         med = float(np.median(vals_arr))
         mad_raw = float(np.median(np.abs(vals_arr - med)))
         if not math.isfinite(mad_raw) or mad_raw <= 0:
-            # MAD = 0 znamená že všetky hodnoty sú rovnaké → konvergencia
+            # MAD = 0 znamena ze vsetky hodnoty su rovnake -> konvergencia
             break
-        mad_sigma = mad_raw / _MAD_CONSISTENCY  # robustný σ estimátor
+        mad_sigma = mad_raw / _MAD_CONSISTENCY  # robustny sigma estimator
         threshold = med + rms_outlier_sigma * mad_sigma
         new_active = {
             cid: rms
@@ -1703,9 +1703,9 @@ def _ensemble_mad_filter_rms(
             if rms <= threshold
         }
         if len(new_active) == len(active):
-            break  # Konvergencia — žiadne ďalšie výrazy
+            break  # Konvergencia - ziadne dalsie vyrazy
         if len(new_active) < n_comp_min:
-            break  # Neprekroč minimum
+            break  # Neprekroc minimum
         active = new_active
     return {
         cid: rms
@@ -1725,15 +1725,15 @@ def _score_comp_candidates_broeg(
     _individual_tier: Callable[[float], int],
     cfg: AppConfig | None = None,
 ) -> Any:
-    # ── Krok 5: Finálny výber ──
-    # Ranking: Broeg (1/comp_rms). Tier je len informatívny stĺpec.
+    # -- Krok 5: Finalny vyber --
+    # Ranking: Broeg (1/comp_rms). Tier je len informativny stlpec.
     #
-    # Literatúra pre comp_score:
-    # - Broeg, Fernández & Neuhäuser (2005): Astron. Nachr. 326, 134
+    # Literatura pre comp_score:
+    # - Broeg, Fernandez & Neuhauser (2005): Astron. Nachr. 326, 134
     #   DOI: 10.1002/asna.200410350
-    # - Young, A.T. (1967): AJ 72, 747 — scintilačný šum
+    # - Young, A.T. (1967): AJ 72, 747 - scintilacny sum
     # - Hardie, R.H. (1962): in Astronomical Techniques (Stars & Stellar Systems vol. II)
-    #   — color term korekcie pri diferenciálnej fotometrii
+    #   - color term korekcie pri diferencialnej fotometrii
     # - AAVSO CCD Photometry Guide (2023), kap. 5.5 a 6
     #   https://www.aavso.org/ccd-photometry-guide
     score_map: dict[str, float] = {}
@@ -1844,7 +1844,7 @@ def _assign_comp_tiers_to_pool(
     _bprp_nan_after = int(pd.to_numeric(candidate_pool_df.get("bp_rp"), errors="coerce").isna().sum())
     if _bprp_nan_after < _bprp_nan_before:
         log_event(
-            f"[COMP] {target_cid}: comp bp_rp enriched NaN {_bprp_nan_before} → {_bprp_nan_after}"
+            f"[COMP] {target_cid}: comp bp_rp enriched NaN {_bprp_nan_before} -> {_bprp_nan_after}"
         )
 
     def _tier_from_delta_bprp_cell(x: Any) -> int:
@@ -2015,7 +2015,7 @@ def _assign_comp_tiers_to_pool(
         )
         if str(sel_note).startswith("color_rms") and sel_note not in ("color_rms_t1",):
             log_event(
-                f"[COMP] WARNING {target_cid}: {sel_note} — widened colour window / sparse pool"
+                f"[COMP] WARNING {target_cid}: {sel_note} - widened colour window / sparse pool"
             )
     except Exception:  # noqa: BLE001
         # EXC-0047: T3 -- Comp selection summary log_event (widened colour window warning) never emitted (EXCEPT-BULK-2 2026-07-08)
@@ -2034,8 +2034,8 @@ def _assign_comp_tiers_to_pool(
     if len(selected_ids) == 0:
         if n_good == 0:
             logging.warning(
-                "[COMP] %s: žiadne T1/T2 comp, "
-                "len %d TIER3/4 — LC bude vynechaná",
+                "[COMP] %s: ziadne T1/T2 comp, "
+                "len %d TIER3/4 - LC bude vynechana",
                 target_cid,
                 len(selected_ids),
             )
@@ -2064,14 +2064,14 @@ def _assign_comp_tiers_to_pool(
         }
     if len(selected_ids) < int(n_comp_min):
         logging.warning(
-            f"[FÁZA 1] Target {target_cid}: po filtrácii len {len(selected_ids)} "
-            f"< n_comp_min={n_comp_min} — keeping thin set (graceful degradation)."
+            f"[FAZA 1] Target {target_cid}: po filtracii len {len(selected_ids)} "
+            f"< n_comp_min={n_comp_min} - keeping thin set (graceful degradation)."
         )
 
     # Tier distribution + warning logic (after final selection)
     if n_good == 0 and n_t4 > 0:
         log_event(
-            f"WARNING: [COMP] {target_cid}: SPARSE FIELD — "
+            f"WARNING: [COMP] {target_cid}: SPARSE FIELD - "
             f"all {len(selected_ids)} comp stars TIER3/4 "
             f"(color mismatch, penalty applied). "
             f"LC quality may be reduced.",
@@ -2079,8 +2079,8 @@ def _assign_comp_tiers_to_pool(
         tier4_warning = True
     elif n_t4 > 0:
         log_event(
-            f"INFO: [COMP] {target_cid}: mixed ensemble — "
-            f"{n_t1}×T1 {n_t2}×T2 {n_t3}×T3 {n_t4}×T4 "
+            f"INFO: [COMP] {target_cid}: mixed ensemble - "
+            f"{n_t1}xT1 {n_t2}xT2 {n_t3}xT3 {n_t4}xT4 "
             f"(TIER3/4 penalty applied).",
         )
         tier4_warning = False
@@ -2144,7 +2144,7 @@ def _assemble_comp_selection_result_rows(
     per_target_rms_map: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     _cfg_asm = cfg or AppConfig()
-    # Zostav výstupný DataFrame
+    # Zostav vystupny DataFrame
     # IMPORTANT: rows must come from final_comps (enriched bp_rp), not from masterstars-derived `candidates`.
     try:
         final_lookup = final_comps.copy()
@@ -2280,7 +2280,7 @@ def _assemble_comp_selection_result_rows(
             tw = float(_tw_map.get(int(_tier_i), 0.25))
             if not (math.isfinite(tw) and tw > 0):
                 tw = 0.25
-            # Broeg, Fernandez & Neuhäuser (2005) AN 326:134
+            # Broeg, Fernandez & Neuhauser (2005) AN 326:134
             # Optimal weights: w_i = 1 / sigma_i^2 (inverse variance weighting)
             # Safe: rms_f > 1e-6 guard prevents division by zero in weight computation.
             r["comp_weight"] = (1.0 / (rms_f**2)) * tw
@@ -2333,8 +2333,8 @@ def _assemble_comp_selection_result_rows(
     _total_rejected_b = len(_b_rejected) if "_b_rejected" in dir() else 0
     if _total_rejected_b > 0:
         logging.info(
-            f"[FÁZA 1] Target {target_cid}: blend filter B celkom vylúčil "
-            f"{_total_rejected_b} kandidátov"
+            f"[FAZA 1] Target {target_cid}: blend filter B celkom vylucil "
+            f"{_total_rejected_b} kandidatov"
         )
 
     out = pd.DataFrame(result_rows)
@@ -2345,9 +2345,9 @@ def _assemble_comp_selection_result_rows(
     color_extra = ""
     dpb = pd.to_numeric(out.get("delta_bprp_abs"), errors="coerce")
     if dpb.notna().any():
-        color_info = f"ΔBPRP median={float(dpb.median()):.3f} max={float(dpb.max()):.3f}"
+        color_info = f"DeltaBPRP median={float(dpb.median()):.3f} max={float(dpb.max()):.3f}"
     else:
-        color_info = "ΔBPRP N/A"
+        color_info = "DeltaBPRP N/A"
     try:
         if final_comps is not None and "color_tier_src" in final_comps.columns:
             _cs = final_comps["color_tier_src"].astype(str)
@@ -2360,8 +2360,8 @@ def _assemble_comp_selection_result_rows(
         color_extra = ""
 
     _log_line = (
-        f"[FÁZA 1] Target {target_cid} ({target.get('vsx_name','')}): "
-        f"{len(out)} porovnávačiek | RMS min={out['comp_rms'].min():.4f} "
+        f"[FAZA 1] Target {target_cid} ({target.get('vsx_name','')}): "
+        f"{len(out)} porovnavaciek | RMS min={out['comp_rms'].min():.4f} "
         f"max={out['comp_rms'].max():.4f} | {color_info}"
     )
     if color_extra:

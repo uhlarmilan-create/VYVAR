@@ -126,7 +126,7 @@ real blends, not on this ratio. See `docs/VYVAR_HCHIPER_PSF_PROBE.md`.
 
 ---
 
-## Revision 2026-07-09 (HEAD f38e924) — PSF-AUDIT-FIXES
+## Revision 2026-07-09 (HEAD f38e924) - PSF-AUDIT-FIXES
 
 Read-only audit (Claude, 2026-07-09) found four latent PSF-arc issues; all **FIXED** with PSF
 disabled in production (byte-identity vs draft_424 anchor preserved).

@@ -7,7 +7,7 @@ Windows tree (data is local; Claude cannot run it). ASCII-only.
 
 - **Why:** all drafts were deleted, including the byte-identity reference (`draft_000366` /
   `770966c3`). This run re-cuts a fresh anchor.
-- **Data:** `C:\ASTRO\python\VYVAR\Archive\Chi_and_H`, **already calibrated** FITS — **must be
+- **Data:** `C:\ASTRO\python\VYVAR\Archive\Chi_and_H`, **already calibrated** FITS - **must be
   retained** (only non-regenerable input; catalog is zaloha on disk). Filter-wheel
   setups **B / V / R / L** (`B_20_2`, `V_20_2`, `R_20_2`, `L_20_2`). **V** = visual/green
   (`G/` folder); **L** = clear/no-filter (broadband). Rig: Newton 300/1200 + C3-26000, **binning
@@ -72,7 +72,7 @@ stats, calibrated/platesolve setups, CT prototype path).
 - [ ] CT prototype emitted (`ct_prototype.csv`) -- CT path exercised for B/V/R/L.
 - [ ] **`git rev-parse HEAD`** recorded in STATE/JOURNAL (commit hash is not auto-captured).
 - [ ] **Compute byte-identity SHA-256** (`compute_photometry_sha`): core + full vs recorded
-      `3f7c9e7a...` / `d5b72d08...` — **draft-independent** gate. Record SHAs, zaloha recipe,
+      `3f7c9e7a...` / `d5b72d08...` - **draft-independent** gate. Record SHAs, zaloha recipe,
       config snapshot, and ephemeral `draft_id` in `VYVAR_STATE.md` / `VYVAR_JOURNAL.md`.
       When comparing to the historical `203254fd...` cut, also run
       `compare_photometry_science_meaningful` (benign-drift acceptance).

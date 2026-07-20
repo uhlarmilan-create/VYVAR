@@ -144,7 +144,7 @@ def main() -> None:
     orch_i = next(i for i in range(gen_i, gen_end) if "# Build PDF" in lines[i])
 
     # Setup before nested defs: from draft_dir= through bullets_by_cid
-    pre_def = lines[gen_i + 45 : first_def]  # platesolve_dir … (draft_dir/params set in __init__ header)
+    pre_def = lines[gen_i + 45 : first_def]  # platesolve_dir ... (draft_dir/params set in __init__ header)
     methods_block = lines[first_def:orch_i]
     orch_block = lines[orch_i:gen_end]
 

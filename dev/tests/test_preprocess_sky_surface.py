@@ -1,4 +1,4 @@
-"""T3: preprocess order-2 sky surface subtract (shared calibrated→processed)."""
+"""T3: preprocess order-2 sky surface subtract (shared calibrated->processed)."""
 
 from __future__ import annotations
 

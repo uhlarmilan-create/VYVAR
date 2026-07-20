@@ -1,4 +1,4 @@
-CURSOR RESULT — 2026-07-19 / 2026-07-20
+CURSOR RESULT - 2026-07-19 / 2026-07-20
 
 What I did
 Implemented PER-FRAME-SAT-GATED: per-frame target saturation decisions behind
@@ -34,35 +34,35 @@ path; full Archive night fixture not required).
 `photometry_summary.csv` is **outside** photometry SHA / science-compare file
 set (`dev/tests/photometry_sha.py` patterns: lightcurves, comp_quality,
 comparison_stars_per_target only). `sat_clean_frac` / `skip_reason` go on
-summary (additive) when ON — no SHA impact.
+summary (additive) when ON - no SHA impact.
 
 ### Gates
 - ruff: clean on touched modules
 - `--fast`: **OVERALL PASS** (1022 passed, 17 skipped)
 - P1 golden: **5/5**
-- `--full`: **OVERALL PASS** — BYTE-IDENTICAL vs VL-ANCHOR-WCSINV
+- `--full`: **OVERALL PASS** - BYTE-IDENTICAL vs VL-ANCHOR-WCSINV
   - science-compare n_lc=166 failures=0
   - core SHA `3d26f4692ac81fc5...` n=333
   - extended SHA `6420f1daa53a0d5d...` n=499
 
 ### Docs impact
-- `docs/VYVAR_DECISIONS.md` — PER-FRAME-SAT-GATED (design + M67 HIGH?MED + deferred validation)
-- `docs/VYVAR_ROADMAP.md` — item kept open: implemented gated OFF; validation pending next saturated dataset
-- `docs/VYVAR_STATE.md` — one-liner
-- `docs/VYVAR_INVARIANTS.md` — INV-CFG-01 amendment (per_frame markers)
-- `docs/VYVAR_PARAMS.md` — regenerated (271 entries)
-- `docs/VYVAR_PARAMETER_HANDBOOK_CZ.pdf` — regenerated
-- `docs/VYVAR_FLOW_CZ.pdf` + `flow_doc_facts.py` + ch.9 sentence — regenerated; docs-sync green
-- `CLAUDE.md` — registry count 271
+- `docs/VYVAR_DECISIONS.md` - PER-FRAME-SAT-GATED (design + M67 HIGH?MED + deferred validation)
+- `docs/VYVAR_ROADMAP.md` - item kept open: implemented gated OFF; validation pending next saturated dataset
+- `docs/VYVAR_STATE.md` - one-liner
+- `docs/VYVAR_INVARIANTS.md` - INV-CFG-01 amendment (per_frame markers)
+- `docs/VYVAR_PARAMS.md` - regenerated (271 entries)
+- `docs/VYVAR_PARAMETER_HANDBOOK_CZ.pdf` - regenerated
+- `docs/VYVAR_FLOW_CZ.pdf` + `flow_doc_facts.py` + ch.9 sentence - regenerated; docs-sync green
+- `CLAUDE.md` - registry count 271
 
 ## Errors (if any)
 None blocking. Pre-existing EXC-0030 sqlite3.Row `.get` noise during --full
 pipeline (unchanged; SHA still byte-identical).
 
 ## Files changed
-- `src_py/photometry_core.py` — decision helpers + Phase 2A wiring
-- `src_py/config.py` — two AppConfig fields + load/to_dict
-- `src_py/invariants_runtime.py` — INV-CFG-01 per-frame markers
+- `src_py/photometry_core.py` - decision helpers + Phase 2A wiring
+- `src_py/config.py` - two AppConfig fields + load/to_dict
+- `src_py/invariants_runtime.py` - INV-CFG-01 per-frame markers
 - `config.json`, `dev/validation/params_registry.json`
 - `dev/tests/test_per_frame_saturation.py` (new)
 - `dev/tests/test_invariants_p2.py`, `dev/tests/test_ui_params_dashboard.py`

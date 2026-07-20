@@ -1,4 +1,4 @@
-"""Phase 2A replay draft_000321 — TODO-44 role-aware aperture verify."""
+"""Phase 2A replay draft_000321 - TODO-44 role-aware aperture verify."""
 from __future__ import annotations
 
 import json
@@ -114,7 +114,7 @@ def main() -> int:
     comps_bo = comp_df.loc[comp_df["target_catalog_id"] == bo_cid, "catalog_id"].drop_duplicates().tolist()
     print(f"BO CVn comp count={len(comps_bo)}")
     # Comp apertures: read from first proc CSV row per comp (if column exists)
-    # Expected radii from saved SNR table × role factors
+    # Expected radii from saved SNR table x role factors
     ap_json = DRAFT / "aperture_snr_table.json"
     if ap_json.is_file() and math.isfinite(bo_lc_ap):
         from photometry_core import (  # noqa: E402
@@ -141,7 +141,7 @@ def main() -> int:
                 )
         if comp_aps:
             print(
-                f"BO comp expected aperture (SNR×{cfg.aperture_comp_factor}): "
+                f"BO comp expected aperture (SNRx{cfg.aperture_comp_factor}): "
                 f"median={pd.Series(comp_aps).median():.3f} min={min(comp_aps):.3f} max={max(comp_aps):.3f}"
             )
             print(

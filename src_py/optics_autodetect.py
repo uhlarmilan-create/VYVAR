@@ -7,7 +7,7 @@ can always override, and an unconfident match simply leaves the default in place
 
 Why fingerprinting (not just name keywords):
     * draft 360 carries ``INSTRUME='QHY CCD QHY294PROM'`` but a useless
-      ``TELESCOP='Sample Primary ...'`` string — so the camera is found by name +
+      ``TELESCOP='Sample Primary ...'`` string - so the camera is found by name +
       full-resolution sensor dims, the telescope by ``FOCALLEN`` + ``APTDIA``.
     * draft 363 has NO name keywords at all and a wrong pixel size, but its image
       dimensions (6252x4176) + ``GAIN`` (0.78) uniquely fingerprint the C3-26000.
@@ -28,7 +28,7 @@ from typing import Any
 # Auto-fill must be CONSERVATIVE: a wrong equipment auto-fill silently corrupts gain/
 # pixel via the resolver's DB-set authority, whereas a *missed* match only prompts.
 #   high   (>= 0.80) -> auto-fill (override default)
-#   medium (0.50..0.80) -> PRE-FILL but flag "unconfirmed — verify"
+#   medium (0.50..0.80) -> PRE-FILL but flag "unconfirmed - verify"
 #   low    (< 0.50) -> prompt (leave default)
 AUTOFILL_THRESHOLD = 0.80   # high band: silently auto-fill
 PREFILL_THRESHOLD = 0.50    # medium band floor: pre-fill but require verification
@@ -43,7 +43,7 @@ class Detection:
 
     @property
     def ok(self) -> bool:
-        """Usable match (pre-fill or better) — not flagged as an unresolved gap."""
+        """Usable match (pre-fill or better) - not flagged as an unresolved gap."""
         return self.matched_id is not None and self.confidence >= PREFILL_THRESHOLD
 
     @property
@@ -65,7 +65,7 @@ class AutodetectReport:
     telescope: Detection = field(default_factory=Detection)
     location: Detection = field(default_factory=Detection)
     header_path: str | None = None
-    #: Phase 4 — fields neither present in the FITS header nor auto-detected.
+    #: Phase 4 - fields neither present in the FITS header nor auto-detected.
     #: Each item: {"field", "detail", "fallback"} so the UI can surface ONLY the gaps
     #: and pre-fill from the default where sensible.
     unresolved: list[dict[str, str]] = field(default_factory=list)
@@ -117,7 +117,7 @@ def _parse_sensorsize(raw: Any) -> tuple[int, int] | None:
     """Parse ``"4164*2796"`` / ``"6252x4176"`` -> (w, h)."""
     if raw is None:
         return None
-    m = re.search(r"(\d{2,})\s*[*xX×]\s*(\d{2,})", str(raw))
+    m = re.search(r"(\d{2,})\s*[*xXx]\s*(\d{2,})", str(raw))
     if not m:
         return None
     try:
@@ -159,7 +159,7 @@ def detect_equipment(header: Any, equipments: list[dict[str, Any]]) -> Detection
         if ss and full_w and full_h and _dims_close(full_w, ss[0]) and _dims_close(full_h, ss[1]):
             score += 0.40
             reasons.append(
-                f"sensor {int(full_w)}x{int(full_h)} (NAXIS×bin) ~ {ss[0]}*{ss[1]}"
+                f"sensor {int(full_w)}x{int(full_h)} (NAXISxbin) ~ {ss[0]}*{ss[1]}"
             )
         g_db = row.get("GAIN_ADU")
         if gain_h and gain_h > 0 and g_db and float(g_db) > 0 and math.isclose(
@@ -172,7 +172,7 @@ def detect_equipment(header: Any, equipments: list[dict[str, Any]]) -> Detection
             px_full = xpix / (xbin or 1.0)
             if math.isclose(px_full, float(px_db), rel_tol=0.05):
                 score += 0.15
-                reasons.append(f"pixel {px_full:g}µm ~ DB {float(px_db):g}µm")
+                reasons.append(f"pixel {px_full:g}um ~ DB {float(px_db):g}um")
         if sensortype_n and _norm(row.get("SENSORTYPE")) and sensortype_n == _norm(
             row.get("SENSORTYPE")
         ):
@@ -337,7 +337,7 @@ def assess_unresolved(
         gaps.append(
             {
                 "field": "Observer site",
-                "detail": "No SITELAT / SITELONG in header — BJD/airmass site cannot come from FITS.",
+                "detail": "No SITELAT / SITELONG in header - BJD/airmass site cannot come from FITS.",
                 "fallback": "default location (IS_DEFAULT)",
             }
         )
@@ -345,7 +345,7 @@ def assess_unresolved(
         gaps.append(
             {
                 "field": "Pointing (RA/Dec)",
-                "detail": "No pointing/WCS keywords in header — field center will rely on blind plate-solve.",
+                "detail": "No pointing/WCS keywords in header - field center will rely on blind plate-solve.",
                 "fallback": "blind solve / manual draft center",
             }
         )

@@ -104,7 +104,7 @@ ORCH = '''    _ = fwhm_px
         mag_tol = max(mag_tol, float(max_mag_diff_bright_floor))
         if mag_tol > float(max_mag_diff):
             logging.debug(
-                "[FÁZA 1] Target %s: jasný cieľ (mag=%.2f < %.2f) → |Δmag| pás "
+                "[FAZA 1] Target %s: jasny ciel (mag=%.2f < %.2f) -> |Deltamag| pas "
                 "max(%.3f, floor %.3f) = %.3f",
                 target_cid or "?",
                 mag_t,
@@ -170,7 +170,7 @@ ORCH = '''    _ = fwhm_px
         else:
             ms_arr_mag = pd.to_numeric(ms.get("mag", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
     except Exception as _iso_exc:  # noqa: BLE001
-        logging.warning(f"[FÁZA 1] Aperture izolácia preskočená (chyba): {_iso_exc!s}")
+        logging.warning(f"[FAZA 1] Aperture izolacia preskocena (chyba): {_iso_exc!s}")
         ms_arr_x = ms_arr_y = ms_arr_mag = np.array([], dtype=float)
 
     id_col = (
@@ -279,7 +279,7 @@ ORCH = '''    _ = fwhm_px
 
     candidates = ms[_base_mask | det_mask].copy()
     if candidates.empty:
-        logging.warning(f"[FÁZA 1] {target_cid}: žiadni kandidáti po hard filtroch")
+        logging.warning(f"[FAZA 1] {target_cid}: ziadni kandidati po hard filtroch")
         _warn_zero_compstars_edge(
             target_cid=target_cid,
             target=target,

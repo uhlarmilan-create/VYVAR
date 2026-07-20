@@ -15,12 +15,12 @@ LOGGER = logging.getLogger(__name__)
 
 def _fmt_period(p: Any) -> str:
     if p is None:
-        return "   —   "
+        return "   -   "
     try:
         f = float(p)
     except (TypeError, ValueError):
-        return "   —   "
-    return f"{f:.6f}d" if math.isfinite(f) else "   —   "
+        return "   -   "
+    return f"{f:.6f}d" if math.isfinite(f) else "   -   "
 
 
 def _write_tess_result_txt(result_json_path: Path, result_txt_path: Path, catalog_id: str) -> None:
@@ -38,7 +38,7 @@ def _write_tess_result_txt(result_json_path: Path, result_txt_path: Path, catalo
             return "?"
 
     lines: list[str] = [
-        f"TESS Analysis Summary — {catalog_id}",
+        f"TESS Analysis Summary - {catalog_id}",
         f"RA={_fmt_coord(data.get('ra'))}  Dec={_fmt_coord(data.get('dec'))}  mag={data.get('mag', '?')}",
         f"Sectors found: {data.get('total_sectors_found', 0)}  |  OK: {data.get('total_sectors_ok', 0)}",
         "",
@@ -54,7 +54,7 @@ def _write_tess_result_txt(result_json_path: Path, result_txt_path: Path, catalo
         err = s.get("error")
         sec = s.get("sector", "?")
         if err:
-            lines.append(f"  Sector {sec:>3}: ERROR — {err}")
+            lines.append(f"  Sector {sec:>3}: ERROR - {err}")
             continue
         lines.append(
             f"  Sector {sec:>3}: "
@@ -120,7 +120,7 @@ def auto_tess_verify_candidates(
     try:
         df = pd.read_csv(
             candidates_csv,
-            dtype={"catalog_id": str, "name": str},  # Gaia ID musí byť str — float64 stráca cifry
+            dtype={"catalog_id": str, "name": str},  # Gaia ID musi byt str - float64 straca cifry
             low_memory=False,
         )
     except Exception as exc:  # noqa: BLE001
@@ -130,7 +130,7 @@ def auto_tess_verify_candidates(
         return
 
     if not bool(getattr(cfg, "tess_enabled", False)):
-        LOGGER.info("[TESS] preskočené — tess_enabled=False (auto_tess_verify_candidates)")
+        LOGGER.info("[TESS] preskocene - tess_enabled=False (auto_tess_verify_candidates)")
         return
 
     # Prefer RA/Dec already present in candidates CSV, fallback to other CSVs in output_dir.
@@ -173,7 +173,7 @@ def auto_tess_verify_candidates(
 
     kat_col = None
     for c in df.columns:
-        cl = str(c).strip().lower().replace("ó", "o")
+        cl = str(c).strip().lower().replace("o", "o")
         if cl in ("katalogy", "katalog"):
             kat_col = str(c)
             break
@@ -201,9 +201,9 @@ def auto_tess_verify_candidates(
             txt = str(row.get(kat_col, "") or "")
             for line in txt.splitlines():
                 s = line.strip()
-                if not s or s.startswith("🔭"):
+                if not s or s.startswith("[telescope]"):
                     continue
-                if "žiadny záznam" in s.lower() or "no match" in s.lower():
+                if "ziadny zaznam" in s.lower() or "no match" in s.lower():
                     continue
                 return False
         return True
@@ -213,14 +213,14 @@ def auto_tess_verify_candidates(
         if not cid:
             continue
         if not _row_tess_eligible(row):
-            LOGGER.info("[TESS] Skip %s — known variable or catalog match", cid)
+            LOGGER.info("[TESS] Skip %s - known variable or catalog match", cid)
             continue
         out_base = tess_dir / cid
         result_json = out_base / "result.json"
         result_txt = out_base / "result.txt"
 
         if result_json.exists():
-            LOGGER.info("[TESS] Skip %s — result.json exists", cid)
+            LOGGER.info("[TESS] Skip %s - result.json exists", cid)
             if (not result_txt.exists()) and result_json.exists():
                 _write_tess_result_txt(result_json, result_txt, cid)
             continue
@@ -243,7 +243,7 @@ def auto_tess_verify_candidates(
             except Exception:  # noqa: BLE001
                 mag = None
 
-        LOGGER.info("[TESS] Run %s (period_hint=%s)", cid, str(period_hint) if period_hint is not None else "—")
+        LOGGER.info("[TESS] Run %s (period_hint=%s)", cid, str(period_hint) if period_hint is not None else "-")
         try:
             run_tess_analysis(
                 catalog_id=cid,

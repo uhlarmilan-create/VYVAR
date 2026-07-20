@@ -1,4 +1,4 @@
-"""Draft run provenance — calibration mode and manifest I/O."""
+"""Draft run provenance - calibration mode and manifest I/O."""
 
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ def apply_pre_calibrated_import_plan(plan: SmartImportPlan) -> None:
 
 def calibration_mode_report_line(mode: str | None) -> str:
     if str(mode or "").strip() == CALIBRATION_MODE_PRE:
-        return "Calibration: skipped — source treated as pre-calibrated"
+        return "Calibration: skipped - source treated as pre-calibrated"
     return "Calibration: VYVAR bias/dark/flat applied"
 
 

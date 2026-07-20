@@ -1,4 +1,4 @@
-"""Aperture Photometry Lightcurves — Fáza 2A UI."""
+"""Aperture Photometry Lightcurves - Faza 2A UI."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from platesolve_ui_paths import default_bundle_dir
 from utils import resolve_draft_dir_path
 from vyvar_ui_status import is_bv_related_phase01_ui_column, log_if_ui_hiding_bv_for_bprp_primary
 
-# Gaia ID musí byť str — float64 stráca cifry
+# Gaia ID musi byt str - float64 straca cifry
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
 # Columns loaded from lightcurve_*.csv for charts / preload (see _render_target_detail, multi-filter overlay).
@@ -51,7 +51,7 @@ _log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Pomocné funkcie
+# Pomocne funkcie
 # ---------------------------------------------------------------------------
 
 
@@ -78,7 +78,7 @@ def _ut_tick_labels_from_jd(jd_vals: "list[float]") -> list[str]:
     """Format JD-like values (BJD/HJD/JD) to UT HH:MM labels."""
     try:
         pass
-    except Exception as exc:  # noqa: BLE001 — primary astropy path removed; body is ``pass``; broad retained if restored
+    except Exception as exc:  # noqa: BLE001 - primary astropy path removed; body is ``pass``; broad retained if restored
         _log.debug("UT tick label primary path skipped: %s", exc)
         # Fallback: HH:MM from fractional day (approx; ignores leap seconds).
         out_f: list[str] = []
@@ -229,7 +229,7 @@ def _phase2a_timestamp(output_dir: Path | None) -> str:
 
 @st.cache_data(ttl=300)
 def _load_summary(summary_csv_str: str) -> pd.DataFrame:
-    """Load photometry_summary.csv — cached 5 min to avoid re-read on every render."""
+    """Load photometry_summary.csv - cached 5 min to avoid re-read on every render."""
     summary_csv = Path(summary_csv_str)
     if not summary_csv.is_file():
         return pd.DataFrame()
@@ -245,7 +245,7 @@ def _enrich_summary_with_zone_flags(
     summary_df: pd.DataFrame,
     active_targets_csv: Path | None,
 ) -> pd.DataFrame:
-    """Doplní target meta z ``active_targets.csv`` (badge v UI, aj starší summary).
+    """Doplni target meta z ``active_targets.csv`` (badge v UI, aj starsi summary).
 
     Enriches:
       - zone_flag
@@ -373,7 +373,7 @@ def _enrich_summary_with_zone_flags(
 
 
 def _phase2a_target_choice_label(row: pd.Series) -> str:
-    """Text pre selectbox Fázy 2A — názov + badge podľa ``zone_flag`` / ``skip_photometry``."""
+    """Text pre selectbox Fazy 2A - nazov + badge podla ``zone_flag`` / ``skip_photometry``."""
     vsx = str(row.get("vsx_name", "") or "").strip()
     cid = str(row.get("catalog_id", "") or "").strip()
     base = vsx if vsx else cid
@@ -387,17 +387,17 @@ def _phase2a_target_choice_label(row: pd.Series) -> str:
         else str(sk).strip().lower() in ("1", "true", "yes", "t")
     )
     if sk_b or zf == "saturated":
-        badge = "🔴 saturated — photometry unavailable"
+        badge = "[red] saturated - photometry unavailable"
     elif zf == "linear":
-        badge = "🟢 linear"
+        badge = "[green] linear"
     elif zf in ("noisy1", "noisy2"):
-        badge = f"🟡 {zf}"
+        badge = f"[yellow] {zf}"
     elif zf == "noisy3":
-        badge = "🟠 noisy3"
-    elif zf == "neznáma_zóna":
-        badge = "⚪ unknown zone"
+        badge = "[orange] noisy3"
+    elif zf == "neznama_zona":
+        badge = "o unknown zone"
     elif zf:
-        badge = f"⚪ {zf}"
+        badge = f"o {zf}"
     else:
         return base
     return f"{base}  {badge}"
@@ -421,7 +421,7 @@ def _float_coord_row(row: pd.Series, *keys: str) -> float:
     return 0.0
 
 
-def _fmt_opt_num(v: Any, fmt: str, empty: str = "—") -> str:
+def _fmt_opt_num(v: Any, fmt: str, empty: str = "-") -> str:
     if v is None:
         return empty
     if isinstance(v, float) and not math.isfinite(v):
@@ -429,7 +429,7 @@ def _fmt_opt_num(v: Any, fmt: str, empty: str = "—") -> str:
     s = str(v).strip()
     if s.lower() in ("", "nan", "none"):
         return empty
-    if s == "—":
+    if s == "-":
         return empty
     try:
         return format(float(v), fmt)
@@ -452,7 +452,7 @@ def _render_target_detail(
     show_airmass: bool = False,
     phase01_use_bprp_primary: bool = True,
 ) -> None:
-    """Interaktívna krivka (Plotly z CSV), field map PNG, metriky, odkazy Vizier/VSX."""
+    """Interaktivna krivka (Plotly z CSV), field map PNG, metriky, odkazy Vizier/VSX."""
     from photometry_phase2a import _normalize_gaia_id
 
     catalog_id = str(target_row.get("catalog_id", ""))
@@ -486,7 +486,7 @@ def _render_target_detail(
     col_lc, col_map = st.columns([3, 2])
 
     with col_lc:
-        st.markdown(f"**Light curve — {vsx_name}**")
+        st.markdown(f"**Light curve - {vsx_name}**")
         if lc_csv.exists():
             lc_df = _cached_read_csv(str(lc_csv))
             if not show_outliers and "flag" in lc_df.columns:
@@ -511,7 +511,7 @@ def _render_target_detail(
                     fig = go.Figure()
                     bjd_num = pd.to_numeric(lc_df["bjd"], errors="coerce")
                     _, bjd_x_off = jd_series_relative(bjd_num)
-                    # Svetlé pozadie + výrazné farby bodov (čitateľné aj v tmavom Streamlit)
+                    # Svetle pozadie + vyrazne farby bodov (citatelne aj v tmavom Streamlit)
                     flag_colors_plotly = {
                         "normal": "#2563eb",
                         "outlier_hi": "#ea580c",
@@ -693,7 +693,7 @@ def _render_target_detail(
             _zf_lc = str(target_row.get("zone_flag", "") or "").strip().lower()
             if _sk_b or _zf_lc == "saturated":
                 st.info(
-                    "Photometry for this target was skipped (saturated star in masterstars — "
+                    "Photometry for this target was skipped (saturated star in masterstars - "
                     "measurement would not be reliable; position and field map remain in the target list)."
                 )
             else:
@@ -707,7 +707,7 @@ def _render_target_detail(
             global_fm = output_dir / "field_map.png"
             if global_fm.exists():
                 st.image(str(global_fm), width="stretch")
-                st.caption("(global field map — per-target not available)")
+                st.caption("(global field map - per-target not available)")
             else:
                 st.info("Field map does not exist.")
 
@@ -765,23 +765,23 @@ def _render_target_detail(
     if vt or zf or bp_s or (bv_s and not hide_bv_meta):
         badge = ""
         if zf == "linear":
-            badge = "🟢 linear"
+            badge = "[green] linear"
         elif zf in ("noisy1", "noisy2"):
-            badge = f"🟡 {zf}"
+            badge = f"[yellow] {zf}"
         elif zf == "noisy3":
-            badge = "🟠 noisy3"
+            badge = "[orange] noisy3"
         elif zf == "saturated":
-            badge = "🔴 saturated"
+            badge = "[red] saturated"
         elif zf:
-            badge = f"⚪ {zf}"
+            badge = f"o {zf}"
         parts = []
         if vt:
             parts.append(f"vsx_type: **{vt}**")
         if badge:
             parts.append(f"zone_flag: {badge}")
-        if bp_s and bp_s != "—":
+        if bp_s and bp_s != "-":
             parts.append(f"bp_rp: **{bp_s}**")
-        if (not hide_bv_meta) and bv_s and bv_s != "—":
+        if (not hide_bv_meta) and bv_s and bv_s != "-":
             parts.append(f"B-V: **{bv_s}**")
         if parts:
             st.caption(" | ".join(parts))
@@ -857,7 +857,7 @@ def _render_target_detail(
             def _tier_badge(v: object) -> str:
                 s = str(v or "").strip()
                 if not s:
-                    return "—"
+                    return "-"
                 key = s.split("_", 1)[0].upper()  # TIER1 / TIER2 / ...
                 bg = {
                     "TIER1": "rgba(34,197,94,0.25)",   # green
@@ -879,7 +879,7 @@ def _render_target_detail(
                 bv_src = str(row_like.get("bv_source", "") or "").strip().lower()
                 cid0 = _normalize_gaia_id(row_like.get("catalog_id", ""))
                 if not cid0:
-                    return "—"
+                    return "-"
                 if bv_src in ("gaia_bprp", "gaia_teff", "unknown", ""):
                     return cid0
                 if bv_src == "tycho2":
@@ -930,11 +930,11 @@ def _render_target_detail(
                     )
                     continue
                 if q == "suspect":
-                    stav = f"suspect — {q_note}" if q_note else "suspect"
+                    stav = f"suspect - {q_note}" if q_note else "suspect"
                 elif q == "good":
                     stav = "good"
                 else:
-                    stav = "—"
+                    stav = "-"
 
                 viz_c = (
                     f"https://vizier.cds.unistra.fr/viz-bin/VizieR?"
@@ -953,7 +953,7 @@ def _render_target_detail(
                 wrel_str = (
                     f"{float(w_c) / max_w:.3f}"
                     if np.isfinite(pd.to_numeric(w_c, errors="coerce")) and float(pd.to_numeric(w_c, errors="coerce")) > 0 and np.isfinite(max_w) and max_w > 0
-                    else "—"
+                    else "-"
                 )
                 def _bv_src_badge(src: str) -> str:
                     key = str(src or "").strip().lower() or "unknown"
@@ -973,13 +973,13 @@ def _render_target_detail(
                     )
 
                 def _tier_color_src_badge(raw: object) -> str:
-                    """Phase 1 tier color: native BP-RP vs B-V→BP-RP fallback (same space as ΔBPRP)."""
+                    """Phase 1 tier color: native BP-RP vs B-V->BP-RP fallback (same space as DeltaBPRP)."""
                     key = str(raw or "").strip().lower()
                     if not key:
-                        return "—"
+                        return "-"
                     label = {
                         "bprp": "bp_rp",
-                        "bv_converted": "BV→BP-RP",
+                        "bv_converted": "BV->BP-RP",
                         "unknown": "unknown",
                     }.get(key, key)
                     bg = {
@@ -1012,10 +1012,10 @@ def _render_target_detail(
                         f"<td>{html.escape(dist_str)}</td>",
                         f"<td>{html.escape(nfr_str)}</td>",
                         f"<td>{html.escape(rms_str)}</td>",
-                        f"<td title=\"Relative weight 1/σ² (Broeg 2005)\">{html.escape(wrel_str)}</td>",
+                        f"<td title=\"Relative weight 1/sigma^2 (Broeg 2005)\">{html.escape(wrel_str)}</td>",
                         f"<td>{_tier_badge(tier_c)}</td>",
                         f"<td>{html.escape(stav)}</td>",
-                        f"<td><a href=\"{html.escape(viz_c)}\" target=\"_blank\" rel=\"noopener noreferrer\">↗</a></td>",
+                        f"<td><a href=\"{html.escape(viz_c)}\" target=\"_blank\" rel=\"noopener noreferrer\">/</a></td>",
                     ]
                 )
                 rows_html.append("<tr style=\"" + bg + "\">" + "".join(cells) + "</tr>")
@@ -1024,10 +1024,10 @@ def _render_target_detail(
                 thead = (
                     "<thead><tr>"
                     "<th>#</th><th>catalog_id</th><th>mag</th><th>bp_rp</th>"
-                    "<th title=\"Primary Phase 1 color filter (|ΔBP-RP| in Gaia space)\">ΔBPRP</th>"
+                    "<th title=\"Primary Phase 1 color filter (|DeltaBP-RP| in Gaia space)\">DeltaBPRP</th>"
                     "<th title=\"Tier color source: native Gaia bp_rp vs conversion from B-V\">tier color</th>"
                     "<th>dist_deg</th><th>comp_n_frames</th><th>comp_rms</th>"
-                    "<th title=\"Relative weight 1/σ² (Broeg 2005)\">w (rel)</th>"
+                    "<th title=\"Relative weight 1/sigma^2 (Broeg 2005)\">w (rel)</th>"
                     "<th>tier</th><th>status</th><th>Vizier</th>"
                     "</tr></thead>"
                 )
@@ -1035,10 +1035,10 @@ def _render_target_detail(
                 thead = (
                     "<thead><tr>"
                     "<th>#</th><th>catalog_id</th><th>mag</th><th>B-V</th><th>B-V src</th><th>bp_rp</th>"
-                    "<th title=\"Primary Phase 1 color filter (|ΔBP-RP| in Gaia space)\">ΔBPRP</th>"
+                    "<th title=\"Primary Phase 1 color filter (|DeltaBP-RP| in Gaia space)\">DeltaBPRP</th>"
                     "<th title=\"Tier color source: native Gaia bp_rp vs conversion from B-V\">tier color</th>"
                     "<th>dist_deg</th><th>comp_n_frames</th><th>comp_rms</th>"
-                    "<th title=\"Relative weight 1/σ² (Broeg 2005)\">w (rel)</th>"
+                    "<th title=\"Relative weight 1/sigma^2 (Broeg 2005)\">w (rel)</th>"
                     "<th>tier</th><th>status</th><th>Vizier</th>"
                     "</tr></thead>"
                 )
@@ -1057,8 +1057,8 @@ def _render_target_detail(
                 )
             if comp_quality_tier4_warning:
                 st.info(
-                    "Phase 1: the ensemble also includes comp stars **TIER3/4** (larger color difference vs target — "
-                    "primarily **|ΔBP-RP|**). Column **tier** = color class from Phase 1; **status** = LC stability from Phase 2A (good/suspect)."
+                    "Phase 1: the ensemble also includes comp stars **TIER3/4** (larger color difference vs target - "
+                    "primarily **|DeltaBP-RP|**). Column **tier** = color class from Phase 1; **status** = LC stability from Phase 2A (good/suspect)."
                 )
             if not quality_by_cid:
                 st.caption(
@@ -1067,21 +1067,21 @@ def _render_target_detail(
                 )
             if hide_bv:
                 st.caption(
-                    "**Phase 1 color selection** uses Gaia **BP-RP** space (column **ΔBPRP** = |ΔBP-RP| vs target; bold). "
-                    "**tier color** = native **bp_rp** or fallback **B-V→BP-RP**. "
-                    "**bp_rp** from Gaia when ID is known. **Vizier** column = sky link (↗)."
+                    "**Phase 1 color selection** uses Gaia **BP-RP** space (column **DeltaBPRP** = |DeltaBP-RP| vs target; bold). "
+                    "**tier color** = native **bp_rp** or fallback **B-V->BP-RP**. "
+                    "**bp_rp** from Gaia when ID is known. **Vizier** column = sky link (/)."
                 )
             else:
                 st.caption(
-                    "**Phase 1 color selection** uses Gaia **BP-RP** space (column **ΔBPRP** = |ΔBP-RP| vs target; bold). "
-                    "**tier color** = native **bp_rp** or fallback **B-V→BP-RP**. "
+                    "**Phase 1 color selection** uses Gaia **BP-RP** space (column **DeltaBPRP** = |DeltaBP-RP| vs target; bold). "
+                    "**tier color** = native **bp_rp** or fallback **B-V->BP-RP**. "
                     "Johnson **B-V** and **B-V src** are informational (report / compatibility). "
-                    "**bp_rp** from Gaia when ID is known. **Vizier** column = sky link (↗)."
+                    "**bp_rp** from Gaia when ID is known. **Vizier** column = sky link (/)."
                 )
 
 
 # ---------------------------------------------------------------------------
-# Hlavný render
+# Hlavny render
 # ---------------------------------------------------------------------------
 
 
@@ -1092,7 +1092,7 @@ def render_aperture_photometry(
     *,
     draft_dir_override: Path | None = None,
 ) -> None:
-    """Hlavná funkcia pre Aperture Photometry tab."""
+    """Hlavna funkcia pre Aperture Photometry tab."""
     _ = pipeline
     st.header("Aperture Photometry")
     st.caption("Phase 0+1 + Phase 2A as one integrated step.")
@@ -1172,7 +1172,7 @@ def render_aperture_photometry(
     if st.session_state.get("pdf_ready"):
         _ps = Path(draft_dir) / "platesolve" / str(selected_setup) / "photometry"
         _ps.mkdir(parents=True, exist_ok=True)
-        with st.spinner("Generating PDF report…"):
+        with st.spinner("Generating PDF report..."):
             from pdf_report import generate_report
 
             _draft_lbl = Path(str(draft_dir).rstrip("/\\")).name
@@ -1191,7 +1191,7 @@ def render_aperture_photometry(
                 accepted_periods=st.session_state.get("accepted_period", {}),
                 variability_timestamp=st.session_state.get("var_analysis_timestamp"),
                 tess_results=st.session_state.get("tess_results", {}),
-                report_title="VYVAR — Summary Measure Report",
+                report_title="VYVAR - Summary Measure Report",
             )
         if pdf_path and Path(pdf_path).exists():
             st.success("PDF report generated.")
@@ -1215,10 +1215,10 @@ def render_aperture_photometry(
             p2a_ts = _phase2a_timestamp(output_dir)
             if st.session_state.get("var_analysis_done"):
                 vts = str(st.session_state.get("var_analysis_timestamp") or "")
-                st.success(f"Completed: {vts} — Variability Detection finished automatically")
+                st.success(f"Completed: {vts} - Variability Detection finished automatically")
                 st.caption(f"Phase 2A (photometry): {p2a_ts}")
             else:
-                st.success(f"✅ Completed: {p2a_ts}")
+                st.success(f"[OK] Completed: {p2a_ts}")
             if st.session_state.get("var_analysis_done"):
                 if (
                     st.session_state.get("crossmatch_auto_done") is True
@@ -1234,7 +1234,7 @@ def render_aperture_photometry(
                         st.rerun()
                 else:
                     st.info(
-                        "⏳ Crossmatch and TESS analysis in progress — PDF will be available when finished."
+                        "... Crossmatch and TESS analysis in progress - PDF will be available when finished."
                     )
             # Always show PDF download if it already exists (even after rerun).
             pdf_latest = _latest_report_pdf(draft_dir, str(selected_setup))
@@ -1252,20 +1252,20 @@ def render_aperture_photometry(
                     # EXC-0501: T3 -- UI diagnostic/plot only (key=f'pdf_dl_hdr_{selected_setup}', / ) / except Exception:  #... (EXCEPT-BULK 2026-07-08)
                     pass
         else:
-            st.warning("⚠️ Not started")
+            st.warning("! Not started")
     with col_run:
-        run_btn = st.button("🔄 RUN Aperture Photometry", key="phase2a_run_full", type="primary")
+        run_btn = st.button("[refresh] RUN Aperture Photometry", key="phase2a_run_full", type="primary")
 
     with st.expander("Setup status", expanded=False):
         for nm in setup_options:
             p = all_setups.get(str(nm)) or {}
             out_d = p.get("output_dir")
             if _phase2a_results_exist(out_d):
-                st.success(f"✅ {nm}: {_phase2a_timestamp(out_d)}")
+                st.success(f"[OK] {nm}: {_phase2a_timestamp(out_d)}")
             else:
-                st.warning(f"⚠️ {nm}: not started")
+                st.warning(f"! {nm}: not started")
 
-    # Stale lock: beh bol prerušený (timeout / kill) pred `finally` → inak ostane True a UI sa zasekne.
+    # Stale lock: beh bol preruseny (timeout / kill) pred `finally` -> inak ostane True a UI sa zasekne.
     if st.session_state.get("phase2a_running") and not run_btn:
         st.session_state["phase2a_running"] = False
 
@@ -1280,22 +1280,22 @@ def render_aperture_photometry(
             if total <= 0:
                 st.warning("No obs_group found in detrended_aligned/lights.")
                 return
-            vyvar_footer_running("Aperture Photometry", f"Starting ({total} setups)…")
-            prog = st.progress(0, text="Starting…")
+            vyvar_footer_running("Aperture Photometry", f"Starting ({total} setups)...")
+            prog = st.progress(0, text="Starting...")
             lines_ph = st.empty()
             statuses: dict[str, str] = {}
             errors: list[str] = []
             n_ok = 0
 
             def _render_lines() -> None:
-                lines = [statuses.get(g, f"{g} …") for g in run_groups]
+                lines = [statuses.get(g, f"{g} ...") for g in run_groups]
                 lines_ph.markdown("\n".join(lines))
 
             for i, nm in enumerate(run_groups, start=1):
-                statuses[nm] = f"{nm} ██████ …"
+                statuses[nm] = f"{nm} ###### ..."
                 _render_lines()
-                prog.progress(int(round(100 * (i - 1) / max(total, 1))), text=f"{nm}: starting…")
-                vyvar_footer_running("Aperture Photometry", f"{nm}: Phase 0+1 + 2A…")
+                prog.progress(int(round(100 * (i - 1) / max(total, 1))), text=f"{nm}: starting...")
+                vyvar_footer_running("Aperture Photometry", f"{nm}: Phase 0+1 + 2A...")
 
                 p = all_setups.get(str(nm)) or {}
                 try:
@@ -1339,7 +1339,7 @@ def render_aperture_photometry(
                     _load_summary.clear()
                     logging.debug("[PERF-7] _load_summary cache cleared after pipeline run")
                     n_ok += 1
-                    statuses[nm] = f"{nm} ████████████ ✓"
+                    statuses[nm] = f"{nm} ############ [OK]"
 
                     # PDF report (optional)
                     try:
@@ -1350,10 +1350,10 @@ def render_aperture_photometry(
                             obs_group=str(nm),
                             output_pdf=None,
                             tess_results=st.session_state.get("tess_results", {}),
-                            report_title="VYVAR — Summary Measure Report",
+                            report_title="VYVAR - Summary Measure Report",
                         )
                         if pdf_path is not None:
-                            st.success(f"📄 PDF saved: {Path(pdf_path).name}")
+                            st.success(f"[page] PDF saved: {Path(pdf_path).name}")
                             try:
                                 st.session_state.setdefault("vyvar_pdf_paths", {})[str(nm)] = str(pdf_path)
                             except Exception:  # noqa: BLE001
@@ -1361,7 +1361,7 @@ def render_aperture_photometry(
                                 pass
                             with open(pdf_path, "rb") as f:
                                 st.download_button(
-                                    label=f"📥 Download {Path(pdf_path).name}",
+                                    label=f"[inbox] Download {Path(pdf_path).name}",
                                     data=f.read(),
                                     file_name=Path(pdf_path).name,
                                     mime="application/pdf",
@@ -1370,19 +1370,19 @@ def render_aperture_photometry(
                     except Exception as _pdf_exc:  # noqa: BLE001
                         st.warning(f"PDF could not be generated: {_pdf_exc}")
                 except Exception as exc_nm:  # noqa: BLE001
-                    statuses[nm] = f"{nm} ███████ ✗"
+                    statuses[nm] = f"{nm} ####### x"
                     errors.append(f"{nm}: {exc_nm}")
                 _render_lines()
                 prog.progress(int(round(100 * i / max(total, 1))), text=f"{nm}: done")
 
             if n_ok:
-                st.success(f"Done — {n_ok} setups processed")
+                st.success(f"Done - {n_ok} setups processed")
             if errors:
                 (st.error if n_ok == 0 else st.warning)(
                     "Issues with some setups:\n" + "\n".join(errors)
                 )
             if len(errors) == 0 and n_ok == total and n_ok > 0 and not st.session_state.get("var_analysis_done"):
-                st.info("Phase 2A complete — starting Variability Detection…")
+                st.info("Phase 2A complete - starting Variability Detection...")
                 try:
                     from ui_variability import run_variability_detection_session
 
@@ -1420,17 +1420,17 @@ def render_aperture_photometry(
                     st.warning(f"Variability Detection could not be started automatically: {_v_exc}")
             # Trigger crossmatch/TESS status messaging if automation not completed yet.
             if st.session_state.get("var_analysis_done") and not st.session_state.get("crossmatch_auto_done"):
-                st.info("⏳ Catalog crossmatch in progress...")
+                st.info("... Catalog crossmatch in progress...")
             elif (
                 st.session_state.get("var_analysis_done")
                 and st.session_state.get("crossmatch_auto_done")
                 and not st.session_state.get("tess_auto_done")
             ):
-                st.info("⏳ TESS analysis in progress — PDF will be available when finished.")
+                st.info("... TESS analysis in progress - PDF will be available when finished.")
             vyvar_footer_idle()
             st.rerun()
         except Exception as exc:  # noqa: BLE001
-            st.error(f"❌ Error: {exc}")
+            st.error(f"[X] Error: {exc}")
             logging.exception("RUN Aperture Photometry zlyhal")
         finally:
             st.session_state["phase2a_running"] = False
@@ -1479,12 +1479,12 @@ def render_aperture_photometry(
                                     vsx_local_db_path=_vsx_db_ap,
                                 )
                                 b = cr.catalog_summary_bullets()
-                                bullets_map[str(cid)] = "\n".join(b) if b else "—"
+                                bullets_map[str(cid)] = "\n".join(b) if b else "-"
                                 xr[str(cid)] = cr
                             except Exception as exc:  # noqa: BLE001
                                 bullets_map[str(cid)] = f"Error: {exc}"
                         else:
-                            bullets_map[str(cid)] = "—"
+                            bullets_map[str(cid)] = "-"
                         pb.progress((i + 1) / len(missing))
                     pb.empty()
                     st.session_state["var_catalog_bullets"] = bullets_map
@@ -1495,7 +1495,7 @@ def render_aperture_photometry(
         # TESS (one candidate per rerun)
         if not bool(getattr(cfg, "tess_enabled", False)):
             if not st.session_state.get("tess_auto_done"):
-                logging.info("[TESS] preskočené — tess_enabled=False (Aperture Photometry auto vetva)")
+                logging.info("[TESS] preskocene - tess_enabled=False (Aperture Photometry auto vetva)")
                 st.session_state["tess_auto_done"] = True
                 st.rerun()
         else:
@@ -1522,15 +1522,15 @@ def render_aperture_photometry(
                 c
                 for c in _cid_rows
                 if c not in _done_tess
-                and _should_trigger_tess(bullets_map.get(c, "—"))
+                and _should_trigger_tess(bullets_map.get(c, "-"))
                 and photometry_dir
             ]
             if to_tess:
                 cid = to_tess[0]
-                _need_tess = [c for c in _cid_rows if _should_trigger_tess(bullets_map.get(c, "—"))]
+                _need_tess = [c for c in _cid_rows if _should_trigger_tess(bullets_map.get(c, "-"))]
                 total = len(_need_tess)
                 done = len([c for c in _need_tess if str(c) in _done_tess])
-                st.info(f"🔭 TESS: {done}/{total} — processing {str(cid)[:16]}...")
+                st.info(f"[telescope] TESS: {done}/{total} - processing {str(cid)[:16]}...")
 
                 row = _get_candidate_row(
                     st.session_state.get("var_results"),
@@ -1566,7 +1566,7 @@ def render_aperture_photometry(
 
     if not exists:
         st.warning(
-            f"⚠️ Photometry was not run for **{selected_setup}**.\n\n"
+            f"! Photometry was not run for **{selected_setup}**.\n\n"
             "Click **RUN Aperture Photometry**."
         )
         return
@@ -1591,7 +1591,7 @@ def render_aperture_photometry(
     at_path_for_zf = Path(at_csv) if at_csv is not None else None
     summary_df = _enrich_summary_with_zone_flags(summary_df, at_path_for_zf)
 
-    tab_lc, tab_hrd = st.tabs(["Photometry / LC", "🌟 Field HRD"])
+    tab_lc, tab_hrd = st.tabs(["Photometry / LC", "[star] Field HRD"])
     with tab_lc:
         _n_total = int(len(summary_df))
         _lc_qopts = ["good", "noisy", "noisy_moon", "short_baseline", "no_data", "saturated"]
@@ -1619,7 +1619,7 @@ def render_aperture_photometry(
                     _hn = str(_hr.get("vsx_name", _hr.get("catalog_id", "")) or "").strip()
                     _hq = str(_hr.get("lc_quality_flag", "") or "").strip()
                     logging.info(
-                        "[UI LC] Hidden target %s — lc_quality_flag=%s (filter=%s)",
+                        "[UI LC] Hidden target %s - lc_quality_flag=%s (filter=%s)",
                         _hn,
                         _hq or "?",
                         ",".join(_sel_q),
@@ -1627,7 +1627,7 @@ def render_aperture_photometry(
             st.caption(f"Showing {len(summary_df)} / {_n_total} targets")
         else:
             st.caption(
-                "Quality filter unavailable — re-run Phase 2A to generate lc_quality_flag"
+                "Quality filter unavailable - re-run Phase 2A to generate lc_quality_flag"
             )
 
         if summary_df.empty:
@@ -1684,7 +1684,7 @@ def render_aperture_photometry(
                         f"Showing first {_MAX_LC_PRELOAD} of {total_lc_count} light curves. "
                         "Use target search to load others."
                     )
-                with st.spinner("Loading light curves into memory…"):
+                with st.spinner("Loading light curves into memory..."):
                     try:
                         for p in lc_files:
                             _ = _cached_read_csv(str(p))
@@ -1755,7 +1755,7 @@ def render_aperture_photometry(
                     )
 
                 fig.update_layout(
-                    title=f"Light curves — {catalog_id}",
+                    title=f"Light curves - {catalog_id}",
                     xaxis_title=jd_axis_title("BJD (TDB)", overlay_x_off),
                     yaxis_title="mag (calib)",
                     yaxis_autorange="reversed",
@@ -1801,11 +1801,11 @@ def render_aperture_photometry(
         good = int((rms_cur < 0.05).sum())
         c3.metric("RMS < 0.05 mag", good)
     else:
-        c2.metric("Median lc_rms", "—")
-        c3.metric("RMS < 0.05 mag", "—")
+        c2.metric("Median lc_rms", "-")
+        c3.metric("RMS < 0.05 mag", "-")
 
     ngc = pd.to_numeric(summary_df.get("n_good_comp"), errors="coerce")
-    c4.metric("Avg good comp", f"{float(ngc.mean()):.1f}" if ngc.notna().any() else "—")
+    c4.metric("Avg good comp", f"{float(ngc.mean()):.1f}" if ngc.notna().any() else "-")
 
     # Cross-setup metrics (based on existing photometry_summary.csv files).
     done_setups = 0
@@ -1834,11 +1834,11 @@ def render_aperture_photometry(
     all_df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
     if not all_df.empty:
         rms_all = pd.to_numeric(all_df.get("lc_rms"), errors="coerce")
-        c6.metric("Best lc_rms", f"{float(rms_all.min()):.4f}" if rms_all.notna().any() else "—")
-        c7.metric("Worst lc_rms", f"{float(rms_all.max()):.4f}" if rms_all.notna().any() else "—")
+        c6.metric("Best lc_rms", f"{float(rms_all.min()):.4f}" if rms_all.notna().any() else "-")
+        c7.metric("Worst lc_rms", f"{float(rms_all.max()):.4f}" if rms_all.notna().any() else "-")
         bp_all = pd.to_numeric(all_df.get("bp_rp"), errors="coerce")
-        c8.metric("Avg bp_rp", f"{float(bp_all.mean()):.3f}" if bp_all.notna().any() else "—")
+        c8.metric("Avg bp_rp", f"{float(bp_all.mean()):.3f}" if bp_all.notna().any() else "-")
     else:
-        c6.metric("Best lc_rms", "—")
-        c7.metric("Worst lc_rms", "—")
-        c8.metric("Avg bp_rp", "—")
+        c6.metric("Best lc_rms", "-")
+        c7.metric("Worst lc_rms", "-")
+        c8.metric("Avg bp_rp", "-")

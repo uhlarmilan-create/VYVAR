@@ -90,7 +90,7 @@ def render_masterstar_selection_qc(
     archive_path: Path | None = None,
     take_n: int = 3,
 ) -> dict[str, Any]:
-    """Tabuľka: ``take_n`` (2–5) najlepších FITS z ``processed/lights`` podľa FWHM; cesty pre MASTERSTAR tlačidlá."""
+    """Tabulka: ``take_n`` (2-5) najlepsich FITS z ``processed/lights`` podla FWHM; cesty pre MASTERSTAR tlacidla."""
     did = int(draft_id) if draft_id is not None else None
     tn = max(2, min(5, int(take_n)))
 
@@ -152,7 +152,7 @@ def render_masterstar_selection_qc(
         show = pd.DataFrame({"File (processed)": [p.name for p in ranked]})
         st.dataframe(show, width="stretch", hide_index=True)
     else:
-        st.warning("No FITS in `processed/lights` — run **MAKE MASTERSTAR** after calibration.")
+        st.warning("No FITS in `processed/lights` - run **MAKE MASTERSTAR** after calibration.")
 
     return {
         "masterstar_candidate_paths": cand_resolved,
@@ -188,7 +188,7 @@ def render_photometric_grid_qa(*, pipeline: AstroPipeline, draft_id: int | None)
         if _fl in df.columns:
             df[_fl] = pd.to_numeric(df[_fl], errors="coerce").fillna(0).astype(int)
 
-    st.caption("Heatmap: count of stars with `is_safe_comp=1` in the matrix (mag bin × color bin).")
+    st.caption("Heatmap: count of stars with `is_safe_comp=1` in the matrix (mag bin x color bin).")
     safe = df[df["IS_SAFE_COMP"] == 1].copy()
     # Parse bins from PHOT_CATEGORY if available.
     if "PHOT_CATEGORY" in df.columns:

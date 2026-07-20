@@ -1,4 +1,4 @@
-"""Comp-star LOO QA (Sokolovsky indices + magnitude locus) — shared core for pipeline and CLI."""
+"""Comp-star LOO QA (Sokolovsky indices + magnitude locus) - shared core for pipeline and CLI."""
 from __future__ import annotations
 
 import json
@@ -599,7 +599,7 @@ def run_comp_qa_for_photometry_dir(
     st = result.get("stats", {})
     LOGGER.info(
         "[COMP_QA] flagged=%s (amp=%s invNV=%s spike=%s amp+invNV=%s) "
-        "n_clean ge%d=%s thin=%s lt%d=%s → %d JSON files",
+        "n_clean ge%d=%s thin=%s lt%d=%s -> %d JSON files",
         st.get("n_flagged"),
         st.get("n_flag_amp"),
         st.get("n_flag_inv"),

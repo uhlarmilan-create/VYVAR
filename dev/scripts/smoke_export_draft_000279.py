@@ -23,12 +23,12 @@ def check(condition: bool, msg_ok: str, msg_fail: str, *, ok: list[str], errors:
 
 
 def main() -> None:
-    # ── Konfigurácia ────────────────────────────────────────────────────────
+    # -- Konfiguracia --------------------------------------------------------
     DRAFT = Path(r"C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000279")
 
-    # Nájdi platesolve subdir automaticky
+    # Najdi platesolve subdir automaticky
     platesolve_dirs = list((DRAFT / "platesolve").glob("*/photometry"))
-    assert platesolve_dirs, "Nenájdený photometry adresár v draft_000279"
+    assert platesolve_dirs, "Nenajdeny photometry adresar v draft_000279"
     PHOT = platesolve_dirs[0]
     _print_safe(f"Photometry dir: {PHOT}")
 
@@ -40,78 +40,78 @@ def main() -> None:
     errors: list[str] = []
     ok: list[str] = []
 
-    # ── Test 1 — Adresáre existujú ─────────────────────────────────────────
-    check(AAVSO.is_dir(), "aavso/ adresár existuje", "aavso/ adresár chýba", ok=ok, errors=errors)
+    # -- Test 1 - Adresare existuju -----------------------------------------
+    check(AAVSO.is_dir(), "aavso/ adresar existuje", "aavso/ adresar chyba", ok=ok, errors=errors)
     check(
         VARASTRO.is_dir(),
-        "varastro/ adresár existuje",
-        "varastro/ adresár chýba",
+        "varastro/ adresar existuje",
+        "varastro/ adresar chyba",
         ok=ok,
         errors=errors,
     )
 
-    # ── Test 2 — BO CVn súbory existujú ────────────────────────────────────
+    # -- Test 2 - BO CVn subory existuju ------------------------------------
     bo_aavso = list(AAVSO.glob("BO_CVn_*.txt"))
     bo_varastro = list(VARASTRO.glob("BO_CVn_*.txt"))
     check(
         len(bo_aavso) >= 1,
         f"aavso/BO_CVn_*.txt existuje ({bo_aavso[0].name if bo_aavso else ''})",
-        "aavso/BO_CVn_*.txt chýba",
+        "aavso/BO_CVn_*.txt chyba",
         ok=ok,
         errors=errors,
     )
     check(
         len(bo_varastro) >= 1,
         f"varastro/BO_CVn_*.txt existuje ({bo_varastro[0].name if bo_varastro else ''})",
-        "varastro/BO_CVn_*.txt chýba",
+        "varastro/BO_CVn_*.txt chyba",
         ok=ok,
         errors=errors,
     )
 
-    # ── Test 3 — VAR.ASTRO filter (RRAB a Mira nesmú byť vo varastro) ─────
+    # -- Test 3 - VAR.ASTRO filter (RRAB a Mira nesmu byt vo varastro) -----
     ss_varastro = list(VARASTRO.glob("SS_CVn_*.txt"))
     r_varastro = list(VARASTRO.glob("R_CVn_*.txt"))
     check(
         len(ss_varastro) == 0,
-        "SS_CVn (RRAB) nie je vo varastro/ — správne",
+        "SS_CVn (RRAB) nie je vo varastro/ - spravne",
         f"SS_CVn (RRAB) sa objavil vo varastro/: {ss_varastro}",
         ok=ok,
         errors=errors,
     )
     check(
         len(r_varastro) == 0,
-        "R_CVn (Mira/M) nie je vo varastro/ — správne",
+        "R_CVn (Mira/M) nie je vo varastro/ - spravne",
         f"R_CVn (M) sa objavil vo varastro/: {r_varastro}",
         ok=ok,
         errors=errors,
     )
 
-    # SS_CVn musí byť v aavso
+    # SS_CVn musi byt v aavso
     ss_aavso = list(AAVSO.glob("SS_CVn_*.txt"))
     check(
         len(ss_aavso) >= 1,
-        "SS_CVn (RRAB) je v aavso/ — správne",
-        "SS_CVn (RRAB) chýba v aavso/",
+        "SS_CVn (RRAB) je v aavso/ - spravne",
+        "SS_CVn (RRAB) chyba v aavso/",
         ok=ok,
         errors=errors,
     )
 
-    # ── Test 4 — AAVSO hlavička BO CVn ────────────────────────────────────
+    # -- Test 4 - AAVSO hlavicka BO CVn ------------------------------------
     if bo_aavso:
         txt = bo_aavso[0].read_text(encoding="utf-8", errors="replace")
-        check("#OBSCODE=" in txt, "AAVSO: #OBSCODE=", "AAVSO: chýba #OBSCODE=", ok=ok, errors=errors)
+        check("#OBSCODE=" in txt, "AAVSO: #OBSCODE=", "AAVSO: chyba #OBSCODE=", ok=ok, errors=errors)
         check(
             "#TYPE=Extended" in txt,
             "AAVSO: #TYPE=Extended",
-            "AAVSO: chýba #TYPE=Extended",
+            "AAVSO: chyba #TYPE=Extended",
             ok=ok,
             errors=errors,
         )
-        check("#DATE=BJD" in txt, "AAVSO: #DATE=BJD", "AAVSO: chýba #DATE=BJD", ok=ok, errors=errors)
-        check("ENSEMBLE" in txt, "AAVSO: CNAME=ENSEMBLE", "AAVSO: chýba ENSEMBLE", ok=ok, errors=errors)
-        check(",CV," in txt, "AAVSO: FILTER=CV", "AAVSO: chýba FILTER CV", ok=ok, errors=errors)
-        check(",NO," in txt, "AAVSO: TRANS=NO", "AAVSO: chýba TRANS=NO", ok=ok, errors=errors)
-        # KMAG — nesmie byť všade "na" (aspoň prvý dátový riadok má KMAG)
+        check("#DATE=BJD" in txt, "AAVSO: #DATE=BJD", "AAVSO: chyba #DATE=BJD", ok=ok, errors=errors)
+        check("ENSEMBLE" in txt, "AAVSO: CNAME=ENSEMBLE", "AAVSO: chyba ENSEMBLE", ok=ok, errors=errors)
+        check(",CV," in txt, "AAVSO: FILTER=CV", "AAVSO: chyba FILTER CV", ok=ok, errors=errors)
+        check(",NO," in txt, "AAVSO: TRANS=NO", "AAVSO: chyba TRANS=NO", ok=ok, errors=errors)
+        # KMAG - nesmie byt vsade "na" (aspon prvy datovy riadok ma KMAG)
         data_lines = [l for l in txt.splitlines() if l and not l.startswith("#")]
         if data_lines:
             first = data_lines[0]
@@ -119,66 +119,66 @@ def main() -> None:
             kmag = fields[10] if len(fields) > 10 else "na"
             check(
                 kmag != "na",
-                f"AAVSO: KMAG vyplnené ({kmag})",
-                "AAVSO: KMAG='na' v prvom dátovom riadku",
+                f"AAVSO: KMAG vyplnene ({kmag})",
+                "AAVSO: KMAG='na' v prvom datovom riadku",
                 ok=ok,
                 errors=errors,
             )
-        # Počet dátových riadkov
+        # Pocet datovych riadkov
         check(
             len(data_lines) >= 10,
-            f"AAVSO: {len(data_lines)} dátových riadkov (min 10)",
-            f"AAVSO: len {len(data_lines)} dátových riadkov",
+            f"AAVSO: {len(data_lines)} datovych riadkov (min 10)",
+            f"AAVSO: len {len(data_lines)} datovych riadkov",
             ok=ok,
             errors=errors,
         )
 
-    # ── Test 5 — VAR.ASTRO hlavička + COMP TABLE BO CVn ───────────────────
+    # -- Test 5 - VAR.ASTRO hlavicka + COMP TABLE BO CVn -------------------
     if bo_varastro:
         txt = bo_varastro[0].read_text(encoding="utf-8", errors="replace")
-        check("BJD(TDB)" in txt, "VAR.ASTRO: BJD(TDB) v hlavičke", "VAR.ASTRO: chýba BJD(TDB)", ok=ok, errors=errors)
+        check("BJD(TDB)" in txt, "VAR.ASTRO: BJD(TDB) v hlavicke", "VAR.ASTRO: chyba BJD(TDB)", ok=ok, errors=errors)
         check(
             "Milan Uhlar" in txt,
             "VAR.ASTRO: Observer Milan Uhlar",
-            "VAR.ASTRO: chýba observer",
+            "VAR.ASTRO: chyba observer",
             ok=ok,
             errors=errors,
         )
-        check("# COMP TABLE" in txt, "VAR.ASTRO: COMP TABLE sekcia", "VAR.ASTRO: chýba COMP TABLE", ok=ok, errors=errors)
-        check("Broeg" in txt, "VAR.ASTRO: Broeg referencia", "VAR.ASTRO: chýba Broeg ref", ok=ok, errors=errors)
+        check("# COMP TABLE" in txt, "VAR.ASTRO: COMP TABLE sekcia", "VAR.ASTRO: chyba COMP TABLE", ok=ok, errors=errors)
+        check("Broeg" in txt, "VAR.ASTRO: Broeg referencia", "VAR.ASTRO: chyba Broeg ref", ok=ok, errors=errors)
         check(
             "Color system: Gaia BP-RP" in txt,
             "VAR.ASTRO: Color system Gaia BP-RP",
-            "VAR.ASTRO: chýba color-system BP-RP riadok",
+            "VAR.ASTRO: chyba color-system BP-RP riadok",
             ok=ok,
             errors=errors,
         )
         check(
             ("tier_weight" in txt) or ("Tier" in txt),
             "VAR.ASTRO: tier popis",
-            "VAR.ASTRO: chýba tier info",
+            "VAR.ASTRO: chyba tier info",
             ok=ok,
             errors=errors,
         )
 
-        # COMP TABLE — počet C0x riadkov
+        # COMP TABLE - pocet C0x riadkov
         comp_lines = [l for l in txt.splitlines() if l.startswith("# C") and l[3:5].isdigit()]
         check(
             len(comp_lines) >= 10,
-            f"VAR.ASTRO: COMP TABLE má {len(comp_lines)} riadkov (min 10)",
-            f"VAR.ASTRO: COMP TABLE má len {len(comp_lines)} riadkov — očakávané 12",
+            f"VAR.ASTRO: COMP TABLE ma {len(comp_lines)} riadkov (min 10)",
+            f"VAR.ASTRO: COMP TABLE ma len {len(comp_lines)} riadkov - ocakavane 12",
             ok=ok,
             errors=errors,
         )
 
-        # Dátové riadky — 4 stĺpce
+        # Datove riadky - 4 stlpce
         data_lines = [l for l in txt.splitlines() if l and not l.startswith("#") and not l.startswith(" ")]
         if data_lines:
             first_fields = data_lines[0].split()
             check(
                 len(first_fields) == 4,
-                f"VAR.ASTRO: dátový riadok má 4 stĺpce ({data_lines[0][:60]})",
-                f"VAR.ASTRO: dátový riadok má {len(first_fields)} stĺpcov (očakávané 4)",
+                f"VAR.ASTRO: datovy riadok ma 4 stlpce ({data_lines[0][:60]})",
+                f"VAR.ASTRO: datovy riadok ma {len(first_fields)} stlpcov (ocakavane 4)",
                 ok=ok,
                 errors=errors,
             )
@@ -187,32 +187,32 @@ def main() -> None:
                 check(
                     bjd_val > 2_400_000,
                     f"VAR.ASTRO: BJD hodnota OK ({bjd_val:.3f})",
-                    f"VAR.ASTRO: BJD hodnota podozrivá ({bjd_val})",
+                    f"VAR.ASTRO: BJD hodnota podozriva ({bjd_val})",
                     ok=ok,
                     errors=errors,
                 )
             except ValueError:
-                errors.append("[FAIL] VAR.ASTRO: BJD nie je číslo")
-                print("[FAIL] VAR.ASTRO: BJD nie je číslo")
+                errors.append("[FAIL] VAR.ASTRO: BJD nie je cislo")
+                print("[FAIL] VAR.ASTRO: BJD nie je cislo")
 
-    # ── Test 6 — Field image ──────────────────────────────────────────────
+    # -- Test 6 - Field image ----------------------------------------------
     field_imgs = list(VARASTRO.glob("BO_CVn_*_field.png"))
     check(
         len(field_imgs) >= 1,
         f"varastro/BO_CVn_*_field.png existuje ({field_imgs[0].name if field_imgs else ''})",
-        "varastro/BO_CVn_*_field.png chýba",
+        "varastro/BO_CVn_*_field.png chyba",
         ok=ok,
         errors=errors,
     )
 
-    # ── Test 7 — Konzistencia: comparison_stars_per_target vs comp_quality JSON
+    # -- Test 7 - Konzistencia: comparison_stars_per_target vs comp_quality JSON
     comp_csv = PHOT / "comparison_stars_per_target.csv"
     json_path = PHOT / "lightcurves" / f"comp_quality_{BO_CID}.json"
 
     if comp_csv.exists() and json_path.exists():
         comp_df = pd.read_csv(
             comp_csv,
-            dtype={"catalog_id": str, "name": str, "target_catalog_id": str},  # Gaia ID musí byť str — float64 stráca cifry
+            dtype={"catalog_id": str, "name": str, "target_catalog_id": str},  # Gaia ID musi byt str - float64 straca cifry
         )
         bo_comp = comp_df[comp_df["target_catalog_id"] == BO_CID]
 
@@ -222,7 +222,7 @@ def main() -> None:
         check(
             len(bo_comp) >= 10,
             f"comparison_stars_per_target.csv: {len(bo_comp)} comp pre BO CVn (min 10)",
-            f"comparison_stars_per_target.csv: len {len(bo_comp)} comp — možná nekonzistencia s JSON",
+            f"comparison_stars_per_target.csv: len {len(bo_comp)} comp - mozna nekonzistencia s JSON",
             ok=ok,
             errors=errors,
         )
@@ -241,23 +241,23 @@ def main() -> None:
         diff_min = abs((mtime_csv - mtime_json).total_seconds()) / 60
         check(
             diff_min < 10,
-            f"Súbory z rovnakého runu (rozdiel {diff_min:.1f} min)",
-            f"Súbory z rôznych runov! comparison_stars={mtime_csv:%H:%M:%S}, "
+            f"Subory z rovnakeho runu (rozdiel {diff_min:.1f} min)",
+            f"Subory z roznych runov! comparison_stars={mtime_csv:%H:%M:%S}, "
             f"comp_quality={mtime_json:%H:%M:%S}, rozdiel={diff_min:.1f} min",
             ok=ok,
             errors=errors,
         )
 
-    # ── Záver ──────────────────────────────────────────────────────────────
+    # -- Zaver --------------------------------------------------------------
     print(f"\n{'='*60}")
-    _print_safe(f"Výsledok: {len(ok)} OK, {len(errors)} FAIL")
+    _print_safe(f"Vysledok: {len(ok)} OK, {len(errors)} FAIL")
     if errors:
         _print_safe("\nFailed testy:")
         for e in errors:
             _print_safe(f"  {e}")
         raise SystemExit(2)
     else:
-        _print_safe("Všetky testy prešli!")
+        _print_safe("Vsetky testy presli!")
 
 
 if __name__ == "__main__":

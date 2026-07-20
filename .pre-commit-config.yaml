@@ -1,4 +1,4 @@
-# BLE001 / E722 regression guard — new broad excepts must be explicitly noqa'd or fixed.
+# BLE001 / E722 regression guard - new broad excepts must be explicitly noqa'd or fixed.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.6

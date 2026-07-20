@@ -1,13 +1,13 @@
-"""VYVAR Blind Plate Solver — Triangle Hash Matching.
+"""VYVAR Blind Plate Solver - Triangle Hash Matching.
 
-Nájde aproximatívne RA/Dec stredu snímky bez akéhokoľvek hintu
-z FITS hlavičky. Používa predgenerovaný index trojuholníkov z Gaia DR3
-(``gaia_triangles_fine.pkl`` / ``gaia_triangles_wide.pkl``, generované skriptom ``GAIA_DR3/build_blind_index.py``).
+Najde aproximativne RA/Dec stredu snimky bez akehokolvek hintu
+z FITS hlavicky. Pouziva predgenerovany index trojuholnikov z Gaia DR3
+(``gaia_triangles_fine.pkl`` / ``gaia_triangles_wide.pkl``, generovane skriptom ``GAIA_DR3/build_blind_index.py``).
 
-3D hash (L1/L3, L2/L3, normalizovaný log10 L3 v ″) + hlasovanie podľa centroidu;
-metadata môže obsahovať aj RA/Dec vrcholov (8 stĺpcov) pre rozšírenia / diagnostiku.
+3D hash (L1/L3, L2/L3, normalizovany log10 L3 v  arcsec) + hlasovanie podla centroidu;
+metadata moze obsahovat aj RA/Dec vrcholov (8 stlpcov) pre rozsirenia / diagnostiku.
 
-Výstup: (ra_deg, dec_deg) alebo None ak sa zhoda nenašla.
+Vystup: (ra_deg, dec_deg) alebo None ak sa zhoda nenasla.
 """
 
 from __future__ import annotations
@@ -149,8 +149,8 @@ def _select_blind_image_stars(
         stars = picked[["x", "y"]].to_numpy(dtype=np.float64)
         return (
             stars,
-            f"INFO: Blind solver: per-cell image pick — {len(stars)} hviezd z {n_cells} buniek "
-            f"(cell={cell_deg}° → {cell_px:.0f}px, SPC={spc}, kNN k={tri_k})",
+            f"INFO: Blind solver: per-cell image pick - {len(stars)} hviezd z {n_cells} buniek "
+            f"(cell={cell_deg} deg -> {cell_px:.0f}px, SPC={spc}, kNN k={tri_k})",
         )
 
     x_max = float(dao_stars["x"].max())
@@ -179,7 +179,7 @@ def _select_blind_image_stars(
         return (
             stars,
             f"INFO: Blind solver: {len(central_stars)} hviezd v R={R_px:.0f}px od stredu, "
-            f"použitých {len(stars)} (budget={budget}, kNN k={tri_k})",
+            f"pouzitych {len(stars)} (budget={budget}, kNN k={tri_k})",
         )
     stars = dao_stars.head(budget)[["x", "y"]].to_numpy(dtype=np.float64)
     return (
@@ -324,7 +324,7 @@ def iter_local_knn_triangle_indices(
                 continue
             yield int(i_tri[0]), int(i_tri[1]), int(i_tri[2])
 
-_CACHED_INDEX: dict = {}  # module-level cache: path → {tree, metadata}
+_CACHED_INDEX: dict = {}  # module-level cache: path -> {tree, metadata}
 
 CLUSTER_RADIUS_DEG = 1.0  # default DBSCAN eps / legacy greedy cluster radius
 _CAND_DEDUP_DEG = 0.3
@@ -419,7 +419,7 @@ class _BlindPassResult:
 
 
 def _load_index(index_path: str | Path) -> dict | None:
-    """Načíta PKL index do module-level cache (načíta sa len raz za beh)."""
+    """Nacita PKL index do module-level cache (nacita sa len raz za beh)."""
     key = str(Path(index_path).resolve())
     if key in _CACHED_INDEX:
         return _CACHED_INDEX[key]
@@ -427,14 +427,14 @@ def _load_index(index_path: str | Path) -> dict | None:
         with open(index_path, "rb") as f:
             data = pickle.load(f)
         if "tree" not in data or "metadata" not in data:
-            log_event("WARNING: Blind index: neplatný formát PKL (chýba tree alebo metadata).")
+            log_event("WARNING: Blind index: neplatny format PKL (chyba tree alebo metadata).")
             return None
         _CACHED_INDEX[key] = data
-        log_event(f"INFO: Blind index načítaný: {len(data['metadata'])} trojuholníkov")
+        log_event(f"INFO: Blind index nacitany: {len(data['metadata'])} trojuholnikov")
         return data
     except Exception as exc:  # noqa: BLE001
         # EXC-0589: T4 -- blind index load fail already surfaced as WARNING; blind tier degrades loudly downstream (EXCEPT-BULK 2026-07-08)
-        log_event(f"WARNING: Blind index: načítanie zlyhalo: {exc}")
+        log_event(f"WARNING: Blind index: nacitanie zlyhalo: {exc}")
         return None
 
 
@@ -476,17 +476,17 @@ def _prepare_blind_context(
     hash_dim = int(idx.get("hash_dim", 2))
     if hash_dim == 4:
         log_event(
-            "WARNING: Blind solver: stary 4D index — vygeneruj znova (build_blind_index.py)."
+            "WARNING: Blind solver: stary 4D index - vygeneruj znova (build_blind_index.py)."
         )
         return None
     if hash_dim == 2:
         log_event(
-            "WARNING: Blind solver: stary 2D index bez mierky — vygeneruj znova (build_blind_index.py)."
+            "WARNING: Blind solver: stary 2D index bez mierky - vygeneruj znova (build_blind_index.py)."
         )
         return None
     if hash_dim != 3:
         log_event(
-            f"WARNING: Blind solver: nepodporovaný hash_dim={hash_dim} — znova vygeneruj index."
+            f"WARNING: Blind solver: nepodporovany hash_dim={hash_dim} - znova vygeneruj index."
         )
         return None
 
@@ -499,8 +499,8 @@ def _prepare_blind_context(
     )
     if _tree_cols != 3:
         log_event(
-            "WARNING: Blind solver: očakávaný 3D hash-tree; "
-            f"strom má {_tree_cols}D — znova vygeneruj index."
+            "WARNING: Blind solver: ocakavany 3D hash-tree; "
+            f"strom ma {_tree_cols}D - znova vygeneruj index."
         )
         return None
 
@@ -508,7 +508,7 @@ def _prepare_blind_context(
         log_L3_min = float(idx["log_L3_min"])
         log_L3_max = float(idx["log_L3_max"])
     except (KeyError, TypeError, ValueError):
-        log_event("WARNING: Blind solver: v PKL chýba log_L3_min / log_L3_max — znova vygeneruj index.")
+        log_event("WARNING: Blind solver: v PKL chyba log_L3_min / log_L3_max - znova vygeneruj index.")
         return None
 
     _cfg = app_config or AppConfig()
@@ -520,16 +520,16 @@ def _prepare_blind_context(
 
     if plate_scale_arcsec_per_px is None:
         log_event(
-            "WARNING: Blind solver: 3D index vyžaduje plate_scale_arcsec_per_px (mierku) — hint sa nepočíta."
+            "WARNING: Blind solver: 3D index vyzaduje plate_scale_arcsec_per_px (mierku) - hint sa nepocita."
         )
         return None
     try:
         _ps = float(plate_scale_arcsec_per_px)
     except (TypeError, ValueError):
-        log_event("WARNING: Blind solver: neplatná mierka (plate_scale_arcsec_per_px).")
+        log_event("WARNING: Blind solver: neplatna mierka (plate_scale_arcsec_per_px).")
         return None
     if not math.isfinite(_ps) or _ps <= 0:
-        log_event("WARNING: Blind solver: neplatná mierka (plate_scale_arcsec_per_px).")
+        log_event("WARNING: Blind solver: neplatna mierka (plate_scale_arcsec_per_px).")
         return None
 
     metadata: np.ndarray = idx["metadata"]
@@ -562,8 +562,8 @@ def _prepare_blind_context(
         log_event(f"DEBUG: Index log_L3 rozsah: min={log_L3_min:.3f} max={log_L3_max:.3f}")
 
     log_event(
-        f"INFO: Blind index: {len(metadata)} trojuholníkov, 3D hash (normalizovaný log L3), "
-        f"vertices={'áno' if has_vertices else 'nie (legacy)'}"
+        f"INFO: Blind index: {len(metadata)} trojuholnikov, 3D hash (normalizovany log L3), "
+        f"vertices={'ano' if has_vertices else 'nie (legacy)'}"
     )
 
     if dao_stars.empty or not {"x", "y"}.issubset(dao_stars.columns):
@@ -591,7 +591,7 @@ def _prepare_blind_context(
     log_event(pick_msg)
 
     if len(stars) < 3:
-        log_event(f"WARNING: Blind solver: príliš málo hviezd ({len(stars)} < 3).")
+        log_event(f"WARNING: Blind solver: prilis malo hviezd ({len(stars)} < 3).")
         return None
 
     return (
@@ -886,7 +886,7 @@ def _dbscan_vote_labels(
     eps_deg: float,
     min_samples: int,
 ) -> np.ndarray:
-    """DBSCAN on vote centers (unit-sphere chord ≈ haversine). Returns label per hit (-1 = noise)."""
+    """DBSCAN on vote centers (unit-sphere chord ~ haversine). Returns label per hit (-1 = noise)."""
     n = len(hits)
     labels = np.full(n, -1, dtype=np.int64)
     if n < min_samples:
@@ -931,7 +931,7 @@ def _hits_to_candidates_dbscan(
     app_config: Any | None,
     top_n: int,
 ) -> list[BlindCandidate]:
-    """Coherent vote clusters → verify candidates (rep = best hash_dist per cluster)."""
+    """Coherent vote clusters -> verify candidates (rep = best hash_dist per cluster)."""
     verifiable = [h for h in hits if h.cat_sky is not None]
     if not verifiable:
         return []
@@ -1000,8 +1000,8 @@ def _hits_to_candidates_dbscan(
         _add_cluster(members)
     log_event(
         f"INFO: Blind DBSCAN: {len(all_clusters)} klastrov (>={min_votes}), "
-        f"{len(out)} verify kandidátov "
-        f"(eps={eps_deg:.2f}°, span<={span_hi}, verify_cap={verify_cap})"
+        f"{len(out)} verify kandidatov "
+        f"(eps={eps_deg:.2f} deg, span<={span_hi}, verify_cap={verify_cap})"
     )
     out.sort(
         key=lambda c: (
@@ -1124,7 +1124,7 @@ def find_blind_candidates(
     ) = ctx
     _cfg = app_config or AppConfig()
     if not has_vertices:
-        log_event("WARNING: Blind candidates: index bez vrcholov (legacy metadata) — vracia [].")
+        log_event("WARNING: Blind candidates: index bez vrcholov (legacy metadata) - vracia [].")
         return []
 
     hash_tree: KDTree = idx["tree"]
@@ -1155,7 +1155,7 @@ def find_blind_candidates(
     ):
         log_event(
             f"INFO: Blind solver(pass dub={pres.dub:.4g}): {pres.n_passed}/{pres.n_tried} "
-            f"trojuholníkov prešlo filter, {len(pres.vote_centers)} hlasov"
+            f"trojuholnikov preslo filter, {len(pres.vote_centers)} hlasov"
         )
         if _dbg and pres.logl3_samples:
             arr = np.asarray(pres.logl3_samples)
@@ -1215,10 +1215,10 @@ def find_blind_candidates(
             debug_sink["votes_near_truth_5deg"] = int((sep_t < 5.0).sum())
             if _dbg:
                 log_event(
-                    f"DEBUG: Blind votes near truth: <2°={debug_sink['votes_near_truth_2deg']} "
-                    f"<5°={debug_sink['votes_near_truth_5deg']} / {len(centers)}"
+                    f"DEBUG: Blind votes near truth: <2 deg={debug_sink['votes_near_truth_2deg']} "
+                    f"<5 deg={debug_sink['votes_near_truth_5deg']} / {len(centers)}"
                 )
-    log_event(f"INFO: Blind solver: {len(candidates)} kandidátov pre geometrickú verifikáciu.")
+    log_event(f"INFO: Blind solver: {len(candidates)} kandidatov pre geometricku verifikaciu.")
     return candidates
 
 
@@ -1293,11 +1293,11 @@ def find_blind_hint(
         scale_tol=scale_tol,
     ):
         if _dbg and pres.is_first_pass and pres.n_passed <= 10:
-            pass  # query_vec debug omitted in refactor — low priority for legacy path
+            pass  # query_vec debug omitted in refactor - low priority for legacy path
 
         log_event(
             f"INFO: Blind solver(pass dub={pres.dub:.4g}): {pres.n_passed}/{pres.n_tried} "
-            f"trojuholníkov prešlo filter, {len(pres.vote_centers)} hlasov"
+            f"trojuholnikov preslo filter, {len(pres.vote_centers)} hlasov"
         )
         if _dbg and pres.logl3_samples:
             arr = np.asarray(pres.logl3_samples)
@@ -1347,8 +1347,8 @@ def find_blind_hint(
             best_count_at_truth = int((sep_t < CLUSTER_RADIUS_DEG).sum())
             if _dbg:
                 log_event(
-                    f"DEBUG: Blind votes near truth: <2°={votes_near_truth_2deg} "
-                    f"<5°={votes_near_truth_5deg} / {len(votes_arr)}"
+                    f"DEBUG: Blind votes near truth: <2 deg={votes_near_truth_2deg} "
+                    f"<5 deg={votes_near_truth_5deg} / {len(votes_arr)}"
                 )
 
         sky_area_deg2 = 41253.0
@@ -1364,7 +1364,7 @@ def find_blind_hint(
         significance = best_weight / max(expected_random, 1e-9)
         log_event(
             f"INFO: Blind solver(pass dub={pres.dub:.4g}): klaster={best_count}, "
-            f"signifikantnosť={significance:.0f}x, expected_random={expected_random:.3f}"
+            f"signifikantnost={significance:.0f}x, expected_random={expected_random:.3f}"
         )
 
         if _collect:
@@ -1396,15 +1396,15 @@ def find_blind_hint(
                 debug_sink["hint"] = (best_ra, best_dec)
             log_event(
                 f"INFO: Blind solver hint: RA={best_ra:.4f} Dec={best_dec:.4f} "
-                f"({best_count} hlasov, {significance:.0f}x nad náhodou)"
+                f"({best_count} hlasov, {significance:.0f}x nad nahodou)"
             )
             return best_ra, best_dec
 
         log_event(
-            f"INFO: Blind solver: klaster zamietnutý (dub={pres.dub:.4g}, count={best_count}, sig={significance:.1f}x)"
+            f"INFO: Blind solver: klaster zamietnuty (dub={pres.dub:.4g}, count={best_count}, sig={significance:.1f}x)"
         )
 
-    log_event("INFO: Blind solver: žiadny pass neprešiel prahmi (min_votes/significance).")
+    log_event("INFO: Blind solver: ziadny pass nepresiel prahmi (min_votes/significance).")
     if _collect and debug_sink.get("passes"):
         best_idx = max(
             range(len(debug_sink["passes"])),

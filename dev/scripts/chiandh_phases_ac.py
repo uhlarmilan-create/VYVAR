@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""h & χ Persei equipment IDs — C3-26000 (eq #2) + DDT 300/1200 + Dablice."""
+"""h & chi Persei equipment IDs - C3-26000 (eq #2) + DDT 300/1200 + Dablice."""
 from __future__ import annotations
 
 

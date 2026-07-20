@@ -23,7 +23,7 @@ def generate_report(
     accepted_periods: dict[str, Any] | None = None,
     variability_timestamp: str | None = None,
     tess_results: dict | None = None,
-    report_title: str = "VYVAR — Summary Measure Report",
+    report_title: str = "VYVAR - Summary Measure Report",
 ) -> str | None:
     """
     Build ``report_{setup_name}.pdf`` under ``photometry_dir``.
@@ -52,7 +52,7 @@ def generate_report(
             variability_timestamp=variability_timestamp,
             report_draft_label=lbl,
             tess_results=tess_results or {},
-            report_title=str(report_title or "VYVAR — Summary Measure Report"),
+            report_title=str(report_title or "VYVAR - Summary Measure Report"),
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("pdf_report.generate_report failed: %s", exc)

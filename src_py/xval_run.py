@@ -3,7 +3,7 @@
 Standalone OFFLINE cross-validation tooling (SEP vs DAO study). NOT imported by the production
 pipeline; not a production trust axis.
 
-VYVAR cross-validation HARNESS — reusable, any draft.
+VYVAR cross-validation HARNESS - reusable, any draft.
 
 Consolidates the validated draft_000365 workflow:
   * independent photutils extraction (own Gaia DR3 catalogue from WCS, dual aperture,
@@ -12,7 +12,7 @@ Consolidates the validated draft_000365 workflow:
   * decomposition against VYVAR per-frame dao_flux + reported lc_rms / comp_rms,
     using the SAME unweighted leave-one-out differential method.
 
-Targets + comps are auto-loaded from VYVAR's comparison_stars_per_target.csv — nothing
+Targets + comps are auto-loaded from VYVAR's comparison_stars_per_target.csv - nothing
 is hardcoded. Shares only the input FITS with VYVAR.
 
 REGRESSION TEST: run on draft_000365 first; it must reproduce
@@ -38,7 +38,7 @@ import pandas as pd
 warnings.filterwarnings("ignore", category=Warning)
 
 
-# ── small helpers ─────────────────────────────────────────────────────────────
+# -- small helpers -------------------------------------------------------------
 def log(m=""): print(m, flush=True)
 
 
@@ -84,7 +84,7 @@ def load_dao(proc_dir: Path, ids: set[str]):
     return pd.DataFrame(rows, columns=["frame", "source_id", "dao_flux"]) if rows else None
 
 
-# ── main ──────────────────────────────────────────────────────────────────────
+# -- main ----------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("detrended_aligned")

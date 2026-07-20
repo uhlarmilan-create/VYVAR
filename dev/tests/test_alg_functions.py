@@ -1,6 +1,6 @@
 """
 tests/test_alg_functions.py
-ALG-2/3/4/5 function audit tests — created 2026-05-21 overnight
+ALG-2/3/4/5 function audit tests - created 2026-05-21 overnight
 
 Run with: python -m pytest tests/test_alg_functions.py -v
 """
@@ -193,7 +193,7 @@ def test_alg3_disabled():
 
 
 def test_alg3_fewer_than_three_comps_passthrough():
-    """<3 comps → no binning (graceful passthrough)."""
+    """<3 comps -> no binning (graceful passthrough)."""
     comp_lc, cids = _make_comp_lc(2, 20)
     out = temporal_bin_comp_lc(comp_lc, {}, pd.DataFrame(), window=5, enabled=True)
     for cid in cids:
@@ -333,7 +333,7 @@ def test_alg5_disabled():
 # ---------------------------------------------------------------------------
 
 def test_alg_pipeline_integration():
-    """Run ALG-3 → stability → ALG-5 → ensemble → ALG-2/4 (disabled) without crash."""
+    """Run ALG-3 -> stability -> ALG-5 -> ensemble -> ALG-2/4 (disabled) without crash."""
     n = 55
     bjd = np.linspace(2459000.0, 2459000.6, n)
     shared = 0.03 * np.linspace(0, 1, n)

@@ -81,7 +81,7 @@ for draft in (360, 363):
     eq = row[0] if row else None
     print(f"\n=== draft {draft} (eq={eq}) ===")
 
-    # gain / RN — both old stages vs resolver
+    # gain / RN - both old stages vs resolver
     og_em, orn_em = old_errormap_gain_rn(h, eq)
     og_2a, orn_2a = old_phase2a_gain_rn(eq)
     rg = resolve_gain(h, db=db, equipment_id=eq, cfg=cfg)
@@ -91,13 +91,13 @@ for draft in (360, 363):
     print(f"  RN   : old_errormap={orn_em:.4f} old_phase2a={orn_2a:.4f} resolver={rrn.value:.4f} ({rrn.source})  "
           f"{'OK' if abs(orn_em-rrn.value)<1e-9 and abs(orn_2a-rrn.value)<1e-9 else 'DELTA!!'}")
 
-    # pixel — old DB-only vs resolver
+    # pixel - old DB-only vs resolver
     opx = db.get_equipment_pixel_size_um(int(eq)) if eq else None
     rpx = resolve_pixel_um(h, db=db, equipment_id=eq, cfg=cfg)
     px_ok = (opx is not None and rpx.ok and abs(float(opx) - rpx.value) < 1e-9)
     print(f"  pixel: old_DB={opx} resolver={rpx.value} ({rpx.source})  warnings={rpx.warnings}  {'OK' if px_ok else 'DELTA!!'}")
 
-    # BJD — config site vs resolved (draft) site
+    # BJD - config site vs resolved (draft) site
     site = resolve_site(h, db=db, draft_id=draft, cfg=cfg)
     bjd_res, _ = _recompute_bjd_hjd_per_target(jd, ra, dec, cfg, site=(site.lat, site.lon, site.elev))
     bjd_cfg, _ = _recompute_bjd_hjd_per_target(jd, ra, dec, cfg, site=None)
@@ -106,4 +106,4 @@ for draft in (360, 363):
     print(f"  BJD  : site={site.source} ({site.lat:.4f},{site.lon:.4f})  max|resolved-config| = {d_ms:.4f} ms")
 
 print(f"\nWorst BJD shift across drafts: {worst:.4f} ms  (expected <= ~0.05 ms)")
-print("VERDICT:", "PASS — only negligible site shift" if worst <= 0.05 else "INVESTIGATE")
+print("VERDICT:", "PASS - only negligible site shift" if worst <= 0.05 else "INVESTIGATE")

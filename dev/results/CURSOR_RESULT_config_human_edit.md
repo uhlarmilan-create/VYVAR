@@ -1,4 +1,4 @@
-CURSOR RESULT ù 2026-07-18 CONFIG-HUMAN-EDIT
+CURSOR RESULT - 2026-07-18 CONFIG-HUMAN-EDIT
 
 What I did
 Made config.json editable in a plain text editor without the UI: parameters grouped into
@@ -10,7 +10,7 @@ config guide. One commit per step, full pytest green after each, ASCII-only.
 
 ## Per-step commits + diff --stat
 
-STEP 1 ù port guide explanations into registry help ù `1307b73`
+STEP 1 - port guide explanations into registry help - `1307b73`
 ```
  dev/tests/test_params_registry.py   |  24 ++
  dev/validation/params_registry.json | 538 ++++++++++++++++++------------------
@@ -21,9 +21,9 @@ All 269 registry `help` fields replaced with the hand-authored per-key Explanati
 from VYVAR_CONFIG_GUIDE_EN.md (1:1 coverage; ASCII; none empty). New guard
 `test_help_is_nonempty_ascii_and_not_placeholder`. VYVAR_PARAMS.md keeps no help column by
 design (the guide remains the human-readable place; the generated table stays a compact
-metadata index) ù only the volatile header line changed.
+metadata index) - only the volatile header line changed.
 
-STEP 2 ù comment-tolerant loader + unknown-key warnings ù `742fee5`
+STEP 2 - comment-tolerant loader + unknown-key warnings - `742fee5`
 ```
  dev/tests/test_config_jsonc_loader.py |  96 ++++++++++++++++++++++++
  src_py/config.py                      | 135 +++++++++++++++++++++++++++++++++-
@@ -36,7 +36,7 @@ raises) on malformed JSON pointing at the validator, and warns on unknown keys w
 closest registered field (difflib) while staying silent on migrated legacy aliases
 (uppercase env-style + WAVE-B scalar tiers/aperture, via `_LEGACY_CONFIG_KEYS`).
 
-STEP 3 ù canonical grouped + commented writer + live migration ù `86c6748`
+STEP 3 - canonical grouped + commented writer + live migration - `86c6748`
 ```
  config.json                           | 935 +++++++++++++++++++++++++---------
  dev/tests/test_config_jsonc_writer.py |  99 ++++
@@ -55,7 +55,7 @@ a trailing "Other" section (never dropped). Registry gained a reserved `__meta__
 (13 phases, ASCII); `load_registry` strips `__`-prefixed reserved keys so field parity
 holds; new `load_phase_help` / `load_registry_meta`.
 
-STEP 4 ù standalone validator ù `0b75a69`
+STEP 4 - standalone validator - `0b75a69`
 ```
  dev/scripts/validate_config.py    | 170 ++++++++++++++++++++++++++++++++++++++
  dev/tests/test_validate_config.py |  83 +++++++++++++++++++
@@ -68,7 +68,7 @@ keys with suggestions, (c) out-of-range values, (d) type mismatches (outermost-t
 Optional/None handled; ambiguous multi-type unions skipped); non-zero exit on any error.
 "Editing without the UI" paragraph added to both guides (CZ pure ASCII).
 
-STEP 5 ù docs & result ù (this commit)
+STEP 5 - docs & result - (this commit)
 PROCESS one-liner (config.json is generated-commented; registry help is the single source),
 STATE + JOURNAL stamps, this result file.
 
@@ -156,5 +156,5 @@ OVERALL: PASS
 ```
 
 ## Push
-GATED ù the whole stack (audit + wave B + config-human-edit) pushes together on Milan's
+GATED - the whole stack (audit + wave B + config-human-edit) pushes together on Milan's
 explicit word.

@@ -3,17 +3,17 @@
     {
       "stage": "entry",
       "ui": "app.py:_run_vyvar_full_pipeline (~L107) via RUN VYVAR button (~L2158 cat_match_arc=2.0)",
-      "orchestrator": "scripts/anchor_pair_run.py:_run_night → night_run.run_night_pipeline (NightRunParams defaults)"
+      "orchestrator": "scripts/anchor_pair_run.py:_run_night -> night_run.run_night_pipeline (NightRunParams defaults)"
     },
     {
       "stage": "scan + import",
       "ui": "smart_scan_source / smart_import_session (inside _run_vyvar_full_pipeline)",
-      "orchestrator": "night_run.run_night_pipeline Steps 1–2 (same importer)"
+      "orchestrator": "night_run.run_night_pipeline Steps 1-2 (same importer)"
     },
     {
       "stage": "calibration",
       "ui": "run_draft_ram_calibration_qc_to_obs_files / calibrate path",
-      "orchestrator": "night_run Step 3–9 calibration + TOP1/Analyze (parallel implementation of UI)"
+      "orchestrator": "night_run Step 3-9 calibration + TOP1/Analyze (parallel implementation of UI)"
     },
     {
       "stage": "preprocess",
@@ -22,12 +22,12 @@
     },
     {
       "stage": "platesolve + MASTERSTAR",
-      "ui": "app._vyvar_execute_platesolve_pending (~L808) → pipeline.astrometry_align_and_build_masterstar",
-      "orchestrator": "night_run._night_run_platesolve (~L313) → same astrometry_align_and_build_masterstar"
+      "ui": "app._vyvar_execute_platesolve_pending (~L808) -> pipeline.astrometry_align_and_build_masterstar",
+      "orchestrator": "night_run._night_run_platesolve (~L313) -> same astrometry_align_and_build_masterstar"
     },
     {
       "stage": "masterstar catalog + optimizer",
-      "ui": "pipeline.generate_masterstar_and_catalog → optimize_masterstar_matches (shared)",
+      "ui": "pipeline.generate_masterstar_and_catalog -> optimize_masterstar_matches (shared)",
       "orchestrator": "same shared pipeline path"
     },
     {
@@ -38,8 +38,8 @@
   ],
   "f2_param_delta_critical": {
     "catalog_match_max_sep_arcsec": {
-      "ui": "2.0 hardcoded (app.py ~2158) → floored to max(10.0, sep) in pipeline (~13254) → effective 10\"",
-      "orchestrator_anchor_pair": "NightRunParams default 25.0 (night_run.py:53); anchor_pair_run does not override → effective 25\"",
+      "ui": "2.0 hardcoded (app.py ~2158) -> floored to max(10.0, sep) in pipeline (~13254) -> effective 10\"",
+      "orchestrator_anchor_pair": "NightRunParams default 25.0 (night_run.py:53); anchor_pair_run does not override -> effective 25\"",
       "impact": "pass-2 unmatched-Gaia radius + initial catalog match; feeds Grip/SIP pair quality"
     },
     "sysrem_enabled": {
@@ -51,37 +51,37 @@
   "f2_fix_sites": {
     "FIX1_roundtrip_gate": {
       "definition": "wcs_invertibility.apply_wcs_refit_with_invertibility_gate L164; evaluate_wcs_roundtrip L44",
-      "ui_chain": "ON — shared optimizer SIP path + generate_masterstar initial solve (pipeline.py ~11815, ~12152)",
-      "orchestrator_chain": "ON — same shared code",
+      "ui_chain": "ON - shared optimizer SIP path + generate_masterstar initial solve (pipeline.py ~11815, ~12152)",
+      "orchestrator_chain": "ON - same shared code",
       "bypass": "none observed; 431 meta wcs_roundtrip_pass=true"
     },
     "FIX2_gaia_sky_SIP": {
-      "definition": "astrometry_optimizer._refit_wcs_sip5_once ~L625–656 uses Gaia RA/Dec from gmap; ensure_sip_inverse in wcs_invertibility",
+      "definition": "astrometry_optimizer._refit_wcs_sip5_once ~L625-656 uses Gaia RA/Dec from gmap; ensure_sip_inverse in wcs_invertibility",
       "ui_chain": "ON",
       "orchestrator_chain": "ON",
-      "bypass_risk": "ON but fed wrong pairs if catalog_ids mismatched (loose 25\" initial match) — identity p95=6.24 on 431 shows Gaia-finalize vs xy disagree"
+      "bypass_risk": "ON but fed wrong pairs if catalog_ids mismatched (loose 25\" initial match) - identity p95=6.24 on 431 shows Gaia-finalize vs xy disagree"
     },
     "FIX3_finalize_coord_source": {
       "definition": "finalize_masterstar_sky_coords (wcs_invertibility L240); called optimizer export ~1216 AND generate_masterstar ~12144",
-      "ui_chain": "ON — 429 has coord_source gaia_catalog/final_wcs",
-      "orchestrator_chain": "ON — 431 has coord_source; identity QA present (a3536a0)",
+      "ui_chain": "ON - 429 has coord_source gaia_catalog/final_wcs",
+      "orchestrator_chain": "ON - 431 has coord_source; identity QA present (a3536a0)",
       "note": "finalize does not repair census; stamps Gaia sky onto possibly wrong matches"
     },
     "FIX4_identity_gate": {
-      "definition": "astrometry_optimizer._write_match dpx>3×FWHM drop / >1.5× warn (~L475–483); evaluate_matched_world2pix_identity_px (~pipeline L12155)",
+      "definition": "astrometry_optimizer._write_match dpx>3xFWHM drop / >1.5x warn (~L475-483); evaluate_matched_world2pix_identity_px (~pipeline L12155)",
       "ui_chain": "ON",
-      "orchestrator_chain": "ON — 431 identity p95=6.24 (gate ran; did not restore health)"
+      "orchestrator_chain": "ON - 431 identity p95=6.24 (gate ran; did not restore health)"
     },
     "C1_stamp_post_finalize": {
       "definition": "pipeline.py ~12167 stamp_vsx_known_variable_on_masterstars after finalize",
-      "ui_chain": "BYPASSED chronologically — stamp precedes write_photometry_plan_files (~12386) that creates variable_targets.csv",
+      "ui_chain": "BYPASSED chronologically - stamp precedes write_photometry_plan_files (~12386) that creates variable_targets.csv",
       "orchestrator_chain": "BYPASSED same (shared generate_masterstar)",
-      "legacy_stamp_site": "DAO/catalog match-time vsx_known_variable flags (pipeline detect/export ~7693–8344) → live counts 87 (429) / 46 (431) = ORIGINAL match-time numbers",
+      "legacy_stamp_site": "DAO/catalog match-time vsx_known_variable flags (pipeline detect/export ~7693-8344) -> live counts 87 (429) / 46 (431) = ORIGINAL match-time numbers",
       "evidence": "post-hoc restamp on current MS+VT: 429 id_join=180, 431 id_join=199; live files never received post-finalize stamp"
     }
   },
   "f2_xy_fingerprint": {
-    "428_vs_431_xy_overlap": "6697/6697 (rounded 0.01 px) — contaminated DAO set reproduced byte-stable",
-    "431_vs_429_xy_overlap": "257 — healthy UI set is a different detection population"
+    "428_vs_431_xy_overlap": "6697/6697 (rounded 0.01 px) - contaminated DAO set reproduced byte-stable",
+    "431_vs_429_xy_overlap": "257 - healthy UI set is a different detection population"
   }
 }

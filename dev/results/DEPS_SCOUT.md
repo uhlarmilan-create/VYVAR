@@ -1,4 +1,4 @@
-DEPS-SCOUT ù dependency landscape vs VYVAR (2026-07-18)
+DEPS-SCOUT - dependency landscape vs VYVAR (2026-07-18)
 
 Author: Claude (web-research scout). Grounding: photutils changelog (readthedocs, fetched
 2026-07-18), astropy 8.0 changelog + PyPI, NumPy release info; VYVAR usage mapped by grep on
@@ -52,7 +52,7 @@ aperture_photometry + Circular{Aperture,Annulus} (photometry core); detect_sourc
 - Independent confidence: our own cross-validation (draft_310) ALREADY ran against photutils
   3.0.0 with Delta < 0.001 mag agreement.
 
-## photutils 3.1 (unreleased) ù watchlist
+## photutils 3.1 (unreleased) - watchlist
 
 - Aperture photometry ~2-25x faster + thread-parallelizable (#2292); ApertureStats ~5-15x
   (#2314). Our per-frame aperture loops dominate the ~2000 s full run - material runtime

@@ -1,4 +1,4 @@
-"""_simulate_night_run_draft343.py — Full night run for V0842 Her (draft_343).
+"""_simulate_night_run_draft343.py - Full night run for V0842 Her (draft_343).
 
 Source: D:\\V842_Her | Location: Jirny (id=2) | Setup: NoFilter_60_2
 """
@@ -21,7 +21,7 @@ _RUN_CFG_PATH = _ROOT / "_draft343_run_config.json"
 
 
 def _build_run_config() -> Path:
-    """Runtime overrides only — does not modify project config.json."""
+    """Runtime overrides only - does not modify project config.json."""
     cfg = AppConfig()
     cfg.observer_location_id = 2
     cfg.phase01_plate_scale_arcsec_per_px = 1.3

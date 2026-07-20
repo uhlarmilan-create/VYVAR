@@ -72,11 +72,11 @@ def build_vyvar_variants(lc: pd.DataFrame) -> dict[str, np.ndarray]:
 
     # Bez ensemble ZP: instrumental (per-frame inst mag, no catalog ZP sum)
     no_zp = inst.copy()
-    # Kalibrované bez airmass detrendu (po ZP, pred AM fit — uložené v mag_calib_raw)
+    # Kalibrovane bez airmass detrendu (po ZP, pred AM fit - ulozene v mag_calib_raw)
     zp_only = raw.copy()
-    # Plný mag_calib (ZP + pokus o AM detrend)
+    # Plny mag_calib (ZP + pokus o AM detrend)
     full = cal.copy()
-    # Odstrániť per-frame ZP offset (späť k „relatívnej“ variácii okolo medianu inst+ZP)
+    # Odstranit per-frame ZP offset (spat k 'relativnej' variacii okolo medianu inst+ZP)
     cal_minus_dm = cal - dm
 
     return {
@@ -107,7 +107,7 @@ def plot_star(
 
     n_panels = 5
     fig, axes = plt.subplots(n_panels, 1, figsize=(11, 12), sharex=True)
-    fig.suptitle(f"{name} — draft_311 NoFilter_60_2 (Phase 2A, forced ap=7 px)", fontsize=12)
+    fig.suptitle(f"{name} - draft_311 NoFilter_60_2 (Phase 2A, forced ap=7 px)", fontsize=12)
 
     t = variants["t"]
     am = variants["airmass"]
@@ -115,9 +115,9 @@ def plot_star(
     panels = [
         ("AIJ rel_flux_T1 (normalized)", aij["rel_flux_norm"].to_numpy(), aij["t_plot"].to_numpy(), "#1f77b4"),
         ("AIJ mag from rel_flux (demean)", aij["mag_aij_dm"].to_numpy(), aij["t_plot"].to_numpy(), "#1f77b4"),
-        ("VYVAR mag_inst — bez ZP", variants["mag_inst demean"], t, "#d62728"),
-        ("VYVAR mag_calib_raw demean — ZP, bez AM", variants["mag_calib_raw demean"], t, "#ff7f0e"),
-        ("VYVAR mag_calib demean — plná pipeline", variants["mag_calib demean"], t, "#2ca02c"),
+        ("VYVAR mag_inst - bez ZP", variants["mag_inst demean"], t, "#d62728"),
+        ("VYVAR mag_calib_raw demean - ZP, bez AM", variants["mag_calib_raw demean"], t, "#ff7f0e"),
+        ("VYVAR mag_calib demean - plna pipeline", variants["mag_calib demean"], t, "#2ca02c"),
     ]
 
     rms_lines: list[str] = []
@@ -132,7 +132,7 @@ def plot_star(
         ax2.set_ylabel("airmass", fontsize=7, color="#4682b4")
         ax2.tick_params(axis="y", labelsize=7)
 
-    axes[-1].set_xlabel("Geocentric JD (UTC) − 2461154")
+    axes[-1].set_xlabel("Geocentric JD (UTC) - 2461154")
     if summary_row is not None:
         rms_lines.append(
             f"summary lc_rms={float(summary_row.get('lc_rms', float('nan'))):.4f}  "
@@ -164,9 +164,9 @@ def plot_overlay(name: str, cid: str, aij_file: str, lc_path: Path, out_dir: Pat
     fig, ax = plt.subplots(figsize=(11, 4))
     ax.plot(aij["t_plot"], aij["mag_aij_dm"], ".", ms=4, label=f"AIJ (RMS {ppt(rms(aij['mag_aij_dm'])):.1f} ppt)", alpha=0.8)
     ax.plot(t, vy, ".", ms=4, label=f"VYVAR mag_calib demean (RMS {ppt(rms(vy)):.1f} ppt)", alpha=0.8)
-    ax.set_xlabel("JD − 2461154")
+    ax.set_xlabel("JD - 2461154")
     ax.set_ylabel("demeaned mag")
-    ax.set_title(f"{name} — AIJ vs VYVAR (ap=7 px Phase 2A)")
+    ax.set_title(f"{name} - AIJ vs VYVAR (ap=7 px Phase 2A)")
     ax.legend(loc="best", fontsize=8)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()

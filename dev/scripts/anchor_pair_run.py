@@ -62,7 +62,7 @@ def _run_night(source: Path, *, run_index: int, log_path: Path) -> dict[str, Any
         equipment_id=1,
         telescope_id=1,
         config_path=None,
-        # Honor config.json / AppConfig (do not force SysRem — F-431 SHA nondeterminism).
+        # Honor config.json / AppConfig (do not force SysRem - F-431 SHA nondeterminism).
         sysrem_enabled=None,
         dry_run=False,
         progress_cb=lambda msg: print(msg, flush=True),
@@ -229,11 +229,11 @@ def _finalize_ledger(*, draft_id: int, snapshot_name: str, core_sha: str, ext_sh
                 "id": new_id,
                 "area": "photometry",
                 "description": f"In-Archive BO CVn anchor snapshot {snapshot_name}",
-                "verification": f"scripts/session_baseline_check.py --full (core {core_sha[:8]}…)",
+                "verification": f"scripts/session_baseline_check.py --full (core {core_sha[:8]}...)",
                 "passes": True,
                 "last_verified": today,
                 "commit": commit,
-                "notes": f"Cut from anchor pair run1 draft_{draft_id:06d}; extended {ext_sha[:8]}…",
+                "notes": f"Cut from anchor pair run1 draft_{draft_id:06d}; extended {ext_sha[:8]}...",
             }
         )
     else:
@@ -241,7 +241,7 @@ def _finalize_ledger(*, draft_id: int, snapshot_name: str, core_sha: str, ext_sh
         it["passes"] = True
         it["last_verified"] = today
         it["commit"] = commit
-        it["notes"] = f"Cut from anchor pair run1 draft_{draft_id:06d}; core {core_sha[:8]}…"
+        it["notes"] = f"Cut from anchor pair run1 draft_{draft_id:06d}; core {core_sha[:8]}..."
         it.pop("status", None)
     for it in ledger.get("items", []):
         if it["id"] == "VL-COUNTERS-ZERO":
@@ -287,7 +287,7 @@ def main() -> int:
             code_dirty, code_paths, scratch_paths = classify_git_dirty_paths(porcelain, dirty_files)
             if code_dirty:
                 print(
-                    "ERROR: git_dirty_code — import-relevant .py modifications block anchor runs",
+                    "ERROR: git_dirty_code - import-relevant .py modifications block anchor runs",
                     file=sys.stderr,
                 )
                 for p in code_paths:
@@ -351,7 +351,7 @@ def main() -> int:
     gates_ok = all(g.get("gate_pass") for g in report["provenance_gates"])
     report["provenance_all_pass"] = gates_ok
     if not gates_ok:
-        print("STOP: provenance/QA gates failed — no snapshot cut", file=sys.stderr)
+        print("STOP: provenance/QA gates failed - no snapshot cut", file=sys.stderr)
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
         return 3
@@ -361,7 +361,7 @@ def main() -> int:
     print(json.dumps(cmp, indent=2, default=str))
 
     if not cmp["byte_identical_core"]:
-        print("STOP: run1 != run2 on core SHA — no anchor cut", file=sys.stderr)
+        print("STOP: run1 != run2 on core SHA - no anchor cut", file=sys.stderr)
         args.report.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
         return 2
 

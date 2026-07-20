@@ -5,7 +5,7 @@ Uses masterstars ra_deg/dec_deg (never pixel x/y) and field-bounded Gaia DB near
 with cos(dec)-scaled RA separation. Self-check gates before reporting.
 
 v3 adds coordinate forensics (--forensics): provenance, systematic-offset test with WCS
-recompute, and vt↔ms violation source vs Gaia DB.
+recompute, and vt<->ms violation source vs Gaia DB.
 """
 from __future__ import annotations
 
@@ -125,7 +125,7 @@ def _delta_stats(
     gra: np.ndarray,
     gdec: np.ndarray,
 ) -> dict[str, float]:
-    """Vector delta to nearest Gaia for each row (ΔRA·cos(dec), ΔDec in arcsec)."""
+    """Vector delta to nearest Gaia for each row (DeltaRA.cos(dec), DeltaDec in arcsec)."""
     n = len(ra_arr)
     dra_arc: list[float] = []
     ddec_arc: list[float] = []
@@ -207,7 +207,7 @@ def _run_coord_forensics(
         "(pipeline.py:8245 _all_pix2world_icrs_deg(wcs_obj, x, y)); "
         "optimize_masterstar_matches refits MASTERSTAR.fits WCS (Grip loop ~676-704, "
         "SIP refit ~588+) but does NOT rewrite ra_deg/dec_deg on unmatched rows before export "
-        "(astrometry_optimizer.py export ~1169-1178 — pre-fix behavior)."
+        "(astrometry_optimizer.py export ~1169-1178 - pre-fix behavior)."
     )
     lines.append(
         "WCS rescale path DOES recompute all coords: pipeline.py:3894-3907 "
@@ -225,14 +225,14 @@ def _run_coord_forensics(
             f"  vector_mean: dRA*cos(dec)={stored['vector_mean_dra_arcsec']:.3f}\" "
             f"dDec={stored['vector_mean_ddec_arcsec']:.3f}\" magnitude={stored['vector_mean_magnitude_arcsec']:.3f}\""
         )
-        lines.append(f"  mean_|Δ|={stored['mean_abs_delta_arcsec']:.3f}\" p50_|Δ|={stored['p50_abs_delta_arcsec']:.3f}\"")
+        lines.append(f"  mean_|Delta|={stored['mean_abs_delta_arcsec']:.3f}\" p50_|Delta|={stored['p50_abs_delta_arcsec']:.3f}\"")
         if stored["vector_mean_magnitude_arcsec"] < 0.5 * stored["mean_abs_delta_arcsec"]:
             lines.append(
-                "  interpretation: vector mean << mean |Δ| with p50 still large → "
+                "  interpretation: vector mean << mean |Delta| with p50 still large -> "
                 "NOT a single rigid shift; per-star large nearest-Gaia offsets (unmatched DAO)"
             )
         elif abs(stored["vector_mean_dra_arcsec"]) < 1.0 and abs(stored["vector_mean_ddec_arcsec"]) < 1.0:
-            lines.append("  interpretation: vector mean ≈ 0 → isotropic scatter (not a single rigid shift)")
+            lines.append("  interpretation: vector mean ~ 0 -> isotropic scatter (not a single rigid shift)")
         dist_arcmin = _field_center_dist_arcmin(u_ra, u_de)
         seps = []
         for i in range(len(u_ra)):
@@ -241,7 +241,7 @@ def _run_coord_forensics(
                 seps.append(sep)
         if seps and len(seps) == len(dist_arcmin):
             corr = float(np.corrcoef(dist_arcmin[: len(seps)], np.asarray(seps))[0, 1])
-            lines.append(f"  corr(|Δ|, dist_from_field_center_arcmin)={corr:.4f} (rotation/scaling signature if |corr|>0.3)")
+            lines.append(f"  corr(|Delta|, dist_from_field_center_arcmin)={corr:.4f} (rotation/scaling signature if |corr|>0.3)")
 
     recomp_p50 = float("nan")
     if masterstar_fits is not None and masterstar_fits.is_file():
@@ -261,8 +261,8 @@ def _run_coord_forensics(
                     )
                     lines.append(
                         f"  vector_mean magnitude={recomputed['vector_mean_magnitude_arcsec']:.3f}\" "
-                        f"mean_|Δ|={recomputed['mean_abs_delta_arcsec']:.3f}\" "
-                        f"p50_|Δ|={recomp_p50:.3f}\""
+                        f"mean_|Delta|={recomputed['mean_abs_delta_arcsec']:.3f}\" "
+                        f"p50_|Delta|={recomp_p50:.3f}\""
                     )
                     if recomp_p50 < stale_wcs_p50_pass_arcsec:
                         lines.append(
@@ -292,7 +292,7 @@ def _run_coord_forensics(
             )
 
     lines.append("")
-    lines.append("# T1.3 vt↔ms violation source (which side deviates from Gaia DB)")
+    lines.append("# T1.3 vt<->ms violation source (which side deviates from Gaia DB)")
     check_ids = set(vt["_cid_norm"].dropna().astype(str))
     vt_dev = 0
     ms_dev = 0
@@ -317,7 +317,7 @@ def _run_coord_forensics(
         if gcoords is None:
             no_gaia += 1
             name = str(vrow.get("vsx_name") or vrow.get("name") or cid)
-            lines.append(f"  {name} cid={cid}: vt-ms={sep_vm:.3f}\" — Gaia DB lookup miss")
+            lines.append(f"  {name} cid={cid}: vt-ms={sep_vm:.3f}\" - Gaia DB lookup miss")
             continue
         g_ra, g_de = gcoords
         sep_vg = _sep_arcsec(ra_v, dec_v, g_ra, g_de)
@@ -333,7 +333,7 @@ def _run_coord_forensics(
             both_dev += 1
             side = "tie"
         lines.append(
-            f"  {name} cid={cid}: vt-ms={sep_vm:.3f}\" vt-gaia={sep_vg:.3f}\" ms-gaia={sep_mg:.3f}\" → {side}"
+            f"  {name} cid={cid}: vt-ms={sep_vm:.3f}\" vt-gaia={sep_vg:.3f}\" ms-gaia={sep_mg:.3f}\" -> {side}"
         )
     lines.append(
         f"violations_analyzed: vt_deviates={vt_dev} ms_deviates={ms_dev} tie={both_dev} no_gaia_db={no_gaia}"
@@ -462,7 +462,7 @@ def main() -> int:
     )
 
     fwhm_arcsec = float(args.fwhm_px) * float(args.plate_scale_arcsec_px)
-    lines.append(f"FWHM={args.fwhm_px}px × {args.plate_scale_arcsec_px}\"/px = {fwhm_arcsec:.3f}\"")
+    lines.append(f"FWHM={args.fwhm_px}px x {args.plate_scale_arcsec_px}\"/px = {fwhm_arcsec:.3f}\"")
 
     gaia_seps: list[float] = []
     for _, row in unmatched.iterrows():

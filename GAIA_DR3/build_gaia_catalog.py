@@ -1,26 +1,26 @@
 """
-build_gaia_catalog.py — kanonický script #1 (Gaia DR3 → lokálna SQLite pre VYVAR)
-─────────────────────────────────────────────────────────────────────────────
-Stiahne Gaia DR3 do lokálnej SQLite (tabuľka ``gaia_dr3``).
+build_gaia_catalog.py - kanonicky script #1 (Gaia DR3 -> lokalna SQLite pre VYVAR)
+-----------------------------------------------------------------------------
+Stiahne Gaia DR3 do lokalnej SQLite (tabulka ``gaia_dr3``).
 
-Optimalizácie:
-  • Polootvorené RA/Dec intervaly → žiadne duplicity na hraniciach pásov.
-  • INTEGER PRIMARY KEY (source_id) + INSERT OR IGNORE → bezpečný resume.
-  • Zápis cez executemany po dávkach (rýchlejšie ako pandas to_sql).
-  • NULLIF pri delení fluksi (full tab); predvolene ``gaia_source_lite``.
-  • strip_progress; WAL; batch commit.
+Optimalizacie:
+  * Polootvorene RA/Dec intervaly -> ziadne duplicity na hraniciach pasov.
+  * INTEGER PRIMARY KEY (source_id) + INSERT OR IGNORE -> bezpecny resume.
+  * Zapis cez executemany po davkach (rychlejsie ako pandas to_sql).
+  * NULLIF pri deleni fluksi (full tab); predvolene ``gaia_source_lite``.
+  * strip_progress; WAL; batch commit.
 
-Spustenie (príklady):
+Spustenie (priklady):
   python GAIA_DR3/build_gaia_catalog.py --help
   python GAIA_DR3/build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum
 
 Env fallback (ak nie je CLI): GAIA_MAG_LIMIT, GAIA_DEC_MIN, GAIA_DEC_MAX,
 GAIA_OUT, GAIA_RA_STEP, GAIA_DEC_STEP, GAIA_MAX_STRIPS, GAIA_SOURCE_FULL,
-SKIP_VACUUM, GAIA_NO_STRIP_CLAMP. Voliteľný login: GAIA_USER + GAIA_PASS
-(inak anonymné TAP).
+SKIP_VACUUM, GAIA_NO_STRIP_CLAMP. Volitelny login: GAIA_USER + GAIA_PASS
+(inak anonymne TAP).
 
-Pri zmene siete pásov vymaž ``strip_progress`` alebo celú DB.
-─────────────────────────────────────────────────────────────────────────────
+Pri zmene siete pasov vymaz ``strip_progress`` alebo celu DB.
+-----------------------------------------------------------------------------
 """
 
 from __future__ import annotations
@@ -257,7 +257,7 @@ def _widen_steps_to_strip_cap(
     dec_step: float,
     max_strips: int,
 ) -> tuple[float, float, int]:
-    """Zväčší RA/Dec krok, kým počet pásov <= max_strips (každý pás = samostatný TAP job)."""
+    """Zvacsi RA/Dec krok, kym pocet pasov <= max_strips (kazdy pas = samostatny TAP job)."""
     ra_s = float(ra_step)
     dec_s = float(dec_step)
     n = _strip_count(dec_min, dec_max, ra_s, dec_s)
@@ -279,7 +279,7 @@ def generate_strips_with_flags(
     dec_step: float,
     ra_step: float,
 ) -> list[tuple[tuple[float, float, float, float], bool, bool]]:
-    """Vráti zoznam ((r0,r1,d0,d1), last_ra, last_dec) pre ADQL polootvorené intervaly."""
+    """Vrati zoznam ((r0,r1,d0,d1), last_ra, last_dec) pre ADQL polootvorene intervaly."""
     items: list[tuple[tuple[float, float, float, float], bool, bool]] = []
     d = dec_min
     while d < dec_max - 1e-12:
@@ -328,7 +328,7 @@ def build_adql(
     mag_limit: float,
     use_full_source: bool,
 ) -> str:
-    """``use_full_source=False`` → ``gaia_source_lite`` (rýchlejšie, menej 500 od TAP)."""
+    """``use_full_source=False`` -> ``gaia_source_lite`` (rychlejsie, menej 500 od TAP)."""
     ra_c = _ra_clause(r0, r1, last_ra)
     de_c = _dec_clause(d0, d1, last_dec)
     mag_f = float(mag_limit)
@@ -453,7 +453,7 @@ def mark_strip_done(
 
 
 def _normalize_tap_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Stĺpce z ADQL → malé písmená, mapovanie na očakávané názvy."""
+    """Stlpce z ADQL -> male pismena, mapovanie na ocakavane nazvy."""
     if df.empty:
         return pd.DataFrame(columns=list(_ROW_COLUMNS))
     rename: dict[str, str] = {}

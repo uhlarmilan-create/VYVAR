@@ -1,11 +1,11 @@
-"""Per-target trust flag (GREEN / YELLOW / RED) — shared by pipeline and CLI.
+"""Per-target trust flag (GREEN / YELLOW / RED) - shared by pipeline and CLI.
 
 Production trust inputs (no SEP / xval axis):
 - **Comp-set quality:** `n_clean` from comp_qa (Sokolovsky leave-one-out locus)
 - **Check-star scatter** (population RMS vs configured soft/hard thresholds)
 - **`lc_quality_flag`** from Phase 2A summary (`good` / `noisy` informational; saturated etc. hard)
 
-SEP vs DAO cross-validation is **offline-only** (`xval_run.py` / `xval_harness_core.py`) — a
+SEP vs DAO cross-validation is **offline-only** (`xval_run.py` / `xval_harness_core.py`) - a
 one-off validation study tool, not imported by the production pipeline and not a trust axis.
 
 Unevaluated targets default **RED** (fail-closed).
@@ -15,9 +15,9 @@ Comp-count thresholds follow ``comp_trust_min_comps`` / ``phase01_comparison_n_c
 numeric photometry.
 
 Gate semantics (Phase-1 degradation, green_min=3):
-- **RED:** ``n_clean == 0`` OR no check star OR hard warnings (bad lc_quality, check ≥ 0.05).
-- **YELLOW:** thin comp set (1–2 clean), sparse_fallback, T3+ with colour-term off, soft check scatter.
-- **GREEN:** ``n_clean ≥ green_min`` (T1/T2 count ≥ green_min) + check + comp_qa OK, no soft warnings.
+- **RED:** ``n_clean == 0`` OR no check star OR hard warnings (bad lc_quality, check >= 0.05).
+- **YELLOW:** thin comp set (1-2 clean), sparse_fallback, T3+ with colour-term off, soft check scatter.
+- **GREEN:** ``n_clean >= green_min`` (T1/T2 count >= green_min) + check + comp_qa OK, no soft warnings.
 - ``short_baseline`` is a non-escalating soft (excluded from ``len(soft) >= 3`` -> RED).
 """
 from __future__ import annotations
@@ -206,7 +206,7 @@ def classify_warnings(
             except (TypeError, ValueError):
                 pass
         soft.append(f"short baseline ({nf_note}thin series)")
-    elif lq and lq not in _LC_QUALITY_OK and lq != "—":
+    elif lq and lq not in _LC_QUALITY_OK and lq != "-":
         hard.append(f"LC quality: {lq}")
 
     if n_chk == 0:
@@ -294,8 +294,8 @@ def build_reason(
     if trust == "GREEN":
         return text
     if trust == "YELLOW":
-        return text + " — review before submitting"
-    return text + " — inspect before submitting"
+        return text + " - review before submitting"
+    return text + " - inspect before submitting"
 
 
 def evaluate_target(
@@ -321,7 +321,7 @@ def evaluate_target(
     cfg: Any | None = None,
 ) -> dict[str, Any]:
     th = thresholds or CompTrustThresholds.from_bounds(3, 8)
-    lq = str(lc_quality or "").strip().lower() or "—"
+    lq = str(lc_quality or "").strip().lower() or "-"
     sparse_band: str | None = None
     sparse_flags: tuple[str, ...] = ()
     use_sparse = False
@@ -590,7 +590,7 @@ def run_trust_flag_for_photometry_dir(
     )
     st = result.get("stats", {})
     LOGGER.info(
-        "[TRUST] min/strong=%s/%s targets=%s trust=%s → %d artifacts",
+        "[TRUST] min/strong=%s/%s targets=%s trust=%s -> %d artifacts",
         st.get("min_comps"),
         st.get("strong_comps"),
         st.get("n_targets"),
@@ -602,11 +602,11 @@ def run_trust_flag_for_photometry_dir(
 
 
 def format_export_trust_note(trust: str, trust_reason: str, *, max_len: int = 36) -> str:
-    """Compact trust tag for AAVSO NOTES (fits after ``meth=…``)."""
+    """Compact trust tag for AAVSO NOTES (fits after ``meth=...``)."""
     t = str(trust or _UNEVALUATED_TRUST).strip().upper()[:6] or _UNEVALUATED_TRUST
     note = f"trust={t}"
     if trust_reason:
-        short = str(trust_reason).split(" — ")[0].strip()
+        short = str(trust_reason).split(" - ")[0].strip()
         if len(short) > max_len - len(note) - 1:
             short = short[: max(0, max_len - len(note) - 4)] + "..."
         if short:
@@ -618,5 +618,5 @@ def format_varastro_trust_comment(trust: str, trust_reason: str) -> str:
     t = str(trust or _UNEVALUATED_TRUST).strip().upper() or _UNEVALUATED_TRUST
     reason = str(trust_reason or "").strip()
     if reason:
-        return f"#   Trust: {t} — {reason}\n"
+        return f"#   Trust: {t} - {reason}\n"
     return f"#   Trust: {t}\n"

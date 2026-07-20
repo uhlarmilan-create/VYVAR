@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CT target presel for h & χ Persei B/V/R (photometric Johnson-Cousins)."""
+"""CT target presel for h & chi Persei B/V/R (photometric Johnson-Cousins)."""
 from __future__ import annotations
 
 import argparse

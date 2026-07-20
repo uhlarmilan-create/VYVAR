@@ -6,25 +6,25 @@ import time
 
 import pandas as pd
 
-# --- KONFIGURÁCIA (default; prepísateľné cez CLI) ---
+# --- KONFIGURACIA (default; prepisatelne cez CLI) ---
 DB_NAME = "vyvar_vsx_local.db"
-MAG_LIMIT = 18.0          # rez podľa VSX `max` (jas v maxime); zdvihni pre slabšie hviezdy
+MAG_LIMIT = 18.0          # rez podla VSX `max` (jas v maxime); zdvihni pre slabsie hviezdy
 DEC_MIN = -90.0
 DEC_MAX = 90.0
-BATCH_SIZE_DEG = 1.0      # 1° pásy = stabilnejšie, menej timeoutov z VizieR
+BATCH_SIZE_DEG = 1.0      # 1 deg pasy = stabilnejsie, menej timeoutov z VizieR
 
-# Stĺpce, ktoré VYVAR z `vsx_data` číta (database.query_local_vsx / validate_vsx_local_db_schema):
-#   TVRDO povinné : oid, ra_deg, dec_deg
-#   používané     : name, var_type, mag_max, mag_min
-#   voliteľné     : period  (VYVAR ho vezme ak existuje)
+# Stlpce, ktore VYVAR z `vsx_data` cita (database.query_local_vsx / validate_vsx_local_db_schema):
+#   TVRDO povinne : oid, ra_deg, dec_deg
+#   pouzivane     : name, var_type, mag_max, mag_min
+#   volitelne     : period  (VYVAR ho vezme ak existuje)
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS vsx_data (
-    oid       INTEGER PRIMARY KEY,   -- VSX OID; PK zaisťuje reálne INSERT OR IGNORE
+    oid       INTEGER PRIMARY KEY,   -- VSX OID; PK zaistuje realne INSERT OR IGNORE
     name      TEXT,
     ra_deg    REAL,
     dec_deg   REAL,
     var_type  TEXT,
-    period    REAL,                  -- dni; NaN ak VSX periódu neuvádza
+    period    REAL,                  -- dni; NaN ak VSX periodu neuvadza
     mag_max   REAL,
     mag_min   REAL
 );
@@ -40,7 +40,7 @@ _COLS = ["oid", "name", "ra_deg", "dec_deg", "var_type", "period", "mag_max", "m
 
 def _ensure_schema(conn: sqlite3.Connection) -> None:
     conn.execute(SCHEMA)
-    # Spatial indexy — VYVAR ich síce vytvorí pri prvom query, ale tu je to lacné a čistejšie.
+    # Spatial indexy - VYVAR ich sice vytvori pri prvom query, ale tu je to lacne a cistejsie.
     conn.execute("CREATE INDEX IF NOT EXISTS idx_vsx_ra ON vsx_data (ra_deg);")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_vsx_dec ON vsx_data (dec_deg);")
     conn.commit()
@@ -58,11 +58,11 @@ def build_vsx(
     mag_limit: float,
     batch_deg: float,
 ) -> None:
-    """Stiahne VSX (VizieR B/vsx/vsx) po Dec pásoch do `vsx_data`.
+    """Stiahne VSX (VizieR B/vsx/vsx) po Dec pasoch do `vsx_data`.
 
-    Bezpečne re-runnovateľné a inkrementálne: vďaka PK na `oid` a `INSERT OR IGNORE`
-    sa duplikáty preskočia. Na dobudovanie slabších hviezd stačí znovu spustiť so
-    zdvihnutým ``--mag-limit`` — pribudnú len nové OID.
+    Bezpecne re-runnovatelne a inkrementalne: vdaka PK na `oid` a `INSERT OR IGNORE`
+    sa duplikaty preskocia. Na dobudovanie slabsich hviezd staci znovu spustit so
+    zdvihnutym ``--mag-limit`` - pribudnu len nove OID.
     """
     from astroquery.vizier import Vizier  # type: ignore[import-not-found]
 
@@ -79,7 +79,7 @@ def build_vsx(
         current_dec = float(dec_min)
         while current_dec < dec_max:
             next_dec = min(current_dec + batch_deg, dec_max)
-            print(f"🔍 Spracovávam pás Dec: {current_dec}° až {next_dec}°...")
+            print(f"[search] Spracovavam pas Dec: {current_dec} deg az {next_dec} deg...")
 
             query_filter = {
                 "DEJ2000": f"{current_dec}..{next_dec}",
@@ -104,12 +104,12 @@ def build_vsx(
                             }
                         )
 
-                        # Doplň prípadne chýbajúce stĺpce (rôzne verzie VizieR vrátia rôzne sady).
+                        # Dopln pripadne chybajuce stlpce (rozne verzie VizieR vratia rozne sady).
                         for c in _COLS:
                             if c not in df.columns:
                                 df[c] = None
 
-                        # Numerická koercia + zahodenie riadkov bez OID/RA/Dec (nepoužiteľné).
+                        # Numericka koercia + zahodenie riadkov bez OID/RA/Dec (nepouzitelne).
                         for c in ("oid", "ra_deg", "dec_deg", "period", "mag_max", "mag_min"):
                             df[c] = pd.to_numeric(df[c], errors="coerce")
                         df = df.dropna(subset=["oid", "ra_deg", "dec_deg"]).copy()
@@ -136,26 +136,26 @@ def build_vsx(
                         conn.commit()
                         added = _count(conn) - before
                         print(
-                            f"   ✅ {len(rows)} hviezd v páse "
-                            f"({added} nových, {len(rows) - added} duplikátov ignorovaných)."
+                            f"   [OK] {len(rows)} hviezd v pase "
+                            f"({added} novych, {len(rows) - added} duplikatov ignorovanych)."
                         )
                     else:
-                        print("   ℹ️ Pás bol prázdny.")
+                        print("   i Pas bol prazdny.")
                     break
 
                 except Exception as e:  # noqa: BLE001
                     wait_time = (attempt + 1) * 20
-                    print(f"   ⚠️ Pokus {attempt + 1} zlyhal: {e}. Čakám {wait_time}s...")
+                    print(f"   ! Pokus {attempt + 1} zlyhal: {e}. Cakam {wait_time}s...")
                     time.sleep(wait_time)
 
             current_dec = next_dec
 
-        print("\n⚡ Finalizácia (VACUUM)...")
+        print("\n! Finalizacia (VACUUM)...")
         conn.execute("VACUUM")
         end_count = _count(conn)
         print(
-            f"✨ Hotovo! vsx_data: {end_count} riadkov "
-            f"(+{end_count - start_count} pridaných v tomto behu)."
+            f"* Hotovo! vsx_data: {end_count} riadkov "
+            f"(+{end_count - start_count} pridanych v tomto behu)."
         )
     finally:
         conn.close()
@@ -163,8 +163,8 @@ def build_vsx(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="VYVAR VSX catalog builder — čisto VSX (VizieR B/vsx/vsx). "
-        "Žiadne APASS/Tycho / B-V tabuľky. Re-runnovateľné a inkrementálne."
+        description="VYVAR VSX catalog builder - cisto VSX (VizieR B/vsx/vsx). "
+        "Ziadne APASS/Tycho / B-V tabulky. Re-runnovatelne a inkrementalne."
     )
     parser.add_argument("--db", default=DB_NAME, help=f"Cesta k SQLite DB (default: {DB_NAME})")
     parser.add_argument("--dec-min", type=float, default=DEC_MIN)
@@ -173,7 +173,7 @@ def main() -> None:
         "--mag-limit",
         type=float,
         default=MAG_LIMIT,
-        help=f"Rez podľa VSX `max` (default {MAG_LIMIT}). Zdvihni pre slabšie hviezdy.",
+        help=f"Rez podla VSX `max` (default {MAG_LIMIT}). Zdvihni pre slabsie hviezdy.",
     )
     parser.add_argument("--batch-deg", type=float, default=BATCH_SIZE_DEG)
     args = parser.parse_args()

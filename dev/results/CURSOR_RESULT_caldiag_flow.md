@@ -1,4 +1,4 @@
-CURSOR RESULT — 2026-07-07 (CAL-FLOW-MAP)
+CURSOR RESULT - 2026-07-07 (CAL-FLOW-MAP)
 
 What I did
 Read-only trace of the calibration/master flow from source-folder selection through
@@ -61,7 +61,7 @@ Write calibrated/lights/<obs_group>/<file>.fits
 |--------|---------|------------------------------|------------------------------|
 | Library masters | Library match + valid age; stored in plan.*_by_obs_key | CalibrationLibrary FITS path | No |
 | Session raw present | IMAGETYP dark/flat in recursive scan | Library path still filled if match (importer.py:1438-1439); raw copied to Raw/darks, Raw/flats but not stacked | No (manual via ui_calibration_library.py:366,398) |
-| Quick Look | No library dark AND no raw darks (importer.py:1455-1457) | None — non_calibrated only | No |
+| Quick Look | No library dark AND no raw darks (importer.py:1455-1457) | None - non_calibrated only | No |
 | Passthrough | No usable dark at calibrate (pipeline.py:14786-14798) | Copy raw with VY_CALIB=PASSTHROUGH | No |
 
 ---
@@ -96,7 +96,7 @@ Write calibrated/lights/<obs_group>/<file>.fits
 
 ---
 
-## 3. Q1 — Library data model
+## 3. Q1 - Library data model
 
 **Registration table:** `CALIBRATION_LIBRARY` with columns
 `ID, KIND, FILE_PATH (UNIQUE), XBINNING, EXPTIME, CCD_TEMP, FILTER_NAME, GAIN, NCOMBINE,
@@ -133,7 +133,7 @@ calibration.py:5-17).
 
 ---
 
-## 4. Q2 — Library master selection
+## 4. Q2 - Library master selection
 
 **Primary path:** `_find_matching_master_in_library` (importer.py:741-870) delegates to
 `find_best_calibration_library_path` when `db` is set (importer.py:776-787), else filesystem scan.
@@ -149,8 +149,8 @@ calibration.py:5-17).
 | CCD_TEMP | required, `ABS(CCD_TEMP - light) <= tol` | not used | default **0.5 C** (importer.py:754,1139; database.py:2179,2244) |
 | FILTER | empty | normalized filter name | exact string |
 
-**Filesystem fallback** (importer.py:841-858): dark — exact exposure, temp within `temp_tolerance`,
-exact gain, binning exact or (light bin>1 and master bin==1); flat — exact normalized filter,
+**Filesystem fallback** (importer.py:841-858): dark - exact exposure, temp within `temp_tolerance`,
+exact gain, binning exact or (light bin>1 and master bin==1); flat - exact normalized filter,
 exact gain, same binning rule.
 
 **Missing scope / temp:** Returns `None` with log; no fallback master (importer.py:756-772,
@@ -173,11 +173,11 @@ If target filename exists and DB row belongs to another equipment/telescope set,
 
 ---
 
-## 5. Q3 — Branch decision: build-new vs use-library
+## 5. Q3 - Branch decision: build-new vs use-library
 
 **Detection rules (NOT folder-name driven for import scan):**
 
-- `smart_scan_source` uses `_collect_fits_by_type(root, db)` — **recursive rglob**, classify each
+- `smart_scan_source` uses `_collect_fits_by_type(root, db)` - **recursive rglob**, classify each
   FITS by `IMAGETYP`/`FRAME`/`IMTYPE` (importer.py:1177-1180,500-557).
 - `_find_lights_subdirectory` (importer.py:429-436) and `_resolve_session_lights` (importer.py:473-497)
   exist but are **not called** by `smart_scan_source` or `smart_import_session` (dead for import path).
@@ -195,7 +195,7 @@ If target filename exists and DB row belongs to another equipment/telescope set,
 - Raw files **copied** to archive `Raw/darks`, `Raw/flats` (importer.py:1771-1784).
 - **`plan.dark_master` still set from library** if `dark_found` (importer.py:1438-1439).
 - Per-group maps `dark_master_by_obs_key` / `masterflat_by_obs_key` come from **library only**
-  (importer.py:1279-1322) — session raw is not stacked into masters during import.
+  (importer.py:1279-1322) - session raw is not stacked into masters during import.
 
 **Auto-build from session:** **Not implemented on import path.** Masters are built only via
 `generate_master_dark_from_source_dir` / `generate_master_flat_from_source_dir`
@@ -211,7 +211,7 @@ masters" is **not** automatic on import; only manual/UI generation + library reg
 
 ---
 
-## 6. Q4 — Master stacking radiometry
+## 6. Q4 - Master stacking radiometry
 
 **Dark:** Per-pixel **mean** (`nanmean` axis 0), no sigma-clipping
 (importer.py:1838-1839,1879-1892,1998-2009; header `VYSTKMOD=MEAN` importer.py:1991-1992).
@@ -228,7 +228,7 @@ masters" is **not** automatic on import; only manual/UI generation + library reg
 
 ---
 
-## 7. Q5 — Calibrate-time resampling
+## 7. Q5 - Calibrate-time resampling
 
 **Confirmed in `resample_master_to_light_binning`** (calibration.py:199-255):
 
@@ -245,7 +245,7 @@ masters" is **not** automatic on import; only manual/UI generation + library reg
 - `infer_spatial_block_factor`: shape-based override increases effective light binning
   (calibration.py:115-135,464-467)
 - `allow_passthrough`: synthetic zeros (dark) / ones (flat) when file missing
-  (calibration.py:441-452) — **no production callers pass `allow_passthrough=True`**
+  (calibration.py:441-452) - **no production callers pass `allow_passthrough=True`**
   (grep: only calibration.py definition; pipeline always raises on missing master via normal path)
 - Flat: `normalize_flat_master` after resample when `VYFLNRD=1` (calibration.py:487-498)
 
@@ -260,7 +260,7 @@ masters" is **not** automatic on import; only manual/UI generation + library reg
 
 ---
 
-## 8. Q6 — Radiometric checks today
+## 8. Q6 - Radiometric checks today
 
 **Confirmed: no calibrate-time radiometric sanity gate** comparing light vs resampled dark
 medians, and no SUM-vs-MEAN dark resample cross-check.
@@ -277,7 +277,7 @@ Existing guards are **geometric/resampling**:
 - `_post_calibration_qc_eval`: sigma-clipped sky stats, HFR, star count on **already calibrated**
   array (pipeline.py:14078-14148,14472-14494) ? headers `VYQCPASS`, `VY_QCHFR`, `VY_QCBG`, `VY_QCRMS`
 - `_quality_inspection_dao_metrics_array` when `dao_qc_in_calibrate` (pipeline.py:14515-14522)
-- RAM QC path in draft workflow (pipeline.py:1986) — post-cal sky/stars
+- RAM QC path in draft workflow (pipeline.py:1986) - post-cal sky/stars
 
 **No check** that `median(light) - median(resampled_dark) > 0` or that dark SUM resample
 matches expected charge scaling. docs/VYVAR_DECISIONS.md:346 and docs/VYVAR_ROADMAP.md:79
@@ -285,7 +285,7 @@ document this gap (not re-cited as code evidence).
 
 ---
 
-## 9. Q7 — CAL-DIAG gate hook points
+## 9. Q7 - CAL-DIAG gate hook points
 
 **Recommended minimal hook (once per master + obs_group, amortized across frames):**
 
@@ -303,7 +303,7 @@ document this gap (not re-cited as code evidence).
    path|light_binning|master_binning).
 
 3. **Flat norm sanity (optional, same cadence):** First flat cache miss in
-   `_calibrate_one_light_apply_masters_in_ram` (pipeline.py:14329-14339) — keyed by
+   `_calibrate_one_light_apply_masters_in_ram` (pipeline.py:14329-14339) - keyed by
    `(obs_group, mf_path, light_bx)`.
 
 **Why not inside `get_processed_master` alone:** Called per flat/dark load without obs_group
@@ -311,7 +311,7 @@ context; hook at calibrate loop preserves once-per-group semantics.
 
 ---
 
-## 10. Q8 — Gain/RN provenance (F-BINGAIN-1 RN sub-question)
+## 10. Q8 - Gain/RN provenance (F-BINGAIN-1 RN sub-question)
 
 **Gain resolution** (`resolve_gain`, param_resolver.py:462-479):
 
@@ -325,7 +325,7 @@ context; hook at calibrate loop preserves once-per-group semantics.
 
 1. DB `READNOISE_E` from `get_equipment_cosmic_params` (database.py:2901-2920), **scaled first**
    via `_scale_bin1_db_for_header(..., exponent=1)` (param_resolver.py:493-498)
-2. Then `_resolve_equipment_intrinsic` — DB wins over header (param_resolver.py:244-257)
+2. Then `_resolve_equipment_intrinsic` - DB wins over header (param_resolver.py:244-257)
 3. Header keys: `RDNOISE`, `READNOISE`, `RDNOISEE`, `RN` (param_resolver.py:69)
 
 **EQUIP-BINNING scaling formula** (treats DB values as **bin1 per-pixel intrinsics**):
@@ -340,7 +340,7 @@ For RN 7.6 -> 15.2: `7.6 * 2^1 = 15.2` (exponent=1).
 
 **Documentation of DB semantics:** Explicit "bin1 per-pixel" comment at
 param_resolver.py:155. `set_equipment_cosmic_params` docstring says "read noise [e-]" only
-(database.py:2928) — does **not** state bin mode; scaling policy implies bin1 store.
+(database.py:2928) - does **not** state bin mode; scaling policy implies bin1 store.
 
 **Production call sites (gain / RN):**
 
@@ -353,7 +353,7 @@ param_resolver.py:155. `set_equipment_cosmic_params` docstring says "read noise 
 | Crowding index | crowding_index.py:90-91 | RN: None |
 
 **RN bin-scaling caveat:** `resolve_read_noise` scales DB using `header` binning when header
-is provided (param_resolver.py:494-496). photometry_core.py:1211 passes `header=None` for RN —
+is provided (param_resolver.py:494-496). photometry_core.py:1211 passes `header=None` for RN -
 scaling uses unscaled DB unless caller passes light header. Phase 2A passes `_ms_header` (6665).
 
 **Decision for CAL-DIAG spec:** Code treats `READNOISE_E` as bin1 per-pixel with `RN_eff = RN_db * bin`
@@ -377,7 +377,7 @@ scaling uses unscaled DB unless caller passes light header. Phase 2A passes `_ms
    library UI uses **header date** (`get_master_age_days`, calibration.py:79-98).
 
 5. **`get_master_age_days` not used in import validity** despite task referencing calibration.py:79
-   — enforcement at import is mtime-based via `get_calibration_status` (importer.py:1405-1406).
+   - enforcement at import is mtime-based via `get_calibration_status` (importer.py:1405-1406).
 
 6. **`allow_passthrough` synthetic master is dead code in production** (calibration.py:441-452;
    no callers with `allow_passthrough=True`).
@@ -385,17 +385,17 @@ scaling uses unscaled DB unless caller passes light header. Phase 2A passes `_ms
 7. **`AstroPipeline.calibrate()` is a stub** returning None (pipeline.py:16804-16811); real path is
    `quick_calibrate_last_import` / `calibrate_lights_to_calibrated`.
 
-8. **Flat EXPTIME not matched** in library flat lookup (database.py:2188,2250-2258) — filter+gain+bin
+8. **Flat EXPTIME not matched** in library flat lookup (database.py:2188,2250-2258) - filter+gain+bin
    only; differs from dark.
 
-9. **RN scaling depends on caller passing header** — inconsistent between photometry_core SNR helper
+9. **RN scaling depends on caller passing header** - inconsistent between photometry_core SNR helper
    (RN header=None, photometry_core.py:1211) and Phase 2A (header set, photometry_core.py:6665).
 
 ---
 
 ## Errors (if any)
 
-None — read-only investigation completed successfully.
+None - read-only investigation completed successfully.
 
 ## Files changed
 

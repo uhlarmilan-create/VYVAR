@@ -34,7 +34,7 @@ from check_star_kmag import (
 )
 from photometry_core import parse_comp_quality_json_map, _resolve_plate_scale_arcsec_per_px
 
-# Gaia ID musí byť str — float64 stráca cifry
+# Gaia ID musi byt str - float64 straca cifry
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
 # Single source for export headers (AAVSO #SOFTWARE + VarAstro Software line).
@@ -117,7 +117,7 @@ def _resolve_export_arcsec_per_px(
     photometry_dir: Path,
     cfg: AppConfig,
 ) -> float | None:
-    """Derive plate scale (arcsec/px) for export headers — derive-or-None (no magic 1.3).
+    """Derive plate scale (arcsec/px) for export headers - derive-or-None (no magic 1.3).
 
     Priority: ``pipeline_meta.json`` ``plate_scale_arcsec_px`` (Phase 2A session);
     then WCS/CD from sibling ``MASTERSTAR.fits`` via ``_resolve_plate_scale_arcsec_per_px``.
@@ -248,7 +248,7 @@ def _append_varastro_site_line(
     lat, lon, alt, name = coords
     if not name:
         name = "Observer site"
-    lines.append(f"# Site: {name} ({lat:.4f}°N, {lon:.4f}°E, {alt:.0f} m)\n")
+    lines.append(f"# Site: {name} ({lat:.4f} degN, {lon:.4f} degE, {alt:.0f} m)\n")
 
 
 def _vyvar_export_citation_lines(
@@ -293,7 +293,7 @@ def _varastro_alg_lines(
 
 
 def _safe_filename(name: str) -> str:
-    """Sanitizuj VSX meno pre filesystem. 'BO CVn' → 'BO_CVn'."""
+    """Sanitizuj VSX meno pre filesystem. 'BO CVn' -> 'BO_CVn'."""
     s = str(name).strip()
     s = re.sub(r"[^\w\s\-\+]", "", s)
     s = re.sub(r"\s+", "_", s)
@@ -308,7 +308,7 @@ def _bjd_to_datestr_yyyymmdd(bjd_tdb: float) -> str:
         dt = t.utc.datetime
         return f"{dt.year:04d}{dt.month:02d}{dt.day:02d}"
     except Exception:  # noqa: BLE001
-        # EXC-0080: T3 -- BJD→datestr fail → 'unknown' token (EXCEPT-BULK-2 2026-07-08)
+        # EXC-0080: T3 -- BJD->datestr fail -> 'unknown' token (EXCEPT-BULK-2 2026-07-08)
         return "unknown"
 
 
@@ -349,7 +349,7 @@ def _fmt_opt_int(v: Any, *, na: str = "na") -> str:
 # Default AAVSO observer placeholder when config is unset (must trigger export/validator warning).
 _AAVSO_OBSCODE_PLACEHOLDER = "UMIA"
 
-# Built-in filter/setup name → AAVSO Extended FILT code (uppercase keys).
+# Built-in filter/setup name -> AAVSO Extended FILT code (uppercase keys).
 # User overrides via ``AppConfig.aavso_filter_map`` (merged on lookup).
 _AAVSO_FILTER_BUILTIN: dict[str, str] = {
     "U": "U",
@@ -396,11 +396,11 @@ def _resolve_aavso_filter(
     """Map setup/filter name to AAVSO FILT code.
 
     Returns ``(code, warning_message)``. Unrecognized filters emit ``UNKN`` and a
-    non-empty warning — never silently default to CV.
+    non-empty warning - never silently default to CV.
     """
     raw = str(filter_name or "").strip()
     if not raw:
-        return "UNKN", "FILT empty — review before AAVSO submit"
+        return "UNKN", "FILT empty - review before AAVSO submit"
 
     key = _filter_lookup_key(raw)
     merged: dict[str, str] = dict(_AAVSO_FILTER_BUILTIN)
@@ -420,7 +420,7 @@ def _resolve_aavso_filter(
 
     return (
         "UNKN",
-        f"FILT unrecognized: '{raw}' — map via aavso_filter_map or review before AAVSO submit",
+        f"FILT unrecognized: '{raw}' - map via aavso_filter_map or review before AAVSO submit",
     )
 
 
@@ -436,7 +436,7 @@ def _guess_setup_info_from_obs_group(obs_group: str) -> tuple[str, str | None, s
     return str(obs_group or ""), None, None
 
 
-# Zakrytové typy podľa VSX dokumentácie
+# Zakrytove typy podla VSX dokumentacie
 _ECLIPSING_TOKENS = frozenset(
     {
         "E",  # Generic eclipsing
@@ -445,16 +445,16 @@ _ECLIPSING_TOKENS = frozenset(
         "EW",  # W Ursae Majoris
         "EP",  # Planetary transits
         "E-DO",  # Disk occultation
-        "ELL",  # Ellipsoidal (no eclipse but VAR.ASTRO má záujem)
-        "EC",  # Contact binaries — ASAS survey typ
-        "ED",  # Detached eclipsing — ASAS survey typ
-        "ESD",  # Semi-detached eclipsing — ASAS survey typ
+        "ELL",  # Ellipsoidal (no eclipse but VAR.ASTRO ma zaujem)
+        "EC",  # Contact binaries - ASAS survey typ
+        "ED",  # Detached eclipsing - ASAS survey typ
+        "ESD",  # Semi-detached eclipsing - ASAS survey typ
     }
 )
 
 
 def _token_is_eclipsing(token: str) -> bool:
-    """Skontroluj či jeden VSX token (bez špeciálnych znakov) je zakrytový."""
+    """Skontroluj ci jeden VSX token (bez specialnych znakov) je zakrytovy."""
     t = str(token or "").strip().rstrip(":").upper()
     if not t:
         return False
@@ -466,7 +466,7 @@ def _token_is_eclipsing(token: str) -> bool:
 
 
 def _is_eclipsing(vsx_type: str) -> bool:
-    """Vráti True ak VSX typ obsahuje zakrytovú komponentu (VSX konvencie)."""
+    """Vrati True ak VSX typ obsahuje zakrytovu komponentu (VSX konvencie)."""
     if not vsx_type or not isinstance(vsx_type, str):
         return False
 
@@ -474,7 +474,7 @@ def _is_eclipsing(vsx_type: str) -> bool:
     if not vsx_type:
         return False
 
-    # Pipe | → OR/neistota: len ak VŠETKY alternatívy sú zakrytové
+    # Pipe | -> OR/neistota: len ak VSETKY alternativy su zakrytove
     if "|" in vsx_type:
         alternatives = [a.strip() for a in vsx_type.split("|") if a.strip()]
         if not alternatives:
@@ -485,7 +485,7 @@ def _is_eclipsing(vsx_type: str) -> bool:
                 return False
         return True
 
-    # Plus + → AND: ak KTORÝKOĽVEK komponent je zakrytový → True
+    # Plus + -> AND: ak KTORYKOLVEK komponent je zakrytovy -> True
     plus_parts = vsx_type.split("+")
     for part in plus_parts:
         part = part.strip()
@@ -500,37 +500,37 @@ def _is_eclipsing(vsx_type: str) -> bool:
 
 def _test_is_eclipsing() -> None:
     cases = [
-        ("EW", True, "W UMa — základný typ"),
-        ("EA", True, "Algol — základný typ"),
-        ("EB", True, "Beta Lyrae — základný typ"),
+        ("EW", True, "W UMa - zakladny typ"),
+        ("EA", True, "Algol - zakladny typ"),
+        ("EB", True, "Beta Lyrae - zakladny typ"),
         ("E", True, "Generic eclipsing"),
         ("EP", True, "Planetary transit"),
         ("ELL", True, "Ellipsoidal"),
         ("EC", True, "ASAS contact binary"),
         ("ED", True, "ASAS detached"),
         ("ESD", True, "ASAS semi-detached"),
-        ("E:", True, "Uncertain eclipsing — colon"),
-        ("EW:", True, "Uncertain EW — colon"),
+        ("E:", True, "Uncertain eclipsing - colon"),
+        ("EW:", True, "Uncertain EW - colon"),
         ("EA/SD", True, "EA s subTypom SD"),
         ("EA/DM", True, "EA s subTypom DM"),
         ("EA/RS", True, "EA s RS aktivitou"),
-        ("EW+DSCT", True, "EW + delta Scuti pulsácia"),
-        ("EA+EA", True, "Dvojitý EA systém"),
-        ("EB+ROT", True, "EB + rotačná variabilita"),
-        ("EA|EB", True, "Neistota medzi EA a EB — oba zakrytové"),
-        ("ELL|DSCT", False, "Neistota ELL alebo DSCT — DSCT nie je zakrytová"),
-        ("EA|RRAB", False, "Neistota EA alebo RRAB — RRAB nie zakrytová"),
-        ("RRAB", False, "RR Lyrae — pulsujúca"),
-        ("ROT", False, "Rotujúca"),
+        ("EW+DSCT", True, "EW + delta Scuti pulsacia"),
+        ("EA+EA", True, "Dvojity EA system"),
+        ("EB+ROT", True, "EB + rotacna variabilita"),
+        ("EA|EB", True, "Neistota medzi EA a EB - oba zakrytove"),
+        ("ELL|DSCT", False, "Neistota ELL alebo DSCT - DSCT nie je zakrytova"),
+        ("EA|RRAB", False, "Neistota EA alebo RRAB - RRAB nie zakrytova"),
+        ("RRAB", False, "RR Lyrae - pulsujuca"),
+        ("ROT", False, "Rotujuca"),
         ("SR", False, "Semi-regular"),
-        ("DSCT|GDOR|SXPHE", False, "Pulsujúce typy"),
-        ("TTS/ROT", False, "T Tauri s rotáciou — nie zakrytová"),
-        ("DPV/ELL", False, "DPV hlavný typ — nie zakrytový"),
+        ("DSCT|GDOR|SXPHE", False, "Pulsujuce typy"),
+        ("TTS/ROT", False, "T Tauri s rotaciou - nie zakrytova"),
+        ("DPV/ELL", False, "DPV hlavny typ - nie zakrytovy"),
         ("L", False, "Slow irregular"),
         ("M", False, "Mira"),
-        ("", False, "Prázdny typ"),
+        ("", False, "Prazdny typ"),
         ("VAR", False, "Unspecified variable"),
-        ("RRAB/BL", False, "RR Lyrae Blazhko — nie zakrytová"),
+        ("RRAB/BL", False, "RR Lyrae Blazhko - nie zakrytova"),
         ("E-DO", True, "Disk occultation"),
         ("LB:", False, "Uncertain slow irregular"),
     ]
@@ -583,7 +583,7 @@ def _copy_field_image(
     fname: str,
     obs_date: str,
 ) -> str | None:
-    """Skopíruj field map PNG do varastro adresára."""
+    """Skopiruj field map PNG do varastro adresara."""
     candidates = [
         lc_dir / f"field_map_{catalog_id}.png",
         lc_dir / "field_map.png",
@@ -608,7 +608,7 @@ def _copy_field_image(
 
 
 def _comp_quality_map_for_export(raw: dict[str, Any]) -> dict[str, str]:
-    """``catalog_id`` → ``good`` / ``suspect`` (excluded comps omitted)."""
+    """``catalog_id`` -> ``good`` / ``suspect`` (excluded comps omitted)."""
     out: dict[str, str] = {}
     for k, v in parse_comp_quality_json_map(raw).items():
         nk = str(normalize_gaia_source_id(k) or "").strip()
@@ -698,11 +698,11 @@ def _format_varastro_comp_table(
         tier = pd.to_numeric(row.get("tier", row.get("comp_tier", 4)), errors="coerce")
         st = _export_comp_status_label(row, comp_quality_map)
 
-        mag_s = f"{float(mag):.3f}" if math.isfinite(float(mag)) else "  —  "
-        bprp_s = f"{float(bprp):.3f}" if math.isfinite(float(bprp)) else "  —  "
-        dbprp_s = f"{float(dbprp):.3f}" if math.isfinite(float(dbprp)) else "  —  "
-        p2p_s = f"{float(p2p):.4f}" if math.isfinite(float(p2p)) else "  —  "
-        wrel_s = f"{float(w_rel):.3f}" if math.isfinite(float(w_rel)) else "  —  "
+        mag_s = f"{float(mag):.3f}" if math.isfinite(float(mag)) else "  -  "
+        bprp_s = f"{float(bprp):.3f}" if math.isfinite(float(bprp)) else "  -  "
+        dbprp_s = f"{float(dbprp):.3f}" if math.isfinite(float(dbprp)) else "  -  "
+        p2p_s = f"{float(p2p):.4f}" if math.isfinite(float(p2p)) else "  -  "
+        wrel_s = f"{float(w_rel):.3f}" if math.isfinite(float(w_rel)) else "  -  "
         try:
             tier_i = int(tier) if math.isfinite(float(tier)) else 4
         except Exception:  # noqa: BLE001
@@ -784,7 +784,7 @@ def export_lightcurve_reports(
     proc_csv_cache: dict[str, pd.DataFrame] | None = None,
     export_failures: list[ExportFailure] | None = None,
 ) -> dict[str, Path]:
-    """Generuje AAVSO a VAR.ASTRO súbory pre jeden target."""
+    """Generuje AAVSO a VAR.ASTRO subory pre jeden target."""
     fresh_cfg = cfg or AppConfig()
     if not str(observer_code).strip() and fresh_cfg is not None:
         observer_code = str(getattr(fresh_cfg, "observer_code", "") or "")
@@ -959,16 +959,16 @@ def export_lightcurve_reports(
     _obc = str(observer_code).strip()
     if not _obc:
         a_lines.append(
-            "#WARNING=OBSCODE is not set — configure observer_code before AAVSO submit\n"
+            "#WARNING=OBSCODE is not set - configure observer_code before AAVSO submit\n"
         )
         logging.warning(
-            "[EXPORT] OBSCODE is empty for %s — set observer_code in config before submit",
+            "[EXPORT] OBSCODE is empty for %s - set observer_code in config before submit",
             str(vsx_name),
         )
     elif _obc.upper() == _AAVSO_OBSCODE_PLACEHOLDER:
         a_lines.append(
             f"#WARNING=OBSCODE is default placeholder {_AAVSO_OBSCODE_PLACEHOLDER} "
-            "— set your AAVSO observer code in config\n"
+            "- set your AAVSO observer code in config\n"
         )
         logging.warning(
             "[EXPORT] OBSCODE is default placeholder %s for %s",
@@ -1039,12 +1039,12 @@ def export_lightcurve_reports(
     # --- VAR.ASTRO.CZ ---
     vsx_type = str(target_row.get("vsx_type", "") or "").strip()
     if not _is_eclipsing(vsx_type):
-        logging.info("[EXPORT] Skip varastro %s — nie zakrytova (%s)", str(vsx_name), str(vsx_type))
+        logging.info("[EXPORT] Skip varastro %s - nie zakrytova (%s)", str(vsx_name), str(vsx_type))
         return {"aavso": aavso_path}
 
     v_lines: list[str] = []
     v_lines.extend(_vyvar_export_citation_lines(fresh_cfg, **_cite_kw))
-    v_lines.append("# VYVAR — Differential Ensemble Photometry\n")
+    v_lines.append("# VYVAR - Differential Ensemble Photometry\n")
     v_lines.append(f"# Software: {_sw_ver} | Observer: {observer_name}\n")
     _append_varastro_site_line(v_lines, fresh_cfg, _resolved_site)
     if obs_group_resolved:
@@ -1078,8 +1078,8 @@ def export_lightcurve_reports(
     _t2 = _tier_lim(1, 0.48)
     _t3 = _tier_lim(2, 0.79)
     v_lines.append(
-        f"#   Tier system (|ΔBP-RP| Gaia): "
-        f"T1≤{_t1:.2f}(w=1.00) T2≤{_t2:.2f}(w=0.85) T3≤{_t3:.2f}(w=0.50) T4>{_t3:.2f}(w=0.25)\n"
+        f"#   Tier system (|DeltaBP-RP| Gaia): "
+        f"T1<={_t1:.2f}(w=1.00) T2<={_t2:.2f}(w=0.85) T3<={_t3:.2f}(w=0.50) T4>{_t3:.2f}(w=0.25)\n"
     )
     v_lines.append("# Color system: Gaia BP-RP\n")
     if setup_filter_raw or exptime_s or binning:
@@ -1208,7 +1208,7 @@ def export_all_method_lightcurve_reports(
         lc_path = lc_csv_path(_lc_dir, target_cid, method)
         if not lc_path.is_file():
             # F-435-EXPORT-GHOSTS: active_targets may lack an LC (no comps / dropped).
-            # Skip with INFO — do not record as export failure.
+            # Skip with INFO - do not record as export failure.
             logging.info(
                 "[EXPORT] skip %s %s: no LC CSV (not a photometry product)",
                 _tid or target_cid,

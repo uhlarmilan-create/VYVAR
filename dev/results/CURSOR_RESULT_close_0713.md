@@ -1,14 +1,14 @@
-CURSOR RESULT — 2026-07-13 (SESSION-CLOSE-0713)
+CURSOR RESULT - 2026-07-13 (SESSION-CLOSE-0713)
 
 What I did
 Closed color-WB continuation session: dirty-hash caption suffix, verification sweep, STATE/JOURNAL/
 ROADMAP updates, push.
 
-## Part 1 — dirty-hash suffix
+## Part 1 - dirty-hash suffix
 `_repo_short_git_hash()` now uses `git describe --always --dirty --abbrev=7` (e.g. `c5685c6-dirty`
 when tree unclean). Test `test_caption_render_stamp_dirty_hash` added. Commit `2aaf858`.
 
-## Part 2 — verification
+## Part 2 - verification
 
 **git log `c5685c6..HEAD`:**
 ```
@@ -27,12 +27,12 @@ when tree unclean). Test `test_caption_render_stamp_dirty_hash` added. Commit `2
 `scripts/qatar8_night_run_v.py`, `docs/round2_figs/v0454_lc_vyvar.png`,
 `CURSOR_RESULT_except_retriage3.md`.
 
-## Part 3 — documentation
-- `docs/VYVAR_STATE.md` — 0713 snapshot, color-WB arc CLOSED, final defaults, canonical/archive paths.
-- `docs/VYVAR_JOURNAL.md` — SESSION-CLOSE-0713 entry (Czech).
-- `docs/VYVAR_ROADMAP.md` — NEXT SESSION restated; colorfield PDF parked.
+## Part 3 - documentation
+- `docs/VYVAR_STATE.md` - 0713 snapshot, color-WB arc CLOSED, final defaults, canonical/archive paths.
+- `docs/VYVAR_JOURNAL.md` - SESSION-CLOSE-0713 entry (Czech).
+- `docs/VYVAR_ROADMAP.md` - NEXT SESSION restated; colorfield PDF parked.
 
-## Part 4 — push
+## Part 4 - push
 **Pushed:** `8bbcfd8` on `origin/main` (`0608739..8bbcfd8`).
 
 ## Color-WB arc summary (CLOSED)
@@ -44,7 +44,7 @@ when tree unclean). Test `test_caption_render_stamp_dirty_hash` added. Commit `2
 | 12g5 | blotch fix | local-bg gate, tapered stamp, hardened G2 |
 | 12g6 | hygiene | caption stamps, boost default 2.2, `tmp/colorfield_final/` |
 
-**Canonical outputs:** `tmp/colorfield_final/manifest.json` — 4 renders @ b2.2, G2 worst 0.005-0.027.
+**Canonical outputs:** `tmp/colorfield_final/manifest.json` - 4 renders @ b2.2, G2 worst 0.005-0.027.
 **Archive:** `tmp/todo12_hrd_archive_0711/`.
 
 ## Errors (if any)

@@ -1,4 +1,4 @@
-CURSOR RESULT ù INSTALL-ARC ù 2026-07-18
+CURSOR RESULT - INSTALL-ARC - 2026-07-18
 
 What I did
 Implemented the installer, the EN install manual, and the first-run hardening so

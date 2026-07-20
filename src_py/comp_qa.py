@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Comp-star LOO QA CLI — delegates to comp_qa_core (same math as pipeline stage)."""
+"""Comp-star LOO QA CLI - delegates to comp_qa_core (same math as pipeline stage)."""
 from __future__ import annotations
 
 import argparse

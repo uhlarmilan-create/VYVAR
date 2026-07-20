@@ -27,9 +27,9 @@ X_AXIS_FRAME_TITLE = "Frame number (Frame Index)"
 
 
 def _compute_masterstar_score(df: pd.DataFrame) -> pd.Series:
-    """Skóre vhodnosti snímky pre MASTERSTAR (vyššie = lepšie).
-    Kombinácia: FWHM (nízke), elongation (nízka = bez stopy), star_count (vysoký), sky_level (nízke).
-    Každá metrika sa normalizuje 0-1, váhy sú empirické.
+    """Skore vhodnosti snimky pre MASTERSTAR (vyssie = lepsie).
+    Kombinacia: FWHM (nizke), elongation (nizka = bez stopy), star_count (vysoky), sky_level (nizke).
+    Kazda metrika sa normalizuje 0-1, vahy su empiricke.
     """
     score = pd.Series(0.0, index=df.index)
     n = len(df)
@@ -37,14 +37,14 @@ def _compute_masterstar_score(df: pd.DataFrame) -> pd.Series:
         return score
 
     def _norm_inverse(s: pd.Series) -> pd.Series:
-        """Nízka hodnota = lepšie → invertovaná normalizácia 0-1."""
+        """Nizka hodnota = lepsie -> invertovana normalizacia 0-1."""
         mn, mx = s.min(), s.max()
         if not math.isfinite(mn) or not math.isfinite(mx) or mx <= mn:
             return pd.Series(1.0, index=s.index)
         return 1.0 - (s - mn) / (mx - mn)
 
     def _norm_direct(s: pd.Series) -> pd.Series:
-        """Vysoká hodnota = lepšie → priama normalizácia 0-1."""
+        """Vysoka hodnota = lepsie -> priama normalizacia 0-1."""
         mn, mx = s.min(), s.max()
         if not math.isfinite(mn) or not math.isfinite(mx) or mx <= mn:
             return pd.Series(1.0, index=s.index)
@@ -119,7 +119,7 @@ def _masterstar_candidate_path_for_job(
             if pre_cal or not _has_raw_seg(hit):
                 return str(hit.resolve())
     if not pre_cal and _has_raw_seg(Path(p)):
-        log_event(f"MASTERSTAR UI: nepodarilo namapať z RAW/non_cal na processed — `{Path(p).name}`.")
+        log_event(f"MASTERSTAR UI: nepodarilo namapat z RAW/non_cal na processed - `{Path(p).name}`.")
         return ""
     if Path(p).is_file():
         return str(Path(p).resolve())
@@ -198,20 +198,20 @@ def _make_is_rejected_persist_handler(
 
 def _jd_and_utc_strings(jd_val: Any) -> tuple[str, str]:
     if jd_val is None:
-        return "—", "—"
+        return "-", "-"
     try:
         jf = float(jd_val)
     except (TypeError, ValueError):
-        return "—", "—"
+        return "-", "-"
     if not math.isfinite(jf):
-        return "—", "—"
+        return "-", "-"
     t = Time(jf, format="jd", scale="utc")
     dt = t.to_datetime()
     return f"{jf:.8f}", dt.strftime("%H:%M:%S")
 
 
 def _prepare_hover_time_fields(df: pd.DataFrame) -> pd.DataFrame:
-    """JD a civilný čas (UTC) len pre hover — os X je ``frame_index``."""
+    """JD a civilny cas (UTC) len pre hover - os X je ``frame_index``."""
     df = df.copy()
     jd = pd.to_numeric(df["INSPECTION_JD"], errors="coerce")
     js, us = [], []
@@ -279,7 +279,7 @@ def _add_fwhm_traces_with_limit(
     *,
     fwhm_limit_px: float,
 ) -> None:
-    """FWHM vs ``frame_index``; farby podľa prahu. Červenú hranicu kreslí ``render_quality_dashboard`` cez ``add_hline``."""
+    """FWHM vs ``frame_index``; farby podla prahu. Cervenu hranicu kresli ``render_quality_dashboard`` cez ``add_hline``."""
     lim = float(fwhm_limit_px)
     lim_active = math.isfinite(lim) and lim > 0.0
     flt_series = df["FILTER"].fillna("NoFilter").astype(str)
@@ -301,13 +301,13 @@ def _add_fwhm_traces_with_limit(
         exp_raw = pd.to_numeric(sub["EXPTIME"], errors="coerce")
         exp_str = np.array(
             [
-                f"{float(e):.3f} s" if pd.notna(e) and math.isfinite(float(e)) else "—"
+                f"{float(e):.3f} s" if pd.notna(e) and math.isfinite(float(e)) else "-"
                 for e in exp_raw.to_numpy()
             ],
             dtype=object,
         )
         fwhm_str = np.array(
-            [f"{float(v):.6f}" if np.isfinite(v) else "—" for v in arr],
+            [f"{float(v):.6f}" if np.isfinite(v) else "-" for v in arr],
             dtype=object,
         )
         jd_hover = sub["_jd_str"].astype(str).to_numpy()
@@ -355,7 +355,7 @@ def render_quality_dashboard(
 ) -> None:
     st.subheader("Quality Dashboard")
     st.caption(
-        "Metrics from `OBS_FILES` (DAO analysis). Click a point in the chart → FITS preview. "
+        "Metrics from `OBS_FILES` (DAO analysis). Click a point in the chart -> FITS preview. "
         "Column **IS_REJECTED** is saved to the database immediately."
     )
 
@@ -420,15 +420,15 @@ def render_quality_dashboard(
             _rn_res_qa = resolve_read_noise(None, db=db, equipment_id=int(_eq_id_qa))
             if _g_res_qa.ok and _rn_res_qa.ok:
                 st.info(
-                    f"🔭 Detektor: gain={float(_g_res_qa.value):.3f} e⁻/ADU · "
-                    f"RN={float(_rn_res_qa.value):.1f} e⁻ "
+                    f"[telescope] Detektor: gain={float(_g_res_qa.value):.3f} e-/ADU . "
+                    f"RN={float(_rn_res_qa.value):.1f} e- "
                     f"(source: {_g_res_qa.source})"
                 )
             else:
                 st.warning(
-                    "⚠️ Gain / Read Noise not set in DB. "
+                    "! Gain / Read Noise not set in DB. "
                     "Phase 2A will use fallback values (gain=1.0, RN=10.0). "
-                    "Set them in Settings → Photometry → Detector."
+                    "Set them in Settings -> Photometry -> Detector."
                 )
         else:
             st.caption("Gain/RN: no equipment assigned for this draft.")
@@ -437,8 +437,8 @@ def render_quality_dashboard(
             "Gain/RN quality panel skipped (draft %s): %s", did, exc
         )
         st.warning(
-            "⚠️ Could not load detector gain/RN for this draft. "
-            "Check Settings → Photometry → Detector and the draft equipment link."
+            "! Could not load detector gain/RN for this draft. "
+            "Check Settings -> Photometry -> Detector and the draft equipment link."
         )
 
     st.caption("Adjust **Center RA/DE** in the VARSTREM panel (Step 2).")
@@ -505,7 +505,7 @@ def render_quality_dashboard(
     df["ELONGATION_MEAN"] = pd.to_numeric(df["ELONGATION_MEAN"], errors="coerce")
     df["CALIB_FLAGS"] = df["CALIB_FLAGS"].fillna("").astype(str)
 
-    # Auto default pre FWHM slider — len pri prvom otvorení dashboardu pre daný draft (session state).
+    # Auto default pre FWHM slider - len pri prvom otvoreni dashboardu pre dany draft (session state).
     _auto_seed_key = f"vyvar_qdash_fwhm_auto_seed_done_{did}"
     if not bool(st.session_state.get(_auto_seed_key, False)):
         try:
@@ -573,7 +573,7 @@ def render_quality_dashboard(
         "Auto FWHM limit",
         key=_auto_key,
         help=(
-            "VYVAR computes the limit automatically (MAD statistics). The “FWHM limit” slider remains manually editable."
+            "VYVAR computes the limit automatically (MAD statistics). The 'FWHM limit' slider remains manually editable."
         ),
     )
 
@@ -598,10 +598,10 @@ def render_quality_dashboard(
 
     if _auto_on and _auto_result.get("auto_limit") is not None:
         st.caption(
-            f"📐 Computed limit: **{_auto_result['auto_limit']:.3f} px** "
+            f"[tri] Computed limit: **{_auto_result['auto_limit']:.3f} px** "
             f"(median={_auto_result['median_fwhm']:.3f}, "
             f"MAD={_auto_result['mad']:.4f}, "
-            f"k={_auto_result['k']:.1f}) — "
+            f"k={_auto_result['k']:.1f}) - "
             f"kept {_auto_result['n_kept']}/{_auto_result['n_total']} frames"
         )
 
@@ -658,9 +658,9 @@ def render_quality_dashboard(
     else:
         fwhm_limit_raw = 0.0
         st.session_state["fwhm_threshold"] = 0.0
-    # Pre graf a filtre: 0 = bez limitu (žiadna červená čiara, žiadne rozťahovanie osi).
+    # Pre graf a filtre: 0 = bez limitu (ziadna cervena ciara, ziadne roztahovanie osi).
     fwhm_limit_plot = float(fwhm_limit_raw) if fwhm_limit_raw > 0.0 else None
-    # Pre zvyšok UI (reject indikácia) potrebujeme číslo; None -> veľké číslo.
+    # Pre zvysok UI (reject indikacia) potrebujeme cislo; None -> velke cislo.
     fwhm_limit = float(fwhm_limit_raw if fwhm_limit_raw > 0.0 else 99.0)
     st.session_state["fwhm_limit"] = float(fwhm_limit)
     st.session_state["vyvar_ui_reject_fwhm"] = float(fwhm_limit)
@@ -675,7 +675,7 @@ def render_quality_dashboard(
                 f"[AUTO FWHM] limit={float(fwhm_limit_raw):.3f} px "
                 f"(median={_auto_result['median_fwhm']:.3f}, "
                 f"k={float(_k_use):.1f}, "
-                f"odrezaných={_auto_result['n_cut']}/{_auto_result['n_total']})"
+                f"odrezanych={_auto_result['n_cut']}/{_auto_result['n_total']})"
             )
         else:
             log_event(f"FWHM threshold (px) changed to {float(fwhm_limit_raw):.2f}")
@@ -705,20 +705,20 @@ def render_quality_dashboard(
                     line_width=2,
                     line_dash="dot",
                     line_color="orange",
-                    annotation_text="Meridian flip / 180° rotation",
+                    annotation_text="Meridian flip / 180 deg rotation",
                     annotation_position="top left",
                 )
     except Exception:  # noqa: BLE001
         # EXC-0534: T3 -- UI diagnostic/plot only (annotation_position='top left', / ) / except Exception:  # noq... (EXCEPT-BULK 2026-07-08)
         pass
     fig_f.update_layout(
-        title="FWHM — red line = limit from slider above; green ≤ limit, red > limit",
+        title="FWHM - red line = limit from slider above; green <= limit, red > limit",
         xaxis_title=X_AXIS_FRAME_TITLE,
         yaxis_title="FWHM (px)",
         height=420,
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
     )
-    # Osa Y podľa dát (kvôli čitateľnosti pri úzkom seeingu)
+    # Osa Y podla dat (kvoli citatelnosti pri uzkom seeingu)
     try:
         _fwhm_series = pd.to_numeric(df.get("FWHM"), errors="coerce").dropna()
         _fwhm_arr = _fwhm_series.to_numpy(dtype=float)
@@ -818,7 +818,7 @@ def render_quality_dashboard(
             )
 
             if isinstance(jump_result, dict) and int(jump_result.get("n_groups", 0) or 0) == 0:
-                st.caption("Field stability analysis not available — run plate solve first.")
+                st.caption("Field stability analysis not available - run plate solve first.")
             elif isinstance(jump_result, dict) and bool(jump_result.get("has_jump", False)):
                 for jf in list(jump_result.get("jump_frames") or []):
                     try:
@@ -843,7 +843,7 @@ def render_quality_dashboard(
                     if not groups_df.empty:
                         groups_df = groups_df.copy()
                         groups_df["Dominant"] = groups_df.get("is_dominant", False).map(
-                            {True: "★ dominant", False: ""}
+                            {True: "* dominant", False: ""}
                         )
                         out_cols = [
                             ("group_id", "Group"),
@@ -860,8 +860,8 @@ def render_quality_dashboard(
 
                 rec = float(jump_result.get("recommended_min_frames_frac", 0.3) or 0.3)
                 st.info(
-                    "Tip — to use only dominant group stars, set "
-                    f"**min_frames_frac ≥ {rec:.2f}** in Settings → "
+                    "Tip - to use only dominant group stars, set "
+                    f"**min_frames_frac >= {rec:.2f}** in Settings -> "
                     "phase01_comparison_min_frames_frac"
                 )
             elif isinstance(jump_result, dict) and int(jump_result.get("n_groups", 0) or 0) > 0:
@@ -870,7 +870,7 @@ def render_quality_dashboard(
                 )
 
             fig_d.update_layout(
-                title="Field drift (arcmin from nightly median) — green ≤ limit, red > limit",
+                title="Field drift (arcmin from nightly median) - green <= limit, red > limit",
                 xaxis_title="Frame index",
                 yaxis_title="Drift (arcmin)",
                 height=280,
@@ -879,7 +879,7 @@ def render_quality_dashboard(
             )
             st.plotly_chart(fig_d, width="stretch")
 
-    # --- MASTERSTAR kandidáti (presunuté pod Sky graf) ---
+    # --- MASTERSTAR kandidati (presunute pod Sky graf) ---
     _ms_eligible = df[df["IS_REJECTED"] == 0].copy()
     if fwhm_limit_raw > 0.0:
         _ms_eligible = _ms_eligible[
@@ -895,9 +895,9 @@ def render_quality_dashboard(
         st.caption(
             "VYVAR ranked frames by score (FWHM 45%, elongation 30%, star count 15%, sky 10%). "
             "The system pre-selects TOP1 automatically, but nothing is saved without confirmation. "
-            "After **Confirm MASTERSTAR selection**, MAKE MASTERSTAR uses **only** this ``processed/lights/…`` frame "
-            "as the copy source for ``platesolve/…/MASTERSTAR.fits`` (no fallback auto-pick from disk). "
-            "``detrended_aligned`` still holds the full aligned series for photometry — only the reference MASTERSTAR changes."
+            "After **Confirm MASTERSTAR selection**, MAKE MASTERSTAR uses **only** this ``processed/lights/...`` frame "
+            "as the copy source for ``platesolve/.../MASTERSTAR.fits`` (no fallback auto-pick from disk). "
+            "``detrended_aligned`` still holds the full aligned series for photometry - only the reference MASTERSTAR changes."
         )
         _cand_df = pd.DataFrame(
             {
@@ -974,14 +974,14 @@ def render_quality_dashboard(
                 if p_job:
                     st.session_state["vyvar_masterstar_candidate_paths"] = [p_job]
                     st.session_state["vyvar_ms_candidate_top1_path"] = p_job
-                log_event(f"MASTERSTAR potvrdený z tabuľky: {Path(p_db).name}")
+                log_event(f"MASTERSTAR potvrdeny z tabulky: {Path(p_db).name}")
                 st.success(f"Set: `{Path(p_db).name}` will be used as MASTERSTAR.")
     else:
         st.info("No suitable frames for MASTERSTAR (check FWHM limit or IS_REJECTED).")
         st.session_state["vyvar_ms_candidates"] = []
         st.session_state["vyvar_ms_candidate_top1_path"] = ""
     st.markdown("---")
-    # --- koniec MASTERSTAR kandidáti ---
+    # --- koniec MASTERSTAR kandidati ---
 
     df["RA"] = pd.to_numeric(df["RA"], errors="coerce")
     df["DE"] = pd.to_numeric(df["DE"], errors="coerce")
@@ -1002,8 +1002,8 @@ def render_quality_dashboard(
             "FWHM": df["FWHM"],
             "Roundness": df["ROUNDNESS_MEAN"],
             "REJECT": reject_qc.astype(bool),
-            "RA (°)": df["RA"],
-            "DE (°)": df["DE"],
+            "RA ( deg)": df["RA"],
+            "DE ( deg)": df["DE"],
             "Sky Level": df["SKY_LEVEL"],
             "Star Count": df["STAR_COUNT"],
             "Calib Flags": df["CALIB_FLAGS"],
@@ -1021,7 +1021,7 @@ def render_quality_dashboard(
                 "Frame",
                 disabled=True,
                 format="%d",
-                help="Same number as chart X-axis (1 … N).",
+                help="Same number as chart X-axis (1 ... N).",
             ),
             "Filename": st.column_config.TextColumn("Filename", disabled=True),
             "EXPTIME (s)": st.column_config.NumberColumn("EXPTIME (s)", disabled=True, format="%.3f"),
@@ -1032,8 +1032,8 @@ def render_quality_dashboard(
                 disabled=True,
                 help="Indicator: outside FWHM limit (threshold > 0). Only IS_REJECTED is saved.",
             ),
-            "RA (°)": st.column_config.NumberColumn("RA (°)", disabled=True, format="%.6f"),
-            "DE (°)": st.column_config.NumberColumn("DE (°)", disabled=True, format="%.6f"),
+            "RA ( deg)": st.column_config.NumberColumn("RA ( deg)", disabled=True, format="%.6f"),
+            "DE ( deg)": st.column_config.NumberColumn("DE ( deg)", disabled=True, format="%.6f"),
             "Sky Level": st.column_config.NumberColumn("Sky Level", disabled=True, format="%.4g"),
             "Star Count": st.column_config.NumberColumn("Star Count", disabled=True, format="%d"),
             "Calib Flags": st.column_config.TextColumn(
@@ -1083,6 +1083,6 @@ def render_quality_dashboard(
             except Exception:  # noqa: BLE001
                 # EXC-0539: T3 -- UI diagnostic/plot only (finally: / _db2.conn.close() / except Exception:  # noqa: BLE0... (EXCEPT-BULK 2026-07-08)
                 pass
-            log_event(f"MASTERSTAR manuálne nastavený: {Path(p_sel).name}")
+            log_event(f"MASTERSTAR manualne nastaveny: {Path(p_sel).name}")
             st.success(f"Set: `{Path(p_sel).name}` will be used as MASTERSTAR.")
 

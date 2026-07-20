@@ -1,4 +1,4 @@
-CURSOR RESULT ù 2026-07-09 (SIGMA-A4)
+CURSOR RESULT - 2026-07-09 (SIGMA-A4)
 
 What I did
 Floor attribution on draft_424 calibrators (k2 / phase / X / time); Newton bin4 gain/RN forensics + ensemble SEM=0 trace; hypothesis corrected-sigma chi2; tests; docs; push.
@@ -12,7 +12,7 @@ Floor attribution on draft_424 calibrators (k2 / phase / X / time); Newton bin4 
 | Base | `a676848` |
 | Push | `98fc719` |
 
-### Part 1 ù Floor attribution (draft_424, 8 calibrators)
+### Part 1 - Floor attribution (draft_424, 8 calibrators)
 
 **floor_before (variant e refit baseline):** 6.5 mmag
 
@@ -23,8 +23,8 @@ Floor attribution on draft_424 calibrators (k2 / phase / X / time); Newton bin4 
 | X_linear | 9.7e-04 | 6.5 | 6.0 | 0.5 |
 | time_linear | 1.1e-03 | 6.5 | 5.0 | 1.5 |
 
-**k2_effective (shared slope, XùDelta_color):** -3.57e-05 mag/(airmassùmag color)  
-**k2 CI (16ù84%):** [-0.00247, 0.00357]
+**k2_effective (shared slope, X-Delta_color):** -3.57e-05 mag/(airmass-mag color)  
+**k2 CI (16-84%):** [-0.00247, 0.00357]
 
 **k'' recovery (Part 1.1c):** floor_after unchanged at 6.5 mmag ? **0.0 mmag recoverable via k2 component removal**
 
@@ -33,22 +33,22 @@ JSON: `tmp/sigma_budget/floor_attribution_draft000424_NoFilter_60_2.json`
 
 Per-calibrator variance explained (k2 / phase), max: G9.3 k2=6.3e-04, phase=1.8e-02; G12.9 phase=3.4e-02.
 
-### Part 2 ù Bin4 gain/RN forensics (draft_426)
+### Part 2 - Bin4 gain/RN forensics (draft_426)
 
-**Archive equipment:** ID=4 C5A-150M (IMX411); draft OBS_DRAFT row. Header GAIN=12.48 e-/ADU matches DB equipment_id=2 (C3-26000/IMX571) bin4-scaled gain 0.78ù4ù=12.48, not eq4 DB (1.0ù16=16.0).
+**Archive equipment:** ID=4 C5A-150M (IMX411); draft OBS_DRAFT row. Header GAIN=12.48 e-/ADU matches DB equipment_id=2 (C3-26000/IMX571) bin4-scaled gain 0.78-4-=12.48, not eq4 DB (1.0-16=16.0).
 
-| Setup | bin | gain_used | gain_src | RN_used | RN_src | gain_exp | RN_exp | ?_ratio | ?ù_pred(1/?_ratioù) |
+| Setup | bin | gain_used | gain_src | RN_used | RN_src | gain_exp | RN_exp | ?_ratio | ?-_pred(1/?_ratio-) |
 |-------|-----|-----------|----------|---------|--------|----------|--------|---------|---------------------|
 | g_60_4 | 4 | 12.48 | header | 14.08 | db | 16.0 | 14.08 | 1.132 | 0.780 |
 | i_70_4 | 4 | 12.48 | header | 14.08 | db | 16.0 | 14.08 | 1.133 | 0.779 |
 | r_60_4 | 4 | 12.48 | header | 14.08 | db | 16.0 | 14.08 | 1.133 | 0.780 |
 | z_90_4 | 4 | 12.48 | header | 14.08 | db | 16.0 | 14.08 | 1.134 | 0.778 |
 
-Scaling: software_sum gainùbù, RNùb (param_resolver).
+Scaling: software_sum gain-b-, RN-b (param_resolver).
 
-**Observed check-star ?ù/dof (howell_only):** g_60_4 SS Cam 0.158; i_70_4 0.329; r_60_4 0.811; V0611 g 0.040. ?_ratio accounting alone does not match full deficit (pred ~0.78 vs obs 0.04ù0.33).
+**Observed check-star ?-/dof (howell_only):** g_60_4 SS Cam 0.158; i_70_4 0.329; r_60_4 0.811; V0611 g 0.040. ?_ratio accounting alone does not match full deficit (pred ~0.78 vs obs 0.04-0.33).
 
-### Ensemble SEM = 0 trace (producer photometry_core ~2608ù2624)
+### Ensemble SEM = 0 trace (producer photometry_core ~2608-2624)
 
 | Case | n_other_comps | n_resid p50 | frames resid<2 | scatter_zero_frac | scatter_nan_frac |
 |------|---------------|-------------|----------------|-------------------|------------------|
@@ -60,14 +60,14 @@ Producer: scatter=0 when len(comp_resid)<2. Sparse g/i: n_resid=2 always; i has 
 
 ### Hypothesis corrected-sigma (gain_exp=16, RN_exp=14.08, variant bin4_gain_rn_hypothesis)
 
-| Case | baseline howell ?ù/dof | hypothesis ?ù/dof |
+| Case | baseline howell ?-/dof | hypothesis ?-/dof |
 |------|-------------------------|-------------------|
 | SS Cam g_60_4 | 0.158 | 2.563 |
 | SS Cam i_70_4 | 0.329 | 1.688 |
 | SS Cam r_60_4 | 0.811 | 3.745 |
 | V0611 g_60_4 | 0.040 | 0.601 |
 
-?ù moves **away** from 1 under DB-scaled gain hypothesis.
+?- moves **away** from 1 under DB-scaled gain hypothesis.
 
 JSON: `tmp/sigma_budget/bin4_sigma_forensics.json`
 
@@ -85,7 +85,7 @@ JSON: `tmp/sigma_budget/bin4_sigma_forensics.json`
 1. Calibrator bp_rp from field-wide comp CSV (not anchor-only pool).
 2. draft_426 DB equipment_id=4 vs header gain matching IMX571 (eq2) scale.
 3. z setup is z_90_4 (not z_60_4) in archive.
-4. Hypothesis uses DB bin1ùbù scaling; header gain already session-truth at 12.48.
+4. Hypothesis uses DB bin1-b- scaling; header gain already session-truth at 12.48.
 
 ## Errors (if any)
 

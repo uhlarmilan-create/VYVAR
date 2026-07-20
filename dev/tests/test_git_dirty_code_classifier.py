@@ -34,7 +34,7 @@ def test_untracked_src_py_is_code() -> None:
 
 
 def test_scratch_only_draft_434_class() -> None:
-    """draft_434-style dirt: md/png/docs/dev-scripts — not import-relevant code."""
+    """draft_434-style dirt: md/png/docs/dev-scripts - not import-relevant code."""
     porcelain = (
         "?? dev/results/CURSOR_RESULT_anchor_evidence.md\n"
         "?? dev/results/VYVAR_CODE_AUDIT.md\n"

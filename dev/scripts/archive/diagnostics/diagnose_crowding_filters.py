@@ -1,4 +1,4 @@
-"""Diagnostika crowding/blend filtrov — kalibrácia parametrov pre draft_000193."""
+"""Diagnostika crowding/blend filtrov - kalibracia parametrov pre draft_000193."""
 
 from pathlib import Path
 import sys
@@ -8,7 +8,7 @@ import math
 
 DRAFT = Path(r"C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000193")
 
-# Poznámka: v tomto drafte je masterstars CSV uložené v platesolve root
+# Poznamka: v tomto drafte je masterstars CSV ulozene v platesolve root
 # ako masterstars_full_match.csv (nie v photometry/).
 MASTERSTAR_CSV = DRAFT / "platesolve" / "masterstars_full_match.csv"
 COMP_CSV = DRAFT / "platesolve" / "NoFilter_120_2" / "photometry" / "comparison_stars_per_target.csv"
@@ -26,7 +26,7 @@ for _stream in (sys.stdout, sys.stderr):
             pass
 
 
-# ── 1. Masterstars: Filter A stĺpce ──
+# -- 1. Masterstars: Filter A stlpce --
 _p("=== Filter A: Gaia flagy v masterstars ===")
 ms = pd.read_csv(MASTERSTAR_CSV, low_memory=False)
 _p(f"  Masterstars riadkov: {len(ms)}")
@@ -42,22 +42,22 @@ for col in ("gaia_nss", "gaia_qso", "gaia_gal"):
                 )
             ).sum()
         )
-        _p(f"  {col}: PRÍTOMNÝ, True={n_true}/{len(ms)}")
+        _p(f"  {col}: PRITOMNY, True={n_true}/{len(ms)}")
     else:
-        _p(f"  {col}: CHÝBA v masterstars CSV")
+        _p(f"  {col}: CHYBA v masterstars CSV")
 
 
-# ── 2. Per-frame CSV: Filter B stĺpce ──
+# -- 2. Per-frame CSV: Filter B stlpce --
 _p()
-_p("=== Filter B: PSF/FWHM stĺpce v per-frame CSV ===")
+_p("=== Filter B: PSF/FWHM stlpce v per-frame CSV ===")
 sample_csvs = sorted(PERFRAME_DIR.glob("proc_*.csv"))[:3]
 for csv_path in sample_csvs:
     df = pd.read_csv(csv_path, nrows=5)
     has_chi2 = "psf_chi2" in df.columns
     has_fwhm = "fwhm_estimate_px" in df.columns
     _p(
-        f"  {csv_path.name}: psf_chi2={'OK' if has_chi2 else 'CHÝBA'}, "
-        f"fwhm_estimate_px={'OK' if has_fwhm else 'CHÝBA'}"
+        f"  {csv_path.name}: psf_chi2={'OK' if has_chi2 else 'CHYBA'}, "
+        f"fwhm_estimate_px={'OK' if has_fwhm else 'CHYBA'}"
     )
     if has_chi2:
         header_cols = pd.read_csv(csv_path, nrows=0).columns
@@ -79,13 +79,13 @@ for csv_path in sample_csvs:
             )
 
 
-# ── 3. Filter C: distribúcia vzdialeností susedov ──
+# -- 3. Filter C: distribucia vzdialenosti susedov --
 _p()
-_p("=== Filter C: Distribúcia vzdialeností medzi hviezdami v masterstars ===")
+_p("=== Filter C: Distribucia vzdialenosti medzi hviezdami v masterstars ===")
 if "x" in ms.columns and "y" in ms.columns:
     xs = pd.to_numeric(ms["x"], errors="coerce").dropna().to_numpy()
     ys = pd.to_numeric(ms["y"], errors="coerce").dropna().to_numpy()
-    # Náhodná vzorka 200 hviezd — spočítaj nearest neighbor vzdialenosť
+    # Nahodna vzorka 200 hviezd - spocitaj nearest neighbor vzdialenost
     rng = np.random.default_rng(42)
     idx = rng.choice(len(xs), size=min(200, len(xs)), replace=False)
     nn_dists: list[float] = []
@@ -96,26 +96,26 @@ if "x" in ms.columns and "y" in ms.columns:
         dists[i] = np.inf
         nn_dists.append(float(dists.min()))
     nn = np.array(nn_dists)
-    _p("  Nearest-neighbor vzdialenosť (px) medzi hviezdami v masterstars:")
+    _p("  Nearest-neighbor vzdialenost (px) medzi hviezdami v masterstars:")
     _p(
         f"  min={nn.min():.1f}, p5={np.percentile(nn, 5):.1f}, "
         f"p25={np.percentile(nn, 25):.1f}, median={np.percentile(nn, 50):.1f}, "
         f"p75={np.percentile(nn, 75):.1f}, p95={np.percentile(nn, 95):.1f}"
     )
     _p()
-    # Koľko hviezd má suseda bližšie ako rôzne prahy?
-    _p("  Počet hviezd s najbližším susedom < prah (contamination detection):")
-    _p(f"  {'Prah (px)':>12}  {'Počet':>8}  {'%':>6}")
+    # Kolko hviezd ma suseda blizsie ako rozne prahy?
+    _p("  Pocet hviezd s najblizsim susedom < prah (contamination detection):")
+    _p(f"  {'Prah (px)':>12}  {'Pocet':>8}  {'%':>6}")
     for thr in (10, 15, 20, 25, 30, 40, 50):
         n = int((nn < thr).sum())
         _p(f"  {thr:>12}  {n:>8}  {100 * n / len(nn):>5.1f}%")
 else:
-    _p("  x/y stĺpce chýbajú v masterstars!")
+    _p("  x/y stlpce chybaju v masterstars!")
 
 
-# ── 4. Contamination ratio analýza ──
+# -- 4. Contamination ratio analyza --
 _p()
-_p("=== Filter C: Analýza contamination ratio ===")
+_p("=== Filter C: Analyza contamination ratio ===")
 if "x" in ms.columns and "y" in ms.columns:
     # Flux proxy
     flux_col = None
@@ -140,8 +140,8 @@ if "x" in ms.columns and "y" in ms.columns:
     xs2 = pd.to_numeric(ms["x"], errors="coerce").to_numpy()
     ys2 = pd.to_numeric(ms["y"], errors="coerce").to_numpy()
 
-    # Pre 200 náhodných hviezd: contamination ratio od najjasnejšieho suseda
-    # v rôznych polomeroch
+    # Pre 200 nahodnych hviezd: contamination ratio od najjasnejsieho suseda
+    # v roznych polomeroch
     rng = np.random.default_rng(42)
     idx2 = rng.choice(len(xs2), size=min(200, len(xs2)), replace=False)
     _p(
@@ -149,7 +149,7 @@ if "x" in ms.columns and "y" in ms.columns:
         f"{'max_ratio=0.50':>16}"
     )
     _p(
-        f"  {'':>14}  {'% vylúčených':>16}  {'% vylúčených':>16}  {'% vylúčených':>16}"
+        f"  {'':>14}  {'% vylucenych':>16}  {'% vylucenych':>16}  {'% vylucenych':>16}"
     )
     for radius in (15, 20, 25, 30, 40):
         n_excl = {0.10: 0, 0.20: 0, 0.50: 0}
@@ -173,7 +173,7 @@ if "x" in ms.columns and "y" in ms.columns:
         )
 
 
-# ── 5. Comp hviezdy: koľko zostalo per target ──
+# -- 5. Comp hviezdy: kolko zostalo per target --
 _p()
 _p("=== Comp hviezdy po filtroch ===")
 if COMP_CSV.exists():
@@ -188,8 +188,8 @@ if COMP_CSV.exists():
     _p(f"  Targetov s < 5 comp: {(counts < 5).sum()}")
     _p(f"  Targetov s >= 5 comp: {(counts >= 5).sum()}")
 else:
-    _p(f"  {COMP_CSV} neexistuje — spusti najprv run_phase0_and_phase1")
+    _p(f"  {COMP_CSV} neexistuje - spusti najprv run_phase0_and_phase1")
 
 _p()
-_p("=== Odporúčané parametre pre tento dataset ===")
-_p("  (vyplní sa po analýze vyššie)")
+_p("=== Odporucane parametre pre tento dataset ===")
+_p("  (vyplni sa po analyze vyssie)")

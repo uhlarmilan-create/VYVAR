@@ -1,4 +1,4 @@
-﻿=== ROOT FILES ===
+=== ROOT FILES ===
   .gitignore                                              0.8 KB     3.3 days
   _audit_issues.py                                        3.9 KB     0.3 days
   _comp_refs_output.txt                                   5.1 KB     4.5 days

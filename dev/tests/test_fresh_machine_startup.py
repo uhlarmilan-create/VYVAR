@@ -86,7 +86,7 @@ def test_database_self_initialises_on_fresh_file(tmp_path: Path) -> None:
         names = {r[0] for r in rows}
         missing = _REQUIRED_TABLES - names
         assert not missing, f"fresh DB missing reference tables: {sorted(missing)}"
-        # Product contract (DB-SEED-SPLIT): schema only — no author observatory rows.
+        # Product contract (DB-SEED-SPLIT): schema only - no author observatory rows.
         for table in ("EQUIPMENTS", "TELESCOPE", "LOCATION"):
             n = int(db.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
             assert n == 0, f"fresh DB {table} must be empty; got {n}"

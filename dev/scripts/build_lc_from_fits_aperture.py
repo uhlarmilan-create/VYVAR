@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build differential LC from proc FITS (photutils) at fixed aperture — AIJ replication test.
+"""Build differential LC from proc FITS (photutils) at fixed aperture - AIJ replication test.
 
 Writes lightcurve_{catalog_id}_ap{N}.csv and comparison PNGs vs AIJ .tbl.
 
@@ -7,7 +7,7 @@ Usage:
   python scripts/build_lc_from_fits_aperture.py
   python scripts/build_lc_from_fits_aperture.py --radius 7 --targets FW,BO
 
-Temporary diagnostic — do not commit unless promoted.
+Temporary diagnostic - do not commit unless promoted.
 """
 from __future__ import annotations
 
@@ -305,7 +305,7 @@ def plot_replication(
 
     fig, axes = plt.subplots(4, 1, figsize=(11, 11), sharex=True)
     fig.suptitle(
-        f"{name} — FITS ap={r_ap}px vs AIJ (draft_311)\n"
+        f"{name} - FITS ap={r_ap}px vs AIJ (draft_311)\n"
         f"corr(rel_flux)={stats.get('corr_rel_flux', float('nan')):.4f}  "
         f"RMS vy={stats.get('rms_mag_diff_vy_ppt', float('nan')):.1f} ppt  "
         f"AIJ={stats.get('rms_mag_diff_aij_ppt', float('nan')):.1f} ppt",
@@ -332,7 +332,7 @@ def plot_replication(
     resid = mag_vy_dm - mag_aij_dm
     axes[2].plot(t_vy.iloc[:n], resid, ".", ms=4, color="#9467bd")
     axes[2].axhline(0, color="gray", lw=0.8)
-    axes[2].set_ylabel("VYVAR − AIJ mag")
+    axes[2].set_ylabel("VYVAR - AIJ mag")
     axes[2].grid(True, alpha=0.3)
 
     if vyvar_lc_path is not None and vyvar_lc_path.is_file():
@@ -347,7 +347,7 @@ def plot_replication(
     else:
         axes[3].plot(t_vy, mag_vy_dm, ".", ms=4)
         axes[3].set_ylabel("mag_diff demean")
-    axes[3].set_xlabel("JD − 2461154")
+    axes[3].set_xlabel("JD - 2461154")
     axes[3].grid(True, alpha=0.3)
 
     fig.tight_layout()
@@ -392,12 +392,12 @@ def main() -> int:
     active_csv = phot / "active_targets.csv"
 
     keys = [k.strip().upper() for k in args.targets.split(",") if k.strip()]
-    LOGGER.info("Frames=%d  r_ap=%.3f  annulus=%s (%.2f–%.2f px)", len(csv_files), args.radius, args.annulus, r_in, r_out)
+    LOGGER.info("Frames=%d  r_ap=%.3f  annulus=%s (%.2f-%.2f px)", len(csv_files), args.radius, args.annulus, r_in, r_out)
 
     ap_tag = f"ap{int(args.radius) if args.radius == int(args.radius) else args.radius}"
 
     print("=" * 70)
-    print(f"Build LC from FITS — {draft.name} — r={args.radius} px")
+    print(f"Build LC from FITS - {draft.name} - r={args.radius} px")
     print(f"  coords={args.coords}  fits={args.fits}  annulus={args.annulus}")
     print("=" * 70)
 
@@ -418,7 +418,7 @@ def main() -> int:
             LOGGER.info("%s: %d positions / %d comps", name, len(xy), len(comp_cids))
             lc = build_lc(cid, comp_cids, xy, csv_files, fits_files, args.radius, r_in, r_out)
         if lc.empty:
-            print(f"  {name}: ERROR — no frames")
+            print(f"  {name}: ERROR - no frames")
             continue
 
         out_csv = lc_dir / f"lightcurve_{cid}_{ap_tag}.csv"

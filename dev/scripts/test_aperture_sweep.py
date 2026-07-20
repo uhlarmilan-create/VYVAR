@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Sweep aperture radius on proc FITS; compare differential LC RMS to AIJ.
 
-Temporary diagnostic — do not commit unless promoted.
+Temporary diagnostic - do not commit unless promoted.
 
 Usage (from repo root):
   python scripts/test_aperture_sweep.py
@@ -73,7 +73,7 @@ def aij_rms_ppt(aij_tbl: Path) -> tuple[float, float]:
 def annulus_radii(r_ap: float, fwhm_px: float, mode: str) -> tuple[float, float]:
     if mode == "vyvar":
         return 4.75 * fwhm_px, 9.0 * fwhm_px
-    # scaled: inner ~1.4× ap, width ~0.9× ap (typical AIJ-like proportions)
+    # scaled: inner ~1.4x ap, width ~0.9x ap (typical AIJ-like proportions)
     r_in = max(r_ap * 1.4, r_ap + 2.0)
     r_out = r_in + max(r_ap * 0.9, 4.0)
     return r_in, r_out
@@ -198,7 +198,7 @@ def main() -> int:
         "--annulus",
         choices=("vyvar", "scaled"),
         default="scaled",
-        help="vyvar = 4.75/9.0×FWHM sky annulus; scaled = inner~1.4×r_ap",
+        help="vyvar = 4.75/9.0xFWHM sky annulus; scaled = inner~1.4xr_ap",
     )
     ap.add_argument("--fwhm", type=float, default=None, help="FWHM [px]; default from MASTERSTAR")
     args = ap.parse_args()

@@ -1,4 +1,4 @@
-"""Unit tests for SysRem (TODO-35) — Tamuz, Mazeh & Zucker (2005), MNRAS 356, 1466."""
+"""Unit tests for SysRem (TODO-35) - Tamuz, Mazeh & Zucker (2005), MNRAS 356, 1466."""
 
 from __future__ import annotations
 

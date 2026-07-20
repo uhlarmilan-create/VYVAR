@@ -1,6 +1,6 @@
 """
 Quick test: compute safe_bbox for draft_000283 using existing aligned frames.
-Does NOT re-run alignment — just re-runs write_photometry_plan_files logic.
+Does NOT re-run alignment - just re-runs write_photometry_plan_files logic.
 Run: python scripts/test_border_bbox.py
 """
 
@@ -31,5 +31,5 @@ import json
 plan = json.loads((PLATESOLVE / "photometry_plan.json").read_text())
 bbox = plan.get("safe_bbox_px")
 print(f"safe_bbox_px = {bbox}")
-print("✅ Border filter works!" if bbox else "❌ safe_bbox_px still None")
+print("[OK] Border filter works!" if bbox else "[X] safe_bbox_px still None")
 

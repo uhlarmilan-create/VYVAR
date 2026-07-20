@@ -43,7 +43,7 @@ EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "3d26f469"
 EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "6420f1da"
 # Structural empty-comp drops keyed by draft_id only (Anchor #3 / R CVn on 435).
 # A future draft with phase2a_empty_comp_drop>0 must FAIL until explicitly listed.
-# Value must match exactly — empty_comp_drop=2 on 435 still trips the gate.
+# Value must match exactly - empty_comp_drop=2 on 435 still trips the gate.
 EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
     435: {"phase2a_empty_comp_drop": 1},  # R CVn 1496795041799526400 (+ siblings w/ 0 comps)
 }

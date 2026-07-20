@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""M67 LRGB native night_run — in-range CT validation (pre-calibrated import + CT presel hook)."""
+"""M67 LRGB native night_run - in-range CT validation (pre-calibrated import + CT presel hook)."""
 from __future__ import annotations
 
 import json
@@ -72,11 +72,11 @@ def main() -> int:
     import pilot_palomar7_phases_ac as pal  # noqa: E402
 
     if not FIELD_DB.is_file():
-        print(f"Missing field DB: {FIELD_DB} — run build_field_db.py first")
+        print(f"Missing field DB: {FIELD_DB} - run build_field_db.py first")
         return 1
 
     if not SOURCE_ROOT.is_dir() or not any(SOURCE_ROOT.rglob("*.fits")):
-        print("Cropping M67 frames …")
+        print("Cropping M67 frames ...")
         rc = crop.main()
         if rc != 0:
             return rc

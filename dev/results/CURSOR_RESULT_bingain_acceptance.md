@@ -1,4 +1,4 @@
-CURSOR RESULT ù 2026-07-10 (F-BINGAIN-1 acceptance run)
+CURSOR RESULT - 2026-07-10 (F-BINGAIN-1 acceptance run)
 
 What I did
 Diagnosed the prior empty-Archive finding (wrong path segment), hardened
@@ -7,11 +7,11 @@ production LC-`err` chi2 (sigma-budget path ignores empirical `sigma_bkg_ap`), r
 patch-only acceptance on drafts 424/425/426 (no DAO re-export), chi2 before/after
 matrices, provenance stats, pedestal fits, pytest, and PDF overflow on draft_425 B.
 
-**Verdict: FAIL ù do not commit/push.** Primary gate miss: V0611 chi2 on draft_426 i/r
-remains ~0.25 (outside 0.8ù1.2). Secondary: draft_425 B_20_2 howell_fallback 24.7%
+**Verdict: FAIL - do not commit/push.** Primary gate miss: V0611 chi2 on draft_426 i/r
+remains ~0.25 (outside 0.8-1.2). Secondary: draft_425 B_20_2 howell_fallback 24.7%
 (>20% flag); draft_424 pooled chi2 shifted 0.074?0.216 (425 unchanged).
 
-## Part 0 ù path diagnosis
+## Part 0 - path diagnosis
 
 The FIX session reported an empty `Archive/Drafts/` because diagnostics used
 `C:\ASTRO\Archive\Drafts` (missing the `python\VYVAR` repo segment). Production
@@ -38,16 +38,16 @@ folders.
 
 ### Chi2 matrix (production LC `err` vs check_kmag; primary gate metric)
 
-**draft_426 ù V0611** (`1112127291051695744`)
+**draft_426 - V0611** (`1112127291051695744`)
 
-| Setup | ?ù/dof before | ?ù/dof after | Gate |
+| Setup | ?-/dof before | ?-/dof after | Gate |
 |-------|---------------|--------------|------|
 | g_60_4 | 1.233 | **1.110** | PASS |
 | i_70_4 | 0.238 | 0.251 | FAIL (low) |
 | r_60_4 | 0.253 | 0.256 | FAIL (low) |
-| z_90_4 | ù | ù | no V0611 sidecar |
+| z_90_4 | - | - | no V0611 sidecar |
 
-**draft_426 ù pooled check stars (n=6/setup)**
+**draft_426 - pooled check stars (n=6/setup)**
 
 | Setup | pooled before | pooled after |
 |-------|---------------|--------------|
@@ -55,7 +55,7 @@ folders.
 | i_70_4 | 0.584 | 0.598 |
 | r_60_4 | 0.476 | 0.544 |
 
-**draft_425 ù pooled (n=40/setup, wide rig)**
+**draft_425 - pooled (n=40/setup, wide rig)**
 
 | Setup | pooled before | pooled after |
 |-------|---------------|--------------|
@@ -63,13 +63,13 @@ folders.
 | V_20_2 | 5.521 | 5.521 |
 | R_20_2 | 0.504 | 0.504 |
 
-**draft_424 ù NoFilter_60_2 pooled (n=40)**
+**draft_424 - NoFilter_60_2 pooled (n=40)**
 
 | before | after |
 |--------|-------|
 | 0.074 | 0.216 |
 
-(Sigma-budget chi2 variant remains ~0.04 for V0611 g ù ignores empirical proc columns;
+(Sigma-budget chi2 variant remains ~0.04 for V0611 g - ignores empirical proc columns;
 documented harness mismatch, not used for gate.)
 
 ### err_bkg_source provenance (% empirical / howell_fallback)
@@ -124,16 +124,16 @@ Empty-aperture patch cost scales ~5 s/frame; phase2a unchanged vs baseline.
 | z_90_4 | 769 | 428 | 1110 | none |
 
 Photon-transfer patch fit is noisy (wide CIs on g); no OFFSET/PEDESTAL FITS keys on
-science frames ù pedestal remains in level per Stage B/C.
+science frames - pedestal remains in level per Stage B/C.
 
 ### Residual-budget analysis (FAIL drivers)
 
-1. **V0611 i/r (?ù?0.25):** Pre-fix underdispersion; empirical bkg term barely moves LC
+1. **V0611 i/r (?-?0.25):** Pre-fix underdispersion; empirical bkg term barely moves LC
    `err` because ensemble/scint/floor dominate at small apertures (r_ap 0.25/0.22 px).
    Fix targets background-dominated g (r_ap 0.54); g moved 1.23?1.11 into gate.
-2. **B_20_2 fallback 24.7%:** Crowded wide-rig B field ù ~25% of rows lack valid empty
+2. **B_20_2 fallback 24.7%:** Crowded wide-rig B field - ~25% of rows lack valid empty
    apertures; those rows retain Howell fallback (byte-identical legacy err).
-3. **424 pooled ?ù shift:** Low absolute ?ù; photon-level err ratio still ~1; LC err
+3. **424 pooled ?- shift:** Low absolute ?-; photon-level err ratio still ~1; LC err
    ensemble-dominated but small photon perturbation visible in pooled check stars.
 
 ## Errors (if any)
@@ -141,13 +141,13 @@ science frames ù pedestal remains in level per Stage B/C.
 - Phase2A tmp outputs: COMP_QA non-fatal (missing comparison_stars in tmp tree).
 - draft_424 phase2a: 2 export failures (missing LC for 2 Gaia targets).
 
-## Files changed (uncommitted ù FAIL stop)
+## Files changed (uncommitted - FAIL stop)
 
-- `scripts/bingain_fix_validate.py` ù archive root hard-fail; LC-err chi2 primary
-- `scripts/bingain_acceptance_run.py` ù `--patch-only`, FITS gain, read_flux err ratio
-- `scripts/bingain_patch_sigma_bkg.py` ù (from FIX session)
+- `scripts/bingain_fix_validate.py` - archive root hard-fail; LC-err chi2 primary
+- `scripts/bingain_acceptance_run.py` - `--patch-only`, FITS gain, read_flux err ratio
+- `scripts/bingain_patch_sigma_bkg.py` - (from FIX session)
 - `photometry_core.py`, `pipeline.py`, `config.py`, `proc_frame_store.py`, tests, docs
-  ù (from FIX session, uncommitted)
+  - (from FIX session, uncommitted)
 
 Reports: `tmp/bingain_acceptance/run_{424,425,426}.json`,
 `tmp/bingain_fix/validation_{424,425,426}.json`

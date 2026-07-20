@@ -1,4 +1,4 @@
-CURSOR RESULT — PUSH 2026-07-18
+CURSOR RESULT - PUSH 2026-07-18
 
 ## PUSH
 
@@ -34,7 +34,7 @@ Working tree: clean of intended changes (only known scratch untracked:
 - SCIENCE-PATH RULE: stack touches `src_py/config.py` (`cabd9e6`) and
   `src_py/database.py` (`a0743a2`). `--full` was run after the last
   science-path commit (`a0743a2` / DB-SEED-SPLIT) and **PASS**ed
-  byte-identical: core `3d26f469…`, extended `6420f1da…`, n_lc=166
+  byte-identical: core `3d26f469...`, extended `6420f1da...`, n_lc=166
   failures=0 (recorded in `CURSOR_RESULT_db_seed_split.md`). Subsequent
   commits (docs/PDF/FLOW) did not touch science path; no re-`--full`
   required.

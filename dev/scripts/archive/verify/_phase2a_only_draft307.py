@@ -52,7 +52,7 @@ def main() -> int:
     log = buf.getvalue()
     (phot / "_phase2a_catalog_only_skip_report.txt").write_text(log, encoding="utf-8")
     xy = len(re.findall(r"XY fallback wrong star", log))
-    am = len(re.findall(r"Airmass detrend preskočený", log))
+    am = len(re.findall(r"Airmass detrend preskoceny", log))
     skip_n = re.search(r"Skipping (\d+) catalog_only targets", log)
     print(f"elapsed={time.time()-t0:.1f}s skip_catalog_only={skip_n.group(1) if skip_n else '?'}")
     print(f"XY fallback={xy} airmass_skip={am}")

@@ -28,7 +28,7 @@ def _safe_float(x: Any) -> float | None:
         return None
     if isinstance(x, str):
         s = x.strip()
-        if not s or s in ("--", "---", "nan", "NaN", "…", "..."):
+        if not s or s in ("--", "---", "nan", "NaN", "...", "..."):
             return None
     try:
         v = float(x)
@@ -72,7 +72,7 @@ class CatalogMatch:
             parts.append(f"amp={self.amplitude:.3g}")
         if self.delta_r is not None:
             parts.append(f"dr={self.delta_r:.2f}\"")
-        return " · ".join(parts) if parts else (self.name or "—")
+        return " . ".join(parts) if parts else (self.name or "-")
 
 
 @dataclass
@@ -127,7 +127,7 @@ class CrossmatchResult:
             else:
                 head = lst[0]
                 tail = f" (+{len(lst) - 1} more)" if len(lst) > 1 else ""
-                lines.append(f"{cat}: {head.name or '—'} — {head.summary()}{tail}")
+                lines.append(f"{cat}: {head.name or '-'} - {head.summary()}{tail}")
         for cat in sorted(self.matches.keys()):
             if cat in seen:
                 continue
@@ -140,7 +140,7 @@ class CrossmatchResult:
             else:
                 head = lst[0]
                 tail = f" (+{len(lst) - 1} more)" if len(lst) > 1 else ""
-                lines.append(f"{cat}: {head.name or '—'} — {head.summary()}{tail}")
+                lines.append(f"{cat}: {head.name or '-'} - {head.summary()}{tail}")
         return lines
 
 
@@ -222,7 +222,7 @@ def _query_simbad(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
         out.append(
             CatalogMatch(
                 catalog="SIMBAD",
-                name=name or "—",
+                name=name or "-",
                 var_type=otype,
                 mag=mag,
                 delta_r=dr,
@@ -290,7 +290,7 @@ def _query_vsx_local_point(db_path: str | Path, coord: SkyCoord, radius_arcsec: 
             continue
         if sep > float(radius_arcsec):
             continue
-        name = str(row.get("name") or "").strip() or "—"
+        name = str(row.get("name") or "").strip() or "-"
         vtype = str(row.get("var_type") or "").strip()
         per = _safe_float(row.get("period"))
         if per is None:
@@ -427,7 +427,7 @@ def _query_gaia_varisum(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMa
             CatalogMatch(
                 catalog="Gaia varisum",
                 name=sid,
-                var_type=flags or "—",
+                var_type=flags or "-",
                 mag=gmag,
                 delta_r=_sep_arcsec(coord, _row_get(row, "RA_ICRS"), _row_get(row, "DE_ICRS")),
                 extra={k: _row_get(row, k) for k in _GAIA_VARISUM_FLAGS if k in getattr(row, "colnames", [])},
@@ -489,7 +489,7 @@ def _query_css(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
         out.append(
             CatalogMatch(
                 catalog="CSS",
-                name=name or "—",
+                name=name or "-",
                 var_type=str(_row_get(row, "Type") or "").strip(),
                 period=_safe_float(_row_get(row, "Per")),
                 amplitude=_safe_float(_row_get(row, "Depth")),
@@ -515,7 +515,7 @@ def _query_kelt(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
     for row in t:
         tic = str(_row_get(row, "TIC") or "").strip()
         tm = str(_row_get(row, "2MASS") or "").strip()
-        name = tic or tm or "—"
+        name = tic or tm or "-"
         out.append(
             CatalogMatch(
                 catalog="KELT",
@@ -545,7 +545,7 @@ def _query_vsbs(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
         out.append(
             CatalogMatch(
                 catalog="VSBS",
-                name=str(_row_get(row, "Name") or "").strip() or "—",
+                name=str(_row_get(row, "Name") or "").strip() or "-",
                 var_type=str(_row_get(row, "Type") or "").strip(),
                 period=_safe_float(_row_get(row, "Per")),
                 amplitude=_safe_float(_row_get(row, "Amp")),
@@ -571,7 +571,7 @@ def _query_tess_eb(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
         out.append(
             CatalogMatch(
                 catalog="TESS-EB",
-                name=str(_row_get(row, "TIC") or "").strip() or "—",
+                name=str(_row_get(row, "TIC") or "").strip() or "-",
                 var_type="EB",
                 period=_safe_float(_row_get(row, "Per")),
                 mag=_safe_float(_row_get(row, "Tmag")),

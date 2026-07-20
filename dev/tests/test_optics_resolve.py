@@ -7,7 +7,7 @@ from optics_selection import (
 
 
 def test_draft_overrides_stale_caller_equipment_id():
-    """OBS_DRAFT optics from import override stale session/UI ids (equipment 1 → 2)."""
+    """OBS_DRAFT optics from import override stale session/UI ids (equipment 1 -> 2)."""
     db = MagicMock()
     db.fetch_obs_draft_by_id.return_value = {
         "ID_EQUIPMENTS": 2,

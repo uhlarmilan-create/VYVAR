@@ -73,7 +73,7 @@ def _slope_mmag_per_hour(time_days: np.ndarray, mag: np.ndarray) -> float:
     if int(ok.sum()) < 2:
         return float("nan")
     lr = linregress(time_days[ok], mag[ok])
-    # linregress slope is mag per BJD day → mmag per hour
+    # linregress slope is mag per BJD day -> mmag per hour
     return float(lr.slope * 1000.0 / 24.0)
 
 
@@ -219,7 +219,7 @@ def _markdown_table(rows: list[dict[str, object]]) -> str:
             return str(v)
         if isinstance(v, float):
             if not np.isfinite(v):
-                return "—"
+                return "-"
             if abs(v) >= 100:
                 return f"{v:.2f}"
             return f"{v:.3f}"
@@ -257,7 +257,7 @@ def main(argv: list[str] | None = None) -> int:
     rot_df = load_rot_catalog_ids(phot_dir)
     summary_by_cid = rot_df.set_index("catalog_id", drop=False)
 
-    print(f"# TODO-LC-TREND diagnostic — draft_{_parse_draft_id(args.draft):06d}")
+    print(f"# TODO-LC-TREND diagnostic - draft_{_parse_draft_id(args.draft):06d}")
     print(f"Photometry: `{phot_dir}`")
     print(f"ROT candidates (vsx_type contains ROT): **{len(rot_df)}**")
     print(f"Minimum unflagged (`normal`) frames: **{MIN_NORMAL_FRAMES}**")
@@ -322,9 +322,9 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"- `{cid}`"
             + (f" ({name})" if name else "")
-            + f" — am_slope(summary)={ams if np.isfinite(float(ams)) else '—'}, "
-            f"ct_c1(median)={c1 if np.isfinite(float(c1)) else '—'}, "
-            f"ac_correction(median)={ac if np.isfinite(float(ac)) else '—'}"
+            + f" - am_slope(summary)={ams if np.isfinite(float(ams)) else '-'}, "
+            f"ct_c1(median)={c1 if np.isfinite(float(c1)) else '-'}, "
+            f"ac_correction(median)={ac if np.isfinite(float(ac)) else '-'}"
         )
 
     return 0

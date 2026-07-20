@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Cheap smoke test for gated PSF components — draft 364 Luminance_180_2 (read-only data).
+"""Cheap smoke test for gated PSF components - draft 364 Luminance_180_2 (read-only data).
 
 Temporarily toggles config flags, runs minimal checks, restores all flags.
-Does NOT fix bugs — report only.
+Does NOT fix bugs - report only.
 """
 from __future__ import annotations
 
@@ -246,7 +246,7 @@ def _derive_psf_quality(df: pd.DataFrame, fwhm_px: float) -> pd.Series:
 
 
 def _quick_crowded_flags(df: pd.DataFrame, fwhm_px: float, plate_scale: float = 0.389) -> pd.Series:
-    """Proxy crowded: nearest neighbour within 2×FWHM in px."""
+    """Proxy crowded: nearest neighbour within 2xFWHM in px."""
     x = df["x"].to_numpy(dtype=float)
     y = df["y"].to_numpy(dtype=float)
     iso_r = 2.0 * fwhm_px
@@ -350,7 +350,7 @@ def main() -> None:
 
     results: dict[str, Any] = {"draft": DRAFT_ID, "setup": SETUP, "fwhm_px": fwhm_px}
 
-    # B1 — Grouper ON
+    # B1 - Grouper ON
     print("=== B1 GROUPER SMOKE ===", flush=True)
     _set_flags(psf_grouper_enabled=True)
     cfg = AppConfig()
@@ -359,7 +359,7 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         results["grouper"] = {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}
 
-    # B2 — Gridded ePSF ON
+    # B2 - Gridded ePSF ON
     print("=== B2 GRIDDED ePSF SMOKE ===", flush=True)
     _set_flags(psf_spatial_enabled=True)
     cfg = AppConfig()
@@ -368,7 +368,7 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         results["gridded"] = {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}
 
-    # B3 — Adaptive ON (needs psf columns; uses proc CSVs directly)
+    # B3 - Adaptive ON (needs psf columns; uses proc CSVs directly)
     print("=== B3 ADAPTIVE SMOKE ===", flush=True)
     _set_flags(psf_adaptive_enabled=True, psf_photometry_enabled=True)
     cfg = AppConfig()

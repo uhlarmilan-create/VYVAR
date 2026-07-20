@@ -1,4 +1,4 @@
-# VYVAR — Check-star Selection Hardening Spec (CS-2 / CS-3 / CS-4)
+# VYVAR - Check-star Selection Hardening Spec (CS-2 / CS-3 / CS-4)
 
 Scope: fix how the **check star is selected** in `check_star_kmag.py:select_check_star`. The
 gate (scatter thresholds) was hardened separately; this spec makes sure the star being gated
@@ -9,18 +9,18 @@ INVARIANTS:
 - **Trust re-baselines** (intended).
 - English/ASCII only.
 
-## CS-3 (PRIORITY) — ensemble exclusion
+## CS-3 (PRIORITY) - ensemble exclusion
 
 Pass `ensemble_ids: set[str]` from Phase-2A `ensemble_member_ids()` at call sites. Never
 select an ensemble member as check star. If fewer than `n_comp_min` independent candidates
 remain -> `None`.
 
-## CS-2 — artefact floor
+## CS-2 - artefact floor
 
 Config `check_select_rms_floor` (default `1e-4`); also `0.1 * median(comp_rms)` of pool.
 Drop candidates at/below floor before sorting.
 
-## CS-4 — crowding (when metric present)
+## CS-4 - crowding (when metric present)
 
 If `contamination_idx` in comp_df, exclude above `aperture_correction_max_contamination`.
 Otherwise deferred.

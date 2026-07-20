@@ -53,7 +53,7 @@ def main() -> int:
     for cid in TARGETS:
         r = summ[summ["catalog_id"].astype(str).str.strip() == cid]
         if r.empty:
-            print(f"| {cid} | — | — | — | — | — |")
+            print(f"| {cid} | - | - | - | - | - |")
             continue
         row = r.iloc[0]
         mb = float(row.get("mag_median_pre_gs11", float("nan")))

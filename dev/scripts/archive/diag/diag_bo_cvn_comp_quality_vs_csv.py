@@ -21,7 +21,7 @@ def main() -> None:
     json_path = phot_dir / "lightcurves" / f"comp_quality_{bo_cid}.json"
     if json_path.exists():
         data = json.loads(json_path.read_text(encoding="utf-8"))
-        _print_safe(f"comp_quality JSON — keys: {list(data.keys())[:5]}")
+        _print_safe(f"comp_quality JSON - keys: {list(data.keys())[:5]}")
         _print_safe(f"Count items in JSON: {len(data)}")
         for i, (k, v) in enumerate(data.items()):
             if i >= 5:

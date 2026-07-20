@@ -66,7 +66,7 @@ def test_astrometry_multi_group_all_fail_raises(tmp_path: Path, monkeypatch):
 
     monkeypatch.setattr(pl, "_astrometry_align_impl_body", _always_fail)
 
-    with pytest.raises(RuntimeError, match="žiadny set neprešiel"):
+    with pytest.raises(RuntimeError, match="ziadny set nepresiel"):
         pl.astrometry_align_and_build_masterstar(archive_path=ap)
 
 

@@ -173,7 +173,7 @@ def _verdict(radial: pd.DataFrame, pa_test: dict, snr_bins: pd.DataFrame) -> str
         if math.isfinite(slope) and slope >= 0.04:
             parts.append("OPTICS (elongation rises with radius)")
         elif math.isfinite(slope) and slope <= -0.04:
-            parts.append("OPTICS (elongation falls with radius — possible edge/corner)")
+            parts.append("OPTICS (elongation falls with radius - possible edge/corner)")
     fr = pa_test.get("frac_near_radial_0_15_or_75_90", 0)
     ft = pa_test.get("frac_near_tangential_35_55", 0)
     if fr > 0.35 and fr > ft + 0.1:
@@ -181,11 +181,11 @@ def _verdict(radial: pd.DataFrame, pa_test: dict, snr_bins: pd.DataFrame) -> str
     elif ft > 0.35:
         parts.append("OPTICS (PA tangential preference)")
     elif pa_test.get("folded_median_deg", 90) < 25 and fr < 0.25:
-        parts.append("MOUNT/ALIGNMENT (PA vs azimuth flat — uniform smear direction)")
+        parts.append("MOUNT/ALIGNMENT (PA vs azimuth flat - uniform smear direction)")
     if not snr_bins.empty and len(snr_bins) >= 2:
         e = snr_bins["elong_median"].to_numpy(dtype=float)
         if np.all(np.isfinite(e)) and e[0] - e[-1] >= 0.05:
-            parts.append("BIAS-FLOOR (elongation→1 at high SNR)")
+            parts.append("BIAS-FLOOR (elongation->1 at high SNR)")
         elif np.all(np.isfinite(e)) and e[-1] >= 1.08 and e[0] <= 1.05:
             parts.append("no SNR bias floor (elongation stays elevated at high SNR)")
     if not parts:

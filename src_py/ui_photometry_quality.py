@@ -29,11 +29,11 @@ def _platesolve_dir_with_comparison(archive: Path) -> Path:
 def _read_csv_cached(path: str) -> pd.DataFrame:
     return pd.read_csv(
         path,
-        dtype={"catalog_id": str, "name": str},  # Gaia ID musí byť str — float64 stráca cifry
+        dtype={"catalog_id": str, "name": str},  # Gaia ID musi byt str - float64 straca cifry
     )
 
 
-@st.cache_data(show_spinner="Loading MASTERSTAR.fits…")
+@st.cache_data(show_spinner="Loading MASTERSTAR.fits...")
 def _read_fits_image_cached(path: str) -> tuple[np.ndarray, dict[str, Any]]:
     from astropy.io import fits
 
@@ -119,7 +119,7 @@ def render_photometry_quality_diagnostic(*, pipeline: Any, draft_id: int | None)
         sat0 = float(pd.to_numeric(ms.get("saturate_limit_adu_85pct", pd.Series([np.nan])), errors="coerce").dropna().median()) if "saturate_limit_adu_85pct" in ms.columns else float("nan")
         sat_default = sat0 if math.isfinite(sat0) else float(pd.to_numeric(ms.get("saturate_limit_adu", pd.Series([65535.0])), errors="coerce").dropna().median() * 0.85) if "saturate_limit_adu" in ms.columns else 55000.0
         sat_thresh = st.slider(
-            "Saturate threshold (ADU) — live test",
+            "Saturate threshold (ADU) - live test",
             min_value=0.0,
             max_value=float(max(1.0, float(pd.to_numeric(ms.get("peak_max_adu", pd.Series([sat_default])), errors="coerce").max() or sat_default) * 1.1)),
             value=float(max(0.0, sat_default)),
@@ -127,7 +127,7 @@ def render_photometry_quality_diagnostic(*, pipeline: Any, draft_id: int | None)
         )
 
     # --- Section 1: MASTERSTAR saturation visualization ---
-    st.markdown("## MASTERSTAR saturation — visualization")
+    st.markdown("## MASTERSTAR saturation - visualization")
 
     fits_path = st.text_input(
         "Background FITS file (optional)",
@@ -229,14 +229,14 @@ def render_photometry_quality_diagnostic(*, pipeline: Any, draft_id: int | None)
 
     st.image(
         im,
-        caption=f"{bg_fits_path.name} + zones overlay (scx×{scx:.4f}, scy×{scy:.4f})",
+        caption=f"{bg_fits_path.name} + zones overlay (scxx{scx:.4f}, scyx{scy:.4f})",
         width="stretch",
     )
 
     # --- Section 2: Histogram peak_max_adu ---
     st.markdown("## Histogram peak_max_adu")
     if "peak_max_adu" not in ms_xy.columns:
-        st.info("`peak_max_adu` is not in MASTERSTAR CSV — histogram skipped.")
+        st.info("`peak_max_adu` is not in MASTERSTAR CSV - histogram skipped.")
     else:
         pk = pd.to_numeric(ms_xy["peak_max_adu"], errors="coerce")
         fig_h = go.Figure()

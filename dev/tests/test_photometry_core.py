@@ -1,5 +1,5 @@
 """
-Unit tests for photometry_core.py — physical correctness validation.
+Unit tests for photometry_core.py - physical correctness validation.
 Run with: python -m pytest tests/test_photometry_core.py -v
 """
 
@@ -12,7 +12,7 @@ import pytest
 
 
 # ---------------------------------------------------------------------------
-# Test 1 — Howell (1989) CCD equation
+# Test 1 - Howell (1989) CCD equation
 # ---------------------------------------------------------------------------
 def test_snr_formula_howell1989():
     """
@@ -30,7 +30,7 @@ def test_snr_formula_howell1989():
 
     err = _photometric_error(flux, sky, area, gain, rn)
 
-    # manual calculation — relative flux error sqrt(variance) / flux
+    # manual calculation - relative flux error sqrt(variance) / flux
     variance = flux / gain + sky / gain * area + (rn / gain) ** 2 * area
     expected_err = math.sqrt(variance) / flux
 
@@ -60,11 +60,11 @@ def test_snr_sky_dominated():
 
 
 # ---------------------------------------------------------------------------
-# Test 2 — Broeg (2005) inverse-variance weights
+# Test 2 - Broeg (2005) inverse-variance weights
 # ---------------------------------------------------------------------------
 def test_broeg_weights_inverse_variance():
     """
-    Broeg (2005) AN 326:134 — weights w_i = 1/sigma_i^2.
+    Broeg (2005) AN 326:134 - weights w_i = 1/sigma_i^2.
     Better comp star (lower RMS) must get higher weight.
     """
     # simulate comp_weight calculation as in ensemble_normalize()
@@ -90,11 +90,11 @@ def test_broeg_equal_comps():
 
 
 # ---------------------------------------------------------------------------
-# Test 3 — Sky subtraction
+# Test 3 - Sky subtraction
 # ---------------------------------------------------------------------------
 def test_sky_subtraction_formula():
     """
-    dao_flux = aperture_sum - sky_pp * area  (Howell 1989 §2)
+    dao_flux = aperture_sum - sky_pp * area  (Howell 1989 S2)
     Net flux must equal gross minus sky contribution.
     """
     # draft_310 sky level; gross high enough for positive net (bright star)
@@ -120,12 +120,12 @@ def test_sky_subtraction_negative_net():
 
 
 # ---------------------------------------------------------------------------
-# Test 4 — ZP MAD sigma-clip (Stetson 1987)
+# Test 4 - ZP MAD sigma-clip (Stetson 1987)
 # ---------------------------------------------------------------------------
 def test_zp_sigmaclip_removes_outliers():
     """
     MAD-based 3-sigma clip must remove outliers from ZP residuals.
-    Stetson (1987) PASP 99:191 — iterative outlier rejection.
+    Stetson (1987) PASP 99:191 - iterative outlier rejection.
     """
     zp_residuals = np.array(
         [0.01, -0.01, 0.02, -0.02, 0.015, -0.015, 5.0, -4.5]
@@ -150,12 +150,12 @@ def test_zp_sigmaclip_preserves_good_data():
 
 
 # ---------------------------------------------------------------------------
-# Test 5 — SNR-optimal aperture table
+# Test 5 - SNR-optimal aperture table
 # ---------------------------------------------------------------------------
 def test_snr_aperture_increases_with_flux():
     """
     Brighter stars (higher flux) need larger optimal aperture.
-    Howell (1989) §3 — r_opt grows with flux in photon-noise regime.
+    Howell (1989) S3 - r_opt grows with flux in photon-noise regime.
     """
     from photometry_core import compute_snr_optimal_aperture_table
 
@@ -173,7 +173,7 @@ def test_snr_aperture_increases_with_flux():
         "Brighter stars need larger or equal optimal aperture"
     )
 
-    # high sky → smaller optimal aperture (minimize sky noise)
+    # high sky -> smaller optimal aperture (minimize sky noise)
     r_faint_12_lowsky = table_bright["table"][12.0]
     r_faint_12_highsky = table_faint["table"][12.0]
     assert r_faint_12_highsky <= r_faint_12_lowsky, (
@@ -200,7 +200,7 @@ def test_snr_aperture_within_bounds():
 
 
 # ---------------------------------------------------------------------------
-# Color term — BP-RP extrapolation guard
+# Color term - BP-RP extrapolation guard
 # ---------------------------------------------------------------------------
 def test_color_term_extrapolation_in_range():
     from photometry_core import _check_color_term_extrapolation
@@ -226,7 +226,7 @@ def test_color_term_extrapolation_tolerance():
 
 
 def test_color_term_extrapolation_fallback_preserves_mag():
-    """Out-of-range → apply_color_term not used; magnitudes unchanged."""
+    """Out-of-range -> apply_color_term not used; magnitudes unchanged."""
     import numpy as np
 
     from photometry_core import (
@@ -290,7 +290,7 @@ def test_should_apply_color_term_osc_aavso_broadband(filter_name: str, expected_
     )
     assert apply is expected_apply
     if expected_apply:
-        assert "aplikovaný" in reason.lower() or "CT" in reason
+        assert "aplikovany" in reason.lower() or "CT" in reason
 
 
 @pytest.mark.parametrize(

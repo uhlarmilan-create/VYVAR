@@ -1,5 +1,5 @@
 """
-VYVAR Smoke Test — draft_000283 border filter + proximity veto
+VYVAR Smoke Test - draft_000283 border filter + proximity veto
 Run: python scripts/smoke_test_draft283.py
 """
 
@@ -14,9 +14,9 @@ PLAN = PLATESOLVE / "photometry_plan.json"
 COMP_CSV = PLATESOLVE / "comparison_stars.csv"
 ALIGNED_DIR = DRAFT / "detrended_aligned" / "lights" / "NoFilter_60_2"
 
-OK = "✅"
-FAIL = "❌"
-WARN = "⚠️"
+OK = "[OK]"
+FAIL = "[X]"
+WARN = "!"
 
 errors = 0
 
@@ -34,7 +34,7 @@ def warn(label, detail=""):
     print(f"  {WARN} {label}{': ' + detail if detail else ''}")
 
 
-print("\n=== VYVAR Smoke Test — draft_000283 ===\n")
+print("\n=== VYVAR Smoke Test - draft_000283 ===\n")
 
 # 1. photometry_plan.json exists
 print("[1] photometry_plan.json")
@@ -49,7 +49,7 @@ if PLAN.exists():
     check(
         "safe_bbox_px present",
         safe_bbox is not None,
-        "border filter did not compute bbox — RAM flush timing still broken?",
+        "border filter did not compute bbox - RAM flush timing still broken?",
     )
 
     if safe_bbox is not None:
@@ -58,7 +58,7 @@ if PLAN.exists():
         check(
             "safe_bbox not full frame (filter applied)",
             x0 > 0 or y0 > 0 or x1 < 2082 or y1 < 1397,
-            f"bbox = {safe_bbox} — looks like no shrinkage was applied",
+            f"bbox = {safe_bbox} - looks like no shrinkage was applied",
         )
         print(f"       safe_bbox_px = {safe_bbox}")
         print(f"       safe_bbox_r_out_px = {r_out}")
@@ -71,8 +71,8 @@ check("Aligned dir exists", ALIGNED_DIR.exists())
 check("At least 100 aligned frames", len(aligned) >= 100, f"found {len(aligned)}")
 
 
-# 3. comparison_stars.csv — no star outside safe_bbox
-print("\n[3] comparison_stars.csv — border filter applied")
+# 3. comparison_stars.csv - no star outside safe_bbox
+print("\n[3] comparison_stars.csv - border filter applied")
 check("File exists", COMP_CSV.exists())
 
 if COMP_CSV.exists() and safe_bbox is not None:
@@ -94,8 +94,8 @@ if COMP_CSV.exists() and safe_bbox is not None:
     check("No comp stars outside safe_bbox", len(outside) == 0, f"{len(outside)} stars outside bbox: {outside[:3]}")
 
 
-# 4. proximity veto — check comparison_stars has no VSX targets
-print("\n[4] Proximity veto — comp ∩ variable_targets")
+# 4. proximity veto - check comparison_stars has no VSX targets
+print("\n[4] Proximity veto - comp intersect variable_targets")
 VAR_CSV = PLATESOLVE / "variable_targets.csv"
 
 if COMP_CSV.exists() and VAR_CSV.exists():

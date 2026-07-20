@@ -126,8 +126,8 @@ from vyvar_platesolver import (
 )
 import itertools
 
-# Aperturná fotometria Fáz 0–2A (active_targets.csv, zone_flag, skip_photometry) je v ``photometry_core``
-# — ``run_phase0_and_phase1`` / ``run_phase2a``, nie v tomto súbore.
+# Aperturna fotometria Faz 0-2A (active_targets.csv, zone_flag, skip_photometry) je v ``photometry_core``
+# - ``run_phase0_and_phase1`` / ``run_phase2a``, nie v tomto subore.
 
 _EPSF_SKIP_LOGGED: set[str] = set()
 
@@ -151,7 +151,7 @@ def _photometry_mode_run_flags(
             if _ps_key not in _EPSF_SKIP_LOGGED:
                 _EPSF_SKIP_LOGGED.add(_ps_key)
                 logging.getLogger("pipeline").info(
-                    "photometry_mode includes epsf but no ePSF model found at %s — skipping PSF photometry",
+                    "photometry_mode includes epsf but no ePSF model found at %s - skipping PSF photometry",
                     _epsf_fits,
                 )
             _run_epsf = False
@@ -250,7 +250,7 @@ def _fits_header_vy_algn_aligned(hdr: fits.Header) -> bool:
     try:
         val = hdr.get("VY_ALGN")
         if val is None:
-            return True  # legacy frames without tag — keep pixel-fallback behaviour
+            return True  # legacy frames without tag - keep pixel-fallback behaviour
         if isinstance(val, tuple):
             val = val[0]
         if isinstance(val, bool):
@@ -286,7 +286,7 @@ def _frame_gain_readnoise_for_error_map(
 
 
 def _per_frame_noise_error_map(data: Any, hdr: fits.Header, *, db: VyvarDatabase | None, equipment_id: int | None):
-    """Per-pixel noise σ for CCD-like error: sqrt(max(data,0)/gain + readnoise²)."""
+    """Per-pixel noise sigma for CCD-like error: sqrt(max(data,0)/gain + readnoise^2)."""
     import numpy as np
 
     gain, rn = _frame_gain_readnoise_for_error_map(hdr, db=db, equipment_id=equipment_id)
@@ -581,7 +581,7 @@ def _fill_psf_catalog_columns(
         if "psf_fit_ok" not in df.columns:
             df["psf_fit_ok"] = False
 
-    # ── Moffat PSF fit (Step 1 of two-step ePSF pipeline only) ─────────────────
+    # -- Moffat PSF fit (Step 1 of two-step ePSF pipeline only) -----------------
     if _run_epsf:
         try:
             from config import AppConfig
@@ -676,7 +676,7 @@ def _fill_psf_catalog_columns(
                         .drop(columns=["_cid_key"])
                     )
             else:
-                LOGGER.debug("[PSF] Moffat skipped — no stars selected for fit")
+                LOGGER.debug("[PSF] Moffat skipped - no stars selected for fit")
         except Exception as _mex:  # noqa: BLE001
             log_event(f"Moffat PSF fit error (non-fatal): {_mex}")
 
@@ -803,7 +803,7 @@ def _cal_diag_export_for_workers(session: CalDiagSession) -> dict[str, Any] | No
     return session.json_export()
 
 
-# ``_calibrate_one_light_*``: explicit ``None`` = read master FITS; omit param = library default (1×1).
+# ``_calibrate_one_light_*``: explicit ``None`` = read master FITS; omit param = library default (1x1).
 _CALIB_MASTER_NB_UNSET = object()
 
 
@@ -819,9 +819,9 @@ def _log_calibration_io_preflight(
         probe = calibrated_root / ".vyvar_write_probe"
         probe.write_text("ok", encoding="ascii")
         probe.unlink(missing_ok=True)
-        log_event(f"Kalibrácia — zápis OK: {calibrated_root.resolve()}")
+        log_event(f"Kalibracia - zapis OK: {calibrated_root.resolve()}")
     except OSError as exc:
-        log_event(f"Kalibrácia — CHÝBA PRÁVO ZÁPISU (calibrated): {calibrated_root.resolve()} → {exc}")
+        log_event(f"Kalibracia - CHYBA PRAVO ZAPISU (calibrated): {calibrated_root.resolve()} -> {exc}")
 
     if master_dark_path is not None:
         md = Path(master_dark_path)
@@ -829,18 +829,18 @@ def _log_calibration_io_preflight(
         ok = md_r.is_file()
         log_event(f"MasterDark: {md_r} (exists={ok})")
         if not ok:
-            log_event("MasterDark: súbor neexistuje — dark sa neaplikuje (flat-only / copy-only podľa nastavenia).")
+            log_event("MasterDark: subor neexistuje - dark sa neaplikuje (flat-only / copy-only podla nastavenia).")
 
     for fk, fp in sorted((masterflat_by_filter or {}).items(), key=lambda x: str(x[0])):
         if fp is None:
-            log_event(f"MasterFlat[{fk!r}]: (žiadna cesta)")
+            log_event(f"MasterFlat[{fk!r}]: (ziadna cesta)")
             continue
         p = Path(fp)
         pr = p.resolve()
         ok = pr.is_file()
         log_event(f"MasterFlat[{fk!r}]: {pr} (exists={ok})")
         if not ok:
-            log_event(f"MasterFlat[{fk!r}]: súbor neexistuje — pre tento filter sa flat neaplikuje.")
+            log_event(f"MasterFlat[{fk!r}]: subor neexistuje - pre tento filter sa flat neaplikuje.")
 
 # Public aliases (historically some callers used ``pipeline.parse_user_*`` / ``pointing_hint_from_header``).
 pointing_hint_from_header = _pointing_hint_from_header
@@ -906,8 +906,8 @@ def _assert_alignment_produced_fits(aligned_root: Path) -> None:
     n = len(_iter_fits_recursive(aligned_root))
     if n == 0:
         raise RuntimeError(
-            "Alignment zlyhal - nenašli sa žiadne výstupné súbory! "
-            f"(žiadne FITS v {aligned_root.resolve()} vrátane podadresárov.)"
+            "Alignment zlyhal - nenasli sa ziadne vystupne subory! "
+            f"(ziadne FITS v {aligned_root.resolve()} vratane podadresarov.)"
         )
 
 
@@ -976,18 +976,18 @@ def log_lights_binning_from_headers_preflight(
     counts: dict[tuple[int, int], int] = summary.get("counts") or {}
     if not counts:
         if int(summary.get("errors") or 0) > 0:
-            log_event(f"{context} — binning z hlavičiek: nepodarilo sa prečítať žiadny FITS.")
+            log_event(f"{context} - binning z hlaviciek: nepodarilo sa precitat ziadny FITS.")
         return None
-    log_event(f"{context} — binning z hlavičiek FITS ({len(paths)} súborov):")
+    log_event(f"{context} - binning z hlaviciek FITS ({len(paths)} suborov):")
     samples: dict[tuple[int, int], Path] = summary.get("samples") or {}
     for (xb, yb), n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
         sample = samples.get((xb, yb))
         sn = sample.name if sample is not None else "?"
-        log_event(f"  {xb}×{yb}: {n}× (príklad: {sn})")
+        log_event(f"  {xb}x{yb}: {n}x (priklad: {sn})")
     if len(counts) > 1:
         log_event(
-            f"{context} — POZOR: zmiešané binning režimy v dávke — "
-            "kalibrácia / master match používajú binning z hlavičky každého súboru."
+            f"{context} - POZOR: zmiesane binning rezimy v davke - "
+            "kalibracia / master match pouzivaju binning z hlavicky kazdeho suboru."
         )
     best_key = max(counts.items(), key=lambda kv: kv[1])[0]
     return best_key
@@ -1131,7 +1131,7 @@ def find_qc_metrics_csv(
     draft_id: int | None = None,
     db: VyvarDatabase | None = None,
 ) -> Path | None:
-    """Find ``qc_metrics.csv`` — supports skip-processed (lights root) and legacy processed/."""
+    """Find ``qc_metrics.csv`` - supports skip-processed (lights root) and legacy processed/."""
     from draft_provenance import draft_archive_root, resolve_draft_lights_root
 
     ap = draft_archive_root(Path(archive_path).expanduser())
@@ -1204,7 +1204,7 @@ def resolve_masterstar_input_root(
     fall back to the draft lights root (``calibrated/lights`` or ``non_calibrated/lights``).
     When ``skip_processed_directory`` is True, use the draft lights root only.
 
-    When ``setup_name`` is explicitly provided, only that subdir is considered — no cross-group scan.
+    When ``setup_name`` is explicitly provided, only that subdir is considered - no cross-group scan.
     Returns ``None`` when the requested setup is missing/empty (multi-group safe).
     """
     from draft_provenance import draft_archive_root, resolve_draft_lights_root
@@ -1360,8 +1360,8 @@ def _dao_star_table_mean_elongation(tbl: Any) -> float | None:
     try:
         if "sharpness" not in tbl.colnames:
             return None
-        # DAOStarFinder nemá priamu elongation — odvodíme z roundness1/roundness2.
-        # elongation ≈ 1 + hypot(roundness1, roundness2)
+        # DAOStarFinder nema priamu elongation - odvodime z roundness1/roundness2.
+        # elongation ~ 1 + hypot(roundness1, roundness2)
         if "roundness1" not in tbl.colnames or "roundness2" not in tbl.colnames:
             return None
         r1 = np.asarray(tbl["roundness1"], dtype=np.float64)
@@ -1523,7 +1523,7 @@ def resolve_preprocess_target_coordinates(
     """Resolve preprocess target coordinates with DB-first priority.
 
     Priority:
-    1) ``OBS_DRAFT.CENTEROFFIELDRA/DE`` (finite pair; **0/0** sa považuje za nevyplnené — pokračuje sa ďalej)
+    1) ``OBS_DRAFT.CENTEROFFIELDRA/DE`` (finite pair; **0/0** sa povazuje za nevyplnene - pokracuje sa dalej)
     2) UI values
     3) median RA/DE from draft light rows
     """
@@ -1542,7 +1542,7 @@ def resolve_preprocess_target_coordinates(
                         )
                         return float(ra_f), float(de_f)
                     log_event(
-                        "DEBUG: OBS_DRAFT center is 0/0 — beriem ako nevyplnené; skúšam UI, potom medián z OBS_FILES."
+                        "DEBUG: OBS_DRAFT center is 0/0 - beriem ako nevyplnene; skusam UI, potom median z OBS_FILES."
                     )
         except Exception:  # noqa: BLE001
             pass
@@ -1571,7 +1571,7 @@ def resolve_preprocess_target_coordinates(
 
 
 def _estimate_fov_deg_from_header(hdr: fits.Header) -> float | None:
-    """Rough field diameter in degrees from WCS pixel scale × ``NAXIS*`` (fallback when CDELT missing)."""
+    """Rough field diameter in degrees from WCS pixel scale x ``NAXIS*`` (fallback when CDELT missing)."""
     try:
         n1 = int(hdr.get("NAXIS1", 0) or 0)
         n2 = int(hdr.get("NAXIS2", 0) or 0)
@@ -1617,7 +1617,7 @@ def _icrs_offset_arcmin(
     ref_ra_deg: float,
     ref_de_deg: float,
 ) -> float:
-    """Small-angle offset from reference (degrees → arcminutes): sqrt((ΔRA·cos δ)² + Δδ²)·60."""
+    """Small-angle offset from reference (degrees -> arcminutes): sqrt((DeltaRA.cos delta)^2 + Deltadelta^2).60."""
     dra = (float(ra_deg) - float(ref_ra_deg) + 180.0) % 360.0 - 180.0
     dde = float(de_deg) - float(ref_de_deg)
     cos_dec = math.cos(math.radians(float(ref_de_deg)))
@@ -1742,13 +1742,13 @@ def run_quality_analysis(
     progress_cb: Callable[[int, int, str], None] | None = None,
     roundness_reject_above: float | None = None,
 ) -> dict[str, Any]:
-    """Per-draft light: DAO metrics → ``OBS_FILES``; FWHM ×1.5 and optional DAO roundness auto-reject.
+    """Per-draft light: DAO metrics -> ``OBS_FILES``; FWHM x1.5 and optional DAO roundness auto-reject.
 
     When Streamlit is available, updates ``st.session_state`` keys ``fwhm_threshold``, ``center_ra``,
     ``center_de`` from computed medians (same as RAM QC path).
 
-    The Quality Dashboard assigns ``frame_index`` 1…N in the same order as
-    :meth:`VyvarDatabase.fetch_draft_light_rows_for_quality` (stable table ↔ plot alignment).
+    The Quality Dashboard assigns ``frame_index`` 1...N in the same order as
+    :meth:`VyvarDatabase.fetch_draft_light_rows_for_quality` (stable table <-> plot alignment).
 
     After metrics, :func:`sync_obs_files_drift_arcmin_for_draft` fills ``DRIFT`` / ``DRIFT_DRA`` / ``DRIFT_DDE``.
     """
@@ -2009,7 +2009,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
     progress_cb: Callable[[int, int, str], None] | None = None,
     roundness_reject_above: float | None = None,
 ) -> dict[str, Any]:
-    """Calibrate each draft light **in RAM only**, DAO metrics → ``OBS_FILES``; FWHM ×1.5 and optional roundness reject.
+    """Calibrate each draft light **in RAM only**, DAO metrics -> ``OBS_FILES``; FWHM x1.5 and optional roundness reject.
 
     No calibrated FITS are written. Uses the same master selection rules as :func:`calibrate_lights_to_calibrated`.
     After QC, :func:`sync_obs_files_drift_arcmin_for_draft` writes ``DRIFT`` / ``DRIFT_DRA`` / ``DRIFT_DDE``.
@@ -2299,7 +2299,7 @@ def calibrated_paths_for_draft_apply_filters(
 ) -> tuple[list[Path], list[Path]]:
     """Calibrated FITS paths that pass QC: ``IS_REJECTED`` 0/NULL + optional ``FWHM`` cap.
 
-    When ``fwhm_max_px`` ≤ 0, no FWHM filter (still excludes manual reject).
+    When ``fwhm_max_px`` <= 0, no FWHM filter (still excludes manual reject).
     When ``fwhm_max_px`` > 0, rows with finite ``FWHM`` > max are excluded.
     Rows with missing ``FWHM`` (NULL/NaN) are kept.
 
@@ -2308,7 +2308,7 @@ def calibrated_paths_for_draft_apply_filters(
     ap = Path(archive_path).expanduser()
     fwhm_limit = fwhm_max_px
     log_event(
-        f"DEBUG: Hľadám súbory pre Draft {draft_id} s FWHM <= {fwhm_limit}"
+        f"DEBUG: Hladam subory pre Draft {draft_id} s FWHM <= {fwhm_limit}"
     )
     db.conn.execute(
         "UPDATE OBS_FILES SET IS_REJECTED = 0 WHERE DRAFT_ID = ?;",
@@ -2463,7 +2463,7 @@ def format_memory_bytes(n: float | int) -> str:
     try:
         x = float(n)
     except (TypeError, ValueError):
-        return "—"
+        return "-"
     if not math.isfinite(x) or x <= 0:
         return "0 B"
     for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
@@ -2544,7 +2544,7 @@ def estimate_memory_from_fits_headers(
 def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
     """Rough RAM hints for QC analyze and optional platesolve ``ram_align_and_catalog`` (header-only scan).
 
-    **QC analyze** is sequential: peak is a few× the largest single frame (QC temps).
+    **QC analyze** is sequential: peak is a fewx the largest single frame (QC temps).
 
     **RAM handoff** (after detrending) holds ~one float32 copy per successfully aligned frame in memory
     before flush; add a margin for align-time temporaries (reference + source + aligned).
@@ -2554,13 +2554,13 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
     out: dict[str, Any] = {
         "archive_path": str(ap),
         "available_ram_bytes": avail,
-        "available_ram_human": format_memory_bytes(avail) if avail is not None else "neznáme (nainštaluj ``psutil``)",
+        "available_ram_human": format_memory_bytes(avail) if avail is not None else "nezname (nainstaluj ``psutil``)",
         "available_ram_source": avail_src,
         "qc_analyze": None,
         "platesolve_ram_handoff": None,
         "notes_sk": (
-            "Odhad z hlavičiek FITS (NAXIS*), predpoklad práce vo float32. Skutočná spotreba závisí od OS, "
-            "Streamlit a ďalších knižníc. Po preprocess ešte pribudnú dočasné polia pri detrendingu."
+            "Odhad z hlaviciek FITS (NAXIS*), predpoklad prace vo float32. Skutocna spotreba zavisi od OS, "
+            "Streamlit a dalsich kniznic. Po preprocess este pribudnu docasne polia pri detrendingu."
         ),
     }
 
@@ -2576,7 +2576,7 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
     if cal.is_dir():
         cfiles = _iter_light_fits(cal)
         st = estimate_memory_from_fits_headers(cfiles)
-        # Working set: jeden snímok načítaný + QC (hrubý faktor)
+        # Working set: jeden snimok nacitany + QC (hruby faktor)
         qc_factor = 6.0
         peak_qc = int(float(st["bytes_float32_max_frame"]) * qc_factor)
         out["qc_analyze"] = {
@@ -2584,7 +2584,7 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
             "estimated_peak_bytes_sequential": peak_qc,
             "estimated_peak_human": format_memory_bytes(peak_qc),
             "explanation_sk": (
-                f"Sekvenčné spracovanie ~{st['n_files']} snímok; špička RAM ≈ {qc_factor:.0f}× najväčší snímok "
+                f"Sekvencne spracovanie ~{st['n_files']} snimok; spicka RAM ~ {qc_factor:.0f}x najvacsi snimok "
                 f"({format_memory_bytes(st['bytes_float32_max_frame'])} float32) pri analyze."
             ),
         }
@@ -2596,9 +2596,9 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
         n = int(st2["n_files"])
         med_b = int(st2["bytes_float32_median_frame"])
         max_b = int(st2["bytes_float32_max_frame"])
-        # Buffer: jedna kópia zarovnaného float32 na úspešný snímok (horný odhad = všetky vstupy zarovnané)
+        # Buffer: jedna kopia zarovnaneho float32 na uspesny snimok (horny odhad = vsetky vstupy zarovnane)
         buffer_est = med_b * max(0, n)
-        # Počas astroalign: ref + src + aligned chvíľu naraz
+        # Pocas astroalign: ref + src + aligned chvilu naraz
         align_spike = max_b * 3
         total_conservative = buffer_est + align_spike
         out["platesolve_ram_handoff"] = {
@@ -2610,8 +2610,8 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
             "estimated_total_conservative_bytes": total_conservative,
             "estimated_total_conservative_human": format_memory_bytes(total_conservative),
             "explanation_sk": (
-                f"Režim „zarovnanie + katalóg v RAM“: drží ~{n} snímok × ~{format_memory_bytes(med_b)} "
-                f"(medián) + krátkodobá špička pri zarovnaní. Ak je to viac než voľná RAM, vypni RAM handoff."
+                f"Rezim 'zarovnanie + katalog v RAM': drzi ~{n} snimok x ~{format_memory_bytes(med_b)} "
+                f"(median) + kratkodoba spicka pri zarovnani. Ak je to viac nez volna RAM, vypni RAM handoff."
             ),
         }
 
@@ -2668,7 +2668,7 @@ def _pick_preferred_masterstar_basename_hit(
     *,
     pre_calibrated: bool = False,
 ) -> Path | None:
-    """Pri viacerých zhodách basename zvoľ radšej ``proc_*.fits`` (spracovaný snímok)."""
+    """Pri viacerych zhodach basename zvol radsej ``proc_*.fits`` (spracovany snimok)."""
     if not hits:
         return None
     clean = [
@@ -2697,7 +2697,7 @@ def _header_vy_fwhm_px(hdr: fits.Header | None) -> float | None:
 
 
 def _obs_fwhm_basename_map_from_db(db: VyvarDatabase, draft_id: int) -> dict[str, float]:
-    """Map ``basename.casefold()`` → FWHM from ``OBS_FILES`` for draft lights (last row wins per name)."""
+    """Map ``basename.casefold()`` -> FWHM from ``OBS_FILES`` for draft lights (last row wins per name)."""
     out: dict[str, float] = {}
     for row in db.fetch_draft_light_rows_for_quality(int(draft_id)):
         try:
@@ -2724,7 +2724,7 @@ def _sort_masterstar_paths_by_fwhm(
     *,
     fwhm_by_basename: dict[str, float] | None = None,
 ) -> list[Path]:
-    """Najlepšie prvé: najnižší VY_FWHM (hlavička alebo DB mapa), neznáme na koniec."""
+    """Najlepsie prve: najnizsi VY_FWHM (hlavicka alebo DB mapa), nezname na koniec."""
     _fb = fwhm_by_basename or {}
     scored: list[tuple[float, str, Path]] = []
     for fp in files:
@@ -2750,7 +2750,7 @@ def _sort_masterstar_paths_by_fwhm(
 
 
 def _strip_external_platesolve_header(hdr: fits.Header) -> None:
-    """Drop celestial WCS and common third-party plate-solve keywords (ASTAP, astrometry.net, …).
+    """Drop celestial WCS and common third-party plate-solve keywords (ASTAP, astrometry.net, ...).
 
     VYVAR must establish astrometry via :func:`vyvar_platesolver.solve_wcs_with_local_gaia` only.
     """
@@ -2804,7 +2804,7 @@ def build_masterstar_from_detrended(
             if hit is None or not _path_is_under_tree(root, hit):
                 continue
             if _path_segments_forbidden_for_masterstar_physical_source(hit, **_forbid_kw):
-                log_event(f"MASTERSTAR: mapovanie zahodilo RAW cestu → {hit}")
+                log_event(f"MASTERSTAR: mapovanie zahodilo RAW cestu -> {hit}")
                 continue
             try:
                 rk = str(hit.resolve()).casefold()
@@ -2817,16 +2817,16 @@ def build_masterstar_from_detrended(
         if remapped:
             files = remapped
             log_event(
-                f"MASTERSTAR: výber zlúčený cez best-effort mapovanie ({len(files)} FITS; path filter bol prázdny)."
+                f"MASTERSTAR: vyber zluceny cez best-effort mapovanie ({len(files)} FITS; path filter bol prazdny)."
             )
     if files:
         if only_paths is None:
             _pipeline_ui_info(
-                f"Nájdených {len(files)} súborov v {root} (vrátane podadresárov)."
+                f"Najdenych {len(files)} suborov v {root} (vratane podadresarov)."
             )
         else:
             _pipeline_ui_info(
-                f"Nájdených {len(files)} súborov pre MASTERSTAR v {root} (výber kandidátov; "
+                f"Najdenych {len(files)} suborov pre MASTERSTAR v {root} (vyber kandidatov; "
                 f"v strome {len(all_fits)} FITS celkom)."
             )
     if not files:
@@ -2836,13 +2836,13 @@ def build_masterstar_from_detrended(
             except Exception:  # noqa: BLE001
                 _want = str(only_paths)
             msg = (
-                f"MASTERSTAR: explicitný výber sa nezhoduje so súbormi pod {root}: {_want}"
-                + (" …" if len(list(only_paths)) > 8 else "")
+                f"MASTERSTAR: explicitny vyber sa nezhoduje so subormi pod {root}: {_want}"
+                + (" ..." if len(list(only_paths)) > 8 else "")
             )
             log_event(msg)
             raise FileNotFoundError(msg)
-        # Celý strom (bez filtra kandidátov): deterministický malý batch z disku.
-        log_event("MASTERSTAR: bez filtra kandidátov — beriem prvých N FITS z priečinka.")
+        # Cely strom (bez filtra kandidatov): deterministicky maly batch z disku.
+        log_event("MASTERSTAR: bez filtra kandidatov - beriem prvych N FITS z priecinka.")
         batch = sorted(
             (
                 fp
@@ -2860,18 +2860,18 @@ def build_masterstar_from_detrended(
     if not files:
         if not all_fits:
             msg = (
-                f"Nenašli sa žiadne FITS súbory v {root} (prehľadávaná cesta, vrátane podadresárov)."
+                f"Nenasli sa ziadne FITS subory v {root} (prehladavana cesta, vratane podadresarov)."
             )
         else:
             msg = (
-                f"Žiadne FITS pre MASTERSTAR po výbere kandidátov: {root} obsahuje {len(all_fits)} súbor(ov), "
-                "ale žiadna cesta nezodpovedá výberu z databázy."
+                f"Ziadne FITS pre MASTERSTAR po vybere kandidatov: {root} obsahuje {len(all_fits)} subor(ov), "
+                "ale ziadna cesta nezodpoveda vyberu z databazy."
             )
         _pipeline_ui_info(msg)
         raise FileNotFoundError(msg)
     try:
         _comp_names = [Path(p).name for p in files]
-        log_event(f"📂 MASTERSTAR COMPOSITION: Using [{', '.join(_comp_names)}]")
+        log_event(f"[folder] MASTERSTAR COMPOSITION: Using [{', '.join(_comp_names)}]")
     except Exception:  # noqa: BLE001
         pass
 
@@ -2885,10 +2885,10 @@ def build_masterstar_from_detrended(
         reference_path, **_forbid_kw
     ) or not _path_is_under_tree(root, reference_path):
         raise FileNotFoundError(
-            f"MASTERSTAR: odmietnutý zdroj mimo lights stromu alebo z RAW: {reference_path}"
+            f"MASTERSTAR: odmietnuty zdroj mimo lights stromu alebo z RAW: {reference_path}"
         )
     if not reference_path.exists():
-        log_event(f"❌ MASTERSTAR FAIL: Reference file {reference_path} not found.")
+        log_event(f"[X] MASTERSTAR FAIL: Reference file {reference_path} not found.")
         fallback_hits = [
             x
             for x in _iter_fits_recursive(root)
@@ -2898,7 +2898,7 @@ def build_masterstar_from_detrended(
         ]
         if fallback_hits:
             reference_path = _pick_preferred_masterstar_basename_hit(fallback_hits) or fallback_hits[0]
-            log_event(f"✅ MASTERSTAR fallback reference found: {reference_path}")
+            log_event(f"[OK] MASTERSTAR fallback reference found: {reference_path}")
         else:
             raise FileNotFoundError(f"MASTERSTAR reference file not found: {reference_path}")
 
@@ -2918,20 +2918,20 @@ def build_masterstar_from_detrended(
             _d0 = hdul0[0].data
             _sh = getattr(_d0, "shape", None)
             if _d0 is None or _sh is None or len(_sh) != 2:
-                raise ValueError("MASTERSTAR: referenčný FITS nie je platný 2D primary.")
+                raise ValueError("MASTERSTAR: referencny FITS nie je platny 2D primary.")
     except ValueError:
         raise
     except Exception as exc:  # noqa: BLE001
-        raise ValueError(f"MASTERSTAR: neviem načítať referenčný FITS: {exc}") from exc
+        raise ValueError(f"MASTERSTAR: neviem nacitat referencny FITS: {exc}") from exc
 
     shutil.copy2(reference_path, output_fits)
     if len(files) <= 1:
-        _ms_pick_msg = "jediný kandidát"
+        _ms_pick_msg = "jediny kandidat"
     else:
-        _ms_pick_msg = f"kandidátov {len(files)}; najlepší podľa VY_FWHM"
-    log_event(f"MASTERSTAR: čistá kópia → {output_fits} (zdroj {reference_path.name}, {_ms_pick_msg}).")
+        _ms_pick_msg = f"kandidatov {len(files)}; najlepsi podla VY_FWHM"
+    log_event(f"MASTERSTAR: cista kopia -> {output_fits} (zdroj {reference_path.name}, {_ms_pick_msg}).")
 
-    # Auto FWHM: médian VY_FWHM zo všetkých processed FITS v root sade
+    # Auto FWHM: median VY_FWHM zo vsetkych processed FITS v root sade
     _all_processed = list(_iter_fits_recursive(root))
     _fwhm_auto_values: list[float] = []
     for _fp_fw in _all_processed:
@@ -2946,25 +2946,25 @@ def build_masterstar_from_detrended(
         _fwhm_auto = float(np.median(np.asarray(_fwhm_auto_values, dtype=np.float64)))
         log_event(
             f"MASTERSTAR: auto FWHM z {len(_fwhm_auto_values)} processed FITS "
-            f"= {_fwhm_auto:.3f} px (médian VY_FWHM)"
+            f"= {_fwhm_auto:.3f} px (median VY_FWHM)"
         )
     else:
         _fwhm_auto = float(fwhm_fallback_px) if fwhm_fallback_px is not None else 4.5
-        log_event(f"MASTERSTAR: VY_FWHM nedostupné — fallback FWHM = {_fwhm_auto:.1f} px")
+        log_event(f"MASTERSTAR: VY_FWHM nedostupne - fallback FWHM = {_fwhm_auto:.1f} px")
 
     try:
         with fits.open(output_fits, mode="update", memmap=False) as h:
             hdr = h[0].header
-            # Vždy prepíš VY_FWHM hodnotou z auto výpočtu (médian sady)
+            # Vzdy prepis VY_FWHM hodnotou z auto vypoctu (median sady)
             vy_fwhm = float(_fwhm_auto)
             hdr["VY_FWHM"] = (vy_fwhm, "FWHM [pix] auto z medianu processed FITS")
-            log_event(f"MASTERSTAR: VY_FWHM = {vy_fwhm:.3f} px zapísaný do FITS.")
-            # VY_FWHM_GAUSS sa doplní po plate-solve (2D Gaussian fit na MASTERSTAR).
+            log_event(f"MASTERSTAR: VY_FWHM = {vy_fwhm:.3f} px zapisany do FITS.")
+            # VY_FWHM_GAUSS sa doplni po plate-solve (2D Gaussian fit na MASTERSTAR).
 
             _strip_external_platesolve_header(hdr)
             log_event(
-                "MASTERSTAR: z MASTERSTAR kópie odstránený externý WCS/plate-solve metadata "
-                "(ASTAP, astrometry.net, …) — astrometriu nastaví výhradne VYVAR Gaia solver."
+                "MASTERSTAR: z MASTERSTAR kopie odstraneny externy WCS/plate-solve metadata "
+                "(ASTAP, astrometry.net, ...) - astrometriu nastavi vyhradne VYVAR Gaia solver."
             )
 
             h.flush()
@@ -3120,8 +3120,8 @@ def resolve_obs_file_to_processed_fits(
 ) -> Path | None:
     """Map ``OBS_FILES.FILE_PATH`` onto the draft lights FITS for MASTERSTAR / preprocess.
 
-    VYVAR-calibrated: ``processed/lights/…/proc_*.fits`` (legacy alias kept for callers).
-    Pre-calibrated: ``non_calibrated/lights/<setup>/`` — the import frame is the frame (no proc_ remap).
+    VYVAR-calibrated: ``processed/lights/.../proc_*.fits`` (legacy alias kept for callers).
+    Pre-calibrated: ``non_calibrated/lights/<setup>/`` - the import frame is the frame (no proc_ remap).
     """
     if archive_path is None:
         return None
@@ -3160,7 +3160,7 @@ def list_best_processed_light_paths_for_masterstar(
     app_config: AppConfig | None = None,
     take_n: int = 5,
 ) -> list[Path]:
-    """Najlepšie (najnižší FWHM) FITS pod ``processed/lights`` — na UI tabuľku a výber pre MASTERSTAR."""
+    """Najlepsie (najnizsi FWHM) FITS pod ``processed/lights`` - na UI tabulku a vyber pre MASTERSTAR."""
     if archive_path is None:
         return []
     ap = Path(archive_path).expanduser()
@@ -3269,7 +3269,7 @@ def get_masterstar_candidate_rows(
     sky = df["SKY_LEVEL"].astype(float)
     stars = df["STAR_COUNT"].astype(float)
 
-    # snr_estimate: more stars and lower sky → better SNR (proxy; true SNR not stored in OBS_FILES).
+    # snr_estimate: more stars and lower sky -> better SNR (proxy; true SNR not stored in OBS_FILES).
     snr_est = (stars + 1.0) / np.sqrt(np.maximum(sky, 0.0) + 1.0)
 
     f_norm_inv = f_med / (np.maximum(f, 0.0) + eps)
@@ -3399,7 +3399,7 @@ def get_auto_fov(
     """Auto field diameter [deg] (diagonal) for plate solving.
 
     Priority:
-    - Header optics (focal + pixel) or DB plate-scale × NAXIS diagonal
+    - Header optics (focal + pixel) or DB plate-scale x NAXIS diagonal
     - Else WCS corners (after a successful solve)
     """
     import numpy as np
@@ -3472,7 +3472,7 @@ def _resolve_focal_mm_for_plate_scale(
             hdr_n, hfixed = normalize_telescope_focal_mm_for_plate_scale(hdr_mm)
             if hfixed:
                 log_event(
-                    f"FOCAL: v hlavičke FITS ohnisko vyzeralo ako 10× preklep ({hdr_mm:g} mm → {hdr_n:g} mm)."
+                    f"FOCAL: v hlavicke FITS ohnisko vyzeralo ako 10x preklep ({hdr_mm:g} mm -> {hdr_n:g} mm)."
                 )
             hdr_mm = hdr_n
         if hdr_mm is not None and _focal_mm_plausible(hdr_mm):
@@ -3486,8 +3486,8 @@ def _resolve_focal_mm_for_plate_scale(
             eq_n, eq_fixed = normalize_telescope_focal_mm_for_plate_scale(float(eq_raw))
             if eq_fixed:
                 log_event(
-                    f"FOCAL: EQUIPMENTS.FOCAL (ID={int(equipment_id)}) vyzeralo ako 10× preklep "
-                    f"({eq_raw:g} mm → {eq_n:g} mm) — použité pre mierku / solver."
+                    f"FOCAL: EQUIPMENTS.FOCAL (ID={int(equipment_id)}) vyzeralo ako 10x preklep "
+                    f"({eq_raw:g} mm -> {eq_n:g} mm) - pouzite pre mierku / solver."
                 )
             if _focal_mm_plausible(eq_n):
                 return float(eq_n), "database_equipment"
@@ -3497,8 +3497,8 @@ def _resolve_focal_mm_for_plate_scale(
             norm, fixed = normalize_telescope_focal_mm_for_plate_scale(float(raw))
             if fixed:
                 log_event(
-                    f"FOCAL: TELESCOPE.FOCAL v DB vyzeralo ako 10× preklep ({raw:g} mm → {norm:g} mm) — "
-                    "použité pre mierku / solver."
+                    f"FOCAL: TELESCOPE.FOCAL v DB vyzeralo ako 10x preklep ({raw:g} mm -> {norm:g} mm) - "
+                    "pouzite pre mierku / solver."
                 )
             if _focal_mm_plausible(norm):
                 return float(norm), "database_telescope"
@@ -3506,7 +3506,7 @@ def _resolve_focal_mm_for_plate_scale(
 
 
 def _merge_equipment_pixel_into_metadata(meta: dict[str, Any], db: VyvarDatabase, equipment_id: int) -> None:
-    """If FITS native pixel is missing or nonsense, use ``EQUIPMENTS.PIXELSIZE`` [µm, 1×1] × binning."""
+    """If FITS native pixel is missing or nonsense, use ``EQUIPMENTS.PIXELSIZE`` [um, 1x1] x binning."""
     try:
         native = db.get_equipment_pixel_size_um(int(equipment_id))
     except Exception:  # noqa: BLE001
@@ -3538,17 +3538,17 @@ def _merge_equipment_pixel_into_metadata(meta: dict[str, Any], db: VyvarDatabase
             same = False
         if not same:
             log_event(
-                f"PIXEL: EQUIPMENTS.PIXELSIZE={nv:g} µm × binning {x_bin}×{y_bin} → efektívny {_eff:g} µm "
-                f"(preferované pred FITS; predtým {prev!r})."
+                f"PIXEL: EQUIPMENTS.PIXELSIZE={nv:g} um x binning {x_bin}x{y_bin} -> efektivny {_eff:g} um "
+                f"(preferovane pred FITS; predtym {prev!r})."
             )
     else:
         log_event(
-            f"PIXEL: EQUIPMENTS.PIXELSIZE={nv:g} µm × binning {x_bin}×{y_bin} → efektívny {_eff:g} µm."
+            f"PIXEL: EQUIPMENTS.PIXELSIZE={nv:g} um x binning {x_bin}x{y_bin} -> efektivny {_eff:g} um."
         )
 
 
 def _recompute_effective_pixel_from_physical(meta: dict[str, Any]) -> None:
-    """``effective_pixel_um_plate_scale`` = native [µm] × XBINNING (int)."""
+    """``effective_pixel_um_plate_scale`` = native [um] x XBINNING (int)."""
     phys = meta.get("pixel_size_um_physical")
     if phys is None:
         return
@@ -3618,7 +3618,7 @@ def _enrich_calibration_metadata_from_header(
     has_focallen = "FOCALLEN" in header and header["FOCALLEN"] not in (None, "", " ", "0", 0)
     if focal_mm is None and has_focallen:
         raw_fc = header["FOCALLEN"]
-        log_event(f"DIAG: FITS FOCALLEN (SIPS / zapisovateľ hlavičky) = {raw_fc!r}")
+        log_event(f"DIAG: FITS FOCALLEN (SIPS / zapisovatel hlavicky) = {raw_fc!r}")
         try:
             v = float(raw_fc)
             mm0 = (v * 1000.0) if (math.isfinite(v) and v > 0 and v < 25.0) else v
@@ -3680,20 +3680,20 @@ def _apply_draft_combined_to_pipeline_meta(meta: dict[str, Any], comb: dict[str,
 
 
 def _log_calibration_metadata_diagnostic(filename: str, metadata: dict[str, Any]) -> None:
-    log_event("--- DIAGNOSTIKA METADÁT PRE KALIBRÁCIU ---")
-    log_event(f"Súbor: {filename}")
+    log_event("--- DIAGNOSTIKA METADAT PRE KALIBRACIU ---")
+    log_event(f"Subor: {filename}")
     log_event(f"FOCAL (z DB/FITS): {metadata.get('focal_length')} mm")
-    log_event(f"PIXEL_SIZE (surový): {metadata.get('pixel_size_raw')} um")
+    log_event(f"PIXEL_SIZE (surovy): {metadata.get('pixel_size_raw')} um")
     _n1 = metadata.get("naxis1")
     _n2 = metadata.get("naxis2")
     if _n1 or _n2:
-        log_event(f"NAXIS: {_n1}×{_n2}")
+        log_event(f"NAXIS: {_n1}x{_n2}")
     _rbx = metadata.get("fits_xbinning_raw")
     _rby = metadata.get("fits_ybinning_raw")
     if _rbx is not None or _rby is not None:
         log_event(f"BINNING (FITS raw): XBINNING={_rbx!r} YBINNING={_rby!r}")
     log_event(f"BINNING (X/Y): {metadata.get('binning')}x{metadata.get('binning_y')}")
-    log_event(f"EFEKTÍVNY PIXEL (pre výpočet): {metadata.get('pixel_um')} um")
+    log_event(f"EFEKTIVNY PIXEL (pre vypocet): {metadata.get('pixel_um')} um")
     log_event("------------------------------------------")
 
 
@@ -3800,7 +3800,7 @@ def compute_plate_scale_from_db(
     *,
     binning: int = 1,
 ) -> float | None:
-    """Vypočíta plate scale [arcsec/px] z EQUIPMENTS a TELESCOPE tabuliek.
+    """Vypocita plate scale [arcsec/px] z EQUIPMENTS a TELESCOPE tabuliek.
 
     Formula: plate_scale = (pixel_um * binning) / focal_mm * 206.265
     """
@@ -3896,12 +3896,12 @@ def _try_rescale_masterstar_linear_wcs_to_expected_plate_scale(
             hdul.flush()
         if math.isfinite(_old_scale) and math.isfinite(_new_scale):
             log_event(
-                f"WCS rescale: {_old_scale:.4f} → {_new_scale:.4f} arcsec/px "
+                f"WCS rescale: {_old_scale:.4f} -> {_new_scale:.4f} arcsec/px "
                 f"(target {exp_f:.3f})"
             )
         else:
             log_event(
-                f"WCS PLATE SCALE: lineárny TAN prispôsobený optickej mierke {exp_f:.3f} arcsec/px."
+                f"WCS PLATE SCALE: linearny TAN prisposobeny optickej mierke {exp_f:.3f} arcsec/px."
             )
         _ms_csv = fp.parent / "masterstars_full_match.csv"
         if _ms_csv.is_file():
@@ -3932,7 +3932,7 @@ def _try_rescale_masterstar_linear_wcs_to_expected_plate_scale(
         if math.isfinite(_new_scale):
             out["new_scale_arcsec_per_px"] = _new_scale
     except Exception as exc:  # noqa: BLE001
-        log_event(f"WCS PLATE SCALE: úprava CD preskočená — {exc!s}")
+        log_event(f"WCS PLATE SCALE: uprava CD preskocena - {exc!s}")
         out["error"] = str(exc)
     return out
 
@@ -3987,7 +3987,7 @@ def _solve_wcs_solve_field_cli(
     cmd.append(str(mp))
 
     log_event(
-        f"solve-field (lokálny): {exe} — --cpulimit {ASTROMETRY_SOLVE_FIELD_CPULIMIT_SEC}, "
+        f"solve-field (lokalny): {exe} - --cpulimit {ASTROMETRY_SOLVE_FIELD_CPULIMIT_SEC}, "
         f"--tweak-order {effective_astrometry_net_tweak_order()}, {mp.name}"
     )
     try:
@@ -4010,7 +4010,7 @@ def _solve_wcs_solve_field_cli(
         tail = (proc.stderr or proc.stdout or "")[-900:]
         if proc.returncode != 0:
             return {"solved": False, "reason": f"solve-field exit {proc.returncode}: {tail!s}"}
-        return {"solved": False, "reason": f"solve-field: missing {wcs_path.name} — {tail!s}"}
+        return {"solved": False, "reason": f"solve-field: missing {wcs_path.name} - {tail!s}"}
 
     try:
         with fits.open(wcs_path, memmap=False) as wh:
@@ -4029,7 +4029,7 @@ def _solve_wcs_solve_field_cli(
         hdul.flush()
 
     log_event(
-        f"solve-field OK: WCS so SIP (tweak-order {effective_astrometry_net_tweak_order()}) → {mp.name}"
+        f"solve-field OK: WCS so SIP (tweak-order {effective_astrometry_net_tweak_order()}) -> {mp.name}"
     )
     return {"solved": True, "method": "solve-field (local CLI)"}
 
@@ -4148,7 +4148,7 @@ def _solve_wcs_external(
     equipment_id: int | None = None,
     draft_id: int | None = None,
 ) -> dict[str, Any]:
-    """Plate solve: výhradne VYVAR (lokálna Gaia DB). Backend ``auto`` / Astrometry.net aliasy sa mapujú na VYVAR."""
+    """Plate solve: vyhradne VYVAR (lokalna Gaia DB). Backend ``auto`` / Astrometry.net aliasy sa mapuju na VYVAR."""
     be = (backend or "vyvar").strip().lower()
     if be in {"astap", "astap_cli", "local"}:
         LOGGER.warning("platesolve backend %r is no longer supported; using VYVAR.", be)
@@ -4187,7 +4187,7 @@ def _solve_wcs_external(
         if not gaia_db:
             return {
                 "solved": False,
-                "reason": "VYVAR solver: v Settings nastav cestu k lokálnej Gaia DR3 SQLite DB (gaia_db_path).",
+                "reason": "VYVAR solver: v Settings nastav cestu k lokalnej Gaia DR3 SQLite DB (gaia_db_path).",
             }
         from vyvar_platesolver import solve_wcs_with_local_gaia, _get_masterstar_wcs_parity
 
@@ -4213,7 +4213,7 @@ def _solve_wcs_external(
         preferred_mirror: str | None = None
         if (not _is_masterstar) and (hint_ra is None or hint_dec is None):
             try:
-                # Načítaj center z MASTERSTAR.fits (má platný WCS po plate solve)
+                # Nacitaj center z MASTERSTAR.fits (ma platny WCS po plate solve)
                 masterstar_path: Path | None = None
                 _fp_here = Path(fits_path)
                 # Guess setup name from parent folder (e.g. processed/lights/R_60_1/*.fits or detrended_aligned/lights/V_60_1/*.fits)
@@ -4223,7 +4223,7 @@ def _solve_wcs_external(
                 except Exception:  # noqa: BLE001
                     _setup_guess = ""
                 _candidate = _fp_here
-                for _lvl in range(6):  # max 6 úrovní hore
+                for _lvl in range(6):  # max 6 urovni hore
                     _candidate = _candidate.parent
                     # New (multi-filter): prefer per-setup MASTERSTAR in platesolve/<setup>/MASTERSTAR.fits
                     _ms_path_setup = (
@@ -4327,7 +4327,7 @@ def _solve_wcs_external(
             )
         elif _is_masterstar:
             log_event(
-                "WARNING: Plate scale z DB nedostupná — solver odvodí mierku z FITS alebo None"
+                "WARNING: Plate scale z DB nedostupna - solver odvodi mierku z FITS alebo None"
             )
         _bx = max(1, int(_em.get("binning", 1) or 1))
         _pix = _em.get("pixel_size_um_physical")
@@ -4340,11 +4340,11 @@ def _solve_wcs_external(
         )
         if exp_scale is not None and _foc_mm is not None and eff_um is not None:
             log_event(
-                f"PLATE SOLVING: Mierka nastavená na {float(exp_scale):.3f} arcsec/px "
-                f"(vypočítané z {float(_foc_mm)}mm a {float(eff_um)}um)"
+                f"PLATE SOLVING: Mierka nastavena na {float(exp_scale):.3f} arcsec/px "
+                f"(vypocitane z {float(_foc_mm)}mm a {float(eff_um)}um)"
             )
         elif exp_scale is not None:
-            log_event(f"PLATE SOLVING: Mierka nastavená na {float(exp_scale):.3f} arcsec/px")
+            log_event(f"PLATE SOLVING: Mierka nastavena na {float(exp_scale):.3f} arcsec/px")
 
         try:
             if bool(cfg_u.debug_platesolver):
@@ -4364,7 +4364,7 @@ def _solve_wcs_external(
                         h0["VYTARGRA"] = (float(hint_ra), "VYVAR plate-solve hint RA [deg] ICRS")
                         h0["VYTARGDE"] = (float(hint_dec), "VYVAR plate-solve hint Dec [deg] ICRS")
                         hdul.flush()
-                log_event(f"INFO: Per-frame VYTARG zapísaný: RA={float(hint_ra):.4f} Dec={float(hint_dec):.4f}")
+                log_event(f"INFO: Per-frame VYTARG zapisany: RA={float(hint_ra):.4f} Dec={float(hint_dec):.4f}")
             except Exception as e:  # noqa: BLE001
                 from except_fix_counters import get_except_fix_counters
 
@@ -4401,7 +4401,7 @@ def _solve_wcs_external(
         b_auto = _plate_solve_input_bundle(
             fits_path, app_config=cfg_a, equipment_id=equipment_id, draft_id=draft_id
         )
-        log_event('Plate-solve backend "auto": len VYVAR lokálny solver (bez Astrometry.net).')
+        log_event('Plate-solve backend "auto": len VYVAR lokalny solver (bez Astrometry.net).')
         return _try_vyvar(bundle=b_auto)
 
     # Accept legacy backend aliases for backward compatibility.
@@ -4410,7 +4410,7 @@ def _solve_wcs_external(
 
     if be in {"astrometry.net", "astrometry_net", "online", "net"}:
         LOGGER.warning(
-            "Plate-solve backend %r už nie je podporovaný — používam VYVAR (lokálna Gaia).", be
+            "Plate-solve backend %r uz nie je podporovany - pouzivam VYVAR (lokalna Gaia).", be
         )
         cfg_n = app_config or AppConfig()
         b_net = _plate_solve_input_bundle(
@@ -4494,7 +4494,7 @@ def _dao_star_count_from_array(arr: "np.ndarray", *, fwhm_px: float = 3.0) -> in
 def _pick_reference_frame_by_star_count(files: list[Path]) -> tuple[Path, dict[str, int]]:
     """Choose the FITS with the most detected stars as alignment / plate-solve reference.
 
-    Uses 2×2 binning + slightly smaller DAO FWHM for speed; preserves relative rankings.
+    Uses 2x2 binning + slightly smaller DAO FWHM for speed; preserves relative rankings.
     """
     import numpy as np
 
@@ -4504,7 +4504,7 @@ def _pick_reference_frame_by_star_count(files: list[Path]) -> tuple[Path, dict[s
             with fits.open(fp, memmap=False) as hdul:
                 data = np.array(hdul[0].data, dtype=np.float32, copy=True)
             data_b = _bin2d_mean(data, 2)
-            # 2×2 binning: FWHM v px ≈ sips_dao_fwhm_px/2 (širšie okno pre kómu v rohoch).
+            # 2x2 binning: FWHM v px ~ sips_dao_fwhm_px/2 (sirsie okno pre komu v rohoch).
             scores[str(fp)] = _dao_star_count_from_array(data_b, fwhm_px=2.5)
         except Exception:  # noqa: BLE001
             scores[str(fp)] = 0
@@ -4589,7 +4589,7 @@ def _query_gaia_local(
     ra_max = float(_ra_l) + float(radius_deg)
     de_min = float(_de_l) - float(radius_deg)
     de_max = float(_de_l) + float(radius_deg)
-    # query_local_gaia: mag_limit=None ⇒ no g_mag SQL cap; pass max_mag only when set
+    # query_local_gaia: mag_limit=None => no g_mag SQL cap; pass max_mag only when set
     # so MASTERSTAR / cone export honor faintest_mag_limit in SQL (not only a redundant pandas filter).
     _ql_kw: dict[str, Any] = {
         "ra_min": ra_min,
@@ -4666,7 +4666,7 @@ def _query_vsx_local(
     vsx_db_path: Path | None,
     max_rows: int | None = None,
 ) -> pd.DataFrame:
-    """Query **local VSX SQLite** for the field; same kužeľ ako Gaia (najprv obdĺžnik, potom great-circle orez)."""
+    """Query **local VSX SQLite** for the field; same kuzel ako Gaia (najprv obdlznik, potom great-circle orez)."""
     if vsx_db_path is None:
         return pd.DataFrame()
     vp = Path(vsx_db_path).expanduser().resolve()
@@ -4720,7 +4720,7 @@ def _query_vsx_local(
     out = sub.loc[_inner].reset_index(drop=True)
     try:
         log_event(
-            f"CATALOG SEARCH (VSX local): {len(out)} zdrojov v kuželi r≈{float(radius_deg):.3f}° "
+            f"CATALOG SEARCH (VSX local): {len(out)} zdrojov v kuzeli r~{float(radius_deg):.3f} deg "
             f"(Ra={_ra_l:.4f}, Dec={_de_l:.4f})"
         )
     except Exception:  # noqa: BLE001
@@ -4795,7 +4795,7 @@ def _query_exoplanet_local(
     out = sub.loc[_inner].reset_index(drop=True)
     try:
         log_event(
-            f"CATALOG SEARCH (exoplanet local): {len(out)} hostov v kuželi r≈{float(radius_deg):.3f}° "
+            f"CATALOG SEARCH (exoplanet local): {len(out)} hostov v kuzeli r~{float(radius_deg):.3f} deg "
             f"(Ra={_ra_l:.4f}, Dec={_de_l:.4f})"
         )
     except Exception:  # noqa: BLE001
@@ -4844,7 +4844,7 @@ def _exo_host_annotation_arrays(
         for i_d, cnt in counts.items():
             if cnt > 1:
                 msg = (
-                    f"[EXO MATCH] {cnt} exoplanet hosts within {max_sep:g}″ of detection "
+                    f"[EXO MATCH] {cnt} exoplanet hosts within {max_sep:g} arcsec of detection "
                     f"index {i_d}"
                     + (f" ({frame_name})" if frame_name else "")
                 )
@@ -5132,7 +5132,7 @@ def _build_exoplanet_promotion_rows_from_masterstars(
         )
     if not rows:
         return pd.DataFrame()
-    log_event(f"[EXO TARGET] {len(rows)} exoplanet host(s) promoted from masterstars (≤{exo_max:g}″)")
+    log_event(f"[EXO TARGET] {len(rows)} exoplanet host(s) promoted from masterstars (<={exo_max:g} arcsec)")
     return pd.DataFrame(rows)
 
 
@@ -5204,7 +5204,7 @@ def _query_vsx_local_frame_bbox(
 
     Completeness must not depend on row order: the frame bbox is tiny (sub-degree), so the SQL
     result is small and the global ``catalog_query_max_rows`` cap never truncates it (unlike the
-    3.5° cone in ``_query_vsx_local``, which hit the 15000-row cap and dropped a contiguous Dec
+    3.5 deg cone in ``_query_vsx_local``, which hit the 15000-row cap and dropped a contiguous Dec
     slice). Returns raw VSX rows over the bbox; the caller applies the precise in-frame pixel
     filter (matching ``margin_px``). RA wrap is handled via centre-relative offsets.
     """
@@ -5253,7 +5253,7 @@ def _query_vsx_local_frame_bbox(
         ra_max=ra_max + pad,
         dec_min=de_min - pad,
         dec_max=de_max + pad,
-        max_rows=None,  # frame bbox is tiny → no cap needed (spatial-first completeness)
+        max_rows=None,  # frame bbox is tiny -> no cap needed (spatial-first completeness)
     )
     if not rows:
         return pd.DataFrame()
@@ -5271,7 +5271,7 @@ def _query_vsx_local_frame_bbox(
 
 
 def _saturate_limit_adu_from_header(hdr: fits.Header) -> float | None:
-    """Return saturation / linearity ceiling in image units (ADU, e⁻, …) if present in header."""
+    """Return saturation / linearity ceiling in image units (ADU, e-, ...) if present in header."""
     import math
 
     for key in ("SATURATE", "MAXLIN", "ESATUR", "LINLIMIT", "MAXADU"):
@@ -5287,7 +5287,7 @@ def _saturate_limit_adu_from_header(hdr: fits.Header) -> float | None:
 
 
 def _infer_sat_limit_from_bitpix(hdr: fits.Header) -> float | None:
-    """Infer linearity ceiling from FITS integer layout (e.g. unsigned 16-bit → 65535)."""
+    """Infer linearity ceiling from FITS integer layout (e.g. unsigned 16-bit -> 65535)."""
     import math
 
     try:
@@ -5299,7 +5299,7 @@ def _infer_sat_limit_from_bitpix(hdr: fits.Header) -> float | None:
     if not math.isfinite(bzero) or not math.isfinite(bscale) or bscale <= 0:
         return None
     if bitpix == 16:
-        # Unsigned 16-bit (common): physical 0…65535 stored with BZERO=32768
+        # Unsigned 16-bit (common): physical 0...65535 stored with BZERO=32768
         if abs(bzero - 32768.0) < 1.0 and abs(bscale - 1.0) < 1e-9:
             return 65535.0
         # Native signed 16-bit
@@ -5332,8 +5332,8 @@ def _effective_saturation_limit(
     fallback_adu: float | None,
     equipment_saturate_adu: float | None = None,
 ) -> tuple[float | None, str]:
-    """Resolve saturation ceiling: header keywords → ``EQUIPMENTS`` / caller ``equipment_saturate_adu`` →
-    ``DATAMAX`` / ``MAXPIX`` → BITPIX guess → optional ``fallback_adu`` (call sites typically pass ``None``).
+    """Resolve saturation ceiling: header keywords -> ``EQUIPMENTS`` / caller ``equipment_saturate_adu`` ->
+    ``DATAMAX`` / ``MAXPIX`` -> BITPIX guess -> optional ``fallback_adu`` (call sites typically pass ``None``).
     """
     import math
 
@@ -5369,7 +5369,7 @@ def _effective_saturation_limit(
 
 
 def _box_peak_max_adu(data: "np.ndarray", x: float, y: float, half: int = 3) -> float:
-    """Maximum pixel value in ``(2*half+1)²`` box around ``(x,y)`` on the **original** image (linear units)."""
+    """Maximum pixel value in ``(2*half+1)^2`` box around ``(x,y)`` on the **original** image (linear units)."""
     import numpy as np
 
     arr = np.asarray(data)
@@ -5392,7 +5392,7 @@ def _box_peaks_at_centroids(
     *,
     half: int = 3,
 ) -> "np.ndarray":
-    """Maximum ADU in each ``(2*half+1)²`` box centred on ``round(x), round(y)`` (vectorized).
+    """Maximum ADU in each ``(2*half+1)^2`` box centred on ``round(x), round(y)`` (vectorized).
 
     Used for per-star saturation on thousands of DAO detections; matches ``_box_peak_max_adu`` on
     interior pixels. Falls back to a Python loop if SciPy is unavailable.
@@ -5427,7 +5427,7 @@ def _box_peaks_at_centroids(
 
 
 def _icrs_deg_to_unitxyz(ra_deg: "np.ndarray", dec_deg: "np.ndarray") -> "np.ndarray":
-    """ICRS degrees → unit direction vectors on the celestial sphere (N,3)."""
+    """ICRS degrees -> unit direction vectors on the celestial sphere (N,3)."""
     import numpy as np
 
     ra = np.radians(np.asarray(ra_deg, dtype=np.float64).ravel())
@@ -5437,7 +5437,7 @@ def _icrs_deg_to_unitxyz(ra_deg: "np.ndarray", dec_deg: "np.ndarray") -> "np.nda
 
 
 def _chord_to_arcsec(dist_chord: "np.ndarray") -> "np.ndarray":
-    """Chord length between unit sphere points (0…2) → great-circle separation in arcseconds."""
+    """Chord length between unit sphere points (0...2) -> great-circle separation in arcseconds."""
     import numpy as np
 
     d = np.asarray(dist_chord, dtype=np.float64)
@@ -5571,7 +5571,7 @@ def _star_saturation_flags(
 
 
 def _all_pix2world_icrs_deg(wcs_obj: WCS, x: "np.ndarray", y: "np.ndarray") -> tuple["np.ndarray", "np.ndarray"]:
-    """Vectorized pixel → world (degrees) for celestial axes; single WCS call (no per-star Python loops)."""
+    """Vectorized pixel -> world (degrees) for celestial axes; single WCS call (no per-star Python loops)."""
     import numpy as np
 
     xa = np.asarray(x, dtype=np.float64).ravel()
@@ -5594,7 +5594,7 @@ def _saturated_core_plateau_vectorized(
     plateau_rel: float = 0.996,
     min_plateau_pixels: int = 5,
 ) -> "np.ndarray":
-    """Same criterion as ``_saturated_core_plateau``, vectorized over ``(x,y)`` centroids (3×3 patch per star)."""
+    """Same criterion as ``_saturated_core_plateau``, vectorized over ``(x,y)`` centroids (3x3 patch per star)."""
     import numpy as np
 
     arr = np.asarray(data, dtype=np.float64)
@@ -5702,7 +5702,7 @@ def _vyvar_df_to_csv(df: pd.DataFrame, path: Path | str) -> None:
     """Write sidecar / per-frame proc CSV.
 
     When ``mag`` is present it holds the Gaia catalog G magnitude (``phot_g_mean_mag`` at
-    cross-match time) — constant per star for the night, not the frame instrumental magnitude.
+    cross-match time) - constant per star for the night, not the frame instrumental magnitude.
     Science paths must use ``dao_flux`` (see ``docs/VYVAR_PROCESS.md``).
     """
     p = Path(path)
@@ -5744,7 +5744,7 @@ def _gaia_catalog_cone_radius_optics_floor_deg(
     """Minimum Gaia cone radius from FOCALLEN + PIXSIZE + binning (ignores flawed linear WCS at chip edges).
 
     A solved TAN-without-SIP header often under-predicts corner separation vs true sky; the rectangular
-    SQL prefilter then clips the catalog so QA shows „missing Gaia“ stripes at left/right edges.
+    SQL prefilter then clips the catalog so QA shows 'missing Gaia' stripes at left/right edges.
     """
     if hdr is None:
         return 0.0
@@ -5781,12 +5781,12 @@ def _gaia_catalog_cone_radius_optics_floor_deg(
 
 
 def _field_center_and_radius_from_wcs(w: WCS, h: int, wpx: int) -> tuple[SkyCoord, float]:
-    """Footprint for **one** Vizier/Gaia cone query tied to the detector — not „celá obloha“.
+    """Footprint for **one** Vizier/Gaia cone query tied to the detector - not 'cela obloha'.
 
     Uses the geometric pixel centre, then the **maximum** great-circle separation from that centre to a
     dense sample of the **full rectangle border** (not only corners). With sip / distortion, the farthest
-    sky point from the centre is not always a corner — undersized cones produced a visible circular
-    „matched only in the middle“ QA overlay. Adds multiplicative + absolute margin for edge stars and
+    sky point from the centre is not always a corner - undersized cones produced a visible circular
+    'matched only in the middle' QA overlay. Adds multiplicative + absolute margin for edge stars and
     small plate-solve errors.
     """
     center = SkyCoord.from_pixel((wpx - 1) / 2.0, (h - 1) / 2.0, wcs=w, origin=0)
@@ -5807,7 +5807,7 @@ def _field_center_and_radius_from_wcs(w: WCS, h: int, wpx: int) -> tuple[SkyCoor
     # Margin: WCS at edges, rectangle vs cone on sphere, plate-solve error. Larger margin because
     # ``field_catalog_cone.csv`` built from a cropped MASTERSTAR must not underserve full-chip frames.
     radius_deg = max(max_sep_deg * 1.38, max_sep_deg + 45.0 / 3600.0)
-    # If CD scale is wrong (too „zoomed“ on sky), spherical sampling collapses — blend in tangent-plane
+    # If CD scale is wrong (too 'zoomed' on sky), spherical sampling collapses - blend in tangent-plane
     # half-diagonal from pixel scales so the cone stays physically plausible.
     try:
         scales = w.proj_plane_pixel_scales()
@@ -5849,10 +5849,10 @@ def _effective_field_catalog_cone_radius_deg(
             pf = float(plate_solve_fov_deg)
             if math.isfinite(pf) and pf > 0:
                 r_fov = catalog_cone_radius_from_fov_diameter_deg(pf)
-                # UI FOV je bezpečnostné minimum, ale nesmie „rozšíriť“ kužeľ oveľa nad reálny čip:
-                # pri zle nastavenom veľkom FOV (napr. 20°+) by inak vznikol polomer ~13° a SQL by
-                # ťahalo 500k+ hviezd (minúty behu). Ak už WCS + optika dávajú rozumný polomer,
-                # obmedzíme príspevok z FOV na ~30 % nad fyzikálnu stopu.
+                # UI FOV je bezpecnostne minimum, ale nesmie 'rozsirit' kuzel ovela nad realny cip:
+                # pri zle nastavenom velkom FOV (napr. 20 deg+) by inak vznikol polomer ~13 deg a SQL by
+                # tahalo 500k+ hviezd (minuty behu). Ak uz WCS + optika davaju rozumny polomer,
+                # obmedzime prispevok z FOV na ~30 % nad fyzikalnu stopu.
                 if r_physical >= 2.5:
                     r_fov_eff = min(float(r_fov), r_physical * 1.30 + 0.35)
                 else:
@@ -5888,25 +5888,25 @@ def _invalidate_field_catalog_cone_cache_if_needed(
             pf = float(plate_solve_fov_deg)
             if math.isfinite(pf):
                 if fov_stored is None:
-                    reasons.append("meta chýba plate_solve_fov_deg (starý cache)")
+                    reasons.append("meta chyba plate_solve_fov_deg (stary cache)")
                 else:
                     try:
                         if abs(float(fov_stored) - pf) > 1e-4:
-                            reasons.append(f"plate_solve_fov_deg {float(fov_stored):.6f} → {pf:.6f}")
+                            reasons.append(f"plate_solve_fov_deg {float(fov_stored):.6f} -> {pf:.6f}")
                     except (TypeError, ValueError):
-                        reasons.append("neplatný uložený plate_solve_fov_deg")
+                        reasons.append("neplatny ulozeny plate_solve_fov_deg")
         except (TypeError, ValueError):
             pass
 
     r_eff = float(effective_radius_deg)
     if r_stored > 0 and r_eff > r_stored * 1.02 + slack_deg:
-        reasons.append(f"kužeľ r≈{r_eff:.4f}° > uložené {r_stored:.4f}°")
+        reasons.append(f"kuzel r~{r_eff:.4f} deg > ulozene {r_stored:.4f} deg")
 
     if not reasons:
         return
     p_csv.unlink(missing_ok=True)
     meta_p.unlink(missing_ok=True)
-    log_event("Katalóg: field_catalog_cone cache vymazaná — " + "; ".join(reasons) + " (načítam nanovo).")
+    log_event("Katalog: field_catalog_cone cache vymazana - " + "; ".join(reasons) + " (nacitam nanovo).")
 
 
 def _field_catalog_cone_meta_path(field_catalog_csv: Path) -> Path:
@@ -5953,8 +5953,8 @@ def select_comparison_stars_spatial_grid(
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Choose comparison stars for ensemble photometry: ~one brightest candidate per spatial grid cell.
 
-    Uses catalog-matched, photometry-safe detections, stratified on a nx×ny grid sized for ``n_comp`` and
-    image aspect ratio so stars are spread across the full detector (typical 100–200 comps for APASS-like work).
+    Uses catalog-matched, photometry-safe detections, stratified on a nxxny grid sized for ``n_comp`` and
+    image aspect ratio so stars are spread across the full detector (typical 100-200 comps for APASS-like work).
 
     When ``require_non_variable`` is True and column ``catalog_known_variable`` exists, stars flagged as
     known variables (VSX and/or Gaia ``phot_variable_flag``) are excluded from the ensemble.
@@ -5978,7 +5978,7 @@ def select_comparison_stars_spatial_grid(
     if require_non_variable and "catalog_known_variable" in work.columns:
         work = work[~work["catalog_known_variable"].fillna(False).astype(bool)]
     # Proximity veto: exclude comp candidates within 10 arcsec of any VSX variable target.
-    # This is intentionally coordinate-based (not catalog_id-based), because VSX→Gaia cross-id can resolve
+    # This is intentionally coordinate-based (not catalog_id-based), because VSX->Gaia cross-id can resolve
     # to a different nearby Gaia source_id than the comp candidate, yet still represent the same physical star.
     if (
         variable_targets_df is not None
@@ -6108,9 +6108,9 @@ def _annotate_masterstars_flux_zones(
     n_stack: int | None = None,
     saturate_limit_fraction: float = 0.85,
 ) -> pd.DataFrame:
-    """Tag MASTERSTAR catalog rows by flux vs SNR noise floor and saturation limit (equipment × 0.85).
+    """Tag MASTERSTAR catalog rows by flux vs SNR noise floor and saturation limit (equipment x 0.85).
 
-    ``noise_floor_adu`` must match the DAO pre-match SNR filter (``median + k×σ``) from
+    ``noise_floor_adu`` must match the DAO pre-match SNR filter (``median + kxsigma``) from
     :func:`detect_stars_and_match_catalog` (see ``det_meta["noise_floor_adu"]``).
     """
     import numpy as np
@@ -6129,7 +6129,7 @@ def _annotate_masterstars_flux_zones(
     except (TypeError, ValueError):
         nf = None
 
-    # Saturation: scale equipment limit by n_stack when a stacked reference is used (typical MASTERSTAR is one copied frame → n_stack=1).
+    # Saturation: scale equipment limit by n_stack when a stacked reference is used (typical MASTERSTAR is one copied frame -> n_stack=1).
     ns = int(n_stack) if n_stack is not None else 1
     ns = max(1, ns)
 
@@ -6152,25 +6152,25 @@ def _annotate_masterstars_flux_zones(
     out["noise_floor_adu"] = nf if nf is not None else np.nan
     out["saturate_limit_adu_85pct"] = sat_lim if sat_lim is not None else np.nan
 
-    # ── Noisy sub-kategórie ──
-    # Prahy sú fixné v kóde — adaptívne pre akúkoľvek zostavu a podmienky.
-    # noise_floor = median + k×σ  kde k = prematch_peak_sigma_floor (config)
-    # Noisy1: flux medzi noise_floor a (median + 3σ) → možná premenná, slabší signál
-    # Noisy2: flux medzi (median + 2σ) a noise_floor → veľmi slabý signál
-    # Noisy3: flux < (median + 2σ)                   → prakticky nepoužiteľné
-    # Pre výpočet σ prahov: odhadneme zo samotného noise_floor
+    # -- Noisy sub-kategorie --
+    # Prahy su fixne v kode - adaptivne pre akukolvek zostavu a podmienky.
+    # noise_floor = median + kxsigma  kde k = prematch_peak_sigma_floor (config)
+    # Noisy1: flux medzi noise_floor a (median + 3sigma) -> mozna premenna, slabsi signal
+    # Noisy2: flux medzi (median + 2sigma) a noise_floor -> velmi slaby signal
+    # Noisy3: flux < (median + 2sigma)                   -> prakticky nepouzitelne
+    # Pre vypocet sigma prahov: odhadneme zo samotneho noise_floor
     # noise_floor = med + k*std  => std = (noise_floor - med) / k
     # k = prematch_peak_sigma_floor (typicky 2.5)
-    # Pre jednoduchosť: noise_floor_2s = med + (2/k)*(nf - med)
-    #                   noise_floor_3s = nf  (= med + k*std, kde k≈2.5 ≈ 3sigma)
+    # Pre jednoduchost: noise_floor_2s = med + (2/k)*(nf - med)
+    #                   noise_floor_3s = nf  (= med + k*std, kde k~2.5 ~ 3sigma)
 
-    # Saturácia: porovnávaj PEAK pixel hodnotu (nie flux sumu!)
-    # flux je aperture sum = suma ADU v aperture → vždy >> sat_limit pre akúkoľvek hviezdu
-    # peak_max_adu = max pixel v hviezde → správna veličina pre saturáciu
+    # Saturacia: porovnavaj PEAK pixel hodnotu (nie flux sumu!)
+    # flux je aperture sum = suma ADU v aperture -> vzdy >> sat_limit pre akukolvek hviezdu
+    # peak_max_adu = max pixel v hviezde -> spravna velicina pre saturaciu
     if "peak_max_adu" in out.columns:
         peak_s = pd.to_numeric(out["peak_max_adu"], errors="coerce")
     else:
-        # Fallback: ak peak_max_adu chýba, použi flux (starý spôsob, nepresný)
+        # Fallback: ak peak_max_adu chyba, pouzi flux (stary sposob, nepresny)
         peak_s = flux_s
 
     out["zone"] = "linear"
@@ -6180,27 +6180,27 @@ def _annotate_masterstars_flux_zones(
 
     if nf is not None:
         nf_val = float(nf)
-        # Odhad mediánu signálu (pre výpočet sub-prahov)
+        # Odhad medianu signalu (pre vypocet sub-prahov)
         finite_flux = flux_s[flux_s.notna() & (flux_s < nf_val)]
         if len(finite_flux) > 10:
             flux_med = float(finite_flux.median())
         else:
             flux_med = float(flux_s.median()) if flux_s.notna().any() else 0.0
 
-        # Sub-prahy: lineárna interpolácia medzi flux_med a nf_val
+        # Sub-prahy: linearna interpolacia medzi flux_med a nf_val
         # noisy1_thresh = nf_val           (= median + k*sigma, config k)
-        # noisy2_thresh = flux_med + 2/3 * (nf_val - flux_med)  (~2σ ak k=3)
-        # noisy3_thresh = flux_med + 1/3 * (nf_val - flux_med)  (~1σ ak k=3)
+        # noisy2_thresh = flux_med + 2/3 * (nf_val - flux_med)  (~2sigma ak k=3)
+        # noisy3_thresh = flux_med + 1/3 * (nf_val - flux_med)  (~1sigma ak k=3)
         spread = nf_val - flux_med
-        noisy2_thresh = flux_med + (2.0 / 3.0) * spread  # ~2σ
-        noisy3_thresh = flux_med + (1.0 / 3.0) * spread  # ~1σ
+        noisy2_thresh = flux_med + (2.0 / 3.0) * spread  # ~2sigma
+        noisy3_thresh = flux_med + (1.0 / 3.0) * spread  # ~1sigma
 
         linear_mask = out["zone"] == "linear"
-        # Noisy1: pod noise_floor ale nad 2σ prahom → slabý ale možno použiteľný
+        # Noisy1: pod noise_floor ale nad 2sigma prahom -> slaby ale mozno pouzitelny
         noisy1_mask = linear_mask & (flux_s < nf_val) & (flux_s >= noisy2_thresh)
-        # Noisy2: pod 2σ ale nad 1σ → veľmi slabý
+        # Noisy2: pod 2sigma ale nad 1sigma -> velmi slaby
         noisy2_mask = linear_mask & (flux_s < noisy2_thresh) & (flux_s >= noisy3_thresh)
-        # Noisy3: pod 1σ → nepoužiteľný
+        # Noisy3: pod 1sigma -> nepouzitelny
         noisy3_mask = linear_mask & (flux_s < noisy3_thresh)
 
         out.loc[noisy1_mask, "zone"] = "noisy1"
@@ -6214,12 +6214,12 @@ def _annotate_masterstars_flux_zones(
         out["is_saturated"] = False
 
     if nf is not None:
-        # is_noisy = True pre akúkoľvek noisy sub-kategóriu
+        # is_noisy = True pre akukolvek noisy sub-kategoriu
         out["is_noisy"] = out["zone"].isin(["noisy1", "noisy2", "noisy3"])
     else:
         out["is_noisy"] = False
 
-    # is_usable: len linear (nie saturated, nie žiadna noisy kategória)
+    # is_usable: len linear (nie saturated, nie ziadna noisy kategoria)
     out["is_usable"] = out["zone"].eq("linear") & flux_s.notna()
     return out
 
@@ -6288,7 +6288,7 @@ def write_photometry_plan_files(
         with fits.open(masterstar_fits, memmap=False) as hdul:
             hdr = hdul[0].header
     except Exception as _ms_open_exc:  # noqa: BLE001
-        log_event(f"write_photometry_plan_files: nepodarilo sa otvoriť MASTERSTAR.fits ({masterstar_fits}): {_ms_open_exc!s}")
+        log_event(f"write_photometry_plan_files: nepodarilo sa otvorit MASTERSTAR.fits ({masterstar_fits}): {_ms_open_exc!s}")
         return {"comparison_stars_csv": "", "variable_targets_csv": "", "error": "MASTERSTAR open failed"}
     wpx = int(hdr.get("NAXIS1", 0) or 0)
     h = int(hdr.get("NAXIS2", 0) or 0)
@@ -6428,10 +6428,10 @@ def write_photometry_plan_files(
             except Exception:  # noqa: BLE001
                 _vsx_p3 = None
             # B-cap fix: variable_targets are driven by the FRAME footprint (bbox + the same
-            # 50px margin used by the in-frame pixel filter below), not the 3.5° cone box. The
+            # 50px margin used by the in-frame pixel filter below), not the 3.5 deg cone box. The
             # cone box hit the 15000-row catalog_query_max_rows cap (no ORDER BY) and silently
             # dropped a contiguous Dec slice (northern half of the field, incl. bright named
-            # variables). The frame bbox is tiny → no cap → spatial-first completeness. Note this
+            # variables). The frame bbox is tiny -> no cap -> spatial-first completeness. Note this
             # list also drives the global comparison-pool veto, so the now-complete variable set
             # correctly purges newly-recognised variables from the comp ensemble (Milan-approved,
             # CURSOR_RESULT_round1).
@@ -6541,7 +6541,7 @@ def write_photometry_plan_files(
                             except Exception:  # noqa: BLE001
                                 zone_out[i] = ""
 
-                # FALLBACK: VSX → Gaia DR3 direct lookup for unresolved catalog_id
+                # FALLBACK: VSX -> Gaia DR3 direct lookup for unresolved catalog_id
                 try:
                     gaia_db = str(_cfg_plan.gaia_db_path or "").strip()
                 except Exception:  # noqa: BLE001
@@ -6678,14 +6678,14 @@ def write_photometry_plan_files(
                             vsx_ra = float(v.iloc[i]["ra_deg"])
                             vsx_dec = float(v.iloc[i]["dec_deg"])
                             log_event(
-                                f"VSX no Gaia match: {vsx_name0} ra={vsx_ra:.4f} dec={vsx_dec:.4f} — hviezda nebude sledovaná"
+                                f"VSX no Gaia match: {vsx_name0} ra={vsx_ra:.4f} dec={vsx_dec:.4f} - hviezda nebude sledovana"
                             )
                         except Exception:  # noqa: BLE001
                             pass
 
                 if unresolved_idx:
                     log_event(
-                        f"VSX→Gaia fallback DR3: resolved={int(fb_resolved)} unresolved={int(fb_unresolved)} "
+                        f"VSX->Gaia fallback DR3: resolved={int(fb_resolved)} unresolved={int(fb_unresolved)} "
                         f"(good={int(fb_good)} uncertain={int(fb_uncertain)} poor={int(fb_poor)})"
                     )
                 if _vsx_coord_skip_labels:
@@ -6697,7 +6697,7 @@ def write_photometry_plan_files(
                         "[VSX] skipped %d variables (unparsable coords): %s",
                         _n_skip,
                         ", ".join(_vsx_coord_skip_labels[:20])
-                        + (" …" if _n_skip > 20 else ""),
+                        + (" ..." if _n_skip > 20 else ""),
                     )
 
                 # Period column varies by VSX schema.
@@ -6767,15 +6767,15 @@ def write_photometry_plan_files(
                     "masterstars_zone_counts_among_gaia_matched": _zone_hist,
                     "phase0_active_targets_hint_count": int(n_phase0_hint),
                     "phase0_note_sk": (
-                        "Fáza 0 (`select_active_targets` v photometry_core.py): všetky zóny z masterstars "
-                        "prejdú do active_targets.csv s `zone_flag`; saturované majú `skip_photometry=True` "
-                        "a Fáza 2A ich nefotometruje (pozri `run_phase2a`). Vylúčené sú len prázdny "
-                        "`catalog_id` a ciele mimo snímky (okrajový filter)."
+                        "Faza 0 (`select_active_targets` v photometry_core.py): vsetky zony z masterstars "
+                        "prejdu do active_targets.csv s `zone_flag`; saturovane maju `skip_photometry=True` "
+                        "a Faza 2A ich nefotometruje (pozri `run_phase2a`). Vylucene su len prazdny "
+                        "`catalog_id` a ciele mimo snimky (okrajovy filter)."
                     ),
                 }
                 _vsx_n_cone = int(n_vsx_after_mag)
     except Exception as _vsx_exc:  # noqa: BLE001
-        log_event(f"variable_targets.csv (VSX export) preskočený: {_vsx_exc!s}")
+        log_event(f"variable_targets.csv (VSX export) preskoceny: {_vsx_exc!s}")
         vsx_out = pd.DataFrame(columns=var_cols)
 
     exo_promo = _build_exoplanet_promotion_rows_from_masterstars(
@@ -6824,26 +6824,26 @@ def write_photometry_plan_files(
     _vyvar_df_to_csv(merged_var, var_path)
     if _vsx_diag:
         _mag_leg = (
-            "mag filter vypnutý (limit≤0)"
+            "mag filter vypnuty (limit<=0)"
             if bool(_vsx_diag.get("vsx_mag_cutoff_disabled"))
             else (
-                f"po mag≤{_vsx_diag.get('vsx_variable_targets_mag_limit')}="
+                f"po mag<={_vsx_diag.get('vsx_variable_targets_mag_limit')}="
                 f"{_vsx_diag.get('vsx_rows_after_mag_filter')} (filter="
-                f"{'áno' if _vsx_diag.get('vsx_mag_filter_applied') else 'nie'})"
+                f"{'ano' if _vsx_diag.get('vsx_mag_filter_applied') else 'nie'})"
             )
         )
         log_event(
             "variable_targets.csv (VSX): "
-            f"VSX v kuželi pred mag={_vsx_diag.get('vsx_rows_in_cone_before_mag_filter')} → "
-            f"{_mag_leg} → "
-            f"v ráme={_vsx_diag.get('vsx_rows_after_in_frame_margin')} → "
-            f"Gaia≤10″={_vsx_diag.get('gaia_matches_within_10arcsec')} → "
+            f"VSX v kuzeli pred mag={_vsx_diag.get('vsx_rows_in_cone_before_mag_filter')} -> "
+            f"{_mag_leg} -> "
+            f"v rame={_vsx_diag.get('vsx_rows_after_in_frame_margin')} -> "
+            f"Gaia<=10 arcsec={_vsx_diag.get('gaia_matches_within_10arcsec')} -> "
             f"CSV={int(len(merged_var))}. "
-            f"Odhad VSX s Gaia ID (Fáza 0 potom cross-match na masterstars): {_vsx_diag.get('phase0_active_targets_hint_count')}."
+            f"Odhad VSX s Gaia ID (Faza 0 potom cross-match na masterstars): {_vsx_diag.get('phase0_active_targets_hint_count')}."
         )
     else:
         log_event(
-            f"variable_targets.csv (VSX export): cone={_vsx_n_cone} → zapísané={int(len(merged_var))} "
+            f"variable_targets.csv (VSX export): cone={_vsx_n_cone} -> zapisane={int(len(merged_var))} "
             f"({var_path.name})"
         )
 
@@ -6917,7 +6917,7 @@ def _sync_comparison_stars_across_setups(platesolve_root: Path) -> None:
             try:
                 shutil.copy2(ref_comp, target_comp)
                 log_event(
-                    f"INFO: Comparison stars skopírované z {ref_dir.name} → {d.name}"
+                    f"INFO: Comparison stars skopirovane z {ref_dir.name} -> {d.name}"
                 )
             except Exception:  # noqa: BLE001
                 pass
@@ -6927,7 +6927,7 @@ def _sync_comparison_stars_across_setups(platesolve_root: Path) -> None:
 
 
 def _dao_auto_binning_factor(h: int, w: int) -> int:
-    """2×2 mean binning for DAO on large chips (~4× fewer pixels); skipped below ~5 MP."""
+    """2x2 mean binning for DAO on large chips (~4x fewer pixels); skipped below ~5 MP."""
     mp = float(int(h) * int(w)) / 1_000_000.0
     if mp < 5.0:
         return 1
@@ -6975,7 +6975,7 @@ def _catalog_match_radius_px(
     wpx: int,
     h: int,
 ) -> float:
-    """Pixel matching radius for Gaia↔DAO (floor 10 px)."""
+    """Pixel matching radius for Gaia<->DAO (floor 10 px)."""
     import numpy as np
     from astropy.wcs.utils import proj_plane_pixel_scales
 
@@ -6991,7 +6991,7 @@ def _catalog_match_radius_px(
 
 
 def _dao_pass2_annulus_stats(data0: "np.ndarray", cx: float, cy: float) -> tuple[float, float]:
-    """Local background median and std on annulus r=8–12 px (``data0`` = bgsub image)."""
+    """Local background median and std on annulus r=8-12 px (``data0`` = bgsub image)."""
     import numpy as np
     from astropy.stats import sigma_clipped_stats
 
@@ -7254,7 +7254,7 @@ def _dao_spatial_flux_cap_row_indices(
     """Row indices into ``tbl`` for up to ``max_n`` sources, spread across the detector.
 
     Sorting globally by flux and truncating biases toward the frame centre when vignetting or
-    gradients make edge stars fainter in ADU — QA then falsely looks like a ``catalog disc``. This
+    gradients make edge stars fainter in ADU - QA then falsely looks like a ``catalog disc``. This
     fills a coarse grid brightest-first per cell, then tops up by global flux (same cap).
     """
     import numpy as np
@@ -7911,10 +7911,10 @@ def detect_stars_and_match_catalog(
     **Faintest magnitude:** if ``faintest_mag_limit`` is set (e.g. ``14``), **matched** stars with catalog
     ``mag`` fainter than the limit are dropped. **Unmatched** detections (no ``mag``) are kept for QA.
 
-    ``match_sep_arcsec`` default 8″ is a robust initial tolerance for slight WCS-scale/offset mismatch; the
-    effective floor is ~12″, then the matcher widens toward a high match fraction (target ~95% on typical
+    ``match_sep_arcsec`` default 8 arcsec is a robust initial tolerance for slight WCS-scale/offset mismatch; the
+    effective floor is ~12 arcsec, then the matcher widens toward a high match fraction (target ~95% on typical
     good frames). When the fraction stays low, a **Gaia/pixel** TAN refit (brightest-first greedy pairs, optional
-    Gaia cone re-query) is applied iteratively. A final tightening to ~4.5″ is applied only when most loose
+    Gaia cone re-query) is applied iteratively. A final tightening to ~4.5 arcsec is applied only when most loose
     matches survive it.
 
     ``max_catalog_rows`` caps DAO detections written per frame. Rows are chosen with **spatial
@@ -7922,17 +7922,17 @@ def detect_stars_and_match_catalog(
     mimic a ``catalog disc`` the way a plain brightest-N sort does.
 
     If ``field_catalog_export_path`` is set, the **full** cone table (``cat_df``) is written there for
-    QA overlays — many more rows than DAO detections in ``masterstars.csv``.
+    QA overlays - many more rows than DAO detections in ``masterstars.csv``.
 
-    ``dao_threshold_sigma``: DAOStarFinder threshold = sigma × std(background); lower values detect more faint
-    sources (cf. SIPS ~2.5σ).
+    ``dao_threshold_sigma``: DAOStarFinder threshold = sigma x std(background); lower values detect more faint
+    sources (cf. SIPS ~2.5sigma).
 
     ``prematch_peak_sigma_floor`` (default 10): before catalog matching, drop DAO rows whose local ``peak`` is
-    below ``median + k × σ`` of the frame (sigma-clipped stats). Lower **k** keeps more faint detections
-    (MASTERSTAR / ``config.json`` / DAO-STARS typicky **2.0–3.5**); higher **k** čistí šum pred matchom.
+    below ``median + k x sigma`` of the frame (sigma-clipped stats). Lower **k** keeps more faint detections
+    (MASTERSTAR / ``config.json`` / DAO-STARS typicky **2.0-3.5**); higher **k** cisti sum pred matchom.
 
     Saturation: (1) ``peak_max_adu`` vs resolved ceiling from FITS keywords / ``EQUIPMENTS.SATURATE_ADU`` (before BITPIX);
-    (2) **plateau core** — many pixels in the central 3×3
+    (2) **plateau core** - many pixels in the central 3x3
     near the local maximum (flat-top clipping, similar to a saturated radial profile). Row flags:
     ``saturated_from_peak``, ``saturated_plateau``, ``likely_saturated`` (OR), ``photometry_ok`` (not OR).
     """
@@ -8001,12 +8001,12 @@ def detect_stars_and_match_catalog(
         _fcp.parent.mkdir(parents=True, exist_ok=True)
         _vyvar_df_to_csv(cat_df, _fcp)
         log_event(
-            f"Vykresľujem katalóg pre celé zorné pole: {int(wpx)}x{int(h)} pixelov "
-            f"(export {len(cat_df)} riadkov do field_catalog_cone.csv, cap={int(_cat_cap_eff)}, kužeľ r≈{float(radius_deg):.2f}°)."
+            f"Vykreslujem katalog pre cele zorne pole: {int(wpx)}x{int(h)} pixelov "
+            f"(export {len(cat_df)} riadkov do field_catalog_cone.csv, cap={int(_cat_cap_eff)}, kuzel r~{float(radius_deg):.2f} deg)."
         )
         log_event(
-            f"KATALÓG TARGET: export {_cat_cap_eff} riadkov do field_catalog_cone.csv "
-            f"(ak je dostupných >= {_cat_cap_eff})."
+            f"KATALOG TARGET: export {_cat_cap_eff} riadkov do field_catalog_cone.csv "
+            f"(ak je dostupnych >= {_cat_cap_eff})."
         )
         try:
             _write_field_catalog_cone_meta(
@@ -8020,7 +8020,7 @@ def detect_stars_and_match_catalog(
         except Exception:  # noqa: BLE001
             pass
     _ = catalog_local_gaia_only
-    # ``vsx_df`` prázdny DataFrame z prefetch = „už sme skúšali“; dopĺňaj len ak volajúci nepredal tabuľku (``None``).
+    # ``vsx_df`` prazdny DataFrame z prefetch = 'uz sme skusali'; doplnaj len ak volajuci nepredal tabulku (``None``).
     if vsx_df is None:
         _vx: Path | None = None
         try:
@@ -8245,8 +8245,8 @@ def detect_stars_and_match_catalog(
     tbl = tbl[::-1]
     n_spatial = int(len(tbl))
     log_event(
-        f"DAO na snímku: raw={n_raw_dao} (po brightest-prefilter max {max(int(max_catalog_rows) * 12, 36_000):d}) → "
-        f"po priestorovom strope max_n={int(max_catalog_rows)}: {n_spatial} bodov (binning DAO={bfac}×)."
+        f"DAO na snimku: raw={n_raw_dao} (po brightest-prefilter max {max(int(max_catalog_rows) * 12, 36_000):d}) -> "
+        f"po priestorovom strope max_n={int(max_catalog_rows)}: {n_spatial} bodov (binning DAO={bfac}x)."
     )
     n = n_spatial
     xb = np.asarray(tbl["xcentroid"], dtype=np.float64)
@@ -8300,11 +8300,11 @@ def detect_stars_and_match_catalog(
         peak_max_adu=pmax_arr,
     )
     _sat_csv, n_sat_pk, n_sat_pl = _proc_sat_block_for_csv(_sat_block)
-    # Pre-match SNR cleanup: drop weak DAO detections under (median + k×σ) from image background.
+    # Pre-match SNR cleanup: drop weak DAO detections under (median + kxsigma) from image background.
     _snr_k = float(prematch_peak_sigma_floor)
     if not math.isfinite(_snr_k):
         _snr_k = 10.0
-    # Spodná hranica 0.5 = zhoda s AppConfig / DAO-STARS pre MASTERSTAR; horná 15 = per-frame default k=10 zostane platný.
+    # Spodna hranica 0.5 = zhoda s AppConfig / DAO-STARS pre MASTERSTAR; horna 15 = per-frame default k=10 zostane platny.
     _snr_k = min(15.0, max(0.5, _snr_k))
     noise_floor = float(med + _snr_k * max(float(std) if np.isfinite(std) else 0.0, 1.0))
     snr_keep = np.isfinite(pmax_arr) & (pmax_arr > noise_floor)
@@ -8327,12 +8327,12 @@ def detect_stars_and_match_catalog(
         _sat_csv, n_sat_pk, n_sat_pl = _proc_sat_block_for_csv(_sat_block)
         n = int(n_snr)
         log_event(
-            f"DAO po SNR filtri (šumová podlaha median+{_snr_k:.1f}×σ): {n}/{n_spatial} bodov "
-            f"(noise_floor≈{noise_floor:.1f} ADU; pred matchom s katalógom)."
+            f"DAO po SNR filtri (sumova podlaha median+{_snr_k:.1f}xsigma): {n}/{n_spatial} bodov "
+            f"(noise_floor~{noise_floor:.1f} ADU; pred matchom s katalogom)."
         )
     elif n_snr == 0:
         log_event(
-            f"DAO SNR filter by zahodil všetko — ponechávam {n_spatial} bodov pred matchom."
+            f"DAO SNR filter by zahodil vsetko - ponechavam {n_spatial} bodov pred matchom."
         )
 
     idx_det = np.arange(1, n + 1, dtype=np.int32)
@@ -8539,7 +8539,7 @@ def detect_stars_and_match_catalog(
                         if n_try > n_matched:
                             df_out, n_matched, match_sep_used = df_try, n_try, thr_wider
                             LOGGER.info(
-                                "Catalog match: zhoda %.0f%% < 70 %%, opakovanie s max separáciou %.2f″ (požadované %.2f″)",
+                                "Catalog match: zhoda %.0f%% < 70 %%, opakovanie s max separaciou %.2f arcsec (pozadovane %.2f arcsec)",
                                 100.0 * r_match,
                                 thr_wider,
                                 _req_before,
@@ -8566,7 +8566,7 @@ def detect_stars_and_match_catalog(
                 df_tight, n_tight = _assign_catalog_at_threshold(_tight_sec)
                 if n_tight >= max(8, int(0.92 * max(1, n_matched))):
                     LOGGER.info(
-                        "Catalog match: počiatočný loose match %.2f″ -> finálne zúženie na %.2f″ (matches %d -> %d)",
+                        "Catalog match: pociatocny loose match %.2f arcsec -> finalne zuzenie na %.2f arcsec (matches %d -> %d)",
                         float(match_sep_used),
                         _tight_sec,
                         int(n_matched),
@@ -8669,7 +8669,7 @@ def detect_stars_and_match_catalog(
                     _rms_w = _meta_wcs.get("rms_px")
                     if _rms_w is not None and math.isfinite(float(_rms_w)) and float(_rms_w) > 10.0:
                         LOGGER.info(
-                            "Catalog match: WCS refine zamietnutý (rms=%.2fpx > 10) — širší pixelový matching.",
+                            "Catalog match: WCS refine zamietnuty (rms=%.2fpx > 10) - sirsi pixelovy matching.",
                             float(_rms_w),
                         )
                         max_px = min(max_px * 1.32, 1.52 * diag)
@@ -8694,12 +8694,12 @@ def detect_stars_and_match_catalog(
                     )
                     if _gaia_db_path is not None and Path(_gaia_db_path).is_file():
                         # Wide-field cones already subsume the chip; tangent-plane WCS nudges do not warrant
-                        # re-running multi-hundred-k row SQLite queries on every refine iteration (was ~10× per frame).
+                        # re-running multi-hundred-k row SQLite queries on every refine iteration (was ~10x per frame).
                         _skip_gaia_rerequery = float(radius2) >= 5.0
                         if _skip_gaia_rerequery:
                             LOGGER.info(
-                                "Catalog match: WCS refine — ponechávam existujúci lokálny Gaia výrez "
-                                f"(r={float(radius2):.2f}° ≥ 5°; bez opätovného SQL dotazu)."
+                                "Catalog match: WCS refine - ponechavam existujuci lokalny Gaia vyrez "
+                                f"(r={float(radius2):.2f} deg >= 5 deg; bez opatovneho SQL dotazu)."
                             )
                         else:
                             cat_df_new = _catalog_df_cap_brightest_by_mag(
@@ -8714,7 +8714,7 @@ def detect_stars_and_match_catalog(
                             )
                             if len(cat_df_new) < 120:
                                 LOGGER.info(
-                                    "Catalog match: WCS refine — Gaia re-query < 120 hviezd; refine zrušený."
+                                    "Catalog match: WCS refine - Gaia re-query < 120 hviezd; refine zruseny."
                                 )
                                 hdr.clear()
                                 hdr.extend(hdr_snapshot.cards)
@@ -8761,7 +8761,7 @@ def detect_stars_and_match_catalog(
                             tree_pack = build_ucac_catalog_kdtree(cat_df)
                             tr, oix_rows = tree_pack
                     else:
-                        LOGGER.info("Catalog match: WCS refine bez nového Gaia kužela (gaia_db_path).")
+                        LOGGER.info("Catalog match: WCS refine bez noveho Gaia kuzela (gaia_db_path).")
                     ra_deg, dec_deg = _all_pix2world_icrs_deg(wcs_obj, x, y)
                     det_coords = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
                     if vsx_df is not None and not vsx_df.empty:
@@ -8862,9 +8862,9 @@ def detect_stars_and_match_catalog(
                 med_nn = float(np.nanmedian(_ok))
                 if med_nn > float(match_sep_used) * 1.15:
                     LOGGER.warning(
-                        "Catalog match je slabý: %s/%s detekcií v rámci %.2f″; medián vzdialenosti k najbližšiemu "
-                        "katalógu ≈ %.2f″ — skús zväčšiť „Max catalog match distance″, overiť plate solve (FOV, RA/Dec) "
-                        "a lokálna Gaia DR3.%s",
+                        "Catalog match je slaby: %s/%s detekcii v ramci %.2f arcsec; median vzdialenosti k najblizsiemu "
+                        "katalogu ~ %.2f arcsec - skus zvacsit 'Max catalog match distance arcsec, overit plate solve (FOV, RA/Dec) "
+                        "a lokalna Gaia DR3.%s",
                         n_matched_before_mag,
                         len(df_out),
                         float(match_sep_used),
@@ -8938,7 +8938,7 @@ def detect_stars_and_match_catalog(
             _n_gaia_detected = int(n_matched_final)
         _gaia_dao_rate = 100.0 * float(_n_gaia_detected) / float(_catalog_rows)
         LOGGER.info(
-            "[DAO] Gaia→DAO completeness (raw): "
+            "[DAO] Gaia->DAO completeness (raw): "
             "%d/%d Gaia stars detected (%.1f%%) "
             "| catalog_only (undetected): %d",
             _n_gaia_detected,
@@ -8980,7 +8980,7 @@ def detect_stars_and_match_catalog(
                 _recon.update(_md)
                 meta.update(reconcile_to_pipeline_meta(_recon))
                 LOGGER.info(
-                    "[DAO] Gaia→DAO reconcile: completeness_50=%.1f%% (matched=%d missed=%d "
+                    "[DAO] Gaia->DAO reconcile: completeness_50=%.1f%% (matched=%d missed=%d "
                     "off_frame=%d below_limit=%d blended=%d) G_lim_50=%.2f fit=%s",
                     float(meta.get("gaia_dao_completeness_pct") or 0.0),
                     int(meta.get("n_gaia_matched") or 0),
@@ -8997,12 +8997,12 @@ def detect_stars_and_match_catalog(
         _corr = meta.get("gaia_dao_completeness_pct")
         if _corr is not None and float(_corr) < 80.0:
             LOGGER.warning(
-                "[DAO] Gaia→DAO corrected completeness LOW: %.1f%% (%d genuinely-missed in-frame)",
+                "[DAO] Gaia->DAO corrected completeness LOW: %.1f%% (%d genuinely-missed in-frame)",
                 float(_corr),
                 int(meta.get("n_gaia_missed") or 0),
             )
     else:
-        LOGGER.debug("[DAO] catalog_rows not available — Gaia→DAO skip")
+        LOGGER.debug("[DAO] catalog_rows not available - Gaia->DAO skip")
     df_out = _proc_rename_det_names_to_catalog_id(df_out)
     return df_out, meta
 
@@ -9233,7 +9233,7 @@ def _compute_airmass_from_altaz(
     if jd is None:
         return float("nan")
 
-    # Safe: airmass from CRVAL1/2 or OBJCTRA/DEC; returns nan if missing — handled downstream.
+    # Safe: airmass from CRVAL1/2 or OBJCTRA/DEC; returns nan if missing - handled downstream.
     ra = _header_float_tu(hdr, "CRVAL1")
     dec = _header_float_tu(hdr, "CRVAL2")
     if ra is None or dec is None:
@@ -9261,7 +9261,7 @@ def _compute_airmass_from_altaz(
         am = _airmass_from_altitude_deg(alt_deg)
         if 0.9 <= am <= 10.0:
             LOGGER.info(
-                "Airmass from AltAz fallback: %.4f (alt=%.2f°)",
+                "Airmass from AltAz fallback: %.4f (alt=%.2f deg)",
                 am,
                 alt_deg,
             )
@@ -9278,10 +9278,10 @@ def _extract_airmass_from_header(
     db: VyvarDatabase | None = None,
     draft_id: int | None = None,
 ) -> float:
-    """Extrahuj airmass z FITS hlavičky.
+    """Extrahuj airmass z FITS hlavicky.
 
-    Skúša AIRMASS, potom ALT_OBJ/OBJCTALT (prepočet cez sec(z) = 1/cos(alt)).
-    Vracia float("nan") ak nie je dostupný.
+    Skusa AIRMASS, potom ALT_OBJ/OBJCTALT (prepocet cez sec(z) = 1/cos(alt)).
+    Vracia float("nan") ak nie je dostupny.
     """
     # Priamy keyword
     for kw in ("AIRMASS", "AIRMAS", "SECZ"):
@@ -9289,12 +9289,12 @@ def _extract_airmass_from_header(
         if val is not None:
             try:
                 v = float(val)
-                if 0.9 <= v <= 10.0:  # fyzikálny rozsah
+                if 0.9 <= v <= 10.0:  # fyzikalny rozsah
                     return v
             except (TypeError, ValueError):
                 pass
 
-    # Fallback: altitude → airmass cez aproximaciu Kasten & Young (1989)
+    # Fallback: altitude -> airmass cez aproximaciu Kasten & Young (1989)
     for kw in ("ALT_OBJ", "OBJCTALT", "ALTITUDE", "TELALT"):
         val = hdr.get(kw)
         if val is not None:
@@ -9489,7 +9489,7 @@ def _export_per_frame_run_catalog_core(
 
     _before_dao = len(df)
     df = _proc_drop_unmatched_dao_rows(df)
-    LOGGER.debug("[TODO-13] catalog-only pre-filter (detect): %d → %d rows", _before_dao, len(df))
+    LOGGER.debug("[TODO-13] catalog-only pre-filter (detect): %d -> %d rows", _before_dao, len(df))
 
     # --- Join MASTERSTAR annotations into per-frame catalog (via catalog_id) ---
     # For matched rows (catalog_id non-empty), bring stable MASTERSTAR columns like zone/is_usable/bp_rp/etc.
@@ -9586,7 +9586,7 @@ def _export_per_frame_run_catalog_core(
         for _i, _nm in enumerate(_tk):
             df.insert(_pos + _i, _nm, _time_cols[_nm])
 
-        # Airmass — rovnaká hodnota pre všetky hviezdy v snímke (frame-level)
+        # Airmass - rovnaka hodnota pre vsetky hviezdy v snimke (frame-level)
         _am_val = _extract_airmass_from_header(
             hdr,
             cfg=_geo_cfg,
@@ -9618,7 +9618,7 @@ def _export_per_frame_run_catalog_core(
 
     _before_cat = len(df2)
     df2 = _proc_catalog_keep_matched_rows_only(df2)
-    LOGGER.debug("[TODO-13] catalog-only filter: %d → %d rows", _before_cat, len(df2))
+    LOGGER.debug("[TODO-13] catalog-only filter: %d -> %d rows", _before_cat, len(df2))
 
     csv_paths: list[str] = []
     write_sidecar = bool(st.get("write_sidecar_csv_next_to_fits"))
@@ -9756,7 +9756,7 @@ def export_per_frame_catalogs(
     ``<platesolve_dir>/per_frame_catalog_index.csv`` lists every file and CSV path.
 
     **Performance:** each frame still runs DAO + catalog match + disk CSV write (dominant cost for many lights).
-    Parallelism: jednotný počet z ``app_config`` / env (``VYVAR_PARALLEL_WORKERS`` alebo legacy env, pozri
+    Parallelism: jednotny pocet z ``app_config`` / env (``VYVAR_PARALLEL_WORKERS`` alebo legacy env, pozri
     :func:`_vyvar_parallel_worker_count`). When ``>1``, uses ``ProcessPoolExecutor`` (``spawn``); the
     parent prefetches Gaia cone. Worker count is capped using ``psutil`` and
     ``per_frame_mp_reserve_ram_gb``. RAM handoff ``aligned_ram`` uses the same process pool with serialized
@@ -9935,8 +9935,8 @@ def export_per_frame_catalogs(
                         if r_stored <= 0.0 or r_need_deg > r_stored * 1.02 + slack_deg:
                             _reuse = False
                             LOGGER.info(
-                                "Per-frame catalog: ignoring cached %s (full chip needs cone_radius_deg≈%.6f, "
-                                "cached %.6f from %s) — fetching larger Gaia cone",
+                                "Per-frame catalog: ignoring cached %s (full chip needs cone_radius_deg~%.6f, "
+                                "cached %.6f from %s) - fetching larger Gaia cone",
                                 field_cat_path,
                                 r_need_deg,
                                 r_stored,
@@ -9947,7 +9947,7 @@ def export_per_frame_catalogs(
                 if _reuse:
                     cat_df = _cdf
                     LOGGER.info(
-                        "Per-frame catalog: reusing %s (%s rows) — skipping duplicate cone query",
+                        "Per-frame catalog: reusing %s (%s rows) - skipping duplicate cone query",
                         field_cat_path,
                         len(cat_df),
                     )
@@ -10037,7 +10037,7 @@ def export_per_frame_catalogs(
             if _ms_gauss.is_file():
                 with fits.open(_ms_gauss, memmap=False) as _gfh:
                     _ghdr = _gfh[0].header
-                    # PRIORITA 1: VY_FWHM_GAUSS — 2D Gaussian fit, closest to SExtractor
+                    # PRIORITA 1: VY_FWHM_GAUSS - 2D Gaussian fit, closest to SExtractor
                     for _gk in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
                         _vg = _ghdr.get(_gk)
                         if _vg is None:
@@ -10055,7 +10055,7 @@ def export_per_frame_catalogs(
                         except (TypeError, ValueError):
                             pass
 
-                    # PRIORITA 2: VY_FWHM × 0.667 fallback
+                    # PRIORITA 2: VY_FWHM x 0.667 fallback
                     if _gauss_override is None:
                         _vy = _ghdr.get("VY_FWHM")
                         if _vy is not None:
@@ -10064,7 +10064,7 @@ def export_per_frame_catalogs(
                                 if 1.0 <= _vyf <= 15.0:
                                     _gauss_override = _vyf * (1.0 / 1.5)
                                     LOGGER.debug(
-                                        "[FWHM] gaussian_override from VY_FWHM×0.667: %.3f px",
+                                        "[FWHM] gaussian_override from VY_FWHMx0.667: %.3f px",
                                         _gauss_override,
                                     )
                             except (TypeError, ValueError):
@@ -10078,7 +10078,7 @@ def export_per_frame_catalogs(
             "(z VY_FWHM alebo VY_FWHM_GAUSS)"
         )
     else:
-        log_event("[PHOT] gaussian_fwhm_px_override = None → fallback na moment×0.619 per frame")
+        log_event("[PHOT] gaussian_fwhm_px_override = None -> fallback na momentx0.619 per frame")
 
     cfg_for_workers = app_config if app_config is not None else AppConfig()
     _dao_fw_export = (
@@ -10095,7 +10095,7 @@ def export_per_frame_catalogs(
     )
     if n_workers > 1 and total > 1:
         LOGGER.info(
-            "Per-frame catalog: up to %s process worker(s); jednotný parallel count + RAM cap (psutil); "
+            "Per-frame catalog: up to %s process worker(s); jednotny parallel count + RAM cap (psutil); "
             "env VYVAR_PARALLEL_WORKERS / legacy",
             n_workers,
         )
@@ -10286,7 +10286,7 @@ def export_per_frame_catalogs(
 
         _before_dao = len(df)
         df = _proc_drop_unmatched_dao_rows(df)
-        LOGGER.debug("[TODO-13] catalog-only pre-filter (detect): %d → %d rows", _before_dao, len(df))
+        LOGGER.debug("[TODO-13] catalog-only pre-filter (detect): %d -> %d rows", _before_dao, len(df))
 
         _run_aperture = bool(_ap_st.get("_run_aperture", True))
         _run_epsf = bool(_ap_st.get("_run_epsf", False))
@@ -10339,7 +10339,7 @@ def export_per_frame_catalogs(
             for _i, _nm in enumerate(_tk):
                 df.insert(_pos + _i, _nm, _time_cols[_nm])
 
-            # Airmass — frame-level hodnota z FITS hlavičky
+            # Airmass - frame-level hodnota z FITS hlavicky
             _am_val = _extract_airmass_from_header(
                 hdr,
                 cfg=_cfg_ap,
@@ -10368,7 +10368,7 @@ def export_per_frame_catalogs(
 
         _before_cat = len(df2)
         df2 = _proc_catalog_keep_matched_rows_only(df2)
-        LOGGER.debug("[TODO-13] catalog-only filter: %d → %d rows", _before_cat, len(df2))
+        LOGGER.debug("[TODO-13] catalog-only filter: %d -> %d rows", _before_cat, len(df2))
 
         csv_paths: list[str] = []
         if write_sidecar_csv_next_to_fits:
@@ -10874,10 +10874,10 @@ def _fill_masterstars_gaia_matched_bp_rp_from_local_db(
     *,
     gaia_db_path: str,
 ) -> tuple[pd.DataFrame, int, int]:
-    """Doplň ``bp_rp`` / ``b_v`` z lokálnej Gaia SQLite pre ``GAIA_MATCHED`` bez farby v masterstars CSV.
+    """Dopln ``bp_rp`` / ``b_v`` z lokalnej Gaia SQLite pre ``GAIA_MATCHED`` bez farby v masterstars CSV.
 
-    Frame-wide Gaia dotaz (``ORDER BY g_mag LIMIT``) často vynechá už omatchované hviezdy na snímke;
-    táto dávka ide priamo podľa ``source_id``.
+    Frame-wide Gaia dotaz (``ORDER BY g_mag LIMIT``) casto vynecha uz omatchovane hviezdy na snimke;
+    tato davka ide priamo podla ``source_id``.
     """
     if df is None or getattr(df, "empty", True):
         return df, 0, 0
@@ -10956,15 +10956,15 @@ def generate_masterstar_and_catalog(
 ) -> dict[str, Any]:
     """Create MASTERSTAR.fits, plate-solve it, and export masterstars.csv.
 
-    Ak je ``masterstar_fits_only=True``, po zostavení FITS v ``platesolve/`` sa skončí (žiadny plate-solve ani CSV).
-    Ak je ``masterstar_skip_build=True``, preskočí sa build z processed — použije sa existujúci ``MASTERSTAR.fits`` v ``platesolve/`` a beží solver + katalóg.
-    Ak je ``masterstar_platesolve_only=True``, po úspešnom plate-solve a úprave mierky WCS sa skončí (bez DAO CSV, ``masterstars_full_match.csv``, fotometrického plánu a zápisu MASTER_SOURCES).
+    Ak je ``masterstar_fits_only=True``, po zostaveni FITS v ``platesolve/`` sa skonci (ziadny plate-solve ani CSV).
+    Ak je ``masterstar_skip_build=True``, preskoci sa build z processed - pouzije sa existujuci ``MASTERSTAR.fits`` v ``platesolve/`` a bezi solver + katalog.
+    Ak je ``masterstar_platesolve_only=True``, po uspesnom plate-solve a uprave mierky WCS sa skonci (bez DAO CSV, ``masterstars_full_match.csv``, fotometrickeho planu a zapisu MASTER_SOURCES).
     """
     max_catalog_rows = max(int(max_catalog_rows), 100000)
     import numpy as np
 
     ap = Path(archive_path).expanduser()
-    # Draft UI môže poslať .../draft_x/non_calibrated — MASTERSTAR a platesolve patria pod koreň draftu.
+    # Draft UI moze poslat .../draft_x/non_calibrated - MASTERSTAR a platesolve patria pod koren draftu.
     if ap.name.casefold() == "non_calibrated":
         ap = ap.parent
     detrended_root: Path | None = None
@@ -10976,8 +10976,8 @@ def generate_masterstar_and_catalog(
         masterstar_fits = Path(platesolve_dir) / _ms_name
         if not masterstar_fits.is_file():
             raise FileNotFoundError(
-                f"MASTERSTAR plate-solve: v {platesolve_dir} chýba súbor {_ms_name}. "
-                "Najprv spusti **MAKE MASTERSTAR** na archíve alebo vytvor MASTERSTAR inak (FITS QA → referenčný snímok)."
+                f"MASTERSTAR plate-solve: v {platesolve_dir} chyba subor {_ms_name}. "
+                "Najprv spusti **MAKE MASTERSTAR** na archive alebo vytvor MASTERSTAR inak (FITS QA -> referencny snimok)."
             )
         _match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
         if _match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
@@ -10985,8 +10985,8 @@ def generate_masterstar_and_catalog(
                 f"MASTERSTAR: catalog match sep eff={_match_sep_eff:.2f} arcsec (min 10 for initial match)."
             )
         log_event(
-            f"MASTERSTAR platesolve-from-disk: {masterstar_fits.resolve()} — VYVAR solver + katalóg "
-            "(bez nového buildu z processed)."
+            f"MASTERSTAR platesolve-from-disk: {masterstar_fits.resolve()} - VYVAR solver + katalog "
+            "(bez noveho buildu z processed)."
         )
         ms_selection_meta = {
             "source": "platesolve_existing",
@@ -11025,7 +11025,7 @@ def generate_masterstar_and_catalog(
                 raise FileNotFoundError(
                     f"MASTERSTAR input root for setup {str(setup_name)!r} not found: {detrended_root}"
                 )
-            log_event(f"❌ MASTERSTAR FAIL: Input path {detrended_root} not found.")
+            log_event(f"[X] MASTERSTAR FAIL: Input path {detrended_root} not found.")
             processed_lights = ap / "processed" / "lights"
             if processed_lights.is_dir():
                 subdirs = sorted(
@@ -11034,7 +11034,7 @@ def generate_masterstar_and_catalog(
                 )
                 if subdirs:
                     detrended_root = subdirs[0]
-                    log_event(f"✅ MASTERSTAR fallback input found: {detrended_root}")
+                    log_event(f"[OK] MASTERSTAR fallback input found: {detrended_root}")
         if not detrended_root.exists():
             raise FileNotFoundError(f"Missing processed/detrended lights: {detrended_root}")
         # If root exists but has no FITS, try first setup subfolder under processed lights (single-group only).
@@ -11047,25 +11047,25 @@ def generate_masterstar_and_catalog(
                 )
                 for sd in subdirs:
                     if _iter_fits_recursive(sd):
-                        log_event(f"✅ MASTERSTAR fallback to setup subdir: {sd}")
+                        log_event(f"[OK] MASTERSTAR fallback to setup subdir: {sd}")
                         detrended_root = sd
                         break
 
-        log_event(f"🔍 MASTERSTAR: Searching for candidates in {Path(detrended_root).resolve()}")
-        log_event(f"Vstupný priečinok pre Masterstar: {Path(detrended_root).resolve()}")
+        log_event(f"[search] MASTERSTAR: Searching for candidates in {Path(detrended_root).resolve()}")
+        log_event(f"Vstupny priecinok pre Masterstar: {Path(detrended_root).resolve()}")
         from draft_provenance import is_pre_calibrated_draft
 
         _pre_cal_ms = is_pre_calibrated_draft(ap, draft_id=draft_id)
         if _pre_cal_ms:
             log_event(
-                "MASTERSTAR: pre-calibrated draft — candidates resolved directly under "
+                "MASTERSTAR: pre-calibrated draft - candidates resolved directly under "
                 f"{Path(detrended_root).resolve()} (no processed/calibrated remap)."
             )
         _match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
         if _match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
             log_event(
-                f"MASTERSTAR: catalog match sep zvýšený na {_match_sep_eff:.2f}\" "
-                f"(požadované minimum pre počiatočný match)."
+                f"MASTERSTAR: catalog match sep zvyseny na {_match_sep_eff:.2f}\" "
+                f"(pozadovane minimum pre pociatocny match)."
             )
 
         ps = Path(platesolve_dir) if platesolve_dir is not None else (ap / "platesolve")
@@ -11075,7 +11075,7 @@ def generate_masterstar_and_catalog(
         masterstar_fits = Path(platesolve_dir) / _ms_name
         only_ms_paths: list[Path] | None = None
         ms_selection_meta: dict[str, Any] = {}
-        #: When True, ``masterstar_candidate_paths`` mapped to disk — do not append unrelated FITS
+        #: When True, ``masterstar_candidate_paths`` mapped to disk - do not append unrelated FITS
         #: for "best-of-N" pool (that would override a deliberate single-frame pick in the UI).
         explicit_ui_masterstar_paths = False
 
@@ -11083,7 +11083,7 @@ def generate_masterstar_and_catalog(
             """Map UI / DB paths onto draft lights FITS under ``detrended_root``.
 
             Pre-calibrated: match by basename under ``non_calibrated/lights/<setup>/``.
-            VYVAR-calibrated: prefer ``processed/lights/…/proc_*.fits`` via remap helpers.
+            VYVAR-calibrated: prefer ``processed/lights/.../proc_*.fits`` via remap helpers.
             """
 
             def _mapped_hit_ok(hit: Path) -> bool:
@@ -11171,10 +11171,10 @@ def generate_masterstar_and_catalog(
                 }
             else:
                 raise FileNotFoundError(
-                    "MASTERSTAR: z UI/job prišli explicitné cesty k referenčnému snímku, ale žiadna sa nenašla "
-                    f"ako ``processed/lights/…/proc_*.fits`` (koreň výberu: {Path(detrended_root).resolve()}). "
-                    "Skontroluj preprocess, archív a výber vo FITS QA (potvrď znovu po **Create Archive & Do Calibration**). "
-                    f"Požadované ({len(cand_paths)}): " + "; ".join(cand_paths[:6]) + (" …" if len(cand_paths) > 6 else "")
+                    "MASTERSTAR: z UI/job prisli explicitne cesty k referencnemu snimku, ale ziadna sa nenasla "
+                    f"ako ``processed/lights/.../proc_*.fits`` (koren vyberu: {Path(detrended_root).resolve()}). "
+                    "Skontroluj preprocess, archiv a vyber vo FITS QA (potvrd znovu po **Create Archive & Do Calibration**). "
+                    f"Pozadovane ({len(cand_paths)}): " + "; ".join(cand_paths[:6]) + (" ..." if len(cand_paths) > 6 else "")
                 )
 
         _multi_obs = draft_is_multi_group_obs(ap)
@@ -11182,9 +11182,9 @@ def generate_masterstar_and_catalog(
             _db_ms = _vyvar_open_database(app_config or AppConfig())
             if _db_ms is not None:
                 try:
-                    # FITS QA „Potvrdiť výber MASTERSTAR“ → ``get_obs_draft_masterstar_source_path``
-                    # (``OBS_DRAFT.MASTERSTAR_PATH`` = zdrojový frame, nie hotový ``MASTERSTAR.fits``).
-                    # Musí ísť pred automatickým top-% z ``OBS_FILES``, inak sa používateľský výber prepíše.
+                    # FITS QA 'Potvrdit vyber MASTERSTAR' -> ``get_obs_draft_masterstar_source_path``
+                    # (``OBS_DRAFT.MASTERSTAR_PATH`` = zdrojovy frame, nie hotovy ``MASTERSTAR.fits``).
+                    # Musi ist pred automatickym top-% z ``OBS_FILES``, inak sa pouzivatelsky vyber prepise.
                     _src = _db_ms.get_obs_draft_masterstar_source_path(int(draft_id))
                     if _src and str(_src).strip():
                         mapped_src = _map_qc_paths_to_disk([str(_src).strip()])
@@ -11198,7 +11198,7 @@ def generate_masterstar_and_catalog(
                                 "explicit_ui_lock": True,
                             }
                             log_event(
-                                f"MASTERSTAR: FITS QA výber (DB source, draft {int(draft_id)}) → {mapped_src[0].name}"
+                                f"MASTERSTAR: FITS QA vyber (DB source, draft {int(draft_id)}) -> {mapped_src[0].name}"
                             )
                     if only_ms_paths is None:
                         db_paths = get_masterstar_candidates(int(draft_id), _pct_eff, db=_db_ms)
@@ -11212,17 +11212,17 @@ def generate_masterstar_and_catalog(
                                 "mapped_found": int(len(mapped_db)),
                             }
                             log_event(
-                                f"MASTERSTAR: výber z DB (draft {int(draft_id)}, top {_pct_eff:g} %) → "
-                                f"{len(mapped_db)} kandidátov (najlepší sa skopíruje do platesolve)."
+                                f"MASTERSTAR: vyber z DB (draft {int(draft_id)}, top {_pct_eff:g} %) -> "
+                                f"{len(mapped_db)} kandidatov (najlepsi sa skopiruje do platesolve)."
                             )
                         else:
                             log_event(
-                                f"MASTERSTAR: DB výber (draft {int(draft_id)}) sa nepodarilo namapovať na FITS pod {detrended_root}."
+                                f"MASTERSTAR: DB vyber (draft {int(draft_id)}) sa nepodarilo namapovat na FITS pod {detrended_root}."
                             )
                 except Exception as exc:  # noqa: BLE001
                     # EXC-0394: T4 -- `_dbc_fw.conn.close()` cleanup only; no radiometry or frame data touched. (EXCEPT-BULK 2026-07-08)
                     logging.error('[EXC-0393] DB FWHM median fetch `pass` leaves `_ms_fwhm_fb` at config default instead of draft QC ...: %s', exc)
-                    log_event(f"MASTERSTAR: DB výber kandidátov zlyhal ({exc!s}).")
+                    log_event(f"MASTERSTAR: DB vyber kandidatov zlyhal ({exc!s}).")
                 finally:
                     try:
                         _db_ms.conn.close()
@@ -11238,12 +11238,12 @@ def generate_masterstar_and_catalog(
                     "mapped_found": int(len(disk_batch)),
                 }
                 log_event(
-                    f"MASTERSTAR disk fallback: {len(disk_batch)} kandidátov z disku (bez platného QC výberu)."
+                    f"MASTERSTAR disk fallback: {len(disk_batch)} kandidatov z disku (bez platneho QC vyberu)."
                 )
 
         if only_ms_paths is None:
             raise FileNotFoundError(
-                f"MASTERSTAR: v {detrended_root} nie sú žiadne FITS pre výber ani po UI/DB."
+                f"MASTERSTAR: v {detrended_root} nie su ziadne FITS pre vyber ani po UI/DB."
             )
 
         _cfg_stack = app_config or AppConfig()
@@ -11278,7 +11278,7 @@ def generate_masterstar_and_catalog(
             _best_n = 10
         _best_n = max(1, min(25, int(_best_n)))
         _cand_all = [Path(p) for p in (only_ms_paths or []) if Path(p).is_file()]
-        # If UI/DB mapping yields too few candidates, expand from disk for best-of-N robustness —
+        # If UI/DB mapping yields too few candidates, expand from disk for best-of-N robustness -
         # but never when the user explicitly passed ``masterstar_candidate_paths`` (would replace e.g.
         # a single chosen frame with unrelated lights and pick lowest VY_FWHM among them).
         try:
@@ -11290,7 +11290,7 @@ def generate_masterstar_and_catalog(
         except Exception:  # noqa: BLE001
             pass
         if not _cand_all:
-            raise FileNotFoundError(f"MASTERSTAR: v {detrended_root} nie sú žiadne FITS pre výber.")
+            raise FileNotFoundError(f"MASTERSTAR: v {detrended_root} nie su ziadne FITS pre vyber.")
         _cand_singletons = _cand_all[:_best_n]
 
         _db_ms_build: VyvarDatabase | None = None
@@ -11363,8 +11363,8 @@ def generate_masterstar_and_catalog(
         except OSError:
             _ms_out = str(masterstar_fits)
         log_event(
-            f"MASTERSTAR (len FITS, bez plate-solve): zapísané {_ms_out} | "
-            f"zkombinovaných snímok={info.get('frames_combined', info.get('frames_used', '?'))}"
+            f"MASTERSTAR (len FITS, bez plate-solve): zapisane {_ms_out} | "
+            f"zkombinovanych snimok={info.get('frames_combined', info.get('frames_used', '?'))}"
         )
         out_fast: dict[str, Any] = {
             "masterstar_fits": _ms_out,
@@ -11390,7 +11390,7 @@ def generate_masterstar_and_catalog(
             out_fast["masterstar_path_store_error"] = str(exc)
         return out_fast
 
-    # Solve WCS (MASTERSTAR): výhradne VYVAR lokálny Gaia solver (žiadny ASTAP / astrometry.net).
+    # Solve WCS (MASTERSTAR): vyhradne VYVAR lokalny Gaia solver (ziadny ASTAP / astrometry.net).
 
     with fits.open(masterstar_fits, memmap=False) as hdul:
         hdr = hdul[0].header.copy()
@@ -11406,18 +11406,18 @@ def generate_masterstar_and_catalog(
         _dao_sigma_eff = 1.8
     _dao_sigma_eff = max(0.1, min(6.0, float(_dao_sigma_eff)))
     log_event(
-        f"MASTERSTAR: DAO threshold σ×RMS = {_dao_sigma_eff:.2f} "
-        f"(config masterstar_dao_threshold_sigma; plate solve + katalóg)"
+        f"MASTERSTAR: DAO threshold sigmaxRMS = {_dao_sigma_eff:.2f} "
+        f"(config masterstar_dao_threshold_sigma; plate solve + katalog)"
     )
 
     _full_db = str(_cfg_ms.gaia_db_path or "").strip()
     if not _full_db:
         raise RuntimeError(
-            "MASTERSTAR: v Settings nastavte gaia_db_path (plná lokálna Gaia DR3 SQLite DB)."
+            "MASTERSTAR: v Settings nastavte gaia_db_path (plna lokalna Gaia DR3 SQLite DB)."
         )
     from vyvar_platesolver import solve_wcs_with_local_gaia
 
-    log_event("MASTERSTAR WCS: VYVAR solver + plná Gaia DB (gaia_db_path).")
+    log_event("MASTERSTAR WCS: VYVAR solver + plna Gaia DB (gaia_db_path).")
     try:
         _sip_ms = int(_cfg_ms.masterstar_platesolve_sip_max_order)
     except (TypeError, ValueError):
@@ -11431,7 +11431,7 @@ def generate_masterstar_and_catalog(
     if _sip_lo > _sip_ms:
         _sip_lo = _sip_ms
     log_event(
-        f"MASTERSTAR: SIP skúšanie {_sip_ms}→…→{_sip_lo} (config max/min plate-solve SIP)."
+        f"MASTERSTAR: SIP skusanie {_sip_ms}->...->{_sip_lo} (config max/min plate-solve SIP)."
     )
     try:
         _xb_ms, _yb_ms = fits_binning_xy_from_header(hdr)
@@ -11465,7 +11465,7 @@ def generate_masterstar_and_catalog(
         )
     else:
         log_event(
-            "WARNING: Plate scale z DB nedostupná — solver odvodí mierku z FITS alebo None"
+            "WARNING: Plate scale z DB nedostupna - solver odvodi mierku z FITS alebo None"
         )
 
     _plate_scale_ms = _auto_scale_ms or None
@@ -11494,7 +11494,7 @@ def generate_masterstar_and_catalog(
     solve_meta: dict[str, Any] = {}
     if _skip_independent_solve:
         log_event(
-            "MASTERSTAR: sibling-recovered WCS on disk — skipping independent Pass-1 plate-solve."
+            "MASTERSTAR: sibling-recovered WCS on disk - skipping independent Pass-1 plate-solve."
         )
         try:
             _vy_sodd = int(hdr.get("VY_SODD", 0) or 0)
@@ -11521,8 +11521,8 @@ def generate_masterstar_and_catalog(
                 if math.isfinite(_hra_ov) and math.isfinite(_hde_ov):
                     _mra, _mde = _hra_ov, _hde_ov
                     log_event(
-                        "MASTERSTAR: hint_ra_deg / hint_dec_deg z volania prepisujú hint z FITS "
-                        "(druhý MASTERSTAR / detrended aligned)."
+                        "MASTERSTAR: hint_ra_deg / hint_dec_deg z volania prepisuju hint z FITS "
+                        "(druhy MASTERSTAR / detrended aligned)."
                     )
             except (TypeError, ValueError):
                 pass
@@ -11541,7 +11541,7 @@ def generate_masterstar_and_catalog(
                         if _mra is None or _mde is None:
                             _mra, _mde = med_ra, med_de
                             log_event(
-                                "MASTERSTAR solve: používam medián RA/Dec z OBS_FILES (hlavička bez spoľahlivého hintu)."
+                                "MASTERSTAR solve: pouzivam median RA/Dec z OBS_FILES (hlavicka bez spolahliveho hintu)."
                             )
                         else:
                             sc_h = SkyCoord(ra=float(_mra) * u.deg, dec=float(_mde) * u.deg, frame="icrs")
@@ -11549,13 +11549,13 @@ def generate_masterstar_and_catalog(
                             sep = float(sc_h.separation(sc_d).deg)
                             if sep > float(_hint_sep_thr):
                                 log_event(
-                                    f"MASTERSTAR solve: hint vs draft median = {sep:.3f}° > {_hint_sep_thr}° "
-                                    "— používam draft medián z OBS_FILES."
+                                    f"MASTERSTAR solve: hint vs draft median = {sep:.3f} deg > {_hint_sep_thr} deg "
+                                    "- pouzivam draft median z OBS_FILES."
                                 )
                                 _mra, _mde = med_ra, med_de
                             elif sep > 0.05:
                                 log_event(
-                                    f"MASTERSTAR solve: hint vs draft median = {sep:.3f}° (skontrolujte pointing)."
+                                    f"MASTERSTAR solve: hint vs draft median = {sep:.3f} deg (skontrolujte pointing)."
                                 )
                 finally:
                     try:
@@ -11634,8 +11634,8 @@ def generate_masterstar_and_catalog(
             data = np.array(hdul[0].data, dtype=np.float32, copy=True)
         if not _has_valid_wcs(hdr):
             raise RuntimeError(
-                "MASTERSTAR: po plate-solve chýba platný WCS. Skontroluj gaia_db_path, RA/Dec a mierku v hlavičke "
-                "(FOCALLEN/PIXSIZE alebo SECPIX) a výstup solvera."
+                "MASTERSTAR: po plate-solve chyba platny WCS. Skontroluj gaia_db_path, RA/Dec a mierku v hlavicke "
+                "(FOCALLEN/PIXSIZE alebo SECPIX) a vystup solvera."
             )
 
         # Pipeline-level acceptance criteria (stricter than solver's minimal guard):
@@ -11647,8 +11647,8 @@ def generate_masterstar_and_catalog(
         _min_mr = 0.60
         if _mr < _min_mr:
             raise RuntimeError(
-                f"MASTERSTAR plate-solve zamietnutý: match_rate={_mr * 100.0:.1f}% < {_min_mr * 100.0:.0f}%. "
-                "Skús zvýšiť n_stack alebo upraviť hint/DAO prahy."
+                f"MASTERSTAR plate-solve zamietnuty: match_rate={_mr * 100.0:.1f}% < {_min_mr * 100.0:.0f}%. "
+                "Skus zvysit n_stack alebo upravit hint/DAO prahy."
             )
 
         try:
@@ -11675,7 +11675,7 @@ def generate_masterstar_and_catalog(
 
         if math.isfinite(scale_ratio) and scale_ratio > _aniso_thr:
             log_event(
-                f"VAROVANIE: Anizotropná mierka ratio={scale_ratio:.2f} — plate-solve zamietnutý, restartujem solver (relaxed)."
+                f"VAROVANIE: Anizotropna mierka ratio={scale_ratio:.2f} - plate-solve zamietnuty, restartujem solver (relaxed)."
             )
             # Retry with relaxed knobs:
             # - slightly larger FOV diameter (hint-vs-solved tolerance),
@@ -11697,7 +11697,7 @@ def generate_masterstar_and_catalog(
                 hdr = hdul[0].header.copy()
                 data = np.array(hdul[0].data, dtype=np.float32, copy=True)
             if not _has_valid_wcs(hdr):
-                raise RuntimeError("MASTERSTAR: po retry plate-solve chýba platný WCS.")
+                raise RuntimeError("MASTERSTAR: po retry plate-solve chyba platny WCS.")
             try:
                 from astropy.wcs import WCS
 
@@ -11712,7 +11712,7 @@ def generate_masterstar_and_catalog(
                 scale_ratio2 = float("nan")
             if math.isfinite(scale_ratio2) and scale_ratio2 > _aniso_thr:
                 raise RuntimeError(
-                    f"MASTERSTAR plate-solve zamietnutý: anizotropná mierka po retry ratio={scale_ratio2:.2f} (>{_aniso_thr})."
+                    f"MASTERSTAR plate-solve zamietnuty: anizotropna mierka po retry ratio={scale_ratio2:.2f} (>{_aniso_thr})."
                 )
 
     _exp_scale_apx: float | None = None
@@ -11737,10 +11737,10 @@ def generate_masterstar_and_catalog(
         except Exception:  # noqa: BLE001
             _exp_scale_apx = None
     if _exp_scale_apx is None or (not math.isfinite(_exp_scale_apx)) or _exp_scale_apx <= 0:
-        # derive-or-None (DR6 pattern): all principled sources exhausted — do not guess.
+        # derive-or-None (DR6 pattern): all principled sources exhausted - do not guess.
         _exp_scale_apx = None
         log_event(
-            "WARNING: MASTERSTAR plate scale not derivable (DB/FITS/WCS exhausted) — "
+            "WARNING: MASTERSTAR plate scale not derivable (DB/FITS/WCS exhausted) - "
             "expected scale unknown; VY_PLTS will not be written."
         )
 
@@ -11771,8 +11771,8 @@ def generate_masterstar_and_catalog(
             except (TypeError, ValueError):
                 _se_s = str(_se)
             log_event(
-                f"MASTERSTAR WCS kvalita: zlá (ratio={_rq_s}, scale_err={_se_s}%) — "
-                "pokračujem bez externého plate-solve (očakáva sa FITS metadáta / budúci blind solver)."
+                f"MASTERSTAR WCS kvalita: zla (ratio={_rq_s}, scale_err={_se_s}%) - "
+                "pokracujem bez externeho plate-solve (ocakava sa FITS metadata / buduci blind solver)."
             )
     except Exception as _wq_exc:  # noqa: BLE001
         log_event(f"MASTERSTAR WCS check failed: {_wq_exc}")
@@ -11786,7 +11786,7 @@ def generate_masterstar_and_catalog(
             draft_id=draft_id,
         )
     except Exception as exc:  # noqa: BLE001
-        log_event(f"WCS PLATE SCALE: neočakávaná chyba — {exc!s}")
+        log_event(f"WCS PLATE SCALE: neocakavana chyba - {exc!s}")
         _pscale_adj = {"rescaled": False, "error": str(exc)}
     solve_meta["wcs_plate_scale_adjustment"] = _pscale_adj
 
@@ -11819,7 +11819,7 @@ def generate_masterstar_and_catalog(
             log_event(f"Could not write VY_PLTS to MASTERSTAR: {exc}")
     else:
         log_event(
-            "WARNING: MASTERSTAR VY_PLTS not written — plate scale not derivable "
+            "WARNING: MASTERSTAR VY_PLTS not written - plate scale not derivable "
             "(derive-or-None; no rig/global constant written to header)."
         )
 
@@ -11840,7 +11840,7 @@ def generate_masterstar_and_catalog(
                 log_event(
                     f"WARNING: MASTERSTAR initial-solve WCS round-trip p99="
                     f"{_rt0.get('wcs_roundtrip_p99_px'):.4f}px (threshold "
-                    f"{_rt0.get('p99_threshold_px')}px) — provenance flag set; continuing."
+                    f"{_rt0.get('p99_threshold_px')}px) - provenance flag set; continuing."
                 )
             else:
                 log_event(
@@ -11857,8 +11857,8 @@ def generate_masterstar_and_catalog(
         except OSError:
             _ms_out_early = str(masterstar_fits)
         log_event(
-            f"ONLY MASTER (test): plate-solve + úprava mierky WCS hotové → {_ms_out_early} "
-            "(preskakujem DAO export, masterstars CSV, fotometrický plán, MASTER_SOURCES)."
+            f"ONLY MASTER (test): plate-solve + uprava mierky WCS hotove -> {_ms_out_early} "
+            "(preskakujem DAO export, masterstars CSV, fotometricky plan, MASTER_SOURCES)."
         )
         out_ps: dict[str, Any] = {
             "masterstar_fits": _ms_out_early,
@@ -11888,7 +11888,7 @@ def generate_masterstar_and_catalog(
             out_ps["masterstar_path_store_error"] = str(exc)
         return out_ps
 
-    # _cfg_ms / _dao_sigma_eff už vyššie (rovnaké DAO σ pre plate solve aj katalóg).
+    # _cfg_ms / _dao_sigma_eff uz vyssie (rovnake DAO sigma pre plate solve aj katalog).
     _ms_fwhm = float(_cfg_ms.sips_dao_fwhm_px)
     if not math.isfinite(_ms_fwhm) or _ms_fwhm <= 0:
         _ms_fwhm = 2.5
@@ -11924,7 +11924,7 @@ def generate_masterstar_and_catalog(
     data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
     # Global median (BOJ) background subtraction is intentionally OFF (handled downstream).
     _ms_mean = float(np.nanmean(data))
-    log_event("MASTERSTAR: globálne odčítanie medianu (BOJ) vypnuté.")
+    log_event("MASTERSTAR: globalne odcitanie medianu (BOJ) vypnute.")
     log_event(f"MASTERSTAR po nan_to_num: mean={_ms_mean:.6f}")
     _ms_min = float(np.nanmin(data))
     _ms_max = float(np.nanmax(data))
@@ -11965,7 +11965,7 @@ def generate_masterstar_and_catalog(
                 effective_radius_deg=float(_r_cat_need),
             )
     except Exception as exc:  # noqa: BLE001
-        log_event(f"Katalóg: kontrola cache field_catalog_cone preskočená — {exc!s}")
+        log_event(f"Katalog: kontrola cache field_catalog_cone preskocena - {exc!s}")
 
     # Full-field MASTERSTAR depth: keep deeper Gaia and larger catalog rows for corner recovery.
     _ms_max_catalog_rows_eff = max(int(max_catalog_rows), 100000)
@@ -12025,11 +12025,11 @@ def generate_masterstar_and_catalog(
                     pairs_catalog_id=[str(t) for t in _pids],
                 )
                 log_event(
-                    f"MASTERSTAR: VYVAR páry ({len(_px)}) zlúčené do katalógu "
+                    f"MASTERSTAR: VYVAR pary ({len(_px)}) zlucene do katalogu "
                     f"(mirror={_mir or 'native'}, pre astrometry optimizer)."
                 )
     except Exception as exc:  # noqa: BLE001
-        log_event(f"MASTERSTAR: zlúčenie VYVAR párov preskočené — {exc!s}")
+        log_event(f"MASTERSTAR: zlucenie VYVAR parov preskocene - {exc!s}")
 
     if "b_v" in df_out.columns and "bp_rp" not in df_out.columns:
         df_out = df_out.copy()
@@ -12051,12 +12051,12 @@ def generate_masterstar_and_catalog(
         _n_gaia_det_raw = int(_n_mat_raw)
     _gaia_rate_raw = (100.0 * float(_n_gaia_det_raw) / float(_cat_rows)) if _cat_rows > 0 else 0.0
     log_event(
-        f"📊 MATCH STATS (raw): Found {_n_det_raw} stars on image | {_n_mat_raw} matched with Gaia | "
-        f"Match Rate: {_rate_raw:.2f}% | Gaia→DAO: {_gaia_rate_raw:.2f}% ({_n_gaia_det_raw}/{_cat_rows})"
+        f"[chart] MATCH STATS (raw): Found {_n_det_raw} stars on image | {_n_mat_raw} matched with Gaia | "
+        f"Match Rate: {_rate_raw:.2f}% | Gaia->DAO: {_gaia_rate_raw:.2f}% ({_n_gaia_det_raw}/{_cat_rows})"
     )
     if _cat_rows > 0:
         LOGGER.info(
-            "[MASTERSTAR] Gaia→DAO completeness: "
+            "[MASTERSTAR] Gaia->DAO completeness: "
             "%d/%d (%.1f%%) | catalog_only: %d",
             _n_gaia_det_raw,
             _cat_rows,
@@ -12175,13 +12175,13 @@ def generate_masterstar_and_catalog(
             _p95f = float(_p95) if _p95 is not None else float("nan")
         except (TypeError, ValueError):
             _p95f = float("nan")
-        # Standing series WARN (Anchor #3 / draft_435 baseline p95≈1.54 px): soft threshold only.
+        # Standing series WARN (Anchor #3 / draft_435 baseline p95~1.54 px): soft threshold only.
         # INV-WCS-01: same band, recorded into pipeline_meta invariants at merge below.
         _IDENTITY_P95_WARN_PX = 2.0
         if math.isfinite(_p95f) and _p95f > _IDENTITY_P95_WARN_PX:
             logging.warning(
                 "[IDENTITY-QA] matched_world2pix_identity_p95_px=%.3f exceeds WARN threshold %.1f px "
-                "(series baseline draft_435 p95≈1.54; no FAIL)",
+                "(series baseline draft_435 p95~1.54; no FAIL)",
                 _p95f,
                 _IDENTITY_P95_WARN_PX,
             )
@@ -12221,7 +12221,7 @@ def generate_masterstar_and_catalog(
             gaia_db_path=_gdb_fill,
         )
         if _n_bp_miss > 0:
-            log_event(f"masterstars bp_rp fallback: {_n_bp_fill}/{_n_bp_miss} doplnených z Gaia DB")
+            log_event(f"masterstars bp_rp fallback: {_n_bp_fill}/{_n_bp_miss} doplnenych z Gaia DB")
         _vyvar_df_to_csv(df_final, csv_path)
     except Exception as exc:  # noqa: BLE001
         log_event(f"MASTERSTAR source_type annotate failed: {exc!s}")
@@ -12243,12 +12243,12 @@ def generate_masterstar_and_catalog(
         _n_gaia_det_opt = int(_n_mat)
     _gaia_rate_opt = (100.0 * float(_n_gaia_det_opt) / float(_cat_rows_opt)) if _cat_rows_opt > 0 else 0.0
     log_event(
-        f"📊 MATCH STATS (optimized): Found {_n_det} stars on image | {_n_mat} matched with Gaia | "
-        f"Match Rate: {_rate:.2f}% | Gaia→DAO: {_gaia_rate_opt:.2f}% ({_n_gaia_det_opt}/{_cat_rows_opt})"
+        f"[chart] MATCH STATS (optimized): Found {_n_det} stars on image | {_n_mat} matched with Gaia | "
+        f"Match Rate: {_rate:.2f}% | Gaia->DAO: {_gaia_rate_opt:.2f}% ({_n_gaia_det_opt}/{_cat_rows_opt})"
     )
     if _cat_rows_opt > 0:
         LOGGER.info(
-            "[MASTERSTAR] Gaia→DAO completeness: "
+            "[MASTERSTAR] Gaia->DAO completeness: "
             "%d/%d (%.1f%%) | catalog_only: %d",
             _n_gaia_det_opt,
             _cat_rows_opt,
@@ -12345,10 +12345,10 @@ def generate_masterstar_and_catalog(
         except Exception as _dag_exc:  # noqa: BLE001
             logging.debug("[INV-DAG-01] masterstar stamp skipped: %s", _dag_exc)
     log_event(
-        f"MASTERSTAR katalóg: {Path(csv_path).name} — {len(df_final)} riadkov "
-        f"(DAO + katalóg na celom poli; žiadne orezanie podľa vzdialenosti od stredu snímku)."
+        f"MASTERSTAR katalog: {Path(csv_path).name} - {len(df_final)} riadkov "
+        f"(DAO + katalog na celom poli; ziadne orezanie podla vzdialenosti od stredu snimku)."
     )
-    # Gaussian FWHM (2D fit) → hlavička; VY_FWHM je DAO odhad, nie moment FWHM — nepoužívaj 0.619.
+    # Gaussian FWHM (2D fit) -> hlavicka; VY_FWHM je DAO odhad, nie moment FWHM - nepouzivaj 0.619.
     masterstars_df = df_final
     if (
         masterstars_df is None
@@ -12393,7 +12393,7 @@ def generate_masterstar_and_catalog(
             )
             _hdul.flush()
         logging.info(
-            f"[MASTERSTAR] VY_FWHM_GAUSS={float(_gaussian_fwhm):.3f}px uložené do hlavičky (2D fit)"
+            f"[MASTERSTAR] VY_FWHM_GAUSS={float(_gaussian_fwhm):.3f}px ulozene do hlavicky (2D fit)"
         )
     except Exception as e:  # noqa: BLE001
         logging.error('[EXC-0409] Cross-setup `comparison_stars.csv` sync failure leaves B/V/R setups with inconsistent c...: %s', exc)
@@ -12644,7 +12644,7 @@ def generate_masterstar_and_catalog(
                         fwhm_neu = float(_np.median(by_col["neutral"])) if by_col["neutral"] else fwhm_med_px
                         fwhm_red = float(_np.median(by_col["red"])) if by_col["red"] else fwhm_med_px
 
-                        # Gaia neighbour veto radius in arcsec: 3× median FWHM (px) × plate scale.
+                        # Gaia neighbour veto radius in arcsec: 3x median FWHM (px) x plate scale.
                         try:
                             from astropy.wcs.utils import proj_plane_pixel_scales
 
@@ -12966,7 +12966,7 @@ def generate_masterstar_and_catalog(
                                     )
                                 pipeline_db2.conn.commit()
 
-                                # Unstable: RMS > 1.5× bin median
+                                # Unstable: RMS > 1.5x bin median
                                 for rr in ms_rows:
                                     if int(rr.get("SAFE_OVERRIDE") or 0) == 1:
                                         continue
@@ -13194,12 +13194,12 @@ def _pass2_sibling_wcs_recovery(
             report_by_gkey[gkey] = rep
             verified_filters.add(recipient_filter)
             log_event(
-                f"SIBLING-WCS Pass2: recovered {setup} via donor {donor_filter} — "
+                f"SIBLING-WCS Pass2: recovered {setup} via donor {donor_filter} - "
                 f"n_tight={((rec_result.get('after') or {}).get('n_matched_tight'))}"
             )
         except Exception as exc:  # noqa: BLE001
             LOGGER.error("Sibling-WCS Pass2 failed for %s: %s", setup, exc)
-            log_event(f"⚠ Sibling-WCS Pass2: set {setup} zostáva preskočený — {exc}")
+            log_event(f"! Sibling-WCS Pass2: set {setup} zostava preskoceny - {exc}")
             still_skipped.append(sk)
 
     return reports, still_skipped
@@ -13249,7 +13249,7 @@ def _merge_astrometry_group_reports(rows: list[dict[str, Any]]) -> dict[str, Any
         if str(x.get("masterstars_csv") or "").strip()
     )
     log_event(
-        f"Astrometria: dokončené {len(rows)} pod-skupín — zarovnaných snímok spolu {tot_aligned} / {tot_in}."
+        f"Astrometria: dokoncene {len(rows)} pod-skupin - zarovnanych snimok spolu {tot_aligned} / {tot_in}."
     )
     return merged
 
@@ -13295,7 +13295,7 @@ def _astrometry_align_impl_body(
     aligned_root = Path(job["aligned_root"])
     platesolve_dir = Path(job["platesolve_dir"])
     files = list(job["files"])
-    # Zarovnané FITS: {archive}/detrended_aligned/lights/{filter_exp_binning}/… (vnorené cesty podľa vstupu)
+    # Zarovnane FITS: {archive}/detrended_aligned/lights/{filter_exp_binning}/... (vnorene cesty podla vstupu)
     os.makedirs(str(aligned_root), exist_ok=True)
     os.makedirs(str(platesolve_dir), exist_ok=True)
     _cfg_align = app_config or AppConfig()
@@ -13318,20 +13318,20 @@ def _astrometry_align_impl_body(
         _fb_align = 2.5
     _pfov_align: float | None = None
     if build_masterstar_and_catalogs:
-        LOGGER.info("Astrometria + MASTERSTAR + per-frame CSV: archív %s", ap)
+        LOGGER.info("Astrometria + MASTERSTAR + per-frame CSV: archiv %s", ap)
     else:
-        LOGGER.info("Astrometria + zarovnanie + per-frame CSV (bez MASTERSTAR): archív %s", ap)
+        LOGGER.info("Astrometria + zarovnanie + per-frame CSV (bez MASTERSTAR): archiv %s", ap)
     # MASTERSTAR initial match: allow a looser sep (min 10") for robust first-pass Gaia join.
     _catalog_match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
     if _catalog_match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
         _pipeline_ui_info(
-            f"Katalógový match prah zvýšený na {_catalog_match_sep_eff:.2f}\" "
-            "(minimum pre robustný počiatočný cross-match)."
+            f"Katalogovy match prah zvyseny na {_catalog_match_sep_eff:.2f}\" "
+            "(minimum pre robustny pociatocny cross-match)."
         )
 
     _cat_loc_only = bool(catalog_local_gaia_only) if catalog_local_gaia_only is not None else True
     if _cat_loc_only:
-        LOGGER.info("Katalóg: režim lokálny Gaia (SQLite)")
+        LOGGER.info("Katalog: rezim lokalny Gaia (SQLite)")
     equip_sat_adu = _equipment_saturate_adu_from_db(id_equipment)
     if draft_id is not None and files:
         try:
@@ -13347,9 +13347,9 @@ def _astrometry_align_impl_body(
             pass
     if not files:
         raise FileNotFoundError(
-            f"Chýbajú FITS v {detrended_root}. Plate solve číta len **spracované** snímky. "
-            "Najprv spusti **MAKE MASTERSTAR** po kroku **Analyze** (zápis do "
-            f"`{ap / 'processed' / 'lights'}` alebo staršie `{ap / 'detrended' / 'lights'}`)."
+            f"Chybaju FITS v {detrended_root}. Plate solve cita len **spracovane** snimky. "
+            "Najprv spusti **MAKE MASTERSTAR** po kroku **Analyze** (zapis do "
+            f"`{ap / 'processed' / 'lights'}` alebo starsie `{ap / 'detrended' / 'lights'}`)."
         )
 
     _t_step3_start = time.time()
@@ -13420,14 +13420,14 @@ def _astrometry_align_impl_body(
 
     # --- MASTERSTAR build + plate-solve (per-setup platesolve/) before alignment ---
     # IMPORTANT (multi-filter): each setup must have its own MASTERSTAR + catalogs, otherwise
-    # R/V/B runs overwrite each other (MASTERSTAR.fits, masterstars_full_match.csv, VY_MIRR, …)
+    # R/V/B runs overwrite each other (MASTERSTAR.fits, masterstars_full_match.csv, VY_MIRR, ...)
     # and reference/per-frame astrometry becomes unstable.
     _masterstar_built = False
     _cat_info_root: dict[str, Any] = {}
     _ps_root = platesolve_dir
     _t_platesolve = time.time()
     if build_masterstar_and_catalogs:
-        _prog("platesolve/MASTERSTAR: referenčný snímok + plate-solve + katalógy…")
+        _prog("platesolve/MASTERSTAR: referencny snimok + plate-solve + katalogy...")
         _cat_info_root = generate_masterstar_and_catalog(
             archive_path=ap,
             max_catalog_rows=int(max_catalog_rows),
@@ -13481,7 +13481,7 @@ def _astrometry_align_impl_body(
             LOGGER.error("Using MASTERSTAR as alignment reference failed: %s", _ms_ref_exc)
 
     _prog(
-        f"detrended_aligned/lights: pripravujem zarovnanie ({n_files} snímok z {detrended_root.name}/…)…"
+        f"detrended_aligned/lights: pripravujem zarovnanie ({n_files} snimok z {detrended_root.name}/...)..."
     )
 
     # If MASTERSTAR was built for this setup and has a valid WCS, prefer it as the canonical
@@ -13502,7 +13502,7 @@ def _astrometry_align_impl_body(
                             ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
                         has_wcs = True
                         log_event(
-                            f"INFO: Reference WCS prevzaté z MASTERSTAR ({_ms_path.name}) — použijem MASTERSTAR WCS pre alignment aj per-frame match."
+                            f"INFO: Reference WCS prevzate z MASTERSTAR ({_ms_path.name}) - pouzijem MASTERSTAR WCS pre alignment aj per-frame match."
                         )
         except Exception as _wcs_copy_exc:  # noqa: BLE001
             try:
@@ -13537,7 +13537,7 @@ def _astrometry_align_impl_body(
             log_event(f"DEBUG: Sibling-recovery MASTERSTAR load failed: {_sib_ms_exc}")
 
     if not has_wcs:
-        _prog("Plate solve referencie (môže chvíľu trvať)…")
+        _prog("Plate solve referencie (moze chvilu trvat)...")
 
     if not has_wcs:
         # Solve reference file in-place (no open handle on Windows).
@@ -13565,7 +13565,7 @@ def _astrometry_align_impl_body(
 
     # Use the same FWHM rule as per-frame alignment (VY_FWHM / header), not only ``sips_dao_fwhm_px``.
     # A fixed ~2.5 px kernel on the reference while sources use ~5 px yields different brightest-N
-    # orderings → bogus point pairs → astroalign "triangles exhausted" and identity/no_wcs cascades.
+    # orderings -> bogus point pairs -> astroalign "triangles exhausted" and identity/no_wcs cascades.
     _raw_ref_fw = dao_detection_fwhm_pixels(ref_hdr, configured_fallback=_fb_align)
     try:
         _fwv = float(_raw_ref_fw) if _raw_ref_fw is not None else float("nan")
@@ -13586,7 +13586,7 @@ def _astrometry_align_impl_body(
         raise RuntimeError(f"astroalign required for frame registration: {exc}") from exc
 
     log_event(
-        f"Detekcia hviezd: Použité FWHM={_align_fwhm_ref:.2f}, Sigma={_align_det_sigma:.2f}"
+        f"Detekcia hviezd: Pouzite FWHM={_align_fwhm_ref:.2f}, Sigma={_align_det_sigma:.2f}"
     )
 
     def _maybe_refine_aligned(
@@ -13596,9 +13596,9 @@ def _astrometry_align_impl_body(
         return
 
     # Adaptive alignment star budget:
-    # - if STAR_COUNT > 1000 → use top 300 brightest
-    # - if STAR_COUNT < 100 → use all
-    # - else → cap at 300
+    # - if STAR_COUNT > 1000 -> use top 300 brightest
+    # - if STAR_COUNT < 100 -> use all
+    # - else -> cap at 300
     data_to_detect = np.asarray(ref_data, dtype=np.float32)
     try:
         log_event(
@@ -13633,7 +13633,7 @@ def _astrometry_align_impl_body(
     ref_xy_fit = ref_xy[: int(min(_align_star_cap, len(ref_xy)))]
     log_event(
         f"Zarovnanie referencia {ref_fp.name}: DAO hviezd={len(ref_xy)}, "
-        f"cap pre transform={_align_star_cap}, DAO σ={_align_det_sigma:.2f}, FWHM={_align_fwhm_ref:.2f}px "
+        f"cap pre transform={_align_star_cap}, DAO sigma={_align_det_sigma:.2f}, FWHM={_align_fwhm_ref:.2f}px "
         f"(QC VY_FWHM alebo sips_dao_fwhm_px)"
     )
 
@@ -13674,13 +13674,13 @@ def _astrometry_align_impl_body(
 
     # save reference as aligned baseline, keep WCS
     _prog(
-        f"detrended_aligned/lights: {'RAM — referencia' if use_ram_handoff else 'zapisujem FITS'} "
+        f"detrended_aligned/lights: {'RAM - referencia' if use_ram_handoff else 'zapisujem FITS'} "
         f"{ref_fp.name} (1/{n_files})"
     )
     try:
         ref_rel = ref_fp.relative_to(detrended_root)
     except Exception:  # noqa: BLE001
-        # Reference can live outside detrended_root (e.g. MASTERSTAR in platesolve/…).
+        # Reference can live outside detrended_root (e.g. MASTERSTAR in platesolve/...).
         # In that case, store it at the aligned root top-level.
         ref_rel = Path(ref_fp.name)
     ref_out = aligned_root / ref_rel
@@ -13728,10 +13728,10 @@ def _astrometry_align_impl_body(
             platesolve_masterstar=platesolve_masterstar, aligned_masterstar=aligned_masterstar
         ):
             log_event(
-                "[MASTERSTAR] aligned ref already exists and matches platesolve source — skipping write"
+                "[MASTERSTAR] aligned ref already exists and matches platesolve source - skipping write"
             )
             return
-        log_event("[MASTERSTAR] copying platesolve MASTERSTAR → detrended_aligned ref")
+        log_event("[MASTERSTAR] copying platesolve MASTERSTAR -> detrended_aligned ref")
         shutil.copy2(platesolve_masterstar, aligned_masterstar)
 
     _ps_masterstar = (platesolve_dir / "MASTERSTAR.fits")
@@ -13781,7 +13781,7 @@ def _astrometry_align_impl_body(
     align_cp = int(max(12, min(500, int(_cfg_align.alignment_max_control_points))))
     ref_pts = np.asarray(ref_xy_fit, dtype=np.float32)
     if ref_pts is None or len(ref_pts) == 0:
-        raise ValueError("Referenčné hviezdy sú prázdne pred štartom alignmentu!")
+        raise ValueError("Referencne hviezdy su prazdne pred startom alignmentu!")
     # Keep immutable backup of reference points; never overwrite with per-frame source detections.
     fixed_target_pts = np.copy(ref_pts).astype("float32")
     log_event(f"DEBUG: Start alignment, reference stars N = {len(fixed_target_pts)}")
@@ -13847,8 +13847,8 @@ def _astrometry_align_impl_body(
         n_written_align += 1
         _prog(
             f"detrended_aligned/lights: "
-            f"{'RAM — zarovnanie' if use_ram_handoff else 'zapisujem FITS'} "
-            f"{fp.name} ({n_written_align}/{n_files})…"
+            f"{'RAM - zarovnanie' if use_ram_handoff else 'zapisujem FITS'} "
+            f"{fp.name} ({n_written_align}/{n_files})..."
         )
         if use_ram_handoff:
             aligned_ram_buffer.append((fp_rel.as_posix(), hdr_out.copy(), np.copy(aligned_data)))
@@ -13879,9 +13879,9 @@ def _astrometry_align_impl_body(
                 _flush_one_alignment(res)
 
         # A-durable: resolve the MP init/task by FRESH module attribute at call time, so the
-        # objects handed to the spawn pool are exactly what sys.modules resolves — even if the
+        # objects handed to the spawn pool are exactly what sys.modules resolves - even if the
         # Streamlit file-watcher reloaded vyvar_alignment_frame after pipeline.py was imported
-        # (the import-time `from … import` binding would otherwise go stale → PicklingError).
+        # (the import-time `from ... import` binding would otherwise go stale -> PicklingError).
         _mp_init = vyvar_alignment_frame._astrometry_align_mp_init
         _mp_task = vyvar_alignment_frame._astrometry_align_mp_task
         try:
@@ -13901,7 +13901,7 @@ def _astrometry_align_impl_body(
             # reload defeats the fresh-attr lookup), run alignment single-process instead of
             # aborting. Photometry is byte-identical to the MP path (same per-frame compute).
             # PicklingError is raised at task-submission (pickling the worker funcs) before any
-            # result is flushed, so no partial per-frame state exists here — run single-process.
+            # result is flushed, so no partial per-frame state exists here - run single-process.
             _pipeline_ui_info(
                 f"Alignment: multiprocessing dispatch failed to pickle worker functions "
                 f"({_pkl_err}); falling back to single-process alignment."
@@ -13923,13 +13923,13 @@ def _astrometry_align_impl_body(
             reasons[rr] = int(reasons.get(rr, 0)) + 1
         reason_txt = ", ".join(f"{k}={v}" for k, v in sorted(reasons.items(), key=lambda kv: (-kv[1], kv[0]))[:5])
         _pipeline_ui_info(
-            f"Alignment warning: zlyhalo {n_failed_align}/{len(files)} snímok v {aligned_root.resolve()} "
-            f"(dôvody: {reason_txt})."
+            f"Alignment warning: zlyhalo {n_failed_align}/{len(files)} snimok v {aligned_root.resolve()} "
+            f"(dovody: {reason_txt})."
         )
     if n_aligned <= 1:
         msg = (
-            f"Alignment zlyhal: úspešne zarovnaná len referencia (1/{len(files)}). "
-            f"Skontroluj DAO prah/FWHM a WCS vstupy. Výstupný priečinok: {aligned_root.resolve()}."
+            f"Alignment zlyhal: uspesne zarovnana len referencia (1/{len(files)}). "
+            f"Skontroluj DAO prah/FWHM a WCS vstupy. Vystupny priecinok: {aligned_root.resolve()}."
         )
         _pipeline_ui_error(msg)
         raise RuntimeError(msg)
@@ -13942,7 +13942,7 @@ def _astrometry_align_impl_body(
     # If we aligned in RAM, flush aligned FITS to disk before MASTERSTAR (needs files on disk).
     _ram_flushed_before_masterstar = False
     if use_ram_handoff and aligned_ram_buffer and build_masterstar_and_catalogs:
-        _prog("detrended_aligned/lights: zapisujem FITS na disk (RAM → disk, pred MASTERSTAR)…")
+        _prog("detrended_aligned/lights: zapisujem FITS na disk (RAM -> disk, pred MASTERSTAR)...")
         for name, hdr, arr in aligned_ram_buffer:
             _target = aligned_root / Path(name)
             _ensure_parent_dirs_for_aligned_fits(_target)
@@ -13954,7 +13954,7 @@ def _astrometry_align_impl_body(
             )
         _ram_flushed_before_masterstar = True
         _aligned_file_list = sorted(aligned_root.glob("proc_*.fits"))
-        LOGGER.info(f"[BORDER] RAM flush done — {len(_aligned_file_list)} aligned frames on disk")
+        LOGGER.info(f"[BORDER] RAM flush done - {len(_aligned_file_list)} aligned frames on disk")
 
     cat_info: dict[str, Any] = {}
     ms_csv: Path | None = None
@@ -13989,7 +13989,7 @@ def _astrometry_align_impl_body(
         # Masterstar lock for Step 3: per-frame catalogs must use one fixed reference list.
         use_master_fast = True
 
-        # Recompute photometry plan after RAM→disk flush so border-safe bbox sees aligned frames on disk.
+        # Recompute photometry plan after RAM->disk flush so border-safe bbox sees aligned frames on disk.
         try:
             if use_ram_handoff and aligned_ram_buffer and _ram_flushed_before_masterstar:
                 if draft_id is not None and str(_cfg_align.database_path or "").strip():
@@ -14090,7 +14090,7 @@ def _astrometry_align_impl_body(
                             db=_db_epsf,
                             draft_id=int(draft_id),
                             # TODO-PSF-PHASE2: moffat_centroids not yet available at MASTERSTAR
-                            # build time — requires per-frame Moffat run first then aggregate
+                            # build time - requires per-frame Moffat run first then aggregate
                             # centroids. Implement in next session.
                         )
                         LOGGER.info("[ePSF] Model built: %s", _epsf_path)
@@ -14106,7 +14106,7 @@ def _astrometry_align_impl_body(
         progress_cb(
             min(export_base + i, global_total),
             global_total,
-            f"detrended_aligned/lights: CSV ({i}/{tot}) — {msg}",
+            f"detrended_aligned/lights: CSV ({i}/{tot}) - {msg}",
         )
 
     if use_ram_handoff:
@@ -14133,7 +14133,7 @@ def _astrometry_align_impl_body(
             draft_id=draft_id,
             equipment_id=id_equipment,
         )
-        _prog("detrended_aligned/lights: zapisujem FITS + CSV na disk (dávka po práci v RAM)…")
+        _prog("detrended_aligned/lights: zapisujem FITS + CSV na disk (davka po praci v RAM)...")
         if not _ram_flushed_before_masterstar:
             for name, hdr, arr in aligned_ram_buffer:
                 _target = aligned_root / Path(name)
@@ -14183,12 +14183,12 @@ def _astrometry_align_impl_body(
     print(f"CELKOM krok 3 ({obs_group_key or detrended_root.name}): {time.time() - _t_step3_start:.1f}s")
 
     LOGGER.info(
-        "Astrometria dokončená: zarovnané %s / %s snímok; per-frame CSV: %s; MASTERSTAR: %s; RAM handoff: %s",
+        "Astrometria dokoncena: zarovnane %s / %s snimok; per-frame CSV: %s; MASTERSTAR: %s; RAM handoff: %s",
         n_aligned,
         len(files),
         int(per_cat.get("written", 0)),
-        "áno" if build_masterstar_and_catalogs else "nie",
-        "áno" if use_ram_handoff else "nie",
+        "ano" if build_masterstar_and_catalogs else "nie",
+        "ano" if use_ram_handoff else "nie",
     )
 
     return {
@@ -14283,7 +14283,7 @@ def astrometry_align_and_build_masterstar(
         db=None,
     )
     if not input_root.exists():
-        log_event(f"❌ ERROR: Input path {input_root} does not exist! Trying fallback...")
+        log_event(f"[X] ERROR: Input path {input_root} does not exist! Trying fallback...")
         processed_lights = ap / "processed" / "lights"
         subdirs: list[Path] = []
         try:
@@ -14294,7 +14294,7 @@ def astrometry_align_and_build_masterstar(
         if subdirs:
             subdirs = sorted(subdirs, key=lambda p: p.name.casefold())
             input_root = subdirs[0]
-            log_event(f"✅ Fallback found: {input_root}")
+            log_event(f"[OK] Fallback found: {input_root}")
     det_top = input_root
     ali_top = ap / "detrended_aligned" / "lights"
     os.makedirs(str(ali_top), exist_ok=True)
@@ -14313,16 +14313,16 @@ def astrometry_align_and_build_masterstar(
     if _n_root_only != _n_all:
         log_event(
             f"FITS celkom: {_n_all} pod {det_top} ({_n_root_only} priamo v koreni; "
-            f"ostatné v podpriečinkoch napr. filter/exp/binning)."
+            f"ostatne v podpriecinkoch napr. filter/exp/binning)."
         )
     else:
         log_event(f"FITS celkom: {_n_all} v {det_top}")
     log_event(f"Alignment input root: {det_top}")
     if not files_all:
         raise FileNotFoundError(
-            f"Chýbajú FITS v {det_top}. Plate solve číta len **spracované** snímky. "
-            "Najprv spusti **MAKE MASTERSTAR** po kroku **Analyze** (zápis z "
-            f"`{ap / 'calibrated' / 'lights'}` → `{ap / 'processed' / 'lights'}` alebo staršie `{ap / 'detrended' / 'lights'}`)."
+            f"Chybaju FITS v {det_top}. Plate solve cita len **spracovane** snimky. "
+            "Najprv spusti **MAKE MASTERSTAR** po kroku **Analyze** (zapis z "
+            f"`{ap / 'calibrated' / 'lights'}` -> `{ap / 'processed' / 'lights'}` alebo starsie `{ap / 'detrended' / 'lights'}`)."
         )
     job_list: list[dict[str, Any]] = []
     # Group strictly by real folder structure under processed/detrended lights.
@@ -14363,8 +14363,8 @@ def astrometry_align_and_build_masterstar(
             )
     if len(job_list) > 1:
         log_event(
-            "Astrometria: viacero pod-pozorovaní (podpriečinky v processed|detrended/lights) — "
-            "samostatné zarovnanie, MASTERSTAR a katalógy pre každú skupinu."
+            "Astrometria: viacero pod-pozorovani (podpriecinky v processed|detrended/lights) - "
+            "samostatne zarovnanie, MASTERSTAR a katalogy pre kazdu skupinu."
         )
     _ms_paths = [str(x).strip() for x in (masterstar_candidate_paths or []) if str(x).strip()]
     try:
@@ -14422,8 +14422,8 @@ def astrometry_align_and_build_masterstar(
         except Exception as exc:  # noqa: BLE001
             LOGGER.error("Astrometria/MASTERSTAR failed for set %s: %s", _setup, exc)
             log_event(
-                f"⚠ Set {_setup}: plate-solve/MASTERSTAR zlyhal — set sa preskakuje, "
-                f"pokračujem ďalším setom. Dôvod: {exc}"
+                f"! Set {_setup}: plate-solve/MASTERSTAR zlyhal - set sa preskakuje, "
+                f"pokracujem dalsim setom. Dovod: {exc}"
             )
             skipped.append(
                 {"gkey": _gkey, "setup": _setup, "solved": False, "skipped_reason": str(exc)}
@@ -14439,7 +14439,7 @@ def astrometry_align_and_build_masterstar(
 
     if not reports:
         raise RuntimeError(
-            "Astrometria: žiadny set neprešiel plate-solve/MASTERSTAR. "
+            "Astrometria: ziadny set nepresiel plate-solve/MASTERSTAR. "
             + "; ".join(f"{s['setup']}: {s['skipped_reason']}" for s in skipped)
         )
 
@@ -14447,7 +14447,7 @@ def astrometry_align_and_build_masterstar(
     if skipped:
         merged["skipped_subgroups"] = skipped
         log_event(
-            f"Astrometria: {len(reports)} setov OK, {len(skipped)} preskočených: "
+            f"Astrometria: {len(reports)} setov OK, {len(skipped)} preskocenych: "
             + ", ".join(s["setup"] for s in skipped)
         )
     return merged
@@ -14695,7 +14695,7 @@ def _post_calibration_qc_eval(
 def _strip_raw_linearity_header_keywords(hdr: fits.Header) -> None:
     """Remove FITS keys that describe the **raw** detector linearity range.
 
-    After ``(light − dark) / flat`` the pixel scale is no longer raw ADU; keeping SATURATE/DATAMAX from the
+    After ``(light - dark) / flat`` the pixel scale is no longer raw ADU; keeping SATURATE/DATAMAX from the
     light frame makes viewers and automated limits disagree with the actual array values.
     """
     for key in (
@@ -15411,14 +15411,14 @@ def calibrate_lights_to_calibrated(
     - none (passthrough copy when dark is unavailable)
 
     MasterFlat is **median-normalized to ~1.0** before division so calibrated values stay in the same order
-    of magnitude as (light − dark) and extreme spikes from tiny flat pixels are avoided.
+    of magnitude as (light - dark) and extreme spikes from tiny flat pixels are avoided.
 
     After normalization, each flat pixel is **clamped below by a small positive floor** so dust donuts and
     dead columns cannot divide the image by near-zero (which would create nonsense ADU far above the
     detector range in viewers).
 
-    Pixels are **not** expected to match raw ADU counts: calibration is ``(L − D) / F_norm`` with
-    ``F_norm = flat / median(flat)``. Raw linearity keywords (SATURATE, DATAMAX, …) are dropped when any
+    Pixels are **not** expected to match raw ADU counts: calibration is ``(L - D) / F_norm`` with
+    ``F_norm = flat / median(flat)``. Raw linearity keywords (SATURATE, DATAMAX, ...) are dropped when any
     calibration is applied so headers stay consistent with the stored float image.
 
     Parallelism uses ``max_workers`` or auto ``pipeline_config.qc_preprocess_workers`` only when environment
@@ -15525,7 +15525,7 @@ def calibrate_lights_to_calibrated(
     total = len(files)
     if total < _n_before_obs_filter:
         log_event(
-            f"Kalibrácia — vylúčené {_n_before_obs_filter - total} súborov podľa OBS_FILES (IS_REJECTED=1 alebo mimo DB)"
+            f"Kalibracia - vylucene {_n_before_obs_filter - total} suborov podla OBS_FILES (IS_REJECTED=1 alebo mimo DB)"
         )
 
     _suffix_note = ", ".join(sorted(FITS_SUFFIXES_LOWER))
@@ -15540,20 +15540,20 @@ def calibrate_lights_to_calibrated(
                 _n_o = _dbc.count_obs_files_for_observation(str(observation_id))
                 _log_bits.append(
                     "OBS_FILES: SELECT COUNT(*) FROM OBS_FILES WHERE OBSERVATION_ID = ? "
-                    f"(obs={observation_id!r}) → {_n_o} rows"
+                    f"(obs={observation_id!r}) -> {_n_o} rows"
                 )
             if draft_id is not None:
                 _n_d = _dbc.count_obs_files_for_draft(int(draft_id))
                 _log_bits.append(
                     "OBS_FILES: SELECT COUNT(*) FROM OBS_FILES WHERE DRAFT_ID = ? "
-                    f"(draft_id={int(draft_id)}) → {_n_d} rows"
+                    f"(draft_id={int(draft_id)}) -> {_n_d} rows"
                 )
         except Exception as exc:  # noqa: BLE001
             _log_bits.append(f"OBS_FILES count query failed: {exc}")
-    log_event("Kalibrácia — vstupné súbory: " + " | ".join(_log_bits))
+    log_event("Kalibracia - vstupne subory: " + " | ".join(_log_bits))
 
     if total > 0:
-        log_lights_binning_from_headers_preflight(files, context="Kalibrácia")
+        log_lights_binning_from_headers_preflight(files, context="Kalibracia")
         _diag_light = _pick_light_for_metadata_diagnostic(files)
         try:
             _db_cal_diag = VyvarDatabase(Path(cfg.database_path))
@@ -15571,7 +15571,7 @@ def calibrate_lights_to_calibrated(
             finally:
                 _db_cal_diag.conn.close()
         except Exception as exc:  # noqa: BLE001
-            log_event(f"DIAGNOSTIKA KALIBRÁCIE: metadáta prvého súboru zlyhali: {exc!s}")
+            log_event(f"DIAGNOSTIKA KALIBRACIE: metadata prveho suboru zlyhali: {exc!s}")
 
     db_main = _db_for_calibration_tasks(qc_pack)
     gate_cfg = cal_diag_config_from_app(cfg)
@@ -15748,8 +15748,8 @@ def calibrate_lights_to_calibrated(
         except Exception as exc:  # noqa: BLE001
             # EXC-0434: T2 -- [CAL-DIAG] MP calibrate batch: same OBS_FILES calibration-state update `pass` after wor... (EXCEPT-BULK-2 2026-07-08)
             _tb_pool = traceback.format_exc()
-            LOGGER.error("Kalibrácia (parallel): pool zlyhal, fallback na sekvenčný režim: %s\n%s", exc, _tb_pool)
-            log_exception("CHYBA POOLU KALIBRÁCIE", exc)
+            LOGGER.error("Kalibracia (parallel): pool zlyhal, fallback na sekvencny rezim: %s\n%s", exc, _tb_pool)
+            log_exception("CHYBA POOLU KALIBRACIE", exc)
             stats["errors"] = 0
             stats["processed"] = 0
             stats["used_dark"] = 0
@@ -15765,8 +15765,8 @@ def calibrate_lights_to_calibrated(
                     _one_sequential(i, src, dst)
                 except Exception as exc2:  # noqa: BLE001
                     _tb2 = traceback.format_exc()
-                    LOGGER.error("Kalibrácia: súbor %s: %s\n%s", src, exc2, _tb2)
-                    log_exception(f"CHYBA KALIBRÁCIE: {src.name}", exc2)
+                    LOGGER.error("Kalibracia: subor %s: %s\n%s", src, exc2, _tb2)
+                    log_exception(f"CHYBA KALIBRACIE: {src.name}", exc2)
                     stats["errors"] += 1
             return stats
 
@@ -15777,7 +15777,7 @@ def calibrate_lights_to_calibrated(
                     _ename = Path(items[idx][0]).name if idx < len(items) else "?"
                     _emsg = (r or {}).get("error") if isinstance(r, dict) else None
                     LOGGER.error(
-                        "Kalibrácia: worker zlyhal pre %s: %s",
+                        "Kalibracia: worker zlyhal pre %s: %s",
                         _ename,
                         _emsg or r,
                     )
@@ -15834,12 +15834,12 @@ def calibrate_lights_to_calibrated(
             _one_sequential(i, src, dst)
         except Exception as exc:  # noqa: BLE001
             _tb_seq = traceback.format_exc()
-            LOGGER.error("Kalibrácia: súbor %s: %s\n%s", src, exc, _tb_seq)
+            LOGGER.error("Kalibracia: subor %s: %s\n%s", src, exc, _tb_seq)
             if not _seq_tb_logged:
-                log_exception(f"CHYBA KALIBRÁCIE: {src.name}", exc)
+                log_exception(f"CHYBA KALIBRACIE: {src.name}", exc)
                 _seq_tb_logged = True
             else:
-                log_event(f"CHYBA KALIBRÁCIE: {src.name}: {exc!s}")
+                log_event(f"CHYBA KALIBRACIE: {src.name}: {exc!s}")
             stats["errors"] += 1
             continue
 
@@ -16233,10 +16233,10 @@ def _qc_fwhm_elongation(
 
 
 def _vyvar_parallel_worker_count(app_config: AppConfig | None = None) -> int:
-    """Jednotný počet workerov pre QC, preprocess, combined, alignment seed, per-frame CSV seed, calibrate MP.
+    """Jednotny pocet workerov pre QC, preprocess, combined, alignment seed, per-frame CSV seed, calibrate MP.
 
-    Prednosť: ``VYVAR_PARALLEL_WORKERS`` → (ak sú obe) minimum z legacy ``VYVAR_QC_PREPROCESS_WORKERS`` a
-    ``VYVAR_PER_FRAME_CSV_WORKERS`` → ``app_config.qc_preprocess_workers`` (už zjednotené) → host auto z ``config``.
+    Prednost: ``VYVAR_PARALLEL_WORKERS`` -> (ak su obe) minimum z legacy ``VYVAR_QC_PREPROCESS_WORKERS`` a
+    ``VYVAR_PER_FRAME_CSV_WORKERS`` -> ``app_config.qc_preprocess_workers`` (uz zjednotene) -> host auto z ``config``.
     """
     u = os.environ.get("VYVAR_PARALLEL_WORKERS")
     if u is not None and str(u).strip() != "":
@@ -16326,8 +16326,8 @@ def _vyvar_cap_mp_workers_for_catalog(
 def _vyvar_per_frame_csv_workers(app_config: AppConfig | None = None) -> int:
     """Process workers for plate-solve step 3 per-frame catalog (DAO + match + CSV).
 
-    Rovnaký základ ako QC/alignment (see :func:`_vyvar_parallel_worker_count`); ďalší strop podľa skutočnej veľkosti
-    snímku rieši ``_vyvar_cap_mp_workers_for_catalog``.
+    Rovnaky zaklad ako QC/alignment (see :func:`_vyvar_parallel_worker_count`); dalsi strop podla skutocnej velkosti
+    snimku riesi ``_vyvar_cap_mp_workers_for_catalog``.
     """
     return _vyvar_parallel_worker_count(app_config)
 
@@ -16368,10 +16368,10 @@ def _fit_subtract_preprocess_sky_surface(
     subsample_step: int = 4,
     calm_adu: float = 100.0,
 ) -> tuple[Any, dict[str, Any]]:
-    """Fit and subtract a 2D polynomial sky correction (shared calibrated→processed preprocess).
+    """Fit and subtract a 2D polynomial sky correction (shared calibrated->processed preprocess).
 
-  Star-masked + sigma-clipped fit on calm background pixels (|cal−median| < ``calm_adu``).
-  Fits order-N to ``median(cal) − cal`` on the fit set, then **subtracts** the surface from
+  Star-masked + sigma-clipped fit on calm background pixels (|cal-median| < ``calm_adu``).
+  Fits order-N to ``median(cal) - cal`` on the fit set, then **subtracts** the surface from
   the frame (429-class gradient removal; full surface including constant term).
     """
     import numpy as np
@@ -16779,7 +16779,7 @@ def preprocess_calibrated_to_processed(
 
     if _skip_processed_directory(cfg):
         log_event(
-            "skip_processed_directory=True — running QC in-place on draft lights "
+            "skip_processed_directory=True - running QC in-place on draft lights "
             f"({calibrated_root})"
         )
         _out = _qc_enrich_calibrated_in_place(
@@ -16824,7 +16824,7 @@ def preprocess_calibrated_to_processed(
                 continue
         if not ras or not decs:
             log_event(
-                f"INFO: header-median pointing fallback found no usable RA/Dec in {len(files)} frame(s) — "
+                f"INFO: header-median pointing fallback found no usable RA/Dec in {len(files)} frame(s) - "
                 "leaving pointing unresolved (plate-solve: FITS WCS or blind)."
             )
             return None, None
@@ -16839,7 +16839,7 @@ def preprocess_calibrated_to_processed(
         ra_is_zero, de_is_zero = False, False
     if ra_is_zero and de_is_zero:
         log_event(
-            "DEBUG: Preprocess target RA/DE = 0/0 — skúšam medián z hlavičiek snímok; inak zostane bez VYTARG (plate-solve: FITS alebo blind)."
+            "DEBUG: Preprocess target RA/DE = 0/0 - skusam median z hlaviciek snimok; inak zostane bez VYTARG (plate-solve: FITS alebo blind)."
         )
         fb_ra, fb_de = _median_pointing_from_headers(fits_files)
         if fb_ra is not None and fb_de is not None:
@@ -16859,7 +16859,7 @@ def preprocess_calibrated_to_processed(
     n_workers = _vyvar_qc_preprocess_workers()
     if n_workers > 1 and total > 1:
         LOGGER.info(
-            "VYVAR preprocess: parallel_workers=%s (paralelne; ~%s× RAM na snímok oproti 1 vláknu)",
+            "VYVAR preprocess: parallel_workers=%s (paralelne; ~%sx RAM na snimok oproti 1 vlaknu)",
             n_workers,
             n_workers,
         )
@@ -16960,7 +16960,7 @@ def analyze_calibrated_qc(
 
     If ``max_frames`` is None, every light FITS under ``calibrated_root`` is analyzed.
 
-    Parallelism: jednotný počet workerov (auto CPU/RAM alebo env, pozri :func:`_vyvar_parallel_worker_count`);
+    Parallelism: jednotny pocet workerov (auto CPU/RAM alebo env, pozri :func:`_vyvar_parallel_worker_count`);
     integer ``>1`` uses a process pool by default (``VYVAR_PARALLEL_BACKEND=thread`` for threads).
     """
     calibrated_root = Path(calibrated_root)
@@ -16972,14 +16972,14 @@ def analyze_calibrated_qc(
         _mh = estimate_memory_from_fits_headers(files)
         _peak = int(float(_mh["bytes_float32_max_frame"]) * 6.0)
         LOGGER.info(
-            "VYVAR QC analyze: %s frames; odhad špičky RAM ~%s (float32 + dočasné polia)",
+            "VYVAR QC analyze: %s frames; odhad spicky RAM ~%s (float32 + docasne polia)",
             total,
             format_memory_bytes(_peak),
         )
     n_workers = _vyvar_qc_preprocess_workers()
     if n_workers > 1 and total > 1:
         LOGGER.info(
-            "VYVAR QC analyze: parallel_workers=%s (paralelne; ~%s× RAM na snímok oproti 1 vláknu)",
+            "VYVAR QC analyze: parallel_workers=%s (paralelne; ~%sx RAM na snimok oproti 1 vlaknu)",
             n_workers,
             n_workers,
         )
@@ -17350,13 +17350,13 @@ def _log_effective_pixel_pitch(meta: dict[str, Any], *, filepath: str = "") -> N
     binning_x = max(1, int(meta.get("binning", 1) or 1))
     binning_y = max(1, int(meta.get("binning_y", binning_x) or binning_x))
     effective_pixsz = meta.get("effective_pixel_um_plate_scale")
-    tail = f" — {filepath}" if filepath else ""
+    tail = f" - {filepath}" if filepath else ""
     try:
         ps_s = f"{float(pixsz_from_header_or_db):.4g}" if pixsz_from_header_or_db is not None else "n/a"
         eff_s = f"{float(effective_pixsz):.4g}" if effective_pixsz is not None else "n/a"
         log_event(
-            f"DEBUG: Fyzický pixel: {ps_s} um | Binning: {binning_x}x{binning_y} | "
-            f"EFEKTÍVNY PIXEL PRE VÝPOČET: {eff_s} um{tail}"
+            f"DEBUG: Fyzicky pixel: {ps_s} um | Binning: {binning_x}x{binning_y} | "
+            f"EFEKTIVNY PIXEL PRE VYPOCET: {eff_s} um{tail}"
         )
     except (TypeError, ValueError):
         pass
@@ -17369,9 +17369,9 @@ def fits_metadata_from_primary_header(
 ) -> dict[str, Any]:
     """Build the same dict as :func:`extract_fits_metadata` from an already-loaded primary header.
 
-    ``pixel_size_um_header`` is the **effective** on-sky pitch [µm] (physical pixel from header × binning).
+    ``pixel_size_um_header`` is the **effective** on-sky pitch [um] (physical pixel from header x binning).
     ``pixel_size_um_physical`` is the native pitch before binning (after optional ``force_physical_pixel_um``).
-    ``effective_pixel_um_plate_scale`` is native × XBINNING [µm] for plate scale / solver hints.
+    ``effective_pixel_um_plate_scale`` is native x XBINNING [um] for plate scale / solver hints.
     """
 
     def _pick(*keys: str, default: Any = None) -> Any:
@@ -17520,10 +17520,10 @@ def extract_fits_metadata(
     - binning_y (YBINNING, default same as binning)
     - naxis1, naxis2
     - pixel_size_um_physical (native pitch from header / DB merge)
-    - pixel_size_um_header (**effective** pitch [µm] = physical × binning for plate solve / WCS)
-    - effective_pixel_um_plate_scale (native mean × XBINNING; solver / plate scale)
-    - focal_length [mm]: ``FOCALLEN`` v hlavičke ak je; inak ``EQUIPMENTS.FOCAL`` (ak je) alebo ``TELESCOPE.FOCAL``
-    - focal_length_source, pixel_size_raw (surové čísla z hlavičky), pixel_um (= effective pixel)
+    - pixel_size_um_header (**effective** pitch [um] = physical x binning for plate solve / WCS)
+    - effective_pixel_um_plate_scale (native mean x XBINNING; solver / plate scale)
+    - focal_length [mm]: ``FOCALLEN`` v hlavicke ak je; inak ``EQUIPMENTS.FOCAL`` (ak je) alebo ``TELESCOPE.FOCAL``
+    - focal_length_source, pixel_size_raw (surove cisla z hlavicky), pixel_um (= effective pixel)
     - temp
     - ra
     - dec
@@ -17531,7 +17531,7 @@ def extract_fits_metadata(
     - telescope
     - camera
 
-    Convention:     ``EQUIPMENTS.PIXELSIZE`` in the DB is the **native 1×1** pitch [µm]; FITS cache
+    Convention:     ``EQUIPMENTS.PIXELSIZE`` in the DB is the **native 1x1** pitch [um]; FITS cache
     ``PIXEL_UM`` stores **effective** pitch after binning.
 
     When ``draft_id`` is set and ``db`` is given, :meth:`VyvarDatabase.get_combined_metadata` overlays
@@ -17742,7 +17742,7 @@ class AstroPipeline:
         ap = Path(archive_path)
         # Accept both draft root (.../draft_xxx) and direct non_calibrated path (.../draft_xxx/non_calibrated).
         ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
-        LOGGER.info("Kalibrácia archívu: %s", ap)
+        LOGGER.info("Kalibracia archivu: %s", ap)
         # Support Draft structure: <archive>/Raw/lights and optional <archive>/non_calibrated/lights.
         # Both sources are calibrated/passthrough-written into the single target: <archive>/calibrated/lights.
         outputs: dict[str, Any] = {"archive_path": str(ap_root), "results": {}, "perf10_qsum": {}}
@@ -17803,7 +17803,7 @@ class AstroPipeline:
                 roundness_reject_above=roundness_reject_above,
             )
 
-        LOGGER.info("Kalibrácia dokončená (sekcií výstupu: %s)", list((outputs.get("results") or {}).keys()))
+        LOGGER.info("Kalibracia dokoncena (sekcii vystupu: %s)", list((outputs.get("results") or {}).keys()))
         return outputs
 
     def calibrate_batch(
@@ -17827,7 +17827,7 @@ class AstroPipeline:
 
         Returns a dict with:
 
-        - ``output_paths``: list aligned with ``light_paths`` — calibrated FITS path or ``None`` on failure
+        - ``output_paths``: list aligned with ``light_paths`` - calibrated FITS path or ``None`` on failure
         - ``results``: list of per-file ``dict``\\ s from workers (``src``, ``dst``, ``ok``, ``error``)
         - ``stats``: processed / ok / failed counts
         """
@@ -18203,8 +18203,8 @@ class AstroPipeline:
 
         if id_equipment is None or id_telescope is None:
             raise ValueError(
-                "prepare_observation_from_session: id_equipment a id_telescope sú povinné "
-                "(vyberte kameru a ďalekohľad v Session Upload)."
+                "prepare_observation_from_session: id_equipment a id_telescope su povinne "
+                "(vyberte kameru a dalekohlad v Session Upload)."
             )
         equipment_id = int(id_equipment)
         telescope_id = int(id_telescope)
@@ -18385,7 +18385,7 @@ def detect_field_jumps(
         f"{len(groups)} position groups found. "
         f"Dominant group: {int(dominant['n_frames'])}/{total} frames "
         f"({dom_frac * 100:.0f}%). "
-        f"Recommended min_frames_frac ≥ {recommended:.2f}."
+        f"Recommended min_frames_frac >= {recommended:.2f}."
     )
 
     return {

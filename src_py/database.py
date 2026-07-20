@@ -35,7 +35,7 @@ def get_gaia_db_max_g_mag(db_path: str | Path) -> float:
     """Return the maximum ``g_mag`` stored in this Gaia SQLite (``SELECT MAX(g_mag) FROM gaia_dr3``).
 
     Cached per resolved path. If the table is empty or the query fails, returns ``0.0`` (caller should treat as
-    „no photometric depth“ / empty DB).
+    'no photometric depth' / empty DB).
     """
     p = Path(db_path).expanduser().resolve()
     key = str(p)
@@ -57,7 +57,7 @@ def get_gaia_db_max_g_mag(db_path: str | Path) -> float:
     except Exception:  # noqa: BLE001
         out = 0.0
         try:
-            log_event(f"GAIA DB: MAX(g_mag) sa nepodarilo načítať z {p.name} — predpokladám 0.0")
+            log_event(f"GAIA DB: MAX(g_mag) sa nepodarilo nacitat z {p.name} - predpokladam 0.0")
         except Exception:  # noqa: BLE001
             pass
     finally:
@@ -67,7 +67,7 @@ def get_gaia_db_max_g_mag(db_path: str | Path) -> float:
         if out > 0:
             log_event(f"GAIA DB: MAX(g_mag) v gaia_dr3 = {out:.3f} ({p.name})")
         else:
-            log_event(f"GAIA DB: MAX(g_mag) = 0 alebo prázdna tabuľka ({p.name})")
+            log_event(f"GAIA DB: MAX(g_mag) = 0 alebo prazdna tabulka ({p.name})")
     except Exception:  # noqa: BLE001
         pass
     return out
@@ -156,14 +156,14 @@ def query_local_gaia(
             ml = float("nan")
         if not math.isfinite(ml) or ml <= 0:
                         log_event(
-                            f"GAIA SQL: invalid mag_limit={mag_limit!r} — no g_mag cap applied."
+                            f"GAIA SQL: invalid mag_limit={mag_limit!r} - no g_mag cap applied."
                         )
         else:
             _gmax_db = get_gaia_db_max_g_mag(p)
             if _gmax_db > 0.0 and ml > float(_gmax_db):
                 try:
                     log_event(
-                        f"GAIA SQL: mag_limit {float(ml):.2f} > MAX(g_mag) v DB ({float(_gmax_db):.3f}) — orezávam."
+                        f"GAIA SQL: mag_limit {float(ml):.2f} > MAX(g_mag) v DB ({float(_gmax_db):.3f}) - orezavam."
                     )
                 except Exception:  # noqa: BLE001
                     # EXC-0060: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
@@ -206,8 +206,8 @@ def query_local_gaia(
                         break
                 if not has_ra_dec_idx:
                     log_event(
-                        "GAIA DB: upozornenie — nenašiel sa zjavný index na (ra, dec); "
-                        "dotazy môžu byť pomalé."
+                        "GAIA DB: upozornenie - nenasiel sa zjavny index na (ra, dec); "
+                        "dotazy mozu byt pomale."
                     )
             except sqlite3.Error as exc:  # noqa: BLE001
                 pass
@@ -277,7 +277,7 @@ def query_local_gaia_by_source_ids(
     """Fetch ``bp_rp`` / magnitudes for specific Gaia ``source_id`` rows (no sky box, no LIMIT sort).
 
     Used when a frame-wide Gaia query (rectangle + ``ORDER BY g_mag LIMIT``) omits stars that are
-    already catalog-matched on the image — those stars still need ``bp_rp`` for photometry / color terms.
+    already catalog-matched on the image - those stars still need ``bp_rp`` for photometry / color terms.
     """
     p = Path(db_path).expanduser().resolve()
     if not p.is_file():
@@ -485,7 +485,7 @@ def query_local_vsx(
 ) -> list[dict[str, Any]]:
     """Query local VSX SQLite (``vsx_data``) for a rectangular RA/Dec window (deg, ICRS).
 
-    Uses the same bounding box as ``query_local_gaia``; RA wrap at 0° is handled via split intervals.
+    Uses the same bounding box as ``query_local_gaia``; RA wrap at 0 deg is handled via split intervals.
     Rows are de-duplicated by ``oid`` when present, else by (ra_deg, dec_deg).
     """
     p = Path(db_path).expanduser().resolve()
@@ -560,7 +560,7 @@ def query_local_vsx(
                 if lim is not None and len(rows_out) >= lim:
                     break
                 log_event(
-                    f"VSX SQL: {len(rows_out)} riadkov (obdĺžnik Dec=[{de0:.3f},{de1:.3f}], RA intervaly={len(intervals)})"
+                    f"VSX SQL: {len(rows_out)} riadkov (obdlznik Dec=[{de0:.3f},{de1:.3f}], RA intervaly={len(intervals)})"
                 )
         return rows_out
     finally:
@@ -674,7 +674,7 @@ def query_local_exoplanet(
                 if lim is not None and len(rows_out) >= lim:
                     break
                 log_event(
-                    f"EXO SQL: {len(rows_out)} riadkov (obdĺžnik Dec=[{de0:.3f},{de1:.3f}], RA intervaly={len(intervals)})"
+                    f"EXO SQL: {len(rows_out)} riadkov (obdlznik Dec=[{de0:.3f},{de1:.3f}], RA intervaly={len(intervals)})"
                 )
         return rows_out
     finally:
@@ -687,8 +687,8 @@ class DraftTechnicalMetadataError(RuntimeError):
     def __init__(self, draft_id: int) -> None:
         self.draft_id = int(draft_id)
         super().__init__(
-            f"Kritická chyba: Chýbajú technické parametre pre Draft {self.draft_id}. "
-            "Skontrolujte tabuľky EQUIPMENTS a TELESCOPES."
+            f"Kriticka chyba: Chybaju technicke parametre pre Draft {self.draft_id}. "
+            "Skontrolujte tabulky EQUIPMENTS a TELESCOPES."
         )
 
 
@@ -826,7 +826,7 @@ def _fits_header_cache_pack_row(
     by = int(meta.get("binning_y", bx) or bx)
     bx = max(1, bx)
     by = max(1, by)
-    # ``PIXEL_UM`` stores **effective** on-sky pitch [µm] (physical header pixel × binning).
+    # ``PIXEL_UM`` stores **effective** on-sky pitch [um] (physical header pixel x binning).
     pu = meta.get("pixel_size_um_header")
     if pu is None:
         pphys = meta.get("pixel_size_um_physical")
@@ -1406,7 +1406,7 @@ class VyvarDatabase:
             for did in sorted(deleted_ids):
                 if table in ("EQUIPMENTS", "TELESCOPE"):
                     if "ACTIVE" not in pragma_cols:
-                        raise ValueError(f"Tabuľka {table} nemá stĺpec ACTIVE — soft-delete nie je možný.")
+                        raise ValueError(f"Tabulka {table} nema stlpec ACTIVE - soft-delete nie je mozny.")
                     self.conn.execute(
                         f"UPDATE {table} SET ACTIVE = 0 WHERE {pk_col} = ?;",
                         (did,),
@@ -1417,13 +1417,13 @@ class VyvarDatabase:
                     n = self.count_references_to_location_id(did)
                     if n > 0:
                         raise ValueError(
-                            f"Lokalitu ID={did} nie je možné zmazať: {n} odkazov v OBS_DRAFT/OBSERVATION."
+                            f"Lokalitu ID={did} nie je mozne zmazat: {n} odkazov v OBS_DRAFT/OBSERVATION."
                         )
                 elif table == "SCANNING":
                     n = self.count_references_to_scanning_id(did)
                     if n > 0:
                         raise ValueError(
-                            f"Scanning ID={did} nie je možné zmazať: {n} odkazov v OBS_DRAFT/OBSERVATION."
+                            f"Scanning ID={did} nie je mozne zmazat: {n} odkazov v OBS_DRAFT/OBSERVATION."
                         )
                 self.conn.execute(f"DELETE FROM {table} WHERE {pk_col} = ?;", (did,))
                 deleted += 1
@@ -1977,7 +1977,7 @@ class VyvarDatabase:
         self._migrate_calibration_library_scope_columns()
 
     def _migrate_calibration_library_scope_columns(self) -> None:
-        """Add optional equipment/telescope scope (set = kamera + ďalekohľad). Legacy rows: NULL,NULL = všeobecné."""
+        """Add optional equipment/telescope scope (set = kamera + dalekohlad). Legacy rows: NULL,NULL = vseobecne."""
         cur = self.conn.execute("PRAGMA table_info('CALIBRATION_LIBRARY');")
         cols = {str(r[1]).upper() for r in cur.fetchall()}
         if "ID_EQUIPMENTS" not in cols:
@@ -2177,7 +2177,7 @@ class VyvarDatabase:
         - **dark:** equipment+telescope, XBINNING, EXPTIME, GAIN, CCD_TEMP within tol (required).
         - **flat:** equipment+telescope, XBINNING, GAIN, FILTER_NAME (no EXPTIME gate).
 
-        Prefers smallest |ΔT| for dark, then newest mtime. When ``prefer_unbinned_master`` and
+        Prefers smallest |DeltaT| for dark, then newest mtime. When ``prefer_unbinned_master`` and
         ``xbinning`` > 1, tries XBINNING=1 first for on-the-fly resample.
         """
         k = str(kind or "").strip().lower()
@@ -2194,7 +2194,7 @@ class VyvarDatabase:
             tel_id = int(id_telescope)
         except (TypeError, ValueError):
             try:
-                log_event(f"CALIB LIB: no scoped master for {k} — missing equipment/telescope ids")
+                log_event(f"CALIB LIB: no scoped master for {k} - missing equipment/telescope ids")
             except Exception:  # noqa: BLE001
                 # EXC-0072: T3 -- pure log_event guard (EXCEPT-BULK-2 2026-07-08)
                 pass
@@ -2203,7 +2203,7 @@ class VyvarDatabase:
             if ccd_temp is None or not math.isfinite(float(ccd_temp)):
                 try:
                     log_event(
-                        f"CALIB LIB: no scoped dark — light CCD_TEMP unknown "
+                        f"CALIB LIB: no scoped dark - light CCD_TEMP unknown "
                         f"(eq={eq_id} tel={tel_id})"
                     )
                 except Exception:  # noqa: BLE001
@@ -2292,7 +2292,7 @@ class VyvarDatabase:
                     log_event(
                         f"CALIB LIB: no scoped master for dark eq={eq_id} tel={tel_id} "
                         f"bin={int(xbinning)} exp={float(exptime):g} gain={int(gain)} "
-                        f"temp={float(light_temp):g}±{tol:g}C"
+                        f"temp={float(light_temp):g}+-{tol:g}C"
                     )
                 else:
                     log_event(
@@ -2304,7 +2304,7 @@ class VyvarDatabase:
         return hit
 
     def fetch_obs_draft_telescope_equipment(self, draft_id: int) -> dict[str, Any] | None:
-        """JOIN OBS_DRAFT → TELESCOPE / EQUIPMENTS for UI (telescope + sensor summary)."""
+        """JOIN OBS_DRAFT -> TELESCOPE / EQUIPMENTS for UI (telescope + sensor summary)."""
         row = self.conn.execute(
             """
             SELECT
@@ -2546,7 +2546,7 @@ class VyvarDatabase:
         (exactly one TRUE each) and an ``ACTIVE`` column on LOCATION.
 
         ``IS_DEFAULT`` is an explicit user marker that pre-selects a row in the Scan
-        Source UI — it does not silently override per-draft / header resolution.
+        Source UI - it does not silently override per-draft / header resolution.
         """
         for table in ("EQUIPMENTS", "TELESCOPE", "LOCATION"):
             cols = {r["name"] for r in self.conn.execute(f"PRAGMA table_info('{table}');").fetchall()}
@@ -2584,7 +2584,7 @@ class VyvarDatabase:
             if row is None:
                 row = self.conn.execute(f"SELECT MIN(ID) AS ID FROM {table};").fetchone()
                 if row is None or row["ID"] is None:
-                    LOGGER.warning("[DATABASE] %s empty — cannot seed IS_DEFAULT.", table)
+                    LOGGER.warning("[DATABASE] %s empty - cannot seed IS_DEFAULT.", table)
                     continue
                 LOGGER.warning(
                     "[DATABASE] %s has no row id=%s for IS_DEFAULT seed; using id=%s instead.",
@@ -2623,7 +2623,7 @@ class VyvarDatabase:
         return int(row["ID"]) if row is not None and row["ID"] is not None else None
 
     def _normalize_telescope_active_to_binary(self) -> None:
-        """Store ``TELESCOPE.ACTIVE`` only as **0** or **1** (legacy YES/NO/1 → 1, 0/NO → 0)."""
+        """Store ``TELESCOPE.ACTIVE`` only as **0** or **1** (legacy YES/NO/1 -> 1, 0/NO -> 0)."""
         cur = self.conn.execute("SELECT ID, ACTIVE FROM TELESCOPE;")
         rows = cur.fetchall()
         for row in rows:
@@ -2641,7 +2641,7 @@ class VyvarDatabase:
         self.conn.commit()
 
     def _ensure_equipments_cosmic_columns(self) -> None:
-        """Detector gain and read noise (e⁻/ADU, read noise e⁻) for photometric error / SNR."""
+        """Detector gain and read noise (e-/ADU, read noise e-) for photometric error / SNR."""
         cursor = self.conn.execute("PRAGMA table_info('EQUIPMENTS');")
         cols = {row["name"] for row in cursor.fetchall()}
         if "GAIN_ADU" not in cols:
@@ -2792,7 +2792,7 @@ class VyvarDatabase:
             return None
 
     def get_equipment_pixel_size_um(self, equipment_id: int) -> float | None:
-        """``EQUIPMENTS.PIXELSIZE``: native (1×1) pixel pitch [µm], if set and positive.
+        """``EQUIPMENTS.PIXELSIZE``: native (1x1) pixel pitch [um], if set and positive.
 
         With ``TELESCOPE``/``EQUIPMENTS.FOCAL`` and X/Y binning from the FITS header, the pipeline derives
         ``expected_scale`` (arcsec/px) for plate solve and catalog geometry.
@@ -2817,7 +2817,7 @@ class VyvarDatabase:
         """``EQUIPMENTS.FOCAL`` [mm] when column exists and value is positive (optional per-camera override).
 
         With ``effective_pixel_um_plate_scale`` from FITS/DB metadata this yields the expected plate scale
-        (e.g. ~9.55″/px for a typical 200 mm refractor and ~9.3 µm pixels), which ``pipeline`` uses for
+        (e.g. ~9.55 arcsec/px for a typical 200 mm refractor and ~9.3 um pixels), which ``pipeline`` uses for
         Astrometry.net bounds, VYVAR Gaia solving, optional CD rescaling on MASTERSTAR, and cone sizing.
         """
         try:
@@ -2921,14 +2921,14 @@ class VyvarDatabase:
             return None
 
     def get_combined_metadata(self, file_path: str | Path, draft_id: int) -> dict[str, Any]:
-        """Merge FITS primary header with ``OBS_DRAFT`` → ``TELESCOPE`` / ``EQUIPMENTS`` SQL fallbacks.
+        """Merge FITS primary header with ``OBS_DRAFT`` -> ``TELESCOPE`` / ``EQUIPMENTS`` SQL fallbacks.
 
         - Focal: plausible FITS keywords first; else ``EQUIPMENTS.FOCAL`` for the draft camera; else
           ``TELESCOPE.FOCAL`` via ``SELECT t.FOCAL FROM TELESCOPE t JOIN OBS_DRAFT d ON d.ID_TELESCOPE = t.ID WHERE d.ID = ?``.
-        - Native pixel [µm]: FITS ``PIXSIZE*`` / ``XPIXSZ`` …; else ``EQUIPMENTS.PIXELSIZE`` via draft join
+        - Native pixel [um]: FITS ``PIXSIZE*`` / ``XPIXSZ`` ...; else ``EQUIPMENTS.PIXELSIZE`` via draft join
           (same as ``get_equipment_pixel_size_um`` on ``OBS_DRAFT.ID_EQUIPMENTS``).
-        - **Binning:** ``XBINNING`` / ``BINNING`` (supports ``2x2`` strings); if header says 1×1 but
-          ``NAXIS`` matches ``EQUIPMENTS.SENSORSIZE`` at 2×/3×/4×, binning is inferred. Effective pixel
+        - **Binning:** ``XBINNING`` / ``BINNING`` (supports ``2x2`` strings); if header says 1x1 but
+          ``NAXIS`` matches ``EQUIPMENTS.SENSORSIZE`` at 2x/3x/4x, binning is inferred. Effective pixel
           is ``native_pixel_um * XBINNING``.
         - ``SATURATE_ADU`` from ``EQUIPMENTS`` for the draft camera when set.
 
@@ -2971,8 +2971,8 @@ class VyvarDatabase:
         )
         if inferred:
             log_event(
-                f"BINNING: FITS hlavička {x_bin}×{y_bin}, NAXIS {naxis1}×{naxis2}, "
-                f"senzor {native_size} → použité {x_inf}×{y_inf} (odvodené z rozmeru)."
+                f"BINNING: FITS hlavicka {x_bin}x{y_bin}, NAXIS {naxis1}x{naxis2}, "
+                f"senzor {native_size} -> pouzite {x_inf}x{y_inf} (odvodene z rozmeru)."
             )
             x_bin, y_bin = x_inf, y_inf
 

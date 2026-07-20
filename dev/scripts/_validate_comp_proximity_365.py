@@ -87,19 +87,19 @@ def main() -> int:
             )
             d = (ra - rb).abs()
             lc_deltas = d[d.notna()].tolist()
-        # median |Δmag| from LC files for changed targets
+        # median |Deltamag| from LC files for changed targets
         for tid in changed_ids:
             lc_b = LC / f"lightcurve_{tid}.csv"
             if not lc_b.is_file():
                 continue
-            # no separate before LC — skip unless we saved them
+            # no separate before LC - skip unless we saved them
     else:
         print("note: save photometry_summary.pre_proximity.csv before phase01 for lc_rms diff")
 
-    # LC rms from comp-quality / summary after only — compare pre/post summary if available
+    # LC rms from comp-quality / summary after only - compare pre/post summary if available
     if lc_deltas:
         print(
-            f"|Δlc_rms| changed targets: max={max(lc_deltas):.6f} "
+            f"|Deltalc_rms| changed targets: max={max(lc_deltas):.6f} "
             f"median={float(np.median(lc_deltas)):.6f} n={len(lc_deltas)}"
         )
 

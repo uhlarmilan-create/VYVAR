@@ -1,8 +1,8 @@
 """
-lunar_context.py — Lunar observing conditions for a VYVAR session.
+lunar_context.py - Lunar observing conditions for a VYVAR session.
 
 Uses astropy ephemeris (built-in, no internet required).
-All inputs/outputs are plain Python types (float, str, dict) —
+All inputs/outputs are plain Python types (float, str, dict) -
 no astropy objects leak outside this module.
 """
 
@@ -38,7 +38,7 @@ def _moon_position(jd: float, lat: float, lon: float, alt_m: float) -> tuple[flo
 
 
 def _lunar_phase(jd: float) -> tuple[float, float]:
-    """Return (illuminated_pct 0–100, age_days since new moon approximation)."""
+    """Return (illuminated_pct 0-100, age_days since new moon approximation)."""
     t = Time(float(jd), format="jd", scale="utc")
     moon = get_body("moon", t)
     sun = get_body("sun", t)
@@ -77,24 +77,24 @@ def _lunar_risk_from_metrics(
 
     if alt < 0.0:
         risk = "LOW"
-        reason = f"Moon below horizon ({alt:.0f}° altitude)"
+        reason = f"Moon below horizon ({alt:.0f} deg altitude)"
     elif phase < 10.0:
         risk = "LOW"
         reason = f"New moon ({phase:.0f}% illuminated)"
     elif (phase >= 10.0 and sep < 20.0) or (phase >= 40.0 and sep < 45.0):
         risk = "HIGH"
         reason = (
-            f"Moon {sep:.0f}° from field, {phase:.0f}% illuminated, {alt:.0f}° altitude"
+            f"Moon {sep:.0f} deg from field, {phase:.0f}% illuminated, {alt:.0f} deg altitude"
         )
     elif (phase >= 40.0 and sep < 90.0) or (phase >= 10.0 and sep < 45.0):
         risk = "MEDIUM"
         reason = (
-            f"Moon {sep:.0f}° from field, {phase:.0f}% illuminated, {alt:.0f}° altitude"
+            f"Moon {sep:.0f} deg from field, {phase:.0f}% illuminated, {alt:.0f} deg altitude"
         )
     else:
         risk = "LOW"
         reason = (
-            f"Moon {sep:.0f}° from field, {phase:.0f}% illuminated, {alt:.0f}° altitude"
+            f"Moon {sep:.0f} deg from field, {phase:.0f}% illuminated, {alt:.0f} deg altitude"
         )
     return risk, reason
 

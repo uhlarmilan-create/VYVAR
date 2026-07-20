@@ -217,7 +217,7 @@ python GAIA_DR3/build_blind_index.py --db <path-to-db> --tier both
 ### Proc CSV schema (`proc_*.csv`)
 
 Sloupec **`mag`** = Gaia katalogove G (hodnota v dobe krizoveho parovani s katalogem; pro danou
-hvezdu konstantni pres celou noc). **Neni** to instrumentalni magnituda snimku — pro vedeckou
+hvezdu konstantni pres celou noc). **Neni** to instrumentalni magnituda snimku - pro vedeckou
 fotometrii pouzivejte **`dao_flux`** (viz `docs/VYVAR_PROCESS.md`).
 
 Kompletni linie sloupcu `mag_inst` -> `mag_calib` -> korekce (GS11, SG, CT, AC) ->

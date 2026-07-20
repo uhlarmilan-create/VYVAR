@@ -53,13 +53,13 @@ def main() -> None:
             pcsv,
             usecols=["catalog_id", "dao_flux"],
             low_memory=False,
-            dtype={"catalog_id": str, "name": str},  # Gaia ID musí byť str — float64 stráca cifry
+            dtype={"catalog_id": str, "name": str},  # Gaia ID musi byt str - float64 straca cifry
         )
         psf = pd.read_csv(
             psfp,
             usecols=["catalog_id", "role", "psf_flux", "psf_fit_ok"],
             low_memory=False,
-            dtype={"catalog_id": str, "name": str},  # Gaia ID musí byť str — float64 stráca cifry
+            dtype={"catalog_id": str, "name": str},  # Gaia ID musi byt str - float64 straca cifry
         )
         proc["_cid"] = proc["catalog_id"].map(cid_key)
         proc["dao"] = pd.to_numeric(proc["dao_flux"], errors="coerce")

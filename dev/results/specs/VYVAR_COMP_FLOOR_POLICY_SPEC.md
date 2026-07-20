@@ -1,4 +1,4 @@
-# VYVAR — Comparison-star Floor Policy (min_comp) — Decision Spec
+# VYVAR - Comparison-star Floor Policy (min_comp) - Decision Spec
 
 Question: what minimum comparison-star count should VYVAR require (current default
 `phase01_comparison_n_comp_min = 3`; the "7 vs 5" question). Grounded in the primary
@@ -16,14 +16,14 @@ literature rather than a single-field sweep, because all archived drafts are the
   ensemble stars, or every star in the frame if properly weighted (Honeycutt-style). Quality
   beats quantity: comps with above-peer uncertainty/variability should be rejected; a few poor
   comps need not beat one good comp. The **check star is separate and must be independent**
-  (C - K should be flat) — consistent with the CS-3 fix (2026-06-11).
+  (C - K should be flat) - consistent with the CS-3 fix (2026-06-11).
 - **Empirical optimum studies:** per-target optimal ensemble size is small and data-chosen
   (Burke et al. NGC 1245: median ~4, chosen by minimising LC scatter); transit pipelines find
   ~4-10 references reduce RMS until correlated noise dominates (Croll et al.); scintillation
   cancellation saturates around **6-8** comps (single comp amplification ~1.8 -> ~1); deep
   surveys require >=10 (SDSS Stripe 82).
 
-**Take-away:** with Broeg weighting (VYVAR), the comp count is **not a precision knob** — the
+**Take-away:** with Broeg weighting (VYVAR), the comp count is **not a precision knob** - the
 weighted ensemble over all good stars sets precision. `min_comp` is a **robustness / trust
 floor**: enough *good* stars that (a) single-star systematics cancel, (b) variable-comp
 rejection can actually work (impossible with 2-3), and (c) sequence-magnitude offsets average
@@ -40,13 +40,13 @@ weighted" ensemble unchanged; only adjust the thresholds:
    (below 5, variable rejection + systematics cancellation are unreliable per the literature).
 2. **Keep / set the preferred level** `strong` at **~10** (AAVSO 12-20; conservative). Targets
    with 5-9 good comps -> existing `thin comp set` soft -> YELLOW (graceful degradation), NOT a
-   hard reject — so sparse fields are flagged, not discarded.
+   hard reject - so sparse fields are flagged, not discarded.
 3. Record the rationale + citations in `VYVAR_DECISIONS.md`.
 
 This is **graceful degradation by design**, exactly the AAVSO/Broeg posture: prefer many good
 weighted comps, accept fewer with a caution flag, reject only below the robustness floor.
 
-## CRITICAL — this is NOT byte-identity-neutral (unlike A/B, CS-1..4)
+## CRITICAL - this is NOT byte-identity-neutral (unlike A/B, CS-1..4)
 
 Changing `min_comps` / `n_comp_min` changes which targets are accepted and how the ensemble is
 populated -> it changes `lightcurve_*.csv` and `comparison_stars_per_target.csv` -> the
@@ -61,7 +61,7 @@ the **anchor re-cut discipline** we established:
 
 Do not change the floor and the anchor in an unconfirmed single run.
 
-## Coupling — do not starve the check star
+## Coupling - do not starve the check star
 
 Higher `min_comp` -> richer ensemble -> fewer leftover independent stars for the check
 (CS-3 footprint on draft_387: only **60 / 1392** independent checks at h & chi Per). Weigh the
@@ -74,7 +74,7 @@ better balance than maximising the floor.
 If empirical confirmation is wanted, sweep `n_comp_min in {3, 5, 7}` **on scratch drafts**
 (never the locked config/anchor). Report, per setting: per-target LC scatter distribution,
 number of accepted targets, and independent-check availability. Expectation: little change at
-dense h & chi Per (comps are plentiful) — which itself confirms that the floor matters mainly
+dense h & chi Per (comps are plentiful) - which itself confirms that the floor matters mainly
 in *sparse* fields, the regime the literature already covers. The probe does not, by itself,
 justify changing the live default; if a change is adopted, follow the anchor re-cut discipline.
 

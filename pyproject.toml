@@ -14,7 +14,7 @@ exclude = [
 [tool.ruff.lint]
 select = [
     "E722",   # bare except (swallows KeyboardInterrupt / SystemExit)
-    "BLE001", # blind except Exception — grandfathered via noqa; new sites must mark intent
+    "BLE001", # blind except Exception - grandfathered via noqa; new sites must mark intent
 ]
 
 [tool.pytest.ini_options]

@@ -53,7 +53,7 @@ def main() -> None:
 
     bo = at[at["catalog_id"] == TARGET_CID]
     if len(bo) != 1:
-        print("[FAIL] BO CVn nenájdená v active_targets.csv")
+        print("[FAIL] BO CVn nenajdena v active_targets.csv")
         return
     row = bo.iloc[0]
     try:
@@ -69,15 +69,15 @@ def main() -> None:
 
     bo_comp = comp[comp["target_catalog_id"] == TARGET_CID]
     if len(bo_comp) < 3:
-        print(f"[FAIL] Málo comp riadkov: {len(bo_comp)}")
+        print(f"[FAIL] Malo comp riadkov: {len(bo_comp)}")
         return
     if "bp_rp" not in bo_comp.columns or not bo_comp["bp_rp"].apply(_is_finite).any():
-        print("[FAIL] Žiadna comp nemá finite bp_rp")
+        print("[FAIL] Ziadna comp nema finite bp_rp")
         return
 
     tier_col = "tier" if "tier" in bo_comp.columns else ("comp_tier" if "comp_tier" in bo_comp.columns else None)
     if tier_col is None:
-        print("[FAIL] Chýba tier/comp_tier stĺpec")
+        print("[FAIL] Chyba tier/comp_tier stlpec")
         return
     tiers = bo_comp[tier_col].dropna().astype(int)
     if not tiers.between(1, 4).all():
@@ -85,7 +85,7 @@ def main() -> None:
 
     dbprp_finite = bo_comp["delta_bprp_abs"].apply(_is_finite) if "delta_bprp_abs" in bo_comp.columns else pd.Series(False)
     if not dbprp_finite.any():
-        print("[FAIL] Žiadna comp nemá finite delta_bprp_abs")
+        print("[FAIL] Ziadna comp nema finite delta_bprp_abs")
     print(
         f"[OK] comparison_stars BO CVn: {len(bo_comp)} comp, "
         f"tiers={sorted(tiers.unique())}, "
@@ -100,9 +100,9 @@ def main() -> None:
         if len(nan_comp) > 0:
             tiers_nan = nan_comp[tier_col].dropna().astype(int)
             if (tiers_nan == 4).all():
-                print(f"[OK] NaN target bp_rp → tier=4 pre {test_cid}")
+                print(f"[OK] NaN target bp_rp -> tier=4 pre {test_cid}")
             else:
-                print(f"[FAIL] Pre target s NaN bp_rp očakávam tier=4, dostal: {tiers_nan.unique()}")
+                print(f"[FAIL] Pre target s NaN bp_rp ocakavam tier=4, dostal: {tiers_nan.unique()}")
         else:
             print(f"[SKIP] No comps for NaN target {test_cid}")
     else:

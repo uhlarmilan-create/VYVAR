@@ -1,14 +1,14 @@
-# VYVAR — Audit ledger
+# VYVAR - Audit ledger
 
-**Started:** 2026-06-08 · **Workflow:** tooling-first triage → targeted fixes → manual critical-path read
+**Started:** 2026-06-08 . **Workflow:** tooling-first triage -> targeted fixes -> manual critical-path read
 
-Stav modulov a disposícia nálezov. Obnoviteľný register — nie čierna diera.
+Stav modulov a disposicia nalezov. Obnovitelny register - nie cierna diera.
 
-**Stavy:** `todo` · `auditing` · `done` · `deferred`
+**Stavy:** `todo` . `auditing` . `done` . `deferred`
 
-| Modul | Stav | Nálezy (Fáza 0→1) | Disposícia |
+| Modul | Stav | Nalezy (Faza 0->1) | Disposicia |
 |---|---|---|---|
-| `photometry_report.py` | done | F821×27 → 0 (TYPE_CHECKING); F841×11 → 1; F811 cm/mm | fix batch 1 — kozmetika + dead locals |
+| `photometry_report.py` | done | F821x27 -> 0 (TYPE_CHECKING); F841x11 -> 1; F811 cm/mm | fix batch 1 - kozmetika + dead locals |
 | `photometry_core.py` | done | batch 3: removed `ra_ms`/`de_ms`, `gaia_teff` dead reads | F841 clear |
 | `comp_selection_per_target.py` | done | batch 3: removed `g_teff` dead reads | F841 clear |
 | `comp_pool_rms.py` | done | F841 `avail_cols` | removed dead assignment |
@@ -18,53 +18,53 @@ Stav modulov a disposícia nálezov. Obnoviteľný register — nie čierna dier
 | `calibration.py` | done | Phase F CAL-A..D (see AUDIT_FINDINGS) | clean; CAL-A caller logging verify |
 | `database.py` | done | Phase F DB-A..D (see AUDIT_FINDINGS) | mostly sound; DB-B threading verify |
 | `vyvar_platesolver.py` | done | Phase F PS-A..C + batch 3 `center` | PS-B = Phase G priority |
-| `pipeline.py` | done | batch 3: removed `n0`×4, `cfg` in `extract_fits_metadata` | F841 clear |
+| `pipeline.py` | done | batch 3: removed `n0`x4, `cfg` in `extract_fits_metadata` | F841 clear |
 | `psf_photometry.py` | done | batch 3: `fit_shape`; **EPSF-1** CLOSED (2026-06-08) azimuthal profile FWHM QC | Diagnostic only; V3e PASS; SHA 770966c3 unchanged |
 | `psf_neighbor_sub.py` | done | step 2/2a validation core + guards (gated OFF) | A9 scored; 2b blocked SAFE_LOW_YIELD |
 | `tests/validation` (A9) | done | blend grid envelope + mismatch diagnostic | `a9_core.py`; tier_a9 reports gitignored |
-| `export_reports.py` | done | F401×2 | ruff --fix batch 1 |
-| `config.py` | done | — | no F841 in scope |
+| `export_reports.py` | done | F401x2 | ruff --fix batch 1 |
+| `config.py` | done | - | no F841 in scope |
 | `ui_*` (aggregate) | done | Phase F: `n_rms_candidates` wired to m2 | UI-only; reverses prior help-text |
 | `tess_verify.py` | done | batch 3: removed `center_col_tpf`/`center_row_tpf` | TESS side path |
 | `xval_run.py` | done | batch 3: removed `sf`, `PS` | offline harness |
 | `psf_runner.py` | done | batch 3: removed `mn_cid` | dev CLI |
 | `orchestrator/` | done | F401/F541 | ruff --fix batch 1 |
 
-## Dávka 1 (2026-06-08) — hotovo
+## Davka 1 (2026-06-08) - hotovo
 
-| Check | Výsledok |
+| Check | Vysledok |
 |---|---|
 | F821 | **0** (bolo 27) |
 | F811 | **0** (bolo 7) |
 | F401/F541 | **0** (auto-fix + review) |
 | F841 | **22** (bolo 44) |
 | `pytest tests` | **174 passed, 6 skipped** |
-| Byte-identita fotometrie | neoverená v tejto dávke (len refaktor mŕtvych premenných / importy) |
+| Byte-identita fotometrie | neoverena v tejto davke (len refaktor mrtvych premennych / importy) |
 
-## Dávka 2 (2026-06-08) — session close
+## Davka 2 (2026-06-08) - session close
 
 F841 batch 2 cleanup: removed `dist_score`, `rms_f2`, redundant `c1_stderr@7141`;
 `lc_df@7786` read-guard preserved (`pd.read_csv` without binding); `g_teff`/`gaia_teff`
 deferred (benign).
 
-| Check | Výsledok |
+| Check | Vysledok |
 |---|---|
 | `pytest tests` | **174 passed, 6 skipped** |
-| Photometry byte-identity (`draft_000366`, 284 artifacts) | **OK** — SHA-256 `ad12325d262e913dc57fa0e805e07c2115aec5005268c704177d7fb72856aa69` unchanged |
+| Photometry byte-identity (`draft_000366`, 284 artifacts) | **OK** - SHA-256 `ad12325d262e913dc57fa0e805e07c2115aec5005268c704177d7fb72856aa69` unchanged |
 | PDF overflow (`draft_000366`) | **0** violations (160 pages) |
 | commit | `10b81fa` |
 
-## Dávka 3 (2026-06-08) — F841 batch 3 + audit findings re-encode
+## Davka 3 (2026-06-08) - F841 batch 3 + audit findings re-encode
 
 F841 production scope 18 -> 1 pending (`ui_variability.py:1480` Cat 3, awaiting Milan).
 Removed 17 dead locals / dead read blocks (Cat 1 + Cat 2). Phase A1: re-encoded
 `VYVAR_AUDIT_FINDINGS.md` to UTF-8 ASCII; `tmp/_gen_audit_findings.py` emits ASCII.
 
-| Check | Výsledok |
+| Check | Vysledok |
 |---|---|
 | F841 production | **1** (`ui_variability.py:1480` pending) |
 | `pytest tests` | **174 passed, 6 skipped** |
-| Photometry byte-identity (`draft_000366`, 284 artifacts) | **OK** — SHA-256 `ad12325d262e913dc57fa0e805e07c2115aec5005268c704177d7fb72856aa69` unchanged |
+| Photometry byte-identity (`draft_000366`, 284 artifacts) | **OK** - SHA-256 `ad12325d262e913dc57fa0e805e07c2115aec5005268c704177d7fb72856aa69` unchanged |
 | PDF overflow (`draft_000366`) | **0** violations (160 pages) |
 | commit | pending (git identity not configured locally; includes Phase B + C staged) |
 
@@ -222,7 +222,7 @@ Step **2a** guards: inclusive sep floor (`nn_dist_fwhm <= 0.8`); catalog-anchore
 
 Mismatch diagnostic: `python -m tests.validation.run_a9_mismatch_diagnostic` ->
 `tests/validation/data/tier_a9/a9_mismatch_diagnostic.md` (gitignored; regenerate locally).
-Design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md` (joint fit §3b; guards §6).
+Design: `docs/VYVAR_NEIGHBOR_SUB_DESIGN.md` (joint fit S3b; guards S6).
 
 ## NEIGHBOR-SUB pre-2b guard + 367 crowding (2026-06-08)
 
@@ -269,7 +269,7 @@ blind index unaffected.
 2. ~~**comp_qa fix-once locus (CQ-C)**~~ **DONE (2026-06-09)**; **ddof co-calibration** remains.
 3. ~~**GAIA-1/GAIA-2**~~ **deferred to DR4** (2026-06-10); DR3 build completes as-is.
 
-## Nástroje
+## Nastroje
 
 ```bash
 python tmp/_gen_audit_findings.py   # regeneruje docs/VYVAR_AUDIT_FINDINGS.md
@@ -292,26 +292,26 @@ grandfathered; 8 `photometry_core` narrowings; 4 bare excepts fixed (sandbox).
 | Trust baseline (`comp_trust_min_comps=5`) | **1382 YELLOW / 106 RED** (1488 rows) |
 | Specs filed | trust hardening, check-star selection, comp-floor policy |
 
-## Session close 2026-06-23–25 — audit follow-ups + exoplanet + band classifier
+## Session close 2026-06-23-25 - audit follow-ups + exoplanet + band classifier
 
 | Item | Status | Commit | Notes |
 |---|---|---|---|
 | G7-F003b PDF `phase01_use_bprp_primary` | **FIXED** | `795faef` | was hardcoded `True`; test `test_g7_f003b_report_bprp_primary.py` |
-| EQUIP-BINNING DB bin1 gain/RN scaling | **FIXED** | `b19cd7e` | FITS intrinsics win; DB fallback scaled gain×bin², RN×bin; deliberate RN 1.3→2.6 on bin2 |
+| EQUIP-BINNING DB bin1 gain/RN scaling | **FIXED** | `b19cd7e` | FITS intrinsics win; DB fallback scaled gainxbin^2, RNxbin; deliberate RN 1.3->2.6 on bin2 |
 | EXOPLANET-XMATCH local host annotation | **DONE** | `c169675` | 14185-row local DB; informational `exo_*` cols only; draft 421 bit-identical |
 | EXO-AS-TARGET host promotion | **DONE** | `1616b18` | string Gaia id end-to-end; draft 422 production-path PASS |
-| comp-select grow-redesign | **REJECTED** | — | ~45% population regressions; sandbox only; not ported |
-| F-RIELLO-1 B-V/Riello citation | **FIXED (A1)** | — | report + emitter; BP-RP raw Gaia only |
-| F-HOWELL-1 / F-CITE-HONEYCUTT | **FIXED (A2/A3)** | — | Howell ADU comment; Honeycutt in CORE |
-| F-HOWELL-3 err sky column | **FIXED (Stage C)** | — | `sky_adu_per_px_annulus`; draft_424 verified |
-| F-BJD-1 time_base provenance | **FIXED (Stage D)** | — | LC column `BJD_TDB`/`JD_FALLBACK`; audit closed |
-| F-AIRMASS-CITE Kasten-Young | **FIXED** | — | pipeline docstring; `kastenyoung1989` bib |
-| F-BINGAIN-1 gain exponent | **LATENT** | — | draft_424: 12/12 `header_index_mapped` 3.17; scaled-db 0%; PT INCONCLUSIVE; RN sub-Q -> CAL-DIAG |
-| GAIA-ID-FLOAT-GUARD | **CLOSED** | — | verified 2x clone + live tree |
-| F-EXCEPT-TIER1 silent pass | **OPEN** | — | 160 sites; dedicated batch later |
+| comp-select grow-redesign | **REJECTED** | - | ~45% population regressions; sandbox only; not ported |
+| F-RIELLO-1 B-V/Riello citation | **FIXED (A1)** | - | report + emitter; BP-RP raw Gaia only |
+| F-HOWELL-1 / F-CITE-HONEYCUTT | **FIXED (A2/A3)** | - | Howell ADU comment; Honeycutt in CORE |
+| F-HOWELL-3 err sky column | **FIXED (Stage C)** | - | `sky_adu_per_px_annulus`; draft_424 verified |
+| F-BJD-1 time_base provenance | **FIXED (Stage D)** | - | LC column `BJD_TDB`/`JD_FALLBACK`; audit closed |
+| F-AIRMASS-CITE Kasten-Young | **FIXED** | - | pipeline docstring; `kastenyoung1989` bib |
+| F-BINGAIN-1 gain exponent | **LATENT** | - | draft_424: 12/12 `header_index_mapped` 3.17; scaled-db 0%; PT INCONCLUSIVE; RN sub-Q -> CAL-DIAG |
+| GAIA-ID-FLOAT-GUARD | **CLOSED** | - | verified 2x clone + live tree |
+| F-EXCEPT-TIER1 silent pass | **OPEN** | - | 160 sites; dedicated batch later |
 | Band classifier (additive) | **DONE** | `fe9b375` | see BAND-DETECT below |
-| CAL-DIAG radiometry gate | **OPEN** | — | agreed 2026-07-07; spec pending |
-| Production CT-gate + k'' rewiring | **PENDING** | — | blocked on filtered draft + FITS FILTER capture |
+| CAL-DIAG radiometry gate | **OPEN** | - | agreed 2026-07-07; spec pending |
+| Production CT-gate + k'' rewiring | **PENDING** | - | blocked on filtered draft + FITS FILTER capture |
 
 ### F-BINGAIN-1 Stage A summary (2026-07-07, `tmp/phaseBinGain/`)
 
@@ -327,7 +327,7 @@ grandfathered; 8 `photometry_core` narrowings; 4 bare excepts fixed (sandbox).
 TIER1-UI-DEBT (38 sites); 299-defensive broad-except cluster. Full detail: ROADMAP deferred table +
 `VYVAR_FULL_AUDIT_LEDGER.md`.
 
-## BAND-DETECT — photometric band classifier (2026-06-24, ledger sync `5d6801c`)
+## BAND-DETECT - photometric band classifier (2026-06-24, ledger sync `5d6801c`)
 
 | Item | Status | Notes |
 |---|---|---|

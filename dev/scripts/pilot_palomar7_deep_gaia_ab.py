@@ -265,7 +265,7 @@ def part_a4_gate_check(field_db: Path) -> dict[str, Any]:
         _restore_config(orig)
         return {"gate_passed": False, "error": str(exc)}
     finally:
-        # keep field db path for Part B if gate passed — restored at end
+        # keep field db path for Part B if gate passed - restored at end
         pass
 
 
@@ -584,7 +584,7 @@ def main() -> int:
         RESULT_PATH.write_text(json.dumps(report, indent=2), encoding="utf-8")
         return 1
 
-    # Part B — field DB path stays set; PSF enabled temporarily
+    # Part B - field DB path stays set; PSF enabled temporarily
     try:
         report["part_b"] = part_b_run(FIELD_DB, orig_config)
     except Exception as exc:  # noqa: BLE001

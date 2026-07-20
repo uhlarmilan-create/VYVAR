@@ -1,8 +1,8 @@
-# VYVAR — Automated Differential Photometry Pipeline
+# VYVAR - Automated Differential Photometry Pipeline
 
 *Turn a night of raw FITS frames into trustworthy, submission-ready variable-star light curves.*
 
-*Read this in Czech: [README_CZ.md](README_CZ.md) — česká verze.*
+*Read this in Czech: [README_CZ.md](README_CZ.md) - ceska verze.*
 
 ---
 
@@ -16,7 +16,7 @@ and writes out the reports and AAVSO / VarAstro submission files. Everything run
 single Streamlit app, and every configurable knob is documented in plain language so you can
 drive the pipeline from the UI or by editing `config.json` directly.
 
-The goal is *honest* photometry. VYVAR does not just draw a pretty curve — it quantifies the
+The goal is *honest* photometry. VYVAR does not just draw a pretty curve - it quantifies the
 noise with a real CCD error model, selects comparison stars the way the Broeg (2005)
 algorithm intends, cross-checks candidates against Gaia DR3, VSX and TESS, and attaches a
 GREEN / YELLOW / RED trust verdict so you know whether a detected variation is real or an
@@ -53,7 +53,7 @@ cluster-level RANSAC WCS verification with geometric match-fraction scoring rath
 vote count. A **two-tier index** (fine for long focal length, wide for short) lets a
 scale-aware orchestrator pick the right tier. Solutions are verified against Gaia to
 `verify_mag_limit = 14` (A/B-tested: as reliable as mag 16 at ~28% less runtime). WCS writes
-are fail-closed — a write error blocks Phase 2A rather than shipping stale astrometry. Blind
+are fail-closed - a write error blocks Phase 2A rather than shipping stale astrometry. Blind
 astrometric calibration follows the hint-as-prior philosophy of Lang et al. (2010).
 
 ### MASTERSTAR
@@ -67,7 +67,7 @@ Every measured star is matched to a local Gaia DR3 catalog (SQLite, built full-s
 GSP-Phot stellar parameters (Andrae et al. 2023) feed colour terms and the HRD.
 
 ### Ensemble differential photometry
-Comparison stars are chosen and weighted following **Broeg, Fernández & Neuhäuser (2005)** —
+Comparison stars are chosen and weighted following **Broeg, Fernandez & Neuhauser (2005)** -
 a variability-weighted artificial comparison star with iterative down-weighting of variable
 references. Selection ranks stars by **BP-RP colour tiers** (Gaia colour transforms; Jordi et
 al. 2010, Riello et al. 2021) then RMS, with a `comp_select_rms_floor` (default `1e-6`) that
@@ -80,7 +80,7 @@ per-measurement sigma budget validates.
 
 ### Error model
 Per-star uncertainties use the **Howell (1989)** CCD signal-to-noise equation with SNR-optimal
-apertures, an empty-aperture background term (Labbé et al. 2003), **Honeycutt (1992)**
+apertures, an empty-aperture background term (Labbe et al. 2003), **Honeycutt (1992)**
 common-mode ensemble-residual removal, and a per-rig systematic floor (`sigma_sys`) so formal
 errors do not under-report real scatter (Merline & Howell 1995). Airmass uses the Kasten &
 Young (1989) optical air-mass formula. SysRem systematic detrending (Tamuz, Mazeh & Zucker
@@ -101,7 +101,7 @@ and period-reliability classification.
 
 ### Reports
 A PDF **Summary Measure Report** carries per-star light curves, an HR diagram with Gaia-based
-classification, and a full **configuration-provenance page** — the exact parameter snapshot,
+classification, and a full **configuration-provenance page** - the exact parameter snapshot,
 git head, and generation timestamp baked into every report so any figure is reproducible.
 
 ### AAVSO / VarAstro export
@@ -119,8 +119,8 @@ not aspirational.
 
 | Tool | Method | Stars | Agreement |
 |------|--------|-------|-----------|
-| photutils 3.0 | Differential LC vs VYVAR `dao_flux`, mag 8–13 | 67 | Δ < 0.001 mag |
-| Muniwin 2.1.36 (c-munipack) | Differential LC, same comparison stars | 3 | ±5–15% RMS |
+| photutils 3.0 | Differential LC vs VYVAR `dao_flux`, mag 8-13 | 67 | Delta < 0.001 mag |
+| Muniwin 2.1.36 (c-munipack) | Differential LC, same comparison stars | 3 | +-5-15% RMS |
 | IRAF apphot (Community IRAF 2.17.1) | Single-frame flux on MASTERSTAR.fits | 48 | 2.2% scatter (after ZP) |
 | SExtractor 2.28 | Single-frame flux | 273 | 6% offset (growth-curve / PSF wings) |
 
@@ -152,12 +152,12 @@ or a config change either reproduces the frozen science numbers exactly or is fl
 
 ## Screenshots
 
-<!-- SCREENSHOT 1: Capture the main Streamlit dashboard after a full run — the RUN VYVAR
+<!-- SCREENSHOT 1: Capture the main Streamlit dashboard after a full run - the RUN VYVAR
      view with the pipeline phases complete and the variability/trust dashboard visible.
      Save as img/readme_dashboard.png -->
 ![VYVAR Streamlit dashboard after a completed run](img/readme_dashboard.png)
 
-<!-- SCREENSHOT 2: Capture a representative page of the PDF Summary Measure Report — ideally
+<!-- SCREENSHOT 2: Capture a representative page of the PDF Summary Measure Report - ideally
      one showing the HR diagram or the configuration-provenance page. Save as img/readme_report.png -->
 ![VYVAR PDF Summary Measure Report page](img/readme_report.png)
 
@@ -174,9 +174,9 @@ VYVAR is a desktop Python application, not a service. It runs on:
 - **OS:** Windows 10/11 or Linux (developed on both).
 - **Python:** 3.12 (developed and tested on 3.12).
 - **RAM:** 8 GB minimum, 16 GB recommended for large nights.
-- **GPU:** optional NVIDIA GPU — only accelerates plate solving; not required.
+- **GPU:** optional NVIDIA GPU - only accelerates plate solving; not required.
 - **Data:** any FITS-producing telescope + monochrome/mono-CMOS or CCD setup, from a wide
-  short-focus rig (~9.8″/px) to a long-focus Newton (~0.65″/px). VYVAR is scale-aware and
+  short-focus rig (~9.8 arcsec/px) to a long-focus Newton (~0.65 arcsec/px). VYVAR is scale-aware and
   picks the aperture-vs-PSF path accordingly.
 
 You also need a local Gaia DR3 catalog (built once; see Installation).
@@ -193,7 +193,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Build the local Gaia DR3 catalog once (run from inside the repo — the builders import
+Build the local Gaia DR3 catalog once (run from inside the repo - the builders import
 `gaia_catalog_id.py` from `src_py/`; use `--out` to place the large database anywhere):
 
 ```bash
@@ -232,7 +232,7 @@ python -m pytest
 | Validation harness & anchor discipline | `docs/VYVAR_VALIDATION.md` |
 | Algorithm & software citations | `CITATIONS.bib` |
 
-Editing `config.json` by hand is fully supported — see the configuration guides and the
+Editing `config.json` by hand is fully supported - see the configuration guides and the
 `validate_config.py` checker.
 
 ---
@@ -243,7 +243,7 @@ VYVAR is in active development and used for real variable-star submissions. Curr
 963 tests green, 269 documented parameters, byte-identical photometry anchor discipline. The
 public paper is in preparation.
 
-VYVAR is **proprietary**. Copyright © 2026 Milan Uhlár. All rights reserved. No use, copying,
+VYVAR is **proprietary**. Copyright (c) 2026 Milan Uhlar. All rights reserved. No use, copying,
 modification, or distribution is permitted without prior written permission. The software is
 provided without warranty of any kind. See [LICENSE](LICENSE).
 

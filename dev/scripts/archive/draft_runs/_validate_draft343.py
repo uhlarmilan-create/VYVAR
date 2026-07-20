@@ -39,7 +39,7 @@ def main() -> int:
     if lunar:
         print(
             f"- lunar_context: phase={lunar.get('phase_pct')}% "
-            f"sep={lunar.get('separation_deg')}° alt={lunar.get('altitude_deg')}° risk={lunar.get('risk')}"
+            f"sep={lunar.get('separation_deg')} deg alt={lunar.get('altitude_deg')} deg risk={lunar.get('risk')}"
         )
     gs11 = meta.get("gs11_summary") or {}
     print(f"- gs11_summary: enabled={gs11.get('enabled')} aperture_arcsec={gs11.get('aperture_arcsec')}")
@@ -219,7 +219,7 @@ def main() -> int:
         else:
             print(f"No LC file: {lcp}")
     else:
-        print("V0842 Her not in active_targets — search Gaia/VSX nearest in summary")
+        print("V0842 Her not in active_targets - search Gaia/VSX nearest in summary")
         if len(summ) and "ra_deg" in summ.columns:
             # VSX 241.509, 50.187
             from astropy.coordinates import SkyCoord

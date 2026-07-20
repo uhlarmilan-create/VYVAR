@@ -1,4 +1,4 @@
-CURSOR RESULT ù 2026-07-10 12:22 UTC+2
+CURSOR RESULT - 2026-07-10 12:22 UTC+2
 
 What I did
 Implemented TODO-12d-HRD: NSS category config flag (default off), hardened annotated field image with
@@ -6,7 +6,7 @@ MASTERSTAR pixel-scale guard + short labels/legend, PDF HRD page wiring, validat
 
 ## Output / findings
 
-### Item A ù NSS category off (default)
+### Item A - NSS category off (default)
 - New key `hrd_nss_category_enabled=False` in AppConfig, config_schema, VYVAR_PARAMS.
 - Stage-1/2 exclude NSS net and Binary label when off; tests parametrize ON for NSS-specific cases.
 
@@ -20,19 +20,19 @@ MASTERSTAR pixel-scale guard + short labels/legend, PDF HRD page wiring, validat
 pre-12d snapshot: `tmp/todo12_hrd/pre12d/summary.json`
 post-12d: `tmp/todo12_hrd/summary.json`
 
-### Item B ù Annotated field image
+### Item B - Annotated field image
 - Background: skips `field_map.png` for annotation (matplotlib `bbox_inches=tight` breaks uniform scale);
-  renders `MASTERSTAR.fits` ? `hrd_field_from_fits.png` at 1:1 (3126ù2088).
+  renders `MASTERSTAR.fits` ? `hrd_field_from_fits.png` at 1:1 (3126-2088).
 - Labels: WD, RSG, RG, HOT, HOT-LUM, COOL (+ NSS when flag ON); SIMBAD main_id under label; legend strip.
 - PDF: annotated image right of HRD plot; caption "Extreme objects marked on the MASTERSTAR field".
 - Cache: `Archive/Drafts/draft_000425/platesolve/B_20_2/photometry/_report_cache/hrd_field_annotated_report.png`
 
-### Alignment check (brightest RSG, draft_425 B ù catalog_id 458357741598022528)
+### Alignment check (brightest RSG, draft_425 B - catalog_id 458357741598022528)
 
 | state | background | scale | peak/bg ratio | aligned |
 |---|---|---|---|---|
-| before scale guard + field_map | field_map.png 1492ù963 | 0.477ù0.461 | 1.90 | FAIL |
-| after FITS 1:1 background | hrd_field_from_fits.png 3126ù2088 | 1.0ù1.0 | 6.375 | PASS |
+| before scale guard + field_map | field_map.png 1492-963 | 0.477-0.461 | 1.90 | FAIL |
+| after FITS 1:1 background | hrd_field_from_fits.png 3126-2088 | 1.0-1.0 | 6.375 | PASS |
 
 Evidence crops: `tmp/todo12_hrd/draft425_B_rsg_align_crop.png`
 Annotated PNGs: `tmp/todo12_hrd/draft425_{B,V,R}_field_annotated.png`
@@ -49,7 +49,7 @@ Also aligned: draft_425 V ratio 15.94, R ratio 8.50.
 - `scripts/todo12_hrd_validate.py`: all setups OK; binary_rows=0 everywhere
 
 ## Errors (if any)
-None ù alignment FAIL on field_map-only path fixed by FITS 1:1 background (within pixel-scale scope).
+None - alignment FAIL on field_map-only path fixed by FITS 1:1 background (within pixel-scale scope).
 
 ## Files changed
 - Code commit `d060323`: config.py, hrd_analysis.py, ui_hrd.py, photometry_report.py, scripts/todo12_hrd_validate.py, tests/test_hrd_extreme.py

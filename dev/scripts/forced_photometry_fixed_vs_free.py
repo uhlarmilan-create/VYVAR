@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fixed vs free-position forced photometry — bright isolated G12-16 (read-only).
+"""Fixed vs free-position forced photometry - bright isolated G12-16 (read-only).
 
 Separates catalog fixed-position confound from real PSF disadvantage on draft 364.
 """
@@ -355,7 +355,7 @@ def run() -> dict[str, Any]:
 
     if math.isfinite(ratio_free) and ratio_free <= 1.0:
         verdict = (
-            "fixed-position confound CONFIRMED — FREE psf/aper drops to <=1 "
+            "fixed-position confound CONFIRMED - FREE psf/aper drops to <=1 "
             f"({ratio_free:.2f} vs FIXED {ratio_fix:.2f}); bright-end forced penalty is a method artifact"
         )
     elif math.isfinite(ratio_free) and ratio_free > 1.0:
@@ -364,7 +364,7 @@ def run() -> dict[str, Any]:
             f"(FREE psf/aper={ratio_free:.2f}, FIXED={ratio_fix:.2f}); DAO win likely selection on detected subset"
         )
     else:
-        verdict = "inconclusive — insufficient valid stars"
+        verdict = "inconclusive - insufficient valid stars"
 
     return {
         "draft_id": DRAFT_ID,

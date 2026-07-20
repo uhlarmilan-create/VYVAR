@@ -1,15 +1,15 @@
-CURSOR RESULT — 2026-07-16 — ANCHOR #3 STOP (SHA gate failed)
+CURSOR RESULT - 2026-07-16 - ANCHOR #3 STOP (SHA gate failed)
 
 What I did
-T1 protocol v2 on draft_435 through SHA gate. **STOP — no snapshot, no --full re-enable,
+T1 protocol v2 on draft_435 through SHA gate. **STOP - no snapshot, no --full re-enable,
 no VL-ANCHOR cut, no T4 push for anchor, T5 P1 not started.**
 
-## T1 — gate chain
+## T1 - gate chain
 
 ### Working tree / HEAD
 ```
 HEAD: 3db08794e3bb446966e382daed4803bf8da220af
-lineage: 3db0879 (docs) → 89842ff (T3 sky-surface) ✓
+lineage: 3db0879 (docs) -> 89842ff (T3 sky-surface) [OK]
 porcelain: untracked scratch only (.worktrees/, CURSOR_RESULT_*.md, scripts/* night_run helpers)
 no modified tracked *.py at start
 ```
@@ -80,12 +80,12 @@ from pass-1 (isolates Labbe / err from Phase 0+1 reselection).
 
 **Finding:** every lightcurve differs **only** in column `err` (mag/flux/`sigma_sys_mag` byte-stable).
 Example `lightcurve_1485540612577549568.csv`: 139/139 rows differ; maxabs(err)=0.029053;
-medianabs≈0.0095.
+medianabs~0.0095.
 
 **Labbe seed probe:** `FILENAME` header is **None** on processed frames; seed still
-deterministic from DATE-OBS/FRAME/NAXIS/r_ap. Same seed + same star list → identical
-`sigma_bkg_ap`. Same seed + **perturbed star exclusion list** → different sigma.
-→ Content seed is live, but empty-aperture placements still depend on the free-pixel mask
+deterministic from DATE-OBS/FRAME/NAXIS/r_ap. Same seed + same star list -> identical
+`sigma_bkg_ap`. Same seed + **perturbed star exclusion list** -> different sigma.
+-> Content seed is live, but empty-aperture placements still depend on the free-pixel mask
 (star x/y set). Something in that path is not identical across the two photometry runs.
 
 Artifacts:
@@ -97,13 +97,13 @@ Artifacts:
 
 ---
 
-## T2 (read-only while T1 ran; not applied — STOP)
+## T2 (read-only while T1 ran; not applied - STOP)
 
 Sky-surface **is** persisted:
-- FITS: `VYSKYORD=2`, `VYSKYP2P` on all 139 `proc_*.fits` (median p2p ≈ 136.84 ADU)
+- FITS: `VYSKYORD=2`, `VYSKYP2P` on all 139 `proc_*.fits` (median p2p ~ 136.84 ADU)
 - QC rows: `processed/lights/qc_metrics.csv` has `sky_surface_*` columns; applied=139/139
 - **Not** in `pipeline_meta` / infolog summary (architect observation confirmed)
-- Deferred: infolog line + meta keys (would be post-snapshot metadata commit — N/A until SHA passes)
+- Deferred: infolog line + meta keys (would be post-snapshot metadata commit - N/A until SHA passes)
 
 Identity p95 WARN threshold 2.0 px: **not applied** (STOP).
 
@@ -115,7 +115,7 @@ Identity p95 WARN threshold 2.0 px: **not applied** (STOP).
   failed target ids: 1496795041799526400, 1497007144465726080, 1498278351706325248
   reason: LC CSV missing (method=aperture)
   ```
-  → fresh ticket still warranted when anchor resumes (E5 not gone).
+  -> fresh ticket still warranted when anchor resumes (E5 not gone).
 - F-428 / F-431 closeout wording / VL-ANCHOR ACTIVE: **deferred** until SHA gate green.
 - A-durable / darks reminder: unchanged.
 
@@ -127,10 +127,10 @@ Identity p95 WARN threshold 2.0 px: **not applied** (STOP).
 
 ## Errors
 
-**SHA gate FAIL — Labbe `err` nondeterminism under protocol v2 (first live proof failed).**
+**SHA gate FAIL - Labbe `err` nondeterminism under protocol v2 (first live proof failed).**
 Science columns otherwise match when comps are fixed. Next architect decision: harden Labbe
 exclusion-mask / seed inputs so `err` is byte-stable, then re-run T1 from SHA gate.
 
 ## Milan note (when gate eventually passes)
 
-Zip snapshot to `C:\ASTRO\backups\`; then drafts 428–434 safe to delete. **Not yet.**
+Zip snapshot to `C:\ASTRO\backups\`; then drafts 428-434 safe to delete. **Not yet.**

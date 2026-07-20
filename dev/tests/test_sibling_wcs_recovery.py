@@ -1,4 +1,4 @@
-"""Sibling-WCS Pass 2 recovery unit tests (ported from sandbox T1–T5 + invariants)."""
+"""Sibling-WCS Pass 2 recovery unit tests (ported from sandbox T1-T5 + invariants)."""
 from __future__ import annotations
 
 import math
@@ -105,7 +105,7 @@ def test_bulk_shift_improves_offset():
 
 
 def test_t1_far_donor_bulk_shift_confirms():
-    """T1 — adopt offset donor WCS; bulk-shift recenters on detections."""
+    """T1 - adopt offset donor WCS; bulk-shift recenters on detections."""
     w_true = _make_tan_wcs(150.0, 45.0, scale_arcsec=1.5)
     ra, de = _grid_catalog(w_true, n=144)
     xs, ys = _detections_from_wcs(w_true, ra, de, noise_px=0.15)
@@ -120,7 +120,7 @@ def test_t1_far_donor_bulk_shift_confirms():
 
 
 def test_t2_order_independent_same_donor():
-    """T2 — donor choice depends only on spectral distance, not processing order."""
+    """T2 - donor choice depends only on spectral distance, not processing order."""
     verified = {"g", "i", "r"}
     picks = [pick_sibling_donor_filter("z", verified) for _ in range(5)]
     assert len(set(picks)) == 1
@@ -132,7 +132,7 @@ def test_t4_single_donor_used():
 
 
 def test_t5_flip_guard_zero_matches():
-    """T5 — flipped WCS yields near-zero matches -> not confirmed."""
+    """T5 - flipped WCS yields near-zero matches -> not confirmed."""
     w_true = _make_tan_wcs(100.0, 20.0)
     ra, de = _grid_catalog(w_true, n=64)
     xs, ys = _detections_from_wcs(w_true, ra, de)

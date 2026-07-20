@@ -31,9 +31,9 @@ def main() -> None:
     out_png = Path(r"C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000249\top_candidates_lightcurves.png")
 
     targets = {
-        1497974233661289000: "Nový kandidát 1 (mag=12.47)",
-        1485338783474459600: "Nový kandidát 2 (mag=13.45)",
-        1497236186481686000: "SS CVn RRAB/BL (validácia)",
+        1497974233661289000: "Novy kandidat 1 (mag=12.47)",
+        1485338783474459600: "Novy kandidat 2 (mag=13.45)",
+        1497236186481686000: "SS CVn RRAB/BL (validacia)",
     }
 
     csvs = sorted(per_frame_dir.glob("proc_*.csv"))
@@ -49,7 +49,7 @@ def main() -> None:
                     csv,
                     usecols=["catalog_id", "dao_flux", "bjd_tdb_mid"],
                     low_memory=False,
-                    dtype={"catalog_id": str, "name": str},  # Gaia ID musí byť str — float64 stráca cifry
+                    dtype={"catalog_id": str, "name": str},  # Gaia ID musi byt str - float64 straca cifry
                 )
             except Exception:
                 continue
@@ -90,7 +90,7 @@ def main() -> None:
     plt.tight_layout()
     out_png.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_png, dpi=150)
-    print(f"Uložené: {out_png}")
+    print(f"Ulozene: {out_png}")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-CURSOR RESULT ù 2026-07-19
+CURSOR RESULT - 2026-07-19
 
 What I did
 VYVAR-INVARIANTS P2: contract registry + runtime gate library + minimal wired set
@@ -17,12 +17,12 @@ into `pipeline_meta.json` (no sibling file). Science byte-identity contract unch
 ## Output / findings
 
 ### Deliverables
-- D1: `docs/VYVAR_INVARIANTS.md` ù full registry (wired + registry-only IDs).
-- D2: `src_py/invariants_runtime.py` ù `inv_check`, stage stamps, schema/CFG validators.
-- D3: wiring ù calibration FLUX-01/02; preprocess residual flatness stats; WCS-01 WARN;
+- D1: `docs/VYVAR_INVARIANTS.md` - full registry (wired + registry-only IDs).
+- D2: `src_py/invariants_runtime.py` - `inv_check`, stage stamps, schema/CFG validators.
+- D3: wiring - calibration FLUX-01/02; preprocess residual flatness stats; WCS-01 WARN;
   DAG stamps (masterstar / phase01 / phase2a / postprocess); end-of-run PROV+CFG;
   COG meta keys only when COG enabled (CFG-01).
-- D4: `dev/tests/test_invariants_p2.py` ù registry parity, unit FAIL/WARN, RNG AST.
+- D4: `dev/tests/test_invariants_p2.py` - registry parity, unit FAIL/WARN, RNG AST.
 
 ### INV-RNG-01 hit list
 **Empty.** No naked `np.random.<fn>(` calls in `src_py` (Generator / SeedSequence /
@@ -33,7 +33,7 @@ into `pipeline_meta.json` (no sibling file). Science byte-identity contract unch
 - docs-sync guard: green (after FLOW PDF regen)
 - `--fast`: OVERALL PASS
 - P1 golden (`VYVAR_INVARIANTS_P1=1`): 5 passed (SHAs unchanged)
-- `--full`: OVERALL PASS ó BYTE-IDENTICAL
+- `--full`: OVERALL PASS - BYTE-IDENTICAL
   - `full-science-compare` n_lc=166 failures=0
   - core `3d26f4692ac81fc5...` n=333; extended `6420f1daa53a0d5d...` n=499
 

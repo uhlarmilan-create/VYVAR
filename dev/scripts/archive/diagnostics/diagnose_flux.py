@@ -25,7 +25,7 @@ DRAFT_ID = 198
 ARCHIVE = r"C:\ASTRO\python\VYVAR\Archive"
 SETUP = "NoFilter_120_2"
 
-# AIJ Source-Sky_T1 z Table.tbl (prvých 10 framov pre porovnanie)
+# AIJ Source-Sky_T1 z Table.tbl (prvych 10 framov pre porovnanie)
 AIJ_T1 = [
     93345,
     91866,
@@ -56,7 +56,7 @@ def norm(x: object) -> str:
 
 def main() -> None:
     csvs = sorted(csv_dir.glob("proc_*.csv"))
-    print(f"Per-frame CSV súborov: {len(csvs)}")
+    print(f"Per-frame CSV suborov: {len(csvs)}")
     print()
 
     print(
@@ -97,7 +97,7 @@ def main() -> None:
     print()
 
     # Teraz skontroluj lightcurve CSV pre TIC
-    print("=== Lightcurve CSV analýza ===")
+    print("=== Lightcurve CSV analyza ===")
     lc_path_344 = lc_dir / f"lightcurve_{TIC_344}.csv"
     lc_path_280 = lc_dir / f"lightcurve_{TIC_280}.csv"
 
@@ -110,16 +110,16 @@ def main() -> None:
             am = normal["airmass"].dropna().to_numpy(dtype=float)
 
             print(f"\n  {label} ({len(lc)} framov, {len(normal)} normal):")
-            print(f"    aperture_r_px unikátne: {lc['aperture_r_px'].unique()}")
+            print(f"    aperture_r_px unikatne: {lc['aperture_r_px'].unique()}")
             if len(mc_raw) > 0:
                 print(
-                    f"    mag_calib_raw: {mc_raw.min():.4f} – {mc_raw.max():.4f}  "
-                    f"Δ={mc_raw.max() - mc_raw.min():.4f}"
+                    f"    mag_calib_raw: {mc_raw.min():.4f} - {mc_raw.max():.4f}  "
+                    f"Delta={mc_raw.max() - mc_raw.min():.4f}"
                 )
             if len(mc) > 0:
                 print(
-                    f"    mag_calib:     {mc.min():.4f} – {mc.max():.4f}  "
-                    f"Δ={mc.max() - mc.min():.4f}"
+                    f"    mag_calib:     {mc.min():.4f} - {mc.max():.4f}  "
+                    f"Delta={mc.max() - mc.min():.4f}"
                 )
 
             # Airmass slope
@@ -127,7 +127,7 @@ def main() -> None:
                 mask = np.isfinite(am) & np.isfinite(mc_raw)
                 slope_raw = float(np.polyfit(am[mask], mc_raw[mask], 1)[0])
                 slope_cal = float(np.polyfit(am[mask], mc[mask], 1)[0])
-                ok_cal = "✅ OK" if abs(slope_cal) <= 0.3 else "❌ TREND OSTÁVA"
+                ok_cal = "[OK] OK" if abs(slope_cal) <= 0.3 else "[X] TREND OSTAVA"
                 print(f"    airmass slope raw: {slope_raw:.4f} mag/am")
                 print(f"    airmass slope cal: {slope_cal:.4f} mag/am  ({ok_cal})")
 
@@ -136,7 +136,7 @@ def main() -> None:
                 min_idx = int(np.argmin(mc))
                 mid = len(mc) // 2
                 print(f"    Minimum: frame {min_idx}/{len(mc)}")
-                print(f"    Prvá pol: {mc[:mid].mean():.4f}  Druhá pol: {mc[mid:].mean():.4f}")
+                print(f"    Prva pol: {mc[:mid].mean():.4f}  Druha pol: {mc[mid:].mean():.4f}")
         else:
             print(f"\n  {label}: lightcurve neexistuje")
 
@@ -146,12 +146,12 @@ def main() -> None:
         lc = pd.read_csv(lc_path_344, low_memory=False)
         if "delta_mag" in lc.columns:
             dm = lc["delta_mag"].dropna().to_numpy(dtype=float)
-            print(f"  delta_mag: min={dm.min():.4f}  max={dm.max():.4f}  Δ={dm.max() - dm.min():.4f}")
-            print("  (ensemble korekcia aplikovaná?)")
+            print(f"  delta_mag: min={dm.min():.4f}  max={dm.max():.4f}  Delta={dm.max() - dm.min():.4f}")
+            print("  (ensemble korekcia aplikovana?)")
         else:
-            print("  delta_mag stĺpec chýba")
+            print("  delta_mag stlpec chyba")
     else:
-        print("  lightcurve_344 neexistuje — preskočené")
+        print("  lightcurve_344 neexistuje - preskocene")
 
 
 if __name__ == "__main__":

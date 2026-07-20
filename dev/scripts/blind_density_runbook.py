@@ -238,13 +238,13 @@ def phase2_build_loop(
         summary["delta_med_logL3"] = delta
         history.append(summary)
         if abs(delta) <= 0.10:
-            print(f"Converged |Δ|={abs(delta):.3f} dex <= 0.10")
+            print(f"Converged |Delta|={abs(delta):.3f} dex <= 0.10")
             break
         if it >= max_iters:
-            print(f"Max iterations; |Δ|={abs(delta):.3f}")
+            print(f"Max iterations; |Delta|={abs(delta):.3f}")
             break
         spc = max(20, int(round(spc * (10.0 ** (-2.0 * delta)))))
-        print(f"Next STARS_PER_CELL={spc} (10^(-2Δ) with Δ={delta:.3f})")
+        print(f"Next STARS_PER_CELL={spc} (10^(-2Delta) with Delta={delta:.3f})")
     return history
 
 

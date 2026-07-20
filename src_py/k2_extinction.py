@@ -345,7 +345,7 @@ def airmass_from_proc_csvs(csv_files: list[Any]) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# NIGHT_FIT v2 — fit path + feasibility pre-gate (S5 / S6)
+# NIGHT_FIT v2 - fit path + feasibility pre-gate (S5 / S6)
 # Model (S5 form): residual = k2 * (C_i - C_ref) * X_t
 # ---------------------------------------------------------------------------
 
@@ -803,7 +803,7 @@ def select_k2_fit_frames_readonly(
         fq = np.asarray(frame_quality_ok, dtype=bool)
         if len(fq) == n_frames:
             keep &= fq
-    # Never drop the whole night for the fit — fall back to all-finite.
+    # Never drop the whole night for the fit - fall back to all-finite.
     if int(keep.sum()) < max(6, n_frames // 5):
         return np.ones(int(n_frames), dtype=bool)
     return keep

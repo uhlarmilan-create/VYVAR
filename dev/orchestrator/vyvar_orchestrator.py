@@ -1,5 +1,5 @@
 """
-VYVAR Orchestrator — bridges Claude (claude.ai) and Cursor via files.
+VYVAR Orchestrator - bridges Claude (claude.ai) and Cursor via files.
 Milan runs this script; it handles the Claude API loop automatically.
 
 Usage:
@@ -25,17 +25,17 @@ Your job in this orchestrator:
 2. Break down Milan's task into steps
 3. For each step, output EXACTLY one of these response types:
 
-TYPE A — task for Cursor:
+TYPE A - task for Cursor:
 CURSOR_TASK:
 <your instruction in English for Cursor>
 END_TASK
 
-TYPE B — need Milan's decision:
+TYPE B - need Milan's decision:
 NEED_DECISION:
 <your question for Milan in Czech/Slovak>
 END_DECISION
 
-TYPE C — done:
+TYPE C - done:
 DONE:
 <summary in Czech/Slovak of what was accomplished>
 END_DONE
@@ -44,7 +44,7 @@ Rules:
 - Always read CURSOR_RESULT before deciding next step
 - Update your mental model of VYVAR_STATE after each Cursor result
 - Ask Milan only when truly necessary (architectural decisions, ambiguous requirements)
-- Be concise in CURSOR_TASK — Cursor knows the codebase
+- Be concise in CURSOR_TASK - Cursor knows the codebase
 - Language: CURSOR_TASK in English, NEED_DECISION and DONE in Czech/Slovak
 """
 
@@ -66,13 +66,13 @@ def write_file(path: Path, content: str):
 
 def wait_for_cursor_result(timeout_min: int = 30) -> str:
     """Wait until CURSOR_RESULT.md appears or is updated."""
-    log("⏳ Čakám na Cursor výsledok... (stlač Enter keď Cursor skončí)")
+    log("... Cakam na Cursor vysledok... (stlac Enter ked Cursor skonci)")
     # Simple approach: wait for user to press Enter
-    # (Cursor doesn't auto-notify yet — TODO-ORCHESTRATOR phase 2)
+    # (Cursor doesn't auto-notify yet - TODO-ORCHESTRATOR phase 2)
     input()
     result = read_file(RESULT_FILE)
     if not result:
-        log("⚠️  CURSOR_RESULT.md je prázdny")
+        log("!  CURSOR_RESULT.md je prazdny")
     return result
 
 def parse_response(text: str) -> tuple[str, str]:
@@ -92,22 +92,22 @@ def run_orchestrator():
     client = anthropic.Anthropic()  # uses ANTHROPIC_API_KEY env var
 
     log("=" * 60)
-    log("VYVAR Orchestrator — štart")
+    log("VYVAR Orchestrator - start")
     log(f"Repo: {REPO_ROOT}")
     log("=" * 60)
 
     # Read current state
     state = read_file(STATE_FILE)
-    log(f"docs/VYVAR_STATE.md načítaný ({len(state)} znakov)")
+    log(f"docs/VYVAR_STATE.md nacitany ({len(state)} znakov)")
 
     # Get task from Milan
-    print("\n🔭 Zadaj úlohu pre VYVAR pipeline:")
+    print("\n[telescope] Zadaj ulohu pre VYVAR pipeline:")
     task = input(">>> ").strip()
     if not task:
-        log("Žiadna úloha — koniec")
+        log("Ziadna uloha - koniec")
         return
 
-    log(f"Úloha: {task}")
+    log(f"Uloha: {task}")
 
     # Build conversation history
     messages = [
@@ -129,10 +129,10 @@ Start with step 1."""
 
     while iteration < max_iterations:
         iteration += 1
-        log(f"\n--- Iterácia {iteration} ---")
+        log(f"\n--- Iteracia {iteration} ---")
 
         # Call Claude API
-        log("🤔 Claude analyzuje...")
+        log("[think] Claude analyzuje...")
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2000,
@@ -140,14 +140,14 @@ Start with step 1."""
             messages=messages,
         )
         claude_text = response.content[0].text
-        log(f"Claude odpoveď ({len(claude_text)} znakov)")
+        log(f"Claude odpoved ({len(claude_text)} znakov)")
 
         # Parse response type
         rtype, content = parse_response(claude_text)
 
         if rtype == "CURSOR_TASK":
-            log("📋 CURSOR_TASK → zapisujem do CURSOR_TASK.md")
-            task_content = f"""# CURSOR TASK — {datetime.now().strftime('%Y-%m-%d %H:%M')}
+            log("[clipboard] CURSOR_TASK -> zapisujem do CURSOR_TASK.md")
+            task_content = f"""# CURSOR TASK - {datetime.now().strftime('%Y-%m-%d %H:%M')}
 Iteration: {iteration}
 
 {content}
@@ -156,12 +156,12 @@ Iteration: {iteration}
 After completing this task, write your results to CURSOR_RESULT.md
 """
             write_file(TASK_FILE, task_content)
-            print("\n📋 Cursor task zapísaný do CURSOR_TASK.md")
-            print("   → Otvor CURSOR_TASK.md v Cursore a spusti task")
-            print("   → Keď Cursor skončí a zapíše CURSOR_RESULT.md, stlač Enter")
+            print("\n[clipboard] Cursor task zapisany do CURSOR_TASK.md")
+            print("   -> Otvor CURSOR_TASK.md v Cursore a spusti task")
+            print("   -> Ked Cursor skonci a zapise CURSOR_RESULT.md, stlac Enter")
 
             cursor_result = wait_for_cursor_result()
-            log(f"✅ Cursor výsledok prijatý ({len(cursor_result)} znakov)")
+            log(f"[OK] Cursor vysledok prijaty ({len(cursor_result)} znakov)")
 
             # Add to conversation
             messages.append({"role": "assistant", "content": claude_text})
@@ -171,10 +171,10 @@ After completing this task, write your results to CURSOR_RESULT.md
             })
 
         elif rtype == "NEED_DECISION":
-            log("❓ NEED_DECISION → čakám na Milana")
-            print("\n❓ Claude potrebuje tvoje rozhodnutie:")
+            log("? NEED_DECISION -> cakam na Milana")
+            print("\n? Claude potrebuje tvoje rozhodnutie:")
             print(f"   {content}")
-            decision = input("Tvoja odpoveď: ").strip()
+            decision = input("Tvoja odpoved: ").strip()
             log(f"Milan rozhodol: {decision}")
 
             messages.append({"role": "assistant", "content": claude_text})
@@ -184,13 +184,13 @@ After completing this task, write your results to CURSOR_RESULT.md
             })
 
         elif rtype == "DONE":
-            log("✅ DONE")
-            print("\n✅ Hotovo!")
+            log("[OK] DONE")
+            print("\n[OK] Hotovo!")
             print(f"\n{content}")
             break
 
         else:
-            log(f"⚠️  Neznámy typ odpovede: {rtype}")
+            log(f"!  Neznamy typ odpovede: {rtype}")
             log(f"Raw: {claude_text[:200]}")
             messages.append({"role": "assistant", "content": claude_text})
             messages.append({
@@ -199,9 +199,9 @@ After completing this task, write your results to CURSOR_RESULT.md
             })
 
     if iteration >= max_iterations:
-        log("⚠️  Max iterácií dosiahnutý")
+        log("!  Max iteracii dosiahnuty")
 
-    log("Orchestrator — koniec session")
+    log("Orchestrator - koniec session")
 
 if __name__ == "__main__":
     run_orchestrator()

@@ -5,7 +5,7 @@ Usage:
     python simulate_night_run.py --dry-run
     python simulate_night_run.py --source D:\\BO_CVn --eq 1 --tel 1
 
-Simulates the VYVAR run equivalent to UI **Session Upload Automation → RUN VYVAR**.
+Simulates the VYVAR run equivalent to UI **Session Upload Automation -> RUN VYVAR**.
 """
 
 from __future__ import annotations

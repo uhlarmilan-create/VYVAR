@@ -1,17 +1,17 @@
-"""ProcFrameStore — unified in-memory store for proc_*.csv frames.
+"""ProcFrameStore - unified in-memory store for proc_*.csv frames.
 
 Replaces shared_csv_cache (Phase 1) and _phase2a_csv_cache (Phase 2A)
 with a single object built once per pipeline run.
 
 Design:
 - One disk read per frame (union of all consumer columns)
-- Column projection views — consumers get a sub-DataFrame without copying
+- Column projection views - consumers get a sub-DataFrame without copying
 - Single parse pass via usecols callable (no separate nrows=0 sniff)
 - dict-compatible interface for backward compat (csv_cache.get() pattern)
 
 Proc schema note (2026-06-25): ``sky_adu_per_px_annulus`` holds per-star annulus sky (ADU/px)
 for the Howell err model; ``noise_floor_adu`` remains the DAO detection floor (MASTERSTAR / SNR table).
-F-BINGAIN-1 (2026-07-10): ``sigma_bkg_ap`` / ``err_bkg_source`` — empirical background noise provenance.
+F-BINGAIN-1 (2026-07-10): ``sigma_bkg_ap`` / ``err_bkg_source`` - empirical background noise provenance.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from gaia_catalog_id import normalize_gaia_source_id_series
 
 # Union of all columns needed by any consumer.
 # Superset of Phase 1 _needed_cols + Phase 2A _needed_cols_2a.
-# Add new columns here if a consumer needs them — no re-read required.
+# Add new columns here if a consumer needs them - no re-read required.
 PROC_STORE_COLS = [
     # Identity
     "catalog_id",
@@ -75,7 +75,7 @@ PROC_STORE_COLS = [
     "zone",
     "source_type",
     "gaia_dr3_variable_catalog",
-    # PSF photometry (gated — Phase 2A adaptive / PSF selector)
+    # PSF photometry (gated - Phase 2A adaptive / PSF selector)
     "psf_flux",
     "psf_flux_err",
     "psf_fit_ok",
@@ -88,7 +88,7 @@ PROC_STORE_COLS = [
     "psf_ac_applied",
     # G2-F002b trust (per-frame proc CSV; Phase 2A frame_time_lookup)
     "catalog_match_mode",
-    # wcs_untrusted is NOT stored here — derived in Phase 2A LC export from
+    # wcs_untrusted is NOT stored here - derived in Phase 2A LC export from
     # catalog_match_mode via catalog_match_trust.is_wcs_untrusted_catalog_match_mode.
 ]
 
@@ -127,8 +127,8 @@ def proc_csv_path_for_aligned_fits(base_path: Path | str) -> Path:
 def list_proc_csvs(proc_dir: Path | str, *, recursive: bool = False) -> list[Path]:
     """Single entry point for listing per-frame proc CSV paths (sorted).
 
-    recursive=False — flat glob (typical per_frame_csv_dir).
-    recursive=True  — rglob tree (ProcFrameStore.build).
+    recursive=False - flat glob (typical per_frame_csv_dir).
+    recursive=True  - rglob tree (ProcFrameStore.build).
     """
     root = Path(proc_dir).expanduser()
     it = root.rglob(PROC_CSV_GLOB) if recursive else root.glob(PROC_CSV_GLOB)
@@ -266,7 +266,7 @@ class ProcFrameStore:
         )
         if n_failed > 0:
             logging.warning(
-                "[PERF-5] %d frame(s) failed to load — "
+                "[PERF-5] %d frame(s) failed to load - "
                 "pipeline will fall back to disk for these",
                 n_failed,
             )

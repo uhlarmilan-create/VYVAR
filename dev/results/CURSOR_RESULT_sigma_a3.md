@@ -1,4 +1,4 @@
-CURSOR RESULT — 2026-07-09 (SIGMA-A3)
+CURSOR RESULT - 2026-07-09 (SIGMA-A3)
 
 What I did
 Added variant (e) with Honeycutt ensemble SEM (dual path a/b), joint refit (d)+(e), draft_424 + SS Cam/V0611 reruns, tests, docs, push.
@@ -12,7 +12,7 @@ Added variant (e) with Honeycutt ensemble SEM (dual path a/b), joint refit (d)+(
 | Base | `b7db856` |
 | Push | `a676848` |
 
-### Variant median chi2/dof and IQR — draft_424 calibrator ensemble
+### Variant median chi2/dof and IQR - draft_424 calibrator ensemble
 
 | Variant | median chi2/dof | IQR |
 |---------|-----------------|-----|
@@ -22,9 +22,9 @@ Added variant (e) with Honeycutt ensemble SEM (dual path a/b), joint refit (d)+(
 | (d) howell_scint_fresid_floor | 1.000 | 0.158 |
 | (e) howell_scint_fresid_floor_ensemble | 1.000 | 0.137 |
 
-### Joint fit (f_resid, sigma_floor) — variant (d) and (e)
+### Joint fit (f_resid, sigma_floor) - variant (d) and (e)
 
-| Variant | f_resid | f_resid CI (16–84%) | sigma_floor (mmag) | sigma_floor CI (16–84%) | median chi2/dof | IQR |
+| Variant | f_resid | f_resid CI (16-84%) | sigma_floor (mmag) | sigma_floor CI (16-84%) | median chi2/dof | IQR |
 |---------|---------|---------------------|--------------------|-------------------------|-----------------|-----|
 | (d) | 0.74 | [0.0, 1.0] | 10.5 | [9.5, 11.0] | 1.000 | 0.158 |
 | (e) | 0.0 | [0.0, 0.62] | 6.5 | [5.5, 7.5] | 1.000 | 0.137 |
@@ -38,7 +38,7 @@ Added variant (e) with Honeycutt ensemble SEM (dual path a/b), joint refit (d)+(
 | Verdict | floor_did_not_collapse |
 | sigma_floor (e) | 6.5 mmag |
 
-### Ensemble SEM path (a)/(b) — draft_424
+### Ensemble SEM path (a)/(b) - draft_424
 
 | Stat | Value |
 |------|-------|
@@ -47,9 +47,9 @@ Added variant (e) with Honeycutt ensemble SEM (dual path a/b), joint refit (d)+(
 | agreement pooled p95 \|diff\| (mag) | 0.0563 |
 | n calibrators compared | 8 |
 
-Per-calibrator production SEM (path b) median (mag): ~0.0078 (7.8 mmag) typical; p95 ~0.011–0.012.
+Per-calibrator production SEM (path b) median (mag): ~0.0078 (7.8 mmag) typical; p95 ~0.011-0.012.
 
-### Chi2/dof per calibrator — all five variants (draft_424)
+### Chi2/dof per calibrator - all five variants (draft_424)
 
 | G | (a) | (b) | (c) | (d) | (e) |
 |---|-----|-----|-----|-----|-----|
@@ -65,7 +65,7 @@ Per-calibrator production SEM (path b) median (mag): ~0.0078 (7.8 mmag) typical;
 Plot: `tmp/sigma_budget/chi2_vs_g_draft000424_NoFilter_60_2.png`
 JSON: `tmp/sigma_budget/calibrator_chi2_summary.json`
 
-### SS Cam / V0611 check-star — variant (e) + ensemble SEM
+### SS Cam / V0611 check-star - variant (e) + ensemble SEM
 
 | Case | check_id | ensemble SEM median (mag) | ensemble SEM p95 (mag) | chi2/dof (e) | chi2/dof (d floor) | chi2/dof (howell_only) |
 |------|----------|---------------------------|------------------------|--------------|--------------------|-----------------------|
@@ -98,9 +98,9 @@ None.
 
 ## Files changed
 
-- `sigma_budget.py` — variant (e) constant, `ensemble_sem_mag` in quadrature
-- `scripts/chi2_sigma_gate.py` — dual SEM extraction, variant (e), vectorized joint fit
-- `scripts/select_constant_calibrators.py` — production ensemble scatter, joint (e) refit
-- `scripts/sparse_comp_diag.py` — check-star variant (e), ensemble SEM report
+- `sigma_budget.py` - variant (e) constant, `ensemble_sem_mag` in quadrature
+- `scripts/chi2_sigma_gate.py` - dual SEM extraction, variant (e), vectorized joint fit
+- `scripts/select_constant_calibrators.py` - production ensemble scatter, joint (e) refit
+- `scripts/sparse_comp_diag.py` - check-star variant (e), ensemble SEM report
 - `tests/test_sigma_a3.py` (new)
 - `docs/VYVAR_ROADMAP.md`, `docs/VYVAR_STATE.md`, `docs/VYVAR_JOURNAL.md`

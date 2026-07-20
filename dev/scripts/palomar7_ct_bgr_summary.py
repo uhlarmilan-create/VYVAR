@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Thin wrapper — use ``ct_bgr_summary.py --draft`` for new summaries."""
+"""Thin wrapper - use ``ct_bgr_summary.py --draft`` for new summaries."""
 from __future__ import annotations
 
 import sys

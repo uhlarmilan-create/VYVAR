@@ -1,12 +1,12 @@
-VYVAR — Plate solver audit (auto-generated)
+VYVAR - Plate solver audit (auto-generated)
 ========================================================================
 
-## 1. Relevantné .py súbory (keyword match)
+## 1. Relevantne .py subory (keyword match)
 
-Kľúčové slová: cone_r, CameraGeometry, plate_solve, platesolve, astrometry,
+Klucove slova: cone_r, CameraGeometry, plate_solve, platesolve, astrometry,
 triangle, pixel_scale, fov_deg, fov_width, fov_height
 
-Súbor                                                  Riadky  Posledná zmena (git log -1 alebo fs mtime)
+Subor                                                  Riadky  Posledna zmena (git log -1 alebo fs mtime)
 ------------------------------------------------------------------------
 app.py                                                   2084  2026-04-28 10:08:26 +0200
 astrometry_optimizer.py                                  1172  2026-04-28 22:25:29 +0200
@@ -60,7 +60,7 @@ vyvar_blind_solver.py                                     312  2026-04-22 20:42:
 vyvar_platesolver.py                                     3348  2026-04-29 19:03:44 +0200
 
 
-## 2. Detail podľa súboru
+## 2. Detail podla suboru
 
 
 ------------------------------------------------------------------------
@@ -91,16 +91,16 @@ FILE: app.py
    1938  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -126,16 +126,16 @@ FILE: astrometry_optimizer.py
     580  def _refit_wcs_sip5_once
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -162,16 +162,16 @@ FILE: config.py
     906  def apply_density_overrides
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -322,16 +322,16 @@ FILE: database.py
    3847  def close
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -342,16 +342,16 @@ FILE: diagnose_crowding_filters.py
      18  def _p
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -364,16 +364,16 @@ FILE: diagnose_ensemble.py
      59  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -385,16 +385,16 @@ FILE: diagnose_flux.py
      57  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -405,16 +405,16 @@ FILE: GAIA_DR3\build_gaia_blind_index.py
      12  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -426,16 +426,16 @@ FILE: GAIA_DR3\gaia-dr3_index_solver.py
      59  def build_blind_index
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -465,16 +465,16 @@ FILE: hrd_analysis.py
     598  def annotate_field_image
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -546,16 +546,16 @@ FILE: importer.py
    2379  def check_known_field
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -570,16 +570,16 @@ FILE: masterstar_context.py
     143  def masterstar_context_markdown
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -595,16 +595,16 @@ FILE: masterstar_wcs_dao_diagnostic.py
      98  def run_masterstar_wcs_dao_diagnostic
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -615,16 +615,16 @@ FILE: pdf_report.py
      15  def generate_report
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -730,16 +730,16 @@ FILE: photometry_core.py
    8813  def _write_suspected_variables
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -784,7 +784,7 @@ FILE: photometry_report.py
    1636  def draw_star_page
    1810  def _draw_summary_page
    1884  def _draw_field_astrophysics_pages
-   (removed) build_summary_measure_report — replaced by generate_photometry_report / RUN VYVAR
+   (removed) build_summary_measure_report - replaced by generate_photometry_report / RUN VYVAR
    2144  def _norm_id
    2186  def _zone_cell
    2199  def _count_lc_normal
@@ -792,16 +792,16 @@ FILE: photometry_report.py
    2358  def _footer
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1069,13 +1069,13 @@ FILE: pipeline.py
   15175  def detect_field_jumps
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
    9185      def _run_masterstar_vyvar_solve(*, enable_sip: bool, sip_max_order: int, fov_deg: float, max_rows: int) -> dict[str, Any]:
@@ -1099,16 +1099,16 @@ FILE: platesolve_ui_paths.py
      86  def resolve_draft_directory
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1149,16 +1149,16 @@ FILE: psf_runner.py
    1530  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1169,16 +1169,16 @@ FILE: run_smoothness_report.py
      10  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1191,16 +1191,16 @@ FILE: scripts\_integration_test_todos.py
      37  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1211,16 +1211,16 @@ FILE: scripts\_smoke_run_draft287.py
      23  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1232,16 +1232,16 @@ FILE: scripts\diag_bo_cvn_comp_quality_mtime.py
      15  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1253,16 +1253,16 @@ FILE: scripts\diag_bo_cvn_comp_quality_vs_csv.py
      16  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1273,16 +1273,16 @@ FILE: scripts\diag_bo_cvn_comp_vs_summary.py
       8  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1293,16 +1293,16 @@ FILE: scripts\diagnose_masterstar_wcs_dao.py
      26  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1313,16 +1313,16 @@ FILE: scripts\run_draft_000244_align_and_photometry.py
      21  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1335,16 +1335,16 @@ FILE: scripts\smoke_export_draft_000279.py
      25  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1358,16 +1358,16 @@ FILE: scripts\smoke_test_draft283.py
     119  def sep_arcsec
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1378,16 +1378,16 @@ FILE: scripts\test_auto_crossmatch_tess_draft_000279.py
      19  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1395,19 +1395,19 @@ FILE: scripts\test_border_bbox.py
       lines=34, mtime=2026-04-30 17:42:44 +0200
 
 ### 2a) def / class (riadok)
-  (žiadne)
+  (ziadne)
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1420,16 +1420,16 @@ FILE: smoke_test_bprp_tier.py
      33  def main
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1463,16 +1463,16 @@ FILE: ui_aperture_photometry.py
    1253  def _cb
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1492,16 +1492,16 @@ FILE: ui_calibration.py
     268  def draft_runtime_status
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1513,16 +1513,16 @@ FILE: ui_dao_stars.py
      18  def render_dao_stars_dashboard
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1538,16 +1538,16 @@ FILE: ui_database_explorer.py
     264  def _highlight_draft
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1564,16 +1564,16 @@ FILE: ui_finalization.py
     400  def render_known_field_banner
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1584,16 +1584,16 @@ FILE: ui_hrd.py
      15  def render_hrd_tab
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1606,16 +1606,16 @@ FILE: ui_masterstar_qa.py
      95  def render_masterstar_qa
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1635,16 +1635,16 @@ FILE: ui_photometry_quality.py
     243  def _hist
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1678,16 +1678,16 @@ FILE: ui_photometry_results.py
    1325  def render_variable_detection
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1711,16 +1711,16 @@ FILE: ui_quality_dashboard.py
     352  def _stage_center_update
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1743,16 +1743,16 @@ FILE: ui_select_stars.py
     495  def _phase01_ui
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1764,16 +1764,16 @@ FILE: ui_settings.py
      28  def render_settings_dashboard
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1785,16 +1785,16 @@ FILE: ui_suspected_lightcurves.py
      88  def render_suspected_lightcurves
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1821,16 +1821,16 @@ FILE: ui_variability.py
    1469  def load_candidate_lc
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1866,16 +1866,16 @@ FILE: utils.py
     539  def session_paths
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1897,16 +1897,16 @@ FILE: vyvar_alignment_frame.py
     765  def _astrometry_align_mp_task
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 
 ------------------------------------------------------------------------
@@ -1918,17 +1918,17 @@ FILE: vyvar_blind_solver.py
      54  def find_blind_hint
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
      61      fov_deg: float | None = None,
-     71          fov_deg: Priemer poľa [deg]; odfiltruje L3 väčšie ako ~0.9×FOV (v arcsekundách).
+     71          fov_deg: Priemer pola [deg]; odfiltruje L3 vacsie ako ~0.9xFOV (v arcsekundach).
     216              if fov_deg is not None:
     218                      _fov = float(fov_deg)
 
@@ -1981,7 +1981,7 @@ FILE: vyvar_platesolver.py
    1506  def solve_wcs_with_local_gaia
 
 ### 2e) trieda CameraGeometry
-  NIE (žiadna definícia `class CameraGeometry` v súbore)
+  NIE (ziadna definicia `class CameraGeometry` v subore)
 
 ### 2b) cone_r (riadok + riadok text)
    1916      cone_r = catalog_cone_radius_deg_from_optics(
@@ -1991,39 +1991,39 @@ FILE: vyvar_platesolver.py
    1990          cone_r = max(float(cone_r), float(_r_fov))
    1992          cone_r = max(float(cone_r), float(_opt.get("search_radius", 0.0)))
    1998      calc_radius = float(cone_r)
-   2003          f"CATALOG SEARCH: Ra={ra0}, Dec={de0}, Radius={cone_r:.2f} deg (vypočítané pre {_foc_log}mm)"
+   2003          f"CATALOG SEARCH: Ra={ra0}, Dec={de0}, Radius={cone_r:.2f} deg (vypocitane pre {_foc_log}mm)"
    2009      ra_min = ra0f - float(cone_r)
    2010      ra_max = ra0f + float(cone_r)
    2011      de_min = de0f - float(cone_r)
    2012      de_max = de0f + float(cone_r)
    2080              cone_r = min(float(cone_r), float(_fov_r))
-   2083                  f"cone_r obmedzený na {cone_r:.3f}° (FOV+20%)"
+   2083                  f"cone_r obmedzeny na {cone_r:.3f} deg (FOV+20%)"
    2085              ra_min = ra0f - float(cone_r)
    2086              ra_max = ra0f + float(cone_r)
    2087              de_min = de0f - float(cone_r)
    2088              de_max = de0f + float(cone_r)
-   2089      # VŽDY obmedz cone_r na FOV+20% ak je _exp_scale k dispozícii; potom SQL box (RA šírka podľa |dec|)
+   2089      # VZDY obmedz cone_r na FOV+20% ak je _exp_scale k dispozicii; potom SQL box (RA sirka podla |dec|)
    2095          if float(cone_r) > _fov_r_deg:
    2096              cone_r = _fov_r_deg
-   2097              log_event(f"VYVAR: cone_r clipped to FOV+20% = {cone_r:.3f}°")
+   2097              log_event(f"VYVAR: cone_r clipped to FOV+20% = {cone_r:.3f} deg")
    2098          ra_min = ra0f - float(cone_r) / math.cos(math.radians(abs(de0f)))
    2099          ra_max = ra0f + float(cone_r) / math.cos(math.radians(abs(de0f)))
    2100          de_min = de0f - float(cone_r)
    2101          de_max = de0f + float(cone_r)
-   2104              f"VYVAR platesolve: vynechávam cone_r clip na FOV+20% (blind hint + expected scale z DB/config môže byť nesprávna)."
-   2146      log_event(f"SQL GAIA: Nájdených {_n_cat_raw} hviezd pre box okolo hintu (≈ r {float(cone_r):.3f}°).")
+   2104              f"VYVAR platesolve: vynechavam cone_r clip na FOV+20% (blind hint + expected scale z DB/config moze byt nespravna)."
+   2146      log_event(f"SQL GAIA: Najdenych {_n_cat_raw} hviezd pre box okolo hintu (~ r {float(cone_r):.3f} deg).")
    3224      hdr0["VY_GAIR"] = (float(cone_r), "Gaia query cone radius [deg] used by VYVAR")
    3337          "attempt": f"cone_r={cone_r:.3f}deg,mag<={eff_max_cat_mag}",
 
 ### 2c) pixel_scale (riadok + riadok text)
-  (žiadne výskyty)
+  (ziadne vyskyty)
 
 ### 2d) fov_deg / fov_width / fov_height (riadok + riadok text)
    1715                          fov_deg=_blind_fov_deg,
 
 
 
-## 3. Duplicitné názvy funkcií (rovnaký `def` názov v ≥2 súboroch z auditu)
+## 3. Duplicitne nazvy funkcii (rovnaky `def` nazov v >=2 suboroch z auditu)
 
   __init__:
     - database.py:433
@@ -2116,11 +2116,11 @@ FILE: vyvar_platesolver.py
     - diagnose_flux.py:50
 
 
-## 4. TODO / FIXME / HACK v solver súboroch z tohto auditu
+## 4. TODO / FIXME / HACK v solver suboroch z tohto auditu
 
-Hľadanie: výskyt reťazcov TODO / FIXME / HACK (case-insensitive).
+Hladanie: vyskyt retazcov TODO / FIXME / HACK (case-insensitive).
 
-- V `vyvar_platesolver.py`, `vyvar_blind_solver.py`, `astrometry_optimizer.py`: žiadny výskyt.
-- V `scripts\_integration_test_todos.py` len komentáre s názvami skupín testov (`TODO-1` … `TODO-4`) — nie technický debt typu `# TODO:`.
-- Celý súborový zoznam z auditu: žiadny riadok `# TODO:` / `FIXME` / `HACK` v zmysle backlog značky (grep `#\s*TODO`, `FIXME`, `HACK` naprieč týmito .py).
+- V `vyvar_platesolver.py`, `vyvar_blind_solver.py`, `astrometry_optimizer.py`: ziadny vyskyt.
+- V `scripts\_integration_test_todos.py` len komentare s nazvami skupin testov (`TODO-1` ... `TODO-4`) - nie technicky debt typu `# TODO:`.
+- Cely suborovy zoznam z auditu: ziadny riadok `# TODO:` / `FIXME` / `HACK` v zmysle backlog znacky (grep `#\s*TODO`, `FIXME`, `HACK` napriec tymito .py).
 

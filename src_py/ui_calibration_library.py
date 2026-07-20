@@ -63,15 +63,15 @@ def _status_style(v: Any) -> str:
 def _equipment_telescope_labels(tags: dict[str, Any] | None) -> tuple[str, str]:
     """Labels from :meth:`VyvarDatabase.calibration_library_path_tag_map` row, or placeholders."""
     if not tags:
-        return "—", "—"
+        return "-", "-"
     ie, it = tags.get("id_equipments"), tags.get("id_telescope")
     if ie is None and it is None:
         return "General", "General"
     cam = tags.get("camera") or tags.get("eq_alias")
     tel = tags.get("telescope") or tags.get("tel_alias")
     return (
-        str(cam) if cam else (f"Equipment #{ie}" if ie is not None else "—"),
-        str(tel) if tel else (f"Telescope #{it}" if it is not None else "—"),
+        str(cam) if cam else (f"Equipment #{ie}" if ie is not None else "-"),
+        str(tel) if tel else (f"Telescope #{it}" if it is not None else "-"),
     )
 
 
@@ -166,7 +166,7 @@ def _render_master_delete_block(
     if not rows:
         return
     st.caption(
-        f"Delete files ({kind_label}) in the library folder — **any age** (not only expired)."
+        f"Delete files ({kind_label}) in the library folder - **any age** (not only expired)."
     )
     by_label = {_row_delete_label(r, library_root): r["_path"] for r in rows}
     choices = sorted(by_label.keys())
@@ -252,7 +252,7 @@ def render_calibration_library_dashboard(
         )
         exp_d = [r for r in dark_rows if str(r.get("Status")) == "Expired"]
         if exp_d:
-            st.caption(f"Shortcut — expired Master Darks: **{len(exp_d)}**")
+            st.caption(f"Shortcut - expired Master Darks: **{len(exp_d)}**")
             if st.button("Delete all expired Master Darks", type="secondary", key="clib_del_exp_dark"):
                 paths = [Path(r["_path"]) for r in exp_d]
                 n_ok, errs = _delete_paths(paths, db)
@@ -276,7 +276,7 @@ def render_calibration_library_dashboard(
         )
         exp_f = [r for r in flat_rows if str(r.get("Status")) == "Expired"]
         if exp_f:
-            st.caption(f"Shortcut — expired Master Flats: **{len(exp_f)}**")
+            st.caption(f"Shortcut - expired Master Flats: **{len(exp_f)}**")
             if st.button("Delete all expired Master Flats", type="secondary", key="clib_del_exp_flat"):
                 paths = [Path(r["_path"]) for r in exp_f]
                 n_ok, errs = _delete_paths(paths, db)
@@ -291,18 +291,18 @@ def render_calibration_library_dashboard(
     st.markdown("**Generate masters into library**")
     st.caption(
         "Enter a directory with **raw** dark or flat FITS (including subfolders). "
-        "Stacking and file naming (e.g. `Dark_120s_Dark_0G_-10deg_Bin2_YYYYMMDD.fits`, `Flat_…NoFilter…`) "
-        "matches import — from headers EXPTIME, FILTER, GAIN, CCD temperature, binning, DATE-OBS."
+        "Stacking and file naming (e.g. `Dark_120s_Dark_0G_-10deg_Bin2_YYYYMMDD.fits`, `Flat_...NoFilter...`) "
+        "matches import - from headers EXPTIME, FILTER, GAIN, CCD temperature, binning, DATE-OBS."
     )
     st.caption(
-        "**Required set:** before generating, select **camera (Equipment)** and **telescope (Telescope)** — "
+        "**Required set:** before generating, select **camera (Equipment)** and **telescope (Telescope)** - "
         "the master is registered in the library under this set."
     )
     gen_eq_id: int | None = None
     gen_tel_id: int | None = None
     gen_set_ok = False
     if db is None:
-        st.warning("Database unavailable — generation with library set registration is not possible.")
+        st.warning("Database unavailable - generation with library set registration is not possible.")
     else:
         gen_equipments = db.get_equipments(active_only=True)
         gen_telescopes = db.get_telescopes(active_only=True)
@@ -372,13 +372,13 @@ def render_calibration_library_dashboard(
                         id_telescope=gen_tel_id,
                     )
                     for m in msgs:
-                        if m.startswith("✅"):
+                        if m.startswith("[OK]"):
                             st.success(m)
-                        elif m.startswith("ℹ️"):
+                        elif m.startswith("i"):
                             st.info(m)
                         else:
                             st.error(m)
-                    if out is not None and all(not str(x).startswith("❌") for x in msgs):
+                    if out is not None and all(not str(x).startswith("[X]") for x in msgs):
                         st.rerun()
                 except Exception as exc:  # noqa: BLE001
                     st.error(f"Error: {exc}")
@@ -404,13 +404,13 @@ def render_calibration_library_dashboard(
                         id_telescope=gen_tel_id,
                     )
                     for m in msgs:
-                        if m.startswith("✅"):
+                        if m.startswith("[OK]"):
                             st.success(m)
-                        elif m.startswith("ℹ️"):
+                        elif m.startswith("i"):
                             st.info(m)
                         else:
                             st.error(m)
-                    if out is not None and all(not str(x).startswith("❌") for x in msgs):
+                    if out is not None and all(not str(x).startswith("[X]") for x in msgs):
                         st.rerun()
                 except Exception as exc:  # noqa: BLE001
                     st.error(f"Error: {exc}")

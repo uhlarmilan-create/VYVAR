@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TOI-1131.01.b V-band night_run — Newton bin2 pre-calibrated, aperture, common-mode validation."""
+"""TOI-1131.01.b V-band night_run - Newton bin2 pre-calibrated, aperture, common-mode validation."""
 from __future__ import annotations
 
 import json
@@ -178,7 +178,7 @@ def main() -> int:
         report["gaia_max_g"] = get_gaia_db_max_g_mag(cfg.gaia_db_path)
 
         if int(gaia_cov.get("cone_0p5deg_count") or 0) < 50:
-            report["error"] = "Insufficient Gaia coverage — build field DB via TAP before run"
+            report["error"] = "Insufficient Gaia coverage - build field DB via TAP before run"
             RESULT_PATH.write_text(json.dumps(report, indent=2), encoding="utf-8")
             print(report["error"])
             return 1

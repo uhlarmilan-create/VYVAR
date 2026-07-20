@@ -1,13 +1,13 @@
-CURSOR RESULT — 2026-07-16 — LABBE-DET + Anchor #3 retry
+CURSOR RESULT - 2026-07-16 - LABBE-DET + Anchor #3 retry
 
 What I did
 Found and fixed `err` nondeterminism (ensemble SEM path, not Labbe placements), hardened
-Labbe, fixed export ghosts, re-ran Anchor #3 dual full-photometry SHA gate → PASS, cut
+Labbe, fixed export ghosts, re-ran Anchor #3 dual full-photometry SHA gate -> PASS, cut
 sky-surface snapshot, re-enabled `--full`, started INVARIANTS P1 seed.
 
-## L1 — First divergent field
+## L1 - First divergent field
 
-**Honest finding:** LC `err` divergence was **ensemble SEM** (photon ⊕ SEM), not Labbe RNG.
+**Honest finding:** LC `err` divergence was **ensemble SEM** (photon (+) SEM), not Labbe RNG.
 
 Evidence (prior STOP + this ticket):
 - 166/166 LCs differed **only** in `err`; mag/flux/`sigma_sys_mag` byte-stable
@@ -21,7 +21,7 @@ placement forensics. Sub-tests: PYTHONHASHSEED no longer required (not shipped a
 star-list source for enhance path remains catalog in-memory (phase2a LC err path does not
 re-measure Labbe).
 
-## L2 — Fix
+## L2 - Fix
 
 - Canonicalize star list + `SeedSequence` child RNG + optional JSONL dump + `labbe_input_hash`
   in `measure_empty_aperture_sigma_bkg`
@@ -29,10 +29,10 @@ re-measure Labbe).
 - Sort cid iteration in PyTICS, common-mode detrend, residual stack, temp-bin, `p2p_thr`
 - Export ghosts: INFO skip (no `record_export_failure` for missing LC)
 
-## L3 — Tests / SHAs
+## L3 - Tests / SHAs
 
 Unit: `tests/test_labbe_det_determinism.py` (subprocess PYTHONHASHSEED + shuffled stars +
-scatter map order) — PASS.
+scatter map order) - PASS.
 
 Phase2a-only fixed-comps double-run (`tmp/labbe_det_phase2a/phase2a_double_run_report.json`):
 ```
@@ -43,11 +43,11 @@ byte_identical_extended: true
 n_diff_files: 0
 ```
 
-## L4 — Anchor #3 retry
+## L4 - Anchor #3 retry
 
 Single HEAD for both passes: `10d610c` (labbe-det fix).
 
-### SHA gate (full photometry ×2)
+### SHA gate (full photometry x2)
 ```
 git_head: 10d610c0e79ddbd67f91b6c01b1073ca2d3099dd
 core:     3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96  n=333
@@ -72,18 +72,18 @@ pass: true
 }
 ```
 Identity QA (preserved from MASTERSTAR/UI stamp): n=2842, p95=1.536 px.
-Sky surface meta: order=2, applied=139/139, p2p median≈136.84 ADU.
+Sky surface meta: order=2, applied=139/139, p2p median~136.84 ADU.
 
 ### session_baseline --full
 Live run (HEAD `ded815b`): pytest **889 passed**, 16 skipped; science compare PASS;
 SHA core/extended PASS. Counters initially FAIL on `phase2a_empty_comp_drop=1` (structural
-R CVn). Allowlisted in `95f262e`; replay of SHA+counter gates → **OVERALL PASS**.
+R CVn). Allowlisted in `95f262e`; replay of SHA+counter gates -> **OVERALL PASS**.
 
 Ledger: `VL-ANCHOR-WCSINV` ACTIVE; `VL-ANCHOR-424` superseded_offline.
 
-## L5 — F-435-EXPORT-GHOSTS
+## L5 - F-435-EXPORT-GHOSTS
 
-Root cause: targets never get LCs — Phase 1 finds **0 comps** (`empty_comp_drop`), so no LC
+Root cause: targets never get LCs - Phase 1 finds **0 comps** (`empty_comp_drop`), so no LC
 CSV exists. IDs:
 - `1496795041799526400` (R CVn)
 - `1497007144465726080`
@@ -93,12 +93,12 @@ Fix: do not enqueue as export failure; INFO skip. Ledger row `F-435-EXPORT-GHOST
 
 ## T2 / T3
 
-- Infolog: `sky surface: order=… applied=… p2p median=…`
+- Infolog: `sky surface: order=... applied=... p2p median=...`
 - Meta: `sky_surface_order` / `sky_surface_p2p_median_adu`
 - Identity p95 WARN threshold **2.0 px** (soft WARNING only)
 - F-428 / F-431 / A-durable wording: see STATE; darks reminder unchanged
 
-## T4 — Commits (push authorized)
+## T4 - Commits (push authorized)
 
 ```
 10d610c fix(labbe-det): canonicalize ensemble SEM join and Labbe RNG purity
@@ -106,14 +106,14 @@ ded815b chore(anchor): cut draft_435 sky-surface anchor and re-enable --full
 95f262e fix(qa): allowlist draft_435 empty_comp_drop in --full counters
 ```
 
-## T5 — INVARIANTS P1
+## T5 - INVARIANTS P1
 
-Started: `tests/test_invariants_p1_seed.py` (gated on `VYVAR_INVARIANTS_P1=1`) — snapshot SHA +
-census/sky-surface asserts. Full golden crop + UI↔night_run dual-entry still open
+Started: `tests/test_invariants_p1_seed.py` (gated on `VYVAR_INVARIANTS_P1=1`) - snapshot SHA +
+census/sky-surface asserts. Full golden crop + UI<->night_run dual-entry still open
 (`CURSOR_RESULT_invariants_P1.md`).
 
 ## Milan note
 
 Zip `draft_000435_snapshot_skysurface_20260716` to `C:\ASTRO\backups\`. After that confirmation,
-drafts **428–434** are safe to delete. Keep `tmp/anchor435_protocol_v2/pass1_photometry_backup`
+drafts **428-434** are safe to delete. Keep `tmp/anchor435_protocol_v2/pass1_photometry_backup`
 until the zip is confirmed.

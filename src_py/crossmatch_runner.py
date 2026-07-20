@@ -24,16 +24,16 @@ def _fmt_cell_existing(v: Any) -> str:
 
 
 def _has_positive_catalog_match(katalogy_text: str) -> bool:
-    """True only if at least one catalog line has a real match (not 'žiadny záznam')."""
+    """True only if at least one catalog line has a real match (not 'ziadny zaznam')."""
     if not katalogy_text or not str(katalogy_text).strip():
         return False
     for line in str(katalogy_text).splitlines():
         line = line.strip()
         if not line:
             continue
-        if "žiadny záznam" in line:
+        if "ziadny zaznam" in line:
             continue
-        if line.startswith("🔭"):
+        if line.startswith("[telescope]"):
             continue
         return True
     return False
@@ -72,7 +72,7 @@ def _format_katalogy_cell(result: CrossmatchResult | dict[str, Any]) -> str:
                     items.append(
                         CatalogMatch(
                             catalog=str(m.get("catalog", cat) or cat),
-                            name=str(m.get("name", "") or "—"),
+                            name=str(m.get("name", "") or "-"),
                             var_type=str(m.get("var_type", "") or ""),
                             period=(float(m["period"]) if m.get("period") is not None else None),
                             amplitude=(float(m["amplitude"]) if m.get("amplitude") is not None else None),
@@ -93,7 +93,7 @@ def _format_katalogy_cell(result: CrossmatchResult | dict[str, Any]) -> str:
         try:
             return json.dumps(result, ensure_ascii=False, cls=_NumpyEncoder)
         except Exception:  # noqa: BLE001
-            return "—"
+            return "-"
 
 
 def _load_radec_map(output_dir: Path) -> dict[str, tuple[float, float]]:
@@ -207,7 +207,7 @@ def auto_crossmatch_candidates(
     if not radec_map:
         radec_map = _load_radec_map(output_dir)
 
-    # Primárny zdroj súradníc: active_targets.csv (WCS-overené); kandidátsky CSV len fallback.
+    # Primarny zdroj suradnic: active_targets.csv (WCS-overene); kandidatsky CSV len fallback.
     _at_path = Path(output_dir) / "active_targets.csv"
     _at_radec: dict[str, tuple[float, float]] = {}
     if _at_path.is_file():
@@ -231,12 +231,12 @@ def auto_crossmatch_candidates(
 
     # Column name preference: keep existing, else create ASCII-friendly 'katalogy'.
     col_kat = "katalogy"
-    for c in ("katalogy", "katalógy", "katalog", "catalogs"):
+    for c in ("katalogy", "katalogy", "katalog", "catalogs"):
         if c in df.columns:
             col_kat = c
             break
     if col_kat not in df.columns:
-        df[col_kat] = "—"
+        df[col_kat] = "-"
         created_col = True
 
     for idx, row in df.iterrows():
@@ -266,7 +266,7 @@ def auto_crossmatch_candidates(
                 cache_path.unlink()
             except OSError:
                 pass
-            # Stale or unreadable cache — fall through to API crossmatch.
+            # Stale or unreadable cache - fall through to API crossmatch.
 
         radec = radec_map.get(cid)
         if radec is None:

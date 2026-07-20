@@ -184,12 +184,12 @@ def main() -> int:
     print(json.dumps(report["sha_gate"], indent=2), flush=True)
 
     if not report["sha_gate"]["pass"]:
-        print("STOP: SHA gate FAILED — restoring Cursor pass1 photometry", flush=True)
+        print("STOP: SHA gate FAILED - restoring Cursor pass1 photometry", flush=True)
         if phot.exists():
             shutil.rmtree(phot, ignore_errors=True)
         shutil.copytree(pass1_phot_backup, phot)
         return 2
-    print("SHA gate PASS — draft photometry left as pass2 (=pass1)", flush=True)
+    print("SHA gate PASS - draft photometry left as pass2 (=pass1)", flush=True)
     return 0
 
 

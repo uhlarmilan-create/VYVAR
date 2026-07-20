@@ -1,4 +1,4 @@
-CURSOR RESULT — 2026-07-08 (EXCEPT-RETRIAGE-3 + EXCEPT-FIX-3)
+CURSOR RESULT - 2026-07-08 (EXCEPT-RETRIAGE-3 + EXCEPT-FIX-3)
 
 What I did
 Executed all five parts of the tranche-3 task (platesolver / alignment / importer / database +
@@ -7,10 +7,10 @@ implemented the TOP-10 + 1-companion fix batch behind `except_fix_counters`, val
 full test suite, and synced state docs. Four separate commits per the FIX-1/2 convention.
 
 ## Commits
-- Part 0 (scanner refresh): `e2444b5` — census: EXCEPT-RETRIAGE-3 Part 0 scanner refresh (stable-ID line-number update)
-- Part B (FIX-3 code + tests): `c47e9b8` — EXCEPT-FIX-3: surface tranche-3 terminal failures (importer/platesolver/alignment/astrometry)
-- Part A (census evidence): `a5b8bdf` — census: EXCEPT-RETRIAGE-3 Part A tranche-3 evidence (astrometry/import/database)
-- Part D (state docs): `561bcb4` — docs: EXCEPT-RETRIAGE-3 + FIX-3 state sync (STATE/ROADMAP/JOURNAL)
+- Part 0 (scanner refresh): `e2444b5` - census: EXCEPT-RETRIAGE-3 Part 0 scanner refresh (stable-ID line-number update)
+- Part B (FIX-3 code + tests): `c47e9b8` - EXCEPT-FIX-3: surface tranche-3 terminal failures (importer/platesolver/alignment/astrometry)
+- Part A (census evidence): `a5b8bdf` - census: EXCEPT-RETRIAGE-3 Part A tranche-3 evidence (astrometry/import/database)
+- Part D (state docs): `561bcb4` - docs: EXCEPT-RETRIAGE-3 + FIX-3 state sync (STATE/ROADMAP/JOURNAL)
 
 Base commit: `9f3da34` (origin/main, SESSION-CLOSE-0708).
 (Commit order is 0 ? B ? A ? D; A landed after B because the evidence tables were finalized with
@@ -21,7 +21,7 @@ the FIX-3-LANDED markers in place. No functional impact.)
 - After FIX-3: **615 passed, 15 skipped** (+11 new tests in `tests/test_except_fix3.py`). No test weakening.
 - Ruff `--select BLE001,E722`: clean on all touched files.
 
-## Part 0 — scanner refresh
+## Part 0 - scanner refresh
 - Root-caused a doubled site count (1230 vs 625): a leftover `.worktrees/except_fix1_*` git worktree
   held duplicate `.py` files. Fix: added `.worktrees` to `EXCLUDE_DIRS` in `sandbox/_except_census_scan.py`.
 - Added a stable-ID line-refresh mode: with an existing census, the scanner preserves every EXC-####
@@ -32,8 +32,8 @@ the FIX-3-LANDED markers in place. No functional impact.)
   no longer detected beyond the 10 FIX-2 rows). Out of tranche-3 scope; its lines were left untouched
   to avoid misaligning tranche-2 IDs, and a warning is emitted. Recorded in the census scanner-refresh note.
 
-## Part A — evidence tables
-Added "Tranche 3 — astrometry/import/database (EVIDENCE, 2026-07-08)" to `docs/VYVAR_EXCEPT_CENSUS.md`:
+## Part A - evidence tables
+Added "Tranche 3 - astrometry/import/database (EVIDENCE, 2026-07-08)" to `docs/VYVAR_EXCEPT_CENSUS.md`:
 84 core sites (database 20, importer 17, alignment 9, blind 2, platesolver 36) + tranche 3b
 `astrometry_optimizer.py` 14 (marked as Milan-approved scope extension) = 98. Includes tier/disposition
 summaries (T1 2 / T2 25 / T3 35 / T4 36; fix-now 11, narrow+log-ERROR 4, narrow+log 19,
@@ -42,7 +42,7 @@ narrow+comment 45, delete-dead 19), the grounded `log_event` dead-code fact, the
 fail-closed-import-abort open question, and a tranche status table. Bulk dispositions are recorded
 only (deferred to the bulk pass, per Part C.4).
 
-## Part B — per-fix confirmation
+## Part B - per-fix confirmation
 New counters added to `except_fix_counters.ExceptFixCounters` (dataclass fields + `snapshot()`), all 10:
 `importer_filter_read_fail`, `dark_bpm_sidecar_write_fail`, `calib_scope_conflict_check_fail`,
 `calib_library_register_fail`, `importer_capture_date_fallback`, `importer_imagetyp_read_fail`,
@@ -73,13 +73,13 @@ New counters added to `except_fix_counters.ExceptFixCounters` (dataclass fields 
 - **#10 EXC-0605 match-rate meta** (surfacing): counter + `logging.error`, sets
   `sip_meta["match_rate_final"]=nan` and `["match_rate_scope"]="error"` sentinels. ?
 
-## Part C — gates
+## Part C - gates
 1. Full pytest **615 passed, 15 skipped** (baseline 604 + 11 new). ?
 2. New tests present for #3, #5, #8 (a/b/c), #9 + counter smokes for #1/#4/#6. ?
 3. Happy-path invariance: all edits are inside except handlers / post-exception sentinels; the WCS
    helper is byte-identical to the old per-key loop on success; the alignment refactor is
    behavior-preserving (nested wrapper delegates to the module fn) and unit-tested; existing
-   byte-identity gate tests remain green. draft_424 headless anchor was NOT re-run — the touched
+   byte-identity gate tests remain green. draft_424 headless anchor was NOT re-run - the touched
    paths do not fire on a healthy draft (deviation noted below).
 4. Bulk dispositions recorded in Part A only; not implemented. ?
 
@@ -93,7 +93,7 @@ New counters added to `except_fix_counters.ExceptFixCounters` (dataclass fields 
 ## Deviations from spec
 - **Commit order** is 0 ? B ? A ? D rather than 0 ? A ? B ? D (evidence tables were finalized with
   FIX-3-LANDED markers after the code landed). No content difference.
-- **`pipeline.py` line refresh deferred** (count mismatch, out of tranche-3 scope) — see Part 0.
+- **`pipeline.py` line refresh deferred** (count mismatch, out of tranche-3 scope) - see Part 0.
 - **draft_424 headless regression not executed** (Part C.3 was "recommended"); happy-path invariance
   argued structurally + covered by existing byte-identity tests. No site was found to have drifted
   into different code than the spec described, so no per-site STOP was required.

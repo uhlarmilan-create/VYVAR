@@ -58,6 +58,6 @@ def test_iterative_clip_excludes_divergent_comp() -> None:
 def test_global_pool_rms_prefilter_bypass_flag() -> None:
     from comp_pool_rms import compute_global_pool_rms_map
 
-    # Empty paths → empty map; flag wiring only (no crash).
+    # Empty paths -> empty map; flag wiring only (no crash).
     m = compute_global_pool_rms_map(set(), None, [], {}, apply_rms_prefilter=False, max_comp_rms=0.1)
     assert m == {}

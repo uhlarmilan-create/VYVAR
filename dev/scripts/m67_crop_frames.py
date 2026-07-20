@@ -16,7 +16,7 @@ import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
 _ROOT = _bootstrap.REPO_ROOT
 M67_RA = 132.846
 M67_DEC = 11.814
-DEFAULT_HALF_PX = 900  # ~1800 px @ ~2 arcsec/px ≈ 1 deg
+DEFAULT_HALF_PX = 900  # ~1800 px @ ~2 arcsec/px ~ 1 deg
 
 
 def _crop_box_from_red(red_fits: Path, half_px: int) -> tuple[int, int, int, int]:

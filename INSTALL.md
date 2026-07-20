@@ -129,7 +129,7 @@ In the app:
 
 1. Open **Settings** and create your **Location**, **Telescope**, and
    **Equipment**, then select them. Until you do, the site choice may be
-   empty/unresolved — that is expected.
+   empty/unresolved - that is expected.
 2. Import your first night and run the pipeline.
 
 ## Troubleshooting

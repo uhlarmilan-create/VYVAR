@@ -1,4 +1,4 @@
-"""Streamlit dashboard: photometry-related ``AppConfig`` fields (výstupy a prepínače)."""
+"""Streamlit dashboard: photometry-related ``AppConfig`` fields (vystupy a prepinace)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from config import AppConfig, save_config_json, ui_config_persist
 
 
 def _detail_help(title: str, *, phase: str, used_in: str, compute: str | None = None) -> None:
-    with st.expander(f"❓ {title}", expanded=False):
+    with st.expander(f"? {title}", expanded=False):
         st.markdown(f"**Phase / process:** {phase}")
         st.markdown(f"**Where and how it is used:** {used_in}")
         if compute:
@@ -18,16 +18,16 @@ def _detail_help(title: str, *, phase: str, used_in: str, compute: str | None = 
 def render_photometry_dashboard(cfg: AppConfig) -> None:
     st.subheader("Photometry")
     st.caption(
-        "Aperture, annulus, and nonlinearity are in **Settings → Photometry (aperture)**. "
+        "Aperture, annulus, and nonlinearity are in **Settings -> Photometry (aperture)**. "
         "Output mode toggles are here (save with the button below)."
     )
 
     st.subheader("Photometry Mode")
     _mode_options = ["aperture", "epsf", "both"]
     _mode_labels = {
-        "aperture": "🔵 Aperture only",
-        "epsf": "🔴 ePSF only",
-        "both": "🟣 Both (comparison mode)",
+        "aperture": "[blue] Aperture only",
+        "epsf": "[red] ePSF only",
+        "both": "[purple] Both (comparison mode)",
     }
     _current_mode = str(getattr(cfg, "photometry_mode", "both"))
     if _current_mode not in _mode_options:
@@ -64,9 +64,9 @@ def render_photometry_dashboard(cfg: AppConfig) -> None:
     )
     _detail_help(
         "aperture_photometry_enabled",
-        phase="Phase 2 / lightcurve — flux on the star.",
+        phase="Phase 2 / lightcurve - flux on the star.",
         used_in="Pipeline chooses between DAO summed flux and `photutils` CircularAperture / CircularAnnulus per this setting.",
-        compute="Aperture and annulus radii: `aperture_fwhm_factor`, `annulus_*_fwhm` × local FWHM (Settings).",
+        compute="Aperture and annulus radii: `aperture_fwhm_factor`, `annulus_*_fwhm` x local FWHM (Settings).",
     )
     save_png = st.checkbox(
         "Save PNG light curve / field map (Phase 2A)",
@@ -76,9 +76,9 @@ def render_photometry_dashboard(cfg: AppConfig) -> None:
     )
     _detail_help(
         "save_lightcurve_png",
-        phase="Phase 2A — result visualization.",
+        phase="Phase 2A - result visualization.",
         used_in="Saves PNG for light curve / field map (disk load, useful for QA).",
-        compute="No numeric computation — optional matplotlib/plot pipeline export.",
+        compute="No numeric computation - optional matplotlib/plot pipeline export.",
     )
     psf_on = st.checkbox(
         "PSF photometry (experimental; requires masterstar_epsf.fits)",
@@ -90,11 +90,11 @@ def render_photometry_dashboard(cfg: AppConfig) -> None:
         "psf_photometry_enabled",
         phase="Experimental PSF photometry (if enabled in pipeline).",
         used_in="Requires `masterstar_epsf.fits` from MASTERSTAR workflow; PSF model fit instead of simple aperture.",
-        compute="EPSF / PSF photometry from pipeline libraries — parameters tied to MASTERSTAR output.",
+        compute="EPSF / PSF photometry from pipeline libraries - parameters tied to MASTERSTAR output.",
     )
 
     st.caption(
-        "Saturation threshold: FITS keywords (`SATURATE`, `MAXLIN`, …), `DATAMAX` / `MAXPIX`, "
+        "Saturation threshold: FITS keywords (`SATURATE`, `MAXLIN`, ...), `DATAMAX` / `MAXPIX`, "
         "or `EQUIPMENTS.SATURATE_ADU` when the draft has equipment assigned."
     )
 
@@ -106,5 +106,5 @@ def render_photometry_dashboard(cfg: AppConfig) -> None:
         with ui_config_persist():
             save_config_json(cfg.project_root, cfg.to_json())
         cfg.ensure_base_dirs()
-        st.success("Saved to `config.json`. Refreshing UI…")
+        st.success("Saved to `config.json`. Refreshing UI...")
         st.rerun()

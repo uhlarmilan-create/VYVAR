@@ -1,4 +1,4 @@
-"""Hertzsprung–Russell diagram helpers from MASTERSTAR field catalog + local Gaia DR3 SQLite."""
+"""Hertzsprung-Russell diagram helpers from MASTERSTAR field catalog + local Gaia DR3 SQLite."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from infolog import log_event
 
 logger = logging.getLogger(__name__)
 
-# HRD extreme-object thresholds (Stage 2) — Pecaut & Mamajek (2013, ApJS 208, 9) intrinsic-color
+# HRD extreme-object thresholds (Stage 2) - Pecaut & Mamajek (2013, ApJS 208, 9) intrinsic-color
 # scale; Gaia BP-RP breakpoints from their updated online table (2024 revision).
 # GSP-Phot teff/logg provenance: Andrae et al. (2023, A&A 674, A27); incomplete at color extremes.
 HRD_BP_RP_VERY_HOT = -0.3  # Pecaut & Mamajek: early-O/B intrinsic BP-RP floor (Gaia era)
@@ -34,8 +34,8 @@ HRD_ABS_MAG_WD = 10.0
 
 HRD_EMPTY_FIELD_MSG = "No extreme objects in this field (all stars near the main sequence)"
 HRD_DETAILS_DISTANCE_CAVEAT = (
-    "Distances use naive inverse parallax (1000/ω, mas); not corrected for Gaia DR3 zero-point "
-    "or Lutz-Kelker bias — see Bailer-Jones et al. (2021)."
+    "Distances use naive inverse parallax (1000/omega, mas); not corrected for Gaia DR3 zero-point "
+    "or Lutz-Kelker bias - see Bailer-Jones et al. (2021)."
 )
 HRD_CAPTION = (
     "HRD positions use Gaia DR3 catalog values (BP-RP, M_G). Differences between filter sessions "
@@ -437,13 +437,13 @@ def _spectral_class(row: pd.Series) -> str:
         return ""
     if t is not None:
         if t >= 30000:
-            return "O–B"
+            return "O-B"
         if t >= 10000:
-            return "B–A"
+            return "B-A"
         if t >= 7500:
-            return "A–F"
+            return "A-F"
         if t >= 6000:
-            return "F–G"
+            return "F-G"
         if t >= 5200:
             return "G"
         if t >= 3700:
@@ -453,7 +453,7 @@ def _spectral_class(row: pd.Series) -> str:
         return "cool"
     if bprp is not None:
         if bprp < 0.0:
-            return "hot (BP−RP)"
+            return "hot (BP-RP)"
         if bprp < 0.5:
             return "early"
         if bprp < 1.2:
@@ -572,7 +572,7 @@ def build_hrd_dataframe(
     if ms.empty:
         return ms
     # Keep only stars with DAO detection (dao_flux or flux > 0)
-    # dao_flux column name varies — try both
+    # dao_flux column name varies - try both
     _flux_col = None
     for _candidate in ("dao_flux", "flux", "peak_dao"):
         if _candidate in ms.columns:
@@ -591,7 +591,7 @@ def build_hrd_dataframe(
                 f"({_after}/{_before} via {_flux_col})"
             )
     else:
-        log_event("HRD: no flux column found — showing all masterstar rows")
+        log_event("HRD: no flux column found - showing all masterstar rows")
 
     ms["catalog_id"] = normalize_gaia_source_id_series(ms["catalog_id"])
     if "phot_g_mean_mag" not in ms.columns and "g_mag" in ms.columns:
@@ -599,8 +599,8 @@ def build_hrd_dataframe(
 
     needed = ["teff_gspphot", "logg_gspphot", "parallax", "parallax_over_error", "non_single_star"]
     missing = [c for c in needed if c not in ms.columns]
-    # CSV často obsahuje prázdne stĺpce z matchu — potom ``missing`` je prázdne a merge by zahodil
-    # stĺpce z Gaia (starý dup_cols). Doplň fetch aj pre stĺpce bez jedinej platnej hodnoty.
+    # CSV casto obsahuje prazdne stlpce z matchu - potom ``missing`` je prazdne a merge by zahodil
+    # stlpce z Gaia (stary dup_cols). Dopln fetch aj pre stlpce bez jedinej platnej hodnoty.
     for c in ("teff_gspphot", "logg_gspphot", "non_single_star"):
         if c in ms.columns and c not in missing:
             num = pd.to_numeric(ms[c], errors="coerce")
@@ -614,7 +614,7 @@ def build_hrd_dataframe(
         )
         if not gdf.empty and "catalog_id" in gdf.columns:
             gdf = gdf.drop(columns=[c for c in ("source_id",) if c in gdf.columns], errors="ignore")
-            # Povoliť prepis hodnôt z SQLite namiesto zahodenia duplicitných stĺpcov z gdf.
+            # Povolit prepis hodnot z SQLite namiesto zahodenia duplicitnych stlpcov z gdf.
             overlap = [c for c in gdf.columns if c != "catalog_id" and c in ms.columns]
             if overlap:
                 ms = ms.drop(columns=overlap, errors="ignore")
@@ -1209,7 +1209,7 @@ def plot_hrd_matplotlib(
             )
 
     ax.invert_yaxis()
-    ax.set_xlabel("BP − RP  [mag]", color="white", fontsize=11)
+    ax.set_xlabel("BP - RP  [mag]", color="white", fontsize=11)
     ax.set_ylabel("M$_G$ / G  [mag]", color="white", fontsize=11)
     title = f"Field HRD -- {obs_group}" if str(obs_group or "").strip() else "Field Hertzsprung\u2013Russell diagram"
     ax.set_title(title, color="white", fontsize=13)
@@ -1221,7 +1221,7 @@ def plot_hrd_matplotlib(
     sm = cm.ScalarMappable(norm=plt.Normalize(-0.5, 4.0), cmap=cm.RdYlBu_r)
     sm.set_array([])
     cbar = fig.colorbar(sm, ax=ax, fraction=0.03, pad=0.02)
-    cbar.set_label("BP − RP", color="white", fontsize=9)
+    cbar.set_label("BP - RP", color="white", fontsize=9)
     cbar.ax.yaxis.set_tick_params(color="white")
     plt.setp(cbar.ax.yaxis.get_ticklabels(), color="white")
 

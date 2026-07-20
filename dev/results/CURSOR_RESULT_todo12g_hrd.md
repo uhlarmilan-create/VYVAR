@@ -1,4 +1,4 @@
-CURSOR RESULT — 2026-07-10 21:05 UTC+2
+CURSOR RESULT - 2026-07-10 21:05 UTC+2
 
 What I did
 Implemented TODO-12g catalog-color field rendering: mono MASTERSTAR luminance x Gaia BP-RP/Teff

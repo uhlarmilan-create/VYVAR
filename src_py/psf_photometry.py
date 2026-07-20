@@ -233,9 +233,9 @@ def _scalar_is_explicit_true(v: Any) -> bool:
 def _read_plate_scale_arcsec_px_from_fits(fits_path: Path) -> float | None:
     """Read plate scale in arcsec/px from FITS header, CD/WCS-FIRST.
 
-    Priority: (1) solved WCS CD matrix / CDELT; (2) VY_PLTS — ONLY if it agrees with
+    Priority: (1) solved WCS CD matrix / CDELT; (2) VY_PLTS - ONLY if it agrees with
     the CD value within 5% (else ignored); (3) SECPIX/PIXSCALE/SCALE only when no CD.
-    Returns None if no reliable value. Sanity range: 0.1–30.0 arcsec/px (wide-field safe).
+    Returns None if no reliable value. Sanity range: 0.1-30.0 arcsec/px (wide-field safe).
     """
     _sane_min = 0.1
     _sane_max = 30.0
@@ -290,7 +290,7 @@ def _read_plate_scale_arcsec_px_from_fits(fits_path: Path) -> float | None:
                         vyf = float(vy)
                         if vyf > 0 and abs(vyf - cd_scale) / cd_scale > 0.05:
                             logging.warning(
-                                "[ePSF] VY_PLTS=%.3f disagrees with CD-derived %.3f arcsec/px (>5%%) — using CD.",
+                                "[ePSF] VY_PLTS=%.3f disagrees with CD-derived %.3f arcsec/px (>5%%) - using CD.",
                                 vyf,
                                 cd_scale,
                             )
@@ -298,7 +298,7 @@ def _read_plate_scale_arcsec_px_from_fits(fits_path: Path) -> float | None:
                         pass
                 return cd_scale
 
-            # (3) No usable CD/WCS — header keyword fallbacks (incl. VY_PLTS).
+            # (3) No usable CD/WCS - header keyword fallbacks (incl. VY_PLTS).
             vy = hdr.get("VY_PLTS")
             if vy is not None:
                 try:
@@ -633,7 +633,7 @@ def _load_cone_catalog(epsf_dir: Path) -> tuple[np.ndarray, np.ndarray, np.ndarr
         ok = np.isfinite(ra) & np.isfinite(dec)
         return ra[ok], dec[ok], mag[ok]
     except Exception as e:  # noqa: BLE001
-        LOGGER.warning("[ePSF] cone catalogue load failed (%s) — isolation uses candidate set", e)
+        LOGGER.warning("[ePSF] cone catalogue load failed (%s) - isolation uses candidate set", e)
         return None
 
 
@@ -792,7 +792,7 @@ def _epsf_augment_candidates_from_detected_pool(
     funnel["n_after_broad_pool"] = int(len(merged))
     log_event(
         f"[ePSF] Broad detected-star pool: +{len(broad)} unique "
-        f"({n_picked_raw} frame picks across {len(pairs)} frames) → {len(merged)} total"
+        f"({n_picked_raw} frame picks across {len(pairs)} frames) -> {len(merged)} total"
     )
     LOGGER.info(
         "[ePSF funnel] broad pool: frames=%s picked_raw=%s unique=%s total=%s",
@@ -818,12 +818,12 @@ def _epsf_prepare_stars(
     """Select clean, isolated ePSF candidate stars and return sky-subtracted EPSFStars + meta.
 
     Shared by the single global ePSF build and the spatially-varying grid build so both use
-    the *identical* candidate selection (DB safe-comps ∩ CSV quality ∩ isolation) and the
+    the *identical* candidate selection (DB safe-comps intersect CSV quality intersect isolation) and the
     same per-cutout sky subtraction.
 
     ``use_targeting`` (default True, the production global-ePSF behaviour) narrows candidates to
     the masterstar/comp worklist. The grid build passes ``use_targeting=False`` so candidates
-    span the *full* frame — essential for a spatially-varying model to populate edge/corner cells.
+    span the *full* frame - essential for a spatially-varying model to populate edge/corner cells.
     """
     mpath = Path(masterstar_fits_path)
     csvpath = Path(masterstars_csv_path)
@@ -917,7 +917,7 @@ def _epsf_prepare_stars(
     csv_ok = csv_ok[csv_ok["_cid"] != ""]
     allowed = set(csv_ok["_cid"].unique())
     funnel["n_csv_with_catalog_id"] = int(len(csv_ok))
-    log_event(f"PSF ePSF: CSV filter → {len(csv_ok)} rows with non-empty catalog_id")
+    log_event(f"PSF ePSF: CSV filter -> {len(csv_ok)} rows with non-empty catalog_id")
     LOGGER.info(
         "[ePSF funnel] after CSV quality: n_input=%s n_after_sat=%s n_after_photometry_ok=%s n_csv_with_id=%s",
         funnel.get("n_csv_input"),
@@ -951,8 +951,8 @@ def _epsf_prepare_stars(
     star_rows: list[dict[str, Any]] = []
     if csv_only:
         # Full-frame candidate set straight from the clean CSV (x,y are master-frame px).
-        # Avoids the MASTER_SOURCES safe-comp ∩ CSV id-join, which can under-cover the frame
-        # (some edge stars use non-Gaia catalog ids) — fatal for a spatially-varying ePSF.
+        # Avoids the MASTER_SOURCES safe-comp intersect CSV id-join, which can under-cover the frame
+        # (some edge stars use non-Gaia catalog ids) - fatal for a spatially-varying ePSF.
         _have_xy = ("x" in csv_ok.columns) and ("y" in csv_ok.columns)
         if not _have_xy:
             raise ValueError("csv_only ePSF candidate selection needs x,y columns in masterstars CSV")
@@ -980,7 +980,7 @@ def _epsf_prepare_stars(
         psf_stars_df = pd.DataFrame(star_rows)
         n_join = int(len(psf_stars_df))
         funnel["n_after_db_join"] = n_join
-        log_event(f"PSF ePSF: CSV-only full-frame candidates → {n_join} star positions")
+        log_event(f"PSF ePSF: CSV-only full-frame candidates -> {n_join} star positions")
         LOGGER.info("[ePSF funnel] csv_only path: n_after_db_join=%s", n_join)
     else:
         _sc_row = db.conn.execute(
@@ -1049,7 +1049,7 @@ def _epsf_prepare_stars(
         _fmsg = (
             "ePSF candidate funnel: "
             + ", ".join(f"{k}={v}" for k, v in funnel.items())
-            + " — no ePSF candidates after DB join / broad-pool augment"
+            + " - no ePSF candidates after DB join / broad-pool augment"
         )
         LOGGER.info("[ePSF funnel] %s", _fmsg)
         raise ValueError(_fmsg)
@@ -1058,10 +1058,10 @@ def _epsf_prepare_stars(
     n_join = int(len(psf_stars_df))
     funnel["n_after_db_join"] = n_join
     if csv_only:
-        log_event(f"PSF ePSF: CSV-only full-frame candidates → {n_join} star positions")
+        log_event(f"PSF ePSF: CSV-only full-frame candidates -> {n_join} star positions")
         LOGGER.info("[ePSF funnel] csv_only path: n_after_db_join=%s", n_join)
     else:
-        log_event(f"PSF ePSF: joined MASTER_SOURCES ∩ CSV → {n_safe_comp_join} safe-comp; total candidates {n_join}")
+        log_event(f"PSF ePSF: joined MASTER_SOURCES intersect CSV -> {n_safe_comp_join} safe-comp; total candidates {n_join}")
         LOGGER.info(
             "[ePSF funnel] after DB join: n_safe_comp=%s n_after_db_join=%s broad_pool=%s",
             n_safe_comp_join,
@@ -1088,7 +1088,7 @@ def _epsf_prepare_stars(
         else:
             funnel["n_after_targeting"] = int(len(targeted_rows))
             LOGGER.warning(
-                "[ePSF] Only %d targeted stars (< min_stars=%d) — using all %d stars",
+                "[ePSF] Only %d targeted stars (< min_stars=%d) - using all %d stars",
                 len(targeted_rows),
                 int(min_stars),
                 k_total,
@@ -1096,7 +1096,7 @@ def _epsf_prepare_stars(
     elif used_broad_pool:
         funnel["n_after_targeting"] = n_join
         log_event(
-            f"[ePSF] Skipped targeting — using broad detected-star pool ({n_join} candidates, "
+            f"[ePSF] Skipped targeting - using broad detected-star pool ({n_join} candidates, "
             f"safe-comp join was {n_safe_comp_join})"
         )
         LOGGER.info("[ePSF funnel] targeting skipped (broad pool): n_after_targeting=%s", n_join)
@@ -1147,14 +1147,14 @@ def _epsf_prepare_stars(
             else:
                 log_event(
                     f"ePSF Phase 2: only {len(_mc_ok)} Moffat-ok stars "
-                    f"(need>=10) — using DAO centroids"
+                    f"(need>=10) - using DAO centroids"
                 )
         except Exception as _mc_exc:  # noqa: BLE001
             LOGGER.warning("[ePSF] Phase 2 moffat centroid override failed: %s", _mc_exc)
 
     # Isolation: reject any candidate with a Gaia *cone-catalogue* neighbour within
-    # N×FWHM (correct plate scale) that is within ~Δmag (brighter, or up to Δmag fainter).
-    # Compared against the FULL cone — not just the candidate set — so a bright NON-candidate
+    # NxFWHM (correct plate scale) that is within ~Deltamag (brighter, or up to Deltamag fainter).
+    # Compared against the FULL cone - not just the candidate set - so a bright NON-candidate
     # neighbour correctly disqualifies a candidate (the previous candidate-vs-candidate test
     # let such stars pass). Falls back to candidate-vs-candidate if the cone CSV is missing.
     _isolation_fwhm_mult = 3.0
@@ -1165,7 +1165,7 @@ def _epsf_prepare_stars(
     funnel["n_before_isolation"] = n_before_iso
     if plate_scale_arcsec_px is None or not math.isfinite(plate_scale_arcsec_px) or plate_scale_arcsec_px <= 0:
         LOGGER.warning(
-            "[ePSF] plate scale unavailable — skipping isolation filter (%.1f×FWHM=%.1fpx)",
+            "[ePSF] plate scale unavailable - skipping isolation filter (%.1fxFWHM=%.1fpx)",
             _isolation_fwhm_mult,
             _isolation_radius_px,
         )
@@ -1206,7 +1206,7 @@ def _epsf_prepare_stars(
                 if math.isfinite(cand_m):
                     contaminating = near & ((m_box - cand_m) <= _isolation_delta_mag)
                 else:
-                    contaminating = near  # no candidate mag → any neighbour disqualifies (conservative)
+                    contaminating = near  # no candidate mag -> any neighbour disqualifies (conservative)
                 iso = not bool(np.any(contaminating))
                 _isolated.append(iso)
                 if not iso:
@@ -1214,8 +1214,8 @@ def _epsf_prepare_stars(
             psf_stars_df = psf_stars_df.loc[_isolated].reset_index(drop=True)
             funnel["n_after_isolation"] = int(len(psf_stars_df))
             log_event(
-                f"[ePSF] Cone isolation ({_isolation_fwhm_mult}×FWHM={_isolation_radius_px:.1f}px, "
-                f"Δmag≤{_isolation_delta_mag}): rejected {_n_rej}/{n_before_iso}, kept {len(psf_stars_df)}"
+                f"[ePSF] Cone isolation ({_isolation_fwhm_mult}xFWHM={_isolation_radius_px:.1f}px, "
+                f"Deltamag<={_isolation_delta_mag}): rejected {_n_rej}/{n_before_iso}, kept {len(psf_stars_df)}"
             )
             LOGGER.info(
                 "[ePSF funnel] after isolation: n_before=%s n_after=%s rejected=%s",
@@ -1244,7 +1244,7 @@ def _epsf_prepare_stars(
             psf_stars_df = psf_stars_df.loc[_isolated].reset_index(drop=True)
             funnel["n_after_isolation"] = int(len(psf_stars_df))
             LOGGER.info(
-                "[ePSF] Isolation (candidate-set fallback, %.1f×FWHM=%.1fpx): %d PSF stars",
+                "[ePSF] Isolation (candidate-set fallback, %.1fxFWHM=%.1fpx): %d PSF stars",
                 _isolation_fwhm_mult,
                 _isolation_radius_px,
                 len(psf_stars_df),
@@ -1285,7 +1285,7 @@ def _epsf_prepare_stars(
         raise ValueError(_fmsg)
 
     # Sky-subtract each star cutout to remove background pedestal
-    # (EPSFBuilder does not subtract sky — must be done manually)
+    # (EPSFBuilder does not subtract sky - must be done manually)
     try:
         _nd_list: list[NDData] = []
         _x_list: list[float] = []
@@ -1301,7 +1301,7 @@ def _epsf_prepare_stars(
             _d_sub = _d - _sky
             _nd_list.append(NDData(data=_d_sub.astype(np.float32)))
 
-            # photutils EPSFStar.center is (x, y) — verified against the installed photutils.
+            # photutils EPSFStar.center is (x, y) - verified against the installed photutils.
             _x_list.append(float(_s.center[0]))
             _y_list.append(float(_s.center[1]))
 
@@ -1400,10 +1400,10 @@ def build_epsf_model(
     ):
         log_event(
             f"ePSF QC WARNING: ePSF/input FWHM ratio={_ratio:.2f} "
-            f"(expect {_EPSF_FWHM_RATIO_WARN_LO:.2f}-{_EPSF_FWHM_RATIO_WARN_HI:.2f}) — possible bad ePSF build"
+            f"(expect {_EPSF_FWHM_RATIO_WARN_LO:.2f}-{_EPSF_FWHM_RATIO_WARN_HI:.2f}) - possible bad ePSF build"
         )
     if _qc.get("epsf_asymmetry") and _qc["epsf_asymmetry"] > 0.1:
-        log_event(f"ePSF QC WARNING: ePSF asymmetry={_qc['epsf_asymmetry']:.3f} (>0.1) — coma/tracking")
+        log_event(f"ePSF QC WARNING: ePSF asymmetry={_qc['epsf_asymmetry']:.3f} (>0.1) - coma/tracking")
 
     out_dir = mpath.parent
     epsf_path = out_dir / _MASTERSTAR_EPSF_NAME
@@ -1437,13 +1437,13 @@ def build_epsf_model(
     meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
     log_event(
-        f"PSF ePSF: saved {epsf_path.name} shape={arr.shape}, n_stars_used={n_ext}, meta → {meta_path.name}"
+        f"PSF ePSF: saved {epsf_path.name} shape={arr.shape}, n_stars_used={n_ext}, meta -> {meta_path.name}"
     )
     return epsf_path
 
 
 def _parse_psf_grid(grid: str) -> tuple[int, int]:
-    """Parse a grid spec like ``"3x3"`` → (nx, ny). Falls back to (3, 3)."""
+    """Parse a grid spec like ``"3x3"`` -> (nx, ny). Falls back to (3, 3)."""
     try:
         a, b = str(grid).lower().split("x")
         nx = max(1, int(a.strip()))
@@ -1465,10 +1465,10 @@ def build_epsf_grid_model(
     min_stars: int | None = None,
     moffat_centroids: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
-    """Build a spatially-varying ePSF over an N×M grid of detector cells (gated, offline).
+    """Build a spatially-varying ePSF over an NxM grid of detector cells (gated, offline).
 
     Reuses the *same* isolated ePSF-candidate selection as :func:`build_epsf_model`, then
-    bins those stars into an ``nx × ny`` grid of detector regions and builds one ePSF per
+    bins those stars into an ``nx x ny`` grid of detector regions and builds one ePSF per
     cell. Cells with fewer than ``min_stars_per_cell`` isolated stars fall back to the single
     global ePSF (flagged). Returns a dict with:
 
@@ -1501,10 +1501,10 @@ def build_epsf_grid_model(
 
     ny_img, nx_img = data.shape[0], data.shape[1]
     star_list = list(stars)
-    # photutils EPSFStar.center is (x, y) — verified against the installed photutils.
+    # photutils EPSFStar.center is (x, y) - verified against the installed photutils.
     centers_xy = [(float(s.center[0]), float(s.center[1])) for s in star_list]
 
-    # Global (single) ePSF — used as fallback for sparse cells.
+    # Global (single) ePSF - used as fallback for sparse cells.
     global_built = _epsf_build_imagepsf_from_stars(
         stars, osamp=osamp, fwhm_px=fwhm_px, cutout_size=cutout_size
     )
@@ -1732,7 +1732,7 @@ def fit_moffat_psf_stars(
             out_rows.append(base)
             continue
 
-        # Skip saturated stars — Moffat profile invalid for saturated cores
+        # Skip saturated stars - Moffat profile invalid for saturated cores
         if saturate_limit_adu is not None:
             _peak = float(srow.get(peak_col, float("nan")))
             if math.isfinite(_peak) and _peak >= float(saturate_limit_adu) * 0.85:
@@ -2318,8 +2318,8 @@ def _grouped_psf_fit(
     """Joint (deblended) PSF fit of a target plus its close neighbours.
 
     Builds an init-params table containing the target and every neighbour within
-    ``neighbor_include_fwhm × fwhm_px``, fits them simultaneously via a
-    ``SourceGrouper`` (``min_separation = group_sep_fwhm × fwhm_px``), then returns
+    ``neighbor_include_fwhm x fwhm_px``, fits them simultaneously via a
+    ``SourceGrouper`` (``min_separation = group_sep_fwhm x fwhm_px``), then returns
     ONLY the target's flux. Returns ``None`` to signal the caller to fall back to the
     single-star path (no neighbours, out of frame, or fit failure/divergence).
     """
@@ -2335,7 +2335,7 @@ def _grouped_psf_fit(
     dist = np.hypot(dx, dy)
     sel = (dist <= r_inc) & (dist > 0.5 * float(fwhm_px))
     if not np.any(sel):
-        return None  # isolated → let caller use the single-star path
+        return None  # isolated -> let caller use the single-star path
 
     src_x = [float(x)]
     src_y = [float(y)]
@@ -2434,7 +2434,7 @@ def _grouped_psf_fit(
         d2 = (xf - tx_l) ** 2 + (yf - ty_l) ** 2
         k = int(np.argmin(d2))
         if math.sqrt(float(d2[k])) > max(2.0, 0.75 * float(fwhm_px)):
-            return None  # target not recovered in the joint fit → fall back
+            return None  # target not recovered in the joint fit -> fall back
         flux_fit = float(res["flux_fit"][k])
         flux_err = _psf_sandwich_flux_err(
             flux_fit,
@@ -2483,10 +2483,10 @@ _PSF_QUALITY_THRESH = {
     "snr_bad": 5.0,
     "shift_marginal_fwhm": 0.5,
     "shift_bad_fwhm": 1.0,
-    "nn_bad_fwhm": 1.0,        # any neighbour this close → unresolved blend, bad
-    "nn_blend_fwhm": 1.5,      # contaminating (≤Δmag) neighbour this close → bad
-    "nn_marginal_fwhm": 2.0,   # any neighbour this close → marginal
-    "nn_contam_dmag": 2.5,     # neighbour ≤ this many mag fainter counts as contaminating
+    "nn_bad_fwhm": 1.0,        # any neighbour this close -> unresolved blend, bad
+    "nn_blend_fwhm": 1.5,      # contaminating (<=Deltamag) neighbour this close -> bad
+    "nn_marginal_fwhm": 2.0,   # any neighbour this close -> marginal
+    "nn_contam_dmag": 2.5,     # neighbour <= this many mag fainter counts as contaminating
 }
 
 
@@ -2502,13 +2502,13 @@ def assess_psf_quality(
 ) -> str:
     """Grade a per-star PSF fit as ``good`` / ``marginal`` / ``bad``.
 
-    Combines reduced χ², fit SNR (flux/flux_err, Howell-style detection significance),
+    Combines reduced chi^2, fit SNR (flux/flux_err, Howell-style detection significance),
     fitted-position shift (in FWHM), and nearest-neighbour proximity (``nn_dist_fwhm``,
-    with the neighbour's relative brightness ``nn_delta_mag`` = ``mag_neighbour − mag_star``).
-    A close neighbour that is comparably bright or brighter (``nn_delta_mag ≤ nn_contam_dmag``)
-    is treated as a contaminating blend — that is the CSS_J161519.8 case (neighbour 3.5 mag
+    with the neighbour's relative brightness ``nn_delta_mag`` = ``mag_neighbour - mag_star``).
+    A close neighbour that is comparably bright or brighter (``nn_delta_mag <= nn_contam_dmag``)
+    is treated as a contaminating blend - that is the CSS_J161519.8 case (neighbour 3.5 mag
     *brighter* at 1.46 FWHM). Severity is the WORST of the available criteria; a non-finite
-    χ²/shift is itself ``bad``. Missing inputs (NaN/None) are skipped (graceful degradation).
+    chi^2/shift is itself ``bad``. Missing inputs (NaN/None) are skipped (graceful degradation).
     """
     sev = 0  # 0 good, 1 marginal, 2 bad
     t = _PSF_QUALITY_THRESH
@@ -2564,14 +2564,14 @@ def psf_photometry_stars(
     """Run iterative (or single-pass) PSF photometry on cutouts per star; never fails per row.
 
     If ``error`` is provided (same shape as ``frame_data``), per-cutout slices are passed to
-    photutils for per-pixel uncertainties (enables finite reduced χ² when the model fits).
+    photutils for per-pixel uncertainties (enables finite reduced chi^2 when the model fits).
 
     If ``gridded_model`` (the dict from :func:`build_epsf_grid_model`) is provided, the
     spatially-varying path is used: each star is fit with the ePSF bilinearly interpolated at
     its (x, y) detector position instead of one global ePSF. The single-ePSF path (``epsf_model_path``)
     is untouched when ``gridded_model`` is ``None``.
     """
-    _ = frame_hdr  # reserved for future metadata (WCS, gain, …)
+    _ = frame_hdr  # reserved for future metadata (WCS, gain, ...)
 
     cols_req = ("x", "y", "catalog_id", "name")
     for c in cols_req:
@@ -2655,7 +2655,7 @@ def psf_photometry_stars(
         phot = PSFPhotometry(psf_model, fit_shape=fit_shape, progress_bar=False)
         _used_iterative = False
 
-    # ── Spatially-varying ePSF (gated): per-star position-interpolated model ──────
+    # -- Spatially-varying ePSF (gated): per-star position-interpolated model ------
     _spatial_active = bool(
         gridded_model is not None
         and isinstance(gridded_model, dict)
@@ -2668,7 +2668,7 @@ def psf_photometry_stars(
             f"{gridded_model.get('n_fallback', 0)} fallback cell(s)"
         )
 
-    # ── Gated SourceGrouper (joint/deblended fit) configuration ──────────────────
+    # -- Gated SourceGrouper (joint/deblended fit) configuration ------------------
     try:
         from config import AppConfig as _AppCfg  # noqa: PLC0415
 
@@ -2826,7 +2826,7 @@ def psf_photometry_stars(
             "psf_group_fallback": False,
         }
 
-        # ── Gated joint/deblended fit: target + close neighbours via SourceGrouper ──
+        # -- Gated joint/deblended fit: target + close neighbours via SourceGrouper --
         _group_fallback = False
         if _grp_active and _nb_xy is not None:
             _gres = _grouped_psf_fit(
@@ -2852,7 +2852,7 @@ def psf_photometry_stars(
                 row_out.pop("n_group", None)
                 out_rows.append(row_out)
                 continue
-            # neighbours existed but joint fit failed → flag and fall through.
+            # neighbours existed but joint fit failed -> flag and fall through.
             # (No neighbours returns None too; that is a normal isolated star, not a
             #  fallback. Distinguish via a quick neighbour check.)
             _dxq = _nb_xy[:, 0] - float(x)

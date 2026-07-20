@@ -61,7 +61,7 @@ NEW = '''def _accumulate_per_frame_comp_metrics(
             if have_edge_cols and not _edge_log_done:
                 logging.info(
                     f"[EDGE CHECK] chip={int(_chip_w_eff)}x{int(_chip_h_eff)}px, "
-                    "annulus outer použitý per-frame z sky_annulus_r_out_px"
+                    "annulus outer pouzity per-frame z sky_annulus_r_out_px"
                 )
                 _edge_log_done = True
 
@@ -212,7 +212,7 @@ NEW = '''def _accumulate_per_frame_comp_metrics(
             continue
 
     logging.info(
-        "[PERF-4B] _accumulate_per_frame_comp_metrics: %d frames × %d candidates vectorized",
+        "[PERF-4B] _accumulate_per_frame_comp_metrics: %d frames x %d candidates vectorized",
         n_frames_loaded,
         len(cand_ids),
     )

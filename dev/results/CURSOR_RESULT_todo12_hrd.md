@@ -1,4 +1,4 @@
-CURSOR RESULT — 2026-07-10
+CURSOR RESULT - 2026-07-10
 
 What I did
 Implemented TODO-12-HRD: two-stage absolute extreme-object selection, online Gaia TAP / SIMBAD enrichment (`hrd_enrich.py`), session-aware HRD titles/captions/tables in PDF and UI, config keys, citations, tests, and real-data validation on draft_425 (B/V/R) + draft_424.
@@ -39,13 +39,13 @@ None blocking. Gaia TAP returns masked null teff for some candidates (expected a
 
 ## Files changed
 - `hrd_enrich.py` (new)
-- `hrd_analysis.py` — Stage 1/2 selection, classification, plot title, caption constant, category colors
-- `ui_hrd.py` — cfg/cache wiring, table columns, empty-field info, caption
-- `photometry_report.py` — HRD page table/caption/enrichment wiring
-- `config.py` — `hrd_online_enrich_enabled`, `hrd_simbad_enrich_enabled`, `hrd_enrich_max_candidates`
-- `citations.py`, `CITATIONS.bib` — Pecaut & Mamajek (2013), Andrae et al. (2023)
+- `hrd_analysis.py` - Stage 1/2 selection, classification, plot title, caption constant, category colors
+- `ui_hrd.py` - cfg/cache wiring, table columns, empty-field info, caption
+- `photometry_report.py` - HRD page table/caption/enrichment wiring
+- `config.py` - `hrd_online_enrich_enabled`, `hrd_simbad_enrich_enabled`, `hrd_enrich_max_candidates`
+- `citations.py`, `CITATIONS.bib` - Pecaut & Mamajek (2013), Andrae et al. (2023)
 - `docs/config_schema.md`, `docs/VYVAR_PARAMS.md`, `docs/VYVAR_ROADMAP.md`, `docs/VYVAR_STATE.md`, `docs/VYVAR_JOURNAL.md`
 - `tests/test_hrd_extreme.py` (new)
 - `scripts/todo12_hrd_validate.py` (validation helper)
 
-Base commit (pre-change): `f4c7c83ce36e1d60f58170ecaf88c02fb1b4a425` — changes not committed (awaiting Milan).
+Base commit (pre-change): `f4c7c83ce36e1d60f58170ecaf88c02fb1b4a425` - changes not committed (awaiting Milan).

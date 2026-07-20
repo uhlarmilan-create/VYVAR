@@ -26,7 +26,7 @@ from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
 from photutils.aperture import CircularAnnulus, CircularAperture, aperture_photometry
 
-# ── CLI ────────────────────────────────────────────────────────────────────────
+# -- CLI ------------------------------------------------------------------------
 parser = argparse.ArgumentParser(description="VYVAR photometry cross-validator")
 parser.add_argument("--fits", required=True, help="proc_*.fits file")
 parser.add_argument("--csv", required=True, help="proc_*.csv file")
@@ -52,15 +52,15 @@ parser.add_argument(
 parser.add_argument("--gain", type=float, default=3.17, help="Gain [e-/ADU]")
 args = parser.parse_args()
 
-# ── Load FITS ──────────────────────────────────────────────────────────────────
+# -- Load FITS ------------------------------------------------------------------
 print(f"Loading FITS: {args.fits}")
 with fits.open(args.fits) as hdul:
     data = hdul[0].data.astype(np.float64)
     header = hdul[0].header
 
-print(f"  Image: {data.shape[1]}×{data.shape[0]} px")
+print(f"  Image: {data.shape[1]}x{data.shape[0]} px")
 
-# ── Load VYVAR CSV ─────────────────────────────────────────────────────────────
+# -- Load VYVAR CSV -------------------------------------------------------------
 print(f"Loading CSV:  {args.csv}")
 df = pd.read_csv(args.csv, dtype={"catalog_id": str, "name": str})
 
@@ -69,11 +69,11 @@ df = df[df["x"].notna() & df["y"].notna() & df["dao_flux"].notna()].copy()
 df = df[df["dao_flux"] > 0].copy()
 print(f"  Stars with valid flux: {len(df)}")
 
-# ── Sky background (global sigma-clipped) ─────────────────────────────────────
+# -- Sky background (global sigma-clipped) -------------------------------------
 _, sky_med, sky_std = sigma_clipped_stats(data, sigma=3.0, maxiters=5)
 print(f"  Sky: median={sky_med:.1f} ADU/px  std={sky_std:.1f}")
 
-# ── Photutils aperture photometry ─────────────────────────────────────────────
+# -- Photutils aperture photometry ---------------------------------------------
 positions = list(zip(df["x"].values, df["y"].values))
 
 # Per-star aperture radius
@@ -84,7 +84,7 @@ else:
         r_arr = df["aperture_r_px"].fillna(4.0).values
     else:
         r_arr = np.full(len(df), 4.0)
-        print("  aperture_r_px missing — using 4.0 px default")
+        print("  aperture_r_px missing - using 4.0 px default")
 
 # Run photometry per unique aperture size (group for efficiency)
 flux_photutils = np.full(len(df), np.nan)
@@ -104,7 +104,7 @@ for r_val in np.unique(np.round(r_arr, 2)):
     phot_table = aperture_photometry(data - sky_med, ap)
     flux_photutils[idx] = phot_table["aperture_sum"].value
 
-    # Photometric error (CCD equation — Howell 1989)
+    # Photometric error (CCD equation - Howell 1989)
     g = args.gain
     area = np.pi * r_val**2
     for j, i in enumerate(idx):
@@ -113,7 +113,7 @@ for r_val in np.unique(np.round(r_arr, 2)):
         variance = F / g + sky_ann / g * area + (sky_std / g) ** 2 * area
         flux_err_photutils[i] = np.sqrt(variance)
 
-# ── Comparison ────────────────────────────────────────────────────────────────
+# -- Comparison ----------------------------------------------------------------
 df["flux_vyvar"] = df["dao_flux"].values
 df["flux_photutils"] = flux_photutils
 df["flux_err_putils"] = flux_err_photutils
@@ -141,9 +141,9 @@ if "mag" in df.columns or "phot_g_mean_mag" in df.columns:
         if len(grp) < 3:
             continue
         _, m, s = sigma_clipped_stats(grp["ratio"].values, sigma=3.0)
-        print(f"  {b:>8}–{b + 1:<3}  {len(grp):>5}  {m:>13.4f}  {s:>8.4f}")
+        print(f"  {b:>8}-{b + 1:<3}  {len(grp):>5}  {m:>13.4f}  {s:>8.4f}")
 
-# ── Save results ───────────────────────────────────────────────────────────────
+# -- Save results ---------------------------------------------------------------
 out_cols = [
     "catalog_id",
     "x",

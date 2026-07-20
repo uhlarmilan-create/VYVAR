@@ -79,12 +79,12 @@ def _vyvar_try_save_infolog_to_disk(cfg: AppConfig) -> str | None:
         return None
     saved_path = save_infolog_to_disk(draft_dir, get_lines())
     if saved_path:
-        log_event(f"Infolog saved → {saved_path}")
+        log_event(f"Infolog saved -> {saved_path}")
     return saved_path
 
 
 def _vyvar_reset_variability_session_state() -> None:
-    """Pri načítaní nového draftu zruš variabilitu / TESS / PDF stav v session."""
+    """Pri nacitani noveho draftu zrus variabilitu / TESS / PDF stav v session."""
     st.session_state.pop("_ap_session_id", None)
     st.session_state.pop("var_analysis_done", None)
     st.session_state.pop("tess_auto_done", None)
@@ -126,7 +126,7 @@ def _run_vyvar_full_pipeline(
     footer_placeholder: Any | None = None,
     pre_calibrated_mode: bool = False,
 ) -> bool:
-    """RUN VYVAR — automatický reťazec scan → import → kalibrácia → Analyze → auto FWHM/TOP1 → MAKE MASTERSTAR → 0+1+2A."""
+    """RUN VYVAR - automaticky retazec scan -> import -> kalibracia -> Analyze -> auto FWHM/TOP1 -> MAKE MASTERSTAR -> 0+1+2A."""
     import numpy as np
 
     from draft_provenance import (
@@ -150,24 +150,24 @@ def _run_vyvar_full_pipeline(
 
     _RUNVYVAR_FW_KEY = "_runvyvar_fwhm_threshold"
 
-    def _update(proces: str, stav: str = "Running…") -> None:
-        log_event(f"[{_run_label}] ▶ {proces}")
+    def _update(proces: str, stav: str = "Running...") -> None:
+        log_event(f"[{_run_label}] > {proces}")
         if footer_placeholder is not None:
             _vyvar_footer_set(
                 footer_placeholder,
                 running=True,
-                process=f"{_run_label} — {proces}",
+                process=f"{_run_label} - {proces}",
                 status_detail=str(stav)[:800],
                 pct=None,
             )
 
     def _fail(name: str, exc: BaseException) -> bool:
-        log_event(f"[{_run_label}] ✗ Zlyhanie v kroku '{name}': {exc}")
+        log_event(f"[{_run_label}] x Zlyhanie v kroku '{name}': {exc}")
         if footer_placeholder is not None:
             _vyvar_footer_set(
                 footer_placeholder,
                 running=False,
-                process=f"{_run_label} — {name}",
+                process=f"{_run_label} - {name}",
                 status_detail=f"Error: {str(exc)[:700]}",
                 pct=None,
             )
@@ -180,7 +180,7 @@ def _run_vyvar_full_pipeline(
             _vyvar_footer_set(
                 footer_placeholder,
                 running=True,
-                process=f"{_run_label} — sub-step",
+                process=f"{_run_label} - sub-step",
                 status_detail=str(msg)[:800],
                 pct=pct,
                 current_file="",
@@ -193,7 +193,7 @@ def _run_vyvar_full_pipeline(
             _vyvar_footer_set(
                 footer_placeholder,
                 running=True,
-                process=f"{_run_label} — Phase 0+1 + 2A",
+                process=f"{_run_label} - Phase 0+1 + 2A",
                 status_detail=str(msg)[:800],
                 pct=None,
             )
@@ -218,7 +218,7 @@ def _run_vyvar_full_pipeline(
             context=_run_label,
         )
         sync_optics_session(_run_optics)
-        log_active_optics(pipeline.db, _run_optics, context=f"{_run_label} (UI výber)")
+        log_active_optics(pipeline.db, _run_optics, context=f"{_run_label} (UI vyber)")
         import_equipment_id = _run_optics.equipment_id
         import_telescope_id = _run_optics.telescope_id
 
@@ -303,7 +303,7 @@ def _run_vyvar_full_pipeline(
             mf_obs = {}
             dm_obs = {}
             log_event(
-                "Pre-calibrated mode: skipping calibration — downstream reads "
+                "Pre-calibrated mode: skipping calibration - downstream reads "
                 f"{resolve_draft_lights_root(ap_root, draft_id=int(_did), db=pipeline.db)}"
             )
         else:
@@ -323,9 +323,9 @@ def _run_vyvar_full_pipeline(
             st.session_state["vyvar_post_cal_plan_source"] = str(plan.source_root)
             st.session_state["vyvar_status_calibrated"] = True
             last_job_snapshot(cal_out)
-            log_event(f"[{_run_label}] Import hotový — draft {_did}, archív {result.archive_path}")
+            log_event(f"[{_run_label}] Import hotovy - draft {_did}, archiv {result.archive_path}")
 
-        _update("Analyze QC (RAM → OBS_FILES)")
+        _update("Analyze QC (RAM -> OBS_FILES)")
         lights_root = resolve_draft_lights_root(
             ap_root,
             draft_id=int(_did),
@@ -337,7 +337,7 @@ def _run_vyvar_full_pipeline(
                 if pre_calibrated_mode
                 else "Missing /calibrated/lights after calibration."
             )
-            return _fail("Analyze QC (RAM → OBS_FILES)", FileNotFoundError(_missing))
+            return _fail("Analyze QC (RAM -> OBS_FILES)", FileNotFoundError(_missing))
 
         st.session_state["vyvar_memory_profile"] = estimate_archive_memory_profile(ap)
         _eq_a = int(import_equipment_id)
@@ -466,7 +466,7 @@ def _run_vyvar_full_pipeline(
             pipeline.db.set_obs_draft_masterstar_source_path(int(_did), _use_path)
         except Exception as exc:  # noqa: BLE001
             # EXC-0001: T3 -- UI diagnostic/plot only (try: / pipeline.db.set_obs_draft_masterstar_source_path(int(_d... (EXCEPT-BULK 2026-07-08)
-            log_event(f"[RUN VYVAR] Zápis MASTERSTAR source do DB: {exc}")
+            log_event(f"[RUN VYVAR] Zapis MASTERSTAR source do DB: {exc}")
 
         _update("MAKE MASTERSTAR (detrend + plate-solve + zarovnanie)")
         from pipeline import resolve_preprocess_target_coordinates
@@ -496,7 +496,7 @@ def _run_vyvar_full_pipeline(
 
         _j_ms: dict[str, Any] = {
             "kind": "make_masterstar",
-            "label": "MAKE MASTERSTAR (RUN VYVAR)…",
+            "label": "MAKE MASTERSTAR (RUN VYVAR)...",
             "archive_path": str(ap),
             "fwhm_limit_px": float(_fwhm_lim),
             "inject_pointing_ra_deg": (float(_ira) if _coords_ok else None),
@@ -611,7 +611,7 @@ def _run_vyvar_full_pipeline(
                         draft_dir=draft_dir,
                         obs_group=str(nm),
                         tess_results={},
-                        base_report_title="VYVAR — Summary Measure Report",
+                        base_report_title="VYVAR - Summary Measure Report",
                     )
                     for _pdf_path in _pdf_paths:
                         log_event(f"[RUN VYVAR] SUMMARY MEASURE REPORT: {Path(_pdf_path).name}")
@@ -633,9 +633,9 @@ def _run_vyvar_full_pipeline(
             )
         if _all_problems:
             log_event(
-                "⚠ RUN VYVAR dokončený ČIASTOČNE — OK: ["
+                "! RUN VYVAR dokonceny CIASTOCNE - OK: ["
                 + ", ".join(completed)
-                + "]; preskočené/zlyhané: ["
+                + "]; preskocene/zlyhane: ["
                 + " ; ".join(_all_problems)
                 + "]"
             )
@@ -643,14 +643,14 @@ def _run_vyvar_full_pipeline(
         # Fresh pipeline outputs: force Variability tab to re-run detection on next render.
         _vyvar_reset_variability_session_state()
 
-        log_event("[RUN VYVAR] ✓ Pipeline dokončený úspešne")
+        log_event("[RUN VYVAR] [OK] Pipeline dokonceny uspesne")
         _vyvar_try_save_infolog_to_disk(cfg)
         if footer_placeholder is not None:
             _vyvar_footer_set(
                 footer_placeholder,
                 running=False,
                 process="RUN VYVAR",
-                status_detail="Done. ✓",
+                status_detail="Done. [OK]",
                 pct=100,
                 step="",
             )
@@ -717,7 +717,7 @@ def _vyvar_execute_preprocess_pending(
         if not p1:
             _why = ["IS_REJECTED=0"]
             if _fwhm_lim > 0:
-                _why.append("FWHM ≤ limit or FWHM is NULL")
+                _why.append("FWHM <= limit or FWHM is NULL")
             raise FileNotFoundError(
                 "QC filter: no frames matching " + ", ".join(_why) + "."
             )
@@ -753,7 +753,7 @@ def _vyvar_execute_preprocess_pending(
             raise FileNotFoundError("Missing source lights directory. Run calibration/import first.")
         if _fwhm_lim > 0:
             log_event(
-                f"Detrend: draft_id chýba — FWHM limit sa neaplikuje z DB; spracúvam všetky FITS v {source_dir}."
+                f"Detrend: draft_id chyba - FWHM limit sa neaplikuje z DB; spracuvam vsetky FITS v {source_dir}."
             )
         df = preprocess_calibrated_to_processed(
             calibrated_root=source_dir,
@@ -1037,7 +1037,7 @@ def vyvar_init_footer_state_if_missing() -> None:
         st.session_state["vyvar_footer_state"] = {
             "running": False,
             "process": "VYVAR",
-            "status_detail": "Ready — start a job on the VARSTREM tab.",
+            "status_detail": "Ready - start a job on the VARSTREM tab.",
             "pct": None,
             "current_file": "",
             "step": "",
@@ -1071,7 +1071,7 @@ def _vyvar_render_fixed_footer_into(placeholder: Any) -> None:
     vyvar_init_footer_state_if_missing()
     fs = st.session_state["vyvar_footer_state"]
     running = bool(fs.get("running"))
-    proc = html.escape(str(fs.get("process") or "—"))
+    proc = html.escape(str(fs.get("process") or "-"))
     detail = html.escape(str(fs.get("status_detail") or ""))
     cfile_raw = str(fs.get("current_file") or "").strip()
     cfile = html.escape(cfile_raw) if cfile_raw else ""
@@ -1083,7 +1083,7 @@ def _vyvar_render_fixed_footer_into(placeholder: Any) -> None:
             p = int(pct)
             pct_html = f'<span class="vyvar-ft-pill-run">{html.escape(str(p))} %</span>'
         except (TypeError, ValueError):
-            pct_html = '<span class="vyvar-ft-pill-run">…</span>'
+            pct_html = '<span class="vyvar-ft-pill-run">...</span>'
     elif not running:
         pct_html = '<span class="vyvar-ft-pill-idle">Idle</span>'
 
@@ -1105,7 +1105,7 @@ def _vyvar_render_fixed_footer_into(placeholder: Any) -> None:
         f'<span class="vyvar-ft-seg"><span class="vyvar-ft-k">Process</span>'
         f'<span class="vyvar-ft-v">{proc}</span></span>'
         f'<span class="vyvar-ft-seg"><span class="vyvar-ft-k">Status</span>'
-        f'<span class="vyvar-ft-v">{detail or "—"}</span></span>'
+        f'<span class="vyvar-ft-v">{detail or "-"}</span></span>'
         f"{file_seg}{step_seg}"
     )
     placeholder.markdown(
@@ -1122,11 +1122,11 @@ def _gaia_db_ok_for_masterstar(gaia_db_path: str) -> bool:
         _gdb = str(gaia_db_path or "").strip()
         ok, msg = validate_gaia_db_schema(_gdb)
         if not ok:
-            st.error("❌ Gaia DR3 database not found. Please set the path in Settings.")
+            st.error("[X] Gaia DR3 database not found. Please set the path in Settings.")
             st.caption(f"Detail: {msg}")
             return False
     except Exception:  # noqa: BLE001
-        st.error("❌ Gaia DR3 database not found. Please set the path in Settings.")
+        st.error("[X] Gaia DR3 database not found. Please set the path in Settings.")
         return False
     return True
 
@@ -1273,7 +1273,7 @@ def _render_pending_job_dispatcher(
     st.session_state["vyvar_footer_state"] = {
         "running": True,
         "process": str(pending.get("label") or pending.get("kind") or "job"),
-        "status_detail": "Starting…",
+        "status_detail": "Starting...",
         "pct": 0,
         "current_file": "",
         "step": "",
@@ -1287,17 +1287,17 @@ def _render_pending_job_dispatcher(
         "make_masterstar",
         "masterstar_catalog_only",
     }
-    progress_bar = None if _hide_inline_job_status else st.progress(0, text="Starting…")
+    progress_bar = None if _hide_inline_job_status else st.progress(0, text="Starting...")
     _status_ctx: Any = (
         contextlib.nullcontext(None)
         if _hide_inline_job_status
-        else st.status(pending.get("label", "Running…"), expanded=False)
+        else st.status(pending.get("label", "Running..."), expanded=False)
     )
     with _status_ctx as stt:
         try:
             if ap is None or not ap.exists():
                 raise FileNotFoundError("Missing/invalid archive path for job.")
-            log_event(f"— Spúšťam: {pending.get('kind')} — {ap}")
+            log_event(f"- Spustam: {pending.get('kind')} - {ap}")
 
             def _cb(i: int, total: int, msg: str) -> None:
                 pct = int(round(100 * (i / max(total, 1))))
@@ -1332,14 +1332,14 @@ def _render_pending_job_dispatcher(
                 plan = st.session_state.get("vyvar_last_import_plan")
                 if plan is None:
                     raise FileNotFoundError(
-                        "Missing import calibration plan — run **Create Archive & Do Calibration** again "
+                        "Missing import calibration plan - run **Create Archive & Do Calibration** again "
                         "(session needs `vyvar_last_import_plan` with masters)."
                     )
                 _draft_a = pending.get("draft_id")
                 if _draft_a is None:
                     _draft_a = st.session_state.get("vyvar_last_draft_id")
                 if _draft_a is None:
-                    raise FileNotFoundError("Missing Draft ID — import a draft to the archive first.")
+                    raise FileNotFoundError("Missing Draft ID - import a draft to the archive first.")
                 _eq_a = pending.get("equipment_id")
                 if _eq_a is None:
                     _eq_a = st.session_state.get("vyvar_last_import_equipment_id")
@@ -1349,7 +1349,7 @@ def _render_pending_job_dispatcher(
                 if _qcm:
                     log_event(
                         f"Odhad RAM (pred analyze): QC peak ~{_qcm.get('estimated_peak_human', '?')}, "
-                        f"snímky: {_qcm.get('n_files', 0)}, voľné: {_mem_prof.get('available_ram_human', '?')}"
+                        f"snimky: {_qcm.get('n_files', 0)}, volne: {_mem_prof.get('available_ram_human', '?')}"
                     )
                 md = Path(plan.dark_master) if getattr(plan, "dark_master", None) else None
                 mf_map: dict[str, Path | None] = {}
@@ -1363,7 +1363,7 @@ def _render_pending_job_dispatcher(
                 for k, v in (getattr(plan, "dark_master_by_obs_key", None) or {}).items():
                     dm_obs[str(k)] = Path(str(v)) if v else None
                 with st.spinner(
-                    "RAM calibration analysis (no calibrated FITS written) — may take a while…"
+                    "RAM calibration analysis (no calibrated FITS written) - may take a while..."
                 ):
                     qsum = run_draft_ram_calibration_qc_to_obs_files(
                         db=pipeline.db,
@@ -1503,12 +1503,12 @@ def _render_pending_job_dispatcher(
                 _ms_skip_build = bool(pending.get("masterstar_skip_build"))
                 if _ms_fits_only:
                     log_event(
-                        f"— MASTERSTAR (len FITS, bez solve): ui_action={pending.get('masterstar_ui_action')!r}, "
-                        "zápis do platesolve/…"
+                        f"- MASTERSTAR (len FITS, bez solve): ui_action={pending.get('masterstar_ui_action')!r}, "
+                        "zapis do platesolve/..."
                     )
                 elif _ms_skip_build:
                     log_event(
-                        "— MASTERSTAR platesolve + katalóg: vstup = existujúci platesolve/MASTERSTAR.fits "
+                        "- MASTERSTAR platesolve + katalog: vstup = existujuci platesolve/MASTERSTAR.fits "
                         f"(skip build z processed), draft_id={pending.get('draft_id')!r}."
                     )
 
@@ -1661,12 +1661,12 @@ def _render_pending_job_dispatcher(
                 st.session_state["vyvar_masterstar_qa_force_refresh"] = True
                 if _ms_fits_only:
                     log_event(
-                        f"✅ MASTERSTAR FITS dokončené [{pending.get('masterstar_ui_action', '?')}]: {_msf or outp.get('masterstar_fits')} "
-                        "(plate-solve a katalóg preskočené)."
+                        f"[OK] MASTERSTAR FITS dokoncene [{pending.get('masterstar_ui_action', '?')}]: {_msf or outp.get('masterstar_fits')} "
+                        "(plate-solve a katalog preskocene)."
                     )
                 elif _ms_skip_build and not _ms_fits_only:
                     log_event(
-                        f"✅ MASTERSTAR plate-solve + katalóg hotové: {_msf or outp.get('masterstar_fits')} "
+                        f"[OK] MASTERSTAR plate-solve + katalog hotove: {_msf or outp.get('masterstar_fits')} "
                         f"(matched={int(outp.get('catalog_matched', 0) or 0)})."
                     )
 
@@ -1698,17 +1698,17 @@ def _render_pending_job_dispatcher(
                 _cfg_epsf = cfg
                 if not bool(getattr(_cfg_epsf, "psf_photometry_enabled", False)):
                     log_event(
-                        "[ePSF job] warning: psf_photometry_enabled=False — PSF columns will be empty"
+                        "[ePSF job] warning: psf_photometry_enabled=False - PSF columns will be empty"
                     )
 
-                log_event("[ePSF job] Building ePSF model…")
+                log_event("[ePSF job] Building ePSF model...")
                 _epsf_path = build_epsf_model(
                     masterstar_fits_path=_ms_fits,
                     masterstars_csv_path=_ms_csv,
                     db=pipeline.db,
                     draft_id=_draft_epsf,
                 )
-                log_event(f"[ePSF job] Model built: {_epsf_path.name}; re-exporting per-frame catalogs…")
+                log_event(f"[ePSF job] Model built: {_epsf_path.name}; re-exporting per-frame catalogs...")
 
                 _dao_fwhm = float(
                     pending.get(
@@ -1764,7 +1764,7 @@ def _render_pending_job_dispatcher(
                     "epsf_path": str(_epsf_path),
                     "frames_written": _written,
                 }
-                log_event(f"[ePSF job] Done — {_out_epsf['message']}")
+                log_event(f"[ePSF job] Done - {_out_epsf['message']}")
 
             else:
                 raise ValueError("Unknown job kind.")
@@ -1845,7 +1845,7 @@ def render_live_view(
 
     st.subheader("VARSTREM")
     st.caption(f"Photometry mode: **{getattr(cfg, 'photometry_mode', 'both')}**")
-    # TODO: extract _render_fits_qa_tab — heavy st.session_state / pending-job wiring; defer Phase 2.
+    # TODO: extract _render_fits_qa_tab - heavy st.session_state / pending-job wiring; defer Phase 2.
     st.write(f"Active session: `{st.session_state[_sess_key]}`")
 
     st.markdown("---")
@@ -1882,7 +1882,7 @@ def render_live_view(
     if _def_tel_lbl and "vyvar_varstrem_telescope" not in st.session_state:
         st.session_state["vyvar_varstrem_telescope"] = _def_tel_lbl
 
-    with st.expander("📂 Define source data", expanded=True):
+    with st.expander("[folder] Define source data", expanded=True):
         source_root = st.text_input(
             "Source Directory",
             value=str(cfg.archive_root),
@@ -1896,7 +1896,7 @@ def render_live_view(
         # Phase 3: fingerprint optics + site from a sample FITS header and auto-fill the
         # selectors (overriding the IS_DEFAULT baseline). The user can still override.
         if st.button(
-            "🧪 Auto-detect optics from FITS",
+            "[test] Auto-detect optics from FITS",
             help="Reads a sample light frame and matches camera/telescope/location by "
             "INSTRUME, sensor dimensions, GAIN, FOCALLEN/APTDIA and SITELAT/LONG.",
         ):
@@ -1983,31 +1983,31 @@ def render_live_view(
         # Phase 3: show the last auto-detect result (match + confidence + evidence).
         _ad_rep = st.session_state.get("vyvar_autodetect_report")
         if _ad_rep is not None:
-            _band_icon = {"high": "✅", "medium": "🟡", "low": "🟠", "none": "⚪"}
+            _band_icon = {"high": "[OK]", "medium": "[yellow]", "low": "[orange]", "none": "o"}
 
             def _ad_line(_title: str, _det: Any) -> str:
-                _ic = _band_icon.get(_det.band(), "⚪")
+                _ic = _band_icon.get(_det.band(), "o")
                 if _det.matched_id is None:
-                    return f"{_ic} **{_title}:** no confident match — set manually (poor-FITS prompt)."
-                _ev = "; ".join(_det.reasons) if _det.reasons else "—"
+                    return f"{_ic} **{_title}:** no confident match - set manually (poor-FITS prompt)."
+                _ev = "; ".join(_det.reasons) if _det.reasons else "-"
                 return (
                     f"{_ic} **{_title}:** {_det.label} "
-                    f"(confidence {_det.confidence:.0%}, {_det.band()}) — {_ev}"
+                    f"(confidence {_det.confidence:.0%}, {_det.band()}) - {_ev}"
                 )
 
             with st.container(border=True):
-                st.caption(f"🔎 Auto-detect from `{Path(_ad_rep.header_path).name}`")
+                st.caption(f"[search] Auto-detect from `{Path(_ad_rep.header_path).name}`")
                 st.markdown(_ad_line("Equipment", _ad_rep.equipment))
                 st.markdown(_ad_line("Telescope", _ad_rep.telescope))
                 st.markdown(_ad_line("Location", _ad_rep.location))
                 st.caption(
-                    "**high** confidence → auto-filled (overrides default); "
-                    "**medium** → pre-filled but **unconfirmed — verify**; "
-                    "**low/none** → default kept and surfaced below for confirmation. "
+                    "**high** confidence -> auto-filled (overrides default); "
+                    "**medium** -> pre-filled but **unconfirmed - verify**; "
+                    "**low/none** -> default kept and surfaced below for confirmation. "
                     "You can override any selector above."
                 )
 
-            # Phase 4: poor-FITS prompt — surface ONLY the unresolved gaps, pre-filled
+            # Phase 4: poor-FITS prompt - surface ONLY the unresolved gaps, pre-filled
             # from the current (default) selection. The resolver then runs downstream.
             if _ad_rep.unresolved:
                 _prefill = {
@@ -2018,20 +2018,20 @@ def render_live_view(
                 }
                 with st.container(border=True):
                     st.warning(
-                        f"⚠️ Poor FITS: {len(_ad_rep.unresolved)} field(s) are not in the header "
+                        f"! Poor FITS: {len(_ad_rep.unresolved)} field(s) are not in the header "
                         "and were not auto-detected. Confirm or override the pre-filled defaults "
                         "in the selectors above before running."
                     )
                     for _gap in _ad_rep.unresolved:
                         _fld = _gap.get("field", "")
                         st.markdown(
-                            f"- **{_fld}** → pre-filled: `{_prefill.get(_fld, _gap.get('fallback', '—'))}`  \n"
+                            f"- **{_fld}** -> pre-filled: `{_prefill.get(_fld, _gap.get('fallback', '-'))}`  \n"
                             f"  <small>{_gap.get('detail', '')}</small>",
                             unsafe_allow_html=True,
                         )
                     st.caption(
                         "These pre-fills feed the import; the unified resolver "
-                        "(header/solve → DB → config, site = draft → header → flagged config) "
+                        "(header/solve -> DB -> config, site = draft -> header -> flagged config) "
                         "then applies them per draft."
                     )
 
@@ -2084,9 +2084,9 @@ def render_live_view(
 
         col_scan, col_run = st.columns([1, 2])
         with col_scan:
-            if st.button("🔍 Scan Source", type="primary"):
+            if st.button("[search] Scan Source", type="primary"):
                 if import_equipment_id <= 0 or import_telescope_id <= 0:
-                    st.error("Vyberte platnú kameru a ďalekohľad pred skenom.")
+                    st.error("Vyberte platnu kameru a dalekohlad pred skenom.")
                 else:
                     try:
                         plan = smart_scan_source(
@@ -2126,19 +2126,19 @@ def render_live_view(
             btn_cal, btn_nc = st.columns(2)
             with btn_cal:
                 run_vyvar_clicked = st.button(
-                    "⚡ RUN VYVAR",
+                    "! RUN VYVAR",
                     type="primary",
                     disabled=run_vyvar_disabled,
-                    help="One click: scan → import → calibrate → analyze → MASTERSTAR → Phase 0+1+2A",
+                    help="One click: scan -> import -> calibrate -> analyze -> MASTERSTAR -> Phase 0+1+2A",
                 )
             with btn_nc:
                 run_vyvar_nc_clicked = st.button(
-                    "📂 RUN VYVAR (non-cal)",
+                    "[folder] RUN VYVAR (non-cal)",
                     type="secondary",
                     disabled=run_vyvar_disabled,
                     help=(
                         "Skips bias/dark/flat. Treats source frames as already calibrated (e.g. "
-                        "Telescope Live exports). Proceeds with alignment → masterstar → photometry."
+                        "Telescope Live exports). Proceeds with alignment -> masterstar -> photometry."
                     ),
                 )
             if run_vyvar_clicked or run_vyvar_nc_clicked:
@@ -2152,7 +2152,7 @@ def render_live_view(
                 st.session_state["dao_fwhm_px"] = _dao_fwhm_default
                 st.session_state["dao_threshold_sigma"] = _dao_sigma_default
                 _status_label = (
-                    "📂 RUN VYVAR (non-cal) running…" if _pre_cal else "⚡ RUN VYVAR running…"
+                    "[folder] RUN VYVAR (non-cal) running..." if _pre_cal else "! RUN VYVAR running..."
                 )
                 with st.status(_status_label, expanded=True) as _rv_status:
                     ok = _run_vyvar_full_pipeline(
@@ -2178,9 +2178,9 @@ def render_live_view(
                     )
                     if ok:
                         _done_label = (
-                            "✅ RUN VYVAR (non-cal) complete"
+                            "[OK] RUN VYVAR (non-cal) complete"
                             if _pre_cal
-                            else "✅ RUN VYVAR complete"
+                            else "[OK] RUN VYVAR complete"
                         )
                         _rv_status.update(
                             label=_done_label,
@@ -2190,7 +2190,7 @@ def render_live_view(
                         st.success("Pipeline finished successfully. Review the results.")
                     else:
                         _err_label = (
-                            "❌ RUN VYVAR (non-cal) — chyba" if _pre_cal else "❌ RUN VYVAR — chyba"
+                            "[X] RUN VYVAR (non-cal) - chyba" if _pre_cal else "[X] RUN VYVAR - chyba"
                         )
                         _rv_status.update(
                             label=_err_label,
@@ -2309,7 +2309,7 @@ def render_live_view(
                     width="stretch",
                     hide_index=True,
                 )
-            with st.expander("Technical group overview (binning · scale)", expanded=False):
+            with st.expander("Technical group overview (binning . scale)", expanded=False):
                 _ogr = []
                 for gk, g in sorted(ogroups.items(), key=lambda x: x[0]):
                     _mf = (getattr(plan, "masterflat_by_obs_key", None) or {}).get(gk)
@@ -2323,14 +2323,14 @@ def render_live_view(
                             "Frames": len(g.get("light_paths") or []),
                             "Master flat": "yes" if _mf else "no",
                             "Master dark": "yes" if _md else "no",
-                            "″/px": g.get("plate_scale_arcsec_per_px"),
+                            " arcsec/px": g.get("plate_scale_arcsec_per_px"),
                         }
                     )
                 st.dataframe(pd.DataFrame(_ogr), width="stretch", hide_index=True)
 
         _fb_prompts = getattr(plan, "flat_fallback_prompts", None) or []
         if _fb_prompts:
-            with st.expander("Missing Master Flat — choose substitute", expanded=True):
+            with st.expander("Missing Master Flat - choose substitute", expanded=True):
                 st.caption(
                     "For groups without a flat you can use a master flat from another filter group "
                     "(same exposure time and binning), or leave skipped (frames go to non_calibrated)."
@@ -2389,7 +2389,7 @@ def render_live_view(
                     if not p or not Path(p).exists():
                         import_disabled = True
             # If missing flats and no manual provided -> allow import (will draft those filters)
-        label = "🚀 Create Archive & Do Calibration (Quick Look Draft)" if plan.quick_look else "🚀 Create Archive & Do Calibration"
+        label = "[rocket] Create Archive & Do Calibration (Quick Look Draft)" if plan.quick_look else "[rocket] Create Archive & Do Calibration"
         if st.button(label, type="primary", disabled=import_disabled):
             try:
                 # Apply manual overrides if provided
@@ -2402,7 +2402,7 @@ def render_live_view(
                     footer_placeholder,
                     running=True,
                     process="Archive import",
-                    status_detail="Writing draft and copying files…",
+                    status_detail="Writing draft and copying files...",
                     pct=0,
                 )
                 result = smart_import_session(
@@ -2418,13 +2418,13 @@ def render_live_view(
                 if getattr(result, "draft_id", None) is not None:
                     st.session_state["vyvar_last_draft_id"] = int(result.draft_id)
                 log_event(
-                    f"Import hotový — draft {result.draft_id}, archív {result.archive_path}"
+                    f"Import hotovy - draft {result.draft_id}, archiv {result.archive_path}"
                 )
                 try:
                     _sat_eq = pipeline.db.get_equipment_saturation_adu(int(import_equipment_id))
                     log_event(
                         f"Equipment ID {import_equipment_id}: SATURATE_ADU v DB = "
-                        f"{_sat_eq if _sat_eq is not None else '(NULL — pri MASTERSTAR katalógu: hlavička → BITPIX → Settings fallback)'}"
+                        f"{_sat_eq if _sat_eq is not None else '(NULL - pri MASTERSTAR katalogu: hlavicka -> BITPIX -> Settings fallback)'}"
                     )
                 except (sqlite3.Error, TypeError, ValueError, KeyError) as exc:
                     log_event(
@@ -2433,15 +2433,15 @@ def render_live_view(
                     )
                 if result.warnings:
                     for w in result.warnings:
-                        log_event(f"Import varování: {w}")
+                        log_event(f"Import varovani: {w}")
 
-                # Immediately run calibration to create /calibrated (progress v pätičke, nie samostatný bar)
+                # Immediately run calibration to create /calibrated (progress v paticke, nie samostatny bar)
                 def _cal_progress(i: int, total: int, msg: str) -> None:
                     pct = int(round(100 * (i / max(total, 1))))
                     _vyvar_footer_set(
                         footer_placeholder,
                         running=True,
-                        process="Calibrating lights → /calibrated",
+                        process="Calibrating lights -> /calibrated",
                         status_detail=msg,
                         pct=pct,
                         current_file=_vyvar_guess_filename_from_progress(msg),
@@ -2451,12 +2451,12 @@ def render_live_view(
                 _vyvar_footer_set(
                     footer_placeholder,
                     running=True,
-                    process="Calibrating lights → /calibrated",
-                    status_detail="Import complete — applying dark/flat…",
+                    process="Calibrating lights -> /calibrated",
+                    status_detail="Import complete - applying dark/flat...",
                     pct=0,
                     step="",
                 )
-                with st.spinner("Calibration in progress — see footer; Multi-observation table updates when finished."):
+                with st.spinner("Calibration in progress - see footer; Multi-observation table updates when finished."):
                     md = Path(plan.dark_master) if getattr(plan, "dark_master", None) else None
                     mf_map: dict[str, Path | None] = {}
                     if getattr(plan, "masterflat_by_filter", None):
@@ -2493,24 +2493,24 @@ def render_live_view(
                     footer_placeholder,
                     running=False,
                     process="Import + calibration",
-                    status_detail=f"Done — frames processed (calibration): {_nproc}",
+                    status_detail=f"Done - frames processed (calibration): {_nproc}",
                     pct=100,
                     step="",
                 )
-                log_event("Kalibrácia hotová — `/calibrated`")
+                log_event("Kalibracia hotova - `/calibrated`")
                 last_job_snapshot(cal_out)
                 st.session_state["vyvar_status_calibrated"] = True
                 _did_imp = getattr(result, "draft_id", None)
                 if _did_imp is not None:
                     st.session_state["vyvar_pending_job"] = {
                         "kind": "analyze",
-                        "label": "QC analysis (RAM calibration)…",
+                        "label": "QC analysis (RAM calibration)...",
                         "archive_path": str(result.archive_path),
                         "draft_id": int(_did_imp),
                         "equipment_id": int(import_equipment_id),
                         "roundness_reject_above": float(st.session_state.get("max_roundness_error", 1.25)),
                     }
-                    st.success("Import and calibration complete — starting QC analysis in RAM (Analyze)…")
+                    st.success("Import and calibration complete - starting QC analysis in RAM (Analyze)...")
                 else:
                     st.success("Import and calibration complete.")
                     st.session_state["vyvar_status_analyzed"] = bool(
@@ -2565,7 +2565,7 @@ def render_infolog(cfg: AppConfig | None = None) -> None:
             clear_log()
             st.rerun()
     with col_b:
-        if st.button("💾 Save Infolog to disk", key="vyvar_infolog_save_disk"):
+        if st.button("[save] Save Infolog to disk", key="vyvar_infolog_save_disk"):
             _cfg = cfg if cfg is not None else AppConfig()
             _draft_dir = resolve_draft_dir(
                 draft_dir_override=st.session_state.get("vyvar_draft_dir_override"),
@@ -2576,9 +2576,9 @@ def render_infolog(cfg: AppConfig | None = None) -> None:
                 saved = save_infolog_to_disk(_draft_dir, get_lines())
                 if saved:
                     st.success(f"Saved: {saved}")
-                    log_event(f"Infolog saved → {saved}")
+                    log_event(f"Infolog saved -> {saved}")
                 else:
-                    st.error("Save failed — check draft directory")
+                    st.error("Save failed - check draft directory")
             else:
                 st.warning("No draft directory selected")
     with col_c:
@@ -2593,7 +2593,7 @@ def render_infolog(cfg: AppConfig | None = None) -> None:
     lines = get_lines()
     if tail < len(lines):
         lines = lines[-int(tail) :]
-    text = "\n".join(lines) if lines else "(no entries yet — start a job on VARSTREM)"
+    text = "\n".join(lines) if lines else "(no entries yet - start a job on VARSTREM)"
     st.code(text, language=None)
 
 
@@ -2609,7 +2609,7 @@ def main() -> None:
 
     st.set_page_config(
         page_title="VYVAR - Variable Star Processing",
-        page_icon="✨",
+        page_icon="*",
         layout="wide",
     )
 
@@ -2637,7 +2637,7 @@ def main() -> None:
             "Enter the absolute path to folder ``draft_XXXXXX`` (must contain ``platesolve/``) "
             "or draft number from the archive. Used in FITS QA, MASTERSTAR QA "
             "and Aperture Photometry tabs. Empty field + Load draft clears override. "
-            "**DAO-STARS**, **Photometry**, and **Photometry — diagnostics** are under **Settings → Tools**."
+            "**DAO-STARS**, **Photometry**, and **Photometry - diagnostics** are under **Settings -> Tools**."
         )
         dcol1, dcol2, dcol3 = st.columns([4, 1, 1])
         with dcol1:
@@ -2650,13 +2650,13 @@ def main() -> None:
             apply_draft = st.button("Load draft", key="vyvar_draft_path_apply", type="primary")
         with dcol3:
             _cur = st.session_state.get("vyvar_last_draft_id")
-            st.caption(f"ID: **{_cur}**" if _cur is not None else "ID: —")
+            st.caption(f"ID: **{_cur}**" if _cur is not None else "ID: -")
         if apply_draft:
             s = (draft_path_inp or "").strip()
             if not s:
                 st.session_state.pop("vyvar_draft_dir_override", None)
                 _vyvar_reset_variability_session_state()
-                st.info("Draft override cleared — using archive path from configuration.")
+                st.info("Draft override cleared - using archive path from configuration.")
                 st.rerun()
             else:
                 ddir, parsed_id, err = resolve_draft_directory(
@@ -2682,8 +2682,8 @@ def main() -> None:
                 "FITS QA",
                 "MASTERSTAR QA",
                 "Aperture Photometry",
-                "🔬 ePSF",
-                "🔍 Variability",
+                "[microscope] ePSF",
+                "[search] Variability",
                 "Infolog",
             ]
         )

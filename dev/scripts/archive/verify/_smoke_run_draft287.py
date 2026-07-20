@@ -1,4 +1,4 @@
-"""One-off: Fáza 0+1 + 2A pre smoke log / active_targets (draft_000287)."""
+"""One-off: Faza 0+1 + 2A pre smoke log / active_targets (draft_000287)."""
 from __future__ import annotations
 
 import logging

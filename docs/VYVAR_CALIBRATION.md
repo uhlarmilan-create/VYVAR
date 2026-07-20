@@ -91,7 +91,7 @@ pouzivaji `mag_calib_final`.
 **Vyznam:** diferencialni ensemble kalibrace k Gaia katalogu; airmass trend je odstranen
 diferencialnim ensemble (ne per-target LSQ na reporting path).
 
-**Literatura:** Broeg, Fernandez & Neuhuser (2005) AN 326:134 (vaha 1/sigma^2 pri ZP);
+**Literatura:** Broeg, Fernandez & Neuh-user (2005) AN 326:134 (vaha 1/sigma^2 pri ZP);
 Honeycutt (1992) PASP 104:435 (ensemble scatter pro `err`).
 
 **Config:** `phase01_comparison_n_comp_min/max` (ensemble pocet kompar).
@@ -112,7 +112,7 @@ Honeycutt (1992) PASP 104:435 (ensemble scatter pro `err`).
 
 ### 2.3 Savitzky-Golay detrend (volitelne, ALG-2)
 
-**Vyznam:** odstraneni pomaleho systematickho trendu na `mag_calib` (airmass jiz v ensemble).
+**Vyznam:** odstraneni pomaleho systematick-ho trendu na `mag_calib` (airmass jiz v ensemble).
 
 **Gate:** `savgol_detrend_enabled` (default **False**, `config.py:459`);
 `savgol_window_frac` default 0.5 (`config.py:460`).
@@ -142,7 +142,7 @@ mag_calib_ct  = mag_calib + ct_correction
 | Fit kvalita | `n_comp >= phase01_ct_min_comp`, `c1_stderr/c1 <= 0.5` | min_comp **7** | `should_apply_color_term` `photometry_core.py:2672-2673`, volano ~3050-3056 |
 | Skupinovy fit | `state.group_color_term.apply_gate` | z fitu | `_compute_group_color_term_fit` ~3057-3064 |
 | Extrapolace BP-RP | target BP-RP v rozsahu kompar | `phase01_ct_extrapolation_tol` | `_check_color_term_extrapolation` ~7387-7392 |
-| Per-target `ct_ok` | finite target_bp_rp, c1!=0, finite bp_rp_comp_med |  | `photometry_core.py:7401-7405` |
+| Per-target `ct_ok` | finite target_bp_rp, c1!=0, finite bp_rp_comp_med | - | `photometry_core.py:7401-7405` |
 
 **Per-target/noc:** `ct_correction` je **scalar** (stejny pro vsechny snimky v LC).
 
@@ -169,7 +169,7 @@ mag_calib_ct  = mag_calib + ct_correction
 **Per-target/noc:** `delta_m_corr` je **scalar**. `ac_scatter` se uklada do CSV, **ne** do `err`.
 
 **Poznam:** COG aperture correction (`cog_aperture_correction_enabled`, default False) je oddelena
-cesta pri cteni fluxu  neni soucast `mag_calib_ac` Method B.
+cesta pri cteni fluxu - neni soucast `mag_calib_ac` Method B.
 
 ---
 
@@ -184,8 +184,8 @@ mag_calib_final = mag_calib + (ct_correction if ct_ok else 0) + (delta_m_corr if
 Kdyz `ct_ok=False` a `ac_ok=True`: vysledek kopiuje `mag_calib_ac` (bit-identicke s AC-only
 exportem pri CT-off config). Ulozeni: `save_lightcurve_csv` ~3809-3854.
 
-**Dulezite:** CT a AC jsou **aditivni konstanty** na final `mag_calib`  nemeni tvar variability
-(nemenny scatter), nemen `err` ani `lc_rms` (viz sekce 4).
+**Dulezite:** CT a AC jsou **aditivni konstanty** na final `mag_calib` - nemeni tvar variability
+(nemenny scatter), nemen- `err` ani `lc_rms` (viz sekce 4).
 
 **Rozhodnuti:** `VYVAR_DECISIONS.md` (Path A, 2026-06-22); audit G5-F011 v
 `dev/results/VYVAR_FULL_AUDIT_LEDGER.md`.
@@ -210,7 +210,7 @@ exportem pri CT-off config). Ulozeni: `save_lightcurve_csv` ~3809-3854.
 
 **Publikacni vystupy** (AAVSO, VarAstro MAG, vsechny LC figury v PDF) nyni pouzivaji
 **`mag_calib_final`**. Scatter/metriky kvality (`lc_rms`, trust) zustavaji na **`mag_calib`**
- CT/AC jsou konstantni posuvy, scatter je invariantni.
+- CT/AC jsou konstantni posuvy, scatter je invariantni.
 
 **`n_ensemble_comp` vs `n_clean`:** summary `n_good_comp` (`photometry_core.py:7827-7829`) =
 komparace stability `good` nebo `suspect` (ensemble pool). `n_clean` z comp_qa
@@ -218,7 +218,7 @@ komparace stability `good` nebo `suspect` (ensemble pool). `n_clean` z comp_qa
 `n_ensemble_comp` (ne `n_good_comp`); trust pouziva `n_clean`.
 
 **Legacy CSV** bez sloupce `mag_calib_final`: export fallback na AC precedence
-(`mag_calib_ac` kdyz `ac_ok`)  `export_reports.py:653-665`.
+(`mag_calib_ac` kdyz `ac_ok`) - `export_reports.py:653-665`.
 
 ---
 
@@ -252,10 +252,10 @@ err = sqrt(err_photon^2 + ensemble_scatter^2)
 
 CT (`ct_correction`) a AC (`delta_m_corr`) jsou **konstantni posuvy** per cil/noc ?
 **nemeni** `err`. Export paruje `mag_calib_final` (z `_select_export_lc_rows`) s puvodnim
-`err`  spravne pro konstantni kalibracni offset (viz G5-F002 RESOLVED non-issue).
+`err` - spravne pro konstantni kalibracni offset (viz G5-F002 RESOLVED non-issue).
 
 `ac_scatter` je ulozen v CSV (`save_lightcurve_csv` ~3850), ale **neni** pridavano do `err`
-(per-point inflace by misrepresentovala korelovan systematik jako nahodny rozptyl).
+(per-point inflace by misrepresentovala korelovan- systematik jako nahodny rozptyl).
 
 ---
 
@@ -265,8 +265,8 @@ CT (`ct_correction`) a AC (`delta_m_corr`) jsou **konstantni posuvy** per cil/no
 |----------|-------|
 | `VYVAR_DECISIONS.md` | DAO+Gaia matched only (2026-06-22); Path A `mag_calib_final` |
 | `dev/results/VYVAR_FULL_AUDIT_LEDGER.md` | G5-F011 FIXED (`be3e193`); G5-F003 superseded |
-| `VYVAR_PIPELINE_CZ.md` | Pipeline manual (CQ-C, PSF, blind solver)  odkazuje sem |
+| `VYVAR_PIPELINE_CZ.md` | Pipeline manual (CQ-C, PSF, blind solver) - odkazuje sem |
 | `VYVAR_CANONICAL_COMBINATION_LOGIC.md` | Ensemble flux-sum vs IVW (Broeg) |
 | `CITATIONS.bib` | Broeg 2005, Howell 1989, Honeycutt 1992, Savitzky-Golay, democratic detrender |
 
-**Commit implementace:** `be3e193`  `fix(calib): canonical mag_calib_final (CT+AC) used by export and all figures (G5-F011)`.
+**Commit implementace:** `be3e193` - `fix(calib): canonical mag_calib_final (CT+AC) used by export and all figures (G5-F011)`.

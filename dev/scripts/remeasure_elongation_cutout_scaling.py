@@ -173,18 +173,18 @@ def _verdict(med_i: float, med_ii: float, med_iii: float) -> str:
     if not all(math.isfinite(x) for x in (med_i, med_ii, med_iii)):
         return "inconclusive (insufficient fits)"
     if med_i >= 1.12 and med_ii <= 1.06 and med_iii <= 1.06:
-        return "cutout/fitter artifact — stars essentially round under scaled windows"
+        return "cutout/fitter artifact - stars essentially round under scaled windows"
     if med_i >= 1.12 and med_ii >= 1.12 and med_iii >= 1.12:
         return "real on-sky ellipticity (persists under scaled Gaussian and moments)"
     if abs(med_ii - med_i) < 0.03 and abs(med_iii - med_i) < 0.03:
-        return "elongation stable across methods — likely real"
-    return "mixed — review per-method medians"
+        return "elongation stable across methods - likely real"
+    return "mixed - review per-method medians"
 
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     rows = []
-    print("Part 1 — elongation re-measure (same star pool, three methods)\n")
+    print("Part 1 - elongation re-measure (same star pool, three methods)\n")
     print(f"{'draft':>5} | {'FWHM':>5} | {'cutout(ii)':>10} | {'N':>5} | {'(i)9x9':>7} | {'(ii)Gauss':>9} | {'(iii)Mom':>8} | verdict")
     print("-" * 95)
     for draft_id, setup in CASES:

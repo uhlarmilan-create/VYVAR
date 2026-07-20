@@ -49,7 +49,7 @@ def seeded_numpy_default_rng(seed: int | None = None):
 
 
 class _NumpyEncoder(json.JSONEncoder):
-    """Serializuje numpy skaláre na Python natívne typy (JSON)."""
+    """Serializuje numpy skalare na Python nativne typy (JSON)."""
 
     def default(self, obj: Any) -> Any:
         if isinstance(obj, np.integer):
@@ -97,7 +97,7 @@ def iter_fits_paths_recursive(root: Path | str) -> list[Path]:
     return sorted(out)
 
 
-# Prefixes for celestial WCS keywords (avoid bare "PC" — would match PCOUNT).
+# Prefixes for celestial WCS keywords (avoid bare "PC" - would match PCOUNT).
 _CELESTIAL_WCS_PREFIXES: tuple[str, ...] = (
     "CRPIX",
     "CRVAL",
@@ -132,7 +132,7 @@ def strip_celestial_wcs_keys(hdr: fits.Header) -> None:
                 pass
 
 
-# Leftovers from ASTAP / other tools — not part of the FITS WCS standard; safe to drop after VYVAR solve.
+# Leftovers from ASTAP / other tools - not part of the FITS WCS standard; safe to drop after VYVAR solve.
 _VENDOR_PLATESOLVE_METADATA_KEYS: tuple[str, ...] = (
     "PLTSOLVD",  # ASTAP: plate-solved flag
 )
@@ -170,12 +170,12 @@ def wcs_distortion_log_suffix(header: fits.Header) -> str:
         ao = header.get("A_ORDER")
         bo = header.get("B_ORDER")
         if ao is not None and int(ao) > 0:
-            return f" WCS má SIP (A_ORDER={int(ao)})."
+            return f" WCS ma SIP (A_ORDER={int(ao)})."
         if bo is not None and int(bo) > 0:
-            return f" WCS má SIP (B_ORDER={int(bo)})."
+            return f" WCS ma SIP (B_ORDER={int(bo)})."
         return (
-            " WCS vyzerá ako lineárny TAN bez SIP — pri širokom poli skontroluj plate solve "
-            "alebo riešenie so SIP (napr. Astrometry.net)."
+            " WCS vyzera ako linearny TAN bez SIP - pri sirokom poli skontroluj plate solve "
+            "alebo riesenie so SIP (napr. Astrometry.net)."
         )
     except (TypeError, ValueError):
         return ""
@@ -184,7 +184,7 @@ def wcs_distortion_log_suffix(header: fits.Header) -> str:
 def wcs_rotation_angle_deg(header: fits.Header) -> float | None:
     """Approximate rotation angle [deg] of the image WCS.
 
-    Computed from the linear pixel-scale matrix of the celestial WCS. Robust to meridian flip / 180° rotation
+    Computed from the linear pixel-scale matrix of the celestial WCS. Robust to meridian flip / 180 deg rotation
     without relying on FITS "FLIP" metadata.
     """
     try:
@@ -216,15 +216,15 @@ def circular_angle_diff_deg(a_deg: float, b_deg: float) -> float:
 def effective_binned_pixel_pitch_um(*, base_pixel_um_1x1: float, binning: int) -> float:
     """Physical pixel pitch of one **image** pixel after symmetric binning.
 
-    ``base_pixel_um_1x1`` is the camera datasheet pitch at 1×1 (e.g. from EQUIPMENTS.PIXELSIZE).
-    For 2×2 binning each output pixel spans 2×2 sensor pixels → pitch doubles.
+    ``base_pixel_um_1x1`` is the camera datasheet pitch at 1x1 (e.g. from EQUIPMENTS.PIXELSIZE).
+    For 2x2 binning each output pixel spans 2x2 sensor pixels -> pitch doubles.
     """
     b = max(1, int(binning))
     return float(base_pixel_um_1x1) * float(b)
 
 
 def parse_fits_binning_int(raw: object, default: int = 1) -> int:
-    """Parse FITS binning: ``2``, ``2.0``, ``"2x2"``, ``"2 x 2"`` → int; else *default*."""
+    """Parse FITS binning: ``2``, ``2.0``, ``"2x2"``, ``"2 x 2"`` -> int; else *default*."""
     if raw is None:
         return max(1, int(default))
     if isinstance(raw, (int, np.integer)):
@@ -234,7 +234,7 @@ def parse_fits_binning_int(raw: object, default: int = 1) -> int:
             return max(1, int(round(float(raw))))
         return max(1, int(default))
     s = str(raw).strip().lower().replace(" ", "")
-    m = re.match(r"^(\d+)[x×](\d+)$", s)
+    m = re.match(r"^(\d+)[xx](\d+)$", s)
     if m:
         return max(1, int(m.group(1)))
     try:
@@ -244,10 +244,10 @@ def parse_fits_binning_int(raw: object, default: int = 1) -> int:
 
 
 def parse_sensor_naxis_from_text(sensor_size: str | None) -> tuple[int, int] | None:
-    """Parse ``EQUIPMENTS.SENSORSIZE`` like ``6280x4176`` → (width, height)."""
+    """Parse ``EQUIPMENTS.SENSORSIZE`` like ``6280x4176`` -> (width, height)."""
     if not sensor_size or not str(sensor_size).strip():
         return None
-    m = re.search(r"(\d+)\s*[x×]\s*(\d+)", str(sensor_size), flags=re.IGNORECASE)
+    m = re.search(r"(\d+)\s*[xx]\s*(\d+)", str(sensor_size), flags=re.IGNORECASE)
     if not m:
         return None
     w, h = int(m.group(1)), int(m.group(2))
@@ -260,7 +260,7 @@ def infer_binning_xy_from_sensor_shape(
     native_size: tuple[int, int] | None,
     header_xy: tuple[int, int],
 ) -> tuple[int, int, bool]:
-    """If header says 1×1 but image size ≈ native/k, infer integer binning *k* (2, 3, 4)."""
+    """If header says 1x1 but image size ~ native/k, infer integer binning *k* (2, 3, 4)."""
     hx, hy = max(1, int(header_xy[0])), max(1, int(header_xy[1]))
     if hx > 1 or hy > 1:
         return hx, hy, False
@@ -300,11 +300,11 @@ def normalize_telescope_focal_mm_for_plate_scale(raw_mm: float) -> tuple[float, 
     return float(raw_mm), False
 
 
-# Plate scale [arcsec/pixel] = (pixel_pitch_um / focal_length_mm) * K; K = 206.265 (≈ rad→″ / 1000 for µm/mm).
+# Plate scale [arcsec/pixel] = (pixel_pitch_um / focal_length_mm) * K; K = 206.265 (~ rad-> arcsec / 1000 for um/mm).
 PLATE_SCALE_ARCSEC_PER_UM_OVER_MM: float = 206.265
 
 # Minimum great-circle cone radius [deg] for Gaia queries and overlays. Undersized cones (often from a
-# bad WCS scale that collapses corner separations) produce a visible „catalog disc“ in QA; wide chips at ~200 mm
+# bad WCS scale that collapses corner separations) produce a visible 'catalog disc' in QA; wide chips at ~200 mm
 # need several degrees to cover the diagonal.
 MIN_GAIA_CONE_RADIUS_DEG: float = 3.5
 
@@ -317,7 +317,7 @@ ASTROMETRY_SOLVE_FIELD_CPULIMIT_SEC: int = 30
 
 
 def effective_astrometry_net_tweak_order() -> int:
-    """Effective SIP ``tweak_order`` / ``--tweak-order``. Default 3; env ``VYVAR_ASTROMETRY_TWEAK_ORDER`` may raise it (3–6), never below 3."""
+    """Effective SIP ``tweak_order`` / ``--tweak-order``. Default 3; env ``VYVAR_ASTROMETRY_TWEAK_ORDER`` may raise it (3-6), never below 3."""
     v = (os.environ.get("VYVAR_ASTROMETRY_TWEAK_ORDER") or "").strip()
     if not v:
         return int(ASTROMETRY_NET_TWEAK_ORDER)
@@ -329,7 +329,7 @@ def effective_astrometry_net_tweak_order() -> int:
 
 
 # photutils ``DAOStarFinder`` has no ``roundness_limit=(None, None)``; extreme ``roundlo``/``roundhi`` disable roundness filtering.
-# Relaxed ``sharplo``/``sharphi`` avoid NoDetectionsWarning when FWHM is slightly mismatched (defaults 0.2–1.0 are tight).
+# Relaxed ``sharplo``/``sharphi`` avoid NoDetectionsWarning when FWHM is slightly mismatched (defaults 0.2-1.0 are tight).
 # Comatic / corner stars are non-round and would be rejected with default roundness (-1, 1).
 DAO_STAR_FINDER_NO_ROUNDNESS_FILTER: dict[str, float] = {
     "roundlo": -1.0e9,
@@ -374,7 +374,7 @@ def dao_detection_fwhm_pixels(header: fits.Header | None, *, configured_fallback
 
 
 def catalog_cone_radius_from_fov_diameter_deg(fov_diameter_deg: float) -> float:
-    """Cone radius [deg] = (FOV diameter / 2) × 1.2 (20 % margin over half-angle to edge)."""
+    """Cone radius [deg] = (FOV diameter / 2) x 1.2 (20 % margin over half-angle to edge)."""
     d = float(fov_diameter_deg)
     if not math.isfinite(d) or d <= 0:
         return 0.0
@@ -382,7 +382,7 @@ def catalog_cone_radius_from_fov_diameter_deg(fov_diameter_deg: float) -> float:
 
 
 def plate_scale_arcsec_per_pixel(*, pixel_pitch_um: float, focal_length_mm: float) -> float | None:
-    """Small-angle plate scale [arcsec/pixel] from pixel pitch [µm] and focal length [mm].
+    """Small-angle plate scale [arcsec/pixel] from pixel pitch [um] and focal length [mm].
 
     ``scale = (pixel_pitch_um / focal_mm) * 206.265``. Focal length is passed through
     :func:`normalize_telescope_focal_mm_for_plate_scale` so a common ``2000`` vs ``200`` mm typo
@@ -491,7 +491,7 @@ def catalog_cone_radius_deg_from_optics(
     converted to degrees and padded by ``margin``. This guarantees query cone >= full rectangular sensor field.
 
     If focal length or pixel pitch are non-positive, falls back to ``fov_diameter_fallback_deg`` with a
-    sensible floor (≥ ``MIN_GAIA_CONE_RADIUS_DEG``, default 3.5°).
+    sensible floor (>= ``MIN_GAIA_CONE_RADIUS_DEG``, default 3.5 deg).
     """
     wpx = max(1, int(naxis1))
     hpx = max(1, int(naxis2))
@@ -507,7 +507,7 @@ def catalog_cone_radius_deg_from_optics(
         # Required formula: radius = 0.5 * hypot(FOV_x, FOV_y) * padding.
         r = 0.5 * float(math.hypot(fov_x_deg, fov_y_deg)) * float(margin)
         # Dynamic floor: wide-field (short focal) needs a larger Gaia cone by default,
-        # but narrow-field optics must not be forced to the global MIN_GAIA_CONE_RADIUS_DEG (3.5°),
+        # but narrow-field optics must not be forced to the global MIN_GAIA_CONE_RADIUS_DEG (3.5 deg),
         # otherwise the catalog becomes too large and triangle matching becomes intractable.
         #
         # For long focal lengths: floor ~ (600 / focal_mm) deg, with a small absolute minimum.
@@ -520,7 +520,7 @@ def catalog_cone_radius_deg_from_optics(
 def astrometry_net_scale_bounds_arcsec_per_pix(scale_arcsec_per_px: float) -> tuple[float, float]:
     """Upper/lower scale for Astrometry.net (``scale_lower`` / ``scale_upper``), arcsec/pixel.
 
-    Band is proportional to the nominal scale so that e.g. ``s ≈ 9.55`` maps to about ``8 … 11``
+    Band is proportional to the nominal scale so that e.g. ``s ~ 9.55`` maps to about ``8 ... 11``
     (same relative width as ``8/9.55`` and ``11/9.55``). Falls back to a wider band if needed.
     """
     s = float(scale_arcsec_per_px)
@@ -676,7 +676,7 @@ def resolve_draft_dir(
     4. ``archive_root/Drafts/draft_{id:06d}`` if ``draft_id`` provided
     5. None
 
-    When ``drafts_before_session=True`` (MASTERSTAR QA): steps 2–3 move after step 4
+    When ``drafts_before_session=True`` (MASTERSTAR QA): steps 2-3 move after step 4
     (Drafts folder is tried before session archive paths).
     """
     import streamlit as st

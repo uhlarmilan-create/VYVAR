@@ -3,7 +3,7 @@ inputs: masterstars=C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve
 inputs: MASTERSTAR.fits=C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000428\platesolve\NoFilter_60_2\MASTERSTAR.fits
 inputs: gaia_db=C:\ASTRO\python\VYVAR\GAIA_DR3\vyvar_gaia_dr3.db
 
-# T1 — Direction statistics
+# T1 - Direction statistics
 {
   "label": "MISASSIGNED_164",
   "n": 160,
@@ -43,10 +43,10 @@ inputs: gaia_db=C:\ASTRO\python\VYVAR\GAIA_DR3\vyvar_gaia_dr3.db
   ]
 }
 match_origin_counts_MISASSIGNED: {"detection_catalog_match_coords": 160}
-T1 interpretation: MISASSIGNED set isotropic (vector mean << mean |delta|) — not rigid shift
+T1 interpretation: MISASSIGNED set isotropic (vector mean << mean |delta|) - not rigid shift
 T1 interpretation: weak radius correlation corr=0.246
 
-# T2 — Peak test on MASTERSTAR.fits
+# T2 - Peak test on MASTERSTAR.fits
 t2_class_histogram (MISASSIGNED n=160): {"CATALOG_PROJECTION_OFF": 160}
 priority_summary: n=7 median_sep_proj_px=1.305 median_sep_wcs_gaia=12.8" median_sep_vt_gaia=0.24"
 priority_targets_t2:                 name               t2_class  sep_proj_px  sep_wcs_gaia_arcsec  sep_vt_gaia_arcsec  peak_sep_from_xy_px
@@ -59,17 +59,17 @@ CSS_J140918.7+423422 CATALOG_PROJECTION_OFF     1.426779            13.941927   
               RX CVn CATALOG_PROJECTION_OFF     0.863800             8.448348            0.182017             0.081742
 contact_sheet: C:\ASTRO\python\VYVAR\tmp\f428_priority_contact_sheet.png
 
-# T3 — Per-frame LC position evidence
-  FY CVn: LC has no x/y — n_frames=139 source_file only
-  FZ CVn: LC has no x/y — n_frames=139 source_file only
-  CSS_J134925.3+393524: LC has no x/y — n_frames=139 source_file only
-  CSS_J140918.7+423422: LC has no x/y — n_frames=139 source_file only
-  NSVS 5096293: LC has no x/y — n_frames=139 source_file only
-  RX CVn: LC has no x/y — n_frames=139 source_file only
+# T3 - Per-frame LC position evidence
+  FY CVn: LC has no x/y - n_frames=139 source_file only
+  FZ CVn: LC has no x/y - n_frames=139 source_file only
+  CSS_J134925.3+393524: LC has no x/y - n_frames=139 source_file only
+  CSS_J140918.7+423422: LC has no x/y - n_frames=139 source_file only
+  NSVS 5096293: LC has no x/y - n_frames=139 source_file only
+  RX CVn: LC has no x/y - n_frames=139 source_file only
   R CVn: no LC file
-  alignment_report: 140 rows, cols=['file', 'frame_index', 'detected_stars', 'aligned', 'alignment_method', 'is_flipped', 'rotation_angle_deg', 'align_residual_px'] — no per-target centroid scatter
+  alignment_report: 140 rows, cols=['file', 'frame_index', 'detected_stars', 'aligned', 'alignment_method', 'is_flipped', 'rotation_angle_deg', 'align_residual_px'] - no per-target centroid scatter
 
-# T4 — 81" population closure
+# T4 - 81" population closure
 unmatched_DET: 2724
 field_catalog_in_frame: n=4409 area_deg2=1.5171 poisson_est_p50~33.4"
 det_nearest_catalog_p50: 131.105"
@@ -78,7 +78,7 @@ edge_margin_50px_fraction: 0.094
 T4_verdict: SPURIOUS-UNIFORM
 det_scatter_png: C:\ASTRO\python\VYVAR\tmp\f428_det_scatter_v5.png
 
-GATE: RECLASSIFY-PROJECTION — peak at ms x/y, not at Gaia projection; systematic not identity
+GATE: RECLASSIFY-PROJECTION - peak at ms x/y, not at Gaia projection; systematic not identity
 draft_428 flux likely correct; T4 re-run + anchor UNBLOCK pending Milan contact sheet review
 
 GATE_VERDICT: RECLASSIFY-PROJECTION

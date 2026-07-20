@@ -159,7 +159,7 @@ def _alignment_detect_xy(
     _frame_name = label or "frame"
     _alignment_emit_log(
         log_sink,
-        f"🚨 [ALIGNMENT] Frame: {_frame_name} | Offset Removed: {m:.2f} | Final Mean: {np.nanmean(data):.4f}",
+        f"[alert] [ALIGNMENT] Frame: {_frame_name} | Offset Removed: {m:.2f} | Final Mean: {np.nanmean(data):.4f}",
     )
     arr = data
     finite = np.isfinite(data)
@@ -192,8 +192,8 @@ def _alignment_detect_xy(
         _nm = label or "frame"
         _alignment_emit_log(
             log_sink,
-            f"DEBUG: Image stats pre {_nm} - podozrivo nízke Std po BG ({clipped_std:.3e}); "
-            "background subtraction môže byť príliš agresívna.",
+            f"DEBUG: Image stats pre {_nm} - podozrivo nizke Std po BG ({clipped_std:.3e}); "
+            "background subtraction moze byt prilis agresivna.",
         )
     data = np.nan_to_num((arr_bg - float(med)).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     sig = max(0.5, min(20.0, float(det_sigma)))
@@ -206,7 +206,7 @@ def _alignment_detect_xy(
         min_val = float(np.min(data_chk))
         max_val = float(np.max(data_chk))
         mean_val = float(np.mean(data_chk))
-        _alignment_emit_log(log_sink, f"[DEBUG DATA CHECK] Súbor: {_nm}")
+        _alignment_emit_log(log_sink, f"[DEBUG DATA CHECK] Subor: {_nm}")
         _alignment_emit_log(
             log_sink,
             f"[DEBUG DATA CHECK] Stats -> Min: {min_val:.4f}, Max: {max_val:.4f}, Mean: {mean_val:.4f}",
@@ -220,7 +220,7 @@ def _alignment_detect_xy(
         pass
     _alignment_emit_log(
         log_sink,
-        f"DEBUG: Používam FWHM={float(fwhm_px):.2f} a Sigma={float(sig):.2f} (z alignment det_sigma) pre detekciu.",
+        f"DEBUG: Pouzivam FWHM={float(fwhm_px):.2f} a Sigma={float(sig):.2f} (z alignment det_sigma) pre detekciu.",
     )
     _alignment_emit_log(log_sink, f"DEBUG: Threshold set to {threshold:.2f} (using clipped_std={clipped_std:.2f})")
     fw = max(1.2, float(fwhm_px))
@@ -239,7 +239,7 @@ def _alignment_detect_xy(
         _used_sigma = _best_sigma
         for idx_s, s in enumerate(sigma_list):
             if idx_s > 0:
-                _alignment_emit_log(log_sink, f"Skúšam znížiť threshold na {float(s):.2f} pre {nm}...")
+                _alignment_emit_log(log_sink, f"Skusam znizit threshold na {float(s):.2f} pre {nm}...")
             finder = DAOStarFinder(
                 fwhm=fw,
                 threshold=max(float(s) * float(clipped_std), 1e-6),
@@ -272,10 +272,10 @@ def _alignment_detect_xy(
     if float(used_sigma) < float(sig) - 1e-9:
         _alignment_emit_log(
             log_sink,
-            f"Detekcia hviezd: Použité FWHM={fw:.2f}, Sigma={float(used_sigma):.2f} (fallback z {float(sig):.2f})",
+            f"Detekcia hviezd: Pouzite FWHM={fw:.2f}, Sigma={float(used_sigma):.2f} (fallback z {float(sig):.2f})",
         )
     if tbl is None or len(tbl) == 0:
-        _alignment_emit_log(log_sink, f"DEBUG: Snímka {_nm} - pokus o detekciu s extrémnou citlivosťou (threshold=1.0)")
+        _alignment_emit_log(log_sink, f"DEBUG: Snimka {_nm} - pokus o detekciu s extremnou citlivostou (threshold=1.0)")
         try:
             finder_ext = DAOStarFinder(
                 fwhm=5.0,
@@ -318,11 +318,11 @@ def _alignment_run_astroalign_points(
         src = np.array(source_pts, dtype="float32")
         tgt = np.array(target_pts, dtype="float32")
         if src.ndim != 2 or src.shape[1] != 2:
-            return None, f"Nesprávny formát source bodov: shape={tuple(src.shape)}"
+            return None, f"Nespravny format source bodov: shape={tuple(src.shape)}"
         if tgt.ndim != 2 or tgt.shape[1] != 2:
-            return None, f"Nesprávny formát target bodov: shape={tuple(tgt.shape)}"
+            return None, f"Nespravny format target bodov: shape={tuple(tgt.shape)}"
         if src.shape == (0, 2) or tgt.shape == (0, 2):
-            return None, "Alignment nemôže začať, prázdne súradnice!"
+            return None, "Alignment nemoze zacat, prazdne suradnice!"
         if len(src) < 10 or len(tgt) < 10:
             return None, "Insufficient stars"
         mcp = max(12, min(int(max_control_points), int(min(len(src), len(tgt)))))
@@ -357,7 +357,7 @@ def _alignment_load_masterstar_catalog_points_for_frame(
         mdf = pd.read_csv(
             ms_csv,
             low_memory=False,
-            dtype={"catalog_id": str, "name": str},  # Gaia ID musí byť str — float64 stráca cifry
+            dtype={"catalog_id": str, "name": str},  # Gaia ID musi byt str - float64 straca cifry
         )
         if "ra_deg" not in mdf.columns or "dec_deg" not in mdf.columns:
             return np.zeros((0, 2), dtype=np.float32)
@@ -487,17 +487,17 @@ def _alignment_compute_one_frame(
                 xy = np.asarray(xy_ms[:max_st], dtype=np.float32)
                 _alignment_emit_log(
                     log_sink,
-                    f"DEBUG: {fp.name} attempt {i_att} - DAO=0, používam fallback MASTERSTAR katalóg ({len(xy)} bodov).",
+                    f"DEBUG: {fp.name} attempt {i_att} - DAO=0, pouzivam fallback MASTERSTAR katalog ({len(xy)} bodov).",
                 )
             else:
                 _alignment_emit_log(
-                    log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami"
+                    log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skusam s uvolnenymi parametrami"
                 )
                 continue
 
         if len(xy) < int(min_detected_stars):
             _alignment_emit_log(
-                log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami"
+                log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skusam s uvolnenymi parametrami"
             )
             continue
         # Track best detection even if transform fails / produces constant frame.
@@ -533,7 +533,7 @@ def _alignment_compute_one_frame(
                 )
                 if fixed_target_pts.shape[0] == 0:
                     raise RuntimeError(
-                        "FATÁLNA CHYBA: Referenčné body boli vymazané z pamäte pred štartom alignmentu!"
+                        "FATALNA CHYBA: Referencne body boli vymazane z pamate pred startom alignmentu!"
                     )
                 current_target = np.array(reference_list, dtype="float32")
                 n_fit = int(min(len(current_target), len(xy)))
@@ -563,7 +563,7 @@ def _alignment_compute_one_frame(
                 if 0 <= n_unique <= 3:
                     _alignment_emit_log(
                         log_sink,
-                        f"WARNING: {fp.name} aligned frame je konštantný (n_unique={n_unique}), pokus {i_att} zlyhal",
+                        f"WARNING: {fp.name} aligned frame je konstantny (n_unique={n_unique}), pokus {i_att} zlyhal",
                     )
                     aligned_data = None
                     continue
@@ -574,13 +574,13 @@ def _alignment_compute_one_frame(
             s_al = float(np.nanstd(aligned_data)) if aligned_data is not None else float("nan")
             if math.isfinite(m_al) and math.isfinite(s_al) and (m_al < 50.0) and (s_al < 20.0):
                 _alignment_emit_log(
-                    log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami"
+                    log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skusam s uvolnenymi parametrami"
                 )
                 aligned_data = None
                 continue
             if float(np.nansum(np.abs(aligned_data))) < 1.0:
                 _alignment_emit_log(
-                    log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami"
+                    log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skusam s uvolnenymi parametrami"
                 )
                 aligned_data = None
                 continue
@@ -591,7 +591,7 @@ def _alignment_compute_one_frame(
         except Exception:  # noqa: BLE001
             aligned_data = None
             _alignment_emit_log(
-                log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skúšam s uvoľnenými parametrami"
+                log_sink, f"WARNING: {fp.name} attempt {i_att} zlyhalo, skusam s uvolnenymi parametrami"
             )
             continue
 
@@ -702,7 +702,7 @@ def _alignment_compute_one_frame(
         if math.isfinite(m_id) and math.isfinite(s_id) and (m_id < 50.0) and (s_id < 20.0):
             _alignment_emit_log(
                 log_sink,
-                f"ERROR: alignment zlyhal pre {fp.name}, identity nepoužitá (black frame guard), preskakujem.",
+                f"ERROR: alignment zlyhal pre {fp.name}, identity nepouzita (black frame guard), preskakujem.",
             )
             return {
                 "kind": "failed_skip",
@@ -725,7 +725,7 @@ def _alignment_compute_one_frame(
         hdr["VY_ALGN"] = (False, "Not aligned to reference (identity fallback)")
         hdr["VY_REF"] = (ref_fp_name[:60], "Reference frame for alignment")
         hdr["VYALGM"] = (aligned_method[:30], "Alignment method (astroalign or WCS reprojection)")
-        _alignment_emit_log(log_sink, f"ERROR: alignment zlyhal pre {fp.name}, použitá identity")
+        _alignment_emit_log(log_sink, f"ERROR: alignment zlyhal pre {fp.name}, pouzita identity")
         return {
             "kind": "identity",
             "fp": str(fp.resolve()),

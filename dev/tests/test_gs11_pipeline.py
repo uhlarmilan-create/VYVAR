@@ -1,4 +1,4 @@
-"""GS11 Step B — pipeline integration tests (comp filter + target correction)."""
+"""GS11 Step B - pipeline integration tests (comp filter + target correction)."""
 
 from __future__ import annotations
 

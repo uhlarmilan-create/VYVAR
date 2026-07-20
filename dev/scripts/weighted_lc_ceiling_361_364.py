@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Weighted LC ceiling test — drafts 361-364 (read-only, standalone).
+"""Weighted LC ceiling test - drafts 361-364 (read-only, standalone).
 
 Measures upper bound on w*PSF + (1-w)*aperture light-curve RMS vs aperture-alone
 using relaxed PSF quality (finite positive flux). Does not modify production config
@@ -555,7 +555,7 @@ def run_draft(draft_id: int, *, cfg: AppConfig, db: VyvarDatabase) -> dict[str, 
 
 def _format_report(results: list[dict[str, Any]], *, psf_flags: dict[str, bool]) -> str:
     lines = [
-        "WEIGHTED LC CEILING — drafts 361-364",
+        "WEIGHTED LC CEILING - drafts 361-364",
         f"Generated: {datetime.now(timezone.utc).isoformat(timespec='seconds')}",
         "Standalone read-only; relaxed PSF quality (finite flux) = upper bound.",
         f"Config PSF flags: {psf_flags}",

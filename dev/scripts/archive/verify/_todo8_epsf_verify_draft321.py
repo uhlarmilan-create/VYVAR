@@ -1,4 +1,4 @@
-"""TODO-8 ePSF full verify on draft_000321 — Run1 PSF off, Run2 PSF on."""
+"""TODO-8 ePSF full verify on draft_000321 - Run1 PSF off, Run2 PSF on."""
 from __future__ import annotations
 
 import json
@@ -56,7 +56,7 @@ def _summary_metrics(phot: Path) -> dict[str, float | int | None]:
 def _epsf_log_stats(log: str, bo_cid: str | None) -> dict[str, str | int]:
     stats: dict[str, str | int] = {}
     for pat, key in (
-        (r"\[ePSF\] After isolation filter \(3×FWHM=[\d.]+px\): (\d+) PSF stars", "epsf_n_stars"),
+        (r"\[ePSF\] After isolation filter \(3xFWHM=[\d.]+px\): (\d+) PSF stars", "epsf_n_stars"),
         (r"\[ePSF\] Model built:", "epsf_built"),
         (r"PSF ePSF: extract_stars retained (\d+)", "extract_stars"),
     ):

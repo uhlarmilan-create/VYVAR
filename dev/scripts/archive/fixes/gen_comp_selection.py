@@ -58,7 +58,7 @@ LOGGER = logging.getLogger(__name__)
 def _angular_distance_deg_vectorized(
     ra_t: float, dec_t: float, ra_arr: np.ndarray, dec_arr: np.ndarray
 ) -> np.ndarray:
-    """Haversine distance (deg); invalid coords → 999.0 (PERF-9)."""
+    """Haversine distance (deg); invalid coords -> 999.0 (PERF-9)."""
     ra2 = np.asarray(ra_arr, dtype=np.float64)
     de2 = np.asarray(dec_arr, dtype=np.float64)
     ra1 = float(ra_t)
@@ -263,7 +263,7 @@ parts.append(
 parts.append(extract(8254, 8406))  # Phase 1 identical first; we'll patch after gen
 parts.append(
     "\n    logging.info(\n"
-    '        "[PERF-4B] _accumulate_per_frame_comp_metrics: %d frames × %d candidates vectorized",\n'
+    '        "[PERF-4B] _accumulate_per_frame_comp_metrics: %d frames x %d candidates vectorized",\n'
     "        n_frames_loaded,\n"
     "        len(cand_ids),\n"
     "    )\n"

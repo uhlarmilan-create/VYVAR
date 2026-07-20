@@ -52,7 +52,7 @@ def _adaptive_mag_filter(
     max_mag_diff: float,
     mag_diff_step: float = 0.25,
 ) -> tuple[pd.DataFrame, float]:
-    """Postupne uvoľňuje Δmag limit kým nie je dostatok kandidátov."""
+    """Postupne uvolnuje Deltamag limit kym nie je dostatok kandidatov."""
     if all_candidates is None or getattr(all_candidates, "empty", True):
         return pd.DataFrame(), float(mag_diff_start)
     target = float(target_mag)

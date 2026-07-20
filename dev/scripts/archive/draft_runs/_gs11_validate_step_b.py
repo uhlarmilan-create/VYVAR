@@ -97,8 +97,8 @@ def main() -> int:
     )
     print(f"phase0+1 elapsed={time.time() - t1:.1f}s")
 
-    gs11_rej = [ln for ln in buf if "GS11 dilution filter vylúčil" in ln]
-    n_rej_comps = sum(int(m.group(1)) for ln in gs11_rej for m in [re.search(r"vylúčil (\d+)", ln)] if m)
+    gs11_rej = [ln for ln in buf if "GS11 dilution filter vylucil" in ln]
+    n_rej_comps = sum(int(m.group(1)) for ln in gs11_rej for m in [re.search(r"vylucil (\d+)", ln)] if m)
     print(f"GS11 comp reject log events: {len(gs11_rej)} (sum comps={n_rej_comps})")
 
     comp = PHOT / "comparison_stars_per_target.csv"

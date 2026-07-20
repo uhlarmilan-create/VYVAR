@@ -18,7 +18,7 @@ from vyvar_blind_solver import find_blind_hint
 def _write_synthetic_index(path: Path, *, n_votes: int = 20) -> tuple[float, float]:
     """Minimal 3D index with clustered metadata at a known sky position."""
     truth_ra, truth_dec = 35.03, 57.14
-    # Hash aligned to _synthetic_dao_stars triangle: r1≈0.530, r2≈0.729, log_L3_norm≈0.433
+    # Hash aligned to _synthetic_dao_stars triangle: r1~0.530, r2~0.729, log_L3_norm~0.433
     hashes = np.tile([0.530, 0.729, 0.433], (n_votes, 1)).astype(np.float32)
     meta = np.tile([truth_ra, truth_dec], (n_votes, 1)).astype(np.float32)
     tree = KDTree(hashes)
@@ -38,7 +38,7 @@ def _write_synthetic_index(path: Path, *, n_votes: int = 20) -> tuple[float, flo
 
 def _synthetic_dao_stars() -> pd.DataFrame:
     """Three stars forming triangle with L3 in index range (plate scale 1.3 arcsec/px)."""
-    # sides 30, 40, 50 px → L3=50 px → 65 arcsec → log10(65)≈1.81 → norm 0.405 in [1,3]
+    # sides 30, 40, 50 px -> L3=50 px -> 65 arcsec -> log10(65)~1.81 -> norm 0.405 in [1,3]
     return pd.DataFrame(
         {
             "x": [500.0, 530.0, 540.0],

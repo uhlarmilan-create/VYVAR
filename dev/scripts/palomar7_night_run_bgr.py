@@ -76,7 +76,7 @@ def main() -> int:
     import pilot_palomar7_phases_ac as pal  # noqa: E402
 
     if not FIELD_DB.is_file():
-        print(f"Missing field DB: {FIELD_DB} — run palomar7_build_field_db.py first")
+        print(f"Missing field DB: {FIELD_DB} - run palomar7_build_field_db.py first")
         return 1
 
     n_linked = _link_bgr_source()

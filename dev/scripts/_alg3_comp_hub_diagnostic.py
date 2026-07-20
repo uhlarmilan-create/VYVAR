@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ALG3_COMP hub diagnostic — draft_342 (read-only)."""
+"""ALG3_COMP hub diagnostic - draft_342 (read-only)."""
 from __future__ import annotations
 
 from collections import defaultdict
@@ -241,16 +241,16 @@ def main() -> None:
             slope_raw = _slope_mmag_hr(t, mag)
             slope_sm = _slope_mmag_hr(t, sm5[: len(mag)])
             print(
-                f"Worst TRENDING_COMP: `{cid}` — slope_raw={st['slope']:.3f} mmag/hr "
+                f"Worst TRENDING_COMP: `{cid}` - slope_raw={st['slope']:.3f} mmag/hr "
                 f"(recomputed {slope_raw:.3f}), lc_rms={st['lc_rms']:.4f} mag, "
-                f"p2p scatter≈{p2p:.4f} mag, slope after w=5 median smooth≈{slope_sm:.3f} mmag/hr."
+                f"p2p scatter~{p2p:.4f} mag, slope after w=5 median smooth~{slope_sm:.3f} mmag/hr."
             )
             print()
             print(
-                "ALG-3 (`temporal_bin_comp_lc`) applies rolling **median** (auto window 3–11). "
+                "ALG-3 (`temporal_bin_comp_lc`) applies rolling **median** (auto window 3-11). "
                 "That attenuates frame-to-frame shot noise but **does not remove** a night-long ramp: "
                 f"median-smoothed slope ({slope_sm:.2f} mmag/hr) stays same order as raw ({slope_raw:.2f}). "
-                "**Keeps underlying trend intact: YES** — edges of rolling median retain endpoints; "
+                "**Keeps underlying trend intact: YES** - edges of rolling median retain endpoints; "
                 "center follows local level so systematic drift propagates into ensemble via PyTICS-weighted ZP."
             )
 
@@ -259,7 +259,7 @@ def main() -> None:
         "The +2 to +4.5 mmag/hr ROT trends with near-zero target `airmass_detrend_mmag` are best explained by "
         "**shared comparison stars whose own `mag_calib` curves drift in the same direction**. "
         "Several hub comps (e.g. `1499195550562121728`, `1497573977069342720`, `1498634043717293056`) "
-        "appear in 4–6 of the 25 ALG3_COMP targets; sign-correlation tables show most linked targets share "
+        "appear in 4-6 of the 25 ALG3_COMP targets; sign-correlation tables show most linked targets share "
         "the comp slope sign. ALG-3 temporal binning smooths noise but preserves slow comp trends; "
         "ensemble normalization then imprints that drift on targets. Targets with large "
         "`airmass_detrend_mmag` likely share comps that still carry residual airmass structure in "

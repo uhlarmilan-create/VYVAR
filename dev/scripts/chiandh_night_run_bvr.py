@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""h & χ Persei B/V/Rc native night_run — science-grade CT validation (pre-calibrated)."""
+"""h & chi Persei B/V/Rc native night_run - science-grade CT validation (pre-calibrated)."""
 from __future__ import annotations
 
 import json
@@ -46,7 +46,7 @@ def _git_rev_parse_head() -> str:
 
 
 def _patch_field_center_resolve() -> None:
-    """FITS have no RA/DEC — force Double Cluster center for preprocess/platesolve."""
+    """FITS have no RA/DEC - force Double Cluster center for preprocess/platesolve."""
     import pipeline as _pipeline  # noqa: E402
 
     _orig = _pipeline.resolve_preprocess_target_coordinates

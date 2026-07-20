@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CLI wrapper pre ``masterstar_wcs_dao_diagnostic.run_masterstar_wcs_dao_diagnostic``.
 
-Použitie:
+Pouzitie:
   python scripts/diagnose_masterstar_wcs_dao.py --archive "C:/.../Drafts/draft_000029"
   python scripts/diagnose_masterstar_wcs_dao.py --fits .../MASTERSTAR.fits --csv .../masterstars_full_match.csv
 """
@@ -12,7 +12,7 @@ import argparse
 import sys
 from pathlib import Path
 
-# Spustenie z ľubovoľného CWD: pridaj koreň projektu
+# Spustenie z lubovolneho CWD: pridaj koren projektu
 _ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _bootstrap  # noqa: E402,F401  (repo layout: src_py + dev on sys.path)
@@ -27,12 +27,12 @@ from masterstar_wcs_dao_diagnostic import (  # noqa: E402
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="DAO vs Gaia→pixel reziduály pre MASTERSTAR.")
-    parser.add_argument("--archive", type=str, default="", help="Koreň draftu (platesolve/…).")
+    parser = argparse.ArgumentParser(description="DAO vs Gaia->pixel rezidualy pre MASTERSTAR.")
+    parser.add_argument("--archive", type=str, default="", help="Koren draftu (platesolve/...).")
     parser.add_argument("--fits", type=str, default="", help="Cesta k MASTERSTAR.fits.")
     parser.add_argument("--csv", type=str, default="", help="Cesta k masterstars CSV.")
-    parser.add_argument("--cone", type=str, default="", help="Voliteľne field_catalog_cone.csv.")
-    parser.add_argument("--worst", type=int, default=12, help="Koľko najhorších riadkov (0 = vypnúť).")
+    parser.add_argument("--cone", type=str, default="", help="Volitelne field_catalog_cone.csv.")
+    parser.add_argument("--worst", type=int, default=12, help="Kolko najhorsich riadkov (0 = vypnut).")
     args = parser.parse_args()
 
     fits_path: Path | None = None

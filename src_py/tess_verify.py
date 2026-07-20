@@ -24,19 +24,19 @@ logger = logging.getLogger(__name__)
 
 _MPL_LOCK = threading.Lock()
 
-# Lomb-Scargle multi-band (dni); od ~28 min do 100 dní
+# Lomb-Scargle multi-band (dni); od ~28 min do 100 dni
 _LIST_SECTION: list[float] = [0.02, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 100.0]
 _PERIOD_MIN_SEARCH_D = float(_LIST_SECTION[0])
 _PERIOD_MAX_SEARCH_D = float(_LIST_SECTION[-1])
 
 
 def _get_optimal_window(period_days: float | None) -> int:
-    """``window_length`` pre ``flatten()`` alebo ``-1`` = preskočiť flatten (dlhé periódy).
+    """``window_length`` pre ``flatten()`` alebo ``-1`` = preskocit flatten (dlhe periody).
 
-    - P < 0.1 d (~2.4 h): 51 (ultrakrátké periódy).
-    - 0.1 d ≤ P ≤ 15 d: 201.
-    - P > 15 d (Mira atď.): ``-1`` — len ``normalize()``, zachovať pomalý trend.
-    - Neznáme / neplatné P: predvolene 201.
+    - P < 0.1 d (~2.4 h): 51 (ultrakratke periody).
+    - 0.1 d <= P <= 15 d: 201.
+    - P > 15 d (Mira atd.): ``-1`` - len ``normalize()``, zachovat pomaly trend.
+    - Nezname / neplatne P: predvolene 201.
     """
     if period_days is None:
         return 201
@@ -55,9 +55,9 @@ def _get_optimal_window(period_days: float | None) -> int:
 
 def _dynamic_window_length(lc: Any, min_window: int = 301) -> int:
     """
-    Dynamický window_length pre flatten — vždy 10% dĺžky LC, minimum 301.
-    Kratší okno by mohol odstrániť signal pri krátkych periódach (P < 0.5 d).
-    Výsledok musí byť odd (lightkurve požiadavka).
+    Dynamicky window_length pre flatten - vzdy 10% dlzky LC, minimum 301.
+    Kratsi okno by mohol odstranit signal pri kratkych periodach (P < 0.5 d).
+    Vysledok musi byt odd (lightkurve poziadavka).
     """
     try:
         n = int(len(lc))
@@ -76,12 +76,12 @@ def _prepare_lc_for_period(
     break_tolerance: int = 50,
 ) -> Any:
     """
-    Pripraví LC pre period search:
-    - normalize na medián=1 (vždy)
+    Pripravi LC pre period search:
+    - normalize na median=1 (vzdy)
     - flatten so Savitzky-Golay (len ak use_flatten=True)
 
-    window_length=None → dynamický výpočet (10% dĺžky LC, min 301).
-    break_tolerance=50 odporúčaný pre TESS (default lightkurve=5 overfituje).
+    window_length=None -> dynamicky vypocet (10% dlzky LC, min 301).
+    break_tolerance=50 odporucany pre TESS (default lightkurve=5 overfituje).
     """
     try:
         lc = lc.normalize()
@@ -123,7 +123,7 @@ def _lomb_scargle_best_period(
     window_length: int = 101,
     use_flatten: bool = True,
 ) -> float | None:
-    """Lomb-Scargle cez ``_LIST_SECTION``; voliteľný ``flatten`` pred periodogramom."""
+    """Lomb-Scargle cez ``_LIST_SECTION``; volitelny ``flatten`` pred periodogramom."""
     work = _prepare_lc_for_period(lc, window_length=None, use_flatten=use_flatten)
     best_pg = None
     best_power = -1.0
@@ -157,7 +157,7 @@ def _lomb_scargle_best_period(
 
 
 def _lc_to_ty_arrays(lc: Any) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
-    """Čas (d), flux, voliteľné chyby pre ``astropy.timeseries.LombScargle``."""
+    """Cas (d), flux, volitelne chyby pre ``astropy.timeseries.LombScargle``."""
     t = np.asarray(lc.time.value if hasattr(lc.time, "value") else lc.time, dtype=float)
     y = np.asarray(lc.flux.value if hasattr(lc.flux, "value") else lc.flux, dtype=float)
     dy: np.ndarray | None = None
@@ -186,7 +186,7 @@ def _iterative_sigma_clip_lc(
     min_points: int = 10,
     min_frac_keep: float = 0.25,
 ) -> Any:
-    """Iteratívne 3σ orezanie fluxu (Peranso-style) na odstránenie CR / dump artefaktov."""
+    """Iterativne 3sigma orezanie fluxu (Peranso-style) na odstranenie CR / dump artefaktov."""
     work = lc
     n0 = int(len(lc)) if hasattr(lc, "__len__") else 0
     for _ in range(int(max_iter)):
@@ -216,8 +216,8 @@ def _find_period_anova(
     use_flatten: bool = True,
 ) -> float | None:
     """
-    „ANOVA“ stopa: Lomb–Scargle v ``astropy.timeseries.LombScargle`` po rovnakých pásoch ako L-S
-    v lightkurve, nezávislé na ``to_periodogram`` — krížová validácia s PDM/BLS.
+    'ANOVA' stopa: Lomb-Scargle v ``astropy.timeseries.LombScargle`` po rovnakych pasoch ako L-S
+    v lightkurve, nezavisle na ``to_periodogram`` - krizova validacia s PDM/BLS.
     """
     work = _prepare_lc_for_period(lc, window_length=None, use_flatten=use_flatten)
     t, y, dy = _lc_to_ty_arrays(work)
@@ -251,7 +251,7 @@ def _find_period_anova(
 
 
 def _lomb_standard_power_at_frequency(lc: Any, frequency_per_day: float) -> float | None:
-    """Výkon Lomb–Scargle (standard) pri danej frekvencii [1/deň]."""
+    """Vykon Lomb-Scargle (standard) pri danej frekvencii [1/den]."""
     t, y, dy = _lc_to_ty_arrays(lc)
     if t.size < 10 or not (np.isfinite(frequency_per_day) and frequency_per_day > 0):
         return None
@@ -270,8 +270,8 @@ def _harmonic_refine_period(
     power_ratio_threshold: float = 1.35,
 ) -> tuple[float | None, str]:
     """
-    Porovná výkon pri P, 0.5P a 2P; ak je 2P výrazne silnejšie (typické EB s aliasom P/2), preferuj 2P.
-    Ak dominuje 0.5P a je v rozsahu hľadania, preferuj P/2.
+    Porovna vykon pri P, 0.5P a 2P; ak je 2P vyrazne silnejsie (typicke EB s aliasom P/2), preferuj 2P.
+    Ak dominuje 0.5P a je v rozsahu hladania, preferuj P/2.
     """
     if p_candidate is None:
         return None, ""
@@ -356,15 +356,15 @@ class TessResult:
 
     def summary_text(self) -> str:
         if self.error_global:
-            return f"TESS: chyba — {self.error_global}"
+            return f"TESS: chyba - {self.error_global}"
         if not self.has_data():
-            return "TESS: žiadne platné sektory"
+            return "TESS: ziadne platne sektory"
         p = self.period_consensus
         pa = self.period_anova_consensus
         p2 = self.period_2p_consensus
-        ps = f"P={p:.6g} d" if p is not None else "P=—"
-        pas = f"P_anova={pa:.6g} d" if pa is not None else "P_anova=—"
-        p2s = f"2P={p2:.6g} d" if p2 is not None else "2P=—"
+        ps = f"P={p:.6g} d" if p is not None else "P=-"
+        pas = f"P_anova={pa:.6g} d" if pa is not None else "P_anova=-"
+        p2s = f"2P={p2:.6g} d" if p2 is not None else "2P=-"
         return (
             f"TESS: {self.total_sectors_ok}/{self.total_sectors_found} sektorov OK | {ps} | {pas} | {p2s} | {self.output_dir}"
         )
@@ -412,10 +412,10 @@ def _find_period(
     ignore_period_hint: bool = False,
     use_flatten_for_ls: bool = True,
 ) -> float | None:
-    """Lomb-Scargle; ``period_hint`` preskočí hľadanie, ak je daný a ``ignore_period_hint`` je False.
+    """Lomb-Scargle; ``period_hint`` preskoci hladanie, ak je dany a ``ignore_period_hint`` je False.
 
-    Ak je ``lc`` už po ``flatten()`` / ``normalize()``, nastav ``use_flatten_for_ls=False``,
-    aby sa nevolal druhý ``flatten`` pred periodogramom.
+    Ak je ``lc`` uz po ``flatten()`` / ``normalize()``, nastav ``use_flatten_for_ls=False``,
+    aby sa nevolal druhy ``flatten`` pred periodogramom.
     """
     if (
         not ignore_period_hint
@@ -442,7 +442,7 @@ def _find_period_pdm(
     n_bins: int = 10,
 ) -> float | None:
     """
-    Phase Dispersion Minimization — vlastná numpy implementácia.
+    Phase Dispersion Minimization - vlastna numpy implementacia.
     lightkurve 2.6.0 nepodporuje method='pdm'.
     """
     try:
@@ -495,9 +495,9 @@ def _find_period_bls(
         work = _prepare_lc_for_period(
             lc, window_length=None, use_flatten=use_flatten
         )
-        # BLS vyžaduje duration < minimum_period
-        # Použiť zlomky min_p, nie absolútne hodnoty
-        min_p = max(float(minimum_period_days), 0.05)  # BLS nestabilné pod 0.05 d
+        # BLS vyzaduje duration < minimum_period
+        # Pouzit zlomky min_p, nie absolutne hodnoty
+        min_p = max(float(minimum_period_days), 0.05)  # BLS nestabilne pod 0.05 d
         durations = [min_p * k for k in (0.05, 0.10, 0.20) if min_p * k < min_p]
         if not durations:
             durations = [min_p * 0.1]
@@ -509,7 +509,7 @@ def _find_period_bls(
             duration=durations,
         )
         p = pg.period_at_max_power
-        # Bezpečné čítanie — astropy 7.x Quantity
+        # Bezpecne citanie - astropy 7.x Quantity
         if hasattr(p, "to_value"):
             return float(p.to_value("d"))
         return float(p.value)
@@ -529,14 +529,14 @@ def _period_consensus(
     short_tol_pdm_bls: float = 0.12,
 ) -> tuple[float | None, str]:
     """
-    Konsenzná perióda (2+ zhody); voliteľná štvrtá stopa ``p_anova`` (astropy Lomb–Scargle).
+    Konsenzna perioda (2+ zhody); volitelna stvrta stopa ``p_anova`` (astropy Lomb-Scargle).
 
-    Pri veľmi krátkych periódách (< short_period_threshold d) sa PDM+BLS zhoda
-    posudzuje miernejším ``short_tol_pdm_bls``.
+    Pri velmi kratkych periodach (< short_period_threshold d) sa PDM+BLS zhoda
+    posudzuje miernejsim ``short_tol_pdm_bls``.
 
-    Priorita (normálne): L-S+PDM > L-S+BLS > PDM+BLS (+ vetvy s anova)
-    Priorita (krátke P): PDM+BLS (miernejší prah) > …
-    Ak žiadna zhoda → L-S alebo ``None`` s method="lomb-scargle".
+    Priorita (normalne): L-S+PDM > L-S+BLS > PDM+BLS (+ vetvy s anova)
+    Priorita (kratke P): PDM+BLS (miernejsi prah) > ...
+    Ak ziadna zhoda -> L-S alebo ``None`` s method="lomb-scargle".
     """
 
     def agree(a: float | None, b: float | None, tol: float) -> bool:
@@ -651,10 +651,10 @@ def _extract_masterstar_cutout(
     size_arcmin: float = 5.0,
 ) -> tuple[np.ndarray, float, float, float, float] | None:
     """
-    Vyreže cutout zo MASTERSTAR FITS okolo (ra0, dec0).
+    Vyreze cutout zo MASTERSTAR FITS okolo (ra0, dec0).
     Vracia (data, left_arcsec, right_arcsec, bottom_arcsec, top_arcsec)
-    kde hodnoty sú ΔRA/ΔDec offsety rohov v arcsekundách od (ra0, dec0).
-    Vracia None ak zlyhá.
+    kde hodnoty su DeltaRA/DeltaDec offsety rohov v arcsekundach od (ra0, dec0).
+    Vracia None ak zlyha.
     """
     try:
         from astropy.io import fits as afits
@@ -669,7 +669,7 @@ def _extract_masterstar_cutout(
                 None,
             )
             if hdu is None:
-                logger.warning("[TESS blend] MASTERSTAR FITS: žiadne obrazové HDU")
+                logger.warning("[TESS blend] MASTERSTAR FITS: ziadne obrazove HDU")
                 return None
             data = hdu.data.astype(float)
             if data.ndim > 2:
@@ -680,7 +680,7 @@ def _extract_masterstar_cutout(
         scales = proj_plane_pixel_scales(wcs)
         ps_arcsec = float(np.mean(scales) * 3600.0)
         if ps_arcsec <= 0 or ps_arcsec > 10.0:
-            logger.warning("[TESS blend] MASTERSTAR pixel scale neplatná: %.2f\"/px", ps_arcsec)
+            logger.warning("[TESS blend] MASTERSTAR pixel scale neplatna: %.2f\"/px", ps_arcsec)
             return None
 
         # Cutout
@@ -689,13 +689,13 @@ def _extract_masterstar_cutout(
         size_px = max(200, size_px)
         cutout = Cutout2D(data, coord, size_px, wcs=wcs, mode="partial", fill_value=np.nan)
 
-        # Extent v arcsekundách od (0,0) = target
+        # Extent v arcsekundach od (0,0) = target
         h, w = cutout.data.shape
         half_w = (w / 2.0) * ps_arcsec
         half_h = (h / 2.0) * ps_arcsec
 
         logger.info(
-            "[TESS blend] MASTERSTAR cutout: %dx%d px, %.2f\"/px, extent ±%.0f\" ±%.0f\"",
+            "[TESS blend] MASTERSTAR cutout: %dx%d px, %.2f\"/px, extent +-%.0f\" +-%.0f\"",
             w,
             h,
             ps_arcsec,
@@ -720,16 +720,16 @@ def _generate_tess_blend_check_png(
     masterstar_fits_path: Path | None = None,
 ) -> Path | None:
     """
-    Generuje blend-check PNG: TESS TPF (vľavo) + Gaia obloha (vpravo).
+    Generuje blend-check PNG: TESS TPF (vlavo) + Gaia obloha (vpravo).
 
-    Ľavý panel : TPF flux mapa + apertúra (červený obdĺžnik) + target (žltý krúžok)
-    Pravý panel : Gaia hviezdy v okolí (bodky podľa mag) + TESS apertúra ako overlay
-                  + pixel grid TESS + merítko 1'
+    Lavy panel : TPF flux mapa + apertura (cerveny obdlznik) + target (zlty kruzok)
+    Pravy panel : Gaia hviezdy v okoli (bodky podla mag) + TESS apertura ako overlay
+                  + pixel grid TESS + meritko 1'
 
     plate_scale_arcsec_px: z cfg.phase01_plate_scale_arcsec_per_px;
-                           None = neznáma (zobrazí sa bez tejto informácie)
-    gaia_db_path          : lokálna SQLite pre susedné hviezdy; None = len target
-    masterstar_fits_path  : voliteľný MASTERSTAR FITS pre pozadie pravého panelu
+                           None = neznama (zobrazi sa bez tejto informacie)
+    gaia_db_path          : lokalna SQLite pre susedne hviezdy; None = len target
+    masterstar_fits_path  : volitelny MASTERSTAR FITS pre pozadie praveho panelu
     """
     try:
         import matplotlib
@@ -758,21 +758,21 @@ def _generate_tess_blend_check_png(
         ra0 = _tpf_coord_deg(getattr(tpf, "ra", float("nan")))
         dec0 = _tpf_coord_deg(getattr(tpf, "dec", float("nan")))
 
-        # ra_target/dec_target = presná poloha targetu (brightest pixel) cez TPF WCS
+        # ra_target/dec_target = presna poloha targetu (brightest pixel) cez TPF WCS
         try:
             _target_coord = tpf.wcs.pixel_to_world(center_col, center_row)
             ra_target = float(_target_coord.ra.deg)
             dec_target = float(_target_coord.dec.deg)
             logger.info("[TESS blend] target WCS: ra=%.6f, dec=%.6f", ra_target, dec_target)
         except Exception as _exc:  # noqa: BLE001
-            logger.warning("[TESS blend] pixel_to_world zlyhal: %s — fallback na ra0/dec0", _exc)
+            logger.warning("[TESS blend] pixel_to_world zlyhal: %s - fallback na ra0/dec0", _exc)
             ra_target = ra0
             dec_target = dec0
 
         gaia_stars: list[dict[str, Any]] = []
         if gaia_db_path is None or not gaia_db_path.is_file():
             logger.warning(
-                "[TESS blend] gaia_db_path nie je nastavená alebo súbor neexistuje: %s",
+                "[TESS blend] gaia_db_path nie je nastavena alebo subor neexistuje: %s",
                 gaia_db_path,
             )
         else:
@@ -809,7 +809,7 @@ def _generate_tess_blend_check_png(
                     finally:
                         con.close()
                     logger.info(
-                        "[TESS blend] Gaia query: %d hviezd načítaných (ra0=%.4f, dec0=%.4f, fov_deg=%.4f)",
+                        "[TESS blend] Gaia query: %d hviezd nacitanych (ra0=%.4f, dec0=%.4f, fov_deg=%.4f)",
                         len(gaia_stars),
                         ra0,
                         dec0,
@@ -817,14 +817,14 @@ def _generate_tess_blend_check_png(
                     )
                     if len(gaia_stars) == 0:
                         logger.warning(
-                            "[TESS blend] Gaia query vrátila 0 hviezd (ra0=%.4f, dec0=%.4f, fov_deg=%.4f)",
+                            "[TESS blend] Gaia query vratila 0 hviezd (ra0=%.4f, dec0=%.4f, fov_deg=%.4f)",
                             ra0,
                             dec0,
                             fov_deg,
                         )
                 else:
                     logger.warning(
-                        "[TESS blend] Gaia query preskočená — neplatné ra0/dec0 z TPF (ra0=%s, dec0=%s)",
+                        "[TESS blend] Gaia query preskocena - neplatne ra0/dec0 z TPF (ra0=%s, dec0=%s)",
                         ra0,
                         dec0,
                     )
@@ -834,20 +834,20 @@ def _generate_tess_blend_check_png(
         if plate_scale_arcsec_px is not None and float(plate_scale_arcsec_px) > 0:
             scope_label = f"Teleskop: {float(plate_scale_arcsec_px):.2f}\"/px"
         else:
-            scope_label = "Teleskop: plate scale neznáma"
+            scope_label = "Teleskop: plate scale neznama"
 
         with _MPL_LOCK:
             fig, (ax_tpf, ax_sky) = plt.subplots(1, 2, figsize=(22, 10), facecolor="#0e0e0e")
             fig.suptitle(
                 f"{catalog_id}  |  Sektor {sector}  |  Blend check\n"
-                f"TESS: {TESS_ARCSEC_PX:.0f}\"/px  ·  {scope_label}",
+                f"TESS: {TESS_ARCSEC_PX:.0f}\"/px  .  {scope_label}",
                 color="white",
                 fontsize=11,
             )
 
             ax_tpf.set_facecolor("#0e0e0e")
             im = ax_tpf.imshow(flux_med, origin="lower", cmap="YlOrRd", aspect="equal")
-            plt.colorbar(im, ax=ax_tpf, label="Flux [e⁻/s]", fraction=0.046, pad=0.04)
+            plt.colorbar(im, ax=ax_tpf, label="Flux [e-/s]", fraction=0.046, pad=0.04)
 
             rows_apt, cols_apt = np.where(apt_mask)
             if len(rows_apt) > 0:
@@ -861,7 +861,7 @@ def _generate_tess_blend_check_png(
                         linewidth=2,
                         edgecolor="red",
                         facecolor="none",
-                        label="TESS apertúra",
+                        label="TESS apertura",
                     )
                 )
 
@@ -876,7 +876,7 @@ def _generate_tess_blend_check_png(
                 label="Target",
             )
             ax_tpf.set_title("TESS TPF", color="white", fontsize=10)
-            ax_tpf.set_xlabel("Pixel (stĺpec)", color="white")
+            ax_tpf.set_xlabel("Pixel (stlpec)", color="white")
             ax_tpf.set_ylabel("Pixel (riadok)", color="white")
             ax_tpf.tick_params(colors="white")
             for sp in ax_tpf.spines.values():
@@ -904,7 +904,7 @@ def _generate_tess_blend_check_png(
                     )
                     _ms_shown = True
             if not _ms_shown:
-                logger.info("[TESS blend] MASTERSTAR pozadie nedostupné — čierne pozadie")
+                logger.info("[TESS blend] MASTERSTAR pozadie nedostupne - cierne pozadie")
             ax_sky.set_aspect("equal")
             half_fov = (n_cols * TESS_ARCSEC_PX) * 1.2
             ax_sky.set_xlim(-half_fov, half_fov)
@@ -916,8 +916,8 @@ def _generate_tess_blend_check_png(
                 apt_h = (r_max - r_min + 1) * TESS_ARCSEC_PX
                 apt_center_col = (c_min + c_max) / 2.0
                 apt_center_row = (r_min + r_max) / 2.0
-                # Offset apertúry od target pixelu (nie od stredu TPF)
-                # Po invert_xaxis: RA rastie doprava → znamienko kladné
+                # Offset apertury od target pixelu (nie od stredu TPF)
+                # Po invert_xaxis: RA rastie doprava -> znamienko kladne
                 apt_x = (apt_center_col - center_col) * TESS_ARCSEC_PX - apt_w / 2.0
                 apt_y = (apt_center_row - center_row) * TESS_ARCSEC_PX - apt_h / 2.0
                 ax_sky.add_patch(
@@ -939,7 +939,7 @@ def _generate_tess_blend_check_png(
                         linewidth=2,
                         edgecolor="red",
                         facecolor="none",
-                        label="TESS apertúra",
+                        label="TESS apertura",
                     )
                 )
 
@@ -989,9 +989,9 @@ def _generate_tess_blend_check_png(
                 fontsize=8,
             )
 
-            ax_sky.set_title("Gaia obloha + TESS apertúra", color="white", fontsize=10)
-            ax_sky.set_xlabel("ΔRA [arcsec]", color="white")
-            ax_sky.set_ylabel("ΔDec [arcsec]", color="white")
+            ax_sky.set_title("Gaia obloha + TESS apertura", color="white", fontsize=10)
+            ax_sky.set_xlabel("DeltaRA [arcsec]", color="white")
+            ax_sky.set_ylabel("DeltaDec [arcsec]", color="white")
             ax_sky.tick_params(colors="white")
             for sp in ax_sky.spines.values():
                 sp.set_edgecolor("gray")
@@ -1001,7 +1001,7 @@ def _generate_tess_blend_check_png(
             out_path = output_dir / f"sector_{sector}_blend_check.png"
             fig.savefig(str(out_path), dpi=130, bbox_inches="tight", facecolor="#0e0e0e")
             plt.close(fig)
-        logger.info("[TESS blend] %s sektor %s → %s", catalog_id, sector, out_path.name)
+        logger.info("[TESS blend] %s sektor %s -> %s", catalog_id, sector, out_path.name)
         return out_path
 
     except Exception as exc:  # noqa: BLE001
@@ -1059,7 +1059,7 @@ def _process_one_sector(
         n_bg = float(np.sum(bg_mask))
         n_t = float(np.sum(target_mask))
         if n_bg <= 0 or n_t <= 0:
-            err_out.error = "Neplatná aperture maska (n_bg alebo n_t)."
+            err_out.error = "Neplatna aperture maska (n_bg alebo n_t)."
             return err_out
         corr_lc = lc_t - ((lc_b / n_bg) * n_t)
         corr_lc = corr_lc.remove_nans()
@@ -1068,7 +1068,7 @@ def _process_one_sector(
         bjd_off = _tpf_bjd_offset(tpf)
         corr_lc.time = corr_lc.time + bjd_off
 
-        # --- Pass 1: predbežná perióda na normalizovaných dátach bez flatten (ultrakrátké P) ---
+        # --- Pass 1: predbezna perioda na normalizovanych datach bez flatten (ultrakratke P) ---
         try:
             lc_norm = corr_lc.normalize()
         except Exception as exc:  # noqa: BLE001
@@ -1085,7 +1085,7 @@ def _process_one_sector(
 
         wl = _get_optimal_window(p_win)
         if int(wl) < 0:
-            # Mira / P > 15 d: žiadny flatten — zachovať pomalý trend
+            # Mira / P > 15 d: ziadny flatten - zachovat pomaly trend
             try:
                 lc_search = corr_lc.normalize()
             except Exception as exc:  # noqa: BLE001
@@ -1125,7 +1125,7 @@ def _process_one_sector(
             str(wl),
         )
 
-        # Pass 2: LS / PDM / BLS / ANOVA(astropy LS) na lc_search (normalize + dynamický flatten v _prepare_lc_for_period)
+        # Pass 2: LS / PDM / BLS / ANOVA(astropy LS) na lc_search (normalize + dynamicky flatten v _prepare_lc_for_period)
         try:
             with ThreadPoolExecutor(max_workers=4) as ex:
                 f_ls = ex.submit(
@@ -1183,7 +1183,7 @@ def _process_one_sector(
             err_out.harmonic_note = None
 
         logger.info(
-            "[TESS] Sector %d periods: LS=%.4f PDM=%.4f BLS=%.4f ANOVA=%.4f → consensus=%.4f (%s)",
+            "[TESS] Sector %d periods: LS=%.4f PDM=%.4f BLS=%.4f ANOVA=%.4f -> consensus=%.4f (%s)",
             int(sector),
             float(period_ls) if period_ls is not None and np.isfinite(period_ls) else -1.0,
             float(period_pdm) if period_pdm is not None and np.isfinite(period_pdm) else -1.0,
@@ -1205,7 +1205,7 @@ def _process_one_sector(
             else None
         )
 
-        # Výstupná krivka = rovnaká ako pri pass-2 vyhľadávaní (adaptívny flatten alebo len normalize)
+        # Vystupna krivka = rovnaka ako pri pass-2 vyhladavani (adaptivny flatten alebo len normalize)
         lc_out = lc_search
 
         t_arr = np.asarray(lc_out.time.value if hasattr(lc_out.time, "value") else lc_out.time, dtype=float)
@@ -1232,7 +1232,7 @@ def _process_one_sector(
             if _gp:
                 _gaia_db = Path(_gp)
         _ms_fits: Path | None = None
-        # Štruktúra: output_dir = .../NoFilter_60_2/photometry
+        # Struktura: output_dir = .../NoFilter_60_2/photometry
         # MASTERSTAR.fits je v .../NoFilter_60_2/
         _ms_candidates = (
             list(output_dir.glob("MASTERSTAR*.fits"))
@@ -1244,7 +1244,7 @@ def _process_one_sector(
             _ms_fits = _ms_candidates[0]
             logger.info("[TESS blend] MASTERSTAR FITS: %s", _ms_fits)
         else:
-            logger.warning("[TESS blend] MASTERSTAR FITS nenájdený v okolí %s", output_dir)
+            logger.warning("[TESS blend] MASTERSTAR FITS nenajdeny v okoli %s", output_dir)
 
         _plate_scale_ref: float | None = None
         # Authoritative: solved WCS/CD from MASTERSTAR via the shared resolver
@@ -1261,8 +1261,8 @@ def _process_one_sector(
         if _plate_scale_ref is None and cfg is not None:
             _psv = float(getattr(cfg, "phase01_plate_scale_arcsec_per_px", 0) or 0)
             _plate_scale_ref = _psv if _psv > 0 else None
-        # plate_scale pre label v nadpise — ak None, zobrazí sa "neznáma"
-        # extent výpočet používa WCS priamo v _extract_masterstar_cutout
+        # plate_scale pre label v nadpise - ak None, zobrazi sa "neznama"
+        # extent vypocet pouziva WCS priamo v _extract_masterstar_cutout
 
         blend_path = _generate_tess_blend_check_png(
             tpf=tpf,
@@ -1308,17 +1308,17 @@ def _assess_period_reliability(
     agree_tolerance: float = 0.20,
 ) -> tuple[float | None, str, str]:
     """
-    Vypočíta robustný globálny period_consensus a reliability flag.
+    Vypocita robustny globalny period_consensus a reliability flag.
 
     Vracia: (p_con, reliability, reason)
 
-    Pravidlá:
-    - noise:     žiadne consensus_periods, alebo max SNR < snr_threshold
-    - uncertain: len 1 sektor, alebo sektory sa nezhodujú (>20% rozdiel)
-    - reliable:  ≥2 sektory sa zhodujú v tolerancii 20%
+    Pravidla:
+    - noise:     ziadne consensus_periods, alebo max SNR < snr_threshold
+    - uncertain: len 1 sektor, alebo sektory sa nezhoduju (>20% rozdiel)
+    - reliable:  >=2 sektory sa zhoduju v tolerancii 20%
     """
     if not consensus_periods:
-        return None, "noise", "Žiadny sektor nedal konsenzus periódy"
+        return None, "noise", "Ziadny sektor nedal konsenzus periody"
 
     snr_vals = [
         float(s.snr) for s in sectors if s.snr is not None and np.isfinite(float(s.snr))
@@ -1353,7 +1353,7 @@ def _assess_period_reliability(
     return (
         p_con,
         "uncertain",
-        f"Sektory sa nezhodujú: {[f'{v:.4f}' for v in p_sorted]} "
+        f"Sektory sa nezhoduju: {[f'{v:.4f}' for v in p_sorted]} "
         f"(max rozdiel > {agree_tolerance * 100:.0f}%)",
     )
 
@@ -1376,7 +1376,7 @@ def run_tess_analysis(
     out_base.mkdir(parents=True, exist_ok=True)
 
     if not bool(getattr(_cfg, "tess_enabled", False)):
-        logging.info("[TESS] preskočené — tess_enabled=False (config.AppConfig / config.json)")
+        logging.info("[TESS] preskocene - tess_enabled=False (config.AppConfig / config.json)")
         return TessResult(
             catalog_id=cid,
             ra=float(ra),
@@ -1385,7 +1385,7 @@ def run_tess_analysis(
             output_dir=str(out_base),
             total_sectors_found=0,
             total_sectors_ok=0,
-            error_global="TESS je v konfigurácii vypnutý (tess_enabled=False). Nastav v config.json: \"tess_enabled\": true",
+            error_global="TESS je v konfiguracii vypnuty (tess_enabled=False). Nastav v config.json: \"tess_enabled\": true",
         )
 
     import lightkurve as lk
@@ -1410,7 +1410,7 @@ def run_tess_analysis(
             dec=float(dec),
             mag=mag,
             output_dir=str(out_base),
-            error_global=f"Chyba vyhľadania TESS: {exc}",
+            error_global=f"Chyba vyhladania TESS: {exc}",
         )
 
     n_found = int(len(search_results))
@@ -1423,10 +1423,10 @@ def run_tess_analysis(
             output_dir=str(out_base),
             total_sectors_found=0,
             total_sectors_ok=0,
-            error_global="Žiadne TESS dáta pre túto pozíciu",
+            error_global="Ziadne TESS data pre tuto poziciu",
         )
 
-    _prog(f"Nájdených {n_found} sektorov, sťahujem...", 0.1)
+    _prog(f"Najdenych {n_found} sektorov, stahujem...", 0.1)
 
     try:
         tpfs = search_results.download_all(cutout_size=int(cutsize), quality_bitmask="hard")
@@ -1439,10 +1439,10 @@ def run_tess_analysis(
             mag=mag,
             output_dir=str(out_base),
             total_sectors_found=n_found,
-            error_global=f"Chyba sťahovania TESS: {exc}",
+            error_global=f"Chyba stahovania TESS: {exc}",
         )
 
-    _prog("Stiahnuté, spracovávam sektory...", 0.3)
+    _prog("Stiahnute, spracovavam sektory...", 0.3)
 
     # Parallelize per-sector processing. Sectors are independent.
     MAX_SECTOR_WORKERS = 4
@@ -1467,7 +1467,7 @@ def run_tess_analysis(
         for future in as_completed(future_to_tpf):
             n_done += 1
             frac = 0.3 + 0.6 * (float(n_done) / float(n_tpfs))
-            _prog(f"Sektor {n_done}/{n_tpfs} hotový", min(0.99, frac))
+            _prog(f"Sektor {n_done}/{n_tpfs} hotovy", min(0.99, frac))
             try:
                 result = future.result()
                 sectors.append(result)

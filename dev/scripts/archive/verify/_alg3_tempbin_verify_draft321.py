@@ -1,4 +1,4 @@
-"""Phase 2A replay on draft_000321 — TODO-ALG-3 temporal binning verify."""
+"""Phase 2A replay on draft_000321 - TODO-ALG-3 temporal binning verify."""
 from __future__ import annotations
 
 import logging

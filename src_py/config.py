@@ -355,10 +355,10 @@ def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
 
 
 def recommended_vyvar_parallel_workers(*, reserve_ram_gb: float = 1.5) -> int:
-    """Jednotný počet workerov pre QC, preprocess, combined, per-frame CSV (základ pred RAM stropom), alignment, calibrate MP.
+    """Jednotny pocet workerov pre QC, preprocess, combined, per-frame CSV (zaklad pred RAM stropom), alignment, calibrate MP.
 
-    Berie minimum z CPU-heuristiky a odhadu podľa voľnej RAM (rovnaký odhad pamäte ako pri per-frame exporte),
-    aby jedna hodnota bola bezpečná v celom workflow.
+    Berie minimum z CPU-heuristiky a odhadu podla volnej RAM (rovnaky odhad pamate ako pri per-frame exporte),
+    aby jedna hodnota bola bezpecna v celom workflow.
     """
     n = os.cpu_count()
     if n is None or n < 1:
@@ -399,15 +399,15 @@ class AppConfig:
     masterflat_validity_days: int = 200
 
     #: Estimated field diameter in degrees for VYVAR Gaia plate solve (used as **minimum** hint only).
-    #: The actual Gaia kužeľ pre celý čip sa odvodzuje z FOCALLEN+PIXSIZE+NAXIS (pozri ``catalog_cone_radius_deg_from_optics``
-    #: v ``utils.py`` a ``solve_wcs_with_local_gaia`` v ``vyvar_platesolver.py``); táto hodnota len zaručí spodnú hranicu.
+    #: The actual Gaia kuzel pre cely cip sa odvodzuje z FOCALLEN+PIXSIZE+NAXIS (pozri ``catalog_cone_radius_deg_from_optics``
+    #: v ``utils.py`` a ``solve_wcs_with_local_gaia`` v ``vyvar_platesolver.py``); tato hodnota len zaruci spodnu hranicu.
     plate_solve_fov_deg: float = 1.0
 
     #: When applying masters from CalibrationLibrary, assume this **sensor** binning in the stored FITS
-    #: (typically ``1`` = full resolution). Lights with ``XBINNING`` 2×2 are matched in RAM (temporary resample).
-    #: JSON ``null``: read ``XBINNING`` from each master FITS (e.g. Bin2 library files with 2×2 lights).
+    #: (typically ``1`` = full resolution). Lights with ``XBINNING`` 2x2 are matched in RAM (temporary resample).
+    #: JSON ``null``: read ``XBINNING`` from each master FITS (e.g. Bin2 library files with 2x2 lights).
     calibration_library_native_binning: int | None = 1
-    #: Max |ΔT| (°C) when matching library dark masters to light ``CCD_TEMP`` (``find_best_calibration_library_path``).
+    #: Max |DeltaT| ( degC) when matching library dark masters to light ``CCD_TEMP`` (``find_best_calibration_library_path``).
     calibration_master_ccd_temp_tolerance_c: float = 0.5
 
     #: CAL-DIAG radiometry gate at calibrate time (VYVAR_CAL_DIAG_SPEC v1.1).
@@ -455,9 +455,9 @@ class AppConfig:
     #: Local-background box size (px) for chroma SNR gate grid; clamp 32..512.
     hrd_color_bg_box_px: int = 96
 
-    #: Fine blind index (Newton / ~1.3″/px rigs); built by ``build_blind_index.py``.
+    #: Fine blind index (Newton / ~1.3 arcsec/px rigs); built by ``build_blind_index.py``.
     blind_index_fine_path: str = ""
-    #: Wide blind index (Carl-Zeiss / ~9.77″/px rigs); built by ``build_blind_index.py``.
+    #: Wide blind index (Carl-Zeiss / ~9.77 arcsec/px rigs); built by ``build_blind_index.py``.
     blind_index_wide_path: str = ""
     #: Deprecated alias of ``blind_index_fine_path`` (``single`` mode and legacy readers).
     blind_index_path: str = ""
@@ -477,7 +477,7 @@ class AppConfig:
     blind_verify_early_accept: int = 30
     #: Minimum matches before early-exit (``max(early_accept, min_matches * 6)`` if unset here).
     blind_verify_early_floor: int = 0
-    #: Early-exit when accepted candidate fraction ≥ this (0 = use absolute ``early_floor`` only).
+    #: Early-exit when accepted candidate fraction >= this (0 = use absolute ``early_floor`` only).
     blind_verify_early_fraction: float = 0.20
     #: Brightest central stars used for blind image kNN triangles (matches index local kNN).
     blind_img_star_budget: int = 80
@@ -489,7 +489,7 @@ class AppConfig:
     # min_samples,vote_span,coherence_cap} hardcoded as solver internals (module constants in
     # vyvar_blind_solver.py / vyvar_platesolver.py).
 
-    #: Path to local VSX subset SQLite (table ``vsx_data``: oid, ra_deg, dec_deg, …) for variable-star flags.
+    #: Path to local VSX subset SQLite (table ``vsx_data``: oid, ra_deg, dec_deg, ...) for variable-star flags.
     vsx_local_db_path: str = ""
     #: VSX export for variable_targets.csv: keep stars with ``mag_max`` <= limit (or unknown ``mag_max``).
     #: Set to ``<= 0`` to disable this cutoff (export all VSX rows in the field cone).
@@ -505,16 +505,16 @@ class AppConfig:
 
     #: Use ``photutils`` circular aperture + annulus sky (replaces DAO ``flux`` in sidecar CSV when enabled).
     aperture_photometry_enabled: bool = True
-    #: Fáza 2A: ukladať PNG (lightcurve, cutout, field map). ``False`` = len CSV + summary; UI používa Plotly z CSV.
+    #: Faza 2A: ukladat PNG (lightcurve, cutout, field map). ``False`` = len CSV + summary; UI pouziva Plotly z CSV.
     save_lightcurve_png: bool = False
-    #: Diagnostic only: ``True`` = pre-TODO-29 order (airmass fit → outlier detect). Default ``False`` keeps outlier → airmass.
+    #: Diagnostic only: ``True`` = pre-TODO-29 order (airmass fit -> outlier detect). Default ``False`` keeps outlier -> airmass.
     phase2a_airmass_before_outlier: bool = False
     #: TODO-35: SysRem (Tamuz et al. 2005) on exported ``lightcurve_*.csv`` after Phase 2A.
     sysrem_enabled: bool = False
     sysrem_n_iter: int = 3
-    #: Post–Phase 2A comp-star LOO QA (Sokolovsky locus); metadata only, no photometry changes.
+    #: Post-Phase 2A comp-star LOO QA (Sokolovsky locus); metadata only, no photometry changes.
     comp_qa_enabled: bool = True
-    #: Post–Phase 2A trust flag (GREEN/YELLOW/RED); metadata + report/export notes only.
+    #: Post-Phase 2A trust flag (GREEN/YELLOW/RED); metadata + report/export notes only.
     trust_flag_enabled: bool = True
     #: LC-quality frame floors for ``classify_lc_quality`` (Phase 2A summary).
     lc_quality_min_frames: int = 20
@@ -535,11 +535,11 @@ class AppConfig:
     # Export reports (AAVSO + VAR.ASTRO.CZ)
     observer_name: str = "Unknown Observer"
     observer_code: str = ""
-    #: Legacy mirror — synced from ``observer_code`` in ``__post_init__`` (kept for older callers).
+    #: Legacy mirror - synced from ``observer_code`` in ``__post_init__`` (kept for older callers).
     aavso_observer_code: str = "UMIA"
-    #: User overrides: filter/setup name (uppercase key) → AAVSO FILT code (e.g. ``"MYLUM": "CV"``).
+    #: User overrides: filter/setup name (uppercase key) -> AAVSO FILT code (e.g. ``"MYLUM": "CV"``).
     aavso_filter_map: dict[str, str] = field(default_factory=dict)
-    # Observer location — used for BJD, airmass, lunar context
+    # Observer location - used for BJD, airmass, lunar context
     observer_location_id: int = 2  # FK to LOCATION table; 0 = unset
     observer_lat: float = 50.1121658  # degrees N
     observer_lon: float = 14.6982547  # degrees E
@@ -555,9 +555,9 @@ class AppConfig:
     #: 2 = quadratic (rarely needed for ground-based amateur setups).
     #: Note: per-set spatial_order planned for TODO-MULTISET.
     psf_spatial_order: int = 0
-    #: Reduced χ² cutoff for PSF fit acceptance (``psf_fit_ok``).
+    #: Reduced chi^2 cutoff for PSF fit acceptance (``psf_fit_ok``).
     psf_chi2_threshold: float = 50.0
-    #: PSF crowded-field joint-fit (SourceGrouper). Default OFF → production unchanged.
+    #: PSF crowded-field joint-fit (SourceGrouper). Default OFF -> production unchanged.
     #: When enabled, each PSF target is fit jointly with its close neighbours so a
     #: bright neighbour does not corrupt a faint blended target.
     psf_grouper_enabled: bool = False
@@ -586,28 +586,28 @@ class AppConfig:
     # Preemptive refuse: very bright neighbour within ~1 FWHM (fine-scale edge guard).
     neighbor_sub_regime_dmag_min: float = 2.5
     neighbor_sub_regime_sep_max: float = 1.1
-    #: Spatially-varying ePSF (GriddedPSFModel). Default OFF → single global ePSF.
+    #: Spatially-varying ePSF (GriddedPSFModel). Default OFF -> single global ePSF.
     #: Master gate for spatial ePSF: spatial active iff (psf_spatial_enabled AND psf_spatial_order > 0).
     #: When enabled, ePSFs are built per detector-region cell and interpolated by (x,y),
     #: which matters on wide fields where the PSF varies (coma / field curvature at edges).
     psf_spatial_enabled: bool = False
-    #: Grid layout "NxM" (columns × rows) of detector regions for the spatial ePSF.
+    #: Grid layout "NxM" (columns x rows) of detector regions for the spatial ePSF.
     psf_spatial_grid: str = "3x3"
     #: Minimum isolated stars per cell; cells below this fall back to the global ePSF (flagged).
     psf_spatial_min_stars_per_cell: int = 25
-    #: When a per-star PSF fit is graded ``bad``, do not emit its PSF flux as usable —
+    #: When a per-star PSF fit is graded ``bad``, do not emit its PSF flux as usable -
     #: fall back to aperture for that star (sets ``psf_quality_fallback``). Default ON: a bad
     #: PSF fit must never silently become the reported value (the RMS-20.4 lesson).
     psf_quality_fallback_enabled: bool = True
-    #: Per-star/per-frame adaptive flux selector (aperture vs PSF). Default OFF → production
+    #: Per-star/per-frame adaptive flux selector (aperture vs PSF). Default OFF -> production
     #: stays pure-aperture. When ON, defaults to aperture and switches to PSF only with
     #: positive evidence AND good PSF quality (see _select_flux_method_row).
     psf_adaptive_enabled: bool = False
-    #: A blend is "resolvable" (→ prefer PSF) only if the nearest neighbour is at least this
-    #: many FWHM away (fit well-conditioned). At 9.77″/px this rarely fires (blends merge).
+    #: A blend is "resolvable" (-> prefer PSF) only if the nearest neighbour is at least this
+    #: many FWHM away (fit well-conditioned). At 9.77 arcsec/px this rarely fires (blends merge).
     psf_adaptive_resolve_fwhm: float = 2.0
     #: Faint-star threshold: below this SNR a good PSF (local background) can beat a
-    #: contaminated aperture annulus → prefer PSF.
+    #: contaminated aperture annulus -> prefer PSF.
     psf_adaptive_snr_lo: float = 15.0
     # WAVE-B STEP 6: moffat_chi2_limit hardcoded (module constant _MOFFAT_CHI2_LIMIT in pipeline.py).
     #: When True, QC headers are written on ``calibrated/lights`` FITS in-place; ``processed/`` is not created.
@@ -623,8 +623,8 @@ class AppConfig:
     #: Per-frame photometry routing: ``aperture``, ``epsf``, or ``both``.
     photometry_mode: str = "both"
     # NOTE: These are in units of **Gaussian FWHM** (not moment-FWHM).
-    # Aperture/annulus radii are computed as factor × fwhm_gaussian_px.
-    #: Legacy single aperture factor — used where multi-aperture (B+C) is not active.
+    # Aperture/annulus radii are computed as factor x fwhm_gaussian_px.
+    #: Legacy single aperture factor - used where multi-aperture (B+C) is not active.
     aperture_fwhm_factor: float = 1.9
     #: SNR aperture sizing sweep bounds (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large):
     #: min ("small") and max ("large") radii as FWHM multiples.
@@ -649,17 +649,17 @@ class AppConfig:
     # WAVE-B STEP 6: masterstar_optimizer_mirror_extra_log hardcoded (module constant in pipeline.py).
     #: Enable verbose debug logs for plate solving / blind solver / hint plumbing.
     debug_platesolver: bool = False
-    #: VYVAR plate-solve na MASTERSTAR: max. SIP stupeň (2–5). Solver skúša **nadol** po ``masterstar_platesolve_sip_min_order`` (napr. 5→4→3).
+    #: VYVAR plate-solve na MASTERSTAR: max. SIP stupen (2-5). Solver skusa **nadol** po ``masterstar_platesolve_sip_min_order`` (napr. 5->4->3).
     masterstar_platesolve_sip_max_order: int = 4
-    #: Najnižší SIP stupeň pri páde vyšších (typicky 3; nie menej ako 2).
+    #: Najnizsi SIP stupen pri pade vyssich (typicky 3; nie menej ako 2).
     masterstar_platesolve_sip_min_order: int = 3
-    #: DAOStarFinder threshold = σ×RMS len pre MASTERSTAR katalóg (hlbšia detekcia; cieľ viac tisíc hviezd).
+    #: DAOStarFinder threshold = sigmaxRMS len pre MASTERSTAR katalog (hlbsia detekcia; ciel viac tisic hviezd).
     masterstar_dao_threshold_sigma: float = 2.1
-    #: Pred matchom s Gaia: ponechať detekcie s peakom aspoň ``median + k×σ`` (nižšie = viac slabých hviezd).
+    #: Pred matchom s Gaia: ponechat detekcie s peakom aspon ``median + kxsigma`` (nizsie = viac slabych hviezd).
     masterstar_prematch_peak_sigma_floor: float = 1.8
-    #: MASTERSTAR katalóg: DAO FWHM z najlepšieho zdrojového snímku (``best_frame_fwhm_px``), nie médian ``VY_FWHM`` v hlavičke.
+    #: MASTERSTAR katalog: DAO FWHM z najlepsieho zdrojoveho snimku (``best_frame_fwhm_px``), nie median ``VY_FWHM`` v hlavicke.
     masterstar_use_best_frame_fwhm: bool = True
-    #: MASTERSTAR DAO pass 2: lokálny prah v σ pri cielených Gaia pozíciách bez DAO zhody (min. 1.5 v kóde).
+    #: MASTERSTAR DAO pass 2: lokalny prah v sigma pri cielenych Gaia poziciach bez DAO zhody (min. 1.5 v kode).
     masterstar_dao_pass2_sigma: float = 1.9
     # WAVE-B STEP 6: masterstar_platesolve_prewrite_rms_max_px / _prewrite_relaxed_rms_max_px /
     # _nn_refine_max_rms_px and masterstar_sip_force_rms_guard_ratio hardcoded as solver internals
@@ -700,9 +700,9 @@ class AppConfig:
     # WAVE-B STEP 6: platesolve_anisotropy_threshold hardcoded (module constant in pipeline.py).
 
     #: Paralelizmus (QC, preprocess, combined, per-frame CSV, alignment, calibrate MP): jedna hodnota
-    #: počítaná v ``__post_init__``; nie v ``config.json``. Runtime override: ``VYVAR_PARALLEL_WORKERS`` alebo legacy env v pipeline.
+    #: pocitana v ``__post_init__``; nie v ``config.json``. Runtime override: ``VYVAR_PARALLEL_WORKERS`` alebo legacy env v pipeline.
     qc_preprocess_workers: int = 1
-    #: Reserve this much RAM (GB) when capping paralelného exportu katalógov cez ``psutil`` (nad rámec jednotného ``_pw``).
+    #: Reserve this much RAM (GB) when capping paralelneho exportu katalogov cez ``psutil`` (nad ramec jednotneho ``_pw``).
     per_frame_mp_reserve_ram_gb: float = 1.5
 
     #: Frame alignment (DAO detection ladder): max brightest sources detected per frame (astroalign picks a subset).
@@ -711,29 +711,29 @@ class AppConfig:
     alignment_max_control_points: int = 80
     #: DAOStarFinder threshold multiplier vs sigma-clipped background RMS (higher = fewer, more significant peaks).
     alignment_detection_sigma: float = 5.0
-    #: Same recipe as QC HFR star detection (``_mean_hfr_bright_stars_dao`` first pass: ``threshold = qc_dao_detection_sigma × std``).
+    #: Same recipe as QC HFR star detection (``_mean_hfr_bright_stars_dao`` first pass: ``threshold = qc_dao_detection_sigma x std``).
     #: Used for frame alignment DAO so it tracks QC-style sensitivity.
     qc_dao_detection_sigma: float = 5.0
 
-    #: DAOStarFinder FWHM (pixels) tuned for SIPS-like centroid search (aperture ~13 → ~4–5 px FWHM).
+    #: DAOStarFinder FWHM (pixels) tuned for SIPS-like centroid search (aperture ~13 -> ~4-5 px FWHM).
     sips_dao_fwhm_px: float = 2.5
-    #: DAOStarFinder threshold = this × background RMS (SIPS “standard deviation count” ≈ 2.5).
-    #: Pre hlboký MASTERSTAR / široké pole niekedy **0.25–1.0** (viac špičiek); používa sa aj pri VYVAR plate solve, ak volanie neprebije ``dao_threshold_sigma``.
+    #: DAOStarFinder threshold = this x background RMS (SIPS 'standard deviation count' ~ 2.5).
+    #: Pre hlboky MASTERSTAR / siroke pole niekedy **0.25-1.0** (viac spiciek); pouziva sa aj pri VYVAR plate solve, ak volanie neprebije ``dao_threshold_sigma``.
     sips_dao_threshold_sigma: float = 3.5
 
-    #: Fáza 0+1 — výber porovnávacích hviezd (``photometry_core.select_comparison_stars_per_target``).
-    #: Pri **riedkom poli** zväčši ``phase01_comparison_max_mag_diff`` / ``phase01_comparison_max_dist_deg``,
-    #: prípadne zníž ``phase01_comparison_min_frames_frac`` alebo zvýš ``phase01_comparison_max_comp_rms`` (slabší filter stability).
-    #: Pri **jasných cieľoch** (``mag`` < ``phase01_comparison_mag_bright_threshold``) sa použije aspoň
-    #: ``phase01_comparison_max_mag_diff_bright_floor`` ako minimálny |Δmag| pás (``0`` = vypnuté).
+    #: Faza 0+1 - vyber porovnavacich hviezd (``photometry_core.select_comparison_stars_per_target``).
+    #: Pri **riedkom poli** zvacsi ``phase01_comparison_max_mag_diff`` / ``phase01_comparison_max_dist_deg``,
+    #: pripadne zniz ``phase01_comparison_min_frames_frac`` alebo zvys ``phase01_comparison_max_comp_rms`` (slabsi filter stability).
+    #: Pri **jasnych cieloch** (``mag`` < ``phase01_comparison_mag_bright_threshold``) sa pouzije aspon
+    #: ``phase01_comparison_max_mag_diff_bright_floor`` ako minimalny |Deltamag| pas (``0`` = vypnute).
     # FOV-based comp distance: if plate_scale is known, search within a fraction of half-diagonal.
     phase01_comparison_max_dist_deg: float = 1.5
     phase01_comparison_fov_fraction: float = 0.75
     phase01_comparison_max_mag_diff: float = 1.5
     phase01_comparison_mag_bright_threshold: float = 12.75
     phase01_comparison_max_mag_diff_bright_floor: float = 1.5
-    #: Absolútny strop pre adaptívne uvoľňovanie |Δmag| pri výbere porovnávačiek.
-    #: Nikdy nejdeme vyššie (ochrana pred miešaním úplne iných jasností).
+    #: Absolutny strop pre adaptivne uvolnovanie |Deltamag| pri vybere porovnavaciek.
+    #: Nikdy nejdeme vyssie (ochrana pred miesanim uplne inych jasnosti).
     phase01_comparison_max_mag_diff_absolute: float = 3.0
     phase01_comparison_n_comp_min: int = 3
     phase01_comparison_n_comp_max: int = 8
@@ -743,9 +743,9 @@ class AppConfig:
     phase01_comparison_exclude_gaia_nss: bool = True
     phase01_comparison_exclude_gaia_extobj: bool = True
     #: ``True`` = tier + colour hard filter via BP-RP (Riello linear B-V fallback when needed).
-    #: ``False`` = legacy |ΔB-V| tiers via ``comp_tier*_bv_limit``.
+    #: ``False`` = legacy |DeltaB-V| tiers via ``comp_tier*_bv_limit``.
     phase01_use_bprp_primary: bool = True
-    #: Max |ΔBP-RP| v efektívnom farebnom priestore (hard filter pri výbere comp).
+    #: Max |DeltaBP-RP| v efektivnom farebnom priestore (hard filter pri vybere comp).
     comp_max_delta_bprp: float = 0.79
     #: Comparison-star colour tiers (WAVE-B STEP 4 merge of comp_tier{1..4}_{bprp_limit,weight}).
     #: 4-row table; each row {"bprp": |dBP-RP| limit (Gaia), "w": ensemble/AC weight}.
@@ -766,11 +766,11 @@ class AppConfig:
     phase01_plate_scale_arcsec_per_px: float = 1.3
     #: Plate scale (arcsec/px) for Phase 2A metadata, GS11, dilution; Set 1 default 1.3.
     plate_scale_arcsec_per_px: float = 1.3
-    #: Fáza 0: minimum cross-match radius VSX → masterstars (arcsec); used with max(5× plate_scale, this).
+    #: Faza 0: minimum cross-match radius VSX -> masterstars (arcsec); used with max(5x plate_scale, this).
     phase01_match_radius_arcsec: float = 10.0
-    #: Fáza 2A: minimum number of comps used in color-term fit before applying CT (``should_apply_color_term``).
+    #: Faza 2A: minimum number of comps used in color-term fit before applying CT (``should_apply_color_term``).
     phase01_ct_min_comp: int = 7
-    #: Fáza 2A: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear).
+    #: Faza 2A: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear).
     apply_color_term: str = "off"
     #: Second-order extinction: ``off`` | ``literature`` | ``fit_else_literature`` (fit path v2).
     k2_mode: str = "literature"
@@ -785,7 +785,7 @@ class AppConfig:
     k2_fit_min_detectability: float = 3.0
     k2_fit_consistency_sigma: float = 2.0
     k2_fit_lit_factor: float = 4.0
-    #: Fáza 2A: BP-RP tolerance (mag) when testing target vs comp range before applying CT (0 = strict).
+    #: Faza 2A: BP-RP tolerance (mag) when testing target vs comp range before applying CT (0 = strict).
     phase01_ct_extrapolation_tol: float = 0.0
     #: Column name used for flux in Phase 1 comp selection (dao_flux = aperture DAO; psf_flux = ePSF).
     phase01_flux_col: str = "dao_flux"
@@ -797,7 +797,7 @@ class AppConfig:
 
     #: ALG-2: Savitzky-Golay detrend after airmass (opt-in; Aigrain & Irwin 2004 MNRAS).
     savgol_detrend_enabled: bool = False
-    savgol_window_frac: float = 0.5  # was 0.3 — more conservative
+    savgol_window_frac: float = 0.5  # was 0.3 - more conservative
     savgol_polyorder: int = 2
 
     #: ALG-4: Democratic Detrender ensemble detrend (Caballero-Nieves et al. 2026 arXiv:2411.09753v2).
@@ -808,20 +808,20 @@ class AppConfig:
     pytics_enabled: bool = True
     pytics_n_iter: int = 5
 
-    #: Fáza 2A: exclude comparison stars with |linear slope| above this (mmag/hr) in stability check.
+    #: Faza 2A: exclude comparison stars with |linear slope| above this (mmag/hr) in stability check.
     comp_max_slope_mmag_hr: float = 5.0
-    #: Minimum |slope|/stderr (σ) to treat a post-common-mode residual slope as real (stability check).
+    #: Minimum |slope|/stderr (sigma) to treat a post-common-mode residual slope as real (stability check).
     comp_slope_significance_k: float = 3.0
     #: Per-target sparse fallback: generous pool + iterative CM-residual clip when default starved.
     comp_sparse_fallback_enabled: bool = True
-    #: Trigger fallback when default yields fewer than this many comps (0 → use ``n_comp_min``).
+    #: Trigger fallback when default yields fewer than this many comps (0 -> use ``n_comp_min``).
     comp_sparse_fallback_min: int = 0
     #: Deprecated alias for ``comp_sparse_fallback_enabled`` (config/UI backward compat).
     comp_iterative_clip_enabled: bool = False
-    #: Population outlier threshold (σ-MAD) for sparse-fallback iterative clip.
+    #: Population outlier threshold (sigma-MAD) for sparse-fallback iterative clip.
     comp_clip_sigma: float = 5.0
 
-    # GS11 — Flux dilution correction
+    # GS11 - Flux dilution correction
     gs11_dilution_enabled: bool = False
     gs11_dilution_aperture_arcsec: float = 0.0
     gs11_dilution_mag_limit_delta: float = 5.0
@@ -838,7 +838,7 @@ class AppConfig:
 
     #: Per-frame curve-of-growth aperture correction (puts every star on a common
     #: ref-radius enclosed-flux scale). Distinct from aperture_correction_* (Method B,
-    #: flux_large/flux_small). Default OFF — validate before enabling in production.
+    #: flux_large/flux_small). Default OFF - validate before enabling in production.
     cog_aperture_correction_enabled: bool = False
     #: COG reference radius in FWHM units (where the curve of growth flattens).
     cog_ref_fwhm: float = 4.5
@@ -863,12 +863,12 @@ class AppConfig:
     #: when per_frame_saturation_enabled is True. Clamped to [0.1, 1.0].
     per_frame_sat_min_clean_frac: float = 0.5
 
-    #: CCD gain (e-/ADU) — used in noise model / SNR estimates.
+    #: CCD gain (e-/ADU) - used in noise model / SNR estimates.
     gain: float = 1.0
-    #: CCD read noise (e-) — used in noise model.
+    #: CCD read noise (e-) - used in noise model.
     read_noise: float = 10.0
 
-    #: F-BINGAIN-1: background error term — ``empirical`` (empty-aperture scatter) or ``howell`` (legacy).
+    #: F-BINGAIN-1: background error term - ``empirical`` (empty-aperture scatter) or ``howell`` (legacy).
     err_background_mode: str = "empirical"
     #: Number of random empty apertures per frame/radius for ``sigma_bkg_ap`` (clamped 16..256).
     err_empty_apertures_n: int = 64
@@ -883,9 +883,9 @@ class AppConfig:
     #: Aperture correction: reject comp stars with scatter above this (mag).
     #: Phase 1 comp gate: max reduced chi2 for PSF fit acceptance in comp selection.
     phase01_comparison_max_psf_chi2: float = 50.0
-    #: Phase 1 comp gate: reject comps with FWHM > this factor × field median FWHM.
+    #: Phase 1 comp gate: reject comps with FWHM > this factor x field median FWHM.
     phase01_comparison_max_fwhm_factor: float = 1.5
-    #: Phase 1 comp gate: minimum isolation radius (px) — reject comps with neighbour closer than this.
+    #: Phase 1 comp gate: minimum isolation radius (px) - reject comps with neighbour closer than this.
     phase01_comparison_isolation_radius_px: float = 25.0
     #: Phase 1 comp stability: sigma for outlier rejection in RMS stability check.
     phase01_comparison_rms_outlier_sigma: float = 3.0
@@ -894,9 +894,9 @@ class AppConfig:
     frame_width_px: int = 2082
     frame_height_px: int = 1397
 
-    #: Jednotný vnútorný okraj čipu (px) pre **celú Fázu 0+1**: aktívne premenné, porovnávacie hviezdy aj suspected.
-    #: Hviezdy s ``x,y`` bližšie ako tento počet pixelov od okraja referenčného poľa sa neberú (zmierňuje artefakty
-    #: pri zarovnaní / posune poľa / okrajoch). ``0`` = vypnuté (celý čip). Predvolene 50 px.
+    #: Jednotny vnutorny okraj cipu (px) pre **celu Fazu 0+1**: aktivne premenne, porovnavacie hviezdy aj suspected.
+    #: Hviezdy s ``x,y`` blizsie ako tento pocet pixelov od okraja referencneho pola sa neberu (zmiernuje artefakty
+    #: pri zarovnani / posune pola / okrajoch). ``0`` = vypnute (cely cip). Predvolene 50 px.
     phase01_chip_interior_margin_px: int = 50
 
     # Variability Detection
@@ -906,7 +906,7 @@ class AppConfig:
     variability_p85_filter: int = 85
     variability_slope_floor: float = 0.02
     variability_sigma_threshold: float = 2.3
-    #: Upper envelope floor = comp P90 rms_pct per mag bin × this factor (TODO-26).
+    #: Upper envelope floor = comp P90 rms_pct per mag bin x this factor (TODO-26).
     variability_comp_floor_factor: float = 1.5
     variability_smoothness_max: float = 0.80
     variability_mag_limit: float = 14.5
@@ -916,11 +916,11 @@ class AppConfig:
     variability_vdi_z_threshold: float = 3.0
     variability_min_points_rms: int = 20
 
-    #: ``True`` = sťahovanie/analýza TESS FFI cez lightkurve (TessCut), UI + ``tess_runner`` + pipeline hook.
-    #: ``False`` = vypnuté — žiadne sťahovanie; log ``[TESS] preskočené``. Zapnúť: ``"tess_enabled": true`` v ``config.json``.
+    #: ``True`` = stahovanie/analyza TESS FFI cez lightkurve (TessCut), UI + ``tess_runner`` + pipeline hook.
+    #: ``False`` = vypnute - ziadne stahovanie; log ``[TESS] preskocene``. Zapnut: ``"tess_enabled": true`` v ``config.json``.
     tess_enabled: bool = False
 
-    #: Hustota poľa (hviezd/Mpx z DAO na MASTERSTAR): prahy a adaptívne úpravy Fázy 0+1 / apertúry (baseline = JSON).
+    #: Hustota pola (hviezd/Mpx z DAO na MASTERSTAR): prahy a adaptivne upravy Fazy 0+1 / apertury (baseline = JSON).
     field_density_sparse_threshold: float = 300.0
     field_density_dense_threshold: float = 1000.0
     field_density_adaptive_enabled: bool = True
@@ -930,19 +930,19 @@ class AppConfig:
     #:   LOOSEN keys on comp AVAILABILITY (few usable catalog comps in FOV), not density;
     #:   TIGHTEN keys on real BLEND_FRAC (contamination @ measured depth), not stars/Mpx.
     crowding_classifier_enabled: bool = False
-    #: blend_frac (neighbours within 1×FWHM @ measured depth) at/above which to TIGHTEN comps.
+    #: blend_frac (neighbours within 1xFWHM @ measured depth) at/above which to TIGHTEN comps.
     crowding_blend_tighten_threshold: float = 0.04
-    #: usable catalog comps in FOV (Gaia stars ≤ effective limit) below which to LOOSEN comps.
+    #: usable catalog comps in FOV (Gaia stars <= effective limit) below which to LOOSEN comps.
     crowding_comp_availability_loosen_count: float = 500.0
     #: SAMPLING GATE for the blend-TIGHTEN branch. Tighten ONLY when the PSF is resolved
-    #: (FWHM_px ≥ this). On under-sampled fields (wide rig, FWHM≈2.6 px) the comp-RMS
-    #: 0.08–0.10 tail is the field floor (scintillation/undersampling), NOT resolvable
+    #: (FWHM_px >= this). On under-sampled fields (wide rig, FWHM~2.6 px) the comp-RMS
+    #: 0.08-0.10 tail is the field floor (scintillation/undersampling), NOT resolvable
     #: contamination, so max_comp_rms tightening cuts good comps and thins the ensemble
-    #: (verified on 360: −19 comps, +3.5 mmag LC scatter). FWHM≥3 px ≈ "well sampled"
-    #: (Nyquist is 2 px; PSF-fit/deblend guidance wants ≳3 px) — only there does a high
+    #: (verified on 360: -19 comps, +3.5 mmag LC scatter). FWHM>=3 px ~ "well sampled"
+    #: (Nyquist is 2 px; PSF-fit/deblend guidance wants >=3 px) - only there does a high
     #: comp-RMS mean real contamination, so tighten pays off (e.g. the Newton cluster).
     crowding_tighten_min_fwhm_px: float = 3.0
-    #: ``True`` = jeden globálny comp pool (safe_bbox + RMS) pred per-target výberom; ``False`` = legacy.
+    #: ``True`` = jeden globalny comp pool (safe_bbox + RMS) pred per-target vyberom; ``False`` = legacy.
     global_comp_pool_enabled: bool = True
 
     #: Post-calibration QC on each calibrated light (metrics + pass/fail vs limits).
@@ -954,7 +954,7 @@ class AppConfig:
     #: If set, fail when sigma-clipped sky RMS exceeds this (same units as calibrated image).
     qc_max_background_rms: float | None = None
 
-    #: FITS QA dashboard: odvodzovať predvolený FWHM limit z MAD (median + k×σ_MAD).
+    #: FITS QA dashboard: odvodzovat predvoleny FWHM limit z MAD (median + kxsigma_MAD).
     auto_fwhm_enabled: bool = True
     auto_fwhm_k_factor: float = 1.5
     auto_fwhm_k_min: float = 1.0
@@ -1007,7 +1007,7 @@ class AppConfig:
         self.masterdark_validity_days = int(data.get("masterdark_validity_days", 90))
         self.masterflat_validity_days = int(data.get("masterflat_validity_days", 200))
 
-        # ``plate_solve_fov_deg`` is no longer read from JSON — resolved from FITS + DB (see ``resolve_plate_solve_fov_deg_hint``).
+        # ``plate_solve_fov_deg`` is no longer read from JSON - resolved from FITS + DB (see ``resolve_plate_solve_fov_deg_hint``).
         self.plate_solve_fov_deg = 1.0
         # Migration: GAIA_DB_PATH supersedes legacy catalog settings.
         _cln_raw = data.get("calibration_library_native_binning", self.calibration_library_native_binning)
@@ -1236,7 +1236,7 @@ class AppConfig:
             self.vsx_variable_targets_mag_limit = float(_vml)
             if not math.isfinite(self.vsx_variable_targets_mag_limit):
                 self.vsx_variable_targets_mag_limit = 13.0
-            # ``<= 0`` = žiadny mag. rez VSX (export všetkých v kuželi); ``> 0`` = max ``mag_max`` z VSX.
+            # ``<= 0`` = ziadny mag. rez VSX (export vsetkych v kuzeli); ``> 0`` = max ``mag_max`` z VSX.
         except (TypeError, ValueError):
             self.vsx_variable_targets_mag_limit = 13.0
         self.exoplanet_local_db_path = str(
@@ -1419,7 +1419,7 @@ class AppConfig:
             self.sysrem_n_iter = 3
         self.comp_qa_enabled = bool(data.get("comp_qa_enabled", self.comp_qa_enabled))
         self.trust_flag_enabled = bool(data.get("trust_flag_enabled", self.trust_flag_enabled))
-        # Export reports — prefer ``observer_name`` / ``observer_code``; fall back to legacy JSON key for the code.
+        # Export reports - prefer ``observer_name`` / ``observer_code``; fall back to legacy JSON key for the code.
         _obn = data.get("observer_name")
         if _obn is None or str(_obn).strip() == "":
             _obn = self.observer_name
@@ -2603,7 +2603,7 @@ class AppConfig:
         self.calibration_library_root.mkdir(parents=True, exist_ok=True)
 
 
-# Delta overrides od baseline (normal / JSON). ``phase01_comparison_max_dist_deg`` sa v runtime pričíta k FOV-výsledku — viz ``apply_density_overrides``.
+# Delta overrides od baseline (normal / JSON). ``phase01_comparison_max_dist_deg`` sa v runtime pricita k FOV-vysledku - viz ``apply_density_overrides``.
 DENSITY_OVERRIDES: dict[str, dict[str, float | int]] = {
     "sparse": {
         "phase01_comparison_max_mag_diff": +0.5,
@@ -2613,7 +2613,7 @@ DENSITY_OVERRIDES: dict[str, dict[str, float | int]] = {
     },
     "normal": {},
     "dense": {
-        # NOTE: aperture_fwhm_factor -0.3 removed (2026-05) — it was structurally dead:
+        # NOTE: aperture_fwhm_factor -0.3 removed (2026-05) - it was structurally dead:
         # the science aperture comes from the SNR-optimal table, which ignores
         # aperture_fwhm_factor (only a fallback when the table is absent). Verified
         # 0-px effect on 361/362. No LC impact; removed for clarity.
@@ -2646,7 +2646,7 @@ CROWDING_TIGHTEN_OVERRIDES: dict[str, float | int] = {
 
 
 def compute_field_density(n_masterstar_stars: int, chip_w_px: int, chip_h_px: int) -> float:
-    """Vráti hustotu poľa v hviezd/Mpx."""
+    """Vrati hustotu pola v hviezd/Mpx."""
     mpx = (float(chip_w_px) * float(chip_h_px)) / 1_000_000.0
     if mpx <= 0 or n_masterstar_stars < 0:
         return 0.0
@@ -2654,7 +2654,7 @@ def compute_field_density(n_masterstar_stars: int, chip_w_px: int, chip_h_px: in
 
 
 def classify_field_density(density: float, sparse_th: float, dense_th: float) -> str:
-    """Vráti ``sparse`` / ``normal`` / ``dense``."""
+    """Vrati ``sparse`` / ``normal`` / ``dense``."""
     if density < float(sparse_th):
         return "sparse"
     if density <= float(dense_th):
@@ -2663,12 +2663,12 @@ def classify_field_density(density: float, sparse_th: float, dense_th: float) ->
 
 
 def apply_density_overrides(cfg: AppConfig, density_class: str) -> AppConfig:
-    """Vráti kópiu ``cfg`` s aplikovanými density override deltami."""
+    """Vrati kopiu ``cfg`` s aplikovanymi density override deltami."""
     cfg_eff = copy.copy(cfg)
     overrides = DENSITY_OVERRIDES.get(density_class, {})
     for param, delta in overrides.items():
         if param == "phase01_comparison_max_dist_deg":
-            # Do cfg neukladáme — v ``run_phase0_and_phase1`` sa pričíta k efektívnemu ``max_dist_deg`` (FOV kľúč).
+            # Do cfg neukladame - v ``run_phase0_and_phase1`` sa pricita k efektivnemu ``max_dist_deg`` (FOV kluc).
             continue
         if not hasattr(cfg_eff, param):
             continue
@@ -2683,7 +2683,7 @@ def apply_density_overrides(cfg: AppConfig, density_class: str) -> AppConfig:
             if param == "phase01_comparison_n_comp_min":
                 new_val = max(2, new_val)
             setattr(cfg_eff, param, new_val)
-            logging.debug("[DENSITY OVERRIDE] %s: %s → %s (delta=%+s)", param, cur, new_val, delta)
+            logging.debug("[DENSITY OVERRIDE] %s: %s -> %s (delta=%+s)", param, cur, new_val, delta)
             continue
         try:
             new_val = float(cur) + float(delta)
@@ -2700,7 +2700,7 @@ def apply_density_overrides(cfg: AppConfig, density_class: str) -> AppConfig:
         elif param == "phase01_comparison_min_dist_arcsec":
             new_val = max(0.0, min(600.0, float(new_val)))
         setattr(cfg_eff, param, new_val)
-        logging.debug("[DENSITY OVERRIDE] %s: %s → %s (delta=%+s)", param, cur, new_val, delta)
+        logging.debug("[DENSITY OVERRIDE] %s: %s -> %s (delta=%+s)", param, cur, new_val, delta)
 
     # Zachovaj annulus_outer > inner + 1
     try:
@@ -2762,7 +2762,7 @@ def apply_crowding_overrides(
             if param == "phase01_comparison_n_comp_min":
                 new_val_i = max(2, new_val_i)
             setattr(cfg_eff, param, new_val_i)
-            logging.debug("[CROWDING OVERRIDE] %s: %s → %s (delta=%+s)", param, cur, new_val_i, delta)
+            logging.debug("[CROWDING OVERRIDE] %s: %s -> %s (delta=%+s)", param, cur, new_val_i, delta)
             continue
         try:
             new_val = float(cur) + float(delta)
@@ -2779,7 +2779,7 @@ def apply_crowding_overrides(
         elif param == "phase01_comparison_max_mag_diff":
             new_val = max(0.05, min(5.0, new_val))
         setattr(cfg_eff, param, new_val)
-        logging.debug("[CROWDING OVERRIDE] %s: %s → %s (delta=%+s)", param, cur, new_val, delta)
+        logging.debug("[CROWDING OVERRIDE] %s: %s -> %s (delta=%+s)", param, cur, new_val, delta)
 
     try:
         inn = float(getattr(cfg_eff, "annulus_inner_fwhm", 0.0) or 0.0)

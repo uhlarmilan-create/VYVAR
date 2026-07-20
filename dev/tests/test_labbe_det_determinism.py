@@ -54,7 +54,7 @@ def test_labbe_order_invariant_shuffled_stars() -> None:
 
 
 def test_labbe_identical_across_pythonhashseed_subprocesses() -> None:
-    """Same synthetic inputs → identical sigma under different PYTHONHASHSEED."""
+    """Same synthetic inputs -> identical sigma under different PYTHONHASHSEED."""
     code = textwrap.dedent(
         """
         import numpy as np

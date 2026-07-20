@@ -1,4 +1,4 @@
-"""VYVAR script #2 — Gaia blind triangle index (fine + wide PKL tiers).
+"""VYVAR script #2 - Gaia blind triangle index (fine + wide PKL tiers).
 
 Builds density-matched triangle hash indexes from local ``gaia_dr3`` SQLite.
 Default run produces ``gaia_triangles_fine.pkl`` and ``gaia_triangles_wide.pkl``.

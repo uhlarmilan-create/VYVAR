@@ -32,7 +32,7 @@ def _pick_gaia_table(con: sqlite3.Connection) -> str:
     for cand in ("gaia_dr3", "gaia_source", "gaia"):
         if cand in names:
             return cand
-    raise RuntimeError(f"Gaia DB: neznáma tabuľka (nájdené: {sorted(names)[:20]})")
+    raise RuntimeError(f"Gaia DB: neznama tabulka (najdene: {sorted(names)[:20]})")
 
 
 def _sep_arcsec(ra1: float, dec1: float, ra2: float, dec2: float) -> float:

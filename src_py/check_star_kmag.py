@@ -246,7 +246,7 @@ def select_check_star(
     cfg: AppConfig | None = None,
     check_select_rms_floor: float | None = None,
 ) -> pd.Series | None:
-    """Pick independent check star — best stability among non-ensemble good comps."""
+    """Pick independent check star - best stability among non-ensemble good comps."""
     if comp_df is None or comp_df.empty:
         return None
 
@@ -302,7 +302,7 @@ def select_check_star(
                 return cand.iloc[0]
 
     if "comp_rms_fieldwide" in df.columns:
-        # Field-wide RMS is for sparse-path diagnostics only — never rank check stars on it.
+        # Field-wide RMS is for sparse-path diagnostics only - never rank check stars on it.
         pass
 
     if "comp_score" in df.columns:

@@ -2,7 +2,7 @@
 
 Usage: python scripts/test_airmass_order.py
 
-Temporary diagnostic — do not commit.
+Temporary diagnostic - do not commit.
 """
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def main() -> int:
         shutil.copy2(summary_path, backup_path)
         print(f"\nBackup summary -> {backup_path.name}")
 
-    print("\n[CURRENT — phase2a_airmass_before_outlier=False (TODO-29)]")
+    print("\n[CURRENT - phase2a_airmass_before_outlier=False (TODO-29)]")
     before: dict[str, tuple] = {}
     for name, cid in TARGET_CIDS.items():
         rms, detrended, slope = get_rms(summary_path, cid)
@@ -83,7 +83,7 @@ def main() -> int:
         print(f"  {name}: lc_rms={rms:.4f} am_detrended={detrended} am_slope={slope}")
 
     n_proc = len(list(PROC_DIR.glob("proc_*.csv")))
-    print(f"\n[RE-RUN — phase2a_airmass_before_outlier=True (pre-TODO-29)]")
+    print(f"\n[RE-RUN - phase2a_airmass_before_outlier=True (pre-TODO-29)]")
     print(f"  proc_*.csv files: {n_proc}")
     cfg.phase2a_airmass_before_outlier = True
 
@@ -114,7 +114,7 @@ def main() -> int:
         after[name] = (rms, detrended, slope)
         print(f"  {name}: lc_rms={rms:.4f} am_detrended={detrended} am_slope={slope}")
 
-    print("\n[DELTA — True minus False (from backup vs new run)]")
+    print("\n[DELTA - True minus False (from backup vs new run)]")
     for name in TARGET_CIDS:
         b_rms, b_det, b_slope = before[name]
         a_rms, a_det, a_slope = after[name]
@@ -130,7 +130,7 @@ def main() -> int:
     print(f"  {backup_path}")
 
     print("\n" + "=" * 60)
-    print("DONE — check lightcurves in:", PHOT_DIR / "lightcurves")
+    print("DONE - check lightcurves in:", PHOT_DIR / "lightcurves")
     print("=" * 60)
     return 0
 

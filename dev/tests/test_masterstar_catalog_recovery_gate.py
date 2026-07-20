@@ -72,7 +72,7 @@ def test_wide_field_gate_uses_detection_budget_not_full_catalog():
 
 
 def test_narrow_field_gate_unchanged_when_cat_lt_det():
-    """Brno r: denom=min(150,233)=150 — gate equals raw catalog fraction."""
+    """Brno r: denom=min(150,233)=150 - gate equals raw catalog fraction."""
     out = _accept(catalog_recovery_tight=126.0 / 150.0, n_matched_tight=126)
     assert out["masterstar_verified"] is True
 

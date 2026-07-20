@@ -101,11 +101,11 @@ def main() -> int:
     comp_df.to_csv(out, index=False)
     print(f"phase1-only elapsed={time.time()-t0:.1f}s rows={len(comp_df)}")
 
-    gs11_rej = [ln for ln in buf if "GS11 dilution filter vylúčil" in ln]
+    gs11_rej = [ln for ln in buf if "GS11 dilution filter vylucil" in ln]
     n_comps = sum(
         int(m.group(1))
         for ln in gs11_rej
-        for m in [re.search(r"vylúčil (\d+)", ln)]
+        for m in [re.search(r"vylucil (\d+)", ln)]
         if m
     )
     print(f"GS11 reject events={len(gs11_rej)} total_comps_rejected={n_comps}")

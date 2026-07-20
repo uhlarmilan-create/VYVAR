@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-# Values clearly on full JD scale (not MJD ~60k, not phase 0–1, not frame index).
+# Values clearly on full JD scale (not MJD ~60k, not phase 0-1, not frame index).
 _JD_FULL_MIN = 2_000_000.0
 
 

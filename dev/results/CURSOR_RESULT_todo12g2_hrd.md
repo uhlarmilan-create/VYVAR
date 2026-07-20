@@ -1,4 +1,4 @@
-CURSOR RESULT ù 2026-07-10 21:20 UTC+2
+CURSOR RESULT - 2026-07-10 21:20 UTC+2
 
 What I did
 Implemented TODO-12g2 catalog-color field polish: hue-preserving highlights (soft Reinhard +

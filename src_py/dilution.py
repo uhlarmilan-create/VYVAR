@@ -1,20 +1,20 @@
 """
-dilution.py — Flux dilution factor computation for VYVAR (TODO-GS11).
+dilution.py - Flux dilution factor computation for VYVAR (TODO-GS11).
 
-Computes per-star dilution factor D = F_star / (F_star + ΣF_neighbors)
+Computes per-star dilution factor D = F_star / (F_star + SigmaF_neighbors)
 from Gaia DR3 catalog neighbors within the photometric aperture.
 
-D = 1.0  → no blend (isolated star)
-D < 1.0  → blended; neighbor flux dilutes the target → observed mag is too bright
+D = 1.0  -> no blend (isolated star)
+D < 1.0  -> blended; neighbor flux dilutes the target -> observed mag is too bright
            (too small numerically). Correction adds a positive offset:
            delta_mag = -2.5 * log10(D)  (> 0 when D < 1)
            mag_corrected = mag_observed + delta_mag
 
 References:
-    Seager & Mallén-Ornelas (2003) ApJ 585, 1038  — dilution factor definition
-    Ciardi et al. (2015) ApJ 805, 16              — blend correction formula
-    Howell (2006) Handbook of CCD Astronomy       — aperture contamination
-    Gaia Collaboration (2023) A&A 674, A1         — neighbor catalog
+    Seager & Mallen-Ornelas (2003) ApJ 585, 1038  - dilution factor definition
+    Ciardi et al. (2015) ApJ 805, 16              - blend correction formula
+    Howell (2006) Handbook of CCD Astronomy       - aperture contamination
+    Gaia Collaboration (2023) A&A 674, A1         - neighbor catalog
 """
 
 from __future__ import annotations
@@ -145,7 +145,7 @@ def flux_from_gmag(g_mag: float) -> float:
     """
     Convert Gaia G magnitude to relative linear flux.
     f = 10^(-g_mag / 2.5)
-    Used only for flux ratios — absolute zero point cancels out.
+    Used only for flux ratios - absolute zero point cancels out.
     """
     return float(10.0 ** (-float(g_mag) / 2.5))
 
@@ -187,14 +187,14 @@ def compute_dilution_factor(
         catalog_id          : Gaia source_id to exclude (the star itself)
         search_radius_arcsec: neighbor search radius; default = aperture_arcsec
         mag_limit_delta     : only include neighbors fainter by at most this
-                              (default 5.0 mag → neighbors contribute > 1% flux)
+                              (default 5.0 mag -> neighbors contribute > 1% flux)
 
     Returns dict:
         {
-            "dilution_factor":    float,   # D = F_star / (F_star + ΣF_neighbors); 1.0 = no blend
+            "dilution_factor":    float,   # D = F_star / (F_star + SigmaF_neighbors); 1.0 = no blend
             "dilution_delta_mag": float,   # -2.5 * log10(D); 0.0 = no blend
             "n_neighbors":        int,     # neighbors found within aperture
-            "neighbor_flux_sum":  float,   # ΣF_neighbors / F_star (relative)
+            "neighbor_flux_sum":  float,   # SigmaF_neighbors / F_star (relative)
             "aperture_arcsec":    float,   # input aperture
             "search_radius_arcsec": float, # actual search radius used
         }
@@ -339,7 +339,7 @@ def apply_target_dilution_to_mag_calib(
 ) -> tuple[np.ndarray, dict[str, Any]]:
     """Apply GS11 dilution correction to per-frame mag_calib (Phase 2A, post-ensemble).
 
-    Returns (corrected_mag_calib, dilution_result) — result dict is unchanged when skipped.
+    Returns (corrected_mag_calib, dilution_result) - result dict is unchanged when skipped.
     """
     out = np.asarray(mag_calib, dtype=np.float64).copy()
     res = dict(dilution_result)
@@ -355,10 +355,10 @@ def apply_target_dilution_to_mag_calib(
         delta = 0.0
     min_d = float(getattr(cfg, "gs11_target_min_dilution", 0.50) or 0.50)
     if d >= min_d and d < 1.0 and math.isfinite(delta) and delta != 0.0:
-        # Blend makes star too bright → mag too small → add positive delta_mag.
+        # Blend makes star too bright -> mag too small -> add positive delta_mag.
         out = out + float(delta)
         LOGGER.info(
-            "GS11 dilution correction: %s D=%.4f Δm=%.1f mmag (%s neighbors)",
+            "GS11 dilution correction: %s D=%.4f Deltam=%.1f mmag (%s neighbors)",
             target_cid or "?",
             d,
             delta * 1000.0,
@@ -366,7 +366,7 @@ def apply_target_dilution_to_mag_calib(
         )
     elif d < min_d and d < 1.0:
         LOGGER.warning(
-            "GS11: %s D=%.4f too low — skipping correction, flagging",
+            "GS11: %s D=%.4f too low - skipping correction, flagging",
             target_cid or "?",
             d,
         )
