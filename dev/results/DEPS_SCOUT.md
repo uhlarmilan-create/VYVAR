@@ -168,3 +168,22 @@ Gates:
 
 Post-push: HEAD == origin/main == 488b02b; working tree clean (bar the 3 known scratch
 scripts).
+
+## CYCLE 2 execution log (2026-07-20)
+
+Executed by Cursor after pubprep+recut push (HEAD ed2a319). Cross-major upgrade per scout:
+photutils 2.3.0 -> 3.0.0, astropy 7.2.0 -> 8.0.1, numpy pin floor 2.4.4.
+
+Migration: kwarg renames + `min_separation=0` freeze at all DAOStarFinder sites; column
+readers to `x_centroid`/`y_centroid`; dev harness scripts aligned.
+
+Gates at cycle commit:
+- `--fast`: OVERALL PASS (1058 passed, 17 skipped).
+- P1 golden: 7/7 PASS (SHAs unchanged on mini).
+- `--full` vs anchor 435: **byte-identical** (path a). core/extended SHA match; science-compare
+  166/166; pipeline wall ~2025 s (prior ~2296 s on same machine class).
+- Fresh venv `pip install -r requirements.txt`: photutils 3.0.0, astropy 8.0.1, numpy 2.5.1
+  (within pin).
+
+Verdict: CYCLE 2 adopted without re-anchor. photutils 3.1 remains watchlist-only.
+Result: `dev/results/CURSOR_RESULT_deps_cycle2.md`.

@@ -661,7 +661,7 @@ def test_04_fwhm(vyvar: dict, fits_dir: Path) -> TestResult:
             arr = data.astype(np.float64)
             arr = arr - np.median(arr)
             std = float(np.std(arr)) + 1e-9
-            daofind = DAOStarFinder(fwhm=4.0, threshold=5.0 * std)
+            daofind = DAOStarFinder(fwhm=4.0, threshold=5.0 * std, min_separation=0)
             sources = daofind(arr)
             if sources is None or len(sources) < 5:
                 continue

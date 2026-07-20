@@ -57,13 +57,13 @@ def _dao_df(fits_path: Path):
         hdr = hdul[0].header
         ny, nx = data.shape
     _, med, std = sigma_clipped_stats(data, sigma=3.0)
-    finder = DAOStarFinder(fwhm=3.0, threshold=5.0 * std)
+    finder = DAOStarFinder(fwhm=3.0, threshold=5.0 * std, min_separation=0)
     srcs = finder(data - med)
     if srcs is None or len(srcs) < 3:
         return None, hdr, int(nx), int(ny)
     import pandas as pd
 
-    df = srcs.to_pandas().rename(columns={"xcentroid": "x", "ycentroid": "y"})
+    df = srcs.to_pandas().rename(columns={"x_centroid": "x", "y_centroid": "y"})
     if "peak" in df.columns and "flux" not in df.columns:
         df["flux"] = df["peak"]
     elif "flux" not in df.columns:

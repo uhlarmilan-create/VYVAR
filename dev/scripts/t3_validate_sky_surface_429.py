@@ -39,7 +39,7 @@ def dao_pass1_count(img: np.ndarray, *, sigma: float = 2.1, fwhm: float = 2.5) -
     finder = DAOStarFinder(
         fwhm=max(1.2, float(fwhm)),
         threshold=float(thr),
-        brightest=None,
+        n_brightest=None,
         **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
     )
     tbl = finder(data0)

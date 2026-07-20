@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-20** (ANCHOR-RECUT-SIGMA-NOTES: VL-ANCHOR-WCSINV re-cut core 03d8fb64 / extended bbfcc92e. Prior: PUBLICATION-PREP; INVARIANTS P3+P4).
+Last updated: **2026-07-20** (DEPS-CYCLE-2: photutils 3.0.0 + astropy 8.0.1 + numpy 2.4.4+; anchor byte-identical. Prior: ANCHOR-RECUT-SIGMA-NOTES).
 
 ## Invariants program -- honest scope
 

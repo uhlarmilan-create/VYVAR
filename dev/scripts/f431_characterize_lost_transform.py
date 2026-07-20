@@ -47,7 +47,7 @@ def dao_pass1_count(img: np.ndarray, *, sigma: float = 2.1, fwhm: float = 2.5) -
     finder = DAOStarFinder(
         fwhm=float(fwhm_eff),
         threshold=float(thr),
-        brightest=None,
+        n_brightest=None,
         **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
     )
     tbl = finder(data0)
@@ -159,14 +159,14 @@ def star_dipole_check(R: np.ndarray, cal: np.ndarray, n_stars: int = 80) -> dict
     """At bright star peaks, look for dipole (sign flip) vs smooth pedestal."""
     _, med, std = sigma_clipped_stats(cal, sigma=3.0, maxiters=3)
     data0 = np.nan_to_num((cal - med).astype(np.float32), nan=0.0)
-    finder = DAOStarFinder(fwhm=2.5, threshold=8.0 * float(std), brightest=n_stars)
+    finder = DAOStarFinder(fwhm=2.5, threshold=8.0 * float(std), n_brightest=n_stars, min_separation=0)
     tbl = finder(data0)
     if tbl is None or len(tbl) == 0:
         return {"n": 0}
     dipoles = 0
     pedestals = 0
     for row in tbl:
-        x, y = int(round(float(row["xcentroid"]))), int(round(float(row["ycentroid"])))
+        x, y = int(round(float(row["x_centroid"]))), int(round(float(row["y_centroid"])))
         if not (5 <= y < R.shape[0] - 5 and 5 <= x < R.shape[1] - 5):
             continue
         patch = R[y - 4 : y + 5, x - 4 : x + 5]

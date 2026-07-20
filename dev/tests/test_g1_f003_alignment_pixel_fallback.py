@@ -56,8 +56,8 @@ def _no_wcs_hdr(aligned: bool) -> fits.Header:
 def _fake_dao_table() -> Table:
     return Table(
         {
-            "xcentroid": [50.0],
-            "ycentroid": [50.0],
+            "x_centroid": [50.0],
+            "y_centroid": [50.0],
             "flux": [1000.0],
             "peak": [500.0],
         }

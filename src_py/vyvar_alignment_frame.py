@@ -103,14 +103,14 @@ def _alignment_as_alignment_points(
 ) -> np.ndarray:
     pts: np.ndarray
     try:
-        if hasattr(sources, "colnames") and "xcentroid" in getattr(sources, "colnames", []) and "ycentroid" in getattr(
+        if hasattr(sources, "colnames") and "x_centroid" in getattr(sources, "colnames", []) and "y_centroid" in getattr(
             sources, "colnames", []
         ):
-            pts = np.transpose((sources["xcentroid"], sources["ycentroid"]))  # type: ignore[index]
+            pts = np.transpose((sources["x_centroid"], sources["y_centroid"]))  # type: ignore[index]
         elif hasattr(sources, "dtype") and getattr(sources.dtype, "names", None):
             names = set(sources.dtype.names or ())
-            if "xcentroid" in names and "ycentroid" in names:
-                pts = np.transpose((sources["xcentroid"], sources["ycentroid"]))  # type: ignore[index]
+            if "x_centroid" in names and "y_centroid" in names:
+                pts = np.transpose((sources["x_centroid"], sources["y_centroid"]))  # type: ignore[index]
             else:
                 arr = np.asarray(sources, dtype=np.float64)
                 pts = arr.reshape((-1, 2)) if arr.ndim == 1 and arr.size % 2 == 0 else arr
@@ -243,7 +243,7 @@ def _alignment_detect_xy(
             finder = DAOStarFinder(
                 fwhm=fw,
                 threshold=max(float(s) * float(clipped_std), 1e-6),
-                brightest=None,
+                n_brightest=None,
                 **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
             )
             _tbl_try = finder(img_in)
@@ -280,7 +280,7 @@ def _alignment_detect_xy(
             finder_ext = DAOStarFinder(
                 fwhm=5.0,
                 threshold=max(1.0 * float(clipped_std), 1e-6),
-                brightest=None,
+                n_brightest=None,
                 **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
             )
             tbl_ext = finder_ext(data)
@@ -297,8 +297,8 @@ def _alignment_detect_xy(
         tbl = tbl[take]
     tbl.sort("flux")
     tbl = tbl[::-1]
-    x = np.asarray(tbl["xcentroid"], dtype=np.float32)
-    y = np.asarray(tbl["ycentroid"], dtype=np.float32)
+    x = np.asarray(tbl["x_centroid"], dtype=np.float32)
+    y = np.asarray(tbl["y_centroid"], dtype=np.float32)
     return np.stack([x, y], axis=1)
 
 

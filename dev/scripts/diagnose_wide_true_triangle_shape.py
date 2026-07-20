@@ -327,12 +327,12 @@ def main() -> int:
     half_diag = math.hypot(nx, ny) / 2.0
 
     _, med, std = sigma_clipped_stats(data, sigma=3.0)
-    finder = DAOStarFinder(fwhm=3.0, threshold=5.0 * std)
+    finder = DAOStarFinder(fwhm=3.0, threshold=5.0 * std, min_separation=0)
     srcs = finder(data - med)
     n_dao = 0 if srcs is None else len(srcs)
     dao_df = pd.DataFrame()
     if srcs is not None and n_dao > 0:
-        dao_df = srcs.to_pandas().rename(columns={"xcentroid": "x", "ycentroid": "y"})
+        dao_df = srcs.to_pandas().rename(columns={"x_centroid": "x", "y_centroid": "y"})
         if "peak" in dao_df.columns:
             dao_df["flux"] = dao_df["peak"]
         dao_df = dao_df.sort_values("flux", ascending=False)

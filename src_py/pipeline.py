@@ -1445,8 +1445,8 @@ def _quality_inspection_dao_metrics_array(
     h, w = img2.shape
 
     for i in range(n_use):
-        x0 = float(tbl["xcentroid"][i])
-        y0 = float(tbl["ycentroid"][i])
+        x0 = float(tbl["x_centroid"][i])
+        y0 = float(tbl["y_centroid"][i])
         xi = int(round(x0))
         yi = int(round(y0))
         y1 = max(0, yi - half)
@@ -7027,8 +7027,8 @@ def _merge_dao_pass1_pass2_tables(
     p1x = np.asarray([], dtype=np.float64)
     p1y = np.asarray([], dtype=np.float64)
     if tbl_pass1 is not None and len(tbl_pass1) > 0:
-        xb = np.asarray(tbl_pass1["xcentroid"], dtype=np.float64)
-        yb = np.asarray(tbl_pass1["ycentroid"], dtype=np.float64)
+        xb = np.asarray(tbl_pass1["x_centroid"], dtype=np.float64)
+        yb = np.asarray(tbl_pass1["y_centroid"], dtype=np.float64)
         p1x, p1y = _dao_xy_binned_to_full(xb, yb, int(bfac))
     kept: list[dict[str, float]] = []
     for row in pass2_rows:
@@ -7041,8 +7041,8 @@ def _merge_dao_pass1_pass2_tables(
         xb, yb = _dao_full_to_binned_xy(xf, yf, int(bfac))
         kept.append(
             {
-                "xcentroid": xb,
-                "ycentroid": yb,
+                "x_centroid": xb,
+                "y_centroid": yb,
                 "flux": float(row["flux"]),
                 "peak": float(row.get("peak", row["flux"])),
             }
@@ -7093,8 +7093,8 @@ def _dao_targeted_pass2_unmatched_gaia(
     dao_x = np.asarray([], dtype=np.float64)
     dao_y = np.asarray([], dtype=np.float64)
     if tbl_pass1 is not None and len(tbl_pass1) > 0:
-        xb = np.asarray(tbl_pass1["xcentroid"], dtype=np.float64)
-        yb = np.asarray(tbl_pass1["ycentroid"], dtype=np.float64)
+        xb = np.asarray(tbl_pass1["x_centroid"], dtype=np.float64)
+        yb = np.asarray(tbl_pass1["y_centroid"], dtype=np.float64)
         dao_x, dao_y = _dao_xy_binned_to_full(xb, yb, int(bfac))
 
     unmatched_idx: list[int] = []
@@ -7142,7 +7142,7 @@ def _dao_targeted_pass2_unmatched_gaia(
                 finder2 = DAOStarFinder(
                     fwhm=float(fwhm_cut),
                     threshold=float(thr2),
-                    brightest=None,
+                    n_brightest=None,
                     **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
                 )
                 tloc = finder2(cutout)
@@ -7151,8 +7151,8 @@ def _dao_targeted_pass2_unmatched_gaia(
             if tloc is None or len(tloc) == 0:
                 n_empty_cutouts += 1
                 continue
-            xc = np.asarray(tloc["xcentroid"], dtype=np.float64)
-            yc = np.asarray(tloc["ycentroid"], dtype=np.float64)
+            xc = np.asarray(tloc["x_centroid"], dtype=np.float64)
+            yc = np.asarray(tloc["y_centroid"], dtype=np.float64)
             x_full = xlo + xc
             y_full = ylo + yc
             dctr = np.hypot(x_full - x0, y_full - y0)
@@ -7263,8 +7263,8 @@ def _dao_spatial_flux_cap_row_indices(
     m = int(max_n)
     if n <= m:
         return np.arange(n, dtype=np.int64)
-    x = np.asarray(tbl["xcentroid"], dtype=np.float64)
-    y = np.asarray(tbl["ycentroid"], dtype=np.float64)
+    x = np.asarray(tbl["x_centroid"], dtype=np.float64)
+    y = np.asarray(tbl["y_centroid"], dtype=np.float64)
     flux = np.asarray(tbl["flux"], dtype=np.float64)
     w = max(float(width_px), 1.0)
     h = max(float(height_px), 1.0)
@@ -7411,7 +7411,7 @@ def detect_stars_match_master_reference(
         finder = DAOStarFinder(
             fwhm=float(fwhm_eff),
             threshold=float(_thr),
-            brightest=None,
+            n_brightest=None,
             **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
         )
         tbl = finder(data_dao)
@@ -7518,8 +7518,8 @@ def detect_stars_match_master_reference(
     tbl.sort("flux")
     tbl = tbl[::-1]
     n = len(tbl)
-    xb = np.asarray(tbl["xcentroid"], dtype=np.float64)
-    yb = np.asarray(tbl["ycentroid"], dtype=np.float64)
+    xb = np.asarray(tbl["x_centroid"], dtype=np.float64)
+    yb = np.asarray(tbl["y_centroid"], dtype=np.float64)
     x, y = _dao_xy_binned_to_full(xb, yb, bfac)
     flux = np.asarray(tbl["flux"], dtype=np.float64)
     peak_dao = np.asarray(tbl["peak"], dtype=np.float64) if "peak" in tbl.colnames else np.full(n, np.nan)
@@ -8143,7 +8143,7 @@ def detect_stars_and_match_catalog(
         finder = DAOStarFinder(
             fwhm=float(fwhm_eff),
             threshold=float(_thr),
-            brightest=None,
+            n_brightest=None,
             **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
         )
         tbl = finder(data_dao)
@@ -8249,8 +8249,8 @@ def detect_stars_and_match_catalog(
         f"po priestorovom strope max_n={int(max_catalog_rows)}: {n_spatial} bodov (binning DAO={bfac}x)."
     )
     n = n_spatial
-    xb = np.asarray(tbl["xcentroid"], dtype=np.float64)
-    yb = np.asarray(tbl["ycentroid"], dtype=np.float64)
+    xb = np.asarray(tbl["x_centroid"], dtype=np.float64)
+    yb = np.asarray(tbl["y_centroid"], dtype=np.float64)
     x, y = _dao_xy_binned_to_full(xb, yb, bfac)
     flux = np.asarray(tbl["flux"], dtype=np.float64)
     peak_dao = np.asarray(tbl["peak"], dtype=np.float64) if "peak" in tbl.colnames else np.full(n, np.nan)
@@ -14601,8 +14601,8 @@ def _mean_hfr_bright_stars_dao(
     half = 10
     hfrs: list[float] = []
     for i in range(min(max_stars, len(tbl))):
-        x0 = float(tbl["xcentroid"][i])
-        y0 = float(tbl["ycentroid"][i])
+        x0 = float(tbl["x_centroid"][i])
+        y0 = float(tbl["y_centroid"][i])
         xi, yi = int(round(x0)), int(round(y0))
         y1, y2 = max(0, yi - half), min(h, yi + half + 1)
         x1, x2 = max(0, xi - half), min(w, xi + half + 1)
@@ -16037,8 +16037,8 @@ def _qc_fwhm_elongation(
         h, w = img2.shape
 
         for i in range(n_use):
-            x0 = float(tbl["xcentroid"][i])
-            y0 = float(tbl["ycentroid"][i])
+            x0 = float(tbl["x_centroid"][i])
+            y0 = float(tbl["y_centroid"][i])
             xi = int(round(x0))
             yi = int(round(y0))
             y1 = max(0, yi - half)
@@ -16407,7 +16407,7 @@ def _fit_subtract_preprocess_sky_surface(
     finder = DAOStarFinder(
         fwhm=float(fwhm_eff),
         threshold=float(thr),
-        brightest=5000,
+        n_brightest=5000,
         **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
     )
     tbl = finder(data0)
@@ -16416,8 +16416,8 @@ def _fit_subtract_preprocess_sky_surface(
         yy, xx = np.ogrid[:h, :w]
         r2 = stamp_r * stamp_r
         for row in tbl:
-            cy = int(round(float(row["ycentroid"])))
-            cx = int(round(float(row["xcentroid"])))
+            cy = int(round(float(row["y_centroid"])))
+            cx = int(round(float(row["x_centroid"])))
             if 0 <= cy < h and 0 <= cx < w:
                 mask &= (yy - cy) ** 2 + (xx - cx) ** 2 > r2
 

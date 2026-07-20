@@ -386,12 +386,12 @@ def centroid_cutout_detector(
     y1 = min(h, iy + half + 1)
     cut = data[y0:y1, x0:x1]
     _, med, std = sigma_clipped_stats(cut, sigma=3.0)
-    finder = DAOStarFinder(fwhm=fwhm, threshold=max(5.0 * float(std), 1e-6))
+    finder = DAOStarFinder(fwhm=fwhm, threshold=max(5.0 * float(std), 1e-6), min_separation=0)
     tbl = finder(cut - med)
     if tbl is None or len(tbl) == 0:
         return float(seed_x), float(seed_y)
-    xs = np.asarray(tbl["xcentroid"], dtype=np.float64) + x0
-    ys = np.asarray(tbl["ycentroid"], dtype=np.float64) + y0
+    xs = np.asarray(tbl["x_centroid"], dtype=np.float64) + x0
+    ys = np.asarray(tbl["y_centroid"], dtype=np.float64) + y0
     d2 = (xs - seed_x) ** 2 + (ys - seed_y) ** 2
     j = int(np.argmin(d2))
     return float(xs[j]), float(ys[j])

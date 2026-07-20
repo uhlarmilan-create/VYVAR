@@ -1,10 +1,10 @@
 streamlit
 pandas
-numpy>=2.4,<3
+numpy>=2.4.4,<3
 psutil
 scipy
-astropy>=7.2,<8
-photutils>=2.3,<3
+astropy>=8.0,<9
+photutils>=3.0,<4
 matplotlib
 scikit-image
 pillow

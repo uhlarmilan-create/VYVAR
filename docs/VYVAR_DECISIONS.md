@@ -6,6 +6,25 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## DEPS-CYCLE-2 - photutils 3.0 + astropy 8.0 (+ numpy 2.4.4+) (2026-07-20)
+
+**Pins.** `photutils>=3.0,<4` (installed 3.0.0); `astropy>=8.0,<9` (8.0.1);
+`numpy>=2.4.4,<3` (dev env 2.4.4; fresh venv may resolve 2.5.x within pin).
+
+**Migration (scout checklist).** Kwarg migration (`sharpness_range`, `roundness_range`,
+`n_brightest`); explicit `min_separation=0` at every `DAOStarFinder` site to freeze 2.x
+detection (#2216); column readers migrated to `x_centroid`/`y_centroid`; PSF module verified
+(EPSFBuilder/ImagePSF/PSFPhotometry unchanged API).
+
+**M2 freeze decision.** Adopting photutils 3.0's implicit 2.5xFWHM crowding filter is a
+**future science arc** (dense-field program), never an upgrade side effect. All production
+DAO sites pass `min_separation=0` deliberately.
+
+**G3 outcome (path a).** `--full` vs VL-ANCHOR-WCSINV **byte-identical**: core
+`03d8fb64...` n=333, extended `bbfcc92e...` n=499; science-compare 166/166 PASS.
+No anchor or P1 re-cut. Runtime ~2025 s vs ~2296 s pre-upgrade (~12% faster).
+See `dev/results/CURSOR_RESULT_deps_cycle2.md`.
+
 ## ANCHOR-RECUT-SIGMA-NOTES - VL-ANCHOR-WCSINV re-cut after ASCII slope notes (2026-07-20)
 
 **Origin.** PUBLICATION-PREP Part B `--full` STOP: 19 `comp_quality_*.json` files differed from

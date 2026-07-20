@@ -3826,8 +3826,8 @@ def _solve_wcs_validate_and_refine(
 
     _nref = min(200, max(100, len(tbl_sorted)))
     _max_mpx = max(22.0, min(95.0, 0.026 * float(math.hypot(float(w), float(h)))))
-    xs_ref = np.asarray(tbl_sorted[:_nref]["xcentroid"], dtype=np.float64)
-    ys_ref = np.asarray(tbl_sorted[:_nref]["ycentroid"], dtype=np.float64)
+    xs_ref = np.asarray(tbl_sorted[:_nref]["x_centroid"], dtype=np.float64)
+    ys_ref = np.asarray(tbl_sorted[:_nref]["y_centroid"], dtype=np.float64)
     _nn_cat_n = min(int(len(cat_df_cone_full)), 8000)
     ra_full = cat_df_cone_full["ra_deg"].to_numpy(dtype=np.float64)[:_nn_cat_n]
     de_full = cat_df_cone_full["dec_deg"].to_numpy(dtype=np.float64)[:_nn_cat_n]
@@ -4260,11 +4260,11 @@ def _try_blind_series_hint(
         from vyvar_blind_series import solve_blind_with_series
 
         _, med, std = sigma_clipped_stats(data, sigma=3.0)
-        finder = DAOStarFinder(fwhm=3.0, threshold=5.0 * float(std))
+        finder = DAOStarFinder(fwhm=3.0, threshold=5.0 * float(std), min_separation=0)
         srcs = finder(data - float(med))
         if srcs is None or len(srcs) < 3:
             return None
-        bdf = srcs.to_pandas().rename(columns={"xcentroid": "x", "ycentroid": "y"})
+        bdf = srcs.to_pandas().rename(columns={"x_centroid": "x", "y_centroid": "y"})
         if "peak" in bdf.columns and "flux" not in bdf.columns:
             bdf["flux"] = bdf["peak"]
         elif "flux" not in bdf.columns:
@@ -4507,11 +4507,11 @@ def solve_wcs_with_local_gaia(
             from vyvar_blind_series import solve_blind_with_series
 
             _, _bmed, _bstd = sigma_clipped_stats(data, sigma=3.0)
-            _bfinder = DAOStarFinder(fwhm=3.0, threshold=5.0 * _bstd)
+            _bfinder = DAOStarFinder(fwhm=3.0, threshold=5.0 * _bstd, min_separation=0)
             _bsrcs = _bfinder(data - _bmed)
             if _bsrcs is not None and len(_bsrcs) >= 3:
                 _bdf = _bsrcs.to_pandas().rename(
-                    columns={"xcentroid": "x", "ycentroid": "y"}
+                    columns={"x_centroid": "x", "y_centroid": "y"}
                 )
                 if "peak" in _bdf.columns and "flux" not in _bdf.columns:
                     _bdf["flux"] = _bdf["peak"]
@@ -4819,9 +4819,9 @@ def solve_wcs_with_local_gaia(
         finder = DAOStarFinder(
             fwhm=float(_dao_fw),
             threshold=max(float(s) * std, 1e-6),
-            brightest=None,
-            roundlo=-1.0,
-            roundhi=1.0,
+            n_brightest=None,
+            roundness_range=(-1.0, 1.0),
+            min_separation=0,
         )
         tbl_try = finder(img2)
         n_try = int(len(tbl_try)) if tbl_try is not None else 0
@@ -4843,7 +4843,7 @@ def solve_wcs_with_local_gaia(
     if tbl is None or len(tbl) < 6:
         return {"solved": False, "reason": "VYVAR solver: malo DAO detekcii (skus nizsi prah sigma)."}
 
-    tbl = tbl[np.isfinite(tbl["xcentroid"]) & np.isfinite(tbl["ycentroid"]) & np.isfinite(tbl["flux"])]
+    tbl = tbl[np.isfinite(tbl["x_centroid"]) & np.isfinite(tbl["y_centroid"]) & np.isfinite(tbl["flux"])]
     flux_arr = np.asarray(tbl["flux"], dtype=np.float64)
     order_full = np.argsort(-flux_arr)
     tbl_sorted = tbl[order_full]
@@ -4862,8 +4862,8 @@ def solve_wcs_with_local_gaia(
     else:
         top = min(250, len(tbl_sorted))
     tbl = tbl_sorted[:top]
-    xs = np.asarray(tbl["xcentroid"], dtype=np.float64)
-    ys = np.asarray(tbl["ycentroid"], dtype=np.float64)
+    xs = np.asarray(tbl["x_centroid"], dtype=np.float64)
+    ys = np.asarray(tbl["y_centroid"], dtype=np.float64)
     _roworder_ori: str | None = None
     if bool(solver_apply_roworder_yflip):
         xs, ys, _roworder_ori = _apply_fits_roworder_to_detections(
@@ -5073,8 +5073,8 @@ def solve_wcs_with_local_gaia(
     _coarse_offset_px: float | None = None
     if _initial_match_rate < 0.10:
         try:
-            xs_seed = np.asarray(tbl_sorted[: min(50, len(tbl_sorted))]["xcentroid"], dtype=np.float64)
-            ys_seed = np.asarray(tbl_sorted[: min(50, len(tbl_sorted))]["ycentroid"], dtype=np.float64)
+            xs_seed = np.asarray(tbl_sorted[: min(50, len(tbl_sorted))]["x_centroid"], dtype=np.float64)
+            ys_seed = np.asarray(tbl_sorted[: min(50, len(tbl_sorted))]["y_centroid"], dtype=np.float64)
             if len(xs_seed) >= 8:
                 base_n = int(len(pairs_x))
                 best_n = base_n
@@ -6171,9 +6171,9 @@ def _sibling_detect_dao_on_image(
         finder = DAOStarFinder(
             fwhm=dao_fw,
             threshold=max(float(s) * std, 1e-6),
-            brightest=None,
-            roundlo=-1.0,
-            roundhi=1.0,
+            n_brightest=None,
+            roundness_range=(-1.0, 1.0),
+            min_separation=0,
         )
         tbl_try = finder(img2)
         n_try = int(len(tbl_try)) if tbl_try is not None else 0
@@ -6186,12 +6186,12 @@ def _sibling_detect_dao_on_image(
         tbl = best_tbl
     if tbl is None or len(tbl) < 6:
         return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.float64)
-    tbl = tbl[np.isfinite(tbl["xcentroid"]) & np.isfinite(tbl["ycentroid"]) & np.isfinite(tbl["flux"])]
+    tbl = tbl[np.isfinite(tbl["x_centroid"]) & np.isfinite(tbl["y_centroid"]) & np.isfinite(tbl["flux"])]
     flux_arr = np.asarray(tbl["flux"], dtype=np.float64)
     order = np.argsort(-flux_arr)
     tbl = tbl[order[: min(250, len(tbl))]]
-    xs = np.asarray(tbl["xcentroid"], dtype=np.float64)
-    ys = np.asarray(tbl["ycentroid"], dtype=np.float64)
+    xs = np.asarray(tbl["x_centroid"], dtype=np.float64)
+    ys = np.asarray(tbl["y_centroid"], dtype=np.float64)
     return xs, ys
 
 

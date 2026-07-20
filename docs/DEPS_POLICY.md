@@ -9,8 +9,8 @@ knowledge.
 
 ## Why we pin majors
 
-`requirements.txt` holds compatible-range pins (e.g. `numpy>=2.4,<3`,
-`astropy>=7.2,<8`, `photutils>=2.3,<3`). The upper bound holds the **major**, so
+`requirements.txt` holds compatible-range pins (e.g. `numpy>=2.4.4,<3`,
+`astropy>=8.0,<9`, `photutils>=3.0,<4`). The upper bound holds the **major**, so
 a fresh install today reproduces the majors the pipeline was validated on.
 Patch/minor bumps inside a range are cheap; crossing a major is the gated ritual
 below.
@@ -61,11 +61,10 @@ candidate list visible, not to pressure an upgrade.
 
 ## Current watchlist (see `dev/results/DEPS_SCOUT.md` for detail)
 
-- **photutils 3.0** - cross-major. Blockers to handle before adopting: the
-  `min_separation` default change (#2216, pass `min_separation=0` at every
-  `DAOStarFinder` site to freeze 2.x behavior) and deprecated kwargs on the
-  science path (`brightest=` ? `n_brightest`, `roundlo=/roundhi=` ?
-  `roundness_range`). Scheduled as CYCLE 2, after the INSTALL/Lenovo arc.
-- **astropy 8.0** - cross-major, bundle with the photutils cycle; no
-  photometry-numeric change flagged for our paths.
-- **numpy 2.4.4** - in-range patch; validated in CYCLE 1 (see DECISIONS).
+- **photutils 3.1** (unreleased) - aperture photometry speedups + segmentation
+  masking evaluation; not adopted until released and scouted.
+- **numpy 2.5.x** - minor bump within `<3`; candidate for a future in-range
+  cycle (pytest + `--full`).
+
+CYCLE 2 (photutils 3.0 + astropy 8.0) executed 2026-07-20; see DECISIONS
+`DEPS-CYCLE-2` and `dev/results/CURSOR_RESULT_deps_cycle2.md`.

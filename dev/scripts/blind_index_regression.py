@@ -47,13 +47,13 @@ def _dao(fits_path: Path) -> tuple:
     with fits.open(fits_path, memmap=True) as hdul:
         data = np.asarray(hdul[0].data, dtype=np.float64)
     _, med, std = sigma_clipped_stats(data, sigma=3.0)
-    finder = DAOStarFinder(fwhm=3.0, threshold=5.0 * std)
+    finder = DAOStarFinder(fwhm=3.0, threshold=5.0 * std, min_separation=0)
     srcs = finder(data - med)
     if srcs is None or len(srcs) < 3:
         return None, data.shape
     import pandas as pd
 
-    df = srcs.to_pandas().rename(columns={"xcentroid": "x", "ycentroid": "y"})
+    df = srcs.to_pandas().rename(columns={"x_centroid": "x", "y_centroid": "y"})
     if "peak" in df.columns:
         df["flux"] = df["peak"]
     return df.sort_values("flux", ascending=False), data.shape

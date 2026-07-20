@@ -328,14 +328,13 @@ def effective_astrometry_net_tweak_order() -> int:
     return max(3, min(6, o))
 
 
-# photutils ``DAOStarFinder`` has no ``roundness_limit=(None, None)``; extreme ``roundlo``/``roundhi`` disable roundness filtering.
-# Relaxed ``sharplo``/``sharphi`` avoid NoDetectionsWarning when FWHM is slightly mismatched (defaults 0.2-1.0 are tight).
+# photutils ``DAOStarFinder`` (>=3): ``roundness_range`` / ``sharpness_range`` disable shape
+# filtering when set to extreme values; ``min_separation=0`` freezes 2.x detection (DEPS-CYCLE-2).
 # Comatic / corner stars are non-round and would be rejected with default roundness (-1, 1).
-DAO_STAR_FINDER_NO_ROUNDNESS_FILTER: dict[str, float] = {
-    "roundlo": -1.0e9,
-    "roundhi": 1.0e9,
-    "sharplo": 0.0,
-    "sharphi": 2.0,
+DAO_STAR_FINDER_NO_ROUNDNESS_FILTER: dict[str, float | tuple[float, float]] = {
+    "roundness_range": (-1.0e9, 1.0e9),
+    "sharpness_range": (0.0, 2.0),
+    "min_separation": 0.0,
 }
 
 
