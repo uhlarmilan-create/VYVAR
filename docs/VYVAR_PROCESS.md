@@ -279,6 +279,9 @@ carried `psf_flux`).
 - **Reproducibility:** a standalone QA result and its productionized stage must produce the
   same numbers on the same draft.
 - **Tests:** `pytest tests/` green before commit.
+- **String literals in science modules:** any change to string literals in `src_py` science
+  modules (including transliteration, wording, or formatting of emitted text) requires a
+  `--full` byte-identity run before push; comments are exempt.
 - **K2 / literature validation:** expected values anchor in the **spec/literature**, never in the
   code under test (no circular checks).
 - **Cross-checks:** prefer an independent witness (sep) over re-running the same engine.

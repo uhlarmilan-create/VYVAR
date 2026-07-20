@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-20** (PUBLICATION-PREP: field PNG cleanup; vsx_out_of_scope_types; slim export headers + methods matrix. Prior: INVARIANTS P3+P4; ENCODING-POLICY).
+Last updated: **2026-07-20** (ANCHOR-RECUT-SIGMA-NOTES: VL-ANCHOR-WCSINV re-cut core 03d8fb64 / extended bbfcc92e. Prior: PUBLICATION-PREP; INVARIANTS P3+P4).
 
 ## Invariants program -- honest scope
 
@@ -40,8 +40,8 @@ Root tidied into a stable layout: production code in `src_py/`, dev material in
 `dev/` (`dev/tests|tools|validation|scripts|sandbox|orchestrator`), all Cursor
 result/task docs in `dev/results/`, scratch in `tmp/` (gitignored). Root `app.py`
 is a thin Streamlit shim. Commits `c611353` (dev/ move) + `8f4d7b4` (src_py/ move).
-Anchor #3 `--full` gate **PASS byte-identical** on `8f4d7b4` (core `3d26f469...`
-n=333; extended `6420f1da...` n=499; git_dirty_code=false). Milan UI smoke
+Anchor #3 `--full` gate **PASS byte-identical** (core `03d8fb64...`
+n=333; extended `bbfcc92e...` n=499; ANCHOR-RECUT-SIGMA-NOTES 2026-07-20). Milan UI smoke
 confirmed (app launched via root shim, Settings + Parameters tab render,
 modified-counter=10) plus e2e draft_000436 anchor run. See CLAUDE.md /
 VYVAR_PROCESS.md for the map; result `CURSOR_RESULT_repo_reorg.md`.
@@ -109,7 +109,8 @@ excluded_targets, VSX stamp, sky-surface stats, export skips. Spec by Claude nex
 ## Current snapshot (Anchor #3 ACTIVE)
 
 **draft_000435_snapshot_skysurface_20260716** - Anchor #3. Dual full-photometry SHA gate
-**PASS** on HEAD `10d610c` (LABBE-DET). Core `3d26f469...` n=333; extended `6420f1da...` n=499.
+**PASS** (ANCHOR-RECUT-SIGMA-NOTES 2026-07-20). Core `03d8fb64...` n=333; extended `bbfcc92e...` n=499.
+Supersedes core `3d26f469...` / extended `6420f1da...` (2026-07-16 LABBE-DET; sigma-notes cosmetic re-cut only).
 Census 2552/2842/169; identity p95 baseline **1.54 px**. Ledger `VL-ANCHOR-WCSINV` ACTIVE;
 `VL-ANCHOR-424` superseded (offline zip historical). `--full` re-enabled against 435.
 

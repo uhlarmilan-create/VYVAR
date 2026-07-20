@@ -6,6 +6,27 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## ANCHOR-RECUT-SIGMA-NOTES - VL-ANCHOR-WCSINV re-cut after ASCII slope notes (2026-07-20)
+
+**Origin.** PUBLICATION-PREP Part B `--full` STOP: 19 `comp_quality_*.json` files differed from
+`draft_000435_snapshot_skysurface_20260716` only in slope-exclusion note text: ASCII `sigma`
+(run) vs Unicode U+03C3 (snapshot). All 166 `lightcurve_*.csv` byte-identical;
+`full-science-compare` PASS. Cause: ENCODING-POLICY commit `ecbae90` transliterated the
+comp-stability note template in `photometry_core.py`; policy stands, not reverted.
+
+**Gate-spec miss (plain).** The ENCODING-POLICY gate set did not require `--full` before push;
+latent SHA drift shipped until Part B touched the shared Phase 0 path and ran `--full`.
+**PROCESS fix:** string-literal changes in `src_py` science modules now require `--full` before
+push (comments exempt).
+
+**Coverage hole.** P1 golden mini (16 frames) never emits slope notes, so `VL-P1-GOLD` did not
+catch the drift. **Test fix:** `dev/tests/test_recur_shatext_templates.py` pins comp_quality
+note template strings.
+
+**Re-cut.** Two independent fresh `--full` runs byte-identical; new anchor SHAs locked via
+ledger refresh on `VL-ANCHOR-WCSINV` (superseded core `3d26f469...` / extended `6420f1da...`
+retained in notes). See `dev/results/CURSOR_RESULT_anchor_recut.md`.
+
 ## EXPORT-HEADER-SLIM - methods matrix + slim AAVSO/VarAstro headers (2026-07-20)
 
 **Decision.** AAVSO and VarAstro text exports drop unconditional citation blocks

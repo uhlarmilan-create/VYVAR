@@ -17,8 +17,8 @@ from tests.photometry_sha import compute_photometry_sha
 
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = "draft_000435_snapshot_skysurface_20260716"
-EXPECTED_CORE = "3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96"
-EXPECTED_EXT = "6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8"
+EXPECTED_CORE = "03d8fb6491bc3c221f89f87acf22b929cece74c60951cf19bda80699180fb989"
+EXPECTED_EXT = "bbfcc92e7ac5c4c5edfe0f99353aca9d03a987f99407352217e82875ed342892"
 
 
 def _enabled() -> bool:

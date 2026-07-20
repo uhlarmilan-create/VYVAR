@@ -143,19 +143,21 @@
       "id": "VL-ANCHOR-WCSINV",
       "area": "photometry",
       "description": "In-Archive BO CVn Anchor #3 sky-surface snapshot draft_000435_snapshot_skysurface_20260716",
-      "verification": "scripts/session_baseline_check.py --full (core 3d26f469\u2026 n=333; extended 6420f1da\u2026 n=499). Census fingerprint n_raw_dao=2552 matched=2842 targets=169; identity p95 baseline 1.54 px.",
+      "verification": "scripts/session_baseline_check.py --full (core 03d8fb64\u2026 n=333; extended bbfcc92e\u2026 n=499). Census fingerprint n_raw_dao=2552 matched=2842 targets=169; identity p95 baseline 1.54 px.",
       "passes": true,
       "last_verified": "2026-07-20",
-      "commit": "69432ee",
-      "notes": "Cut after LABBE-DET err determinism fix; dual full-photometry SHA gate PASS on HEAD 10d610c. Alias: VL-ANCHOR-SKYSURFACE. Offline zips: C:\\\\ASTRO\\\\backups\\\\draft_000435_snapshot_skysurface_20260716.zip + draft_000435_anchor_live_20260716.zip. F-428 arc evidence moved to validation/f428_arc_evidence/.",
+      "commit": null,
+      "notes": "Re-cut 2026-07-20 (ANCHOR-RECUT-SIGMA-NOTES): sigma-notes ASCII fold (ENCODING-POLICY ecbae90); LC set byte-identical; 19 comp_quality notes cosmetic. Supersedes core 3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96 / extended 6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8 (2026-07-16 LABBE-DET cut). Prior STOP: dev/results/CURSOR_RESULT_publication_prep.md. Alias: VL-ANCHOR-SKYSURFACE. Offline zips: C:\\\\ASTRO\\\\backups\\\\draft_000435_snapshot_skysurface_20260716.zip + draft_000435_anchor_live_20260716.zip.",
       "census_fingerprint": {
         "n_raw_dao": 2552,
         "matched": 2842,
         "targets": 169
       },
       "identity_p95_baseline_px": 1.536099044764055,
-      "core_sha": "3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96",
-      "extended_sha": "6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8"
+      "core_sha": "03d8fb6491bc3c221f89f87acf22b929cece74c60951cf19bda80699180fb989",
+      "extended_sha": "bbfcc92e7ac5c4c5edfe0f99353aca9d03a987f99407352217e82875ed342892",
+      "superseded_core_sha": "3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96",
+      "superseded_extended_sha": "6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8"
     },
     {
       "id": "F-435-EXPORT-GHOSTS",
