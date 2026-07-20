@@ -241,6 +241,7 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 |----|-----|------|
 | BORDER-PREALIGN | LOW | `[BORDER] Glob found 0 aligned frames` fires pre-alignment (428/429 benign); silence or reorder stage |
 | A-DURABLE-UI | LOW | Save watched `.py` during alignment — pending Milan confirmation on 429 run |
+| ENCODING-POLICY | MED | Repo text files carry legacy cp1252 bytes (em dashes) that editors mis-decode and corrupt on save (2026-07-20 incident: 14 files restored from HEAD). One-time migration to UTF-8 + guard test + `.gitattributes`/`editorconfig` policy. |
 
 ---
 

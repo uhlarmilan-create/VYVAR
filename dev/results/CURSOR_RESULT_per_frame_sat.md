@@ -67,4 +67,4 @@ pipeline (unchanged; SHA still byte-identical).
 - `dev/tests/test_per_frame_saturation.py` (new)
 - `dev/tests/test_invariants_p2.py`, `dev/tests/test_ui_params_dashboard.py`
 - docs / FLOW / handbook / PARAMS as above
-- Commit: (see git log after commit)
+- Commit: `69432ee` (not pushed)
