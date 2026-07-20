@@ -12591,12 +12591,15 @@ def select_active_targets(
     - ``catalog_id`` z masterstars musi byt neprazdny (inak sa ciel vynecha).
     - **Ziadny filter na zonu** (linear / noisy / saturated vsetky prejdu); kvalita je v ``zone_flag``,
       saturovane ciele maju ``skip_photometry=True`` pre Fazu 2A.
-    - **Ziadny filter na ``vsx_type``** (SXPHE, DSCT, ... sa nevyhadzuju same o sebe).
+    - ``vsx_out_of_scope_types`` (config): VSX auto-selected targets whose type tokens match
+      are kept in active_targets with ``skip_photometry=True`` and
+      ``skip_reason='vsx_type_out_of_scope'`` (mask-first). Manual targets are never filtered.
+      Empty list = inactive (byte-identical to prior behaviour).
 
     Returns:
         DataFrame s active targets - stlpce z variable_targets + pridane zo masterstars:
         [name, catalog_id, ra_deg, dec_deg, vsx_name, vsx_type, vsx_period,
-         x, y, mag, b_v, bp_rp, zone_flag, skip_photometry]
+         x, y, mag, b_v, bp_rp, zone_flag, skip_photometry, skip_reason]
     """
     global LAST_EXCLUDED_TARGETS
     # Auto-repair poskodenych Gaia ID pred nacitanim (ak je dostupna lokalna Gaia DB).
@@ -12827,6 +12830,22 @@ def select_active_targets(
             excluded_rows.append(_excluded_target_row(vrow, "saturated", mag=mag_for_skip))
             continue
         skip_ph = zone_flag == "saturated"
+        skip_reason = "zone_flag" if skip_ph else ""
+        # VSX out-of-scope type filter (auto VSX only; mask-first).
+        from vsx_type_scope import (  # noqa: PLC0415
+            is_vsx_auto_selected_target,
+            vsx_type_is_out_of_scope,
+        )
+
+        _voos = list(getattr(_cfg, "vsx_out_of_scope_types", []) or [])
+        if (
+            (not skip_ph)
+            and _voos
+            and is_vsx_auto_selected_target(vrow)
+            and vsx_type_is_out_of_scope(str(vrow.get("vsx_type", "") or ""), _voos)
+        ):
+            skip_ph = True
+            skip_reason = "vsx_type_out_of_scope"
         rec = {
             "name": vrow.get("name", ""),
             "vsx_name": vrow.get("vsx_name", ""),
@@ -12849,7 +12868,10 @@ def select_active_targets(
             "bp_rp": float(ms_row.get("bp_rp", float("nan"))),
             "zone_flag": zone_flag,
             "skip_photometry": bool(skip_ph),
+            "skip_reason": str(skip_reason),
         }
+        if "catalog" in vrow.index:
+            rec["catalog"] = vrow.get("catalog", "")
         for _exo_col in (
             "exo_host_obj_id",
             "exo_host_name",
@@ -12879,6 +12901,7 @@ def select_active_targets(
         "bp_rp",
         "zone_flag",
         "skip_photometry",
+        "skip_reason",
     ]
     n_excluded_no_dao_match = int((~vt_in.index.isin(matched_vt_idx)).sum())
     for vidx, vrow in vt_in.loc[~vt_in.index.isin(matched_vt_idx)].iterrows():

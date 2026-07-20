@@ -193,6 +193,10 @@
   // Faint limit for automatically adopting VSX-known variables in the field
   // as measurement targets.
   "vsx_variable_targets_mag_limit": 14.5,
+  // VSX types to leave unmeasured (token-match on |/+/whitespace; trailing ':'
+  // stripped; any-token equals any config entry; empty = inactive). Auto VSX
+  // only; manual targets immune. Example: ["ROT"].
+  "vsx_out_of_scope_types": [],
   // Strategy for picking which detected stars feed the blind solver
   // ('per_cell' spreads them evenly across the frame).
   "blind_img_select_mode": "per_cell",

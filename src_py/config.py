@@ -494,6 +494,8 @@ class AppConfig:
     #: VSX export for variable_targets.csv: keep stars with ``mag_max`` <= limit (or unknown ``mag_max``).
     #: Set to ``<= 0`` to disable this cutoff (export all VSX rows in the field cone).
     vsx_variable_targets_mag_limit: float = 14.5
+    #: VSX types to leave unmeasured (token-match; empty = inactive). See vsx_type_scope.py.
+    vsx_out_of_scope_types: list[str] = field(default_factory=list)
 
     #: Path to local exoplanet host SQLite (``exoplanet_data``: NASA Exoplanet Archive snapshot).
     exoplanet_local_db_path: str = "exoplanets/vyvar_exoplanet_local.db"
@@ -1239,6 +1241,15 @@ class AppConfig:
             # ``<= 0`` = ziadny mag. rez VSX (export vsetkych v kuzeli); ``> 0`` = max ``mag_max`` z VSX.
         except (TypeError, ValueError):
             self.vsx_variable_targets_mag_limit = 13.0
+        _voos = data.get("vsx_out_of_scope_types", self.vsx_out_of_scope_types)
+        if _voos is None:
+            self.vsx_out_of_scope_types = []
+        elif isinstance(_voos, str):
+            self.vsx_out_of_scope_types = [p.strip() for p in _voos.split(",") if p.strip()]
+        elif isinstance(_voos, (list, tuple)):
+            self.vsx_out_of_scope_types = [str(p).strip() for p in _voos if str(p).strip()]
+        else:
+            self.vsx_out_of_scope_types = []
         self.exoplanet_local_db_path = str(
             data.get(
                 "exoplanet_local_db_path",
@@ -2372,6 +2383,7 @@ class AppConfig:
             "debug_platesolver": bool(self.debug_platesolver),
             "vsx_local_db_path": str(self.vsx_local_db_path or ""),
             "vsx_variable_targets_mag_limit": float(self.vsx_variable_targets_mag_limit),
+            "vsx_out_of_scope_types": list(self.vsx_out_of_scope_types),
             "exoplanet_local_db_path": str(self.exoplanet_local_db_path or ""),
             "exoplanet_match_max_sep_arcsec": float(self.exoplanet_match_max_sep_arcsec),
             "catalog_query_max_rows": int(self.catalog_query_max_rows),

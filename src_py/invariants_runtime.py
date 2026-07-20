@@ -415,6 +415,39 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
                 if issues and issues[-1].startswith("psf method"):
                     break
 
+    # Empty vsx_out_of_scope_types => no out-of-scope skip markers.
+    _cfg_snap = meta.get("config") if isinstance(meta.get("config"), dict) else {}
+    _voos = meta.get("vsx_out_of_scope_types")
+    if _voos is None:
+        _voos = _cfg_snap.get("vsx_out_of_scope_types", [])
+    if isinstance(_voos, str):
+        _voos_list = [p.strip() for p in _voos.split(",") if p.strip()]
+    elif isinstance(_voos, (list, tuple)):
+        _voos_list = [str(p).strip() for p in _voos if str(p).strip()]
+    else:
+        _voos_list = []
+    if not _voos_list and photometry_dir is not None:
+        import pandas as pd
+
+        for rel in (
+            Path(photometry_dir) / "photometry_summary.csv",
+            Path(photometry_dir).parent / "active_targets.csv",
+        ):
+            if not rel.is_file():
+                continue
+            try:
+                df = pd.read_csv(rel, low_memory=False)
+            except Exception:  # noqa: BLE001
+                continue
+            if "skip_reason" not in df.columns:
+                continue
+            vals = {str(v).strip().lower() for v in df["skip_reason"].tolist()}
+            if "vsx_type_out_of_scope" in vals:
+                issues.append(
+                    f"skip_reason=vsx_type_out_of_scope in {rel.name} while "
+                    "vsx_out_of_scope_types=[]"
+                )
+
     ok = not issues
     inv_check(
         meta,

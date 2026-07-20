@@ -387,7 +387,11 @@ def _phase2a_target_choice_label(row: pd.Series) -> str:
         else str(sk).strip().lower() in ("1", "true", "yes", "t")
     )
     if sk_b or zf == "saturated":
-        badge = "[red] saturated - photometry unavailable"
+        sr = str(row.get("skip_reason", "") or "").strip().lower()
+        if sr == "vsx_type_out_of_scope":
+            badge = "[grey] VSX type out of scope - not measured"
+        else:
+            badge = "[red] saturated - photometry unavailable"
     elif zf == "linear":
         badge = "[green] linear"
     elif zf in ("noisy1", "noisy2"):
