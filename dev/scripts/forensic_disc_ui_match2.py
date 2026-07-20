@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
-"""F3 discriminator: NightRun on main with UI-parity match radius (2.0\") + config SysRem."""
+# -*- coding: ascii -*-
+"""
+==============================================================================
+FORENSIC SCRIPT -- ARCHIVED (no live role)
+==============================================================================
+purpose:     F3 discriminator -- NightRun with UI-parity match radius
+             (cat_match_arc=2.0) + config SysRem; class now guarded by P1
+             test_ui_chain_byte_identity (promoted assertion).
+finding IDs: F3 / F-431 (headless vs UI match-radius divergence class)
+RESULT:      dev/results/CURSOR_RESULT_invariants_P3P4.md
+DECISIONS:   INVARIANTS-P3P4-CLOSEOUT
+date:        2026-07-20
+state:       ARCHIVED -- no live role (PROMOTE+ARCHIVE pilot)
+==============================================================================
+"""
 from __future__ import annotations
 
 import json

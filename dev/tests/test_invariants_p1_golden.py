@@ -276,6 +276,32 @@ def test_headless_chain_sha(headless_mini: Path, mini_and_gold: tuple[Path, dict
 
 def test_ui_chain_byte_identity(headless_mini: Path, mini_and_gold: tuple[Path, dict]) -> None:
     """UI-order vs headless science identity. Divergence = F-431-class STOP."""
+    # F3 discriminator PROMOTED from forensic_disc_ui_match2.py (P3 pilot):
+    # app.py RUN VYVAR pins cat_match_arc=2.0 (call site ~app.py:2169); NightRun
+    # default must match that UI parity value.
+    _app_src = (REPO_ROOT / "src_py" / "app.py").read_text(encoding="ascii")
+    assert "cat_match_arc=2.0" in _app_src, (
+        "UI RUN VYVAR must pin cat_match_arc=2.0 (F3/F-431 parity; app.py call site)"
+    )
+    from dataclasses import fields  # noqa: PLC0415
+    from night_run import NightRunParams  # noqa: PLC0415
+    from pathlib import Path as _Path  # noqa: PLC0415
+
+    _nr_default = next(
+        f.default
+        for f in fields(NightRunParams)
+        if f.name == "catalog_match_max_sep_arcsec"
+    )
+    assert float(_nr_default) == 2.0, (
+        "NightRunParams.catalog_match_max_sep_arcsec default must be 2.0 "
+        "(UI RUN VYVAR parity)"
+    )
+    # Also pin via a minimal constructed instance (required ctor args are dummies).
+    _nr = NightRunParams(
+        source_dir=_Path("."), equipment_id=1, telescope_id=1
+    )
+    assert float(_nr.catalog_match_max_sep_arcsec) == 2.0
+
     mini, _gold = mini_and_gold
     # Snapshot mini skeleton without photometry outputs for a second chain
     work = REPO_ROOT / "tmp" / "p1_ui_chain_work"

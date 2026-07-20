@@ -6,7 +6,9 @@ discipline lives here; open harness items **DEV-PROCESS-A/B** are spec'd in ROAD
 
 **Session init:** read STATE, ROADMAP, latest JOURNAL, PROCESS, and
 `docs/VYVAR_CLAUDE_OPERATING_PRINCIPLES.md` (the last governs how Claude reasons and answers; it is
-not optional context).
+not optional context). At the **first session of each week**, also run
+`python dev/tools/invariants_report.py` (optionally `--write`) -- the weekly
+invariants cadence; `--fast` itself is unchanged.
 
 ## Repository layout & ritual paths (post REPO-REORG, 2026-07-17)
 
@@ -48,6 +50,10 @@ in the same work** -- not as a later habit. Drift turns tests red.
 2. **RESULT file** must include a **"Docs impact:"** section -- either the list
    of updated documents, or the explicit line `Docs impact: none (reason)`. A
    RESULT without this section is incomplete.
+2b. **RESULT file** must also include a **"Recurrence:"** one-liner (see
+   Recurrence rule below):
+   `Recurrence: new test <name> | existing <name> | n/a (first occurrence / not a bug-class)`.
+   A RESULT without this field is incomplete (same enforcement style as Docs impact).
 3. **Docs impact checklist** (walk each item):
    - **STATE** -- always (snapshot of what is true now).
    - **DECISIONS** -- if a decision was made or reversed.
@@ -66,6 +72,38 @@ in the same work** -- not as a later habit. Drift turns tests red.
 5. **Layout rule:** `*_SPEC.md` files live in `dev/results/specs/`
    (development artifacts), never in `docs/`. `docs/` holds the user-facing
    family only.
+
+---
+
+## Recurrence and forensic discipline
+
+### Recurrence rule
+
+Formalizes the existing two-correction practice:
+
+- A bug class fixed for the **second** time gets a permanent regression test
+  named `test_recur_<class>...` plus a DECISIONS pointer.
+- Every RESULT file must carry the mandatory one-line field:
+  `Recurrence: new test <name> | existing <name> | n/a (first occurrence / not a bug-class)`.
+
+### Forensic promotion rubric
+
+Every forensic / one-off investigation script (`dev/scripts/forensic_*`, or a
+`tmp/` probe that graduates into the repo) must end in **exactly one** state,
+recorded in the closing RESULT:
+
+| State | Meaning |
+|-------|---------|
+| **PROMOTE** | Its discriminating assertion moves into a permanent test; script deleted or archived after promotion. |
+| **ARCHIVE** | Script stays tracked with a mandatory header block (purpose, finding ID, RESULT/DECISIONS pointer, date, state: `ARCHIVED` -- no live role). |
+| **DELETE** | Knowledge fully captured elsewhere; pointer recorded. |
+
+### Weekly invariants report cadence
+
+At the first session of each week, run `python dev/tools/invariants_report.py`
+(optionally `--write` to emit `dev/results/INVARIANTS_WEEKLY_<yyyymmdd>.md`).
+This is an addition to the session ritual text; `session_baseline_check.py --fast`
+itself is unchanged.
 
 ---
 
