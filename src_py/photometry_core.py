@@ -5358,21 +5358,15 @@ def save_target_field_map_png(
     fig, ax = plt.subplots(figsize=(18, 12))
     ax.imshow(data, origin="lower", cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
 
-    # Target - standard cerveny stvorec; catalog_only cyan prerusovany kruzok
+    # Target - red square (DAO-matched photometry targets only; no catalog_only marker)
     try:
         tx, ty = float(target_row["x"]), float(target_row["y"])
-        _z_t = str(target_row.get("zone", "") or "").strip().lower()
+        _z_t = str(
+            target_row.get("zone_flag", target_row.get("zone", "")) or ""
+        ).strip().lower()
         if _z_t == "catalog_only":
-            circ_t = mpatches.Circle(
-                (tx, ty),
-                radius=16,
-                linewidth=2.0,
-                edgecolor="cyan",
-                facecolor="none",
-                linestyle="--",
-            )
-            ax.add_patch(circ_t)
-            tcol = "cyan"
+            # No photometry on catalog_only; do not draw a cyan "no DAO" marker.
+            pass
         else:
             rect_t = mpatches.Rectangle(
                 (tx - 15, ty - 15),
@@ -5383,17 +5377,16 @@ def save_target_field_map_png(
                 facecolor="none",
             )
             ax.add_patch(rect_t)
-            tcol = "red"
-        tname = str(target_row.get("vsx_name", target_row.get("catalog_id", "T")))[:20]
-        ax.text(
-            tx + 18,
-            ty,
-            f"T: {tname}",
-            color=tcol,
-            fontsize=7,
-            va="center",
-            fontweight="bold",
-        )
+            tname = str(target_row.get("vsx_name", target_row.get("catalog_id", "T")))[:20]
+            ax.text(
+                tx + 18,
+                ty,
+                f"T: {tname}",
+                color="red",
+                fontsize=7,
+                va="center",
+                fontweight="bold",
+            )
     except (KeyError, TypeError, ValueError):
         pass
 
@@ -5424,7 +5417,7 @@ def save_target_field_map_png(
     target_name = str(target_row.get("vsx_name", target_row.get("catalog_id", "")))
     ax.set_title(
         f"VYVAR - {target_name}\n"
-        f"(red=VSX target, cyan=catalog_only (no DAO), green=comp star)",
+        f"(red=VSX target, green=comp star)",
         fontsize=10,
     )
     ax.axis("off")
