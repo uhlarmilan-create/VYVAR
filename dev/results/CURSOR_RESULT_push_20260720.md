@@ -74,11 +74,30 @@ Added under OPEN low-priority hygiene:
   `chore(bookkeeping): ledger auto-stamp from k2 --full + result footer stamps`
 - Final RESULT tip / --fast / origin verify: appended after push below.
 
-## Push / sanity (filled after push)
+## Push / sanity (retry-2)
 
 | Check | Result |
 |-------|--------|
-| `origin/main` pre-push | (pending) |
-| `--fast` | (pending) |
-| `git push` | (pending) |
-| Pushed tip | (pending) |
+| `origin/main` pre-push | still `c588ee9` (unchanged) |
+| `--fast` | OVERALL PASS (ledger PASS; 1024 passed, 24 skipped) |
+| `git push` | `c588ee9..f8923e9  main -> main` |
+| Local tip == origin tip | `f8923e9` |
+
+### Pushed stack (oldest -> newest), 11 commits
+
+```
+42521bb  docs(flow): FLOW doc v3.0 full-depth edition (~36pp) - builder rewrite
+6d549a2  docs(layout): move *_SPEC.md to dev/results/specs; FLOW v3.0.1 ...
+fbe1be9  process(docs-sync): mandatory Docs impact ritual + machine guard ...
+0db0690  invariants(p1): golden mini-dataset + E2E equivalence suite
+b0575c9  fix(apcorr): all-or-nothing COG per night ...
+80e0e66  feat(report): VSX limit vs measured field depth check ...
+66102d7  docs(roadmap): close TODO-COMP-P2P-RESIDUAL as stale ...
+6a68fae  invariants(p2): contract registry + runtime gates ...
+69432ee  feat(saturation): per-frame target saturation decisions behind flag ...
+3c0a369  feat(k2): NIGHT_FIT v2 fit path per design spec (gated OFF) ...
+f8923e9  chore(bookkeeping): ledger auto-stamp from k2 --full + result footer stamps
+```
+
+RESULT append strategy: R1 carried the diagnosis + R2 list; this section
+(and this note) ride as one last tiny RESULT commit after the push.
