@@ -216,7 +216,7 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
     _k2_val, _k2_src = resolve_k2_bprp_value(_cfg, _obs_group)
     _bp_med_k2 = bp_rp_comp_median(ctx.comp_bp_rp, comp_quality)
     if (
-        _k2_src is K2Source.LITERATURE_DEFAULT
+        _k2_src in (K2Source.LITERATURE_DEFAULT, K2Source.NIGHT_FIT)
         and math.isfinite(float(_k2_val))
         and math.isfinite(_bp_med_k2)
     ):
@@ -227,6 +227,7 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
             ctx.airmass_arr,
             float(_k2_val),
             _bp_med_k2,
+            k2_source=_k2_src,
         )
     k2_value_lc = float("nan")
     k2_colour_ref = float("nan")
@@ -249,7 +250,7 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
             min_comp_for_ct=int(_cfg.phase01_ct_min_comp),
         )
     if (
-        _k2_src is K2Source.LITERATURE_DEFAULT
+        _k2_src in (K2Source.LITERATURE_DEFAULT, K2Source.NIGHT_FIT)
         and math.isfinite(float(_k2_val))
         and math.isfinite(_bp_med_k2)
     ):
@@ -259,7 +260,7 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
             object_bp_rp=float(target_bp_rp),
             bp_rp_comp_med=_bp_med_k2,
             k2_value=float(_k2_val),
-            k2_source=K2Source.LITERATURE_DEFAULT,
+            k2_source=_k2_src,
         )
         k2_value_lc = float(_k2_val)
         k2_colour_ref = _bp_med_k2

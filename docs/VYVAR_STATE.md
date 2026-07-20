@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-19** (PER-FRAME-SAT-GATED: per-frame target sat decisions behind flag, default OFF; registry 271).
+Last updated: **2026-07-20** (K2-NIGHT-FIT-V2: NIGHT_FIT fitter + synthetic recovery gated OFF; activation still B2-blocked).
 
 ## Repository layout (REPO-REORG -- DONE, gate PASS)
 

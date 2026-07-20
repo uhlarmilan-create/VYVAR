@@ -30,7 +30,10 @@ Separate commits per phase; pytest green each. Result files: `CURSOR_RESULT_inva
 
 **Status:** **ACTIVATED v1 (2026-07-07).** Spec: `dev/results/specs/VYVAR_K2_DESIGN_SPEC.md`. Code: `k2_extinction.py`,
 `k2_mode=literature` default, band_classify CT wiring + CV/CR flip, LC provenance columns.
-**NIGHT_FIT = v2 open** (`k2_fit_enabled` OFF; pre-gate spec'd, sandbox machinery in `tmp/k2_*`).
+**NIGHT_FIT v2 fit implemented + synthetically validated (gated OFF)** (`k2_fit_enabled=false`;
+`fit_k2_night` / `k2_feasibility_pregate` in `k2_extinction.py`; recovery suite
+`dev/tests/test_k2_night_fit_recovery.py`). **Activation blocked ONLY on data night (B2 /
+K2-DATA-BLOCKER).**
 
 **Rejected (do not port):** comp-select **grow-redesign** — population validation showed ~**45%**
 regressions; sandbox-only; **nothing ported to production**.
@@ -47,7 +50,7 @@ regressions; sandbox-only; **nothing ported to production**.
 |----|-----|------|
 | **PROV-HEADLESS** | — | **FIXED** (`e7ce7ea`): `pipeline_meta.json` `provenance` block (`git_hash`, `git_dirty`, full `config_snapshot`, `stamped_at_utc`, `entry_point`); last-writer-wins at `run_phase2a` + `generate_masterstar_and_catalog`. |
 | **PROC-MAG-NAMING** | — | **FIXED** (`0913665`, documented): proc CSV `mag` = Gaia catalog G (constant per star at match time); science uses `dao_flux`. Docstring + `VYVAR_PIPELINE_CZ.md` schema note; PROCESS dao_flux rule verified. |
-| **K2-DATA-BLOCKER** | — | NIGHT_FIT needs calibrated filtered draft, dX ≥ ~0.3, comp residual floor ≪ 15 mmag. Home rig + flats qualifies; Boyden blocked on flat/flip systematics. **Supersedes** old blockers (filtered draft + FILTER strings — both satisfied 2026-07-07). |
+| **K2-DATA-BLOCKER** | — | Activation only: calibrated filtered draft, dX ≥ ~0.3, comp residual floor ≪ 15 mmag. v2 fitter + synthetic recovery DONE (2026-07-20); Boyden blocked on flat/flip systematics. |
 | **K2-SLOPE-TRACE** | — | **FIXED** (`8c44b71`): GR slope 0.859→1.054 (Jordi 2010 Table 6 inverse, FGK g-r=0.48); k2_g≈−0.0169, k2_r≈−0.0042. UG retained 1.091 as documented exception → **K2-SLOPE-UG** (FUTURE). |
 | **K2-SLOPE-UG** | FUTURE | No Jordi u-g row; spec-anchored UG slope 1.091 retained pending citable source. |
 

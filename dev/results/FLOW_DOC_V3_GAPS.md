@@ -59,11 +59,8 @@ B5. BRIGHT-LIMIT FIGURE - doc states practical wide-rig bright limit
 ## C. Verify on SYNTHETIC data (Claude can generate these)
 
 C1. K2-FIT-RECOVERY (pre-validation of NIGHT_FIT before B2 exists):
-    inject a known k'' into synthetic comp mag_inst series (given airmass
-    curve + BP-RP distribution + realistic noise from the error model),
-    run the v2 fit, assert recovery within consistency gates across a
-    parameter sweep (k'' in 0..0.08, color spreads, noise levels). Proves
-    the fitter itself; the real-night blocker then only concerns data.
+    DONE (2026-07-20): v2 fitter implemented + synthetic recovery suite; see
+    CURSOR_RESULT_k2_night_fit_v2.md.
 
 C2. PSF-DEBLEND-INJECTION: synthetic frames with pairs at separations
     0.6..2.5 FWHM and dmag 0..4, known fluxes; run grouped ePSF fit and

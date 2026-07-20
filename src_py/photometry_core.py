@@ -3996,6 +3996,105 @@ def _comp_maps_from_comparison_stars_csv(comp_csv: Path) -> tuple[dict[str, floa
     return comp_bp_rp, comp_catalog_mag, comp_quality
 
 
+def _phase2a_attempt_k2_night_fit(
+    *,
+    cfg: Any,
+    obs_group: str,
+    flux_matrix: pd.DataFrame,
+    csv_files: list[Path],
+    comparison_stars_csv: Path,
+    masterstar_fits_path: Path,
+) -> Any:
+    """Build flux-derived Honeycutt inputs and run NIGHT_FIT (S6). Returns None if not enabled."""
+    from k2_extinction import (  # noqa: PLC0415
+        airmass_from_proc_csvs,
+        attempt_k2_night_fit_from_arrays,
+        select_k2_fit_frames_readonly,
+    )
+
+    if flux_matrix is None or getattr(flux_matrix, "empty", True):
+        return attempt_k2_night_fit_from_arrays(
+            cfg,
+            obs_group,
+            mag_inst=np.array([], dtype=np.float64),
+            colour=np.array([], dtype=np.float64),
+            airmass=np.array([], dtype=np.float64),
+            star_index=np.array([], dtype=np.int64),
+            frame_index=np.array([], dtype=np.int64),
+        )
+    comp_bp_rp, _, comp_quality = _comp_maps_from_comparison_stars_csv(Path(comparison_stars_csv))
+    comp_ids = [
+        cid
+        for cid, q in comp_quality.items()
+        if q.get("quality") != "excluded" and cid in comp_bp_rp
+    ]
+    if len(comp_ids) < 3:
+        comp_ids = sorted(comp_bp_rp.keys())
+    mag_map = _group_comp_mag_inst_from_flux_matrix(flux_matrix, comp_ids, csv_files)
+    am = airmass_from_proc_csvs(csv_files)
+    # READ-ONLY fit-frame subset from always-on align_residual_px (when present).
+    align_res = np.full(len(csv_files), float("nan"), dtype=np.float64)
+    try:
+        align_rep = Path(masterstar_fits_path).resolve().parent / "alignment_report.csv"
+        if align_rep.is_file():
+            rep = pd.read_csv(align_rep, low_memory=False)
+            if "file" in rep.columns and "align_residual_px" in rep.columns:
+                by_stem = {
+                    Path(str(r["file"])).stem: float(
+                        pd.to_numeric(r.get("align_residual_px"), errors="coerce")
+                    )
+                    for _, r in rep.iterrows()
+                    if str(r.get("file", "")).strip()
+                }
+                for i, p in enumerate(csv_files):
+                    align_res[i] = by_stem.get(p.stem, float("nan"))
+    except Exception as exc:  # noqa: BLE001
+        logging.debug("[K2-FIT] align_residual read failed: %s", exc)
+    _apr = float(getattr(cfg, "aperture_fwhm_factor", 1.9) or 1.9) * 3.0
+    _max_res = float(getattr(cfg, "frame_align_residual_max_frac", 0.25) or 0.25) * _apr
+    frame_ok = select_k2_fit_frames_readonly(
+        len(csv_files),
+        align_residual_px=align_res,
+        align_residual_max_px=_max_res,
+    )
+
+    mag_l: list[float] = []
+    col_l: list[float] = []
+    am_l: list[float] = []
+    si_l: list[int] = []
+    fi_l: list[int] = []
+    br_l: list[float] = []
+    for si, cid in enumerate(comp_ids):
+        series = mag_map.get(cid)
+        if series is None:
+            continue
+        bp = float(comp_bp_rp.get(cid, float("nan")))
+        for fi in range(len(csv_files)):
+            if not frame_ok[fi]:
+                continue
+            mv = float(series[fi])
+            av = float(am[fi]) if fi < len(am) else float("nan")
+            if not math.isfinite(mv) or not math.isfinite(av) or not math.isfinite(bp):
+                continue
+            mag_l.append(mv)
+            col_l.append(bp)
+            am_l.append(av)
+            si_l.append(si)
+            fi_l.append(fi)
+            br_l.append(mv)
+    return attempt_k2_night_fit_from_arrays(
+        cfg,
+        obs_group,
+        mag_inst=np.asarray(mag_l, dtype=np.float64),
+        colour=np.asarray(col_l, dtype=np.float64),
+        airmass=np.asarray(am_l, dtype=np.float64),
+        star_index=np.asarray(si_l, dtype=np.int64),
+        frame_index=np.asarray(fi_l, dtype=np.int64),
+        brightness=np.asarray(br_l, dtype=np.float64),
+        frame_ok=None,  # already filtered
+    )
+
+
 def _compute_group_color_term_fit(
     *,
     comparison_stars_csv: Path,
@@ -4003,6 +4102,8 @@ def _compute_group_color_term_fit(
     csv_files: list[Path],
     obs_group: str,
     cfg: Any,
+    k2_value: float | None = None,
+    k2_source: Any | None = None,
 ) -> _ColorTermGroupFit | None:
     comp_csv = Path(comparison_stars_csv)
     if not comp_csv.is_file():
@@ -4027,8 +4128,13 @@ def _compute_group_color_term_fit(
         resolve_k2_bprp_value,
     )
 
-    _k2_val, _k2_src = resolve_k2_bprp_value(cfg, obs_group)
-    if _k2_src is K2Source.LITERATURE_DEFAULT and math.isfinite(float(_k2_val)):
+    if k2_value is not None and k2_source is not None:
+        _k2_val, _k2_src = float(k2_value), k2_source
+    else:
+        _k2_val, _k2_src = resolve_k2_bprp_value(cfg, obs_group)
+    if _k2_src in (K2Source.LITERATURE_DEFAULT, K2Source.NIGHT_FIT) and math.isfinite(
+        float(_k2_val)
+    ):
         _bp_med = bp_rp_comp_median(comp_bp_rp, comp_quality)
         if math.isfinite(_bp_med):
             comp_mag_inst = apply_k2_to_comp_mag_inst(
@@ -4038,6 +4144,7 @@ def _compute_group_color_term_fit(
                 airmass_from_proc_csvs(csv_files),
                 float(_k2_val),
                 _bp_med,
+                k2_source=_k2_src,
             )
     c1, c1_stderr, n_comp = fit_color_term_c1(
         comp_mag_inst,
@@ -7009,6 +7116,8 @@ class _Phase2AState:
     cog_night_fallback_n_frames: int = 0
     #: PER-FRAME-SAT-GATED night meta (empty when flag OFF — INV-CFG-01).
     per_frame_sat_meta: dict[str, Any] = field(default_factory=dict)
+    #: NIGHT_FIT v2 meta (empty when k2_fit_enabled=False).
+    k2_fit_meta: dict[str, Any] = field(default_factory=dict)
 
 
 def _build_phase2a_dynamic_params(
@@ -8577,6 +8686,34 @@ def _phase2a_prepare_shared_state(
         _site.ok,
     )
 
+    from k2_extinction import resolve_k2_bprp_value  # noqa: PLC0415
+
+    # NIGHT_FIT v2 (gated): attempt only when k2_fit_enabled; default OFF skips entirely.
+    _k2_night_fit = None
+    _k2_fit_meta: dict[str, Any] = {}
+    if bool(getattr(_cfg, "k2_fit_enabled", False)):
+        _k2_night_fit = _phase2a_attempt_k2_night_fit(
+            cfg=_cfg,
+            obs_group=obs_group,
+            flux_matrix=_flux_matrix,
+            csv_files=csv_files,
+            comparison_stars_csv=Path(comparison_stars_csv),
+            masterstar_fits_path=Path(masterstar_fits_path),
+        )
+        if _k2_night_fit is not None:
+            _k2_fit_meta = dict(_k2_night_fit.to_meta())
+
+    _k2_bprp, _k2_src_enum = resolve_k2_bprp_value(
+        _cfg, obs_group, night_fit_result=_k2_night_fit
+    )
+    if _k2_src_enum.value != "none" and math.isfinite(float(_k2_bprp)):
+        log_event(f"[K2] obs_group {obs_group}: k2={float(_k2_bprp):.6f} source={_k2_src_enum.value}")
+    if _k2_fit_meta.get("k2_fit_refuse_reason"):
+        log_event(
+            f"[K2-FIT] refused ({_k2_fit_meta.get('k2_fit_refuse_reason')}); "
+            f"using source={_k2_src_enum.value}"
+        )
+
     _apply_ct = resolve_apply_color_term(_cfg, obs_group)
     _group_ct: _ColorTermGroupFit | None = None
     if _apply_ct:
@@ -8593,6 +8730,8 @@ def _phase2a_prepare_shared_state(
             csv_files=csv_files,
             obs_group=obs_group,
             cfg=_cfg,
+            k2_value=float(_k2_bprp),
+            k2_source=_k2_src_enum,
         )
         if _group_ct is not None:
             log_event(f"[COLOR TERM] group pool fit ({obs_group}): {_group_ct.gate_reason}")
@@ -8600,12 +8739,6 @@ def _phase2a_prepare_shared_state(
             logging.warning("[COLOR TERM] group pool fit unavailable for %s", obs_group)
     else:
         log_event(f"[COLOR TERM] disabled for {obs_group} (apply_color_term toggle / filter type)")
-
-    from k2_extinction import resolve_k2_bprp_value  # noqa: PLC0415
-
-    _k2_bprp, _k2_src_enum = resolve_k2_bprp_value(_cfg, obs_group)
-    if _k2_src_enum.value != "none" and math.isfinite(float(_k2_bprp)):
-        log_event(f"[K2] obs_group {obs_group}: k2={float(_k2_bprp):.6f} source={_k2_src_enum.value}")
 
     # Run-effective resolved facts for the honest full-config report (metadata only).
     _resolved_facts = _build_phase2a_resolved_facts(
@@ -8677,6 +8810,7 @@ def _phase2a_prepare_shared_state(
         cog_night_fallback_n_without_ok=_cog_n_bad,
         cog_night_fallback_n_frames=_cog_n_frames,
         per_frame_sat_meta=dict(_per_frame_sat_meta or {}),
+        k2_fit_meta=dict(_k2_fit_meta or {}),
     )
 
 
@@ -9396,20 +9530,28 @@ def _phase2a_process_one_target(
     k2_source_rows = [K2Source.NONE.value] * len(mag_calib)
     _k2_val = float(getattr(state, "k2_bprp", float("nan")))
     _k2_src = str(getattr(state, "k2_source", K2Source.NONE.value))
-    if _k2_src == K2Source.LITERATURE_DEFAULT.value and math.isfinite(_k2_val):
+    if _k2_src in (
+        K2Source.LITERATURE_DEFAULT.value,
+        K2Source.NIGHT_FIT.value,
+    ) and math.isfinite(_k2_val):
         _tf_k2 = all_frames[all_frames["catalog_id"] == target_cid]
         if "airmass" in _tf_k2.columns:
             _airmass_k2 = _tf_k2["airmass"].to_numpy(dtype=float)
         else:
             _airmass_k2 = np.full(len(mag_calib), float("nan"), dtype=float)
         _bp_med_k2 = bp_rp_comp_median(comp_bp_rp, comp_quality)
+        _k2_src_enum = (
+            K2Source.NIGHT_FIT
+            if _k2_src == K2Source.NIGHT_FIT.value
+            else K2Source.LITERATURE_DEFAULT
+        )
         mag_calib, _k2_delta, k2_source_rows = apply_k2_per_frame(
             mag_calib,
             _airmass_k2,
             object_bp_rp=float(target_bp_rp),
             bp_rp_comp_med=_bp_med_k2,
             k2_value=_k2_val,
-            k2_source=K2Source.LITERATURE_DEFAULT,
+            k2_source=_k2_src_enum,
         )
         k2_value_lc = _k2_val
         k2_colour_ref = _bp_med_k2
@@ -10554,6 +10696,16 @@ def run_phase2a(
     # INV-CFG-01: per-frame sat markers present only when enabled.
     if bool(getattr(_cfg, "per_frame_saturation_enabled", False)) and state.per_frame_sat_meta:
         merge_photometry_pipeline_meta(output_dir, dict(state.per_frame_sat_meta))
+    # NIGHT_FIT meta only when fit path was enabled (default OFF → absent).
+    if bool(getattr(_cfg, "k2_fit_enabled", False)) and state.k2_fit_meta:
+        merge_photometry_pipeline_meta(
+            output_dir,
+            {
+                **dict(state.k2_fit_meta),
+                "k2_source": str(state.k2_source),
+                "k2_value": float(state.k2_bprp) if math.isfinite(float(state.k2_bprp)) else None,
+            },
+        )
 
     # Per target loop
     # _phase2a_process_single_target (inline): ZP → CT → (outlier → airmass | airmass → outlier) → export.

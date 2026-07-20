@@ -6,6 +6,34 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## K2-NIGHT-FIT-V2-IMPLEMENTED — gated NIGHT_FIT fitter + synthetic recovery (2026-07-20)
+
+**Scope finding.** The v2 fit path was never in production: `k2_extinction.py` had v1
+literature machinery only; the four `k2_fit_*` keys existed since v1 for forward
+compat. This ships v2 per `dev/results/specs/VYVAR_K2_DESIGN_SPEC.md` v1.1 S5/S6.
+Remaining activation blocker is **only** the data night (GAPS B2 / K2-DATA-BLOCKER).
+GAPS C1 (prove the fitter) is delivered by the synthetic suite against the real
+production fitter.
+
+**Adherence.** Model on Honeycutt residuals uses the S5-identifiable form
+`k2*(C-Cref)*dX` (dX = X−mean(X) after frame+star CM removal). Pre-gate: monotonic
+airmass refuse; detectability `sigma_k2_pred ≤ |k2_lit|/k2_fit_min_detectability`;
+outer colour/brightness tertile + arc consistency within
+`k2_fit_consistency_sigma * max(sigma_boot, 0.10·|k2|)`; plausibility ceiling +
+literature factor/sign. Any failure → LITERATURE_DEFAULT with
+`k2_fit_refuse_reason`. Default `k2_fit_enabled=false` is byte-identical.
+
+**Synthetic validation (summary).** Recovery sweep over k2∈{0,0.02,0.05,0.08} ×
+spread∈{0.2,0.5,1.0} × noise∈{5,15,30} mmag: accepted fits within
+`max(2·σ_boot, 0.005)`; non-detectable cells refuse with `detectability`. Explicit
+REFUSE: monotonic X; absurd k2=0.5; tertile-split injection; zero-signal clean.
+Draft-427 fixture: `fixture_source=synthesized_from_decisions` (sandbox JSON gone;
+signature from SPEC S1/S6 + recon notes) fails items 3/4.
+
+**Activation.** Still blocked on B2 data night. Do not flip `k2_fit_enabled` here.
+
+---
+
 ## PER-FRAME-SAT-GATED — per-frame target saturation behind flag (2026-07-19)
 
 **Context re-scope.** The original M67 evidence (76 Green / 49 Red whole-star drops)
