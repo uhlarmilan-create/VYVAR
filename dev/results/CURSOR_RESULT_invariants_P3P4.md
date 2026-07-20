@@ -100,3 +100,17 @@ nothing dropped or amended:
 |------|--------|
 | --fast | OVERALL PASS (1034 passed, 17 skipped) |
 | FLOW/facts | none |
+
+## PUSH (2026-07-20)
+
+Docs impact: n/a - push bookkeeping
+Recurrence: n/a - push bookkeeping
+
+- Pre-push --fast: OVERALL PASS (1034 passed, 17 skipped)
+- origin/main pre-push: still `5d8c3c0`
+- `git push origin main`: `5d8c3c0..dce0f15`
+- Pushed stack (oldest -> newest):
+  - `aa383b2` invariants(p3): recurrence + forensic-promotion + weekly report + pilot
+  - `dce0f15` invariants(p4): STATE honest-scope; GAPS D2 void; P1-P4 closeout
+  - (this RESULT append rides as the final bookkeeping commit)
+- Still untracked by design: dy_peg_night_run_bvr.py, qatar8_night_run_v.py
