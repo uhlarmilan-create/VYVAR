@@ -170,7 +170,7 @@ def _resolve_target_color_for_comp_selection(
                         (int(_sid),),
                     ).fetchone()
                     if row is not None:
-                        if "bp_rp" in want and row.get("bp_rp") is not None:
+                        if "bp_rp" in want and row["bp_rp"] is not None:
                             try:
                                 g_bp_rp = float(row["bp_rp"])
                             except (TypeError, ValueError):

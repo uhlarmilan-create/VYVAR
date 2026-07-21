@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-21** (CYTHON-SPIKE: profile + build scaffolding; Windows compile blocked on MSVC + photometry_core Cython forward-ref; see ROADMAP CYTHON-RELEASE).
+Last updated: **2026-07-21** (LATENT-NAMES-COMPILE-GATE: restore _get_lc_psf_strict + ruff F821; CYTHON root-cause in flight).
 
 ## Invariants program -- honest scope
 

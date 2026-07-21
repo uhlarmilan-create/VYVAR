@@ -809,6 +809,7 @@ def main() -> None:
     args = ap.parse_args()
 
     if args.draft_id is not None and args.setup:
+        from config import AppConfig  # noqa: PLC0415
         from scripts.provenance_guard import assert_stamped  # noqa: PLC0415
 
         cfg = AppConfig()

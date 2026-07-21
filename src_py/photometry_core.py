@@ -7316,7 +7316,7 @@ def _load_blend_worklist(masterstar_fits_path: Path) -> dict[str, BlendMapEntry]
                 if ncid:
                     m[ncid] = entry
     except Exception as e:  # noqa: BLE001
-        logging.error('[EXC-0162] ePSF blend worklist JSON load fails - adaptive blend deblend map empty, crowded stars u...: %s', exc)
+        logging.error('[EXC-0162] ePSF blend worklist JSON load fails - adaptive blend deblend map empty, crowded stars u...: %s', e)
         logging.warning("[ePSF] blend worklist load failed (%s)", e)
     _ADAPTIVE_BLEND_CACHE[key] = m
     return m
@@ -7379,8 +7379,8 @@ def _get_comp_bjd_series(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
     return np.array([], dtype=float)
 
 
-def _resolve_star_flux_method(cid: str, all_frames: pd.DataFrame) -> str:
-    """PSF-only inst mag: NaN when PSF flux unavailable (no aperture fallback)."""
+def _get_lc_psf_strict(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
+    """PSF-only inst mag: NaN when PSF flux unavailable or AC not applied (no aperture fallback)."""
     sub = all_frames[all_frames["catalog_id"] == cid]
     if sub.empty:
         return np.array([], dtype=float)
@@ -7388,8 +7388,12 @@ def _resolve_star_flux_method(cid: str, all_frames: pd.DataFrame) -> str:
         return np.full(len(sub), float("nan"), dtype=float)
     psf_flux = pd.to_numeric(sub["psf_flux"], errors="coerce").to_numpy(dtype=float)
     psf_ok = sub["psf_fit_ok"].map(_coerce_bool_cell).to_numpy(dtype=bool)
+    if "psf_ac_applied" in sub.columns:
+        ac_ok = sub["psf_ac_applied"].map(_coerce_bool_cell).to_numpy(dtype=bool)
+    else:
+        ac_ok = np.zeros(len(sub), dtype=bool)
     psf_mag = np.where(
-        psf_ok & np.isfinite(psf_flux) & (psf_flux > 0),
+        psf_ok & np.isfinite(psf_flux) & (psf_flux > 0) & ac_ok,
         -2.5 * np.log10(psf_flux),
         np.nan,
     )
@@ -8409,7 +8413,7 @@ def _phase2a_prepare_shared_state(
                         f"[FAZA 2A] FWHM z VY_FWHM (DAO): {_fwhm_from_header:.3f} px"
                     )
     except Exception as _e:  # noqa: BLE001
-        logging.error('[EXC-0170] MASTERSTAR header FWHM read throws - measured FWHM from stars used instead (logged warn...: %s', exc)
+        logging.error('[EXC-0170] MASTERSTAR header FWHM read throws - measured FWHM from stars used instead (logged warn...: %s', _e)
         logging.warning(f"[FAZA 2A] Nemozem citat FWHM z hlavicky: {_e}")
 
     if _fwhm_from_header is not None:
@@ -8475,7 +8479,7 @@ def _phase2a_prepare_shared_state(
                 json.dump(_snr_ap_table, _f, indent=2)
             logging.info("[PHASE 2A] Aperture SNR table saved: %s", _ap_table_path)
         except Exception as _ap_exc:  # noqa: BLE001
-            logging.error('[EXC-0171] aperture_snr_table.json write to draft dir fails - table used in-memory but not persist...: %s', exc)
+            logging.error('[EXC-0171] aperture_snr_table.json write to draft dir fails - table used in-memory but not persist...: %s', _ap_exc)
             logging.warning("[PHASE 2A] Could not save aperture_snr_table.json: %s", _ap_exc)
 
     _star_mag_by_cid = _phase2a_star_mag_lookup(at_df, comp_df, Path(masterstar_fits_path))
@@ -9939,7 +9943,7 @@ def _phase2a_process_one_target(
                         _mctx = MethodLcWriteContext(**{**_mctx_base.__dict__, "method": _alt_m})
                         save_method_variant_lightcurve(_mctx)
                     except Exception as _alt_exc:  # noqa: BLE001
-                        logging.error('[EXC-0172] Alternate method-variant LC file (e.g. detrended) not written for one target/method: %s', exc)
+                        logging.error('[EXC-0172] Alternate method-variant LC file (e.g. detrended) not written for one target/method: %s', _alt_exc)
                         logging.warning(
                             "[METHOD-LC] %s %s failed: %s",
                             target_cid,
@@ -9947,7 +9951,7 @@ def _phase2a_process_one_target(
                             _alt_exc,
                         )
         except Exception as _meth_exc:  # noqa: BLE001
-            logging.error('[EXC-0173] All method-variant LC exports for target skipped when init block fails: %s', exc)
+            logging.error('[EXC-0173] All method-variant LC exports for target skipped when init block fails: %s', _meth_exc)
             logging.warning("[METHOD-LC] init failed for %s: %s", target_cid, _meth_exc)
     # Kvalita comp pre UI (tabulka 'Porovnavacie hviezdy')
     _cq_path = lc_dir / f"comp_quality_{target_cid}.json"
@@ -12709,7 +12713,7 @@ def select_active_targets(
                 )
         except Exception as _wcs_exc:  # noqa: BLE001
             # EXC-0200: T4 -- Non-numeric Gaia id string returned as-is in select_active_targets helper (EXCEPT-BULK-2 2026-07-08)
-            logging.error('[EXC-0199] WCS scale sanity check failure logged - distance matching may stay on ra/dec instead of...: %s', exc)
+            logging.error('[EXC-0199] WCS scale sanity check failure logged - distance matching may stay on ra/dec instead of...: %s', _wcs_exc)
             logging.warning("[SELECT TARGETS] WCS sanity check failed: %s", _wcs_exc)
     if _use_pixel_dist:
         log_event("[SELECT TARGETS] Distance mode: pixel-fallback")
@@ -14519,7 +14523,7 @@ def run_phase0_and_phase1(
                 )
                 _wcs_scale_ok = False
         except Exception as _wcs_exc:  # noqa: BLE001
-            logging.error('[EXC-0210] WCS scale sanity exception assumes scale OK - comp matching uses ra/dec haversine when ...: %s', exc)
+            logging.error('[EXC-0210] WCS scale sanity exception assumes scale OK - comp matching uses ra/dec haversine when ...: %s', _wcs_exc)
             logging.warning(
                 "[WCS SANITY] check failed (non-fatal): %s - skipping check, assuming WCS scale OK "
                 "(radec-haversine distance mode).",

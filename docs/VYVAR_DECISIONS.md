@@ -6,6 +6,28 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## LATENT-NAMES-COMPILE-GATE - latent NameError sweep before Cython release (2026-07-21)
+
+**Trigger.** Cython compile-as-static-analysis + pyflakes/ruff F821 gate ahead of
+CYTHON-RELEASE closed-source bundle.
+
+**Fixed (10 + EXC-0030 accessor).**
+1. `_get_lc_psf_strict` deleted as collateral in `0b5eb8b` while consumers remained
+   (`photometry_core:7419`, `method_lc_output._build_flux` lazy import) -- restored with
+   `psf_ac_applied` guard (T2 never-silent AC rule).
+2-9. Eight EXC-batch log templates referenced `exc` while handlers bound `e`, `_e`,
+   `_ap_exc`, `_alt_exc`, `_meth_exc`, `_wcs_exc` (`photometry_core` x7, `pipeline` x1).
+10. `calibration.py`: missing `import sqlite3` (latent NameError on equipment OSC path).
+11. `comp_selection_per_target.py:173`: `sqlite3.Row.get` -- **root cause of recurring
+    EXC-0030 noise** in `--full` logs (`'sqlite3.Row' object has no attribute 'get'`).
+
+**Systemic guard.** ruff **F821** enabled repo-wide (`pyproject.toml`); `import *` shims
+(`photometry.py`, `photometry_phase2a.py`) remain -- F821 blind in those two files only.
+
+**Recurrence.** New guard: ruff F821 (dangling-name class, 2nd+ occurrence).
+
+---
+
 ## DEPS-CYCLE-2 - photutils 3.0 + astropy 8.0 (+ numpy 2.4.4+) (2026-07-20)
 
 **Pins.** `photutils>=3.0,<4` (installed 3.0.0); `astropy>=8.0,<9` (8.0.1);

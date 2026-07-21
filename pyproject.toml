@@ -15,6 +15,7 @@ exclude = [
 select = [
     "E722",   # bare except (swallows KeyboardInterrupt / SystemExit)
     "BLE001", # blind except Exception - grandfathered via noqa; new sites must mark intent
+    "F821",   # undefined name (latent NameError in except handlers / compile gate)
 ]
 
 [tool.pytest.ini_options]

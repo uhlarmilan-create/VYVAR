@@ -24,6 +24,7 @@ CALIBRATION_LIBRARY_NATIVE_BINNING: int = 1
 
 import logging
 import os
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, NamedTuple

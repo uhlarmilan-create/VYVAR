@@ -12396,7 +12396,7 @@ def generate_masterstar_and_catalog(
             f"[MASTERSTAR] VY_FWHM_GAUSS={float(_gaussian_fwhm):.3f}px ulozene do hlavicky (2D fit)"
         )
     except Exception as e:  # noqa: BLE001
-        logging.error('[EXC-0409] Cross-setup `comparison_stars.csv` sync failure leaves B/V/R setups with inconsistent c...: %s', exc)
+        logging.error('[EXC-0409] Cross-setup `comparison_stars.csv` sync failure leaves B/V/R setups with inconsistent c...: %s', e)
         log_event(f"[ERROR] VY_FWHM_GAUSS fit ZLYHAL: {e}\n{traceback.format_exc()}")
     try:
         _ms_path_tag = Path(masterstar_fits)
