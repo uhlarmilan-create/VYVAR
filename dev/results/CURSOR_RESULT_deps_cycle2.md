@@ -82,3 +82,19 @@ None blocking. `--full` OVERALL was FAIL solely on transient pytest count during
 - `dev/scripts/` (DAO harness alignment)
 - `dev/tests/test_g1_f003_alignment_pixel_fallback.py`
 - docs listed above
+
+## Push (2026-07-21, Milan authorized)
+
+- **Step 1 verdict:** numpy 2.5.1 NOT byte-identical (SHA fail; science-compare PASS). Pin tightened to `>=2.4.4,<2.5`.
+- **origin/main tip:** 25939fb (local tip matches after push bookkeeping commit below)
+- **Stack pushed:** f2e7ce4 (DEPS CYCLE 2) -> 25939fb (numpy 2.5.1 validation - pin tightened)
+- **Pre-push --fast:** OVERALL PASS (1058 passed, 17 skipped)
+- **origin/main before push:** ed2a319 (unchanged as required)
+
+## Docs impact (push bookkeeping)
+
+n/a
+
+## Recurrence (push bookkeeping)
+
+n/a
