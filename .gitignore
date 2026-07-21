@@ -36,6 +36,7 @@ CalibrationLibrary/
 dist/
 *.egg-info/
 # Cython release build (scripts under build/ are tracked)
+build/temp.*/
 build/_cython_out/
 build/**/*.c
 build/**/*.cpp
