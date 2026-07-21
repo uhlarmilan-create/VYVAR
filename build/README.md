@@ -9,9 +9,14 @@ no source edits required.
 - Python 3.12+ with project deps installed (`pip install -r requirements.txt`)
 - Cython 3.x: `pip install cython` (spike tested with **3.2.8**)
 - C compiler:
-  - **Windows:** [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-    with "Desktop development with C++" / MSVC v143+. Verify:
-    `python tmp/cython_spike/hello_cython_test.py` -> RC 0 and a `.pyd` built.
+  - **Windows (VS 2026 Build Tools 18):** Developer Command Prompt alone is not
+    enough -- you need **Desktop development with C++** (MSVC + Windows SDK).
+    Verify in that prompt: `where cl` must find `cl.exe`.
+    If missing: Visual Studio Installer -> Modify -> check "Desktop development
+    with C++" -> Install. Or (elevated):
+    `"C:\Program Files (x86)\Microsoft Visual Studio\Installer\setup.exe" modify --installPath "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools" --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive`
+  - **Quick build (partial spike, no photometry_core):** from Developer Command Prompt:
+    `build\cython_build_win.bat`
   - **Linux:** `gcc`, `python3-dev`
 
 ## Build

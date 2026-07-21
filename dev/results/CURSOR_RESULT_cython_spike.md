@@ -3,13 +3,15 @@ CURSOR RESULT - 2026-07-21 -- CYTHON-SPIKE (profiling + compile feasibility)
 What I did
 Profiled anchor `--full` (py-spy flamegraph, OVERALL PASS) and P1 golden mini
 (speedscope, 608 s). Added `build/setup_cython.py`, `build/README.md`,
-`dev/scripts/summarize_speedscope.py`, and gitignore rules for Cython artifacts.
-MSVC Build Tools absent on this Windows box; photometry_core fails Cython
-translation without source edits. Parts 3-4 (import proof, P1 compiled, speed,
-protection) BLOCKED pending MSVC + photometry_core fix on a build host.
+`build/cython_build_win.bat`, `dev/scripts/summarize_speedscope.py`, and
+gitignore rules for Cython artifacts. MSVC Build Tools 18 verified (2026-07-21
+continuation): partial compile links OK; import proof + MP spawn OK; P1 byte-
+identity FAIL on comp_selection_per_target compiled alone; photometry_core
+still STOP at Cython translate.
 
 Docs impact: ROADMAP (CYTHON-RELEASE arc, spike DONE); STATE one-liner.
-Recurrence: n/a (first spike; compile blockers are environment + one forward-ref).
+Recurrence: n/a (first spike; compile blockers are environment + forward-ref +
+comp_selection byte-identity under plain Cython).
 
 ## Part 1 -- profiling
 
@@ -72,70 +74,60 @@ photometry_phase2a.
 
 ## Part 2 -- compile spike
 
-### Prereq: MSVC Build Tools -- FAIL (Windows)
+### Prereq: MSVC Build Tools -- PASS (2026-07-21 continuation)
 
-Hello-world cythonize:
-  error: Microsoft Visual C++ 14.0 or greater is required.
+VS 2026 Build Tools 18 + Desktop development with C++ installed.
+VsDevCmd + cl.exe 14.51.36231 verified. hello-world Cython: RC 0.
 
-winget install Microsoft.VisualStudio.2022.BuildTools ... exit 1602 (installer
-cancelled / likely needs elevation).
+### Build matrix (updated)
 
-**Install on Windows dev box:**
-  winget install Microsoft.VisualStudio.2022.BuildTools
-  Select workload: "Desktop development with C++" (MSVC v143+, Windows SDK).
-  Verify: python tmp/cython_spike/hello_cython_test.py -> RC 0, .pyd present.
+| module | Cython translate | link (.pyd) | P1 byte-identity |
+|--------|------------------|---------------|------------------|
+| photometry_core | **STOP** | n/a | n/a |
+| comp_selection_per_target | OK | **PASS** | **FAIL** (alone) |
+| photometry_phase2a | OK | PASS | not isolated (file lock) |
 
-Cython version recorded: **3.2.8**. py-spy: **0.4.2**.
+Partial build command:
+  build\cython_build_win.bat  (CYTHON_MODULES=buildable; moves .pyd -> src_py/)
 
-### Build matrix
-
-| module | Cython translate | link (.pyd/.so) | notes |
-|--------|------------------|-----------------|-------|
-| photometry_core | **STOP** | n/a | CompileError line 7419: undeclared `_get_lc_psf_strict` (forward ref to symbol defined only via lazy import in method_lc_output; needs source edit -- out of spike scope) |
-| comp_selection_per_target | OK | BLOCKED (no MSVC) | Pure-Python mode, no source edits |
-| photometry_phase2a | OK | BLOCKED (no MSVC) | Pure-Python mode, no source edits |
-
-Scaffolding committed: build/setup_cython.py, build/README.md.
-Docstring stripping: Cython.Compiler.Options.docstrings = False (not a
-compiler_directive in 3.x).
-
-## Part 3 -- correctness proof -- BLOCKED
+## Part 3 -- correctness proof
 
 | check | status | detail |
 |-------|--------|--------|
-| Import proof (.pyd shadows .py) | BLOCKED | No extension modules built |
-| P1 golden compiled byte-identity | BLOCKED | photometry_core does not translate; no .pyd |
-| Full pytest compiled | BLOCKED | same |
-| Multiprocessing worker __file__ | BLOCKED | same |
+| Import proof (.pyd shadows .py) | **PASS** | comp_selection_per_target.cp312-win_amd64.pyd; photometry_phase2a.cp312-win_amd64.pyd under src_py/ |
+| P1 golden compiled byte-identity | **FAIL** | comp_selection alone: core SHA 4ecbae9f... != VL-P1-GOLD 074ae881...; both modules: phase2a_empty_comp_drop=167/169 |
+| Full pytest compiled | **MOSTLY PASS** | 1056 passed, 2 failed (P1 headless SHA + physics); 17 skipped |
+| Multiprocessing worker __file__ | **PASS** | spawn worker: ...comp_selection_per_target.cp312-win_amd64.pyd |
 
-Interpreted tree sanity: session_baseline_check --fast PASS after spike work
-(1051 passed, 24 skipped).
+Interpreted tree restored (.pyd removed): headless SHA **PASS** in 491 s;
+P1 mini photometry regenerated at gold SHA.
 
-## Part 4 -- measurements -- BLOCKED
+## Part 4 -- measurements
 
-| metric | status |
+| metric | result |
 |--------|--------|
-| P1 wall time interpreted vs compiled (3x median) | BLOCKED |
-| --full wall interpreted vs compiled | BLOCKED |
-| strings / protection on .pyd | BLOCKED |
-
-Honest expectation (from profile): plain compile of numpy/pandas-bound paths
-yields modest gains; comp_selection_per_target PY-LOOP is the best typed target;
-IO/matplotlib slice is not fixed by Cython compile alone.
+| P1 headless wall (interpreted, 1 run) | 491 s (post-restore) |
+| P1 headless wall (compiled, broken) | 14 s (167 target drops -- not a valid speed win) |
+| Speed median 3x3 | **not measured** (compiled path non-equivalent) |
+| Protection (comp_selection .pyd) | 654336 bytes; source recoverable: **NO**; bytecode: **NO**; docstrings: **stripped** (__doc__ None); visible: Cython symbol names, build path to .c |
 
 ## Part 5 -- verdict
 
-**GO/NO-GO: CONDITIONAL NO-GO for Windows compile on this machine; GO to proceed
-with the CYTHON-RELEASE arc after two unblockers.**
+**GO/NO-GO: NO-GO for plain Cython compile as-is.**
 
-Unblockers (ordered):
-1. Install MSVC Build Tools on Windows (or use Linux sandbox for first linked build).
-2. Fix photometry_core `_get_lc_psf_strict` forward reference (define or import
-   at module level) -- science-path change, full gates required; not spike scope.
+Blockers:
+1. photometry_core Cython translate STOP (_get_lc_psf_strict forward ref).
+2. comp_selection_per_target plain compile **breaks science** (P1 SHA drift;
+   isolated test confirms this module alone; 167/169 empty-comp drops when
+   paired with photometry_phase2a compiled). Root-cause investigation required
+   before any release compile of this module (likely Cython semantic delta in
+   PY-LOOP closures/lambdas -- not acceptable for byte-identity release).
 
-After unblockers, Linux sandbox should run from same build/setup_cython.py:
-  python build/setup_cython.py build_ext --inplace
-  import proof -> VYVAR_INVARIANTS_P1=1 pytest -> full pytest -> MP worker check.
+MSVC + build scaffolding: **GO** (ready for Linux sandbox link test).
+
+Protection goal (closed-source): **GO** for .pyd format (no source in binary).
+
+Speed: inconclusive until byte-identical compile achieved.
 
 ### Full-build sketch (post-spike)
 
