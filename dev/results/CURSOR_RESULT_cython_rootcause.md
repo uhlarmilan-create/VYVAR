@@ -97,3 +97,20 @@ None blocking. EXC-0030 root cause fixed (sqlite3.Row.get -> row[] indexing).
 - docs/VYVAR_DECISIONS.md (CYTHON-ANNOTATION-TYPING)
 - docs/VYVAR_STATE.md
 - dev/results/CURSOR_RESULT_cython_rootcause.md
+
+## Push (2026-07-21, authorized by Milan)
+
+Pre-push checks: tree clean except allowlisted night-run scripts
+(dy_peg_night_run_bvr.py, qatar8_night_run_v.py); origin/main at
+0ffbcd4; session_baseline_check --fast OVERALL PASS (1066 passed).
+
+Pushed stack to origin/main:
+- 29bee9f spike(cython): windows build scripts + NO-GO addendum
+- 12887bc fix(latent): restore _get_lc_psf_strict (+AC guard); ...
+- cb94a70 spike(cython): root-cause science drift (annotation typing) + ...
+- 1824f65 chore(bookkeeping): ledger stamp from cython gates; ignore MSVC temp dirs
+
+origin/main tip: 1824f65 (matches local HEAD).
+
+Docs impact: none (push bookkeeping only).
+Recurrence: n/a - push bookkeeping.
