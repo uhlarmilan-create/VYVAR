@@ -632,6 +632,10 @@ next calibration lever.
 - **TODO-GS10 - AAVSO Direct API upload** ("Submit to AAVSO" button; WebObs API after the
   GS6b validation). Dep GS6b [OK].
 - **TODO-45 - RGB camera support** (IMX533 RGGB -> de-Bayer -> G-channel photometry).
+  **Parked arc: OSC-SUPPORT** - gap inventory `dev/results/OSC_GAP_INVENTORY.md`
+  (2026-07-21 discovery on Bayer proxy data; IMX533 RGGB not on disk). Revisit
+  trigger: Milan **1.0 vs 1.1 decision**; MUST gaps = debayer boundary + platesolve
+  on mosaic + OSC calibration path. Verdict today: **NO-GO** for release 1.0 OSC science.
 - **TODO-8-BOO - Bootes globular-cluster validation** (ePSF vs aperture on a dense ~2 h
   field). Pairs with the PSF/Newton work.
 - ~~**TODO-FORCED-COMP - forced-aperture `catalog_only` without Phase-1 tier selection.**~~ **SUPERSEDED (`7f0dc86`)** - forced-aperture / catalog_only path removed; DAO+Gaia matched only.

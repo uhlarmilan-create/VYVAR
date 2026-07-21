@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-21** (CYTHON root-cause: annotation_typing=False pin; all three modules compile + P1 byte-identical; GO for release compile arc).
+Last updated: **2026-07-21** (OSC-SUPPORT discovery: Bayer/IMX533 gap inventory; NO-GO for OSC science in 1.0 without debayer arc).
 
 ## Invariants program -- honest scope
 
