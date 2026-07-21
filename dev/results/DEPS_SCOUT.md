@@ -187,3 +187,17 @@ Gates at cycle commit:
 
 Verdict: CYCLE 2 adopted without re-anchor. photutils 3.1 remains watchlist-only.
 Result: `dev/results/CURSOR_RESULT_deps_cycle2.md`.
+
+## numpy 2.5.1 validation (2026-07-21)
+
+Milan path (a): bless 2.5.1 before compiled release freezes exact versions.
+Venv `tmp/deps_cycle2_venv`: numpy 2.5.1, astropy 8.0.1, photutils 3.0.0.
+
+`session_baseline_check.py --full` on HEAD f2e7ce4:
+- full-science-compare: PASS (n_lc=166 failures=0)
+- full-photometry-sha-core: FAIL run 842443c7c293e808... vs snap 03d8fb6491bc3c22... (n=333)
+- full-photometry-sha-extended: FAIL run 9cabd82d8e0710c2... vs snap bbfcc92e...
+- pipeline wall: 2307 s (run tmp/session_baseline/20260721T061830Z)
+
+Verdict: **NOT byte-identical** - pin tightened to `numpy>=2.4.4,<2.5`. Dev env
+stays on 2.4.4 (validated). numpy 2.5.x deferred to a future gated cycle.

@@ -9,7 +9,7 @@ knowledge.
 
 ## Why we pin majors
 
-`requirements.txt` holds compatible-range pins (e.g. `numpy>=2.4.4,<3`,
+`requirements.txt` holds compatible-range pins (e.g. `numpy>=2.4.4,<2.5`,
 `astropy>=8.0,<9`, `photutils>=3.0,<4`). The upper bound holds the **major**, so
 a fresh install today reproduces the majors the pipeline was validated on.
 Patch/minor bumps inside a range are cheap; crossing a major is the gated ritual
@@ -63,8 +63,8 @@ candidate list visible, not to pressure an upgrade.
 
 - **photutils 3.1** (unreleased) - aperture photometry speedups + segmentation
   masking evaluation; not adopted until released and scouted.
-- **numpy 2.5.x** - minor bump within `<3`; candidate for a future in-range
-  cycle (pytest + `--full`).
+- **numpy 2.5.x** - minor bump; **not blessed** (2026-07-21: SHA drift under 2.5.1,
+  science-compare PASS). Pin held at `>=2.4.4,<2.5` until a future gated cycle.
 
 CYCLE 2 (photutils 3.0 + astropy 8.0) executed 2026-07-20; see DECISIONS
 `DEPS-CYCLE-2` and `dev/results/CURSOR_RESULT_deps_cycle2.md`.

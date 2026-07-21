@@ -38,12 +38,24 @@ No re-cut required (VL-ANCHOR-WCSINV + VL-P1-GOLD unchanged).
 ## Pins (requirements.txt)
 
 ```
-numpy>=2.4.4,<3
+numpy>=2.4.4,<2.5
 astropy>=8.0,<9
 photutils>=3.0,<4
 ```
 
 Installed (dev): numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
+
+## numpy 2.5.1 validation (2026-07-21)
+
+| Check | numpy 2.5.1 venv | Verdict |
+|-------|------------------|---------|
+| quick pytest | 13/13 PASS | OK |
+| full-science-compare | PASS 166/166 | OK |
+| full-photometry-sha-core | FAIL 842443c7... vs 03d8fb64... | NOT byte-identical |
+| full-photometry-sha-extended | FAIL 9cabd82d... vs bbfcc92e... | NOT byte-identical |
+
+**Outcome:** pin tightened to `numpy>=2.4.4,<2.5`. Dev stays on 2.4.4 (blessed).
+Run: `tmp/session_baseline/20260721T061830Z`, 2307 s.
 
 ## Docs impact
 

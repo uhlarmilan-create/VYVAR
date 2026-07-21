@@ -9,7 +9,7 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 ## DEPS-CYCLE-2 - photutils 3.0 + astropy 8.0 (+ numpy 2.4.4+) (2026-07-20)
 
 **Pins.** `photutils>=3.0,<4` (installed 3.0.0); `astropy>=8.0,<9` (8.0.1);
-`numpy>=2.4.4,<3` (dev env 2.4.4; fresh venv may resolve 2.5.x within pin).
+`numpy>=2.4.4,<2.5` (validated on 2.4.4; 2.5.1 rejected 2026-07-21, see below).
 
 **Migration (scout checklist).** Kwarg migration (`sharpness_range`, `roundness_range`,
 `n_brightest`); explicit `min_separation=0` at every `DAOStarFinder` site to freeze 2.x
@@ -24,6 +24,13 @@ DAO sites pass `min_separation=0` deliberately.
 `03d8fb64...` n=333, extended `bbfcc92e...` n=499; science-compare 166/166 PASS.
 No anchor or P1 re-cut. Runtime ~2025 s vs ~2296 s pre-upgrade (~12% faster).
 See `dev/results/CURSOR_RESULT_deps_cycle2.md`.
+
+**numpy 2.5.1 validation (2026-07-21).** Fresh-install path tested in
+`tmp/deps_cycle2_venv` (numpy 2.5.1 + astropy 8.0.1 + photutils 3.0.0): `--full`
+science-compare PASS (166/166) but photometry SHA core/extended **FAIL** (run
+`842443c7...` / `9cabd82d...` vs anchor `03d8fb64...` / `bbfcc92e...`). Pin
+tightened to `numpy>=2.4.4,<2.5`; 2.5.x is a future gated candidate, not blessed
+for the compiled release bundle.
 
 ## ANCHOR-RECUT-SIGMA-NOTES - VL-ANCHOR-WCSINV re-cut after ASCII slope notes (2026-07-20)
 
