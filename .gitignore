@@ -34,8 +34,16 @@ CalibrationLibrary/
 
 # Build
 dist/
-build/
 *.egg-info/
+# Cython release build (scripts under build/ are tracked)
+build/_cython_out/
+build/**/*.c
+build/**/*.cpp
+build/**/*.obj
+src_py/*.pyd
+src_py/*.so
+src_py/*.c
+src_py/*.cpp
 
 # Lokalne hard-copy exporty
 hard_copy_*.patch

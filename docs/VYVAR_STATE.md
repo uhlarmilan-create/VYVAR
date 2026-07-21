@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-20** (DEPS-CYCLE-2: photutils 3.0.0 + astropy 8.0.1 + numpy 2.4.4+; anchor byte-identical. Prior: ANCHOR-RECUT-SIGMA-NOTES).
+Last updated: **2026-07-21** (CYTHON-SPIKE: profile + build scaffolding; Windows compile blocked on MSVC + photometry_core Cython forward-ref; see ROADMAP CYTHON-RELEASE).
 
 ## Invariants program -- honest scope
 

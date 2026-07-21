@@ -10,6 +10,25 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
+## IN-FLIGHT - CYTHON-RELEASE (closed-source bundle, target 2026-08-31)
+
+**Status:** spike **DONE (2026-07-21)**; full build **BLOCKED** on MSVC (Windows dev box)
++ photometry_core Cython forward-ref fix. Result: `dev/results/CURSOR_RESULT_cython_spike.md`.
+
+| Phase | Pri | Deliverable |
+|-------|-----|-------------|
+| **Spike** | HIGH | **DONE (2026-07-21).** py-spy profile + build/setup_cython.py; CONDITIONAL NO-GO on this Windows host (no MSVC; photometry_core translate STOP). Linux link + P1 compiled check deferred to sandbox. |
+| **Full build** | HIGH | Typed + plain Cython compile of src_py science modules; photometry_core forward-ref fix; P1 byte-identity on compiled set. |
+| **Bundling** | HIGH | Windows + Linux closed-source bundle; mixed .pyd/.so + interpreted UI layer. |
+| **Data-dir separation** | MED | User data outside install tree. |
+| **Updater** | MED | In-app or sidecar update channel. |
+| **Alpha (Lenovo T460)** | MED | First bundled alpha on target hardware. |
+| **Release** | HIGH | **2026-08-31** public closed-source release. |
+
+Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
+
+---
+
 ## QUEUED - VYVAR-INVARIANTS (starts after Anchor #3)
 
 **Status:** **UNBLOCKED** (2026-07-16). Anchor #3 ACTIVE (`VL-ANCHOR-WCSINV` /
