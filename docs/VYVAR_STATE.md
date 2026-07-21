@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-21** (OSC-SUPPORT: IMX533 M71 re-run completes E2E but NO-GO — debayer still mandatory; silent CV-band wrong science risk).
+Last updated: **2026-07-21** (OSC-SUPPORT: M71 L/B/R superpixel extraction runs E2E; G blocked by flat invariant + shared dark naming; Phase-1 lead L-extract, debayer still mandatory for naive OSC).
 
 ## Invariants program -- honest scope
 

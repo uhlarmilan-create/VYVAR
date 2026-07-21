@@ -216,3 +216,112 @@ Run artifacts (M71, not committed)
 - tmp/osc_discovery/m71_run/import_source/ (15 lights + darks/flats copies)
 - Archive/Drafts/draft_000438/
 - tmp/osc_discovery/m71_night_run.txt
+
+---
+
+M71 channel-extraction experiment (L/B/G/R, superpixel 2x2) - 2026-07-21
+-------------------------------------------------------------------------
+
+**Method (AAVSO grounding, data-prep only — zero src_py changes):** channel
+**separation**, never interpolated demosaic. RGGB superpixel extraction via
+`dev/scripts/osc_extract_channels.py`:
+
+| Channel | Formula | AAVSO role |
+|---------|---------|------------|
+| L | (R+G1+G2+B)/4 | CV-equivalent luminance (differential detection) |
+| G | (G1+G2)/2 | TG ~ V |
+| B | native B cell | TB |
+| R | native R cell | TR |
+
+2x2 binning is the extraction step (3008^2 -> 1504^2 float32). Headers: copy
+DATE-OBS/EXPTIME/GAIN/CCD-TEMP/telescope keys; XBINNING=YBINNING=2;
+XPIXSZ=YPIXSZ=7.52; FILTER=L|G|B|R; strip BAYERPAT; add OSC-MODE + OSC-SRC.
+
+**Input:** `Archive/M71/` (255 lights, 40 darks, 30 flats, ASI533MC RGGB).
+**Extracted trees (local):** `tmp/m71_extract/{L,G,B,R}/{Lights,Darks,Flats}/`.
+**Equipment:** id=5 (ASI533MC Pro); telescope 1480 mm (~1.05 arcsec/px at bin2).
+**Runs:** 12 lights per channel, `simulate_night_run.py --no-sysrem`, per-channel
+master flats; master dark rebuilt per channel when rerunning (see gaps below).
+
+Per-channel results
+-------------------
+
+| Ch | Draft | Status | Gaia DAO % | n matched | WCS id p95 px | FWHM med px | comp stars | lc_rms med | G_lim_50 | MASTERSTAR max ADU | sky p2p med ADU |
+|----|-------|--------|------------|-----------|---------------|-------------|------------|------------|----------|-------------------|-----------------|
+| **L** | 439 | **OK** | 97.6 | 8253 | 7.31 | 3.88 | 150 | 0.025 | 17.5 | 60380 | 1.7 |
+| **G** | 440/443/445 | **FAIL** | — | — | — | — | — | — | — | — | cal abort |
+| **B** | 441 | **OK** | 86.5 | 868 | 0.40 | 4.57 | 145 | 0.048 | 14.4 | 64909 | 232 |
+| **R** | 444 | **OK** | 97.4 | 8324 | 6.98 | 4.07 | 150 | 0.048 | 17.5 | 59506 | 1.3 |
+
+**G failure modes (all runs):**
+
+1. **First pass (draft 440):** reused L-stack master dark
+   (`Dark_15s_Dark_100G_-10deg_Bin2_20260721.fits`, median ~2464 ADU) on G lights
+   (median ~2028 ADU) -> CAL-DIAG **ABORT** (convention mismatch; no calibrated
+   lights written -> preprocess "no frames IS_REJECTED=0").
+2. **Rerun with G-specific dark (draft 443):** dark pairing fixed, but every frame
+   hit **INV-FLUX-02 FAIL** (post-flat mean=1.001413, tol=0.001) during
+   calibrate; chain aborts before photometry.
+3. Flat rebuild did not relieve INV-FLUX-02 (draft 445, identical mean).
+
+**R** succeeded only after channel-specific master dark (median ~2073 ADU matching
+R lights ~2090 ADU). **L** passed CAL-DIAG with MEAN_AUTOCORRECT on shared dark.
+
+Color-slope diagnostic (Gaia-matched stars)
+-------------------------------------------
+
+Proxy for `(m_inst - Gaia G)` vs `BP-RP` using per-frame DAO flux, per-frame
+zero-point from 9<G<14 stars, median per `catalog_id` across frames (n shown).
+Not `mag_calib` (pipeline ties catalog `mag` to Gaia G in proc CSVs).
+
+| Ch | slope (mmag / bp-rp) | n stars | Sign / ordering |
+|----|----------------------|---------|-----------------|
+| B | **+863** | 5938 | steepest (blue channel vs Gaia G) |
+| L | **+625** | 4702 | intermediate (luminance) |
+| R | **+234** | 4191 | flattest (red channel) |
+| G | n/a | — | run did not reach photometry |
+
+**Interpretation:** clear **physical ordering B > L > R** in color sensitivity
+(not noise — thousands of stars). All slopes positive in this sign convention
+(bluer Gaia stars brighter relative to G in narrower blue-ish bands). **G
+(smallest expected)** could not be measured. Opposite B/R signs in a strict
+TG/TB/TR calibration sense still need G channel + proper band zeropoints.
+
+**Saturation (cluster core):** MASTERSTAR peak **59-65k ADU** (~90-99% of 65535)
+on L/B/R — M71 core saturated on 15s bin2 extracted channels; differential
+work should exclude core or shorten exposure.
+
+Conclusions for OSC-SUPPORT Phase-1 design
+------------------------------------------
+
+1. **Extraction path is viable** — mono FILTER=L|G|B|R frames run through the
+   existing pipeline without src_py changes; plate solve + photometry complete
+   on L/B/R.
+2. **First in-pipeline mode:** prefer **L (CV/luminance superpixel)** for
+   differential/time-series (best depth, lowest lc_rms, 97%+ Gaia recovery).
+   **G (TG)** is the AAVSO target band but blocked today by flat-field invariant
+   INV-FLUX-02 on this dataset (+ shared master-dark naming — see gap).
+3. **New MUST (multi-channel prep):** `_write_master_to_library` names darks
+   `..._Dark_...` regardless of OSC FILTER header -> only one bin2 dark per
+   night; G/R need channel-specific stacks or autocorrect policy extension.
+4. **B channel:** usable for bluest science but **shallow** (G_lim_50~14.4),
+   high sky residual (~232 ADU p2p) — poor for faint-variable work on M71.
+5. **Debayer-in-pipeline still required** for naive OSC import; this experiment
+   proves channel separation **offline** is the safer Phase-1 bridge (matches
+   AAVSO practice) rather than forcing interpolated demosaic.
+6. **Overall NO-GO unchanged** for release 1.0 naive OSC — but Phase-1 design
+   should lead with **superpixel L or G extraction at ingest**, not raw mosaic.
+
+**Surprises:** (a) M71 mosaic run (draft 438) could complete on checkerboard,
+   while extracted **G** fails closed on a 0.14% flat norm deviation; (b) B
+   completeness collapses vs L/R despite "successful" run; (c) color slope
+   ordering visible even without band_classify TG/TB/TR mapping.
+
+Run artifacts (channel experiment, not committed)
+-------------------------------------------------
+- `dev/scripts/osc_extract_channels.py`
+- `tmp/m71_extract/` (derived FITS)
+- `tmp/m71_channel_experiment/` (import trees, logs, `channel_compare.json`)
+- `CalibrationLibrary/Flat_0s_{L,G,B,R}_100G_-9.9deg_Bin2_20260721.fits`
+- `CalibrationLibrary/Dark_15s_Dark_100G_-10deg_Bin2_20260721.fits` (last build: R)
+- `Archive/Drafts/draft_000439` (L), `441` (B), `444` (R); G attempts `440/443/445`
