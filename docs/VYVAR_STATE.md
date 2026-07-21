@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-21** (LATENT-NAMES-COMPILE-GATE: restore _get_lc_psf_strict + ruff F821; CYTHON root-cause in flight).
+Last updated: **2026-07-21** (CYTHON root-cause: annotation_typing=False pin; all three modules compile + P1 byte-identical; GO for release compile arc).
 
 ## Invariants program -- honest scope
 

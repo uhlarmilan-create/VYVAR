@@ -28,6 +28,26 @@ CYTHON-RELEASE closed-source bundle.
 
 ---
 
+## CYTHON-ANNOTATION-TYPING - release compile directive (2026-07-21)
+
+**Finding.** Cython 3 pure-Python mode defaults `annotation_typing=True`, turning PEP-484
+annotations into C type declarations. Plain compile of `comp_selection_per_target` without
+the pin changed P1 science (core SHA `4ecbae9f...` vs VL-P1-GOLD `074ae881...`; up to
+167/169 `phase2a_empty_comp_drop`).
+
+**Decision.** All release compiles use `annotation_typing=False` in
+`build/setup_cython.py` `COMPILER_DIRECTIVES`. PEP annotations remain metadata only.
+Typed speedups later use explicit `cython.*` declarations in dedicated modules, never
+via PEP-484 annotations on production paths.
+
+**Verification.** With the pin: `comp_selection_per_target` alone and all three spike
+modules (`photometry_core`, `comp_selection_per_target`, `photometry_phase2a`) compile;
+P1 golden 7/7 byte-identical on Windows (MSVC 14.51, Cython 3.2.8).
+
+**Recurrence test.** `dev/tests/test_cython_annotation_typing.py` pins the directive.
+
+---
+
 ## DEPS-CYCLE-2 - photutils 3.0 + astropy 8.0 (+ numpy 2.4.4+) (2026-07-20)
 
 **Pins.** `photutils>=3.0,<4` (installed 3.0.0); `astropy>=8.0,<9` (8.0.1);

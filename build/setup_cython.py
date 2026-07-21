@@ -54,6 +54,7 @@ def _active_modules() -> list[str]:
 COMPILER_DIRECTIVES = {
     "language_level": "3",
     "embedsignature": False,
+    "annotation_typing": False,
 }
 
 
