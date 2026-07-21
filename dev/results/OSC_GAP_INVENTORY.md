@@ -122,3 +122,97 @@ Run artifacts (tmp, not committed)
 - tmp/osc_discovery/night_run_stdout.txt
 - tmp/osc_discovery/draft437_evidence.json
 - Archive/Drafts/draft_000437/ (DB draft from discovery run)
+
+---
+
+IMX533 M71 re-run (real target data, full calib) - 2026-07-21
+------------------------------------------------------------
+
+Data path: C:\ASTRO\python\VYVAR\Archive\M71\
+Equipment: ASI533MC Pro (ZWO), BAYERPAT=RGGB, EQUIPMENTS id=5 (created for run).
+
+Header / frame summary
+----------------------
+| Set | Count | Key header values (sample) |
+|-----|------:|----------------------------|
+| Lights | 255 | INSTRUME=ZWO CCD ASI533MC Pro; BAYERPAT=RGGB; 3008x3008 bin1; EXPTIME=15s; GAIN=100; CCD-TEMP -10.0 to -10.2C (279 frames at -10.0C); FILTER absent (import -> NoFilter) |
+| Darks | 40 | Same camera/pattern; EXPTIME=15s; CCD-TEMP=-10.0C; median ~2040 ADU; checkerboard col-delta ~935 ADU |
+| Flats | 30 | Same camera/pattern; EXPTIME~0.0034s; CCD-TEMP=-9.9C; median ~23020 ADU; checkerboard ~10982 ADU; RGGB tile medians before norm [13682, 23058, 23058, 36863] |
+
+Pipeline walk: 15 lights subset, simulate_night_run.py, equipment_id=5, sysrem off.
+Run: draft_000438 (SUCCESS, 2215 s, 11 frames after QC rejections, 74 LCs).
+
+Master build (naive path + harness note)
+----------------------------------------
+- **Naive UI/library path FAIL:** `generate_master_dark_from_source_dir` /
+  `generate_master_flat_from_source_dir` reject all ZWO frames because
+  `_looks_like_master()` treats filenames `Dark_*.fits` / `Flat_*.fits` as
+  already-combined masters (0 raw frames left). **New SHOULD gap.**
+- **Harness (discovery only):** stacked 40 darks + 30 flats via
+  `_write_master_to_library` -> CalibrationLibrary:
+  - Dark_15s_Dark_100G_-10deg_Bin1_20260721.fits (checkerboard ~935 ADU on master dark)
+  - Flat_0s_NoFilter_100G_-9.9deg_Bin1_20260721.fits (RGGB tile structure preserved in stack)
+- **normalize_flat_master at calibrate (FLOW test):** `get_processed_master(flat)` sets
+  `flat_normalized_at_calibrate=True`; per-tile BAYER4 norm -> all four RGGB quadrant
+  medians 1.0, global median 1.0, checkerboard col-delta ~0.007 ADU post-norm.
+  Header at calibrate: VYFLTNRM=BAYER4, VYFLTPAT=RGGB (via explicit probe). Claim
+  **partially validated** (norm runs at calibrate, not at library stack time).
+- **Scan pairing SUSPECT:** import scan status Darks=master points at session
+  `Dark_081.fits` (single raw frame), while library master also linked via
+  `dark_by_obs_key`. CCD_TEMP pairing accepted (-10.1C lights vs -10.0C master).
+
+Stage table (M71)
+-----------------
+
+| Stage | Verdict | Evidence |
+|-------|---------|----------|
+| Import + master pairing | SUSPECT | quick_look=false; IS_CALIBRATED=1; library flat OK; dark scan confusion (see above); no FILTER -> NoFilter_15_1 group |
+| Calibration + CAL-DIAG | SUSPECT | Real dark subtract + Bayer flat divide ran (25.7 s). Raw light checkerboard ~936 ADU -> calibrated ~21 ADU (large reduction, Bayer residual remains). CAL-DIAG passed |
+| QC (RAM) | SUSPECT | FWHM median ~5.95 px; elongation median ~1.36 (mosaic DAO artifacts) |
+| Preprocess / sky-surface | SUSPECT | residual_flatness_p99 median ~3.86 ADU (better than Seestar 10-22); processed checkerboard still ~21 ADU; fwhm_px median ~5.07, elong ~1.08 |
+| Plate solve + catalogs | SUSPECT | **Completed** (vs Seestar FAIL). DAO pass1 **29292 detections** on mosaic; initial catalog match ~2.7%; WCS refine rejected rms=187 px repeatedly; pipeline continued on M71 globular. Plate scale solved ~0.55 arcsec/px |
+| Phase 0/1 + Phase 2A | SUSPECT | Full photometry ran: 74 targets, lc_rms median **0.026 mag** (looks healthy). Aperture photometry on mixed Bayer flux |
+| Exports | SUSPECT | AAVSO files emit **FILT=CV** (NoFilter fallback); example ASAS J195403 ~9.5 mag CV. No TG/TB/TR. 8 export failures (empty LC points). Not OSC-aware band coding |
+
+Deltas vs Seestar proxy pass (draft_437)
+----------------------------------------
+| Aspect | Seestar (no calib) | IMX533 M71 (full calib) |
+|--------|--------------------|-------------------------|
+| Pattern / camera | GRBG, Seestar S50 | **RGGB**, ASI533MC Pro |
+| Calibration | Quick-look, passthrough | **Real dark+flat**, IS_CALIBRATED=1 |
+| Checkerboard post-cal | ~68 ADU (unchanged) | **~21 ADU** (reduced, not removed) |
+| Flat Bayer norm | Not exercised | **BAYER4 per-tile at calibrate** |
+| Plate solve | FAIL (MASTERSTAR abort) | **Completed** (dense GC field; 29k spurious DAO) |
+| Phase 2A | NOT REACHED | **74 LCs produced** (silent wrong-band flux) |
+| AAVSO export | UNKN (LP filter) | **CV** (NoFilter; still not OSC) |
+
+Gap list movement
+-----------------
+- **MUST #2 refined:** plate solve is not guaranteed FAIL; on M71 it **passes** while
+  DAO/WCS quality is **SUSPECT** (spurious detections, low initial match). Still MUST
+  because centroids are mosaic-based and WCS/photometry are not trustworthy.
+- **New SHOULD:** ZWO `Dark_`/`Flat_` filenames break master generation via
+  `_looks_like_master`; naive user cannot build masters from typical ASI exports.
+- **New SHOULD:** import scan labels session darks as "master" when names match
+  `Dark_*` pattern.
+- **SHOULD #3 (sky-surface):** improved residual with calib (p99 ~3.9 vs 10-22) but
+  Bayer pattern persists in calibrated image (~21 ADU).
+- **MUST #1, #3, #4, export/band gaps:** unchanged.
+
+Conclusion
+----------
+**Overall NO-GO unchanged** for release 1.0 OSC science. M71 shows the pipeline can
+**complete end-to-end** and produce plausible LC/export output on a globular cluster
+without debayering — which **increases silent wrong-science risk** vs the Seestar run
+that failed closed at plate solve. Debayer boundary remains mandatory before OSC support.
+
+Revisit trigger unchanged: Milan 1.0 vs 1.1 + debayer regression on this M71 set.
+
+Run artifacts (M71, not committed)
+----------------------------------
+- CalibrationLibrary: Dark_15s_Dark_100G_-10deg_Bin1_20260721.fits,
+  Flat_0s_NoFilter_100G_-9.9deg_Bin1_20260721.fits
+- EQUIPMENTS id=5 (ASI533MC Pro / IMX533 OSC)
+- tmp/osc_discovery/m71_run/import_source/ (15 lights + darks/flats copies)
+- Archive/Drafts/draft_000438/
+- tmp/osc_discovery/m71_night_run.txt

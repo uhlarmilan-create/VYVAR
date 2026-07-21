@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-21** (OSC-SUPPORT discovery: Bayer/IMX533 gap inventory; NO-GO for OSC science in 1.0 without debayer arc).
+Last updated: **2026-07-21** (OSC-SUPPORT: IMX533 M71 re-run completes E2E but NO-GO — debayer still mandatory; silent CV-band wrong science risk).
 
 ## Invariants program -- honest scope
 
