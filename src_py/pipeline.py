@@ -16,7 +16,7 @@ import traceback
 import warnings
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 import astropy.units as u
 import numpy as np
@@ -1116,7 +1116,11 @@ def _skip_processed_directory(app_config: AppConfig | None = None) -> bool:
 
 
 def _get_vy_qc_status(fits_path: Path) -> str:
-    """Read ``VY_QC`` header value from FITS. Returns ``'ok'`` if missing."""
+    """Read ``VY_QC`` header value from FITS. Returns ``'ok'`` if missing.
+
+    Diagnostic only in skip-processed mode; alignment gating uses
+    ``qc_metrics.csv`` (QC-01). See ``docs/VYVAR_DECISIONS.md`` QC-ALLOWLIST-AUTHORITY.
+    """
     try:
         with fits.open(fits_path, memmap=False) as hdul:
             return str(hdul[0].header.get("VY_QC", "ok")).strip().lower()
@@ -1146,6 +1150,67 @@ def find_qc_metrics_csv(
         if p.is_file():
             return p
     return None
+
+
+def norm_fits_path_key(path: Path | str) -> str:
+    """Normalized absolute path key for qc_metrics / allowlist joins (casefold)."""
+    try:
+        return str(Path(path).resolve()).casefold()
+    except OSError:
+        return str(path).casefold()
+
+
+def load_qc_metrics_status_by_path(qc_csv: Path | str) -> dict[str, str]:
+    """Map normalized absolute FITS path -> ``status`` from ``qc_metrics.csv``."""
+    p = Path(qc_csv)
+    if not p.is_file():
+        raise FileNotFoundError(f"qc_metrics.csv not found: {p}")
+    df = pd.read_csv(p)
+    if "status" not in df.columns:
+        raise ValueError(f"qc_metrics.csv missing status column: {p}")
+    src_col = "src" if "src" in df.columns else "dst"
+    out: dict[str, str] = {}
+    for _, row in df.iterrows():
+        raw = row.get(src_col)
+        if raw is None or (isinstance(raw, float) and not math.isfinite(float(raw))):
+            continue
+        out[norm_fits_path_key(str(raw))] = str(row["status"]).strip()
+    return out
+
+
+def filter_files_by_qc_metrics_allowlist(
+    files: Sequence[Path | str],
+    qc_csv: Path | str,
+) -> tuple[list[Path], dict[str, str]]:
+    """Keep FITS whose ``qc_metrics.csv`` row has ``status == 'ok'`` (exact match).
+
+    Frames on disk but absent from the CSV, or with any non-ok status, are excluded.
+    Matching uses normalized resolved absolute paths (casefold).
+    """
+    status_map = load_qc_metrics_status_by_path(qc_csv)
+    ok_keys = {k for k, v in status_map.items() if v == "ok"}
+    selected: list[Path] = []
+    for raw in files:
+        fp = Path(raw)
+        if norm_fits_path_key(fp) in ok_keys:
+            selected.append(fp)
+    return selected, status_map
+
+
+def build_prefilter_rejected_map(
+    all_paths: Sequence[Path | str],
+    passing_paths: Sequence[Path | str],
+    *,
+    reason: str = "rejected_prefilter_fwhm",
+) -> dict[Path, str]:
+    """Paths in ``all_paths`` not in ``passing_paths`` -> prefilter reject reason."""
+    pass_keys = {norm_fits_path_key(p) for p in passing_paths}
+    out: dict[Path, str] = {}
+    for raw in all_paths:
+        fp = Path(raw)
+        if norm_fits_path_key(fp) not in pass_keys:
+            out[fp.resolve()] = str(reason)
+    return out
 
 
 def _archive_preprocess_lights_root(
@@ -14303,11 +14368,25 @@ def astrometry_align_and_build_masterstar(
     files_all = _iter_fits_recursive(det_top)
     if _skip_processed_directory(_cfg_align_root):
         _n_before_qc = len(files_all)
-        files_all = [fp for fp in files_all if _get_vy_qc_status(fp) == "ok"]
+        _qc_csv = find_qc_metrics_csv(
+            ap,
+            app_config=_cfg_align_root,
+            draft_id=draft_id,
+            db=None,
+        )
+        if _qc_csv is None or not _qc_csv.is_file():
+            raise FileNotFoundError(
+                "skip_processed_directory=True requires the preprocess QC step; "
+                "run Analyze/preprocess first to produce qc_metrics.csv"
+            )
+        files_all, _qc_status_map = filter_files_by_qc_metrics_allowlist(files_all, _qc_csv)
         log_event(
             f"skip_processed: using {len(files_all)}/{_n_before_qc} lights FITS "
-            f"(VY_QC=ok) for alignment from {det_top}"
+            f"(qc_metrics.csv allowlist) for alignment from {det_top}"
         )
+        from invariants_runtime import check_qc01_skipproc_alignment  # noqa: PLC0415
+
+        check_qc01_skipproc_alignment(files_all, _qc_csv, meta={"invariants": []})
     _n_root_only = len(list(det_top.glob("*.fits"))) if det_top.exists() else 0
     _n_all = len(files_all)
     if _n_root_only != _n_all:
@@ -16601,6 +16680,7 @@ def _qc_enrich_calibrated_in_place(
     target_dec: float | None = None,
     inject_pointing_only_if_missing: bool = True,
     only_paths: Sequence[Path | str] | None = None,
+    prefilter_rejected: Mapping[Path | str, str] | None = None,
     progress_cb: Callable[..., None] | None = None,
 ) -> dict[str, Any]:
     """Lightweight QC pass that writes VY_* headers directly onto calibrated FITS files.
@@ -16608,24 +16688,28 @@ def _qc_enrich_calibrated_in_place(
     Replaces ``preprocess_calibrated_to_processed`` when ``skip_processed_directory=True``.
     Does NOT copy files. Does NOT do temporal sigma clipping.
     Writes: VY_FWHM, VY_ELONG, VY_QC, VY_NSTAR, VYVARPR (and optional VYTARG*) to each FITS.
+
+    Skip-mode frame **selection authority** is the DB DAO-FWHM prefilter passed via
+    ``prefilter_rejected`` (status ``rejected_prefilter_*``). Segmentation FWHM /
+    elongation are measured and recorded as diagnostics only; they do not drive reject
+    statuses here. Alignment gating reads ``qc_metrics.csv`` (QC-01).
+
     Returns a dict with ``results`` rows compatible with the preprocess QC table.
     """
     import numpy as np
 
-    cfg = app_config or AppConfig()
-    _fwhm_limit = (
-        float(fwhm_reject_limit)
-        if fwhm_reject_limit is not None and math.isfinite(float(fwhm_reject_limit))
-        else float(cfg.qc_fwhm_limit)
-    )
-    _elong_limit = (
-        float(elong_reject_limit)
-        if elong_reject_limit is not None and math.isfinite(float(elong_reject_limit))
-        else float(cfg.qc_elong_limit)
-    )
+    _ = fwhm_reject_limit, elong_reject_limit, app_config  # skip-mode: diagnostics only
 
     calibrated_root = Path(calibrated_root)
-    fits_paths = _filter_light_paths_maybe(_iter_light_fits(calibrated_root), only_paths)
+    _prefilter: dict[str, str] = {}
+    if prefilter_rejected:
+        for fp, reason in prefilter_rejected.items():
+            _prefilter[norm_fits_path_key(fp)] = str(reason)
+
+    if prefilter_rejected is not None:
+        fits_paths = _iter_light_fits(calibrated_root)
+    else:
+        fits_paths = _filter_light_paths_maybe(_iter_light_fits(calibrated_root), only_paths)
     results: list[dict[str, Any]] = []
     total = len(fits_paths)
 
@@ -16642,12 +16726,8 @@ def _qc_enrich_calibrated_in_place(
             elong = float(qc.get("elongation")) if qc.get("elongation") is not None else float("nan")
             n_stars = int(qc.get("n_stars_detected") or 0)
 
-            if math.isfinite(fwhm) and fwhm > _fwhm_limit:
-                status = "rejected_fwhm"
-            elif math.isfinite(elong) and elong > _elong_limit:
-                status = "rejected_elong"
-            else:
-                status = "ok"
+            pre_status = _prefilter.get(norm_fits_path_key(fp))
+            status = pre_status if pre_status else "ok"
 
             with fits.open(fp, mode="update") as hdul:
                 hdr = hdul[0].header
@@ -16742,6 +16822,7 @@ def preprocess_calibrated_to_processed(
     inject_pointing_dec_deg: float | None = None,
     inject_pointing_only_if_missing: bool = True,
     only_paths: Sequence[Path | str] | None = None,
+    prefilter_rejected: Mapping[Path | str, str] | None = None,
     db: VyvarDatabase | None = None,
     draft_id: int | None = None,
     app_config: AppConfig | None = None,
@@ -16791,6 +16872,7 @@ def preprocess_calibrated_to_processed(
             target_dec=inject_pointing_dec_deg,
             inject_pointing_only_if_missing=inject_pointing_only_if_missing,
             only_paths=only_paths,
+            prefilter_rejected=prefilter_rejected,
             progress_cb=progress_cb,
         )
         return pd.DataFrame(_out.get("results") or [])

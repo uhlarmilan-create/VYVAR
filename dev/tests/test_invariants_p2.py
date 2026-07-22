@@ -63,7 +63,7 @@ def test_wired_ids_have_call_sites() -> None:
         n = len(re.findall(re.escape(inv_id), corpus))
         assert n >= 1, f"{inv_id} has no call site / mention in src_py or tests"
     # Inverse: no stray INV-*-style wired markers in inv_check that are unknown
-    for m in re.findall(r'inv_check\([^)]*["\'](INV-[A-Z0-9-]+)["\']', corpus):
+    for m in re.findall(r'inv_check\([^)]*["\']((?:INV-[A-Z0-9-]+|QC-\d+))["\']', corpus):
         if m in WIRED_INV_IDS or m == "INV-WCS-00":
             continue
         # allow only registry-known wired set from inv_check in production helpers
@@ -103,7 +103,7 @@ def test_flux02_flat_mean() -> None:
 def test_flux02_skewed_flat_median_passes_mean_would_fail() -> None:
     """INV-FLUX-02 pins median semantics (matches normalize_flat_master, not mean)."""
     flat = np.ones((32, 32), dtype=np.float64)
-    flat[:16, :] = 0.994
+    flat[:15, :] = 0.994
     assert abs(float(np.nanmedian(flat)) - 1.0) < 1e-6
     assert abs(float(np.nanmean(flat)) - 0.996770) < 1e-3
     ok, detail = check_flat_mean_near_one(flat)

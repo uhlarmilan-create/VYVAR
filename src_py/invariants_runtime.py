@@ -11,7 +11,7 @@ import math
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 
@@ -42,6 +42,7 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-RNG-01",
         "INV-PROV-01",
         "INV-CFG-01",
+        "QC-01",
     }
 )
 
@@ -178,6 +179,54 @@ def check_flat_mean_near_one(
     ok = rel <= float(rel_tol)
     mean_a = float(np.nanmean(m))
     return ok, f"median={med_a:.6f} |median-1|={rel:.3e} mean={mean_a:.6f} (tol={rel_tol:g})"
+
+
+def read_qc_metrics_status_by_path(qc_csv: Path | str) -> dict[str, str]:
+    """Map normalized absolute FITS path -> status (for QC-01 / allowlist checks)."""
+    import pandas as pd
+
+    from pipeline import norm_fits_path_key  # noqa: PLC0415
+
+    p = Path(qc_csv)
+    if not p.is_file():
+        raise FileNotFoundError(f"qc_metrics.csv not found: {p}")
+    df = pd.read_csv(p)
+    if "status" not in df.columns:
+        raise ValueError(f"qc_metrics.csv missing status column: {p}")
+    src_col = "src" if "src" in df.columns else "dst"
+    out: dict[str, str] = {}
+    for _, row in df.iterrows():
+        raw = row.get(src_col)
+        if raw is None or (isinstance(raw, float) and not math.isfinite(float(raw))):
+            continue
+        out[norm_fits_path_key(str(raw))] = str(row["status"]).strip()
+    return out
+
+
+def check_qc01_skipproc_alignment(
+    selected_files: Sequence[Path | str],
+    qc_csv: Path | str,
+    *,
+    meta: dict[str, Any] | None = None,
+) -> None:
+    """QC-01: in skip_processed mode every aligned frame must be qc_metrics.csv status=ok."""
+    from pipeline import norm_fits_path_key  # noqa: PLC0415
+
+    meta_block = meta if meta is not None else {"invariants": []}
+    status_map = read_qc_metrics_status_by_path(qc_csv)
+    ok_keys = {k for k, v in status_map.items() if v == "ok"}
+    bad: list[str] = []
+    for raw in selected_files:
+        fp = Path(raw)
+        key = norm_fits_path_key(fp)
+        st = status_map.get(key)
+        if st != "ok":
+            bad.append(f"{fp.name}:{st or 'missing'}")
+    n_sel = len(list(selected_files))
+    n_ok_match = n_sel - len(bad)
+    ok = len(bad) == 0 and all(norm_fits_path_key(f) in ok_keys for f in selected_files)
+    detail = f"n_selected={n_sel} n_ok_matched={n_ok_match} violations={bad[:8]}"
+    inv_check(meta_block, "QC-01", ok, policy="FAIL", detail=detail)
 
 
 def residual_large_scale_p99_adu(

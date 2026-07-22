@@ -208,8 +208,11 @@ def _night_run_preprocess(
     """Headless equivalent of ``app._vyvar_execute_preprocess_pending``."""
     from draft_provenance import resolve_draft_lights_root
     from pipeline import (
+        build_prefilter_rejected_map,
         calibrated_paths_for_draft_apply_filters,
         preprocess_calibrated_to_processed,
+        _iter_light_fits,
+        _skip_processed_directory,
     )
 
     _app_cfg = pipeline.config
@@ -254,7 +257,14 @@ def _night_run_preprocess(
                 why.append("FWHM <= limit or FWHM is NULL")
             raise FileNotFoundError("QC filter: no frames matching " + ", ".join(why) + ".")
         dfs_pp: list[pd.DataFrame] = []
-        tot_pp = len(p1)
+        _skip_qc = _skip_processed_directory(_app_cfg)
+        _all_lights = _iter_light_fits(source_dir) if _skip_qc else []
+        _prefilter_map: dict[Path, str] | None = None
+        _only_pp: list[Path] | None = p1
+        if _skip_qc:
+            _prefilter_map = build_prefilter_rejected_map(_all_lights, p1)
+            _only_pp = None
+        tot_pp = len(_all_lights) if _skip_qc else len(p1)
         off_pp = 0
 
         def _pcb_pp(off0: int):
@@ -269,7 +279,8 @@ def _night_run_preprocess(
             preprocess_calibrated_to_processed(
                 calibrated_root=source_dir,
                 processed_root=proc_root,
-                only_paths=p1,
+                only_paths=_only_pp,
+                prefilter_rejected=_prefilter_map,
                 progress_cb=_pcb_pp(off_pp),
                 db=pipeline.db,
                 draft_id=int(_dqf),
