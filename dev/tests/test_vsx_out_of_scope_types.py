@@ -159,6 +159,7 @@ def test_empty_list_noop_equivalence(tmp_path: Path) -> None:
     cfg_off = AppConfig()
     cfg_off.vsx_out_of_scope_types = []
     cfg_default = AppConfig()
+    cfg_default.vsx_out_of_scope_types = []
     a = select_active_targets(
         vt_p, ms_p, frame_w_px=512, frame_h_px=512, edge_margin_px=10,
         match_radius_arcsec=30.0, cfg=cfg_off,

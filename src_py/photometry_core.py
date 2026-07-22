@@ -14781,13 +14781,27 @@ def run_phase0_and_phase1(
     _t_phase1 = time.time()
     _gs11_comp_rejects_acc: list[int] = [0]
     _n_active = int(len(active))
+    _n_oos_skipped = 0
+    _n_phase1 = int(
+        (active.get("skip_reason", pd.Series(dtype=str)).astype(str) != "vsx_type_out_of_scope").sum()
+    )
+    _i_phase1 = 0
     for _i_active, (active_idx, target_row) in enumerate(active.iterrows(), start=1):
         try:
+            _skip_reason = str(target_row.get("skip_reason") or "").strip()
+            # Only vsx_type_out_of_scope is deterministic/final here. Do NOT skip
+            # saturated/zone_flag targets - PER-FRAME-SAT can revive them in Phase 2A.
+            if _skip_reason == "vsx_type_out_of_scope":
+                _n_oos_skipped += 1
+                continue
+            _i_phase1 += 1
             if progress_cb is not None and (
-                _i_active == 1 or _i_active == _n_active or (_n_active > 1 and _i_active % max(1, _n_active // 12) == 0)
+                _i_phase1 == 1
+                or _i_phase1 == _n_phase1
+                or (_n_phase1 > 1 and _i_phase1 % max(1, _n_phase1 // 12) == 0)
             ):
                 _tid = str(target_row.get("vsx_name") or target_row.get("catalog_id", ""))[:48]
-                _p(f"Phase 1: target {_i_active}/{_n_active}: {_tid}")
+                _p(f"Phase 1: target {_i_phase1}/{_n_phase1}: {_tid}")
             tr_enriched = _enrich_target_bp_rp_from_gaia_db(
                 target_row,
                 gaia_db_path=_gaia_db_targets,
@@ -14858,6 +14872,12 @@ def run_phase0_and_phase1(
             )
             targets_without_comps.append(str(target_row.get("catalog_id", "") or ""))
             continue
+
+    if _n_oos_skipped:
+        logging.info(
+            "Faza 1: %d out-of-scope targets skipped (no comp selection)",
+            _n_oos_skipped,
+        )
 
     try:
         active.to_csv(active_csv, index=False)
