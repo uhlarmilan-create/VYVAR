@@ -1179,10 +1179,34 @@ catalog, comp selection) uses each channel's own pixels; only geometry/WCS is sh
 DAO-Gaia match rate logged after propagation; below ``MASTERSTAR_PLATESOLVE_MIN_MATCH_RATE`` (0.60,
 same gate as ``generate_masterstar_and_catalog``) -> WARN with channel numbers; FAIL only if
 oneRGGB itself failed (B channel fewer stars expected). Band tokens: R->TR, G->TG, B->TB,
-oneRGGB->CLEAR (k'' none-token path; AAVSO export deferred OSC-3). Known systematic: Bayer channel
+oneRGGB->CLEAR (k'' none-token path). Known systematic: Bayer channel
 planes sit at sub-cell offsets (<=0.5 raw px = 0.25 superpixel); accepted for catalog crossmatch
 tolerances - no per-channel WCS micro-shift. Wired gate **OSC-02** (identical frame ID sets).
-**Status:** phase 2 implemented; OSC-3 export mapping queued.
+**Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
+
+### OSC-BAND-EXPORT (2026-07-22, phase 3/3)
+
+E1. AAVSO band codes for OSC DSLR tri-color (untransformed): R->TR, G->TG, B->TB per
+AAVSO practice. ``oneRGGB`` is **internal-only** (LC + report diagnostics); hard excluded
+from AAVSO and VarAstro exports (mixed-channel mags undefined).
+
+E2. Comp/check catalog magnitudes per band: TG ensemble reduces against Johnson V comps,
+TB against B, TR against Cousins R_C (AAVSO comp-mag rule).
+
+E3. Gaia DR3 G + BP-RP -> Johnson/Cousins via ``src_py/gaia_johnson.py``. **Coefficient
+source:** Gaia DR3 documentation CU5 Table 5.9 (GBP-GRP polynomials for G-V, G-B, G-R;
+sigma column 0.03017 / 0.0633 / 0.03167 mag). **Validation reference:** Ruelas-Mayorga
+et al. 2025 RASTI 4:37 (doi:10.1093/rasti/rzaf037; Landolt-standard independent fit,
+Crossref-verified author list). Validity 8<G<16, BP-RP in pinned range. Out-of-validity
+comps excluded with logged reason; Table 5.9 sigma added in quadrature. Riello et al.
+2021 EDR3 Table C.2-style fallback in unit tests only.
+
+E4. Jordi B-V legacy path (mono k2 slope) **unchanged**; ``gaia_johnson`` consumed only by
+OSC band exports in this phase.
+
+E5. No new config parameters. Wired gate **OSC-03** (no oneRGGB in export files).
+
+**Status:** phase 3 implemented; M71 E2E acceptance pending Milan.
 
 ## Comp-star selection & QA
 

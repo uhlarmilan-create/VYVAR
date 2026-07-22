@@ -22,6 +22,7 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
 | QC-01 **[wired]** | Every frame entering alignment appears in ``qc_metrics.csv`` with ``status=ok`` (exact match); violation = FAIL. | runtime (alignment collection) | FAIL | ``check_qc01_skipproc_alignment`` after allowlist join in ``astrometry_align_and_build_masterstar``. |
 | OSC-01 **[wired]** | OSC equipment (``EQUIPMENTS.BAYERMASK`` set): no raw Bayer mosaic may enter alignment/photometry; every aligned FITS must carry ``VY_CHANNEL`` (extraction complete). | runtime (alignment collection) | FAIL | ``check_osc01_channel_extraction_required`` in ``astrometry_align_and_build_masterstar``. |
 | OSC-02 **[wired]** | OSC draft: the four channel obs-groups (oneRGGB/R/G/B) share an **identical** post-allowlist frame ID set; violation = FAIL. | runtime (alignment orchestration) | FAIL | ``check_osc02_unified_frame_sets`` before OSC alignment bundle run. |
+| OSC-03 **[wired]** | AAVSO/VarAstro export writers must not emit **oneRGGB** rows; R/G/B exports must use TR/TG/TB FILT codes respectively. | runtime (export pre-write) | FAIL | ``check_osc03_export_eligibility`` in ``export_lightcurve_reports``; oneRGGB skipped before write. |
 | INV-SHA-01 | Double-photometry SHA determinism (core + extended). | already enforced (`session_baseline_check.py --full` + P1 golden) | FAIL | VL-ANCHOR-WCSINV / VL-P1-GOLD; registry pointer only. |
 
 ## Meta / SHA scope (P2 finding)

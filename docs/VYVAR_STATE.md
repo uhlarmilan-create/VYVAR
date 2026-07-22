@@ -1,6 +1,8 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-22** (OSC-2 phase 2: WCS solve-once on oneRGGB, registration handoff to R/G/B, unified QC verdict replication, OSC-02 wired; OSC-3 queued).
+**Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
+
+Last updated: **2026-07-22** (OSC-3 phase 3: TR/TG/TB exports, Gaia->Johnson comps, OSC-03 wired; OSC arc code-complete pending M71 acceptance).
 
 Registered params: **271** (was 270; +``osc_channel_binning``).
 

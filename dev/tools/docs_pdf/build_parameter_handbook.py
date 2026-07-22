@@ -473,7 +473,7 @@ story = []
 story.append(Paragraph("VYVAR - Referencni prirucka parametru", st_title))
 story.append(Paragraph("Detailni rozbor vsech %d parametru config.json: vyznam, rozsahy, duvody vychozich hodnot, dusledky zmen, matematicke pozadi a literatura." % len(CFG), st_intro))
 story.append(Spacer(1, 8))
-story.append(Paragraph("Stav: 2026-07-22, VYVAR HEAD (OSC-1). Registrovanych parametru: 271. Doprovodne dokumenty: VYVAR_CONFIG_GUIDE_CZ/EN.md (rychla reference), docs/VYVAR_PARAMS.md (strojovy index). Cestina bez diakritiky dle konvence projektu.", st_meta))
+story.append(Paragraph("Stav: 2026-07-22, VYVAR HEAD (OSC-3). Registrovanych parametru: 271. Doprovodne dokumenty: VYVAR_CONFIG_GUIDE_CZ/EN.md (rychla reference), docs/VYVAR_PARAMS.md (strojovy index). Cestina bez diakritiky dle konvence projektu.", st_meta))
 story.append(Spacer(1, 10))
 story.append(Paragraph("Jak cist tuto prirucku", st_h1))
 story.append(Paragraph("Kazdy parametr ma: vyznam, aktualni hodnotu (z vaseho config.json) a tam, kde na hodnote zalezi, rozbor [b]Mensi / Vetsi / Proc vychozi[/b]. Vedecky nabite skupiny maji oranzove BOXY s matematikou a odkazy. Parametry bez rozboru jsou bezpecne 'jasne' - jejich vyznam plne popisuje prvni veta.", st_body))
