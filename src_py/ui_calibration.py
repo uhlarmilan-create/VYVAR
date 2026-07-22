@@ -69,7 +69,7 @@ def render_calibration_equipment_header(
 
     st.info(
         f"**Telescope:** {tn} ({focal_s})\n\n**Sensor:** {en} ({pix_s})",
-        icon="[telescope]",
+        icon=":material/telescope:",
     )
 
 

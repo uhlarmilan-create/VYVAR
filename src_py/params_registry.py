@@ -179,10 +179,11 @@ def infer_widget_kind(field_name: str, field_type: str, entry: dict[str, Any]) -
         return "checkbox"
     if field_name in LITERAL_OPTIONS:
         return "select"
+    # Compound containers before scalar float/int (``list[float]`` contains "float").
+    if "dict" in t or "list" in t:
+        return "text"
     if entry.get("range") is not None:
         return "number"
     if "int" in t or "float" in t:
         return "number"
-    if "dict" in t or "list" in t:
-        return "text"
     return "text"

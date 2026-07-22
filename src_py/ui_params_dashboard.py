@@ -135,11 +135,13 @@ def _coerce_for_save(key: str, kind: str, raw: Any, entry: dict[str, Any], cur: 
         return val
     if kind == "select":
         return str(raw)
-    # text / dict
-    if isinstance(cur, dict):
+    # text / dict / list (JSON)
+    if isinstance(cur, (dict, list)):
         try:
-            parsed = json.loads(raw) if isinstance(raw, str) and raw.strip() else {}
-            return parsed if isinstance(parsed, dict) else cur
+            parsed = json.loads(raw) if isinstance(raw, str) and raw.strip() else ({} if isinstance(cur, dict) else [])
+            if type(parsed) is type(cur):
+                return parsed
+            return cur
         except (json.JSONDecodeError, TypeError):
             return cur
     return str(raw)
@@ -183,16 +185,24 @@ def _render_auto_widget(
             idx = options.index(str(cur)) if str(cur) in options else 0
             st.selectbox(entry["label"] + marker, options, index=idx, key=skey, help=help_txt)
         elif kind == "number":
-            rng = entry.get("range")
-            is_int = isinstance(cur, int) and not isinstance(cur, bool)
-            kwargs: dict[str, Any] = {"key": skey, "help": help_txt}
-            if rng is not None:
-                kwargs["min_value"] = int(rng[0]) if is_int else float(rng[0])
-                kwargs["max_value"] = int(rng[1]) if is_int else float(rng[1])
-            value = int(cur) if is_int else float(cur)
-            st.number_input(entry["label"] + marker, value=value, **kwargs)
-        else:  # text / dict
-            if isinstance(cur, dict):
+            if isinstance(cur, (list, tuple, dict)):
+                st.text_input(
+                    entry["label"] + marker,
+                    value=json.dumps(cur, sort_keys=True),
+                    key=skey,
+                    help=help_txt,
+                )
+            else:
+                rng = entry.get("range")
+                is_int = isinstance(cur, int) and not isinstance(cur, bool)
+                kwargs: dict[str, Any] = {"key": skey, "help": help_txt}
+                if rng is not None:
+                    kwargs["min_value"] = int(rng[0]) if is_int else float(rng[0])
+                    kwargs["max_value"] = int(rng[1]) if is_int else float(rng[1])
+                value = int(cur) if is_int else float(cur)
+                st.number_input(entry["label"] + marker, value=value, **kwargs)
+        else:  # text / dict / list
+            if isinstance(cur, (dict, list)):
                 st.text_input(entry["label"] + marker, value=json.dumps(cur, sort_keys=True), key=skey, help=help_txt)
             else:
                 st.text_input(entry["label"] + marker, value="" if cur is None else str(cur), key=skey, help=help_txt)

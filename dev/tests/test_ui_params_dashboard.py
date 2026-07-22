@@ -99,3 +99,18 @@ def test_modified_counter_counts_config_runtime_only() -> None:
         pr.load_registry()[m["key"]]["owner"] == "config_runtime" for m in dev_cfg["modified"]
     )
     assert "observer_location_name" not in {m["key"] for m in dev_cfg["modified"]}
+
+
+def test_structured_config_keys_use_text_not_number_widget() -> None:
+    """list[float] / dict[str, float] types must not match the scalar float heuristic."""
+    reg = pr.load_registry()
+    types = pr.appconfig_field_types()
+    structured = (
+        "comp_color_tiers",
+        "phase01_tiers",
+        "aperture_snr_sizing",
+        "sigma_sys_mag",
+    )
+    for key in structured:
+        kind = pr.infer_widget_kind(key, types.get(key, ""), reg[key])
+        assert kind == "text", f"{key} with type {types.get(key)!r} resolved to {kind!r}"
