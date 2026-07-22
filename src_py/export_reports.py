@@ -259,17 +259,16 @@ def _vyvar_export_citation_lines(
     target_row: pd.Series | None = None,
     targets_df: pd.DataFrame | None = None,
     lc_method: str | None = None,
+    obs_group: str = "",
 ) -> list[str]:
     """Comment header block for AAVSO / VAR.ASTRO text exports (CITATIONS.bib)."""
     if run_ctx is None:
-        meta = load_pipeline_meta(photometry_dir)
-        targets = targets_df
-        if targets is None and target_row is not None:
-            targets = pd.DataFrame([target_row])
-        run_ctx = build_run_citation_context(
+        run_ctx = _osc_export_citation_context(
             cfg,
-            pipeline_meta=meta,
-            targets_df=targets,
+            photometry_dir=photometry_dir,
+            obs_group=obs_group,
+            targets_df=targets_df,
+            target_row=target_row,
             lc_method=lc_method,
         )
     return emit_export_citation_lines(run_ctx)
@@ -383,11 +382,6 @@ _AAVSO_FILTER_BUILTIN: dict[str, str] = {
 }
 
 
-def _filter_lookup_key(name: str) -> str:
-    s = str(name or "").strip().upper()
-    return re.sub(r"[\s\-]+", "_", s)
-
-
 def _resolve_aavso_filter(
     filter_name: str,
     cfg: AppConfig | None = None,
@@ -423,16 +417,117 @@ def _resolve_aavso_filter(
     )
 
 
+def _filter_lookup_key(name: str) -> str:
+    s = str(name or "").strip().upper()
+    return re.sub(r"[\s\-]+", "_", s)
+
+
+def resolve_aavso_filt_from_obs_group(
+    obs_group: str,
+    cfg: AppConfig | None = None,
+) -> tuple[str, str | None]:
+    """End-to-end AAVSO FILT: OSC channel tokens TR/TG/TB; mono via setup parse."""
+    from osc_align import is_onerggb_internal_obs_group, obs_group_band_token
+
+    og = str(obs_group or "").strip()
+    if is_onerggb_internal_obs_group(og):
+        return "", "oneRGGB internal-only (E1 - not exported)"
+    tok = obs_group_band_token(og)
+    if tok in ("TR", "TG", "TB"):
+        return tok, None
+    setup_filter_raw, _, _ = _guess_setup_info_from_obs_group(og)
+    return _resolve_aavso_filter(setup_filter_raw, cfg)
+
+
+def _prepare_osc_comp_df_for_export(
+    comp_df: pd.DataFrame | None,
+    aavso_band_token: str,
+) -> tuple[pd.DataFrame, list[str]]:
+    """Attach Johnson comp mags for OSC band exports; return notes for excluded comps."""
+    from gaia_johnson import TRANSFORM_CITATION, transform_comp_row_for_osc_band
+
+    notes: list[str] = []
+    if comp_df is None or comp_df.empty:
+        return pd.DataFrame() if comp_df is None else comp_df.copy(), notes
+    if aavso_band_token not in ("TR", "TG", "TB"):
+        return comp_df.copy(), notes
+
+    out = comp_df.copy()
+    j_mags: list[float] = []
+    j_errs: list[float] = []
+    j_ok: list[bool] = []
+    for _, row in out.iterrows():
+        res = transform_comp_row_for_osc_band(row, aavso_band_token, log_exclusions=True)
+        j_mags.append(float(res.johnson_mag) if res.ok else float("nan"))
+        j_errs.append(float(res.johnson_mag_err) if res.ok else float("nan"))
+        j_ok.append(bool(res.ok))
+        if not res.ok:
+            cid = str(row.get("catalog_id", "") or "")[:18]
+            notes.append(f"comp {cid} excluded: {res.reason}")
+    out["johnson_mag"] = j_mags
+    out["johnson_mag_err"] = j_errs
+    out["johnson_ok"] = j_ok
+    out.attrs["osc_transform_citation"] = TRANSFORM_CITATION
+    return out, notes
+
+
+def _osc_export_citation_context(
+    cfg: AppConfig | None,
+    *,
+    photometry_dir: Path | None,
+    obs_group: str,
+    targets_df: pd.DataFrame | None = None,
+    target_row: pd.Series | None = None,
+    lc_method: str | None = None,
+    run_ctx: Any = None,
+) -> Any:
+    """Build citation context with OSC export flags when obs-group is a channel folder."""
+    from citations import RunCitationContext, build_run_citation_context
+    from gaia_johnson import TRANSFORM_CITATION
+    from osc_align import is_osc_export_eligible_obs_group, parse_osc_channel
+
+    if run_ctx is not None and isinstance(run_ctx, RunCitationContext):
+        base = run_ctx
+    else:
+        meta = load_pipeline_meta(photometry_dir)
+        targets = targets_df
+        if targets is None and target_row is not None:
+            targets = pd.DataFrame([target_row])
+        base = build_run_citation_context(
+            cfg,
+            pipeline_meta=meta,
+            targets_df=targets,
+            lc_method=lc_method,
+            obs_group=obs_group,
+        )
+    ch = parse_osc_channel(obs_group)
+    if ch is None:
+        return base
+    osc_bin = int(getattr(cfg, "osc_channel_binning", 2) or 2) if cfg else 2
+    return RunCitationContext(
+        **{
+            **base.__dict__,
+            "osc_channel_export": is_osc_export_eligible_obs_group(obs_group),
+            "osc_channel_binning": osc_bin,
+            "osc_transform_citation": TRANSFORM_CITATION if is_osc_export_eligible_obs_group(obs_group) else "",
+        }
+    )
+
+
 def _guess_setup_info_from_obs_group(obs_group: str) -> tuple[str, str | None, str | None]:
-    """Best-effort: parse 'NoFilter_60_2' -> (filter, exptime, binning)."""
-    parts = [p for p in str(obs_group or "").strip().split("_") if p]
+    """Best-effort: parse 'NoFilter_60_2' or 'NoFilter_60_2_G' -> (filter, exptime, binning)."""
+    from osc_align import parse_osc_channel_from_setup
+
+    raw = str(obs_group or "").strip().split("|")[0].strip()
+    base, _ch = parse_osc_channel_from_setup(raw)
+    parts = [p for p in base.split("_") if p]
     if not parts:
         return "", None, None
     if len(parts) >= 3 and parts[-1].isdigit() and parts[-2].isdigit():
         return "_".join(parts[:-2]), parts[-2], parts[-1]
     if len(parts) >= 2 and parts[-1].isdigit():
         return "_".join(parts[:-1]), parts[-1], None
-    return str(obs_group or ""), None, None
+    return base or raw, None, None
 
 
 # Zakrytove typy podla VSX dokumentacie
@@ -671,6 +766,7 @@ def _format_varastro_comp_table(
     comp_df: pd.DataFrame,
     *,
     comp_quality_map: dict[str, str] | None = None,
+    use_johnson_mag: bool = False,
 ) -> str:
     header = (
         "# Nr  CatalogId             Mag    BP-RP  dBPRP  tier_color  "
@@ -687,9 +783,14 @@ def _format_varastro_comp_table(
             q_skip = str(comp_quality_map.get(cid_key, "") or "").strip().lower()
             if q_skip == "excluded":
                 continue
+        if use_johnson_mag and "johnson_ok" in row.index and not bool(row.get("johnson_ok")):
+            continue
         export_row_n += 1
         cid = str(row.get("catalog_id", "") or "")[:19].ljust(19)
-        mag = pd.to_numeric(row.get("mag", float("nan")), errors="coerce")
+        if use_johnson_mag and "johnson_mag" in row.index:
+            mag = pd.to_numeric(row.get("johnson_mag", float("nan")), errors="coerce")
+        else:
+            mag = pd.to_numeric(row.get("mag", float("nan")), errors="coerce")
         bprp = pd.to_numeric(row.get("bp_rp", float("nan")), errors="coerce")
         dbprp = pd.to_numeric(row.get("delta_bprp_abs", float("nan")), errors="coerce")
         p2p = pd.to_numeric(row.get("p2p_rms", float("nan")), errors="coerce")
@@ -845,8 +946,32 @@ def export_lightcurve_reports(
         except Exception:  # noqa: BLE001
             # EXC-0087: T2 -- report/export may omit or misstate (if setup_dir.name and setup_dir.name.lower() not in... (EXCEPT-BULK-2 2026-07-08)
             pass
+
+    from invariants_runtime import check_osc03_export_eligibility
+    from osc_align import is_onerggb_internal_obs_group
+
+    if is_onerggb_internal_obs_group(obs_group_resolved):
+        logging.info("[EXPORT] skip oneRGGB internal obs-group %s", obs_group_resolved)
+        record_export_failure(
+            export_failures,
+            _target_id,
+            _export_method,
+            "oneRGGB internal-only (OSC E1 - not exported)",
+        )
+        return {}
+
     setup_filter_raw, exptime_s, binning = _guess_setup_info_from_obs_group(obs_group_resolved)
-    aavso_filter, filt_warn = _resolve_aavso_filter(setup_filter_raw, fresh_cfg)
+    aavso_filter, filt_warn = resolve_aavso_filt_from_obs_group(obs_group_resolved, fresh_cfg)
+    _osc_export = aavso_filter in ("TR", "TG", "TB")
+    comp_export_df, _osc_comp_notes = _prepare_osc_comp_df_for_export(
+        comp_df,
+        aavso_filter,
+    )
+    check_osc03_export_eligibility(
+        obs_group_resolved,
+        aavso_filter,
+        meta={"target": _target_id, "method": _export_method},
+    )
 
     # Target catalog info.
     target_cid = str(target_row.get("catalog_id", "") or "").strip()
@@ -937,20 +1062,35 @@ def export_lightcurve_reports(
         "photometry_dir": _phot_dir,
         "target_row": target_row,
         "lc_method": _export_method,
+        "obs_group": obs_group_resolved,
     }
     if run_citation_ctx is not None:
-        _cite_kw["run_ctx"] = run_citation_ctx
+        _cite_kw["run_ctx"] = _osc_export_citation_context(
+            fresh_cfg,
+            photometry_dir=_phot_dir,
+            obs_group=obs_group_resolved,
+            run_ctx=run_citation_ctx,
+            lc_method=_export_method,
+        )
     elif targets_df is not None:
         _cite_kw["targets_df"] = targets_df
     if _export_method in ("psf", "adaptive"):
-        _cite_kw["run_ctx"] = build_run_citation_context(
+        _cite_kw["run_ctx"] = _osc_export_citation_context(
             fresh_cfg,
-            pipeline_meta=load_pipeline_meta(_phot_dir),
+            photometry_dir=_phot_dir,
+            obs_group=obs_group_resolved,
             targets_df=targets_df,
+            target_row=target_row,
             lc_method=_export_method,
         )
     a_lines: list[str] = []
     a_lines.extend(_vyvar_export_citation_lines(fresh_cfg, **_cite_kw))
+    if _osc_export:
+        from gaia_johnson import TRANSFORM_CITATION
+
+        a_lines.append(f"# OSC comp/check mags: Gaia G+BP-RP -> Johnson ({TRANSFORM_CITATION})\n")
+        for note in _osc_comp_notes[:5]:
+            a_lines.append(f"#WARNING={note}\n")
     if filt_warn:
         a_lines.append(f"#WARNING={filt_warn}\n")
         logging.warning("[EXPORT] %s (%s)", filt_warn, str(vsx_name))
@@ -1072,10 +1212,16 @@ def export_lightcurve_reports(
         f"#   Tier system (|DeltaBP-RP| Gaia): "
         f"T1<={_t1:.2f}(w=1.00) T2<={_t2:.2f}(w=0.85) T3<={_t3:.2f}(w=0.50) T4>{_t3:.2f}(w=0.25)\n"
     )
-    v_lines.append("# Color system: Gaia BP-RP\n")
-    if setup_filter_raw or exptime_s or binning:
+    if _osc_export:
+        from gaia_johnson import TRANSFORM_CITATION, johnson_band_for_osc_aavso_token
+
+        _jb = johnson_band_for_osc_aavso_token(aavso_filter) or "?"
+        v_lines.append(f"# Color system: Gaia BP-RP -> Johnson {_jb} ({TRANSFORM_CITATION})\n")
+    else:
+        v_lines.append("# Color system: Gaia BP-RP\n")
+    if setup_filter_raw or exptime_s or binning or aavso_filter:
         v_lines.append(
-            f"#   Filter: {setup_filter_raw or 'CV'} | Exp: {exptime_s or 'na'}s | Bin: {binning or 'na'}\n"
+            f"#   Filter: {aavso_filter or setup_filter_raw or 'CV'} | Exp: {exptime_s or 'na'}s | Bin: {binning or 'na'}\n"
         )
     ap_px = pd.to_numeric(summary_row.get("aperture_px", float("nan")), errors="coerce")
     fwhm_px = pd.to_numeric(summary_row.get("fwhm_px", float("nan")), errors="coerce")
@@ -1112,13 +1258,20 @@ def export_lightcurve_reports(
     v_lines.append("# COMP TABLE:\n")
     v_lines.append(
         _format_varastro_comp_table(
-            comp_df,
+            comp_export_df if _osc_export else comp_df,
             comp_quality_map=comp_quality_map,
+            use_johnson_mag=_osc_export,
         )
     )
     v_lines.append("#\n")
     if check_row is not None:
-        chk_mag = pd.to_numeric(check_row.get("mag", float("nan")), errors="coerce")
+        if _osc_export:
+            from gaia_johnson import transform_comp_row_for_osc_band
+
+            chk_res = transform_comp_row_for_osc_band(check_row, aavso_filter, log_exclusions=False)
+            chk_mag = float(chk_res.johnson_mag) if chk_res.ok else float("nan")
+        else:
+            chk_mag = pd.to_numeric(check_row.get("mag", float("nan")), errors="coerce")
         chk_p2p = pd.to_numeric(check_row.get("p2p_rms", float("nan")), errors="coerce")
         v_lines.append(
             f"# CHK CatalogId: {check_cid} | Mag: {_fmt_opt_num(chk_mag, '.3f')} | "

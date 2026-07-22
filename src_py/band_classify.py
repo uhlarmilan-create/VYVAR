@@ -350,8 +350,7 @@ def compare_legacy_color_term_auto(obs_group: str) -> bool:
 
 
 def guess_aavso_code_from_obs_group(obs_group: str) -> tuple[str, str | None]:
-    """Best-effort AAVSO FILT via export layer (for comparison tables only)."""
-    from export_reports import _guess_setup_info_from_obs_group, _resolve_aavso_filter  # noqa: PLC0415
+    """Best-effort AAVSO FILT via export layer (OSC-aware)."""
+    from export_reports import resolve_aavso_filt_from_obs_group  # noqa: PLC0415
 
-    setup_filter_raw, _, _ = _guess_setup_info_from_obs_group(obs_group)
-    return _resolve_aavso_filter(setup_filter_raw, None)
+    return resolve_aavso_filt_from_obs_group(obs_group, None)

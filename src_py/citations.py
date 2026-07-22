@@ -164,6 +164,9 @@ class RunCitationContext:
     k2_mode: str = "off"
     k2_source_label: str = "none"
     k2_value: float | None = None
+    osc_channel_export: bool = False
+    osc_channel_binning: int | None = None
+    osc_transform_citation: str = ""
 
 
 def _vsx_db_configured(cfg: AppConfig | None) -> bool:
@@ -209,6 +212,7 @@ def build_run_citation_context(
     period_analysis: bool = False,
     variability_detection: bool = False,
     tess_used: bool = False,
+    obs_group: str = "",
 ) -> RunCitationContext:
     meta = pipeline_meta if isinstance(pipeline_meta, dict) else {}
     gs11_meta = meta.get("gs11_summary") if isinstance(meta.get("gs11_summary"), dict) else {}
@@ -259,6 +263,14 @@ def build_run_citation_context(
         _ct = "off"
     k2_src_label, k2_val = _resolve_k2_matrix_fields(cfg, meta, k2_mode=_k2m, use_k2=use_k2)
 
+    from gaia_johnson import TRANSFORM_CITATION
+    from osc_align import is_osc_export_eligible_obs_group, parse_osc_channel
+
+    _og = str(obs_group or "").strip()
+    _osc_ch = parse_osc_channel(_og)
+    _osc_export = is_osc_export_eligible_obs_group(_og) if _osc_ch else False
+    _osc_bin = int(getattr(cfg, "osc_channel_binning", 2) or 2) if (cfg and _osc_ch) else None
+
     return RunCitationContext(
         use_vsx=use_vsx,
         use_psf=use_psf,
@@ -289,6 +301,9 @@ def build_run_citation_context(
         k2_mode=_k2m if use_k2 else "off",
         k2_source_label=k2_src_label,
         k2_value=k2_val,
+        osc_channel_export=_osc_export,
+        osc_channel_binning=_osc_bin,
+        osc_transform_citation=TRANSFORM_CITATION if _osc_export else "",
     )
 
 
@@ -548,6 +563,12 @@ def build_methods_matrix_lines(ctx: RunCitationContext) -> list[str]:
         ("empirical background mode", _on(bool(ctx.use_empirical_background))),
         ("trust gate", _on(bool(ctx.use_trust))),
     ]
+    if ctx.osc_channel_export:
+        _bin = ctx.osc_channel_binning if ctx.osc_channel_binning is not None else "?"
+        pairs.append(("OSC channel extraction", "ON"))
+        pairs.append(("OSC channel binning", f"{_bin}x{_bin} average"))
+        if ctx.osc_transform_citation:
+            pairs.append(("OSC Gaia->Johnson comps", f"ON ({ctx.osc_transform_citation})"))
     return [f"{name}: {state}" for name, state in pairs]
 
 

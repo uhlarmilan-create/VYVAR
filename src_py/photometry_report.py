@@ -5632,6 +5632,43 @@ class _PhotometryReportBuilder:
                 self._page_footer(c)
                 c.showPage()
                 page_sub += 1
+
+    def _report_osc_multiband_summary(self, c: "canvas.Canvas") -> None:
+        from osc_align import obs_group_band_token, osc_multiband_summary_rows
+
+        rows = osc_multiband_summary_rows(self.draft_dir, self.obs_group)
+        if not rows:
+            return
+        c.setPageSize(self.landscape(self.A4))
+        y = self.PAGE_H - self.M_TOP
+        c.setFont(self.FONT_BOLD, 14)
+        c.setFillColor(self.C_TITLE)
+        c.drawString(self.M_LEFT, y - 0.35 * self.cm, "OSC multi-band summary (unified frame set)")
+        c.setFillColor(self.colors.black)
+        y -= 1.1 * self.cm
+        c.setFont(self.FONT_BOLD, 9)
+        c.drawString(self.M_LEFT, y, "Channel")
+        c.drawString(self.M_LEFT + 2.2 * self.cm, y, "Band")
+        c.drawString(self.M_LEFT + 3.8 * self.cm, y, "Export")
+        c.drawString(self.M_LEFT + 6.5 * self.cm, y, "n_LCs")
+        c.drawString(self.M_LEFT + 8.5 * self.cm, y, "obs-group")
+        y -= 0.55 * self.cm
+        c.setFont(self.FONT_REG, 9)
+        for row in rows:
+            ch = str(row.get("channel", ""))
+            tok = str(row.get("band_token", "") or obs_group_band_token(str(row.get("obs_group", ""))))
+            elig = "yes" if row.get("export_eligible") else "internal"
+            n_lc = int(row.get("n_lightcurves", 0) or 0)
+            og = str(row.get("obs_group", ""))
+            c.drawString(self.M_LEFT, y, ch)
+            c.drawString(self.M_LEFT + 2.2 * self.cm, y, tok or "-")
+            c.drawString(self.M_LEFT + 3.8 * self.cm, y, elig)
+            c.drawString(self.M_LEFT + 6.5 * self.cm, y, str(n_lc))
+            c.drawString(self.M_LEFT + 8.5 * self.cm, y, og[:48])
+            y -= 0.45 * self.cm
+        self._page_footer(c)
+        c.showPage()
+
     def _report_abbreviations(self, c: "canvas.Canvas") -> None:
         c.setPageSize(self.landscape(self.A4))
         y0 = self.PAGE_H - self.M_TOP
@@ -6145,6 +6182,10 @@ class _PhotometryReportBuilder:
         self._report_hockey_stick(c)
         self._report_candidates_table(c)
         self._report_tess_section(c)
+        try:
+            self._report_osc_multiband_summary(c)
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("PDF OSC multiband summary skipped (non-fatal): %s", exc)
         self._report_abbreviations(c)
         try:
             self._report_configuration_page(c)

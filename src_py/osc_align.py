@@ -61,6 +61,49 @@ def obs_group_band_token(obs_group: str) -> str:
     return obs_group_first_token(obs_group)
 
 
+def parse_osc_channel(obs_group: str) -> str | None:
+    """Return OSC channel token (oneRGGB/R/G/B) or None for mono obs-groups."""
+    _base, ch = parse_osc_channel_from_setup(str(obs_group or "").split("|")[0].strip())
+    return ch
+
+
+def is_onerggb_internal_obs_group(obs_group: str) -> bool:
+    """E1: oneRGGB is internal-only; never AAVSO/VarAstro eligible."""
+    return parse_osc_channel(obs_group) == "oneRGGB"
+
+
+def is_osc_export_eligible_obs_group(obs_group: str) -> bool:
+    """True for exportable OSC channel obs-groups (R/G/B), false for oneRGGB."""
+    ch = parse_osc_channel(obs_group)
+    return ch in OSC_RGB_CHANNELS
+
+
+def osc_multiband_summary_rows(draft_dir: Path, obs_group: str) -> list[dict[str, object]]:
+    """Compact per-channel summary for PDF report block (JD-consistent frame set per OSC-02)."""
+    raw = str(obs_group or "").split("|")[0].strip()
+    base, _cur = parse_osc_channel_from_setup(raw)
+    if not base or base == raw:
+        return []
+    root = Path(draft_dir) / "platesolve"
+    rows: list[dict[str, object]] = []
+    for ch in OSC_CHANNELS:
+        og = channel_obs_group_folder(base, ch)
+        lc_dir = root / og / "photometry" / "lightcurves"
+        n_lc = len(list(lc_dir.glob("lightcurve_*_aperture.csv"))) if lc_dir.is_dir() else 0
+        tok = osc_band_token_for_channel(ch) or ""
+        rows.append(
+            {
+                "channel": ch,
+                "obs_group": og,
+                "band_token": tok,
+                "aavso_filt": tok if ch in OSC_RGB_CHANNELS else "internal",
+                "export_eligible": ch in OSC_RGB_CHANNELS,
+                "n_lightcurves": n_lc,
+            }
+        )
+    return rows
+
+
 def replicate_qc_verdict_from_one_rggb(*, lights_root: Path, base_name: str) -> dict[str, Any]:
     """D1: copy oneRGGB ``status`` to R/G/B rows; keep per-channel diagnostics; add ``qc_source``."""
     root = Path(lights_root)

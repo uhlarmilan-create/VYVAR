@@ -45,6 +45,7 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "QC-01",
         "OSC-01",
         "OSC-02",
+        "OSC-03",
     }
 )
 
@@ -294,6 +295,44 @@ def check_osc02_unified_frame_sets(
     ok = len(violations) == 0
     detail = f"n_bundles={len(osc_bundles)} violations={violations[:6]}"
     inv_check(meta_block, "OSC-02", ok, policy="FAIL", detail=detail)
+
+
+def check_osc03_export_eligibility(
+    obs_group: str,
+    aavso_filter: str,
+    *,
+    meta: dict[str, Any] | None = None,
+) -> None:
+    """OSC-03: oneRGGB must never reach AAVSO/VarAstro exports; R/G/B must use TR/TG/TB."""
+    from osc_align import is_onerggb_internal_obs_group, parse_osc_channel
+
+    meta_block = meta if meta is not None else {"invariants": []}
+    og = str(obs_group or "").strip()
+    if not og:
+        inv_check(meta_block, "OSC-03", True, policy="FAIL", detail="mono path (no obs_group)")
+        return
+    if is_onerggb_internal_obs_group(og):
+        inv_check(
+            meta_block,
+            "OSC-03",
+            False,
+            policy="FAIL",
+            detail=f"oneRGGB export blocked: {og}",
+        )
+        return
+    ch = parse_osc_channel(og)
+    if ch in ("R", "G", "B"):
+        expected = {"R": "TR", "G": "TG", "B": "TB"}.get(ch, "")
+        ok = str(aavso_filter or "").strip().upper() == expected
+        inv_check(
+            meta_block,
+            "OSC-03",
+            ok,
+            policy="FAIL",
+            detail=f"channel={ch} filt={aavso_filter!r} expected={expected!r}",
+        )
+        return
+    inv_check(meta_block, "OSC-03", True, policy="FAIL", detail=f"mono/non-OSC obs_group={og}")
 
 
 def residual_large_scale_p99_adu(
