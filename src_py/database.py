@@ -983,6 +983,7 @@ class VyvarDatabase:
         self._ensure_equipments_saturate_adu_column()
         self._ensure_equipments_cosmic_columns()
         self._ensure_equipments_focal_column()
+        self._ensure_equipments_bayermask_column()
         self._ensure_scanning_gain_column()
         self._ensure_obs_files_draft_column()
         self._ensure_obs_files_qc_columns()
@@ -1297,6 +1298,16 @@ class VyvarDatabase:
             return n
         if col == "IS_DEFAULT":
             return 0 if int(self.normalize_active_db_value(raw)) == 0 else 1
+        if table == "EQUIPMENTS" and col == "BAYERMASK":
+            if raw is None:
+                return None
+            s = str(raw).strip()
+            if not s:
+                return None
+            from osc_extract import normalize_bayermask
+
+            pat = normalize_bayermask(s)
+            return pat if pat is not None else "mono"
         if raw is None:
             return None
         try:
@@ -2657,6 +2668,45 @@ class VyvarDatabase:
         if "FOCAL" not in cols:
             self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN FOCAL REAL;")
             self.conn.commit()
+
+    def _ensure_equipments_bayermask_column(self) -> None:
+        """OSC Bayer mask authority: RGGB/BGGR/GBRG/GRBG, mono, or empty (mono)."""
+        cursor = self.conn.execute("PRAGMA table_info('EQUIPMENTS');")
+        cols = {row["name"] for row in cursor.fetchall()}
+        if "BAYERMASK" not in cols:
+            self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN BAYERMASK TEXT;")
+            self.conn.commit()
+        try:
+            row = self.conn.execute(
+                "SELECT ID, BAYERMASK FROM EQUIPMENTS WHERE ID = 5;"
+            ).fetchone()
+            if row is not None and (row["BAYERMASK"] is None or str(row["BAYERMASK"]).strip() == ""):
+                self.conn.execute(
+                    "UPDATE EQUIPMENTS SET BAYERMASK = 'RGGB' WHERE ID = 5;"
+                )
+                self.conn.commit()
+        except sqlite3.Error:
+            pass
+
+    def get_equipment_bayermask(self, equipment_id: int | None) -> str | None:
+        """Return canonical Bayer mask or None (mono/empty)."""
+        if equipment_id is None:
+            return None
+        try:
+            row = self.conn.execute(
+                "SELECT BAYERMASK FROM EQUIPMENTS WHERE ID = ?;",
+                (int(equipment_id),),
+            ).fetchone()
+        except sqlite3.Error:
+            return None
+        if not row or row["BAYERMASK"] in (None, ""):
+            return None
+        from osc_extract import normalize_bayermask
+
+        try:
+            return normalize_bayermask(str(row["BAYERMASK"]))
+        except ValueError:
+            return None
 
     def _drop_settings_table(self) -> None:
         # WAVE-B STEP 5: the SETTINGS table was vestigial. It only ever held

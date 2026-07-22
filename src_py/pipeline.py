@@ -14317,6 +14317,22 @@ def astrometry_align_and_build_masterstar(
     from invariants_runtime import check_qc01_skipproc_alignment  # noqa: PLC0415
 
     check_qc01_skipproc_alignment(files_all, _qc_csv, meta={"invariants": []})
+    _bayermask = None
+    if id_equipment is not None and _cfg_align_root is not None:
+        try:
+            from database import VyvarDatabase
+
+            _osc_db = VyvarDatabase(str(_cfg_align_root.database_path))
+            _bayermask = _osc_db.get_equipment_bayermask(int(id_equipment))
+        except Exception:  # noqa: BLE001
+            _bayermask = None
+    from invariants_runtime import check_osc01_channel_extraction_required  # noqa: PLC0415
+
+    check_osc01_channel_extraction_required(
+        files_all,
+        equipment_bayermask=_bayermask,
+        meta={"invariants": []},
+    )
     _n_root_only = len(list(det_top.glob("*.fits"))) if det_top.exists() else 0
     _n_all = len(files_all)
     if _n_root_only != _n_all:
@@ -15086,7 +15102,8 @@ def _calibrate_one_light_disk(
     )
 
     qc_summary: dict[str, Any] | None = None
-    if (used_dark or used_flat) and qc_pack and qc_pack.get("enabled"):
+    _osc_mosaic = _valid_bayerpat_from_header(hdr) is not None
+    if (used_dark or used_flat) and qc_pack and qc_pack.get("enabled") and not _osc_mosaic:
         limits = {
             "max_hfr": float(qc_pack.get("max_hfr", 5.0)),
             "min_stars": int(qc_pack.get("min_stars", 10)),
@@ -15129,14 +15146,17 @@ def _calibrate_one_light_disk(
                 LOGGER.debug("OBS_FILES QC update failed: %s", exc)
 
     perf10_qc: dict[str, Any] | None = None
-    if qc_pack and bool(qc_pack.get("dao_qc_in_calibrate")):
+    if (
+        not _osc_mosaic
+        and qc_pack
+        and bool(qc_pack.get("dao_qc_in_calibrate"))
+    ):
         try:
             perf10_qc = _quality_inspection_dao_metrics_array(
                 np.asarray(data, dtype=np.float32),
                 hdr,
             )
         except Exception as exc:  # noqa: BLE001
-            # EXC-0427: T4 -- Nested `pass` when `log_exception` itself fails; worker already returns `{ok: False, er... (EXCEPT-BULK-2 2026-07-08)
             logging.warning("[PERF-10] DAO QC in calibrate failed for %s: %s", src.name, exc)
 
     fits.writeto(dst, _as_fits_float32_image(data), header=hdr, overwrite=True)
@@ -16498,6 +16518,97 @@ def _fit_subtract_preprocess_sky_surface(
     }
 
 
+def run_osc_channel_extraction_for_archive(
+    *,
+    calibrated_lights_root: Path,
+    db: VyvarDatabase,
+    equipment_id: int,
+    app_config: AppConfig | None = None,
+    progress_cb: Callable[..., None] | None = None,
+) -> dict[str, Any]:
+    """Extract OSC CFA mosaics into four channel obs-groups; QC+sky-surface per channel."""
+    from osc_extract import (
+        OSC_CHANNELS,
+        channel_obs_group_folder,
+        extract_one_light_to_channels,
+        is_channel_obs_group_folder,
+        is_osc_bayermask,
+        iter_mosaic_light_fits,
+    )
+
+    cfg = app_config or AppConfig()
+    bayermask = db.get_equipment_bayermask(int(equipment_id))
+    if not is_osc_bayermask(bayermask):
+        return {"skipped": True, "reason": "mono equipment"}
+
+    gain_raw, rn_raw = db.get_equipment_cosmic_params(int(equipment_id))
+    gain_e = float(gain_raw) if gain_raw is not None and gain_raw > 0 else 1.0
+    rn_e = float(rn_raw) if rn_raw is not None and rn_raw >= 0 else 5.0
+    osc_bin = int(cfg.osc_channel_binning)
+    root = Path(calibrated_lights_root)
+    out: dict[str, Any] = {
+        "skipped": False,
+        "bayermask": bayermask,
+        "osc_bin": osc_bin,
+        "groups": [],
+        "n_extracted": 0,
+        "n_mosaic_removed": 0,
+    }
+
+    group_dirs = sorted(
+        [d for d in root.iterdir() if d.is_dir() and not is_channel_obs_group_folder(d.name)],
+        key=lambda p: p.name.casefold(),
+    )
+    total_files = sum(len(iter_mosaic_light_fits(g)) for g in group_dirs)
+    done = 0
+    for group_dir in group_dirs:
+        mosaic_files = iter_mosaic_light_fits(group_dir)
+        if not mosaic_files:
+            continue
+        base_name = group_dir.name
+        out_dirs = {
+            ch: root / channel_obs_group_folder(base_name, ch) for ch in OSC_CHANNELS
+        }
+        grp_stat: dict[str, Any] = {"base": base_name, "channels": list(OSC_CHANNELS), "n": 0}
+        for fp in mosaic_files:
+            done += 1
+            if progress_cb is not None:
+                progress_cb(done, max(total_files, 1), f"OSC extract {fp.name}")
+            extract_one_light_to_channels(
+                fp,
+                out_dirs=out_dirs,
+                bayermask=str(bayermask),
+                osc_bin=osc_bin,
+                gain_e_per_adu=gain_e,
+                read_noise_e=rn_e,
+            )
+            try:
+                fp.unlink()
+                out["n_mosaic_removed"] += 1
+            except OSError as exc:
+                LOGGER.warning("[OSC] failed to remove mosaic %s: %s", fp, exc)
+            grp_stat["n"] += 1
+            out["n_extracted"] += 1
+        for ch in OSC_CHANNELS:
+            _qc_enrich_calibrated_in_place(
+                out_dirs[ch],
+                app_config=cfg,
+                apply_sky_surface=True,
+                progress_cb=progress_cb,
+            )
+        try:
+            if not any(group_dir.iterdir()):
+                group_dir.rmdir()
+        except OSError:
+            pass
+        out["groups"].append(grp_stat)
+    log_event(
+        f"OSC extraction: {out['n_extracted']} mosaic(s) -> {len(out['groups'])} base group(s); "
+        f"channels={','.join(OSC_CHANNELS)} bin={osc_bin}"
+    )
+    return out
+
+
 def _qc_enrich_calibrated_in_place(
     calibrated_root: Path,
     *,
@@ -16510,6 +16621,7 @@ def _qc_enrich_calibrated_in_place(
     only_paths: Sequence[Path | str] | None = None,
     prefilter_rejected: Mapping[Path | str, str] | None = None,
     progress_cb: Callable[..., None] | None = None,
+    apply_sky_surface: bool = False,
 ) -> dict[str, Any]:
     """Lightweight QC pass that writes VY_* headers directly onto calibrated FITS files.
 
@@ -16526,7 +16638,9 @@ def _qc_enrich_calibrated_in_place(
     """
     import numpy as np
 
-    _ = fwhm_reject_limit, elong_reject_limit, app_config  # skip-mode: diagnostics only
+    _ = fwhm_reject_limit, elong_reject_limit  # skip-mode: diagnostics only
+    cfg = app_config or AppConfig()
+    sky_order = int(cfg.preprocess_sky_surface_order)
 
     calibrated_root = Path(calibrated_root)
     _prefilter: dict[str, str] = {}
@@ -16548,6 +16662,18 @@ def _qc_enrich_calibrated_in_place(
             with fits.open(fp, memmap=False) as hdul:
                 data = np.array(hdul[0].data, dtype=np.float32, copy=True)
                 hdr = hdul[0].header
+
+            sky_stats: dict[str, Any] = {}
+            is_channel = bool(hdr.get("VY_CHANNEL")) or apply_sky_surface
+            is_mosaic = _valid_bayerpat_from_header(hdr) is not None and not hdr.get("VY_CHANNEL")
+            if is_channel and sky_order > 0 and not is_mosaic:
+                data, sky_stats = _fit_subtract_preprocess_sky_surface(data, order=sky_order)
+                with fits.open(fp, mode="update") as hdul:
+                    hdul[0].data = _as_fits_float32_image(data)
+                    for k, v in sky_stats.items():
+                        if k == "sky_surface_applied":
+                            hdul[0].header["VY_SKYSF"] = (bool(v), "Sky-surface subtract applied")
+                    hdul.flush()
 
             qc = _qc_fwhm_elongation(data)
             fwhm = float(qc.get("fwhm_px")) if qc.get("fwhm_px") is not None else float("nan")
@@ -16590,6 +16716,7 @@ def _qc_enrich_calibrated_in_place(
                     "n_sources": qc.get("n_sources"),
                     "n_stars_detected": n_stars,
                     "bg_median": float(np.nanmedian(data)) if data.size else None,
+                    **sky_stats,
                 }
             )
             log_event(
@@ -17139,7 +17266,14 @@ def fits_metadata_from_primary_header(
         "jd_start": jd_start,
         "telescope": _pick("TELESCOP", "SCOPE", default=None),
         "camera": _pick("INSTRUME", "CAMERA", default=None),
+        "bayerpat": _valid_bayerpat_from_header(header),
     }
+
+
+def _valid_bayerpat_from_header(header: fits.Header) -> str | None:
+    from osc_extract import valid_bayer_pattern_4
+
+    return valid_bayer_pattern_4(str(header.get("BAYERPAT") or ""))
 
 
 def extract_fits_metadata(
@@ -17178,6 +17312,7 @@ def extract_fits_metadata(
     - jd_start
     - telescope
     - camera
+    - bayerpat (FITS BAYERPAT when present, e.g. RGGB)
 
     Convention:     ``EQUIPMENTS.PIXELSIZE`` in the DB is the **native 1x1** pitch [um]; FITS cache
     ``PIXEL_UM`` stores **effective** pitch after binning.
@@ -17452,6 +17587,17 @@ class AstroPipeline:
             )
 
         LOGGER.info("Kalibracia dokoncena (sekcii vystupu: %s)", list((outputs.get("results") or {}).keys()))
+        if equipment_id is not None:
+            cal_root = ap_root / "calibrated" / "lights"
+            if cal_root.is_dir():
+                osc_out = run_osc_channel_extraction_for_archive(
+                    calibrated_lights_root=cal_root,
+                    db=self.db,
+                    equipment_id=int(equipment_id),
+                    app_config=self.config,
+                    progress_cb=progress_cb,
+                )
+                outputs["osc_extraction"] = osc_out
         return outputs
 
     def calibrate_batch(

@@ -2572,6 +2572,20 @@
     "unit": null,
     "widget": "auto"
   },
+  "osc_channel_binning": {
+    "help": "OSC only: NxN average binning applied to each extracted channel (R/G/B/oneRGGB) after Bayer plane split. Allowed 1-4 (default 2). Total linear scale vs raw mosaic = 2 (superpixel) x N.",
+    "kind": "static",
+    "label": "OSC Channel Binning",
+    "owner": "config_runtime",
+    "phase": "qc",
+    "range": [
+      1.0,
+      4.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
+  },
   "project_root": {
     "help": "VYVAR installation root; derived from the code location, never edit.",
     "kind": "static",

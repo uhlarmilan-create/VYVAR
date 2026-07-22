@@ -422,6 +422,14 @@ def normalize_flat_master(
     hdr_pat = _valid_bayer_pattern_4(str(header.get("BAYERPAT") or ""))
     assumed_pat = False
     pat = hdr_pat
+    if pat is None and bin_factor == 1 and db is not None and id_equipments is not None:
+        try:
+            db_pat = db.get_equipment_bayermask(int(id_equipments))
+        except Exception:  # noqa: BLE001
+            db_pat = None
+        if db_pat and h % 2 == 0 and w % 2 == 0 and h >= 2 and w >= 2:
+            pat = db_pat
+            assumed_pat = True
     if pat is None and bin_factor == 1 and _db_equipment_suggests_osc(db, id_equipments):
         if h % 2 == 0 and w % 2 == 0 and h >= 2 and w >= 2:
             pat = "RGGB"
@@ -457,7 +465,7 @@ def normalize_flat_master(
                 sl /= mv
             else:
                 log_event(f"Master flat: varovanie - neplatny median pre dlazdicu {lab}, preskocene delenie.")
-        note = f"Bayer {pat}" + (" (predvolene RGGB z EQUIPMENTS)" if assumed_pat else "")
+        note = f"Bayer {pat}" + (" (from EQUIPMENTS.BAYERMASK)" if assumed_pat else "")
         log_event(
             "Master flat: normalizacia po Bayer dlazdiciach "
             f"({note}); mediany ADU pred norm: "

@@ -1,6 +1,8 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-21** (OSC-SUPPORT: M71 L/B/R superpixel extraction runs E2E; G blocked by flat invariant + shared dark naming; Phase-1 lead L-extract, debayer still mandatory for naive OSC).
+Last updated: **2026-07-22** (OSC-1 phase 1: CFA calibrate + plane-split extraction to oneRGGB/R/G/B obs-groups; BAYERMASK DB column; OSC-01 wired; osc_channel_binning param 271; OSC-2/3 queued).
+
+Registered params: **271** (was 270; +``osc_channel_binning``).
 
 ## Invariants program -- honest scope
 

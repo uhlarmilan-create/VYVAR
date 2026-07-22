@@ -1157,6 +1157,18 @@ MASTERSTAR (unchanged Phase 0 criterion). Rationale: catalog ``mag_max`` band he
 made the static threshold semantically fuzzy; detection limit is the honest gate. Comp-pool
 veto coverage grows with the fuller ``variable_targets`` list (correctness). **Status:** implemented.
 
+### OSC-CHANNEL-EXTRACTION (2026-07-22, phase 1/3)
+OSC Bayer mosaics: calibrate on CFA (dark subtract + flat divide on raw mosaic; flat via
+``normalize_flat_master`` per-tile using ``EQUIPMENTS.BAYERMASK``). **No** demosaic/interpolation.
+After calibration, plane-split extraction to four obs-groups (``oneRGGB``, ``R``, ``G``, ``B``) with
+AVERAGE semantics; optional ``osc_channel_binning`` NxN average post-extraction. Sky-surface fit runs
+**only** on extracted channels, never on the mosaic. ``oneRGGB`` is internal/diagnostics only (not
+AAVSO). Effective gain/RN stamped per channel (``VY_EGAIN``, ``VY_RDNOIS``). Wired gate **OSC-01**
+(no mosaic without ``VY_CHANNEL`` in alignment). Literature: AAVSO DSLR Observing Manual (channel
+separation); Carrasco/Riello Johnson transforms deferred to OSC-3.
+**Status:** phase 1 implemented; OSC-2 (WCS reuse + per-channel photometry) and OSC-3 (band mapping,
+TG/TB/TR exports) queued.
+
 ## Comp-star selection & QA
 
 ### Selection priority: stability > colour > proximity; proximity is a GATE, not a rank

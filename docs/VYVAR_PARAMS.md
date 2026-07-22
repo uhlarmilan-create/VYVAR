@@ -6,15 +6,15 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-07-22T12:40:03Z at git HEAD 7b235fe._
+_Generated 2026-07-22T15:35:40Z at git HEAD c055ac3._
 
 ## Summary
 
-- Entries: 270
-- Tier: basic 13, advanced 69, expert 188
-- Kind: static 252, derived 0, resolved 18
-- Widget: auto 112, custom 143, hidden 15
-- Owner: db_static 9, config_runtime 242, fits_dynamic 6, internal 13
+- Entries: 271
+- Tier: basic 13, advanced 70, expert 188
+- Kind: static 253, derived 0, resolved 18
+- Widget: auto 113, custom 143, hidden 15
+- Owner: db_static 9, config_runtime 243, fits_dynamic 6, internal 13
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -79,6 +79,7 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `frame_quality_gate_enabled` | False | - | expert | static | config_runtime | auto | Frame Quality Gate Enabled |
 | `frame_quality_min_keep_frames` | 10 | 3 .. 100000 | expert | static | config_runtime | auto | Frame Quality Min Keep Frames |
 | `frame_quality_ratio_k` | 5.0 | 2 .. 20 | expert | static | config_runtime | auto | Frame Quality Ratio K |
+| `osc_channel_binning` | 2 | 1 .. 4 | advanced | static | config_runtime | auto | OSC Channel Binning |
 | `preprocess_sky_surface_order` | 2 | 0 .. 2 | expert | static | config_runtime | auto | Preprocess Sky Surface Order |
 | `qc_after_calibrate_enabled` | True | - | basic | static | config_runtime | auto | QC After Calibrate Enabled |
 | `qc_dao_detection_sigma` | 5.0 | - | expert | static | config_runtime | auto | QC DAO Detection Sigma |

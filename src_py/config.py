@@ -625,6 +625,8 @@ class AppConfig:
     # WAVE-B STEP 6: moffat_chi2_limit hardcoded (module constant _MOFFAT_CHI2_LIMIT in pipeline.py).
     #: Per calibrated light: subtract source-masked sigma-clipped polynomial sky surface in preprocess (0=off, default 2).
     preprocess_sky_surface_order: int = 2
+    #: OSC: post-extraction NxN average binning on each channel plane (1-4; default 2). Total scale vs raw = 2 x N.
+    osc_channel_binning: int = 2
     #: In-place QC diagnostic threshold for estimated FWHM [pix] (legacy; selection uses DB prefilter).
     qc_fwhm_limit: float = 8.0
     #: In-place QC diagnostic threshold for elongation a/b.
@@ -1555,6 +1557,11 @@ class AppConfig:
         except (TypeError, ValueError):
             self.preprocess_sky_surface_order = 2
         try:
+            _ocb = int(data.get("osc_channel_binning", self.osc_channel_binning))
+            self.osc_channel_binning = _ocb if _ocb in (1, 2, 3, 4) else 2
+        except (TypeError, ValueError):
+            self.osc_channel_binning = 2
+        try:
             _ems = int(data.get("epsf_min_stars", self.epsf_min_stars))
             self.epsf_min_stars = max(10, _ems)
         except (TypeError, ValueError):
@@ -2458,6 +2465,7 @@ class AppConfig:
             "psf_adaptive_resolve_fwhm": float(self.psf_adaptive_resolve_fwhm),
             "psf_adaptive_snr_lo": float(self.psf_adaptive_snr_lo),
             "preprocess_sky_surface_order": int(self.preprocess_sky_surface_order),
+            "osc_channel_binning": int(self.osc_channel_binning),
             "qc_fwhm_limit": float(self.qc_fwhm_limit),
             "qc_elong_limit": float(self.qc_elong_limit),
             "epsf_min_stars": int(self.epsf_min_stars),

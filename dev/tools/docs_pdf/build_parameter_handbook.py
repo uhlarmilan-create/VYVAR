@@ -148,6 +148,11 @@ D['preprocess_sky_surface_order'] = dict(
  mensi="0/1: gradienty oblohy (Mesic, svitani, vinetace zbytkova po flatu) zustanou v datech a prosaknou do mezikruzi -> systematicky posun pozadi zavisly na poloze.",
  vetsi="Vyssi rad neni povolen zamerne: flexibilnejsi plocha uz by zacala pojidat realne velkoskalove struktury (mlhoviny!) a lokalni pozadi hvezd - viz box.",
  proc="Rad 2 odstrani presne to, co je systematicke (gradient + zakriveni), a nic vic. Fit zachovava tok (flux-conserving).")
+D['osc_channel_binning'] = dict(
+ rozsah="1-4; vychozi 2.",
+ proc="Pouze OSC: NxN prumer po extrakci kanalu (R/G/B/oneRGGB). Celkova linearni mira vuci raw mozaice = 2 (superpixel) x N. S n=2 je vysledne rozliseni 4x hrubsi nez raw pixel.",
+ mensi="Jemnejsi vzorkovani (blize superpixelu 2x2); vice sumu, pomalejsi beh.",
+ vetsi="Hrubsi kanaly; mensi soubory, ale ztrata detailu a horsi match na MASTERSTAR pri OSC-2.")
 D['frame_quality_gate_enabled'] = dict(
  proc="Relativni brana: vyrazuje snimky vyrazne horsi nez typicky snimek TE NOCI (pomer ratio_k). Doplnuje absolutni limity.")
 D['frame_quality_ratio_k'] = dict(
@@ -468,7 +473,7 @@ story = []
 story.append(Paragraph("VYVAR - Referencni prirucka parametru", st_title))
 story.append(Paragraph("Detailni rozbor vsech %d parametru config.json: vyznam, rozsahy, duvody vychozich hodnot, dusledky zmen, matematicke pozadi a literatura." % len(CFG), st_intro))
 story.append(Spacer(1, 8))
-story.append(Paragraph("Stav: 2026-07-22, VYVAR HEAD 2c520c6. Registrovanych parametru: 270. Doprovodne dokumenty: VYVAR_CONFIG_GUIDE_CZ/EN.md (rychla reference), docs/VYVAR_PARAMS.md (strojovy index). Cestina bez diakritiky dle konvence projektu.", st_meta))
+story.append(Paragraph("Stav: 2026-07-22, VYVAR HEAD (OSC-1). Registrovanych parametru: 271. Doprovodne dokumenty: VYVAR_CONFIG_GUIDE_CZ/EN.md (rychla reference), docs/VYVAR_PARAMS.md (strojovy index). Cestina bez diakritiky dle konvence projektu.", st_meta))
 story.append(Spacer(1, 10))
 story.append(Paragraph("Jak cist tuto prirucku", st_h1))
 story.append(Paragraph("Kazdy parametr ma: vyznam, aktualni hodnotu (z vaseho config.json) a tam, kde na hodnote zalezi, rozbor [b]Mensi / Vetsi / Proc vychozi[/b]. Vedecky nabite skupiny maji oranzove BOXY s matematikou a odkazy. Parametry bez rozboru jsou bezpecne 'jasne' - jejich vyznam plne popisuje prvni veta.", st_body))

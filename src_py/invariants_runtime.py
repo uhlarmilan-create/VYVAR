@@ -43,6 +43,7 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-PROV-01",
         "INV-CFG-01",
         "QC-01",
+        "OSC-01",
     }
 )
 
@@ -227,6 +228,44 @@ def check_qc01_skipproc_alignment(
     ok = len(bad) == 0 and all(norm_fits_path_key(f) in ok_keys for f in selected_files)
     detail = f"n_selected={n_sel} n_ok_matched={n_ok_match} violations={bad[:8]}"
     inv_check(meta_block, "QC-01", ok, policy="FAIL", detail=detail)
+
+
+def check_osc01_channel_extraction_required(
+    selected_files: Sequence[Path | str],
+    *,
+    equipment_bayermask: str | None,
+    meta: dict[str, Any] | None = None,
+) -> None:
+    """OSC-01: OSC equipment frames must carry VY_CHANNEL (no raw mosaic in alignment)."""
+    from astropy.io import fits
+
+    from osc_extract import is_osc_bayermask, valid_bayer_pattern_4
+
+    meta_block = meta if meta is not None else {"invariants": []}
+    if not is_osc_bayermask(equipment_bayermask):
+        inv_check(
+            meta_block,
+            "OSC-01",
+            True,
+            policy="FAIL",
+            detail="mono equipment (OSC-01 N/A)",
+        )
+        return
+    bad: list[str] = []
+    for raw in selected_files:
+        fp = Path(raw)
+        try:
+            with fits.open(fp, memmap=False) as hdul:
+                hdr = hdul[0].header
+                if hdr.get("VY_CHANNEL"):
+                    continue
+                if valid_bayer_pattern_4(str(hdr.get("BAYERPAT") or "")):
+                    bad.append(fp.name)
+        except OSError:
+            bad.append(fp.name)
+    ok = len(bad) == 0
+    detail = f"equipment_bayermask={equipment_bayermask} mosaic_without_VY_CHANNEL={bad[:8]}"
+    inv_check(meta_block, "OSC-01", ok, policy="FAIL", detail=detail)
 
 
 def residual_large_scale_p99_adu(

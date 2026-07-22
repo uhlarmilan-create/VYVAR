@@ -35,9 +35,9 @@ from invariants_runtime import (  # noqa: E402
 
 def _registry_wired_ids() -> set[str]:
     text = (DOCS / "VYVAR_INVARIANTS.md").read_text(encoding="utf-8")
-    found = set(re.findall(r"((?:INV-[A-Z0-9-]+|QC-\d+))\s+\*\*\[wired\]\*\*", text))
+    found = set(re.findall(r"((?:INV-[A-Z0-9-]+|QC-\d+|OSC-\d+))\s+\*\*\[wired\]\*\*", text))
     # Also accept markdown table form: INV-XXX **[wired]**
-    found |= set(re.findall(r"\|\s*((?:INV-[A-Z0-9-]+|QC-\d+))\s+\*\*\[wired\]\*\*", text))
+    found |= set(re.findall(r"\|\s*((?:INV-[A-Z0-9-]+|QC-\d+|OSC-\d+))\s+\*\*\[wired\]\*\*", text))
     return found
 
 
@@ -63,7 +63,7 @@ def test_wired_ids_have_call_sites() -> None:
         n = len(re.findall(re.escape(inv_id), corpus))
         assert n >= 1, f"{inv_id} has no call site / mention in src_py or tests"
     # Inverse: no stray INV-*-style wired markers in inv_check that are unknown
-    for m in re.findall(r'inv_check\([^)]*["\']((?:INV-[A-Z0-9-]+|QC-\d+))["\']', corpus):
+    for m in re.findall(r'inv_check\([^)]*["\']((?:INV-[A-Z0-9-]+|QC-\d+|OSC-\d+))["\']', corpus):
         if m in WIRED_INV_IDS or m == "INV-WCS-00":
             continue
         # allow only registry-known wired set from inv_check in production helpers

@@ -1739,6 +1739,24 @@ def smart_import_session(
         raise FileNotFoundError("Missing 'lights' directory! Import aborted.")
 
     metadata = extract_fits_metadata(lights_files[0], db=pipeline.db, app_config=pipeline.config)
+    from osc_extract import validate_bayer_crosscheck
+
+    _import_warnings: list[str] = []
+    for fp in lights_files[:500]:
+        try:
+            meta_x = extract_fits_metadata(fp, db=pipeline.db, app_config=pipeline.config)
+        except Exception:  # noqa: BLE001
+            continue
+        verdict, msg = validate_bayer_crosscheck(
+            fits_bayerpat=meta_x.get("bayerpat"),
+            equipment_bayermask=pipeline.db.get_equipment_bayermask(int(id_equipment)),
+        )
+        if verdict == "fail" and msg:
+            raise ValueError(msg)
+        if verdict == "warn" and msg and msg not in _import_warnings:
+            _import_warnings.append(msg)
+    if _import_warnings:
+        plan.warnings.extend(_import_warnings)
     scanning_id = pipeline.db.find_or_create_scanning_id(metadata)
 
     # Ingestion creates DRAFT only (Session ID created after astrometry).

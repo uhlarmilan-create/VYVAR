@@ -162,11 +162,13 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
                 "SATURATE_ADU",
                 "GAIN_ADU",
                 "READNOISE_E",
+                "BAYERMASK",
                 "ACTIVE",
                 "IS_DEFAULT",
             ],
             extra_caption=(
                 "SATURATE_ADU: ADU ceiling for catalog saturation. "
+                "BAYERMASK: RGGB/BGGR/GBRG/GRBG for OSC; empty or mono for monochrome. "
                 "E.g. 16383 for 14-bit ADC, or 65535 for full 16-bit range."
             ),
         )

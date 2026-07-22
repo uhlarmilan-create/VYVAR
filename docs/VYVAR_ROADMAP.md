@@ -631,15 +631,11 @@ next calibration lever.
   add higher-order distortion terms. (See DECISIONS: *What VYVAR deliberately does NOT adopt from SIPS* - WCS distortion scoped here.)
 - **TODO-GS10 - AAVSO Direct API upload** ("Submit to AAVSO" button; WebObs API after the
   GS6b validation). Dep GS6b [OK].
-- **TODO-45 - RGB camera support** (IMX533 RGGB -> de-Bayer -> G-channel photometry).
-  **Parked arc: OSC-SUPPORT** - gap inventory `dev/results/OSC_GAP_INVENTORY.md`
-  (2026-07-21: Seestar proxy + **IMX533 M71 re-run** + **L/B/G/R superpixel
-  extraction experiment** - L/B/R E2E on extracted mono frames; G blocked by
-  INV-FLUX-02; offline extraction viable, naive mosaic still NO-GO). Revisit
-  trigger: Milan **1.0 vs 1.1 decision**; MUST gaps = debayer boundary +
-  untrusted mosaic photometry + per-channel master-dark naming. Verdict today:
-  **NO-GO** for release 1.0 naive OSC; Phase-1 design input = superpixel
-  **L-extract at ingest** (best M71 result) then G/TG once flat/dark gaps fixed.
+- **TODO-45 - RGB camera support** (IMX533 RGGB). **OSC arc phase 1 DONE (2026-07-22):**
+  CFA calibrate + plane-split extraction to `oneRGGB`/R/G/B obs-groups (`osc_extract.py`,
+  `EQUIPMENTS.BAYERMASK`, OSC-01). **Queued:** OSC-2 WCS reuse + per-channel photometry;
+  OSC-3 band mapping + TG/TB/TR exports + Gaia->Johnson. Gap inventory
+  `dev/results/OSC_GAP_INVENTORY.md`; M71 validation dataset (eq id=5).
 - **TODO-8-BOO - Bootes globular-cluster validation** (ePSF vs aperture on a dense ~2 h
   field). Pairs with the PSF/Newton work.
 - ~~**TODO-FORCED-COMP - forced-aperture `catalog_only` without Phase-1 tier selection.**~~ **SUPERSEDED (`7f0dc86`)** - forced-aperture / catalog_only path removed; DAO+Gaia matched only.

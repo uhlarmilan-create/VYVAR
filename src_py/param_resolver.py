@@ -65,8 +65,8 @@ SANITY: dict[str, tuple[float, float]] = {
 
 # Header keyword variant families (first finite + in-range wins).
 HEADER_KEYS: dict[str, tuple[str, ...]] = {
-    "gain": ("EGAIN", "GAIN"),
-    "read_noise": ("RDNOISE", "READNOISE", "RDNOISEE", "RN"),
+    "gain": ("VY_EGAIN", "EGAIN", "GAIN"),
+    "read_noise": ("VY_RDNOIS", "RDNOISE", "READNOISE", "RDNOISEE", "RN"),
     "pixel_um": ("XPIXSZ", "PIXSIZE1", "XPIXSIZE", "PIXSIZE", "PIXSZLX"),
     "focal_mm": ("FOCALLEN", "FOCLEN", "TELFOCA"),
     "saturation": ("SATURATE", "MAXLIN", "ESATUR", "LINLIMIT", "MAXADU", "DATAMAX"),
