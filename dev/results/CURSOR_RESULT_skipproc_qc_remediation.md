@@ -173,3 +173,39 @@ changed. `test_docs_sync_guard`: 4/4 PASS (with `config.json` reverted to origin
 
 Milan authorizes push. Push inventory: **7 unpushed commits** (+ remediation commit
 = 8) on `main` ahead of `origin/main` @ `302e81b`.
+
+---
+
+## Push (2026-07-22, authorized by Milan)
+
+### Pre-push checks
+
+| Check | Result |
+|-------|--------|
+| Stack `git log origin/main..HEAD --oneline` | 8 commits - exact match (see below) |
+| `git status --short` | Clean; allowlisted untracked only (`dy_peg_night_run_bvr.py`, `qatar8_night_run_v.py`) |
+| `git fetch origin`; `origin/main` | `302e81b` (no upstream movement) |
+| `session_baseline_check.py --fast` | **OVERALL PASS** - 1068 passed, 24 skipped |
+
+### Pushed commits (8, newest first)
+
+```
+63ed2b4 fix(encoding): repair locally introduced non-ASCII (ROADMAP, OSC inventory, result files)
+4f140ef docs(invariants): QC-01 skip-processed allowlist contract + DECISIONS entry
+263c6e7 fix(skipproc): qc_metrics allowlist gates alignment; full-set QC + prefilter stamping
+a5ddfa1 fix(ui): material calibration icon and structured params JSON widgets
+cff5502 fix(invariants): INV-FLUX-02 checks median (matches normalize_flat_master)
+9533953 docs(osc): M71 L/B/G/R extraction experiment results
+627bd35 docs(osc): IMX533 M71 re-run appended to gap inventory
+cad6002 docs(osc): IMX533 discovery gap inventory; park OSC-SUPPORT arc
+```
+
+Base: `302e81b` -> stack tip: `63ed2b4` (`git push origin main` succeeded).
+
+### Bookkeeping commit
+
+`37ba61b` - `docs(results): record SKIPPROC-QC stack push (tip 63ed2b4)`
+
+### Final origin/main tip
+
+`37ba61ba745706aca307fa2b9aed4fabe9602703` (`37ba61b`)
