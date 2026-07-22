@@ -88,3 +88,80 @@ Run on working tree with OSC-1 changes (~2131s pipeline). Mono byte-identical an
 ## STOP before push
 
 Local commit `0f1c07f`. Await Milan push authorization.
+
+---
+
+## PRE-PUSH VERIFICATION - noise model pairing (2026-07-22)
+
+### (a) `rn_eff` in `osc_extract.py` (verbatim, after fix)
+
+Module docstring + `effective_gain_rn()`:
+
+```
+n_avg = plane_count * bin_n**2
+gain_eff = gain_raw * n_avg
+rn_eff = rn_raw * sqrt(n_avg)
+```
+
+```172:174:src_py/osc_extract.py
+    gain_eff = g * n_avg
+    rn_eff = rn * math.sqrt(n_avg)
+    return gain_eff, rn_eff
+```
+
+### (b) Per-pixel variance in photometry error model (verbatim)
+
+Howell (1989) eq. 2, per-pixel (`area=1`, `sky_pp=0`):
+
+```1011:1013:src_py/photometry_core.py
+    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
+    rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
+    return flux / g + max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
+```
+
+PSF sky-only per-pixel sigma uses the same RN term:
+
+```2174:2177:src_py/psf_photometry.py
+    g = max(1e-6, float(gain))
+    rn = max(0.0, float(read_noise_e))
+    var = sky / g + (rn / g) ** 2
+    return float(math.sqrt(max(var, 1e-12)))
+```
+
+Headers consumed via `param_resolver`: `VY_EGAIN`, `VY_RDNOIS` (preferred over `EGAIN`/`RDNOISE`).
+
+### Pairing proof (AVERAGE semantics)
+
+For `n = plane_count * bin^2` pixels averaged (variance scales as `1/n`):
+
+- `gain_eff = n * gain_raw` => Poisson term `S_ADU / gain_eff = S_ADU / (n * g_raw)` OK
+- RN term must be `(rn_eff / gain_eff)^2 = (rn_raw / g_raw)^2 / n`
+- Therefore `rn_eff = rn_raw * sqrt(n)` (not `rn_raw / sqrt(n)`)
+
+**Bug found and fixed:** pre-verification code had `rn_eff = rn_raw / sqrt(n_avg)`, inconsistent with `(rn/g)^2` consumers. Signal-dominated Monte Carlo masked this (~3% RN bias at 25% tolerance).
+
+### Test strengthening
+
+- `test_monte_carlo_noise_model`: prediction now uses production `_howell_variance_adu2` with `(rn_eff/gain_eff)^2`.
+- Added `test_monte_carlo_noise_model_rn_dominated` parametrized over `channel in {R, G, oneRGGB}`, `osc_bin in {1, 2}`; S ~ 1.5-2.9 ADU (~3-5 e- at g=1.8), RN=8 e-, 1200 trials, **5%** tolerance.
+
+### `VY_RDNOIS` header values (tests)
+
+`test_extract_writes_headers_and_reduces_checkerboard` does **not** assert numeric `VY_RDNOIS` (only `VY_EGAIN > 1.5`). Example stamped values for `gain=1.5`, `rn=3.0`, G channel, `osc_bin=2` (`n_avg=8`):
+
+| | Before fix | After fix |
+|---|------------|-----------|
+| `VY_RDNOIS` | 1.061 e- | 8.485 e- |
+
+Any downstream FITS written before this fix understates read noise by factor `n_avg`.
+
+### Gates (post-fix, uncommitted)
+
+```
+pytest: 1085 passed, 24 skipped
+session_baseline_check --fast: OVERALL PASS
+```
+
+### STOP before push
+
+Fix + tests local only; not committed. Await Milan push authorization.

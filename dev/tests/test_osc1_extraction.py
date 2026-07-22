@@ -21,6 +21,7 @@ from osc_extract import (
     validate_bayer_crosscheck,
     valid_bayer_pattern_4,
 )
+from photometry_core import _howell_variance_adu2
 
 
 def _synthetic_mosaic(pattern: str, *, h: int = 8, w: int = 8) -> np.ndarray:
@@ -56,41 +57,94 @@ def test_bayer_planes_per_mask(pattern: str) -> None:
     assert float(np.mean(ch["oneRGGB"])) == pytest.approx((10 + 20 + 22 + 40) / 4.0)
 
 
+def _low_signal_mosaic(*, h: int = 40, w: int = 40, base_adu: float = 1.5) -> np.ndarray:
+    mosaic = np.full((h, w), base_adu, dtype=np.float32)
+    mosaic[0::2, 0::2] += 0.4
+    mosaic[0::2, 1::2] += 0.2
+    mosaic[1::2, 0::2] += 0.2
+    mosaic[1::2, 1::2] += 0.8
+    return mosaic
+
+
+def _monte_carlo_channel_variance(
+    *,
+    channel: str,
+    osc_bin: int,
+    gain: float,
+    rn: float,
+    mosaic: np.ndarray,
+    pattern: str,
+    n_trials: int,
+    rng: np.random.Generator,
+) -> tuple[float, float]:
+    var_emp: list[float] = []
+    electrons_scale = np.maximum(mosaic.astype(np.float64) * gain, 0.0)
+    for _ in range(n_trials):
+        electrons = rng.poisson(electrons_scale) + rng.normal(0.0, rn, mosaic.shape)
+        adu = electrons / gain
+        r, g1, g2, b = bayer_planes_from_mosaic(adu, pattern)
+        ch = derive_channel_planes(r, g1, g2, b)[channel]
+        ch_b = average_bin_2d(ch, osc_bin)
+        var_emp.append(float(np.var(ch_b)))
+    var_mean = float(np.mean(var_emp))
+    r0, g1s, g2s, b0 = bayer_planes_from_mosaic(mosaic, pattern)
+    ch_plane = derive_channel_planes(r0, g1s, g2s, b0)[channel]
+    mean_adu = float(np.mean(average_bin_2d(ch_plane, osc_bin)))
+    g_eff, rn_eff = effective_gain_rn(gain, rn, channel, osc_bin)
+    var_pred = _howell_variance_adu2(mean_adu, 0.0, 1.0, gain=g_eff, read_noise=rn_eff)
+    return var_mean, float(var_pred)
+
+
 def test_effective_gain_rn_formula() -> None:
     g0, rn0 = 2.0, 4.0
     ge, rne = effective_gain_rn(g0, rn0, "G", 2)
     assert ge == pytest.approx(2.0 * 2 * 4)
-    assert rne == pytest.approx(4.0 / math.sqrt(2 * 4))
+    assert rne == pytest.approx(4.0 * math.sqrt(2 * 4))
 
 
 def test_monte_carlo_noise_model() -> None:
     rng = np.random.default_rng(42)
     gain = 1.7
     rn = 3.2
-    signal_adu = 500.0
-    n_trials = 400
     pattern = "RGGB"
-    h, w = 40, 40
-    mosaic = np.full((h, w), signal_adu, dtype=np.float32)
+    mosaic = np.full((40, 40), 500.0, dtype=np.float32)
     mosaic[0::2, 0::2] += 5.0
     mosaic[0::2, 1::2] += 2.0
     mosaic[1::2, 0::2] += 2.0
     mosaic[1::2, 1::2] += 8.0
-    var_emp: list[float] = []
-    for _ in range(n_trials):
-        electrons = rng.poisson(mosaic * gain).astype(np.float64) + rng.normal(0.0, rn, mosaic.shape)
-        adu = electrons / gain
-        r, g1, g2, b = bayer_planes_from_mosaic(adu, pattern)
-        ch = derive_channel_planes(r, g1, g2, b)["G"]
-        ch_b = average_bin_2d(ch, 2)
-        var_emp.append(float(np.var(ch_b)))
-    var_mean = float(np.mean(var_emp))
-    r0, g1s, g2s, b0 = bayer_planes_from_mosaic(mosaic, pattern)
-    g_plane = derive_channel_planes(r0, g1s, g2s, b0)["G"]
-    mean_adu = float(np.mean(g_plane))
-    g_eff, rn_eff = effective_gain_rn(gain, rn, "G", 2)
-    var_pred = mean_adu / g_eff + rn_eff**2
+    var_mean, var_pred = _monte_carlo_channel_variance(
+        channel="G",
+        osc_bin=2,
+        gain=gain,
+        rn=rn,
+        mosaic=mosaic,
+        pattern=pattern,
+        n_trials=400,
+        rng=rng,
+    )
     assert var_mean == pytest.approx(var_pred, rel=0.25)
+
+
+@pytest.mark.parametrize("channel", ["R", "G", "oneRGGB"])
+@pytest.mark.parametrize("osc_bin", [1, 2])
+def test_monte_carlo_noise_model_rn_dominated(channel: str, osc_bin: int) -> None:
+    """RN-dominated regime catches rn_eff pairing errors (signal case cannot)."""
+    rng = np.random.default_rng(100 + hash((channel, osc_bin)) % 10_000)
+    gain = 1.8
+    rn = 8.0
+    mosaic = _low_signal_mosaic()
+    var_mean, var_pred = _monte_carlo_channel_variance(
+        channel=channel,
+        osc_bin=osc_bin,
+        gain=gain,
+        rn=rn,
+        mosaic=mosaic,
+        pattern="RGGB",
+        n_trials=1200,
+        rng=rng,
+    )
+    assert var_pred > 0.0
+    assert var_mean == pytest.approx(var_pred, rel=0.05)
 
 
 def test_validate_bayer_crosscheck_fail_and_warn() -> None:

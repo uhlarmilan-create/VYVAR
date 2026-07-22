@@ -8,7 +8,7 @@ Effective gain/RN after plane averaging and bin averaging (Poisson + read noise)
 
     n_avg = plane_count * bin_n**2
     gain_eff = gain_raw * n_avg
-    rn_eff = rn_raw / sqrt(n_avg)
+    rn_eff = rn_raw * sqrt(n_avg)
 
 where plane_count is 1 (R/B), 2 (G), or 4 (oneRGGB). ADU scale is preserved by
 AVERAGE semantics (not SUM), so Poisson variance per output ADU scales as 1/gain_eff.
@@ -170,7 +170,7 @@ def effective_gain_rn(
     if not math.isfinite(rn) or rn < 0:
         raise ValueError(f"Invalid read_noise_e={read_noise_e}")
     gain_eff = g * n_avg
-    rn_eff = rn / math.sqrt(n_avg)
+    rn_eff = rn * math.sqrt(n_avg)
     return gain_eff, rn_eff
 
 
