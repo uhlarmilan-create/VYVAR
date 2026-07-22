@@ -1,6 +1,6 @@
 # VYVAR -- Development State
 
-Last updated: **2026-07-22** (OSC-1 phase 1: CFA calibrate + plane-split extraction to oneRGGB/R/G/B obs-groups; BAYERMASK DB column; OSC-01 wired; osc_channel_binning param 271; OSC-2/3 queued).
+Last updated: **2026-07-22** (OSC-2 phase 2: WCS solve-once on oneRGGB, registration handoff to R/G/B, unified QC verdict replication, OSC-02 wired; OSC-3 queued).
 
 Registered params: **271** (was 270; +``osc_channel_binning``).
 

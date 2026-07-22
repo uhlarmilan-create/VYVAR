@@ -1166,8 +1166,23 @@ AVERAGE semantics; optional ``osc_channel_binning`` NxN average post-extraction.
 AAVSO). Effective gain/RN stamped per channel (``VY_EGAIN``, ``VY_RDNOIS``). Wired gate **OSC-01**
 (no mosaic without ``VY_CHANNEL`` in alignment). Literature: AAVSO DSLR Observing Manual (channel
 separation); Carrasco/Riello Johnson transforms deferred to OSC-3.
-**Status:** phase 1 implemented; OSC-2 (WCS reuse + per-channel photometry) and OSC-3 (band mapping,
+**Status:** phase 1 implemented; see OSC-WCS-SOLVE-ONCE for phase 2; OSC-3 (band mapping,
 TG/TB/TR exports) queued.
+
+### OSC-WCS-SOLVE-ONCE (2026-07-22, phase 2/3)
+OSC multi-band drafts: **unified frame set** across oneRGGB/R/G/B (QC verdict replicated from
+oneRGGB with per-channel diagnostics preserved; ``qc_source=oneRGGB``). Plate-solve runs **once**
+on the oneRGGB MASTERSTAR; WCS is propagated to R/G/B masterstars and aligned frames. Registration
+transforms are computed on oneRGGB only and stored in ``platesolve/<oneRGGB>/osc_registration_handoff.json``
+for verbatim reuse on sibling channel frames (D2 artifact). Channel MASTERSTAR photometry (DAO
+catalog, comp selection) uses each channel's own pixels; only geometry/WCS is shared (D4). Per-channel
+DAO-Gaia match rate logged after propagation; below ``MASTERSTAR_PLATESOLVE_MIN_MATCH_RATE`` (0.60,
+same gate as ``generate_masterstar_and_catalog``) -> WARN with channel numbers; FAIL only if
+oneRGGB itself failed (B channel fewer stars expected). Band tokens: R->TR, G->TG, B->TB,
+oneRGGB->CLEAR (k'' none-token path; AAVSO export deferred OSC-3). Known systematic: Bayer channel
+planes sit at sub-cell offsets (<=0.5 raw px = 0.25 superpixel); accepted for catalog crossmatch
+tolerances - no per-channel WCS micro-shift. Wired gate **OSC-02** (identical frame ID sets).
+**Status:** phase 2 implemented; OSC-3 export mapping queued.
 
 ## Comp-star selection & QA
 

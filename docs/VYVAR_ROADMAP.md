@@ -633,8 +633,9 @@ next calibration lever.
   GS6b validation). Dep GS6b [OK].
 - **TODO-45 - RGB camera support** (IMX533 RGGB). **OSC arc phase 1 DONE (2026-07-22):**
   CFA calibrate + plane-split extraction to `oneRGGB`/R/G/B obs-groups (`osc_extract.py`,
-  `EQUIPMENTS.BAYERMASK`, OSC-01). **Queued:** OSC-2 WCS reuse + per-channel photometry;
-  OSC-3 band mapping + TG/TB/TR exports + Gaia->Johnson. Gap inventory
+  `EQUIPMENTS.BAYERMASK`, OSC-01). **OSC-2 DONE (2026-07-22):** WCS solve-once on oneRGGB,
+  registration handoff + per-channel photometry path (`osc_align.py`, OSC-02). **Queued:** OSC-3
+  band mapping + TG/TB/TR exports + Gaia->Johnson. Gap inventory
   `dev/results/OSC_GAP_INVENTORY.md`; M71 validation dataset (eq id=5).
 - **TODO-8-BOO - Bootes globular-cluster validation** (ePSF vs aperture on a dense ~2 h
   field). Pairs with the PSF/Newton work.
