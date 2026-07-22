@@ -217,8 +217,6 @@ D['blind_img_star_budget'] = dict(
  proc="Rozpocet drzi reseni v sekundach; per_cell vyber zaruci pokryti celeho pole.")
 D['verify_mag_limit'] = dict(
  proc="Overovaci katalog do mag 14 je stejne spolehlivy jako 16 a o ~28 % rychlejsi (zmereno) - slabsi hvezdy overeni nepridavaji, jen zpomaluji.")
-D['vsx_variable_targets_mag_limit'] = dict(
- proc="Automaticke prevzeti znamych promennych z VSX jako cilu; limit chrani pred zaplavou slabych cilu pod dosahem sestavy.")
 D['epsf_min_stars'] = dict(
  proc="ePSF model z mene nez ~10 hvezd je nestabilni (sum jednotlivych hvezd se propise do modelu); PSF program je stejne vypnut do validace.")
 D['exoplanet_match_max_sep_arcsec'] = dict(
@@ -470,7 +468,7 @@ story = []
 story.append(Paragraph("VYVAR - Referencni prirucka parametru", st_title))
 story.append(Paragraph("Detailni rozbor vsech %d parametru config.json: vyznam, rozsahy, duvody vychozich hodnot, dusledky zmen, matematicke pozadi a literatura." % len(CFG), st_intro))
 story.append(Spacer(1, 8))
-story.append(Paragraph("Stav: 2026-07-18, VYVAR HEAD d437bcd. Doprovodne dokumenty: VYVAR_CONFIG_GUIDE_CZ/EN.md (rychla reference), docs/VYVAR_PARAMS.md (strojovy index). Cestina bez diakritiky dle konvence projektu.", st_meta))
+story.append(Paragraph("Stav: 2026-07-22, VYVAR HEAD 2c520c6. Registrovanych parametru: 270. Doprovodne dokumenty: VYVAR_CONFIG_GUIDE_CZ/EN.md (rychla reference), docs/VYVAR_PARAMS.md (strojovy index). Cestina bez diakritiky dle konvence projektu.", st_meta))
 story.append(Spacer(1, 10))
 story.append(Paragraph("Jak cist tuto prirucku", st_h1))
 story.append(Paragraph("Kazdy parametr ma: vyznam, aktualni hodnotu (z vaseho config.json) a tam, kde na hodnote zalezi, rozbor [b]Mensi / Vetsi / Proc vychozi[/b]. Vedecky nabite skupiny maji oranzove BOXY s matematikou a odkazy. Parametry bez rozboru jsou bezpecne 'jasne' - jejich vyznam plne popisuje prvni veta.", st_body))

@@ -84,3 +84,32 @@ OVERALL: PASS
 3. `a0e3431` feat(vsx)!: scope by DAO+Gaia detection; remove vsx_variable_targets_mag_limit
 
 Plus bookkeeping commit (ledger + STATE + this result file).
+
+## Push (2026-07-22, Milan authorized)
+
+### Pre-push checks
+
+| Check | Result |
+|-------|--------|
+| `git fetch origin`; `origin/main` | `8815c45` (unchanged as required) |
+| Stack `git log origin/main..HEAD --oneline` | 4 commits - exact match (see below) |
+| `git status --short` | Clean; allowlisted untracked only (`dy_peg_night_run_bvr.py`, `qatar8_night_run_v.py`) |
+| `session_baseline_check.py --fast` (final HEAD) | **OVERALL PASS** - 1069 passed, 24 skipped |
+
+### Pushed commits (feature stack, newest first)
+
+```
+a0e3431 feat(vsx)!: scope by DAO+Gaia detection; remove vsx_variable_targets_mag_limit
+7b235fe perf(phase1): skip comp selection for vsx_type_out_of_scope targets (mask-first listing preserved)
+013cb0c feat(skipproc)!: skip-only preprocess; remove skip_processed_directory param and processed/ tree
+```
+
+Base: `8815c45` -> stack tip: `a0e3431` (`git push origin main` succeeded; bookkeeping commit on top, not listed here).
+
+### Bookkeeping
+
+One docs commit (ledger stamp from `--full`, STATE param counts, this result file including `_apply_temporal_sigma_clip_in_place` confirmation) pushed with the stack.
+
+### Final origin/main tip
+
+Local HEAD matches `origin/main` after push. For current tip: `git rev-parse origin/main`.
