@@ -485,27 +485,12 @@ def resolved_facts_model(
         {"label": "Exposure (s)", "value": _fmt(rf.get("exptime_s")), "source": "FITS"},
     ]
 
-    # AUTO-VSX-LIMIT (report-only): configured VSX mag limit vs measured field depth.
-    vsx_limit = None
-    if cfg is not None:
-        vsx_limit = _finite_mag_or_none(getattr(cfg, "vsx_variable_targets_mag_limit", None))
-    if vsx_limit is None:
-        prov = meta.get("provenance") if isinstance(meta.get("provenance"), dict) else {}
-        snap = prov.get("config_snapshot") if isinstance(prov.get("config_snapshot"), dict) else {}
-        vsx_limit = _finite_mag_or_none(snap.get("vsx_variable_targets_mag_limit"))
-    depth = load_field_depth_metrics(
-        meta,
-        photometry_dir,
-        draft_dir=draft_dir,
-        obs_group=obs_group,
-        cfg=cfg,
-    )
-    vsx_status = vsx_limit_vs_depth_status(vsx_limit, depth.get("g_lim_90"), depth.get("snr5"))
+    # VSX auto-target scope (report-only): detection-limited adoption.
     rows.append(
         {
-            "label": "VSX limit vs field depth",
-            "value": str(vsx_status["line"]),
-            "source": "report check",
+            "label": "VSX auto-target scope",
+            "value": "detection-limited (DAO+Gaia match)",
+            "source": "pipeline policy",
         }
     )
 
@@ -513,7 +498,7 @@ def resolved_facts_model(
         "fallback": fallback,
         "warnings": warnings,
         "rows": rows,
-        "vsx_depth": vsx_status,
+        "vsx_depth": {"status": "n/a", "warn": False, "line": "detection-limited (DAO+Gaia match)"},
     }
 
 
@@ -2760,31 +2745,17 @@ class _PhotometryReportBuilder:
             pass
         c.drawString(self.M_LEFT, y, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-        # AUTO-VSX-LIMIT cover WARN (informational; does not alter target selection).
+        # VSX scope note on cover (informational).
         try:
-            _depth = load_field_depth_metrics(
-                self._pipeline_meta,
-                self.photometry_dir,
-                draft_dir=self.draft_dir,
-                obs_group=self.obs_group,
-                cfg=self._cfg,
+            y -= 0.55 * self.cm
+            c.setFont(self.FONT_REG, 10)
+            c.drawString(
+                self.M_LEFT,
+                y,
+                "VSX auto-target scope: detection-limited (DAO+Gaia match)",
             )
-            _lim = None
-            if self._cfg is not None:
-                _lim = _finite_mag_or_none(
-                    getattr(self._cfg, "vsx_variable_targets_mag_limit", None)
-                )
-            _vsx = vsx_limit_vs_depth_status(
-                _lim, _depth.get("g_lim_90"), _depth.get("snr5")
-            )
-            if bool(_vsx.get("warn")) and _vsx.get("message"):
-                y -= 0.55 * self.cm
-                c.setFont(self.FONT_BOLD, 11)
-                c.setFillColor(self.colors.HexColor("#b00000"))
-                c.drawString(self.M_LEFT, y, f"WARN: {_vsx['message']}")
-                c.setFillColor(self.colors.black)
         except Exception as exc:  # noqa: BLE001
-            logging.debug("[AUTO-VSX-LIMIT] cover badge skipped: %s", exc)
+            logging.debug("[VSX-SCOPE] cover line skipped: %s", exc)
 
         var_rows = self._variability_cover_rows()
         if var_rows:
@@ -5778,35 +5749,18 @@ class _PhotometryReportBuilder:
             y -= 0.42 * self.cm
         y -= 0.2 * self.cm
 
-        # AUTO-VSX-LIMIT: one-line depth comparison on the config page.
+        # VSX scope one-liner on the config page.
         try:
-            _depth = load_field_depth_metrics(
-                self._pipeline_meta,
-                self.photometry_dir,
-                draft_dir=self.draft_dir,
-                obs_group=self.obs_group,
-                cfg=self._cfg,
-            )
-            _lim = None
-            if self._cfg is not None:
-                _lim = _finite_mag_or_none(
-                    getattr(self._cfg, "vsx_variable_targets_mag_limit", None)
-                )
-            _vsx = vsx_limit_vs_depth_status(
-                _lim, _depth.get("g_lim_90"), _depth.get("snr5")
-            )
             c.setFont(self.FONT_REG, 9)
-            c.drawString(self.M_LEFT, y, str(_vsx["line"])[:140])
+            c.drawString(
+                self.M_LEFT,
+                y,
+                "VSX auto-target scope: detection-limited (DAO+Gaia match)",
+            )
             y -= 0.42 * self.cm
-            if bool(_vsx.get("warn")) and _vsx.get("message"):
-                c.setFont(self.FONT_BOLD, 9)
-                c.setFillColor(self.colors.HexColor("#b00000"))
-                c.drawString(self.M_LEFT, y, f"WARN: {_vsx['message']}")
-                c.setFillColor(self.colors.black)
-                y -= 0.42 * self.cm
             y -= 0.1 * self.cm
         except Exception as exc:  # noqa: BLE001
-            logging.debug("[AUTO-VSX-LIMIT] config page line skipped: %s", exc)
+            logging.debug("[VSX-SCOPE] config page line skipped: %s", exc)
 
         c.setFont(self.FONT_OBL, 8)
         c.drawString(

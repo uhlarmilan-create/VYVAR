@@ -5682,9 +5682,9 @@ def auto_export_variability_candidates_csv(
     except Exception:  # noqa: BLE001
         sigma_thr = 2.3
     try:
-        mag_limit = float(cfg.vsx_variable_targets_mag_limit)
+        mag_limit = float(cfg.variability_mag_limit)
     except Exception:  # noqa: BLE001
-        mag_limit = 13.0
+        mag_limit = 14.5
 
     flux_col = "dao_flux"
     fm, meta, _bjd = load_field_flux_matrix(

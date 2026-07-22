@@ -3,23 +3,38 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
 import pytest
+
+
+def _write_qc_csv(lights_root: Path, fits_paths: list[Path]) -> None:
+    rows = [
+        {"src": str(p.resolve()), "dst": str(p.resolve()), "status": "ok"}
+        for p in fits_paths
+    ]
+    pd.DataFrame(rows).to_csv(lights_root / "qc_metrics.csv", index=False)
 
 
 def _make_two_group_archive(tmp_path: Path) -> Path:
     ap = tmp_path / "draft_test"
+    fits: list[Path] = []
     for name in ("g_60_4", "r_60_4"):
-        d = ap / "processed" / "lights" / name
+        d = ap / "calibrated" / "lights" / name
         d.mkdir(parents=True)
-        (d / f"proc_{name}.fits").write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
+        fp = d / f"Light_{name}.fits"
+        fp.write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
+        fits.append(fp)
+    _write_qc_csv(ap / "calibrated" / "lights", fits)
     return ap
 
 
 def _make_single_group_archive(tmp_path: Path) -> Path:
     ap = tmp_path / "draft_single"
-    d = ap / "processed" / "lights" / "g_60_4"
+    d = ap / "calibrated" / "lights" / "g_60_4"
     d.mkdir(parents=True)
-    (d / "proc_g.fits").write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
+    fp = d / "Light_g.fits"
+    fp.write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
+    _write_qc_csv(ap / "calibrated" / "lights", [fp])
     return ap
 
 

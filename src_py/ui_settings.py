@@ -347,19 +347,9 @@ def render_settings_dashboard(
                 "Informational label only - does not affect comp selection or photometry."
             )
 
-        vsx_mag_limit_save = st.number_input(
-            "Mag limit for Variable Targets export (VSX)",
-            min_value=0.0,
-            max_value=21.0,
-            value=float(getattr(cfg, "vsx_variable_targets_mag_limit", 13.0) or 13.0),
-            step=0.5,
-            help="Cut VSX by mag_max.",
-        )
-        _detail_help(
-            "vsx_variable_targets_mag_limit",
-            phase="Export variable targets (VSX cone).",
-            used_in="Keeps rows with `mag_max` <= limit (or without `mag_max`). Value 0 = no cut.",
-            compute="Filter in SQL / pandas after query - not a physical computation.",
+        st.caption(
+            "VSX variable scope is detection-limited (DAO+Gaia match on MASTERSTAR). "
+            "Variability mag cutoff: Settings -> variability_mag_limit."
         )
 
     with tab_cal:
@@ -1077,7 +1067,6 @@ def render_settings_dashboard(
         cfg.blind_index_path = cfg.blind_index_fine_path
         cfg.vsx_local_db_path = str(vsx_db_path).strip()
         cfg.exoplanet_local_db_path = str(exo_db_path).strip()
-        cfg.vsx_variable_targets_mag_limit = float(vsx_mag_limit_save)
         cfg.qc_max_hfr = float(qc_hfr)
         cfg.qc_min_stars = int(qc_stars)
         cfg.qc_after_calibrate_enabled = bool(qc_after_cal)

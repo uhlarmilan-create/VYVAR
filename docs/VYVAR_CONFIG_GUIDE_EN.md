@@ -251,8 +251,6 @@ Finding stars on the frames, solving the sky coordinates (plate solving, includi
 | `variability_smoothness_max` | 0.8 | Setting (config.json) | config.json | config assembly & validation (`config.py:2416`) | Maximum smoothness score - very smooth curves are more likely trends/artifacts than stellar variability. |
 | `variability_vdi_z_threshold` | 3.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:2421`) | Z-score threshold of the variability detection index (VDI). |
 | `verify_mag_limit` | 14.0; range 8 .. 18 | Setting (config.json) | config.json | config assembly & validation (`config.py:904`) | Faint limit of catalog stars used for blind-solve verification. |
-| `vsx_variable_targets_mag_limit` | 14.5 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:5523`) | Faint limit for automatically adopting VSX-known variables in the field as measurement targets. |
-
 ## Photometry
 
 Measuring star brightness: aperture sizing, sky annulus, error model, aperture correction, optional PSF photometry and neighbor subtraction, and optional detrending methods. The heart of the pipeline.
@@ -445,4 +443,3 @@ Machine-level behavior: parallel workers and RAM reserves. Computed from your ha
 |---|---|---|---|---|---|
 | `per_frame_mp_reserve_ram_gb` | 1.5 | Setting (config.json) | config.json | config assembly & validation (`config.py:1028`) | RAM (GB) kept free per worker when sizing per-frame parallelism. |
 | `qc_preprocess_workers` | 1 | Internal | environment / machine | calibration & frame processing (`pipeline.py:15384`) | Number of parallel preprocessing workers; computed from CPU/RAM at startup, overridable by the VYVAR_PARALLEL_WORKERS environment variable. |
-| `skip_processed_directory` | False | Setting (config.json) | config.json | main application UI (`app.py:209`) | Skips drafts whose processed directory already exists (resume behavior). |

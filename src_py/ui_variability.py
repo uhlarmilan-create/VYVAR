@@ -1227,9 +1227,9 @@ def render_variability_dashboard(
         key="var_sigma_thr",
         help="Higher = fewer candidates (stricter RMS threshold). Default 2.3 from config.json.",
     )
-    mag_limit = float(cfg_dict.get("vsx_variable_targets_mag_limit", 13.0) or 13.0)
+    mag_limit = float(cfg_dict.get("variability_mag_limit", 14.5) or 14.5)
     st.caption(
-        f"Mag limit: {mag_limit:.1f} mag (from Settings -> `vsx_variable_targets_mag_limit`)"
+        f"Variability mag cutoff: {mag_limit:.1f} mag (Settings -> `variability_mag_limit`)"
     )
     min_frames_pct = 100  # vsetky framy (bez slidera)
 

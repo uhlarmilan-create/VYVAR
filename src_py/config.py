@@ -55,6 +55,9 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "skip_processed_directory": (
         "skip_processed_directory removed 2026-07; skip behavior is now always on"
     ),
+    "vsx_variable_targets_mag_limit": (
+        "vsx_variable_targets_mag_limit removed 2026-07; VSX scope is detection-limited (DAO+Gaia match)"
+    ),
 }
 
 
@@ -502,9 +505,6 @@ class AppConfig:
 
     #: Path to local VSX subset SQLite (table ``vsx_data``: oid, ra_deg, dec_deg, ...) for variable-star flags.
     vsx_local_db_path: str = ""
-    #: VSX export for variable_targets.csv: keep stars with ``mag_max`` <= limit (or unknown ``mag_max``).
-    #: Set to ``<= 0`` to disable this cutoff (export all VSX rows in the field cone).
-    vsx_variable_targets_mag_limit: float = 14.5
     #: VSX types to leave unmeasured (token-match; empty = inactive). See vsx_type_scope.py.
     vsx_out_of_scope_types: list[str] = field(default_factory=list)
 
@@ -1242,13 +1242,6 @@ class AppConfig:
         self.vsx_local_db_path = str(
             data.get("vsx_local_db_path", data.get("VSX_LOCAL_DB_PATH", "")) or ""
         ).strip()
-        _vml = data.get("vsx_variable_targets_mag_limit", self.vsx_variable_targets_mag_limit)
-        try:
-            self.vsx_variable_targets_mag_limit = float(_vml)
-            if not math.isfinite(self.vsx_variable_targets_mag_limit):
-                self.vsx_variable_targets_mag_limit = 13.0
-        except (TypeError, ValueError):
-            self.vsx_variable_targets_mag_limit = 13.0
         _voos = data.get("vsx_out_of_scope_types", self.vsx_out_of_scope_types)
         if _voos is None:
             self.vsx_out_of_scope_types = []
@@ -2387,7 +2380,6 @@ class AppConfig:
             "blind_use_rig_prior": bool(self.blind_use_rig_prior),
             "debug_platesolver": bool(self.debug_platesolver),
             "vsx_local_db_path": str(self.vsx_local_db_path or ""),
-            "vsx_variable_targets_mag_limit": float(self.vsx_variable_targets_mag_limit),
             "vsx_out_of_scope_types": list(self.vsx_out_of_scope_types),
             "exoplanet_local_db_path": str(self.exoplanet_local_db_path or ""),
             "exoplanet_match_max_sep_arcsec": float(self.exoplanet_match_max_sep_arcsec),

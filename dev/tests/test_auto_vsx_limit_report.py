@@ -7,6 +7,7 @@ from photometry_report import (
     resolved_facts_model,
     vsx_limit_vs_depth_status,
 )
+from config import AppConfig
 
 
 def test_vsx_depth_ok_within_margin() -> None:
@@ -60,21 +61,19 @@ def test_resolved_facts_tolerates_missing_depth() -> None:
         photometry_dir=None,
         cfg=None,
     )
-    assert any(r["label"] == "VSX limit vs field depth" for r in model["rows"])
-    vsx_row = next(r for r in model["rows"] if r["label"] == "VSX limit vs field depth")
-    assert "n/a" in vsx_row["value"]
+    assert any(r["label"] == "VSX auto-target scope" for r in model["rows"])
+    vsx_row = next(r for r in model["rows"] if r["label"] == "VSX auto-target scope")
+    assert "detection-limited" in vsx_row["value"]
     assert model["vsx_depth"]["status"] == "n/a"
     assert model["vsx_depth"]["warn"] is False
 
 
-def test_resolved_facts_warn_from_pipeline_meta_g90() -> None:
-    class _Cfg:
-        vsx_variable_targets_mag_limit = 15.5
-
+def test_resolved_facts_detection_limited_scope() -> None:
     model = resolved_facts_model(
         {"g_lim_90": 14.0, "resolved_facts": {"filter": "V"}},
         photometry_dir=None,
-        cfg=_Cfg(),
+        cfg=AppConfig(),
     )
-    assert model["vsx_depth"]["warn"] is True
-    assert "G_lim_90=14.00" in model["vsx_depth"]["line"]
+    vsx_row = next(r for r in model["rows"] if r["label"] == "VSX auto-target scope")
+    assert "DAO+Gaia" in vsx_row["value"]
+    assert model["vsx_depth"]["warn"] is False

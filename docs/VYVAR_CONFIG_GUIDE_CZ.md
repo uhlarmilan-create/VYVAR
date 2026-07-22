@@ -253,8 +253,6 @@ Hledani hvezd na snimcich, urceni oblohovych souradnic (plate solving vcetne sle
 | `variability_smoothness_max` | 0.8 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2416`) | Maximalni skore hladkosti - velmi hladke krivky jsou spis trendy/artefakty nez hvezdna promennost. |
 | `variability_vdi_z_threshold` | 3.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2421`) | Prah z-skore indexu detekce promennosti (VDI). |
 | `verify_mag_limit` | 14.0; rozsah 8 .. 18 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:904`) | Limit jasnosti katalogovych hvezd pouzitych pro overeni slepeho reseni. |
-| `vsx_variable_targets_mag_limit` | 14.5 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:5523`) | Limit jasnosti pro automaticke prevzeti znamych promennych z VSX v poli jako cilu mereni. |
-
 ## Fotometrie
 
 Mereni jasnosti hvezd: velikost apertury, oblozne mezikruzi (annulus), model chyb, aperturni korekce, volitelna PSF fotometrie a odecet sousedu a volitelne metody detrendovani. Srdce pipeline.
@@ -447,4 +445,3 @@ Chovani na urovni stroje: pocet paralelnich pracovniku a rezerva RAM. Odvozuje s
 |---|---|---|---|---|---|
 | `per_frame_mp_reserve_ram_gb` | 1.5 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1028`) | RAM (GB) drzena volna na pracovnika pri dimenzovani paralelniho zpracovani snimku. |
 | `qc_preprocess_workers` | 1 | Interni | prostredi / stroj | kalibrace a zpracovani snimku (`pipeline.py:15384`) | Pocet paralelnich pracovniku predzpracovani; pocita se z CPU/RAM pri startu, lze prepsat promennou prostredi VYVAR_PARALLEL_WORKERS. |
-| `skip_processed_directory` | False | Nastaveni (config.json) | config.json | hlavni UI aplikace (`app.py:209`) | Preskakuje drafty, jejichz zpracovany adresar uz existuje (chovani pri navazovani). |

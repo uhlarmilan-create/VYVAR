@@ -3239,17 +3239,6 @@
     "unit": null,
     "widget": "hidden"
   },
-  "vsx_variable_targets_mag_limit": {
-    "help": "Faint limit for automatically adopting VSX-known variables in the field as measurement targets.",
-    "kind": "static",
-    "label": "VSX Variable Targets Mag Limit",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto"
-  },
   "vsx_out_of_scope_types": {
     "help": "List of VSX variability types to leave unmeasured (default empty = feature inactive). Matching: a target's VSX type string is tokenized on the separators |, /, + and whitespace; each token is uppercased and a trailing : (VSX uncertain-classification mark) is stripped; config entries are normalized the same way; a target is OUT OF SCOPE when ANY of its tokens equals ANY configured entry. Substring matching is NEVER used (e.g. M does not exclude SRM). Applies ONLY to VSX auto-selected targets; manually added targets are never filtered. Matched targets stay in active_targets.csv with skip_photometry=True and skip_reason=vsx_type_out_of_scope (mask-first). Out-of-scope stars remain known variables and stay purged from the comparison pool. Example: [\"ROT\"] excludes ROT and ROT: but keeps DSCT|GDOR|SXPHE.",
     "kind": "static",

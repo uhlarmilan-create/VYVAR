@@ -71,7 +71,7 @@ def test_owner_groups_partition_every_key() -> None:
     # db_static/fits_dynamic. STEP 6 (HARDCODE) removed 20 config_runtime solver-internal keys
     # (261 -> 241; +2 PER-FRAME-SAT -> 243).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 244, "fits_dynamic": 6, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 242, "fits_dynamic": 6, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

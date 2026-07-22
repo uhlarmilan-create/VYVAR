@@ -6,15 +6,15 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-07-22T12:38:38Z at git HEAD 8815c45._
+_Generated 2026-07-22T12:40:03Z at git HEAD 7b235fe._
 
 ## Summary
 
-- Entries: 271
-- Tier: basic 13, advanced 70, expert 188
-- Kind: static 253, derived 0, resolved 18
-- Widget: auto 113, custom 143, hidden 15
-- Owner: db_static 9, config_runtime 243, fits_dynamic 6, internal 13
+- Entries: 270
+- Tier: basic 13, advanced 69, expert 188
+- Kind: static 252, derived 0, resolved 18
+- Widget: auto 112, custom 143, hidden 15
+- Owner: db_static 9, config_runtime 242, fits_dynamic 6, internal 13
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -171,7 +171,6 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `variability_vdi_z_threshold` | 3.0 | - | expert | static | config_runtime | auto | Variability VDI Z Threshold |
 | `verify_mag_limit` | 14.0 | 8 .. 18 | expert | static | config_runtime | auto | Verify Mag Limit |
 | `vsx_out_of_scope_types` | [] | - | basic | static | config_runtime | auto | VSX Out Of Scope Types |
-| `vsx_variable_targets_mag_limit` | 14.5 | - | advanced | static | config_runtime | auto | VSX Variable Targets Mag Limit |
 
 ## photometry
 

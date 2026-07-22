@@ -161,7 +161,7 @@ def test_resolved_facts_empty_meta_does_not_crash() -> None:
     # 9 core facts + AUTO-VSX-LIMIT depth comparison row
     assert len(model["rows"]) == 10
     assert all(set(r.keys()) == {"label", "value", "source"} for r in model["rows"])
-    assert any(r["label"] == "VSX limit vs field depth" for r in model["rows"])
+    assert any(r["label"] == "VSX auto-target scope" for r in model["rows"])
 
 
 # --------------------------------------------------------------------------- #

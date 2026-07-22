@@ -6472,23 +6472,6 @@ def write_photometry_plan_files(
             )
             n_vsx_in_cone = int(len(vsx_df)) if vsx_df is not None else 0
             _vsx_n_cone = n_vsx_in_cone
-            try:
-                mag_limit = float(_cfg_plan.vsx_variable_targets_mag_limit or 13.0)
-            except Exception:  # noqa: BLE001
-                mag_limit = 13.0
-            mag_filter_applied = False
-            if (
-                vsx_df is not None
-                and not vsx_df.empty
-                and "mag_max" in vsx_df.columns
-                and mag_limit is not None
-                and float(mag_limit) > 0.0
-            ):
-                mm = pd.to_numeric(vsx_df["mag_max"], errors="coerce")
-                vsx_df = vsx_df[mm.isna() | (mm <= float(mag_limit))].copy()
-                mag_filter_applied = True
-
-            n_vsx_after_mag = int(len(vsx_df)) if vsx_df is not None else 0
 
             # Gaia cross-id from MASTERSTAR catalog (within 10 arcsec).
             ga = df.copy()
@@ -6783,12 +6766,9 @@ def write_photometry_plan_files(
                     z = str(zone_out[i]).strip().lower()
                     _zone_hist[z] = int(_zone_hist.get(z, 0)) + 1
                 _vsx_diag = {
-                    "vsx_rows_in_cone_before_mag_filter": int(n_vsx_in_cone),
-                    "vsx_rows_after_mag_filter": int(n_vsx_after_mag),
-                    "vsx_variable_targets_mag_limit": float(mag_limit),
-                    "vsx_mag_cutoff_disabled": bool(float(mag_limit) <= 0.0),
-                    "vsx_mag_filter_applied": bool(mag_filter_applied),
+                    "vsx_rows_in_frame_bbox": int(n_vsx_in_cone),
                     "vsx_rows_after_in_frame_margin": int(n_vsx_in_frame),
+                    "n_with_masterstar_match": int(n_gaia_ok),
                     "vsx_rows_written_csv": int(len(vsx_out)),
                     "gaia_matches_within_10arcsec": int(n_gaia_ok),
                     "masterstars_zone_counts_among_gaia_matched": _zone_hist,
@@ -6800,7 +6780,7 @@ def write_photometry_plan_files(
                         "`catalog_id` a ciele mimo snimky (okrajovy filter)."
                     ),
                 }
-                _vsx_n_cone = int(n_vsx_after_mag)
+                _vsx_n_cone = int(n_vsx_in_cone)
     except Exception as _vsx_exc:  # noqa: BLE001
         log_event(f"variable_targets.csv (VSX export) preskoceny: {_vsx_exc!s}")
         vsx_out = pd.DataFrame(columns=var_cols)
@@ -6850,21 +6830,11 @@ def write_photometry_plan_files(
         pass
     _vyvar_df_to_csv(merged_var, var_path)
     if _vsx_diag:
-        _mag_leg = (
-            "mag filter vypnuty (limit<=0)"
-            if bool(_vsx_diag.get("vsx_mag_cutoff_disabled"))
-            else (
-                f"po mag<={_vsx_diag.get('vsx_variable_targets_mag_limit')}="
-                f"{_vsx_diag.get('vsx_rows_after_mag_filter')} (filter="
-                f"{'ano' if _vsx_diag.get('vsx_mag_filter_applied') else 'nie'})"
-            )
-        )
         log_event(
             "variable_targets.csv (VSX): "
-            f"VSX v kuzeli pred mag={_vsx_diag.get('vsx_rows_in_cone_before_mag_filter')} -> "
-            f"{_mag_leg} -> "
-            f"v rame={_vsx_diag.get('vsx_rows_after_in_frame_margin')} -> "
-            f"Gaia<=10 arcsec={_vsx_diag.get('gaia_matches_within_10arcsec')} -> "
+            f"VSX in frame bbox={_vsx_diag.get('vsx_rows_in_frame_bbox')} -> "
+            f"in-frame margin={_vsx_diag.get('vsx_rows_after_in_frame_margin')} -> "
+            f"detection-limited (DAO+Gaia match)={_vsx_diag.get('n_with_masterstar_match')} -> "
             f"CSV={int(len(merged_var))}. "
             f"Odhad VSX s Gaia ID (Faza 0 potom cross-match na masterstars): {_vsx_diag.get('phase0_active_targets_hint_count')}."
         )

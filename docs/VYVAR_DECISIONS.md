@@ -1149,6 +1149,14 @@ segmentation FWHM. Frame selection authority is the DB DAO-FWHM prefilter (Analy
 feeding ``prefilter_rejected`` status rows. Rationale: ``dev/results/CURSOR_RESULT_skipproc_qc_leak.md``.
 Wired gate: **QC-01**. **Status:** unconditional since SKIPPROC-PERMANENT.
 
+### VSX-AUTO-MAGLIM (2026-07-22)
+``vsx_variable_targets_mag_limit`` removed. VSX rows enter ``variable_targets.csv`` from the
+frame bbox query without a static ``mag_max`` pre-filter; **measurement scope** remains
+detection-limited: a VSX star is active only with a DAO detection cross-matched to Gaia on
+MASTERSTAR (unchanged Phase 0 criterion). Rationale: catalog ``mag_max`` band heterogeneity
+made the static threshold semantically fuzzy; detection limit is the honest gate. Comp-pool
+veto coverage grows with the fuller ``variable_targets`` list (correctness). **Status:** implemented.
+
 ## Comp-star selection & QA
 
 ### Selection priority: stability > colour > proximity; proximity is a GATE, not a rank

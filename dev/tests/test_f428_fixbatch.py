@@ -120,7 +120,7 @@ def test_auto_export_excludes_known_vsx_candidate(tmp_path: Path, monkeypatch) -
 
     class _Cfg:
         variability_sigma_threshold = 2.3
-        vsx_variable_targets_mag_limit = 13.0
+        variability_mag_limit = 14.5
         gaia_db_path = ""
 
         def to_dict(self):

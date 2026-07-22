@@ -1401,7 +1401,7 @@ def render_aperture_photometry(
                     sigma_v = float(
                         st.session_state.get("var_sigma_thr", cfg_dct.get("variability_sigma_threshold", 2.3))
                     )
-                    mag_v = float(cfg_dct.get("vsx_variable_targets_mag_limit", 13.0) or 13.0)
+                    mag_v = float(cfg_dct.get("variability_mag_limit", 14.5) or 14.5)
                     results_v, n_cand_v, var_sig_v = run_variability_detection_session(
                         cfg=cfg,
                         draft_dir=draft_dir,
