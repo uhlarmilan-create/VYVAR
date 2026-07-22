@@ -15,7 +15,8 @@ Full program P1-P4: DONE. Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`
 - Golden-mini E2E equivalence incl. UI-order vs headless byte identity on that
   night (`VL-P1-GOLD`).
 - Wired runtime gates: FLUX-01/02 FAIL, FLAT-01 WARN, WCS-01 WARN, DAG-01 FAIL,
-  PROV-01 + CFG-01 end-of-run FAIL; RNG AST guard.
+  QC-01 FAIL (skip-processed alignment allowlist), PROV-01 + CFG-01 end-of-run FAIL;
+  RNG AST guard.
 - Docs<->code sync on 43 config facts + 18 function names + docs layout + FLOW
   PDF presence (`test_docs_sync_guard`).
 - ASCII-only tracked text + LF-normalized repo (guards in `--fast`).
