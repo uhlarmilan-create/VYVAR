@@ -11,7 +11,7 @@ import math
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
@@ -44,6 +44,7 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-CFG-01",
         "QC-01",
         "OSC-01",
+        "OSC-02",
     }
 )
 
@@ -266,6 +267,33 @@ def check_osc01_channel_extraction_required(
     ok = len(bad) == 0
     detail = f"equipment_bayermask={equipment_bayermask} mosaic_without_VY_CHANNEL={bad[:8]}"
     inv_check(meta_block, "OSC-01", ok, policy="FAIL", detail=detail)
+
+
+def check_osc02_unified_frame_sets(
+    osc_bundles: Mapping[str, Mapping[str, Any]],
+    *,
+    meta: dict[str, Any] | None = None,
+) -> None:
+    """OSC-02: the four channel groups of one OSC draft share identical frame ID sets."""
+    from osc_align import unified_allowlist_frame_ids
+
+    meta_block = meta if meta is not None else {"invariants": []}
+    if not osc_bundles:
+        inv_check(meta_block, "OSC-02", True, policy="FAIL", detail="mono path (OSC-02 N/A)")
+        return
+    violations: list[str] = []
+    for base, bundle in osc_bundles.items():
+        files_by_ch: dict[str, list[Path]] = {}
+        for ch, job in bundle.items():
+            files_by_ch[str(ch)] = [Path(f) for f in (job.get("files") or [])]
+        ids = unified_allowlist_frame_ids(files_by_ch)
+        for ch, paths in files_by_ch.items():
+            stems = {p.name.casefold() for p in paths}
+            if stems != ids:
+                violations.append(f"{base}:{ch} n={len(stems)} expected={len(ids)}")
+    ok = len(violations) == 0
+    detail = f"n_bundles={len(osc_bundles)} violations={violations[:6]}"
+    inv_check(meta_block, "OSC-02", ok, policy="FAIL", detail=detail)
 
 
 def residual_large_scale_p99_adu(

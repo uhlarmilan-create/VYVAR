@@ -92,11 +92,13 @@ class K2Source(str, enum.Enum):
 
 
 def filter_token_from_obs_group(obs_group: str) -> str:
-    """Canonical filter token from obs_group (first segment; case preserved for Sloan vs Johnson)."""
-    raw = obs_group_first_token(obs_group)
-    if not raw:
-        return ""
-    return str(raw).strip().replace("''", "'")
+    """Canonical filter token from obs_group (OSC channel suffix -> TR/TG/TB/CLEAR)."""
+    from osc_align import obs_group_band_token
+
+    tok = obs_group_band_token(obs_group)
+    if tok:
+        return str(tok).strip().replace("''", "'")
+    return ""
 
 
 # Johnson/Cousins bands with negligible k'' (AAVSO practice); uppercase tokens only.

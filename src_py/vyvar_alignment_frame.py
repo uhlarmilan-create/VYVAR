@@ -309,22 +309,22 @@ def _alignment_run_astroalign_points(
     image_source: np.ndarray,
     image_target: np.ndarray,
     max_control_points: int,
-) -> tuple[np.ndarray | None, str | None]:
+) -> tuple[np.ndarray | None, str | None, dict[str, Any] | None]:
     try:
         import astroalign  # type: ignore
     except Exception as exc:  # noqa: BLE001
-        return None, str(exc)
+        return None, str(exc), None
     try:
         src = np.array(source_pts, dtype="float32")
         tgt = np.array(target_pts, dtype="float32")
         if src.ndim != 2 or src.shape[1] != 2:
-            return None, f"Nespravny format source bodov: shape={tuple(src.shape)}"
+            return None, f"Nespravny format source bodov: shape={tuple(src.shape)}", None
         if tgt.ndim != 2 or tgt.shape[1] != 2:
-            return None, f"Nespravny format target bodov: shape={tuple(tgt.shape)}"
+            return None, f"Nespravny format target bodov: shape={tuple(tgt.shape)}", None
         if src.shape == (0, 2) or tgt.shape == (0, 2):
-            return None, "Alignment nemoze zacat, prazdne suradnice!"
+            return None, "Alignment nemoze zacat, prazdne suradnice!", None
         if len(src) < 10 or len(tgt) < 10:
-            return None, "Insufficient stars"
+            return None, "Insufficient stars", None
         mcp = max(12, min(int(max_control_points), int(min(len(src), len(tgt)))))
         with seeded_numpy_default_rng(VYVAR_RANDOM_SEED):
             t, _ = astroalign.find_transform(
@@ -333,9 +333,13 @@ def _alignment_run_astroalign_points(
                 max_control_points=mcp,
             )
         aligned_data, _ = astroalign.apply_transform(t, image_source, image_target)
-        return _as_fits_float32_image(aligned_data), None
+        handoff = {
+            "method": "astroalign",
+            "matrix": [float(x) for x in np.asarray(t.params, dtype=np.float64).reshape(-1)],
+        }
+        return _as_fits_float32_image(aligned_data), None, handoff
     except Exception as e:  # noqa: BLE001
-        return None, str(e)
+        return None, str(e), None
 
 
 def _alignment_load_masterstar_catalog_points_for_frame(
@@ -451,6 +455,7 @@ def _alignment_compute_one_frame(
     ]
     aligned_data: np.ndarray | None = None
     aligned_method = "astroalign"
+    registration_handoff: dict[str, Any] | None = None
     xy_used = np.zeros((0, 2), dtype=np.float32)
     # Keep best available detection across attempts so that non-astroalign fallbacks
     # (phase correlation / WCS shift) still report a meaningful detected star count.
@@ -522,6 +527,7 @@ def _alignment_compute_one_frame(
                         )
                         aligned_data = _as_fits_float32_image(aligned_data)
                         aligned_method = "wcs_reproject"
+                        registration_handoff = {"method": "wcs_reproject"}
                 except Exception:  # noqa: BLE001
                     aligned_data = None
 
@@ -544,7 +550,7 @@ def _alignment_compute_one_frame(
                     xy_fit = np.asarray(xy_fit[:n_fit], dtype=np.float32)
                     ref_fit = np.asarray(ref_fit[:n_fit], dtype=np.float32)
                 mcp = max(12, min(int(max_control_points), n_fit))
-                aligned_data, aa_err = _alignment_run_astroalign_points(
+                aligned_data, aa_err, reg_handoff = _alignment_run_astroalign_points(
                     source_pts=xy_fit,
                     target_pts=ref_fit,
                     image_source=data,
@@ -553,6 +559,7 @@ def _alignment_compute_one_frame(
                 )
                 if aligned_data is None:
                     raise RuntimeError(str(aa_err or "astroalign failed"))
+                registration_handoff = reg_handoff
 
             try:
                 arr_check = np.asarray(aligned_data, dtype=np.float32)
@@ -646,6 +653,11 @@ def _alignment_compute_one_frame(
                         if (n_unique < 0 or n_unique > 3) and float(np.nansum(np.abs(shifted))) >= 1.0:
                             aligned_data = shifted
                             aligned_method = "phase_correlation"
+                            registration_handoff = {
+                                "method": "phase_correlation",
+                                "dy": float(dy),
+                                "dx": float(dx),
+                            }
                             _attempt_ok = True
                             _alignment_emit_log(
                                 log_sink,
@@ -686,6 +698,11 @@ def _alignment_compute_one_frame(
                     if (n_unique < 0 or n_unique > 3) and float(np.nansum(np.abs(shifted))) >= 1.0:
                         aligned_data = shifted
                         aligned_method = "wcs_shift"
+                        registration_handoff = {
+                            "method": "wcs_shift",
+                            "dy": float(dy),
+                            "dx": float(dx),
+                        }
                         _attempt_ok = True
                         _alignment_emit_log(
                             log_sink,
@@ -763,6 +780,7 @@ def _alignment_compute_one_frame(
         "hdr": hdr.copy(),
         "aligned_data": np.copy(aligned_data),
         "aligned_method": aligned_method,
+        "registration_handoff": registration_handoff,
         "xy_used": xy_used,
         "fw_i": fw_i,
         "star_count": {

@@ -11641,7 +11641,9 @@ def generate_masterstar_and_catalog(
             _mr = float(solve_meta.get("match_rate", 0.0) or 0.0)
         except (TypeError, ValueError):
             _mr = 0.0
-        _min_mr = 0.60
+        from vyvar_platesolver import MASTERSTAR_PLATESOLVE_MIN_MATCH_RATE
+
+        _min_mr = float(MASTERSTAR_PLATESOLVE_MIN_MATCH_RATE)
         if _mr < _min_mr:
             raise RuntimeError(
                 f"MASTERSTAR plate-solve zamietnuty: match_rate={_mr * 100.0:.1f}% < {_min_mr * 100.0:.0f}%. "
@@ -13251,6 +13253,163 @@ def _merge_astrometry_group_reports(rows: list[dict[str, Any]]) -> dict[str, Any
     return merged
 
 
+def _run_osc_multi_group_alignment(
+    *,
+    job_list: list[dict[str, Any]],
+    osc_bundles: dict[str, dict[str, dict[str, Any]]],
+    align_kw: dict[str, Any],
+) -> dict[str, Any]:
+    """OSC-2: oneRGGB full solve+align first; R/G/B reuse WCS + registration handoff."""
+    from osc_align import (
+        OSC_REGISTRATION_HANDOFF,
+        load_registration_handoff,
+        log_channel_match_rate_verification,
+        propagate_wcs_between_fits,
+        require_osc_donor_products,
+        write_wcs_propagation_meta,
+    )
+
+    build_ms = bool(align_kw.get("build_masterstar_and_catalogs"))
+    reports: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    archive_path = Path(align_kw["archive_path"])
+    cfg = align_kw.get("app_config") or AppConfig()
+
+    for base in sorted(osc_bundles.keys(), key=str.casefold):
+        bundle = osc_bundles[base]
+        one_job = dict(bundle["oneRGGB"])
+        one_job["osc_write_registration_handoff"] = True
+        _setup = Path(str(one_job.get("gkey") or "")).name or base
+        one_rggb_failed = False
+        try:
+            one_rep = _astrometry_align_impl_body(job=one_job, **align_kw)
+            reports.append(one_rep)
+        except Exception as exc:  # noqa: BLE001
+            one_rggb_failed = True
+            LOGGER.error("OSC oneRGGB alignment failed for %s: %s", _setup, exc)
+            skipped.append({"gkey": one_job.get("gkey"), "setup": _setup, "skipped_reason": str(exc)})
+            continue
+
+        donor_ps = Path(one_job["platesolve_dir"])
+        try:
+            require_osc_donor_products(donor_ps)
+            handoff = load_registration_handoff(donor_ps / OSC_REGISTRATION_HANDOFF)
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.error("OSC donor products missing for %s: %s", base, exc)
+            skipped.append({"gkey": one_job.get("gkey"), "setup": _setup, "skipped_reason": str(exc)})
+            continue
+
+        for ch in ("R", "G", "B"):
+            ch_job = dict(bundle[ch])
+            ch_setup = Path(str(ch_job.get("gkey") or "")).name or f"{base}_{ch}"
+            ch_ps = Path(ch_job["platesolve_dir"])
+            ch_ps.mkdir(parents=True, exist_ok=True)
+            try:
+                if build_ms:
+                    generate_masterstar_and_catalog(
+                        archive_path=archive_path,
+                        source_root=Path(ch_job["detrended_root"]),
+                        platesolve_dir=ch_ps,
+                        setup_name=str(ch_job.get("gkey") or "") or None,
+                        masterstar_fits_only=True,
+                        app_config=cfg,
+                        equipment_id=align_kw.get("id_equipment"),
+                        draft_id=align_kw.get("draft_id"),
+                        master_dark_path=align_kw.get("master_dark_path"),
+                        platesolve_backend=str(align_kw.get("platesolve_backend") or "vyvar"),
+                        plate_solve_fov_deg=float(
+                            align_kw.get("plate_solve_fov_deg") or cfg.plate_solve_fov_deg
+                        ),
+                    )
+                    ch_ms = ch_ps / "MASTERSTAR.fits"
+                    propagate_wcs_between_fits(donor_ps / "MASTERSTAR.fits", ch_ms)
+                    cat_info = generate_masterstar_and_catalog(
+                        archive_path=archive_path,
+                        platesolve_dir=ch_ps,
+                        setup_name=str(ch_job.get("gkey") or "") or None,
+                        masterstar_skip_build=True,
+                        masterstar_platesolve_skip_solve=True,
+                        app_config=cfg,
+                        equipment_id=align_kw.get("id_equipment"),
+                        draft_id=align_kw.get("draft_id"),
+                        platesolve_backend=str(align_kw.get("platesolve_backend") or "vyvar"),
+                        plate_solve_fov_deg=float(
+                            align_kw.get("plate_solve_fov_deg") or cfg.plate_solve_fov_deg
+                        ),
+                        catalog_match_max_sep_arcsec=float(
+                            align_kw.get("catalog_match_max_sep_arcsec") or 25.0
+                        ),
+                        max_catalog_rows=int(align_kw.get("max_catalog_rows") or 12000),
+                        dao_threshold_sigma=float(
+                            align_kw.get("dao_threshold_sigma") or cfg.masterstar_dao_threshold_sigma
+                        ),
+                        catalog_local_gaia_only=align_kw.get("catalog_local_gaia_only"),
+                    )
+                    mr = None
+                    if isinstance(cat_info, dict):
+                        sm = cat_info.get("solve_meta") or cat_info
+                        if isinstance(sm, dict):
+                            mr = sm.get("match_rate")
+                    write_wcs_propagation_meta(
+                        ch_ps,
+                        donor_dir=donor_ps,
+                        channel=str(ch),
+                        match_rate=float(mr) if mr is not None else None,
+                    )
+                    log_channel_match_rate_verification(
+                        channel=str(ch),
+                        match_rate=float(mr) if mr is not None else None,
+                        one_rggb_failed=one_rggb_failed,
+                        log_event=log_event,
+                    )
+                ch_kw = {
+                    k: v
+                    for k, v in align_kw.items()
+                    if k not in {"build_masterstar_and_catalogs"}
+                }
+                ch_rep = _astrometry_align_impl_body(
+                    job=ch_job,
+                    osc_registration_handoff=handoff,
+                    sibling_recovery_use_masterstar=True,
+                    build_masterstar_and_catalogs=False,
+                    **ch_kw,
+                )
+                ch_rep["osc_channel"] = ch
+                ch_rep["osc_donor"] = str(donor_ps)
+                reports.append(ch_rep)
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.error("OSC channel %s alignment failed for %s: %s", ch, ch_setup, exc)
+                skipped.append({"gkey": ch_job.get("gkey"), "setup": ch_setup, "skipped_reason": str(exc)})
+
+    from osc_align import parse_osc_channel_from_setup
+
+    mono_jobs: list[dict[str, Any]] = []
+    for j in job_list:
+        gkey = str(j.get("gkey") or "")
+        setup = Path(gkey).name if gkey else ""
+        _, ch = parse_osc_channel_from_setup(setup)
+        if ch is None:
+            mono_jobs.append(j)
+
+    for j in mono_jobs:
+        try:
+            reports.append(_astrometry_align_impl_body(job=j, **align_kw))
+        except Exception as exc:  # noqa: BLE001
+            setup = Path(str(j.get("gkey") or "")).name if j.get("gkey") else "(root)"
+            skipped.append({"gkey": j.get("gkey"), "setup": setup, "skipped_reason": str(exc)})
+
+    if not reports:
+        raise RuntimeError(
+            "OSC astrometry: no group succeeded. "
+            + "; ".join(f"{s.get('setup')}: {s.get('skipped_reason')}" for s in skipped)
+        )
+    merged = _merge_astrometry_group_reports(reports)
+    if skipped:
+        merged["skipped_subgroups"] = skipped
+    merged["osc_orchestration"] = True
+    return merged
+
+
 def _astrometry_align_impl_body(
     *,
     job: dict[str, Any],
@@ -13277,6 +13436,8 @@ def _astrometry_align_impl_body(
     ram_align_and_catalog: bool = False,
     app_config: AppConfig | None = None,
     sibling_recovery_use_masterstar: bool = False,
+    osc_registration_handoff: dict[str, Any] | None = None,
+    osc_write_registration_handoff: bool = False,
 ) -> dict[str, Any]:
     """Internal: astrometry + alignment + per-frame CSV for one observation subtree (``job``)."""
     import numpy as np
@@ -13352,6 +13513,12 @@ def _astrometry_align_impl_body(
     _t_step3_start = time.time()
     n_files = len(files)
     ref_fp, ref_star_scores = _pick_reference_frame_by_star_count(files)
+    if osc_registration_handoff is not None:
+        ref_name = str(osc_registration_handoff.get("reference_file") or "")
+        for _rf in files:
+            if _rf.name == ref_name:
+                ref_fp = _rf
+                break
     # Read reference once (no lock during solve step).
     with fits.open(ref_fp, memmap=False) as hdul:
         ref_hdr = hdul[0].header.copy()
@@ -13813,6 +13980,7 @@ def _astrometry_align_impl_body(
         "fb_align": float(_fb_align),
         "rotation_ref_angle_deg": rotation_ref_angle_deg,
     }
+    _osc_registration_capture: dict[str, dict[str, Any]] = {}
 
     def _flush_one_alignment(res: dict[str, Any]) -> None:
         nonlocal n_written_align, _flip_logged, rotation_flip_first_index_1based
@@ -13853,8 +14021,66 @@ def _astrometry_align_impl_body(
             fits.writeto(out_fp, aligned_data, header=hdr_out, overwrite=True)
         aligned_files.append(out_fp)
         star_counts.append(res["star_count"])
+        rh = res.get("registration_handoff")
+        if isinstance(rh, dict) and res.get("star_count", {}).get("file"):
+            _osc_registration_capture[str(res["star_count"]["file"])] = dict(rh)
 
-    if n_align_workers > 1 and len(align_tasks) > 1:
+    if osc_registration_handoff is not None:
+        from osc_align import apply_registration_handoff_to_frame
+
+        handoff_frames = dict(osc_registration_handoff.get("frames") or {})
+        ref_name = str(osc_registration_handoff.get("reference_file") or ref_fp.name)
+        for fp in files:
+            if fp == ref_fp and fp.name != ref_name:
+                continue
+            if fp.name == ref_name:
+                continue
+            entry = handoff_frames.get(fp.name) or {}
+            if entry and not bool(entry.get("aligned", True)):
+                star_counts.append(
+                    {
+                        "file": fp.name,
+                        "frame_index": int(files.index(fp) + 1) if fp in files else 0,
+                        "detected_stars": 0,
+                        "aligned": False,
+                        "reason": "donor_not_aligned",
+                        "alignment_method": "osc_handoff_skip",
+                        "is_flipped": False,
+                    }
+                )
+                continue
+            with fits.open(fp, memmap=False) as hdul:
+                raw_hdr = hdul[0].header.copy()
+                raw_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+            aligned_data, hdr_out, method = apply_registration_handoff_to_frame(
+                frame_path=fp,
+                frame_data=raw_data,
+                frame_hdr=raw_hdr,
+                ref_data=ref_data,
+                ref_hdr=ref_hdr,
+                handoff_entry=entry,
+            )
+            _flush_one_alignment(
+                {
+                    "kind": "aligned",
+                    "fp": str(fp.resolve()),
+                    "frame_index_1based": int(files.index(fp) + 1) if fp in files else 0,
+                    "is_flipped": False,
+                    "hdr": hdr_out,
+                    "aligned_data": aligned_data,
+                    "aligned_method": method,
+                    "fw_i": float(_fb_align),
+                    "star_count": {
+                        "file": fp.name,
+                        "frame_index": int(files.index(fp) + 1) if fp in files else 0,
+                        "detected_stars": 0,
+                        "aligned": True,
+                        "alignment_method": method,
+                        "is_flipped": False,
+                    },
+                }
+            )
+    elif n_align_workers > 1 and len(align_tasks) > 1:
         _mp_ctx: dict[str, Any] = {
             "ref_data": np.ascontiguousarray(np.copy(_align_ctx["ref_data"])),
             "ref_hdr": _align_ctx["ref_hdr"].copy(),
@@ -13932,6 +14158,14 @@ def _astrometry_align_impl_body(
         raise RuntimeError(msg)
     rep_path = platesolve_dir / "alignment_report.csv"
     pd.DataFrame(star_counts).to_csv(rep_path, index=False)
+    if osc_write_registration_handoff or bool(job.get("osc_write_registration_handoff")):
+        from osc_align import write_registration_handoff
+
+        write_registration_handoff(
+            platesolve_dir,
+            reference_file=str(ref_fp.name),
+            frames=_osc_registration_capture,
+        )
 
     print(f"  Zarovnanie: {time.time() - _t_align:.1f}s")
     _t_csv = time.time()
@@ -14391,6 +14625,13 @@ def astrometry_align_and_build_masterstar(
             "Astrometria: viacero pod-pozorovani (podpriecinky v processed|detrended/lights) - "
             "samostatne zarovnanie, MASTERSTAR a katalogy pre kazdu skupinu."
         )
+    from osc_align import partition_jobs_for_osc_alignment
+
+    job_list, osc_meta = partition_jobs_for_osc_alignment(job_list)
+    if osc_meta.get("has_osc_bundles"):
+        from invariants_runtime import check_osc02_unified_frame_sets
+
+        check_osc02_unified_frame_sets(osc_meta["bundles"], meta={"invariants": []})
     _ms_paths = [str(x).strip() for x in (masterstar_candidate_paths or []) if str(x).strip()]
     try:
         _ms_pct = float(masterstar_selection_pct) if masterstar_selection_pct is not None else None
@@ -14434,6 +14675,12 @@ def astrometry_align_and_build_masterstar(
         ram_align_and_catalog=ram_align_and_catalog,
         app_config=app_config,
     )
+    if osc_meta.get("has_osc_bundles"):
+        return _run_osc_multi_group_alignment(
+            job_list=job_list,
+            osc_bundles=osc_meta["bundles"],
+            align_kw=_kw,
+        )
     if len(job_list) == 1:
         return _astrometry_align_impl_body(job=job_list[0], **_kw)
 
@@ -16597,11 +16844,25 @@ def run_osc_channel_extraction_for_archive(
                 progress_cb=progress_cb,
             )
         try:
+            from osc_align import merge_osc_qc_metrics_at_lights_root, replicate_qc_verdict_from_one_rggb
+
+            replicate_qc_verdict_from_one_rggb(lights_root=root, base_name=base_name)
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("[OSC] QC verdict replication failed for %s: %s", base_name, exc)
+        try:
             if not any(group_dir.iterdir()):
                 group_dir.rmdir()
         except OSError:
             pass
         out["groups"].append(grp_stat)
+    try:
+        from osc_align import merge_osc_qc_metrics_at_lights_root
+
+        merged_qc = merge_osc_qc_metrics_at_lights_root(root)
+        if merged_qc is not None:
+            out["qc_metrics_csv"] = str(merged_qc)
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[OSC] qc_metrics merge at lights root failed: %s", exc)
     log_event(
         f"OSC extraction: {out['n_extracted']} mosaic(s) -> {len(out['groups'])} base group(s); "
         f"channels={','.join(OSC_CHANNELS)} bin={osc_bin}"

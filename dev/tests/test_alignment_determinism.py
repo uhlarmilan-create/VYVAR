@@ -78,8 +78,8 @@ def test_alignment_run_astroalign_points_byte_identical():
         "image_target": img_t,
         "max_control_points": 50,
     }
-    out1, err1 = _alignment_run_astroalign_points(**kw)
-    out2, err2 = _alignment_run_astroalign_points(**kw)
+    out1, err1, _ = _alignment_run_astroalign_points(**kw)
+    out2, err2, _ = _alignment_run_astroalign_points(**kw)
     assert err1 is None and err2 is None
     assert out1 is not None and out2 is not None
     assert np.array_equal(out1, out2)
@@ -90,7 +90,7 @@ def test_alignment_run_astroalign_points_insufficient_stars():
     src = np.array([[10.0, 10.0], [20.0, 20.0]], dtype=np.float32)
     tgt = np.array([[11.0, 10.0], [21.0, 20.0]], dtype=np.float32)
     img = np.zeros((64, 64), dtype=np.float32)
-    out, err = _alignment_run_astroalign_points(
+    out, err, _ = _alignment_run_astroalign_points(
         source_pts=src,
         target_pts=tgt,
         image_source=img,

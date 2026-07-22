@@ -67,6 +67,7 @@ PM_CORRECTION_MIN_MASYR = 10.0
 # Fixed to their long-standing defaults (never tuned in config history); solver mechanics.
 _BLIND_PREFILTER_MIN = 4                 # was cfg.blind_prefilter_min (4); prefilter floor
 _MASTERSTAR_ODDS_MATCH_FLOOR = 30        # was cfg.masterstar_odds_match_floor (30)
+MASTERSTAR_PLATESOLVE_MIN_MATCH_RATE = 0.60  # pipeline generate_masterstar_and_catalog reject gate
 _MASTERSTAR_ODDS_K = 12.0                # was cfg.masterstar_odds_k (12.0)
 _MASTERSTAR_ODDS_MIN_QUADRANTS = 3       # was cfg.masterstar_odds_min_quadrants (3)
 _MASTERSTAR_FALSE_ALARM_P_MAX = 1e-6     # was cfg.masterstar_false_alarm_p_max (1e-6)

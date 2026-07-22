@@ -72,7 +72,7 @@ def test_alignment_run_astroalign_points_respects_control_point_cap():
     import unittest.mock as mock
 
     with mock.patch.object(astroalign, "find_transform", _spy_find_transform):
-        out, err = _alignment_run_astroalign_points(
+        out, err, _ = _alignment_run_astroalign_points(
             source_pts=src,
             target_pts=tgt,
             image_source=img,
