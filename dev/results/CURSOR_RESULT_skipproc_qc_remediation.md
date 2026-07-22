@@ -206,7 +206,10 @@ Base: `302e81b` -> stack tip: `63ed2b4` (`git push origin main` succeeded).
 
 - `bf03340` - `docs(results): record SKIPPROC-QC stack push (tip 63ed2b4)`
 - `6d6f51f` - `docs(results): fix final tip hash in SKIPPROC-QC push record`
+- `f2f44c6` - `docs(results): align SKIPPROC-QC push record with origin/main tip 6d6f51f`
 
 ### Final origin/main tip
 
-`6d6f51f1a23254cc116924c81d5255682e1f131a` (`6d6f51f`)
+Stack landed at `63ed2b4`; bookkeeping commits above followed. At push
+completion (2026-07-22): `f2f44c6cd512ee764409246f4adb4b72f20a3b95` (`f2f44c6`).
+For current tip after any later commits: `git rev-parse origin/main`.
