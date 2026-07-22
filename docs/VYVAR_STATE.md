@@ -85,7 +85,7 @@ Live config.json migrated value-identical (249 keys). Commits `1307b73` (help po
 
 ## UI block
 
-**Wave 1 (parameters): DONE.** Machine-readable registry (269 entries post WAVE-B) with
+**Wave 1 (parameters): DONE.** Machine-readable registry (270 entries post PIPELINE-SIMPLIFY-1; was 272) with
 parity / freshness / hidden-tier guard tests, generated `VYVAR_PARAMS.md`, tiered
 Parameters dashboard, PDF Configuration page in the SUMMARY MEASURE REPORT. min_comps=3
 closed as intentional (DECISIONS). Results:
