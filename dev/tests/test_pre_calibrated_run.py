@@ -241,8 +241,7 @@ def test_map_masterstar_db_candidates_pre_calibrated(tmp_path: Path):
     db.conn.close()
 
 
-def test_resolve_masterstar_input_root_pre_calibrated_skip_processed(tmp_path: Path):
-    from config import AppConfig
+def test_resolve_masterstar_input_root_pre_calibrated(tmp_path: Path):
     from draft_provenance import CALIBRATION_MODE_PRE, write_draft_manifest
     from pipeline import resolve_masterstar_input_root
 
@@ -252,9 +251,7 @@ def test_resolve_masterstar_input_root_pre_calibrated_skip_processed(tmp_path: P
     (setup / "light001.fits").write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
     write_draft_manifest(ap, draft_id=1, calibration_mode=CALIBRATION_MODE_PRE)
 
-    cfg = AppConfig()
-    cfg.skip_processed_directory = True
-    hit = resolve_masterstar_input_root(ap, setup_name="Green_60_2", app_config=cfg)
+    hit = resolve_masterstar_input_root(ap, setup_name="Green_60_2")
     assert hit is not None
     assert "non_calibrated" in str(hit).replace("\\", "/")
     assert not (ap / "calibrated").exists()

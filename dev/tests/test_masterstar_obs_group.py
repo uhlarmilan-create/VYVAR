@@ -9,9 +9,9 @@ import pytest
 def _make_multi_group_archive(tmp_path: Path) -> Path:
     ap = tmp_path / "draft_test"
     for name in ("Blue_60_2", "Green_60_2", "Red_60_2"):
-        d = ap / "processed" / "lights" / name
+        d = ap / "calibrated" / "lights" / name
         d.mkdir(parents=True)
-        (d / f"proc_{name}.fits").write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
+        (d / f"Light_{name}.fits").write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
     return ap
 
 
@@ -37,9 +37,9 @@ def test_resolve_masterstar_input_root_legacy_single_group_scan(tmp_path: Path):
     from pipeline import resolve_masterstar_input_root
 
     ap = tmp_path / "single"
-    d = ap / "processed" / "lights" / "NoFilter_60_2"
+    d = ap / "calibrated" / "lights" / "NoFilter_60_2"
     d.mkdir(parents=True)
-    (d / "proc_a.fits").write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
+    (d / "Light_a.fits").write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
     hit = resolve_masterstar_input_root(ap, setup_name=None)
     assert hit is not None
     assert hit.name == "NoFilter_60_2"
@@ -53,7 +53,7 @@ def test_draft_is_multi_group_obs(tmp_path: Path):
     assert draft_is_multi_group_obs(ap) is True
 
     single = tmp_path / "one"
-    d = single / "processed" / "lights" / "Blue_60_2"
+    d = single / "calibrated" / "lights" / "Blue_60_2"
     d.mkdir(parents=True)
-    (d / "proc_x.fits").write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
+    (d / "Light_x.fits").write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
     assert draft_is_multi_group_obs(single) is False

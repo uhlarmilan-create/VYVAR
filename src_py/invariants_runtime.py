@@ -209,7 +209,7 @@ def check_qc01_skipproc_alignment(
     *,
     meta: dict[str, Any] | None = None,
 ) -> None:
-    """QC-01: in skip_processed mode every aligned frame must be qc_metrics.csv status=ok."""
+    """QC-01: every aligned frame must appear in qc_metrics.csv with status=ok."""
     from pipeline import norm_fits_path_key  # noqa: PLC0415
 
     meta_block = meta if meta is not None else {"invariants": []}

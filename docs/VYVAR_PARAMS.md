@@ -6,15 +6,15 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-07-20T16:18:47Z at git HEAD 07108b8._
+_Generated 2026-07-22T12:38:38Z at git HEAD 8815c45._
 
 ## Summary
 
-- Entries: 272
-- Tier: basic 13, advanced 70, expert 189
-- Kind: static 254, derived 0, resolved 18
-- Widget: auto 113, custom 143, hidden 16
-- Owner: db_static 9, config_runtime 244, fits_dynamic 6, internal 13
+- Entries: 271
+- Tier: basic 13, advanced 70, expert 188
+- Kind: static 253, derived 0, resolved 18
+- Widget: auto 113, custom 143, hidden 15
+- Owner: db_static 9, config_runtime 243, fits_dynamic 6, internal 13
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -353,5 +353,4 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 |-----|---------|-------|------|------|-------|--------|-------|
 | `per_frame_mp_reserve_ram_gb` | 1.5 | - | expert | static | config_runtime | hidden | Per Frame MP Reserve RAM Gb |
 | `qc_preprocess_workers` | 1 | - | expert | resolved | internal | hidden | QC Preprocess Workers |
-| `skip_processed_directory` | False | - | expert | static | config_runtime | hidden | Skip Processed Directory |
 

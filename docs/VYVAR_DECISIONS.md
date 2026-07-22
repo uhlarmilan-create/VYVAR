@@ -1131,23 +1131,23 @@ Per-frame `fallback_ee` remains a FUTURE refinement (noted on ROADMAP closure).
 
 **Status:** implemented; COG still default OFF pending enablement validation.
 
-### `skip_processed_directory` flow
-Raw -> Calibrated -> QC-in-place (VY_* headers on calibrated) -> Aligned -> proc CSV -> LC, skipping
-the `processed/` copy. Saves ~1.5 GB and ~20-30 % per draft. **Status: Phase 1 shipped (gated,
-default false); legacy `processed/` removal pending validation.**
+### SKIPPROC-PERMANENT (2026-07-22)
+``skip_processed_directory`` removed; in-place QC + ``qc_metrics.csv`` allowlist is the only
+preprocess path. The ``processed/lights`` copy tree is retired (it existed only as a check
+artifact; allowlist supersedes). Resume/skip-drafts: preprocess complete when
+``calibrated/lights/qc_metrics.csv`` exists (or ``pipeline_meta`` preprocess stage stamp).
+**Status:** implemented.
 
-### QC-ALLOWLIST-AUTHORITY (skip_processed mode)
-In ``skip_processed_directory=True`` mode, ``qc_metrics.csv`` under the draft lights root is the
-**authoritative frame allowlist** for alignment: only rows with ``status=ok`` (exact match) enter
-``astrometry_align_and_build_masterstar``. Frames on disk but missing from the CSV, or with any
-non-ok status, are excluded; a missing CSV is fail-closed. ``VY_QC`` FITS headers remain
-**diagnostic only** (including prefilter stamps such as ``rejected_prefilter_fwhm``); they are
-not alignment gates. Skip-mode in-place QC visits **every** light frame and records segmentation
-FWHM/elongation as diagnostics; it does **not** self-reject on segmentation FWHM. Frame selection
-authority is the DB DAO-FWHM prefilter (Analyze Auto FWHM limit) feeding ``prefilter_rejected``
-status rows. Rationale: ``dev/results/CURSOR_RESULT_skipproc_qc_leak.md`` (CONFIRMED leak via
-subset visitation + fail-open headers + dual FWHM estimators). Wired gate: **QC-01**.
-**Status:** implemented 2026-07-22.
+### QC-ALLOWLIST-AUTHORITY
+``qc_metrics.csv`` under the draft lights root is the **authoritative frame allowlist** for
+alignment: only rows with ``status=ok`` (exact match) enter ``astrometry_align_and_build_masterstar``.
+Frames on disk but missing from the CSV, or with any non-ok status, are excluded; a missing CSV is
+fail-closed. ``VY_QC`` FITS headers remain **diagnostic only** (including prefilter stamps such as
+``rejected_prefilter_fwhm``); they are not alignment gates. In-place QC visits **every** light
+frame and records segmentation FWHM/elongation as diagnostics; it does **not** self-reject on
+segmentation FWHM. Frame selection authority is the DB DAO-FWHM prefilter (Analyze Auto FWHM limit)
+feeding ``prefilter_rejected`` status rows. Rationale: ``dev/results/CURSOR_RESULT_skipproc_qc_leak.md``.
+Wired gate: **QC-01**. **Status:** unconditional since SKIPPROC-PERMANENT.
 
 ## Comp-star selection & QA
 

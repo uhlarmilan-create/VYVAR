@@ -1,4 +1,4 @@
-"""Skip-processed QC allowlist (design C+A) and QC-01 gate tests."""
+"""Preprocess QC allowlist (design C+A) and QC-01 gate tests."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from pipeline import (
     filter_files_by_qc_metrics_allowlist,
     load_qc_metrics_status_by_path,
     norm_fits_path_key,
+    preprocess_calibrated_to_processed,
 )
 
 
@@ -53,8 +54,7 @@ def test_allowlist_ok_included_rejected_excluded(tmp_path: Path) -> None:
         ],
     )
     selected, _ = filter_files_by_qc_metrics_allowlist([ok_fp, bad_fp, ghost_fp], qc)
-    names = {p.name for p in selected}
-    assert names == {"ok.fits"}
+    assert [p.name for p in selected] == ["ok.fits"]
 
 
 def test_allowlist_missing_csv_raises(tmp_path: Path) -> None:
@@ -63,20 +63,17 @@ def test_allowlist_missing_csv_raises(tmp_path: Path) -> None:
         load_qc_metrics_status_by_path(qc)
 
 
-def test_skipproc_align_requires_qc_csv_message(tmp_path: Path) -> None:
+def test_align_requires_qc_csv_message(tmp_path: Path) -> None:
     from pipeline import find_qc_metrics_csv
 
     ap = tmp_path / "draft"
     (ap / "calibrated" / "lights").mkdir(parents=True)
-    cfg = AppConfig()
-    cfg.skip_processed_directory = True
-    qc = find_qc_metrics_csv(ap, app_config=cfg)
+    qc = find_qc_metrics_csv(ap, app_config=AppConfig())
     assert qc is None
-    with pytest.raises(FileNotFoundError, match="skip_processed_directory=True requires the preprocess QC step"):
+    with pytest.raises(FileNotFoundError, match="Preprocess QC step required"):
         if qc is None or not qc.is_file():
             raise FileNotFoundError(
-                "skip_processed_directory=True requires the preprocess QC step; "
-                "run Analyze/preprocess first to produce qc_metrics.csv"
+                "Preprocess QC step required; run Analyze/preprocess first to produce qc_metrics.csv"
             )
 
 
@@ -88,7 +85,6 @@ def test_full_set_visitation_prefilter_stamping(tmp_path: Path) -> None:
     _write_light_fits(drop, seed=2.0)
     pre = build_prefilter_rejected_map([keep, drop], [keep])
     cfg = AppConfig()
-    cfg.skip_processed_directory = True
     out = _qc_enrich_calibrated_in_place(
         tmp_path / "calibrated" / "lights",
         app_config=cfg,
@@ -113,7 +109,6 @@ def test_skip_mode_never_emits_segmentation_reject_statuses(tmp_path: Path) -> N
     fp = root / "one.fits"
     _write_light_fits(fp)
     cfg = AppConfig()
-    cfg.skip_processed_directory = True
     cfg.qc_fwhm_limit = 0.5
     out = _qc_enrich_calibrated_in_place(root, app_config=cfg, fwhm_reject_limit=0.5)
     statuses = {str(r.get("status")) for r in out.get("results") or []}
@@ -150,3 +145,29 @@ def test_norm_fits_path_key_casefold(tmp_path: Path) -> None:
     k1 = norm_fits_path_key(p)
     k2 = norm_fits_path_key(str(p).upper())
     assert k1 == k2
+
+
+def test_preprocess_creates_no_processed_directory(tmp_path: Path) -> None:
+    lights = tmp_path / "calibrated" / "lights" / "NoFilter_60_2"
+    fp = lights / "Light_001.fits"
+    _write_light_fits(fp)
+    preprocess_calibrated_to_processed(
+        calibrated_root=tmp_path / "calibrated" / "lights",
+        processed_root=tmp_path / "processed" / "lights",
+        app_config=AppConfig(),
+    )
+    assert not (tmp_path / "processed").exists()
+    assert (tmp_path / "calibrated" / "lights" / "qc_metrics.csv").is_file()
+
+
+def test_known_removed_skip_processed_directory_logs_info(tmp_path: Path, caplog) -> None:
+    import json
+    import logging
+
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(json.dumps({"skip_processed_directory": True}), encoding="utf-8")
+    caplog.set_level(logging.INFO)
+    from config import AppConfig
+
+    AppConfig(project_root=tmp_path)
+    assert any("skip_processed_directory removed 2026-07" in r.message for r in caplog.records)

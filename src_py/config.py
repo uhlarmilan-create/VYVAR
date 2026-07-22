@@ -50,6 +50,14 @@ _LEGACY_CONFIG_KEYS: frozenset[str] = frozenset({
 })
 
 
+# Keys removed from AppConfig; load_config_json logs INFO once per key (no difflib WARN).
+KNOWN_REMOVED_KEYS: dict[str, str] = {
+    "skip_processed_directory": (
+        "skip_processed_directory removed 2026-07; skip behavior is now always on"
+    ),
+}
+
+
 def strip_jsonc_comments(text: str) -> str:
     """Remove ``//`` line comments that sit OUTSIDE string literals (JSONC-lite).
 
@@ -131,6 +139,9 @@ def _warn_unknown_config_keys(data: dict[str, Any]) -> None:
     known = set(field_names) | _LEGACY_CONFIG_KEYS
     for key in data:
         if key in known:
+            continue
+        if key in KNOWN_REMOVED_KEYS:
+            logging.info("config.json: %s", KNOWN_REMOVED_KEYS[key])
             continue
         near = difflib.get_close_matches(key, list(field_names), n=1)
         hint = f" (did you mean '{near[0]}'?)" if near else ""
@@ -612,13 +623,11 @@ class AppConfig:
     #: contaminated aperture annulus -> prefer PSF.
     psf_adaptive_snr_lo: float = 15.0
     # WAVE-B STEP 6: moffat_chi2_limit hardcoded (module constant _MOFFAT_CHI2_LIMIT in pipeline.py).
-    #: When True, QC headers are written on ``calibrated/lights`` FITS in-place; ``processed/`` is not created.
-    skip_processed_directory: bool = False
     #: Per calibrated light: subtract source-masked sigma-clipped polynomial sky surface in preprocess (0=off, default 2).
     preprocess_sky_surface_order: int = 2
-    #: In-place QC reject threshold for estimated FWHM [pix] (``skip_processed_directory`` path).
+    #: In-place QC diagnostic threshold for estimated FWHM [pix] (legacy; selection uses DB prefilter).
     qc_fwhm_limit: float = 8.0
-    #: In-place QC reject threshold for elongation a/b (``skip_processed_directory`` path).
+    #: In-place QC diagnostic threshold for elongation a/b.
     qc_elong_limit: float = 1.8
     #: Minimum clean stars required to build the ePSF model.
     epsf_min_stars: int = 30
@@ -1238,7 +1247,6 @@ class AppConfig:
             self.vsx_variable_targets_mag_limit = float(_vml)
             if not math.isfinite(self.vsx_variable_targets_mag_limit):
                 self.vsx_variable_targets_mag_limit = 13.0
-            # ``<= 0`` = ziadny mag. rez VSX (export vsetkych v kuzeli); ``> 0`` = max ``mag_max`` z VSX.
         except (TypeError, ValueError):
             self.vsx_variable_targets_mag_limit = 13.0
         _voos = data.get("vsx_out_of_scope_types", self.vsx_out_of_scope_types)
@@ -1548,9 +1556,6 @@ class AppConfig:
         except (TypeError, ValueError):
             self.psf_adaptive_snr_lo = 15.0
         # WAVE-B STEP 6: moffat_chi2_limit hardcoded (solver/QC internal).
-        self.skip_processed_directory = bool(
-            data.get("skip_processed_directory", self.skip_processed_directory)
-        )
         try:
             _sso = int(data.get("preprocess_sky_surface_order", self.preprocess_sky_surface_order))
             self.preprocess_sky_surface_order = max(0, min(2, _sso))
@@ -2460,7 +2465,6 @@ class AppConfig:
             "psf_adaptive_enabled": bool(self.psf_adaptive_enabled),
             "psf_adaptive_resolve_fwhm": float(self.psf_adaptive_resolve_fwhm),
             "psf_adaptive_snr_lo": float(self.psf_adaptive_snr_lo),
-            "skip_processed_directory": bool(self.skip_processed_directory),
             "preprocess_sky_surface_order": int(self.preprocess_sky_surface_order),
             "qc_fwhm_limit": float(self.qc_fwhm_limit),
             "qc_elong_limit": float(self.qc_elong_limit),

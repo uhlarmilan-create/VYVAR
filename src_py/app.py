@@ -206,7 +206,6 @@ def _run_vyvar_full_pipeline(
             return _fail("Scan Source + Import", RuntimeError(f"Invalid Source Directory: {_root}"))
 
         if pre_calibrated_mode:
-            pipeline.config.skip_processed_directory = True
             log_event(calibration_mode_report_line(CALIBRATION_MODE_PRE))
 
         _run_optics = resolve_working_optics(
@@ -674,7 +673,6 @@ def _vyvar_execute_preprocess_pending(
         estimate_archive_memory_profile,
         preprocess_calibrated_to_processed,
         _iter_light_fits,
-        _skip_processed_directory,
     )
 
     _app_cfg = pipeline.config
@@ -725,14 +723,9 @@ def _vyvar_execute_preprocess_pending(
                 "QC filter: no frames matching " + ", ".join(_why) + "."
             )
         dfs_pp: list[pd.DataFrame] = []
-        _skip_qc = _skip_processed_directory(_app_cfg)
-        _all_lights = _iter_light_fits(source_dir) if _skip_qc else []
-        _prefilter_map: dict[Path, str] | None = None
-        _only_pp: list[Path] | None = p1
-        if _skip_qc:
-            _prefilter_map = build_prefilter_rejected_map(_all_lights, p1)
-            _only_pp = None
-        tot_pp = len(_all_lights) if _skip_qc else len(p1)
+        _all_lights = _iter_light_fits(source_dir)
+        _prefilter_map = build_prefilter_rejected_map(_all_lights, p1)
+        tot_pp = len(_all_lights)
         off_pp = 0
 
         def _pcb_pp(off0: int):
@@ -749,7 +742,7 @@ def _vyvar_execute_preprocess_pending(
                 preprocess_calibrated_to_processed(
                     calibrated_root=source_dir,
                     processed_root=proc_root,
-                    only_paths=_only_pp,
+                    only_paths=None,
                     prefilter_rejected=_prefilter_map,
                     progress_cb=_pcb_pp(off_pp),
                     db=pipeline.db,
@@ -774,12 +767,6 @@ def _vyvar_execute_preprocess_pending(
             draft_id=None,
             **_pp_kw,
         )
-    try:
-        if not df.empty and not bool(getattr(_app_cfg, "skip_processed_directory", False)):
-            proc_root.mkdir(parents=True, exist_ok=True)
-            df.to_csv(proc_root / "qc_metrics.csv", index=False)
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("[APP] Writing qc_metrics.csv failed: %s", exc)
     out2 = pipeline.quick_preprocess_last_import(archive_path=ap_root, run=False)
     st.session_state["vyvar_memory_profile"] = estimate_archive_memory_profile(ap_root)
     st.session_state["vyvar_last_qc_suggestions"] = out2.get("qc_suggestions", {})
@@ -791,7 +778,7 @@ def _vyvar_execute_preprocess_pending(
             if not df.empty and "status" in df.columns
             else 0
         )
-        _root_pp = str(proc_root)
+        _root_pp = str(source_dir)
         st.session_state["vyvar_last_job_summary"] = {
             "kind": "preprocess",
             "rows": int(len(df)),

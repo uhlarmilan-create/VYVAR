@@ -2955,17 +2955,6 @@
     "unit": null,
     "widget": "custom"
   },
-  "skip_processed_directory": {
-    "help": "Skips drafts whose processed directory already exists (resume behavior).",
-    "kind": "static",
-    "label": "Skip Processed Directory",
-    "owner": "config_runtime",
-    "phase": "system",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "hidden"
-  },
   "sparse_trust_T_green": {
     "help": "Check-star T-statistic bound for GREEN trust on sparse fields.",
     "kind": "static",

@@ -1110,24 +1110,6 @@ def _resolve_draft_light_raw_path(archive: Path, file_path: Path | str) -> Path 
     return None
 
 
-def _skip_processed_directory(app_config: AppConfig | None = None) -> bool:
-    cfg = app_config or AppConfig()
-    return bool(getattr(cfg, "skip_processed_directory", False))
-
-
-def _get_vy_qc_status(fits_path: Path) -> str:
-    """Read ``VY_QC`` header value from FITS. Returns ``'ok'`` if missing.
-
-    Diagnostic only in skip-processed mode; alignment gating uses
-    ``qc_metrics.csv`` (QC-01). See ``docs/VYVAR_DECISIONS.md`` QC-ALLOWLIST-AUTHORITY.
-    """
-    try:
-        with fits.open(fits_path, memmap=False) as hdul:
-            return str(hdul[0].header.get("VY_QC", "ok")).strip().lower()
-    except Exception:  # noqa: BLE001
-        return "error"
-
-
 def find_qc_metrics_csv(
     archive_path: Path | str,
     app_config: AppConfig | None = None,
@@ -1135,17 +1117,14 @@ def find_qc_metrics_csv(
     draft_id: int | None = None,
     db: VyvarDatabase | None = None,
 ) -> Path | None:
-    """Find ``qc_metrics.csv`` - supports skip-processed (lights root) and legacy processed/."""
+    """Find ``qc_metrics.csv`` under draft lights root (legacy fallback: processed/lights)."""
     from draft_provenance import draft_archive_root, resolve_draft_lights_root
 
     ap = draft_archive_root(Path(archive_path).expanduser())
-    cfg = app_config or AppConfig()
-    candidates: list[Path] = []
-    if _skip_processed_directory(cfg):
-        candidates.append(
-            resolve_draft_lights_root(ap, draft_id=draft_id, db=db) / "qc_metrics.csv"
-        )
-    candidates.append(ap / "processed" / "lights" / "qc_metrics.csv")
+    candidates: list[Path] = [
+        resolve_draft_lights_root(ap, draft_id=draft_id, db=db) / "qc_metrics.csv",
+        ap / "processed" / "lights" / "qc_metrics.csv",
+    ]
     for p in candidates:
         if p.is_file():
             return p
@@ -1220,28 +1199,25 @@ def _archive_preprocess_lights_root(
     draft_id: int | None = None,
     db: VyvarDatabase | None = None,
 ) -> Path:
-    """Lights root for alignment (``processed/lights``, draft lights root, or legacy ``detrended/lights``)."""
+    """Lights root for alignment (draft lights root or legacy ``detrended/lights``)."""
     from draft_provenance import draft_archive_root, resolve_draft_lights_root
 
     root = draft_archive_root(Path(ap).expanduser())
-    if _skip_processed_directory(app_config):
-        lights = resolve_draft_lights_root(root, draft_id=draft_id, db=db)
-        for cand in (lights, root / "detrended" / "lights"):
-            if cand.is_dir() and _iter_fits_recursive(cand):
-                return cand
-        return lights
-    for cand in (root / "processed" / "lights", root / "detrended" / "lights"):
+    lights = resolve_draft_lights_root(root, draft_id=draft_id, db=db)
+    for cand in (lights, root / "detrended" / "lights"):
         if cand.is_dir() and _iter_fits_recursive(cand):
             return cand
-    return root / "processed" / "lights"
+    return lights
 
 
 def draft_obs_group_count(archive_path: Path | str) -> int:
-    """Number of obs_group subdirs under ``processed/lights`` that contain FITS."""
-    ap = Path(archive_path).expanduser()
-    if ap.name.casefold() == "non_calibrated":
-        ap = ap.parent
-    pl = ap / "processed" / "lights"
+    """Number of obs_group subdirs under draft lights root that contain FITS."""
+    from draft_provenance import draft_archive_root, resolve_draft_lights_root
+
+    ap = draft_archive_root(Path(archive_path).expanduser())
+    pl = resolve_draft_lights_root(ap)
+    if not pl.is_dir():
+        pl = ap / "processed" / "lights"
     if not pl.is_dir():
         return 0
     return sum(
@@ -1263,11 +1239,9 @@ def resolve_masterstar_input_root(
     draft_id: int | None = None,
     db: VyvarDatabase | None = None,
 ) -> Path | None:
-    """Pick MASTERSTAR input root under ``processed/lights[/setup_name]`` with robust fallback.
+    """Pick MASTERSTAR input root under draft lights[/setup_name] with robust fallback.
 
-    If ``processed/lights`` does not exist yet (e.g. right after calibration / during QA preview),
-    fall back to the draft lights root (``calibrated/lights`` or ``non_calibrated/lights``).
-    When ``skip_processed_directory`` is True, use the draft lights root only.
+    Uses ``calibrated/lights`` or ``non_calibrated/lights`` (via :func:`resolve_draft_lights_root`).
 
     When ``setup_name`` is explicitly provided, only that subdir is considered - no cross-group scan.
     Returns ``None`` when the requested setup is missing/empty (multi-group safe).
@@ -1275,7 +1249,6 @@ def resolve_masterstar_input_root(
     from draft_provenance import draft_archive_root, resolve_draft_lights_root
 
     ap = draft_archive_root(Path(archive_path).expanduser())
-    processed = ap / "processed" / "lights"
     lights_root = resolve_draft_lights_root(ap, draft_id=draft_id, db=db)
     setup_key = str(setup_name or "").strip()
 
@@ -1298,21 +1271,10 @@ def resolve_masterstar_input_root(
                 return base
         return None
 
-    if _skip_processed_directory(app_config):
-        hit = _pick_under(lights_root)
-        if hit is not None:
-            return hit
-        return lights_root if not setup_key else None
-
-    hit = _pick_under(processed)
-    if hit is not None:
-        return hit
     hit = _pick_under(lights_root)
     if hit is not None:
         return hit
-    if setup_key:
-        return None
-    return processed
+    return lights_root if not setup_key else None
 
 
 def _inspection_jd_from_header(hdr: fits.Header) -> float | None:
@@ -14366,27 +14328,25 @@ def astrometry_align_and_build_masterstar(
     ps_top = ap / "platesolve"
     os.makedirs(str(ps_top), exist_ok=True)
     files_all = _iter_fits_recursive(det_top)
-    if _skip_processed_directory(_cfg_align_root):
-        _n_before_qc = len(files_all)
-        _qc_csv = find_qc_metrics_csv(
-            ap,
-            app_config=_cfg_align_root,
-            draft_id=draft_id,
-            db=None,
+    _n_before_qc = len(files_all)
+    _qc_csv = find_qc_metrics_csv(
+        ap,
+        app_config=_cfg_align_root,
+        draft_id=draft_id,
+        db=None,
+    )
+    if _qc_csv is None or not _qc_csv.is_file():
+        raise FileNotFoundError(
+            "Preprocess QC step required; run Analyze/preprocess first to produce qc_metrics.csv"
         )
-        if _qc_csv is None or not _qc_csv.is_file():
-            raise FileNotFoundError(
-                "skip_processed_directory=True requires the preprocess QC step; "
-                "run Analyze/preprocess first to produce qc_metrics.csv"
-            )
-        files_all, _qc_status_map = filter_files_by_qc_metrics_allowlist(files_all, _qc_csv)
-        log_event(
-            f"skip_processed: using {len(files_all)}/{_n_before_qc} lights FITS "
-            f"(qc_metrics.csv allowlist) for alignment from {det_top}"
-        )
-        from invariants_runtime import check_qc01_skipproc_alignment  # noqa: PLC0415
+    files_all, _qc_status_map = filter_files_by_qc_metrics_allowlist(files_all, _qc_csv)
+    log_event(
+        f"QC allowlist: using {len(files_all)}/{_n_before_qc} lights FITS "
+        f"(qc_metrics.csv) for alignment from {det_top}"
+    )
+    from invariants_runtime import check_qc01_skipproc_alignment  # noqa: PLC0415
 
-        check_qc01_skipproc_alignment(files_all, _qc_csv, meta={"invariants": []})
+    check_qc01_skipproc_alignment(files_all, _qc_csv, meta={"invariants": []})
     _n_root_only = len(list(det_top.glob("*.fits"))) if det_top.exists() else 0
     _n_all = len(files_all)
     if _n_root_only != _n_all:
@@ -16435,7 +16395,7 @@ def _analyze_calibrated_qc_one(src: Path) -> dict[str, Any]:
             "max": float(np.nanmax(arr)) if arr.size else None,
         }
     except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0439] [SILENT-DROP] `_preprocess_calibrated_one` returns `{status: error}` without writing pr...: %s', exc)
+        logging.error('[EXC-0439] [SILENT-DROP] analyze calibrated QC one-frame helper failed: %s', exc)
         return {"src": str(src), "status": f"error: {exc}"}
 
 
@@ -16568,108 +16528,6 @@ def _fit_subtract_preprocess_sky_surface(
     }
 
 
-def _preprocess_calibrated_one(
-    src: Path,
-    *,
-    calibrated_root: Path,
-    processed_root: Path,
-    reject_fwhm_px: float | None,
-    reject_elongation: float | None,
-    inject_pointing_ra_deg: float | None,
-    inject_pointing_dec_deg: float | None,
-    inject_pointing_only_if_missing: bool,
-    sky_surface_order: int = 0,
-) -> dict[str, Any]:
-    import numpy as np
-
-    src = Path(src)
-    calibrated_root = Path(calibrated_root)
-    processed_root = Path(processed_root)
-    rel = src.relative_to(calibrated_root)
-    dst = processed_root / rel.parent / _safe_proc_name(rel.name)
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    status = "ok"
-    try:
-        with fits.open(src, memmap=False) as hdul:
-            hdr = hdul[0].header.copy()
-            data = np.array(hdul[0].data, dtype=np.float32, copy=True)
-
-        data3 = np.asarray(data, dtype=np.float32)
-        sky_stats: dict[str, Any] = {"sky_surface_order": 0, "sky_surface_applied": False}
-        if int(sky_surface_order) > 0:
-            data3, sky_stats = _fit_subtract_preprocess_sky_surface(
-                data3,
-                order=int(sky_surface_order),
-            )
-        bg_m = {"bg_median": float(np.nanmedian(data3)), "method": -1.0}
-
-        if reject_fwhm_px is not None or reject_elongation is not None:
-            qc = _qc_fwhm_elongation(data3)
-        else:
-            qc = {"fwhm_px": None, "elongation": None, "n_sources": None, "n_stars_detected": None}
-        fwhm_px = qc.get("fwhm_px")
-        elong = qc.get("elongation")
-        if reject_fwhm_px is not None and fwhm_px is not None and float(fwhm_px) > float(
-            reject_fwhm_px
-        ):
-            status = "rejected_fwhm"
-        if reject_elongation is not None and elong is not None and float(elong) > float(
-            reject_elongation
-        ):
-            status = "rejected_elong"
-
-        hdr["VYVARPR"] = (True, "VYVAR pre-processed output")
-        if fwhm_px is not None:
-            hdr["VY_FWHM"] = (float(fwhm_px), "Estimated FWHM [pix]")
-        if elong is not None:
-            hdr["VY_ELONG"] = (float(elong), "Estimated elongation (a/b)")
-        nsd = qc.get("n_stars_detected")
-        if nsd is not None:
-            hdr["VY_NSTAR"] = (int(nsd), "Approx. star detections (QC)")
-        hdr["VY_QC"] = (status, "QC status")
-        if sky_stats.get("sky_surface_applied"):
-            hdr["VYSKYORD"] = (int(sky_stats["sky_surface_order"]), "Preprocess sky surface polynomial order")
-            hdr["VYSKYP2P"] = (
-                float(sky_stats["sky_surface_p2p_adu"]),
-                "Preprocess sky surface peak-to-peak [ADU]",
-            )
-
-        if (
-            inject_pointing_ra_deg is not None
-            and inject_pointing_dec_deg is not None
-            and math.isfinite(float(inject_pointing_ra_deg))
-            and math.isfinite(float(inject_pointing_dec_deg))
-        ):
-            ira = float(inject_pointing_ra_deg)
-            idec = float(inject_pointing_dec_deg)
-            ex_ra, ex_dec, _ = _pointing_hint_from_header(hdr)
-            do_inject = (not bool(inject_pointing_only_if_missing)) or (
-                ex_ra is None or ex_dec is None
-            )
-            if do_inject:
-                hdr["VYTARGRA"] = (ira, "VYVAR plate-solve hint RA [deg] ICRS")
-                hdr["VYTARGDE"] = (idec, "VYVAR plate-solve hint Dec [deg] ICRS")
-                hdr.add_history("VYVAR: VYTARGRA/VYTARGDE for plate solving (preprocess)")
-
-        saved_dst = ""
-        if not str(status).startswith("rejected"):
-            fits.writeto(dst, _as_fits_float32_image(data3), header=hdr, overwrite=True)
-            saved_dst = str(dst)
-        return {
-            "src": str(src),
-            "dst": saved_dst,
-            "status": status,
-            "fwhm_px": fwhm_px,
-            "elongation": elong,
-            "n_sources": qc.get("n_sources"),
-            "n_stars_detected": qc.get("n_stars_detected"),
-            "bg_median": bg_m.get("bg_median"),
-            **sky_stats,
-        }
-    except Exception as exc:  # noqa: BLE001
-        return {"src": str(src), "dst": str(dst), "status": f"error: {exc}"}
-
-
 def _qc_enrich_calibrated_in_place(
     calibrated_root: Path,
     *,
@@ -16685,7 +16543,7 @@ def _qc_enrich_calibrated_in_place(
 ) -> dict[str, Any]:
     """Lightweight QC pass that writes VY_* headers directly onto calibrated FITS files.
 
-    Replaces ``preprocess_calibrated_to_processed`` when ``skip_processed_directory=True``.
+    In-place preprocess QC for ``preprocess_calibrated_to_processed`` (skip-only; no ``processed/`` copy tree).
     Does NOT copy files. Does NOT do temporal sigma clipping.
     Writes: VY_FWHM, VY_ELONG, VY_QC, VY_NSTAR, VYVARPR (and optional VYTARG*) to each FITS.
 
@@ -16858,175 +16716,23 @@ def preprocess_calibrated_to_processed(
             inject_pointing_ra_deg = float(_ra_eff)
             inject_pointing_dec_deg = float(_de_eff)
 
-    if _skip_processed_directory(cfg):
-        log_event(
-            "skip_processed_directory=True - running QC in-place on draft lights "
-            f"({calibrated_root})"
-        )
-        _out = _qc_enrich_calibrated_in_place(
-            calibrated_root,
-            app_config=cfg,
-            fwhm_reject_limit=reject_fwhm_px,
-            elong_reject_limit=reject_elongation,
-            target_ra=inject_pointing_ra_deg,
-            target_dec=inject_pointing_dec_deg,
-            inject_pointing_only_if_missing=inject_pointing_only_if_missing,
-            only_paths=only_paths,
-            prefilter_rejected=prefilter_rejected,
-            progress_cb=progress_cb,
-        )
-        return pd.DataFrame(_out.get("results") or [])
-
-    processed_root.mkdir(parents=True, exist_ok=True)
-
-    fits_files = _filter_light_paths_maybe(_iter_light_fits(calibrated_root), only_paths)
-    target_ra = inject_pointing_ra_deg
-    target_dec = inject_pointing_dec_deg
-    fwhm_limit_log = reject_fwhm_px
     log_event(
-        f"DEBUG: Preprocess filter - RA:{target_ra}, DE:{target_dec}, FWHM_Lim:{fwhm_limit_log}"
+        f"Preprocess: running QC in-place on draft lights ({calibrated_root})"
     )
+    _out = _qc_enrich_calibrated_in_place(
+        calibrated_root,
+        app_config=cfg,
+        fwhm_reject_limit=reject_fwhm_px,
+        elong_reject_limit=reject_elongation,
+        target_ra=inject_pointing_ra_deg,
+        target_dec=inject_pointing_dec_deg,
+        inject_pointing_only_if_missing=inject_pointing_only_if_missing,
+        only_paths=only_paths,
+        prefilter_rejected=prefilter_rejected,
+        progress_cb=progress_cb,
+    )
+    return pd.DataFrame(_out.get("results") or [])
 
-    def _median_pointing_from_headers(files: Sequence[Path]) -> tuple[float | None, float | None]:
-        ras: list[float] = []
-        decs: list[float] = []
-        for fp in files:
-            try:
-                with fits.open(fp, memmap=False) as hdul:
-                    hdr = hdul[0].header
-                ra_h, dec_h, _src_h = _pointing_hint_from_header(hdr)
-                if ra_h is None or dec_h is None:
-                    continue
-                ra_v = float(ra_h)
-                de_v = float(dec_h)
-                if math.isfinite(ra_v) and math.isfinite(de_v):
-                    ras.append(ra_v)
-                    decs.append(de_v)
-            except Exception:  # noqa: BLE001
-                continue
-        if not ras or not decs:
-            log_event(
-                f"INFO: header-median pointing fallback found no usable RA/Dec in {len(files)} frame(s) - "
-                "leaving pointing unresolved (plate-solve: FITS WCS or blind)."
-            )
-            return None, None
-        return float(np.median(np.asarray(ras, dtype=np.float64))), float(
-            np.median(np.asarray(decs, dtype=np.float64))
-        )
-
-    try:
-        ra_is_zero = target_ra is not None and math.isfinite(float(target_ra)) and abs(float(target_ra)) < 1e-9
-        de_is_zero = target_dec is not None and math.isfinite(float(target_dec)) and abs(float(target_dec)) < 1e-9
-    except (TypeError, ValueError):
-        ra_is_zero, de_is_zero = False, False
-    if ra_is_zero and de_is_zero:
-        log_event(
-            "DEBUG: Preprocess target RA/DE = 0/0 - skusam median z hlaviciek snimok; inak zostane bez VYTARG (plate-solve: FITS alebo blind)."
-        )
-        fb_ra, fb_de = _median_pointing_from_headers(fits_files)
-        if fb_ra is not None and fb_de is not None:
-            inject_pointing_ra_deg = float(fb_ra)
-            inject_pointing_dec_deg = float(fb_de)
-            log_event(
-                f"DEBUG: Preprocess fallback pointing applied: RA={float(fb_ra):.6f}, DE={float(fb_de):.6f}"
-            )
-
-    total = len(fits_files)
-    sky_surface_order = int(getattr(cfg, "preprocess_sky_surface_order", 0) or 0)
-    if sky_surface_order > 0:
-        log_event(
-            f"Preprocess sky-surface subtract: order={sky_surface_order} "
-            f"(source-masked sigma-clipped fit)"
-        )
-    n_workers = _vyvar_qc_preprocess_workers()
-    if n_workers > 1 and total > 1:
-        LOGGER.info(
-            "VYVAR preprocess: parallel_workers=%s (paralelne; ~%sx RAM na snimok oproti 1 vlaknu)",
-            n_workers,
-            n_workers,
-        )
-
-    if n_workers > 1 and total > 1:
-        with _vyvar_parallel_pool(n_workers) as ex:
-            futs = {
-                ex.submit(
-                    _preprocess_calibrated_one,
-                    src,
-                    calibrated_root=calibrated_root,
-                    processed_root=processed_root,
-                    reject_fwhm_px=reject_fwhm_px,
-                    reject_elongation=reject_elongation,
-                    inject_pointing_ra_deg=inject_pointing_ra_deg,
-                    inject_pointing_dec_deg=inject_pointing_dec_deg,
-                    inject_pointing_only_if_missing=inject_pointing_only_if_missing,
-                    sky_surface_order=sky_surface_order,
-                ): src
-                for src in fits_files
-            }
-            by_src: dict[Path, dict[str, Any]] = {}
-            done = 0
-            for fut in as_completed(futs):
-                src = futs[fut]
-                by_src[src] = fut.result()
-                done += 1
-                if progress_cb is not None:
-                    progress_cb(done, total, f"Preprocessing {src.name}")
-            rows = [by_src[s] for s in fits_files]
-    else:
-        rows = []
-        for i, src in enumerate(fits_files, start=1):
-            if progress_cb is not None:
-                progress_cb(i, total, f"Preprocessing {src.name}")
-            rows.append(
-                _preprocess_calibrated_one(
-                    src,
-                    calibrated_root=calibrated_root,
-                    processed_root=processed_root,
-                    reject_fwhm_px=reject_fwhm_px,
-                    reject_elongation=reject_elongation,
-                    inject_pointing_ra_deg=inject_pointing_ra_deg,
-                    inject_pointing_dec_deg=inject_pointing_dec_deg,
-                    inject_pointing_only_if_missing=inject_pointing_only_if_missing,
-                    sky_surface_order=sky_surface_order,
-                )
-            )
-
-    produced = [Path(r["dst"]) for r in rows if r.get("dst")]
-    df = pd.DataFrame(rows)
-
-    if sky_surface_order > 0 and not df.empty and "sky_surface_applied" in df.columns:
-        _applied = df["sky_surface_applied"].fillna(False).astype(bool)
-        n_applied = int(_applied.sum())
-        n_tot = int(len(df))
-        p2p_med = float("nan")
-        if "sky_surface_p2p_adu" in df.columns and n_applied > 0:
-            p2p_med = float(
-                pd.to_numeric(df.loc[_applied, "sky_surface_p2p_adu"], errors="coerce").median()
-            )
-        log_event(
-            f"sky surface: order={sky_surface_order} applied={n_applied}/{n_tot} "
-            f"p2p median={p2p_med:.2f} ADU"
-            if math.isfinite(p2p_med)
-            else f"sky surface: order={sky_surface_order} applied={n_applied}/{n_tot} p2p median=n/a"
-        )
-
-    if temporal_sigma_clip:
-        try:
-            _apply_temporal_sigma_clip_in_place(
-                processed_root=processed_root,
-                produced_files=produced,
-                sigma=float(temporal_sigma),
-                min_frames=int(temporal_min_frames),
-                use_gpu_if_available=bool(use_gpu_if_available),
-            )
-            if not df.empty:
-                df["temporal_mask"] = True
-        except Exception:  # noqa: BLE001
-            # keep preprocessing results; temporal mask is optional
-            if not df.empty:
-                df["temporal_mask"] = False
-
-    return df
 
 
 def analyze_calibrated_qc(
@@ -17138,116 +16844,6 @@ def _qc_suggest_thresholds(df: "pd.DataFrame") -> dict[str, float | int | None]:
         out["suggest_reject_elongation"] = _robust_suggest(e_ok, k=4.0)
 
     return out
-
-
-def _apply_temporal_sigma_clip_in_place(
-    *,
-    processed_root: Path,
-    produced_files: list[Path],
-    sigma: float = 6.0,
-    min_frames: int = 5,
-    tile: int = 256,
-    use_gpu_if_available: bool = False,
-) -> None:
-    """Mask transient artifacts across a time series (satellites/aircraft) per folder.
-
-    For each folder (typically per filter), compute per-pixel median and MAD across frames
-    and replace outliers in each frame with the median value.
-    """
-    import numpy as np
-    import hashlib
-
-    if sigma <= 0:
-        return
-    if min_frames < 3:
-        min_frames = 3
-
-    # group by parent directory (per-filter folder)
-    groups: dict[Path, list[Path]] = {}
-    for fp in produced_files:
-        groups.setdefault(fp.parent, []).append(fp)
-
-    tmp_root = Path(processed_root) / ".vyvar_tmp"
-    tmp_root.mkdir(parents=True, exist_ok=True)
-
-    use_gpu = bool(use_gpu_if_available) and _cupy_available()
-    cp = None
-    if use_gpu:
-        try:
-            import cupy as cp  # type: ignore
-        except Exception:  # noqa: BLE001
-            # EXC-0441: T2 -- WCS center extraction returns `None, None` on failure; draft segmentation sees frame as... (EXCEPT-BULK-2 2026-07-08)
-            use_gpu = False
-            cp = None
-
-    for folder, files in groups.items():
-        files = sorted(files)
-        if len(files) < min_frames:
-            continue
-
-        # Create per-frame memmaps to allow tile updates without holding the full stack in RAM.
-        tag = hashlib.md5(str(folder).encode("utf-8"), usedforsecurity=False).hexdigest()[:8]
-        work = tmp_root / f"temporal_{tag}"
-        if work.exists():
-            shutil.rmtree(work, ignore_errors=True)
-        work.mkdir(parents=True, exist_ok=True)
-
-        memmaps: list[np.ndarray] = []
-        headers: list[fits.Header] = []
-        shapes: list[tuple[int, int]] = []
-        for fp in files:
-            with fits.open(fp, memmap=False) as hdul:
-                hdr = hdul[0].header.copy()
-                data = np.array(hdul[0].data, dtype=np.float32, copy=True)
-            headers.append(hdr)
-            shapes.append((int(data.shape[0]), int(data.shape[1])))
-            mm_path = work / f"{fp.stem}.npy"
-            mm = np.lib.format.open_memmap(mm_path, mode="w+", dtype="float32", shape=data.shape)
-            mm[:] = data
-            memmaps.append(mm)
-
-        # Use common smallest shape to avoid mismatch issues (cropping)
-        h = min(s[0] for s in shapes)
-        w = min(s[1] for s in shapes)
-        eps = np.float32(1e-6)
-        k = np.float32(1.4826 * float(sigma))
-
-        for y0 in range(0, h, tile):
-            y1 = min(h, y0 + tile)
-            for x0 in range(0, w, tile):
-                x1 = min(w, x0 + tile)
-                stack_cpu = np.stack([mm[y0:y1, x0:x1] for mm in memmaps], axis=0)
-
-                if use_gpu and cp is not None:
-                    stack_gpu = cp.asarray(stack_cpu)
-                    med_gpu = cp.nanmedian(stack_gpu, axis=0)
-                    mad_gpu = cp.nanmedian(cp.abs(stack_gpu - med_gpu), axis=0) + eps
-                    thr_gpu = k * mad_gpu
-                    med_cpu = cp.asnumpy(med_gpu)
-                    for i, mm in enumerate(memmaps):
-                        mask = cp.asnumpy(cp.abs(stack_gpu[i] - med_gpu) > thr_gpu)
-                        if np.any(mask):
-                            block = mm[y0:y1, x0:x1]
-                            block[mask] = med_cpu[mask]
-                            mm[y0:y1, x0:x1] = block
-                else:
-                    med = np.nanmedian(stack_cpu, axis=0)
-                    mad = np.nanmedian(np.abs(stack_cpu - med), axis=0) + eps
-                    thr = k * mad
-                    for i, mm in enumerate(memmaps):
-                        resid = np.abs(stack_cpu[i] - med)
-                        mask = resid > thr
-                        if np.any(mask):
-                            block = mm[y0:y1, x0:x1]
-                            block[mask] = med[mask]
-                            mm[y0:y1, x0:x1] = block
-
-        # write back to FITS
-        for fp, hdr, mm in zip(files, headers, memmaps, strict=False):
-            hdr.add_history(f"VYVAR: Temporal sigma-clip mask applied (sigma={sigma:g})")
-            fits.writeto(fp, np.asarray(mm[:h, :w], dtype=np.float32), header=hdr, overwrite=True)
-
-        shutil.rmtree(work, ignore_errors=True)
 
 
 def scan_calibrated_lights_pointing(
@@ -18177,12 +17773,10 @@ class AstroPipeline:
         }
 
         if source_dir.exists():
-            proc_root = ap_root / "processed" / "lights"
-            _skip_proc = _skip_processed_directory(self.config)
             if run:
                 df = preprocess_calibrated_to_processed(
                     calibrated_root=source_dir,
-                    processed_root=proc_root,
+                    processed_root=source_dir,
                     reject_fwhm_px=reject_fwhm_px,
                     reject_elongation=reject_elongation,
                     temporal_sigma_clip=temporal_sigma_clip,
@@ -18193,12 +17787,7 @@ class AstroPipeline:
                     app_config=self.config,
                 )
             else:
-                # summarize from existing qc_metrics.csv if present
-                qc_csv_existing = (
-                    source_dir / "qc_metrics.csv"
-                    if _skip_proc
-                    else proc_root / "qc_metrics.csv"
-                )
+                qc_csv_existing = source_dir / "qc_metrics.csv"
                 if not qc_csv_existing.exists():
                     qc_csv_existing = ap_root / "detrended" / "lights" / "qc_metrics.csv"
                 try:
@@ -18206,17 +17795,13 @@ class AstroPipeline:
                 except Exception:  # noqa: BLE001
                     df = pd.DataFrame()
             out["processed"]["source"] = {
-                "processed_root": str(source_dir if _skip_proc else proc_root),
+                "lights_root": str(source_dir),
                 "rows": int(len(df)),
                 "rejected": int((df["status"].astype(str).str.startswith("rejected")).sum()) if not df.empty else 0,
                 "source_dir": str(source_dir),
-                "skip_processed_directory": _skip_proc,
             }
-            # Save QC table for review
             try:
-                qc_csv = source_dir / "qc_metrics.csv" if _skip_proc else proc_root / "qc_metrics.csv"
-                if run and not df.empty and not _skip_proc:
-                    df.to_csv(qc_csv, index=False)
+                qc_csv = source_dir / "qc_metrics.csv"
                 out["processed"]["source"]["qc_csv"] = str(qc_csv)
             except Exception as exc:  # noqa: BLE001
                 LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)

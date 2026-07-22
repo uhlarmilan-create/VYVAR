@@ -517,8 +517,6 @@ first, stability second (both gated), proximity as a distance gate only. (See DE
 | Crowding classifier | `crowding_classifier_enabled` | OFF (wide rig) |
 | Sparse comp fallback | `comp_sparse_fallback_enabled` | **ON** (per-target; inert on rich anchor) |
 | Detrend | `sysrem_enabled`, `savgol_detrend_enabled` | OFF |
-| Skip processed/ | `skip_processed_directory` | OFF |
-
 PSF flags stay **OFF** on the wide rig (correct). The PSF path is now **validated-but-gated**:
 enable only on characterized fine-scale data after the Brno / Newton characterization gate
 (see DECISIONS + ROADMAP).

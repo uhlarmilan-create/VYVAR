@@ -196,7 +196,7 @@
   // VSX types to leave unmeasured (token-match on |/+/whitespace; trailing ':'
   // stripped; any-token equals any config entry; empty = inactive). Auto VSX
   // only; manual targets immune. Example: ["ROT"].
-  "vsx_out_of_scope_types": [],
+  "vsx_out_of_scope_types": ["ROT"],
   // Strategy for picking which detected stars feed the blind solver
   // ('per_cell' spreads them evenly across the frame).
   "blind_img_select_mode": "per_cell",
@@ -713,9 +713,6 @@
   // your hardware; override only when you must.
   // RAM (GB) kept free per worker when sizing per-frame parallelism.
   "per_frame_mp_reserve_ram_gb": 1.5,
-  // Skips drafts whose processed directory already exists (resume behavior).
-  "skip_processed_directory": false,
-
   // === File & catalog paths ===
   // Where VYVAR finds its data on disk: star catalogs, plate-solve indexes,
   // the archive and the calibration library. Machine-specific plumbing - set
