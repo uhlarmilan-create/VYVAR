@@ -90,7 +90,28 @@ OVERALL: PASS (~2549s)
 ```
 Mono anchor byte-identical preserved.
 
-## STOP before push
+## Push (2026-07-22, Milan authorized)
 
-Uncommitted working tree. M71 E2E (OSC-1+2+3) deferred to Milan on eq id=5.
-Await Milan authorization after --full PASS + M71 acceptance.
+### Pre-push checks
+
+| Check | Result |
+|-------|--------|
+| `git fetch origin`; `origin/main` before push | `ad35345` |
+| Stack `git log origin/main..HEAD --oneline` | 2 commits - exact match (see below) |
+| Citation provenance | Coefficients: Gaia DR3 CU5 Table 5.9; sigmas: same table sigma column; validation: Ruelas-Mayorga et al. 2025 RASTI doi:10.1093/rasti/rzaf037 (Crossref-verified) |
+| `git status --short` | Clean; allowlisted untracked only |
+| `session_baseline_check.py --fast` (final HEAD `44b22f6`) | **OVERALL PASS** - 1117 passed, 24 skipped |
+| `--full` draft_435 (pre-push) | **OVERALL PASS** - byte-identical core+extended |
+
+### Commit inventory (`origin/main..HEAD`, newest first)
+
+```
+44b22f6 docs(osc): OSC-3 invariants, decisions, FLOW/handbook PDFs, gate record
+859e776 feat(osc): TR/TG/TB exports, Gaia Table 5.9 Johnson comps, OSC-03 (phase 3)
+```
+
+Base: `ad35345` -> stack tip: `44b22f6` (`git push origin main` succeeded).
+
+### Final origin/main tip
+
+Local HEAD matches `origin/main` at `44b22f6` after push. For current tip: `git rev-parse origin/main`.

@@ -2,6 +2,34 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-22 -- Session arc (SKIPPROC-QC through OSC-3 push)
+
+**SKIPPROC-QC:** Leak in skip-processed QC allowlist identified, fixed, and pushed.
+
+**PIPELINE-SIMPLIFY-1:** Skip-only path made permanent; Phase-1 out-of-scope skip; mag-limit
+removed. `--full` mono anchor byte-identical. The open "non-skip estimator mismatch" finding
+from SKIPPROC-QC is **resolved** by removal of the copy path in PIPELINE-SIMPLIFY-1.
+
+**DOCS-REFRESH:** Parameter handbook + FLOW PDF regenerated after param removals.
+
+**OSC-1/2/3 (RGB arc, phases 1-3):**
+- OSC-1: CFA calibration, Bayer channel extraction, BAYERMASK, OSC-01 gate.
+- OSC-2: WCS solve-once on oneRGGB, registration handoff, unified QC, OSC-02.
+- OSC-3: TR/TG/TB AAVSO/VarAstro exports, Gaia DR3 Table 5.9 Johnson comps
+  (`gaia_johnson.py`), OSC-03 export gate. Coefficients from Gaia DR3 CU5 Table 5.9;
+  validation reference Ruelas-Mayorga et al. 2025 RASTI doi:10.1093/rasti/rzaf037.
+- Pre-push: **rn_eff pairing bug** found and fixed (OSC-1, `rn_eff = rn_raw * sqrt(n)`).
+
+**FUTURE (not blocking):**
+- CITATIONS.bib ASCII disposition.
+- Docs-guard sweep for KNOWN_REMOVED_KEYS in builder prose.
+- Preprocess QC summary durability into `pipeline_meta.json`.
+- Mono adoption of `gaia_johnson` (E4) as separately gated future decision.
+
+**Pending:** M71 E2E acceptance (OSC-1+2+3 on eq id=5); Claude fresh-clone audit of OSC stack.
+
+---
+
 ## 2026-07-18 -- CONFIG-HUMAN-EDIT (grouped, commented, hand-editable config.json)
 
 config.json turned into a generated grouped + commented JSONC-lite document so a user can
