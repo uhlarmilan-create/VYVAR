@@ -169,14 +169,15 @@ def check_flat_mean_near_one(
     *,
     rel_tol: float = FLAT_MEAN_REL_TOL,
 ) -> tuple[bool, str]:
-    """INV-FLUX-02: normalized master flat mean ~ 1.0."""
+    """INV-FLUX-02: normalized master flat median ~ 1.0 (matches ``normalize_flat_master``)."""
     m = np.asarray(flat, dtype=np.float64)
-    mean_a = float(np.nanmean(m))
-    if not math.isfinite(mean_a):
-        return False, "non-finite mean"
-    rel = abs(mean_a - 1.0)
+    med_a = float(np.nanmedian(m))
+    if not math.isfinite(med_a):
+        return False, "non-finite median"
+    rel = abs(med_a - 1.0)
     ok = rel <= float(rel_tol)
-    return ok, f"mean={mean_a:.6f} |mean-1|={rel:.3e} (tol={rel_tol:g})"
+    mean_a = float(np.nanmean(m))
+    return ok, f"median={med_a:.6f} |median-1|={rel:.3e} mean={mean_a:.6f} (tol={rel_tol:g})"
 
 
 def residual_large_scale_p99_adu(

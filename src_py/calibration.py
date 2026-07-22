@@ -582,7 +582,7 @@ def get_processed_master(
         )
         flat_median_adu_before_norm = fm_pre
         flat_normalized_at_calibrate = True
-        # INV-FLUX-02: normalized flat mean ~ 1.0 (FAIL-CLOSED).
+        # INV-FLUX-02: normalized flat median ~ 1.0 (FAIL-CLOSED; matches normalize_flat_master).
         from invariants_runtime import check_flat_mean_near_one  # noqa: PLC0415
         from invariants_runtime import inv_check  # noqa: PLC0415
 

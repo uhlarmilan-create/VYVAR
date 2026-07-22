@@ -35,9 +35,9 @@ from invariants_runtime import (  # noqa: E402
 
 def _registry_wired_ids() -> set[str]:
     text = (DOCS / "VYVAR_INVARIANTS.md").read_text(encoding="utf-8")
-    found = set(re.findall(r"(INV-[A-Z0-9-]+)\s+\*\*\[wired\]\*\*", text))
+    found = set(re.findall(r"((?:INV-[A-Z0-9-]+|QC-\d+))\s+\*\*\[wired\]\*\*", text))
     # Also accept markdown table form: INV-XXX **[wired]**
-    found |= set(re.findall(r"\|\s*(INV-[A-Z0-9-]+)\s+\*\*\[wired\]\*\*", text))
+    found |= set(re.findall(r"\|\s*((?:INV-[A-Z0-9-]+|QC-\d+))\s+\*\*\[wired\]\*\*", text))
     return found
 
 
@@ -98,6 +98,16 @@ def test_flux02_flat_mean() -> None:
     assert ok
     ok_b, _ = check_flat_mean_near_one(np.full((32, 32), 1.05))
     assert ok_b is False
+
+
+def test_flux02_skewed_flat_median_passes_mean_would_fail() -> None:
+    """INV-FLUX-02 pins median semantics (matches normalize_flat_master, not mean)."""
+    flat = np.ones((32, 32), dtype=np.float64)
+    flat[:16, :] = 0.994
+    assert abs(float(np.nanmedian(flat)) - 1.0) < 1e-6
+    assert abs(float(np.nanmean(flat)) - 0.996770) < 1e-3
+    ok, detail = check_flat_mean_near_one(flat)
+    assert ok, detail
 
 
 def test_flat01_warn_band() -> None:

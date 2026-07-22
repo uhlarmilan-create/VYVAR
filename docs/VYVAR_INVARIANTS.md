@@ -10,7 +10,7 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
 | ID | Contract statement | Enforced | Policy | Evidence / history |
 |----|-------------------|----------|--------|--------------------|
 | INV-FLUX-01 **[wired]** | `dark_resample` conserves total flux: block-sum downscale and uniform upscale preserve SUM within relative 1e-6. | both (runtime in `get_processed_master` / resample path; unit tests for upscale) | FAIL | Calibration masters; broken resample = broken dark. |
-| INV-FLUX-02 **[wired]** | Normalized master flat has mean ? 1.0 within relative 1e-3. | both | FAIL | `normalize_flat_master` / `get_processed_master`. |
+| INV-FLUX-02 **[wired]** | Normalized master flat has median ? 1.0 within relative 1e-3 (matches ``normalize_flat_master``). | both | FAIL | `normalize_flat_master` / `get_processed_master`. |
 | INV-FLUX-03 | Sky-surface preprocess subtracts the **full** fitted surface including the constant term (pedestal convention; **not** mean-preserving). Provenance sky-surface stats mandatory when applied. | provenance schema (INV-PROV-01) + FLOW ch 4.5 wording | FAIL (schema) | T3-PREPROCESS-SKY-SURFACE; FLOW 4.5 doc-drift fixed 2026-07-19 (was wrongly "flux-conserving"). |
 | INV-FLAT-01 **[wired]** | Post-preprocess residual large-scale flatness: order-2 refit on the processed frame has p99 \|surface\| below a generous band (default 400 ADU; known honest gap vs oracle - T3). | both | WARN | Value recorded in invariants detail / sky_stats. |
 | INV-WCS-00 | WCS invertibility / round-trip gate (F-428). | already enforced (F-428) | FAIL | Reference only; not re-wired in P2. |
