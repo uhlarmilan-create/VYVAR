@@ -115,3 +115,27 @@ logging imports this constant (no new config parameter). See DECISIONS OSC-WCS-S
 ```
 pytest dev/tests: 1100 passed, 24 skipped
 ```
+
+## Push (2026-07-22, Milan authorized)
+
+### Pre-push checks
+
+| Check | Result |
+|-------|--------|
+| `git fetch origin`; `origin/main` before push | `9cfcefc` |
+| Stack `git log origin/main..HEAD --oneline` | 2 commits - exact match (see below) |
+| `git status --short` | Clean; allowlisted untracked only (`dy_peg_night_run_bvr.py`, `qatar8_night_run_v.py`) |
+| `session_baseline_check.py --fast` (final HEAD `d02d512`) | **OVERALL PASS** - 1100 passed, 24 skipped |
+
+### Commit inventory (`origin/main..HEAD`, newest first)
+
+```
+d02d512 docs(osc): OSC-2 invariants, decisions, state, gate record
+224c442 feat(osc): WCS solve-once, registration handoff, unified QC, OSC-02 (phase 2)
+```
+
+Base: `9cfcefc` -> stack tip: `d02d512` (`git push origin main` succeeded).
+
+### Final origin/main tip
+
+Local HEAD matches `origin/main` at `d02d512` after push. For current tip: `git rev-parse origin/main`.
