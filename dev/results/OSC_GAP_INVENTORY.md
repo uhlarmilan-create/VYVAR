@@ -203,7 +203,7 @@ Conclusion
 ----------
 **Overall NO-GO unchanged** for release 1.0 OSC science. M71 shows the pipeline can
 **complete end-to-end** and produce plausible LC/export output on a globular cluster
-without debayering — which **increases silent wrong-science risk** vs the Seestar run
+without debayering - which **increases silent wrong-science risk** vs the Seestar run
 that failed closed at plate solve. Debayer boundary remains mandatory before OSC support.
 
 Revisit trigger unchanged: Milan 1.0 vs 1.1 + debayer regression on this M71 set.
@@ -222,7 +222,7 @@ Run artifacts (M71, not committed)
 M71 channel-extraction experiment (L/B/G/R, superpixel 2x2) - 2026-07-21
 -------------------------------------------------------------------------
 
-**Method (AAVSO grounding, data-prep only — zero src_py changes):** channel
+**Method (AAVSO grounding, data-prep only - zero src_py changes):** channel
 **separation**, never interpolated demosaic. RGGB superpixel extraction via
 `dev/scripts/osc_extract_channels.py`:
 
@@ -249,7 +249,7 @@ Per-channel results
 | Ch | Draft | Status | Gaia DAO % | n matched | WCS id p95 px | FWHM med px | comp stars | lc_rms med | G_lim_50 | MASTERSTAR max ADU | sky p2p med ADU |
 |----|-------|--------|------------|-----------|---------------|-------------|------------|------------|----------|-------------------|-----------------|
 | **L** | 439 | **OK** | 97.6 | 8253 | 7.31 | 3.88 | 150 | 0.025 | 17.5 | 60380 | 1.7 |
-| **G** | 440/443/445 | **FAIL** | — | — | — | — | — | — | — | — | cal abort |
+| **G** | 440/443/445 | **FAIL** | - | - | - | - | - | - | - | - | cal abort |
 | **B** | 441 | **OK** | 86.5 | 868 | 0.40 | 4.57 | 145 | 0.048 | 14.4 | 64909 | 232 |
 | **R** | 444 | **OK** | 97.4 | 8324 | 6.98 | 4.07 | 150 | 0.048 | 17.5 | 59506 | 1.3 |
 
@@ -279,37 +279,37 @@ Not `mag_calib` (pipeline ties catalog `mag` to Gaia G in proc CSVs).
 | B | **+863** | 5938 | steepest (blue channel vs Gaia G) |
 | L | **+625** | 4702 | intermediate (luminance) |
 | R | **+234** | 4191 | flattest (red channel) |
-| G | n/a | — | run did not reach photometry |
+| G | n/a | - | run did not reach photometry |
 
 **Interpretation:** clear **physical ordering B > L > R** in color sensitivity
-(not noise — thousands of stars). All slopes positive in this sign convention
+(not noise - thousands of stars). All slopes positive in this sign convention
 (bluer Gaia stars brighter relative to G in narrower blue-ish bands). **G
 (smallest expected)** could not be measured. Opposite B/R signs in a strict
 TG/TB/TR calibration sense still need G channel + proper band zeropoints.
 
 **Saturation (cluster core):** MASTERSTAR peak **59-65k ADU** (~90-99% of 65535)
-on L/B/R — M71 core saturated on 15s bin2 extracted channels; differential
+on L/B/R - M71 core saturated on 15s bin2 extracted channels; differential
 work should exclude core or shorten exposure.
 
 Conclusions for OSC-SUPPORT Phase-1 design
 ------------------------------------------
 
-1. **Extraction path is viable** — mono FILTER=L|G|B|R frames run through the
+1. **Extraction path is viable** - mono FILTER=L|G|B|R frames run through the
    existing pipeline without src_py changes; plate solve + photometry complete
    on L/B/R.
 2. **First in-pipeline mode:** prefer **L (CV/luminance superpixel)** for
    differential/time-series (best depth, lowest lc_rms, 97%+ Gaia recovery).
    **G (TG)** is the AAVSO target band but blocked today by flat-field invariant
-   INV-FLUX-02 on this dataset (+ shared master-dark naming — see gap).
+   INV-FLUX-02 on this dataset (+ shared master-dark naming - see gap).
 3. **New MUST (multi-channel prep):** `_write_master_to_library` names darks
    `..._Dark_...` regardless of OSC FILTER header -> only one bin2 dark per
    night; G/R need channel-specific stacks or autocorrect policy extension.
 4. **B channel:** usable for bluest science but **shallow** (G_lim_50~14.4),
-   high sky residual (~232 ADU p2p) — poor for faint-variable work on M71.
+   high sky residual (~232 ADU p2p) - poor for faint-variable work on M71.
 5. **Debayer-in-pipeline still required** for naive OSC import; this experiment
    proves channel separation **offline** is the safer Phase-1 bridge (matches
    AAVSO practice) rather than forcing interpolated demosaic.
-6. **Overall NO-GO unchanged** for release 1.0 naive OSC — but Phase-1 design
+6. **Overall NO-GO unchanged** for release 1.0 naive OSC - but Phase-1 design
    should lead with **superpixel L or G extraction at ingest**, not raw mosaic.
 
 **Surprises:** (a) M71 mosaic run (draft 438) could complete on checkerboard,

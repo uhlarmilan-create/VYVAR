@@ -634,7 +634,7 @@ next calibration lever.
 - **TODO-45 - RGB camera support** (IMX533 RGGB -> de-Bayer -> G-channel photometry).
   **Parked arc: OSC-SUPPORT** - gap inventory `dev/results/OSC_GAP_INVENTORY.md`
   (2026-07-21: Seestar proxy + **IMX533 M71 re-run** + **L/B/G/R superpixel
-  extraction experiment** — L/B/R E2E on extracted mono frames; G blocked by
+  extraction experiment** - L/B/R E2E on extracted mono frames; G blocked by
   INV-FLUX-02; offline extraction viable, naive mosaic still NO-GO). Revisit
   trigger: Milan **1.0 vs 1.1 decision**; MUST gaps = debayer boundary +
   untrusted mosaic photometry + per-channel master-dark naming. Verdict today:

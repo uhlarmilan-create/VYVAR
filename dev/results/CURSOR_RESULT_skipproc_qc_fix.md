@@ -18,15 +18,15 @@ Skewed-flat test indices corrected post-commit (`flat[:15,:]` so median=1.0).
 
 ## Implementation summary
 
-### C — qc_metrics.csv allowlist (skip mode only)
+### C - qc_metrics.csv allowlist (skip mode only)
 
 - `astrometry_align_and_build_masterstar` (~14368): replaced VY_QC-header filter
   with `filter_files_by_qc_metrics_allowlist` + `find_qc_metrics_csv`.
-- Missing CSV ? fail-closed `FileNotFoundError` with actionable message.
+- Missing CSV -> fail-closed `FileNotFoundError` with actionable message.
 - Log: `skip_processed: using X/Y lights FITS (qc_metrics.csv allowlist) ...`
 - Path match: normalized resolved absolute paths (casefold).
 
-### A — full-set visitation + prefilter stamping
+### A - full-set visitation + prefilter stamping
 
 - `app._vyvar_execute_preprocess_pending` + `night_run._night_run_preprocess`:
   when skip mode, build `prefilter_rejected` via `build_prefilter_rejected_map`,
@@ -63,24 +63,35 @@ Updated: `dev/tests/test_invariants_p2.py` (QC-01 registry regex, flux02 skew fi
 ## Test counts
 
 ```
-dev/tests (full): 1067 passed, 24 skipped, 1 failed (pre-existing)
+dev/tests (full): 1068 passed, 24 skipped (after remediation)
 dev/tests/test_docs_sync_guard.py: 4 passed
 dev/tests/test_skipproc_qc_allowlist.py: 7 passed
+dev/tests/test_ascii_policy.py: 3 passed
 ruff (touched files): clean
 ```
 
-**Pre-existing failure:** `test_ascii_policy.py::test_tracked_text_files_are_ascii`
-(non-ASCII in `dev/results/OSC_GAP_INVENTORY.md`, `docs/VYVAR_ROADMAP.md` — not
-introduced by this arc). UI emoji was **not** committed; `:material/telescope:` used.
-The guard did **not** flag the transient emoji in the working tree before replacement
-(guard scans tracked files only — **not a guard gap** for untracked edits).
+**ASCII policy failure (corrected classification):** non-ASCII bytes were
+**introduced locally** in unpushed commits, not present at `origin/main` (302e81b).
+Offenders and introducing commits:
+
+| File | Introduced by | Corruption class |
+|------|---------------|------------------|
+| `docs/VYVAR_ROADMAP.md` | `9533953` (OSC arc) | UTF-8 em dash U+2014 |
+| `dev/results/OSC_GAP_INVENTORY.md` | `cad6002`/`627bd35`/`9533953` (OSC arc) | cp1252 0x97 em dash |
+| `dev/results/CURSOR_RESULT_skipproc_qc_fix.md` | `4f140ef` | cp1252 0x97 em dash |
+| `dev/results/CURSOR_RESULT_skipproc_qc_leak.md` | `4f140ef` | cp1252 0x97/0x93/0x94 |
+
+Repaired in remediation commit (see `CURSOR_RESULT_skipproc_qc_remediation.md`).
+UI emoji was **not** committed; `:material/telescope:` used in `a5ddfa1`.
 
 ## session_baseline_check.py --fast
 
 ```
-OVERALL: FAIL (pytest exit 1 due to pre-existing ascii_policy failure above)
-1067 passed otherwise; git/docs/config/ledger checks PASS/WARN as usual
+OVERALL: PASS (after encoding remediation; see CURSOR_RESULT_skipproc_qc_remediation.md)
 ```
+
+Prior to remediation this arc reported OVERALL FAIL because the four files above
+were committed with non-ASCII bytes before `ascii_migrate.py` repair.
 
 Anchor `--full` re-run **not required**: draft_435 uses `skip_processed_directory=false`.
 
@@ -105,11 +116,11 @@ Non-skip copy-mode preprocess, calibration, phase2a, anchor draft_435 path: **by
    `preprocess_calibrated_to_processed` copy path still compares segmentation FWHM
    from `_qc_fwhm_elongation` against `reject_fwhm_px` (DAO-scale Auto limit when
    wired through UI). Same dead-check class as the skip-mode bug, but anchor
-   draft_435 uses `skip_processed=false` and processed/ copy flow — left unchanged
+   draft_435 uses `skip_processed=false` and processed/ copy flow - left unchanged
    per anchor protection.
 
-2. **ASCII policy:** pre-existing non-ASCII bytes in tracked OSC/ROADMAP docs
-   (outside this arc).
+2. **ASCII policy:** locally introduced non-ASCII in OSC + SKIPPROC result commits
+   (see table above); repaired in remediation arc.
 
 3. **FLOW PDF:** no existing skip_processed frame-selection section in
    `build_flow_doc.py`; no FLOW builder edit required. DECISIONS + INVARIANTS
