@@ -76,16 +76,15 @@ pytest: 1079 passed, 24 skipped
 ```
 
 ### `--full` draft_435 (mono anchor)
-Started in background at task end (`tmp/osc1_full_gate.log`). **Await result before push.**
-Expected: byte-identical (OSC code gated on BAYERMASK; mono draft_435 unchanged).
-
-## Docs impact
-
-- `VYVAR_INVARIANTS.md`: OSC-01 [wired]
-- `VYVAR_DECISIONS.md`: OSC-CHANNEL-EXTRACTION
-- `VYVAR_STATE.md`, params registry 271, `VYVAR_PARAMS.md` regen
-- Handbook + FLOW PDF regenerated (OSC branch note in ch. 4.5)
+```
+full-snapshot-sha-core       PASS   03d8fb6491bc3c22... n=333
+full-photometry-sha-core     PASS   03d8fb6491bc3c22... n=333
+full-photometry-sha-extended PASS   bbfcc92e7ac5c4c5... n=499
+full-science-compare         PASS   n_lc=166 failures=0
+OVERALL: PASS
+```
+Run on working tree with OSC-1 changes (~2131s pipeline). Mono byte-identical anchor preserved.
 
 ## STOP before push
 
-Await `--full` OVERALL PASS confirmation; then Milan push authorization.
+Local commit `0f1c07f`. Await Milan push authorization.
