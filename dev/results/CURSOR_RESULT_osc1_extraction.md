@@ -155,13 +155,41 @@ For `n = plane_count * bin^2` pixels averaged (variance scales as `1/n`):
 
 Any downstream FITS written before this fix understates read noise by factor `n_avg`.
 
-### Gates (post-fix, uncommitted)
+### Gates (post-fix)
 
 ```
 pytest: 1085 passed, 24 skipped
 session_baseline_check --fast: OVERALL PASS
 ```
 
-### STOP before push
+Committed as `7ffcc06`; see Push section below.
 
-Fix + tests local only; not committed. Await Milan push authorization.
+## Push (2026-07-22, Milan authorized)
+
+### Pre-push checks
+
+| Check | Result |
+|-------|--------|
+| `git fetch origin`; `origin/main` before push | `2c520c6` (unchanged since PIPELINE-SIMPLIFY push; DOCS-REFRESH not yet on remote) |
+| Stack `git log origin/main..HEAD --oneline` | 4 commits - exact match (see below) |
+| `git status --short` | Clean; allowlisted untracked only (`dy_peg_night_run_bvr.py`, `qatar8_night_run_v.py`) |
+| `session_baseline_check.py --fast` (final HEAD `7ffcc06`) | **OVERALL PASS** - 1085 passed, 24 skipped |
+
+### Commit inventory (`origin/main..HEAD`, newest first)
+
+```
+7ffcc06 fix(osc): correct rn_eff pairing (rn*sqrt(n)) + RN-dominated Monte Carlo test
+4634bd1 docs(results): OSC-1 gate record (--full PASS on mono anchor)
+0f1c07f feat(osc)!: CFA calibration, Bayer channel extraction, BAYERMASK, and OSC-01 gate (phase 1)
+c055ac3 docs(pdf): regenerate parameter handbook + FLOW after param removals (DOCS-REFRESH; was local-only until this push)
+```
+
+Base: `2c520c6` -> stack tip: `7ffcc06` (`git push origin main` succeeded).
+
+### Bookkeeping
+
+One docs commit (ledger stamp, this result file push record) pushed with the stack.
+
+### Final origin/main tip
+
+Local HEAD matches `origin/main` at `7ffcc06` after push. For current tip: `git rev-parse origin/main`.

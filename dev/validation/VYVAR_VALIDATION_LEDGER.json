@@ -45,7 +45,7 @@
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
       "last_verified": "2026-07-22",
-      "commit": "a0e3431",
+      "commit": "7ffcc06",
       "notes": "Re-verify on next --full against draft_435 sky-surface anchor."
     },
     {
@@ -146,7 +146,7 @@
       "verification": "scripts/session_baseline_check.py --full (core 03d8fb64\u2026 n=333; extended bbfcc92e\u2026 n=499). Census fingerprint n_raw_dao=2552 matched=2842 targets=169; identity p95 baseline 1.54 px.",
       "passes": true,
       "last_verified": "2026-07-22",
-      "commit": "a0e3431",
+      "commit": "7ffcc06",
       "notes": "Re-cut 2026-07-20 (ANCHOR-RECUT-SIGMA-NOTES): sigma-notes ASCII fold (ENCODING-POLICY ecbae90); LC set byte-identical; 19 comp_quality notes cosmetic. Supersedes core 3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96 / extended 6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8 (2026-07-16 LABBE-DET cut). Prior STOP: dev/results/CURSOR_RESULT_publication_prep.md. Alias: VL-ANCHOR-SKYSURFACE. Offline zips: C:\\\\ASTRO\\\\backups\\\\draft_000435_snapshot_skysurface_20260716.zip + draft_000435_anchor_live_20260716.zip.",
       "census_fingerprint": {
         "n_raw_dao": 2552,
