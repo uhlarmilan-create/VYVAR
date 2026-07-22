@@ -202,10 +202,11 @@ cad6002 docs(osc): IMX533 discovery gap inventory; park OSC-SUPPORT arc
 
 Base: `302e81b` -> stack tip: `63ed2b4` (`git push origin main` succeeded).
 
-### Bookkeeping commit
+### Bookkeeping commits
 
-`bf03340` - `docs(results): record SKIPPROC-QC stack push (tip 63ed2b4)`
+- `bf03340` - `docs(results): record SKIPPROC-QC stack push (tip 63ed2b4)`
+- `6d6f51f` - `docs(results): fix final tip hash in SKIPPROC-QC push record`
 
 ### Final origin/main tip
 
-`bf03340653b995d4c0aee95ebe95cd568448a0c5` (`bf03340`)
+`6d6f51f1a23254cc116924c81d5255682e1f131a` (`6d6f51f`)
