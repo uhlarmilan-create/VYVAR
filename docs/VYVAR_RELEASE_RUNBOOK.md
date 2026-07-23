@@ -67,13 +67,17 @@ git tag preview-YYYYMMDD
 
 Do not push until Milan approves.
 
-## Step 6 - Public release (Milan, manual)
+## Step 6 - Public release (Cursor via gh CLI, Milan authorizes per release)
 
-1. Copy `release/public_repo/*` to `VYVAR-release` repository.
-2. GitHub Releases -> **pre-release** flag.
-3. Upload `VYVAR-*-win64.zip`, `VYVAR-*-linux-x64.tar.gz`, `SHA256SUMS`.
-
-Cursor **never** pushes to `VYVAR-release`.
+1. Copy `release/public_repo/*` to `VYVAR-release` repository (no binaries, no source).
+2. Grep staged content for private repo URLs, machine paths, tokens; fix before push.
+3. Commit and push `VYVAR-release` (repo-local git identity if needed).
+4. Set repo description + topics via `gh repo edit`.
+5. When **both** platform bundles exist and Milan confirms in-session:
+   - Tag `preview-YYYYMMDD` in the **private** repo.
+   - Create GitHub Release in `VYVAR-release` with **pre-release** flag via `gh release create`.
+   - Upload `VYVAR-*-win64.zip`, `VYVAR-*-linux-x64.tar.gz`, `SHA256SUMS`.
+6. Do **not** cut a single-platform preview without Milan's explicit say-so.
 
 ## Step 7 - Bookkeeping
 
