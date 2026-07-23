@@ -27,7 +27,7 @@ after RELEASE-1 push; not re-run in this session (see Gates).
 ```
 VYVAR-preview-20260723-win64/
   python/              embedded Python 3.12.10 + Lib/site-packages
-  src_py/              84x .pyd + ui_*.py + app.py (NO .py for compiled science modules)
+  src_py/              85x .pyd + ui_*.py + app.py (NO .py for compiled science modules)
   app.py               root Streamlit shim
   VYVAR.bat / vyvar.sh launchers (VYVAR_RELEASE_BUNDLE=1)
   vyvar_selftest.py    --selftest entry

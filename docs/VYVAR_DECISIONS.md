@@ -55,7 +55,8 @@ anchors run interpreted; compiled builds must reproduce the **same** anchor SHAs
 **MODULE_LIST rule (S2).** Single source: `dev/tools/cython_release/module_list.py`.
 All `src_py/*.py` except `app.py`, `ui_*.py`, plus `EXPLICIT_EXCLUDE` (one-line
 reason per entry). OSC modules (`osc_extract`, `osc_align`, `gaia_johnson`) included.
-84 science modules compiled on Windows MSVC (2026-07-23).
+84 science modules compiled at RELEASE-1 (`b4c372a`, 2026-07-23); **85** after RELEASE-2
+added `vyvar_runtime.py` for bundled first-launch bootstrap (`3369832`).
 
 **Pinned flags (S3).** Plain compile only: `annotation_typing=False`,
 `Options.docstrings=False`, `language_level=3`, `embedsignature=False`.

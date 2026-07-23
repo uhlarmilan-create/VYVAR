@@ -2,18 +2,20 @@
 
 **Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
 
-Last updated: **2026-07-23** (CYTHON-RELEASE-1: full MODULE_LIST compile + anchor identity gate;
-RELEASE-2 bundling queued 2026-08-31).
+Last updated: **2026-07-23** (CYTHON-RELEASE preview `preview-20260723` cut; pending M71 E2E).
 
 Registered params: **271** (was 270; +``osc_channel_binning``).
 
-## Cython release readiness (RELEASE-1 + RELEASE-2)
+## Cython release readiness (RELEASE-1 + RELEASE-2) -- preview out
 
-RELEASE-1: 84-module compile, anchor identity gates (see `CURSOR_RESULT_cython_release1.md`).
-RELEASE-2: bundle builder (`dev/tools/cython_release/bundle/`), embedded Python 3.12,
-data-dir separation (`VYVAR_DATA_DIR` / `%LOCALAPPDATA%\\VYVAR`), install docs CZ+EN in
-`release/public_repo/`, runbook `docs/VYVAR_RELEASE_RUNBOOK.md`. Windows preview bundle
-smoke PASS. **Before push:** interpreted `--full` (B2 config path change). STOP before push.
+RELEASE-1 @ `b4c372a`: **85** science modules compiled (84 before RELEASE-2 added
+`vyvar_runtime.py` in `3369832`); anchor identity gates PASS (see
+`CURSOR_RESULT_cython_release1.md`). RELEASE-2: bundle builder, embedded Python 3.12,
+data-dir separation, install docs, public repo staging, runbook. **Preview
+`preview-20260723` cut** (win64 + linux-x64) on `VYVAR-release`; private tag
+`preview-20260723` @ `fe574c0`.
+
+**Pending:** M71 E2E acceptance; Milan field **Linux USB install** test on target rig.
 
 ## Invariants program -- honest scope
 

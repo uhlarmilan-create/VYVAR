@@ -163,12 +163,43 @@ Release URL: **pending Milan gh release create** (assets + SHA256SUMS ready in
 
 ### Round-trip integrity
 
-Pending `gh release create` + download verify. Expected hashes:
+**STOP (2026-07-23 PREVIEW-CUT-FINAL):** GitHub release not visible to anonymous API
+or Cursor `gh` (no auth in subprocess). Cannot download release assets for round-trip.
 
-```
-5573d15f299f0c3abdeaafc0c869102ad24e4a1303745728d2f8d1349b4eadea  VYVAR-preview-20260723-win64.zip
-02d96e2a1264ba117eaee425195a09bee7825f7dcbea8e24b8db6a9d384d22b1  VYVAR-preview-20260723-linux-x64.tar.gz
-```
+| Check | Result |
+|-------|--------|
+| `gh release view` (Cursor subprocess) | FAIL -- not logged in |
+| `GET .../releases/tags/preview-20260723` | 404 Not Found |
+| `GET .../releases` | `[]` (empty) |
+| Asset URL HEAD (win64 zip) | 404 Not Found |
+
+**Local sanity (not a substitute for round-trip):** local `tmp/cython_release/bundle/dist/`
+files match expected SHA256 and local `SHA256SUMS`:
+
+| Asset | Expected / local SHA256 | Match |
+|-------|-------------------------|-------|
+| VYVAR-preview-20260723-win64.zip | `5573d15f299f0c3abdeaafc0c869102ad24e4a1303745728d2f8d1349b4eadea` | PASS |
+| VYVAR-preview-20260723-linux-x64.tar.gz | `02d96e2a1264ba117eaee425195a09bee7825f7dcbea8e24b8db6a9d384d22b1` | PASS |
+
+**Action:** Milan verify release URL in browser; if public, re-run round-trip from
+release download URLs. Do not re-upload until mismatch root cause is known.
+
+## Preview cut - final verification (PREVIEW-CUT-FINAL 2026-07-23)
+
+### Module count 84 vs 85
+
+RELEASE-1 @ `b4c372a` compiled **84** modules (`module_list()` excluded
+`vyvar_runtime.py`, which did not exist yet). RELEASE-2 commit **`3369832`**
+added `src_py/vyvar_runtime.py` (bundled first-launch bootstrap for
+`resolve_data_root()` / `%LOCALAPPDATA%\\VYVAR`); MODULE_LIST became **85** for
+PREVIEW-CUT builds and selftest.
+
+### Release verify (GitHub)
+
+Release URL: **not confirmed** (anonymous API 404; see Round-trip STOP above).
+
+Expected when visible: pre-release flag true; exactly 3 assets (win64 zip,
+linux-x64 tar.gz, SHA256SUMS).
 
 ## Runbook update -- committed
 

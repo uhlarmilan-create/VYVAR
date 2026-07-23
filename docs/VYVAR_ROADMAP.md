@@ -10,19 +10,22 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## IN-FLIGHT - CYTHON-RELEASE (closed-source bundle, target 2026-08-31)
+## DONE - CYTHON-RELEASE (closed-source bundle; preview 2026-07-23)
 
-**Status:** RELEASE-2 **DONE (2026-07-23)** bundle builder + Win preview smoke PASS.
-RELEASE-1 commits local (not pushed). Result: `dev/results/CURSOR_RESULT_cython_release2.md`.
-**Pending before push:** interpreted `--full` anchor (B2 path change).
+**Status:** **DONE (2026-07-23).** RELEASE-1: 85-module MODULE_LIST compile (84 @ `b4c372a`
++ `vyvar_runtime` @ `3369832`), compiled==interpreted anchor identity. RELEASE-2: bundles,
+embedded runtime, data-dir separation (B2 `--full` PASS). `VYVAR-release` populated;
+`preview-20260723` pre-release (both platforms). Results:
+`dev/results/CURSOR_RESULT_release_close.md`.
+
+**v1.0.0 semantic versioning:** open -- no `v1.0.0` until Milan + Claude declare it.
 
 | Phase | Pri | Deliverable |
 |-------|-----|-------------|
 | **Spike** | HIGH | **DONE (2026-07-21).** |
-| **RELEASE-1** | HIGH | **DONE (2026-07-23).** Full MODULE_LIST compile + anchor identity gates. |
-| **RELEASE-2** | HIGH | **DONE (2026-07-23).** Bundle builder, embedded runtime, data-dir separation, install docs, public_repo staging, runbook. Win bundle smoke PASS. |
-| **RELEASE-2 Linux** | HIGH | WSL Ubuntu 24 bundle + smoke (Milan, per runbook). |
-| **Public upload** | HIGH | Milan: `preview-YYYYMMDD` pre-release on `VYVAR-release`. |
+| **RELEASE-1** | HIGH | **DONE (2026-07-23).** |
+| **RELEASE-2** | HIGH | **DONE (2026-07-23).** Win + Linux preview bundles; smoke PASS. |
+| **Public upload** | HIGH | **DONE (2026-07-23).** `preview-20260723` on `VYVAR-release`. |
 
 Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 

@@ -2,6 +2,25 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+---
+
+## 2026-07-23 -- CYTHON RELEASE arc close (RELEASE-1 / RELEASE-2 / preview cut)
+
+**RELEASE-1:** 85-module MODULE_LIST compile (84 @ `b4c372a` + `vyvar_runtime` @ `3369832`);
+compiled `--full` anchor byte-identical to interpreted (core `03d8fb64...` n=333,
+extended `bbfcc92e...` n=499).
+
+**RELEASE-2:** Self-contained win64 + linux-x64 bundles; embedded Python 3.12;
+`resolve_data_root()` / `%LOCALAPPDATA%\\VYVAR` data-dir separation; B2 interpreted
+`--full` PASS @ `6a05390`. `VYVAR-release` public repo populated (docs only).
+
+**Preview cut:** `preview-20260723` pre-release on `VYVAR-release` (both platforms);
+private tag `preview-20260723` @ `fe574c0`. Result:
+`dev/results/CURSOR_RESULT_release_close.md`.
+
+**Pending:** M71 E2E acceptance; Milan Linux USB field install test. **v1.0.0** versioning
+open (no semantic release until declared).
+
 ## 2026-07-22 -- Session arc (SKIPPROC-QC through OSC-3 push)
 
 **SKIPPROC-QC:** Leak in skip-processed QC allowlist identified, fixed, and pushed.

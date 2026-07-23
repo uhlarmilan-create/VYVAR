@@ -2,7 +2,8 @@ CURSOR RESULT - CYTHON-RELEASE-1 (2026-07-23)
 
 What I did
 Promoted spike Cython tooling to `dev/tools/cython_release/`, compiled the full
-RELEASE-1 MODULE_LIST (84 science modules) on Windows MSVC, ran latent-bug sweep,
+RELEASE-1 MODULE_LIST (**84** science modules @ `b4c372a`; **85** after RELEASE-2
+adds `vyvar_runtime.py` in `3369832`) on Windows MSVC, ran latent-bug sweep,
 import smoke, MP spawn verification, compiled pytest, P1 golden, and `--full` anchor
 gate under compiled build; verified interpreted `--fast` after clean. STOP before push.
 
@@ -47,7 +48,7 @@ No `fix(latent)` commit required.
 
 | Item | Value |
 |------|-------|
-| Modules built | 84 |
+| Modules built | 84 (@ b4c372a; 85 after `3369832` adds `vyvar_runtime`) |
 | .pyd in src_py | 84 |
 | Build wall | ~640 s |
 | Pinned flags | annotation_typing=False, Options.docstrings=False, language_level=3 |

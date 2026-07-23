@@ -11,6 +11,12 @@ Milan explicitly approves.
 
 ## Step 1 - Clean tree + interpreted `--fast`
 
+**Gate hygiene:** clear stale P1 env before pytest counts:
+
+```bat
+Remove-Item Env:VYVAR_INVARIANTS_P1 -ErrorAction SilentlyContinue
+```
+
 ```bat
 cd VYVAR
 git status   REM must be clean except release work
@@ -78,6 +84,16 @@ Do not push until Milan approves.
    - Create GitHub Release in `VYVAR-release` with **pre-release** flag via `gh release create`.
    - Upload `VYVAR-*-win64.zip`, `VYVAR-*-linux-x64.tar.gz`, `SHA256SUMS`.
 6. Do **not** cut a single-platform preview without Milan's explicit say-so.
+
+**gh auth:** `gh release create` runs in Milan's **interactive terminal**; Cursor
+subprocess does not inherit `gh auth` (`%APPDATA%\GitHub CLI\hosts.yml`).
+
+## Platform build hygiene
+
+**`dist/` is NOT shared between Windows and WSL builds.** Use separate dist roots
+(e.g. Windows native `tmp/cython_release/bundle/dist/` vs WSL `/tmp/vyvar_bundle_dist`
+symlink) or fully clean `dist/` between platforms. Mixing WSL symlink staging with
+Windows `build_bundle.py` causes **WinError 1920** on the staging tree.
 
 ## Step 7 - Bookkeeping
 
