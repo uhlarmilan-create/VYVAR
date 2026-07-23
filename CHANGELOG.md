@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Preview bundle (2026-07-23):** launcher isolation (`python -I`) and selftest pin verification
+  (`RUNTIME_PIN.json` dep_versions) to block host-site package shadowing on Linux installs.
+
 ### Added
 - **CONFIG-HUMAN-EDIT (2026-07-18):** `config.json` is now a grouped, commented, `//`-tolerant
   JSONC-lite document that can be edited without the UI; standalone validator

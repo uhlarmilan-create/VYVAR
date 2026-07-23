@@ -106,6 +106,45 @@ def _install_site_packages(python_exe: Path, target: Path, req_lines: list[str])
     )
 
 
+def _pinned_dep_versions(python_exe: Path) -> dict[str, str]:
+    code = (
+        "import importlib.metadata as m\n"
+        "deps = ['numpy','astropy','photutils','streamlit','pandas','scipy']\n"
+        "for d in deps:\n"
+        "    print(d, m.version(d))\n"
+    )
+    proc = subprocess.run(
+        [str(python_exe), "-I", "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    out: dict[str, str] = {}
+    for line in proc.stdout.splitlines():
+        parts = line.strip().split(None, 1)
+        if len(parts) == 2:
+            out[parts[0]] = parts[1]
+    return out
+
+
+def _write_runtime_pin(staging: Path, platform_key: str, pin: RuntimePin, python_exe: Path) -> None:
+    dep_versions = _pinned_dep_versions(python_exe)
+    (staging / "RUNTIME_PIN.json").write_text(
+        json.dumps(
+            {
+                "platform": platform_key,
+                "python_version": pin.version,
+                "url": pin.url,
+                "sha256": pin.sha256 or "(see cache sidecar)",
+                "dep_versions": dep_versions,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="ascii",
+    )
+
+
 def _ascii_fold(text: str) -> str:
     return text.encode("ascii", "replace").decode("ascii")
 
@@ -172,6 +211,7 @@ def _stage_runtime(staging: Path, platform_key: str) -> Path:
 def build_bundle(*, tag: str, platform_key: str, skip_runtime: bool = False) -> Path:
     if platform_key not in RUNTIME_PINS:
         raise SystemExit(f"unknown platform {platform_key}")
+    pin = RUNTIME_PINS[platform_key]
     name = bundle_name(tag, platform_key)
     staging = DIST_DIR / "staging" / name
     if staging.is_dir():
@@ -187,25 +227,24 @@ def build_bundle(*, tag: str, platform_key: str, skip_runtime: bool = False) -> 
         (staging / "THIRD_PARTY_NOTICES.txt").write_text(
             _third_party_notices(site), encoding="ascii"
         )
+        if platform_key == "win64":
+            python_exe = staging / "python" / "python.exe"
+        else:
+            py_home = staging / "python"
+            subs = [p for p in py_home.iterdir() if p.is_dir()]
+            inner = subs[0] if len(subs) == 1 else py_home
+            python_exe = inner / "bin" / "python3"
+            if not python_exe.is_file():
+                python_exe = next(inner.rglob("python3"))
+        _write_runtime_pin(staging, platform_key, pin, python_exe)
     else:
         (staging / "THIRD_PARTY_NOTICES.txt").write_text(
             "THIRD_PARTY_NOTICES skipped (--skip-runtime)\n", encoding="ascii"
         )
-    # Pin record
-    pin = RUNTIME_PINS[platform_key]
-    (staging / "RUNTIME_PIN.json").write_text(
-        json.dumps(
-            {
-                "platform": platform_key,
-                "python_version": pin.version,
-                "url": pin.url,
-                "sha256": pin.sha256 or "(see cache sidecar)",
-            },
-            indent=2,
+        (staging / "RUNTIME_PIN.json").write_text(
+            json.dumps({"platform": platform_key, "dep_versions": {}}, indent=2) + "\n",
+            encoding="ascii",
         )
-        + "\n",
-        encoding="ascii",
-    )
     DIST_DIR.mkdir(parents=True, exist_ok=True)
     if platform_key == "win64":
         out = DIST_DIR / f"{name}.zip"

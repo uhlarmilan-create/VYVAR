@@ -184,7 +184,96 @@ files match expected SHA256 and local `SHA256SUMS`:
 **Action:** Milan verify release URL in browser; if public, re-run round-trip from
 release download URLs. Do not re-upload until mismatch root cause is known.
 
-## Preview cut - final verification (PREVIEW-CUT-FINAL 2026-07-23)
+---
+
+CURSOR RESULT - BUNDLE-ISOLATION-FIX (2026-07-23)
+
+What I did
+Fixed bundled launcher environment isolation (Milan Linux field bug: host numpy
+1.26.4 / astropy 7.2.0 / photutils 1.13.0 shadowed bundle -> ImagePSF missing).
+Launchers use `python -I`; selftest loads `RUNTIME_PIN.json` `dep_versions` and
+FAILs early on version or origin mismatch. Smoke adds contamination regression
+(isolated launcher PASS with poison PYTHONPATH; direct inject FAIL with clear
+message). Cosmetic: generic ui placeholders; public README.md + Releases link.
+Rebuilt win64 + linux-x64; new SHA256SUMS. **STOP before gh re-upload** (Milan).
+
+## Launcher isolation
+
+| File | Change |
+|------|--------|
+| `dev/tools/cython_release/bundle/templates/vyvar.sh` | `unset PYTHONPATH PYTHONHOME PYTHONUSERBASE`; `python -I` for selftest + streamlit |
+| `dev/tools/cython_release/bundle/templates/VYVAR.bat` | clear host env vars; `python -I` for selftest + streamlit |
+
+`-I` verified: streamlit and selftest import from bundled site-packages only.
+
+## Selftest pin verification
+
+| File | Change |
+|------|--------|
+| `dev/tools/cython_release/bundle/build_bundle.py` | `_pinned_dep_versions()` + `_write_runtime_pin()` writes numpy/astropy/photutils/streamlit/pandas/scipy |
+| `dev/tools/cython_release/bundle/templates/vyvar_selftest.py` | fail-fast contamination messages (version + `__file__` under bundle tree) |
+| `dev/tools/cython_release/bundle/bundle_layout.py` | `VYVAR_BUNDLE_DIST` override (WSL native `/tmp/vyvar_bundle_dist` per runbook) |
+
+## Smoke contamination regression
+
+| File | Change |
+|------|--------|
+| `dev/tools/cython_release/bundle/smoke_bundle.py` | poison fake numpy via PYTHONPATH (isolated) + sys.path inject (non-isolated) |
+
+Win64 + linux-x64 smoke PASS (including contamination case).
+
+## Cosmetic / public repo
+
+| File | Change |
+|------|--------|
+| `src_py/ui_photometry_quality.py` | generic `/path/to/...` placeholders (no personal paths) |
+| `release/public_repo/README.md` | default README; [Cesky](README_CZ.md) + Releases link at top |
+| `release/public_repo/README_EN.md` | removed (renamed) |
+| `release/public_repo/CHANGELOG.md` | preview refreshed: launcher isolation fix |
+
+`VYVAR-release` @ `42aef8c` (docs only; pushed earlier this arc).
+
+## Rebuilt preview artifacts (isolation fix)
+
+| Asset | SHA256 | Smoke |
+|-------|--------|-------|
+| `tmp/cython_release/bundle/dist/VYVAR-preview-20260723-win64.zip` | `1b1188ac49fb4f5f1e6343b78a6ac2c4337c901de4d96b0dea372acf96d80dd0` | PASS |
+| `tmp/cython_release/bundle/dist/VYVAR-preview-20260723-linux-x64.tar.gz` | `d80239c7e6c136c15c523337cef4ebd12adb2bd6597bcdb1d3de541f1d69b7b6` | PASS (WSL) |
+
+Combined `tmp/cython_release/bundle/dist/SHA256SUMS` updated (both lines above).
+
+**Previous SHAs (pre-isolation, superseded):**
+win64 `5573d15f...`; linux `02d96e2a...`.
+
+Linux build note: use `VYVAR_BUNDLE_DIST=/tmp/vyvar_bundle_dist` on WSL (avoid NTFS
+terminfo case collision on `/mnt/c`).
+
+## Session baseline
+
+`session_baseline_check.py --fast` with `VYVAR_INVARIANTS_P1=1`: pytest FAIL only
+on unstaged README rename (`README_EN.md` missing on disk); resolves after commit.
+
+## Milan re-upload (STOP -- run in authenticated terminal)
+
+Use **`gh release upload ... --clobber`** (same tag `preview-20260723`; replaces assets):
+
+```bat
+"C:\Program Files\GitHub CLI\gh.exe" release upload preview-20260723 --repo uhlarmilan-create/VYVAR-release --clobber "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-win64.zip" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-linux-x64.tar.gz" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\SHA256SUMS"
+```
+
+Do **not** delete/recreate the release unless upload fails.
+
+## Files changed (private repo)
+
+- `dev/tools/cython_release/bundle/` (templates, build_bundle, smoke_bundle, bundle_layout)
+- `src_py/ui_photometry_quality.py`
+- `release/public_repo/` (README.md, CHANGELOG.md; README_EN.md deleted)
+- `CHANGELOG.md`, `docs/VYVAR_JOURNAL.md`
+- `dev/results/CURSOR_RESULT_release_close.md` (this append)
+
+## ASCII check
+
+This append written with ASCII-only punctuation (no em dash, no Unicode arrows).
 
 ### Module count 84 vs 85
 

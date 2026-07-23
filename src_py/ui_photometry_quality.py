@@ -76,7 +76,7 @@ def render_photometry_quality_diagnostic(*, pipeline: Any, draft_id: int | None)
     _ = (pipeline, draft_id)
     archive_path = st.text_input(
         "Archive path (draft)",
-        placeholder=r"C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000180",
+        placeholder=r"/path/to/Archive/Drafts/draft_000000",
         help="Enter the draft path manually",
     )
     if (not archive_path) or (not os.path.isdir(str(archive_path))):
@@ -131,7 +131,7 @@ def render_photometry_quality_diagnostic(*, pipeline: Any, draft_id: int | None)
 
     fits_path = st.text_input(
         "Background FITS file (optional)",
-        placeholder=r"C:\...\proc_TYC_4062-1642-1_Light_082.fits",
+        placeholder=r"/path/to/detrended_aligned/lights/proc_target_Light_001.fits",
         help="Leave empty for MASTERSTAR.fits, or enter another FITS path",
         key="vyvar_photqa_bg_fits_path",
     ).strip()

@@ -4,6 +4,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-23 -- BUNDLE-ISOLATION-FIX (preview refresh)
+
+**Field bug:** Linux bundle imported host numpy/astropy/photutils (ImagePSF missing).
+**Fix:** `vyvar.sh` / `VYVAR.bat` run bundled `python -I`; selftest verifies
+`RUNTIME_PIN.json` dep versions and `__file__` origins; smoke adds PYTHONPATH
+contamination regression. Rebuilt win64 + linux-x64 preview artifacts; new SHA256SUMS.
+Result append: `dev/results/CURSOR_RESULT_release_close.md` (BUNDLE-ISOLATION-FIX).
+
 ## 2026-07-23 -- CYTHON RELEASE arc close (RELEASE-1 / RELEASE-2 / preview cut)
 
 **RELEASE-1:** 85-module MODULE_LIST compile (84 @ `b4c372a` + `vyvar_runtime` @ `3369832`);

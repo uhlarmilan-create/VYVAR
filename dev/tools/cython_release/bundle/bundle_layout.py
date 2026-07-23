@@ -2,6 +2,7 @@
 """Release bundle layout helpers and assertions."""
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -9,7 +10,8 @@ BUNDLE_DIR = Path(__file__).resolve().parent
 CYTHON_RELEASE = BUNDLE_DIR.parent
 REPO_ROOT = CYTHON_RELEASE.parents[2]
 SRC_PY = REPO_ROOT / "src_py"
-DIST_DIR = REPO_ROOT / "tmp" / "cython_release" / "bundle" / "dist"
+_DEFAULT_DIST = REPO_ROOT / "tmp" / "cython_release" / "bundle" / "dist"
+DIST_DIR = Path(os.environ.get("VYVAR_BUNDLE_DIST", str(_DEFAULT_DIST)))
 
 sys.path.insert(0, str(CYTHON_RELEASE))
 from module_list import derive_module_lists, is_ui_layer  # noqa: E402

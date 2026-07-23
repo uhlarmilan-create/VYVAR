@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib
+import json
+import os
 import platform
 import sys
 from pathlib import Path
@@ -14,20 +16,23 @@ if str(SRC) not in sys.path:
 
 from config import resolve_data_root  # noqa: E402
 
-# Sibling bundle_layout import via path hack for dev smoke runs
-_BUNDLE = INSTALL / "dev" / "tools" / "cython_release" / "bundle"
-if _BUNDLE.is_dir() and str(_BUNDLE.parent) not in sys.path:
-    sys.path.insert(0, str(_BUNDLE.parent.parent))
-    sys.path.insert(0, str(_BUNDLE))
+PINNED_DEPS = (
+    "numpy",
+    "astropy",
+    "photutils",
+    "streamlit",
+    "pandas",
+    "scipy",
+)
 
 
 def _module_list() -> list[str]:
     try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "dev" / "tools" / "cython_release"))
         from module_list import module_list
 
         return module_list()
     except ImportError:
-        # Fallback when running from unpacked bundle without dev tree
         compiled: list[str] = []
         for p in sorted(SRC.glob("*.pyd")) + sorted(SRC.glob("*.so")):
             stem = p.name.split(".cp", 1)[0] if ".cp" in p.name else p.stem
@@ -35,24 +40,90 @@ def _module_list() -> list[str]:
         return sorted(set(compiled))
 
 
+def _bundle_python_roots(install: Path) -> list[Path]:
+    roots: list[Path] = []
+    for rel in ("python", "python/python", "python/Lib/site-packages", "python/python/lib"):
+        p = install / rel
+        if p.is_dir():
+            roots.append(p.resolve())
+    return roots
+
+
+def _load_runtime_pin(install: Path) -> dict:
+    pin_path = install / "RUNTIME_PIN.json"
+    if not pin_path.is_file():
+        raise SystemExit(f"SELFTEST FAIL: missing {pin_path.name}")
+    return json.loads(pin_path.read_text(encoding="utf-8"))
+
+
+def _path_under_bundle(path: Path, install: Path, roots: list[Path]) -> bool:
+    resolved = path.resolve()
+    install_resolved = install.resolve()
+    if str(resolved).startswith(str(install_resolved)):
+        return True
+    for root in roots:
+        try:
+            resolved.relative_to(root)
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def _verify_pinned_deps(install: Path, pin: dict) -> None:
+    expected: dict[str, str] = pin.get("dep_versions") or {}
+    if not expected:
+        raise SystemExit("SELFTEST FAIL: RUNTIME_PIN.json missing dep_versions (rebuild bundle)")
+    roots = _bundle_python_roots(install)
+    for dep in PINNED_DEPS:
+        exp_ver = expected.get(dep)
+        if not exp_ver:
+            print("SELFTEST FAIL:")
+            print(f"  {dep}: missing pinned version in RUNTIME_PIN.json")
+            raise SystemExit(1)
+        try:
+            mod = importlib.import_module(dep)
+        except Exception as exc:  # noqa: BLE001
+            print("SELFTEST FAIL:")
+            print(
+                f"  environment contamination detected: {dep} import failed ({type(exc).__name__}: {exc}) "
+                f"expected {exp_ver} from bundle"
+            )
+            raise SystemExit(1) from exc
+        act_ver = str(getattr(mod, "__version__", "") or "")
+        mod_file = getattr(mod, "__file__", None) or ""
+        origin = Path(mod_file).resolve() if mod_file else None
+        if act_ver != exp_ver:
+            print("SELFTEST FAIL:")
+            print(
+                f"  environment contamination detected: {dep} {act_ver} "
+                f"expected {exp_ver} from bundle"
+            )
+            raise SystemExit(1)
+        if origin is None or not _path_under_bundle(origin, install, roots):
+            origin_s = str(origin) if origin else "(unknown)"
+            print("SELFTEST FAIL:")
+            print(
+                f"  environment contamination detected: {dep} {act_ver} from {origin_s} "
+                f"expected {exp_ver} from bundle"
+            )
+            raise SystemExit(1)
+
+
 def main() -> int:
+    pin = _load_runtime_pin(INSTALL)
+    _verify_pinned_deps(INSTALL, pin)
     data_root = resolve_data_root(INSTALL)
     print(f"VYVAR selftest platform={platform.platform()}")
     print(f"python={sys.version.split()[0]} executable={sys.executable}")
     print(f"install_dir={INSTALL}")
     print(f"data_dir={data_root}")
-    key_deps = (
-        "numpy",
-        "astropy",
-        "photutils",
-        "streamlit",
-        "pandas",
-        "scipy",
-    )
-    for dep in key_deps:
+    print(f"isolated={getattr(sys.flags, 'isolate', None)}")
+    for dep in PINNED_DEPS:
         mod = importlib.import_module(dep)
         ver = getattr(mod, "__version__", "?")
-        print(f"dep {dep}={ver}")
+        origin = getattr(mod, "__file__", "?")
+        print(f"dep {dep}={ver} origin={origin}")
     failures: list[str] = []
     for name in _module_list():
         try:

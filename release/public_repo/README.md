@@ -1,5 +1,10 @@
 # VYVAR
 
+[Cesky](README_CZ.md)
+
+**Download:** [GitHub Releases](https://github.com/uhlarmilan-create/VYVAR-release/releases)
+(`VYVAR-preview-YYYYMMDD-win64.zip` / `linux-x64.tar.gz` + SHA256SUMS).
+
 Automated differential photometry pipeline for variable stars: from raw FITS to
 calibrated, plate-solved, measured light curves with AAVSO / VarAstro export and
 PDF reports.
@@ -26,9 +31,6 @@ are built locally by the user - not shipped with the installer.
 
 See [INSTALL_VYVAR_EN.md](INSTALL_VYVAR_EN.md) (English) or
 [INSTALL_VYVAR_CZ.md](INSTALL_VYVAR_CZ.md) (Czech, ASCII diacritics-free).
-
-Download preview bundles from [GitHub Releases](https://github.com/uhlarmilan-create/VYVAR-release/releases)
-(`VYVAR-preview-YYYYMMDD-win64.zip` / `linux-x64.tar.gz`).
 
 ## License
 
