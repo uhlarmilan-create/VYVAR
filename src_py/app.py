@@ -2595,6 +2595,28 @@ def render_infolog(cfg: AppConfig | None = None) -> None:
     st.code(text, language=None)
 
 
+def _config_cache_fingerprint(cfg: AppConfig) -> str:
+    """Bump Streamlit cache when config.json changes (Settings save)."""
+    path = cfg.data_root / "config.json"
+    try:
+        st = path.stat()
+        return f"{int(st.st_mtime_ns)}:{st.st_size}"
+    except OSError:
+        return "missing"
+
+
+@st.cache_resource
+def _cached_astro_pipeline(database_path: str, config_fingerprint: str) -> AstroPipeline:
+    """One DB connection per Streamlit server process (avoids startup migration races).
+
+    ``config_fingerprint`` is ``config.json`` mtime+size so a Settings save rebuilds
+    ``AppConfig`` instead of reusing a stale cached pipeline.
+    """
+    _ = config_fingerprint
+    cfg = AppConfig()
+    return AstroPipeline(config=cfg)
+
+
 def main() -> None:
     from vyvar_runtime import ensure_release_data_dir
 
@@ -2602,7 +2624,10 @@ def main() -> None:
     cfg = AppConfig()
     cfg.ensure_base_dirs()
     ensure_infolog_logging()
-    pipeline = AstroPipeline(config=cfg)
+    pipeline = _cached_astro_pipeline(
+        str(cfg.database_path.resolve()),
+        _config_cache_fingerprint(cfg),
+    )
 
     # Session guard for long-running pipelines (prevents auto blocks after reload).
     if "_current_session_id" not in st.session_state:

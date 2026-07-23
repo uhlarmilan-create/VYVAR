@@ -27,6 +27,22 @@ _GAIA_DB_GMAG_MAX_CACHE: dict[str, float] = {}
 
 LOGGER = logging.getLogger(__name__)
 
+_SQLITE_CONNECT_TIMEOUT_S = 30.0
+
+
+def open_sqlite_connection(
+    db_path: str | Path,
+    *,
+    timeout: float = _SQLITE_CONNECT_TIMEOUT_S,
+) -> sqlite3.Connection:
+    """Open ``vyvar.sqlite3`` with WAL + busy timeout (Streamlit-safe concurrent access)."""
+    conn = sqlite3.connect(str(db_path), timeout=float(timeout))
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute(f"PRAGMA busy_timeout = {int(float(timeout) * 1000)};")
+    return conn
+
 _EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "SCANNING", "LOCATION"})
 _EDITABLE_DEFAULT_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
 
@@ -876,9 +892,7 @@ class VyvarDatabase:
 
     def __init__(self, db_path: str | Path) -> None:
         self.db_path = str(db_path)
-        self.conn = sqlite3.connect(self.db_path)
-        self.conn.row_factory = sqlite3.Row
-        self._enable_foreign_keys()
+        self.conn = open_sqlite_connection(self.db_path)
         self._create_tables()
         self.initialize_database()
         self._ensure_obs_files_indexes()
@@ -3197,6 +3211,94 @@ class VyvarDatabase:
             gain=gain,
         )
 
+    def _fk_row_exists(self, table: str, row_id: int) -> bool:
+        if table not in ("EQUIPMENTS", "TELESCOPE", "LOCATION", "SCANNING"):
+            raise ValueError(f"unsupported FK table: {table!r}")
+        row = self.conn.execute(
+            f"SELECT 1 FROM {table} WHERE ID = ? LIMIT 1;",
+            (int(row_id),),
+        ).fetchone()
+        return row is not None
+
+    def _validate_observation_foreign_keys(
+        self,
+        *,
+        id_equipments: int,
+        id_telescope: int,
+        id_location: int,
+        id_scanning: int,
+    ) -> None:
+        checks = (
+            ("EQUIPMENTS", int(id_equipments), "equipment/camera"),
+            ("TELESCOPE", int(id_telescope), "telescope"),
+            ("LOCATION", int(id_location), "observatory location"),
+            ("SCANNING", int(id_scanning), "scanning profile (exposure/filter/binning)"),
+        )
+        missing = [
+            f"{label} (id={rid})"
+            for table, rid, label in checks
+            if not self._fk_row_exists(table, rid)
+        ]
+        if missing:
+            raise ValueError(
+                "Observation references missing database row(s): "
+                + ", ".join(missing)
+                + ". Add the required rows in Database Explorer or import with valid FITS metadata."
+            )
+
+    def resolve_import_location_id(
+        self,
+        *,
+        id_location: int | None,
+        cfg_location_id: int,
+    ) -> tuple[int, str | None]:
+        """Return a valid ``LOCATION.ID`` for import, with an optional warning."""
+        candidates: list[int] = []
+        if id_location is not None:
+            try:
+                explicit = int(id_location)
+            except (TypeError, ValueError):
+                explicit = 0
+            if explicit > 0:
+                candidates.append(explicit)
+        try:
+            cfg_id = int(cfg_location_id)
+        except (TypeError, ValueError):
+            cfg_id = 0
+        if cfg_id > 0 and cfg_id not in candidates:
+            candidates.append(cfg_id)
+
+        for idx, lid in enumerate(candidates):
+            if self._fk_row_exists("LOCATION", lid):
+                if idx > 0:
+                    return lid, (
+                        f"Observer location id={candidates[0]} is not in the database; "
+                        f"using location id={lid} instead."
+                    )
+                return lid, None
+
+        default_id = self.get_default_id("LOCATION")
+        if default_id is not None and self._fk_row_exists("LOCATION", int(default_id)):
+            stale = f" id={cfg_id}" if cfg_id > 0 else ""
+            return int(default_id), (
+                f"Configured observer location{stale} is missing from the database; "
+                f"using default location id={int(default_id)}."
+            )
+
+        row = self.conn.execute("SELECT MIN(ID) AS ID FROM LOCATION;").fetchone()
+        if row is not None and row["ID"] is not None:
+            fallback = int(row["ID"])
+            stale = f" id={cfg_id}" if cfg_id > 0 else ""
+            return fallback, (
+                f"Configured observer location{stale} is missing from the database; "
+                f"using first location id={fallback}."
+            )
+
+        raise ValueError(
+            "Cannot import: no LOCATION row in the database. "
+            "Add an observatory site under Database Explorer first."
+        )
+
     def insert_observation(
         self,
         id_equipments: int,
@@ -3216,6 +3318,13 @@ class VyvarDatabase:
             center_of_field_ra=center_of_field_ra,
             center_of_field_de=center_of_field_de,
             observation_start_jd=observation_start_jd,
+        )
+
+        self._validate_observation_foreign_keys(
+            id_equipments=id_equipments,
+            id_telescope=id_telescope,
+            id_location=id_location,
+            id_scanning=id_scanning,
         )
 
         try:
@@ -3739,24 +3848,42 @@ class VyvarDatabase:
 
     def create_draft(self, data: dict[str, Any]) -> int:
         """Create an ingestion draft without Session ID (no astrometry yet)."""
-        cursor = self.conn.execute(
-            """
-            INSERT INTO OBS_DRAFT (
-                ID_EQUIPMENTS, ID_TELESCOPE, ID_LOCATION, ID_SCANNING,
-                OBSERVATIONSTARTJD, CENTEROFFIELDRA, CENTEROFFIELDDE,
-                STATUS, IS_CALIBRATED
-            )
-            VALUES (?, ?, ?, ?, ?, NULL, NULL, 'INGESTED', ?);
-            """,
-            (
-                int(data.get("id_equipments", 1)),
-                int(data.get("id_telescope", 1)),
-                int(data.get("id_location", 1)),
-                int(data.get("id_scanning", 1)),
-                float(data.get("observation_start_jd", 0.0)),
-                1 if bool(data.get("is_calibrated", False)) else 0,
-            ),
+        id_equipments = int(data.get("id_equipments", 1))
+        id_telescope = int(data.get("id_telescope", 1))
+        id_location = int(data.get("id_location", 1))
+        id_scanning = int(data.get("id_scanning", 1))
+        self._validate_observation_foreign_keys(
+            id_equipments=id_equipments,
+            id_telescope=id_telescope,
+            id_location=id_location,
+            id_scanning=id_scanning,
         )
+        try:
+            cursor = self.conn.execute(
+                """
+                INSERT INTO OBS_DRAFT (
+                    ID_EQUIPMENTS, ID_TELESCOPE, ID_LOCATION, ID_SCANNING,
+                    OBSERVATIONSTARTJD, CENTEROFFIELDRA, CENTEROFFIELDDE,
+                    STATUS, IS_CALIBRATED
+                )
+                VALUES (?, ?, ?, ?, ?, NULL, NULL, 'INGESTED', ?);
+                """,
+                (
+                    id_equipments,
+                    id_telescope,
+                    id_location,
+                    id_scanning,
+                    float(data.get("observation_start_jd", 0.0)),
+                    1 if bool(data.get("is_calibrated", False)) else 0,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            if "FOREIGN KEY constraint failed" in str(exc):
+                raise ValueError(
+                    "Cannot create observation draft: foreign-key reference missing "
+                    "(equipment, telescope, location, or scanning)."
+                ) from exc
+            raise
         self.conn.commit()
         return int(cursor.lastrowid)
 
@@ -4355,5 +4482,9 @@ class VyvarDatabase:
         return [dict(r) for r in cur.fetchall()]
 
     def close(self) -> None:
+        try:
+            self.conn.commit()
+        except sqlite3.Error:
+            pass
         self.conn.close()
 

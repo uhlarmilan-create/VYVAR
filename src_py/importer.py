@@ -1723,14 +1723,12 @@ def smart_import_session(
     _cfg_loc_id = (
         int(getattr(_cfg, "observer_location_id", 0) or 0) if _cfg is not None else 0
     )
-    if id_location is not None and int(id_location) > 1:
-        _id_loc = int(id_location)
-    elif _cfg_loc_id > 0:
-        _id_loc = _cfg_loc_id
-    elif id_location is not None:
-        _id_loc = int(id_location)
-    else:
-        _id_loc = 1
+    _id_loc, _loc_warn = pipeline.db.resolve_import_location_id(
+        id_location=id_location,
+        cfg_location_id=_cfg_loc_id,
+    )
+    if _loc_warn:
+        plan.warnings.append(_loc_warn)
 
     if not plan.lights_files:
         raise FileNotFoundError("Missing 'lights' directory! Import aborted.")
