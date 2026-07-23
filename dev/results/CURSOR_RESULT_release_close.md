@@ -142,12 +142,33 @@ gh repo edit uhlarmilan-create/VYVAR-release --description "VYVAR variable-star 
 | Step | Result |
 |------|--------|
 | Pre-push `origin/main` | `893d5d2` |
-| Commits pushed | `1c05bc7` fix(cython), docs commit (this result + runbook) |
+| Commits pushed | `1c05bc7` fix(cython), `b859d3f` docs(release) |
+| Post-push `origin/main` | `b859d3f` |
 | Tag | `preview-20260723` pushed to private repo |
+
+### GitHub Release (VYVAR-release)
+
+**BLOCKED in Cursor shell:** `gh auth status` reports not logged in (no
+`%APPDATA%\GitHub CLI\hosts.yml`). Milan completed auth in interactive session;
+Cursor subprocess does not inherit it. Run locally:
+
+```bat
+"C:\Program Files\GitHub CLI\gh.exe" auth login
+"C:\Program Files\GitHub CLI\gh.exe" repo edit uhlarmilan-create/VYVAR-release --description "VYVAR variable-star photometry pipeline - preview release bundles" --add-topic astronomy --add-topic photometry --add-topic variable-stars --add-topic aavso
+"C:\Program Files\GitHub CLI\gh.exe" release create preview-20260723 --repo uhlarmilan-create/VYVAR-release --prerelease --title "VYVAR preview 2026-07-23" --notes-file tmp\release_close\release_notes_preview-20260723.md tmp\cython_release\bundle\dist\VYVAR-preview-20260723-win64.zip tmp\cython_release\bundle\dist\VYVAR-preview-20260723-linux-x64.tar.gz tmp\cython_release\bundle\dist\SHA256SUMS
+```
+
+Release URL: **pending Milan gh release create** (assets + SHA256SUMS ready in
+`tmp/cython_release/bundle/dist/`).
 
 ### Round-trip integrity
 
-(Downloaded assets re-hashed and compared to SHA256SUMS after `gh release create`.)
+Pending `gh release create` + download verify. Expected hashes:
+
+```
+5573d15f299f0c3abdeaafc0c869102ad24e4a1303745728d2f8d1349b4eadea  VYVAR-preview-20260723-win64.zip
+02d96e2a1264ba117eaee425195a09bee7825f7dcbea8e24b8db6a9d384d22b1  VYVAR-preview-20260723-linux-x64.tar.gz
+```
 
 ## Runbook update -- committed
 
