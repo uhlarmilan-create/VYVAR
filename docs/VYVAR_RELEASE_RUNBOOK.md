@@ -1,0 +1,95 @@
+# VYVAR release runbook (REPEATABLE)
+
+Repeatable ritual for cutting a preview release bundle. **STOP before push** unless
+Milan explicitly approves.
+
+## Prerequisites
+
+- CYTHON-RELEASE-1 tooling green (`dev/tools/cython_release/`)
+- Windows: Visual Studio Build Tools (MSVC) for compile
+- Linux bundle: WSL Ubuntu 24+ with `python3-dev`, `gcc`, repo cloned in WSL
+
+## Step 1 - Clean tree + interpreted `--fast`
+
+```bat
+cd VYVAR
+git status   REM must be clean except release work
+python dev\scripts\session_baseline_check.py --fast
+```
+
+Expect **OVERALL PASS**.
+
+## Step 2 - RELEASE-1 compile + gates
+
+```bat
+python build\setup_cython.py build
+python dev\tools\cython_release\smoke_imports.py
+python dev\tools\cython_release\verify_mp.py
+set PYTHONPATH=src_py
+pytest dev\tests -q
+set VYVAR_INVARIANTS_P1=1
+pytest dev\tests\test_invariants_p1_seed.py dev\tests\test_invariants_p1_golden.py -q
+python dev\scripts\session_baseline_check.py --full
+```
+
+Compiled `--full` must match anchor SHAs (core `03d8fb64...` n=333, extended
+`bbfcc92e...` n=499, science compare 0 failures).
+
+If `src_py` path-resolution changed (B2), interpreted `--full` after `setup_cython.py clean`
+must also PASS byte-identical.
+
+## Step 3 - Windows bundle
+
+```bat
+python dev\tools\cython_release\bundle\build_bundle.py --platform win64 --tag preview-YYYYMMDD
+python dev\tools\cython_release\bundle\smoke_bundle.py --artifact dist\release\VYVAR-preview-YYYYMMDD-win64.zip
+```
+
+## Step 4 - Linux bundle (WSL Ubuntu 24)
+
+One-time WSL setup:
+
+```bash
+sudo apt update && sudo apt install -y python3-dev gcc build-essential
+cd /mnt/c/ASTRO/python/VYVAR   # or clone inside WSL
+python3 build/setup_cython.py build
+python3 dev/tools/cython_release/bundle/build_bundle.py --platform linux-x64 --tag preview-YYYYMMDD
+python3 dev/tools/cython_release/bundle/smoke_bundle.py --artifact dist/release/VYVAR-preview-YYYYMMDD-linux-x64.tar.gz
+```
+
+**Future:** GitHub Actions matrix (win64 + linux-x64) - not implemented in RELEASE-2.
+
+## Step 5 - Tag (private repo)
+
+```bat
+git tag preview-YYYYMMDD
+```
+
+Do not push until Milan approves.
+
+## Step 6 - Public release (Milan, manual)
+
+1. Copy `release/public_repo/*` to `VYVAR-release` repository.
+2. GitHub Releases -> **pre-release** flag.
+3. Upload `VYVAR-*-win64.zip`, `VYVAR-*-linux-x64.tar.gz`, `SHA256SUMS`.
+
+Cursor **never** pushes to `VYVAR-release`.
+
+## Step 7 - Bookkeeping
+
+- Update `dev/validation/VYVAR_VALIDATION_LEDGER.json` (preview bundle stamp)
+- Add `docs/VYVAR_JOURNAL.md` entry
+- Write `dev/results/CURSOR_RESULT_cython_release2.md`
+
+## Runtime pins
+
+See `dev/tools/cython_release/bundle/runtime_pins.py`:
+
+| Platform | Python | Source |
+|----------|--------|--------|
+| win64 | 3.12.10 embed | python.org |
+| linux-x64 | 3.12.8 | python-build-standalone (glibc >= 2.39) |
+
+## Preview versioning (R4)
+
+Tags: `preview-YYYYMMDD` with GitHub pre-release flag. Semantic `v1.0.0` later.

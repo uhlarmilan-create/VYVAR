@@ -12,22 +12,17 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## IN-FLIGHT - CYTHON-RELEASE (closed-source bundle, target 2026-08-31)
 
-**Status:** RELEASE-1 **DONE (2026-07-23)** on Windows MSVC: full MODULE_LIST (84
-modules), P1 golden 7/7 byte-identical, compiled `--full` anchor identity gate,
-pytest compiled green (1115 passed, 5 conditional skips). Result:
-`dev/results/CURSOR_RESULT_cython_release1.md`. **RELEASE-2 queued** (bundling/
-installer: mixed `.pyd`/`.so` + interpreted UI, data-dir separation, Win+Linux
-installers; target **2026-08-31**).
+**Status:** RELEASE-2 **DONE (2026-07-23)** bundle builder + Win preview smoke PASS.
+RELEASE-1 commits local (not pushed). Result: `dev/results/CURSOR_RESULT_cython_release2.md`.
+**Pending before push:** interpreted `--full` anchor (B2 path change).
 
 | Phase | Pri | Deliverable |
 |-------|-----|-------------|
-| **Spike** | HIGH | **DONE (2026-07-21).** py-spy profile + build/setup_cython.py; GO with `annotation_typing=False`; P1 7/7 on 3-module subset (+15.8% P1 headless). |
-| **RELEASE-1** | HIGH | **DONE (2026-07-23).** Full MODULE_LIST compile + anchor identity + MP spawn + conditional-skip pytest policy. Tooling: `dev/tools/cython_release/`. |
-| **RELEASE-2 Bundling** | HIGH | Windows + Linux closed-source bundle; mixed .pyd/.so + interpreted UI layer. |
-| **Data-dir separation** | MED | User data outside install tree. |
-| **Updater** | MED | In-app or sidecar update channel. |
-| **Alpha (Lenovo T460)** | MED | First bundled alpha on target hardware. |
-| **Release** | HIGH | **2026-08-31** public closed-source release. |
+| **Spike** | HIGH | **DONE (2026-07-21).** |
+| **RELEASE-1** | HIGH | **DONE (2026-07-23).** Full MODULE_LIST compile + anchor identity gates. |
+| **RELEASE-2** | HIGH | **DONE (2026-07-23).** Bundle builder, embedded runtime, data-dir separation, install docs, public_repo staging, runbook. Win bundle smoke PASS. |
+| **RELEASE-2 Linux** | HIGH | WSL Ubuntu 24 bundle + smoke (Milan, per runbook). |
+| **Public upload** | HIGH | Milan: `preview-YYYYMMDD` pre-release on `VYVAR-release`. |
 
 Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 

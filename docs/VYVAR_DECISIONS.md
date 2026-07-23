@@ -28,7 +28,25 @@ CYTHON-RELEASE closed-source bundle.
 
 ---
 
-## CYTHON-RELEASE-1 - full-set compile + anchor identity gate (2026-07-23)
+## CYTHON-RELEASE-2 - bundle + embedded runtime + install docs (2026-07-23)
+
+**Decisions (Milan, R1-R6).** Release ships bundled Python 3.12 on Win (embeddable) and
+Linux (python-build-standalone); catalogs never shipped; LICENSE reused; preview tags
+`preview-YYYYMMDD` (pre-release); equipment via DB Explorer; install docs CZ+EN.
+
+**Data-dir separation (B2).** `resolve_data_root()` in `config.py`: `VYVAR_DATA_DIR` env
+override; git dev checkout keeps install root as data root (dev-neutral); bundled installs
+default to `%LOCALAPPDATA%\\VYVAR` / `~/.local/share/vyvar`. First-launch bootstrap in
+`vyvar_runtime.py`. **Requires --full anchor** after path-resolution change.
+
+**Bundle tooling.** `dev/tools/cython_release/bundle/` (`build_bundle.py`, runtime pins,
+launchers, `--selftest`, `smoke_bundle.py`). Public repo content staged under
+`release/public_repo/` (Milan copies to `VYVAR-release`; Cursor never pushes public repo).
+
+**Next.** Milan: WSL Linux bundle + GitHub pre-release upload per `docs/VYVAR_RELEASE_RUNBOOK.md`.
+
+---
+
 
 **Scope (S1-S4).** Release compilation is a packaging step only: `src_py/` stays
 interpreted in git; `.pyd`/`.so` and `build/_cython_out/` are gitignored. Dev/CI

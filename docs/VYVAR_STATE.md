@@ -7,13 +7,13 @@ RELEASE-2 bundling queued 2026-08-31).
 
 Registered params: **271** (was 270; +``osc_channel_binning``).
 
-## Cython release readiness (RELEASE-1 DONE 2026-07-23)
+## Cython release readiness (RELEASE-1 + RELEASE-2)
 
-Full science MODULE_LIST (84 modules) compiles on Windows MSVC with pinned flags
-(`annotation_typing=False`). Compiled P1 golden 7/7 byte-identical; compiled `--full`
-must match anchor SHAs (core `03d8fb64...`, extended `bbfcc92e...`). Dev/CI path
-stays interpreted (`--fast`). Tooling: `dev/tools/cython_release/`. Bundling/installer
-= RELEASE-2 (target 2026-08-31). Result: `dev/results/CURSOR_RESULT_cython_release1.md`.
+RELEASE-1: 84-module compile, anchor identity gates (see `CURSOR_RESULT_cython_release1.md`).
+RELEASE-2: bundle builder (`dev/tools/cython_release/bundle/`), embedded Python 3.12,
+data-dir separation (`VYVAR_DATA_DIR` / `%LOCALAPPDATA%\\VYVAR`), install docs CZ+EN in
+`release/public_repo/`, runbook `docs/VYVAR_RELEASE_RUNBOOK.md`. Windows preview bundle
+smoke PASS. **Before push:** interpreted `--full` (B2 config path change). STOP before push.
 
 ## Invariants program -- honest scope
 
