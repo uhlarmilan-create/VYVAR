@@ -1,0 +1,11 @@
+{
+  "observer_code": "",
+  "archive_root": "",
+  "calibration_library_root": "",
+  "database_path": "",
+  "gaia_db_path": "",
+  "vsx_local_db_path": "",
+  "exoplanet_local_db_path": "exoplanets/vyvar_exoplanet_local.db",
+  "blind_index_fine_path": "",
+  "blind_index_wide_path": ""
+}

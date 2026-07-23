@@ -50,6 +50,10 @@ src_py/*.cpp
 hard_copy_*.patch
 hard_copy_*.bundle
 
+# Release bundle artifacts (RELEASE-2)
+/tmp/cython_release/bundle/dist/
+/dev/tools/cython_release/bundle/cache/
+
 # Scratch workspaces (one-off artifacts + helper scripts)
 /dev/sandbox/
 /tmp/

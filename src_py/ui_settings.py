@@ -1134,7 +1134,7 @@ def render_settings_dashboard(
         cfg.phase01_chip_interior_margin_px = int(max(0, min(2000, p01_chip)))
 
         with ui_config_persist():
-            save_config_json(cfg.project_root, cfg.to_json())
+            save_config_json(cfg.data_root, cfg.to_json())
         cfg.ensure_base_dirs()
         st.success("Saved to `config.json`. Refreshing UI...")
         st.rerun()

@@ -238,7 +238,7 @@ def _apply_and_save(cfg: Any, auto_keys: list[str], entry_by_key: dict[str, Any]
     from config import save_config_json, ui_config_persist
 
     with ui_config_persist():
-        save_config_json(cfg.project_root, cfg.to_json())
+        save_config_json(cfg.data_root, cfg.to_json())
     cfg.ensure_base_dirs()
 
 

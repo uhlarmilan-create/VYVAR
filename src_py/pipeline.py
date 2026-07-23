@@ -16535,9 +16535,10 @@ def _vyvar_parallel_worker_count(app_config: AppConfig | None = None) -> int:
             return max(1, min(32, int(app_config.qc_preprocess_workers)))
         except (TypeError, ValueError):
             pass
-    from config import recommended_vyvar_parallel_workers
+    from config import load_config_json, recommended_vyvar_parallel_workers, resolve_data_root
 
-    data = load_config_json(Path(__file__).resolve().parent.parent)  # src_py -> repo root (config.json)
+    _install = Path(__file__).resolve().parent.parent
+    data = load_config_json(resolve_data_root(_install))
     try:
         res_gb = float(data.get("per_frame_mp_reserve_ram_gb", 1.5))
         if not math.isfinite(res_gb) or res_gb < 0:

@@ -302,7 +302,7 @@ Apply these values manually in the sliders above, or click **Apply suggestions**
             cfg.masterstar_prematch_peak_sigma_floor = float(_sug["masterstar_prematch_peak_sigma_floor"])
             cfg.phase01_comparison_max_dist_deg = float(_sug["phase01_comparison_max_dist_deg"])
             with ui_config_persist():
-                save_config_json(cfg.project_root, cfg.to_json())
+                save_config_json(cfg.data_root, cfg.to_json())
             st.success("Suggestions saved to `config.json`. Refresh the page to reload sliders.")
             st.rerun()
 
@@ -361,7 +361,7 @@ Apply these values manually in the sliders above, or click **Apply suggestions**
             cfg.masterstar_sibling_min_quadrants = int(sibling_quad)
             cfg.masterstar_sibling_stack_n = int(sibling_stk)
             with ui_config_persist():
-                save_config_json(cfg.project_root, cfg.to_json())
+                save_config_json(cfg.data_root, cfg.to_json())
             st.success(
                 "Saved. The next **MASTERSTARS** / worker run will use the new values "
                 "(this session still holds the previous `cfg` in memory)."

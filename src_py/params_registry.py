@@ -85,9 +85,16 @@ def appconfig_fields() -> list[dataclasses.Field]:
     return list(dataclasses.fields(config.AppConfig))
 
 
+_INTERNAL_APP_CONFIG_FIELDS = frozenset({"data_root"})
+
+
 def appconfig_field_names() -> set[str]:
     """Public (non underscore-prefixed) AppConfig field names."""
-    return {f.name for f in appconfig_fields() if not f.name.startswith("_")}
+    return {
+        f.name
+        for f in appconfig_fields()
+        if not f.name.startswith("_") and f.name not in _INTERNAL_APP_CONFIG_FIELDS
+    }
 
 
 def appconfig_field_types() -> dict[str, str]:

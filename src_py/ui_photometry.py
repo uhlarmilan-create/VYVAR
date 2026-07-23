@@ -50,7 +50,7 @@ def render_photometry_dashboard(cfg: AppConfig) -> None:
     if selected_mode != _current_mode:
         cfg.photometry_mode = selected_mode
         with ui_config_persist():
-            save_config_json(cfg.project_root, cfg.to_json())
+            save_config_json(cfg.data_root, cfg.to_json())
         st.info(
             f"Photometry mode set to '{selected_mode}'. "
             "This takes effect on the next RUN VYVAR."
@@ -104,7 +104,7 @@ def render_photometry_dashboard(cfg: AppConfig) -> None:
         cfg.save_lightcurve_png = bool(save_png)
         cfg.psf_photometry_enabled = bool(psf_on)
         with ui_config_persist():
-            save_config_json(cfg.project_root, cfg.to_json())
+            save_config_json(cfg.data_root, cfg.to_json())
         cfg.ensure_base_dirs()
         st.success("Saved to `config.json`. Refreshing UI...")
         st.rerun()

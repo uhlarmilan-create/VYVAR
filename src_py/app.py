@@ -2051,7 +2051,7 @@ def render_live_view(
                     cfg.observer_alt_m = float(_loc_row["alt_m"])
                     cfg.observer_location_name = str(_loc_row.get("name") or "")
                     with ui_config_persist():
-                        save_config_json(cfg.project_root, cfg.to_json())
+                        save_config_json(cfg.data_root, cfg.to_json())
                     LOGGER.info(
                         f"Observer location set: {cfg.observer_location_name} "
                         f"(lat={cfg.observer_lat}, lon={cfg.observer_lon}, alt={cfg.observer_alt_m}m)"
@@ -2596,6 +2596,9 @@ def render_infolog(cfg: AppConfig | None = None) -> None:
 
 
 def main() -> None:
+    from vyvar_runtime import ensure_release_data_dir
+
+    ensure_release_data_dir(Path(__file__).resolve().parent.parent)
     cfg = AppConfig()
     cfg.ensure_base_dirs()
     ensure_infolog_logging()

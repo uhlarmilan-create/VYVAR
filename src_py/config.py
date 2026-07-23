@@ -12,9 +12,51 @@ import logging
 import math
 import os
 import sqlite3
+import sys
 import textwrap
 from pathlib import Path
 from typing import Any
+
+
+def is_git_dev_checkout(install_root: Path) -> bool:
+    """True when running from a git clone (dev/CI path uses install tree as data root)."""
+    return (install_root / ".git").is_dir()
+
+
+def default_release_data_dir() -> Path:
+    """Default user data directory for bundled installs (RELEASE-2 / R1)."""
+    if sys.platform == "win32":
+        local = os.environ.get("LOCALAPPDATA", "").strip()
+        if local:
+            return (Path(local) / "VYVAR").resolve()
+    return (Path.home() / ".local" / "share" / "vyvar").resolve()
+
+
+def resolve_data_root(install_root: Path) -> Path:
+    """Resolve the user data root (config, DB, Archive, catalogs).
+
+    Precedence: ``VYVAR_DATA_DIR`` env -> git dev checkout (install root) ->
+    bundled install (platform default) when bundle markers/env present ->
+    install root (tests and explicit ``project_root`` overrides).
+    """
+    override = os.environ.get("VYVAR_DATA_DIR", "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    root = install_root.resolve()
+    if is_git_dev_checkout(root):
+        return root
+    bundle_flag = os.environ.get("VYVAR_RELEASE_BUNDLE", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    bundle_layout = (root / "RUNTIME_PIN.json").is_file() or (
+        root / "python" / "python.exe"
+    ).is_file() or (root / "python" / "bin" / "python3").is_file()
+    if bundle_flag or bundle_layout:
+        return default_release_data_dir()
+    return root
 
 
 def config_json_path(project_root: Path) -> Path:
@@ -993,12 +1035,14 @@ class AppConfig:
     frame_align_residual_min_keep_frames: int = 10  # safety floor: skip gate if it would drop below this
 
     # Paths derived from config.json (must stay after all init=True fields for dataclass(slots=True)).
+    data_root: Path = field(init=False)
     archive_root: Path = field(init=False)
     calibration_library_root: Path = field(init=False)
     database_path: Path = field(init=False)
 
     def __post_init__(self) -> None:
-        data = load_config_json(self.project_root)
+        self.data_root = resolve_data_root(self.project_root)
+        data = load_config_json(self.data_root)
 
         # A blank ("" / whitespace) path value means "use the project-root default" -- the
         # same as omitting the key. This keeps a relocated/fresh install working: the
@@ -1009,12 +1053,12 @@ class AppConfig:
             raw = str(data.get(key) or "").strip()
             return Path(raw) if raw else default
 
-        self.archive_root = _path_or_default("archive_root", self.project_root / "Archive")
+        self.archive_root = _path_or_default("archive_root", self.data_root / "Archive")
         self.calibration_library_root = _path_or_default(
-            "calibration_library_root", self.project_root / "CalibrationLibrary"
+            "calibration_library_root", self.data_root / "CalibrationLibrary"
         )
         self.database_path = _path_or_default(
-            "database_path", self.project_root / "vyvar.sqlite3"
+            "database_path", self.data_root / "vyvar.sqlite3"
         )
 
         self.masterdark_validity_days = int(data.get("masterdark_validity_days", 90))
@@ -1138,7 +1182,7 @@ class AppConfig:
             self.hrd_color_bg_box_px = 96
         self.hrd_color_bg_box_px = max(32, min(512, int(self.hrd_color_bg_box_px)))
 
-        gaia_dir = self.project_root / "GAIA_DR3"
+        gaia_dir = self.data_root / "GAIA_DR3"
         _fine_default = str(gaia_dir / "gaia_triangles_fine.pkl")
         _wide_default = str(gaia_dir / "gaia_triangles_wide.pkl")
         legacy_blind = str(
