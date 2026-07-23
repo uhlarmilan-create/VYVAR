@@ -19,6 +19,8 @@ sys.path.insert(0, str(BUNDLE_DIR))
 from bundle_layout import (  # noqa: E402
     DIST_DIR,
     REPO_ROOT,
+    REQUIRED_RUNTIME_FILES,
+    RUNTIME_FILE_SOURCES,
     SRC_PY,
     assert_no_compiled_py_sources,
     bundle_name,
@@ -137,6 +139,7 @@ def _write_runtime_pin(staging: Path, platform_key: str, pin: RuntimePin, python
                 "url": pin.url,
                 "sha256": pin.sha256 or "(see cache sidecar)",
                 "dep_versions": dep_versions,
+                "required_files": list(REQUIRED_RUNTIME_FILES),
             },
             indent=2,
         )
@@ -188,6 +191,25 @@ def _write_root_shim(staging: Path) -> None:
     shutil.copy2(REPO_ROOT / "app.py", staging / "app.py")
 
 
+def _copy_runtime_data_files(staging: Path) -> None:
+    """Ship install-root data files that src_py reads at runtime."""
+    for rel, src in RUNTIME_FILE_SOURCES.items():
+        if not src.is_file():
+            raise SystemExit(f"REFUSE: required runtime file missing in repo: {rel} ({src})")
+        dest = staging / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+
+
+def _assert_runtime_files(staging: Path) -> None:
+    missing = [rel for rel in REQUIRED_RUNTIME_FILES if not (staging / rel).is_file()]
+    if missing:
+        raise SystemExit(
+            "Bundle assertion failed: required runtime files missing from staging:\n  "
+            + "\n  ".join(missing)
+        )
+
+
 def _stage_runtime(staging: Path, platform_key: str) -> Path:
     pin = RUNTIME_PINS[platform_key]
     archive = fetch_runtime_archive(platform_key)
@@ -219,9 +241,12 @@ def build_bundle(*, tag: str, platform_key: str, skip_runtime: bool = False) -> 
     staging.mkdir(parents=True)
     _copy_science_and_ui(staging, platform_key)
     _write_root_shim(staging)
-    for tpl in ("VYVAR.bat", "vyvar.sh", "vyvar_selftest.py", "config.template.json"):
+    _copy_runtime_data_files(staging)
+    for tpl in ("VYVAR.bat", "vyvar.sh", "vyvar_selftest.py"):
         shutil.copy2(TEMPLATES / tpl, staging / tpl)
+    shutil.copy2(TEMPLATES / "config.template.json", staging / "config.template.json")
     shutil.copy2(REPO_ROOT / "LICENSE", staging / "LICENSE")
+    _assert_runtime_files(staging)
     if not skip_runtime:
         site = _stage_runtime(staging, platform_key)
         (staging / "THIRD_PARTY_NOTICES.txt").write_text(

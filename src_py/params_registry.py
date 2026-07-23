@@ -63,6 +63,10 @@ def load_registry(path: Path | None = None) -> dict[str, dict[str, Any]]:
     that is NOT a parameter and are stripped here, so parity with AppConfig fields holds.
     """
     p = path or REGISTRY_PATH
+    if not p.is_file():
+        raise FileNotFoundError(
+            f"parameter registry missing: {p} (release bundle must ship dev/validation/params_registry.json)"
+        )
     raw = json.loads(p.read_text(encoding="utf-8"))
     return {k: v for k, v in raw.items() if not k.startswith("__")}
 
@@ -70,6 +74,10 @@ def load_registry(path: Path | None = None) -> dict[str, dict[str, Any]]:
 def load_registry_meta(path: Path | None = None) -> dict[str, Any]:
     """Return the reserved ``__meta__`` block of the registry (editorial metadata)."""
     p = path or REGISTRY_PATH
+    if not p.is_file():
+        raise FileNotFoundError(
+            f"parameter registry missing: {p} (release bundle must ship dev/validation/params_registry.json)"
+        )
     raw = json.loads(p.read_text(encoding="utf-8"))
     meta = raw.get("__meta__")
     return meta if isinstance(meta, dict) else {}

@@ -110,9 +110,41 @@ def _verify_pinned_deps(install: Path, pin: dict) -> None:
             raise SystemExit(1)
 
 
+def _verify_required_files(install: Path, pin: dict) -> None:
+    required: list[str] = list(pin.get("required_files") or [])
+    if not required:
+        raise SystemExit("SELFTEST FAIL: RUNTIME_PIN.json missing required_files (rebuild bundle)")
+    missing = [rel for rel in required if not (install / rel).is_file()]
+    if missing:
+        print("SELFTEST FAIL:")
+        for rel in missing:
+            print(f"  required runtime file missing: {rel}")
+        raise SystemExit(1)
+
+
+def _verify_runtime_loaders(install: Path) -> None:
+    import citations
+    import params_registry as pr
+
+    reg = pr.load_registry()
+    if not reg:
+        print("SELFTEST FAIL:")
+        print("  params_registry.load_registry() returned empty registry")
+        raise SystemExit(1)
+    bib = citations.load_citations_bib()
+    logo = install / "img" / "VYVAR_logo.png"
+    if not logo.is_file():
+        print("SELFTEST FAIL:")
+        print(f"  missing PDF logo: {logo}")
+        raise SystemExit(1)
+    print(f"runtime_data OK registry_keys={len(reg)} citations={len(bib)}")
+
+
 def main() -> int:
     pin = _load_runtime_pin(INSTALL)
+    _verify_required_files(INSTALL, pin)
     _verify_pinned_deps(INSTALL, pin)
+    _verify_runtime_loaders(INSTALL)
     data_root = resolve_data_root(INSTALL)
     print(f"VYVAR selftest platform={platform.platform()}")
     print(f"python={sys.version.split()[0]} executable={sys.executable}")

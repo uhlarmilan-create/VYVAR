@@ -13,6 +13,21 @@ SRC_PY = REPO_ROOT / "src_py"
 _DEFAULT_DIST = REPO_ROOT / "tmp" / "cython_release" / "bundle" / "dist"
 DIST_DIR = Path(os.environ.get("VYVAR_BUNDLE_DIST", str(_DEFAULT_DIST)))
 
+# Install-root paths required in the release bundle (manifest guard + selftest).
+REQUIRED_RUNTIME_FILES: tuple[str, ...] = (
+    "dev/validation/params_registry.json",
+    "CITATIONS.bib",
+    "img/VYVAR_logo.png",
+    "config.template.json",
+)
+
+# Repo sources for runtime files (install-relative path -> source file).
+RUNTIME_FILE_SOURCES: dict[str, Path] = {
+    "dev/validation/params_registry.json": REPO_ROOT / "dev" / "validation" / "params_registry.json",
+    "CITATIONS.bib": REPO_ROOT / "CITATIONS.bib",
+    "img/VYVAR_logo.png": REPO_ROOT / "img" / "VYVAR_logo.png",
+}
+
 sys.path.insert(0, str(CYTHON_RELEASE))
 from module_list import derive_module_lists, is_ui_layer  # noqa: E402
 

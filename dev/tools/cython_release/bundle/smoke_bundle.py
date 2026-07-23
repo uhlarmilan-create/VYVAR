@@ -14,7 +14,7 @@ from pathlib import Path
 BUNDLE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BUNDLE_DIR))
 
-from bundle_layout import DIST_DIR, assert_no_compiled_py_sources, compiled_module_stems  # noqa: E402
+from bundle_layout import DIST_DIR, REQUIRED_RUNTIME_FILES, assert_no_compiled_py_sources, compiled_module_stems  # noqa: E402
 
 SMOKE_DIST = Path(os.environ.get("VYVAR_BUNDLE_SMOKE_DIST", str(DIST_DIR)))
 
@@ -120,6 +120,39 @@ def _contamination_regression(bundle_root: Path) -> None:
         )
 
 
+def _runtime_loaders_smoke(bundle_root: Path) -> None:
+    py = _bundle_python_exe(bundle_root)
+    rels = list(REQUIRED_RUNTIME_FILES)
+    code = (
+        "import sys\n"
+        "from pathlib import Path\n"
+        f"INSTALL = Path({str(bundle_root)!r})\n"
+        "SRC = INSTALL / 'src_py'\n"
+        "sys.path.insert(0, str(SRC))\n"
+        "import params_registry as pr\n"
+        "import citations\n"
+        "reg = pr.load_registry()\n"
+        "if not reg:\n"
+        "    raise SystemExit('empty params registry')\n"
+        "bib = citations.load_citations_bib()\n"
+        f"for rel in {rels!r}:\n"
+        "    p = INSTALL / rel\n"
+        "    if not p.is_file():\n"
+        "        raise SystemExit(f'missing required runtime file: {rel}')\n"
+        "print(f'runtime_loaders OK keys={len(reg)} citations={len(bib)}')\n"
+    )
+    proc = subprocess.run(
+        [str(py), "-I", "-c", code],
+        cwd=str(bundle_root),
+        capture_output=True,
+        text=True,
+    )
+    combined = (proc.stdout or "") + (proc.stderr or "")
+    if proc.returncode != 0:
+        log = _write_log(combined)
+        raise SystemExit(f"runtime loaders smoke FAIL log={log}")
+
+
 def smoke(artifact: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="vyvar_bundle_smoke ") as tmp:
         root = Path(tmp)
@@ -130,6 +163,7 @@ def smoke(artifact: Path) -> None:
         log = _write_log((proc.stdout or "") + (proc.stderr or ""))
         if proc.returncode != 0:
             raise SystemExit(f"bundle smoke FAIL exit={proc.returncode} log={log}")
+        _runtime_loaders_smoke(bundle_root)
         _contamination_regression(bundle_root)
         print(f"bundle smoke PASS log={log}")
 

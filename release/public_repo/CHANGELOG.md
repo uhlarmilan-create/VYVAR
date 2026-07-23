@@ -3,6 +3,7 @@
 ## preview-20260723 (pre-release)
 
 - Preview refreshed: launcher isolation fix (`python -I`; pin verification in selftest)
+- Preview refreshed: runtime data files shipped (params_registry.json, CITATIONS.bib, logo)
 - First preview bundle: Windows win64 + Linux x64
 - Bundled Python 3.12 runtime (embedded / python-build-standalone)
 - 85 compiled science modules + interpreted Streamlit UI

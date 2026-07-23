@@ -4,6 +4,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-23 -- BUNDLE-DATA-FILES (preview refresh)
+
+**Field bug #2:** Settings tab crashed on missing `dev/validation/params_registry.json`.
+**Fix:** runtime dependency sweep; ship required install-root data files at the same
+relative paths; `REQUIRED_RUNTIME_FILES` manifest guard in `build_bundle.py`; selftest
++ smoke loader checks. Rebuilt preview artifacts. Result append in
+`dev/results/CURSOR_RESULT_release_close.md`.
+
 ## 2026-07-23 -- BUNDLE-ISOLATION-FIX (preview refresh)
 
 **Field bug:** Linux bundle imported host numpy/astropy/photutils (ImagePSF missing).

@@ -275,6 +275,67 @@ Do **not** delete/recreate the release unless upload fails.
 
 This append written with ASCII-only punctuation (no em dash, no Unicode arrows).
 
+---
+
+CURSOR RESULT - BUNDLE-DATA-FILES (2026-07-23)
+
+What I did
+Fixed field bug #2: Settings tab crashed on missing `dev/validation/params_registry.json`.
+Runtime dependency sweep, ship required install-root data files, manifest guard in
+`build_bundle.py`, selftest + smoke loader checks. Graceful UI fallback if registry
+missing. Rebuilt win64 + linux-x64 preview bundles. **STOP before gh re-upload**.
+
+## Runtime dependency sweep
+
+| File (install-relative) | Consumer | Trigger | Disposition |
+|-------------------------|----------|---------|-------------|
+| `dev/validation/params_registry.json` | `params_registry.load_registry()` | Settings -> Parameters; config save; PDF config appendix | **(a) Shipped** |
+| `CITATIONS.bib` | `citations.load_citations_bib()` | Phase 2A export; PDF methods/citations | **(a) Shipped** |
+| `img/VYVAR_logo.png` | `photometry_report` cover | PDF after VAR-STREM / Aperture Photometry | **(a) Shipped** |
+| `config.template.json` | `vyvar_runtime.ensure_release_data_dir()` | First bundled app launch | **(a) Shipped** (template) |
+| `dev/scripts/diagnose_psf_elongation_362.py` | `psf_photometry._epsf_augment_*` | ePSF broad-pool augment | **(b) Degrades** (warn + skip; not shipped) |
+| `docs/*`, validation ledger | (none) | n/a | Not read at runtime |
+| `.git/` / git subprocess | provenance helpers | pipeline_meta / HRD caption | **(b) Degrades** to null/nogit |
+
+## Manifest guard
+
+- `bundle_layout.REQUIRED_RUNTIME_FILES` + `RUNTIME_FILE_SOURCES`
+- `build_bundle._copy_runtime_data_files()` + `_assert_runtime_files()` (build fails if missing)
+- `RUNTIME_PIN.json` gains `required_files` list
+- `vyvar_selftest.py`: presence check + `load_registry()` / `load_citations_bib()` calls
+- `smoke_bundle.py`: `_runtime_loaders_smoke()` from bundled interpreter
+
+## Code hardening
+
+- `params_registry.load_registry()` / `load_registry_meta()`: explicit `FileNotFoundError`
+- `ui_params_dashboard.render_params_dashboard()`: warning + return (no crash)
+
+## Rebuilt preview artifacts
+
+| Asset | SHA256 | Smoke |
+|-------|--------|-------|
+| `VYVAR-preview-20260723-win64.zip` | `129ec09ecd976c7ed5ad4a15b7b88c2a217f12a5c1d7ddde4bb2153cadfb1ae6` | PASS |
+| `VYVAR-preview-20260723-linux-x64.tar.gz` | `3afe17b2c37f80142b903a7dffbfacedaa5a1ed9f904ea36b5b34070a5d99e43` | PASS (WSL) |
+
+Supersedes isolation-only SHAs: win64 `1b1188ac...`; linux `d80239c7...`.
+
+## Milan re-upload (STOP)
+
+```bat
+"C:\Program Files\GitHub CLI\gh.exe" release upload preview-20260723 --repo uhlarmilan-create/VYVAR-release --clobber "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-win64.zip" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-linux-x64.tar.gz" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\SHA256SUMS"
+```
+
+## Files changed
+
+- `dev/tools/cython_release/bundle/` (bundle_layout, build_bundle, smoke_bundle, vyvar_selftest template)
+- `src_py/params_registry.py`, `src_py/ui_params_dashboard.py`
+- `CHANGELOG.md`, `release/public_repo/CHANGELOG.md`, `docs/VYVAR_JOURNAL.md`
+- `dev/results/CURSOR_RESULT_release_close.md` (this append)
+
+## ASCII check
+
+This append written with ASCII-only punctuation (no em dash, no Unicode arrows).
+
 ### Module count 84 vs 85
 
 RELEASE-1 @ `b4c372a` compiled **84** modules (`module_list()` excluded

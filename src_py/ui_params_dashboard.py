@@ -276,7 +276,12 @@ def render_params_dashboard(cfg: Any, *, pipeline_meta: dict[str, Any] | None = 
     as before), db_static keys are read-only observatory facts, fits_dynamic keys are
     read-only runtime-resolved values, and internal keys are not rendered.
     """
-    registry = pr.load_registry()
+    try:
+        registry = pr.load_registry()
+    except FileNotFoundError as exc:
+        st.warning("Parameters dashboard is not available in this install (registry file missing).")
+        st.caption(str(exc))
+        return
     types = pr.appconfig_field_types()
     defaults = pr.appconfig_defaults()
 
