@@ -31,6 +31,23 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 ---
 
+## OPEN - Post-preview validation and docs (2026-07-23)
+
+| ID | Pri | Status / deliverable |
+|----|-----|----------------------|
+| **CONFIG-MATERIALIZE-CHECK** | MED | Wired in BUNDLE-FRESH-CONFIG (`vyvar_runtime.ensure_release_data_dir` -> `materialize_fresh_config_json`; called from `app.py` on launch). **Remaining:** confirm on Milan's real bundled first launch that `config.json` lands in the data dir with all persisted keys; selftest fresh-config smoke covers bootstrap in tmp dir. |
+| **INSTALL-GAIA-DEC-CUTOUT** | MED | Docs: Gaia builder supports `--dec-min` / `--dec-max`; INSTALL should lead with a declination cutout decision (observer southernmost usable DEC), size/time table, and note ESA archive login is **optional**. |
+| **V1-VALIDATION-PROTOCOL** | HIGH | Enrich validation strategy: detrended_aligned validation packs (small frame-level pack across many fields; large LC pack for 1-2 fields via split release assets; one raw-FITS E2E mini field). ePSF validation: internal ePSF-vs-aperture identity; DAOPHOT/allstar independent PSF reference; independent plain-photutils EPSFBuilder script. Comparison: Munipack/SExtractor/IRAF headless in Claude sandbox; AIJ hybrid (Milan GUI, Claude evaluates exports). Scripted PDF QA (overflow/clipping/encoding + report-vs-CSV consistency). Fallback: Claude-authored harness on Milan full data. Sandbox capable: headless installs, P1-golden E2E, bundle verification. NOT capable: visual UI clicking, ESA archive downloads. |
+| **M71 E2E acceptance** | HIGH | OSC arc code-complete; M71 validation dataset (eq id=5). |
+| **Milan field Linux testing** | HIGH | Real Linux box: DB + catalogs + calibration in progress; first full pipeline run pending. |
+| **CITATIONS.bib ASCII disposition** | LOW | Open encoding/normalization decision for bundled citations file. |
+| **KNOWN_REMOVED_KEYS builder-prose sweep** | LOW | Docs-guard sweep for removed config keys still mentioned in builder prose. |
+| **preprocess-QC summary durability** | MED | Persist QC summary into `pipeline_meta.json` (survive reruns). |
+| **mono gaia_johnson adoption** | MED | Gated mono path adoption of `gaia_johnson` catalog helper. |
+| **v1.0.0 declaration** | HIGH | Joint Milan + Claude decision; open. |
+
+---
+
 ## QUEUED - VYVAR-INVARIANTS (starts after Anchor #3)
 
 **Status:** **UNBLOCKED** (2026-07-16). Anchor #3 ACTIVE (`VL-ANCHOR-WCSINV` /

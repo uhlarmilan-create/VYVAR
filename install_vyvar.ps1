@@ -356,7 +356,7 @@ function Invoke-PhaseFinish($catalog) {
     Write-Host ''
     Write-Info 'Full walk-through:  docs\VYVAR_INSTALL_GUIDE_CZ.pdf'
     Write-Info 'Every config key:   docs\VYVAR_CONFIG_GUIDE_CZ.md (CZ) / docs\VYVAR_CONFIG_GUIDE_EN.md (EN)'
-    Write-Info 'Install reference:   INSTALL.md'
+    Write-Info 'Install reference:   docs/INSTALL.md'
     if ($catalog.Mode -eq 'skip') {
         Write-Host ''
         Write-Warn2 'LIMITED MODE: catalogs were skipped - add them (re-run installer, option 1)'

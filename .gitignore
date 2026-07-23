@@ -37,12 +37,17 @@ dist/
 *.egg-info/
 # Cython release build (scripts under build/ are tracked)
 build/temp.*/
+build/lib.*/
 build/_cython_out/
 build/**/*.c
 build/**/*.cpp
 build/**/*.obj
+/*.pyd
+/*.so
+/*.pyd.bak
 src_py/*.pyd
 src_py/*.so
+src_py/*.pyd.bak
 src_py/*.c
 src_py/*.cpp
 

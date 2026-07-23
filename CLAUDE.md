@@ -24,8 +24,10 @@ State and process docs live under `docs/`:
   `dev/orchestrator/`, and `dev/results/` for ALL `CURSOR_RESULT_*.md` /
   `CURSOR_TASK_*.md` working documents (current and future).
 - Root keeps only: `config.json`, `pyproject.toml`, `requirements.txt`,
-  `.gitignore`, `README.md`, `README_CZ.md`, `LICENSE`, `CLAUDE.md`,
-  `CHANGELOG.md`, `CITATIONS.bib`, and the `app.py` shim.
+  `.gitignore`, `README.md` (thin GitHub landing; links into `docs/`), `LICENSE`,
+  `CLAUDE.md`, `CHANGELOG.md`, `CITATIONS.bib`, and the `app.py` shim.
+- User-facing docs in `docs/`: `README_FULL.md`, `README_CZ.md`, `INSTALL.md`, plus
+  STATE/ROADMAP/JOURNAL/process guides.
 - `tmp/` -- gitignored disposable scratch (helpers, one-off harnesses, outputs).
   Nothing tracked lives here.
 - UNTOUCHED data roots: `GAIA_DR3/`, `Archive/`, `docs/`, `exoplanets/`,

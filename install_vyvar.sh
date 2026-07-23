@@ -250,7 +250,7 @@ phase_finish() {
     echo ""
     info "Full walk-through:  docs/VYVAR_INSTALL_GUIDE_CZ.pdf"
     info "Every config key:   docs/VYVAR_CONFIG_GUIDE_CZ.md / docs/VYVAR_CONFIG_GUIDE_EN.md"
-    info "Install reference:   INSTALL.md"
+    info "Install reference:   docs/INSTALL.md"
     if [ "$CATALOG_MODE" = "skip" ]; then
         echo ""
         warn "LIMITED MODE: catalogs skipped - add them (re-run installer, option 1)."

@@ -6,6 +6,27 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+---
+
+## 2026-07-23 -- SESSION-CLOSE (preview-20260723 field-fix arc)
+
+**Preview cut:** `preview-20260723` live on `VYVAR-release` (win64 + linux-x64). Four
+same-day field bugs found during Milan Linux install testing; all fixed and bundles refreshed.
+
+| Arc | Bug | Fix summary |
+|-----|-----|-------------|
+| BUNDLE-ISOLATION-FIX | #1 host site-packages shadowing | `python -I` launchers; selftest pin verification; contamination regression |
+| BUNDLE-DATA-FILES | #2 missing params_registry.json | Runtime-file manifest + graceful UI fallback |
+| BUNDLE-CATALOG-SCRIPTS | #3 missing catalog builders / skeleton | `scripts/catalogs/` + `--tool`; data-dir skeleton incl. `Archive/Drafts/` |
+| BUNDLE-FRESH-CONFIG | #4 Parameters `float(None)` crash | Canonical first-run config materialization; None-safe widgets; registry sweep test |
+
+**Final artifact SHAs:** win64 `30c2b2ba...`; linux-x64 `98e10cef...`. Verified 3-way: Cursor
+smoke (incl. fresh-config sweep + skeleton), Claude sandbox round-trip v3 (poisoned PYTHONPATH,
+271-key widget sweep), Milan field Linux install in progress (DB + catalogs + calibration).
+
+**Housekeeping (this close):** compiled-artifact tree hygiene + post-bundle auto-clean;
+user docs moved under `docs/` with thin root `README.md` landing.
+
 ## 2026-07-23 -- BUNDLE-FRESH-CONFIG (preview refresh)
 
 **Field finding #4:** Settings Parameters tab crashed on fresh install (`float(None)` in

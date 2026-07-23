@@ -10,7 +10,8 @@ For a narrated, step-by-step walk-through in Czech, see
 `docs/VYVAR_INSTALL_GUIDE_CZ.pdf`. For what every configuration key means, see
 `docs/VYVAR_CONFIG_GUIDE_EN.md` (English) or `docs/VYVAR_CONFIG_GUIDE_CZ.md`
 (Czech), or the in-depth `docs/VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech). For a
-project overview, see `README.md` / `README_CZ.md`.
+project overview, see `docs/README_FULL.md` / `docs/README_CZ.md` (or `README.md` at the repo
+root for the thin landing page with links).
 
 ## Prerequisites
 

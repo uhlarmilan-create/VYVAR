@@ -172,7 +172,7 @@ st.append(tab([
  ["Stavba Gaia katalogu prerusena","Spustte build_gaia_catalog.py znovu - pokracuje od posledniho pasu (resume)."],
 ], [52,116]))
 st.append(P("10. Kam dal", H1))
-st.append(P("[b]VYVAR_CONFIG_GUIDE_CZ.md[/b] - rychla reference vsech parametru. [b]VYVAR_PARAMETER_HANDBOOK_CZ.pdf[/b] - podrobny rozbor parametru s matematikou a literaturou. [b]README_CZ.md[/b] - prehled schopnosti. Config.json lze bezpecne editovat i rucne (ma komentare) a zkontrolovat prikazem validate_config.py.", B))
+st.append(P("[b]VYVAR_CONFIG_GUIDE_CZ.md[/b] - rychla reference vsech parametru. [b]VYVAR_PARAMETER_HANDBOOK_CZ.pdf[/b] - podrobny rozbor parametru s matematikou a literaturou. [b]docs/README_CZ.md[/b] - prehled schopnosti. Config.json lze bezpecne editovat i rucne (ma komentare) a zkontrolovat prikazem validate_config.py.", B))
 st.append(Spacer(1,6))
 st.append(box("Poznamka pro uzivatele KStars/Ekos (Linux)", [
  "Snimate-li pres KStars/Ekos, VYVAR muze bezet primo na temze linuxovem stroji - odpada prenos dat. Archivni cestu ve fazi 4 nasmerujte na slozku, kam Ekos uklada snimky, a noci importujte primo z ni."]))

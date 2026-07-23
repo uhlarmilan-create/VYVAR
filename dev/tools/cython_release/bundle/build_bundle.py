@@ -14,6 +14,7 @@ import zipfile
 from pathlib import Path
 
 BUNDLE_DIR = Path(__file__).resolve().parent
+CYTHON_RELEASE = BUNDLE_DIR.parent
 sys.path.insert(0, str(BUNDLE_DIR))
 
 from bundle_layout import (  # noqa: E402
@@ -267,7 +268,19 @@ def _write_config_template(staging: Path) -> None:
     dest.write_text(fallback.read_text(encoding="utf-8"), encoding="utf-8")
 
 
-def build_bundle(*, tag: str, platform_key: str, skip_runtime: bool = False) -> Path:
+def _post_bundle_clean(*, enabled: bool) -> None:
+    """Remove compiled artifacts from the dev checkout after bundle assembly (RELEASE-TREE-HYGIENE)."""
+    if not enabled:
+        return
+    tools = str(CYTHON_RELEASE)
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    from build_release import run_clean  # noqa: WPS433
+
+    run_clean()
+
+
+def build_bundle(*, tag: str, platform_key: str, skip_runtime: bool = False, post_clean: bool = True) -> Path:
     if platform_key not in RUNTIME_PINS:
         raise SystemExit(f"unknown platform {platform_key}")
     pin = RUNTIME_PINS[platform_key]
@@ -336,6 +349,7 @@ def build_bundle(*, tag: str, platform_key: str, skip_runtime: bool = False) -> 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log.write_text(f"artifact={out}\nsha256={digest}\n", encoding="ascii")
     print(f"bundle OK: {out} sha256={digest}")
+    _post_bundle_clean(enabled=post_clean)
     return out
 
 
@@ -344,8 +358,18 @@ def main() -> None:
     parser.add_argument("--tag", default="preview-20260723")
     parser.add_argument("--platform", choices=sorted(RUNTIME_PINS), required=True)
     parser.add_argument("--skip-runtime", action="store_true", help="Layout-only (no pip/runtime fetch)")
+    parser.add_argument(
+        "--no-post-clean",
+        action="store_true",
+        help="Keep compiled .pyd/.so in src_py/ after bundle (debug only)",
+    )
     args = parser.parse_args()
-    build_bundle(tag=args.tag, platform_key=args.platform, skip_runtime=args.skip_runtime)
+    build_bundle(
+        tag=args.tag,
+        platform_key=args.platform,
+        skip_runtime=args.skip_runtime,
+        post_clean=not args.no_post_clean,
+    )
 
 
 if __name__ == "__main__":

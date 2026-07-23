@@ -188,7 +188,7 @@ SHA helper (kotvy): `tests/photometry_sha.py`. Guard testy:
   `gaia_catalog_id.py`, ktery resi presnost 19-cifernych `source_id` pres `Decimal` -- naivni
   `int(float)` by je poskodil). `--out` / `--fine-out` / `--wide-out` presmeruji velke soubory
   kamkoli. Skript hleda koren repa smerem nahoru a pri spusteni mimo klon konci jasnou hlaskou
-  (ne `ModuleNotFoundError`). Viz `README.md` sekce "Building the Gaia catalog".
+  (ne `ModuleNotFoundError`). Viz `docs/README_FULL.md` sekce "Building the Gaia catalog".
 
 Priklad:
 

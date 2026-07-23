@@ -6,6 +6,22 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## RELEASE-TREE-HYGIENE - post-bundle compiled-artifact cleanup (2026-07-23)
+
+**Problem.** WSL/MSVC Cython builds leave `.pyd`/`.so` beside sources (and occasionally
+at repo root when relocation fails). These must never appear in `git status` or confuse
+dev interpreted runs.
+
+**Rule.** After every successful `build_bundle.py` run, **`run_clean()` runs automatically**
+(removes `src_py/*.pyd|*.so`, repo-root droppings, `build/lib.*`, `build/_cython_out/`).
+Opt out for debugging only: `build_bundle.py --no-post-clean`. Manual reset anytime:
+`python build/setup_cython.py clean` (Windows and WSL).
+
+**Gitignore.** `*.pyd`, `*.so`, `build/lib.*/`, root `/*.pyd`, `/*.so` are ignored; physical
+delete is still required so interpreted dev does not shadow stale binaries.
+
+---
+
 ## LATENT-NAMES-COMPILE-GATE - latent NameError sweep before Cython release (2026-07-21)
 
 **Trigger.** Cython compile-as-static-analysis + pyflakes/ruff F821 gate ahead of
@@ -269,7 +285,7 @@ scout (`dev/results/DEPS_SCOUT.md`), Cursor-verified against tree `d437bcd`.
 - **License = proprietary, all rights reserved.** VYVAR ships under a short
   proprietary `LICENSE` at the repo root: Copyright (c) 2026 Milan Uhlar; no use,
   copying, modification, or distribution without prior written permission; no
-  warranty. The `README.md` / `README_CZ.md` license sections match this text.
+  warranty. The `docs/README_FULL.md` / `docs/README_CZ.md` license sections match this text.
   Rationale: VYVAR is not (yet) an open-source release; keep all rights with the
   author until a deliberate licensing decision is made.
 - **Repository visibility = private** (already applied on the remote). The GitHub

@@ -110,10 +110,24 @@ def run_clean() -> None:
     import shutil
 
     removed: list[str] = []
-    for pattern in ("*.pyd", "*.so", "*.c"):
-        for p in SRC_PY.glob(pattern):
-            p.unlink(missing_ok=True)
-            removed.append(str(p.relative_to(REPO_ROOT)))
+    patterns = ("*.pyd", "*.so", "*.c", "*.pyd.bak", "*.so.bak")
+    for base in (SRC_PY, REPO_ROOT):
+        for pattern in patterns:
+            for p in base.glob(pattern):
+                if not p.is_file():
+                    continue
+                try:
+                    p.unlink()
+                except OSError as exc:
+                    print(f"WARNING: could not remove {p}: {exc}", file=sys.stderr)
+                    continue
+                removed.append(str(p.relative_to(REPO_ROOT)))
+    build_root = REPO_ROOT / "build"
+    if build_root.is_dir():
+        for lib in build_root.glob("lib.*"):
+            if lib.is_dir():
+                shutil.rmtree(lib, ignore_errors=True)
+                removed.append(str(lib.relative_to(REPO_ROOT)))
     if BUILD_DIR.is_dir():
         shutil.rmtree(BUILD_DIR, ignore_errors=True)
         removed.append(str(BUILD_DIR.relative_to(REPO_ROOT)))

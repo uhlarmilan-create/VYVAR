@@ -2,20 +2,29 @@
 
 **Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
 
-Last updated: **2026-07-23** (CYTHON-RELEASE preview `preview-20260723` cut; pending M71 E2E).
+Last updated: **2026-07-23** (preview-20260723 field-fix arc closed; housekeeping).
 
 Registered params: **271** (was 270; +``osc_channel_binning``).
 
-## Cython release readiness (RELEASE-1 + RELEASE-2) -- preview out
+## Cython release readiness (RELEASE-1 + RELEASE-2) -- preview live
 
 RELEASE-1 @ `b4c372a`: **85** science modules compiled (84 before RELEASE-2 added
 `vyvar_runtime.py` in `3369832`); anchor identity gates PASS (see
 `CURSOR_RESULT_cython_release1.md`). RELEASE-2: bundle builder, embedded Python 3.12,
-data-dir separation, install docs, public repo staging, runbook. **Preview
-`preview-20260723` cut** (win64 + linux-x64) on `VYVAR-release`; private tag
-`preview-20260723` @ `fe574c0`.
+data-dir separation, install docs, public repo staging, runbook.
 
-**Pending:** M71 E2E acceptance; Milan field **Linux USB install** test on target rig.
+**Preview `preview-20260723`:** live on `VYVAR-release` with **both platforms** (win64 +
+linux-x64). Private tip `3c31bfa` (BUNDLE-FRESH-CONFIG). Verified **3-way**: Cursor bundle
+smoke (selftest, contamination regression, fresh-config sweep, skeleton), Claude sandbox
+round-trip v3, Milan field Linux install **in progress** (DB seed, catalog builds,
+calibration library population).
+
+**Four same-day field bugs (#1-#4)** found during Milan's Linux preview install -- all fixed
+and bundles refreshed (final SHAs `30c2b2ba` / `98e10cef`). Housekeeping: compiled-artifact
+tree hygiene + docs relocation under `docs/` (thin root README landing).
+
+**Pending:** M71 E2E acceptance; Milan field **first real pipeline run** on Linux box;
+v1.0.0 declaration (joint decision, open).
 
 ## Invariants program -- honest scope
 

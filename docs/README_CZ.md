@@ -2,7 +2,7 @@
 
 *Z noci surovych FITS snimk? ud?la d?v?ryhodne sv?telne k?ivky prom?nnych hv?zd p?ipravene k odeslani.*
 
-*Read this in English: [README.md](README.md) - English version.*
+*Read this in English: [README_FULL.md](README_FULL.md) - English version.*
 
 ---
 
@@ -183,8 +183,8 @@ Pot?ebujete take lokalni katalog Gaia DR3 (stavi se jednou; viz Instalace).
 
 ## Instalace
 
-Kompletni krokovy instalator a pr?vodce nastavenim (**INSTALL.md**, EN + CZ) se p?ipravuje.
-Zatim zkracena verze:
+Kompletni krokovy instalator a pr?vodce nastavenim (**[INSTALL.md](INSTALL.md)**, EN + CZ) je k dispozici.
+Zkracena verze pro git dev checkout:
 
 ```bash
 pip install -r requirements.txt

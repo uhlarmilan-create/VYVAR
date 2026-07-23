@@ -51,6 +51,10 @@ python dev\tools\cython_release\bundle\build_bundle.py --platform win64 --tag pr
 python dev\tools\cython_release\bundle\smoke_bundle.py --artifact dist\release\VYVAR-preview-YYYYMMDD-win64.zip
 ```
 
+`build_bundle.py` runs `setup_cython.py clean` automatically after a successful bundle
+(unless `--no-post-clean`). The checkout should have no `.pyd`/`.so` under `src_py/` before
+the next interpreted dev session.
+
 ## Step 4 - Linux bundle (WSL Ubuntu 24)
 
 One-time WSL setup:

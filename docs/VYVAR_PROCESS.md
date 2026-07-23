@@ -250,7 +250,8 @@ that choice is recorded in PARAMS, not left implicit.
 
 > ENCODING-POLICY (2026-07-20): **ALL repo text files are ASCII-only.** This extends the
 > existing "deliverables ASCII-only English / docs Czech-no-diacritics" convention to every
-> tracked text file, **including** `CURSOR_RESULT_*.md`, `README.md`, and `README_CZ.md`.
+> tracked text file, **including** `CURSOR_RESULT_*.md`, `README.md`, `docs/README_FULL.md`,
+> and `docs/README_CZ.md`.
 > Em dash -> `-`, arrows -> `->` / `<-`, curly quotes -> straight, ellipsis -> `...`, etc.
 > Cursor writes results in pure ASCII. Guard: `dev/tests/test_ascii_policy.py` (empty
 > allowlist; justified exceptions only). Tool: `python dev/tools/ascii_migrate.py`
