@@ -39,8 +39,10 @@ On first launch the data directory is created automatically:
 
 Override before launch: set environment variable `VYVAR_DATA_DIR` to any writable path.
 
-The initializer creates `Archive/`, `CalibrationLibrary/`, catalog folders, an empty
-`vyvar.sqlite3`, `config.json` from template, and `NEXT_STEPS.txt`.
+The initializer creates `Archive/Drafts/`, `CalibrationLibrary/`, catalog folders,
+`logs/`, an empty `vyvar.sqlite3`, `config.json` from template, and `NEXT_STEPS.txt`.
+
+Catalog and observation data never live inside the install folder (B1 design).
 
 ## 3. Health check (selftest)
 
@@ -49,22 +51,91 @@ VYVAR.bat --selftest
 ./vyvar.sh --selftest
 ```
 
-Prints Python version, platform, data directory, key dependency versions, and imports
-every compiled science module. Exit code 0 means the install is healthy.
+Prints Python version, platform, data directory, data-dir skeleton status, key
+dependency versions, runtime file checks, and imports every compiled science module.
+Exit code 0 means the install is healthy.
 
-## 4. Build catalogs (required - never shipped)
+## 4. Building the catalogs (required - never pre-built)
 
-Catalogs are **always built by the user** (R2). Use the scripts from a dev checkout
-(or copy outputs into your data directory):
+Catalogs are **always built by the user** (R2). The release bundle ships builder
+scripts under `scripts/catalogs/` (same bundled Python; no system Python).
 
-| Catalog | Script | Typical output under data dir |
-|---------|--------|----------------------------------|
-| Gaia DR3 SQLite | `GAIA_DR3/build_gaia_catalog.py` | `GAIA_DR3/vyvar_gaia_dr3.db` |
-| Blind indexes | `GAIA_DR3/build_blind_index.py` | `GAIA_DR3/gaia_triangles_*.pkl` |
-| VSX local | `VSX/vsx_make.py` | `VSX/vyvar_vsx_local_v2.db` |
-| Exoplanets | `exoplanets/exoplanet_make.py` | `exoplanets/vyvar_exoplanet_local.db` |
+### 4.1 Order (do not skip Gaia)
 
-Point paths in Settings or edit `config.json` in the **data directory** after building.
+1. **Gaia DR3 SQLite** (largest; network download from ESA Gaia TAP)
+2. **Gaia blind indexes** (local CPU; requires Gaia DB from step 1)
+3. **VSX local DB** (VizieR download)
+4. **Exoplanet local DB** (NASA Exoplanet Archive TAP)
+
+### 4.2 Commands (bundled launcher)
+
+Use `--` before script flags. Outputs default to your **data directory** (section 2).
+
+**Linux:**
+
+```
+./vyvar.sh --tool build_gaia -- --help
+./vyvar.sh --tool build_gaia -- --mag-limit 16.5
+./vyvar.sh --tool build_blind_index --
+./vyvar.sh --tool build_vsx --
+./vyvar.sh --tool build_exoplanets --
+```
+
+**Windows:**
+
+```
+VYVAR.bat --tool build_gaia -- --help
+VYVAR.bat --tool build_gaia -- --mag-limit 16.5
+VYVAR.bat --tool build_blind_index --
+VYVAR.bat --tool build_vsx --
+VYVAR.bat --tool build_exoplanets --
+```
+
+See also `scripts/catalogs/README.md` in the install folder.
+
+### 4.3 Where files land (data directory)
+
+| Step | Default output path (under data dir) |
+|------|-------------------------------------|
+| Gaia DR3 | `GAIA_DR3/vyvar_gaia_dr3.db` |
+| Blind indexes | `GAIA_DR3/gaia_triangles_fine.pkl`, `gaia_triangles_wide.pkl` |
+| VSX | `VSX/vyvar_vsx_local.db` |
+| Exoplanets | `exoplanets/vyvar_exoplanet_local.db` |
+
+Override with script flags (`--out`, `--db`, etc.) or set paths in Settings /
+`config.json` after building.
+
+### 4.4 Time and disk (typical)
+
+| Step | Network source | Download | Output size (typical) |
+|------|----------------|----------|------------------------|
+| Gaia G<=16.5 full sky | esa.gaia.eu TAP | hours to days | **~9-10 GB** SQLite |
+| Blind indexes | (local Gaia DB) | none | ~100-500 MB PKL |
+| VSX | VizieR B/vsx/vsx | minutes | ~10-50 MB |
+| Exoplanets | exoplanetarchive.ipac.caltech.edu | minutes | ~1-5 MB |
+
+Gaia build is **resumable** (`strip_progress` in the DB). Safe to restart after
+interruption. Narrow `--dec-min`/`--dec-max` for testing before a full-sky run.
+
+### 4.5 Verification
+
+```
+./vyvar.sh --selftest
+sqlite3 ~/.local/share/vyvar/GAIA_DR3/vyvar_gaia_dr3.db "SELECT COUNT(*) FROM gaia_dr3;"
+```
+
+Row counts depend on mag limit and sky coverage. After building, confirm paths in
+Settings (Paths section) or `config.json` point at the files above.
+
+### 4.6 When to rebuild
+
+| Event | Action |
+|-------|--------|
+| First install | Full sequence (4.1) |
+| Gaia mag limit raised | Re-run Gaia + blind indexes |
+| VSX mag limit raised | Re-run VSX only (incremental) |
+| Exoplanet archive update | Re-run exoplanet builder (incremental) |
+| New VYVAR install | Keep data directory; rebuild only if you want fresh catalogs |
 
 ## 5. Equipment setup (DB Explorer)
 

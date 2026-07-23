@@ -14,7 +14,13 @@ from pathlib import Path
 BUNDLE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BUNDLE_DIR))
 
-from bundle_layout import DIST_DIR, REQUIRED_RUNTIME_FILES, assert_no_compiled_py_sources, compiled_module_stems  # noqa: E402
+from bundle_layout import (  # noqa: E402
+    CATALOG_SCRIPT_SOURCES,
+    DIST_DIR,
+    REQUIRED_RUNTIME_FILES,
+    assert_no_compiled_py_sources,
+    compiled_module_stems,
+)
 
 SMOKE_DIST = Path(os.environ.get("VYVAR_BUNDLE_SMOKE_DIST", str(DIST_DIR)))
 
@@ -153,6 +159,27 @@ def _runtime_loaders_smoke(bundle_root: Path) -> None:
         raise SystemExit(f"runtime loaders smoke FAIL log={log}")
 
 
+def _catalog_scripts_smoke(bundle_root: Path) -> None:
+    py = _bundle_python_exe(bundle_root)
+    scripts = [
+        Path(rel).name
+        for rel in CATALOG_SCRIPT_SOURCES
+        if rel.endswith(".py") and not rel.endswith("vyvar_catalog_paths.py")
+    ]
+    for name in scripts:
+        script = bundle_root / "scripts" / "catalogs" / name
+        proc = subprocess.run(
+            [str(py), "-I", str(script), "--help"],
+            cwd=str(bundle_root),
+            capture_output=True,
+            text=True,
+        )
+        combined = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode != 0:
+            log = _write_log(combined)
+            raise SystemExit(f"catalog script --help FAIL {name} log={log}")
+
+
 def smoke(artifact: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="vyvar_bundle_smoke ") as tmp:
         root = Path(tmp)
@@ -164,6 +191,7 @@ def smoke(artifact: Path) -> None:
         if proc.returncode != 0:
             raise SystemExit(f"bundle smoke FAIL exit={proc.returncode} log={log}")
         _runtime_loaders_smoke(bundle_root)
+        _catalog_scripts_smoke(bundle_root)
         _contamination_regression(bundle_root)
         print(f"bundle smoke PASS log={log}")
 

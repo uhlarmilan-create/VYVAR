@@ -28,6 +28,17 @@ RUNTIME_FILE_SOURCES: dict[str, Path] = {
     "img/VYVAR_logo.png": REPO_ROOT / "img" / "VYVAR_logo.png",
 }
 
+CATALOG_SCRIPT_SOURCES: dict[str, Path] = {
+    "scripts/catalogs/README.md": REPO_ROOT / "scripts" / "catalogs" / "README.md",
+    "scripts/catalogs/vyvar_catalog_paths.py": REPO_ROOT / "scripts" / "catalogs" / "vyvar_catalog_paths.py",
+    "scripts/catalogs/build_gaia_catalog.py": REPO_ROOT / "GAIA_DR3" / "build_gaia_catalog.py",
+    "scripts/catalogs/build_blind_index.py": REPO_ROOT / "GAIA_DR3" / "build_blind_index.py",
+    "scripts/catalogs/vsx_make.py": REPO_ROOT / "VSX" / "vsx_make.py",
+    "scripts/catalogs/exoplanet_make.py": REPO_ROOT / "exoplanets" / "exoplanet_make.py",
+}
+
+REQUIRED_RUNTIME_FILES = REQUIRED_RUNTIME_FILES + tuple(CATALOG_SCRIPT_SOURCES.keys())
+
 sys.path.insert(0, str(CYTHON_RELEASE))
 from module_list import derive_module_lists, is_ui_layer  # noqa: E402
 

@@ -336,6 +336,70 @@ Supersedes isolation-only SHAs: win64 `1b1188ac...`; linux `d80239c7...`.
 
 This append written with ASCII-only punctuation (no em dash, no Unicode arrows).
 
+---
+
+CURSOR RESULT - BUNDLE-CATALOG-SCRIPTS (2026-07-23)
+
+What I did
+Shipped catalog builder scripts in release bundle (`scripts/catalogs/`), added `--tool`
+launcher wrapper, fixed data-dir skeleton (`Archive/Drafts/`), extended selftest/smoke,
+full INSTALL catalog chapter (EN+CZ+PDF). Rebuilt preview artifacts. **STOP before gh
+re-upload**.
+
+## Data-dir skeleton
+
+`vyvar_runtime._ensure_data_skeleton()` creates on every bundled launch:
+`Archive/`, `Archive/Drafts/`, `CalibrationLibrary/`, `GAIA_DR3/`, `VSX/`, `exoplanets/`,
+`logs/`. Selftest verifies via temp `VYVAR_DATA_DIR`.
+
+## Catalog scripts shipped
+
+| Install path | Source |
+|--------------|--------|
+| `scripts/catalogs/build_gaia_catalog.py` | `GAIA_DR3/build_gaia_catalog.py` |
+| `scripts/catalogs/build_blind_index.py` | `GAIA_DR3/build_blind_index.py` |
+| `scripts/catalogs/vsx_make.py` | `VSX/vsx_make.py` |
+| `scripts/catalogs/exoplanet_make.py` | `exoplanets/exoplanet_make.py` |
+| `scripts/catalogs/vyvar_catalog_paths.py` | new helper (data-dir defaults) |
+| `scripts/catalogs/README.md` | user-facing build guide |
+
+Launcher: `./vyvar.sh --tool build_gaia -- --mag-limit 16.5` (and siblings).
+
+Defaults write to data dir via `resolve_data_root()` (B2 neutral).
+
+## B2 gate
+
+**Not required.** Changes: `vyvar_runtime` bootstrap only (compiled refresh); catalog
+scripts outside `src_py` science path; `config.resolve_data_root()` unchanged.
+
+## Rebuilt preview artifacts
+
+| Asset | SHA256 | Smoke |
+|-------|--------|-------|
+| win64 zip | `5d6b9bcb67e3bb912c394a242e1da6be865e55ed507f5e67e972086897a171a6` | PASS |
+| linux-x64 tar.gz | `9b0ba5b51cbef7ec2662e678ba7d0a3174bacf4f00400e18191e68528dbf888f` | PASS |
+
+Supersedes prior catalog-scripts iteration SHAs.
+
+## Milan re-upload (STOP)
+
+```bat
+"C:\Program Files\GitHub CLI\gh.exe" release upload preview-20260723 --repo uhlarmilan-create/VYVAR-release --clobber "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-win64.zip" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-linux-x64.tar.gz" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\SHA256SUMS"
+```
+
+## Files changed
+
+- `scripts/catalogs/` (new helper + README)
+- `GAIA_DR3/`, `VSX/`, `exoplanets/` builders (data-dir defaults, compiled-module root find)
+- `src_py/vyvar_runtime.py` (skeleton + NEXT_STEPS + db.close)
+- `dev/tools/cython_release/bundle/` (stage scripts, selftest, smoke, launchers)
+- `release/public_repo/INSTALL_VYVAR_*.md` + PDFs, CHANGELOG
+- `CHANGELOG.md`, `docs/VYVAR_JOURNAL.md`, `dev/results/CURSOR_RESULT_release_close.md`
+
+## ASCII check
+
+This append written with ASCII-only punctuation (no em dash, no Unicode arrows).
+
 ### Module count 84 vs 85
 
 RELEASE-1 @ `b4c372a` compiled **84** modules (`module_list()` excluded

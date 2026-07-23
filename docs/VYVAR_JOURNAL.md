@@ -4,6 +4,13 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-23 -- BUNDLE-CATALOG-SCRIPTS (preview refresh)
+
+**Field finding #3:** catalog builders missing from bundle; INSTALL lacked build procedure.
+**Fix:** ship `scripts/catalogs/` builders + `--tool` launcher; data-dir skeleton includes
+`Archive/Drafts/`; selftest prints skeleton status; INSTALL chapter EN+CZ+PDF. Result:
+`dev/results/CURSOR_RESULT_release_close.md`.
+
 ## 2026-07-23 -- BUNDLE-DATA-FILES (preview refresh)
 
 **Field bug #2:** Settings tab crashed on missing `dev/validation/params_registry.json`.

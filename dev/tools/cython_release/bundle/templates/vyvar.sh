@@ -17,4 +17,23 @@ export PATH="${PY_HOME}/bin:${PATH}"
 if [[ "${1:-}" == "--selftest" ]]; then
   exec "${PY}" -I "${INSTALL_DIR}/vyvar_selftest.py"
 fi
+if [[ "${1:-}" == "--tool" ]]; then
+  shift
+  tool="${1:-}"
+  shift || true
+  case "${tool}" in
+    build_gaia) script="build_gaia_catalog.py" ;;
+    build_blind_index) script="build_blind_index.py" ;;
+    build_vsx) script="vsx_make.py" ;;
+    build_exoplanets) script="exoplanet_make.py" ;;
+    *)
+      echo "Unknown tool: ${tool} (try build_gaia, build_blind_index, build_vsx, build_exoplanets)" >&2
+      exit 1
+      ;;
+  esac
+  if [[ "${1:-}" == "--" ]]; then
+    shift
+  fi
+  exec "${PY}" -I "${INSTALL_DIR}/scripts/catalogs/${script}" "$@"
+fi
 exec "${PY}" -I -m streamlit run "${INSTALL_DIR}/app.py" --server.headless true "$@"

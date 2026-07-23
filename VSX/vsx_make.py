@@ -3,11 +3,38 @@ from __future__ import annotations
 import argparse
 import sqlite3
 import time
+from pathlib import Path
 
 import pandas as pd
 
+_VSX_DIR = Path(__file__).resolve().parent
+
+
+def _catalog_default(script_dir: Path, *rel_parts: str, legacy: Path) -> Path:
+    import importlib.util
+
+    install_guess = script_dir.parent
+    for base in (
+        script_dir,
+        script_dir.parent / "scripts" / "catalogs",
+        install_guess / "scripts" / "catalogs",
+    ):
+        hp = base / "vyvar_catalog_paths.py"
+        if not hp.is_file():
+            continue
+        spec = importlib.util.spec_from_file_location("vyvar_catalog_paths", hp)
+        if spec is None or spec.loader is None:
+            continue
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.default_catalog_file(script_dir, *rel_parts)
+    return legacy
+
+
 # --- KONFIGURACIA (default; prepisatelne cez CLI) ---
-DB_NAME = "vyvar_vsx_local.db"
+DB_NAME = str(
+    _catalog_default(_VSX_DIR, "VSX", "vyvar_vsx_local.db", legacy=_VSX_DIR / "vyvar_vsx_local.db")
+)
 MAG_LIMIT = 18.0          # rez podla VSX `max` (jas v maxime); zdvihni pre slabsie hviezdy
 DEC_MIN = -90.0
 DEC_MAX = 90.0

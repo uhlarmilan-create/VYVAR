@@ -12,6 +12,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   (`RUNTIME_PIN.json` dep_versions) to block host-site package shadowing on Linux installs.
 - **Preview bundle (2026-07-23):** ship runtime data files (`params_registry.json`, `CITATIONS.bib`,
   logo, config template); manifest guard + selftest presence checks.
+- **Preview bundle (2026-07-23):** catalog builders under `scripts/catalogs/`; `--tool` launcher;
+  data-dir skeleton (`Archive/Drafts/`); INSTALL catalog chapter (EN+CZ).
 
 ### Added
 - **CONFIG-HUMAN-EDIT (2026-07-18):** `config.json` is now a grouped, commented, `//`-tolerant

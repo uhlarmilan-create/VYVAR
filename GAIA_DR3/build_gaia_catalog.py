@@ -39,24 +39,33 @@ _GAIA_DR3_DIR = Path(__file__).resolve().parent
 
 
 def _find_vyvar_root(start: Path) -> tuple[Path, Path]:
-    """Walk upward from *start* to locate ``gaia_catalog_id.py``.
+    """Walk upward from *start* to locate ``gaia_catalog_id`` (py or compiled).
 
     Post REPO-REORG (2026-07) the VYVAR modules live under ``src_py/``. Return
     ``(repo_root, module_dir)`` where *module_dir* is the directory that actually
-    holds ``gaia_catalog_id.py`` (``<root>/src_py`` on the current layout, or the
+    holds ``gaia_catalog_id`` (``<root>/src_py`` on the current layout, or the
     root itself on the legacy flat layout).
     """
     here = start.resolve()
-    for candidate in (here, *here.parents):
-        if (candidate / "src_py" / "gaia_catalog_id.py").is_file():
-            return candidate, candidate / "src_py"
+
+    def _has_gaia_catalog_id(candidate: Path) -> Path | None:
+        src = candidate / "src_py"
+        if (src / "gaia_catalog_id.py").is_file():
+            return src
+        if any(src.glob("gaia_catalog_id*.pyd")) or any(src.glob("gaia_catalog_id*.so")):
+            return src
         if (candidate / "gaia_catalog_id.py").is_file():
-            return candidate, candidate
+            return candidate
+        return None
+
+    for candidate in (here, *here.parents):
+        mod_dir = _has_gaia_catalog_id(candidate)
+        if mod_dir is not None:
+            return candidate, mod_dir
     raise SystemExit(
-        "build_gaia_catalog.py needs gaia_catalog_id.py from the VYVAR repo "
-        "(src_py/gaia_catalog_id.py). Run this script from inside your VYVAR clone "
-        "(e.g. `python GAIA_DR3/build_gaia_catalog.py --out <path>`), "
-        "and use --out to write the DB anywhere you like."
+        "build_gaia_catalog.py needs gaia_catalog_id from the VYVAR install "
+        "(src_py/gaia_catalog_id). Run from the install root or scripts/catalogs/ "
+        "and use --out to write the DB under your data directory."
     )
 
 
@@ -70,7 +79,29 @@ from astroquery.gaia import Gaia
 
 from gaia_catalog_id import normalize_gaia_source_id
 
-DEFAULT_OUT = _GAIA_DR3_DIR / "vyvar_gaia_dr3.db"
+def _catalog_default(script_dir: Path, *rel_parts: str, legacy: Path) -> Path:
+    import importlib.util
+
+    for base in (
+        script_dir,
+        script_dir.parent / "scripts" / "catalogs",
+        _VYVAR_ROOT / "scripts" / "catalogs",
+    ):
+        hp = base / "vyvar_catalog_paths.py"
+        if not hp.is_file():
+            continue
+        spec = importlib.util.spec_from_file_location("vyvar_catalog_paths", hp)
+        if spec is None or spec.loader is None:
+            continue
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.default_catalog_file(script_dir, *rel_parts)
+    return legacy
+
+
+DEFAULT_OUT = _catalog_default(
+    _GAIA_DR3_DIR, "GAIA_DR3", "vyvar_gaia_dr3.db", legacy=_GAIA_DR3_DIR / "vyvar_gaia_dr3.db"
+)
 
 MAX_RETRIES = 8
 RETRY_BASE_S = 20

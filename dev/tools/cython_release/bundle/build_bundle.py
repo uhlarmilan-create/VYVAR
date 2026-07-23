@@ -17,6 +17,7 @@ BUNDLE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BUNDLE_DIR))
 
 from bundle_layout import (  # noqa: E402
+    CATALOG_SCRIPT_SOURCES,
     DIST_DIR,
     REPO_ROOT,
     REQUIRED_RUNTIME_FILES,
@@ -201,6 +202,15 @@ def _copy_runtime_data_files(staging: Path) -> None:
         shutil.copy2(src, dest)
 
 
+def _stage_catalog_scripts(staging: Path) -> None:
+    for rel, src in CATALOG_SCRIPT_SOURCES.items():
+        if not src.is_file():
+            raise SystemExit(f"REFUSE: catalog script missing in repo: {rel} ({src})")
+        dest = staging / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+
+
 def _assert_runtime_files(staging: Path) -> None:
     missing = [rel for rel in REQUIRED_RUNTIME_FILES if not (staging / rel).is_file()]
     if missing:
@@ -242,6 +252,7 @@ def build_bundle(*, tag: str, platform_key: str, skip_runtime: bool = False) -> 
     _copy_science_and_ui(staging, platform_key)
     _write_root_shim(staging)
     _copy_runtime_data_files(staging)
+    _stage_catalog_scripts(staging)
     for tpl in ("VYVAR.bat", "vyvar.sh", "vyvar_selftest.py"):
         shutil.copy2(TEMPLATES / tpl, staging / tpl)
     shutil.copy2(TEMPLATES / "config.template.json", staging / "config.template.json")

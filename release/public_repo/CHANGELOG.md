@@ -4,6 +4,7 @@
 
 - Preview refreshed: launcher isolation fix (`python -I`; pin verification in selftest)
 - Preview refreshed: runtime data files shipped (params_registry.json, CITATIONS.bib, logo)
+- Preview refreshed: catalog builders in `scripts/catalogs/` + INSTALL catalog chapter
 - First preview bundle: Windows win64 + Linux x64
 - Bundled Python 3.12 runtime (embedded / python-build-standalone)
 - 85 compiled science modules + interpreted Streamlit UI

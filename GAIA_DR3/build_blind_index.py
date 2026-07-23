@@ -34,9 +34,37 @@ K_NEIGHBORS_DEFAULT = 8
 TOLERANCE_UPPER_DEFAULT = 0.002
 DEC_BAND_DEG_DEFAULT = 1.0
 
-DEFAULT_FINE_OUT = _GAIA_DIR / "gaia_triangles_fine.pkl"
-DEFAULT_WIDE_OUT = _GAIA_DIR / "gaia_triangles_wide.pkl"
-DEFAULT_DB = _GAIA_DIR / "vyvar_gaia_dr3.db"
+
+def _catalog_default(script_dir: Path, *rel_parts: str, legacy: Path) -> Path:
+    import importlib.util
+
+    install_guess = script_dir.parent
+    for base in (
+        script_dir,
+        script_dir.parent / "scripts" / "catalogs",
+        install_guess / "scripts" / "catalogs",
+    ):
+        hp = base / "vyvar_catalog_paths.py"
+        if not hp.is_file():
+            continue
+        spec = importlib.util.spec_from_file_location("vyvar_catalog_paths", hp)
+        if spec is None or spec.loader is None:
+            continue
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.default_catalog_file(script_dir, *rel_parts)
+    return legacy
+
+
+DEFAULT_FINE_OUT = _catalog_default(
+    _GAIA_DIR, "GAIA_DR3", "gaia_triangles_fine.pkl", legacy=_GAIA_DIR / "gaia_triangles_fine.pkl"
+)
+DEFAULT_WIDE_OUT = _catalog_default(
+    _GAIA_DIR, "GAIA_DR3", "gaia_triangles_wide.pkl", legacy=_GAIA_DIR / "gaia_triangles_wide.pkl"
+)
+DEFAULT_DB = _catalog_default(
+    _GAIA_DIR, "GAIA_DR3", "vyvar_gaia_dr3.db", legacy=_GAIA_DIR / "vyvar_gaia_dr3.db"
+)
 
 FINE_CELL_DEG = 1.0
 FINE_STARS_PER_CELL = 95
