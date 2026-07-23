@@ -500,3 +500,82 @@ data_skeleton logs: OK
 ## ASCII check
 
 This append uses ASCII-only punctuation.
+
+---
+
+# CURSOR RESULT append - BUNDLE-FIELD-FIXES-2 - 2026-07-24
+
+## What I did
+
+Closed field bugs #5 (invalid Material icon) and #7 (FOREIGN KEY on fresh reference DB),
+plus the Streamlit startup `database is locked` fix from Milan's Linux preview. One rebuild
+(win64 + WSL linux-x64), smoke both, push housekeeping + fixes stack.
+
+## Fixes
+
+### DB lock + cached pipeline (Milan startup)
+
+- `open_sqlite_connection()` -- WAL + 30 s busy timeout on every `vyvar.sqlite3` open.
+- `@st.cache_resource _cached_astro_pipeline(database_path, config_fingerprint)` -- one
+  `AstroPipeline` / DB connection per Streamlit server process (avoids concurrent migration
+  races on reruns).
+- **Config invalidation:** cache key includes `config.json` mtime+size
+  (`_config_cache_fingerprint`). Settings save updates mtime; next rerun builds a fresh
+  pipeline with reloaded `AppConfig` (no stale cached config).
+
+### #5 Icon
+
+- `:material/telescope:` is **not** in Streamlit 1.60 `ALL_MATERIAL_ICONS` -- replaced with
+  `:material/visibility:` in `ui_calibration.py`.
+- Permanent test `dev/tests/test_ui_material_icons.py` sweeps all `:material/...:` literals
+  under `src_py/` against pinned Streamlit 1.60 validation.
+
+### #7 FOREIGN KEY (fresh DB, equipment/telescope/location only)
+
+**Reproduced:** clean tmp DB with EQUIPMENTS + TELESCOPE + LOCATION rows only.
+
+| Statement | Failure mode |
+|-----------|--------------|
+| `INSERT INTO OBS_DRAFT ... id_scanning=1` | SCANNING empty -- raw `IntegrityError` |
+| `INSERT ... id_location=2` | config bootstrap `observer_location_id=2` but only `LOCATION.id=1` exists |
+
+**Fix:**
+
+- `_validate_observation_foreign_keys()` preflight on `create_draft` / `insert_observation`
+  with explicit missing-referent message (no silent `id=1` FK assumptions).
+- `resolve_import_location_id()` in import path: fall back to DB default / first LOCATION row
+  when configured `observer_location_id` is stale; append warning to import plan.
+
+Scanning profile still auto-created from FITS via `find_or_create_scanning_id` on import.
+
+## Gate
+
+`session_baseline_check.py --fast` OVERALL PASS (1134 passed, 25 skipped).
+
+## Rebuilt preview artifacts
+
+| Asset | SHA256 | Smoke |
+|-------|--------|-------|
+| win64 zip | `a3a5e302b6f8947ad71b290197b2583e0a649ec8a8b9c7d7a5f6565f99986170` | PASS |
+| linux-x64 tar.gz | `ed443a6b0df262c55ec03bf240353e00c92e4bb3db094c20e8a1e58a2d30186b` | PASS (WSL) |
+
+## Milan re-upload (STOP)
+
+```bat
+"C:\Program Files\GitHub CLI\gh.exe" release upload preview-20260723 --repo uhlarmilan-create/VYVAR-release --clobber "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-win64.zip" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-linux-x64.tar.gz" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\SHA256SUMS"
+```
+
+## Commits pushed
+
+- `a9a310c` chore: release tree hygiene and docs relocation under docs/
+- `ec481c1` fix(field): Streamlit DB lock, icon guard, and FK preflight for fresh DB
+
+## Files changed (ec481c1)
+
+- `src_py/database.py`, `src_py/app.py`, `src_py/importer.py`, `src_py/ui_calibration.py`
+- `dev/tests/test_database_sqlite_wal.py`, `dev/tests/test_database_fk_draft.py`,
+  `dev/tests/test_ui_material_icons.py`
+
+## ASCII check
+
+This append uses ASCII-only punctuation.
