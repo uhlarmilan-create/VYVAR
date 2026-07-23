@@ -132,6 +132,15 @@ In the app:
    empty/unresolved - that is expected.
 2. Import your first night and run the pipeline.
 
+## Development vs release builds
+
+Day-to-day development and CI run **interpreted** Python from `src_py/` (see
+`dev/scripts/session_baseline_check.py --fast`). **Release** packages compile the
+science module set to native extensions (`.pyd` on Windows, `.so` on Linux) using
+`dev/tools/cython_release/`; the Streamlit UI layer (`app.py`, `ui_*.py`) stays
+interpreted. Compiled artifacts are not committed to git. Full installer and
+data-directory layout for release installs are documented in RELEASE-2 (bundling).
+
 ## Troubleshooting
 
 | Symptom                                   | Cause / fix                                                                                          |

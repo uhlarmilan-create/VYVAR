@@ -28,7 +28,37 @@ CYTHON-RELEASE closed-source bundle.
 
 ---
 
-## CYTHON-ANNOTATION-TYPING - release compile directive (2026-07-21)
+## CYTHON-RELEASE-1 - full-set compile + anchor identity gate (2026-07-23)
+
+**Scope (S1-S4).** Release compilation is a packaging step only: `src_py/` stays
+interpreted in git; `.pyd`/`.so` and `build/_cython_out/` are gitignored. Dev/CI
+anchors run interpreted; compiled builds must reproduce the **same** anchor SHAs.
+
+**MODULE_LIST rule (S2).** Single source: `dev/tools/cython_release/module_list.py`.
+All `src_py/*.py` except `app.py`, `ui_*.py`, plus `EXPLICIT_EXCLUDE` (one-line
+reason per entry). OSC modules (`osc_extract`, `osc_align`, `gaia_johnson`) included.
+84 science modules compiled on Windows MSVC (2026-07-23).
+
+**Pinned flags (S3).** Plain compile only: `annotation_typing=False`,
+`Options.docstrings=False`, `language_level=3`, `embedsignature=False`.
+`build_release.py` refuses to run if these drift.
+
+**Release gate (S4).** Compiled `--full` must match interpreted anchor byte-identity:
+core `03d8fb64...` n=333, extended `bbfcc92e...` n=499, science compare 0 failures.
+P1 golden compiled: 7/7 byte-identical (`VL-P1-GOLD`).
+
+**Conditional-skip policy.** Tests using `inspect.getsource` or `.py` source scans on
+compiled modules skip only when the module loads from `.pyd`/`.so`
+(`dev/tests/cython_compat.py`). No ad-hoc test weakening.
+
+**Tooling.** `dev/tools/cython_release/` (build, clean, latent sweep, smoke, MP verify);
+`build/setup_cython.py` shim. Recurrence: `test_cython_annotation_typing.py` (full list
++ flag-drift guard).
+
+**Next.** RELEASE-2: bundling/installer (mixed compiled science + interpreted UI).
+
+---
+
 
 **Finding.** Cython 3 pure-Python mode defaults `annotation_typing=True`, turning PEP-484
 annotations into C type declarations. Plain compile of `comp_selection_per_target` without

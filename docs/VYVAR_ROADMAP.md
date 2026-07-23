@@ -12,14 +12,18 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## IN-FLIGHT - CYTHON-RELEASE (closed-source bundle, target 2026-08-31)
 
-**Status:** spike **DONE (2026-07-21)**; full build **BLOCKED** on MSVC (Windows dev box)
-+ photometry_core Cython forward-ref fix. Result: `dev/results/CURSOR_RESULT_cython_spike.md`.
+**Status:** RELEASE-1 **DONE (2026-07-23)** on Windows MSVC: full MODULE_LIST (84
+modules), P1 golden 7/7 byte-identical, compiled `--full` anchor identity gate,
+pytest compiled green (1115 passed, 5 conditional skips). Result:
+`dev/results/CURSOR_RESULT_cython_release1.md`. **RELEASE-2 queued** (bundling/
+installer: mixed `.pyd`/`.so` + interpreted UI, data-dir separation, Win+Linux
+installers; target **2026-08-31**).
 
 | Phase | Pri | Deliverable |
 |-------|-----|-------------|
-| **Spike** | HIGH | **DONE (2026-07-21).** py-spy profile + build/setup_cython.py; CONDITIONAL NO-GO on this Windows host (no MSVC; photometry_core translate STOP). Linux link + P1 compiled check deferred to sandbox. |
-| **Full build** | HIGH | Typed + plain Cython compile of src_py science modules; photometry_core forward-ref fix; P1 byte-identity on compiled set. |
-| **Bundling** | HIGH | Windows + Linux closed-source bundle; mixed .pyd/.so + interpreted UI layer. |
+| **Spike** | HIGH | **DONE (2026-07-21).** py-spy profile + build/setup_cython.py; GO with `annotation_typing=False`; P1 7/7 on 3-module subset (+15.8% P1 headless). |
+| **RELEASE-1** | HIGH | **DONE (2026-07-23).** Full MODULE_LIST compile + anchor identity + MP spawn + conditional-skip pytest policy. Tooling: `dev/tools/cython_release/`. |
+| **RELEASE-2 Bundling** | HIGH | Windows + Linux closed-source bundle; mixed .pyd/.so + interpreted UI layer. |
 | **Data-dir separation** | MED | User data outside install tree. |
 | **Updater** | MED | In-app or sidecar update channel. |
 | **Alpha (Lenovo T460)** | MED | First bundled alpha on target hardware. |

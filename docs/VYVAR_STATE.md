@@ -2,9 +2,18 @@
 
 **Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
 
-Last updated: **2026-07-22** (OSC-3 phase 3: TR/TG/TB exports, Gaia->Johnson comps, OSC-03 wired; OSC arc code-complete pending M71 acceptance).
+Last updated: **2026-07-23** (CYTHON-RELEASE-1: full MODULE_LIST compile + anchor identity gate;
+RELEASE-2 bundling queued 2026-08-31).
 
 Registered params: **271** (was 270; +``osc_channel_binning``).
+
+## Cython release readiness (RELEASE-1 DONE 2026-07-23)
+
+Full science MODULE_LIST (84 modules) compiles on Windows MSVC with pinned flags
+(`annotation_typing=False`). Compiled P1 golden 7/7 byte-identical; compiled `--full`
+must match anchor SHAs (core `03d8fb64...`, extended `bbfcc92e...`). Dev/CI path
+stays interpreted (`--fast`). Tooling: `dev/tools/cython_release/`. Bundling/installer
+= RELEASE-2 (target 2026-08-31). Result: `dev/results/CURSOR_RESULT_cython_release1.md`.
 
 ## Invariants program -- honest scope
 
