@@ -154,6 +154,12 @@ def test_exo_match_double_host_warning(tmp_path: Path, caplog):
 def test_comp_exclusion_does_not_use_exoplanet_columns():
     import inspect
 
+    from tests.cython_compat import skip_if_compiled
+
+    skip_if_compiled(
+        "comp_selection_per_target",
+        "inspect.getsource requires interpreted comp_selection_per_target.py",
+    )
     src = inspect.getsource(select_comparison_stars_spatial_grid)
     assert "catalog_known_variable" in src
     assert "exo_host" not in src
@@ -161,6 +167,12 @@ def test_comp_exclusion_does_not_use_exoplanet_columns():
 
 
 def test_catalog_known_variable_not_includes_exoplanet():
+    from tests.cython_compat import skip_if_compiled
+
+    skip_if_compiled(
+        "pipeline",
+        "source text scan requires interpreted pipeline.py",
+    )
     import pipeline
 
     text = Path(pipeline.__file__).resolve()

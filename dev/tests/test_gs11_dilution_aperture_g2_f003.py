@@ -76,5 +76,11 @@ def test_gs11_aperture_skip_when_undeterminable(caplog: pytest.LogCaptureFixture
 def test_no_fixed_3_in_dilution_resolver_source() -> None:
     import inspect
 
+    from tests.cython_compat import skip_if_compiled
+
+    skip_if_compiled(
+        "photometry_core",
+        "inspect.getsource requires interpreted photometry_core.py",
+    )
     src = inspect.getsource(_resolve_photometric_aperture_px_for_gs11)
     assert "3.0" not in src

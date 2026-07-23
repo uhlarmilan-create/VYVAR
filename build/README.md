@@ -19,9 +19,25 @@ no source edits required.
     `build\cython_build_win.bat`
   - **Linux:** `gcc`, `python3-dev`
 
-## Build
+## Build (RELEASE-1 full set)
 
-From repo root:
+From repo root (Windows: Visual Studio Developer Command Prompt):
+
+```bat
+dev\tools\cython_release\cython_build_release.bat
+```
+
+Or:
+
+```bash
+python build/setup_cython.py build
+python build/setup_cython.py clean
+```
+
+Full MODULE_LIST derivation, pinned flags, smoke/MP checks: see
+`dev/tools/cython_release/README.md`.
+
+Legacy spike partial build (3 modules):
 
 ```bash
 python build/setup_cython.py build_ext --inplace

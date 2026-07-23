@@ -49,6 +49,12 @@ def test_appconfig_json_missing_keys_uses_fallback(tmp_path: Path) -> None:
 
 
 def test_dataclass_defaults_match_post_init() -> None:
+    from tests.cython_compat import skip_if_compiled
+
+    skip_if_compiled(
+        "config",
+        "source text scan requires interpreted config.py",
+    )
     field_map = {f.name: f.default for f in fields(AppConfig)}
     post_dark, post_flat = _post_init_fallback_literals()
 

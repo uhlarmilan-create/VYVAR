@@ -297,6 +297,12 @@ def test_obscode_warning_only_when_unset() -> None:
     import export_reports as er
     import inspect
 
+    from tests.cython_compat import skip_if_compiled
+
+    skip_if_compiled(
+        "export_reports",
+        "inspect.getsource requires interpreted export_reports.py",
+    )
     src = inspect.getsource(er)
     assert "default placeholder" not in src
     assert "_AAVSO_OBSCODE_PLACEHOLDER" not in src
