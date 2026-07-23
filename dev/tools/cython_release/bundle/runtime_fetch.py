@@ -52,14 +52,33 @@ def fetch_runtime_archive(platform_key: str) -> Path:
 def extract_runtime(archive: Path, pin: RuntimePin, dest_dir: Path) -> Path:
     """Extract runtime; return path to python home directory."""
     if dest_dir.exists():
-        shutil.rmtree(dest_dir)
-    dest_dir.mkdir(parents=True)
+        shutil.rmtree(dest_dir, ignore_errors=True)
+    dest_dir.mkdir(parents=True, exist_ok=True)
     if pin.archive_kind == "zip":
         with zipfile.ZipFile(archive) as zf:
             zf.extractall(dest_dir)
         return dest_dir
+    # python-build-standalone terminfo symlinks break on WSL drvfs (/mnt/c).
+    dest_str = str(dest_dir)
+    use_tmp = dest_str.startswith("/mnt/")
+    tmp_root: Path | None = None
+    extract_dest = dest_dir
+    if use_tmp:
+        import tempfile
+
+        tmp_root = Path(tempfile.mkdtemp(prefix="vyvar_runtime_"))
+        extract_dest = tmp_root
     with tarfile.open(archive, "r:gz") as tf:
-        # install_only tarballs have a single top-level directory
-        tf.extractall(dest_dir)
-    subs = [p for p in dest_dir.iterdir() if p.is_dir()]
-    return subs[0] if len(subs) == 1 else dest_dir
+        try:
+            tf.extractall(extract_dest, filter="data")
+        except TypeError:
+            tf.extractall(extract_dest)
+    subs = [p for p in extract_dest.iterdir() if p.is_dir()]
+    py_home = subs[0] if len(subs) == 1 else extract_dest
+    if use_tmp and tmp_root is not None:
+        if dest_dir.exists():
+            shutil.rmtree(dest_dir, ignore_errors=True)
+        shutil.copytree(py_home, dest_dir, symlinks=False)
+        shutil.rmtree(tmp_root, ignore_errors=True)
+        return dest_dir
+    return py_home
