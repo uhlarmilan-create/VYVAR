@@ -38,6 +38,44 @@ _RESOLVED_META_KEYS: dict[str, tuple[str, ...]] = {
 # --------------------------------------------------------------------------- #
 # Pure, Streamlit-free helpers (unit tested)                                   #
 # --------------------------------------------------------------------------- #
+def resolve_auto_widget_display(
+    cfg: Any,
+    key: str,
+    entry: dict[str, Any],
+    types: dict[str, str],
+    defaults: dict[str, Any],
+) -> tuple[str, Any, bool]:
+    """Resolve widget kind and display value for one ``widget=auto`` key (Streamlit-free).
+
+    Returns ``(kind, display_value, none_fallback)`` where ``none_fallback`` is True when a
+    scalar number/select would have coerced ``None`` and the renderer uses the text path instead.
+    """
+    kind = pr.infer_widget_kind(key, types.get(key, ""), entry)
+    cur = getattr(cfg, key, None)
+    if cur is None:
+        cur = defaults.get(key)
+    if entry.get("kind") in ("resolved", "derived"):
+        return "resolved", cur, False
+    if kind == "checkbox":
+        return kind, bool(cur) if cur is not None else False, False
+    if kind == "select":
+        if cur is None:
+            return "text", "", True
+        options = list(pr.LITERAL_OPTIONS.get(key, ()))
+        if str(cur) not in options:
+            options = [str(cur), *options]
+        return kind, str(cur), False
+    if kind == "number":
+        if isinstance(cur, (list, tuple, dict)):
+            return "text", json.dumps(cur, sort_keys=True), False
+        if cur is None:
+            return "text", "", True
+        return kind, cur, False
+    if isinstance(cur, (dict, list)):
+        return kind, json.dumps(cur, sort_keys=True), False
+    return kind, "" if cur is None else str(cur), cur is None
+
+
 def plan_auto_widgets(registry: dict[str, Any] | None = None) -> dict[str, str]:
     """Map every ``widget=auto`` registry key to a concrete widget kind.
 
@@ -155,8 +193,10 @@ def _render_auto_widget(
     defaults: dict[str, Any],
     pipeline_meta: dict[str, Any] | None,
 ) -> None:
-    kind = pr.infer_widget_kind(key, types.get(key, ""), entry)
-    cur = getattr(cfg, key, defaults.get(key))
+    kind, display, none_fallback = resolve_auto_widget_display(cfg, key, entry, types, defaults)
+    cur = getattr(cfg, key, None)
+    if cur is None:
+        cur = defaults.get(key)
     default = defaults.get(key)
     is_resolved = entry.get("kind") in ("resolved", "derived")
     skey = f"{_KEY_PREFIX}{key}"
@@ -164,6 +204,8 @@ def _render_auto_widget(
     modified = (key in defaults) and pr.values_differ(cur, default)
     marker = " *(modified)*" if modified else ""
     help_txt = f"{entry.get('help', '')} Default: {pr.default_repr(default)}."
+    if none_fallback:
+        help_txt += " Empty: set a value or use Reset to default."
 
     cols = st.columns([6, 1])
     with cols[0]:
@@ -177,35 +219,24 @@ def _render_auto_widget(
             st.caption(entry.get("help", ""))
             return
         if kind == "checkbox":
-            st.checkbox(entry["label"] + marker, value=bool(cur), key=skey, help=help_txt)
+            st.checkbox(entry["label"] + marker, value=bool(display), key=skey, help=help_txt)
         elif kind == "select":
             options = list(pr.LITERAL_OPTIONS.get(key, ()))
-            if str(cur) not in options:
-                options = [str(cur), *options]
-            idx = options.index(str(cur)) if str(cur) in options else 0
+            if str(display) not in options:
+                options = [str(display), *options]
+            idx = options.index(str(display)) if str(display) in options else 0
             st.selectbox(entry["label"] + marker, options, index=idx, key=skey, help=help_txt)
         elif kind == "number":
-            if isinstance(cur, (list, tuple, dict)):
-                st.text_input(
-                    entry["label"] + marker,
-                    value=json.dumps(cur, sort_keys=True),
-                    key=skey,
-                    help=help_txt,
-                )
-            else:
-                rng = entry.get("range")
-                is_int = isinstance(cur, int) and not isinstance(cur, bool)
-                kwargs: dict[str, Any] = {"key": skey, "help": help_txt}
-                if rng is not None:
-                    kwargs["min_value"] = int(rng[0]) if is_int else float(rng[0])
-                    kwargs["max_value"] = int(rng[1]) if is_int else float(rng[1])
-                value = int(cur) if is_int else float(cur)
-                st.number_input(entry["label"] + marker, value=value, **kwargs)
-        else:  # text / dict / list
-            if isinstance(cur, (dict, list)):
-                st.text_input(entry["label"] + marker, value=json.dumps(cur, sort_keys=True), key=skey, help=help_txt)
-            else:
-                st.text_input(entry["label"] + marker, value="" if cur is None else str(cur), key=skey, help=help_txt)
+            rng = entry.get("range")
+            is_int = isinstance(display, int) and not isinstance(display, bool)
+            kwargs: dict[str, Any] = {"key": skey, "help": help_txt}
+            if rng is not None:
+                kwargs["min_value"] = int(rng[0]) if is_int else float(rng[0])
+                kwargs["max_value"] = int(rng[1]) if is_int else float(rng[1])
+            value = int(display) if is_int else float(display)
+            st.number_input(entry["label"] + marker, value=value, **kwargs)
+        else:  # text / dict / list / None fallback
+            st.text_input(entry["label"] + marker, value=str(display), key=skey, help=help_txt)
     with cols[1]:
         if not is_resolved and st.button("Reset", key=f"{skey}__reset", disabled=not modified):
             st.session_state[skey] = default

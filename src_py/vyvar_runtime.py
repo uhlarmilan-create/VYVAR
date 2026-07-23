@@ -2,10 +2,9 @@
 """Release bundle first-launch bootstrap and data-dir helpers (RELEASE-2 / B1)."""
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
-from config import config_json_path, is_git_dev_checkout, resolve_data_root
+from config import config_json_path, is_git_dev_checkout, materialize_fresh_config_json, resolve_data_root
 
 _NEXT_STEPS = """VYVAR - first launch complete
 ================================
@@ -44,6 +43,7 @@ def _ensure_data_skeleton(data_root: Path) -> None:
 
 def ensure_release_data_dir(install_root: Path, *, template_path: Path | None = None) -> Path:
     """Create the user data tree on first bundled launch; no-op for git dev checkouts."""
+    del template_path  # legacy kwarg; bootstrap uses canonical writer, not template copy
     data_root = resolve_data_root(install_root)
     if is_git_dev_checkout(install_root):
         return data_root
@@ -51,11 +51,7 @@ def ensure_release_data_dir(install_root: Path, *, template_path: Path | None = 
     cfg_path = config_json_path(data_root)
     if cfg_path.is_file():
         return data_root
-    tpl = template_path or (install_root / "config.template.json")
-    if tpl.is_file():
-        shutil.copy2(tpl, cfg_path)
-    else:
-        cfg_path.write_text("{}\n", encoding="utf-8")
+    materialize_fresh_config_json(install_root, data_root)
     db_path = data_root / "vyvar.sqlite3"
     if not db_path.is_file():
         from database import VyvarDatabase

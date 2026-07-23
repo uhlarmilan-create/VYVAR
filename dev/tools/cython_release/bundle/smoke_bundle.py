@@ -159,6 +159,53 @@ def _runtime_loaders_smoke(bundle_root: Path) -> None:
         raise SystemExit(f"runtime loaders smoke FAIL log={log}")
 
 
+def _fresh_config_smoke(bundle_root: Path) -> None:
+    py = _bundle_python_exe(bundle_root)
+    code = (
+        "import json, os, sys, tempfile\n"
+        "from pathlib import Path\n"
+        f"INSTALL = Path({str(bundle_root)!r})\n"
+        "SRC = INSTALL / 'src_py'\n"
+        "sys.path.insert(0, str(SRC))\n"
+        "import config\n"
+        "import params_registry as pr\n"
+        "import ui_params_dashboard as upd\n"
+        "from vyvar_runtime import ensure_release_data_dir\n"
+        "with tempfile.TemporaryDirectory(prefix='vyvar_fresh_cfg_') as tmp:\n"
+        "    os.environ['VYVAR_DATA_DIR'] = tmp\n"
+        "    ensure_release_data_dir(INSTALL)\n"
+        "    cfg_path = Path(tmp) / 'config.json'\n"
+        "    if not cfg_path.is_file():\n"
+        "        raise SystemExit('bootstrap did not write config.json')\n"
+        "    payload = json.loads(config.strip_jsonc_comments(cfg_path.read_text(encoding='utf-8')))\n"
+        "    cfg = config.AppConfig(project_root=INSTALL)\n"
+        "    expected = set(cfg.to_json().keys())\n"
+        "    missing = expected - set(payload.keys())\n"
+        "    if missing:\n"
+        "        raise SystemExit(f'config.json missing keys: {sorted(missing)[:8]}')\n"
+        "    reg = pr.load_registry()\n"
+        "    types = pr.appconfig_field_types()\n"
+        "    defaults = pr.appconfig_defaults()\n"
+        "    auto = 0\n"
+        "    for key, entry in reg.items():\n"
+        "        if entry.get('widget') != 'auto':\n"
+        "            continue\n"
+        "        auto += 1\n"
+        "        upd.resolve_auto_widget_display(cfg, key, entry, types, defaults)\n"
+        "    print(f'fresh_config_smoke OK keys={len(payload)} auto={auto}')\n"
+    )
+    proc = subprocess.run(
+        [str(py), "-I", "-c", code],
+        cwd=str(bundle_root),
+        capture_output=True,
+        text=True,
+    )
+    combined = (proc.stdout or "") + (proc.stderr or "")
+    if proc.returncode != 0:
+        log = _write_log(combined)
+        raise SystemExit(f"fresh config smoke FAIL log={log}")
+
+
 def _catalog_scripts_smoke(bundle_root: Path) -> None:
     py = _bundle_python_exe(bundle_root)
     scripts = [
@@ -191,6 +238,7 @@ def smoke(artifact: Path) -> None:
         if proc.returncode != 0:
             raise SystemExit(f"bundle smoke FAIL exit={proc.returncode} log={log}")
         _runtime_loaders_smoke(bundle_root)
+        _fresh_config_smoke(bundle_root)
         _catalog_scripts_smoke(bundle_root)
         _contamination_regression(bundle_root)
         print(f"bundle smoke PASS log={log}")

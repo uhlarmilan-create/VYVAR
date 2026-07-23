@@ -2,6 +2,8 @@
 
 ## preview-20260723 (pre-release)
 
+- Preview refreshed: canonical first-run `config.json` (full registry defaults); Parameters dashboard None-safe
+- Preview refreshed: Settings Paths tab shows install dir vs data dir
 - Preview refreshed: launcher isolation fix (`python -I`; pin verification in selftest)
 - Preview refreshed: runtime data files shipped (params_registry.json, CITATIONS.bib, logo)
 - Preview refreshed: catalog builders in `scripts/catalogs/` + INSTALL catalog chapter

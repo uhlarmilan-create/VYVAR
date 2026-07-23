@@ -4,6 +4,17 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+---
+
+## 2026-07-23 -- BUNDLE-FRESH-CONFIG (preview refresh)
+
+**Field finding #4:** Settings Parameters tab crashed on fresh install (`float(None)` in
+`_render_auto_widget`) because bootstrap copied a trimmed `config.template.json` (~11 keys).
+**Fix:** `materialize_fresh_config_json()` writes every persisted key via the canonical grouped
+writer; dashboard None-safe fallback; `--fast` fresh-config registry sweep test; smoke fresh-config
+check; Paths tab shows install vs data dir. `config.template.json` is build-generated reference
+only (not used at bootstrap). Result: `dev/results/CURSOR_RESULT_release_close.md`.
+
 ## 2026-07-23 -- BUNDLE-CATALOG-SCRIPTS (preview refresh)
 
 **Field finding #3:** catalog builders missing from bundle; INSTALL lacked build procedure.

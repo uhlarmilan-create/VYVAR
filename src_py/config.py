@@ -399,6 +399,32 @@ def render_config_jsonc(data: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def write_bootstrap_config_json(data_root: Path, data: dict[str, Any]) -> None:
+    """Write first-run ``config.json`` during release bootstrap (not UI-guarded)."""
+    path = config_json_path(data_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_config_jsonc(data), encoding="utf-8")
+
+
+def materialize_fresh_config_json(install_root: Path, data_root: Path) -> None:
+    """Materialize canonical ``config.json`` with every persisted key at code defaults.
+
+    Used on first bundled launch instead of copying a trimmed template. The canonical
+    grouped writer (``render_config_jsonc`` + ``AppConfig.to_json()``) is the same path
+    the Settings UI uses on save.
+    """
+    prev_data = os.environ.get("VYVAR_DATA_DIR")
+    os.environ["VYVAR_DATA_DIR"] = str(data_root.resolve())
+    try:
+        cfg = AppConfig(project_root=install_root.resolve())
+        write_bootstrap_config_json(data_root, cfg.to_json())
+    finally:
+        if prev_data is None:
+            os.environ.pop("VYVAR_DATA_DIR", None)
+        else:
+            os.environ["VYVAR_DATA_DIR"] = prev_data
+
+
 def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
     if not _CONFIG_PERSIST_ALLOWED:
         raise ConfigPersistError(
@@ -406,8 +432,7 @@ def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
             "(wrap the write in config.ui_config_persist()). The pipeline/headless path "
             "must not write config.json; run-effective values belong in provenance."
         )
-    path = config_json_path(project_root)
-    path.write_text(render_config_jsonc(data), encoding="utf-8")
+    write_bootstrap_config_json(project_root, data)
 
 
 def recommended_vyvar_parallel_workers(*, reserve_ram_gb: float = 1.5) -> int:

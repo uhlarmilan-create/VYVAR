@@ -114,3 +114,72 @@ def test_structured_config_keys_use_text_not_number_widget() -> None:
     for key in structured:
         kind = pr.infer_widget_kind(key, types.get(key, ""), reg[key])
         assert kind == "text", f"{key} with type {types.get(key)!r} resolved to {kind!r}"
+
+
+def test_none_scalar_number_uses_text_fallback() -> None:
+    """Optional float fields with None must not coerce through float() (field bug #4)."""
+    import config
+
+    cfg = config.AppConfig()
+    cfg.qc_max_background_rms = None
+    reg = pr.load_registry()
+    types = pr.appconfig_field_types()
+    defaults = pr.appconfig_defaults()
+    kind, display, none_fallback = upd.resolve_auto_widget_display(
+        cfg, "qc_max_background_rms", reg["qc_max_background_rms"], types, defaults
+    )
+    assert kind == "text"
+    assert display == ""
+    assert none_fallback is True
+
+
+def test_fresh_bootstrap_config_widget_sweep(tmp_path, monkeypatch) -> None:
+    """First-run bootstrap must materialize every persisted key and pass widget resolution."""
+    import json
+
+    import config
+    from vyvar_runtime import _ensure_data_skeleton
+
+    install = tmp_path / "install"
+    install.mkdir()
+    (install / "RUNTIME_PIN.json").write_text("{}", encoding="ascii")
+    data = tmp_path / "data"
+    data.mkdir()
+    monkeypatch.setenv("VYVAR_DATA_DIR", str(data))
+
+    _ensure_data_skeleton(data)
+    config.materialize_fresh_config_json(install, data)
+
+    cfg_path = data / "config.json"
+    assert cfg_path.is_file(), "bootstrap must write config.json"
+    payload = json.loads(config.strip_jsonc_comments(cfg_path.read_text(encoding="utf-8")))
+    cfg = config.AppConfig(project_root=install)
+    expected = set(cfg.to_json().keys())
+    missing = expected - set(payload.keys())
+    assert not missing, f"config.json missing persisted keys: {sorted(missing)[:12]}"
+
+    reg = pr.load_registry()
+    types = pr.appconfig_field_types()
+    defaults = pr.appconfig_defaults()
+    plan = upd.plan_auto_widgets(reg)
+    errors: list[str] = []
+    for key, entry in reg.items():
+        if entry.get("widget") != "auto":
+            continue
+        try:
+            kind, _display, none_fallback = upd.resolve_auto_widget_display(
+                cfg, key, entry, types, defaults
+            )
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{key}: raised {exc!r}")
+            continue
+        if entry.get("kind") in ("resolved", "derived"):
+            if kind != "resolved":
+                errors.append(f"{key}: expected resolved, got {kind!r}")
+            continue
+        planned = plan[key]
+        if planned == "number" and kind == "text" and none_fallback:
+            continue
+        if kind != planned:
+            errors.append(f"{key}: plan={planned!r} resolved={kind!r}")
+    assert not errors, "fresh-config widget sweep errors:\n" + "\n".join(errors)

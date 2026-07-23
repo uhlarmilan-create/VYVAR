@@ -422,3 +422,81 @@ linux-x64 tar.gz, SHA256SUMS).
 ## ASCII check
 
 This file written with ASCII-only punctuation (no em dash, no Unicode arrows).
+
+---
+
+# CURSOR RESULT append - BUNDLE-FRESH-CONFIG - 2026-07-23
+
+## What I did
+
+Fixed field bug #4 (Parameters dashboard crash on fresh bundle install): canonical first-run
+`config.json` materialization, None-safe widget resolution, permanent fresh-config sweep test,
+Settings Paths install/data dir display, rebuilt preview bundles with smoke (incl. fresh-config
++ skeleton regression).
+
+## Output / findings
+
+**Root cause:** `ensure_release_data_dir` copied trimmed `config.template.json` (11 keys).
+Dashboard assumed every registry key had a value; optional scalars like `qc_max_background_rms`
+(None) hit `float(None)` in `_render_auto_widget`.
+
+**Deep fix:** `config.materialize_fresh_config_json()` + `write_bootstrap_config_json()` write
+every persisted key at code defaults via `AppConfig.to_json()` + `render_config_jsonc`.
+`vyvar_runtime.ensure_release_data_dir` calls materialize instead of template copy.
+
+**`config.template.json` role:** generated at build time from the canonical writer (fallback to
+dev `config.json` on WSL hosts without full deps); shipped as documentation/reference only --
+bootstrap never copies it.
+
+**Defensive fix:** `resolve_auto_widget_display()` -- None scalars on number/select widgets
+fall back to registry default, then text widget with empty-value hint.
+
+**Regression test:** `test_fresh_bootstrap_config_widget_sweep` + `test_none_scalar_number_uses_text_fallback`
+in `dev/tests/test_ui_params_dashboard.py` (--fast permanent).
+
+**Smoke:** `_fresh_config_smoke()` in `smoke_bundle.py` (bootstrap + full registry widget sweep
+from bundled interpreter).
+
+**UX:** Settings -> Paths and catalogs shows install dir and data dir at top.
+
+**Skeleton regression (bug #3):** selftest on clean tmp `VYVAR_DATA_DIR` -- all OK:
+
+```
+data_skeleton Archive: OK
+data_skeleton Archive/Drafts: OK
+data_skeleton CalibrationLibrary: OK
+data_skeleton GAIA_DR3: OK
+data_skeleton VSX: OK
+data_skeleton exoplanets: OK
+data_skeleton logs: OK
+```
+
+**Gate:** `session_baseline_check.py --fast` OVERALL PASS (1121 passed, 29 skipped).
+
+## Rebuilt preview artifacts
+
+| Asset | SHA256 | Smoke |
+|-------|--------|-------|
+| win64 zip | `30c2b2ba20a4f9ce9a479bcc58753151b6c918cee48afb641d01dd21f7939ad5` | PASS |
+| linux-x64 tar.gz | `98e10ceff85bd4a3c7c2e13cfd5e7c3917c4d4dc84fb7f0858f02b99ed2a4f47` | PASS (WSL) |
+
+## Milan re-upload (STOP)
+
+```bat
+"C:\Program Files\GitHub CLI\gh.exe" release upload preview-20260723 --repo uhlarmilan-create/VYVAR-release --clobber "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-win64.zip" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-linux-x64.tar.gz" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\SHA256SUMS"
+```
+
+## Files changed
+
+- `src_py/config.py` (`materialize_fresh_config_json`, `write_bootstrap_config_json`)
+- `src_py/vyvar_runtime.py` (canonical bootstrap)
+- `src_py/ui_params_dashboard.py` (`resolve_auto_widget_display`, None-safe render)
+- `src_py/ui_settings.py` (install/data dir on Paths tab)
+- `dev/tests/test_ui_params_dashboard.py` (fresh-config sweep tests)
+- `dev/tools/cython_release/bundle/build_bundle.py` (generate template at build)
+- `dev/tools/cython_release/bundle/smoke_bundle.py` (`_fresh_config_smoke`)
+- `CHANGELOG.md`, `release/public_repo/CHANGELOG.md`, `docs/VYVAR_JOURNAL.md`
+
+## ASCII check
+
+This append uses ASCII-only punctuation.

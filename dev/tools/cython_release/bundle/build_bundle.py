@@ -240,6 +240,33 @@ def _stage_runtime(staging: Path, platform_key: str) -> Path:
     return site
 
 
+def _write_config_template(staging: Path) -> None:
+    """Generate reference ``config.template.json`` from the canonical grouped writer at build time.
+
+    Bootstrap no longer copies this file; it is documentation/reference only. When the build
+    host lacks full science deps (typical WSL system Python), fall back to the dev checkout
+    ``config.json`` which is maintained by the same writer.
+    """
+    dest = staging / "config.template.json"
+    src_py = str(SRC_PY)
+    if src_py not in sys.path:
+        sys.path.insert(0, src_py)
+    try:
+        from config import AppConfig, render_config_jsonc  # noqa: WPS433
+
+        cfg = AppConfig(project_root=REPO_ROOT)
+        dest.write_text(render_config_jsonc(cfg.to_json()), encoding="utf-8")
+        return
+    except Exception:  # noqa: BLE001 -- WSL/minimal hosts may lack pandas etc.
+        pass
+    fallback = REPO_ROOT / "config.json"
+    if not fallback.is_file():
+        raise SystemExit(
+            "config.template.json: cannot materialize from AppConfig and no config.json fallback"
+        )
+    dest.write_text(fallback.read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def build_bundle(*, tag: str, platform_key: str, skip_runtime: bool = False) -> Path:
     if platform_key not in RUNTIME_PINS:
         raise SystemExit(f"unknown platform {platform_key}")
@@ -255,7 +282,7 @@ def build_bundle(*, tag: str, platform_key: str, skip_runtime: bool = False) -> 
     _stage_catalog_scripts(staging)
     for tpl in ("VYVAR.bat", "vyvar.sh", "vyvar_selftest.py"):
         shutil.copy2(TEMPLATES / tpl, staging / tpl)
-    shutil.copy2(TEMPLATES / "config.template.json", staging / "config.template.json")
+    _write_config_template(staging)
     shutil.copy2(REPO_ROOT / "LICENSE", staging / "LICENSE")
     _assert_runtime_files(staging)
     if not skip_runtime:

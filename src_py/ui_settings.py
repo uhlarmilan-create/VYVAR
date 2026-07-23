@@ -124,6 +124,15 @@ def render_settings_dashboard(
         )
 
     with tab_paths:
+        st.markdown("### Install and data directories")
+        st.markdown(
+            f"- **Install directory:** `{cfg.project_root}`\n"
+            f"- **Data directory:** `{cfg.data_root}`"
+        )
+        st.caption(
+            "Catalogs, Archive, config.json, and vyvar.sqlite3 live under the data directory, "
+            "not the install folder."
+        )
         st.markdown("### Paths and library")
         archive_root = st.text_input(
             "archive_root",
