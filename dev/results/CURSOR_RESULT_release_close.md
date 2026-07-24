@@ -707,7 +707,7 @@ bootstrap/DB-open helpers are release infrastructure, not VL-ANCHOR science modu
 ## Commits pushed
 
 - `c99fcec` fix(release): wire bundled data-dir bootstrap and truthful selftest
-- (docs close commit) result append + STATE/JOURNAL refresh
+- `95dbed1` docs: BUNDLE-BOOTSTRAP-WIRING close append and preview SHAs
 
 ## Files changed (c99fcec)
 
