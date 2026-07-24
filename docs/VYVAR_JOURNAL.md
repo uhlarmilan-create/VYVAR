@@ -8,6 +8,16 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-24 -- BUNDLE-BOOTSTRAP-WIRING (preview refresh, bug #9)
+
+**Field bug #9** (Claude sandbox RTv4 on live release assets): `--selftest` printed
+``data_skeleton ...: OK`` while the resolved ``VYVAR_DATA_DIR`` stayed empty -- root cause
+``vyvar_selftest.py`` lines 159-166 bootstrapped an internal ``TemporaryDirectory``, not
+``resolve_data_root()``. **Fix:** single ``bootstrap_release_data_dir()`` entrypoint
+(skeleton + canonical ``config.json`` + DB init + report); wired from app startup and
+selftest; ``open_sqlite_connection`` mkdirs DB parent. CONFIG-MATERIALIZE-CHECK closed.
+Rebuilt preview SHAs (see result append). Tip pending push.
+
 ## 2026-07-24 -- BUNDLE-FIELD-FIXES-2 (preview refresh)
 
 **Field bugs #5-#8:** invalid `:material/telescope:` (Streamlit 1.60); FOREIGN KEY on fresh

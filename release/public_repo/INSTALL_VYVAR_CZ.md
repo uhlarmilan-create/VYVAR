@@ -41,9 +41,13 @@ VYVAR.bat --selftest
 ./vyvar.sh --selftest
 ```
 
-Vypise verze Pythonu, platformu, datovy adresar, stav datove kostry, klicove
-zavislosti, kontrolu runtime souboru a import vsech zkompilovanych modulu.
-Exit code 0 = instalace je v poradku.
+Vypise verze Pythonu, platformu, datovy adresar, stav bootstrapu po polozkach
+(`bootstrap <path>: created|preexisting|FAILED:...`), klicove zavislosti, kontrolu
+runtime souboru a import vsech zkompilovanych modulu. Pri prvnim behu na cistem
+datovem adresari musi radky bootstrapu ukazovat ``created`` a pod vytisknutym
+``data_dir`` musi existovat adresare, ``config.json`` a ``vyvar.sqlite3``.
+Exit code 0 = instalace je v poradku; libovolny ``FAILED:`` nebo chybejici soubor
+na disku = nenulovy exit.
 
 ## 4. Stavba katalogu (povinne - nikdy se nesifi)
 

@@ -140,13 +140,21 @@ def _verify_runtime_loaders(install: Path) -> None:
     print(f"runtime_data OK registry_keys={len(reg)} citations={len(bib)}")
 
 
-def _verify_data_dir_skeleton(install: Path) -> None:
-    import os
-    import tempfile
+def _verify_data_dir_bootstrap(install: Path) -> None:
+    from vyvar_runtime import bootstrap_failures, bootstrap_release_data_dir
 
-    from vyvar_runtime import ensure_release_data_dir
+    data_root, report = bootstrap_release_data_dir(install)
+    failures = bootstrap_failures(report)
+    for key in sorted(report):
+        print(f"bootstrap {key}: {report[key]}")
+    if failures:
+        print("SELFTEST FAIL:")
+        print(f"  data-dir bootstrap failed for {data_root}")
+        for key, status in sorted(failures.items()):
+            print(f"  {key}: {status}")
+        raise SystemExit(1)
 
-    expected = (
+    expected_dirs = (
         "Archive",
         "Archive/Drafts",
         "CalibrationLibrary",
@@ -155,24 +163,22 @@ def _verify_data_dir_skeleton(install: Path) -> None:
         "exoplanets",
         "logs",
     )
-    prev = os.environ.get("VYVAR_DATA_DIR")
-    with tempfile.TemporaryDirectory(prefix="vyvar_selftest_data_") as tmp:
-        os.environ["VYVAR_DATA_DIR"] = tmp
-        try:
-            ensure_release_data_dir(install)
-            for rel in expected:
-                p = Path(tmp) / rel
-                status = "OK" if p.is_dir() else "MISSING"
-                print(f"data_skeleton {rel}: {status}")
-                if not p.is_dir():
-                    print("SELFTEST FAIL:")
-                    print(f"  data dir bootstrap missing: {rel}")
-                    raise SystemExit(1)
-        finally:
-            if prev is None:
-                os.environ.pop("VYVAR_DATA_DIR", None)
-            else:
-                os.environ["VYVAR_DATA_DIR"] = prev
+    for rel in expected_dirs:
+        p = data_root / rel
+        if not p.is_dir():
+            print("SELFTEST FAIL:")
+            print(f"  data dir missing on disk after bootstrap: {p}")
+            raise SystemExit(1)
+    cfg_path = data_root / "config.json"
+    if not cfg_path.is_file():
+        print("SELFTEST FAIL:")
+        print(f"  config.json missing after bootstrap: {cfg_path}")
+        raise SystemExit(1)
+    db_path = data_root / "vyvar.sqlite3"
+    if not db_path.is_file():
+        print("SELFTEST FAIL:")
+        print(f"  vyvar.sqlite3 missing after bootstrap: {db_path}")
+        raise SystemExit(1)
 
 
 def main() -> int:
@@ -180,7 +186,7 @@ def main() -> int:
     _verify_required_files(INSTALL, pin)
     _verify_pinned_deps(INSTALL, pin)
     _verify_runtime_loaders(INSTALL)
-    _verify_data_dir_skeleton(INSTALL)
+    _verify_data_dir_bootstrap(INSTALL)
     data_root = resolve_data_root(INSTALL)
     print(f"VYVAR selftest platform={platform.platform()}")
     print(f"python={sys.version.split()[0]} executable={sys.executable}")

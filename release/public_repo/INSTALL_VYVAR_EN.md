@@ -51,9 +51,13 @@ VYVAR.bat --selftest
 ./vyvar.sh --selftest
 ```
 
-Prints Python version, platform, data directory, data-dir skeleton status, key
-dependency versions, runtime file checks, and imports every compiled science module.
-Exit code 0 means the install is healthy.
+Prints Python version, platform, resolved data directory, per-item bootstrap
+report (`bootstrap <path>: created|preexisting|FAILED:...`), key dependency versions,
+runtime file checks, and imports every compiled science module. On first run against
+a fresh data directory, bootstrap lines should read ``created`` and the directories,
+``config.json``, and ``vyvar.sqlite3`` must exist on disk under the printed
+``data_dir``. Exit code 0 means the install is healthy; any ``FAILED:`` line or
+missing on-disk artifact yields a non-zero exit.
 
 ## 4. Building the catalogs (required - never pre-built)
 

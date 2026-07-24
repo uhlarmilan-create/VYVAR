@@ -170,10 +170,13 @@ def _fresh_config_smoke(bundle_root: Path) -> None:
         "import config\n"
         "import params_registry as pr\n"
         "import ui_params_dashboard as upd\n"
-        "from vyvar_runtime import ensure_release_data_dir\n"
+        "from database import VyvarDatabase\n"
+        "from vyvar_runtime import bootstrap_release_data_dir\n"
         "with tempfile.TemporaryDirectory(prefix='vyvar_fresh_cfg_') as tmp:\n"
         "    os.environ['VYVAR_DATA_DIR'] = tmp\n"
-        "    ensure_release_data_dir(INSTALL)\n"
+        "    data_root, report = bootstrap_release_data_dir(INSTALL)\n"
+        "    if any(str(v).startswith('FAILED:') for v in report.values()):\n"
+        "        raise SystemExit(f'bootstrap failed: {report}')\n"
         "    cfg_path = Path(tmp) / 'config.json'\n"
         "    if not cfg_path.is_file():\n"
         "        raise SystemExit('bootstrap did not write config.json')\n"
@@ -183,6 +186,8 @@ def _fresh_config_smoke(bundle_root: Path) -> None:
         "    missing = expected - set(payload.keys())\n"
         "    if missing:\n"
         "        raise SystemExit(f'config.json missing keys: {sorted(missing)[:8]}')\n"
+        "    db = VyvarDatabase(str(Path(tmp) / 'vyvar.sqlite3'))\n"
+        "    db.close()\n"
         "    reg = pr.load_registry()\n"
         "    types = pr.appconfig_field_types()\n"
         "    defaults = pr.appconfig_defaults()\n"
@@ -227,6 +232,48 @@ def _catalog_scripts_smoke(bundle_root: Path) -> None:
             raise SystemExit(f"catalog script --help FAIL {name} log={log}")
 
 
+def _bootstrap_selftest_smoke(bundle_root: Path) -> None:
+    """Fresh VYVAR_DATA_DIR: selftest bootstrap lines, on-disk skeleton, DB init."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="vyvar_smoke_bootstrap_") as tmp:
+        env = {"VYVAR_DATA_DIR": tmp}
+        proc = _run_selftest(bundle_root, env=env)
+        combined = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode != 0:
+            log = _write_log(combined)
+            raise SystemExit(f"bootstrap selftest smoke FAIL exit={proc.returncode} log={log}")
+        if "bootstrap Archive: created" not in combined:
+            log = _write_log(combined)
+            raise SystemExit(f"bootstrap selftest smoke missing created lines log={log}")
+        root = Path(tmp)
+        for rel in ("Archive", "config.json", "vyvar.sqlite3"):
+            if not (root / rel).exists():
+                log = _write_log(combined)
+                raise SystemExit(f"bootstrap selftest smoke missing on disk {rel} log={log}")
+        py = _bundle_python_exe(bundle_root)
+        code = (
+            "import sys\n"
+            "from pathlib import Path\n"
+            f"INSTALL = Path({str(bundle_root)!r})\n"
+            "SRC = INSTALL / 'src_py'\n"
+            "sys.path.insert(0, str(SRC))\n"
+            f"from database import VyvarDatabase\n"
+            f"VyvarDatabase({str(root / 'vyvar.sqlite3')!r}).close()\n"
+            "print('bootstrap_db OK')\n"
+        )
+        db_proc = subprocess.run(
+            [str(py), "-I", "-c", code],
+            cwd=str(bundle_root),
+            capture_output=True,
+            text=True,
+            env={**os.environ.copy(), "VYVAR_DATA_DIR": tmp},
+        )
+        if db_proc.returncode != 0:
+            log = _write_log((db_proc.stdout or "") + (db_proc.stderr or ""))
+            raise SystemExit(f"bootstrap DB init smoke FAIL log={log}")
+
+
 def smoke(artifact: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="vyvar_bundle_smoke ") as tmp:
         root = Path(tmp)
@@ -237,6 +284,7 @@ def smoke(artifact: Path) -> None:
         log = _write_log((proc.stdout or "") + (proc.stderr or ""))
         if proc.returncode != 0:
             raise SystemExit(f"bundle smoke FAIL exit={proc.returncode} log={log}")
+        _bootstrap_selftest_smoke(bundle_root)
         _runtime_loaders_smoke(bundle_root)
         _fresh_config_smoke(bundle_root)
         _catalog_scripts_smoke(bundle_root)

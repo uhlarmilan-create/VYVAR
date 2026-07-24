@@ -36,7 +36,9 @@ def open_sqlite_connection(
     timeout: float = _SQLITE_CONNECT_TIMEOUT_S,
 ) -> sqlite3.Connection:
     """Open ``vyvar.sqlite3`` with WAL + busy timeout (Streamlit-safe concurrent access)."""
-    conn = sqlite3.connect(str(db_path), timeout=float(timeout))
+    path = Path(db_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(path), timeout=float(timeout))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute("PRAGMA journal_mode = WAL;")
