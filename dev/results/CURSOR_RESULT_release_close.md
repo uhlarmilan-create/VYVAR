@@ -633,7 +633,7 @@ library (incl. expired dark), catalogs present, stale `observer_location_id=2`.
 - `ec481c1` fix(field): Streamlit DB lock, icon guard, and FK preflight for fresh DB
 - `3b2c5a6` docs: BUNDLE-FIELD-FIXES-2 result append and state refresh
 - `4897a6b` fix(field): preflight error log and Milan-state FK import path
-- (docs close commit) final SHAs + #8 append
+- `dbb90a7` docs: BUNDLE-FIELD-FIXES-2 close append with final preview SHAs
 
 ## Files changed (4897a6b)
 
