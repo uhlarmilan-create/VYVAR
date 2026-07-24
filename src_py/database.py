@@ -3241,7 +3241,7 @@ class VyvarDatabase:
         ]
         if missing:
             raise ValueError(
-                "Observation references missing database row(s): "
+                "Cannot create observation draft (INSERT INTO OBS_DRAFT): missing database row(s): "
                 + ", ".join(missing)
                 + ". Add the required rows in Database Explorer or import with valid FITS metadata."
             )

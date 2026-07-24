@@ -30,6 +30,7 @@ from infolog import (
     log_exception,
     save_infolog_to_disk,
 )
+from run_preflight_log import write_run_preflight_error_log
 from importer import smart_import_session, smart_scan_source
 from optics_selection import (
     VyvarOpticsSelection,
@@ -66,6 +67,16 @@ def _vyvar_effective_draft_dir_override() -> Path | None:
         return None
     p = Path(str(raw)).expanduser()
     return p.resolve() if p.is_dir() else None
+
+
+def _vyvar_format_run_failure_message(*, default: str) -> str:
+    """Prefer on-disk preflight log path over generic Infolog hint when early failure left no draft log."""
+    log_path = st.session_state.get("vyvar_last_preflight_error_log")
+    detail = st.session_state.get("vyvar_last_preflight_error_message")
+    if log_path:
+        msg = str(detail or "Pipeline preflight failed before draft Infolog was saved.")
+        return f"{msg} Preflight log: {log_path}"
+    return default
 
 
 def _vyvar_try_save_infolog_to_disk(cfg: AppConfig) -> str | None:
@@ -163,6 +174,18 @@ def _run_vyvar_full_pipeline(
 
     def _fail(name: str, exc: BaseException) -> bool:
         log_event(f"[{_run_label}] x Zlyhanie v kroku '{name}': {exc}")
+        try:
+            log_path = write_run_preflight_error_log(
+                cfg.data_root,
+                step=name,
+                exc=exc,
+                db=pipeline.db,
+                cfg=cfg,
+            )
+            st.session_state["vyvar_last_preflight_error_log"] = str(log_path)
+            st.session_state["vyvar_last_preflight_error_message"] = f"{name}: {exc}"
+        except Exception as log_exc:  # noqa: BLE001
+            LOGGER.debug("run preflight error log write failed: %s", log_exc)
         if footer_placeholder is not None:
             _vyvar_footer_set(
                 footer_placeholder,
@@ -201,6 +224,8 @@ def _run_vyvar_full_pipeline(
     _calibration_mode = CALIBRATION_MODE_PRE if pre_calibrated_mode else CALIBRATION_MODE_VYVAR
 
     try:
+        st.session_state.pop("vyvar_last_preflight_error_log", None)
+        st.session_state.pop("vyvar_last_preflight_error_message", None)
         _root = Path(str(source_root).strip())
         if not _root.is_dir():
             return _fail("Scan Source + Import", RuntimeError(f"Invalid Source Directory: {_root}"))
@@ -2195,7 +2220,11 @@ def render_live_view(
                             state="error",
                             expanded=True,
                         )
-                        st.error("Pipeline stopped. See Infolog for error details.")
+                        st.error(
+                            _vyvar_format_run_failure_message(
+                                default="Pipeline stopped. See Infolog for error details."
+                            )
+                        )
 
     plan = st.session_state.get("vyvar_smart_plan")
     if plan:
