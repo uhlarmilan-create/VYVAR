@@ -792,7 +792,7 @@ interpreted ``--full``.
 
 - `ff7dca6` fix(field): thread-safe cached sqlite connection for Streamlit reruns
 - `2be87fc` fix(field): expose lastrowid and rowcount on locked sqlite cursor
-- (docs close commit) result append + STATE/JOURNAL refresh
+- `4e5971f` docs: BUNDLE-DB-THREADING close append and preview SHAs
 
 ## Files changed
 

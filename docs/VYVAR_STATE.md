@@ -14,7 +14,7 @@ RELEASE-1 @ `b4c372a`: **86** science modules compiled (84 @ RELEASE-1; +``vyvar
 data-dir separation, install docs, public repo staging, runbook.
 
 **Preview `preview-20260723`:** live on `VYVAR-release` with **both platforms** (win64 +
-linux-x64). Private tip `2be87fc` (BUNDLE-DB-THREADING on top of bootstrap/field-fix stack).
+linux-x64). Private tip `4e5971f` (BUNDLE-DB-THREADING on top of bootstrap/field-fix stack).
 Verified bundle smoke (selftest bootstrap, threading DB smoke, contamination regression).
 
 **Field bugs #1-#10** from Milan Linux preview install / Claude RTv4 -- fixed and bundles
