@@ -8,8 +8,8 @@ Registered params: **271** (was 270; +``osc_channel_binning``).
 
 ## Cython release readiness (RELEASE-1 + RELEASE-2) -- preview live
 
-RELEASE-1 @ `b4c372a`: **85** science modules compiled (84 before RELEASE-2 added
-`vyvar_runtime.py` in `3369832`); anchor identity gates PASS (see
+RELEASE-1 @ `b4c372a`: **86** science modules compiled (84 @ RELEASE-1; +``vyvar_runtime``
+@ RELEASE-2; +``run_preflight_log`` @ BUNDLE-FIELD-FIXES-2); anchor identity gates PASS (see
 `CURSOR_RESULT_cython_release1.md`). RELEASE-2: bundle builder, embedded Python 3.12,
 data-dir separation, install docs, public repo staging, runbook.
 

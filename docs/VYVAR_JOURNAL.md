@@ -8,6 +8,15 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-24 -- BUNDLE-DB-THREADING (preview refresh, bug #10)
+
+**Field bug #10** (Milan Linux): UI DB reads failed ``SQLite objects created in a thread can
+only be used in that same thread`` -- side effect of #6 ``@st.cache_resource`` pipeline cache
+crossing Streamlit rerun threads. **Fix:** ``check_same_thread=False`` +
+``ThreadSafeSQLiteConnection`` (RLock on execute/commit/executescript/executemany/close).
+Rejected thread-local connections (would duplicate schema/migration work). Rebuilt preview
+SHAs pending. Tip pending push.
+
 ## 2026-07-24 -- BUNDLE-BOOTSTRAP-WIRING (preview refresh, bug #9)
 
 **Field bug #9** (Claude sandbox RTv4 on live release assets): `--selftest` printed

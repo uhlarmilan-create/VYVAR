@@ -274,6 +274,58 @@ def _bootstrap_selftest_smoke(bundle_root: Path) -> None:
             raise SystemExit(f"bootstrap DB init smoke FAIL log={log}")
 
 
+def _threading_db_smoke(bundle_root: Path) -> None:
+    """Cross-thread VyvarDatabase access from bundled interpreter (bug #10)."""
+    py = _bundle_python_exe(bundle_root)
+    code = (
+        "import sys\n"
+        "from concurrent.futures import ThreadPoolExecutor, as_completed\n"
+        "from pathlib import Path\n"
+        "import tempfile\n"
+        f"INSTALL = Path({str(bundle_root)!r})\n"
+        "SRC = INSTALL / 'src_py'\n"
+        "sys.path.insert(0, str(SRC))\n"
+        "from config import AppConfig\n"
+        "from pipeline import AstroPipeline\n"
+        "with tempfile.TemporaryDirectory(prefix='vyvar_smoke_thread_') as tmp:\n"
+        "    cfg = AppConfig(project_root=INSTALL)\n"
+        "    cfg.database_path = Path(tmp) / 'vyvar.sqlite3'\n"
+        "    cfg.ensure_base_dirs()\n"
+        "    pipeline = AstroPipeline(config=cfg)\n"
+        "    pipeline.db.conn.execute(\n"
+        "        'INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);',\n"
+        "        ('Cam', 'seed', 'YES'),\n"
+        "    )\n"
+        "    pipeline.db.conn.commit()\n"
+        "    def read_n():\n"
+        "        return len(pipeline.db.get_equipments())\n"
+        "    def write_tag(tag):\n"
+        "        pipeline.db.conn.execute('UPDATE EQUIPMENTS SET ALIAS=? WHERE ID=1;', (tag,))\n"
+        "        pipeline.db.conn.commit()\n"
+        "    with ThreadPoolExecutor(max_workers=3) as pool:\n"
+        "        futs = [pool.submit(read_n), pool.submit(write_tag, 'B'), pool.submit(read_n)]\n"
+        "        reads = []\n"
+        "        for f in as_completed(futs):\n"
+        "            r = f.result()\n"
+        "            if isinstance(r, int):\n"
+        "                reads.append(r)\n"
+        "    if len(reads) < 2 or any(r < 1 for r in reads):\n"
+        "        raise SystemExit(f'threading smoke FAIL reads={reads}')\n"
+        "    pipeline.db.close()\n"
+        "    print('threading_db OK')\n"
+    )
+    proc = subprocess.run(
+        [str(py), "-I", "-c", code],
+        cwd=str(bundle_root),
+        capture_output=True,
+        text=True,
+    )
+    combined = (proc.stdout or "") + (proc.stderr or "")
+    if proc.returncode != 0:
+        log = _write_log(combined)
+        raise SystemExit(f"threading DB smoke FAIL log={log}")
+
+
 def smoke(artifact: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="vyvar_bundle_smoke ") as tmp:
         root = Path(tmp)
@@ -287,6 +339,7 @@ def smoke(artifact: Path) -> None:
         _bootstrap_selftest_smoke(bundle_root)
         _runtime_loaders_smoke(bundle_root)
         _fresh_config_smoke(bundle_root)
+        _threading_db_smoke(bundle_root)
         _catalog_scripts_smoke(bundle_root)
         _contamination_regression(bundle_root)
         print(f"bundle smoke PASS log={log}")

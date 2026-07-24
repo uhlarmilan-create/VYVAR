@@ -72,7 +72,8 @@ anchors run interpreted; compiled builds must reproduce the **same** anchor SHAs
 All `src_py/*.py` except `app.py`, `ui_*.py`, plus `EXPLICIT_EXCLUDE` (one-line
 reason per entry). OSC modules (`osc_extract`, `osc_align`, `gaia_johnson`) included.
 84 science modules compiled at RELEASE-1 (`b4c372a`, 2026-07-23); **85** after RELEASE-2
-added `vyvar_runtime.py` for bundled first-launch bootstrap (`3369832`).
+added `vyvar_runtime.py` for bundled first-launch bootstrap (`3369832`); **86** after
+BUNDLE-FIELD-FIXES-2 added `run_preflight_log.py` for pre-infolog RUN error capture.
 
 **Pinned flags (S3).** Plain compile only: `annotation_typing=False`,
 `Options.docstrings=False`, `language_level=3`, `embedsignature=False`.

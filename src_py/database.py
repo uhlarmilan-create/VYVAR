@@ -7,6 +7,7 @@ import logging
 import math
 import os
 import sqlite3
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, ClassVar, Iterable
@@ -35,15 +36,133 @@ def open_sqlite_connection(
     *,
     timeout: float = _SQLITE_CONNECT_TIMEOUT_S,
 ) -> sqlite3.Connection:
-    """Open ``vyvar.sqlite3`` with WAL + busy timeout (Streamlit-safe concurrent access)."""
+    """Open ``vyvar.sqlite3`` with WAL + busy timeout (Streamlit-safe concurrent access).
+
+    ``check_same_thread=False`` allows a cached connection to be used across Streamlit
+    rerun threads; :class:`ThreadSafeSQLiteConnection` serializes access with an RLock.
+    """
     path = Path(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path), timeout=float(timeout))
+    conn = sqlite3.connect(
+        str(path),
+        timeout=float(timeout),
+        check_same_thread=False,
+    )
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute("PRAGMA journal_mode = WAL;")
     conn.execute(f"PRAGMA busy_timeout = {int(float(timeout) * 1000)};")
     return conn
+
+
+class _LockedCursor:
+    """Hold the connection RLock until this cursor is fully consumed or closed."""
+
+    __slots__ = ("_cursor", "_lock", "_released")
+
+    def __init__(self, cursor: sqlite3.Cursor, lock: threading.RLock) -> None:
+        self._cursor = cursor
+        self._lock = lock
+        self._released = False
+
+    def _release(self) -> None:
+        if not self._released:
+            self._released = True
+            self._lock.release()
+
+    def fetchone(self) -> sqlite3.Row | None:
+        try:
+            row = self._cursor.fetchone()
+            if row is None:
+                self._release()
+            return row
+        except Exception:
+            self._release()
+            raise
+
+    def fetchmany(self, size: int | None = None) -> list[sqlite3.Row]:
+        try:
+            if size is None:
+                rows = self._cursor.fetchmany()
+            else:
+                rows = self._cursor.fetchmany(size)
+            if not rows:
+                self._release()
+            return rows
+        except Exception:
+            self._release()
+            raise
+
+    def fetchall(self) -> list[sqlite3.Row]:
+        try:
+            return self._cursor.fetchall()
+        finally:
+            self._release()
+
+    def __iter__(self) -> _LockedCursor:
+        return self
+
+    def __next__(self) -> sqlite3.Row:
+        row = self.fetchone()
+        if row is None:
+            raise StopIteration
+        return row
+
+    def close(self) -> None:
+        try:
+            self._cursor.close()
+        finally:
+            self._release()
+
+    def __del__(self) -> None:
+        self._release()
+
+
+class ThreadSafeSQLiteConnection:
+    """RLock-serialized wrapper around a shared ``vyvar.sqlite3`` connection.
+
+    Rejected alternative: thread-local connections per ``VyvarDatabase`` -- would
+    multiply migration/schema work and complicate commit visibility across threads.
+    """
+
+    __slots__ = ("_conn", "_lock")
+
+    def __init__(self, conn: sqlite3.Connection, lock: threading.RLock | None = None) -> None:
+        self._conn = conn
+        self._lock = lock or threading.RLock()
+
+    def execute(
+        self,
+        sql: str,
+        parameters: Iterable[Any] = (),
+    ) -> _LockedCursor:
+        self._lock.acquire()
+        try:
+            cur = self._conn.execute(sql, parameters)
+            return _LockedCursor(cur, self._lock)
+        except Exception:
+            self._lock.release()
+            raise
+
+    def executemany(self, sql: str, seq_of_parameters: Iterable[Iterable[Any]]) -> None:
+        with self._lock:
+            self._conn.executemany(sql, seq_of_parameters)
+
+    def executescript(self, sql_script: str) -> sqlite3.Cursor:
+        with self._lock:
+            return self._conn.executescript(sql_script)
+
+    def commit(self) -> None:
+        with self._lock:
+            self._conn.commit()
+
+    def rollback(self) -> None:
+        with self._lock:
+            self._conn.rollback()
+
+    def close(self) -> None:
+        with self._lock:
+            self._conn.close()
 
 _EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "SCANNING", "LOCATION"})
 _EDITABLE_DEFAULT_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
@@ -894,7 +1013,7 @@ class VyvarDatabase:
 
     def __init__(self, db_path: str | Path) -> None:
         self.db_path = str(db_path)
-        self.conn = open_sqlite_connection(self.db_path)
+        self.conn = ThreadSafeSQLiteConnection(open_sqlite_connection(self.db_path))
         self._create_tables()
         self.initialize_database()
         self._ensure_obs_files_indexes()
