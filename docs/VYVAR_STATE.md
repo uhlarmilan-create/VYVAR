@@ -2,7 +2,7 @@
 
 **Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
 
-Last updated: **2026-07-24** (BUNDLE-FIELD-FIXES-2; preview bundles refreshed).
+Last updated: **2026-07-24** (BUNDLE-BOOTSTRAP-WIRING; preview bundles refreshed).
 
 Registered params: **271** (was 270; +``osc_channel_binning``).
 
@@ -14,12 +14,13 @@ RELEASE-1 @ `b4c372a`: **85** science modules compiled (84 before RELEASE-2 adde
 data-dir separation, install docs, public repo staging, runbook.
 
 **Preview `preview-20260723`:** live on `VYVAR-release` with **both platforms** (win64 +
-linux-x64). Private tip `4897a6b` (BUNDLE-FIELD-FIXES-2 on top of housekeeping `a9a310c`).
-Verified bundle smoke (selftest, contamination regression, fresh-config sweep, skeleton).
+linux-x64). Private tip `c99fcec` (BUNDLE-BOOTSTRAP-WIRING on top of field-fix stack).
+Verified bundle smoke (selftest bootstrap on fresh `VYVAR_DATA_DIR`, contamination
+regression, fresh-config sweep).
 
-**Field bugs #1-#8** from Milan Linux preview install -- fixed and bundles refreshed (final SHAs
-`1e0178b9` / `7a750529`). Housekeeping: compiled-artifact tree hygiene + docs relocation under
-`docs/` (thin root README landing).
+**Field bugs #1-#9** from Milan Linux preview install / Claude RTv4 -- fixed and bundles
+refreshed (final SHAs `251e6846` / `af35c0e0`). Housekeeping: compiled-artifact tree
+hygiene + docs relocation under `docs/` (thin root README landing).
 
 **Pending:** M71 E2E acceptance; Milan field **first real pipeline run** on Linux box;
 v1.0.0 declaration (joint decision, open).

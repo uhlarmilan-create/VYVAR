@@ -16,7 +16,8 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 ``resolve_data_root()``. **Fix:** single ``bootstrap_release_data_dir()`` entrypoint
 (skeleton + canonical ``config.json`` + DB init + report); wired from app startup and
 selftest; ``open_sqlite_connection`` mkdirs DB parent. CONFIG-MATERIALIZE-CHECK closed.
-Rebuilt preview SHAs (see result append). Tip pending push.
+Rebuilt preview SHAs `251e6846` / `af35c0e0`. Tip `c99fcec`. Result:
+`dev/results/CURSOR_RESULT_release_close.md` append.
 
 ## 2026-07-24 -- BUNDLE-FIELD-FIXES-2 (preview refresh)
 

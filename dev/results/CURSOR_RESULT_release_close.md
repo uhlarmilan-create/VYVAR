@@ -643,3 +643,81 @@ library (incl. expired dark), catalogs present, stale `observer_location_id=2`.
 ## ASCII check
 
 This append uses ASCII-only punctuation.
+
+---
+
+# CURSOR RESULT append - BUNDLE-BOOTSTRAP-WIRING (bug #9) - 2026-07-24
+
+## What I did
+
+Fixed first-launch bootstrap wiring false-OK in `--selftest` (Claude RTv4 on live
+release assets), closed CONFIG-MATERIALIZE-CHECK, one rebuild (win64 + WSL linux-x64),
+smoke both, push full stack.
+
+## Root cause (bug #9)
+
+``dev/tools/cython_release/bundle/templates/vyvar_selftest.py`` lines **159-166**
+(``_verify_data_dir_skeleton``): set ``VYVAR_DATA_DIR`` to an internal
+``tempfile.TemporaryDirectory(prefix="vyvar_selftest_data_")``, called
+``ensure_release_data_dir(install)``, printed ``data_skeleton <rel>: OK`` for paths
+under that **ephemeral** tmp, then restored the caller's env. The printed
+``data_dir=`` line (line 188) used ``resolve_data_root(INSTALL)`` -- the user's real
+``VYVAR_DATA_DIR`` or platform default -- which was **never bootstrapped**. OK lines
+were false positives; real path stayed absent -> ``unable to open database file``.
+
+App startup already called ``ensure_release_data_dir`` in ``app.py`` ``main()``, but
+selftest gave false confidence and did not exercise the resolved path.
+
+## Fix
+
+- ``bootstrap_release_data_dir(install_root)`` in ``vyvar_runtime.py``: single
+  entrypoint creates data root, full skeleton, canonical ``config.json`` (all persisted
+  keys), ``vyvar.sqlite3``, ``NEXT_STEPS.txt``; returns per-item
+  ``created|preexisting|FAILED:...`` report.
+- ``ensure_release_data_dir`` wraps bootstrap and raises on any FAILED (app launch).
+- Selftest calls bootstrap on **resolved** ``VYVAR_DATA_DIR``, prints ``bootstrap <key>: ...``,
+  exits non-zero on FAILED or missing on-disk artifacts.
+- ``open_sqlite_connection``: ``Path(db_path).parent.mkdir(parents=True)`` before connect
+  (anchor-neutral infrastructure; no science-path change).
+- Smoke: ``_bootstrap_selftest_smoke`` (fresh env dir -> selftest -> DB init).
+
+## Anchor / science gate
+
+No science algorithm changes. Touches ``vyvar_runtime.py``, ``database.open_sqlite_connection``
+(mkdir only), selftest template, smoke. **--fast only** (no interpreted ``--full``):
+bootstrap/DB-open helpers are release infrastructure, not VL-ANCHOR science modules.
+
+## Gate
+
+``session_baseline_check.py --fast`` OVERALL PASS (1145 passed, 26 skipped post-commit).
+
+## Rebuilt preview artifacts
+
+| Asset | SHA256 | Smoke |
+|-------|--------|-------|
+| win64 zip | `251e6846449734e2d61320cc8866232df44ad90d339f36d6686ef2a35f186fd9` | PASS |
+| linux-x64 tar.gz | `af35c0e033db0821a09ce66e12178d230ea634830c8f036e7a8793ac81123af5` | PASS (WSL) |
+
+## Milan re-upload (STOP -- Milan runs this)
+
+```bat
+"C:\Program Files\GitHub CLI\gh.exe" release upload preview-20260723 --repo uhlarmilan-create/VYVAR-release --clobber "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-win64.zip" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-linux-x64.tar.gz" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\SHA256SUMS"
+```
+
+## Commits pushed
+
+- `c99fcec` fix(release): wire bundled data-dir bootstrap and truthful selftest
+- (docs close commit) result append + STATE/JOURNAL refresh
+
+## Files changed (c99fcec)
+
+- ``src_py/vyvar_runtime.py``, ``src_py/database.py``
+- ``dev/tools/cython_release/bundle/templates/vyvar_selftest.py``,
+  ``dev/tools/cython_release/bundle/smoke_bundle.py``
+- ``dev/tests/test_bootstrap_release_data_dir.py``
+- ``docs/VYVAR_ROADMAP.md``, ``release/public_repo/INSTALL_VYVAR_EN.md``,
+  ``release/public_repo/INSTALL_VYVAR_CZ.md``
+
+## ASCII check
+
+This append uses ASCII-only punctuation.
