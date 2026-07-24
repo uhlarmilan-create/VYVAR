@@ -721,3 +721,86 @@ bootstrap/DB-open helpers are release infrastructure, not VL-ANCHOR science modu
 ## ASCII check
 
 This append uses ASCII-only punctuation.
+
+---
+
+# CURSOR RESULT append - BUNDLE-DB-THREADING (bug #10) - 2026-07-24
+
+## What I did
+
+Fixed Streamlit cross-thread ``sqlite3.ProgrammingError`` on cached pipeline DB access
+(Milan Linux #10), sibling audit, module-count doc reconcile (86 incl.
+``run_preflight_log``), rebuild (win64 + WSL linux-x64), smoke both, push full stack.
+
+## Root cause (bug #10)
+
+#6 ``@st.cache_resource _cached_astro_pipeline`` keeps one ``VyvarDatabase`` / sqlite
+connection for the Streamlit server process. Reruns execute on different threads;
+default ``check_same_thread=True`` forbids using the connection outside its creation
+thread -> ``get_equipments`` and all UI DB reads fail.
+
+## Fix (chosen: RLock wrapper; rejected thread-local connections)
+
+**Chosen:** ``open_sqlite_connection(..., check_same_thread=False)`` +
+``ThreadSafeSQLiteConnection`` with per-connection ``threading.RLock`` serializing:
+``execute`` (via ``_LockedCursor`` holding lock until fetch complete),
+``executemany``, ``executescript``, ``commit``, ``rollback``, ``close``.
+``VyvarDatabase.conn`` is the wrapper; resource cache unchanged.
+
+**Rejected:** thread-local connections per ``VyvarDatabase`` -- same WAL file but
+N connections, repeated schema/migration visibility complexity vs one guarded connection.
+
+**Guarded entry methods:** all access goes through ``ThreadSafeSQLiteConnection``;
+``_LockedCursor`` delegates ``lastrowid`` / ``rowcount`` for INSERT helpers.
+
+## Sibling audit (cached / long-lived sqlite)
+
+| Location | Hazard | Action |
+|----------|--------|--------|
+| ``app.py`` ``@st.cache_resource _cached_astro_pipeline`` | **Yes** -- shared ``VyvarDatabase`` | Fixed |
+| ``ui_*`` ``@st.cache_data`` | No sqlite -- FITS/arrays/VSX file loads | None |
+| ``bulk_update_obs_file_is_rejected`` | Already short-lived per-call connection | None |
+| ``pipeline.py`` / night_run MP workers | Fresh ``VyvarDatabase`` per worker | None |
+| Gaia/VSX catalog helpers in ``database.py`` | Ephemeral ``sqlite3.connect`` per call | None |
+
+## Module count reconcile
+
+Selftest reports **86** compiled modules. Docs previously said 85. Added module:
+``run_preflight_log`` (BUNDLE-FIELD-FIXES-2 / #8 pre-infolog error log). Prior +1 was
+``vyvar_runtime`` (RELEASE-2).
+
+## Anchor / science gate
+
+Threading/locking in DB open + connection wrapper only; no science algorithm change.
+``session_baseline_check.py --fast`` OVERALL PASS (1147 passed, 27 skipped); no
+interpreted ``--full``.
+
+## Rebuilt preview artifacts
+
+| Asset | SHA256 | Smoke |
+|-------|--------|-------|
+| win64 zip | `7d8e0d3044714dbdc7bca7bbd85689fcb8b2decb788de8c12d0ba04bee9df64d` | PASS |
+| linux-x64 tar.gz | `abc8580e26af6df4df5ea9c0666c5af801d261904f5585c04c2a623fc0a8f904` | PASS (WSL) |
+
+## Milan re-upload (STOP -- Milan runs this)
+
+```bat
+"C:\Program Files\GitHub CLI\gh.exe" release upload preview-20260723 --repo uhlarmilan-create/VYVAR-release --clobber "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-win64.zip" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-linux-x64.tar.gz" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\SHA256SUMS"
+```
+
+## Commits pushed
+
+- `ff7dca6` fix(field): thread-safe cached sqlite connection for Streamlit reruns
+- `2be87fc` fix(field): expose lastrowid and rowcount on locked sqlite cursor
+- (docs close commit) result append + STATE/JOURNAL refresh
+
+## Files changed
+
+- ``src_py/database.py`` (``ThreadSafeSQLiteConnection``, ``_LockedCursor``)
+- ``dev/tests/test_database_sqlite_threading.py``
+- ``dev/tools/cython_release/bundle/smoke_bundle.py`` (``_threading_db_smoke``)
+- ``docs/VYVAR_DECISIONS.md``, ``docs/VYVAR_STATE.md``, ``docs/VYVAR_JOURNAL.md``
+
+## ASCII check
+
+This append uses ASCII-only punctuation.

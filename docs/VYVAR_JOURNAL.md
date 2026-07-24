@@ -14,8 +14,9 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 only be used in that same thread`` -- side effect of #6 ``@st.cache_resource`` pipeline cache
 crossing Streamlit rerun threads. **Fix:** ``check_same_thread=False`` +
 ``ThreadSafeSQLiteConnection`` (RLock on execute/commit/executescript/executemany/close).
-Rejected thread-local connections (would duplicate schema/migration work). Rebuilt preview
-SHAs pending. Tip pending push.
+Rejected thread-local connections per ``VyvarDatabase`` -- would duplicate schema/migration work). Rebuilt preview
+SHAs ``7d8e0d30`` / ``abc8580e0``. Tip ``2be87fc``. Result:
+`dev/results/CURSOR_RESULT_release_close.md` append.
 
 ## 2026-07-24 -- BUNDLE-BOOTSTRAP-WIRING (preview refresh, bug #9)
 

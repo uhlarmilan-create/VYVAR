@@ -14,13 +14,11 @@ RELEASE-1 @ `b4c372a`: **86** science modules compiled (84 @ RELEASE-1; +``vyvar
 data-dir separation, install docs, public repo staging, runbook.
 
 **Preview `preview-20260723`:** live on `VYVAR-release` with **both platforms** (win64 +
-linux-x64). Private tip `c99fcec` (BUNDLE-BOOTSTRAP-WIRING on top of field-fix stack).
-Verified bundle smoke (selftest bootstrap on fresh `VYVAR_DATA_DIR`, contamination
-regression, fresh-config sweep).
+linux-x64). Private tip `2be87fc` (BUNDLE-DB-THREADING on top of bootstrap/field-fix stack).
+Verified bundle smoke (selftest bootstrap, threading DB smoke, contamination regression).
 
-**Field bugs #1-#9** from Milan Linux preview install / Claude RTv4 -- fixed and bundles
-refreshed (final SHAs `251e6846` / `af35c0e0`). Housekeeping: compiled-artifact tree
-hygiene + docs relocation under `docs/` (thin root README landing).
+**Field bugs #1-#10** from Milan Linux preview install / Claude RTv4 -- fixed and bundles
+refreshed (final SHAs `7d8e0d30` / `abc8580e0`).
 
 **Pending:** M71 E2E acceptance; Milan field **first real pipeline run** on Linux box;
 v1.0.0 declaration (joint decision, open).
