@@ -579,3 +579,67 @@ Scanning profile still auto-created from FITS via `find_or_create_scanning_id` o
 ## ASCII check
 
 This append uses ASCII-only punctuation.
+
+---
+
+# CURSOR RESULT append - BUNDLE-FIELD-FIXES-2 close (#8 + final rebuild) - 2026-07-24
+
+## What I did
+
+Added **#8 early preflight error capture** (`4897a6b`), rebuilt preview bundles once more
+(win64 + WSL linux-x64), smoke both, refreshed SHA256SUMS, pushed full stack.
+
+## #8 Early error capture (pre-infolog)
+
+Failures before draft infolog init left no trace ("unknown step", generic "See Infolog").
+
+**Fix:**
+
+- `src_py/run_preflight_log.py` -- writes
+  `<data_dir>/logs/run_preflight_error_<timestamp>.log` with step, exception,
+  failing statement (inferred from SQLite message when needed), DB FK summary, traceback.
+- `src_py/app.py` -- `_fail()` and outer RUN VYVAR exception path call
+  `write_run_preflight_error_log`; `_vyvar_format_run_failure_message()` names the log
+  path in the UI error box when no draft infolog exists (no misleading "See Infolog").
+- Test: `dev/tests/test_run_preflight_error_log.py` (forced preflight exception -> file
+  exists + UI message names it).
+
+## #7 Milan-state FK import (4897a6b)
+
+Extended FK preflight with Milan-like clean DB: equipment + telescope + location + cal
+library (incl. expired dark), catalogs present, stale `observer_location_id=2`.
+`dev/tests/test_run_vyvar_fk_milan_state.py` -- import succeeds with location fallback warning.
+
+## Gate (4897a6b)
+
+`session_baseline_check.py --fast` OVERALL PASS (1139 passed, 25 skipped).
+
+## Final preview artifacts (post-4897a6b)
+
+| Asset | SHA256 | Smoke |
+|-------|--------|-------|
+| win64 zip | `1e0178b9113b9027c4ddf53c664ce9ecd330fd4b718366c4c13c198b7bb6dfe0` | PASS |
+| linux-x64 tar.gz | `7a750529faebaf448de158e3cd2426fd40a5b013107b0f30e285b0af3d26732e` | PASS (WSL) |
+
+## Milan re-upload (STOP -- Milan runs this)
+
+```bat
+"C:\Program Files\GitHub CLI\gh.exe" release upload preview-20260723 --repo uhlarmilan-create/VYVAR-release --clobber "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-win64.zip" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\VYVAR-preview-20260723-linux-x64.tar.gz" "C:\ASTRO\python\VYVAR\tmp\cython_release\bundle\dist\SHA256SUMS"
+```
+
+## Commits pushed (full stack)
+
+- `a9a310c` chore: release tree hygiene and docs relocation under docs/
+- `ec481c1` fix(field): Streamlit DB lock, icon guard, and FK preflight for fresh DB
+- `3b2c5a6` docs: BUNDLE-FIELD-FIXES-2 result append and state refresh
+- `4897a6b` fix(field): preflight error log and Milan-state FK import path
+- (docs close commit) final SHAs + #8 append
+
+## Files changed (4897a6b)
+
+- `src_py/run_preflight_log.py`, `src_py/app.py`, `src_py/database.py`, `src_py/importer.py`
+- `dev/tests/test_run_preflight_error_log.py`, `dev/tests/test_run_vyvar_fk_milan_state.py`
+
+## ASCII check
+
+This append uses ASCII-only punctuation.

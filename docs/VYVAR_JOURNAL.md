@@ -10,10 +10,12 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ## 2026-07-24 -- BUNDLE-FIELD-FIXES-2 (preview refresh)
 
-**Field bugs #5-#7:** invalid `:material/telescope:` (Streamlit 1.60); FOREIGN KEY on fresh
-DB when SCANNING empty or `observer_location_id=2` stale; Streamlit startup `database is locked`
-(WAL + cached pipeline + config.json fingerprint invalidation). Rebuilt preview SHAs
-`a3a5e302` / `ed443a6b`. Result: `dev/results/CURSOR_RESULT_release_close.md` append.
+**Field bugs #5-#8:** invalid `:material/telescope:` (Streamlit 1.60); FOREIGN KEY on fresh
+DB when SCANNING empty or `observer_location_id=2` stale (Milan-state import test); Streamlit
+startup `database is locked` (WAL + cached pipeline + config.json fingerprint invalidation);
+pre-infolog RUN failures now write `logs/run_preflight_error_<ts>.log` and name it in the UI.
+Rebuilt preview SHAs `1e0178b9` / `7a750529`. Tip `4897a6b`. Result:
+`dev/results/CURSOR_RESULT_release_close.md` append.
 
 ## 2026-07-23 -- SESSION-CLOSE (preview-20260723 field-fix arc)
 

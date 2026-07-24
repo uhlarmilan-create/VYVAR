@@ -14,11 +14,11 @@ RELEASE-1 @ `b4c372a`: **85** science modules compiled (84 before RELEASE-2 adde
 data-dir separation, install docs, public repo staging, runbook.
 
 **Preview `preview-20260723`:** live on `VYVAR-release` with **both platforms** (win64 +
-linux-x64). Private tip `ec481c1` (BUNDLE-FIELD-FIXES-2 on top of housekeeping `a9a310c`).
+linux-x64). Private tip `4897a6b` (BUNDLE-FIELD-FIXES-2 on top of housekeeping `a9a310c`).
 Verified bundle smoke (selftest, contamination regression, fresh-config sweep, skeleton).
 
-**Field bugs #1-#7** from Milan Linux preview install -- fixed and bundles refreshed (final SHAs
-`a3a5e302` / `ed443a6b`). Housekeeping: compiled-artifact tree hygiene + docs relocation under
+**Field bugs #1-#8** from Milan Linux preview install -- fixed and bundles refreshed (final SHAs
+`1e0178b9` / `7a750529`). Housekeeping: compiled-artifact tree hygiene + docs relocation under
 `docs/` (thin root README landing).
 
 **Pending:** M71 E2E acceptance; Milan field **first real pipeline run** on Linux box;
