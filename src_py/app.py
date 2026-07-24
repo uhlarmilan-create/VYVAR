@@ -589,6 +589,7 @@ def _run_vyvar_full_pipeline(
 
         errors: list[str] = []
         completed: list[str] = []
+        zero_target_setups: list[str] = []
         for nm in run_groups:
             p = all_setups.get(str(nm)) or {}
             ms_fits = Path(p.get("masterstar_fits")) if p.get("masterstar_fits") else None
@@ -615,7 +616,7 @@ def _run_vyvar_full_pipeline(
                 errors.append(f"{nm}: missing {', '.join(missing)}")
                 continue
             try:
-                run_full_photometry_pipeline(
+                phot_result = run_full_photometry_pipeline(
                     masterstar_fits_path=ms_fits,
                     variable_targets_csv=vt_csv,
                     masterstars_csv=ms_csv,
@@ -627,6 +628,17 @@ def _run_vyvar_full_pipeline(
                     draft_id=int(_did),
                     progress_cb=_prog_phot,
                 )
+                if phot_result.get("zero_targets"):
+                    zero_target_setups.append(str(nm))
+                    completed.append(str(nm))
+                    log_event(
+                        f"[RUN VYVAR] ! {nm}: 0 aktivnych cielov - fotometria nespustena "
+                        "(skontroluj VSX katalog / target selection)"
+                    )
+                    continue
+                if phot_result.get("error"):
+                    errors.append(f"{nm}: {phot_result.get('error')}")
+                    continue
                 completed.append(str(nm))
                 try:
                     from photometry_report import generate_all_method_photometry_reports  # noqa: PLC0415
@@ -667,7 +679,34 @@ def _run_vyvar_full_pipeline(
         # Fresh pipeline outputs: force Variability tab to re-run detection on next render.
         _vyvar_reset_variability_session_state()
 
-        log_event("[RUN VYVAR] [OK] Pipeline dokonceny uspesne")
+        _photometry_ran = [s for s in completed if s not in zero_target_setups]
+        if zero_target_setups and not _photometry_ran and not _all_problems:
+            _zero_msg = (
+                "Pipeline dokonceny - 0 aktivnych cielov, fotometria nespustena "
+                "(skontroluj VSX katalog / target selection)"
+            )
+            log_event(f"[RUN VYVAR] ! {_zero_msg}")
+            _vyvar_try_save_infolog_to_disk(cfg)
+            if footer_placeholder is not None:
+                _vyvar_footer_set(
+                    footer_placeholder,
+                    running=False,
+                    process="RUN VYVAR",
+                    status_detail=f"Done. ! {_zero_msg}",
+                    pct=100,
+                    step="",
+                )
+            return True
+        if zero_target_setups and _photometry_ran:
+            log_event(
+                "! RUN VYVAR dokonceny CIASTOCNE - fotometria OK: ["
+                + ", ".join(_photometry_ran)
+                + "]; 0 cielov (bez fotometrie): ["
+                + ", ".join(zero_target_setups)
+                + "]"
+            )
+        elif not zero_target_setups:
+            log_event("[RUN VYVAR] [OK] Pipeline dokonceny uspesne")
         _vyvar_try_save_infolog_to_disk(cfg)
         if footer_placeholder is not None:
             _vyvar_footer_set(

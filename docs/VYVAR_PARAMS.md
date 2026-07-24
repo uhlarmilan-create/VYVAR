@@ -6,7 +6,7 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-07-22T15:35:40Z at git HEAD c055ac3._
+_Generated 2026-07-24T14:08:30Z at git HEAD 10608bb._
 
 ## Summary
 
@@ -27,7 +27,7 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `observer_alt_m` | 275.0 | - | basic | static | db_static | auto | Observer Alt M |
 | `observer_code` |  | - | basic | static | db_static | auto | Observer Code |
 | `observer_lat` | 50.1121658 | - | basic | static | db_static | auto | Observer Lat |
-| `observer_location_id` | 2 | - | basic | static | db_static | auto | Observer Location ID |
+| `observer_location_id` | 1 | - | basic | static | db_static | auto | Observer Location ID |
 | `observer_location_name` |  | - | basic | static | db_static | auto | Observer Location Name |
 | `observer_lon` | 14.6982547 | - | basic | static | db_static | auto | Observer Lon |
 | `observer_name` | Unknown Observer | - | basic | static | db_static | auto | Observer Name |

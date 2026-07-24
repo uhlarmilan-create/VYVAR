@@ -2,7 +2,7 @@
 
 **Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
 
-Last updated: **2026-07-24** (BUNDLE-BOOTSTRAP-WIRING; preview bundles refreshed).
+Last updated: **2026-07-24** (FIELD-RUN-FINDINGS #11-#13; session close 2026-07-23/24).
 
 Registered params: **271** (was 270; +``osc_channel_binning``).
 
@@ -14,14 +14,20 @@ RELEASE-1 @ `b4c372a`: **86** science modules compiled (84 @ RELEASE-1; +``vyvar
 data-dir separation, install docs, public repo staging, runbook.
 
 **Preview `preview-20260723`:** live on `VYVAR-release` with **both platforms** (win64 +
-linux-x64). Private tip `4e5971f` (BUNDLE-DB-THREADING on top of bootstrap/field-fix stack).
-Verified bundle smoke (selftest bootstrap, threading DB smoke, contamination regression).
+linux-x64). Private tip through bug #10 (`10608bb` BUNDLE-DB-THREADING). Field-run findings
+**#11-#13** fixed in repo (next preview refresh; no bundle rebuild this session).
 
-**Field bugs #1-#10** from Milan Linux preview install / Claude RTv4 -- fixed and bundles
-refreshed (final SHAs `7d8e0d30` / `abc8580e0`).
+**3-way verification protocol established:** Cursor smoke (`--fast` / registry sweep) +
+Claude sandbox round-trips v3-v6 + Milan Linux field box.
 
-**Pending:** M71 E2E acceptance; Milan field **first real pipeline run** on Linux box;
-v1.0.0 declaration (joint decision, open).
+**First real-sky astrometry through the public bundle:** FI Boo 147 frames (draft_000001,
+NoFilter_60_2) -- astrometry + MASTERSTAR + RAM handoff **complete** on Milan Linux box;
+photometry resumed after VSX path fix (see JOURNAL).
+
+**Field bugs #1-#10** from Milan Linux preview install / Claude RTv4-v6 -- fixed and bundles
+refreshed (final SHAs `7d8e0d30` / `abc8580e0` @ bug #10).
+
+**Pending:** M71 E2E acceptance; v1.0.0 declaration (joint decision, open).
 
 ## Invariants program -- honest scope
 

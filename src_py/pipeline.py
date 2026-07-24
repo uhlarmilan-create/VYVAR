@@ -4692,17 +4692,27 @@ def _query_vsx_local(
     radius_deg: float,
     vsx_db_path: Path | None,
     max_rows: int | None = None,
+    require_db: bool = False,
 ) -> pd.DataFrame:
     """Query **local VSX SQLite** for the field; same kuzel ako Gaia (najprv obdlznik, potom great-circle orez)."""
-    if vsx_db_path is None:
+    from database import count_vsx_local_rows, require_vsx_local_db_path
+
+    if require_db:
+        vp = require_vsx_local_db_path(vsx_db_path)
+        n_total = count_vsx_local_rows(vp)
+    elif vsx_db_path is None:
         return pd.DataFrame()
-    vp = Path(vsx_db_path).expanduser().resolve()
-    if not vp.is_file():
-        return pd.DataFrame()
+    else:
+        vp = Path(vsx_db_path).expanduser().resolve()
+        if not vp.is_file():
+            return pd.DataFrame()
+        n_total = count_vsx_local_rows(vp)
     try:
         _ra_l = float(center.icrs.ra.deg)
         _de_l = float(center.icrs.dec.deg)
     except Exception:  # noqa: BLE001
+        if require_db:
+            raise
         return pd.DataFrame()
     ra_min = float(_ra_l) - float(radius_deg)
     ra_max = float(_ra_l) + float(radius_deg)
@@ -4728,14 +4738,28 @@ def _query_vsx_local(
         max_rows=int(_cap),
     )
     if not rows:
+        if require_db:
+            log_event(
+                f"VSX cone=0 on {vp} ({n_total} total rows) - field genuinely empty "
+                f"(r~{float(radius_deg):.3f} deg, Ra={_ra_l:.4f}, Dec={_de_l:.4f})"
+            )
         return pd.DataFrame()
     df = pd.DataFrame(rows)
     if "ra_deg" not in df.columns or "dec_deg" not in df.columns:
+        if require_db:
+            from database import VSXCatalogError
+
+            raise VSXCatalogError(f"VSX query returned unexpected columns from {vp}.")
         return pd.DataFrame()
     _raq = pd.to_numeric(df["ra_deg"], errors="coerce")
     _deq = pd.to_numeric(df["dec_deg"], errors="coerce")
     _okq = _raq.notna() & _deq.notna()
     if not bool(_okq.any()):
+        if require_db:
+            log_event(
+                f"VSX cone=0 on {vp} ({n_total} total rows) - field genuinely empty "
+                f"(r~{float(radius_deg):.3f} deg, Ra={_ra_l:.4f}, Dec={_de_l:.4f})"
+            )
         return pd.DataFrame()
     sub = df.loc[_okq].copy()
     _coo_q = SkyCoord(
@@ -4745,13 +4769,19 @@ def _query_vsx_local(
     )
     _inner = center.separation(_coo_q).deg <= float(radius_deg) + 1e-9
     out = sub.loc[_inner].reset_index(drop=True)
-    try:
+    if require_db and out.empty:
         log_event(
-            f"CATALOG SEARCH (VSX local): {len(out)} zdrojov v kuzeli r~{float(radius_deg):.3f} deg "
-            f"(Ra={_ra_l:.4f}, Dec={_de_l:.4f})"
+            f"VSX cone=0 on {vp} ({n_total} total rows) - field genuinely empty "
+            f"(r~{float(radius_deg):.3f} deg, Ra={_ra_l:.4f}, Dec={_de_l:.4f})"
         )
-    except Exception:  # noqa: BLE001
-        pass
+    elif not out.empty:
+        try:
+            log_event(
+                f"CATALOG SEARCH (VSX local): {len(out)} zdrojov v kuzeli r~{float(radius_deg):.3f} deg "
+                f"(Ra={_ra_l:.4f}, Dec={_de_l:.4f})"
+            )
+        except Exception:  # noqa: BLE001
+            pass
     return out
 
 
@@ -5226,6 +5256,7 @@ def _query_vsx_local_frame_bbox(
     vsx_db_path: Path | None,
     margin_px: float = 50.0,
     center: SkyCoord | None = None,
+    require_db: bool = False,
 ) -> pd.DataFrame:
     """Query **local VSX** within the FRAME footprint (frame bbox + ``margin_px``), spatial-first.
 
@@ -5235,11 +5266,18 @@ def _query_vsx_local_frame_bbox(
     slice). Returns raw VSX rows over the bbox; the caller applies the precise in-frame pixel
     filter (matching ``margin_px``). RA wrap is handled via centre-relative offsets.
     """
-    if vsx_db_path is None:
+    from database import count_vsx_local_rows, require_vsx_local_db_path
+
+    if require_db:
+        vp = require_vsx_local_db_path(vsx_db_path)
+        n_total = count_vsx_local_rows(vp)
+    elif vsx_db_path is None:
         return pd.DataFrame()
-    vp = Path(vsx_db_path).expanduser().resolve()
-    if not vp.is_file():
-        return pd.DataFrame()
+    else:
+        vp = Path(vsx_db_path).expanduser().resolve()
+        if not vp.is_file():
+            return pd.DataFrame()
+        n_total = 0
     m = float(margin_px)
     w = float(width_px)
     h = float(height_px)
@@ -5283,9 +5321,18 @@ def _query_vsx_local_frame_bbox(
         max_rows=None,  # frame bbox is tiny -> no cap needed (spatial-first completeness)
     )
     if not rows:
+        if require_db:
+            log_event(
+                f"VSX cone=0 on {vp} ({n_total} total rows) - field genuinely empty "
+                f"(frame bbox+{int(m)}px, RA=[{ra_min:.4f},{ra_max:.4f}], Dec=[{de_min:.4f},{de_max:.4f}])"
+            )
         return pd.DataFrame()
     df = pd.DataFrame(rows)
     if "ra_deg" not in df.columns or "dec_deg" not in df.columns:
+        if require_db:
+            from database import VSXCatalogError
+
+            raise VSXCatalogError(f"VSX query returned unexpected columns from {vp}.")
         return pd.DataFrame()
     try:
         log_event(
@@ -6350,7 +6397,12 @@ def write_photometry_plan_files(
         else:
             all_aligned = sorted(aligned_dir.glob("proc_*.fits"))
             LOGGER.info(f"[BORDER] Glob found {len(all_aligned)} aligned frames in {aligned_dir}")
-        if len(all_aligned) < 2:
+        if len(all_aligned) == 0:
+            log_event(
+                "[BORDER] Deferred: no aligned proc_*.fits on disk yet "
+                "(pre-alignment or RAM-handoff); border filter skipped"
+            )
+        elif len(all_aligned) < 2:
             log_event(f"[BORDER] Not enough aligned frames for intersection bbox: {len(all_aligned)}")
         else:
             frames_for_bbox = all_aligned
@@ -6438,6 +6490,8 @@ def write_photometry_plan_files(
     _vsx_n_cone = 0
     _vsx_diag: dict[str, Any] = {}
     try:
+        from database import VSXCatalogError, require_vsx_local_db_path
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FITSFixedWarning)
             w0 = WCS(hdr)
@@ -6447,13 +6501,7 @@ def write_photometry_plan_files(
             center, radius_deg = _effective_field_catalog_cone_radius_deg(
                 w0, int(h), int(wpx), plate_solve_fov_deg=None, fits_header=hdr
             )
-            _vsx_p3: Path | None = None
-            try:
-                _vsp3 = str(_cfg_plan.vsx_local_db_path or "").strip()
-                if _vsp3:
-                    _vsx_p3 = Path(_vsp3).expanduser().resolve()
-            except Exception:  # noqa: BLE001
-                _vsx_p3 = None
+            _vsx_p3 = require_vsx_local_db_path(_cfg_plan.vsx_local_db_path)
             # B-cap fix: variable_targets are driven by the FRAME footprint (bbox + the same
             # 50px margin used by the in-frame pixel filter below), not the 3.5 deg cone box. The
             # cone box hit the 15000-row catalog_query_max_rows cap (no ORDER BY) and silently
@@ -6469,6 +6517,7 @@ def write_photometry_plan_files(
                 vsx_db_path=_vsx_p3,
                 margin_px=50.0,
                 center=center,
+                require_db=True,
             )
             n_vsx_in_cone = int(len(vsx_df)) if vsx_df is not None else 0
             _vsx_n_cone = n_vsx_in_cone
@@ -6781,6 +6830,8 @@ def write_photometry_plan_files(
                     ),
                 }
                 _vsx_n_cone = int(n_vsx_in_cone)
+    except VSXCatalogError:
+        raise
     except Exception as _vsx_exc:  # noqa: BLE001
         log_event(f"variable_targets.csv (VSX export) preskoceny: {_vsx_exc!s}")
         vsx_out = pd.DataFrame(columns=var_cols)
@@ -14235,8 +14286,8 @@ def _astrometry_align_impl_body(
                         aligned_files=_aligned_file_list,
                     )
                     cat_info.update(_wp_aligned or {})
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as _wp_exc:  # noqa: BLE001
+            log_event(f"[BORDER] Post-RAM-flush photometry plan rewrite failed: {_wp_exc!s}")
 
     export_base = prog_i[0]
     _catalog_app_cfg = _cfg_align

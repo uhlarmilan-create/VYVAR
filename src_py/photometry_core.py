@@ -15538,6 +15538,15 @@ def run_full_photometry_pipeline(
 
     active_targets_csv = Path(str(p01.get("active_targets_csv") or ""))
     comparison_stars_csv = Path(str(p01.get("comparison_stars_csv") or ""))
+    n_active = int(p01.get("n_active_targets") or 0)
+    if n_active <= 0:
+        return {
+            "phase01": p01,
+            "phase2a": None,
+            "output_dir": str(Path(output_dir)),
+            "zero_targets": True,
+            "n_active_targets": 0,
+        }
     if not active_targets_csv.is_file() or not comparison_stars_csv.is_file():
         return {
             "phase01": p01,

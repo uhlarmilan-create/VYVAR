@@ -620,7 +620,7 @@ class AppConfig:
     #: User overrides: filter/setup name (uppercase key) -> AAVSO FILT code (e.g. ``"MYLUM": "CV"``).
     aavso_filter_map: dict[str, str] = field(default_factory=dict)
     # Observer location - used for BJD, airmass, lunar context
-    observer_location_id: int = 2  # FK to LOCATION table; 0 = unset
+    observer_location_id: int = 1  # FK to LOCATION table; 0 = unset; 1 = typical first LOCATION row
     observer_lat: float = 50.1121658  # degrees N
     observer_lon: float = 14.6982547  # degrees E
     observer_alt_m: float = 275.0  # metres above sea level

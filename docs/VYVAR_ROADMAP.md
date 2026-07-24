@@ -28,6 +28,8 @@ embedded runtime, data-dir separation (B2 `--full` PASS). `VYVAR-release` popula
 | **Public upload** | HIGH | **DONE (2026-07-23).** `preview-20260723` on `VYVAR-release`. |
 
 Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
+**DEPS note (2026-07-24):** photutils 3.0 runtime deprecation warnings observed
+(`npixels` -> `n_pixels`, `semimajor_sigma` removed in 4.0) -- next DEPS cycle item.
 
 ---
 
@@ -37,9 +39,10 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 |----|-----|----------------------|
 | **CONFIG-MATERIALIZE-CHECK** | -- | **DONE** (2026-07-24, BUNDLE-BOOTSTRAP-WIRING): `bootstrap_release_data_dir()` is the single entrypoint for skeleton + canonical `config.json` materialization; wired from bundled app startup (`ensure_release_data_dir` in `app.py`) and `--selftest` (truthful per-item report on the resolved `VYVAR_DATA_DIR`). |
 | **INSTALL-GAIA-DEC-CUTOUT** | MED | Docs: Gaia builder supports `--dec-min` / `--dec-max`; INSTALL should lead with a declination cutout decision (observer southernmost usable DEC), size/time table, and note ESA archive login is **optional**. |
+| **SYNTH-SKY-GENERATOR** | MED | Validation-protocol tool: Claude WCS-true synthetic field generator (sub-pixel geometry debug pending); then known-truth photometry validation against injected variables. |
 | **V1-VALIDATION-PROTOCOL** | HIGH | Enrich validation strategy: detrended_aligned validation packs (small frame-level pack across many fields; large LC pack for 1-2 fields via split release assets; one raw-FITS E2E mini field). ePSF validation: internal ePSF-vs-aperture identity; DAOPHOT/allstar independent PSF reference; independent plain-photutils EPSFBuilder script. Comparison: Munipack/SExtractor/IRAF headless in Claude sandbox; AIJ hybrid (Milan GUI, Claude evaluates exports). Scripted PDF QA (overflow/clipping/encoding + report-vs-CSV consistency). Fallback: Claude-authored harness on Milan full data. Sandbox capable: headless installs, P1-golden E2E, bundle verification. NOT capable: visual UI clicking, ESA archive downloads. |
 | **M71 E2E acceptance** | HIGH | OSC arc code-complete; M71 validation dataset (eq id=5). |
-| **Milan field Linux testing** | HIGH | Real Linux box: DB + catalogs + calibration in progress; first full pipeline run pending. |
+| **Milan field Linux testing** | HIGH | First real-sky E2E astrometry DONE (FI Boo 147 frames); photometry after VSX fix; findings #11-#13 in repo for next bundle. |
 | **CITATIONS.bib ASCII disposition** | LOW | Open encoding/normalization decision for bundled citations file. |
 | **KNOWN_REMOVED_KEYS builder-prose sweep** | LOW | Docs-guard sweep for removed config keys still mentioned in builder prose. |
 | **preprocess-QC summary durability** | MED | Persist QC summary into `pipeline_meta.json` (survive reruns). |
@@ -277,7 +280,7 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 
 | ID | Sev | Item |
 |----|-----|------|
-| BORDER-PREALIGN | LOW | `[BORDER] Glob found 0 aligned frames` fires pre-alignment (428/429 benign); silence or reorder stage |
+| ~~BORDER-PREALIGN~~ | LOW | **DONE (2026-07-24).** RAM-handoff / pre-alignment `[BORDER] Glob 0` -> explicit defer log; post-flush rewrite no longer silent (`FIELD-RUN-FINDINGS #11`). |
 | A-DURABLE-UI | LOW | Save watched `.py` during alignment - pending Milan confirmation on 429 run |
 | ~~ENCODING-POLICY~~ | MED | **DONE (2026-07-20).** ASCII-only tracked text + `test_ascii_policy` guard + `ascii_migrate.py`; EOL normalize (`* text=auto` + `.editorconfig`) in follow-up commit. Incident: cp1252/U+FFFD editor corruption class. |
 

@@ -602,6 +602,61 @@ def validate_vsx_local_db_schema(db_path: str | Path) -> tuple[bool, str]:
         con.close()
 
 
+def count_vsx_local_rows(db_path: str | Path) -> int:
+    """Return row count in ``vsx_data`` (0 when table missing or unreadable)."""
+    p = Path(db_path).expanduser().resolve()
+    if not p.is_file():
+        return 0
+    con = sqlite3.connect(str(p))
+    try:
+        cur = con.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='vsx_data' LIMIT 1;"
+        )
+        if cur.fetchone() is None:
+            return 0
+        row = con.execute("SELECT COUNT(*) FROM vsx_data;").fetchone()
+        return int(row[0] if row is not None else 0)
+    except sqlite3.Error:
+        return 0
+    finally:
+        con.close()
+
+
+class VSXCatalogError(RuntimeError):
+    """VSX local catalog path/schema/availability failure (fail-loud, like Gaia)."""
+
+
+def require_vsx_local_db_path(vsx_local_db_path: str | Path | None) -> Path:
+    """Resolve VSX SQLite path or raise with Settings-tab actionable message."""
+    raw = str(vsx_local_db_path or "").strip()
+    if not raw:
+        raise VSXCatalogError(
+            "VSX local database path is not set (config key vsx_local_db_path). "
+            "Open Settings -> Catalogs, set VSX local DB to your built SQLite "
+            "(scripts/catalogs/vsx_make.py output under <data_dir>/VSX/, table vsx_data)."
+        )
+    p = Path(raw).expanduser().resolve()
+    if not p.is_file():
+        raise VSXCatalogError(
+            f"VSX local database file not found: {p}. "
+            "Build it with ./vyvar.sh --tool build_vsx -- (or VYVAR.bat) and set "
+            "vsx_local_db_path in Settings -> Catalogs."
+        )
+    ok, code = validate_vsx_local_db_schema(p)
+    if not ok:
+        raise VSXCatalogError(
+            f"VSX local database invalid ({code}): {p}. "
+            "Rebuild with build_vsx and verify table vsx_data in Settings -> Catalogs."
+        )
+    n_rows = count_vsx_local_rows(p)
+    if n_rows <= 0:
+        raise VSXCatalogError(
+            f"VSX local database has zero rows in vsx_data: {p}. "
+            "Rebuild the VSX catalog (build_vsx) before running photometry."
+        )
+    return p
+
+
 def _vsx_ra_intervals_deg(ra_min: float, ra_max: float) -> list[tuple[float, float]]:
     """Split an RA range (deg) into sub-intervals within [0, 360) when the box crosses the meridian."""
     rm, rM = float(ra_min), float(ra_max)

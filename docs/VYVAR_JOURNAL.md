@@ -8,6 +8,34 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-24 -- FIELD-RUN-FINDINGS + session close (FI Boo first real E2E)
+
+**FIRST REAL FIELD E2E (Milan Linux, preview-20260723):** FI Boo, draft_000001,
+NoFilter_60_2, 147 frames. Infolog `infolog_20260724_152115.txt`: astrometry fully
+succeeded (147 aligned + MASTERSTAR, RAM handoff). Photometry initially reported 0 targets
+then plain success -- root cause **#12** empty/wrong `vsx_local_db_path` on fresh config
+(VSX cone silently 0). After VSX path fix Milan resumed photometry.
+
+| ID | Finding | Fix (repo; next bundle) |
+|----|---------|-------------------------|
+| #12 | VSX path unset -> silent 0 targets -> false OK | Fail-loud `require_vsx_local_db_path` (symmetric with Gaia); distinguish empty field vs bad path in infolog |
+| #13 | 0-target run ended `[OK] Pipeline dokonceny uspesne` | Warning completion string; skip SUMMARY REPORT when no photometry |
+| #11 | `[BORDER] Glob found 0` during RAM-handoff pre-flush | Defer BORDER with explicit log; post-flush rewrite logs failures |
+| #7 noise | Fresh bootstrap `observer_location_id=2` vs DB id=1 | Default **1** in AppConfig + bootstrap materialization |
+
+**Bug #10 (cached sqlite crosses Streamlit threads):** RLock fix on `ThreadSafeSQLiteConnection`
+(`check_same_thread=False`); regression test permanent. Side effect of #6 pipeline cache.
+
+**Claude sandbox RTv5:** bug #9 fix verified on-disk (252-key config, skeleton, DB); FK preflight
+with Milan vector -> clear actionable error. **RTv6:** 24 cross-thread `get_equipments` from 8
+threads PASS.
+
+**Claude sandbox mini-E2E:** synthetic FITS -> scan -> import -> calibrate -> preprocess QC ->
+per-frame platesolve + alignment SUCCEEDED against 140-star mini Gaia DB; masterstar
+tight-verification correctly **REJECTED** harness ~10 px systematic geometry error (gates OK).
+
+Result: `dev/results/CURSOR_RESULT_field_run_findings.md`.
+
 ## 2026-07-24 -- BUNDLE-DB-THREADING (preview refresh, bug #10)
 
 **Field bug #10** (Milan Linux): UI DB reads failed ``SQLite objects created in a thread can
