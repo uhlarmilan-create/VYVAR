@@ -114,6 +114,14 @@ class _LockedCursor:
         finally:
             self._release()
 
+    @property
+    def lastrowid(self) -> int:
+        return int(self._cursor.lastrowid)
+
+    @property
+    def rowcount(self) -> int:
+        return int(self._cursor.rowcount)
+
     def __del__(self) -> None:
         self._release()
 
