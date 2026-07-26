@@ -153,6 +153,24 @@
         "matched": 2842,
         "targets": 169
       },
+      "phase0_funnel_fingerprint": {
+        "variable_targets_rows": 245,
+        "gaia_match_source_histogram": {
+          "gaia_dr3_direct": 64,
+          "masterstars": 178,
+          "masterstars_exo": 2,
+          "no_match": 1
+        },
+        "active_targets_rows": 169,
+        "skip_photometry_true": 2,
+        "zone_flag_histogram": {
+          "linear": 113,
+          "noisy1": 10,
+          "noisy2": 6,
+          "noisy3": 38,
+          "saturated": 2
+        }
+      },
       "identity_p95_baseline_px": 1.536099044764055,
       "core_sha": "03d8fb6491bc3c221f89f87acf22b929cece74c60951cf19bda80699180fb989",
       "extended_sha": "bbfcc92e7ac5c4c5edfe0f99353aca9d03a987f99407352217e82875ed342892",

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -101,6 +102,29 @@ def test_except_fix_allowlist_is_draft_scoped() -> None:
     # Other drafts have no allowlist - a nonzero counter would fail the gate.
     assert by_draft.get(999, {}) == {}
     assert by_draft.get(424, {}) == {}
+
+
+def test_phase0_funnel_compare_detects_mismatch() -> None:
+    from phase0_funnel import compare_phase0_funnel_fingerprints
+
+    issues = compare_phase0_funnel_fingerprints(
+        {"active_targets_rows": 322, "variable_targets_rows": 873},
+        {"active_targets_rows": 169, "variable_targets_rows": 245},
+    )
+    assert any("active_targets_rows" in i for i in issues)
+    assert any("variable_targets_rows" in i for i in issues)
+
+
+def test_phase0_funnel_fingerprint_from_csv(tmp_path: Path) -> None:
+    from phase0_funnel import compute_phase0_funnel_fingerprint
+
+    vt = tmp_path / "variable_targets.csv"
+    pd.DataFrame(
+        [{"catalog_id": "1", "gaia_match_source": "masterstars", "vsx_name": "A"}]
+    ).to_csv(vt, index=False)
+    fp = compute_phase0_funnel_fingerprint(vt)
+    assert fp["variable_targets_rows"] == 1
+    assert fp["gaia_match_source_histogram"].get("masterstars") == 1
 
 
 def test_main_full_exit_zero_when_suspended(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -48,6 +48,32 @@ EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
     435: {"phase2a_empty_comp_drop": 1},  # R CVn 1496795041799526400 (+ siblings w/ 0 comps)
 }
 
+# Phase 0 funnel fingerprints (input plan files + post-pipeline active_targets).
+# Anchor --full uses frozen plan CSVs from draft_435 platesolve; it does NOT regenerate
+# variable_targets.csv via write_photometry_plan_files. A change in plan-time export therefore
+# passes byte-identical photometry until these files or Phase 0 logic change.
+EXPECTED_PHASE0_FUNNEL_BY_DRAFT: dict[int, dict[str, Any]] = {
+    435: {
+        "variable_targets_rows": 245,
+        "gaia_match_source_histogram": {
+            "gaia_dr3_direct": 64,
+            "masterstars": 178,
+            "masterstars_exo": 2,
+            "no_match": 1,
+        },
+        "active_targets_rows": 169,
+        "skip_photometry_true": 2,
+        "skip_reason_histogram": {},
+        "zone_flag_histogram": {
+            "linear": 113,
+            "noisy1": 10,
+            "noisy2": 6,
+            "noisy3": 38,
+            "saturated": 2,
+        },
+    },
+}
+
 # Known untracked paths: WARN only (not FAIL). Extend when deliberately added.
 KNOWN_UNTRACKED_PREFIXES = (
     ".worktrees/",
@@ -300,6 +326,97 @@ def _update_ledger_on_full_pass(commit: str) -> None:
     LEDGER_PATH.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
 
 
+def _check_plan_regen_fingerprint(
+    report: SessionReport,
+    *,
+    cfg: Any,
+    ps: Path,
+    work_root: Path,
+    draft_id: int,
+) -> None:
+    """Regenerate plan-time variable_targets.csv and compare to recorded anchor fingerprint."""
+    from config import AppConfig  # noqa: PLC0415
+    from phase0_funnel import compare_phase0_funnel_fingerprints, compute_phase0_funnel_fingerprint  # noqa: PLC0415
+    from pipeline import write_photometry_plan_files  # noqa: PLC0415
+
+    expected = EXPECTED_PHASE0_FUNNEL_BY_DRAFT.get(int(draft_id))
+    if not expected:
+        report.add("full-plan-regen", "SKIP", f"no fingerprint for draft {draft_id}")
+        return
+
+    regen_dir = work_root / "plan_regen"
+    regen_dir.mkdir(parents=True, exist_ok=True)
+    ms_fits = ps / "MASTERSTAR.fits"
+    ms_csv = ps / "masterstars_full_match.csv"
+    if not ms_fits.is_file() or not ms_csv.is_file():
+        report.add("full-plan-regen", "FAIL", "missing MASTERSTAR or masterstars for regen")
+        return
+
+    _cfg = cfg if isinstance(cfg, AppConfig) else AppConfig()
+    try:
+        plan_result = write_photometry_plan_files(
+            platesolve_dir=regen_dir,
+            masterstar_fits=ms_fits,
+            masterstars_csv=ms_csv,
+            draft_id=int(draft_id),
+            database_path=_cfg.database_path,
+        )
+    except Exception as exc:  # noqa: BLE001
+        report.add("full-plan-regen", "FAIL", f"write_photometry_plan_files: {exc!s}"[:200])
+        return
+
+    regen_vt = regen_dir / "variable_targets.csv"
+    if not regen_vt.is_file():
+        report.add("full-plan-regen", "FAIL", "regenerated variable_targets.csv missing")
+        return
+
+    regen_fp = compute_phase0_funnel_fingerprint(regen_vt, active_targets_csv=None)
+    exp_input = {
+        "variable_targets_rows": expected.get("variable_targets_rows"),
+        "gaia_match_source_histogram": expected.get("gaia_match_source_histogram"),
+    }
+    issues = compare_phase0_funnel_fingerprints(
+        {
+            "variable_targets_rows": regen_fp.get("variable_targets_rows"),
+            "gaia_match_source_histogram": regen_fp.get("gaia_match_source_histogram"),
+        },
+        exp_input,
+    )
+    plan_json = regen_dir / "photometry_plan.json"
+    diag_note = ""
+    if plan_json.is_file():
+        try:
+            diag = json.loads(plan_json.read_text(encoding="utf-8")).get("variable_targets_diagnostics") or {}
+            if diag:
+                diag_note = f" diag_keys={sorted(diag.keys())[:6]}"
+        except Exception:  # noqa: BLE001
+            pass
+    if plan_result.get("error"):
+        report.add(
+            "full-plan-regen",
+            "FAIL",
+            f"plan error: {plan_result.get('error')}{diag_note}"[:200],
+        )
+        return
+    if issues:
+        report.add(
+            "full-plan-regen",
+            "FAIL",
+            f"regen mismatch: {'; '.join(issues)[:180]}{diag_note}",
+        )
+    else:
+        report.add(
+            "full-plan-regen",
+            "PASS",
+            json.dumps(
+                {
+                    "variable_targets_rows": regen_fp.get("variable_targets_rows"),
+                    "gaia_match_source_histogram": regen_fp.get("gaia_match_source_histogram"),
+                }
+            )[:200],
+        )
+
+
 def run_full_baseline(report: SessionReport) -> None:
     suspend_msg = _full_baseline_suspend_message()
     if suspend_msg:
@@ -355,6 +472,8 @@ def run_full_baseline(report: SessionReport) -> None:
     work_root = REPO_ROOT / "tmp" / "session_baseline" / ts
     out_phot = work_root / "platesolve" / SETUP / "photometry"
     out_phot.mkdir(parents=True, exist_ok=True)
+
+    _check_plan_regen_fingerprint(report, cfg=cfg, ps=ps, work_root=work_root, draft_id=DRAFT_ID)
 
     reset_except_fix_counters()
     db = VyvarDatabase(cfg.database_path)
@@ -484,6 +603,52 @@ def run_full_baseline(report: SessionReport) -> None:
             "full-counters-expected",
             "PASS",
             f"allowlisted {json.dumps(expected)} (structural empty-comp drops)",
+        )
+
+    from phase0_funnel import (  # noqa: PLC0415
+        compare_phase0_funnel_fingerprints,
+        compute_phase0_funnel_fingerprint,
+    )
+
+    expected_funnel = EXPECTED_PHASE0_FUNNEL_BY_DRAFT.get(int(DRAFT_ID))
+    if expected_funnel:
+        input_fp = compute_phase0_funnel_fingerprint(
+            ps / "variable_targets.csv",
+            active_targets_csv=None,
+        )
+        input_only = {
+            "variable_targets_rows": input_fp.get("variable_targets_rows"),
+            "gaia_match_source_histogram": input_fp.get("gaia_match_source_histogram"),
+        }
+        exp_input = {
+            "variable_targets_rows": expected_funnel.get("variable_targets_rows"),
+            "gaia_match_source_histogram": expected_funnel.get("gaia_match_source_histogram"),
+        }
+        input_issues = compare_phase0_funnel_fingerprints(input_only, exp_input)
+        report.add(
+            "full-phase0-input-vt",
+            "PASS" if not input_issues else "FAIL",
+            json.dumps(input_only)[:200] if not input_issues else "; ".join(input_issues)[:200],
+        )
+
+        out_at = out_phot / "active_targets.csv"
+        run_fp = compute_phase0_funnel_fingerprint(
+            ps / "variable_targets.csv",
+            active_targets_csv=out_at,
+        )
+        run_issues = compare_phase0_funnel_fingerprints(run_fp, expected_funnel)
+        report.add(
+            "full-phase0-funnel",
+            "PASS" if not run_issues else "FAIL",
+            json.dumps(
+                {
+                    "active_targets_rows": run_fp.get("active_targets_rows"),
+                    "skip_photometry_true": run_fp.get("skip_photometry_true"),
+                    "zone_flag_histogram": run_fp.get("zone_flag_histogram"),
+                }
+            )[:200]
+            if not run_issues
+            else "; ".join(run_issues)[:200],
         )
 
     if report.ok:
