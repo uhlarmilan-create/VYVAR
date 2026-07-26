@@ -42,6 +42,8 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-RNG-01",
         "INV-PROV-01",
         "INV-CFG-01",
+        "INV-CFG-01R",
+        "INV-PHASE0-ID",
         "QC-01",
         "OSC-01",
         "OSC-02",
@@ -612,6 +614,75 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
         policy="FAIL",
         detail="; ".join(issues) if issues else "config<->behavior markers clean",
     )
+
+    # INV-CFG-01 reverse: non-empty vsx_out_of_scope_types with matching VSX types must mask rows.
+    if _voos_list and photometry_dir is not None:
+        import pandas as pd
+
+        at_path = Path(photometry_dir).parent / "active_targets.csv"
+        vt_path = Path(photometry_dir).parent.parent / "variable_targets.csv"
+        if at_path.is_file() and vt_path.is_file():
+            try:
+                at_df = pd.read_csv(at_path, low_memory=False)
+                vt_df = pd.read_csv(vt_path, low_memory=False)
+                from vsx_type_scope import is_vsx_auto_selected_target, vsx_type_is_out_of_scope  # noqa: PLC0415
+
+                expect_mask = False
+                for _, vrow in vt_df.iterrows():
+                    if not is_vsx_auto_selected_target(vrow):
+                        continue
+                    if vsx_type_is_out_of_scope(str(vrow.get("vsx_type", "") or ""), _voos_list):
+                        expect_mask = True
+                        break
+                if expect_mask and "skip_reason" in at_df.columns:
+                    masked = (at_df["skip_reason"].astype(str).str.strip() == "vsx_type_out_of_scope").sum()
+                    if int(masked) <= 0:
+                        inv_check(
+                            meta,
+                            "INV-CFG-01R",
+                            False,
+                            policy="WARN",
+                            detail="vsx_out_of_scope_types non-empty but zero masked active targets",
+                        )
+            except Exception:  # noqa: BLE001
+                pass
+
+    # INV-PHASE0-ID: active catalog_id must match planner catalog_id for same vsx_name.
+    if photometry_dir is not None:
+        import pandas as pd
+
+        at_path = Path(photometry_dir).parent / "active_targets.csv"
+        vt_path = Path(photometry_dir).parent.parent / "variable_targets.csv"
+        if at_path.is_file() and vt_path.is_file():
+            try:
+                from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
+
+                at_df = pd.read_csv(at_path, low_memory=False)
+                vt_df = pd.read_csv(vt_path, low_memory=False)
+                if "vsx_name" in at_df.columns and "vsx_name" in vt_df.columns and "catalog_id" in at_df.columns:
+                    vt_map = {
+                        str(r["vsx_name"]).strip(): normalize_gaia_source_id(r.get("catalog_id"))
+                        for _, r in vt_df.iterrows()
+                        if str(r.get("vsx_name", "") or "").strip()
+                    }
+                    mism: list[str] = []
+                    for _, ar in at_df.iterrows():
+                        vn = str(ar.get("vsx_name", "") or "").strip()
+                        if not vn or vn not in vt_map:
+                            continue
+                        plan = vt_map[vn]
+                        act = normalize_gaia_source_id(ar.get("catalog_id"))
+                        if plan and act and plan != act:
+                            mism.append(vn)
+                    inv_check(
+                        meta,
+                        "INV-PHASE0-ID",
+                        len(mism) == 0,
+                        policy="FAIL",
+                        detail=f"catalog_id mismatch vs planner: {mism[:5]}" if mism else "identity join clean",
+                    )
+            except Exception:  # noqa: BLE001
+                pass
 
 
 def validate_provenance_schema(

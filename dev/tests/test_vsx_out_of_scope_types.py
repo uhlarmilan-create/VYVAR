@@ -71,6 +71,7 @@ def _write_phase0(tmp_path: Path) -> tuple[Path, Path]:
                 "x": 200.0,
                 "y": 200.0,
                 "catalog_id": "1111111111111111111",
+                "gaia_match_source": "masterstars",
                 "mag": 12.0,
             },
             {
@@ -85,6 +86,7 @@ def _write_phase0(tmp_path: Path) -> tuple[Path, Path]:
                 "x": 300.0,
                 "y": 300.0,
                 "catalog_id": "2222222222222222222",
+                "gaia_match_source": "masterstars",
                 "mag": 11.5,
             },
             {
@@ -143,7 +145,6 @@ def test_select_active_out_of_scope_mask_and_manual_immune(tmp_path: Path) -> No
         frame_w_px=512,
         frame_h_px=512,
         edge_margin_px=10,
-        match_radius_arcsec=30.0,
         cfg=cfg,
     )
     assert len(out) == 3
@@ -162,11 +163,11 @@ def test_empty_list_noop_equivalence(tmp_path: Path) -> None:
     cfg_default.vsx_out_of_scope_types = []
     a = select_active_targets(
         vt_p, ms_p, frame_w_px=512, frame_h_px=512, edge_margin_px=10,
-        match_radius_arcsec=30.0, cfg=cfg_off,
+        cfg=cfg_off,
     )
     b = select_active_targets(
         vt_p, ms_p, frame_w_px=512, frame_h_px=512, edge_margin_px=10,
-        match_radius_arcsec=30.0, cfg=cfg_default,
+        cfg=cfg_default,
     )
     assert list(a["skip_photometry"]) == list(b["skip_photometry"])
     assert not any(a["skip_photometry"])
@@ -180,7 +181,7 @@ def test_out_of_scope_still_in_comp_exclude_set(tmp_path: Path) -> None:
     cfg.vsx_out_of_scope_types = ["ROT"]
     out = select_active_targets(
         vt_p, ms_p, frame_w_px=512, frame_h_px=512, edge_margin_px=10,
-        match_radius_arcsec=30.0, cfg=cfg,
+        cfg=cfg,
     )
     cids = {
         str(c)

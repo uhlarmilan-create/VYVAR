@@ -12569,6 +12569,38 @@ def _refresh_variable_targets_xy(
         logging.info("[VT REFRESH] %d riadkov (ziadne platne x/y po prepocte)", len(df))
 
 
+def _attach_predicted_dilution_report(active: pd.DataFrame, cfg: AppConfig) -> pd.DataFrame:
+    """Report-only Gaia-predicted dilution fraction (design D; does not gate or correct)."""
+    out = active.copy()
+    out["predicted_dilution_factor"] = 1.0
+    gdb = str(cfg.gaia_db_path or "").strip()
+    if out.empty or not gdb:
+        return out
+    try:
+        from dilution import compute_dilution_factor  # noqa: PLC0415
+    except Exception:  # noqa: BLE001
+        return out
+    ap = float(cfg.gs11_dilution_aperture_arcsec)
+    mld = float(cfg.gs11_dilution_mag_limit_delta)
+    factors: list[float] = []
+    for _, row in out.iterrows():
+        try:
+            res = compute_dilution_factor(
+                float(row["ra_deg"]),
+                float(row["dec_deg"]),
+                float(pd.to_numeric(row.get("mag"), errors="coerce")),
+                ap,
+                gdb,
+                catalog_id=row.get("catalog_id"),
+                mag_limit_delta=mld,
+            )
+            factors.append(float(res.get("dilution_factor", 1.0)))
+        except Exception:  # noqa: BLE001
+            factors.append(1.0)
+    out["predicted_dilution_factor"] = factors
+    return out
+
+
 def select_active_targets(
     variable_targets_csv: Path,
     masterstars_csv: Path,
@@ -12577,7 +12609,6 @@ def select_active_targets(
     frame_h_px: int = 1397,
     edge_margin_px: int = 50,
     safe_bbox: tuple[float, float, float, float] | None = None,
-    match_radius_arcsec: float = 15.0,
     gaia_db_path: str | None = None,
     vsx_local_db_path: str | None = None,
     masterstar_fits_path: Path | str | None = None,
@@ -12590,11 +12621,12 @@ def select_active_targets(
     - Hviezda musi byt v snimke (``x,y`` aspon ``edge_margin_px`` od okraja efektivneho pola; to iste cislo
       ako ``chip_interior_margin_px`` vo Faze 0+1 - jednotne s porovnavackami a suspected).
     - Sirka/vyska sa zvacsi z dat ak treba
-    - Must match masterstars_full_match.csv (cross-match < match_radius_arcsec).
-      VSX without masterstar (DAO+Gaia) match is excluded from active_targets.
+    - VSX auto rows: identity join on planner ``catalog_id`` in masterstars (no positional matching).
+      Only ``gaia_match_source=masterstars`` rows are promotable; ``gaia_dr3_direct`` / ``no_match`` stay
+      in variable_targets for comp veto but are excluded here.
+    - Manual / exoplanet targets: identity join on ``catalog_id`` when present (not subject to VSX gate).
     - ``catalog_id`` z masterstars musi byt neprazdny (inak sa ciel vynecha).
-    - **Ziadny filter na zonu** (linear / noisy / saturated vsetky prejdu); kvalita je v ``zone_flag``,
-      saturovane ciele maju ``skip_photometry=True`` pre Fazu 2A.
+    - ``catalog_only`` / ``neznama_zona`` / ``saturated`` zone flags mask photometry.
     - ``vsx_out_of_scope_types`` (config): VSX auto-selected targets whose type tokens match
       are kept in active_targets with ``skip_photometry=True`` and
       ``skip_reason='vsx_type_out_of_scope'`` (mask-first). Manual targets are never filtered.
@@ -12667,88 +12699,25 @@ def select_active_targets(
 
     _cfg = cfg if cfg is not None else AppConfig()
 
-    # Cross-match s masterstars (RA/Dec haversine, or pixel distance when WCS scale is bad)
-    ms["ra_deg"] = pd.to_numeric(ms["ra_deg"], errors="coerce")
-    ms["dec_deg"] = pd.to_numeric(ms["dec_deg"], errors="coerce")
-    vt_in["ra_deg"] = pd.to_numeric(vt_in["ra_deg"], errors="coerce")
-    vt_in["dec_deg"] = pd.to_numeric(vt_in["dec_deg"], errors="coerce")
-
-    ms_arr = ms[["ra_deg", "dec_deg"]].to_numpy(dtype=float)
-    ms_x_arr = pd.to_numeric(ms.get("x"), errors="coerce").to_numpy(dtype=np.float64)
-    ms_y_arr = pd.to_numeric(ms.get("y"), errors="coerce").to_numpy(dtype=np.float64)
-
-    _plate_nominal = (
-        float(plate_scale_arcsec_px)
-        if plate_scale_arcsec_px is not None
-        and math.isfinite(float(plate_scale_arcsec_px))
-        and float(plate_scale_arcsec_px) > 0
-        else float(_cfg.phase01_plate_scale_arcsec_per_px or 1.3)
+    from vsx_type_scope import (  # noqa: PLC0415
+        is_vsx_auto_selected_target,
+        vsx_type_is_out_of_scope,
     )
 
-    _use_pixel_dist = False
-    _ms_fits_chk = (
-        Path(str(masterstar_fits_path)).expanduser().resolve()
-        if masterstar_fits_path
-        else Path(masterstars_csv).resolve().parent / "MASTERSTAR.fits"
-    )
-    if _ms_fits_chk.is_file():
-        try:
-            import warnings as _warnings  # noqa: PLC0415
-
-            from astropy.wcs import FITSFixedWarning, WCS as _WCS_chk  # noqa: PLC0415
-
-            with _warnings.catch_warnings():
-                _warnings.simplefilter("ignore", FITSFixedWarning)
-                with astrofits.open(_ms_fits_chk, memmap=False) as _hd_w:
-                    _wcs_chk = _WCS_chk(_hd_w[0].header)
-            _psm_chk = np.asarray(_wcs_chk.pixel_scale_matrix, dtype=np.float64)
-            _actual_scale = float(np.sqrt(np.abs(np.linalg.det(_psm_chk))) * 3600.0)
-            _scale_ratio = abs(_actual_scale - _plate_nominal) / max(_plate_nominal, 1e-9)
-            if _scale_ratio > 0.20:
-                _use_pixel_dist = True
-                log_event(
-                    f"[SELECT TARGETS] WCS scale {_actual_scale:.3f}\"/px deviates "
-                    f"{_scale_ratio * 100.0:.1f}% from nominal {_plate_nominal:.3f}\"/px "
-                    f"- pixel-distance matching"
-                )
-        except Exception as _wcs_exc:  # noqa: BLE001
-            # EXC-0200: T4 -- Non-numeric Gaia id string returned as-is in select_active_targets helper (EXCEPT-BULK-2 2026-07-08)
-            logging.error('[EXC-0199] WCS scale sanity check failure logged - distance matching may stay on ra/dec instead of...: %s', _wcs_exc)
-            logging.warning("[SELECT TARGETS] WCS sanity check failed: %s", _wcs_exc)
-    if _use_pixel_dist:
-        log_event("[SELECT TARGETS] Distance mode: pixel-fallback")
-
-    # TODO-23: adaptive matching radius - VSX/Gaia catalog -> masterstars (not 1-pixel centroid match)
-    # Fixed: respect caller/config floor, adaptive with generous minimum (5x plate scale)
-    if _plate_nominal > 0:
-        _adaptive = _plate_nominal * 5.0
-        _cfg_floor = float(_cfg.phase01_match_radius_arcsec)
-        match_radius_arcsec = max(_adaptive, _cfg_floor)
-    else:
-        match_radius_arcsec = float(_cfg.phase01_match_radius_arcsec)
-    LOGGER.debug(
-        '[TODO-23] match_radius=%.2f" (plate_scale=%s"/px, adaptive=5x, floor=%s")',
-        match_radius_arcsec,
-        f"{float(plate_scale_arcsec_px):.3f}" if plate_scale_arcsec_px else "unknown",
-        f"{float(_cfg.phase01_match_radius_arcsec):.2f}",
-    )
-
-    def _gaia_id_str(x: Any) -> str:
-        s = str(x).strip()
-        if s in ("", "nan"):
-            return ""
-        try:
-            return str(int(float(s)))
-        except Exception:  # noqa: BLE001
-            return s
-
-    from comp_selection_per_target import (  # noqa: PLC0415
-        _angular_distance_deg_vectorized,
-        _pixel_distance_deg_vectorized,
-    )
+    # Identity join index: normalized Gaia source_id -> masterstar row.
+    ms_by_cid: dict[str, pd.Series] = {}
+    for _, ms_row in ms.iterrows():
+        cid_ms = normalize_gaia_source_id(ms_row.get("name", ""))
+        if not cid_ms:
+            cid_ms = _normalize_gaia_id(ms_row.get("catalog_id", ""))
+        if cid_ms and cid_ms not in ms_by_cid:
+            ms_by_cid[str(cid_ms)] = ms_row
 
     out_of_frame = int(len(vt) - int(in_frame.sum()))
     no_catalog_id = 0
+    no_gaia_id = 0
+    no_dao_detection = 0
+    not_target_eligible = 0
     matched_rows: list[dict] = []
     matched_vt_idx: set[Any] = set()
     excluded_rows: list[dict[str, Any]] = []
@@ -12771,48 +12740,40 @@ def select_active_targets(
         excluded_rows.append(_excluded_target_row(vrow_off, "out_of_frame"))
 
     for vidx, vrow in vt_in.iterrows():
-        ra_v = float(vrow["ra_deg"])
-        dec_v = float(vrow["dec_deg"])
+        ra_v = float(pd.to_numeric(vrow.get("ra_deg"), errors="coerce"))
+        dec_v = float(pd.to_numeric(vrow.get("dec_deg"), errors="coerce"))
         if not (math.isfinite(ra_v) and math.isfinite(dec_v)):
             continue
-        # Najdi najblizsi zaznam v masterstars
-        if _use_pixel_dist:
-            x_v = float(vrow["x"])
-            y_v = float(vrow["y"])
-            if not (math.isfinite(x_v) and math.isfinite(y_v)):
+
+        is_vsx_auto = is_vsx_auto_selected_target(vrow)
+        planner_cid = _normalize_gaia_id(vrow.get("catalog_id", ""))
+        gaia_src = str(vrow.get("gaia_match_source", "") or "").strip().lower()
+
+        if is_vsx_auto:
+            if gaia_src not in ("masterstars",):
+                not_target_eligible += 1
+                excluded_rows.append(
+                    _excluded_target_row(vrow, "no_gaia_id" if not planner_cid else "not_target_eligible")
+                )
                 continue
-            dists = _pixel_distance_deg_vectorized(
-                x_v,
-                y_v,
-                ms_x_arr,
-                ms_y_arr,
-                plate_scale_arcsec=_plate_nominal,
-            )
-        else:
-            dists = _angular_distance_deg_vectorized(ra_v, dec_v, ms_arr[:, 0], ms_arr[:, 1])
-        best_idx = int(np.argmin(dists))
-        best_dist_arcsec = dists[best_idx] * 3600.0
-        if best_dist_arcsec > match_radius_arcsec:
-            continue
-        ms_row = ms.iloc[best_idx]
-        zone_val_raw = str(ms_row.get("zone", "")).strip()
-        zone_flag = _active_target_zone_flag(ms_row, zone_val_raw)
-        # Preferuj "name" (casto obsahuje presny Gaia source_id aj ked catalog_id je poskodeny float64).
-        name_raw = ms_row.get("name", "")
-        name_norm = normalize_gaia_source_id(name_raw)
-        if name_norm and re.fullmatch(r"\d{12,22}", str(name_norm)):
-            catalog_id_norm = str(name_norm)
-            cid_raw = str(name_raw).strip()
-        else:
-            cid_raw = str(ms_row.get("catalog_id", ms_row.get("name", ""))).strip()
-            catalog_id_norm = _normalize_gaia_id(ms_row.get("catalog_id", ms_row.get("name")))
-        if not catalog_id_norm:
-            # Fallback na textovy retazec ak _normalize vrati prazdny ale mame neciselny id
-            catalog_id_norm = _gaia_id_str(cid_raw)
-        if not catalog_id_norm:
+            if not planner_cid:
+                no_gaia_id += 1
+                excluded_rows.append(_excluded_target_row(vrow, "no_gaia_id"))
+                continue
+        elif not planner_cid:
             no_catalog_id += 1
             excluded_rows.append(_excluded_target_row(vrow, "no_catalog_id"))
             continue
+
+        ms_row = ms_by_cid.get(str(planner_cid))
+        if ms_row is None:
+            no_dao_detection += 1
+            excluded_rows.append(_excluded_target_row(vrow, "no_dao_detection"))
+            continue
+
+        catalog_id_norm = str(planner_cid)
+        zone_val_raw = str(ms_row.get("zone", "")).strip()
+        zone_flag = _active_target_zone_flag(ms_row, zone_val_raw)
         mag_for_skip = float(
             pd.to_numeric(
                 ms_row.get("mag", ms_row.get("phot_g_mean_mag", float("nan"))),
@@ -12826,26 +12787,19 @@ def select_active_targets(
             snr50_ok_for_skip = bool(_bool_col(pd.Series([_snr_raw])).iloc[0])
         if (not snr50_ok_for_skip) and math.isfinite(mag_for_skip) and mag_for_skip < 8.0:
             logging.info(
-                "[SKIP] %s: mag=%.1f snr50_ok=False "
-                "- pravdepodobne saturovana, skip",
+                "[SKIP] %s: mag=%.1f snr50_ok=False - pravdepodobne saturovana, skip",
                 catalog_id_norm,
                 mag_for_skip,
             )
             excluded_rows.append(_excluded_target_row(vrow, "saturated", mag=mag_for_skip))
             continue
-        skip_ph = zone_flag == "saturated"
+        skip_ph = zone_flag in ("saturated", "catalog_only", "neznama_zona")
         skip_reason = "zone_flag" if skip_ph else ""
-        # VSX out-of-scope type filter (auto VSX only; mask-first).
-        from vsx_type_scope import (  # noqa: PLC0415
-            is_vsx_auto_selected_target,
-            vsx_type_is_out_of_scope,
-        )
-
         _voos = list(getattr(_cfg, "vsx_out_of_scope_types", []) or [])
         if (
             (not skip_ph)
             and _voos
-            and is_vsx_auto_selected_target(vrow)
+            and is_vsx_auto
             and vsx_type_is_out_of_scope(str(vrow.get("vsx_type", "") or ""), _voos)
         ):
             skip_ph = True
@@ -12858,16 +12812,10 @@ def select_active_targets(
             "priority": vrow.get("priority", 1),
             "ra_deg": ra_v,
             "dec_deg": dec_v,
-            "x": float(vrow["x"]),
-            "y": float(vrow["y"]),
+            "x": float(pd.to_numeric(ms_row.get("x", vrow.get("x")), errors="coerce")),
+            "y": float(pd.to_numeric(ms_row.get("y", vrow.get("y")), errors="coerce")),
             "catalog_id": catalog_id_norm,
-            # Prefer image-matched magnitude; fallback to Gaia G if masterstars carries it.
-            "mag": float(
-                pd.to_numeric(
-                    ms_row.get("mag", ms_row.get("phot_g_mean_mag", float("nan"))),
-                    errors="coerce",
-                )
-            ),
+            "mag": mag_for_skip,
             "b_v": float(ms_row.get("b_v", float("nan"))),
             "bp_rp": float(ms_row.get("bp_rp", float("nan"))),
             "zone_flag": zone_flag,
@@ -12907,24 +12855,10 @@ def select_active_targets(
         "skip_photometry",
         "skip_reason",
     ]
-    n_excluded_no_dao_match = int((~vt_in.index.isin(matched_vt_idx)).sum())
-    for vidx, vrow in vt_in.loc[~vt_in.index.isin(matched_vt_idx)].iterrows():
-        excluded_rows.append(_excluded_target_row(vrow, "no_dao_gaia_match"))
-    if n_excluded_no_dao_match:
-        _ex_names = [
-            str(vt_in.loc[i].get("vsx_name") or vt_in.loc[i].get("name") or "")
-            for i in vt_in.index
-            if i not in matched_vt_idx
-        ]
-        _ex_names = [n for n in _ex_names if n]
-        _preview = ", ".join(_ex_names[:30])
-        if len(_ex_names) > 30:
-            _preview += ", ..."
-        logging.info(
-            "[Faza 0] Excluded %d VSX targets without masterstar (DAO+Gaia) match - not in active_targets: %s",
-            n_excluded_no_dao_match,
-            _preview,
-        )
+    n_masked_zone = int(sum(1 for r in matched_rows if r.get("skip_reason") == "zone_flag"))
+    n_masked_vsx_type = int(sum(1 for r in matched_rows if r.get("skip_reason") == "vsx_type_out_of_scope"))
+    n_gaia_id_assigned = int(vt_in["catalog_id"].apply(lambda x: bool(_normalize_gaia_id(x))).sum()) if "catalog_id" in vt_in.columns else 0
+    _contam_pct = float("nan")
     if not matched_rows:
         LAST_EXCLUDED_TARGETS = (
             pd.DataFrame(excluded_rows)
@@ -12933,7 +12867,21 @@ def select_active_targets(
         )
         log_event(
             "select_active_targets: linear=0 noisy1=0 noisy2=0 noisy3=0 saturated=0 "
-            f"no_catalog_id={no_catalog_id} out_of_frame={out_of_frame}"
+            f"no_catalog_id={no_catalog_id} no_gaia_id={no_gaia_id} no_dao_detection={no_dao_detection} "
+            f"out_of_frame={out_of_frame}"
+        )
+        logging.info(
+            "FAZA 0 funnel: vsx_bbox=%d -> in_frame=%d -> gaia_id_assigned=%d (contamination=%s) "
+            "-> dao_detected=0 -> active=0 | excluded: no_dao_detection=%d no_gaia_id=%d "
+            "not_target_eligible=%d out_of_frame=%d | masked: zone_flag=0 vsx_type_out_of_scope=0",
+            int(len(vt)),
+            int(len(vt_in)),
+            n_gaia_id_assigned,
+            "n/a",
+            no_dao_detection,
+            no_gaia_id,
+            not_target_eligible,
+            out_of_frame,
         )
         return pd.DataFrame(columns=_empty_cols)
 
@@ -12976,13 +12924,47 @@ def select_active_targets(
     n_sat = int((result["zone_flag"] == "saturated").sum())
     log_event(
         f"select_active_targets: linear={n_lin} noisy1={n_n1} noisy2={n_n2} noisy3={n_n3} "
-        f"saturated={n_sat} no_catalog_id={no_catalog_id} out_of_frame={out_of_frame} "
-        f"excluded_no_dao_match={n_excluded_no_dao_match}"
+        f"saturated={n_sat} no_catalog_id={no_catalog_id} no_gaia_id={no_gaia_id} "
+        f"no_dao_detection={no_dao_detection} out_of_frame={out_of_frame}"
     )
     logging.info(
-        f"[FAZA 0] active_targets: {len(result)} / {len(vt)} VSX hviezd "
-        f"(in_frame={int(in_frame.sum())}, masterstar_matched={len(matched_rows)}, excluded_no_dao_match={n_excluded_no_dao_match})"
+        "FAZA 0 funnel: vsx_bbox=%d -> in_frame=%d -> gaia_id_assigned=%d (contamination=%s) "
+        "-> dao_detected=%d -> active=%d | excluded: no_dao_detection=%d no_gaia_id=%d "
+        "not_target_eligible=%d out_of_frame=%d | masked: zone_flag=%d vsx_type_out_of_scope=%d",
+        int(len(vt)),
+        int(len(vt_in)),
+        n_gaia_id_assigned,
+        f"{_contam_pct:.1f}%" if math.isfinite(_contam_pct) else "n/a",
+        len(matched_rows),
+        len(result),
+        no_dao_detection,
+        no_gaia_id,
+        not_target_eligible,
+        out_of_frame,
+        n_masked_zone,
+        n_masked_vsx_type,
     )
+    _voos_cfg = list(getattr(_cfg, "vsx_out_of_scope_types", []) or [])
+    if _voos_cfg and n_masked_vsx_type == 0 and "catalog" in vt.columns:
+        _vt_vsx = vt[vt["catalog"].astype(str).str.upper() == "VSX"]
+        _types = set()
+        for _t in _vt_vsx.get("vsx_type", pd.Series(dtype=str)).astype(str):
+            for _tok in _t.replace(":", " ").replace("/", " ").split():
+                _types.add(_tok.strip().upper())
+        if any(str(t).strip().upper() in _types for t in _voos_cfg):
+            logging.warning(
+                "[FAZA 0] vsx_out_of_scope_types=%s but zero rows masked - check VSX type tokens",
+                _voos_cfg,
+            )
+    if n_gaia_id_assigned > 0 and len(vt_in) > 0:
+        _assign_frac = float(n_gaia_id_assigned) / float(len(vt_in))
+        if _assign_frac < 0.50:
+            logging.warning(
+                "[FAZA 0] gaia_id_assigned=%d far below in_frame=%d (%.0f%%) - sparse Gaia cross-match",
+                n_gaia_id_assigned,
+                int(len(vt_in)),
+                100.0 * _assign_frac,
+            )
     LAST_EXCLUDED_TARGETS = (
         pd.DataFrame(excluded_rows)
         if excluded_rows
@@ -14257,7 +14239,6 @@ def run_phase0_and_phase1(
     frame_w_px: int = 2082,
     frame_h_px: int = 1397,
     chip_interior_margin_px: int = 100,
-    match_radius_arcsec: float = 15.0,
     plate_scale_arcsec_px: float | None = None,
     max_dist_deg: float = 1.0,
     max_mag_diff: float = 0.25,
@@ -14595,7 +14576,6 @@ def run_phase0_and_phase1(
         frame_h_px=frame_h_px,
         edge_margin_px=int(chip_interior_margin_px),
         safe_bbox=_safe_bbox,
-        match_radius_arcsec=match_radius_arcsec,
         gaia_db_path=str(_cfg_p01.gaia_db_path or ""),
         vsx_local_db_path=str(_cfg_p01.vsx_local_db_path or "").strip() or None,
         masterstar_fits_path=_ms_for_catalog_only if _ms_for_catalog_only.is_file() else None,
@@ -14613,6 +14593,7 @@ def run_phase0_and_phase1(
         # EXC-0212: T3 -- ProcFrameStore not stored in Streamlit session_state - UI perf cache miss only (EXCEPT-BULK-2 2026-07-08)
         logging.error('[EXC-0211] active_targets.csv catalog_id normalization fails - float-truncated IDs written to disk: %s', exc)
         pass
+    active = _attach_predicted_dilution_report(active, _cfg_p01)
     active.to_csv(active_csv, index=False)
     logging.info(f"[FAZA 0] Ulozene: {active_csv} ({len(active)} cielov)")
     _excluded = LAST_EXCLUDED_TARGETS
@@ -15499,7 +15480,6 @@ def run_full_photometry_pipeline(
         frame_w_px=int(_fw_pipe),
         frame_h_px=int(_fh_pipe),
         chip_interior_margin_px=int(_cfg.phase01_chip_interior_margin_px),
-        match_radius_arcsec=float(_cfg.phase01_match_radius_arcsec),
         plate_scale_arcsec_px=_plate_scale,
         max_dist_deg=_compute_fov_max_dist(
             frame_w_px=int(_fw_pipe),

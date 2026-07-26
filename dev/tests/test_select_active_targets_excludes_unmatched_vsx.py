@@ -26,6 +26,8 @@ def _write_fixtures(tmp_path: Path) -> tuple[Path, Path]:
                 "x": 256.0,
                 "y": 256.0,
                 "catalog_id": "9999999999999999999",
+                "catalog": "VSX",
+                "gaia_match_source": "masterstars",
                 "mag": 12.5,
             },
             {
@@ -39,6 +41,8 @@ def _write_fixtures(tmp_path: Path) -> tuple[Path, Path]:
                 "x": 300.0,
                 "y": 300.0,
                 "catalog_id": "1111111111111111111",
+                "catalog": "VSX",
+                "gaia_match_source": "masterstars",
                 "mag": 11.0,
             },
         ]
@@ -75,7 +79,6 @@ def test_select_active_targets_excludes_unmatched_vsx(tmp_path: Path) -> None:
         frame_w_px=512,
         frame_h_px=512,
         edge_margin_px=50,
-        match_radius_arcsec=15.0,
     )
     assert len(out) == 1
     assert str(out.iloc[0]["catalog_id"]) == "1111111111111111111"

@@ -2461,20 +2461,6 @@
     "unit": null,
     "widget": "auto"
   },
-  "phase01_match_radius_arcsec": {
-    "help": "Sky radius (arcsec) for matching detected stars to Gaia catalog entries.",
-    "kind": "static",
-    "label": "Phase01 Match Radius Arcsec",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      3.0,
-      30.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto"
-  },
   "phase01_plate_scale_arcsec_per_px": {
     "help": "Phase-1 plate scale; resolved from the WCS solution at run time. WAVE-B removed its config.json fallback - the resolver is authoritative.",
     "kind": "resolved",

@@ -188,10 +188,6 @@ D['saturate_limit_fraction'] = dict(
  mensi="Konzervativnejsi - vic jasnych hvezd vylouceno; prijdete o jasne komparacni kandidaty.",
  vetsi="Riziko mereni v nelinearni oblasti: tok jasnych hvezd je systematicky PODCENEN, cimz se pokrivi diferencialni magnitudy vuci jasnym kompum - viz box o saturaci.",
  proc="Detektory ztraceji linearitu pod plnou studni; 15% rezerva kryje typicky nastup nelinearity CMOS. Absolutni strop (ADU) se bere z FITS/DB per kamera.")
-D['phase01_match_radius_arcsec'] = dict(
- mensi="Mene falesnych ztotozneni s Gaia, ale pri horsim WCS/seeingu prijdete o prava sparovani.",
- vetsi="Vic sparovani, ale v hustych polich roste riziko zameny souseda (spatna identita = fatalni pro fotometrii promenne!).",
- proc="Volba ~ nekolik nasobku astrometricke chyby (WCS RMS + centroid) - typicky 2-3 arcsec na wide, mene na Newtonu.")
 D['field_density_sparse_threshold'] = dict(
  mensi="Adaptace na ridka pole nastane pozdeji - na wide poli hrozi prazdne comp pooly.",
  vetsi="I normalni pole dostanou uvolnena kriteria - zbytecne slabsi vyber.",

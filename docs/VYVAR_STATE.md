@@ -2,9 +2,9 @@
 
 **Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
 
-Last updated: **2026-07-24** (FIELD-RUN-FINDINGS #11-#13; session close 2026-07-23/24).
+Last updated: **2026-07-26** (PHASE0-IDENTITY-GATE close; SIGMA/SKY-SURFACE diagnostics).
 
-Registered params: **271** (was 270; +``osc_channel_binning``).
+Registered params: **270** (removed ``phase01_match_radius_arcsec``; was 271).
 
 ## Cython release readiness (RELEASE-1 + RELEASE-2) -- preview live
 
@@ -61,6 +61,11 @@ Full program P1-P4: DONE. Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`
   `docs/VYVAR_INVARIANTS.md`.
 - `sigma_sys` floors exist for band `"4"` only (other bands lack the systematic
   term -- GAPS A2).
+- **MASTERSTAR detection and stack rebuild** sit outside the anchor `--full` gate
+  (frozen `MASTERSTAR.fits` + CSV); preprocess/detrend changes can alter pass-1 DAO
+  counts without failing byte-identity photometry SHA checks.
+- **DAO detection is not byte-reproducible** across the photutils 3.0 upgrade
+  (+1.1% pass-1 on the same frozen MASTERSTAR image; see DEPS policy / anchor notes).
 
 ## Repository layout (REPO-REORG -- DONE, gate PASS)
 

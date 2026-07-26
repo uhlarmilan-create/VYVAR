@@ -100,6 +100,9 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "vsx_variable_targets_mag_limit": (
         "vsx_variable_targets_mag_limit removed 2026-07; VSX scope is detection-limited (DAO+Gaia match)"
     ),
+    "phase01_match_radius_arcsec": (
+        "phase01_match_radius_arcsec removed 2026-07; Phase 0 uses catalog_id identity join (PHASE0-IDENTITY-GATE)"
+    ),
 }
 
 
@@ -846,8 +849,6 @@ class AppConfig:
     phase01_plate_scale_arcsec_per_px: float = 1.3
     #: Plate scale (arcsec/px) for Phase 2A metadata, GS11, dilution; Set 1 default 1.3.
     plate_scale_arcsec_per_px: float = 1.3
-    #: Faza 0: minimum cross-match radius VSX -> masterstars (arcsec); used with max(5x plate_scale, this).
-    phase01_match_radius_arcsec: float = 10.0
     #: Faza 2A: minimum number of comps used in color-term fit before applying CT (``should_apply_color_term``).
     phase01_ct_min_comp: int = 7
     #: Faza 2A: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear).
@@ -2268,7 +2269,6 @@ class AppConfig:
         # WAVE-B STEP 5 (DELETE-DB-DUP): plate_scale_arcsec_per_px (WCS/CD then DB optics) and
         # phase01_plate_scale_arcsec_per_px (WCS-superseded) resolve at run time; no longer loaded
         # from or saved to config.json. Fields keep their dataclass defaults as fallbacks.
-        _f01("phase01_match_radius_arcsec", 10.0, 3.0, 30.0)
         _f01("exoplanet_match_max_sep_arcsec", 3.0, 0.5, 30.0)
         _f01("phase01_comparison_max_psf_chi2", 50.0, 1.0, 500.0)
         _f01("phase01_comparison_max_fwhm_factor", 1.5, 0.5, 5.0)
@@ -2652,7 +2652,6 @@ class AppConfig:
             "gs11_comp_suspect_dilution": float(self.gs11_comp_suspect_dilution),
             "gs11_target_min_dilution": float(self.gs11_target_min_dilution),
             "phase01_chip_interior_margin_px": int(self.phase01_chip_interior_margin_px),
-            "phase01_match_radius_arcsec": float(self.phase01_match_radius_arcsec),
             "variability_min_frames": int(self.variability_min_frames),
             "variability_min_frames_frac": float(self.variability_min_frames_frac),
             "variability_sigma_clip": float(self.variability_sigma_clip),

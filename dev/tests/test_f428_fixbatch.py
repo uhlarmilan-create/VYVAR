@@ -235,6 +235,8 @@ def test_excluded_targets_sidecar_on_no_match(tmp_path: Path, monkeypatch) -> No
             "dec_deg": [42.0],
             "mag": [10.5],
             "catalog_id": ["1400549806859236864"],
+            "catalog": ["VSX"],
+            "gaia_match_source": ["masterstars"],
             "x": [500.0],
             "y": [500.0],
         }
@@ -274,14 +276,14 @@ def test_excluded_targets_sidecar_on_no_match(tmp_path: Path, monkeypatch) -> No
     assert active.empty
     excluded = pc.LAST_EXCLUDED_TARGETS
     assert not excluded.empty
-    assert excluded.iloc[0]["reason"] == "no_dao_gaia_match"
+    assert excluded.iloc[0]["reason"] == "no_dao_detection"
     assert excluded.iloc[0]["vsx_name"] == "BO CVn"
 
     sidecar = tmp_path / "excluded_targets.csv"
     excluded.to_csv(sidecar, index=False)
     loaded = pd.read_csv(sidecar)
     assert len(loaded) == 1
-    assert loaded.iloc[0]["reason"] == "no_dao_gaia_match"
+    assert loaded.iloc[0]["reason"] == "no_dao_detection"
 
 
 def test_infolog_formatter_uses_utc() -> None:

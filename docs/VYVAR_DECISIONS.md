@@ -1223,6 +1223,65 @@ MASTERSTAR (unchanged Phase 0 criterion). Rationale: catalog ``mag_max`` band he
 made the static threshold semantically fuzzy; detection limit is the honest gate. Comp-pool
 veto coverage grows with the fuller ``variable_targets`` list (correctness). **Status:** implemented.
 
+### VSX-GAIA-MATCHER-TWO-STEP (2026-07-26, PHASE0-IDENTITY-GATE / MATCHER-FIX)
+
+**Decision.** Plan-time cross-match is a **two-step separation** (design A):
+
+1. **VSX -> Gaia DR3** over the frame bbox (deep local catalogue via ``query_local_gaia``;
+   same geometry as ``_query_vsx_local_frame_bbox``). Measured ``rho`` sets acceptance radius
+   ``r_max = sqrt(0.01 / (pi * rho))`` (1% contamination budget). Mixture fit yields ``Q``, ``w``,
+   ``sigma_narrow``, ``sigma_broad`` for **ranking** multi-candidate cases; Sutherland reliability
+   tiers are quality indicators only (not accept/reject gates).
+2. **Phase 0** promotes only when the accepted Gaia ``source_id`` is present in
+   ``masterstars_full_match.csv`` (``gaia_match_source=masterstars``). Matches without DAO
+   detection remain in ``variable_targets.csv`` as ``gaia_dr3_direct`` (comparison-pool veto only).
+
+**Why not masterstars as match RHS.** Masterstars are detection-limited (``Q ~ 0.32`` on anchor
+night); fitting nearest-neighbour separations against them locks ``sigma`` onto the chance scale
+(~100 arcsec), not astrometry. ``Q`` is a **fitted** mixture parameter (Sutherland & Saunders),
+not assumed 1.
+
+**True-match separation model (MATCHER-FIX-2).** A single Rayleigh is insufficient for VSX: the
+catalogue is heterogeneous (774/873 in-frame entries on the anchor night are Gaia-identified
+names with near-zero true separation; classical entries carry mixed epoch/quality astrometry),
+and Gaia DR3 (epoch 2016.0) vs VSX (generally J2000) introduces a proper-motion tail to ~1-2 arcsec.
+The true-match term is therefore a **two-component Rayleigh mixture** (``w``, ``sigma_narrow``,
+``sigma_broad``) plus measured ``rho`` and fitted ``Q``. The <=1% contamination gate
+(``mean(rho * pi * (sep/3600)^2)``) was **never relaxed** in this arc.
+
+**Acceptance rule (MATCHER-FIX-3).** Acceptance is defined solely by the pre-registered 1%
+contamination budget, not by a reliability threshold. The acceptance radius follows from measured
+field density:
+
+``r_max = sqrt(0.01 / (pi * rho))``  [``r`` in deg; ``rho`` in deg^-2]
+
+A Gaia source is a **candidate** when it lies within ``r_max`` of the VSX position. Exactly one
+candidate is accepted; when several lie inside ``r_max``, the mixture-based Sutherland likelihood
+ratio **ranks** them and the best is taken. Reliability is still computed per row for
+``gaia_match_quality`` tiers but **must not reject** a positional candidate. This mirrors the Gaia
+DR3 cross-match design: the figure of merit ranks neighbours; positional compatibility gates them.
+An arbitrary FoM cutoff was explicitly avoided by the Gaia authors because it would be arbitrary.
+
+**PM path.** When ``pmra``/``pmdec`` columns are present and finite in the local Gaia DB,
+positions propagate from ``GAIA_EPOCH=2016.0`` to ``VSX_MATCH_EPOCH=2000.0`` (J2000 assumption).
+When absent, ``pm_path=broadened`` with a small quadrature term; separation quantiles before/after
+are logged.
+
+**Degeneracy guard.** ``sigma_broad > 0.25/sqrt(rho)`` [deg] plus astrometric-tail checks on the
+sub-10 arcsec core (chance-scale p50 lock-on). At plan-time match, degeneracy is **WARN** only
+(ranking may degrade; acceptance via ``r_max`` is unaffected). Strict FAIL remains in unit tests
+on direct mixture fit.
+
+**Outcome check (G3).** WARN when ``masterstars_accepted / masterstars_eligible < 80%``, where
+``masterstars_eligible`` counts VSX rows with any DAO ``source_id`` candidate within ``r_max``.
+
+**Comparison baselines (plan regen).** Withdrawn: frozen 245-row anchor VT histogram
+``masterstars=178, gaia_dr3_direct=64, no_match=1, masterstars_exo=2`` (14.5 mag limit era).
+Correct like-for-like: ``draft_000450`` regen on same night/field without mag limit:
+``873 rows | masterstars 283 | gaia_dr3_direct 443 | no_match 147``.
+
+**Status:** implemented (uncommitted pending Milan STOP clearance).
+
 ### OSC-CHANNEL-EXTRACTION (2026-07-22, phase 1/3)
 OSC Bayer mosaics: calibrate on CFA (dark subtract + flat divide on raw mosaic; flat via
 ``normalize_flat_master`` per-tile using ``EQUIPMENTS.BAYERMASK``). **No** demosaic/interpolation.

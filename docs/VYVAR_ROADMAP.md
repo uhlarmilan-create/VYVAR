@@ -694,6 +694,11 @@ next calibration lever.
 
 ## LOW
 
+- **Gaia local DB: add pmra/pmdec columns (MATCHER-FIX-3 follow-up).** Current
+  ``vyvar_gaia_dr3.db`` build returns ``pm_columns_present=false``, ``n_pm_finite=0`` on the dev
+  machine; positions cannot propagate from Gaia epoch 2016.0 to VSX J2000 and the proper-motion tail
+  stays in the separation residual. Add PM columns at the next catalog rebuild (benefits astrometry
+  across VYVAR, not only the VSX matcher). Not a blocker for the contamination-budget acceptance fix.
 - **GAIA-1 / GAIA-2 (pmra/pmdec, ruwe)** -- **DEFERRED to Gaia DR4 build** (~Dec 2026). Not
   restarting the DR3 rebuild. See DECISIONS + `VYVAR_GAIA_DR3_AUDIT.md`. DR4 migration hooks
   (epoch J2017.5, build columns, lite-table check) recorded in DECISIONS.

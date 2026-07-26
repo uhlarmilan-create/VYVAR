@@ -279,7 +279,6 @@ INTENTIONALLY_HIDDEN = {
     "phase01_ct_min_comp",
     "phase01_ct_extrapolation_tol",
     "phase01_flux_col",
-    "phase01_match_radius_arcsec",
     "comp_max_slope_mmag_hr",
     "aperture_fwhm_factor_small",
     "aperture_fwhm_factor_medium",

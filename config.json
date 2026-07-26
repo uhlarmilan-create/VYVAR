@@ -276,7 +276,6 @@
   // crowded-field mode.
   "masterstar_quality_crowded_n_cat_min": 800,
   // Sky radius (arcsec) for matching detected stars to Gaia catalog entries.
-  "phase01_match_radius_arcsec": 10.0,
   // Minimum surviving-points ratio after sigma clipping for a star to stay in
   // variability analysis.
   "variability_clip_ratio_min": 0.8,

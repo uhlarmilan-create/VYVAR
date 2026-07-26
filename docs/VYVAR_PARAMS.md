@@ -6,15 +6,15 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-07-24T14:08:30Z at git HEAD 10608bb._
+_Generated 2026-07-26T20:41:12Z at git HEAD cb78b25._
 
 ## Summary
 
-- Entries: 271
-- Tier: basic 13, advanced 70, expert 188
-- Kind: static 253, derived 0, resolved 18
-- Widget: auto 113, custom 143, hidden 15
-- Owner: db_static 9, config_runtime 243, fits_dynamic 6, internal 13
+- Entries: 270
+- Tier: basic 13, advanced 70, expert 187
+- Kind: static 252, derived 0, resolved 18
+- Widget: auto 112, custom 143, hidden 15
+- Owner: db_static 9, config_runtime 242, fits_dynamic 6, internal 13
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -149,7 +149,6 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `masterstar_sibling_stack_n` | 10 | - | advanced | static | config_runtime | custom | Masterstar Sibling Stack N |
 | `masterstar_use_best_frame_fwhm` | True | - | expert | static | config_runtime | custom | Masterstar Use Best Frame FWHM |
 | `phase01_chip_interior_margin_px` | 50 | - | advanced | static | config_runtime | auto | Phase01 Chip Interior Margin PX |
-| `phase01_match_radius_arcsec` | 10.0 | 3 .. 30 | expert | static | config_runtime | auto | Phase01 Match Radius Arcsec |
 | `phase01_plate_scale_arcsec_per_px` | 1.3 | 0 .. 30 | expert | resolved | fits_dynamic | auto | Phase01 Plate Scale Arcsec Per PX |
 | `plate_scale_arcsec_per_px` | 1.3 | 0.1 .. 30 | expert | resolved | fits_dynamic | auto | Plate Scale Arcsec Per PX |
 | `plate_solve_fov_deg` | 1.0 | - | expert | resolved | fits_dynamic | auto | Plate Solve FOV Deg |

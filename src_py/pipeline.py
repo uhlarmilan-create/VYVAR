@@ -6522,7 +6522,7 @@ def write_photometry_plan_files(
             n_vsx_in_cone = int(len(vsx_df)) if vsx_df is not None else 0
             _vsx_n_cone = n_vsx_in_cone
 
-            # Gaia cross-id from MASTERSTAR catalog (within 10 arcsec).
+            # Masterstars catalogue (Phase 0 DAO membership only; not the VSX->Gaia match RHS).
             ga = df.copy()
             if "catalog_id" in ga.columns and "ra_deg" in ga.columns and "dec_deg" in ga.columns:
                 ga["catalog_id"] = ga["catalog_id"].fillna("").astype(str).str.strip()
@@ -6532,6 +6532,15 @@ def write_photometry_plan_files(
                 ga = ga[ga["ra_deg"].notna() & ga["dec_deg"].notna()].copy()
             else:
                 ga = ga.iloc[0:0].copy()
+            from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
+
+            _ms_ids: set[str] = set()
+            if not ga.empty:
+                _ms_ids = {
+                    str(normalize_gaia_source_id(x)).strip()
+                    for x in ga["catalog_id"].astype(str).tolist()
+                    if str(x).strip()
+                }
 
             if vsx_df is not None and not vsx_df.empty and "ra_deg" in vsx_df.columns and "dec_deg" in vsx_df.columns:
                 v = vsx_df.copy()
@@ -6550,214 +6559,173 @@ def write_photometry_plan_files(
 
                 n_vsx_in_frame = int(len(v))
 
-                # Nearest Gaia match for catalog_id.
+                # Density-aware VSX -> Gaia DR3 cross-match (Marrese 2017/2019; Sutherland & Saunders 1992).
+                # RHS is the deep local Gaia catalogue over the frame bbox; masterstars membership is derived after.
                 cat_id_out = [""] * int(len(v))
                 mag_out: list[float] = [float("nan")] * int(len(v))
                 zone_out: list[str] = [""] * int(len(v))
                 sep_out: list[float] = [float("nan")] * int(len(v))
                 quality_out: list[str] = [""] * int(len(v))
                 source_out: list[str] = [""] * int(len(v))
-                if len(v) > 0 and len(ga) > 0:
-                    vcoo = SkyCoord(
-                        ra=v["ra_deg"].astype(float).to_numpy() * u.deg,
-                        dec=v["dec_deg"].astype(float).to_numpy() * u.deg,
-                        frame="icrs",
+                _cm_diag: dict[str, Any] = {}
+                if len(v) > 0:
+                    from database import get_gaia_db_max_g_mag  # noqa: PLC0415
+                    from vsx_gaia_crossmatch import (  # noqa: PLC0415
+                        VsxGaiaCrossmatchError,
+                        field_area_deg2_from_wcs,
+                        match_vsx_to_gaia_density_aware,
+                        query_gaia_for_frame_bbox,
                     )
-                    gcoo = SkyCoord(
-                        ra=ga["ra_deg"].astype(float).to_numpy() * u.deg,
-                        dec=ga["dec_deg"].astype(float).to_numpy() * u.deg,
-                        frame="icrs",
+
+                    try:
+                        gaia_db = str(_cfg_plan.gaia_db_path or "").strip()
+                    except Exception:  # noqa: BLE001
+                        gaia_db = ""
+                    if not gaia_db:
+                        raise RuntimeError("VSX->Gaia cross-match refused: gaia_db_path not configured")
+
+                    _field_area = field_area_deg2_from_wcs(w0, int(wpx), int(h))
+                    _gaia_db_max_g = float(get_gaia_db_max_g_mag(gaia_db))
+                    _gaia_rows = query_gaia_for_frame_bbox(
+                        gaia_db,
+                        w0,
+                        int(wpx),
+                        int(h),
+                        margin_px=50.0,
+                        center=center,
                     )
-                    idx, sep2d, _ = vcoo.match_to_catalog_sky(gcoo)
-                    max_sep = 10.0 * u.arcsec
-                    for i in range(len(v)):
-                        if 0 <= int(idx[i]) < len(ga) and sep2d[i] <= max_sep:
-                            gro = ga.iloc[int(idx[i])]
-                            cat_id_out[i] = str(gro["catalog_id"])
-                            sep_out[i] = float(sep2d[i].to(u.arcsec).value)
-                            try:
-                                s0 = float(sep_out[i])
-                            except Exception:  # noqa: BLE001
-                                s0 = float("nan")
-                            if math.isfinite(s0):
-                                if s0 < 3.0:
-                                    quality_out[i] = "good"
-                                elif s0 <= 7.0:
-                                    quality_out[i] = "uncertain"
+                    _gdf = pd.DataFrame(_gaia_rows) if _gaia_rows else pd.DataFrame()
+                    if _gdf.empty:
+                        raise RuntimeError(
+                            "VSX->Gaia cross-match refused: no Gaia DR3 sources in frame bbox"
+                        )
+                    _sid_col = "source_id" if "source_id" in _gdf.columns else "catalog_id"
+                    _ra_col = "ra" if "ra" in _gdf.columns else "ra_deg"
+                    _dec_col = "dec" if "dec" in _gdf.columns else "dec_deg"
+                    _gdf = _gdf.copy()
+                    _gdf["catalog_id"] = _gdf[_sid_col].apply(
+                        lambda x: str(normalize_gaia_source_id(x)).strip()
+                    )
+                    _gdf["ra_deg"] = pd.to_numeric(_gdf[_ra_col], errors="coerce")
+                    _gdf["dec_deg"] = pd.to_numeric(_gdf[_dec_col], errors="coerce")
+                    _gdf = _gdf[
+                        _gdf["catalog_id"].ne("")
+                        & _gdf["ra_deg"].notna()
+                        & _gdf["dec_deg"].notna()
+                    ].copy()
+                    _pmra = (
+                        pd.to_numeric(_gdf["pmra"], errors="coerce").to_numpy(dtype=float)
+                        if "pmra" in _gdf.columns
+                        else None
+                    )
+                    _pmdec = (
+                        pd.to_numeric(_gdf["pmdec"], errors="coerce").to_numpy(dtype=float)
+                        if "pmdec" in _gdf.columns
+                        else None
+                    )
+                    _vsx_mag_max = (
+                        pd.to_numeric(v.get("mag_max"), errors="coerce").to_numpy(dtype=float)
+                        if "mag_max" in v.columns
+                        else None
+                    )
+                    try:
+                        _match_rows, _cm_diag_obj = match_vsx_to_gaia_density_aware(
+                            v["ra_deg"].astype(float).to_numpy(),
+                            v["dec_deg"].astype(float).to_numpy(),
+                            _gdf["catalog_id"].astype(str).to_numpy(),
+                            _gdf["ra_deg"].astype(float).to_numpy(),
+                            _gdf["dec_deg"].astype(float).to_numpy(),
+                            field_area_deg2=float(_field_area),
+                            pmra=_pmra,
+                            pmdec=_pmdec,
+                            gaia_db_max_g=_gaia_db_max_g,
+                            vsx_mag_max=_vsx_mag_max,
+                            masterstars_ids=_ms_ids,
+                        )
+                        _cm_diag = {
+                            "q_fit": _cm_diag_obj.q_fit,
+                            "w_fit": _cm_diag_obj.w_fit,
+                            "sigma_narrow_arcsec": _cm_diag_obj.sigma_narrow_arcsec,
+                            "sigma_broad_arcsec": _cm_diag_obj.sigma_broad_arcsec,
+                            "sigma_arcsec": _cm_diag_obj.sigma_narrow_arcsec,
+                            "rho_per_deg2": _cm_diag_obj.rho_per_deg2,
+                            "mean_nn_arcsec": _cm_diag_obj.mean_nn_arcsec,
+                            "pm_path": _cm_diag_obj.pm_path,
+                            "pm_columns_present": _cm_diag_obj.pm_columns_present,
+                            "n_pm_finite": _cm_diag_obj.n_pm_finite,
+                            "n_vsx": _cm_diag_obj.n_vsx,
+                            "n_gaia": _cm_diag_obj.n_gaia,
+                            "n_accepted": _cm_diag_obj.n_accepted,
+                            "expected_contamination_fraction": _cm_diag_obj.expected_contamination_fraction,
+                            "r_max_arcsec": _cm_diag_obj.r_max_arcsec,
+                            "candidate_multiplicity": dict(_cm_diag_obj.candidate_multiplicity),
+                            "multi_candidate_fraction": _cm_diag_obj.multi_candidate_fraction,
+                            "fit_degenerate_warn": _cm_diag_obj.fit_degenerate_warn,
+                            "gaia_db_max_g": _cm_diag_obj.gaia_db_max_g,
+                            "vsx_fainter_than_gaia_db": _cm_diag_obj.vsx_fainter_than_gaia_db,
+                            "sep_quantiles_before_pm": _cm_diag_obj.sep_quantiles_before_pm,
+                            "sep_quantiles_after_pm": _cm_diag_obj.sep_quantiles_after_pm,
+                            "sep_quantiles_accepted": _cm_diag_obj.sep_quantiles_accepted,
+                            "masterstars_in_frame": _cm_diag_obj.masterstars_in_frame,
+                            "masterstars_eligible": _cm_diag_obj.masterstars_eligible,
+                            "masterstars_accepted": _cm_diag_obj.masterstars_accepted,
+                            "outcome_check": _cm_diag_obj.outcome_check,
+                        }
+                        _gaia_by_cid = {
+                            str(r["catalog_id"]): r for _, r in _gdf.iterrows()
+                        }
+                        for i, mr in enumerate(_match_rows):
+                            if mr.accepted and mr.catalog_id:
+                                cat_id_out[i] = mr.catalog_id
+                                sep_out[i] = float(mr.sep_arcsec)
+                                quality_out[i] = mr.quality
+                                if mr.catalog_id in _ms_ids:
+                                    source_out[i] = "masterstars"
+                                    gro = ga.loc[ga["catalog_id"].astype(str) == mr.catalog_id]
+                                    if not gro.empty:
+                                        gro = gro.iloc[0]
+                                        try:
+                                            _mg = gro.get("mag")
+                                            mag_out[i] = (
+                                                float(_mg)
+                                                if _mg is not None and str(_mg).strip() != ""
+                                                else float("nan")
+                                            )
+                                        except (TypeError, ValueError):
+                                            mag_out[i] = float("nan")
+                                        try:
+                                            zr = gro.get("zone")
+                                            zone_out[i] = str(zr).strip().lower() if zr is not None else ""
+                                        except Exception:  # noqa: BLE001
+                                            zone_out[i] = ""
                                 else:
-                                    quality_out[i] = "poor"
-                            source_out[i] = "masterstars"
-                            try:
-                                _mg = gro.get("mag")
-                                mag_out[i] = float(_mg) if _mg is not None and str(_mg).strip() != "" else float("nan")
-                            except (TypeError, ValueError):
-                                mag_out[i] = float("nan")
-                            if not math.isfinite(mag_out[i]):
-                                mag_out[i] = float("nan")
-                            try:
-                                zr = gro.get("zone")
-                                zone_out[i] = str(zr).strip().lower() if zr is not None else ""
-                            except Exception:  # noqa: BLE001
-                                zone_out[i] = ""
-
-                # FALLBACK: VSX -> Gaia DR3 direct lookup for unresolved catalog_id
-                try:
-                    gaia_db = str(_cfg_plan.gaia_db_path or "").strip()
-                except Exception:  # noqa: BLE001
-                    gaia_db = ""
-                unresolved_idx = [i for i in range(len(v)) if not str(cat_id_out[i] or "").strip()]
-                fb_resolved = 0
-                fb_unresolved = int(len(unresolved_idx))
-                fb_good = 0
-                fb_uncertain = 0
-                fb_poor = 0
-                _vsx_coord_skip_labels: list[str] = []
-                if gaia_db and unresolved_idx:
-                    # Cache per VSX coord (avoid repeated SQL if duplicates).
-                    gaia_cache: dict[tuple[float, float], pd.DataFrame] = {}
-
-                    def _norm_gaia_id(x: Any) -> str:
-                        # Robust Gaia source_id normalization (NO float cast).
-                        try:
-                            from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
-
-                            return str(normalize_gaia_source_id(x)).strip()
-                        except Exception:  # noqa: BLE001
-                            s = str(x or "").strip()
-                            if not s or s.lower() in ("nan", "none"):
-                                return ""
-                            return s
-
-                    for i in unresolved_idx:
-                        try:
-                            vsx_ra = float(v.iloc[i]["ra_deg"])
-                            vsx_dec = float(v.iloc[i]["dec_deg"])
-                        except Exception:  # noqa: BLE001
-                            _lbl = str(v.iloc[i].get("name") or v.iloc[i].get("oid") or f"row{i}").strip()
-                            _vsx_coord_skip_labels.append(_lbl or f"row{i}")
-                            continue
-                        if not (math.isfinite(vsx_ra) and math.isfinite(vsx_dec)):
-                            continue
-                        key = (float(vsx_ra), float(vsx_dec))
-                        if key not in gaia_cache:
-                            rdeg = 0.00833  # 30 arcsec
-                            try:
-                                rows = query_local_gaia(
-                                    gaia_db,
-                                    ra_min=float(vsx_ra) - rdeg,
-                                    ra_max=float(vsx_ra) + rdeg,
-                                    dec_min=float(vsx_dec) - rdeg,
-                                    dec_max=float(vsx_dec) + rdeg,
-                                    mag_limit=20.0,
-                                    max_rows=2000,
-                                )
-                            except Exception:  # noqa: BLE001
-                                rows = []
-                            gdf = pd.DataFrame(rows) if rows else pd.DataFrame()
-                            gaia_cache[key] = gdf
-                        gdf = gaia_cache.get(key)
-                        if gdf is None or gdf.empty:
-                            continue
-
-                        # Coordinates columns (schema: ra/dec; fallback to ra_deg/dec_deg if present).
-                        ra_col = "ra" if "ra" in gdf.columns else ("ra_deg" if "ra_deg" in gdf.columns else "")
-                        dec_col = "dec" if "dec" in gdf.columns else ("dec_deg" if "dec_deg" in gdf.columns else "")
-                        if not ra_col or not dec_col:
-                            continue
-                        ra_c = pd.to_numeric(gdf[ra_col], errors="coerce").to_numpy(dtype=float)
-                        dec_c = pd.to_numeric(gdf[dec_col], errors="coerce").to_numpy(dtype=float)
-                        ok = np.isfinite(ra_c) & np.isfinite(dec_c)
-                        if not bool(np.any(ok)):
-                            continue
-                        ra_c = ra_c[ok]
-                        dec_c = dec_c[ok]
-                        sub = gdf.loc[gdf.index[ok]].copy()
-
-                        vsx_coord = SkyCoord(ra=float(vsx_ra) * u.deg, dec=float(vsx_dec) * u.deg, frame="icrs")
-                        cand_coords = SkyCoord(ra=ra_c * u.deg, dec=dec_c * u.deg, frame="icrs")
-                        seps = vsx_coord.separation(cand_coords).arcsec
-                        sub["_sep_arcsec"] = np.asarray(seps, dtype=float)
-                        sub20 = sub[pd.to_numeric(sub["_sep_arcsec"], errors="coerce") < 20.0].copy()
-                        if sub20.empty:
-                            continue
-
-                        best = None
-                        # Mag preference when VSX mag_max is known.
-                        vsx_m = float("nan")
-                        try:
-                            vsx_m = float(pd.to_numeric(v.iloc[i].get("mag_max"), errors="coerce"))
-                        except Exception:  # noqa: BLE001
-                            vsx_m = float("nan")
-                        gmag_col = "g_mag" if "g_mag" in sub20.columns else ("phot_g_mean_mag" if "phot_g_mean_mag" in sub20.columns else "")
-                        if math.isfinite(vsx_m) and gmag_col:
-                            gm = pd.to_numeric(sub20[gmag_col], errors="coerce")
-                            good_mag = (gm.notna()) & ((gm - float(vsx_m)).abs() < 2.0)
-                            sub_mag = sub20.loc[good_mag].copy()
-                            if not sub_mag.empty:
-                                best = sub_mag.sort_values("_sep_arcsec", ascending=True).iloc[0]
-                        if best is None:
-                            best = sub20.sort_values("_sep_arcsec", ascending=True).iloc[0]
-
-                        # Gaia ID (prefer catalog_id if present, else source_id)
-                        raw_id = best.get("catalog_id", None)
-                        if raw_id is None or str(raw_id).strip() == "":
-                            raw_id = best.get("source_id", None)
-                        gid = _norm_gaia_id(raw_id)
-                        if not gid:
-                            continue
-
-                        cat_id_out[i] = gid
-                        try:
-                            sep_val = float(best.get("_sep_arcsec", float("nan")))
-                        except Exception:  # noqa: BLE001
-                            # EXC-0351: T2 -- Per-variable 'no Gaia match' log line is skipped when logging fails; catalog_id remains... (EXCEPT-BULK 2026-07-08)
-                            sep_val = float("nan")
-                        sep_out[i] = sep_val
-                        if math.isfinite(sep_val):
-                            if sep_val < 3.0:
-                                quality_out[i] = "good"
-                                fb_good += 1
-                            elif sep_val <= 7.0:
-                                quality_out[i] = "uncertain"
-                                fb_uncertain += 1
+                                    source_out[i] = "gaia_dr3_direct"
+                                    grow = _gaia_by_cid.get(mr.catalog_id)
+                                    if grow is not None:
+                                        try:
+                                            _gm = grow.get("g_mag")
+                                            mag_out[i] = (
+                                                float(_gm)
+                                                if _gm is not None and str(_gm).strip() != ""
+                                                else float("nan")
+                                            )
+                                        except (TypeError, ValueError):
+                                            mag_out[i] = float("nan")
                             else:
-                                quality_out[i] = "poor"
-                                fb_poor += 1
-                        source_out[i] = "gaia_dr3_direct"
-                        fb_resolved += 1
-
-                # Mark remaining unresolved with explicit source + log.
-                if unresolved_idx:
-                    for i in unresolved_idx:
-                        if str(cat_id_out[i] or "").strip():
-                            continue
-                        source_out[i] = "no_match"
-                        try:
-                            vsx_name0 = str(v.iloc[i].get("name", "") or "").strip()
-                            vsx_ra = float(v.iloc[i]["ra_deg"])
-                            vsx_dec = float(v.iloc[i]["dec_deg"])
-                            log_event(
-                                f"VSX no Gaia match: {vsx_name0} ra={vsx_ra:.4f} dec={vsx_dec:.4f} - hviezda nebude sledovana"
-                            )
-                        except Exception:  # noqa: BLE001
-                            pass
-
-                if unresolved_idx:
-                    log_event(
-                        f"VSX->Gaia fallback DR3: resolved={int(fb_resolved)} unresolved={int(fb_unresolved)} "
-                        f"(good={int(fb_good)} uncertain={int(fb_uncertain)} poor={int(fb_poor)})"
-                    )
-                if _vsx_coord_skip_labels:
-                    from except_fix_counters import get_except_fix_counters
-
-                    _n_skip = len(_vsx_coord_skip_labels)
-                    get_except_fix_counters().vsx_variable_coord_drop += _n_skip
-                    LOGGER.error(
-                        "[VSX] skipped %d variables (unparsable coords): %s",
-                        _n_skip,
-                        ", ".join(_vsx_coord_skip_labels[:20])
-                        + (" ..." if _n_skip > 20 else ""),
-                    )
+                                source_out[i] = "no_match"
+                                try:
+                                    vsx_name0 = str(v.iloc[i].get("name", "") or "").strip()
+                                    vsx_ra = float(v.iloc[i]["ra_deg"])
+                                    vsx_dec = float(v.iloc[i]["dec_deg"])
+                                    log_event(
+                                        f"VSX no Gaia match: {vsx_name0} ra={vsx_ra:.4f} dec={vsx_dec:.4f} "
+                                        "- hviezda nebude sledovana"
+                                    )
+                                except Exception:  # noqa: BLE001
+                                    pass
+                    except VsxGaiaCrossmatchError as _cm_exc:
+                        log_event(f"VSX->Gaia DR3 cross-match refused: {_cm_exc!s}")
+                        raise RuntimeError(str(_cm_exc)) from _cm_exc
 
                 # Period column varies by VSX schema.
                 _pcol = None
@@ -6822,6 +6790,7 @@ def write_photometry_plan_files(
                     "gaia_matches_within_10arcsec": int(n_gaia_ok),
                     "masterstars_zone_counts_among_gaia_matched": _zone_hist,
                     "phase0_active_targets_hint_count": int(n_phase0_hint),
+                    "vsx_gaia_crossmatch": dict(_cm_diag),
                     "phase0_note_sk": (
                         "Faza 0 (`select_active_targets` v photometry_core.py): vsetky zony z masterstars "
                         "prejdu do active_targets.csv s `zone_flag`; saturovane maju `skip_photometry=True` "
