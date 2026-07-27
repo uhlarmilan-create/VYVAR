@@ -14,14 +14,14 @@ masterstar census (2951 rows, 201 actives). **451 vs 453** isolates sky-surface 
 UI entry point but confounded by masterstar inflation on 451 (6698 vs 2951).
 
 **Comparable targets:** Wall-time targets must come from the **same measurement source** per draft.
-The task table’s “> 2 h” for 453 is **not comparable** to completed-run folder timestamps or the
+The task table's "> 2 h" for 453 is **not comparable** to completed-run folder timestamps or the
 452 night-run `SUCCESS` line (measured after completion). Infolog-derived phase spans are **tail-only**
-(8000-line ring buffer) and omit calibration/preprocess on UI runs — not comparable to 452’s full
+(8000-line ring buffer) and omit calibration/preprocess on UI runs  -  not comparable to 452's full
 `[NightRun] [OK]` profile without stating that gap.
 
 ---
 
-## 1. Comparison table — confirmed / corrected
+## 1. Comparison table  -  confirmed / corrected
 
 | Draft | Entry | Sky-surface | Masterstars | Actives | Wall time (measured) |
 |-------|-------|-------------|------------:|--------:|---------------------:|
@@ -32,15 +32,15 @@ The task table’s “> 2 h” for 453 is **not comparable** to completed-run folder t
 **Corrections to the task table:**
 
 - **452 wall time:** **118.8 min**, not previously reported in the remediation doc.
-- **453 wall time:** Completed run **~76 min**, not > 2 h. Milan’s “> 2 h still running” note was
+- **453 wall time:** Completed run **~76 min**, not > 2 h. Milan's "> 2 h still running" note was
   either mid-run or included non-pipeline wall clock; the finished draft timestamps do not support
   > 2 h pipeline time.
-- **451 ~88 min:** Measured **83.4 min** — close; same order of magnitude.
+- **451 ~88 min:** Measured **83.4 min**  -  close; same order of magnitude.
 - Counts (6698 / 2951 / 201 / 242): **confirmed** from CSV row counts on disk.
 
 **Design note (451 vs 453 confound):** 451 did **more** photometry work (6698 masterstars, 242
 actives) yet finished **faster** than 453 (83 vs 76 min is close; both much faster than headless 452).
-Any “sky-surface made UI slower” claim is **not supported** by total wall clock; the confound dominates.
+Any "sky-surface made UI slower" claim is **not supported** by total wall clock; the confound dominates.
 
 ---
 
@@ -51,11 +51,11 @@ Any “sky-surface made UI slower” claim is **not supported** by total wall clock;
 | Draft | Timing source | Caveat |
 |-------|---------------|--------|
 | 452 | Full `tmp/c4_night_run_452.log` `[NightRun] [OK]` markers | Complete pipeline |
-| 451, 453 | `infolog_*.txt` tail + folder ctime | **First ~8000 lines lost** (calibration, preprocess, INV-PREP-01); infolog starts mid–MASTERSTAR build |
+| 451, 453 | `infolog_*.txt` tail + folder ctime | **First ~8000 lines lost** (calibration, preprocess, INV-PREP-01); infolog starts mid?MASTERSTAR build |
 
 Artifacts: `phase_timing.csv`, `phase_markers_{451,452,453}.txt`, `config_snapshot_{451,452,453}.json`.
 
-### 2.2 Draft 452 — full headless phases (seconds)
+### 2.2 Draft 452  -  full headless phases (seconds)
 
 | Phase | duration_s | n_items |
 |-------|-----------:|--------:|
@@ -63,12 +63,12 @@ Artifacts: `phase_timing.csv`, `phase_markers_{451,452,453}.txt`, `config_snapsh
 | preprocess | **2743.1** | 150 frames |
 | platesolve_align_masterstar | 859.0 | 139 frames |
 | photometry_NoFilter_60_2 | **2549.0** | 201 targets |
-| (other steps) | < 10 | — |
-| **wall_clock_total** | **7129.1** | — |
+| (other steps) | < 10 |  -  |
+| **wall_clock_total** | **7129.1** |  -  |
 
 **Per-frame preprocess (452):** 2743.1 / 150 = **18.3 s/frame** (includes in-place sky-surface + QC).
 
-### 2.3 Draft 453 — infolog tail blocks (seconds, incomplete)
+### 2.3 Draft 453  -  infolog tail blocks (seconds, incomplete)
 
 | Phase block | duration_s | n_items |
 |-------------|-----------:|--------:|
@@ -77,20 +77,20 @@ Artifacts: `phase_timing.csv`, `phase_markers_{451,452,453}.txt`, `config_snapsh
 | phase0_phase1_window | 2177 | 201 |
 | phase2a | 805 | 201 |
 | reporting_export | 1040 | 201 |
-| wall_clock_folder_ctime | 4562 | — |
+| wall_clock_folder_ctime | 4562 |  -  |
 
 Preprocess/calibration: **not in retained infolog** (not measurable from this artifact).
 
-### 2.4 Draft 451 — infolog tail blocks (seconds, incomplete)
+### 2.4 Draft 451  -  infolog tail blocks (seconds, incomplete)
 
 | Phase block | duration_s | n_items |
 |-------------|-----------:|--------:|
 | masterstar_build (visible) | 108 | 6698 |
-| phase0 (visible) | 2894 | — |
-| phase1 | 1793 | — |
+| phase0 (visible) | 2894 |  -  |
+| phase1 | 1793 |  -  |
 | phase2a | 1026 | 242 |
 | reporting_export | 549 | 242 |
-| wall_clock_folder_ctime | 5002 | — |
+| wall_clock_folder_ctime | 5002 |  -  |
 
 ### 2.5 Ranked phase deltas (where measurable)
 
@@ -123,8 +123,8 @@ upstream work was not repeated or not logged.
 
 | Suspect | Verdict | Seconds / notes |
 |---------|---------|-----------------|
-| **Sky-surface in-place preprocess (`ff08002`)** | **Confirmed expensive on 452** | 2743 s total, 18.3 s/frame. **Not measurable on 453** (preprocess evicted from infolog). Cannot attribute 452–453 gap to sky-surface alone without 453 preprocess timing. |
-| **`qc_preprocess_workers=8`** | **Config confirmed identical** on 451/452/453 (`config_snapshot_*.json`). Both paths log `up to 8 process worker(s)` (452 log line 16:03:20; 453 infolog 19:06:45). **Cannot prove** equal utilization without per-frame worker audit. | — |
+| **Sky-surface in-place preprocess (`ff08002`)** | **Confirmed expensive on 452** | 2743 s total, 18.3 s/frame. **Not measurable on 453** (preprocess evicted from infolog). Cannot attribute 452?453 gap to sky-surface alone without 453 preprocess timing. |
+| **`qc_preprocess_workers=8`** | **Config confirmed identical** on 451/452/453 (`config_snapshot_*.json`). Both paths log `up to 8 process worker(s)` (452 log line 16:03:20; 453 infolog 19:06:45). **Cannot prove** equal utilization without per-frame worker audit. |  -  |
 | **`predicted_dilution_factor`** | **Not measurable** | Zero log hits in 452 log or 453 infolog. |
 | **`INV-PREP-01` guard** | **Not observable on 453** | 0 infolog hits; preprocess phase not retained. **Cannot confirm** one-frame-per-obs_group from timestamps. |
 | **`INV-MS-01` guard** | **Confirmed on 453** | `INV-MS-01 MASTERSTAR purity guard: dao_only_fraction=0.037` at 19:05:40. |
@@ -132,7 +132,7 @@ upstream work was not repeated or not logged.
 
 ---
 
-## 4. Equivalence check (452 vs 453) — STOP CONDITION
+## 4. Equivalence check (452 vs 453)  -  STOP CONDITION
 
 Script: `dev/scripts/draft_ui_equivalence_check.py draft_000452 draft_000453`
 Full output: `dev/results/context/session_20260727/equivalence_452_vs_453.txt`
@@ -152,16 +152,16 @@ Semantic analysis: `equivalence_semantic.json`
 
 1. **Schema:** 452 LC files include **`delta_mag_sysrem`** column (all NaN); 453 omits it. Headless
    452 ran with SysRem export stub; UI 453 did not write the column.
-2. **BJD/HJD:** 70/198 files differ at **max |?| = 1.40×10??** — float representation only. Cause:
+2. **BJD/HJD:** 70/198 files differ at **max |?| = 1.40?10??**  -  float representation only. Cause:
    `pipeline_meta.json` **`observer_location` lat/lon differs** between runs (452:
-   50.073658/14.41854; 453: 50.112166/14.698255) despite same site name “Jirny”.
-3. **Shared photometry columns:** All non-time shared columns match within **1×10??** except path
-   metadata in `photometry_summary.csv` (`lc_csv` / `lc_png` draft paths — 201 rows).
+   50.073658/14.41854; 453: 50.112166/14.698255) despite same site name "Jirny".
+3. **Shared photometry columns:** All non-time shared columns match within **1?10??** except path
+   metadata in `photometry_summary.csv` (`lc_csv` / `lc_png` draft paths  -  201 rows).
 
 **Catalog / target layer:** `active_targets.csv`, `variable_targets.csv`, `masterstars_full_match.csv`,
-`comparison_stars_per_target.csv` — **byte-identical** between 452 and 453.
+`comparison_stars_per_target.csv`  -  **byte-identical** between 452 and 453.
 
-**Conclusion:** Not byte-identical; **scientific divergence is not established** — differences are
+**Conclusion:** Not byte-identical; **scientific divergence is not established**  -  differences are
 empty SysRem column, path strings, and sub-nanosecond JD formatting from site-coordinate metadata drift.
 **Reference cut must not proceed** until byte identity or an explicit equivalence policy is decided.
 
@@ -174,14 +174,14 @@ INV-MS-01 MASTERSTAR purity guard: dao_only_fraction=0.037
 [EXO TARGET] funnel: hosts_in_field=82 masterstars_in_frame=2842 promoted=3 sep_max=3 arcsec
 ```
 
-**INV-PREP-01:** **absent** from saved infolog (preprocess evicted by 8000-line buffer) — **not** proof
+**INV-PREP-01:** **absent** from saved infolog (preprocess evicted by 8000-line buffer)  -  **not** proof
 the guard did not run; **is** proof the UI infolog is an incomplete operator record for early phases.
 
-### 4.4 Acceptance table — draft 453 vs 452
+### 4.4 Acceptance table  -  draft 453 vs 452
 
 | Quantity | 452 | 453 |
 |----------|----:|----:|
-| pass-1 DAO (453 meta) | — | 2552 |
+| pass-1 DAO (453 meta) |  -  | 2552 |
 | masterstars rows | 2951 | 2951 |
 | DAO_ONLY fraction | 3.69% | 3.69% |
 | bg_std | 83.82 ADU | 83.82 ADU |
@@ -215,12 +215,12 @@ whichever comes first; store only CSV/JSON/text (no FITS); cap **5 MB per sessio
 
 ---
 
-## 6. Stop conditions — status
+## 6. Stop conditions  -  status
 
 | Condition | Status |
 |-----------|--------|
 | Comparison table wrong in design-changing way | **Partial:** 453 wall time corrected (76 min, not > 2 h). Design stands. |
-| Science files not byte-identical | **TRIGGERED** — see §4. Timing conclusions for 452 vs 453 upstream preprocess are **blocked** until preprocess timing exists for 453. |
+| Science files not byte-identical | **TRIGGERED**  -  see ?4. Timing conclusions for 452 vs 453 upstream preprocess are **blocked** until preprocess timing exists for 453. |
 | Guard lines absent from 453 infolog | **Partial:** `INV-MS-01` **present**; `INV-PREP-01` **absent** (infolog buffer limit, not proven guard skip). |
 
 ---

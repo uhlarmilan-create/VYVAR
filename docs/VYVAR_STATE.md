@@ -75,13 +75,16 @@ Full program P1-P4: DONE. Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`
 - **MASTERSTAR detection and stack rebuild** sit outside the anchor `--full` gate
   (frozen `MASTERSTAR.fits` + CSV); preprocess/detrend changes can alter pass-1 DAO
   counts without failing byte-identity photometry SHA checks.
-- **DAO detection is not byte-reproducible** across the photutils 3.0 upgrade
-  (+1.1% pass-1 on the same frozen MASTERSTAR image; see DEPS policy / anchor notes).
 - **Raw-to-photometry rebuild validated (2026-07-27):** draft_452 acceptance run after
-  SKY-SURFACE restore (`ff08002`) matches anchor MASTERSTAR catalogue metrics (pass-1 2552,
-  2951 rows, DAO_ONLY 3.7%, bg_std 83.8 ADU, sigma_pp 46.9 ADU). Anchor `--full` photometry
+  SKY-SURFACE restore (`ff08002`) matches anchor MASTERSTAR catalogue metrics (pass-1 **2552**,
+  2951 rows, DAO_ONLY 3.7%, bg_std 83.8 ADU). Anchor `--full` photometry
   SHA gate remains the regression lock on frozen inputs; raw-path equivalence is now demonstrated
   on BO CVn (`dev/results/CURSOR_RESULT_post451_remediation.md` PRE-PUSH CLOSEOUT).
+  **photutils 3.0 is not implicated:** pass-1 2552 under photutils 3.0 with production FWHM
+  (~3.23 px from header); the earlier +1.1% replay-harness count used config default 2.5 px.
+- **sigma_pp convention (MASTERSTAR):** report **46.90 ADU** = unmasked full-frame MAD on
+  byte-identical MASTERSTAR; **~45.03 ADU** with star mask + 40 px margin; legacy **46.13 ADU**
+  used a different margin -- not an image change.
 
 ## Repository layout (REPO-REORG -- DONE, gate PASS)
 

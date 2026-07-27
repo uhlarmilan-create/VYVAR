@@ -47,6 +47,10 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 | **KNOWN_REMOVED_KEYS builder-prose sweep** | LOW | Docs-guard sweep for removed config keys still mentioned in builder prose. |
 | **preprocess-QC summary durability** | MED | Persist QC summary into `pipeline_meta.json` (survive reruns). |
 | **PHASE0-BORDER-MARGIN-GEOMETRY** | MED | Derive Phase 0 `out_of_frame` border margin from aperture + sky annulus outer radius (FWHM-driven), not a fixed 50 px constant. Draft 451 `out_of_frame=78` is consistent with a 50 px strip (~12% frame area) -- count is not anomalous; only the constant is arbitrary. **No implementation in POST-451 closeout.** |
+| **CATALOG-PROVENANCE** | HIGH | Record VSX + Gaia DB identity (path, size, SHA, row count) in run provenance. Anchor `plan_regen_fingerprint` is coupled to an unpinned Gaia DB; rebuilding it (PM-columns work) will fail the anchor for an unrecognisable reason. |
+| **SKY-SURFACE-BLAST-RADIUS** | MED | Drafts 438, 439, 444, 448, 449, 450, 451 carry inflated catalogues (40-75% DAO_ONLY). Draft 451 analysis: shared-target photometry unaffected (Group A RMS ratio 1.007); damage expected confined to spurious faint targets. **Open:** confirm whether any export from those drafts reached AAVSO or VarAstro. |
+| **GAIA-PM-COLUMNS** | MED | Gaia DB lacks `pmra`/`pmdec`; matcher runs `broadened` mode. **Deliberate deferral** to DR4 build (~Dec 2026), not an oversight -- five-month horizon. See existing GAIA-1/2 rows below. |
+| **R-CVN-EMPTY-COMP** | LOW | Empty-comp drop now reports `no_comps`; confirm nothing further needed (POST-453 ledger). |
 | **mono gaia_johnson adoption** | MED | Gated mono path adoption of `gaia_johnson` catalog helper. |
 | **v1.0.0 declaration** | HIGH | Joint Milan + Claude decision; open. |
 

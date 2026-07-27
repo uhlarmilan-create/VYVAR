@@ -140,6 +140,24 @@ literature, or field practice - not bare engineering preference.
 3. **Milan review** - PDF + numbers before production commit.
 4. **Commit** - source + tests + docs only; harnesses stay in `tmp/`.
 
+**Production-path harness rule (2026-07-27, POST-453):** A sandbox or replay harness that
+does not go through the production code path cannot characterise production behaviour.
+Example: the photutils 3.0 "+1.1% DAO pass-1" claim came from a replay harness using
+config-default FWHM (2.5 px) while production derives FWHM from the FITS header (~3.23 px on
+BO CVn). Draft 452 under photutils 3.0 with production FWHM reproduced pass-1 **2552** exactly.
+
+### Session context retention (`dev/results/context/`)
+
+Committed measurement sessions under `dev/results/context/` follow:
+
+| Rule | Value |
+|------|-------|
+| Retention | 30 days **or** until the next reference cut (whichever is sooner) |
+| Allowed types | CSV, JSON, text only (no FITS blobs) |
+| Size cap | 5 MB per session directory |
+| Over cap | SHA-256 manifest of omitted files instead of binary blobs |
+| Purpose | Push raw numbers to origin so Claude/architect can analyse without prose-only handoff |
+
 ## External data (Brno) - PSF / NEIGHBOR-SUB gate
 
 Before publishable PSF or NEIGHBOR-SUB on incoming external data: characterize plate scale,
