@@ -62,6 +62,7 @@ from gaia_catalog_id import (
     read_vyvar_csv,
 )
 from infolog import log_event, log_exception
+from infolog_session import log_milestone
 from optics_selection import resolve_optics_ids_for_platesolve
 from calibration import (
     CALIBRATION_LIBRARY_NATIVE_BINNING,
@@ -16738,13 +16739,17 @@ def _fit_subtract_preprocess_sky_surface(
     tbl = finder(data0)
     stamp_r = int(max(4, round(3.5 * fwhm_eff)))
     if tbl is not None and len(tbl) > 0:
-        yy, xx = np.ogrid[:h, :w]
         r2 = stamp_r * stamp_r
         for row in tbl:
             cy = int(round(float(row["y_centroid"])))
             cx = int(round(float(row["x_centroid"])))
-            if 0 <= cy < h and 0 <= cx < w:
-                mask &= (yy - cy) ** 2 + (xx - cx) ** 2 > r2
+            if not (0 <= cy < h and 0 <= cx < w):
+                continue
+            y0, y1 = max(0, cy - stamp_r), min(h, cy + stamp_r + 1)
+            x0, x1 = max(0, cx - stamp_r), min(w, cx + stamp_r + 1)
+            yy_l, xx_l = np.ogrid[y0:y1, x0:x1]
+            local_excl = (yy_l - cy) ** 2 + (xx_l - cx) ** 2 <= r2
+            mask[y0:y1, x0:x1] &= ~local_excl
 
     bg_median, _, _ = sigma_clipped_stats(work, mask=mask, sigma=3.0, maxiters=5)
     calm_thr = max(5.0, float(calm_adu))
@@ -16919,6 +16924,95 @@ def run_osc_channel_extraction_for_archive(
     return out
 
 
+def _qc_enrich_one_frame(
+    fp_str: str,
+    *,
+    sky_order: int,
+    prefilter_status: str | None,
+    target_ra: float | None,
+    target_dec: float | None,
+    inject_pointing_only_if_missing: bool,
+) -> dict[str, Any]:
+    """Process one calibrated light frame in-place (picklable worker for parallel QC)."""
+    import numpy as np
+
+    fp = Path(fp_str)
+    try:
+        with fits.open(fp, memmap=False) as hdul:
+            data = np.array(hdul[0].data, dtype=np.float32, copy=True)
+            hdr = hdul[0].header.copy()
+
+        sky_stats: dict[str, Any] = {}
+        is_mosaic = _valid_bayerpat_from_header(hdr) is not None and not hdr.get("VY_CHANNEL")
+        if sky_order > 0 and not is_mosaic:
+            data, sky_stats = _fit_subtract_preprocess_sky_surface(data, order=sky_order)
+
+        qc = _qc_fwhm_elongation(data)
+        fwhm = float(qc.get("fwhm_px")) if qc.get("fwhm_px") is not None else float("nan")
+        elong = float(qc.get("elongation")) if qc.get("elongation") is not None else float("nan")
+        n_stars = int(qc.get("n_stars_detected") or 0)
+        status = prefilter_status if prefilter_status else "ok"
+
+        with fits.open(fp, mode="update") as hdul:
+            hdul[0].data = _as_fits_float32_image(data)
+            hdr = hdul[0].header
+            if sky_stats.get("sky_surface_applied"):
+                hdr["VY_SKYSF"] = (True, "Sky-surface subtract applied")
+                hdr["VYSKYORD"] = (
+                    int(sky_stats.get("sky_surface_order") or sky_order),
+                    "Preprocess sky-surface polynomial order",
+                )
+                p2p = sky_stats.get("sky_surface_p2p_adu")
+                if p2p is not None and math.isfinite(float(p2p)):
+                    hdr["VYSKYP2P"] = (
+                        round(float(p2p), 4),
+                        "Sky surface peak-to-peak ADU",
+                    )
+            if math.isfinite(fwhm):
+                hdr["VY_FWHM"] = (round(fwhm, 4), "Estimated FWHM [pix]")
+            if math.isfinite(elong):
+                hdr["VY_ELONG"] = (round(elong, 4), "Estimated elongation (a/b)")
+            hdr["VY_NSTAR"] = (n_stars, "Approx. star detections (QC)")
+            hdr["VY_QC"] = (status, "QC status")
+            hdr["VYVARPR"] = (True, "VYVAR pre-processed output")
+            if target_ra is not None and target_dec is not None:
+                ira = float(target_ra)
+                idec = float(target_dec)
+                if math.isfinite(ira) and math.isfinite(idec):
+                    ex_ra, ex_dec, _ = _pointing_hint_from_header(hdr)
+                    do_inject = (not bool(inject_pointing_only_if_missing)) or (
+                        ex_ra is None or ex_dec is None
+                    )
+                    if do_inject:
+                        hdr["VYTARGRA"] = (ira, "VYVAR plate-solve hint RA [deg] ICRS")
+                        hdr["VYTARGDE"] = (idec, "VYVAR plate-solve hint Dec [deg] ICRS")
+                        hdr.add_history("VYVAR: VYTARGRA/VYTARGDE for plate solving (QC in-place)")
+            hdul.flush()
+
+        return {
+            "src": str(fp),
+            "dst": str(fp),
+            "status": status,
+            "fwhm_px": fwhm,
+            "elongation": elong,
+            "n_sources": qc.get("n_sources"),
+            "n_stars_detected": n_stars,
+            "bg_median": float(np.nanmedian(data)) if data.size else None,
+            **sky_stats,
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "src": str(fp),
+            "dst": str(fp),
+            "status": f"error: {exc}",
+            "fwhm_px": float("nan"),
+            "elongation": float("nan"),
+            "n_sources": None,
+            "n_stars_detected": 0,
+            "bg_median": None,
+        }
+
+
 def _qc_enrich_calibrated_in_place(
     calibrated_root: Path,
     *,
@@ -16965,96 +17059,65 @@ def _qc_enrich_calibrated_in_place(
         fits_paths = _filter_light_paths_maybe(_iter_light_fits(calibrated_root), only_paths)
     results: list[dict[str, Any]] = []
     total = len(fits_paths)
+    n_workers = _vyvar_qc_preprocess_workers() if total > 1 else 1
+    if n_workers > 1:
+        LOGGER.info(
+            "QC in-place: parallel_workers=%s (%s frames; qc_preprocess_workers)",
+            n_workers,
+            total,
+        )
 
-    for i, fp in enumerate(fits_paths, start=1):
-        if progress_cb is not None:
-            progress_cb(i, total, f"QC in-place {fp.name}")
-        try:
-            with fits.open(fp, memmap=False) as hdul:
-                data = np.array(hdul[0].data, dtype=np.float32, copy=True)
-                hdr = hdul[0].header
-
-            sky_stats: dict[str, Any] = {}
-            is_mosaic = _valid_bayerpat_from_header(hdr) is not None and not hdr.get("VY_CHANNEL")
-            if sky_order > 0 and not is_mosaic:
-                data, sky_stats = _fit_subtract_preprocess_sky_surface(data, order=sky_order)
-                with fits.open(fp, mode="update") as hdul:
-                    hdul[0].data = _as_fits_float32_image(data)
-                    if sky_stats.get("sky_surface_applied"):
-                        hdul[0].header["VY_SKYSF"] = (True, "Sky-surface subtract applied")
-                        hdul[0].header["VYSKYORD"] = (
-                            int(sky_stats.get("sky_surface_order") or sky_order),
-                            "Preprocess sky-surface polynomial order",
-                        )
-                        p2p = sky_stats.get("sky_surface_p2p_adu")
-                        if p2p is not None and math.isfinite(float(p2p)):
-                            hdul[0].header["VYSKYP2P"] = (
-                                round(float(p2p), 4),
-                                "Sky surface peak-to-peak ADU",
-                            )
-                    hdul.flush()
-
-            qc = _qc_fwhm_elongation(data)
-            fwhm = float(qc.get("fwhm_px")) if qc.get("fwhm_px") is not None else float("nan")
-            elong = float(qc.get("elongation")) if qc.get("elongation") is not None else float("nan")
-            n_stars = int(qc.get("n_stars_detected") or 0)
-
-            pre_status = _prefilter.get(norm_fits_path_key(fp))
-            status = pre_status if pre_status else "ok"
-
-            with fits.open(fp, mode="update") as hdul:
-                hdr = hdul[0].header
-                if math.isfinite(fwhm):
-                    hdr["VY_FWHM"] = (round(fwhm, 4), "Estimated FWHM [pix]")
-                if math.isfinite(elong):
-                    hdr["VY_ELONG"] = (round(elong, 4), "Estimated elongation (a/b)")
-                hdr["VY_NSTAR"] = (n_stars, "Approx. star detections (QC)")
-                hdr["VY_QC"] = (status, "QC status")
-                hdr["VYVARPR"] = (True, "VYVAR pre-processed output")
-                if target_ra is not None and target_dec is not None:
-                    ira = float(target_ra)
-                    idec = float(target_dec)
-                    if math.isfinite(ira) and math.isfinite(idec):
-                        ex_ra, ex_dec, _ = _pointing_hint_from_header(hdr)
-                        do_inject = (not bool(inject_pointing_only_if_missing)) or (
-                            ex_ra is None or ex_dec is None
-                        )
-                        if do_inject:
-                            hdr["VYTARGRA"] = (ira, "VYVAR plate-solve hint RA [deg] ICRS")
-                            hdr["VYTARGDE"] = (idec, "VYVAR plate-solve hint Dec [deg] ICRS")
-                            hdr.add_history("VYVAR: VYTARGRA/VYTARGDE for plate solving (QC in-place)")
-                hdul.flush()
-
-            results.append(
-                {
-                    "src": str(fp),
-                    "dst": str(fp),
-                    "status": status,
-                    "fwhm_px": fwhm,
-                    "elongation": elong,
-                    "n_sources": qc.get("n_sources"),
-                    "n_stars_detected": n_stars,
-                    "bg_median": float(np.nanmedian(data)) if data.size else None,
-                    **sky_stats,
-                }
+    if n_workers > 1 and total > 1:
+        with _vyvar_parallel_pool(n_workers) as ex:
+            futs = {}
+            for fp in fits_paths:
+                futs[ex.submit(
+                    _qc_enrich_one_frame,
+                    str(fp),
+                    sky_order=sky_order,
+                    prefilter_status=_prefilter.get(norm_fits_path_key(fp)),
+                    target_ra=target_ra,
+                    target_dec=target_dec,
+                    inject_pointing_only_if_missing=inject_pointing_only_if_missing,
+                )] = fp
+            done = 0
+            for fut in as_completed(futs):
+                fp = futs[fut]
+                done += 1
+                if progress_cb is not None:
+                    progress_cb(done, total, f"QC in-place {fp.name}")
+                row = fut.result()
+                results.append(row)
+                if str(row.get("status", "")).startswith("error"):
+                    log_event(f"QC in-place failed for {fp.name}: {row.get('status')}")
+                else:
+                    log_event(
+                        f"QC in-place {fp.name}: {row.get('status')} "
+                        f"FWHM={float(row.get('fwhm_px', float('nan'))):.2f} "
+                        f"elong={float(row.get('elongation', float('nan'))):.2f}"
+                    )
+        results.sort(key=lambda r: str(r.get("src", "")))
+    else:
+        for i, fp in enumerate(fits_paths, start=1):
+            if progress_cb is not None:
+                progress_cb(i, total, f"QC in-place {fp.name}")
+            row = _qc_enrich_one_frame(
+                str(fp),
+                sky_order=sky_order,
+                prefilter_status=_prefilter.get(norm_fits_path_key(fp)),
+                target_ra=target_ra,
+                target_dec=target_dec,
+                inject_pointing_only_if_missing=inject_pointing_only_if_missing,
             )
-            log_event(
-                f"QC in-place {fp.name}: {status} FWHM={fwhm:.2f} elong={elong:.2f}"
-            )
-        except Exception as exc:  # noqa: BLE001
-            log_event(f"QC in-place failed for {fp.name}: {exc}")
-            results.append(
-                {
-                    "src": str(fp),
-                    "dst": str(fp),
-                    "status": f"error: {exc}",
-                    "fwhm_px": float("nan"),
-                    "elongation": float("nan"),
-                    "n_sources": None,
-                    "n_stars_detected": 0,
-                    "bg_median": None,
-                }
-            )
+            results.append(row)
+            if str(row.get("status", "")).startswith("error"):
+                log_event(f"QC in-place failed for {fp.name}: {row.get('status')}")
+            else:
+                log_event(
+                    f"QC in-place {fp.name}: {row.get('status')} "
+                    f"FWHM={float(row.get('fwhm_px', float('nan'))):.2f} "
+                    f"elong={float(row.get('elongation', float('nan'))):.2f}"
+                )
 
     n_ok = sum(1 for r in results if r.get("status") == "ok")
     n_rejected = sum(1 for r in results if str(r.get("status", "")).startswith("rejected"))
@@ -17170,6 +17233,7 @@ def preprocess_calibrated_to_processed(
     log_event(
         f"Preprocess: running QC in-place on draft lights ({calibrated_root})"
     )
+    log_milestone(f"[PREPROCESS] start in-place QC sky_order={int(cfg.preprocess_sky_surface_order)}")
     _out = _qc_enrich_calibrated_in_place(
         calibrated_root,
         app_config=cfg,

@@ -1,0 +1,19 @@
+step,seconds
+FITS read,0.008
+source masking (DAOStarFinder bbox),1.350
+sigma-clipped polynomial fit,0.055
+surface evaluation full grid,0.220
+FITS write-back + QC headers,0.064
+QC metrics (FWHM/elong),0.700
+other,0.000
+
+metric,value
+profile_frame,BO_CVn_Light_001.fits
+draft452_reference,draft_000452
+byte_compare_method,draft451_calibrated_input vs draft452_output
+n_frames_compared,10
+max_abs_diff_data,0.0
+max_abs_diff_note,frame001 excluded (451/452 cal input differs by 660 ADU pre-preprocess)
+per_frame_s_sequential,1.23
+per_frame_s_parallel_10f,0.80
+projected_150_frames_s_parallel,120
