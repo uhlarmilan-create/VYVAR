@@ -377,9 +377,9 @@ masked evaluation with different margin. No fix required.
 | `f873085` | Uniform data_root path resolution + catalog tests + DECISIONS/ROADMAP/PDF |
 | `df42d46` | C.4 closeout result + STATE update |
 | `1b58fe3` | Guard headless observability + infolog save + tests |
-| `5192213` | DECISIONS (3 entries) + UI equivalence script + PUSH result |
+| `66e85c5` | DECISIONS (3 entries) + UI equivalence script + PUSH result |
 
-**Pushed range:** `535d863..5192213` (9 commits).
+**Pushed range:** `535d863..66e85c5` (9 commits).
 
 ### Item 5 - UI equivalence prep (ready, not run)
 
