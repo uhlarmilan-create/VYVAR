@@ -59,6 +59,17 @@ def resolve_data_root(install_root: Path) -> Path:
     return root
 
 
+def resolve_config_path(raw: str | Path, data_root: Path) -> str:
+    """Resolve a config path: absolute as-is, relative against ``data_root`` (never CWD)."""
+    s = str(raw or "").strip()
+    if not s:
+        return ""
+    p = Path(s).expanduser()
+    if not p.is_absolute():
+        p = data_root / p
+    return str(p.resolve())
+
+
 def config_json_path(project_root: Path) -> Path:
     return project_root / "config.json"
 
@@ -1077,7 +1088,10 @@ class AppConfig:
         # sqlite3.connect fail on first run).
         def _path_or_default(key: str, default: Path) -> Path:
             raw = str(data.get(key) or "").strip()
-            return Path(raw) if raw else default
+            if not raw:
+                return default
+            resolved = resolve_config_path(raw, self.data_root)
+            return Path(resolved) if resolved else default
 
         self.archive_root = _path_or_default("archive_root", self.data_root / "Archive")
         self.calibration_library_root = _path_or_default(
@@ -1114,7 +1128,10 @@ class AppConfig:
         except (TypeError, ValueError):
             pass
 
-        self.gaia_db_path = str(data.get("gaia_db_path", data.get("GAIA_DB_PATH", "")) or "").strip()
+        self.gaia_db_path = resolve_config_path(
+            str(data.get("gaia_db_path", data.get("GAIA_DB_PATH", "")) or "").strip(),
+            self.data_root,
+        )
 
         self.hrd_online_enrich_enabled = bool(
             data.get("hrd_online_enrich_enabled", self.hrd_online_enrich_enabled)
@@ -1221,15 +1238,15 @@ class AppConfig:
             data.get("blind_index_wide_path", data.get("BLIND_INDEX_WIDE_PATH", "")) or ""
         ).strip()
         if not fine and not wide and legacy_blind:
-            base = Path(legacy_blind).expanduser().parent
+            base = Path(resolve_config_path(legacy_blind, self.data_root)).parent
             fine = str((base / "gaia_triangles_fine.pkl").resolve())
             wide = str((base / "gaia_triangles_wide.pkl").resolve())
         if not fine:
             fine = legacy_blind or _fine_default
         if not wide:
             wide = _wide_default
-        self.blind_index_fine_path = fine
-        self.blind_index_wide_path = wide
+        self.blind_index_fine_path = resolve_config_path(fine, self.data_root) if fine else ""
+        self.blind_index_wide_path = resolve_config_path(wide, self.data_root) if wide else ""
         self.blind_index_path = fine
         _mode = str(data.get("blind_index_select_mode", self.blind_index_select_mode) or "auto")
         _mode = _mode.strip().lower()
@@ -1311,9 +1328,10 @@ class AppConfig:
         # vote_span,coherence_cap} hardcoded as solver internals (module constants in
         # vyvar_blind_solver.py).
 
-        self.vsx_local_db_path = str(
-            data.get("vsx_local_db_path", data.get("VSX_LOCAL_DB_PATH", "")) or ""
-        ).strip()
+        self.vsx_local_db_path = resolve_config_path(
+            str(data.get("vsx_local_db_path", data.get("VSX_LOCAL_DB_PATH", "")) or "").strip(),
+            self.data_root,
+        )
         _voos = data.get("vsx_out_of_scope_types", self.vsx_out_of_scope_types)
         if _voos is None:
             self.vsx_out_of_scope_types = []
@@ -1323,19 +1341,17 @@ class AppConfig:
             self.vsx_out_of_scope_types = [str(p).strip() for p in _voos if str(p).strip()]
         else:
             self.vsx_out_of_scope_types = []
-        self.exoplanet_local_db_path = str(
-            data.get(
-                "exoplanet_local_db_path",
-                data.get("EXOPLANET_LOCAL_DB_PATH", self.exoplanet_local_db_path),
-            )
-            or self.exoplanet_local_db_path
-            or ""
-        ).strip()
-        if self.exoplanet_local_db_path:
-            _exo_p = Path(self.exoplanet_local_db_path)
-            if not _exo_p.is_absolute():
-                _exo_p = self.data_root / _exo_p
-            self.exoplanet_local_db_path = str(_exo_p.resolve())
+        self.exoplanet_local_db_path = resolve_config_path(
+            str(
+                data.get(
+                    "exoplanet_local_db_path",
+                    data.get("EXOPLANET_LOCAL_DB_PATH", self.exoplanet_local_db_path),
+                )
+                or self.exoplanet_local_db_path
+                or ""
+            ).strip(),
+            self.data_root,
+        )
         try:
             _exo_sep = float(
                 data.get("exoplanet_match_max_sep_arcsec", self.exoplanet_match_max_sep_arcsec)

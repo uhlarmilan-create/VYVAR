@@ -182,7 +182,9 @@ def get_gaia_db_max_g_mag(db_path: str | Path) -> float:
     Cached per resolved path. If the table is empty or the query fails, returns ``0.0`` (caller should treat as
     'no photometric depth' / empty DB).
     """
-    p = Path(db_path).expanduser().resolve()
+    p = _resolve_catalog_db_path(db_path) if str(db_path or "").strip() else Path()
+    if not p:
+        raise GaiaCatalogError("Gaia local database path is empty.")
     key = str(p)
     if key in _GAIA_DB_GMAG_MAX_CACHE:
         return float(_GAIA_DB_GMAG_MAX_CACHE[key])
@@ -227,7 +229,7 @@ def load_verify_gaia_bright_stars(
 
     Returns ``(ra_deg, dec_deg, g_mag)`` sorted by ``g_mag`` ascending. Cached per DB path + limit.
     """
-    p = Path(db_path).expanduser().resolve()
+    p = _resolve_catalog_db_path(db_path)
     if not p.is_file():
         raise FileNotFoundError(f"Gaia DB not found: {p}")
     try:
@@ -289,7 +291,7 @@ def query_local_gaia(
 
     The Gaia DB schema can evolve; this function auto-detects optional columns and returns them when present.
     """
-    p = Path(db_path).expanduser().resolve()
+    p = _resolve_catalog_db_path(db_path)
     if not p.is_file():
         raise FileNotFoundError(f"Gaia DB not found: {p}")
 
@@ -424,7 +426,7 @@ def query_local_gaia_by_source_ids(
     Used when a frame-wide Gaia query (rectangle + ``ORDER BY g_mag LIMIT``) omits stars that are
     already catalog-matched on the image - those stars still need ``bp_rp`` for photometry / color terms.
     """
-    p = Path(db_path).expanduser().resolve()
+    p = _resolve_catalog_db_path(db_path)
     if not p.is_file():
         raise FileNotFoundError(f"Gaia DB not found: {p}")
     try:
@@ -487,7 +489,7 @@ def query_local_gaia_by_source_ids(
 
 def validate_gaia_db_schema(db_path: str | Path) -> tuple[bool, str]:
     """Validate local Gaia DB has table/columns required by VYVAR."""
-    p = Path(db_path).expanduser().resolve()
+    p = _resolve_catalog_db_path(db_path)
     if not str(db_path).strip() or not p.is_file():
         return False, "missing_file"
     con = sqlite3.connect(str(p))
@@ -581,7 +583,7 @@ def get_observer_location_by_id(db_path: str | Path, location_id: int) -> dict[s
 
 def validate_vsx_local_db_schema(db_path: str | Path) -> tuple[bool, str]:
     """Validate local VSX subset SQLite (``vsx_data`` from VizieR B/vsx/vsx import)."""
-    p = Path(db_path).expanduser().resolve()
+    p = _resolve_catalog_db_path(db_path)
     if not str(db_path).strip() or not p.is_file():
         return False, "missing_file"
     con = sqlite3.connect(str(p))
@@ -604,7 +606,7 @@ def validate_vsx_local_db_schema(db_path: str | Path) -> tuple[bool, str]:
 
 def count_vsx_local_rows(db_path: str | Path) -> int:
     """Return row count in ``vsx_data`` (0 when table missing or unreadable)."""
-    p = Path(db_path).expanduser().resolve()
+    p = _resolve_catalog_db_path(db_path)
     if not p.is_file():
         return 0
     con = sqlite3.connect(str(p))
@@ -630,6 +632,39 @@ class ExoplanetCatalogError(RuntimeError):
     """Exoplanet local host DB path/schema/availability failure (fail-loud when configured)."""
 
 
+class GaiaCatalogError(RuntimeError):
+    """Gaia local DB path/schema/availability failure (fail-loud when configured)."""
+
+
+def _resolve_catalog_db_path(raw: str | Path) -> Path:
+    """Resolve catalog DB path using data_root (not CWD)."""
+    from config import resolve_config_path, resolve_data_root  # noqa: PLC0415
+
+    install_root = Path(__file__).resolve().parent.parent
+    data_root = resolve_data_root(install_root)
+    resolved = resolve_config_path(raw, data_root)
+    if not resolved:
+        return Path()
+    return Path(resolved)
+
+
+def require_gaia_db_path(gaia_db_path: str | Path | None) -> Path:
+    """Resolve Gaia SQLite path or raise when photometry needs the local catalog."""
+    raw = str(gaia_db_path or "").strip()
+    if not raw:
+        raise GaiaCatalogError(
+            "Gaia local database path is not set (config key gaia_db_path). "
+            "Open Settings -> Catalogs and set gaia_db_path to your Gaia DR3 SQLite."
+        )
+    p = _resolve_catalog_db_path(raw)
+    if not p.is_file():
+        raise GaiaCatalogError(
+            f"Gaia local database file not found: {p}. "
+            "Set gaia_db_path in Settings -> Catalogs."
+        )
+    return p
+
+
 def require_exoplanet_local_db_path(exoplanet_local_db_path: str | Path | None) -> Path:
     """Resolve exoplanet SQLite path or raise when the feature is configured."""
     raw = str(exoplanet_local_db_path or "").strip()
@@ -637,12 +672,7 @@ def require_exoplanet_local_db_path(exoplanet_local_db_path: str | Path | None) 
         raise ExoplanetCatalogError(
             "Exoplanet local database path is not set (config key exoplanet_local_db_path)."
         )
-    p = Path(raw).expanduser()
-    if not p.is_absolute():
-        from config import AppConfig  # noqa: PLC0415
-
-        p = AppConfig().data_root / p
-    p = p.resolve()
+    p = _resolve_catalog_db_path(raw)
     if not p.is_file():
         raise ExoplanetCatalogError(
             f"Exoplanet local database file not found: {p}. "
@@ -667,7 +697,7 @@ def require_vsx_local_db_path(vsx_local_db_path: str | Path | None) -> Path:
             "Open Settings -> Catalogs, set VSX local DB to your built SQLite "
             "(scripts/catalogs/vsx_make.py output under <data_dir>/VSX/, table vsx_data)."
         )
-    p = Path(raw).expanduser().resolve()
+    p = _resolve_catalog_db_path(raw)
     if not p.is_file():
         raise VSXCatalogError(
             f"VSX local database file not found: {p}. "
@@ -720,7 +750,7 @@ def query_local_vsx(
     Uses the same bounding box as ``query_local_gaia``; RA wrap at 0 deg is handled via split intervals.
     Rows are de-duplicated by ``oid`` when present, else by (ra_deg, dec_deg).
     """
-    p = Path(db_path).expanduser().resolve()
+    p = _resolve_catalog_db_path(db_path)
     if not p.is_file():
         return []
     de0 = float(dec_min)
@@ -801,7 +831,7 @@ def query_local_vsx(
 
 def validate_exoplanet_local_db_schema(db_path: str | Path) -> tuple[bool, str]:
     """Validate local exoplanet host SQLite (``exoplanet_data`` from NASA Exoplanet Archive snapshot)."""
-    p = Path(db_path).expanduser().resolve()
+    p = _resolve_catalog_db_path(db_path)
     if not str(db_path).strip() or not p.is_file():
         return False, "missing_file"
     con = sqlite3.connect(str(p))
@@ -836,7 +866,7 @@ def query_local_exoplanet(
     Same bounding-box pattern as ``query_local_vsx``; RA wrap via ``_vsx_ra_intervals_deg``.
     Rows de-duplicated by ``obj_id`` when present, else by (ra_deg, dec_deg).
     """
-    p = Path(db_path).expanduser().resolve()
+    p = _resolve_catalog_db_path(db_path)
     if not p.is_file():
         return []
     de0 = float(dec_min)

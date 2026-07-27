@@ -46,6 +46,7 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 | **CITATIONS.bib ASCII disposition** | LOW | Open encoding/normalization decision for bundled citations file. |
 | **KNOWN_REMOVED_KEYS builder-prose sweep** | LOW | Docs-guard sweep for removed config keys still mentioned in builder prose. |
 | **preprocess-QC summary durability** | MED | Persist QC summary into `pipeline_meta.json` (survive reruns). |
+| **PHASE0-BORDER-MARGIN-GEOMETRY** | MED | Derive Phase 0 `out_of_frame` border margin from aperture + sky annulus outer radius (FWHM-driven), not a fixed 50 px constant. Draft 451 `out_of_frame=78` is consistent with a 50 px strip (~12% frame area) -- count is not anomalous; only the constant is arbitrary. **No implementation in POST-451 closeout.** |
 | **mono gaia_johnson adoption** | MED | Gated mono path adoption of `gaia_johnson` catalog helper. |
 | **v1.0.0 declaration** | HIGH | Joint Milan + Claude decision; open. |
 
@@ -272,7 +273,7 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 | F-429-TAP-RETRY | LOW | **VERIFIED** | 429 `_hrd_cache` `enrich_attempts=3`; INFO per retry added |
 | VALIDATE-429 | HIGH | **DONE** | draft_429 checklist; A1 FAILED-AS-WRITTEN (`git_dirty`); superseded by anchor pair |
 | VL-ANCHOR-430 | HIGH | **DISQUALIFIED / RESTART** | draft_000430 non-anchor (mixed commits, dirty tree); fresh pair via `anchor_pair_run.py` |
-| **F-431-HEADLESS-DIVERGENCE** | **HIGH** | **T1 FIXED (2026-07-27)** | Mono sky-surface restored (`ff08002`); guards INV-PREP-01/INV-MS-01 (`1191579`). C.4 BO CVn acceptance pending raw FITS. T2: await Milan clean UI. T3: **gated**. T4 partial landed. Blast radius: drafts 438-450 (historical). |
+| **F-431-HEADLESS-DIVERGENCE** | **HIGH** | **T1 FIXED (2026-07-27)** | Mono sky-surface restored (`ff08002`); guards INV-PREP-01/INV-MS-01 (`1191579`). C.4 BO CVn acceptance re-run on draft_452 in closeout. T2: await Milan clean UI. T3: **gated**. T4 partial landed. Blast radius: drafts 438-450 (historical). |
 
 ---
 

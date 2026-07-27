@@ -1214,6 +1214,26 @@ OSC Bayer mosaics are still skipped to avoid double subtract on channels. Header
 **INV-MS-01** (DAO_ONLY fraction WARN/FAIL). C.4 acceptance on BO CVn raw path pending Milan
 raw frames on disk. **Status:** code landed; science validation pending.
 
+### CONFIG-PATH-DATA-ROOT (2026-07-27)
+
+**Problem.** Config path-valued keys stored as relative strings (e.g.
+``exoplanets/vyvar_exoplanet_local.db``, ``VSX/vyvar_vsx_local_v2.db``) were resolved with
+``Path.resolve()`` against the **process CWD**, not ``data_root``. When night runs or Streamlit
+sessions set CWD under ``Archive/Drafts/`` (common since ``c99fcec`` data-dir bootstrap), a
+configured file under ``<data_root>/`` was missed; VSX/exoplanet queries returned empty and the
+pipeline reported success (draft 450, 2026-07-24).
+
+**Trigger.** Latent CWD-relative resolution predates the regression; first production symptom on
+draft 450 coincides with ``c99fcec`` (2026-07-24) separating ``data_root`` from install root while
+night-run CWD stayed under ``Archive/Drafts/``. ``3c31bfa`` materialized relative paths in
+``config.json`` but did not change resolution semantics.
+
+**Rule.** One resolution function for all config paths: ``resolve_config_path(raw, data_root)`` in
+``config.py`` -- absolute paths as-is, relative paths against ``data_root``, never CWD. Catalog DB
+open paths use ``database._resolve_catalog_db_path`` + ``require_*_db_path`` helpers; a configured
+path that does not exist or has zero rows (VSX) **must fail loud** with the config key name. Guard:
+``dev/tests/test_catalog_db_path_resolution.py``. **Status:** implemented (POST-451 closeout).
+
 ### QC-ALLOWLIST-AUTHORITY
 ``qc_metrics.csv`` under the draft lights root is the **authoritative frame allowlist** for
 alignment: only rows with ``status=ok`` (exact match) enter ``astrometry_align_and_build_masterstar``.
