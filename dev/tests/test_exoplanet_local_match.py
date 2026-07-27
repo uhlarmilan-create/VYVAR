@@ -68,8 +68,11 @@ def test_validate_exoplanet_schema_ok(tmp_path: Path):
     assert code == "ok"
 
 
-def test_query_local_exoplanet_missing_file_returns_empty(tmp_path: Path):
-    assert query_local_exoplanet(tmp_path / "nope.db", ra_min=0, ra_max=1, dec_min=0, dec_max=1) == []
+def test_query_local_exoplanet_missing_file_raises(tmp_path: Path):
+    from database import ExoplanetCatalogError, require_exoplanet_local_db_path
+
+    with pytest.raises(ExoplanetCatalogError, match="not found"):
+        require_exoplanet_local_db_path(tmp_path / "nope.db")
 
 
 def test_query_local_exoplanet_box_and_cone(tmp_path: Path):

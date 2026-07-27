@@ -4804,9 +4804,9 @@ def _query_exoplanet_local(
     """Query local exoplanet host SQLite for the field; box query + great-circle cone filter."""
     if exoplanet_db_path is None:
         return pd.DataFrame()
-    ep = Path(exoplanet_db_path).expanduser().resolve()
-    if not ep.is_file():
-        return pd.DataFrame()
+    from database import require_exoplanet_local_db_path  # noqa: PLC0415
+
+    ep = require_exoplanet_local_db_path(exoplanet_db_path)
     try:
         _ra_l = float(center.icrs.ra.deg)
         _de_l = float(center.icrs.dec.deg)
@@ -5050,15 +5050,15 @@ def _build_exoplanet_promotion_rows_from_masterstars(
     margin_px: float = 50.0,
 ) -> pd.DataFrame:
     """Promote masterstars rows with exoplanet host match within configured separation."""
-    _exo_path: Path | None = None
-    try:
-        _exs = str(cfg.exoplanet_local_db_path or "").strip()
-        if _exs:
-            _exo_path = Path(_exs).expanduser().resolve()
-    except Exception:  # noqa: BLE001
-        _exo_path = None
-    if _exo_path is None or not _exo_path.is_file():
+    _exs = str(cfg.exoplanet_local_db_path or "").strip()
+    if not _exs:
         return pd.DataFrame()
+    from database import require_exoplanet_local_db_path  # noqa: PLC0415
+
+    try:
+        _exo_path = require_exoplanet_local_db_path(_exs)
+    except Exception:
+        raise
     if master_df is None or master_df.empty:
         return pd.DataFrame()
     if "catalog_id" not in master_df.columns or "ra_deg" not in master_df.columns or "dec_deg" not in master_df.columns:
@@ -5118,6 +5118,7 @@ def _build_exoplanet_promotion_rows_from_masterstars(
         radius_deg=radius_deg,
         exoplanet_db_path=_exo_path,
     )
+    n_hosts_in_field = int(len(exo_df)) if exo_df is not None and not exo_df.empty else 0
 
     ra_arr = pd.to_numeric(m["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
     de_arr = pd.to_numeric(m["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
@@ -5136,6 +5137,10 @@ def _build_exoplanet_promotion_rows_from_masterstars(
         sep = float(exo_sep[i]) if math.isfinite(float(exo_sep[i])) else float("nan")
         promote_mask[i] = bool(oid) and math.isfinite(sep) and sep <= exo_max
     if not bool(np.any(promote_mask)):
+        log_event(
+            f"[EXO TARGET] funnel: hosts_in_field={n_hosts_in_field} masterstars_in_frame={len(m)} "
+            f"promoted=0 sep_max={exo_max:g} arcsec"
+        )
         return pd.DataFrame()
 
     sub = m.loc[promote_mask].copy()
@@ -5188,7 +5193,15 @@ def _build_exoplanet_promotion_rows_from_masterstars(
             }
         )
     if not rows:
+        log_event(
+            f"[EXO TARGET] funnel: hosts_in_field={n_hosts_in_field} masterstars_in_frame={len(m)} "
+            f"promoted=0 sep_max={exo_max:g} arcsec (no Gaia catalog_id on matched rows)"
+        )
         return pd.DataFrame()
+    log_event(
+        f"[EXO TARGET] funnel: hosts_in_field={n_hosts_in_field} masterstars_in_frame={len(m)} "
+        f"promoted={len(rows)} sep_max={exo_max:g} arcsec"
+    )
     log_event(f"[EXO TARGET] {len(rows)} exoplanet host(s) promoted from masterstars (<={exo_max:g} arcsec)")
     return pd.DataFrame(rows)
 
@@ -5210,11 +5223,11 @@ def _merge_vsx_exoplanet_variable_targets(
         exo["catalog_id"] = normalize_gaia_source_id_series(exo["catalog_id"])
 
     exo_extra = list(_EXO_HOST_ANNOTATION_COLUMNS) + ["target_origin"]
-    if exo.empty:
-        return vsx
     for col in exo_extra:
         if col not in vsx.columns:
             vsx[col] = ""
+    if exo.empty:
+        return vsx
 
     if vsx.empty:
         return exo

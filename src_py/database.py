@@ -626,6 +626,38 @@ class VSXCatalogError(RuntimeError):
     """VSX local catalog path/schema/availability failure (fail-loud, like Gaia)."""
 
 
+class ExoplanetCatalogError(RuntimeError):
+    """Exoplanet local host DB path/schema/availability failure (fail-loud when configured)."""
+
+
+def require_exoplanet_local_db_path(exoplanet_local_db_path: str | Path | None) -> Path:
+    """Resolve exoplanet SQLite path or raise when the feature is configured."""
+    raw = str(exoplanet_local_db_path or "").strip()
+    if not raw:
+        raise ExoplanetCatalogError(
+            "Exoplanet local database path is not set (config key exoplanet_local_db_path)."
+        )
+    p = Path(raw).expanduser()
+    if not p.is_absolute():
+        from config import AppConfig  # noqa: PLC0415
+
+        p = AppConfig().data_root / p
+    p = p.resolve()
+    if not p.is_file():
+        raise ExoplanetCatalogError(
+            f"Exoplanet local database file not found: {p}. "
+            "Set exoplanet_local_db_path in Settings -> Catalogs to "
+            "exoplanets/vyvar_exoplanet_local.db under the VYVAR data directory."
+        )
+    ok, code = validate_exoplanet_local_db_schema(p)
+    if not ok:
+        raise ExoplanetCatalogError(
+            f"Exoplanet local database invalid ({code}): {p}. "
+            "Rebuild the snapshot and verify table exoplanet_data."
+        )
+    return p
+
+
 def require_vsx_local_db_path(vsx_local_db_path: str | Path | None) -> Path:
     """Resolve VSX SQLite path or raise with Settings-tab actionable message."""
     raw = str(vsx_local_db_path or "").strip()

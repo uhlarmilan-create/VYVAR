@@ -1331,6 +1331,11 @@ class AppConfig:
             or self.exoplanet_local_db_path
             or ""
         ).strip()
+        if self.exoplanet_local_db_path:
+            _exo_p = Path(self.exoplanet_local_db_path)
+            if not _exo_p.is_absolute():
+                _exo_p = self.data_root / _exo_p
+            self.exoplanet_local_db_path = str(_exo_p.resolve())
         try:
             _exo_sep = float(
                 data.get("exoplanet_match_max_sep_arcsec", self.exoplanet_match_max_sep_arcsec)
