@@ -37,10 +37,10 @@ DRAFT_ID = 435
 SETUP = "NoFilter_60_2"
 SNAPSHOT_NAME = "draft_000435_snapshot_skysurface_20260716"
 # Content anchors (Anchor #3 / sky-surface; LABBE-DET err-stable dual pass on 10d610c).
-EXPECTED_PHOTOMETRY_SHA_CORE = "03d8fb6491bc3c221f89f87acf22b929cece74c60951cf19bda80699180fb989"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED = "bbfcc92e7ac5c4c5edfe0f99353aca9d03a987f99407352217e82875ed342892"
-EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "03d8fb64"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "bbfcc92e"
+EXPECTED_PHOTOMETRY_SHA_CORE = "1c48d9fc0056bc513c379fe1fb873e25215e5910f873e55e4a0b4fd8b5995d9f"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED = "744bce947ed47463227791bdac62dbec6885edfb1b637ae0a597f9d1973a71ba"
+EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "1c48d9fc"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "744bce94"
 # Structural empty-comp drops keyed by draft_id only (Anchor #3 / R CVn on 435).
 # A future draft with phase2a_empty_comp_drop>0 must FAIL until explicitly listed.
 # Value must match exactly - empty_comp_drop=2 on 435 still trips the gate.
@@ -48,10 +48,21 @@ EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
     435: {"phase2a_empty_comp_drop": 1},  # R CVn 1496795041799526400 (+ siblings w/ 0 comps)
 }
 
-# Phase 0 funnel fingerprints (input plan files + post-pipeline active_targets).
-# Anchor --full uses frozen plan CSVs from draft_435 platesolve; it does NOT regenerate
-# variable_targets.csv via write_photometry_plan_files. A change in plan-time export therefore
-# passes byte-identical photometry until these files or Phase 0 logic change.
+# Phase 0 funnel fingerprints: frozen input VT + post-pipeline active_targets.
+# Plan-regen (write_photometry_plan_files) is checked separately via EXPECTED_PLAN_REGEN_BY_DRAFT
+# and covers the VSX->Gaia matcher; photometry SHA covers the identity join at pipeline time.
+EXPECTED_PLAN_REGEN_BY_DRAFT: dict[int, dict[str, Any]] = {
+    435: {
+        "variable_targets_rows": 875,
+        "gaia_match_source_histogram": {
+            "gaia_dr3_direct": 512,
+            "masterstars": 205,
+            "masterstars_exo": 2,
+            "no_match": 156,
+        },
+    },
+}
+
 EXPECTED_PHASE0_FUNNEL_BY_DRAFT: dict[int, dict[str, Any]] = {
     435: {
         "variable_targets_rows": 245,
@@ -61,13 +72,13 @@ EXPECTED_PHASE0_FUNNEL_BY_DRAFT: dict[int, dict[str, Any]] = {
             "masterstars_exo": 2,
             "no_match": 1,
         },
-        "active_targets_rows": 169,
+        "active_targets_rows": 165,
         "skip_photometry_true": 2,
-        "skip_reason_histogram": {},
+        "skip_reason_histogram": {"": 163, "zone_flag": 2},
         "zone_flag_histogram": {
-            "linear": 113,
+            "linear": 110,
             "noisy1": 10,
-            "noisy2": 6,
+            "noisy2": 5,
             "noisy3": 38,
             "saturated": 2,
         },
@@ -339,9 +350,9 @@ def _check_plan_regen_fingerprint(
     from phase0_funnel import compare_phase0_funnel_fingerprints, compute_phase0_funnel_fingerprint  # noqa: PLC0415
     from pipeline import write_photometry_plan_files  # noqa: PLC0415
 
-    expected = EXPECTED_PHASE0_FUNNEL_BY_DRAFT.get(int(draft_id))
+    expected = EXPECTED_PLAN_REGEN_BY_DRAFT.get(int(draft_id))
     if not expected:
-        report.add("full-plan-regen", "SKIP", f"no fingerprint for draft {draft_id}")
+        report.add("full-plan-regen", "SKIP", f"no plan-regen fingerprint for draft {draft_id}")
         return
 
     regen_dir = work_root / "plan_regen"

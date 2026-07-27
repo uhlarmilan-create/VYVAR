@@ -66,6 +66,10 @@ Full program P1-P4: DONE. Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`
   counts without failing byte-identity photometry SHA checks.
 - **DAO detection is not byte-reproducible** across the photutils 3.0 upgrade
   (+1.1% pass-1 on the same frozen MASTERSTAR image; see DEPS policy / anchor notes).
+- **Anchor frozen inputs predate SKY-SURFACE regression** (`013cb0c`): `MASTERSTAR.fits`,
+  `masterstars_full_match.csv`, and aligned lights in draft_435 date from 2026-07-16. The
+  anchor is reproducible from those frozen inputs but **not rebuildable from raw** under
+  current code until the SKY-SURFACE arc lands (`dev/results/CURSOR_RESULT_skysurface_regression.md`).
 
 ## Repository layout (REPO-REORG -- DONE, gate PASS)
 
@@ -73,9 +77,9 @@ Root tidied into a stable layout: production code in `src_py/`, dev material in
 `dev/` (`dev/tests|tools|validation|scripts|sandbox|orchestrator`), all Cursor
 result/task docs in `dev/results/`, scratch in `tmp/` (gitignored). Root `app.py`
 is a thin Streamlit shim. Commits `c611353` (dev/ move) + `8f4d7b4` (src_py/ move).
-Anchor #3 `--full` gate **PASS byte-identical** (core `03d8fb64...`
-n=333; extended `bbfcc92e...` n=499; ANCHOR-RECUT-SIGMA-NOTES 2026-07-20). Milan UI smoke
-confirmed (app launched via root shim, Settings + Parameters tab render,
+Anchor #3 `--full` gate **PASS byte-identical** (core `1c48d9fc...`
+n=325; extended `744bce94...` n=487; PHASE0-IDENTITY-GATE re-cut 2026-07-27, active 165).
+Milan UI smoke confirmed (app launched via root shim, Settings + Parameters tab render,
 modified-counter=10) plus e2e draft_000436 anchor run. See CLAUDE.md /
 VYVAR_PROCESS.md for the map; result `CURSOR_RESULT_repo_reorg.md`.
 
