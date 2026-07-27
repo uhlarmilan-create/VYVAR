@@ -10144,6 +10144,47 @@ def _phase2a_process_one_target(
     state.chip_fh = chip_fh
     return summary_rows, n_lc
 
+def _propagate_phase2a_skip_reason_to_active(
+    active_csv: Path,
+    summary_rows: list[dict[str, Any]],
+) -> None:
+    """Write Phase 2A drop reasons (e.g. no_comps) into active_targets skip_reason."""
+    if not active_csv.is_file() or not summary_rows:
+        return
+    try:
+        active = pd.read_csv(active_csv, low_memory=False, dtype={"catalog_id": str})
+    except Exception:  # noqa: BLE001
+        return
+    if "catalog_id" not in active.columns or "skip_reason" not in active.columns:
+        return
+    by_cid: dict[str, str] = {}
+    for r in summary_rows:
+        cid = str(r.get("catalog_id") or "").strip()
+        if not cid:
+            continue
+        if int(r.get("n_frames") or 0) != 0:
+            continue
+        reason = str(r.get("ac_skip_reason") or r.get("skip_reason") or "").strip()
+        if reason:
+            by_cid[cid] = reason
+    if not by_cid:
+        return
+    changed = False
+    if active["skip_reason"].dtype != object:
+        active["skip_reason"] = active["skip_reason"].astype(object)
+    for idx in active.index:
+        cid = str(active.at[idx, "catalog_id"] or "").strip()
+        if cid not in by_cid:
+            continue
+        sr = active.at[idx, "skip_reason"]
+        if pd.notna(sr) and str(sr).strip():
+            continue
+        active.at[idx, "skip_reason"] = by_cid[cid]
+        changed = True
+    if changed:
+        active.to_csv(active_csv, index=False)
+
+
 def _phase2a_finalize_exports(
     *,
     summary_rows: list,
@@ -10182,6 +10223,7 @@ def _phase2a_finalize_exports(
         cfg=_cfg,
         plate_scale_arcsec=float(plate_scale_arcsec),
     )
+    _propagate_phase2a_skip_reason_to_active(output_dir / "active_targets.csv", summary_rows)
 
     if summary_rows:
         from collections import Counter
@@ -12927,23 +12969,17 @@ def select_active_targets(
         f"saturated={n_sat} no_catalog_id={no_catalog_id} no_gaia_id={no_gaia_id} "
         f"no_dao_detection={no_dao_detection} out_of_frame={out_of_frame}"
     )
-    logging.info(
-        "FAZA 0 funnel: vsx_bbox=%d -> in_frame=%d -> gaia_id_assigned=%d (contamination=%s) "
-        "-> dao_detected=%d -> active=%d | excluded: no_dao_detection=%d no_gaia_id=%d "
-        "not_target_eligible=%d out_of_frame=%d | masked: zone_flag=%d vsx_type_out_of_scope=%d",
-        int(len(vt)),
-        int(len(vt_in)),
-        n_gaia_id_assigned,
-        f"{_contam_pct:.1f}%" if math.isfinite(_contam_pct) else "n/a",
-        len(matched_rows),
-        len(result),
-        no_dao_detection,
-        no_gaia_id,
-        not_target_eligible,
-        out_of_frame,
-        n_masked_zone,
-        n_masked_vsx_type,
+    _funnel_msg = (
+        f"FAZA 0 funnel: vsx_bbox={int(len(vt))} -> in_frame={int(len(vt_in))} -> "
+        f"gaia_id_assigned={n_gaia_id_assigned} (contamination="
+        f"{f'{_contam_pct:.1f}%' if math.isfinite(_contam_pct) else 'n/a'}) -> "
+        f"dao_detected={len(matched_rows)} -> active={len(result)} | excluded: "
+        f"no_dao_detection={no_dao_detection} no_gaia_id={no_gaia_id} "
+        f"not_target_eligible={not_target_eligible} out_of_frame={out_of_frame} | masked: "
+        f"zone_flag={n_masked_zone} vsx_type_out_of_scope={n_masked_vsx_type}"
     )
+    logging.info(_funnel_msg)
+    log_event(_funnel_msg)
     _voos_cfg = list(getattr(_cfg, "vsx_out_of_scope_types", []) or [])
     if _voos_cfg and n_masked_vsx_type == 0 and "catalog" in vt.columns:
         _vt_vsx = vt[vt["catalog"].astype(str).str.upper() == "VSX"]

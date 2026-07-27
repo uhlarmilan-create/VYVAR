@@ -22,6 +22,7 @@ from astropy.coordinates import SkyCoord, search_around_sky
 
 from database import get_gaia_db_max_g_mag, query_local_gaia
 from gaia_catalog_id import normalize_gaia_source_id
+from infolog import log_event
 from vyvar_platesolver import GAIA_EPOCH, _apply_proper_motion
 
 LOGGER = logging.getLogger(__name__)
@@ -686,38 +687,20 @@ def match_vsx_to_gaia_density_aware(
     q_accepted = _sep_quantiles(np.asarray(accepted_seps, dtype=float))
 
     pm_log = "propagated" if pm_path == "propagated" else "broadened"
-    LOGGER.info(
-        "VSX-GAIA XM: n_vsx=%d n_gaia=%d rho=%.1f deg^-2 mean_nn=%.1f\" r_max=%.2f\" "
-        "Q=%.2f w=%.2f sigma_n=%.2f\" sigma_b=%.2f\" accepted=%d contamination=%.3f%% "
-        "cand_mult=0:%d 1:%d 2:%d 3+:%d multi=%.2f%% "
-        "pm_path=%s pm_cols=%s pm_finite=%d vsx_epoch=%.1f gaia_epoch=%.1f "
-        "masterstars=%d/%d outcome=%s gaia_db_max_g=%.1f",
-        n_vsx,
-        n_gaia,
-        rho,
-        mean_nn,
-        r_max,
-        fit.q_fit,
-        fit.w_fit,
-        sn_eff,
-        sb_eff,
-        int(np.sum(accepted_mask)),
-        100.0 * realized_contam,
-        mult["0"],
-        mult["1"],
-        mult["2"],
-        mult["3plus"],
-        100.0 * multi_candidate_frac if math.isfinite(multi_candidate_frac) else float("nan"),
-        pm_log,
-        pm_columns_present,
-        n_pm_finite,
-        float(vsx_match_epoch),
-        float(GAIA_EPOCH),
-        masterstars_accepted,
-        ms_eligible if ms_ids else len(ms_ids),
-        outcome_check,
-        float(gaia_db_max_g),
+    _xm_msg = (
+        f"VSX-GAIA XM: n_vsx={n_vsx} n_gaia={n_gaia} rho={rho:.1f} deg^-2 mean_nn={mean_nn:.1f}\" "
+        f"r_max={r_max:.2f}\" Q={fit.q_fit:.2f} w={fit.w_fit:.2f} sigma_n={sn_eff:.2f}\" "
+        f"sigma_b={sb_eff:.2f}\" accepted={int(np.sum(accepted_mask))} "
+        f"contamination={100.0 * realized_contam:.3f}% "
+        f"cand_mult=0:{mult['0']} 1:{mult['1']} 2:{mult['2']} 3+:{mult['3plus']} "
+        f"multi={100.0 * multi_candidate_frac if math.isfinite(multi_candidate_frac) else float('nan'):.2f}% "
+        f"pm_path={pm_log} pm_cols={pm_columns_present} pm_finite={n_pm_finite} "
+        f"vsx_epoch={float(vsx_match_epoch):.1f} gaia_epoch={float(GAIA_EPOCH):.1f} "
+        f"masterstars={masterstars_accepted}/{ms_eligible if ms_ids else len(ms_ids)} "
+        f"outcome={outcome_check} gaia_db_max_g={float(gaia_db_max_g):.1f}"
     )
+    LOGGER.info(_xm_msg)
+    log_event(_xm_msg)
     if pm_path == "broadened":
         notes.append(
             f"PM broadened: pm_columns_present={pm_columns_present} n_pm_finite={n_pm_finite}; "
