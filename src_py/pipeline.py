@@ -12254,6 +12254,19 @@ def generate_masterstar_and_catalog(
         )
         if _n_bp_miss > 0:
             log_event(f"masterstars bp_rp fallback: {_n_bp_fill}/{_n_bp_miss} doplnenych z Gaia DB")
+        try:
+            from invariants_runtime import InvariantViolation  # noqa: PLC0415
+            from invariants_runtime import check_dao_only_fraction  # noqa: PLC0415
+            from invariants_runtime import inv_check  # noqa: PLC0415
+
+            _ms_inv_meta: dict[str, Any] = {"invariants": []}
+            _ok_ms, _det_ms, _frac_ms, _pol_ms = check_dao_only_fraction(df_final)
+            inv_check(_ms_inv_meta, "INV-MS-01", _ok_ms, policy=_pol_ms, detail=_det_ms)
+            log_event(f"MASTERSTAR purity guard: {_det_ms}")
+        except InvariantViolation:
+            raise
+        except Exception as _ms_inv_exc:  # noqa: BLE001
+            LOGGER.debug("[INV-MS-01] skipped: %s", _ms_inv_exc)
         _vyvar_df_to_csv(df_final, csv_path)
     except Exception as exc:  # noqa: BLE001
         log_event(f"MASTERSTAR source_type annotate failed: {exc!s}")
@@ -17047,6 +17060,37 @@ def _qc_enrich_calibrated_in_place(
         f"QC in-place: {n_ok} ok, {n_rejected} rejected, "
         f"{len(results) - n_ok - n_rejected} errors"
     )
+
+    try:
+        from invariants_runtime import check_preprocess_large_small_ratio  # noqa: PLC0415
+        from invariants_runtime import inv_check  # noqa: PLC0415
+
+        _prep_inv_meta: dict[str, Any] = {"invariants": []}
+        _sample_by_group: dict[str, Path] = {}
+        for _r in results:
+            if str(_r.get("status") or "") != "ok":
+                continue
+            _src = Path(str(_r.get("src") or ""))
+            if not _src.is_file():
+                continue
+            _grp = str(_src.parent)
+            if _grp not in _sample_by_group:
+                _sample_by_group[_grp] = _src
+        for _grp, _fp in _sample_by_group.items():
+            with fits.open(_fp, memmap=False) as _hdul:
+                _frame = np.asarray(_hdul[0].data, dtype=np.float32)
+            _ok_prep, _det_prep, _ratio_prep = check_preprocess_large_small_ratio(_frame)
+            inv_check(
+                _prep_inv_meta,
+                "INV-PREP-01",
+                _ok_prep,
+                policy="WARN",
+                detail=f"{Path(_grp).name}: {_det_prep}",
+            )
+            if math.isfinite(_ratio_prep):
+                log_event(f"Preprocess gradient guard ({Path(_grp).name}): {_det_prep}")
+    except Exception as _prep_inv_exc:  # noqa: BLE001
+        LOGGER.debug("[INV-PREP-01] skipped: %s", _prep_inv_exc)
 
     _qc_df = pd.DataFrame(results)
     _qc_csv = calibrated_root / "qc_metrics.csv"

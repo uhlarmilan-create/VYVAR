@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import ast
+import math
 import re
 import sys
 from pathlib import Path
@@ -21,11 +22,15 @@ from invariants_runtime import (  # noqa: E402
     PER_FRAME_SAT_META_KEYS,
     WIRED_INV_IDS,
     InvariantViolation,
+    check_dao_only_fraction,
     check_dark_resample_flux_conservation,
     check_flat_mean_near_one,
+    check_preprocess_large_small_ratio,
     check_residual_flatness,
     check_wcs_identity_p95,
+    dao_only_fraction_from_masterstars,
     inv_check,
+    preprocess_large_small_ratio,
     stamp_pipeline_stage,
     uniform_sum_preserving_upscale,
     validate_config_behavior,
@@ -303,3 +308,44 @@ def test_cfg01_per_frame_sat_markers_absent_when_off() -> None:
     with pytest.raises(InvariantViolation):
         validate_config_behavior(meta_bad, None)
     assert "per_frame_sat_enabled" in PER_FRAME_SAT_META_KEYS
+
+
+def test_prep01_flat_frame_passes_gradient_guard() -> None:
+    flat = np.full((128, 128), 1000.0, dtype=np.float64)
+    ok, det, ratio = check_preprocess_large_small_ratio(flat)
+    assert ok
+    assert math.isfinite(ratio)
+    assert ratio < 10.0
+
+
+def test_prep01_gradient_frame_warns() -> None:
+    h, w = 256, 256
+    yy, xx = np.mgrid[0:h, 0:w]
+    steep = (1000.0 + 2.0 * xx + 1.5 * yy).astype(np.float64)
+    ok, det, ratio = check_preprocess_large_small_ratio(steep, warn_ratio=10.0)
+    assert not ok
+    assert ratio > 10.0
+
+
+def test_ms01_dao_only_fraction_warn_and_fail() -> None:
+    import pandas as pd
+
+    df_ok = pd.DataFrame({"catalog_id": ["1", "2", "3"], "source_type": ["GAIA_MATCHED"] * 3})
+    ok, det, frac, pol = check_dao_only_fraction(df_ok)
+    assert ok and pol == "ok"
+    assert dao_only_fraction_from_masterstars(df_ok) == 0.0
+
+    df_warn = pd.DataFrame(
+        {
+            "catalog_id": ["", ""] + ["2"] * 13,
+            "source_type": ["DAO_ONLY", "DAO_ONLY"] + ["GAIA_MATCHED"] * 13,
+        }
+    )
+    ok_w, _, frac_w, pol_w = check_dao_only_fraction(df_warn)
+    assert not ok_w and pol_w == "WARN"
+    assert abs(frac_w - (2.0 / 15.0)) < 1e-9
+
+    df_fail = pd.DataFrame({"catalog_id": [""] * 4, "source_type": ["DAO_ONLY"] * 4})
+    ok_f, _, frac_f, pol_f = check_dao_only_fraction(df_fail)
+    assert not ok_f and pol_f == "FAIL"
+    assert frac_f == 1.0

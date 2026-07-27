@@ -44,6 +44,8 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-CFG-01",
         "INV-CFG-01R",
         "INV-PHASE0-ID",
+        "INV-PREP-01",
+        "INV-MS-01",
         "QC-01",
         "OSC-01",
         "OSC-02",
@@ -55,6 +57,9 @@ FLATNESS_P99_WARN_ADU = 400.0
 WCS_IDENTITY_P95_WARN_PX = 2.0
 FLAT_MEAN_REL_TOL = 1e-3
 FLUX_SUM_REL_TOL = 1e-6
+PREPROCESS_LARGE_SMALL_RATIO_WARN = 10.0
+DAO_ONLY_FRACTION_WARN = 0.10
+DAO_ONLY_FRACTION_FAIL = 0.25
 
 COG_META_KEYS = (
     "cog_night_fallback",
@@ -406,6 +411,75 @@ def check_wcs_identity_p95(
         return True, "identity p95 n/a"
     ok = p95 <= float(warn_px)
     return ok, f"matched_world2pix_identity_p95_px={p95:.3f} (warn<{warn_px:g})"
+
+
+def preprocess_large_small_ratio(
+    frame: np.ndarray,
+    *,
+    sigma: float = 30.0,
+) -> float:
+    """Ratio of large-scale to small-scale variance (post-preprocess gradient guard)."""
+    from scipy.ndimage import gaussian_filter  # type: ignore[import-untyped]
+
+    arr = np.asarray(frame, dtype=np.float64)
+    if arr.ndim != 2 or arr.size < 64:
+        return float("nan")
+    finite = np.isfinite(arr)
+    if not int(np.count_nonzero(finite)):
+        return float("nan")
+    fill = float(np.nanmedian(arr[finite]))
+    work = np.where(finite, arr, fill)
+    blur = gaussian_filter(work, sigma=float(sigma))
+    resid = work - blur
+    var_large = float(np.var(blur))
+    var_small = float(np.var(resid))
+    if var_small <= 0.0 or not math.isfinite(var_small):
+        return 0.0
+    return var_large / var_small
+
+
+def check_preprocess_large_small_ratio(
+    frame: np.ndarray,
+    *,
+    warn_ratio: float = PREPROCESS_LARGE_SMALL_RATIO_WARN,
+) -> tuple[bool, str, float]:
+    """INV-PREP-01: large-scale gradient residual vs anchor band (~1-5x good; >>10x regression)."""
+    ratio = preprocess_large_small_ratio(frame)
+    if not math.isfinite(ratio):
+        return True, "large_small_ratio n/a (insufficient samples)", float("nan")
+    ok = ratio <= float(warn_ratio)
+    return ok, f"large_small_ratio={ratio:.2f}x (warn>{warn_ratio:g})", ratio
+
+
+def dao_only_fraction_from_masterstars(df: Any) -> float:
+    """Fraction of masterstar rows with empty catalog_id / source_type DAO_ONLY."""
+    import pandas as pd
+
+    pdf = df if isinstance(df, pd.DataFrame) else pd.DataFrame(df)
+    if pdf.empty:
+        return 0.0
+    if "source_type" in pdf.columns:
+        st = pdf["source_type"].fillna("").astype(str).str.strip()
+        n_dao = int((st == "DAO_ONLY").sum())
+    else:
+        cid = pdf.get("catalog_id", pd.Series([""] * len(pdf))).fillna("").astype(str).str.strip()
+        n_dao = int((cid == "").sum())
+    return float(n_dao) / float(len(pdf))
+
+
+def check_dao_only_fraction(
+    df: Any,
+    *,
+    warn_frac: float = DAO_ONLY_FRACTION_WARN,
+    fail_frac: float = DAO_ONLY_FRACTION_FAIL,
+) -> tuple[bool, str, float, str]:
+    """INV-MS-01: DAO_ONLY purity on masterstars export (anchor ~3.7%; regression >>10%)."""
+    frac = dao_only_fraction_from_masterstars(df)
+    if frac > float(fail_frac):
+        return False, f"dao_only_fraction={frac:.3f} (fail>{fail_frac:g})", frac, "FAIL"
+    if frac > float(warn_frac):
+        return False, f"dao_only_fraction={frac:.3f} (warn>{warn_frac:g})", frac, "WARN"
+    return True, f"dao_only_fraction={frac:.3f}", frac, "ok"
 
 
 def stamp_pipeline_stage(
