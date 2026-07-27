@@ -146,7 +146,7 @@
       "verification": "scripts/session_baseline_check.py --full (core 1c48d9fc\u2026 n=325; extended 744bce94\u2026 n=487). Census fingerprint n_raw_dao=2552 matched=2842 targets=165; identity p95 baseline 1.54 px. Plan-regen 875 rows (873 VSX + 2 exo); frozen VT 245 rows.",
       "passes": true,
       "last_verified": "2026-07-27",
-      "commit": "2a9cda0",
+      "commit": "0833c5c",
       "notes": "Re-cut 2026-07-27 (PHASE0-IDENTITY-GATE CLOSE-2): science-justified identity join drops 4 spurious gaia_dr3_direct actives (Gaia DR3 1499883638682689920, 1500410236033012352, 1498513166158147968, 1499064433800590592); active 169\u2192165; TOI-3919 retained via exo identity join. Supersedes core 03d8fb6491bc3c221f89f87acf22b929cece74c60951cf19bda80699180fb989 / extended bbfcc92e7ac5c4c5edfe0f99353aca9d03a987f99407352217e82875ed342892 (2026-07-20 sigma-notes cut). Gate coverage: plan-regen exercises VSX\u2192Gaia matcher (875 rows); photometry SHA exercises identity join on frozen VT. Frozen anchor inputs (MASTERSTAR.fits, masterstars_full_match.csv, aligned lights) date 2026-07-16 and predate SKY-SURFACE regression 013cb0c -- reproducible from frozen inputs, not rebuildable from raw until SKY-SURFACE lands (see CURSOR_RESULT_skysurface_regression.md). Prior: Re-cut 2026-07-20 (ANCHOR-RECUT-SIGMA-NOTES); CYTHON-RELEASE-1 + RELEASE-CLOSE @ 6a05390.",
       "census_fingerprint": {
         "n_raw_dao": 2552,
