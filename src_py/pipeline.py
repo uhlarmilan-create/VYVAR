@@ -16934,6 +16934,7 @@ def _qc_enrich_calibrated_in_place(
     import numpy as np
 
     _ = fwhm_reject_limit, elong_reject_limit  # skip-mode: diagnostics only
+    _ = apply_sky_surface  # OSC callers pass True; mono gate is sky_order-only (T3 restore)
     cfg = app_config or AppConfig()
     sky_order = int(cfg.preprocess_sky_surface_order)
 
@@ -16959,15 +16960,23 @@ def _qc_enrich_calibrated_in_place(
                 hdr = hdul[0].header
 
             sky_stats: dict[str, Any] = {}
-            is_channel = bool(hdr.get("VY_CHANNEL")) or apply_sky_surface
             is_mosaic = _valid_bayerpat_from_header(hdr) is not None and not hdr.get("VY_CHANNEL")
-            if is_channel and sky_order > 0 and not is_mosaic:
+            if sky_order > 0 and not is_mosaic:
                 data, sky_stats = _fit_subtract_preprocess_sky_surface(data, order=sky_order)
                 with fits.open(fp, mode="update") as hdul:
                     hdul[0].data = _as_fits_float32_image(data)
-                    for k, v in sky_stats.items():
-                        if k == "sky_surface_applied":
-                            hdul[0].header["VY_SKYSF"] = (bool(v), "Sky-surface subtract applied")
+                    if sky_stats.get("sky_surface_applied"):
+                        hdul[0].header["VY_SKYSF"] = (True, "Sky-surface subtract applied")
+                        hdul[0].header["VYSKYORD"] = (
+                            int(sky_stats.get("sky_surface_order") or sky_order),
+                            "Preprocess sky-surface polynomial order",
+                        )
+                        p2p = sky_stats.get("sky_surface_p2p_adu")
+                        if p2p is not None and math.isfinite(float(p2p)):
+                            hdul[0].header["VYSKYP2P"] = (
+                                round(float(p2p), 4),
+                                "Sky surface peak-to-peak ADU",
+                            )
                     hdul.flush()
 
             qc = _qc_fwhm_elongation(data)

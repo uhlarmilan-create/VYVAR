@@ -204,12 +204,20 @@ def test_sky_surface_not_on_mosaic_regression(monkeypatch: pytest.MonkeyPatch, t
     fits.writeto(mosaic, np.ones((8, 8), dtype=np.float32), hdr, overwrite=True)
     pl._qc_enrich_calibrated_in_place(tmp_path, app_config=pl.AppConfig())
     assert calls == []
-    ch = tmp_path / "ch.fits"
+    mono_dir = tmp_path / "mono_only"
+    mono_dir.mkdir()
+    mono = mono_dir / "mono.fits"
+    fits.writeto(mono, np.ones((8, 8), dtype=np.float32), overwrite=True)
+    pl._qc_enrich_calibrated_in_place(mono_dir, app_config=pl.AppConfig())
+    assert len(calls) == 1
+    ch_dir = tmp_path / "ch_only"
+    ch_dir.mkdir()
+    ch = ch_dir / "ch.fits"
     ch_hdr = fits.Header()
     ch_hdr["VY_CHANNEL"] = "R"
     fits.writeto(ch, np.ones((8, 8), dtype=np.float32), ch_hdr, overwrite=True)
-    pl._qc_enrich_calibrated_in_place(tmp_path, app_config=pl.AppConfig(), apply_sky_surface=True)
-    assert len(calls) == 1
+    pl._qc_enrich_calibrated_in_place(ch_dir, app_config=pl.AppConfig(), apply_sky_surface=True)
+    assert len(calls) == 2
 
 
 def test_osc01_invariant_blocks_mosaic(tmp_path: Path) -> None:
