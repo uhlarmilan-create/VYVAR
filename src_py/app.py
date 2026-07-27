@@ -28,8 +28,8 @@ from infolog import (
     last_job_snapshot,
     log_event,
     log_exception,
-    save_infolog_to_disk,
 )
+from infolog_session import save_infolog_to_disk, start_infolog_session
 from run_preflight_log import write_run_preflight_error_log
 from importer import smart_import_session, smart_scan_source
 from optics_selection import (
@@ -302,6 +302,9 @@ def _run_vyvar_full_pipeline(
 
         ap = Path(str(result.archive_path))
         ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
+        from infolog_session import start_infolog_session  # noqa: PLC0415
+
+        start_infolog_session(ap_root)
         record_draft_calibration_provenance(
             db=pipeline.db,
             archive_path=ap_root,
