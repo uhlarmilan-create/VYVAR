@@ -74,7 +74,7 @@ EXPECTED_PHASE0_FUNNEL_BY_DRAFT: dict[int, dict[str, Any]] = {
         },
         "active_targets_rows": 165,
         "skip_photometry_true": 2,
-        "skip_reason_histogram": {"": 163, "zone_flag": 2},
+        "skip_reason_histogram": {"": 162, "no_comps": 1, "zone_flag": 2},
         "zone_flag_histogram": {
             "linear": 110,
             "noisy1": 10,

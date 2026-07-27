@@ -2,7 +2,18 @@
 
 **Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
 
-Last updated: **2026-07-26** (PHASE0-IDENTITY-GATE close; SIGMA/SKY-SURFACE diagnostics).
+Last updated: **2026-07-27** (POST-451 remediation: exoplanet restore, observability, sky-surface fix).
+
+## POST-451 remediation (2026-07-27)
+
+- **Part A DONE** (`926a94c`): exoplanet promotion path resolved against `data_root`; fail-loud DB;
+  VT schema preserves exo columns when frame empty.
+- **Part B DONE** (`63b902d`): `VSX-GAIA XM:` and `FAZA 0 funnel:` routed through `log_event`;
+  Phase 2A `skip_reason` propagated for `n_frames=0`.
+- **Part C.1 DONE** (`ff08002`): order-2 sky-surface subtract restored on mono preprocess path.
+- **Part C.3 DONE** (`1191579`): INV-PREP-01 + INV-MS-01 guards wired.
+- **Part C.4 PENDING**: full raw-to-photometry BO CVn acceptance (no calibrated FITS on disk in
+  draft_451 tree for local re-run).
 
 Registered params: **270** (removed ``phase01_match_radius_arcsec``; was 271).
 

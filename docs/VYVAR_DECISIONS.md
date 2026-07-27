@@ -1204,6 +1204,16 @@ artifact; allowlist supersedes). Resume/skip-drafts: preprocess complete when
 ``calibrated/lights/qc_metrics.csv`` exists (or ``pipeline_meta`` preprocess stage stamp).
 **Status:** implemented.
 
+### SKY-SURFACE-RESTORE (2026-07-27)
+Accidental drop of order-2 sky-surface subtract on mono frames in `013cb0c` (SKIPPROC) is
+**reversed**. T3-PREPROCESS-SKY-SURFACE (2026-07-16) remains authoritative: when
+``preprocess_sky_surface_order > 0``, ``_qc_enrich_calibrated_in_place`` calls
+``_fit_subtract_preprocess_sky_surface`` for all non-mosaic lights (no ``VY_CHANNEL`` gate);
+OSC Bayer mosaics are still skipped to avoid double subtract on channels. Headers:
+``VY_SKYSF``, ``VYSKYORD``, ``VYSKYP2P``. Guards: **INV-PREP-01** (large_small_ratio WARN),
+**INV-MS-01** (DAO_ONLY fraction WARN/FAIL). C.4 acceptance on BO CVn raw path pending Milan
+raw frames on disk. **Status:** code landed; science validation pending.
+
 ### QC-ALLOWLIST-AUTHORITY
 ``qc_metrics.csv`` under the draft lights root is the **authoritative frame allowlist** for
 alignment: only rows with ``status=ok`` (exact match) enter ``astrometry_align_and_build_masterstar``.
