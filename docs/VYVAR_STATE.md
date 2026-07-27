@@ -77,10 +77,11 @@ Full program P1-P4: DONE. Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`
   counts without failing byte-identity photometry SHA checks.
 - **DAO detection is not byte-reproducible** across the photutils 3.0 upgrade
   (+1.1% pass-1 on the same frozen MASTERSTAR image; see DEPS policy / anchor notes).
-- **Anchor frozen inputs predate SKY-SURFACE regression** (`013cb0c`): `MASTERSTAR.fits`,
-  `masterstars_full_match.csv`, and aligned lights in draft_435 date from 2026-07-16. The
-  anchor is reproducible from those frozen inputs but **not rebuildable from raw** under
-  current code until the SKY-SURFACE arc lands (`dev/results/CURSOR_RESULT_skysurface_regression.md`).
+- **Raw-to-photometry rebuild validated (2026-07-27):** draft_452 acceptance run after
+  SKY-SURFACE restore (`ff08002`) matches anchor MASTERSTAR catalogue metrics (pass-1 2552,
+  2951 rows, DAO_ONLY 3.7%, bg_std 83.8 ADU, sigma_pp 46.9 ADU). Anchor `--full` photometry
+  SHA gate remains the regression lock on frozen inputs; raw-path equivalence is now demonstrated
+  on BO CVn (`dev/results/CURSOR_RESULT_post451_remediation.md` PRE-PUSH CLOSEOUT).
 
 ## Repository layout (REPO-REORG -- DONE, gate PASS)
 
