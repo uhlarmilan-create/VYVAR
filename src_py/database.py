@@ -3523,26 +3523,11 @@ class VyvarDatabase:
                     )
                 return lid, None
 
-        default_id = self.get_default_id("LOCATION")
-        if default_id is not None and self._fk_row_exists("LOCATION", int(default_id)):
-            stale = f" id={cfg_id}" if cfg_id > 0 else ""
-            return int(default_id), (
-                f"Configured observer location{stale} is missing from the database; "
-                f"using default location id={int(default_id)}."
-            )
-
-        row = self.conn.execute("SELECT MIN(ID) AS ID FROM LOCATION;").fetchone()
-        if row is not None and row["ID"] is not None:
-            fallback = int(row["ID"])
-            stale = f" id={cfg_id}" if cfg_id > 0 else ""
-            return fallback, (
-                f"Configured observer location{stale} is missing from the database; "
-                f"using first location id={fallback}."
-            )
-
         raise ValueError(
-            "Cannot import: no LOCATION row in the database. "
-            "Add an observatory site under Database Explorer first."
+            "Cannot import: observer location unresolved "
+            f"(config key observer_location_id={cfg_id if cfg_id > 0 else 'unset'}, "
+            f"id_location={id_location!r}). "
+            "Set observer_location_id in config.json to a valid LOCATION.ID."
         )
 
     def insert_observation(

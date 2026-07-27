@@ -73,18 +73,16 @@ def test_create_draft_stale_config_location_id_raises_clear_error(tmp_path, monk
         )
 
 
-def test_resolve_import_location_falls_back_from_stale_config_id(tmp_path, monkeypatch) -> None:
+def test_resolve_import_location_fails_on_stale_config_id(tmp_path, monkeypatch) -> None:
     db = _fresh_db(tmp_path, monkeypatch)
     _seed_equipment_telescope_location(db)
-    loc_id, warn = db.resolve_import_location_id(id_location=None, cfg_location_id=2)
-    assert loc_id == 1
-    assert warn is not None
-    assert "id=2" in warn
+    with pytest.raises(ValueError, match="observer_location_id"):
+        db.resolve_import_location_id(id_location=None, cfg_location_id=2)
 
 
 def test_resolve_import_location_requires_row(tmp_path, monkeypatch) -> None:
     db = _fresh_db(tmp_path, monkeypatch)
-    with pytest.raises(ValueError, match="no LOCATION row"):
+    with pytest.raises(ValueError, match="observer location unresolved|no LOCATION row"):
         db.resolve_import_location_id(id_location=None, cfg_location_id=2)
 
 

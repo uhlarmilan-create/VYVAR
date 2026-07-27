@@ -103,7 +103,7 @@ def main() -> None:
     logging.info("Source:    %s", args.source)
     logging.info("Equipment: ID=%d", args.eq)
     logging.info("Telescope: ID=%d", args.tel)
-    logging.info("SysRem:    enabled=%s, iter=%d", sysrem_on, args.sysrem_iter)
+    logging.info("SysRem:    %s", "disabled via --no-sysrem" if args.no_sysrem else "from config.json")
     logging.info("Dry run:   %s", args.dry_run)
     logging.info("Log file:  %s", args.log.resolve())
     logging.info("=" * 60)
@@ -113,8 +113,8 @@ def main() -> None:
         equipment_id=int(args.eq),
         telescope_id=int(args.tel),
         config_path=args.config,
-        sysrem_enabled=sysrem_on,
-        sysrem_n_iter=int(args.sysrem_iter),
+        sysrem_enabled=False if args.no_sysrem else None,
+        sysrem_n_iter=int(args.sysrem_iter) if args.no_sysrem is False else None,
         dry_run=bool(args.dry_run),
         progress_cb=lambda msg: logging.info("[Progress] %s", msg),
     )

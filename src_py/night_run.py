@@ -38,7 +38,7 @@ class NightRunParams:
     equipment_id: int
     telescope_id: int
     config_path: Path | None = None
-    location_id: int = 1
+    location_id: int | None = None
     platesolve_equipment_id: int | None = None
     sysrem_enabled: bool | None = None
     sysrem_n_iter: int | None = None
@@ -612,7 +612,8 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             pipeline=pipeline,
             id_equipment=eq_id,
             id_telescope=tel_id,
-            id_location=int(params.location_id),
+            id_location=int(params.location_id) if params.location_id is not None else None,
+            cfg=cfg,
         )
         _t("smart_import_session", t0)
 
@@ -626,6 +627,33 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         ap = Path(str(import_result.archive_path))
         ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
         result.draft_dir = ap_root.resolve()
+
+        from infolog_session import log_milestone, start_infolog_session  # noqa: PLC0415
+
+        start_infolog_session(result.draft_dir)
+        _loc_id = int(params.location_id) if params.location_id is not None else int(cfg.observer_location_id)
+        if _loc_id <= 0:
+            raise ValueError(
+                "observer_location_id is unset (config key observer_location_id); "
+                "cannot import without a valid LOCATION row."
+            )
+        from database import get_observer_location_by_id  # noqa: PLC0415
+
+        _loc_row = get_observer_location_by_id(cfg.database_path, _loc_id)
+        if not _loc_row:
+            raise ValueError(
+                f"observer_location_id={_loc_id} not found in LOCATION table "
+                f"(config key observer_location_id)."
+            )
+        cfg.observer_location_id = _loc_id
+        cfg.observer_lat = float(_loc_row["lat"])
+        cfg.observer_lon = float(_loc_row["lon"])
+        cfg.observer_alt_m = float(_loc_row["alt_m"])
+        cfg.observer_location_name = str(_loc_row.get("name") or "")
+        log_milestone(
+            f"[SITE] observer location id={_loc_id} name={_loc_row.get('name')} "
+            f"lat={_loc_row.get('lat')} lon={_loc_row.get('lon')} source=config+import"
+        )
 
         from draft_provenance import (
             CALIBRATION_MODE_PRE,
@@ -1120,8 +1148,9 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         timings["total"] = time.time() - t_run
         result.phase_timings = timings
         if result.draft_dir is not None:
-            from infolog import save_infolog_to_disk  # noqa: PLC0415
+            from infolog_session import end_infolog_session, save_infolog_to_disk  # noqa: PLC0415
 
+            end_infolog_session()
             saved = save_infolog_to_disk(result.draft_dir)
             if saved:
                 _p(f"Infolog saved: {Path(saved).name}")

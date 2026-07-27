@@ -57,10 +57,10 @@ def _write_light(path: Path) -> None:
 
 
 class _Cfg:
-    observer_location_id = 2
     calibration_master_ccd_temp_tolerance_c = 0.5
 
-    def __init__(self, data_root: Path) -> None:
+    def __init__(self, data_root: Path, *, observer_location_id: int = 1) -> None:
+        self.observer_location_id = int(observer_location_id)
         self.data_root = data_root
         self.archive_root = data_root / "Archive"
         self.calibration_library_root = data_root / "CalibrationLibrary"
@@ -131,7 +131,7 @@ def test_milan_state_scan_shows_expired_dark_and_import_succeeds(tmp_path: Path)
     source = tmp_path / "session" / "Lights"
     _write_light(source / "light_0001.fits")
 
-    cfg = _Cfg(data_root)
+    cfg = _Cfg(data_root, observer_location_id=int(loc))
     plan = smart_scan_source(
         source_root=source.parent,
         calibration_library_root=cal_root,
@@ -158,7 +158,6 @@ def test_milan_state_scan_shows_expired_dark_and_import_succeeds(tmp_path: Path)
     )
     assert result.draft_id is not None
     assert int(result.draft_id) >= 1
-    assert any("observer location" in w.lower() and "id=2" in w for w in plan.warnings)
 
     row = db.conn.execute(
         "SELECT ID_LOCATION, ID_SCANNING FROM OBS_DRAFT WHERE ID = ?;",

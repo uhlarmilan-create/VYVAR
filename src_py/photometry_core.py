@@ -5032,6 +5032,7 @@ def save_lightcurve_csv(
         df["err_method"] = [str(m) for m in err_method]
     _ssm = float(sigma_sys_mag) if sigma_sys_mag is not None and math.isfinite(float(sigma_sys_mag)) else float("nan")
     df["sigma_sys_mag"] = np.round(np.full(n, _ssm, dtype=np.float64), 6)
+    df["delta_mag_sysrem"] = np.round(np.full(n, float("nan"), dtype=np.float64), 6)
     df.to_csv(output_path, index=False)
 
 
@@ -6579,6 +6580,7 @@ def _phase2a_observer_location_dict(
     cfg: object,
     site: tuple[float | None, float | None, float | None] | None = None,
     site_source: str | None = None,
+    location_id: int | None = None,
 ) -> dict[str, Any]:
     """Observer site for ``pipeline_meta.json`` (AAVSO/VAR.ASTRO use same cfg fields).
 
@@ -6603,6 +6605,7 @@ def _phase2a_observer_location_dict(
     except (TypeError, ValueError):
         alt_m = 0.0
     out_source = "config"
+    out_loc_id = int(location_id) if location_id is not None and int(location_id) > 0 else loc_id
     if site is not None and site[0] is not None and site[1] is not None:
         lat = float(site[0])
         lon = float(site[1])
@@ -6613,7 +6616,7 @@ def _phase2a_observer_location_dict(
         "lat": lat,
         "lon": lon,
         "alt_m": alt_m,
-        "location_id": loc_id,
+        "location_id": out_loc_id,
         "source": out_source,
     }
 
@@ -7084,6 +7087,7 @@ class _Phase2AState:
     site_alt: float | None = None
     site_source: str = "unresolved"
     site_ok: bool = False
+    site_location_id: int | None = None
     group_color_term: _ColorTermGroupFit | None = None
     apply_color_term: bool = False
     k2_bprp: float = float("nan")
@@ -8674,6 +8678,17 @@ def _phase2a_prepare_shared_state(
     from param_resolver import resolve_site as _resolve_site  # noqa: PLC0415
 
     _site = _resolve_site(_ms_header, db=db, draft_id=draft_id, cfg=_cfg)
+    _site_loc_id: int | None = None
+    if db is not None and draft_id is not None:
+        try:
+            _dr = db.conn.execute(
+                "SELECT ID_LOCATION FROM OBS_DRAFT WHERE ID = ?;",
+                (int(draft_id),),
+            ).fetchone()
+            if _dr is not None and _dr[0] is not None:
+                _site_loc_id = int(_dr[0])
+        except Exception:  # noqa: BLE001
+            _site_loc_id = None
     logging.info(
         "[PHASE 2A] Observer site: source=%s lat=%s lon=%s alt=%s ok=%s",
         _site.source,
@@ -8795,6 +8810,7 @@ def _phase2a_prepare_shared_state(
         site_alt=_site.elev,
         site_source=_site.source,
         site_ok=bool(_site.ok),
+        site_location_id=_site_loc_id,
         group_color_term=_group_ct,
         apply_color_term=bool(_apply_ct),
         k2_bprp=float(_k2_bprp),
@@ -10709,6 +10725,7 @@ def run_phase2a(
                 _cfg,
                 site=(state.site_lat, state.site_lon, state.site_alt) if state.site_ok else None,
                 site_source=state.site_source,
+                location_id=state.site_location_id,
             ),
             "dynamic_params": _dyn,
             "resolved_facts": state.resolved_facts,
