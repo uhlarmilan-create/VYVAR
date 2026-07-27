@@ -1,0 +1,305 @@
+{
+  "drafts": {
+    "451": {
+      "source": "infolog_20260727_104233.txt",
+      "n_events": 8000,
+      "first": "2026-07-27 07:20:12",
+      "last": "2026-07-27 08:42:33",
+      "wall_s": 4941.0,
+      "masterstars": 6698,
+      "actives": 242,
+      "vt_rows": 873,
+      "dao_only_frac": 0.4039,
+      "pipeline_meta_keys": [
+        "gaia_dao_completeness_raw_pct",
+        "catalog_rows",
+        "n_gaia_detected",
+        "n_gaia_undetected",
+        "wcs_roundtrip_p99_px"
+      ]
+    },
+    "452": {
+      "source": "night_run_log",
+      "n_events": 11132,
+      "first": "2026-07-27 15:12:41",
+      "last": "2026-07-27 17:11:30",
+      "wall_s": 7129.0,
+      "masterstars": 2951,
+      "actives": 201,
+      "vt_rows": 875,
+      "dao_only_frac": 0.0369,
+      "pipeline_meta_keys": [
+        "gaia_dao_completeness_raw_pct",
+        "catalog_rows",
+        "n_gaia_detected",
+        "n_gaia_undetected",
+        "wcs_roundtrip_p99_px"
+      ]
+    },
+    "453": {
+      "source": "infolog_20260727_222019.txt",
+      "n_events": 8000,
+      "first": "2026-07-27 19:05:26",
+      "last": "2026-07-27 20:20:19",
+      "wall_s": 4493.0,
+      "masterstars": 2951,
+      "actives": 201,
+      "vt_rows": 875,
+      "dao_only_frac": 0.0369,
+      "pipeline_meta_keys": [
+        "gaia_dao_completeness_raw_pct",
+        "catalog_rows",
+        "n_gaia_detected",
+        "n_gaia_undetected",
+        "wcs_roundtrip_p99_px"
+      ]
+    }
+  },
+  "suspects": {
+    "451": {
+      "sky_surface_preprocess": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "qc_workers": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "predicted_dilution": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "inv_prep01": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "inv_ms01": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "mixture_fit": {
+        "first": "2026-07-27 07:20:24",
+        "last": "2026-07-27 08:09:34",
+        "n_hits": 28,
+        "duration_s": 2950.0,
+        "sample_lines": [
+          "07:20:24  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "07:20:26  INFO  [pipeline]  [DAO] Gaia->DAO reconcile: completeness_50=90.7% (matched=3372 missed=308 off_frame=940 below_limit=8670 blended=84) G_lim_50=14.92 fit=fleming1995_erf",
+          "07:20:26  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "07:20:56  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "07:21:14  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "08:09:34  GAIA SQL: mag_limit 20.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "08:09:34  GAIA SQL: mag_limit 20.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "08:09:34  GAIA SQL: mag_limit 20.00 > MAX(g_mag) v DB (17.500) - orezavam."
+        ]
+      },
+      "vsx_gaia": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "exo_target": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "faza0_funnel": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      }
+    },
+    "452": {
+      "sky_surface_preprocess": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "qc_workers": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "predicted_dilution": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "inv_prep01": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "inv_ms01": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "mixture_fit": {
+        "first": "2026-07-27 16:02:20",
+        "last": "2026-07-27 16:02:20",
+        "n_hits": 1,
+        "duration_s": null,
+        "sample_lines": [
+          "16:02:20  [DAO] Gaia->DAO reconcile: completeness_50=89.4% (matched=2761 missed=271 off_frame=924 below_limit=9300 blended=85) G_lim_50=14.52 fit=fleming1995_erf"
+        ]
+      },
+      "vsx_gaia": {
+        "first": "2026-07-27 16:02:29",
+        "last": "2026-07-27 16:03:12",
+        "n_hits": 3,
+        "duration_s": 43.0,
+        "sample_lines": [
+          "16:02:29  VSX-GAIA XM: n_vsx=873 n_gaia=15085 rho=705.9 deg^-2 mean_nn=67.8\" r_max=7.64\" Q=0.99 w=0.96 sigma_n=0.18\" sigma_b=0.50\" accepted=717 contamination=0.011% cand_mult=0:156 1:694 2:23 3+:0 multi=2.63% pm_path=broadened pm_cols=False pm_finite=0 vsx_epoch=2000.0 gaia_epoch=2016.0 masterstars=205/208 outcome=ok gaia_db_max_g=17.5",
+          "16:02:34  VSX-GAIA XM: n_vsx=873 n_gaia=15085 rho=705.9 deg^-2 mean_nn=67.8\" r_max=7.64\" Q=0.99 w=0.96 sigma_n=0.18\" sigma_b=0.50\" accepted=717 contamination=0.011% cand_mult=0:156 1:694 2:23 3+:0 multi=2.63% pm_path=broadened pm_cols=False pm_finite=0 vsx_epoch=2000.0 gaia_epoch=2016.0 masterstars=205/208 outcome=ok gaia_db_max_g=17.5",
+          "16:03:12  VSX-GAIA XM: n_vsx=873 n_gaia=15085 rho=705.9 deg^-2 mean_nn=67.8\" r_max=7.64\" Q=0.99 w=0.96 sigma_n=0.18\" sigma_b=0.50\" accepted=717 contamination=0.011% cand_mult=0:156 1:694 2:23 3+:0 multi=2.63% pm_path=broadened pm_cols=False pm_finite=0 vsx_epoch=2000.0 gaia_epoch=2016.0 masterstars=205/208 outcome=ok gaia_db_max_g=17.5"
+        ]
+      },
+      "exo_target": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "faza0_funnel": {
+        "first": "2026-07-27 16:15:19",
+        "last": "2026-07-27 16:15:19",
+        "n_hits": 1,
+        "duration_s": null,
+        "sample_lines": [
+          "16:15:19  FAZA 0 funnel: vsx_bbox=875 -> in_frame=797 -> gaia_id_assigned=651 (contamination=n/a) -> dao_detected=201 -> active=201 | excluded: no_dao_detection=0 no_gaia_id=0 not_target_eligible=596 out_of_frame=78 | masked: zone_flag=2 vsx_type_out_of_scope=0"
+        ]
+      }
+    },
+    "453": {
+      "sky_surface_preprocess": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "qc_workers": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "predicted_dilution": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "inv_prep01": {
+        "first": null,
+        "last": null,
+        "n_hits": 0,
+        "duration_s": null,
+        "sample_lines": []
+      },
+      "inv_ms01": {
+        "first": "2026-07-27 19:05:40",
+        "last": "2026-07-27 19:05:40",
+        "n_hits": 4,
+        "duration_s": null,
+        "sample_lines": [
+          "19:05:40  INFO  [pipeline]  INV-MS-01 MASTERSTAR purity guard: dao_only_fraction=0.037",
+          "19:05:40  INV-MS-01 MASTERSTAR purity guard: dao_only_fraction=0.037"
+        ]
+      },
+      "mixture_fit": {
+        "first": "2026-07-27 19:05:34",
+        "last": "2026-07-27 19:55:34",
+        "n_hits": 9,
+        "duration_s": 3000.0,
+        "sample_lines": [
+          "19:05:34  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "19:05:35  INFO  [pipeline]  [DAO] Gaia->DAO reconcile: completeness_50=89.4% (matched=2761 missed=271 off_frame=924 below_limit=9300 blended=85) G_lim_50=14.52 fit=fleming1995_erf",
+          "19:05:35  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "19:05:37  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "19:05:40  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "19:55:34  GAIA SQL: mag_limit 20.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "19:55:34  GAIA SQL: mag_limit 20.00 > MAX(g_mag) v DB (17.500) - orezavam.",
+          "19:55:34  GAIA SQL: mag_limit 20.00 > MAX(g_mag) v DB (17.500) - orezavam."
+        ]
+      },
+      "vsx_gaia": {
+        "first": "2026-07-27 19:05:45",
+        "last": "2026-07-27 19:06:35",
+        "n_hits": 3,
+        "duration_s": 50.0,
+        "sample_lines": [
+          "19:05:45  VSX-GAIA XM: n_vsx=873 n_gaia=15085 rho=705.9 deg^-2 mean_nn=67.8\" r_max=7.64\" Q=0.99 w=0.96 sigma_n=0.18\" sigma_b=0.50\" accepted=717 contamination=0.011% cand_mult=0:156 1:694 2:23 3+:0 multi=2.63% pm_path=broadened pm_cols=False pm_finite=0 vsx_epoch=2000.0 gaia_epoch=2016.0 masterstars=205/208 outcome=ok gaia_db_max_g=17.5",
+          "19:05:50  VSX-GAIA XM: n_vsx=873 n_gaia=15085 rho=705.9 deg^-2 mean_nn=67.8\" r_max=7.64\" Q=0.99 w=0.96 sigma_n=0.18\" sigma_b=0.50\" accepted=717 contamination=0.011% cand_mult=0:156 1:694 2:23 3+:0 multi=2.63% pm_path=broadened pm_cols=False pm_finite=0 vsx_epoch=2000.0 gaia_epoch=2016.0 masterstars=205/208 outcome=ok gaia_db_max_g=17.5",
+          "19:06:35  VSX-GAIA XM: n_vsx=873 n_gaia=15085 rho=705.9 deg^-2 mean_nn=67.8\" r_max=7.64\" Q=0.99 w=0.96 sigma_n=0.18\" sigma_b=0.50\" accepted=717 contamination=0.011% cand_mult=0:156 1:694 2:23 3+:0 multi=2.63% pm_path=broadened pm_cols=False pm_finite=0 vsx_epoch=2000.0 gaia_epoch=2016.0 masterstars=205/208 outcome=ok gaia_db_max_g=17.5"
+        ]
+      },
+      "exo_target": {
+        "first": "2026-07-27 19:05:46",
+        "last": "2026-07-27 19:06:36",
+        "n_hits": 9,
+        "duration_s": 50.0,
+        "sample_lines": [
+          "19:05:46  [EXO TARGET] funnel: hosts_in_field=82 masterstars_in_frame=2842 promoted=3 sep_max=3 arcsec",
+          "19:05:46  [EXO TARGET] 3 exoplanet host(s) promoted from masterstars (<=3 arcsec)",
+          "19:05:46  [EXO TARGET] variable_targets merge: VSX=873 exo-only added=2 total=875",
+          "19:05:51  [EXO TARGET] funnel: hosts_in_field=82 masterstars_in_frame=2842 promoted=3 sep_max=3 arcsec",
+          "19:05:51  [EXO TARGET] 3 exoplanet host(s) promoted from masterstars (<=3 arcsec)",
+          "19:06:36  [EXO TARGET] funnel: hosts_in_field=82 masterstars_in_frame=2842 promoted=3 sep_max=3 arcsec",
+          "19:06:36  [EXO TARGET] 3 exoplanet host(s) promoted from masterstars (<=3 arcsec)",
+          "19:06:36  [EXO TARGET] variable_targets merge: VSX=873 exo-only added=2 total=875"
+        ]
+      },
+      "faza0_funnel": {
+        "first": "2026-07-27 19:20:10",
+        "last": "2026-07-27 19:20:10",
+        "n_hits": 1,
+        "duration_s": null,
+        "sample_lines": [
+          "19:20:10  FAZA 0 funnel: vsx_bbox=875 -> in_frame=797 -> gaia_id_assigned=651 (contamination=n/a) -> dao_detected=201 -> active=201 | excluded: no_dao_detection=0 no_gaia_id=0 not_target_eligible=596 out_of_frame=78 | masked: zone_flag=2 vsx_type_out_of_scope=0"
+        ]
+      }
+    }
+  },
+  "config": {
+    "451": {},
+    "452": {},
+    "453": {}
+  },
+  "equivalence_exit": 0
+}

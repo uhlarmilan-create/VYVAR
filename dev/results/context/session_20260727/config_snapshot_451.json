@@ -1,0 +1,13 @@
+{
+  "qc_preprocess_workers": 8,
+  "preprocess_sky_surface_order": 2,
+  "observer_location": {
+    "name": "Jirny",
+    "lat": 50.1121658,
+    "lon": 14.6982547,
+    "alt_m": 275.0,
+    "location_id": 2,
+    "source": "draft"
+  },
+  "git_hash": "535d8638155ff953931ec9f0e3eebed2c1fdbc05"
+}

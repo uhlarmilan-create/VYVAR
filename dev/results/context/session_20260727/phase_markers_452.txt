@@ -1,0 +1,37 @@
+# draft_452 phase markers from tmp/c4_night_run_452.log
+
+2026-07-27 15:12:41,348 [INFO] SysRem:    enabled=True, iter=3
+2026-07-27 15:12:41,367 [INFO] [NightRun] [OK] config - 0.0s
+2026-07-27 15:12:41,367 [INFO] [NightRun] Step 1: Scan source
+2026-07-27 15:12:42,001 [INFO] [NightRun] [OK] smart_scan_source - 0.6s
+2026-07-27 15:12:42,003 [INFO] [NightRun] Step 2: Import session
+2026-07-27 15:12:43,135 [INFO] [NightRun] [OK] smart_import_session - 1.1s
+2026-07-27 15:12:43,137 [INFO] [NightRun] Step 3: Calibration
+2026-07-27 15:15:12,329 [INFO] [NightRun] [OK] calibration - 149.2s
+2026-07-27 15:15:12,622 [INFO] [NightRun] [OK] memory_profile - 0.3s
+2026-07-27 15:15:16,963 [INFO] [NightRun] [OK] pointing_scan - 4.3s
+2026-07-27 15:15:16,963 [INFO] [NightRun] Step 7: Auto FWHM limit
+2026-07-27 15:15:16,963 [INFO] [NightRun] [OK] auto_fwhm - 0.0s
+2026-07-27 15:15:16,963 [INFO] [NightRun] Step 8: Auto-select MASTERSTAR (TOP1)
+2026-07-27 15:15:17,257 [INFO] [NightRun] [OK] masterstar_resolve - 0.3s
+2026-07-27 15:15:17,258 [INFO] [NightRun] [OK] preprocess_prep - 0.0s
+2026-07-27 15:15:17,258 [INFO] [NightRun] Step 11: Preprocess (calibrated -> processed)
+2026-07-27 16:01:00,318 [INFO] [NightRun] [OK] preprocess - 2743.1s
+2026-07-27 16:01:00,318 [INFO] [NightRun] Step 12: Plate solve + alignment + MASTERSTAR
+2026-07-27 16:03:20,386 [INFO] Per-frame catalog: MASTERSTAR lock enabled (single catalog: masterstars_full_match.csv, 2951 rows)
+2026-07-27 16:03:20,386 [INFO] Per-frame catalog: up to 8 process worker(s); jednotny parallel count + RAM cap (psutil); env VYVAR_PARALLEL_WORKERS / legacy
+2026-07-27 16:15:19,341 [INFO] [NightRun] [OK] platesolve_align_masterstar - 859.0s
+2026-07-27 16:15:19,350 [INFO] [NightRun] Step 13: Discover obs groups
+2026-07-27 16:15:19,350 [INFO] [NightRun] [OK] discover_obs_groups - 0.0s
+2026-07-27 16:15:19,358 [INFO] [NightRun] Step 14: Photometry - NoFilter_60_2
+2026-07-27 16:57:47,327 [INFO] [NightRun] SysRem: removing systematic trends...
+2026-07-27 16:57:47,327 [INFO] [Progress] SysRem: removing systematic trends...
+2026-07-27 16:57:47,683 [INFO] [SysRem] Iteration 1/3 - median |c_j|=0.00610, median |a_i|=0.3761
+2026-07-27 16:57:47,684 [INFO] [SysRem] Iteration 2/3 - median |c_j|=0.00469, median |a_i|=0.8138
+2026-07-27 16:57:47,684 [INFO] [SysRem] Iteration 3/3 - median |c_j|=0.00295, median |a_i|=0.9319
+2026-07-27 16:57:47,685 [INFO] [SysRem] Done: 198 stars x 139 frames x 3 iter | RMS before=0.0925 after=0.0855 improvement=7.6%
+2026-07-27 16:57:48,361 [INFO] [SysRem] 198 stars | RMS improvement 7.6% (3 iter)
+2026-07-27 16:57:48,361 [INFO] [NightRun] [OK] photometry_NoFilter_60_2 - 2549.0s
+2026-07-27 17:11:30,426 [INFO] SUCCESS in 7129.1s
+2026-07-27 17:11:30,426 [INFO] SysRem improvement: 7.6%
+2026-07-27 17:11:30,426 [INFO]   [SysRem]

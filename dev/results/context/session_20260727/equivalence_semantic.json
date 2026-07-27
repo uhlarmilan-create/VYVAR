@@ -1,0 +1,16 @@
+{
+  "byte_identical_lightcurves": 0,
+  "lightcurve_count_each": 198,
+  "comparison_stars_per_target_identical": true,
+  "active_targets_identical": true,
+  "variable_targets_identical": true,
+  "masterstars_identical": true,
+  "schema_differences": [
+    "452 lightcurves include empty delta_mag_sysrem column; 453 omits it"
+  ],
+  "shared_column_max_abs_diff_excluding_time": 0.0,
+  "bjd_hjd_max_abs_diff": 1.3969838619232178e-09,
+  "bjd_hjd_diff_rows": 70,
+  "cause_bjd_hjd_diff": "pipeline_meta observer_location lat/lon differs between runs (site record drift)",
+  "photometry_summary_diff": "lc_csv/lc_png path strings only (201 rows)"
+}

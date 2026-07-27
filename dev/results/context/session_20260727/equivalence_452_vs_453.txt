@@ -1,0 +1,1046 @@
+{
+  "science_compare": {
+    "draft_a": "draft_000452",
+    "draft_b": "draft_000453",
+    "patterns": {
+      "photometry/lightcurves/lightcurve_*.csv": {
+        "count_a": 198,
+        "count_b": 198,
+        "mismatches": [
+          {
+            "file": "lightcurve_1485516006708222208.csv",
+            "sha_a": "2de5230e8fdfd68a",
+            "sha_b": "13a4f30a117c86e5"
+          },
+          {
+            "file": "lightcurve_1485540612577549568.csv",
+            "sha_a": "0c60a00230ae54e0",
+            "sha_b": "80fc872f3dd0e73a"
+          },
+          {
+            "file": "lightcurve_1485552329248338816.csv",
+            "sha_a": "7250f55ea2d4a09e",
+            "sha_b": "3c0b187eb6522ea8"
+          },
+          {
+            "file": "lightcurve_1485560025830226432.csv",
+            "sha_a": "6679f644698e8932",
+            "sha_b": "e63e5dee2adc15fc"
+          },
+          {
+            "file": "lightcurve_1485574899299782528.csv",
+            "sha_a": "b8d87e7a80bba84b",
+            "sha_b": "e9c5a7852a2c7986"
+          },
+          {
+            "file": "lightcurve_1485609538212672000.csv",
+            "sha_a": "c48866d24b44fb57",
+            "sha_b": "e092d2ea911e6eab"
+          },
+          {
+            "file": "lightcurve_1485929083779282048.csv",
+            "sha_a": "9691e6154ef20339",
+            "sha_b": "edd320c5ad31b2c5"
+          },
+          {
+            "file": "lightcurve_1485984368598279808.csv",
+            "sha_a": "86c06567661adbdf",
+            "sha_b": "7853058e20f6c17f"
+          },
+          {
+            "file": "lightcurve_1485987151737107200.csv",
+            "sha_a": "577c623cf94bb547",
+            "sha_b": "30b138551f72c0ae"
+          },
+          {
+            "file": "lightcurve_1485987254816323328.csv",
+            "sha_a": "db32f4c079dec4b1",
+            "sha_b": "46727e75c3901f7a"
+          },
+          {
+            "file": "lightcurve_1485988010730568192.csv",
+            "sha_a": "caf5858a46b45751",
+            "sha_b": "9f5f0de7b86845de"
+          },
+          {
+            "file": "lightcurve_1496037650087948160.csv",
+            "sha_a": "2a2f44616d3acc8c",
+            "sha_b": "0e877cd223c6b7d0"
+          },
+          {
+            "file": "lightcurve_1496226044533492864.csv",
+            "sha_a": "a08257bee0322144",
+            "sha_b": "dc4ae9db5e9e5b46"
+          },
+          {
+            "file": "lightcurve_1496241609494910976.csv",
+            "sha_a": "1903fcc2a2940b32",
+            "sha_b": "d5fbd3ce8b61286f"
+          },
+          {
+            "file": "lightcurve_1496248206564680064.csv",
+            "sha_a": "b55df97bd841de1c",
+            "sha_b": "ab50a177da34b9d5"
+          },
+          {
+            "file": "lightcurve_1496278752372040832.csv",
+            "sha_a": "feda03af7269c84e",
+            "sha_b": "55fee8d5b609ddbe"
+          },
+          {
+            "file": "lightcurve_1496280126761597440.csv",
+            "sha_a": "030f3fb0e2a87f92",
+            "sha_b": "e2998bfac772598f"
+          },
+          {
+            "file": "lightcurve_1496282153986140032.csv",
+            "sha_a": "843570d0369964ca",
+            "sha_b": "1bb1992100c5c5cf"
+          },
+          {
+            "file": "lightcurve_1496286139715833088.csv",
+            "sha_a": "38fa03e7c4b42566",
+            "sha_b": "a773721c0f7a3fcc"
+          },
+          {
+            "file": "lightcurve_1496293286541396480.csv",
+            "sha_a": "dd6914921ebef551",
+            "sha_b": "3c4e51a3def4a067"
+          },
+          {
+            "file": "lightcurve_1496735393295120000.csv",
+            "sha_a": "cf05a06200f657e4",
+            "sha_b": "0de555dcbc617c9f"
+          },
+          {
+            "file": "lightcurve_1496777965010561408.csv",
+            "sha_a": "7461368001b89fa6",
+            "sha_b": "ae4da30c328e0426"
+          },
+          {
+            "file": "lightcurve_1496779992235769216.csv",
+            "sha_a": "39883603bebf0d6b",
+            "sha_b": "49de2114bc978892"
+          },
+          {
+            "file": "lightcurve_1496783943605056512.csv",
+            "sha_a": "03bb85610bb61325",
+            "sha_b": "a8c3ba10a479242f"
+          },
+          {
+            "file": "lightcurve_1496804834326599424.csv",
+            "sha_a": "0c6967a5f76d06d3",
+            "sha_b": "4c5f551bc508edee"
+          },
+          {
+            "file": "lightcurve_1496807273867416320.csv",
+            "sha_a": "d1f8c0818e7de029",
+            "sha_b": "f72cc9679ad04a46"
+          },
+          {
+            "file": "lightcurve_1496820605445847296.csv",
+            "sha_a": "f0f7e0bba7bc0e8d",
+            "sha_b": "73f566568f211c9f"
+          },
+          {
+            "file": "lightcurve_1496831119525794304.csv",
+            "sha_a": "1bcb43b0a2ff13cc",
+            "sha_b": "6122126810ad34fe"
+          },
+          {
+            "file": "lightcurve_1496846925005421056.csv",
+            "sha_a": "e4dee848bd5ab390",
+            "sha_b": "3cf92c7b644c5856"
+          },
+          {
+            "file": "lightcurve_1496876646179115648.csv",
+            "sha_a": "17cacc63312a0b6b",
+            "sha_b": "6e9c9198837a4933"
+          },
+          {
+            "file": "lightcurve_1496877883129723648.csv",
+            "sha_a": "8d881ca89a94db60",
+            "sha_b": "fa4bd5097dcbae3a"
+          },
+          {
+            "file": "lightcurve_1496880666268505216.csv",
+            "sha_a": "f80d793c66734413",
+            "sha_b": "c146a32d1df15474"
+          },
+          {
+            "file": "lightcurve_1496921279479636352.csv",
+            "sha_a": "7df90531d8cec98f",
+            "sha_b": "569a8841af45874c"
+          },
+          {
+            "file": "lightcurve_1496930968925861248.csv",
+            "sha_a": "606ed08f616ffafa",
+            "sha_b": "305f323b3c7b55b1"
+          },
+          {
+            "file": "lightcurve_1496943338431625344.csv",
+            "sha_a": "6f1bc974dd910b11",
+            "sha_b": "2b449f8430abc971"
+          },
+          {
+            "file": "lightcurve_1496944987699077376.csv",
+            "sha_a": "b2e73e612295ce2f",
+            "sha_b": "f5c7783e5b5b8c0f"
+          },
+          {
+            "file": "lightcurve_1496965569182317952.csv",
+            "sha_a": "e45bc7a1ebc10015",
+            "sha_b": "721f3b4e0f2155e2"
+          },
+          {
+            "file": "lightcurve_1496968421040578944.csv",
+            "sha_a": "c590d2575ead1601",
+            "sha_b": "f73969a7dc41edcc"
+          },
+          {
+            "file": "lightcurve_1496976598656622848.csv",
+            "sha_a": "ca884c1d62418f9b",
+            "sha_b": "640f82f325c03f5d"
+          },
+          {
+            "file": "lightcurve_1496990342553687040.csv",
+            "sha_a": "2e34e70dfef4c48f",
+            "sha_b": "b75ae5696be84ac2"
+          },
+          {
+            "file": "lightcurve_1496993675448311808.csv",
+            "sha_a": "cd7cbf360053df27",
+            "sha_b": "02dbf8b55bedcacb"
+          },
+          {
+            "file": "lightcurve_1496998382733052928.csv",
+            "sha_a": "41269e4e8217dd2f",
+            "sha_b": "ac447e95d472c208"
+          },
+          {
+            "file": "lightcurve_1497002849498457728.csv",
+            "sha_a": "828f18183be498f5",
+            "sha_b": "b85317e2cf4b7b21"
+          },
+          {
+            "file": "lightcurve_1497010168122706688.csv",
+            "sha_a": "53bd409f64bab684",
+            "sha_b": "16f3710f6bded273"
+          },
+          {
+            "file": "lightcurve_1497061570291342464.csv",
+            "sha_a": "cdc82d61a6fa2a6e",
+            "sha_b": "a755401144d59dcb"
+          },
+          {
+            "file": "lightcurve_1497070744341492864.csv",
+            "sha_a": "1084b50ca78d4bcf",
+            "sha_b": "4eb967c8eed66363"
+          },
+          {
+            "file": "lightcurve_1497094418201167744.csv",
+            "sha_a": "04bfefa11b07be9f",
+            "sha_b": "c447f35f62bb83e6"
+          },
+          {
+            "file": "lightcurve_1497114175050663040.csv",
+            "sha_a": "5522846bd8247fa4",
+            "sha_b": "be0297265c4dd80b"
+          },
+          {
+            "file": "lightcurve_1497114793525954432.csv",
+            "sha_a": "ee813485c67b54ed",
+            "sha_b": "43b4614807eef4eb"
+          },
+          {
+            "file": "lightcurve_1497132660589966976.csv",
+            "sha_a": "d6a0cce15ae3b82c",
+            "sha_b": "890d29222cd03593"
+          },
+          {
+            "file": "lightcurve_1497133553943163904.csv",
+            "sha_a": "2c6531a2485f3d69",
+            "sha_b": "dd6e1fbc1d160f99"
+          },
+          {
+            "file": "lightcurve_1497154753901690624.csv",
+            "sha_a": "94edef9dd6c8aa52",
+            "sha_b": "2618699145f09276"
+          },
+          {
+            "file": "lightcurve_1497158396033960064.csv",
+            "sha_a": "d27275b8a83e1d86",
+            "sha_b": "35153e70ff3bc3f5"
+          },
+          {
+            "file": "lightcurve_1497164580786846976.csv",
+            "sha_a": "cff6a049d721ac5f",
+            "sha_b": "cb16c404c893a8a5"
+          },
+          {
+            "file": "lightcurve_1497181623217208064.csv",
+            "sha_a": "ca6c22cecef6bfeb",
+            "sha_b": "c317e84aecce7c03"
+          },
+          {
+            "file": "lightcurve_1497181966814590848.csv",
+            "sha_a": "3f76d637024540fb",
+            "sha_b": "3dab186f01bb0226"
+          },
+          {
+            "file": "lightcurve_1497225981639401984.csv",
+            "sha_a": "d4c8cea3f98ba706",
+            "sha_b": "a26b1a58f29692ea"
+          },
+          {
+            "file": "lightcurve_1497227287309482624.csv",
+            "sha_a": "5533838f4e947fcd",
+            "sha_b": "b650f43c535a9ce3"
+          },
+          {
+            "file": "lightcurve_1497236186481686016.csv",
+            "sha_a": "7cfde4cb2a193b09",
+            "sha_b": "c9fe9eba8da1cd03"
+          },
+          {
+            "file": "lightcurve_1497245497969274240.csv",
+            "sha_a": "16aab67ac87f838f",
+            "sha_b": "238b02c4c628cbcd"
+          },
+          {
+            "file": "lightcurve_1497265873295605120.csv",
+            "sha_a": "4c5b0054e27d05d4",
+            "sha_b": "39cd263790caa486"
+          },
+          {
+            "file": "lightcurve_1497297690413358720.csv",
+            "sha_a": "824f4e8230b73972",
+            "sha_b": "962ec2adbddaea2b"
+          },
+          {
+            "file": "lightcurve_1497303909525988352.csv",
+            "sha_a": "5bf7a57331fcc059",
+            "sha_b": "6140fa924965258d"
+          },
+          {
+            "file": "lightcurve_1497343732462852864.csv",
+            "sha_a": "77847c2d6681c88f",
+            "sha_b": "8d8d33e446bb481c"
+          },
+          {
+            "file": "lightcurve_1497345278651080576.csv",
+            "sha_a": "107bac560525b3cf",
+            "sha_b": "f5350cd1a327dba1"
+          },
+          {
+            "file": "lightcurve_1497347718192483840.csv",
+            "sha_a": "7706728666e1aa52",
+            "sha_b": "acf59eb937e9616b"
+          },
+          {
+            "file": "lightcurve_1497350638770267520.csv",
+            "sha_a": "bfc4683011bf65c9",
+            "sha_b": "42e446d10a4af5e2"
+          },
+          {
+            "file": "lightcurve_1497418258735289472.csv",
+            "sha_a": "a82fdee25975ab0d",
+            "sha_b": "ff2926a1cd2c8157"
+          },
+          {
+            "file": "lightcurve_1497419495685871488.csv",
+            "sha_a": "a43c8c8385aac7d3",
+            "sha_b": "addb507049b91c7e"
+          },
+          {
+            "file": "lightcurve_1497424851508532992.csv",
+            "sha_a": "8e7570d3c93bba90",
+            "sha_b": "30436456461610af"
+          },
+          {
+            "file": "lightcurve_1497425371201155072.csv",
+            "sha_a": "3af1b7a58dd21d95",
+            "sha_b": "55d08c14c8218ad3"
+          },
+          {
+            "file": "lightcurve_1497436125799224960.csv",
+            "sha_a": "0cd31add70911774",
+            "sha_b": "f3182e2cf52a35a4"
+          },
+          {
+            "file": "lightcurve_1497440970522358528.csv",
+            "sha_a": "f28339dcf79fa61f",
+            "sha_b": "7537575895df82c1"
+          },
+          {
+            "file": "lightcurve_1497491273179203456.csv",
+            "sha_a": "a4b132cc67e25a30",
+            "sha_b": "62f2d0a5de5a33ed"
+          },
+          {
+            "file": "lightcurve_1497498763602158720.csv",
+            "sha_a": "1593b94ef87b8bdb",
+            "sha_b": "d51b43a92944eb24"
+          },
+          {
+            "file": "lightcurve_1497513469570146432.csv",
+            "sha_a": "4c580bd7f624b3af",
+            "sha_b": "bcbf6c197e2da749"
+          },
+          {
+            "file": "lightcurve_1497525907795379456.csv",
+            "sha_a": "41d81f0c50b917e2",
+            "sha_b": "07996d4aab61748d"
+          },
+          {
+            "file": "lightcurve_1497535116205236736.csv",
+            "sha_a": "3e282517a05b8818",
+            "sha_b": "56fbab51f5aeba72"
+          },
+          {
+            "file": "lightcurve_1497561779362267392.csv",
+            "sha_a": "49cfd94349b3b210",
+            "sha_b": "bc152f46c2db40c9"
+          },
+          {
+            "file": "lightcurve_1497570128778641152.csv",
+            "sha_a": "93beb96d2dbb0845",
+            "sha_b": "1599fd6b8d70c0a0"
+          },
+          {
+            "file": "lightcurve_1497600399708129792.csv",
+            "sha_a": "d3c4f1f106417ccd",
+            "sha_b": "49dbf6e787b7fd33"
+          },
+          {
+            "file": "lightcurve_1497603835681942400.csv",
+            "sha_a": "4db28b0acd77e28e",
+            "sha_b": "076e58f596441dd7"
+          },
+          {
+            "file": "lightcurve_1497622939696499840.csv",
+            "sha_a": "093ce4b0ea7c6a25",
+            "sha_b": "17aaa8f6b5474e14"
+          },
+          {
+            "file": "lightcurve_1497623248934145536.csv",
+            "sha_a": "cc274636fd4aa84c",
+            "sha_b": "0e81d7a10bc6d8fc"
+          },
+          {
+            "file": "lightcurve_1497639123133258752.csv",
+            "sha_a": "729016286f19852e",
+            "sha_b": "4aa1ef51d7c2766e"
+          },
+          {
+            "file": "lightcurve_1497683722074089728.csv",
+            "sha_a": "07e5f39ea95da7f7",
+            "sha_b": "eec00f6582cd33bb"
+          },
+          {
+            "file": "lightcurve_1497683996951418880.csv",
+            "sha_a": "baabe27b225c8dca",
+            "sha_b": "61dc3a711aa6cd99"
+          },
+          {
+            "file": "lightcurve_1497699183955811968.csv",
+            "sha_a": "8aa3a61b1e0a3526",
+            "sha_b": "051e0051472e767d"
+          },
+          {
+            "file": "lightcurve_1497704131758182400.csv",
+            "sha_a": "f609db766765b8f8",
+            "sha_b": "575daaf589d6dd95"
+          },
+          {
+            "file": "lightcurve_1497704372276351360.csv",
+            "sha_a": "cf33be2e76d46727",
+            "sha_b": "8eb8aa6b379932dc"
+          },
+          {
+            "file": "lightcurve_1497729317446890240.csv",
+            "sha_a": "065a58de0f07c103",
+            "sha_b": "3d34a7529a59b863"
+          },
+          {
+            "file": "lightcurve_1497774637941811584.csv",
+            "sha_a": "dbf3ff8636f4a563",
+            "sha_b": "4b203a5e1f73626b"
+          },
+          {
+            "file": "lightcurve_1497871669842349184.csv",
+            "sha_a": "70788d56d6c45837",
+            "sha_b": "6e543b6ca59b1b3d"
+          },
+          {
+            "file": "lightcurve_1497892801081417216.csv",
+            "sha_a": "f3c16b8e471762a9",
+            "sha_b": "862be35181c923fc"
+          },
+          {
+            "file": "lightcurve_1497912008175205760.csv",
+            "sha_a": "fb1495158be4b2bb",
+            "sha_b": "1368fb2ee5ef7145"
+          },
+          {
+            "file": "lightcurve_1497940389319020928.csv",
+            "sha_a": "8888def86a8849d9",
+            "sha_b": "6e2f4a1e775d6f41"
+          },
+          {
+            "file": "lightcurve_1497960008729614976.csv",
+            "sha_a": "8e368fc6d5839715",
+            "sha_b": "4f4b5e193e11db40"
+          },
+          {
+            "file": "lightcurve_1497971450522478080.csv",
+            "sha_a": "620ad85cc99ca4e1",
+            "sha_b": "bd93fc167575aec0"
+          },
+          {
+            "file": "lightcurve_1497971759760138880.csv",
+            "sha_a": "aad07e34c2fc21c2",
+            "sha_b": "7c3c53005f8fddb4"
+          },
+          {
+            "file": "lightcurve_1497981071249239040.csv",
+            "sha_a": "ea5915c1db0eeb1f",
+            "sha_b": "82acabb5837cd62b"
+          },
+          {
+            "file": "lightcurve_1498000793739050368.csv",
+            "sha_a": "87c2a4f897f9a183",
+            "sha_b": "62075ae78c7220ec"
+          },
+          {
+            "file": "lightcurve_1498011960654465536.csv",
+            "sha_a": "5797e4cc496e674e",
+            "sha_b": "bfd8f4d2934d34ee"
+          },
+          {
+            "file": "lightcurve_1498021787539643648.csv",
+            "sha_a": "e0f23fa2c5b6f924",
+            "sha_b": "20d35b0f79f744f4"
+          },
+          {
+            "file": "lightcurve_1498027456896444928.csv",
+            "sha_a": "7dd389984b1a5545",
+            "sha_b": "41435bdd7deb141d"
+          },
+          {
+            "file": "lightcurve_1498032473418221952.csv",
+            "sha_a": "be1b3a124584c85a",
+            "sha_b": "4e450134daf6a5be"
+          },
+          {
+            "file": "lightcurve_1498055357004035712.csv",
+            "sha_a": "1ea2fc6775c43062",
+            "sha_b": "cc2891c2aeefe166"
+          },
+          {
+            "file": "lightcurve_1498058827337611392.csv",
+            "sha_a": "37a7fab9996a4fe4",
+            "sha_b": "15640d84628b7604"
+          },
+          {
+            "file": "lightcurve_1498064771572297856.csv",
+            "sha_a": "67c5fce314b03e04",
+            "sha_b": "e49e078d30488072"
+          },
+          {
+            "file": "lightcurve_1498077072358637824.csv",
+            "sha_a": "1c8ef5880e34fd26",
+            "sha_b": "b823f7af71e03ed0"
+          },
+          {
+            "file": "lightcurve_1498105384781489920.csv",
+            "sha_a": "e2faedb9ed88f28f",
+            "sha_b": "bfdd86c08c08895c"
+          },
+          {
+            "file": "lightcurve_1498120159470525696.csv",
+            "sha_a": "41860cedfef8d8bc",
+            "sha_b": "29da6357aaa1a03d"
+          },
+          {
+            "file": "lightcurve_1498135552633294976.csv",
+            "sha_a": "9b91cb7cd7848910",
+            "sha_b": "cf4c05d1fe4968a1"
+          },
+          {
+            "file": "lightcurve_1498139469643451136.csv",
+            "sha_a": "9d2a013dbcda0a45",
+            "sha_b": "52eda25136060aa3"
+          },
+          {
+            "file": "lightcurve_1498143180495215488.csv",
+            "sha_a": "49599b949c128df2",
+            "sha_b": "ee9f40dc8595ad1c"
+          },
+          {
+            "file": "lightcurve_1498183274013681536.csv",
+            "sha_a": "a693a221263a8607",
+            "sha_b": "6d8ecf1879eee3dc"
+          },
+          {
+            "file": "lightcurve_1498229629597339776.csv",
+            "sha_a": "11d8cfbf4e239e26",
+            "sha_b": "b00eb8d3f8aaf653"
+          },
+          {
+            "file": "lightcurve_1498231038346636416.csv",
+            "sha_a": "42ab09185ae12ba5",
+            "sha_b": "4cb3e218f97eb0d8"
+          },
+          {
+            "file": "lightcurve_1498298211635183744.csv",
+            "sha_a": "6a6be4d6892f703d",
+            "sha_b": "b856262f52a88636"
+          },
+          {
+            "file": "lightcurve_1498311298398914816.csv",
+            "sha_a": "9704a2e4c771f6dd",
+            "sha_b": "ff5220124b2e011a"
+          },
+          {
+            "file": "lightcurve_1498321301379345408.csv",
+            "sha_a": "45f63c2b9a45414e",
+            "sha_b": "193d4b75eeb76514"
+          },
+          {
+            "file": "lightcurve_1498322916287022976.csv",
+            "sha_a": "2a8c258c26d84eec",
+            "sha_b": "ec7f2f75b702ea6a"
+          },
+          {
+            "file": "lightcurve_1498341092588681856.csv",
+            "sha_a": "f3f842b5bf590500",
+            "sha_b": "7b9fa347e49ac3a5"
+          },
+          {
+            "file": "lightcurve_1498360952517410688.csv",
+            "sha_a": "53b8318c1eb7976a",
+            "sha_b": "3232c5162525a007"
+          },
+          {
+            "file": "lightcurve_1498371844554437376.csv",
+            "sha_a": "b3e9de019aeddd81",
+            "sha_b": "172215650ef863d1"
+          },
+          {
+            "file": "lightcurve_1498399779021762176.csv",
+            "sha_a": "0ad66aa11d73df35",
+            "sha_b": "2df2f9061735ba70"
+          },
+          {
+            "file": "lightcurve_1498408094078428288.csv",
+            "sha_a": "0da51002d7753bca",
+            "sha_b": "2354471c4bd0d493"
+          },
+          {
+            "file": "lightcurve_1498425548825498112.csv",
+            "sha_a": "05569d927b56657b",
+            "sha_b": "be99b2636d0f2eb1"
+          },
+          {
+            "file": "lightcurve_1498453002256280832.csv",
+            "sha_a": "f6efbde0b77c0bc2",
+            "sha_b": "1c7ef34e2a9ef74a"
+          },
+          {
+            "file": "lightcurve_1498453414573142016.csv",
+            "sha_a": "1ccfbe9ee77d8cbc",
+            "sha_b": "cde2e6ea7ba504b7"
+          },
+          {
+            "file": "lightcurve_1498472209350080000.csv",
+            "sha_a": "26369c4d7654e2e3",
+            "sha_b": "9e0e14fa87f32948"
+          },
+          {
+            "file": "lightcurve_1498486880958321024.csv",
+            "sha_a": "2f44f05a128a445e",
+            "sha_b": "5c782145d246ae15"
+          },
+          {
+            "file": "lightcurve_1498529074716971776.csv",
+            "sha_a": "1c8494992baa2764",
+            "sha_b": "9b90bdec671c9f95"
+          },
+          {
+            "file": "lightcurve_1498531686057111040.csv",
+            "sha_a": "0b08ae71fe6274ee",
+            "sha_b": "07dcdb7accad968a"
+          },
+          {
+            "file": "lightcurve_1498589513496406912.csv",
+            "sha_a": "4edcb4fdf2fcc2ee",
+            "sha_b": "b57cb43118f2608f"
+          },
+          {
+            "file": "lightcurve_1498613634033133184.csv",
+            "sha_a": "73a8ee1c015390d5",
+            "sha_b": "27e81f9397f6dd40"
+          },
+          {
+            "file": "lightcurve_1498617482323461376.csv",
+            "sha_a": "0617b3e939c11a18",
+            "sha_b": "6e781ac1ba8b83c0"
+          },
+          {
+            "file": "lightcurve_1498650364592989440.csv",
+            "sha_a": "a89d437bc7b7b060",
+            "sha_b": "439b952e25689420"
+          },
+          {
+            "file": "lightcurve_1498698193348806144.csv",
+            "sha_a": "03057d6f2f63b669",
+            "sha_b": "01ca9519de1c25a7"
+          },
+          {
+            "file": "lightcurve_1498699086702005376.csv",
+            "sha_a": "d8cb0c3aed302cc6",
+            "sha_b": "483b1f0378a6f520"
+          },
+          {
+            "file": "lightcurve_1498723688274975104.csv",
+            "sha_a": "212e3fb0ca38bcac",
+            "sha_b": "aa92b665179a8d0f"
+          },
+          {
+            "file": "lightcurve_1498732106410850944.csv",
+            "sha_a": "0e56fd3b7fba4839",
+            "sha_b": "6d95370d20c3c40b"
+          },
+          {
+            "file": "lightcurve_1498744544636143104.csv",
+            "sha_a": "2b17240ef5ee857e",
+            "sha_b": "4c48e82e68f4bd08"
+          },
+          {
+            "file": "lightcurve_1498751450943601280.csv",
+            "sha_a": "cf164e02eac4d40c",
+            "sha_b": "2b7d3f138346da40"
+          },
+          {
+            "file": "lightcurve_1498752275577303808.csv",
+            "sha_a": "36e19e1d66baf30b",
+            "sha_b": "ee0d984d7f5ca8a9"
+          },
+          {
+            "file": "lightcurve_1498783199341798016.csv",
+            "sha_a": "63a189996a4576e7",
+            "sha_b": "61539cbb125c172a"
+          },
+          {
+            "file": "lightcurve_1498795809366255488.csv",
+            "sha_a": "8c3b6706320d4cae",
+            "sha_b": "47340532e920b725"
+          },
+          {
+            "file": "lightcurve_1498804639818507904.csv",
+            "sha_a": "84c2b27896021b3f",
+            "sha_b": "703e39941ffe7d35"
+          },
+          {
+            "file": "lightcurve_1498824568466764288.csv",
+            "sha_a": "964102bf3cb89bc0",
+            "sha_b": "0c2a06a882ecb299"
+          },
+          {
+            "file": "lightcurve_1498829481909356160.csv",
+            "sha_a": "3d0c83153bccefa6",
+            "sha_b": "acfa780d9cbdb1f3"
+          },
+          {
+            "file": "lightcurve_1498842882207281152.csv",
+            "sha_a": "17361d336422136a",
+            "sha_b": "7ed75d612f2bb90f"
+          },
+          {
+            "file": "lightcurve_1498857072779075200.csv",
+            "sha_a": "76beb080e808a0b8",
+            "sha_b": "a9575c1a2c7c1835"
+          },
+          {
+            "file": "lightcurve_1498874424446929280.csv",
+            "sha_a": "4d5a4795d6a87c65",
+            "sha_b": "c91b5cc3a3a87596"
+          },
+          {
+            "file": "lightcurve_1498878753773944576.csv",
+            "sha_a": "c4577c1b28516d5f",
+            "sha_b": "2ccbe8ffa7b4b8f4"
+          },
+          {
+            "file": "lightcurve_1498882533345167488.csv",
+            "sha_a": "7524da580f075e59",
+            "sha_b": "09d2a20f95ec528d"
+          },
+          {
+            "file": "lightcurve_1498905004614111744.csv",
+            "sha_a": "6d7a9f06c1810bad",
+            "sha_b": "20e01f50972d58a8"
+          },
+          {
+            "file": "lightcurve_1498973724090771712.csv",
+            "sha_a": "6be6e84c3887bba5",
+            "sha_b": "1b8afdcaacc08deb"
+          },
+          {
+            "file": "lightcurve_1499006984318088320.csv",
+            "sha_a": "8d9c9653c54af25c",
+            "sha_b": "b5db814879fccd89"
+          },
+          {
+            "file": "lightcurve_1499021174889970816.csv",
+            "sha_a": "2e501eaaba4bc2e2",
+            "sha_b": "75a082644cecf6bb"
+          },
+          {
+            "file": "lightcurve_1499074466844182016.csv",
+            "sha_a": "88bc8fd980021855",
+            "sha_b": "4fd345a1c3606454"
+          },
+          {
+            "file": "lightcurve_1499081063913928576.csv",
+            "sha_a": "bdfcc8893e416b14",
+            "sha_b": "23682b6517b2dd3e"
+          },
+          {
+            "file": "lightcurve_1499084499887740160.csv",
+            "sha_a": "4a8df7ae27cfa0b7",
+            "sha_b": "537cf1aa97bb2621"
+          },
+          {
+            "file": "lightcurve_1499119546820866176.csv",
+            "sha_a": "0f7499da0392753d",
+            "sha_b": "77e9fef8aa4096a7"
+          },
+          {
+            "file": "lightcurve_1499140884218407040.csv",
+            "sha_a": "ea8125a96a25344b",
+            "sha_b": "8154a4afbcbd7938"
+          },
+          {
+            "file": "lightcurve_1499209638054824320.csv",
+            "sha_a": "cef0aa606c67a58b",
+            "sha_b": "2870439bc0d2fdfa"
+          },
+          {
+            "file": "lightcurve_1499210016011946496.csv",
+            "sha_a": "deb54869cd00b554",
+            "sha_b": "0c9cc437ae966f8c"
+          },
+          {
+            "file": "lightcurve_1499213280187092352.csv",
+            "sha_a": "77aed2a49de19bcb",
+            "sha_b": "8d32e2180e457a09"
+          },
+          {
+            "file": "lightcurve_1499215032533749888.csv",
+            "sha_a": "0ac8e929681092b3",
+            "sha_b": "75d1bee0265e4499"
+          },
+          {
+            "file": "lightcurve_1499244513189283712.csv",
+            "sha_a": "ee2429d264f67678",
+            "sha_b": "51b3610798d894dd"
+          },
+          {
+            "file": "lightcurve_1499278078357014656.csv",
+            "sha_a": "58b69dcbe6d24593",
+            "sha_b": "96feb7a883b72fff"
+          },
+          {
+            "file": "lightcurve_1499294845909337344.csv",
+            "sha_a": "d6437de53caba746",
+            "sha_b": "290d3263de5c0dd8"
+          },
+          {
+            "file": "lightcurve_1499857834519139968.csv",
+            "sha_a": "190abc80344c0f14",
+            "sha_b": "0bcc7ffac2b2bae6"
+          },
+          {
+            "file": "lightcurve_1499869001434118656.csv",
+            "sha_a": "383e40cb100e95df",
+            "sha_b": "b91c07dcb02b91bd"
+          },
+          {
+            "file": "lightcurve_1499892159897789824.csv",
+            "sha_a": "16107759eef37894",
+            "sha_b": "f7ec833946e51732"
+          },
+          {
+            "file": "lightcurve_1499974932507448448.csv",
+            "sha_a": "307197634e699e54",
+            "sha_b": "3a804283f0271dfa"
+          },
+          {
+            "file": "lightcurve_1500271044731692416.csv",
+            "sha_a": "5f323535cc1b5cef",
+            "sha_b": "0eba0057364a6131"
+          },
+          {
+            "file": "lightcurve_1500291007741051520.csv",
+            "sha_a": "4045e80cf64ed660",
+            "sha_b": "eca3bb9af73c2a65"
+          },
+          {
+            "file": "lightcurve_1500311761023032320.csv",
+            "sha_a": "fb359202386a31fc",
+            "sha_b": "f2f95f7bc4018421"
+          },
+          {
+            "file": "lightcurve_1500327978819506944.csv",
+            "sha_a": "6709c919a0d395d1",
+            "sha_b": "d1fd0bfe2e91ffeb"
+          },
+          {
+            "file": "lightcurve_1500380858456833536.csv",
+            "sha_a": "fff670bc7cea0fc5",
+            "sha_b": "ab4f027224a8e19e"
+          },
+          {
+            "file": "lightcurve_1500424804562041984.csv",
+            "sha_a": "5bd0ac0ff36e22b2",
+            "sha_b": "23e8d76bcc97bb04"
+          },
+          {
+            "file": "lightcurve_1500461157165243648.csv",
+            "sha_a": "56634fad4552b0bf",
+            "sha_b": "feb9e72011b6cdb7"
+          },
+          {
+            "file": "lightcurve_1500516094090243712.csv",
+            "sha_a": "39ce6b9ebcecb2e5",
+            "sha_b": "1a891fcb4ab689a6"
+          },
+          {
+            "file": "lightcurve_1500540768678968832.csv",
+            "sha_a": "621a5d5819f3fe62",
+            "sha_b": "d709927d61025caf"
+          },
+          {
+            "file": "lightcurve_1500549977088828160.csv",
+            "sha_a": "74d032ceacb4ffbb",
+            "sha_b": "ddc3acc3f4b3db01"
+          },
+          {
+            "file": "lightcurve_1500550526844642688.csv",
+            "sha_a": "e109dae76d70311f",
+            "sha_b": "6b374b9622a57f0f"
+          },
+          {
+            "file": "lightcurve_1500643091979730432.csv",
+            "sha_a": "f183539ae311b222",
+            "sha_b": "531192fe06a67880"
+          },
+          {
+            "file": "lightcurve_1500689752504456576.csv",
+            "sha_a": "8c7e36ad25751191",
+            "sha_b": "879e13f473109441"
+          },
+          {
+            "file": "lightcurve_1500690886375824512.csv",
+            "sha_a": "8df1c75ce83051d3",
+            "sha_b": "6a07ea0825979b04"
+          },
+          {
+            "file": "lightcurve_1500693841313325696.csv",
+            "sha_a": "89b846fa1510197d",
+            "sha_b": "2cb1ff6c214b2f0f"
+          },
+          {
+            "file": "lightcurve_1500700335303879680.csv",
+            "sha_a": "50ec4b869ee760b5",
+            "sha_b": "83ecfc0e3b28924f"
+          },
+          {
+            "file": "lightcurve_1500702087650511232.csv",
+            "sha_a": "cd304b914f0c0b54",
+            "sha_b": "02849305276e04eb"
+          },
+          {
+            "file": "lightcurve_1500705484968035968.csv",
+            "sha_a": "e67d7b6e7491eaea",
+            "sha_b": "f1dd8e50fda5f891"
+          },
+          {
+            "file": "lightcurve_1500746446072739200.csv",
+            "sha_a": "2ec259c227843e59",
+            "sha_b": "1ea6f26a232889fe"
+          },
+          {
+            "file": "lightcurve_1501955221668216320.csv",
+            "sha_a": "bc416e8f31d01a15",
+            "sha_b": "23319f1ad245a814"
+          },
+          {
+            "file": "lightcurve_1501957455051193472.csv",
+            "sha_a": "6dca29d0d2b3f537",
+            "sha_b": "f0e864a11e5ab76e"
+          },
+          {
+            "file": "lightcurve_1502044385189172224.csv",
+            "sha_a": "188ea0bdbae9329a",
+            "sha_b": "41a4588bb28df54e"
+          },
+          {
+            "file": "lightcurve_1504293848541056896.csv",
+            "sha_a": "5a4f1a52e7496ebe",
+            "sha_b": "8f9624f74150c65d"
+          },
+          {
+            "file": "lightcurve_1504485335363167488.csv",
+            "sha_a": "78caaa627cab934f",
+            "sha_b": "556c4f8101252784"
+          }
+        ]
+      },
+      "photometry/comp_quality_*.json": {
+        "count_a": 0,
+        "count_b": 0,
+        "mismatches": []
+      },
+      "photometry/comparison_stars_per_target.csv": {
+        "count_a": 1,
+        "count_b": 1,
+        "mismatches": []
+      }
+    }
+  },
+  "acceptance_a": {
+    "dao_pass1": null,
+    "masterstars_rows": 2951,
+    "dao_only_frac": 0.036936631650288036,
+    "bg_std": 83.82144165039062,
+    "sigma_pp_unmasked_mad": 46.8973148478565,
+    "dao_threshold": 176.02502746582033,
+    "active_targets": 201,
+    "exo_promoted_vt": 3,
+    "infolog": null,
+    "VSX-GAIA XM": "",
+    "FAZA 0 funnel": "",
+    "INV-PREP-01": "",
+    "INV-MS-01": "",
+    "EXO TARGET": ""
+  },
+  "acceptance_b": {
+    "dao_pass1": 2552,
+    "masterstars_rows": 2951,
+    "dao_only_frac": 0.036936631650288036,
+    "bg_std": 83.82144165039062,
+    "sigma_pp_unmasked_mad": 46.8973148478565,
+    "dao_threshold": 176.02502746582033,
+    "active_targets": 201,
+    "exo_promoted_vt": 3,
+    "infolog": "infolog_20260727_222019.txt",
+    "VSX-GAIA XM": "VSX-GAIA XM: n_vsx=873 n_gaia=15085 rho=705.9 deg^-2 mean_nn=67.8\" r_max=7.64\" Q=0.99 w=0.96 sigma_n=0.18\" sigma_b=0.50\" accepted=717 contamination=0.011% cand_mult=0:156 1:694 2:23 3+:0 multi=2.63% pm_path=broadened pm_cols=False pm_finite=0 vsx_epoch=2000.0 gaia_epoch=2016.0 masterstars=205/208 outcome=ok gaia_db_max_g=17.5",
+    "FAZA 0 funnel": "FAZA 0 funnel: vsx_bbox=875 -> in_frame=797 -> gaia_id_assigned=651 (contamination=n/a) -> dao_detected=201 -> active=201 | excluded: no_dao_detection=0 no_gaia_id=0 not_target_eligible=596 out_of_frame=78 | masked: zone_flag=2 vsx_type_out_of_scope=0",
+    "INV-PREP-01": "",
+    "INV-MS-01": "INV-MS-01 MASTERSTAR purity guard: dao_only_fraction=0.037",
+    "EXO TARGET": "[EXO TARGET] funnel: hosts_in_field=82 masterstars_in_frame=2842 promoted=3 sep_max=3 arcsec"
+  }
+}

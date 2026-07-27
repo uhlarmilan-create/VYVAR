@@ -1,0 +1,26 @@
+draft,phase,start_ts,end_ts,duration_s,n_items,source
+452,config,2026-07-27 15:12:41,2026-07-27 15:12:41,0.0,,night_run_ok_marker
+452,smart_scan_source,2026-07-27 15:12:41.400000,2026-07-27 15:12:42,0.6,,night_run_ok_marker
+452,smart_import_session,2026-07-27 15:12:41.900000,2026-07-27 15:12:43,1.1,,night_run_ok_marker
+452,calibration,2026-07-27 15:12:42.800000,2026-07-27 15:15:12,149.2,150,night_run_ok_marker
+452,memory_profile,2026-07-27 15:15:11.700000,2026-07-27 15:15:12,0.3,,night_run_ok_marker
+452,pointing_scan,2026-07-27 15:15:11.700000,2026-07-27 15:15:16,4.3,,night_run_ok_marker
+452,auto_fwhm,2026-07-27 15:15:16,2026-07-27 15:15:16,0.0,,night_run_ok_marker
+452,masterstar_resolve,2026-07-27 15:15:16.700000,2026-07-27 15:15:17,0.3,,night_run_ok_marker
+452,preprocess_prep,2026-07-27 15:15:17,2026-07-27 15:15:17,0.0,,night_run_ok_marker
+452,preprocess,2026-07-27 15:15:16.900000,2026-07-27 16:01:00,2743.1,150,night_run_ok_marker
+452,platesolve_align_masterstar,2026-07-27 16:01:00,2026-07-27 16:15:19,859.0,139,night_run_ok_marker
+452,discover_obs_groups,2026-07-27 16:15:19,2026-07-27 16:15:19,0.0,,night_run_ok_marker
+452,photometry_NoFilter_60_2,2026-07-27 16:15:19,2026-07-27 16:57:48,2549.0,201,night_run_ok_marker
+452,wall_clock_total,,,7129.1,,night_run_success
+451,alignment,2026-07-27 07:21:17,2026-07-27 07:40:22,1145.0,139,infolog_block
+451,phase0_phase1_window,2026-07-27 07:40:22,2026-07-27 08:10:21,1799.0,242,infolog_block
+451,phase2a,2026-07-27 08:10:21,2026-07-27 08:27:27,1026.0,242,infolog_block
+451,reporting_export,2026-07-27 08:18:18,2026-07-27 08:42:33,1455.0,242,infolog_block
+451,wall_clock_folder_ctime,2026-07-27 09:19:11,2026-07-27 10:42:33,5002.0,,folder_ctime_span
+453,masterstar_build_tail,2026-07-27 19:05:35,2026-07-27 19:05:41,6.0,2951,infolog_block
+453,alignment,2026-07-27 19:05:52,2026-07-27 19:20:09,857.0,139,infolog_block
+453,phase0_phase1_window,2026-07-27 19:20:10,2026-07-27 19:56:27,2177.0,201,infolog_block
+453,phase2a,2026-07-27 19:56:27,2026-07-27 20:09:52,805.0,201,infolog_block
+453,reporting_export,2026-07-27 20:02:59,2026-07-27 20:20:19,1040.0,201,infolog_block
+453,wall_clock_folder_ctime,2026-07-27 21:04:17,2026-07-27 22:20:19,4562.0,,folder_ctime_span
