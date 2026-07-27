@@ -12262,7 +12262,9 @@ def generate_masterstar_and_catalog(
             _ms_inv_meta: dict[str, Any] = {"invariants": []}
             _ok_ms, _det_ms, _frac_ms, _pol_ms = check_dao_only_fraction(df_final)
             inv_check(_ms_inv_meta, "INV-MS-01", _ok_ms, policy=_pol_ms, detail=_det_ms)
-            log_event(f"MASTERSTAR purity guard: {_det_ms}")
+            _ms_guard_msg = f"INV-MS-01 MASTERSTAR purity guard: {_det_ms}"
+            LOGGER.info(_ms_guard_msg)
+            log_event(_ms_guard_msg)
         except InvariantViolation:
             raise
         except Exception as _ms_inv_exc:  # noqa: BLE001
@@ -17088,7 +17090,11 @@ def _qc_enrich_calibrated_in_place(
                 detail=f"{Path(_grp).name}: {_det_prep}",
             )
             if math.isfinite(_ratio_prep):
-                log_event(f"Preprocess gradient guard ({Path(_grp).name}): {_det_prep}")
+                _prep_guard_msg = (
+                    f"INV-PREP-01 Preprocess gradient guard ({Path(_grp).name}): {_det_prep}"
+                )
+                LOGGER.info(_prep_guard_msg)
+                log_event(_prep_guard_msg)
     except Exception as _prep_inv_exc:  # noqa: BLE001
         LOGGER.debug("[INV-PREP-01] skipped: %s", _prep_inv_exc)
 

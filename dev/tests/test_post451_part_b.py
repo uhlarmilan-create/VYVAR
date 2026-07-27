@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pandas as pd
@@ -147,3 +148,58 @@ def test_active_nframes_zero_must_have_skip_reason() -> None:
     )
     bad = df[(pd.to_numeric(df["n_frames"], errors="coerce").fillna(0) == 0) & (df["skip_reason"].fillna("").astype(str).str.strip() == "")]
     assert len(bad) == 0
+
+
+def test_inv_ms01_milestone_reaches_headless_logger(caplog: pytest.LogCaptureFixture) -> None:
+    import logging
+
+    from invariants_runtime import check_dao_only_fraction, inv_check
+    from infolog import get_lines, log_event
+
+    pipeline_logger = logging.getLogger("pipeline")
+    old_propagate = pipeline_logger.propagate
+    pipeline_logger.propagate = True
+    caplog.set_level(logging.INFO, logger="pipeline")
+    try:
+        df = pd.DataFrame(
+            {
+                "catalog_id": ["1", "2", "3"],
+                "source_type": ["GAIA_MATCHED", "GAIA_MATCHED", "GAIA_MATCHED"],
+            }
+        )
+        ok, det, _frac, pol = check_dao_only_fraction(df)
+        inv_check({"invariants": []}, "INV-MS-01", ok, policy=pol, detail=det)
+        msg = f"INV-MS-01 MASTERSTAR purity guard: {det}"
+        pipeline_logger.info(msg)
+        log_event(msg)
+        assert any("INV-MS-01 MASTERSTAR purity guard" in r.message for r in caplog.records)
+        assert any("INV-MS-01 MASTERSTAR purity guard" in ln for ln in get_lines())
+    finally:
+        pipeline_logger.propagate = old_propagate
+
+
+def test_inv_prep01_milestone_reaches_headless_logger(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    import logging
+
+    import numpy as np
+    from invariants_runtime import check_preprocess_large_small_ratio, inv_check
+    from infolog import get_lines, log_event
+
+    pipeline_logger = logging.getLogger("pipeline")
+    old_propagate = pipeline_logger.propagate
+    pipeline_logger.propagate = True
+    caplog.set_level(logging.INFO, logger="pipeline")
+    try:
+        frame = np.full((64, 64), 1000.0, dtype=np.float64)
+        ok, det, ratio = check_preprocess_large_small_ratio(frame)
+        inv_check({"invariants": []}, "INV-PREP-01", ok, policy="WARN", detail=f"NoFilter_60_2: {det}")
+        msg = f"INV-PREP-01 Preprocess gradient guard (NoFilter_60_2): {det}"
+        pipeline_logger.info(msg)
+        log_event(msg)
+        assert any("INV-PREP-01 Preprocess gradient guard" in r.message for r in caplog.records)
+        assert any("INV-PREP-01 Preprocess gradient guard" in ln for ln in get_lines())
+        assert math.isfinite(ratio)
+    finally:
+        pipeline_logger.propagate = old_propagate

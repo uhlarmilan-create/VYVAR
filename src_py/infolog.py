@@ -37,6 +37,12 @@ def log_event(message: str) -> None:
         logging.getLogger(__name__).debug("log_event append failed: %s", exc)
 
 
+def log_milestone(message: str) -> None:
+    """Infolog buffer plus pipeline logger (headless night-run and UI)."""
+    log_event(message)
+    logging.getLogger("pipeline").info(message)
+
+
 def log_gaia_query(ra: float, dec: float, calculated_radius: float) -> None:
     """Structured Gaia query debug line."""
     log_event(f"GAIA QUERY: Center={ra},{dec} | Radius={calculated_radius:.2f} deg")

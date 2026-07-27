@@ -504,6 +504,10 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
     timings: dict[str, float] = {}
     t_run = time.time()
 
+    from infolog import ensure_infolog_logging  # noqa: PLC0415
+
+    ensure_infolog_logging()
+
     def _p(msg: str) -> None:
         LOGGER.info("[NightRun] %s", msg)
         if params.progress_cb is not None:
@@ -1115,6 +1119,12 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         result.success = True
         timings["total"] = time.time() - t_run
         result.phase_timings = timings
+        if result.draft_dir is not None:
+            from infolog import save_infolog_to_disk  # noqa: PLC0415
+
+            saved = save_infolog_to_disk(result.draft_dir)
+            if saved:
+                _p(f"Infolog saved: {Path(saved).name}")
         _p(
             f"Night run complete - draft {draft_id}, {total_lc} light curve(s), "
             f"{total_frames} frame(s)"
