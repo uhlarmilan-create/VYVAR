@@ -1234,6 +1234,52 @@ open paths use ``database._resolve_catalog_db_path`` + ``require_*_db_path`` hel
 path that does not exist or has zero rows (VSX) **must fail loud** with the config key name. Guard:
 ``dev/tests/test_catalog_db_path_resolution.py``. **Status:** implemented (POST-451 closeout).
 
+### PHASE0-ACTIVE-COUNT-VT-CONTEXT (2026-07-27)
+
+**Problem.** POST-451 C.4 acceptance table listed active targets **~160-175** by extrapolating from
+the anchor's 165 actives. That band was wrong: anchor actives come from a **frozen**
+``variable_targets.csv`` built when ``vsx_variable_targets_mag_limit = 14.5`` still existed (245
+VT rows, faintest G=14.50). The live full-path VT has **no mag limit** (873 VSX rows). Comparing
+live active counts to anchor without stating the VT context repeats the apples-to-oranges error
+made earlier with the ``~283`` masterstars target.
+
+**Verified decomposition (draft_452, live VT):**
+
+- VT rows with G <= 14.5: **243** (vs 245 on frozen anchor VT).
+- Active total **201** = Group A **163** (shared with anchor 165, minus 2 zone/skip) + Group B
+  **38** (live-path-only actives).
+- Group B actives carry ``gaia_match_source`` **masterstars** (37) or **masterstars_exo** (1) -
+  not ``gaia_dr3_direct`` (Phase 0 rejects ``gaia_dr3_direct`` as ``not_target_eligible``).
+
+**Rule.** When citing anchor active count (165) as a regression target for full-path runs, always
+state the frozen VT / mag-limit context. Do not treat 165 as the expected live-path active count
+without that caveat. **Status:** recorded; no code change.
+
+### DETECTION-DEPTH-VS-LC-USABILITY (2026-07-27)
+
+**Principle.** A star detectable on a single stacked MASTERSTAR frame at the DAO threshold is
+**not** guaranteed to yield a scientifically usable differential light curve across the series.
+Group B on draft_452 (38 actives): median ``lc_rms`` **0.398 mag**, **20** flagged RED - real
+variables, genuinely detected, correctly identified, but not submission-grade at this rig and
+exposure.
+
+**Rule.** No magnitude cut, no target limit, no new parameter. The existing trust system (RED /
+``lc_quality_flag``) is the correct handling. Do not reopen as a pipeline defect when faint
+actives appear with poor curves. **Status:** recorded; no code change.
+
+### GUARD-HEADLESS-OBSERVABILITY (2026-07-27)
+
+**Problem.** ``INV-PREP-01`` and ``INV-MS-01`` called ``log_event()`` only, which writes to the
+in-memory Infolog ring buffer. Headless ``run_night_pipeline`` did not mirror Part B's
+``logging.info`` + ``log_event`` dual path; guard output never reached night-run stdout or
+``infolog_*.txt`` on disk.
+
+**Fix.** Guards emit ``LOGGER.info`` + ``log_event`` (same dual path as Part B VSX-GAIA / FAZA 0
+funnel). ``log_milestone()`` helper added to ``infolog.py`` for future Cython rebuild. Headless
+``run_night_pipeline`` calls ``ensure_infolog_logging()`` at start and ``save_infolog_to_disk()``
+on success. Tests: ``test_inv_ms01_milestone_reaches_headless_logger``,
+``test_inv_prep01_milestone_reaches_headless_logger``. **Status:** implemented.
+
 ### QC-ALLOWLIST-AUTHORITY
 ``qc_metrics.csv`` under the draft lights root is the **authoritative frame allowlist** for
 alignment: only rows with ``status=ok`` (exact match) enter ``astrometry_align_and_build_masterstar``.

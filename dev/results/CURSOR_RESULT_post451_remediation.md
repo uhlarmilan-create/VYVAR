@@ -186,14 +186,16 @@ Per-frame catalog: masterstars_full_match.csv, 2951 rows
 | DAO_ONLY fraction | 40.4% | <10%, ~4% | 3.7% | **3.69%** (109/2951) |
 | bg_std | 62.2 ADU | ~84 ADU | 83.8 | **83.82 ADU** |
 | DAO threshold | 130.7 ADU | ~175 ADU | 175.4 | **176.03 ADU** |
-| active targets | 242 | ~160-175 | 165 | **201** |
+| active targets | 242 | **201** (live VT) | 165 (frozen VT) | **201** |
 | Group A median RMS ratio vs anchor | 1.007 | 0.95-1.05 | 1.0 | **1.000** |
 | sigma_pp | 46.07 ADU | ~46 | 46.13 | **46.90 ADU** |
 
-**Reading on active=201 (above 160-175 band):** MASTERSTAR/threshold restoration worked; the
-residual +36 vs anchor 165 is not a sky-surface defect. Group B shrank 82 -> 38 (faint
-`gaia_dr3_direct` tail actives still admitted on the live full-path VT). Anchor frozen VT
-admitted fewer of these at plan time. Group A photometry matches anchor (ratio 1.000).
+**Reading on active=201:** The old **~160-175** band was wrong (anchor 165 comes from a frozen VT
+with `vsx_variable_targets_mag_limit=14.5`, 245 rows; live VT has 873 rows - see
+**PHASE0-ACTIVE-COUNT-VT-CONTEXT**). Correct decomposition: **201** = Group A **163** (243 VT rows
+<= 14.5 mag) + Group B **38** (630 VT rows > 14.5 mag). Group B actives carry
+`gaia_match_source` **masterstars** (37) or **masterstars_exo** (1) - not `gaia_dr3_direct`
+(Phase 0 rejects those as `not_target_eligible`). Group A photometry matches anchor (ratio 1.000).
 
 **Infolog lines (night-run stdout; Part B.1 proof):**
 
@@ -206,9 +208,12 @@ FAZA 0 funnel: vsx_bbox=875 -> in_frame=797 -> gaia_id_assigned=651 -> dao_detec
 TOI-3919, TIC 23815847, Gaia DR3 1500746446072739200 (TIC 165412561). Draft 451 VT had **no**
 exo columns.
 
-**INV-PREP-01 / INV-MS-01:** Guard `log_event` strings (`Preprocess gradient guard`,
-`MASTERSTAR purity guard`) did not appear in the headless night-run stdout (UI infolog path).
-Measured outcomes satisfy guards: sky-surface stamps present; DAO_ONLY **3.69%** (anchor 3.7%).
+**INV-PREP-01 / INV-MS-01 (pre-push fix):** On draft_452 the guards likely executed (outcomes
+match) but `log_event`-only wiring left no lines in headless stdout or on-disk infolog - same
+defect class as Part B. **Fix:** dual `LOGGER.info` + `log_event` on both guards; headless
+`run_night_pipeline` saves infolog on success. Tests:
+`test_inv_ms01_milestone_reaches_headless_logger`,
+`test_inv_prep01_milestone_reaches_headless_logger`. UI run (draft 453+) is the direct proof.
 
 **Group A / Group B (vs anchor 165 actives)**
 
@@ -220,12 +225,18 @@ Measured outcomes satisfy guards: sky-surface stamps present; DAO_ONLY **3.69%**
 | Group B median lc_rms | 0.294 mag | 0.398 mag |
 | Group B RED trust | 41 | 20 |
 
-Group B largely disappeared (82 -> 38) as inflated-DAO spurious actives dropped; remaining 38 are
-still faint tail detections with `gaia_dr3_direct` on the live matcher, not shared-anchor targets.
+Group B shrank 82 -> 38 as inflated-DAO spurious actives dropped after sky-surface restore.
+Remaining 38 are faint VT tail detections (G > 14.5 mag) with legitimate `masterstars` /
+`masterstars_exo` identity joins - not shared-anchor targets. Median lc_rms **0.398 mag**, **20**
+RED (see **DETECTION-DEPTH-VS-LC-USABILITY**).
 
 **1.4 C.2 decision:** **C.2 NOT needed.** `bg_std` returned to **83.82 ADU** (matches draft_435
-exactly) with `sigma_pp` unchanged (**46.90** vs anchor 46.13). The estimator was sensitive to
-its input image (missing sky-surface), not independently broken.
+exactly). **`sigma_pp` 46.90 vs anchor 46.13:** `MASTERSTAR.fits` pixel arrays are **byte-identical**
+between draft_452 and draft_435 (`max_abs_diff=0.0`). The gap is a **measurement inconsistency**:
+unmasked MAD on the full frame yields **~46.90 ADU** on both drafts; star-masked MAD (40 px margin
+from masterstars CSV) yields **~45.03 ADU** on both. Anchor reference 46.13 used a masked method
+with slightly different margin/implementation - not different image content. DAO counts still match
+exactly because detection uses catalog x/y/peak, not the sigma estimator mask.
 
 ---
 
@@ -306,10 +317,9 @@ Not implemented here. `out_of_frame=78` on 451/452 is consistent with ~12% frame
 | `1191579` | C.3 INV-PREP-01 / INV-MS-01 guards |
 | `5078669` | C.5 docs + anchor funnel expectation |
 | `f873085` | Uniform data_root path resolution + catalog tests + DECISIONS/ROADMAP/PDF |
+| `df42d46` | C.4 closeout result + STATE NOT-guaranteed removal |
 
-**Uncommitted:** `docs/VYVAR_STATE.md` (NOT-guaranteed removal after C.4 pass).
-
-**Push:** awaiting explicit Milan authorization on the commit list above.
+**Push:** Milan authorized 2026-07-27; see **## PUSH** below.
 
 ---
 
@@ -317,3 +327,69 @@ Not implemented here. `out_of_frame=78` on 451/452 is consistent with ~12% frame
 
 None triggered. Preprocess byte-compare 0 ADU; 452 detrended frames regenerated with sky stamps;
 Group A RMS ratio 1.000; bg_std restored; anchor `--full` PASS.
+
+---
+
+## PUSH (2026-07-27)
+
+Milan authorized push conditional on items 1-3 below. All satisfied; `--fast` green; anchor `--full`
+PASS; `ruff` clean.
+
+### Item 1 - Guard observability (blocking)
+
+**(b) Confirmed:** guards were not wired to headless stdout on draft_452 (`log_event` only).
+**Fix:** `LOGGER.info` + `log_event` on `INV-MS-01` and `INV-PREP-01`; `ensure_infolog_logging()`
+at headless start; `save_infolog_to_disk()` on success. Unit tests assert both fire on headless
+path. Draft 452 has no retroactive infolog file; UI draft 453+ infolog is the live proof.
+
+### Item 2 - sigma_pp 46.90 vs 46.13 (blocking)
+
+`MASTERSTAR.fits` arrays **identical** (452 vs 435 anchor snapshot). **Measurement inconsistency:**
+full-frame unmasked MAD ~46.90 ADU; star-masked MAD ~45.03 ADU (40 px margin). Anchor 46.13 from
+masked evaluation with different margin. No fix required.
+
+### Item 3 - DECISIONS entries
+
+| ID | Summary |
+|----|---------|
+| **PHASE0-ACTIVE-COUNT-VT-CONTEXT** | ~160-175 band wrong; 201 = 163 + 38; Group B = masterstars/masterstars_exo |
+| **DETECTION-DEPTH-VS-LC-USABILITY** | Detection depth != LC usability; trust RED flags handle Group B |
+| **GUARD-HEADLESS-OBSERVABILITY** | Dual-path logging fix for INV guards |
+
+### Gates (push)
+
+| Gate | Result |
+|------|--------|
+| `pytest -q` | **PASS** (1191 passed, 26 skipped) |
+| `--fast` | **PASS** |
+| `ruff` | clean |
+| anchor `--full` | **PASS** (core `1c48d9fc...` n=325, extended `744bce94...` n=487, plan-regen 875, active 165) |
+
+### Commits pushed
+
+| Commit | Description |
+|--------|-------------|
+| `926a94c` | Part A exoplanet promotion + fail-loud |
+| `63b902d` | Part B observability + skip_reason |
+| `ff08002` | C.1 sky-surface restore |
+| `1191579` | C.3 INV-PREP-01 / INV-MS-01 guards |
+| `5078669` | C.5 docs + anchor funnel expectation |
+| `f873085` | Uniform data_root path resolution + catalog tests + DECISIONS/ROADMAP/PDF |
+| `df42d46` | C.4 closeout result + STATE update |
+| `1b58fe3` | Guard headless observability + infolog save + tests |
+| `5192213` | DECISIONS (3 entries) + UI equivalence script + PUSH result |
+
+**Pushed range:** `535d863..5192213` (9 commits).
+
+### Item 5 - UI equivalence prep (ready, not run)
+
+When Milan's UI draft exists (453+):
+
+```bash
+python dev/scripts/draft_ui_equivalence_check.py draft_000452 draft_000453
+```
+
+Compares science file SHAs (`lightcurve_*.csv`, `comp_quality_*.json`,
+`comparison_stars_per_target.csv`), acceptance table, Phase 0 funnel, `VSX-GAIA XM:` line, both
+guard outputs from **UI infolog**, exoplanet promotion count (expect 3). Any divergence is a
+finding - do not cut reference or touch ledger until both runs agree.
