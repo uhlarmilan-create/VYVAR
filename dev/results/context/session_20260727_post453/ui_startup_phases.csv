@@ -1,0 +1,9 @@
+phase,seconds,notes
+UI click to draft Raw folder,unknown,not instrumented in UI yet; headless proxy below
+smart_scan_source,0.6,draft452 night_run log
+smart_import_session,1.1,150 FITS draft451 Raw 0.81 GB => 0.74 GB/s effective
+calibration_to_first_calibrated,149.2,draft452; dominates pre-platesolve wall
+draft Raw ctime to calibrated ctime,7,draft453 folder CreationTime delta
+preprocess_old_sequential,2743.1,draft452 baseline 18.3 s/frame
+preprocess_new_projected,120,8 workers x 1.23 s/frame sequential measured on 10f
+infolog_gap_pre_fix,8000,ring buffer evicted calibration+preprocess on UI runs
