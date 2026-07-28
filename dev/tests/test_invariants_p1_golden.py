@@ -52,6 +52,32 @@ def _enabled() -> bool:
     )
 
 
+def _truthy_env(name: str) -> bool:
+    return str(os.environ.get(name, "")).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _p1_force_execution() -> bool:
+    """When True, headless_mini must run the pipeline (lock/verify path).
+
+    Default under VYVAR_INVARIANTS_P1=1: always execute. Opt-in reuse only when
+    VYVAR_P1_REUSE_FROZEN=1 (visible pytest.skip, never a silent PASS).
+    """
+    if _truthy_env("VYVAR_P1_FORCE"):
+        return True
+    if _truthy_env("VYVAR_P1_REUSE_FROZEN"):
+        return False
+    # Full P1 gate runs and session --full both set FORCE explicitly.
+    return True
+
+
+def _mini_matches_locked_core(mini: Path, gold: dict) -> bool:
+    try:
+        core, nc = compute_photometry_sha(mini, include_comp_qa=False)
+        return core == gold["core_sha"] and nc == gold["core_n"]
+    except Exception:  # noqa: BLE001
+        return False
+
+
 pytestmark = pytest.mark.skipif(
     not _enabled(), reason="set VYVAR_INVARIANTS_P1=1 to run P1 golden"
 )
@@ -232,17 +258,15 @@ def mini_and_gold() -> tuple[Path, dict]:
 def headless_mini(mini_and_gold: tuple[Path, dict]) -> Path:
     """Module-scoped headless run; leaves science outputs on the mini.
 
-    Skips re-run when the mini already carries the locked VL-P1-GOLD core SHA
-    (speeds local re-runs after a green lock).
+    When VYVAR_P1_REUSE_FROZEN=1 and the mini already matches VL-P1-GOLD, dependent
+    tests skip visibly (never report PASS without executing the pipeline).
     """
     mini, gold = mini_and_gold
-    try:
-        core, nc = compute_photometry_sha(mini, include_comp_qa=False)
-        if core == gold["core_sha"] and nc == gold["core_n"]:
-            print("\n[P1] headless chain SKIP (mini already at VL-P1-GOLD core SHA)")
-            return mini
-    except Exception:  # noqa: BLE001
-        pass
+    if not _p1_force_execution() and _mini_matches_locked_core(mini, gold):
+        pytest.skip(
+            "SKIPPED (reused frozen outputs at VL-P1-GOLD core SHA); "
+            "unset VYVAR_P1_REUSE_FROZEN to force execution"
+        )
     t0 = time.time()
     _p1_headless_chain(mini)
     print(f"\n[P1] headless chain {time.time() - t0:.1f}s")
@@ -275,7 +299,7 @@ def test_headless_chain_sha(headless_mini: Path, mini_and_gold: tuple[Path, dict
 
 
 def test_ui_chain_byte_identity(headless_mini: Path, mini_and_gold: tuple[Path, dict]) -> None:
-    """UI-order vs headless science identity. Divergence = F-431-class STOP."""
+    """UI-order vs headless science identity on P1 mini (both chains must execute)."""
     # F3 discriminator PROMOTED from forensic_disc_ui_match2.py (P3 pilot):
     # app.py RUN VYVAR pins cat_match_arc=2.0 (call site ~app.py:2169); NightRun
     # default must match that UI parity value.

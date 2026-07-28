@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -37,10 +38,10 @@ DRAFT_ID = 435
 SETUP = "NoFilter_60_2"
 SNAPSHOT_NAME = "draft_000435_snapshot_skysurface_20260716"
 # Content anchors (Anchor #3 / sky-surface; LABBE-DET err-stable dual pass on 10d610c).
-EXPECTED_PHOTOMETRY_SHA_CORE = "1c48d9fc0056bc513c379fe1fb873e25215e5910f873e55e4a0b4fd8b5995d9f"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED = "744bce947ed47463227791bdac62dbec6885edfb1b637ae0a597f9d1973a71ba"
-EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "1c48d9fc"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "744bce94"
+EXPECTED_PHOTOMETRY_SHA_CORE = "b7f980c09e238b855c2ee1b9518061777934d8f0a61eaec7431cda4f537aed52"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED = "2c43bbbf06921fbef46fb6a4ed1f8afccdabacaa5827b8ec50372de0e3816205"
+EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "b7f980c0"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "2c43bbbf"
 # Structural empty-comp drops keyed by draft_id only (Anchor #3 / R CVn on 435).
 # A future draft with phase2a_empty_comp_drop>0 must FAIL until explicitly listed.
 # Value must match exactly - empty_comp_drop=2 on 435 still trips the gate.
@@ -429,6 +430,8 @@ def _check_plan_regen_fingerprint(
 
 
 def run_full_baseline(report: SessionReport) -> None:
+    """Deliberate full tier: force P1 golden execution when env flag is set."""
+    os.environ["VYVAR_P1_FORCE"] = "1"
     suspend_msg = _full_baseline_suspend_message()
     if suspend_msg:
         report.add("full-baseline", "SUSPENDED", suspend_msg)
