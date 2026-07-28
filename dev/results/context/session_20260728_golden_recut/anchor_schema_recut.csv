@@ -1,0 +1,14 @@
+metric,value
+max_abs_delta_bjd,0.0
+max_abs_delta_hjd,0.0
+lc_byte_diffs_schema_only,162
+new_column,delta_mag_sysrem
+non_time_science_diffs,0
+aavso_export_leak,no_explicit_columns_only_bjd_mag_err
+varastro_export_leak,no_uses_delta_mag_not_delta_mag_sysrem
+
+run1_core_sha,b7f980c09e238b855c2ee1b9518061777934d8f0a61eaec7431cda4f537aed52
+run1_extended_sha,2c43bbbf06921fbef46fb6a4ed1f8afccdabacaa5827b8ec50372de0e3816205
+run1_core_n,325
+run1_extended_n,487
+run2_agrees,yes

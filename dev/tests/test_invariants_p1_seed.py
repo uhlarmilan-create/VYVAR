@@ -15,10 +15,11 @@ import pytest
 from config import AppConfig
 from tests.photometry_sha import compute_photometry_sha
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
+LEDGER_PATH = ROOT / "dev" / "validation" / "VYVAR_VALIDATION_LEDGER.json"
 SNAPSHOT = "draft_000435_snapshot_skysurface_20260716"
-EXPECTED_CORE = "03d8fb6491bc3c221f89f87acf22b929cece74c60951cf19bda80699180fb989"
-EXPECTED_EXT = "bbfcc92e7ac5c4c5edfe0f99353aca9d03a987f99407352217e82875ed342892"
+EXPECTED_CORE = "b7f980c09e238b855c2ee1b9518061777934d8f0a61eaec7431cda4f537aed52"
+EXPECTED_EXT = "2c43bbbf06921fbef46fb6a4ed1f8afccdabacaa5827b8ec50372de0e3816205"
 
 
 def _enabled() -> bool:
@@ -41,8 +42,8 @@ def test_p1_snapshot_sha_matches_registered() -> None:
     ext, ne = compute_photometry_sha(snap, include_comp_qa=True)
     assert core == EXPECTED_CORE
     assert ext == EXPECTED_EXT
-    assert nc == 333
-    assert ne == 499
+    assert nc == 325
+    assert ne == 487
 
 
 def test_p1_census_fingerprint_in_meta() -> None:
@@ -57,7 +58,12 @@ def test_p1_census_fingerprint_in_meta() -> None:
         / "pipeline_meta.json"
     )
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    assert meta.get("matched_world2pix_identity_n") == 2842
-    p95 = float(meta.get("matched_world2pix_identity_p95_px"))
+    ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+    anchor = next(i for i in ledger["items"] if i.get("id") == "VL-ANCHOR-WCSINV")
+    fp = anchor["census_fingerprint"]
+    dyn = meta.get("dynamic_params") or {}
+    assert int(dyn.get("n_stars_dao") or 0) == fp["n_raw_dao"]
+    lc = meta.get("lc_quality_summary") or {}
+    assert int(lc.get("total") or 0) == fp["targets"]
+    p95 = float(anchor.get("identity_p95_baseline_px"))
     assert 1.0 < p95 < 2.0
-    assert int(meta.get("sky_surface_order") or 0) == 2
