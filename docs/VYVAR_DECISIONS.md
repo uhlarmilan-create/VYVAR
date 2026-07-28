@@ -464,6 +464,13 @@ at preprocess time; Milan UI run is acceptance gate.
 path). **Resolution:** shared ``_fit_subtract_preprocess_sky_surface`` in
 ``preprocess_calibrated_to_processed``. See `CURSOR_RESULT_t3_restore_anchor.md`.
 
+**Recurrence (2026-07-22 / SKIPPROC, second occurrence):** ``013cb0c`` retired the
+``processed/lights`` copy tree and removed the in-place order-2 sky-surface subtract from the
+mono calibration path. Same defect class as F-431; see **SKY-SURFACE-RESTORE** (2026-07-27).
+First closure shipped **without a regression guard**, so the step could return silently until
+**INV-PREP-01** (preprocess gradient / large-small ratio on calibrated frames) made a third
+occurrence detectable from the saved infolog.
+
 ---
 
 ## F-428-PASS2-CONTAMINATION - draft_428 census products unreliable (2026-07-16)
@@ -1206,11 +1213,14 @@ artifact; allowlist supersedes). Resume/skip-drafts: preprocess complete when
 
 ### SKY-SURFACE-RESTORE (2026-07-27)
 Accidental drop of order-2 sky-surface subtract on mono frames in `013cb0c` (SKIPPROC) is
-**reversed**. T3-PREPROCESS-SKY-SURFACE (2026-07-16) remains authoritative: when
+**reversed**. This is the **second occurrence** of F-431-HEADLESS-DIVERGENCE (lost preprocess
+ADU step); the first closure (2026-07-16) did not add a guard, so SKIPPROC could remove the step
+again without tripping any gate. T3-PREPROCESS-SKY-SURFACE (2026-07-16) remains authoritative: when
 ``preprocess_sky_surface_order > 0``, ``_qc_enrich_calibrated_in_place`` calls
 ``_fit_subtract_preprocess_sky_surface`` for all non-mosaic lights (no ``VY_CHANNEL`` gate);
 OSC Bayer mosaics are still skipped to avoid double subtract on channels. Headers:
-``VY_SKYSF``, ``VYSKYORD``, ``VYSKYP2P``. Guards: **INV-PREP-01** (large_small_ratio WARN),
+``VY_SKYSF``, ``VYSKYORD``, ``VYSKYP2P``. Guards: **INV-PREP-01** (large_small_ratio WARN on
+calibrated-frame gradient; detects missing or ineffective sky-surface subtract from infolog),
 **INV-MS-01** (DAO_ONLY fraction WARN/FAIL). C.4 acceptance on BO CVn raw path pending Milan
 raw frames on disk. **Status:** code landed; science validation pending.
 

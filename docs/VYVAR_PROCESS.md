@@ -86,6 +86,13 @@ Formalizes the existing two-correction practice:
 - Every RESULT file must carry the mandatory one-line field:
   `Recurrence: new test <name> | existing <name> | n/a (first occurrence / not a bug-class)`.
 
+**Closing without a guard.** A defect closure that does not add a regression guard (test,
+infolog milestone, or ledger gate that would fail if the defect returns) is incomplete. That is
+how the same bug class comes back silently -- F-431 (2026-07-16) and SKIPPROC (2026-07-22) both
+removed the order-2 preprocess sky-surface step; the first fix had no guard, so the second
+occurrence was not caught until science comparison. Prefer a named guard (`INV-PREP-01`,
+`test_recur_*`, photometry SHA gate) over narrative "fixed" notes alone.
+
 ### Forensic promotion rubric
 
 Every forensic / one-off investigation script (`dev/scripts/forensic_*`, or a
