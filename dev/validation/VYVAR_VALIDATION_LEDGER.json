@@ -146,7 +146,7 @@
       "verification": "scripts/session_baseline_check.py --full (core b7f980c0\u2026 n=325; extended 2c43bbbf\u2026 n=487). Census fingerprint n_raw_dao=2552 matched=2842 targets=165; identity p95 baseline 1.54 px. Plan-regen 875 rows (873 VSX + 2 exo); frozen VT 245 rows.",
       "passes": true,
       "last_verified": "2026-07-28",
-      "commit": "pending",
+      "commit": "9f5b0d8",
       "notes": "Re-cut 2026-07-28 (GOLDEN-ASSET-RECUT Part 3): schema harmonisation only -- additive delta_mag_sysrem column on all light curves (NaN when SysRem off); BJD/HJD/magnitudes/flags/comp sets bit-identical vs prior anchor. Two agreeing --full runs. Supersedes core 1c48d9fc0056bc513c379fe1fb873e25215e5910f873e55e4a0b4fd8b5995d9f / extended 744bce947ed47463227791bdac62dbec6885edfb1b637ae0a597f9d1973a71ba (2026-07-27 identity-gate re-cut). Prior identity-gate note (2026-07-27 CLOSE-2) unchanged.",
       "census_fingerprint": {
         "n_raw_dao": 2552,
@@ -207,7 +207,7 @@
       "verification": "VYVAR_INVARIANTS_P1=1 pytest dev/tests/test_invariants_p1_golden.py -q (headless SHA + UI-order identity + census bands + physics)",
       "passes": true,
       "last_verified": "2026-07-28",
-      "commit": "pending",
+      "commit": "a9d7eb0",
       "notes": "Re-cut 2026-07-28 (GOLDEN-ASSET-RECUT Part 2): identity gate (4 mis-associated gaia_dr3_direct targets removed) plus delta_mag_sysrem schema column. Two independent wipe+rebuild+headless runs byte-identical. Supersedes core 074ae881e0f589b41a998db3bd64e87cb8179e3dae2e8bce87dc234fb0adfeec n=333 / extended 66285d3f601e70a472aed90834d6f3298eb0f53a7330bc0a12602c634fdd03ba n=497 (2026-07-19 lock). Scope unchanged: photometry-ready mini.",
       "mini_name": "draft_000435_p1mini",
       "source_draft": "draft_000435",
