@@ -1,0 +1,12 @@
+phase,seconds,source,notes
+run_vyvar_start,0,instrumentation,app.py log_phase_boundary at pipeline start (UI path)
+smart_scan_source,0.6,headless_proxy,draft452 night_run log pre-fix
+smart_import_session,1.1,headless_proxy,150 FITS 0.81 GB
+calibration_to_first_calibrated,149.2,headless_proxy,draft452 dominates pre-platesolve
+draft_raw_to_calibrated_folder,7,headless_proxy,draft453 folder CreationTime
+preprocess_old_sequential,2743.1,headless_proxy,draft452 18.3 s/frame baseline
+preprocess_new_measured,1.23,measured,sequential per-frame POST-453 on 452 inputs
+preprocess_new_parallel_10f,0.80,measured,10-frame sample
+preprocess_new_projected_150f,120,projected,8 workers
+ui_idle_pre_first_artifact,unknown,pending,requires next operator UI run; Streamlit rerun cycles not captured in headless proxy
+infolog_durable_session,enabled,code,write_run_infolog + start_infolog_session + log_phase_boundary wired UI+headless
