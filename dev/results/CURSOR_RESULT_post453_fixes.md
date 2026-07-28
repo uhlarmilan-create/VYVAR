@@ -121,7 +121,9 @@ column only**, not time - **ledger NOT re-cut** per standing stop rule.
 site-resolution fix does not shift BJD on this path. Expected ~1e-10 d Dablice-Jirny shift
 applies to headless **full pipeline** exports, not this photometry-only anchor replay.
 
-**Run 2:** second `--full` started for reproducibility record (pending completion at write time).
+**Run 2:** `tmp/session_baseline/20260728T074447Z` (2352 s). Core/extended SHA **identical to run 1**
+(b7f980c09e238b85... / 2c43bbbf06921fbe...). Two agreeing runs confirmed; ledger still not re-cut
+(schema-only delta_mag_sysrem diff vs snapshot).
 
 **Previous anchor wrong site:** Headless runs before 9d3d8f4 could import with Dablice (id=1)
 while metadata claimed Jirny. No in-repo evidence of AAVSO/VarAstro submission from those runs.

@@ -1,0 +1,7 @@
+run,timestamp_utc,work_root,core_sha,extended_sha,core_n,extended_n
+2,20260728T074447Z,tmp/session_baseline/20260728T074447Z,b7f980c09e238b855c2ee1b9518061777934d8f0a61eaec7431cda4f537aed52,2c43bbbf06921fbef46fb6a4ed1f8afccdabacaa5827b8ec50372de0e3816205,325,487
+
+agreement_with_run1,core_sha_match,extended_sha_match
+yes,true,true
+
+pipeline_wall_s,2352
