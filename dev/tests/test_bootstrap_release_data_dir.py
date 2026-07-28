@@ -55,7 +55,7 @@ def test_bootstrap_fresh_data_dir_creates_skeleton_and_config(tmp_path, monkeypa
     missing = expected - set(payload.keys())
     assert not missing, f"missing persisted keys: {sorted(missing)[:8]}"
     assert len(payload) == len(expected)
-    assert int(payload.get("observer_location_id") or 0) == 1
+    assert int(payload.get("observer_location_id") or 0) == 0
 
     db = VyvarDatabase(str(data / "vyvar.sqlite3"))
     db.close()

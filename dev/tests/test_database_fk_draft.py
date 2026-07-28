@@ -82,7 +82,7 @@ def test_resolve_import_location_fails_on_stale_config_id(tmp_path, monkeypatch)
 
 def test_resolve_import_location_requires_row(tmp_path, monkeypatch) -> None:
     db = _fresh_db(tmp_path, monkeypatch)
-    with pytest.raises(ValueError, match="observer location unresolved|no LOCATION row"):
+    with pytest.raises(ValueError, match="observer_location_id"):
         db.resolve_import_location_id(id_location=None, cfg_location_id=2)
 
 
