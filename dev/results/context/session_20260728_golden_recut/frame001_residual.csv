@@ -1,0 +1,9 @@
+frame,max_abs_451_vs_452_raw_ADU,max_abs_451_vs_452_cal_ADU,max_abs_451_preprocess_vs_452_cal_ADU
+001,0.0,659.646,533.450
+002,0.0,121.237,0.0
+
+cause,draft_451_frame001_calibrated_anomaly
+detail,Raw byte-identical between 451 and 452; 659 ADU cal diff vs 121 ADU on frame 002; 451 lacks VYSKYORD on all frames; preprocess from 451 input reproduces 452 for frames 002-010 exactly
+not,nondeterminism_in_current_calibration
+extra_451_frame001,structured_calibration_defect_in_draft_451_first_frame_beyond_missing_sky_surface_median_diff_only_15_ADU_max_spatial_659_ADU
+evidence_needed_for_root_cause,451_calibration_run_logs_or_intermediate_masters_per_frame_not_on_disk
