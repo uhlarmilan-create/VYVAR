@@ -2,7 +2,7 @@
 
 **Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
 
-Last updated: **2026-07-27** (POST-451 remediation: exoplanet restore, observability, sky-surface fix).
+Last updated: **2026-07-28** (draft 454 analysis; entry-point equivalence 454 vs 455).
 
 ## POST-451 remediation (2026-07-27)
 
@@ -75,6 +75,15 @@ Full program P1-P4: DONE. Result: `dev/results/CURSOR_RESULT_invariants_P3P4.md`
 - **MASTERSTAR detection and stack rebuild** sit outside the anchor `--full` gate
   (frozen `MASTERSTAR.fits` + CSV); preprocess/detrend changes can alter pass-1 DAO
   counts without failing byte-identity photometry SHA checks.
+- **Anchor `--full` begins at `detrended_aligned/lights`** (copies frozen MASTERSTAR +
+  CSV, runs photometry only). **Not covered:** calibration, preprocess (sky-surface in-place QC),
+  and alignment. Together with plan-time VSX export regeneration and MASTERSTAR/detection
+  (above), these are the three anchor coverage gaps found in the 2026-07 arc -- the boundary of
+  what the anchor byte-SHA gate actually guarantees.
+- **Anchor snapshot photometry portability:** `draft_000435_snapshot_skysurface_20260716`
+  lives under gitignored `Archive/`; photometry was patched locally from an agreeing run
+  (2026-07-28 schema re-cut). SHA verification on another machine requires the same snapshot
+  patch or a fresh `--full` run -- not guaranteed from git alone.
 - **Raw-to-photometry rebuild validated (2026-07-27):** draft_452 acceptance run after
   SKY-SURFACE restore (`ff08002`) matches anchor MASTERSTAR catalogue metrics (pass-1 **2552**,
   2951 rows, DAO_ONLY 3.7%, bg_std 83.8 ADU). Anchor `--full` photometry

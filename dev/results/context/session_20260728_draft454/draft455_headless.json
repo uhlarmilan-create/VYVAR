@@ -1,0 +1,26 @@
+{
+  "success": true,
+  "draft_id": 455,
+  "draft_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000455",
+  "n_lightcurves": 201,
+  "n_frames": 139,
+  "phase_timings": {
+    "config": 0.011497259140014648,
+    "smart_scan_source": 0.36591434478759766,
+    "smart_import_session": 7.423327684402466,
+    "calibration": 135.17107796669006,
+    "memory_profile": 0.4394867420196533,
+    "ram_qc": 0.0,
+    "pointing_scan": 5.644366025924683,
+    "auto_fwhm": 0.004502534866333008,
+    "masterstar_resolve": 0.3914337158203125,
+    "preprocess_prep": 0.0,
+    "preprocess": 48.89642858505249,
+    "platesolve_align_masterstar": 1141.9011328220367,
+    "discover_obs_groups": 0.0,
+    "photometry_NoFilter_60_2": 2657.327147245407,
+    "total": 4514.787045717239
+  },
+  "errors": [],
+  "elapsed_s": 4514.791939496994
+}

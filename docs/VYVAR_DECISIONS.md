@@ -1368,6 +1368,25 @@ Correct like-for-like: ``draft_000450`` regen on same night/field without mag li
 
 **Status:** implemented (uncommitted pending Milan STOP clearance).
 
+### IDENTITY-GATE-WRONG-STAR-NAMING (2026-07-28, GOLDEN-ASSET-RECUT audit)
+
+**Finding.** Before the Phase 0 identity gate, four ``gaia_dr3_direct`` targets received light curves
+named after **neighbouring** Gaia IDs (matched masterstar ``catalog_id`` adopted instead of the
+variable's). The stale P1 mini files are the clearest artefact:
+
+| VSX / variable Gaia target | Stale LC filename Gaia ID |
+|----------------------------|---------------------------|
+| 1499883638682689920 | 1499883638682689408 |
+| 1500410236033012352 | 1500410613990135296 |
+| 1498513166158147968 | 1498513269237363456 |
+| 1499064433800590592 | 1499064399440851968 |
+
+Those files are light curves of neighbouring stars, not the variables they were created for.
+Independent confirmation of the identity gate from filename geometry, not only from active-count
+arithmetic. Recorded in ``VL-ANCHOR-WCSINV.identity_gate_dropped_targets``.
+
+**Status:** recorded; gate fix shipped in PHASE0-IDENTITY-GATE CLOSE-2.
+
 ### OSC-CHANNEL-EXTRACTION (2026-07-22, phase 1/3)
 OSC Bayer mosaics: calibrate on CFA (dark subtract + flat divide on raw mosaic; flat via
 ``normalize_flat_master`` per-tile using ``EQUIPMENTS.BAYERMASK``). **No** demosaic/interpolation.

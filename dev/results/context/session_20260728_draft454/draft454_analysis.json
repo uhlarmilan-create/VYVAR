@@ -1,0 +1,167 @@
+{
+  "infolog_used": "Archive\\Drafts\\draft_000454\\infolog_20260728_152715.txt",
+  "phases": [
+    {
+      "phase": "[PHASE] run_vyvar start",
+      "start_s": 48425,
+      "duration_s": 0
+    },
+    {
+      "phase": "[PHASE] Scan Source + Import + calibration start",
+      "start_s": 48425,
+      "duration_s": 10
+    },
+    {
+      "phase": "[PHASE] Calibration start",
+      "start_s": 48435,
+      "duration_s": 148
+    },
+    {
+      "phase": "[PHASE] Analyze QC (RAM -> OBS_FILES) start",
+      "start_s": 48583,
+      "duration_s": 64
+    },
+    {
+      "phase": "[PHASE] Auto FWHM limit start",
+      "start_s": 48647,
+      "duration_s": 0
+    },
+    {
+      "phase": "[PHASE] Auto-select MASTERSTAR (TOP1) start",
+      "start_s": 48647,
+      "duration_s": 1
+    },
+    {
+      "phase": "[PHASE] MAKE MASTERSTAR (detrend + plate-solve + zarovnanie) start",
+      "start_s": 48648,
+      "duration_s": 986
+    },
+    {
+      "phase": "[PHASE] Phase 0+1 + Phase 2A (photometry) start",
+      "start_s": 49634,
+      "duration_s": null
+    },
+    {
+      "phase": "preprocess_qc_in_place_wall",
+      "duration_s": 44,
+      "per_frame_s": 0.29333333333333333,
+      "n_frames": 150
+    },
+    {
+      "phase": "run_start_to_first_artifact_s",
+      "duration_s": 10
+    },
+    {
+      "phase": "infolog_wall_clock_s",
+      "duration_s": 4975
+    },
+    {
+      "phase": "infolog_wall_clock_min",
+      "duration_s": 82.91666666666667
+    }
+  ],
+  "proofs": {
+    "SITE": "13:27:15  [SITE] observer location id=2 name=Jirny lat=50.1121658 lon=14.6982547 alt_m=275.0 source=ui_selection",
+    "INV-PREP-01": "13:31:32  INFO  [pipeline]  INV-PREP-01 Preprocess gradient guard (NoFilter_60_2): large_small_ratio=0.03x (warn>10)",
+    "INV-MS-01": "13:33:08  INFO  [pipeline]  INV-MS-01 MASTERSTAR purity guard: dao_only_fraction=0.037",
+    "VSX-GAIA XM": "13:33:13  VSX-GAIA XM: n_vsx=873 n_gaia=15085 rho=705.9 deg^-2 mean_nn=67.8\" r_max=7.64\" Q=0.99 w=0.96 sigma_n=0.18\" sigma_b=0.50\" accepted=717 contamination=0.011% cand_mult=0:156 1:694 2:23 3+:0 multi=2.63% pm_path=broadened pm_cols=False pm_finite=0 vsx_epoch=2000.0 gaia_epoch=2016.0 masterstars=205/208 outcome=ok gaia_db_max_g=17.5",
+    "FAZA 0 funnel": "13:47:15  FAZA 0 funnel: vsx_bbox=875 -> in_frame=797 -> gaia_id_assigned=651 (contamination=n/a) -> dao_detected=201 -> active=201 | excluded: no_dao_detection=0 no_gaia_id=0 not_target_eligible=596 out_of_frame=78 | masked: zone_flag=2 vsx_type_out_of_scope=0",
+    "EXO TARGET": "13:33:14  [EXO TARGET] funnel: hosts_in_field=82 masterstars_in_frame=2842 promoted=3 sep_max=3 arcsec",
+    "DAO pass 1": "13:32:59  INFO  [pipeline]  [DAO pass 1] 2552 detections, 1332 Gaia unmatched",
+    "DAO pass 2": "13:32:59  INFO  [pipeline]  [DAO pass 2] 1225 additional detections from 1332 targeted positions"
+  },
+  "acceptance_454": {
+    "dao_pass1": 2552,
+    "masterstars_rows": 2951,
+    "dao_only_frac": 0.036936631650288036,
+    "bg_std": 83.82144165039062,
+    "dao_threshold": 176.02502746582033,
+    "active_targets": 201,
+    "vt_rows": 875,
+    "exo_promoted_vt": 3,
+    "n_lightcurves": 198
+  },
+  "acceptance_452_context": {
+    "dao_pass1": null,
+    "masterstars_rows": 2951,
+    "dao_only_frac": 0.036936631650288036,
+    "bg_std": 83.82144165039062,
+    "dao_threshold": 176.02502746582033,
+    "active_targets": 201,
+    "vt_rows": 875,
+    "exo_promoted_vt": 3,
+    "n_lightcurves": 198
+  },
+  "calibrated_452_vs_454": {
+    "n_compared": 150,
+    "n_exact_zero": 149,
+    "max_diff": 533.4501953125,
+    "nonzero_frames": [
+      {
+        "frame": "BO_CVn_Light_001.fits",
+        "max_abs_diff": 533.4501953125
+      }
+    ],
+    "csv": "dev\\results\\context\\session_20260728_draft454\\calibrated_452_vs_454.csv"
+  },
+  "vy_skyp2p_454_frames_001_010": [
+    {
+      "frame": "BO_CVn_Light_001.fits",
+      "VY_SKYP2P": NaN,
+      "VYSKYORD": 2
+    },
+    {
+      "frame": "BO_CVn_Light_002.fits",
+      "VY_SKYP2P": NaN,
+      "VYSKYORD": 2
+    },
+    {
+      "frame": "BO_CVn_Light_003.fits",
+      "VY_SKYP2P": NaN,
+      "VYSKYORD": 2
+    },
+    {
+      "frame": "BO_CVn_Light_004.fits",
+      "VY_SKYP2P": NaN,
+      "VYSKYORD": 2
+    },
+    {
+      "frame": "BO_CVn_Light_005.fits",
+      "VY_SKYP2P": NaN,
+      "VYSKYORD": 2
+    },
+    {
+      "frame": "BO_CVn_Light_006.fits",
+      "VY_SKYP2P": NaN,
+      "VYSKYORD": 2
+    },
+    {
+      "frame": "BO_CVn_Light_007.fits",
+      "VY_SKYP2P": NaN,
+      "VYSKYORD": 2
+    },
+    {
+      "frame": "BO_CVn_Light_008.fits",
+      "VY_SKYP2P": NaN,
+      "VYSKYORD": 2
+    },
+    {
+      "frame": "BO_CVn_Light_009.fits",
+      "VY_SKYP2P": NaN,
+      "VYSKYORD": 2
+    },
+    {
+      "frame": "BO_CVn_Light_010.fits",
+      "VY_SKYP2P": NaN,
+      "VYSKYORD": 2
+    }
+  ],
+  "vy_skyp2p_454_stats": {
+    "min": NaN,
+    "median": NaN,
+    "max": NaN,
+    "frame001": NaN,
+    "frame002": NaN
+  },
+  "runtime_s": 10.569269895553589
+}

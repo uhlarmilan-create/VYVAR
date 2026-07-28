@@ -1,0 +1,13 @@
+duration_s,n_frames,per_frame_s,phase,start_s
+0,,,[PHASE] run_vyvar start,48425
+10,,,[PHASE] Scan Source + Import + calibration start,48425
+148,,,[PHASE] Calibration start,48435
+64,,,[PHASE] Analyze QC (RAM -> OBS_FILES) start,48583
+0,,,[PHASE] Auto FWHM limit start,48647
+1,,,[PHASE] Auto-select MASTERSTAR (TOP1) start,48647
+986,,,[PHASE] MAKE MASTERSTAR (detrend + plate-solve + zarovnanie) start,48648
+,,,[PHASE] Phase 0+1 + Phase 2A (photometry) start,49634
+44,150,0.29333333333333333,preprocess_qc_in_place_wall,
+10,,,run_start_to_first_artifact_s,
+4975,,,infolog_wall_clock_s,
+82.91666666666667,,,infolog_wall_clock_min,
