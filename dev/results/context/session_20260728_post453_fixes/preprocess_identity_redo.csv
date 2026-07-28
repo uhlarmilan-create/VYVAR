@@ -1,0 +1,20 @@
+step,seconds
+FITS read,0.010
+source masking (DAOStarFinder bbox),1.350
+sigma-clipped polynomial fit,0.055
+surface evaluation full grid,0.220
+FITS write-back + QC headers,0.064
+QC metrics (FWHM/elong),0.700
+
+metric,value
+profile_frame,BO_CVn_Light_001.fits
+draft452_reference,draft_000452
+byte_compare_method,draft451_calibrated_input vs draft452_calibrated_output
+n_frames_compared,10
+max_abs_diff_frames_002_010,0.0
+max_abs_diff_frame001,533.4501953125
+frame001_cause,draft451 cal lacked VYSKYORD; draft452 recalibrated with sky-surface order 2
+frame001_verdict,genuine_calibration_input_difference_not_nondeterminism
+per_frame_s_sequential,1.23
+per_frame_s_parallel_10f,0.80
+projected_150_frames_s_parallel,120

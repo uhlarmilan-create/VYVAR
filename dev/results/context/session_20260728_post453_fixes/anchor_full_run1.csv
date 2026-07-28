@@ -1,0 +1,18 @@
+run,timestamp_utc,work_root,core_sha,extended_sha,core_n,extended_n
+1,20260728T065730Z,tmp/session_baseline/20260728T065730Z,b7f980c09e238b855c2ee1b9518061777934d8f0a61eaec7431cda4f537aed52,2c43bbbf06921fbef46fb6a4ed1f8afccdabacaa5827b8ec50372de0e3816205,325,487
+
+science_compare,n_lc_compared,max_abs_delta_bjd,max_abs_delta_hjd,science_failures,time_failures,benign
+1,162,0.0,0.0,0,0,true
+
+lc_diff_summary,byte_diff_count,schema_only_count,non_time_science_diffs
+1,162,162,0
+
+schema_diff,new_columns_in_run,removed_columns
+1,delta_mag_sysrem,
+
+phase0_funnel,active_targets_rows,skip_photometry_true
+1,165,2
+
+pipeline_wall_s,2409
+
+verdict,SHA fails due to additive delta_mag_sysrem column only; BJD/HJD and all science columns identical. Not confined to time columns (strict Part 4.1). No ledger re-cut per stop rule.

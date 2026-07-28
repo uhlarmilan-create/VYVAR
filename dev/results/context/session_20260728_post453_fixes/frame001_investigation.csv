@@ -1,0 +1,16 @@
+frame,max_abs_diff_451_vs_452_calibrated_ADU,vyskyord_451,vyskyord_452,identity_451_input_new_preprocess_vs_452_output
+BO_CVn_Light_001.fits,659.646,,2,533.450
+BO_CVn_Light_002.fits,121.237,,2,0.0
+BO_CVn_Light_003.fits,119.457,,2,0.0
+BO_CVn_Light_004.fits,118.066,,2,0.0
+BO_CVn_Light_005.fits,117.762,,2,0.0
+BO_CVn_Light_006.fits,115.770,,2,0.0
+BO_CVn_Light_007.fits,114.292,,2,0.0
+BO_CVn_Light_008.fits,113.980,,2,0.0
+BO_CVn_Light_009.fits,112.130,,2,0.0
+BO_CVn_Light_010.fits,113.569,,2,0.0
+
+verdict,genuine_calibration_input_difference_not_nondeterminism
+cause,draft_451 calibrated without VYSKYORD sky-surface; draft_452 recalibrated with VYSKYORD=2 VY_SKYSF=True (post451 remediation)
+frame001_exclusion,451 frame001 is not the same calibrated input 452 preprocess consumed; pre-preprocess 452 input not retained on disk
+frames_002_010,max_abs_diff_0.0 on identity redo including all ten when comparing 451-input+new-preprocess vs 452-output
