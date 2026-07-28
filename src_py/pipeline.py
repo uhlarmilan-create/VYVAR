@@ -61,8 +61,7 @@ from gaia_catalog_id import (
     normalize_gaia_source_id,
     read_vyvar_csv,
 )
-from infolog import log_event, log_exception
-from infolog_session import log_milestone
+from infolog import log_event, log_exception, log_milestone
 from optics_selection import resolve_optics_ids_for_platesolve
 from calibration import (
     CALIBRATION_LIBRARY_NATIVE_BINNING,

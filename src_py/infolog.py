@@ -126,6 +126,16 @@ def get_lines() -> list[str]:
         return list(_lines)
 
 
+def write_run_infolog(draft_dir: str | Path, entries: list[str] | None = None) -> str | None:
+    """Single entry point to persist the operator infolog for a completed run."""
+    return save_infolog_to_disk(draft_dir, entries)
+
+
+def log_phase_boundary(phase: str, *, status: str = "start") -> None:
+    """Timestamped phase milestone (durable; survives ring-buffer eviction)."""
+    log_milestone(f"[PHASE] {phase} {status}")
+
+
 def save_infolog_to_disk(draft_dir: str | Path, entries: list[str] | None = None) -> str | None:
     """
     Save current Infolog entries to ``draft_dir/infolog_YYYYMMDD_HHMMSS.txt``.
@@ -189,6 +199,7 @@ class InfologHandler(logging.Handler):
             msg = self.format(record)
             with _lock:
                 _lines.append(msg)
+                _append_session_line(msg)
         except Exception:  # noqa: BLE001
             self.handleError(record)
 
