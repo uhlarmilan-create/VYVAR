@@ -512,11 +512,20 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         LOGGER.info("[NightRun] %s", msg)
         if params.progress_cb is not None:
             params.progress_cb(msg)
+        if msg.startswith("Step "):
+            from infolog import log_phase_boundary  # noqa: PLC0415
+
+            _phase = msg.split(":", 1)[0].replace("Step ", "").strip()
+            if _phase:
+                log_phase_boundary(_phase, status="start")
 
     def _t(label: str, t0: float) -> None:
         elapsed = time.time() - t0
         timings[label] = elapsed
         LOGGER.info("[NightRun] [OK] %s - %.1fs", label, elapsed)
+        from infolog import log_milestone  # noqa: PLC0415
+
+        log_milestone(f"[PHASE] {label} done {elapsed:.1f}s")
 
     prog_cb = _make_progress_cb(params.progress_cb)
 
@@ -606,13 +615,26 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
         # Step 2: Import
         _p("Step 2: Import session")
+        from observer_location import (  # noqa: PLC0415
+            apply_resolved_observer_location_to_config,
+            resolve_observer_location_for_run,
+        )
+
+        _resolved_site = resolve_observer_location_for_run(
+            cfg.database_path,
+            explicit_location_id=params.location_id,
+            cfg=cfg,
+            source_hint="cli_arg" if params.location_id is not None else None,
+        )
+        apply_resolved_observer_location_to_config(cfg, _resolved_site)
         t0 = time.time()
         import_result = smart_import_session(
             plan=plan,
             pipeline=pipeline,
             id_equipment=eq_id,
             id_telescope=tel_id,
-            id_location=int(params.location_id) if params.location_id is not None else None,
+            id_location=_resolved_site.location_id,
+            location_source=_resolved_site.source,
             cfg=cfg,
         )
         _t("smart_import_session", t0)
@@ -628,37 +650,16 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
         result.draft_dir = ap_root.resolve()
 
-        from infolog_session import log_milestone, start_infolog_session  # noqa: PLC0415
+        from infolog import log_milestone, log_phase_boundary, start_infolog_session  # noqa: PLC0415
 
         start_infolog_session(result.draft_dir)
-        _loc_id = int(params.location_id) if params.location_id is not None else int(cfg.observer_location_id)
-        if _loc_id <= 0:
-            raise ValueError(
-                "observer_location_id is unset (config key observer_location_id); "
-                "cannot import without a valid LOCATION row."
-            )
-        from database import get_observer_location_by_id  # noqa: PLC0415
-
-        _loc_row = get_observer_location_by_id(cfg.database_path, _loc_id)
-        if not _loc_row:
-            raise ValueError(
-                f"observer_location_id={_loc_id} not found in LOCATION table "
-                f"(config key observer_location_id)."
-            )
-        cfg.observer_location_id = _loc_id
-        cfg.observer_lat = float(_loc_row["lat"])
-        cfg.observer_lon = float(_loc_row["lon"])
-        cfg.observer_alt_m = float(_loc_row["alt_m"])
-        cfg.observer_location_name = str(_loc_row.get("name") or "")
-        log_milestone(
-            f"[SITE] observer location id={_loc_id} name={_loc_row.get('name')} "
-            f"lat={_loc_row.get('lat')} lon={_loc_row.get('lon')} source=config+import"
-        )
+        log_milestone(_resolved_site.milestone_line())
 
         from draft_provenance import (
             CALIBRATION_MODE_PRE,
             CALIBRATION_MODE_VYVAR,
             record_draft_calibration_provenance,
+            record_observer_location_provenance,
         )
 
         record_draft_calibration_provenance(
@@ -666,6 +667,11 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             archive_path=ap_root,
             draft_id=draft_id,
             calibration_mode=CALIBRATION_MODE_PRE if params.pre_calibrated_mode else CALIBRATION_MODE_VYVAR,
+        )
+        record_observer_location_provenance(
+            archive_path=ap_root,
+            draft_id=draft_id,
+            resolved=_resolved_site,
         )
 
         md = Path(plan.dark_master) if getattr(plan, "dark_master", None) else None
@@ -1148,10 +1154,10 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         timings["total"] = time.time() - t_run
         result.phase_timings = timings
         if result.draft_dir is not None:
-            from infolog_session import end_infolog_session, save_infolog_to_disk  # noqa: PLC0415
+            from infolog import end_infolog_session, write_run_infolog  # noqa: PLC0415
 
             end_infolog_session()
-            saved = save_infolog_to_disk(result.draft_dir)
+            saved = write_run_infolog(result.draft_dir)
             if saved:
                 _p(f"Infolog saved: {Path(saved).name}")
         _p(

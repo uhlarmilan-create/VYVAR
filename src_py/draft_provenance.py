@@ -124,6 +124,25 @@ def resolve_calibration_mode(
     return CALIBRATION_MODE_VYVAR
 
 
+def record_observer_location_provenance(
+    *,
+    archive_path: Path | str,
+    draft_id: int,
+    resolved: Any,
+) -> Path:
+    """Persist resolved observer site into draft_manifest.json."""
+    prov = resolved.as_provenance_dict() if hasattr(resolved, "as_provenance_dict") else dict(resolved)
+    root = draft_archive_root(archive_path)
+    manifest = load_draft_manifest(root)
+    mode = str(manifest.get("calibration_mode") or CALIBRATION_MODE_VYVAR)
+    return write_draft_manifest(
+        root,
+        draft_id=int(draft_id),
+        calibration_mode=mode,
+        extra={"observer_location": prov},
+    )
+
+
 def record_draft_calibration_provenance(
     *,
     db: Any,

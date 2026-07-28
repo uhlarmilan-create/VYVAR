@@ -3498,37 +3498,19 @@ class VyvarDatabase:
         id_location: int | None,
         cfg_location_id: int,
     ) -> tuple[int, str | None]:
-        """Return a valid ``LOCATION.ID`` for import, with an optional warning."""
-        candidates: list[int] = []
-        if id_location is not None:
-            try:
-                explicit = int(id_location)
-            except (TypeError, ValueError):
-                explicit = 0
-            if explicit > 0:
-                candidates.append(explicit)
-        try:
-            cfg_id = int(cfg_location_id)
-        except (TypeError, ValueError):
-            cfg_id = 0
-        if cfg_id > 0 and cfg_id not in candidates:
-            candidates.append(cfg_id)
+        """Return a valid ``LOCATION.ID`` for import (delegates to unified resolver)."""
+        from observer_location import resolve_observer_location_for_run
 
-        for idx, lid in enumerate(candidates):
-            if self._fk_row_exists("LOCATION", lid):
-                if idx > 0:
-                    return lid, (
-                        f"Observer location id={candidates[0]} is not in the database; "
-                        f"using location id={lid} instead."
-                    )
-                return lid, None
+        class _CfgShim:
+            observer_location_id = int(cfg_location_id)
 
-        raise ValueError(
-            "Cannot import: observer location unresolved "
-            f"(config key observer_location_id={cfg_id if cfg_id > 0 else 'unset'}, "
-            f"id_location={id_location!r}). "
-            "Set observer_location_id in config.json to a valid LOCATION.ID."
+        resolved = resolve_observer_location_for_run(
+            self.db_path,
+            explicit_location_id=id_location,
+            cfg=_CfgShim(),
+            source_hint="cli_arg" if id_location is not None else None,
         )
+        return int(resolved.location_id), None
 
     def insert_observation(
         self,

@@ -1716,19 +1716,20 @@ def smart_import_session(
     id_equipment: int,
     id_telescope: int,
     id_location: int | None = None,
+    location_source: str | None = None,
     cfg: Any | None = None,
 ) -> ImportResult:
     """Perform import according to SmartImportPlan decision tree (DB write)."""
     _cfg = cfg if cfg is not None else getattr(pipeline, "config", None)
-    _cfg_loc_id = (
-        int(getattr(_cfg, "observer_location_id", 0) or 0) if _cfg is not None else 0
+    from observer_location import resolve_observer_location_for_run
+
+    _resolved = resolve_observer_location_for_run(
+        pipeline.db.db_path,
+        explicit_location_id=id_location,
+        cfg=_cfg,
+        source_hint=location_source,  # type: ignore[arg-type]
     )
-    _id_loc, _loc_warn = pipeline.db.resolve_import_location_id(
-        id_location=id_location,
-        cfg_location_id=_cfg_loc_id,
-    )
-    if _loc_warn:
-        plan.warnings.append(_loc_warn)
+    _id_loc = int(_resolved.location_id)
 
     if not plan.lights_files:
         raise FileNotFoundError("Missing 'lights' directory! Import aborted.")

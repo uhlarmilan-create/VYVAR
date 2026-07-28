@@ -28,8 +28,9 @@ from infolog import (
     last_job_snapshot,
     log_event,
     log_exception,
+    write_run_infolog,
+    start_infolog_session,
 )
-from infolog_session import save_infolog_to_disk, start_infolog_session
 from run_preflight_log import write_run_preflight_error_log
 from importer import smart_import_session, smart_scan_source
 from optics_selection import (
@@ -88,7 +89,7 @@ def _vyvar_try_save_infolog_to_disk(cfg: AppConfig) -> str | None:
     )
     if not draft_dir:
         return None
-    saved_path = save_infolog_to_disk(draft_dir, get_lines())
+    saved_path = write_run_infolog(draft_dir, get_lines())
     if saved_path:
         log_event(f"Infolog saved -> {saved_path}")
     return saved_path
@@ -146,6 +147,7 @@ def _run_vyvar_full_pipeline(
         apply_pre_calibrated_import_plan,
         calibration_mode_report_line,
         record_draft_calibration_provenance,
+        record_observer_location_provenance,
         resolve_draft_lights_root,
     )
     from photometry_core import compute_auto_fwhm_limit, run_full_photometry_pipeline
@@ -162,6 +164,9 @@ def _run_vyvar_full_pipeline(
     _RUNVYVAR_FW_KEY = "_runvyvar_fwhm_threshold"
 
     def _update(proces: str, stav: str = "Running...") -> None:
+        from infolog import log_phase_boundary  # noqa: PLC0415
+
+        log_phase_boundary(proces, status="start")
         log_event(f"[{_run_label}] > {proces}")
         if footer_placeholder is not None:
             _vyvar_footer_set(
@@ -226,6 +231,9 @@ def _run_vyvar_full_pipeline(
     try:
         st.session_state.pop("vyvar_last_preflight_error_log", None)
         st.session_state.pop("vyvar_last_preflight_error_message", None)
+        from infolog import log_phase_boundary  # noqa: PLC0415
+
+        log_phase_boundary("run_vyvar", status="start")
         _root = Path(str(source_root).strip())
         if not _root.is_dir():
             return _fail("Scan Source + Import", RuntimeError(f"Invalid Source Directory: {_root}"))
@@ -285,11 +293,25 @@ def _run_vyvar_full_pipeline(
         else:
             apply_pre_calibrated_import_plan(plan)
 
+        from observer_location import (  # noqa: PLC0415
+            apply_resolved_observer_location_to_config,
+            resolve_observer_location_for_run,
+        )
+
+        _resolved_site = resolve_observer_location_for_run(
+            cfg.database_path,
+            explicit_location_id=int(cfg.observer_location_id),
+            cfg=cfg,
+            source_hint="ui_selection",
+        )
+        apply_resolved_observer_location_to_config(cfg, _resolved_site)
         result = smart_import_session(
             plan=plan,
             pipeline=pipeline,
             id_equipment=int(import_equipment_id),
             id_telescope=int(import_telescope_id),
+            id_location=_resolved_site.location_id,
+            location_source=_resolved_site.source,
             cfg=cfg,
         )
         st.session_state["vyvar_last_import_equipment_id"] = int(import_equipment_id)
@@ -302,14 +324,20 @@ def _run_vyvar_full_pipeline(
 
         ap = Path(str(result.archive_path))
         ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
-        from infolog_session import start_infolog_session  # noqa: PLC0415
+        from infolog import log_milestone, log_phase_boundary, start_infolog_session  # noqa: PLC0415
 
         start_infolog_session(ap_root)
+        log_milestone(_resolved_site.milestone_line())
         record_draft_calibration_provenance(
             db=pipeline.db,
             archive_path=ap_root,
             draft_id=int(_did),
             calibration_mode=_calibration_mode,
+        )
+        record_observer_location_provenance(
+            archive_path=ap_root,
+            draft_id=int(_did),
+            resolved=_resolved_site,
         )
 
         md = Path(plan.dark_master) if getattr(plan, "dark_master", None) else None
@@ -2642,7 +2670,7 @@ def render_infolog(cfg: AppConfig | None = None) -> None:
                 archive_root=_cfg.archive_root,
             )
             if _draft_dir:
-                saved = save_infolog_to_disk(_draft_dir, get_lines())
+                saved = write_run_infolog(_draft_dir, get_lines())
                 if saved:
                     st.success(f"Saved: {saved}")
                     log_event(f"Infolog saved -> {saved}")
