@@ -1,0 +1,9 @@
+target_vsx_id,matched_gaia_lc_id,identity_gate_drop
+1499883638682689920,1499883638682689408,yes
+1500410236033012352,1500410613990135296,yes
+1498513166158147968,1498513269237363456,yes
+1499064433800590592,1499064399440851968,yes
+
+arithmetic,333_minus_325,8_files
+files_per_target,lightcurve_csv_plus_comp_quality_json,2
+premise_confirmed,yes

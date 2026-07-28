@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-27",
+  "updated": "2026-07-28",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -143,11 +143,11 @@
       "id": "VL-ANCHOR-WCSINV",
       "area": "photometry",
       "description": "In-Archive BO CVn Anchor #3 sky-surface snapshot draft_000435_snapshot_skysurface_20260716",
-      "verification": "scripts/session_baseline_check.py --full (core 1c48d9fc\u2026 n=325; extended 744bce94\u2026 n=487). Census fingerprint n_raw_dao=2552 matched=2842 targets=165; identity p95 baseline 1.54 px. Plan-regen 875 rows (873 VSX + 2 exo); frozen VT 245 rows.",
+      "verification": "scripts/session_baseline_check.py --full (core b7f980c0\u2026 n=325; extended 2c43bbbf\u2026 n=487). Census fingerprint n_raw_dao=2552 matched=2842 targets=165; identity p95 baseline 1.54 px. Plan-regen 875 rows (873 VSX + 2 exo); frozen VT 245 rows.",
       "passes": true,
-      "last_verified": "2026-07-27",
-      "commit": "0833c5c",
-      "notes": "Re-cut 2026-07-27 (PHASE0-IDENTITY-GATE CLOSE-2): science-justified identity join drops 4 spurious gaia_dr3_direct actives (Gaia DR3 1499883638682689920, 1500410236033012352, 1498513166158147968, 1499064433800590592); active 169\u2192165; TOI-3919 retained via exo identity join. Supersedes core 03d8fb6491bc3c221f89f87acf22b929cece74c60951cf19bda80699180fb989 / extended bbfcc92e7ac5c4c5edfe0f99353aca9d03a987f99407352217e82875ed342892 (2026-07-20 sigma-notes cut). Gate coverage: plan-regen exercises VSX\u2192Gaia matcher (875 rows); photometry SHA exercises identity join on frozen VT. Frozen anchor inputs (MASTERSTAR.fits, masterstars_full_match.csv, aligned lights) date 2026-07-16 and predate SKY-SURFACE regression 013cb0c -- reproducible from frozen inputs, not rebuildable from raw until SKY-SURFACE lands (see CURSOR_RESULT_skysurface_regression.md). Prior: Re-cut 2026-07-20 (ANCHOR-RECUT-SIGMA-NOTES); CYTHON-RELEASE-1 + RELEASE-CLOSE @ 6a05390.",
+      "last_verified": "2026-07-28",
+      "commit": "pending",
+      "notes": "Re-cut 2026-07-28 (GOLDEN-ASSET-RECUT Part 3): schema harmonisation only -- additive delta_mag_sysrem column on all light curves (NaN when SysRem off); BJD/HJD/magnitudes/flags/comp sets bit-identical vs prior anchor. Two agreeing --full runs. Supersedes core 1c48d9fc0056bc513c379fe1fb873e25215e5910f873e55e4a0b4fd8b5995d9f / extended 744bce947ed47463227791bdac62dbec6885edfb1b637ae0a597f9d1973a71ba (2026-07-27 identity-gate re-cut). Prior identity-gate note (2026-07-27 CLOSE-2) unchanged.",
       "census_fingerprint": {
         "n_raw_dao": 2552,
         "matched": 2842,
@@ -185,10 +185,10 @@
         }
       },
       "identity_p95_baseline_px": 1.536099044764055,
-      "core_sha": "1c48d9fc0056bc513c379fe1fb873e25215e5910f873e55e4a0b4fd8b5995d9f",
-      "extended_sha": "744bce947ed47463227791bdac62dbec6885edfb1b637ae0a597f9d1973a71ba",
-      "superseded_core_sha": "03d8fb6491bc3c221f89f87acf22b929cece74c60951cf19bda80699180fb989",
-      "superseded_extended_sha": "bbfcc92e7ac5c4c5edfe0f99353aca9d03a987f99407352217e82875ed342892"
+      "core_sha": "b7f980c09e238b855c2ee1b9518061777934d8f0a61eaec7431cda4f537aed52",
+      "extended_sha": "2c43bbbf06921fbef46fb6a4ed1f8afccdabacaa5827b8ec50372de0e3816205",
+      "superseded_core_sha": "1c48d9fc0056bc513c379fe1fb873e25215e5910f873e55e4a0b4fd8b5995d9f",
+      "superseded_extended_sha": "744bce947ed47463227791bdac62dbec6885edfb1b637ae0a597f9d1973a71ba"
     },
     {
       "id": "F-435-EXPORT-GHOSTS",
@@ -206,30 +206,34 @@
       "description": "INVARIANTS P1 golden mini draft_000435_p1mini (16-frame DATE-OBS stride from draft_000435)",
       "verification": "VYVAR_INVARIANTS_P1=1 pytest dev/tests/test_invariants_p1_golden.py -q (headless SHA + UI-order identity + census bands + physics)",
       "passes": true,
-      "last_verified": "2026-07-19",
-      "commit": "fbe1be9",
-      "notes": "Locked after two independent wipe+rebuild+headless runs produced byte-identical science outputs. Scope: photometry-ready (in-draft Raw/darks/flats have no local masters; CalibrationLibrary). Chain coverage matches session_baseline --full (run_full_photometry_pipeline). Variability no-op and short-baseline lc_quality are expected at n=16.",
+      "last_verified": "2026-07-28",
+      "commit": "pending",
+      "notes": "Re-cut 2026-07-28 (GOLDEN-ASSET-RECUT Part 2): identity gate (4 mis-associated gaia_dr3_direct targets removed) plus delta_mag_sysrem schema column. Two independent wipe+rebuild+headless runs byte-identical. Supersedes core 074ae881e0f589b41a998db3bd64e87cb8179e3dae2e8bce87dc234fb0adfeec n=333 / extended 66285d3f601e70a472aed90834d6f3298eb0f53a7330bc0a12602c634fdd03ba n=497 (2026-07-19 lock). Scope unchanged: photometry-ready mini.",
       "mini_name": "draft_000435_p1mini",
       "source_draft": "draft_000435",
       "setup": "NoFilter_60_2",
       "n_frames": 16,
       "selection": "even_stride_date_obs_first_included_aligned_only",
       "inputs_manifest_sha256": "86ab0d9ea6e41264323badb291dfba77756192370cd3486db0f5eb049088bb91",
-      "core_sha": "074ae881e0f589b41a998db3bd64e87cb8179e3dae2e8bce87dc234fb0adfeec",
-      "core_n": 333,
-      "extended_sha": "66285d3f601e70a472aed90834d6f3298eb0f53a7330bc0a12602c634fdd03ba",
-      "extended_n": 497,
+      "core_sha": "e7976de18e4197e85e0120dcadf6bdae5ac0be73238be92f83c7cd87fa0fedee",
+      "core_n": 325,
+      "extended_sha": "d0e8f64b55806400aa7e305d97c79c7d4d03cb99b96e48ac44c81d7e087b3deb",
+      "extended_n": 485,
+      "superseded_core_sha": "074ae881e0f589b41a998db3bd64e87cb8179e3dae2e8bce87dc234fb0adfeec",
+      "superseded_extended_sha": "66285d3f601e70a472aed90834d6f3298eb0f53a7330bc0a12602c634fdd03ba",
+      "superseded_core_n": 333,
+      "superseded_extended_n": 497,
       "census": {
         "dao_pass1_vy_ndao": 2552,
         "n_detected_mean": 2777.5625,
         "n_matched_mean": 2638.5625,
         "identity_n_parent": 2842,
         "identity_p95_parent": 1.536099044764055,
-        "n_summary_targets": 169
+        "n_summary_targets": 165
       },
       "lock_timings_s": {
-        "run1": 611.6,
-        "run2": 574.7
+        "run1": 443.2,
+        "run2": 449.1
       }
     }
   ]
