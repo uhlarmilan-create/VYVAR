@@ -338,6 +338,35 @@ def _update_ledger_on_full_pass(commit: str) -> None:
     LEDGER_PATH.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
 
 
+def _check_catalog_provenance(
+    report: SessionReport,
+    *,
+    cfg: Any,
+    snap_meta: dict[str, Any],
+    run_meta: dict[str, Any],
+) -> bool:
+    from catalog_provenance import build_catalog_provenance_block, summarize_catalog_delta  # noqa: PLC0415
+
+    snap_prov = snap_meta.get("provenance") if isinstance(snap_meta.get("provenance"), dict) else {}
+    exp = snap_prov.get("catalog_databases")
+    if not exp:
+        exp = build_catalog_provenance_block(cfg)
+    run_prov = run_meta.get("provenance") if isinstance(run_meta.get("provenance"), dict) else {}
+    act = run_prov.get("catalog_databases")
+    issues = summarize_catalog_delta(exp, act)
+    if issues:
+        report.add("full-catalog-provenance", "FAIL", "; ".join(issues)[:400])
+        return False
+    gaia = (act or {}).get("gaia_dr3") or {}
+    vsx = (act or {}).get("vsx_local") or {}
+    report.add(
+        "full-catalog-provenance",
+        "PASS",
+        f"gaia rows={gaia.get('row_count')} g<={gaia.get('max_g_mag')} vsx rows={vsx.get('row_count')}",
+    )
+    return True
+
+
 def _check_plan_regen_fingerprint(
     report: SessionReport,
     *,
@@ -461,6 +490,7 @@ def run_full_baseline(report: SessionReport) -> None:
         report.add("full-snapshot", "FAIL", f"missing {snapshot}")
         return
     snap_meta_path = snapshot / "platesolve" / SETUP / "photometry" / "pipeline_meta.json"
+    snap_meta: dict[str, Any] = {}
     if snap_meta_path.is_file():
         from scripts.provenance_guard import parseable_git_hash, provenance_block  # noqa: PLC0415
 
@@ -523,6 +553,12 @@ def run_full_baseline(report: SessionReport) -> None:
     elapsed = (datetime.now(timezone.utc) - t0).total_seconds()
     report.add("full-pipeline", "PASS", f"{elapsed:.0f}s -> {work_root.relative_to(REPO_ROOT)}")
 
+    run_meta_path = out_phot / "pipeline_meta.json"
+    run_meta: dict[str, Any] = {}
+    if run_meta_path.is_file():
+        run_meta = json.loads(run_meta_path.read_text(encoding="utf-8"))
+    catalog_ok = _check_catalog_provenance(report, cfg=cfg, snap_meta=snap_meta, run_meta=run_meta)
+
     cmp = compare_photometry_science_meaningful(
         work_root,
         snapshot,
@@ -563,7 +599,13 @@ def run_full_baseline(report: SessionReport) -> None:
         )
     else:
         report.add("full-snapshot-sha-core", "PASS", f"{snap_core_sha[:16]}... n={snap_core_n}")
-    if core_sha == snap_core_sha and core_n == snap_core_n:
+    if not catalog_ok:
+        report.add(
+            "full-photometry-sha-core",
+            "FAIL",
+            "input catalogue changed (see full-catalog-provenance)",
+        )
+    elif core_sha == snap_core_sha and core_n == snap_core_n:
         report.add(
             "full-photometry-sha-core",
             "PASS",

@@ -6,6 +6,35 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+---
+
+## INFOLOG-AUTHORITY - durable session log over ring buffer (2026-07-29)
+
+**Problem.** Two infolog files per run with the same nominal role: a durable session append log
+(written from run start) and a late ring-buffer export (8000-line cap). Guard lines such as
+`INV-PREP-01` appeared in the durable file but not in the export the UI auto-saved after RUN.
+
+**Rule.** `write_run_infolog()` **finalizes the durable session file** when one is open: flush,
+close, prepend `# authoritative: durable session log (complete operator record)` and the milestone
+block. Ring-buffer-only saves (no session) are tagged `# partial: ring-buffer tail only`. The
+Streamlit tab may still show the live ring buffer for tail viewing; disk artefact for operators is
+the durable file.
+
+---
+
+## CATALOG-PROVENANCE - fingerprint catalog DBs in run meta (2026-07-29)
+
+**Problem.** Anchor `plan_regen_fingerprint` depends on Gaia cone contents (15085 sources at
+G<=17.5 on anchor night). Rebuilding the Gaia DB (e.g. GAIA-PM-COLUMNS) would fail the anchor
+with an anonymous SHA mismatch.
+
+**Rule.** Every photometry run records `provenance.catalog_databases` with path, size, mtime,
+row count, and `fingerprint_sha256` via `sha256(size + first_1MiB + last_1MiB)` (full file hash
+over ~53 GB impractical). Anchor `--full` gate `full-catalog-provenance` compares run vs snapshot;
+on mismatch reports **input catalogue changed** with field-level deltas before photometry SHA fail.
+
+---
+
 ## RELEASE-TREE-HYGIENE - post-bundle compiled-artifact cleanup (2026-07-23)
 
 **Problem.** WSL/MSVC Cython builds leave `.pyd`/`.so` beside sources (and occasionally

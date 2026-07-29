@@ -6913,6 +6913,12 @@ def _build_pipeline_provenance_block(cfg: Any, *, entry_point: str) -> dict[str,
         "entry_point": entry_point,
         "labbe_rng_seed_policy": "content_frame_hash_v1",
     }
+    try:
+        from catalog_provenance import build_catalog_provenance_block  # noqa: PLC0415
+
+        block["catalog_databases"] = build_catalog_provenance_block(cfg)
+    except Exception as exc:  # noqa: BLE001
+        block["catalog_databases_error"] = str(exc)
     if git_dirty is True:
         block["git_dirty_files"] = dirty_files
         try:

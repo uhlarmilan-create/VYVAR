@@ -2,7 +2,23 @@
 
 **Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
 
-Last updated: **2026-07-28** (draft 454 analysis; entry-point equivalence 454 vs 455).
+Last updated: **2026-07-29** (session close 2026-07-26..28: infolog authority, catalog provenance, disk cleanup plan).
+
+## Session close 2026-07-26 .. 2026-07-28 (BO CVn arc)
+
+Eight production defects closed or guarded; entry-point equivalence demonstrated (454 UI vs 455
+headless byte-identical on 198 LCs). See JOURNAL entry and `dev/results/CURSOR_RESULT_session_close.md`.
+
+**New wiring this close:**
+- **Infolog:** durable session log is the authoritative operator artefact; ring-buffer export labeled partial.
+- **CATALOG-PROVENANCE:** Gaia + VSX DB identity (path, size, mtime, head/tail SHA, row count) in
+  `pipeline_meta.json`; anchor `--full` compares fingerprints and reports *input catalogue changed*.
+- **INV-PREP-01:** measured healthy **0.03x** (454) vs regression **20-60x**; threshold **10x** kept
+  (margin documented in `VYVAR_INVARIANTS.md`).
+
+**Disk cleanup (operator):** evidence for `DRAFT451-CAL-FRAME001` extracted to
+`dev/results/context/frame001_evidence/`; deletion plan + manifest in session-close result -- agent did
+not delete under `Archive/`.
 
 ## POST-451 remediation (2026-07-27)
 

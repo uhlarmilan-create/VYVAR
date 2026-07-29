@@ -89,7 +89,7 @@ def _vyvar_try_save_infolog_to_disk(cfg: AppConfig) -> str | None:
     )
     if not draft_dir:
         return None
-    saved_path = write_run_infolog(draft_dir, get_lines())
+    saved_path = write_run_infolog(draft_dir)
     if saved_path:
         log_event(f"Infolog saved -> {saved_path}")
     return saved_path
@@ -2652,9 +2652,10 @@ def render_infolog(cfg: AppConfig | None = None) -> None:
     st.subheader("Infolog")
     st.caption(
         "Detailed trace: `pipeline`, `importer` (INFO), and long job steps "
-        "(QC / preprocessing / plate solve). Auto-saved to "
-        "`draft_dir/infolog_YYYYMMDD_HHMMSS.txt` after RUN VYVAR. "
-        "Buffer is lost after Streamlit restart."
+        "(QC / preprocessing / plate solve). After RUN VYVAR the **durable session log** "
+        "(complete record incl. guard lines) is finalized under "
+        "`draft_dir/infolog_YYYYMMDD_HHMMSS.txt`. The tab below shows the live ring buffer "
+        "(last 8000 lines only). Buffer is lost after Streamlit restart."
     )
     col_a, col_b, col_c = st.columns(3)
     with col_a:
@@ -2670,7 +2671,7 @@ def render_infolog(cfg: AppConfig | None = None) -> None:
                 archive_root=_cfg.archive_root,
             )
             if _draft_dir:
-                saved = write_run_infolog(_draft_dir, get_lines())
+                saved = write_run_infolog(_draft_dir)
                 if saved:
                     st.success(f"Saved: {saved}")
                     log_event(f"Infolog saved -> {saved}")

@@ -8,6 +8,52 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+---
+
+## 2026-07-29 -- SESSION CLOSE (2026-07-26 .. 2026-07-28, BO CVn arc)
+
+Three-day arc on BO CVn wide rig: wrong-star Phase 0, sky-surface recurrence (F-431), path bugs,
+preprocess performance, golden-asset staleness, and entry-point equivalence. Result:
+`dev/results/CURSOR_RESULT_session_close.md`.
+
+### What broke and what fixed it
+
+| # | Finding | Fix / guard |
+|---|---------|-------------|
+| 1 | **Phase 0 wrong-star:** `a0e3431` removed mag limit; replacement matched by **48.85"** proximity and adopted masterstar `catalog_id` without planner check -> **67** wrong targets on BO CVn (47 >1 mag brighter; worst G=8.04 on ROT@17.66). Predicted chance coincidences 60.1 vs observed 67. | Two-step matcher: VSX->Gaia cross-match with 1% contamination budget (`r_max` from density); likelihood ratio for ranking only; Phase 0 **identity join, no radius**. |
+| 2 | **Sky-surface regression (F-431):** `013cb0c` retired `processed/` tree; order-2 subtract lost -> `bg_std` -26%, threshold at **1.56 sigma**, pass-1 DAO 3.5x, ~2600 spurious detections (40% DAO_ONLY vs 3.7% anchor). | Restored on mono preprocess path (`ff08002`); **INV-PREP-01** guard wired. |
+| 3 | Exoplanet promotion path resolved against CWD not `data_root`. | Single resolution rule; fail-loud. |
+| 4 | Headless observer location defaulted Dablice; UI used operator selection. | One resolver; no defaults; provenance records source. |
+| 5 | `delta_mag_sysrem` missing on some entry points. | Always written. |
+| 6 | Preprocess **18.3 s/frame -> 0.29 s/frame** (62x). Source masking 1.35 s; polynomial 0.055 s -- numerically neutral fix, subsampled grid rejected. 149/150 frames byte-identical old vs new. | Profile-first mask fix. |
+| 7 | `VL-P1-GOLD` stale (`core_n=333`); fixture could PASS without running. | Re-cut; fixture executes pipeline. |
+| 8 | Entry-point equivalence unproven across UI vs headless. | Draft **454** (UI) vs **455** (headless): **byte-identical** on 198 LCs. |
+
+### Process lessons (transferable)
+
+- Closing a defect without a regression guard is how it returns (F-431 closed 2026-07-16, back 2026-07-22 via housekeeping).
+- Harness off the production path cannot characterise production (+1.1% photutils claim was config FWHM 2.5 vs production ~3.23 px).
+- Gates must cover the layer where change happens (plan-time VSX export, MASTERSTAR/detection, cal/preprocess/align -- all three gaps now in STATE NOT guaranteed).
+- A gate that can pass without running is not a gate (P1 fixture; headless guards missing from exported infolog until this close).
+- State where a target number comes from before comparing (~283 masterstars, 160-175 actives, 178/64/1/2 histogram, anchor 165 vs live 201) -- Rule 0.1.
+
+### Session-close wiring (2026-07-29)
+
+- **Infolog authority:** durable session append log finalized as operator artefact; ring-buffer-only export tagged `# partial: ring-buffer tail only`.
+- **INV-PREP-01 threshold:** measured healthy **0.03x** (454); regression **20-60x**; threshold **10x** kept (~330x below healthy).
+- **CATALOG-PROVENANCE:** Gaia (211,712,600 rows, G<=17.5) + VSX (7,827,904 rows) fingerprinted in provenance; anchor compares and says *input catalogue changed* on mismatch.
+
+### Disk cleanup (operator action -- not executed by agent)
+
+Evidence for frame-001 cal delta copied to `dev/results/context/frame001_evidence/`. Manifest:
+`dev/results/context/deleted_drafts.md`. **~42.1 GB** reclaimable (435 Raw+cal 2.4 GB + drafts 438,448-455 39.6 GB).
+
+**Backup warning:** anchor snapshot, working draft, and P1 mini live only under gitignored `Archive/` on one disk:
+`draft_000435` (~6.0 GB), `draft_000435_snapshot_skysurface_20260716` (~6.0 GB), `draft_000435_p1mini` (~0.7 GB).
+Detection behaviour changed since 2026-07-16 -- rebuild from raw would not reproduce them.
+
+---
+
 ## 2026-07-24 -- FIELD-RUN-FINDINGS + session close (FI Boo first real E2E)
 
 **FIRST REAL FIELD E2E (Milan Linux, preview-20260723):** FI Boo, draft_000001,

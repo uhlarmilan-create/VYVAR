@@ -128,7 +128,59 @@ def get_lines() -> list[str]:
 
 def write_run_infolog(draft_dir: str | Path, entries: list[str] | None = None) -> str | None:
     """Single entry point to persist the operator infolog for a completed run."""
+    return _finalize_or_save_infolog(draft_dir, entries)
+
+
+def _finalize_or_save_infolog(draft_dir: str | Path, entries: list[str] | None = None) -> str | None:
+    """Prefer the durable session log as the authoritative operator artefact."""
+    global _session_log_path, _session_log_file
+    session_path = _session_log_path
+    if session_path is not None:
+        path = Path(session_path)
+        try:
+            if _session_log_file is not None:
+                _session_log_file.flush()
+                _session_log_file.close()
+                _session_log_file = None
+            if path.is_file():
+                _mark_authoritative_session_infolog(path)
+                _session_log_path = None
+                return str(path)
+        except Exception as exc:  # noqa: BLE001
+            logging.getLogger(__name__).warning("[INFOLOG] finalize session log failed: %s", exc)
+        finally:
+            _session_log_path = None
+            _session_log_file = None
     return save_infolog_to_disk(draft_dir, entries)
+
+
+def _mark_authoritative_session_infolog(path: Path) -> None:
+    """Tag durable session file as the complete operator record."""
+    text = path.read_text(encoding="utf-8")
+    marker = "# authoritative: durable session log (complete operator record)"
+    if marker in text:
+        return
+    lines = text.splitlines(keepends=True)
+    insert_at = 0
+    for i, ln in enumerate(lines):
+        if ln.startswith("#") and "====" not in ln:
+            insert_at = i + 1
+        else:
+            break
+    header = marker + "\n"
+    milestones = get_milestones()
+    if milestones and "milestones (never evicted)" not in text:
+        header += "# --- milestones (never evicted) ---\n"
+        for m in milestones:
+            header += f"{m}\n"
+        header += "\n"
+    lines.insert(insert_at, header)
+    path.write_text("".join(lines), encoding="utf-8")
+
+
+def get_active_session_log_path() -> Path | None:
+    """Path to the durable session log for the current run, if any."""
+    return _session_log_path
 
 
 def log_phase_boundary(phase: str, *, status: str = "start") -> None:
@@ -154,6 +206,7 @@ def save_infolog_to_disk(draft_dir: str | Path, entries: list[str] | None = None
             f.write(f"# VYVAR Infolog - {ts}\n")
             f.write(f"# Draft: {root}\n")
             f.write("# timestamps: UTC\n")
+            f.write("# partial: ring-buffer tail only (no active session log)\n")
             f.write("#" + "=" * 60 + "\n\n")
             if milestones:
                 f.write("# --- milestones (never evicted) ---\n")
@@ -178,6 +231,7 @@ def clear_log() -> None:
     with _lock:
         _lines.clear()
         _milestones.clear()
+    end_infolog_session()
 
 
 def last_job_snapshot(obj: Any) -> None:

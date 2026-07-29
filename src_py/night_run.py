@@ -1154,9 +1154,8 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         timings["total"] = time.time() - t_run
         result.phase_timings = timings
         if result.draft_dir is not None:
-            from infolog import end_infolog_session, write_run_infolog  # noqa: PLC0415
+            from infolog import write_run_infolog  # noqa: PLC0415
 
-            end_infolog_session()
             saved = write_run_infolog(result.draft_dir)
             if saved:
                 _p(f"Infolog saved: {Path(saved).name}")
