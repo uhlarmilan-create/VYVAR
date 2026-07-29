@@ -63,8 +63,9 @@ One-time WSL setup:
 sudo apt update && sudo apt install -y python3-dev gcc build-essential
 cd /mnt/c/ASTRO/python/VYVAR   # or clone inside WSL
 python3 build/setup_cython.py build
-python3 dev/tools/cython_release/bundle/build_bundle.py --platform linux-x64 --tag preview-YYYYMMDD
-python3 dev/tools/cython_release/bundle/smoke_bundle.py --artifact dist/release/VYVAR-preview-YYYYMMDD-linux-x64.tar.gz
+export VYVAR_BUNDLE_DIST=/tmp/vyvar_bundle_dist   # native FS avoids terminfo case collisions on /mnt/c/
+python3 dev/tools/cython_release/bundle/build_bundle.py --platform linux-x64 --tag preview-VYVAR.0.9.0
+python3 dev/tools/cython_release/bundle/smoke_bundle.py --artifact /tmp/vyvar_bundle_dist/VYVAR-preview-VYVAR.0.9.0-linux-x64.tar.gz
 ```
 
 **Future:** GitHub Actions matrix (win64 + linux-x64) - not implemented in RELEASE-2.
@@ -116,4 +117,5 @@ See `dev/tools/cython_release/bundle/runtime_pins.py`:
 
 ## Preview versioning (R4)
 
-Tags: `preview-YYYYMMDD` with GitHub pre-release flag. Semantic `v1.0.0` later.
+Tags: `preview-VYVAR.<semver>` (e.g. `preview-VYVAR.0.9.0`) with GitHub pre-release flag.
+Earlier previews used `preview-YYYYMMDD`; semantic `v1.0.0` later.

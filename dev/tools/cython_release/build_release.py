@@ -62,7 +62,7 @@ def _extensions(modules: list[str]) -> list[Extension]:
 
 
 def _relocate_pyd_artifacts(modules: list[str], log: list[str]) -> None:
-    """Move cp312-*.pyd from repo root into src_py/ (setuptools inplace quirk on Windows)."""
+    """Move inplace build extensions from repo root into src_py/ (setuptools quirk)."""
     for name in modules:
         for pyd in REPO_ROOT.glob(f"{name}.cp*.pyd"):
             dest = SRC_PY / pyd.name
@@ -73,6 +73,11 @@ def _relocate_pyd_artifacts(modules: list[str], log: list[str]) -> None:
                 dest = SRC_PY / pyd.name
                 pyd.replace(dest)
                 log.append(f"relocated {pyd.name} -> src_py/")
+        for so in REPO_ROOT.glob(f"{name}*.so"):
+            if so.parent == REPO_ROOT:
+                dest = SRC_PY / so.name
+                so.replace(dest)
+                log.append(f"relocated {so.name} -> src_py/")
 
 
 def run_build(*, modules: list[str] | None = None, log_path: Path | None = None) -> Path:

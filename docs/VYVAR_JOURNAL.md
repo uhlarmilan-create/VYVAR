@@ -10,6 +10,17 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+---
+
+## 2026-07-29 -- RELEASE BUILD preview-VYVAR.0.9.0
+
+Compiled rebuild (**90** modules), all release gates PASS on compiled build (anchor core
+`b7f980c0...` n=325 unchanged). Windows + Linux bundles built and smoke-tested; SHA256SUMS +
+release notes prepared. **Not published** -- Milan handover in `dev/results/CURSOR_RESULT_release_090.md`.
+Reprocessing warning for `preview-20260723` (missing sky-surface) leads release notes.
+
+---
+
 ## 2026-07-29 -- SESSION CLOSE (2026-07-26 .. 2026-07-28, BO CVn arc)
 
 Three-day arc on BO CVn wide rig: wrong-star Phase 0, sky-surface recurrence (F-431), path bugs,
