@@ -21,6 +21,44 @@ A confident narrative built from symptoms is the single thing that has repeatedl
 
 > "Nie riesit symptom -- hladat pricinu."
 
+## Task rules (adopted 2026-07-28)
+
+Three rules agreed during the 2026-07-26..28 session after repeated round trips. They exist to
+prevent the same failure shapes from recurring in Cursor tasks and result write-ups.
+
+### Rule 0.1 - Premise check before any work
+
+Every task, and every result, opens with two sentences: **what is being compared with what, and how
+the two differ.** If a target number is given, state where it came from and whether it is comparable
+to the thing being measured. If it is not comparable, say so and stop.
+
+*Why:* four task-level errors in one session had the same shape - a figure carried from one context
+into another where it did not apply (`~283 masterstars`, the `160-175 actives` band, the
+`178/64/1/2` histogram, and the anchor's 165 against a live plan's 201). Each cost a round trip.
+Every one would have been caught by writing those two sentences first.
+
+### Rule 0.2 - Commit and push the raw numbers, not only the interpretation
+
+Every diagnostic task ends by committing the underlying data - CSVs, log extracts, measurement
+tables - under `dev/results/context/session_YYYYMMDD*/`, **and pushing it**.
+
+*Why:* Claude has read-only GitHub access but none to the operator's disk. Analysis done from a
+written summary is analysis of someone else's reading. On one occasion the data was committed but
+not pushed, and the round trip happened anyway - commit alone does not satisfy this rule.
+
+Retention: 30 days or until the next reference cut, whichever comes first; CSV/JSON/text only;
+5 MB per session; SHA manifest instead of blobs when over cap.
+
+### Rule 0.3 - Run time is a first-class acceptance criterion
+
+Any task touching the science path reports run time per part, and correctness criteria alone are
+never sufficient acceptance.
+
+*Why:* the sky-surface restoration was accepted on seven correctness criteria with no timing
+criterion at all. It reintroduced a step that cost 18.3 s per frame - 38% of a run - and that was
+only discovered when the operator complained about a slow run, days later. The subsequent
+profile-first fix brought it to 0.29 s per frame with no change in output.
+
 ## 1. Where Claude is reliable vs must verify
 
 **Reliable -- lead confidently:**
