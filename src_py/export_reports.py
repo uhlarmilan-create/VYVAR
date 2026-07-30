@@ -47,6 +47,29 @@ class ExportFailure(TypedDict):
     reason: str
 
 
+def _accumulate_export_stat(export_stats: dict[str, int] | None, key: str, n: int = 1) -> None:
+    if export_stats is None:
+        return
+    export_stats[key] = int(export_stats.get(key, 0)) + int(n)
+
+
+def _count_err_scatter_unmatched_epochs(lc_df: pd.DataFrame) -> int:
+    if "err_scatter_unmatched" not in lc_df.columns:
+        return 0
+    col = lc_df["err_scatter_unmatched"]
+    if col.dtype == bool:
+        return int(col.sum())
+    return int(col.astype(str).str.strip().str.lower().isin(("true", "1", "yes", "t")).sum())
+
+
+def _maybe_set_airmass_citation(run_citation_ctx: Any, lc_df: pd.DataFrame) -> None:
+    if run_citation_ctx is None:
+        return
+    from photometry_core import lc_has_finite_airmass  # noqa: PLC0415
+
+    if lc_has_finite_airmass(lc_df):
+        run_citation_ctx.use_airmass = True
+
 def record_export_failure(
     failures: list[ExportFailure] | None,
     target_id: str,
@@ -77,8 +100,24 @@ def record_export_failure(
     )
 
 
-def log_export_batch_summary(failures: list[ExportFailure]) -> None:
+def log_export_batch_summary(
+    failures: list[ExportFailure],
+    export_stats: dict[str, int] | None = None,
+) -> None:
     """Emit operator-visible batch summary when any per-target exports failed or were empty."""
+    if export_stats:
+        _tb_ref = int(export_stats.get("time_base_refused") or 0)
+        _sc_un = int(export_stats.get("err_scatter_unmatched_epochs") or 0)
+        if _tb_ref:
+            logging.error(
+                "[EXPORT] time_base refused (non-BJD_TDB or unknown/mixed): %d target-method(s)",
+                _tb_ref,
+            )
+        if _sc_un:
+            logging.info(
+                "[EXPORT] err_scatter_unmatched epochs (err unchanged): %d total",
+                _sc_un,
+            )
     if not failures:
         return
     ids = sorted({f["target_id"] for f in failures})
@@ -883,6 +922,7 @@ def export_lightcurve_reports(
     active_methods: list[str] | None = None,
     proc_csv_cache: dict[str, pd.DataFrame] | None = None,
     export_failures: list[ExportFailure] | None = None,
+    export_stats: dict[str, int] | None = None,
 ) -> dict[str, Path]:
     """Generuje AAVSO a VAR.ASTRO subory pre jeden target."""
     fresh_cfg = cfg or AppConfig()
@@ -922,6 +962,49 @@ def export_lightcurve_reports(
             "no exportable LC points (flags/mag empty)",
         )
         return {}
+
+    from photometry_core import (  # noqa: PLC0415
+        TIME_BASE_BJD_TDB,
+        resolve_lc_time_base,
+    )
+
+    try:
+        _time_base = resolve_lc_time_base(lc_normal)
+    except ValueError as exc:
+        record_export_failure(
+            export_failures,
+            _target_id,
+            _export_method,
+            f"time_base invalid: {exc}",
+        )
+        _accumulate_export_stat(export_stats, "time_base_refused")
+        return {}
+
+    if _time_base != TIME_BASE_BJD_TDB:
+        record_export_failure(
+            export_failures,
+            _target_id,
+            _export_method,
+            f"time_base={_time_base}: export refused (AAVSO requires BJD_TDB)",
+        )
+        _accumulate_export_stat(export_stats, "time_base_refused")
+        return {}
+
+    _n_scatter_unmatched = _count_err_scatter_unmatched_epochs(lc_normal)
+    if _n_scatter_unmatched:
+        _accumulate_export_stat(
+            export_stats,
+            "err_scatter_unmatched_epochs",
+            _n_scatter_unmatched,
+        )
+        logging.info(
+            "[EXPORT] %s method=%s: %d epoch(s) err_scatter_unmatched (err unchanged)",
+            str(vsx_name),
+            _export_method,
+            _n_scatter_unmatched,
+        )
+
+    _maybe_set_airmass_citation(run_citation_ctx, lc_normal)
 
     bjd_first = pd.to_numeric(lc_normal.iloc[0].get("bjd", float("nan")), errors="coerce")
     date_tag = _bjd_to_datestr_yyyymmdd(float(bjd_first)) if math.isfinite(float(bjd_first)) else "unknown"
@@ -1331,6 +1414,7 @@ def export_all_method_lightcurve_reports(
     cfg: AppConfig | None = None,
     proc_csv_cache: dict[str, pd.DataFrame] | None = None,
     export_failures: list[ExportFailure] | None = None,
+    export_stats: dict[str, int] | None = None,
     **kwargs: Any,
 ) -> dict[str, dict[str, Path]]:
     """Export AAVSO + VarAstro for each active photometry method."""
@@ -1385,6 +1469,7 @@ def export_all_method_lightcurve_reports(
                 active_methods=_methods,
                 proc_csv_cache=_proc_cache,
                 export_failures=export_failures,
+                export_stats=export_stats,
                 **kwargs,
             )
         except Exception as exc:  # noqa: BLE001

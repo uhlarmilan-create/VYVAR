@@ -20,12 +20,21 @@ if TYPE_CHECKING:
     from pipeline import AstroPipeline
 
 from jd_axis_format import jd_axis_title, jd_series_relative
+from photometry_core import lc_time_axis_short_label, resolve_lc_time_base
 from platesolve_ui_paths import default_bundle_dir
 from utils import resolve_draft_dir_path
 from vyvar_ui_status import is_bv_related_phase01_ui_column, log_if_ui_hiding_bv_for_bprp_primary
 
 # Gaia ID musi byt str - float64 straca cifry
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
+
+
+def _lc_time_axis_title(lc_df: pd.DataFrame, offset: int | None) -> str:
+    try:
+        tb = resolve_lc_time_base(lc_df)
+    except ValueError:
+        return jd_axis_title("time (unknown)", offset)
+    return jd_axis_title(lc_time_axis_short_label(tb), offset)
 
 # Columns loaded from lightcurve_*.csv for charts / preload (see _render_target_detail, multi-filter overlay).
 _LC_OVERVIEW_COLS = [
@@ -653,7 +662,7 @@ def _render_target_detail(
                             showgrid=False,
                         ),
                         xaxis=dict(
-                            title=dict(text=jd_axis_title("BJD (TDB)", bjd_x_off), **_axis_title),
+                            title=dict(text=_lc_time_axis_title(lc_df, bjd_x_off), **_axis_title),
                             tickfont=dict(color="#000000", size=12),
                             gridcolor="#e2e8f0",
                         ),
@@ -1758,9 +1767,10 @@ def render_aperture_photometry(
                         )
                     )
 
+                combined_lc = pd.concat([spec[1] for spec in trace_specs], ignore_index=True) if trace_specs else pd.DataFrame()
                 fig.update_layout(
                     title=f"Light curves - {catalog_id}",
-                    xaxis_title=jd_axis_title("BJD (TDB)", overlay_x_off),
+                    xaxis_title=_lc_time_axis_title(combined_lc, overlay_x_off),
                     yaxis_title="mag (calib)",
                     yaxis_autorange="reversed",
                     legend_title="Filter",

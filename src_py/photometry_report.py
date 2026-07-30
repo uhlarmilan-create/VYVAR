@@ -532,8 +532,15 @@ def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[st
     ]
 
 
-def _pdf_time_axis_label(time_col: str) -> str:
-    """PDF LC axis label for the stored time column (LC ``bjd`` is BJD(TDB) from Phase 2A)."""
+def _pdf_time_axis_label(time_col: str, *, time_base: str | None = None) -> str:
+    """PDF LC axis label from ``time_base`` when present, else infer from column name."""
+    from photometry_core import TIME_BASE_BJD_TDB, TIME_BASE_JD_FALLBACK  # noqa: PLC0415
+
+    tb = str(time_base or "").strip()
+    if tb == TIME_BASE_JD_FALLBACK:
+        return "JD (fallback)"
+    if tb == TIME_BASE_BJD_TDB:
+        return "BJD(TDB)"
     c = str(time_col or "").strip().lower()
     if c in ("bjd", "bjd_tdb", "bjd_tdb_mid") or c.startswith("bjd"):
         return "BJD(TDB)"
@@ -1793,6 +1800,15 @@ class _PhotometryReportBuilder:
             if xcol is None or ycol is None:
                 return None
 
+            _time_base = None
+            if "time_base" in dfn.columns:
+                try:
+                    from photometry_core import resolve_lc_time_base  # noqa: PLC0415
+
+                    _time_base = resolve_lc_time_base(dfn)
+                except ValueError:
+                    _time_base = None
+
             x = pd.to_numeric(dfn[xcol], errors="coerce").to_numpy(dtype=float)
             y = pd.to_numeric(dfn[ycol], errors="coerce").to_numpy(dtype=float)
             ok = np.isfinite(x) & np.isfinite(y)
@@ -1807,7 +1823,7 @@ class _PhotometryReportBuilder:
                 ax.scatter(x, y, s=6, c="#1f77b4", alpha=0.9, linewidths=0)
                 ax.invert_yaxis()
                 ax.grid(True, alpha=0.25)
-                ax.set_xlabel(_pdf_time_axis_label(xcol))
+                ax.set_xlabel(_pdf_time_axis_label(xcol, time_base=_time_base))
                 ax.set_ylabel(ycol)
                 fig.tight_layout()
                 out_png = out_jpg.with_suffix(".png")
@@ -1919,6 +1935,16 @@ class _PhotometryReportBuilder:
         if len(series) < 2:
             return self._plot_lightcurve_to_jpeg(aperture_csv, out_jpg)
 
+        _overlay_time_base = None
+        try:
+            _ap_df = pd.read_csv(aperture_csv, low_memory=False)
+            if "time_base" in _ap_df.columns:
+                from photometry_core import resolve_lc_time_base  # noqa: PLC0415
+
+                _overlay_time_base = resolve_lc_time_base(_ap_df)
+        except Exception:  # noqa: BLE001
+            _overlay_time_base = None
+
         stats: dict[str, dict[str, float]] = {}
         for name, _x, y_s, _c, _m in series:
             stats[name] = {
@@ -1936,7 +1962,7 @@ class _PhotometryReportBuilder:
                     ax.scatter(x_s, y_s, s=6, c=col, alpha=0.85, linewidths=0, marker=mk, label=leg)
                 ax.invert_yaxis()
                 ax.grid(True, alpha=0.25)
-                ax.set_xlabel(_pdf_time_axis_label(xcol))
+                ax.set_xlabel(_pdf_time_axis_label(xcol, time_base=_overlay_time_base))
                 ax.set_ylabel(ycol)
                 ax.legend(loc="best", fontsize=7, framealpha=0.9)
 
