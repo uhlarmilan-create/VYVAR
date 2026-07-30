@@ -11982,6 +11982,9 @@ def enhance_catalog_dataframe_aperture_bpm(
     err_background_mode: str = ERR_BKG_MODE_EMPIRICAL,
     err_empty_apertures_n: int = 64,
     err_empty_apertures_min: int = 16,
+    aperture_variable_factor: float = 1.0,
+    aperture_comp_factor: float = 1.0,
+    variable_target_catalog_ids: frozenset[str] | None = None,
 ) -> pd.DataFrame:
     """Replace DAO ``flux`` with aperture photometry when enabled; add linearity/BPM flags.
 
@@ -12011,6 +12014,21 @@ def enhance_catalog_dataframe_aperture_bpm(
         aperture_fwhm_factor=aperture_fwhm_factor,
     )
     out["fwhm_estimate_px"] = fwhm_per
+
+    if gaussian_fwhm_px_override is not None:
+        try:
+            _ov_ok = math.isfinite(float(gaussian_fwhm_px_override)) and 0.5 < float(gaussian_fwhm_px_override) < 30.0
+        except (TypeError, ValueError):
+            _ov_ok = False
+        _fwhm_scope = "per_draft_gaussian_override" if _ov_ok else "per_frame_moment_median"
+    elif hdr is not None and hdr.get("VY_FWHM") is not None:
+        _fwhm_scope = "per_frame_header_vy_fwhm_dao_scaled"
+    elif math.isfinite(float(fwhm_moment_med)) and float(fwhm_moment_med) > 0:
+        _fwhm_scope = "per_frame_moment_median"
+    else:
+        _fwhm_scope = "unknown"
+    _snr_mode = "snr_table" if snr_aperture_table is not None else "global_fixed"
+    _target_cids = variable_target_catalog_ids or frozenset()
 
     if aperture_enabled and math.isfinite(float(fwhm_gaussian_f)) and float(fwhm_gaussian_f) > 0:
         try:
@@ -12075,6 +12093,24 @@ def enhance_catalog_dataframe_aperture_bpm(
                 out["flux"] = flux_arr.astype(np.float64)
                 out["dao_flux"] = out["flux"]
                 out["aperture_r_px"] = r_ap_arr.astype(np.float64)
+                _fac_labels = []
+                for i in range(n):
+                    _cid_i = ""
+                    if _cid_series is not None:
+                        try:
+                            _cid_i = _normalize_gaia_id(_cid_series.iloc[i])
+                        except Exception:  # noqa: BLE001
+                            _cid_i = ""
+                    if _cid_i in _target_cids and float(aperture_variable_factor) != 1.0:
+                        _fac_labels.append(f"snr_table_var_{float(aperture_variable_factor):.3f}x")
+                    elif _cid_i and float(aperture_comp_factor) != 1.0:
+                        _fac_labels.append(f"snr_table_comp_{float(aperture_comp_factor):.3f}x")
+                    else:
+                        _fac_labels.append("snr_table")
+                out["aperture_factor_applied"] = _fac_labels
+                out["fwhm_px_for_aperture"] = float(fw)
+                out["fwhm_px_scope"] = _fwhm_scope
+                out["snr_aperture_mode"] = _snr_mode
                 out["sky_annulus_r_out_px"] = r_out_arr.astype(np.float64)
                 out["noise_floor_adu"] = sky_pp_arr.astype(np.float64)
                 out[SKY_ADU_PER_PX_ANNULUS_COL] = sky_pp_arr.astype(np.float64)
@@ -12098,6 +12134,10 @@ def enhance_catalog_dataframe_aperture_bpm(
                 out["flux"] = flux_arr.astype(np.float64)
                 out["dao_flux"] = out["flux"]
                 out["aperture_r_px"] = float(r_ap)
+                out["aperture_factor_applied"] = f"global_{float(aperture_fwhm_factor):.3f}x"
+                out["fwhm_px_for_aperture"] = float(fw)
+                out["fwhm_px_scope"] = _fwhm_scope
+                out["snr_aperture_mode"] = _snr_mode
                 out["sky_annulus_r_out_px"] = float(r_out)
                 out["noise_floor_adu"] = sky_pp_arr.astype(np.float64)
                 out[SKY_ADU_PER_PX_ANNULUS_COL] = sky_pp_arr.astype(np.float64)
