@@ -35,6 +35,34 @@ on mismatch reports **input catalogue changed** with field-level deltas before p
 
 ---
 
+## ANCHOR-GATE-BLIND-SPOT - `--full` cannot verify preprocess or detection (2026-07-30)
+
+**Finding (Audit Stage 3 Part 0b).** The anchor byte-identity gate
+(`session_baseline_check.py --full`, ledger VL-ANCHOR-WCSINV) starts from **frozen**
+`detrended_aligned/lights`, `MASTERSTAR.fits`, and `masterstars_full_match.csv` copied from
+the anchor snapshot. It calls `run_full_photometry_pipeline` only. It never runs calibration,
+preprocess, alignment, MASTERSTAR stacking, or DAO detection/catalogue construction.
+
+**Consequence.** Two active audit fixes survived every gate without verification on the science path:
+
+| Change | Blind to `--full`? |
+|--------|-------------------|
+| P-10 preprocess sky-surface sign fix | **Yes** — preprocess does not run |
+| DAO threshold / noise estimator (3.8, `sigma_pp`) | **Yes** — frozen catalogue, no DAO |
+
+This is the same blind spot recorded in `CURSOR_RESULT_masterstar_count_diag.md`; Stage 0
+incorrectly attributed a photometry SHA change to P-10 + threshold when neither executed in
+the `--full` run.
+
+**Rule.** Treat `--full` as verifying **photometry determinism and downstream science outputs**
+given fixed aligned lights and MASTERSTAR inputs. Preprocess, alignment, stacking, and detection
+changes require a **full-chain rebuild harness** from calibrated lights (Part 0b) before
+anchor re-cut. Registry: `INV-ANCHOR-00` in `VYVAR_INVARIANTS.md`.
+
+**Stages covered vs not covered** — see INV-ANCHOR-00 table in `VYVAR_INVARIANTS.md`.
+
+---
+
 ## RELEASE-TREE-HYGIENE - post-bundle compiled-artifact cleanup (2026-07-23)
 
 **Problem.** WSL/MSVC Cython builds leave `.pyd`/`.so` beside sources (and occasionally

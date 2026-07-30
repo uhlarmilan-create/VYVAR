@@ -30,6 +30,22 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
 | INV-VSXGAIA-DEGEN | VSX->Gaia plan-time mixture fit must fail loud when ``sigma_broad`` exceeds chance-scale guards; no fixed-radius fallback. | plan export (`vsx_gaia_crossmatch`) | FAIL | ``VsxGaiaCrossmatchDegenerateError``; see ``docs/VYVAR_DECISIONS.md`` VSX-GAIA-MATCHER-TWO-STEP. |
 | INV-VSXGAIA-OUTCOME | Plan-time cross-match WARN when ``masterstars_accepted / masterstars_eligible < 80%`` (G3 recovery check). | plan export (log) | WARN | ``vsx_gaia_crossmatch`` INFO/WARNING; ``outcome_check=warn_masterstars_low``. |
 | INV-SHA-01 | Double-photometry SHA determinism (core + extended). | already enforced (`session_baseline_check.py --full` + P1 golden) | FAIL | VL-ANCHOR-WCSINV / VL-P1-GOLD; registry pointer only. |
+| INV-ANCHOR-00 **[audit finding]** | **Anchor `--full` gate coverage boundary.** `session_baseline_check.py --full` copies frozen inputs from the anchor snapshot and runs photometry only. It does **not** exercise calibration, preprocess, alignment, stacking, MASTERSTAR build, DAO detection, or catalogue construction. Preprocess fixes (e.g. P-10 sky-surface sign), DAO threshold/noise changes, and MASTERSTAR census changes are **invisible** to this gate unless a separate end-to-end rebuild harness is run. | reference (not wired as FAIL) | — | `CURSOR_RESULT_masterstar_count_diag.md`; Audit Stage 3 Part 0b (2026-07-30). |
+
+### Anchor `--full` stage coverage (INV-ANCHOR-00 detail)
+
+| Pipeline stage | Covered by `--full`? | Notes |
+|----------------|---------------------|-------|
+| Calibration (flat/dark/bias) | **No** | Not in snapshot path |
+| Preprocess (sky surface, etc.) | **No** | Uses frozen `detrended_aligned/lights` (aligned lights already preprocessed upstream) |
+| Alignment / detrending | **No** | Frozen aligned lights copied from snapshot |
+| MASTERSTAR stack + build | **No** | Frozen `MASTERSTAR.fits` copied |
+| DAO pass-1 / pass-2 detection | **No** | Frozen `masterstars_full_match.csv` copied |
+| Catalogue / variable-target plan | **Partial** | Plan regen fingerprint checked; catalogue CSV frozen |
+| Per-frame DAO + photometry (Phase 0/2A) | **Yes** | `run_full_photometry_pipeline` on copied inputs |
+| Postprocess / export | **Yes** | Same photometry path |
+
+End-to-end verification of preprocess, detection, and MASTERSTAR requires a **full-chain rebuild harness** from calibrated lights (Audit Stage 3 Part 0b), not `--full` alone.
 
 ## Meta / SHA scope (P2 finding)
 
