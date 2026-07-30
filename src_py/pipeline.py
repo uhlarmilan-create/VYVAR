@@ -7008,7 +7008,7 @@ def _dao_noise_sigma_adu(
     fallback_std: float,
     data_dao: Any | None = None,
 ) -> float:
-    """Noise scale for DAOStarFinder threshold (sigma_pp / sqrt(bfac), with legacy fallback)."""
+    """Legacy per-pixel noise scale (diagnostic only; not used for DAO threshold under option B)."""
     from astropy.stats import sigma_clipped_stats
 
     sigma_pp = _pixel_noise_sigma_pp_adu(arr)
@@ -7020,6 +7020,33 @@ def _dao_noise_sigma_adu(
         return float(std_dao)
     logging.warning("[DAO] sigma_pp unavailable; falling back to global sigma_clipped_stats")
     return float(fallback_std)
+
+
+def _dao_convolved_background_rms_adu(
+    data_dao: Any,
+    *,
+    fwhm_px: float,
+    sigma_radius: float = 1.5,
+) -> tuple[float, float]:
+    """Robust RMS of the DAO convolved detection image (option B threshold basis).
+
+    Builds the same zero-sum kernel DAOStarFinder uses, convolves ``data_dao``, and
+    returns (rms_convolved, kernel.rel_err). Caller sets ``scale_threshold=False`` and
+    ``threshold = N * rms_convolved`` so nominal N-sigma holds on correlated/resampled data.
+    """
+    import numpy as np
+    from astropy.stats import sigma_clipped_stats
+    from photutils.detection.core import _StarFinderKernel
+    from scipy.ndimage import convolve
+
+    arr = np.asarray(data_dao, dtype=np.float32)
+    if arr.ndim != 2 or arr.size < 64:
+        return float("nan"), float("nan")
+    fwhm = max(1.2, float(fwhm_px))
+    kernel = _StarFinderKernel(fwhm=fwhm, sigma_radius=float(sigma_radius))
+    conv = convolve(arr, kernel.data, mode="nearest")
+    _, _, rms = sigma_clipped_stats(conv, sigma=3.0, maxiters=3)
+    return float(rms), float(kernel.rel_err)
 
 
 def _mean_bin2d_for_dao(data0: "np.ndarray", factor: int) -> tuple["np.ndarray", int]:
@@ -7446,7 +7473,10 @@ def detect_stars_match_master_reference(
         thr_s = max(0.5, min(20.0, thr_s))
         dao_scale = _dao_auto_binning_factor(*data0.shape)
         data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
-        std_dao = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
+        fwhm_eff = max(1.2, _base_fw_m / float(bfac))
+        rms_conv, _dao_rel_err = _dao_convolved_background_rms_adu(data_dao, fwhm_px=fwhm_eff)
+        sigma_pp_diag = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
+        std_dao = rms_conv
         if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
             try:
                 std_dao = float(np.nanstd(arr))
@@ -7482,19 +7512,20 @@ def detect_stars_match_master_reference(
             print(f"WARNING: {_nm} std=0 aj po fallback, preskakujem")
             empty_meta: dict[str, Any] = {"status": "std_zero"}
             return pd.DataFrame(), empty_meta
-        fwhm_eff = max(1.2, _base_fw_m / float(bfac))
         _thr = max(thr_s * float(std_dao), 1e-6)
         try:
             _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
             print(
                 f"DEBUG DAO INPUT: {_nm} mean={float(np.nanmean(arr)):.1f} std={float(np.nanstd(arr)):.1f} "
-                f"threshold={float(_thr):.1f} fwhm={float(fwhm_eff):.2f}"
+                f"threshold={float(_thr):.1f} rms_conv={float(rms_conv):.2f} sigma_pp_diag={float(sigma_pp_diag):.2f} "
+                f"fwhm={float(fwhm_eff):.2f}"
             )
         except Exception:  # noqa: BLE001
             pass
         finder = DAOStarFinder(
             fwhm=float(fwhm_eff),
             threshold=float(_thr),
+            scale_threshold=False,
             n_brightest=None,
             **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
         )
@@ -8167,7 +8198,10 @@ def detect_stars_and_match_catalog(
         _ds = max(0.5, min(20.0, _ds))
         dao_scale = _dao_auto_binning_factor(*data0.shape)
         data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
-        std_dao = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
+        fwhm_eff = max(1.2, _base_fw / float(bfac))
+        rms_conv, _dao_rel_err = _dao_convolved_background_rms_adu(data_dao, fwhm_px=fwhm_eff)
+        sigma_pp_diag = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
+        std_dao = rms_conv
         if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
             try:
                 std_dao = float(np.nanstd(arr))
@@ -8209,20 +8243,21 @@ def detect_stars_and_match_catalog(
                 "catalog_match_mode": "full_cone",
                 "reason": "std_dao_zero",
             }
-        fwhm_eff = max(1.2, _base_fw / float(bfac))
         _thr = max(_ds * float(std_dao), 1e-6)
         # Adaptive threshold monitoring: match-rate check runs after first catalog match pass (below).
         try:
             _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
             print(
                 f"DEBUG DAO INPUT: {_nm} mean={float(np.nanmean(arr)):.1f} std={float(np.nanstd(arr)):.1f} "
-                f"threshold={float(_thr):.1f} fwhm={float(fwhm_eff):.2f}"
+                f"threshold={float(_thr):.1f} rms_conv={float(rms_conv):.2f} sigma_pp_diag={float(sigma_pp_diag):.2f} "
+                f"fwhm={float(fwhm_eff):.2f}"
             )
         except Exception:  # noqa: BLE001
             pass
         finder = DAOStarFinder(
             fwhm=float(fwhm_eff),
             threshold=float(_thr),
+            scale_threshold=False,
             n_brightest=None,
             **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
         )
