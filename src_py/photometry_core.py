@@ -10686,6 +10686,80 @@ def _phase2a_finalize_exports(
         "lunar_context": lunar_context,
     }
 
+
+def photometer_check_star_production_path(
+    *,
+    state: _Phase2AState,
+    parent_target_cid: str,
+    check_cid: str,
+    masterstar_fits_path: Path,
+    lc_dir: Path,
+    output_dir: Path,
+    annulus_inner_fwhm: float = 4.0,
+    annulus_outer_fwhm: float = 6.0,
+    outlier_sigma: float = 3.0,
+    stability_sigma: float = 3.0,
+    _apt_fw: float | None = None,
+    _save_png: bool = False,
+) -> pd.DataFrame | None:
+    """Diagnostic: photometer a check star via the production Phase 2A target path.
+
+    Uses the parent target's comparison ensemble (minus the check star) and production
+    ``err`` from ``save_lightcurve_csv``. Intended for check-star chi2 validation.
+    """
+    from dataclasses import replace
+
+    parent_target_cid = _normalize_gaia_id(parent_target_cid)
+    check_cid = _normalize_gaia_id(check_cid)
+    if not parent_target_cid or not check_cid or parent_target_cid == check_cid:
+        return None
+    parent_comps = state._comp_index.get(parent_target_cid, pd.DataFrame())
+    if parent_comps.empty:
+        return None
+    comp_subset = parent_comps.loc[parent_comps["catalog_id"] != check_cid].copy()
+    if comp_subset.empty:
+        return None
+    ms = state.masterstars_df
+    if ms.empty or "catalog_id" not in ms.columns:
+        return None
+    check_ms = ms.loc[ms["catalog_id"] == check_cid]
+    if check_ms.empty:
+        return None
+    target_row = check_ms.iloc[0].copy()
+    target_row["skip_photometry"] = False
+    diag_state = replace(
+        state,
+        _comp_index={**state._comp_index, check_cid: comp_subset.reset_index(drop=True)},
+        _nt=1,
+    )
+    _apt = float(_apt_fw if _apt_fw is not None else getattr(state._cfg, "aperture_fwhm_factor", 2.5))
+    ac_logged: list[bool] = [False]
+    summary_rows: list = []
+    n_lc = 0
+    _phase2a_process_one_target(
+        target_row,
+        ti=1,
+        state=diag_state,
+        summary_rows=summary_rows,
+        n_lc=n_lc,
+        lc_dir=Path(lc_dir),
+        output_dir=Path(output_dir),
+        progress_cb=None,
+        masterstar_fits_path=Path(masterstar_fits_path),
+        annulus_inner_fwhm=float(annulus_inner_fwhm),
+        annulus_outer_fwhm=float(annulus_outer_fwhm),
+        outlier_sigma=float(outlier_sigma),
+        stability_sigma=float(stability_sigma),
+        _apt_fw=_apt,
+        _save_png=bool(_save_png),
+        ac_sign_logged=ac_logged,
+    )
+    lc_path = Path(lc_dir) / f"lightcurve_{check_cid}.csv"
+    if not lc_path.is_file():
+        return None
+    return pd.read_csv(lc_path, low_memory=False)
+
+
 def run_phase2a(
     masterstar_fits_path: Path,
     active_targets_csv: Path,
