@@ -1,0 +1,10 @@
+step,seconds
+FITS read,0.009975
+mask+fit+eval (combined),1.998468
+FITS write-back,0.059523
+
+metric,value
+n_frames,10.0
+total_s,11.141326300101355
+per_frame_s,1.1141326300101355
+max_abs_diff,508.969482421875
