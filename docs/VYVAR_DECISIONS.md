@@ -63,6 +63,22 @@ anchor re-cut. Registry: `INV-ANCHOR-00` in `VYVAR_INVARIANTS.md`.
 
 ---
 
+## DAO-THRESHOLD-OPTION-B — convolved RMS threshold (2026-07-30, N pending)
+
+**Architecture (Part 2 implemented).** DAO detection threshold uses option B:
+`scale_threshold=False`, `threshold = N × rms_conv`, where `rms_conv` is the robust RMS of
+the FIND-kernel convolved detection image. `_pixel_noise_sigma_pp_adu` / `_dao_noise_sigma_adu`
+remain **diagnostic only** (not wired to threshold).
+
+**Literature basis.** photutils `DAOStarFinder` (`scale_threshold=False`); Fruchter & Hook
+(2002) resampling correlation; Casertano et al. (2000) AJ 120, 2747 App. A undersampled noise.
+
+**Pending Milan decision.** `masterstar_dao_threshold_sigma` must be recalibrated: under option B
+the number means **N sigma in the convolved image on correlated noise** (third recalibration;
+intended final stable meaning). Sweep: `dev/results/CURSOR_RESULT_audit_stage3_part2.md`.
+
+---
+
 ## RELEASE-TREE-HYGIENE - post-bundle compiled-artifact cleanup (2026-07-23)
 
 **Problem.** WSL/MSVC Cython builds leave `.pyd`/`.so` beside sources (and occasionally
