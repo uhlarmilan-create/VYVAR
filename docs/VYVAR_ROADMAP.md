@@ -57,6 +57,22 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 ---
 
+## OPEN - MASTERSTAR reference architecture (2026-07-30)
+
+**Status:** NOT STARTED. Does **not** block the current anchor re-cut arc. Full spec:
+`docs/VYVAR_MASTERSTAR_REFERENCE_ARCHITECTURE.md` (Science Audit Tranches 3/4 + design session).
+
+| ID | Pri | Status / deliverable |
+|----|-----|----------------------|
+| **TODO-C** | HIGH | Separate **admission gate** (predicted per-epoch SNR via `g_lim_*` + Labbé `sigma_bkg_ap`) from **detection threshold**; flag catalogue rows CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE. Independent of stack reference. |
+| **CR-REJECTION** | MED | Cosmic-ray rejection (L.A.Cosmic or equivalent). Standalone hygiene gap; prerequisite for TODO-B; improves TODO-A median stacks. Verified: no CR step in `src_py` today (`cosmic` = gain/RN only). |
+| **TODO-A** | HIGH | Replace single-frame MASTERSTAR (`build_masterstar_from_detrended` lowest-`VY_FWHM` copy) with **median/sigma-clip stack** of best N frames ranked by `I_j = F_j²/(σ_j²·FWHM_j²)`; mandatory provenance; recalibrate DAO threshold; split `DAO_ONLY` health metric by magnitude vs Gaia cap. |
+| **TODO-B** | MED | Zackay & Ofek (2017) **proper coaddition** — optimal version of A; blocked on CR rejection, uncorrelated inputs, per-frame PSF, PSF-based `F_j`. |
+
+**Suggested order:** TODO-C → CR-REJECTION → TODO-A → TODO-B.
+
+---
+
 ## QUEUED - VYVAR-INVARIANTS (starts after Anchor #3)
 
 **Status:** **UNBLOCKED** (2026-07-16). Anchor #3 ACTIVE (`VL-ANCHOR-WCSINV` /

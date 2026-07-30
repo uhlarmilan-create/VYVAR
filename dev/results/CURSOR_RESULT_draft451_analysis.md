@@ -220,23 +220,21 @@ with this mechanism.
 
 ## Quantitative expectation after SKY-SURFACE + sigma-estimator fix
 
-**Do not add a magnitude cut** -- the design self-corrects when the threshold returns to ~175 ADU.
+> **VOID (2026-07-30, Audit Tranche 3 / P-10).** This table assumed draft_435 had correctly
+> flattened backgrounds and that restoring sky-surface subtract would return pass-1 DAO to ~2550.
+> **P-10 sign error:** 435 `proc_*` had **doubled** gradient (`2g`), not flattened; 450 plain had
+> natural `g`. The two defects (sign error + inflated `bg_std` estimator) **cancelled** on 435,
+> yielding ~3.7% `DAO_ONLY` at an effective **3.8σ**, not 2.1σ. After P-10 + sigma_pp estimator
+> + threshold recalibration (~3.8), expect threshold ~175 ADU and anchor-class DAO counts — **not**
+> the table below. See `CURSOR_RESULT_audit_t3.md`.
 
-Measured on 451 MASTERSTAR:
+~~After fix (restore sky-surface subtract + correct estimator, `bg_std` ~84 ADU, threshold ~175 ADU):~~
 
-- `sigma_pp` = 46.07 ADU (unchanged vs 435)
-- Broken `bg_std` = 62.23 ADU -> threshold 130.7 ADU (**1.56x effective sigma** vs 435's 3.81x)
-- Pass-1 ratio 8926/2552 = **3.50x** (matches tail-probability prediction from SIGMA-ESTIMATOR-VERIFY)
-
-After fix (restore sky-surface subtract + correct estimator, `bg_std` ~84 ADU, threshold ~175 ADU):
-
-| Quantity | Observed 451 | Expected post-fix |
+| Quantity | Observed 451 | ~~Expected post-fix~~ **VOID** |
 |----------|-------------:|------------------:|
-| Pass-1 DAO | 8926 | **~2550** (435 class) |
-| MASTERSTAR rows post-filter | 6698 | **~2950** (DAO_ONLY ~3-4%) |
-| `DAO_ONLY` fraction | 40.4% | **~3.7%** |
-| Plan-time detection-limited VSX (`accepted` in XM line) | 717 | **~205** (scale with pass-1) |
-| Active targets | 242 | **~160-165** (Group B ~82 largely disappears; Group A aligns with anchor) |
+| Pass-1 DAO | 8926 | ~~**~2550**~~ |
+| `DAO_ONLY` fraction | 40.4% | ~~**~3.7%**~~ |
+| Active targets | 242 | ~~**~160-165**~~ |
 
 The 82 Group-B extras are exactly the targets that should not survive a correct DAO threshold; they
 are genuinely Gaia-identified but **marginally detected** spurious actives, not a separate catalogue
