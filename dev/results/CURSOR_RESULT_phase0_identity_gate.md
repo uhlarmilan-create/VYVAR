@@ -1,3 +1,5 @@
+> **PROVENANCE WARNING (added 2026-07-30).** The numbers in this document derive in part from **draft_000450** baseline comparisons (frozen anchor inputs from pre-013cb0c **draft_000435** are separately sourced), produced after the in-place preprocess architecture landed (`013cb0c`, 2026-07-22) and before the sky-surface idempotency guard (`84174ae`, 2026-07-30). During that window a repeated preprocess pass could subtract the sky surface twice, at a measured cost of order 500 ADU. **draft_000450** is no longer available, so its status is UNKNOWN, not clean. Treat these numbers as indicative, not validated.
+
 CURSOR RESULT - PHASE0-IDENTITY-GATE - 2026-07-26
 
 Tree: `cb78b25` (local main, +1 vs private tip `10608bb`). Science-path changes are

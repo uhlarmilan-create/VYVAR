@@ -1,3 +1,5 @@
+> **PROVENANCE WARNING (added 2026-07-30).** The numbers in this document derive from **draft_000450** (comparative tables also use pre-013cb0c **draft_435**), produced after the in-place preprocess architecture landed (`013cb0c`, 2026-07-22) and before the sky-surface idempotency guard (`84174ae`, 2026-07-30). During that window a repeated preprocess pass could subtract the sky surface twice, at a measured cost of order 500 ADU. **draft_000450** is no longer available, so its status is UNKNOWN, not clean. Treat these numbers as indicative, not validated.
+
 # CURSOR RESULT - SIGMA-ESTIMATOR-VERIFY (2026-07-26)
 
 Read-only diagnostic. No code changes, no commits. Scratch: `tmp/sigma_estimator_verify.py`,

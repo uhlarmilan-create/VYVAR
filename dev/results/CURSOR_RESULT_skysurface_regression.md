@@ -1,3 +1,5 @@
+> **PROVENANCE WARNING (added 2026-07-30).** Quantitative rows in this document for **draft_000449**, **draft_000450**, and other unavailable drafts from 2026-07-21 onward were produced after the in-place preprocess architecture landed (`013cb0c`, 2026-07-22) or in the same session window, and before the sky-surface idempotency guard (`84174ae`, 2026-07-30). During that window a repeated preprocess pass could subtract the sky surface twice, at a measured cost of order 500 ADU. Those drafts are no longer available, so their status is UNKNOWN, not clean. Rows sourced only from pre-013cb0c **draft_000435** family on disk remain anchor-validated separately. Treat post-era numbers as indicative, not validated.
+
 # CURSOR RESULT - SKY-SURFACE-REGRESSION (2026-07-26)
 
 Investigation + impact assessment. No code changes, no commits. Independent of PHASE0-IDENTITY-GATE

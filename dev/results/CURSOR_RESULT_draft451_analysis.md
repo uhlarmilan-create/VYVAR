@@ -1,3 +1,5 @@
+> **PROVENANCE WARNING (added 2026-07-30).** The numbers in this document derive from **draft_000451** (with comparisons to **draft_000450** and anchor **draft_000435_snapshot_skysurface_20260716**), produced after the in-place preprocess architecture landed (`013cb0c`, 2026-07-22) and before the sky-surface idempotency guard (`84174ae`, 2026-07-30). During that window a repeated preprocess pass could subtract the sky surface twice, at a measured cost of order 500 ADU. **draft_000451** and **draft_000450** are no longer available, so their status is UNKNOWN, not clean. Treat these numbers as indicative, not validated.
+
 # CURSOR RESULT - DRAFT-451 ANALYSIS (2026-07-27)
 
 Read-only diagnostic. No code changes, no commits. Scratch: `tmp/draft451_analysis.py`,
