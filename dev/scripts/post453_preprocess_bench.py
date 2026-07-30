@@ -34,6 +34,7 @@ def profile_one_frame() -> dict[str, float]:
         data = hdul[0].data.astype(np.float32, copy=True)
         hdr = hdul[0].header
     times["FITS read"] = time.perf_counter() - t0
+    _ = hdr
 
     t0 = time.perf_counter()
     out, stats = _fit_subtract_preprocess_sky_surface(data, order=2)
@@ -55,8 +56,17 @@ def byte_compare(n: int = 10) -> dict[str, float]:
     from config import AppConfig
     from pipeline import _qc_enrich_calibrated_in_place
 
-    lights = sorted((REF_DRAFT / "calibrated" / "lights" / "NoFilter_60_2").glob("BO_CVn_Light_*.fits"))
+    lights_root = REF_DRAFT / "calibrated" / "lights" / "NoFilter_60_2"
+    if not lights_root.is_dir():
+        raise FileNotFoundError(f"Missing lights directory: {lights_root}")
+    lights = sorted(lights_root.glob("BO_CVn_Light_*.fits"))
     sample = lights[:n]
+    if not sample:
+        raise RuntimeError(
+            f"No BO_CVn_Light_*.fits frames found under {lights_root}; "
+            "cannot run byte-compare bench (zero frames)."
+        )
+
     bench_root = OUT_DIR / "bench_lights"
     if bench_root.exists():
         shutil.rmtree(bench_root)
@@ -88,7 +98,6 @@ def byte_compare(n: int = 10) -> dict[str, float]:
 
 
 def main() -> None:
-    CTX.mkdir(parents=True, exist_ok=True)
     if not REF_LIGHT.is_file():
         print("MISSING ref frame:", REF_LIGHT)
         sys.exit(1)
@@ -110,8 +119,10 @@ def main() -> None:
         "metric,value",
         *[f"{k},{v}" for k, v in cmp.items()],
     ]
-    (CTX / "preprocess_profile.csv").write_text("\n".join(lines) + "\n", encoding="ascii")
-    print("\nWrote", CTX / "preprocess_profile.csv")
+    out_csv = CTX / "preprocess_profile.csv"
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    out_csv.write_text("\n".join(lines) + "\n", encoding="ascii")
+    print("\nWrote", out_csv)
 
 
 if __name__ == "__main__":
