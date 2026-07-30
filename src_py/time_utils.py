@@ -166,7 +166,20 @@ def compute_hjd_bjd(
         bjd = float((t.tdb + ltt_bary).jd)
 
         return hjd, bjd
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        from except_fix_counters import get_except_fix_counters
+
+        get_except_fix_counters().hjd_bjd_compute_fail += 1
+        logger.error(
+            "[TIME] HJD/BJD computation failed for jd=%r ra=%r dec=%r site=(%r,%r,%r): %s",
+            jd,
+            ra_deg,
+            dec_deg,
+            site_lat,
+            site_lon,
+            site_elev_m,
+            exc,
+        )
         return None, None
 
 

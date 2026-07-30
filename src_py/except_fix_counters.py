@@ -44,6 +44,7 @@ class ExceptFixCounters:
     # EXCEPT-FIX-4 (tranche 4: time/trust/export/optics/check-star)
     timeobs_parse_fallback: int = 0
     jd_mid_compute_fail: int = 0
+    hjd_bjd_compute_fail: int = 0
     trust_kmag_sidecar_read_fail: int = 0
     variability_gaia_id_norm_skip: int = 0
     k2_airmass_read_fail: int = 0
@@ -87,6 +88,7 @@ class ExceptFixCounters:
             "platesolve_match_rate_meta_fail": self.platesolve_match_rate_meta_fail,
             "timeobs_parse_fallback": self.timeobs_parse_fallback,
             "jd_mid_compute_fail": self.jd_mid_compute_fail,
+            "hjd_bjd_compute_fail": self.hjd_bjd_compute_fail,
             "trust_kmag_sidecar_read_fail": self.trust_kmag_sidecar_read_fail,
             "variability_gaia_id_norm_skip": self.variability_gaia_id_norm_skip,
             "k2_airmass_read_fail": self.k2_airmass_read_fail,

@@ -73,6 +73,42 @@ TIME_BASE_BJD_TDB = "BJD_TDB"
 TIME_BASE_JD_FALLBACK = "JD_FALLBACK"
 
 
+def resolve_lc_time_base(lc_df: pd.DataFrame) -> str:
+    """Return the single ``time_base`` value for an LC dataframe."""
+    if lc_df is None or getattr(lc_df, "empty", True):
+        raise ValueError("empty LC")
+    if TIME_BASE_COL not in lc_df.columns:
+        raise ValueError("time_base column absent")
+    raw = lc_df[TIME_BASE_COL].astype(str).str.strip()
+    raw = raw[raw.str.lower().ne("nan") & (raw != "")]
+    if raw.empty:
+        raise ValueError("time_base column empty")
+    uniq = set(raw.unique())
+    if len(uniq) > 1:
+        raise ValueError(f"mixed time_base values: {sorted(uniq)}")
+    tb = uniq.pop()
+    if tb not in (TIME_BASE_BJD_TDB, TIME_BASE_JD_FALLBACK):
+        raise ValueError(f"unknown time_base: {tb!r}")
+    return tb
+
+
+def lc_time_axis_short_label(time_base: str) -> str:
+    """Human-readable LC time axis label from ``time_base``."""
+    if time_base == TIME_BASE_BJD_TDB:
+        return "BJD (TDB)"
+    if time_base == TIME_BASE_JD_FALLBACK:
+        return "JD (fallback)"
+    return "time"
+
+
+def lc_has_finite_airmass(lc_df: pd.DataFrame) -> bool:
+    """True when the LC carries at least one finite airmass value."""
+    if lc_df is None or getattr(lc_df, "empty", True) or "airmass" not in lc_df.columns:
+        return False
+    am = pd.to_numeric(lc_df["airmass"], errors="coerce")
+    return bool(am.notna().any())
+
+
 def _safe_polyfit(
     x: np.ndarray,
     y: np.ndarray,
@@ -1001,7 +1037,14 @@ def _howell_variance_adu2(
     gain: float = 1.0,
     read_noise: float = 10.0,
 ) -> float:
-    """Total variance [ADU^2] from Howell (1989) eq. 2 (legacy level-based background term)."""
+    """Total variance [ADU^2] from a reduced Howell (1989) eq. 2 form.
+
+    Implemented terms: source Poisson (``flux/gain``), sky Poisson on the aperture
+    (``sky_pp/gain * area``), and read noise (``(read_noise/gain)^2 * area``).
+
+    Omitted (not in this helper): dark-current shot noise, the ``(1 + n_pix/n_B)``
+    sky-estimation factor, flat-field noise, and digitisation/quantisation noise.
+    """
     if not math.isfinite(flux) or flux <= 0:
         return float("nan")
     if not math.isfinite(sky_pp) or sky_pp < 0:
@@ -10350,6 +10393,7 @@ def _phase2a_finalize_exports(
         n_export_ok = 0
         n_export_skip = 0
         _export_failures: list[dict[str, str]] = []
+        _export_stats: dict[str, int] = {}
         for _, trow in at_df.iterrows():
             target_cid = _normalize_gaia_id(trow.get("catalog_id", ""))
             if not target_cid:
@@ -10409,6 +10453,7 @@ def _phase2a_finalize_exports(
                     targets_df=at_df,
                     run_citation_ctx=_run_cite,
                     export_failures=_export_failures,
+                    export_stats=_export_stats,
                 )
                 if _method_paths:
                     n_export_ok += 1
@@ -10423,13 +10468,23 @@ def _phase2a_finalize_exports(
                 )
                 n_export_skip += 1
 
-        log_export_batch_summary(_export_failures)
+        log_export_batch_summary(_export_failures, _export_stats)
         logging.info(
             "[EXPORT] lightcurves_reports: %d targets exported, %d skipped (methods=%s)",
             int(n_export_ok),
             int(n_export_skip),
             ",".join(_active_methods),
         )
+        if _export_stats.get("err_scatter_unmatched_epochs"):
+            logging.info(
+                "[EXPORT] run summary: err_scatter_unmatched_epochs=%d",
+                int(_export_stats["err_scatter_unmatched_epochs"]),
+            )
+        if _export_stats.get("time_base_refused"):
+            logging.error(
+                "[EXPORT] run summary: time_base_refused=%d",
+                int(_export_stats["time_base_refused"]),
+            )
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0176] AAVSO/VarAstro lightcurve export batch fails - external report files missing: %s', exc)
         logging.warning("[EXPORT] init failed: %s", exc)

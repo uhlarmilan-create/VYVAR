@@ -9308,10 +9308,16 @@ def _extract_airmass_from_header(
     db: VyvarDatabase | None = None,
     draft_id: int | None = None,
 ) -> float:
-    """Extrahuj airmass z FITS hlavicky.
+    """Extract airmass from a FITS header for per-frame catalog metadata.
 
-    Skusa AIRMASS, potom ALT_OBJ/OBJCTALT (prepocet cez sec(z) = 1/cos(alt)).
-    Vracia float("nan") ak nie je dostupny.
+    Priority order:
+    1. ``AIRMASS`` / ``AIRMAS`` / ``SECZ`` header keywords when in the physical range.
+    2. ``ALT_OBJ`` / ``OBJCTALT`` / ``ALTITUDE`` / ``TELALT`` converted via
+       Kasten & Young (1989) (:func:`_airmass_from_altitude_deg`).
+    3. Field-center AltAz computed from WCS/object coordinates, observer site, and
+       mid-exposure JD (:func:`_compute_airmass_from_altaz`), also using Kasten & Young (1989).
+
+    Returns ``float('nan')`` when no path yields a finite value.
     """
     # Priamy keyword
     for kw in ("AIRMASS", "AIRMAS", "SECZ"):
