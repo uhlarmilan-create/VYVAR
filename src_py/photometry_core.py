@@ -3576,6 +3576,29 @@ def _combine_err_with_ensemble_scatter_keyed(
     return err_out, unmatched
 
 
+def _err_budget_components_keyed(
+    err_photon: np.ndarray,
+    source_files: list[str] | np.ndarray,
+    scatter_by_file: dict[str, float],
+    *,
+    sigma_sys_mag: float = 0.0,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Per-epoch error budget terms in relative-flux domain (export / diagnostics)."""
+    from sigma_floor_core import mag_sigma_to_rel  # noqa: PLC0415
+
+    ep = np.asarray(err_photon, dtype=np.float64)
+    n = len(ep)
+    sem_rel = np.zeros(n, dtype=np.float64)
+    sys_rel = np.full(n, mag_sigma_to_rel(float(sigma_sys_mag)), dtype=np.float64)
+    for i, sf in enumerate(np.asarray(source_files, dtype=object)):
+        key = str(sf).strip()
+        if scatter_by_file and key in scatter_by_file:
+            sc = float(scatter_by_file[key])
+            if math.isfinite(sc):
+                sem_rel[i] = mag_sigma_to_rel(sc)
+    return ep, sem_rel, sys_rel
+
+
 # ---------------------------------------------------------------------------
 # Color term (BP-RP) - globalny shift na noc
 # ---------------------------------------------------------------------------
@@ -4940,6 +4963,9 @@ def save_lightcurve_csv(
     time_base: str = TIME_BASE_BJD_TDB,
     err_method: list[str] | None = None,
     sigma_sys_mag: float | None = None,
+    err_photon: np.ndarray | None = None,
+    err_sem_rel: np.ndarray | None = None,
+    err_sigma_sys_rel: np.ndarray | None = None,
 ) -> None:
     """Ulozi lightcurve CSV.
 
@@ -5075,6 +5101,12 @@ def save_lightcurve_csv(
         df["err_method"] = [str(m) for m in err_method]
     _ssm = float(sigma_sys_mag) if sigma_sys_mag is not None and math.isfinite(float(sigma_sys_mag)) else float("nan")
     df["sigma_sys_mag"] = np.round(np.full(n, _ssm, dtype=np.float64), 6)
+    if err_photon is not None:
+        df["err_photon"] = np.round(np.asarray(err_photon, dtype=np.float64), 6)
+    if err_sem_rel is not None:
+        df["err_sem_rel"] = np.round(np.asarray(err_sem_rel, dtype=np.float64), 6)
+    if err_sigma_sys_rel is not None:
+        df["err_sigma_sys_rel"] = np.round(np.asarray(err_sigma_sys_rel, dtype=np.float64), 6)
     df["delta_mag_sysrem"] = np.round(np.full(n, float("nan"), dtype=np.float64), 6)
     df.to_csv(output_path, index=False)
 
@@ -9748,6 +9780,7 @@ def _phase2a_process_one_target(
 
     err = target_frames["err"].to_numpy(dtype=float)
     err, err_method_rows = _route_lc_per_frame_err(target_frames, err)
+    err_photon_arr = np.asarray(err, dtype=np.float64).copy()
     # Per-point uncertainty = photon/SNR base error (term-1) (+) ensemble zeropoint uncertainty
     # (term-3, ``ensemble_scatter``). Joined by EXACT ``source_file`` (G2-F004), not positional index.
     _src_for_err = target_frames["source_file"].astype(str).tolist()
@@ -9764,6 +9797,12 @@ def _phase2a_process_one_target(
         _ensemble_scatter_by_file,
         sigma_sys_mag=_sigma_sys_mag,
         target_name=str(target_name),
+    )
+    err_photon_export, err_sem_rel_export, err_sigma_sys_rel_export = _err_budget_components_keyed(
+        err_photon_arr,
+        _src_for_err,
+        _ensemble_scatter_by_file,
+        sigma_sys_mag=_sigma_sys_mag,
     )
     ap_arr = target_frames["aperture_r_px"].to_numpy(dtype=float)
     src_files = target_frames["source_file"].tolist()
@@ -9958,6 +9997,9 @@ def _phase2a_process_one_target(
         time_base=time_base,
         err_method=err_method_rows,
         sigma_sys_mag=_sigma_sys_mag,
+        err_photon=err_photon_export,
+        err_sem_rel=err_sem_rel_export,
+        err_sigma_sys_rel=err_sigma_sys_rel_export,
     )
     if _have_psf_cols:
         try:

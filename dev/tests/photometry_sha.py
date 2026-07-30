@@ -60,6 +60,10 @@ PHOTOMETRY_QC_COLS_LC = frozenset(
         "lunar_separation_deg",
         "lunar_risk",
         "time_base",
+        "err_photon",
+        "err_sem_rel",
+        "err_sigma_sys_rel",
+        "sigma_sys_mag",
     }
 )
 PHOTOMETRY_TIME_COLS = frozenset({"bjd", "hjd", "jd", "mjd", "time", "bjd_tdb", "bjd_bary"})
