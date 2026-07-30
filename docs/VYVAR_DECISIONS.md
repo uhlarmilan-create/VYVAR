@@ -1277,6 +1277,26 @@ a float-rounding issue.
 checkable on disk; in-place-era drafts unavailable, status unknown. **Status:** implemented;
 regression tests ``dev/tests/test_skysf_double_guard.py``.
 
+### SKYSF-UNKNOWN-PROVENANCE-WINDOW (2026-07-30)
+
+**Window.** Commits ``013cb0c`` (2026-07-22, in-place skip-only preprocess on calibrated FITS)
+through ``84174ae`` (2026-07-30, ``VY_SKYSF`` / ``VYSKYORD`` idempotency guard).
+
+**Defect.** Without the guard, any repeated preprocess pass on the same calibrated light could run
+``_fit_subtract_preprocess_sky_surface`` again. Measured cost on draft 452 bench: **508.97 ADU**
+``max_abs_diff`` for **one** extra pass (star-mask non-idempotency; not a rounding artefact).
+
+**Drafts inside the window (status UNKNOWN).** ``draft_000449`` through ``draft_000455`` (and any
+other post-``013cb0c`` run not re-verifiable on disk). These drafts are **gone locally** and
+**absent from backups** on the forensic machine as of 2026-07-30.
+
+**Rule.** Quantitative results committed from that window (``f8285c7`` forensic bundle and
+derivatives) carry a **PROVENANCE WARNING** banner. Treat as indicative, not validated, until a
+draft is restored and headers/pixels re-checked. Pre-``013cb0c`` anchor drafts (``draft_000435``
+family) are outside this window and remain anchor-validated where Part 1 forensics passed.
+
+**Status:** bookkeeping + banners applied; no remediation or reprocessing.
+
 ### CONFIG-PATH-DATA-ROOT (2026-07-27)
 
 **Problem.** Config path-valued keys stored as relative strings (e.g.
