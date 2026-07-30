@@ -16893,7 +16893,6 @@ def run_osc_channel_extraction_for_archive(
             _qc_enrich_calibrated_in_place(
                 out_dirs[ch],
                 app_config=cfg,
-                apply_sky_surface=True,
                 progress_cb=progress_cb,
             )
         try:
@@ -16923,10 +16922,59 @@ def run_osc_channel_extraction_for_archive(
     return out
 
 
+class SkySurfaceOrderConflictError(RuntimeError):
+    """``VY_SKYSF`` present but ``VYSKYORD`` differs from the requested preprocess order."""
+
+
+def _header_has_vy_skysf(hdr: fits.Header) -> bool:
+    if "VY_SKYSF" not in hdr:
+        return False
+    v = hdr["VY_SKYSF"]
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return bool(v)
+    return str(v).strip().lower() in ("true", "1", "t", "yes")
+
+
+def _header_vyskyord(hdr: fits.Header) -> int | None:
+    if "VYSKYORD" not in hdr:
+        return None
+    try:
+        return int(hdr["VYSKYORD"])
+    except (TypeError, ValueError):
+        return None
+
+
+def _decide_preprocess_sky_action(
+    hdr: fits.Header,
+    *,
+    sky_order: int,
+    force_reapply: bool,
+) -> str:
+    """Return ``apply`` or ``skip``. Raises :class:`SkySurfaceOrderConflictError` on order mismatch."""
+    if sky_order <= 0:
+        return "skip"
+    if force_reapply:
+        return "apply"
+    if not _header_has_vy_skysf(hdr):
+        return "apply"
+    existing = _header_vyskyord(hdr)
+    if existing is None:
+        return "apply"
+    if existing == sky_order:
+        return "skip"
+    raise SkySurfaceOrderConflictError(
+        f"VYSKYORD={existing} but preprocess requests order={sky_order}; "
+        "recalibration from raw is required to change sky-surface order."
+    )
+
+
 def _qc_enrich_one_frame(
     fp_str: str,
     *,
     sky_order: int,
+    force_reapply: bool,
     prefilter_status: str | None,
     target_ra: float | None,
     target_dec: float | None,
@@ -16944,7 +16992,30 @@ def _qc_enrich_one_frame(
         sky_stats: dict[str, Any] = {}
         is_mosaic = _valid_bayerpat_from_header(hdr) is not None and not hdr.get("VY_CHANNEL")
         if sky_order > 0 and not is_mosaic:
-            data, sky_stats = _fit_subtract_preprocess_sky_surface(data, order=sky_order)
+            action = _decide_preprocess_sky_action(
+                hdr, sky_order=sky_order, force_reapply=force_reapply
+            )
+            if action == "apply":
+                _force_flag = bool(force_reapply and _header_has_vy_skysf(hdr))
+                if _force_flag:
+                    LOGGER.warning(
+                        "preprocess_sky_surface_force_reapply: re-subtracting sky surface on %s",
+                        fp.name,
+                    )
+                data, sky_stats = _fit_subtract_preprocess_sky_surface(data, order=sky_order)
+                if _force_flag:
+                    sky_stats["sky_surface_force_reapply"] = True
+            else:
+                sky_stats = {
+                    "sky_surface_applied": False,
+                    "sky_surface_skipped": True,
+                    "sky_surface_order": sky_order,
+                }
+                LOGGER.info(
+                    "Sky-surface subtract skipped on %s (VY_SKYSF present, VYSKYORD=%s)",
+                    fp.name,
+                    sky_order,
+                )
 
         qc = _qc_fwhm_elongation(data)
         fwhm = float(qc.get("fwhm_px")) if qc.get("fwhm_px") is not None else float("nan")
@@ -16999,6 +17070,8 @@ def _qc_enrich_one_frame(
             "bg_median": float(np.nanmedian(data)) if data.size else None,
             **sky_stats,
         }
+    except SkySurfaceOrderConflictError:
+        raise
     except Exception as exc:  # noqa: BLE001
         return {
             "src": str(fp),
@@ -17024,7 +17097,6 @@ def _qc_enrich_calibrated_in_place(
     only_paths: Sequence[Path | str] | None = None,
     prefilter_rejected: Mapping[Path | str, str] | None = None,
     progress_cb: Callable[..., None] | None = None,
-    apply_sky_surface: bool = False,
 ) -> dict[str, Any]:
     """Lightweight QC pass that writes VY_* headers directly onto calibrated FITS files.
 
@@ -17042,9 +17114,9 @@ def _qc_enrich_calibrated_in_place(
     import numpy as np
 
     _ = fwhm_reject_limit, elong_reject_limit  # skip-mode: diagnostics only
-    _ = apply_sky_surface  # OSC callers pass True; mono gate is sky_order-only (T3 restore)
     cfg = app_config or AppConfig()
     sky_order = int(cfg.preprocess_sky_surface_order)
+    force_reapply = bool(getattr(cfg, "preprocess_sky_surface_force_reapply", False))
 
     calibrated_root = Path(calibrated_root)
     _prefilter: dict[str, str] = {}
@@ -17074,6 +17146,7 @@ def _qc_enrich_calibrated_in_place(
                     _qc_enrich_one_frame,
                     str(fp),
                     sky_order=sky_order,
+                    force_reapply=force_reapply,
                     prefilter_status=_prefilter.get(norm_fits_path_key(fp)),
                     target_ra=target_ra,
                     target_dec=target_dec,
@@ -17085,7 +17158,10 @@ def _qc_enrich_calibrated_in_place(
                 done += 1
                 if progress_cb is not None:
                     progress_cb(done, total, f"QC in-place {fp.name}")
-                row = fut.result()
+                try:
+                    row = fut.result()
+                except SkySurfaceOrderConflictError as exc:
+                    raise RuntimeError(f"QC in-place failed for {fp.name}: {exc}") from exc
                 results.append(row)
                 if str(row.get("status", "")).startswith("error"):
                     log_event(f"QC in-place failed for {fp.name}: {row.get('status')}")
@@ -17103,6 +17179,7 @@ def _qc_enrich_calibrated_in_place(
             row = _qc_enrich_one_frame(
                 str(fp),
                 sky_order=sky_order,
+                force_reapply=force_reapply,
                 prefilter_status=_prefilter.get(norm_fits_path_key(fp)),
                 target_ra=target_ra,
                 target_dec=target_dec,
@@ -17120,10 +17197,23 @@ def _qc_enrich_calibrated_in_place(
 
     n_ok = sum(1 for r in results if r.get("status") == "ok")
     n_rejected = sum(1 for r in results if str(r.get("status", "")).startswith("rejected"))
+    sky_surface_skip_count = sum(1 for r in results if r.get("sky_surface_skipped"))
+    sky_surface_force_reapply = force_reapply and any(
+        r.get("sky_surface_force_reapply") for r in results
+    )
     log_event(
         f"QC in-place: {n_ok} ok, {n_rejected} rejected, "
         f"{len(results) - n_ok - n_rejected} errors"
     )
+    if sky_surface_skip_count:
+        log_event(
+            f"QC in-place: sky-surface subtract skipped on {sky_surface_skip_count} frame(s) "
+            "(VY_SKYSF guard)"
+        )
+    if sky_surface_force_reapply:
+        log_event(
+            "QC in-place: preprocess_sky_surface_force_reapply=True (sky-surface guard bypassed)"
+        )
 
     try:
         from invariants_runtime import check_preprocess_large_small_ratio  # noqa: PLC0415
@@ -17172,6 +17262,8 @@ def _qc_enrich_calibrated_in_place(
         "n_processed": len(results),
         "n_ok": n_ok,
         "n_rejected": n_rejected,
+        "sky_surface_skip_count": sky_surface_skip_count,
+        "sky_surface_force_reapply": sky_surface_force_reapply,
         "results": results,
         "qc_root": str(calibrated_root),
         "qc_csv": str(_qc_csv),
@@ -17245,7 +17337,28 @@ def preprocess_calibrated_to_processed(
         prefilter_rejected=prefilter_rejected,
         progress_cb=progress_cb,
     )
-    return pd.DataFrame(_out.get("results") or [])
+    _skip_n = int(_out.get("sky_surface_skip_count") or 0)
+    if _skip_n:
+        log_milestone(f"[PREPROCESS] sky_surface skipped {_skip_n} frame(s) (VY_SKYSF guard)")
+    if _out.get("sky_surface_force_reapply"):
+        LOGGER.warning(
+            "preprocess_sky_surface_force_reapply=True: sky-surface guard bypassed on this run"
+        )
+    df = pd.DataFrame(_out.get("results") or [])
+    df.attrs["preprocess_sky_summary"] = {
+        "sky_surface_skip_count": _skip_n,
+        "sky_surface_force_reapply": bool(_out.get("sky_surface_force_reapply")),
+    }
+    return df
+
+
+def preprocess_sky_summary_from_df(df: pd.DataFrame) -> dict[str, Any]:
+    """Extract sky-surface guard counters stored on a preprocess result dataframe."""
+    raw = getattr(df, "attrs", {}).get("preprocess_sky_summary") or {}
+    return {
+        "sky_surface_skip_count": int(raw.get("sky_surface_skip_count") or 0),
+        "sky_surface_force_reapply": bool(raw.get("sky_surface_force_reapply")),
+    }
 
 
 

@@ -706,6 +706,8 @@ class AppConfig:
     # WAVE-B STEP 6: moffat_chi2_limit hardcoded (module constant _MOFFAT_CHI2_LIMIT in pipeline.py).
     #: Per calibrated light: subtract source-masked sigma-clipped polynomial sky surface in preprocess (0=off, default 2).
     preprocess_sky_surface_order: int = 2
+    #: When True, bypass the VY_SKYSF idempotency guard and re-subtract sky surface in-place.
+    preprocess_sky_surface_force_reapply: bool = False
     #: OSC: post-extraction NxN average binning on each channel plane (1-4; default 2). Total scale vs raw = 2 x N.
     osc_channel_binning: int = 2
     #: In-place QC diagnostic threshold for estimated FWHM [pix] (legacy; selection uses DB prefilter).
@@ -1647,6 +1649,12 @@ class AppConfig:
             self.preprocess_sky_surface_order = max(0, min(2, _sso))
         except (TypeError, ValueError):
             self.preprocess_sky_surface_order = 2
+        self.preprocess_sky_surface_force_reapply = bool(
+            data.get(
+                "preprocess_sky_surface_force_reapply",
+                self.preprocess_sky_surface_force_reapply,
+            )
+        )
         try:
             _ocb = int(data.get("osc_channel_binning", self.osc_channel_binning))
             self.osc_channel_binning = _ocb if _ocb in (1, 2, 3, 4) else 2
@@ -2555,6 +2563,7 @@ class AppConfig:
             "psf_adaptive_resolve_fwhm": float(self.psf_adaptive_resolve_fwhm),
             "psf_adaptive_snr_lo": float(self.psf_adaptive_snr_lo),
             "preprocess_sky_surface_order": int(self.preprocess_sky_surface_order),
+            "preprocess_sky_surface_force_reapply": bool(self.preprocess_sky_surface_force_reapply),
             "osc_channel_binning": int(self.osc_channel_binning),
             "qc_fwhm_limit": float(self.qc_fwhm_limit),
             "qc_elong_limit": float(self.qc_elong_limit),
