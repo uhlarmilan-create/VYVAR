@@ -767,6 +767,7 @@ def _vyvar_execute_preprocess_pending(
         calibrated_paths_for_draft_apply_filters,
         estimate_archive_memory_profile,
         preprocess_calibrated_to_processed,
+        preprocess_sky_summary_from_df,
         _iter_light_fits,
     )
 
@@ -818,6 +819,8 @@ def _vyvar_execute_preprocess_pending(
                 "QC filter: no frames matching " + ", ".join(_why) + "."
             )
         dfs_pp: list[pd.DataFrame] = []
+        _sky_skip_total = 0
+        _sky_force_reapply = False
         _all_lights = _iter_light_fits(source_dir)
         _prefilter_map = build_prefilter_rejected_map(_all_lights, p1)
         tot_pp = len(_all_lights)
@@ -845,8 +848,16 @@ def _vyvar_execute_preprocess_pending(
                     **_pp_kw,
                 )
             )
+            _pp_sum = preprocess_sky_summary_from_df(dfs_pp[-1])
+            _sky_skip_total += int(_pp_sum.get("sky_surface_skip_count") or 0)
+            _sky_force_reapply = _sky_force_reapply or bool(_pp_sum.get("sky_surface_force_reapply"))
             off_pp += len(p1)
         df = pd.concat(dfs_pp, ignore_index=True) if dfs_pp else pd.DataFrame()
+        if dfs_pp:
+            df.attrs["preprocess_sky_summary"] = {
+                "sky_surface_skip_count": _sky_skip_total,
+                "sky_surface_force_reapply": _sky_force_reapply,
+            }
     else:
         if not source_dir.exists():
             raise FileNotFoundError("Missing source lights directory. Run calibration/import first.")
@@ -874,11 +885,14 @@ def _vyvar_execute_preprocess_pending(
             else 0
         )
         _root_pp = str(source_dir)
+        _sky_sum = preprocess_sky_summary_from_df(df)
         st.session_state["vyvar_last_job_summary"] = {
             "kind": "preprocess",
             "rows": int(len(df)),
             "rejected": rej_pp,
             "root": _root_pp,
+            "sky_surface_skip_count": int(_sky_sum.get("sky_surface_skip_count") or 0),
+            "sky_surface_force_reapply": bool(_sky_sum.get("sky_surface_force_reapply")),
         }
     except Exception:  # noqa: BLE001
         st.session_state["vyvar_last_job_summary"] = None
