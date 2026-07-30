@@ -12,6 +12,28 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-30 -- SKYSF-DOUBLE guard (in-place idempotency)
+
+Second in-place preprocess on calibrated lights could re-run order-2 sky-surface subtract
+because ``VY_SKYSF`` / ``VYSKYORD`` were written but never read. Bench on draft 452 showed
+``max_abs_diff=508.97`` ADU for one double-subtract pass (calibrated vs re-preprocessed in
+place) -- hundreds of ADU, driven by star-mask non-idempotency (second fit runs on a
+different domain and removes real signal), not a rounding artifact.
+
+**Guard landed:** read ``VY_SKYSF`` on the frame about to be modified before subtracting;
+absent -> subtract; present + matching ``VYSKYORD`` -> skip (counter in run summary);
+present + mismatched order -> abort (recalibration from raw required).
+``preprocess_sky_surface_force_reapply`` (default False) bypasses with WARNING + provenance flag.
+Copy-tree-era calibrated FITS without markers still subtract on first pass; ``proc_*`` markers
+on siblings do not affect the guard.
+
+Anchor forensics (draft 435, copy-tree): no contamination on drafts checkable; in-place-era
+drafts unavailable locally, status unknown.
+
+**Tests:** ``dev/tests/test_skysf_double_guard.py`` (T1-T6).
+
+---
+
 ## 2026-07-29 -- RELEASE BUILD preview-VYVAR.0.9.0
 
 Compiled rebuild (**90** modules), all release gates PASS on compiled build (anchor core

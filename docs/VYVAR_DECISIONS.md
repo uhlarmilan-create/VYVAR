@@ -1253,6 +1253,30 @@ calibrated-frame gradient; detects missing or ineffective sky-surface subtract f
 **INV-MS-01** (DAO_ONLY fraction WARN/FAIL). C.4 acceptance on BO CVn raw path pending Milan
 raw frames on disk. **Status:** code landed; science validation pending.
 
+### SKYSF-DOUBLE-GUARD (2026-07-30)
+
+**Problem.** In-place preprocess (``_qc_enrich_calibrated_in_place``, since ``013cb0c``) always
+re-ran ``_fit_subtract_preprocess_sky_surface`` when ``preprocess_sky_surface_order > 0`` even if
+the frame already carried ``VY_SKYSF=True``. Headers were write-only; UI preprocess twice,
+MAKE MASTERSTAR re-entry, or interrupted re-runs could double-subtract. Measured defect cost on
+draft 452 bench: **508.97 ADU** ``max_abs_diff`` for **one** extra pass (452 calibrated vs 452
+re-preprocessed in place) -- star-mask non-idempotency removes real signal on the second fit, not
+a float-rounding issue.
+
+**Rule.** One-shot in-place sky-surface subtract per calibrated light, guarded by headers on the
+**same** FITS being modified:
+- ``VY_SKYSF`` absent (legacy copy-tree calibrated): subtract and write markers.
+- ``VY_SKYSF`` present and ``VYSKYORD == preprocess_sky_surface_order``: **skip** (INFO + run-summary counter).
+- ``VY_SKYSF`` present and ``VYSKYORD != order``: **abort**; message requires recalibration from raw.
+- ``preprocess_sky_surface_force_reapply=True``: bypass guard; record override in row provenance + WARNING in run summary.
+
+**``apply_sky_surface`` removed** (was dead after T3 restore): mono and OSC channel paths gate on
+``preprocess_sky_surface_order`` only; mosaics still excluded via ``BAYERPAT`` without ``VY_CHANNEL``.
+
+**Anchor note.** Copy-tree draft 435 verified single subtract; no contamination on drafts
+checkable on disk; in-place-era drafts unavailable, status unknown. **Status:** implemented;
+regression tests ``dev/tests/test_skysf_double_guard.py``.
+
 ### CONFIG-PATH-DATA-ROOT (2026-07-27)
 
 **Problem.** Config path-valued keys stored as relative strings (e.g.
