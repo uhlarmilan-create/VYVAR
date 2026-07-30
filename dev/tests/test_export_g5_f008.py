@@ -3,6 +3,7 @@
 from export_reports import export_lightcurve_reports
 import pandas as pd
 from config import AppConfig
+from photometry_core import TIME_BASE_BJD_TDB
 
 
 def test_varastro_header_uses_n_ensemble_comp_label(tmp_path):
@@ -19,6 +20,7 @@ def test_varastro_header_uses_n_ensemble_comp_label(tmp_path):
             "mag_calib_final": [12.5],
             "err": [0.01],
             "flag": ["normal"],
+            "time_base": [TIME_BASE_BJD_TDB],
         }
     )
     target = pd.Series({"vsx_name": "EA_STAR", "vsx_type": "EA", "catalog_id": "123"})

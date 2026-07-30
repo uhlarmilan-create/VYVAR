@@ -137,7 +137,7 @@ def test_export_onerggb_skipped(tmp_path: Path) -> None:
 
     phot = tmp_path / "photometry"
     phot.mkdir()
-    lc = pd.DataFrame({"bjd": [2_459_000.0], "mag_calib": [12.0], "err": [0.01], "airmass": [1.1]})
+    lc = pd.DataFrame({"bjd": [2_459_000.0], "mag_calib": [12.0], "err": [0.01], "airmass": [1.1], "time_base": ["BJD_TDB"]})
     target = pd.Series({"catalog_id": "T1", "vsx_name": "TEST", "vsx_type": "EA", "mag": 12.0, "bp_rp": 0.5})
     summary = pd.Series({"obs_group": "NoFilter_60_2_oneRGGB"})
     paths = export_lightcurve_reports(
@@ -163,6 +163,7 @@ def test_export_channel_filt_in_aavso_file(tmp_path: Path) -> None:
             "err": [0.01],
             "airmass": [1.1],
             "source_file": ["f.csv"],
+            "time_base": ["BJD_TDB"],
         }
     )
     target = pd.Series({"catalog_id": "T1", "vsx_name": "TEST", "vsx_type": "EA", "mag": 12.0, "bp_rp": 0.5})

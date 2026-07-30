@@ -160,7 +160,7 @@
   "masterstar_centre_rms_max_px": 1.2,
   // Primary DAO detection threshold (sigma) on the masterstar; lower finds
   // fainter stars but more noise.
-  "masterstar_dao_threshold_sigma": 2.1,
+  "masterstar_dao_threshold_sigma": 3.8,
   // Limit on the edge-to-centre distortion ratio still considered benign for
   // the optics.
   "masterstar_distortion_benign_ratio_max": 3.2,

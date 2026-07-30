@@ -228,6 +228,9 @@ def _apply_aperture_catalog_enhancements_from_st(
             err_background_mode=str(st.get("err_background_mode", "empirical")),
             err_empty_apertures_n=int(st.get("err_empty_apertures_n", 64)),
             err_empty_apertures_min=int(st.get("err_empty_apertures_min", 16)),
+            aperture_variable_factor=float(st.get("aperture_variable_factor", 1.0)),
+            aperture_comp_factor=float(st.get("aperture_comp_factor", 1.0)),
+            variable_target_catalog_ids=frozenset(st.get("variable_target_catalog_ids") or []),
         )
     except Exception as exc:  # noqa: BLE001
         from except_fix_counters import get_except_fix_counters
@@ -6964,6 +6967,61 @@ def _dao_auto_binning_factor(h: int, w: int) -> int:
     return 2
 
 
+def _pixel_noise_sigma_pp_adu(arr: Any) -> float:
+    """Gradient-immune pixel noise from adjacent differences (MAD estimator).
+
+    For smooth large-scale structure, ``I[i+1]-I[i]`` is nearly constant so MAD tracks
+    pixel-to-pixel noise, not sky gradient. Validated on BO CVn MASTERSTAR (~46 ADU stable
+    across draft 435/450 while ``sigma_clipped_stats`` moved 26%; see SIGMA-ESTIMATOR-VERIFY).
+    """
+    import numpy as np
+
+    a = np.asarray(arr, dtype=np.float64)
+    if a.ndim != 2 or a.size < 64:
+        return float("nan")
+    finite = np.isfinite(a)
+    chunks: list[np.ndarray] = []
+    dh = a[:, 1:] - a[:, :-1]
+    mh = finite[:, 1:] & finite[:, :-1]
+    if int(np.count_nonzero(mh)) >= 32:
+        chunks.append(dh[mh].ravel())
+    dv = a[1:, :] - a[:-1, :]
+    mv = finite[1:, :] & finite[:-1, :]
+    if int(np.count_nonzero(mv)) >= 32:
+        chunks.append(dv[mv].ravel())
+    if not chunks:
+        return float("nan")
+    diffs = np.concatenate(chunks)
+    if diffs.size < 64:
+        return float("nan")
+    med = float(np.median(diffs))
+    mad = float(np.median(np.abs(diffs - med)))
+    if not math.isfinite(mad) or mad <= 0:
+        return float("nan")
+    return float(mad / 0.674489750196082 / math.sqrt(2.0))
+
+
+def _dao_noise_sigma_adu(
+    arr: Any,
+    *,
+    bfac: int,
+    fallback_std: float,
+    data_dao: Any | None = None,
+) -> float:
+    """Noise scale for DAOStarFinder threshold (sigma_pp / sqrt(bfac), with legacy fallback)."""
+    from astropy.stats import sigma_clipped_stats
+
+    sigma_pp = _pixel_noise_sigma_pp_adu(arr)
+    if math.isfinite(float(sigma_pp)) and float(sigma_pp) > 0:
+        return float(sigma_pp) / math.sqrt(float(max(1, bfac)))
+    if int(bfac) > 1 and data_dao is not None:
+        _, _, std_dao = sigma_clipped_stats(data_dao, sigma=3.0, maxiters=3)
+        logging.warning("[DAO] sigma_pp unavailable; falling back to sigma_clipped_stats on binned frame")
+        return float(std_dao)
+    logging.warning("[DAO] sigma_pp unavailable; falling back to global sigma_clipped_stats")
+    return float(fallback_std)
+
+
 def _mean_bin2d_for_dao(data0: "np.ndarray", factor: int) -> tuple["np.ndarray", int]:
     import numpy as np
 
@@ -7388,11 +7446,7 @@ def detect_stars_match_master_reference(
         thr_s = max(0.5, min(20.0, thr_s))
         dao_scale = _dao_auto_binning_factor(*data0.shape)
         data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
-        _, _, std_dao = (
-            sigma_clipped_stats(data_dao, sigma=3.0, maxiters=3)
-            if bfac > 1
-            else (mean, med, std)
-        )
+        std_dao = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
         if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
             try:
                 std_dao = float(np.nanstd(arr))
@@ -8113,11 +8167,7 @@ def detect_stars_and_match_catalog(
         _ds = max(0.5, min(20.0, _ds))
         dao_scale = _dao_auto_binning_factor(*data0.shape)
         data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
-        _, _, std_dao = (
-            sigma_clipped_stats(data_dao, sigma=3.0, maxiters=3)
-            if bfac > 1
-            else (mean, med, std)
-        )
+        std_dao = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
         if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
             try:
                 std_dao = float(np.nanstd(arr))
@@ -16702,7 +16752,7 @@ def _fit_subtract_preprocess_sky_surface(
     """Fit and subtract a 2D polynomial sky correction (shared calibrated->processed preprocess).
 
   Star-masked + sigma-clipped fit on calm background pixels (|cal-median| < ``calm_adu``).
-  Fits order-N to ``median(cal) - cal`` on the fit set, then **subtracts** the surface from
+  Fits order-N to ``work - bg_median`` on the fit set, then subtracts the fitted surface from
   the frame (429-class gradient removal; full surface including constant term).
     """
     import numpy as np
@@ -16762,7 +16812,7 @@ def _fit_subtract_preprocess_sky_surface(
 
     step = max(1, int(subsample_step))
     yy_s, xx_s = np.mgrid[0:h:step, 0:w:step]
-    z_s = (float(bg_median) - work[::step, ::step]).astype(np.float64)
+    z_s = (work[::step, ::step] - float(bg_median)).astype(np.float64)
     m_s = fit_mask[::step, ::step]
     use_mask = m_s & np.isfinite(z_s)
     min_coef = (order_i + 1) * (order_i + 2) // 2

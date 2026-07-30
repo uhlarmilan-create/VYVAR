@@ -126,20 +126,43 @@ def _obs_year_from_header(header: fits.Header | None) -> float:
     return float(datetime.utcnow().year)
 
 
+_PM_COLUMNS_UNAVAILABLE_LOGGED = False
+
+
+def _row_has_finite_pm(row: dict[str, Any]) -> bool:
+    try:
+        pmra = row.get("pmra")
+        pmdec = row.get("pmdec")
+        if pmra is None or pmdec is None:
+            return False
+        return math.isfinite(float(pmra)) and math.isfinite(float(pmdec))
+    except (TypeError, ValueError):
+        return False
+
+
 def _apply_pm_to_gaia_rows(rows: list[dict[str, Any]], *, obs_year: float) -> tuple[list[dict[str, Any]], int]:
     """Apply PM correction to Gaia rows where PM is significant."""
+    global _PM_COLUMNS_UNAVAILABLE_LOGGED  # noqa: PLW0603
+    if rows and not any(_row_has_finite_pm(row) for row in rows):
+        if not _PM_COLUMNS_UNAVAILABLE_LOGGED:
+            logging.warning(
+                "[PM] Gaia catalog has no finite pmra/pmdec; proper-motion correction skipped "
+                "(local DR3 build omits PM per GAIA-1 — n_corrected=0 is not evidence of success)"
+            )
+            _PM_COLUMNS_UNAVAILABLE_LOGGED = True
     out: list[dict[str, Any]] = []
     n_corrected = 0
     for row in rows:
         rr = dict(row)
+        if not _row_has_finite_pm(rr):
+            out.append(rr)
+            continue
         try:
-            pmra = rr.get("pmra")
-            pmdec = rr.get("pmdec")
-            pmra_f = float(pmra) if pmra is not None else 0.0
-            pmdec_f = float(pmdec) if pmdec is not None else 0.0
+            pmra_f = float(rr["pmra"])
+            pmdec_f = float(rr["pmdec"])
         except (TypeError, ValueError):
-            pmra_f = 0.0
-            pmdec_f = 0.0
+            out.append(rr)
+            continue
         if abs(pmra_f) > PM_CORRECTION_MIN_MASYR or abs(pmdec_f) > PM_CORRECTION_MIN_MASYR:
             ra_corr, dec_corr = _apply_proper_motion(
                 rr.get("ra", float("nan")),

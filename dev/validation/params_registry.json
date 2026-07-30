@@ -1739,7 +1739,7 @@
     "widget": "custom"
   },
   "masterstar_dao_threshold_sigma": {
-    "help": "Primary DAO detection threshold (sigma) on the masterstar; lower finds fainter stars but more noise.",
+    "help": "Primary DAO detection threshold (sigma) on the masterstar, multiplied by gradient-immune pixel noise sigma_pp (adjacent-difference MAD). Recalibrated 2026-07-30 (P-10 bundle): 3.8 reproduces ~175 ADU threshold and ~3.7% DAO_ONLY on anchor-class data where 2.1 against sigma_clipped_stats was an effective 3.8 sigma.",
     "kind": "static",
     "label": "Masterstar DAO Threshold Sigma",
     "owner": "config_runtime",
@@ -2554,6 +2554,17 @@
       0.0,
       2.0
     ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "preprocess_sky_surface_force_reapply": {
+    "help": "When true, bypass the sky-surface idempotency guard and re-subtract the model in-place (diagnostic / recovery only; default false preserves anchor byte-identity).",
+    "kind": "static",
+    "label": "Preprocess Sky Surface Force Reapply",
+    "owner": "config_runtime",
+    "phase": "qc",
+    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto"

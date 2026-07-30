@@ -15,6 +15,7 @@ from export_reports import (
     log_export_batch_summary,
     record_export_failure,
 )
+from photometry_core import TIME_BASE_BJD_TDB
 
 
 def _minimal_lc() -> pd.DataFrame:
@@ -25,6 +26,7 @@ def _minimal_lc() -> pd.DataFrame:
             "mag_calib_final": [12.5],
             "err": [0.01],
             "flag": ["normal"],
+            "time_base": [TIME_BASE_BJD_TDB],
         }
     )
 

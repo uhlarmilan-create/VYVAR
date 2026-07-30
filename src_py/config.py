@@ -750,7 +750,7 @@ class AppConfig:
     #: Najnizsi SIP stupen pri pade vyssich (typicky 3; nie menej ako 2).
     masterstar_platesolve_sip_min_order: int = 3
     #: DAOStarFinder threshold = sigmaxRMS len pre MASTERSTAR katalog (hlbsia detekcia; ciel viac tisic hviezd).
-    masterstar_dao_threshold_sigma: float = 2.1
+    masterstar_dao_threshold_sigma: float = 3.8
     #: Pred matchom s Gaia: ponechat detekcie s peakom aspon ``median + kxsigma`` (nizsie = viac slabych hviezd).
     masterstar_prematch_peak_sigma_floor: float = 1.8
     #: MASTERSTAR katalog: DAO FWHM z najlepsieho zdrojoveho snimku (``best_frame_fwhm_px``), nie median ``VY_FWHM`` v hlavicke.

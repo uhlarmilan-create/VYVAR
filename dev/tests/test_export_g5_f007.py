@@ -14,6 +14,7 @@ from export_reports import (
     _resolve_export_arcsec_per_px,
     export_lightcurve_reports,
 )
+from photometry_core import TIME_BASE_BJD_TDB
 
 
 def test_resolve_arcsec_from_pipeline_meta_home_rig(tmp_path: Path) -> None:
@@ -68,6 +69,7 @@ def test_varastro_omits_aperture_arcsec_when_scale_unknown(tmp_path: Path) -> No
             "err": [0.01],
             "airmass": [1.1],
             "flag": ["normal"],
+            "time_base": [TIME_BASE_BJD_TDB],
         }
     )
     target = pd.Series({"vsx_name": "TEST_STAR", "vsx_type": "EA", "catalog_id": "123"})
@@ -118,6 +120,7 @@ def test_varastro_shows_derived_aperture_arcsec(tmp_path: Path) -> None:
             "airmass": [1.1],
             "flag": ["normal"],
             "delta_mag": [0.1],
+            "time_base": [TIME_BASE_BJD_TDB],
         }
     )
     target = pd.Series({"vsx_name": "TEST_EA", "vsx_type": "EA", "catalog_id": "123"})
@@ -164,6 +167,7 @@ def test_aavso_body_byte_identical_when_scale_matches_meta(tmp_path: Path) -> No
             "err": [0.010],
             "airmass": [1.100],
             "flag": ["normal"],
+            "time_base": [TIME_BASE_BJD_TDB],
         }
     )
     target = pd.Series({"vsx_name": "REG_STAR", "vsx_type": "EA", "catalog_id": "456"})

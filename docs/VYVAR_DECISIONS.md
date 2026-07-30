@@ -1297,6 +1297,69 @@ family) are outside this window and remain anchor-validated where Part 1 forensi
 
 **Status:** bookkeeping + banners applied; no remediation or reprocessing.
 
+### P-10-SKYSURF-SIGN + PREPROCESS-REGIMES-JULY (2026-07-30)
+
+**P-10 defect.** ``_fit_subtract_preprocess_sky_surface`` fitted ``z = bg_median - work`` then
+subtracted ``surf``, **doubling** large-scale gradient while preserving pedestal. SKYSF-DOUBLE
+forensics ratio ``283/136.8 ≈ 2.07`` on refit p2p is this signature, not mask non-idempotency alone.
+
+**Fix (local, bundled with sigma_pp DAO estimator):** fit ``z = work - bg_median``, keep
+``out = work - surf``. **Not pushed alone** — see Audit Tranche 3.
+
+**Three distinct preprocess regimes in July (none physically correct pre-fix):**
+
+| Era | Behaviour | Large-scale content |
+|-----|-----------|---------------------|
+| pre-``013cb0c`` (435 family) | sky-surface applied | gradient **doubled** (``2g``) |
+| ``013cb0c`` → T3 restore | sky-surface **absent** for mono (SKIPPROC) | natural ``g`` |
+| restore → ``84174ae`` | sky-surface applied (sign bug) + double-pass risk | ``2g`` (+ double risk) |
+
+**Anchor status.** ``VL-ANCHOR-WCSINV`` fingerprints (``b7f980c0…``, ``n_raw_dao=2552``, etc.)
+describe **reproducible doubled-gradient data**, not physically flattened backgrounds. Anchor is a
+**reproducibility reference until re-cut** after P-10 + estimator bundle + delta measurement.
+
+**Byte-identity doctrine.** Identity gates prove the pipeline repeats itself, not that the transform
+is correct. At least one gate per physical step should compare against an independent expectation
+(synthetic gradient test in ``test_preprocess_sky_surface.py`` for sky-surface).
+
+**Status:** fix + sigma_pp estimator + ``masterstar_dao_threshold_sigma=3.8`` recalibration
+implemented locally; anchor re-run and ledger re-cut pending.
+
+### D1-3-MASTER-FLAT-CONSTRUCTION (2026-07-30, audit Stage 1)
+
+**Question.** Is the CalibrationLibrary master flat dark/bias-subtracted before stacking, and is
+normalization at stack time or calibrate time?
+
+**Evidence (code).** ``importer._write_master_to_library`` / ``_generate_master_flat``: per-pixel
+**median** stack of raw flat FITS with **no** dark or bias subtraction step
+(``generate_master_flat_from_source_dir`` docstring, ``importer.py`` ~1639-1700, ~2122-2133).
+New masters receive ``VYFLNRD=1`` with comment *Median normalization deferred to calibrate after
+resample* (``importer.py`` ~1122-1126). ``calibration.py`` module docstring: legacy flats
+normalized at stack time; new flats normalized in RAM at calibrate via ``normalize_flat_master``.
+
+**Literature.** Howell, *Handbook of CCD Astronomy* (flat-field chapter): flats must have additive
+terms (bias/dark) removed before treating the frame as a pure multiplicative illumination map;
+otherwise bias does not scale with signal and breaks ``(light-dark)/flat``.
+
+**Status.** **Open scope gap:** VYVAR does not dark-subtract individual flats before median stack.
+Operator must supply bias-subtracted or dark-subtracted sky flats externally, or accept that
+twilight/dark current in raw flats is folded into the master. Normalization: **at calibrate** for
+``VYFLNRD=1`` masters (current library convention).
+
+### D10-2-GAIA-JOHNSON-RANGE (2026-07-30, audit Stage 1)
+
+**Literature.** Gaia DR3 CU5 Table 5.9 polynomials (``gaia_johnson.py``); applicability range
+Table 5.10: **G in [8, 16] mag**, **BP-RP in [-0.5, 5.1] mag** (pinned as ``G_MAG_MIN/MAX``,
+``BPRP_MIN/MAX``).
+
+**Code.** ``transform_gaia_to_johnson`` rejects out-of-range inputs (``gaia_johnson.py`` ~140-155);
+``transform_comp_row_for_osc_band`` excludes comps from OSC ensemble with logged reason.
+
+**Anchor (draft_435 snapshot).** 1/148 comparison stars and 39/2951 masterstars outside published
+G range (bright stars); **0** outside BP-RP range in sampled failures.
+
+**Status.** Guard **present**; finding **latent** for colour, **active** for a handful of bright comps.
+
 ### CONFIG-PATH-DATA-ROOT (2026-07-27)
 
 **Problem.** Config path-valued keys stored as relative strings (e.g.
