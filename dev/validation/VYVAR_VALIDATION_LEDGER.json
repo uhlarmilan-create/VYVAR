@@ -45,7 +45,7 @@
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
       "last_verified": "2026-07-29",
-      "commit": "6bc8da4",
+      "commit": "226d269",
       "notes": "Re-verify on next --full against draft_435 sky-surface anchor."
     },
     {
@@ -146,7 +146,7 @@
       "verification": "scripts/session_baseline_check.py --full (core b7f980c0\u2026 n=325; extended 2c43bbbf\u2026 n=487). Census fingerprint n_raw_dao=2552 matched=2842 targets=165; identity p95 baseline 1.54 px. Plan-regen 875 rows (873 VSX + 2 exo); frozen VT 245 rows.",
       "passes": true,
       "last_verified": "2026-07-29",
-      "commit": "6bc8da4",
+      "commit": "226d269",
       "notes": "Re-cut 2026-07-28 (GOLDEN-ASSET-RECUT Part 3): schema harmonisation only -- additive delta_mag_sysrem column on all light curves (NaN when SysRem off); BJD/HJD/magnitudes/flags/comp sets bit-identical vs prior anchor. Two agreeing --full runs. Supersedes core 1c48d9fc0056bc513c379fe1fb873e25215e5910f873e55e4a0b4fd8b5995d9f / extended 744bce947ed47463227791bdac62dbec6885edfb1b637ae0a597f9d1973a71ba (2026-07-27 identity-gate re-cut). Identity-gate re-cut (2026-07-27 CLOSE-2): four gaia_dr3_direct mis-associations removed (active 169 -> 165 on frozen mag-limited VT). Wrong-star naming evidence on stale mini: VSX target Gaia IDs paired with neighbour LC filenames (old code adopted matched masterstar catalog_id). See identity_gate_dropped_targets.",
       "identity_gate_dropped_targets": [
         {
