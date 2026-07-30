@@ -1,0 +1,70 @@
+{
+  "anchor_snapshot": {
+    "draft": "draft_000435_snapshot_skysurface_20260716",
+    "infolog_files": [
+      "infolog_20260716_123126.txt"
+    ],
+    "preprocess_hits": [],
+    "qc_in_place_count": 0,
+    "pipeline_meta_paths": [
+      "Archive/Drafts/draft_000435_snapshot_skysurface_20260716/platesolve/NoFilter_60_2/photometry/pipeline_meta.json"
+    ],
+    "pipeline_meta_preprocess": {
+      "sky_surface_order": 2,
+      "sky_surface_n_applied": 139,
+      "sky_surface_n_frames": 139,
+      "sky_surface_p2p_median_adu": 136.83660888671875
+    },
+    "draft_manifest": {
+      "draft_id": 435,
+      "calibration_mode": "vyvar_calibrated",
+      "updated_utc": "2026-07-16T09:15:28+00:00"
+    },
+    "qc_metrics_sky_applied_true": 139,
+    "qc_metrics_rows": 139,
+    "qc_metrics_p2p_stats": {
+      "n": 139,
+      "min": 114.30887603759766,
+      "p05": 118.71147537231444,
+      "median": 136.83660888671875,
+      "p95": 157.79916839599608,
+      "max": 177.94744873046875,
+      "mean": 136.57657255543222,
+      "std": 12.159810609887558
+    }
+  },
+  "draft_435_live": {
+    "draft": "draft_000435",
+    "infolog_files": [
+      "infolog_20260716_123126.txt"
+    ],
+    "preprocess_hits": [],
+    "qc_in_place_count": 0,
+    "pipeline_meta_paths": [
+      "Archive/Drafts/draft_000435/platesolve/NoFilter_60_2/photometry/pipeline_meta.json"
+    ],
+    "pipeline_meta_preprocess": {
+      "sky_surface_order": 2,
+      "sky_surface_n_applied": 139,
+      "sky_surface_n_frames": 139,
+      "sky_surface_p2p_median_adu": 136.83660888671875
+    },
+    "draft_manifest": {
+      "draft_id": 435,
+      "calibration_mode": "vyvar_calibrated",
+      "updated_utc": "2026-07-16T09:15:28+00:00"
+    },
+    "qc_metrics_sky_applied_true": 139,
+    "qc_metrics_rows": 139,
+    "qc_metrics_p2p_stats": {
+      "n": 139,
+      "min": 114.30887603759766,
+      "p05": 118.71147537231444,
+      "median": 136.83660888671875,
+      "p95": 157.79916839599608,
+      "max": 177.94744873046875,
+      "mean": 136.57657255543222,
+      "std": 12.159810609887558
+    }
+  }
+}
