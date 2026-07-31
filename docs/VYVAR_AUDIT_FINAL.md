@@ -101,10 +101,9 @@ Stage 1.2 provenance columns added (`aperture_factor_applied`, `fwhm_px_for_aper
 `aperture_snr_table.json` (`fwhm_px = 2.395`, `r_min_px = 1.916`). Focus target at clamp for
 all frames. Register inference via `aperture_fwhm_factor` was wrong code path (H0 confirmed).
 
-**Closure Step 1c (2026-07-31):** Repaired harness (`closure_step1c_differential_aperture.py`).
-Differential `delta_ap` with QC-clean proxy targets at r=1.916 px: max best-worst **0.203 mmag**
-(vs Step 1b **2.69 mmag VOID**). Step 1b artifact: corrupt focus-target COG numerator despite
-`focus_in_qc=false`. A-1 **DOCUMENTED** on anchor.
+**Closure Step 1d (2026-07-31):** Unit bug fixed (`delta_ap` in **mmag**, `* 1000`). Independent
+fixture `closure_a1_reference_fixture.py` (L2 photutils) expects **+144 mmag** G 8-9 range over
+anchor r50 span. Repaired harness on real proxies: max **203 mmag** -> **A-1b CONFIRMED**.
 
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across

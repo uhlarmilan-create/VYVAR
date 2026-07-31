@@ -50,7 +50,15 @@ from closure_step1b_differential_aperture import (  # noqa: E402
 PROXY_R_AP = 1.916
 T4_RATIO_LO = 5.0
 T4_RATIO_HI = 15.0
-GATE_MM = 10.0
+GATE_MM = 10.0  # 10 mmag differential gate (Step 1b/1c pre-register)
+
+
+def _delta_ap_mmag(ee_target: float, ee_comps: list[float]) -> float:
+    """Differential aperture metric in millimagnitudes (not magnitudes)."""
+    med_c = float(np.median(ee_comps))
+    if ee_target <= 0 or med_c <= 0:
+        return float("nan")
+    return -2.5 * math.log10(ee_target / med_c) * 1000.0
 
 
 def _monotone_ee(radii: np.ndarray, ee: np.ndarray) -> np.ndarray:
@@ -189,7 +197,7 @@ def _delta_ap_series(
         if med_c <= 0:
             deltas.append(float("nan"))
             continue
-        deltas.append(-2.5 * math.log10(ee_t / med_c))
+        deltas.append(_delta_ap_mmag(ee_t, ee_c))
     return np.array(deltas, dtype=np.float64)
 
 
@@ -262,7 +270,7 @@ def _delta_ap_frozen_k(
         if med_c <= 0:
             deltas.append(float("nan"))
             continue
-        deltas.append(-2.5 * math.log10(ee_t / med_c))
+        deltas.append(_delta_ap_mmag(ee_t, ee_c))
     return np.array(deltas, dtype=np.float64)
 
 
@@ -294,6 +302,47 @@ def _mad(x: np.ndarray) -> float:
     return float(np.median(np.abs(x - np.median(x))))
 
 
+def _validate_reference_fixture() -> dict[str, Any]:
+    """Gate: harness _delta_ap_mmag must match closure_a1_reference_fixture.py (L2 photutils)."""
+    from closure_a1_reference_fixture import (  # noqa: PLC0415
+        BETA,
+        COG_RADII,
+        R50_GRID,
+        R_TARGET,
+        SKY_ADU,
+        SUBSETS,
+        TOTAL_FLUX,
+        TOL_MMAG,
+        alpha_from_r50,
+        build_expected,
+        ee_at,
+        ee_curve_photutils,
+        render_moffat,
+    )
+
+    exp = build_expected()
+    errors: dict[str, list[float]] = {k: [] for k in SUBSETS}
+    for r50 in R50_GRID:
+        a = alpha_from_r50(r50, BETA)
+        img = render_moffat((161, 161), 80.37, 80.62, a, BETA, TOTAL_FLUX, SKY_ADU)
+        ee = ee_curve_photutils(img, 80.37, 80.62)
+        et = ee_at(COG_RADII, ee, R_TARGET)
+        key = f"{r50:.2f}"
+        for subset, radii in SUBSETS.items():
+            ec = [ee_at(COG_RADII, ee, r) for r in radii]
+            got = _delta_ap_mmag(et, ec)
+            want = exp["table"][key][subset]
+            errors[subset].append(abs(got - want))
+    max_err = max(v for vals in errors.values() for v in vals)
+    return {
+        "pass": max_err <= TOL_MMAG,
+        "max_abs_error_mmag": max_err,
+        "expected_t4_ratio": exp["t4_ratio"],
+        "expected_ranges": exp["range_over_span"],
+        "per_subset_max_err": {k: max(v) for k, v in errors.items()},
+    }
+
+
 def run_self_tests(
     ee_cache: dict[int, dict[str, dict[str, Any]]],
     aperture_by_frame: dict[int, dict[str, float]],
@@ -318,7 +367,7 @@ def run_self_tests(
             d_self.append(float("nan"))
             continue
         ee = _ee_at_radius(ee_cache[fi][tid]["radii"], ee_cache[fi][tid]["ee"], PROXY_R_AP)
-        d_self.append(-2.5 * math.log10(ee / ee) if ee > 0 else float("nan"))
+        d_self.append(_delta_ap_mmag(ee, [ee]))
     t1_self_max = float(np.nanmax(np.abs(np.array(d_self))))
 
     d_eq = _delta_ap_series(
@@ -351,7 +400,7 @@ def run_self_tests(
             rap_cs = [float(np.nanmedian([aperture_by_frame[fi].get(c, float("nan")) for fi in range(n_frames)])) for c in clist_t2[:3]]
             ee_t = _moffat_ee(rap_t, sc)
             ee_cs = [_moffat_ee(r, sc) for r in rap_cs]
-            analytic = -2.5 * math.log10(ee_t / float(np.median(ee_cs)))
+            analytic = _delta_ap_mmag(ee_t, ee_cs)
             # build synthetic cache one frame
             syn: dict[str, dict[str, Any]] = {}
             for cid in [tid, *clist_t2[:3]]:
@@ -434,13 +483,21 @@ def _pick_proxies(
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--draft", type=Path, required=True)
+    ap.add_argument("--draft", type=Path, required=False)
     ap.add_argument("--step1b-json", type=Path, default=Path("tmp/closure_step1b_results.json"))
     ap.add_argument("--out", type=Path, default=Path("tmp/closure_step1c_results.json"))
     ap.add_argument("--cache", type=Path, default=Path("tmp/closure_step1c_ee_cache.npz"))
     ap.add_argument("--rebuild-cache", action="store_true")
+    ap.add_argument("--fixture-check", action="store_true", help="validate against closure_a1_reference_fixture.py and exit")
     args = ap.parse_args()
 
+    if args.fixture_check:
+        res = _validate_reference_fixture()
+        print(json.dumps(res, indent=2))
+        raise SystemExit(0 if res["pass"] else 1)
+
+    if args.draft is None:
+        ap.error("--draft is required unless --fixture-check")
     t0 = time.perf_counter()
     draft = args.draft.resolve()
     lights = draft / "detrended_aligned/lights/NoFilter_60_2"
@@ -500,6 +557,7 @@ def main() -> None:
 
     # Self-tests first
     tests = run_self_tests(ee_cache, aperture_by_frame, r50_arr, star_ids, comp_subs, n_frames, catalog)
+    tests["F_fixture"] = _validate_reference_fixture()
 
     # Recompute B.3 for proxies + real target
     b3: dict[str, Any] = {"proxies": {}, "real_target": {}}
@@ -587,7 +645,7 @@ def main() -> None:
                 ee_c.append(_ee_at_radius(ee_cache[fi][cid]["radii"], ee_cache[fi][cid]["ee"], rap))
             if ee_c and math.isfinite(ee_t) and ee_t > 0:
                 med_c = float(np.median(ee_c))
-                dre.append(-2.5 * math.log10(ee_t / med_c) if med_c > 0 else float("nan"))
+                dre.append(_delta_ap_mmag(ee_t, ee_c))
             else:
                 dre.append(float("nan"))
         dre = np.array(dre, dtype=np.float64)
@@ -668,7 +726,7 @@ def main() -> None:
     with args.out.open("w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
     print(f"Wrote {args.out}")
-    print(f"T1 pass {tests['T1']['self_pass']} T2 {tests['T2']['pass']} T3 {tests['T3']['pass']} T4 {tests.get('T4',{}).get('pass')}")
+    print(f"T1 pass {tests['T1']['self_pass']} T2 {tests['T2']['pass']} T3 {tests['T3']['pass']} T4 {tests.get('T4',{}).get('pass')} F {tests['F_fixture']['pass']}")
 
 
 if __name__ == "__main__":

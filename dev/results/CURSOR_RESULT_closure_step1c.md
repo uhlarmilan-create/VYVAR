@@ -4,6 +4,10 @@ CURSOR RESULT - 2026-07-31 CLOSURE STEP 1c (harness audit + delta_ap recomputati
 **Decisive number:** max |delta_ap| best-to-worst = **0.203 mmag** (proxy G 12.0, G 8-9 comps)
 **T4 ratio:** median range(G 8-9)/range(G > 11) = **0.66** (FAIL band 5-15; explained at sub-mmag floor)
 
+**VOID (Step 1d, 2026-07-31):** All delta_ap values in this report omitted `* 1000` (mag labeled
+as mmag). Corrected decisive number **203 mmag**; verdict **A-1b CONFIRMED**. See
+`dev/results/CURSOR_RESULT_closure_step1d.md` and `dev/tools/closure_a1_reference_fixture.py`.
+
 **Mode:** harness repair + measurement. No production code changes.
 **Base:** `origin/main` @ `9a1c0c4`; pushed `90d2a99`, `70d0d4c`
 **Harness:** `dev/tools/closure_step1c_differential_aperture.py`
