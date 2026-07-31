@@ -12,6 +12,32 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-07-31 -- SESSION CLOSE (science audit closure)
+
+Session close after Audit Stage 3 Parts 0c--0e and tranches 1--4 remediation arc.
+
+**Filed:**
+- `docs/VYVAR_AUDIT_FINAL.md` -- 12-domain science audit synthesis
+- `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md` -- 30-item register; Steps 1-10 queued
+- `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md` -- operational MASTERSTAR TODO index
+
+**Committed evidence:**
+- `dev/results/CURSOR_RESULT_audit_stage3_part0d.md` + harness (Part 0c pairing invalid;
+  source_file pairing median p95 |delta| 0.104 mag)
+- `dev/results/CURSOR_RESULT_audit_stage3_part0e.md` (DAO centroid M4 on focus target;
+  19/156 targets with frame shift > aperture radius)
+
+**Headline findings (awaiting Milan on several):**
+- Part 0c delta table invalid until recomputed on `source_file`
+- Part 0e corrects Part 0d ensemble attribution for focus target `1498135552633294976`
+- Part 1c: Part 1b chi2=649 was total chi2 mis-index; median chi2_red ~4.7
+- Part 2b: correct-path sweep slope -1.58; no N selected (R5)
+- Anchor re-cut blocked on T4-1 + stack/threshold work
+
+**Next work:** Closure Step 1 (**A-1**) frame selection metric for stacked MASTERSTAR.
+
+---
+
 ## 2026-07-30 -- SKYSF-DOUBLE guard (in-place idempotency)
 
 Second in-place preprocess on calibrated lights could re-run order-2 sky-surface subtract

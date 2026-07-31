@@ -57,19 +57,44 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 ---
 
+## QUEUED - Audit closure Steps 1-10 (2026-07-31)
+
+**Status:** QUEUED. Source: `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md` (30 items; Steps 1-10 active).
+Audit synthesis: `docs/VYVAR_AUDIT_FINAL.md`. Operational TODO index:
+`docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md`.
+
+| Step | ID | Pri | Status / deliverable |
+|------|-----|-----|----------------------|
+| 1 | **A-1** | HIGH | Frame selection metric `I_j = F_j²/(σ_j²·FWHM_j²)` for MASTERSTAR stack ranking |
+| 2 | **A-2** | HIGH | Selection rule N_min=10, N_max=20, quality gate 0.5×max(I_j) |
+| 3 | **A-3** | HIGH | Median/sigma-clip stack (replace single-frame copy) |
+| 4 | **A-4** | HIGH | Stack provenance in header + `pipeline_meta.json` |
+| 5 | **A-5** | HIGH | Recalibrate DAO threshold against stack noise/PSF |
+| 6 | **A-6** | MED | Split `DAO_ONLY` health metric by magnitude vs Gaia cap |
+| 7 | **C-1** | HIGH | Admission gate: predicted per-epoch SNR (`g_lim_*` + Labbé σ_bkg_ap) |
+| 8 | **C-2** | HIGH | CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE catalogue flags |
+| 9 | **CR-1** | MED | Cosmic-ray rejection (L.A.Cosmic or equivalent) |
+| 10 | **T4-1** | HIGH | **DECISION:** detection noise on resampled frames (options A/B/C/D) |
+
+Items 11-30 in closure register (P-10 FIXED, anchor re-cut BLOCKED, etc.) tracked but not in
+this execution wave.
+
+---
+
 ## OPEN - MASTERSTAR reference architecture (2026-07-30)
 
-**Status:** NOT STARTED. Does **not** block the current anchor re-cut arc. Full spec:
-`docs/VYVAR_MASTERSTAR_REFERENCE_ARCHITECTURE.md` (Science Audit Tranches 3/4 + design session).
+**Status:** NOT STARTED. Does **not** block closure Step 1 start. Full spec:
+`docs/VYVAR_MASTERSTAR_REFERENCE_ARCHITECTURE.md`; checklist:
+`docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md`.
 
 | ID | Pri | Status / deliverable |
 |----|-----|----------------------|
-| **TODO-C** | HIGH | Separate **admission gate** (predicted per-epoch SNR via `g_lim_*` + Labbé `sigma_bkg_ap`) from **detection threshold**; flag catalogue rows CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE. Independent of stack reference. |
-| **CR-REJECTION** | MED | Cosmic-ray rejection (L.A.Cosmic or equivalent). Standalone hygiene gap; prerequisite for TODO-B; improves TODO-A median stacks. Verified: no CR step in `src_py` today (`cosmic` = gain/RN only). |
-| **TODO-A** | HIGH | Replace single-frame MASTERSTAR (`build_masterstar_from_detrended` lowest-`VY_FWHM` copy) with **median/sigma-clip stack** of best N frames ranked by `I_j = F_j²/(σ_j²·FWHM_j²)`; mandatory provenance; recalibrate DAO threshold; split `DAO_ONLY` health metric by magnitude vs Gaia cap. |
-| **TODO-B** | MED | Zackay & Ofek (2017) **proper coaddition** — optimal version of A; blocked on CR rejection, uncorrelated inputs, per-frame PSF, PSF-based `F_j`. |
+| **TODO-C** | HIGH | Separate **admission gate** (predicted per-epoch SNR via `g_lim_*` + Labbé `sigma_bkg_ap`) from **detection threshold**; flag catalogue rows CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE. Independent of stack reference. **Closure Steps 7-8.** |
+| **CR-REJECTION** | MED | Cosmic-ray rejection (L.A.Cosmic or equivalent). Standalone hygiene gap; prerequisite for TODO-B; improves TODO-A median stacks. Verified: no CR step in `src_py` today (`cosmic` = gain/RN only). **Closure Step 9.** |
+| **TODO-A** | HIGH | Replace single-frame MASTERSTAR (`build_masterstar_from_detrended` lowest-`VY_FWHM` copy) with **median/sigma-clip stack** of best N frames ranked by `I_j = F_j²/(σ_j²·FWHM_j²)`; mandatory provenance; recalibrate DAO threshold; split `DAO_ONLY` health metric by magnitude vs Gaia cap. **Closure Steps 1-6.** |
+| **TODO-B** | MED | Zackay & Ofek (2017) **proper coaddition** — optimal version of A; blocked on CR rejection, uncorrelated inputs, per-frame PSF, PSF-based `F_j`. Register item 30. |
 
-**Suggested order:** TODO-C → CR-REJECTION → TODO-A → TODO-B.
+**Suggested order:** TODO-C → CR-REJECTION → TODO-A → TODO-B (see closure register Steps 1-10).
 
 ---
 

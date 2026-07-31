@@ -1,8 +1,27 @@
 # VYVAR -- Development State
 
-**Status:** phase 2 implemented; see OSC-BAND-EXPORT for phase 3.
+**Status:** Science audit **complete** (2026-07-31); closure execution queued.
 
-Last updated: **2026-07-29** (session close 2026-07-26..28: infolog authority, catalog provenance, disk cleanup plan).
+Last updated: **2026-07-31** (session close: audit docs filed, Stage 3 Part 0d/0e committed).
+
+## Session close 2026-07-31 (science audit closure)
+
+Twelve-domain science audit synthesised in `docs/VYVAR_AUDIT_FINAL.md`. Thirty-item closure
+register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c--0e) committed.
+
+**Audit complete.** Remediation is tracked in the closure register, not open discovery.
+
+**Next work item:** Closure **Step 1 (A-1)** -- implement MASTERSTAR frame selection metric
+`I_j = F_j^2 / (sigma_j^2 * FWHM_j^2)` (`VYVAR_TODO_MASTERSTAR_REFERENCE.md`).
+
+**Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
+recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.
+
+Key Stage 3 findings:
+- Part 0c delta table **invalid** (positional CSV pairing); correct pairing median p95 |delta| **0.104 mag**.
+- Part 0e: focus-target tail from **DAO centroid shift** on same `catalog_id`, not ensemble/neighbour swap.
+- Part 1c: Part 1b chi2=649 was **total chi2** mis-index; true median chi2_red ~ **4.7**.
+- Part 2b: correct-path threshold sweep slope **-1.58**; **no N selected** (R5).
 
 ## Session close 2026-07-26 .. 2026-07-28 (BO CVn arc)
 
