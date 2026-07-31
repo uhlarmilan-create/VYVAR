@@ -353,3 +353,11 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `per_frame_mp_reserve_ram_gb` | 1.5 | - | expert | static | config_runtime | hidden | Per Frame MP Reserve RAM Gb |
 | `qc_preprocess_workers` | 1 | - | expert | resolved | internal | hidden | QC Preprocess Workers |
 
+---
+
+## Parameter budget notes (closure Step 1, 2026-07-31)
+
+| key | budget status | evidence |
+|-----|---------------|----------|
+| `aperture_snr_sizing` | **DEAD on science path** | `precompute_and_save_snr_aperture_table_for_draft` never passes bounds; defaults `r_min_fwhm=0.8`, `r_max_fwhm=2.5` used (`CURSOR_RESULT_closure_step1.md`, S1) |
+

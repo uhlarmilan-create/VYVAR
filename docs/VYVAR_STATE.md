@@ -1,8 +1,8 @@
 # VYVAR -- Development State
 
-**Status:** Science audit **complete** (2026-07-31); closure execution queued.
+**Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-07-31** (session close: audit docs filed, Stage 3 Part 0d/0e committed).
+Last updated: **2026-07-31** (closure Step 1 aperture A-1 measured).
 
 ## Session close 2026-07-31 (science audit closure)
 
@@ -11,8 +11,9 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** Closure **Step 1 (A-1)** -- implement MASTERSTAR frame selection metric
-`I_j = F_j^2 / (sigma_j^2 * FWHM_j^2)` (`VYVAR_TODO_MASTERSTAR_REFERENCE.md`).
+**Next work item:** Aperture closure **Step 2** (A-2/A-3 placement) pending Milan patch choice for
+SNR-table per-frame FWHM (A-1b, `dev/results/CURSOR_RESULT_closure_step1.md`). MASTERSTAR stack
+metric **A-1** (`I_j`) remains queued in parallel.
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.
