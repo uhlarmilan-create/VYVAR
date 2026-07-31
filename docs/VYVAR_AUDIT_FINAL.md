@@ -101,11 +101,10 @@ Stage 1.2 provenance columns added (`aperture_factor_applied`, `fwhm_px_for_aper
 `aperture_snr_table.json` (`fwhm_px = 2.395`, `r_min_px = 1.916`). Focus target at clamp for
 all frames. Register inference via `aperture_fwhm_factor` was wrong code path (H0 confirmed).
 
-**Closure Step 1b (2026-07-31):** Differential systematic measured as
-`delta_ap = -2.5 log10(EE_target/EE_comps)` using growth curves at actual proc CSV radii.
-Max best-worst spread **2.69 mmag** (G 8-9 comps) -- below 10 mmag gate -> **DOCUMENTED**,
-not FIX-required on this anchor. Step 1 absolute COG FWHM and 8 pp EE spread are **VOID** (R7).
-Absolute PSF scale split to register **A-9**.
+**Closure Step 1c (2026-07-31):** Repaired harness (`closure_step1c_differential_aperture.py`).
+Differential `delta_ap` with QC-clean proxy targets at r=1.916 px: max best-worst **0.203 mmag**
+(vs Step 1b **2.69 mmag VOID**). Step 1b artifact: corrupt focus-target COG numerator despite
+`focus_in_qc=false`. A-1 **DOCUMENTED** on anchor.
 
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across
@@ -223,5 +222,5 @@ A-1 **DOCUMENTED** (Step 1b); **A-9** absolute PSF scale open. MASTERSTAR stack 
 | `CURSOR_RESULT_audit_stage1.md` | D10-2, D5-1 provenance, D1-3 |
 | `CURSOR_RESULT_audit_stage2.md` | D5-1, D10-1, D1-2, P-02, U-09, T4-1 |
 | `CURSOR_RESULT_closure_step1.md` | A-1 Step 1 (superseded VOID items) |
-| `CURSOR_RESULT_closure_step1b.md` | A-1 Step 1b delta_ap; A-1 DOCUMENTED; A-9 |
+| `CURSOR_RESULT_closure_step1c.md` | A-1 Step 1c harness audit; delta_ap 0.203 mmag; A-1 DOCUMENTED final |
 | `CURSOR_RESULT_audit_stage3_part0c.md` -- `part0e.md` | Rebuild delta tail forensics |

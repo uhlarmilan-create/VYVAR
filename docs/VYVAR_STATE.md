@@ -2,7 +2,7 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-07-31** (closure Step 1b A-1 DOCUMENTED).
+Last updated: **2026-07-31** (closure Step 1c A-1 DOCUMENTED final).
 
 ## Session close 2026-07-31 (science audit closure)
 
@@ -12,8 +12,8 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
 **Next work item:** Aperture closure **Step 2** (A-2/A-3 DAO centroid / placement). A-1
-**DOCUMENTED** (`CURSOR_RESULT_closure_step1b.md`, delta_ap 2.69 mmag). **A-9** absolute PSF
-scale open. MASTERSTAR **A-1** (`I_j`) queued separately.
+**CLOSED (DOCUMENTED)** -- repaired delta_ap **0.203 mmag** max (`CURSOR_RESULT_closure_step1c.md`).
+**A-9** absolute PSF scale open. MASTERSTAR **A-1** (`I_j`) queued separately.
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.

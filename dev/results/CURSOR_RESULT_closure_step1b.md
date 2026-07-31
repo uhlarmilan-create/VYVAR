@@ -78,7 +78,11 @@ Rate exceeds 80% gate; fit-based tracking in B.2 is admissible.
 
 ## Part B - Differential measurement (no FWHM ground truth required)
 
-### B.1 Per-frame PSF scale proxy `r50_frame`
+**VOID (Step 1c, 2026-07-31):** B.3 / B.5 / B.6 tables below used a corrupt focus-target numerator
+(non-monotonic COG, EE>1) and incorrect B.5 unit mixing (r50 vs TABLE_FWHM=2.395). Superseded by
+`dev/results/CURSOR_RESULT_closure_step1c.md`. Parts A, C, E and V1-V7 **stand**.
+
+### B.1 Per-frame PSF scale proxy `r50_frame` (STANDS)
 
 Median over fixed-star set of COG radius at EE = 0.5 (0.25 px steps to 12 px, normalised at 12 px).
 

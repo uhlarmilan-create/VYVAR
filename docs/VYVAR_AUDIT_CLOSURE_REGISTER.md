@@ -26,14 +26,13 @@ not in the first execution wave.
 
 ### Aperture closure Step 1 (finding A-1 -- SNR table radius)
 
-**Status:** **A-1 DOCUMENTED** (2026-07-31 Step 1b). Undersized radii confirmed; differential
-harmless on anchor (delta_ap < 10 mmag).
-**Reports:** `dev/results/CURSOR_RESULT_closure_step1b.md` (authoritative); Step 1 superseded items marked VOID.
-**Harness:** `dev/tools/closure_step1b_differential_aperture.py`
+**Status:** **A-1 DOCUMENTED** (2026-07-31 Step 1c final). Undersized radii; differential harmless.
+**Reports:** `dev/results/CURSOR_RESULT_closure_step1c.md` (authoritative); Step 1b B.3/B.5/B.6 VOID.
+**Harness:** `dev/tools/closure_step1c_differential_aperture.py`
 
 | Finding | Verdict | Decisive measurement |
 |---------|---------|----------------------|
-| SNR-table radii vs comps (differential) | **DOCUMENTED** | max delta_ap best-worst = **2.69 mmag** (G 8-9 comps) |
+| SNR-table differential (repaired harness) | **DOCUMENTED** | max delta_ap **0.203 mmag** (proxy G~12, G 8-9 comps); Step 1b **2.69 mmag superseded** |
 | Absolute FWHM scale | **A-9 open** | estimators disagree 2.4-4.9 px; not blocking |
 | SNR table clamp | binding (expected) | **2060/2649** on r_min; faint-end normal at 0.8 x FWHM |
 | `aperture_snr_sizing` (S1) | **DEAD** | hardcoded 0.8/2.5 used |
@@ -56,7 +55,7 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | 13 | I-12 PM unavailable logging | 4 | **FIXED** | WARNING when pmra/pmdec absent |
 | 14 | T1 export time_base truth | 12 | **FIXED** | Refuse non-BJD_TDB AAVSO export |
 | 15 | D10-2 Gaia->Johnson range guard | 10 | **FIXED** | Stage 1; 1 comp outside range on anchor |
-| 16 | D5-1 aperture provenance columns | 5 | **FIXED** | Stage 1.2 columns; Step 1b: delta_ap **2.69 mmag** max differential (DOCUMENTED); magnitude-dependent radii from SNR table; S3 role factors label-only |
+| 16 | D5-1 aperture provenance columns | 5 | **FIXED** | Step 1c: repaired delta_ap **0.203 mmag** max (proxy); magnitude-dependent SNR-table radii; S3 label-only |
 | 31 | **A-9** absolute PSF scale unresolved | 5, 7 | **MEASURED** | VY_FWHM_GAUSS 2.395 vs header 3.207 vs COG identities 4.0-4.9 px disagree; not blocking Steps 2-10; required before absolute flux/SNR claims |
 | 17 | D1-3 master flat documentation | 1 | **CLOSED** | DECISIONS entry; builder gap noted |
 | 18 | D10-1 unfiltered CV->CR band | 10 | **FIXED** | Milan decision; Stage 3 |
@@ -97,7 +96,8 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | Stage 0--2 | `dev/results/CURSOR_RESULT_audit_stage{0,1,2}.md` |
 | Stage 3 Part 0a--0e | `dev/results/CURSOR_RESULT_audit_stage3_part*.md` |
 | Closure Step 1 (aperture A-1) | `dev/results/CURSOR_RESULT_closure_step1.md` (VOID markers) |
-| Closure Step 1b (A-1 repair) | `dev/results/CURSOR_RESULT_closure_step1b.md` |
+| Closure Step 1b (A-1 repair) | `dev/results/CURSOR_RESULT_closure_step1b.md` (B.3/B.5/B.6 VOID) |
+| Closure Step 1c (harness audit) | `dev/results/CURSOR_RESULT_closure_step1c.md` |
 | MASTERSTAR spec | `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md` |
 
 ---
