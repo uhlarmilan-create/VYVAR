@@ -48,7 +48,20 @@ See section 5 for hashes.
 
 ## 5 -- Report
 
-(Filled after push.)
+**New HEAD:** `67c4bfd`
+
+| # | Hash | Message |
+|---|------|---------|
+| 1 | `ca9c0b7` | docs(audit): add 12-domain final synthesis and 30-item closure register |
+| 2 | `e99876a` | docs(masterstar): add operational TODO reference checklist |
+| 3 | `6537d68` | audit(stage3-0d): delta-tail forensics report |
+| 4 | `c5a4a64` | audit(stage3-0d): delta-tail forensics harness |
+| 5 | `de8108c` | audit(stage3-0e): per-frame identity forensics report |
+| 6 | `67c4bfd` | docs(session-close): audit complete; queue closure Steps 1-10 |
+
+**Push:** `086d45a..67c4bfd main -> main` confirmed.
+
+**git status:** clean (nothing to commit, working tree clean).
 
 ## Errors
 
