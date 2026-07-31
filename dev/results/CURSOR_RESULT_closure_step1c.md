@@ -1,8 +1,12 @@
 CURSOR RESULT - 2026-07-31 CLOSURE STEP 1c (harness audit + delta_ap recomputation)
 
-**Outcome: A-1b DOWNGRADED to DOCUMENTED** (repaired harness; differential below 10 mmag gate)
-**Decisive number:** max |delta_ap| best-to-worst = **0.203 mmag** (proxy G 12.0, G 8-9 comps)
-**T4 ratio:** median range(G 8-9)/range(G > 11) = **0.66** (FAIL band 5-15; explained at sub-mmag floor)
+**Outcome: A-1b DOWNGRADED to DOCUMENTED** -- **VOID (Step 1d):** see `CURSOR_RESULT_closure_step1d.md` -> **A-1b CONFIRMED**
+**Decisive number:** max |delta_ap| best-to-worst = **0.203** (mislabeled mmag; true **203 mmag**)
+
+**VOID (Step 1d, 2026-07-31):** All delta_ap values omitted `* 1000`. Corrected in
+`CURSOR_RESULT_closure_step1d.md`. Verdict superseded: **A-1b CONFIRMED** at **203 mmag**.
+
+**T4 ratio:** median range(G 8-9)/range(G > 11) = **0.66** on mislabeled units (VOID); **5.32** on mmag (Step 1d PASS)
 
 **VOID (Step 1d, 2026-07-31):** All delta_ap values in this report omitted `* 1000` (mag labeled
 as mmag). Corrected decisive number **203 mmag**; verdict **A-1b CONFIRMED**. See
