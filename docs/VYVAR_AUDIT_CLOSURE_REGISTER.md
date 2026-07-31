@@ -26,23 +26,24 @@ not in the first execution wave.
 
 ### Aperture closure Step 1 (finding A-1 -- SNR table radius)
 
-**Status:** **A-1b MEASURED** (2026-07-31). FIX required; patch proposed, not applied.
-**Report:** `dev/results/CURSOR_RESULT_closure_step1.md`
-**Harness:** `dev/tools/closure_step1_aperture_fwhm_ground_truth.py`
+**Status:** **A-1 DOCUMENTED** (2026-07-31 Step 1b). Undersized radii confirmed; differential
+harmless on anchor (delta_ap < 10 mmag).
+**Reports:** `dev/results/CURSOR_RESULT_closure_step1b.md` (authoritative); Step 1 superseded items marked VOID.
+**Harness:** `dev/tools/closure_step1b_differential_aperture.py`
 
 | Finding | Verdict | Decisive measurement |
 |---------|---------|----------------------|
-| Focus target `aperture_r_px = 1.916 px` vs true FWHM | **A-1b** | EE at r_ap varies **8.0 pp** best-worst frame (COG); `r_ap/FWHM = 0.479` on median frame |
-| SNR table clamp | binding | **2060/2649** stars on `r_min_px` (frame 063) |
-| `aperture_snr_sizing` (S1) | **DEAD** on science path | defaults 0.8/2.5 FWHM used instead |
-| D5-1 Q1 per-frame FWHM for apertures | **No** | draft-constant `VY_FWHM_GAUSS = 2.395` |
-| Role factors on export path (S3) | label only | `aperture_comp_factor` not applied to radius |
+| SNR-table radii vs comps (differential) | **DOCUMENTED** | max delta_ap best-worst = **2.69 mmag** (G 8-9 comps) |
+| Absolute FWHM scale | **A-9 open** | estimators disagree 2.4-4.9 px; not blocking |
+| SNR table clamp | binding (expected) | **2060/2649** on r_min; faint-end normal at 0.8 x FWHM |
+| `aperture_snr_sizing` (S1) | **DEAD** | hardcoded 0.8/2.5 used |
+| D5-1 Q1 per-frame FWHM | **No** | draft-constant `VY_FWHM_GAUSS = 2.395` |
+| Role factors (S3) | label only | not applied on export path |
 
-**Proposed fix (Milan):** option (i) -- per-frame FWHM for SNR table, not MASTERSTAR Gaussian.
-Unblocks aperture Steps 2-3 (placement A-2/A-3) and informs anchor re-cut after patch.
+**Fix posture:** no mandatory patch on anchor differential grounds; option (iii) COG AC is the
+direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch must not ship alone.
 
-**ID note:** MASTERSTAR stack items **A-1..A-6** in this table are a separate queue; aperture
-finding **A-1** in Step 1 reports refers to SNR-table radius only.
+**ID note:** MASTERSTAR stack items **A-1..A-6** above are a separate queue.
 
 ---
 
@@ -55,7 +56,8 @@ finding **A-1** in Step 1 reports refers to SNR-table radius only.
 | 13 | I-12 PM unavailable logging | 4 | **FIXED** | WARNING when pmra/pmdec absent |
 | 14 | T1 export time_base truth | 12 | **FIXED** | Refuse non-BJD_TDB AAVSO export |
 | 15 | D10-2 Gaia->Johnson range guard | 10 | **FIXED** | Stage 1; 1 comp outside range on anchor |
-| 16 | D5-1 aperture provenance columns | 5 | **FIXED** | Stage 1.2 proc CSV columns; **Step 1 (2026-07-31): A-1b** -- radius undersized vs COG FWHM; per-draft FWHM; clamp binding; role factors label-only on export |
+| 16 | D5-1 aperture provenance columns | 5 | **FIXED** | Stage 1.2 columns; Step 1b: delta_ap **2.69 mmag** max differential (DOCUMENTED); magnitude-dependent radii from SNR table; S3 role factors label-only |
+| 31 | **A-9** absolute PSF scale unresolved | 5, 7 | **MEASURED** | VY_FWHM_GAUSS 2.395 vs header 3.207 vs COG identities 4.0-4.9 px disagree; not blocking Steps 2-10; required before absolute flux/SNR claims |
 | 17 | D1-3 master flat documentation | 1 | **CLOSED** | DECISIONS entry; builder gap noted |
 | 18 | D10-1 unfiltered CV->CR band | 10 | **FIXED** | Milan decision; Stage 3 |
 | 19 | sigma_pp drop / sigma_clipped_stats | 2 | **FIXED** | Milan decision Stage 3 |
@@ -94,7 +96,8 @@ finding **A-1** in Step 1 reports refers to SNR-table radius only.
 | Tranche 4 | `dev/results/CURSOR_RESULT_audit_t4.md` |
 | Stage 0--2 | `dev/results/CURSOR_RESULT_audit_stage{0,1,2}.md` |
 | Stage 3 Part 0a--0e | `dev/results/CURSOR_RESULT_audit_stage3_part*.md` |
-| Closure Step 1 (aperture A-1) | `dev/results/CURSOR_RESULT_closure_step1.md` |
+| Closure Step 1 (aperture A-1) | `dev/results/CURSOR_RESULT_closure_step1.md` (VOID markers) |
+| Closure Step 1b (A-1 repair) | `dev/results/CURSOR_RESULT_closure_step1b.md` |
 | MASTERSTAR spec | `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md` |
 
 ---

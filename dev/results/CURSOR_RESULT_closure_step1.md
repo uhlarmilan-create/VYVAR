@@ -12,6 +12,25 @@ between best- and worst-seeing science frames (COG median curve; Part C.2).
 
 ---
 
+## Step 1b supersession (2026-07-31) -- see `CURSOR_RESULT_closure_step1b.md`
+
+**Verdict superseded:** A-1b FIX required -> **A-1b DOWNGRADED to DOCUMENTED** (differential
+systematic below 10 mmag gate).
+
+| ID | Step 1 claim | Status | Pointer |
+|----|--------------|--------|---------|
+| V1 | SNR optimum not below ~1.0 x FWHM; clamp evidence for S2 | **VOID** | Step 1b S0; correct limit ~0.67 x FWHM |
+| V2 | COG FWHM = 4.00 px ground truth; r_ap/FWHM = 0.479 | **VOID** | Step 1b A-9; identity invalid on non-Gaussian profile |
+| V3 | 0/15 Gaussian fits as data property | **VOID** | harness bug (compound-model param names) |
+| V4 | Isolation by 6 x FWHM_table | **VOID** | Step 1b A.2 angular rule |
+| V5 | 8.03 pp EE spread as decisive differential | **VOID** | common-mode; Step 1b B.3 delta_ap |
+| V6 | r_opt ~3.2 px / EE 51%->72% expected gain | **VOID** | clamp arithmetic, not optimum |
+| V7 | flow_doc_facts: no aperture-sizing facts | **VOID** | build_flow_doc.py:391 documents 0.8/2.5 x FWHM |
+
+**Stands unchanged:** H0, clamp binding, A.6 scale match, S1/S3/S4 from Step 1 Part E.
+
+---
+
 ## Part A - Artefact readout
 
 ### A.1 `aperture_snr_table.json` (draft root)

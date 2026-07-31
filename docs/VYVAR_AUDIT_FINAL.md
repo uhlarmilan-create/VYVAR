@@ -99,17 +99,21 @@ Stage 1.2 provenance columns added (`aperture_factor_applied`, `fwhm_px_for_aper
 
 **Closure Step 1 (2026-07-31, finding A-1):** Anchor draft_435 uses SNR-table radii from
 `aperture_snr_table.json` (`fwhm_px = 2.395`, `r_min_px = 1.916`). Focus target at clamp for
-all frames. Independent COG ground truth (median-seeing frame): FWHM **4.0 px**; `r_ap/FWHM =
-0.479`; enclosed flux at 1.916 px **51.3%** (median) vs **47.6%** (worst) -- **8.0 pp spread**
-(verdict **A-1b**). Register inference via `aperture_fwhm_factor` was wrong code path (H0
-confirmed).
+all frames. Register inference via `aperture_fwhm_factor` was wrong code path (H0 confirmed).
+
+**Closure Step 1b (2026-07-31):** Differential systematic measured as
+`delta_ap = -2.5 log10(EE_target/EE_comps)` using growth curves at actual proc CSV radii.
+Max best-worst spread **2.69 mmag** (G 8-9 comps) -- below 10 mmag gate -> **DOCUMENTED**,
+not FIX-required on this anchor. Step 1 absolute COG FWHM and 8 pp EE spread are **VOID** (R7).
+Absolute PSF scale split to register **A-9**.
 
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across
 frames.
 
 **D5-1 Q2 (are role factors applied to science radii?):** **No** on per-frame export path;
-`aperture_comp_factor` appears in label strings only (S3).
+`aperture_comp_factor` appears in label strings only (S3). The "target 1.0x vs comp 1.1x radius"
+framing is **superseded** -- differing radii come from magnitude bins in the SNR table, not role factors.
 
 Prior Stage 2 statement "radii track per-frame FWHM" is **VOID** for anchor draft_435 (R7);
 radii track magnitude bins from a draft-constant FWHM table.
@@ -202,9 +206,8 @@ Measurement stages 0--3 and tranches 1--4 are **committed** (`dev/results/`). Op
 `VYVAR_AUDIT_CLOSURE_REGISTER.md`. Anchor re-cut remains **blocked** on T4-1 detection-noise
 decision and DAO-centroid / pairing fixes from Stage 3 Part 0d--0e.
 
-**Next work item:** Aperture closure **Step 2** (A-2/A-3 placement; DAO centroid coupling) after
-Milan selects SNR-table FWHM fix (option i proposed in `CURSOR_RESULT_closure_step1.md`).
-MASTERSTAR stack **A-1** (frame metric `I_j`) remains queued separately.
+**Next work item:** Aperture closure **Step 2** (A-2/A-3 placement; DAO centroid coupling).
+A-1 **DOCUMENTED** (Step 1b); **A-9** absolute PSF scale open. MASTERSTAR stack **A-1** (`I_j`) queued separately.
 
 ---
 
@@ -219,5 +222,6 @@ MASTERSTAR stack **A-1** (frame metric `I_j`) remains queued separately.
 | `CURSOR_RESULT_audit_stage0.md` | Estimator measurement, P-10 verify |
 | `CURSOR_RESULT_audit_stage1.md` | D10-2, D5-1 provenance, D1-3 |
 | `CURSOR_RESULT_audit_stage2.md` | D5-1, D10-1, D1-2, P-02, U-09, T4-1 |
-| `CURSOR_RESULT_closure_step1.md` | A-1b aperture radius vs COG FWHM; D5-1 Q1/Q2; S1-S5 |
+| `CURSOR_RESULT_closure_step1.md` | A-1 Step 1 (superseded VOID items) |
+| `CURSOR_RESULT_closure_step1b.md` | A-1 Step 1b delta_ap; A-1 DOCUMENTED; A-9 |
 | `CURSOR_RESULT_audit_stage3_part0c.md` -- `part0e.md` | Rebuild delta tail forensics |
