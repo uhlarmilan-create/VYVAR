@@ -47,14 +47,14 @@ OVERSAMPLE = 21           # convergence verified: 11 -> 21 changes EE by 7e-5
 COG_RADII = np.arange(0.25, 12.0001, 0.25)
 NORM_RADIUS = 12.0
 R_TARGET = 1.916          # anchor r_min_px clamp
-# Production sky annulus at r_ap = R_TARGET, fw = 2.395 (anchor draft_435):
-#   r_in  = max(r_ap + 0.5, 4.75 * fw) = 11.376 px
+# Sky annulus for COG / EE measurement (Step 1l L4):
+#   r_in  = max(r_norm + 2.0, 4.75 * fw) = 14.0 px  (must exceed NORM_RADIUS)
 #   r_out = max(r_in + 0.5, 9.0 * fw)  = 21.555 px
-# Step 1k (K4): replaced harness-only 25-45 px (Step 1b fixture choice).
+# Prior geometries: 25-45 px (Step 1b harness); 11.376-21.555 px (Step 1k, overlapped r_norm).
 FW_PROD = 2.395
 ANN_INNER_FWHM = 4.75
 ANN_OUTER_FWHM = 9.0
-_r_in_prod = max(R_TARGET + 0.5, ANN_INNER_FWHM * FW_PROD)
+_r_in_prod = max(NORM_RADIUS + 2.0, ANN_INNER_FWHM * FW_PROD)
 ANNULUS_IN = _r_in_prod
 ANNULUS_OUT = max(_r_in_prod + 0.5, ANN_OUTER_FWHM * FW_PROD)
 

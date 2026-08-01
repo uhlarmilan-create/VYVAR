@@ -35,12 +35,12 @@ issues; LOW EE rare placement. Report: `dev/results/CURSOR_RESULT_closure_step1i
 **Step 1j (2026-08-01):** J-a -- per-star sky subtraction error in F(12); J1 slope **-0.285**
 (vs -0.4); G 11.52/11.53 F(12) ratio **2.6x** at dG = 0.006 mag. Step 1i production annulus
 claim withdrawn. Report: `dev/results/CURSOR_RESULT_closure_step1j.md`.
-**Step 1k (2026-08-01):** Two independent F(12) defects -- **additive** (per-star sky, ~56% of
-G 11.52/11.53 pair) and **multiplicative** (flux-vs-G compression, slope **-0.285** harness,
-**-0.296** production). K-a: residual vs peak ADU (r=+0.36); bright-half slope **-0.185** vs
-faint **-0.404**; saturation excluded. BP-RP partial (production slope **-0.339** with colour).
-**D5-2** opened (production flux scaling). Fixture annulus -> production geometry (K4).
-Report: `dev/results/CURSOR_RESULT_closure_step1k.md`.
+**Step 1k (2026-08-01):** Two F(12) defects proposed (additive sky + multiplicative compression).
+K3: production slope **-0.296** (D5-2 opened). K-a (D1-2 non-linearity) **withdrawn in Step 1l**
+(residual-vs-peak confounded; peak trend gone after aperture control).
+**Step 1l (2026-08-01):** L-a -- D5-2 mechanism is magnitude-dependent `aperture_r_px` (D5-1 /
+A-1); `pearson(residual, r50)` **-0.024**; colour term fails half-sample test (L-c excluded).
+Report: `dev/results/CURSOR_RESULT_closure_step1l.md`.
 **Reports:** `dev/results/CURSOR_RESULT_closure_step1g.md`; Step 1f **48.0 mmag VOID** (V11).
 **Fixture:** `dev/tools/closure_a1_reference_fixture.py` (target-radius sweep in --emit)
 **Harness:** `dev/tools/closure_step1f_differential_aperture.py` (Step 1g F1/G9)
@@ -71,7 +71,7 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | 14 | T1 export time_base truth | 12 | **FIXED** | Refuse non-BJD_TDB AAVSO export |
 | 15 | D10-2 Gaia->Johnson range guard | 10 | **FIXED** | Stage 1; 1 comp outside range on anchor |
 | 16 | D5-1 aperture provenance columns | 5 | **FIXED** | Step 1g: F1 config valid; G6 fail; exact delta_ap open; 48.0 mmag VOID |
-| 16b | **D5-2** production flux vs G scaling | 5 | **MEASURED** | Step 1k: log10(flux) vs mag slope -0.296 (-0.339 + BP-RP); not harness-only |
+| 16b | **D5-2** production flux vs G scaling | 5 | **MEASURED** | Step 1k: slope -0.296; Step 1l: mechanism = SNR-table aperture_r vs mag (D5-1) |
 | 31 | **A-9** absolute PSF scale unresolved | 5, 7 | **MEASURED** | VY_FWHM_GAUSS 2.395 vs header 3.207 vs COG identities 4.0-4.9 px disagree; not blocking Steps 2-10; required before absolute flux/SNR claims |
 | 17 | D1-3 master flat documentation | 1 | **CLOSED** | DECISIONS entry; builder gap noted |
 | 18 | D10-1 unfiltered CV->CR band | 10 | **FIXED** | Milan decision; Stage 3 |
@@ -80,7 +80,7 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | 21 | I-11 Howell sky on subtracted frames | 2 | **DECISION** | Options 1--3 documented; 0 prod epochs |
 | 22 | I-04 ensemble scatter unmatched | 8 | **DECISION** | NaN+exclude vs inflate |
 | 23 | I-03 omitted Howell terms | 2 | QUEUED | After I-11 decision |
-| 24 | D1-2 linearity correction | 1 | **MEASURED** | Step 1k: residual vs peak ADU r=+0.36; bright-half slope -0.185 |
+| 24 | D1-2 linearity correction | 1 | **DEFERRED** | Step 1k K-a withdrawn Step 1l; peak-vs-residual confounded |
 | 25 | P-02 scintillation in production err | 9 | **DECISION** | Do not wire without Milan |
 | 26 | U-09 DATE-OBS convention per rig | 4 | MEASURED | BO CVn: shutter-open; others TBD |
 | 27 | Part 0c delta pairing fix (source_file) | 7 | **QUEUED** | Harness bug; invalid tail stats |
@@ -117,7 +117,7 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | Closure Step 1e (measurement repair) | `dev/results/CURSOR_RESULT_closure_step1e.md` (contamination VOID) |
 | Closure Step 1f (admissibility + measure) | `dev/results/CURSOR_RESULT_closure_step1f.md` (V11-V14 VOID) |
 | Closure Step 1g (F1 configuration) | `dev/results/CURSOR_RESULT_closure_step1g.md` |
-| Closure Step 1h-1k (A-1 diagnosis) | `dev/results/CURSOR_RESULT_closure_step1{h,i,j,k}.md` |
+| Closure Step 1h-1l (A-1 diagnosis) | `dev/results/CURSOR_RESULT_closure_step1{h,i,j,k,l}.md` |
 | MASTERSTAR spec | `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md` |
 
 ---

@@ -2,7 +2,13 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-01** (closure Step 1k F(12) slope decomposition).
+Last updated: **2026-08-01** (closure Step 1l slope mechanism discrimination).
+
+## Session close 2026-08-01 (closure Step 1l)
+
+Step 1l (L-a): D5-2 mechanism is magnitude-dependent aperture radius (D5-1); Step 1k K-a
+(non-linearity) withdrawn. pearson(residual, r50) = -0.024; peak trend vanishes after aperture
+control. Fixture annulus r_in = 14.0 px. Report: `dev/results/CURSOR_RESULT_closure_step1l.md`.
 
 ## Session close 2026-08-01 (closure Step 1k)
 
@@ -37,10 +43,9 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** Step 1l -- D1-2/D5-2 linearity and per-star sky correction design; do not
-consolidate `delta_ap` until flux-vs-G compression is addressed. A-1 **CONFIRMED**; exact
-magnitude **open**. Mechanism: two defects (additive sky quantified; multiplicative compression
-per Step 1k K-a).
+**Next work item:** Step 1m -- flux-vs-G tests with aperture normalisation or fixed-radius COG;
+D5-2 remediation with D5-1. A-1 exact magnitude **open**. D5-2 **MEASURED**; mechanism =
+SNR-table aperture vs magnitude (Step 1l L-a).
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.

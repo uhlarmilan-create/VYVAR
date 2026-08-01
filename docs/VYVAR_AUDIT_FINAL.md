@@ -37,12 +37,20 @@ calibrate-after-resample. Open gap vs Howell requirement that additive terms be 
 normalization -- scope documented, not verified end-to-end in builder UI.
 
 **D1-2 (detector linearity):** Stage 2 measurement on anchor showed G vs peak ADU correlation
-(r = -0.85) dominated by magnitude; no isolated residual-vs-peak trend. **Closure Step 1k
-(2026-08-01): first valid non-linearity signature** -- log10(flux) vs G residual correlates with
-peak_max_adu (r = **+0.36** harness and production); mean residual rises from **-0.40 dex** (peak
-< 2k ADU) to **+0.12 dex** (peak > 20k ADU); bright-half G slope **-0.185** vs faint **-0.404**.
-Bright-end compression at ~4-8k ADU peak break. Saturation flags false for brightest closure stars.
-Status: **MEASURED** (pending correction design).
+(r = -0.85) dominated by magnitude; no isolated residual-vs-peak trend. Closure Step 1k reported
+residual vs peak_max_adu (r = +0.36) as a non-linearity candidate; **Step 1l withdrew that
+verdict**: peak is confounded with brightness/seeing; trend vanishes after `aperture_r_px` control
+(r = -0.023). Status: **DEFERRED** (third invalid path avoided).
+
+**Closure Step 1k (2026-08-01):** F(12) defect decomposed; production `flux` vs `mag` slope
+**-0.296** (D5-2 confirmed, not harness-only). K-a non-linearity claim superseded by Step 1l.
+
+**Closure Step 1l (2026-08-01):** L-a -- D5-2 mechanism is magnitude-dependent aperture radius
+(SNR table; aperture_r vs mag r = -0.95) without COG normalisation. `pearson(residual, r50)`
+**-0.024** on pooled star-frames. Colour term inconsistent across magnitude halves (L-c excluded).
+**D5-2 (production flux vs catalogue magnitude):** Confirmed Step 1k; mechanism assigned Step 1l.
+log10(flux) vs mag slope **-0.296** (n = 4058); identical on dao_flux. Not folded into A-1;
+cross-reference **D5-1** (aperture provenance / SNR-table radii). Status: **MEASURED**.
 
 **D1-1 (cosmic-ray rejection):** **Absent** from `src_py` (gain/RN "cosmic" params only).
 Prerequisite for stacked MASTERSTAR and proper coaddition (see `VYVAR_TODO_MASTERSTAR_REFERENCE.md`).
@@ -125,22 +133,12 @@ dominant. HIGH EE: normalisation path; LOW EE: rare placement (one frame 3.17 px
 **Closure Step 1j (2026-08-01):** J-a -- F(12) fails catalogue consistency (J1 slope **-0.285**
 vs **-0.4**); G 11.52 vs 11.53 (dG = 0.006 mag) F(12) ratio **2.6x** from per-star sky offset
 (~33 ADU/px). Step 1i production annulus claim **withdrawn** (25-45 px is harness-only;
-production uses 4.75-9.0 x FWHM per star). J3: no annulus geometry restores F(12) vs G;
-narrow/production annulus reduces EE std for G 11.53. J2: field-centre correlation -0.53 on
-annulus sky offset.
+production uses 4.75-9.0 x FWHM per star). J3: narrow/production annulus reduces EE std for
+G 11.53. J2: field-centre correlation -0.53 on annulus sky offset.
 
-**Closure Step 1k (2026-08-01):** F(12) defect decomposed into additive (sky, quantified) and
-multiplicative (flux-vs-G compression). Harness slope **-0.285**; production `flux` vs `mag`
-**-0.296** (not harness-only). Residual vs peak_max_adu r=**+0.36**; bright-half slope **-0.185**.
-BP-RP joint slope **-0.339** (partial colour). **D5-2** opened. Fixture annulus aligned to
-production geometry (11.376-21.555 px at r_ap=1.916). G 12.59 narrow/prod failure: sky annulus
-r_in overlaps F(12) aperture, not frame edge.
-
-**D5-2 (production flux vs catalogue magnitude):** On anchor draft_435, pipeline aperture flux
-does not scale as 10^(-0.4 G): log10(flux) vs mag slope **-0.296** (n=4058 star-frames),
-**-0.339** with BP-RP. Same compression as harness F(12) recomputation. Affects magnitude-dependent
-corrections and comparison-star ensembles. Mechanism consistent with D1-2 bright-end non-linearity;
-tracked separately from A-1 aperture systematic. Status: **MEASURED**.
+**Closure Step 1k/1l (2026-08-01):** D5-2 confirmed (production flux slope **-0.296**). Step 1l:
+mechanism = magnitude-dependent `aperture_r_px` (D5-1 link); Step 1k K-a (D1-2) withdrawn.
+Fixture annulus: 25-45 px (1b), 11.376-21.555 px (1k, overlapped r_norm), 14.0-21.555 px (1l).
 
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across
