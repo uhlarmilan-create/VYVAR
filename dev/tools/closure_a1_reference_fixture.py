@@ -227,6 +227,22 @@ def gate_g5_structure(exp: dict) -> tuple[bool, str]:
     return 5.0 <= r <= 15.0, f"T4 ratio G_8_9 / G_gt_11 = {r:.2f} (band 5-15)"
 
 
+CONTAMINATION_SENSITIVITY_MMAG = {
+    "note": (
+        "Synthetic pair shifts in delta_ap at r=1.916 px (Step 1h isolation audit reference). "
+        "Step 1h D3: zero catalogue neighbours within 8 px and dG<5 for all five proxies "
+        "and all six G 8-9 comparisons on anchor draft_435."
+    ),
+    "columns_flux_fraction": [0.05, 0.10, 0.30],
+    "rows_separation_px": [
+        {"sep_px": 1.0, "delta_ap_mmag": [3.6, 6.9, 17.9]},
+        {"sep_px": 2.0, "delta_ap_mmag": [9.9, 19.1, 51.0]},
+        {"sep_px": 4.0, "delta_ap_mmag": [6.7, 13.3, 38.6]},
+        {"sep_px": 8.0, "delta_ap_mmag": [0.2, 0.4, 1.2]},
+    ],
+}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--emit", action="store_true", help="print expected values as JSON")
@@ -234,7 +250,11 @@ def main() -> int:
 
     exp = build_expected()
     if args.emit:
-        payload = {"expected": exp, "target_radius_sweep": build_target_radius_sweep()}
+        payload = {
+            "expected": exp,
+            "target_radius_sweep": build_target_radius_sweep(),
+            "contamination_sensitivity_mmag": CONTAMINATION_SENSITIVITY_MMAG,
+        }
         print(json.dumps(payload, indent=2))
         return 0
 

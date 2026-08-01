@@ -28,6 +28,9 @@ not in the first execution wave.
 
 **Status:** **A-1b CONFIRMED** (2026-08-01 Step 1g). F1 configuration (proxies at clamp 1.916 px,
 disjoint from comps). G9 PASS; G6 FAIL; exact magnitude **open**.
+**Step 1h diagnosis (2026-08-01):** G6 magnitude spread = fainter-proxy COG numerator instability
+(`EE_target` outside physics band); denominator stable; contamination excluded (H1). Step 1i:
+numerator QC gate before re-measurement. Report: `dev/results/CURSOR_RESULT_closure_step1h.md`.
 **Reports:** `dev/results/CURSOR_RESULT_closure_step1g.md`; Step 1f **48.0 mmag VOID** (V11).
 **Fixture:** `dev/tools/closure_a1_reference_fixture.py` (target-radius sweep in --emit)
 **Harness:** `dev/tools/closure_step1f_differential_aperture.py` (Step 1g F1/G9)
@@ -101,7 +104,8 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | Closure Step 1b (A-1 repair) | `dev/results/CURSOR_RESULT_closure_step1b.md` (B.3/B.5/B.6 VOID) |
 | Closure Step 1d (mmag + fixture) | `dev/results/CURSOR_RESULT_closure_step1d.md` (V8-V10 VOID) |
 | Closure Step 1e (measurement repair) | `dev/results/CURSOR_RESULT_closure_step1e.md` (contamination VOID) |
-| Closure Step 1f (admissibility + measure) | `dev/results/CURSOR_RESULT_closure_step1f.md` |
+| Closure Step 1f (admissibility + measure) | `dev/results/CURSOR_RESULT_closure_step1f.md` (V11-V14 VOID) |
+| Closure Step 1g (F1 configuration) | `dev/results/CURSOR_RESULT_closure_step1g.md` |
 | MASTERSTAR spec | `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md` |
 
 ---

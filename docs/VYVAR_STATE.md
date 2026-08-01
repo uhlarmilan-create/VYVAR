@@ -2,7 +2,13 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-01** (closure Step 1g F1 configuration).
+Last updated: **2026-08-01** (closure Step 1h magnitude-dependence diagnosis).
+
+## Session close 2026-08-01 (closure Step 1h)
+
+Step 1h diagnosed G6 magnitude dependence (H1): fainter-proxy COG numerator instability at
+r=1.916 px; denominator and catalogue contamination excluded. No consolidated number. Step 1i:
+numerator QC gate then re-measurement. Report: `dev/results/CURSOR_RESULT_closure_step1h.md`.
 
 ## Session close 2026-07-31 (science audit closure)
 
@@ -11,9 +17,10 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** G6 proxy agreement (narrow G band or single canonical proxy). A-1 **CONFIRMED**
-(verdict); exact magnitude **open** after Step 1g G6 fail. Brightest proxy diagnostic **94 mmag**
-G 8-9 vs fixture 144.3 mmag (`CURSOR_RESULT_closure_step1g.md`).
+**Next work item:** Step 1i -- numerator QC gate on proxy `EE(1.916)` vs physics band, then
+re-measurement. A-1 **CONFIRMED** (verdict); exact magnitude **open**. Brightest proxy (G 11.52)
+diagnostic **94 mmag** G 8-9 remains the only proxy near physics band (`CURSOR_RESULT_closure_step1h.md`).
+Do **not** narrow proxy G band to pass G6 without fixing COG measurement (R8).
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.
