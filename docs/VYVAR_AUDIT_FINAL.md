@@ -103,7 +103,16 @@ all frames. Register inference via `aperture_fwhm_factor` was wrong code path (H
 
 **Closure Step 1d (2026-07-31):** Unit bug fixed (`delta_ap` in **mmag**, `* 1000`). Independent
 fixture `closure_a1_reference_fixture.py` (L2 photutils) expects **+144 mmag** G 8-9 range over
-anchor r50 span. Repaired harness on real proxies: max **203 mmag** -> **A-1b CONFIRMED**.
+anchor r50 span. Step 1d reported max **203 mmag** -> **A-1b CONFIRMED**; **203 mmag VOID** (V8).
+
+**Closure Step 1e (2026-08-01):** Measurement-method repair (photutils exact COG, Gaussian
+centroid). G7 PASS; G6 failed due to full-curve admissibility defect (VOID contamination claim;
+fixed in Step 1f).
+
+**Closure Step 1f (2026-08-01):** C1 restricted admissibility to r<=3.5 px; C2 removed frame
+auto-exclusion; C3 re-selected five G<=12 proxies. G6/G7/G8 PASS. First consolidated measurement:
+G 8-9 p95-p5 **48.0 +/- 5.7 mmag** vs fixture **144.3 mmag** (Moffat beta=3 expectation).
+T4 sub-ensemble ratio **FAIL** (median 0.34).
 
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across

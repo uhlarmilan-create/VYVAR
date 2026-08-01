@@ -26,14 +26,16 @@ not in the first execution wave.
 
 ### Aperture closure Step 1 (finding A-1 -- SNR table radius)
 
-**Status:** **A-1b CONFIRMED** (2026-07-31 Step 1d). Unit fix: delta_ap in **mmag** (* 1000).
-**Reports:** `dev/results/CURSOR_RESULT_closure_step1d.md` (authoritative); Step 1c mmag VOID.
+**Status:** **A-1b CONFIRMED** (2026-08-01 Step 1f measured). Step 1e G7 validated COG method;
+Step 1f C1-C3 + G8 delivered first consolidated number.
+**Reports:** `dev/results/CURSOR_RESULT_closure_step1f.md` (authoritative measurement);
+Step 1d V8-V10 VOID; Step 1e contamination claim VOID.
 **Fixture:** `dev/tools/closure_a1_reference_fixture.py`
-**Harness:** `dev/tools/closure_step1c_differential_aperture.py --fixture-check`
+**Harness:** `dev/tools/closure_step1f_differential_aperture.py`
 
 | Finding | Verdict | Decisive measurement |
 |---------|---------|----------------------|
-| SNR-table differential (mmag) | **A-1b CONFIRMED** | max delta_ap **203 mmag** (proxy G~12, G 8-9); fixture expects **144 mmag** on synthetic Moffat span |
+| SNR-table differential (mmag) | **A-1b CONFIRMED** | G 8-9 p95-p5 **48.0 +/- 5.7 mmag** (Step 1f); fixture expects **144.3 mmag** (Moffat beta=3); T4 ratio **FAIL** (0.34) |
 | Absolute FWHM scale | **A-9 open** | estimators disagree 2.4-4.9 px; not blocking |
 | SNR table clamp | binding (expected) | **2060/2649** on r_min; faint-end normal at 0.8 x FWHM |
 | `aperture_snr_sizing` (S1) | **DEAD** | hardcoded 0.8/2.5 used |
@@ -56,7 +58,7 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | 13 | I-12 PM unavailable logging | 4 | **FIXED** | WARNING when pmra/pmdec absent |
 | 14 | T1 export time_base truth | 12 | **FIXED** | Refuse non-BJD_TDB AAVSO export |
 | 15 | D10-2 Gaia->Johnson range guard | 10 | **FIXED** | Stage 1; 1 comp outside range on anchor |
-| 16 | D5-1 aperture provenance columns | 5 | **FIXED** | Step 1d: delta_ap **203 mmag** max (proxy); mmag unit fix; magnitude-dependent SNR radii |
+| 16 | D5-1 aperture provenance columns | 5 | **FIXED** | Step 1f: G 8-9 delta_ap **48.0 +/- 5.7 mmag**; T4 open |
 | 31 | **A-9** absolute PSF scale unresolved | 5, 7 | **MEASURED** | VY_FWHM_GAUSS 2.395 vs header 3.207 vs COG identities 4.0-4.9 px disagree; not blocking Steps 2-10; required before absolute flux/SNR claims |
 | 17 | D1-3 master flat documentation | 1 | **CLOSED** | DECISIONS entry; builder gap noted |
 | 18 | D10-1 unfiltered CV->CR band | 10 | **FIXED** | Milan decision; Stage 3 |
@@ -98,7 +100,9 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | Stage 3 Part 0a--0e | `dev/results/CURSOR_RESULT_audit_stage3_part*.md` |
 | Closure Step 1 (aperture A-1) | `dev/results/CURSOR_RESULT_closure_step1.md` (VOID markers) |
 | Closure Step 1b (A-1 repair) | `dev/results/CURSOR_RESULT_closure_step1b.md` (B.3/B.5/B.6 VOID) |
-| Closure Step 1d (mmag + fixture) | `dev/results/CURSOR_RESULT_closure_step1d.md` |
+| Closure Step 1d (mmag + fixture) | `dev/results/CURSOR_RESULT_closure_step1d.md` (V8-V10 VOID) |
+| Closure Step 1e (measurement repair) | `dev/results/CURSOR_RESULT_closure_step1e.md` (contamination VOID) |
+| Closure Step 1f (admissibility + measure) | `dev/results/CURSOR_RESULT_closure_step1f.md` |
 | MASTERSTAR spec | `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md` |
 
 ---

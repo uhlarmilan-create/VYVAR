@@ -2,7 +2,7 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-07-31** (closure Step 1c A-1 DOCUMENTED final).
+Last updated: **2026-08-01** (closure Step 1f measured delta_ap).
 
 ## Session close 2026-07-31 (science audit closure)
 
@@ -11,8 +11,9 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** Milan patch choice for A-1 (frozen k_i / r50 sizing / COG AC). A-1
-**CONFIRMED** at **203 mmag** differential (`CURSOR_RESULT_closure_step1d.md`).
+**Next work item:** T4 sub-ensemble ratio (FAIL at 0.34); fixture vs anchor PSF alignment.
+Milan patch choice for A-1 (options i/iii/iv) informed by Step 1f B.5/B.6. A-1 **CONFIRMED**
+at **48.0 +/- 5.7 mmag** G 8-9 differential (`CURSOR_RESULT_closure_step1f.md`).
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.

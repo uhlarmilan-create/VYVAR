@@ -55,6 +55,20 @@ Step 1c harness repair (monotone EE, proxy decoupling) **stands**. Unit fix only
 
 ---
 
+## VOID (Step 1e supersession -- do not delete)
+
+**Pointer:** `dev/results/CURSOR_RESULT_closure_step1e.md`
+
+| ID | Claim in this report | Issue |
+|----|---------------------|-------|
+| **V8** | Decisive **203 mmag** (max two-point range across proxies) | Five proxies at same radius must agree within 25%; spread was 30-203 mmag (6.8x). Not a consolidated measurement. |
+| **V9** | T4 **5.32 PASS** (single best proxy) | Median per-proxy ratio is **2.42** (band 5-15 FAIL). Quoting the maximum proxy is not T4. |
+| **V10** | Proxies G 12.03/12.06 show range(G>11) > range(G 8-9) | Physically impossible under monotone PSF; integer-centre noise (fixture G4: 77 mmag jitter). |
+
+The **203 mmag headline** and **T4=5.32 PASS** are **VOID**. Verdict **A-1b CONFIRMED** stands
+(minimum 5x3 proxy cell 12.0 mmag > 10 mmag gate); exact consolidated magnitude remains open
+after Step 1e (G6 failed on real data).
+
 ## Commands
 
 ```bash
