@@ -2,7 +2,12 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-01** (closure Step 1m COG flux normalisation).
+Last updated: **2026-08-01** (closure Step 1n bright-end localisation).
+
+## Session close 2026-08-01 (closure Step 1n)
+
+Step 1n (N-none): C-sat and C-sky excluded; D5-2 localised to G 8-9 bin; flux_large at fixed
+radius confirms compression is not aperture coupling. Report: `dev/results/CURSOR_RESULT_closure_step1n.md`.
 
 ## Session close 2026-08-01 (closure Step 1m)
 
@@ -49,8 +54,8 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** Step 1n -- resolve ~0.12 dex/mag residual compression after COG normalisation;
-D5-2 mechanism open. A-1 exact magnitude **open**. Use M1 normalisation as baseline for flux-vs-G.
+**Next work item:** Step 1o -- alignment/detrending path vs native sky test gap; G 8-9 bin
+mechanism. D5-2 **MEASURED**, localised, mechanism open.
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.

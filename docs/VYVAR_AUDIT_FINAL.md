@@ -48,14 +48,14 @@ verdict**: peak is confounded with brightness/seeing; trend vanishes after `aper
 **Closure Step 1l (2026-08-01):** L-a proposed (aperture mechanism); K-a withdrawal stands.
 Colour term fails half-sample test (L-c excluded). Joint G+aperture OLS retired Step 1m (VIF 9.8).
 
-**Closure Step 1m (2026-08-01):** M-x -- COG-normalised flux slope **-0.280** (H-ap -0.400 and
-H-2 ~-0.19 rejected); measured `slope(log10 EE(r_ap) vs G)` = **-0.016**. Step 1l L-a
-**withdrawn**. D5-2 confirmed; mechanism **open**.
+**Closure Step 1m (2026-08-01):** M-x -- COG-normalised **-0.280**; mechanism open.
 
-**D5-2 (production flux vs catalogue magnitude):** Confirmed anchor draft_435. Raw slope
-**-0.296**; COG-normalised **-0.280** (four flux columns agree within 0.008). Not harness-only.
-Mechanism **open** (aperture EE coupling removes only 0.016 dex/mag of 0.104 shortfall vs -0.4).
-Cross-reference D5-1; not closed. Status: **MEASURED**.
+**Closure Step 1n (2026-08-01):** N-none -- C-sat/C-sky excluded; D5-2 localised to G 8-9 bin;
+`flux_large` (fixed 9.58 px) slope **-0.269** refutes aperture mechanism.
+
+**D5-2 (production flux vs catalogue magnitude):** Confirmed. Raw slope **-0.296** (`flux`),
+**-0.269** (`flux_large` fixed radius). Localisation: strongest deviation in **G 8-9** mag bin
+(-0.258 flux). Most bins G >= 9 near -0.4 on `flux_large`. Mechanism **open**. Status: **MEASURED**.
 
 **D1-1 (cosmic-ray rejection):** **Absent** from `src_py` (gain/RN "cosmic" params only).
 Prerequisite for stacked MASTERSTAR and proper coaddition (see `VYVAR_TODO_MASTERSTAR_REFERENCE.md`).
@@ -141,9 +141,7 @@ vs **-0.4**); G 11.52 vs 11.53 (dG = 0.006 mag) F(12) ratio **2.6x** from per-st
 production uses 4.75-9.0 x FWHM per star). J3: narrow/production annulus reduces EE std for
 G 11.53. J2: field-centre correlation -0.53 on annulus sky offset.
 
-**Closure Step 1k-1m (2026-08-01):** D5-2 confirmed (raw **-0.296**, COG-norm **-0.280**).
-Step 1l L-a withdrawn Step 1m; mechanism **open**. K-a (D1-2) withdrawn Step 1l. Fixture
-annulus: 25-45 px (1b), 11.376-21.555 px (1k), 14.0-21.555 px (1l).
+**Closure Step 1k-1n (2026-08-01):** D5-2 confirmed; mechanism open after Step 1n (N-none).
 
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across
