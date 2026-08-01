@@ -114,6 +114,14 @@ at clamp 1.916 px, excluded from comp subsets). G7/G8/G9 PASS; **G6 FAIL** (prox
 4.8x on G 8-9). Brightest proxy G 11.52: G 8-9 range **94 mmag** vs fixture **144.3 mmag**.
 Step 1f **48.0 mmag** VOID (proxies inside comp set). Exact consolidated magnitude **open**.
 
+**Closure Step 1i (2026-08-01):** Mechanism for EE(1.916) excursions identified (I3). E5
+WCS-position COG control: EE std unchanged (ratio 1.001-1.010) -- placement not dominant.
+HIGH EE tail: 12 px normalisation failure on faint stars (F(12) drops 6.6x G 11.52->12.68;
+converged-wrong Gaussian fits with amp/peak down to 0.09). LOW EE tail: rare placement errors
+(one frame at 3.17 px fit-to-WCS). Step 1h "SNR-driven" label rejected. **Production note:**
+25-45 px COG sky annulus normalisation at faint G may warrant review beyond A-1 closure alone
+(same geometry as fixture L2 and production photometry annulus scale).
+
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across
 frames.

@@ -2,7 +2,14 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-01** (closure Step 1h magnitude-dependence diagnosis).
+Last updated: **2026-08-01** (closure Step 1i numerator mechanism).
+
+## Session close 2026-08-01 (closure Step 1i)
+
+Step 1i located the EE(1.916) failure mechanism (I3): 12 px normalisation collapse on faint
+stars (dominant) plus rare placement errors (low-EE tail). E5 WCS-position control excludes
+placement as scatter fix. Step 1j: cause-based admissibility, not EE-band filtering.
+Report: `dev/results/CURSOR_RESULT_closure_step1i.md`.
 
 ## Session close 2026-08-01 (closure Step 1h)
 
@@ -17,10 +24,9 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** Step 1i -- numerator QC gate on proxy `EE(1.916)` vs physics band, then
-re-measurement. A-1 **CONFIRMED** (verdict); exact magnitude **open**. Brightest proxy (G 11.52)
-diagnostic **94 mmag** G 8-9 remains the only proxy near physics band (`CURSOR_RESULT_closure_step1h.md`).
-Do **not** narrow proxy G band to pass G6 without fixing COG measurement (R8).
+**Next work item:** Step 1j -- cause-based admissibility (fit_amp/peak, F(12) floor, chi2,
+placement threshold); **no EE-band filtering** (R8). A-1 **CONFIRMED**; exact magnitude **open**.
+Mechanism: 12 px normalisation failure on faint stars (Step 1i I3).
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.

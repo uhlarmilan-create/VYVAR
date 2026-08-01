@@ -28,9 +28,11 @@ not in the first execution wave.
 
 **Status:** **A-1b CONFIRMED** (2026-08-01 Step 1g). F1 configuration (proxies at clamp 1.916 px,
 disjoint from comps). G9 PASS; G6 FAIL; exact magnitude **open**.
-**Step 1h diagnosis (2026-08-01):** G6 magnitude spread = fainter-proxy COG numerator instability
-(`EE_target` outside physics band); denominator stable; contamination excluded (H1). Step 1i:
-numerator QC gate before re-measurement. Report: `dev/results/CURSOR_RESULT_closure_step1h.md`.
+**Step 1h diagnosis (2026-08-01):** G6 magnitude spread in numerator; denominator stable;
+contamination excluded. Report: `dev/results/CURSOR_RESULT_closure_step1h.md`.
+**Step 1i mechanism (2026-08-01):** I3 -- 12 px normalisation failure on faint stars (collapsed
+F(12), converged-wrong Gaussian fits) is dominant; rare placement errors on low-EE tail. E5
+excludes placement as scatter fix. Report: `dev/results/CURSOR_RESULT_closure_step1i.md`.
 **Reports:** `dev/results/CURSOR_RESULT_closure_step1g.md`; Step 1f **48.0 mmag VOID** (V11).
 **Fixture:** `dev/tools/closure_a1_reference_fixture.py` (target-radius sweep in --emit)
 **Harness:** `dev/tools/closure_step1f_differential_aperture.py` (Step 1g F1/G9)

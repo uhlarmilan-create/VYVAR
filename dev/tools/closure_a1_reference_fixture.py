@@ -227,6 +227,32 @@ def gate_g5_structure(exp: dict) -> tuple[bool, str]:
     return 5.0 <= r <= 15.0, f"T4 ratio G_8_9 / G_gt_11 = {r:.2f} (band 5-15)"
 
 
+PLACEMENT_SENSITIVITY_EE = {
+    "note": "Synthetic Moffat at anchor r50=1.87 px: EE(1.916) vs aperture offset from true centre (Step 1i). Placement can only decrease EE.",
+    "rows": [
+        {"offset_px": 0.0, "EE_1.916": 0.4916, "delta_EE": 0.0, "pct_of_physics_band": 0.0},
+        {"offset_px": 0.25, "EE_1.916": 0.4871, "delta_EE": -0.0045, "pct_of_physics_band": -3.0},
+        {"offset_px": 0.50, "EE_1.916": 0.4737, "delta_EE": -0.0179, "pct_of_physics_band": -11.0},
+        {"offset_px": 1.00, "EE_1.916": 0.4280, "delta_EE": -0.0636, "pct_of_physics_band": -39.0},
+        {"offset_px": 2.00, "EE_1.916": 0.2748, "delta_EE": -0.2168, "pct_of_physics_band": -134.0},
+        {"offset_px": 3.00, "EE_1.916": 0.1313, "delta_EE": -0.3603, "pct_of_physics_band": -222.0},
+    ],
+    "physics_band_width": 0.162,
+}
+
+SKY_BIAS_SENSITIVITY_EE = {
+    "note": "Fixture L2 render at r50=1.87 px: EE(1.916) vs uniform sky bias added to annulus estimate (Step 1i). Only mechanism that increases EE above 0.65.",
+    "F_12_at_zero_bias_adu": 199376.0,
+    "rows": [
+        {"sky_bias_adu_per_px": 0, "F_12_adu": 199376, "EE_1.916": 0.4916},
+        {"sky_bias_adu_per_px": 50, "F_12_adu": 176756, "EE_1.916": 0.5512},
+        {"sky_bias_adu_per_px": 100, "F_12_adu": 154137, "EE_1.916": 0.6284},
+        {"sky_bias_adu_per_px": 200, "F_12_adu": 108898, "EE_1.916": 0.8788},
+        {"sky_bias_adu_per_px": 400, "F_12_adu": 18420, "EE_1.916": 5.07},
+    ],
+}
+
+
 CONTAMINATION_SENSITIVITY_MMAG = {
     "note": (
         "Synthetic pair shifts in delta_ap at r=1.916 px (Step 1h isolation audit reference). "
@@ -253,6 +279,8 @@ def main() -> int:
         payload = {
             "expected": exp,
             "target_radius_sweep": build_target_radius_sweep(),
+            "placement_sensitivity_ee": PLACEMENT_SENSITIVITY_EE,
+            "sky_bias_sensitivity_ee": SKY_BIAS_SENSITIVITY_EE,
             "contamination_sensitivity_mmag": CONTAMINATION_SENSITIVITY_MMAG,
         }
         print(json.dumps(payload, indent=2))
