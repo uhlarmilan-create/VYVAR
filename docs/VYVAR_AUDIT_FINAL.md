@@ -36,9 +36,13 @@ stacks of **raw** flats without dark subtraction at stack time; `VYFLNRD=1` norm
 calibrate-after-resample. Open gap vs Howell requirement that additive terms be removed before
 normalization -- scope documented, not verified end-to-end in builder UI.
 
-**D1-2 (detector linearity):** Stage 2 measurement on anchor shows G vs peak ADU correlation
-(r = -0.85) dominated by **magnitude**, not a linearity defect signature. No monotonic
-residual-vs-peak trend isolated.
+**D1-2 (detector linearity):** Stage 2 measurement on anchor showed G vs peak ADU correlation
+(r = -0.85) dominated by magnitude; no isolated residual-vs-peak trend. **Closure Step 1k
+(2026-08-01): first valid non-linearity signature** -- log10(flux) vs G residual correlates with
+peak_max_adu (r = **+0.36** harness and production); mean residual rises from **-0.40 dex** (peak
+< 2k ADU) to **+0.12 dex** (peak > 20k ADU); bright-half G slope **-0.185** vs faint **-0.404**.
+Bright-end compression at ~4-8k ADU peak break. Saturation flags false for brightest closure stars.
+Status: **MEASURED** (pending correction design).
 
 **D1-1 (cosmic-ray rejection):** **Absent** from `src_py` (gain/RN "cosmic" params only).
 Prerequisite for stacked MASTERSTAR and proper coaddition (see `VYVAR_TODO_MASTERSTAR_REFERENCE.md`).
@@ -123,7 +127,20 @@ vs **-0.4**); G 11.52 vs 11.53 (dG = 0.006 mag) F(12) ratio **2.6x** from per-st
 (~33 ADU/px). Step 1i production annulus claim **withdrawn** (25-45 px is harness-only;
 production uses 4.75-9.0 x FWHM per star). J3: no annulus geometry restores F(12) vs G;
 narrow/production annulus reduces EE std for G 11.53. J2: field-centre correlation -0.53 on
-annulus sky offset. Production path not yet validated separately.
+annulus sky offset.
+
+**Closure Step 1k (2026-08-01):** F(12) defect decomposed into additive (sky, quantified) and
+multiplicative (flux-vs-G compression). Harness slope **-0.285**; production `flux` vs `mag`
+**-0.296** (not harness-only). Residual vs peak_max_adu r=**+0.36**; bright-half slope **-0.185**.
+BP-RP joint slope **-0.339** (partial colour). **D5-2** opened. Fixture annulus aligned to
+production geometry (11.376-21.555 px at r_ap=1.916). G 12.59 narrow/prod failure: sky annulus
+r_in overlaps F(12) aperture, not frame edge.
+
+**D5-2 (production flux vs catalogue magnitude):** On anchor draft_435, pipeline aperture flux
+does not scale as 10^(-0.4 G): log10(flux) vs mag slope **-0.296** (n=4058 star-frames),
+**-0.339** with BP-RP. Same compression as harness F(12) recomputation. Affects magnitude-dependent
+corrections and comparison-star ensembles. Mechanism consistent with D1-2 bright-end non-linearity;
+tracked separately from A-1 aperture systematic. Status: **MEASURED**.
 
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across

@@ -2,7 +2,14 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-01** (closure Step 1j F(12) normalisation test).
+Last updated: **2026-08-01** (closure Step 1k F(12) slope decomposition).
+
+## Session close 2026-08-01 (closure Step 1k)
+
+Step 1k (K-a): F(12) has two defects -- additive per-star sky (~56% of G 11.52/11.53 pair) and
+multiplicative flux-vs-G compression (harness slope -0.285, production -0.296). Residual tracks
+peak ADU (r=+0.36); bright-half slope -0.185 vs faint -0.404. D5-2 opened. Fixture annulus
+aligned to production geometry. Report: `dev/results/CURSOR_RESULT_closure_step1k.md`.
 
 ## Session close 2026-08-01 (closure Step 1j)
 
@@ -30,9 +37,10 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** Step 1k -- per-star sky diagnosis (harness vs independent estimate);
-amp/peak cause gate (~0.25-0.43); production-path F(12) vs G test. A-1 **CONFIRMED**; exact
-magnitude **open**. Mechanism: per-star sky subtraction error in F(12) (Step 1j J-a).
+**Next work item:** Step 1l -- D1-2/D5-2 linearity and per-star sky correction design; do not
+consolidate `delta_ap` until flux-vs-G compression is addressed. A-1 **CONFIRMED**; exact
+magnitude **open**. Mechanism: two defects (additive sky quantified; multiplicative compression
+per Step 1k K-a).
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.

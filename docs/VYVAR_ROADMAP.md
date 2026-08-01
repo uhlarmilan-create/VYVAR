@@ -59,8 +59,9 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 ## QUEUED - Audit closure Steps 1-10 (2026-07-31)
 
-**Status:** QUEUED (MASTERSTAR stack). **Aperture A-1:** **CONFIRMED**; Step 1j J-a (per-star
-sky error in F(12)); Step 1k queued. Harness: `closure_step1j_test_f12_normalisation.py`.
+**Status:** QUEUED (MASTERSTAR stack). **Aperture A-1:** **CONFIRMED**; Step 1k K-a (two F(12)
+defects: additive sky + multiplicative compression; production slope -0.296); Step 1l queued.
+Harness: `closure_step1k_decompose_f12_slope.py`.
 Source: `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md` (30 items; Steps 1-10 active).
 Audit synthesis: `docs/VYVAR_AUDIT_FINAL.md`. Operational TODO index:
 `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md`.
