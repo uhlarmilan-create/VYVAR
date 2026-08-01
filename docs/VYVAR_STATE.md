@@ -2,7 +2,13 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-01** (closure Step 1l slope mechanism discrimination).
+Last updated: **2026-08-01** (closure Step 1m COG flux normalisation).
+
+## Session close 2026-08-01 (closure Step 1m)
+
+Step 1m (M-x): COG-normalised flux slope -0.280 (H-ap and H-2 rejected); measured EE(r_ap) vs G
+slope -0.016. D5-2 confirmed; mechanism open. Step 1l L-a withdrawn. fwhm_estimate_px varies
+every frame (35/35 stars). Report: `dev/results/CURSOR_RESULT_closure_step1m.md`.
 
 ## Session close 2026-08-01 (closure Step 1l)
 
@@ -43,9 +49,8 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** Step 1m -- flux-vs-G tests with aperture normalisation or fixed-radius COG;
-D5-2 remediation with D5-1. A-1 exact magnitude **open**. D5-2 **MEASURED**; mechanism =
-SNR-table aperture vs magnitude (Step 1l L-a).
+**Next work item:** Step 1n -- resolve ~0.12 dex/mag residual compression after COG normalisation;
+D5-2 mechanism open. A-1 exact magnitude **open**. Use M1 normalisation as baseline for flux-vs-G.
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.

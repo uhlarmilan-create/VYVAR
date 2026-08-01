@@ -45,12 +45,17 @@ verdict**: peak is confounded with brightness/seeing; trend vanishes after `aper
 **Closure Step 1k (2026-08-01):** F(12) defect decomposed; production `flux` vs `mag` slope
 **-0.296** (D5-2 confirmed, not harness-only). K-a non-linearity claim superseded by Step 1l.
 
-**Closure Step 1l (2026-08-01):** L-a -- D5-2 mechanism is magnitude-dependent aperture radius
-(SNR table; aperture_r vs mag r = -0.95) without COG normalisation. `pearson(residual, r50)`
-**-0.024** on pooled star-frames. Colour term inconsistent across magnitude halves (L-c excluded).
-**D5-2 (production flux vs catalogue magnitude):** Confirmed Step 1k; mechanism assigned Step 1l.
-log10(flux) vs mag slope **-0.296** (n = 4058); identical on dao_flux. Not folded into A-1;
-cross-reference **D5-1** (aperture provenance / SNR-table radii). Status: **MEASURED**.
+**Closure Step 1l (2026-08-01):** L-a proposed (aperture mechanism); K-a withdrawal stands.
+Colour term fails half-sample test (L-c excluded). Joint G+aperture OLS retired Step 1m (VIF 9.8).
+
+**Closure Step 1m (2026-08-01):** M-x -- COG-normalised flux slope **-0.280** (H-ap -0.400 and
+H-2 ~-0.19 rejected); measured `slope(log10 EE(r_ap) vs G)` = **-0.016**. Step 1l L-a
+**withdrawn**. D5-2 confirmed; mechanism **open**.
+
+**D5-2 (production flux vs catalogue magnitude):** Confirmed anchor draft_435. Raw slope
+**-0.296**; COG-normalised **-0.280** (four flux columns agree within 0.008). Not harness-only.
+Mechanism **open** (aperture EE coupling removes only 0.016 dex/mag of 0.104 shortfall vs -0.4).
+Cross-reference D5-1; not closed. Status: **MEASURED**.
 
 **D1-1 (cosmic-ray rejection):** **Absent** from `src_py` (gain/RN "cosmic" params only).
 Prerequisite for stacked MASTERSTAR and proper coaddition (see `VYVAR_TODO_MASTERSTAR_REFERENCE.md`).
@@ -136,9 +141,9 @@ vs **-0.4**); G 11.52 vs 11.53 (dG = 0.006 mag) F(12) ratio **2.6x** from per-st
 production uses 4.75-9.0 x FWHM per star). J3: narrow/production annulus reduces EE std for
 G 11.53. J2: field-centre correlation -0.53 on annulus sky offset.
 
-**Closure Step 1k/1l (2026-08-01):** D5-2 confirmed (production flux slope **-0.296**). Step 1l:
-mechanism = magnitude-dependent `aperture_r_px` (D5-1 link); Step 1k K-a (D1-2) withdrawn.
-Fixture annulus: 25-45 px (1b), 11.376-21.555 px (1k, overlapped r_norm), 14.0-21.555 px (1l).
+**Closure Step 1k-1m (2026-08-01):** D5-2 confirmed (raw **-0.296**, COG-norm **-0.280**).
+Step 1l L-a withdrawn Step 1m; mechanism **open**. K-a (D1-2) withdrawn Step 1l. Fixture
+annulus: 25-45 px (1b), 11.376-21.555 px (1k), 14.0-21.555 px (1l).
 
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across
