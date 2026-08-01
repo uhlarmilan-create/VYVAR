@@ -109,10 +109,10 @@ anchor r50 span. Step 1d reported max **203 mmag** -> **A-1b CONFIRMED**; **203 
 centroid). G7 PASS; G6 failed due to full-curve admissibility defect (VOID contamination claim;
 fixed in Step 1f).
 
-**Closure Step 1f (2026-08-01):** C1 restricted admissibility to r<=3.5 px; C2 removed frame
-auto-exclusion; C3 re-selected five G<=12 proxies. G6/G7/G8 PASS. First consolidated measurement:
-G 8-9 p95-p5 **48.0 +/- 5.7 mmag** vs fixture **144.3 mmag** (Moffat beta=3 expectation).
-T4 sub-ensemble ratio **FAIL** (median 0.34).
+**Closure Step 1g (2026-08-01):** F1 restores A-1 differential configuration (proxies G 11.5-13.0
+at clamp 1.916 px, excluded from comp subsets). G7/G8/G9 PASS; **G6 FAIL** (proxy p95-p5 spread
+4.8x on G 8-9). Brightest proxy G 11.52: G 8-9 range **94 mmag** vs fixture **144.3 mmag**.
+Step 1f **48.0 mmag** VOID (proxies inside comp set). Exact consolidated magnitude **open**.
 
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across

@@ -126,6 +126,17 @@ Step 1e rejection without neighbours).
 
 Supersedes 203 mmag (Step 1d V8) and "exact value open" (Step 1e).
 
+### VOID (Step 1g supersession -- do not delete)
+
+**Pointer:** `dev/results/CURSOR_RESULT_closure_step1g.md`
+
+| ID | Claim | Issue |
+|----|-------|-------|
+| **V11** | M2 headline **48.0 +/- 5.7 mmag** as A-1 value | Proxies were inside G8_9 comparison set at comparison radii |
+| **V12** | G6 PASS at 1.19 / 1.07 / 1.04 | Autocorrelation among five near-identical G~8 proxies |
+| **V13** | Fixture disagreement explained as PSF/proxy magnitude | Configuration swap accounts for signs and magnitudes |
+| **V14** | B.5/B.6 on Step 1f configuration | Invalid configuration; re-run under F1 in Step 1g |
+
 ## What Step 2 inherits
 
 - First **validated-method** consolidated number: **48 mmag** G 8-9 (robust p95-p5).

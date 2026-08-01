@@ -144,6 +144,27 @@ def build_expected() -> dict:
     return out
 
 
+def build_target_radius_sweep() -> dict:
+    """Range over r50 span vs proxy/target radius (Step 1g configuration diagnostic)."""
+    sweep_radii = [1.916, 2.416, 2.866, 3.016, 3.166]
+    out: dict = {"beta": BETA, "unit": "mmag", "ranges_over_span": {}, "t4_ratio": {}}
+    for r_t in sweep_radii:
+        by_subset: dict[str, list[float]] = {k: [] for k in SUBSETS}
+        for r50 in R50_GRID:
+            a = alpha_from_r50(r50, BETA)
+            img = render_moffat((161, 161), 80.37, 80.62, a, BETA, TOTAL_FLUX, SKY_ADU)
+            ee = ee_curve_photutils(img, 80.37, 80.62)
+            et = ee_at(COG_RADII, ee, r_t)
+            for k, radii in SUBSETS.items():
+                ec = [ee_at(COG_RADII, ee, r) for r in radii]
+                by_subset[k].append(delta_ap_mmag(et, ec))
+        ranges = {k: round(by_subset[k][-1] - by_subset[k][0], 1) for k in SUBSETS}
+        out["ranges_over_span"][f"{r_t:.3f}"] = ranges
+        g89, g11 = ranges["G_8_9"], ranges["G_gt_11"]
+        out["t4_ratio"][f"{r_t:.3f}"] = round(g89 / g11, 2) if abs(g11) > 0.1 else None
+    return out
+
+
 # ---------------------------------------------------------------- gates
 def gate_g0_renderer() -> tuple[bool, str]:
     a = alpha_from_r50(1.87, BETA)
@@ -213,7 +234,8 @@ def main() -> int:
 
     exp = build_expected()
     if args.emit:
-        print(json.dumps(exp, indent=2))
+        payload = {"expected": exp, "target_radius_sweep": build_target_radius_sweep()}
+        print(json.dumps(payload, indent=2))
         return 0
 
     gates = [

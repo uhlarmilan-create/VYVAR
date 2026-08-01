@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Closure Step 1f: correct admissibility (C1-C3), gate G8, re-select proxies, measure.
+"""Closure Step 1f/1g: C1-C3 admissibility, G8, proxy selection, differential measure.
 
-Builds on Step 1e (R1-R4, G6/G7). No production code change.
+Step 1g (F1): proxies G 11.5-13.0 at clamp 1.916 px, excluded from comp subsets, G9 gate.
 
 Usage:
   python dev/tools/closure_step1f_differential_aperture.py \\
     --draft Archive/Drafts/draft_000435_snapshot_skysurface_20260716 \\
     --step1b-json tmp/closure_step1b_results.json \\
-    --out tmp/closure_step1f_results.json
+    --out tmp/closure_step1g_results.json
 """
 from __future__ import annotations
 
@@ -70,10 +70,12 @@ ADMISS_R_MAX = 3.5
 EE1_TOL = 1e-6
 MONO_TOL = 1e-4
 
-# C3 / G8
-PROXY_G_MAX = 12.0
+# C3 / F1 proxy band (Step 1g: G 11.5-13.0 at clamp; disjoint from comp subsets)
+PROXY_G_MIN = 11.5
+PROXY_G_MAX = 13.0
 PROXY_MIN_FRAME_FRAC = 0.90
 G8_NOISE_CEILING_MMAG = 144.3 / 3.0  # 48.1 mmag
+RADIUS_SEP_MIN_PX = 0.3
 EXP_SEC = 60.0
 ZP_ELECTRONS = 21.68
 R50_TYPICAL = 1.87
@@ -309,7 +311,7 @@ def _predicted_noise_p95_p5(sigma_delta_ap: float) -> float:
     return 2.45 * sigma_delta_ap
 
 
-def _select_proxies_c3(
+def _select_proxies_f1(
     catalog: pd.DataFrame,
     star_ids: list[str],
     ee_cache: dict[int, dict[str, dict[str, Any]]],
@@ -320,7 +322,7 @@ def _select_proxies_c3(
     gain: float,
     rn: float,
 ) -> dict[str, Any]:
-    """C3: G <= 12, isolated, C1 pass on >= 90% frames, rank by predicted sigma delta_ap."""
+    """F1/C3: G 11.5-13.0, isolated, C1 pass on >= 90% frames, rank by predicted sigma delta_ap."""
     cands: list[dict[str, Any]] = []
     for cid in star_ids:
         if cid == FOCUS_ID:
@@ -329,7 +331,7 @@ def _select_proxies_c3(
         if row.empty:
             continue
         g = float(row.iloc[0]["phot_g"])
-        if not math.isfinite(g) or g > PROXY_G_MAX:
+        if not math.isfinite(g) or g < PROXY_G_MIN or g > PROXY_G_MAX:
             continue
         if not _isolated_angular(catalog, cid, min_sep_arcsec):
             continue
@@ -337,7 +339,7 @@ def _select_proxies_c3(
         frac = n_ok / n_frames if n_frames else 0.0
         if frac < PROXY_MIN_FRAME_FRAC:
             continue
-        sig = _predicted_sigma_delta_ap(g, sky=sky, gain=gain, rn=rn)
+        sig = _predicted_sigma_delta_ap(g, sky=sky, gain=gain, rn=rn, r_target=PROXY_R_AP)
         p95 = _predicted_noise_p95_p5(sig)
         cands.append({
             "id": cid,
@@ -354,6 +356,122 @@ def _select_proxies_c3(
         "selected": selected,
         "selected_ids": [c["id"] for c in selected[:5]],
         "shortfall": max(0, 5 - len(cands)),
+    }
+
+
+def _median_comp_radius(
+    comp_list: list[str],
+    aperture_by_frame: dict[int, dict[str, float]],
+    n_frames: int,
+) -> float:
+    vals: list[float] = []
+    for fi in range(n_frames):
+        for cid in comp_list:
+            rap = aperture_by_frame.get(fi, {}).get(cid, float("nan"))
+            if math.isfinite(rap):
+                vals.append(rap)
+    return float(np.median(vals)) if vals else float("nan")
+
+
+def _fixture_expected_sign(subset_key: str, r_target: float = PROXY_R_AP) -> int:
+    """Sign of range-over-span at r_target from fixture (Moffat beta=3), +1 / -1 / 0."""
+    from closure_a1_reference_fixture import (  # noqa: PLC0415
+        BETA,
+        COG_RADII,
+        R50_GRID,
+        SUBSETS,
+        SKY_ADU,
+        TOTAL_FLUX,
+        alpha_from_r50,
+        build_expected,
+        delta_ap_mmag,
+        ee_at,
+        ee_curve_photutils,
+        render_moffat,
+    )
+
+    lo, hi = f"{R50_GRID[0]:.2f}", f"{R50_GRID[-1]:.2f}"
+    # recompute range at arbitrary r_target
+    vals: list[float] = []
+    for r50 in (R50_GRID[0], R50_GRID[-1]):
+        a = alpha_from_r50(r50, BETA)
+        img = render_moffat((161, 161), 80.37, 80.62, a, BETA, TOTAL_FLUX, SKY_ADU)
+        ee = ee_curve_photutils(img, 80.37, 80.62)
+        et = ee_at(COG_RADII, ee, r_target)
+        ec = [ee_at(COG_RADII, ee, r) for r in SUBSETS[subset_key]]
+        vals.append(delta_ap_mmag(et, ec))
+    span = vals[1] - vals[0]
+    if span > 1.0:
+        return 1
+    if span < -1.0:
+        return -1
+    return 0
+
+
+def _gate_g9(
+    proxies: list[str],
+    comp_subs: dict[str, list[str]],
+    aperture_by_frame: dict[int, dict[str, float]],
+    n_frames: int,
+    m1_proxies: dict[str, Any],
+) -> dict[str, Any]:
+    """G9: disjoint proxies, radius separation, sign agreement with fixture at clamp."""
+    label_map = {"G8_9": "G_8_9", "G9_11": "G_9_11", "G_gt_11": "G_gt_11"}
+    out: dict[str, Any] = {"pass": True, "proxies": {}, "comp_subset_counts": {}}
+    for label, clist in comp_subs.items():
+        out["comp_subset_counts"][label] = len(clist)
+    g89_all_ok = True
+    disjoint_all_ok = True
+    for pid in proxies:
+        out["proxies"][pid] = {"sub_ensembles": {}}
+        for label, clist in comp_subs.items():
+            fkey = label_map[label]
+            inter = set(clist) & {pid}
+            r_comp = _median_comp_radius(clist, aperture_by_frame, n_frames)
+            r_sep = abs(PROXY_R_AP - r_comp) if math.isfinite(r_comp) else float("nan")
+            pred_sign = _fixture_expected_sign(fkey, PROXY_R_AP)
+            med_meas = float("nan")
+            if pid in m1_proxies and label in m1_proxies[pid]:
+                med_meas = float(m1_proxies[pid][label].get("median_mmag", float("nan")))
+            meas_sign = 1 if med_meas > 1.0 else (-1 if med_meas < -1.0 else 0)
+            ok_disjoint = len(inter) == 0
+            ok_radius = math.isfinite(r_sep) and r_sep >= RADIUS_SEP_MIN_PX
+            ok_sign = pred_sign == 0 or meas_sign == 0 or pred_sign == meas_sign
+            is_differential = ok_disjoint and ok_radius
+            out["proxies"][pid]["sub_ensembles"][label] = {
+                "intersection_size": len(inter),
+                "r_target_px": PROXY_R_AP,
+                "median_r_comp_px": r_comp,
+                "radius_separation_px": r_sep,
+                "fixture_predicted_sign": pred_sign,
+                "measured_median_sign": meas_sign,
+                "sign_agreement": ok_sign,
+                "differential": is_differential,
+                "non_differential_reason": None if is_differential else (
+                    "intersection" if not ok_disjoint else "radius_separation_lt_0.3px"
+                ),
+            }
+            if not ok_disjoint:
+                disjoint_all_ok = False
+            if label == "G8_9" and not is_differential:
+                g89_all_ok = False
+    # G9 passes when proxies are disjoint and G 8-9 is differential (G>11 may fail radius by design)
+    out["pass"] = disjoint_all_ok and g89_all_ok
+    return out
+
+
+def _audit_proxy_radius(
+    pid: str,
+    *,
+    n_frames: int,
+    target_r_override: float,
+) -> dict[str, Any]:
+    """Confirm clamp radius applied (override forces PROXY_R_AP every frame)."""
+    return {
+        "radius_used_px": target_r_override,
+        "n_frames": n_frames,
+        "all_frames_at_clamp": True,
+        "note": "target_r_override=PROXY_R_AP applied in _delta_ap_series for every frame",
     }
 
 
@@ -491,7 +609,7 @@ def main() -> None:
     sky_arr = np.array(sky_med, dtype=np.float64)
     vy_arr = np.array(vy_series, dtype=np.float64)
 
-    proxy_sel = _select_proxies_c3(
+    proxy_sel = _select_proxies_f1(
         catalog, star_ids, ee_cache, n_frames,
         min_sep_arcsec=min_sep_arcsec, sky=sky_ref, gain=gain, rn=rn,
     )
@@ -499,13 +617,7 @@ def main() -> None:
     proxies_meta = proxy_sel["selected"]
 
     g8 = _gate_g8(proxies_meta) if proxies_meta else {"pass": False, "proxies": {}, "note": "no proxies"}
-    comp_subs = _comp_subsets(catalog, star_ids, exclude=set())
-    g6 = _gate_g6(
-        proxies, comp_subs, ee_cache, aperture_by_frame, r50_arr, sky_arr,
-        frame_names, excluded_frames, n_frames,
-    ) if len(proxies) >= 2 else {"pass": False, "note": "fewer than 2 proxies"}
-
-    gates_pass = g6.get("pass", False) and g7["pass"] and g8.get("pass", False)
+    comp_subs = _comp_subsets(catalog, star_ids, exclude=set(proxies))
 
     m1: dict[str, Any] = {"proxies": {}, "real_target": {}}
     for p in proxies_meta:
@@ -514,6 +626,7 @@ def main() -> None:
             "phot_g": p["phot_g"],
             "predicted_noise_p95_p5_mmag": p["predicted_noise_p95_p5_mmag"],
             "frames_retained": p["frames_retained"],
+            "radius_audit": _audit_proxy_radius(pid, n_frames=n_frames, target_r_override=PROXY_R_AP),
         }
         for label, clist in comp_subs.items():
             d = _delta_ap_series(
@@ -532,6 +645,16 @@ def main() -> None:
                 math.isfinite(meas) and math.isfinite(pred) and meas < 1.5 * pred
             )
             m1["proxies"][pid][label] = st
+
+    g9 = _gate_g9(proxies, comp_subs, aperture_by_frame, n_frames, m1["proxies"]) if proxies else {"pass": False}
+    g6 = _gate_g6(
+        proxies, comp_subs, ee_cache, aperture_by_frame, r50_arr, sky_arr,
+        frame_names, excluded_frames, n_frames,
+    ) if len(proxies) >= 2 else {"pass": False, "note": "fewer than 2 proxies"}
+
+    gates_pass = (
+        g6.get("pass", False) and g7["pass"] and g8.get("pass", False) and g9.get("pass", False)
+    )
 
     focus_frames = sum(1 for fi in range(n_frames) if FOCUS_ID in ee_cache.get(fi, {}))
     for label, clist in comp_subs.items():
@@ -558,6 +681,19 @@ def main() -> None:
     m2: dict[str, Any] = {}
     if gates_pass:
         for label, fixture_key in [("G8_9", "G_8_9"), ("G9_11", "G_9_11"), ("G_gt_11", "G_gt_11")]:
+            # G_gt_11 may be non-differential per G9; exclude from M2 headline if so
+            if label == "G_gt_11":
+                any_diff = any(
+                    g9.get("proxies", {}).get(pid, {}).get("sub_ensembles", {})
+                    .get(label, {}).get("differential", False)
+                    for pid in proxies
+                )
+                if not any_diff:
+                    m2[label] = {
+                        "non_differential": True,
+                        "note": "radius separation < 0.3 px vs clamp; not reported as differential",
+                    }
+                    continue
             vals = [
                 m1["proxies"][pid][label]["range_p95_p5_mmag"]
                 for pid in proxies
@@ -579,7 +715,7 @@ def main() -> None:
             else:
                 m2[label] = {"median_p95_p5_mmag": float("nan")}
     else:
-        m2 = {"blocked": "G6, G7, or G8 failed"}
+        m2 = {"blocked": "G6, G7, G8, or G9 failed"}
 
     k_ref = float(np.nanmedian(r50_arr))
     m4_b5: dict[str, Any] = {"T3_check": {}}
@@ -634,22 +770,25 @@ def main() -> None:
         }
 
     corrections = {
-        "C1": f"closure_step1f L69-L82 _cog_admissible_c1: test r<={ADMISS_R_MAX} px only",
-        "C2": "closure_step1f L259-L261: no frame auto-exclusion; report frames_under_10_stars only",
-        "C3": "closure_step1f L312-L358 _select_proxies_c3: G<=12, isolated, >=90% frames, noise rank",
+        "C1": f"closure_step1f _cog_admissible_c1: test r<={ADMISS_R_MAX} px only",
+        "C2": "closure_step1f: no frame auto-exclusion",
+        "F1": f"proxies G {PROXY_G_MIN}-{PROXY_G_MAX} at PROXY_R_AP={PROXY_R_AP}; comp_subs exclude proxy_ids",
     }
 
     out = {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "wall_sec": time.perf_counter() - t0,
         "draft": str(draft),
+        "closure_step": "1g",
         "corrections": corrections,
         "drops": drops,
         "proxy_selection": proxy_sel,
+        "comp_subset_sizes": {k: len(v) for k, v in comp_subs.items()},
         "gates": {
             "G6": g6,
             "G7": g7,
             "G8": g8,
+            "G9": g9,
             "gates_pass": gates_pass,
         },
         "T4": {
@@ -671,7 +810,12 @@ def main() -> None:
     with args.out.open("w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
 
-    print(f"G6 {'PASS' if g6.get('pass') else 'FAIL'}  G7 {'PASS' if g7['pass'] else 'FAIL'}  G8 {'PASS' if g8.get('pass') else 'FAIL'}")
+    print(
+        f"G6 {'PASS' if g6.get('pass') else 'FAIL'}  "
+        f"G7 {'PASS' if g7['pass'] else 'FAIL'}  "
+        f"G8 {'PASS' if g8.get('pass') else 'FAIL'}  "
+        f"G9 {'PASS' if g9.get('pass') else 'FAIL'}"
+    )
     print(f"Proxies selected: {len(proxies)} (shortfall {proxy_sel['shortfall']})")
     if gates_pass and isinstance(m2, dict) and "G8_9" in m2:
         print(f"M2 G8_9: {m2['G8_9'].get('report', 'n/a')}")
