@@ -2,7 +2,13 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-01** (closure Step 1i numerator mechanism).
+Last updated: **2026-08-01** (closure Step 1j F(12) normalisation test).
+
+## Session close 2026-08-01 (closure Step 1j)
+
+Step 1j (J-a): F(12) inconsistent with catalogue G (slope -0.285 vs -0.4); G 11.52/11.53 F(12)
+ratio 2.6x at dG = 0.006 mag from per-star sky offset. Step 1i production annulus claim
+withdrawn. Step 1k: sky model + amp/peak gate. Report: `dev/results/CURSOR_RESULT_closure_step1j.md`.
 
 ## Session close 2026-08-01 (closure Step 1i)
 
@@ -24,9 +30,9 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** Step 1j -- cause-based admissibility (fit_amp/peak, F(12) floor, chi2,
-placement threshold); **no EE-band filtering** (R8). A-1 **CONFIRMED**; exact magnitude **open**.
-Mechanism: 12 px normalisation failure on faint stars (Step 1i I3).
+**Next work item:** Step 1k -- per-star sky diagnosis (harness vs independent estimate);
+amp/peak cause gate (~0.25-0.43); production-path F(12) vs G test. A-1 **CONFIRMED**; exact
+magnitude **open**. Mechanism: per-star sky subtraction error in F(12) (Step 1j J-a).
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.

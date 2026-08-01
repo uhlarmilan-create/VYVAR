@@ -30,9 +30,11 @@ not in the first execution wave.
 disjoint from comps). G9 PASS; G6 FAIL; exact magnitude **open**.
 **Step 1h diagnosis (2026-08-01):** G6 magnitude spread in numerator; denominator stable;
 contamination excluded. Report: `dev/results/CURSOR_RESULT_closure_step1h.md`.
-**Step 1i mechanism (2026-08-01):** I3 -- 12 px normalisation failure on faint stars (collapsed
-F(12), converged-wrong Gaussian fits) is dominant; rare placement errors on low-EE tail. E5
-excludes placement as scatter fix. Report: `dev/results/CURSOR_RESULT_closure_step1i.md`.
+**Step 1i mechanism (2026-08-01):** I3 -- normalisation not placement (E5); HIGH EE from F(12)
+issues; LOW EE rare placement. Report: `dev/results/CURSOR_RESULT_closure_step1i.md`.
+**Step 1j (2026-08-01):** J-a -- per-star sky subtraction error in F(12); J1 slope **-0.285**
+(vs -0.4); G 11.52/11.53 F(12) ratio **2.6x** at dG = 0.006 mag. Step 1i production annulus
+claim withdrawn. Report: `dev/results/CURSOR_RESULT_closure_step1j.md`.
 **Reports:** `dev/results/CURSOR_RESULT_closure_step1g.md`; Step 1f **48.0 mmag VOID** (V11).
 **Fixture:** `dev/tools/closure_a1_reference_fixture.py` (target-radius sweep in --emit)
 **Harness:** `dev/tools/closure_step1f_differential_aperture.py` (Step 1g F1/G9)
