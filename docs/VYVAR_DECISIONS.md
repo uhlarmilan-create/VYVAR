@@ -2293,3 +2293,67 @@ lands.
 
 **Known issue (b):** per-target `comp_rms` gate not authoritative for N_good; RMS fallback + routing
 fix is **Phase-1b** (immediate next), not part of the Phase-1 commit.
+
+---
+
+## Audit closure decisions 5-9 (2026-08-02, batch C + B-revised)
+
+Milan approved recommendations from `docs/VYVAR_DECISION_BRIEF.md` and D5-2 mechanism from
+`dev/results/CURSOR_RESULT_batch_B_revised.md`.
+
+### 5 -- I-11 (register 21): Howell sky term on subtracted frames
+
+**Decision:** **Option 1** -- carry pre-subtraction `sky_surface_bg_median_adu` into the Howell
+sky Poisson term on the legacy fallback path.
+
+**Why:** Sky Poisson noise is set by photons that arrived before subtraction, not by the
+post-subtraction annulus residual (Howell 2006 CCD equation).
+
+**Implement:** batch D (D.2). Confirming metric: crowded-field chi2_red rises toward correctness;
+anchor unchanged (0 legacy-path epochs today).
+
+### 6 -- I-04 (register 22): ensemble scatter on unmatched epochs
+
+**Decision:** **Option 1** -- NaN + exclude epoch when ensemble scatter cannot be computed;
+export flag required.
+
+**Why:** Fail-optimistic zero substitution is unacceptable for publication-grade errors (Honeycutt
+1992 propagate-or-drop rule).
+
+**Implement:** batch D (D.1). Confirming metric: byte-identical anchor (0 unmatched epochs).
+
+### 7 -- P-02 / A-6 (register 25): scintillation and systematic floor
+
+**Decision:** **Option 3** -- (a) wire scintillation per rig from Young/Osborn formula using
+per-epoch header airmass; (b) re-measure chi2_red; (c) if median chi2_red still > 1.2, add
+per-rig `sigma_sys_mag` floor; **report floor and achieved chi2_red separately** (R8).
+
+**Why:** Part 1c median chi2_red ~4.7; scintillation alone may not close gap on all rigs; Everett
+& Howell (2001) 2-5 mmag systematic floor is literature-backed.
+
+**Implement:** batch D (D.4). Confirming metric: median chi2_red within ~20% of 1.0 on >= 2 rigs.
+
+### 8 -- T4-1 (register 10): detection noise on resampled frames
+
+**Decision:** **Option B** -- single measured `N_equiv` correction so effective post-resample
+threshold matches intent. **Confirm 3.78 vs 4.71** from Part 2b measured `rel_err` before re-cut.
+
+**Why:** Correlated noise after astroalign (Casertano 2000; Fruchter & Hook 2002); fixed kernel
+implies single rig-level factor.
+
+**Implement:** batch E (E.4). Blocks anchor re-cut until applied.
+
+### 9 -- D5-2 (register 16b): bright-end flux compression mechanism
+
+**Decision:** Mechanism = **bright-end saturation / detector non-linearity** (G 8-9 bin, stars to
+~97% full well). **Fix = saturation admission gate (C-1/C-2)** at **70%** of
+`saturate_limit_adu_85pct` (to be validated in implementation). **Not** an in-code linearity curve.
+
+**Why:** Production-column M1 (B-revised): G 10-13 slope -0.421; G 8-9 bin -0.258; brightest star
+peak 54231 ADU (97.4% of 55705). Batch B B-open superseded (FITS instrument invalid).
+
+**D1-2 alternative:** per-sensor linearity curve (Howell 2006 sec 4.4) **DEFERRED** -- requires
+dome-flat ramp per sensor; observing-plan item, not code fabrication.
+
+**Implement:** C-1/C-2 admission gate in batch E alongside existing admission-gate work.
+

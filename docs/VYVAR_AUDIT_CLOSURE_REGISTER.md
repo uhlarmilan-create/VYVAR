@@ -19,10 +19,10 @@ not in the first execution wave.
 | **4** | **A-4** | Mandatory stack provenance in header + `pipeline_meta.json` | 7 | QUEUED | A-3 |
 | **5** | **A-5** | Recalibrate `masterstar_dao_threshold_sigma` against stack noise/PSF | 7 | QUEUED | A-3, T4-1 |
 | **6** | **A-6** | Split `DAO_ONLY` health metric by magnitude vs Gaia cap (17.5) | 7 | QUEUED | A-5 |
-| **7** | **C-1** | Admission gate: predicted per-epoch SNR (`g_lim_*` + Labb sigma_bkg_ap) | 7, 8 | QUEUED | -- |
+| **7** | **C-1** | Admission gate: predicted per-epoch SNR + **saturation gate (D5-2)** | 7, 8 | **QUEUED** | batch E; 70% full-well gate |
 | **8** | **C-2** | Flag catalogue rows CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE | 7 | QUEUED | C-1 |
 | **9** | **CR-1** | Cosmic-ray rejection (L.A.Cosmic or equivalent) | 1 | **QUEUED** (documented batch A) | batch E |
-| **10** | **T4-1** | Milan decision: detection noise on resampled frames (options A/B/C/D) | 2, 7 | **DECISION** (brief ready) | `VYVAR_DECISION_BRIEF.md` C.4 |
+| **10** | **T4-1** | Milan decision: detection noise on resampled frames (options A/B/C/D) | 2, 7 | **DECIDED** | Option B; batch E; DECISIONS #8 |
 
 ### Aperture closure Step 1 (finding A-1 -- SNR table radius)
 
@@ -57,8 +57,9 @@ K3: production slope **-0.296** (D5-2 opened). K-a (D1-2 non-linearity) **withdr
 **Step 1l (2026-08-01):** L-a proposed (aperture mechanism); K-a withdrawal stands. **Step 1l L-a
 withdrawn in Step 1m** (COG normalisation does not reach -0.400).
 **Step 1m (2026-08-01):** M-x -- COG-normalised slope **-0.280**; D5-2 confirmed; mechanism open.
-**Step 1n (2026-08-01):** N-none -- C-sat and C-sky excluded; G 8-9 bin localisation; `flux_large`
-refutes aperture mechanism. Report: `dev/results/CURSOR_RESULT_closure_step1n.md`.
+**Step 1n (2026-08-01):** N-none on FITS tests; production columns localise G 8-9.
+**Batch B-revised (2026-08-02):** D5-2 **CONFIRMED** -- saturation/non-linearity; batch B-open
+superseded. Report: `dev/results/CURSOR_RESULT_batch_B_revised.md`.
 **Reports:** `dev/results/CURSOR_RESULT_closure_step1g.md`; Step 1f **48.0 mmag VOID** (V11).
 **Fixture:** `dev/tools/closure_a1_reference_fixture.py` (target-radius sweep in --emit)
 **Harness:** `dev/tools/closure_step1f_differential_aperture.py` (Step 1g F1/G9)
@@ -89,17 +90,17 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | 14 | T1 export time_base truth | 12 | **FIXED** | Refuse non-BJD_TDB AAVSO export |
 | 15 | D10-2 Gaia->Johnson range guard | 10 | **FIXED** | Stage 1; 1 comp outside range on anchor |
 | 16 | D5-1 aperture provenance columns | 5 | **DOCUMENTED** | A-1b CONFIRMED DOCUMENTED; fix deferred batch D |
-| 16b | **D5-2** production flux vs G scaling | 5 | **MEASURED** | Slope -0.296; G 8-9 bin; mechanism **DEFERRED** (batch B-open) |
+| 16b | **D5-2** production flux vs G scaling | 5 | **CONFIRMED** | G 8-9 bin; saturation/non-linearity; fix = C-1/C-2 gate 70% |
 | 31 | **A-9** absolute PSF scale unresolved | 5, 7 | **DOCUMENTED** | Estimators disagree; use COG r50 before absolute claims |
 | 17 | D1-3 master flat documentation | 1 | **CLOSED** | DECISIONS entry; builder gap noted |
 | 18 | D10-1 unfiltered CV->CR band | 10 | **FIXED** | Milan decision; Stage 3 |
 | 19 | sigma_pp drop / sigma_clipped_stats | 2 | **FIXED** | Milan decision Stage 3 |
 | 20 | masterstar_dao_threshold 2.1->3.8 | 7 | **FIXED** | Bundled with P-10 |
-| 21 | I-11 Howell sky on subtracted frames | 2 | **DECISION** (brief ready) | Options 1-3; recommend Option 1; `VYVAR_DECISION_BRIEF.md` C.1 |
-| 22 | I-04 ensemble scatter unmatched | 8 | **DECISION** (brief ready) | NaN+exclude vs inflate; recommend Option 1; C.2 |
+| 21 | I-11 Howell sky on subtracted frames | 2 | **DECIDED** | Option 1; batch D; DECISIONS #5 |
+| 22 | I-04 ensemble scatter unmatched | 8 | **DECIDED** | Option 1 NaN+exclude; batch D; DECISIONS #6 |
 | 23 | I-03 omitted Howell terms | 2 | QUEUED | After I-11 decision |
-| 24 | D1-2 linearity correction | 1 | **DEFERRED** | Batch B-open: partial +0.37 (G 9-11 ref), below +0.4 gate |
-| 25 | P-02 scintillation in production err | 9 | **DECISION** (brief ready) | With A-6; recommend Option 3; `VYVAR_DECISION_BRIEF.md` C.3 |
+| 24 | D1-2 linearity correction | 1 | **DEFERRED** | Dome-flat ramp per sensor; D5-2 gate preferred |
+| 25 | P-02 scintillation in production err | 9 | **DECIDED** | Option 3; batch D; DECISIONS #7 |
 | 26 | U-09 DATE-OBS convention per rig | 4 | **MEASURED** / **DOCUMENTED** | BO CVn: shutter-open verified; QHY294 and other rigs UNVERIFIED |
 | 27 | Part 0c delta pairing fix (source_file) | 7 | **QUEUED** | Harness bug; invalid tail stats |
 | 28 | DAO centroid stability / aperture placement | 5, 7 | **QUEUED** | Part 0e M4; 19/156 targets > r_ap shift |
@@ -137,7 +138,8 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | Closure Step 1g (F1 configuration) | `dev/results/CURSOR_RESULT_closure_step1g.md` |
 | Closure batch A (doc close) | `dev/results/CURSOR_RESULT_batch_A.md` |
 | Closure batch C (Milan decisions) | `docs/VYVAR_DECISION_BRIEF.md`, `dev/results/CURSOR_RESULT_batch_C.md` |
-| Limitations (paper section) | `docs/VYVAR_LIMITATIONS.md` |
+| Closure batch B-revised (D5-2 mechanism) | `dev/results/CURSOR_RESULT_batch_B_revised.md` |
+| Audit closure deliverable | `docs/VYVAR_AUDIT_CLOSURE.md` |
 | MASTERSTAR spec | `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md` |
 
 ---

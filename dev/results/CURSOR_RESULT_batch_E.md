@@ -26,9 +26,9 @@ Batch C brief ready (done)
 E.1 Part 0c pairing, E.2 DAO centroid guard, E.3 CR-1, E.4 T4-1, final `--full` re-cut,
 register item 29 -- all **pending**.
 
-## Next step
+## Update 2026-08-02 (batch B-revised)
 
-1. Complete batch D (including Milan re-cut authorization)
+T4-1 decision recorded (DECISIONS #8). Batch D still required before E. Re-issue batch E after D.
 2. Record **C.4 / T4-1** choice in `VYVAR_DECISIONS.md` (Option A/B/C/D; if B, confirm N_equiv
    3.78 vs 4.71)
 3. Re-issue batch E

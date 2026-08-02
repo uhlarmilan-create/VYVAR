@@ -2,7 +2,12 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-02** (batches D and E blocked on preconditions).
+Last updated: **2026-08-02** (audit closure B-revised; D5-2 confirmed).
+
+## Session close 2026-08-02 (audit closure B-revised)
+
+D5-2 **CONFIRMED**: saturation/non-linearity G 8-9; fix = C-1/C-2 gate. Decisions 5-9 recorded.
+`docs/VYVAR_AUDIT_CLOSURE.md` created. **Re-issue batch D**, then batch E.
 
 ## Session close 2026-08-02 (batches D and E blocked)
 
@@ -71,8 +76,8 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** Milan reads `docs/VYVAR_DECISION_BRIEF.md` and records choices in
-`docs/VYVAR_DECISIONS.md`. **Batch D blocked** until choices recorded.
+**Next work item:** **Batch D** (I-04, I-11, P-02/A-6) -- preconditions met. Then batch E after D
+re-cut authorization.
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.

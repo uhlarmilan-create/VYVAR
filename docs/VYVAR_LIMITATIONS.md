@@ -36,20 +36,17 @@ Scheduled in implementation batch E. Status: **DOCUMENTED**, CR-1 **QUEUED**.
 
 ## D1-2 -- Detector linearity correction
 
-Closure Steps 1k-1n and batch B tested peak-ADU vs flux-deficit correlations. Batch B (B2) with
-G 9-11 reference slope (-0.414) gives partial correlation deficit~peak | r50 = **+0.37** on
-G < 9 (below the pre-registered +0.4 threshold). Faint-half (G > 10) reference slope is -0.18,
-not -0.4, confounding the pre-registered test. **Not confirmed** on the unconfounded criterion.
-Status: **DEFERRED**. Literature: Howell (2006) sec 4.4. Evidence:
-`dev/results/CURSOR_RESULT_batch_B.md`.
+**DEFERRED** to observing plan. Per-sensor linearity curve (Howell 2006 sec 4.4) requires a
+dome-flat ramp measurement per sensor. **Not** the chosen fix for D5-2.
 
 ## D5-2 -- Production flux vs catalogue magnitude compression
 
-Pipeline flux does not scale as 10^(-0.4 G). Measured slopes: `flux` **-0.296**, `flux_large`
-(fixed 9.58 px) **-0.269** (4058 star-frames, anchor draft_435). Localisation: G 8-9 bin
-**-0.258** (sharp break to -0.434 at G 9-10). **Mechanism open** after batch B (B-open): B1
-before/after sky test **VOID** (sanity gate); B2 does not meet non-linearity threshold. Status:
-**MEASURED**, mechanism **DEFERRED**. Evidence: Steps 1k-1n, `dev/results/CURSOR_RESULT_batch_B.md`.
+**CONFIRMED (2026-08-02, batch B-revised).** Compression confined to **G 8-9** bin (production
+`flux` slope **-0.258** vs **~-0.4** at G 9-13). Brightest star reaches **97%** of full well
+(54231 / 55705 ADU). **Mechanism:** saturation / detector non-linearity. **Fix:** saturation
+admission gate at **70%** of `saturate_limit_adu_85pct` (C-1/C-2, batch E). Not aperture; not
+sky wings. Batch B B-open superseded (invalid FITS remeasurement). Evidence:
+`dev/results/CURSOR_RESULT_batch_B_revised.md`.
 
 ## I-12 -- Proper motion when pmra/pmdec absent
 

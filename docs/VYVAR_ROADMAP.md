@@ -59,8 +59,8 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 ## QUEUED - Audit closure Steps 1-10 (2026-07-31)
 
-**Status:** QUEUED (MASTERSTAR stack). **Batch C complete.** **Batches D and E blocked** (awaiting
-Milan DECISIONS + D re-cut auth). See `dev/results/CURSOR_RESULT_batch_{D,E}.md`.
+**Status:** Audit **closed** pending D/E re-cuts. D5-2 **CONFIRMED**. **Batch D** ready. MASTERSTAR
+architecture = separate enhancement thread. See `docs/VYVAR_AUDIT_CLOSURE.md`.
 Source: `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md` (30 items; Steps 1-10 active).
 Audit synthesis: `docs/VYVAR_AUDIT_FINAL.md`. Operational TODO index:
 `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md`.

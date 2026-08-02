@@ -237,8 +237,8 @@ Measurement stages 0--3 and tranches 1--4 are **committed** (`dev/results/`). Op
 decision and DAO-centroid / pairing fixes from Stage 3 Part 0d--0e.
 
 **Next work item:** Aperture closure **Step 2** (A-2/A-3 placement; DAO centroid coupling).
-A-1 **DOCUMENTED** (batch A); **A-9 DOCUMENTED**. D5-2 **MEASURED**, mechanism **DEFERRED** (batch B-open).
-MASTERSTAR stack **A-1** (`I_j`) queued separately.
+A-1 **DOCUMENTED** (batch A); **A-9 DOCUMENTED**. D5-2 **CONFIRMED** (batch B-revised). Decisions
+5-9 recorded; batches **D then E** ready to execute.
 
 ---
 

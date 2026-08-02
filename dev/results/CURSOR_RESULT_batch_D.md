@@ -1,12 +1,12 @@
 CURSOR RESULT - 2026-08-02 10:50 UTC+2
 
-**Status: BLOCKED -- preconditions not met. No code changes. No re-cut.**
+**Status: PRECONDITIONS NOW MET -- re-issue batch D.**
 
 What I did
 Verified batch D preconditions against `docs/VYVAR_DECISIONS.md` and batch B outcome. Stopped
 per task rule: do not guess a decision.
 
-## Precondition check
+## Precondition check (original run 2026-08-02)
 
 | precondition | required | actual | met? |
 |--------------|----------|--------|------|
@@ -38,9 +38,10 @@ No D5-2/D1-2 fix in batch D unless Milan directs otherwise after a future measur
 
 D.1 I-04, D.2 I-11, D.3 I-03, D.4 P-02+A-6, D.6 A-1 COG, anchor `--full` re-cut -- all **pending**.
 
-## Next step
+## Update 2026-08-02 (batch B-revised)
 
-After Milan records choices, re-issue batch D. Expected first actions:
+Decisions 5-9 recorded in `VYVAR_DECISIONS.md`. D5-2 mechanism **CONFIRMED** (saturation gate).
+**All batch D preconditions met.** Re-issue batch D task.
 
 - Implement D.1/D.2/D.4 per chosen options
 - Run tests (fail before / pass after)
