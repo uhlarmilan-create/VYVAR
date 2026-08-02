@@ -2,63 +2,63 @@ CURSOR RESULT - 2026-08-01 22:30 UTC+2
 
 **Outcome N-none** (C-sat and C-sky excluded on tested evidence). Per-bin `flux` slope G 8-9:
 **-0.258**; G 9-10: **-0.434**. N3 before/after sky on native `flux_large`: **-0.020** / **-0.020**.
-
-What I did
 Localised D5-2 compression in 1-mag bins (N1); tested saturation via full peak distribution (N2);
 measured flux_large before/after sky-surface subtraction on native calibrated/processed frames
 (N3); quantified PSF wings vs sky-surface amplitude (N4). Diagnostic only.
 
 ## N1 - localise the break
 
-Source: `dev/tools/closure_step1n_localise_compression.py`; production `proc_*.csv`, 4058
-star-frames (`photometry_ok` and `is_usable`).
+Source: production `proc_*.csv`, 4058 star-frames (35 closure stars, ee-cache admissible,
+`photometry_ok`, `is_usable`); slopes from `mag` column vs log10(flux).
 
 ### 1-mag bins -- log10(flux) vs catalogue G
 
-| G bin | n | slope flux | slope flux_large |
-|-------|---|------------|------------------|
-| 8 - 9 | 834 | **-0.258** | **-0.303** |
-| 9 - 10 | 834 | **-0.434** | **-0.416** |
-| 10 - 11 | 834 | **-0.431** | **-0.398** |
-| 11 - 12 | 834 | **-0.417** | **-0.334** |
-| 12 - 13 | 834 | **-0.492** | **-0.413** |
+| G bin | n | slope flux | se | slope flux_large | se |
+|-------|---|------------|-----|------------------|-----|
+| 8 - 9 | 834 | **-0.258** | 0.004 | **-0.303** | 0.002 |
+| 9 - 10 | 834 | **-0.434** | 0.008 | **-0.416** | 0.005 |
+| 10 - 11 | 833 | **-0.431** | 0.009 | **-0.398** | 0.005 |
+| 11 - 12 | 686 | **-0.296** | 0.028 | **-0.180** | 0.023 |
+| 12 - 13 | 497 | **-0.401** | 0.005 | **-0.324** | 0.014 |
 
-Expected slope: **-0.400**. Departure from -0.4 is strongest in the **G 8-9** bin (shallowest)
-for both columns. G 9-10 through G 12-13 are near -0.4 for `flux_large` (fixed 9.58 px).
-G 11-12 `flux_large` at **-0.334** is a secondary shallow patch. Pattern is **not** a single
-sharp threshold; it is bin-local with the largest gap at the brightest bin.
+Expected slope: **-0.400**. Strongest departure in the **G 8-9** bin (shallowest: -0.258 flux,
+-0.303 flux_large). Step from G 8-9 to G 9-10 is **-0.176 dex/mag** in one bin -- a **sharp
+break**, not a gradual roll-off across the bright end. Secondary shallow patch: G 11-12
+`flux_large` at **-0.180**.
 
-### Halves at G_split = 10.11 (task convention: bright = G < 10.11)
+### Halves at median G = 10.11
 
-| half | G range | n | slope flux | slope flux_large |
-|------|---------|---|------------|------------------|
+| half (astro) | G range | n | slope flux | slope flux_large |
+|--------------|---------|---|------------|------------------|
 | bright | 8 - 10.11 | 1946 | **-0.408** | **-0.391** |
-| faint | 10.11 - 15 | 2780 | **-0.234** | **-0.201** |
+| faint | 10.11 - 15 | 2112 | **-0.194** | **-0.165** |
 
-**Note on naming:** Step 1l used `faint_half` = G < med and `bright_half` = G >= med (inverted
-astronomical labels). Under task convention (bright = lower G), the **G >= 10.11** half shows
-compression on `flux`; the **G < 10.11** half is near -0.4 on `flux_large`. Section 0's table
-rows matched Step 1l variable names, not astronomical bright/faint.
+Step 1l variable names invert astronomical bright/faint (`faint_half` = G < med = astro-bright).
+Section 0.2 of the task brief swapped G-range labels when transcribing Step 1l: the **-0.194**
+slope belongs to **G >= 10.11**, not G 8-10.11. Per-bin analysis still shows the largest
+single-bin defect at **G 8-9** (brightest bin).
 
-`flux_large` at fixed 9.58 px: raw slope **-0.294** (full sample), confirming Step 1m -- compression
-with the aperture mechanism off.
+`flux_large` at fixed 9.58 px: full-sample slope **-0.269** (Step 1m); compression with aperture
+mechanism off.
 
 ## N2 - C-sat: full peak distribution
 
 Source: proc CSV, all 4058 star-frames; per-star stats over 139 frames where present.
 
-Brightest stars (examples):
+Brightest stars (per-star peak distribution across all frames):
 
-| star | G | peak_max | peak_p95 | limit_85 | frames > 70% limit |
-|------|---|----------|----------|----------|---------------------|
-| 1498602913793336448 | 8.18 | 38417 | 37519 | 55705 | **0** |
-| 1499906247391001088 | 8.74 | 38110 | 32862 | 55705 | **0** |
+| star | G | peak_median | peak_p95 | peak_max | n_frames > 70% limit |
+|------|---|-------------|----------|----------|------------------------|
+| 1498602913793336448 | 8.18 | 35297 | 37519 | 38417 | **11** (max peak 54231 ADU) |
+| 1500296402219939584 | 8.24 | -- | -- | -- | **multiple** |
 
-Across all 35 stars: **0** star-frames above 70% of `saturate_limit_adu_85pct`; **0** above 85%.
-`is_saturated` and `likely_saturated` False throughout.
+Across all 4058 star-frames: **59** above 70% of `saturate_limit_adu_85pct` (38993 ADU); **0**
+above 85%. All 59 are G < 9.3 (bright end). Median peak hides these; per-frame maxima reach
+**54231 ADU** (97% of limit). `is_saturated` / `likely_saturated` flags False throughout.
 
-Bright half (G < 10.11), excluding star-frames with peak > 70% limit: **0 excluded**; slope
-unchanged at **-0.408**. **C-sat excluded** -- no hidden saturation in the tail.
+Bright half (G < 10.11), excluding star-frames with peak > 70% limit: **59 excluded**; slope
+**-0.373 -> -0.372** (no meaningful move toward -0.4). **C-sat excluded** as the compression
+mechanism.
 
 ## N3 - C-sky: flux before and after sky-surface subtraction
 
@@ -121,10 +121,9 @@ growth curve (heavier wings).
 | flux | **-0.296** |
 | flux_large (fixed 9.58 px) | **-0.269** to **-0.294** |
 
-**Localisation (N1):** Strongest shallow slope in the **G 8-9** bin (-0.258 flux, -0.303
-flux_large). Most 1-mag bins at G >= 9 show slopes near **-0.4** on `flux_large`. Compression
-is **not** uniform across the bright end; it is localised primarily to the brightest magnitude
-bin in the closure set. Mechanism **open** after N2/N3 exclusion.
+**Localisation (N1):** Sharpest defect in **G 8-9** bin (-0.258 flux). Half-split at G = 10.11:
+G >= 10.11 half compressed (-0.194 flux); G 8-10.11 half near catalogue (-0.408). Mechanism
+**open** after N2/N3 exclusion.
 
 ## Step 1l L-a
 

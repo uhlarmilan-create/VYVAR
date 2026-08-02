@@ -40,9 +40,9 @@ K3: production slope **-0.296** (D5-2 opened). K-a (D1-2 non-linearity) **withdr
 (residual-vs-peak confounded; peak trend gone after aperture control).
 **Step 1l (2026-08-01):** L-a proposed (aperture mechanism); K-a withdrawal stands. **Step 1l L-a
 withdrawn in Step 1m** (COG normalisation does not reach -0.400).
-**Step 1m (2026-08-01):** M-x -- normalised flux slope **-0.280** (H-ap -0.400 and H-2 ~-0.19
-both rejected); measured `slope(log10 EE(r_ap) vs G)` = **-0.016**. D5-2 confirmed; mechanism
-**open**. Report: `dev/results/CURSOR_RESULT_closure_step1m.md`.
+**Step 1m (2026-08-01):** M-x -- COG-normalised slope **-0.280**; D5-2 confirmed; mechanism open.
+**Step 1n (2026-08-01):** N-none -- C-sat and C-sky excluded; G 8-9 bin localisation; `flux_large`
+refutes aperture mechanism. Report: `dev/results/CURSOR_RESULT_closure_step1n.md`.
 **Reports:** `dev/results/CURSOR_RESULT_closure_step1g.md`; Step 1f **48.0 mmag VOID** (V11).
 **Fixture:** `dev/tools/closure_a1_reference_fixture.py` (target-radius sweep in --emit)
 **Harness:** `dev/tools/closure_step1f_differential_aperture.py` (Step 1g F1/G9)
