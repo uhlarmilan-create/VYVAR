@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-31
 **Source audit:** `docs/VYVAR_AUDIT_FINAL.md`
-**Status legend:** CLOSED | FIXED | MEASURED | DECISION | QUEUED | BLOCKED
+**Status legend:** CLOSED | FIXED | MEASURED | DOCUMENTED | DECISION | QUEUED | BLOCKED | DEFERRED
 
 Steps **1--10** below are the active closure queue (ROADMAP). Remaining items are tracked but
 not in the first execution wave.
@@ -21,13 +21,29 @@ not in the first execution wave.
 | **6** | **A-6** | Split `DAO_ONLY` health metric by magnitude vs Gaia cap (17.5) | 7 | QUEUED | A-5 |
 | **7** | **C-1** | Admission gate: predicted per-epoch SNR (`g_lim_*` + Labb sigma_bkg_ap) | 7, 8 | QUEUED | -- |
 | **8** | **C-2** | Flag catalogue rows CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE | 7 | QUEUED | C-1 |
-| **9** | **CR-1** | Cosmic-ray rejection (L.A.Cosmic or equivalent) | 1 | QUEUED | -- |
+| **9** | **CR-1** | Cosmic-ray rejection (L.A.Cosmic or equivalent) | 1 | **QUEUED** (documented batch A) | batch E |
 | **10** | **T4-1** | Milan decision: detection noise on resampled frames (options A/B/C/D) | 2, 7 | **DECISION** | measurement in stage2 |
 
 ### Aperture closure Step 1 (finding A-1 -- SNR table radius)
 
-**Status:** **A-1b CONFIRMED** (2026-08-01 Step 1g). F1 configuration (proxies at clamp 1.916 px,
-disjoint from comps). G9 PASS; G6 FAIL; exact magnitude **open**.
+**Status:** **A-1b CONFIRMED, DOCUMENTED** (2026-08-02 batch A).
+
+> **A-1b CONFIRMED, DOCUMENTED.** The SNR aperture table assigns magnitude-dependent radii
+> (`aperture_r_px`, clamp 1.916 px at the faint end) with **no curve-of-growth correction**, so
+> the enclosed-flux fraction differs between target and comparison stars and does not fully cancel
+> in the differential. Verdict robust (all 5x3 proxy cells > 10 mmag gate, Step 1d). Exact
+> consolidated magnitude was not stabilised because the measurement apparatus, not the physics,
+> blocked it across Steps 1e-1n; the physics expectation from
+> `dev/tools/closure_a1_reference_fixture.py` is ~144 mmag for G 8-9 comparisons over the anchor
+> r50 span. **Recommended fix:** enable `cog_aperture_correction_enabled` (option iii, Stetson
+> 1990 growth-curve aperture correction), which normalises all stars to a common enclosed-flux
+> scale and removes the mechanism directly. This is deferred to the numeric-change batch (D), not
+> applied here.
+
+Settled sub-findings (not re-litigated): S1 `aperture_snr_sizing` **DEAD**; S3 role factors
+label-only; D5-1 Q1 per-frame FWHM **No** (draft-constant `VY_FWHM_GAUSS`).
+
+**Step 1h-1n:** diagnosis arc; Step 1n N-none; batch B (2026-08-02) B-open on mechanism.
 **Step 1h diagnosis (2026-08-01):** G6 magnitude spread in numerator; denominator stable;
 contamination excluded. Report: `dev/results/CURSOR_RESULT_closure_step1h.md`.
 **Step 1i mechanism (2026-08-01):** I3 -- normalisation not placement (E5); HIGH EE from F(12)
@@ -72,9 +88,9 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | 13 | I-12 PM unavailable logging | 4 | **FIXED** | WARNING when pmra/pmdec absent |
 | 14 | T1 export time_base truth | 12 | **FIXED** | Refuse non-BJD_TDB AAVSO export |
 | 15 | D10-2 Gaia->Johnson range guard | 10 | **FIXED** | Stage 1; 1 comp outside range on anchor |
-| 16 | D5-1 aperture provenance columns | 5 | **FIXED** | Step 1g: F1 config valid; G6 fail; exact delta_ap open; 48.0 mmag VOID |
-| 16b | **D5-2** production flux vs G scaling | 5 | **MEASURED** | Slope -0.296; G 8-9 bin -0.258; mechanism **open** (N-none) |
-| 31 | **A-9** absolute PSF scale unresolved | 5, 7 | **MEASURED** | VY_FWHM_GAUSS 2.395 vs header 3.207 vs COG identities 4.0-4.9 px disagree; not blocking Steps 2-10; required before absolute flux/SNR claims |
+| 16 | D5-1 aperture provenance columns | 5 | **DOCUMENTED** | A-1b CONFIRMED DOCUMENTED; fix deferred batch D |
+| 16b | **D5-2** production flux vs G scaling | 5 | **MEASURED** | Slope -0.296; G 8-9 bin; mechanism **DEFERRED** (batch B-open) |
+| 31 | **A-9** absolute PSF scale unresolved | 5, 7 | **DOCUMENTED** | Estimators disagree; use COG r50 before absolute claims |
 | 17 | D1-3 master flat documentation | 1 | **CLOSED** | DECISIONS entry; builder gap noted |
 | 18 | D10-1 unfiltered CV->CR band | 10 | **FIXED** | Milan decision; Stage 3 |
 | 19 | sigma_pp drop / sigma_clipped_stats | 2 | **FIXED** | Milan decision Stage 3 |
@@ -82,9 +98,9 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | 21 | I-11 Howell sky on subtracted frames | 2 | **DECISION** | Options 1--3 documented; 0 prod epochs |
 | 22 | I-04 ensemble scatter unmatched | 8 | **DECISION** | NaN+exclude vs inflate |
 | 23 | I-03 omitted Howell terms | 2 | QUEUED | After I-11 decision |
-| 24 | D1-2 linearity correction | 1 | **DEFERRED** | Step 1k K-a withdrawn Step 1l; peak-vs-residual confounded |
+| 24 | D1-2 linearity correction | 1 | **DEFERRED** | Batch B-open: partial +0.37 (G 9-11 ref), below +0.4 gate |
 | 25 | P-02 scintillation in production err | 9 | **DECISION** | Do not wire without Milan |
-| 26 | U-09 DATE-OBS convention per rig | 4 | MEASURED | BO CVn: shutter-open; others TBD |
+| 26 | U-09 DATE-OBS convention per rig | 4 | **MEASURED** / **DOCUMENTED** | BO CVn: shutter-open verified; QHY294 and other rigs UNVERIFIED |
 | 27 | Part 0c delta pairing fix (source_file) | 7 | **QUEUED** | Harness bug; invalid tail stats |
 | 28 | DAO centroid stability / aperture placement | 5, 7 | **QUEUED** | Part 0e M4; 19/156 targets > r_ap shift |
 | 29 | Anchor re-cut (VL-ANCHOR-WCSINV) | all | **BLOCKED** | After T4-1 + A-5 + pairing fix |
@@ -119,7 +135,9 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | Closure Step 1e (measurement repair) | `dev/results/CURSOR_RESULT_closure_step1e.md` (contamination VOID) |
 | Closure Step 1f (admissibility + measure) | `dev/results/CURSOR_RESULT_closure_step1f.md` (V11-V14 VOID) |
 | Closure Step 1g (F1 configuration) | `dev/results/CURSOR_RESULT_closure_step1g.md` |
-| Closure Step 1h-1n (A-1 diagnosis) | `dev/results/CURSOR_RESULT_closure_step1{h,i,j,k,l,m,n}.md` |
+| Closure batch A (doc close) | `dev/results/CURSOR_RESULT_batch_A.md` |
+| Closure batch B (D5-2 mechanism) | `dev/results/CURSOR_RESULT_batch_B.md` |
+| Limitations (paper section) | `docs/VYVAR_LIMITATIONS.md` |
 | MASTERSTAR spec | `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md` |
 
 ---

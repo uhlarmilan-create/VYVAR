@@ -36,29 +36,22 @@ stacks of **raw** flats without dark subtraction at stack time; `VYFLNRD=1` norm
 calibrate-after-resample. Open gap vs Howell requirement that additive terms be removed before
 normalization -- scope documented, not verified end-to-end in builder UI.
 
-**D1-2 (detector linearity):** Stage 2 measurement on anchor showed G vs peak ADU correlation
-(r = -0.85) dominated by magnitude; no isolated residual-vs-peak trend. Closure Step 1k reported
-residual vs peak_max_adu (r = +0.36) as a non-linearity candidate; **Step 1l withdrew that
-verdict**: peak is confounded with brightness/seeing; trend vanishes after `aperture_r_px` control
-(r = -0.023). Status: **DEFERRED** (third invalid path avoided).
+**D1-2 (detector linearity):** Batch B (2026-08-02) **B-open**. B2 partial deficit~peak | r50 = +0.37
+(G 9-11 reference), below +0.4 pre-registered threshold. Faint-half reference slope -0.18
+(invalid). Status: **DEFERRED**.
 
-**Closure Step 1k (2026-08-01):** F(12) defect decomposed; production `flux` vs `mag` slope
-**-0.296** (D5-2 confirmed, not harness-only). K-a non-linearity claim superseded by Step 1l.
+**Closure batch B (2026-08-02):** B-open -- B1 VOID (sanity gate); B2 inconclusive. D5-2 mechanism
+**DEFERRED**. Report: `dev/results/CURSOR_RESULT_batch_B.md`.
 
-**Closure Step 1l (2026-08-01):** L-a proposed (aperture mechanism); K-a withdrawal stands.
-Colour term fails half-sample test (L-c excluded). Joint G+aperture OLS retired Step 1m (VIF 9.8).
-
-**Closure Step 1m (2026-08-01):** M-x -- COG-normalised **-0.280**; mechanism open.
-
-**Closure Step 1n (2026-08-01):** N-none -- C-sat/C-sky excluded; D5-2 localised to G 8-9 bin
-(sharp break); `flux_large` (fixed 9.58 px) slope **-0.269** refutes aperture mechanism.
+**Closure batch A (2026-08-02):** A-1, A-9, D1-1, U-09 **DOCUMENTED**; `docs/VYVAR_LIMITATIONS.md`
+created. Report: `dev/results/CURSOR_RESULT_batch_A.md`.
 
 **D5-2 (production flux vs catalogue magnitude):** Confirmed. Raw slope **-0.296** (`flux`),
-**-0.269** (`flux_large` fixed radius). Localisation: **G 8-9** bin slope **-0.258** (sharp
-break to -0.434 at G 9-10); G >= 10.11 half at **-0.194**. Mechanism **open**. Status: **MEASURED**.
+**-0.269** (`flux_large` fixed radius). Localisation: **G 8-9** bin. Mechanism **DEFERRED**
+(batch B-open). Status: **MEASURED**.
 
-**D1-1 (cosmic-ray rejection):** **Absent** from `src_py` (gain/RN "cosmic" params only).
-Prerequisite for stacked MASTERSTAR and proper coaddition (see `VYVAR_TODO_MASTERSTAR_REFERENCE.md`).
+**D1-1 (cosmic-ray rejection):** **DOCUMENTED**. Absent from `src_py`. Scheduled batch E
+(van Dokkum 2001 L.A.Cosmic or astroscrappy). CR-1 **QUEUED**.
 
 ---
 
@@ -243,7 +236,8 @@ Measurement stages 0--3 and tranches 1--4 are **committed** (`dev/results/`). Op
 decision and DAO-centroid / pairing fixes from Stage 3 Part 0d--0e.
 
 **Next work item:** Aperture closure **Step 2** (A-2/A-3 placement; DAO centroid coupling).
-A-1 **DOCUMENTED** (Step 1b); **A-9** absolute PSF scale open. MASTERSTAR stack **A-1** (`I_j`) queued separately.
+A-1 **DOCUMENTED** (batch A); **A-9 DOCUMENTED**. D5-2 **MEASURED**, mechanism **DEFERRED** (batch B-open).
+MASTERSTAR stack **A-1** (`I_j`) queued separately.
 
 ---
 

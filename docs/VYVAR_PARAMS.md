@@ -359,7 +359,7 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 
 | key | budget status | evidence |
 |-----|---------------|----------|
-| `aperture_snr_sizing` | **DEAD on science path** | `precompute_and_save_snr_aperture_table_for_draft` never passes bounds; defaults `r_min_fwhm=0.8`, `r_max_fwhm=2.5` used (`CURSOR_RESULT_closure_step1.md`, S1) |
+| `aperture_snr_sizing` | **DEAD on science path** | Hardcoded 0.8/2.5 x FWHM used; config key orphan (S1, batch A DOCUMENTED). See closure Step 1 + batch A. |
 
 **Flow doc note (Step 1b, V7):** `build_flow_doc.py:391` correctly documents hardcoded
 `r_min=0.8 x FWHM` .. `r_max=2.5 x FWHM`; `flow_doc_facts.py:60` tracks

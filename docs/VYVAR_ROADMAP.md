@@ -59,8 +59,8 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 ## QUEUED - Audit closure Steps 1-10 (2026-07-31)
 
-**Status:** QUEUED (MASTERSTAR stack). **Aperture A-1:** **CONFIRMED**; D5-2 **MEASURED**
-(localised G 8-9; mechanism open); Step 1o queued. Harness: `closure_step1n_localise_compression.py`.
+**Status:** QUEUED (MASTERSTAR stack). **Aperture A-1:** **DOCUMENTED** (batch A); D5-2 **MEASURED**,
+mechanism **DEFERRED** (batch B-open). **Batch C** queued (Milan decisions).
 Source: `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md` (30 items; Steps 1-10 active).
 Audit synthesis: `docs/VYVAR_AUDIT_FINAL.md`. Operational TODO index:
 `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md`.
