@@ -134,7 +134,8 @@ vs **-0.4**); G 11.52 vs 11.53 (dG = 0.006 mag) F(12) ratio **2.6x** from per-st
 production uses 4.75-9.0 x FWHM per star). J3: narrow/production annulus reduces EE std for
 G 11.53. J2: field-centre correlation -0.53 on annulus sky offset.
 
-**Closure Step 1k-1n (2026-08-01):** D5-2 confirmed; mechanism open after Step 1n (N-none).
+**Closure batch C (2026-08-02):** Decision brief ready for Milan (I-11, I-04, P-02/A-6, T4-1).
+See `docs/VYVAR_DECISION_BRIEF.md`. No implementation until choices in DECISIONS.md.
 
 **D5-1 Q1 (does aperture FWHM track per-frame seeing?):** **No.** Single draft-constant
 `VY_FWHM_GAUSS` from MASTERSTAR drives SNR table; `aperture_r_px` constant per star across

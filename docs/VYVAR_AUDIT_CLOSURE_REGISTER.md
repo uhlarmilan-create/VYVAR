@@ -22,7 +22,7 @@ not in the first execution wave.
 | **7** | **C-1** | Admission gate: predicted per-epoch SNR (`g_lim_*` + Labb sigma_bkg_ap) | 7, 8 | QUEUED | -- |
 | **8** | **C-2** | Flag catalogue rows CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE | 7 | QUEUED | C-1 |
 | **9** | **CR-1** | Cosmic-ray rejection (L.A.Cosmic or equivalent) | 1 | **QUEUED** (documented batch A) | batch E |
-| **10** | **T4-1** | Milan decision: detection noise on resampled frames (options A/B/C/D) | 2, 7 | **DECISION** | measurement in stage2 |
+| **10** | **T4-1** | Milan decision: detection noise on resampled frames (options A/B/C/D) | 2, 7 | **DECISION** (brief ready) | `VYVAR_DECISION_BRIEF.md` C.4 |
 
 ### Aperture closure Step 1 (finding A-1 -- SNR table radius)
 
@@ -95,11 +95,11 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | 18 | D10-1 unfiltered CV->CR band | 10 | **FIXED** | Milan decision; Stage 3 |
 | 19 | sigma_pp drop / sigma_clipped_stats | 2 | **FIXED** | Milan decision Stage 3 |
 | 20 | masterstar_dao_threshold 2.1->3.8 | 7 | **FIXED** | Bundled with P-10 |
-| 21 | I-11 Howell sky on subtracted frames | 2 | **DECISION** | Options 1--3 documented; 0 prod epochs |
-| 22 | I-04 ensemble scatter unmatched | 8 | **DECISION** | NaN+exclude vs inflate |
+| 21 | I-11 Howell sky on subtracted frames | 2 | **DECISION** (brief ready) | Options 1-3; recommend Option 1; `VYVAR_DECISION_BRIEF.md` C.1 |
+| 22 | I-04 ensemble scatter unmatched | 8 | **DECISION** (brief ready) | NaN+exclude vs inflate; recommend Option 1; C.2 |
 | 23 | I-03 omitted Howell terms | 2 | QUEUED | After I-11 decision |
 | 24 | D1-2 linearity correction | 1 | **DEFERRED** | Batch B-open: partial +0.37 (G 9-11 ref), below +0.4 gate |
-| 25 | P-02 scintillation in production err | 9 | **DECISION** | Do not wire without Milan |
+| 25 | P-02 scintillation in production err | 9 | **DECISION** (brief ready) | With A-6; recommend Option 3; `VYVAR_DECISION_BRIEF.md` C.3 |
 | 26 | U-09 DATE-OBS convention per rig | 4 | **MEASURED** / **DOCUMENTED** | BO CVn: shutter-open verified; QHY294 and other rigs UNVERIFIED |
 | 27 | Part 0c delta pairing fix (source_file) | 7 | **QUEUED** | Harness bug; invalid tail stats |
 | 28 | DAO centroid stability / aperture placement | 5, 7 | **QUEUED** | Part 0e M4; 19/156 targets > r_ap shift |
@@ -136,7 +136,7 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | Closure Step 1f (admissibility + measure) | `dev/results/CURSOR_RESULT_closure_step1f.md` (V11-V14 VOID) |
 | Closure Step 1g (F1 configuration) | `dev/results/CURSOR_RESULT_closure_step1g.md` |
 | Closure batch A (doc close) | `dev/results/CURSOR_RESULT_batch_A.md` |
-| Closure batch B (D5-2 mechanism) | `dev/results/CURSOR_RESULT_batch_B.md` |
+| Closure batch C (Milan decisions) | `docs/VYVAR_DECISION_BRIEF.md`, `dev/results/CURSOR_RESULT_batch_C.md` |
 | Limitations (paper section) | `docs/VYVAR_LIMITATIONS.md` |
 | MASTERSTAR spec | `docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md` |
 

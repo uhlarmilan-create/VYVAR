@@ -2,7 +2,12 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-02** (closure batches A and B).
+Last updated: **2026-08-02** (closure batch C decision brief).
+
+## Session close 2026-08-02 (closure batch C)
+
+Decision brief for Milan: I-11, I-04, P-02/A-6, T4-1. `docs/VYVAR_DECISION_BRIEF.md`.
+Awaiting Milan choices in `VYVAR_DECISIONS.md` before batch D.
 
 ## Session close 2026-08-02 (closure batches A and B)
 
@@ -60,8 +65,8 @@ register in `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md`. Stage 3 forensics (Parts 0c-
 
 **Audit complete.** Remediation is tracked in the closure register, not open discovery.
 
-**Next work item:** Batch C -- Milan decisions (I-11, I-04, P-02/A-6, T4-1). D5-2 mechanism
-**DEFERRED** (batch B-open). A-1 fix deferred to batch D.
+**Next work item:** Milan reads `docs/VYVAR_DECISION_BRIEF.md` and records choices in
+`docs/VYVAR_DECISIONS.md`. **Batch D blocked** until choices recorded.
 
 **Anchor re-cut:** still **BLOCKED** on T4-1 detection-noise decision (Milan), DAO threshold
 recalibration post-stack, Part 0c `source_file` pairing fix, and Part 0e DAO-centroid stability.
