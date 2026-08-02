@@ -2,7 +2,13 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-02** (closure batch C decision brief).
+Last updated: **2026-08-02** (batches D and E blocked on preconditions).
+
+## Session close 2026-08-02 (batches D and E blocked)
+
+Batch D and E **not started**. Missing: Milan choices in `VYVAR_DECISIONS.md` (I-11, I-04,
+P-02/A-6; T4-1 for batch E). Batch B precondition satisfied (B-open). Reports:
+`dev/results/CURSOR_RESULT_batch_{D,E}.md`.
 
 ## Session close 2026-08-02 (closure batch C)
 
