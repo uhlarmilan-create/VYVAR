@@ -1,7 +1,7 @@
 # VYVAR -- Audit closure (final register)
 
 **Date:** 2026-08-02
-**Commit:** see `git log` at closure stamp (batch B-revised push)
+**Commit:** `294583c` (batch B-revised, 2026-08-02)
 **Purpose:** Single document for referees and maintainers. Every audit item, final disposition,
 evidence pointer, and implementation batch. Limitations: `docs/VYVAR_LIMITATIONS.md`.
 

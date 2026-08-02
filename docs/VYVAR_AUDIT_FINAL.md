@@ -36,19 +36,18 @@ stacks of **raw** flats without dark subtraction at stack time; `VYFLNRD=1` norm
 calibrate-after-resample. Open gap vs Howell requirement that additive terms be removed before
 normalization -- scope documented, not verified end-to-end in builder UI.
 
-**D1-2 (detector linearity):** Batch B (2026-08-02) **B-open**. B2 partial deficit~peak | r50 = +0.37
-(G 9-11 reference), below +0.4 pre-registered threshold. Faint-half reference slope -0.18
-(invalid). Status: **DEFERRED**.
+**D1-2 (detector linearity):** **DEFERRED** -- dome-flat ramp per sensor (Howell 2006 sec 4.4).
+D5-2 fix is saturation admission gate, not an in-code curve.
 
-**Closure batch B (2026-08-02):** B-open -- B1 VOID (sanity gate); B2 inconclusive. D5-2 mechanism
-**DEFERRED**. Report: `dev/results/CURSOR_RESULT_batch_B.md`.
+**Closure batch B-revised (2026-08-02):** D5-2 **CONFIRMED** -- bright-end saturation/non-linearity
+(G 8-9 bin, 97% full well). Batch B B-open superseded. Decisions 5-9 in `VYVAR_DECISIONS.md`.
+Report: `dev/results/CURSOR_RESULT_batch_B_revised.md`.
 
 **Closure batch A (2026-08-02):** A-1, A-9, D1-1, U-09 **DOCUMENTED**; `docs/VYVAR_LIMITATIONS.md`
 created. Report: `dev/results/CURSOR_RESULT_batch_A.md`.
 
-**D5-2 (production flux vs catalogue magnitude):** Confirmed. Raw slope **-0.296** (`flux`),
-**-0.269** (`flux_large` fixed radius). Localisation: **G 8-9** bin. Mechanism **DEFERRED**
-(batch B-open). Status: **MEASURED**.
+**D5-2 (production flux vs catalogue magnitude):** **CONFIRMED.** G 8-9 bin slope **-0.258**;
+G 10-13 **~-0.4**. Mechanism: saturation/non-linearity. Fix: C-1/C-2 gate at 70% full well.
 
 **D1-1 (cosmic-ray rejection):** **DOCUMENTED**. Absent from `src_py`. Scheduled batch E
 (van Dokkum 2001 L.A.Cosmic or astroscrappy). CR-1 **QUEUED**.
