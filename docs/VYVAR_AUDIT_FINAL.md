@@ -50,12 +50,12 @@ Colour term fails half-sample test (L-c excluded). Joint G+aperture OLS retired 
 
 **Closure Step 1m (2026-08-01):** M-x -- COG-normalised **-0.280**; mechanism open.
 
-**Closure Step 1n (2026-08-01):** N-none -- C-sat/C-sky excluded; D5-2 localised to G 8-9 bin;
-`flux_large` (fixed 9.58 px) slope **-0.269** refutes aperture mechanism.
+**Closure Step 1n (2026-08-01):** N-none -- C-sat/C-sky excluded; D5-2 localised to G 8-9 bin
+(sharp break); `flux_large` (fixed 9.58 px) slope **-0.269** refutes aperture mechanism.
 
 **D5-2 (production flux vs catalogue magnitude):** Confirmed. Raw slope **-0.296** (`flux`),
-**-0.269** (`flux_large` fixed radius). Localisation: strongest deviation in **G 8-9** mag bin
-(-0.258 flux). Most bins G >= 9 near -0.4 on `flux_large`. Mechanism **open**. Status: **MEASURED**.
+**-0.269** (`flux_large` fixed radius). Localisation: **G 8-9** bin slope **-0.258** (sharp
+break to -0.434 at G 9-10); G >= 10.11 half at **-0.194**. Mechanism **open**. Status: **MEASURED**.
 
 **D1-1 (cosmic-ray rejection):** **Absent** from `src_py` (gain/RN "cosmic" params only).
 Prerequisite for stacked MASTERSTAR and proper coaddition (see `VYVAR_TODO_MASTERSTAR_REFERENCE.md`).
