@@ -112,9 +112,83 @@ Only D.4 changes exported numbers on the anchor. Confirmed by science-compare PA
 
 **Batch E blocked** until GATE 1 fingerprints authorized and pushed.
 
-## Files changed
+---
 
-- `src_py/sigma_floor_core.py`, `src_py/sigma_budget.py`, `src_py/photometry_core.py`, `src_py/export_reports.py`
-- `dev/tests/test_batch_d_audit_closure.py`, `dev/tests/test_g2_f004_err_scatter_keyed.py`
-- `dev/results/CURSOR_RESULT_batch_D.md` (this file)
-- Commit: **`683fba1`**
+## GATE 1 authorized append (2026-08-03 22:15 UTC+2)
+
+**Status: BATCH D GATE 1 CLOSED -- fingerprints pushed; batch E blocked on floor anomaly.**
+
+What I did
+- Pushed batch D anchor fingerprints (SHA core/extended + ledger + baseline tests).
+- Fitted wide-rig `sigma_sys_mag` for equipment_id 1 per R8 (Part 1c check stars, n=162).
+- **Did not apply floor** (outside 2-5 mmag sanity). **Did not start batch E.**
+
+### Fingerprints pushed
+
+| tier | value | n |
+|------|-------|---|
+| core (new) | `b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39` | 325 |
+| extended (new) | `65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2` | 487 |
+| core (superseded) | `b7f980c09e238b855c2ee1b9518061777934d8f0a61eaec7431cda4f537aed52` | 325 |
+| extended (superseded) | `2c43bbbf06921fbef46fb6a4ed1f8afccdabacaa5827b8ec50372de0e3816205` | 487 |
+
+Science compare **PASS** (162 LC, flux/mag/WCS unchanged). Delta **err column only**
+(scintillation wired in D.4).
+
+### Wide-rig sigma_sys floor fit (equipment_id 1, R8)
+
+**Median quoted err (post-scintillation):** **9.4 mmag** (Part 1c `err_median` across 162 check fields).
+Scintillation at X=1: **1.73 mmag** (negligible vs quoted err).
+
+| stage | median chi2_red_clipped | source |
+|-------|-------------------------|--------|
+| before batch D (no scint) | **3.55** | prior Part 1c / `tmp/batch_d_chi2_before.json` |
+| scintillation only | **3.55** | `tmp/batch_d_part1c_post_scint.json` (2026-08-03) |
+| scintillation + fitted floor | **~1.0** (simulated) | needs **~15 mmag** floor -- **NOT applied** |
+
+**Fitted floor (NOT applied):**
+
+| method | sigma_sys (mmag) | sanity 2-5 mmag? |
+|--------|------------------|------------------|
+| chi2 scaling (`sqrt(chi2) x err`) | **14.7** | NO |
+| measured residual RMS (median scatter 20.1 mmag) | **15.7** | NO |
+| constant-calibrator cohort (n=12, separate harness) | **8.33** | NO |
+
+**R8 verdict:** Floor outside Everett & Howell (2001) 2-5 mmag band on the check-star population.
+Per task rule: **do not apply**; **stop before batch E**. Likely causes: photon or ensemble term
+mis-scaled, and/or frame-correlated scatter not captured by a constant quadrature floor.
+
+Harness: `dev/tools/batch_d_wide_floor_fit.py` (cohort fit); Part 1c:
+`dev/scripts/audit_stage3_part1c_robust_chi2.py`.
+
+### Pre-existing `--fast` failures (separate from batch D)
+
+Batch D tests **26/26 PASS**. `--fast` OVERALL still **FAIL** on 5 pre-existing pytest issues
+(unrelated to batch D; fix outside this thread):
+
+1. `dev/tests/test_invariants_p1_seed.py` -- requires Archive snapshot on disk (environment)
+2. Additional legacy failures logged at re-cut #1 (see prior session baseline output)
+
+These do **not** block fingerprint push.
+
+### Docs updated
+
+- `docs/VYVAR_DECISIONS.md` -- decision 7 addendum (floor fit table)
+- `docs/VYVAR_AUDIT_FINAL.md` -- error budget section
+- `docs/VYVAR_VALIDATION.md` -- anchor fingerprint table
+- `docs/VYVAR_AUDIT_CLOSURE_REGISTER.md` -- items 21, 22, 25 FIXED; item 29 batch D done
+- `docs/VYVAR_STATE.md`, `docs/VYVAR_ROADMAP.md`
+
+## Files changed (GATE 1 append)
+
+- `dev/scripts/session_baseline_check.py` -- EXPECTED SHA
+- `dev/tests/test_invariants_p1_seed.py` -- EXPECTED SHA
+- `dev/validation/VYVAR_VALIDATION_LEDGER.json` -- VL-ANCHOR-WCSINV
+- `dev/tools/batch_d_wide_floor_fit.py` -- floor fit harness (new)
+- `dev/results/CURSOR_RESULT_batch_D.md` (this append)
+- Docs listed above
+
+## Errors (if any)
+
+None blocking. Floor fit **anomaly** reported; batch E not started.
+

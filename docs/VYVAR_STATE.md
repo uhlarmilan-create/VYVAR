@@ -2,7 +2,16 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-03** (batch D code + re-cut #1; GATE 1 pending).
+Last updated: **2026-08-03** (batch D GATE 1 closed; batch E blocked on floor anomaly).
+
+## Session close 2026-08-03 (batch D GATE 1; batch E blocked)
+
+Batch D **GATE 1 authorized**: fingerprints pushed (core `b9c9489a...`, extended
+`65bc826c...`; superseded `b7f980c0...` / `2c43bbbf...`). Code base `683fba1`.
+Wide-rig `sigma_sys_mag` floor fit for equipment_id 1: **anomaly** -- fitted
+~15 mmag (outside Everett & Howell 2-5 mmag sanity); **not applied**. Batch E
+**not started** (task rule: stop if floor fails sanity). Reports:
+`dev/results/CURSOR_RESULT_batch_D.md`, `dev/results/CURSOR_RESULT_batch_E.md`.
 
 ## Session close 2026-08-03 (batch D; GATE 1 pending)
 

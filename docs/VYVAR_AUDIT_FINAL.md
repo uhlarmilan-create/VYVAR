@@ -194,8 +194,13 @@ explain extreme cases (Part 0e).
 **Part 1c corrected:** Median chi2_red ~4.7 (not ~649). Clipped median ~4.0. Top outliers from
 **shared bad frames** (e.g. frame 123 saturation), not cosmic-ray spikes.
 
-**sigma_sys_mag = 0** on equipment_id=1 (BO CVn wide rig) -- documented; literature floor debate
-open for differential photometry.
+**sigma_sys_mag = 0** on equipment_id=1 (BO CVn wide rig). Batch D (2026-08-03) wired
+scintillation (~1.73 mmag at X=1); median check-star chi2_red_clipped unchanged at **3.55**
+(n=162, Part 1c harness). Fitted systematic floor **~15 mmag** (residual-RMS method) to reach
+chi2_red ~1.0 -- **outside** Everett & Howell (2001) 2-5 mmag sanity band; **not applied**
+(R8). Implies photon or ensemble term may be mis-scaled, or check-star population carries
+extra frame-correlated scatter beyond a constant floor. See DECISIONS #7 addendum and
+`dev/results/CURSOR_RESULT_batch_D.md`.
 
 ---
 

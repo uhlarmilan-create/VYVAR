@@ -2357,3 +2357,33 @@ dome-flat ramp per sensor; observing-plan item, not code fabrication.
 
 **Implement:** C-1/C-2 admission gate in batch E alongside existing admission-gate work.
 
+---
+
+## Decision 7 addendum -- wide-rig sigma_sys floor fit (2026-08-03, batch D GATE 1)
+
+**Population:** Part 1c check-star harness, draft_435, equipment_id **1**, n=**162** fields.
+
+**Median quoted err (post-scintillation):** **9.4 mmag**. Scintillation at X=1: **1.73 mmag**
+(negligible in quadrature).
+
+| stage | median chi2_red_clipped | notes |
+|-------|-------------------------|-------|
+| before batch D (no scint) | **3.55** | `tmp/batch_d_chi2_before.json` (prior session) |
+| scintillation only | **3.55** | `tmp/batch_d_part1c_post_scint.json`; unchanged |
+| scintillation + fitted floor | **~1.0** (simulated) | requires **~15 mmag** floor -- **not applied** |
+
+**Fitted sigma_sys_mag (NOT applied):**
+
+- From chi2 formula (`true_scatter = sqrt(chi2) x err`): **~14.7 mmag**
+- From measured residual RMS (`scatter_mag` median 20.1 mmag): **~15.7 mmag**
+- Constant-calibrator cohort (`dev/tools/batch_d_wide_floor_fit.py`, n=12): **8.33 mmag**
+  (chi2_before ~0.99 on that subset; also outside 2-5 mmag sanity)
+
+**R8 verdict:** Floor outside Everett & Howell (2001) **2-5 mmag** band on the check-star
+population. **Do not apply** without Milan review -- likely photon/ensemble mis-scaling or
+frame-correlated scatter not captured by a constant quadrature floor. Batch E **blocked** per
+GATE 1 task rule.
+
+**Fingerprints pushed (batch D re-cut #1):** core `b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39`
+(n=325); extended `65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2` (n=487).
+Superseded: `b7f980c0...` / `2c43bbbf...`. Science compare PASS (162 LC; flux/mag/WCS unchanged).

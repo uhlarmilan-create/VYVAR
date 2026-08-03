@@ -190,3 +190,17 @@ OLD legacy estimator 1.048-1.111). Report: `tier_v3e/v3e_epsf_fwhm.md`. Diagnost
 Run V3e: `python -m tests.validation.run_v3e_epsf_fwhm`.
 
 Deterministic regeneration: `python -m tests.validation.recover --all`.
+
+## Anchor fingerprint (VL-ANCHOR-WCSINV, batch D)
+
+**Status (2026-08-03):** Batch D GATE 1 **authorized** -- fingerprints **pushed**. Batch E
+**pending GATE 2** (blocked on wide-rig floor anomaly; see `dev/results/CURSOR_RESULT_batch_E.md`).
+
+| tier | SHA (draft_435 snapshot) | n |
+|------|--------------------------|---|
+| core | `b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39` | 325 |
+| extended | `65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2` | 487 |
+
+Superseded (pre-batch-D): `b7f980c0...` / `2c43bbbf...`. Delta: **err column only** (scintillation).
+Science compare PASS (162 LC). Ledger: `dev/validation/VYVAR_VALIDATION_LEDGER.json`.
+
