@@ -1,9 +1,9 @@
 CURSOR RESULT - 2026-08-02 10:50 UTC+2
 
-**Status: BLOCKED -- preconditions not met. No code changes. No re-cut.**
+**Status: BLOCKED on GATE 1 -- batch D code pushed (`683fba1`); fingerprints await Milan.**
 
 What I did
-Verified batch E preconditions. Stopped per task rule.
+Batch D implemented and re-cut #1 run. Batch E **not started** per run-order gate.
 
 ## Precondition check
 

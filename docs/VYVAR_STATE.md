@@ -2,7 +2,13 @@
 
 **Status:** Science audit **complete** (2026-07-31); closure execution in progress.
 
-Last updated: **2026-08-02** (audit closure B-revised; D5-2 confirmed).
+Last updated: **2026-08-03** (batch D code + re-cut #1; GATE 1 pending).
+
+## Session close 2026-08-03 (batch D; GATE 1 pending)
+
+Batch D **implemented and pushed** (`683fba1`): I-04, I-11, P-02 scintillation wired. Re-cut #1
+`--full`: science compare **PASS** (flux unchanged); err SHA changed (expected). **Fingerprints
+await Milan GATE 1.** Batch E **not started**. Report: `dev/results/CURSOR_RESULT_batch_D.md`.
 
 ## Session close 2026-08-02 (audit closure B-revised)
 
