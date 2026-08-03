@@ -96,11 +96,11 @@ direct D5-1 mechanism if Milan wants enclosed-flux normalisation. S2 ZP patch mu
 | 18 | D10-1 unfiltered CV->CR band | 10 | **FIXED** | Milan decision; Stage 3 |
 | 19 | sigma_pp drop / sigma_clipped_stats | 2 | **FIXED** | Milan decision Stage 3 |
 | 20 | masterstar_dao_threshold 2.1->3.8 | 7 | **FIXED** | Bundled with P-10 |
-| 21 | I-11 Howell sky on subtracted frames | 2 | **DECIDED** | Option 1; batch D; DECISIONS #5 |
-| 22 | I-04 ensemble scatter unmatched | 8 | **DECIDED** | Option 1 NaN+exclude; batch D; DECISIONS #6 |
-| 23 | I-03 omitted Howell terms | 2 | QUEUED | After I-11 decision |
+| 21 | I-11 Howell sky on subtracted frames | 2 | **IMPLEMENTED** | Option 1; code `683fba1`; 0 fallback on anchor; GATE 1 |
+| 22 | I-04 ensemble scatter unmatched | 8 | **IMPLEMENTED** | NaN+exclude; code `683fba1`; 0 anchor epochs; GATE 1 |
+| 23 | I-03 omitted Howell terms | 2 | **DOCUMENTED** | Legacy Howell unused on anchor; docstring only |
 | 24 | D1-2 linearity correction | 1 | **DEFERRED** | Dome-flat ramp per sensor; D5-2 gate preferred |
-| 25 | P-02 scintillation in production err | 9 | **DECIDED** | Option 3; batch D; DECISIONS #7 |
+| 25 | P-02 scintillation in production err | 9 | **IMPLEMENTED** | Scint wired `683fba1`; eq1 floor TBD; GATE 1 |
 | 26 | U-09 DATE-OBS convention per rig | 4 | **MEASURED** / **DOCUMENTED** | BO CVn: shutter-open verified; QHY294 and other rigs UNVERIFIED |
 | 27 | Part 0c delta pairing fix (source_file) | 7 | **QUEUED** | Harness bug; invalid tail stats |
 | 28 | DAO centroid stability / aperture placement | 5, 7 | **QUEUED** | Part 0e M4; 19/156 targets > r_ap shift |
