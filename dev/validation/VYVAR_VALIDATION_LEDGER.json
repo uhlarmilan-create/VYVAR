@@ -146,7 +146,7 @@
       "verification": "scripts/session_baseline_check.py --full (core b9c9489a\u2026 n=325; extended 65bc826c\u2026 n=487). Census fingerprint n_raw_dao=2552 matched=2842 targets=165; identity p95 baseline 1.54 px. Plan-regen 875 rows (873 VSX + 2 exo); frozen VT 245 rows.",
       "passes": true,
       "last_verified": "2026-08-03",
-      "commit": "02dc8c2",
+      "commit": "6af9a03",
       "notes": "Batch D re-cut #1 (2026-08-03, GATE 1 authorized): err column only -- scintillation wired (683fba1). Science compare PASS 162 LC. Supersedes core b7f980c0 / extended 2c43bbbf (pre-batch-D). sigma_sys floor eq 1 NOT applied (fit 15-18 mmag, outside 2-5 mmag sanity; CURSOR_RESULT_batch_D.md). Prior: 2026-07-28 schema harmonisation; identity-gate 2026-07-27 CLOSE-2.",
       "identity_gate_dropped_targets": [
         {
