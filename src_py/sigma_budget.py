@@ -1,6 +1,7 @@
 """Diagnostic sigma budget: Howell (production) + Young/Osborn scintillation.
 
-Sandbox/diagnostic only -- not wired into production LC export.
+Production LC export wires scintillation via ``sigma_floor_core.scintillation_mag_per_epoch``
+(batch D, P-02). This module also provides diagnostic harness variants.
 See dev/results/specs/VYVAR_SIGMA_BUDGET_SPEC.md.
 """
 

@@ -99,8 +99,8 @@ def test_adversarial_reorder_pairs_correct_epoch() -> None:
     assert np.allclose(keyed, expected)
 
 
-def test_dropped_epoch_flagged_photon_only_warning(caplog: pytest.LogCaptureFixture) -> None:
-    """Missing scatter map entry: flagged, photon-only err, WARNING logged."""
+def test_dropped_epoch_nan_and_flagged(caplog: pytest.LogCaptureFixture) -> None:
+    """Missing scatter map entry: flagged, err NaN (I-04), WARNING logged."""
     files = ["proc_a.csv", "proc_b.csv", "proc_c.csv"]
     err_photon = np.array([0.1, 0.2, 0.3])
     scatter_by_file = {"proc_a.csv": 0.01, "proc_b.csv": 0.02}
@@ -113,7 +113,7 @@ def test_dropped_epoch_flagged_photon_only_warning(caplog: pytest.LogCaptureFixt
     assert unmatched.tolist() == [False, False, True]
     assert keyed[0] == _expected_combine(0.1, 0.01)
     assert keyed[1] == _expected_combine(0.2, 0.02)
-    assert keyed[2] == 0.3
+    assert math.isnan(keyed[2])
     assert any("[G2-F004]" in r.message and "V-test" in r.message for r in caplog.records)
 
 
@@ -133,4 +133,4 @@ def test_empty_source_file_unmatched() -> None:
     )
     assert unmatched.tolist() == [False, True]
     assert keyed[0] == _expected_combine(0.1, 0.01)
-    assert keyed[1] == 0.2
+    assert math.isnan(keyed[1])

@@ -998,7 +998,7 @@ def export_lightcurve_reports(
             _n_scatter_unmatched,
         )
         logging.info(
-            "[EXPORT] %s method=%s: %d epoch(s) err_scatter_unmatched (err unchanged)",
+            "[EXPORT] %s method=%s: %d epoch(s) err_scatter_unmatched (excluded from LC)",
             str(vsx_name),
             _export_method,
             _n_scatter_unmatched,

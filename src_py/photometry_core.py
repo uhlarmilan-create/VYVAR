@@ -55,6 +55,7 @@ _MAD_CONSISTENCY = 0.6745  # normalizacny faktor MAD -> sigma ekvivalent
 
 # Explicit annulus sky (ADU/px) for Howell err; ``noise_floor_adu`` remains detection-floor legacy.
 SKY_ADU_PER_PX_ANNULUS_COL = "sky_adu_per_px_annulus"
+SKY_SURFACE_BG_MEDIAN_ADU_COL = "sky_surface_bg_median_adu"
 
 # F-BINGAIN-1: empirical background noise (empty-aperture scatter) + provenance.
 SIGMA_BKG_AP_COL = "sigma_bkg_ap"
@@ -1268,9 +1269,15 @@ def _photometric_error_with_bkg_mode(
 def _sky_pp_for_photometric_error(row: Any) -> float:
     """Sky level (ADU/px) for Howell ``_photometric_error`` from a proc-CSV row.
 
-    Prefer ``sky_adu_per_px_annulus`` (explicit annulus median from aperture export).
-    Fall back to ``noise_floor_adu`` for older proc CSVs (happy path: annulus; edge: detection).
+    I-11: prefer pre-subtraction ``sky_surface_bg_median_adu`` for the Howell sky Poisson
+    term (photons that arrived before the 2D sky surface was subtracted). Post-subtraction
+    annulus sky collapses toward zero and under-quotes the sky term on the legacy path.
+
+    Fall back to ``sky_adu_per_px_annulus`` then ``noise_floor_adu`` for older proc CSVs.
     """
+    pre_sub = float(pd.to_numeric(row.get(SKY_SURFACE_BG_MEDIAN_ADU_COL), errors="coerce"))
+    if math.isfinite(pre_sub) and pre_sub >= 0:
+        return pre_sub
     ann = float(pd.to_numeric(row.get(SKY_ADU_PER_PX_ANNULUS_COL), errors="coerce"))
     if math.isfinite(ann) and ann >= 0:
         return ann
@@ -3530,27 +3537,32 @@ def _combine_err_with_ensemble_scatter_keyed(
     scatter_by_file: dict[str, float],
     *,
     sigma_sys_mag: float = 0.0,
+    sigma_scint_mag: np.ndarray | list[float] | None = None,
     target_name: str = "",
 ) -> tuple[np.ndarray, np.ndarray]:
     """Join photon ``err`` with ensemble scatter by EXACT ``source_file`` match (G2-F004).
 
     Domain contract: ``err_photon`` is relative flux (err/flux); ``scatter_by_file`` values are
     ensemble SEM in magnitudes (Honeycutt residual std/sqrt(n) with c4 correction from
-    ``ensemble_normalize``). Per-rig ``sigma_sys_mag`` (mag) is added in quadrature after SEM.
+    ``ensemble_normalize``). Per-rig ``sigma_sys_mag`` and per-epoch ``sigma_scint_mag`` (mag)
+    are added in quadrature after SEM.
 
-    err_total^2 = err_photon^2 + sem_rel^2 + sigma_sys_rel^2 (relative-flux domain).
+    err_total^2 = err_photon^2 + sem_rel^2 + scint_rel^2 + sigma_sys_rel^2 (relative-flux domain).
 
-    Matched epoch, finite scatter -> quadrature with SEM (+ floor when configured).
-    Matched epoch, NaN scatter -> scatter treated as 0.0 (photon-only + floor), same as legacy
-    ``np.where(isfinite, scatter, 0.0)``.
-    Unmatched ``source_file`` -> photon-only err (+ floor), ``err_scatter_unmatched`` True,
-    WARNING logged.
+    Matched epoch, finite scatter -> quadrature with SEM (+ scint + floor when configured).
+    Matched epoch, NaN scatter -> scatter treated as 0.0 (photon-only + scint + floor).
+    Unmatched ``source_file`` -> **NaN err**, ``err_scatter_unmatched`` True (I-04: exclude epoch).
     """
     from sigma_floor_core import combine_production_err_rel  # noqa: PLC0415
 
     err_out = np.asarray(err_photon, dtype=np.float64).copy()
     unmatched = np.zeros(len(err_out), dtype=bool)
     _floor = float(sigma_sys_mag) if math.isfinite(float(sigma_sys_mag)) and float(sigma_sys_mag) > 0 else 0.0
+    _scint_arr: np.ndarray | None = None
+    if sigma_scint_mag is not None:
+        _scint_arr = np.asarray(sigma_scint_mag, dtype=np.float64)
+        if len(_scint_arr) != len(err_out):
+            _scint_arr = None
 
     n_unmatched = 0
     for i, sf in enumerate(np.asarray(source_files, dtype=object)):
@@ -3562,13 +3574,21 @@ def _combine_err_with_ensemble_scatter_keyed(
         elif scatter_by_file:
             unmatched[i] = True
             n_unmatched += 1
+            err_out[i] = float("nan")
+            continue
         ep = float(err_out[i]) if math.isfinite(err_out[i]) else float("nan")
-        err_out[i] = combine_production_err_rel(ep, sc_mag, sigma_sys_mag=_floor)
+        scint_m = 0.0
+        if _scint_arr is not None:
+            v = float(_scint_arr[i])
+            scint_m = v if math.isfinite(v) and v > 0 else 0.0
+        err_out[i] = combine_production_err_rel(
+            ep, sc_mag, sigma_sys_mag=_floor, sigma_scint_mag=scint_m,
+        )
 
     if n_unmatched > 0:
         logging.warning(
             "[G2-F004] %s: %d/%d epochs missing ensemble_scatter for source_file "
-            "- photon-only err kept",
+            "- err set NaN, epoch excluded (I-04)",
             target_name or "?",
             n_unmatched,
             len(err_out),
@@ -3582,21 +3602,48 @@ def _err_budget_components_keyed(
     scatter_by_file: dict[str, float],
     *,
     sigma_sys_mag: float = 0.0,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    sigma_scint_mag: np.ndarray | list[float] | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Per-epoch error budget terms in relative-flux domain (export / diagnostics)."""
     from sigma_floor_core import mag_sigma_to_rel  # noqa: PLC0415
 
     ep = np.asarray(err_photon, dtype=np.float64)
     n = len(ep)
     sem_rel = np.zeros(n, dtype=np.float64)
+    scint_rel = np.zeros(n, dtype=np.float64)
     sys_rel = np.full(n, mag_sigma_to_rel(float(sigma_sys_mag)), dtype=np.float64)
+    _scint_arr: np.ndarray | None = None
+    if sigma_scint_mag is not None:
+        _scint_arr = np.asarray(sigma_scint_mag, dtype=np.float64)
+        if len(_scint_arr) != n:
+            _scint_arr = None
     for i, sf in enumerate(np.asarray(source_files, dtype=object)):
         key = str(sf).strip()
         if scatter_by_file and key in scatter_by_file:
             sc = float(scatter_by_file[key])
             if math.isfinite(sc):
                 sem_rel[i] = mag_sigma_to_rel(sc)
-    return ep, sem_rel, sys_rel
+        if _scint_arr is not None:
+            v = float(_scint_arr[i])
+            if math.isfinite(v) and v > 0:
+                scint_rel[i] = mag_sigma_to_rel(v)
+    return ep, sem_rel, scint_rel, sys_rel
+
+
+def _exclude_err_scatter_unmatched_epochs(
+    err_scatter_unmatched: np.ndarray,
+    *arrays: np.ndarray | list,
+) -> tuple[np.ndarray, ...]:
+    """Drop epochs flagged ``err_scatter_unmatched`` (I-04 export exclusion)."""
+    mask = ~np.asarray(err_scatter_unmatched, dtype=bool)
+    out: list[Any] = [mask]
+    for arr in arrays:
+        a = np.asarray(arr)
+        if len(a) == len(mask):
+            out.append(a[mask])
+        else:
+            out.append(arr)
+    return tuple(out)
 
 
 # ---------------------------------------------------------------------------
@@ -4965,6 +5012,7 @@ def save_lightcurve_csv(
     sigma_sys_mag: float | None = None,
     err_photon: np.ndarray | None = None,
     err_sem_rel: np.ndarray | None = None,
+    err_scint_rel: np.ndarray | None = None,
     err_sigma_sys_rel: np.ndarray | None = None,
 ) -> None:
     """Ulozi lightcurve CSV.
@@ -5105,6 +5153,8 @@ def save_lightcurve_csv(
         df["err_photon"] = np.round(np.asarray(err_photon, dtype=np.float64), 6)
     if err_sem_rel is not None:
         df["err_sem_rel"] = np.round(np.asarray(err_sem_rel, dtype=np.float64), 6)
+    if err_scint_rel is not None:
+        df["err_scint_rel"] = np.round(np.asarray(err_scint_rel, dtype=np.float64), 6)
     if err_sigma_sys_rel is not None:
         df["err_sigma_sys_rel"] = np.round(np.asarray(err_sigma_sys_rel, dtype=np.float64), 6)
     df["delta_mag_sysrem"] = np.round(np.full(n, float("nan"), dtype=np.float64), 6)
@@ -9781,28 +9831,69 @@ def _phase2a_process_one_target(
     err = target_frames["err"].to_numpy(dtype=float)
     err, err_method_rows = _route_lc_per_frame_err(target_frames, err)
     err_photon_arr = np.asarray(err, dtype=np.float64).copy()
+    if "airmass" in target_frames.columns:
+        airmass_arr = target_frames["airmass"].to_numpy(dtype=float)
+    else:
+        airmass_arr = np.full(len(target_frames), float("nan"), dtype=float)
     # Per-point uncertainty = photon/SNR base error (term-1) (+) ensemble zeropoint uncertainty
     # (term-3, ``ensemble_scatter``). Joined by EXACT ``source_file`` (G2-F004), not positional index.
     _src_for_err = target_frames["source_file"].astype(str).tolist()
-    from sigma_floor_core import resolve_sigma_sys_mag  # noqa: PLC0415
+    from sigma_budget import resolve_rig_scintillation_params  # noqa: PLC0415
+    from sigma_floor_core import resolve_sigma_sys_mag, scintillation_mag_per_epoch  # noqa: PLC0415
 
     _sigma_sys_mag = resolve_sigma_sys_mag(
         state.equipment_id,
         _cfg,
         rig_label=str(state.obs_group or ""),
     )
+    _draft_id_lc: int | None = None
+    try:
+        from platesolve_ui_paths import parse_draft_id_from_text  # noqa: PLC0415
+
+        _draft_id_lc = parse_draft_id_from_text(str(output_dir))
+    except Exception:  # noqa: BLE001
+        _draft_id_lc = None
+    _rig_scint = resolve_rig_scintillation_params(
+        draft_id=_draft_id_lc,
+        setup=str(state.obs_group or ""),
+        cfg=_cfg,
+        pipeline_meta=(
+            {"observer_location": {"alt_m": float(state.site_alt)}}
+            if state.site_ok and state.site_alt is not None
+            else None
+        ),
+    )
+    _scint_mag_arr = np.array(
+        [
+            scintillation_mag_per_epoch(
+                telescope_diameter_m=_rig_scint.telescope_diameter_m,
+                airmass=float(am),
+                exposure_s=_rig_scint.exposure_s,
+                altitude_m=_rig_scint.altitude_m,
+                c_y=_rig_scint.c_y,
+            )
+            if math.isfinite(float(am)) and float(am) >= 1.0
+            else 0.0
+            for am in airmass_arr
+        ],
+        dtype=np.float64,
+    )
     err, err_scatter_unmatched_arr = _combine_err_with_ensemble_scatter_keyed(
         err,
         _src_for_err,
         _ensemble_scatter_by_file,
         sigma_sys_mag=_sigma_sys_mag,
+        sigma_scint_mag=_scint_mag_arr,
         target_name=str(target_name),
     )
-    err_photon_export, err_sem_rel_export, err_sigma_sys_rel_export = _err_budget_components_keyed(
-        err_photon_arr,
-        _src_for_err,
-        _ensemble_scatter_by_file,
-        sigma_sys_mag=_sigma_sys_mag,
+    err_photon_export, err_sem_rel_export, err_scint_rel_export, err_sigma_sys_rel_export = (
+        _err_budget_components_keyed(
+            err_photon_arr,
+            _src_for_err,
+            _ensemble_scatter_by_file,
+            sigma_sys_mag=_sigma_sys_mag,
+            sigma_scint_mag=_scint_mag_arr,
+        )
     )
     ap_arr = target_frames["aperture_r_px"].to_numpy(dtype=float)
     src_files = target_frames["source_file"].tolist()
@@ -9810,10 +9901,6 @@ def _phase2a_process_one_target(
 
     # Airmass / flip arrays for export + the democratic detrender (no per-target airmass detrend here:
     # airmass is handled by the differential comp ensemble).
-    if "airmass" in target_frames.columns:
-        airmass_arr = target_frames["airmass"].to_numpy(dtype=float)
-    else:
-        airmass_arr = np.full_like(bjd, float("nan"), dtype=float)
     flip_arr = (
         target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
         if "is_flipped" in target_frames.columns
@@ -9956,6 +10043,65 @@ def _phase2a_process_one_target(
         _lc_lunar_phase = float("nan")
         _lc_lunar_sep = float("nan")
         _lc_lunar_risk = "UNKNOWN"
+    # I-04: exclude epochs with unmatched ensemble scatter from LC export.
+    if err_scatter_unmatched_arr is not None and np.any(err_scatter_unmatched_arr):
+        _keep_lc = ~np.asarray(err_scatter_unmatched_arr, dtype=bool)
+        if err_method_rows is not None and len(err_method_rows) == len(_keep_lc):
+            err_method_rows = [err_method_rows[i] for i in range(len(_keep_lc)) if _keep_lc[i]]
+        if _mag_democratic is not None and len(_mag_democratic) == len(_keep_lc):
+            _mag_democratic = np.asarray(_mag_democratic, dtype=float)[_keep_lc]
+        if _err_inflation is not None and len(_err_inflation) == len(_keep_lc):
+            _err_inflation = np.asarray(_err_inflation, dtype=float)[_keep_lc]
+        (
+            bjd,
+            hjd,
+            jd,
+            airmass_arr,
+            flip_arr,
+            target_lc,
+            mag_calib_raw,
+            mag_calib,
+            mag_calib_ct,
+            mag_calib_ac,
+            delta_mag,
+            err,
+            ap_arr,
+            out_flags,
+            src_files,
+            align_fail_arr,
+            err_scatter_unmatched_arr,
+            catalog_match_mode_list,
+            wcs_untrusted_arr,
+            err_photon_export,
+            err_sem_rel_export,
+            err_scint_rel_export,
+            err_sigma_sys_rel_export,
+        ) = _exclude_err_scatter_unmatched_epochs(
+            ~_keep_lc,
+            bjd,
+            hjd,
+            jd,
+            airmass_arr,
+            flip_arr,
+            target_lc,
+            mag_calib_raw,
+            mag_calib,
+            mag_calib_ct,
+            mag_calib_ac,
+            delta_mag,
+            err,
+            ap_arr,
+            out_flags,
+            src_files,
+            align_fail_arr,
+            err_scatter_unmatched_arr,
+            catalog_match_mode_list,
+            wcs_untrusted_arr,
+            err_photon_export,
+            err_sem_rel_export,
+            err_scint_rel_export,
+            err_sigma_sys_rel_export,
+        )
     save_lightcurve_csv(
         lc_csv,
         bjd,
@@ -9999,6 +10145,7 @@ def _phase2a_process_one_target(
         sigma_sys_mag=_sigma_sys_mag,
         err_photon=err_photon_export,
         err_sem_rel=err_sem_rel_export,
+        err_scint_rel=err_scint_rel_export,
         err_sigma_sys_rel=err_sigma_sys_rel_export,
     )
     if _have_psf_cols:

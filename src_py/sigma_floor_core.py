@@ -66,14 +66,18 @@ def combine_production_err_rel(
     sem_mag: float,
     *,
     sigma_sys_mag: float = 0.0,
+    sigma_scint_mag: float = 0.0,
 ) -> float:
-    """Quadrature combine photon, ensemble SEM, and per-rig floor in rel-flux domain."""
+    """Quadrature combine photon, ensemble SEM, scintillation, and per-rig floor (rel-flux domain)."""
     terms = 0.0
     if math.isfinite(err_photon_rel) and err_photon_rel > 0:
         terms += err_photon_rel * err_photon_rel
     sem_rel = mag_sigma_to_rel(sem_mag)
     if sem_rel > 0:
         terms += sem_rel * sem_rel
+    scint_rel = mag_sigma_to_rel(sigma_scint_mag)
+    if scint_rel > 0:
+        terms += scint_rel * scint_rel
     sys_rel = mag_sigma_to_rel(sigma_sys_mag)
     if sys_rel > 0:
         terms += sys_rel * sys_rel
@@ -87,10 +91,39 @@ def combine_production_err_mag(
     sem_mag: float,
     *,
     sigma_sys_mag: float = 0.0,
+    sigma_scint_mag: float = 0.0,
 ) -> float:
     """Magnitude-domain sigma from production composition."""
-    rel = combine_production_err_rel(err_photon_rel, sem_mag, sigma_sys_mag=sigma_sys_mag)
+    rel = combine_production_err_rel(
+        err_photon_rel,
+        sem_mag,
+        sigma_sys_mag=sigma_sys_mag,
+        sigma_scint_mag=sigma_scint_mag,
+    )
     return rel_sigma_to_mag(rel)
+
+
+def scintillation_mag_per_epoch(
+    *,
+    telescope_diameter_m: float,
+    airmass: float,
+    exposure_s: float,
+    altitude_m: float,
+    c_y: float = 1.5,
+) -> float:
+    """Per-epoch scintillation sigma in magnitudes (Young/Osborn via sigma_budget)."""
+    from sigma_budget import relative_flux_err_to_mag_sigma, scintillation_sigma  # noqa: PLC0415
+
+    rel = scintillation_sigma(
+        telescope_diameter_m=telescope_diameter_m,
+        airmass=airmass,
+        exposure_s=exposure_s,
+        altitude_m=altitude_m,
+        c_y=c_y,
+    )
+    if not math.isfinite(rel) or rel <= 0:
+        return 0.0
+    return float(relative_flux_err_to_mag_sigma(rel))
 
 
 def resolve_sigma_sys_mag(
