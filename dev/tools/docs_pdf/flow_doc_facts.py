@@ -49,7 +49,7 @@ DOC_CONFIG_FACTS: dict[str, object] = {
     "variability_vdi_z_threshold": 3.0,
     "preprocess_sky_surface_order": 2,
     "auto_fwhm_k_factor": 1.5,
-    "masterstar_dao_threshold_sigma": 2.1,
+    "masterstar_dao_threshold_sigma": 3.8,
     "exoplanet_match_max_sep_arcsec": 3.0,
 }
 
