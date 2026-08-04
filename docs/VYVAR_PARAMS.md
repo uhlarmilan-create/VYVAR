@@ -360,16 +360,3 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `per_frame_mp_reserve_ram_gb` | 1.5 | - | expert | static | config_runtime | hidden | Per Frame MP Reserve RAM Gb |
 | `qc_preprocess_workers` | 1 | - | expert | resolved | internal | hidden | QC Preprocess Workers |
 
----
-
-## Parameter budget notes (closure Step 1, 2026-07-31)
-
-| key | budget status | evidence |
-|-----|---------------|----------|
-| `aperture_snr_sizing` | **DEAD on science path** | Hardcoded 0.8/2.5 x FWHM used; config key orphan (S1, batch A DOCUMENTED). See closure Step 1 + batch A. |
-
-**Flow doc note (Step 1b, V7):** `build_flow_doc.py:391` correctly documents hardcoded
-`r_min=0.8 x FWHM` .. `r_max=2.5 x FWHM`; `flow_doc_facts.py:60` tracks
-`compute_snr_optimal_aperture_table`. The orphan parameter is `aperture_snr_sizing` in config,
-not the flow-doc SNR sweep text. PDF regen not required for closure measurement.
-
