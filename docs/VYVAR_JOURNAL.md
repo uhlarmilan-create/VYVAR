@@ -12,6 +12,29 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-04 -- SESSION-CLOSE 2026-08-04b (evidence chain, WIDE-ERR harness fix, manifest tripwire)
+
+Committed evidence chain (`CURSOR_RESULT_anchor_prov.md`, `CURSOR_RESULT_wide_err_step0_checkstar.md`,
+restore helpers, WIDE-ERR STEP 0 tool). Redirected `wide_error_budget_diag.py` and
+`wide_err_step0_checkstar.py` diag LC output from snapshot `photometry/diag_check_lc/` to
+`tmp/` -- accounts for 15:47 diag writes only; 10:20-11:47 masterstars / comparison_stars /
+check_kmag writes remain unattributed.
+
+**Manifest tripwire (not wired to pytest -- Archive data absent in CI):**
+
+```
+python dev/tools/anchor_manifest_check.py --write
+python dev/tools/anchor_manifest_check.py
+```
+
+Default manifest: `dev/results/anchor_restore/manifest_restored_20260804.txt`. Exit non-zero
+on any size, sha256, missing, or extra file under `platesolve/NoFilter_60_2/photometry/`.
+Run after any tool touches the snapshot tree.
+
+ROADMAP: **WIDE-ERR-POP-DELTA** added (July 333/166 vs August 1121/248 not directly comparable).
+
+---
+
 ## 2026-08-04 -- ANCHOR-RESTORE-1 (July zip back to draft_435 snapshot)
 
 Restored `Archive/Drafts/draft_000435_snapshot_skysurface_20260716` from

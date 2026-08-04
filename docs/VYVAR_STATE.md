@@ -2,7 +2,14 @@
 
 **Status:** Science audit **closed** (2026-08-04).
 
-Last updated: **2026-08-04** (ANCHOR-RESTORE-1: July snapshot back on disk).
+Last updated: **2026-08-04** (SESSION-CLOSE 2026-08-04b: evidence chain, manifest tripwire).
+
+## Session close 2026-08-04b (evidence chain; WIDE-ERR harness fix)
+
+Evidence chain committed; WIDE-ERR diag LC output redirected to `tmp/` (15:47 writes
+accounted; 10:20-11:47 writes still unattributed). Manifest tripwire:
+`dev/results/anchor_restore/manifest_restored_20260804.txt` +
+`dev/tools/anchor_manifest_check.py`. ROADMAP **WIDE-ERR-POP-DELTA** added.
 
 ## Session close 2026-08-04 (ANCHOR-RESTORE-1)
 
@@ -322,17 +329,21 @@ excluded_targets, VSX stamp, sky-surface stats, export skips. Spec by Claude nex
 Post-11:47 mutated tree quarantined at
 `Archive/Drafts/_quarantine/draft_000435_snapshot_MUTATED_20260804_1147`.
 
-**On-disk photometry SHA (July generation, NOT the gate constant):**
-core `3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96` n=333;
+**DOCUMENTED FACT (not a gate value):** draft_435 snapshot, July generation, restored
+2026-08-04 from `draft_000435_snapshot_skysurface_20260716.zip`; produced at `10d610c`
+with `git_dirty=true`; photometry SHA core `3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96` n=333 /
 extended `6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8` n=499.
-`pipeline_meta`: git `10d610c0`, `git_dirty=true`, `admission_sat_peak_frac` absent.
 166 `check_kmag_*.csv` (164 x `1499906247391001088`, 2 x `1497528072458898432`).
+`pipeline_meta`: git `10d610c0`, `git_dirty=true`, `admission_sat_peak_frac` absent.
+Integrity tripwire: `dev/results/anchor_restore/manifest_restored_20260804.txt`;
+check with `python dev/tools/anchor_manifest_check.py` (see JOURNAL 2026-08-04b).
 
 **Gate values do NOT describe this tree.** `session_baseline_check.py` and
-`test_invariants_p1_seed.py` still expect batch-E draft_000500 fingerprints
-(`5bccd85a...` n=497 / `7fdcdca4...` n=744) on this snapshot path -- seeding error;
-see ROADMAP **ANCHOR-GATE-SEED**. Do **not** treat `--full` SHA gate as verified until
-reseeding is resolved.
+`test_invariants_p1_seed.py` expect batch-E draft_000500 fingerprints
+(`5bccd85a...` n=**497** / `7fdcdca4...` n=**744**). Neither the count nor the hash
+describes any draft_435 generation: draft_435 has never produced 497 lightcurves (July
+core n=333; mutated August core n=1121). Seeding error; see ROADMAP **ANCHOR-GATE-SEED**.
+Do **not** treat `--full` SHA gate as verified until reseeding is resolved.
 
 **Prior anchor history (reference only):** LABBE-DET pass used core `3d26f469...` /
 extended `6420f1da...` (2026-07-16). Batch E physical re-cut on scratch `draft_000500`

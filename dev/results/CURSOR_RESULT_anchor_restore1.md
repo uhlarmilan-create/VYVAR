@@ -106,6 +106,8 @@ FORBIDDEN items respected:
 - dev/results/CURSOR_RESULT_anchor_restore1.md
 - dev/results/anchor_restore/manifest_mutated_20260804.txt
 
+Commit: f067304
+
 ## Errors
 
 None.
