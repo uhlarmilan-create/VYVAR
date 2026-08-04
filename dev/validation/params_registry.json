@@ -38,6 +38,20 @@
     "unit": null,
     "widget": "auto"
   },
+  "admission_sat_peak_frac": {
+    "help": "D5-2 / C-1 admission gate. Reject comparison stars whose peak exceeds this fraction of full well. Distinct from the 85 percent is_saturated flag; 0.70 was set by the batch E re-cut.",
+    "kind": "static",
+    "label": "Admission Sat Peak Frac",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": [
+      0.5,
+      0.95
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
   "alignment_detection_sigma": {
     "help": "Detection sensitivity of the star finder used to pick alignment control stars.",
     "kind": "static",
@@ -917,6 +931,34 @@
     "unit": null,
     "widget": "custom"
   },
+  "dao_centroid_max_shift_fwhm": {
+    "help": "E.2. Maximum DAO-vs-WCS centroid shift, in units of FWHM, before a matched star falls back to its WCS pixel position.",
+    "kind": "static",
+    "label": "Dao Centroid Max Shift Fwhm",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.1,
+      5.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "dao_detection_n_equiv": {
+    "help": "T4-1 Option B. Effective number of independent pixels per resolution element on the resampled detection image; DAO threshold is N_equiv * rms_conv. Measured from audit Part 2b (rel_err=1.09 -> 3.78; legacy 1.36 -> 4.71).",
+    "kind": "static",
+    "label": "Dao Detection N Equiv",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.5,
+      12.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
   "dao_qc_in_calibrate": {
     "help": "Runs the star-detection based QC directly during calibration so bad frames are flagged as early as possible.",
     "kind": "static",
@@ -974,6 +1016,17 @@
     "tier": "expert",
     "unit": null,
     "widget": "custom"
+  },
+  "enable_lacosmic": {
+    "help": "CR-1. Run L.A.Cosmic (astroscrappy) cosmic-ray rejection on the preprocess path. Stamps VY_COSM / VY_COSMNPX headers.",
+    "kind": "static",
+    "label": "Enable Lacosmic",
+    "owner": "config_runtime",
+    "phase": "qc",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto"
   },
   "epsf_min_stars": {
     "help": "Minimum suitable stars required to build an empirical PSF model (ePSF) for PSF photometry.",
@@ -1204,6 +1257,28 @@
     "tier": "expert",
     "unit": null,
     "widget": "hidden"
+  },
+  "lacosmic_sigclip": {
+    "help": "L.A.Cosmic sigma clipping threshold for the Laplacian edge detection (astroscrappy sigclip).",
+    "kind": "static",
+    "label": "Lacosmic Sigclip",
+    "owner": "config_runtime",
+    "phase": "qc",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
+  },
+  "lacosmic_objlim": {
+    "help": "L.A.Cosmic contrast limit between the Laplacian image and the fine-structure image; higher values protect real point sources (astroscrappy objlim).",
+    "kind": "static",
+    "label": "Lacosmic Objlim",
+    "owner": "config_runtime",
+    "phase": "qc",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto"
   },
   "gaia_db_path": {
     "help": "Path to the local full-sky Gaia DR3 SQLite database (40M+ stars) used for star identification and comparison selection.",

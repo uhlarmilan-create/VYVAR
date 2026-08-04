@@ -6,15 +6,15 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-07-28T06:38:37Z at git HEAD 5dd34e5._
+_Generated 2026-08-04T12:12:38Z at git HEAD ab0f669._
 
 ## Summary
 
-- Entries: 270
-- Tier: basic 13, advanced 70, expert 187
-- Kind: static 252, derived 0, resolved 18
-- Widget: auto 112, custom 143, hidden 15
-- Owner: db_static 9, config_runtime 242, fits_dynamic 6, internal 13
+- Entries: 277
+- Tier: basic 13, advanced 71, expert 193
+- Kind: static 259, derived 0, resolved 18
+- Widget: auto 119, custom 143, hidden 15
+- Owner: db_static 9, config_runtime 249, fits_dynamic 6, internal 13
 
 Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -72,6 +72,7 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `auto_fwhm_k_factor` | 1.5 | - | advanced | static | config_runtime | custom | Auto FWHM K Factor |
 | `auto_fwhm_k_max` | 4.0 | - | advanced | static | config_runtime | custom | Auto FWHM K Max |
 | `auto_fwhm_k_min` | 1.0 | - | advanced | static | config_runtime | custom | Auto FWHM K Min |
+| `enable_lacosmic` | True | - | advanced | static | config_runtime | auto | Enable Lacosmic |
 | `frame_align_residual_gate_enabled` | False | - | expert | static | config_runtime | auto | Frame Align Residual Gate Enabled |
 | `frame_align_residual_max_frac` | 0.25 | 0.05 .. 1 | expert | static | config_runtime | auto | Frame Align Residual Max Frac |
 | `frame_align_residual_min_keep_frames` | 10 | 3 .. 100000 | expert | static | config_runtime | auto | Frame Align Residual Min Keep Frames |
@@ -79,7 +80,10 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `frame_quality_gate_enabled` | False | - | expert | static | config_runtime | auto | Frame Quality Gate Enabled |
 | `frame_quality_min_keep_frames` | 10 | 3 .. 100000 | expert | static | config_runtime | auto | Frame Quality Min Keep Frames |
 | `frame_quality_ratio_k` | 5.0 | 2 .. 20 | expert | static | config_runtime | auto | Frame Quality Ratio K |
+| `lacosmic_objlim` | 5.0 | - | expert | static | config_runtime | auto | Lacosmic Objlim |
+| `lacosmic_sigclip` | 4.5 | - | expert | static | config_runtime | auto | Lacosmic Sigclip |
 | `osc_channel_binning` | 2 | 1 .. 4 | advanced | static | config_runtime | auto | OSC Channel Binning |
+| `preprocess_sky_surface_force_reapply` | False | - | expert | static | config_runtime | auto | Preprocess Sky Surface Force Reapply |
 | `preprocess_sky_surface_order` | 2 | 0 .. 2 | expert | static | config_runtime | auto | Preprocess Sky Surface Order |
 | `qc_after_calibrate_enabled` | True | - | basic | static | config_runtime | auto | QC After Calibrate Enabled |
 | `qc_dao_detection_sigma` | 5.0 | - | expert | static | config_runtime | auto | QC DAO Detection Sigma |
@@ -118,6 +122,8 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `crowding_classifier_enabled` | False | - | expert | static | config_runtime | custom | Crowding Classifier Enabled |
 | `crowding_comp_availability_loosen_count` | 500.0 | 0 .. 1000000 | expert | static | config_runtime | custom | Crowding Comp Availability Loosen Count |
 | `crowding_tighten_min_fwhm_px` | 3.0 | 0 .. 30 | expert | static | config_runtime | custom | Crowding Tighten Min FWHM PX |
+| `dao_centroid_max_shift_fwhm` | 1.0 | 0.1 .. 5 | expert | static | config_runtime | auto | Dao Centroid Max Shift Fwhm |
+| `dao_detection_n_equiv` | 3.78 | 0.5 .. 12 | expert | static | config_runtime | auto | Dao Detection N Equiv |
 | `debug_platesolver` | False | - | expert | static | config_runtime | auto | Debug Platesolver |
 | `epsf_min_stars` | 30 | - | expert | static | config_runtime | custom | EPSF Min Stars |
 | `exoplanet_match_max_sep_arcsec` | 3.0 | 0.5 .. 30 | expert | static | config_runtime | auto | Exoplanet Match Max Sep Arcsec |
@@ -131,7 +137,7 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 | `masterstar_catalog_recovery_min` | 0.65 | 0.4 .. 0.95 | advanced | static | config_runtime | custom | Masterstar Catalog Recovery Min |
 | `masterstar_centre_rms_max_px` | 1.2 | 0.5 .. 5 | advanced | static | config_runtime | custom | Masterstar Centre RMS Max PX |
 | `masterstar_dao_pass2_sigma` | 1.9 | - | expert | static | config_runtime | custom | Masterstar DAO Pass2 Sigma |
-| `masterstar_dao_threshold_sigma` | 2.1 | 0.1 .. 6 | advanced | static | config_runtime | custom | Masterstar DAO Threshold Sigma |
+| `masterstar_dao_threshold_sigma` | 3.8 | 0.1 .. 6 | advanced | static | config_runtime | custom | Masterstar DAO Threshold Sigma |
 | `masterstar_detection_cap_adaptive` | True | - | expert | static | config_runtime | custom | Masterstar Detection Cap Adaptive |
 | `masterstar_detection_cap_k` | 0.08 | 0.01 .. 1 | expert | static | config_runtime | custom | Masterstar Detection Cap K |
 | `masterstar_detection_cap_max` | 800 | - | expert | static | config_runtime | custom | Masterstar Detection Cap Max |
@@ -254,6 +260,7 @@ Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` 
 
 | key | default | range | tier | kind | owner | widget | label |
 |-----|---------|-------|------|------|-------|--------|-------|
+| `admission_sat_peak_frac` | 0.7 | 0.5 .. 0.95 | expert | static | config_runtime | auto | Admission Sat Peak Frac |
 | `comp_clip_sigma` | 5.0 | 3 .. 10 | advanced | static | config_runtime | auto | Comp Clip Sigma |
 | `comp_color_tiers` | [{'bprp': 0.15, 'w': 1.0}, {'bprp': 0.3, 'w': 0.85}, {'bprp': 0.55, 'w': 0.5}, {'bprp': 1.1, 'w': 0.25}] | - | advanced | static | config_runtime | auto | Comp Color Tiers |
 | `comp_contamination_penalty_k` | 3.0 | 0 .. 20 | expert | static | config_runtime | auto | Comp Contamination Penalty K |
