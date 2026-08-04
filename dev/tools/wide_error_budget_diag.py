@@ -183,7 +183,7 @@ def main() -> int:
             parent_target_cid=target_cid,
             check_cid=check_cid,
             masterstar_fits_path=ps / "MASTERSTAR.fits",
-            lc_dir=phot / "diag_check_lc" / target_cid,
+            lc_dir=REPO / "tmp" / "wide_error_budget_diag" / "diag_check_lc" / target_cid,
             output_dir=phot,
         )
         if lc_df is None or "mag_calib_final" not in lc_df.columns:
