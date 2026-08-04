@@ -1,7 +1,7 @@
 # VYVAR -- Audit closure (final register)
 
 **Date:** 2026-08-04
-**Commit:** `20dde2b` (batch E GATE 2 closure)
+**Commit:** `f0b310e` (batch E GATE 2 closure)
 **Purpose:** Referee-facing deliverable. Every audit item, final disposition, evidence pointer,
 and implementation batch. Limitations: `docs/VYVAR_LIMITATIONS.md`.
 
