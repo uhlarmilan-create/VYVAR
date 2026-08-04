@@ -2,7 +2,14 @@
 
 **Status:** Science audit **closed** (2026-08-04).
 
-Last updated: **2026-08-04** (BATCH-E-PARAMS-REGISTRY closed; session sync to GitHub).
+Last updated: **2026-08-04** (ANCHOR-RESTORE-1: July snapshot back on disk).
+
+## Session close 2026-08-04 (ANCHOR-RESTORE-1)
+
+Restored `draft_000435_snapshot_skysurface_20260716` from July offline zip; post-11:47
+mutated tree quarantined. Gate seeding (`5bccd85a` / `7fdcdca4`) **not** updated and
+**does not** match on-disk July generation (`3d26f469` / `6420f1da`). Anchor **not**
+verified via `--full` gate. Report: `dev/results/CURSOR_RESULT_anchor_restore1.md`.
 
 ## Session close 2026-08-04 (BATCH-E-PARAMS-REGISTRY)
 
@@ -17,12 +24,11 @@ Report: `dev/results/CURSOR_RESULT_batch_e_params_hygiene.md`.
 ## Session close 2026-08-04 (audit closed)
 
 Batch E **GATE 2 authorized**. Physical re-cut fingerprints pushed (core `5bccd85a...` n=497;
-extended `7fdcdca...` n=744). Archive snapshot refreshed from `draft_000500`. Register item 29
-**FIXED**. Science audit **closed**. Future threads: **WIDE-ERR**, **MASTERSTAR stacking**
-(not audit-open; logged in ROADMAP). Reports: `dev/results/CURSOR_RESULT_final_closure.md`,
-`CURSOR_RESULT_batch_E_physical_recut.md`. Referee deliverable: `docs/VYVAR_AUDIT_CLOSURE.md`.
-Snapshot SHA gate **PASS** (on-disk snapshot matches batch E fingerprints; `--fast` pytest
-failures noted separately, non-blocking).
+extended `7fdcdca...` n=744). Register item 29 **FIXED**. Science audit **closed**. Future
+threads: **WIDE-ERR**, **MASTERSTAR stacking** (not audit-open; logged in ROADMAP). Reports:
+`dev/results/CURSOR_RESULT_final_closure.md`, `CURSOR_RESULT_batch_E_physical_recut.md`.
+Referee deliverable: `docs/VYVAR_AUDIT_CLOSURE.md`. **Superseded by ANCHOR-RESTORE-1:**
+on-disk snapshot reverted to July generation; gate fingerprints no longer describe live tree.
 
 ## Session close 2026-08-03 (batch D GATE 1; batch E blocked)
 
@@ -308,13 +314,30 @@ excluded_targets, VSX stamp, sky-surface stats, export skips. Spec by Claude nex
    remain: `draft_000435` + `draft_000435_snapshot_skysurface_20260716`.
 4. F-428 arc evidence: `validation/f428_arc_evidence/` (moved from `tmp/`).
 
-## Current snapshot (Anchor #3 ACTIVE)
+## Current snapshot (Anchor #3 on disk -- July generation restored 2026-08-04)
 
-**draft_000435_snapshot_skysurface_20260716** - Anchor #3. Dual full-photometry SHA gate
-**PASS** (ANCHOR-RECUT-SIGMA-NOTES 2026-07-20). Core `03d8fb64...` n=333; extended `bbfcc92e...` n=499.
-Supersedes core `3d26f469...` / extended `6420f1da...` (2026-07-16 LABBE-DET; sigma-notes cosmetic re-cut only).
-Census 2552/2842/169; identity p95 baseline **1.54 px**. Ledger `VL-ANCHOR-WCSINV` ACTIVE;
-`VL-ANCHOR-424` superseded (offline zip historical). `--full` re-enabled against 435.
+**draft_000435_snapshot_skysurface_20260716** -- restored from offline zip
+(`C:\ASTRO\backups\draft_000435_snapshot_skysurface_20260716.zip`, SHA256
+`a35d22354666e359ce1bdd9a6eb207d5d768466a67fcdb77c22425eabb3f84a0`) on 2026-08-04.
+Post-11:47 mutated tree quarantined at
+`Archive/Drafts/_quarantine/draft_000435_snapshot_MUTATED_20260804_1147`.
+
+**On-disk photometry SHA (July generation, NOT the gate constant):**
+core `3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96` n=333;
+extended `6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8` n=499.
+`pipeline_meta`: git `10d610c0`, `git_dirty=true`, `admission_sat_peak_frac` absent.
+166 `check_kmag_*.csv` (164 x `1499906247391001088`, 2 x `1497528072458898432`).
+
+**Gate values do NOT describe this tree.** `session_baseline_check.py` and
+`test_invariants_p1_seed.py` still expect batch-E draft_000500 fingerprints
+(`5bccd85a...` n=497 / `7fdcdca4...` n=744) on this snapshot path -- seeding error;
+see ROADMAP **ANCHOR-GATE-SEED**. Do **not** treat `--full` SHA gate as verified until
+reseeding is resolved.
+
+**Prior anchor history (reference only):** LABBE-DET pass used core `3d26f469...` /
+extended `6420f1da...` (2026-07-16). Batch E physical re-cut on scratch `draft_000500`
+produced `5bccd85a...` / `7fdcdca4...` -- fingerprints pushed to gate files but live
+snapshot was never faithfully that generation before restore.
 
 **Root cause of prior STOP:** ensemble SEM join / dict-order nondeterminism in phase2a `err`
 (not Labbe placements). Labbe hardened anyway (canonical stars + SeedSequence + dump).

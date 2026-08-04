@@ -12,6 +12,33 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-04 -- ANCHOR-RESTORE-1 (July zip back to draft_435 snapshot)
+
+Restored `Archive/Drafts/draft_000435_snapshot_skysurface_20260716` from
+`C:\ASTRO\backups\draft_000435_snapshot_skysurface_20260716.zip` (SHA256 verified
+`a35d2235...` before extract). **Why:** the post-2026-08-04 11:47 tree had unlogged
+provenance (writes 10:20-11:47 with no matching run log; POST batch E `pipeline_meta` on
+a path that should have been immutable snapshot).
+
+**Quarantined (not deleted):**
+`Archive/Drafts/_quarantine/draft_000435_snapshot_MUTATED_20260804_1147`.
+Photometry manifest: `dev/results/anchor_restore/manifest_mutated_20260804.txt`
+(2999 files, 846 MB under `platesolve/NoFilter_60_2/photometry/`).
+
+**Restored generation photometry SHA** (documented fact, not a gate value):
+core `3d26f4692ac81fc52db6ef9f70b148f9f7c56a5bb5e84e637339c4883ba47a96` n=333;
+extended `6420f1daa53a0d5d0a92bfd1ab30eba68e2ab88be8fe5f4c68048a5463054ac8` n=499.
+Produced at git `10d610c` with `git_dirty=true`; pre-batch-E (`admission_sat_peak_frac`
+absent). WIDE-ERR 09:17 cohort recoverable (166 check_kmag; 164+2 id split).
+
+**Gate seeding untouched:** `session_baseline_check.py`, `test_invariants_p1_seed.py`, and
+`VYVAR_VALIDATION_LEDGER.json` still expect draft_000500 fingerprints on the draft_435
+binding -- see ROADMAP **ANCHOR-GATE-SEED**. Snapshot restore does not fix that.
+
+Report: `dev/results/CURSOR_RESULT_anchor_restore1.md`.
+
+---
+
 ## 2026-08-04 -- SESSION CLOSE (audit closed; batch E GATE 2)
 
 Science audit **closed**. Batch E **GATE 2 authorized** after physical re-cut from calibrated
