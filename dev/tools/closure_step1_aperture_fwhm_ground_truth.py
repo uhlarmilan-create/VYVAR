@@ -114,7 +114,7 @@ def _fit_gaussian_with_background(
         if not all(math.isfinite(v) and v > 0 for v in (fwhm_x, fwhm_y)):
             return None
         return {"fwhm_x": fwhm_x, "fwhm_y": fwhm_y, "fwhm_mean": 0.5 * (fwhm_x + fwhm_y)}
-    except Exception:
+    except (ValueError, TypeError, IndexError, np.linalg.LinAlgError, fitting.NonFiniteValueError):
         return None
 
 
