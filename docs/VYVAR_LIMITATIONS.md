@@ -76,6 +76,24 @@ rig; a +EXPTIME/2 error is invisible in light-curve shape but fatal for times of
 has no DATE-END/EXPMID header; driver convention **UNVERIFIED** before timing-critical submission.
 Status: **MEASURED** (home rig), **DOCUMENTED** (others). Evidence: `CURSOR_RESULT_audit_stage2.md`.
 
+## aperture_snr_sizing -- partially wired (closure Step 1, 2026-07-31)
+
+`aperture_snr_sizing` (`config.py:727`, default `{small: 1.5, large: 4.0}`) is **partially
+wired**, not dead or orphan:
+
+- **Live path:** `pipeline.py:10051-10052` and `10713-10714` unpack `small`/`large` into
+  `aperture_fwhm_factor_small` / `_large` in the per-frame settings dict; `pipeline.py:187-188`
+  consumes those into `r_small_px` / `r_large_px` on the aperture-bounds path.
+- **Ignored path:** `photometry_core.py:1297-1298` `compute_snr_optimal_aperture_table` keeps
+  hardcoded `r_min_fwhm=0.8`, `r_max_fwhm=2.5` and no caller passes the config values -- the
+  SNR-optimal sweep does not read `aperture_snr_sizing`.
+
+**Flow doc note (Step 1b, V7):** `build_flow_doc.py:391` documents the hardcoded sweep bounds
+(`r_min=0.8 x FWHM` .. `r_max=2.5 x FWHM`) correctly; `flow_doc_facts.py:60` tracks
+`compute_snr_optimal_aperture_table`. The split is in config wiring, not in the FLOW PDF text.
+Evidence: closure Step 1 + batch A (S1 DOCUMENTED). This note was removed from
+`docs/VYVAR_PARAMS.md` in commit `faa1782` because that file is generator output only.
+
 ## MASTERSTAR architecture (enhancement thread)
 
 Single-frame MASTERSTAR copy is scientifically usable but non-standard vs stacked reference

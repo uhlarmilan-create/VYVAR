@@ -66,7 +66,9 @@ Additional rule-based fixes in same pass (not in FFFD scan): `?_pp` -> `sigma_pp
 `rel_err?1.36` -> `rel_err~1.36`, `cal ? pre` -> `cal -> pre`, `42.5 ? 30.6`
 -> `42.5 -> 30.6`, table `| <FFFD> |` -> `| - |`, SHA ellipsis patterns.
 
-Remaining ~215 em-dash/range FFFD -> `-` via ascii_migrate CHAR_MAP (mechanical).
+Remaining FFFD total **215** (pre-repair); **43** hand-repaired (21 measured after_digit
+plus rule-based hits); **~172** em-dash/range FFFD folded to `-` via ascii_migrate CHAR_MAP
+(mechanical).
 
 Production touch: `src_py/vyvar_platesolver.py:150` em dash in GAIA-1 log string
 folded to ASCII hyphen; string compiles and reads correctly.
@@ -93,8 +95,9 @@ Not fixed in this batch (touches 10 production files; Milan decision).
 
 ## FLOW PDF
 
-Pages before: **36**. Pages after: **36**. Overflow violations: **0**
-(no overflow guard in build_flow_doc.py; page count unchanged).
+Pages before: **36**. Pages after: **36**. Overflow: no overflow instrumentation exists
+for the FLOW doc (`build_flow_doc.py`); not measured. (`dev/scripts/verify_pdf_overflow.py`
+targets the SUMMARY MEASURE REPORT per draft, not the FLOW PDF.)
 
 ## Commit hashes (separate, not squashed)
 
@@ -127,3 +130,59 @@ dev/tools/closure_step1_aperture_fwhm_ground_truth.py,
 dev/tests/test_ble001_regression.py, dev/tools/batch_e_ascii_hand_repair.py,
 34 ASCII-migrated tracked text files, docs/VYVAR_ROADMAP.md,
 dev/results/CURSOR_RESULT_batch_e_params_hygiene.md
+
+---
+
+## Follow-up 2026-08-04
+
+### aperture_snr_sizing finding restored
+
+Moved sharpened budget note from deleted `VYVAR_PARAMS.md` tail (commit `faa1782`) to
+`docs/VYVAR_LIMITATIONS.md` new section "aperture_snr_sizing -- partially wired".
+Status: partially wired -- live on `pipeline.py:187-188` aperture-bounds path; ignored
+by `compute_snr_optimal_aperture_table` (hardcoded 0.8/2.5 x FWHM). Step 1b V7 FLOW
+note retained.
+
+### CONFIG guide split clause
+
+`docs/VYVAR_CONFIG_GUIDE_EN.md:267` and `docs/VYVAR_CONFIG_GUIDE_CZ.md:269` now name
+the consumer split (aperture-bounds path vs SNR-optimal sweep).
+
+### Result file corrections
+
+- FFFD arithmetic: **215 total** pre-repair; **43 hand-repaired**; **~172 mechanical**
+  via ascii_migrate.
+- FLOW PDF: no overflow instrumentation for `build_flow_doc.py`; not measured
+  (`verify_pdf_overflow.py` is for SUMMARY MEASURE REPORT only).
+
+### Full-suite baseline (ab0f669 vs HEAD)
+
+Measured via detached worktree at `ab0f669` (not stash/reset on main).
+
+| commit | passed | failed | skipped |
+|--------|-------:|-------:|--------:|
+| ab0f669 | 1223 | 7 | 31 |
+| HEAD (57ef9de) | 1235 | 0 | 26 |
+
+Total collected tests: **1261** both runs (1223+7+31 = 1235+0+26).
+
+**Delta vs prior "six failures" claim:** full suite at ab0f669 had **7** failures, not 6.
+The seventh is `test_exoplanet_promotion_restore.py::
+test_config_resolves_relative_exoplanet_path_against_data_root` (outside the hygiene
+subset filter). Hygiene-only filter at ab0f669: 26 passed, 6 failed (matches prior report).
+
+Reconciliation: 1235 - 1223 = **12** net passes gained on HEAD. Of 7 baseline failures,
+all 7 fixed (+5 tests no longer skipped: 31 -> 26 skips). 7 + 5 = 12. Does not reconcile
+with "1235 minus six fixed failures" (that would imply 1229 passed); the correct baseline
+passed count is **1223**, not 1229.
+
+### batch_e_ascii_hand_repair.py fate
+
+**Keep (a)** -- retained in repo as BATCH-E archaeology. One-shot migration artifact;
+repair table is authoritative in this result file. No routine maintenance role. Docstring
+left unchanged in this docs-only commit; a future code-touch may add the archaeology
+banner if desired.
+
+### Follow-up commit
+
+Docs only: LIMITATIONS, CONFIG guides EN/CZ, this result append.
