@@ -2,7 +2,17 @@
 
 **Status:** Science audit **closed** (2026-08-04).
 
-Last updated: **2026-08-04** (audit **closed**; batch E GATE 2).
+Last updated: **2026-08-04** (BATCH-E-PARAMS-REGISTRY closed; session sync to GitHub).
+
+## Session close 2026-08-04 (BATCH-E-PARAMS-REGISTRY)
+
+Docs/test hygiene only; **no science path touched**; anchor SHA gate **not re-run** (nothing
+under it changed). Registry **271 -> 277** entries; `VYVAR_PARAMS.md` regenerated. FLOW threshold
+**2.1 -> 3.8** synced in `flow_doc_facts.py`, builder prose, and PDF. ASCII policy clean
+(**34** tracked files; **215** U+FFFD of which **43** hand-repaired). `aperture_snr_sizing`
+reclassified from "dead" to **partially wired** in `docs/VYVAR_LIMITATIONS.md`. Hygiene subset
+and full suite on main tree: **1235 passed / 0 failed / 26 skipped**. Commits `8094af8..33ec2dc`.
+Report: `dev/results/CURSOR_RESULT_batch_e_params_hygiene.md`.
 
 ## Session close 2026-08-04 (audit closed)
 
@@ -260,17 +270,19 @@ Live config.json migrated value-identical (249 keys). Commits `1307b73` (help po
 
 ## Test-hygiene backlog
 
-- **BATCH-E-PARAMS-REGISTRY:** **DONE (2026-08-04).** Hygiene subset 32/32 green; full suite
-  1235 passed. Result: `dev/results/CURSOR_RESULT_batch_e_params_hygiene.md`.
-- Malformed `# noqa` truncation in 10 production files (15 sites) -- REPORT ONLY; Milan
-  decision (see result file STEP 5C).
-- `dev/tests/test_g7_f003c_report_cfg_snapshot.py` (2 tests) is order-dependent:
+- `dev/tests/test_g7_f003c_report_cfg_snapshot.py` (2 tests) is order-dependent: its
   `_factory` monkeypatch self-recurses through `config.AppConfig` when the qc-metrics
   path constructs `AppConfig()`. Passes in the full suite, fails in isolation. Confirmed
   pre-existing (reproduces on committed code with no wave-A edits). Repro:
   `python -m pytest dev/tests/test_g7_f003c_report_cfg_snapshot.py -q`. Fix later:
   make `_factory` bind the real `AppConfig` (e.g. capture it before patching) instead of
   re-importing the patched name.
+- **NOQA-TRUNCATED-EXCEPT-BULK** (ROADMAP): 15 malformed `# noqa` directives across 10
+  `src_py` files from truncated EXCEPT-BULK 2026-07-08 census comments; see
+  `dev/results/CURSOR_RESULT_batch_e_params_hygiene.md` STEP 5C. Not started.
+
+(BATCH-E-PARAMS-REGISTRY and the six `--fast` hygiene failures: **CLOSED 2026-08-04**,
+commits `8094af8..33ec2dc`.)
 
 ## UI block
 

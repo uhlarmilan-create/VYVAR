@@ -23,6 +23,18 @@ for the full map.
 - **Registry -> docs:** `python dev/tools/gen_params_md.py` regenerates
   `docs/VYVAR_PARAMS.md` from `dev/validation/params_registry.json`.
 - **Ledger:** `dev/validation/VYVAR_VALIDATION_LEDGER.json`.
+
+### Full-suite pytest comparability
+
+Pass/skip counts from `python -m pytest dev/tests` are only comparable across commits when
+taken on the **same on-disk data state**. A linked worktree or fresh clone (tracked files
+only) silently drops gitignored paths (`Archive/`, `GAIA_DR3/`, exoplanet DB, VSX): data-gated
+tests skip instead of running, and at least one data-gated assert fails outright.
+**Worked example:** `test_exoplanet_promotion_restore.py:106-110` asserts the exoplanet local
+DB path is a file (`p.is_file()`); it passes on the main tree and fails in a worktree without
+the gitignored DB. For before/after commit comparisons, run the full suite on **main** with
+gitignored data present (or stash on main); do not use a bare worktree as the baseline.
+
 - **Result-file location rule:** ALL `CURSOR_RESULT_*.md` and `CURSOR_TASK_*.md`
   working documents go in `dev/results/` (never at the repo root). Sandbox
   harnesses stay in `tmp/`.

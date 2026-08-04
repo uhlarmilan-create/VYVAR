@@ -155,26 +155,34 @@ the consumer split (aperture-bounds path vs SNR-optimal sweep).
 - FLOW PDF: no overflow instrumentation for `build_flow_doc.py`; not measured
   (`verify_pdf_overflow.py` is for SUMMARY MEASURE REPORT only).
 
-### Full-suite baseline (ab0f669 vs HEAD)
+### Full-suite baseline (ab0f669 vs HEAD) -- RETRACTED comparison
 
-Measured via detached worktree at `ab0f669` (not stash/reset on main).
+The ab0f669 run was taken in a **linked worktree**, which carries tracked files only.
+`Archive/`, the exoplanet DB, and `GAIA_DR3/` are gitignored and absent there. The two
+runs measured **different on-disk data states** and are **NOT comparable** as passed-count
+totals. **Retract** any claim that "the correct baseline passed count is 1223".
 
-| commit | passed | failed | skipped |
-|--------|-------:|-------:|--------:|
-| ab0f669 | 1223 | 7 | 31 |
-| HEAD (57ef9de) | 1235 | 0 | 26 |
+| commit | passed | failed | skipped | note |
+|--------|-------:|-------:|--------:|------|
+| ab0f669 (worktree) | 1223 | 7 | 31 | invalid baseline -- missing gitignored data |
+| HEAD (main tree) | 1235 | 0 | 26 | standing number on full data |
 
-Total collected tests: **1261** both runs (1223+7+31 = 1235+0+26).
+**Method defect:** a full-suite baseline for this repo must be taken on a tree that carries
+the gitignored data (**stash on main**), never in a fresh worktree or clone without
+`Archive/` / DB paths.
 
-**Delta vs prior "six failures" claim:** full suite at ab0f669 had **7** failures, not 6.
-The seventh is `test_exoplanet_promotion_restore.py::
-test_config_resolves_relative_exoplanet_path_against_data_root` (outside the hygiene
-subset filter). Hygiene-only filter at ab0f669: 26 passed, 6 failed (matches prior report).
+**Failures fixed by this batch: 6**, not 7. The seventh,
+`test_exoplanet_promotion_restore.py::test_config_resolves_relative_exoplanet_path_against_data_root`
+(`dev/tests/test_exoplanet_promotion_restore.py:106-110`), asserts `p.is_file()` on the
+gitignored exoplanet DB. It fails in any worktree and passes on the main tree. Nothing in
+this batch touched it.
 
-Reconciliation: 1235 - 1223 = **12** net passes gained on HEAD. Of 7 baseline failures,
-all 7 fixed (+5 tests no longer skipped: 31 -> 26 skips). 7 + 5 = 12. Does not reconcile
-with "1235 minus six fixed failures" (that would imply 1229 passed); the correct baseline
-passed count is **1223**, not 1229.
+The **31 -> 26 skip delta** is the same artifact: tests gated on gitignored on-disk drafts
+(`test_alg_functions.py:418`, `test_photometry_completeness.py:15` and `:25`,
+`test_fix_draft_equipment.py:102`, `test_f428_msstamp_coord.py:128`,
+`test_pre_cal_proc_csv_naming_e2e.py:45` and `:49`). Not a code effect.
+
+Standing full-suite on main tree: **1235 passed / 0 failed / 26 skipped**.
 
 ### batch_e_ascii_hand_repair.py fate
 
