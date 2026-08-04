@@ -27,16 +27,16 @@ deltas. The **3.36 mag headline is not a valid measurement.**
 **Correct pairing (`source_file`, 139 common frames):** cohort median per-target |?mag| p95 =
 **0.104 mag** (vs **0.317 mag** positional). Focus target max |?| = **2.76 mag**, p95 =
 **1.52 mag** (not 3.36). Residual tail on correct pairing is dominated by **ensemble
-recomposition** (near-constant offset ~1.3–1.9 mag on worst targets) plus **raw flux
-differences** on shared frames — not identity error, not astrophysical epoch mismatch.
+recomposition** (near-constant offset ~1.3-1.9 mag on worst targets) plus **raw flux
+differences** on shared frames - not identity error, not astrophysical epoch mismatch.
 
 **STOP GATE A: FAILED (A1). Part B skipped per task rules.** Part C uses corrected pairing.
 
 ---
 
-# PART A — IS THE COMPARISON VALID?
+# PART A - IS THE COMPARISON VALID?
 
-## A1 — Epoch pairing in Part 0c (FAIL)
+## A1 - Epoch pairing in Part 0c (FAIL)
 
 From `dev/scripts/audit_stage3_part0c_cohort_delta.py`, `_delta_table()`:
 
@@ -52,10 +52,10 @@ mag_rebuild = rdf["mag_calib_final"].iloc[:n]
 |-----|----------------------:|---------------------:|
 | Anchor snapshot | 139 | 139 |
 | Rebuild `draft_000499` | 150 | 150 |
-| Common `source_file` | 139 | — |
-| Positional order match (first 139 rows) | **8/139** same `source_file` | — |
+| Common `source_file` | 139 | - |
+| Positional order match (first 139 rows) | **8/139** same `source_file` | - |
 
-Rebuild-only frames (11): e.g. `proc_BO_CVn_Light_009.csv`, `_056`, `_058`, `_074`, `_100`, …
+Rebuild-only frames (11): e.g. `proc_BO_CVn_Light_009.csv`, `_056`, `_058`, `_074`, `_100`, ...
 
 **Verdict: Part 0c delta table must be recomputed on `source_file` (or BJD). All Part 0c
 tail statistics (p95 0.43 mag, bright-target 3.36 mag max, ensemble-changed 100%) are
@@ -64,29 +64,29 @@ unreliable.**
 Note: `n_good_comp` is **not exported** in light-curve CSVs; Part 0c's ensemble-changed
 stratification from that column is also invalid.
 
-## A2 — Same star in both runs? (PASS)
+## A2 - Same star in both runs? (PASS)
 
 Target `1498135552633294976`:
 
 | field | anchor | rebuild |
 |-------|--------|---------|
 | `catalog_id` | 1498135552633294976 | 1498135552633294976 |
-| RA, Dec | 212.232608°, 41.382321° | identical |
+| RA, Dec | 212.232608 deg, 41.382321 deg | identical |
 | pixel x, y (masterstars) | 281.13, 620.50 | 281.87, 620.61 |
 | sky separation | **0.0 arcsec** | |
 | pixel separation | **0.74 px** | |
 | VSX | ROT (Gaia DR3 1498135552633294976) | same |
 | `source_type` | GAIA_MATCHED | GAIA_MATCHED |
 
-0.74 px ? aperture radius (~1.9–2 px). **Not PHASE0-IDENTITY-GATE failure.**
+0.74 px ? aperture radius (~1.9-2 px). **Not PHASE0-IDENTITY-GATE failure.**
 
-## A3 — Intrinsic variability (context)
+## A3 - Intrinsic variability (context)
 
 Anchor LC for this target (139 epochs):
 
 | Quantity | Value |
 |----------|------:|
-| `mag_calib_final` range | 15.39 – 17.73 mag (**2.34 mag** span) |
+| `mag_calib_final` range | 15.39 - 17.73 mag (**2.34 mag** span) |
 | std (ddof=1) | 0.31 mag |
 | p05 / p50 / p95 | 15.62 / 15.91 / 16.47 |
 
@@ -101,17 +101,17 @@ annex.
 
 ---
 
-# PART C — SCOPE (correct `source_file` pairing)
+# PART C - SCOPE (correct `source_file` pairing)
 
-## C1 — Cohort distribution (156 common targets)
+## C1 - Cohort distribution (156 common targets)
 
 | Metric | Positional (0c method, invalid) | `source_file` paired (valid) |
 |--------|--------------------------------:|-----------------------------:|
 | Median per-target \|?\| p95 | 0.317 mag | **0.104 mag** |
 | Cohort max per-target \|?\| p95 | 2.32 mag | **1.98 mag** |
-| Targets with p95 > 0.1 mag | — | **78** |
-| Targets with p95 > 0.5 mag | — | **12** |
-| Targets with p95 > 1.0 mag | — | **5** |
+| Targets with p95 > 0.1 mag | - | **78** |
+| Targets with p95 > 0.5 mag | - | **12** |
+| Targets with p95 > 1.0 mag | - | **5** |
 
 Stratify by ensemble change (comp `catalog_id` set in `comparison_stars_per_target.csv`):
 
@@ -122,7 +122,7 @@ Stratify by ensemble change (comp `catalog_id` set in `comparison_stars_per_targ
 
 Large deltas correlate with **comparison ensemble change**, not target faintness alone.
 
-## C2 — Five worst targets (valid pairing)
+## C2 - Five worst targets (valid pairing)
 
 | target_cid | \|?\| p95 | mean ? | std ? | comp intersection | anchor comps | rebuild comps |
 |------------|----------:|-------:|------:|------------------:|-------------:|--------------:|
@@ -133,20 +133,20 @@ Large deltas correlate with **comparison ensemble change**, not target faintness
 | 1498341092588681856 | 1.41 | ?1.29 | 0.08 | 1 | 3 | 8 |
 
 **Shared mechanism:** near-constant per-target offset (std ? |mean|) with **almost completely
-disjoint comparison ensembles** (0–3 comps in common, rebuild typically 8 comps vs anchor 3–4).
+disjoint comparison ensembles** (0-3 comps in common, rebuild typically 8 comps vs anchor 3-4).
 This is **C2 ensemble zero-point recomposition**, not positional artefact. Positional method
 inflated these further (focus target positional max 3.36 ? valid max 2.76).
 
 ### Focus-target annex (correct pairing; B-equivalent checks)
 
-**1498135552633294976** — comparison comps:
+**1498135552633294976** - comparison comps:
 
 | Run | comp IDs | mean comp catalog mag |
 |-----|----------|----------------------:|
 | Anchor | 1485995020117153792, 1497863492225150208, 1498352740539935744, 1498819861182631168 | 13.39 |
 | Rebuild | 8 comps (intersection **1**: 1485995020117153792 only) | 12.95 |
 
-Catalog mean comp mag shift ? **?0.45 mag** — insufficient alone for **?1.38 mag** mean target
+Catalog mean comp mag shift ? **?0.45 mag** - insufficient alone for **?1.38 mag** mean target
 offset; differential pipeline amplifies ensemble swap.
 
 **Raw flux on worst common frame** (`proc_BO_CVn_Light_063.csv`):
@@ -154,7 +154,7 @@ offset; differential pipeline amplifies ensemble swap.
 | | anchor | rebuild |
 |---|-------:|--------:|
 | `dao_flux` | 134.4 | 458.1 |
-| ratio | — | **3.41×** ? **?1.36 mag** instrumental |
+| ratio | - | **3.41x** ? **?1.36 mag** instrumental |
 | `aperture_r_px` | 1.916 | 1.901 |
 | x, y | 282.18, 618.15 | 281.98, 621.63 |
 | `peak_max_adu` | 1666 | 1709 |
@@ -165,14 +165,14 @@ remainder from ensemble calibration (C2).
 
 **Cause classification (focus target, valid pairing):**
 
-- **C4 pairing** — explains the **3.36 mag Part 0c headline** (invalid)
-- **C2 ensemble** — primary cause of **?1.38 mag** mean offset on valid pairs
-- **C3 flux/aperture** — flux ratio ~3.4× on worst frame; centroids within ~4 px
+- **C4 pairing** - explains the **3.36 mag Part 0c headline** (invalid)
+- **C2 ensemble** - primary cause of **?1.38 mag** mean offset on valid pairs
+- **C3 flux/aperture** - flux ratio ~3.4x on worst frame; centroids within ~4 px
 - **Not C1** identity (0.74 px sep)
 - **Not C5** same-epoch variability (BJD matched)
 - **Not C6**
 
-## C3 — Six anchor-only targets
+## C3 - Six anchor-only targets
 
 | catalog_id | In rebuild `variable_targets`? | In rebuild masterstars? | In rebuild photometry? | Drop stage |
 |------------|--------------------------------|-------------------------|------------------------|------------|
@@ -185,7 +185,7 @@ remainder from ensemble calibration (C2).
 
 Anchor photometry summary shows all six had LCs in the snapshot (139 frames, various trust flags).
 Rebuild wrote **230** LCs vs anchor **162**; these six are in the anchor set but not the rebuild
-export set for reasons above — not a single uniform rule.
+export set for reasons above - not a single uniform rule.
 
 ---
 
@@ -193,19 +193,19 @@ export set for reasons above — not a single uniform rule.
 
 | Earlier report | Finding | Verdict |
 |----------------|---------|---------|
-| Part 0c: ? p95 **0.43 mag**, max **2.56 mag** | Positional pairing | **Wrong** — recomputed median p95 **0.104 mag** |
-| Part 0c: bright target max **3.36 mag** | Positional pairing on ROT star | **Wrong** — valid max **2.76 mag**, p95 **1.52 mag** |
-| Part 0c: tail **100% ensemble_changed** via `n_good_comp` | Column absent from LC CSV | **Unreliable** — use comp-set diff (134/156 changed) |
-| Part 0c: "bright targets moved materially" | Partially positional artefact | **Revised** — valid pairing shows 5 targets with p95 > 1 mag, all with ensemble swap |
+| Part 0c: ? p95 **0.43 mag**, max **2.56 mag** | Positional pairing | **Wrong** - recomputed median p95 **0.104 mag** |
+| Part 0c: bright target max **3.36 mag** | Positional pairing on ROT star | **Wrong** - valid max **2.76 mag**, p95 **1.52 mag** |
+| Part 0c: tail **100% ensemble_changed** via `n_good_comp` | Column absent from LC CSV | **Unreliable** - use comp-set diff (134/156 changed) |
+| Part 0c: "bright targets moved materially" | Partially positional artefact | **Revised** - valid pairing shows 5 targets with p95 > 1 mag, all with ensemble swap |
 
 ---
 
 # Implications for anchor re-cut
 
 1. **Recompute all Stage 3 delta metrics** on `source_file` before any gate decision.
-2. The **3.36 mag blocker** is **not confirmed** on valid pairing; the real tail is **~1–2 mag
+2. The **3.36 mag blocker** is **not confirmed** on valid pairing; the real tail is **~1-2 mag
    constant-offset** targets with **disjoint comparison ensembles** between anchor snapshot and
-   rebuild — a plan/ensemble stability issue, not a single-star identity catastrophe.
+   rebuild - a plan/ensemble stability issue, not a single-star identity catastrophe.
 3. Fix `audit_stage3_part0c_cohort_delta.py` before any future delta report.
 
-**STOP GATE 0d** — awaiting Milan review.
+**STOP GATE 0d** - awaiting Milan review.

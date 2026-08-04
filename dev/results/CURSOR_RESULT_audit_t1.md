@@ -4,7 +4,7 @@ Base: `8c55020`. Groups A and B implemented; C and D not implemented (C gated; D
 
 ---
 
-## Group A � no numeric change
+## Group A - no numeric change
 
 | Item | Change |
 |------|--------|
@@ -15,12 +15,12 @@ Base: `8c55020`. Groups A and B implemented; C and D not implemented (C gated; D
 
 ### Acceptance A (byte-identity)
 
-Headless regen on commit `06ed950` (`tmp/session_baseline/20260730T102630Z`, provenance `git_hash=06ed950�`) vs `draft_000435_snapshot_skysurface_20260716`:
+Headless regen on commit `06ed950` (`tmp/session_baseline/20260730T102630Z`, provenance `git_hash=06ed950...`) vs `draft_000435_snapshot_skysurface_20260716`:
 
 | Gate | Result |
 |------|--------|
-| Photometry SHA core | **PASS** `b7f980c0�` n=325 (byte-identical) |
-| Photometry SHA extended | **PASS** `2c43bbbf�` n=487 (byte-identical) |
+| Photometry SHA core | **PASS** `b7f980c0...` n=325 (byte-identical) |
+| Photometry SHA extended | **PASS** `2c43bbbf...` n=487 (byte-identical) |
 | Science compare (162 LCs, incl. `err` in file hash) | **PASS** 0 science/time failures |
 | `except_fix_counters` | `phase2a_empty_comp_drop=1` (expected for R CVn on 435) |
 
@@ -28,7 +28,7 @@ Structural note: Group A touches no photometry math, export row values, or succe
 
 ---
 
-## Group B � export truth
+## Group B - export truth
 
 ### B1 policy (implemented)
 
@@ -48,7 +48,7 @@ When `time_base == BJD_TDB` throughout: `#DATE=BJD` written (unchanged healthy p
 | `export_reports.py` | `#DATE=BJD` only after BJD_TDB guard passes |
 | `ui_aperture_photometry.py` | axis title from `time_base` via `resolve_lc_time_base` |
 | `photometry_report.py` | PDF LC x-axis label from `time_base` when column present |
-| VarAstro | declares `# TIME SYSTEM: BJD(TDB)`; same export gate � refused when not BJD_TDB |
+| VarAstro | declares `# TIME SYSTEM: BJD(TDB)`; same export gate - refused when not BJD_TDB |
 
 ### B3 `err_scatter_unmatched`
 
@@ -58,21 +58,21 @@ Surfaced only (err unchanged): batch summary + run summary log `err_scatter_unma
 
 Re-export vs anchor AAVSO (20 targets sampled, 13 with ref files): **13/13 byte-identical**, 0 diff.
 
-Test: `dev/tests/test_export_time_base_refusal.py` � **4 passed** (JD_FALLBACK / absent / mixed ? no file, no `#DATE=BJD`).
+Test: `dev/tests/test_export_time_base_refusal.py` - **4 passed** (JD_FALLBACK / absent / mixed ? no file, no `#DATE=BJD`).
 
 ---
 
-## Group C � STOP (not implemented)
+## Group C - STOP (not implemented)
 
 Gate not cleared. Findings for Milan:
 
-**C1 legacy Howell:** anchor snapshot 162 LCs, **0** epochs with `err_method=howell`; production default is **empirical (Labbe)**. `(1+n_pix/n_B)` factor would need annulus pixel count `n_B` at `_howell_variance_adu2` call sites � available as `aperture_area_px` / annulus geometry in per-frame rows but not wired into variance helper today.
+**C1 legacy Howell:** anchor snapshot 162 LCs, **0** epochs with `err_method=howell`; production default is **empirical (Labbe)**. `(1+n_pix/n_B)` factor would need annulus pixel count `n_B` at `_howell_variance_adu2` call sites - available as `aperture_area_px` / annulus geometry in per-frame rows but not wired into variance helper today.
 
 **C2 ensemble scatter:** anchor **0** epochs with `err_scatter_unmatched=True`. Options (choose before implement): (a) NaN err + exclude from export, or (b) flag + inflated err.
 
 ---
 
-## Group D � measurements only
+## Group D - measurements only
 
 ### D1 Scintillation / variance budget (sample targets, NoFilter_60_2)
 
@@ -102,9 +102,9 @@ Current header priority order is fine for this rig (BO CVn Newton).
 
 | rig | sample | DATE-OBS | DATE-END | EXPMID | EXPTIME |
 |-----|--------|----------|----------|--------|---------|
-| NoFilter_60_2 | BO_CVn_Light_001.fits | 2026-04-23T19:35:20.355 | � | � | 60.0 |
+| NoFilter_60_2 | BO_CVn_Light_001.fits | 2026-04-23T19:35:20.355 | - | - | 60.0 |
 
-No DATE-END / EXPMID / MIDPOINT on sample; shutter-open vs mid-exposure not established from one frame � needs rig-specific sweep.
+No DATE-END / EXPMID / MIDPOINT on sample; shutter-open vs mid-exposure not established from one frame - needs rig-specific sweep.
 
 ---
 

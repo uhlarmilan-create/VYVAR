@@ -34,7 +34,7 @@ production uses Table 5.9 (`GDR3_TABLE59_COEFFS`).
 |-----------|---|---------------|
 | comparison_stars | 148 | **1** (G=7.99) |
 | masterstars_full_match | 2951 | **39** (bright G<8) |
-| BP-RP failures | — | **0** in sampled set |
+| BP-RP failures | - | **0** in sampled set |
 
 Finding: **latent** for colour; **active** for bright comps (1 ensemble star).
 
@@ -57,7 +57,7 @@ See `VYVAR_DECISIONS.md` **D1-3-MASTER-FLAT-CONSTRUCTION**.
 **Summary:** median stack of **raw** flats, **no** dark subtraction at stack; `VYFLNRD=1` ->
 normalize at **calibrate** after resample. **Open gap** vs Howell flat-field requirement.
 
-## ACCEPTANCE Stage 1 — byte identity
+## ACCEPTANCE Stage 1 - byte identity
 
 **LC photometry path:** flux/mag/err computation unchanged (additive columns only).
 

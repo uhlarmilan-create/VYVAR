@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Audit Stage 3 Part 1b: check-star chi2 via production photometry path."""
 
 from __future__ import annotations

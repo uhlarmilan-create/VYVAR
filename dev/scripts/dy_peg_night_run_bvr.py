@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""DY Peg B/V/R native night_run — zaloha-only, pre-calibrated, bin1 aperture baseline."""
+"""DY Peg B/V/R native night_run - zaloha-only, pre-calibrated, bin1 aperture baseline."""
 from __future__ import annotations
 
 import json
@@ -48,7 +48,7 @@ def _git_rev_parse_head() -> str:
 
 
 def _patch_field_center_resolve() -> None:
-    """FITS have no RA/DEC — always force DY Peg field center."""
+    """FITS have no RA/DEC - always force DY Peg field center."""
     import pipeline as _pipeline  # noqa: E402
 
     def _resolve(*, db, draft_id, ui_ra_deg, ui_dec_deg):
@@ -268,7 +268,7 @@ def _analyze_draft(draft_dir: Path, *, cfg, collect_ms_stats) -> dict:
 
     out["masterstar_stats"] = collect_ms_stats(draft_dir)
 
-    # PDF overflow — regenerate each setup with layout verify (night_run PDFs omit verify mode)
+    # PDF overflow - regenerate each setup with layout verify (night_run PDFs omit verify mode)
     out["pdf_overflow_by_setup"] = {}
     pdf_overflow_total = 0
     try:

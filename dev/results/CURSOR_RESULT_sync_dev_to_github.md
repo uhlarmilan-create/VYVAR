@@ -152,7 +152,7 @@ index 845ba63..7858391 100644
      },
      {
 @@ -146,7 +146,7 @@
-       "verification": "scripts/session_baseline_check.py --full (core b7f980c0 n=325; extended 2c43bbbf n=487). ...",
+       "verification": "scripts/session_baseline_check.py --full (core b7f980c0... n=325; extended 2c43bbbf... n=487). ...",
        "passes": true,
        "last_verified": "2026-07-29",
 -      "commit": "6bc8da4",
@@ -271,14 +271,14 @@ Two review files remain modified; this result file is untracked (not part of app
 ```
 
 One row per `id` in `items[]`. Re-verification overwrites `last_verified` and `commit` on the
-existing entry — no run-id / append history per gate.
+existing entry - no run-id / append history per gate.
 
 **Git history (`git log -p --follow`, last 5 commits touching ledger):** every gate re-run **edited**
 existing entries (e.g. `VL-ANCHOR-WCSINV` `commit` 0833c5c -> pending -> 9f5b0d8 -> 6bc8da4;
 `VL-COUNTERS-ZERO` `last_verified`/`commit` updated in place). No duplicate rows added for the
 same gate id.
 
-**Two modified entries (working tree vs HEAD@2e0909a) — committed as 4159aaf:**
+**Two modified entries (working tree vs HEAD@2e0909a) - committed as 4159aaf:**
 
 ```json
 {
@@ -298,7 +298,7 @@ same gate id.
   "id": "VL-ANCHOR-WCSINV",
   "area": "photometry",
   "description": "In-Archive BO CVn Anchor #3 sky-surface snapshot draft_000435_snapshot_skysurface_20260716",
-  "verification": "scripts/session_baseline_check.py --full (core b7f980c0… n=325; extended 2c43bbbf… n=487). ...",
+  "verification": "scripts/session_baseline_check.py --full (core b7f980c0... n=325; extended 2c43bbbf... n=487). ...",
   "passes": true,
   "last_verified": "2026-07-29",
   "commit": "226d269",
@@ -313,20 +313,20 @@ Change: `commit` only `6bc8da4` -> `226d269` on both (LAST-STATE stamp after rel
 **Writer path (in-place, by design for B):** `dev/scripts/session_baseline_check.py` (~334) sets
 `last_verified`; anchor pair / manual commits update `commit`. Not a defect under LAST-STATE schema.
 
-**Commit:** `4159aaf` — `validation: update gate verification stamps to 226d269`
+**Commit:** `4159aaf` - `validation: update gate verification stamps to 226d269`
 
 ### 4b - preprocess_profile.csv relocated
 
 1. Saved working-tree version to temp.
-2. `git checkout -- dev/results/context/session_20260727_post453/preprocess_profile.csv` — diff empty.
+2. `git checkout -- dev/results/context/session_20260727_post453/preprocess_profile.csv` - diff empty.
 3. New folder: `dev/results/context/session_20260730_preprocess_profile/` with `preprocess_profile.csv`
    + `README.md`.
 
-**Commit:** `83ee002` — `results: add 20260730 preprocess profile (new schema, separate session folder; post453 profile left untouched)`
+**Commit:** `83ee002` - `results: add 20260730 preprocess profile (new schema, separate session folder; post453 profile left untouched)`
 
 ### 4c - Housekeeping
 
-**Commit:** (this file) — `docs: add sync-to-github session report`
+**Commit:** (this file) - `docs: add sync-to-github session report`
 
 ### Final sync
 

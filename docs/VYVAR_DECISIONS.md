@@ -47,8 +47,8 @@ preprocess, alignment, MASTERSTAR stacking, or DAO detection/catalogue construct
 
 | Change | Blind to `--full`? |
 |--------|-------------------|
-| P-10 preprocess sky-surface sign fix | **Yes** — preprocess does not run |
-| DAO threshold / noise estimator (3.8, `sigma_pp`) | **Yes** — frozen catalogue, no DAO |
+| P-10 preprocess sky-surface sign fix | **Yes** - preprocess does not run |
+| DAO threshold / noise estimator (3.8, `sigma_pp`) | **Yes** - frozen catalogue, no DAO |
 
 This is the same blind spot recorded in `CURSOR_RESULT_masterstar_count_diag.md`; Stage 0
 incorrectly attributed a photometry SHA change to P-10 + threshold when neither executed in
@@ -59,14 +59,14 @@ given fixed aligned lights and MASTERSTAR inputs. Preprocess, alignment, stackin
 changes require a **full-chain rebuild harness** from calibrated lights (Part 0b) before
 anchor re-cut. Registry: `INV-ANCHOR-00` in `VYVAR_INVARIANTS.md`.
 
-**Stages covered vs not covered** — see INV-ANCHOR-00 table in `VYVAR_INVARIANTS.md`.
+**Stages covered vs not covered** - see INV-ANCHOR-00 table in `VYVAR_INVARIANTS.md`.
 
 ---
 
-## DAO-THRESHOLD-OPTION-B — convolved RMS threshold (2026-07-30, N pending)
+## DAO-THRESHOLD-OPTION-B - convolved RMS threshold (2026-07-30, N pending)
 
 **Architecture (Part 2 implemented).** DAO detection threshold uses option B:
-`scale_threshold=False`, `threshold = N × rms_conv`, where `rms_conv` is the robust RMS of
+`scale_threshold=False`, `threshold = N x rms_conv`, where `rms_conv` is the robust RMS of
 the FIND-kernel convolved detection image. `_pixel_noise_sigma_pp_adu` / `_dao_noise_sigma_adu`
 remain **diagnostic only** (not wired to threshold).
 
@@ -1345,20 +1345,20 @@ family) are outside this window and remain anchor-validated where Part 1 forensi
 
 **P-10 defect.** ``_fit_subtract_preprocess_sky_surface`` fitted ``z = bg_median - work`` then
 subtracted ``surf``, **doubling** large-scale gradient while preserving pedestal. SKYSF-DOUBLE
-forensics ratio ``283/136.8 ≈ 2.07`` on refit p2p is this signature, not mask non-idempotency alone.
+forensics ratio ``283/136.8 ~ 2.07`` on refit p2p is this signature, not mask non-idempotency alone.
 
 **Fix (local, bundled with sigma_pp DAO estimator):** fit ``z = work - bg_median``, keep
-``out = work - surf``. **Not pushed alone** — see Audit Tranche 3.
+``out = work - surf``. **Not pushed alone** - see Audit Tranche 3.
 
 **Three distinct preprocess regimes in July (none physically correct pre-fix):**
 
 | Era | Behaviour | Large-scale content |
 |-----|-----------|---------------------|
 | pre-``013cb0c`` (435 family) | sky-surface applied | gradient **doubled** (``2g``) |
-| ``013cb0c`` → T3 restore | sky-surface **absent** for mono (SKIPPROC) | natural ``g`` |
-| restore → ``84174ae`` | sky-surface applied (sign bug) + double-pass risk | ``2g`` (+ double risk) |
+| ``013cb0c`` -> T3 restore | sky-surface **absent** for mono (SKIPPROC) | natural ``g`` |
+| restore -> ``84174ae`` | sky-surface applied (sign bug) + double-pass risk | ``2g`` (+ double risk) |
 
-**Anchor status.** ``VL-ANCHOR-WCSINV`` fingerprints (``b7f980c0…``, ``n_raw_dao=2552``, etc.)
+**Anchor status.** ``VL-ANCHOR-WCSINV`` fingerprints (``b7f980c0...``, ``n_raw_dao=2552``, etc.)
 describe **reproducible doubled-gradient data**, not physically flattened backgrounds. Anchor is a
 **reproducibility reference until re-cut** after P-10 + estimator bundle + delta measurement.
 

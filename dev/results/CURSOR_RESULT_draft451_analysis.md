@@ -224,8 +224,8 @@ with this mechanism.
 > flattened backgrounds and that restoring sky-surface subtract would return pass-1 DAO to ~2550.
 > **P-10 sign error:** 435 `proc_*` had **doubled** gradient (`2g`), not flattened; 450 plain had
 > natural `g`. The two defects (sign error + inflated `bg_std` estimator) **cancelled** on 435,
-> yielding ~3.7% `DAO_ONLY` at an effective **3.8σ**, not 2.1σ. After P-10 + sigma_pp estimator
-> + threshold recalibration (~3.8), expect threshold ~175 ADU and anchor-class DAO counts — **not**
+> yielding ~3.7% `DAO_ONLY` at an effective **3.8sigma**, not 2.1sigma. After P-10 + sigma_pp estimator
+> + threshold recalibration (~3.8), expect threshold ~175 ADU and anchor-class DAO counts - **not**
 > the table below. See `CURSOR_RESULT_audit_t3.md`.
 
 ~~After fix (restore sky-surface subtract + correct estimator, `bg_std` ~84 ADU, threshold ~175 ADU):~~

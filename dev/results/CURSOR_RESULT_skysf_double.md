@@ -2,15 +2,15 @@ CURSOR RESULT - SKYSF-DOUBLE (2026-07-30)
 
 What I did
 Part 1 forensics (read-only) on anchor draft_000435_snapshot_skysurface_20260716 and on-disk draft sweep.
-STOP GATE 1 ù awaiting Milan clearance before Part 2 (guard implementation).
+STOP GATE 1 - awaiting Milan clearance before Part 2 (guard implementation).
 
 Evidence outputs: `dev/results/context/session_20260730_skysf_double/`
 
 ---
 
-## PART 1 ù Forensics
+## PART 1 - Forensics
 
-### 1.1 ù Header detector (calibrated lights)
+### 1.1 - Header detector (calibrated lights)
 
 **CSV:** `anchor_435_snapshot_headers.csv` (150 frames, setup `NoFilter_60_2`)
 
@@ -25,7 +25,7 @@ Evidence outputs: `dev/results/context/session_20260730_skysf_double/`
 
 **Important context:** this anchor (2026-07-16) predates in-place preprocess with `VY_*` headers on calibrated FITS. Sky subtraction ran on the **`processed/lights/` copy tree** (`calibrated ? proc_*.fits`), recorded in `processed/lights/qc_metrics.csv` with `src?dst`.
 
-**Supplementary ù science-path headers on `proc_*.fits` (10-frame sample):**
+**Supplementary - science-path headers on `proc_*.fits` (10-frame sample):**
 
 | Stat | VYSKYP2P (ADU) on proc_ files |
 |------|------------------------------:|
@@ -34,13 +34,13 @@ Evidence outputs: `dev/results/context/session_20260730_skysf_double/`
 | max | 177.9 |
 | VYSKYORD | 2 on all sampled frames |
 
-Distribution is **unimodal** in the **115ù178 ADU** band (matches `qc_metrics.csv` / `pipeline_meta.json` median **136.84 ADU**). There is **no low-value tail** (<30 ADU) that would indicate a second-pass overwrite on already-flat data.
+Distribution is **unimodal** in the **115-178 ADU** band (matches `qc_metrics.csv` / `pipeline_meta.json` median **136.84 ADU**). There is **no low-value tail** (<30 ADU) that would indicate a second-pass overwrite on already-flat data.
 
 **Plain reading:** absent markers on calibrated FITS are expected for this era; proc-tree markers show **first-pass gradient scale**, not second-pass residual scale. This is evidence **against** double subtraction on the science path.
 
 ---
 
-### 1.2 ù Independent cross-check (stored pixels)
+### 1.2 - Independent cross-check (stored pixels)
 
 **CSV:** `anchor_435_snapshot_residual_refit.csv`
 
@@ -48,23 +48,23 @@ Refit: source-masked order-2 `_fit_subtract_preprocess_sky_surface` on **stored*
 
 | Layer | refit surface p2p (ADU) | Interpretation |
 |-------|------------------------:|----------------|
-| **calibrated** (150 frames) | min 114.3, p05 118.8, **median 136.8**, p95 157.6, max 177.9 | Full sky gradient still present ù **not** in-place subtracted |
-| **processed proc_** (frame001 example) | refit p2p **283.0** | **Misleading high** ù see below |
+| **calibrated** (150 frames) | min 114.3, p05 118.8, **median 136.8**, p95 157.6, max 177.9 | Full sky gradient still present - **not** in-place subtracted |
+| **processed proc_** (frame001 example) | refit p2p **283.0** | **Misleading high** - see below |
 | **Identity check** (frame001) | `max_abs(recompute_single_subtract(cal) ? proc_) = **0.0**` | proc_ is **exactly one** sky subtract of calibrated |
 
 **10/10 proc frames (sample):** byte-identical to a **single** recompute from calibrated (`single_subtract_identity 10/10`).
 
 **Argument from numbers (not expectation):**
 
-- **One subtraction:** proc_ = cal ? S? with ?S??_p2p ? 136ù178 ADU (recorded in proc header / qc_metrics). Confirmed by **0.0 ADU** identity vs recompute.
-- **Two subtractions:** proc_ would equal cal ? S? ? S?; header `VYSKYP2P` would reflect **S?** (small, ?30 ADU on flat data). Observed header values are **S?-scale** (136ù178 ADU), not S?-scale.
-- **Refit p2p on proc_** can exceed calibrated refit p2p (283 vs 178 on frame001) because star masking is **non-idempotent** after subtract ù different DAOStarFinder detections change the fit domain. This is **not** a double-subtract signature; it coexists with **0.0 identity** to single subtract.
+- **One subtraction:** proc_ = cal ? S? with ?S??_p2p ? 136-178 ADU (recorded in proc header / qc_metrics). Confirmed by **0.0 ADU** identity vs recompute.
+- **Two subtractions:** proc_ would equal cal ? S? ? S?; header `VYSKYP2P` would reflect **S?** (small, ?30 ADU on flat data). Observed header values are **S?-scale** (136-178 ADU), not S?-scale.
+- **Refit p2p on proc_** can exceed calibrated refit p2p (283 vs 178 on frame001) because star masking is **non-idempotent** after subtract - different DAOStarFinder detections change the fit domain. This is **not** a double-subtract signature; it coexists with **0.0 identity** to single subtract.
 
 **Conclusion:** science-path pixels received **one** sky-surface subtraction. Calibrated FITS were **not** subtracted in place (gradient intact).
 
 ---
 
-### 1.3 ù Provenance
+### 1.3 - Provenance
 
 | Source | Finding |
 |--------|---------|
@@ -77,7 +77,7 @@ Refit: source-masked order-2 `_fit_subtract_preprocess_sky_surface` on **stored*
 
 ---
 
-### 1.4 ù Scope sweep (calibrated headers only)
+### 1.4 - Scope sweep (calibrated headers only)
 
 **CSV:** `all_drafts_header_sweep.csv`
 
@@ -91,14 +91,14 @@ Refit: source-masked order-2 `_fit_subtract_preprocess_sky_surface` on **stored*
 
 ---
 
-### 1.5 ù VERDICT: **A1 ù ANCHOR CLEAN**
+### 1.5 - VERDICT: **A1 - ANCHOR CLEAN**
 
 **Evidence:**
 
 1. Science subtract happened once on **`processed/lights/proc_*.fits`**, byte-identical to single recompute (0.0 ADU).
 2. proc_ `VYSKYP2P` values are unimodal **first-pass gradient scale** (median ~137 ADU), not second-pass residual scale.
 3. No low-VYSKYP2P population on any on-disk draft.
-4. Calibrated FITS lack markers and retain full gradient ù consistent with **pre-in-place** architecture, **not** with double in-place subtract.
+4. Calibrated FITS lack markers and retain full gradient - consistent with **pre-in-place** architecture, **not** with double in-place subtract.
 
 **Caveat (not contamination):** the R2 double-subtract defect applies to **post-SKIPPROC in-place** path on drafts re-run via MAKE MASTERSTAR today. The July-16 anchor used the **copy-tree** path; contamination check is for **single subtract on science pixels**, which passes.
 

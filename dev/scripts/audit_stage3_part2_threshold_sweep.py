@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Audit Stage 3 Part 2: DAO threshold N sweep on scratch rebuild."""
 
 from __future__ import annotations

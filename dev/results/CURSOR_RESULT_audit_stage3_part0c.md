@@ -15,7 +15,7 @@ snapshot cohort (`draft_000435_snapshot_skysurface_20260716` vs scratch `draft_0
 
 ---
 
-## 0c.2 — Cohort mismatch (like-for-like)
+## 0c.2 - Cohort mismatch (like-for-like)
 
 | Cohort | Light curves |
 |--------|-------------:|
@@ -33,7 +33,7 @@ older 245-row plan; photometry there wrote 162 LCs. The 74 rebuild-only targets 
 in the rebuild planner (median Gaia G ~14.5 mag; none skipped). They are additional VSX
 candidates the regen picked up, not a photometry bug.
 
-**Like-for-like delta** (156 common targets only — the only meaningful comparison):
+**Like-for-like delta** (156 common targets only - the only meaningful comparison):
 
 | Metric | ? `mag_calib_final` | ? `err` |
 |--------|--------------------:|--------:|
@@ -43,27 +43,27 @@ candidates the regen picked up, not a photometry bug.
 | n epoch pairs | 20?192 | 20?192 |
 
 Part 0b's delta table already paired common LCs only; restricting to the anchor target set
-does not shrink the tail — the tail is **in** the 156 shared targets.
+does not shrink the tail - the tail is **in** the 156 shared targets.
 
 The 6 anchor-only targets are absent from the rebuild LC set (planner/regen did not select
 them for photometry in this run).
 
 ---
 
-## 0c.1 — Delta tail stratification
+## 0c.1 - Delta tail stratification
 
 ### Overall tail (|?mag| ? p95 ? 0.66 mag; 1?010 epoch pairs)
 
 | Stratifier | Finding |
 |------------|---------|
 | Target magnitude | Tail splits evenly: **515** epoch pairs with target G < 14, **495** with G ? 14 (median target G in tail **13.71**). Not exclusively faint-end. |
-| `n_good_comp` / ensemble | **`ensemble_changed` = 100%** of tail epochs — comparison ensemble size/membership differed between runs for every tail point. |
+| `n_good_comp` / ensemble | **`ensemble_changed` = 100%** of tail epochs - comparison ensemble size/membership differed between runs for every tail point. |
 | Trust flag | Empty on all tail rows in both runs (no trust stratification signal). |
-| Bright targets (G < 14) | **133** common bright targets; per-target \|?mag\| p95 max **1.91 mag** (e.g. `1498135552633294976` max **3.36 mag**). **Bright, well-measured targets moved materially** — not a faint-limit artefact alone. |
+| Bright targets (G < 14) | **133** common bright targets; per-target \|?mag\| p95 max **1.91 mag** (e.g. `1498135552633294976` max **3.36 mag**). **Bright, well-measured targets moved materially** - not a faint-limit artefact alone. |
 
 **Plain verdict:** The median shift (?0.008 mag) is negligible. The p95/max tail is **partly**
 explained by ensemble/plan differences (100% ensemble change in the tail), but **bright
-targets also show large per-target deltas** — that is the more serious finding: it is not
+targets also show large per-target deltas** - that is the more serious finding: it is not
 only faint-end noise.
 
 Worst per-target |?mag| max (common cohort): up to **3.36 mag** (`1498135552633294976`).
@@ -85,4 +85,4 @@ Worst per-target |?mag| max (common cohort): up to **3.36 mag** (`14981355526332
 - `dev/scripts/audit_stage3_part0c_cohort_delta.py`
 - `dev/results/CURSOR_RESULT_audit_stage3_part0c.md`
 
-**STOP GATE 0c** — awaiting Milan review.
+**STOP GATE 0c** - awaiting Milan review.

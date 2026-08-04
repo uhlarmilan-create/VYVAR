@@ -4,7 +4,7 @@ What I did
 Measured post-P-10 sigma_clipped_stats vs sigma_pp (0.1), re-verified P-10 with independent
 pre-fix test (0.2), prepared AUDIT-T3 bundle for push (0.3).
 
-## 0.1 Estimator necessity after P-10 — DECISION REQUIRED
+## 0.1 Estimator necessity after P-10 - DECISION REQUIRED
 
 Measurement: `tmp/audit_stage0_measure.py` on 10 P-10-preprocessed frames (draft_435 calibrated,
 frames 001/017/034/050/067/083/100/116/133/150).

@@ -16,7 +16,7 @@ Independent of stack reference. **Suggested first** in the MASTERSTAR arc.
 
 | Sub | Task | Done? |
 |-----|------|-------|
-| C-1 | Compute predicted per-epoch SNR from `g_lim_50/90` + Labbé `sigma_bkg_ap` | |
+| C-1 | Compute predicted per-epoch SNR from `g_lim_50/90` + Labbe `sigma_bkg_ap` | |
 | C-2 | Threshold admission on SNR, not DAO detection in reference | |
 | C-3 | Verify draft_451 Group-B spurious actives rejected | |
 | C-4 | Mark deep catalogue rows CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE | |

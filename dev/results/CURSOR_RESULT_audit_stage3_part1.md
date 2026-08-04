@@ -5,12 +5,12 @@ Implemented additive LC err-budget export (no change to combined `err` value). M
 
 ## Output / findings
 
-### 1.1 — LC err-budget export (prerequisite, no numeric science change)
+### 1.1 - LC err-budget export (prerequisite, no numeric science change)
 
 **Implementation:** export existing terms from `_combine_err_with_ensemble_scatter_keyed` path:
-- `err_photon` — photon/SNR base (relative flux)
-- `err_sem_rel` — ensemble SEM term (relative flux)
-- `err_sigma_sys_rel` — `sigma_sys_mag` floor (relative flux)
+- `err_photon` - photon/SNR base (relative flux)
+- `err_sem_rel` - ensemble SEM term (relative flux)
+- `err_sigma_sys_rel` - `sigma_sys_mag` floor (relative flux)
 
 | Location | Change |
 |----------|--------|
@@ -21,9 +21,9 @@ Combined `err` unchanged (additive columns only).
 
 ---
 
-### 1.1 — P-02 corrected metric: check-star chi2_red
+### 1.1 - P-02 corrected metric: check-star chi2_red
 
-**Invalid Stage 2 metric (rejected):** `lc_rms / lc_rms_ooe` on variable targets — measures intrinsic variability, not error calibration.
+**Invalid Stage 2 metric (rejected):** `lc_rms / lc_rms_ooe` on variable targets - measures intrinsic variability, not error calibration.
 
 **Correct metric:**
 \[
@@ -36,7 +36,7 @@ on **check stars** (constant comparison stars via `check_kmag_*` sidecars), with
 | Topic | Source | Quote / value |
 |-------|--------|---------------|
 | Check-star / ensemble method | Honeycutt (1992) PASP 104, 435 | Standard reference for differential ensemble photometry and check-star validation of zeropoint stability. |
-| Scintillation (diagnostic only; **not** wired to production `err`, decision 3) | Osborn et al. (2015) MNRAS 452, 1707 eq. (7) | “\(\sigma_Y^2 = 10\times10^{-6} C_Y^2 D^{-4/3} t^{-1} (\cos\gamma)^{-3} \exp(-2h_\mathrm{obs}/H)\)” with “\(C_Y\) … mean value of **1.5**” across sites. |
+| Scintillation (diagnostic only; **not** wired to production `err`, decision 3) | Osborn et al. (2015) MNRAS 452, 1707 eq. (7) | '\(\sigma_Y^2 = 10\times10^{-6} C_Y^2 D^{-4/3} t^{-1} (\cos\gamma)^{-3} \exp(-2h_\mathrm{obs}/H)\)' with '\(C_Y\) ... mean value of **1.5**' across sites. |
 | Implemented scintillation | `src_py/sigma_budget.py` | `OSBORN_CY_DEFAULT = 1.5`; same equation in `scintillation_sigma()`. |
 
 **Measurement script:** `dev/scripts/audit_stage3_part1_measure.py`  
@@ -61,7 +61,7 @@ on **check stars** (constant comparison stars via `check_kmag_*` sidecars), with
 | 1485609538212672000 | 37 | 1.302 | 1.578 | 94.48 | 0.058 |
 | 1485913828055470592 | 139 | 1.250 | 1.477 | 31.00 | 0.090 |
 
-**Reconciliation:** T1 priors match **target** chi2_red on `mag_calib_final` (recomputed; agreement within ~0.01–0.03). They do **not** apply to check stars — targets are variable; check-star chi2 uses `kmag` sidecar series.
+**Reconciliation:** T1 priors match **target** chi2_red on `mag_calib_final` (recomputed; agreement within ~0.01-0.03). They do **not** apply to check stars - targets are variable; check-star chi2 uses `kmag` sidecar series.
 
 **Interpretation (measurement only; decision 3 unchanged):**
 - With **check-specific photon err** + field ensemble SEM: median chi2_red >> 1 ? quoted uncertainties **under-estimate** check-star scatter (or `kmag` residual includes unmodeled systematics).
@@ -72,30 +72,30 @@ on **check stars** (constant comparison stars via `check_kmag_*` sidecars), with
 
 ---
 
-### 1.2 — D1-2 corrected metric: linearity residual vs peak ADU
+### 1.2 - D1-2 corrected metric: linearity residual vs peak ADU
 
-**Invalid Stage 2 metric (rejected):** Gaia G vs peak ADU correlation (r = -0.85) — brightness-forced, not linearity.
+**Invalid Stage 2 metric (rejected):** Gaia G vs peak ADU correlation (r = -0.85) - brightness-forced, not linearity.
 
 **Correct metric:** per-frame ZP from masterstars: `zp = median(inst - cat)`; residual `= inst - cat - zp` vs `peak_max_adu`, binned to `saturate_limit_adu`.
 
 | peak ADU bin (approx) | n | mean residual (mag) | std (mag) |
 |----------------------|---:|--------------------:|----------:|
-| 0 – 6553 | 342847 | +0.124 | 1.996 |
-| 6553 – 13107 | 11753 | -0.172 | 0.239 |
-| 13107 – 19661 | 4013 | -0.237 | 0.227 |
-| … | … | … | … |
-| 52428 – 58982 | 460 | -0.303 | 0.166 |
-| 58982 – 65535 | 619 | -0.229 | 0.652 |
+| 0 - 6553 | 342847 | +0.124 | 1.996 |
+| 6553 - 13107 | 11753 | -0.172 | 0.239 |
+| 13107 - 19661 | 4013 | -0.237 | 0.227 |
+| ... | ... | ... | ... |
+| 52428 - 58982 | 460 | -0.303 | 0.166 |
+| 58982 - 65535 | 619 | -0.229 | 0.652 |
 
 - **`saturate_limit_adu` median:** 65535
 - **Trend onset (heuristic):** none flagged below saturation; low-peak bin dominated by outliers (std ~2 mag).
-- **High-peak bins:** mean residual shifts from ~+0.12 mag (low peak) toward ~-0.30 mag (~400–600 mmag) — systematic, but **unfiltered flux vs Gaia G catalogue mag** confounds pure sensor linearity.
+- **High-peak bins:** mean residual shifts from ~+0.12 mag (low peak) toward ~-0.30 mag (~400-600 mmag) - systematic, but **unfiltered flux vs Gaia G catalogue mag** confounds pure sensor linearity.
 
 **Literature (R1)**
 
 | Topic | Status |
 |-------|--------|
-| IMX294 / IMX571 manufacturer linearity spec | **UNVERIFIED** — datasheet not retrieved this session |
+| IMX294 / IMX571 manufacturer linearity spec | **UNVERIFIED** - datasheet not retrieved this session |
 | Standard test method | Flat-ratio vs exposure time (classic CCD linearity test); not executed here |
 
 **Verdict:** Residual-vs-peak plot does **not** isolate sensor linearity on this rig without band-matched catalogue magnitudes. No ADU level identified as clean sensor non-linearity onset.
@@ -104,12 +104,12 @@ on **check stars** (constant comparison stars via `check_kmag_*` sidecars), with
 
 ## Errors (if any)
 - D1-2 low-peak bin includes bad/unmatched sources; high-peak trend may reflect transform mismatch (CV/G) not ADU linearity.
-- Check-star chi2 uses reconstructed err (check photon + target-field ensemble SEM); full “check as target” pipeline rerun would be tighter.
+- Check-star chi2 uses reconstructed err (check photon + target-field ensemble SEM); full 'check as target' pipeline rerun would be tighter.
 
 ## Files changed
-- `src_py/photometry_core.py` — err-budget export
-- `dev/tests/photometry_sha.py` — QC column allowlist
-- `dev/scripts/audit_stage3_part1_measure.py` — measurements (new)
+- `src_py/photometry_core.py` - err-budget export
+- `dev/tests/photometry_sha.py` - QC column allowlist
+- `dev/scripts/audit_stage3_part1_measure.py` - measurements (new)
 - `dev/results/CURSOR_RESULT_audit_stage3_part1.md` (this report)
 
 ## STOP GATE 1

@@ -147,7 +147,7 @@ def _apply_pm_to_gaia_rows(rows: list[dict[str, Any]], *, obs_year: float) -> tu
         if not _PM_COLUMNS_UNAVAILABLE_LOGGED:
             logging.warning(
                 "[PM] Gaia catalog has no finite pmra/pmdec; proper-motion correction skipped "
-                "(local DR3 build omits PM per GAIA-1 — n_corrected=0 is not evidence of success)"
+                "(local DR3 build omits PM per GAIA-1 - n_corrected=0 is not evidence of success)"
             )
             _PM_COLUMNS_UNAVAILABLE_LOGGED = True
     out: list[dict[str, Any]] = []

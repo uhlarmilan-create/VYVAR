@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Qatar-8 V-band night_run — Dablice Newton bin1, pre-calibrated, transit validation."""
+"""Qatar-8 V-band night_run - Dablice Newton bin1, pre-calibrated, transit validation."""
 from __future__ import annotations
 
 import json
@@ -44,7 +44,7 @@ HOST_V_MAG = 11.71
 CATALOG_RA = 157.413
 CATALOG_DEC = 70.527
 
-PLATE_SCALE_BIN1 = round(206.265 * 3.76 / 1200.0, 4)  # ~0.646″/px C3-26000 @ 1200mm
+PLATE_SCALE_BIN1 = round(206.265 * 3.76 / 1200.0, 4)  # ~0.646 arcsec/px C3-26000 @ 1200mm
 CHIANDH_BIN2_DAO_FWHM_PX = 3.5
 
 
@@ -194,8 +194,8 @@ def _identity_precheck(sample_fits: Path) -> dict:
         "sep_catalog_to_gaia_host_arcsec": round(cat_sep_host, 2),
         "sep_gaia_host_to_field_center_arcsec": round(host_sep_field, 2),
         "verdict": (
-            "PASS — no FITS-embedded Gaia ID; host Gaia matches catalog coords (≤1″); "
-            f"host is {host_sep_field/60:.1f}′ from field center (in FOV)"
+            "PASS - no FITS-embedded Gaia ID; host Gaia matches catalog coords (<=1 arcsec); "
+            f"host is {host_sep_field/60:.1f}' from field center (in FOV)"
             if cat_sep_host < 2.0 and host_sep_field < 3600
             else "REVIEW"
         ),
@@ -204,7 +204,7 @@ def _identity_precheck(sample_fits: Path) -> dict:
 
 
 def _patch_blind_platesolve_hint() -> None:
-    """Pre-cal NINA WCS vs VYVAR solver center can differ by ~0.3–0.4° — use relaxed hint guard."""
+    """Pre-cal NINA WCS vs VYVAR solver center can differ by ~0.3-0.4 deg - use relaxed hint guard."""
     import pipeline as _pipeline  # noqa: PLC0415
     import vyvar_platesolver as vps  # noqa: PLC0415
 
@@ -235,7 +235,7 @@ def _median_field_center(fits_list: list[Path]) -> tuple[float, float]:
 
 
 def _patch_preprocess_field_center(field_ra: float, field_dec: float) -> None:
-    """Inject catalog-host coordinates for MASTERSTAR hint (solver lands ~0.25° from host)."""
+    """Inject catalog-host coordinates for MASTERSTAR hint (solver lands ~0.25 deg from host)."""
     import pipeline as _pipeline  # noqa: PLC0415
 
     hint_ra, hint_dec = float(HOST_RA), float(HOST_DEC)
@@ -450,9 +450,9 @@ def _analyze_host(draft_dir: Path, *, nea: dict) -> dict:
     ax.set_xlabel("BJD")
     ax.set_ylabel("Calibrated mag")
     ax.set_title(
-        f"Qatar-8 host Gaia …{cid[-8:]}\n"
+        f"Qatar-8 host Gaia ...{cid[-8:]}\n"
         f"{len(mag)} frames, {baseline_h:.2f} h | lc_rms={lc_rms_mmag:.1f} mmag | "
-        f"meas depth≈{depth_mmag:.1f} mmag | trust={row.get('trust','')}"
+        f"meas depth~{depth_mmag:.1f} mmag | trust={row.get('trust','')}"
     )
     ax.invert_yaxis()
     ax.grid(True, alpha=0.25)

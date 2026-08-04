@@ -10,7 +10,7 @@ Source JSON: `tmp/audit_stage2_measure.json`. Anchor: `draft_000435_snapshot_sky
 (`photometry_core.py:11657+`) uses **per-frame** `VY_FWHM` from each aligned FITS header
 (DAO scaled x0.667), else moment median. **Not** a single draft-global constant.
 
-**(b) SNR aperture mode on anchor:** **OFF** — no `snr_aperture_table.json` on snapshot.
+**(b) SNR aperture mode on anchor:** **OFF** - no `snr_aperture_table.json` on snapshot.
 `global_fixed` with `aperture_fwhm_factor` x per-frame FWHM.
 
 ### Measurements
@@ -22,7 +22,7 @@ Source JSON: `tmp/audit_stage2_measure.json`. Anchor: `draft_000435_snapshot_sky
 | BO CVn LC `aperture_r_px` | **2.716 px** constant all epochs |
 | LC mag vs FWHM slope (40 targets) | median **-3.5 mmag/px** (IQR 84; inconclusive) |
 
-**Literature (R1):** Stetson (1990) PASP 102, 992; Howell (1989) PASP 101, 616 — differential
+**Literature (R1):** Stetson (1990) PASP 102, 992; Howell (1989) PASP 101, 616 - differential
 photometry cancels aperture differences when **same aperture** applied to target and comps on each
 frame. VYVAR uses **fixed global radius per frame** (not per-star SNR mode on anchor), so predicted
 FWHM-tracking bias slope ~ **0** at first order.
@@ -31,7 +31,7 @@ FWHM-tracking bias slope ~ **0** at first order.
 dominant anchor behaviour is **constant target aperture 2.716 px** vs comp **2.416 px** (role factor
 1.1 x FWHM implied). Full residual test needs Stage 1.2 provenance on regen.
 
-## 2.2 D10-1 CV vs CR — DECISION REQUIRED
+## 2.2 D10-1 CV vs CR - DECISION REQUIRED
 
 148 comparison stars (Gaia G + BP-RP -> Johnson):
 
@@ -43,7 +43,7 @@ dominant anchor behaviour is **constant target aperture 2.716 px** vs comp **2.4
 **R band flatter** (lower colour slope and scatter). Instrumental passband closer to Cousins R than
 Johnson V for unfiltered QHY294.
 
-**Literature (R1):** AAVSO CCD Manual / Extended Format — CV and CR are **calibrated Johnson/Cousins
+**Literature (R1):** AAVSO CCD Manual / Extended Format - CV and CR are **calibrated Johnson/Cousins
 comparison star magnitudes** in V and R respectively; unfiltered hardware must be mapped to one.
 
 **DECISION REQUIRED (Milan):** do not change band mapping in this task.
@@ -57,21 +57,21 @@ comparison star magnitudes** in V and R respectively; unfiltered hardware must b
 | 30-45k | 1300 | 8.38 |
 | 45-60k | 186 | 8.35 |
 
-Strong G vs peak correlation (r=-0.85) — **dominated by magnitude**, not linearity defect.
+Strong G vs peak correlation (r=-0.85) - **dominated by magnitude**, not linearity defect.
 Brightest comp peak **61404 ADU** (G~8.35). No monotonic residual trend isolated without
 instrumental-minus-catalogue on linearized scale.
 
 **Literature:** CMOS linearity typically tested via flat-field ratio vs exposure; manufacturer
 spec **UNVERIFIED** this session (IMX294 datasheet not fetched).
 
-## 2.4 P-02 Variance budget — DECISION REQUIRED
+## 2.4 P-02 Variance budget - DECISION REQUIRED
 
 LC export **lacks** per-term `err_photon`, `sem_rel`, `sigma_sys_rel` columns.
 
 Proxy: `lc_rms / lc_rms_ooe` median **2.08**; **98%** of targets >1 -> predominantly
 **under-quoted** vs OOE scatter on this anchor (consistent with audit correction).
 
-**Scintillation:** Osborn et al. (2015) MNRAS 452, 1707 — implemented in `sigma_budget`; **not
+**Scintillation:** Osborn et al. (2015) MNRAS 452, 1707 - implemented in `sigma_budget`; **not
 wired** to production err (per task).
 
 **DECISION REQUIRED:** do not enable scintillation in production err without Milan approval.
@@ -87,17 +87,17 @@ Rig **NoFilter_60_2 / QHY294PROM** (5 sampled lights):
 | DATE-END | **no** |
 | MIDPOINT / EXPMID | **no** |
 
-**Literature (R1):** FITS Standard 4.0 / Rots et al. (2015) A&A 574, A36 — `DATE-OBS` is the
+**Literature (R1):** FITS Standard 4.0 / Rots et al. (2015) A&A 574, A36 - `DATE-OBS` is the
 **start** of the observation unless `DATE-BEG`/`DATE-END` pair defined.
 
 **Risk:** mid-exposure time = DATE-OBS + EXPTIME/2 (**30 s** bias). **UNVERIFIED** whether QHY
 driver stamps shutter-open vs readout start.
 
-## 2.6 T4-1 Detection noise on resampled frames — DECISION REQUIRED
+## 2.6 T4-1 Detection noise on resampled frames - DECISION REQUIRED
 
-**Literature (R1):** Fruchter & Hook (2002) PASP 114, 144 — resampling correlates pixels;
+**Literature (R1):** Fruchter & Hook (2002) PASP 114, 144 - resampling correlates pixels;
 noise on output pixel scale **underestimates** noise on detection scales. Casertano et al. (2000)
-AJ 120, 2747 Appendix A — same.
+AJ 120, 2747 Appendix A - same.
 
 **Tranche 4 verified (white noise, FWHM 3.2, photutils rel_err=1.360):**
 

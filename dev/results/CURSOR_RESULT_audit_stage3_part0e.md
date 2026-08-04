@@ -19,25 +19,25 @@ and assigned mechanism (E5). Read-only; no code changes.
 
 **Part 0d ensemble attribution is wrong for the focus target.** On frame 063,
 `1498135552633294976` keeps the **same `catalog_id`** in both runs; there is **no brighter
-catalogue neighbour** within 6 px of either aperture position. The flux ratio (3.41× ?
+catalogue neighbour** within 6 px of either aperture position. The flux ratio (3.41x ?
 ?1.36 mag) matches the calibrated delta; comp-catalog mean shift (?0.45 mag) does not.
 
 The mechanism is **per-frame DAO detection centroid shift** on the same sky-matched star:
 aperture centres differ by **3.48 px** (r ? 1.9 px), so the two runs sample barely
 overlapping flux on the same PSF. **`catalog_match_mode = master_reference_sky`** in both runs.
 
-**E1 neighbour test: negative.** Not M1 as “wrong Gaia ID / brighter neighbour.”
+**E1 neighbour test: negative.** Not M1 as 'wrong Gaia ID / brighter neighbour.'
 
 **WCS differs slightly (~0.4 px on frame 063)** but explains only ~12% of the 3.5 px
 position split; the rest is **DAO centroid offset from WCS** changing between runs.
 
-**Verdict: M4** (refined) — same catalogue identity, **mis-centred aperture from unstable
+**Verdict: M4** (refined) - same catalogue identity, **mis-centred aperture from unstable
 DAO match centroid** upstream of photometry; optionally **M3** at sub-aperture WCS level for
 the global ~0.4 px component.
 
 ---
 
-# E1 — What is at the rebuild position?
+# E1 - What is at the rebuild position?
 
 Frames examined: **063** (worst), **085**, **014** for target `1498135552633294976`.
 
@@ -56,9 +56,9 @@ Frames examined: **063** (worst), **085**, **014** for target `14981355526332949
 
 **Sources within 6 px of rebuild position (281.98, 621.63):** only `1498135552633294976` (both CSVs).
 
-**Union within 6 px of either position:** **1 source** — the target itself. No second Gaia ID.
+**Union within 6 px of either position:** **1 source** - the target itself. No second Gaia ID.
 Nearest masterstar neighbour on reference grid: `1498136342907277184` at **~11 px**, G = 14.45
-(only **0.24 mag** fainter than target G = 14.20) — **outside** the 6 px search disc and not
+(only **0.24 mag** fainter than target G = 14.20) - **outside** the 6 px search disc and not
 present in per-frame proc rows near either aperture.
 
 **Brighter neighbour at rebuild position?** **No.**
@@ -67,34 +67,34 @@ present in per-frame proc rows near either aperture.
 
 | Frame | Position shift (an?rb) | Flux ratio | Neighbours within 6 px |
 |-------|----------------------:|-----------:|------------------------|
-| 085 | **2.02 px** | 2.0× (?0.75 mag) | target only |
-| 014 | **0.74 px** | 1.13× (?0.12 mag) | target only |
+| 085 | **2.02 px** | 2.0x (?0.75 mag) | target only |
+| 014 | **0.74 px** | 1.13x (?0.12 mag) | target only |
 
 Large flux deltas track **large position shifts**, not catalogue identity swaps.
 
 ---
 
-# E2 — Where does (x, y) come from?
+# E2 - Where does (x, y) come from?
 
-**Path:** per-frame **DAO detection centroid**, then **sky match** to master catalogue — **not**
+**Path:** per-frame **DAO detection centroid**, then **sky match** to master catalogue - **not**
 catalogue RA/Dec ? WCS ? pixel for the exported proc `x,y`.
 
 | Step | Location | What happens |
 |------|----------|--------------|
-| 1 | `pipeline.py` ~7525–7534 | `DAOStarFinder` on aligned frame ? detection table |
-| 2 | ~7637–7638 | `x`, `y` = DAO centroids (full-pixel grid) |
-| 3 | ~7699–7734 | If WCS OK: `match_to_catalog_sky(master_coords)` with threshold `match_sep_arcsec` (default **8 arcsec**); match by **sky position**, identity = master `catalog_id` |
-| 4 | ~7878–7879 | Output proc row: **`x`, `y` = DAO centroid**; `catalog_id` from matched master row |
-| 5 | `photometry_core.py` ~2417–2420 | Phase 2A reads proc CSV **`x`, `y` unchanged** for aperture photometry |
+| 1 | `pipeline.py` ~7525-7534 | `DAOStarFinder` on aligned frame ? detection table |
+| 2 | ~7637-7638 | `x`, `y` = DAO centroids (full-pixel grid) |
+| 3 | ~7699-7734 | If WCS OK: `match_to_catalog_sky(master_coords)` with threshold `match_sep_arcsec` (default **8 arcsec**); match by **sky position**, identity = master `catalog_id` |
+| 4 | ~7878-7879 | Output proc row: **`x`, `y` = DAO centroid**; `catalog_id` from matched master row |
+| 5 | `photometry_core.py` ~2417-2420 | Phase 2A reads proc CSV **`x`, `y` unchanged** for aperture photometry |
 
 **No centroid refinement or recentre in `photometry_core.py`** (confirmed grep). Aperture is
 placed at whatever DAO centroid the pipeline locked to the catalogue row for that frame.
 
 ---
 
-# E3 — Is the WCS the same?
+# E3 - Is the WCS the same?
 
-Frame 063, target RA/Dec = 212.232608°, 41.382321°:
+Frame 063, target RA/Dec = 212.232608 deg, 41.382321 deg:
 
 | | Anchor | Rebuild |
 |---|--------|---------|
@@ -112,13 +112,13 @@ Frame 063, target RA/Dec = 212.232608°, 41.382321°:
 | WCS projection alone (rebuild ? anchor) | ?0.16 | +0.37 | **0.41 px** |
 | Proc aperture centres (rebuild ? anchor) | ?0.20 | **+3.48** | **3.48 px** |
 
-**WCS shift is real but ~0.4 px — not ~3.5 px.** The dominant term is **change in DAO?WCS
+**WCS shift is real but ~0.4 px - not ~3.5 px.** The dominant term is **change in DAO?WCS
 offset** between runs (especially ?y ? 3.1 px). Same catalogue row, different detection
 centroid locked by sky match.
 
 ---
 
-# E4 — Scope
+# E4 - Scope
 
 ## Cohort (156 common targets, 139 common proc frames)
 
@@ -143,17 +143,17 @@ Per-target maximum proc `(x,y)` shift on shared `source_file` rows:
 
 **Two mechanisms in the tail:**
 
-1. **Ensemble-only** (148554…, 149832…, 149834…): sub-aperture position shifts (? 1.6 px),
+1. **Ensemble-only** (148554..., 149832..., 149834...): sub-aperture position shifts (? 1.6 px),
    **zero** frames with shift > r_ap; large \|?mag\| from comp-set change (Part 0d valid pairing).
 
-2. **DAO mis-centroid** (149813…, partly 149845…): shifts **> 2 px** on multiple frames,
-   flux responds at fixed `catalog_id` — matches user’s peak/flux/aperture argument.
+2. **DAO mis-centroid** (149813..., partly 149845...): shifts **> 2 px** on multiple frames,
+   flux responds at fixed `catalog_id` - matches user's peak/flux/aperture argument.
 
 Focus target is the **extreme DAO-centroid case**, not representative of all five.
 
 ---
 
-# E5 — Verdict
+# E5 - Verdict
 
 | Code | Applicable? | Evidence |
 |------|-------------|----------|
@@ -162,7 +162,7 @@ Focus target is the **extreme DAO-centroid case**, not representative of all fiv
 | **M3** both | **Partial** | WCS sub-aperture + large DAO centroid change combine on worst frames |
 | **M4** something else | **Yes (primary)** | **Same-ID DAO centroid instability**: sky match assigns catalogue row, but exported `x,y` follow per-run DAO peak; when centroid jumps **> 2r_ap**, enclosed flux changes dramatically with similar peak |
 
-**Recommended label:** **M4 — per-frame aperture placement error on correct catalogue identity**
+**Recommended label:** **M4 - per-frame aperture placement error on correct catalogue identity**
 (DAO centroid path in `detect_stars_match_master_reference`, not ensemble zero-point).
 
 ---
@@ -171,20 +171,20 @@ Focus target is the **extreme DAO-centroid case**, not representative of all fiv
 
 | Part 0d claim | Part 0e finding |
 |---------------|-----------------|
-| “Ensemble recomposition ?1.38 mag mean offset” as primary cause | **Wrong for focus target:** flux ratio explains offset; comp mean ? = ?0.45 mag |
-| “Differential pipeline amplifies ensemble swap” | **Not supported** — no such amplification in code; ensemble shifts zero point ~ comp ? |
+| 'Ensemble recomposition ?1.38 mag mean offset' as primary cause | **Wrong for focus target:** flux ratio explains offset; comp mean ? = ?0.45 mag |
+| 'Differential pipeline amplifies ensemble swap' | **Not supported** - no such amplification in code; ensemble shifts zero point ~ comp ? |
 | 3.36 mag max delta | Still **invalid positional pairing**; valid max **2.76 mag**, driven by mis-centroid + flux on frame 063 |
-| Bright-target tail “not faint-end artefact” | Partially true under valid pairing, but **split mechanism**: ensemble (most) vs DAO centroid (149813…) |
+| Bright-target tail 'not faint-end artefact' | Partially true under valid pairing, but **split mechanism**: ensemble (most) vs DAO centroid (149813...) |
 
 ---
 
 # Implications
 
-1. **Do not attribute focus-target flux delta to ensemble change** — fix centroid/aperture
+1. **Do not attribute focus-target flux delta to ensemble change** - fix centroid/aperture
    placement upstream (DAO match on `master_reference_sky` path).
-2. **19 targets** hit at least one frame with shift > aperture radius — bounded but non-zero
+2. **19 targets** hit at least one frame with shift > aperture radius - bounded but non-zero
    identity/placement risk class.
 3. Anchor re-cut blocked on: (a) Part 0c pairing fix, (b) DAO centroid stability or
    catalogue-position aperture option for photometry.
 
-**STOP GATE 0e** — awaiting Milan review. No fixes applied.
+**STOP GATE 0e** - awaiting Milan review. No fixes applied.

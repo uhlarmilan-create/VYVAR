@@ -1,4 +1,4 @@
-# CARRY-01 — Per-frame diff table (new profiler `byte_compare`)
+# CARRY-01 - Per-frame diff table (new profiler `byte_compare`)
 
 **Generated:** 2026-07-30 (CARRY-01 Part A3)  
 **Method:** `dev/scripts/post453_preprocess_bench.py` ? `byte_compare()`  
@@ -21,9 +21,9 @@ python dev/scripts/post453_preprocess_bench_per_frame.py   # to be added in CARR
 
 | frame | max_abs_diff | mean_abs_diff | n_pixels_nonzero |
 |-------|-------------:|--------------:|-----------------:|
-| *pending live recompute* | — | — | — |
+| *pending live recompute* | - | - | - |
 
-*(10 frames: `BO_CVn_Light_001.fits` … `BO_CVn_Light_010.fits`)*
+*(10 frames: `BO_CVn_Light_001.fits` ... `BO_CVn_Light_010.fits`)*
 
 ---
 
@@ -37,7 +37,7 @@ python dev/scripts/post453_preprocess_bench_per_frame.py   # to be added in CARR
 
 ---
 
-## Related evidence — OLD comparison (451 input + preprocess vs 452 output)
+## Related evidence - OLD comparison (451 input + preprocess vs 452 output)
 
 From `dev/results/context/session_20260728_post453_fixes/frame001_investigation.csv` (commit `6c0a524`, measured when drafts were on disk). **Not the same comparison as the new profiler**, but documents frame001 dominance for the cross-draft identity check the old profile CSV describes.
 
