@@ -331,7 +331,7 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 
 | ID | Sev | Item |
 |----|-----|------|
-| **BATCH-E-PARAMS-REGISTRY** | MED | Register batch E config fields in params registry + regenerate `VYVAR_PARAMS.md`: `dao_centroid_max_shift_fwhm`, `admission_sat_peak_frac`, `dao_detection_n_equiv`, `enable_lacosmic`, `lacosmic_objlim`, `lacosmic_sigclip` (`sigma_sys_mag` already registered). Sync `masterstar_dao_threshold_sigma` (3.8) into `flow_doc_facts.py` / FLOW PDF. Triage `--fast` pytest: 5 pre-existing + 1 batch E registry gap (see STATE test-hygiene backlog). |
+| **BATCH-E-PARAMS-REGISTRY** | MED | **DONE (2026-08-04).** Six batch E fields registered; VYVAR_PARAMS.md 277 entries; dashboard owner assert 249 config_runtime; FLOW threshold 3.8; BLE001 + ASCII hygiene. Result: `dev/results/CURSOR_RESULT_batch_e_params_hygiene.md`. |
 | ~~BORDER-PREALIGN~~ | LOW | **DONE (2026-07-24).** RAM-handoff / pre-alignment `[BORDER] Glob 0` -> explicit defer log; post-flush rewrite no longer silent (`FIELD-RUN-FINDINGS #11`). |
 | A-DURABLE-UI | LOW | Save watched `.py` during alignment - pending Milan confirmation on 429 run |
 | ~~ENCODING-POLICY~~ | MED | **DONE (2026-07-20).** ASCII-only tracked text + `test_ascii_policy` guard + `ascii_migrate.py`; EOL normalize (`* text=auto` + `.editorconfig`) in follow-up commit. Incident: cp1252/U+FFFD editor corruption class. |

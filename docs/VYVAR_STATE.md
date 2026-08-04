@@ -260,19 +260,11 @@ Live config.json migrated value-identical (249 keys). Commits `1307b73` (help po
 
 ## Test-hygiene backlog
 
-- **Batch E params registry (next session):** register batch E config fields in the params
-  registry and regenerate `docs/VYVAR_PARAMS.md` -- `dao_centroid_max_shift_fwhm`,
-  `admission_sat_peak_frac`, `dao_detection_n_equiv`, `enable_lacosmic`, `lacosmic_objlim`,
-  `lacosmic_sigclip` (`sigma_sys_mag` already registered). Also sync
-  `masterstar_dao_threshold_sigma` (3.8) into `flow_doc_facts.py` / FLOW PDF.
-- **`--fast` pytest triage (2026-08-04):** 6 failures on batch E tree; **5 pre-existing**
-  on HEAD `20dde2b` (`test_ascii_policy` 34 non-ASCII audit result files;
-  `test_ble001_regression` in `closure_step1_aperture_fwhm_ground_truth.py`;
-  `test_flow_doc_config_facts` threshold 3.8 vs 2.1;
-  `test_generated_params_md_is_fresh` + `test_owner_groups_partition_every_key` stale
-  PARAMS/dashboard counts). **1 batch E:** `test_registry_covers_every_public_field_exactly_once`
-  (six new AppConfig fields above). Non-blocking for session close.
-- `dev/tests/test_g7_f003c_report_cfg_snapshot.py` (2 tests) is order-dependent: its
+- **BATCH-E-PARAMS-REGISTRY:** **DONE (2026-08-04).** Hygiene subset 32/32 green; full suite
+  1235 passed. Result: `dev/results/CURSOR_RESULT_batch_e_params_hygiene.md`.
+- Malformed `# noqa` truncation in 10 production files (15 sites) -- REPORT ONLY; Milan
+  decision (see result file STEP 5C).
+- `dev/tests/test_g7_f003c_report_cfg_snapshot.py` (2 tests) is order-dependent:
   `_factory` monkeypatch self-recurses through `config.AppConfig` when the qc-metrics
   path constructs `AppConfig()`. Passes in the full suite, fails in isolation. Confirmed
   pre-existing (reproduces on committed code with no wave-A edits). Repro:
