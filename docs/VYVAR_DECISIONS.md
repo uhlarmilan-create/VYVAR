@@ -2384,6 +2384,13 @@ population. **Do not apply** without Milan review -- likely photon/ensemble mis-
 frame-correlated scatter not captured by a constant quadrature floor. Batch E **blocked** per
 GATE 1 task rule.
 
+**H1-global verdict (2026-08-04 diagnostic):** Part 1c check stars (n=162): median
+scatter/quoted-err ratio **~1.96** (~2x); slope through origin **1.83** (T2). Median
+scatter **20.1 mmag** vs quoted err **9.4 mmag**; chi2_red **3.55** unchanged. **Not H2**
+(honest 20 mmag intrinsic scatter). **No floor applied.** Primary fix routed: audit
+ensemble SEM + photon term propagation (post-batch-E numeric item). Secondary: comp QA
+(high catalog comp_rms comps). See `dev/results/CURSOR_RESULT_wide_error_diag.md`.
+
 **Fingerprints pushed (batch D re-cut #1):** core `b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39`
 (n=325); extended `65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2` (n=487).
 Superseded: `b7f980c0...` / `2c43bbbf...`. Science compare PASS (162 LC; flux/mag/WCS unchanged).

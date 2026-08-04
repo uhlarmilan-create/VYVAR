@@ -38,10 +38,10 @@ DRAFT_ID = 435
 SETUP = "NoFilter_60_2"
 SNAPSHOT_NAME = "draft_000435_snapshot_skysurface_20260716"
 # Content anchors (Anchor #3 / sky-surface; LABBE-DET err-stable dual pass on 10d610c).
-EXPECTED_PHOTOMETRY_SHA_CORE = "b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED = "65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2"
-EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "b9c9489a"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "65bc826c"
+EXPECTED_PHOTOMETRY_SHA_CORE = "5bccd85a94d95031f80d372141ae0c61b0d8b0b2026c6bb15076d4e6a5e9b77e"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED = "7fdcdca402ad47d044ca7b34d1f1c0d09185d02016f94a1a3747cb0528862ea2"
+EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "5bccd85a"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "7fdcdca4"
 # Structural empty-comp drops keyed by draft_id only (Anchor #3 / R CVn on 435).
 # A future draft with phase2a_empty_comp_drop>0 must FAIL until explicitly listed.
 # Value must match exactly - empty_comp_drop=2 on 435 still trips the gate.

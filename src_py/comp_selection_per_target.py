@@ -748,6 +748,9 @@ def _accumulate_per_frame_comp_metrics(
     _chip_h_eff: int | None = int(chip_fh) if chip_fh is not None else None
     _edge_log_done = False
     _use_vectorized = len(cand_ids) >= 50
+    from config import AppConfig
+
+    _cfg_sat = AppConfig()
 
     for csv_path in sort_per_frame_csv_paths(per_frame_csv_paths, csv_cache):
         df = csv_cache.get(str(csv_path))
@@ -793,7 +796,18 @@ def _accumulate_per_frame_comp_metrics(
                     sp["_limit"] = pd.to_numeric(sp["saturate_limit_adu_85pct"], errors="coerce")
                     sp = sp[sp["_limit"].gt(0) & sp["_peak"].notna() & sp["_limit"].notna()]
                     if not sp.empty:
-                        sp["_over"] = sp["_peak"] > sp["_limit"]
+                        _adm_frac = 0.70
+                        _sat_frac_col = 0.85
+                        try:
+                            _adm_frac = float(getattr(_cfg_sat, "admission_sat_peak_frac", 0.70))
+                        except (TypeError, ValueError):
+                            _adm_frac = 0.70
+                        try:
+                            _sat_frac_col = float(getattr(_cfg_sat, "saturate_limit_fraction", 0.85))
+                        except (TypeError, ValueError):
+                            _sat_frac_col = 0.85
+                        _adm_mult = _adm_frac / _sat_frac_col if _sat_frac_col > 0 else (0.70 / 0.85)
+                        sp["_over"] = sp["_peak"] > sp["_limit"] * _adm_mult
                         for cid, n_tot in sp.groupby(name_col, sort=True).size().items():
                             cid_s = str(cid)
                             peak_total_map[cid_s] = int(peak_total_map.get(cid_s, 0)) + int(n_tot)
@@ -807,7 +821,18 @@ def _accumulate_per_frame_comp_metrics(
                         limit = float(_row.get("saturate_limit_adu_85pct", float("nan")))
                         if math.isfinite(peak) and math.isfinite(limit) and limit > 0:
                             peak_total_map[_cid] = int(peak_total_map.get(_cid, 0)) + 1
-                            if peak > limit:
+                            _adm_frac = 0.70
+                            _sat_frac_col = 0.85
+                            try:
+                                _adm_frac = float(getattr(_cfg_sat, "admission_sat_peak_frac", 0.70))
+                            except (TypeError, ValueError):
+                                _adm_frac = 0.70
+                            try:
+                                _sat_frac_col = float(getattr(_cfg_sat, "saturate_limit_fraction", 0.85))
+                            except (TypeError, ValueError):
+                                _sat_frac_col = 0.85
+                            _adm_mult = _adm_frac / _sat_frac_col if _sat_frac_col > 0 else (0.70 / 0.85)
+                            if peak > limit * _adm_mult:
                                 peak_over_map[_cid] = int(peak_over_map.get(_cid, 0)) + 1
 
             if "psf_chi2" in df.columns and not _cand.empty:
@@ -1086,7 +1111,7 @@ def _apply_comp_metric_hard_filters(
     cfg: Any | None = None,
     comp_quality_notes: dict[str, str] | None = None,
 ) -> Any:
-    # Filter SAT: vyluc kandidatov, ktori su nad 85% sat limitu vo viac nez 10% framov
+    # Filter SAT: reject candidates above admission gate (70% full well vs 85pct limit column)
     _sat_rejected: set[str] = set()
     for cid in sorted(flux_map.keys()):
         total = int(peak_total_map.get(cid, 0) or 0)
@@ -1099,6 +1124,10 @@ def _apply_comp_metric_hard_filters(
                 f"({over}/{total} framov nad 85% limitom)"
             )
     if _sat_rejected:
+        logging.info(
+            "[BATCH-E E.5] saturation gate excluded %d comps (admission_sat_peak_frac gate)",
+            len(_sat_rejected),
+        )
         logging.info(f"[FAZA 1] Celkom vylucenych kvoli saturacii: {len(_sat_rejected)}")
 
     # Filter EDGE: vyluc kandidatov, ktorych sky annulus casto vycnieva mimo cip

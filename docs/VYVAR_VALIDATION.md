@@ -193,14 +193,14 @@ Deterministic regeneration: `python -m tests.validation.recover --all`.
 
 ## Anchor fingerprint (VL-ANCHOR-WCSINV, batch D)
 
-**Status (2026-08-03):** Batch D GATE 1 **authorized** -- fingerprints **pushed**. Batch E
-**pending GATE 2** (blocked on wide-rig floor anomaly; see `dev/results/CURSOR_RESULT_batch_E.md`).
+**Status (2026-08-04):** Batch E **GATE 2 authorized**; anchor fingerprints **pushed** (physical re-cut).
 
-| tier | SHA (draft_435 snapshot) | n |
-|------|--------------------------|---|
-| core | `b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39` | 325 |
-| extended | `65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2` | 487 |
+| tier | SHA (draft_435 snapshot, active anchor) | n |
+|------|----------------------------------------|---|
+| core | `5bccd85a94d95031f80d372141ae0c61b0d8b0b2026c6bb15076d4e6a5e9b77e` | 497 |
+| extended | `7fdcdca402ad47d044ca7b34d1f1c0d09185d02016f94a1a3747cb0528862ea2` | 744 |
 
-Superseded (pre-batch-D): `b7f980c0...` / `2c43bbbf...`. Delta: **err column only** (scintillation).
-Science compare PASS (162 LC). Ledger: `dev/validation/VYVAR_VALIDATION_LEDGER.json`.
+Superseded batch D (GATE 1): core `b9c9489a...` / extended `65bc826c...` (n=325/487).
+Superseded pre-batch-D: `b7f980c0...` / `2c43bbbf...`.
+Ledger: `dev/validation/VYVAR_VALIDATION_LEDGER.json` (VL-ANCHOR-WCSINV).
 

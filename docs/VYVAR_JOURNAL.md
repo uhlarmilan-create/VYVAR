@@ -12,6 +12,32 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-04 -- SESSION CLOSE (audit closed; batch E GATE 2)
+
+Science audit **closed**. Batch E **GATE 2 authorized** after physical re-cut from calibrated
+lights. Anchor fingerprints pushed: core `5bccd85a94d95031...` n=497; extended
+`7fdcdca402ad47d0...` n=744. Archive snapshot refreshed from `draft_000500`. Closure register
+item **29 FIXED** (VL-ANCHOR-WCSINV re-cut). Referee deliverable:
+`docs/VYVAR_AUDIT_CLOSURE.md`.
+
+**Batch E shipped:** E.1 source_file delta pairing; E.2 DAO centroid WCS guard
+(`dao_centroid_max_shift_fwhm`); E.3 L.A.Cosmic preprocess; E.4 detection N_equiv=3.78; E.5
+saturation admission gate (`admission_sat_peak_frac`). D5-2 slope -0.318 -> -0.491 on
+physical re-cut.
+
+**Future threads (not audit-open):** **WIDE-ERR** (wide-rig err underquote ~2x; err bars only)
+and **MASTERSTAR stacking** (Steps 1-6 + TODO-B coaddition). See ROADMAP.
+
+**Gate:** on-disk snapshot SHA matches batch E fingerprints (`session_baseline_check.py`
+constants). `--fast` pytest: 6 failures (5 pre-existing on `20dde2b`, 1 batch E registry
+gap) -- non-blocking; hygiene logged in STATE/ROADMAP as **BATCH-E-PARAMS-REGISTRY**.
+
+Reports: `dev/results/CURSOR_RESULT_final_closure.md`,
+`dev/results/CURSOR_RESULT_batch_E_physical_recut.md`,
+`dev/results/CURSOR_RESULT_wide_error_diag.md`.
+
+---
+
 ## 2026-07-31 -- SESSION CLOSE (science audit closure)
 
 Session close after Audit Stage 3 Parts 0c--0e and tranches 1--4 remediation arc.

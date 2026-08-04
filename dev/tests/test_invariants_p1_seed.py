@@ -18,8 +18,8 @@ from tests.photometry_sha import compute_photometry_sha
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER_PATH = ROOT / "dev" / "validation" / "VYVAR_VALIDATION_LEDGER.json"
 SNAPSHOT = "draft_000435_snapshot_skysurface_20260716"
-EXPECTED_CORE = "b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39"
-EXPECTED_EXT = "65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2"
+EXPECTED_CORE = "5bccd85a94d95031f80d372141ae0c61b0d8b0b2026c6bb15076d4e6a5e9b77e"
+EXPECTED_EXT = "7fdcdca402ad47d044ca7b34d1f1c0d09185d02016f94a1a3747cb0528862ea2"
 
 
 def _enabled() -> bool:

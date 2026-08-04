@@ -1,8 +1,18 @@
 # VYVAR -- Development State
 
-**Status:** Science audit **complete** (2026-07-31); closure execution in progress.
+**Status:** Science audit **closed** (2026-08-04).
 
-Last updated: **2026-08-03** (batch D GATE 1 closed; batch E blocked on floor anomaly).
+Last updated: **2026-08-04** (audit **closed**; batch E GATE 2).
+
+## Session close 2026-08-04 (audit closed)
+
+Batch E **GATE 2 authorized**. Physical re-cut fingerprints pushed (core `5bccd85a...` n=497;
+extended `7fdcdca...` n=744). Archive snapshot refreshed from `draft_000500`. Register item 29
+**FIXED**. Science audit **closed**. Future threads: **WIDE-ERR**, **MASTERSTAR stacking**
+(not audit-open; logged in ROADMAP). Reports: `dev/results/CURSOR_RESULT_final_closure.md`,
+`CURSOR_RESULT_batch_E_physical_recut.md`. Referee deliverable: `docs/VYVAR_AUDIT_CLOSURE.md`.
+Snapshot SHA gate **PASS** (on-disk snapshot matches batch E fingerprints; `--fast` pytest
+failures noted separately, non-blocking).
 
 ## Session close 2026-08-03 (batch D GATE 1; batch E blocked)
 
@@ -250,6 +260,18 @@ Live config.json migrated value-identical (249 keys). Commits `1307b73` (help po
 
 ## Test-hygiene backlog
 
+- **Batch E params registry (next session):** register batch E config fields in the params
+  registry and regenerate `docs/VYVAR_PARAMS.md` -- `dao_centroid_max_shift_fwhm`,
+  `admission_sat_peak_frac`, `dao_detection_n_equiv`, `enable_lacosmic`, `lacosmic_objlim`,
+  `lacosmic_sigclip` (`sigma_sys_mag` already registered). Also sync
+  `masterstar_dao_threshold_sigma` (3.8) into `flow_doc_facts.py` / FLOW PDF.
+- **`--fast` pytest triage (2026-08-04):** 6 failures on batch E tree; **5 pre-existing**
+  on HEAD `20dde2b` (`test_ascii_policy` 34 non-ASCII audit result files;
+  `test_ble001_regression` in `closure_step1_aperture_fwhm_ground_truth.py`;
+  `test_flow_doc_config_facts` threshold 3.8 vs 2.1;
+  `test_generated_params_md_is_fresh` + `test_owner_groups_partition_every_key` stale
+  PARAMS/dashboard counts). **1 batch E:** `test_registry_covers_every_public_field_exactly_once`
+  (six new AppConfig fields above). Non-blocking for session close.
 - `dev/tests/test_g7_f003c_report_cfg_snapshot.py` (2 tests) is order-dependent: its
   `_factory` monkeypatch self-recurses through `config.AppConfig` when the qc-metrics
   path constructs `AppConfig()`. Passes in the full suite, fails in isolation. Confirmed

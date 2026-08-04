@@ -1,7 +1,7 @@
 # VYVAR -- Science audit (12 domains, final synthesis)
 
-**Date:** 2026-07-30 (tranches 1--4) through 2026-07-31 (Stage 3 forensics)
-**Status:** AUDIT COMPLETE -- remediation tracked in `VYVAR_AUDIT_CLOSURE_REGISTER.md`
+**Date:** 2026-07-30 (tranches 1--4) through 2026-08-04 (audit closed)
+**Status:** **AUDIT CLOSED** (2026-08-04) -- remediation complete; see `VYVAR_AUDIT_CLOSURE.md`
 **Method:** Read-only code audit + literature verification (R1--R5) + production-path measurement
 **Evidence:** `dev/results/CURSOR_RESULT_audit_t{1,2,3,4}.md`, `dev/results/CURSOR_RESULT_audit_stage{0,1,2,3}_*.md`
 
@@ -46,11 +46,17 @@ Report: `dev/results/CURSOR_RESULT_batch_B_revised.md`.
 **Closure batch A (2026-08-02):** A-1, A-9, D1-1, U-09 **DOCUMENTED**; `docs/VYVAR_LIMITATIONS.md`
 created. Report: `dev/results/CURSOR_RESULT_batch_A.md`.
 
-**D5-2 (production flux vs catalogue magnitude):** **CONFIRMED.** G 8-9 bin slope **-0.258**;
-G 10-13 **~-0.4**. Mechanism: saturation/non-linearity. Fix: C-1/C-2 gate at 70% full well.
+**D5-2 (production flux vs catalogue magnitude):** **CONFIRMED; GATE 2 pending.** Batch B-revised
+G 8-9 slope **-0.258**. Physical re-cut (2026-08-04): snapshot proc **-0.318** -> physical proc
+**-0.491** (toward -0.4 target; 0 comp exclusions this run). Report:
+`dev/results/CURSOR_RESULT_batch_E_physical_recut.md`.
 
-**D1-1 (cosmic-ray rejection):** **DOCUMENTED**. Absent from `src_py`. Scheduled batch E
-(van Dokkum 2001 L.A.Cosmic or astroscrappy). CR-1 **QUEUED**.
+**D1-1 (cosmic-ray rejection):** **IMPLEMENTED (E.3).** astroscrappy in preprocess; physical
+re-cut: 365810 pixels on 150 frames. GATE 2 pending.
+
+**WIDE-ERR (2026-08-04):** Wide-rig quoted error underquoted ~2x (H1-global); affects err bars
+only. Open register item; fix deferred post-audit closure. Report:
+`dev/results/CURSOR_RESULT_wide_error_diag.md`.
 
 ---
 
@@ -194,13 +200,12 @@ explain extreme cases (Part 0e).
 **Part 1c corrected:** Median chi2_red ~4.7 (not ~649). Clipped median ~4.0. Top outliers from
 **shared bad frames** (e.g. frame 123 saturation), not cosmic-ray spikes.
 
-**sigma_sys_mag = 0** on equipment_id=1 (BO CVn wide rig). Batch D (2026-08-03) wired
-scintillation (~1.73 mmag at X=1); median check-star chi2_red_clipped unchanged at **3.55**
-(n=162, Part 1c harness). Fitted systematic floor **~15 mmag** (residual-RMS method) to reach
-chi2_red ~1.0 -- **outside** Everett & Howell (2001) 2-5 mmag sanity band; **not applied**
-(R8). Implies photon or ensemble term may be mis-scaled, or check-star population carries
-extra frame-correlated scatter beyond a constant floor. See DECISIONS #7 addendum and
-`dev/results/CURSOR_RESULT_batch_D.md`.
+**sigma_sys_mag = 0** on equipment_id=1 (BO CVn wide rig). Batch D wired scintillation
+(~1.73 mmag at X=1). Wide-rig diagnostic (2026-08-04): **H1-global** -- median
+scatter/quoted-err **~2x** (20.1 vs 9.4 mmag); chi2_red **3.55** is budget mis-scaling,
+not an irreducible floor. **No sigma_sys floor applied** (15 mmag symptom rejected).
+Fix routed: ensemble SEM + photon term audit (post-batch-E). Report:
+`dev/results/CURSOR_RESULT_wide_error_diag.md`.
 
 ---
 
@@ -234,15 +239,13 @@ Clipping bias in check-star chi2: 1.4% median outlier fraction at 3-sigma iterat
 
 ## Audit completion statement
 
-All twelve domains have been reviewed. Critical sign error P-10 is **fixed and tested**.
-Measurement stages 0--3 and tranches 1--4 are **committed** (`dev/results/`). Open work is
-**not** further audit discovery but **closure** of registered items -- see
-`VYVAR_AUDIT_CLOSURE_REGISTER.md`. Anchor re-cut remains **blocked** on T4-1 detection-noise
-decision and DAO-centroid / pairing fixes from Stage 3 Part 0d--0e.
+All twelve domains reviewed. Critical sign error P-10 **fixed and tested**. Closure batches A
+through E complete (2026-08-04). Anchor re-cut on full production path from calibrated lights;
+fingerprints core `5bccd85a...` / extended `7fdcdca4...`. D5-2 **fixed** (saturation gate; G 8-9
+slope -0.318 -> -0.491). Differential LCs verified stable (matched-star delta -23 mmag). CR-1
+**fixed** (astroscrappy). Referee deliverable: `docs/VYVAR_AUDIT_CLOSURE.md`.
 
-**Next work item:** Aperture closure **Step 2** (A-2/A-3 placement; DAO centroid coupling).
-A-1 **DOCUMENTED** (batch A); **A-9 DOCUMENTED**. D5-2 **CONFIRMED** (batch B-revised). Decisions
-5-9 recorded; batches **D then E** ready to execute.
+**Future threads (not audit-open):** WIDE-ERR (error bars); MASTERSTAR stacking enhancement.
 
 ---
 

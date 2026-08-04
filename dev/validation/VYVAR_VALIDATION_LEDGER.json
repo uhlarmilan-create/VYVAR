@@ -143,11 +143,11 @@
       "id": "VL-ANCHOR-WCSINV",
       "area": "photometry",
       "description": "In-Archive BO CVn Anchor #3 sky-surface snapshot draft_000435_snapshot_skysurface_20260716",
-      "verification": "scripts/session_baseline_check.py --full (core b9c9489a\u2026 n=325; extended 65bc826c\u2026 n=487). Census fingerprint n_raw_dao=2552 matched=2842 targets=165; identity p95 baseline 1.54 px. Plan-regen 875 rows (873 VSX + 2 exo); frozen VT 245 rows.",
+      "verification": "scripts/session_baseline_check.py --full (core 5bccd85a\u2026 n=497; extended 7fdcdca4\u2026 n=744). Physical re-cut from calibrated lights (batch E GATE 2). Matched-star differential delta -23 mmag (V-clean).",
       "passes": true,
-      "last_verified": "2026-08-03",
-      "commit": "6af9a03",
-      "notes": "Batch D re-cut #1 (2026-08-03, GATE 1 authorized): err column only -- scintillation wired (683fba1). Science compare PASS 162 LC. Supersedes core b7f980c0 / extended 2c43bbbf (pre-batch-D). sigma_sys floor eq 1 NOT applied (fit 15-18 mmag, outside 2-5 mmag sanity; CURSOR_RESULT_batch_D.md). Prior: 2026-07-28 schema harmonisation; identity-gate 2026-07-27 CLOSE-2.",
+      "last_verified": "2026-08-04",
+      "commit": "20dde2b",
+      "notes": "Batch E physical re-cut (2026-08-04, GATE 2 authorized): full production path from calibrated lights on scratch draft_000500; snapshot refreshed. E.3 CR 365810 px; E.4 N_equiv=3.78; differential LC stable (-23 mmag matched-star). Supersedes batch D core b9c9489a / extended 65bc826c. Prior batch D: err-only delta (scintillation). sigma_sys floor eq 1 NOT applied.",
       "identity_gate_dropped_targets": [
         {
           "vsx_gaia_target_id": "1499883638682689920",
@@ -203,10 +203,10 @@
         }
       },
       "identity_p95_baseline_px": 1.536099044764055,
-      "core_sha": "b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39",
-      "extended_sha": "65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2",
-      "superseded_core_sha": "b7f980c09e238b855c2ee1b9518061777934d8f0a61eaec7431cda4f537aed52",
-      "superseded_extended_sha": "2c43bbbf06921fbef46fb6a4ed1f8afccdabacaa5827b8ec50372de0e3816205"
+      "core_sha": "5bccd85a94d95031f80d372141ae0c61b0d8b0b2026c6bb15076d4e6a5e9b77e",
+      "extended_sha": "7fdcdca402ad47d044ca7b34d1f1c0d09185d02016f94a1a3747cb0528862ea2",
+      "superseded_core_sha": "b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39",
+      "superseded_extended_sha": "65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2"
     },
     {
       "id": "F-435-EXPORT-GHOSTS",

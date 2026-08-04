@@ -7049,6 +7049,112 @@ def _dao_convolved_background_rms_adu(
     return float(rms), float(kernel.rel_err)
 
 
+_BATCH_E_N_EQUIV_LOGGED = False
+
+
+def _dao_detection_threshold_adu(
+    rms_conv: float,
+    *,
+    cfg: Any | None,
+    dao_threshold_sigma: float,
+) -> tuple[float, float]:
+    """T4-1 Option B: threshold = N_equiv * rms_conv (measured N from Part 2b)."""
+    global _BATCH_E_N_EQUIV_LOGGED  # noqa: PLW0603
+    rms = float(rms_conv)
+    if not math.isfinite(rms) or rms <= 0:
+        return 1e-6, float("nan")
+    n_eff = float(getattr(cfg, "dao_detection_n_equiv", dao_threshold_sigma)) if cfg is not None else float(
+        dao_threshold_sigma
+    )
+    if not math.isfinite(n_eff) or n_eff <= 0:
+        n_eff = float(dao_threshold_sigma)
+    if cfg is not None and not _BATCH_E_N_EQUIV_LOGGED:
+        LOGGER.info("[BATCH-E E.4] N_equiv=%.2f applied for DAO detection threshold", n_eff)
+        _BATCH_E_N_EQUIV_LOGGED = True
+    return max(n_eff * rms, 1e-6), n_eff
+
+
+def _apply_dao_centroid_wcs_guard(
+    x: "np.ndarray",
+    y: "np.ndarray",
+    *,
+    matched: "np.ndarray",
+    safe: "np.ndarray",
+    master_df: pd.DataFrame,
+    fwhm_px: float,
+    max_shift_fwhm: float,
+) -> tuple["np.ndarray", "np.ndarray", int]:
+    """Replace DAO centroids with MASTERSTAR reference pixels when shift exceeds guard."""
+    import numpy as np
+
+    xo = np.asarray(x, dtype=np.float64).copy()
+    yo = np.asarray(y, dtype=np.float64).copy()
+    if master_df is None or master_df.empty or "x" not in master_df.columns or "y" not in master_df.columns:
+        return xo, yo, 0
+    mx = pd.to_numeric(master_df["x"], errors="coerce").to_numpy(dtype=np.float64)
+    my = pd.to_numeric(master_df["y"], errors="coerce").to_numpy(dtype=np.float64)
+    m = np.asarray(matched, dtype=bool)
+    if not m.any():
+        return xo, yo, 0
+    s = np.clip(np.asarray(safe, dtype=np.int64), 0, max(len(mx) - 1, 0))
+    x_ref = mx[s]
+    y_ref = my[s]
+    ok = m & np.isfinite(x_ref) & np.isfinite(y_ref) & np.isfinite(xo) & np.isfinite(yo)
+    if not ok.any():
+        return xo, yo, 0
+    max_px = float(max(0.1, max_shift_fwhm)) * float(max(1.2, fwhm_px))
+    shift = np.hypot(xo - x_ref, yo - y_ref)
+    use_wcs = ok & (shift > max_px)
+    xo[use_wcs] = x_ref[use_wcs]
+    yo[use_wcs] = y_ref[use_wcs]
+    return xo, yo, int(np.count_nonzero(use_wcs))
+
+
+def _remove_cosmics_lacosmic(
+    data: "np.ndarray",
+    hdr: fits.Header,
+    cfg: Any,
+) -> tuple["np.ndarray", int]:
+    """CR-1: L.A.Cosmic via astroscrappy (van Dokkum 2001). Returns cleaned data, n_cr_pixels."""
+    import numpy as np
+
+    if not bool(getattr(cfg, "enable_lacosmic", False)):
+        return data, 0
+    try:
+        import astroscrappy as ac  # type: ignore
+    except ImportError:
+        LOGGER.warning("[CR-1] astroscrappy not installed; cosmic-ray cleaning skipped")
+        return data, 0
+    arr = np.asarray(data, dtype=np.float32)
+    if arr.ndim != 2 or arr.size < 64:
+        return data, 0
+    sigclip = float(getattr(cfg, "lacosmic_sigclip", 4.5))
+    objlim = float(getattr(cfg, "lacosmic_objlim", 5.0))
+    try:
+        gain = float(hdr.get("GAIN") or hdr.get("EGAIN") or 1.0)
+    except (TypeError, ValueError):
+        gain = 1.0
+    if not math.isfinite(gain) or gain <= 0:
+        gain = 1.0
+    try:
+        readnoise = float(hdr.get("RDNOISE") or hdr.get("READNOIS") or 10.0)
+    except (TypeError, ValueError):
+        readnoise = 10.0
+    if not math.isfinite(readnoise) or readnoise <= 0:
+        readnoise = 10.0
+    mask, cleaned = ac.detect_cosmics(
+        arr,
+        sigclip=sigclip,
+        sigfrac=0.3,
+        objlim=objlim,
+        gain=gain,
+        readnoise=readnoise,
+        satlevel=65535.0,
+    )
+    n_cr = int(np.count_nonzero(mask))
+    return cleaned.astype(np.float32, copy=False), n_cr
+
+
 def _mean_bin2d_for_dao(data0: "np.ndarray", factor: int) -> tuple["np.ndarray", int]:
     import numpy as np
 
@@ -7512,12 +7618,15 @@ def detect_stars_match_master_reference(
             print(f"WARNING: {_nm} std=0 aj po fallback, preskakujem")
             empty_meta: dict[str, Any] = {"status": "std_zero"}
             return pd.DataFrame(), empty_meta
-        _thr = max(thr_s * float(std_dao), 1e-6)
+        _thr, _n_equiv_used = _dao_detection_threshold_adu(
+            float(std_dao), cfg=_cfg_dao, dao_threshold_sigma=float(thr_s),
+        )
         try:
             _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
             print(
                 f"DEBUG DAO INPUT: {_nm} mean={float(np.nanmean(arr)):.1f} std={float(np.nanstd(arr)):.1f} "
-                f"threshold={float(_thr):.1f} rms_conv={float(rms_conv):.2f} sigma_pp_diag={float(sigma_pp_diag):.2f} "
+                f"threshold={float(_thr):.1f} rms_conv={float(rms_conv):.2f} n_equiv={float(_n_equiv_used):.2f} "
+                f"sigma_pp_diag={float(sigma_pp_diag):.2f} "
                 f"fwhm={float(fwhm_eff):.2f}"
             )
         except Exception:  # noqa: BLE001
@@ -7747,18 +7856,6 @@ def detect_stars_match_master_reference(
             sep_arcsec_arr = sep_px  # px (kept numeric for mask)
             oix = oix_px
 
-    pmax_arr = _box_peaks_at_centroids(arr, x, y)
-    _sat_block = _vectorized_star_saturation_columns(
-        arr,
-        x,
-        y,
-        sat_limit=sat_limit,
-        sat_frac=sat_frac,
-        peak_dao=peak_dao,
-        peak_max_adu=pmax_arr,
-    )
-    _sat_csv, n_sat_pk, n_sat_pl = _proc_sat_block_for_csv(_sat_block)
-
     nm_m = len(m_valid)
     idx_det = np.arange(1, n + 1, dtype=np.int32)
     det_str = np.array([f"DET_{i:04d}" for i in idx_det], dtype=object)
@@ -7830,6 +7927,28 @@ def detect_stars_match_master_reference(
         ck_m = m_valid["catalog_known_variable"].fillna(False).astype(bool).to_numpy()
     else:
         ck_m = vx_m | gv_m
+
+    x, y, _n_dao_wcs_fallback = _apply_dao_centroid_wcs_guard(
+        x,
+        y,
+        matched=matched,
+        safe=safe,
+        master_df=m_valid,
+        fwhm_px=float(max(1.2, _base_fw_m / float(bfac))),
+        max_shift_fwhm=float(getattr(_cfg_dao, "dao_centroid_max_shift_fwhm", 1.0)),
+    )
+
+    pmax_arr = _box_peaks_at_centroids(arr, x, y)
+    _sat_block = _vectorized_star_saturation_columns(
+        arr,
+        x,
+        y,
+        sat_limit=sat_limit,
+        sat_frac=sat_frac,
+        peak_dao=peak_dao,
+        peak_max_adu=pmax_arr,
+    )
+    _sat_csv, n_sat_pk, n_sat_pl = _proc_sat_block_for_csv(_sat_block)
 
     cat_sel = cat_s_m[safe]
     cid_sel = cid_m[safe]
@@ -7917,6 +8036,7 @@ def detect_stars_match_master_reference(
         "n_likely_saturated": n_sat,
         "n_saturated_from_peak": n_sat_pk,
         "n_saturated_plateau": n_sat_pl,
+        "n_dao_wcs_centroid_fallback": int(_n_dao_wcs_fallback),
         "saturate_limit_adu": float(sat_limit) if sat_limit is not None else None,
         "saturate_limit_source": sat_limit_src,
         "n_vsx_in_field": 0,
@@ -7933,6 +8053,11 @@ def detect_stars_match_master_reference(
         ),
         **meta_mag,
     }
+    if int(_n_dao_wcs_fallback) > 0:
+        LOGGER.info(
+            "[BATCH-E E.2] centroid WCS fallback triggered on %d star-frames",
+            int(_n_dao_wcs_fallback),
+        )
     return df_out, meta
 
 
@@ -8243,13 +8368,16 @@ def detect_stars_and_match_catalog(
                 "catalog_match_mode": "full_cone",
                 "reason": "std_dao_zero",
             }
-        _thr = max(_ds * float(std_dao), 1e-6)
+        _thr, _n_equiv_used = _dao_detection_threshold_adu(
+            float(std_dao), cfg=AppConfig(), dao_threshold_sigma=float(_ds),
+        )
         # Adaptive threshold monitoring: match-rate check runs after first catalog match pass (below).
         try:
             _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
             print(
                 f"DEBUG DAO INPUT: {_nm} mean={float(np.nanmean(arr)):.1f} std={float(np.nanstd(arr)):.1f} "
-                f"threshold={float(_thr):.1f} rms_conv={float(rms_conv):.2f} sigma_pp_diag={float(sigma_pp_diag):.2f} "
+                f"threshold={float(_thr):.1f} rms_conv={float(rms_conv):.2f} n_equiv={float(_n_equiv_used):.2f} "
+                f"sigma_pp_diag={float(sigma_pp_diag):.2f} "
                 f"fwhm={float(fwhm_eff):.2f}"
             )
         except Exception:  # noqa: BLE001
@@ -17108,6 +17236,11 @@ def _qc_enrich_one_frame(
                     sky_order,
                 )
 
+        cfg_cr = AppConfig()
+        n_cr_pixels = 0
+        if bool(getattr(cfg_cr, "enable_lacosmic", False)):
+            data, n_cr_pixels = _remove_cosmics_lacosmic(data, hdr, cfg_cr)
+
         qc = _qc_fwhm_elongation(data)
         fwhm = float(qc.get("fwhm_px")) if qc.get("fwhm_px") is not None else float("nan")
         elong = float(qc.get("elongation")) if qc.get("elongation") is not None else float("nan")
@@ -17135,6 +17268,14 @@ def _qc_enrich_one_frame(
                 hdr["VY_ELONG"] = (round(elong, 4), "Estimated elongation (a/b)")
             hdr["VY_NSTAR"] = (n_stars, "Approx. star detections (QC)")
             hdr["VY_QC"] = (status, "QC status")
+            hdr["VY_COSM"] = (bool(n_cr_pixels > 0), "Cosmic-ray cleaning applied in preprocessing")
+            if n_cr_pixels > 0:
+                hdr["VY_COSMNPX"] = (int(n_cr_pixels), "Cosmic-ray pixels cleaned (L.A.Cosmic)")
+                LOGGER.info(
+                    "[BATCH-E E.3] astroscrappy removed %d pixels on frame %s",
+                    int(n_cr_pixels),
+                    fp.name,
+                )
             hdr["VYVARPR"] = (True, "VYVAR pre-processed output")
             if target_ra is not None and target_dec is not None:
                 ira = float(target_ra)
@@ -17159,6 +17300,7 @@ def _qc_enrich_one_frame(
             "n_sources": qc.get("n_sources"),
             "n_stars_detected": n_stars,
             "bg_median": float(np.nanmedian(data)) if data.size else None,
+            "lacosmic_pixels_cleaned": int(n_cr_pixels),
             **sky_stats,
         }
     except SkySurfaceOrderConflictError:

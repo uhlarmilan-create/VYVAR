@@ -26,13 +26,11 @@ before any absolute claim** (enclosed-flux fraction, absolute SNR, detection com
 D1-2 `fwhm_ratio` test). Use curve-of-growth r50 as scale proxy, not a fitted FWHM. Status:
 **DOCUMENTED**. Evidence: register item 31, Step 1f.
 
-## D1-1 -- No cosmic-ray rejection
+## D1-1 -- Cosmic-ray rejection
 
-No cosmic-ray rejection in `src_py` (grep confirms only gain/read-noise "cosmic" parameter names).
-Single-frame MASTERSTAR and per-frame photometry limit damage to isolated outlier epochs. Hard
-prerequisite for stacking or coaddition (`docs/VYVAR_TODO_MASTERSTAR_REFERENCE.md`); publication
-gap vs standard pipelines. **Fix:** L.A.Cosmic (van Dokkum 2001, PASP 113, 1420) or astroscrappy.
-Scheduled in implementation batch E. Status: **DOCUMENTED**, CR-1 **QUEUED**.
+**FIXED (batch E, 2026-08-04).** L.A.Cosmic via astroscrappy in preprocessing (`enable_lacosmic`).
+Physical re-cut: 365810 pixels cleaned on 150 frames. Evidence:
+`dev/results/CURSOR_RESULT_batch_E_physical_recut.md`.
 
 ## D1-2 -- Detector linearity correction
 
@@ -41,12 +39,17 @@ dome-flat ramp measurement per sensor. **Not** the chosen fix for D5-2.
 
 ## D5-2 -- Production flux vs catalogue magnitude compression
 
-**CONFIRMED (2026-08-02, batch B-revised).** Compression confined to **G 8-9** bin (production
-`flux` slope **-0.258** vs **~-0.4** at G 9-13). Brightest star reaches **97%** of full well
-(54231 / 55705 ADU). **Mechanism:** saturation / detector non-linearity. **Fix:** saturation
-admission gate at **70%** of `saturate_limit_adu_85pct` (C-1/C-2, batch E). Not aperture; not
-sky wings. Batch B B-open superseded (invalid FITS remeasurement). Evidence:
-`dev/results/CURSOR_RESULT_batch_B_revised.md`.
+**FIXED (2026-08-04, batch E).** Mechanism: saturation / detector non-linearity G 8-9.
+Saturation admission gate at **70%** full well (C-1/C-2). Physical re-cut G 8-9 slope
+**-0.318 -> -0.491**. Evidence: `dev/results/CURSOR_RESULT_batch_B_revised.md`,
+`dev/results/CURSOR_RESULT_batch_E_physical_recut.md`.
+
+## WIDE-ERR -- Wide-rig quoted error underquoted
+
+Wide-rig (equipment_id 1) quoted error underquoted ~2x vs check-star scatter (H1-global).
+Affects **error bars only**, not fluxes. Fix routed: Honeycutt 1992 leave-one-out ensemble SEM +
+photon-term audit. Must be resolved before a wide-rig submission claims its error bars. Status:
+**OPEN** (future thread). Evidence: `dev/results/CURSOR_RESULT_wide_error_diag.md`.
 
 ## I-12 -- Proper motion when pmra/pmdec absent
 

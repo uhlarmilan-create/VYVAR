@@ -33,24 +33,23 @@ def _delta_table(rebuilt_lc: Path, anchor_lc: Path, target_cid: str) -> pd.DataF
         return None
     rdf = pd.read_csv(rb, low_memory=False)
     adf = pd.read_csv(an, low_memory=False)
-    n = min(len(rdf), len(adf))
-    if n == 0:
+    if rdf.empty or adf.empty or "source_file" not in rdf.columns or "source_file" not in adf.columns:
+        return None
+    m = adf.merge(rdf, on="source_file", suffixes=("_anchor", "_rebuild"), how="inner")
+    if m.empty:
         return None
     out = pd.DataFrame(
         {
             "target_cid": target_cid,
-            "mag_anchor": pd.to_numeric(adf["mag_calib_final"].iloc[:n], errors="coerce"),
-            "mag_rebuild": pd.to_numeric(rdf["mag_calib_final"].iloc[:n], errors="coerce"),
-            "err_anchor": pd.to_numeric(adf["err"].iloc[:n], errors="coerce"),
-            "err_rebuild": pd.to_numeric(rdf["err"].iloc[:n], errors="coerce"),
-            "n_good_comp_rebuild": pd.to_numeric(
-                rdf.get("n_good_comp", pd.Series([np.nan] * n)).iloc[:n], errors="coerce"
-            ),
-            "n_good_comp_anchor": pd.to_numeric(
-                adf.get("n_good_comp", pd.Series([np.nan] * n)).iloc[:n], errors="coerce"
-            ),
-            "trust_rebuild": rdf.get("trust_flag", pd.Series([""] * n)).iloc[:n].astype(str),
-            "trust_anchor": adf.get("trust_flag", pd.Series([""] * n)).iloc[:n].astype(str),
+            "source_file": m["source_file"].astype(str),
+            "mag_anchor": pd.to_numeric(m["mag_calib_final_anchor"], errors="coerce"),
+            "mag_rebuild": pd.to_numeric(m["mag_calib_final_rebuild"], errors="coerce"),
+            "err_anchor": pd.to_numeric(m["err_anchor"], errors="coerce"),
+            "err_rebuild": pd.to_numeric(m["err_rebuild"], errors="coerce"),
+            "n_good_comp_rebuild": pd.to_numeric(m.get("n_good_comp_rebuild", np.nan), errors="coerce"),
+            "n_good_comp_anchor": pd.to_numeric(m.get("n_good_comp_anchor", np.nan), errors="coerce"),
+            "trust_rebuild": m.get("trust_flag_rebuild", pd.Series([""] * len(m))).astype(str),
+            "trust_anchor": m.get("trust_flag_anchor", pd.Series([""] * len(m))).astype(str),
         }
     )
     out["delta_mag"] = out["mag_rebuild"] - out["mag_anchor"]
