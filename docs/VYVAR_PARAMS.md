@@ -6,18 +6,18 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-05T17:32:09Z at git HEAD 0613b33._
+_Generated 2026-08-05T17:51:06Z at git HEAD 7620077._
 
 ## Summary
 
-- Entries: 277
-- Tier: basic 13, advanced 71, expert 193
-- Kind: static 259, derived 0, resolved 18
-- Widget: auto 119, custom 143, hidden 15
-- Owner: db_static 9, config_runtime 249, fits_dynamic 6, internal 13
-- Scope: universal 227, rig 32, site 10, session 8
-- Scope key: none 227, rig 16, rig_band 2, rig_sampling 14, site 10, frame 8
-- Rig triage group: a 18, b 11, c 3
+- Entries: 287
+- Tier: basic 13, advanced 71, expert 203
+- Kind: static 269, derived 0, resolved 18
+- Widget: auto 119, custom 143, hidden 25
+- Owner: db_static 9, config_runtime 259, fits_dynamic 6, internal 13
+- Scope: universal 233, rig 36, site 10, session 8
+- Scope key: none 233, rig 17, rig_band 2, rig_sampling 17, site 10, frame 8
+- Rig triage group: a 20, b 13, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -94,6 +94,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `qc_fwhm_limit` | 8.0 | - | expert | static | config_runtime | universal | none | n/a | auto | QC FWHM Limit |
 | `qc_max_background_rms` | None | - | expert | static | config_runtime | universal | none | n/a | auto | QC Max Background RMS |
 | `qc_max_hfr` | 5.0 | - | advanced | static | config_runtime | rig | rig_sampling | b | auto | QC Max HFR |
+| `qc_max_hfr_fwhm_ratio` | None | - | expert | static | config_runtime | rig | rig_sampling | b | hidden | QC Max HFR FWHM Ratio |
 | `qc_min_stars` | 10 | - | advanced | static | config_runtime | universal | none | n/a | auto | QC Min Stars |
 
 ## alignment
@@ -116,6 +117,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `blind_verify_early_fraction` | 0.2 | 0 .. 0.95 | expert | static | config_runtime | universal | none | n/a | custom | Blind Verify Early Fraction |
 | `blind_verify_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | custom | Blind Verify Enabled |
 | `blind_verify_inmemory_catalog` | True | - | expert | static | config_runtime | universal | none | n/a | custom | Blind Verify Inmemory Catalog |
+| `blind_verify_match_tol_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Blind Verify Match Tol Arcsec |
 | `blind_verify_match_tol_px` | 2.5 | 0.5 .. 20 | expert | static | config_runtime | rig | rig_sampling | b | custom | Blind Verify Match Tol PX |
 | `blind_verify_min_fraction` | 0.15 | 0.05 .. 0.95 | expert | static | config_runtime | universal | none | n/a | custom | Blind Verify Min Fraction |
 | `blind_verify_min_matches` | 12 | - | expert | static | config_runtime | universal | none | n/a | custom | Blind Verify Min Matches |
@@ -124,7 +126,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `crowding_blend_tighten_threshold` | 0.04 | 0 .. 1 | expert | static | config_runtime | universal | none | n/a | custom | Crowding Blend Tighten Threshold |
 | `crowding_classifier_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | Crowding Classifier Enabled |
 | `crowding_comp_availability_loosen_count` | 500.0 | 0 .. 1000000 | expert | static | config_runtime | universal | none | n/a | custom | Crowding Comp Availability Loosen Count |
-| `crowding_tighten_min_fwhm_px` | 3.0 | 0 .. 30 | expert | static | config_runtime | rig | rig_sampling | b | custom | Crowding Tighten Min FWHM PX |
+| `crowding_tighten_min_fwhm_px` | 3.0 | 0 .. 30 | expert | static | config_runtime | rig | rig_sampling | a | custom | Crowding Tighten Min FWHM PX |
 | `dao_centroid_max_shift_fwhm` | 1.0 | 0.1 .. 5 | expert | static | config_runtime | universal | none | n/a | auto | Dao Centroid Max Shift Fwhm |
 | `dao_detection_n_equiv` | 3.78 | 0.5 .. 12 | expert | static | config_runtime | universal | none | n/a | auto | Dao Detection N Equiv |
 | `debug_platesolver` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Debug Platesolver |
@@ -138,6 +140,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `masterstar_accept_mode` | odds | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Accept Mode |
 | `masterstar_best_of_n` | 10 | 1 .. 25 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Best Of N |
 | `masterstar_catalog_recovery_min` | 0.65 | 0.4 .. 0.95 | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Catalog Recovery Min |
+| `masterstar_centre_rms_max_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Masterstar Centre RMS Max Arcsec |
 | `masterstar_centre_rms_max_px` | 1.2 | 0.5 .. 5 | advanced | static | config_runtime | rig | rig_sampling | b | custom | Masterstar Centre RMS Max PX |
 | `masterstar_dao_pass2_sigma` | 1.9 | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar DAO Pass2 Sigma |
 | `masterstar_dao_threshold_sigma` | 3.8 | 0.1 .. 6 | advanced | static | config_runtime | rig | rig_sampling | a | custom | Masterstar DAO Threshold Sigma |
@@ -154,6 +157,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `masterstar_sibling_min_matched` | 40 | - | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Sibling Min Matched |
 | `masterstar_sibling_min_quadrants` | 3 | - | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Sibling Min Quadrants |
 | `masterstar_sibling_recovery_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Sibling Recovery Enabled |
+| `masterstar_sibling_rms_max_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Masterstar Sibling RMS Max Arcsec |
 | `masterstar_sibling_rms_max_px` | 2.0 | 0.5 .. 10 | advanced | static | config_runtime | rig | rig_sampling | b | custom | Masterstar Sibling RMS Max PX |
 | `masterstar_sibling_stack_n` | 10 | - | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Sibling Stack N |
 | `masterstar_use_best_frame_fwhm` | True | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Use Best Frame FWHM |
@@ -162,6 +166,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `plate_scale_arcsec_per_px` | 1.3 | 0.1 .. 30 | expert | resolved | fits_dynamic | session | frame | n/a | auto | Plate Scale Arcsec Per PX |
 | `plate_solve_fov_deg` | 1.0 | - | expert | resolved | fits_dynamic | rig | rig | a | auto | Plate Solve FOV Deg |
 | `saturate_limit_fraction` | 0.85 | - | expert | static | config_runtime | rig | rig | a | auto | Saturate Limit Fraction |
+| `sips_dao_fwhm_fwhm_factor` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | SIPS DAO FWHM Factor |
 | `sips_dao_fwhm_px` | 2.5 | 1 .. 8 | advanced | static | config_runtime | rig | rig_sampling | b | custom | Sips DAO FWHM PX |
 | `sips_dao_threshold_sigma` | 3.5 | - | advanced | static | config_runtime | rig | rig_sampling | a | custom | Sips DAO Threshold Sigma |
 | `variability_clip_ratio_min` | 0.8 | - | expert | static | config_runtime | universal | none | n/a | auto | Variability Clip Ratio Min |
@@ -199,6 +204,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `cog_ac_factor_max` | 5.0 | - | expert | static | config_runtime | universal | none | n/a | custom | COG Ac Factor Max |
 | `cog_aperture_correction_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | COG Aperture Correction Enabled |
 | `cog_isolation_fwhm` | 6.0 | - | expert | static | config_runtime | universal | none | n/a | custom | COG Isolation FWHM |
+| `cog_ladder_step_fwhm` | None | - | expert | static | config_runtime | rig | rig | a | hidden | COG Ladder Step FWHM |
 | `cog_ladder_step_px` | 0.5 | - | expert | static | config_runtime | rig | rig_sampling | b | custom | COG Ladder Step PX |
 | `cog_min_stars` | 8 | 1 .. 500 | expert | static | config_runtime | universal | none | n/a | custom | COG Min Stars |
 | `cog_ref_fwhm` | 4.5 | 1.5 .. 10 | expert | static | config_runtime | universal | none | n/a | custom | COG Ref FWHM |
@@ -275,13 +281,16 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `comp_sparse_fallback_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Sparse Fallback Enabled |
 | `comp_sparse_fallback_min` | 0 | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Sparse Fallback Min |
 | `global_comp_pool_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Global Comp Pool Enabled |
+| `phase01_chip_interior_margin_arcsec` | None | - | expert | static | config_runtime | rig | rig_sampling | b | hidden | Phase01 Chip Interior Margin Arcsec |
 | `phase01_comparison_exclude_gaia_extobj` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Exclude Gaia Extobj |
 | `phase01_comparison_exclude_gaia_nss` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Exclude Gaia NSS |
 | `phase01_comparison_fov_fraction` | 0.75 | - | expert | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison FOV Fraction |
+| `phase01_comparison_isolation_radius_arcsec` | None | - | expert | static | config_runtime | rig | rig_sampling | b | hidden | Phase01 Comparison Isolation Radius Arcsec |
 | `phase01_comparison_isolation_radius_px` | 25.0 | 1 .. 200 | expert | static | config_runtime | rig | rig_sampling | b | custom | Phase01 Comparison Isolation Radius PX |
 | `phase01_comparison_mag_bright_threshold` | 12.75 | 6 .. 18 | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Mag Bright Threshold |
 | `phase01_comparison_max_comp_rms` | 0.1 | 0.01 .. 0.5 | advanced | resolved | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max Comp RMS |
 | `phase01_comparison_max_dist_deg` | 1.5 | 0.05 .. 10 | advanced | resolved | config_runtime | rig | rig | b | custom | Phase01 Comparison Max Dist Deg |
+| `phase01_comparison_max_dist_fov_frac` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Phase01 Comparison Max Dist FOV Frac |
 | `phase01_comparison_max_fwhm_factor` | 1.5 | 0.5 .. 5 | expert | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max FWHM Factor |
 | `phase01_comparison_max_mag_diff` | 1.5 | 0.05 .. 5 | advanced | resolved | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max Mag Diff |
 | `phase01_comparison_max_mag_diff_absolute` | 3.0 | 1 .. 10 | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max Mag Diff Absolute |
@@ -331,6 +340,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 
 | key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
+| `hrd_color_bg_box_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | HRD Color BG Box Arcsec |
 | `hrd_color_bg_box_px` | 96 | 32 .. 512 | expert | static | config_runtime | rig | rig_sampling | b | custom | HRD Color Bg Box PX |
 | `hrd_color_chroma_boost` | 2.2 | 1 .. 3 | expert | static | config_runtime | universal | none | n/a | custom | HRD Color Chroma Boost |
 | `hrd_color_chroma_snr` | 3.0 | 0 .. 20 | expert | static | config_runtime | universal | none | n/a | custom | HRD Color Chroma SNR |

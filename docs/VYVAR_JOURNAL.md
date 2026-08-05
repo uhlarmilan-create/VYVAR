@@ -3863,7 +3863,7 @@ _Merged from repo (27.5-28.5.2026) and local (21.5.2026)._
 
 | ID | Telescope | Camera | Scale | Site |
 |----|-----------|--------|-------|------|
-| 1 | 200mm Carl-Zeiss | QHY294MM | ~1.3 arcsec/px | Jirny |
+| 1 | 200mm Carl-Zeiss | QHY294MM | ~9.77 arcsec/px (confirmed JOURNAL :3233; was ~1.3 placeholder) | Jirny |
 | 2 | 300/1200 Newton | C3-26000 | TBD | Dablic obs. |
 | 3 | Noctutec 206/560 f/2.72 | C3-26000 | TBD | TBD |
 
