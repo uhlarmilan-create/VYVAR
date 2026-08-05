@@ -139,6 +139,49 @@ def test_scope_scope_key_invariant() -> None:
     assert not bad, "scope <-> scope_key invariant violations:\n" + "\n".join(bad)
 
 
+def test_sampling_defining_keys_not_resolved_by_rig_sampling() -> None:
+    _assert_sampling_defining_acyclicity(_registry())
+
+
+def _assert_sampling_defining_acyclicity(reg: dict) -> None:
+    bad = [
+        k for k in pr.SAMPLING_DEFINING_KEYS
+        if reg[k].get("scope_key") == "rig_sampling"
+    ]
+    assert not bad, (
+        "SAMPLING_DEFINING_KEYS must not use scope_key=rig_sampling (circular):\n"
+        + "\n".join(bad)
+    )
+
+
+def test_sampling_defining_keys_acyclicity_injection() -> None:
+    import pytest
+
+    reg = _registry()
+    key = pr.SAMPLING_DEFINING_KEYS[0]
+    saved = reg[key]["scope_key"]
+    try:
+        reg[key]["scope_key"] = "rig_sampling"
+        with pytest.raises(AssertionError, match="rig_sampling"):
+            _assert_sampling_defining_acyclicity(reg)
+    finally:
+        reg[key]["scope_key"] = saved
+
+
+def test_internal_resolved_not_group_a() -> None:
+    reg = _registry()
+    bad = [
+        k for k, e in reg.items()
+        if e.get("owner") == "internal"
+        and e.get("kind") == "resolved"
+        and e.get("scope_group") == "a"
+    ]
+    assert not bad, (
+        "owner=internal + kind=resolved must not be scope_group=a (runtime-measured, not stored per rig):\n"
+        + "\n".join(bad)
+    )
+
+
 def test_classifier_explicit_keys_exist_in_registry() -> None:
     import importlib.util
 

@@ -6,7 +6,7 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-05T15:57:50Z at git HEAD 9227cbf._
+_Generated 2026-08-05T17:32:09Z at git HEAD 0613b33._
 
 ## Summary
 
@@ -15,9 +15,9 @@ _Generated 2026-08-05T15:57:50Z at git HEAD 9227cbf._
 - Kind: static 259, derived 0, resolved 18
 - Widget: auto 119, custom 143, hidden 15
 - Owner: db_static 9, config_runtime 249, fits_dynamic 6, internal 13
-- Scope: universal 226, rig 35, site 10, session 6
-- Scope key: none 226, rig 15, rig_band 2, rig_sampling 18, site 10, frame 6
-- Rig triage group: a 20, b 12, c 3
+- Scope: universal 227, rig 32, site 10, session 8
+- Scope key: none 227, rig 16, rig_band 2, rig_sampling 14, site 10, frame 8
+- Rig triage group: a 18, b 11, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -61,7 +61,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `cal_diag_hard_sigma` | 5.0 | 3 .. 10 | expert | static | config_runtime | universal | none | n/a | auto | Cal Diag Hard Sigma |
 | `cal_diag_rel_tol` | 0.02 | 0 .. 0.2 | expert | static | config_runtime | universal | none | n/a | auto | Cal Diag Rel Tol |
 | `cal_diag_sat_warn_frac` | 0.9 | 0.5 .. 1 | expert | static | config_runtime | rig | rig | a | auto | Cal Diag Sat Warn Frac |
-| `calibration_library_native_binning` | 1 | 1 .. 16 | advanced | static | config_runtime | rig | rig_sampling | a | auto | Calibration Library Native Binning |
+| `calibration_library_native_binning` | 1 | 1 .. 16 | advanced | static | config_runtime | rig | rig | a | auto | Calibration Library Native Binning |
 | `calibration_master_ccd_temp_tolerance_c` | 0.5 | - | expert | static | config_runtime | rig | rig | a | auto | Calibration Master CCD TEMP Tolerance C |
 | `dao_qc_in_calibrate` | True | - | expert | static | config_runtime | universal | none | n/a | auto | DAO QC In Calibrate |
 | `masterdark_validity_days` | 90 | - | basic | static | config_runtime | rig | rig | c | auto | Masterdark Validity Days |
@@ -85,7 +85,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `frame_quality_ratio_k` | 5.0 | 2 .. 20 | expert | static | config_runtime | universal | none | n/a | auto | Frame Quality Ratio K |
 | `lacosmic_objlim` | 5.0 | - | expert | static | config_runtime | universal | none | n/a | auto | Lacosmic Objlim |
 | `lacosmic_sigclip` | 4.5 | - | expert | static | config_runtime | universal | none | n/a | auto | Lacosmic Sigclip |
-| `osc_channel_binning` | 2 | 1 .. 4 | advanced | static | config_runtime | rig | rig_sampling | a | auto | OSC Channel Binning |
+| `osc_channel_binning` | 2 | 1 .. 4 | advanced | static | config_runtime | rig | rig | a | auto | OSC Channel Binning |
 | `preprocess_sky_surface_force_reapply` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Preprocess Sky Surface Force Reapply |
 | `preprocess_sky_surface_order` | 2 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Preprocess Sky Surface Order |
 | `qc_after_calibrate_enabled` | True | - | basic | static | config_runtime | universal | none | n/a | auto | QC After Calibrate Enabled |
@@ -133,8 +133,8 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `field_density_adaptive_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | custom | Field Density Adaptive Enabled |
 | `field_density_dense_threshold` | 1000.0 | - | expert | static | config_runtime | universal | none | n/a | custom | Field Density Dense Threshold |
 | `field_density_sparse_threshold` | 300.0 | 1 .. 50000 | expert | static | config_runtime | universal | none | n/a | custom | Field Density Sparse Threshold |
-| `frame_height_px` | 1397 | - | expert | resolved | internal | rig | rig | a | hidden | Frame Height PX |
-| `frame_width_px` | 2082 | - | expert | resolved | internal | rig | rig | a | hidden | Frame Width PX |
+| `frame_height_px` | 1397 | - | expert | resolved | internal | session | frame | n/a | hidden | Frame Height PX |
+| `frame_width_px` | 2082 | - | expert | resolved | internal | session | frame | n/a | hidden | Frame Width PX |
 | `masterstar_accept_mode` | odds | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Accept Mode |
 | `masterstar_best_of_n` | 10 | 1 .. 25 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Best Of N |
 | `masterstar_catalog_recovery_min` | 0.65 | 0.4 .. 0.95 | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Catalog Recovery Min |
@@ -281,13 +281,13 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `phase01_comparison_isolation_radius_px` | 25.0 | 1 .. 200 | expert | static | config_runtime | rig | rig_sampling | b | custom | Phase01 Comparison Isolation Radius PX |
 | `phase01_comparison_mag_bright_threshold` | 12.75 | 6 .. 18 | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Mag Bright Threshold |
 | `phase01_comparison_max_comp_rms` | 0.1 | 0.01 .. 0.5 | advanced | resolved | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max Comp RMS |
-| `phase01_comparison_max_dist_deg` | 1.5 | 0.05 .. 10 | advanced | resolved | config_runtime | rig | rig_sampling | b | custom | Phase01 Comparison Max Dist Deg |
+| `phase01_comparison_max_dist_deg` | 1.5 | 0.05 .. 10 | advanced | resolved | config_runtime | rig | rig | b | custom | Phase01 Comparison Max Dist Deg |
 | `phase01_comparison_max_fwhm_factor` | 1.5 | 0.5 .. 5 | expert | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max FWHM Factor |
 | `phase01_comparison_max_mag_diff` | 1.5 | 0.05 .. 5 | advanced | resolved | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max Mag Diff |
 | `phase01_comparison_max_mag_diff_absolute` | 3.0 | 1 .. 10 | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max Mag Diff Absolute |
 | `phase01_comparison_max_mag_diff_bright_floor` | 1.5 | 0 .. 4 | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max Mag Diff Bright Floor |
 | `phase01_comparison_max_psf_chi2` | 50.0 | 1 .. 500 | expert | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max PSF Chi2 |
-| `phase01_comparison_min_dist_arcsec` | 60.0 | 0 .. 600 | advanced | resolved | config_runtime | rig | rig_sampling | b | custom | Phase01 Comparison Min Dist Arcsec |
+| `phase01_comparison_min_dist_arcsec` | 60.0 | 0 .. 600 | advanced | resolved | config_runtime | universal | none | n/a | custom | Phase01 Comparison Min Dist Arcsec |
 | `phase01_comparison_min_frames_frac` | 0.2 | 0.05 .. 0.95 | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Min Frames Frac |
 | `phase01_comparison_n_comp_max` | 8 | - | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison N Comp Max |
 | `phase01_comparison_n_comp_min` | 3 | - | advanced | resolved | config_runtime | universal | none | n/a | custom | Phase01 Comparison N Comp Min |

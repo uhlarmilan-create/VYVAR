@@ -59,6 +59,11 @@ SCOPE_KEYS = ("none", "rig", "rig_band", "rig_sampling", "site", "frame")
 # c=operational tuning; n/a for non-rig entries.
 SCOPE_GROUPS = ("n/a", "a", "b", "c")
 
+# Parameters that define effective linear sampling (rig_sampling). They must use scope_key=rig,
+# never rig_sampling -- resolving them by a key they define is circular. Add new sampling
+# definers here when introduced.
+SAMPLING_DEFINING_KEYS = ("osc_channel_binning", "calibration_library_native_binning")
+
 ENTRY_KEYS = (
     "tier", "phase", "label", "help", "unit", "kind", "range", "widget", "owner",
     "scope", "scope_key", "scope_group", "scope_confidence",

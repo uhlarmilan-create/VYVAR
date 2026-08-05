@@ -757,7 +757,7 @@
     "widget": "auto",
     "scope": "rig",
     "scope_confidence": "high",
-    "scope_key": "rig_sampling",
+    "scope_key": "rig",
     "scope_group": "a"
   },
   "calibration_library_root": {
@@ -1577,10 +1577,10 @@
     "tier": "expert",
     "unit": null,
     "widget": "hidden",
-    "scope": "rig",
+    "scope": "session",
     "scope_confidence": "high",
-    "scope_key": "rig",
-    "scope_group": "a"
+    "scope_key": "frame",
+    "scope_group": "n/a"
   },
   "frame_quality_fwhm_factor": {
     "help": "Scaling of the FWHM threshold used by the frame-quality gate.",
@@ -1661,10 +1661,10 @@
     "tier": "expert",
     "unit": null,
     "widget": "hidden",
-    "scope": "rig",
+    "scope": "session",
     "scope_confidence": "high",
-    "scope_key": "rig",
-    "scope_group": "a"
+    "scope_key": "frame",
+    "scope_group": "n/a"
   },
   "lacosmic_sigclip": {
     "help": "L.A.Cosmic sigma clipping threshold for the Laplacian edge detection (astroscrappy sigclip).",
@@ -3139,7 +3139,7 @@
     "widget": "custom",
     "scope": "rig",
     "scope_confidence": "low",
-    "scope_key": "rig_sampling",
+    "scope_key": "rig",
     "scope_group": "b"
   },
   "phase01_comparison_max_fwhm_factor": {
@@ -3245,10 +3245,10 @@
     "tier": "advanced",
     "unit": null,
     "widget": "custom",
-    "scope": "rig",
-    "scope_confidence": "low",
-    "scope_key": "rig_sampling",
-    "scope_group": "b"
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_min_frames_frac": {
     "help": "Minimum fraction of frames a comparison must be measured on.",
@@ -3523,7 +3523,7 @@
     "widget": "auto",
     "scope": "rig",
     "scope_confidence": "high",
-    "scope_key": "rig_sampling",
+    "scope_key": "rig",
     "scope_group": "a"
   },
   "project_root": {

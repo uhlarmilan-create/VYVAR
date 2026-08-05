@@ -12,6 +12,9 @@ scope_confidence low 0/277. Verified against ground-truth anchors, help text, an
 
 Measured after remediation (HEAD pending commit):
 
+**Errata (Task C''):** section 1 below reported `rig_sampling 19`; the registry held **18**
+(15+2+18=35 rig entries). Corrected in `CURSOR_RESULT_params_scope_corrections.md`.
+
 | metric | Task C | Task C' | delta |
 |--------|--------|---------|-------|
 | universal | 229 | 226 | -3 |
