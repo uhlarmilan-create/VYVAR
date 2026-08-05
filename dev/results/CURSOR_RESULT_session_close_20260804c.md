@@ -24,7 +24,8 @@ status + session-close header). Two commits; pushed to origin/main after rebase.
    - dev/results/CURSOR_RESULT_wide_err_e4.md (new)
    - dev/results/CURSOR_RESULT_wide_err_w1w2.md (new)
 
-3. **(this report)** -- dev/results/CURSOR_RESULT_session_close_20260804c.md
+3. **1dc2527** -- dev: session-close 2026-08-04c report (WIDE-ERR investigation record).
+   - dev/results/CURSOR_RESULT_session_close_20260804c.md
 
 ### Not committed (left untracked by design)
 
@@ -38,9 +39,9 @@ status + session-close header). Two commits; pushed to origin/main after rebase.
 
 ### Push
 
-- git pull --rebase origin main: (see Errors if any)
-- git push origin main: (see Errors if any)
-- HEAD after push: (see Errors if any)
+- git pull --rebase origin main: clean (already up to date)
+- git push origin main: success (6e2223d..1dc2527)
+- HEAD after push: **1dc2527**
 
 ### Retractions recorded in LIMITATIONS
 
@@ -59,7 +60,7 @@ status + session-close header). Two commits; pushed to origin/main after rebase.
 | DB-DEFECT-DIAMETER | 341 | HIGH | Not started |
 
 ## Errors (if any)
-(pending pull/push)
+None.
 
 ## Files changed
 docs/VYVAR_LIMITATIONS.md
