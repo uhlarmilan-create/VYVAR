@@ -86,6 +86,25 @@ def test_owner_axis_full_coverage_and_valid_enum() -> None:
     assert not bad, f"registry entries with owner not in {pr.OWNERS}:\n" + "\n".join(bad)
 
 
+def test_scope_axis_full_coverage_and_valid_enum() -> None:
+    reg = _registry()
+    missing = sorted(k for k, e in reg.items() if "scope" not in e)
+    assert not missing, f"registry entries with no scope: {missing}"
+    bad_scope = sorted(
+        f"{k}={e.get('scope')!r}" for k, e in reg.items() if e.get("scope") not in pr.SCOPES
+    )
+    assert not bad_scope, f"registry entries with scope not in {pr.SCOPES}:\n" + "\n".join(bad_scope)
+    bad_conf = sorted(
+        f"{k}={e.get('scope_confidence')!r}"
+        for k, e in reg.items()
+        if e.get("scope_confidence") not in pr.SCOPE_CONFIDENCES
+    )
+    assert not bad_conf, (
+        f"registry entries with scope_confidence not in {pr.SCOPE_CONFIDENCES}:\n"
+        + "\n".join(bad_conf)
+    )
+
+
 def test_range_is_null_or_ordered_numeric_pair() -> None:
     reg = _registry()
     bad: list[str] = []

@@ -38,8 +38,16 @@ WIDGETS = ("auto", "custom", "hidden")
 #   fits_dynamic  -- resolved from FITS/WCS at run time (config value is a fallback only).
 #   internal      -- plumbing (paths, worker counts, project_root); not user-facing.
 OWNERS = ("db_static", "config_runtime", "fits_dynamic", "internal")
+# Physical-scope axis (PARAM-SCOPE-AUDIT): does the correct value depend on equipment/site/session?
+#   universal -- one correct value for every setup (algorithm constants, FWHM multiples, statistics).
+#   rig       -- depends on telescope + camera + binning (pixels, ADU, FOV, detector geometry).
+#   site      -- depends on observing location / atmosphere (extinction, observer coords).
+#   session   -- resolved per run from FITS/WCS/plan; config is fallback only.
+# Consistent with src_py/param_resolver.py categories (equipment-intrinsic / observation-specific / site).
+SCOPES = ("universal", "rig", "site", "session")
+SCOPE_CONFIDENCES = ("high", "low")
 
-ENTRY_KEYS = ("tier", "phase", "label", "help", "unit", "kind", "range", "widget", "owner")
+ENTRY_KEYS = ("tier", "phase", "label", "help", "unit", "kind", "range", "widget", "owner", "scope", "scope_confidence")
 
 # str-typed fields whose values are drawn from a fixed vocabulary (selectbox).
 LITERAL_OPTIONS: dict[str, tuple[str, ...]] = {

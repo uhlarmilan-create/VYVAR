@@ -77,6 +77,7 @@ def build_markdown(*, generated_at: str | None = None, git_head: str | None = No
     kind_c = Counter(e["kind"] for e in registry.values())
     widget_c = Counter(e["widget"] for e in registry.values())
     owner_c = Counter(e["owner"] for e in registry.values())
+    scope_c = Counter(e["scope"] for e in registry.values())
 
     lines: list[str] = []
     lines.append("# VYVAR -- Config <-> UI parameter registry")
@@ -120,9 +121,13 @@ def build_markdown(*, generated_at: str | None = None, git_head: str | None = No
         "- Owner: "
         + ", ".join(f"{o} {owner_c.get(o, 0)}" for o in pr.OWNERS)
     )
+    lines.append(
+        "- Scope: "
+        + ", ".join(f"{s} {scope_c.get(s, 0)}" for s in pr.SCOPES)
+    )
     lines.append("")
     lines.append(
-        "Columns: key, default, range, tier, kind, owner, widget, label. `kind=resolved` means "
+        "Columns: key, default, range, tier, kind, owner, scope, widget, label. `kind=resolved` means "
         "the runtime value can be auto-derived/overridden by the pipeline (the configured "
         "value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` "
         "(DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` "
@@ -131,8 +136,8 @@ def build_markdown(*, generated_at: str | None = None, git_head: str | None = No
     )
     lines.append("")
 
-    header = "| key | default | range | tier | kind | owner | widget | label |"
-    sep = "|-----|---------|-------|------|------|-------|--------|-------|"
+    header = "| key | default | range | tier | kind | owner | scope | widget | label |"
+    sep = "|-----|---------|-------|------|------|-------|-------|--------|-------|"
 
     for phase in pr.PHASES:
         keys = sorted(k for k, e in registry.items() if e["phase"] == phase)
@@ -160,6 +165,7 @@ def build_markdown(*, generated_at: str | None = None, git_head: str | None = No
                         _cell(e["tier"]),
                         _cell(e["kind"]),
                         _cell(e["owner"]),
+                        _cell(e["scope"]),
                         _cell(e["widget"]),
                         _cell(e["label"]),
                     ]
