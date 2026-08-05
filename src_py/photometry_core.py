@@ -48,6 +48,15 @@ from infolog import log_event
 from catalog_match_trust import is_wcs_untrusted_catalog_match_mode, normalize_catalog_match_mode
 from jd_axis_format import jd_axis_title, jd_series_relative
 from utils import iter_fits_paths_recursive as _iter_fits_recursive
+from unit_resolver import (
+    phase01_chip_interior_margin_px as _resolve_chip_interior_margin_px,
+    phase01_comparison_isolation_radius_px as _resolve_isolation_radius_px,
+    resolve_max_dist_fallback_deg,
+    resolve_px_from_arcsec,
+    resolve_px_from_fwhm_factor,
+    plate_scale_arcsec_per_px_from_header,
+    sips_dao_fwhm_px as _resolve_sips_dao_fwhm_px,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -5616,7 +5625,14 @@ def _edge_ok_from_masterstar_pipeline(
         nx = ny = None
 
     try:
-        base_margin = float(cfg_dict.get("phase01_chip_interior_margin_px", 100))
+        _arc_margin = cfg_dict.get("phase01_chip_interior_margin_arcsec")
+        _legacy_margin = float(cfg_dict.get("phase01_chip_interior_margin_px", 100))
+        base_margin = resolve_px_from_arcsec(
+            _arc_margin,
+            _legacy_margin,
+            plate_scale_arcsec_per_px_from_header(hdr),
+            param_name="phase01_chip_interior_margin_px",
+        )
     except (TypeError, ValueError):
         base_margin = 100.0
     try:
@@ -12541,7 +12557,14 @@ def enhance_catalog_dataframe_aperture_bpm(
                         peak_max_adu=_peak,
                         sat_limit_adu=_sat,
                         ref_fwhm=float(cog_params.get("ref_fwhm", 4.5)),
-                        ladder_step_px=float(cog_params.get("ladder_step_px", 0.5)),
+                        ladder_step_px=float(
+                            resolve_px_from_fwhm_factor(
+                                cog_params.get("ladder_step_fwhm"),
+                                float(cog_params.get("ladder_step_px", 0.5)),
+                                fw,
+                                param_name="cog_ladder_step_px",
+                            )
+                        ),
                         min_stars=int(cog_params.get("min_stars", 8)),
                         isolation_fwhm=float(cog_params.get("isolation_fwhm", 6.0)),
                         snr_min=float(cog_params.get("snr_min", 50.0)),
@@ -15828,7 +15851,7 @@ def run_full_photometry_pipeline(
             progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
 
     # FWHM: prefer header (VY_FWHM_GAUSS/VY_FWHM), inak default z configu.
-    fwhm_px = float(_cfg.sips_dao_fwhm_px)
+    fwhm_px = _resolve_sips_dao_fwhm_px(_cfg, fwhm_px=None)
     _ms_header_shared: Any | None = None
     _ms_path_shared = Path(masterstar_fits_path)
     if _ms_path_shared.is_file():
@@ -15896,14 +15919,19 @@ def run_full_photometry_pipeline(
         fwhm_px=float(fwhm_px),
         frame_w_px=int(_fw_pipe),
         frame_h_px=int(_fh_pipe),
-        chip_interior_margin_px=int(_cfg.phase01_chip_interior_margin_px),
+        chip_interior_margin_px=_resolve_chip_interior_margin_px(_cfg, arcsec_per_px=_plate_scale),
         plate_scale_arcsec_px=_plate_scale,
         max_dist_deg=_compute_fov_max_dist(
             frame_w_px=int(_fw_pipe),
             frame_h_px=int(_fh_pipe),
             plate_scale=_plate_scale,
             fov_fraction=float(_cfg.phase01_comparison_fov_fraction),
-            fallback_deg=float(_cfg.phase01_comparison_max_dist_deg),
+            fallback_deg=resolve_max_dist_fallback_deg(
+                _cfg,
+                frame_w_px=int(_fw_pipe),
+                frame_h_px=int(_fh_pipe),
+                plate_scale_arcsec_px=_plate_scale,
+            ),
         ),
         max_mag_diff=float(_cfg.phase01_comparison_max_mag_diff),
         comp_max_delta_bprp=float(_cfg.comp_max_delta_bprp),
@@ -15925,7 +15953,7 @@ def run_full_photometry_pipeline(
         ),
         max_psf_chi2=float(_cfg.phase01_comparison_max_psf_chi2),
         max_fwhm_factor=float(_cfg.phase01_comparison_max_fwhm_factor),
-        isolation_radius_px=float(_cfg.phase01_comparison_isolation_radius_px),
+        isolation_radius_px=_resolve_isolation_radius_px(_cfg, arcsec_per_px=_plate_scale),
         flux_col=_cfg.phase01_flux_col,
         cfg=_cfg,
         progress_cb=progress_cb,

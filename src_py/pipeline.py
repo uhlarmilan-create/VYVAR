@@ -194,6 +194,7 @@ def _apply_aperture_catalog_enhancements_from_st(
         cog_params = {
             "ref_fwhm": float(st.get("cog_ref_fwhm", 4.5)),
             "ladder_step_px": float(st.get("cog_ladder_step_px", 0.5)),
+            "ladder_step_fwhm": st.get("cog_ladder_step_fwhm"),
             "min_stars": int(st.get("cog_min_stars", 8)),
             "isolation_fwhm": float(st.get("cog_isolation_fwhm", 6.0)),
             "snr_min": float(st.get("cog_snr_min", 50.0)),
@@ -10059,6 +10060,7 @@ def export_per_frame_catalogs(
         "cog_snr_min": float(_cfg_ap.cog_snr_min),
         "cog_sat_frac": float(_cfg_ap.cog_sat_frac),
         "cog_ladder_step_px": float(_cfg_ap.cog_ladder_step_px),
+        "cog_ladder_step_fwhm": getattr(_cfg_ap, "cog_ladder_step_fwhm", None),
         "cog_ac_factor_max": float(_cfg_ap.cog_ac_factor_max),
         "gain": float(_cfg_ap.gain),
         "read_noise": float(_cfg_ap.read_noise),
@@ -15043,6 +15045,7 @@ def _qc_pack_from_config(
     return {
         "enabled": en,
         "max_hfr": float(cfg.qc_max_hfr),
+        "max_hfr_fwhm_ratio": getattr(cfg, "qc_max_hfr_fwhm_ratio", None),
         "min_stars": int(cfg.qc_min_stars),
         "max_bg_rms": cfg.qc_max_background_rms,
         "dao_detection_sigma": _dao,
@@ -15096,8 +15099,11 @@ def _mean_hfr_bright_stars_dao(
     *,
     max_stars: int = 50,
     dao_detection_sigma: float = 5.0,
-) -> tuple[float | None, int]:
-    """Median half-flux radius [px] on up to ``max_stars`` brightest DAO sources; return (HFR, n_detected)."""
+) -> tuple[float | None, int, float | None]:
+    """Median half-flux radius [px] on up to ``max_stars`` brightest DAO sources.
+
+    Returns (HFR, n_detected, fwhm_guess_px).
+    """
     import numpy as np
     from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
@@ -15105,11 +15111,11 @@ def _mean_hfr_bright_stars_dao(
     img = np.asarray(crop, dtype=np.float32)
     finite = np.isfinite(img)
     if not np.any(finite):
-        return None, 0
+        return None, 0, None
     _, med, std = sigma_clipped_stats(img[finite], sigma=3.0, maxiters=5)
     std = float(std)
     if not math.isfinite(std) or std <= 0:
-        return None, 0
+        return None, 0, None
     img2 = np.asarray(img - float(med), dtype=np.float32)
     img2 = np.nan_to_num(img2, nan=0.0, posinf=0.0, neginf=0.0)
     if float(np.nanmedian(img2)) < 0:
@@ -15130,7 +15136,7 @@ def _mean_hfr_bright_stars_dao(
         )
         tbl = daofind(img2)
     if tbl is None or len(tbl) == 0:
-        return None, 0
+        return None, 0, float(fwhm_guess)
     n_det = int(len(tbl))
     tbl.sort("flux")
     tbl = tbl[::-1]
@@ -15150,8 +15156,8 @@ def _mean_hfr_bright_stars_dao(
         if math.isfinite(hfr) and 0.2 < hfr < 50.0:
             hfrs.append(hfr)
     if not hfrs:
-        return None, n_det
-    return float(np.nanmedian(np.asarray(hfrs, dtype=np.float64))), n_det
+        return None, n_det, float(fwhm_guess)
+    return float(np.nanmedian(np.asarray(hfrs, dtype=np.float64))), n_det, float(fwhm_guess)
 
 
 def _post_calibration_qc_eval(
@@ -15189,9 +15195,15 @@ def _post_calibration_qc_eval(
     _ds = float(limits.get("dao_detection_sigma", 5.0))
     if not math.isfinite(_ds) or _ds <= 0:
         _ds = 5.0
-    hfr_m, n_star = _mean_hfr_bright_stars_dao(crop, max_stars=50, dao_detection_sigma=_ds)
+    hfr_m, n_star, fwhm_guess = _mean_hfr_bright_stars_dao(crop, max_stars=50, dao_detection_sigma=_ds)
 
-    max_h = float(limits.get("max_hfr", 5.0))
+    from unit_resolver import resolve_hfr_limit_px
+
+    class _QcHfrCfg:
+        qc_max_hfr = float(limits.get("max_hfr", 5.0))
+        qc_max_hfr_fwhm_ratio = limits.get("max_hfr_fwhm_ratio")
+
+    max_h = resolve_hfr_limit_px(_QcHfrCfg(), fwhm_px=fwhm_guess)
     min_star = int(limits.get("min_stars", 10))
     max_rms = limits.get("max_bg_rms")
 

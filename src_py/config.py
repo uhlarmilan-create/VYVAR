@@ -549,6 +549,8 @@ class AppConfig:
     hrd_color_chroma_boost: float = 2.2
     #: Local-background box size (px) for chroma SNR gate grid; clamp 32..512.
     hrd_color_bg_box_px: int = 96
+    #: Local-background box size (arcsec). None -> fall back to ``hrd_color_bg_box_px`` (legacy px).
+    hrd_color_bg_box_arcsec: float | None = None
 
     #: Fine blind index (Newton / ~1.3 arcsec/px rigs); built by ``build_blind_index.py``.
     blind_index_fine_path: str = ""
@@ -562,6 +564,8 @@ class AppConfig:
     blind_verify_enabled: bool = True
     blind_verify_top_n: int = 15
     blind_verify_match_tol_px: float = 2.5
+    #: Blind verify match tolerance (arcsec). None -> fall back to ``blind_verify_match_tol_px``.
+    blind_verify_match_tol_arcsec: float | None = None
     blind_verify_min_matches: int = 12
     blind_verify_min_fraction: float = 0.15
     #: In-memory bright Gaia + KDTree for blind verify (one load per solve).
@@ -776,6 +780,8 @@ class AppConfig:
     masterstar_min_matched_floor: int = 40
     #: MASTERSTAR verified-solve: centre RMS cap [px] when distortion is not globally benign.
     masterstar_centre_rms_max_px: float = 1.20
+    #: Centre RMS gate (arcsec). None -> fall back to ``masterstar_centre_rms_max_px``.
+    masterstar_centre_rms_max_arcsec: float | None = None
     #: MASTERSTAR distortion-limited benign: max edge/centre residual ratio (was 2.50; Brno r ~3.0).
     masterstar_distortion_benign_ratio_max: float = 3.20
 
@@ -798,6 +804,8 @@ class AppConfig:
     masterstar_sibling_min_matched: int = 40
     #: Sibling odds gate: maximum RMS of tight matches [px].
     masterstar_sibling_rms_max_px: float = 2.0
+    #: Sibling-recovery RMS gate (arcsec). None -> fall back to ``masterstar_sibling_rms_max_px``.
+    masterstar_sibling_rms_max_arcsec: float | None = None
     #: Sibling odds gate: minimum quadrants with at least one tight match.
     masterstar_sibling_min_quadrants: int = 3
     #: Median-stack frame count for sibling stacking rescue when single-frame odds fail.
@@ -823,6 +831,8 @@ class AppConfig:
 
     #: DAOStarFinder FWHM (pixels) tuned for SIPS-like centroid search (aperture ~13 -> ~4-5 px FWHM).
     sips_dao_fwhm_px: float = 2.5
+    #: Initial DAO FWHM as multiple of measured FWHM. None -> fall back to ``sips_dao_fwhm_px``.
+    sips_dao_fwhm_fwhm_factor: float | None = None
     #: DAOStarFinder threshold = this x background RMS (SIPS 'standard deviation count' ~ 2.5).
     #: Pre hlboky MASTERSTAR / siroke pole niekedy **0.25-1.0** (viac spiciek); pouziva sa aj pri VYVAR plate solve, ak volanie neprebije ``dao_threshold_sigma``.
     sips_dao_threshold_sigma: float = 3.5
@@ -834,6 +844,8 @@ class AppConfig:
     #: ``phase01_comparison_max_mag_diff_bright_floor`` ako minimalny |Deltamag| pas (``0`` = vypnute).
     # FOV-based comp distance: if plate_scale is known, search within a fraction of half-diagonal.
     phase01_comparison_max_dist_deg: float = 1.5
+    #: Max comp distance as fraction of half-diagonal FOV (deg). None -> fall back to ``phase01_comparison_max_dist_deg``.
+    phase01_comparison_max_dist_fov_frac: float | None = None
     phase01_comparison_fov_fraction: float = 0.75
     phase01_comparison_max_mag_diff: float = 1.5
     phase01_comparison_mag_bright_threshold: float = 12.75
@@ -956,6 +968,8 @@ class AppConfig:
     cog_sat_frac: float = 0.85
     #: COG radius-ladder step (px).
     cog_ladder_step_px: float = 0.5
+    #: COG ladder step as multiple of measured FWHM. None -> fall back to ``cog_ladder_step_px``.
+    cog_ladder_step_fwhm: float | None = None
     #: Maximum allowed per-star ac_factor (safety clamp).
     cog_ac_factor_max: float = 5.0
 
@@ -991,6 +1005,8 @@ class AppConfig:
     phase01_comparison_max_fwhm_factor: float = 1.5
     #: Phase 1 comp gate: minimum isolation radius (px) - reject comps with neighbour closer than this.
     phase01_comparison_isolation_radius_px: float = 25.0
+    #: Isolation radius (arcsec). None -> fall back to ``phase01_comparison_isolation_radius_px``.
+    phase01_comparison_isolation_radius_arcsec: float | None = None
     #: Phase 1 comp stability: sigma for outlier rejection in RMS stability check.
     phase01_comparison_rms_outlier_sigma: float = 3.0
 
@@ -1002,6 +1018,8 @@ class AppConfig:
     #: Hviezdy s ``x,y`` blizsie ako tento pocet pixelov od okraja referencneho pola sa neberu (zmiernuje artefakty
     #: pri zarovnani / posune pola / okrajoch). ``0`` = vypnute (cely cip). Predvolene 50 px.
     phase01_chip_interior_margin_px: int = 50
+    #: Chip interior margin (arcsec). None -> fall back to ``phase01_chip_interior_margin_px``.
+    phase01_chip_interior_margin_arcsec: float | None = None
 
     # Variability Detection
     variability_min_frames: int = 30
@@ -1054,6 +1072,8 @@ class AppConfig:
     #: PERF-10: DAO QC (FWHM/sky/star_count) during calibration; skips RAM QC pass when True.
     dao_qc_in_calibrate: bool = True
     qc_max_hfr: float = 5.0
+    #: QC HFR limit as multiple of measured FWHM. None -> fall back to ``qc_max_hfr`` (legacy px).
+    qc_max_hfr_fwhm_ratio: float | None = None
     qc_min_stars: int = 10
     #: If set, fail when sigma-clipped sky RMS exceeds this (same units as calibrated image).
     qc_max_background_rms: float | None = None
@@ -2454,6 +2474,31 @@ class AppConfig:
 
         self.tess_enabled = bool(data.get("tess_enabled", self.tess_enabled))
 
+        def _opt_float_none(key: str) -> None:
+            v = data.get(key)
+            if v is None or v == "":
+                setattr(self, key, None)
+                return
+            try:
+                fv = float(v)
+                setattr(self, key, fv if math.isfinite(fv) else None)
+            except (TypeError, ValueError):
+                setattr(self, key, None)
+
+        for _unit_norm_key in (
+            "blind_verify_match_tol_arcsec",
+            "cog_ladder_step_fwhm",
+            "hrd_color_bg_box_arcsec",
+            "masterstar_centre_rms_max_arcsec",
+            "masterstar_sibling_rms_max_arcsec",
+            "phase01_chip_interior_margin_arcsec",
+            "phase01_comparison_isolation_radius_arcsec",
+            "phase01_comparison_max_dist_fov_frac",
+            "qc_max_hfr_fwhm_ratio",
+            "sips_dao_fwhm_fwhm_factor",
+        ):
+            _opt_float_none(_unit_norm_key)
+
     # --- structured-key accessors (WAVE-B STEP 4) ---------------------------------- #
     def comp_tier_bprp_limits(self) -> list[float]:
         """|dBP-RP| colour limit per comp tier, row order, from ``comp_color_tiers``."""
@@ -2505,12 +2550,14 @@ class AppConfig:
             "hrd_color_white_point": str(self.hrd_color_white_point),
             "hrd_color_chroma_boost": float(self.hrd_color_chroma_boost),
             "hrd_color_bg_box_px": int(self.hrd_color_bg_box_px),
+            "hrd_color_bg_box_arcsec": self.hrd_color_bg_box_arcsec,
             "blind_index_fine_path": str(self.blind_index_fine_path or ""),
             "blind_index_wide_path": str(self.blind_index_wide_path or ""),
             "blind_index_select_mode": str(self.blind_index_select_mode or "auto"),
             "blind_verify_enabled": bool(self.blind_verify_enabled),
             "blind_verify_top_n": int(self.blind_verify_top_n),
             "blind_verify_match_tol_px": float(self.blind_verify_match_tol_px),
+            "blind_verify_match_tol_arcsec": self.blind_verify_match_tol_arcsec,
             "blind_verify_min_matches": int(self.blind_verify_min_matches),
             "blind_verify_min_fraction": float(self.blind_verify_min_fraction),
             "blind_verify_inmemory_catalog": bool(self.blind_verify_inmemory_catalog),
@@ -2533,10 +2580,12 @@ class AppConfig:
             "alignment_detection_sigma": float(self.alignment_detection_sigma),
             "qc_dao_detection_sigma": float(self.qc_dao_detection_sigma),
             "sips_dao_fwhm_px": float(self.sips_dao_fwhm_px),
+            "sips_dao_fwhm_fwhm_factor": self.sips_dao_fwhm_fwhm_factor,
             "sips_dao_threshold_sigma": float(self.sips_dao_threshold_sigma),
             "qc_after_calibrate_enabled": bool(self.qc_after_calibrate_enabled),
             "dao_qc_in_calibrate": bool(self.dao_qc_in_calibrate),
             "qc_max_hfr": float(self.qc_max_hfr),
+            "qc_max_hfr_fwhm_ratio": self.qc_max_hfr_fwhm_ratio,
             "qc_min_stars": int(self.qc_min_stars),
             "qc_max_background_rms": (
                 float(self.qc_max_background_rms)
@@ -2625,6 +2674,7 @@ class AppConfig:
             "cog_snr_min": float(self.cog_snr_min),
             "cog_sat_frac": float(self.cog_sat_frac),
             "cog_ladder_step_px": float(self.cog_ladder_step_px),
+            "cog_ladder_step_fwhm": self.cog_ladder_step_fwhm,
             "cog_ac_factor_max": float(self.cog_ac_factor_max),
             "per_frame_saturation_enabled": bool(self.per_frame_saturation_enabled),
             "per_frame_sat_min_clean_frac": float(self.per_frame_sat_min_clean_frac),
@@ -2635,6 +2685,7 @@ class AppConfig:
             "phase01_comparison_max_psf_chi2": float(self.phase01_comparison_max_psf_chi2),
             "phase01_comparison_max_fwhm_factor": float(self.phase01_comparison_max_fwhm_factor),
             "phase01_comparison_isolation_radius_px": float(self.phase01_comparison_isolation_radius_px),
+            "phase01_comparison_isolation_radius_arcsec": self.phase01_comparison_isolation_radius_arcsec,
             "phase01_comparison_rms_outlier_sigma": float(self.phase01_comparison_rms_outlier_sigma),
             "annulus_inner_fwhm": float(self.annulus_inner_fwhm),
             "annulus_outer_fwhm": float(self.annulus_outer_fwhm),
@@ -2654,6 +2705,7 @@ class AppConfig:
             "masterstar_catalog_recovery_min": float(self.masterstar_catalog_recovery_min),
             "masterstar_min_matched_floor": int(self.masterstar_min_matched_floor),
             "masterstar_centre_rms_max_px": float(self.masterstar_centre_rms_max_px),
+            "masterstar_centre_rms_max_arcsec": self.masterstar_centre_rms_max_arcsec,
             "masterstar_distortion_benign_ratio_max": float(
                 self.masterstar_distortion_benign_ratio_max
             ),
@@ -2666,9 +2718,11 @@ class AppConfig:
             "masterstar_sibling_recovery_enabled": bool(self.masterstar_sibling_recovery_enabled),
             "masterstar_sibling_min_matched": int(self.masterstar_sibling_min_matched),
             "masterstar_sibling_rms_max_px": float(self.masterstar_sibling_rms_max_px),
+            "masterstar_sibling_rms_max_arcsec": self.masterstar_sibling_rms_max_arcsec,
             "masterstar_sibling_min_quadrants": int(self.masterstar_sibling_min_quadrants),
             "masterstar_sibling_stack_n": int(self.masterstar_sibling_stack_n),
             "phase01_comparison_max_dist_deg": float(self.phase01_comparison_max_dist_deg),
+            "phase01_comparison_max_dist_fov_frac": self.phase01_comparison_max_dist_fov_frac,
             "phase01_comparison_max_mag_diff": float(self.phase01_comparison_max_mag_diff),
             "phase01_comparison_mag_bright_threshold": float(self.phase01_comparison_mag_bright_threshold),
             "phase01_comparison_max_mag_diff_bright_floor": float(
@@ -2726,6 +2780,7 @@ class AppConfig:
             "gs11_comp_suspect_dilution": float(self.gs11_comp_suspect_dilution),
             "gs11_target_min_dilution": float(self.gs11_target_min_dilution),
             "phase01_chip_interior_margin_px": int(self.phase01_chip_interior_margin_px),
+            "phase01_chip_interior_margin_arcsec": self.phase01_chip_interior_margin_arcsec,
             "variability_min_frames": int(self.variability_min_frames),
             "variability_min_frames_frac": float(self.variability_min_frames_frac),
             "variability_sigma_clip": float(self.variability_sigma_clip),

@@ -385,15 +385,13 @@ def hrd_color_chroma_boost_from_cfg(cfg: Any | None) -> float:
     return float(np.clip(val, 1.0, 3.0))
 
 
-def hrd_color_bg_box_px_from_cfg(cfg: Any | None) -> int:
+def hrd_color_bg_box_px_from_cfg(cfg: Any | None, *, arcsec_per_px: float | None = None) -> int:
     default = _DEFAULT_BG_BOX_PX
     if cfg is None:
         return default
-    try:
-        val = int(getattr(cfg, "hrd_color_bg_box_px", default))
-    except (TypeError, ValueError):
-        return default
-    return int(np.clip(val, 32, 512))
+    from unit_resolver import hrd_color_bg_box_px as _resolve_hrd_color_bg_box_px
+
+    return _resolve_hrd_color_bg_box_px(cfg, arcsec_per_px=arcsec_per_px)
 
 
 def hrd_color_chroma_snr_from_cfg(cfg: Any | None) -> float:
@@ -718,7 +716,6 @@ def render_catalog_color_field(
     saturation = hrd_color_saturation_from_cfg(cfg)
     chroma_snr = hrd_color_chroma_snr_from_cfg(cfg)
     chroma_boost = hrd_color_chroma_boost_from_cfg(cfg)
-    bg_box_px = hrd_color_bg_box_px_from_cfg(cfg)
     highlight_mode = hrd_color_highlight_mode_from_cfg(cfg)
     white_point_mode = hrd_color_white_point_from_cfg(cfg)
 
@@ -744,6 +741,17 @@ def render_catalog_color_field(
     if not ok_scale:
         log_event("HRD color field: pixel scale unknown vs MASTERSTAR FITS -- skipped")
         return None
+
+    from astropy.io import fits as astrofits
+    from unit_resolver import plate_scale_arcsec_per_px_from_header
+
+    _bg_scale: float | None = None
+    try:
+        with astrofits.open(fits_path, memmap=False) as _hdul:
+            _bg_scale = plate_scale_arcsec_per_px_from_header(_hdul[0].header)
+    except Exception:  # noqa: BLE001
+        _bg_scale = None
+    bg_box_px = hrd_color_bg_box_px_from_cfg(cfg, arcsec_per_px=_bg_scale)
 
     xs = pd.to_numeric(colorable["x"], errors="coerce").to_numpy(dtype=np.float64) * sx
     ys = pd.to_numeric(colorable["y"], errors="coerce").to_numpy(dtype=np.float64) * sy

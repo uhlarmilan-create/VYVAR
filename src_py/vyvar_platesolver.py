@@ -31,6 +31,12 @@ from astropy.wcs.utils import fit_wcs_from_points
 from config import AppConfig
 from database import get_gaia_db_max_g_mag
 from infolog import log_event, log_gaia_query
+from unit_resolver import (
+    blind_verify_match_tol_px as _resolve_blind_verify_match_tol_px,
+    masterstar_centre_rms_max_px as _resolve_centre_rms_max_px,
+    masterstar_sibling_rms_max_px as _resolve_sibling_rms_max_px,
+    plate_scale_arcsec_per_px_from_wcs,
+)
 from utils import (
     MIN_GAIA_CONE_RADIUS_DEG,
     catalog_cone_radius_deg_from_optics,
@@ -1715,7 +1721,6 @@ def _verify_blind_candidates(
         return None
 
     _cfg = app_config or AppConfig()
-    top_tol = float(getattr(_cfg, "blind_verify_match_tol_px", 2.5))
     min_matches = int(getattr(_cfg, "blind_verify_min_matches", 12))
     min_fraction = float(getattr(_cfg, "blind_verify_min_fraction", 0.30))
     _dbg = bool(getattr(_cfg, "debug_platesolver", False))
@@ -1740,6 +1745,8 @@ def _verify_blind_candidates(
                     min_matches = max(6, int(min_matches) - 4)
         except (TypeError, ValueError):
             pass
+
+    top_tol = _resolve_blind_verify_match_tol_px(_cfg, arcsec_per_px=_known_ps)
 
     if _early_floor_cfg > 0:
         _early_floor = max(_early_accept, _early_floor_cfg)
@@ -3574,11 +3581,9 @@ def _solve_wcs_validate_and_refine(
         except (TypeError, ValueError):
             _matched_floor = 40
         _matched_floor = max(1, min(500, _matched_floor))
-        try:
-            _centre_rms_max = float(getattr(_cfg_val, "masterstar_centre_rms_max_px", 1.20))
-        except (TypeError, ValueError):
-            _centre_rms_max = 1.20
-        _centre_rms_max = max(0.5, min(5.0, _centre_rms_max))
+        _ps_centre = plate_scale_arcsec_per_px_from_wcs(wcs_final)
+        _centre_rms_max = _resolve_centre_rms_max_px(_cfg_val, arcsec_per_px=_ps_centre)
+        _centre_rms_max = max(0.5, min(5.0, float(_centre_rms_max)))
     _dist_assess: dict[str, Any] = {}
     if _is_masterstar and int(_matched_n) >= 20:
         try:
@@ -5785,16 +5790,17 @@ def filter_code_from_setup_name(setup: str) -> str:
     return s.split("_")[0].strip().lower()
 
 
-def _sibling_cfg_thresholds(cfg: AppConfig) -> dict[str, float | int]:
+def _sibling_cfg_thresholds(
+    cfg: AppConfig,
+    *,
+    arcsec_per_px: float | None = None,
+) -> dict[str, float | int]:
     try:
         min_matched = int(cfg.masterstar_sibling_min_matched)
     except (TypeError, ValueError):
         min_matched = 40
     min_matched = max(1, min(500, int(min_matched)))
-    try:
-        rms_max = float(cfg.masterstar_sibling_rms_max_px)
-    except (TypeError, ValueError):
-        rms_max = 2.0
+    rms_max = _resolve_sibling_rms_max_px(cfg, arcsec_per_px=arcsec_per_px)
     if not math.isfinite(rms_max) or rms_max <= 0:
         rms_max = 2.0
     try:
@@ -6356,7 +6362,10 @@ def try_recover_masterstar_sibling_wcs(
 ) -> dict[str, Any]:
     """Adopt donor WCS, bulk-shift on recipient detections, odds-confirm; optional median stack."""
     cfg = app_config or AppConfig()
-    thresholds = _sibling_cfg_thresholds(cfg)
+    thresholds = _sibling_cfg_thresholds(
+        cfg,
+        arcsec_per_px=expected_plate_scale_arcsec_per_px,
+    )
     recipient_path = Path(recipient_masterstar_fits)
     donor_path = Path(donor_masterstar_fits)
     if not recipient_path.is_file():
