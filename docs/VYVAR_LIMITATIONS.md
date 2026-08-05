@@ -46,10 +46,84 @@ Saturation admission gate at **70%** full well (C-1/C-2). Physical re-cut G 8-9 
 
 ## WIDE-ERR -- Wide-rig quoted error underquoted
 
-Wide-rig (equipment_id 1) quoted error underquoted ~2x vs check-star scatter (H1-global).
-Affects **error bars only**, not fluxes. Fix routed: Honeycutt 1992 leave-one-out ensemble SEM +
-photon-term audit. Must be resolved before a wide-rig submission claims its error bars. Status:
-**OPEN** (future thread). Evidence: `dev/results/CURSOR_RESULT_wide_error_diag.md`.
+Wide-rig (equipment_id 1) quoted error underquoted vs check-star scatter (H1-global).
+Affects **error bars only**, not fluxes. Investigation record as of **2026-08-04**
+(restored July anchor `draft_000435_snapshot_skysurface_20260716`). Evidence chain:
+`dev/results/CURSOR_RESULT_wide_error_diag.md` (E0), W1/W2, A/A2b, E1-E4, AUDIT,
+AUDIT-2.
+
+### Measured (facts on this rig, restored July anchor)
+
+- sigma_total_robust/err = **1.83** (W1, 163 fields, check star 1499906247391001088)
+- Per-comp excess distribution (E4.1): median **20.18 mmag** across 1167 comp instances;
+  IQR 15.77 -- 20.18 -- 25.50 mmag; rises with fainter G (11.9 -> 30.5 mmag from
+  G 8-10 to G 13-14); rises with lower peak ADU (14.8 -> 25.2 mmag from ADU
+  quintile q80-100 to q0-20)
+- Check-star excess (E4.2): median **17.62 mmag** across 163 fields
+- Ratio check/bright-comp excess: **1.48** (check star is ~50% noisier than
+  brightness-matched comps -- neither generic rig floor nor clean special)
+- sigma_sys_mag = **0** for equipment_id 1 (config.json)
+
+### Eliminated (with the evidence file)
+
+- Check star variability (E0 STEP 5: VSX no match within 10 arcsec; Gaia var_flag
+  NOT_AVAILABLE) -- `CURSOR_RESULT_wide_err_step0_checkstar.md`
+- Outliers (E4/W1 robust estimators consistent with non-robust)
+- Trend (W1: linear/quadratic detrend does not collapse ratio) --
+  `CURSOR_RESULT_wide_err_w1w2.md`
+- N_eff / flux-weight mismatch (W2: predicted 1.04, measured 1.83; Spearman -0.23) --
+  `CURSOR_RESULT_wide_err_w1w2.md`
+- Iterative comp clipping / D12-1 (E1.3: SEM_unclipped/SEM_production = 1.00) --
+  `CURSOR_RESULT_wide_err_e1.md`
+- Flux-set vs SEM-set difference (E1.2: diff = 0 every frame) --
+  `CURSOR_RESULT_wide_err_e1.md`
+- Photon term (M4: faint-end k = 1.12, not 1.83; photon-dominated stars are OK)
+- Common mode c(t) (E2.2: check_pc1_corr = 0.003 -> c(t) cancels between target
+  and ensemble as expected) -- `CURSOR_RESULT_wide_err_e2.md`
+- Spatial gradient (E2.2: 9% of fields significant at p<0.05, not enough to
+  support EPD-style correction) -- `CURSOR_RESULT_wide_err_e2.md`
+- Scintillation (A3: closes ~9% of gap even with corrected APTDIA) --
+  `CURSOR_RESULT_wide_err_a.md`
+
+### Untested (open)
+
+- Detector non-linearity D1-2: A1 had peak_max_adu range 25774-32452 ADU (1.26x span,
+  ~40-50% of full scale), insufficient lever arm to detect non-linearity. NOT refuted.
+- Honeycutt (1992) primary eq. 3-5: AUDIT-2 could not retrieve. Whether VYVAR's
+  std/(c4*sqrt(n)) on m - comp_ref_map approximates Honeycutt's derived error formula
+  cannot be determined without the primary source. --
+  `CURSOR_RESULT_wide_err_audit2.md`
+- Cross-rig comparison: no Newton/Dablice or Boyden draft with check-star LCs on
+  disk. Whether 20 mmag excess is a wide-rig characteristic or a VYVAR-pipeline
+  characteristic is not established.
+
+### Decision status: DEFERRED
+
+- Voluntary batch D policy: 15-17 mmag floor sits outside Everett & Howell 2-5 mmag
+  band. That band applies to well-sampled PSF; this rig has 9.55"/px and APTDIA=70 mm
+  (see ROADMAP **DB-DEFECT-DIAMETER** below).
+- E4.1 measured the same 15-20 mmag range independently. Two methods, same result;
+  not fitted to chi2=1.
+- Applying it as sigma_sys_mag = 17.6 mmag would collapse chi2 for check star from
+  3.35 to 1.0 by definition, closing the measurement. Deferred until Newton or Boyden
+  cross-check (ROADMAP **WIDE-ERR-CROSSRIG**).
+
+### Retractions (do not resurrect these hypotheses without re-testing)
+
+- **WIDE-ERR-CORRELATED-COMPS** (E2.1 predicted factor 1.90 was coincidence; the
+  across-frame correlation captures c(t) which cancels) -- `CURSOR_RESULT_wide_err_e2.md`
+- **WIDE-ERR-SEM-ARITH** (E1.4 measured brightness spread, not measurement scatter) --
+  `CURSOR_RESULT_wide_err_e1.md`
+- **WIDE-ERR-MISSING-TARGET-TERM** (E3.2 sigma_eps included photon; monotonic G rise
+  is photon, not systematic) -- `CURSOR_RESULT_wide_err_e3.md`
+- Multiplicative gain model (A2b M2 sky PTC on unflat-fielded frames; g_eff 0.96
+  violates the science-data lower bound g >= 2.50) -- `CURSOR_RESULT_wide_err_a2b.md`
+- Additive sigma_sys floor of exactly 15 mmag from batch D chi2 fit (predicts
+  constant excess in mmag; A2 measured 7.8 mmag at G~10 vs 56 mmag at G~14) --
+  `CURSOR_RESULT_wide_err_a.md`
+
+Status: **DEFERRED** (decision on sigma_sys_mag pending cross-rig check). Direct
+measurement: `dev/results/CURSOR_RESULT_wide_err_e4.md`.
 
 ## I-12 -- Proper motion when pmra/pmdec absent
 

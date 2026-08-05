@@ -2,7 +2,20 @@
 
 **Status:** Science audit **closed** (2026-08-04).
 
-Last updated: **2026-08-04** (SESSION-CLOSE 2026-08-04b: evidence chain, manifest tripwire).
+Last updated: **2026-08-04** (SESSION-CLOSE 2026-08-04c: WIDE-ERR investigation record).
+
+## Session close 2026-08-04c (WIDE-ERR investigation record)
+
+WIDE-ERR investigation state written to `docs/VYVAR_LIMITATIONS.md` (WIDE-ERR section).
+Decision on sigma_sys_mag **DEFERRED** pending WIDE-ERR-CROSSRIG. Three ROADMAP items
+added (HONEYCUTT-PDF, CROSSRIG, DB-DEFECT-DIAMETER). E4 per-comp excess measurement
+committed. Report: `dev/results/CURSOR_RESULT_session_close_20260804c.md`.
+
+## WIDE-ERR
+
+Investigated 2026-08-04. Per-comp excess ~20 mmag measured directly on rig.
+Decision on sigma_sys_mag DEFERRED pending WIDE-ERR-CROSSRIG. See LIMITATIONS:47
+for full state including 5 retracted hypotheses.
 
 ## Session close 2026-08-04b (evidence chain; WIDE-ERR harness fix)
 
