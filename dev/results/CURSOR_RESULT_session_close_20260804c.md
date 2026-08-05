@@ -41,7 +41,7 @@ status + session-close header). Two commits; pushed to origin/main after rebase.
 
 - git pull --rebase origin main: clean (already up to date)
 - git push origin main: success (6e2223d..1dc2527)
-- HEAD after push: **1dc2527**
+- HEAD after push: **9d764a1** (includes report fix commit)
 
 ### Retractions recorded in LIMITATIONS
 
