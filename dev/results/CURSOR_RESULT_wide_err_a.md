@@ -21,7 +21,8 @@ N_eff mismatch rejected as mechanism.
 ## A1 -- Within-star test (check star 1499906247391001088, 163 fields)
 
 **Peak column:** `peak_max_adu` from per-frame proc CSVs (also present: `peak_dao`).
-Across all pooled epochs: p05 = 25774, p50 = 28915, p95 = 32452 ADU.
+Across all pooled epochs: p05 = 25774, p50 = 28915, p95 = 32452 ADU (1.26x span, entirely
+within ~40-50% of full scale -- insufficient lever arm to detect detector non-linearity).
 
 **Per-field regression** of residual r_i (mmag about weighted mean) on peak ADU:
 
@@ -66,6 +67,8 @@ decile. This is inconsistent with a simple "higher peak -> higher residual" non-
 
 Pre-registered: relation present but **non-monotonic** -> report shape, do not force LEVEL or
 FLOOR from A1 alone. FWHM confounding prevents separating peak from seeing. **NOT SEPARABLE.**
+The lowest-peak decile's elevated scatter (20.8 mmag) is the expected signature of poor
+seeing, not of detector level. **A1 did not refute D1-2; it did not test it.**
 
 ## A2 -- Population test (166 variable-target LCs)
 
@@ -114,20 +117,24 @@ isolated as detector level on this data. Does not match FLOOR or LEVEL pre-regis
 
 | keyword | value |
 |---------|-------|
-| XPIXSZ / YPIXSZ | 9.26 um (unbinned pixel) |
+| XPIXSZ / YPIXSZ | 9.26 um (binned pixel pitch -- NOT unbinned) |
 | XBINNING / YBINNING | 2 / 2 |
 | SCALE | 9.55169 arcsec/pixel (binned) |
 | FOCALLEN (header) | 200.0 mm |
 | APTDIA (header) | 70.0 mm |
 
-**3. Implied focal length:**
+**3. Implied focal length (corrected -- A2b audit of A3 step 3):**
 
-pixel_pitch_binned = 9.26 um x 2 = 0.01852 mm
-f_implied = 206265 x 0.01852 / 9.55169 = **399.9 mm**
+Previous A3 doubled pixel pitch incorrectly. XPIXSZ = 9.26 um is **already** the binned pitch.
+Self-check from the same data:
 
-Against DB: DIAMETER = 200 mm, FOCAL = 200 mm. Implied f ~ 400 mm vs header FOCALLEN 200 mm.
-Using DB diameter: **f/D = 400/200 = f/2.0** (not f/1.0). Header APTDIA 70 mm is inconsistent
-with DB 200 mm (fix_telescope_diameter.py 72 -> 200 mm per SIGMA-A2).
+  9.55169 arcsec/px x 200 mm / 206265 = 9.26 um  (exact)
+
+Implied focal length **f = 200 mm**, matching header FOCALLEN, not 400 mm.
+
+With DB DIAMETER = 200 mm that is **f/1.0**. Header APTDIA = 70 mm contradicts DB
+DIAMETER = 200 mm -- record as **DB defect** contradicted by the instrument's own FITS header
+(do not change DB).
 
 **4. Scintillation** (Young/Osborn, exposure 60 s, altitude 275 m, airmass p05/p50/p95 =
 1.013 / 1.040 / 1.187):
@@ -159,7 +166,8 @@ peak/FWHM test and/or a brightness-dependent error term beyond scint/N_eff.
 
 ## A4 -- Commits
 
-Pending: commit dev/tools/wide_err_w1w2.py + dev/tools/wide_err_a.py (ASCII check).
+Commit **298a00e**: `dev/tools/wide_err_w1w2.py`, `dev/tools/wide_err_a.py`,
+`dev/results/CURSOR_RESULT_wide_err_a.md`. ASCII check: stop=0, migrated_or_would=0.
 
 ## Files created
 
