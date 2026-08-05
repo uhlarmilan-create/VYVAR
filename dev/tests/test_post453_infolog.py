@@ -29,13 +29,13 @@ def test_write_run_infolog_is_single_save_entrypoint(tmp_path: Path) -> None:
     log_milestone("[SITE] observer location id=2 source=config")
     log_phase_boundary("calibration", status="start")
     log_milestone("INV-PREP-01 Preprocess gradient guard: ok ratio=1.0")
-    log_milestone("INV-MS-01 MASTERSTAR count guard: ok")
+    log_milestone("INV-WCS-01 matched_world2pix_identity: ok p95=1.54")
     path = write_run_infolog(draft)
     assert path is not None
     text = Path(path).read_text(encoding="utf-8")
     assert "[SITE]" in text
     assert "INV-PREP-01" in text
-    assert "INV-MS-01" in text
+    assert "INV-WCS-01" in text
     assert "[PHASE] calibration start" in text
     assert "authoritative: durable session log" in text
 

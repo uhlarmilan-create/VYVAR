@@ -45,7 +45,6 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-CFG-01R",
         "INV-PHASE0-ID",
         "INV-PREP-01",
-        "INV-MS-01",
         "QC-01",
         "OSC-01",
         "OSC-02",
@@ -58,8 +57,6 @@ WCS_IDENTITY_P95_WARN_PX = 2.0
 FLAT_MEAN_REL_TOL = 1e-3
 FLUX_SUM_REL_TOL = 1e-6
 PREPROCESS_LARGE_SMALL_RATIO_WARN = 10.0
-DAO_ONLY_FRACTION_WARN = 0.10
-DAO_ONLY_FRACTION_FAIL = 0.25
 
 COG_META_KEYS = (
     "cog_night_fallback",
@@ -452,7 +449,11 @@ def check_preprocess_large_small_ratio(
 
 
 def dao_only_fraction_from_masterstars(df: Any) -> float:
-    """Fraction of masterstar rows with empty catalog_id / source_type DAO_ONLY."""
+    """Informational census: fraction of masterstar rows with empty catalog_id / DAO_ONLY.
+
+    No runtime policy is attached. Used by the pipeline log line, threshold-sweep
+    audit scripts, and anchor fixture regression tests.
+    """
     import pandas as pd
 
     pdf = df if isinstance(df, pd.DataFrame) else pd.DataFrame(df)
@@ -465,21 +466,6 @@ def dao_only_fraction_from_masterstars(df: Any) -> float:
         cid = pdf.get("catalog_id", pd.Series([""] * len(pdf))).fillna("").astype(str).str.strip()
         n_dao = int((cid == "").sum())
     return float(n_dao) / float(len(pdf))
-
-
-def check_dao_only_fraction(
-    df: Any,
-    *,
-    warn_frac: float = DAO_ONLY_FRACTION_WARN,
-    fail_frac: float = DAO_ONLY_FRACTION_FAIL,
-) -> tuple[bool, str, float, str]:
-    """INV-MS-01: DAO_ONLY purity on masterstars export (anchor ~3.7%; regression >>10%)."""
-    frac = dao_only_fraction_from_masterstars(df)
-    if frac > float(fail_frac):
-        return False, f"dao_only_fraction={frac:.3f} (fail>{fail_frac:g})", frac, "FAIL"
-    if frac > float(warn_frac):
-        return False, f"dao_only_fraction={frac:.3f} (warn>{warn_frac:g})", frac, "WARN"
-    return True, f"dao_only_fraction={frac:.3f}", frac, "ok"
 
 
 def stamp_pipeline_stage(

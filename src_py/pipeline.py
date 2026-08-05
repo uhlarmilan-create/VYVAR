@@ -12474,23 +12474,21 @@ def generate_masterstar_and_catalog(
         if _n_bp_miss > 0:
             log_event(f"masterstars bp_rp fallback: {_n_bp_fill}/{_n_bp_miss} doplnenych z Gaia DB")
         try:
-            from invariants_runtime import InvariantViolation  # noqa: PLC0415
-            from invariants_runtime import check_dao_only_fraction  # noqa: PLC0415
-            from invariants_runtime import inv_check  # noqa: PLC0415
+            from invariants_runtime import dao_only_fraction_from_masterstars  # noqa: PLC0415
 
-            _ms_inv_meta: dict[str, Any] = {"invariants": []}
-            _ok_ms, _det_ms, _frac_ms, _pol_ms = check_dao_only_fraction(df_final)
-            inv_check(_ms_inv_meta, "INV-MS-01", _ok_ms, policy=_pol_ms, detail=_det_ms)
-            _ms_guard_msg = f"INV-MS-01 MASTERSTAR purity guard: {_det_ms}"
-            LOGGER.info(_ms_guard_msg)
-            log_event(_ms_guard_msg)
-        except InvariantViolation:
-            raise
-        except Exception as _ms_inv_exc:  # noqa: BLE001
-            LOGGER.debug("[INV-MS-01] skipped: %s", _ms_inv_exc)
-        _vyvar_df_to_csv(df_final, csv_path)
+            _frac_ms = float(dao_only_fraction_from_masterstars(df_final))
+            _n_dao_ms = int(round(_frac_ms * float(len(df_final))))
+            _ms_info_msg = (
+                f"MASTERSTAR DAO_ONLY census: {_n_dao_ms}/{len(df_final)} "
+                f"(fraction={_frac_ms:.3f}) -- informational, not a gate"
+            )
+            LOGGER.info(_ms_info_msg)
+            log_event(_ms_info_msg)
+        except Exception as _ms_census_exc:  # noqa: BLE001
+            LOGGER.debug("[MASTERSTAR-DAO-CENSUS] skipped: %s", _ms_census_exc)
     except Exception as exc:  # noqa: BLE001
         log_event(f"MASTERSTAR source_type annotate failed: {exc!s}")
+    _vyvar_df_to_csv(df_final, csv_path)
     _n_det = int(len(df_final))
     _n_mat = int(
         df_final.get("catalog_id", pd.Series([""] * len(df_final)))

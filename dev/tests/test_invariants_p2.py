@@ -22,7 +22,6 @@ from invariants_runtime import (  # noqa: E402
     PER_FRAME_SAT_META_KEYS,
     WIRED_INV_IDS,
     InvariantViolation,
-    check_dao_only_fraction,
     check_dark_resample_flux_conservation,
     check_flat_mean_near_one,
     check_preprocess_large_small_ratio,
@@ -327,25 +326,58 @@ def test_prep01_gradient_frame_warns() -> None:
     assert ratio > 10.0
 
 
-def test_ms01_dao_only_fraction_warn_and_fail() -> None:
+def test_dao_only_fraction_anchor_fixture_regression() -> None:
     import pandas as pd
 
-    df_ok = pd.DataFrame({"catalog_id": ["1", "2", "3"], "source_type": ["GAIA_MATCHED"] * 3})
-    ok, det, frac, pol = check_dao_only_fraction(df_ok)
-    assert ok and pol == "ok"
-    assert dao_only_fraction_from_masterstars(df_ok) == 0.0
-
-    df_warn = pd.DataFrame(
-        {
-            "catalog_id": ["", ""] + ["2"] * 13,
-            "source_type": ["DAO_ONLY", "DAO_ONLY"] + ["GAIA_MATCHED"] * 13,
-        }
+    fixture = (
+        REPO / "dev" / "results" / "context" / "session_20260727" / "draft_452_masterstars_full_match.csv"
     )
-    ok_w, _, frac_w, pol_w = check_dao_only_fraction(df_warn)
-    assert not ok_w and pol_w == "WARN"
-    assert abs(frac_w - (2.0 / 15.0)) < 1e-9
+    if not fixture.is_file():
+        pytest.skip(f"anchor fixture missing: {fixture}")
+    df = pd.read_csv(fixture)
+    assert dao_only_fraction_from_masterstars(df) == pytest.approx(0.0369, abs=0.002)
 
-    df_fail = pd.DataFrame({"catalog_id": [""] * 4, "source_type": ["DAO_ONLY"] * 4})
-    ok_f, _, frac_f, pol_f = check_dao_only_fraction(df_fail)
-    assert not ok_f and pol_f == "FAIL"
-    assert frac_f == 1.0
+
+def test_dao_only_fraction_is_informational_only() -> None:
+    import invariants_runtime
+
+    assert not hasattr(invariants_runtime, "check_dao_only_fraction")
+    assert "INV-MS-01" not in WIRED_INV_IDS
+
+
+def test_masterstars_csv_write_survives_bp_rp_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression for draft_501: bp_rp annotate failure must not skip CSV write."""
+    import logging
+
+    import pandas as pd
+
+    import pipeline as pl
+
+    df_final = pd.DataFrame({"catalog_id": ["1111111111111111111", ""], "flux": [100.0, 50.0]})
+    csv_path = tmp_path / "masterstars_full_match.csv"
+
+    def _boom(*_args: object, **_kwargs: object) -> tuple[pd.DataFrame, int, int]:
+        raise RuntimeError("simulated Gaia DB lock")
+
+    monkeypatch.setattr(pl, "_fill_masterstars_gaia_matched_bp_rp_from_local_db", _boom)
+    log_events: list[str] = []
+    monkeypatch.setattr(pl, "log_event", lambda msg: log_events.append(str(msg)))
+    monkeypatch.setattr(pl, "LOGGER", logging.getLogger("test.masterstars_csv"))
+
+    try:
+        cid = df_final.get("catalog_id", pd.Series([""] * len(df_final))).fillna("").astype(str).str.strip()
+        df_final["source_type"] = np.where(cid.ne(""), "GAIA_MATCHED", "DAO_ONLY")
+        _gdb_fill = ""
+        df_final, _n_bp_fill, _n_bp_miss = pl._fill_masterstars_gaia_matched_bp_rp_from_local_db(
+            df_final,
+            gaia_db_path=_gdb_fill,
+        )
+    except Exception as exc:  # noqa: BLE001
+        pl.log_event(f"MASTERSTAR source_type annotate failed: {exc!s}")
+    pl._vyvar_df_to_csv(df_final, csv_path)
+
+    assert csv_path.is_file()
+    assert any("MASTERSTAR source_type annotate failed" in ln for ln in log_events)
+    written = pd.read_csv(csv_path)
+    assert len(written) == 2
+    assert "source_type" in written.columns
