@@ -78,6 +78,8 @@ def build_markdown(*, generated_at: str | None = None, git_head: str | None = No
     widget_c = Counter(e["widget"] for e in registry.values())
     owner_c = Counter(e["owner"] for e in registry.values())
     scope_c = Counter(e["scope"] for e in registry.values())
+    scope_key_c = Counter(e["scope_key"] for e in registry.values())
+    scope_group_c = Counter(e["scope_group"] for e in registry.values() if e["scope"] == "rig")
 
     lines: list[str] = []
     lines.append("# VYVAR -- Config <-> UI parameter registry")
@@ -125,10 +127,19 @@ def build_markdown(*, generated_at: str | None = None, git_head: str | None = No
         "- Scope: "
         + ", ".join(f"{s} {scope_c.get(s, 0)}" for s in pr.SCOPES)
     )
+    lines.append(
+        "- Scope key: "
+        + ", ".join(f"{k} {scope_key_c.get(k, 0)}" for k in pr.SCOPE_KEYS)
+    )
+    if scope_group_c:
+        lines.append(
+            "- Rig triage group: "
+            + ", ".join(f"{g} {scope_group_c.get(g, 0)}" for g in ("a", "b", "c") if scope_group_c.get(g))
+        )
     lines.append("")
     lines.append(
-        "Columns: key, default, range, tier, kind, owner, scope, widget, label. `kind=resolved` means "
-        "the runtime value can be auto-derived/overridden by the pipeline (the configured "
+        "Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. "
+        "`kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured "
         "value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` "
         "(DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` "
         "(resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep "
@@ -136,8 +147,8 @@ def build_markdown(*, generated_at: str | None = None, git_head: str | None = No
     )
     lines.append("")
 
-    header = "| key | default | range | tier | kind | owner | scope | widget | label |"
-    sep = "|-----|---------|-------|------|------|-------|-------|--------|-------|"
+    header = "| key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |"
+    sep = "|-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|"
 
     for phase in pr.PHASES:
         keys = sorted(k for k, e in registry.items() if e["phase"] == phase)
@@ -166,6 +177,8 @@ def build_markdown(*, generated_at: str | None = None, git_head: str | None = No
                         _cell(e["kind"]),
                         _cell(e["owner"]),
                         _cell(e["scope"]),
+                        _cell(e["scope_key"]),
+                        _cell(e["scope_group"]),
                         _cell(e["widget"]),
                         _cell(e["label"]),
                     ]

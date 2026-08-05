@@ -46,8 +46,23 @@ OWNERS = ("db_static", "config_runtime", "fits_dynamic", "internal")
 # Consistent with src_py/param_resolver.py categories (equipment-intrinsic / observation-specific / site).
 SCOPES = ("universal", "rig", "site", "session")
 SCOPE_CONFIDENCES = ("high", "low")
+# Resolution key: what identity the correct value must be looked up by (PARAM-SCOPE-REMEDIATION C').
+#   none         -- scope=universal; no equipment/site/frame identity needed.
+#   rig          -- (ID_EQUIPMENTS, ID_TELESCOPE) draft-level rig identity.
+#   rig_band     -- rig + band token (filter, or TR/TG/TB for OSC Bayer planes).
+#   rig_sampling -- rig + effective linear sampling (mono: binning; OSC: 2 x osc_channel_binning).
+#   site         -- ID_LOCATION observing site.
+#   frame        -- FITS / solved WCS per frame (scope=session).
+# OSC note: effective linear sampling is 2 (Bayer superpixel) x osc_channel_binning (default 2 -> 4x).
+SCOPE_KEYS = ("none", "rig", "rig_band", "rig_sampling", "site", "frame")
+# Triage group for scope=rig only: a=genuine per-rig physics, b=unit artefact (normalise to arcsec/FWHM),
+# c=operational tuning; n/a for non-rig entries.
+SCOPE_GROUPS = ("n/a", "a", "b", "c")
 
-ENTRY_KEYS = ("tier", "phase", "label", "help", "unit", "kind", "range", "widget", "owner", "scope", "scope_confidence")
+ENTRY_KEYS = (
+    "tier", "phase", "label", "help", "unit", "kind", "range", "widget", "owner",
+    "scope", "scope_key", "scope_group", "scope_confidence",
+)
 
 # str-typed fields whose values are drawn from a fixed vocabulary (selectbox).
 LITERAL_OPTIONS: dict[str, tuple[str, ...]] = {

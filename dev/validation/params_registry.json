@@ -27,7 +27,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "site",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "site",
+    "scope_group": "n/a"
   },
   "aavso_observer_code": {
     "help": "Your official AAVSO observer code (e.g. UMIA). Stamped into every AAVSO export as #OBSCODE. A warning is emitted ONLY when this value is missing/empty; any explicitly configured code (including UMIA) is accepted with no placeholder warning.",
@@ -40,7 +42,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "site",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "site",
+    "scope_group": "n/a"
   },
   "admission_sat_peak_frac": {
     "help": "D5-2 / C-1 admission gate. Reject comparison stars whose peak exceeds this fraction of full well. Distinct from the 85 percent is_saturated flag; 0.70 was set by the batch E re-cut.",
@@ -56,7 +60,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "alignment_detection_sigma": {
     "help": "Detection sensitivity of the star finder used to pick alignment control stars.",
@@ -69,7 +75,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "alignment_max_control_points": {
     "help": "Maximum number of control points the aligner may use per frame; more is robuster but slower.",
@@ -82,7 +90,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig_sampling",
+    "scope_group": "c"
   },
   "alignment_max_stars": {
     "help": "Cap on stars considered by the alignment matcher.",
@@ -98,7 +108,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "annulus_inner_fwhm": {
     "help": "Inner radius of the sky annulus in FWHM units; density adaptation may tighten it on dense fields.",
@@ -114,7 +126,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "annulus_outer_fwhm": {
     "help": "Outer radius of the sky annulus in FWHM units.",
@@ -130,7 +144,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "aperture_comp_factor": {
     "help": "Aperture size multiplier applied to comparison stars.",
@@ -146,7 +162,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "aperture_correction_enabled": {
     "help": "Enables aperture correction: transferring flux measured in a small aperture to the total-flux scale using bright reference stars.",
@@ -159,7 +177,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "aperture_correction_max_contamination": {
     "help": "Maximum neighbour contamination a reference star may have to be used for aperture correction.",
@@ -175,7 +195,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "aperture_correction_max_scatter_mag": {
     "help": "Maximum scatter (mag) allowed among aperture-correction reference stars.",
@@ -191,7 +213,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "aperture_correction_min_ref_stars": {
     "help": "Minimum reference stars required to compute an aperture correction.",
@@ -207,7 +231,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "aperture_fwhm_factor": {
     "help": "Base aperture radius in FWHM units; the SNR-optimal sizing sweep may adapt the effective radius per star.",
@@ -223,7 +249,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "aperture_photometry_enabled": {
     "help": "Master switch of aperture photometry - the production measurement method of VYVAR.",
@@ -236,7 +264,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "aperture_snr_sizing": {
     "help": "SNR-optimal aperture sizing sweep bounds as FWHM multiples: 'small' is the minimum radius (best for faint stars), 'large' the maximum. WAVE-B merged the former aperture_fwhm_factor_small/_large scalars into this mapping (there is no medium class).",
@@ -249,7 +279,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "aperture_variable_factor": {
     "help": "Aperture size multiplier applied to the variable (target) star.",
@@ -265,7 +297,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "apply_color_term": {
     "help": "Whether a color-term transformation is applied to magnitudes ('off' keeps instrumental system).",
@@ -277,8 +311,10 @@
     "tier": "expert",
     "unit": null,
     "widget": "auto",
-    "scope": "site",
-    "scope_confidence": "high"
+    "scope": "rig",
+    "scope_confidence": "high",
+    "scope_key": "rig_band",
+    "scope_group": "a"
   },
   "archive_root": {
     "help": "Root folder of the observation archive (raw and processed drafts). Resolved per machine at startup.",
@@ -291,7 +327,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "auto_fwhm_enabled": {
     "help": "Automatically derives the frame-quality FWHM limit from the night's own seeing statistics instead of a fixed number.",
@@ -304,7 +342,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "auto_fwhm_k_factor": {
     "help": "Multiplier applied to the night's median FWHM when deriving the automatic quality limit.",
@@ -317,7 +357,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "auto_fwhm_k_max": {
     "help": "Upper clamp of the automatic FWHM limit multiplier.",
@@ -330,7 +372,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "auto_fwhm_k_min": {
     "help": "Lower clamp of the automatic FWHM limit multiplier.",
@@ -343,7 +387,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_img_select_mode": {
     "help": "Strategy for picking which detected stars feed the blind solver ('per_cell' spreads them evenly across the frame).",
@@ -356,7 +402,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "session",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "frame",
+    "scope_group": "n/a"
   },
   "blind_img_star_budget": {
     "help": "Maximum number of image stars handed to the blind solver; a budget keeps solving fast.",
@@ -369,7 +417,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_index_fine_path": {
     "help": "Path to the fine-scale astrometric index used by the blind plate solver for narrow-field rigs.",
@@ -382,7 +432,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_index_path": {
     "help": "Legacy single-index path for the blind solver; superseded by the fine/wide pair with automatic selection.",
@@ -395,7 +447,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_index_select_mode": {
     "help": "How the blind solver picks its index: 'auto' chooses fine or wide by the rig's field of view; can be forced manually.",
@@ -408,7 +462,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "session",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "frame",
+    "scope_group": "n/a"
   },
   "blind_index_wide_path": {
     "help": "Path to the wide-field astrometric index used by the blind plate solver for wide rigs (e.g. the 200mm Zeiss).",
@@ -421,7 +477,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_use_rig_prior": {
     "help": "Uses the known rig plate scale as a prior to reject implausible blind-solve candidates early.",
@@ -434,7 +492,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "blind_verify_early_accept": {
     "help": "Number of verified star matches at which the blind solver stops early and accepts the solution.",
@@ -447,7 +507,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_verify_early_floor": {
     "help": "Minimum matches required before early acceptance may trigger at all.",
@@ -460,7 +522,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_verify_early_fraction": {
     "help": "Fraction of catalog stars that must match for early acceptance.",
@@ -476,7 +540,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_verify_enabled": {
     "help": "Verifies every blind-solve candidate against the Gaia catalog before trusting it - the safety net of blind solving.",
@@ -489,7 +555,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_verify_inmemory_catalog": {
     "help": "Keeps the verification catalog in memory for speed instead of re-querying the database.",
@@ -502,7 +570,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_verify_match_tol_px": {
     "help": "Pixel tolerance when matching image stars to catalog positions during verification.",
@@ -518,7 +588,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "blind_verify_min_fraction": {
     "help": "Minimum fraction of stars that must match for a blind solution to pass verification.",
@@ -534,7 +606,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_verify_min_matches": {
     "help": "Absolute minimum of matched stars for a verified blind solution.",
@@ -547,7 +621,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "blind_verify_top_n": {
     "help": "How many best blind candidates get the full verification treatment.",
@@ -560,7 +636,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "bpm_dark_mad_sigma": {
     "help": "Sensitivity of bad-pixel detection on the master dark: pixels deviating more than this many robust sigmas are mapped as defective.",
@@ -576,7 +654,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "cal_diag_autocorrect_enabled": {
     "help": "Lets the calibration diagnostic auto-correct a detected master-dark convention mismatch (e.g. SUM vs MEAN stacking) instead of aborting.",
@@ -589,7 +669,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cal_diag_gate_enabled": {
     "help": "Master switch of the calibration diagnostic gate: sanity-checks the sky level after dark subtraction and fails closed on nonsense.",
@@ -602,7 +684,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cal_diag_hard_sigma": {
     "help": "Hard limit (in sigmas) of the post-calibration sky sanity check; beyond it the frame set is rejected.",
@@ -618,7 +702,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cal_diag_rel_tol": {
     "help": "Relative tolerance of the pre-subtraction dark-vs-frame level cross-check (2% by default).",
@@ -634,7 +720,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cal_diag_sat_warn_frac": {
     "help": "Fraction of the saturation limit at which the diagnostic starts warning about a too-bright master or frame.",
@@ -650,7 +738,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "calibration_library_native_binning": {
     "help": "Binning in which the calibration library masters were built; masters get resampled (with provenance flag) when a draft uses another binning.",
@@ -666,7 +756,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig_sampling",
+    "scope_group": "a"
   },
   "calibration_library_root": {
     "help": "Root folder of the calibration library (master darks/flats organized by camera, binning and temperature). Resolved per machine.",
@@ -679,7 +771,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "calibration_master_ccd_temp_tolerance_c": {
     "help": "Maximum allowed CCD temperature difference (deg C) between a master dark and the light frames it calibrates.",
@@ -692,7 +786,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "catalog_query_max_rows": {
     "help": "Cap on rows returned by a single Gaia catalog query; protects memory on very dense fields.",
@@ -708,7 +804,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "check_select_rms_floor": {
     "help": "RMS floor in check-star selection scoring.",
@@ -724,7 +822,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "check_star_min_epochs": {
     "help": "Minimum epochs the check star must cover for its quality verdict to count.",
@@ -737,7 +837,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cog_ac_factor_max": {
     "help": "Upper clamp of the curve-of-growth aperture-correction factor.",
@@ -750,7 +852,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cog_aperture_correction_enabled": {
     "help": "Enables the curve-of-growth variant of aperture correction (experimental alternative).",
@@ -763,7 +867,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cog_isolation_fwhm": {
     "help": "Isolation radius (FWHM) a star needs to serve as a curve-of-growth reference.",
@@ -776,7 +882,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cog_ladder_step_px": {
     "help": "Radius step (px) of the curve-of-growth aperture ladder.",
@@ -789,7 +897,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "cog_min_stars": {
     "help": "Minimum stars needed to fit a curve of growth.",
@@ -805,7 +915,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cog_ref_fwhm": {
     "help": "Reference FWHM used to normalize the curve of growth.",
@@ -821,7 +933,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cog_sat_frac": {
     "help": "Saturation-fraction cutoff for curve-of-growth reference stars.",
@@ -834,7 +948,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "cog_snr_min": {
     "help": "Minimum SNR of a curve-of-growth reference star.",
@@ -847,7 +963,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_clip_sigma": {
     "help": "Sigma-clipping level applied to comparison-star series before ensemble statistics.",
@@ -863,7 +981,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_color_tiers": {
     "help": "Ordered color-match tiers for comparison weighting. Each entry is a BP-RP color-match limit ('bprp', tighter = better color match) and the ensemble weight ('w') for stars in that tier. WAVE-B merged the eight comp_tier{1..4}_bprp_limit / _weight scalars into this list of dicts.",
@@ -876,7 +996,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_contamination_penalty_k": {
     "help": "Weight penalty strength for contaminated comparison stars in ensemble weighting.",
@@ -892,7 +1014,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_iterative_clip_enabled": {
     "help": "Iterative re-clipping of the comparison ensemble (drop-and-reweigh loop); ON in production since the Brno fix of 2026-06-14.",
@@ -905,7 +1029,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_max_delta_bprp": {
     "help": "Maximum Gaia BP-RP color difference between a comparison star and the target - the primary defense against extinction systematics on unfiltered data; density adaptation adjusts it.",
@@ -921,7 +1047,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_max_slope_mmag_hr": {
     "help": "Maximum linear trend (mmag/hour) a comparison star may show before being rejected as drifting.",
@@ -937,7 +1065,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_qa_enabled": {
     "help": "Per-epoch quality assessment of the comparison ensemble feeding the trust verdict.",
@@ -950,7 +1080,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_select_rms_floor": {
     "help": "Numerical floor of comparison RMS in weighting (prevents division blow-ups).",
@@ -963,7 +1095,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_slope_significance_k": {
     "help": "Statistical significance required before a comparison star's trend counts as real drift.",
@@ -979,7 +1113,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_sparse_fallback_enabled": {
     "help": "Allows the sparse-field fallback path when strict criteria yield too few comparisons.",
@@ -992,7 +1128,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_sparse_fallback_min": {
     "help": "Minimum comparisons the sparse fallback aims for (0 = take what exists).",
@@ -1005,7 +1143,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "comp_trust_min_comps": {
     "help": "GREEN trust threshold of ensemble size (default 5 per literature; production runs 3 with sigma scaled by N - see DECISIONS). Fewer comps degrade to YELLOW, not RED.",
@@ -1018,7 +1158,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "crowding_blend_tighten_threshold": {
     "help": "Blend-fraction level above which the (experimental) crowding classifier would tighten comparison criteria.",
@@ -1034,7 +1176,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "crowding_classifier_enabled": {
     "help": "Experimental crowding classifier switch; OFF pending validation on Newton dense-field data.",
@@ -1047,7 +1191,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "crowding_comp_availability_loosen_count": {
     "help": "Comparison-star availability level treated as plentiful when the crowding logic decides about loosening.",
@@ -1063,7 +1209,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "crowding_tighten_min_fwhm_px": {
     "help": "Minimum FWHM (px) below which crowding-driven tightening is not applied (undersampled images).",
@@ -1079,7 +1227,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "dao_centroid_max_shift_fwhm": {
     "help": "E.2. Maximum DAO-vs-WCS centroid shift, in units of FWHM, before a matched star falls back to its WCS pixel position.",
@@ -1095,7 +1245,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "dao_detection_n_equiv": {
     "help": "T4-1 Option B. Effective number of independent pixels per resolution element on the resampled detection image; DAO threshold is N_equiv * rms_conv. Measured from audit Part 2b (rel_err=1.09 -> 3.78; legacy 1.36 -> 4.71).",
@@ -1111,7 +1263,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "dao_qc_in_calibrate": {
     "help": "Runs the star-detection based QC directly during calibration so bad frames are flagged as early as possible.",
@@ -1124,7 +1278,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "database_path": {
     "help": "Path to the main VYVAR SQLite database (drafts, equipment, locations, results). Resolved per machine.",
@@ -1137,7 +1293,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "debug_platesolver": {
     "help": "Verbose diagnostic logging of the plate solver; for troubleshooting only.",
@@ -1150,7 +1308,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "democratic_detrend_enabled": {
     "help": "Optional 'democratic' detrend of the light curve (median trend of the field); OFF by default - detrending can eat real variability.",
@@ -1163,7 +1323,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "democratic_sg_window_frac": {
     "help": "Window width (fraction of the night) of the democratic detrend smoother.",
@@ -1179,7 +1341,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "enable_lacosmic": {
     "help": "CR-1. Run L.A.Cosmic (astroscrappy) cosmic-ray rejection on the preprocess path. Stamps VY_COSM / VY_COSMNPX headers.",
@@ -1192,7 +1356,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "epsf_min_stars": {
     "help": "Minimum suitable stars required to build an empirical PSF model (ePSF) for PSF photometry.",
@@ -1205,7 +1371,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "err_background_mode": {
     "help": "How the background-noise term of the error model is estimated ('empirical' = measured from empty apertures on the frame).",
@@ -1218,7 +1386,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "err_empty_apertures_min": {
     "help": "Minimum empty apertures required for a valid empirical background estimate.",
@@ -1231,7 +1401,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "err_empty_apertures_n": {
     "help": "How many empty apertures are placed per frame for the empirical background noise measurement.",
@@ -1244,7 +1416,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "exoplanet_local_db_path": {
     "help": "Path to the local NASA Exoplanet Archive database used to cross-match detected stars with known exoplanet hosts.",
@@ -1257,7 +1431,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "exoplanet_match_max_sep_arcsec": {
     "help": "Maximum sky separation (arcsec) for identifying a detected star with a known exoplanet host.",
@@ -1273,7 +1449,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "export_arcsec_per_px": {
     "help": "Plate-scale label written into export metadata; the science value comes from the WCS. WAVE-B removed its config.json fallback (derivable from WCS/optics).",
@@ -1286,7 +1464,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "session",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "frame",
+    "scope_group": "n/a"
   },
   "field_density_adaptive_enabled": {
     "help": "Master switch of density adaptation: sparse/normal/dense field profiles automatically loosen or tighten comparison-star criteria.",
@@ -1299,7 +1479,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "field_density_dense_threshold": {
     "help": "Matched-star count above which the field is treated as dense (tighter criteria).",
@@ -1312,7 +1494,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "field_density_sparse_threshold": {
     "help": "Matched-star count below which the field is treated as sparse (looser criteria so an ensemble can still be formed).",
@@ -1328,7 +1512,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "frame_align_residual_gate_enabled": {
     "help": "Optional gate dropping frames whose alignment residuals are unusually large (poorly registered frames).",
@@ -1341,7 +1527,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "frame_align_residual_max_frac": {
     "help": "Maximum fraction of frames the alignment-residual gate may drop; protects against discarding the night.",
@@ -1357,7 +1545,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "frame_align_residual_min_keep_frames": {
     "help": "Minimum number of frames that must survive the alignment-residual gate.",
@@ -1373,7 +1563,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "frame_height_px": {
     "help": "Frame height in pixels; measured from FITS NAXIS2 at run time. WAVE-B internalized it (no longer stored in config.json).",
@@ -1386,7 +1578,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "frame_quality_fwhm_factor": {
     "help": "Scaling of the FWHM threshold used by the frame-quality gate.",
@@ -1402,7 +1596,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "frame_quality_gate_enabled": {
     "help": "Optional gate excluding frames of clearly worse sharpness than the night's typical seeing.",
@@ -1415,7 +1611,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "frame_quality_min_keep_frames": {
     "help": "Minimum number of frames that must survive the frame-quality gate.",
@@ -1431,7 +1629,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "frame_quality_ratio_k": {
     "help": "How many times worse than the typical frame a frame must be before the quality gate drops it.",
@@ -1447,7 +1647,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "frame_width_px": {
     "help": "Frame width in pixels; measured from FITS NAXIS1 at run time. WAVE-B internalized it (no longer stored in config.json).",
@@ -1460,7 +1662,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "lacosmic_sigclip": {
     "help": "L.A.Cosmic sigma clipping threshold for the Laplacian edge detection (astroscrappy sigclip).",
@@ -1473,7 +1677,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "lacosmic_objlim": {
     "help": "L.A.Cosmic contrast limit between the Laplacian image and the fine-structure image; higher values protect real point sources (astroscrappy objlim).",
@@ -1486,7 +1692,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "gaia_db_path": {
     "help": "Path to the local full-sky Gaia DR3 SQLite database (40M+ stars) used for star identification and comparison selection.",
@@ -1499,7 +1707,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "gain": {
     "help": "Detector gain (e-/ADU) converting counts to electrons in the error model; resolved from the FITS header (cross-checked against the DB). WAVE-B removed its config.json fallback - the resolver is authoritative.",
@@ -1512,7 +1722,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "global_comp_pool_enabled": {
     "help": "Builds one field-wide comparison pool reused across targets instead of fully per-target pools.",
@@ -1525,7 +1737,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "gs11_comp_max_dilution": {
     "help": "Maximum dilution (flux contamination) a comparison star may have under the GS11 dilution model.",
@@ -1541,7 +1755,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "gs11_comp_suspect_dilution": {
     "help": "Dilution level at which a comparison star is marked suspect.",
@@ -1557,7 +1773,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "gs11_dilution_aperture_arcsec": {
     "help": "Aperture (arcsec) used when computing catalog-based dilution; 0 derives it from the photometric aperture.",
@@ -1572,8 +1790,10 @@
     "tier": "expert",
     "unit": null,
     "widget": "custom",
-    "scope": "rig",
-    "scope_confidence": "high"
+    "scope": "universal",
+    "scope_confidence": "low",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "gs11_dilution_enabled": {
     "help": "Enables catalog-based dilution estimation (how much neighbour light leaks into apertures).",
@@ -1586,7 +1806,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "gs11_dilution_mag_limit_delta": {
     "help": "How many magnitudes fainter than the star the dilution census still counts neighbours.",
@@ -1602,7 +1824,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "gs11_target_min_dilution": {
     "help": "Minimum acceptable target dilution before the target is flagged as badly blended.",
@@ -1618,7 +1842,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_color_bg_box_px": {
     "help": "Background sampling box (px) for star colors in the color HR diagram.",
@@ -1634,7 +1860,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "hrd_color_chroma_boost": {
     "help": "Chroma amplification of the HRD star colors for visual clarity.",
@@ -1650,7 +1878,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_color_chroma_snr": {
     "help": "Minimum color SNR before a star gets a saturated color in the HRD.",
@@ -1666,7 +1896,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_color_field_enabled": {
     "help": "Renders the color HR diagram of the observed field in the report.",
@@ -1679,7 +1911,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_color_highlight_mode": {
     "help": "Highlight style of interesting objects in the HRD ('soft' = gentle emphasis).",
@@ -1692,7 +1926,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_color_saturation": {
     "help": "Base color saturation of HRD points.",
@@ -1708,7 +1944,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_color_white_point": {
     "help": "White-point reference of HRD colors ('field_median' balances to the field's median color).",
@@ -1721,7 +1959,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_dsc_confirm_prob": {
     "help": "Probability threshold for confirming a candidate's HRD-based classification.",
@@ -1737,7 +1977,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_enrich_max_candidates": {
     "help": "Cap on objects sent to online enrichment services per report.",
@@ -1753,7 +1995,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_enrich_tap_timeout_s": {
     "help": "Timeout (s) of TAP queries during online enrichment.",
@@ -1769,7 +2013,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_max_per_category": {
     "help": "Maximum highlighted objects per category in the HRD legend.",
@@ -1785,7 +2031,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_min_per_net": {
     "help": "Minimum objects kept per detection net when trimming HRD highlights.",
@@ -1801,7 +2049,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_nss_category_enabled": {
     "help": "Adds the Gaia non-single-star category to HRD highlights.",
@@ -1814,7 +2064,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_online_enrich_enabled": {
     "help": "Online enrichment of interesting HRD objects from Gaia archive services.",
@@ -1827,7 +2079,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_parallax_min_mas": {
     "help": "Minimum parallax (mas) for placing a star in the absolute-magnitude HRD.",
@@ -1843,7 +2097,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_parallax_snr_min": {
     "help": "Minimum parallax SNR for a trustworthy HRD position.",
@@ -1859,7 +2115,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "hrd_simbad_enrich_enabled": {
     "help": "SIMBAD lookups for object types of HRD highlights.",
@@ -1872,7 +2130,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "k2_ceiling": {
     "help": "Upper cap of the fitted second-order extinction coefficient k2 (mag per airmass per color unit).",
@@ -1885,7 +2145,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "k2_defaults_bprp": {
     "help": "Per-band literature defaults of k2 keyed by BP-RP, used when fitting is off or fails.",
@@ -1897,8 +2159,10 @@
     "tier": "expert",
     "unit": null,
     "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high"
+    "scope": "rig",
+    "scope_confidence": "low",
+    "scope_key": "rig_band",
+    "scope_group": "a"
   },
   "k2_fit_consistency_sigma": {
     "help": "Consistency requirement (sigma) between the fitted k2 and expectations before the fit is trusted.",
@@ -1911,7 +2175,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "k2_fit_enabled": {
     "help": "Enables per-night fitting of the second-order extinction coefficient (v2 NIGHT_FIT; OFF until validated).",
@@ -1924,7 +2190,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "k2_fit_lit_factor": {
     "help": "Allowed multiple of the literature k2 value; fits outside it are rejected as unphysical.",
@@ -1937,7 +2205,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "k2_fit_min_detectability": {
     "help": "Minimum detectability (signal strength) the night must offer for a k2 fit to be attempted.",
@@ -1950,7 +2220,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "k2_mode": {
     "help": "Source of k2: 'literature' (defaults) or fitted per night when the fit program is enabled.",
@@ -1963,7 +2235,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "site",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "site",
+    "scope_group": "n/a"
   },
   "lc_quality_min_frames": {
     "help": "Minimum frames for a full-quality light-curve verdict.",
@@ -1976,7 +2250,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "lc_quality_min_normal_frac": {
     "help": "Minimum fraction of normal (unflagged) points a light curve needs.",
@@ -1992,7 +2268,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "lc_quality_short_min_frames": {
     "help": "Frame floor of the short-baseline quality track for brief series.",
@@ -2005,7 +2283,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterdark_validity_days": {
     "help": "How many days a master dark stays valid; older masters trigger a warning to shoot new darks (currently ~21.7. deadline).",
@@ -2018,7 +2298,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig",
+    "scope_group": "c"
   },
   "masterflat_validity_days": {
     "help": "How many days a master flat stays valid before VYVAR asks for a fresh one.",
@@ -2031,7 +2313,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig",
+    "scope_group": "c"
   },
   "masterstar_accept_mode": {
     "help": "Acceptance strategy of the masterstar plate solution ('odds' = statistical odds-ratio test).",
@@ -2044,7 +2328,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_best_of_n": {
     "help": "How many best frames are stacked/considered when building the masterstar reference.",
@@ -2060,7 +2346,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_catalog_recovery_min": {
     "help": "Minimum fraction of catalog stars the masterstar must recover for the solution to be trusted.",
@@ -2076,7 +2364,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_centre_rms_max_px": {
     "help": "Maximum RMS (px) of star positions near the frame centre for an acceptable astrometric solution.",
@@ -2092,7 +2382,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "masterstar_dao_pass2_sigma": {
     "help": "Detection sigma of the second, deeper DAO pass on the masterstar stack.",
@@ -2105,7 +2397,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_dao_threshold_sigma": {
     "help": "Primary DAO detection threshold (sigma) on the masterstar, multiplied by gradient-immune pixel noise sigma_pp (adjacent-difference MAD). Recalibrated 2026-07-30 (P-10 bundle): 3.8 reproduces ~175 ADU threshold and ~3.7% DAO_ONLY on anchor-class data where 2.1 against sigma_clipped_stats was an effective 3.8 sigma.",
@@ -2121,7 +2415,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "a"
   },
   "masterstar_detection_cap_adaptive": {
     "help": "Adapts the detection cap to field density instead of a fixed count.",
@@ -2134,7 +2430,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_detection_cap_k": {
     "help": "Scaling constant of the adaptive detection cap.",
@@ -2150,7 +2448,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_detection_cap_max": {
     "help": "Upper clamp of the adaptive detection cap.",
@@ -2163,7 +2463,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_detection_cap_min": {
     "help": "Lower clamp of the adaptive detection cap.",
@@ -2176,7 +2478,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_distortion_benign_ratio_max": {
     "help": "Limit on the edge-to-centre distortion ratio still considered benign for the optics.",
@@ -2192,7 +2496,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_min_matched_floor": {
     "help": "Absolute floor of matched stars a masterstar solution must reach.",
@@ -2205,7 +2511,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_platesolve_sip_max_order": {
     "help": "Highest SIP distortion polynomial order the solver may fit.",
@@ -2218,7 +2526,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_platesolve_sip_min_order": {
     "help": "Lowest SIP distortion order tried by the solver.",
@@ -2231,7 +2541,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_prematch_peak_sigma_floor": {
     "help": "Minimum peak significance of stars used in the pre-match stage.",
@@ -2247,7 +2559,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_quality_crowded_n_cat_min": {
     "help": "Catalog-star count above which the masterstar quality checks switch to crowded-field mode.",
@@ -2260,7 +2574,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_sibling_min_matched": {
     "help": "Minimum matches a sibling (recovery) solution needs.",
@@ -2273,7 +2589,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_sibling_min_quadrants": {
     "help": "Quadrant coverage required from a sibling solution.",
@@ -2286,7 +2604,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_sibling_recovery_enabled": {
     "help": "Enables the sibling-stack recovery path when the primary masterstar solve fails.",
@@ -2299,7 +2619,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_sibling_rms_max_px": {
     "help": "RMS limit for accepting a sibling recovery solution.",
@@ -2315,7 +2637,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "masterstar_sibling_stack_n": {
     "help": "How many frames the sibling recovery stack combines.",
@@ -2328,7 +2652,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "masterstar_use_best_frame_fwhm": {
     "help": "Uses the best frame's FWHM for masterstar detection kernels instead of an average.",
@@ -2341,7 +2667,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "neighbor_sub_centroid_max_fwhm": {
     "help": "Maximum centroid shift (FWHM) allowed after neighbour subtraction.",
@@ -2354,7 +2682,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "neighbor_sub_chi2_max": {
     "help": "Chi-square cap of the neighbour-model fit.",
@@ -2367,7 +2697,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "neighbor_sub_max_neighbor_overmag": {
     "help": "Guard: the fitted neighbour must not come out brighter than expected by more than this (mag).",
@@ -2380,7 +2712,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "neighbor_sub_max_target_undermag": {
     "help": "Guard: the target must not lose more than this (mag) by the subtraction.",
@@ -2393,7 +2727,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "neighbor_sub_min_recovered_snr": {
     "help": "Minimum SNR the target must retain after neighbour subtraction.",
@@ -2406,7 +2742,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "neighbor_sub_nn_contam_dmag": {
     "help": "Brightness difference within which a nearest neighbour counts as contaminating.",
@@ -2419,7 +2757,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "neighbor_sub_refuse_sep_fwhm": {
     "help": "Below this separation (FWHM) subtraction is refused - the pair is too blended to fix.",
@@ -2432,7 +2772,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "neighbor_sub_regime_dmag_min": {
     "help": "Brightness-difference bound defining the regime where neighbour subtraction applies.",
@@ -2445,7 +2787,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "neighbor_sub_regime_sep_max": {
     "help": "Separation bound (FWHM) of the neighbour-subtraction regime.",
@@ -2458,7 +2802,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "neighbor_sub_residual_rms_max": {
     "help": "Residual RMS cap after subtraction for the result to be accepted.",
@@ -2471,7 +2817,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "nonlinearity_fwhm_ratio": {
     "help": "FWHM ratio threshold of the detector nonlinearity diagnostic (bright stars growing fatter than faint ones).",
@@ -2487,7 +2835,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "nonlinearity_peak_percentile": {
     "help": "Peak-brightness percentile at which the nonlinearity diagnostic samples star shapes.",
@@ -2503,7 +2853,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "observer_alt_m": {
     "help": "Altitude of the observing site above sea level in meters; part of the site definition used for airmass and time corrections. WAVE-B removed the config.json copy - hydrated from the LOCATION row.",
@@ -2516,7 +2868,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "site",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "site",
+    "scope_group": "n/a"
   },
   "observer_code": {
     "help": "Short observer identifier printed in reports and exports (separate from the AAVSO code).",
@@ -2529,7 +2883,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "site",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "site",
+    "scope_group": "n/a"
   },
   "observer_lat": {
     "help": "Latitude of the observing site in degrees. Hydrated from the draft's LOCATION record; WAVE-B removed the config.json copy.",
@@ -2542,7 +2898,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "site",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "site",
+    "scope_group": "n/a"
   },
   "observer_location_id": {
     "help": "Database ID of the currently selected observing site (LOCATION table row). This id stays in config.json and drives the hydration of the coordinates.",
@@ -2555,7 +2913,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "site",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "site",
+    "scope_group": "n/a"
   },
   "observer_location_name": {
     "help": "Human-readable name of the selected observing site (e.g. Jirny, Dablice). WAVE-B removed the config.json copy - hydrated from the LOCATION row.",
@@ -2568,7 +2928,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "site",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "site",
+    "scope_group": "n/a"
   },
   "observer_lon": {
     "help": "Longitude of the observing site in degrees; hydrated from the LOCATION row (WAVE-B removed the config.json copy).",
@@ -2581,7 +2943,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "site",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "site",
+    "scope_group": "n/a"
   },
   "observer_name": {
     "help": "Full observer name printed in reports.",
@@ -2594,7 +2958,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "site",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "site",
+    "scope_group": "n/a"
   },
   "per_frame_mp_reserve_ram_gb": {
     "help": "RAM (GB) kept free per worker when sizing per-frame parallelism.",
@@ -2607,7 +2973,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "per_frame_sat_min_clean_frac": {
     "help": "Minimum fraction of unsaturated frames required to measure a target when per-frame saturation is enabled (clamped 0.1..1.0).",
@@ -2623,7 +2991,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "per_frame_saturation_enabled": {
     "help": "When true, target saturation uses per-frame clean fraction instead of whole-star master zone skip (default false keeps legacy zone skip).",
@@ -2636,7 +3006,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_chip_interior_margin_px": {
     "help": "Margin (px) from the chip edge inside which stars are excluded from comparison selection (edge effects).",
@@ -2649,7 +3021,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "phase01_comparison_exclude_gaia_extobj": {
     "help": "Excludes Gaia-flagged extended objects (galaxies) from comparison candidates.",
@@ -2662,7 +3036,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_exclude_gaia_nss": {
     "help": "Excludes Gaia non-single-star (binary) sources from comparison candidates.",
@@ -2675,7 +3051,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_fov_fraction": {
     "help": "Fraction of the field of view around the target within which comparisons are searched.",
@@ -2688,7 +3066,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_isolation_radius_px": {
     "help": "Isolation radius (px): a comparison must have no bright neighbour inside it.",
@@ -2704,7 +3084,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "phase01_comparison_mag_bright_threshold": {
     "help": "Brightness above which the stricter bright-star mag-difference floor applies.",
@@ -2720,7 +3102,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_max_comp_rms": {
     "help": "Maximum night RMS of a comparison-star series; density adaptation may tighten it.",
@@ -2736,7 +3120,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_max_dist_deg": {
     "help": "Maximum sky distance (deg) of a comparison from the target; density adaptation adds to the FOV-derived base.",
@@ -2751,8 +3137,10 @@
     "tier": "advanced",
     "unit": null,
     "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high"
+    "scope": "rig",
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "phase01_comparison_max_fwhm_factor": {
     "help": "Maximum FWHM ratio vs the field median a comparison may have (rejects defocused/blended shapes).",
@@ -2768,7 +3156,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_max_mag_diff": {
     "help": "Base maximum brightness difference (mag) between comparison and target; adapted by density profile.",
@@ -2784,7 +3174,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_max_mag_diff_absolute": {
     "help": "Hard ceiling of the brightness difference no adaptation may exceed.",
@@ -2800,7 +3192,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_max_mag_diff_bright_floor": {
     "help": "Mag-difference floor applied to bright stars regardless of adaptation.",
@@ -2816,7 +3210,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_max_psf_chi2": {
     "help": "Maximum PSF-fit chi-square of a comparison star (shape sanity).",
@@ -2832,7 +3228,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_min_dist_arcsec": {
     "help": "Minimum distance (arcsec) between comparison and target to avoid mutual contamination; density-adapted.",
@@ -2847,8 +3245,10 @@
     "tier": "advanced",
     "unit": null,
     "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high"
+    "scope": "rig",
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "phase01_comparison_min_frames_frac": {
     "help": "Minimum fraction of frames a comparison must be measured on.",
@@ -2864,7 +3264,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_n_comp_max": {
     "help": "Maximum ensemble size; literature shows scintillation gains saturate around 6-8 comparisons.",
@@ -2877,7 +3279,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_n_comp_min": {
     "help": "Minimum comparisons the selector aims for; density adaptation may lower it on sparse fields.",
@@ -2890,7 +3294,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_comparison_rms_outlier_sigma": {
     "help": "Sigma level for flagging a comparison as an RMS outlier vs its brightness bin.",
@@ -2906,7 +3312,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_ct_extrapolation_tol": {
     "help": "Allowed color-range extrapolation of the color-term relation (0 = no extrapolation).",
@@ -2919,7 +3327,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_ct_min_comp": {
     "help": "Minimum comparisons required to fit a color-term relation.",
@@ -2935,7 +3345,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_flux_col": {
     "help": "Which flux column feeds Phase-1 comparison statistics (dao_flux = detection-stage flux).",
@@ -2948,7 +3360,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "session",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "frame",
+    "scope_group": "n/a"
   },
   "phase01_plate_scale_arcsec_per_px": {
     "help": "Phase-1 plate scale; resolved from the WCS solution at run time. WAVE-B removed its config.json fallback - the resolver is authoritative.",
@@ -2964,7 +3378,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "session",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "frame",
+    "scope_group": "n/a"
   },
   "phase01_tiers": {
     "help": "Brightness-difference bounds (mag) of the candidate magnitude tiers, ascending. WAVE-B merged the phase01_tier{1..4}_mag scalars into this list.",
@@ -2977,7 +3393,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase01_use_bprp_primary": {
     "help": "Uses Gaia BP-RP directly as the primary color criterion (instead of a computed B-V) - the grounded design choice of VYVAR.",
@@ -2990,7 +3408,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "phase2a_airmass_before_outlier": {
     "help": "Order switch: apply the airmass detrend before (True) or after (False) outlier rejection in Phase 2A.",
@@ -3003,7 +3423,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "photometry_mode": {
     "help": "Which measurement families run: aperture, PSF, or both.",
@@ -3016,7 +3438,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "plate_scale_arcsec_per_px": {
     "help": "Global plate scale (arcsec/px); resolved from the WCS at run time - the number that converts pixels to sky angles. WAVE-B removed its config.json fallback.",
@@ -3032,7 +3456,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "session",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "frame",
+    "scope_group": "n/a"
   },
   "plate_solve_fov_deg": {
     "help": "Field-of-view estimate (degrees) fed to the plate solver; computed from frame size and optics.",
@@ -3045,7 +3471,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "preprocess_sky_surface_order": {
     "help": "Polynomial order of the flux-conserving sky-surface background model subtracted before photometry (2 = gentle 2D gradient removal; part of the draft_435 anchor).",
@@ -3061,7 +3489,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "preprocess_sky_surface_force_reapply": {
     "help": "When true, bypass the sky-surface idempotency guard and re-subtract the model in-place (diagnostic / recovery only; default false preserves anchor byte-identity).",
@@ -3074,7 +3504,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "osc_channel_binning": {
     "help": "OSC only: NxN average binning applied to each extracted channel (R/G/B/oneRGGB) after Bayer plane split. Allowed 1-4 (default 2). Total linear scale vs raw mosaic = 2 (superpixel) x N.",
@@ -3090,7 +3522,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig_sampling",
+    "scope_group": "a"
   },
   "project_root": {
     "help": "VYVAR installation root; derived from the code location, never edit.",
@@ -3103,7 +3537,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_adaptive_enabled": {
     "help": "Adaptive per-star routing between PSF and aperture measurement (PSF program is OFF pending the Newton dense-field gate).",
@@ -3116,7 +3552,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_adaptive_resolve_fwhm": {
     "help": "Separation (FWHM) below which the adaptive router prefers PSF for blended pairs.",
@@ -3129,7 +3567,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_adaptive_snr_lo": {
     "help": "SNR below which the adaptive router prefers PSF measurement.",
@@ -3142,7 +3582,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_chi2_threshold": {
     "help": "Chi-square limit of an acceptable PSF fit.",
@@ -3155,7 +3597,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_group_sep_fwhm": {
     "help": "Separation (FWHM) within which stars are fitted together as a PSF group.",
@@ -3168,7 +3612,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_grouper_enabled": {
     "help": "Enables simultaneous group fitting of close stars in PSF photometry.",
@@ -3181,7 +3627,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_neighbor_include_fwhm": {
     "help": "Radius (FWHM) within which neighbours are included in a PSF fit.",
@@ -3194,7 +3642,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_neighbor_sub_enabled": {
     "help": "Enables PSF-model neighbour subtraction before aperture measurement of blended targets.",
@@ -3207,7 +3657,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_photometry_enabled": {
     "help": "Master switch of PSF photometry (currently OFF; enablement gated on the Newton dense-field validation).",
@@ -3220,7 +3672,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_quality_fallback_enabled": {
     "help": "Falls back to the aperture measurement when a PSF fit fails quality checks.",
@@ -3233,7 +3687,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_spatial_enabled": {
     "help": "Enables spatially varying PSF models across the frame.",
@@ -3246,7 +3702,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_spatial_grid": {
     "help": "Grid of spatial PSF cells (e.g. 3x3).",
@@ -3259,7 +3717,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_spatial_min_stars_per_cell": {
     "help": "Minimum stars per cell to build a local PSF model.",
@@ -3272,7 +3732,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "psf_spatial_order": {
     "help": "Polynomial order of PSF spatial variation (0 = constant PSF).",
@@ -3288,7 +3750,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "pytics_enabled": {
     "help": "Enables the PyTICS-style iterative comparison calibration step of light-curve construction.",
@@ -3301,7 +3765,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "pytics_n_iter": {
     "help": "Iteration count of the PyTICS-style calibration.",
@@ -3317,7 +3783,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "qc_after_calibrate_enabled": {
     "help": "Runs the full QC pass right after calibration and stores per-frame quality metrics.",
@@ -3330,7 +3798,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "qc_dao_detection_sigma": {
     "help": "Detection sensitivity (sigma above background) of the star finder used by QC to count stars per frame.",
@@ -3343,7 +3813,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "a"
   },
   "qc_elong_limit": {
     "help": "Maximum acceptable star elongation; higher values indicate trailing (guiding/wind) and flag the frame.",
@@ -3356,7 +3828,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "qc_fwhm_limit": {
     "help": "Absolute upper FWHM limit (px) a frame may have before being flagged as too soft (used when auto-FWHM is off).",
@@ -3369,7 +3843,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "qc_max_background_rms": {
     "help": "Optional cap on background noise RMS per frame; None disables the check.",
@@ -3382,7 +3858,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "qc_max_hfr": {
     "help": "Maximum half-flux radius per frame - an alternative sharpness measure familiar from capture software.",
@@ -3395,7 +3873,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "qc_min_stars": {
     "help": "Minimum number of detected stars a frame needs to be considered usable.",
@@ -3408,7 +3888,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "qc_preprocess_workers": {
     "help": "Number of parallel preprocessing workers; computed from CPU/RAM at startup, overridable by the VYVAR_PARALLEL_WORKERS environment variable.",
@@ -3421,7 +3903,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "read_noise": {
     "help": "Detector read noise (electrons) in the error model; resolved DB-first (equipment-intrinsic), then FITS. WAVE-B removed its config.json fallback.",
@@ -3434,7 +3918,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "saturate_limit_fraction": {
     "help": "Fraction of the detector's saturation level above which a star is treated as saturated and excluded from photometry.",
@@ -3446,8 +3932,10 @@
     "tier": "expert",
     "unit": null,
     "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high"
+    "scope": "rig",
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "save_lightcurve_png": {
     "help": "Also saves per-target light-curve PNG previews during the run.",
@@ -3460,7 +3948,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "savgol_detrend_enabled": {
     "help": "Optional Savitzky-Golay smoothing detrend; OFF by default for the same reason as other detrends.",
@@ -3473,7 +3963,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "savgol_polyorder": {
     "help": "Polynomial order of the Savitzky-Golay filter.",
@@ -3486,7 +3978,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "savgol_window_frac": {
     "help": "Window width (fraction of the series) of the Savitzky-Golay filter.",
@@ -3499,10 +3993,12 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "sigma_sys_mag": {
-    "help": "Per-band systematic error floor (mag) added in quadrature to statistical errors (e.g. {'4': 0.018} for band 4).",
+    "help": "Per-equipment systematic error floor (mag) added in quadrature to statistical errors; dict keys are equipment_id strings (e.g. {'3': 0.018}), not filter band numbers. Lookup: resolve_sigma_sys_mag in sigma_floor_core.py.",
     "kind": "static",
     "label": "Sigma Sys Mag",
     "owner": "config_runtime",
@@ -3512,7 +4008,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
   },
   "sips_dao_fwhm_px": {
     "help": "Assumed star FWHM (px) for the SIPS-style DAO detection preset.",
@@ -3528,7 +4026,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "b"
   },
   "sips_dao_threshold_sigma": {
     "help": "Detection threshold (sigma) of the SIPS-style DAO preset.",
@@ -3541,7 +4041,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "rig",
-    "scope_confidence": "high"
+    "scope_confidence": "low",
+    "scope_key": "rig_sampling",
+    "scope_group": "a"
   },
   "sparse_trust_T_green": {
     "help": "Check-star T-statistic bound for GREEN trust on sparse fields.",
@@ -3554,7 +4056,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "sparse_trust_T_red": {
     "help": "Check-star T-statistic bound beyond which sparse-field trust turns RED.",
@@ -3567,7 +4071,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "sparse_trust_X2_RED": {
     "help": "Excess-variance bound turning sparse-field trust RED.",
@@ -3580,7 +4086,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "sysrem_enabled": {
     "help": "Optional SysRem systematics removal (Tamuz+ 2005); OFF by default - validated as risky for preserving real variability.",
@@ -3593,7 +4101,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "sysrem_n_iter": {
     "help": "Number of SysRem iterations when enabled.",
@@ -3606,7 +4116,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "temporal_bin_window": {
     "help": "Time-bin width for temporal binning (0 = none).",
@@ -3622,7 +4134,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "temporal_binning_enabled": {
     "help": "Temporal binning of light curves; OFF by design - injection testing proved it harmful (24/25 targets worse).",
@@ -3635,7 +4149,9 @@
     "unit": null,
     "widget": "custom",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "tess_enabled": {
     "help": "Enables the TESS cross-analysis block (comparing your light curve against TESS data).",
@@ -3648,7 +4164,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "trust_flag_enabled": {
     "help": "Master switch of the per-epoch trust flag written into results and exports.",
@@ -3661,7 +4179,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_clip_ratio_min": {
     "help": "Minimum surviving-points ratio after sigma clipping for a star to stay in variability analysis.",
@@ -3674,7 +4194,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_comp_floor_factor": {
     "help": "How many times above the comparison-star noise floor a star must scatter to count as variable.",
@@ -3687,7 +4209,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_mag_limit": {
     "help": "Faint magnitude limit of the variability search.",
@@ -3700,7 +4224,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_min_amplitude_mag": {
     "help": "Minimum amplitude (mag) for a variability candidate.",
@@ -3713,7 +4239,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_min_frames": {
     "help": "Minimum frames a star must appear on to be analysed for variability.",
@@ -3726,7 +4254,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_min_frames_frac": {
     "help": "Minimum fraction of the night's frames a star must cover for variability analysis.",
@@ -3742,7 +4272,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_min_points_rms": {
     "help": "Minimum points needed before an RMS-based variability statistic is computed.",
@@ -3755,7 +4287,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_min_rms_pct": {
     "help": "Percentile floor of the RMS-vs-magnitude relation used to normalize variability scores.",
@@ -3768,7 +4302,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_p85_filter": {
     "help": "Percentile filter removing the noisiest tail before variability statistics.",
@@ -3781,7 +4317,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_sigma_clip": {
     "help": "Sigma-clipping level applied to light curves before variability metrics.",
@@ -3794,7 +4332,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_sigma_threshold": {
     "help": "Significance (sigma) a star's scatter must exceed to be flagged as a variability candidate.",
@@ -3807,7 +4347,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_slope_floor": {
     "help": "Minimum slope of the excess-scatter trend considered meaningful in candidate scoring.",
@@ -3820,7 +4362,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_smoothness_max": {
     "help": "Maximum smoothness score - very smooth curves are more likely trends/artifacts than stellar variability.",
@@ -3833,7 +4377,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "variability_vdi_z_threshold": {
     "help": "Z-score threshold of the variability detection index (VDI).",
@@ -3846,7 +4392,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "verify_mag_limit": {
     "help": "Faint limit of catalog stars used for blind-solve verification.",
@@ -3862,7 +4410,9 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "vsx_local_db_path": {
     "help": "Path to the local AAVSO VSX database of known variable stars, used to identify variables in the field.",
@@ -3875,7 +4425,9 @@
     "unit": null,
     "widget": "hidden",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "vsx_out_of_scope_types": {
     "help": "List of VSX variability types to leave unmeasured (default empty = feature inactive). Matching: a target's VSX type string is tokenized on the separators |, /, + and whitespace; each token is uppercased and a trailing : (VSX uncertain-classification mark) is stripped; config entries are normalized the same way; a target is OUT OF SCOPE when ANY of its tokens equals ANY configured entry. Substring matching is NEVER used (e.g. M does not exclude SRM). Applies ONLY to VSX auto-selected targets; manually added targets are never filtered. Matched targets stay in active_targets.csv with skip_photometry=True and skip_reason=vsx_type_out_of_scope (mask-first). Out-of-scope stars remain known variables and stay purged from the comparison pool. Example: [\"ROT\"] excludes ROT and ROT: but keeps DSCT|GDOR|SXPHE.",
@@ -3888,6 +4440,8 @@
     "unit": null,
     "widget": "auto",
     "scope": "universal",
-    "scope_confidence": "high"
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   }
 }

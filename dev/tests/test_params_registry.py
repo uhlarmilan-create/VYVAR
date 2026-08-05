@@ -103,6 +103,76 @@ def test_scope_axis_full_coverage_and_valid_enum() -> None:
         f"registry entries with scope_confidence not in {pr.SCOPE_CONFIDENCES}:\n"
         + "\n".join(bad_conf)
     )
+    missing_key = sorted(k for k, e in reg.items() if "scope_key" not in e)
+    assert not missing_key, f"registry entries with no scope_key: {missing_key}"
+    bad_key = sorted(
+        f"{k}={e.get('scope_key')!r}" for k, e in reg.items() if e.get("scope_key") not in pr.SCOPE_KEYS
+    )
+    assert not bad_key, f"registry entries with scope_key not in {pr.SCOPE_KEYS}:\n" + "\n".join(bad_key)
+    missing_grp = sorted(k for k, e in reg.items() if "scope_group" not in e)
+    assert not missing_grp, f"registry entries with no scope_group: {missing_grp}"
+    bad_grp = sorted(
+        f"{k}={e.get('scope_group')!r}" for k, e in reg.items() if e.get("scope_group") not in pr.SCOPE_GROUPS
+    )
+    assert not bad_grp, f"registry entries with scope_group not in {pr.SCOPE_GROUPS}:\n" + "\n".join(bad_grp)
+
+
+def test_scope_scope_key_invariant() -> None:
+    reg = _registry()
+    bad: list[str] = []
+    rig_keys = {"rig", "rig_band", "rig_sampling"}
+    for key, e in reg.items():
+        scope = e.get("scope")
+        sk = e.get("scope_key")
+        grp = e.get("scope_group")
+        if scope == "universal" and (sk != "none" or grp != "n/a"):
+            bad.append(f"{key}: universal requires scope_key=none, scope_group=n/a")
+        elif scope == "site" and (sk != "site" or grp != "n/a"):
+            bad.append(f"{key}: site requires scope_key=site, scope_group=n/a")
+        elif scope == "session" and (sk != "frame" or grp != "n/a"):
+            bad.append(f"{key}: session requires scope_key=frame, scope_group=n/a")
+        elif scope == "rig":
+            if sk not in rig_keys:
+                bad.append(f"{key}: rig requires scope_key in {rig_keys}, got {sk!r}")
+            if grp not in ("a", "b", "c"):
+                bad.append(f"{key}: rig requires scope_group in a/b/c, got {grp!r}")
+    assert not bad, "scope <-> scope_key invariant violations:\n" + "\n".join(bad)
+
+
+def test_classifier_explicit_keys_exist_in_registry() -> None:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "classify_params_scope", _ROOT / "tools" / "classify_params_scope.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(mod)
+    reg = _registry()
+    mod.validate_explicit_keys(reg)  # raises KeyError on dead keys
+
+
+def test_classifier_rejects_dead_explicit_key() -> None:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "classify_params_scope", _ROOT / "tools" / "classify_params_scope.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(mod)
+    reg = _registry()
+    saved = mod.EXPLICIT.pop("gain", None)
+    mod.EXPLICIT["__nonexistent_test_key__"] = mod.ScopeResult(
+        "rig", "rig", "a", "high", "injected dead key"
+    )
+    try:
+        with __import__("pytest").raises(KeyError, match="__nonexistent_test_key__"):
+            mod.validate_explicit_keys(reg)
+    finally:
+        mod.EXPLICIT.pop("__nonexistent_test_key__", None)
+        if saved is not None:
+            mod.EXPLICIT["gain"] = saved
 
 
 def test_range_is_null_or_ordered_numeric_pair() -> None:
