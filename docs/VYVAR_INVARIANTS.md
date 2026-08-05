@@ -26,7 +26,6 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
 | OSC-03 **[wired]** | AAVSO/VarAstro export writers must not emit **oneRGGB** rows; R/G/B exports must use TR/TG/TB FILT codes respectively. | runtime (export pre-write) | FAIL | ``check_osc03_export_eligibility`` in ``export_lightcurve_reports``; oneRGGB skipped before write. |
 | INV-PHASE0-ID **[wired]** | Active `catalog_id` must equal planner `catalog_id` for the same `vsx_name` (identity join; no positional adoption). | runtime (end-of-run) | FAIL | `validate_config_behavior` after Phase 0. |
 | INV-PREP-01 **[wired]** | Post-preprocess large-scale gradient guard: ``large_small_ratio = var(blur(sigma=30)) / var(frame-blur)`` on one QC frame per obs_group; WARN above **10x** (threshold constant ``PREPROCESS_LARGE_SMALL_RATIO_WARN``). **Measured (draft 454, 2026-07-28):** healthy **0.03x** on BO CVn wide rig. **SKIPPROC regression (draft 450 era):** **20-60x**. Margin at threshold 10x: healthy is **~330x below** warn; regression is **2-6x above** -- threshold left at 10 because separation is enormous; not anchored on the original 1-5x estimate (that estimate was ~2 orders high vs measured healthy). | runtime (preprocess QC) | WARN | ``check_preprocess_large_small_ratio`` in ``_qc_enrich_calibrated_in_place``. |
-| INV-MS-01 **[wired]** | Masterstar export DAO_ONLY fraction: WARN above 0.10, FAIL above 0.25 (anchor ~3.7%). | runtime (masterstar CSV write) | WARN / FAIL | ``check_dao_only_fraction`` before ``masterstars_full_match.csv`` write. |
 | INV-VSXGAIA-DEGEN | VSX->Gaia plan-time mixture fit must fail loud when ``sigma_broad`` exceeds chance-scale guards; no fixed-radius fallback. | plan export (`vsx_gaia_crossmatch`) | FAIL | ``VsxGaiaCrossmatchDegenerateError``; see ``docs/VYVAR_DECISIONS.md`` VSX-GAIA-MATCHER-TWO-STEP. |
 | INV-VSXGAIA-OUTCOME | Plan-time cross-match WARN when ``masterstars_accepted / masterstars_eligible < 80%`` (G3 recovery check). | plan export (log) | WARN | ``vsx_gaia_crossmatch`` INFO/WARNING; ``outcome_check=warn_masterstars_low``. |
 | INV-SHA-01 | Double-photometry SHA determinism (core + extended). | already enforced (`session_baseline_check.py --full` + P1 golden) | FAIL | VL-ANCHOR-WCSINV / VL-P1-GOLD; registry pointer only. |
@@ -53,6 +52,15 @@ End-to-end verification of preprocess, detection, and MASTERSTAR requires a **fu
 `--full` science comparator file set (`dev/tests/photometry_sha.py`). Invariants
 and stage stamps may be written to `pipeline_meta.json` without breaking
 byte-identity of science outputs.
+
+## Removed invariants
+
+`INV-MS-01` (masterstar DAO_ONLY purity, WARN 0.10 / FAIL 0.25) -- **removed from runtime
+2026-08-05.** Thresholds were seeded on a single configuration (wide rig, VYVAR-calibrated,
+measured 0.0369) and are not portable across rigs or calibration modes; the same quantity is
+0.417 on a legitimate Newton/eq4 pre-calibrated run (draft_501). The fraction is retained as
+an informational log line, and the anchor-regression sense is retained as a fixture test
+(`dev/tests/test_invariants_p2.py`). See `docs/VYVAR_LIMITATIONS.md` (INV-MS-01-REMOVED).
 
 ## Growth rule
 

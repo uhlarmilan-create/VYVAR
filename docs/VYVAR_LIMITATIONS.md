@@ -168,6 +168,34 @@ wired**, not dead or orphan:
 Evidence: closure Step 1 + batch A (S1 DOCUMENTED). This note was removed from
 `docs/VYVAR_PARAMS.md` in commit `faa1782` because that file is generator output only.
 
+## INV-MS-01-REMOVED
+
+**What it was.** Runtime invariant `INV-MS-01` compared the masterstars `dao_only_fraction`
+(fraction of rows without a Gaia crossmatch) against WARN > 0.10 / FAIL > 0.25 before writing
+`masterstars_full_match.csv`. Thresholds were seeded from the wide-rig VYVAR-calibrated BO CVn
+anchor.
+
+**Measured numbers (not comparable).**
+- Anchor fixture `dev/results/context/session_20260727/draft_452_masterstars_full_match.csv`:
+  n=2951, DAO_ONLY=109, fraction **0.0369** (wide rig, VYVAR-calibrated).
+- draft_501 (Newton/eq4, pre-calibrated V lights): fraction **0.417** on 1668 detections.
+
+Plate scale, calibration mode, Gaia cone depth, and field crowding differ between these runs.
+A single threshold derived from one configuration is not a health criterion for the other.
+
+**Design rule.** A runtime FAIL gate may only encode an invariant that holds across every
+supported rig, calibration mode, and observing site. Configuration-dependent health metrics
+belong in tests, reports, and logs -- never in fail-closed runtime.
+
+**Structural defect fixed with removal.** When `INV-MS-01` failed, the broad exception handler
+swallowed the error and skipped `_vyvar_df_to_csv`, leaving a pre-annotate CSV on disk and
+producing 0 light curves with a misleading *"source_type annotate failed"* log line (draft_501).
+
+**Residual risk.** VYVAR no longer hard-stops on catalogue inflation. If DAO detection inflates,
+the symptom surfaces in LC quality and in the informational `MASTERSTAR DAO_ONLY census` log line.
+ROADMAP item **A-6** (split DAO_ONLY fraction by magnitude vs Gaia cap) is the intended
+replacement diagnostic.
+
 ## MASTERSTAR architecture (enhancement thread)
 
 Single-frame MASTERSTAR copy is scientifically usable but non-standard vs stacked reference

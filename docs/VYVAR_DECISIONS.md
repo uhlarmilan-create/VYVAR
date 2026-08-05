@@ -2394,3 +2394,20 @@ ensemble SEM + photon term propagation (post-batch-E numeric item). Secondary: c
 **Fingerprints pushed (batch D re-cut #1):** core `b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39`
 (n=325); extended `65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2` (n=487).
 Superseded: `b7f980c0...` / `2c43bbbf...`. Science compare PASS (162 LC; flux/mag/WCS unchanged).
+
+## INV-MS-01-REMOVAL (2026-08-05)
+
+**Decision:** Remove runtime invariant `INV-MS-01` (masterstar DAO_ONLY fraction WARN/FAIL gate).
+
+**Rationale:** Thresholds (WARN 0.10 / FAIL 0.25) were calibrated on a single wide-rig
+VYVAR-calibrated anchor (measured 0.0369). A legitimate Newton/eq4 pre-calibrated run
+(draft_501) measures 0.417 under unchanged science goals. The metric is not portable across
+rigs or calibration modes; re-tuning would only move the kill boundary.
+
+**A2 finding:** FAIL raised `InvariantViolation`, which was swallowed by a broad handler that
+also wrapped `_vyvar_df_to_csv` -- the annotated masterstars CSV was never written, causing
+0-LC runs with a misleading log line. Fix: remove the gate; move CSV write outside the
+annotate try block; retain fraction as informational census only.
+
+**Detail:** `docs/VYVAR_LIMITATIONS.md` (INV-MS-01-REMOVED). Anchor regression retained in
+`dev/tests/test_invariants_p2.py` fixture test. A-6 magnitude-split diagnostic remains open.

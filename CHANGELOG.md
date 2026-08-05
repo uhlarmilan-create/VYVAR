@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- **INV-MS-01 removed (2026-08-05):** masterstar DAO_ONLY fraction is informational only;
+  CSV write no longer skipped when annotate/bp_rp steps fail. See `docs/VYVAR_LIMITATIONS.md`.
+
 ### Fixed
 - **Preview bundle (2026-07-23):** first-run bootstrap materializes full `config.json` via the
   canonical grouped writer (`AppConfig.to_json()` + `render_config_jsonc`); no longer copies
