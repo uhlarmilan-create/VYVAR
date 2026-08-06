@@ -1023,16 +1023,21 @@ def compute_gaia_dao_reconcile(
 
 
 DAO_ONLY_CLASS_ARTIFACT_NEGATIVE = "artifact_negative"
-DAO_ONLY_CLASS_BELOW_CATALOGUE = "below_catalogue"
-DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT = "unconfirmed_bright"
+DAO_ONLY_CLASS_UNMATCHED_IN_RANGE = "unmatched_in_range"
+DAO_ONLY_CLASS_AMBIGUOUS_DEPTH = "ambiguous_depth"
+DAO_ONLY_CLASS_BEYOND_CATALOGUE = "beyond_catalogue"
 DAO_ONLY_CLASS_INDETERMINATE = "indeterminate"
 
 DAO_ONLY_CLASS_LABELS = (
     DAO_ONLY_CLASS_ARTIFACT_NEGATIVE,
-    DAO_ONLY_CLASS_BELOW_CATALOGUE,
-    DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT,
+    DAO_ONLY_CLASS_UNMATCHED_IN_RANGE,
+    DAO_ONLY_CLASS_AMBIGUOUS_DEPTH,
+    DAO_ONLY_CLASS_BEYOND_CATALOGUE,
     DAO_ONLY_CLASS_INDETERMINATE,
 )
+
+# err_mag ~ 1.0857 / SNR (photometry_core aperture convention)
+SIGMA_G_SNR_TERM = 1.0857362
 
 
 @dataclass
@@ -1047,11 +1052,75 @@ class FluxToGFitResult:
 
 
 @dataclass
-class DaoOnlyClassMargin:
-    margin_mag: float
-    residual_mad: float | None
-    sigma_mag: float | None
-    formula: str
+class ConfirmableDepthResult:
+    confirmable_depth_g: float | None
+    winning_input: str | None
+    inputs: dict[str, float | None]
+    depth_resolvable: bool
+    reason: str = ""
+
+
+def derive_confirmable_depth_g(
+    *,
+    gaia_db_max_g_mag: float | None,
+    effective_match_depth: float | None,
+    cone_query_mag_limit: float | None,
+) -> ConfirmableDepthResult:
+    """Minimum of every limit that constrains what the local catalogue could return."""
+    inputs: dict[str, float | None] = {
+        "gaia_db_max_g_mag": (
+            float(gaia_db_max_g_mag)
+            if gaia_db_max_g_mag is not None and math.isfinite(float(gaia_db_max_g_mag))
+            else None
+        ),
+        "effective_match_depth": (
+            float(effective_match_depth)
+            if effective_match_depth is not None and math.isfinite(float(effective_match_depth))
+            else None
+        ),
+        "cone_query_mag_limit": (
+            float(cone_query_mag_limit)
+            if cone_query_mag_limit is not None and math.isfinite(float(cone_query_mag_limit))
+            else None
+        ),
+    }
+    if inputs["gaia_db_max_g_mag"] is None or inputs["gaia_db_max_g_mag"] <= 0:
+        return ConfirmableDepthResult(
+            None,
+            None,
+            inputs,
+            False,
+            "gaia_db_max_g_mag absent or non-finite; confirmable depth undefined",
+        )
+    candidates = {k: v for k, v in inputs.items() if v is not None and v > 0}
+    if not candidates:
+        return ConfirmableDepthResult(None, None, inputs, False, "no finite depth inputs")
+    winner = min(candidates, key=candidates.get)
+    return ConfirmableDepthResult(
+        float(candidates[winner]),
+        winner,
+        inputs,
+        True,
+        "",
+    )
+
+
+def row_snr_from_flux(flux: Any, *, noise_adu: float | None) -> float:
+    """Detection SNR = flux / noise_adu (consistent with snr50_ok = flux >= 50 * noise)."""
+    f = float(flux)
+    n = float(noise_adu) if noise_adu is not None else float("nan")
+    if not math.isfinite(f) or f <= 0 or not math.isfinite(n) or n <= 0:
+        return float("nan")
+    return float(f / n)
+
+
+def sigma_g_row(*, zp_residual_rms: float, snr: float) -> float:
+    """Per-row implied-G uncertainty: hypot(ZP fit RMS, 1.0857/SNR)."""
+    rms = float(zp_residual_rms) if math.isfinite(float(zp_residual_rms)) else 0.0
+    s = float(snr)
+    if not math.isfinite(s) or s <= 0:
+        return float("nan")
+    return float(math.hypot(rms, SIGMA_G_SNR_TERM / s))
 
 
 def fit_instrumental_flux_to_g(
@@ -1087,19 +1156,6 @@ def fit_instrumental_flux_to_g(
     return FluxToGFitResult(True, zp, n_ok, mad, rms, "median_zp")
 
 
-def derive_dao_only_class_margin(
-    *,
-    flux_fit: FluxToGFitResult,
-    fleming_sigma_mag: float | None = None,
-) -> DaoOnlyClassMargin:
-    """Combine flux-fit scatter with Fleming sigma_mag; no hardcoded floor."""
-    mad = float(flux_fit.residual_mad) if flux_fit.residual_mad is not None and math.isfinite(flux_fit.residual_mad) else 0.0
-    sig = float(fleming_sigma_mag) if fleming_sigma_mag is not None and math.isfinite(float(fleming_sigma_mag)) else 0.0
-    margin = float(math.hypot(2.0 * mad, sig))
-    formula = "margin = hypot(2 * flux_fit_MAD, fleming_sigma_mag)"
-    return DaoOnlyClassMargin(margin_mag=margin, residual_mad=mad or None, sigma_mag=sig or None, formula=formula)
-
-
 def implied_g_from_flux(flux: Any, *, zp: float) -> float:
     f = float(flux)
     if not math.isfinite(f) or f <= 0:
@@ -1115,22 +1171,71 @@ def _dao_only_row_mask(df: pd.DataFrame) -> pd.Series:
     return cid.eq("")
 
 
+def _estimate_frame_noise_adu(df: pd.DataFrame, *, frame_noise_adu: float | None) -> float | None:
+    if frame_noise_adu is not None and math.isfinite(float(frame_noise_adu)) and float(frame_noise_adu) > 0:
+        return float(frame_noise_adu)
+    if "noise_floor_adu" in df.columns:
+        nf = pd.to_numeric(df["noise_floor_adu"], errors="coerce")
+        ok = nf.notna() & (nf > 0)
+        if ok.any():
+            return float(nf.loc[ok].median())
+    flux = pd.to_numeric(df.get("flux"), errors="coerce")
+    snr_ok = df.get("snr50_ok")
+    if snr_ok is not None:
+        mask = snr_ok.fillna(False).astype(bool) & flux.gt(0)
+        if mask.any():
+            return float((flux.loc[mask] / 50.0).median())
+    matched = ~_dao_only_row_mask(df)
+    f = flux.loc[matched & flux.gt(0)]
+    if len(f) >= 10:
+        return float(f.median() / 100.0)
+    return None
+
+
+def _row_noise_adu(row: pd.Series, *, frame_noise_adu: float | None) -> float | None:
+    for col in ("noise_floor_adu", "bg_std_adu"):
+        if col in row.index:
+            v = pd.to_numeric(row.get(col), errors="coerce")
+            if pd.notna(v) and float(v) > 0:
+                return float(v)
+    if frame_noise_adu is not None and math.isfinite(float(frame_noise_adu)) and float(frame_noise_adu) > 0:
+        return float(frame_noise_adu)
+    return None
+
+
+def _implied_g_deciles(values: np.ndarray) -> dict[str, float]:
+    arr = np.asarray(values, dtype=np.float64)
+    arr = arr[np.isfinite(arr)]
+    if arr.size == 0:
+        return {}
+    out: dict[str, float] = {}
+    for p in (10, 20, 30, 40, 50, 60, 70, 80, 90):
+        out[f"p{p}"] = float(np.percentile(arr, p))
+    return out
+
+
 def classify_dao_only_dataframe(
     df: pd.DataFrame,
     *,
-    max_g_mag: float,
+    depth: ConfirmableDepthResult,
     flux_fit: FluxToGFitResult,
-    margin: DaoOnlyClassMargin,
+    fleming_sigma_mag: float | None = None,
+    frame_noise_adu: float | None = None,
+    gaia_db_identity: dict[str, Any] | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """Add ``implied_g_mag`` and ``dao_only_class`` (additive; non-DAO rows blank)."""
+    """Add implied-G columns and ``dao_only_class`` (additive; non-DAO rows blank)."""
     out = df.copy()
     out["implied_g_mag"] = np.nan
+    out["implied_g_minus_depth"] = np.nan
+    out["sigma_g_row"] = np.nan
     out["dao_only_class"] = ""
     dao_mask = _dao_only_row_mask(out)
     meta: dict[str, Any] = {
-        "max_g_mag": float(max_g_mag),
-        "margin_mag": float(margin.margin_mag),
-        "margin_formula": margin.formula,
+        "confirmable_depth_g": depth.confirmable_depth_g,
+        "confirmable_depth_inputs": dict(depth.inputs),
+        "confirmable_depth_winner": depth.winning_input,
+        "depth_resolvable": bool(depth.depth_resolvable),
+        "depth_unresolvable_reason": depth.reason if not depth.depth_resolvable else "",
         "flux_fit": {
             "ok": flux_fit.ok,
             "zp": flux_fit.zp,
@@ -1140,8 +1245,19 @@ def classify_dao_only_dataframe(
             "method": flux_fit.method,
             "reason": flux_fit.reason,
         },
-        "fleming_sigma_mag_used": margin.sigma_mag,
+        "fleming_sigma_mag_population": (
+            float(fleming_sigma_mag)
+            if fleming_sigma_mag is not None and math.isfinite(float(fleming_sigma_mag))
+            else None
+        ),
+        "sigma_g_formula": "sigma_g(row) = hypot(zp_residual_rms, 1.0857 / SNR(row))",
+        "gaia_db_identity": dict(gaia_db_identity or {}),
     }
+    if gaia_db_identity and gaia_db_identity.get("max_g_mag") is not None:
+        meta["max_g_mag"] = float(gaia_db_identity["max_g_mag"])
+    elif depth.inputs.get("gaia_db_max_g_mag") is not None:
+        meta["max_g_mag"] = float(depth.inputs["gaia_db_max_g_mag"])
+
     counts = {k: 0 for k in DAO_ONLY_CLASS_LABELS}
     if not dao_mask.any():
         meta["counts"] = counts
@@ -1152,22 +1268,38 @@ def classify_dao_only_dataframe(
     peak = pd.to_numeric(out.get("peak_max_adu"), errors="coerce")
     sat = out.get("likely_saturated")
     edge = out.get("edge_safe_10px")
+    zp_rms = float(flux_fit.residual_rms) if flux_fit.residual_rms is not None and flux_fit.ok else float("nan")
+    sigma_samples: list[float] = []
+    implied_samples: list[float] = []
 
-    bright_thr = float(max_g_mag) - float(margin.margin_mag)
-    meta["bright_threshold_g"] = bright_thr
+    depth_unresolvable = not depth.depth_resolvable or depth.confirmable_depth_g is None
+    confirmable_depth = float(depth.confirmable_depth_g) if not depth_unresolvable else float("nan")
+    noise_frame = _estimate_frame_noise_adu(out, frame_noise_adu=frame_noise_adu)
+    meta["frame_noise_adu_used"] = noise_frame
 
     for idx in out.index[dao_mask]:
         f = flux.loc[idx] if idx in flux.index else float("nan")
         cls = DAO_ONLY_CLASS_INDETERMINATE
         ig = float("nan")
+        sig_g = float("nan")
+        ig_minus = float("nan")
 
         if pd.notna(f) and float(f) <= 0:
             cls = DAO_ONLY_CLASS_ARTIFACT_NEGATIVE
+        elif depth_unresolvable:
+            cls = DAO_ONLY_CLASS_INDETERMINATE
+            meta.setdefault("indeterminate_reasons", {})
+            meta["indeterminate_reasons"]["depth_unresolvable"] = (
+                int(meta["indeterminate_reasons"].get("depth_unresolvable", 0)) + 1
+            )
         else:
             indet = False
             if flux_fit.ok and flux_fit.zp is not None and pd.notna(f) and float(f) > 0:
                 ig = implied_g_from_flux(float(f), zp=float(flux_fit.zp))
                 out.at[idx, "implied_g_mag"] = ig
+                implied_samples.append(ig)
+                ig_minus = float(ig) - confirmable_depth
+                out.at[idx, "implied_g_minus_depth"] = ig_minus
             else:
                 indet = True
             if sat is not None:
@@ -1180,15 +1312,32 @@ def classify_dao_only_dataframe(
                     indet = True
             if peak is not None and (not pd.notna(peak.loc[idx])):
                 indet = True
+            noise = _row_noise_adu(out.loc[idx], frame_noise_adu=noise_frame)
+            snr = row_snr_from_flux(f, noise_adu=noise)
+            if math.isfinite(zp_rms):
+                sig_g = sigma_g_row(zp_residual_rms=zp_rms, snr=snr)
+                if math.isfinite(sig_g):
+                    out.at[idx, "sigma_g_row"] = sig_g
+                    sigma_samples.append(sig_g)
             if indet or not math.isfinite(ig):
                 cls = DAO_ONLY_CLASS_INDETERMINATE
-            elif ig > bright_thr:
-                cls = DAO_ONLY_CLASS_BELOW_CATALOGUE
+            elif not math.isfinite(sig_g):
+                cls = DAO_ONLY_CLASS_INDETERMINATE
+            elif ig < confirmable_depth - sig_g:
+                cls = DAO_ONLY_CLASS_UNMATCHED_IN_RANGE
+            elif ig > confirmable_depth + sig_g:
+                cls = DAO_ONLY_CLASS_BEYOND_CATALOGUE
             else:
-                cls = DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT
+                cls = DAO_ONLY_CLASS_AMBIGUOUS_DEPTH
         out.at[idx, "dao_only_class"] = cls
         counts[cls] = int(counts.get(cls, 0)) + 1
 
+    if sigma_samples:
+        sig_arr = np.asarray(sigma_samples, dtype=np.float64)
+        meta["sigma_g_row_median"] = float(np.median(sig_arr))
+        meta["sigma_g_row_mean"] = float(np.mean(sig_arr))
+        meta["sigma_g_row_deciles"] = _implied_g_deciles(sig_arr)
+    meta["dao_only_implied_g_deciles"] = _implied_g_deciles(np.asarray(implied_samples, dtype=np.float64))
     meta["counts"] = counts
     meta["n_dao_only"] = int(dao_mask.sum())
     return out, meta
@@ -1201,15 +1350,19 @@ def format_dao_only_census_log(meta: dict[str, Any], *, n_total: int) -> str:
     frac = float(n_dao) / float(n_total) if n_total > 0 else 0.0
     parts = [
         f"artifact_negative={int(counts.get(DAO_ONLY_CLASS_ARTIFACT_NEGATIVE, 0))}",
-        f"below_catalogue={int(counts.get(DAO_ONLY_CLASS_BELOW_CATALOGUE, 0))}",
-        f"unconfirmed_bright={int(counts.get(DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT, 0))}",
+        f"unmatched_in_range={int(counts.get(DAO_ONLY_CLASS_UNMATCHED_IN_RANGE, 0))}",
+        f"ambiguous_depth={int(counts.get(DAO_ONLY_CLASS_AMBIGUOUS_DEPTH, 0))}",
+        f"beyond_catalogue={int(counts.get(DAO_ONLY_CLASS_BEYOND_CATALOGUE, 0))}",
         f"indeterminate={int(counts.get(DAO_ONLY_CLASS_INDETERMINATE, 0))}",
     ]
-    mg = meta.get("max_g_mag")
-    mg_s = f"{float(mg):.2f}" if mg is not None and math.isfinite(float(mg)) else "?"
+    depth = meta.get("confirmable_depth_g")
+    winner = meta.get("confirmable_depth_winner") or "?"
+    depth_s = f"{float(depth):.2f}" if depth is not None and math.isfinite(float(depth)) else "unresolved"
+    if not meta.get("depth_resolvable", True):
+        depth_s = f"unresolved ({meta.get('depth_unresolvable_reason', '?')})"
     return (
         f"MASTERSTAR DAO_ONLY census: {n_dao}/{n_total} (fraction={frac:.3f}) "
-        f"[{', '.join(parts)}] | Gaia DB cap G<{mg_s} | informational, not a gate"
+        f"[{', '.join(parts)}] | confirmable_depth G={depth_s} (from {winner}) | informational, not a gate"
     )
 
 
@@ -1223,61 +1376,121 @@ def dao_only_report_lines(pipeline_meta: dict[str, Any] | None) -> list[str]:
             n_dao = sum(int(v) for v in counts.values())
     if n_dao is None:
         return []
-    cap = meta.get("gaia_db_max_g_mag")
-    cap_s = f"{float(cap):.2f}" if cap is not None and math.isfinite(float(cap)) else "?"
+    depth = meta.get("confirmable_depth_g")
+    winner = meta.get("confirmable_depth_winner") or "?"
+    depth_s = f"{float(depth):.2f}" if depth is not None and math.isfinite(float(depth)) else "unresolved"
     lines = [
-        f"  DAO_ONLY unmatched: {int(n_dao)} (informational, not a gate)",
-        f"  Gaia DB catalogue cap: G < {cap_s} (right-censored local build)",
+        f"  DAO_ONLY unmatched: {int(n_dao)} (informational, not a gate; counts are installation-specific)",
+        f"  Confirmable depth: G={depth_s} (winning limit: {winner})",
     ]
+    inputs = meta.get("confirmable_depth_inputs")
+    if isinstance(inputs, dict):
+        for k, v in inputs.items():
+            vs = f"{float(v):.2f}" if v is not None and math.isfinite(float(v)) else "n/a"
+            lines.append(f"    depth input {k}: {vs}")
+    cap = meta.get("gaia_db_max_g_mag")
+    if cap is not None:
+        lines.append(f"  Local Gaia DB max G: {float(cap):.2f}")
+    fp = meta.get("gaia_db_fingerprint_sha256")
+    if fp:
+        lines.append(f"  Gaia DB fingerprint: {fp[:16]}...")
     for key, label in (
-        ("dao_only_n_artifact_negative", "artifact_negative (flux<=0)"),
-        ("dao_only_n_below_catalogue", "below_catalogue (fainter than cap-margin)"),
-        ("dao_only_n_unconfirmed_bright", "unconfirmed_bright (brighter than cap-margin)"),
+        ("dao_only_n_artifact_negative", "artifact_negative"),
+        ("dao_only_n_unmatched_in_range", "unmatched_in_range (purity signal)"),
+        ("dao_only_n_ambiguous_depth", "ambiguous_depth"),
+        ("dao_only_n_beyond_catalogue", "beyond_catalogue"),
         ("dao_only_n_indeterminate", "indeterminate"),
     ):
         if meta.get(key) is not None:
             lines.append(f"    {label}: {int(meta[key])}")
-    margin = meta.get("dao_only_class_margin_mag")
-    if margin is not None and math.isfinite(float(margin)):
-        lines.append(f"  Class boundary margin: {float(margin):.3f} mag ({meta.get('dao_only_class_margin_formula', '')})")
+    med = meta.get("dao_only_sigma_g_row_median")
+    if med is not None and math.isfinite(float(med)):
+        lines.append(f"  Per-row sigma_g median: {float(med):.3f} mag")
+    fleming = meta.get("fleming_sigma_mag_population")
+    if fleming is not None:
+        lines.append(f"  Fleming sigma_mag (population diagnostic only): {float(fleming):.3f} mag")
     zp = meta.get("dao_only_flux_fit_zp")
-    mad = meta.get("dao_only_flux_fit_residual_mad")
-    if zp is not None and mad is not None:
-        lines.append(f"  Flux-to-G fit: zp={float(zp):.3f}, residual MAD={float(mad):.3f} mag")
+    rms = meta.get("dao_only_flux_fit_residual_rms")
+    if zp is not None and rms is not None:
+        lines.append(f"  Flux-to-G fit: zp={float(zp):.3f}, residual RMS={float(rms):.3f} mag")
     return lines
 
 
 def dao_only_class_meta_flat(meta: dict[str, Any]) -> dict[str, Any]:
     """Flat keys for pipeline_meta."""
     counts = meta.get("counts") or {}
-    return {
+    gdb = meta.get("gaia_db_identity") if isinstance(meta.get("gaia_db_identity"), dict) else {}
+    flat: dict[str, Any] = {
         "dao_only_class_counts": dict(counts),
         "dao_only_n_artifact_negative": int(counts.get(DAO_ONLY_CLASS_ARTIFACT_NEGATIVE, 0)),
-        "dao_only_n_below_catalogue": int(counts.get(DAO_ONLY_CLASS_BELOW_CATALOGUE, 0)),
-        "dao_only_n_unconfirmed_bright": int(counts.get(DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT, 0)),
+        "dao_only_n_unmatched_in_range": int(counts.get(DAO_ONLY_CLASS_UNMATCHED_IN_RANGE, 0)),
+        "dao_only_n_ambiguous_depth": int(counts.get(DAO_ONLY_CLASS_AMBIGUOUS_DEPTH, 0)),
+        "dao_only_n_beyond_catalogue": int(counts.get(DAO_ONLY_CLASS_BEYOND_CATALOGUE, 0)),
         "dao_only_n_indeterminate": int(counts.get(DAO_ONLY_CLASS_INDETERMINATE, 0)),
+        "confirmable_depth_g": meta.get("confirmable_depth_g"),
+        "confirmable_depth_inputs": meta.get("confirmable_depth_inputs"),
+        "confirmable_depth_winner": meta.get("confirmable_depth_winner"),
+        "dao_only_depth_resolvable": meta.get("depth_resolvable"),
+        "dao_only_implied_g_deciles": meta.get("dao_only_implied_g_deciles"),
         "dao_only_flux_fit_zp": meta.get("flux_fit", {}).get("zp"),
         "dao_only_flux_fit_residual_mad": meta.get("flux_fit", {}).get("residual_mad"),
         "dao_only_flux_fit_residual_rms": meta.get("flux_fit", {}).get("residual_rms"),
-        "dao_only_class_margin_mag": meta.get("margin_mag"),
-        "dao_only_class_margin_formula": meta.get("margin_formula"),
-        "dao_only_bright_threshold_g": meta.get("bright_threshold_g"),
-        "gaia_db_max_g_mag": meta.get("max_g_mag"),
+        "dao_only_sigma_g_row_median": meta.get("sigma_g_row_median"),
+        "dao_only_sigma_g_row_mean": meta.get("sigma_g_row_mean"),
+        "dao_only_sigma_g_formula": meta.get("sigma_g_formula"),
+        "fleming_sigma_mag_population": meta.get("fleming_sigma_mag_population"),
+        "gaia_db_max_g_mag": meta.get("max_g_mag") or gdb.get("max_g_mag"),
+        "gaia_db_fingerprint_sha256": gdb.get("fingerprint_sha256"),
+        "gaia_db_row_count": gdb.get("row_count"),
     }
+    return flat
 
 
 def annotate_dao_only_magnitude_classes(
     df: pd.DataFrame,
     *,
     gaia_db_path: str | Any,
+    effective_match_depth: float | None = None,
+    cone_query_mag_limit: float | None = None,
     fleming_sigma_mag: float | None = None,
+    frame_noise_adu: float | None = None,
+    gaia_db_identity: dict[str, Any] | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """Classify DAO_ONLY rows by implied G vs local Gaia cap; additive columns only."""
-    max_g = float(get_gaia_db_max_g_mag(gaia_db_path))
+    """Classify DAO_ONLY rows by implied G vs derived confirmable depth; additive columns only."""
+    if gaia_db_identity is None:
+        try:
+            from catalog_provenance import fingerprint_gaia_db  # noqa: PLC0415
+
+            gaia_db_identity = fingerprint_gaia_db(gaia_db_path)
+        except Exception:  # noqa: BLE001
+            gaia_db_identity = {}
+    max_g: float | None = None
+    try:
+        max_g = float(get_gaia_db_max_g_mag(gaia_db_path))
+        if not math.isfinite(max_g) or max_g <= 0:
+            max_g = None
+    except Exception:  # noqa: BLE001
+        max_g = None
+    if gaia_db_identity and gaia_db_identity.get("max_g_mag") is not None:
+        try:
+            max_g = float(gaia_db_identity["max_g_mag"])
+        except (TypeError, ValueError):
+            pass
+    depth = derive_confirmable_depth_g(
+        gaia_db_max_g_mag=max_g,
+        effective_match_depth=effective_match_depth,
+        cone_query_mag_limit=cone_query_mag_limit,
+    )
     matched = df.loc[~_dao_only_row_mask(df)].copy()
     fit = fit_instrumental_flux_to_g(matched)
-    margin = derive_dao_only_class_margin(flux_fit=fit, fleming_sigma_mag=fleming_sigma_mag)
-    return classify_dao_only_dataframe(df, max_g_mag=max_g, flux_fit=fit, margin=margin)
+    return classify_dao_only_dataframe(
+        df,
+        depth=depth,
+        flux_fit=fit,
+        fleming_sigma_mag=fleming_sigma_mag,
+        frame_noise_adu=frame_noise_adu,
+        gaia_db_identity=gaia_db_identity,
+    )
 
 
 def reconcile_to_pipeline_meta(report: dict[str, Any]) -> dict[str, Any]:

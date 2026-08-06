@@ -19,11 +19,14 @@ from dao_reconcile import (
     check_reference_population_consistency,
     classify_dao_only_dataframe,
     completeness_50_pct,
+    ConfirmableDepthResult,
+    DAO_ONLY_CLASS_AMBIGUOUS_DEPTH,
     DAO_ONLY_CLASS_ARTIFACT_NEGATIVE,
-    DAO_ONLY_CLASS_BELOW_CATALOGUE,
-    DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT,
+    DAO_ONLY_CLASS_BEYOND_CATALOGUE,
+    DAO_ONLY_CLASS_INDETERMINATE,
+    DAO_ONLY_CLASS_UNMATCHED_IN_RANGE,
+    derive_confirmable_depth_g,
     decompose_reference_population,
-    derive_dao_only_class_margin,
     fit_fleming_completeness,
     fit_instrumental_flux_to_g,
     fleming_completeness,
@@ -32,6 +35,7 @@ from dao_reconcile import (
     is_blended_with_matched,
     reconcile_to_pipeline_meta,
     resolve_effective_match_depth,
+    sigma_g_row,
     split_missed_by_g90,
     CENSOR_MARGIN_MAG,
 )
@@ -370,43 +374,95 @@ def test_fit_instrumental_flux_to_g_median_zp():
     assert fit.residual_mad < 0.01
 
 
+def test_derive_confirmable_depth_g_min_winner():
+    depth = derive_confirmable_depth_g(
+        gaia_db_max_g_mag=17.5,
+        effective_match_depth=18.0,
+        cone_query_mag_limit=19.0,
+    )
+    assert depth.depth_resolvable is True
+    assert depth.confirmable_depth_g == pytest.approx(17.5)
+    assert depth.winning_input == "gaia_db_max_g_mag"
+
+
+def test_derive_confirmable_depth_unresolvable_without_db_cap():
+    depth = derive_confirmable_depth_g(
+        gaia_db_max_g_mag=None,
+        effective_match_depth=18.0,
+        cone_query_mag_limit=19.0,
+    )
+    assert depth.depth_resolvable is False
+    assert depth.confirmable_depth_g is None
+
+
+def test_sigma_g_row_uses_rms_not_fleming():
+    sg = sigma_g_row(zp_residual_rms=0.431, snr=50.0)
+    assert sg == pytest.approx(math.hypot(0.431, 1.0857362 / 50.0), rel=1e-6)
+    assert sg < 0.5
+
+
 def test_dao_only_classification_buckets():
-    max_g = 17.5
-    fit = FluxToGFitResult(True, 22.0, 10, 0.05, 0.06, "median_zp")
-    margin = derive_dao_only_class_margin(flux_fit=fit, fleming_sigma_mag=0.3)
+    depth = ConfirmableDepthResult(17.5, "gaia_db_max_g_mag", {"gaia_db_max_g_mag": 17.5}, True)
+    fit = FluxToGFitResult(True, 22.0, 10, 0.05, 0.431, "median_zp")
     df = pd.DataFrame(
         {
-            "source_type": ["DAO_ONLY"] * 4,
-            "flux": [-1.0, 1.0, 10.0, 100000.0],
-            "peak_max_adu": [1.0, 50.0, 50.0, 500.0],
-            "likely_saturated": [False, False, False, False],
-            "edge_safe_10px": [True, True, True, True],
+            "source_type": ["DAO_ONLY"] * 5,
+            "flux": [-1.0, 50000.0, 10.0, 50000.0, 50000.0],
+            "peak_max_adu": [1.0, 500.0, 500.0, 50.0, 500.0],
+            "likely_saturated": [False, False, False, False, False],
+            "edge_safe_10px": [True, True, True, True, True],
+            "noise_floor_adu": [10.0, 10.0, 10.0, 10.0, 10.0],
         }
     )
-    # flux=1 -> very faint G; flux=100000 -> bright G
-    out, meta = classify_dao_only_dataframe(df, max_g_mag=max_g, flux_fit=fit, margin=margin)
+    out, meta = classify_dao_only_dataframe(
+        df,
+        depth=depth,
+        flux_fit=fit,
+        frame_noise_adu=10.0,
+    )
     classes = list(out["dao_only_class"])
     assert classes[0] == DAO_ONLY_CLASS_ARTIFACT_NEGATIVE
-    assert DAO_ONLY_CLASS_BELOW_CATALOGUE in classes
-    assert DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT in classes
-    assert meta["margin_mag"] == pytest.approx(margin.margin_mag)
+    assert DAO_ONLY_CLASS_UNMATCHED_IN_RANGE in classes
+    assert DAO_ONLY_CLASS_BEYOND_CATALOGUE in classes
+    assert meta["confirmable_depth_g"] == pytest.approx(17.5)
+
+
+def test_dao_only_depth_unresolvable_all_indeterminate(monkeypatch):
+    from dao_reconcile import annotate_dao_only_magnitude_classes
+
+    monkeypatch.setattr("dao_reconcile.get_gaia_db_max_g_mag", lambda _p: 0.0)
+    df = pd.DataFrame(
+        {
+            "source_type": ["DAO_ONLY", "GAIA_MATCHED"],
+            "flux": [100.0, 1000.0],
+            "phot_g_mean_mag": [np.nan, 12.0],
+            "catalog_id": ["", "123"],
+        }
+    )
+    out, meta = annotate_dao_only_magnitude_classes(df, gaia_db_path="/fake/path")
+    assert meta["depth_resolvable"] is False
+    assert out.loc[out["source_type"] == "DAO_ONLY", "dao_only_class"].iloc[0] == DAO_ONLY_CLASS_INDETERMINATE
 
 
 def test_format_dao_only_census_log():
     meta = {
         "n_dao_only": 10,
-        "max_g_mag": 17.5,
+        "confirmable_depth_g": 17.5,
+        "confirmable_depth_winner": "gaia_db_max_g_mag",
+        "depth_resolvable": True,
         "counts": {
             DAO_ONLY_CLASS_ARTIFACT_NEGATIVE: 2,
-            DAO_ONLY_CLASS_BELOW_CATALOGUE: 5,
-            DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT: 1,
-            "indeterminate": 2,
+            DAO_ONLY_CLASS_UNMATCHED_IN_RANGE: 5,
+            DAO_ONLY_CLASS_AMBIGUOUS_DEPTH: 1,
+            DAO_ONLY_CLASS_BEYOND_CATALOGUE: 1,
+            DAO_ONLY_CLASS_INDETERMINATE: 1,
         },
     }
     line = format_dao_only_census_log(meta, n_total=100)
     assert "artifact_negative=2" in line
+    assert "unmatched_in_range=5" in line
+    assert "confirmable_depth G=17.50" in line
     assert "informational, not a gate" in line
-    assert "Gaia DB cap G<17.50" in line
 
 
 def test_reconcile_to_pipeline_meta_includes_dao_only_class():
@@ -417,18 +473,22 @@ def test_reconcile_to_pipeline_meta_includes_dao_only_class():
         "dao_only_class_meta": {
             "counts": {
                 "artifact_negative": 2,
-                "below_catalogue": 8,
-                "unconfirmed_bright": 1,
+                "unmatched_in_range": 8,
+                "ambiguous_depth": 1,
+                "beyond_catalogue": 0,
                 "indeterminate": 1,
             },
+            "confirmable_depth_g": 17.5,
+            "confirmable_depth_winner": "gaia_db_max_g_mag",
             "max_g_mag": 17.5,
-            "margin_mag": 0.4,
-            "margin_formula": "margin = hypot(2 * flux_fit_MAD, fleming_sigma_mag)",
-            "flux_fit": {"zp": 22.0, "residual_mad": 0.05, "residual_rms": 0.06},
+            "flux_fit": {"zp": 22.0, "residual_mad": 0.05, "residual_rms": 0.431},
+            "gaia_db_identity": {"fingerprint_sha256": "abc", "row_count": 100},
         },
     }
     meta = reconcile_to_pipeline_meta(report)
     assert meta["dao_only_n_artifact_negative"] == 2
+    assert meta["dao_only_n_unmatched_in_range"] == 8
+    assert meta["confirmable_depth_g"] == 17.5
     assert meta["gaia_db_max_g_mag"] == 17.5
 
 
@@ -455,6 +515,12 @@ def test_draft501_artifact_negative_count():
     if "source_type" not in df.columns:
         cid = df.get("catalog_id", pd.Series([""] * len(df))).fillna("").astype(str).str.strip()
         df["source_type"] = pd.Series(["DAO_ONLY"] * len(df)).where(cid.eq(""), "GAIA_MATCHED")
-    _out, meta = annotate_dao_only_magnitude_classes(df, gaia_db_path=str(cfg.gaia_db_path))
+    _out, meta = annotate_dao_only_magnitude_classes(
+        df,
+        gaia_db_path=str(cfg.gaia_db_path),
+        effective_match_depth=18.0,
+        cone_query_mag_limit=18.0,
+        frame_noise_adu=10.0,
+    )
     n_neg = int((meta.get("counts") or {}).get(DAO_ONLY_CLASS_ARTIFACT_NEGATIVE, 0))
     assert n_neg == 142
