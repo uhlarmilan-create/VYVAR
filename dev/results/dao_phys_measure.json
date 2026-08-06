@@ -82,11 +82,13 @@
         "read_noise_e": 2.6,
         "gain_source": "header",
         "read_noise_source": "db",
-        "read_noise_db_note": "DB READNOISE_E may differ from resolved runtime value; header/DB path logged above.",
-        "sigma_meas_adu": 4.571925163269043,
+        "sigma_meas_rms_conv_adu": 4.571925163269043,
+        "sigma_meas_std_clip_adu": 8.510191917419434,
         "sigma_pred_pedestal0_adu": 103.59063284909429,
+        "R_rms_conv": 0.04413454226048795,
+        "R_std_clip": 0.08215213753753836,
         "R_pedestal0": 0.04413454226048795,
-        "pedestal_inverted_adu": 33415.564148857244,
+        "pedestal_inverted_adu": 33254.81904452618,
         "ptc": {
           "usable": true,
           "n_bins": 16,
@@ -399,6 +401,396 @@
         "telescope": "DDT 300/1200",
         "diameter_mm": 300.0,
         "focal_mm": 1200.0
+      },
+      "phys2": {
+        "noise_R": {
+          "R_rms_conv": 0.04413454226048795,
+          "R_std_clip": 0.08215213753753836,
+          "sigma_pred_pedestal0_adu": 103.59063284909429,
+          "pedestal_conclusion_survives": true
+        },
+        "noise_binning_slope": {
+          "usable": true,
+          "factors": [
+            1,
+            2,
+            4,
+            8,
+            16
+          ],
+          "sigma_clip_by_factor": [
+            8.46550516344489,
+            4.2909738363872245,
+            2.197978971473057,
+            1.1664925346708486,
+            0.6843635981959058
+          ],
+          "log_log_slope": -0.9136650493889359,
+          "verdict": "white"
+        },
+        "gain_rn_convention": {
+          "header_binning": 2,
+          "db_gain_bin1": 0.78,
+          "db_read_noise_bin1": 1.3,
+          "db_gain_scaled_for_header": 3.12,
+          "db_read_noise_scaled_for_header": 2.6,
+          "resolved_gain": 3.12,
+          "resolved_gain_source": "header",
+          "resolved_read_noise": 2.6,
+          "resolved_read_noise_source": "db",
+          "c3_26000_bin2_check": {
+            "gain_db_x4_matches_header": true,
+            "rn_db_x2_matches_resolved": true,
+            "mutually_consistent": true
+          },
+          "qhy294mm_rn_check": null,
+          "note": "DB values documented as bin1 per param_resolver; header XBINNING scales DB fallbacks. Header-mapped gain bypasses DB scaling."
+        },
+        "masterstar_provenance": {
+          "ncombine_header": 1,
+          "is_stack": false,
+          "calibration_mode": "pre_calibrated",
+          "reference_light_fits": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000501\\non_calibrated\\lights\\V_60_2\\TOI-1131.01.b_2025-04-22_23-05-09_V.fits",
+          "std_clip_master_adu": 8.510191917419434,
+          "std_clip_single_light_adu": 8.675413131713867,
+          "ratio_master_over_single": 0.9809552431106567,
+          "verdict": "single reference frame (not noise-reducing stack)"
+        },
+        "bpm": {
+          "dark_bpm_sidecars_in_draft": [],
+          "n_dark_bpm_sidecars": 0,
+          "proc_rows_on_bad_column_frac": null,
+          "proc_rows_sampled": 0
+        },
+        "Q_statistic": {
+          "psf_predicted": 4.360398369517627,
+          "fwhm_px_used": 2.572,
+          "populations": {
+            "dao_only": {
+              "median": 4.851612903225806,
+              "p05": 0.5514101973086958,
+              "p95": 29.488457942144624,
+              "n": 569
+            },
+            "gaia_matched": {
+              "median": 4.264422517348013,
+              "p05": 2.9628515988852606,
+              "p95": 9.563744070092515,
+              "n": 956
+            }
+          },
+          "tradeoff_curve": [
+            {
+              "q_lower_bound": -7.268,
+              "dao_only_removed_frac": 0.1150855365474339,
+              "gaia_removed_frac": 0.0010449320794148381
+            },
+            {
+              "q_lower_bound": 17.099,
+              "dao_only_removed_frac": 0.9035769828926905,
+              "gaia_removed_frac": 0.9937304075235109
+            },
+            {
+              "q_lower_bound": 41.465,
+              "dao_only_removed_frac": 0.9673405909797823,
+              "gaia_removed_frac": 0.9989550679205852
+            },
+            {
+              "q_lower_bound": 65.831,
+              "dao_only_removed_frac": 0.9828926905132193,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 90.198,
+              "dao_only_removed_frac": 0.9891135303265941,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 114.564,
+              "dao_only_removed_frac": 0.9922239502332815,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 138.93,
+              "dao_only_removed_frac": 0.9937791601866252,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 163.297,
+              "dao_only_removed_frac": 0.9937791601866252,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 187.663,
+              "dao_only_removed_frac": 0.995334370139969,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 212.029,
+              "dao_only_removed_frac": 0.995334370139969,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 236.396,
+              "dao_only_removed_frac": 0.995334370139969,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 260.762,
+              "dao_only_removed_frac": 0.995334370139969,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 285.129,
+              "dao_only_removed_frac": 0.995334370139969,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 309.495,
+              "dao_only_removed_frac": 0.9968895800933126,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 333.861,
+              "dao_only_removed_frac": 0.9968895800933126,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 358.228,
+              "dao_only_removed_frac": 0.9968895800933126,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 382.594,
+              "dao_only_removed_frac": 0.9968895800933126,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 406.96,
+              "dao_only_removed_frac": 0.9968895800933126,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 431.327,
+              "dao_only_removed_frac": 0.9968895800933126,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 455.693,
+              "dao_only_removed_frac": 0.9968895800933126,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 480.06,
+              "dao_only_removed_frac": 0.9984447900466563,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 504.426,
+              "dao_only_removed_frac": 0.9984447900466563,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 528.792,
+              "dao_only_removed_frac": 0.9984447900466563,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 553.159,
+              "dao_only_removed_frac": 0.9984447900466563,
+              "gaia_removed_frac": 1.0
+            },
+            {
+              "q_lower_bound": 577.525,
+              "dao_only_removed_frac": 0.9984447900466563,
+              "gaia_removed_frac": 1.0
+            }
+          ]
+        },
+        "persistence": {
+          "usable": true,
+          "n_frames": 12,
+          "frames_sample": [
+            "TOI-1131.01.b_2025-04-22_23-05-09_V.fits",
+            "TOI-1131.01.b_2025-04-22_23-09-31_V.fits",
+            "TOI-1131.01.b_2025-04-22_23-10-31_V.fits",
+            "TOI-1131.01.b_2025-04-22_23-11-32_V.fits",
+            "TOI-1131.01.b_2025-04-22_23-12-32_V.fits"
+          ],
+          "method": "one DAO pass/frame (cap 200); reference (x,y) recurrence within 1px on native lights",
+          "dao_only": {
+            "n": 200,
+            "mean_recurrence_frac": 0.00041666666666666664,
+            "p95_recurrence_frac": 0.0
+          },
+          "gaia_matched": {
+            "n": 120,
+            "mean_recurrence_frac": 0.0,
+            "p95_recurrence_frac": 0.0
+          }
+        },
+        "negative_flux": {
+          "n_negative": 142,
+          "frac_of_dao_only": 0.20402298850574713,
+          "peak_above_median_adu_median": 33.865234375,
+          "peak_above_median_adu_p05": 18.933984375,
+          "interpretation": "negative flux with positive peak_max_adu implies local background > aperture sum (oversubtracted neighbourhood or mis-centred aperture on a weak gradient)",
+          "spatial": {
+            "neg_centroid_x": 1647.5674508546765,
+            "neg_centroid_y": 1121.6545327598242,
+            "dao_only_centroid_x": 1567.2117368651784,
+            "dao_only_centroid_y": 1057.814363197281,
+            "neg_spatial_std_px": 1067.5591040565596,
+            "dao_only_spatial_std_px": 1077.9641216372054
+          }
+        },
+        "snr_floor": {
+          "k_configured": 1.8,
+          "floor_adu": 33493.93162670136,
+          "sigma_units": {
+            "dao_only": {
+              "median": 4.938930920460985,
+              "p05": 2.539234744608752,
+              "p95": 8.565327178555968
+            },
+            "gaia_matched": {
+              "median": 19.11678391964304,
+              "p05": 5.239283099624893,
+              "p95": 437.997200362231
+            }
+          },
+          "k_floor_curve": [
+            {
+              "k_floor": 0.5,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.0
+            },
+            {
+              "k_floor": 1.0,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.0
+            },
+            {
+              "k_floor": 1.5,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.0
+            },
+            {
+              "k_floor": 2.0,
+              "dao_only_removed_frac": 0.0028735632183908046,
+              "gaia_removed_frac": 0.0
+            },
+            {
+              "k_floor": 2.5,
+              "dao_only_removed_frac": 0.04310344827586207,
+              "gaia_removed_frac": 0.00205761316872428
+            },
+            {
+              "k_floor": 3.0,
+              "dao_only_removed_frac": 0.14367816091954022,
+              "gaia_removed_frac": 0.0051440329218107
+            },
+            {
+              "k_floor": 3.5,
+              "dao_only_removed_frac": 0.22988505747126436,
+              "gaia_removed_frac": 0.00823045267489712
+            },
+            {
+              "k_floor": 4.0,
+              "dao_only_removed_frac": 0.34051724137931033,
+              "gaia_removed_frac": 0.01440329218106996
+            },
+            {
+              "k_floor": 4.5,
+              "dao_only_removed_frac": 0.4324712643678161,
+              "gaia_removed_frac": 0.0257201646090535
+            },
+            {
+              "k_floor": 5.0,
+              "dao_only_removed_frac": 0.5057471264367817,
+              "gaia_removed_frac": 0.0411522633744856
+            },
+            {
+              "k_floor": 5.5,
+              "dao_only_removed_frac": 0.5890804597701149,
+              "gaia_removed_frac": 0.05864197530864197
+            },
+            {
+              "k_floor": 6.0,
+              "dao_only_removed_frac": 0.6594827586206896,
+              "gaia_removed_frac": 0.07921810699588477
+            },
+            {
+              "k_floor": 6.5,
+              "dao_only_removed_frac": 0.7155172413793104,
+              "gaia_removed_frac": 0.10185185185185185
+            },
+            {
+              "k_floor": 7.0,
+              "dao_only_removed_frac": 0.7830459770114943,
+              "gaia_removed_frac": 0.12757201646090535
+            },
+            {
+              "k_floor": 7.5,
+              "dao_only_removed_frac": 0.8376436781609196,
+              "gaia_removed_frac": 0.15329218106995884
+            },
+            {
+              "k_floor": 8.0,
+              "dao_only_removed_frac": 0.9008620689655172,
+              "gaia_removed_frac": 0.1831275720164609
+            },
+            {
+              "k_floor": 8.5,
+              "dao_only_removed_frac": 0.9439655172413793,
+              "gaia_removed_frac": 0.20781893004115226
+            },
+            {
+              "k_floor": 9.0,
+              "dao_only_removed_frac": 0.9669540229885057,
+              "gaia_removed_frac": 0.22839506172839505
+            },
+            {
+              "k_floor": 9.5,
+              "dao_only_removed_frac": 0.9712643678160919,
+              "gaia_removed_frac": 0.25102880658436216
+            },
+            {
+              "k_floor": 10.0,
+              "dao_only_removed_frac": 0.978448275862069,
+              "gaia_removed_frac": 0.2736625514403292
+            },
+            {
+              "k_floor": 10.5,
+              "dao_only_removed_frac": 0.978448275862069,
+              "gaia_removed_frac": 0.29012345679012347
+            },
+            {
+              "k_floor": 11.0,
+              "dao_only_removed_frac": 0.9813218390804598,
+              "gaia_removed_frac": 0.3148148148148148
+            },
+            {
+              "k_floor": 11.5,
+              "dao_only_removed_frac": 0.9813218390804598,
+              "gaia_removed_frac": 0.3333333333333333
+            },
+            {
+              "k_floor": 12.0,
+              "dao_only_removed_frac": 0.9827586206896551,
+              "gaia_removed_frac": 0.35390946502057613
+            }
+          ],
+          "knee_ge50_dao_le2_gaia": null,
+          "snr_reconciliation": {
+            "recorded_merged": 1670,
+            "recorded_after_snr": 1668,
+            "recorded_removed": 2,
+            "floor_adu_at_k_configured": 33493.93162670136,
+            "below_floor_in_current_csv": 0,
+            "note": "current CSV is post-SNR; pre-SNR merged catalogue not archived for 435"
+          }
+        }
       }
     },
     {
@@ -483,11 +875,13 @@
         "read_noise_e": 15.2,
         "gain_source": "header_index_mapped",
         "read_noise_source": "db",
-        "read_noise_db_note": "DB READNOISE_E may differ from resolved runtime value; header/DB path logged above.",
-        "sigma_meas_adu": 63.39926528930664,
+        "sigma_meas_rms_conv_adu": 63.39926528930664,
+        "sigma_meas_std_clip_adu": 83.82144165039062,
         "sigma_pred_pedestal0_adu": 25.292776863555513,
+        "R_rms_conv": 2.506615451174875,
+        "R_std_clip": 3.3140466190238427,
         "R_pedestal0": 2.506615451174875,
-        "pedestal_inverted_adu": -10713.783020481045,
+        "pedestal_inverted_adu": -20244.60117485033,
         "ptc": {
           "usable": true,
           "n_bins": 16,
@@ -800,6 +1194,378 @@
         "telescope": "Carl-Zeiss 200mm",
         "diameter_mm": 200.0,
         "focal_mm": 200.0
+      },
+      "phys2": {
+        "noise_R": {
+          "R_rms_conv": 2.506615451174875,
+          "R_std_clip": 3.3140466190238427,
+          "sigma_pred_pedestal0_adu": 25.292776863555513,
+          "pedestal_conclusion_survives": false
+        },
+        "noise_binning_slope": {
+          "usable": true,
+          "factors": [
+            1,
+            2,
+            4,
+            8,
+            16
+          ],
+          "sigma_clip_by_factor": [
+            82.61025293449727,
+            72.44697791953222,
+            69.72020157844752,
+            69.28947743637117,
+            70.36748716746445
+          ],
+          "log_log_slope": -0.05271129413001971,
+          "verdict": "correlated"
+        },
+        "gain_rn_convention": {
+          "header_binning": 2,
+          "db_gain_bin1": 3.17,
+          "db_read_noise_bin1": 7.6,
+          "db_gain_scaled_for_header": 12.68,
+          "db_read_noise_scaled_for_header": 15.2,
+          "resolved_gain": 3.17,
+          "resolved_gain_source": "header_index_mapped",
+          "resolved_read_noise": 15.2,
+          "resolved_read_noise_source": "db",
+          "c3_26000_bin2_check": null,
+          "qhy294mm_rn_check": {
+            "likely_double_count_rn": true,
+            "evidence": "draft_303 NoFilter_60_2 measured RN=7.6 e- at bin2; resolver scales bin1->bin2 again",
+            "rn_if_db_already_bin2": 7.6
+          },
+          "note": "DB values documented as bin1 per param_resolver; header XBINNING scales DB fallbacks. Header-mapped gain bypasses DB scaling."
+        },
+        "masterstar_provenance": {
+          "ncombine_header": 1,
+          "is_stack": false,
+          "calibration_mode": "vyvar_calibrated",
+          "reference_light_fits": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000435_snapshot_skysurface_20260716\\platesolve\\NoFilter_60_2\\MASTERSTAR.fits",
+          "std_clip_master_adu": 83.82144165039062,
+          "std_clip_single_light_adu": 83.82144165039062,
+          "ratio_master_over_single": 1.0,
+          "verdict": "single reference frame (not noise-reducing stack)"
+        },
+        "bpm": {
+          "dark_bpm_sidecars_in_draft": [],
+          "n_dark_bpm_sidecars": 0,
+          "proc_rows_on_bad_column_frac": 0.0,
+          "proc_rows_sampled": 367011
+        },
+        "Q_statistic": {
+          "psf_predicted": 5.387643117792901,
+          "fwhm_px_used": 3.2068878608540805,
+          "populations": {
+            "dao_only": {
+              "median": 4.135673588773065,
+              "p05": 0.3687717928818542,
+              "p95": 7.664657387212465,
+              "n": 88
+            },
+            "gaia_matched": {
+              "median": 3.0581569055276017,
+              "p05": 1.2644879070386172,
+              "p95": 5.477164538414833,
+              "n": 2275
+            }
+          },
+          "tradeoff_curve": [
+            {
+              "q_lower_bound": -16.805,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.00437636761487965
+            },
+            {
+              "q_lower_bound": -5.975,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.004814004376367615
+            },
+            {
+              "q_lower_bound": 4.854,
+              "dao_only_removed_frac": 0.6477272727272727,
+              "gaia_removed_frac": 0.9041575492341357
+            },
+            {
+              "q_lower_bound": 15.683,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9986870897155361
+            },
+            {
+              "q_lower_bound": 26.512,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9986870897155361
+            },
+            {
+              "q_lower_bound": 37.341,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 48.17,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 59.0,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 69.829,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 80.658,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 91.487,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 102.316,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 113.145,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 123.975,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 134.804,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 145.633,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 156.462,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 167.291,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9991247264770241
+            },
+            {
+              "q_lower_bound": 178.12,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.999562363238512
+            },
+            {
+              "q_lower_bound": 188.95,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.999562363238512
+            },
+            {
+              "q_lower_bound": 199.779,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.999562363238512
+            },
+            {
+              "q_lower_bound": 210.608,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.999562363238512
+            },
+            {
+              "q_lower_bound": 221.437,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.999562363238512
+            },
+            {
+              "q_lower_bound": 232.266,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.999562363238512
+            },
+            {
+              "q_lower_bound": 243.095,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.999562363238512
+            }
+          ]
+        },
+        "persistence": {
+          "usable": false,
+          "reason": "persistence test only implemented for draft_501 with lights_dir"
+        },
+        "negative_flux": {
+          "n_negative": 8,
+          "frac_of_dao_only": 0.07339449541284404,
+          "peak_above_median_adu_median": 163.6016845703125,
+          "peak_above_median_adu_p05": 154.11610107421876,
+          "interpretation": "negative flux with positive peak_max_adu implies local background > aperture sum (oversubtracted neighbourhood or mis-centred aperture on a weak gradient)",
+          "spatial": {
+            "neg_centroid_x": 1078.8842403473534,
+            "neg_centroid_y": 449.9918373758194,
+            "dao_only_centroid_x": 988.0734357473708,
+            "dao_only_centroid_y": 1020.6889741033026,
+            "neg_spatial_std_px": 580.8221805435288,
+            "dao_only_spatial_std_px": 575.5061995550368
+          }
+        },
+        "snr_floor": {
+          "k_configured": 1.8,
+          "floor_adu": 2105.9221740722655,
+          "sigma_units": {
+            "dao_only": {
+              "median": 2.401028739986478,
+              "p05": 1.8578948039091827,
+              "p95": 28.116727619462313
+            },
+            "gaia_matched": {
+              "median": 5.286527896962895,
+              "p05": 2.0174291621718154,
+              "p95": 90.98969053698285
+            }
+          },
+          "k_floor_curve": [
+            {
+              "k_floor": 0.5,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.0
+            },
+            {
+              "k_floor": 1.0,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.0
+            },
+            {
+              "k_floor": 1.5,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.0
+            },
+            {
+              "k_floor": 2.0,
+              "dao_only_removed_frac": 0.21100917431192662,
+              "gaia_removed_frac": 0.047149894440534836
+            },
+            {
+              "k_floor": 2.5,
+              "dao_only_removed_frac": 0.5963302752293578,
+              "gaia_removed_frac": 0.16783954961294864
+            },
+            {
+              "k_floor": 3.0,
+              "dao_only_removed_frac": 0.7339449541284404,
+              "gaia_removed_frac": 0.26425052779732583
+            },
+            {
+              "k_floor": 3.5,
+              "dao_only_removed_frac": 0.7522935779816514,
+              "gaia_removed_frac": 0.32969739619985927
+            },
+            {
+              "k_floor": 4.0,
+              "dao_only_removed_frac": 0.7798165137614679,
+              "gaia_removed_frac": 0.3877551020408163
+            },
+            {
+              "k_floor": 4.5,
+              "dao_only_removed_frac": 0.7981651376146789,
+              "gaia_removed_frac": 0.434201266713582
+            },
+            {
+              "k_floor": 5.0,
+              "dao_only_removed_frac": 0.8073394495412844,
+              "gaia_removed_frac": 0.47642505277973257
+            },
+            {
+              "k_floor": 5.5,
+              "dao_only_removed_frac": 0.8165137614678899,
+              "gaia_removed_frac": 0.5144264602392681
+            },
+            {
+              "k_floor": 6.0,
+              "dao_only_removed_frac": 0.8256880733944955,
+              "gaia_removed_frac": 0.5425756509500352
+            },
+            {
+              "k_floor": 6.5,
+              "dao_only_removed_frac": 0.8348623853211009,
+              "gaia_removed_frac": 0.5636875439831105
+            },
+            {
+              "k_floor": 7.0,
+              "dao_only_removed_frac": 0.8348623853211009,
+              "gaia_removed_frac": 0.5886699507389163
+            },
+            {
+              "k_floor": 7.5,
+              "dao_only_removed_frac": 0.8348623853211009,
+              "gaia_removed_frac": 0.6097818437719915
+            },
+            {
+              "k_floor": 8.0,
+              "dao_only_removed_frac": 0.8440366972477065,
+              "gaia_removed_frac": 0.6308937368050669
+            },
+            {
+              "k_floor": 8.5,
+              "dao_only_removed_frac": 0.8440366972477065,
+              "gaia_removed_frac": 0.6484869809992962
+            },
+            {
+              "k_floor": 9.0,
+              "dao_only_removed_frac": 0.8532110091743119,
+              "gaia_removed_frac": 0.6674876847290641
+            },
+            {
+              "k_floor": 9.5,
+              "dao_only_removed_frac": 0.8532110091743119,
+              "gaia_removed_frac": 0.6801548205489092
+            },
+            {
+              "k_floor": 10.0,
+              "dao_only_removed_frac": 0.8623853211009175,
+              "gaia_removed_frac": 0.6917663617171006
+            },
+            {
+              "k_floor": 10.5,
+              "dao_only_removed_frac": 0.8623853211009175,
+              "gaia_removed_frac": 0.7012667135819846
+            },
+            {
+              "k_floor": 11.0,
+              "dao_only_removed_frac": 0.8623853211009175,
+              "gaia_removed_frac": 0.7114707952146376
+            },
+            {
+              "k_floor": 11.5,
+              "dao_only_removed_frac": 0.8623853211009175,
+              "gaia_removed_frac": 0.7220267417311752
+            },
+            {
+              "k_floor": 12.0,
+              "dao_only_removed_frac": 0.8623853211009175,
+              "gaia_removed_frac": 0.7297677691766362
+            }
+          ],
+          "knee_ge50_dao_le2_gaia": null,
+          "snr_reconciliation": {
+            "recorded_merged": 3777,
+            "recorded_after_snr": 2951,
+            "recorded_removed": 826,
+            "floor_adu_at_k_configured": 2105.9221740722655,
+            "below_floor_in_current_csv": 0,
+            "note": "current CSV is post-SNR; pre-SNR merged catalogue not archived for 435"
+          }
+        }
       }
     },
     {
@@ -884,11 +1650,13 @@
         "read_noise_e": 15.2,
         "gain_source": "header_index_mapped",
         "read_noise_source": "db",
-        "read_noise_db_note": "DB READNOISE_E may differ from resolved runtime value; header/DB path logged above.",
-        "sigma_meas_adu": 55.763187408447266,
+        "sigma_meas_rms_conv_adu": 55.763187408447266,
+        "sigma_meas_std_clip_adu": 53.020225524902344,
         "sigma_pred_pedestal0_adu": 26.771790873337647,
+        "R_rms_conv": 2.0829083744256534,
+        "R_std_clip": 1.980451206112843,
         "R_pedestal0": 2.0829083744256534,
-        "pedestal_inverted_adu": -7585.189578326919,
+        "pedestal_inverted_adu": -6639.297224222128,
         "ptc": {
           "usable": true,
           "n_bins": 16,
@@ -1201,6 +1969,371 @@
         "telescope": "Carl-Zeiss 200mm",
         "diameter_mm": 200.0,
         "focal_mm": 200.0
+      },
+      "phys2": {
+        "noise_R": {
+          "R_rms_conv": 2.0829083744256534,
+          "R_std_clip": 1.980451206112843,
+          "sigma_pred_pedestal0_adu": 26.771790873337647,
+          "pedestal_conclusion_survives": false
+        },
+        "noise_binning_slope": {
+          "usable": true,
+          "factors": [
+            1,
+            2,
+            4,
+            8,
+            16
+          ],
+          "sigma_clip_by_factor": [
+            51.17079164139279,
+            29.667553390077952,
+            20.89808956060625,
+            17.92130166161345,
+            17.125211603380507
+          ],
+          "log_log_slope": -0.3885608005774653,
+          "verdict": "correlated"
+        },
+        "gain_rn_convention": {
+          "header_binning": 2,
+          "db_gain_bin1": 3.17,
+          "db_read_noise_bin1": 7.6,
+          "db_gain_scaled_for_header": 12.68,
+          "db_read_noise_scaled_for_header": 15.2,
+          "resolved_gain": 3.17,
+          "resolved_gain_source": "header_index_mapped",
+          "resolved_read_noise": 15.2,
+          "resolved_read_noise_source": "db",
+          "c3_26000_bin2_check": null,
+          "qhy294mm_rn_check": {
+            "likely_double_count_rn": true,
+            "evidence": "draft_303 NoFilter_60_2 measured RN=7.6 e- at bin2; resolver scales bin1->bin2 again",
+            "rn_if_db_already_bin2": 7.6
+          },
+          "note": "DB values documented as bin1 per param_resolver; header XBINNING scales DB fallbacks. Header-mapped gain bypasses DB scaling."
+        },
+        "masterstar_provenance": {
+          "ncombine_header": 1,
+          "is_stack": false,
+          "calibration_mode": "vyvar_calibrated",
+          "reference_light_fits": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000500\\platesolve\\NoFilter_60_2\\MASTERSTAR.fits",
+          "std_clip_master_adu": 53.020225524902344,
+          "std_clip_single_light_adu": 53.020225524902344,
+          "ratio_master_over_single": 1.0,
+          "verdict": "single reference frame (not noise-reducing stack)"
+        },
+        "bpm": {
+          "dark_bpm_sidecars_in_draft": [],
+          "n_dark_bpm_sidecars": 0,
+          "proc_rows_on_bad_column_frac": 0.0,
+          "proc_rows_sampled": 482754
+        },
+        "Q_statistic": {
+          "psf_predicted": 6.051562455387048,
+          "fwhm_px_used": 3.8295,
+          "populations": {
+            "dao_only": {
+              "median": 4.664798077922352,
+              "p05": 1.8856964138677585,
+              "p95": 9.013872698144118,
+              "n": 553
+            },
+            "gaia_matched": {
+              "median": 3.5048976258241464,
+              "p05": 2.2233560511966495,
+              "p95": 9.171516978202225,
+              "n": 2299
+            }
+          },
+          "tradeoff_curve": [
+            {
+              "q_lower_bound": -0.425,
+              "dao_only_removed_frac": 0.0036036036036036037,
+              "gaia_removed_frac": 0.0043308791684712
+            },
+            {
+              "q_lower_bound": 0.819,
+              "dao_only_removed_frac": 0.012612612612612612,
+              "gaia_removed_frac": 0.0064963187527068
+            },
+            {
+              "q_lower_bound": 2.062,
+              "dao_only_removed_frac": 0.05945945945945946,
+              "gaia_removed_frac": 0.0389779125162408
+            },
+            {
+              "q_lower_bound": 3.305,
+              "dao_only_removed_frac": 0.14414414414414414,
+              "gaia_removed_frac": 0.418796015591165
+            },
+            {
+              "q_lower_bound": 4.549,
+              "dao_only_removed_frac": 0.4540540540540541,
+              "gaia_removed_frac": 0.7765266349068861
+            },
+            {
+              "q_lower_bound": 5.792,
+              "dao_only_removed_frac": 0.7387387387387387,
+              "gaia_removed_frac": 0.8852317020355132
+            },
+            {
+              "q_lower_bound": 7.035,
+              "dao_only_removed_frac": 0.8612612612612612,
+              "gaia_removed_frac": 0.916847119965353
+            },
+            {
+              "q_lower_bound": 8.279,
+              "dao_only_removed_frac": 0.9207207207207208,
+              "gaia_removed_frac": 0.9363360762234734
+            },
+            {
+              "q_lower_bound": 9.522,
+              "dao_only_removed_frac": 0.9567567567567568,
+              "gaia_removed_frac": 0.9584235599826765
+            },
+            {
+              "q_lower_bound": 10.765,
+              "dao_only_removed_frac": 0.9783783783783784,
+              "gaia_removed_frac": 0.9831095712429623
+            },
+            {
+              "q_lower_bound": 12.009,
+              "dao_only_removed_frac": 0.9819819819819819,
+              "gaia_removed_frac": 0.9922044174967518
+            },
+            {
+              "q_lower_bound": 13.252,
+              "dao_only_removed_frac": 0.9873873873873874,
+              "gaia_removed_frac": 0.9956691208315288
+            },
+            {
+              "q_lower_bound": 14.495,
+              "dao_only_removed_frac": 0.9927927927927928,
+              "gaia_removed_frac": 0.9978345604157643
+            },
+            {
+              "q_lower_bound": 15.739,
+              "dao_only_removed_frac": 0.9927927927927928,
+              "gaia_removed_frac": 0.9987007362494587
+            },
+            {
+              "q_lower_bound": 16.982,
+              "dao_only_removed_frac": 0.9963963963963964,
+              "gaia_removed_frac": 0.9987007362494587
+            },
+            {
+              "q_lower_bound": 18.225,
+              "dao_only_removed_frac": 0.9963963963963964,
+              "gaia_removed_frac": 0.9995669120831528
+            },
+            {
+              "q_lower_bound": 19.469,
+              "dao_only_removed_frac": 0.9963963963963964,
+              "gaia_removed_frac": 0.9995669120831528
+            },
+            {
+              "q_lower_bound": 20.712,
+              "dao_only_removed_frac": 0.9981981981981982,
+              "gaia_removed_frac": 0.9995669120831528
+            },
+            {
+              "q_lower_bound": 21.955,
+              "dao_only_removed_frac": 0.9981981981981982,
+              "gaia_removed_frac": 0.9995669120831528
+            },
+            {
+              "q_lower_bound": 23.199,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9995669120831528
+            },
+            {
+              "q_lower_bound": 24.442,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9995669120831528
+            },
+            {
+              "q_lower_bound": 25.685,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9995669120831528
+            },
+            {
+              "q_lower_bound": 26.928,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9995669120831528
+            },
+            {
+              "q_lower_bound": 28.172,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9995669120831528
+            },
+            {
+              "q_lower_bound": 29.415,
+              "dao_only_removed_frac": 1.0,
+              "gaia_removed_frac": 0.9995669120831528
+            }
+          ]
+        },
+        "persistence": {
+          "usable": false,
+          "reason": "persistence test only implemented for draft_501 with lights_dir"
+        },
+        "negative_flux": {
+          "n_negative": 48,
+          "frac_of_dao_only": 0.0855614973262032,
+          "peak_above_median_adu_median": 126.4754638671875,
+          "peak_above_median_adu_p05": 101.42657470703125,
+          "interpretation": "negative flux with positive peak_max_adu implies local background > aperture sum (oversubtracted neighbourhood or mis-centred aperture on a weak gradient)",
+          "spatial": {
+            "neg_centroid_x": 1021.0459479446117,
+            "neg_centroid_y": 632.7560641782912,
+            "dao_only_centroid_x": 909.292485839488,
+            "dao_only_centroid_y": 824.0124903036117,
+            "neg_spatial_std_px": 722.1043004440925,
+            "dao_only_spatial_std_px": 710.2309375072645
+          }
+        },
+        "snr_floor": {
+          "k_configured": 1.8,
+          "floor_adu": 2294.5833786010744,
+          "sigma_units": {
+            "dao_only": {
+              "median": 5.727937408725015,
+              "p05": 2.3468527874152074,
+              "p95": 11.764972479184374
+            },
+            "gaia_matched": {
+              "median": 5.068990758571845,
+              "p05": 2.1919056526205534,
+              "p95": 77.82376173597198
+            }
+          },
+          "k_floor_curve": [
+            {
+              "k_floor": 0.5,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.0
+            },
+            {
+              "k_floor": 1.0,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.0
+            },
+            {
+              "k_floor": 1.5,
+              "dao_only_removed_frac": 0.0,
+              "gaia_removed_frac": 0.0
+            },
+            {
+              "k_floor": 2.0,
+              "dao_only_removed_frac": 0.0106951871657754,
+              "gaia_removed_frac": 0.02330805953383881
+            },
+            {
+              "k_floor": 2.5,
+              "dao_only_removed_frac": 0.08377896613190731,
+              "gaia_removed_frac": 0.10586913788261725
+            },
+            {
+              "k_floor": 3.0,
+              "dao_only_removed_frac": 0.13903743315508021,
+              "gaia_removed_frac": 0.2055602358887953
+            },
+            {
+              "k_floor": 3.5,
+              "dao_only_removed_frac": 0.16755793226381463,
+              "gaia_removed_frac": 0.30356641392867173
+            },
+            {
+              "k_floor": 4.0,
+              "dao_only_removed_frac": 0.18538324420677363,
+              "gaia_removed_frac": 0.37826453243470937
+            },
+            {
+              "k_floor": 4.5,
+              "dao_only_removed_frac": 0.2014260249554367,
+              "gaia_removed_frac": 0.43499017130019657
+            },
+            {
+              "k_floor": 5.0,
+              "dao_only_removed_frac": 0.2709447415329768,
+              "gaia_removed_frac": 0.4931199101376018
+            },
+            {
+              "k_floor": 5.5,
+              "dao_only_removed_frac": 0.4295900178253119,
+              "gaia_removed_frac": 0.5369278292614434
+            },
+            {
+              "k_floor": 6.0,
+              "dao_only_removed_frac": 0.6167557932263814,
+              "gaia_removed_frac": 0.5827014883459702
+            },
+            {
+              "k_floor": 6.5,
+              "dao_only_removed_frac": 0.7789661319073083,
+              "gaia_removed_frac": 0.6234203875315922
+            },
+            {
+              "k_floor": 7.0,
+              "dao_only_removed_frac": 0.875222816399287,
+              "gaia_removed_frac": 0.6554338668913227
+            },
+            {
+              "k_floor": 7.5,
+              "dao_only_removed_frac": 0.9073083778966132,
+              "gaia_removed_frac": 0.6837966863240663
+            },
+            {
+              "k_floor": 8.0,
+              "dao_only_removed_frac": 0.9144385026737968,
+              "gaia_removed_frac": 0.7006458859870823
+            },
+            {
+              "k_floor": 8.5,
+              "dao_only_removed_frac": 0.9162210338680927,
+              "gaia_removed_frac": 0.7152485256950295
+            },
+            {
+              "k_floor": 9.0,
+              "dao_only_removed_frac": 0.9215686274509803,
+              "gaia_removed_frac": 0.7278854254422915
+            },
+            {
+              "k_floor": 9.5,
+              "dao_only_removed_frac": 0.9233511586452763,
+              "gaia_removed_frac": 0.7385565852288682
+            },
+            {
+              "k_floor": 10.0,
+              "dao_only_removed_frac": 0.9251336898395722,
+              "gaia_removed_frac": 0.7469811850603763
+            },
+            {
+              "k_floor": 10.5,
+              "dao_only_removed_frac": 0.9358288770053476,
+              "gaia_removed_frac": 0.7613030047739399
+            },
+            {
+              "k_floor": 11.0,
+              "dao_only_removed_frac": 0.9447415329768271,
+              "gaia_removed_frac": 0.7705700645885987
+            },
+            {
+              "k_floor": 11.5,
+              "dao_only_removed_frac": 0.948306595365419,
+              "gaia_removed_frac": 0.7773097444538051
+            },
+            {
+              "k_floor": 12.0,
+              "dao_only_removed_frac": 0.9518716577540107,
+              "gaia_removed_frac": 0.7846110643077787
+            }
+          ],
+          "knee_ge50_dao_le2_gaia": null,
+          "snr_reconciliation": null
+        }
       }
     }
   ],
@@ -1227,7 +2360,7 @@
       "dao_only_removed_frac": "n/a (frame reject)",
       "gaia_matched_lost_frac": "n/a",
       "would_prevent_501_outcome": true,
-      "risk": "R=0.044 flag pre-cal pedestal"
+      "risk": "R=0.082 flag pre-cal pedestal"
     },
     {
       "draft": "draft_000501",
@@ -1279,7 +2412,7 @@
       "dao_only_removed_frac": "n/a (frame reject)",
       "gaia_matched_lost_frac": "n/a",
       "would_prevent_501_outcome": false,
-      "risk": "R=2.507 flag pre-cal pedestal"
+      "risk": "R=3.314 flag pre-cal pedestal"
     },
     {
       "draft": "draft_000435_snapshot_skysurface_20260716",
@@ -1331,7 +2464,7 @@
       "dao_only_removed_frac": "n/a (frame reject)",
       "gaia_matched_lost_frac": "n/a",
       "would_prevent_501_outcome": false,
-      "risk": "R=2.083 flag pre-cal pedestal"
+      "risk": "R=1.980 flag pre-cal pedestal"
     },
     {
       "draft": "draft_000500",

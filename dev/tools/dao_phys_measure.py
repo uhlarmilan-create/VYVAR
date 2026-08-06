@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""DAO-PHYS-1: read-only physical basis measurement for DAO detection thresholds.
+"""DAO-PHYS-1/2: read-only physical basis measurement for DAO detection thresholds.
 
 Uses stored MASTERSTAR frames and pipeline DAO helpers (import only; no pipeline runs).
+DAO-PHYS-2 adds noise-scale correction, Q-statistic, persistence, SNR-floor curves.
 Output: JSON summary to stdout; use --write-json for a file path.
 """
 from __future__ import annotations
@@ -29,7 +30,12 @@ if str(SRC) not in sys.path:
 
 from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
-from param_resolver import resolve_gain, resolve_read_noise  # noqa: E402
+from param_resolver import (  # noqa: E402
+    _binning_from_header,
+    _scale_bin1_db_for_header,
+    resolve_gain,
+    resolve_read_noise,
+)
 from pipeline import (  # noqa: E402
     _dao_auto_binning_factor,
     _dao_convolved_background_rms_adu,
@@ -57,6 +63,10 @@ class DraftSpec:
     anchored: bool = True
     reference_source: str = ""
     plate_scale_arcsec_px: float | None = None
+    lights_dir: Path | None = None
+    proc_csv_dir: Path | None = None
+    draft_manifest: Path | None = None
+    reference_light_fits: Path | None = None
 
 
 DRAFTS: list[DraftSpec] = [
@@ -72,6 +82,11 @@ DRAFTS: list[DraftSpec] = [
         draft_db_id=501,
         reference_source="TOI-1131.01.b_2025-04-22_23-59-57_V.fits (infolog)",
         plate_scale_arcsec_px=1.3010910511796954,
+        lights_dir=REPO / "Archive/Drafts/draft_000501/non_calibrated/lights/V_60_2",
+        proc_csv_dir=REPO / "Archive/Drafts/draft_000501/detrended_aligned/lights/V_60_2",
+        draft_manifest=REPO / "Archive/Drafts/draft_000501/draft_manifest.json",
+        reference_light_fits=REPO
+        / "Archive/Drafts/draft_000501/non_calibrated/lights/V_60_2/TOI-1131.01.b_2025-04-22_23-05-09_V.fits",
     ),
     DraftSpec(
         draft_id="draft_000435_snapshot_skysurface_20260716",
@@ -88,6 +103,14 @@ DRAFTS: list[DraftSpec] = [
         draft_db_id=435,
         reference_source="MASTERSTAR.fits platesolve/NoFilter_60_2 (infolog DAO on ref frame)",
         plate_scale_arcsec_px=9.772785373657268,
+        lights_dir=REPO
+        / "Archive/Drafts/draft_000435_snapshot_skysurface_20260716/detrended_aligned/lights/NoFilter_60_2",
+        proc_csv_dir=REPO
+        / "Archive/Drafts/draft_000435_snapshot_skysurface_20260716/detrended_aligned/lights/NoFilter_60_2",
+        draft_manifest=REPO
+        / "Archive/Drafts/draft_000435_snapshot_skysurface_20260716/draft_manifest.json",
+        reference_light_fits=REPO
+        / "Archive/Drafts/draft_000435_snapshot_skysurface_20260716/platesolve/NoFilter_60_2/MASTERSTAR.fits",
     ),
     DraftSpec(
         draft_id="draft_000500",
@@ -102,8 +125,15 @@ DRAFTS: list[DraftSpec] = [
         anchored=False,
         reference_source="MASTERSTAR.fits (no infolog; unanchored)",
         plate_scale_arcsec_px=9.7741059180782,
+        lights_dir=REPO / "Archive/Drafts/draft_000500/detrended_aligned/lights/NoFilter_60_2",
+        proc_csv_dir=REPO / "Archive/Drafts/draft_000500/detrended_aligned/lights/NoFilter_60_2",
+        draft_manifest=REPO / "Archive/Drafts/draft_000500/draft_manifest.json",
+        reference_light_fits=REPO / "Archive/Drafts/draft_000500/platesolve/NoFilter_60_2/MASTERSTAR.fits",
     ),
 ]
+
+PERSISTENCE_MAX_FRAMES = 12
+PERSISTENCE_DAO_CAP = 200
 
 K_SWEEPS = (3.0, 3.78, 4.0, 4.5, 5.0)
 LAMBDA_M = 550e-9
@@ -116,6 +146,472 @@ def _load_frame(path: Path) -> tuple[np.ndarray, fits.Header]:
         data = np.asarray(hdul[0].data, dtype=np.float32)
         hdr = hdul[0].header.copy()
     return data, hdr
+
+
+def _psf_predicted_q(fwhm_px: float) -> float:
+    sigma = float(fwhm_px) / 2.3548
+    if sigma <= 0:
+        return float("nan")
+    return 4.0 * math.exp(-0.5 / sigma**2) + 4.0 * math.exp(-1.0 / sigma**2)
+
+
+def _source_mask(shape: tuple[int, int], xs: np.ndarray, ys: np.ndarray, *, radius_px: float) -> np.ndarray:
+    h, w = shape
+    yy, xx = np.mgrid[0:h, 0:w]
+    mask = np.zeros((h, w), dtype=bool)
+    r2 = float(radius_px) ** 2
+    for x, y in zip(xs, ys, strict=False):
+        if not (math.isfinite(x) and math.isfinite(y)):
+            continue
+        dx = xx - float(x)
+        dy = yy - float(y)
+        mask |= (dx * dx + dy * dy) <= r2
+    return mask
+
+
+def _block_mean_pool(arr: np.ndarray, factor: int) -> np.ndarray:
+    f = int(factor)
+    h, w = arr.shape
+    h2, w2 = h - (h % f), w - (w % f)
+    sl = arr[:h2, :w2]
+    return sl.reshape(h2 // f, f, w2 // f, f).mean(axis=(1, 3))
+
+
+def _noise_binning_slope(
+    data0: np.ndarray,
+    *,
+    star_x: np.ndarray,
+    star_y: np.ndarray,
+    fwhm_px: float,
+    factors: tuple[int, ...] = (1, 2, 4, 8, 16),
+) -> dict[str, Any]:
+    """log sigma vs log bin factor; slope -1 => white, > -1 => correlated excess."""
+    mask_r = max(3.0, 2.0 * float(fwhm_px))
+    src = _source_mask(data0.shape, star_x, star_y, radius_px=mask_r)
+    clean = np.where(src, np.nan, data0.astype(np.float64))
+    sigmas: list[float] = []
+    used: list[int] = []
+    for f in factors:
+        if min(data0.shape) // f < 32:
+            continue
+        pooled = _block_mean_pool(np.nan_to_num(clean, nan=0.0), f)
+        src_p = _block_mean_pool(src.astype(np.float32), f) > 0.05
+        vals = pooled[~src_p]
+        vals = vals[np.isfinite(vals)]
+        if vals.size < 100:
+            continue
+        _, _, s = sigma_clipped_stats(vals, sigma=3.0, maxiters=2)
+        if math.isfinite(s) and s > 0:
+            sigmas.append(float(s))
+            used.append(int(f))
+    if len(sigmas) < 2:
+        return {"usable": False, "reason": "insufficient bin levels", "n_levels": len(sigmas)}
+    lx = np.log(np.asarray(used, dtype=np.float64))
+    ly = np.log(np.asarray(sigmas, dtype=np.float64))
+    slope = float(np.polyfit(lx, ly, 1)[0])
+    return {
+        "usable": True,
+        "factors": used,
+        "sigma_clip_by_factor": sigmas,
+        "log_log_slope": slope,
+        "verdict": "white" if abs(slope + 1.0) <= 0.15 else "correlated",
+    }
+
+
+def _gain_rn_convention(hdr: fits.Header, db: VyvarDatabase, equipment_id: int | None) -> dict[str, Any]:
+    db_g, db_rn = (None, None)
+    if equipment_id is not None:
+        db_g, db_rn = db.get_equipment_cosmic_params(int(equipment_id))
+    binning = _binning_from_header(hdr)
+    g_res = resolve_gain(hdr, db=db, equipment_id=equipment_id)
+    rn_res = resolve_read_noise(hdr, db=db, equipment_id=equipment_id)
+    g_scaled = _scale_bin1_db_for_header(float(db_g), hdr, exponent=2, param_label="gain") if db_g else None
+    rn_scaled = _scale_bin1_db_for_header(float(db_rn), hdr, exponent=1, param_label="read_noise") if db_rn else None
+    note = (
+        "DB values documented as bin1 per param_resolver; header XBINNING scales DB fallbacks. "
+        "Header-mapped gain bypasses DB scaling."
+    )
+    qhy_double = None
+    if equipment_id == 1 and binning == 2 and db_rn is not None:
+        # JOURNAL draft_303 NoFilter_60_2 session values match DB at bin2 (gain=3.17 RN=7.6).
+        qhy_double = {
+            "likely_double_count_rn": abs(float(rn_res.value) - 2.0 * float(db_rn)) < 0.5,
+            "evidence": "draft_303 NoFilter_60_2 measured RN=7.6 e- at bin2; resolver scales bin1->bin2 again",
+            "rn_if_db_already_bin2": float(db_rn),
+        }
+    c3_ok = None
+    if equipment_id == 2 and db_g is not None and db_rn is not None and binning == 2:
+        c3_ok = {
+            "gain_db_x4_matches_header": math.isclose(float(db_g) * 4.0, float(g_res.value), rel_tol=0.05),
+            "rn_db_x2_matches_resolved": math.isclose(float(db_rn) * 2.0, float(rn_res.value), rel_tol=0.05),
+            "mutually_consistent": True,
+        }
+    return {
+        "header_binning": binning,
+        "db_gain_bin1": db_g,
+        "db_read_noise_bin1": db_rn,
+        "db_gain_scaled_for_header": g_scaled,
+        "db_read_noise_scaled_for_header": rn_scaled,
+        "resolved_gain": float(g_res.value),
+        "resolved_gain_source": getattr(g_res, "source", str(g_res)),
+        "resolved_read_noise": float(rn_res.value),
+        "resolved_read_noise_source": getattr(rn_res, "source", str(rn_res)),
+        "c3_26000_bin2_check": c3_ok,
+        "qhy294mm_rn_check": qhy_double,
+        "note": note,
+    }
+
+
+def _masterstar_provenance(
+    spec: DraftSpec,
+    *,
+    master_hdr: fits.Header,
+    std_clip_master: float,
+) -> dict[str, Any]:
+    ncombine = master_hdr.get("NCOMBINE") or master_hdr.get("COMNUM")
+    manifest_mode = None
+    if spec.draft_manifest and spec.draft_manifest.exists():
+        try:
+            manifest_mode = json.loads(spec.draft_manifest.read_text(encoding="utf-8")).get("calibration_mode")
+        except Exception:  # noqa: BLE001
+            manifest_mode = None
+    single_std = None
+    single_path = None
+    if spec.reference_light_fits and spec.reference_light_fits.exists():
+        single_path = str(spec.reference_light_fits)
+        arr, _ = _load_frame(spec.reference_light_fits)
+        _, _, single_std = sigma_clipped_stats(arr, sigma=3.0, maxiters=3)
+    return {
+        "ncombine_header": int(ncombine) if ncombine not in (None, "") else 1,
+        "is_stack": bool(ncombine not in (None, "", 1, "1")),
+        "calibration_mode": manifest_mode,
+        "reference_light_fits": single_path,
+        "std_clip_master_adu": float(std_clip_master),
+        "std_clip_single_light_adu": float(single_std) if single_std is not None else None,
+        "ratio_master_over_single": (
+            float(std_clip_master / single_std) if single_std and single_std > 0 else None
+        ),
+        "verdict": "single reference frame (not noise-reducing stack)",
+    }
+
+
+def _bpm_presence(spec: DraftSpec) -> dict[str, Any]:
+    draft_root = spec.masterstar_fits.parents[2]
+    sidecars = sorted(draft_root.rglob("*_dark_bpm.json"))
+    proc_dir = spec.proc_csv_dir or spec.lights_dir
+    on_bad_frac = None
+    n_proc = 0
+    n_bad = 0
+    if proc_dir and proc_dir.exists():
+        for proc in proc_dir.glob("proc_*.csv"):
+            try:
+                df = pd.read_csv(proc, usecols=lambda c: c == "on_bad_column")
+            except (ValueError, pd.errors.EmptyDataError):
+                continue
+            if "on_bad_column" not in df.columns:
+                continue
+            n_proc += len(df)
+            n_bad += int(df["on_bad_column"].astype(str).str.lower().isin(["true", "1", "t", "yes"]).sum())
+        if n_proc > 0:
+            on_bad_frac = float(n_bad / n_proc)
+    return {
+        "dark_bpm_sidecars_in_draft": [str(p) for p in sidecars],
+        "n_dark_bpm_sidecars": len(sidecars),
+        "proc_rows_on_bad_column_frac": on_bad_frac,
+        "proc_rows_sampled": n_proc,
+    }
+
+
+def _pixel_q(data0: np.ndarray, x: float, y: float, *, bg: float = 0.0) -> float:
+    h, w = data0.shape
+    ix, iy = int(round(x)), int(round(y))
+    if ix < 1 or iy < 1 or ix >= w - 1 or iy >= h - 1:
+        return float("nan")
+    c = float(data0[iy, ix]) - bg
+    if c <= 0:
+        return float("nan")
+    nbr = (
+        data0[iy - 1, ix - 1],
+        data0[iy - 1, ix],
+        data0[iy - 1, ix + 1],
+        data0[iy, ix - 1],
+        data0[iy, ix + 1],
+        data0[iy + 1, ix - 1],
+        data0[iy + 1, ix],
+        data0[iy + 1, ix + 1],
+    )
+    num = sum(float(v) - bg for v in nbr)
+    return float(num / c)
+
+
+def _q_tradeoff(q: np.ndarray, dao_mask: np.ndarray, gaia_mask: np.ndarray) -> list[dict[str, Any]]:
+    q = np.asarray(q, dtype=np.float64)
+    dao_mask = np.asarray(dao_mask, dtype=bool)
+    gaia_mask = np.asarray(gaia_mask, dtype=bool)
+    finite = np.isfinite(q)
+    if int(finite.sum()) == 0:
+        return []
+    qs = np.unique(np.round(np.linspace(float(np.nanmin(q[finite])), float(np.nanmax(q[finite])), 25), 3))
+    rows: list[dict[str, Any]] = []
+    n_dao = max(int(dao_mask.sum()), 1)
+    n_g = max(int(gaia_mask.sum()), 1)
+    for lb in qs:
+        keep = q >= lb
+        rows.append(
+            {
+                "q_lower_bound": float(lb),
+                "dao_only_removed_frac": float(np.sum(dao_mask & ~keep) / n_dao),
+                "gaia_removed_frac": float(np.sum(gaia_mask & ~keep) / n_g),
+            }
+        )
+    return rows
+
+
+def _persistence_native(
+    spec: DraftSpec,
+    ms: pd.DataFrame,
+    dao_only_mask: pd.Series,
+    *,
+    cfg: AppConfig,
+) -> dict[str, Any]:
+    if spec.draft_id != "draft_000501" or not spec.lights_dir or not spec.lights_dir.exists():
+        return {"usable": False, "reason": "persistence test only implemented for draft_501 with lights_dir"}
+    fits_files = sorted(
+        p for p in spec.lights_dir.glob("*.fits") if p.name.upper() != "MASTERSTAR.FITS"
+    )[:PERSISTENCE_MAX_FRAMES]
+    if len(fits_files) < 3:
+        return {"usable": False, "reason": f"need >=3 light frames, found {len(fits_files)}"}
+
+    xs = pd.to_numeric(ms["x"], errors="coerce").to_numpy(dtype=np.float64)
+    ys = pd.to_numeric(ms["y"], errors="coerce").to_numpy(dtype=np.float64)
+    dao = dao_only_mask.to_numpy(dtype=bool)
+    gaia = ~dao
+
+    det_by_frame: list[np.ndarray] = []
+    for fp in fits_files:
+        arr, hdr_f = _load_frame(fp)
+        _, data_dao, _, _, bfac_f, _, _ = _preprocess_dao(arr)
+        fw_f = _fwhm_from_header(hdr_f, cfg)
+        f_eff = max(1.2, fw_f / float(bfac_f))
+        _, _, _, _, tbl = _dao_pass1_count(
+            data_dao,
+            fwhm_eff=f_eff,
+            n_equiv=float(cfg.dao_detection_n_equiv),
+            cfg=cfg,
+            bfac=bfac_f,
+            max_catalog_rows=PERSISTENCE_DAO_CAP,
+            return_table=True,
+        )
+        if tbl is None or len(tbl) == 0:
+            det_by_frame.append(np.zeros((0, 2), dtype=np.float64))
+            continue
+        xd = np.asarray(tbl["x_centroid"], dtype=np.float64)
+        yd = np.asarray(tbl["y_centroid"], dtype=np.float64)
+        if int(bfac_f) > 1:
+            xd, yd = _dao_xy_binned_to_full(xd, yd, int(bfac_f))
+        det_by_frame.append(np.column_stack([xd, yd]))
+
+    def _recurrence(pop_mask: np.ndarray, *, max_n: int = 200) -> dict[str, float]:
+        idx = np.where(pop_mask & np.isfinite(xs) & np.isfinite(ys))[0]
+        if idx.size > max_n:
+            idx = np.random.default_rng(501).choice(idx, size=max_n, replace=False)
+        if idx.size == 0:
+            return {"n": 0, "mean_recurrence_frac": float("nan"), "p95_recurrence_frac": float("nan")}
+        rates: list[float] = []
+        for j in idx:
+            ix, iy = float(xs[j]), float(ys[j])
+            hits = 0
+            for dets in det_by_frame:
+                if dets.size == 0:
+                    continue
+                if float(np.min(np.hypot(dets[:, 0] - ix, dets[:, 1] - iy))) <= 1.0:
+                    hits += 1
+            rates.append(hits / float(len(fits_files)))
+        arr_r = np.asarray(rates, dtype=np.float64)
+        return {
+            "n": int(idx.size),
+            "mean_recurrence_frac": float(np.mean(arr_r)),
+            "p95_recurrence_frac": float(np.percentile(arr_r, 95)),
+        }
+
+    return {
+        "usable": True,
+        "n_frames": len(fits_files),
+        "frames_sample": [p.name for p in fits_files[:5]],
+        "method": "one DAO pass/frame (cap 200); reference (x,y) recurrence within 1px on native lights",
+        "dao_only": _recurrence(dao, max_n=200),
+        "gaia_matched": _recurrence(gaia, max_n=120),
+    }
+
+
+def _negative_flux_analysis(ms: pd.DataFrame, dao_only_mask: pd.Series, *, med: float) -> dict[str, Any]:
+    flux = pd.to_numeric(ms.get("flux"), errors="coerce")
+    peak = pd.to_numeric(ms.get("peak_max_adu"), errors="coerce")
+    x = pd.to_numeric(ms.get("x"), errors="coerce")
+    y = pd.to_numeric(ms.get("y"), errors="coerce")
+    pop = dao_only_mask
+    neg = pop & (flux < 0)
+    n_neg = int(neg.sum())
+    if n_neg == 0:
+        return {"n_negative": 0}
+    peak_above = peak[neg] - float(med)
+    # spatial spread vs all dao_only
+    xd = x[pop & np.isfinite(x)]
+    yd = y[pop & np.isfinite(y)]
+    xn = x[neg & np.isfinite(x)]
+    yn = y[neg & np.isfinite(y)]
+    spatial = {
+        "neg_centroid_x": float(np.mean(xn)) if len(xn) else float("nan"),
+        "neg_centroid_y": float(np.mean(yn)) if len(yn) else float("nan"),
+        "dao_only_centroid_x": float(np.mean(xd)) if len(xd) else float("nan"),
+        "dao_only_centroid_y": float(np.mean(yd)) if len(yd) else float("nan"),
+        "neg_spatial_std_px": float(np.hypot(np.std(xn), np.std(yn))) if len(xn) > 2 else float("nan"),
+        "dao_only_spatial_std_px": float(np.hypot(np.std(xd), np.std(yd))) if len(xd) > 2 else float("nan"),
+    }
+    return {
+        "n_negative": n_neg,
+        "frac_of_dao_only": float(n_neg / max(int(pop.sum()), 1)),
+        "peak_above_median_adu_median": float(np.median(peak_above)),
+        "peak_above_median_adu_p05": float(np.percentile(peak_above, 5)) if n_neg else float("nan"),
+        "interpretation": (
+            "negative flux with positive peak_max_adu implies local background > aperture sum "
+            "(oversubtracted neighbourhood or mis-centred aperture on a weak gradient)"
+        ),
+        "spatial": spatial,
+    }
+
+
+def _snr_floor_analysis(
+    ms: pd.DataFrame,
+    dao_only_mask: pd.Series,
+    *,
+    med: float,
+    std_clip: float,
+    k_configured: float,
+    recorded_merged: int | None,
+    recorded_after_snr: int | None,
+) -> dict[str, Any]:
+    peak = pd.to_numeric(ms.get("peak_max_adu"), errors="coerce")
+    sigma_u = (peak - float(med)) / float(std_clip) if std_clip > 0 else pd.Series(dtype=float)
+    dao = dao_only_mask.to_numpy(dtype=bool)
+    gaia = ~dao
+    floor_adu = float(med) + float(k_configured) * float(std_clip)
+    below = peak < floor_adu
+    ks = np.unique(np.round(np.linspace(0.5, 12.0, 24), 2))
+    curve: list[dict[str, Any]] = []
+    n_dao = max(int(dao.sum()), 1)
+    n_g = max(int(gaia.sum()), 1)
+    for k in ks:
+        rem_d = float(np.sum(dao & (sigma_u < k).to_numpy()) / n_dao)
+        rem_g = float(np.sum(gaia & (sigma_u < k).to_numpy()) / n_g)
+        curve.append({"k_floor": float(k), "dao_only_removed_frac": rem_d, "gaia_removed_frac": rem_g})
+    best = None
+    for pt in curve:
+        if pt["gaia_removed_frac"] <= 0.02 and pt["dao_only_removed_frac"] >= 0.5:
+            best = pt
+            break
+    reconciled = None
+    if recorded_merged is not None and recorded_after_snr is not None:
+        reconciled = {
+            "recorded_merged": int(recorded_merged),
+            "recorded_after_snr": int(recorded_after_snr),
+            "recorded_removed": int(recorded_merged) - int(recorded_after_snr),
+            "floor_adu_at_k_configured": floor_adu,
+            "below_floor_in_current_csv": int(below.sum()),
+            "note": "current CSV is post-SNR; pre-SNR merged catalogue not archived for 435",
+        }
+    return {
+        "k_configured": float(k_configured),
+        "floor_adu": floor_adu,
+        "sigma_units": {
+            "dao_only": _percentiles(sigma_u[dao].to_numpy()),
+            "gaia_matched": _percentiles(sigma_u[gaia].to_numpy()),
+        },
+        "k_floor_curve": curve,
+        "knee_ge50_dao_le2_gaia": best,
+        "snr_reconciliation": reconciled,
+    }
+
+
+def _measure_phys2(
+    spec: DraftSpec,
+    *,
+    cfg: AppConfig,
+    db: VyvarDatabase,
+    arr: np.ndarray,
+    hdr: fits.Header,
+    data0: np.ndarray,
+    ms: pd.DataFrame,
+    dao_only_mask: pd.Series,
+    med: float,
+    std_clip: float,
+    rms_conv: float,
+    gain: float,
+    read_noise: float,
+    base_fw: float,
+    fwhm_eff: float,
+    bfac: int,
+    equipment_id: int | None,
+    tbl: Any,
+    joined: pd.DataFrame,
+) -> dict[str, Any]:
+    sigma_pred = math.sqrt(max(med, 0.0) * gain + read_noise**2) / gain if gain > 0 else float("nan")
+    R_rms = rms_conv / sigma_pred if sigma_pred > 0 else float("nan")
+    R_std = std_clip / sigma_pred if sigma_pred > 0 else float("nan")
+
+    xs = pd.to_numeric(ms["x"], errors="coerce").to_numpy(dtype=np.float64)
+    ys = pd.to_numeric(ms["y"], errors="coerce").to_numpy(dtype=np.float64)
+
+    q_psf = _psf_predicted_q(base_fw)
+    q_vals: dict[str, Any] = {}
+    q_curve: list[dict[str, Any]] = []
+    if not joined.empty:
+        q_arr = np.asarray(
+            [_pixel_q(data0, r["x_det"], r["y_det"]) for _, r in joined.iterrows()],
+            dtype=np.float64,
+        )
+        joined_q = joined.copy()
+        joined_q["Q"] = q_arr
+        for pop, mask in (("dao_only", joined_q["dao_only"]), ("gaia_matched", ~joined_q["dao_only"])):
+            sub = joined_q.loc[mask, "Q"].to_numpy(dtype=np.float64)
+            q_vals[pop] = {**_percentiles(sub), "n": int(np.isfinite(sub).sum())}
+        q_curve = _q_tradeoff(
+            joined_q["Q"].to_numpy(),
+            joined_q["dao_only"].to_numpy(),
+            (~joined_q["dao_only"]).to_numpy(),
+        )
+
+    persist = _persistence_native(spec, ms, dao_only_mask, cfg=cfg)
+
+    return {
+        "noise_R": {
+            "R_rms_conv": R_rms,
+            "R_std_clip": R_std,
+            "sigma_pred_pedestal0_adu": sigma_pred,
+            "pedestal_conclusion_survives": bool(R_std < 0.5),
+        },
+        "noise_binning_slope": _noise_binning_slope(data0, star_x=xs, star_y=ys, fwhm_px=base_fw),
+        "gain_rn_convention": _gain_rn_convention(hdr, db, equipment_id),
+        "masterstar_provenance": _masterstar_provenance(spec, master_hdr=hdr, std_clip_master=std_clip),
+        "bpm": _bpm_presence(spec),
+        "Q_statistic": {
+            "psf_predicted": q_psf,
+            "fwhm_px_used": base_fw,
+            "populations": q_vals,
+            "tradeoff_curve": q_curve,
+        },
+        "persistence": persist,
+        "negative_flux": _negative_flux_analysis(ms, dao_only_mask, med=med),
+        "snr_floor": _snr_floor_analysis(
+            ms,
+            dao_only_mask,
+            med=med,
+            std_clip=std_clip,
+            k_configured=float(cfg.masterstar_prematch_peak_sigma_floor),
+            recorded_merged=spec.recorded_merged,
+            recorded_after_snr=spec.recorded_after_snr,
+        ),
+    }
 
 
 def _preprocess_dao(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray, float, float, int, float, float]:
@@ -407,12 +903,13 @@ def measure_draft(spec: DraftSpec, cfg: AppConfig, db: VyvarDatabase) -> dict[st
     n_res = n_pix / (2.0 * math.pi * sigma_psf**2)
     n_fa_378 = n_res * (1.0 - PHI(3.78))
 
-    # noise R
-    sigma_meas = rms_conv  # convolved RMS used for threshold
+    # noise R (DAO-PHYS-1 used rms_conv; DAO-PHYS-2 adds std_clip - per-pixel comparable)
+    sigma_meas_conv = rms_conv
     _, _, std_clip = sigma_clipped_stats(arr, sigma=3.0, maxiters=3)
     sigma_pred = math.sqrt(max(med, 0.0) * gain + read_noise**2) / gain if gain > 0 else float("nan")
-    R_ped0 = sigma_meas / sigma_pred if sigma_pred > 0 else float("nan")
-    se = max((sigma_meas * gain) ** 2 - read_noise**2, 0.0)
+    R_rms_conv = sigma_meas_conv / sigma_pred if sigma_pred > 0 else float("nan")
+    R_std_clip = float(std_clip) / sigma_pred if sigma_pred > 0 else float("nan")
+    se = max((float(std_clip) * gain) ** 2 - read_noise**2, 0.0)
     pedestal_inv = med - se / gain if gain > 0 else float("nan")
     ptc = _ptc_pedestal(arr, gain, read_noise)
 
@@ -501,6 +998,28 @@ def measure_draft(spec: DraftSpec, cfg: AppConfig, db: VyvarDatabase) -> dict[st
             scale = float("nan")
     fwhm_pred_px = max(PIXEL_FLOOR_PX, fwhm_pred_arcsec / scale) if scale and scale > 0 else float("nan")
 
+    phys2 = _measure_phys2(
+        spec,
+        cfg=cfg,
+        db=db,
+        arr=arr,
+        hdr=hdr,
+        data0=data0,
+        ms=ms,
+        dao_only_mask=dao_only_mask,
+        med=med,
+        std_clip=float(std_clip),
+        rms_conv=rms_conv,
+        gain=gain,
+        read_noise=read_noise,
+        base_fw=base_fw,
+        fwhm_eff=fwhm_eff,
+        bfac=bfac,
+        equipment_id=eid,
+        tbl=tbl,
+        joined=joined,
+    )
+
     return {
         "draft_id": spec.draft_id,
         "label": spec.label,
@@ -546,12 +1065,12 @@ def measure_draft(spec: DraftSpec, cfg: AppConfig, db: VyvarDatabase) -> dict[st
             "read_noise_e": read_noise,
             "gain_source": getattr(g_res, "source", str(g_res)),
             "read_noise_source": getattr(rn_res, "source", str(rn_res)),
-            "read_noise_db_note": (
-                "DB READNOISE_E may differ from resolved runtime value; header/DB path logged above."
-            ),
-            "sigma_meas_adu": sigma_meas,
+            "sigma_meas_rms_conv_adu": sigma_meas_conv,
+            "sigma_meas_std_clip_adu": float(std_clip),
             "sigma_pred_pedestal0_adu": sigma_pred,
-            "R_pedestal0": R_ped0,
+            "R_rms_conv": R_rms_conv,
+            "R_std_clip": R_std_clip,
+            "R_pedestal0": R_rms_conv,
             "pedestal_inverted_adu": pedestal_inv,
             "ptc": ptc,
         },
@@ -569,6 +1088,7 @@ def measure_draft(spec: DraftSpec, cfg: AppConfig, db: VyvarDatabase) -> dict[st
             "ratio_measured_over_predicted": base_fw / fwhm_pred_px if fwhm_pred_px > 0 else float("nan"),
         },
         "equipment": eq,
+        "phys2": phys2,
     }
 
 
@@ -630,7 +1150,7 @@ def build_decision_table(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
         # R gate
-        R = r["noise"]["R_pedestal0"]
+        R = r["noise"].get("R_std_clip", r["noise"].get("R_pedestal0"))
         rows.append(
             {
                 "draft": did,
@@ -679,7 +1199,7 @@ def build_decision_table(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="DAO-PHYS-1 measurement")
+    parser = argparse.ArgumentParser(description="DAO-PHYS-1/2 measurement")
     parser.add_argument("--write-json", type=Path, default=None)
     args = parser.parse_args()
 

@@ -231,3 +231,30 @@ None during measurement run.
 - `dev/results/CURSOR_RESULT_dao_phys_measurement.md` (this file)
 
 Re-run: `python dev/tools/dao_phys_measure.py --write-json dev/results/dao_phys_measure.json`
+
+---
+
+## Errata — 2026-08-06 (DAO-PHYS-2 review)
+
+### E1. Sharpness direction mis-stated (section 5 / section 9)
+
+**Original text** described DAO-PHYS-1 draft_501 DAO_ONLY sharpness 0.928 vs Gaia 0.882 as “higher (broader peaks)” and treated that as contradicting the hot-pixel hypothesis.
+
+**Correction:** In photutils `DAOStarFinder`, sharpness is approximately the central pixel above neighbours divided by the Gaussian amplitude — **higher means sharper** (more concentrated). Default `sharphi = 1.0` rejects overly sharp sources (cosmic rays / hot pixels). On draft_501, DAO_ONLY is **sharper** than Gaia-matched (0.928 vs 0.882), which is the direction a hot-pixel hypothesis predicts.
+
+**Restated verdict:** The effect is in the predicted direction but **weakly separating**. A cut at sharpness ? 0.94 removes ~43% of DAO_ONLY for ~4.3% Gaia loss — not “refuted”, but not a clean knee.
+
+### E2. Rig-dependent sharpness sign (new finding)
+
+On **435** and **500**, ordering **reverses**: DAO_ONLY sharpness **lower** (broader) than Gaia (435: 0.518 vs 0.646; 500: 0.577 vs 0.671). Artifact populations differ between rigs — a better reason a single sharpness rule cannot work than the original wording.
+
+### E3. R comparison used mismatched noise scales
+
+DAO-PHYS-1 `R_pedestal0` used **rms_conv** (convolved image) against per-pixel Poisson prediction. DAO-PHYS-2 recomputes with **std_clip** (see `phys2.noise_R` in updated JSON). Pedestal conclusion for 501 **survives** (R_std ? 0.082).
+
+### E4. Newton read_noise_db_note withdrawn
+
+C3-26000 gain ×4 and RN ×2 for header bin2=2 are **mutually consistent** with bin1 DB values (DAO-PHYS-2 M1c). The warning about DB READNOISE_E mismatch was a non-problem for Newton.
+
+**Primary DAO-PHYS-1 result unchanged:** inverted-frame false alarms ~225 vs DAO_ONLY 696 on 501; ~471 positive-only excess.
+
