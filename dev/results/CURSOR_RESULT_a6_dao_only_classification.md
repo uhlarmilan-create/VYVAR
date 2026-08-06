@@ -15,10 +15,10 @@ pipeline wiring. Local P1 headless A/B at same HEAD (with vs without A-6 src cha
 - Legacy `classify_unmatched_dao` (artifact heuristic for reconcile report only; not used for A-6 rows)
 
 **Added for A-6:**
-- `fit_instrumental_flux_to_g` ù median ZP from Gaia-matched `flux` + `phot_g_mean_mag`
-- `derive_dao_only_class_margin` ù `hypot(2 * MAD, fleming_sigma_mag)`, no hardcoded floor
-- `classify_dao_only_dataframe` ù assigns four classes; additive columns only
-- `annotate_dao_only_magnitude_classes` ù pipeline entry point
+- `fit_instrumental_flux_to_g` - median ZP from Gaia-matched `flux` + `phot_g_mean_mag`
+- `derive_dao_only_class_margin` - `hypot(2 * MAD, fleming_sigma_mag)`, no hardcoded floor
+- `classify_dao_only_dataframe` - assigns four classes; additive columns only
+- `annotate_dao_only_magnitude_classes` - pipeline entry point
 - `format_dao_only_census_log`, `dao_only_report_lines`, `dao_only_class_meta_flat`
 - `reconcile_to_pipeline_meta` extended to merge `dao_only_class_meta` when present
 
@@ -48,12 +48,12 @@ Formula logged: `margin = hypot(2 * flux_fit_MAD, fleming_sigma_mag)`.
 | draft_500 | NoFilter_60_2 | 561 | 48 | 8 | 496 | 9 |
 
 **Predictions vs data:**
-- **draft_501:** `artifact_negative` = 142 ù **confirmed** (20.4%). Remainder dominated by
+- **draft_501:** `artifact_negative` = 142 - **confirmed** (20.4%). Remainder dominated by
   `below_catalogue` (525) as predicted for shallow peak_dao / deep implied-G tail.
-- **draft_435 / draft_500:** prediction of `below_catalogue` dominance ù **refuted**. Wide-rig
+- **draft_435 / draft_500:** prediction of `below_catalogue` dominance - **refuted**. Wide-rig
   DAO_ONLY are mostly **brighter** than `max_g_mag ? margin` (`unconfirmed_bright` 98/109 and
   496/561). These are spurious detections above the local catalogue depth, not faint sources the
-  catalogue cannot see. The 3.7ù higher DAO_ONLY fraction on draft_500 vs 435 is explained by
+  catalogue cannot see. The 3.7- higher DAO_ONLY fraction on draft_500 vs 435 is explained by
   more `unconfirmed_bright` (496 vs 98), not by below-cap tail.
 
 ## 4. Census log line (verbatim, draft_501)
@@ -71,7 +71,7 @@ P1 mini headless chain (`draft_000435_p1mini`, setup `NoFilter_60_2`), two runs 
 | **with A-6** | `aa72e97979a74d5b8297c6bc3624bee668d8bd5f28624de0a708149e286c2636` | 325 | `05d7036d6cfd5a035fe725728bea9d89266ae8fc0b63604e0f912801d76b4c39` | 485 |
 | **without A-6** | `aa72e97979a74d5b8297c6bc3624bee668d8bd5f28624de0a708149e286c2636` | 325 | `05d7036d6cfd5a035fe725728bea9d89266ae8fc0b63604e0f912801d76b4c39` | 485 |
 
-**Identical** ù additive masterstar columns do not move photometry outputs on P1 mini.
+**Identical** - additive masterstar columns do not move photometry outputs on P1 mini.
 
 ## 6. What this does not resolve
 
@@ -88,12 +88,12 @@ None blocking.
 
 ## Files changed
 
-- `src_py/dao_reconcile.py` ù classification core
-- `src_py/pipeline.py` ù census + columns before CSV write; meta reuse
-- `src_py/photometry_report.py` ù resolved-facts DAO census row
-- `src_py/ui_masterstar_qa.py` ù per-class caption
-- `dev/tests/test_dao_reconcile.py` ù unit + draft_501 regression
-- `dev/tools/a6_classify_offline.py` ù offline tables
+- `src_py/dao_reconcile.py` - classification core
+- `src_py/pipeline.py` - census + columns before CSV write; meta reuse
+- `src_py/photometry_report.py` - resolved-facts DAO census row
+- `src_py/ui_masterstar_qa.py` - per-class caption
+- `dev/tests/test_dao_reconcile.py` - unit + draft_501 regression
+- `dev/tools/a6_classify_offline.py` - offline tables
 - `docs/VYVAR_ROADMAP.md`, `docs/VYVAR_LIMITATIONS.md`
 - `dev/results/CURSOR_RESULT_a6_dao_only_classification.md`
 

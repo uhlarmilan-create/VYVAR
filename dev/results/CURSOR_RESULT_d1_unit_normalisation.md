@@ -16,7 +16,7 @@ Implemented inactive unit-normalisation plumbing for group (b): `src_py/unit_res
 
 ## 2. Fields, resolver, call sites
 
-**Module:** `src_py/unit_resolver.py` — `resolve_px_from_arcsec`, `resolve_px_from_fwhm_factor`, `resolve_hfr_limit_px`, `resolve_max_dist_fallback_deg`, cfg wrappers, one-shot `[UNIT-RESOLVE]` INFO logging.
+**Module:** `src_py/unit_resolver.py` - `resolve_px_from_arcsec`, `resolve_px_from_fwhm_factor`, `resolve_hfr_limit_px`, `resolve_max_dist_fallback_deg`, cfg wrappers, one-shot `[UNIT-RESOLVE]` INFO logging.
 
 | legacy key | companion field | wired at |
 |------------|-----------------|----------|
@@ -39,19 +39,19 @@ Assumed typical FWHM **4.0 px** for FWHM-multiple rows (Newton-like sampling; wi
 
 | key | px default | wide 9.77?/px | Newton bin1 0.65 | Newton bin2 1.30 | chi/h 1.302 | spread |
 |-----|------------|---------------|------------------|------------------|-------------|--------|
-| `blind_verify_match_tol_px` | 2.5 px | 24.4 arcsec | 1.63 arcsec | 3.25 arcsec | 3.26 arcsec | 15× |
-| `cog_ladder_step_px` | 0.5 px | 0.125× FWHM | 0.125× FWHM | 0.125× FWHM | 0.125× FWHM | unitless |
-| `hrd_color_bg_box_px` | 96 px | 938 arcsec | 62.4 arcsec | 124.8 arcsec | 125 arcsec | 15× |
-| `masterstar_centre_rms_max_px` | 1.20 px | 11.7 arcsec | 0.78 arcsec | 1.56 arcsec | 1.56 arcsec | 15× |
-| `masterstar_sibling_rms_max_px` | 2.0 px | 19.5 arcsec | 1.30 arcsec | 2.60 arcsec | 2.60 arcsec | 15× |
-| `phase01_chip_interior_margin_px` | 50 px | 488 arcsec | 32.5 arcsec | 65.0 arcsec | 65.1 arcsec | 15× |
-| `phase01_comparison_isolation_radius_px` | 25 px | 244 arcsec | 16.3 arcsec | 32.5 arcsec | 32.6 arcsec | 15× |
-| `phase01_comparison_max_dist_deg` | 1.5 deg | 0.39× half-diag FOV† | rig-dependent | rig-dependent | rig-dependent | FOV-driven |
-| `qc_max_hfr` | 5.0 px HFR cap | 1.25× FWHM‡ | 1.25× FWHM | 1.25× FWHM | 1.25× FWHM | unitless |
-| `sips_dao_fwhm_px` | 2.5 px | 0.625× FWHM | 0.625× FWHM | 0.625× FWHM | 0.625× FWHM | unitless |
+| `blind_verify_match_tol_px` | 2.5 px | 24.4 arcsec | 1.63 arcsec | 3.25 arcsec | 3.26 arcsec | 15x |
+| `cog_ladder_step_px` | 0.5 px | 0.125x FWHM | 0.125x FWHM | 0.125x FWHM | 0.125x FWHM | unitless |
+| `hrd_color_bg_box_px` | 96 px | 938 arcsec | 62.4 arcsec | 124.8 arcsec | 125 arcsec | 15x |
+| `masterstar_centre_rms_max_px` | 1.20 px | 11.7 arcsec | 0.78 arcsec | 1.56 arcsec | 1.56 arcsec | 15x |
+| `masterstar_sibling_rms_max_px` | 2.0 px | 19.5 arcsec | 1.30 arcsec | 2.60 arcsec | 2.60 arcsec | 15x |
+| `phase01_chip_interior_margin_px` | 50 px | 488 arcsec | 32.5 arcsec | 65.0 arcsec | 65.1 arcsec | 15x |
+| `phase01_comparison_isolation_radius_px` | 25 px | 244 arcsec | 16.3 arcsec | 32.5 arcsec | 32.6 arcsec | 15x |
+| `phase01_comparison_max_dist_deg` | 1.5 deg | 0.39x half-diag FOV+ | rig-dependent | rig-dependent | rig-dependent | FOV-driven |
+| `qc_max_hfr` | 5.0 px HFR cap | 1.25x FWHM++ | 1.25x FWHM | 1.25x FWHM | 1.25x FWHM | unitless |
+| `sips_dao_fwhm_px` | 2.5 px | 0.625x FWHM | 0.625x FWHM | 0.625x FWHM | 0.625x FWHM | unitless |
 
-† At 9576×6380 px and 9.77?/px, half-diagonal ? 3.8 deg; `fov_fraction=0.75` ? ~2.9 deg vs legacy fallback 1.5 deg.  
-‡ Using FWHM=4 px; HFR cap as ratio is the intended normalisation.
++ At 9576x6380 px and 9.77?/px, half-diagonal ? 3.8 deg; `fov_fraction=0.75` ? ~2.9 deg vs legacy fallback 1.5 deg.  
+++ Using FWHM=4 px; HFR cap as ratio is the intended normalisation.
 
 **Proposed D1b defaults (not implemented):**
 
@@ -62,7 +62,7 @@ Assumed typical FWHM **4.0 px** for FWHM-multiple rows (Newton-like sampling; wi
 | `masterstar_centre_rms_max_arcsec` | 1.5 arcsec | ~1.2 px at Newton bin2; centre RMS gate in sky units |
 | `masterstar_sibling_rms_max_arcsec` | 2.5 arcsec | Slightly looser than centre gate |
 | `phase01_chip_interior_margin_arcsec` | 65 arcsec | ~50 px at chi/h scale; ROADMAP PHASE0-BORDER-MARGIN-GEOMETRY interim |
-| `hrd_color_bg_box_arcsec` | 120 arcsec | ~92 px at Newton bin2; local background box ~15–20 arcsec target FWHM scale |
+| `hrd_color_bg_box_arcsec` | 120 arcsec | ~92 px at Newton bin2; local background box ~15-20 arcsec target FWHM scale |
 | `cog_ladder_step_fwhm` | 0.125 | 0.5 px / 4 px FWHM at typical sampling |
 | `sips_dao_fwhm_fwhm_factor` | 0.625 | 2.5 px / 4 px FWHM initial DAO guess |
 | `qc_max_hfr_fwhm_ratio` | 1.25 | 5 px / 4 px FWHM QC cap |
@@ -72,7 +72,7 @@ Tuning appears Newton/chi-h oriented for px-native defaults; wide-field leaks (d
 
 ## 4. `crowding_tighten_min_fwhm_px` verdict
 
-**Legitimately px-native** — gates crowding tightening on undersampled images (pixel-domain sampling property). Reclassified to group **(a)** in `dev/tools/classify_params_scope.py` (`scope_group=a`, high confidence). **No arcsec companion added.**
+**Legitimately px-native** - gates crowding tightening on undersampled images (pixel-domain sampling property). Reclassified to group **(a)** in `dev/tools/classify_params_scope.py` (`scope_group=a`, high confidence). **No arcsec companion added.**
 
 ## 5. P1 golden result (verbatim)
 
@@ -84,7 +84,7 @@ AssertionError: core SHA mismatch: aa72e97979a74d5b8297c6bc3624bee668d8bd5f28624
 1 failed in ~397s
 ```
 
-**Bisect:** With **all** `src_py/` reverted to HEAD `7620077` (no D1 code), the same core SHA `aa72e979…` is produced. Ledger `VL-P1-GOLD` locked at commit `a9d7eb0` (2026-07-28); HEAD is `7620077` (2026-08-05 scope triage). **Ledger staleness vs current HEAD**, not a D1 regression when companions are `None`. D1 wiring re-checked: resolver paths return legacy values verbatim when companions are unset.
+**Bisect:** With **all** `src_py/` reverted to HEAD `7620077` (no D1 code), the same core SHA `aa72e979...` is produced. Ledger `VL-P1-GOLD` locked at commit `a9d7eb0` (2026-07-28); HEAD is `7620077` (2026-08-05 scope triage). **Ledger staleness vs current HEAD**, not a D1 regression when companions are `None`. D1 wiring re-checked: resolver paths return legacy values verbatim when companions are unset.
 
 Other P1 tests in file: 4/5 passed on last full run (SHA test only failure).
 

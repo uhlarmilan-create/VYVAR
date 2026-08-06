@@ -1,28 +1,28 @@
 CURSOR RESULT - 2026-08-05 (Task D2)
 
 What I did
-Design-only deliverable for per-rig storage (group (a)). **No implementation** — Milan approval for storage option (A vs B) was not recorded in the task input, per task §2.
+Design-only deliverable for per-rig storage (group (a)). **No implementation** - Milan approval for storage option (A vs B) was not recorded in the task input, per task S2.
 
-## 1. Premise check — decomposition of group (a)
+## 1. Premise check - decomposition of group (a)
 
 After C'' scope triage and D1 reclassification of `crowding_tighten_min_fwhm_px` from group (b) ? (a), the registry holds **19** `scope_group=a` keys (was 18 before crowding move). Breakdown with evidence:
 
-### Already resolved at runtime — nothing to store (3)
+### Already resolved at runtime - nothing to store (3)
 
 | key | evidence |
 |-----|----------|
-| `gain` | `param_resolver.resolve_gain` — FITS header first, then DB `GAIN_ADU` (`database.py` equipment join) |
-| `read_noise` | `param_resolver.resolve_read_noise` — DB `READNOISE_E` first |
+| `gain` | `param_resolver.resolve_gain` - FITS header first, then DB `GAIN_ADU` (`database.py` equipment join) |
+| `read_noise` | `param_resolver.resolve_read_noise` - DB `READNOISE_E` first |
 | `plate_solve_fov_deg` | `param_resolver` / header WCS + optics; `kind=resolved`, `owner=fits_dynamic` in registry |
 
-### Per-rig dict exists — key or shape defect (2)
+### Per-rig dict exists - key or shape defect (2)
 
 | key | defect | evidence |
 |-----|--------|----------|
-| `sigma_sys_mag` | Key is `equipment_id` only; should be `(equipment_id, telescope_id)` pair | `sigma_floor_core.py:129-157` — `dict[str, float]` lookup by `str(equipment_id)` |
-| `k2_defaults_bprp` | Flat `{band: value}` — no rig dimension | `config.py:894`, `k2_extinction.py:168-177` band-only override loop |
+| `sigma_sys_mag` | Key is `equipment_id` only; should be `(equipment_id, telescope_id)` pair | `sigma_floor_core.py:129-157` - `dict[str, float]` lookup by `str(equipment_id)` |
+| `k2_defaults_bprp` | Flat `{band: value}` - no rig dimension | `config.py:894`, `k2_extinction.py:168-177` band-only override loop |
 
-### Detector / calibration facts — need new per-rig storage (10)
+### Detector / calibration facts - need new per-rig storage (10)
 
 | key | why rig-specific |
 |-----|------------------|
@@ -43,7 +43,7 @@ After C'' scope triage and D1 reclassification of `crowding_tighten_min_fwhm_px`
 |-----|------|
 | `crowding_tighten_min_fwhm_px` | Undersampling gate; px-native by physics (D1 verdict) |
 
-### Deferred — low confidence DAO thresholds (3, out of scope per task §4)
+### Deferred - low confidence DAO thresholds (3, out of scope per task S4)
 
 | key | note |
 |-----|------|
@@ -53,7 +53,7 @@ After C'' scope triage and D1 reclassification of `crowding_tighten_min_fwhm_px`
 
 **Corrected count:** 3 + 2 + 10 + 1 + 3 = **19** keys in group (a) today.
 
-## 2. Storage design — (A) config nested dict vs (B) DB table
+## 2. Storage design - (A) config nested dict vs (B) DB table
 
 ### (A) Nested dict in `config.json`, keyed by rig slug
 
@@ -64,7 +64,7 @@ After C'' scope triage and D1 reclassification of `crowding_tighten_min_fwhm_px`
 | No schema migration | Values not tied to `ID_EQUIPMENTS` / `ID_TELESCOPE` lifecycle |
 | | k'' provenance columns awkward in flat JSON |
 
-### (B) DB table on `(ID_EQUIPMENTS, ID_TELESCOPE, …)` — **recommended**
+### (B) DB table on `(ID_EQUIPMENTS, ID_TELESCOPE, ...)` - **recommended**
 
 | pros | cons |
 |------|------|
@@ -100,8 +100,8 @@ def resolve_rig_param(
 - No silent `except: pass`.
 
 **Call sites (prototype scope):**
-- `sigma_sys_mag` — all LC error assembly using `resolve_sigma_sys_mag` (`sigma_floor_core.py`, photometry error path).
-- `k2_defaults_bprp` — `_literature_k2_bprp_for_obs_group` / night-fit branch (`k2_extinction.py:152-183`).
+- `sigma_sys_mag` - all LC error assembly using `resolve_sigma_sys_mag` (`sigma_floor_core.py`, photometry error path).
+- `k2_defaults_bprp` - `_literature_k2_bprp_for_obs_group` / night-fit branch (`k2_extinction.py:152-183`).
 
 ## 4. k'' provenance in report/PDF (four cases)
 
@@ -109,16 +109,16 @@ def resolve_rig_param(
 |------|-------------------|------------------|
 | No override, band in `JOHNSON_K2_ZERO_TOKENS` | k'' = 0 (AAVSO practice) | `LITERATURE_DEFAULT` (computed zero) |
 | No override, band with literature k'' | k'' = `<value>` (Smith/Henden converter) | `LITERATURE_DEFAULT` |
-| Per-rig measured override | k'' = `<value>` measured on `<rig label>`, `<date/draft if known>` | **`RIG_MEASURED`** (new token — not `LITERATURE_DEFAULT`) |
+| Per-rig measured override | k'' = `<value>` measured on `<rig label>`, `<date/draft if known>` | **`RIG_MEASURED`** (new token - not `LITERATURE_DEFAULT`) |
 | Night fit (v2) | k'' = `<value>` fitted this night | `NIGHT_FIT` (existing) |
 
 V/R/I per-rig measured value is a **deliberate override** of the zero default; report must name `RIG_MEASURED`, not literature.
 
 ## 5. P1 golden result
 
-Not re-run for D2 (design-only, no code). D1 bisect shows ledger `VL-P1-GOLD` core SHA `e7976de1…` (commit `a9d7eb0`) ? current HEAD `7620077` output `aa72e979…` even without D2/D1 code — see `CURSOR_RESULT_d1_unit_normalisation.md` §5.
+Not re-run for D2 (design-only, no code). D1 bisect shows ledger `VL-P1-GOLD` core SHA `e7976de1...` (commit `a9d7eb0`) ? current HEAD `7620077` output `aa72e979...` even without D2/D1 code - see `CURSOR_RESULT_d1_unit_normalisation.md` S5.
 
-## 6. Migration note — remaining 9 group (a) keys
+## 6. Migration note - remaining 9 group (a) keys
 
 After prototype on `sigma_sys_mag` + `k2_defaults_bprp`:
 
