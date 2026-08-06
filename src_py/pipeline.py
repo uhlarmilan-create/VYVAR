@@ -12465,6 +12465,8 @@ def generate_masterstar_and_catalog(
         saturate_limit_adu_fallback=det_meta.get("saturate_limit_adu"),
         saturate_limit_fraction=float(_cfg_ms.saturate_limit_fraction),
     )
+    _dao_class_meta: dict[str, Any] = {}
+    _recon_ms: dict[str, Any] | None = None
     try:
         cid = df_final.get("catalog_id", pd.Series([""] * len(df_final))).fillna("").astype(str).str.strip()
         df_final["source_type"] = np.where(cid.ne(""), "GAIA_MATCHED", "DAO_ONLY")
@@ -12475,19 +12477,98 @@ def generate_masterstar_and_catalog(
         )
         if _n_bp_miss > 0:
             log_event(f"masterstars bp_rp fallback: {_n_bp_fill}/{_n_bp_miss} doplnenych z Gaia DB")
-        try:
-            from invariants_runtime import dao_only_fraction_from_masterstars  # noqa: PLC0415
+        _fleming_sigma: float | None = None
+        if _gdb_fill:
+            try:
+                from dao_reconcile import (  # noqa: PLC0415
+                    annotate_dao_only_magnitude_classes,
+                    compute_gaia_dao_reconcile,
+                    fit_fleming_completeness,
+                    format_dao_only_census_log,
+                    resolve_effective_match_depth,
+                )
 
-            _frac_ms = float(dao_only_fraction_from_masterstars(df_final))
-            _n_dao_ms = int(round(_frac_ms * float(len(df_final))))
-            _ms_info_msg = (
-                f"MASTERSTAR DAO_ONLY census: {_n_dao_ms}/{len(df_final)} "
-                f"(fraction={_frac_ms:.3f}) -- informational, not a gate"
-            )
-            LOGGER.info(_ms_info_msg)
-            log_event(_ms_info_msg)
-        except Exception as _ms_census_exc:  # noqa: BLE001
-            LOGGER.debug("[MASTERSTAR-DAO-CENSUS] skipped: %s", _ms_census_exc)
+                _cone_df_cls = None
+                _cone_csv_cls = Path(platesolve_dir) / "field_catalog_cone.csv"
+                if _cone_csv_cls.is_file():
+                    _cone_df_cls = read_vyvar_csv(_cone_csv_cls, low_memory=False, dtype={"catalog_id": str})
+                _fwhm_cls = float(det_meta.get("dao_fwhm_px") or 0.0)
+                if not (_fwhm_cls > 0.0):
+                    _fwhm_cls = float(header_core_fwhm_px(hdr) or 3.5)
+                _nax1_cls = int(hdr.get("NAXIS1") or 0)
+                _nax2_cls = int(hdr.get("NAXIS2") or 0)
+                _wcs_cls = None
+                _plate_cls = None
+                if _has_valid_wcs(hdr) and _nax1_cls > 0 and _nax2_cls > 0:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", FITSFixedWarning)
+                        _wcs_cls = WCS(hdr)
+                    try:
+                        from astropy.wcs.utils import proj_plane_pixel_scales
+
+                        _plate_cls = float(np.mean(proj_plane_pixel_scales(_wcs_cls) * 3600.0))
+                    except Exception:  # noqa: BLE001
+                        pass
+                if _wcs_cls is not None:
+                    _recon_ms = compute_gaia_dao_reconcile(
+                        df_final,
+                        gaia_db_path=_gdb_fill,
+                        wcs=_wcs_cls,
+                        naxis1=_nax1_cls,
+                        naxis2=_nax2_cls,
+                        fwhm_px=_fwhm_cls,
+                        plate_scale_arcsec=_plate_cls,
+                        mag_limit=float(det_meta.get("faintest_mag_limit") or 18.0),
+                        match_sep_arcsec=float(
+                            det_meta.get("match_sep_arcsec_effective")
+                            or det_meta.get("match_sep_arcsec_requested")
+                            or 8.0
+                        ),
+                        cone_df=_cone_df_cls,
+                    )
+                    _md_cls = resolve_effective_match_depth(det_meta, is_masterstar=True)
+                    _recon_ms.update(_md_cls)
+                    _ff = fit_fleming_completeness(_recon_ms.get("completeness_curve") or [])
+                    _fleming_sigma = _ff.sigma_mag
+                df_final, _dao_class_meta = annotate_dao_only_magnitude_classes(
+                    df_final,
+                    gaia_db_path=_gdb_fill,
+                    fleming_sigma_mag=_fleming_sigma,
+                )
+                if _recon_ms is not None:
+                    _recon_ms["dao_only_class_meta"] = _dao_class_meta
+                _ms_info_msg = format_dao_only_census_log(_dao_class_meta, n_total=len(df_final))
+                LOGGER.info(_ms_info_msg)
+                log_event(_ms_info_msg)
+            except Exception as _ms_census_exc:  # noqa: BLE001
+                LOGGER.debug("[MASTERSTAR-DAO-CENSUS] skipped: %s", _ms_census_exc)
+                try:
+                    from invariants_runtime import dao_only_fraction_from_masterstars  # noqa: PLC0415
+
+                    _frac_ms = float(dao_only_fraction_from_masterstars(df_final))
+                    _n_dao_ms = int(round(_frac_ms * float(len(df_final))))
+                    _ms_info_msg = (
+                        f"MASTERSTAR DAO_ONLY census: {_n_dao_ms}/{len(df_final)} "
+                        f"(fraction={_frac_ms:.3f}) -- informational, not a gate"
+                    )
+                    LOGGER.info(_ms_info_msg)
+                    log_event(_ms_info_msg)
+                except Exception:  # noqa: BLE001
+                    pass
+        else:
+            try:
+                from invariants_runtime import dao_only_fraction_from_masterstars  # noqa: PLC0415
+
+                _frac_ms = float(dao_only_fraction_from_masterstars(df_final))
+                _n_dao_ms = int(round(_frac_ms * float(len(df_final))))
+                _ms_info_msg = (
+                    f"MASTERSTAR DAO_ONLY census: {_n_dao_ms}/{len(df_final)} "
+                    f"(fraction={_frac_ms:.3f}) -- informational, not a gate"
+                )
+                LOGGER.info(_ms_info_msg)
+                log_event(_ms_info_msg)
+            except Exception as _ms_census_exc:  # noqa: BLE001
+                LOGGER.debug("[MASTERSTAR-DAO-CENSUS] skipped: %s", _ms_census_exc)
     except Exception as exc:  # noqa: BLE001
         log_event(f"MASTERSTAR source_type annotate failed: {exc!s}")
     _vyvar_df_to_csv(df_final, csv_path)
@@ -12546,50 +12627,57 @@ def generate_masterstar_and_catalog(
                 if isinstance(_meta_patch["invariants"], list):
                     _meta_patch["invariants"].extend(list(_inv_wcs_recs))
         try:
-            _cone_df = None
-            _cone_csv = Path(platesolve_dir) / "field_catalog_cone.csv"
-            if _cone_csv.is_file():
-                _cone_df = read_vyvar_csv(_cone_csv, low_memory=False, dtype={"catalog_id": str})
-            _fwhm_recon = float(det_meta.get("dao_fwhm_px") or 0.0)
-            if not (_fwhm_recon > 0.0):
-                _fwhm_recon = float(header_core_fwhm_px(hdr) or 3.5)
-            _wcs_recon = None
-            _plate_recon = None
-            _nax1 = int(hdr.get("NAXIS1") or 0)
-            _nax2 = int(hdr.get("NAXIS2") or 0)
-            if _has_valid_wcs(hdr) and _nax1 > 0 and _nax2 > 0:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", FITSFixedWarning)
-                    _wcs_recon = WCS(hdr)
-                try:
-                    from astropy.wcs.utils import proj_plane_pixel_scales
+            if _recon_ms is not None:
+                _meta_patch.update(reconcile_to_pipeline_meta(_recon_ms))
+            elif _dao_class_meta:
+                from dao_reconcile import dao_only_class_meta_flat  # noqa: PLC0415
 
-                    _plate_recon = float(np.mean(proj_plane_pixel_scales(_wcs_recon) * 3600.0))
-                except Exception:  # noqa: BLE001
-                    pass
-            _gdb_recon = str(_cfg_ms.gaia_db_path or "").strip()
-            _faintest_recon = float(det_meta.get("faintest_mag_limit") or 18.0)
-            _match_sep_recon = float(
-                det_meta.get("match_sep_arcsec_effective")
-                or det_meta.get("match_sep_arcsec_requested")
-                or 8.0
-            )
-            if _wcs_recon is not None and _gdb_recon:
-                _recon = compute_gaia_dao_reconcile(
-                    df_final,
-                    gaia_db_path=_gdb_recon,
-                    wcs=_wcs_recon,
-                    naxis1=_nax1,
-                    naxis2=_nax2,
-                    fwhm_px=_fwhm_recon,
-                    plate_scale_arcsec=_plate_recon,
-                    mag_limit=_faintest_recon,
-                    match_sep_arcsec=_match_sep_recon,
-                    cone_df=_cone_df,
+                _meta_patch.update(dao_only_class_meta_flat(_dao_class_meta))
+            else:
+                _cone_df = None
+                _cone_csv = Path(platesolve_dir) / "field_catalog_cone.csv"
+                if _cone_csv.is_file():
+                    _cone_df = read_vyvar_csv(_cone_csv, low_memory=False, dtype={"catalog_id": str})
+                _fwhm_recon = float(det_meta.get("dao_fwhm_px") or 0.0)
+                if not (_fwhm_recon > 0.0):
+                    _fwhm_recon = float(header_core_fwhm_px(hdr) or 3.5)
+                _wcs_recon = None
+                _plate_recon = None
+                _nax1 = int(hdr.get("NAXIS1") or 0)
+                _nax2 = int(hdr.get("NAXIS2") or 0)
+                if _has_valid_wcs(hdr) and _nax1 > 0 and _nax2 > 0:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", FITSFixedWarning)
+                        _wcs_recon = WCS(hdr)
+                    try:
+                        from astropy.wcs.utils import proj_plane_pixel_scales
+
+                        _plate_recon = float(np.mean(proj_plane_pixel_scales(_wcs_recon) * 3600.0))
+                    except Exception:  # noqa: BLE001
+                        pass
+                _gdb_recon = str(_cfg_ms.gaia_db_path or "").strip()
+                _faintest_recon = float(det_meta.get("faintest_mag_limit") or 18.0)
+                _match_sep_recon = float(
+                    det_meta.get("match_sep_arcsec_effective")
+                    or det_meta.get("match_sep_arcsec_requested")
+                    or 8.0
                 )
-                _md = resolve_effective_match_depth(det_meta, is_masterstar=True)
-                _recon.update(_md)
-                _meta_patch.update(reconcile_to_pipeline_meta(_recon))
+                if _wcs_recon is not None and _gdb_recon:
+                    _recon = compute_gaia_dao_reconcile(
+                        df_final,
+                        gaia_db_path=_gdb_recon,
+                        wcs=_wcs_recon,
+                        naxis1=_nax1,
+                        naxis2=_nax2,
+                        fwhm_px=_fwhm_recon,
+                        plate_scale_arcsec=_plate_recon,
+                        mag_limit=_faintest_recon,
+                        match_sep_arcsec=_match_sep_recon,
+                        cone_df=_cone_df,
+                    )
+                    _md = resolve_effective_match_depth(det_meta, is_masterstar=True)
+                    _recon.update(_md)
+                    _meta_patch.update(reconcile_to_pipeline_meta(_recon))
         except Exception as exc:  # noqa: BLE001
             log_event(f"MASTERSTAR Gaia reconcile decomposition skipped: {exc!s}")
             _meta_patch["gaia_dao_completeness_pct"] = round(float(_gaia_rate_opt), 2)

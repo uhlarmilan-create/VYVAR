@@ -192,9 +192,10 @@ swallowed the error and skipped `_vyvar_df_to_csv`, leaving a pre-annotate CSV o
 producing 0 light curves with a misleading *"source_type annotate failed"* log line (draft_501).
 
 **Residual risk.** VYVAR no longer hard-stops on catalogue inflation. If DAO detection inflates,
-the symptom surfaces in LC quality and in the informational `MASTERSTAR DAO_ONLY census` log line.
-ROADMAP item **A-6** (split DAO_ONLY fraction by magnitude vs Gaia cap) is the intended
-replacement diagnostic.
+the symptom surfaces in LC quality and in the informational `MASTERSTAR DAO_ONLY census` log line
+(per-class breakdown: `artifact_negative`, `below_catalogue`, `unconfirmed_bright`, `indeterminate`;
+Gaia DB cap `max_g_mag` stated explicitly). **No runtime gate** -- classification is report/log only
+(A-6, 2026-08-06).
 
 ## MASTERSTAR architecture (enhancement thread)
 

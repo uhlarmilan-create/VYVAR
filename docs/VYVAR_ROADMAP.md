@@ -76,7 +76,7 @@ Audit synthesis: `docs/VYVAR_AUDIT_FINAL.md`. Operational TODO index:
 | 3 | **A-3** | HIGH | Median/sigma-clip stack (replace single-frame copy) |
 | 4 | **A-4** | HIGH | Stack provenance in header + `pipeline_meta.json` |
 | 5 | **A-5** | HIGH | Recalibrate DAO threshold against stack noise/PSF |
-| 6 | **A-6** | MED | Split `DAO_ONLY` health metric by magnitude vs Gaia cap |
+| 6 | **A-6** | DONE | Split `DAO_ONLY` health metric by magnitude vs Gaia cap (per-class census + CSV columns; no runtime gate) |
 | 7 | **C-1** | HIGH | Admission gate: predicted per-epoch SNR (`g_lim_*` + Labbe sigma_bkg_ap) |
 | 8 | **C-2** | HIGH | CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE catalogue flags |
 | 9 | **CR-1** | MED | Cosmic-ray rejection (L.A.Cosmic or equivalent) |

@@ -494,6 +494,31 @@ def resolved_facts_model(
         }
     )
 
+    if meta.get("n_dao_unmatched") is not None or meta.get("dao_only_n_artifact_negative") is not None:
+        cap = meta.get("gaia_db_max_g_mag")
+        cap_s = f"G<{float(cap):.2f}" if cap is not None else "G<?"
+        n_dao = int(meta.get("n_dao_unmatched") or 0)
+        parts = []
+        for k, short in (
+            ("dao_only_n_artifact_negative", "artifact_negative"),
+            ("dao_only_n_below_catalogue", "below_catalogue"),
+            ("dao_only_n_unconfirmed_bright", "unconfirmed_bright"),
+            ("dao_only_n_indeterminate", "indeterminate"),
+        ):
+            if meta.get(k) is not None:
+                parts.append(f"{short}={int(meta[k])}")
+        val = f"{n_dao} total [{', '.join(parts)}] | Gaia cap {cap_s}"
+        margin = meta.get("dao_only_class_margin_mag")
+        if margin is not None:
+            val += f" | margin={float(margin):.3f} mag"
+        rows.append(
+            {
+                "label": "DAO_ONLY census (informational)",
+                "value": val,
+                "source": "masterstars magnitude class",
+            }
+        )
+
     return {
         "fallback": fallback,
         "warnings": warnings,

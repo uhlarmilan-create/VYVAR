@@ -456,8 +456,11 @@ def render_masterstar_qa(
         _n_gaia_missed: int | None = None
         _n_dao_unmatched: int | None = None
         _n_dao_faint: int | None = None
-        _n_dao_artifact: int | None = None
-        _n_dao_unexplained: int | None = None
+        _n_dao_artifact_neg: int | None = None
+        _n_dao_below_cat: int | None = None
+        _n_dao_unconf_bright: int | None = None
+        _n_dao_indeterminate: int | None = None
+        _gaia_db_max_g: float | None = None
         _meta_json = setup_dir / "photometry" / "pipeline_meta.json"
         if _meta_json.is_file():
             try:
@@ -521,6 +524,16 @@ def render_masterstar_qa(
                     _n_dao_unmatched = int(_meta["n_dao_unmatched"])
                 if _meta.get("n_dao_matched_to_faint") is not None:
                     _n_dao_faint = int(_meta["n_dao_matched_to_faint"])
+                if _meta.get("dao_only_n_artifact_negative") is not None:
+                    _n_dao_artifact_neg = int(_meta["dao_only_n_artifact_negative"])
+                if _meta.get("dao_only_n_below_catalogue") is not None:
+                    _n_dao_below_cat = int(_meta["dao_only_n_below_catalogue"])
+                if _meta.get("dao_only_n_unconfirmed_bright") is not None:
+                    _n_dao_unconf_bright = int(_meta["dao_only_n_unconfirmed_bright"])
+                if _meta.get("dao_only_n_indeterminate") is not None:
+                    _n_dao_indeterminate = int(_meta["dao_only_n_indeterminate"])
+                if _meta.get("gaia_db_max_g_mag") is not None:
+                    _gaia_db_max_g = float(_meta["gaia_db_max_g_mag"])
             except Exception:  # noqa: BLE001
                 # EXC-0529: T3 -- UI diagnostic/plot only (if _cr_raw is not None: / _meta_catalog_rows = int(_cr_raw) / ... (EXCEPT-BULK 2026-07-08)
                 pass
@@ -603,12 +616,22 @@ def render_masterstar_qa(
         )
         _n_unmatched_rows = max(0, n_all - n_ok)
         if _n_dao_unmatched is not None:
-            st.caption(
-                f"Unmatched DAO: **{_n_dao_unmatched}** "
-                f"(faint-real: **{_n_dao_faint if _n_dao_faint is not None else '?'}**, "
-                f"artifact: **{_n_dao_artifact if _n_dao_artifact is not None else '?'}**, "
-                f"unexplained: **{_n_dao_unexplained if _n_dao_unexplained is not None else '?'}**)"
-            )
+            _cap_s = f"G<{_gaia_db_max_g:.2f}" if _gaia_db_max_g is not None else "G<?"
+            if _n_dao_artifact_neg is not None:
+                st.caption(
+                    f"Unmatched DAO: **{_n_dao_unmatched}** "
+                    f"(artifact_negative: **{_n_dao_artifact_neg}**, "
+                    f"below_catalogue: **{_n_dao_below_cat if _n_dao_below_cat is not None else '?'}**, "
+                    f"unconfirmed_bright: **{_n_dao_unconf_bright if _n_dao_unconf_bright is not None else '?'}**, "
+                    f"indeterminate: **{_n_dao_indeterminate if _n_dao_indeterminate is not None else '?'}**) "
+                    f"| Gaia DB cap {_cap_s} | informational, not a gate"
+                )
+            else:
+                st.caption(
+                    f"Unmatched DAO: **{_n_dao_unmatched}** "
+                    f"(faint-real: **{_n_dao_faint if _n_dao_faint is not None else '?'}**) "
+                    f"| re-run MASTERSTAR for A-6 magnitude breakdown"
+                )
         elif _n_unmatched_rows > 0:
             st.caption(f"Unmatched detections: **{_n_unmatched_rows}** (re-run MASTERSTAR for R-2 breakdown)")
         _thresh_pct = _gaia_dao_pct if _gaia_dao_pct is not None else None
