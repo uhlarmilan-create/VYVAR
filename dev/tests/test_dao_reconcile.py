@@ -17,10 +17,18 @@ from dao_reconcile import (
     bin_completeness_curve,
     blend_radius_px,
     check_reference_population_consistency,
+    classify_dao_only_dataframe,
     completeness_50_pct,
+    DAO_ONLY_CLASS_ARTIFACT_NEGATIVE,
+    DAO_ONLY_CLASS_BELOW_CATALOGUE,
+    DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT,
     decompose_reference_population,
+    derive_dao_only_class_margin,
     fit_fleming_completeness,
+    fit_instrumental_flux_to_g,
     fleming_completeness,
+    FluxToGFitResult,
+    format_dao_only_census_log,
     is_blended_with_matched,
     reconcile_to_pipeline_meta,
     resolve_effective_match_depth,
@@ -345,3 +353,108 @@ def test_reconcile_to_pipeline_meta_r2b_keys():
     assert meta["g_lim_50_censored"] is True
     assert meta["n_missed_below_g90"] == 5
     assert meta["match_depth"] == 18.0
+
+
+def test_fit_instrumental_flux_to_g_median_zp():
+    matched = pd.DataFrame(
+        {
+            "flux": [1000.0, 2000.0, 4000.0, 8000.0, 16000.0],
+            "phot_g_mean_mag": [12.0, 11.25, 10.5, 9.75, 9.0],
+        }
+    )
+    fit = fit_instrumental_flux_to_g(matched)
+    assert fit.ok
+    assert fit.zp is not None
+    assert fit.n_matched == 5
+    assert fit.residual_mad is not None
+    assert fit.residual_mad < 0.01
+
+
+def test_dao_only_classification_buckets():
+    max_g = 17.5
+    fit = FluxToGFitResult(True, 22.0, 10, 0.05, 0.06, "median_zp")
+    margin = derive_dao_only_class_margin(flux_fit=fit, fleming_sigma_mag=0.3)
+    df = pd.DataFrame(
+        {
+            "source_type": ["DAO_ONLY"] * 4,
+            "flux": [-1.0, 1.0, 10.0, 100000.0],
+            "peak_max_adu": [1.0, 50.0, 50.0, 500.0],
+            "likely_saturated": [False, False, False, False],
+            "edge_safe_10px": [True, True, True, True],
+        }
+    )
+    # flux=1 -> very faint G; flux=100000 -> bright G
+    out, meta = classify_dao_only_dataframe(df, max_g_mag=max_g, flux_fit=fit, margin=margin)
+    classes = list(out["dao_only_class"])
+    assert classes[0] == DAO_ONLY_CLASS_ARTIFACT_NEGATIVE
+    assert DAO_ONLY_CLASS_BELOW_CATALOGUE in classes
+    assert DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT in classes
+    assert meta["margin_mag"] == pytest.approx(margin.margin_mag)
+
+
+def test_format_dao_only_census_log():
+    meta = {
+        "n_dao_only": 10,
+        "max_g_mag": 17.5,
+        "counts": {
+            DAO_ONLY_CLASS_ARTIFACT_NEGATIVE: 2,
+            DAO_ONLY_CLASS_BELOW_CATALOGUE: 5,
+            DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT: 1,
+            "indeterminate": 2,
+        },
+    }
+    line = format_dao_only_census_log(meta, n_total=100)
+    assert "artifact_negative=2" in line
+    assert "informational, not a gate" in line
+    assert "Gaia DB cap G<17.50" in line
+
+
+def test_reconcile_to_pipeline_meta_includes_dao_only_class():
+    report = {
+        "g_lim_50": 14.2,
+        "n_dao_unmatched": 12,
+        "completeness_curve": [],
+        "dao_only_class_meta": {
+            "counts": {
+                "artifact_negative": 2,
+                "below_catalogue": 8,
+                "unconfirmed_bright": 1,
+                "indeterminate": 1,
+            },
+            "max_g_mag": 17.5,
+            "margin_mag": 0.4,
+            "margin_formula": "margin = hypot(2 * flux_fit_MAD, fleming_sigma_mag)",
+            "flux_fit": {"zp": 22.0, "residual_mad": 0.05, "residual_rms": 0.06},
+        },
+    }
+    meta = reconcile_to_pipeline_meta(report)
+    assert meta["dao_only_n_artifact_negative"] == 2
+    assert meta["gaia_db_max_g_mag"] == 17.5
+
+
+@pytest.mark.slow
+def test_draft501_artifact_negative_count():
+    """Regression: draft_501 should have 142 artifact_negative DAO_ONLY rows."""
+    from config import AppConfig
+    from pathlib import Path
+
+    cfg = AppConfig()
+    csv_path = (
+        Path(cfg.archive_root)
+        / "Drafts"
+        / "draft_000501"
+        / "platesolve"
+        / "V_60_2"
+        / "masterstars_full_match.csv"
+    )
+    if not csv_path.is_file():
+        pytest.skip(f"missing {csv_path}")
+    from dao_reconcile import annotate_dao_only_magnitude_classes
+
+    df = pd.read_csv(csv_path, low_memory=False, dtype={"catalog_id": str})
+    if "source_type" not in df.columns:
+        cid = df.get("catalog_id", pd.Series([""] * len(df))).fillna("").astype(str).str.strip()
+        df["source_type"] = pd.Series(["DAO_ONLY"] * len(df)).where(cid.eq(""), "GAIA_MATCHED")
+    _out, meta = annotate_dao_only_magnitude_classes(df, gaia_db_path=str(cfg.gaia_db_path))
+    n_neg = int((meta.get("counts") or {}).get(DAO_ONLY_CLASS_ARTIFACT_NEGATIVE, 0))
+    assert n_neg == 142

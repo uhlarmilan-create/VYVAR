@@ -1022,6 +1022,264 @@ def compute_gaia_dao_reconcile(
     }
 
 
+DAO_ONLY_CLASS_ARTIFACT_NEGATIVE = "artifact_negative"
+DAO_ONLY_CLASS_BELOW_CATALOGUE = "below_catalogue"
+DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT = "unconfirmed_bright"
+DAO_ONLY_CLASS_INDETERMINATE = "indeterminate"
+
+DAO_ONLY_CLASS_LABELS = (
+    DAO_ONLY_CLASS_ARTIFACT_NEGATIVE,
+    DAO_ONLY_CLASS_BELOW_CATALOGUE,
+    DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT,
+    DAO_ONLY_CLASS_INDETERMINATE,
+)
+
+
+@dataclass
+class FluxToGFitResult:
+    ok: bool
+    zp: float | None
+    n_matched: int
+    residual_mad: float | None
+    residual_rms: float | None
+    method: str
+    reason: str = ""
+
+
+@dataclass
+class DaoOnlyClassMargin:
+    margin_mag: float
+    residual_mad: float | None
+    sigma_mag: float | None
+    formula: str
+
+
+def fit_instrumental_flux_to_g(
+    matched_df: pd.DataFrame,
+    *,
+    flux_col: str = "flux",
+    g_col: str = "phot_g_mean_mag",
+) -> FluxToGFitResult:
+    """Robust ZP from Gaia-matched rows: G = zp - 2.5*log10(flux)."""
+    if matched_df.empty:
+        return FluxToGFitResult(False, None, 0, None, None, "none", "empty matched population")
+    flux = pd.to_numeric(matched_df.get(flux_col), errors="coerce")
+    gmag = pd.to_numeric(matched_df.get(g_col, matched_df.get("mag")), errors="coerce")
+    ok = flux.gt(0) & gmag.notna() & np.isfinite(flux.to_numpy(dtype=float)) & np.isfinite(gmag.to_numpy(dtype=float))
+    n_ok = int(ok.sum())
+    if n_ok < 5:
+        return FluxToGFitResult(
+            False,
+            None,
+            n_ok,
+            None,
+            None,
+            "insufficient",
+            f"need >=5 matched rows with positive flux and G, got {n_ok}",
+        )
+    logf = np.log10(flux.loc[ok].to_numpy(dtype=np.float64))
+    g_arr = gmag.loc[ok].to_numpy(dtype=np.float64)
+    zp_samples = g_arr + 2.5 * logf
+    zp = float(np.median(zp_samples))
+    residuals = g_arr - (zp - 2.5 * logf)
+    mad = float(np.median(np.abs(residuals - np.median(residuals))))
+    rms = float(np.sqrt(np.mean(np.square(residuals))))
+    return FluxToGFitResult(True, zp, n_ok, mad, rms, "median_zp")
+
+
+def derive_dao_only_class_margin(
+    *,
+    flux_fit: FluxToGFitResult,
+    fleming_sigma_mag: float | None = None,
+) -> DaoOnlyClassMargin:
+    """Combine flux-fit scatter with Fleming sigma_mag; no hardcoded floor."""
+    mad = float(flux_fit.residual_mad) if flux_fit.residual_mad is not None and math.isfinite(flux_fit.residual_mad) else 0.0
+    sig = float(fleming_sigma_mag) if fleming_sigma_mag is not None and math.isfinite(float(fleming_sigma_mag)) else 0.0
+    margin = float(math.hypot(2.0 * mad, sig))
+    formula = "margin = hypot(2 * flux_fit_MAD, fleming_sigma_mag)"
+    return DaoOnlyClassMargin(margin_mag=margin, residual_mad=mad or None, sigma_mag=sig or None, formula=formula)
+
+
+def implied_g_from_flux(flux: Any, *, zp: float) -> float:
+    f = float(flux)
+    if not math.isfinite(f) or f <= 0:
+        return float("nan")
+    return float(zp - 2.5 * math.log10(f))
+
+
+def _dao_only_row_mask(df: pd.DataFrame) -> pd.Series:
+    if "source_type" in df.columns:
+        st = df["source_type"].fillna("").astype(str).str.strip().str.upper()
+        return st.eq("DAO_ONLY")
+    cid = _normalize_ids(df)
+    return cid.eq("")
+
+
+def classify_dao_only_dataframe(
+    df: pd.DataFrame,
+    *,
+    max_g_mag: float,
+    flux_fit: FluxToGFitResult,
+    margin: DaoOnlyClassMargin,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Add ``implied_g_mag`` and ``dao_only_class`` (additive; non-DAO rows blank)."""
+    out = df.copy()
+    out["implied_g_mag"] = np.nan
+    out["dao_only_class"] = ""
+    dao_mask = _dao_only_row_mask(out)
+    meta: dict[str, Any] = {
+        "max_g_mag": float(max_g_mag),
+        "margin_mag": float(margin.margin_mag),
+        "margin_formula": margin.formula,
+        "flux_fit": {
+            "ok": flux_fit.ok,
+            "zp": flux_fit.zp,
+            "n_matched": flux_fit.n_matched,
+            "residual_mad": flux_fit.residual_mad,
+            "residual_rms": flux_fit.residual_rms,
+            "method": flux_fit.method,
+            "reason": flux_fit.reason,
+        },
+        "fleming_sigma_mag_used": margin.sigma_mag,
+    }
+    counts = {k: 0 for k in DAO_ONLY_CLASS_LABELS}
+    if not dao_mask.any():
+        meta["counts"] = counts
+        meta["n_dao_only"] = 0
+        return out, meta
+
+    flux = pd.to_numeric(out.get("flux"), errors="coerce")
+    peak = pd.to_numeric(out.get("peak_max_adu"), errors="coerce")
+    sat = out.get("likely_saturated")
+    edge = out.get("edge_safe_10px")
+
+    bright_thr = float(max_g_mag) - float(margin.margin_mag)
+    meta["bright_threshold_g"] = bright_thr
+
+    for idx in out.index[dao_mask]:
+        f = flux.loc[idx] if idx in flux.index else float("nan")
+        cls = DAO_ONLY_CLASS_INDETERMINATE
+        ig = float("nan")
+
+        if pd.notna(f) and float(f) <= 0:
+            cls = DAO_ONLY_CLASS_ARTIFACT_NEGATIVE
+        else:
+            indet = False
+            if flux_fit.ok and flux_fit.zp is not None and pd.notna(f) and float(f) > 0:
+                ig = implied_g_from_flux(float(f), zp=float(flux_fit.zp))
+                out.at[idx, "implied_g_mag"] = ig
+            else:
+                indet = True
+            if sat is not None:
+                sv = str(sat.loc[idx]).strip().lower()
+                if sv in ("true", "1", "t", "yes"):
+                    indet = True
+            if edge is not None:
+                ev = str(edge.loc[idx]).strip().lower()
+                if ev in ("false", "0", "f", "no"):
+                    indet = True
+            if peak is not None and (not pd.notna(peak.loc[idx])):
+                indet = True
+            if indet or not math.isfinite(ig):
+                cls = DAO_ONLY_CLASS_INDETERMINATE
+            elif ig > bright_thr:
+                cls = DAO_ONLY_CLASS_BELOW_CATALOGUE
+            else:
+                cls = DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT
+        out.at[idx, "dao_only_class"] = cls
+        counts[cls] = int(counts.get(cls, 0)) + 1
+
+    meta["counts"] = counts
+    meta["n_dao_only"] = int(dao_mask.sum())
+    return out, meta
+
+
+def format_dao_only_census_log(meta: dict[str, Any], *, n_total: int) -> str:
+    """Informational census line with per-class breakdown (not a gate)."""
+    counts = meta.get("counts") or {}
+    n_dao = int(meta.get("n_dao_only") or sum(int(v) for v in counts.values()))
+    frac = float(n_dao) / float(n_total) if n_total > 0 else 0.0
+    parts = [
+        f"artifact_negative={int(counts.get(DAO_ONLY_CLASS_ARTIFACT_NEGATIVE, 0))}",
+        f"below_catalogue={int(counts.get(DAO_ONLY_CLASS_BELOW_CATALOGUE, 0))}",
+        f"unconfirmed_bright={int(counts.get(DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT, 0))}",
+        f"indeterminate={int(counts.get(DAO_ONLY_CLASS_INDETERMINATE, 0))}",
+    ]
+    mg = meta.get("max_g_mag")
+    mg_s = f"{float(mg):.2f}" if mg is not None and math.isfinite(float(mg)) else "?"
+    return (
+        f"MASTERSTAR DAO_ONLY census: {n_dao}/{n_total} (fraction={frac:.3f}) "
+        f"[{', '.join(parts)}] | Gaia DB cap G<{mg_s} | informational, not a gate"
+    )
+
+
+def dao_only_report_lines(pipeline_meta: dict[str, Any] | None) -> list[str]:
+    """PDF/UI lines for DAO_ONLY magnitude classification (informational, not a gate)."""
+    meta = pipeline_meta if isinstance(pipeline_meta, dict) else {}
+    n_dao = meta.get("n_dao_unmatched")
+    if n_dao is None:
+        counts = meta.get("dao_only_class_counts")
+        if isinstance(counts, dict):
+            n_dao = sum(int(v) for v in counts.values())
+    if n_dao is None:
+        return []
+    cap = meta.get("gaia_db_max_g_mag")
+    cap_s = f"{float(cap):.2f}" if cap is not None and math.isfinite(float(cap)) else "?"
+    lines = [
+        f"  DAO_ONLY unmatched: {int(n_dao)} (informational, not a gate)",
+        f"  Gaia DB catalogue cap: G < {cap_s} (right-censored local build)",
+    ]
+    for key, label in (
+        ("dao_only_n_artifact_negative", "artifact_negative (flux<=0)"),
+        ("dao_only_n_below_catalogue", "below_catalogue (fainter than cap-margin)"),
+        ("dao_only_n_unconfirmed_bright", "unconfirmed_bright (brighter than cap-margin)"),
+        ("dao_only_n_indeterminate", "indeterminate"),
+    ):
+        if meta.get(key) is not None:
+            lines.append(f"    {label}: {int(meta[key])}")
+    margin = meta.get("dao_only_class_margin_mag")
+    if margin is not None and math.isfinite(float(margin)):
+        lines.append(f"  Class boundary margin: {float(margin):.3f} mag ({meta.get('dao_only_class_margin_formula', '')})")
+    zp = meta.get("dao_only_flux_fit_zp")
+    mad = meta.get("dao_only_flux_fit_residual_mad")
+    if zp is not None and mad is not None:
+        lines.append(f"  Flux-to-G fit: zp={float(zp):.3f}, residual MAD={float(mad):.3f} mag")
+    return lines
+
+
+def dao_only_class_meta_flat(meta: dict[str, Any]) -> dict[str, Any]:
+    """Flat keys for pipeline_meta."""
+    counts = meta.get("counts") or {}
+    return {
+        "dao_only_class_counts": dict(counts),
+        "dao_only_n_artifact_negative": int(counts.get(DAO_ONLY_CLASS_ARTIFACT_NEGATIVE, 0)),
+        "dao_only_n_below_catalogue": int(counts.get(DAO_ONLY_CLASS_BELOW_CATALOGUE, 0)),
+        "dao_only_n_unconfirmed_bright": int(counts.get(DAO_ONLY_CLASS_UNCONFIRMED_BRIGHT, 0)),
+        "dao_only_n_indeterminate": int(counts.get(DAO_ONLY_CLASS_INDETERMINATE, 0)),
+        "dao_only_flux_fit_zp": meta.get("flux_fit", {}).get("zp"),
+        "dao_only_flux_fit_residual_mad": meta.get("flux_fit", {}).get("residual_mad"),
+        "dao_only_flux_fit_residual_rms": meta.get("flux_fit", {}).get("residual_rms"),
+        "dao_only_class_margin_mag": meta.get("margin_mag"),
+        "dao_only_class_margin_formula": meta.get("margin_formula"),
+        "dao_only_bright_threshold_g": meta.get("bright_threshold_g"),
+        "gaia_db_max_g_mag": meta.get("max_g_mag"),
+    }
+
+
+def annotate_dao_only_magnitude_classes(
+    df: pd.DataFrame,
+    *,
+    gaia_db_path: str | Any,
+    fleming_sigma_mag: float | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Classify DAO_ONLY rows by implied G vs local Gaia cap; additive columns only."""
+    max_g = float(get_gaia_db_max_g_mag(gaia_db_path))
+    matched = df.loc[~_dao_only_row_mask(df)].copy()
+    fit = fit_instrumental_flux_to_g(matched)
+    margin = derive_dao_only_class_margin(flux_fit=fit, fleming_sigma_mag=fleming_sigma_mag)
+    return classify_dao_only_dataframe(df, max_g_mag=max_g, flux_fit=fit, margin=margin)
+
+
 def reconcile_to_pipeline_meta(report: dict[str, Any]) -> dict[str, Any]:
     """Extract flat keys for ``merge_photometry_pipeline_meta``."""
     curve = report.get("completeness_curve") or []
@@ -1034,7 +1292,7 @@ def reconcile_to_pipeline_meta(report: dict[str, Any]) -> dict[str, Any]:
         }
         for c in curve[:80]
     ]
-    return {
+    flat = {
         "g_lim_50": report.get("g_lim_50"),
         "g_lim_90": report.get("g_lim_90"),
         "g_lim_50_raw_fit": report.get("g_lim_50_raw_fit"),
@@ -1067,3 +1325,6 @@ def reconcile_to_pipeline_meta(report: dict[str, Any]) -> dict[str, Any]:
         "blend_radius_arcsec": report.get("blend_radius_arcsec"),
         "dao_reconcile_methodology": report.get("methodology"),
     }
+    if report.get("dao_only_class_meta"):
+        flat.update(dao_only_class_meta_flat(report["dao_only_class_meta"]))
+    return flat
