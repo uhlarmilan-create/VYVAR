@@ -1,0 +1,1365 @@
+{
+  "drafts": [
+    {
+      "draft_id": "draft_000501",
+      "label": "501 Newton V",
+      "anchored": true,
+      "reference_source": "TOI-1131.01.b_2025-04-22_23-59-57_V.fits (infolog)",
+      "masterstar_fits": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000501\\platesolve\\V_60_2\\MASTERSTAR.fits",
+      "infolog": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000501\\infolog_20260805_113441.txt",
+      "frame_shape": [
+        2088,
+        3126
+      ],
+      "n_pix": 6527088,
+      "vy_fwhm_header": 2.572,
+      "bfac": 2,
+      "fwhm_eff_px": 1.286,
+      "median_adu": 33478.61328125,
+      "std_clip_adu": 8.510191917419434,
+      "rms_conv_adu": 4.571925163269043,
+      "threshold_adu": 17.28187711715698,
+      "recorded_pass1": 1654,
+      "reproduced_pass1": 1618,
+      "anchor_ok": true,
+      "anchor_pct": 97.82345828295043,
+      "recorded_merged": 1670,
+      "recorded_after_snr": 1668,
+      "masterstars_rows": 1668,
+      "dao_only_rows": 696,
+      "gaia_matched_rows": 972,
+      "inverted_decomposition": {
+        "n_inverted_at_3.78": 225,
+        "dao_only_observed": 696,
+        "n_positive_only_artifacts_est": 471,
+        "n_real_below_catalog_cap_est": 0
+      },
+      "k_curve": [
+        {
+          "k": 3.0,
+          "n_detected_pass1": 4334,
+          "n_inverted": 2327,
+          "rms_conv": 4.571925163269043,
+          "threshold_adu": 13.715775489807129
+        },
+        {
+          "k": 3.78,
+          "n_detected_pass1": 1618,
+          "n_inverted": 225,
+          "rms_conv": 4.571925163269043,
+          "threshold_adu": 17.28187711715698
+        },
+        {
+          "k": 4.0,
+          "n_detected_pass1": 1446,
+          "n_inverted": 143,
+          "rms_conv": 4.571925163269043,
+          "threshold_adu": 18.287700653076172
+        },
+        {
+          "k": 4.5,
+          "n_detected_pass1": 1208,
+          "n_inverted": 67,
+          "rms_conv": 4.571925163269043,
+          "threshold_adu": 20.573663234710693
+        },
+        {
+          "k": 5.0,
+          "n_detected_pass1": 1098,
+          "n_inverted": 35,
+          "rms_conv": 4.571925163269043,
+          "threshold_adu": 22.859625816345215
+        }
+      ],
+      "analytic": {
+        "sigma_psf_px": 1.0922371326651945,
+        "n_res": 870774.545865073,
+        "n_fa_gaussian_3.78": 68.28107144212811,
+        "ratio_inverted_to_n_fa": 3.2952031250812994
+      },
+      "noise": {
+        "gain_e_adu": 3.12,
+        "read_noise_e": 2.6,
+        "gain_source": "header",
+        "read_noise_source": "db",
+        "read_noise_db_note": "DB READNOISE_E may differ from resolved runtime value; header/DB path logged above.",
+        "sigma_meas_adu": 4.571925163269043,
+        "sigma_pred_pedestal0_adu": 103.59063284909429,
+        "R_pedestal0": 0.04413454226048795,
+        "pedestal_inverted_adu": 33415.564148857244,
+        "ptc": {
+          "usable": true,
+          "n_bins": 16,
+          "slope_var_vs_median": -10.394559948047421,
+          "intercept": 348070.0072756237,
+          "gain_from_slope_e_adu": NaN,
+          "rn_e_from_intercept": NaN,
+          "pedestal_adu_x_intercept": 33485.78573939605
+        }
+      },
+      "shape": {
+        "dao_only": {
+          "n_matched_det": 643,
+          "sharpness": {
+            "median": 0.9278888878968474,
+            "p05": 0.8105359997835327,
+            "p95": 1.0764617521174746
+          },
+          "roundness1": {
+            "median": 0.048135459423065186,
+            "p05": -0.8721431493759155,
+            "p95": 0.8399430871009826
+          },
+          "roundness2": {
+            "median": 0.04075716176798543,
+            "p05": -0.7958482023366887,
+            "p95": 0.8254794324922832
+          }
+        },
+        "gaia_matched": {
+          "n_matched_det": 957,
+          "sharpness": {
+            "median": 0.8820812144313218,
+            "p05": 0.8048934883288134,
+            "p95": 0.9401662838004878
+          },
+          "roundness1": {
+            "median": 0.03806596249341965,
+            "p05": -0.5142228126525878,
+            "p95": 0.5704351782798766
+          },
+          "roundness2": {
+            "median": 0.06471223862639609,
+            "p05": -0.38874093454959835,
+            "p95": 0.4858424487084049
+          }
+        }
+      },
+      "sharpness_tradeoff": [
+        {
+          "sharpness_ub": 0.6772,
+          "dao_only_removed_frac": 1.0,
+          "gaia_removed_frac": 0.9989550679205852
+        },
+        {
+          "sharpness_ub": 0.6993,
+          "dao_only_removed_frac": 0.9984447900466563,
+          "gaia_removed_frac": 0.9989550679205852
+        },
+        {
+          "sharpness_ub": 0.7214,
+          "dao_only_removed_frac": 0.9984447900466563,
+          "gaia_removed_frac": 0.9979101358411703
+        },
+        {
+          "sharpness_ub": 0.7435,
+          "dao_only_removed_frac": 0.9984447900466563,
+          "gaia_removed_frac": 0.9937304075235109
+        },
+        {
+          "sharpness_ub": 0.7657,
+          "dao_only_removed_frac": 0.9906687402799378,
+          "gaia_removed_frac": 0.9864158829676071
+        },
+        {
+          "sharpness_ub": 0.7878,
+          "dao_only_removed_frac": 0.9782270606531882,
+          "gaia_removed_frac": 0.9717868338557993
+        },
+        {
+          "sharpness_ub": 0.8099,
+          "dao_only_removed_frac": 0.9502332814930016,
+          "gaia_removed_frac": 0.9373040752351097
+        },
+        {
+          "sharpness_ub": 0.832,
+          "dao_only_removed_frac": 0.8989113530326595,
+          "gaia_removed_frac": 0.8808777429467085
+        },
+        {
+          "sharpness_ub": 0.8542,
+          "dao_only_removed_frac": 0.833592534992224,
+          "gaia_removed_frac": 0.7836990595611285
+        },
+        {
+          "sharpness_ub": 0.8763,
+          "dao_only_removed_frac": 0.7713841368584758,
+          "gaia_removed_frac": 0.5715778474399164
+        },
+        {
+          "sharpness_ub": 0.8984,
+          "dao_only_removed_frac": 0.645412130637636,
+          "gaia_removed_frac": 0.3510971786833856
+        },
+        {
+          "sharpness_ub": 0.9205,
+          "dao_only_removed_frac": 0.5272161741835147,
+          "gaia_removed_frac": 0.1400208986415883
+        },
+        {
+          "sharpness_ub": 0.9426,
+          "dao_only_removed_frac": 0.4307931570762053,
+          "gaia_removed_frac": 0.042842215256008356
+        },
+        {
+          "sharpness_ub": 0.9648,
+          "dao_only_removed_frac": 0.3250388802488336,
+          "gaia_removed_frac": 0.01567398119122257
+        },
+        {
+          "sharpness_ub": 0.9869,
+          "dao_only_removed_frac": 0.23483670295489892,
+          "gaia_removed_frac": 0.0041797283176593526
+        },
+        {
+          "sharpness_ub": 1.009,
+          "dao_only_removed_frac": 0.18195956454121306,
+          "gaia_removed_frac": 0.0010449320794148381
+        },
+        {
+          "sharpness_ub": 1.0311,
+          "dao_only_removed_frac": 0.12441679626749612,
+          "gaia_removed_frac": 0.0
+        },
+        {
+          "sharpness_ub": 1.0533,
+          "dao_only_removed_frac": 0.08709175738724728,
+          "gaia_removed_frac": 0.0
+        },
+        {
+          "sharpness_ub": 1.0754,
+          "dao_only_removed_frac": 0.05132192846034215,
+          "gaia_removed_frac": 0.0
+        },
+        {
+          "sharpness_ub": 1.0975,
+          "dao_only_removed_frac": 0.027993779160186624,
+          "gaia_removed_frac": 0.0
+        },
+        {
+          "sharpness_ub": 1.1196,
+          "dao_only_removed_frac": 0.01866251944012442,
+          "gaia_removed_frac": 0.0
+        },
+        {
+          "sharpness_ub": 1.1418,
+          "dao_only_removed_frac": 0.01088646967340591,
+          "gaia_removed_frac": 0.0
+        },
+        {
+          "sharpness_ub": 1.1639,
+          "dao_only_removed_frac": 0.006220839813374806,
+          "gaia_removed_frac": 0.0
+        },
+        {
+          "sharpness_ub": 1.186,
+          "dao_only_removed_frac": 0.003110419906687403,
+          "gaia_removed_frac": 0.0
+        },
+        {
+          "sharpness_ub": 1.2081,
+          "dao_only_removed_frac": 0.0015552099533437014,
+          "gaia_removed_frac": 0.0
+        }
+      ],
+      "roundness_tradeoff": [
+        {
+          "roundness_ub": 0.0,
+          "dao_only_removed_frac": 1.0,
+          "gaia_removed_frac": 1.0
+        },
+        {
+          "roundness_ub": 0.085,
+          "dao_only_removed_frac": 0.9860031104199067,
+          "gaia_removed_frac": 0.9310344827586207
+        },
+        {
+          "roundness_ub": 0.169,
+          "dao_only_removed_frac": 0.9409020217729394,
+          "gaia_removed_frac": 0.786833855799373
+        },
+        {
+          "roundness_ub": 0.254,
+          "dao_only_removed_frac": 0.8678071539657853,
+          "gaia_removed_frac": 0.632183908045977
+        },
+        {
+          "roundness_ub": 0.338,
+          "dao_only_removed_frac": 0.7838258164852255,
+          "gaia_removed_frac": 0.5088819226750261
+        },
+        {
+          "roundness_ub": 0.423,
+          "dao_only_removed_frac": 0.6594090202177294,
+          "gaia_removed_frac": 0.3510971786833856
+        },
+        {
+          "roundness_ub": 0.508,
+          "dao_only_removed_frac": 0.5598755832037325,
+          "gaia_removed_frac": 0.2413793103448276
+        },
+        {
+          "roundness_ub": 0.592,
+          "dao_only_removed_frac": 0.46500777604976673,
+          "gaia_removed_frac": 0.15569487983281086
+        },
+        {
+          "roundness_ub": 0.677,
+          "dao_only_removed_frac": 0.37636080870917576,
+          "gaia_removed_frac": 0.09926854754440961
+        },
+        {
+          "roundness_ub": 0.762,
+          "dao_only_removed_frac": 0.29704510108864696,
+          "gaia_removed_frac": 0.05851619644723093
+        },
+        {
+          "roundness_ub": 0.846,
+          "dao_only_removed_frac": 0.24261275272161742,
+          "gaia_removed_frac": 0.04179728317659352
+        },
+        {
+          "roundness_ub": 0.931,
+          "dao_only_removed_frac": 0.18973561430793157,
+          "gaia_removed_frac": 0.02821316614420063
+        },
+        {
+          "roundness_ub": 1.015,
+          "dao_only_removed_frac": 0.1368584758942457,
+          "gaia_removed_frac": 0.02089864158829676
+        },
+        {
+          "roundness_ub": 1.1,
+          "dao_only_removed_frac": 0.1026438569206843,
+          "gaia_removed_frac": 0.01567398119122257
+        },
+        {
+          "roundness_ub": 1.185,
+          "dao_only_removed_frac": 0.07465007776049767,
+          "gaia_removed_frac": 0.01044932079414838
+        },
+        {
+          "roundness_ub": 1.269,
+          "dao_only_removed_frac": 0.05287713841368585,
+          "gaia_removed_frac": 0.009404388714733543
+        },
+        {
+          "roundness_ub": 1.354,
+          "dao_only_removed_frac": 0.04354587869362364,
+          "gaia_removed_frac": 0.008359456635318705
+        },
+        {
+          "roundness_ub": 1.439,
+          "dao_only_removed_frac": 0.03421461897356143,
+          "gaia_removed_frac": 0.0073145245559038665
+        },
+        {
+          "roundness_ub": 1.523,
+          "dao_only_removed_frac": 0.027993779160186624,
+          "gaia_removed_frac": 0.00522466039707419
+        },
+        {
+          "roundness_ub": 1.608,
+          "dao_only_removed_frac": 0.02021772939346812,
+          "gaia_removed_frac": 0.003134796238244514
+        }
+      ],
+      "trivial_filters": {
+        "dao_only": {
+          "n": 696,
+          "neg_flux_frac": 0.20402298850574713,
+          "fail_snr50_frac": 0.9870689655172413,
+          "fail_edge_frac": 0.035919540229885055,
+          "union_removed_frac": 0.9885057471264368
+        },
+        "gaia_matched": {
+          "n": 972,
+          "neg_flux_frac": 0.01440329218106996,
+          "fail_snr50_frac": 0.6069958847736625,
+          "fail_edge_frac": 0.01646090534979424,
+          "union_removed_frac": 0.6111111111111112
+        }
+      },
+      "fwhm_optics": {
+        "diameter_mm": 300.0,
+        "fwhm_atm_assumed_arcsec": 2.5,
+        "fwhm_predicted_arcsec": 2.530159616787654,
+        "plate_scale_arcsec_px": 1.3010910511796954,
+        "fwhm_predicted_px": 1.9446445462011024,
+        "fwhm_measured_px": 2.572,
+        "ratio_measured_over_predicted": 1.322606748376945
+      },
+      "equipment": {
+        "equipment_id": 2,
+        "telescope_id": 2,
+        "camera": "C3-26000",
+        "pixel_um": 3.76,
+        "gain_db": 0.78,
+        "read_noise_db": 1.3,
+        "telescope": "DDT 300/1200",
+        "diameter_mm": 300.0,
+        "focal_mm": 1200.0
+      }
+    },
+    {
+      "draft_id": "draft_000435_snapshot_skysurface_20260716",
+      "label": "435 wide anchor",
+      "anchored": true,
+      "reference_source": "MASTERSTAR.fits platesolve/NoFilter_60_2 (infolog DAO on ref frame)",
+      "masterstar_fits": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000435_snapshot_skysurface_20260716\\platesolve\\NoFilter_60_2\\MASTERSTAR.fits",
+      "infolog": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000435_snapshot_skysurface_20260716\\infolog_20260716_123126.txt",
+      "frame_shape": [
+        1397,
+        2082
+      ],
+      "n_pix": 2908554,
+      "vy_fwhm_header": 3.2068878608540805,
+      "bfac": 1,
+      "fwhm_eff_px": 3.2068878608540805,
+      "median_adu": 1955.0435791015625,
+      "std_clip_adu": 83.82144165039062,
+      "rms_conv_adu": 63.39926528930664,
+      "threshold_adu": 239.6492227935791,
+      "recorded_pass1": 2552,
+      "reproduced_pass1": 2534,
+      "anchor_ok": true,
+      "anchor_pct": 99.29467084639498,
+      "recorded_merged": 3777,
+      "recorded_after_snr": 2951,
+      "masterstars_rows": 2951,
+      "dao_only_rows": 109,
+      "gaia_matched_rows": 2842,
+      "inverted_decomposition": {
+        "n_inverted_at_3.78": 336,
+        "dao_only_observed": 109,
+        "n_positive_only_artifacts_est": 0,
+        "n_real_below_catalog_cap_est": 0
+      },
+      "k_curve": [
+        {
+          "k": 3.0,
+          "n_detected_pass1": 6205,
+          "n_inverted": 3997,
+          "rms_conv": 63.39926528930664,
+          "threshold_adu": 190.19779586791992
+        },
+        {
+          "k": 3.78,
+          "n_detected_pass1": 2534,
+          "n_inverted": 336,
+          "rms_conv": 63.39926528930664,
+          "threshold_adu": 239.6492227935791
+        },
+        {
+          "k": 4.0,
+          "n_detected_pass1": 2345,
+          "n_inverted": 173,
+          "rms_conv": 63.39926528930664,
+          "threshold_adu": 253.59706115722656
+        },
+        {
+          "k": 4.5,
+          "n_detected_pass1": 2087,
+          "n_inverted": 49,
+          "rms_conv": 63.39926528930664,
+          "threshold_adu": 285.2966938018799
+        },
+        {
+          "k": 5.0,
+          "n_detected_pass1": 1923,
+          "n_inverted": 34,
+          "rms_conv": 63.39926528930664,
+          "threshold_adu": 316.9963264465332
+        }
+      ],
+      "analytic": {
+        "sigma_psf_px": 1.36185147819521,
+        "n_res": 249596.08547286357,
+        "n_fa_gaussian_3.78": 19.571872219711032,
+        "ratio_inverted_to_n_fa": 17.1674940561696
+      },
+      "noise": {
+        "gain_e_adu": 3.17,
+        "read_noise_e": 15.2,
+        "gain_source": "header_index_mapped",
+        "read_noise_source": "db",
+        "read_noise_db_note": "DB READNOISE_E may differ from resolved runtime value; header/DB path logged above.",
+        "sigma_meas_adu": 63.39926528930664,
+        "sigma_pred_pedestal0_adu": 25.292776863555513,
+        "R_pedestal0": 2.506615451174875,
+        "pedestal_inverted_adu": -10713.783020481045,
+        "ptc": {
+          "usable": true,
+          "n_bins": 16,
+          "slope_var_vs_median": -3.2691875321645427,
+          "intercept": 9314.728276711614,
+          "gain_from_slope_e_adu": NaN,
+          "rn_e_from_intercept": NaN,
+          "pedestal_adu_x_intercept": 2849.248684900096
+        }
+      },
+      "shape": {
+        "dao_only": {
+          "n_matched_det": 88,
+          "sharpness": {
+            "median": 0.5178868581597128,
+            "p05": 0.2874110853854459,
+            "p95": 1.2610589731817028
+          },
+          "roundness1": {
+            "median": -0.025545263662934303,
+            "p05": -0.8732775568962097,
+            "p95": 0.7970406442880625
+          },
+          "roundness2": {
+            "median": -0.06863245066704173,
+            "p05": -0.9021370460748858,
+            "p95": 1.1988044590596163
+          }
+        },
+        "gaia_matched": {
+          "n_matched_det": 2285,
+          "sharpness": {
+            "median": 0.6461550998784564,
+            "p05": 0.3906281608230695,
+            "p95": 0.8186243563181266
+          },
+          "roundness1": {
+            "median": 0.013675878755748272,
+            "p05": -0.6149265050888062,
+            "p95": 0.6221826434135433
+          },
+          "roundness2": {
+            "median": 0.15487389590486494,
+            "p05": -0.25102321461356353,
+            "p95": 0.549782753832171
+          }
+        }
+      },
+      "sharpness_tradeoff": [
+        {
+          "sharpness_ub": 0.0785,
+          "dao_only_removed_frac": 1.0,
+          "gaia_removed_frac": 0.999562363238512
+        },
+        {
+          "sharpness_ub": 0.1334,
+          "dao_only_removed_frac": 1.0,
+          "gaia_removed_frac": 0.9973741794310722
+        },
+        {
+          "sharpness_ub": 0.1884,
+          "dao_only_removed_frac": 0.9886363636363636,
+          "gaia_removed_frac": 0.9964989059080963
+        },
+        {
+          "sharpness_ub": 0.2433,
+          "dao_only_removed_frac": 0.9886363636363636,
+          "gaia_removed_frac": 0.9921225382932166
+        },
+        {
+          "sharpness_ub": 0.2983,
+          "dao_only_removed_frac": 0.9431818181818182,
+          "gaia_removed_frac": 0.9829321663019693
+        },
+        {
+          "sharpness_ub": 0.3532,
+          "dao_only_removed_frac": 0.8863636363636364,
+          "gaia_removed_frac": 0.9680525164113786
+        },
+        {
+          "sharpness_ub": 0.4082,
+          "dao_only_removed_frac": 0.7840909090909091,
+          "gaia_removed_frac": 0.9409190371991247
+        },
+        {
+          "sharpness_ub": 0.4631,
+          "dao_only_removed_frac": 0.7159090909090909,
+          "gaia_removed_frac": 0.8980306345733041
+        },
+        {
+          "sharpness_ub": 0.5181,
+          "dao_only_removed_frac": 0.5,
+          "gaia_removed_frac": 0.838074398249453
+        },
+        {
+          "sharpness_ub": 0.5731,
+          "dao_only_removed_frac": 0.375,
+          "gaia_removed_frac": 0.7299781181619256
+        },
+        {
+          "sharpness_ub": 0.628,
+          "dao_only_removed_frac": 0.3068181818181818,
+          "gaia_removed_frac": 0.562363238512035
+        },
+        {
+          "sharpness_ub": 0.683,
+          "dao_only_removed_frac": 0.22727272727272727,
+          "gaia_removed_frac": 0.3663019693654267
+        },
+        {
+          "sharpness_ub": 0.7379,
+          "dao_only_removed_frac": 0.13636363636363635,
+          "gaia_removed_frac": 0.17549234135667396
+        },
+        {
+          "sharpness_ub": 0.7929,
+          "dao_only_removed_frac": 0.11363636363636363,
+          "gaia_removed_frac": 0.07527352297592997
+        },
+        {
+          "sharpness_ub": 0.8478,
+          "dao_only_removed_frac": 0.09090909090909091,
+          "gaia_removed_frac": 0.035448577680525166
+        },
+        {
+          "sharpness_ub": 0.9028,
+          "dao_only_removed_frac": 0.09090909090909091,
+          "gaia_removed_frac": 0.01663019693654267
+        },
+        {
+          "sharpness_ub": 0.9577,
+          "dao_only_removed_frac": 0.07954545454545454,
+          "gaia_removed_frac": 0.008315098468271335
+        },
+        {
+          "sharpness_ub": 1.0127,
+          "dao_only_removed_frac": 0.07954545454545454,
+          "gaia_removed_frac": 0.00612691466083151
+        },
+        {
+          "sharpness_ub": 1.0677,
+          "dao_only_removed_frac": 0.06818181818181818,
+          "gaia_removed_frac": 0.002188183807439825
+        },
+        {
+          "sharpness_ub": 1.1226,
+          "dao_only_removed_frac": 0.06818181818181818,
+          "gaia_removed_frac": 0.00175054704595186
+        },
+        {
+          "sharpness_ub": 1.1776,
+          "dao_only_removed_frac": 0.06818181818181818,
+          "gaia_removed_frac": 0.00087527352297593
+        },
+        {
+          "sharpness_ub": 1.2325,
+          "dao_only_removed_frac": 0.06818181818181818,
+          "gaia_removed_frac": 0.000437636761487965
+        },
+        {
+          "sharpness_ub": 1.2875,
+          "dao_only_removed_frac": 0.045454545454545456,
+          "gaia_removed_frac": 0.000437636761487965
+        },
+        {
+          "sharpness_ub": 1.3424,
+          "dao_only_removed_frac": 0.022727272727272728,
+          "gaia_removed_frac": 0.0
+        },
+        {
+          "sharpness_ub": 1.3974,
+          "dao_only_removed_frac": 0.0,
+          "gaia_removed_frac": 0.0
+        }
+      ],
+      "roundness_tradeoff": [
+        {
+          "roundness_ub": 0.0,
+          "dao_only_removed_frac": 1.0,
+          "gaia_removed_frac": 1.0
+        },
+        {
+          "roundness_ub": 0.068,
+          "dao_only_removed_frac": 0.9886363636363636,
+          "gaia_removed_frac": 0.9741794310722101
+        },
+        {
+          "roundness_ub": 0.135,
+          "dao_only_removed_frac": 0.9318181818181818,
+          "gaia_removed_frac": 0.9019693654266958
+        },
+        {
+          "roundness_ub": 0.203,
+          "dao_only_removed_frac": 0.9318181818181818,
+          "gaia_removed_frac": 0.7951859956236323
+        },
+        {
+          "roundness_ub": 0.27,
+          "dao_only_removed_frac": 0.8977272727272727,
+          "gaia_removed_frac": 0.6665207877461706
+        },
+        {
+          "roundness_ub": 0.338,
+          "dao_only_removed_frac": 0.8181818181818182,
+          "gaia_removed_frac": 0.5479212253829322
+        },
+        {
+          "roundness_ub": 0.406,
+          "dao_only_removed_frac": 0.7272727272727273,
+          "gaia_removed_frac": 0.42669584245076586
+        },
+        {
+          "roundness_ub": 0.473,
+          "dao_only_removed_frac": 0.6590909090909091,
+          "gaia_removed_frac": 0.31684901531728665
+        },
+        {
+          "roundness_ub": 0.541,
+          "dao_only_removed_frac": 0.5795454545454546,
+          "gaia_removed_frac": 0.23544857768052516
+        },
+        {
+          "roundness_ub": 0.608,
+          "dao_only_removed_frac": 0.5454545454545454,
+          "gaia_removed_frac": 0.1785557986870897
+        },
+        {
+          "roundness_ub": 0.676,
+          "dao_only_removed_frac": 0.5113636363636364,
+          "gaia_removed_frac": 0.1361050328227571
+        },
+        {
+          "roundness_ub": 0.744,
+          "dao_only_removed_frac": 0.45454545454545453,
+          "gaia_removed_frac": 0.0975929978118162
+        },
+        {
+          "roundness_ub": 0.811,
+          "dao_only_removed_frac": 0.4090909090909091,
+          "gaia_removed_frac": 0.07221006564551423
+        },
+        {
+          "roundness_ub": 0.879,
+          "dao_only_removed_frac": 0.32954545454545453,
+          "gaia_removed_frac": 0.05470459518599562
+        },
+        {
+          "roundness_ub": 0.947,
+          "dao_only_removed_frac": 0.2727272727272727,
+          "gaia_removed_frac": 0.036761487964989056
+        },
+        {
+          "roundness_ub": 1.014,
+          "dao_only_removed_frac": 0.20454545454545456,
+          "gaia_removed_frac": 0.0262582056892779
+        },
+        {
+          "roundness_ub": 1.082,
+          "dao_only_removed_frac": 0.125,
+          "gaia_removed_frac": 0.02013129102844639
+        },
+        {
+          "roundness_ub": 1.149,
+          "dao_only_removed_frac": 0.11363636363636363,
+          "gaia_removed_frac": 0.015317286652078774
+        },
+        {
+          "roundness_ub": 1.217,
+          "dao_only_removed_frac": 0.09090909090909091,
+          "gaia_removed_frac": 0.01050328227571116
+        },
+        {
+          "roundness_ub": 1.285,
+          "dao_only_removed_frac": 0.07954545454545454,
+          "gaia_removed_frac": 0.007439824945295405
+        }
+      ],
+      "trivial_filters": {
+        "dao_only": {
+          "n": 109,
+          "neg_flux_frac": 0.07339449541284404,
+          "fail_snr50_frac": 0.8532110091743119,
+          "fail_edge_frac": 0.009174311926605505,
+          "union_removed_frac": 0.8532110091743119
+        },
+        "gaia_matched": {
+          "n": 2842,
+          "neg_flux_frac": 0.07283603096410979,
+          "fail_snr50_frac": 0.6481351161154116,
+          "fail_edge_frac": 0.026389866291344124,
+          "union_removed_frac": 0.659746657283603
+        }
+      },
+      "fwhm_optics": {
+        "diameter_mm": 200.0,
+        "fwhm_atm_assumed_arcsec": 2.5,
+        "fwhm_predicted_arcsec": 2.5673609591274573,
+        "plate_scale_arcsec_px": 9.772785373657268,
+        "fwhm_predicted_px": 1.2,
+        "fwhm_measured_px": 3.2068878608540805,
+        "ratio_measured_over_predicted": 2.672406550711734
+      },
+      "equipment": {
+        "equipment_id": 1,
+        "telescope_id": 1,
+        "camera": "QHY294MM",
+        "pixel_um": 4.63,
+        "gain_db": 3.17,
+        "read_noise_db": 7.6,
+        "telescope": "Carl-Zeiss 200mm",
+        "diameter_mm": 200.0,
+        "focal_mm": 200.0
+      }
+    },
+    {
+      "draft_id": "draft_000500",
+      "label": "500 wide",
+      "anchored": false,
+      "reference_source": "MASTERSTAR.fits (no infolog; unanchored)",
+      "masterstar_fits": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000500\\platesolve\\NoFilter_60_2\\MASTERSTAR.fits",
+      "infolog": null,
+      "frame_shape": [
+        1397,
+        2082
+      ],
+      "n_pix": 2908554,
+      "vy_fwhm_header": 3.8295,
+      "bfac": 1,
+      "fwhm_eff_px": 3.8295,
+      "median_adu": 2199.14697265625,
+      "std_clip_adu": 53.020225524902344,
+      "rms_conv_adu": 55.763187408447266,
+      "threshold_adu": 210.78484840393065,
+      "recorded_pass1": null,
+      "reproduced_pass1": 2879,
+      "anchor_ok": null,
+      "anchor_pct": null,
+      "recorded_merged": null,
+      "recorded_after_snr": 4122,
+      "masterstars_rows": 4122,
+      "dao_only_rows": 561,
+      "gaia_matched_rows": 3561,
+      "inverted_decomposition": {
+        "n_inverted_at_3.78": 999,
+        "dao_only_observed": 561,
+        "n_positive_only_artifacts_est": 0,
+        "n_real_below_catalog_cap_est": 0
+      },
+      "k_curve": [
+        {
+          "k": 3.0,
+          "n_detected_pass1": 6322,
+          "n_inverted": 4708,
+          "rms_conv": 55.763187408447266,
+          "threshold_adu": 167.2895622253418
+        },
+        {
+          "k": 3.78,
+          "n_detected_pass1": 2879,
+          "n_inverted": 999,
+          "rms_conv": 55.763187408447266,
+          "threshold_adu": 210.78484840393065
+        },
+        {
+          "k": 4.0,
+          "n_detected_pass1": 2577,
+          "n_inverted": 770,
+          "rms_conv": 55.763187408447266,
+          "threshold_adu": 223.05274963378906
+        },
+        {
+          "k": 4.5,
+          "n_detected_pass1": 2059,
+          "n_inverted": 555,
+          "rms_conv": 55.763187408447266,
+          "threshold_adu": 250.9343433380127
+        },
+        {
+          "k": 5.0,
+          "n_detected_pass1": 1713,
+          "n_inverted": 452,
+          "rms_conv": 55.763187408447266,
+          "threshold_adu": 278.8159370422363
+        }
+      ],
+      "analytic": {
+        "sigma_psf_px": 1.6262527603193477,
+        "n_res": 175033.49693244658,
+        "n_fa_gaussian_3.78": 13.72510802659795,
+        "ratio_inverted_to_n_fa": 72.78631236009461
+      },
+      "noise": {
+        "gain_e_adu": 3.17,
+        "read_noise_e": 15.2,
+        "gain_source": "header_index_mapped",
+        "read_noise_source": "db",
+        "read_noise_db_note": "DB READNOISE_E may differ from resolved runtime value; header/DB path logged above.",
+        "sigma_meas_adu": 55.763187408447266,
+        "sigma_pred_pedestal0_adu": 26.771790873337647,
+        "R_pedestal0": 2.0829083744256534,
+        "pedestal_inverted_adu": -7585.189578326919,
+        "ptc": {
+          "usable": true,
+          "n_bins": 16,
+          "slope_var_vs_median": 4.77239458134405,
+          "intercept": -7679.126378579519,
+          "gain_from_slope_e_adu": 0.20953841576912738,
+          "rn_e_from_intercept": 0.0,
+          "pedestal_adu_x_intercept": 1609.0719758584687
+        }
+      },
+      "shape": {
+        "dao_only": {
+          "n_matched_det": 555,
+          "sharpness": {
+            "median": 0.5773616539524686,
+            "p05": 0.21644122524497056,
+            "p95": 0.9452373726725651
+          },
+          "roundness1": {
+            "median": 0.6200610399246216,
+            "p05": -1.1719942450523375,
+            "p95": 1.4809932231903076
+          },
+          "roundness2": {
+            "median": 0.764651639739283,
+            "p05": -0.5171838214625282,
+            "p95": 1.5730058532895634
+          }
+        },
+        "gaia_matched": {
+          "n_matched_det": 2309,
+          "sharpness": {
+            "median": 0.6713832455797422,
+            "p05": 0.31236548952525395,
+            "p95": 0.9435596545934177
+          },
+          "roundness1": {
+            "median": -0.06184360757470131,
+            "p05": -0.7603147149085998,
+            "p95": 0.767874574661254
+          },
+          "roundness2": {
+            "median": 0.09206537921089077,
+            "p05": -0.46345779864764725,
+            "p95": 0.7727649428582068
+          }
+        }
+      },
+      "sharpness_tradeoff": [
+        {
+          "sharpness_ub": 0.0012,
+          "dao_only_removed_frac": 1.0,
+          "gaia_removed_frac": 1.0
+        },
+        {
+          "sharpness_ub": 0.0595,
+          "dao_only_removed_frac": 1.0,
+          "gaia_removed_frac": 0.9982676483326115
+        },
+        {
+          "sharpness_ub": 0.1178,
+          "dao_only_removed_frac": 0.9891891891891892,
+          "gaia_removed_frac": 0.9939367691641403
+        },
+        {
+          "sharpness_ub": 0.1761,
+          "dao_only_removed_frac": 0.972972972972973,
+          "gaia_removed_frac": 0.9848419229103508
+        },
+        {
+          "sharpness_ub": 0.2344,
+          "dao_only_removed_frac": 0.9351351351351351,
+          "gaia_removed_frac": 0.9727154612386314
+        },
+        {
+          "sharpness_ub": 0.2926,
+          "dao_only_removed_frac": 0.8972972972972973,
+          "gaia_removed_frac": 0.9562581203984409
+        },
+        {
+          "sharpness_ub": 0.3509,
+          "dao_only_removed_frac": 0.8324324324324325,
+          "gaia_removed_frac": 0.9341706366392377
+        },
+        {
+          "sharpness_ub": 0.4092,
+          "dao_only_removed_frac": 0.7639639639639639,
+          "gaia_removed_frac": 0.9038544824599394
+        },
+        {
+          "sharpness_ub": 0.4675,
+          "dao_only_removed_frac": 0.6882882882882883,
+          "gaia_removed_frac": 0.8622780424426159
+        },
+        {
+          "sharpness_ub": 0.5258,
+          "dao_only_removed_frac": 0.590990990990991,
+          "gaia_removed_frac": 0.7886530965786055
+        },
+        {
+          "sharpness_ub": 0.5841,
+          "dao_only_removed_frac": 0.4918918918918919,
+          "gaia_removed_frac": 0.7020355132091814
+        },
+        {
+          "sharpness_ub": 0.6423,
+          "dao_only_removed_frac": 0.3783783783783784,
+          "gaia_removed_frac": 0.5747076656561282
+        },
+        {
+          "sharpness_ub": 0.7006,
+          "dao_only_removed_frac": 0.2648648648648649,
+          "gaia_removed_frac": 0.4213945430922477
+        },
+        {
+          "sharpness_ub": 0.7589,
+          "dao_only_removed_frac": 0.20540540540540542,
+          "gaia_removed_frac": 0.2693806842789086
+        },
+        {
+          "sharpness_ub": 0.8172,
+          "dao_only_removed_frac": 0.14954954954954955,
+          "gaia_removed_frac": 0.14681680381117368
+        },
+        {
+          "sharpness_ub": 0.8755,
+          "dao_only_removed_frac": 0.08108108108108109,
+          "gaia_removed_frac": 0.0844521437851884
+        },
+        {
+          "sharpness_ub": 0.9337,
+          "dao_only_removed_frac": 0.05765765765765766,
+          "gaia_removed_frac": 0.053702901689042876
+        },
+        {
+          "sharpness_ub": 0.992,
+          "dao_only_removed_frac": 0.03963963963963964,
+          "gaia_removed_frac": 0.030749242096145518
+        },
+        {
+          "sharpness_ub": 1.0503,
+          "dao_only_removed_frac": 0.014414414414414415,
+          "gaia_removed_frac": 0.01862278042442616
+        },
+        {
+          "sharpness_ub": 1.1086,
+          "dao_only_removed_frac": 0.005405405405405406,
+          "gaia_removed_frac": 0.007795582503248159
+        },
+        {
+          "sharpness_ub": 1.1669,
+          "dao_only_removed_frac": 0.0036036036036036037,
+          "gaia_removed_frac": 0.004763967085318319
+        },
+        {
+          "sharpness_ub": 1.2252,
+          "dao_only_removed_frac": 0.0018018018018018018,
+          "gaia_removed_frac": 0.0021654395842356
+        },
+        {
+          "sharpness_ub": 1.2834,
+          "dao_only_removed_frac": 0.0,
+          "gaia_removed_frac": 0.00129926375054136
+        },
+        {
+          "sharpness_ub": 1.3417,
+          "dao_only_removed_frac": 0.0,
+          "gaia_removed_frac": 0.00043308791684711995
+        },
+        {
+          "sharpness_ub": 1.4,
+          "dao_only_removed_frac": 0.0,
+          "gaia_removed_frac": 0.0
+        }
+      ],
+      "roundness_tradeoff": [
+        {
+          "roundness_ub": 0.0,
+          "dao_only_removed_frac": 1.0,
+          "gaia_removed_frac": 1.0
+        },
+        {
+          "roundness_ub": 0.109,
+          "dao_only_removed_frac": 0.9927927927927928,
+          "gaia_removed_frac": 0.9346037245560849
+        },
+        {
+          "roundness_ub": 0.219,
+          "dao_only_removed_frac": 0.972972972972973,
+          "gaia_removed_frac": 0.7799913382416631
+        },
+        {
+          "roundness_ub": 0.328,
+          "dao_only_removed_frac": 0.9333333333333333,
+          "gaia_removed_frac": 0.5972282373321784
+        },
+        {
+          "roundness_ub": 0.437,
+          "dao_only_removed_frac": 0.8990990990990991,
+          "gaia_removed_frac": 0.42615851017756606
+        },
+        {
+          "roundness_ub": 0.546,
+          "dao_only_removed_frac": 0.8576576576576577,
+          "gaia_removed_frac": 0.3152880034647033
+        },
+        {
+          "roundness_ub": 0.656,
+          "dao_only_removed_frac": 0.827027027027027,
+          "gaia_removed_frac": 0.23083585967951495
+        },
+        {
+          "roundness_ub": 0.765,
+          "dao_only_removed_frac": 0.790990990990991,
+          "gaia_removed_frac": 0.1676050238198354
+        },
+        {
+          "roundness_ub": 0.874,
+          "dao_only_removed_frac": 0.745945945945946,
+          "gaia_removed_frac": 0.12646167171935904
+        },
+        {
+          "roundness_ub": 0.983,
+          "dao_only_removed_frac": 0.6936936936936937,
+          "gaia_removed_frac": 0.08921611087050671
+        },
+        {
+          "roundness_ub": 1.093,
+          "dao_only_removed_frac": 0.6288288288288288,
+          "gaia_removed_frac": 0.0671286271113036
+        },
+        {
+          "roundness_ub": 1.202,
+          "dao_only_removed_frac": 0.5567567567567567,
+          "gaia_removed_frac": 0.053702901689042876
+        },
+        {
+          "roundness_ub": 1.311,
+          "dao_only_removed_frac": 0.47927927927927927,
+          "gaia_removed_frac": 0.043308791684711995
+        },
+        {
+          "roundness_ub": 1.42,
+          "dao_only_removed_frac": 0.36936936936936937,
+          "gaia_removed_frac": 0.03204850584668688
+        },
+        {
+          "roundness_ub": 1.53,
+          "dao_only_removed_frac": 0.3045045045045045,
+          "gaia_removed_frac": 0.023819835426591596
+        },
+        {
+          "roundness_ub": 1.639,
+          "dao_only_removed_frac": 0.23783783783783785,
+          "gaia_removed_frac": 0.018189692507579038
+        },
+        {
+          "roundness_ub": 1.748,
+          "dao_only_removed_frac": 0.16936936936936936,
+          "gaia_removed_frac": 0.013858813339107838
+        },
+        {
+          "roundness_ub": 1.857,
+          "dao_only_removed_frac": 0.11351351351351352,
+          "gaia_removed_frac": 0.00822867042009528
+        },
+        {
+          "roundness_ub": 1.967,
+          "dao_only_removed_frac": 0.07747747747747748,
+          "gaia_removed_frac": 0.0038977912516240795
+        },
+        {
+          "roundness_ub": 2.076,
+          "dao_only_removed_frac": 0.04684684684684685,
+          "gaia_removed_frac": 0.00129926375054136
+        }
+      ],
+      "trivial_filters": {
+        "dao_only": {
+          "n": 561,
+          "neg_flux_frac": 0.0855614973262032,
+          "fail_snr50_frac": 0.44206773618538325,
+          "fail_edge_frac": 0.016042780748663103,
+          "union_removed_frac": 0.44919786096256686
+        },
+        "gaia_matched": {
+          "n": 3561,
+          "neg_flux_frac": 0.05307497893850042,
+          "fail_snr50_frac": 0.669194046616119,
+          "fail_edge_frac": 0.02695871946082561,
+          "union_removed_frac": 0.6809884863802302
+        }
+      },
+      "fwhm_optics": {
+        "diameter_mm": 200.0,
+        "fwhm_atm_assumed_arcsec": 2.5,
+        "fwhm_predicted_arcsec": 2.5673609591274573,
+        "plate_scale_arcsec_px": 9.7741059180782,
+        "fwhm_predicted_px": 1.2,
+        "fwhm_measured_px": 3.8295,
+        "ratio_measured_over_predicted": 3.19125
+      },
+      "equipment": {
+        "equipment_id": 1,
+        "telescope_id": 1,
+        "camera": "QHY294MM",
+        "pixel_um": 4.63,
+        "gain_db": 3.17,
+        "read_noise_db": 7.6,
+        "telescope": "Carl-Zeiss 200mm",
+        "diameter_mm": 200.0,
+        "focal_mm": 200.0
+      }
+    }
+  ],
+  "decision_table": [
+    {
+      "draft": "draft_000501",
+      "measure": "reject negative flux",
+      "dao_only_removed_frac": 0.20402298850574713,
+      "gaia_matched_lost_frac": 0.01440329218106996,
+      "would_prevent_501_outcome": true,
+      "risk": "low on Gaia if fraction small"
+    },
+    {
+      "draft": "draft_000501",
+      "measure": "union trivial (neg+snr50+edge)",
+      "dao_only_removed_frac": 0.9885057471264368,
+      "gaia_matched_lost_frac": 0.6111111111111112,
+      "would_prevent_501_outcome": true,
+      "risk": "check Gaia loss"
+    },
+    {
+      "draft": "draft_000501",
+      "measure": "noise-consistency R gate (frame-level)",
+      "dao_only_removed_frac": "n/a (frame reject)",
+      "gaia_matched_lost_frac": "n/a",
+      "would_prevent_501_outcome": true,
+      "risk": "R=0.044 flag pre-cal pedestal"
+    },
+    {
+      "draft": "draft_000501",
+      "measure": "restore sharpness upper bound",
+      "dao_only_removed_frac": "no knee found",
+      "gaia_matched_lost_frac": "n/a",
+      "would_prevent_501_outcome": false,
+      "risk": "comatic stars if bound too tight on roundness (disabled by design)"
+    },
+    {
+      "draft": "draft_000501",
+      "measure": "FAR-derived k (N_FA=1)",
+      "k_implied": 4.7253843006174785,
+      "dao_only_removed_frac": "indirect (lowers all detections)",
+      "n_detected_pass1_at_k": 1158.4154538641546,
+      "n_inverted_at_k": 52.575404760481376,
+      "would_prevent_501_outcome": "depth/purity trade-off -- not decided here",
+      "risk": "catalog depth loss"
+    },
+    {
+      "draft": "draft_000501",
+      "measure": "FAR-derived k (N_FA=10)",
+      "k_implied": 4.233892687371377,
+      "dao_only_removed_frac": "indirect (lowers all detections)",
+      "n_detected_pass1_at_k": 1334.6670808112247,
+      "n_inverted_at_k": 107.44831151955074,
+      "would_prevent_501_outcome": "depth/purity trade-off -- not decided here",
+      "risk": "catalog depth loss"
+    },
+    {
+      "draft": "draft_000435_snapshot_skysurface_20260716",
+      "measure": "reject negative flux",
+      "dao_only_removed_frac": 0.07339449541284404,
+      "gaia_matched_lost_frac": 0.07283603096410979,
+      "would_prevent_501_outcome": false,
+      "risk": "low on Gaia if fraction small"
+    },
+    {
+      "draft": "draft_000435_snapshot_skysurface_20260716",
+      "measure": "union trivial (neg+snr50+edge)",
+      "dao_only_removed_frac": 0.8532110091743119,
+      "gaia_matched_lost_frac": 0.659746657283603,
+      "would_prevent_501_outcome": false,
+      "risk": "check Gaia loss"
+    },
+    {
+      "draft": "draft_000435_snapshot_skysurface_20260716",
+      "measure": "noise-consistency R gate (frame-level)",
+      "dao_only_removed_frac": "n/a (frame reject)",
+      "gaia_matched_lost_frac": "n/a",
+      "would_prevent_501_outcome": false,
+      "risk": "R=2.507 flag pre-cal pedestal"
+    },
+    {
+      "draft": "draft_000435_snapshot_skysurface_20260716",
+      "measure": "restore sharpness upper bound",
+      "dao_only_removed_frac": "no knee found",
+      "gaia_matched_lost_frac": "n/a",
+      "would_prevent_501_outcome": false,
+      "risk": "comatic stars if bound too tight on roundness (disabled by design)"
+    },
+    {
+      "draft": "draft_000435_snapshot_skysurface_20260716",
+      "measure": "FAR-derived k (N_FA=1)",
+      "k_implied": 4.464837722155632,
+      "dao_only_removed_frac": "indirect (lowers all detections)",
+      "n_detected_pass1_at_k": 2105.143735367694,
+      "n_inverted_at_k": 57.72024490540318,
+      "would_prevent_501_outcome": "depth/purity trade-off -- not decided here",
+      "risk": "catalog depth loss"
+    },
+    {
+      "draft": "draft_000435_snapshot_skysurface_20260716",
+      "measure": "FAR-derived k (N_FA=10)",
+      "k_implied": 3.9440125501198806,
+      "dao_only_removed_frac": "indirect (lowers all detections)",
+      "n_detected_pass1_at_k": 2393.0983092151932,
+      "n_inverted_at_k": 214.48161059299753,
+      "would_prevent_501_outcome": "depth/purity trade-off -- not decided here",
+      "risk": "catalog depth loss"
+    },
+    {
+      "draft": "draft_000500",
+      "measure": "reject negative flux",
+      "dao_only_removed_frac": 0.0855614973262032,
+      "gaia_matched_lost_frac": 0.05307497893850042,
+      "would_prevent_501_outcome": false,
+      "risk": "low on Gaia if fraction small"
+    },
+    {
+      "draft": "draft_000500",
+      "measure": "union trivial (neg+snr50+edge)",
+      "dao_only_removed_frac": 0.44919786096256686,
+      "gaia_matched_lost_frac": 0.6809884863802302,
+      "would_prevent_501_outcome": false,
+      "risk": "check Gaia loss"
+    },
+    {
+      "draft": "draft_000500",
+      "measure": "noise-consistency R gate (frame-level)",
+      "dao_only_removed_frac": "n/a (frame reject)",
+      "gaia_matched_lost_frac": "n/a",
+      "would_prevent_501_outcome": false,
+      "risk": "R=2.083 flag pre-cal pedestal"
+    },
+    {
+      "draft": "draft_000500",
+      "measure": "restore sharpness upper bound",
+      "dao_only_removed_frac": "no knee found",
+      "gaia_matched_lost_frac": "n/a",
+      "would_prevent_501_outcome": false,
+      "risk": "comatic stars if bound too tight on roundness (disabled by design)"
+    },
+    {
+      "draft": "draft_000500",
+      "measure": "FAR-derived k (N_FA=1)",
+      "k_implied": 4.388254836180297,
+      "dao_only_removed_frac": "indirect (lowers all detections)",
+      "n_detected_pass1_at_k": 2174.767989717212,
+      "n_inverted_at_k": 603.0504204424722,
+      "would_prevent_501_outcome": "depth/purity trade-off -- not decided here",
+      "risk": "catalog depth loss"
+    },
+    {
+      "draft": "draft_000500",
+      "measure": "FAR-derived k (N_FA=10)",
+      "k_implied": 3.8581172288297294,
+      "dao_only_removed_frac": "indirect (lowers all detections)",
+      "n_detected_pass1_at_k": 2771.766349515553,
+      "n_inverted_at_k": 917.6870663545088,
+      "would_prevent_501_outcome": "depth/purity trade-off -- not decided here",
+      "risk": "catalog depth loss"
+    }
+  ]
+}
