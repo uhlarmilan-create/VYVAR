@@ -457,9 +457,12 @@ def render_masterstar_qa(
         _n_dao_unmatched: int | None = None
         _n_dao_faint: int | None = None
         _n_dao_artifact_neg: int | None = None
-        _n_dao_below_cat: int | None = None
-        _n_dao_unconf_bright: int | None = None
+        _n_dao_in_range: int | None = None
+        _n_dao_ambiguous: int | None = None
+        _n_dao_beyond: int | None = None
         _n_dao_indeterminate: int | None = None
+        _confirmable_depth: float | None = None
+        _depth_winner: str | None = None
         _gaia_db_max_g: float | None = None
         _meta_json = setup_dir / "photometry" / "pipeline_meta.json"
         if _meta_json.is_file():
@@ -526,12 +529,18 @@ def render_masterstar_qa(
                     _n_dao_faint = int(_meta["n_dao_matched_to_faint"])
                 if _meta.get("dao_only_n_artifact_negative") is not None:
                     _n_dao_artifact_neg = int(_meta["dao_only_n_artifact_negative"])
-                if _meta.get("dao_only_n_below_catalogue") is not None:
-                    _n_dao_below_cat = int(_meta["dao_only_n_below_catalogue"])
-                if _meta.get("dao_only_n_unconfirmed_bright") is not None:
-                    _n_dao_unconf_bright = int(_meta["dao_only_n_unconfirmed_bright"])
+                if _meta.get("dao_only_n_unmatched_in_range") is not None:
+                    _n_dao_in_range = int(_meta["dao_only_n_unmatched_in_range"])
+                if _meta.get("dao_only_n_ambiguous_depth") is not None:
+                    _n_dao_ambiguous = int(_meta["dao_only_n_ambiguous_depth"])
+                if _meta.get("dao_only_n_beyond_catalogue") is not None:
+                    _n_dao_beyond = int(_meta["dao_only_n_beyond_catalogue"])
                 if _meta.get("dao_only_n_indeterminate") is not None:
                     _n_dao_indeterminate = int(_meta["dao_only_n_indeterminate"])
+                if _meta.get("confirmable_depth_g") is not None:
+                    _confirmable_depth = float(_meta["confirmable_depth_g"])
+                if _meta.get("confirmable_depth_winner") is not None:
+                    _depth_winner = str(_meta["confirmable_depth_winner"])
                 if _meta.get("gaia_db_max_g_mag") is not None:
                     _gaia_db_max_g = float(_meta["gaia_db_max_g_mag"])
             except Exception:  # noqa: BLE001
@@ -616,15 +625,21 @@ def render_masterstar_qa(
         )
         _n_unmatched_rows = max(0, n_all - n_ok)
         if _n_dao_unmatched is not None:
-            _cap_s = f"G<{_gaia_db_max_g:.2f}" if _gaia_db_max_g is not None else "G<?"
+            _depth_s = (
+                f"G={_confirmable_depth:.2f} ({_depth_winner})"
+                if _confirmable_depth is not None and _depth_winner
+                else (f"G={_confirmable_depth:.2f}" if _confirmable_depth is not None else "G=?")
+            )
+            _cap_s = f"Gaia DB max G={_gaia_db_max_g:.2f}" if _gaia_db_max_g is not None else ""
             if _n_dao_artifact_neg is not None:
                 st.caption(
                     f"Unmatched DAO: **{_n_dao_unmatched}** "
                     f"(artifact_negative: **{_n_dao_artifact_neg}**, "
-                    f"below_catalogue: **{_n_dao_below_cat if _n_dao_below_cat is not None else '?'}**, "
-                    f"unconfirmed_bright: **{_n_dao_unconf_bright if _n_dao_unconf_bright is not None else '?'}**, "
+                    f"unmatched_in_range: **{_n_dao_in_range if _n_dao_in_range is not None else '?'}**, "
+                    f"ambiguous_depth: **{_n_dao_ambiguous if _n_dao_ambiguous is not None else '?'}**, "
+                    f"beyond_catalogue: **{_n_dao_beyond if _n_dao_beyond is not None else '?'}**, "
                     f"indeterminate: **{_n_dao_indeterminate if _n_dao_indeterminate is not None else '?'}**) "
-                    f"| Gaia DB cap {_cap_s} | informational, not a gate"
+                    f"| confirmable depth {_depth_s} {_cap_s} | counts installation-specific; informational, not a gate"
                 )
             else:
                 st.caption(

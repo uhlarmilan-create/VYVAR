@@ -12495,6 +12495,15 @@ def generate_masterstar_and_catalog(
                 _fwhm_cls = float(det_meta.get("dao_fwhm_px") or 0.0)
                 if not (_fwhm_cls > 0.0):
                     _fwhm_cls = float(header_core_fwhm_px(hdr) or 3.5)
+                _md_cls = resolve_effective_match_depth(det_meta, is_masterstar=True)
+                _cone_lim_cls: float | None = None
+                try:
+                    _raw_lim = det_meta.get("faintest_mag_limit")
+                    if _raw_lim is not None and math.isfinite(float(_raw_lim)):
+                        _cone_lim_cls = float(_raw_lim)
+                except (TypeError, ValueError):
+                    _cone_lim_cls = None
+                _noise_cls = det_meta.get("noise_floor_adu")
                 _nax1_cls = int(hdr.get("NAXIS1") or 0)
                 _nax2_cls = int(hdr.get("NAXIS2") or 0)
                 _wcs_cls = None
@@ -12526,14 +12535,16 @@ def generate_masterstar_and_catalog(
                         ),
                         cone_df=_cone_df_cls,
                     )
-                    _md_cls = resolve_effective_match_depth(det_meta, is_masterstar=True)
                     _recon_ms.update(_md_cls)
                     _ff = fit_fleming_completeness(_recon_ms.get("completeness_curve") or [])
                     _fleming_sigma = _ff.sigma_mag
                 df_final, _dao_class_meta = annotate_dao_only_magnitude_classes(
                     df_final,
                     gaia_db_path=_gdb_fill,
+                    effective_match_depth=_md_cls.get("match_depth"),
+                    cone_query_mag_limit=_cone_lim_cls,
                     fleming_sigma_mag=_fleming_sigma,
+                    frame_noise_adu=_noise_cls,
                 )
                 if _recon_ms is not None:
                     _recon_ms["dao_only_class_meta"] = _dao_class_meta

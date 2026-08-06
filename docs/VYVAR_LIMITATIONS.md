@@ -193,9 +193,10 @@ producing 0 light curves with a misleading *"source_type annotate failed"* log l
 
 **Residual risk.** VYVAR no longer hard-stops on catalogue inflation. If DAO detection inflates,
 the symptom surfaces in LC quality and in the informational `MASTERSTAR DAO_ONLY census` log line
-(per-class breakdown: `artifact_negative`, `below_catalogue`, `unconfirmed_bright`, `indeterminate`;
-Gaia DB cap `max_g_mag` stated explicitly). **No runtime gate** -- classification is report/log only
-(A-6, 2026-08-06).
+(per-class breakdown with derived `confirmable_depth_g`; implied-G deciles in `pipeline_meta`).
+**DAO_ONLY class counts depend on the local Gaia DB build and must not be compared across
+installations or wired to any gate.** The transferable quantity is the implied-G distribution
+(`implied_g_mag`, `implied_g_minus_depth` per row), not the raw counts. No runtime gate (A-6/A-6b).
 
 ## MASTERSTAR architecture (enhancement thread)
 

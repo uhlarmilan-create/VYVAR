@@ -495,22 +495,27 @@ def resolved_facts_model(
     )
 
     if meta.get("n_dao_unmatched") is not None or meta.get("dao_only_n_artifact_negative") is not None:
-        cap = meta.get("gaia_db_max_g_mag")
-        cap_s = f"G<{float(cap):.2f}" if cap is not None else "G<?"
         n_dao = int(meta.get("n_dao_unmatched") or 0)
+        depth = meta.get("confirmable_depth_g")
+        winner = meta.get("confirmable_depth_winner") or "?"
+        depth_s = f"{float(depth):.2f}" if depth is not None else "unresolved"
         parts = []
         for k, short in (
             ("dao_only_n_artifact_negative", "artifact_negative"),
-            ("dao_only_n_below_catalogue", "below_catalogue"),
-            ("dao_only_n_unconfirmed_bright", "unconfirmed_bright"),
+            ("dao_only_n_unmatched_in_range", "unmatched_in_range"),
+            ("dao_only_n_ambiguous_depth", "ambiguous_depth"),
+            ("dao_only_n_beyond_catalogue", "beyond_catalogue"),
             ("dao_only_n_indeterminate", "indeterminate"),
         ):
             if meta.get(k) is not None:
                 parts.append(f"{short}={int(meta[k])}")
-        val = f"{n_dao} total [{', '.join(parts)}] | Gaia cap {cap_s}"
-        margin = meta.get("dao_only_class_margin_mag")
-        if margin is not None:
-            val += f" | margin={float(margin):.3f} mag"
+        val = (
+            f"{n_dao} total [{', '.join(parts)}] | confirmable_depth G={depth_s} (from {winner}); "
+            "counts installation-specific"
+        )
+        sg = meta.get("dao_only_sigma_g_row_median")
+        if sg is not None:
+            val += f" | sigma_g median={float(sg):.3f} mag"
         rows.append(
             {
                 "label": "DAO_ONLY census (informational)",
