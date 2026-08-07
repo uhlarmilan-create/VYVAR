@@ -4,7 +4,7 @@
 
 Last updated: **2026-08-07** (SESSION-CLOSE 2026-08-07: DAO doc amendments + GitHub sync).
 
-**HEAD:** `44e8656` (post DAO-CLOSE; doc amendments pending this session-close push).
+**HEAD:** `6b53c6c` (session-close 2026-08-07 doc amendments pushed).
 
 ## Session close 2026-08-07 (DAO detection closure + doc sync)
 
