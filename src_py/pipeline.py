@@ -6190,6 +6190,50 @@ def select_comparison_stars_spatial_grid(
     return picked, meta
 
 
+_MASTERSTAR_ZONE_LOG_ONCE: set[str] = set()
+
+
+def _masterstar_zone_log_once(key: str, msg: str) -> None:
+    if key in _MASTERSTAR_ZONE_LOG_ONCE:
+        return
+    _MASTERSTAR_ZONE_LOG_ONCE.add(key)
+    logging.warning(msg)
+
+
+def _resolve_masterstar_bg_sigma_adu(
+    *,
+    sigma_px: Any,
+    noise_floor_adu: Any,
+    sky_median_adu: Any,
+    prematch_peak_sigma_floor: Any,
+) -> float | None:
+    """Return per-pixel background sigma used in the DAO noise-floor formula."""
+    try:
+        if sigma_px is not None and str(sigma_px).strip() != "":
+            sp = float(sigma_px)
+            if math.isfinite(sp) and sp > 0:
+                return sp
+    except (TypeError, ValueError):
+        pass
+    try:
+        nf = float(noise_floor_adu)
+        sky = float(sky_median_adu)
+        k = float(prematch_peak_sigma_floor)
+    except (TypeError, ValueError):
+        return None
+    if not (math.isfinite(nf) and math.isfinite(sky) and math.isfinite(k) and k > 0):
+        return None
+    inv = (nf - sky) / k
+    if math.isfinite(inv) and inv > 0:
+        _masterstar_zone_log_once(
+            "sigma_inverted",
+            "[MASTERSTAR zone] bg_sigma_adu inferred from noise_floor_adu, sky_median_adu and "
+            "prematch_peak_sigma_floor (prefer det_meta['bg_sigma_adu'] when available).",
+        )
+        return float(inv)
+    return None
+
+
 def _annotate_masterstars_flux_zones(
     df: pd.DataFrame,
     *,
@@ -6198,11 +6242,20 @@ def _annotate_masterstars_flux_zones(
     saturate_limit_adu_fallback: Any = None,
     n_stack: int | None = None,
     saturate_limit_fraction: float = 0.85,
+    zone_mode: str = "legacy",
+    zone_sigma_linear: float = 3.5,
+    zone_sigma_noisy1: float = 2.5,
+    zone_sigma_noisy2: float = 1.5,
+    sigma_px: Any = None,
+    sky_median_adu: Any = None,
+    prematch_peak_sigma_floor: Any = None,
 ) -> pd.DataFrame:
     """Tag MASTERSTAR catalog rows by flux vs SNR noise floor and saturation limit (equipment x 0.85).
 
     ``noise_floor_adu`` must match the DAO pre-match SNR filter (``median + kxsigma``) from
     :func:`detect_stars_and_match_catalog` (see ``det_meta["noise_floor_adu"]``).
+
+    When ``zone_mode`` is ``peak_significance``, noisy sub-classes use ``peak_dao / bg_sigma_adu``.
     """
     import numpy as np
 
@@ -6220,7 +6273,6 @@ def _annotate_masterstars_flux_zones(
     except (TypeError, ValueError):
         nf = None
 
-    # Saturation: scale equipment limit by n_stack when a stacked reference is used (typical MASTERSTAR is one copied frame -> n_stack=1).
     ns = int(n_stack) if n_stack is not None else 1
     ns = max(1, ns)
 
@@ -6243,74 +6295,88 @@ def _annotate_masterstars_flux_zones(
     out["noise_floor_adu"] = nf if nf is not None else np.nan
     out["saturate_limit_adu_85pct"] = sat_lim if sat_lim is not None else np.nan
 
-    # -- Noisy sub-kategorie --
-    # Prahy su fixne v kode - adaptivne pre akukolvek zostavu a podmienky.
-    # noise_floor = median + kxsigma  kde k = prematch_peak_sigma_floor (config)
-    # Noisy1: flux medzi noise_floor a (median + 3sigma) -> mozna premenna, slabsi signal
-    # Noisy2: flux medzi (median + 2sigma) a noise_floor -> velmi slaby signal
-    # Noisy3: flux < (median + 2sigma)                   -> prakticky nepouzitelne
-    # Pre vypocet sigma prahov: odhadneme zo samotneho noise_floor
-    # noise_floor = med + k*std  => std = (noise_floor - med) / k
-    # k = prematch_peak_sigma_floor (typicky 2.5)
-    # Pre jednoduchost: noise_floor_2s = med + (2/k)*(nf - med)
-    #                   noise_floor_3s = nf  (= med + k*std, kde k~2.5 ~ 3sigma)
-
-    # Saturacia: porovnavaj PEAK pixel hodnotu (nie flux sumu!)
-    # flux je aperture sum = suma ADU v aperture -> vzdy >> sat_limit pre akukolvek hviezdu
-    # peak_max_adu = max pixel v hviezde -> spravna velicina pre saturaciu
     if "peak_max_adu" in out.columns:
         peak_s = pd.to_numeric(out["peak_max_adu"], errors="coerce")
     else:
-        # Fallback: ak peak_max_adu chyba, pouzi flux (stary sposob, nepresny)
         peak_s = flux_s
 
-    out["zone"] = "linear"
+    mode = str(zone_mode or "legacy").strip().lower()
+    if mode not in ("legacy", "peak_significance"):
+        mode = "legacy"
 
-    if sat_lim is not None:
-        out.loc[peak_s > float(sat_lim), "zone"] = "saturated"
+    if mode == "legacy":
+        out["zone"] = "linear"
 
-    if nf is not None:
-        nf_val = float(nf)
-        # Odhad medianu signalu (pre vypocet sub-prahov)
-        finite_flux = flux_s[flux_s.notna() & (flux_s < nf_val)]
-        if len(finite_flux) > 10:
-            flux_med = float(finite_flux.median())
+        if sat_lim is not None:
+            out.loc[peak_s > float(sat_lim), "zone"] = "saturated"
+
+        if nf is not None:
+            nf_val = float(nf)
+            finite_flux = flux_s[flux_s.notna() & (flux_s < nf_val)]
+            if len(finite_flux) > 10:
+                flux_med = float(finite_flux.median())
+            else:
+                flux_med = float(flux_s.median()) if flux_s.notna().any() else 0.0
+
+            spread = nf_val - flux_med
+            noisy2_thresh = flux_med + (2.0 / 3.0) * spread
+            noisy3_thresh = flux_med + (1.0 / 3.0) * spread
+
+            linear_mask = out["zone"] == "linear"
+            noisy1_mask = linear_mask & (flux_s < nf_val) & (flux_s >= noisy2_thresh)
+            noisy2_mask = linear_mask & (flux_s < noisy2_thresh) & (flux_s >= noisy3_thresh)
+            noisy3_mask = linear_mask & (flux_s < noisy3_thresh)
+
+            out.loc[noisy1_mask, "zone"] = "noisy1"
+            out.loc[noisy2_mask, "zone"] = "noisy2"
+            out.loc[noisy3_mask, "zone"] = "noisy3"
+    else:
+        out["zone"] = ""
+        if sat_lim is not None:
+            out.loc[peak_s > float(sat_lim), "zone"] = "saturated"
+
+        bg_sigma = _resolve_masterstar_bg_sigma_adu(
+            sigma_px=sigma_px,
+            noise_floor_adu=noise_floor_adu,
+            sky_median_adu=sky_median_adu,
+            prematch_peak_sigma_floor=prematch_peak_sigma_floor,
+        )
+        if bg_sigma is None:
+            _masterstar_zone_log_once(
+                "sigma_unresolvable",
+                "[MASTERSTAR zone] peak_significance mode: bg_sigma_adu unresolvable - "
+                "leaving zone empty (maps to neznama_zona downstream).",
+            )
         else:
-            flux_med = float(flux_s.median()) if flux_s.notna().any() else 0.0
+            t1 = float(zone_sigma_linear)
+            t2 = float(zone_sigma_noisy1)
+            t3 = float(zone_sigma_noisy2)
+            if "peak_dao" in out.columns:
+                peak_dao_s = pd.to_numeric(out["peak_dao"], errors="coerce")
+            else:
+                peak_dao_s = pd.Series(np.nan, index=out.index, dtype=float)
+            peak_sig = peak_dao_s / float(bg_sigma)
+            unsat = out["zone"].eq("")
+            sig_ok = unsat & peak_sig.notna()
+            sig_miss = unsat & peak_sig.isna()
+            out.loc[sig_miss, "zone"] = "unknown"
+            out.loc[sig_ok & (peak_sig >= t1), "zone"] = "linear"
+            out.loc[sig_ok & (peak_sig >= t2) & (peak_sig < t1), "zone"] = "noisy1"
+            out.loc[sig_ok & (peak_sig >= t3) & (peak_sig < t2), "zone"] = "noisy2"
+            out.loc[sig_ok & (peak_sig < t3), "zone"] = "noisy3"
+            if sig_miss.any():
+                _masterstar_zone_log_once(
+                    "peak_dao_missing",
+                    "[MASTERSTAR zone] peak_significance mode: peak_dao missing/NaN rows "
+                    "marked zone=unknown (not flux fallback).",
+                )
 
-        # Sub-prahy: linearna interpolacia medzi flux_med a nf_val
-        # noisy1_thresh = nf_val           (= median + k*sigma, config k)
-        # noisy2_thresh = flux_med + 2/3 * (nf_val - flux_med)  (~2sigma ak k=3)
-        # noisy3_thresh = flux_med + 1/3 * (nf_val - flux_med)  (~1sigma ak k=3)
-        spread = nf_val - flux_med
-        noisy2_thresh = flux_med + (2.0 / 3.0) * spread  # ~2sigma
-        noisy3_thresh = flux_med + (1.0 / 3.0) * spread  # ~1sigma
-
-        linear_mask = out["zone"] == "linear"
-        # Noisy1: pod noise_floor ale nad 2sigma prahom -> slaby ale mozno pouzitelny
-        noisy1_mask = linear_mask & (flux_s < nf_val) & (flux_s >= noisy2_thresh)
-        # Noisy2: pod 2sigma ale nad 1sigma -> velmi slaby
-        noisy2_mask = linear_mask & (flux_s < noisy2_thresh) & (flux_s >= noisy3_thresh)
-        # Noisy3: pod 1sigma -> nepouzitelny
-        noisy3_mask = linear_mask & (flux_s < noisy3_thresh)
-
-        out.loc[noisy1_mask, "zone"] = "noisy1"
-        out.loc[noisy2_mask, "zone"] = "noisy2"
-        out.loc[noisy3_mask, "zone"] = "noisy3"
-
-    # is_saturated: peak > sat_limit
     if sat_lim is not None:
         out["is_saturated"] = (peak_s > float(sat_lim)).fillna(False)
     else:
         out["is_saturated"] = False
 
-    if nf is not None:
-        # is_noisy = True pre akukolvek noisy sub-kategoriu
-        out["is_noisy"] = out["zone"].isin(["noisy1", "noisy2", "noisy3"])
-    else:
-        out["is_noisy"] = False
-
-    # is_usable: len linear (nie saturated, nie ziadna noisy kategoria)
+    out["is_noisy"] = out["zone"].isin(["noisy1", "noisy2", "noisy3"])
     out["is_usable"] = out["zone"].eq("linear") & flux_s.notna()
     return out
 
@@ -8550,7 +8616,8 @@ def detect_stars_and_match_catalog(
         _snr_k = 10.0
     # Spodna hranica 0.5 = zhoda s AppConfig / DAO-STARS pre MASTERSTAR; horna 15 = per-frame default k=10 zostane platny.
     _snr_k = min(15.0, max(0.5, _snr_k))
-    noise_floor = float(med + _snr_k * max(float(std) if np.isfinite(std) else 0.0, 1.0))
+    _bg_sigma_adu = max(float(std) if np.isfinite(std) else 0.0, 1.0)
+    noise_floor = float(med + _snr_k * _bg_sigma_adu)
     snr_keep = np.isfinite(pmax_arr) & (pmax_arr > noise_floor)
     n_snr = int(np.count_nonzero(snr_keep))
     if 0 < n_snr < n:
@@ -9137,6 +9204,8 @@ def detect_stars_and_match_catalog(
     n_matched_final = int(cat_nonempty.sum()) if len(df_out) else 0
     meta = {
         "noise_floor_adu": float(noise_floor),
+        "sky_median_adu": float(med),
+        "bg_sigma_adu": float(_bg_sigma_adu),
         "n_detected_dao_raw": int(n_raw_dao),
         "n_dao_after_spatial_cap": int(n_spatial),
         "n_detected_dao": n_detected_dao,
@@ -12464,6 +12533,13 @@ def generate_masterstar_and_catalog(
         equipment_saturate_adu=equipment_saturate_adu,
         saturate_limit_adu_fallback=det_meta.get("saturate_limit_adu"),
         saturate_limit_fraction=float(_cfg_ms.saturate_limit_fraction),
+        zone_mode=str(_cfg_ms.masterstar_zone_mode),
+        zone_sigma_linear=float(_cfg_ms.masterstar_zone_sigma_linear),
+        zone_sigma_noisy1=float(_cfg_ms.masterstar_zone_sigma_noisy1),
+        zone_sigma_noisy2=float(_cfg_ms.masterstar_zone_sigma_noisy2),
+        sigma_px=det_meta.get("bg_sigma_adu"),
+        sky_median_adu=det_meta.get("sky_median_adu"),
+        prematch_peak_sigma_floor=det_meta.get("prematch_peak_sigma_floor"),
     )
     _dao_class_meta: dict[str, Any] = {}
     _recon_ms: dict[str, Any] | None = None

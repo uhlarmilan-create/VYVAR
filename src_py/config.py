@@ -767,6 +767,14 @@ class AppConfig:
     admission_sat_peak_frac: float = 0.70
     #: Pred matchom s Gaia: ponechat detekcie s peakom aspon ``median + kxsigma`` (nizsie = viac slabych hviezd).
     masterstar_prematch_peak_sigma_floor: float = 1.8
+    #: MASTERSTAR flux-zone classifier: ``legacy`` or ``peak_significance`` (peak_dao/bg_sigma).
+    masterstar_zone_mode: str = "legacy"
+    #: Peak-significance mode: ``linear`` when peak_dao/bg_sigma >= T1.
+    masterstar_zone_sigma_linear: float = 3.5
+    #: Peak-significance mode: noisy1 lower bound T2 (upper bound T1).
+    masterstar_zone_sigma_noisy1: float = 2.5
+    #: Peak-significance mode: noisy2 lower bound T3 (upper bound T2).
+    masterstar_zone_sigma_noisy2: float = 1.5
     #: MASTERSTAR katalog: DAO FWHM z najlepsieho zdrojoveho snimku (``best_frame_fwhm_px``), nie median ``VY_FWHM`` v hlavicke.
     masterstar_use_best_frame_fwhm: bool = True
     #: MASTERSTAR DAO pass 2: lokalny prah v sigma pri cielenych Gaia poziciach bez DAO zhody (min. 1.5 v kode).
@@ -2083,6 +2091,32 @@ class AppConfig:
         except (TypeError, ValueError):
             self.masterstar_prematch_peak_sigma_floor = 3.2
         self.masterstar_prematch_peak_sigma_floor = max(0.5, min(6.0, float(self.masterstar_prematch_peak_sigma_floor)))
+
+        _zmode = str(data.get("masterstar_zone_mode", self.masterstar_zone_mode) or "legacy").strip().lower()
+        self.masterstar_zone_mode = (
+            _zmode if _zmode in ("legacy", "peak_significance") else "legacy"
+        )
+        try:
+            self.masterstar_zone_sigma_linear = float(
+                data.get("masterstar_zone_sigma_linear", self.masterstar_zone_sigma_linear)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_zone_sigma_linear = 3.5
+        try:
+            self.masterstar_zone_sigma_noisy1 = float(
+                data.get("masterstar_zone_sigma_noisy1", self.masterstar_zone_sigma_noisy1)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_zone_sigma_noisy1 = 2.5
+        try:
+            self.masterstar_zone_sigma_noisy2 = float(
+                data.get("masterstar_zone_sigma_noisy2", self.masterstar_zone_sigma_noisy2)
+            )
+        except (TypeError, ValueError):
+            self.masterstar_zone_sigma_noisy2 = 1.5
+        self.masterstar_zone_sigma_linear = max(0.5, min(20.0, float(self.masterstar_zone_sigma_linear)))
+        self.masterstar_zone_sigma_noisy1 = max(0.5, min(20.0, float(self.masterstar_zone_sigma_noisy1)))
+        self.masterstar_zone_sigma_noisy2 = max(0.5, min(20.0, float(self.masterstar_zone_sigma_noisy2)))
 
         # WAVE-B STEP 6: masterstar_platesolve_prewrite_rms_max_px / _prewrite_relaxed_rms_max_px /
         # _nn_refine_max_rms_px and masterstar_sip_force_rms_guard_ratio hardcoded as solver internals
