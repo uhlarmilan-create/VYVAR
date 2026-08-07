@@ -95,13 +95,10 @@ def _reclassify(
         noise_floor_adu=nf,
         equipment_saturate_adu=sat_lim / 0.85 if sat_lim > 0 else None,
         saturate_limit_adu_fallback=sat_lim,
-        zone_mode="peak_significance",
-        zone_sigma_linear=t1,
-        zone_sigma_noisy1=t2,
-        zone_sigma_noisy2=t3,
         sigma_px=sigma,
         sky_median_adu=sky,
         prematch_peak_sigma_floor=k,
+        dao_detection_n_equiv=t1,
     )
 
 

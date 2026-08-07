@@ -6192,6 +6192,87 @@ def select_comparison_stars_spatial_grid(
 
 _MASTERSTAR_ZONE_LOG_ONCE: set[str] = set()
 
+# Whole-sigma step for noisy sub-bands below the detection significance (statistical definition).
+_MASTERSTAR_ZONE_SIGMA_STEP = 1.0
+
+
+def _masterstar_zone_sigma_thresholds(
+    dao_detection_n_equiv: Any,
+) -> tuple[float, float, float] | None:
+    """Linear/noisy boundaries from DAO detection significance (peak_dao/bg_sigma >= N_equiv)."""
+    try:
+        t1 = float(dao_detection_n_equiv)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(t1) or t1 <= 0:
+        return None
+    step = float(_MASTERSTAR_ZONE_SIGMA_STEP)
+    return t1, t1 - step, t1 - 2.0 * step
+
+
+def _detect_empirical_clip_level_adu(data: "np.ndarray") -> float | None:
+    """Return the ADU level of frame truncation pile-up, or None if the frame is not clipped."""
+    import numpy as np
+
+    arr = np.asarray(data, dtype=np.float64)
+    finite = arr[np.isfinite(arr)]
+    if finite.size == 0:
+        return None
+    vmax = float(np.max(finite))
+    if not math.isfinite(vmax) or vmax <= 0:
+        return None
+    at_max = np.abs(finite - vmax) <= 0.5
+    if int(np.count_nonzero(at_max)) >= 8:
+        return vmax
+    for clip_candidate in (65535.0, 32767.0):
+        near = np.abs(finite - clip_candidate) <= 0.5
+        if int(np.count_nonzero(near)) >= 8:
+            return clip_candidate
+    return None
+
+
+def _resolve_peak_saturation_limit_adu(
+    *,
+    camera_sat_limit_adu: float | None,
+    saturate_fraction: float,
+    n_stack: int = 1,
+    sky_median_adu: float | None = None,
+    frame_max_adu: float | None = None,
+    empirical_clip_adu: float | None = None,
+) -> float | None:
+    """Peak-test saturation ceiling: empirical clip first; camera constant only on raw-scale data."""
+    ns = max(1, int(n_stack))
+    frac = float(saturate_fraction)
+    if empirical_clip_adu is not None:
+        try:
+            ec = float(empirical_clip_adu)
+            if math.isfinite(ec) and ec > 0:
+                return ec * frac / float(ns)
+        except (TypeError, ValueError):
+            pass
+    if camera_sat_limit_adu is None:
+        return None
+    try:
+        cam_lim = float(camera_sat_limit_adu) * frac / float(ns)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(cam_lim) or cam_lim <= 0:
+        return None
+    sky = float("nan")
+    fmax = float("nan")
+    try:
+        if sky_median_adu is not None:
+            sky = float(sky_median_adu)
+        if frame_max_adu is not None:
+            fmax = float(frame_max_adu)
+    except (TypeError, ValueError):
+        pass
+    if math.isfinite(fmax) and fmax > cam_lim * 1.02:
+        return None
+    if math.isfinite(sky) and sky > 0.20 * cam_lim:
+        return None
+    return cam_lim
+
 
 def _masterstar_zone_log_once(key: str, msg: str) -> None:
     if key in _MASTERSTAR_ZONE_LOG_ONCE:
@@ -6242,20 +6323,20 @@ def _annotate_masterstars_flux_zones(
     saturate_limit_adu_fallback: Any = None,
     n_stack: int | None = None,
     saturate_limit_fraction: float = 0.85,
-    zone_mode: str = "legacy",
-    zone_sigma_linear: float = 3.5,
-    zone_sigma_noisy1: float = 2.5,
-    zone_sigma_noisy2: float = 1.5,
     sigma_px: Any = None,
     sky_median_adu: Any = None,
     prematch_peak_sigma_floor: Any = None,
+    frame_max_adu: Any = None,
+    empirical_clip_adu: Any = None,
+    dao_detection_n_equiv: Any = None,
 ) -> pd.DataFrame:
-    """Tag MASTERSTAR catalog rows by flux vs SNR noise floor and saturation limit (equipment x 0.85).
+    """Tag MASTERSTAR catalog rows by peak significance (peak_dao/bg_sigma) and saturation.
+
+    Linear/usability boundary T1 = ``dao_detection_n_equiv`` (same N-sigma as DAOFIND threshold).
+    Noisy sub-bands step below in whole sigma (``_MASTERSTAR_ZONE_SIGMA_STEP``).
 
     ``noise_floor_adu`` must match the DAO pre-match SNR filter (``median + kxsigma``) from
     :func:`detect_stars_and_match_catalog` (see ``det_meta["noise_floor_adu"]``).
-
-    When ``zone_mode`` is ``peak_significance``, noisy sub-classes use ``peak_dao / bg_sigma_adu``.
     """
     import numpy as np
 
@@ -6293,64 +6374,48 @@ def _annotate_masterstars_flux_zones(
             pass
 
     out["noise_floor_adu"] = nf if nf is not None else np.nan
-    out["saturate_limit_adu_85pct"] = sat_lim if sat_lim is not None else np.nan
 
     if "peak_max_adu" in out.columns:
         peak_s = pd.to_numeric(out["peak_max_adu"], errors="coerce")
     else:
         peak_s = flux_s
 
-    mode = str(zone_mode or "legacy").strip().lower()
-    if mode not in ("legacy", "peak_significance"):
-        mode = "legacy"
+    peak_sat_lim = _resolve_peak_saturation_limit_adu(
+        camera_sat_limit_adu=sat_lim,
+        saturate_fraction=float(saturate_limit_fraction),
+        n_stack=ns,
+        sky_median_adu=sky_median_adu,
+        frame_max_adu=frame_max_adu,
+        empirical_clip_adu=empirical_clip_adu,
+    )
+    out["saturate_limit_adu_85pct"] = peak_sat_lim if peak_sat_lim is not None else np.nan
 
-    if mode == "legacy":
-        out["zone"] = "linear"
+    out["zone"] = ""
+    if peak_sat_lim is not None:
+        out.loc[peak_s > float(peak_sat_lim), "zone"] = "saturated"
 
-        if sat_lim is not None:
-            out.loc[peak_s > float(sat_lim), "zone"] = "saturated"
-
-        if nf is not None:
-            nf_val = float(nf)
-            finite_flux = flux_s[flux_s.notna() & (flux_s < nf_val)]
-            if len(finite_flux) > 10:
-                flux_med = float(finite_flux.median())
-            else:
-                flux_med = float(flux_s.median()) if flux_s.notna().any() else 0.0
-
-            spread = nf_val - flux_med
-            noisy2_thresh = flux_med + (2.0 / 3.0) * spread
-            noisy3_thresh = flux_med + (1.0 / 3.0) * spread
-
-            linear_mask = out["zone"] == "linear"
-            noisy1_mask = linear_mask & (flux_s < nf_val) & (flux_s >= noisy2_thresh)
-            noisy2_mask = linear_mask & (flux_s < noisy2_thresh) & (flux_s >= noisy3_thresh)
-            noisy3_mask = linear_mask & (flux_s < noisy3_thresh)
-
-            out.loc[noisy1_mask, "zone"] = "noisy1"
-            out.loc[noisy2_mask, "zone"] = "noisy2"
-            out.loc[noisy3_mask, "zone"] = "noisy3"
-    else:
-        out["zone"] = ""
-        if sat_lim is not None:
-            out.loc[peak_s > float(sat_lim), "zone"] = "saturated"
-
-        bg_sigma = _resolve_masterstar_bg_sigma_adu(
-            sigma_px=sigma_px,
-            noise_floor_adu=noise_floor_adu,
-            sky_median_adu=sky_median_adu,
-            prematch_peak_sigma_floor=prematch_peak_sigma_floor,
+    bg_sigma = _resolve_masterstar_bg_sigma_adu(
+        sigma_px=sigma_px,
+        noise_floor_adu=noise_floor_adu,
+        sky_median_adu=sky_median_adu,
+        prematch_peak_sigma_floor=prematch_peak_sigma_floor,
+    )
+    if bg_sigma is None:
+        _masterstar_zone_log_once(
+            "sigma_unresolvable",
+            "[MASTERSTAR zone] bg_sigma_adu unresolvable - "
+            "leaving zone empty (maps to neznama_zona downstream).",
         )
-        if bg_sigma is None:
+    else:
+        thresholds = _masterstar_zone_sigma_thresholds(dao_detection_n_equiv)
+        if thresholds is None:
             _masterstar_zone_log_once(
-                "sigma_unresolvable",
-                "[MASTERSTAR zone] peak_significance mode: bg_sigma_adu unresolvable - "
+                "n_equiv_missing",
+                "[MASTERSTAR zone] dao_detection_n_equiv unresolvable - "
                 "leaving zone empty (maps to neznama_zona downstream).",
             )
         else:
-            t1 = float(zone_sigma_linear)
-            t2 = float(zone_sigma_noisy1)
-            t3 = float(zone_sigma_noisy2)
+            t1, t2, t3 = thresholds
             if "peak_dao" in out.columns:
                 peak_dao_s = pd.to_numeric(out["peak_dao"], errors="coerce")
             else:
@@ -6367,12 +6432,12 @@ def _annotate_masterstars_flux_zones(
             if sig_miss.any():
                 _masterstar_zone_log_once(
                     "peak_dao_missing",
-                    "[MASTERSTAR zone] peak_significance mode: peak_dao missing/NaN rows "
+                    "[MASTERSTAR zone] peak_dao missing/NaN rows "
                     "marked zone=unknown (not flux fallback).",
                 )
 
-    if sat_lim is not None:
-        out["is_saturated"] = (peak_s > float(sat_lim)).fillna(False)
+    if peak_sat_lim is not None:
+        out["is_saturated"] = (peak_s > float(peak_sat_lim)).fillna(False)
     else:
         out["is_saturated"] = False
 
@@ -8006,11 +8071,20 @@ def detect_stars_match_master_reference(
     )
 
     pmax_arr = _box_peaks_at_centroids(arr, x, y)
+    _frame_max_adu = float(np.nanmax(arr))
+    _empirical_clip_adu = _detect_empirical_clip_level_adu(arr)
+    _peak_sat_lim = _resolve_peak_saturation_limit_adu(
+        camera_sat_limit_adu=sat_limit,
+        saturate_fraction=sat_frac,
+        sky_median_adu=float(med),
+        frame_max_adu=_frame_max_adu,
+        empirical_clip_adu=_empirical_clip_adu,
+    )
     _sat_block = _vectorized_star_saturation_columns(
         arr,
         x,
         y,
-        sat_limit=sat_limit,
+        sat_limit=_peak_sat_lim,
         sat_frac=sat_frac,
         peak_dao=peak_dao,
         peak_max_adu=pmax_arr,
@@ -8383,6 +8457,7 @@ def detect_stars_and_match_catalog(
             _base_fw = dao_detection_fwhm_pixels(hdr, configured_fallback=_fb_c)
     else:
         _base_fw = dao_detection_fwhm_pixels(hdr, configured_fallback=_fb_c)
+    _dao_n_equiv_used: float | None = None
     try:
         from photutils.detection import DAOStarFinder  # type: ignore
 
@@ -8438,6 +8513,7 @@ def detect_stars_and_match_catalog(
         _thr, _n_equiv_used = _dao_detection_threshold_adu(
             float(std_dao), cfg=AppConfig(), dao_threshold_sigma=float(_ds),
         )
+        _dao_n_equiv_used = float(_n_equiv_used)
         # Adaptive threshold monitoring: match-rate check runs after first catalog match pass (below).
         try:
             _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
@@ -8600,11 +8676,20 @@ def detect_stars_and_match_catalog(
     sat_frac = min(max(sat_frac, 0.5), 1.0)
 
     pmax_arr = _box_peaks_at_centroids(arr, x, y)
+    _frame_max_adu = float(np.nanmax(arr))
+    _empirical_clip_adu = _detect_empirical_clip_level_adu(arr)
+    _peak_sat_lim = _resolve_peak_saturation_limit_adu(
+        camera_sat_limit_adu=sat_limit,
+        saturate_fraction=sat_frac,
+        sky_median_adu=float(med),
+        frame_max_adu=_frame_max_adu,
+        empirical_clip_adu=_empirical_clip_adu,
+    )
     _sat_block = _vectorized_star_saturation_columns(
         arr,
         x,
         y,
-        sat_limit=sat_limit,
+        sat_limit=_peak_sat_lim,
         sat_frac=sat_frac,
         peak_dao=peak_dao,
         peak_max_adu=pmax_arr,
@@ -9206,6 +9291,8 @@ def detect_stars_and_match_catalog(
         "noise_floor_adu": float(noise_floor),
         "sky_median_adu": float(med),
         "bg_sigma_adu": float(_bg_sigma_adu),
+        "frame_max_adu": float(_frame_max_adu),
+        "empirical_clip_adu": _empirical_clip_adu,
         "n_detected_dao_raw": int(n_raw_dao),
         "n_dao_after_spatial_cap": int(n_spatial),
         "n_detected_dao": n_detected_dao,
@@ -9225,6 +9312,9 @@ def detect_stars_and_match_catalog(
         **foot_meta,
         "field_catalog_cone_csv": str(Path(field_catalog_export_path)) if field_catalog_export_path else None,
         "dao_threshold_sigma": float(dao_threshold_sigma),
+        "dao_detection_n_equiv": (
+            float(_dao_n_equiv_used) if _dao_n_equiv_used is not None and math.isfinite(_dao_n_equiv_used) else None
+        ),
         "dao_fwhm_px": _fwhm_used,
         "dao_detect_binning": int(bfac),
         "prematch_peak_sigma_floor": float(_snr_k),
@@ -12533,13 +12623,16 @@ def generate_masterstar_and_catalog(
         equipment_saturate_adu=equipment_saturate_adu,
         saturate_limit_adu_fallback=det_meta.get("saturate_limit_adu"),
         saturate_limit_fraction=float(_cfg_ms.saturate_limit_fraction),
-        zone_mode=str(_cfg_ms.masterstar_zone_mode),
-        zone_sigma_linear=float(_cfg_ms.masterstar_zone_sigma_linear),
-        zone_sigma_noisy1=float(_cfg_ms.masterstar_zone_sigma_noisy1),
-        zone_sigma_noisy2=float(_cfg_ms.masterstar_zone_sigma_noisy2),
         sigma_px=det_meta.get("bg_sigma_adu"),
         sky_median_adu=det_meta.get("sky_median_adu"),
         prematch_peak_sigma_floor=det_meta.get("prematch_peak_sigma_floor"),
+        frame_max_adu=det_meta.get("frame_max_adu"),
+        empirical_clip_adu=det_meta.get("empirical_clip_adu"),
+        dao_detection_n_equiv=(
+            det_meta.get("dao_detection_n_equiv")
+            if det_meta.get("dao_detection_n_equiv") is not None
+            else float(_cfg_ms.dao_detection_n_equiv)
+        ),
     )
     _dao_class_meta: dict[str, Any] = {}
     _recon_ms: dict[str, Any] | None = None
