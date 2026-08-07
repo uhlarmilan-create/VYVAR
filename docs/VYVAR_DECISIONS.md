@@ -2410,4 +2410,20 @@ also wrapped `_vyvar_df_to_csv` -- the annotated masterstars CSV was never writt
 annotate try block; retain fraction as informational census only.
 
 **Detail:** `docs/VYVAR_LIMITATIONS.md` (INV-MS-01-REMOVED). Anchor regression retained in
-`dev/tests/test_invariants_p2.py` fixture test. A-6 magnitude-split diagnostic remains open.
+`dev/tests/test_invariants_p2.py` fixture test. A-6 magnitude-split diagnostic **closed**
+2026-08-07 (`docs/VYVAR_DAO_DETECTION.md`).
+
+## DAO-ONLY-CLASSIFY-REPORT-NOT-FILTER (2026-08-07)
+
+**Decision:** DAO_ONLY rows are **classified and reported**, not filtered at detection or
+MASTERSTAR write time.
+
+**Rationale:** The DAO-PHYS / A-6 campaign showed no detection-stage filter separates artifact
+from astrophysical candidates without unacceptable depth loss. Magnitude-vs-Gaia-cap classes
+(`artifact_negative`, `unmatched_in_range`, `ambiguous_depth`, `beyond_catalogue`, `indeterminate`)
+plus `sigma_g_row` bands give operators visibility. Consumption remains gated by `snr50_ok` and
+downstream photometry filters (`comp_selection_per_target.py:514-523`,
+`variability_detector.py:101`). Class counts are installation-specific (local Gaia DB) and must
+not become runtime gates.
+
+**Reference:** `docs/VYVAR_DAO_DETECTION.md`, `src_py/dao_reconcile.py`, `dev/results/CURSOR_RESULT_dao_close.md`.

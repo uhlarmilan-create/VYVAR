@@ -198,6 +198,10 @@ the symptom surfaces in LC quality and in the informational `MASTERSTAR DAO_ONLY
 installations or wired to any gate.** The transferable quantity is the implied-G distribution
 (`implied_g_mag`, `implied_g_minus_depth` per row), not the raw counts. No runtime gate (A-6/A-6b).
 
+Operators should treat wide-rig `unmatched_in_range` populations as undecidable at detection
+stage on current evidence (DAO-CLOSE confusion-blend test refuted local Gaia blend hypothesis on
+drafts 435/500). See `docs/VYVAR_DAO_DETECTION.md`.
+
 ## MASTERSTAR architecture (enhancement thread)
 
 Single-frame MASTERSTAR copy is scientifically usable but non-standard vs stacked reference

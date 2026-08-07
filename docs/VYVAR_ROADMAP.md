@@ -76,7 +76,8 @@ Audit synthesis: `docs/VYVAR_AUDIT_FINAL.md`. Operational TODO index:
 | 3 | **A-3** | HIGH | Median/sigma-clip stack (replace single-frame copy) |
 | 4 | **A-4** | HIGH | Stack provenance in header + `pipeline_meta.json` |
 | 5 | **A-5** | HIGH | Recalibrate DAO threshold against stack noise/PSF |
-| 6 | **A-6** | DONE | Split `DAO_ONLY` health metric by magnitude vs Gaia cap (per-class census + CSV columns; no runtime gate) |
+| **DAO-THRESHOLD-PARAMS** | -- | **CLOSED (2026-08-07).** `masterstar_dao_threshold_sigma`, `sips_dao_threshold_sigma`, `qc_dao_detection_sigma`: no detection-stage change indicated; draft_501 inflation driven by pre-calibrated additive pedestal, not rig geometry alone. Reopen: two-rig empirical sweep at matched calibration state. See `docs/VYVAR_DAO_DETECTION.md` section 5.1. |
+| 6 | **A-6** | DONE | Split `DAO_ONLY` health metric by magnitude vs Gaia cap (per-class census + CSV columns; no runtime gate). **DAO detection workstream closed 2026-08-07** (`docs/VYVAR_DAO_DETECTION.md`). |
 | 7 | **C-1** | HIGH | Admission gate: predicted per-epoch SNR (`g_lim_*` + Labbe sigma_bkg_ap) |
 | 8 | **C-2** | HIGH | CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE catalogue flags |
 | 9 | **CR-1** | MED | Cosmic-ray rejection (L.A.Cosmic or equivalent) |
