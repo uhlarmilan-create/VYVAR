@@ -80,7 +80,6 @@ LITERAL_OPTIONS: dict[str, tuple[str, ...]] = {
     "blind_index_select_mode": ("auto", "series_all", "single"),
     "blind_img_select_mode": ("per_cell", "central"),
     "masterstar_accept_mode": ("odds", "fraction"),
-    "masterstar_zone_mode": ("legacy", "peak_significance"),
     "phase01_flux_col": ("dao_flux", "psf_flux"),
 }
 

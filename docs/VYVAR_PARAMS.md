@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-07T08:52:13Z at git HEAD 0ee01b3._
+_Generated 2026-08-07T09:45:51Z at git HEAD 6db4b67._
 
 ## Summary
 
-- Entries: 291
-- Tier: basic 13, advanced 71, expert 207
-- Kind: static 273, derived 0, resolved 18
-- Widget: auto 119, custom 147, hidden 25
-- Owner: db_static 9, config_runtime 263, fits_dynamic 6, internal 13
-- Scope: universal 241, rig 32, site 10, session 8
-- Scope key: none 241, rig 16, rig_band 2, rig_sampling 14, site 10, frame 8
+- Entries: 287
+- Tier: basic 13, advanced 71, expert 203
+- Kind: static 269, derived 0, resolved 18
+- Widget: auto 119, custom 143, hidden 25
+- Owner: db_static 9, config_runtime 259, fits_dynamic 6, internal 13
+- Scope: universal 237, rig 32, site 10, session 8
+- Scope key: none 237, rig 16, rig_band 2, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 19, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -161,10 +161,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `masterstar_sibling_rms_max_px` | 2.0 | 0.5 .. 10 | advanced | static | config_runtime | rig | rig_sampling | b | custom | Masterstar Sibling RMS Max PX |
 | `masterstar_sibling_stack_n` | 10 | - | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Sibling Stack N |
 | `masterstar_use_best_frame_fwhm` | True | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Use Best Frame FWHM |
-| `masterstar_zone_mode` | legacy | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Zone Mode |
-| `masterstar_zone_sigma_linear` | 3.5 | 0.5 .. 20 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Zone Sigma Linear |
-| `masterstar_zone_sigma_noisy1` | 2.5 | 0.5 .. 20 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Zone Sigma Noisy1 |
-| `masterstar_zone_sigma_noisy2` | 1.5 | 0.5 .. 20 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Zone Sigma Noisy2 |
 | `phase01_chip_interior_margin_px` | 50 | - | advanced | static | config_runtime | rig | rig_sampling | b | auto | Phase01 Chip Interior Margin PX |
 | `phase01_plate_scale_arcsec_per_px` | 1.3 | 0 .. 30 | expert | resolved | fits_dynamic | session | frame | n/a | auto | Phase01 Plate Scale Arcsec Per PX |
 | `plate_scale_arcsec_per_px` | 1.3 | 0.1 .. 30 | expert | resolved | fits_dynamic | session | frame | n/a | auto | Plate Scale Arcsec Per PX |
