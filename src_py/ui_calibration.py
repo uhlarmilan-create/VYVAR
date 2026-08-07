@@ -89,7 +89,6 @@ def render_calibration_library_flat_warnings(db: VyvarDatabase, plan: Any) -> No
             continue
         st.warning(
             f"Filter **{fl}** has no master in the library. A fallback will be used or the group will be skipped.",
-            icon="!",
         )
 
 
