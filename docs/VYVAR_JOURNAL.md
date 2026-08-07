@@ -2,13 +2,58 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
----
+## 2026-08-07 -- SESSION-CLOSE (DAO detection closure; doc sync)
 
----
+**Rozsah 2026-08-05 .. 2026-08-07.** Uzavreni DAO workstreamu a synchronizace stavovych dokumentu.
 
----
+### INV-MS-01 a A2 oprava zapisu masterstars CSV
 
----
+- Runtime invariant **INV-MS-01** (WARN/FAIL na `dao_only_fraction`) **odstranen** -- prahy z wide-rig
+  anchoru nejsou prenosne na Newton / pre-kalibrovane behy (draft_501: 0.417 vs anchor 0.037).
+  Rozhodnuti: `docs/VYVAR_DECISIONS.md` INV-MS-01-REMOVAL.
+- **A2:** pri selhani annotate handleru se `_vyvar_df_to_csv` preskocil -> 0 LC s matoucim logem
+  (draft_501). Oprava: CSV zapis mimo annotate try block; frakce zustava informacni census.
+
+### Audit kalibracnich cest (Task B, read-only)
+
+- Tri mechanismy misto dvou: (1) VYVAR kalibrace, (2) PASSTHROUGH (chybi dark), (3)
+  `pre_calibrated_mode`. **F-B01:** PASSTHROUGH zapisuje `CALIBRATION_MODE=vyvar_calibrated` a
+  PDF muze tvrdit aplikovanou VYVAR kalibraci, kdyz zadna nebyla. Report:
+  `dev/results/CURSOR_RESULT_calpath_audit.md` (sekce 13 rozhodnuti, 14 poradi oprav).
+
+### Parametry -- scope osa (scope_key, skupiny a/b/c)
+
+- Triaz `scope` / `scope_key` / `scope_group` (a=fyzika rigu, b=unit artefakt, c=tuning,
+  n/a=ne-rig). EXPLICIT tabulka v `dev/tools/classify_params_scope.py`. Opravy C'-3 a D1
+  companions (arcsec/FWHM normalizace -> `universal/n/a`). Vysledky:
+  `dev/results/CURSOR_RESULT_params_scope_*.md`.
+
+### D1 -- neaktivni unit normalizace (plumbing)
+
+- `src_py/unit_resolver.py`, 10 companion poli (`None` defaulty), resolver na call sitech.
+  Chovani beze zmeny; tabulka konverzi a navrh D1b defaultu v
+  `dev/results/CURSOR_RESULT_d1_unit_normalisation.md`. **D1b ceka** na review Milana.
+
+### D2 -- design per-rig storage (bez implementace)
+
+- 19 klicu skupiny (a); `sigma_sys_mag` klic jen `equipment_id`; `k2_defaults_bprp` flat dict.
+  Implementace **blokovana** volbou uloziste: nested dict v `config.json` vs DB tabulka
+  `(ID_EQUIPMENTS, ID_TELESCOPE)`. Doporuceni: DB tabulka. Report:
+  `dev/results/CURSOR_RESULT_d2_per_rig_storage.md`.
+
+### DAO kampan -> uzavreni (DAO-PHYS-1/2/2b, A-6, A-6b, DAO-CLOSE)
+
+- Klasifikace DAO_ONLY podle implied G vs `confirmable_depth_g`; per-row `sigma_g_row`;
+  tridy `artifact_negative`, `unmatched_in_range`, `ambiguous_depth`, `beyond_catalogue`,
+  `indeterminate`. Report-only, zadna runtime brana.
+- P1 A/B: additive sloupce nemeni photometry SHA (`aa72e979...` n=325).
+- **DAO-CLOSE (2026-08-07):** referencni doc `docs/VYVAR_DAO_DETECTION.md`; confusion-blend
+  test **netestovatelny** s Gaia DB censored na G=17.5 (ne refutovan); unmeasurable fraction
+  na wide rigu dominuje ZP scatter, ne SNR jednotlivych detekci.
+- Commits: `8ed215f..44e8656`.
+
+**Otevrene (viz ROADMAP Post-DAO carry-forward):** P1-RECUT, Task A regression, D1b, D2,
+F-B01/F-B02, QHY294MM RN, BPM sidecars.
 
 ---
 

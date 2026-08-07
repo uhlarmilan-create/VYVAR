@@ -47,8 +47,9 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 | **KNOWN_REMOVED_KEYS builder-prose sweep** | LOW | Docs-guard sweep for removed config keys still mentioned in builder prose. |
 | **preprocess-QC summary durability** | MED | Persist QC summary into `pipeline_meta.json` (survive reruns). |
 | **PHASE0-BORDER-MARGIN-GEOMETRY** | MED | Derive Phase 0 `out_of_frame` border margin from aperture + sky annulus outer radius (FWHM-driven), not a fixed 50 px constant. Draft 451 `out_of_frame=78` is consistent with a 50 px strip (~12% frame area) -- count is not anomalous; only the constant is arbitrary. **No implementation in POST-451 closeout.** |
-| **D1** | MED | Group (b) unit normalisation: re-express px-native rig parameters as arcsec or FWHM multiples via resolved plate scale (see scope triage group b). Science-path change; needs byte-identity gate before merge. |
-| **D2** | HIGH | Per-rig storage for group (a) parameters: resolver on `resolve_sigma_sys_mag` pattern, `K2Source` for measured-vs-literature k'', widen `sigma_sys_mag` key beyond equipment_id alone; flat `k2_defaults_bprp` dict cannot hold per-rig values today. |
+| **D1** | MED | **DONE (2026-08-05).** Inactive unit-normalisation plumbing: `unit_resolver.py`, 10 arcsec/FWHM companion fields (`None` defaults), registry + call-site wiring. Result: `dev/results/CURSOR_RESULT_d1_unit_normalisation.md`. |
+| **D1b** | MED | **OPEN.** Conversion table and proposed normalised defaults in D1 result; companions remain `None` -- behaviour unchanged. Awaits Milan review before activating defaults. |
+| **D2** | HIGH | **OPEN (design done 2026-08-05).** Per-rig storage for group (a) parameters. Implementation blocked on storage choice: nested dict in `config.json` (`sigma_sys_mag` pattern) vs DB table keyed on `(ID_EQUIPMENTS`, `ID_TELESCOPE)`. Cursor recommended DB table. Result: `dev/results/CURSOR_RESULT_d2_per_rig_storage.md`. |
 | **DRAFT451-CAL-FRAME001** | MED | Draft 451 frame-001 calibrated product differs from draft 452 by **659.6 ADU** max while siblings differ ~121 ADU; raw 451 vs 452 inputs are byte-identical (0.0 ADU). Old-vs-new preprocess on the same night: **149/150** calibrated frames match exactly (452 vs 454); only frame 001 differs (**533.5 ADU**). **Evidence preserved (2026-07-29):** `dev/results/context/frame001_evidence/draft451_BO_CVn_Light_001.fits` SHA256 `15DED344DBC1CA4504FD419E38CC5A19DA16A6BBF001E5529B0005A0C2CFB041`; `draft452_BO_CVn_Light_001.fits` SHA256 `E5B6B3E261842E833CE341ADAD669E5A686136734475D674AFA12387C5D3D774`. Root cause still needs draft 451 calibration run logs. |
 | **CATALOG-PROVENANCE** | HIGH | **DONE (2026-07-29).** `catalog_provenance.py` stamps Gaia + VSX identity into run provenance; anchor `--full` gate `full-catalog-provenance` compares to snapshot (or live DB when snapshot lacks block) and names *input catalogue changed* before anonymous SHA fail. Fingerprint: `sha256(size + first_1MiB + last_1MiB)` -- full SHA over ~53 GB Gaia impractical. |
 | **SKY-SURFACE-BLAST-RADIUS** | MED | Drafts 438, 439, 444, 448, 449, 450, 451 carry inflated catalogues (40-75% DAO_ONLY). Draft 451 analysis: shared-target photometry unaffected (Group A RMS ratio 1.007); damage expected confined to spurious faint targets. **Open:** confirm whether any export from those drafts reached AAVSO or VarAstro. |
@@ -56,6 +57,18 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 | **R-CVN-EMPTY-COMP** | LOW | Empty-comp drop now reports `no_comps`; confirm nothing further needed (POST-453 ledger). |
 | **mono gaia_johnson adoption** | MED | Gated mono path adoption of `gaia_johnson` catalog helper. |
 | **v1.0.0 declaration** | HIGH | Joint Milan + Claude decision; open. |
+
+---
+
+## OPEN - Post-DAO session carry-forward (2026-08-07)
+
+| ID | Pri | Status / deliverable |
+|----|-----|----------------------|
+| **P1-RECUT** | HIGH | Golden ledger stale since `a9d7eb0` (2026-07-28). At least four intervening commits changed science outputs (`9b74548`, `683fba1`, `f0b310e`, `5cd6ae9`). Three tests fail: `test_headless_chain_sha`, `test_p1_snapshot_sha_matches_registered`, `test_p1_census_fingerprint_in_meta`. **Interim standard:** local A/B (two P1 headless runs at one HEAD, no `VYVAR_P1_REUSE_FROZEN`). |
+| **TASK-A-REGRESSION** | MED | `test_masterstars_csv_write_survives_bp_rp_failure` (`dev/tests/test_invariants_p2.py`) reimplements fixed A2 control flow in the test body; never calls `generate_masterstar_and_catalog`. A2 CSV-write mechanism untested against pre-fix pipeline. |
+| **F-B01-F-B02** | HIGH | Calibration-path audit: PASSTHROUGH runs record `CALIBRATION_MODE=vyvar_calibrated` and PDF may claim VYVAR calibration when none applied. Fix order: `dev/results/CURSOR_RESULT_calpath_audit.md` section 14; decisions section 13. |
+| **QHY294MM-RN-DOUBLE** | LOW/MED | DB read-noise 7.6 e- appears to be bin2 measurement (`draft_303`) that `param_resolver` scales by binning again to 15.2 e-. Minor at current sky levels; material for short/dark exposures. |
+| **BPM-SIDECAR-PATH** | MED | No `*_dark_bpm.json` found for any draft including VYVAR-calibrated runs. Whether path is dead, disabled, or writes outside draft tree is unresolved. |
 
 ---
 

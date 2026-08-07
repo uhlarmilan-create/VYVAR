@@ -1,8 +1,39 @@
 # VYVAR -- Development State
 
-**Status:** Science audit **closed** (2026-08-04).
+**Status:** Science audit **closed** (2026-08-04). DAO detection workstream **closed** (2026-08-07).
 
-Last updated: **2026-08-04** (SESSION-CLOSE 2026-08-04c: WIDE-ERR investigation record).
+Last updated: **2026-08-07** (SESSION-CLOSE 2026-08-07: DAO doc amendments + GitHub sync).
+
+**HEAD:** `44e8656` (post DAO-CLOSE; doc amendments pending this session-close push).
+
+## Session close 2026-08-07 (DAO detection closure + doc sync)
+
+DAO detection workstream **closed**. Reference: `docs/VYVAR_DAO_DETECTION.md` (amended 2026-08-07:
+confusion-blend untestable not refuted; unmeasurable-fraction wide-rig caveat). A-6 magnitude
+classification and INV-MS-01 removal complete. Commits `8ed215f..44e8656` on main.
+
+**Closed this arc:** INV-MS-01 runtime gate; A-6/A-6b DAO_ONLY classification (report, not
+filter); DAO-THRESHOLD-PARAMS question; D1 inactive unit-normalisation plumbing; params scope
+triage (`scope_key`, groups a/b/c); calibration-path audit (read-only); DAO-PHYS through
+DAO-CLOSE.
+
+**Open (explicit carry-forward):**
+
+1. **P1-RECUT** -- golden ledger stale since `a9d7eb0` (2026-07-28); science commits
+   `9b74548`, `683fba1`, `f0b310e`, `5cd6ae9` moved outputs. Three P1 ledger tests fail.
+   Interim standard: local A/B (two headless runs at one HEAD, no `VYVAR_P1_REUSE_FROZEN`).
+2. **Task A regression remediation** -- `test_masterstars_csv_write_survives_bp_rp_failure`
+   reimplements fixed control flow; does not call `generate_masterstar_and_catalog`.
+3. **D1b** -- conversion table exists; normalised companion defaults await Milan review (all
+   companions still `None`; behaviour unchanged).
+4. **D2** -- design complete; blocked on storage choice (nested `config.json` dict vs DB table
+   keyed on `(ID_EQUIPMENTS`, `ID_TELESCOPE)`; Cursor recommended DB table).
+5. **F-B01 / F-B02** -- PASSTHROUGH runs record `CALIBRATION_MODE=vyvar_calibrated`; fix order
+   in `dev/results/CURSOR_RESULT_calpath_audit.md` sections 13-14.
+6. **QHY294MM read-noise double-count** -- DB 7.6 e- may be bin2 value re-scaled to 15.2 e-.
+7. **BPM sidecars** -- no `*_dark_bpm.json` found for any draft; path status unresolved.
+
+Report: `dev/results/CURSOR_RESULT_session_close_20260807.md`.
 
 ## Session close 2026-08-04c (WIDE-ERR investigation record)
 
