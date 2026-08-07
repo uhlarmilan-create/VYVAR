@@ -199,8 +199,18 @@ installations or wired to any gate.** The transferable quantity is the implied-G
 (`implied_g_mag`, `implied_g_minus_depth` per row), not the raw counts. No runtime gate (A-6/A-6b).
 
 Operators should treat wide-rig `unmatched_in_range` populations as undecidable at detection
-stage on current evidence (DAO-CLOSE confusion-blend test refuted local Gaia blend hypothesis on
-drafts 435/500). See `docs/VYVAR_DAO_DETECTION.md`.
+stage on current evidence. The DAO-CLOSE confusion-blend test is **not testable** with a Gaia
+build censored at G=17.5 (control self-match artefact in neighbour counts; corrected densities
+show no difference at 1x/3x FWHM). See `docs/VYVAR_DAO_DETECTION.md` section 4.5.
+
+## DAO-ONLY sigma_g unmeasurable fraction (wide-rig caveat)
+
+`sigma_g_unmeasurable_fraction` (rows with `sigma_g > 1.0 mag`) is reported in census and
+`pipeline_meta`. Because `sigma_g >= zp_residual_rms` for every row, on wide rigs with ZP fit
+RMS near 1 mag (435: 0.837; 500: 0.946) the metric largely reflects **global flux-to-G
+calibration scatter** across the field, not per-detection quality. On draft_501 (RMS 0.431) it
+does flag genuinely faint rows. Do not read wide-rig values near 0.95 as "96% junk detections".
+See `docs/VYVAR_DAO_DETECTION.md` section 3.5.
 
 ## MASTERSTAR architecture (enhancement thread)
 

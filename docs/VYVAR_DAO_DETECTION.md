@@ -130,9 +130,23 @@ Reported in census log (`format_dao_only_census_log`), `pipeline_meta` flat keys
 ### 3.5 Unmeasurable fraction diagnostic
 
 Fraction of DAO_ONLY rows with `sigma_g_row > 1.0 mag` is reported as
-`sigma_g_unmeasurable_fraction` in census and `pipeline_meta`. On reference drafts this is
-large by design (p90 sigma_g ~3.2-3.4 mag on 501/435), signalling weak photometry behind
-many band assignments.
+`sigma_g_unmeasurable_fraction` in census and `pipeline_meta`.
+
+Because `sigma_g = hypot(zp_residual_rms, 1.0857 / SNR(row))`, every row has
+`sigma_g >= zp_residual_rms` regardless of its photometry. With the measured ZP scatter
+(501: 0.431; 435: 0.837; 500: 0.946 mag), a 1.0 mag threshold means different things per
+draft:
+
+- **draft_500** (`zp_rms` 0.946): the floor alone is almost 1.0 mag, so the reported 0.959
+  is substantially a statement about the **flux-to-G calibration**, not individual detections.
+- **draft_435** (0.837): 0.842 -- same effect, slightly weaker.
+- **draft_501** (0.431): 0.388 requires `1.0857 / SNR` around 0.9 mag (SNR ~1.2), so here
+  the figure does reflect genuinely faint rows.
+
+Do not read 0.959 on wide rigs as "96% of detections are junk". On wide rigs the dominant
+uncertainty in `implied_g_mag` is the global zero point fitted across a ~5.7 degree field at
+~9.77 arcsec/px, not per-detection SNR. This is a known limitation of wide-rig classification;
+the ZP model is not opened for rework here.
 
 ### 3.6 Flux-to-G fit quality
 
@@ -193,22 +207,43 @@ Wide rigs are pixel-limited / correlated-noise dominated rather than seeing-limi
 
 Hypothesis: wide-rig `unmatched_in_range` rows are blends of unresolved faint Gaia stars.
 
-**Result: refuted / undecidable at detection stage.**
+**Result: hypothesis not testable with the local Gaia build; closure verdict unchanged
+(undecidable at detection stage).**
+
+The tool (`dev/tools/dao_close_confusion_blend.py:56-78`, `_neighbor_stats`) counts every Gaia
+source inside the search radius with no exclusion of the row's own counterpart. Control rows
+are Gaia-matched by definition, so each control contains itself. That is why
+`control_median_n_gaia_1x_fwhm = 1.0` while test rows read `0.0` -- the difference is the
+self-match, not neighbour density. After subtracting it:
+
+| draft | radius | test | control (raw) | control (self removed) |
+|-------|--------|------|---------------|------------------------|
+| 435 | 1x FWHM | 0 | 1 | 0 |
+| 435 | 2x FWHM | 0 | 1 | 0 |
+| 435 | 3x FWHM | 1 | 2 | 1 |
+| 500 | 1x FWHM | 0 | 1 | 0 |
+| 500 | 2x FWHM | 0 | 2 | 1 |
+| 500 | 3x FWHM | 1 | 2 | 1 |
+
+Corrected, the two populations are indistinguishable at 1x and 3x FWHM. There is no excess and
+no meaningful deficit -- the measurement shows **no difference**, not a result in the direction
+an earlier report described.
+
+More fundamentally: the local Gaia database is right-censored at G = 17.5. A blend producing
+implied G ~15 from components fainter than 17.5 is **invisible to the catalogue used to test for
+it**. "No excess local Gaia density" is therefore the expected reading whether the hypothesis
+is true or false.
 
 | Draft | n in-range | verdict |
 |-------|------------|---------|
 | 501 | 26 | inconclusive (sample too small) |
-| 435 | 81 | no excess local Gaia density vs controls |
-| 500 | 455 | no excess local Gaia density vs controls |
+| 435 | 81 | undecidable (catalogue-censored test) |
+| 500 | 455 | undecidable (catalogue-censored test) |
 
-Test rows show **lower** median neighbour counts at 1-2 x FWHM than brightness-matched Gaia
-controls (0 vs 1-2), and summed-neighbour implied G is **much fainter** than detection implied G
-(median delta ~20-24 mag), opposite the blend prediction.
+Tool: `dev/tools/dao_close_confusion_blend.py`; results: `dev/results/dao_close_confusion_blend.json`.
 
-Tool: `dev/tools/dao_close_confusion_blend.py`; results: `tmp/dao_close_confusion_blend.json`.
-
-Future evidence that could decide: deeper catalogue, finer sampling, or per-frame persistence
-with adequate drift baseline -- not queued as a task.
+A deeper all-sky catalogue would be required to test the blend hypothesis -- observation only,
+not a queued task.
 
 ---
 
@@ -220,7 +255,7 @@ with adequate drift baseline -- not queued as a task.
 | Sharpness bounds | Weak; sign reverses between rigs | DAO-PHYS-2 |
 | Split detections on bright stars | Median 10-16 px to nearest match; 5-17% within 5 px | A-6b split-detection tool |
 | Hot pixels | DAO-PHYS-2 underpowered (cap 200); DAO-PHYS-2b corrected test is authoritative | DAO-PHYS-2b result |
-| Confusion blends (faint unresolved Gaia sum) | Refuted on 435/500 | DAO-CLOSE confusion-blend test |
+| Confusion blends (faint unresolved Gaia sum) | Not testable (Gaia censored at G=17.5; control self-match artefact) | DAO-CLOSE confusion-blend test |
 | Runtime `dao_only_fraction` gate | Removed (INV-MS-01) | DECISIONS INV-MS-01-REMOVAL |
 
 ### 5.1 DAO threshold parameters (closed question)
@@ -246,6 +281,8 @@ VYVAR no longer fails a run on catalogue inflation. Residual symptoms:
 
 Operators should treat wide-rig `unmatched_in_range` populations as **undecidable at detection
 stage** on current evidence, not as confirmed uncatalogued sources or as pure artifacts.
+The confusion-blend hypothesis is not testable with a catalogue censored at the depth it
+concerns (`docs/VYVAR_DAO_DETECTION.md` section 4.5).
 
 ---
 
