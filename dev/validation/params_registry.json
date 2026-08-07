@@ -2563,6 +2563,75 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "masterstar_zone_mode": {
+    "help": "MASTERSTAR flux-zone classifier: legacy (aperture sum vs noise_floor_adu) or peak_significance (peak_dao/bg_sigma).",
+    "kind": "static",
+    "label": "Masterstar Zone Mode",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_zone_sigma_linear": {
+    "help": "Peak-significance mode: linear zone when peak_dao/bg_sigma >= this threshold (T1).",
+    "kind": "static",
+    "label": "Masterstar Zone Sigma Linear",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.5,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_zone_sigma_noisy1": {
+    "help": "Peak-significance mode: noisy1 lower bound (T2); upper bound is masterstar_zone_sigma_linear.",
+    "kind": "static",
+    "label": "Masterstar Zone Sigma Noisy1",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.5,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_zone_sigma_noisy2": {
+    "help": "Peak-significance mode: noisy2 lower bound (T3); upper bound is masterstar_zone_sigma_noisy1.",
+    "kind": "static",
+    "label": "Masterstar Zone Sigma Noisy2",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.5,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
   "masterstar_quality_crowded_n_cat_min": {
     "help": "Catalog-star count above which the masterstar quality checks switch to crowded-field mode.",
     "kind": "static",

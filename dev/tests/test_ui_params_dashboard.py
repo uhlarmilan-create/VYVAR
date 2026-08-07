@@ -73,8 +73,9 @@ def test_owner_groups_partition_every_key() -> None:
     # (243 -> 242). batch D added preprocess_sky_surface_force_reapply (242 -> 243);
     # BATCH-E-PARAMS-REGISTRY added 6 config_runtime keys (243 -> 249); total 277.
     # Task D1 added 10 hidden config_runtime normalised companion fields (277 -> 287).
+    # ZONE-FIX added 4 config_runtime keys (287 -> 291; config_runtime 259 -> 263).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 259, "fits_dynamic": 6, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 263, "fits_dynamic": 6, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:
