@@ -1,0 +1,76 @@
+{
+  "draft_000501/V_60_2": {
+    "n_unmatched_in_range": 26,
+    "sample_too_small": true,
+    "fwhm_arcsec": 3.344796777266307,
+    "flux_fit_zp": 22.309590821915776,
+    "flux_fit_residual_rms": 0.43098903149022383,
+    "confirmable_depth_g": 17.5,
+    "sigma_g_unmeasurable_fraction": 0.388086642599278,
+    "test_summary": {
+      "test_median_n_gaia_1x_fwhm": 0.0,
+      "test_median_delta_g_1x_fwhm": 21.77285827482558,
+      "test_median_n_gaia_2x_fwhm": 0.0,
+      "test_median_delta_g_2x_fwhm": 21.77285827482558,
+      "test_median_n_gaia_3x_fwhm": 0.0,
+      "test_median_delta_g_3x_fwhm": 21.187416327711496
+    },
+    "control_summary": {
+      "control_median_n_gaia_1x_fwhm": 1.0,
+      "control_median_n_gaia_2x_fwhm": 1.0,
+      "control_median_n_gaia_3x_fwhm": 1.0
+    },
+    "verdict": "inconclusive",
+    "verdict_reason": "n_unmatched_in_range=26 too small for population inference",
+    "future_evidence": "deeper all-sky catalogue, finer plate scale, or per-frame persistence with adequate drift baseline"
+  },
+  "draft_000435_snapshot_skysurface_20260716/NoFilter_60_2": {
+    "n_unmatched_in_range": 81,
+    "sample_too_small": false,
+    "fwhm_arcsec": 31.336538696466814,
+    "flux_fit_zp": 22.10664912508088,
+    "flux_fit_residual_rms": 0.837468993921922,
+    "confirmable_depth_g": 17.5,
+    "sigma_g_unmeasurable_fraction": 0.8415841584158416,
+    "test_summary": {
+      "test_median_n_gaia_1x_fwhm": 0.0,
+      "test_median_n_gaia_2x_fwhm": 0.0,
+      "test_median_delta_g_2x_fwhm": 23.394715518380227,
+      "test_median_n_gaia_3x_fwhm": 1.0,
+      "test_median_delta_g_3x_fwhm": 23.265048315161412
+    },
+    "control_summary": {
+      "control_median_n_gaia_1x_fwhm": 1.0,
+      "control_median_n_gaia_2x_fwhm": 1.0,
+      "control_median_n_gaia_3x_fwhm": 2.0
+    },
+    "verdict": "refuted_or_inconclusive",
+    "verdict_reason": "no clear excess local Gaia density vs matched controls at 1-3 x FWHM",
+    "future_evidence": "deeper all-sky catalogue, finer plate scale, or per-frame persistence with adequate drift baseline"
+  },
+  "draft_000500/NoFilter_60_2": {
+    "n_unmatched_in_range": 455,
+    "sample_too_small": false,
+    "fwhm_arcsec": 37.42431252658843,
+    "flux_fit_zp": 21.865263355066503,
+    "flux_fit_residual_rms": 0.9462119360041965,
+    "confirmable_depth_g": 17.5,
+    "sigma_g_unmeasurable_fraction": 0.9590643274853801,
+    "test_summary": {
+      "test_median_n_gaia_1x_fwhm": 0.0,
+      "test_median_delta_g_1x_fwhm": 20.66368351047703,
+      "test_median_n_gaia_2x_fwhm": 0.0,
+      "test_median_delta_g_2x_fwhm": 24.492280904044215,
+      "test_median_n_gaia_3x_fwhm": 1.0,
+      "test_median_delta_g_3x_fwhm": 23.905102715774653
+    },
+    "control_summary": {
+      "control_median_n_gaia_1x_fwhm": 1.0,
+      "control_median_n_gaia_2x_fwhm": 2.0,
+      "control_median_n_gaia_3x_fwhm": 2.0
+    },
+    "verdict": "refuted_or_inconclusive",
+    "verdict_reason": "no clear excess local Gaia density vs matched controls at 1-3 x FWHM",
+    "future_evidence": "deeper all-sky catalogue, finer plate scale, or per-frame persistence with adequate drift baseline"
+  }
+}
