@@ -6,7 +6,7 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-05T17:51:06Z at git HEAD 7620077._
+_Generated 2026-08-07T07:07:22Z at git HEAD 5306c6c._
 
 ## Summary
 
@@ -15,9 +15,9 @@ _Generated 2026-08-05T17:51:06Z at git HEAD 7620077._
 - Kind: static 269, derived 0, resolved 18
 - Widget: auto 119, custom 143, hidden 25
 - Owner: db_static 9, config_runtime 259, fits_dynamic 6, internal 13
-- Scope: universal 233, rig 36, site 10, session 8
-- Scope key: none 233, rig 17, rig_band 2, rig_sampling 17, site 10, frame 8
-- Rig triage group: a 20, b 13, c 3
+- Scope: universal 237, rig 32, site 10, session 8
+- Scope key: none 237, rig 16, rig_band 2, rig_sampling 14, site 10, frame 8
+- Rig triage group: a 19, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -94,7 +94,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `qc_fwhm_limit` | 8.0 | - | expert | static | config_runtime | universal | none | n/a | auto | QC FWHM Limit |
 | `qc_max_background_rms` | None | - | expert | static | config_runtime | universal | none | n/a | auto | QC Max Background RMS |
 | `qc_max_hfr` | 5.0 | - | advanced | static | config_runtime | rig | rig_sampling | b | auto | QC Max HFR |
-| `qc_max_hfr_fwhm_ratio` | None | - | expert | static | config_runtime | rig | rig_sampling | b | hidden | QC Max HFR FWHM Ratio |
+| `qc_max_hfr_fwhm_ratio` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | QC Max HFR FWHM Ratio |
 | `qc_min_stars` | 10 | - | advanced | static | config_runtime | universal | none | n/a | auto | QC Min Stars |
 
 ## alignment
@@ -204,7 +204,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `cog_ac_factor_max` | 5.0 | - | expert | static | config_runtime | universal | none | n/a | custom | COG Ac Factor Max |
 | `cog_aperture_correction_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | COG Aperture Correction Enabled |
 | `cog_isolation_fwhm` | 6.0 | - | expert | static | config_runtime | universal | none | n/a | custom | COG Isolation FWHM |
-| `cog_ladder_step_fwhm` | None | - | expert | static | config_runtime | rig | rig | a | hidden | COG Ladder Step FWHM |
+| `cog_ladder_step_fwhm` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | COG Ladder Step FWHM |
 | `cog_ladder_step_px` | 0.5 | - | expert | static | config_runtime | rig | rig_sampling | b | custom | COG Ladder Step PX |
 | `cog_min_stars` | 8 | 1 .. 500 | expert | static | config_runtime | universal | none | n/a | custom | COG Min Stars |
 | `cog_ref_fwhm` | 4.5 | 1.5 .. 10 | expert | static | config_runtime | universal | none | n/a | custom | COG Ref FWHM |
@@ -281,11 +281,11 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `comp_sparse_fallback_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Sparse Fallback Enabled |
 | `comp_sparse_fallback_min` | 0 | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Sparse Fallback Min |
 | `global_comp_pool_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Global Comp Pool Enabled |
-| `phase01_chip_interior_margin_arcsec` | None | - | expert | static | config_runtime | rig | rig_sampling | b | hidden | Phase01 Chip Interior Margin Arcsec |
+| `phase01_chip_interior_margin_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Phase01 Chip Interior Margin Arcsec |
 | `phase01_comparison_exclude_gaia_extobj` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Exclude Gaia Extobj |
 | `phase01_comparison_exclude_gaia_nss` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Exclude Gaia NSS |
 | `phase01_comparison_fov_fraction` | 0.75 | - | expert | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison FOV Fraction |
-| `phase01_comparison_isolation_radius_arcsec` | None | - | expert | static | config_runtime | rig | rig_sampling | b | hidden | Phase01 Comparison Isolation Radius Arcsec |
+| `phase01_comparison_isolation_radius_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Phase01 Comparison Isolation Radius Arcsec |
 | `phase01_comparison_isolation_radius_px` | 25.0 | 1 .. 200 | expert | static | config_runtime | rig | rig_sampling | b | custom | Phase01 Comparison Isolation Radius PX |
 | `phase01_comparison_mag_bright_threshold` | 12.75 | 6 .. 18 | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Mag Bright Threshold |
 | `phase01_comparison_max_comp_rms` | 0.1 | 0.01 .. 0.5 | advanced | resolved | config_runtime | universal | none | n/a | custom | Phase01 Comparison Max Comp RMS |

@@ -4529,10 +4529,10 @@
     "tier": "expert",
     "unit": "arcsec",
     "widget": "hidden",
-    "scope": "rig",
-    "scope_key": "rig_sampling",
-    "scope_group": "b",
-    "scope_confidence": "low"
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
   },
   "phase01_comparison_isolation_radius_arcsec": {
     "help": "Comp isolation radius in arcsec. None uses legacy phase01_comparison_isolation_radius_px.",
@@ -4544,10 +4544,10 @@
     "tier": "expert",
     "unit": "arcsec",
     "widget": "hidden",
-    "scope": "rig",
-    "scope_key": "rig_sampling",
-    "scope_group": "b",
-    "scope_confidence": "low"
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
   },
   "phase01_comparison_max_dist_fov_frac": {
     "help": "Max comp distance as fraction of half-diagonal FOV. None uses legacy max_dist_deg fallback.",
@@ -4574,10 +4574,10 @@
     "tier": "expert",
     "unit": null,
     "widget": "hidden",
-    "scope": "rig",
-    "scope_key": "rig_sampling",
-    "scope_group": "b",
-    "scope_confidence": "low"
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
   },
   "sips_dao_fwhm_fwhm_factor": {
     "help": "Initial DAO FWHM as multiple of measured FWHM. None uses legacy sips_dao_fwhm_px.",

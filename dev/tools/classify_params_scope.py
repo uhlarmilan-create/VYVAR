@@ -107,6 +107,21 @@ EXPLICIT: dict[str, ScopeResult] = {
     # --- group (b) unit artefacts ---
     "blind_verify_match_tol_px": ScopeResult("rig", "rig_sampling", "b", "low", "Target unit: arcsec via resolved plate scale."),
     "cog_ladder_step_px": ScopeResult("rig", "rig_sampling", "b", "low", "Target unit: FWHM multiples for aperture ladder step."),
+    "cog_ladder_step_fwhm": ScopeResult(
+        "universal", "none", "n/a", "high", "FWHM multiple; arcsec companion is the normalisation.",
+    ),
+    "blind_verify_match_tol_arcsec": ScopeResult(
+        "universal", "none", "n/a", "high", "Angular tolerance on sky; px companion is legacy.",
+    ),
+    "phase01_chip_interior_margin_arcsec": ScopeResult(
+        "universal", "none", "n/a", "high", "Angular margin on sky; px companion is legacy.",
+    ),
+    "phase01_comparison_isolation_radius_arcsec": ScopeResult(
+        "universal", "none", "n/a", "high", "Angular isolation radius; px companion is legacy.",
+    ),
+    "qc_max_hfr_fwhm_ratio": ScopeResult(
+        "universal", "none", "n/a", "high", "FWHM-normalised HFR ratio; the field is the normalisation.",
+    ),
     "crowding_tighten_min_fwhm_px": ScopeResult(
         "rig", "rig_sampling", "a", "high",
         "Undersampling gate in px; sampling is a pixel-domain property -- not group (b).",
