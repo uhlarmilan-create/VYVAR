@@ -516,6 +516,13 @@ def resolved_facts_model(
         sg = meta.get("dao_only_sigma_g_row_median")
         if sg is not None:
             val += f" | sigma_g median={float(sg):.3f} mag"
+        rms = meta.get("dao_only_flux_fit_residual_rms")
+        if rms is not None and math.isfinite(float(rms)):
+            val += f" | flux-to-G RMS={float(rms):.3f} mag"
+        un_frac = meta.get("dao_only_sigma_g_unmeasurable_fraction")
+        if un_frac is not None:
+            thr = meta.get("dao_only_sigma_g_unmeasurable_threshold_mag", 1.0)
+            val += f" | unmeasurable(sigma_g>{float(thr):.1f})={float(un_frac):.3f}"
         rows.append(
             {
                 "label": "DAO_ONLY census (informational)",

@@ -1027,6 +1027,7 @@ DAO_ONLY_CLASS_UNMATCHED_IN_RANGE = "unmatched_in_range"
 DAO_ONLY_CLASS_AMBIGUOUS_DEPTH = "ambiguous_depth"
 DAO_ONLY_CLASS_BEYOND_CATALOGUE = "beyond_catalogue"
 DAO_ONLY_CLASS_INDETERMINATE = "indeterminate"
+SIGMA_G_UNMEASURABLE_THRESHOLD_MAG = 1.0
 
 DAO_ONLY_CLASS_LABELS = (
     DAO_ONLY_CLASS_ARTIFACT_NEGATIVE,
@@ -1337,6 +1338,10 @@ def classify_dao_only_dataframe(
         meta["sigma_g_row_median"] = float(np.median(sig_arr))
         meta["sigma_g_row_mean"] = float(np.mean(sig_arr))
         meta["sigma_g_row_deciles"] = _implied_g_deciles(sig_arr)
+        n_unmeas = int(np.sum(sig_arr > SIGMA_G_UNMEASURABLE_THRESHOLD_MAG))
+        meta["sigma_g_unmeasurable_threshold_mag"] = SIGMA_G_UNMEASURABLE_THRESHOLD_MAG
+        meta["sigma_g_unmeasurable_n"] = n_unmeas
+        meta["sigma_g_unmeasurable_fraction"] = float(n_unmeas / sig_arr.size)
     meta["dao_only_implied_g_deciles"] = _implied_g_deciles(np.asarray(implied_samples, dtype=np.float64))
     meta["counts"] = counts
     meta["n_dao_only"] = int(dao_mask.sum())
@@ -1360,9 +1365,22 @@ def format_dao_only_census_log(meta: dict[str, Any], *, n_total: int) -> str:
     depth_s = f"{float(depth):.2f}" if depth is not None and math.isfinite(float(depth)) else "unresolved"
     if not meta.get("depth_resolvable", True):
         depth_s = f"unresolved ({meta.get('depth_unresolvable_reason', '?')})"
+    ff = meta.get("flux_fit") or {}
+    zp_rms = ff.get("residual_rms")
+    extras: list[str] = []
+    if zp_rms is not None and math.isfinite(float(zp_rms)):
+        extras.append(f"flux-to-G RMS={float(zp_rms):.3f} mag")
+    un_frac = meta.get("sigma_g_unmeasurable_fraction")
+    if un_frac is not None:
+        thr = meta.get("sigma_g_unmeasurable_threshold_mag", SIGMA_G_UNMEASURABLE_THRESHOLD_MAG)
+        extras.append(
+            f"unmeasurable(sigma_g>{float(thr):.1f})={float(un_frac):.3f}"
+        )
+    tail = f" | {'; '.join(extras)}" if extras else ""
     return (
         f"MASTERSTAR DAO_ONLY census: {n_dao}/{n_total} (fraction={frac:.3f}) "
-        f"[{', '.join(parts)}] | confirmable_depth G={depth_s} (from {winner}) | informational, not a gate"
+        f"[{', '.join(parts)}] | confirmable_depth G={depth_s} (from {winner}) | "
+        f"informational, not a gate{tail}"
     )
 
 
@@ -1413,6 +1431,18 @@ def dao_only_report_lines(pipeline_meta: dict[str, Any] | None) -> list[str]:
     rms = meta.get("dao_only_flux_fit_residual_rms")
     if zp is not None and rms is not None:
         lines.append(f"  Flux-to-G fit: zp={float(zp):.3f}, residual RMS={float(rms):.3f} mag")
+        if rms is not None and float(rms) > 0.6:
+            lines.append(
+                "  Note: large flux-to-G scatter weakens implied-G classification precision on this draft."
+            )
+    un_frac = meta.get("dao_only_sigma_g_unmeasurable_fraction")
+    if un_frac is not None:
+        thr = meta.get("dao_only_sigma_g_unmeasurable_threshold_mag", SIGMA_G_UNMEASURABLE_THRESHOLD_MAG)
+        n_u = meta.get("dao_only_sigma_g_unmeasurable_n")
+        lines.append(
+            f"  Unmeasurable fraction (sigma_g>{float(thr):.1f} mag): {float(un_frac):.3f}"
+            + (f" ({int(n_u)} rows)" if n_u is not None else "")
+        )
     return lines
 
 
@@ -1438,6 +1468,9 @@ def dao_only_class_meta_flat(meta: dict[str, Any]) -> dict[str, Any]:
         "dao_only_sigma_g_row_median": meta.get("sigma_g_row_median"),
         "dao_only_sigma_g_row_mean": meta.get("sigma_g_row_mean"),
         "dao_only_sigma_g_formula": meta.get("sigma_g_formula"),
+        "dao_only_sigma_g_unmeasurable_threshold_mag": meta.get("sigma_g_unmeasurable_threshold_mag"),
+        "dao_only_sigma_g_unmeasurable_n": meta.get("sigma_g_unmeasurable_n"),
+        "dao_only_sigma_g_unmeasurable_fraction": meta.get("sigma_g_unmeasurable_fraction"),
         "fleming_sigma_mag_population": meta.get("fleming_sigma_mag_population"),
         "gaia_db_max_g_mag": meta.get("max_g_mag") or gdb.get("max_g_mag"),
         "gaia_db_fingerprint_sha256": gdb.get("fingerprint_sha256"),

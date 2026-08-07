@@ -465,6 +465,22 @@ def test_format_dao_only_census_log():
     assert "informational, not a gate" in line
 
 
+def test_census_log_includes_unmeasurable_and_zp_rms():
+    meta = {
+        "confirmable_depth_g": 17.5,
+        "confirmable_depth_winner": "gaia_db_max_g_mag",
+        "depth_resolvable": True,
+        "counts": {DAO_ONLY_CLASS_UNMATCHED_IN_RANGE: 3},
+        "n_dao_only": 3,
+        "flux_fit": {"residual_rms": 0.837},
+        "sigma_g_unmeasurable_fraction": 0.5,
+        "sigma_g_unmeasurable_threshold_mag": 1.0,
+    }
+    line = format_dao_only_census_log(meta, n_total=50)
+    assert "flux-to-G RMS=0.837 mag" in line
+    assert "unmeasurable(sigma_g>1.0)=0.500" in line
+
+
 def test_reconcile_to_pipeline_meta_includes_dao_only_class():
     report = {
         "g_lim_50": 14.2,
