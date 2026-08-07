@@ -1,0 +1,209 @@
+{
+  "zone_distributions": {
+    "draft_452_fixture": {
+      "n": 2951,
+      "before": {
+        "saturated": 28,
+        "linear": 1799,
+        "noisy1": 210,
+        "noisy2": 182,
+        "noisy3": 732
+      },
+      "after": {
+        "saturated": 31,
+        "linear": 1741,
+        "noisy1": 337,
+        "noisy2": 596,
+        "noisy3": 246
+      },
+      "is_usable_before": 1799,
+      "is_usable_after": 1741
+    },
+    "draft_435": {
+      "n": 2951,
+      "before": {
+        "saturated": 28,
+        "linear": 1799,
+        "noisy1": 210,
+        "noisy2": 182,
+        "noisy3": 732
+      },
+      "after": {
+        "saturated": 31,
+        "linear": 678,
+        "noisy1": 166,
+        "noisy2": 370,
+        "noisy3": 1706
+      },
+      "is_usable_before": 1799,
+      "is_usable_after": 678
+    },
+    "draft_500": {
+      "n": 4122,
+      "before": {
+        "saturated": 23,
+        "linear": 1713,
+        "noisy1": 324,
+        "noisy2": 352,
+        "noisy3": 1710
+      },
+      "after": {
+        "saturated": 26,
+        "linear": 341,
+        "noisy1": 121,
+        "noisy2": 181,
+        "noisy3": 3453
+      },
+      "is_usable_before": 1713,
+      "is_usable_after": 341
+    },
+    "draft_502": {
+      "n": 1668,
+      "before": {
+        "saturated": 10,
+        "linear": 4,
+        "noisy1": 3,
+        "noisy2": 13,
+        "noisy3": 1638
+      },
+      "after": {
+        "linear": 1083,
+        "noisy2": 276,
+        "noisy1": 307,
+        "noisy3": 2
+      },
+      "is_usable_before": 4,
+      "is_usable_after": 1083
+    }
+  },
+  "draft_502_saturation": {
+    "n_masterstars_saturated_before": 10,
+    "n_targets_saturated_before": 2,
+    "histogram": {
+      "frame_max_adu": 98232.375,
+      "count_at_max": 1,
+      "truncation_detected": false,
+      "empirical_clip_adu": null,
+      "peak_sat_limit_resolved": null,
+      "Q_flagged_sample": [
+        {
+          "name": "1625355949977942400",
+          "peak_max_adu": 98300.546875,
+          "Q": 0.9911851989532842
+        },
+        {
+          "name": "1625409177508735872",
+          "peak_max_adu": 93631.15625,
+          "Q": 0.9702147543638668
+        },
+        {
+          "name": "1625373404725030528",
+          "peak_max_adu": 91320.625,
+          "Q": 1.0072673970471517
+        },
+        {
+          "name": "1625465733638160000",
+          "peak_max_adu": 86359.1875,
+          "Q": 0.9507059433784721
+        },
+        {
+          "name": "1625305338083329152",
+          "peak_max_adu": 83433.609375,
+          "Q": 0.947210665862442
+        },
+        {
+          "name": "1625455906752989952",
+          "peak_max_adu": 88137.90625,
+          "Q": 0.9823685438139349
+        },
+        {
+          "name": "1625381586638911488",
+          "peak_max_adu": 88299.90625,
+          "Q": 0.9329154613597084
+        },
+        {
+          "name": "1625468482417236864",
+          "peak_max_adu": 66694.890625,
+          "Q": 0.9819365000210445
+        },
+        {
+          "name": "1625284863975164032",
+          "peak_max_adu": 66129.9296875,
+          "Q": 0.9644570156781432
+        },
+        {
+          "name": "1625431614417974144",
+          "peak_max_adu": 63119.6640625,
+          "Q": 0.9860318574198091
+        }
+      ],
+      "Q_bright_unflagged_sample": [
+        {
+          "name": "1625566442031336064",
+          "peak_max_adu": 55333.8515625,
+          "Q": 0.9715021021499363
+        },
+        {
+          "name": "1625573829375431296",
+          "peak_max_adu": 49710.046875,
+          "Q": 0.9712317261936708
+        },
+        {
+          "name": "1625469611992999936",
+          "peak_max_adu": 54952.078125,
+          "Q": 0.975939146024525
+        },
+        {
+          "name": "1625561872186122496",
+          "peak_max_adu": 49920.515625,
+          "Q": 0.9914389627325116
+        },
+        {
+          "name": "1625560257278439808",
+          "peak_max_adu": 49850.8671875,
+          "Q": 0.9867403005768649
+        },
+        {
+          "name": "1625450477914254080",
+          "peak_max_adu": 51565.3125,
+          "Q": 1.0233299884149463
+        },
+        {
+          "name": "1625405638455683584",
+          "peak_max_adu": 50247.9140625,
+          "Q": 0.9844947521894123
+        },
+        {
+          "name": "1625381930236186752",
+          "peak_max_adu": 47002.3984375,
+          "Q": 0.9897025566565377
+        },
+        {
+          "name": "1625398732148334592",
+          "peak_max_adu": 48238.59765625,
+          "Q": 0.9927575385364081
+        },
+        {
+          "name": "1625370179205609984",
+          "peak_max_adu": 44123.515625,
+          "Q": 0.9919394319079897
+        }
+      ]
+    },
+    "TIC_198213332_before": {
+      "name": "TIC 198213332",
+      "catalog_id": "1625373404725030528",
+      "peak_max_adu": 91320.625,
+      "saturate_limit_adu_85pct": 55704.75,
+      "zone": "saturated",
+      "likely_saturated": "True",
+      "flux": 105209.09375
+    },
+    "TIC_198213332_after_reclassify": {
+      "zone": "linear",
+      "is_saturated": false
+    },
+    "n_masterstars_saturated_after": 0,
+    "is_usable_after": 1083
+  }
+}
