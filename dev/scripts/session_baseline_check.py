@@ -241,6 +241,51 @@ def check_ledger_hint(report: SessionReport) -> None:
 _TRACKED_DEPS = ("numpy", "astropy", "photutils")
 
 
+def check_anchor_manifest_db_parity(report: SessionReport) -> None:
+    """Phase 1a: anchor draft manifest core fields match OBS_DRAFT."""
+    _ensure_import_paths()
+    from config import AppConfig
+    from database import VyvarDatabase
+    from draft_provenance import manifest_db_parity_errors, record_draft_manifest_core
+
+    cfg = AppConfig(project_root=REPO_ROOT)
+    db_path = Path(cfg.database_path)
+    if not db_path.is_file():
+        report.add("manifest-db-parity", "WARN", "vyvar.sqlite3 missing")
+        return
+
+    anchor_dir = REPO_ROOT / "Archive" / "Drafts" / SNAPSHOT_NAME
+    if not anchor_dir.is_dir():
+        report.add("manifest-db-parity", "WARN", f"anchor dir missing ({SNAPSHOT_NAME})")
+        return
+
+    db = VyvarDatabase(db_path)
+    try:
+        row = db.conn.execute(
+            """
+            SELECT ID FROM OBS_DRAFT
+            WHERE ID = ? OR ARCHIVE_PATH LIKE ?
+            ORDER BY ID
+            LIMIT 1;
+            """,
+            (int(DRAFT_ID), f"%{SNAPSHOT_NAME}%"),
+        ).fetchone()
+        if row is None:
+            report.add("manifest-db-parity", "WARN", f"draft {DRAFT_ID} not in DB")
+            return
+        did = int(row["ID"])
+        record_draft_manifest_core(db, did)
+        errors = manifest_db_parity_errors(db, did)
+        if errors:
+            report.add("manifest-db-parity", "FAIL", errors[0][:80])
+        else:
+            report.add("manifest-db-parity", "PASS", f"draft_id={did}")
+    except Exception as exc:  # noqa: BLE001
+        report.add("manifest-db-parity", "FAIL", str(exc)[:80])
+    finally:
+        db.close()
+
+
 def check_deps_outdated(report: SessionReport) -> None:
     """Informational: surface outdated tracked deps. Never FAILs (WARN/PASS/SKIP).
 
@@ -749,6 +794,7 @@ def main(argv: list[str] | None = None) -> int:
     check_git_state(report)
     check_config_paths(report)
     check_pytest(report)
+    check_anchor_manifest_db_parity(report)
     check_ledger_hint(report)
     check_deps_outdated(report)
     if args.full:
