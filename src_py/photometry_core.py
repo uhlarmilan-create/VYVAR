@@ -11257,21 +11257,12 @@ def _get_plate_scale_from_cfg(
                     pix_um = None
                 try:
                     foc_mm = (
-                        float(db.get_equipment_focal_mm(id_eq))
-                        if (hasattr(db, "get_equipment_focal_mm") and id_eq > 0)
+                        float(db.get_telescope_focal_mm(id_tel if id_tel > 0 else None))
+                        if hasattr(db, "get_telescope_focal_mm")
                         else None
                     )
                 except Exception:  # noqa: BLE001
                     foc_mm = None
-                if foc_mm is None or not (math.isfinite(float(foc_mm)) and float(foc_mm) > 0):
-                    try:
-                        foc_mm = (
-                            float(db.get_telescope_focal_mm(id_tel if id_tel > 0 else None))
-                            if hasattr(db, "get_telescope_focal_mm")
-                            else None
-                        )
-                    except Exception:  # noqa: BLE001
-                        foc_mm = None
 
                 if (
                     pix_um is not None

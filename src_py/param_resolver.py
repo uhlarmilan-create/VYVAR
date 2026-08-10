@@ -541,18 +541,12 @@ def resolve_focal_mm(
     cfg: Any = None,
     db_value: float | None = None,
 ) -> Resolved:
-    if db_value is None and db is not None:
+    if db_value is None and db is not None and telescope_id is not None:
         try:
-            if equipment_id is not None:
-                db_value = db.get_equipment_focal_mm(int(equipment_id))
-        except Exception:  # noqa: BLE001
+            db_value = db.get_telescope_focal_mm(int(telescope_id))
+        except Exception as exc:  # noqa: BLE001
+            logging.debug('[EXC-0117] science path may skip or use stale defaults (try: / db_value = db.get_telescope_focal_m...: %s', exc)
             db_value = None
-        if (db_value is None or not _is_valid("focal_mm", db_value)) and telescope_id is not None:
-            try:
-                db_value = db.get_telescope_focal_mm(int(telescope_id))
-            except Exception as exc:  # noqa: BLE001
-                logging.debug('[EXC-0117] science path may skip or use stale defaults (try: / db_value = db.get_telescope_focal_m...: %s', exc)
-                pass
     # FOCALLEN sometimes carried in metres for fast scopes -> normalise.
     res = _resolve_equipment_intrinsic(
         "focal_mm", header=_focal_header_in_mm(header), db_value=db_value, cfg_value=None, log_label="focal_mm"

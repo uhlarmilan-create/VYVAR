@@ -3494,9 +3494,9 @@ def _resolve_focal_mm_for_plate_scale(
     header: fits.Header | None,
     db: VyvarDatabase | None,
     *,
-    equipment_id: int | None = None,
+    telescope_id: int | None = None,
 ) -> tuple[float | None, str]:
-    """Plausible FITS focal first; else ``EQUIPMENTS.FOCAL`` (optional); else ``TELESCOPE.FOCAL``."""
+    """Plausible FITS focal first; else ``TELESCOPE.FOCAL``."""
     if header is not None:
         hdr_mm = _header_focal_length_mm(header)
         if hdr_mm is not None:
@@ -3508,20 +3508,20 @@ def _resolve_focal_mm_for_plate_scale(
             hdr_mm = hdr_n
         if hdr_mm is not None and _focal_mm_plausible(hdr_mm):
             return float(hdr_mm), "fits_header"
-    if db is not None and equipment_id is not None:
+    if db is not None and telescope_id is not None:
         try:
-            eq_raw = db.get_equipment_focal_mm(int(equipment_id))
+            tel_raw = db.get_telescope_focal_mm(int(telescope_id))
         except Exception:  # noqa: BLE001
-            eq_raw = None
-        if eq_raw is not None:
-            eq_n, eq_fixed = normalize_telescope_focal_mm_for_plate_scale(float(eq_raw))
-            if eq_fixed:
+            tel_raw = None
+        if tel_raw is not None:
+            tel_n, tel_fixed = normalize_telescope_focal_mm_for_plate_scale(float(tel_raw))
+            if tel_fixed:
                 log_event(
-                    f"FOCAL: EQUIPMENTS.FOCAL (ID={int(equipment_id)}) vyzeralo ako 10x preklep "
-                    f"({eq_raw:g} mm -> {eq_n:g} mm) - pouzite pre mierku / solver."
+                    f"FOCAL: TELESCOPE.FOCAL (ID={int(telescope_id)}) vyzeralo ako 10x preklep "
+                    f"({tel_raw:g} mm -> {tel_n:g} mm) - pouzite pre mierku / solver."
                 )
-            if _focal_mm_plausible(eq_n):
-                return float(eq_n), "database_equipment"
+            if _focal_mm_plausible(tel_n):
+                return float(tel_n), "database_telescope"
     if db is not None:
         raw = db.get_telescope_focal_mm(None)
         if raw is not None:
@@ -3610,6 +3610,7 @@ def _enrich_calibration_metadata_from_header(
     *,
     db: VyvarDatabase | None,
     id_equipment: int | None,
+    id_telescope: int | None = None,
 ) -> None:
     """Add ``focal_length``, ``pixel_size_raw``, ``pixel_um``, ``focal_length_source`` for diagnostics / UI."""
 
@@ -3634,17 +3635,10 @@ def _enrich_calibration_metadata_from_header(
     src = "none"
     # Universal optics: prefer DB (UI) over FITS FOCALLEN for plate scale / solver hints.
     if db is not None:
-        eqf: float | None = None
-        if id_equipment is not None:
-            try:
-                eqf = db.get_equipment_focal_mm(int(id_equipment))
-            except Exception:  # noqa: BLE001
-                eqf = None
-        telf = db.get_telescope_focal_mm(None)
-        raw_db = eqf if eqf is not None else telf
-        if raw_db is not None:
-            focal_mm, _fx = normalize_telescope_focal_mm_for_plate_scale(float(raw_db))
-            src = "equipment_focal" if eqf is not None else "telescope_focal"
+        telf = db.get_telescope_focal_mm(int(id_telescope) if id_telescope is not None else None)
+        if telf is not None:
+            focal_mm, _fx = normalize_telescope_focal_mm_for_plate_scale(float(telf))
+            src = "telescope_focal"
 
     has_focallen = "FOCALLEN" in header and header["FOCALLEN"] not in (None, "", " ", "0", 0)
     if focal_mm is None and has_focallen:
@@ -3773,7 +3767,7 @@ def _plate_solve_input_bundle(
                 foc = None
         if foc is None:
             foc, _ = _resolve_focal_mm_for_plate_scale(
-                out["header"], db_u, equipment_id=_eq_use
+                out["header"], db_u, telescope_id=_tel_use
             )
         out["focal_mm"] = foc
         eff_um: float | None = None
@@ -18345,7 +18339,7 @@ def extract_fits_metadata(
     - pixel_size_um_physical (native pitch from header / DB merge)
     - pixel_size_um_header (**effective** pitch [um] = physical x binning for plate solve / WCS)
     - effective_pixel_um_plate_scale (native mean x XBINNING; solver / plate scale)
-    - focal_length [mm]: ``FOCALLEN`` v hlavicke ak je; inak ``EQUIPMENTS.FOCAL`` (ak je) alebo ``TELESCOPE.FOCAL``
+    - focal_length [mm]: ``FOCALLEN`` in header when present; else ``TELESCOPE.FOCAL``
     - focal_length_source, pixel_size_raw (surove cisla z hlavicky), pixel_um (= effective pixel)
     - temp
     - ra
@@ -18362,6 +18356,14 @@ def extract_fits_metadata(
     FITS+SQL focal/pixel (``XBINNING``-strict effective pixel) and ``EQUIPMENTS.SATURATE_ADU``.
     """
     fp = Path(filepath)
+    id_telescope: int | None = None
+    if db is not None and draft_id is not None:
+        try:
+            dr = db.fetch_obs_draft_by_id(int(draft_id)) or {}
+            if dr.get("ID_TELESCOPE") is not None:
+                id_telescope = int(dr["ID_TELESCOPE"])
+        except Exception:  # noqa: BLE001
+            id_telescope = None
     st: os.stat_result | None = None
     try:
         st = fp.stat()
@@ -18377,7 +18379,11 @@ def extract_fits_metadata(
             _recompute_effective_pixel_from_physical(meta)
             with fits.open(fp, memmap=False) as hdul:
                 _enrich_calibration_metadata_from_header(
-                    meta, hdul[0].header, db=db, id_equipment=id_equipment
+                    meta,
+                    hdul[0].header,
+                    db=db,
+                    id_equipment=id_equipment,
+                    id_telescope=id_telescope,
                 )
             if draft_id is not None:
                 comb = db.get_combined_metadata(fp, int(draft_id))
@@ -18398,7 +18404,13 @@ def extract_fits_metadata(
     if db is not None and id_equipment is not None:
         _merge_equipment_pixel_into_metadata(meta, db, int(id_equipment))
     _recompute_effective_pixel_from_physical(meta)
-    _enrich_calibration_metadata_from_header(meta, header, db=db, id_equipment=id_equipment)
+    _enrich_calibration_metadata_from_header(
+        meta,
+        header,
+        db=db,
+        id_equipment=id_equipment,
+        id_telescope=id_telescope,
+    )
     if draft_id is not None and db is not None:
         comb = db.get_combined_metadata(fp, int(draft_id))
         _apply_draft_combined_to_pipeline_meta(meta, comb)

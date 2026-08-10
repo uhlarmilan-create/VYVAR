@@ -122,6 +122,10 @@ class _LockedCursor:
     def rowcount(self) -> int:
         return int(self._cursor.rowcount)
 
+    @property
+    def description(self):
+        return self._cursor.description
+
     def __del__(self) -> None:
         self._release()
 
@@ -520,7 +524,7 @@ def _location_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
         "lon": float(row["LONGITUDE"]) if row["LONGITUDE"] is not None else 0.0,
         "alt_m": float(row["ALTITUDE"]) if row["ALTITUDE"] is not None else 0.0,
         "is_default": int(row["IS_DEFAULT"] or 0) if "IS_DEFAULT" in keys else 0,
-        "active": int(row["ACTIVE"] if row["ACTIVE"] is not None else 1) if "ACTIVE" in keys else 1,
+        "active": VyvarDatabase.normalize_active_db_value(row["ACTIVE"]) if "ACTIVE" in keys else 1,
     }
 
 
@@ -544,7 +548,7 @@ def get_observer_locations(db_path: str | Path, *, active_only: bool = False) ->
             sel += ", " + extra
         sql = f"{sel} FROM LOCATION"
         if active_only and "ACTIVE" in loc_cols:
-            sql += " WHERE ACTIVE IS NULL OR ACTIVE != 0"
+            sql += f" WHERE {VyvarDatabase.sql_expr_active_is_true('ACTIVE')} "
         sql += " ORDER BY ID;"
         cur = conn.execute(sql)
         return [_location_row_to_dict(r) for r in cur.fetchall()]
@@ -1142,7 +1146,8 @@ class VyvarDatabase:
         self._create_tables()
         self.initialize_database()
         self._ensure_obs_files_indexes()
-        self._drop_settings_table()
+        self._drop_vestigial_tables()
+        self._drop_equipments_focal_column()
 
     def _enable_foreign_keys(self) -> None:
         self.conn.execute("PRAGMA foreign_keys = ON;")
@@ -1166,7 +1171,7 @@ class VyvarDatabase:
                 ALIAS TEXT,
                 DIAMETER REAL,
                 FOCAL REAL,
-                ACTIVE INTEGER DEFAULT 1
+                ACTIVE TEXT DEFAULT 'YES'
             );
 
             CREATE TABLE IF NOT EXISTS LOCATION (
@@ -1242,7 +1247,6 @@ class VyvarDatabase:
         self._ensure_is_default_columns()
         self._ensure_equipments_saturate_adu_column()
         self._ensure_equipments_cosmic_columns()
-        self._ensure_equipments_focal_column()
         self._ensure_equipments_bayermask_column()
         self._ensure_scanning_gain_column()
         self._ensure_obs_files_draft_column()
@@ -1250,7 +1254,6 @@ class VyvarDatabase:
         self._ensure_obs_files_quality_inspection_columns()
         self._ensure_obs_files_observation_group_key()
         self._ensure_obs_files_scanning_and_calibration_columns()
-        self._ensure_photometry_light_curve_table()
         self._ensure_observation_import_columns()
         self._ensure_calibration_library_table()
         self._ensure_fits_header_cache_table()
@@ -1260,6 +1263,109 @@ class VyvarDatabase:
         self._ensure_obs_draft_masterstar_path_column()
         self._ensure_obs_draft_status_panel_columns()
         self._ensure_obs_draft_calibration_mode_column()
+        self._normalize_active_columns_to_text()
+
+    def _column_sql_type(self, table: str, column: str) -> str | None:
+        for row in self.conn.execute(f"PRAGMA table_info('{table}');"):
+            if str(row["name"]) == column:
+                return str(row["type"] or "").upper()
+        return None
+
+    def _normalize_active_values_in_place(self, table: str) -> None:
+        for row in self.conn.execute(f"SELECT ID, ACTIVE FROM {table};"):
+            want = self.normalize_active_text(row["ACTIVE"])
+            have = row["ACTIVE"]
+            if have is None or str(have).strip().upper() != want:
+                self.conn.execute(
+                    f"UPDATE {table} SET ACTIVE = ? WHERE ID = ?;",
+                    (want, int(row["ID"])),
+                )
+
+    def _rebuild_table_active_column_to_text(self, table: str, create_sql: str, copy_sql: str) -> None:
+        self.conn.executescript(
+            f"""
+            PRAGMA foreign_keys=OFF;
+            ALTER TABLE {table} RENAME TO {table}_OLD;
+            {create_sql}
+            {copy_sql}
+            DROP TABLE {table}_OLD;
+            PRAGMA foreign_keys=ON;
+            """
+        )
+
+    def _normalize_active_columns_to_text(self) -> None:
+        """One-time migration: ACTIVE is physically ``YES``/``NO`` on EQUIPMENTS/TELESCOPE/LOCATION."""
+        self._normalize_active_values_in_place("EQUIPMENTS")
+
+        tel_type = self._column_sql_type("TELESCOPE", "ACTIVE")
+        if tel_type and "INT" in tel_type:
+            self._rebuild_table_active_column_to_text(
+                "TELESCOPE",
+                """
+                CREATE TABLE TELESCOPE (
+                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    TELESCOPENAME TEXT,
+                    ALIAS TEXT,
+                    DIAMETER REAL,
+                    FOCAL REAL,
+                    ACTIVE TEXT DEFAULT 'YES',
+                    IS_DEFAULT INTEGER DEFAULT 0
+                );
+                """,
+                """
+                INSERT INTO TELESCOPE (
+                    ID, TELESCOPENAME, ALIAS, DIAMETER, FOCAL, ACTIVE, IS_DEFAULT
+                )
+                SELECT
+                    ID, TELESCOPENAME, ALIAS, DIAMETER, FOCAL,
+                    CASE
+                        WHEN ACTIVE IS NULL THEN 'YES'
+                        WHEN typeof(ACTIVE) IN ('integer', 'real') AND CAST(ACTIVE AS INTEGER) = 0 THEN 'NO'
+                        WHEN UPPER(TRIM(CAST(ACTIVE AS TEXT))) IN ('NO', 'N', 'FALSE', '0', '0.0') THEN 'NO'
+                        ELSE 'YES'
+                    END,
+                    COALESCE(IS_DEFAULT, 0)
+                FROM TELESCOPE_OLD;
+                """,
+            )
+        else:
+            self._normalize_active_values_in_place("TELESCOPE")
+
+        loc_type = self._column_sql_type("LOCATION", "ACTIVE")
+        if loc_type and "INT" in loc_type:
+            self._rebuild_table_active_column_to_text(
+                "LOCATION",
+                """
+                CREATE TABLE LOCATION (
+                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    PLACENAME TEXT,
+                    LATITUDE REAL,
+                    LONGITUDE REAL,
+                    ALTITUDE REAL,
+                    ACTIVE TEXT DEFAULT 'YES',
+                    IS_DEFAULT INTEGER DEFAULT 0
+                );
+                """,
+                """
+                INSERT INTO LOCATION (
+                    ID, PLACENAME, LATITUDE, LONGITUDE, ALTITUDE, ACTIVE, IS_DEFAULT
+                )
+                SELECT
+                    ID, PLACENAME, LATITUDE, LONGITUDE, ALTITUDE,
+                    CASE
+                        WHEN ACTIVE IS NULL THEN 'YES'
+                        WHEN typeof(ACTIVE) IN ('integer', 'real') AND CAST(ACTIVE AS INTEGER) = 0 THEN 'NO'
+                        WHEN UPPER(TRIM(CAST(ACTIVE AS TEXT))) IN ('NO', 'N', 'FALSE', '0', '0.0') THEN 'NO'
+                        ELSE 'YES'
+                    END,
+                    COALESCE(IS_DEFAULT, 0)
+                FROM LOCATION_OLD;
+                """,
+            )
+        elif loc_type:
+            self._normalize_active_values_in_place("LOCATION")
+
+        self.conn.commit()
 
     def _ensure_final_data_view(self) -> None:
         """View of rows that reference equipment/telescope (drafts, observations, QC runs).
@@ -1466,16 +1572,11 @@ class VyvarDatabase:
 
     @staticmethod
     def sql_expr_active_is_true(column_ref: str) -> str:
-        """SQL predicate: row is *active* (soft-delete off).
-
-        Accepts ``NULL``, numeric ``1``, or text ``YES``/``1``/``TRUE``/``Y`` as active;
-        numeric ``0`` or text ``NO``/``0``/``FALSE`` as inactive. Aligns with ``ACTIVE = 1`` style checks.
-        """
+        """SQL predicate: row is *active* (soft-delete off). Storage is ``YES``/``NO`` text."""
         c = column_ref.strip()
         return f"""(
             ({c}) IS NULL
-            OR (typeof({c}) IN ('integer', 'real') AND CAST({c} AS INTEGER) != 0)
-            OR (typeof({c}) = 'text' AND UPPER(TRIM(CAST({c} AS TEXT))) IN ('YES', 'Y', 'TRUE', '1'))
+            OR UPPER(TRIM(CAST({c} AS TEXT))) NOT IN ('NO', 'N', 'FALSE', '0', '0.0')
         )"""
 
     def count_final_data_for_equipment_id(self, equipment_id: int) -> int:
@@ -1550,12 +1651,14 @@ class VyvarDatabase:
             return 1
         return 1
 
+    @staticmethod
+    def normalize_active_text(raw: Any) -> str:
+        """Normalize ACTIVE column storage to ``YES`` or ``NO`` (text only)."""
+        return "NO" if VyvarDatabase.normalize_active_db_value(raw) == 0 else "YES"
+
     def _coerce_sql_param(self, table: str, col: str, raw: Any) -> Any:
         if col == "ACTIVE":
-            n = int(self.normalize_active_db_value(raw))
-            if table == "TELESCOPE":
-                return 0 if n == 0 else 1
-            return n
+            return self.normalize_active_text(raw)
         if col == "IS_DEFAULT":
             return 0 if int(self.normalize_active_db_value(raw)) == 0 else 1
         if table == "EQUIPMENTS" and col == "BAYERMASK":
@@ -1679,7 +1782,7 @@ class VyvarDatabase:
                     if "ACTIVE" not in pragma_cols:
                         raise ValueError(f"Tabulka {table} nema stlpec ACTIVE - soft-delete nie je mozny.")
                     self.conn.execute(
-                        f"UPDATE {table} SET ACTIVE = 0 WHERE {pk_col} = ?;",
+                        f"UPDATE {table} SET ACTIVE = 'NO' WHERE {pk_col} = ?;",
                         (did,),
                     )
                     soft_deactivated += 1
@@ -1798,6 +1901,15 @@ class VyvarDatabase:
         row = cur.fetchone()
         return dict(row) if row is not None else None
 
+    def _try_refresh_draft_manifest(self, draft_id: int) -> None:
+        """Best-effort dual-write of draft_manifest.json from OBS_DRAFT (Phase 1 shadow)."""
+        try:
+            from draft_provenance import record_draft_manifest_core
+
+            record_draft_manifest_core(self, int(draft_id))
+        except Exception as exc:  # noqa: BLE001
+            log_event(f"draft_manifest refresh failed for draft_id={int(draft_id)}: {exc}")
+
     def update_obs_draft_center(self, draft_id: int, center_ra_deg: float, center_de_deg: float) -> None:
         """Persist draft field center (ICRS degrees) in ``OBS_DRAFT``."""
         cur = self.conn.execute(
@@ -1847,6 +1959,7 @@ class VyvarDatabase:
         if cur.rowcount == 0:
             raise ValueError(f"Draft '{draft_id}' not found for status-panel update.")
         self.conn.commit()
+        self._try_refresh_draft_manifest(int(draft_id))
 
     def set_obs_draft_masterstar_path(self, draft_id: int, masterstar_path: str | None) -> None:
         """Persist absolute MASTERSTAR FITS path for a draft."""
@@ -1863,6 +1976,7 @@ class VyvarDatabase:
         if cur.rowcount == 0:
             raise ValueError(f"Draft '{draft_id}' not found for MASTERSTAR path update.")
         self.conn.commit()
+        self._try_refresh_draft_manifest(int(draft_id))
 
     def get_obs_draft_masterstar_path(self, draft_id: int) -> str | None:
         """Return persisted MASTERSTAR path for a draft (if available)."""
@@ -1896,6 +2010,7 @@ class VyvarDatabase:
         if cur.rowcount == 0:
             raise ValueError(f"Draft '{draft_id}' not found for MASTERSTAR source update.")
         self.conn.commit()
+        self._try_refresh_draft_manifest(int(draft_id))
 
     def get_obs_draft_masterstar_source_path(self, draft_id: int) -> str | None:
         """Return persisted MASTERSTAR *source* (selected frame) path for a draft."""
@@ -1926,6 +2041,7 @@ class VyvarDatabase:
         if cur.rowcount == 0:
             raise ValueError(f"Draft '{draft_id}' not found for MASTERSTAR FITS path update.")
         self.conn.commit()
+        self._try_refresh_draft_manifest(int(draft_id))
 
     def qc_processing_run_exists(self, processing_hash: str) -> bool:
         cur = self.conn.execute(
@@ -2037,6 +2153,7 @@ class VyvarDatabase:
             (str(status), int(draft_id)),
         )
         self.conn.commit()
+        self._try_refresh_draft_manifest(int(draft_id))
 
     def count_obs_files(self) -> int:
         cur = self.conn.execute("SELECT COUNT(*) FROM OBS_FILES;")
@@ -2705,33 +2822,6 @@ class VyvarDatabase:
                 self.conn.execute(f"ALTER TABLE OBS_FILES ADD COLUMN {name} {sql_type};")
         self.conn.commit()
 
-    def _ensure_photometry_light_curve_table(self) -> None:
-        """Multi-filter light-curve storage (JD vs magnitude), keyed by draft / filter."""
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS PHOTOMETRY_LIGHT_CURVE (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                DRAFT_ID INTEGER,
-                OBSERVATION_ID TEXT,
-                OBSERVATION_GROUP_KEY TEXT NOT NULL DEFAULT '',
-                FILTER_NAME TEXT NOT NULL DEFAULT '',
-                JD REAL NOT NULL,
-                MAG REAL,
-                MAG_ERR REAL,
-                SOURCE_FILE TEXT,
-                CREATED_AT TEXT NOT NULL,
-                FOREIGN KEY (DRAFT_ID) REFERENCES OBS_DRAFT (ID) ON DELETE CASCADE
-            );
-            """
-        )
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS IDX_PHOT_LC_DRAFT_JD ON PHOTOMETRY_LIGHT_CURVE (DRAFT_ID, JD);"
-        )
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS IDX_PHOT_LC_FILTER ON PHOTOMETRY_LIGHT_CURVE (FILTER_NAME);"
-        )
-        self.conn.commit()
-
     def _ensure_scanning_gain_column(self) -> None:
         """Schema migration: add GAIN column to SCANNING."""
         cursor = self.conn.execute("PRAGMA table_info('SCANNING');")
@@ -2797,10 +2887,9 @@ class VyvarDatabase:
         cursor = self.conn.execute("PRAGMA table_info('TELESCOPE');")
         tel_cols = {row["name"] for row in cursor.fetchall()}
         if "ACTIVE" not in tel_cols:
-            self.conn.execute("ALTER TABLE TELESCOPE ADD COLUMN ACTIVE INTEGER DEFAULT 1;")
-            self.conn.execute("UPDATE TELESCOPE SET ACTIVE = 1 WHERE ACTIVE IS NULL;")
+            self.conn.execute("ALTER TABLE TELESCOPE ADD COLUMN ACTIVE TEXT DEFAULT 'YES';")
+            self.conn.execute("UPDATE TELESCOPE SET ACTIVE = 'YES' WHERE ACTIVE IS NULL;")
 
-        self._normalize_telescope_active_to_binary()
         self.conn.commit()
 
     #: Designated default rows for the reference tables (Phase 2). These are the
@@ -2827,8 +2916,8 @@ class VyvarDatabase:
 
         loc_cols = {r["name"] for r in self.conn.execute("PRAGMA table_info('LOCATION');").fetchall()}
         if "ACTIVE" not in loc_cols:
-            self.conn.execute("ALTER TABLE LOCATION ADD COLUMN ACTIVE INTEGER DEFAULT 1;")
-            self.conn.execute("UPDATE LOCATION SET ACTIVE = 1 WHERE ACTIVE IS NULL;")
+            self.conn.execute("ALTER TABLE LOCATION ADD COLUMN ACTIVE TEXT DEFAULT 'YES';")
+            self.conn.execute("UPDATE LOCATION SET ACTIVE = 'YES' WHERE ACTIVE IS NULL;")
 
         self.conn.commit()
         self._seed_table_defaults()
@@ -2893,15 +2982,6 @@ class VyvarDatabase:
             return None
         return int(row["ID"]) if row is not None and row["ID"] is not None else None
 
-    def _normalize_telescope_active_to_binary(self) -> None:
-        """Store ``TELESCOPE.ACTIVE`` only as **0** or **1** (legacy YES/NO/1 -> 1, 0/NO -> 0)."""
-        cur = self.conn.execute("SELECT ID, ACTIVE FROM TELESCOPE;")
-        rows = cur.fetchall()
-        for row in rows:
-            rid = int(row["ID"])
-            nv = int(self.normalize_active_db_value(row["ACTIVE"]))
-            self.conn.execute("UPDATE TELESCOPE SET ACTIVE = ? WHERE ID = ?;", (nv, rid))
-
     def _ensure_equipments_saturate_adu_column(self) -> None:
         """Schema migration: linear saturation ceiling (ADU) per camera/equipment row."""
         cursor = self.conn.execute("PRAGMA table_info('EQUIPMENTS');")
@@ -2920,14 +3000,6 @@ class VyvarDatabase:
         if "READNOISE_E" not in cols:
             self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN READNOISE_E REAL;")
         self.conn.commit()
-
-    def _ensure_equipments_focal_column(self) -> None:
-        """Optional focal length [mm] on EQUIPMENTS (per-camera plate-scale / diagnostics)."""
-        cursor = self.conn.execute("PRAGMA table_info('EQUIPMENTS');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        if "FOCAL" not in cols:
-            self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN FOCAL REAL;")
-            self.conn.commit()
 
     def _ensure_equipments_bayermask_column(self) -> None:
         """OSC Bayer mask authority: RGGB/BGGR/GBRG/GRBG, mono, or empty (mono)."""
@@ -2968,12 +3040,51 @@ class VyvarDatabase:
         except ValueError:
             return None
 
-    def _drop_settings_table(self) -> None:
-        # WAVE-B STEP 5: the SETTINGS table was vestigial. It only ever held
-        # masterdark_validity_days / masterflat_validity_days, which are config.json-authoritative
-        # (cfg.masterdark_validity_days / cfg.masterflat_validity_days). Nothing read SETTINGS at
-        # run time, so drop it on open (idempotent migration for existing DBs).
+    def _drop_vestigial_tables(self) -> None:
+        # WAVE-B STEP 5: SETTINGS held only masterdark/masterflat validity days (config.json-authoritative).
+        # PHOTOMETRY_LIGHT_CURVE was never read; light curves are file-based CSVs.
         self.conn.execute("DROP TABLE IF EXISTS SETTINGS;")
+        self.conn.execute("DROP TABLE IF EXISTS PHOTOMETRY_LIGHT_CURVE;")
+        self.conn.commit()
+
+    def _drop_equipments_focal_column(self) -> None:
+        """One-time migration: focal length belongs on TELESCOPE, not EQUIPMENTS."""
+        cursor = self.conn.execute("PRAGMA table_info('EQUIPMENTS');")
+        cols = {row["name"] for row in cursor.fetchall()}
+        if "FOCAL" not in cols:
+            return
+        self.conn.execute("PRAGMA foreign_keys = OFF;")
+        try:
+            self.conn.executescript(
+                """
+                ALTER TABLE EQUIPMENTS RENAME TO EQUIPMENTS_OLD;
+                CREATE TABLE EQUIPMENTS (
+                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CAMERANAME TEXT,
+                    ALIAS TEXT,
+                    SENSORTYPE TEXT,
+                    SENSORSIZE TEXT,
+                    PIXELSIZE REAL,
+                    ACTIVE TEXT DEFAULT 'YES',
+                    SATURATE_ADU REAL,
+                    GAIN_ADU REAL,
+                    READNOISE_E REAL,
+                    BAYERMASK TEXT,
+                    IS_DEFAULT INTEGER DEFAULT 0
+                );
+                INSERT INTO EQUIPMENTS (
+                    ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, ACTIVE,
+                    SATURATE_ADU, GAIN_ADU, READNOISE_E, BAYERMASK, IS_DEFAULT
+                )
+                SELECT
+                    ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, ACTIVE,
+                    SATURATE_ADU, GAIN_ADU, READNOISE_E, BAYERMASK, IS_DEFAULT
+                FROM EQUIPMENTS_OLD;
+                DROP TABLE EQUIPMENTS_OLD;
+                """
+            )
+        finally:
+            self.conn.execute("PRAGMA foreign_keys = ON;")
         self.conn.commit()
 
     def _ensure_observation_import_columns(self) -> None:
@@ -3104,7 +3215,7 @@ class VyvarDatabase:
     def get_equipment_pixel_size_um(self, equipment_id: int) -> float | None:
         """``EQUIPMENTS.PIXELSIZE``: native (1x1) pixel pitch [um], if set and positive.
 
-        With ``TELESCOPE``/``EQUIPMENTS.FOCAL`` and X/Y binning from the FITS header, the pipeline derives
+        With ``TELESCOPE.FOCAL`` and X/Y binning from the FITS header, the pipeline derives
         ``expected_scale`` (arcsec/px) for plate solve and catalog geometry.
         """
         cursor = self.conn.execute(
@@ -3115,36 +3226,6 @@ class VyvarDatabase:
         if row is None:
             return None
         v = row["PIXELSIZE"]
-        if v is None:
-            return None
-        try:
-            f = float(v)
-            return f if f > 0 and math.isfinite(f) else None
-        except (TypeError, ValueError):
-            return None
-
-    def get_equipment_focal_mm(self, equipment_id: int) -> float | None:
-        """``EQUIPMENTS.FOCAL`` [mm] when column exists and value is positive (optional per-camera override).
-
-        With ``effective_pixel_um_plate_scale`` from FITS/DB metadata this yields the expected plate scale
-        (e.g. ~9.55 arcsec/px for a typical 200 mm refractor and ~9.3 um pixels), which ``pipeline`` uses for
-        Astrometry.net bounds, VYVAR Gaia solving, optional CD rescaling on MASTERSTAR, and cone sizing.
-        """
-        try:
-            cursor = self.conn.execute("PRAGMA table_info('EQUIPMENTS');")
-            cols = {row["name"] for row in cursor.fetchall()}
-        except sqlite3.Error as exc:  # noqa: BLE001
-            return None
-        if "FOCAL" not in cols:
-            return None
-        cursor = self.conn.execute(
-            "SELECT FOCAL FROM EQUIPMENTS WHERE ID = ?;",
-            (int(equipment_id),),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        v = row["FOCAL"]
         if v is None:
             return None
         try:
@@ -3233,8 +3314,7 @@ class VyvarDatabase:
     def get_combined_metadata(self, file_path: str | Path, draft_id: int) -> dict[str, Any]:
         """Merge FITS primary header with ``OBS_DRAFT`` -> ``TELESCOPE`` / ``EQUIPMENTS`` SQL fallbacks.
 
-        - Focal: plausible FITS keywords first; else ``EQUIPMENTS.FOCAL`` for the draft camera; else
-          ``TELESCOPE.FOCAL`` via ``SELECT t.FOCAL FROM TELESCOPE t JOIN OBS_DRAFT d ON d.ID_TELESCOPE = t.ID WHERE d.ID = ?``.
+        - Focal: plausible FITS keywords first; else ``TELESCOPE.FOCAL`` for the draft telescope.
         - Native pixel [um]: FITS ``PIXSIZE*`` / ``XPIXSZ`` ...; else ``EQUIPMENTS.PIXELSIZE`` via draft join
           (same as ``get_equipment_pixel_size_um`` on ``OBS_DRAFT.ID_EQUIPMENTS``).
         - **Binning:** ``XBINNING`` / ``BINNING`` (supports ``2x2`` strings); if header says 1x1 but
@@ -3291,35 +3371,16 @@ class VyvarDatabase:
         focal_src = "fits_header" if _f_hdr_ok else "none"
         if not _f_hdr_ok:
             focal_mm = None
-            if id_eq is not None:
+            if id_tel is not None:
                 try:
-                    ef = self.get_equipment_focal_mm(int(id_eq))
+                    tf = self.get_telescope_focal_mm(int(id_tel))
                 except Exception:  # noqa: BLE001
-                    ef = None
-                if ef is not None:
-                    n, _ = normalize_telescope_focal_mm_for_plate_scale(float(ef))
-                    if _db_focal_plausible_mm(n):
-                        focal_mm = float(n)
-                        focal_src = "equipment_focal_sql"
-            if focal_mm is None and id_tel is not None:
-                cur_tf = self.conn.execute(
-                    """
-                    SELECT t.FOCAL FROM TELESCOPE t
-                    INNER JOIN OBS_DRAFT d ON d.ID_TELESCOPE = t.ID
-                    WHERE d.ID = ?;
-                    """,
-                    (did,),
-                )
-                row_tf = cur_tf.fetchone()
-                if row_tf is not None and row_tf["FOCAL"] is not None:
-                    try:
-                        raw_t = float(row_tf["FOCAL"])
-                        n2, _ = normalize_telescope_focal_mm_for_plate_scale(raw_t)
-                        if _db_focal_plausible_mm(n2):
-                            focal_mm = float(n2)
-                            focal_src = "telescope_focal_sql"
-                    except (TypeError, ValueError):
-                        pass
+                    tf = None
+                if tf is not None:
+                    n2, _ = normalize_telescope_focal_mm_for_plate_scale(float(tf))
+                    if _db_focal_plausible_mm(n2):
+                        focal_mm = float(n2)
+                        focal_src = "telescope_focal_sql"
 
         native_um = _db_header_pixel_native_um_mean(header)
         pix_src = "fits_header"
@@ -4098,7 +4159,11 @@ class VyvarDatabase:
                 ) from exc
             raise
         self.conn.commit()
-        return int(cursor.lastrowid)
+        draft_id_out = int(cursor.lastrowid)
+        arch = data.get("archive_path")
+        if arch is not None and str(arch).strip():
+            self._try_refresh_draft_manifest(draft_id_out)
+        return draft_id_out
 
     def update_draft_import_log(
         self,
@@ -4136,6 +4201,7 @@ class VyvarDatabase:
         if cursor.rowcount == 0:
             raise ValueError(f"Draft '{draft_id}' not found for import log update.")
         self.conn.commit()
+        self._try_refresh_draft_manifest(int(draft_id))
 
     def finalize_draft(self, draft_id: int, *, ra_deg: float, dec_deg: float) -> str:
         """Finalize a draft by creating OBSERVATION.ID after astrometry."""
@@ -4189,6 +4255,7 @@ class VyvarDatabase:
             (observation_id, float(ra_deg), float(dec_deg), int(draft_id)),
         )
         self.conn.commit()
+        self._try_refresh_draft_manifest(int(draft_id))
         return observation_id
 
     def finalize_draft_to_observation(
@@ -4320,6 +4387,7 @@ class VyvarDatabase:
             (final_id, int(draft_id)),
         )
         self.conn.commit()
+        self._try_refresh_draft_manifest(int(draft_id))
         return final_id
 
     def _migrate_comp_library_tables(self) -> None:
