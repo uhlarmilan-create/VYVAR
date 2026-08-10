@@ -1912,7 +1912,17 @@ class VyvarDatabase:
     def fetch_obs_draft_by_id(self, draft_id: int) -> dict[str, Any] | None:
         cur = self.conn.execute("SELECT * FROM OBS_DRAFT WHERE ID = ?;", (int(draft_id),))
         row = cur.fetchone()
-        return dict(row) if row is not None else None
+        if row is None:
+            return None
+        row_dict = dict(row)
+        from draft_provenance import _rig_from_draft_row, observe_manifest_rig_ids
+
+        observe_manifest_rig_ids(
+            int(draft_id),
+            _rig_from_draft_row(row_dict),
+            draft_row=row_dict,
+        )
+        return row_dict
 
     def _try_refresh_draft_manifest(self, draft_id: int) -> None:
         """Best-effort dual-write of draft_manifest.json from OBS_DRAFT + OBS_FILES (Phase 1 shadow)."""
@@ -2710,6 +2720,10 @@ class VyvarDatabase:
             """
             SELECT
                 d.ID AS draft_id,
+                d.ID_EQUIPMENTS,
+                d.ID_TELESCOPE,
+                d.ARCHIVE_PATH,
+                d.LIGHTS_PATH,
                 t.TELESCOPENAME AS telescope_name,
                 t.FOCAL AS telescope_focal_mm,
                 e.CAMERANAME AS equipment_name,
@@ -2721,7 +2735,30 @@ class VyvarDatabase:
             """,
             (int(draft_id),),
         ).fetchone()
-        return dict(row) if row else None
+        if row is None:
+            return None
+        from draft_provenance import observe_manifest_rig_ids
+
+        observe_manifest_rig_ids(
+            int(draft_id),
+            {
+                "equipment_id": int(row["ID_EQUIPMENTS"])
+                if row["ID_EQUIPMENTS"] is not None
+                else None,
+                "telescope_id": int(row["ID_TELESCOPE"])
+                if row["ID_TELESCOPE"] is not None
+                else None,
+            },
+            draft_row=dict(row),
+            db=self,
+        )
+        return {
+            "draft_id": row["draft_id"],
+            "telescope_name": row["telescope_name"],
+            "telescope_focal_mm": row["telescope_focal_mm"],
+            "equipment_name": row["equipment_name"],
+            "pixel_um": row["pixel_um"],
+        }
 
     @staticmethod
     def _normalize_calibration_library_filter_name(flt: str | None) -> str:

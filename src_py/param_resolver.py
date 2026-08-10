@@ -630,13 +630,27 @@ def resolve_exptime(header: Any = None, *, db_value: float | None = None, cfg: A
 # --------------------------------------------------------------------------- #
 # SITE: per-draft ID_LOCATION -> header SITELAT/LONG/ELEV -> config (flagged)
 # --------------------------------------------------------------------------- #
+def _sqlite_row_field(row_obj: Any, index: int, name: str) -> Any:
+    if hasattr(row_obj, "keys"):
+        try:
+            if name in row_obj.keys():
+                return row_obj[name]
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        return row_obj[index]
+    except (IndexError, KeyError, TypeError):
+        return None
+
+
 def _draft_location(db: Any, draft_id: int | None) -> tuple[float, float, float] | None:
     if db is None or draft_id is None:
         return None
     try:
         cur = db.conn.execute(
             """
-            SELECT l.LATITUDE, l.LONGITUDE, l.ALTITUDE
+            SELECT l.LATITUDE, l.LONGITUDE, l.ALTITUDE, d.ID_LOCATION,
+                   d.ARCHIVE_PATH, d.LIGHTS_PATH
             FROM OBS_DRAFT d JOIN LOCATION l ON l.ID = d.ID_LOCATION
             WHERE d.ID = ?
             """,
@@ -648,9 +662,28 @@ def _draft_location(db: Any, draft_id: int | None) -> tuple[float, float, float]
         return None
     if row is None:
         return None
+
+    loc_id_raw = _sqlite_row_field(row, 3, "ID_LOCATION")
+    if loc_id_raw is not None:
+        from draft_provenance import observe_manifest_rig_ids
+
+        observe_manifest_rig_ids(
+            int(draft_id),
+            {
+                "location_id": int(loc_id_raw),
+            },
+            draft_row={
+                "ID_LOCATION": loc_id_raw,
+                "ARCHIVE_PATH": _sqlite_row_field(row, 4, "ARCHIVE_PATH"),
+                "LIGHTS_PATH": _sqlite_row_field(row, 5, "LIGHTS_PATH"),
+            },
+            db=db,
+        )
     try:
-        la, lo = float(row[0]), float(row[1])
-        al = float(row[2]) if row[2] is not None and math.isfinite(float(row[2])) else 0.0
+        la = float(_sqlite_row_field(row, 0, "LATITUDE"))
+        lo = float(_sqlite_row_field(row, 1, "LONGITUDE"))
+        alt_raw = _sqlite_row_field(row, 2, "ALTITUDE")
+        al = float(alt_raw) if alt_raw is not None and math.isfinite(float(alt_raw)) else 0.0
     except (TypeError, ValueError):
         return None
     if not (math.isfinite(la) and math.isfinite(lo)):
@@ -682,14 +715,30 @@ def _draft_id_location(db: Any, draft_id: int | None) -> int | None:
         return None
     try:
         row = db.conn.execute(
-            "SELECT ID_LOCATION FROM OBS_DRAFT WHERE ID = ?;",
+            "SELECT ID_LOCATION, ARCHIVE_PATH, LIGHTS_PATH FROM OBS_DRAFT WHERE ID = ?;",
             (int(draft_id),),
         ).fetchone()
-        if row is not None and row[0] is not None:
-            return int(row[0])
+        if row is None:
+            return None
+        loc_id_raw = _sqlite_row_field(row, 0, "ID_LOCATION")
+        if loc_id_raw is None:
+            return None
+        loc_id = int(loc_id_raw)
+        from draft_provenance import observe_manifest_rig_ids
+
+        observe_manifest_rig_ids(
+            int(draft_id),
+            {"location_id": loc_id},
+            draft_row={
+                "ID_LOCATION": loc_id,
+                "ARCHIVE_PATH": _sqlite_row_field(row, 1, "ARCHIVE_PATH"),
+                "LIGHTS_PATH": _sqlite_row_field(row, 2, "LIGHTS_PATH"),
+            },
+            db=db,
+        )
+        return loc_id
     except Exception:  # noqa: BLE001
         return None
-    return None
 
 
 def _apply_null_island_guard(

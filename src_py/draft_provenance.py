@@ -17,6 +17,127 @@ MANIFEST_SCHEMA_VERSION = 3
 
 _MANIFEST_NAME = "draft_manifest.json"
 
+# Phase 2.1 shadow-observe counters (rig-id reads; DB remains authority).
+MANIFEST_SHADOW_MISMATCHES = 0
+MANIFEST_SHADOW_ABSENT = 0
+MANIFEST_SHADOW_EQUAL = 0
+
+_MANIFEST_SHADOW_LOAD_CACHE: dict[int, dict[str, Any]] = {}
+
+
+def reset_manifest_shadow_counters() -> None:
+    """Reset Phase 2.1 shadow-observe counters (tests / batch reports)."""
+    global MANIFEST_SHADOW_MISMATCHES, MANIFEST_SHADOW_ABSENT, MANIFEST_SHADOW_EQUAL
+    MANIFEST_SHADOW_MISMATCHES = 0
+    MANIFEST_SHADOW_ABSENT = 0
+    MANIFEST_SHADOW_EQUAL = 0
+
+
+def clear_manifest_shadow_load_cache() -> None:
+    """Clear per-draft manifest load cache (tests)."""
+    _MANIFEST_SHADOW_LOAD_CACHE.clear()
+
+
+def manifest_shadow_counter_snapshot() -> dict[str, int]:
+    return {
+        "mismatch": int(MANIFEST_SHADOW_MISMATCHES),
+        "absent": int(MANIFEST_SHADOW_ABSENT),
+        "equal": int(MANIFEST_SHADOW_EQUAL),
+    }
+
+
+def _normalize_rig_id(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _load_manifest_for_shadow(draft_id: int, archive_root: Path) -> dict[str, Any]:
+    manifest_path = archive_root / _MANIFEST_NAME
+    try:
+        mtime_ns = manifest_path.stat().st_mtime_ns if manifest_path.is_file() else -1
+    except OSError:
+        mtime_ns = -1
+    cache_key = (int(draft_id), str(archive_root.resolve()), int(mtime_ns))
+    cached = _MANIFEST_SHADOW_LOAD_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+    loaded = load_draft_manifest(archive_root)
+    _MANIFEST_SHADOW_LOAD_CACHE[cache_key] = loaded
+    return loaded
+
+
+def _resolve_archive_root_for_shadow(
+    draft_id: int,
+    draft_row: dict[str, Any] | None,
+    db: Any | None,
+) -> Path | None:
+    if draft_row is not None:
+        root = resolve_draft_archive_root_from_row(draft_row)
+        if root is not None:
+            return root
+    if db is not None and hasattr(db, "conn"):
+        try:
+            row = db.conn.execute(
+                "SELECT ARCHIVE_PATH, LIGHTS_PATH FROM OBS_DRAFT WHERE ID = ?;",
+                (int(draft_id),),
+            ).fetchone()
+            if row is not None:
+                return resolve_draft_archive_root_from_row(dict(row))
+        except Exception:  # noqa: BLE001
+            return None
+    return None
+
+
+def observe_manifest_rig_ids(
+    draft_id: int,
+    db_rig: dict[str, int | None],
+    *,
+    draft_row: dict[str, Any] | None = None,
+    db: Any | None = None,
+) -> None:
+    """Phase 2.1: log manifest-vs-DB rig id mismatches; DB values are never altered."""
+    global MANIFEST_SHADOW_MISMATCHES, MANIFEST_SHADOW_ABSENT, MANIFEST_SHADOW_EQUAL
+
+    if not db_rig:
+        return
+
+    did = int(draft_id)
+    root = _resolve_archive_root_for_shadow(did, draft_row, db)
+    if root is None:
+        MANIFEST_SHADOW_ABSENT += 1
+        return
+
+    manifest = _load_manifest_for_shadow(did, root)
+    if not manifest:
+        MANIFEST_SHADOW_ABSENT += 1
+        return
+
+    rig_m = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
+    mismatches: list[tuple[str, int | None, int | None]] = []
+    for key, db_val in db_rig.items():
+        man_val = _normalize_rig_id(rig_m.get(key))
+        db_norm = _normalize_rig_id(db_val)
+        if db_norm != man_val:
+            mismatches.append((str(key), db_norm, man_val))
+
+    if mismatches:
+        MANIFEST_SHADOW_MISMATCHES += 1
+        from infolog import log_event
+
+        for key, db_v, man_v in mismatches:
+            msg = (
+                f"MANIFEST_SHADOW mismatch draft_id={did} {key} "
+                f"db={db_v!r} manifest={man_v!r}"
+            )
+            logging.warning(msg)
+            log_event(msg)
+    else:
+        MANIFEST_SHADOW_EQUAL += 1
+
 
 def draft_archive_root(archive_path: Path | str) -> Path:
     """Normalize draft archive root (parent when path is ``non_calibrated/``)."""
@@ -354,6 +475,14 @@ def load_draft_manifest(archive_path: Path | str) -> dict[str, Any]:
         return {}
 
 
+def _fetch_obs_draft_row_raw(db: Any, draft_id: int) -> dict[str, Any] | None:
+    """Load OBS_DRAFT row without Phase 2.1 shadow-observe (manifest writer / internal use)."""
+    if not hasattr(db, "conn"):
+        return None
+    row = db.conn.execute("SELECT * FROM OBS_DRAFT WHERE ID = ?;", (int(draft_id),)).fetchone()
+    return dict(row) if row is not None else None
+
+
 def resolve_calibration_mode(
     *,
     draft_id: int | None = None,
@@ -363,7 +492,7 @@ def resolve_calibration_mode(
     """Resolve calibration_mode from DB, then draft manifest, else default."""
     if db is not None and draft_id is not None:
         try:
-            row = db.fetch_obs_draft_by_id(int(draft_id)) or {}
+            row = _fetch_obs_draft_row_raw(db, int(draft_id)) or {}
             mode = row.get("CALIBRATION_MODE") or row.get("calibration_mode")
             if mode:
                 return str(mode)
@@ -381,7 +510,7 @@ def record_draft_manifest_core(db: Any, draft_id: int) -> Path | None:
     from infolog import log_event
 
     did = int(draft_id)
-    row = db.fetch_obs_draft_by_id(did) if hasattr(db, "fetch_obs_draft_by_id") else None
+    row = _fetch_obs_draft_row_raw(db, did)
     if not row:
         log_event(f"draft_manifest: skip draft_id={did} (OBS_DRAFT row missing)")
         return None
