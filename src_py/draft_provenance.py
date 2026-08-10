@@ -13,7 +13,7 @@ from importer import SmartImportPlan
 
 CALIBRATION_MODE_VYVAR = "vyvar_calibrated"
 CALIBRATION_MODE_PRE = "pre_calibrated"
-MANIFEST_SCHEMA_VERSION = 2
+MANIFEST_SCHEMA_VERSION = 3
 
 _MANIFEST_NAME = "draft_manifest.json"
 
@@ -96,6 +96,159 @@ def _rig_from_draft_row(row: dict[str, Any]) -> dict[str, int | None]:
     }
 
 
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    s = str(value).strip()
+    return s or None
+
+
+def _optional_flag01(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return 1 if int(value) != 0 else 0
+    except (TypeError, ValueError):
+        return None
+
+
+def _obs_file_row_to_manifest_entry(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "file_path": _optional_str(row.get("FILE_PATH")) or "",
+        "imagetyp": _optional_str(row.get("IMAGETYP")),
+        "filter": _optional_str(row.get("FILTER")),
+        "qc": {
+            "hfr": _optional_float(row.get("QC_HFR")),
+            "stars": _optional_int(row.get("QC_STARS")),
+            "background": _optional_float(row.get("QC_BACKGROUND")),
+            "bg_rms": _optional_float(row.get("QC_BG_RMS")),
+            "passed": _optional_flag01(row.get("QC_PASSED")),
+        },
+        "inspection": {
+            "fwhm": _optional_float(row.get("FWHM")),
+            "sky_level": _optional_float(row.get("SKY_LEVEL")),
+            "star_count": _optional_int(row.get("STAR_COUNT")),
+            "rejected_auto": _optional_flag01(row.get("REJECTED_AUTO")),
+            "is_rejected": _optional_flag01(row.get("IS_REJECTED")),
+            "inspection_jd": _optional_float(row.get("INSPECTION_JD")),
+            "ra": _optional_float(row.get("RA")),
+            "de": _optional_float(row.get("DE")),
+            "exptime": _optional_float(row.get("EXPTIME")),
+            "drift": _optional_float(row.get("DRIFT")),
+            "drift_dra": _optional_float(row.get("DRIFT_DRA")),
+            "drift_dde": _optional_float(row.get("DRIFT_DDE")),
+            "roundness_mean": _optional_float(row.get("ROUNDNESS_MEAN")),
+            "elongation_mean": _optional_float(row.get("ELONGATION_MEAN")),
+        },
+        "group_key": _optional_str(row.get("OBSERVATION_GROUP_KEY")),
+        "id_scanning": _optional_int(row.get("ID_SCANNING")),
+        "is_calibrated": _optional_flag01(row.get("IS_CALIBRATED")),
+        "calib_type": _optional_str(row.get("CALIB_TYPE")),
+        "calib_flags": _optional_str(row.get("CALIB_FLAGS")),
+    }
+
+
+def _fetch_manifest_files_from_db(db: Any, draft_id: int) -> list[dict[str, Any]]:
+    cur = db.conn.execute(
+        """
+        SELECT FILE_PATH, IMAGETYP, FILTER,
+               QC_HFR, QC_STARS, QC_BACKGROUND, QC_BG_RMS, QC_PASSED,
+               FWHM, SKY_LEVEL, STAR_COUNT, REJECTED_AUTO, IS_REJECTED, INSPECTION_JD,
+               RA, DE, EXPTIME, DRIFT, DRIFT_DRA, DRIFT_DDE, ROUNDNESS_MEAN, ELONGATION_MEAN,
+               OBSERVATION_GROUP_KEY, ID_SCANNING, IS_CALIBRATED, CALIB_TYPE, CALIB_FLAGS
+        FROM OBS_FILES
+        WHERE DRAFT_ID = ?
+        ORDER BY FILE_PATH, ID;
+        """,
+        (int(draft_id),),
+    )
+    return [_obs_file_row_to_manifest_entry(dict(r)) for r in cur.fetchall()]
+
+
+def _manifest_file_entry_mismatch(label: str, db_val: Any, man_val: Any) -> str | None:
+    if db_val != man_val:
+        return f"{label} DB={db_val!r} manifest={man_val!r}"
+    return None
+
+
+def _compare_manifest_file_entries(
+    draft_id: int,
+    file_path: str,
+    db_entry: dict[str, Any],
+    man_entry: dict[str, Any],
+) -> list[str]:
+    errors: list[str] = []
+    prefix = f"draft_id={draft_id}: files[{file_path!r}]"
+
+    for key in ("imagetyp", "filter", "group_key", "calib_type", "calib_flags"):
+        err = _manifest_file_entry_mismatch(
+            f"{prefix}.{key}",
+            db_entry.get(key),
+            man_entry.get(key),
+        )
+        if err:
+            errors.append(err)
+
+    for key in ("id_scanning", "is_calibrated"):
+        err = _manifest_file_entry_mismatch(
+            f"{prefix}.{key}",
+            db_entry.get(key),
+            man_entry.get(key),
+        )
+        if err:
+            errors.append(err)
+
+    db_qc = db_entry.get("qc") if isinstance(db_entry.get("qc"), dict) else {}
+    man_qc = man_entry.get("qc") if isinstance(man_entry.get("qc"), dict) else {}
+    for key in ("hfr", "stars", "background", "bg_rms", "passed"):
+        err = _manifest_file_entry_mismatch(
+            f"{prefix}.qc.{key}",
+            db_qc.get(key),
+            man_qc.get(key),
+        )
+        if err:
+            errors.append(err)
+            break
+
+    db_insp = db_entry.get("inspection") if isinstance(db_entry.get("inspection"), dict) else {}
+    man_insp = man_entry.get("inspection") if isinstance(man_entry.get("inspection"), dict) else {}
+    for key in (
+        "fwhm",
+        "sky_level",
+        "star_count",
+        "rejected_auto",
+        "is_rejected",
+        "inspection_jd",
+        "ra",
+        "de",
+        "exptime",
+        "drift",
+        "drift_dra",
+        "drift_dde",
+        "roundness_mean",
+        "elongation_mean",
+    ):
+        err = _manifest_file_entry_mismatch(
+            f"{prefix}.inspection.{key}",
+            db_insp.get(key),
+            man_insp.get(key),
+        )
+        if err:
+            errors.append(err)
+            break
+
+    return errors
+
+
 def is_pre_calibrated_draft(
     archive_path: Path | str,
     *,
@@ -154,6 +307,7 @@ def write_draft_manifest(
     center: dict[str, Any] | None = None,
     observation_start_jd: float | None = None,
     schema_version: int = MANIFEST_SCHEMA_VERSION,
+    files: list[dict[str, Any]] | None = None,
 ) -> Path:
     """Persist draft manifest JSON under the draft archive root."""
     root = Path(archive_path).expanduser().resolve()
@@ -175,6 +329,8 @@ def write_draft_manifest(
             payload["is_calibrated"] = int(is_calibrated)
         payload["center"] = dict(center or {"ra_deg": None, "de_deg": None})
         payload["observation_start_jd"] = observation_start_jd
+    if files is not None:
+        payload["files"] = list(files)
     if extra:
         payload.update(extra)
     path = root / _MANIFEST_NAME
@@ -267,6 +423,7 @@ def record_draft_manifest_core(db: Any, draft_id: int) -> Path | None:
         is_calibrated=is_cal,
         center=_center_from_draft_row(row),
         observation_start_jd=jd_val,
+        files=_fetch_manifest_files_from_db(db, did),
     )
 
 
@@ -295,6 +452,7 @@ def record_observer_location_provenance(
             is_calibrated=manifest.get("is_calibrated"),
             center=manifest.get("center"),
             observation_start_jd=manifest.get("observation_start_jd"),
+            files=manifest.get("files") if isinstance(manifest.get("files"), list) else None,
         )
     return write_draft_manifest(
         root,
@@ -389,5 +547,35 @@ def manifest_db_parity_errors(db: Any, draft_id: int) -> list[str]:
     if jd_db is not None and jd_db == 0.0:
         jd_db = None
     _eq("observation_start_jd", jd_db, manifest.get("observation_start_jd"))
+
+    db_files = _fetch_manifest_files_from_db(db, did)
+    man_files = manifest.get("files")
+    if not isinstance(man_files, list):
+        if db_files:
+            errors.append(f"draft_id={did}: files[] missing in manifest (DB has {len(db_files)} rows)")
+        return errors
+
+    if len(db_files) != len(man_files):
+        errors.append(
+            f"draft_id={did}: files count DB={len(db_files)} manifest={len(man_files)}"
+        )
+        return errors
+
+    man_by_path: dict[str, dict[str, Any]] = {}
+    for item in man_files:
+        if isinstance(item, dict):
+            fp = str(item.get("file_path") or "")
+            man_by_path[fp] = item
+
+    for db_entry in db_files:
+        fp = str(db_entry.get("file_path") or "")
+        man_entry = man_by_path.get(fp)
+        if man_entry is None:
+            errors.append(f"draft_id={did}: file_path={fp!r} in DB but missing from manifest")
+            return errors
+        file_errors = _compare_manifest_file_entries(did, fp, db_entry, man_entry)
+        if file_errors:
+            errors.extend(file_errors[:3])
+            return errors
 
     return errors

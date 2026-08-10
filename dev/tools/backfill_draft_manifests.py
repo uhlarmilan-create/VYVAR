@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Backfill draft_manifest.json v2 core fields from OBS_DRAFT (idempotent)."""
+"""Backfill draft_manifest.json v3 (draft core + files[]) from OBS_DRAFT/OBS_FILES (idempotent)."""
 
 from __future__ import annotations
 

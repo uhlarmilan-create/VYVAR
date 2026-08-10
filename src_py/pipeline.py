@@ -2011,6 +2011,7 @@ def apply_perf10_dao_qc_to_obs_files(
 
     med_ra, med_de = draft_median_pointing_icrs_deg(db, int(draft_id))
     sync_obs_files_drift_arcmin_for_draft(db, int(draft_id), ref_ra_deg=med_ra, ref_de_deg=med_de)
+    db._try_refresh_draft_manifest(int(draft_id))
     _dl_suggest = 5.0
     return {
         "draft_id": int(draft_id),
@@ -2316,6 +2317,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
         st.session_state.update(_upd2)
     except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
+    db._try_refresh_draft_manifest(int(draft_id))
     return result
 
 
@@ -16389,6 +16391,14 @@ def calibrate_lights_to_calibrated(
             log_event(f"DIAGNOSTIKA KALIBRACIE: metadata prveho suboru zlyhali: {exc!s}")
 
     db_main = _db_for_calibration_tasks(qc_pack)
+
+    def _refresh_manifest_after_cal_qc() -> None:
+        if draft_id is not None and db_main is not None:
+            try:
+                db_main._try_refresh_draft_manifest(int(draft_id))
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.debug("draft_manifest refresh after calibrate QC: %s", exc)
+
     gate_cfg = cal_diag_config_from_app(cfg)
     gate_on = bool(gate_cfg.get("enabled", True))
     cal_diag_session = CalDiagSession()
@@ -16583,6 +16593,7 @@ def calibrate_lights_to_calibrated(
                     LOGGER.error("Kalibracia: subor %s: %s\n%s", src, exc2, _tb2)
                     log_exception(f"CHYBA KALIBRACIE: {src.name}", exc2)
                     stats["errors"] += 1
+            _refresh_manifest_after_cal_qc()
             return stats
 
         for idx, r in enumerate(rows):
@@ -16639,6 +16650,7 @@ def calibrate_lights_to_calibrated(
             p10 = r.get("perf10_qc") if isinstance(r, dict) else None
             if isinstance(p10, dict) and p10 and not p10.get("error"):
                 perf10_qc_results[str(Path(items[idx][0]).resolve())] = p10
+        _refresh_manifest_after_cal_qc()
         return stats
 
     _seq_tb_logged = False
@@ -16662,6 +16674,7 @@ def calibrate_lights_to_calibrated(
     if _arch is not None:
         write_cal_diag_json(_arch, cal_diag_session, gate_enabled=gate_on)
 
+    _refresh_manifest_after_cal_qc()
     return stats
 
 

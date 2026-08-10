@@ -1915,7 +1915,7 @@ class VyvarDatabase:
         return dict(row) if row is not None else None
 
     def _try_refresh_draft_manifest(self, draft_id: int) -> None:
-        """Best-effort dual-write of draft_manifest.json from OBS_DRAFT (Phase 1 shadow)."""
+        """Best-effort dual-write of draft_manifest.json from OBS_DRAFT + OBS_FILES (Phase 1 shadow)."""
         try:
             from draft_provenance import record_draft_manifest_core
 
@@ -3847,6 +3847,7 @@ class VyvarDatabase:
             ],
         )
         self.conn.commit()
+        self._try_refresh_draft_manifest(int(draft_id))
 
     def update_obs_file_qc_by_raw_light_path(
         self,
@@ -4088,6 +4089,7 @@ class VyvarDatabase:
             con.commit()
         finally:
             con.close()
+        self._try_refresh_draft_manifest(did)
 
     def _normalize_obs_file_path_key(self, p: str | Path) -> str:
         try:
