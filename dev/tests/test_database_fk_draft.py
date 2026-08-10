@@ -24,7 +24,7 @@ def _seed_equipment_telescope_location(db: VyvarDatabase) -> tuple[int, int, int
     tel = int(
         db.conn.execute(
             "INSERT INTO TELESCOPE (TELESCOPENAME, ALIAS, DIAMETER, FOCAL, ACTIVE) "
-            "VALUES (?, ?, ?, ?, 1);",
+            "VALUES (?, ?, ?, ?, 'YES');",
             ("Tel", "T", 200.0, 1000.0),
         ).lastrowid
     )

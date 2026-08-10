@@ -90,7 +90,7 @@ def test_milan_state_scan_shows_expired_dark_and_import_succeeds(tmp_path: Path)
     tel = int(
         db.conn.execute(
             "INSERT INTO TELESCOPE (TELESCOPENAME, ALIAS, DIAMETER, FOCAL, ACTIVE) "
-            "VALUES (?, ?, ?, ?, 1);",
+            "VALUES (?, ?, ?, ?, 'YES');",
             ("RC12", "RC", 300.0, 2400.0),
         ).lastrowid
     )
@@ -179,7 +179,7 @@ def test_milan_state_stale_location_without_fallback_raises_clear_preflight(tmp_
     tel = int(
         db.conn.execute(
             "INSERT INTO TELESCOPE (TELESCOPENAME, ALIAS, DIAMETER, FOCAL, ACTIVE) "
-            "VALUES (?, ?, ?, ?, 1);",
+            "VALUES (?, ?, ?, ?, 'YES');",
             ("Tel", "T", 200.0, 1000.0),
         ).lastrowid
     )

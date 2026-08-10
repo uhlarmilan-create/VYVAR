@@ -644,6 +644,8 @@ next calibration lever.
   NOT a priority: the canonical publishable unit is a single night (see DECISIONS,
   product-scope boundary). Build only if a long-baseline science case demands it.
   Dep: AAVSO validation (GS6b [OK]). ~2-4 days. -> **PUBLICATION** workstream.
+  **Schema note:** ``FIELD_REGISTRY`` and ``COMP_STAR_LIBRARY`` are retained as idle
+  FUTURE multi-night infrastructure (not dead schema); see TODO-GS8.
 - ~~**APCORR-MIXEDFRAME**~~ **DONE (2026-07-19)** - all-or-nothing COG per night
   (`APCORR-MIXEDFRAME-ALLORNOTHING` in DECISIONS). After per-frame COG AC, if any science
   frame lacks usable `cog_ok`, Phase 2A disables COG for the entire night (standard Metoda B
