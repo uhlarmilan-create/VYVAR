@@ -144,6 +144,85 @@ def test_equipments_focal_column_dropped_on_open(tmp_path) -> None:
     db2.close()
 
 
+def test_equipments_focal_migration_heals_orphan_old_table(tmp_path) -> None:
+    """Leftover EQUIPMENTS_OLD from a failed rebuild must not block reopen."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        "INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);",
+        ("CamOrphan", "alias-o", "YES"),
+    )
+    db.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN FOCAL REAL;")
+    db.conn.execute("UPDATE EQUIPMENTS SET FOCAL = 1480.0 WHERE ID = 1;")
+    db.conn.execute(
+        """
+        CREATE TABLE EQUIPMENTS_OLD (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            CAMERANAME TEXT,
+            FOCAL REAL
+        );
+        """
+    )
+    db.conn.commit()
+    db.close()
+
+    db2 = VyvarDatabase(db_path)
+    cols = {r["name"] for r in db2.conn.execute("PRAGMA table_info('EQUIPMENTS');").fetchall()}
+    tables = {
+        r[0] for r in db2.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    }
+    assert "FOCAL" not in cols
+    assert "EQUIPMENTS_OLD" not in tables
+    row = db2.conn.execute("SELECT CAMERANAME FROM EQUIPMENTS WHERE ID = 1;").fetchone()
+    assert row is not None
+    assert row["CAMERANAME"] == "CamOrphan"
+    db2.close()
+
+
+def test_telescope_active_migration_heals_orphan_old_table(tmp_path) -> None:
+    """Leftover TELESCOPE_OLD from a failed ACTIVE rebuild must not block reopen."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    conn = __import__("sqlite3").connect(db_path)
+    conn.executescript(
+        """
+        CREATE TABLE TELESCOPE (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            TELESCOPENAME TEXT,
+            ALIAS TEXT,
+            DIAMETER REAL,
+            FOCAL REAL,
+            ACTIVE INTEGER DEFAULT 1,
+            IS_DEFAULT INTEGER DEFAULT 0
+        );
+        INSERT INTO TELESCOPE (TELESCOPENAME, ALIAS, DIAMETER, FOCAL, ACTIVE)
+        VALUES ('TelOrphan', 'to', 200.0, 1480.0, 1);
+        CREATE TABLE TELESCOPE_OLD (
+            ID INTEGER PRIMARY KEY,
+            TELESCOPENAME TEXT
+        );
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    db = VyvarDatabase(db_path)
+    active_type = next(
+        str(r["type"]).upper()
+        for r in db.conn.execute("PRAGMA table_info('TELESCOPE');")
+        if r["name"] == "ACTIVE"
+    )
+    tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")}
+    assert "TEXT" in active_type
+    assert "TELESCOPE_OLD" not in tables
+    row = db.conn.execute(
+        "SELECT TELESCOPENAME, ACTIVE FROM TELESCOPE WHERE ID = 1;"
+    ).fetchone()
+    assert row is not None
+    assert row["TELESCOPENAME"] == "TelOrphan"
+    assert row["ACTIVE"] == "YES"
+    db.close()
+
+
 def test_photometry_light_curve_table_dropped_on_open(tmp_path) -> None:
     db_path = tmp_path / "vyvar.sqlite3"
     db = VyvarDatabase(db_path)

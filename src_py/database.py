@@ -178,6 +178,7 @@ class ThreadSafeSQLiteConnection:
 
 _EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "SCANNING", "LOCATION"})
 _EDITABLE_DEFAULT_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
+_REBUILD_MIGRATION_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION", "OBS_FILES"})
 
 
 def get_gaia_db_max_g_mag(db_path: str | Path) -> float:
@@ -1281,17 +1282,29 @@ class VyvarDatabase:
                     (want, int(row["ID"])),
                 )
 
+    def _rebuild_table_safely(self, table: str, create_sql: str, insert_sql: str) -> None:
+        """Crash-safe RENAME/CREATE/COPY/DROP table rebuild for one-time migrations."""
+        if table not in _REBUILD_MIGRATION_TABLES:
+            raise ValueError(f"unsafe table name for rebuild migration: {table!r}")
+        old = f"{table}_OLD"
+        self.conn.execute("PRAGMA foreign_keys = OFF;")
+        try:
+            self.conn.execute("BEGIN;")
+            try:
+                self.conn.execute(f"DROP TABLE IF EXISTS {old};")
+                self.conn.execute(f"ALTER TABLE {table} RENAME TO {old};")
+                self.conn.execute(create_sql.strip())
+                self.conn.execute(insert_sql.strip())
+                self.conn.execute(f"DROP TABLE {old};")
+                self.conn.commit()
+            except Exception:
+                self.conn.rollback()
+                raise
+        finally:
+            self.conn.execute("PRAGMA foreign_keys = ON;")
+
     def _rebuild_table_active_column_to_text(self, table: str, create_sql: str, copy_sql: str) -> None:
-        self.conn.executescript(
-            f"""
-            PRAGMA foreign_keys=OFF;
-            ALTER TABLE {table} RENAME TO {table}_OLD;
-            {create_sql}
-            {copy_sql}
-            DROP TABLE {table}_OLD;
-            PRAGMA foreign_keys=ON;
-            """
-        )
+        self._rebuild_table_safely(table, create_sql, copy_sql)
 
     def _normalize_active_columns_to_text(self) -> None:
         """One-time migration: ACTIVE is physically ``YES``/``NO`` on EQUIPMENTS/TELESCOPE/LOCATION."""
@@ -2738,9 +2751,9 @@ class VyvarDatabase:
             return
 
         # Rebuild table to add DRAFT_ID + FK (SQLite limitations)
-        self.conn.executescript(
+        self._rebuild_table_safely(
+            "OBS_FILES",
             """
-            ALTER TABLE OBS_FILES RENAME TO OBS_FILES_OLD;
             CREATE TABLE OBS_FILES (
                 ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 OBSERVATION_ID TEXT,
@@ -2751,12 +2764,12 @@ class VyvarDatabase:
                 FOREIGN KEY (OBSERVATION_ID) REFERENCES OBSERVATION (ID) ON DELETE CASCADE,
                 FOREIGN KEY (DRAFT_ID) REFERENCES OBS_DRAFT (ID) ON DELETE CASCADE
             );
+            """,
+            """
             INSERT INTO OBS_FILES (ID, OBSERVATION_ID, DRAFT_ID, FILE_PATH, IMAGETYP, FILTER)
             SELECT ID, OBSERVATION_ID, NULL, FILE_PATH, IMAGETYP, FILTER FROM OBS_FILES_OLD;
-            DROP TABLE OBS_FILES_OLD;
-            """
+            """,
         )
-        self.conn.commit()
 
     def _ensure_obs_files_qc_columns(self) -> None:
         """Post-calibration QC metrics per light file (matched by archived raw ``FILE_PATH``)."""
@@ -3053,39 +3066,35 @@ class VyvarDatabase:
         cols = {row["name"] for row in cursor.fetchall()}
         if "FOCAL" not in cols:
             return
-        self.conn.execute("PRAGMA foreign_keys = OFF;")
-        try:
-            self.conn.executescript(
-                """
-                ALTER TABLE EQUIPMENTS RENAME TO EQUIPMENTS_OLD;
-                CREATE TABLE EQUIPMENTS (
-                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    CAMERANAME TEXT,
-                    ALIAS TEXT,
-                    SENSORTYPE TEXT,
-                    SENSORSIZE TEXT,
-                    PIXELSIZE REAL,
-                    ACTIVE TEXT DEFAULT 'YES',
-                    SATURATE_ADU REAL,
-                    GAIN_ADU REAL,
-                    READNOISE_E REAL,
-                    BAYERMASK TEXT,
-                    IS_DEFAULT INTEGER DEFAULT 0
-                );
-                INSERT INTO EQUIPMENTS (
-                    ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, ACTIVE,
-                    SATURATE_ADU, GAIN_ADU, READNOISE_E, BAYERMASK, IS_DEFAULT
-                )
-                SELECT
-                    ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, ACTIVE,
-                    SATURATE_ADU, GAIN_ADU, READNOISE_E, BAYERMASK, IS_DEFAULT
-                FROM EQUIPMENTS_OLD;
-                DROP TABLE EQUIPMENTS_OLD;
-                """
+        self._rebuild_table_safely(
+            "EQUIPMENTS",
+            """
+            CREATE TABLE EQUIPMENTS (
+                ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                CAMERANAME TEXT,
+                ALIAS TEXT,
+                SENSORTYPE TEXT,
+                SENSORSIZE TEXT,
+                PIXELSIZE REAL,
+                ACTIVE TEXT DEFAULT 'YES',
+                SATURATE_ADU REAL,
+                GAIN_ADU REAL,
+                READNOISE_E REAL,
+                BAYERMASK TEXT,
+                IS_DEFAULT INTEGER DEFAULT 0
+            );
+            """,
+            """
+            INSERT INTO EQUIPMENTS (
+                ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, ACTIVE,
+                SATURATE_ADU, GAIN_ADU, READNOISE_E, BAYERMASK, IS_DEFAULT
             )
-        finally:
-            self.conn.execute("PRAGMA foreign_keys = ON;")
-        self.conn.commit()
+            SELECT
+                ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, ACTIVE,
+                SATURATE_ADU, GAIN_ADU, READNOISE_E, BAYERMASK, IS_DEFAULT
+            FROM EQUIPMENTS_OLD;
+            """,
+        )
 
     def _ensure_observation_import_columns(self) -> None:
         """Lightweight schema migration for import logging fields."""
