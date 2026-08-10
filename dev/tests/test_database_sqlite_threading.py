@@ -97,3 +97,131 @@ def test_vyvar_database_conn_is_thread_safe_wrapper(tmp_path) -> None:
 
     assert isinstance(db.conn, ThreadSafeSQLiteConnection)
     db.close()
+
+
+def test_read_df_via_thread_safe_connection(tmp_path) -> None:
+    """Database Explorer _read_df must not call con.cursor() (wrapper has no cursor())."""
+    from ui_database_explorer import _read_df
+
+    db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db.conn.execute(
+        "INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);",
+        ("CamA", "alias-a", "YES"),
+    )
+    db.conn.commit()
+    df = _read_df(db.conn, "SELECT ID, CAMERANAME, ALIAS FROM EQUIPMENTS ORDER BY ID;")
+    assert list(df.columns) == ["ID", "CAMERANAME", "ALIAS"]
+    assert len(df) == 1
+    assert df.iloc[0]["CAMERANAME"] == "CamA"
+    df2 = _read_df(
+        db.conn,
+        "SELECT ALIAS FROM EQUIPMENTS WHERE ID = ?;",
+        (1,),
+    )
+    assert df2.iloc[0]["ALIAS"] == "alias-a"
+    db.close()
+
+
+def test_equipments_focal_column_dropped_on_open(tmp_path) -> None:
+    """Legacy EQUIPMENTS.FOCAL is removed; focal is TELESCOPE-only."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        "INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);",
+        ("CamA", "alias-a", "YES"),
+    )
+    db.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN FOCAL REAL;")
+    db.conn.execute("UPDATE EQUIPMENTS SET FOCAL = 999.0 WHERE ID = 1;")
+    db.conn.commit()
+    db.close()
+
+    db2 = VyvarDatabase(db_path)
+    cols = {r["name"] for r in db2.conn.execute("PRAGMA table_info('EQUIPMENTS');").fetchall()}
+    assert "FOCAL" not in cols
+    row = db2.conn.execute("SELECT CAMERANAME FROM EQUIPMENTS WHERE ID = 1;").fetchone()
+    assert row is not None
+    assert row["CAMERANAME"] == "CamA"
+    db2.close()
+
+
+def test_photometry_light_curve_table_dropped_on_open(tmp_path) -> None:
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        """
+        CREATE TABLE PHOTOMETRY_LIGHT_CURVE (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            DRAFT_ID INTEGER,
+            JD REAL
+        );
+        """
+    )
+    db.conn.commit()
+    db.close()
+
+    VyvarDatabase(db_path).close()
+    conn = __import__("sqlite3").connect(db_path)
+    names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table';")}
+    conn.close()
+    assert "PHOTOMETRY_LIGHT_CURVE" not in names
+
+
+def test_active_stored_as_yes_no_text(tmp_path) -> None:
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        "INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);",
+        ("CamA", "a", "1"),
+    )
+    db.conn.execute(
+        "INSERT INTO TELESCOPE (TELESCOPENAME, ALIAS, DIAMETER, FOCAL, ACTIVE) VALUES (?, ?, ?, ?, ?);",
+        ("Tel", "t", 200.0, 1000.0, 0),
+    )
+    db.conn.execute(
+        "INSERT INTO LOCATION (PLACENAME, LATITUDE, LONGITUDE, ALTITUDE, ACTIVE) VALUES (?, ?, ?, ?, ?);",
+        ("Site", 50.0, 14.0, 300.0, 1),
+    )
+    db.conn.commit()
+    db.close()
+
+    db2 = VyvarDatabase(db_path)
+    eq = db2.conn.execute("SELECT ACTIVE FROM EQUIPMENTS WHERE ID = 1;").fetchone()["ACTIVE"]
+    tel = db2.conn.execute("SELECT ACTIVE FROM TELESCOPE WHERE ID = 1;").fetchone()["ACTIVE"]
+    loc = db2.conn.execute("SELECT ACTIVE FROM LOCATION WHERE ID = 1;").fetchone()["ACTIVE"]
+    assert eq == "YES"
+    assert tel == "NO"
+    assert loc == "YES"
+    assert db2.get_equipments(active_only=True)
+    assert db2.get_telescopes(active_only=True) == []
+    assert db2.get_telescopes(active_only=False)
+    assert VyvarDatabase.normalize_active_text(1) == "YES"
+    assert VyvarDatabase.normalize_active_text(0) == "NO"
+    assert VyvarDatabase.normalize_active_text("NO") == "NO"
+    db2.close()
+
+
+def test_get_observer_locations_text_active(tmp_path) -> None:
+    from database import get_observer_locations
+
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        "INSERT INTO LOCATION (PLACENAME, LATITUDE, LONGITUDE, ALTITUDE, ACTIVE) VALUES (?, ?, ?, ?, ?);",
+        ("ActiveSite", 50.0, 14.0, 300.0, "YES"),
+    )
+    db.conn.execute(
+        "INSERT INTO LOCATION (PLACENAME, LATITUDE, LONGITUDE, ALTITUDE, ACTIVE) VALUES (?, ?, ?, ?, ?);",
+        ("InactiveSite", 51.0, 15.0, 400.0, "NO"),
+    )
+    db.conn.commit()
+    db.close()
+
+    all_rows = get_observer_locations(db_path)
+    assert len(all_rows) == 2
+    assert all_rows[0]["active"] == 1
+    assert all_rows[1]["active"] == 0
+
+    active_rows = get_observer_locations(db_path, active_only=True)
+    assert len(active_rows) == 1
+    assert active_rows[0]["name"] == "ActiveSite"
+    assert active_rows[0]["active"] == 1

@@ -13,6 +13,21 @@ from importer import quicklook_preview_png_bytes
 from pipeline import AstroPipeline
 
 
+def _read_df(conn, sql, params=()):
+    """Read a query into a DataFrame via the RLock-serialized wrapper.
+
+    Avoids pandas' DBAPI cursor() path, which ThreadSafeSQLiteConnection does not expose.
+    """
+    cur = conn.execute(sql, tuple(params))
+    try:
+        cols = [d[0] for d in (cur.description or [])]
+        rows = cur.fetchall()  # _LockedCursor.fetchall releases the RLock in finally
+    except Exception:
+        cur.close()  # release the RLock if we failed before fetchall
+        raise
+    return pd.DataFrame.from_records(rows, columns=cols)
+
+
 def _row_active_for_style(row: pd.Series, col: str = "ACTIVE") -> bool:
     if col not in row.index:
         return True
@@ -41,9 +56,9 @@ def _render_universal_main_table(
 ) -> None:
     """``st.data_editor`` with dynamic rows + Save -> SQL (non-OBS reference tables)."""
     conn = pipeline.db.conn
-    df = pd.read_sql_query(f"SELECT * FROM {sql_name} {order_sql};", conn)
-    if sql_name == "TELESCOPE" and "ACTIVE" in df.columns and not df.empty:
-        df["ACTIVE"] = df["ACTIVE"].map(VyvarDatabase.normalize_active_db_value).astype(int)
+    df = _read_df(conn, f"SELECT * FROM {sql_name} {order_sql};")
+    if "ACTIVE" in df.columns and not df.empty:
+        df["ACTIVE"] = df["ACTIVE"].map(VyvarDatabase.normalize_active_text)
     if "IS_DEFAULT" in df.columns and not df.empty:
         df["IS_DEFAULT"] = (
             df["IS_DEFAULT"].map(VyvarDatabase.normalize_active_db_value).astype(int).astype(bool)
@@ -56,13 +71,13 @@ def _render_universal_main_table(
         )
     if sql_name == "TELESCOPE":
         st.caption(
-            "**TELESCOPE.ACTIVE:** only **0** or **1** - **1** = active, **0** = soft-delete (inactive). "
-            "Deleting a row in the editor **does not remove** the record - sets **ACTIVE = 0**."
+            "**TELESCOPE.ACTIVE:** **YES** = active; **NO** = soft-delete (inactive). "
+            "Deleting a row in the editor **does not remove** the record - sets **ACTIVE = 'NO'**."
         )
     elif sql_name == "EQUIPMENTS":
         st.caption(
-            "**EQUIPMENTS.ACTIVE:** **1** / **YES** = active; **0** / **NO** = soft-delete (only active rows in Draft picker). "
-            "Deleting a row in the editor **does not DELETE** in SQL - sets **ACTIVE = 0**. "
+            "**EQUIPMENTS.ACTIVE:** **YES** = active; **NO** = soft-delete (only active rows in Draft picker). "
+            "Deleting a row in the editor **does not DELETE** in SQL - sets **ACTIVE = 'NO'**. "
             "Physical ``DELETE`` is not performed from this editor (``FINAL_DATA`` / hash integrity)."
         )
     else:
@@ -83,11 +98,11 @@ def _render_universal_main_table(
 
     disabled = [c for c in df.columns if c == "ID" or c not in editable]
     column_config: dict[str, Any] = {}
-    if sql_name == "TELESCOPE" and "ACTIVE" in df.columns:
+    if "ACTIVE" in df.columns and sql_name in ("EQUIPMENTS", "TELESCOPE", "LOCATION"):
         column_config["ACTIVE"] = st.column_config.SelectboxColumn(
             "ACTIVE",
-            options=[0, 1],
-            help="1 = active, 0 = soft-delete (inactive)",
+            options=["YES", "NO"],
+            help="YES = active, NO = soft-delete (inactive)",
             required=True,
         )
     if "IS_DEFAULT" in df.columns:
@@ -120,7 +135,7 @@ def _render_universal_main_table(
                 f"deleted {stats['deleted']}",
             ]
             if sd:
-                parts.append(f"soft-deactivated (ACTIVE=0): {sd}")
+                parts.append(f"soft-deactivated (ACTIVE='NO'): {sd}")
             st.success("Done: " + ", ".join(parts) + ".")
             st.rerun()
         except Exception as exc:  # noqa: BLE001
@@ -158,7 +173,6 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
                 "SENSORTYPE",
                 "SENSORSIZE",
                 "PIXELSIZE",
-                "FOCAL",
                 "SATURATE_ADU",
                 "GAIN_ADU",
                 "READNOISE_E",
@@ -186,7 +200,8 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
             "Reference table for exposure / filter / binning. Editor changes apply only to SCANNING columns."
         )
         with st.expander("Preview: Effective_Pixel_Size (reference EQUIPMENTS ID=1)", expanded=False):
-            scan_preview = pd.read_sql_query(
+            scan_preview = _read_df(
+                conn,
                 """
                 SELECT
                     s.*,
@@ -199,7 +214,6 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
                 LEFT JOIN EQUIPMENTS e ON e.ID = 1
                 ORDER BY s.ID;
                 """,
-                conn,
             )
             if not scan_preview.empty and "BINNING" in scan_preview.columns:
 
@@ -226,19 +240,19 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
         )
 
     elif table == "OBS_DRAFT":
-        draft_df = pd.read_sql_query("SELECT * FROM OBS_DRAFT ORDER BY ID DESC;", conn)
+        draft_df = _read_df(conn, "SELECT * FROM OBS_DRAFT ORDER BY ID DESC;")
         st.dataframe(draft_df, width="stretch")
         st.info("OBS_DRAFT rows represent ingestion before astrometry finalization.")
 
     elif table == "OBS_FILES":
         st.caption("Per-file index for each OBSERVATION (ingestion evidence).")
-        obs_ids = pd.read_sql_query(
+        obs_ids = _read_df(
+            conn,
             "SELECT ID FROM OBSERVATION ORDER BY ID DESC LIMIT 200;",
-            conn,
         )["ID"].astype(str).tolist()
-        draft_ids = pd.read_sql_query(
-            "SELECT ID FROM OBS_DRAFT ORDER BY ID DESC LIMIT 200;",
+        draft_ids = _read_df(
             conn,
+            "SELECT ID FROM OBS_DRAFT ORDER BY ID DESC LIMIT 200;",
         )["ID"].astype(str).tolist()
         selected_obs = st.selectbox(
             "Filter by key",
@@ -246,29 +260,29 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
             index=0,
         )
         if selected_obs == "(all)":
-            files_df = pd.read_sql_query(
-                "SELECT * FROM OBS_FILES ORDER BY OBSERVATION_ID DESC, ID DESC LIMIT 2000;",
+            files_df = _read_df(
                 conn,
+                "SELECT * FROM OBS_FILES ORDER BY OBSERVATION_ID DESC, ID DESC LIMIT 2000;",
             )
         elif selected_obs.startswith("DRAFT:"):
             did = selected_obs.split(":", 1)[1]
-            files_df = pd.read_sql_query(
-                "SELECT * FROM OBS_FILES WHERE DRAFT_ID = ? ORDER BY ID DESC;",
+            files_df = _read_df(
                 conn,
-                params=(did,),
+                "SELECT * FROM OBS_FILES WHERE DRAFT_ID = ? ORDER BY ID DESC;",
+                (did,),
             )
         else:
             oid = selected_obs.split(":", 1)[1] if selected_obs.startswith("OBS:") else selected_obs
-            files_df = pd.read_sql_query(
-                "SELECT * FROM OBS_FILES WHERE OBSERVATION_ID = ? ORDER BY ID DESC;",
+            files_df = _read_df(
                 conn,
-                params=(oid,),
+                "SELECT * FROM OBS_FILES WHERE OBSERVATION_ID = ? ORDER BY ID DESC;",
+                (oid,),
             )
         st.dataframe(files_df, width="stretch")
         st.info("OBS_FILES edit is disabled (generated automatically during import).")
 
     else:  # OBSERVATION
-        observation_df = pd.read_sql_query("SELECT * FROM OBSERVATION ORDER BY ID;", conn)
+        observation_df = _read_df(conn, "SELECT * FROM OBSERVATION ORDER BY ID;")
 
         if "IS_CALIBRATED" in observation_df.columns:
             draft_mask = observation_df["IS_CALIBRATED"].fillna(1).astype(int) == 0
