@@ -2359,56 +2359,30 @@ def calibrated_paths_for_draft_apply_filters(
     lim_active = bool(fwhm_max_px is not None and float(fwhm_max_px) > 0)
     lim_v = float(fwhm_max_px) if lim_active else 0.0
     _ = drift_max_arcmin  # backward compatibility: cleaning is FWHM-only
+    all_rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
     if lim_active:
-        _nonnull_cnt = int(
-            db.conn.execute(
-                "SELECT COUNT(*) FROM OBS_FILES WHERE DRAFT_ID = ? AND FWHM IS NOT NULL;",
-                (int(draft_id),),
-            ).fetchone()[0]
-        )
+        _nonnull_cnt = sum(1 for _r in all_rows if _r.get("FWHM") is not None)
         if _nonnull_cnt > 0:
             rows = [
-                dict(r)
-                for r in db.conn.execute(
-                    """
-                    SELECT * FROM OBS_FILES
-                    WHERE DRAFT_ID = ?
-                      AND (IS_REJECTED = 0 OR IS_REJECTED IS NULL)
-                      AND FWHM IS NOT NULL
-                      AND (FWHM <= ?);
-                    """,
-                    (int(draft_id), float(lim_v)),
-                ).fetchall()
+                _r
+                for _r in all_rows
+                if _r.get("IS_REJECTED") in (None, 0)
+                and _r.get("FWHM") is not None
+                and float(_r["FWHM"]) <= float(lim_v)
             ]
         else:
             rows = [
-                dict(r)
-                for r in db.conn.execute(
-                    """
-                    SELECT * FROM OBS_FILES
-                    WHERE DRAFT_ID = ?
-                      AND (IS_REJECTED = 0 OR IS_REJECTED IS NULL)
-                      AND (FWHM <= ? OR FWHM IS NULL);
-                    """,
-                    (int(draft_id), float(lim_v)),
-                ).fetchall()
+                _r
+                for _r in all_rows
+                if _r.get("IS_REJECTED") in (None, 0)
+                and (_r.get("FWHM") is None or float(_r["FWHM"]) <= float(lim_v))
             ]
         log_event(
             f"DEBUG: Preprocess DB filter selected {len(rows)} rows (limit={float(lim_v):.3f} px, strict, nonnull_fwhm={_nonnull_cnt})."
         )
     else:
         log_event("DEBUG: Preprocess filter - FWHM limit disabled (0/None); keeping all non-rejected frames.")
-        rows = [
-            dict(r)
-            for r in db.conn.execute(
-                """
-                SELECT * FROM OBS_FILES
-                WHERE DRAFT_ID = ?
-                  AND (IS_REJECTED = 0 OR IS_REJECTED IS NULL);
-                """,
-                (int(draft_id),),
-            ).fetchall()
-        ]
+        rows = [_r for _r in all_rows if _r.get("IS_REJECTED") in (None, 0)]
         log_event(f"DEBUG: Preprocess DB filter selected {len(rows)} rows (FWHM disabled).")
 
     for row in rows:
@@ -2435,14 +2409,11 @@ def calibrated_paths_for_draft_apply_filters(
             continue
         cal_paths.append(resolved_raw)
     if not cal_paths:
-        rescue_rows = db.conn.execute(
-            """
-            SELECT * FROM OBS_FILES
-            WHERE DRAFT_ID = ?
-              AND (IS_REJECTED = 0 OR IS_REJECTED IS NULL);
-            """,
-            (int(draft_id),),
-        ).fetchall()
+        rescue_rows = [
+            _r
+            for _r in db.fetch_draft_light_rows_for_quality(int(draft_id))
+            if _r.get("IS_REJECTED") in (None, 0)
+        ]
         if rescue_rows:
             log_event(f"INFO: Rescue pass found {len(rescue_rows)} files by ignoring QC filters.")
         for row in rescue_rows:
@@ -15298,12 +15269,8 @@ def _qc_pack_from_config(
         try:
             _dbp = Path(cfg.database_path)
             if _dbp.is_file():
-                _row = VyvarDatabase(_dbp).conn.execute(
-                    "SELECT ID_EQUIPMENTS FROM OBS_DRAFT WHERE ID = ?",
-                    (int(draft_id),),
-                ).fetchone()
-                if _row and _row[0] is not None:
-                    id_equipments = int(_row[0])
+                _vdb = VyvarDatabase(_dbp)
+                id_equipments = _vdb.get_draft_equipment_id(int(draft_id))
         except Exception:  # noqa: BLE001
             id_equipments = None
     return {

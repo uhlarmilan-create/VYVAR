@@ -52,17 +52,11 @@ def _clamp_fwhm_px(v: float) -> float:
 
 
 def _median_fwhm_obs_files(db: VyvarDatabase, draft_id: int) -> float | None:
-    cur = db.conn.execute(
-        """
-        SELECT FWHM FROM OBS_FILES
-        WHERE DRAFT_ID = ? AND FWHM IS NOT NULL;
-        """,
-        (int(draft_id),),
-    )
+    rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
     vals: list[float] = []
-    for row in cur.fetchall():
+    for row in rows:
         try:
-            x = float(row[0])
+            x = float(row.get("FWHM"))
         except (TypeError, ValueError):
             continue
         if math.isfinite(x) and x > 0.0:
