@@ -12,9 +12,7 @@ from database import VyvarDatabase
 from draft_provenance import (
     collect_manifest_draft_rows,
     collect_manifest_obs_file_rows,
-    collect_manifest_observation_rows,
 )
-from importer import quicklook_preview_png_bytes
 from pipeline import AstroPipeline
 
 
@@ -147,7 +145,7 @@ def _render_universal_main_table(
     else:
         st.caption(
             "After **Save**, changes are written to SQL. For **LOCATION**, a row is **deleted** "
-            "only if nothing in OBS_DRAFT / OBSERVATION references it (otherwise an error)."
+            "only if nothing in OBS_DRAFT references it (otherwise an error)."
         )
     if extra_caption:
         st.caption(extra_caption)
@@ -214,7 +212,7 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
 
     table = st.selectbox(
         "Table",
-        options=["TELESCOPES", "EQUIPMENTS", "LOCATION", "OBS_DRAFT", "OBSERVATION", "OBS_FILES"],
+        options=["TELESCOPES", "EQUIPMENTS", "LOCATION", "OBS_DRAFT", "OBS_FILES"],
         index=0,
     )
 
@@ -267,8 +265,14 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
     elif table == "OBS_FILES":
         st.caption("Per-file index from ``draft_manifest.json`` ``files[]`` (ingestion evidence).")
         archive_root = Path(pipeline.config.archive_root)
-        obs_rows = collect_manifest_observation_rows(archive_root)
-        obs_ids = [str(r["ID"]) for r in obs_rows[:200]]
+        obs_rows = collect_manifest_obs_file_rows(archive_root)
+        obs_ids = sorted(
+            {
+                str(r["OBSERVATION_ID"])
+                for r in obs_rows
+                if r.get("OBSERVATION_ID") not in (None, "")
+            }
+        )[:200]
         draft_ids = [str(r["ID"]) for r in collect_manifest_draft_rows(archive_root)[:200]]
         selected_obs = st.selectbox(
             "Filter by key",
@@ -286,66 +290,6 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
         files_df = pd.DataFrame.from_records(file_rows) if file_rows else pd.DataFrame()
         st.dataframe(files_df, width="stretch")
         st.info("OBS_FILES edit is disabled (generated automatically during import).")
-
-    else:  # OBSERVATION
-        archive_root = Path(pipeline.config.archive_root)
-        obs_rows = collect_manifest_observation_rows(archive_root)
-        observation_df = pd.DataFrame.from_records(obs_rows) if obs_rows else pd.DataFrame()
-        st.caption("Source: finalized drafts (`final_observation_id` in manifest). Read-only.")
-
-        if "IS_CALIBRATED" in observation_df.columns:
-            draft_mask = observation_df["IS_CALIBRATED"].fillna(1).astype(int) == 0
-            if draft_mask.any():
-                st.error(
-                    "Draft sessions detected: some OBSERVATION rows are marked as non-calibrated. "
-                    "These sessions should be treated as preliminary (Quick Look)."
-                )
-
-                def _highlight_draft(row: pd.Series) -> list[str]:
-                    is_draft = False
-                    try:
-                        is_draft = int(row.get("IS_CALIBRATED", 1) or 1) == 0
-                    except Exception:  # noqa: BLE001
-                        is_draft = False
-                    return ["background-color: #f8d7da" if is_draft else "" for _ in row.index]
-
-                st.dataframe(
-                    observation_df.style.apply(_highlight_draft, axis=1),
-                    width="stretch",
-                )
-            else:
-                st.dataframe(observation_df, width="stretch")
-        else:
-            st.dataframe(observation_df, width="stretch")
-
-        # Quick Look preview (ZScale) for draft sessions
-        if "IS_CALIBRATED" in observation_df.columns and "LIGHTS_PATH" in observation_df.columns:
-            draft_df = observation_df[
-                observation_df["IS_CALIBRATED"].fillna(1).astype(int) == 0
-            ].copy()
-            if not draft_df.empty:
-                st.markdown("---")
-                st.subheader("Quick Look Preview (Draft)")
-                choices = draft_df["ID"].astype(str).tolist()
-                selected = st.selectbox("Draft OBSERVATION", options=choices)
-                row = draft_df[draft_df["ID"].astype(str) == str(selected)].iloc[0]
-                lights_path = str(row.get("LIGHTS_PATH") or "")
-                lights_dir = Path(lights_path)
-                fits_files: list[Path] = []
-                if lights_dir.exists() and lights_dir.is_dir():
-                    for ext in ("*.fits", "*.fit", "*.fts", "*.FITS", "*.FIT", "*.FTS"):
-                        fits_files.extend(lights_dir.glob(ext))
-                fits_files = sorted(fits_files)
-                if not fits_files:
-                    st.warning("No FITS found for preview in LIGHTS_PATH.")
-                else:
-                    try:
-                        png_bytes = quicklook_preview_png_bytes(fits_files[0])
-                        st.image(png_bytes, caption=f"ZScale preview: {fits_files[0].name}", width="stretch")
-                    except Exception as exc:  # noqa: BLE001
-                        st.error(f"Preview failed: {exc}")
-
-        st.info("OBSERVATION edit is intentionally disabled (ID is derived / file-first key).")
 
     st.divider()
     st.subheader("Database Maintenance (Temporary Tables Only)")

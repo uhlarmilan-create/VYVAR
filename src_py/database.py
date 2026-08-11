@@ -1206,20 +1206,6 @@ class VyvarDatabase:
                 ALTITUDE REAL
             );
 
-            CREATE TABLE IF NOT EXISTS OBSERVATION (
-                ID TEXT PRIMARY KEY,
-                ID_EQUIPMENTS INTEGER,
-                ID_TELESCOPE INTEGER,
-                ID_LOCATION INTEGER,
-                ID_SCANNING INTEGER,
-                CENTEROFFIELDRA REAL,
-                CENTEROFFIELDDE REAL,
-                OBSERVATIONSTARTJD REAL,
-                FOREIGN KEY (ID_EQUIPMENTS) REFERENCES EQUIPMENTS (ID),
-                FOREIGN KEY (ID_TELESCOPE) REFERENCES TELESCOPE (ID),
-                FOREIGN KEY (ID_LOCATION) REFERENCES LOCATION (ID)
-            );
-
             CREATE TABLE IF NOT EXISTS OBS_DRAFT (
                 ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 ID_EQUIPMENTS INTEGER,
@@ -1239,8 +1225,7 @@ class VyvarDatabase:
                 ARCHIVE_PATH TEXT,
                 FOREIGN KEY (ID_EQUIPMENTS) REFERENCES EQUIPMENTS (ID),
                 FOREIGN KEY (ID_TELESCOPE) REFERENCES TELESCOPE (ID),
-                FOREIGN KEY (ID_LOCATION) REFERENCES LOCATION (ID),
-                FOREIGN KEY (FINAL_OBSERVATION_ID) REFERENCES OBSERVATION (ID)
+                FOREIGN KEY (ID_LOCATION) REFERENCES LOCATION (ID)
             );
 
             CREATE TABLE IF NOT EXISTS OBS_FILES (
@@ -1250,7 +1235,6 @@ class VyvarDatabase:
                 FILE_PATH TEXT,
                 IMAGETYP TEXT,
                 FILTER TEXT,
-                FOREIGN KEY (OBSERVATION_ID) REFERENCES OBSERVATION (ID) ON DELETE CASCADE,
                 FOREIGN KEY (DRAFT_ID) REFERENCES OBS_DRAFT (ID) ON DELETE CASCADE
             );
             """
@@ -1266,7 +1250,6 @@ class VyvarDatabase:
         self._ensure_obs_files_quality_inspection_columns()
         self._ensure_obs_files_observation_group_key()
         self._ensure_obs_files_scanning_and_calibration_columns()
-        self._ensure_observation_import_columns()
         self._ensure_calibration_library_table()
         self._ensure_fits_header_cache_table()
         self._ensure_qc_processing_tables()
@@ -1391,24 +1374,17 @@ class VyvarDatabase:
 
         self.conn.commit()
 
-    def _ensure_final_data_view(self) -> None:
-        """View of rows that reference equipment/telescope (drafts, observations, QC runs).
+    def _rebuild_final_data_view(self) -> None:
+        """View of rows that reference equipment/telescope (drafts, QC runs).
 
         Used for hard-delete integrity (hashtag / final pipeline safety). Not a physical table.
         """
-        cur = self.conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='view' AND name='FINAL_DATA' LIMIT 1;"
-        )
-        if cur.fetchone() is not None:
-            return
+        self.conn.execute("DROP VIEW IF EXISTS FINAL_DATA;")
         self.conn.execute(
             """
             CREATE VIEW FINAL_DATA AS
             SELECT d.ID_EQUIPMENTS AS equipment_id, d.ID_TELESCOPE AS telescope_id
             FROM OBS_DRAFT d
-            UNION ALL
-            SELECT o.ID_EQUIPMENTS, o.ID_TELESCOPE
-            FROM OBSERVATION o
             UNION ALL
             SELECT d2.ID_EQUIPMENTS, d2.ID_TELESCOPE
             FROM OBS_QC_PROCESSING_RUN r
@@ -1416,6 +1392,14 @@ class VyvarDatabase:
             """
         )
         self.conn.commit()
+
+    def _ensure_final_data_view(self) -> None:
+        cur = self.conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='view' AND name='FINAL_DATA' LIMIT 1;"
+        )
+        if cur.fetchone() is not None:
+            return
+        self._rebuild_final_data_view()
 
     def _ensure_master_sources_table(self) -> None:
         self.conn.execute(
@@ -1622,18 +1606,11 @@ class VyvarDatabase:
         return int(row[0]) if row is not None else 0
 
     def count_references_to_location_id(self, location_id: int) -> int:
-        n = 0
         cur = self.conn.execute(
             "SELECT COUNT(*) FROM OBS_DRAFT WHERE ID_LOCATION = ?;",
             (int(location_id),),
         )
-        n += int(cur.fetchone()[0])
-        cur = self.conn.execute(
-            "SELECT COUNT(*) FROM OBSERVATION WHERE ID_LOCATION = ?;",
-            (int(location_id),),
-        )
-        n += int(cur.fetchone()[0])
-        return n
+        return int(cur.fetchone()[0])
 
     @staticmethod
     def normalize_active_db_value(raw: Any) -> int:
@@ -1895,7 +1872,7 @@ class VyvarDatabase:
                     n = self.count_references_to_location_id(did)
                     if n > 0:
                         raise ValueError(
-                            f"Lokalitu ID={did} nie je mozne zmazat: {n} odkazov v OBS_DRAFT/OBSERVATION."
+                            f"Lokalitu ID={did} nie je mozne zmazat: {n} odkazov v OBS_DRAFT."
                         )
                 self.conn.execute(f"DELETE FROM {table} WHERE {pk_col} = ?;", (did,))
                 deleted += 1
@@ -2301,7 +2278,7 @@ class VyvarDatabase:
         ``OBS_QC_PROCESSING_RUN`` / ``OBS_QC_PROCESSING_FILE`` are **not** CASCADE-deleted.
         Leaves orphan ``DRAFT_ID`` values in QC runs (danger-zone tradeoff).
 
-        Never executes SQL against ``EQUIPMENTS``, ``TELESCOPE``, ``OBSERVATION``, or ``OBS_QC_PROCESSING_*``.
+        Never executes SQL against ``EQUIPMENTS``, ``TELESCOPE``, or ``OBS_QC_PROCESSING_*``.
         """
         cur_f = self.conn.execute("DELETE FROM OBS_FILES;")
         n_files = int(cur_f.rowcount) if cur_f.rowcount is not None and cur_f.rowcount >= 0 else 0
@@ -2889,7 +2866,6 @@ class VyvarDatabase:
                 FILE_PATH TEXT,
                 IMAGETYP TEXT,
                 FILTER TEXT,
-                FOREIGN KEY (OBSERVATION_ID) REFERENCES OBSERVATION (ID) ON DELETE CASCADE,
                 FOREIGN KEY (DRAFT_ID) REFERENCES OBS_DRAFT (ID) ON DELETE CASCADE
             );
             """,
@@ -3177,6 +3153,8 @@ class VyvarDatabase:
         self.conn.execute("PRAGMA foreign_keys = OFF;")
         try:
             self.conn.execute("DROP TABLE IF EXISTS SCANNING;")
+            self.conn.execute("DROP TABLE IF EXISTS OBSERVATION;")
+            self._rebuild_final_data_view()
             self.conn.execute("DROP TABLE IF EXISTS SETTINGS;")
             self.conn.execute("DROP TABLE IF EXISTS PHOTOMETRY_LIGHT_CURVE;")
             self.conn.commit()
@@ -3218,25 +3196,6 @@ class VyvarDatabase:
             FROM EQUIPMENTS_OLD;
             """,
         )
-
-    def _ensure_observation_import_columns(self) -> None:
-        """Lightweight schema migration for import logging fields."""
-        cursor = self.conn.execute("PRAGMA table_info('OBSERVATION');")
-        existing_cols = {row["name"] for row in cursor.fetchall()}
-
-        to_add: list[tuple[str, str]] = [
-            ("LIGHTS_PATH", "TEXT"),
-            ("CALIB_PATH", "TEXT"),
-            ("IMPORTED_AT", "TEXT"),
-            ("IMPORT_WARNINGS", "TEXT"),
-            ("IS_CALIBRATED", "INTEGER"),
-            ("ARCHIVE_PATH", "TEXT"),
-        ]
-        for col_name, col_type in to_add:
-            if col_name in existing_cols:
-                continue
-            self.conn.execute(f"ALTER TABLE OBSERVATION ADD COLUMN {col_name} {col_type};")
-        self.conn.commit()
 
     def initialize_database(self) -> None:
         """Reference tables are created (schema) but intentionally EMPTY on a fresh DB.
@@ -3646,98 +3605,6 @@ class VyvarDatabase:
         )
         return int(resolved.location_id), None
 
-    def insert_observation(
-        self,
-        id_equipments: int,
-        id_telescope: int,
-        id_location: int,
-        id_scanning: int,
-        center_of_field_ra: float,
-        center_of_field_de: float,
-        observation_start_jd: float,
-        hashtag: str | None = None,
-    ) -> str:
-        observation_id = hashtag or self.generate_hashtag(
-            id_equipments=id_equipments,
-            id_telescope=id_telescope,
-            id_location=id_location,
-            id_scanning=id_scanning,
-            center_of_field_ra=center_of_field_ra,
-            center_of_field_de=center_of_field_de,
-            observation_start_jd=observation_start_jd,
-        )
-
-        self._validate_observation_foreign_keys(
-            id_equipments=id_equipments,
-            id_telescope=id_telescope,
-            id_location=id_location,
-            id_scanning=id_scanning,
-        )
-
-        try:
-            self.conn.execute(
-                """
-                INSERT INTO OBSERVATION (
-                    ID,
-                    ID_EQUIPMENTS,
-                    ID_TELESCOPE,
-                    ID_LOCATION,
-                    ID_SCANNING,
-                    CENTEROFFIELDRA,
-                    CENTEROFFIELDDE,
-                    OBSERVATIONSTARTJD
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-                """,
-                (
-                    observation_id,
-                    id_equipments,
-                    id_telescope,
-                    id_location,
-                    id_scanning,
-                    center_of_field_ra,
-                    center_of_field_de,
-                    observation_start_jd,
-                ),
-            )
-        except sqlite3.IntegrityError as exc:
-            if "FOREIGN KEY constraint failed" in str(exc):
-                raise ValueError(
-                    "Observation references a non-existing foreign key "
-                    "(equipment, telescope, location, or scanning)."
-                ) from exc
-            if "UNIQUE constraint failed" in str(exc):
-                raise ValueError(
-                    f"Observation with hashtag '{observation_id}' already exists."
-                ) from exc
-            raise
-
-        self.conn.commit()
-        return observation_id
-
-    def add_observation(self, data_dict: dict[str, Any]) -> str:
-        """Insert observation from input dictionary and auto-generate hashtag ID."""
-        required_fields = {
-            "center_of_field_ra",
-            "center_of_field_de",
-            "observation_start_jd",
-        }
-        missing = required_fields - set(data_dict.keys())
-        if missing:
-            missing_fields = ", ".join(sorted(missing))
-            raise ValueError(f"Missing required observation fields: {missing_fields}")
-
-        return self.insert_observation(
-            id_equipments=int(data_dict.get("id_equipments", 1)),
-            id_telescope=int(data_dict.get("id_telescope", 1)),
-            id_location=int(data_dict.get("id_location", 1)),
-            id_scanning=int(data_dict.get("id_scanning", 1)),
-            center_of_field_ra=float(data_dict["center_of_field_ra"]),
-            center_of_field_de=float(data_dict["center_of_field_de"]),
-            observation_start_jd=float(data_dict["observation_start_jd"]),
-            hashtag=None,
-        )
-
     def get_equipments(self, *, active_only: bool = False) -> list[dict[str, Any]]:
         sql = """
             SELECT ID, CAMERANAME, ALIAS, ACTIVE, IS_DEFAULT
@@ -3761,113 +3628,6 @@ class VyvarDatabase:
         sql += " ORDER BY ID; "
         cursor = self.conn.execute(sql, params)
         return [dict(row) for row in cursor.fetchall()]
-
-    def get_observation_metadata(self, hashtag: str) -> dict[str, Any] | None:
-        cursor = self.conn.execute(
-            """
-            SELECT
-                o.ID AS observation_id,
-                o.CENTEROFFIELDRA AS center_of_field_ra,
-                o.CENTEROFFIELDDE AS center_of_field_de,
-                o.OBSERVATIONSTARTJD AS observation_start_jd,
-                e.ID AS equipment_id,
-                e.CAMERANAME AS camera_name,
-                e.ALIAS AS equipment_alias,
-                e.SENSORTYPE AS sensor_type,
-                e.SENSORSIZE AS sensor_size,
-                e.PIXELSIZE AS pixel_size,
-                t.ID AS telescope_id,
-                t.TELESCOPENAME AS telescope_name,
-                t.ALIAS AS telescope_alias,
-                t.DIAMETER AS diameter,
-                t.FOCAL AS focal,
-                l.ID AS location_id,
-                l.PLACENAME AS place_name,
-                l.LATITUDE AS latitude,
-                l.LONGITUDE AS longitude,
-                l.ALTITUDE AS altitude,
-                o.ID_SCANNING AS scanning_id,
-                NULL AS exp_time,
-                NULL AS filters,
-                NULL AS binning,
-                NULL AS sensor_temp
-            FROM OBSERVATION o
-            LEFT JOIN EQUIPMENTS e ON o.ID_EQUIPMENTS = e.ID
-            LEFT JOIN TELESCOPE t ON o.ID_TELESCOPE = t.ID
-            LEFT JOIN LOCATION l ON o.ID_LOCATION = l.ID
-            WHERE o.ID = ?;
-            """,
-            (hashtag,),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        return dict(row)
-
-    def update_observation_import_log(
-        self,
-        hashtag: str,
-        *,
-        lights_path: str,
-        calib_path: str,
-        imported_at: str,
-        import_warnings: str | None = None,
-        is_calibrated: bool | None = None,
-        archive_path: str | None = None,
-    ) -> None:
-        is_cal_int = None if is_calibrated is None else (1 if is_calibrated else 0)
-        cursor = self.conn.execute(
-            """
-            UPDATE OBSERVATION
-            SET LIGHTS_PATH = ?,
-                CALIB_PATH = ?,
-                IMPORTED_AT = ?,
-                IMPORT_WARNINGS = ?,
-                IS_CALIBRATED = COALESCE(?, IS_CALIBRATED),
-                ARCHIVE_PATH = COALESCE(?, ARCHIVE_PATH)
-            WHERE ID = ?;
-            """,
-            (
-                lights_path,
-                calib_path,
-                imported_at,
-                import_warnings,
-                is_cal_int,
-                archive_path,
-                hashtag,
-            ),
-        )
-        if cursor.rowcount == 0:
-            raise ValueError(f"Observation '{hashtag}' not found for import log update.")
-        self.conn.commit()
-
-    def insert_observation_files(self, observation_id: str, files: list[dict[str, Any]]) -> None:
-        """Insert per-file evidence rows into OBS_FILES for finalized OBSERVATION."""
-        self.conn.execute("DELETE FROM OBS_FILES WHERE OBSERVATION_ID = ?;", (observation_id,))
-        self.conn.executemany(
-            """
-            INSERT INTO OBS_FILES (
-                OBSERVATION_ID, DRAFT_ID, FILE_PATH, IMAGETYP, FILTER, OBSERVATION_GROUP_KEY,
-                ID_SCANNING, IS_CALIBRATED, CALIB_TYPE, CALIB_FLAGS
-            )
-            VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?);
-            """,
-            [
-                (
-                    observation_id,
-                    str(item.get("file_path", "")),
-                    str(item.get("imagetyp", "")),
-                    str(item.get("filter", "")),
-                    str(item.get("observation_group_key", "") or ""),
-                    (int(item.get("id_scanning")) if item.get("id_scanning") is not None else None),
-                    (int(item.get("is_calibrated")) if item.get("is_calibrated") is not None else None),
-                    str(item.get("calib_type", "") or ""),
-                    str(item.get("calib_flags", "") or ""),
-                )
-                for item in files
-            ],
-        )
-        self.conn.commit()
 
     def count_obs_files_for_observation(self, observation_id: str) -> int:
         row = self.conn.execute(
@@ -4162,61 +3922,6 @@ class VyvarDatabase:
             is_calibrated=is_cal_int,
             extra=extra,
         )
-
-    def finalize_draft(self, draft_id: int, *, ra_deg: float, dec_deg: float) -> str:
-        """Finalize a draft by creating OBSERVATION.ID after astrometry."""
-        cursor = self.conn.execute("SELECT * FROM OBS_DRAFT WHERE ID = ?;", (int(draft_id),))
-        row = cursor.fetchone()
-        if row is None:
-            raise ValueError(f"Draft '{draft_id}' not found.")
-
-        observation_id = self.generate_hashtag(
-            id_equipments=int(row["ID_EQUIPMENTS"]),
-            id_telescope=int(row["ID_TELESCOPE"]),
-            id_location=int(row["ID_LOCATION"]),
-            id_scanning=int(row["ID_SCANNING"]),
-            center_of_field_ra=float(ra_deg),
-            center_of_field_de=float(dec_deg),
-            observation_start_jd=float(row["OBSERVATIONSTARTJD"] or 0.0),
-        )
-
-        # Create OBSERVATION
-        self.insert_observation(
-            id_equipments=int(row["ID_EQUIPMENTS"]),
-            id_telescope=int(row["ID_TELESCOPE"]),
-            id_location=int(row["ID_LOCATION"]),
-            id_scanning=int(row["ID_SCANNING"]),
-            center_of_field_ra=float(ra_deg),
-            center_of_field_de=float(dec_deg),
-            observation_start_jd=float(row["OBSERVATIONSTARTJD"] or 0.0),
-            hashtag=observation_id,
-        )
-
-        # Move file evidence to OBSERVATION
-        self.conn.execute(
-            """
-            UPDATE OBS_FILES
-            SET OBSERVATION_ID = ?, DRAFT_ID = NULL
-            WHERE DRAFT_ID = ?;
-            """,
-            (observation_id, int(draft_id)),
-        )
-
-        # Mark draft finalized
-        self.conn.execute(
-            """
-            UPDATE OBS_DRAFT
-            SET STATUS = 'FINALIZED',
-                FINAL_OBSERVATION_ID = ?,
-                CENTEROFFIELDRA = ?,
-                CENTEROFFIELDDE = ?
-            WHERE ID = ?;
-            """,
-            (observation_id, float(ra_deg), float(dec_deg), int(draft_id)),
-        )
-        self.conn.commit()
-        self._try_refresh_draft_manifest(int(draft_id))
-        return observation_id
 
     def finalize_draft_to_observation(
         self,

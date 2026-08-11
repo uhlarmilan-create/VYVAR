@@ -19046,11 +19046,6 @@ class AstroPipeline:
             "missing_camera": not bool(metadata.get("camera")),
         }
 
-    def create_observation_from_payload(self, payload: dict[str, Any]) -> str:
-        """Insert prepared observation payload and return new observation ID."""
-        return self.db.add_observation(payload)
-
-
 def _field_jump_empty_result() -> dict[str, Any]:
     """Return empty/unknown result when data is insufficient."""
     return {

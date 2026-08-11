@@ -1,4 +1,4 @@
-"""UI: final approval step - persist OBSERVATION and archive key artifacts under ``finalized/``."""
+"""UI: final approval step - persist final_observation_id in manifest and archive key artifacts."""
 
 from __future__ import annotations
 
@@ -232,7 +232,7 @@ def render_finalization(
 
     st.markdown("#### Approval")
     approved_by = st.text_input(
-        "Observer name (written to OBSERVATION)",
+        "Observer name (written to manifest on finalize)",
         value=st.session_state.get("vyvar_observer_name", ""),
         key="vyvar_finalization_approved_by",
     )
@@ -247,7 +247,7 @@ def render_finalization(
     with col1:
         st.info(
             "After approval:\n"
-            "1. The observation is written to the OBSERVATION table\n"
+            "1. The observation id is written to draft_manifest.json\n"
             "2. Important files are copied to finalized/\n"
             "3. The draft remains in the DB (manual cleanup in Database Explorer)"
         )
@@ -271,7 +271,7 @@ def render_finalization(
                     approved_by=approved_by.strip() or None,
                     notes=notes.strip() or None,
                 )
-                log_event(f"Finalizacia: draft {draft_id} -> OBSERVATION {obs_id}")
+                log_event(f"Finalizacia: draft {draft_id} -> obs_id {obs_id}")
 
                 if archive_path is None:
                     st.warning("ARCHIVE_PATH is not set - skipping file copy.")
@@ -393,7 +393,7 @@ def render_finalization(
                     st.session_state["vyvar_observer_name"] = approved_by.strip()
 
                 st.success(
-                    f"[OK] Observation finalized! OBSERVATION ID = {obs_id}. "
+                    f"[OK] Observation finalized! observation id = {obs_id}. "
                     f"Copied {len(copied)} file(s) to finalized/."
                 )
                 st.balloons()
