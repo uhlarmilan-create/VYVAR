@@ -1,3 +1,0 @@
-source_file,mag_calib_final,err,n_good_comp,trust_flag
-a.csv,10.0,0.01,3,GREEN
-b.csv,11.0,0.02,3,GREEN
