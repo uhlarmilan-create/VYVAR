@@ -139,57 +139,8 @@ def _build_rows(
     return dark_rows, flat_rows
 
 
-def _df_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
-    if not rows:
-        return pd.DataFrame()
-    return pd.DataFrame([{k: v for k, v in r.items() if k != "_path"} for r in rows])
-
-
-def _row_delete_label(row: dict[str, Any], library_root: Path) -> str:
-    """Unique label for multiselect (relative path avoids duplicate ``File`` names in subfolders)."""
-    p = Path(row["_path"])
-    try:
-        return str(p.resolve().relative_to(library_root.resolve()))
-    except ValueError:
-        return p.name
-
-
-def _render_master_delete_block(
-    rows: list[dict[str, Any]],
-    *,
-    kind_label: str,
-    key_prefix: str,
-    library_root: Path,
-    db: VyvarDatabase | None,
-) -> None:
-    """Delete any listed masters (age/status irrelevant); updates DB registry when ``db`` is set."""
-    if not rows:
-        return
-    st.caption(
-        f"Delete files ({kind_label}) in the library folder - **any age** (not only expired)."
-    )
-    by_label = {_row_delete_label(r, library_root): r["_path"] for r in rows}
-    choices = sorted(by_label.keys())
-    picked = st.multiselect(
-        f"Select files to delete ({kind_label})",
-        options=choices,
-        key=f"{key_prefix}_del_pick",
-        help="Select one or more files; deletion removes the FITS from disk and the CALIBRATION_LIBRARY record (if DB).",
-    )
-    if st.button(
-        f"Delete selected ({kind_label})",
-        type="secondary",
-        key=f"{key_prefix}_del_btn",
-    ):
-        if not picked:
-            st.warning("No files selected.")
-        else:
-            paths = [Path(by_label[f]) for f in picked if f in by_label]
-            n_ok, errs = _delete_paths(paths, db)
-            if errs:
-                st.error("Some files could not be deleted:\n" + "\n".join(errs))
-            st.success(f"Deleted {n_ok} file(s).")
-            st.rerun()
+_CLIB_DEL_PENDING_KEY = "clib_del_pending"
+_CLIB_DEL_DIALOG_KEY = "clib_del_dialog_open"
 
 
 def _delete_paths(paths: list[Path], db: VyvarDatabase | None) -> tuple[int, list[str]]:
@@ -205,6 +156,104 @@ def _delete_paths(paths: list[Path], db: VyvarDatabase | None) -> tuple[int, lis
         except OSError as exc:
             errors.append(f"{p.name}: {exc}")
     return n_ok, errors
+
+
+def _make_delete_confirm_dialog(db: VyvarDatabase | None):
+    """OK/CANCEL confirm for a single master file delete."""
+
+    def _body() -> None:
+        pending = st.session_state.get(_CLIB_DEL_PENDING_KEY)
+        if not pending:
+            return
+        st.markdown(f"Delete **{pending['kind']}** master file?")
+        st.text(str(pending.get("file") or ""))
+        c_ok, c_cancel = st.columns(2)
+        with c_ok:
+            if st.button("OK", key="clib_del_confirm_ok", type="primary"):
+                n_ok, errs = _delete_paths([Path(str(pending["path"]))], db)
+                st.session_state.pop(_CLIB_DEL_PENDING_KEY, None)
+                if errs:
+                    st.error("Could not delete file:\n" + "\n".join(errs))
+                elif n_ok:
+                    st.success(f"Deleted: {pending.get('file')}")
+                st.rerun()
+        with c_cancel:
+            if st.button("CANCEL", key="clib_del_confirm_cancel"):
+                st.session_state.pop(_CLIB_DEL_PENDING_KEY, None)
+                st.rerun()
+
+    if hasattr(st, "dialog"):
+        return st.dialog("Confirm delete")(_body)
+    return _body
+
+
+def _render_master_table_with_delete(
+    rows: list[dict[str, Any]],
+    *,
+    kind_label: str,
+    key_prefix: str,
+    include_exptime: bool,
+) -> None:
+    """Overview table with a per-row Delete button (last column)."""
+    sorted_rows = sorted(
+        rows,
+        key=lambda r: (str(r.get("Status") or ""), -float(r.get("Age (days)") or 0.0)),
+    )
+    if include_exptime:
+        headers = [
+            "Filter",
+            "Exp (s)",
+            "Bin",
+            "Camera",
+            "Telescope",
+            "Date",
+            "Age (days)",
+            "Status",
+            "File",
+            "Delete",
+        ]
+        weights = [1, 1, 1, 2, 2, 2, 1, 1, 3, 1]
+    else:
+        headers = ["Filter", "Bin", "Camera", "Telescope", "Date", "Age (days)", "Status", "File", "Delete"]
+        weights = [1, 1, 2, 2, 2, 1, 1, 3, 1]
+
+    hdr_cols = st.columns(weights)
+    for hdr, col in zip(headers, hdr_cols):
+        col.markdown(f"**{hdr}**")
+
+    for idx, row in enumerate(sorted_rows):
+        cols = st.columns(weights)
+        ci = 0
+        cols[ci].write(row.get("Filter", ""))
+        ci += 1
+        if include_exptime:
+            cols[ci].write(row.get("Exp (s)", ""))
+            ci += 1
+        cols[ci].write(row.get("Bin", ""))
+        ci += 1
+        cols[ci].write(row.get("Camera", ""))
+        ci += 1
+        cols[ci].write(row.get("Telescope", ""))
+        ci += 1
+        cols[ci].write(row.get("Date", ""))
+        ci += 1
+        cols[ci].write(row.get("Age (days)", ""))
+        ci += 1
+        status = row.get("Status", "")
+        cols[ci].markdown(
+            f'<span style="padding:2px 6px; border-radius:4px; {_status_style(status)}">{status}</span>',
+            unsafe_allow_html=True,
+        )
+        ci += 1
+        cols[ci].write(row.get("File", ""))
+        ci += 1
+        if cols[ci].button("Delete", key=f"{key_prefix}_del_{idx}", type="secondary"):
+            st.session_state[_CLIB_DEL_PENDING_KEY] = {
+                "path": row["_path"],
+                "file": row.get("File"),
+                "kind": kind_label,
+            }
+            st.session_state[_CLIB_DEL_DIALOG_KEY] = True
 
 
 def render_calibration_library_dashboard(
@@ -239,51 +288,29 @@ def render_calibration_library_dashboard(
         tag_map=tag_map,
     )
 
+    delete_confirm_dialog = _make_delete_confirm_dialog(db)
+    if st.session_state.pop(_CLIB_DEL_DIALOG_KEY, False):
+        delete_confirm_dialog()
+
     st.markdown("**Master Darks**")
     if dark_rows:
-        ddf = _df_for_display(dark_rows).sort_values(["Status", "Age (days)"], ascending=[True, False])
-        st.dataframe(ddf.style.applymap(_status_style, subset=["Status"]), width="stretch", hide_index=True)
-        _render_master_delete_block(
+        _render_master_table_with_delete(
             dark_rows,
             kind_label="Master Dark",
             key_prefix="clib_dark",
-            library_root=root,
-            db=db,
+            include_exptime=True,
         )
-        exp_d = [r for r in dark_rows if str(r.get("Status")) == "Expired"]
-        if exp_d:
-            st.caption(f"Shortcut - expired Master Darks: **{len(exp_d)}**")
-            if st.button("Delete all expired Master Darks", type="secondary", key="clib_del_exp_dark"):
-                paths = [Path(r["_path"]) for r in exp_d]
-                n_ok, errs = _delete_paths(paths, db)
-                if errs:
-                    st.error("Some files could not be deleted:\n" + "\n".join(errs))
-                st.success(f"Deleted {n_ok} file(s).")
-                st.rerun()
     else:
         st.info("No Master Dark found in CalibrationLibrary.")
 
     st.markdown("**Master Flats**")
     if flat_rows:
-        fdf = _df_for_display(flat_rows).sort_values(["Status", "Age (days)"], ascending=[True, False])
-        st.dataframe(fdf.style.applymap(_status_style, subset=["Status"]), width="stretch", hide_index=True)
-        _render_master_delete_block(
+        _render_master_table_with_delete(
             flat_rows,
             kind_label="Master Flat",
             key_prefix="clib_flat",
-            library_root=root,
-            db=db,
+            include_exptime=False,
         )
-        exp_f = [r for r in flat_rows if str(r.get("Status")) == "Expired"]
-        if exp_f:
-            st.caption(f"Shortcut - expired Master Flats: **{len(exp_f)}**")
-            if st.button("Delete all expired Master Flats", type="secondary", key="clib_del_exp_flat"):
-                paths = [Path(r["_path"]) for r in exp_f]
-                n_ok, errs = _delete_paths(paths, db)
-                if errs:
-                    st.error("Some files could not be deleted:\n" + "\n".join(errs))
-                st.success(f"Deleted {n_ok} file(s).")
-                st.rerun()
     else:
         st.info("No Master Flat found in CalibrationLibrary.")
 
