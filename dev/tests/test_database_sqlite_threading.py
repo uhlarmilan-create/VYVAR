@@ -304,3 +304,116 @@ def test_get_observer_locations_text_active(tmp_path) -> None:
     assert len(active_rows) == 1
     assert active_rows[0]["name"] == "ActiveSite"
     assert active_rows[0]["active"] == 1
+
+
+def test_qc_run_orphan_old_table_heals_on_open(tmp_path) -> None:
+    """Leftover OBS_QC_PROCESSING_RUN_OLD from a failed rebuild must not block reopen."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        """
+        INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+        VALUES (?, ?, ?);
+        """,
+        ("hash-504", 504, "2026-08-11T12:00:00+00:00"),
+    )
+    db.conn.execute(
+        """
+        CREATE TABLE OBS_QC_PROCESSING_RUN_OLD (
+            ID INTEGER PRIMARY KEY,
+            PROCESSING_HASH TEXT,
+            DRAFT_ID INTEGER,
+            CREATED_AT TEXT
+        );
+        """
+    )
+    db.conn.commit()
+    db.close()
+
+    db2 = VyvarDatabase(db_path)
+    tables = {
+        r[0] for r in db2.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    }
+    assert "OBS_QC_PROCESSING_RUN_OLD" not in tables
+    row = db2.conn.execute(
+        "SELECT PROCESSING_HASH, DRAFT_ID FROM OBS_QC_PROCESSING_RUN WHERE ID = 1;"
+    ).fetchone()
+    assert row is not None
+    assert row["PROCESSING_HASH"] == "hash-504"
+    assert int(row["DRAFT_ID"]) == 504
+    db2.conn.execute(
+        """
+        INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+        VALUES (?, ?, ?);
+        """,
+        ("hash-504b", 504, "2026-08-11T13:00:00+00:00"),
+    )
+    db2.conn.commit()
+    db2.close()
+
+
+def test_qc_run_obs_draft_fk_migration_uses_safe_rebuild(tmp_path) -> None:
+    """Legacy OBS_DRAFT FK on QC run table migrates without leaving *_OLD orphans."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    conn = __import__("sqlite3").connect(db_path)
+    conn.executescript(
+        """
+        CREATE TABLE OBS_DRAFT (ID INTEGER PRIMARY KEY);
+        INSERT INTO OBS_DRAFT (ID) VALUES (504);
+        CREATE TABLE OBS_QC_PROCESSING_RUN (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            PROCESSING_HASH TEXT NOT NULL UNIQUE,
+            DRAFT_ID INTEGER NOT NULL,
+            CREATED_AT TEXT NOT NULL,
+            FOREIGN KEY (DRAFT_ID) REFERENCES OBS_DRAFT (ID)
+        );
+        INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+        VALUES ('legacy-hash', 504, '2026-08-11T10:00:00+00:00');
+        CREATE TABLE OBS_QC_PROCESSING_FILE (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            RUN_ID INTEGER NOT NULL,
+            SOURCE_OBS_FILE_ID INTEGER NOT NULL,
+            FILE_PATH TEXT,
+            FILTER TEXT,
+            EXPTIME REAL,
+            INSPECTION_JD REAL,
+            FWHM REAL,
+            DRIFT REAL,
+            FOREIGN KEY (RUN_ID) REFERENCES OBS_QC_PROCESSING_RUN (ID) ON DELETE CASCADE
+        );
+        INSERT INTO OBS_QC_PROCESSING_FILE (
+            RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH, FILTER, EXPTIME, INSPECTION_JD, FWHM, DRIFT
+        ) VALUES (1, 99, 'lights/frame001.fits', 'Clear', 60.0, 2460000.5, 3.2, 0.1);
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    db = VyvarDatabase(db_path)
+    tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")}
+    assert "OBS_DRAFT" not in tables
+    assert "OBS_QC_PROCESSING_RUN_OLD" not in tables
+    assert "OBS_QC_PROCESSING_FILE_OLD" not in tables
+    run = db.conn.execute(
+        "SELECT PROCESSING_HASH, DRAFT_ID FROM OBS_QC_PROCESSING_RUN WHERE ID = 1;"
+    ).fetchone()
+    assert run is not None
+    assert run["PROCESSING_HASH"] == "legacy-hash"
+    assert int(run["DRAFT_ID"]) == 504
+    frow = db.conn.execute(
+        "SELECT RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH FROM OBS_QC_PROCESSING_FILE WHERE ID = 1;"
+    ).fetchone()
+    assert frow is not None
+    assert int(frow["RUN_ID"]) == 1
+    assert int(frow["SOURCE_OBS_FILE_ID"]) == 99
+    assert frow["FILE_PATH"] == "lights/frame001.fits"
+    db.conn.execute(
+        """
+        INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+        VALUES (?, ?, ?);
+        """,
+        ("post-migrate", 504, "2026-08-11T14:00:00+00:00"),
+    )
+    db.conn.commit()
+    db.close()
+

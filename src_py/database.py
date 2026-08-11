@@ -179,7 +179,13 @@ class ThreadSafeSQLiteConnection:
 
 _EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION", "DRAFT_MANIFEST"})
 _EDITABLE_DEFAULT_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
-_REBUILD_MIGRATION_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
+_REBUILD_MIGRATION_TABLES = frozenset({
+    "EQUIPMENTS",
+    "TELESCOPE",
+    "LOCATION",
+    "OBS_QC_PROCESSING_RUN",
+    "OBS_QC_PROCESSING_FILE",
+})
 
 
 def get_gaia_db_max_g_mag(db_path: str | Path) -> float:
@@ -2892,6 +2898,33 @@ class VyvarDatabase:
         except ValueError:
             return None
 
+    def _table_exists(self, table: str) -> bool:
+        row = self.conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1;",
+            (str(table),),
+        ).fetchone()
+        return row is not None
+
+    def _table_has_fk_to(self, table: str, ref_table: str) -> bool:
+        try:
+            for row in self.conn.execute(f"PRAGMA foreign_key_list('{table}');"):
+                if str(row[2]).upper() == str(ref_table).upper():
+                    return True
+        except sqlite3.Error:
+            return False
+        return False
+
+    def _heal_qc_orphan_old_tables(self) -> None:
+        """Drop stale *_OLD QC tables or recover when only *_OLD survived a crash."""
+        for base in ("OBS_QC_PROCESSING_RUN", "OBS_QC_PROCESSING_FILE"):
+            old = f"{base}_OLD"
+            if not self._table_exists(old):
+                continue
+            if self._table_exists(base):
+                self.conn.execute(f"DROP TABLE IF EXISTS {old};")
+            else:
+                self.conn.execute(f"ALTER TABLE {old} RENAME TO {base};")
+
     def _drop_vestigial_tables(self) -> None:
         # WAVE-B STEP 5: SETTINGS held only masterdark/masterflat validity days (config.json-authoritative).
         # PHOTOMETRY_LIGHT_CURVE was never read; light curves are file-based CSVs.
@@ -2911,39 +2944,71 @@ class VyvarDatabase:
 
     def _qc_run_has_obs_draft_fk(self) -> bool:
         legacy_draft = "OBS" + "_DRAFT"
-        try:
-            for row in self.conn.execute("PRAGMA foreign_key_list('OBS_QC_PROCESSING_RUN');"):
-                if str(row[2]).upper() == legacy_draft:
-                    return True
-        except sqlite3.Error:
+        if not self._table_exists("OBS_QC_PROCESSING_RUN"):
             return False
-        return False
+        return self._table_has_fk_to("OBS_QC_PROCESSING_RUN", legacy_draft)
+
+    def _qc_file_has_obs_draft_fk(self) -> bool:
+        legacy_draft = "OBS" + "_DRAFT"
+        if not self._table_exists("OBS_QC_PROCESSING_FILE"):
+            return False
+        return self._table_has_fk_to("OBS_QC_PROCESSING_FILE", legacy_draft)
 
     def _rebuild_qc_tables_without_obs_draft_fk(self) -> None:
-        """Remove legacy draft-table FK from QC run table on older databases."""
-        if not self._qc_run_has_obs_draft_fk():
+        """Remove legacy draft-table FK from QC tables on older databases."""
+        self._heal_qc_orphan_old_tables()
+        run_needs = self._qc_run_has_obs_draft_fk()
+        file_needs = self._qc_file_has_obs_draft_fk()
+        if not run_needs and not file_needs:
             return
-        self.conn.execute("ALTER TABLE OBS_QC_PROCESSING_RUN RENAME TO OBS_QC_PROCESSING_RUN_OLD;")
-        self.conn.execute(
-            """
-            CREATE TABLE OBS_QC_PROCESSING_RUN (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                PROCESSING_HASH TEXT NOT NULL UNIQUE,
-                DRAFT_ID INTEGER NOT NULL,
-                CREATED_AT TEXT NOT NULL
-            );
-            """
-        )
-        self.conn.execute(
-            """
-            INSERT INTO OBS_QC_PROCESSING_RUN (ID, PROCESSING_HASH, DRAFT_ID, CREATED_AT)
-            SELECT ID, PROCESSING_HASH, DRAFT_ID, CREATED_AT FROM OBS_QC_PROCESSING_RUN_OLD;
-            """
-        )
-        self.conn.execute("DROP TABLE OBS_QC_PROCESSING_RUN_OLD;")
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS IDX_QC_PROC_RUN_DRAFT ON OBS_QC_PROCESSING_RUN (DRAFT_ID);"
-        )
+        if run_needs:
+            self._rebuild_table_safely(
+                "OBS_QC_PROCESSING_RUN",
+                """
+                CREATE TABLE OBS_QC_PROCESSING_RUN (
+                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    PROCESSING_HASH TEXT NOT NULL UNIQUE,
+                    DRAFT_ID INTEGER NOT NULL,
+                    CREATED_AT TEXT NOT NULL
+                );
+                """,
+                """
+                INSERT INTO OBS_QC_PROCESSING_RUN (ID, PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+                SELECT ID, PROCESSING_HASH, DRAFT_ID, CREATED_AT FROM OBS_QC_PROCESSING_RUN_OLD;
+                """,
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS IDX_QC_PROC_RUN_DRAFT ON OBS_QC_PROCESSING_RUN (DRAFT_ID);"
+            )
+            file_needs = True
+        if file_needs and self._table_exists("OBS_QC_PROCESSING_FILE"):
+            self._rebuild_table_safely(
+                "OBS_QC_PROCESSING_FILE",
+                """
+                CREATE TABLE OBS_QC_PROCESSING_FILE (
+                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    RUN_ID INTEGER NOT NULL,
+                    SOURCE_OBS_FILE_ID INTEGER NOT NULL,
+                    FILE_PATH TEXT,
+                    FILTER TEXT,
+                    EXPTIME REAL,
+                    INSPECTION_JD REAL,
+                    FWHM REAL,
+                    DRIFT REAL,
+                    FOREIGN KEY (RUN_ID) REFERENCES OBS_QC_PROCESSING_RUN (ID) ON DELETE CASCADE
+                );
+                """,
+                """
+                INSERT INTO OBS_QC_PROCESSING_FILE (
+                    ID, RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH, FILTER, EXPTIME,
+                    INSPECTION_JD, FWHM, DRIFT
+                )
+                SELECT
+                    ID, RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH, FILTER, EXPTIME,
+                    INSPECTION_JD, FWHM, DRIFT
+                FROM OBS_QC_PROCESSING_FILE_OLD;
+                """,
+            )
 
     def _drop_equipments_focal_column(self) -> None:
         """One-time migration: focal length belongs on TELESCOPE, not EQUIPMENTS."""
