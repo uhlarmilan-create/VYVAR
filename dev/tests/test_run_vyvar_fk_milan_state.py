@@ -71,6 +71,7 @@ class _Pipeline:
     def __init__(self, db: VyvarDatabase, cfg: _Cfg) -> None:
         self.db = db
         self.config = cfg
+        self.db._archive_root_override = Path(cfg.archive_root).expanduser().resolve()
 
 
 def test_milan_state_scan_shows_expired_dark_and_import_succeeds(tmp_path: Path) -> None:
@@ -159,10 +160,8 @@ def test_milan_state_scan_shows_expired_dark_and_import_succeeds(tmp_path: Path)
     assert result.draft_id is not None
     assert int(result.draft_id) >= 1
 
-    row = db.conn.execute(
-        "SELECT ID_LOCATION, ID_SCANNING FROM OBS_DRAFT WHERE ID = ?;",
-        (int(result.draft_id),),
-    ).fetchone()
+    row = db.fetch_obs_draft_by_id(int(result.draft_id))
+    assert row is not None
     assert int(row["ID_LOCATION"]) == int(loc)
     assert int(row["ID_SCANNING"]) >= 1
 

@@ -1,25 +1,24 @@
 # -*- coding: ascii -*-
-"""Phase 2.4 manifest-first core draft field overlay."""
+"""Phase 2.4 manifest-first core draft field reads."""
 from __future__ import annotations
 
 from draft_provenance import (
-    apply_manifest_core_to_draft_row,
     clear_manifest_shadow_load_cache,
     reset_manifest_shadow_counters,
+    resolve_draft_dir_for_id,
     write_draft_manifest,
 )
 
 
-def test_apply_manifest_core_overlays_center_and_paths(tmp_path) -> None:
+def test_fetch_obs_draft_reads_center_and_paths_from_manifest(tmp_path) -> None:
     from database import VyvarDatabase
     from tools.reference_seed import seed_reference_observatory
 
     reset_manifest_shadow_counters()
     clear_manifest_shadow_load_cache()
     db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
-    archive = tmp_path / "draft_core_overlay"
-    archive.mkdir()
     draft_id = db.create_draft(
         {
             "id_equipments": 1,
@@ -30,6 +29,8 @@ def test_apply_manifest_core_overlays_center_and_paths(tmp_path) -> None:
             "is_calibrated": 0,
         }
     )
+    archive = resolve_draft_dir_for_id(db, int(draft_id))
+    assert archive is not None
     db.update_draft_import_log(
         int(draft_id),
         lights_path=str(archive / "calibrated" / "lights"),
@@ -47,11 +48,6 @@ def test_apply_manifest_core_overlays_center_and_paths(tmp_path) -> None:
         observation_start_jd=2460000.5,
         files=[],
     )
-    db.conn.execute(
-        "UPDATE OBS_DRAFT SET CENTEROFFIELDRA = 0, CENTEROFFIELDDE = 0, OBSERVATIONSTARTJD = 0 WHERE ID = ?;",
-        (int(draft_id),),
-    )
-    db.conn.commit()
 
     row = db.fetch_obs_draft_by_id(int(draft_id))
     assert row is not None

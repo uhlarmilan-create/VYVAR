@@ -246,7 +246,7 @@ def check_anchor_manifest_db_parity(report: SessionReport) -> None:
     _ensure_import_paths()
     from config import AppConfig
     from database import VyvarDatabase
-    from draft_provenance import manifest_db_parity_errors, record_draft_manifest_core
+    from draft_provenance import backfill_draft_manifest_from_db, manifest_db_parity_errors
 
     cfg = AppConfig(project_root=REPO_ROOT)
     db_path = Path(cfg.database_path)
@@ -274,7 +274,7 @@ def check_anchor_manifest_db_parity(report: SessionReport) -> None:
             report.add("manifest-db-parity", "WARN", f"draft {DRAFT_ID} not in DB")
             return
         did = int(row["ID"])
-        record_draft_manifest_core(db, did)
+        backfill_draft_manifest_from_db(db, did)
         errors = manifest_db_parity_errors(db, did)
         if errors:
             report.add("manifest-db-parity", "FAIL", errors[0][:80])

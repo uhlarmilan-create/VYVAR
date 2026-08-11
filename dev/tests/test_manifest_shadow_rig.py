@@ -1,27 +1,17 @@
 # -*- coding: ascii -*-
-"""Phase 2.1 manifest rig-id shadow-observe (superseded by 2.2 flip tests)."""
+"""Phase 2.8 manifest-direct rig reads (shadow observe retired)."""
 from __future__ import annotations
 
-from draft_provenance import (
-    clear_manifest_shadow_load_cache,
-    manifest_shadow_counter_snapshot,
-    record_draft_manifest_core,
-    reset_manifest_shadow_counters,
-    write_draft_manifest,
-)
+from draft_provenance import resolve_draft_dir_for_id, write_draft_manifest
 
 
-def test_shadow_logs_mismatch_when_manifest_differs_from_db(tmp_path) -> None:
+def test_fetch_obs_draft_reads_manifest_rig_directly(tmp_path) -> None:
     from database import VyvarDatabase
     from tools.reference_seed import seed_reference_observatory
 
-    reset_manifest_shadow_counters()
-    clear_manifest_shadow_load_cache()
-    db_path = tmp_path / "vyvar.sqlite3"
-    db = VyvarDatabase(db_path)
+    db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
-    archive = tmp_path / "draft_shadow_bad"
-    archive.mkdir()
     draft_id = db.create_draft(
         {
             "id_equipments": 1,
@@ -32,13 +22,8 @@ def test_shadow_logs_mismatch_when_manifest_differs_from_db(tmp_path) -> None:
             "is_calibrated": 0,
         }
     )
-    db.update_draft_import_log(
-        int(draft_id),
-        lights_path=str(archive / "calibrated" / "lights"),
-        calib_path=str(archive / "calibrated"),
-        imported_at="2026-08-10T12:00:00Z",
-        archive_path=str(archive),
-    )
+    archive = resolve_draft_dir_for_id(db, int(draft_id))
+    assert archive is not None
     write_draft_manifest(
         archive,
         draft_id=int(draft_id),
@@ -56,21 +41,16 @@ def test_shadow_logs_mismatch_when_manifest_differs_from_db(tmp_path) -> None:
     row = db.fetch_obs_draft_by_id(int(draft_id))
     assert row is not None
     assert row["ID_EQUIPMENTS"] == 999
-    assert manifest_shadow_counter_snapshot()["mismatch"] >= 1
     db.close()
 
 
-def test_matching_manifest_is_silent_on_equal(tmp_path) -> None:
+def test_create_draft_manifest_matches_fetch(tmp_path) -> None:
     from database import VyvarDatabase
     from tools.reference_seed import seed_reference_observatory
 
-    reset_manifest_shadow_counters()
-    clear_manifest_shadow_load_cache()
-    db_path = tmp_path / "vyvar.sqlite3"
-    db = VyvarDatabase(db_path)
+    db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
-    archive = tmp_path / "draft_shadow_ok"
-    archive.mkdir()
     draft_id = db.create_draft(
         {
             "id_equipments": 1,
@@ -81,19 +61,9 @@ def test_matching_manifest_is_silent_on_equal(tmp_path) -> None:
             "is_calibrated": 0,
         }
     )
-    db.update_draft_import_log(
-        int(draft_id),
-        lights_path=str(archive / "calibrated" / "lights"),
-        calib_path=str(archive / "calibrated"),
-        imported_at="2026-08-10T12:00:00Z",
-        archive_path=str(archive),
-    )
-    record_draft_manifest_core(db, int(draft_id))
 
     row = db.fetch_obs_draft_by_id(int(draft_id))
     assert row is not None
     assert row["ID_EQUIPMENTS"] == 1
-    snap = manifest_shadow_counter_snapshot()
-    assert snap["mismatch"] == 0
-    assert snap["equal"] >= 1
+    assert float(row["OBSERVATIONSTARTJD"]) == 2450000.5
     db.close()

@@ -73,6 +73,7 @@ def test_record_draft_calibration_provenance_db_and_manifest(tmp_path: Path, mon
 
     db_path = tmp_path / "test.db"
     db = VyvarDatabase(db_path)
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
     draft_id = db.create_draft(
         {
@@ -84,8 +85,10 @@ def test_record_draft_calibration_provenance_db_and_manifest(tmp_path: Path, mon
             "is_calibrated": 0,
         }
     )
-    archive = tmp_path / "draft_000001"
-    archive.mkdir()
+    from draft_provenance import resolve_draft_dir_for_id
+
+    archive = resolve_draft_dir_for_id(db, int(draft_id))
+    assert archive is not None
     record_draft_calibration_provenance(
         db=db,
         archive_path=archive,
@@ -172,15 +175,8 @@ def test_map_masterstar_db_candidates_pre_calibrated(tmp_path: Path):
     from pipeline import get_masterstar_candidates, resolve_obs_file_to_processed_fits
     from tools.reference_seed import seed_reference_observatory
 
-    ap = tmp_path / "draft_ms"
-    setup = ap / "non_calibrated" / "lights" / "V_20_2"
-    setup.mkdir(parents=True)
-    f1 = setup / "frame_a.fits"
-    f2 = setup / "frame_b.fits"
-    f1.write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
-    f2.write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
-
     db = VyvarDatabase(tmp_path / "t.db")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
     draft_id = db.create_draft(
         {
@@ -192,6 +188,17 @@ def test_map_masterstar_db_candidates_pre_calibrated(tmp_path: Path):
             "is_calibrated": 0,
         }
     )
+    from draft_provenance import resolve_draft_dir_for_id
+
+    ap = resolve_draft_dir_for_id(db, int(draft_id))
+    assert ap is not None
+    setup = ap / "non_calibrated" / "lights" / "V_20_2"
+    setup.mkdir(parents=True)
+    f1 = setup / "frame_a.fits"
+    f2 = setup / "frame_b.fits"
+    f1.write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
+    f2.write_bytes(b"SIMPLE  =                    T / dummy\nEND\n")
+
     db.set_obs_draft_calibration_mode(draft_id, CALIBRATION_MODE_PRE)
     write_draft_manifest(ap, draft_id=draft_id, calibration_mode=CALIBRATION_MODE_PRE)
     db.insert_draft_files(
@@ -212,13 +219,15 @@ def test_map_masterstar_db_candidates_pre_calibrated(tmp_path: Path):
         ],
     )
     db.update_obs_file_quality_by_id(
-        db.conn.execute("SELECT ID FROM OBS_FILES WHERE DRAFT_ID=?", (draft_id,)).fetchone()[0],
+        int(draft_id),
+        1,
         fwhm=2.1,
         sky_level=100.0,
         star_count=200,
     )
     db.update_obs_file_quality_by_id(
-        db.conn.execute("SELECT ID FROM OBS_FILES WHERE DRAFT_ID=? ORDER BY ID DESC LIMIT 1", (draft_id,)).fetchone()[0],
+        int(draft_id),
+        2,
         fwhm=3.5,
         sky_level=120.0,
         star_count=150,

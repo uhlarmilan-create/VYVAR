@@ -12,7 +12,7 @@ sys.path.insert(0, str(REPO / "src_py"))
 
 from config import AppConfig
 from database import VyvarDatabase
-from draft_provenance import record_draft_manifest_core
+from draft_provenance import backfill_draft_manifest_from_db
 
 
 def main() -> int:
@@ -38,7 +38,7 @@ def main() -> int:
         skipped = 0
         for row in rows:
             did = int(row["ID"])
-            path = record_draft_manifest_core(db, did)
+            path = backfill_draft_manifest_from_db(db, did)
             if path is None:
                 skipped += 1
             else:

@@ -89,16 +89,10 @@ def _resolve_archive_root_for_shadow(
         root = resolve_draft_archive_root_from_row(draft_row)
         if root is not None:
             return root
-    if db is not None and hasattr(db, "conn"):
-        try:
-            row = db.conn.execute(
-                "SELECT ARCHIVE_PATH, LIGHTS_PATH FROM OBS_DRAFT WHERE ID = ?;",
-                (int(draft_id),),
-            ).fetchone()
-            if row is not None:
-                return resolve_draft_archive_root_from_row(dict(row))
-        except Exception:  # noqa: BLE001
-            return None
+    if db is not None:
+        root = resolve_draft_dir_for_id(db, int(draft_id))
+        if root is not None:
+            return draft_archive_root(root)
     return None
 
 
@@ -540,8 +534,7 @@ def light_rows_from_manifest(
 ) -> list[dict[str, Any]] | None:
     """Return OBS_FILES-shaped light rows from manifest files[] when present."""
     did = int(draft_id)
-    row = _fetch_obs_draft_row_raw(db, did)
-    root = resolve_draft_archive_root_from_row(row or {})
+    root = resolve_draft_dir_for_id(db, did)
     if root is None:
         _log_manifest_fallback(did, "files[]", "archive root not resolvable")
         return None
@@ -554,7 +547,6 @@ def light_rows_from_manifest(
         _log_manifest_fallback(did, "files[]", "files missing in manifest")
         return None
 
-    id_map = _obs_file_id_map_for_draft(db, did)
     want = str(imagetyp or "light").strip().lower()
     rows: list[dict[str, Any]] = []
     for entry in files:
@@ -563,10 +555,7 @@ def light_rows_from_manifest(
         it = str(entry.get("imagetyp") or "").strip().lower()
         if it != want:
             continue
-        fp = _optional_str(entry.get("file_path")) or ""
         obs_id = _optional_int(entry.get("obs_file_id"))
-        if obs_id is None and fp:
-            obs_id = id_map.get(fp) or id_map.get(str(Path(fp).resolve()))
         rows.append(_manifest_entry_to_obs_file_row(entry, draft_id=did, obs_file_id=obs_id))
     rows.sort(key=lambda r: str(r.get("FILE_PATH") or ""))
     return rows
@@ -752,12 +741,317 @@ def load_draft_manifest(archive_path: Path | str) -> dict[str, Any]:
         return {}
 
 
-def _fetch_obs_draft_row_raw(db: Any, draft_id: int) -> dict[str, Any] | None:
-    """Load OBS_DRAFT row without Phase 2.1 shadow-observe (manifest writer / internal use)."""
-    if not hasattr(db, "conn"):
+def resolve_draft_dir_for_id(db: Any, draft_id: int) -> Path | None:
+    """Return draft archive directory containing ``draft_manifest.json`` for ``draft_id``."""
+    if db is None:
         return None
-    row = db.conn.execute("SELECT * FROM OBS_DRAFT WHERE ID = ?;", (int(draft_id),)).fetchone()
-    return dict(row) if row is not None else None
+    resolver = getattr(db, "resolve_archive_root", None)
+    if resolver is None:
+        return None
+    try:
+        archive_root = Path(resolver()).expanduser().resolve()
+    except Exception:  # noqa: BLE001
+        return None
+    did = int(draft_id)
+    standard = archive_root / "Drafts" / f"draft_{did:06d}"
+    if standard.is_dir() or (standard / _MANIFEST_NAME).is_file():
+        return standard.resolve()
+    for found_id, path in iter_draft_archive_dirs(archive_root):
+        if found_id == did:
+            return path
+    drafts_dir = archive_root / "Drafts"
+    if drafts_dir.is_dir():
+        for child in drafts_dir.iterdir():
+            mf = child / _MANIFEST_NAME
+            if not mf.is_file():
+                continue
+            try:
+                raw = json.loads(mf.read_text(encoding="utf-8"))
+                if int(raw.get("draft_id", -1)) == did:
+                    return child.resolve()
+            except Exception:  # noqa: BLE001
+                continue
+    for mf in archive_root.rglob(_MANIFEST_NAME):
+        try:
+            raw = json.loads(mf.read_text(encoding="utf-8"))
+            if int(raw.get("draft_id", -1)) == did:
+                return mf.parent.resolve()
+        except Exception:  # noqa: BLE001
+            continue
+    return None
+
+
+def allocate_next_draft_id(archive_root: Path | str, db: Any | None = None) -> int:
+    """Next draft id from filesystem scan (and optional legacy DB MAX during transition)."""
+    max_id = 0
+    for did, _ in iter_draft_archive_dirs(archive_root):
+        max_id = max(max_id, int(did))
+    if db is not None and hasattr(db, "conn"):
+        try:
+            row = db.conn.execute("SELECT MAX(ID) AS m FROM OBS_DRAFT;").fetchone()
+            if row is not None and row["m"] is not None:
+                max_id = max(max_id, int(row["m"]))
+        except Exception:  # noqa: BLE001
+            pass
+    return int(max_id) + 1
+
+
+def _ingest_item_to_manifest_entry(item: dict[str, Any], *, obs_file_id: int) -> dict[str, Any]:
+    fake_row = {
+        "ID": int(obs_file_id),
+        "FILE_PATH": item.get("file_path"),
+        "IMAGETYP": item.get("imagetyp"),
+        "FILTER": item.get("filter"),
+        "OBSERVATION_GROUP_KEY": item.get("observation_group_key"),
+        "ID_SCANNING": item.get("id_scanning"),
+        "IS_CALIBRATED": item.get("is_calibrated"),
+        "CALIB_TYPE": item.get("calib_type"),
+        "CALIB_FLAGS": item.get("calib_flags"),
+    }
+    return _obs_file_row_to_manifest_entry(fake_row)
+
+
+def _persist_manifest(
+    root: Path | str,
+    draft_id: int,
+    manifest: dict[str, Any],
+) -> Path:
+    """Write full manifest dict to ``draft_manifest.json``."""
+    payload = dict(manifest)
+    payload["schema_version"] = int(payload.get("schema_version") or MANIFEST_SCHEMA_VERSION)
+    payload["draft_id"] = int(draft_id)
+    payload["updated_utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    path = Path(root).expanduser().resolve() / _MANIFEST_NAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    clear_manifest_shadow_load_cache()
+    return path
+
+
+def load_or_init_manifest(root: Path | str, draft_id: int) -> dict[str, Any]:
+    manifest = load_draft_manifest(root)
+    if manifest:
+        return manifest
+    return {
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "draft_id": int(draft_id),
+        "calibration_mode": CALIBRATION_MODE_VYVAR,
+        "files": [],
+    }
+
+
+def patch_draft_manifest(
+    root: Path | str,
+    draft_id: int,
+    *,
+    rig: dict[str, Any] | None = None,
+    paths: dict[str, Any] | None = None,
+    status: str | None = None,
+    center: dict[str, Any] | None = None,
+    files: list[dict[str, Any]] | None = None,
+    final_observation_id: str | None = None,
+    is_calibrated: int | None = None,
+    observation_start_jd: float | None = None,
+    calibration_mode: str | None = None,
+    extra: dict[str, Any] | None = None,
+) -> Path:
+    """Merge fields into manifest and persist (manifest-direct write API)."""
+    manifest = load_or_init_manifest(root, int(draft_id))
+    if rig is not None:
+        manifest["rig"] = dict(rig)
+    if paths is not None:
+        manifest["paths"] = dict(paths)
+    if status is not None:
+        manifest["status"] = str(status)
+    if center is not None:
+        manifest["center"] = dict(center)
+    if files is not None:
+        manifest["files"] = list(files)
+    if final_observation_id is not None:
+        manifest["final_observation_id"] = str(final_observation_id) if final_observation_id else None
+    if is_calibrated is not None:
+        manifest["is_calibrated"] = int(is_calibrated)
+    if observation_start_jd is not None:
+        manifest["observation_start_jd"] = observation_start_jd
+    if calibration_mode is not None:
+        manifest["calibration_mode"] = str(calibration_mode)
+    if extra:
+        manifest.update(extra)
+    return _persist_manifest(root, int(draft_id), manifest)
+
+
+def fetch_obs_draft_row_manifest(db: Any, draft_id: int) -> dict[str, Any] | None:
+    """Load OBS_DRAFT-shaped row from manifest (sole store)."""
+    root = resolve_draft_dir_for_id(db, int(draft_id))
+    if root is None:
+        return None
+    manifest = load_draft_manifest(root)
+    if not manifest:
+        return None
+    row = obs_draft_row_from_manifest(manifest, int(draft_id))
+    row["ARCHIVE_PATH"] = row.get("ARCHIVE_PATH") or str(root)
+    return row
+
+
+def create_draft_manifest(
+    db: Any,
+    archive_root: Path | str,
+    data: dict[str, Any],
+) -> int:
+    """Allocate draft id and write initial manifest (no OBS_DRAFT SQL)."""
+    did = allocate_next_draft_id(archive_root, db)
+    draft_dir = Path(archive_root).expanduser().resolve() / "Drafts" / f"draft_{did:06d}"
+    draft_dir.mkdir(parents=True, exist_ok=True)
+    mode = str(data.get("calibration_mode") or CALIBRATION_MODE_VYVAR)
+    jd = _optional_float(data.get("observation_start_jd"))
+    is_cal = 1 if bool(data.get("is_calibrated", False)) else 0
+    patch_draft_manifest(
+        draft_dir,
+        did,
+        rig={
+            "equipment_id": _optional_int(data.get("id_equipments")),
+            "telescope_id": _optional_int(data.get("id_telescope")),
+            "location_id": _optional_int(data.get("id_location")),
+            "scanning_id": _optional_int(data.get("id_scanning")),
+        },
+        paths={"archive": str(draft_dir)},
+        status="INGESTED",
+        observation_start_jd=jd,
+        is_calibrated=is_cal,
+        calibration_mode=mode,
+        files=[],
+    )
+    return int(did)
+
+
+def set_draft_manifest_files(
+    db: Any,
+    draft_id: int,
+    files: list[dict[str, Any]],
+) -> None:
+    """Replace manifest ``files[]`` from ingest evidence dicts."""
+    root = resolve_draft_dir_for_id(db, int(draft_id))
+    if root is None:
+        raise ValueError(f"Draft {draft_id}: archive directory not found for manifest files write")
+    entries: list[dict[str, Any]] = []
+    for idx, item in enumerate(files):
+        obs_id = _optional_int(item.get("obs_file_id")) or (idx + 1)
+        entries.append(_ingest_item_to_manifest_entry(item, obs_file_id=int(obs_id)))
+    patch_draft_manifest(root, int(draft_id), files=entries)
+
+
+def _find_manifest_file_index(
+    files: list[Any],
+    *,
+    file_path: str | None = None,
+    obs_file_id: int | None = None,
+) -> int | None:
+    want_id = int(obs_file_id) if obs_file_id is not None else None
+    want_fp = _optional_str(file_path)
+    want_fp_key = str(Path(want_fp).resolve()) if want_fp else None
+    for i, entry in enumerate(files):
+        if not isinstance(entry, dict):
+            continue
+        if want_id is not None and _optional_int(entry.get("obs_file_id")) == want_id:
+            return i
+        if want_fp_key:
+            fp = _optional_str(entry.get("file_path")) or ""
+            if fp == want_fp or str(Path(fp).resolve()) == want_fp_key:
+                return i
+    return None
+
+
+def update_manifest_file_entry(
+    db: Any,
+    draft_id: int,
+    *,
+    obs_file_id: int | None = None,
+    file_path: str | None = None,
+    qc: dict[str, Any] | None = None,
+    inspection: dict[str, Any] | None = None,
+    imagetyp: str | None = None,
+    filter_name: str | None = None,
+    is_calibrated: int | None = None,
+    calib_type: str | None = None,
+    calib_flags: str | None = None,
+) -> bool:
+    """Patch one ``files[]`` entry in the manifest."""
+    root = resolve_draft_dir_for_id(db, int(draft_id))
+    if root is None:
+        return False
+    manifest = load_or_init_manifest(root, int(draft_id))
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        files = []
+    idx = _find_manifest_file_index(files, file_path=file_path, obs_file_id=obs_file_id)
+    if idx is None:
+        return False
+    entry = dict(files[idx]) if isinstance(files[idx], dict) else {}
+    if imagetyp is not None:
+        entry["imagetyp"] = imagetyp
+    if filter_name is not None:
+        entry["filter"] = filter_name
+    if is_calibrated is not None:
+        entry["is_calibrated"] = int(is_calibrated)
+    if calib_type is not None:
+        entry["calib_type"] = calib_type
+    if calib_flags is not None:
+        entry["calib_flags"] = calib_flags
+    if qc:
+        cur_qc = entry.get("qc") if isinstance(entry.get("qc"), dict) else {}
+        cur_qc.update(qc)
+        entry["qc"] = cur_qc
+    if inspection:
+        cur_insp = entry.get("inspection") if isinstance(entry.get("inspection"), dict) else {}
+        cur_insp.update(inspection)
+        entry["inspection"] = cur_insp
+    files[idx] = entry
+    patch_draft_manifest(root, int(draft_id), files=files)
+    return True
+
+
+def bulk_update_manifest_is_rejected(
+    db: Any,
+    draft_id: int,
+    updates: list[tuple[int, int]],
+) -> None:
+    for obs_file_id, rej in updates:
+        update_manifest_file_entry(
+            db,
+            int(draft_id),
+            obs_file_id=int(obs_file_id),
+            inspection={"is_rejected": 1 if int(rej) else 0},
+        )
+
+
+def reset_manifest_light_is_rejected(db: Any, draft_id: int) -> None:
+    root = resolve_draft_dir_for_id(db, int(draft_id))
+    if root is None:
+        return
+    manifest = load_or_init_manifest(root, int(draft_id))
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        return
+    changed = False
+    for i, entry in enumerate(files):
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("imagetyp") or "").strip().lower() != "light":
+            continue
+        insp = entry.get("inspection") if isinstance(entry.get("inspection"), dict) else {}
+        insp = dict(insp)
+        insp["is_rejected"] = 0
+        entry = dict(entry)
+        entry["inspection"] = insp
+        files[i] = entry
+        changed = True
+    if changed:
+        patch_draft_manifest(root, int(draft_id), files=files)
+
+
+def _fetch_obs_draft_row_raw(db: Any, draft_id: int) -> dict[str, Any] | None:
+    """Deprecated: manifest is sole store. Kept for transition callers."""
+    return fetch_obs_draft_row_manifest(db, int(draft_id))
 
 
 def resolve_calibration_mode(
@@ -766,15 +1060,18 @@ def resolve_calibration_mode(
     db: Any = None,
     archive_path: Path | str | None = None,
 ) -> str:
-    """Resolve calibration_mode from DB, then draft manifest, else default."""
+    """Resolve calibration_mode from draft manifest, else default."""
     if db is not None and draft_id is not None:
-        try:
-            row = _fetch_obs_draft_row_raw(db, int(draft_id)) or {}
+        row = fetch_obs_draft_row_manifest(db, int(draft_id))
+        if row:
             mode = row.get("CALIBRATION_MODE") or row.get("calibration_mode")
             if mode:
                 return str(mode)
-        except Exception:  # noqa: BLE001
-            pass
+        root = resolve_draft_dir_for_id(db, int(draft_id))
+        if root is not None:
+            mode = load_draft_manifest(root).get("calibration_mode")
+            if mode:
+                return str(mode)
     if archive_path is not None:
         mode = load_draft_manifest(archive_path).get("calibration_mode")
         if mode:
@@ -782,55 +1079,66 @@ def resolve_calibration_mode(
     return CALIBRATION_MODE_VYVAR
 
 
-def record_draft_manifest_core(db: Any, draft_id: int) -> Path | None:
-    """Mirror OBS_DRAFT core fields into draft_manifest.json (DB is authority in Phase 1)."""
-    from infolog import log_event
-
-    did = int(draft_id)
-    row = _fetch_obs_draft_row_raw(db, did)
-    if not row:
-        log_event(f"draft_manifest: skip draft_id={did} (OBS_DRAFT row missing)")
+def backfill_draft_manifest_from_db(db: Any, draft_id: int) -> Path | None:
+    """One-time migration: copy legacy OBS_DRAFT/OBS_FILES SQL into manifest."""
+    if not hasattr(db, "conn"):
         return None
-
-    root = resolve_draft_archive_root_from_row(row)
+    row = db.conn.execute("SELECT * FROM OBS_DRAFT WHERE ID = ?;", (int(draft_id),)).fetchone()
+    if row is None:
+        return None
+    row_dict = dict(row)
+    root = resolve_draft_archive_root_from_row(row_dict)
     if root is None:
-        log_event(f"draft_manifest: skip draft_id={did} (archive root not resolvable)")
         return None
-
     existing = load_draft_manifest(root)
     extra: dict[str, Any] = {}
     if isinstance(existing.get("observer_location"), dict):
         extra["observer_location"] = existing["observer_location"]
-
-    mode = resolve_calibration_mode(draft_id=did, db=db, archive_path=root)
-    jd_raw = row.get("OBSERVATIONSTARTJD")
-    jd_val = _optional_float(jd_raw)
+    mode = resolve_calibration_mode(draft_id=int(draft_id), archive_path=root)
+    jd_val = _optional_float(row_dict.get("OBSERVATIONSTARTJD"))
     if jd_val is not None and jd_val == 0.0:
         jd_val = None
-
-    is_cal_raw = row.get("IS_CALIBRATED")
     try:
-        is_cal = 0 if is_cal_raw is None else (1 if int(is_cal_raw) != 0 else 0)
+        is_cal = 0 if row_dict.get("IS_CALIBRATED") is None else (1 if int(row_dict["IS_CALIBRATED"]) != 0 else 0)
     except (TypeError, ValueError):
         is_cal = 0
-
-    final_obs = row.get("FINAL_OBSERVATION_ID")
+    final_obs = row_dict.get("FINAL_OBSERVATION_ID")
     final_obs_s = str(final_obs).strip() if final_obs is not None and str(final_obs).strip() else None
-
+    cur = db.conn.execute(
+        """
+        SELECT FILE_PATH, IMAGETYP, FILTER,
+               QC_HFR, QC_STARS, QC_BACKGROUND, QC_BG_RMS, QC_PASSED,
+               FWHM, SKY_LEVEL, STAR_COUNT, REJECTED_AUTO, IS_REJECTED, INSPECTION_JD,
+               RA, DE, EXPTIME, DRIFT, DRIFT_DRA, DRIFT_DDE, ROUNDNESS_MEAN, ELONGATION_MEAN,
+               OBSERVATION_GROUP_KEY, ID_SCANNING, IS_CALIBRATED, CALIB_TYPE, CALIB_FLAGS, ID
+        FROM OBS_FILES WHERE DRAFT_ID = ? ORDER BY FILE_PATH, ID;
+        """,
+        (int(draft_id),),
+    )
+    files = [_obs_file_row_to_manifest_entry(dict(r)) for r in cur.fetchall()]
     return write_draft_manifest(
         root,
-        draft_id=did,
+        draft_id=int(draft_id),
         calibration_mode=mode,
         extra=extra or None,
-        rig=_rig_from_draft_row(row),
-        paths=_paths_from_draft_row(row),
-        status=str(row.get("STATUS") or "").strip() or None,
+        rig=_rig_from_draft_row(row_dict),
+        paths=_paths_from_draft_row(row_dict),
+        status=str(row_dict.get("STATUS") or "").strip() or None,
         final_observation_id=final_obs_s,
         is_calibrated=is_cal,
-        center=_center_from_draft_row(row),
+        center=_center_from_draft_row(row_dict),
         observation_start_jd=jd_val,
-        files=_fetch_manifest_files_from_db(db, did),
+        files=files,
     )
+
+
+def record_draft_manifest_core(db: Any, draft_id: int) -> Path | None:
+    """Retired mirror (Phase 2.8): return manifest path if present."""
+    root = resolve_draft_dir_for_id(db, int(draft_id))
+    if root is None:
+        return None
+    path = root / _MANIFEST_NAME
+    return path if path.is_file() else None
 
 
 def record_observer_location_provenance(
@@ -875,116 +1183,31 @@ def record_draft_calibration_provenance(
     draft_id: int,
     calibration_mode: str,
 ) -> Path:
-    """Persist calibration_mode to OBS_DRAFT and draft_manifest.json."""
-    if hasattr(db, "set_obs_draft_calibration_mode"):
-        db.set_obs_draft_calibration_mode(int(draft_id), str(calibration_mode))
-    path = record_draft_manifest_core(db, int(draft_id))
-    if path is not None:
-        return path
-    return write_draft_manifest(
-        archive_path,
-        draft_id=int(draft_id),
+    """Persist calibration_mode to draft manifest."""
+    root = draft_archive_root(archive_path)
+    manifest = load_or_init_manifest(root, int(draft_id))
+    return patch_draft_manifest(
+        root,
+        int(draft_id),
         calibration_mode=str(calibration_mode),
+        rig=manifest.get("rig") if isinstance(manifest.get("rig"), dict) else None,
+        paths=manifest.get("paths") if isinstance(manifest.get("paths"), dict) else None,
+        status=manifest.get("status"),
+        files=manifest.get("files") if isinstance(manifest.get("files"), list) else None,
+        extra={"observer_location": manifest["observer_location"]}
+        if isinstance(manifest.get("observer_location"), dict)
+        else None,
     )
 
 
 def manifest_db_parity_errors(db: Any, draft_id: int) -> list[str]:
-    """Return parity mismatch messages between manifest and OBS_DRAFT (empty if OK)."""
-    did = int(draft_id)
-    row = _fetch_obs_draft_row_raw(db, did)
-    if not row:
-        return [f"draft_id={did}: OBS_DRAFT row missing"]
-
-    root = resolve_draft_archive_root_from_row(row)
+    """Retired DB parity check: verify manifest exists for anchor drafts."""
+    root = resolve_draft_dir_for_id(db, int(draft_id))
     if root is None:
-        return [f"draft_id={did}: archive root not resolvable"]
-
-    manifest = load_draft_manifest(root)
-    if not manifest:
-        return [f"draft_id={did}: draft_manifest.json missing at {root}"]
-
-    errors: list[str] = []
-
-    def _eq(label: str, db_val: Any, man_val: Any) -> None:
-        if db_val != man_val:
-            errors.append(f"draft_id={did}: {label} DB={db_val!r} manifest={man_val!r}")
-
-    rig_m = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
-    rig_db = _rig_from_draft_row(row)
-    for key in ("equipment_id", "telescope_id", "location_id", "scanning_id"):
-        _eq(f"rig.{key}", rig_db.get(key), rig_m.get(key))
-
-    paths_m = manifest.get("paths") if isinstance(manifest.get("paths"), dict) else {}
-    paths_db = _paths_from_draft_row(row)
-    for key in ("lights", "calib", "archive", "masterstar", "masterstar_fits"):
-        _eq(f"paths.{key}", paths_db.get(key), paths_m.get(key))
-
-    db_status = str(row.get("STATUS") or "").strip() or None
-    man_status = manifest.get("status")
-    if man_status is not None:
-        man_status = str(man_status).strip() or None
-    _eq("status", db_status, man_status)
-
-    db_final = row.get("FINAL_OBSERVATION_ID")
-    db_final_s = str(db_final).strip() if db_final is not None and str(db_final).strip() else None
-    man_final = manifest.get("final_observation_id")
-    if man_final is not None:
-        man_final = str(man_final).strip() or None
-    _eq("final_observation_id", db_final_s, man_final)
-
-    try:
-        db_is_cal = 0 if row.get("IS_CALIBRATED") is None else (1 if int(row["IS_CALIBRATED"]) != 0 else 0)
-    except (TypeError, ValueError):
-        db_is_cal = 0
-    man_is_cal = manifest.get("is_calibrated")
-    if man_is_cal is not None:
-        try:
-            man_is_cal = 1 if int(man_is_cal) != 0 else 0
-        except (TypeError, ValueError):
-            man_is_cal = man_is_cal
-    _eq("is_calibrated", db_is_cal, man_is_cal)
-
-    center_m = manifest.get("center") if isinstance(manifest.get("center"), dict) else {}
-    center_db = _center_from_draft_row(row)
-    _eq("center.ra_deg", center_db.get("ra_deg"), center_m.get("ra_deg"))
-    _eq("center.de_deg", center_db.get("de_deg"), center_m.get("de_deg"))
-
-    jd_db = _optional_float(row.get("OBSERVATIONSTARTJD"))
-    if jd_db is not None and jd_db == 0.0:
-        jd_db = None
-    _eq("observation_start_jd", jd_db, manifest.get("observation_start_jd"))
-
-    db_files = _fetch_manifest_files_from_db(db, did)
-    man_files = manifest.get("files")
-    if not isinstance(man_files, list):
-        if db_files:
-            errors.append(f"draft_id={did}: files[] missing in manifest (DB has {len(db_files)} rows)")
-        return errors
-
-    if len(db_files) != len(man_files):
-        errors.append(
-            f"draft_id={did}: files count DB={len(db_files)} manifest={len(man_files)}"
-        )
-        return errors
-
-    man_by_path: dict[str, dict[str, Any]] = {}
-    for item in man_files:
-        if isinstance(item, dict):
-            fp = str(item.get("file_path") or "")
-            man_by_path[fp] = item
-
-    for db_entry in db_files:
-        fp = str(db_entry.get("file_path") or "")
-        man_entry = man_by_path.get(fp)
-        if man_entry is None:
-            errors.append(f"draft_id={did}: file_path={fp!r} in DB but missing from manifest")
-            return errors
-        file_errors = _compare_manifest_file_entries(did, fp, db_entry, man_entry)
-        if file_errors:
-            errors.extend(file_errors[:3])
-            return errors
-
-    return errors
+        return [f"draft_id={int(draft_id)}: draft archive dir missing"]
+    if not load_draft_manifest(root):
+        return [f"draft_id={int(draft_id)}: draft_manifest.json missing"]
+    return []
 
 
 def iter_draft_archive_dirs(archive_root: Path | str) -> list[tuple[int, Path]]:

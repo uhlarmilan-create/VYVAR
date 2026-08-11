@@ -1,5 +1,5 @@
 # -*- coding: ascii -*-
-"""Phase 2.2 manifest-first rig-id reads + OBS_DRAFT editor manifest refresh."""
+"""Phase 2.8 manifest-first rig-id reads + OBS_DRAFT editor manifest write."""
 from __future__ import annotations
 
 import pandas as pd
@@ -7,9 +7,8 @@ import pandas as pd
 from draft_provenance import (
     clear_manifest_shadow_load_cache,
     load_draft_manifest,
-    manifest_shadow_counter_snapshot,
-    record_draft_manifest_core,
     reset_manifest_shadow_counters,
+    resolve_draft_dir_for_id,
     write_draft_manifest,
 )
 
@@ -28,12 +27,10 @@ def test_fetch_obs_draft_returns_manifest_rig_when_present(tmp_path) -> None:
 
     reset_manifest_shadow_counters()
     clear_manifest_shadow_load_cache()
-    db_path = tmp_path / "vyvar.sqlite3"
-    db = VyvarDatabase(db_path)
+    db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
     _ensure_telescope_8(db)
-    archive = tmp_path / "draft_flip_ok"
-    archive.mkdir()
     draft_id = db.create_draft(
         {
             "id_equipments": 1,
@@ -44,6 +41,8 @@ def test_fetch_obs_draft_returns_manifest_rig_when_present(tmp_path) -> None:
             "is_calibrated": 0,
         }
     )
+    archive = resolve_draft_dir_for_id(db, int(draft_id))
+    assert archive is not None
     db.update_draft_import_log(
         int(draft_id),
         lights_path=str(archive / "calibrated" / "lights"),
@@ -64,24 +63,19 @@ def test_fetch_obs_draft_returns_manifest_rig_when_present(tmp_path) -> None:
         paths={"archive": str(archive.resolve())},
         files=[],
     )
-    db.conn.execute("UPDATE OBS_DRAFT SET ID_TELESCOPE = 1 WHERE ID = ?;", (int(draft_id),))
-    db.conn.commit()
 
     row = db.fetch_obs_draft_by_id(int(draft_id))
     assert row is not None
     assert row["ID_TELESCOPE"] == 8
-    assert manifest_shadow_counter_snapshot()["fallback"] == 0
     db.close()
 
 
-def test_fetch_obs_draft_falls_back_to_db_without_manifest(tmp_path) -> None:
+def test_create_draft_writes_manifest_rig(tmp_path) -> None:
     from database import VyvarDatabase
     from tools.reference_seed import seed_reference_observatory
 
-    reset_manifest_shadow_counters()
-    clear_manifest_shadow_load_cache()
-    db_path = tmp_path / "vyvar.sqlite3"
-    db = VyvarDatabase(db_path)
+    db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
     draft_id = db.create_draft(
         {
@@ -97,23 +91,19 @@ def test_fetch_obs_draft_falls_back_to_db_without_manifest(tmp_path) -> None:
     row = db.fetch_obs_draft_by_id(int(draft_id))
     assert row is not None
     assert row["ID_TELESCOPE"] == 1
-    assert manifest_shadow_counter_snapshot()["fallback"] >= 4
     db.close()
 
 
-def test_obs_draft_editor_save_refreshes_manifest_and_flip_reads_new_rig(tmp_path) -> None:
-    """Draft-438 scenario: DB rig edit via explorer save must refresh manifest for flipped reads."""
+def test_obs_draft_editor_save_writes_manifest_rig(tmp_path) -> None:
     from database import VyvarDatabase
     from tools.reference_seed import seed_reference_observatory
 
     reset_manifest_shadow_counters()
     clear_manifest_shadow_load_cache()
-    db_path = tmp_path / "vyvar.sqlite3"
-    db = VyvarDatabase(db_path)
+    db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
     _ensure_telescope_8(db)
-    archive = tmp_path / "draft_000438"
-    archive.mkdir()
     draft_id = db.create_draft(
         {
             "id_equipments": 1,
@@ -124,6 +114,8 @@ def test_obs_draft_editor_save_refreshes_manifest_and_flip_reads_new_rig(tmp_pat
             "is_calibrated": 0,
         }
     )
+    archive = resolve_draft_dir_for_id(db, int(draft_id))
+    assert archive is not None
     db.update_draft_import_log(
         int(draft_id),
         lights_path=str(archive / "calibrated" / "lights"),
@@ -131,8 +123,6 @@ def test_obs_draft_editor_save_refreshes_manifest_and_flip_reads_new_rig(tmp_pat
         imported_at="2026-08-10T12:00:00Z",
         archive_path=str(archive),
     )
-    record_draft_manifest_core(db, int(draft_id))
-    clear_manifest_shadow_load_cache()
 
     orig = pd.DataFrame(
         [{"ID": int(draft_id), "ID_TELESCOPE": 1, "ID_EQUIPMENTS": 1, "ID_LOCATION": 1, "ID_SCANNING": 1}]
@@ -162,14 +152,10 @@ def test_fetch_telescope_equipment_uses_manifest_telescope_for_join(tmp_path) ->
     from database import VyvarDatabase
     from tools.reference_seed import seed_reference_observatory
 
-    reset_manifest_shadow_counters()
-    clear_manifest_shadow_load_cache()
-    db_path = tmp_path / "vyvar.sqlite3"
-    db = VyvarDatabase(db_path)
+    db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
     _ensure_telescope_8(db)
-    archive = tmp_path / "draft_te_join"
-    archive.mkdir()
     draft_id = db.create_draft(
         {
             "id_equipments": 1,
@@ -180,6 +166,8 @@ def test_fetch_telescope_equipment_uses_manifest_telescope_for_join(tmp_path) ->
             "is_calibrated": 0,
         }
     )
+    archive = resolve_draft_dir_for_id(db, int(draft_id))
+    assert archive is not None
     db.update_draft_import_log(
         int(draft_id),
         lights_path=str(archive / "calibrated" / "lights"),

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import math
 import os
@@ -1143,12 +1144,34 @@ class VyvarDatabase:
 
     def __init__(self, db_path: str | Path) -> None:
         self.db_path = str(db_path)
+        self._archive_root_override: Path | None = None
         self.conn = ThreadSafeSQLiteConnection(open_sqlite_connection(self.db_path))
         self._create_tables()
         self.initialize_database()
         self._ensure_obs_files_indexes()
         self._drop_vestigial_tables()
         self._drop_equipments_focal_column()
+
+    def resolve_archive_root(self) -> Path:
+        """Resolve Archive root for manifest I/O (config.json or data_root/Archive)."""
+        if self._archive_root_override is not None:
+            return Path(self._archive_root_override).expanduser().resolve()
+        dbp = Path(self.db_path).expanduser().resolve()
+        data_root = dbp.parent
+        for cfg_path in (data_root / "config.json", dbp.parent.parent / "config.json"):
+            if not cfg_path.is_file():
+                continue
+            try:
+                raw = json.loads(cfg_path.read_text(encoding="utf-8"))
+                ar = str(raw.get("archive_root") or "").strip()
+                if ar:
+                    p = Path(ar).expanduser()
+                    if not p.is_absolute():
+                        p = data_root / p
+                    return p.resolve()
+            except Exception:  # noqa: BLE001
+                continue
+        return (data_root / "Archive").resolve()
 
     def _enable_foreign_keys(self) -> None:
         self.conn.execute("PRAGMA foreign_keys = ON;")
@@ -1797,6 +1820,89 @@ class VyvarDatabase:
         pragma_cols = [r[1] for r in self.conn.execute(f"PRAGMA table_info({table});").fetchall()]
         insert_colnames = [c for c in pragma_cols if c != pk_col]
 
+        if table == "OBS_DRAFT":
+            from draft_provenance import (
+                _optional_float,
+                _optional_int,
+                load_or_init_manifest,
+                patch_draft_manifest,
+                resolve_draft_dir_for_id,
+            )
+
+            inserted = 0
+            updated = 0
+            deleted = 0
+            for pid, row in edited_by_id.items():
+                root = resolve_draft_dir_for_id(self, int(pid))
+                if root is None:
+                    continue
+                manifest = load_or_init_manifest(root, int(pid))
+                rig = dict(manifest.get("rig") or {})
+                paths = dict(manifest.get("paths") or {})
+                center = dict(manifest.get("center") or {"ra_deg": None, "de_deg": None})
+                scalar_map = {
+                    "ID_EQUIPMENTS": ("rig", "equipment_id"),
+                    "ID_TELESCOPE": ("rig", "telescope_id"),
+                    "ID_LOCATION": ("rig", "location_id"),
+                    "ID_SCANNING": ("rig", "scanning_id"),
+                    "LIGHTS_PATH": ("paths", "lights"),
+                    "CALIB_PATH": ("paths", "calib"),
+                    "ARCHIVE_PATH": ("paths", "archive"),
+                    "MASTERSTAR_PATH": ("paths", "masterstar"),
+                    "MASTERSTAR_FITS_PATH": ("paths", "masterstar_fits"),
+                    "STATUS": ("status", None),
+                    "CENTEROFFIELDRA": ("center", "ra_deg"),
+                    "CENTEROFFIELDDE": ("center", "de_deg"),
+                    "OBSERVATIONSTARTJD": ("observation_start_jd", None),
+                    "IS_CALIBRATED": ("is_calibrated", None),
+                }
+                changed = False
+                for col in editable_cols:
+                    if col not in row.index:
+                        continue
+                    val = self._coerce_sql_param(table, col, row[col])
+                    spec = scalar_map.get(col)
+                    if spec is None:
+                        continue
+                    bucket, key = spec
+                    if bucket == "rig" and key:
+                        rig[key] = _optional_int(val) if val is not None else None
+                        changed = True
+                    elif bucket == "paths" and key:
+                        paths[key] = str(val).strip() if val is not None else None
+                        changed = True
+                    elif bucket == "center" and key:
+                        center[key] = float(val) if val is not None else None
+                        changed = True
+                    elif bucket == "status":
+                        patch_draft_manifest(root, int(pid), status=str(val) if val is not None else None)
+                        changed = True
+                    elif bucket == "observation_start_jd":
+                        patch_draft_manifest(root, int(pid), observation_start_jd=_optional_float(val))
+                        changed = True
+                    elif bucket == "is_calibrated":
+                        patch_draft_manifest(
+                            root,
+                            int(pid),
+                            is_calibrated=1 if int(val) != 0 else 0 if val is not None else None,
+                        )
+                        changed = True
+                if changed:
+                    patch_draft_manifest(
+                        root,
+                        int(pid),
+                        rig=rig,
+                        paths=paths,
+                        center=center,
+                    )
+                    updated += 1
+            return {
+                "inserted": inserted,
+                "updated": updated,
+                "deleted": deleted,
+                "soft_deactivated": 0,
+            }
+
         try:
             self.conn.execute("BEGIN;")
             for did in sorted(deleted_ids):
@@ -1932,27 +2038,23 @@ class VyvarDatabase:
         self.conn.commit()
 
     def fetch_obs_draft_by_id(self, draft_id: int) -> dict[str, Any] | None:
-        cur = self.conn.execute("SELECT * FROM OBS_DRAFT WHERE ID = ?;", (int(draft_id),))
-        row = cur.fetchone()
-        if row is None:
-            return None
-        row_dict = dict(row)
-        from draft_provenance import apply_manifest_core_to_draft_row
+        from draft_provenance import fetch_obs_draft_row_manifest
 
-        apply_manifest_core_to_draft_row(int(draft_id), row_dict, db=self)
-        return row_dict
+        return fetch_obs_draft_row_manifest(self, int(draft_id))
 
     def _draft_rig_resolve_row(self, draft_id: int) -> dict[str, Any] | None:
-        """OBS_DRAFT rig FK columns + path hints for manifest-first resolution."""
-        row = self.conn.execute(
-            """
-            SELECT ID_EQUIPMENTS, ID_TELESCOPE, ID_LOCATION, ID_SCANNING,
-                   ARCHIVE_PATH, LIGHTS_PATH
-            FROM OBS_DRAFT WHERE ID = ?;
-            """,
-            (int(draft_id),),
-        ).fetchone()
-        return dict(row) if row is not None else None
+        """Rig FK columns + path hints from manifest."""
+        row = self.fetch_obs_draft_by_id(int(draft_id))
+        if row is None:
+            return None
+        return {
+            "ID_EQUIPMENTS": row.get("ID_EQUIPMENTS"),
+            "ID_TELESCOPE": row.get("ID_TELESCOPE"),
+            "ID_LOCATION": row.get("ID_LOCATION"),
+            "ID_SCANNING": row.get("ID_SCANNING"),
+            "ARCHIVE_PATH": row.get("ARCHIVE_PATH"),
+            "LIGHTS_PATH": row.get("LIGHTS_PATH"),
+        }
 
     def _resolve_draft_rig_id(self, draft_id: int, field: str, db_col: str) -> int | None:
         from draft_provenance import resolve_rig_id_manifest_first
@@ -1994,28 +2096,21 @@ class VyvarDatabase:
         return self._resolve_draft_rig_id(int(draft_id), "scanning_id", "ID_SCANNING")
 
     def _try_refresh_draft_manifest(self, draft_id: int) -> None:
-        """Best-effort dual-write of draft_manifest.json from OBS_DRAFT + OBS_FILES (Phase 1 shadow)."""
-        try:
-            from draft_provenance import record_draft_manifest_core
-
-            record_draft_manifest_core(self, int(draft_id))
-        except Exception as exc:  # noqa: BLE001
-            log_event(f"draft_manifest refresh failed for draft_id={int(draft_id)}: {exc}")
+        """No-op: manifest is written directly (Phase 2.8)."""
+        return
 
     def update_obs_draft_center(self, draft_id: int, center_ra_deg: float, center_de_deg: float) -> None:
-        """Persist draft field center (ICRS degrees) in ``OBS_DRAFT``."""
-        cur = self.conn.execute(
-            """
-            UPDATE OBS_DRAFT
-               SET CENTEROFFIELDRA = ?,
-                   CENTEROFFIELDDE = ?
-             WHERE ID = ?;
-            """,
-            (float(center_ra_deg), float(center_de_deg), int(draft_id)),
-        )
-        if cur.rowcount == 0:
+        """Persist draft field center (ICRS degrees) in manifest."""
+        from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
+
+        root = resolve_draft_dir_for_id(self, int(draft_id))
+        if root is None:
             raise ValueError(f"Draft '{draft_id}' not found for center update.")
-        self.conn.commit()
+        patch_draft_manifest(
+            root,
+            int(draft_id),
+            center={"ra_deg": float(center_ra_deg), "de_deg": float(center_de_deg)},
+        )
 
     def update_obs_draft_status_panel_values(
         self,
@@ -2026,49 +2121,35 @@ class VyvarDatabase:
         focal_mm: float | None = None,
         pixel_um: float | None = None,
     ) -> None:
-        """Persist status-panel values for a draft (center + optional focal/pixel)."""
-        sets: list[str] = []
-        params: list[Any] = []
-        if center_ra_deg is not None:
-            sets.append("CENTEROFFIELDRA = ?")
-            params.append(float(center_ra_deg))
-        if center_de_deg is not None:
-            sets.append("CENTEROFFIELDDE = ?")
-            params.append(float(center_de_deg))
-        if focal_mm is not None:
-            sets.append("FOCAL_MM = ?")
-            params.append(float(focal_mm))
-        if pixel_um is not None:
-            sets.append("PIXEL_UM = ?")
-            params.append(float(pixel_um))
-        if not sets:
+        """Persist status-panel values for a draft (center + optional focal/pixel) in manifest."""
+        from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
+
+        _ = focal_mm, pixel_um
+        if center_ra_deg is None and center_de_deg is None:
             return
-        params.append(int(draft_id))
-        cur = self.conn.execute(
-            f"UPDATE OBS_DRAFT SET {', '.join(sets)} WHERE ID = ?;",
-            tuple(params),
-        )
-        if cur.rowcount == 0:
+        root = resolve_draft_dir_for_id(self, int(draft_id))
+        if root is None:
             raise ValueError(f"Draft '{draft_id}' not found for status-panel update.")
-        self.conn.commit()
-        self._try_refresh_draft_manifest(int(draft_id))
+        center: dict[str, float | None] = {}
+        if center_ra_deg is not None:
+            center["ra_deg"] = float(center_ra_deg)
+        if center_de_deg is not None:
+            center["de_deg"] = float(center_de_deg)
+        patch_draft_manifest(root, int(draft_id), center=center)
 
     def set_obs_draft_masterstar_path(self, draft_id: int, masterstar_path: str | None) -> None:
-        """Persist absolute MASTERSTAR FITS path for a draft."""
+        """Persist absolute MASTERSTAR FITS path for a draft (manifest)."""
+        from draft_provenance import load_or_init_manifest, patch_draft_manifest, resolve_draft_dir_for_id
+
         _p = (str(masterstar_path).strip() if masterstar_path is not None else "") or None
-        cur = self.conn.execute(
-            """
-            UPDATE OBS_DRAFT
-               SET MASTERSTAR_PATH = ?,
-                   MASTERSTAR_FITS_PATH = ?
-             WHERE ID = ?;
-            """,
-            (_p, _p, int(draft_id)),
-        )
-        if cur.rowcount == 0:
+        root = resolve_draft_dir_for_id(self, int(draft_id))
+        if root is None:
             raise ValueError(f"Draft '{draft_id}' not found for MASTERSTAR path update.")
-        self.conn.commit()
-        self._try_refresh_draft_manifest(int(draft_id))
+        manifest = load_or_init_manifest(root, int(draft_id))
+        paths = dict(manifest.get("paths") or {})
+        paths["masterstar"] = _p
+        paths["masterstar_fits"] = _p
+        patch_draft_manifest(root, int(draft_id), paths=paths)
 
     def get_obs_draft_masterstar_path(self, draft_id: int) -> str | None:
         """Return persisted MASTERSTAR path for a draft (manifest-first)."""
@@ -2083,19 +2164,17 @@ class VyvarDatabase:
     # MASTERSTAR selection vs MASTERSTAR product (separate persistence)
     # ------------------------------------------------------------------
     def set_obs_draft_masterstar_source_path(self, draft_id: int, source_path: str | None) -> None:
-        """Persist the *selected source frame* for MASTERSTAR (usually a processed light FITS).
+        """Persist the selected source frame path in manifest ``paths.masterstar``."""
+        from draft_provenance import load_or_init_manifest, patch_draft_manifest, resolve_draft_dir_for_id
 
-        Stored in ``OBS_DRAFT.MASTERSTAR_PATH`` only (does NOT overwrite ``MASTERSTAR_FITS_PATH``).
-        """
         _p = (str(source_path).strip() if source_path is not None else "") or None
-        cur = self.conn.execute(
-            "UPDATE OBS_DRAFT SET MASTERSTAR_PATH = ? WHERE ID = ?;",
-            (_p, int(draft_id)),
-        )
-        if cur.rowcount == 0:
+        root = resolve_draft_dir_for_id(self, int(draft_id))
+        if root is None:
             raise ValueError(f"Draft '{draft_id}' not found for MASTERSTAR source update.")
-        self.conn.commit()
-        self._try_refresh_draft_manifest(int(draft_id))
+        manifest = load_or_init_manifest(root, int(draft_id))
+        paths = dict(manifest.get("paths") or {})
+        paths["masterstar"] = _p
+        patch_draft_manifest(root, int(draft_id), paths=paths)
 
     def get_obs_draft_masterstar_source_path(self, draft_id: int) -> str | None:
         """Return persisted MASTERSTAR *source* (selected frame) path (manifest-first)."""
@@ -2107,19 +2186,17 @@ class VyvarDatabase:
         return s or None
 
     def set_obs_draft_masterstar_fits_path(self, draft_id: int, fits_path: str | None) -> None:
-        """Persist the produced MASTERSTAR.fits path for a draft.
+        """Persist produced MASTERSTAR.fits path in manifest."""
+        from draft_provenance import load_or_init_manifest, patch_draft_manifest, resolve_draft_dir_for_id
 
-        Stored in ``OBS_DRAFT.MASTERSTAR_FITS_PATH`` only (does NOT overwrite ``MASTERSTAR_PATH``).
-        """
         _p = (str(fits_path).strip() if fits_path is not None else "") or None
-        cur = self.conn.execute(
-            "UPDATE OBS_DRAFT SET MASTERSTAR_FITS_PATH = ? WHERE ID = ?;",
-            (_p, int(draft_id)),
-        )
-        if cur.rowcount == 0:
+        root = resolve_draft_dir_for_id(self, int(draft_id))
+        if root is None:
             raise ValueError(f"Draft '{draft_id}' not found for MASTERSTAR FITS path update.")
-        self.conn.commit()
-        self._try_refresh_draft_manifest(int(draft_id))
+        manifest = load_or_init_manifest(root, int(draft_id))
+        paths = dict(manifest.get("paths") or {})
+        paths["masterstar_fits"] = _p
+        patch_draft_manifest(root, int(draft_id), paths=paths)
 
     def qc_processing_run_exists(self, processing_hash: str) -> bool:
         cur = self.conn.execute(
@@ -2166,17 +2243,10 @@ class VyvarDatabase:
             raise ValueError(f"Cannot resolve QC processing run for hash: {h}")
         run_id = int(run_row["ID"])
         self.conn.execute("DELETE FROM OBS_QC_PROCESSING_FILE WHERE RUN_ID = ?;", (run_id,))
-        cur2 = self.conn.execute(
-            """
-            SELECT ID, FILE_PATH, FILTER, EXPTIME, INSPECTION_JD, FWHM, DRIFT
-            FROM OBS_FILES
-            WHERE DRAFT_ID = ?
-              AND LOWER(COALESCE(IMAGETYP, '')) = 'light'
-              AND COALESCE(IS_REJECTED, 0) = 0;
-            """,
-            (int(draft_id),),
-        )
-        for frow in cur2.fetchall():
+        light_rows = self.fetch_draft_light_rows_for_quality(int(draft_id))
+        for frow in light_rows:
+            if frow.get("IS_REJECTED") not in (None, 0):
+                continue
             ex_v: float | None = None
             if frow["EXPTIME"] is not None:
                 try:
@@ -2226,12 +2296,12 @@ class VyvarDatabase:
         return run_id
 
     def update_obs_draft_status(self, draft_id: int, status: str) -> None:
-        self.conn.execute(
-            "UPDATE OBS_DRAFT SET STATUS = ? WHERE ID = ?;",
-            (str(status), int(draft_id)),
-        )
-        self.conn.commit()
-        self._try_refresh_draft_manifest(int(draft_id))
+        from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
+
+        root = resolve_draft_dir_for_id(self, int(draft_id))
+        if root is None:
+            raise ValueError(f"Draft '{draft_id}' not found for status update.")
+        patch_draft_manifest(root, int(draft_id), status=str(status))
 
     def count_obs_files(self) -> int:
         cur = self.conn.execute("SELECT COUNT(*) FROM OBS_FILES;")
@@ -2770,30 +2840,20 @@ class VyvarDatabase:
         return hit
 
     def fetch_obs_draft_telescope_equipment(self, draft_id: int) -> dict[str, Any] | None:
-        """JOIN OBS_DRAFT -> TELESCOPE / EQUIPMENTS for UI (telescope + sensor summary)."""
-        row = self.conn.execute(
-            """
-            SELECT
-                d.ID AS draft_id,
-                d.ID_EQUIPMENTS,
-                d.ID_TELESCOPE,
-                d.ARCHIVE_PATH,
-                d.LIGHTS_PATH,
-                t.TELESCOPENAME AS telescope_name,
-                t.FOCAL AS telescope_focal_mm,
-                e.CAMERANAME AS equipment_name,
-                e.PIXELSIZE AS pixel_um
-            FROM OBS_DRAFT d
-            LEFT JOIN TELESCOPE t ON d.ID_TELESCOPE = t.ID
-            LEFT JOIN EQUIPMENTS e ON d.ID_EQUIPMENTS = e.ID
-            WHERE d.ID = ?;
-            """,
-            (int(draft_id),),
-        ).fetchone()
+        """Telescope + sensor summary for UI (manifest rig ids)."""
+        row = self.fetch_obs_draft_by_id(int(draft_id))
         if row is None:
             return None
         eq_id = self.get_draft_equipment_id(int(draft_id))
         tel_id = self.get_draft_telescope_id(int(draft_id))
+        if tel_id is None:
+            return {
+                "draft_id": int(draft_id),
+                "telescope_name": None,
+                "telescope_focal_mm": None,
+                "equipment_name": None,
+                "pixel_um": None,
+            }
         names = self.conn.execute(
             """
             SELECT
@@ -2809,14 +2869,14 @@ class VyvarDatabase:
         ).fetchone()
         if names is None:
             return {
-                "draft_id": row["draft_id"],
+                "draft_id": int(draft_id),
                 "telescope_name": None,
                 "telescope_focal_mm": None,
                 "equipment_name": None,
                 "pixel_um": None,
             }
         return {
-            "draft_id": row["draft_id"],
+            "draft_id": int(draft_id),
             "telescope_name": names["telescope_name"],
             "telescope_focal_mm": names["telescope_focal_mm"],
             "equipment_name": names["equipment_name"],
@@ -2979,13 +3039,12 @@ class VyvarDatabase:
         self.conn.commit()
 
     def set_obs_draft_calibration_mode(self, draft_id: int, calibration_mode: str) -> None:
-        cur = self.conn.execute(
-            "UPDATE OBS_DRAFT SET CALIBRATION_MODE = ? WHERE ID = ?;",
-            (str(calibration_mode), int(draft_id)),
-        )
-        if cur.rowcount == 0:
+        from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
+
+        root = resolve_draft_dir_for_id(self, int(draft_id))
+        if root is None:
             raise ValueError(f"Draft '{draft_id}' not found for calibration mode update.")
-        self.conn.commit()
+        patch_draft_manifest(root, int(draft_id), calibration_mode=str(calibration_mode))
 
     def _ensure_active_columns(self) -> None:
         """Schema migration: add ACTIVE columns to EQUIPMENTS/TELESCOPE."""
@@ -3916,33 +3975,10 @@ class VyvarDatabase:
         return int(row["n"] if row is not None and row["n"] is not None else 0)
 
     def insert_draft_files(self, draft_id: int, files: list[dict[str, Any]]) -> None:
-        """Insert per-file evidence rows into OBS_FILES for draft ingestion."""
-        self.conn.execute("DELETE FROM OBS_FILES WHERE DRAFT_ID = ?;", (int(draft_id),))
-        self.conn.executemany(
-            """
-            INSERT INTO OBS_FILES (
-                OBSERVATION_ID, DRAFT_ID, FILE_PATH, IMAGETYP, FILTER, OBSERVATION_GROUP_KEY,
-                ID_SCANNING, IS_CALIBRATED, CALIB_TYPE, CALIB_FLAGS
-            )
-            VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-            """,
-            [
-                (
-                    int(draft_id),
-                    str(item.get("file_path", "")),
-                    str(item.get("imagetyp", "")),
-                    str(item.get("filter", "")),
-                    str(item.get("observation_group_key", "") or ""),
-                    (int(item.get("id_scanning")) if item.get("id_scanning") is not None else None),
-                    (int(item.get("is_calibrated")) if item.get("is_calibrated") is not None else None),
-                    str(item.get("calib_type", "") or ""),
-                    str(item.get("calib_flags", "") or ""),
-                )
-                for item in files
-            ],
-        )
-        self.conn.commit()
-        self._try_refresh_draft_manifest(int(draft_id))
+        """Insert per-file evidence into manifest ``files[]``."""
+        from draft_provenance import set_draft_manifest_files
+
+        set_draft_manifest_files(self, int(draft_id), files)
 
     def update_obs_file_qc_by_raw_light_path(
         self,
@@ -3956,67 +3992,28 @@ class VyvarDatabase:
         qc_bg_rms: float | None = None,
         qc_passed: bool | None = None,
     ) -> int:
-        """Update QC columns for the row whose ``FILE_PATH`` matches the raw light FITS path.
+        """Update QC fields in manifest ``files[]`` for matching ``file_path``."""
+        from draft_provenance import update_manifest_file_entry
 
-        Restrict with ``draft_id`` or ``observation_id`` when set to avoid ambiguous basename matches.
-        Returns SQLite ``rowcount``.
-        """
-        p = str(Path(raw_light_path).resolve())
-        assignments: list[str] = []
-        set_vals: list[Any] = []
-        if qc_hfr is not None and math.isfinite(float(qc_hfr)):
-            assignments.append("QC_HFR = ?")
-            set_vals.append(float(qc_hfr))
-        if qc_stars is not None:
-            assignments.append("QC_STARS = ?")
-            set_vals.append(int(qc_stars))
-        if qc_background is not None and math.isfinite(float(qc_background)):
-            assignments.append("QC_BACKGROUND = ?")
-            set_vals.append(float(qc_background))
-        if qc_bg_rms is not None and math.isfinite(float(qc_bg_rms)):
-            assignments.append("QC_BG_RMS = ?")
-            set_vals.append(float(qc_bg_rms))
-        if qc_passed is not None:
-            assignments.append("QC_PASSED = ?")
-            set_vals.append(1 if qc_passed else 0)
-        if not assignments:
+        if draft_id is None:
             return 0
-
-        where_parts = ["FILE_PATH = ?"]
-        where_vals: list[Any] = [p]
-        if draft_id is not None:
-            where_parts.append("DRAFT_ID = ?")
-            where_vals.append(int(draft_id))
-        elif observation_id is not None:
-            where_parts.append("OBSERVATION_ID = ?")
-            where_vals.append(str(observation_id))
-
-        wh = " AND ".join(where_parts)
-        sql = f"UPDATE OBS_FILES SET {', '.join(assignments)} WHERE {wh}"
-        cur = self.conn.execute(sql, tuple(set_vals + where_vals))
-        n = int(cur.rowcount or 0)
-        if n == 0 and os.name == "nt":
-            wparts = ["LOWER(FILE_PATH) = LOWER(?)"]
-            wvals: list[Any] = [p]
-            if draft_id is not None:
-                wparts.insert(0, "DRAFT_ID = ?")
-                wvals.insert(0, int(draft_id))
-            elif observation_id is not None:
-                wparts.insert(0, "OBSERVATION_ID = ?")
-                wvals.insert(0, str(observation_id))
-            cur2 = self.conn.execute(
-                "SELECT ID FROM OBS_FILES WHERE " + " AND ".join(wparts),
-                tuple(wvals),
-            )
-            row = cur2.fetchone()
-            if row is None:
-                self.conn.commit()
-                return 0
-            sql2 = f"UPDATE OBS_FILES SET {', '.join(assignments)} WHERE ID = ?"
-            cur3 = self.conn.execute(sql2, tuple(set_vals + [int(row["ID"])]))
-            n = int(cur3.rowcount or 0)
-        self.conn.commit()
-        return n
+        p = str(Path(raw_light_path).resolve())
+        qc: dict[str, Any] = {}
+        if qc_hfr is not None and math.isfinite(float(qc_hfr)):
+            qc["hfr"] = float(qc_hfr)
+        if qc_stars is not None:
+            qc["stars"] = int(qc_stars)
+        if qc_background is not None and math.isfinite(float(qc_background)):
+            qc["background"] = float(qc_background)
+        if qc_bg_rms is not None and math.isfinite(float(qc_bg_rms)):
+            qc["bg_rms"] = float(qc_bg_rms)
+        if qc_passed is not None:
+            qc["passed"] = 1 if qc_passed else 0
+        if not qc:
+            return 0
+        _ = observation_id
+        ok = update_manifest_file_entry(self, int(draft_id), file_path=p, qc=qc)
+        return 1 if ok else 0
 
     def _fetch_draft_light_rows_raw(self, draft_id: int) -> list[dict[str, Any]]:
         """Raw OBS_FILES light rows (manifest writer / DB fallback only)."""
@@ -4035,13 +4032,11 @@ class VyvarDatabase:
         return [dict(r) for r in cur.fetchall()]
 
     def fetch_draft_light_rows_for_quality(self, draft_id: int) -> list[dict[str, Any]]:
-        """Light frames for a draft (manifest-first; DB fallback)."""
+        """Light frames for a draft (manifest-only)."""
         from draft_provenance import light_rows_from_manifest
 
         rows = light_rows_from_manifest(self, int(draft_id), imagetyp="light")
-        if rows is not None:
-            return rows
-        return self._fetch_draft_light_rows_raw(int(draft_id))
+        return rows if rows is not None else []
 
     def fetch_draft_scanning_ids(self, draft_id: int) -> list[int]:
         """Unique per-file scanning IDs for light rows (manifest-first)."""
@@ -4071,36 +4066,26 @@ class VyvarDatabase:
         calib_type: str | None = None,
         calib_flags: str | None = None,
     ) -> int:
-        """Update IS_CALIBRATED/CALIB_TYPE/CALIB_FLAGS for one OBS_FILES row matched by FILE_PATH."""
-        p = str(Path(raw_light_path).resolve())
-        parts: list[str] = []
-        vals: list[Any] = []
-        if is_calibrated is not None:
-            parts.append("IS_CALIBRATED = ?")
-            vals.append(1 if int(is_calibrated) else 0)
-        if calib_type is not None:
-            parts.append("CALIB_TYPE = ?")
-            vals.append(str(calib_type))
-        if calib_flags is not None:
-            parts.append("CALIB_FLAGS = ?")
-            vals.append(str(calib_flags))
-        if not parts:
+        """Update calibration fields in manifest ``files[]``."""
+        from draft_provenance import update_manifest_file_entry
+
+        if draft_id is None:
             return 0
-        where_parts = ["FILE_PATH = ?"]
-        where_vals: list[Any] = [p]
-        if draft_id is not None:
-            where_parts.append("DRAFT_ID = ?")
-            where_vals.append(int(draft_id))
-        elif observation_id is not None:
-            where_parts.append("OBSERVATION_ID = ?")
-            where_vals.append(str(observation_id))
-        sql = f"UPDATE OBS_FILES SET {', '.join(parts)} WHERE {' AND '.join(where_parts)}"
-        cur = self.conn.execute(sql, tuple(vals + where_vals))
-        self.conn.commit()
-        return int(cur.rowcount or 0)
+        p = str(Path(raw_light_path).resolve())
+        _ = observation_id
+        ok = update_manifest_file_entry(
+            self,
+            int(draft_id),
+            file_path=p,
+            is_calibrated=1 if is_calibrated is not None and int(is_calibrated) else is_calibrated,
+            calib_type=str(calib_type) if calib_type is not None else None,
+            calib_flags=str(calib_flags) if calib_flags is not None else None,
+        )
+        return 1 if ok else 0
 
     def update_obs_file_quality_by_id(
         self,
+        draft_id: int,
         row_id: int,
         *,
         fwhm: float | None = None,
@@ -4119,86 +4104,54 @@ class VyvarDatabase:
         roundness_mean: float | None = None,
         elongation_mean: float | None = None,
     ) -> None:
-        """Update quality-inspection columns for one OBS_FILES row."""
-        parts: list[str] = []
-        vals: list[Any] = []
+        """Update quality-inspection fields for one manifest ``files[]`` entry."""
+        from draft_provenance import update_manifest_file_entry
+
+        insp: dict[str, Any] = {}
         if clear_drift:
-            parts.extend(["DRIFT = NULL", "DRIFT_DRA = NULL", "DRIFT_DDE = NULL"])
+            insp.update({"drift": None, "drift_dra": None, "drift_dde": None})
         else:
             if drift_arcmin is not None and math.isfinite(float(drift_arcmin)) and float(drift_arcmin) >= 0.0:
-                parts.append("DRIFT = ?")
-                vals.append(float(drift_arcmin))
+                insp["drift"] = float(drift_arcmin)
             if drift_dra_deg is not None and math.isfinite(float(drift_dra_deg)):
-                parts.append("DRIFT_DRA = ?")
-                vals.append(float(drift_dra_deg))
+                insp["drift_dra"] = float(drift_dra_deg)
             if drift_dde_deg is not None and math.isfinite(float(drift_dde_deg)):
-                parts.append("DRIFT_DDE = ?")
-                vals.append(float(drift_dde_deg))
+                insp["drift_dde"] = float(drift_dde_deg)
         if fwhm is not None and math.isfinite(float(fwhm)):
-            parts.append("FWHM = ?")
-            vals.append(float(fwhm))
+            insp["fwhm"] = float(fwhm)
         if sky_level is not None and math.isfinite(float(sky_level)):
-            parts.append("SKY_LEVEL = ?")
-            vals.append(float(sky_level))
+            insp["sky_level"] = float(sky_level)
         if star_count is not None:
-            parts.append("STAR_COUNT = ?")
-            vals.append(int(star_count))
+            insp["star_count"] = int(star_count)
         if rejected_auto is not None:
-            parts.append("REJECTED_AUTO = ?")
-            vals.append(1 if int(rejected_auto) else 0)
+            insp["rejected_auto"] = 1 if int(rejected_auto) else 0
         if inspection_jd is not None and math.isfinite(float(inspection_jd)):
-            parts.append("INSPECTION_JD = ?")
-            vals.append(float(inspection_jd))
+            insp["inspection_jd"] = float(inspection_jd)
         if is_rejected is not None:
-            parts.append("IS_REJECTED = ?")
-            vals.append(1 if int(is_rejected) else 0)
+            insp["is_rejected"] = 1 if int(is_rejected) else 0
         if ra_deg is not None and math.isfinite(float(ra_deg)):
-            parts.append("RA = ?")
-            vals.append(float(ra_deg))
+            insp["ra"] = float(ra_deg)
         if de_deg is not None and math.isfinite(float(de_deg)):
-            parts.append("DE = ?")
-            vals.append(float(de_deg))
+            insp["de"] = float(de_deg)
         if exptime_sec is not None and math.isfinite(float(exptime_sec)) and float(exptime_sec) >= 0:
-            parts.append("EXPTIME = ?")
-            vals.append(float(exptime_sec))
+            insp["exptime"] = float(exptime_sec)
         if roundness_mean is not None and math.isfinite(float(roundness_mean)) and float(roundness_mean) >= 0.0:
-            parts.append("ROUNDNESS_MEAN = ?")
-            vals.append(float(roundness_mean))
+            insp["roundness_mean"] = float(roundness_mean)
         if elongation_mean is not None and math.isfinite(float(elongation_mean)) and float(elongation_mean) > 0.0:
-            parts.append("ELONGATION_MEAN = ?")
-            vals.append(float(elongation_mean))
-        if not parts:
+            insp["elongation_mean"] = float(elongation_mean)
+        if not insp:
             return
-        vals.append(int(row_id))
-        self.conn.execute(
-            f"UPDATE OBS_FILES SET {', '.join(parts)} WHERE ID = ?;",
-            tuple(vals),
-        )
-        self.conn.commit()
+        update_manifest_file_entry(self, int(draft_id), obs_file_id=int(row_id), inspection=insp)
 
     def bulk_update_obs_file_is_rejected(
         self,
         draft_id: int,
         updates: list[tuple[int, int]],
     ) -> None:
-        """``updates`` = list of (row_id, is_rejected 0/1).
+        """``updates`` = list of (obs_file_id, is_rejected 0/1) in manifest."""
+        from draft_provenance import bulk_update_manifest_is_rejected
 
-        Uses a short-lived connection so this stays valid when Streamlit
-        ``data_editor`` ``on_change`` runs on a worker thread (not the thread
-        that created ``self.conn``).
-        """
-        did = int(draft_id)
-        con = sqlite3.connect(self.db_path)
-        try:
-            for rid, rej in updates:
-                con.execute(
-                    "UPDATE OBS_FILES SET IS_REJECTED = ? WHERE ID = ? AND DRAFT_ID = ?;",
-                    (1 if int(rej) else 0, int(rid), did),
-                )
-            con.commit()
-        finally:
-            con.close()
-        self._try_refresh_draft_manifest(did)
+        bulk_update_manifest_is_rejected(self, int(draft_id), updates)
 
     def _normalize_obs_file_path_key(self, p: str | Path) -> str:
         try:
@@ -4207,7 +4160,7 @@ class VyvarDatabase:
             return str(p).casefold()
 
     def fetch_light_file_paths_not_rejected_for_draft(self, draft_id: int) -> set[str]:
-        """Normalized ``FILE_PATH`` keys for draft lights with ``IS_REJECTED`` 0 or NULL (manifest-first)."""
+        """Normalized FILE_PATH keys for draft lights with IS_REJECTED 0 or NULL (manifest)."""
         rows = self.fetch_draft_light_rows_for_quality(int(draft_id))
         out: set[str] = set()
         for row in rows:
@@ -4217,41 +4170,40 @@ class VyvarDatabase:
             fp = row.get("FILE_PATH")
             if fp:
                 out.add(self._normalize_obs_file_path_key(str(fp)))
-        if out or rows:
-            return out
-        cur = self.conn.execute(
-            """
-            SELECT FILE_PATH FROM OBS_FILES
-            WHERE DRAFT_ID = ? AND LOWER(COALESCE(IMAGETYP, '')) = 'light'
-              AND (IS_REJECTED IS NULL OR IS_REJECTED = 0);
-            """,
-            (int(draft_id),),
-        )
-        for row in cur.fetchall():
-            fp = row["FILE_PATH"]
-            if fp:
-                out.add(self._normalize_obs_file_path_key(str(fp)))
         return out
 
     def fetch_light_file_paths_not_rejected_for_observation(self, observation_id: str) -> set[str]:
-        """Same as draft helper for finalized ``OBSERVATION_ID``."""
-        cur = self.conn.execute(
-            """
-            SELECT FILE_PATH FROM OBS_FILES
-            WHERE OBSERVATION_ID = ? AND LOWER(COALESCE(IMAGETYP, '')) = 'light'
-              AND (IS_REJECTED IS NULL OR IS_REJECTED = 0);
-            """,
-            (str(observation_id),),
-        )
+        """Light paths for a finalized observation (manifest ``final_observation_id``)."""
+        from draft_provenance import collect_manifest_obs_file_rows, iter_draft_archive_dirs
+
         out: set[str] = set()
-        for row in cur.fetchall():
-            fp = row["FILE_PATH"]
+        archive_root = self.resolve_archive_root()
+        rows = collect_manifest_obs_file_rows(archive_root, observation_id=str(observation_id))
+        for row in rows:
+            if str(row.get("IMAGETYP") or "").strip().lower() != "light":
+                continue
+            rej = row.get("IS_REJECTED")
+            if rej not in (None, 0):
+                continue
+            fp = row.get("FILE_PATH")
             if fp:
                 out.add(self._normalize_obs_file_path_key(str(fp)))
+        if out:
+            return out
+        for did, apath in iter_draft_archive_dirs(archive_root):
+            _ = apath
+            rows2 = self.fetch_draft_light_rows_for_quality(int(did))
+            for row in rows2:
+                rej = row.get("IS_REJECTED")
+                if rej not in (None, 0):
+                    continue
+                fp = row.get("FILE_PATH")
+                if fp:
+                    out.add(self._normalize_obs_file_path_key(str(fp)))
         return out
 
     def create_draft(self, data: dict[str, Any]) -> int:
-        """Create an ingestion draft without Session ID (no astrometry yet)."""
+        """Create an ingestion draft (manifest-direct; no OBS_DRAFT SQL)."""
         id_equipments = int(data.get("id_equipments", 1))
         id_telescope = int(data.get("id_telescope", 1))
         id_location = int(data.get("id_location", 1))
@@ -4262,38 +4214,10 @@ class VyvarDatabase:
             id_location=id_location,
             id_scanning=id_scanning,
         )
-        try:
-            cursor = self.conn.execute(
-                """
-                INSERT INTO OBS_DRAFT (
-                    ID_EQUIPMENTS, ID_TELESCOPE, ID_LOCATION, ID_SCANNING,
-                    OBSERVATIONSTARTJD, CENTEROFFIELDRA, CENTEROFFIELDDE,
-                    STATUS, IS_CALIBRATED
-                )
-                VALUES (?, ?, ?, ?, ?, NULL, NULL, 'INGESTED', ?);
-                """,
-                (
-                    id_equipments,
-                    id_telescope,
-                    id_location,
-                    id_scanning,
-                    float(data.get("observation_start_jd", 0.0)),
-                    1 if bool(data.get("is_calibrated", False)) else 0,
-                ),
-            )
-        except sqlite3.IntegrityError as exc:
-            if "FOREIGN KEY constraint failed" in str(exc):
-                raise ValueError(
-                    "Cannot create observation draft: foreign-key reference missing "
-                    "(equipment, telescope, location, or scanning)."
-                ) from exc
-            raise
-        self.conn.commit()
-        draft_id_out = int(cursor.lastrowid)
-        arch = data.get("archive_path")
-        if arch is not None and str(arch).strip():
-            self._try_refresh_draft_manifest(draft_id_out)
-        return draft_id_out
+        from draft_provenance import create_draft_manifest
+
+        archive_root = self.resolve_archive_root()
+        return int(create_draft_manifest(self, archive_root, data))
 
     def update_draft_import_log(
         self,
@@ -4306,32 +4230,29 @@ class VyvarDatabase:
         is_calibrated: bool | None = None,
         archive_path: str | None = None,
     ) -> None:
-        is_cal_int = None if is_calibrated is None else (1 if is_calibrated else 0)
-        cursor = self.conn.execute(
-            """
-            UPDATE OBS_DRAFT
-            SET LIGHTS_PATH = ?,
-                CALIB_PATH = ?,
-                IMPORTED_AT = ?,
-                IMPORT_WARNINGS = ?,
-                IS_CALIBRATED = COALESCE(?, IS_CALIBRATED),
-                ARCHIVE_PATH = COALESCE(?, ARCHIVE_PATH)
-            WHERE ID = ?;
-            """,
-            (
-                lights_path,
-                calib_path,
-                imported_at,
-                import_warnings,
-                is_cal_int,
-                archive_path,
-                int(draft_id),
-            ),
-        )
-        if cursor.rowcount == 0:
+        from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
+
+        root = resolve_draft_dir_for_id(self, int(draft_id))
+        if root is None and archive_path:
+            root = Path(str(archive_path)).expanduser().resolve()
+        if root is None:
             raise ValueError(f"Draft '{draft_id}' not found for import log update.")
-        self.conn.commit()
-        self._try_refresh_draft_manifest(int(draft_id))
+        is_cal_int = None if is_calibrated is None else (1 if is_calibrated else 0)
+        paths = {
+            "lights": str(lights_path),
+            "calib": str(calib_path),
+            "archive": str(archive_path or root),
+        }
+        extra: dict[str, Any] = {"imported_at": imported_at}
+        if import_warnings is not None:
+            extra["import_warnings"] = import_warnings
+        patch_draft_manifest(
+            root,
+            int(draft_id),
+            paths=paths,
+            is_calibrated=is_cal_int,
+            extra=extra,
+        )
 
     def finalize_draft(self, draft_id: int, *, ra_deg: float, dec_deg: float) -> str:
         """Finalize a draft by creating OBSERVATION.ID after astrometry."""
@@ -4395,130 +4316,47 @@ class VyvarDatabase:
         approved_by: str | None = None,
         notes: str | None = None,
     ) -> str:
-        """Persist UI approval: upsert ``OBSERVATION`` row keyed by ``DRAFT_ID``, mark draft ``FINALIZED``.
-
-        Returns the observation hashtag ``OBSERVATION.ID`` (text primary key).
-        """
+        """Persist UI approval in manifest (``final_observation_id``, ``FINALIZED``)."""
         from astropy.time import Time
+        from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
 
-        def _obs_cols() -> set[str]:
-            cur = self.conn.execute("PRAGMA table_info(OBSERVATION);")
-            return {str(r[1]) for r in cur.fetchall()}
-
-        cols_o = _obs_cols()
-        for col_sql in (
-            ("DRAFT_ID", "INTEGER"),
-            ("STATUS", "TEXT"),
-            ("APPROVED_BY", "TEXT"),
-            ("APPROVAL_NOTES", "TEXT"),
-            ("APPROVAL_JD", "REAL"),
-        ):
-            name, typ = col_sql
-            if name not in cols_o:
-                self.conn.execute(f"ALTER TABLE OBSERVATION ADD COLUMN {name} {typ};")
-        cols_o = _obs_cols()
-        if "DRAFT_ID" in cols_o:
-            self.conn.execute(
-                "CREATE UNIQUE INDEX IF NOT EXISTS UQ_OBSERVATION_DRAFT_ID ON OBSERVATION(DRAFT_ID);"
-            )
-
-        cur_d = self.conn.execute("SELECT * FROM OBS_DRAFT WHERE ID = ?;", (int(draft_id),))
-        drow = cur_d.fetchone()
-        if drow is None:
+        draft = self.fetch_obs_draft_by_id(int(draft_id))
+        if draft is None:
             raise ValueError(f"Draft {draft_id} not found")
-        draft = dict(drow)
         st = str(draft.get("STATUS") or "").strip().upper()
         if st == "FINALIZED":
+            existing = draft.get("FINAL_OBSERVATION_ID")
+            if existing:
+                return str(existing)
             raise ValueError(f"Draft {draft_id} is already finalized")
 
         approval_jd = float(Time.now().jd)
         ra_c = float(draft.get("CENTEROFFIELDRA") or 0.0)
         de_c = float(draft.get("CENTEROFFIELDDE") or 0.0)
         obs_id = self.generate_hashtag(
-            id_equipments=int(draft["ID_EQUIPMENTS"]),
-            id_telescope=int(draft["ID_TELESCOPE"]),
-            id_location=int(draft["ID_LOCATION"]),
-            id_scanning=int(draft["ID_SCANNING"]),
+            id_equipments=int(draft.get("ID_EQUIPMENTS") or 0),
+            id_telescope=int(draft.get("ID_TELESCOPE") or 0),
+            id_location=int(draft.get("ID_LOCATION") or 0),
+            id_scanning=int(draft.get("ID_SCANNING") or 0),
             center_of_field_ra=ra_c,
             center_of_field_de=de_c,
             observation_start_jd=float(draft.get("OBSERVATIONSTARTJD") or 0.0),
         )
-
-        arch = draft.get("ARCHIVE_PATH")
-        arch_s = str(arch).strip() if arch is not None else ""
-        is_cal = 1
-
-        self.conn.execute(
-            """
-            INSERT INTO OBSERVATION (
-                ID,
-                DRAFT_ID,
-                ID_EQUIPMENTS,
-                ID_TELESCOPE,
-                ID_LOCATION,
-                ID_SCANNING,
-                CENTEROFFIELDRA,
-                CENTEROFFIELDDE,
-                OBSERVATIONSTARTJD,
-                ARCHIVE_PATH,
-                IS_CALIBRATED,
-                APPROVED_BY,
-                APPROVAL_NOTES,
-                APPROVAL_JD,
-                STATUS
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'FINALIZED')
-            ON CONFLICT(DRAFT_ID) DO UPDATE SET
-                STATUS = 'FINALIZED',
-                APPROVED_BY = excluded.APPROVED_BY,
-                APPROVAL_NOTES = excluded.APPROVAL_NOTES,
-                APPROVAL_JD = excluded.APPROVAL_JD
-            """,
-            (
-                obs_id,
-                int(draft_id),
-                int(draft["ID_EQUIPMENTS"]),
-                int(draft["ID_TELESCOPE"]),
-                int(draft["ID_LOCATION"]),
-                int(draft["ID_SCANNING"]),
-                ra_c,
-                de_c,
-                float(draft.get("OBSERVATIONSTARTJD") or 0.0),
-                arch_s or None,
-                is_cal,
-                approved_by,
-                notes,
-                approval_jd,
-            ),
+        root = resolve_draft_dir_for_id(self, int(draft_id))
+        if root is None:
+            raise ValueError(f"Draft {draft_id}: manifest archive missing")
+        patch_draft_manifest(
+            root,
+            int(draft_id),
+            status="FINALIZED",
+            final_observation_id=str(obs_id),
+            extra={
+                "approved_by": approved_by,
+                "approval_notes": notes,
+                "approval_jd": approval_jd,
+            },
         )
-        out = self.conn.execute(
-            "SELECT ID FROM OBSERVATION WHERE DRAFT_ID = ? LIMIT 1;",
-            (int(draft_id),),
-        ).fetchone()
-        if out is None:
-            raise RuntimeError(f"finalize_draft_to_observation: missing OBSERVATION row for draft {draft_id}")
-        final_id = str(out["ID"] if isinstance(out, sqlite3.Row) else out[0])
-
-        self.conn.execute(
-            """
-            UPDATE OBS_FILES
-               SET OBSERVATION_ID = ?, DRAFT_ID = NULL
-             WHERE DRAFT_ID = ?;
-            """,
-            (final_id, int(draft_id)),
-        )
-        self.conn.execute(
-            """
-            UPDATE OBS_DRAFT
-               SET STATUS = 'FINALIZED',
-                   FINAL_OBSERVATION_ID = ?
-             WHERE ID = ?;
-            """,
-            (final_id, int(draft_id)),
-        )
-        self.conn.commit()
-        self._try_refresh_draft_manifest(int(draft_id))
-        return final_id
+        return str(obs_id)
 
     def _migrate_comp_library_tables(self) -> None:
         """Create FIELD_REGISTRY / COMP_STAR_LIBRARY and indexes (idempotent)."""

@@ -1,25 +1,17 @@
 # -*- coding: ascii -*-
-"""Phase 2.3 manifest-first rig-id accessors (get_draft_*)."""
+"""Phase 2.8 manifest-direct rig-id accessors (get_draft_*)."""
 from __future__ import annotations
 
-from draft_provenance import (
-    clear_manifest_shadow_load_cache,
-    manifest_shadow_counter_snapshot,
-    reset_manifest_shadow_counters,
-    write_draft_manifest,
-)
+from draft_provenance import resolve_draft_dir_for_id, write_draft_manifest
 
 
 def test_get_draft_equipment_id_returns_manifest_value(tmp_path) -> None:
     from database import VyvarDatabase
     from tools.reference_seed import seed_reference_observatory
 
-    reset_manifest_shadow_counters()
-    clear_manifest_shadow_load_cache()
     db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
-    archive = tmp_path / "draft_eq_manifest"
-    archive.mkdir()
     draft_id = db.create_draft(
         {
             "id_equipments": 1,
@@ -30,13 +22,8 @@ def test_get_draft_equipment_id_returns_manifest_value(tmp_path) -> None:
             "is_calibrated": 0,
         }
     )
-    db.update_draft_import_log(
-        int(draft_id),
-        lights_path=str(archive / "calibrated" / "lights"),
-        calib_path=str(archive / "calibrated"),
-        imported_at="2026-08-11T09:00:00Z",
-        archive_path=str(archive),
-    )
+    archive = resolve_draft_dir_for_id(db, int(draft_id))
+    assert archive is not None
     write_draft_manifest(
         archive,
         draft_id=int(draft_id),
@@ -50,21 +37,17 @@ def test_get_draft_equipment_id_returns_manifest_value(tmp_path) -> None:
         paths={"archive": str(archive.resolve())},
         files=[],
     )
-    db.conn.execute("UPDATE OBS_DRAFT SET ID_EQUIPMENTS = 1 WHERE ID = ?;", (int(draft_id),))
-    db.conn.commit()
 
     assert db.get_draft_equipment_id(int(draft_id)) == 2
-    assert manifest_shadow_counter_snapshot()["fallback"] == 0
     db.close()
 
 
-def test_get_draft_location_id_falls_back_without_manifest(tmp_path) -> None:
+def test_get_draft_location_id_reads_manifest_after_create(tmp_path) -> None:
     from database import VyvarDatabase
     from tools.reference_seed import seed_reference_observatory
 
-    reset_manifest_shadow_counters()
-    clear_manifest_shadow_load_cache()
     db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
     draft_id = db.create_draft(
         {
@@ -78,7 +61,6 @@ def test_get_draft_location_id_falls_back_without_manifest(tmp_path) -> None:
     )
 
     assert db.get_draft_location_id(int(draft_id)) == 1
-    assert manifest_shadow_counter_snapshot()["fallback"] >= 1
     db.close()
 
 
@@ -89,12 +71,9 @@ def test_resolve_phase2a_equipment_id_uses_manifest(tmp_path) -> None:
     from photometry_core import _resolve_phase2a_equipment_id
     from tools.reference_seed import seed_reference_observatory
 
-    reset_manifest_shadow_counters()
-    clear_manifest_shadow_load_cache()
     db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db._archive_root_override = tmp_path
     seed_reference_observatory(db)
-    archive = tmp_path / "draft_p2a_eq"
-    archive.mkdir()
     draft_id = db.create_draft(
         {
             "id_equipments": 1,
@@ -105,13 +84,8 @@ def test_resolve_phase2a_equipment_id_uses_manifest(tmp_path) -> None:
             "is_calibrated": 0,
         }
     )
-    db.update_draft_import_log(
-        int(draft_id),
-        lights_path=str(archive / "calibrated" / "lights"),
-        calib_path=str(archive / "calibrated"),
-        imported_at="2026-08-11T09:00:00Z",
-        archive_path=str(archive),
-    )
+    archive = resolve_draft_dir_for_id(db, int(draft_id))
+    assert archive is not None
     write_draft_manifest(
         archive,
         draft_id=int(draft_id),
@@ -125,8 +99,6 @@ def test_resolve_phase2a_equipment_id_uses_manifest(tmp_path) -> None:
         paths={"archive": str(archive.resolve())},
         files=[],
     )
-    db.conn.execute("UPDATE OBS_DRAFT SET ID_EQUIPMENTS = 1 WHERE ID = ?;", (int(draft_id),))
-    db.conn.commit()
 
     eq_id = _resolve_phase2a_equipment_id(
         db,

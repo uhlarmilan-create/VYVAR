@@ -1668,19 +1668,19 @@ def sync_obs_files_drift_arcmin_for_draft(
     n = 0
     if ref_ra_deg is None or ref_de_deg is None:
         for row in rows:
-            db.update_obs_file_quality_by_id(int(row["ID"]), clear_drift=True)
+            db.update_obs_file_quality_by_id(int(draft_id), int(row["ID"]), clear_drift=True)
             n += 1
         return n
     try:
         rref0, dref0 = float(ref_ra_deg), float(ref_de_deg)
     except (TypeError, ValueError):
         for row in rows:
-            db.update_obs_file_quality_by_id(int(row["ID"]), clear_drift=True)
+            db.update_obs_file_quality_by_id(int(draft_id), int(row["ID"]), clear_drift=True)
             n += 1
         return n
     if not (math.isfinite(rref0) and math.isfinite(dref0)):
         for row in rows:
-            db.update_obs_file_quality_by_id(int(row["ID"]), clear_drift=True)
+            db.update_obs_file_quality_by_id(int(draft_id), int(row["ID"]), clear_drift=True)
             n += 1
         return n
     rref, dref = rref0, dref0
@@ -1690,12 +1690,12 @@ def sync_obs_files_drift_arcmin_for_draft(
             ra = row.get("RA")
             de = row.get("DE")
             if ra is None or de is None:
-                db.update_obs_file_quality_by_id(rid, clear_drift=True)
+                db.update_obs_file_quality_by_id(int(draft_id), rid, clear_drift=True)
                 n += 1
                 continue
             raf, def_ = float(ra), float(de)
             if not (math.isfinite(raf) and math.isfinite(def_)):
-                db.update_obs_file_quality_by_id(rid, clear_drift=True)
+                db.update_obs_file_quality_by_id(int(draft_id), rid, clear_drift=True)
                 n += 1
                 continue
             dra_deg = ((raf - rref) + 180.0) % 360.0 - 180.0
@@ -1703,9 +1703,9 @@ def sync_obs_files_drift_arcmin_for_draft(
             dra_plane = dra_deg * math.cos(math.radians(dref))
             d_arc = math.hypot(dra_plane, dde_deg) * 60.0
             if not math.isfinite(d_arc):
-                db.update_obs_file_quality_by_id(rid, clear_drift=True)
+                db.update_obs_file_quality_by_id(int(draft_id), rid, clear_drift=True)
             else:
-                db.update_obs_file_quality_by_id(
+                db.update_obs_file_quality_by_id(int(draft_id), 
                     rid,
                     drift_arcmin=float(d_arc),
                     drift_dra_deg=float(dra_plane),
@@ -1713,7 +1713,7 @@ def sync_obs_files_drift_arcmin_for_draft(
                 )
             n += 1
         except (TypeError, ValueError):
-            db.update_obs_file_quality_by_id(rid, clear_drift=True)
+            db.update_obs_file_quality_by_id(int(draft_id), rid, clear_drift=True)
             n += 1
     return n
 
@@ -1808,7 +1808,7 @@ def run_quality_analysis(
         tgt = _resolve_light_fits_for_quality_inspection(ap, raw)
         if tgt is None:
             errors.append(f"missing {raw.name}")
-            db.update_obs_file_quality_by_id(rid, rejected_auto=0)
+            db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=0)
             if progress_cb is not None:
                 progress_cb(i, n, f"Skip missing {raw.name}")
             continue
@@ -1821,8 +1821,7 @@ def run_quality_analysis(
         _rm_db = float(_rm) if _rm is not None and math.isfinite(float(_rm)) and float(_rm) >= 0.0 else None
         _el = m.get("elongation_mean")
         _el_db = float(_el) if _el is not None and math.isfinite(float(_el)) and float(_el) > 0.0 else None
-        db.update_obs_file_quality_by_id(
-            rid,
+        db.update_obs_file_quality_by_id(int(draft_id), rid,
             fwhm=m.get("fwhm_mean"),
             sky_level=m.get("sky_background"),
             star_count=int(m.get("star_count") or 0),
@@ -1867,7 +1866,7 @@ def run_quality_analysis(
                 rej = 1
         if rej:
             auto_n += 1
-        db.update_obs_file_quality_by_id(rid, rejected_auto=rej)
+        db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=rej)
 
     med_ra, med_de = draft_median_pointing_icrs_deg(db, int(draft_id))
     sync_obs_files_drift_arcmin_for_draft(db, int(draft_id), ref_ra_deg=med_ra, ref_de_deg=med_de)
@@ -1959,8 +1958,7 @@ def apply_perf10_dao_qc_to_obs_files(
                 if _el is not None and math.isfinite(float(_el)) and float(_el) > 0.0
                 else None
             )
-            db.update_obs_file_quality_by_id(
-                rid,
+            db.update_obs_file_quality_by_id(int(draft_id), rid,
                 fwhm=qc.get("fwhm_mean"),
                 sky_level=qc.get("sky_background"),
                 star_count=int(qc.get("star_count") or 0),
@@ -2007,7 +2005,7 @@ def apply_perf10_dao_qc_to_obs_files(
                 rej = 1
         if rej:
             auto_n += 1
-        db.update_obs_file_quality_by_id(rid, rejected_auto=rej)
+        db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=rej)
 
     med_ra, med_de = draft_median_pointing_icrs_deg(db, int(draft_id))
     sync_obs_files_drift_arcmin_for_draft(db, int(draft_id), ref_ra_deg=med_ra, ref_de_deg=med_de)
@@ -2116,7 +2114,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
         raw_fp = _resolve_draft_light_raw_path(ap, str(row.get("FILE_PATH") or ""))
         if raw_fp is None:
             errors.append(f"missing raw {row.get('FILE_PATH')}")
-            db.update_obs_file_quality_by_id(rid, rejected_auto=0)
+            db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=0)
             if progress_cb is not None:
                 progress_cb(i, n, f"Skip missing {Path(str(row.get('FILE_PATH') or '')).name}")
             continue
@@ -2128,13 +2126,13 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 _light_shape = (int(hdul[0].data.shape[0]), int(hdul[0].data.shape[1]))
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{raw_fp.name}: header {exc}")
-            db.update_obs_file_quality_by_id(rid, rejected_auto=0)
+            db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=0)
             if progress_cb is not None:
                 progress_cb(i, n, f"Header fail {raw_fp.name}")
             continue
 
         if is_obs_group_aborted(cal_diag_session, _ok):
-            db.update_obs_file_quality_by_id(rid, rejected_auto=0)
+            db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=0)
             if progress_cb is not None:
                 progress_cb(i, n, f"CAL-DIAG skip {raw_fp.name}")
             continue
@@ -2192,7 +2190,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
             )
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{raw_fp.name}: {exc}")
-            db.update_obs_file_quality_by_id(rid, rejected_auto=0)
+            db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=0)
             if progress_cb is not None:
                 progress_cb(i, n, f"Cal fail {raw_fp.name}")
             continue
@@ -2204,8 +2202,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
         _rm_db = float(_rm) if _rm is not None and math.isfinite(float(_rm)) and float(_rm) >= 0.0 else None
         _el = m.get("elongation_mean")
         _el_db = float(_el) if _el is not None and math.isfinite(float(_el)) and float(_el) > 0.0 else None
-        db.update_obs_file_quality_by_id(
-            rid,
+        db.update_obs_file_quality_by_id(int(draft_id), rid,
             fwhm=m.get("fwhm_mean"),
             sky_level=m.get("sky_background"),
             star_count=int(m.get("star_count") or 0),
@@ -2250,7 +2247,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 rej = 1
         if rej:
             auto_n += 1
-        db.update_obs_file_quality_by_id(rid, rejected_auto=rej)
+        db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=rej)
 
     med_ra, med_de = draft_median_pointing_icrs_deg(db, int(draft_id))
     sync_obs_files_drift_arcmin_for_draft(db, int(draft_id), ref_ra_deg=med_ra, ref_de_deg=med_de)
@@ -2343,11 +2340,9 @@ def calibrated_paths_for_draft_apply_filters(
     log_event(
         f"DEBUG: Hladam subory pre Draft {draft_id} s FWHM <= {fwhm_limit}"
     )
-    db.conn.execute(
-        "UPDATE OBS_FILES SET IS_REJECTED = 0 WHERE DRAFT_ID = ?;",
-        (int(draft_id),),
-    )
-    db.conn.commit()
+    from draft_provenance import reset_manifest_light_is_rejected
+
+    reset_manifest_light_is_rejected(db, int(draft_id))
     log_event(f"DEBUG: Draft {draft_id} reset: all files set to IS_REJECTED=0 before filtering.")
     cal_paths: list[Path] = []
     if source_dir is None:
@@ -2998,49 +2993,57 @@ def _update_masterstar_obs_file_status(
     if draft_id is None or selected_ref_path is None:
         return
     try:
-        db = VyvarDatabase(Path((cfg or AppConfig()).database_path))
+        from draft_provenance import load_or_init_manifest, patch_draft_manifest, resolve_draft_dir_for_id
+
+        app_cfg = cfg or AppConfig()
+        db = VyvarDatabase(Path(app_cfg.database_path))
+        ar = getattr(app_cfg, "archive_root", None)
+        if ar:
+            db._archive_root_override = Path(str(ar)).expanduser().resolve()
         try:
-            cur = db.conn.execute("PRAGMA table_info('OBS_FILES');")
-            cols = {str(r[1]).upper() for r in cur.fetchall()}
-            if "WCS" not in cols:
-                db.conn.execute("ALTER TABLE OBS_FILES ADD COLUMN WCS INTEGER;")
-            if "STARS" not in cols:
-                db.conn.execute("ALTER TABLE OBS_FILES ADD COLUMN STARS INTEGER;")
+            root = resolve_draft_dir_for_id(db, int(draft_id))
+            if root is None:
+                return
+            manifest = load_or_init_manifest(root, int(draft_id))
+            files = manifest.get("files")
+            if not isinstance(files, list):
+                return
             ref_name = selected_ref_path.name
             ref_l = ref_name.casefold()
             raw_l = ref_l[5:] if ref_l.startswith("proc_") else ref_l
             proc_l = raw_l if raw_l.startswith("proc_") else f"proc_{raw_l}"
-            like_raw = f"%{raw_l}"
-            like_proc = f"%{proc_l}"
-            cur_upd = db.conn.execute(
-                """
-                UPDATE OBS_FILES
-                   SET WCS = ?, STARS = ?
-                 WHERE DRAFT_ID = ?
-                   AND (
-                        LOWER(FILE_PATH) LIKE ?
-                        OR LOWER(FILE_PATH) LIKE ?
-                        OR LOWER(FILE_PATH) LIKE ?
-                   );
-                """,
-                (
-                    1 if bool(wcs_ok) else 0,
-                    int(max(0, int(n_stars))),
-                    int(draft_id),
-                    like_raw,
-                    like_proc,
-                    f"%{ref_l}",
-                ),
-            )
-            db.conn.commit()
+            updated = 0
+            for i, entry in enumerate(files):
+                if not isinstance(entry, dict):
+                    continue
+                fp = str(entry.get("file_path") or "")
+                fp_l = Path(fp).name.casefold()
+                if not (
+                    fp_l == raw_l
+                    or fp_l == proc_l
+                    or fp_l == ref_l
+                    or raw_l in fp_l
+                    or proc_l in fp_l
+                    or ref_l in fp_l
+                ):
+                    continue
+                patched = dict(entry)
+                insp = dict(patched.get("inspection") or {})
+                insp["wcs"] = 1 if bool(wcs_ok) else 0
+                insp["stars"] = int(max(0, int(n_stars)))
+                patched["inspection"] = insp
+                files[i] = patched
+                updated += 1
+            if updated:
+                patch_draft_manifest(root, int(draft_id), files=files)
             log_event(
-                f"MASTERSTAR DB update: DRAFT_ID={int(draft_id)}, WCS={1 if wcs_ok else 0}, "
-                f"Stars={int(n_stars)}, rows={int(cur_upd.rowcount)}"
+                f"MASTERSTAR manifest update: DRAFT_ID={int(draft_id)}, WCS={1 if wcs_ok else 0}, "
+                f"Stars={int(n_stars)}, rows={int(updated)}"
             )
         finally:
             db.conn.close()
     except Exception as exc:  # noqa: BLE001
-        log_event(f"MASTERSTAR DB update skipped: {exc!s}")
+        log_event(f"MASTERSTAR manifest update skipped: {exc!s}")
 
 
 def _resolve_best_effort_path_under(
@@ -18530,6 +18533,7 @@ class AstroPipeline:
     def __init__(self, config: AppConfig | None = None) -> None:
         self.config = config or AppConfig()
         self.db = VyvarDatabase(self.config.database_path)
+        self.db._archive_root_override = Path(self.config.archive_root)
 
     def calibrate(self, session_path: Path | str) -> Any:
         """Calibrate raw images and build nightly masters.
