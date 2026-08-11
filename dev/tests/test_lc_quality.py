@@ -80,7 +80,38 @@ def test_no_data_low_normal_frac():
 
 
 def test_noisy_zone():
+    assert _classify(zone_flag="noise") == "noisy"
     assert _classify(zone_flag="noisy2") == "noisy"
+
+
+def test_noise_zone_with_ok_rms_is_noisy():
+    coeffs = np.array([-0.35, -1.2])
+    mag = 12.0
+    expected = expected_rms_from_model(mag, coeffs)
+    assert (
+        _classify(
+            zone_flag="noise",
+            lc_rms=expected,
+            lc_median_mag=mag,
+            rms_model_coeffs=coeffs,
+        )
+        == "noisy"
+    )
+
+
+def test_legacy_noisy1_zone_maps_to_noisy():
+    coeffs = np.array([-0.35, -1.2])
+    mag = 12.0
+    expected = expected_rms_from_model(mag, coeffs)
+    assert (
+        _classify(
+            zone_flag="noisy1",
+            lc_rms=expected,
+            lc_median_mag=mag,
+            rms_model_coeffs=coeffs,
+        )
+        == "noisy"
+    )
 
 
 def test_noisy_rms_model():
@@ -123,21 +154,6 @@ def test_good():
             lc_median_mag=mag,
             n_frames=139,
             n_normal_frames=139,
-            rms_model_coeffs=coeffs,
-        )
-        == "good"
-    )
-
-
-def test_noisy1_with_ok_rms_is_good():
-    coeffs = np.array([-0.35, -1.2])
-    mag = 12.0
-    expected = expected_rms_from_model(mag, coeffs)
-    assert (
-        _classify(
-            zone_flag="noisy1",
-            lc_rms=expected,
-            lc_median_mag=mag,
             rms_model_coeffs=coeffs,
         )
         == "good"

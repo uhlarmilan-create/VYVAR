@@ -237,7 +237,7 @@ def _flux_matrix_from_pivot(
 
     per_frame_dir = Path(per_frame_dir)
     if zone_filter is None:
-        zone_filter = ["linear", "noisy1"]
+        zone_filter = ["linear"]
 
     frames = sorted(per_frame_dir.glob("proc_*.csv"))
     if not frames:
@@ -307,7 +307,7 @@ def load_field_flux_matrix(
         pass
 
     if zone_filter is None:
-        zone_filter = ["linear", "noisy1"]
+        zone_filter = ["linear"]
 
     frames = sorted(per_frame_dir.glob("proc_*.csv"))
     if not frames:

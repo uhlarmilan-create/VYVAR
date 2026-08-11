@@ -6089,22 +6089,17 @@ def select_comparison_stars_spatial_grid(
 
 _MASTERSTAR_ZONE_LOG_ONCE: set[str] = set()
 
-# Whole-sigma step for noisy sub-bands below the detection significance (statistical definition).
-_MASTERSTAR_ZONE_SIGMA_STEP = 1.0
-
-
-def _masterstar_zone_sigma_thresholds(
+def _masterstar_zone_linear_threshold(
     dao_detection_n_equiv: Any,
-) -> tuple[float, float, float] | None:
-    """Linear/noisy boundaries from DAO detection significance (peak_dao/bg_sigma >= N_equiv)."""
+) -> float | None:
+    """Linear-zone lower bound from DAO detection significance (peak_dao/bg_sigma >= N_equiv)."""
     try:
         t1 = float(dao_detection_n_equiv)
     except (TypeError, ValueError):
         return None
     if not math.isfinite(t1) or t1 <= 0:
         return None
-    step = float(_MASTERSTAR_ZONE_SIGMA_STEP)
-    return t1, t1 - step, t1 - 2.0 * step
+    return t1
 
 
 def _detect_empirical_clip_level_adu(data: "np.ndarray") -> float | None:
@@ -6304,15 +6299,14 @@ def _annotate_masterstars_flux_zones(
             "leaving zone empty (maps to neznama_zona downstream).",
         )
     else:
-        thresholds = _masterstar_zone_sigma_thresholds(dao_detection_n_equiv)
-        if thresholds is None:
+        t1 = _masterstar_zone_linear_threshold(dao_detection_n_equiv)
+        if t1 is None:
             _masterstar_zone_log_once(
                 "n_equiv_missing",
                 "[MASTERSTAR zone] dao_detection_n_equiv unresolvable - "
                 "leaving zone empty (maps to neznama_zona downstream).",
             )
         else:
-            t1, t2, t3 = thresholds
             if "peak_dao" in out.columns:
                 peak_dao_s = pd.to_numeric(out["peak_dao"], errors="coerce")
             else:
@@ -6323,9 +6317,7 @@ def _annotate_masterstars_flux_zones(
             sig_miss = unsat & peak_sig.isna()
             out.loc[sig_miss, "zone"] = "unknown"
             out.loc[sig_ok & (peak_sig >= t1), "zone"] = "linear"
-            out.loc[sig_ok & (peak_sig >= t2) & (peak_sig < t1), "zone"] = "noisy1"
-            out.loc[sig_ok & (peak_sig >= t3) & (peak_sig < t2), "zone"] = "noisy2"
-            out.loc[sig_ok & (peak_sig < t3), "zone"] = "noisy3"
+            out.loc[sig_ok & (peak_sig < t1), "zone"] = "noise"
             if sig_miss.any():
                 _masterstar_zone_log_once(
                     "peak_dao_missing",
@@ -6338,7 +6330,7 @@ def _annotate_masterstars_flux_zones(
     else:
         out["is_saturated"] = False
 
-    out["is_noisy"] = out["zone"].isin(["noisy1", "noisy2", "noisy3"])
+    out["is_noisy"] = out["zone"].eq("noise")
     out["is_usable"] = out["zone"].eq("linear") & flux_s.notna()
     return out
 

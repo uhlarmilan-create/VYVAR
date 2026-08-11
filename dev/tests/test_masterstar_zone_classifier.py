@@ -14,9 +14,8 @@ if str(_SRC_PY) not in sys.path:
     sys.path.insert(0, str(_SRC_PY))
 
 from pipeline import (  # noqa: E402
-    _MASTERSTAR_ZONE_SIGMA_STEP,
     _annotate_masterstars_flux_zones,
-    _masterstar_zone_sigma_thresholds,
+    _masterstar_zone_linear_threshold,
     _MASTERSTAR_ZONE_LOG_ONCE,
 )
 
@@ -38,12 +37,32 @@ def _mini_df() -> pd.DataFrame:
     )
 
 
-def test_zone_thresholds_derive_from_dao_detection_n_equiv() -> None:
+def test_zone_linear_threshold_from_dao_detection_n_equiv() -> None:
     n_equiv = 3.78
-    t1, t2, t3 = _masterstar_zone_sigma_thresholds(n_equiv)
+    t1 = _masterstar_zone_linear_threshold(n_equiv)
     assert t1 == n_equiv
-    assert t2 == n_equiv - _MASTERSTAR_ZONE_SIGMA_STEP
-    assert t3 == n_equiv - 2.0 * _MASTERSTAR_ZONE_SIGMA_STEP
+
+
+def test_sub_linear_stars_marked_noise() -> None:
+    df = pd.DataFrame(
+        {
+            "flux": [800.0, 120.0],
+            "peak_dao": [45.0, 8.0],
+            "peak_max_adu": [50.0, 10.0],
+        }
+    )
+    out = _annotate_masterstars_flux_zones(
+        df,
+        noise_floor_adu=2105.9,
+        equipment_saturate_adu=65535.0,
+        sigma_px=10.0,
+        sky_median_adu=1955.0,
+        prematch_peak_sigma_floor=1.8,
+        dao_detection_n_equiv=3.78,
+    )
+    assert out.loc[0, "zone"] == "linear"
+    assert out.loc[1, "zone"] == "noise"
+    assert bool(out.loc[1, "is_noisy"])
 
 
 def test_peak_dao_missing_marks_unknown_not_flux_guess() -> None:

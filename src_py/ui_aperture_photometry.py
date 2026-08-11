@@ -403,10 +403,8 @@ def _phase2a_target_choice_label(row: pd.Series) -> str:
             badge = "[red] saturated - photometry unavailable"
     elif zf == "linear":
         badge = "[green] linear"
-    elif zf in ("noisy1", "noisy2"):
-        badge = f"[yellow] {zf}"
-    elif zf == "noisy3":
-        badge = "[orange] noisy3"
+    elif zf == "noise" or zf in ("noisy1", "noisy2", "noisy3"):
+        badge = "[orange] noise"
     elif zf == "neznama_zona":
         badge = "o unknown zone"
     elif zf:
@@ -779,10 +777,8 @@ def _render_target_detail(
         badge = ""
         if zf == "linear":
             badge = "[green] linear"
-        elif zf in ("noisy1", "noisy2"):
-            badge = f"[yellow] {zf}"
-        elif zf == "noisy3":
-            badge = "[orange] noisy3"
+        elif zf == "noise" or zf in ("noisy1", "noisy2", "noisy3"):
+            badge = "[orange] noise"
         elif zf == "saturated":
             badge = "[red] saturated"
         elif zf:

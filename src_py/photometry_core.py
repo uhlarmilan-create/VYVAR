@@ -6378,7 +6378,7 @@ def apply_per_frame_saturation_to_active_targets(
 def build_rms_mag_model(
     summary_rows: list[dict],
     *,
-    zone_filter: tuple[str, ...] = ("linear", "noisy1"),
+    zone_filter: tuple[str, ...] = ("linear",),
     min_stars: int = 10,
 ) -> tuple[np.ndarray, np.ndarray] | None:
     """Fit mag-dependent RMS baseline from stable comp/target stars.
@@ -6467,6 +6467,9 @@ def classify_lc_quality(
     except Exception:  # noqa: BLE001
         zf = ""
 
+    if zf in ("noisy1", "noisy2", "noisy3"):
+        zf = "noise"
+
     if zf == "saturated":
         return "saturated"
 
@@ -6494,7 +6497,7 @@ def classify_lc_quality(
     if nf > 0 and (nn / float(nf)) < min_frac:
         return "no_data"
 
-    noisy_from_zone = zf in ("noisy2", "noisy3")
+    noisy_from_zone = zf == "noise"
     noisy_from_rms = False
     if rms_model_coeffs is not None:
         try:
@@ -12712,8 +12715,10 @@ def _phase0_effective_frame_hw_px(
 def _active_target_zone_flag(ms_row: pd.Series, zone_val_raw: str) -> str:
     """Mapovanie masterstars ``zone`` (+ legacy ``is_saturated``) na ``zone_flag`` pre active_targets."""
     z = str(zone_val_raw or "").strip().lower()
-    if z in ("linear", "noisy1", "noisy2", "noisy3", "saturated"):
+    if z in ("linear", "noise", "saturated"):
         return z
+    if z in ("noisy1", "noisy2", "noisy3"):
+        return "noise"
     try:
         sat = bool(ms_row.get("is_saturated", False))
     except Exception:  # noqa: BLE001
@@ -13319,7 +13324,7 @@ def select_active_targets(
             else pd.DataFrame(columns=["name", "vsx_name", "vsx_type", "ra_deg", "dec_deg", "mag", "reason"])
         )
         log_event(
-            "select_active_targets: linear=0 noisy1=0 noisy2=0 noisy3=0 saturated=0 "
+            "select_active_targets: linear=0 noise=0 saturated=0 "
             f"no_catalog_id={no_catalog_id} no_gaia_id={no_gaia_id} no_dao_detection={no_dao_detection} "
             f"out_of_frame={out_of_frame}"
         )
@@ -13371,12 +13376,10 @@ def select_active_targets(
             f"catalog_ids (prefer real VSX name over Gaia placeholder)"
         )
     n_lin = int((result["zone_flag"] == "linear").sum())
-    n_n1 = int((result["zone_flag"] == "noisy1").sum())
-    n_n2 = int((result["zone_flag"] == "noisy2").sum())
-    n_n3 = int((result["zone_flag"] == "noisy3").sum())
+    n_noise = int((result["zone_flag"] == "noise").sum())
     n_sat = int((result["zone_flag"] == "saturated").sum())
     log_event(
-        f"select_active_targets: linear={n_lin} noisy1={n_n1} noisy2={n_n2} noisy3={n_n3} "
+        f"select_active_targets: linear={n_lin} noise={n_noise} "
         f"saturated={n_sat} no_catalog_id={no_catalog_id} no_gaia_id={no_gaia_id} "
         f"no_dao_detection={no_dao_detection} out_of_frame={out_of_frame}"
     )
