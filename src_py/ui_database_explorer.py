@@ -9,6 +9,11 @@ import pandas as pd
 import streamlit as st
 
 from database import VyvarDatabase
+from draft_provenance import (
+    collect_manifest_draft_rows,
+    collect_manifest_obs_file_rows,
+    collect_manifest_observation_rows,
+)
 from importer import quicklook_preview_png_bytes
 from pipeline import AstroPipeline
 
@@ -43,6 +48,65 @@ def _row_active_for_style(row: pd.Series, col: str = "ACTIVE") -> bool:
     if s in ("NO", "N", "FALSE", "0", "0.0"):
         return False
     return True
+
+
+def _render_obs_draft_manifest_editor(pipeline: AstroPipeline, archive_root: Path) -> None:
+    """OBS_DRAFT editor: display from manifest; save via SQL + manifest refresh."""
+    draft_rows = collect_manifest_draft_rows(archive_root)
+    draft_df = pd.DataFrame.from_records(draft_rows) if draft_rows else pd.DataFrame()
+    if draft_df.empty:
+        st.info("No draft folders found under Archive/Drafts.")
+        return
+    if "ID" in draft_df.columns:
+        draft_df = draft_df.sort_values("ID", ascending=False).reset_index(drop=True)
+    st.caption("Source: ``draft_manifest.json``. Save writes OBS_DRAFT SQL then refreshes manifest.")
+    editable_cols = [
+        "ID_EQUIPMENTS",
+        "ID_TELESCOPE",
+        "ID_LOCATION",
+        "ID_SCANNING",
+        "LIGHTS_PATH",
+        "CALIB_PATH",
+        "ARCHIVE_PATH",
+        "MASTERSTAR_PATH",
+        "MASTERSTAR_FITS_PATH",
+        "STATUS",
+        "CENTEROFFIELDRA",
+        "CENTEROFFIELDDE",
+        "OBSERVATIONSTARTJD",
+        "IS_CALIBRATED",
+    ]
+    editable = [c for c in editable_cols if c in draft_df.columns]
+    disabled = [c for c in draft_df.columns if c == "ID" or c not in editable]
+    edited = st.data_editor(
+        draft_df,
+        width="stretch",
+        num_rows="dynamic",
+        disabled=disabled,
+        key="vyvar_universal_ed_OBS_DRAFT",
+        hide_index=True,
+    )
+    if st.button("Save changes to database (OBS_DRAFT manifest)", key="vyvar_universal_save_OBS_DRAFT"):
+        try:
+            stats = pipeline.db.apply_main_table_editor_save(
+                "OBS_DRAFT",
+                "ID",
+                draft_df,
+                edited,
+                editable_cols=editable,
+            )
+            sd = int(stats.get("soft_deactivated", 0))
+            parts = [
+                f"inserted {stats['inserted']}",
+                f"updated {stats['updated']}",
+                f"deleted {stats['deleted']}",
+            ]
+            if sd:
+                parts.append(f"soft-deactivated (ACTIVE='NO'): {sd}")
+            st.success("Done: " + ", ".join(parts) + ".")
+            st.rerun()
+        except Exception as exc:  # noqa: BLE001
+            st.error(str(exc))
 
 
 def _render_universal_main_table(
@@ -240,49 +304,38 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
         )
 
     elif table == "OBS_DRAFT":
-        draft_df = _read_df(conn, "SELECT * FROM OBS_DRAFT ORDER BY ID DESC;")
-        st.dataframe(draft_df, width="stretch")
+        archive_root = Path(pipeline.config.archive_root)
+        _render_obs_draft_manifest_editor(pipeline, archive_root)
         st.info("OBS_DRAFT rows represent ingestion before astrometry finalization.")
 
     elif table == "OBS_FILES":
-        st.caption("Per-file index for each OBSERVATION (ingestion evidence).")
-        obs_ids = _read_df(
-            conn,
-            "SELECT ID FROM OBSERVATION ORDER BY ID DESC LIMIT 200;",
-        )["ID"].astype(str).tolist()
-        draft_ids = _read_df(
-            conn,
-            "SELECT ID FROM OBS_DRAFT ORDER BY ID DESC LIMIT 200;",
-        )["ID"].astype(str).tolist()
+        st.caption("Per-file index from ``draft_manifest.json`` ``files[]`` (ingestion evidence).")
+        archive_root = Path(pipeline.config.archive_root)
+        obs_rows = collect_manifest_observation_rows(archive_root)
+        obs_ids = [str(r["ID"]) for r in obs_rows[:200]]
+        draft_ids = [str(r["ID"]) for r in collect_manifest_draft_rows(archive_root)[:200]]
         selected_obs = st.selectbox(
             "Filter by key",
             options=["(all)"] + [f"OBS:{x}" for x in obs_ids] + [f"DRAFT:{x}" for x in draft_ids],
             index=0,
         )
         if selected_obs == "(all)":
-            files_df = _read_df(
-                conn,
-                "SELECT * FROM OBS_FILES ORDER BY OBSERVATION_ID DESC, ID DESC LIMIT 2000;",
-            )
+            file_rows = collect_manifest_obs_file_rows(archive_root)[:2000]
         elif selected_obs.startswith("DRAFT:"):
-            did = selected_obs.split(":", 1)[1]
-            files_df = _read_df(
-                conn,
-                "SELECT * FROM OBS_FILES WHERE DRAFT_ID = ? ORDER BY ID DESC;",
-                (did,),
-            )
+            did = int(selected_obs.split(":", 1)[1])
+            file_rows = collect_manifest_obs_file_rows(archive_root, draft_id=did)
         else:
             oid = selected_obs.split(":", 1)[1] if selected_obs.startswith("OBS:") else selected_obs
-            files_df = _read_df(
-                conn,
-                "SELECT * FROM OBS_FILES WHERE OBSERVATION_ID = ? ORDER BY ID DESC;",
-                (oid,),
-            )
+            file_rows = collect_manifest_obs_file_rows(archive_root, observation_id=oid)
+        files_df = pd.DataFrame.from_records(file_rows) if file_rows else pd.DataFrame()
         st.dataframe(files_df, width="stretch")
         st.info("OBS_FILES edit is disabled (generated automatically during import).")
 
     else:  # OBSERVATION
-        observation_df = _read_df(conn, "SELECT * FROM OBSERVATION ORDER BY ID;")
+        archive_root = Path(pipeline.config.archive_root)
+        obs_rows = collect_manifest_observation_rows(archive_root)
+        observation_df = pd.DataFrame.from_records(obs_rows) if obs_rows else pd.DataFrame()
+        st.caption("Source: finalized drafts (`final_observation_id` in manifest). Read-only.")
 
         if "IS_CALIBRATED" in observation_df.columns:
             draft_mask = observation_df["IS_CALIBRATED"].fillna(1).astype(int) == 0

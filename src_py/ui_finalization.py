@@ -11,6 +11,7 @@ import streamlit as st
 from astropy.io import fits
 
 from infolog import log_event
+from draft_provenance import draft_scan_summary_from_manifest, load_draft_manifest
 
 # Columns read from per-frame *_catalog.csv for FIELD_REGISTRY sidecar RMS (groupby only).
 _REGISTRY_COLS = ["catalog_id", "aperture_mag"]
@@ -72,58 +73,45 @@ def _copy_finalization_files(
     return copied
 
 
-def _draft_scan_row(db: Any, draft_id: int) -> dict[str, Any] | None:
-    try:
-        row = db.conn.execute(
-            """
-            SELECT s.EXPTIME AS exptime, s.FILTERS AS filters, s.BINNING AS binning
-            FROM OBS_DRAFT d
-            LEFT JOIN SCANNING s ON s.ID = d.ID_SCANNING
-            WHERE d.ID = ?;
-            """,
-            (int(draft_id),),
-        ).fetchone()
-        return dict(row) if row is not None else None
-    except Exception:  # noqa: BLE001
-        # EXC-0516: T3 -- UI diagnostic/plot only ().fetchone() / return dict(row) if row is not None else None /... (EXCEPT-BULK 2026-07-08)
+def _draft_scan_row(db: Any, draft_id: int, archive_path: Path | None) -> dict[str, Any] | None:
+    if archive_path is not None:
+        manifest = load_draft_manifest(archive_path)
+        if manifest:
+            return draft_scan_summary_from_manifest(manifest)
+    row = db.fetch_obs_draft_by_id(int(draft_id))
+    if row is None:
         return None
+    ap_raw = row.get("ARCHIVE_PATH")
+    if ap_raw:
+        manifest = load_draft_manifest(str(ap_raw))
+        if manifest:
+            return draft_scan_summary_from_manifest(manifest)
+    return None
 
 
 def _draft_location_name(db: Any, draft_id: int) -> str:
     try:
+        loc_id = db.get_draft_location_id(int(draft_id))
+        if loc_id is None:
+            return "-"
         row = db.conn.execute(
-            """
-            SELECT l.PLACENAME AS place_name
-            FROM OBS_DRAFT d
-            LEFT JOIN LOCATION l ON l.ID = d.ID_LOCATION
-            WHERE d.ID = ?;
-            """,
-            (int(draft_id),),
+            "SELECT PLACENAME FROM LOCATION WHERE ID = ?;",
+            (int(loc_id),),
         ).fetchone()
         if row is None:
             return "-"
-        v = row["place_name"] if hasattr(row, "keys") else row[0]
+        v = row["PLACENAME"] if hasattr(row, "keys") else row[0]
         s = str(v).strip() if v is not None else ""
         return s or "-"
     except Exception:  # noqa: BLE001
-        # EXC-0517: T3 -- UI diagnostic/plot only (s = str(v).strip() if v is not None else '' / return s or '-' ... (EXCEPT-BULK 2026-07-08)
         return "-"
 
 
 def _n_light_frames(db: Any, draft_id: int) -> int:
     try:
-        row = db.conn.execute(
-            """
-            SELECT COUNT(*) AS n FROM OBS_FILES
-            WHERE DRAFT_ID = ? AND LOWER(COALESCE(IMAGETYP, '')) = 'light';
-            """,
-            (int(draft_id),),
-        ).fetchone()
-        if row is None:
-            return 0
-        return int(row["n"] if hasattr(row, "keys") else row[0])
+        rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
+        return len(rows)
     except Exception:  # noqa: BLE001
-        # EXC-0518: T3 -- UI diagnostic/plot only (return 0 / return int(row['n'] if hasattr(row, 'keys') else ro... (EXCEPT-BULK 2026-07-08)
         return 0
 
 
@@ -210,7 +198,7 @@ def render_finalization(
         st.warning("Some checks failed - you may still continue (your call).")
 
     st.markdown("#### Observation summary")
-    scan = _draft_scan_row(db, int(draft_id))
+    scan = _draft_scan_row(db, int(draft_id), archive_path)
     loc_name = _draft_location_name(db, int(draft_id))
     tel_eq = db.fetch_obs_draft_telescope_equipment(int(draft_id)) or {}
     n_frames = _n_light_frames(db, int(draft_id))
@@ -233,7 +221,7 @@ def render_finalization(
         st.markdown(f"**Filter:** {flt}")
         st.markdown(f"**Exposure:** {expt_s}")
         st.markdown(f"**Binning:** {bin_s}")
-        st.markdown(f"**Light frame count (OBS_FILES):** {n_frames}")
+        st.markdown(f"**Light frame count (manifest files[]):** {n_frames}")
     with c2:
         st.markdown(f"**DATE_OBS start:** {row.get('DATE_OBS_START') or '-'}")
         st.markdown(f"**DATE_OBS end:** {row.get('DATE_OBS_END') or '-'}")

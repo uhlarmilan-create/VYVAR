@@ -985,3 +985,177 @@ def manifest_db_parity_errors(db: Any, draft_id: int) -> list[str]:
             return errors
 
     return errors
+
+
+def iter_draft_archive_dirs(archive_root: Path | str) -> list[tuple[int, Path]]:
+    """List ``(draft_id, archive_dir)`` under ``Archive/Drafts/draft_*`` (sorted by id desc)."""
+    drafts_dir = Path(archive_root).expanduser().resolve() / "Drafts"
+    if not drafts_dir.is_dir():
+        return []
+    out: list[tuple[int, Path]] = []
+    for child in drafts_dir.iterdir():
+        if not child.is_dir():
+            continue
+        name = child.name.lower()
+        if not name.startswith("draft_"):
+            continue
+        suffix = name.split("_", 1)[-1]
+        try:
+            did = int(suffix)
+        except ValueError:
+            continue
+        out.append((int(did), child.resolve()))
+    out.sort(key=lambda t: t[0], reverse=True)
+    return out
+
+
+def obs_draft_row_from_manifest(manifest: dict[str, Any], draft_id: int) -> dict[str, Any]:
+    """Build an OBS_DRAFT-shaped row dict from ``draft_manifest.json`` (UI display source)."""
+    rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
+    paths = manifest.get("paths") if isinstance(manifest.get("paths"), dict) else {}
+    center = manifest.get("center") if isinstance(manifest.get("center"), dict) else {}
+    row: dict[str, Any] = {
+        "ID": int(draft_id),
+        "ID_EQUIPMENTS": _optional_int(rig.get("equipment_id")),
+        "ID_TELESCOPE": _optional_int(rig.get("telescope_id")),
+        "ID_LOCATION": _optional_int(rig.get("location_id")),
+        "ID_SCANNING": _optional_int(rig.get("scanning_id")),
+        "OBSERVATIONSTARTJD": _optional_float(manifest.get("observation_start_jd")),
+        "CENTEROFFIELDRA": center.get("ra_deg"),
+        "CENTEROFFIELDDE": center.get("de_deg"),
+        "STATUS": _optional_str(manifest.get("status")),
+        "FINAL_OBSERVATION_ID": _optional_str(manifest.get("final_observation_id")),
+        "LIGHTS_PATH": _optional_str(paths.get("lights")),
+        "CALIB_PATH": _optional_str(paths.get("calib")),
+        "ARCHIVE_PATH": _optional_str(paths.get("archive")),
+        "MASTERSTAR_PATH": _optional_str(paths.get("masterstar")),
+        "MASTERSTAR_FITS_PATH": _optional_str(paths.get("masterstar_fits")),
+        "IS_CALIBRATED": _optional_flag01(manifest.get("is_calibrated")),
+        "CALIBRATION_MODE": _optional_str(manifest.get("calibration_mode")),
+    }
+    return row
+
+
+def collect_manifest_draft_rows(archive_root: Path | str) -> list[dict[str, Any]]:
+    """All draft rows for Database Explorer (manifest-first, no OBS_DRAFT SQL)."""
+    rows: list[dict[str, Any]] = []
+    for did, apath in iter_draft_archive_dirs(archive_root):
+        manifest = load_draft_manifest(apath)
+        if manifest:
+            rows.append(obs_draft_row_from_manifest(manifest, did))
+        else:
+            rows.append(
+                {
+                    "ID": int(did),
+                    "ARCHIVE_PATH": str(apath),
+                    "STATUS": None,
+                }
+            )
+    return rows
+
+
+def collect_manifest_obs_file_rows(
+    archive_root: Path | str,
+    *,
+    draft_id: int | None = None,
+    observation_id: str | None = None,
+) -> list[dict[str, Any]]:
+    """Flatten manifest ``files[]`` into OBS_FILES-shaped rows (UI display)."""
+    want_draft = int(draft_id) if draft_id is not None else None
+    want_obs = str(observation_id).strip() if observation_id is not None else None
+    rows: list[dict[str, Any]] = []
+    for did, apath in iter_draft_archive_dirs(archive_root):
+        if want_draft is not None and int(did) != want_draft:
+            continue
+        manifest = load_draft_manifest(apath)
+        if not manifest:
+            continue
+        final_obs = _optional_str(manifest.get("final_observation_id"))
+        if want_obs is not None and final_obs != want_obs:
+            continue
+        files = manifest.get("files")
+        if not isinstance(files, list):
+            continue
+        for entry in files:
+            if not isinstance(entry, dict):
+                continue
+            row = _manifest_entry_to_obs_file_row(
+                entry,
+                draft_id=int(did),
+                obs_file_id=_optional_int(entry.get("obs_file_id")),
+            )
+            if final_obs:
+                row["OBSERVATION_ID"] = final_obs
+            rows.append(row)
+    rows.sort(
+        key=lambda r: (
+            str(r.get("OBSERVATION_ID") or ""),
+            int(r.get("DRAFT_ID") or 0),
+            str(r.get("FILE_PATH") or ""),
+        ),
+        reverse=True,
+    )
+    return rows
+
+
+def collect_manifest_observation_rows(archive_root: Path | str) -> list[dict[str, Any]]:
+    """OBSERVATION-shaped rows from finalized manifests (``final_observation_id`` set)."""
+    rows: list[dict[str, Any]] = []
+    for did, apath in iter_draft_archive_dirs(archive_root):
+        manifest = load_draft_manifest(apath)
+        if not manifest:
+            continue
+        obs_id = _optional_str(manifest.get("final_observation_id"))
+        if not obs_id:
+            continue
+        draft_row = obs_draft_row_from_manifest(manifest, did)
+        rows.append(
+            {
+                "ID": obs_id,
+                "ID_EQUIPMENTS": draft_row.get("ID_EQUIPMENTS"),
+                "ID_TELESCOPE": draft_row.get("ID_TELESCOPE"),
+                "ID_LOCATION": draft_row.get("ID_LOCATION"),
+                "ID_SCANNING": draft_row.get("ID_SCANNING"),
+                "CENTEROFFIELDRA": draft_row.get("CENTEROFFIELDRA"),
+                "CENTEROFFIELDDE": draft_row.get("CENTEROFFIELDDE"),
+                "OBSERVATIONSTARTJD": draft_row.get("OBSERVATIONSTARTJD"),
+                "LIGHTS_PATH": draft_row.get("LIGHTS_PATH"),
+                "CALIB_PATH": draft_row.get("CALIB_PATH"),
+                "IS_CALIBRATED": draft_row.get("IS_CALIBRATED"),
+                "ARCHIVE_PATH": draft_row.get("ARCHIVE_PATH"),
+                "DRAFT_ID": int(did),
+            }
+        )
+    rows.sort(key=lambda r: str(r.get("ID") or ""))
+    return rows
+
+
+def draft_scan_summary_from_manifest(manifest: dict[str, Any]) -> dict[str, Any] | None:
+    """Exposure/filter/binning from manifest ``files[]`` (no SCANNING SQL)."""
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        return None
+    for entry in files:
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("imagetyp") or "").strip().lower() != "light":
+            continue
+        insp = entry.get("inspection") if isinstance(entry.get("inspection"), dict) else {}
+        exptime = _optional_float(insp.get("exptime"))
+        filt = _optional_str(entry.get("filter"))
+        binning: int | None = None
+        fp = _optional_str(entry.get("file_path"))
+        if fp:
+            fpath = Path(fp)
+            if fpath.is_file():
+                try:
+                    from astropy.io import fits
+
+                    with fits.open(fpath, memmap=True) as hdul:
+                        xbin = hdul[0].header.get("XBINNING")
+                        if xbin is not None:
+                            binning = int(xbin)
+                except Exception:  # noqa: BLE001
+                    binning = None
+        return {"exptime": exptime, "filters": filt, "binning": binning}
+    return None
