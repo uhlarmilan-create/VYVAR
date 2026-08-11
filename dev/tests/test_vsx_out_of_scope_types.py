@@ -174,6 +174,18 @@ def test_empty_list_noop_equivalence(tmp_path: Path) -> None:
     assert "vsx_type_out_of_scope" not in set(a.get("skip_reason", pd.Series(dtype=str)).astype(str))
 
 
+def test_vsx_out_of_scope_types_persists_in_config_json(tmp_path: Path) -> None:
+    """User-set vsx_out_of_scope_types must round-trip through config.json save/load."""
+    from config import save_config_json, ui_config_persist
+
+    cfg = AppConfig(project_root=tmp_path)
+    cfg.vsx_out_of_scope_types = ["ROT"]
+    with ui_config_persist():
+        save_config_json(tmp_path, cfg.to_json())
+    reloaded = AppConfig(project_root=tmp_path)
+    assert reloaded.vsx_out_of_scope_types == ["ROT"]
+
+
 def test_out_of_scope_still_in_comp_exclude_set(tmp_path: Path) -> None:
     """Out-of-scope ROT stays in active_targets -> still in Phase-2A exclude set."""
     vt_p, ms_p = _write_phase0(tmp_path)

@@ -34,7 +34,6 @@ DOC_CONFIG_FACTS: dict[str, object] = {
     "masterflat_validity_days": 200,
     "field_density_sparse_threshold": 300.0,
     "field_density_dense_threshold": 1000.0,
-    "vsx_out_of_scope_types": [],
     "verify_mag_limit": 14.0,
     "apply_color_term": "off",
     "phase01_comparison_max_comp_rms": 0.1,
