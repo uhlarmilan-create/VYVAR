@@ -6353,6 +6353,8 @@ def write_photometry_plan_files(
     draft_id: int | None = None,
     database_path: Path | str | None = None,
     aligned_files: list[Path] | None = None,
+    aligned_ram_frames: list[tuple[str, Any, Any]] | None = None,
+    require_safe_bbox: bool = False,
 ) -> dict[str, Any]:
     """Write ``comparison_stars.csv`` from ``masterstars.csv`` + image size; stub ``variable_targets.csv``."""
     import numpy as np
@@ -6442,15 +6444,35 @@ def write_photometry_plan_files(
         else:
             all_aligned = sorted(aligned_dir.glob("proc_*.fits"))
             LOGGER.info(f"[BORDER] Glob found {len(all_aligned)} aligned frames in {aligned_dir}")
-        if len(all_aligned) == 0:
+
+        ram_arrays: list[Any] = []
+        if aligned_ram_frames:
+            for _name, _hdr, _arr in aligned_ram_frames:
+                if _arr is not None:
+                    ram_arrays.append(_arr)
+            if ram_arrays:
+                LOGGER.info(f"[BORDER] Using {len(ram_arrays)} aligned RAM frames for intersection bbox")
+
+        n_frame_sources = len(all_aligned) + (len(ram_arrays) if not all_aligned else 0)
+        if n_frame_sources == 0:
+            if require_safe_bbox:
+                raise RuntimeError(
+                    "[BORDER] Post-alignment border filter requires aligned frames but none "
+                    "were found on disk or in RAM handoff"
+                )
             log_event(
                 "[BORDER] Deferred: no aligned proc_*.fits on disk yet "
                 "(pre-alignment or RAM-handoff); border filter skipped"
             )
-        elif len(all_aligned) < 2:
-            log_event(f"[BORDER] Not enough aligned frames for intersection bbox: {len(all_aligned)}")
+        elif n_frame_sources < 2:
+            if require_safe_bbox:
+                raise RuntimeError(
+                    f"[BORDER] Post-alignment border filter requires >=2 aligned frames, got {n_frame_sources}"
+                )
+            log_event(f"[BORDER] Not enough aligned frames for intersection bbox: {n_frame_sources}")
         else:
-            frames_for_bbox = all_aligned
+            frames_for_bbox = all_aligned if all_aligned else []
+            ram_for_bbox = [] if all_aligned else ram_arrays
             try:
                 if draft_id is not None and database_path:
                     dbp2 = Path(str(database_path))
@@ -6467,24 +6489,48 @@ def write_photometry_plan_files(
                             if dom is not None:
                                 fs = int(dom.get("frame_start") or 0)
                                 fe = int(dom.get("frame_end") or 0)
-                                frames_for_bbox = all_aligned[fs : fe + 1]
+                                if all_aligned:
+                                    frames_for_bbox = all_aligned[fs : fe + 1]
+                                elif aligned_ram_frames:
+                                    ram_for_bbox = [
+                                        arr for _n, _h, arr in aligned_ram_frames[fs : fe + 1] if arr is not None
+                                    ]
                                 log_event(
                                     f"[BORDER] Field jump detected - using dominant group frames {fs}-{fe} "
-                                    f"({len(frames_for_bbox)} frames) for intersection bbox"
+                                    f"({len(frames_for_bbox) or len(ram_for_bbox)} frames) for intersection bbox"
                                 )
                             else:
                                 log_event(
-                                    f"[BORDER] Field jump detected - no dominant group found; using all {len(frames_for_bbox)} frames"
+                                    f"[BORDER] Field jump detected - no dominant group found; using all "
+                                    f"{len(frames_for_bbox) or len(ram_for_bbox)} frames"
                                 )
                         else:
                             log_event(
-                                f"[BORDER] Field stable - using all {len(frames_for_bbox)} aligned frames for intersection bbox"
+                                f"[BORDER] Field stable - using all "
+                                f"{len(frames_for_bbox) or len(ram_for_bbox)} aligned frames for intersection bbox"
                             )
             except Exception as _jr_exc:  # noqa: BLE001
                 log_event(f"[BORDER] detect_field_jumps failed: {_jr_exc!s} - using all aligned frames")
 
-            raw_bbox = common_field_intersection_bbox_px(frame_paths=frames_for_bbox, finite_stride=16)
+            from photometry_core import (  # noqa: PLC0415
+                common_field_intersection_bbox_px,
+                common_field_intersection_bbox_px_from_arrays,
+            )
+
+            raw_bbox = None
+            if len(frames_for_bbox) >= 2:
+                raw_bbox = common_field_intersection_bbox_px(frame_paths=frames_for_bbox, finite_stride=16)
+            elif len(ram_for_bbox) >= 2:
+                raw_bbox = common_field_intersection_bbox_px_from_arrays(
+                    frame_arrays=ram_for_bbox, finite_stride=16
+                )
+
             if raw_bbox is None:
+                if require_safe_bbox:
+                    raise RuntimeError(
+                        "[BORDER] Post-alignment border filter failed: intersection bbox returned None "
+                        f"(disk={len(frames_for_bbox)}, ram={len(ram_for_bbox)})"
+                    )
                 log_event("[BORDER] intersection bbox returned None - no border filter applied")
             else:
                 x0, y0, x1, y1 = raw_bbox
@@ -6495,12 +6541,20 @@ def write_photometry_plan_files(
                         f"[BORDER] Safe bbox (shrunk by r_out={_r_out:.1f}px): "
                         f"x=[{_safe_bbox[0]:.0f},{_safe_bbox[2]:.0f}] y=[{_safe_bbox[1]:.0f},{_safe_bbox[3]:.0f}]"
                     )
+                elif require_safe_bbox:
+                    raise RuntimeError(
+                        f"[BORDER] Post-alignment safe bbox invalid after shrink (r_out={_r_out:.1f}px)"
+                    )
                 else:
                     log_event(
                         f"[BORDER] Safe bbox invalid after shrink (r_out={_r_out:.1f}px); skipping border filter"
                     )
                     _safe_bbox = None
+    except RuntimeError:
+        raise
     except Exception as _bbox_exc:  # noqa: BLE001
+        if require_safe_bbox:
+            raise RuntimeError(f"[BORDER] safe_bbox computation failed: {_bbox_exc!s}") from _bbox_exc
         log_event(f"[BORDER] safe_bbox computation failed: {_bbox_exc!s} - skipping border filter")
         _safe_bbox = None
 
@@ -14652,23 +14706,41 @@ def _astrometry_align_impl_body(
         # Masterstar lock for Step 3: per-frame catalogs must use one fixed reference list.
         use_master_fast = True
 
-        # Recompute photometry plan after RAM->disk flush so border-safe bbox sees aligned frames on disk.
+        # Recompute photometry plan after alignment so border-safe bbox uses aligned frames.
         try:
+            _aligned_disk: list[Path] = []
             if use_ram_handoff and aligned_ram_buffer and _ram_flushed_before_masterstar:
-                if draft_id is not None and str(_cfg_align.database_path or "").strip():
-                    _wp_aligned = write_photometry_plan_files(
-                        platesolve_dir=platesolve_dir,
-                        masterstar_fits=ms_fits or (platesolve_dir / "MASTERSTAR.fits"),
-                        masterstars_csv=ms_csv or (platesolve_dir / "masterstars_full_match.csv"),
-                        n_comparison_stars=int(n_comparison_stars),
-                        require_non_variable=bool(require_non_variable_comparisons),
-                        draft_id=int(draft_id),
-                        database_path=Path(str(_cfg_align.database_path)),
-                        aligned_files=_aligned_file_list,
-                    )
-                    cat_info.update(_wp_aligned or {})
+                _aligned_disk = list(_aligned_file_list)
+            else:
+                try:
+                    _aligned_disk = sorted(aligned_root.glob("proc_*.fits"))
+                except Exception:  # noqa: BLE001
+                    _aligned_disk = []
+            _has_aligned = bool(_aligned_disk) or bool(use_ram_handoff and aligned_ram_buffer)
+            if build_masterstar_and_catalogs and _has_aligned:
+                _wp_aligned = write_photometry_plan_files(
+                    platesolve_dir=platesolve_dir,
+                    masterstar_fits=ms_fits or (platesolve_dir / "MASTERSTAR.fits"),
+                    masterstars_csv=ms_csv or (platesolve_dir / "masterstars_full_match.csv"),
+                    n_comparison_stars=int(n_comparison_stars),
+                    require_non_variable=bool(require_non_variable_comparisons),
+                    draft_id=int(draft_id) if draft_id is not None else None,
+                    database_path=(
+                        Path(str(_cfg_align.database_path))
+                        if str(_cfg_align.database_path or "").strip()
+                        else None
+                    ),
+                    aligned_files=_aligned_disk if _aligned_disk else None,
+                    aligned_ram_frames=aligned_ram_buffer if use_ram_handoff and aligned_ram_buffer else None,
+                    require_safe_bbox=True,
+                )
+                cat_info.update(_wp_aligned or {})
+        except RuntimeError as _wp_exc:
+            log_event(f"[BORDER] Post-alignment photometry plan rewrite failed: {_wp_exc!s}")
+            if "[BORDER]" in str(_wp_exc):
+                raise
         except Exception as _wp_exc:  # noqa: BLE001
-            log_event(f"[BORDER] Post-RAM-flush photometry plan rewrite failed: {_wp_exc!s}")
+            log_event(f"[BORDER] Post-alignment photometry plan rewrite failed: {_wp_exc!s}")
 
     export_base = prog_i[0]
     _catalog_app_cfg = _cfg_align

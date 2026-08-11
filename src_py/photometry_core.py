@@ -11710,6 +11710,68 @@ def vsx_is_known_variable_top3_per_bin(
     return flagged
 
 
+def _finite_pixel_bbox_from_array(
+    data: "np.ndarray",
+    *,
+    finite_stride: int,
+) -> tuple[float, float, float, float] | None:
+    """Per-frame finite-pixel bbox from a 2-D array (strided sampling)."""
+    import numpy as np
+
+    arr = np.asarray(data, dtype=np.float32)
+    if arr.ndim != 2:
+        return None
+    stride = max(1, int(finite_stride))
+    samp = arr[::stride, ::stride]
+    fin = np.isfinite(samp)
+    if not bool(fin.any()):
+        return None
+    ys, xs = np.where(fin)
+    x0 = float(xs.min() * stride)
+    y0 = float(ys.min() * stride)
+    x1 = float(min(arr.shape[1] - 1, xs.max() * stride + (stride - 1)))
+    y1 = float(min(arr.shape[0] - 1, ys.max() * stride + (stride - 1)))
+    return (x0, y0, x1, y1)
+
+
+def _intersection_bbox_from_frame_bboxes(
+    bboxes: list[tuple[float, float, float, float]],
+) -> tuple[float, float, float, float] | None:
+    if len(bboxes) < 2:
+        return None
+    x0_i, y0_i = 0.0, 0.0
+    x1_i, y1_i = float("inf"), float("inf")
+    for x0, y0, x1, y1 in bboxes:
+        x0_i = max(x0_i, x0)
+        y0_i = max(y0_i, y0)
+        x1_i = min(x1_i, x1)
+        y1_i = min(y1_i, y1)
+    if not (math.isfinite(x0_i) and math.isfinite(y0_i) and math.isfinite(x1_i) and math.isfinite(y1_i)):
+        return None
+    if x1_i <= x0_i or y1_i <= y0_i:
+        return None
+    return (x0_i, y0_i, x1_i, y1_i)
+
+
+def common_field_intersection_bbox_px_from_arrays(
+    *,
+    frame_arrays: list["np.ndarray"],
+    finite_stride: int = 16,
+) -> tuple[float, float, float, float] | None:
+    """Compute intersection bbox of finite pixels across in-memory frames (x0,y0,x1,y1)."""
+    try:
+        import numpy as np  # noqa: F401
+    except Exception:  # noqa: BLE001
+        return None
+
+    bboxes: list[tuple[float, float, float, float]] = []
+    for arr in frame_arrays:
+        bb = _finite_pixel_bbox_from_array(arr, finite_stride=finite_stride)
+        if bb is not None:
+            bboxes.append(bb)
+    return _intersection_bbox_from_frame_bboxes(bboxes)
+
+
 def common_field_intersection_bbox_px(
     *,
     frame_paths: list[Path],
@@ -11730,37 +11792,17 @@ def common_field_intersection_bbox_px(
     if len(fps) < 2:
         return None
 
-    x0_i, y0_i = 0.0, 0.0
-    x1_i, y1_i = float("inf"), float("inf")
-    stride = max(1, int(finite_stride))
-
+    bboxes: list[tuple[float, float, float, float]] = []
     for fp in fps:
         try:
             with fits.open(fp, memmap=False) as hdul:
                 data = np.asarray(hdul[0].data, dtype=np.float32)
         except Exception:  # noqa: BLE001
             continue
-        if data.ndim != 2:
-            continue
-        samp = data[::stride, ::stride]
-        fin = np.isfinite(samp)
-        if not bool(fin.any()):
-            continue
-        ys, xs = np.where(fin)
-        x0 = float(xs.min() * stride)
-        y0 = float(ys.min() * stride)
-        x1 = float(min(data.shape[1] - 1, xs.max() * stride + (stride - 1)))
-        y1 = float(min(data.shape[0] - 1, ys.max() * stride + (stride - 1)))
-        x0_i = max(x0_i, x0)
-        y0_i = max(y0_i, y0)
-        x1_i = min(x1_i, x1)
-        y1_i = min(y1_i, y1)
-
-    if not (math.isfinite(x0_i) and math.isfinite(y0_i) and math.isfinite(x1_i) and math.isfinite(y1_i)):
-        return None
-    if x1_i <= x0_i or y1_i <= y0_i:
-        return None
-    return (x0_i, y0_i, x1_i, y1_i)
+        bb = _finite_pixel_bbox_from_array(data, finite_stride=finite_stride)
+        if bb is not None:
+            bboxes.append(bb)
+    return _intersection_bbox_from_frame_bboxes(bboxes)
 
 
 def recommended_aperture_by_color(
