@@ -6,18 +6,18 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-07T09:45:51Z at git HEAD 6db4b67._
+_Generated 2026-08-11T14:33:39Z at git HEAD 90fdbfb._
 
 ## Summary
 
-- Entries: 287
-- Tier: basic 13, advanced 71, expert 203
-- Kind: static 269, derived 0, resolved 18
-- Widget: auto 119, custom 143, hidden 25
-- Owner: db_static 9, config_runtime 259, fits_dynamic 6, internal 13
-- Scope: universal 237, rig 32, site 10, session 8
-- Scope key: none 237, rig 16, rig_band 2, rig_sampling 14, site 10, frame 8
-- Rig triage group: a 19, b 10, c 3
+- Entries: 282
+- Tier: basic 13, advanced 70, expert 199
+- Kind: static 264, derived 0, resolved 18
+- Widget: auto 114, custom 143, hidden 25
+- Owner: db_static 9, config_runtime 254, fits_dynamic 6, internal 13
+- Scope: universal 233, rig 31, site 10, session 8
+- Scope key: none 233, rig 15, rig_band 2, rig_sampling 14, site 10, frame 8
+- Rig triage group: a 18, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -56,11 +56,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
 | `bpm_dark_mad_sigma` | 5.0 | 2 .. 12 | expert | static | config_runtime | rig | rig | a | auto | Bpm Dark Mad Sigma |
-| `cal_diag_autocorrect_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Cal Diag Autocorrect Enabled |
-| `cal_diag_gate_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Cal Diag Gate Enabled |
-| `cal_diag_hard_sigma` | 5.0 | 3 .. 10 | expert | static | config_runtime | universal | none | n/a | auto | Cal Diag Hard Sigma |
-| `cal_diag_rel_tol` | 0.02 | 0 .. 0.2 | expert | static | config_runtime | universal | none | n/a | auto | Cal Diag Rel Tol |
-| `cal_diag_sat_warn_frac` | 0.9 | 0.5 .. 1 | expert | static | config_runtime | rig | rig | a | auto | Cal Diag Sat Warn Frac |
 | `calibration_library_native_binning` | 1 | 1 .. 16 | advanced | static | config_runtime | rig | rig | a | auto | Calibration Library Native Binning |
 | `calibration_master_ccd_temp_tolerance_c` | 0.5 | - | expert | static | config_runtime | rig | rig | a | auto | Calibration Master CCD TEMP Tolerance C |
 | `dao_qc_in_calibrate` | True | - | expert | static | config_runtime | universal | none | n/a | auto | DAO QC In Calibrate |

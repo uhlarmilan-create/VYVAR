@@ -1,7 +1,7 @@
 # Pruvodce konfiguraci VYVAR (config.json) - CZ
 
 _Sesterky dokument: `VYVAR_CONFIG_GUIDE_EN.md` (anglicky). Vychazi z registru
-parametru (`dev/validation/params_registry.json`, 269 polozek) a z auditu
+parametru (`dev/validation/params_registry.json`, 264 polozek) a z auditu
 zdroju parametru (`dev/results/PARAM_SOURCE_AUDIT.md`), stav k 18. 7. 2026
 (po redukci parametru WAVE-B). Pri zmene parametru aktualizujte tohoto
 pruvodce spolu s registrem._
@@ -130,11 +130,6 @@ Odstraneni otisku kamery ze surovych snimku pomoci master darku a flatu, plus ko
 | Parametr | Vychozi | Typ | Odkud se bere | Kde se pouziva | Vysvetleni |
 |---|---|---|---|---|---|
 | `bpm_dark_mad_sigma` | 5.0; rozsah 2 .. 12 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1645`) | Citlivost detekce vadnych pixelu na master darku: pixely odchylene o vice nez tolik robustnich sigma se oznaci jako vadne. |
-| `cal_diag_autocorrect_enabled` | True | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1930`) | Povoli kalibracni diagnostice automaticky opravit zjisteny nesoulad konvence master darku (napr. skladani SUM vs MEAN) misto preruseni. |
-| `cal_diag_gate_enabled` | True | Nastaveni (config.json) | config.json | UI Nastaveni (`ui_settings.py:395`) | Hlavni vypinac kalibracni diagnosticke brany: kontroluje uroven oblohy po odectu darku a pri nesmyslu se bezpecne zastavi. |
-| `cal_diag_hard_sigma` | 5.0; rozsah 3 .. 10 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2120`) | Tvrdy limit (v sigmach) kontroly oblohy po kalibraci; za nim se sada snimku odmitne. |
-| `cal_diag_rel_tol` | 0.02; rozsah 0 .. 0.2 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2119`) | Relativni tolerance krizove kontroly urovni dark vs snimek pred odectem (vychozi 2 %). |
-| `cal_diag_sat_warn_frac` | 0.9; rozsah 0.5 .. 1 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2121`) | Podil saturacniho limitu, od ktereho diagnostika varuje pred prilis jasnym masterem nebo snimkem. |
 | `calibration_library_native_binning` | 1; rozsah 1 .. 16 | Nastaveni (config.json) | config.json | kalibrace a zpracovani snimku (`pipeline.py:694`) | Binning, ve kterem byly postaveny mastery knihovny kalibraci; pri jinem binningu draftu se mastery prevzorkuji (s provenance priznakem). |
 | `calibration_master_ccd_temp_tolerance_c` | 0.5 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:743`) | Maximalni povoleny rozdil teploty CCD (deg C) mezi master darkem a svetelnymi snimky, ktere kalibruje. |
 | `dao_qc_in_calibrate` | True | Nastaveni (config.json) | config.json | kalibrace a zpracovani snimku (`pipeline.py:14476`) | Spousti QC zalozene na detekci hvezd primo behem kalibrace, aby se spatne snimky oznacily co nejdrive. |

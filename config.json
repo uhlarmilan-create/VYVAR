@@ -52,27 +52,12 @@
   // How many days a master flat stays valid before VYVAR asks for a fresh
   // one.
   "masterflat_validity_days": 200,
-  // Master switch of the calibration diagnostic gate: sanity-checks the sky
-  // level after dark subtraction and fails closed on nonsense.
-  "cal_diag_gate_enabled": true,
   // Binning in which the calibration library masters were built; masters get
   // resampled (with provenance flag) when a draft uses another binning.
   "calibration_library_native_binning": 1,
   // Sensitivity of bad-pixel detection on the master dark: pixels deviating
   // more than this many robust sigmas are mapped as defective.
   "bpm_dark_mad_sigma": 5.0,
-  // Lets the calibration diagnostic auto-correct a detected master-dark
-  // convention mismatch (e.g. SUM vs MEAN stacking) instead of aborting.
-  "cal_diag_autocorrect_enabled": true,
-  // Hard limit (in sigmas) of the post-calibration sky sanity check; beyond
-  // it the frame set is rejected.
-  "cal_diag_hard_sigma": 5.0,
-  // Relative tolerance of the pre-subtraction dark-vs-frame level cross-check
-  // (2% by default).
-  "cal_diag_rel_tol": 0.02,
-  // Fraction of the saturation limit at which the diagnostic starts warning
-  // about a too-bright master or frame.
-  "cal_diag_sat_warn_frac": 0.9,
   // Maximum allowed CCD temperature difference (deg C) between a master dark
   // and the light frames it calibrates.
   "calibration_master_ccd_temp_tolerance_c": 0.5,

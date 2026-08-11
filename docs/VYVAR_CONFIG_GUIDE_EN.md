@@ -1,7 +1,7 @@
 # VYVAR Configuration Guide (config.json) - EN
 
 _Companion document: `VYVAR_CONFIG_GUIDE_CZ.md` (Czech). Generated from the
-parameter registry (`dev/validation/params_registry.json`, 269 entries) and
+parameter registry (`dev/validation/params_registry.json`, 264 entries) and
 the parameter source audit (`dev/results/PARAM_SOURCE_AUDIT.md`), state as of
 2026-07-18 (post WAVE-B parameter reduction). When parameters change, update
 this guide together with the registry._
@@ -33,7 +33,7 @@ parameters, and this guide labels every one of them:
   them (e.g. from the astrometric solution). These no longer carry
   config.json fallbacks after WAVE-B.
 - **Setting (config.json)** - the genuine user-tunable behavior of the
-  pipeline. This is the majority of the 269 registered parameters (config.json
+  pipeline. This is the majority of the 264 registered parameters (config.json
   persists 249 of them; the rest are database facts, FITS/runtime values, or
   internal plumbing). A few settings are marked "runtime auto-adjust": the
   configured value is a base that the pipeline may adapt to the field (for
@@ -128,11 +128,6 @@ Removing the camera signature from raw frames using master darks and flats, plus
 | Parameter | Default | Type | Source | Used in | Explanation |
 |---|---|---|---|---|---|
 | `bpm_dark_mad_sigma` | 5.0; range 2 .. 12 | Setting (config.json) | config.json | config assembly & validation (`config.py:1645`) | Sensitivity of bad-pixel detection on the master dark: pixels deviating more than this many robust sigmas are mapped as defective. |
-| `cal_diag_autocorrect_enabled` | True | Setting (config.json) | config.json | config assembly & validation (`config.py:1930`) | Lets the calibration diagnostic auto-correct a detected master-dark convention mismatch (e.g. SUM vs MEAN stacking) instead of aborting. |
-| `cal_diag_gate_enabled` | True | Setting (config.json) | config.json | Settings UI (`ui_settings.py:395`) | Master switch of the calibration diagnostic gate: sanity-checks the sky level after dark subtraction and fails closed on nonsense. |
-| `cal_diag_hard_sigma` | 5.0; range 3 .. 10 | Setting (config.json) | config.json | config assembly & validation (`config.py:2120`) | Hard limit (in sigmas) of the post-calibration sky sanity check; beyond it the frame set is rejected. |
-| `cal_diag_rel_tol` | 0.02; range 0 .. 0.2 | Setting (config.json) | config.json | config assembly & validation (`config.py:2119`) | Relative tolerance of the pre-subtraction dark-vs-frame level cross-check (2% by default). |
-| `cal_diag_sat_warn_frac` | 0.9; range 0.5 .. 1 | Setting (config.json) | config.json | config assembly & validation (`config.py:2121`) | Fraction of the saturation limit at which the diagnostic starts warning about a too-bright master or frame. |
 | `calibration_library_native_binning` | 1; range 1 .. 16 | Setting (config.json) | config.json | calibration & frame processing (`pipeline.py:694`) | Binning in which the calibration library masters were built; masters get resampled (with provenance flag) when a draft uses another binning. |
 | `calibration_master_ccd_temp_tolerance_c` | 0.5 | Setting (config.json) | config.json | config assembly & validation (`config.py:743`) | Maximum allowed CCD temperature difference (deg C) between a master dark and the light frames it calibrates. |
 | `dao_qc_in_calibrate` | True | Setting (config.json) | config.json | calibration & frame processing (`pipeline.py:14476`) | Runs the star-detection based QC directly during calibration so bad frames are flagged as early as possible. |

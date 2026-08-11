@@ -28,7 +28,6 @@ def test_merge_stamps_provenance_with_full_config_snapshot(tmp_path: Path) -> No
     phot.mkdir()
     cfg = AppConfig()
     cfg.k2_mode = "literature"
-    cfg.cal_diag_gate_enabled = True
 
     merge_photometry_pipeline_meta(
         phot,
@@ -44,7 +43,6 @@ def test_merge_stamps_provenance_with_full_config_snapshot(tmp_path: Path) -> No
     assert prov["entry_point"] == "run_phase2a"
     snap = prov["config_snapshot"]
     assert snap["k2_mode"] == "literature"
-    assert snap["cal_diag_gate_enabled"] is True
     assert "archive_root" in snap
 
 
@@ -57,13 +55,11 @@ def test_merge_last_writer_wins_overwrites_provenance(tmp_path: Path) -> None:
 
     cfg2 = AppConfig()
     cfg2.k2_mode = "literature"
-    cfg2.cal_diag_gate_enabled = False
     merge_photometry_pipeline_meta(phot, {}, cfg2, entry_point="generate_masterstar_and_catalog")
 
     meta = json.loads((phot / "pipeline_meta.json").read_text(encoding="utf-8"))
     prov = meta["provenance"]
     assert prov["config_snapshot"]["k2_mode"] == "literature"
-    assert prov["config_snapshot"]["cal_diag_gate_enabled"] is False
     assert prov["entry_point"] == "generate_masterstar_and_catalog"
 
 

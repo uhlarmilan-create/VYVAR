@@ -11038,17 +11038,6 @@ def run_phase2a(
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0179] calibration_mode not merged into pipeline_meta after Phase 2A: %s', exc)
         pass
-    _cal_diag_meta: dict[str, Any] = {}
-    try:
-        from cal_diag import load_cal_diag_json_for_meta
-
-        _dd = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
-        _cd = load_cal_diag_json_for_meta(_dd)
-        if _cd is not None:
-            _cal_diag_meta = {"cal_diag": _cd}
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0180] cal_diag block not merged into pipeline_meta: %s', exc)
-        pass
     merge_photometry_pipeline_meta(
         output_dir,
         {
@@ -11065,7 +11054,6 @@ def run_phase2a(
                 state.stability_run_flags.get("common_mode_detrend_applied")
             ),
             **_cal_meta,
-            **_cal_diag_meta,
             **_sky_surface_meta_from_qc(_draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))),
         },
         _cfg,

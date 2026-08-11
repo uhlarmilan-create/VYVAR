@@ -89,22 +89,6 @@ D['bpm_dark_mad_sigma'] = dict(
  mensi="Vic pixelu oznacenych za vadne - bezpecnejsi vuci horkym pixelum, ale roste sance vyradit zdrave pixely (ztrata plochy, interpolace).",
  vetsi="Mene vadnych pixelu zachyceno; horke pixely mohou prezit a chovat se jako mikro-hvezdy.",
  proc="MAD (median absolute deviation) je robustni vuci samotnym vadnym pixelum; volba v jednotkach robustni sigmy dava stabilni prah nezavisly na urovni signalu.")
-D['cal_diag_gate_enabled'] = dict(
- proc="Fail-closed pojistka: po odectu darku musi median oblohy zustat fyzikalne smysluplny. Chrani pred zamenou konvence masteru (SUM vs MEAN) a spatnym parovanim masteru - trida chyb, ktera jinak POTICHU znici celou noc.",
- mensi="(vypnuto) Pipeline zpracuje i nesmyslne kalibrovana data - nedoporucujeme vypinat.",
- vetsi="(zapnuto, vychozi) Pri anomalii se beh zastavi s jasnou hlaskou.")
-D['cal_diag_rel_tol'] = dict(
- rozsah="0.01-0.10; vychozi 0.02 (2 %).",
- mensi="Prisnejsi krizova kontrola urovni dark vs snimek; vice falesnych poplachu pri promenlivem pozadi (Mesic, svitani).",
- vetsi="Volnejsi kontrola; skutecny nesoulad konvence muze proklouznout.")
-D['cal_diag_hard_sigma'] = dict(
- mensi="Citlivejsi tvrda brana - vic zastaveni.",
- vetsi="Brana zachyti jen extremni pripady.",
- proc="Dvoustupnova logika: mekka tolerance (rel_tol) varuje/koriguje, tvrda sigma zastavi.")
-D['cal_diag_autocorrect_enabled'] = dict(
- proc="Kdyz diagnostika bezpecne rozpozna znamou zamenu (SUM misto MEAN stack), umi ji prepocitat misto zastaveni. Oprava je zapsana do provenance.",
- mensi="(vypnuto) Kazdy nesoulad = zastaveni; vhodne pri ladeni knihovny.",
- vetsi="(zapnuto) Pohodlnejsi provoz; oprava je vzdy dohledatelna v reportu.")
 D['calibration_master_ccd_temp_tolerance_c'] = dict(
  rozsah="0.1-5 C; vychozi 0.5 C.",
  mensi="Prisnejsi parovani darku dle teploty - nejcistsi kalibrace, ale nemusi se najit zadny master.",
@@ -469,7 +453,7 @@ story = []
 story.append(Paragraph("VYVAR - Referencni prirucka parametru", st_title))
 story.append(Paragraph("Detailni rozbor vsech %d parametru config.json: vyznam, rozsahy, duvody vychozich hodnot, dusledky zmen, matematicke pozadi a literatura." % len(CFG), st_intro))
 story.append(Spacer(1, 8))
-story.append(Paragraph("Stav: 2026-07-22, VYVAR HEAD (OSC-3). Registrovanych parametru: 271. Doprovodne dokumenty: VYVAR_CONFIG_GUIDE_CZ/EN.md (rychla reference), docs/VYVAR_PARAMS.md (strojovy index). Cestina bez diakritiky dle konvence projektu.", st_meta))
+story.append(Paragraph("Stav: 2026-07-22, VYVAR HEAD (OSC-3). Registrovanych parametru: 266. Doprovodne dokumenty: VYVAR_CONFIG_GUIDE_CZ/EN.md (rychla reference), docs/VYVAR_PARAMS.md (strojovy index). Cestina bez diakritiky dle konvence projektu.", st_meta))
 story.append(Spacer(1, 10))
 story.append(Paragraph("Jak cist tuto prirucku", st_h1))
 story.append(Paragraph("Kazdy parametr ma: vyznam, aktualni hodnotu (z vaseho config.json) a tam, kde na hodnote zalezi, rozbor [b]Mensi / Vetsi / Proc vychozi[/b]. Vedecky nabite skupiny maji oranzove BOXY s matematikou a odkazy. Parametry bez rozboru jsou bezpecne 'jasne' - jejich vyznam plne popisuje prvni veta.", st_body))

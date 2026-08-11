@@ -389,17 +389,6 @@ def render_settings_dashboard(
             used_in="Calibrate lights before later steps.",
             compute="Date difference vs. threshold.",
         )
-        new_cal_diag_gate = st.checkbox(
-            "cal_diag_gate_enabled",
-            value=bool(cfg.cal_diag_gate_enabled),
-            help="CAL-DIAG radiometry gate at calibrate time (matched rigs: no-op on science data).",
-        )
-        _detail_help(
-            "cal_diag_gate_enabled",
-            phase="Calibrate lights.",
-            used_in="Pre-subtraction convention check and post-dark sky sanity per obs_group.",
-            compute="Median-based gate; auto-correct SUM->MEAN when enabled in config.",
-        )
         _cln_none = st.checkbox(
             "calibration_library_native_binning: read from each master FITS (JSON null)",
             value=cfg.calibration_library_native_binning is None,
@@ -1068,7 +1057,6 @@ def render_settings_dashboard(
         cfg.database_path = Path(db_path)
         cfg.masterdark_validity_days = int(new_dark)
         cfg.masterflat_validity_days = int(new_flat)
-        cfg.cal_diag_gate_enabled = bool(new_cal_diag_gate)
         cfg.calibration_library_native_binning = None if _cln_none else int(new_cl_bin)
         cfg.gaia_db_path = str(gaia_db_path).strip()
         cfg.blind_index_fine_path = str(blind_index_fine_path).strip()

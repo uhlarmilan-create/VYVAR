@@ -102,7 +102,6 @@ EXPLICIT: dict[str, ScopeResult] = {
     "osc_channel_binning": ScopeResult("rig", "rig", "a", "high", "Defines OSC sampling (2 x N superpixel); input to rig_sampling."),
     "admission_sat_peak_frac": ScopeResult("rig", "rig", "a", "high", "Saturation fraction vs detector full-well."),
     "saturate_limit_fraction": ScopeResult("rig", "rig", "a", "high", "Saturation fraction vs detector full-well."),
-    "cal_diag_sat_warn_frac": ScopeResult("rig", "rig", "a", "high", "Saturation warning vs full-well ADU."),
     "blind_use_rig_prior": ScopeResult("rig", "rig", "a", "high", "Blind index selection uses rig FOV prior."),
     # --- group (b) unit artefacts ---
     "blind_verify_match_tol_px": ScopeResult("rig", "rig_sampling", "b", "low", "Target unit: arcsec via resolved plate scale."),
@@ -192,8 +191,6 @@ EXPLICIT: dict[str, ScopeResult] = {
     "hrd_color_saturation": ScopeResult("universal", "none", "n/a", "high", "Display chroma saturation."),
     "per_frame_saturation_enabled": ScopeResult("universal", "none", "n/a", "high", "Boolean gate enable."),
     "temporal_binning_enabled": ScopeResult("universal", "none", "n/a", "high", "Boolean temporal binning."),
-    "cal_diag_hard_sigma": ScopeResult("universal", "none", "n/a", "high", "Sigma gate on cal diagnostic."),
-    "cal_diag_rel_tol": ScopeResult("universal", "none", "n/a", "high", "Relative tolerance ratio."),
     "vsx_out_of_scope_types": ScopeResult("universal", "none", "n/a", "high", "VSX type exclusion list."),
 }
 
