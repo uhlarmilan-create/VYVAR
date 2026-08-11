@@ -2161,26 +2161,6 @@ class VyvarDatabase:
             raise ValueError(f"Draft '{draft_id}' not found for status update.")
         patch_draft_manifest(root, int(draft_id), status=str(status))
 
-    def count_obs_files(self) -> int:
-        from draft_provenance import count_all_manifest_files
-
-        return int(count_all_manifest_files(self.resolve_archive_root()))
-
-    def maintenance_delete_obs_files_for_processed_drafts(self) -> int:
-        """Clear manifest ``files[]`` for drafts with status PROCESSED."""
-        from draft_provenance import clear_manifest_files_for_processed_drafts
-
-        return int(clear_manifest_files_for_processed_drafts(self))
-
-    def maintenance_nuke_obs_files_and_drafts_preserve_qc_snapshots(self) -> tuple[int, int]:
-        """Clear manifest ``files[]`` on all drafts (staging reset; QC snapshots preserved)."""
-        from draft_provenance import clear_all_manifest_files, count_draft_manifest_dirs
-
-        n_files = int(clear_all_manifest_files(self))
-        n_drafts = int(count_draft_manifest_dirs(self))
-        self.conn.commit()
-        return (n_files, n_drafts)
-
     def _ensure_fits_header_cache_table(self) -> None:
         """Primary-header cache for fast smart_scan (path + size + mtime invalidation)."""
         self.conn.execute(

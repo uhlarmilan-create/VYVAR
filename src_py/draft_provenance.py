@@ -549,16 +549,6 @@ def _manifest_file_count(manifest: dict[str, Any]) -> int:
     return sum(1 for e in files if isinstance(e, dict))
 
 
-def count_all_manifest_files(archive_root: Path | str) -> int:
-    """Total ``files[]`` entries across all draft manifests."""
-    total = 0
-    for _did, apath in iter_draft_archive_dirs(archive_root):
-        manifest = load_draft_manifest(apath)
-        if manifest:
-            total += _manifest_file_count(manifest)
-    return int(total)
-
-
 def count_manifest_files_for_draft(db: Any, draft_id: int) -> int:
     root = resolve_draft_dir_for_id(db, int(draft_id))
     if root is None:
@@ -568,43 +558,6 @@ def count_manifest_files_for_draft(db: Any, draft_id: int) -> int:
 
 def count_manifest_files_for_observation(archive_root: Path | str, observation_id: str) -> int:
     return len(collect_manifest_obs_file_rows(archive_root, observation_id=str(observation_id)))
-
-
-def clear_manifest_files_for_processed_drafts(db: Any) -> int:
-    """Clear ``files[]`` for manifests with status PROCESSED."""
-    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
-    if archive_root is None:
-        return 0
-    cleared = 0
-    for did, apath in iter_draft_archive_dirs(archive_root):
-        manifest = load_draft_manifest(apath)
-        if not manifest:
-            continue
-        st = str(manifest.get("status") or "").strip().upper()
-        if st != "PROCESSED":
-            continue
-        n = _manifest_file_count(manifest)
-        if n:
-            patch_draft_manifest(apath, int(did), files=[])
-            cleared += n
-    return int(cleared)
-
-
-def clear_all_manifest_files(db: Any) -> int:
-    """Clear ``files[]`` on every draft manifest (staging reset helper)."""
-    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
-    if archive_root is None:
-        return 0
-    cleared = 0
-    for did, apath in iter_draft_archive_dirs(archive_root):
-        manifest = load_draft_manifest(apath)
-        if not manifest:
-            continue
-        n = _manifest_file_count(manifest)
-        if n:
-            patch_draft_manifest(apath, int(did), files=[])
-            cleared += n
-    return int(cleared)
 
 
 def _manifest_rig_pair(manifest: dict[str, Any]) -> tuple[int | None, int | None]:
@@ -677,13 +630,6 @@ def count_manifest_references_to_location_id(db: Any, location_id: int) -> int:
         if loc == want:
             n += 1
     return int(n)
-
-
-def count_draft_manifest_dirs(db: Any) -> int:
-    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
-    if archive_root is None:
-        return 0
-    return len(iter_draft_archive_dirs(archive_root))
 
 
 def _manifest_file_entry_mismatch(label: str, db_val: Any, man_val: Any) -> str | None:
