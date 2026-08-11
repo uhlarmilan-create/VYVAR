@@ -17,20 +17,29 @@ MANIFEST_SCHEMA_VERSION = 3
 
 _MANIFEST_NAME = "draft_manifest.json"
 
-# Phase 2.1 shadow-observe counters (rig-id reads; DB remains authority).
+# Phase 2.1 shadow-observe + Phase 2.2 manifest-first rig-id reads.
 MANIFEST_SHADOW_MISMATCHES = 0
 MANIFEST_SHADOW_ABSENT = 0
 MANIFEST_SHADOW_EQUAL = 0
+MANIFEST_FALLBACK = 0
 
-_MANIFEST_SHADOW_LOAD_CACHE: dict[int, dict[str, Any]] = {}
+_RIG_MANIFEST_TO_DB: dict[str, str] = {
+    "equipment_id": "ID_EQUIPMENTS",
+    "telescope_id": "ID_TELESCOPE",
+    "location_id": "ID_LOCATION",
+    "scanning_id": "ID_SCANNING",
+}
+
+_MANIFEST_SHADOW_LOAD_CACHE: dict[tuple[int, str, int], dict[str, Any]] = {}
 
 
 def reset_manifest_shadow_counters() -> None:
-    """Reset Phase 2.1 shadow-observe counters (tests / batch reports)."""
-    global MANIFEST_SHADOW_MISMATCHES, MANIFEST_SHADOW_ABSENT, MANIFEST_SHADOW_EQUAL
+    """Reset Phase 2.1/2.2 manifest rig-id counters (tests / batch reports)."""
+    global MANIFEST_SHADOW_MISMATCHES, MANIFEST_SHADOW_ABSENT, MANIFEST_SHADOW_EQUAL, MANIFEST_FALLBACK
     MANIFEST_SHADOW_MISMATCHES = 0
     MANIFEST_SHADOW_ABSENT = 0
     MANIFEST_SHADOW_EQUAL = 0
+    MANIFEST_FALLBACK = 0
 
 
 def clear_manifest_shadow_load_cache() -> None:
@@ -43,6 +52,7 @@ def manifest_shadow_counter_snapshot() -> dict[str, int]:
         "mismatch": int(MANIFEST_SHADOW_MISMATCHES),
         "absent": int(MANIFEST_SHADOW_ABSENT),
         "equal": int(MANIFEST_SHADOW_EQUAL),
+        "fallback": int(MANIFEST_FALLBACK),
     }
 
 
@@ -99,7 +109,7 @@ def observe_manifest_rig_ids(
     draft_row: dict[str, Any] | None = None,
     db: Any | None = None,
 ) -> None:
-    """Phase 2.1: log manifest-vs-DB rig id mismatches; DB values are never altered."""
+    """Phase 2.1: log manifest-vs-DB rig id mismatches (observe-only)."""
     global MANIFEST_SHADOW_MISMATCHES, MANIFEST_SHADOW_ABSENT, MANIFEST_SHADOW_EQUAL
 
     if not db_rig:
@@ -137,6 +147,174 @@ def observe_manifest_rig_ids(
             log_event(msg)
     else:
         MANIFEST_SHADOW_EQUAL += 1
+
+
+def _log_manifest_fallback(draft_id: int, field: str, reason: str) -> None:
+    global MANIFEST_FALLBACK
+    MANIFEST_FALLBACK += 1
+    from infolog import log_event
+
+    msg = f"MANIFEST_FALLBACK draft_id={int(draft_id)} {field} ({reason})"
+    logging.info(msg)
+    log_event(msg)
+
+
+def resolve_rig_id_manifest_first(
+    draft_id: int,
+    field: str,
+    db_value: int | None,
+    *,
+    draft_row: dict[str, Any] | None = None,
+    db: Any | None = None,
+) -> int | None:
+    """Phase 2.2: return manifest rig id when present, else DB fallback."""
+    did = int(draft_id)
+    db_norm = _normalize_rig_id(db_value)
+    root = _resolve_archive_root_for_shadow(did, draft_row, db)
+    if root is None:
+        _log_manifest_fallback(did, field, "archive root not resolvable")
+        return db_norm
+
+    manifest = _load_manifest_for_shadow(did, root)
+    if not manifest:
+        _log_manifest_fallback(did, field, "manifest absent")
+        return db_norm
+
+    rig_m = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
+    if field not in rig_m or rig_m.get(field) is None:
+        _log_manifest_fallback(did, field, "rig field missing in manifest")
+        return db_norm
+
+    man_val = _normalize_rig_id(rig_m.get(field))
+    if man_val is None:
+        _log_manifest_fallback(did, field, "rig field null in manifest")
+        return db_norm
+
+    if man_val != db_norm:
+        observe_manifest_rig_ids(
+            did,
+            {field: db_norm},
+            draft_row=draft_row,
+            db=db,
+        )
+    else:
+        global MANIFEST_SHADOW_EQUAL
+        MANIFEST_SHADOW_EQUAL += 1
+    return man_val
+
+
+_MANIFEST_FIELD_MISSING = object()
+
+_PATH_MANIFEST_TO_DB: dict[tuple[str, ...], str] = {
+    ("paths", "lights"): "LIGHTS_PATH",
+    ("paths", "calib"): "CALIB_PATH",
+    ("paths", "archive"): "ARCHIVE_PATH",
+    ("paths", "masterstar"): "MASTERSTAR_PATH",
+    ("paths", "masterstar_fits"): "MASTERSTAR_FITS_PATH",
+}
+
+_SCALAR_MANIFEST_TO_DB: dict[tuple[str, ...], str] = {
+    ("status",): "STATUS",
+    ("observation_start_jd",): "OBSERVATIONSTARTJD",
+    ("is_calibrated",): "IS_CALIBRATED",
+    ("final_observation_id",): "FINAL_OBSERVATION_ID",
+}
+
+
+def _manifest_nested_value(manifest: dict[str, Any], path: tuple[str, ...]) -> Any:
+    cur: Any = manifest
+    for key in path:
+        if not isinstance(cur, dict) or key not in cur:
+            return _MANIFEST_FIELD_MISSING
+        cur = cur[key]
+    return cur
+
+
+def _overlay_manifest_scalar(
+    draft_id: int,
+    row_dict: dict[str, Any],
+    manifest: dict[str, Any],
+    path: tuple[str, ...],
+    db_col: str,
+) -> None:
+    man_val = _manifest_nested_value(manifest, path)
+    if man_val is _MANIFEST_FIELD_MISSING:
+        return
+    if db_col == "IS_CALIBRATED":
+        try:
+            row_dict[db_col] = 1 if int(man_val) != 0 else 0
+        except (TypeError, ValueError):
+            row_dict[db_col] = 0
+        return
+    if db_col == "OBSERVATIONSTARTJD":
+        jd = _optional_float(man_val)
+        row_dict[db_col] = jd
+        return
+    if db_col == "STATUS":
+        row_dict[db_col] = str(man_val).strip() if man_val is not None else None
+        return
+    if db_col == "FINAL_OBSERVATION_ID":
+        s = str(man_val).strip() if man_val is not None else ""
+        row_dict[db_col] = s or None
+        return
+    row_dict[db_col] = man_val
+
+
+def apply_manifest_core_to_draft_row(
+    draft_id: int,
+    row_dict: dict[str, Any],
+    *,
+    db: Any | None = None,
+) -> None:
+    """Overlay manifest-first rig ids and core draft fields onto an OBS_DRAFT row dict."""
+    apply_manifest_rig_to_draft_row(int(draft_id), row_dict, db=db)
+    did = int(draft_id)
+    root = _resolve_archive_root_for_shadow(did, row_dict, db)
+    if root is None:
+        for db_col in list(_PATH_MANIFEST_TO_DB.values()) + list(_SCALAR_MANIFEST_TO_DB.values()):
+            _log_manifest_fallback(did, db_col, "archive root not resolvable")
+        _log_manifest_fallback(did, "center", "archive root not resolvable")
+        return
+
+    manifest = _load_manifest_for_shadow(did, root)
+    if not manifest:
+        for db_col in list(_PATH_MANIFEST_TO_DB.values()) + list(_SCALAR_MANIFEST_TO_DB.values()):
+            _log_manifest_fallback(did, db_col, "manifest absent")
+        _log_manifest_fallback(did, "center", "manifest absent")
+        return
+
+    for path, db_col in _PATH_MANIFEST_TO_DB.items():
+        _overlay_manifest_scalar(did, row_dict, manifest, path, db_col)
+    for path, db_col in _SCALAR_MANIFEST_TO_DB.items():
+        _overlay_manifest_scalar(did, row_dict, manifest, path, db_col)
+
+    center_m = manifest.get("center")
+    if isinstance(center_m, dict):
+        if "ra_deg" in center_m:
+            row_dict["CENTEROFFIELDRA"] = center_m.get("ra_deg")
+        if "de_deg" in center_m:
+            row_dict["CENTEROFFIELDDE"] = center_m.get("de_deg")
+
+
+def apply_manifest_rig_to_draft_row(
+    draft_id: int,
+    row_dict: dict[str, Any],
+    *,
+    db: Any | None = None,
+    fields: frozenset[str] | None = None,
+) -> None:
+    """Overlay manifest-first rig FK ids onto an OBS_DRAFT row dict (in place)."""
+    want = fields or frozenset(_RIG_MANIFEST_TO_DB.keys())
+    for man_key, db_col in _RIG_MANIFEST_TO_DB.items():
+        if man_key not in want:
+            continue
+        row_dict[db_col] = resolve_rig_id_manifest_first(
+            int(draft_id),
+            man_key,
+            row_dict.get(db_col),
+            draft_row=row_dict,
+            db=db,
+        )
 
 
 def draft_archive_root(archive_path: Path | str) -> Path:
@@ -243,7 +421,7 @@ def _optional_flag01(value: Any) -> int | None:
 
 
 def _obs_file_row_to_manifest_entry(row: dict[str, Any]) -> dict[str, Any]:
-    return {
+    entry: dict[str, Any] = {
         "file_path": _optional_str(row.get("FILE_PATH")) or "",
         "imagetyp": _optional_str(row.get("IMAGETYP")),
         "filter": _optional_str(row.get("FILTER")),
@@ -276,6 +454,10 @@ def _obs_file_row_to_manifest_entry(row: dict[str, Any]) -> dict[str, Any]:
         "calib_type": _optional_str(row.get("CALIB_TYPE")),
         "calib_flags": _optional_str(row.get("CALIB_FLAGS")),
     }
+    obs_id = _optional_int(row.get("ID"))
+    if obs_id is not None:
+        entry["obs_file_id"] = obs_id
+    return entry
 
 
 def _fetch_manifest_files_from_db(db: Any, draft_id: int) -> list[dict[str, Any]]:
@@ -293,6 +475,101 @@ def _fetch_manifest_files_from_db(db: Any, draft_id: int) -> list[dict[str, Any]
         (int(draft_id),),
     )
     return [_obs_file_row_to_manifest_entry(dict(r)) for r in cur.fetchall()]
+
+
+def _manifest_entry_to_obs_file_row(
+    entry: dict[str, Any],
+    *,
+    draft_id: int,
+    obs_file_id: int | None = None,
+) -> dict[str, Any]:
+    qc = entry.get("qc") if isinstance(entry.get("qc"), dict) else {}
+    insp = entry.get("inspection") if isinstance(entry.get("inspection"), dict) else {}
+    row_id = _optional_int(entry.get("obs_file_id"))
+    if row_id is None:
+        row_id = obs_file_id
+    return {
+        "ID": row_id,
+        "FILE_PATH": _optional_str(entry.get("file_path")) or "",
+        "IMAGETYP": _optional_str(entry.get("imagetyp")),
+        "FILTER": _optional_str(entry.get("filter")),
+        "OBSERVATION_GROUP_KEY": _optional_str(entry.get("group_key")),
+        "ID_SCANNING": _optional_int(entry.get("id_scanning")),
+        "IS_CALIBRATED": _optional_flag01(entry.get("is_calibrated")),
+        "CALIB_TYPE": _optional_str(entry.get("calib_type")),
+        "CALIB_FLAGS": _optional_str(entry.get("calib_flags")),
+        "FWHM": _optional_float(insp.get("fwhm")),
+        "SKY_LEVEL": _optional_float(insp.get("sky_level")),
+        "STAR_COUNT": _optional_int(insp.get("star_count")),
+        "REJECTED_AUTO": _optional_flag01(insp.get("rejected_auto")),
+        "IS_REJECTED": _optional_flag01(insp.get("is_rejected")),
+        "INSPECTION_JD": _optional_float(insp.get("inspection_jd")),
+        "RA": _optional_float(insp.get("ra")),
+        "DE": _optional_float(insp.get("de")),
+        "EXPTIME": _optional_float(insp.get("exptime")),
+        "DRIFT": _optional_float(insp.get("drift")),
+        "DRIFT_DRA": _optional_float(insp.get("drift_dra")),
+        "DRIFT_DDE": _optional_float(insp.get("drift_dde")),
+        "ROUNDNESS_MEAN": _optional_float(insp.get("roundness_mean")),
+        "ELONGATION_MEAN": _optional_float(insp.get("elongation_mean")),
+        "DRAFT_ID": int(draft_id),
+    }
+
+
+def _obs_file_id_map_for_draft(db: Any, draft_id: int) -> dict[str, int]:
+    """Writer/parity helper: map normalized FILE_PATH -> OBS_FILES.ID."""
+    cur = db.conn.execute(
+        "SELECT ID, FILE_PATH FROM OBS_FILES WHERE DRAFT_ID = ?;",
+        (int(draft_id),),
+    )
+    out: dict[str, int] = {}
+    for r in cur.fetchall():
+        fp = _optional_str(r["FILE_PATH"]) if hasattr(r, "keys") else _optional_str(r[1])
+        rid = _optional_int(r["ID"]) if hasattr(r, "keys") else _optional_int(r[0])
+        if fp and rid is not None:
+            out[str(Path(fp).resolve())] = int(rid)
+            out[fp] = int(rid)
+    return out
+
+
+def light_rows_from_manifest(
+    db: Any,
+    draft_id: int,
+    *,
+    imagetyp: str = "light",
+) -> list[dict[str, Any]] | None:
+    """Return OBS_FILES-shaped light rows from manifest files[] when present."""
+    did = int(draft_id)
+    row = _fetch_obs_draft_row_raw(db, did)
+    root = resolve_draft_archive_root_from_row(row or {})
+    if root is None:
+        _log_manifest_fallback(did, "files[]", "archive root not resolvable")
+        return None
+    manifest = _load_manifest_for_shadow(did, root)
+    if not manifest:
+        _log_manifest_fallback(did, "files[]", "manifest absent")
+        return None
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        _log_manifest_fallback(did, "files[]", "files missing in manifest")
+        return None
+
+    id_map = _obs_file_id_map_for_draft(db, did)
+    want = str(imagetyp or "light").strip().lower()
+    rows: list[dict[str, Any]] = []
+    for entry in files:
+        if not isinstance(entry, dict):
+            continue
+        it = str(entry.get("imagetyp") or "").strip().lower()
+        if it != want:
+            continue
+        fp = _optional_str(entry.get("file_path")) or ""
+        obs_id = _optional_int(entry.get("obs_file_id"))
+        if obs_id is None and fp:
+            obs_id = id_map.get(fp) or id_map.get(str(Path(fp).resolve()))
+        rows.append(_manifest_entry_to_obs_file_row(entry, draft_id=did, obs_file_id=obs_id))
+    rows.sort(key=lambda r: str(r.get("FILE_PATH") or ""))
+    return rows
 
 
 def _manifest_file_entry_mismatch(label: str, db_val: Any, man_val: Any) -> str | None:
@@ -614,7 +891,7 @@ def record_draft_calibration_provenance(
 def manifest_db_parity_errors(db: Any, draft_id: int) -> list[str]:
     """Return parity mismatch messages between manifest and OBS_DRAFT (empty if OK)."""
     did = int(draft_id)
-    row = db.fetch_obs_draft_by_id(did) if hasattr(db, "fetch_obs_draft_by_id") else None
+    row = _fetch_obs_draft_row_raw(db, did)
     if not row:
         return [f"draft_id={did}: OBS_DRAFT row missing"]
 

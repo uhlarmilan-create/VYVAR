@@ -254,17 +254,14 @@ def resolve_target_coordinates(
 
     if db is not None and draft_id is not None:
         try:
-            cur = db.conn.execute(
-                "SELECT CENTEROFFIELDRA, CENTEROFFIELDDE FROM OBS_DRAFT WHERE ID = ?;",
-                (int(draft_id),),
-            )
-            row = cur.fetchone()
-            if row is not None:
-                r0, d0 = row[0], row[1]
-                if r0 is not None and d0 is not None:
-                    rf, df = float(r0), float(d0)
-                    if math.isfinite(rf) and math.isfinite(df):
-                        return rf, df
+            if hasattr(db, "fetch_obs_draft_by_id"):
+                row = db.fetch_obs_draft_by_id(int(draft_id))
+                if row is not None:
+                    r0, d0 = row.get("CENTEROFFIELDRA"), row.get("CENTEROFFIELDDE")
+                    if r0 is not None and d0 is not None:
+                        rf, df = float(r0), float(d0)
+                        if math.isfinite(rf) and math.isfinite(df):
+                            return rf, df
         except Exception:  # noqa: BLE001
             pass
 

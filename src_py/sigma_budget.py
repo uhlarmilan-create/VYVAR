@@ -227,31 +227,34 @@ def resolve_rig_scintillation_params(
     if draft_id is not None:
         try:
             db = VyvarDatabase(_cfg.database_path)
-            row = db.conn.execute(
-                """
-                SELECT t.DIAMETER AS diameter_mm, t.TELESCOPENAME AS telescope_name,
-                       l.ALTITUDE AS altitude_m, l.PLACENAME AS place_name
-                FROM OBS_DRAFT d
-                LEFT JOIN TELESCOPE t ON d.ID_TELESCOPE = t.ID
-                LEFT JOIN LOCATION l ON d.ID_LOCATION = l.ID
-                WHERE d.ID = ?;
-                """,
-                (int(draft_id),),
-            ).fetchone()
-            if row:
-                rd = dict(row)
-                if rd.get("diameter_mm") is not None and math.isfinite(float(rd["diameter_mm"])):
-                    diam_m = float(rd["diameter_mm"]) / 1000.0
-                    notes.append(
-                        f"D={diam_m:.3f} m from TELESCOPE.DIAMETER ({rd.get('telescope_name')})"
-                    )
-                if alt_m is None and rd.get("altitude_m") is not None:
-                    loc_alt = float(rd["altitude_m"])
-                    if math.isfinite(loc_alt) and loc_alt > 0:
-                        alt_m = loc_alt
-                        notes.append(f"altitude_m={alt_m} from LOCATION ({rd.get('place_name')})")
-                    elif math.isfinite(loc_alt):
-                        notes.append(f"LOCATION altitude_m={loc_alt} ignored (<=0)")
+            tel_id = db.get_draft_telescope_id(int(draft_id))
+            loc_id = db.get_draft_location_id(int(draft_id))
+            if tel_id is not None:
+                trow = db.conn.execute(
+                    "SELECT DIAMETER AS diameter_mm, TELESCOPENAME AS telescope_name FROM TELESCOPE WHERE ID = ?;",
+                    (int(tel_id),),
+                ).fetchone()
+                if trow:
+                    rd = dict(trow)
+                    if rd.get("diameter_mm") is not None and math.isfinite(float(rd["diameter_mm"])):
+                        diam_m = float(rd["diameter_mm"]) / 1000.0
+                        notes.append(
+                            f"D={diam_m:.3f} m from TELESCOPE.DIAMETER ({rd.get('telescope_name')})"
+                        )
+            if loc_id is not None:
+                lrow = db.conn.execute(
+                    "SELECT ALTITUDE AS altitude_m, PLACENAME AS place_name FROM LOCATION WHERE ID = ?;",
+                    (int(loc_id),),
+                ).fetchone()
+                if lrow:
+                    rd = dict(lrow)
+                    if alt_m is None and rd.get("altitude_m") is not None:
+                        loc_alt = float(rd["altitude_m"])
+                        if math.isfinite(loc_alt) and loc_alt > 0:
+                            alt_m = loc_alt
+                            notes.append(f"altitude_m={alt_m} from LOCATION ({rd.get('place_name')})")
+                        elif math.isfinite(loc_alt):
+                            notes.append(f"LOCATION altitude_m={loc_alt} ignored (<=0)")
         except Exception as exc:  # noqa: BLE001
             notes.append(f"DB rig lookup failed: {exc!s}")
 

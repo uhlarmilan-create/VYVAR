@@ -19,20 +19,31 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def test_altitude_zero_pipeline_meta_falls_back_to_location(monkeypatch):
     class _FakeConn:
-        def execute(self, *_a, **_k):
+        def execute(self, sql, *_a, **_k):
             class _Row:
                 def fetchone(self):
-                    return {
-                        "diameter_mm": 200.0,
-                        "telescope_name": "Carl-Zeiss",
-                        "altitude_m": 250.0,
-                        "place_name": "Jirny",
-                    }
+                    if "TELESCOPE" in sql:
+                        return {
+                            "diameter_mm": 200.0,
+                            "telescope_name": "Carl-Zeiss",
+                        }
+                    if "LOCATION" in sql:
+                        return {
+                            "altitude_m": 250.0,
+                            "place_name": "Jirny",
+                        }
+                    return None
 
             return _Row()
 
     class _FakeDB:
         conn = _FakeConn()
+
+        def get_draft_telescope_id(self, draft_id: int) -> int:
+            return 1
+
+        def get_draft_location_id(self, draft_id: int) -> int:
+            return 1
 
     monkeypatch.setattr("database.VyvarDatabase", lambda *_a, **_k: _FakeDB())
     rig = resolve_rig_scintillation_params(

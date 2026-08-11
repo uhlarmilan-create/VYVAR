@@ -81,10 +81,7 @@ def _load_wcs_meta(ms_fits: Path) -> dict[str, Any]:
 def _gain_rn_for_draft(db: Any, draft_id: int) -> tuple[float, float, str]:
     """(gain e-/ADU, read_noise e-, source) from EQUIPMENTS via OBS_DRAFT."""
     try:
-        row = db.conn.execute(
-            "SELECT ID_EQUIPMENTS FROM OBS_DRAFT WHERE ID = ?;", (int(draft_id),)
-        ).fetchone()
-        eid = int(row["ID_EQUIPMENTS"]) if row and row["ID_EQUIPMENTS"] else None
+        eid = db.get_draft_equipment_id(int(draft_id)) if hasattr(db, "get_draft_equipment_id") else None
         if eid:
             from param_resolver import resolve_gain, resolve_read_noise  # noqa: PLC0415
 

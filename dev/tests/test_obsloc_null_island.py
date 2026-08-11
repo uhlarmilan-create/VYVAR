@@ -26,13 +26,12 @@ def test_null_island_coords_threshold() -> None:
 
 def test_resolve_site_null_island_unresolved(caplog: pytest.LogCaptureFixture) -> None:
     db = MagicMock()
+    db.get_draft_location_id.return_value = 42
 
     def _exec(sql: str, params: tuple) -> MagicMock:
         cur = MagicMock()
         if "LATITUDE" in sql:
             cur.fetchone.return_value = (0.0, 0.0, 0.0)
-        elif "ID_LOCATION" in sql:
-            cur.fetchone.return_value = (42,)
         else:
             cur.fetchone.return_value = None
         return cur
@@ -51,6 +50,7 @@ def test_resolve_site_null_island_unresolved(caplog: pytest.LogCaptureFixture) -
 
 def test_resolve_site_real_location_unchanged() -> None:
     db = MagicMock()
+    db.get_draft_location_id.return_value = 1
     db.conn.execute.return_value.fetchone.return_value = (50.075, 14.437, 525.0)
     site = resolve_site(fits.Header(), db=db, draft_id=1, cfg=AppConfig())
     assert site.ok
@@ -59,6 +59,7 @@ def test_resolve_site_real_location_unchanged() -> None:
 
 def test_resolve_observer_location_null_island_returns_none() -> None:
     db = MagicMock()
+    db.get_draft_location_id.return_value = 1
     db.conn.execute.return_value.fetchone.return_value = (0.0, 0.0, 0.0)
     lat, lon, elev = resolve_observer_location(fits.Header(), db=db, draft_id=1, cfg=AppConfig())
     assert lat is None and lon is None and elev is None
@@ -66,6 +67,7 @@ def test_resolve_observer_location_null_island_returns_none() -> None:
 
 def test_airmass_refuses_null_island() -> None:
     db = MagicMock()
+    db.get_draft_location_id.return_value = 1
     db.conn.execute.return_value.fetchone.return_value = (0.0, 0.0, 0.0)
     hdr = fits.Header()
     hdr["CRVAL1"] = 202.0

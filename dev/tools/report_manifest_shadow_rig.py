@@ -64,7 +64,7 @@ def main() -> int:
         snap = manifest_shadow_counter_snapshot()
         print(
             f"drafts={len(draft_ids)} equal={snap['equal']} absent={snap['absent']} "
-            f"mismatch={snap['mismatch']}"
+            f"mismatch={snap['mismatch']} fallback={snap['fallback']}"
         )
         if snap["mismatch"] > 0:
             print("FAIL: manifest rig shadow mismatches detected", file=sys.stderr)

@@ -176,7 +176,7 @@ class ThreadSafeSQLiteConnection:
         with self._lock:
             self._conn.close()
 
-_EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "SCANNING", "LOCATION"})
+_EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "SCANNING", "LOCATION", "OBS_DRAFT"})
 _EDITABLE_DEFAULT_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
 _REBUILD_MIGRATION_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION", "OBS_FILES"})
 
@@ -1698,6 +1698,13 @@ class VyvarDatabase:
                 return None
         except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[DATABASE] Editor value coerce failed (non-critical): %s", exc)
+        try:
+            import numpy as np
+
+            if isinstance(raw, np.generic):
+                return raw.item()
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("[DATABASE] Editor numpy coerce failed (non-critical): %s", exc)
         return raw
 
     def apply_main_table_editor_save(
@@ -1711,10 +1718,11 @@ class VyvarDatabase:
     ) -> dict[str, int]:
         """Apply INSERT/UPDATE/DELETE from a Streamlit ``data_editor`` diff.
 
-        Only ``EQUIPMENTS``, ``TELESCOPE``, ``SCANNING``, ``LOCATION`` are allowed.
+        Only ``EQUIPMENTS``, ``TELESCOPE``, ``SCANNING``, ``LOCATION``, ``OBS_DRAFT`` are allowed.
 
         **EQUIPMENTS / TELESCOPE:** a row removed from the editor is **not** ``DELETE``-d; ``ACTIVE`` is set
         to **0** (soft-delete). Physical ``DELETE`` for those tables is never performed from this API.
+        **OBS_DRAFT:** manifest refresh after commit when rig FK ids may have changed.
         **LOCATION / SCANNING:** physical delete with reference checks (``FINAL_DATA`` / FK usage).
         """
         import pandas as pd_local
@@ -1784,6 +1792,7 @@ class VyvarDatabase:
         updated = 0
         deleted = 0
         soft_deactivated = 0
+        obs_draft_manifest_refresh: set[int] = set()
 
         pragma_cols = [r[1] for r in self.conn.execute(f"PRAGMA table_info({table});").fetchall()]
         insert_colnames = [c for c in pragma_cols if c != pk_col]
@@ -1791,6 +1800,8 @@ class VyvarDatabase:
         try:
             self.conn.execute("BEGIN;")
             for did in sorted(deleted_ids):
+                if table == "OBS_DRAFT":
+                    obs_draft_manifest_refresh.add(int(did))
                 if table in ("EQUIPMENTS", "TELESCOPE"):
                     if "ACTIVE" not in pragma_cols:
                         raise ValueError(f"Tabulka {table} nema stlpec ACTIVE - soft-delete nie je mozny.")
@@ -1838,6 +1849,8 @@ class VyvarDatabase:
                 params = list(changes.values()) + [pid]
                 self.conn.execute(f"UPDATE {table} SET {set_sql} WHERE {pk_col} = ?;", params)
                 updated += 1
+                if table == "OBS_DRAFT":
+                    obs_draft_manifest_refresh.add(int(pid))
 
             for row in new_rows:
                 vals: list[Any] = []
@@ -1846,11 +1859,13 @@ class VyvarDatabase:
                     vals.append(self._coerce_sql_param(table, c, raw))
                 placeholders = ", ".join("?" * len(insert_colnames))
                 cols_sql = ", ".join(insert_colnames)
-                self.conn.execute(
+                ins_cur = self.conn.execute(
                     f"INSERT INTO {table} ({cols_sql}) VALUES ({placeholders});",
                     vals,
                 )
                 inserted += 1
+                if table == "OBS_DRAFT":
+                    obs_draft_manifest_refresh.add(int(ins_cur.lastrowid))
 
             # Enforce exactly-one IS_DEFAULT when the user explicitly checked a new row.
             if (
@@ -1867,6 +1882,13 @@ class VyvarDatabase:
         except Exception:
             self.conn.rollback()
             raise
+
+        if table == "OBS_DRAFT":
+            from draft_provenance import clear_manifest_shadow_load_cache
+
+            clear_manifest_shadow_load_cache()
+            for did in sorted(obs_draft_manifest_refresh):
+                self._try_refresh_draft_manifest(int(did))
 
         return {
             "inserted": inserted,
@@ -1915,14 +1937,61 @@ class VyvarDatabase:
         if row is None:
             return None
         row_dict = dict(row)
-        from draft_provenance import _rig_from_draft_row, observe_manifest_rig_ids
+        from draft_provenance import apply_manifest_core_to_draft_row
 
-        observe_manifest_rig_ids(
-            int(draft_id),
-            _rig_from_draft_row(row_dict),
-            draft_row=row_dict,
-        )
+        apply_manifest_core_to_draft_row(int(draft_id), row_dict, db=self)
         return row_dict
+
+    def _draft_rig_resolve_row(self, draft_id: int) -> dict[str, Any] | None:
+        """OBS_DRAFT rig FK columns + path hints for manifest-first resolution."""
+        row = self.conn.execute(
+            """
+            SELECT ID_EQUIPMENTS, ID_TELESCOPE, ID_LOCATION, ID_SCANNING,
+                   ARCHIVE_PATH, LIGHTS_PATH
+            FROM OBS_DRAFT WHERE ID = ?;
+            """,
+            (int(draft_id),),
+        ).fetchone()
+        return dict(row) if row is not None else None
+
+    def _resolve_draft_rig_id(self, draft_id: int, field: str, db_col: str) -> int | None:
+        from draft_provenance import resolve_rig_id_manifest_first
+
+        row = self._draft_rig_resolve_row(draft_id)
+        if row is None:
+            return None
+        raw = row.get(db_col)
+        db_val: int | None
+        if raw is None:
+            db_val = None
+        else:
+            try:
+                db_val = int(raw)
+            except (TypeError, ValueError):
+                db_val = None
+        return resolve_rig_id_manifest_first(
+            int(draft_id),
+            field,
+            db_val,
+            draft_row=row,
+            db=self,
+        )
+
+    def get_draft_equipment_id(self, draft_id: int) -> int | None:
+        """Manifest-first ``equipment_id``; DB fallback when manifest absent."""
+        return self._resolve_draft_rig_id(int(draft_id), "equipment_id", "ID_EQUIPMENTS")
+
+    def get_draft_telescope_id(self, draft_id: int) -> int | None:
+        """Manifest-first ``telescope_id``; DB fallback when manifest absent."""
+        return self._resolve_draft_rig_id(int(draft_id), "telescope_id", "ID_TELESCOPE")
+
+    def get_draft_location_id(self, draft_id: int) -> int | None:
+        """Manifest-first ``location_id``; DB fallback when manifest absent."""
+        return self._resolve_draft_rig_id(int(draft_id), "location_id", "ID_LOCATION")
+
+    def get_draft_scanning_id(self, draft_id: int) -> int | None:
+        """Manifest-first ``scanning_id``; DB fallback when manifest absent."""
+        return self._resolve_draft_rig_id(int(draft_id), "scanning_id", "ID_SCANNING")
 
     def _try_refresh_draft_manifest(self, draft_id: int) -> None:
         """Best-effort dual-write of draft_manifest.json from OBS_DRAFT + OBS_FILES (Phase 1 shadow)."""
@@ -2002,18 +2071,11 @@ class VyvarDatabase:
         self._try_refresh_draft_manifest(int(draft_id))
 
     def get_obs_draft_masterstar_path(self, draft_id: int) -> str | None:
-        """Return persisted MASTERSTAR path for a draft (if available)."""
-        cur = self.conn.execute(
-            "SELECT MASTERSTAR_FITS_PATH, MASTERSTAR_PATH FROM OBS_DRAFT WHERE ID = ?;",
-            (int(draft_id),),
-        )
-        row = cur.fetchone()
+        """Return persisted MASTERSTAR path for a draft (manifest-first)."""
+        row = self.fetch_obs_draft_by_id(int(draft_id))
         if row is None:
             return None
-        try:
-            v = row["MASTERSTAR_FITS_PATH"] or row["MASTERSTAR_PATH"]
-        except Exception:  # noqa: BLE001
-            v = row[0] if len(row) > 0 else None
+        v = row.get("MASTERSTAR_FITS_PATH") or row.get("MASTERSTAR_PATH")
         s = str(v).strip() if v is not None else ""
         return s or None
 
@@ -2036,18 +2098,11 @@ class VyvarDatabase:
         self._try_refresh_draft_manifest(int(draft_id))
 
     def get_obs_draft_masterstar_source_path(self, draft_id: int) -> str | None:
-        """Return persisted MASTERSTAR *source* (selected frame) path for a draft."""
-        cur = self.conn.execute(
-            "SELECT MASTERSTAR_PATH FROM OBS_DRAFT WHERE ID = ?;",
-            (int(draft_id),),
-        )
-        row = cur.fetchone()
+        """Return persisted MASTERSTAR *source* (selected frame) path (manifest-first)."""
+        row = self.fetch_obs_draft_by_id(int(draft_id))
         if row is None:
             return None
-        try:
-            v = row["MASTERSTAR_PATH"]
-        except Exception:  # noqa: BLE001
-            v = row[0] if len(row) > 0 else None
+        v = row.get("MASTERSTAR_PATH")
         s = str(v).strip() if v is not None else ""
         return s or None
 
@@ -2737,27 +2792,35 @@ class VyvarDatabase:
         ).fetchone()
         if row is None:
             return None
-        from draft_provenance import observe_manifest_rig_ids
-
-        observe_manifest_rig_ids(
-            int(draft_id),
-            {
-                "equipment_id": int(row["ID_EQUIPMENTS"])
-                if row["ID_EQUIPMENTS"] is not None
-                else None,
-                "telescope_id": int(row["ID_TELESCOPE"])
-                if row["ID_TELESCOPE"] is not None
-                else None,
-            },
-            draft_row=dict(row),
-            db=self,
-        )
+        eq_id = self.get_draft_equipment_id(int(draft_id))
+        tel_id = self.get_draft_telescope_id(int(draft_id))
+        names = self.conn.execute(
+            """
+            SELECT
+                t.TELESCOPENAME AS telescope_name,
+                t.FOCAL AS telescope_focal_mm,
+                e.CAMERANAME AS equipment_name,
+                e.PIXELSIZE AS pixel_um
+            FROM TELESCOPE t
+            LEFT JOIN EQUIPMENTS e ON e.ID = ?
+            WHERE t.ID = ?;
+            """,
+            (eq_id, tel_id),
+        ).fetchone()
+        if names is None:
+            return {
+                "draft_id": row["draft_id"],
+                "telescope_name": None,
+                "telescope_focal_mm": None,
+                "equipment_name": None,
+                "pixel_um": None,
+            }
         return {
             "draft_id": row["draft_id"],
-            "telescope_name": row["telescope_name"],
-            "telescope_focal_mm": row["telescope_focal_mm"],
-            "equipment_name": row["equipment_name"],
-            "pixel_um": row["pixel_um"],
+            "telescope_name": names["telescope_name"],
+            "telescope_focal_mm": names["telescope_focal_mm"],
+            "equipment_name": names["equipment_name"],
+            "pixel_um": names["pixel_um"],
         }
 
     @staticmethod
@@ -3373,16 +3436,11 @@ class VyvarDatabase:
         """
         fp = Path(file_path)
         did = int(draft_id)
-        cur = self.conn.execute(
-            "SELECT ID_EQUIPMENTS, ID_TELESCOPE FROM OBS_DRAFT WHERE ID = ?;",
-            (did,),
-        )
-        dr = cur.fetchone()
-        if dr is None:
+        if self._draft_rig_resolve_row(did) is None:
             raise ValueError(f"OBS_DRAFT id={did} not found.")
 
-        id_eq = dr["ID_EQUIPMENTS"]
-        id_tel = dr["ID_TELESCOPE"]
+        id_eq = self.get_draft_equipment_id(did)
+        id_tel = self.get_draft_telescope_id(did)
 
         with fits.open(fp, memmap=False) as hdul:
             header = hdul[0].header.copy()
@@ -3960,8 +4018,8 @@ class VyvarDatabase:
         self.conn.commit()
         return n
 
-    def fetch_draft_light_rows_for_quality(self, draft_id: int) -> list[dict[str, Any]]:
-        """Light frames for a draft (for quality inspection / preprocessing filter)."""
+    def _fetch_draft_light_rows_raw(self, draft_id: int) -> list[dict[str, Any]]:
+        """Raw OBS_FILES light rows (manifest writer / DB fallback only)."""
         cur = self.conn.execute(
             """
             SELECT ID, FILE_PATH, IMAGETYP, FILTER, OBSERVATION_GROUP_KEY, ID_SCANNING, IS_CALIBRATED, CALIB_TYPE,
@@ -3976,18 +4034,32 @@ class VyvarDatabase:
         )
         return [dict(r) for r in cur.fetchall()]
 
+    def fetch_draft_light_rows_for_quality(self, draft_id: int) -> list[dict[str, Any]]:
+        """Light frames for a draft (manifest-first; DB fallback)."""
+        from draft_provenance import light_rows_from_manifest
+
+        rows = light_rows_from_manifest(self, int(draft_id), imagetyp="light")
+        if rows is not None:
+            return rows
+        return self._fetch_draft_light_rows_raw(int(draft_id))
+
     def fetch_draft_scanning_ids(self, draft_id: int) -> list[int]:
-        """Unique per-file scanning IDs for light rows in a draft."""
-        cur = self.conn.execute(
-            """
-            SELECT DISTINCT ID_SCANNING
-            FROM OBS_FILES
-            WHERE DRAFT_ID = ? AND LOWER(COALESCE(IMAGETYP, '')) = 'light' AND ID_SCANNING IS NOT NULL
-            ORDER BY ID_SCANNING;
-            """,
-            (int(draft_id),),
-        )
-        return [int(r["ID_SCANNING"]) for r in cur.fetchall() if r["ID_SCANNING"] is not None]
+        """Unique per-file scanning IDs for light rows (manifest-first)."""
+        rows = self.fetch_draft_light_rows_for_quality(int(draft_id))
+        out: list[int] = []
+        seen: set[int] = set()
+        for row in rows:
+            sid = row.get("ID_SCANNING")
+            if sid is None:
+                continue
+            try:
+                iv = int(sid)
+            except (TypeError, ValueError):
+                continue
+            if iv not in seen:
+                seen.add(iv)
+                out.append(iv)
+        return sorted(out)
 
     def update_obs_file_calibration_state_by_raw_light_path(
         self,
@@ -4135,7 +4207,18 @@ class VyvarDatabase:
             return str(p).casefold()
 
     def fetch_light_file_paths_not_rejected_for_draft(self, draft_id: int) -> set[str]:
-        """Normalized ``FILE_PATH`` keys for draft lights with ``IS_REJECTED`` 0 or NULL."""
+        """Normalized ``FILE_PATH`` keys for draft lights with ``IS_REJECTED`` 0 or NULL (manifest-first)."""
+        rows = self.fetch_draft_light_rows_for_quality(int(draft_id))
+        out: set[str] = set()
+        for row in rows:
+            rej = row.get("IS_REJECTED")
+            if rej not in (None, 0):
+                continue
+            fp = row.get("FILE_PATH")
+            if fp:
+                out.add(self._normalize_obs_file_path_key(str(fp)))
+        if out or rows:
+            return out
         cur = self.conn.execute(
             """
             SELECT FILE_PATH FROM OBS_FILES
@@ -4144,7 +4227,6 @@ class VyvarDatabase:
             """,
             (int(draft_id),),
         )
-        out: set[str] = set()
         for row in cur.fetchall():
             fp = row["FILE_PATH"]
             if fp:

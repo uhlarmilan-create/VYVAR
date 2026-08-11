@@ -194,18 +194,15 @@ def _vy_fwhm_from_header(hdr: Any) -> float:
 
 
 def _draft_equipment_id(db: VyvarDatabase, draft_id: int) -> int | None:
-    """``OBS_DRAFT.ID_EQUIPMENTS`` for this draft, if set and positive."""
-    row = db.conn.execute(
-        "SELECT ID_EQUIPMENTS FROM OBS_DRAFT WHERE ID = ?;",
-        (int(draft_id),),
-    ).fetchone()
-    if row is None or row["ID_EQUIPMENTS"] is None:
+    """Manifest-first equipment id for this draft, if set and positive."""
+    eid = db.get_draft_equipment_id(int(draft_id))
+    if eid is None:
         return None
     try:
-        eid = int(row["ID_EQUIPMENTS"])
+        val = int(eid)
     except (TypeError, ValueError):
         return None
-    return eid if eid > 0 else None
+    return val if val > 0 else None
 
 
 def _draft_db_gain_e_per_adu(db: VyvarDatabase | None, draft_id: int) -> float | None:
