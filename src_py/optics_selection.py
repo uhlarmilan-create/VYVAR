@@ -1,7 +1,7 @@
 """Active camera + telescope selection - one source of truth for VYVAR.
 
 Priority when resolving optics for platesolve / calibration / masters:
-1. ``OBS_DRAFT`` row (frozen at import) when ``draft_id`` is set
+1. ``draft manifest`` row (frozen at import) when ``draft_id`` is set
 2. Explicit UI combobox ids passed by the caller
 3. Streamlit session keys (synced on every Varstream page render)
 
@@ -154,7 +154,7 @@ def resolve_optics_ids_for_platesolve(
     equipment_id: int | None = None,
     telescope_id: int | None = None,
 ) -> tuple[int | None, int | None]:
-    """``OBS_DRAFT`` optics override caller ids when ``draft_id`` is set."""
+    """``draft manifest`` optics override caller ids when ``draft_id`` is set."""
     eq = int(equipment_id) if equipment_id is not None else None
     tel = int(telescope_id) if telescope_id is not None else None
     if db is None or draft_id is None:
@@ -166,7 +166,7 @@ def resolve_optics_ids_for_platesolve(
 
         get_except_fix_counters().optics_draft_override_read_fail += 1
         _log.error(
-            "[OPTICS] OBS_DRAFT override read failed for draft_id=%s: %s",
+            "[OPTICS] draft manifest override read failed for draft_id=%s: %s",
             draft_id,
             exc,
         )

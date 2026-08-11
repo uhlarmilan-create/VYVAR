@@ -21,7 +21,7 @@ def render_calibration_equipment_header(
     equipment_id: int | None,
     telescope_id: int | None,
 ) -> None:
-    """Top-of-section info: telescope + sensor from OBS_DRAFT JOIN, else from selected IDs."""
+    """Top-of-section info: telescope + sensor from draft manifest JOIN, else from selected IDs."""
     telescope_name: str | None = None
     telescope_focal_mm: float | None = None
     equipment_name: str | None = None

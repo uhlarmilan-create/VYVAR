@@ -1554,7 +1554,7 @@ def resolve_preprocess_target_coordinates(
     """Resolve preprocess target coordinates with DB-first priority.
 
     Priority:
-    1) ``OBS_DRAFT.CENTEROFFIELDRA/DE`` (finite pair; **0/0** sa povazuje za nevyplnene - pokracuje sa dalej)
+    1) ``draft manifest.CENTEROFFIELDRA/DE`` (finite pair; **0/0** sa povazuje za nevyplnene - pokracuje sa dalej)
     2) UI values
     3) median RA/DE from draft light rows
     """
@@ -1573,7 +1573,7 @@ def resolve_preprocess_target_coordinates(
                         )
                         return float(ra_f), float(de_f)
                     log_event(
-                        "DEBUG: OBS_DRAFT center is 0/0 - beriem ako nevyplnene; skusam UI, potom median z manifest files[]."
+                        "DEBUG: draft manifest center is 0/0 - beriem ako nevyplnene; skusam UI, potom median z manifest files[]."
                     )
         except Exception:  # noqa: BLE001
             pass
@@ -1721,14 +1721,14 @@ def sync_obs_files_drift_arcmin_for_draft(
 def generate_observation_hash(db: VyvarDatabase, draft_id: int) -> str:
     """Deterministic processing hashtag: camera (equipment) + telescope + filter/exptime set + JD start.
 
-    JD start is the minimum finite ``INSPECTION_JD`` among draft lights, else ``OBS_DRAFT.OBSERVATIONSTARTJD``.
+    JD start is the minimum finite ``INSPECTION_JD`` among draft lights, else ``draft manifest.OBSERVATIONSTARTJD``.
     Filter/exptime signature is sorted unique ``(FILTER, EXPTIME)`` pairs from ``manifest files[]`` lights.
     """
     import hashlib
 
     drow = db.fetch_obs_draft_by_id(int(draft_id))
     if drow is None:
-        raise ValueError(f"OBS_DRAFT id={int(draft_id)} not found")
+        raise ValueError(f"Draft id={int(draft_id)} not found")
     id_eq = int(drow.get("ID_EQUIPMENTS") or 0)
     id_tel = int(drow.get("ID_TELESCOPE") or 0)
     lights = db.fetch_draft_light_rows_for_quality(int(draft_id))
@@ -4272,7 +4272,7 @@ def _solve_wcs_external(
             except Exception as _e:  # noqa: BLE001
                 log_event(f"WARNING: Per-frame hint z MASTERSTAR zlyhal: {_e}")
 
-        # Fallback: if MASTERSTAR hint is missing, try OBS_DRAFT center (can be 0/0).
+        # Fallback: if MASTERSTAR hint is missing, try draft manifest center (can be 0/0).
         if (not _is_masterstar) and (hint_ra is None or hint_dec is None) and draft_id is not None:
             try:
                 _db_hint = _vyvar_open_database(cfg_u)
@@ -4290,7 +4290,7 @@ def _solve_wcs_external(
                                 hint_ra = float(ra_f)
                                 hint_dec = float(de_f)
                                 log_event(
-                                    f"INFO: Per-frame hint z OBS_DRAFT center: RA={hint_ra:.4f} Dec={hint_dec:.4f}"
+                                    f"INFO: Per-frame hint z draft manifest center: RA={hint_ra:.4f} Dec={hint_dec:.4f}"
                                 )
                     finally:
                         try:
@@ -11563,7 +11563,7 @@ def generate_masterstar_and_catalog(
             if _db_ms is not None:
                 try:
                     # FITS QA 'Potvrdit vyber MASTERSTAR' -> ``get_obs_draft_masterstar_source_path``
-                    # (``OBS_DRAFT.MASTERSTAR_PATH`` = zdrojovy frame, nie hotovy ``MASTERSTAR.fits``).
+                    # (``draft manifest.MASTERSTAR_PATH`` = zdrojovy frame, nie hotovy ``MASTERSTAR.fits``).
                     # Musi ist pred automatickym top-% z ``manifest files[]``, inak sa pouzivatelsky vyber prepise.
                     _src = _db_ms.get_obs_draft_masterstar_source_path(int(draft_id))
                     if _src and str(_src).strip():
@@ -16326,17 +16326,15 @@ def calibrate_lights_to_calibrated(
             if observation_id:
                 _n_o = _dbc.count_obs_files_for_observation(str(observation_id))
                 _log_bits.append(
-                    "manifest files[]: SELECT COUNT(*) FROM manifest files[] WHERE OBSERVATION_ID = ? "
-                    f"(obs={observation_id!r}) -> {_n_o} rows"
+                    f"manifest files[] count (obs={observation_id!r}) -> {_n_o} rows"
                 )
             if draft_id is not None:
                 _n_d = _dbc.count_obs_files_for_draft(int(draft_id))
                 _log_bits.append(
-                    "manifest files[]: SELECT COUNT(*) FROM manifest files[] WHERE DRAFT_ID = ? "
-                    f"(draft_id={int(draft_id)}) -> {_n_d} rows"
+                    f"manifest files[] count (draft_id={int(draft_id)}) -> {_n_d} rows"
                 )
         except Exception as exc:  # noqa: BLE001
-            _log_bits.append(f"manifest files[] count query failed: {exc}")
+            _log_bits.append(f"manifest files[] count failed: {exc}")
     log_event("Kalibracia - vstupne subory: " + " | ".join(_log_bits))
 
     if total > 0:

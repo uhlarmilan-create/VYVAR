@@ -177,7 +177,7 @@ class ThreadSafeSQLiteConnection:
         with self._lock:
             self._conn.close()
 
-_EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION", "OBS_DRAFT"})
+_EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION", "DRAFT_MANIFEST"})
 _EDITABLE_DEFAULT_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
 _REBUILD_MIGRATION_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
 
@@ -950,7 +950,7 @@ def query_local_exoplanet(
 
 
 class DraftTechnicalMetadataError(RuntimeError):
-    """Focal length and/or effective pixel pitch missing after FITS + OBS_DRAFT SQL merge."""
+    """Focal length and/or effective pixel pitch missing after FITS + draft manifest SQL merge."""
 
     def __init__(self, draft_id: int) -> None:
         self.draft_id = int(draft_id)
@@ -1205,28 +1205,6 @@ class VyvarDatabase:
                 ALTITUDE REAL
             );
 
-            CREATE TABLE IF NOT EXISTS OBS_DRAFT (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                ID_EQUIPMENTS INTEGER,
-                ID_TELESCOPE INTEGER,
-                ID_LOCATION INTEGER,
-                ID_SCANNING INTEGER,
-                OBSERVATIONSTARTJD REAL,
-                CENTEROFFIELDRA REAL,
-                CENTEROFFIELDDE REAL,
-                STATUS TEXT DEFAULT 'INGESTED',
-                FINAL_OBSERVATION_ID TEXT,
-                LIGHTS_PATH TEXT,
-                CALIB_PATH TEXT,
-                IMPORTED_AT TEXT,
-                IMPORT_WARNINGS TEXT,
-                IS_CALIBRATED INTEGER,
-                ARCHIVE_PATH TEXT,
-                FOREIGN KEY (ID_EQUIPMENTS) REFERENCES EQUIPMENTS (ID),
-                FOREIGN KEY (ID_TELESCOPE) REFERENCES TELESCOPE (ID),
-                FOREIGN KEY (ID_LOCATION) REFERENCES LOCATION (ID)
-            );
-
             """
         )
         self.conn.commit()
@@ -1238,11 +1216,7 @@ class VyvarDatabase:
         self._ensure_calibration_library_table()
         self._ensure_fits_header_cache_table()
         self._ensure_qc_processing_tables()
-        self._ensure_final_data_view()
         self._ensure_master_sources_table()
-        self._ensure_obs_draft_masterstar_path_column()
-        self._ensure_obs_draft_status_panel_columns()
-        self._ensure_obs_draft_calibration_mode_column()
         self._normalize_active_columns_to_text()
 
     def _column_sql_type(self, table: str, column: str) -> str | None:
@@ -1359,32 +1333,10 @@ class VyvarDatabase:
 
         self.conn.commit()
 
-    def _rebuild_final_data_view(self) -> None:
-        """View of rows that reference equipment/telescope (drafts, QC runs).
-
-        Used for hard-delete integrity (hashtag / final pipeline safety). Not a physical table.
-        """
+    def _drop_final_data_view(self) -> None:
+        """Retire SQL FINAL_DATA view; integrity counts use manifest scan."""
         self.conn.execute("DROP VIEW IF EXISTS FINAL_DATA;")
-        self.conn.execute(
-            """
-            CREATE VIEW FINAL_DATA AS
-            SELECT d.ID_EQUIPMENTS AS equipment_id, d.ID_TELESCOPE AS telescope_id
-            FROM OBS_DRAFT d
-            UNION ALL
-            SELECT d2.ID_EQUIPMENTS, d2.ID_TELESCOPE
-            FROM OBS_QC_PROCESSING_RUN r
-            INNER JOIN OBS_DRAFT d2 ON d2.ID = r.DRAFT_ID;
-            """
-        )
         self.conn.commit()
-
-    def _ensure_final_data_view(self) -> None:
-        cur = self.conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='view' AND name='FINAL_DATA' LIMIT 1;"
-        )
-        if cur.fetchone() is not None:
-            return
-        self._rebuild_final_data_view()
 
     def _ensure_master_sources_table(self) -> None:
         self.conn.execute(
@@ -1411,8 +1363,7 @@ class VyvarDatabase:
                 EXCLUSION_REASON TEXT,
                 STRESS_RMS REAL,
                 SAFE_OVERRIDE INTEGER DEFAULT 0,
-                CREATED_AT TEXT NOT NULL,
-                FOREIGN KEY (DRAFT_ID) REFERENCES OBS_DRAFT (ID) ON DELETE SET NULL
+                CREATED_AT TEXT NOT NULL
             );
             """
         )
@@ -1573,29 +1524,19 @@ class VyvarDatabase:
         )"""
 
     def count_final_data_for_equipment_id(self, equipment_id: int) -> int:
-        self._ensure_final_data_view()
-        cur = self.conn.execute(
-            "SELECT COUNT(*) FROM FINAL_DATA WHERE equipment_id = ?;",
-            (int(equipment_id),),
-        )
-        row = cur.fetchone()
-        return int(row[0]) if row is not None else 0
+        from draft_provenance import count_manifest_final_data_for_equipment
+
+        return int(count_manifest_final_data_for_equipment(self, int(equipment_id)))
 
     def count_final_data_for_telescope_id(self, telescope_id: int) -> int:
-        self._ensure_final_data_view()
-        cur = self.conn.execute(
-            "SELECT COUNT(*) FROM FINAL_DATA WHERE telescope_id = ?;",
-            (int(telescope_id),),
-        )
-        row = cur.fetchone()
-        return int(row[0]) if row is not None else 0
+        from draft_provenance import count_manifest_final_data_for_telescope
+
+        return int(count_manifest_final_data_for_telescope(self, int(telescope_id)))
 
     def count_references_to_location_id(self, location_id: int) -> int:
-        cur = self.conn.execute(
-            "SELECT COUNT(*) FROM OBS_DRAFT WHERE ID_LOCATION = ?;",
-            (int(location_id),),
-        )
-        return int(cur.fetchone()[0])
+        from draft_provenance import count_manifest_references_to_location_id
+
+        return int(count_manifest_references_to_location_id(self, int(location_id)))
 
     @staticmethod
     def normalize_active_db_value(raw: Any) -> int:
@@ -1677,12 +1618,12 @@ class VyvarDatabase:
     ) -> dict[str, int]:
         """Apply INSERT/UPDATE/DELETE from a Streamlit ``data_editor`` diff.
 
-        Only ``EQUIPMENTS``, ``TELESCOPE``, ``LOCATION``, ``OBS_DRAFT`` are allowed.
+        Only ``EQUIPMENTS``, ``TELESCOPE``, ``LOCATION``, ``DRAFT_MANIFEST`` are allowed.
 
         **EQUIPMENTS / TELESCOPE:** a row removed from the editor is **not** ``DELETE``-d; ``ACTIVE`` is set
         to **0** (soft-delete). Physical ``DELETE`` for those tables is never performed from this API.
-        **OBS_DRAFT:** manifest refresh after commit when rig FK ids may have changed.
-        **LOCATION:** physical delete with reference checks (``FINAL_DATA`` / FK usage).
+        **DRAFT_MANIFEST:** manifest-direct save (no SQL staging table).
+        **LOCATION:** physical delete with reference checks (manifest rig ``location_id`` usage).
         """
         import pandas as pd_local
 
@@ -1751,15 +1692,12 @@ class VyvarDatabase:
         updated = 0
         deleted = 0
         soft_deactivated = 0
-        obs_draft_manifest_refresh: set[int] = set()
 
-        pragma_cols = [r[1] for r in self.conn.execute(f"PRAGMA table_info({table});").fetchall()]
-        insert_colnames = [c for c in pragma_cols if c != pk_col]
-
-        if table == "OBS_DRAFT":
+        if table == "DRAFT_MANIFEST":
             from draft_provenance import (
                 _optional_float,
                 _optional_int,
+                clear_manifest_shadow_load_cache,
                 load_or_init_manifest,
                 patch_draft_manifest,
                 resolve_draft_dir_for_id,
@@ -1832,6 +1770,7 @@ class VyvarDatabase:
                         center=center,
                     )
                     updated += 1
+            clear_manifest_shadow_load_cache()
             return {
                 "inserted": inserted,
                 "updated": updated,
@@ -1839,11 +1778,12 @@ class VyvarDatabase:
                 "soft_deactivated": 0,
             }
 
+        pragma_cols = [r[1] for r in self.conn.execute(f"PRAGMA table_info({table});").fetchall()]
+        insert_colnames = [c for c in pragma_cols if c != pk_col]
+
         try:
             self.conn.execute("BEGIN;")
             for did in sorted(deleted_ids):
-                if table == "OBS_DRAFT":
-                    obs_draft_manifest_refresh.add(int(did))
                 if table in ("EQUIPMENTS", "TELESCOPE"):
                     if "ACTIVE" not in pragma_cols:
                         raise ValueError(f"Tabulka {table} nema stlpec ACTIVE - soft-delete nie je mozny.")
@@ -1857,7 +1797,7 @@ class VyvarDatabase:
                     n = self.count_references_to_location_id(did)
                     if n > 0:
                         raise ValueError(
-                            f"Lokalitu ID={did} nie je mozne zmazat: {n} odkazov v OBS_DRAFT."
+                            f"Lokalitu ID={did} nie je mozne zmazat: {n} odkazov v draft manifestoch."
                         )
                 self.conn.execute(f"DELETE FROM {table} WHERE {pk_col} = ?;", (did,))
                 deleted += 1
@@ -1885,8 +1825,6 @@ class VyvarDatabase:
                 params = list(changes.values()) + [pid]
                 self.conn.execute(f"UPDATE {table} SET {set_sql} WHERE {pk_col} = ?;", params)
                 updated += 1
-                if table == "OBS_DRAFT":
-                    obs_draft_manifest_refresh.add(int(pid))
 
             for row in new_rows:
                 vals: list[Any] = []
@@ -1900,8 +1838,6 @@ class VyvarDatabase:
                     vals,
                 )
                 inserted += 1
-                if table == "OBS_DRAFT":
-                    obs_draft_manifest_refresh.add(int(ins_cur.lastrowid))
 
             # Enforce exactly-one IS_DEFAULT when the user explicitly checked a new row.
             if (
@@ -1919,13 +1855,6 @@ class VyvarDatabase:
             self.conn.rollback()
             raise
 
-        if table == "OBS_DRAFT":
-            from draft_provenance import clear_manifest_shadow_load_cache
-
-            clear_manifest_shadow_load_cache()
-            for did in sorted(obs_draft_manifest_refresh):
-                self._try_refresh_draft_manifest(int(did))
-
         return {
             "inserted": inserted,
             "updated": updated,
@@ -1941,8 +1870,7 @@ class VyvarDatabase:
                 ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 PROCESSING_HASH TEXT NOT NULL UNIQUE,
                 DRAFT_ID INTEGER NOT NULL,
-                CREATED_AT TEXT NOT NULL,
-                FOREIGN KEY (DRAFT_ID) REFERENCES OBS_DRAFT (ID) ON DELETE CASCADE
+                CREATED_AT TEXT NOT NULL
             );
             """
         )
@@ -2245,20 +2173,11 @@ class VyvarDatabase:
         return int(clear_manifest_files_for_processed_drafts(self))
 
     def maintenance_nuke_obs_files_and_drafts_preserve_qc_snapshots(self) -> tuple[int, int]:
-        """Clear manifest ``files[]`` and remove ``OBS_DRAFT`` SQL rows (staging reset).
-
-        Temporarily disables foreign-key enforcement only for the ``OBS_DRAFT`` delete so that
-        ``OBS_QC_PROCESSING_RUN`` / ``OBS_QC_PROCESSING_FILE`` are **not** CASCADE-deleted.
-        """
-        from draft_provenance import clear_all_manifest_files
+        """Clear manifest ``files[]`` on all drafts (staging reset; QC snapshots preserved)."""
+        from draft_provenance import clear_all_manifest_files, count_draft_manifest_dirs
 
         n_files = int(clear_all_manifest_files(self))
-        self.conn.execute("PRAGMA foreign_keys = OFF;")
-        try:
-            cur_d = self.conn.execute("DELETE FROM OBS_DRAFT;")
-            n_drafts = int(cur_d.rowcount) if cur_d.rowcount is not None and cur_d.rowcount >= 0 else 0
-        finally:
-            self.conn.execute("PRAGMA foreign_keys = ON;")
+        n_drafts = int(count_draft_manifest_dirs(self))
         self.conn.commit()
         return (n_files, n_drafts)
 
@@ -2819,40 +2738,6 @@ class VyvarDatabase:
         ).fetchone()
         return row is not None
 
-    def _ensure_obs_draft_masterstar_path_column(self) -> None:
-        """Schema migration: persist resolved MASTERSTAR path per draft."""
-        cursor = self.conn.execute("PRAGMA table_info('OBS_DRAFT');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        if "MASTERSTAR_PATH" not in cols:
-            self.conn.execute("ALTER TABLE OBS_DRAFT ADD COLUMN MASTERSTAR_PATH TEXT;")
-        if "MASTERSTAR_FITS_PATH" not in cols:
-            self.conn.execute("ALTER TABLE OBS_DRAFT ADD COLUMN MASTERSTAR_FITS_PATH TEXT;")
-        self.conn.commit()
-
-    def _ensure_obs_draft_status_panel_columns(self) -> None:
-        """Schema migration: optional persisted status-panel optics values on draft."""
-        cursor = self.conn.execute("PRAGMA table_info('OBS_DRAFT');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        if "FOCAL_MM" not in cols:
-            self.conn.execute("ALTER TABLE OBS_DRAFT ADD COLUMN FOCAL_MM REAL;")
-        if "PIXEL_UM" not in cols:
-            self.conn.execute("ALTER TABLE OBS_DRAFT ADD COLUMN PIXEL_UM REAL;")
-        self.conn.commit()
-
-    def _ensure_obs_draft_calibration_mode_column(self) -> None:
-        """Schema migration: provenance flag for VYVAR vs pre-calibrated ingest."""
-        cursor = self.conn.execute("PRAGMA table_info('OBS_DRAFT');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        if "CALIBRATION_MODE" not in cols:
-            self.conn.execute(
-                "ALTER TABLE OBS_DRAFT ADD COLUMN CALIBRATION_MODE TEXT DEFAULT 'vyvar_calibrated';"
-            )
-            self.conn.execute(
-                "UPDATE OBS_DRAFT SET CALIBRATION_MODE = 'vyvar_calibrated' "
-                "WHERE CALIBRATION_MODE IS NULL;"
-            )
-        self.conn.commit()
-
     def set_obs_draft_calibration_mode(self, draft_id: int, calibration_mode: str) -> None:
         from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
 
@@ -3035,12 +2920,50 @@ class VyvarDatabase:
             self.conn.execute("DROP TABLE IF EXISTS SCANNING;")
             self.conn.execute("DROP TABLE IF EXISTS OBSERVATION;")
             self.conn.execute("DROP TABLE IF EXISTS OBS_FILES;")
-            self._rebuild_final_data_view()
+            self._rebuild_qc_tables_without_obs_draft_fk()
+            self._drop_final_data_view()
+            self.conn.execute("DROP TABLE IF EXISTS OBS_DRAFT;")
             self.conn.execute("DROP TABLE IF EXISTS SETTINGS;")
             self.conn.execute("DROP TABLE IF EXISTS PHOTOMETRY_LIGHT_CURVE;")
             self.conn.commit()
         finally:
             self.conn.execute("PRAGMA foreign_keys = ON;")
+
+    def _qc_run_has_obs_draft_fk(self) -> bool:
+        legacy_draft = "OBS" + "_DRAFT"
+        try:
+            for row in self.conn.execute("PRAGMA foreign_key_list('OBS_QC_PROCESSING_RUN');"):
+                if str(row[2]).upper() == legacy_draft:
+                    return True
+        except sqlite3.Error:
+            return False
+        return False
+
+    def _rebuild_qc_tables_without_obs_draft_fk(self) -> None:
+        """Remove legacy draft-table FK from QC run table on older databases."""
+        if not self._qc_run_has_obs_draft_fk():
+            return
+        self.conn.execute("ALTER TABLE OBS_QC_PROCESSING_RUN RENAME TO OBS_QC_PROCESSING_RUN_OLD;")
+        self.conn.execute(
+            """
+            CREATE TABLE OBS_QC_PROCESSING_RUN (
+                ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                PROCESSING_HASH TEXT NOT NULL UNIQUE,
+                DRAFT_ID INTEGER NOT NULL,
+                CREATED_AT TEXT NOT NULL
+            );
+            """
+        )
+        self.conn.execute(
+            """
+            INSERT INTO OBS_QC_PROCESSING_RUN (ID, PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+            SELECT ID, PROCESSING_HASH, DRAFT_ID, CREATED_AT FROM OBS_QC_PROCESSING_RUN_OLD;
+            """
+        )
+        self.conn.execute("DROP TABLE OBS_QC_PROCESSING_RUN_OLD;")
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS IDX_QC_PROC_RUN_DRAFT ON OBS_QC_PROCESSING_RUN (DRAFT_ID);"
+        )
 
     def _drop_equipments_focal_column(self) -> None:
         """One-time migration: focal length belongs on TELESCOPE, not EQUIPMENTS."""
@@ -3274,11 +3197,11 @@ class VyvarDatabase:
             return None
 
     def get_combined_metadata(self, file_path: str | Path, draft_id: int) -> dict[str, Any]:
-        """Merge FITS primary header with ``OBS_DRAFT`` -> ``TELESCOPE`` / ``EQUIPMENTS`` SQL fallbacks.
+        """Merge FITS primary header with ``draft manifest`` -> ``TELESCOPE`` / ``EQUIPMENTS`` SQL fallbacks.
 
         - Focal: plausible FITS keywords first; else ``TELESCOPE.FOCAL`` for the draft telescope.
         - Native pixel [um]: FITS ``PIXSIZE*`` / ``XPIXSZ`` ...; else ``EQUIPMENTS.PIXELSIZE`` via draft join
-          (same as ``get_equipment_pixel_size_um`` on ``OBS_DRAFT.ID_EQUIPMENTS``).
+          (same as ``get_equipment_pixel_size_um`` on ``draft manifest.ID_EQUIPMENTS``).
         - **Binning:** ``XBINNING`` / ``BINNING`` (supports ``2x2`` strings); if header says 1x1 but
           ``NAXIS`` matches ``EQUIPMENTS.SENSORSIZE`` at 2x/3x/4x, binning is inferred. Effective pixel
           is ``native_pixel_um * XBINNING``.
@@ -3290,7 +3213,7 @@ class VyvarDatabase:
         fp = Path(file_path)
         did = int(draft_id)
         if self._draft_rig_resolve_row(did) is None:
-            raise ValueError(f"OBS_DRAFT id={did} not found.")
+            raise ValueError(f"Draft id={did} not found.")
 
         id_eq = self.get_draft_equipment_id(did)
         id_tel = self.get_draft_telescope_id(did)
@@ -3451,7 +3374,7 @@ class VyvarDatabase:
         ]
         if missing:
             raise ValueError(
-                "Cannot create observation draft (INSERT INTO OBS_DRAFT): missing database row(s): "
+                "Cannot create observation draft: missing database row(s): "
                 + ", ".join(missing)
                 + ". Add the required rows in Database Explorer or import with valid FITS metadata."
             )
@@ -3723,7 +3646,7 @@ class VyvarDatabase:
         return out
 
     def create_draft(self, data: dict[str, Any]) -> int:
-        """Create an ingestion draft (manifest-direct; no OBS_DRAFT SQL)."""
+        """Create an ingestion draft (manifest-direct; no draft manifest SQL)."""
         id_equipments = int(data.get("id_equipments", 1))
         id_telescope = int(data.get("id_telescope", 1))
         id_location = int(data.get("id_location", 1))

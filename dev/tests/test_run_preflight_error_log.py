@@ -20,7 +20,7 @@ def test_write_run_preflight_error_log_creates_file(tmp_path: Path) -> None:
     db = VyvarDatabase(data_root / "vyvar.sqlite3")
     db.insert_location(place_name="Site", latitude=50.0, longitude=14.0, altitude=300.0)
     exc = ValueError(
-        "Cannot create observation draft (INSERT INTO OBS_DRAFT): missing observatory location (id=2)"
+        "Cannot create observation draft: missing database row(s): observatory location (id=2)"
     )
     path = write_run_preflight_error_log(
         data_root,
@@ -34,7 +34,7 @@ def test_write_run_preflight_error_log_creates_file(tmp_path: Path) -> None:
     assert path.name.startswith("run_preflight_error_")
     text = path.read_text(encoding="utf-8")
     assert "Scan Source + Import + calibration" in text
-    assert "INSERT INTO OBS_DRAFT" in text
+    assert "missing database row" in text
     assert "LOCATION:" in text
     assert "observer_location_id=2" in text
     assert "Traceback" in text or "traceback:" in text

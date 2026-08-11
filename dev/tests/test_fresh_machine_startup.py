@@ -36,7 +36,7 @@ _FRESH_CONFIG = """// fresh-machine config.json (paths blanked by the installer)
 }
 """
 
-_REQUIRED_TABLES = {"EQUIPMENTS", "TELESCOPE", "LOCATION", "OBS_DRAFT"}
+_REQUIRED_TABLES = {"EQUIPMENTS", "TELESCOPE", "LOCATION"}
 
 
 def _fresh_root(tmp_path: Path) -> Path:

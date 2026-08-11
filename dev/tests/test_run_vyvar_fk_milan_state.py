@@ -183,7 +183,7 @@ def test_milan_state_stale_location_without_fallback_raises_clear_preflight(tmp_
         ).lastrowid
     )
     scan = 42
-    with pytest.raises(ValueError, match="INSERT INTO OBS_DRAFT.*observatory location"):
+    with pytest.raises(ValueError, match="observatory location"):
         db.create_draft(
             {
                 "id_equipments": eq,

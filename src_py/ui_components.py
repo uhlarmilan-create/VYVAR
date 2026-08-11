@@ -39,7 +39,7 @@ def persist_draft_center_on_change(
     focal_key: str = DRAFT_FOCAL_MM_STATE_KEY,
     pixel_key: str = DRAFT_PIXEL_UM_STATE_KEY,
 ) -> None:
-    """Persist status-panel values from session state to ``OBS_DRAFT`` on widget change."""
+    """Persist status-panel values from session state to ``draft manifest`` on widget change."""
     if draft_id is None:
         return
     try:

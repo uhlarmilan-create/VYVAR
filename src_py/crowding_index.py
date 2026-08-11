@@ -79,7 +79,7 @@ def _load_wcs_meta(ms_fits: Path) -> dict[str, Any]:
 
 
 def _gain_rn_for_draft(db: Any, draft_id: int) -> tuple[float, float, str]:
-    """(gain e-/ADU, read_noise e-, source) from EQUIPMENTS via OBS_DRAFT."""
+    """(gain e-/ADU, read_noise e-, source) from EQUIPMENTS via draft manifest."""
     try:
         eid = db.get_draft_equipment_id(int(draft_id)) if hasattr(db, "get_draft_equipment_id") else None
         if eid:

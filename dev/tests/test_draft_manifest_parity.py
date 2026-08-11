@@ -11,7 +11,7 @@ from draft_provenance import (
 )
 
 
-def test_backfill_writes_manifest_from_legacy_sql(tmp_path) -> None:
+def test_backfill_returns_existing_manifest_path(tmp_path) -> None:
     from database import VyvarDatabase
     from tools.reference_seed import seed_reference_observatory
 
@@ -19,20 +19,21 @@ def test_backfill_writes_manifest_from_legacy_sql(tmp_path) -> None:
     db = VyvarDatabase(db_path)
     db._archive_root_override = tmp_path
     seed_reference_observatory(db)
-    archive = tmp_path / "draft_000001"
+
+    draft_id = db.create_draft(
+        {
+            "id_equipments": 1,
+            "id_telescope": 1,
+            "id_location": 1,
+            "id_scanning": 1,
+            "observation_start_jd": 2450000.5,
+            "is_calibrated": 0,
+        }
+    )
+    archive = resolve_draft_dir_for_id(db, int(draft_id))
+    assert archive is not None
     lights = archive / "calibrated" / "lights"
     lights.mkdir(parents=True)
-
-    draft_id = 1
-    db.conn.execute(
-        """
-        INSERT INTO OBS_DRAFT (ID, ID_EQUIPMENTS, ID_TELESCOPE, ID_LOCATION, ID_SCANNING,
-            OBSERVATIONSTARTJD, STATUS, ARCHIVE_PATH, LIGHTS_PATH, IS_CALIBRATED)
-        VALUES (?, 1, 1, 1, 1, 2450000.5, 'INGESTED', ?, ?, 0);
-        """,
-        (int(draft_id), str(archive), str(lights)),
-    )
-    db.conn.commit()
     db.update_draft_import_log(
         int(draft_id),
         lights_path=str(lights),

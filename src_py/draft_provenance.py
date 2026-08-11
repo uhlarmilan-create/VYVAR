@@ -274,7 +274,7 @@ def apply_manifest_core_to_draft_row(
     *,
     db: Any | None = None,
 ) -> None:
-    """Overlay manifest-first rig ids and core draft fields onto an OBS_DRAFT row dict."""
+    """Overlay manifest-first rig ids and core draft fields onto an draft manifest row dict."""
     apply_manifest_rig_to_draft_row(int(draft_id), row_dict, db=db)
     did = int(draft_id)
     root = _resolve_archive_root_for_shadow(did, row_dict, db)
@@ -311,7 +311,7 @@ def apply_manifest_rig_to_draft_row(
     db: Any | None = None,
     fields: frozenset[str] | None = None,
 ) -> None:
-    """Overlay manifest-first rig FK ids onto an OBS_DRAFT row dict (in place)."""
+    """Overlay manifest-first rig FK ids onto an draft manifest row dict (in place)."""
     want = fields or frozenset(_RIG_MANIFEST_TO_DB.keys())
     for man_key, db_col in _RIG_MANIFEST_TO_DB.items():
         if man_key not in want:
@@ -338,7 +338,7 @@ def draft_archive_root(archive_path: Path | str) -> Path:
 
 
 def resolve_draft_archive_root_from_row(row: dict[str, Any]) -> Path | None:
-    """Resolve draft archive root from an OBS_DRAFT row (ARCHIVE_PATH, else LIGHTS_PATH)."""
+    """Resolve draft archive root from an draft manifest row (ARCHIVE_PATH, else LIGHTS_PATH)."""
     arch = row.get("ARCHIVE_PATH")
     if arch is not None and str(arch).strip():
         return draft_archive_root(str(arch).strip())
@@ -607,6 +607,85 @@ def clear_all_manifest_files(db: Any) -> int:
     return int(cleared)
 
 
+def _manifest_rig_pair(manifest: dict[str, Any]) -> tuple[int | None, int | None]:
+    rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
+    return (_optional_int(rig.get("equipment_id")), _optional_int(rig.get("telescope_id")))
+
+
+def iter_manifest_final_data_pairs(
+    archive_root: Path | str,
+    db: Any | None = None,
+) -> list[tuple[int | None, int | None]]:
+    """Equipment/telescope id pairs referenced by draft manifests and QC runs (FINAL_DATA source)."""
+    pairs: list[tuple[int | None, int | None]] = []
+    seen: set[tuple[int | None, int | None]] = set()
+
+    def _add(manifest: dict[str, Any]) -> None:
+        key = _manifest_rig_pair(manifest)
+        if key not in seen:
+            seen.add(key)
+            pairs.append(key)
+
+    for _did, apath in iter_draft_archive_dirs(archive_root):
+        manifest = load_draft_manifest(apath)
+        if manifest:
+            _add(manifest)
+
+    if db is not None and hasattr(db, "conn"):
+        try:
+            for row in db.conn.execute("SELECT DISTINCT DRAFT_ID FROM OBS_QC_PROCESSING_RUN;"):
+                did = int(row["DRAFT_ID"])
+                root = resolve_draft_dir_for_id(db, did)
+                if root is None:
+                    continue
+                manifest = load_draft_manifest(root)
+                if manifest:
+                    _add(manifest)
+        except Exception:  # noqa: BLE001
+            pass
+    return pairs
+
+
+def count_manifest_final_data_for_equipment(db: Any, equipment_id: int) -> int:
+    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
+    if archive_root is None:
+        return 0
+    want = int(equipment_id)
+    return sum(1 for eq, _tel in iter_manifest_final_data_pairs(archive_root, db) if eq == want)
+
+
+def count_manifest_final_data_for_telescope(db: Any, telescope_id: int) -> int:
+    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
+    if archive_root is None:
+        return 0
+    want = int(telescope_id)
+    return sum(1 for _eq, tel in iter_manifest_final_data_pairs(archive_root, db) if tel == want)
+
+
+def count_manifest_references_to_location_id(db: Any, location_id: int) -> int:
+    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
+    if archive_root is None:
+        return 0
+    want = int(location_id)
+    n = 0
+    for _did, apath in iter_draft_archive_dirs(archive_root):
+        manifest = load_draft_manifest(apath)
+        if not manifest:
+            continue
+        rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
+        loc = _optional_int(rig.get("location_id"))
+        if loc == want:
+            n += 1
+    return int(n)
+
+
+def count_draft_manifest_dirs(db: Any) -> int:
+    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
+    if archive_root is None:
+        return 0
+    return len(iter_draft_archive_dirs(archive_root))
+
+
 def _manifest_file_entry_mismatch(label: str, db_val: Any, man_val: Any) -> str | None:
     if db_val != man_val:
         return f"{label} DB={db_val!r} manifest={man_val!r}"
@@ -828,17 +907,11 @@ def resolve_draft_dir_for_id(db: Any, draft_id: int) -> Path | None:
 
 
 def allocate_next_draft_id(archive_root: Path | str, db: Any | None = None) -> int:
-    """Next draft id from filesystem scan (and optional legacy DB MAX during transition)."""
+    """Next draft id from filesystem scan of ``Archive/Drafts/draft_*``."""
+    _ = db
     max_id = 0
     for did, _ in iter_draft_archive_dirs(archive_root):
         max_id = max(max_id, int(did))
-    if db is not None and hasattr(db, "conn"):
-        try:
-            row = db.conn.execute("SELECT MAX(ID) AS m FROM OBS_DRAFT;").fetchone()
-            if row is not None and row["m"] is not None:
-                max_id = max(max_id, int(row["m"]))
-        except Exception:  # noqa: BLE001
-            pass
     return int(max_id) + 1
 
 
@@ -927,7 +1000,7 @@ def patch_draft_manifest(
 
 
 def fetch_obs_draft_row_manifest(db: Any, draft_id: int) -> dict[str, Any] | None:
-    """Load OBS_DRAFT-shaped row from manifest (sole store)."""
+    """Load draft manifest-shaped row from manifest (sole store)."""
     root = resolve_draft_dir_for_id(db, int(draft_id))
     if root is None:
         return None
@@ -944,7 +1017,7 @@ def create_draft_manifest(
     archive_root: Path | str,
     data: dict[str, Any],
 ) -> int:
-    """Allocate draft id and write initial manifest (no OBS_DRAFT SQL)."""
+    """Allocate draft id and write initial manifest (no draft manifest SQL)."""
     did = allocate_next_draft_id(archive_root, db)
     draft_dir = Path(archive_root).expanduser().resolve() / "Drafts" / f"draft_{did:06d}"
     draft_dir.mkdir(parents=True, exist_ok=True)
@@ -1126,46 +1199,14 @@ def resolve_calibration_mode(
 
 
 def backfill_draft_manifest_from_db(db: Any, draft_id: int) -> Path | None:
-    """One-time migration: ensure manifest exists (legacy SQL core fields only)."""
-    if not hasattr(db, "conn"):
-        return None
-    row = db.conn.execute("SELECT * FROM OBS_DRAFT WHERE ID = ?;", (int(draft_id),)).fetchone()
-    if row is None:
-        return None
-    row_dict = dict(row)
-    root = resolve_draft_archive_root_from_row(row_dict)
+    """Ensure manifest exists for a draft archive dir (legacy SQL source retired)."""
+    root = resolve_draft_dir_for_id(db, int(draft_id))
     if root is None:
         return None
-    existing = load_draft_manifest(root)
     manifest_path = root / _MANIFEST_NAME
     if manifest_path.is_file():
         return manifest_path
-    extra: dict[str, Any] = {}
-    mode = resolve_calibration_mode(draft_id=int(draft_id), archive_path=root)
-    jd_val = _optional_float(row_dict.get("OBSERVATIONSTARTJD"))
-    if jd_val is not None and jd_val == 0.0:
-        jd_val = None
-    try:
-        is_cal = 0 if row_dict.get("IS_CALIBRATED") is None else (1 if int(row_dict["IS_CALIBRATED"]) != 0 else 0)
-    except (TypeError, ValueError):
-        is_cal = 0
-    final_obs = row_dict.get("FINAL_OBSERVATION_ID")
-    final_obs_s = str(final_obs).strip() if final_obs is not None and str(final_obs).strip() else None
-    files = existing.get("files") if isinstance(existing.get("files"), list) else []
-    return write_draft_manifest(
-        root,
-        draft_id=int(draft_id),
-        calibration_mode=mode,
-        extra=extra or None,
-        rig=_rig_from_draft_row(row_dict),
-        paths=_paths_from_draft_row(row_dict),
-        status=str(row_dict.get("STATUS") or "").strip() or None,
-        final_observation_id=final_obs_s,
-        is_calibrated=is_cal,
-        center=_center_from_draft_row(row_dict),
-        observation_start_jd=jd_val,
-        files=list(files),
-    )
+    return None
 
 
 def record_draft_manifest_core(db: Any, draft_id: int) -> Path | None:
@@ -1269,7 +1310,7 @@ def iter_draft_archive_dirs(archive_root: Path | str) -> list[tuple[int, Path]]:
 
 
 def obs_draft_row_from_manifest(manifest: dict[str, Any], draft_id: int) -> dict[str, Any]:
-    """Build an OBS_DRAFT-shaped row dict from ``draft_manifest.json`` (UI display source)."""
+    """Build an draft manifest-shaped row dict from ``draft_manifest.json`` (UI display source)."""
     rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
     paths = manifest.get("paths") if isinstance(manifest.get("paths"), dict) else {}
     center = manifest.get("center") if isinstance(manifest.get("center"), dict) else {}
@@ -1296,7 +1337,7 @@ def obs_draft_row_from_manifest(manifest: dict[str, Any], draft_id: int) -> dict
 
 
 def collect_manifest_draft_rows(archive_root: Path | str) -> list[dict[str, Any]]:
-    """All draft rows for Database Explorer (manifest-first, no OBS_DRAFT SQL)."""
+    """All draft rows for Database Explorer (manifest-first, no draft manifest SQL)."""
     rows: list[dict[str, Any]] = []
     for did, apath in iter_draft_archive_dirs(archive_root):
         manifest = load_draft_manifest(apath)

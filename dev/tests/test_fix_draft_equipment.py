@@ -26,8 +26,9 @@ def _load_fix_module():
     return mod
 
 
-def _seed_equipment_db(db_path: Path) -> VyvarDatabase:
+def _seed_equipment_db(db_path: Path, archive_root: Path) -> VyvarDatabase:
     db = VyvarDatabase(db_path)
+    db._archive_root_override = archive_root
     # Reference fixture (C5A-150M id=4, Carl-Zeiss id=1, ...) - not product seed.
     seed_reference_observatory(db)
     db.conn.execute(
@@ -45,11 +46,17 @@ def _seed_equipment_db(db_path: Path) -> VyvarDatabase:
         WHERE ID = 4;
         """
     )
-    db.conn.execute(
-        """
-        INSERT INTO OBS_DRAFT (ID, ID_EQUIPMENTS, ID_TELESCOPE)
-        VALUES (426, 4, 1);
-        """
+    draft_dir = archive_root / "Drafts" / "draft_000426"
+    draft_dir.mkdir(parents=True)
+    from draft_provenance import write_draft_manifest
+
+    write_draft_manifest(
+        draft_dir,
+        draft_id=426,
+        calibration_mode="vyvar_calibrated",
+        rig={"equipment_id": 4, "telescope_id": 1, "location_id": 1, "scanning_id": 1},
+        paths={"archive": str(draft_dir.resolve())},
+        files=[],
     )
     db.conn.commit()
     return db
@@ -82,7 +89,7 @@ def _write_sample_fits(
 
 def test_verify_draft_equipment_scores_c5a_geometry(tmp_path):
     db_path = tmp_path / "vyvar.db"
-    _seed_equipment_db(db_path)
+    _seed_equipment_db(db_path, tmp_path)
     draft_dir = tmp_path / "Drafts" / "draft_000426"
     _write_sample_fits(draft_dir)
 

@@ -189,7 +189,7 @@ def test_fix4_7_optics_draft_override_read_fail_counts(
     assert eq == 1
     assert tel == 2
     assert get_except_fix_counters().optics_draft_override_read_fail == 1
-    assert any("OBS_DRAFT override read failed" in r.message for r in caplog.records)
+    assert any("draft manifest override read failed" in r.message for r in caplog.records)
 
 
 # --------------------------------------------------------------------------- #

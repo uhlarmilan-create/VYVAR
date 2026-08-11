@@ -131,7 +131,7 @@ def test_obs_draft_editor_save_writes_manifest_rig(tmp_path) -> None:
     edited.loc[0, "ID_TELESCOPE"] = 8
 
     stats = db.apply_main_table_editor_save(
-        "OBS_DRAFT",
+        "DRAFT_MANIFEST",
         "ID",
         orig,
         edited,

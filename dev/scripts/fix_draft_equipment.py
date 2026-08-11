@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Maintenance: verify and correct OBS_DRAFT.ID_EQUIPMENTS from FITS header evidence."""
+"""Maintenance: verify and correct draft manifest equipment_id from FITS header evidence."""
 
 from __future__ import annotations
 
@@ -103,12 +103,11 @@ def verify_draft_equipment(
     cfg: AppConfig,
 ) -> dict[str, Any]:
     db = VyvarDatabase(cfg.database_path)
-    draft_row = db.conn.execute(
-        "SELECT ID, ID_EQUIPMENTS, ID_TELESCOPE FROM OBS_DRAFT WHERE ID = ?;",
-        (int(draft_id),),
-    ).fetchone()
+    if getattr(cfg, "archive_root", None):
+        db._archive_root_override = Path(str(cfg.archive_root))
+    draft_row = db.fetch_obs_draft_by_id(int(draft_id))
     if draft_row is None:
-        return {"draft_id": draft_id, "error": "OBS_DRAFT not found"}
+        return {"draft_id": draft_id, "error": "draft manifest not found"}
     current_eq = int(draft_row["ID_EQUIPMENTS"]) if draft_row["ID_EQUIPMENTS"] is not None else None
     eq_rows = [
         dict(r)
@@ -172,7 +171,7 @@ def verify_draft_equipment(
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--draft", type=int, required=True, help="OBS_DRAFT.ID to verify/fix")
+    ap.add_argument("--draft", type=int, required=True, help="Draft id to verify/fix")
     ap.add_argument("--apply", action="store_true", help="Write DB update when verified != current")
     ap.add_argument("--json", action="store_true", help="Print verification JSON")
     args = ap.parse_args()
@@ -206,16 +205,21 @@ def main() -> None:
         return
 
     if args.apply:
+        from draft_provenance import load_or_init_manifest, patch_draft_manifest, resolve_draft_dir_for_id
+
         db = VyvarDatabase(cfg.database_path)
-        db.conn.execute(
-            "UPDATE OBS_DRAFT SET ID_EQUIPMENTS = ? WHERE ID = ?;",
-            (int(verified), int(args.draft)),
-        )
-        db.conn.commit()
-        after = db.conn.execute(
-            "SELECT ID_EQUIPMENTS FROM OBS_DRAFT WHERE ID = ?;", (int(args.draft),)
-        ).fetchone()
-        print(f"Applied: ID_EQUIPMENTS {cur} -> {after['ID_EQUIPMENTS']}")
+        if getattr(cfg, "archive_root", None):
+            db._archive_root_override = Path(str(cfg.archive_root))
+        root = resolve_draft_dir_for_id(db, int(args.draft))
+        if root is None:
+            print("STOP: draft archive dir not found.")
+            return
+        manifest = load_or_init_manifest(root, int(args.draft))
+        rig = dict(manifest.get("rig") or {})
+        rig["equipment_id"] = int(verified)
+        patch_draft_manifest(root, int(args.draft), rig=rig)
+        after = db.fetch_obs_draft_by_id(int(args.draft))
+        print(f"Applied: ID_EQUIPMENTS {cur} -> {after['ID_EQUIPMENTS'] if after else None}")
     else:
         print(f"Would set ID_EQUIPMENTS={verified} (dry-run; pass --apply)")
 

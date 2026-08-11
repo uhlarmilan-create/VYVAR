@@ -1384,7 +1384,7 @@ def _resolve_phase2a_equipment_id(
     output_dir: Path,
     masterstar_fits_path: Path,
 ) -> int | None:
-    """``OBS_DRAFT.ID_EQUIPMENTS`` from ``draft_id`` or path segment ``draft_NNN``."""
+    """``draft manifest.ID_EQUIPMENTS`` from ``draft_id`` or path segment ``draft_NNN``."""
     if db is None:
         return None
     did = draft_id
@@ -1403,7 +1403,7 @@ def _resolve_phase2a_equipment_id(
         if hasattr(db, "get_draft_equipment_id"):
             return db.get_draft_equipment_id(int(did))
     except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0125] OBS_DRAFT equipment_id DB read fails - gain/RN resolver falls back without equipment scope: %s', exc)
+        logging.error('[EXC-0125] draft manifest equipment_id DB read fails - gain/RN resolver falls back without equipment scope: %s', exc)
         return None
     return None
 

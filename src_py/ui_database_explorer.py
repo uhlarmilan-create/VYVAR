@@ -1,4 +1,4 @@
-"""Database Explorer tab: table browser + draft manifest maintenance (OBS_DRAFT only)."""
+"""Database Explorer tab: reference tables + draft manifest maintenance."""
 
 from __future__ import annotations
 
@@ -45,8 +45,8 @@ def _row_active_for_style(row: pd.Series, col: str = "ACTIVE") -> bool:
     return True
 
 
-def _render_obs_draft_manifest_editor(pipeline: AstroPipeline, archive_root: Path) -> None:
-    """OBS_DRAFT editor: display from manifest; save via SQL + manifest refresh."""
+def _render_draft_manifest_editor(pipeline: AstroPipeline, archive_root: Path) -> None:
+    """Draft manifest editor: display and save via ``draft_manifest.json`` only."""
     draft_rows = collect_manifest_draft_rows(archive_root)
     draft_df = pd.DataFrame.from_records(draft_rows) if draft_rows else pd.DataFrame()
     if draft_df.empty:
@@ -54,7 +54,7 @@ def _render_obs_draft_manifest_editor(pipeline: AstroPipeline, archive_root: Pat
         return
     if "ID" in draft_df.columns:
         draft_df = draft_df.sort_values("ID", ascending=False).reset_index(drop=True)
-    st.caption("Source: ``draft_manifest.json``. Save writes OBS_DRAFT SQL then refreshes manifest.")
+    st.caption("Source: ``draft_manifest.json``. Save writes manifest fields directly.")
     editable_cols = [
         "ID_EQUIPMENTS",
         "ID_TELESCOPE",
@@ -78,13 +78,13 @@ def _render_obs_draft_manifest_editor(pipeline: AstroPipeline, archive_root: Pat
         width="stretch",
         num_rows="dynamic",
         disabled=disabled,
-        key="vyvar_universal_ed_OBS_DRAFT",
+        key="vyvar_universal_ed_DRAFT_MANIFEST",
         hide_index=True,
     )
-    if st.button("Save changes to database (OBS_DRAFT manifest)", key="vyvar_universal_save_OBS_DRAFT"):
+    if st.button("Save draft manifest changes", key="vyvar_universal_save_DRAFT_MANIFEST"):
         try:
             stats = pipeline.db.apply_main_table_editor_save(
-                "OBS_DRAFT",
+                "DRAFT_MANIFEST",
                 "ID",
                 draft_df,
                 edited,
@@ -142,7 +142,7 @@ def _render_universal_main_table(
     else:
         st.caption(
             "After **Save**, changes are written to SQL. For **LOCATION**, a row is **deleted** "
-            "only if nothing in OBS_DRAFT references it (otherwise an error)."
+            "only if nothing in draft manifests references it (otherwise an error)."
         )
     if extra_caption:
         st.caption(extra_caption)
@@ -205,11 +205,9 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
     st.subheader("Database Explorer")
     st.caption("Browse and validate VYVAR SQLite metadata (with basic consistency tools).")
 
-    conn = pipeline.db.conn
-
     table = st.selectbox(
         "Table",
-        options=["TELESCOPES", "EQUIPMENTS", "LOCATION", "OBS_DRAFT"],
+        options=["TELESCOPES", "EQUIPMENTS", "LOCATION"],
         index=0,
     )
 
@@ -254,15 +252,15 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
             editable_cols=["PLACENAME", "LATITUDE", "LONGITUDE", "ALTITUDE", "ACTIVE", "IS_DEFAULT"],
         )
 
-    elif table == "OBS_DRAFT":
-        archive_root = Path(pipeline.config.archive_root)
-        _render_obs_draft_manifest_editor(pipeline, archive_root)
-        st.info("OBS_DRAFT rows represent ingestion before astrometry finalization.")
+    st.divider()
+    st.subheader("Draft manifests")
+    archive_root = Path(pipeline.config.archive_root)
+    _render_draft_manifest_editor(pipeline, archive_root)
 
     st.divider()
     st.subheader("Draft Manifest Maintenance")
     st.caption(
-        "Clears ``draft_manifest.json`` ``files[]`` entries and **OBS_DRAFT** SQL rows. "
+        "Clears ``draft_manifest.json`` ``files[]`` entries. "
         "Does not touch **EQUIPMENTS**, **TELESCOPE**, or **OBS_QC_PROCESSING_*** (final hashes)."
     )
     _n_obs = pipeline.db.count_obs_files()
@@ -285,14 +283,14 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
         unsafe_allow_html=True,
     )
     st.error(
-        "Full staging reset: clear all draft manifest ``files[]`` and **DELETE FROM OBS_DRAFT**. "
-        "Hashtag tables **OBS_QC_PROCESSING_*** are left intact (may still reference missing draft IDs)."
+        "Full staging reset: clear all draft manifest ``files[]``. "
+        "Hashtag tables **OBS_QC_PROCESSING_*** are left intact."
     )
     if "vyvar_maint_nuke_gen" not in st.session_state:
         st.session_state["vyvar_maint_nuke_gen"] = 0
     _nuke_gen = int(st.session_state["vyvar_maint_nuke_gen"])
     _nuke_ok = st.checkbox(
-        "I understand the risks and want to clear all manifest files[] and OBS_DRAFT rows.",
+        "I understand the risks and want to clear all manifest files[] entries.",
         key=f"vyvar_dbx_maint_nuke_confirm_{_nuke_gen}",
     )
     _nuke_clicked = st.button(
@@ -300,12 +298,12 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
         key=f"vyvar_dbx_maint_nuke_go_{_nuke_gen}",
         disabled=not _nuke_ok,
         type="primary",
-        help="Clears all manifest files[] and OBS_DRAFT rows. EQUIPMENTS / TELESCOPE / OBS_QC_PROCESSING_* are unchanged.",
+        help="Clears all manifest files[]. EQUIPMENTS / TELESCOPE / OBS_QC_PROCESSING_* are unchanged.",
     )
     if _nuke_clicked:
         try:
             nf, nd = pipeline.db.maintenance_nuke_obs_files_and_drafts_preserve_qc_snapshots()
-            st.success(f"Cleared manifest file rows = {nf}, OBS_DRAFT rows = {nd}.")
+            st.success(f"Cleared manifest file rows = {nf} (draft folders = {nd}).")
         except Exception as exc:  # noqa: BLE001
             st.error(str(exc))
         st.session_state["vyvar_maint_nuke_gen"] = _nuke_gen + 1

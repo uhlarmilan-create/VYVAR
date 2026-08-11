@@ -91,12 +91,12 @@ def write_run_preflight_error_log(
 
 def _infer_failing_statement(exc: BaseException) -> str:
     msg = str(exc)
-    if "INSERT INTO OBS_DRAFT" in msg:
+    if "Cannot create observation draft" in msg or "missing database row" in msg:
         return msg
     if "FOREIGN KEY constraint failed" in msg:
         return (
             "sqlite INSERT with FOREIGN KEY constraint failed "
-            "(likely OBS_DRAFT id_location/id_scanning or stale config observer_location_id)"
+            "(likely draft manifest id_location/id_scanning or stale config observer_location_id)"
         )
     if "Observation references missing" in msg or "missing database row" in msg:
         return msg

@@ -242,7 +242,7 @@ _TRACKED_DEPS = ("numpy", "astropy", "photutils")
 
 
 def check_anchor_manifest_db_parity(report: SessionReport) -> None:
-    """Phase 1a: anchor draft manifest core fields match OBS_DRAFT."""
+    """Anchor draft: ``draft_manifest.json`` exists and is readable."""
     _ensure_import_paths()
     from config import AppConfig
     from database import VyvarDatabase
@@ -261,19 +261,7 @@ def check_anchor_manifest_db_parity(report: SessionReport) -> None:
 
     db = VyvarDatabase(db_path)
     try:
-        row = db.conn.execute(
-            """
-            SELECT ID FROM OBS_DRAFT
-            WHERE ID = ? OR ARCHIVE_PATH LIKE ?
-            ORDER BY ID
-            LIMIT 1;
-            """,
-            (int(DRAFT_ID), f"%{SNAPSHOT_NAME}%"),
-        ).fetchone()
-        if row is None:
-            report.add("manifest-db-parity", "WARN", f"draft {DRAFT_ID} not in DB")
-            return
-        did = int(row["ID"])
+        did = int(DRAFT_ID)
         backfill_draft_manifest_from_db(db, did)
         errors = manifest_db_parity_errors(db, did)
         if errors:

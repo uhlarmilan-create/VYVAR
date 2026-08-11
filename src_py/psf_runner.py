@@ -206,7 +206,7 @@ def _draft_equipment_id(db: VyvarDatabase, draft_id: int) -> int | None:
 
 
 def _draft_db_gain_e_per_adu(db: VyvarDatabase | None, draft_id: int) -> float | None:
-    """``EQUIPMENTS.GAIN_ADU`` pre ``OBS_DRAFT.ID_EQUIPMENTS``, ak je kladne."""
+    """``EQUIPMENTS.GAIN_ADU`` pre ``draft manifest.ID_EQUIPMENTS``, ak je kladne."""
     if db is None:
         return None
     eq_id = _draft_equipment_id(db, draft_id)
