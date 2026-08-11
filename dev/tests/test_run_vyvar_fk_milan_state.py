@@ -182,13 +182,7 @@ def test_milan_state_stale_location_without_fallback_raises_clear_preflight(tmp_
             ("Tel", "T", 200.0, 1000.0),
         ).lastrowid
     )
-    scan = db.insert_scanning(
-        exp_time=60.0,
-        filters="NoFilter",
-        binning=2,
-        sensor_temp=-10.0,
-        gain=100,
-    )
+    scan = 42
     with pytest.raises(ValueError, match="INSERT INTO OBS_DRAFT.*observatory location"):
         db.create_draft(
             {

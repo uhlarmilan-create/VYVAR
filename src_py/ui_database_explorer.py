@@ -146,7 +146,7 @@ def _render_universal_main_table(
         )
     else:
         st.caption(
-            "After **Save**, changes are written to SQL. For **LOCATION** / **SCANNING**, a row is **deleted** "
+            "After **Save**, changes are written to SQL. For **LOCATION**, a row is **deleted** "
             "only if nothing in OBS_DRAFT / OBSERVATION references it (otherwise an error)."
         )
     if extra_caption:
@@ -214,7 +214,7 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
 
     table = st.selectbox(
         "Table",
-        options=["TELESCOPES", "EQUIPMENTS", "LOCATION", "SCANNING", "OBS_DRAFT", "OBSERVATION", "OBS_FILES"],
+        options=["TELESCOPES", "EQUIPMENTS", "LOCATION", "OBS_DRAFT", "OBSERVATION", "OBS_FILES"],
         index=0,
     )
 
@@ -257,50 +257,6 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
             sql_name="LOCATION",
             ui_label="LOCATION",
             editable_cols=["PLACENAME", "LATITUDE", "LONGITUDE", "ALTITUDE", "ACTIVE", "IS_DEFAULT"],
-        )
-
-    elif table == "SCANNING":
-        st.caption(
-            "Reference table for exposure / filter / binning. Editor changes apply only to SCANNING columns."
-        )
-        with st.expander("Preview: Effective_Pixel_Size (reference EQUIPMENTS ID=1)", expanded=False):
-            scan_preview = _read_df(
-                conn,
-                """
-                SELECT
-                    s.*,
-                    e.PIXELSIZE AS Base_Pixel_Size_um,
-                    CASE
-                        WHEN s.BINNING = 22 THEN e.PIXELSIZE * 2.0
-                        ELSE e.PIXELSIZE
-                    END AS Effective_Pixel_Size_um
-                FROM SCANNING s
-                LEFT JOIN EQUIPMENTS e ON e.ID = 1
-                ORDER BY s.ID;
-                """,
-            )
-            if not scan_preview.empty and "BINNING" in scan_preview.columns:
-
-                def _highlight_binning_22(row: pd.Series) -> list[str]:
-                    try:
-                        is_22 = int(row["BINNING"]) == 22
-                    except Exception:  # noqa: BLE001
-                        is_22 = False
-                    return ["background-color: #fff3cd" if is_22 else "" for _ in row.index]
-
-                st.dataframe(
-                    scan_preview.style.apply(_highlight_binning_22, axis=1),
-                    width="stretch",
-                )
-            else:
-                st.dataframe(scan_preview, width="stretch")
-
-        _scan_editable = ["EXPTIME", "FILTERS", "BINNING", "SENSORTEMP", "GAIN"]
-        _render_universal_main_table(
-            pipeline,
-            sql_name="SCANNING",
-            ui_label="SCANNING",
-            editable_cols=_scan_editable,
         )
 
     elif table == "OBS_DRAFT":

@@ -282,7 +282,7 @@ def test_null_ccd_temp_non_calibration_safe_calibration_dark_fails(tmp_path: Pat
     assert meta["temp"] == 0.0
     assert float(meta["temp"]) == 0.0
 
-    scanning_id = db.find_or_create_scanning_id(meta)
+    scanning_id = db.derive_scanning_id(meta)
     assert scanning_id > 0
 
     params = _params_string(meta, include_filter=True)

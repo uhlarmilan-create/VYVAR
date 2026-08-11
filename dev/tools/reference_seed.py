@@ -29,10 +29,6 @@ REFERENCE_TELESCOPE: tuple[tuple, ...] = (
 REFERENCE_LOCATION: tuple[tuple, ...] = (
     (1, "Dablice", 50.073658, 14.418540, 355.5),
 )
-# (ID, EXPTIME, FILTERS, BINNING, SENSORTEMP)
-REFERENCE_SCANNING: tuple[tuple, ...] = (
-    (1, 120.0, "Clear", 11, -10.0),
-)
 
 
 def seed_reference_observatory(db) -> None:
@@ -58,10 +54,5 @@ def seed_reference_observatory(db) -> None:
         "INSERT OR IGNORE INTO LOCATION (ID, PLACENAME, LATITUDE, LONGITUDE, ALTITUDE) "
         "VALUES (?, ?, ?, ?, ?)",
         REFERENCE_LOCATION,
-    )
-    conn.executemany(
-        "INSERT OR IGNORE INTO SCANNING (ID, EXPTIME, FILTERS, BINNING, SENSORTEMP) "
-        "VALUES (?, ?, ?, ?, ?)",
-        REFERENCE_SCANNING,
     )
     conn.commit()

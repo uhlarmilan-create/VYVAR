@@ -25,7 +25,7 @@ def summarize_db_fk_state(db: Any, cfg: Any | None = None) -> str:
     conn = getattr(db, "conn", None)
     if conn is None:
         return "database: (no connection)"
-    for table in ("EQUIPMENTS", "TELESCOPE", "LOCATION", "SCANNING"):
+    for table in ("EQUIPMENTS", "TELESCOPE", "LOCATION"):
         try:
             n = int(conn.execute(f"SELECT COUNT(*) FROM {table};").fetchone()[0])
         except Exception as exc:  # noqa: BLE001

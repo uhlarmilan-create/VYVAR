@@ -7,7 +7,6 @@ from database import VyvarDatabase
 from tools.reference_seed import (
     REFERENCE_EQUIPMENTS,
     REFERENCE_LOCATION,
-    REFERENCE_SCANNING,
     REFERENCE_TELESCOPE,
     seed_reference_observatory,
 )
@@ -16,7 +15,7 @@ from tools.reference_seed import (
 def test_initialize_database_leaves_reference_tables_empty(tmp_path: Path) -> None:
     db = VyvarDatabase(tmp_path / "fresh.sqlite3")
     try:
-        for table in ("EQUIPMENTS", "TELESCOPE", "LOCATION", "SCANNING"):
+        for table in ("EQUIPMENTS", "TELESCOPE", "LOCATION"):
             n = int(db.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
             assert n == 0, f"{table} must be empty on a fresh DB; got {n}"
     finally:
@@ -45,12 +44,6 @@ def test_seed_reference_observatory_pins_exact_author_rows(tmp_path: Path) -> No
             "FROM LOCATION ORDER BY ID"
         ).fetchall()
         assert [tuple(r) for r in loc] == list(REFERENCE_LOCATION)
-
-        scan = db.conn.execute(
-            "SELECT ID, EXPTIME, FILTERS, BINNING, SENSORTEMP "
-            "FROM SCANNING ORDER BY ID"
-        ).fetchall()
-        assert [tuple(r) for r in scan] == list(REFERENCE_SCANNING)
 
         # Idempotent: second call must not duplicate or alter rows.
         seed_reference_observatory(db)

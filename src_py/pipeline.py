@@ -19019,7 +19019,7 @@ class AstroPipeline:
         """Read first FITS and build prefilled OBSERVATION payload."""
         first_fits = self._first_fits_file(session_path)
         metadata = extract_fits_metadata(first_fits, db=self.db, app_config=self.config)
-        scanning_id = self.db.find_or_create_scanning_id(metadata)
+        scanning_id = self.db.derive_scanning_id(metadata)
 
         if id_equipment is None or id_telescope is None:
             raise ValueError(

@@ -11174,7 +11174,7 @@ def _get_plate_scale_from_cfg(
     Plate scale (arcsec/px) for FOV / max_dist_deg.
     Priority:
     1. Solved WCS/CD matrix from the FITS (authoritative)
-    2. DB EQUIPMENTS+TELESCOPE+SCANNING (pixel/focal/binning)
+    2. DB EQUIPMENTS+TELESCOPE+FITS binning (pixel/focal/binning)
     3. cfg.phase01_plate_scale_arcsec_per_px (last resort)
     4. plate_scale_arcsec_per_pixel(cfg); None if unavailable
     """
@@ -11194,7 +11194,7 @@ def _get_plate_scale_from_cfg(
             )
             return float(_wcs_ps)
 
-    # 2. DB: derive plate scale from EQUIPMENTS + TELESCOPE + SCANNING binning (if available).
+    # 2. DB: derive plate scale from EQUIPMENTS + TELESCOPE + FITS binning (if available).
     if db is not None and draft_id is not None:
         try:
             did = int(draft_id)
@@ -12830,7 +12830,7 @@ def _resolve_frame_hw_px_from_masterstar(
 ) -> tuple[int, int, str]:
     """Authoritative chip width/height for Phase 0+1 spatial culling.
 
-    Priority: (1) MASTERSTAR FITS ``NAXIS1``/``NAXIS2``; (2) DB ``SCANNING`` via draft;
+    Priority: (1) MASTERSTAR FITS ``NAXIS1``/``NAXIS2``; (2) light FITS via draft;
     (3) caller defaults (global cfg knob / hardcoded 2082x1397).
     """
     w_def, h_def = int(frame_w_px), int(frame_h_px)

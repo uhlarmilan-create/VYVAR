@@ -1756,7 +1756,7 @@ def smart_import_session(
             _import_warnings.append(msg)
     if _import_warnings:
         plan.warnings.extend(_import_warnings)
-    scanning_id = pipeline.db.find_or_create_scanning_id(metadata)
+    scanning_id = pipeline.db.derive_scanning_id(metadata)
 
     # Ingestion creates DRAFT only (Session ID created after astrometry).
     missing_obs_keys_set: set[str] = set(getattr(plan, "missing_obs_keys", []) or [])
@@ -1793,7 +1793,7 @@ def smart_import_session(
                 gk = observation_group_key(
                     flt, float(meta_l.get("exposure", 0.0)), int(meta_l.get("binning", 1) or 1)
                 )
-                sc_i = int(pipeline.db.find_or_create_scanning_id(meta_l))
+                sc_i = int(pipeline.db.derive_scanning_id(meta_l))
             except Exception:  # noqa: BLE001
                 gk = observation_group_key(flt, 0.0, 1)
                 sc_i = None
@@ -1855,7 +1855,7 @@ def smart_import_session(
             gk = observation_group_key(
                 flt, float(meta_l.get("exposure", 0.0)), int(meta_l.get("binning", 1) or 1)
             )
-            sc_i = int(pipeline.db.find_or_create_scanning_id(meta_l))
+            sc_i = int(pipeline.db.derive_scanning_id(meta_l))
         except Exception:  # noqa: BLE001
             gk = observation_group_key(flt, 0.0, 1)
             sc_i = None

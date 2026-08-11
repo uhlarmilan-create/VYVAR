@@ -177,7 +177,7 @@ class ThreadSafeSQLiteConnection:
         with self._lock:
             self._conn.close()
 
-_EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "SCANNING", "LOCATION", "OBS_DRAFT"})
+_EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION", "OBS_DRAFT"})
 _EDITABLE_DEFAULT_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
 _REBUILD_MIGRATION_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION", "OBS_FILES"})
 
@@ -1206,15 +1206,6 @@ class VyvarDatabase:
                 ALTITUDE REAL
             );
 
-            CREATE TABLE IF NOT EXISTS SCANNING (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                EXPTIME REAL,
-                FILTERS TEXT,
-                BINNING INTEGER,
-                SENSORTEMP REAL,
-                GAIN INTEGER DEFAULT 0
-            );
-
             CREATE TABLE IF NOT EXISTS OBSERVATION (
                 ID TEXT PRIMARY KEY,
                 ID_EQUIPMENTS INTEGER,
@@ -1226,8 +1217,7 @@ class VyvarDatabase:
                 OBSERVATIONSTARTJD REAL,
                 FOREIGN KEY (ID_EQUIPMENTS) REFERENCES EQUIPMENTS (ID),
                 FOREIGN KEY (ID_TELESCOPE) REFERENCES TELESCOPE (ID),
-                FOREIGN KEY (ID_LOCATION) REFERENCES LOCATION (ID),
-                FOREIGN KEY (ID_SCANNING) REFERENCES SCANNING (ID)
+                FOREIGN KEY (ID_LOCATION) REFERENCES LOCATION (ID)
             );
 
             CREATE TABLE IF NOT EXISTS OBS_DRAFT (
@@ -1250,7 +1240,6 @@ class VyvarDatabase:
                 FOREIGN KEY (ID_EQUIPMENTS) REFERENCES EQUIPMENTS (ID),
                 FOREIGN KEY (ID_TELESCOPE) REFERENCES TELESCOPE (ID),
                 FOREIGN KEY (ID_LOCATION) REFERENCES LOCATION (ID),
-                FOREIGN KEY (ID_SCANNING) REFERENCES SCANNING (ID),
                 FOREIGN KEY (FINAL_OBSERVATION_ID) REFERENCES OBSERVATION (ID)
             );
 
@@ -1272,7 +1261,6 @@ class VyvarDatabase:
         self._ensure_equipments_saturate_adu_column()
         self._ensure_equipments_cosmic_columns()
         self._ensure_equipments_bayermask_column()
-        self._ensure_scanning_gain_column()
         self._ensure_obs_files_draft_column()
         self._ensure_obs_files_qc_columns()
         self._ensure_obs_files_quality_inspection_columns()
@@ -1647,20 +1635,6 @@ class VyvarDatabase:
         n += int(cur.fetchone()[0])
         return n
 
-    def count_references_to_scanning_id(self, scanning_id: int) -> int:
-        n = 0
-        cur = self.conn.execute(
-            "SELECT COUNT(*) FROM OBS_DRAFT WHERE ID_SCANNING = ?;",
-            (int(scanning_id),),
-        )
-        n += int(cur.fetchone()[0])
-        cur = self.conn.execute(
-            "SELECT COUNT(*) FROM OBSERVATION WHERE ID_SCANNING = ?;",
-            (int(scanning_id),),
-        )
-        n += int(cur.fetchone()[0])
-        return n
-
     @staticmethod
     def normalize_active_db_value(raw: Any) -> int:
         """Normalize UI / DB values to **1** = active, **0** = inactive (soft-delete). Legacy ``YES``/``NO`` supported."""
@@ -1741,12 +1715,12 @@ class VyvarDatabase:
     ) -> dict[str, int]:
         """Apply INSERT/UPDATE/DELETE from a Streamlit ``data_editor`` diff.
 
-        Only ``EQUIPMENTS``, ``TELESCOPE``, ``SCANNING``, ``LOCATION``, ``OBS_DRAFT`` are allowed.
+        Only ``EQUIPMENTS``, ``TELESCOPE``, ``LOCATION``, ``OBS_DRAFT`` are allowed.
 
         **EQUIPMENTS / TELESCOPE:** a row removed from the editor is **not** ``DELETE``-d; ``ACTIVE`` is set
         to **0** (soft-delete). Physical ``DELETE`` for those tables is never performed from this API.
         **OBS_DRAFT:** manifest refresh after commit when rig FK ids may have changed.
-        **LOCATION / SCANNING:** physical delete with reference checks (``FINAL_DATA`` / FK usage).
+        **LOCATION:** physical delete with reference checks (``FINAL_DATA`` / FK usage).
         """
         import pandas as pd_local
 
@@ -1922,12 +1896,6 @@ class VyvarDatabase:
                     if n > 0:
                         raise ValueError(
                             f"Lokalitu ID={did} nie je mozne zmazat: {n} odkazov v OBS_DRAFT/OBSERVATION."
-                        )
-                elif table == "SCANNING":
-                    n = self.count_references_to_scanning_id(did)
-                    if n > 0:
-                        raise ValueError(
-                            f"Scanning ID={did} nie je mozne zmazat: {n} odkazov v OBS_DRAFT/OBSERVATION."
                         )
                 self.conn.execute(f"DELETE FROM {table} WHERE {pk_col} = ?;", (did,))
                 deleted += 1
@@ -2995,15 +2963,6 @@ class VyvarDatabase:
                 self.conn.execute(f"ALTER TABLE OBS_FILES ADD COLUMN {name} {sql_type};")
         self.conn.commit()
 
-    def _ensure_scanning_gain_column(self) -> None:
-        """Schema migration: add GAIN column to SCANNING."""
-        cursor = self.conn.execute("PRAGMA table_info('SCANNING');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        if "GAIN" not in cols:
-            self.conn.execute("ALTER TABLE SCANNING ADD COLUMN GAIN INTEGER DEFAULT 0;")
-            self.conn.execute("UPDATE SCANNING SET GAIN = 0 WHERE GAIN IS NULL;")
-            self.conn.commit()
-
     def _ensure_obs_draft_masterstar_path_column(self) -> None:
         """Schema migration: persist resolved MASTERSTAR path per draft."""
         cursor = self.conn.execute("PRAGMA table_info('OBS_DRAFT');")
@@ -3215,9 +3174,14 @@ class VyvarDatabase:
     def _drop_vestigial_tables(self) -> None:
         # WAVE-B STEP 5: SETTINGS held only masterdark/masterflat validity days (config.json-authoritative).
         # PHOTOMETRY_LIGHT_CURVE was never read; light curves are file-based CSVs.
-        self.conn.execute("DROP TABLE IF EXISTS SETTINGS;")
-        self.conn.execute("DROP TABLE IF EXISTS PHOTOMETRY_LIGHT_CURVE;")
-        self.conn.commit()
+        self.conn.execute("PRAGMA foreign_keys = OFF;")
+        try:
+            self.conn.execute("DROP TABLE IF EXISTS SCANNING;")
+            self.conn.execute("DROP TABLE IF EXISTS SETTINGS;")
+            self.conn.execute("DROP TABLE IF EXISTS PHOTOMETRY_LIGHT_CURVE;")
+            self.conn.commit()
+        finally:
+            self.conn.execute("PRAGMA foreign_keys = ON;")
 
     def _drop_equipments_focal_column(self) -> None:
         """One-time migration: focal length belongs on TELESCOPE, not EQUIPMENTS."""
@@ -3622,67 +3586,14 @@ class VyvarDatabase:
         self.conn.commit()
         return int(cursor.lastrowid)
 
-    def insert_scanning(
-        self,
-        exp_time: float,
-        filters: str,
-        binning: int,
-        sensor_temp: float,
-        gain: int = 0,
-    ) -> int:
-        cursor = self.conn.execute(
-            """
-            INSERT INTO SCANNING (EXPTIME, FILTERS, BINNING, SENSORTEMP, GAIN)
-            VALUES (?, ?, ?, ?, ?);
-            """,
-            (exp_time, filters, binning, sensor_temp, int(gain)),
-        )
-        self.conn.commit()
-        return int(cursor.lastrowid)
+    def derive_scanning_id(self, metadata: dict[str, Any]) -> int:
+        """Stable scanning id from FITS metadata (no SCANNING SQL table)."""
+        from draft_provenance import derive_scanning_id as _derive_scanning_id
 
-    def find_or_create_scanning_id(self, metadata: dict[str, Any]) -> int:
-        """Find scanning row by metadata, or create a new one.
-
-        Matching fields:
-        - EXPTIME exact
-        - FILTERS exact
-        - BINNING exact
-        - SENSORTEMP with tolerance +/- 0.5
-        """
-        exp_time = float(metadata["exposure"])
-        filters = str(metadata["filter"])
-        binning = int(metadata["binning"])
-        sensor_temp = float(metadata["temp"])
-        gain = int(metadata.get("gain", 0))
-
-        cursor = self.conn.execute(
-            """
-            SELECT ID
-            FROM SCANNING
-            WHERE EXPTIME = ?
-              AND FILTERS = ?
-              AND BINNING = ?
-              AND ABS(SENSORTEMP - ?) <= 0.5
-              AND COALESCE(GAIN, 0) = ?
-            ORDER BY ID
-            LIMIT 1;
-            """,
-            (exp_time, filters, binning, sensor_temp, gain),
-        )
-        row = cursor.fetchone()
-        if row is not None:
-            return int(row["ID"])
-
-        return self.insert_scanning(
-            exp_time=exp_time,
-            filters=filters,
-            binning=binning,
-            sensor_temp=sensor_temp,
-            gain=gain,
-        )
+        return int(_derive_scanning_id(metadata))
 
     def _fk_row_exists(self, table: str, row_id: int) -> bool:
-        if table not in ("EQUIPMENTS", "TELESCOPE", "LOCATION", "SCANNING"):
+        if table not in ("EQUIPMENTS", "TELESCOPE", "LOCATION"):
             raise ValueError(f"unsupported FK table: {table!r}")
         row = self.conn.execute(
             f"SELECT 1 FROM {table} WHERE ID = ? LIMIT 1;",
@@ -3702,7 +3613,6 @@ class VyvarDatabase:
             ("EQUIPMENTS", int(id_equipments), "equipment/camera"),
             ("TELESCOPE", int(id_telescope), "telescope"),
             ("LOCATION", int(id_location), "observatory location"),
-            ("SCANNING", int(id_scanning), "scanning profile (exposure/filter/binning)"),
         )
         missing = [
             f"{label} (id={rid})"
@@ -3876,16 +3786,15 @@ class VyvarDatabase:
                 l.LATITUDE AS latitude,
                 l.LONGITUDE AS longitude,
                 l.ALTITUDE AS altitude,
-                s.ID AS scanning_id,
-                s.EXPTIME AS exp_time,
-                s.FILTERS AS filters,
-                s.BINNING AS binning,
-                s.SENSORTEMP AS sensor_temp
+                o.ID_SCANNING AS scanning_id,
+                NULL AS exp_time,
+                NULL AS filters,
+                NULL AS binning,
+                NULL AS sensor_temp
             FROM OBSERVATION o
             LEFT JOIN EQUIPMENTS e ON o.ID_EQUIPMENTS = e.ID
             LEFT JOIN TELESCOPE t ON o.ID_TELESCOPE = t.ID
             LEFT JOIN LOCATION l ON o.ID_LOCATION = l.ID
-            LEFT JOIN SCANNING s ON o.ID_SCANNING = s.ID
             WHERE o.ID = ?;
             """,
             (hashtag,),

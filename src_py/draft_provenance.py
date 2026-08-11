@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import math
 from datetime import datetime, timezone
@@ -31,6 +32,19 @@ _RIG_MANIFEST_TO_DB: dict[str, str] = {
 }
 
 _MANIFEST_SHADOW_LOAD_CACHE: dict[tuple[int, str, int], dict[str, Any]] = {}
+
+
+def derive_scanning_id(metadata: dict[str, Any]) -> int:
+    """Stable scanning id from FITS metadata (no SCANNING SQL table)."""
+    exp_time = float(metadata["exposure"])
+    filters = str(metadata["filter"])
+    binning = int(metadata["binning"])
+    sensor_temp = float(metadata["temp"])
+    gain = int(metadata.get("gain", 0))
+    payload = f"{exp_time:.6f}|{filters}|{binning}|{sensor_temp:.3f}|{gain}"
+    digest = hashlib.md5(payload.encode("utf-8"), usedforsecurity=False).hexdigest()
+    val = int(digest[:7], 16) & 0x7FFFFFFF
+    return val if val > 0 else 1
 
 
 def reset_manifest_shadow_counters() -> None:

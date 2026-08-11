@@ -61,4 +61,3 @@ def test_summarize_db_fk_state_lists_table_counts(tmp_path: Path) -> None:
     )
     summary = summarize_db_fk_state(db, cfg=type("Cfg", (), {"observer_location_id": 0})())
     assert "EQUIPMENTS: 1 row(s)" in summary
-    assert "SCANNING: 0 row(s)" in summary
