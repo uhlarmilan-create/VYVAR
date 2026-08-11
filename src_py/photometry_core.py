@@ -1400,12 +1400,8 @@ def _resolve_phase2a_equipment_id(
     if did is None:
         return None
     try:
-        row = db.conn.execute(
-            "SELECT ID_EQUIPMENTS FROM OBS_DRAFT WHERE ID = ?;",
-            (int(did),),
-        ).fetchone()
-        if row is not None and row[0] is not None:
-            return int(row[0])
+        if hasattr(db, "get_draft_equipment_id"):
+            return db.get_draft_equipment_id(int(did))
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0125] OBS_DRAFT equipment_id DB read fails - gain/RN resolver falls back without equipment scope: %s', exc)
         return None
@@ -8828,12 +8824,8 @@ def _phase2a_prepare_shared_state(
     _site_loc_id: int | None = None
     if db is not None and draft_id is not None:
         try:
-            _dr = db.conn.execute(
-                "SELECT ID_LOCATION FROM OBS_DRAFT WHERE ID = ?;",
-                (int(draft_id),),
-            ).fetchone()
-            if _dr is not None and _dr[0] is not None:
-                _site_loc_id = int(_dr[0])
+            if hasattr(db, "get_draft_location_id"):
+                _site_loc_id = db.get_draft_location_id(int(draft_id))
         except Exception:  # noqa: BLE001
             _site_loc_id = None
     logging.info(
@@ -11220,27 +11212,26 @@ def _get_plate_scale_from_cfg(
 
                 binning = 1
                 try:
-                    cur = db.conn.execute(
-                        """
-                        SELECT ID_SCANNING
-                        FROM OBS_FILES
-                        WHERE DRAFT_ID = ?
-                          AND LOWER(COALESCE(IMAGETYP,'')) = 'light'
-                          AND ID_SCANNING IS NOT NULL
-                        ORDER BY FILE_PATH
-                        LIMIT 1;
-                        """,
-                        (did,),
+                    light_rows = (
+                        db.fetch_draft_light_rows_for_quality(did)
+                        if hasattr(db, "fetch_draft_light_rows_for_quality")
+                        else []
                     )
-                    r0 = cur.fetchone()
-                    sid = int(r0["ID_SCANNING"]) if r0 and r0["ID_SCANNING"] is not None else 0
-                    if sid > 0:
-                        cur2 = db.conn.execute("SELECT BINNING FROM SCANNING WHERE ID = ? LIMIT 1;", (sid,))
-                        r2 = cur2.fetchone()
-                        if r2 and r2["BINNING"] is not None:
-                            b0 = int(r2["BINNING"])
-                            if 1 <= b0 <= 16:
-                                binning = b0
+                    fp0 = None
+                    for lr in light_rows:
+                        fp0 = lr.get("FILE_PATH")
+                        if fp0:
+                            break
+                    if fp0:
+                        from astropy.io import fits as _fits_bin
+
+                        with _fits_bin.open(str(fp0), memmap=False) as _hdul:
+                            _hdr = _hdul[0].header
+                            _xb = _hdr.get("XBINNING") or _hdr.get("BINNING")
+                            if _xb is not None:
+                                b0 = int(float(_xb))
+                                if 1 <= b0 <= 16:
+                                    binning = b0
                 except Exception:  # noqa: BLE001
                     # EXC-0181: T4 -- DB plate-scale lookup failure falls through to config phase01_plate_scale_arcsec_per_px (EXCEPT-BULK-2 2026-07-08)
                     binning = 1
@@ -12858,27 +12849,22 @@ def _resolve_frame_hw_px_from_masterstar(
             did = int(draft_id)
         except (TypeError, ValueError):
             did = 0
-        if did > 0 and hasattr(db, "conn"):
+        if did > 0 and hasattr(db, "fetch_draft_light_rows_for_quality"):
             try:
-                cur = db.conn.execute(
-                    """
-                    SELECT s.NAXIS1, s.NAXIS2
-                    FROM OBS_FILES f
-                    JOIN SCANNING s ON s.ID = f.ID_SCANNING
-                    WHERE f.DRAFT_ID = ?
-                      AND LOWER(COALESCE(f.IMAGETYP, '')) = 'light'
-                      AND s.NAXIS1 > 0 AND s.NAXIS2 > 0
-                    ORDER BY f.FILE_PATH
-                    LIMIT 1
-                    """,
-                    (did,),
-                )
-                row = cur.fetchone()
-                if row is not None:
-                    w = int(row["NAXIS1"] or 0)
-                    h = int(row["NAXIS2"] or 0)
+                light_rows = db.fetch_draft_light_rows_for_quality(did)
+                fp0 = None
+                for lr in light_rows:
+                    fp0 = lr.get("FILE_PATH")
+                    if fp0:
+                        break
+                if fp0:
+                    from astropy.io import fits as _fits_nax
+
+                    with _fits_nax.open(str(fp0), memmap=False) as _hdul:
+                        w = int(_hdul[0].header.get("NAXIS1") or 0)
+                        h = int(_hdul[0].header.get("NAXIS2") or 0)
                     if w > 0 and h > 0:
-                        return w, h, "db_scanning"
+                        return w, h, "fits_naxis_light"
             except Exception:  # noqa: BLE001
                 pass
     return w_def, h_def, "caller_default"
