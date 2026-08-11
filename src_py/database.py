@@ -179,7 +179,7 @@ class ThreadSafeSQLiteConnection:
 
 _EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION", "OBS_DRAFT"})
 _EDITABLE_DEFAULT_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
-_REBUILD_MIGRATION_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION", "OBS_FILES"})
+_REBUILD_MIGRATION_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
 
 
 def get_gaia_db_max_g_mag(db_path: str | Path) -> float:
@@ -1148,7 +1148,6 @@ class VyvarDatabase:
         self.conn = ThreadSafeSQLiteConnection(open_sqlite_connection(self.db_path))
         self._create_tables()
         self.initialize_database()
-        self._ensure_obs_files_indexes()
         self._drop_vestigial_tables()
         self._drop_equipments_focal_column()
 
@@ -1228,15 +1227,6 @@ class VyvarDatabase:
                 FOREIGN KEY (ID_LOCATION) REFERENCES LOCATION (ID)
             );
 
-            CREATE TABLE IF NOT EXISTS OBS_FILES (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                OBSERVATION_ID TEXT,
-                DRAFT_ID INTEGER,
-                FILE_PATH TEXT,
-                IMAGETYP TEXT,
-                FILTER TEXT,
-                FOREIGN KEY (DRAFT_ID) REFERENCES OBS_DRAFT (ID) ON DELETE CASCADE
-            );
             """
         )
         self.conn.commit()
@@ -1245,11 +1235,6 @@ class VyvarDatabase:
         self._ensure_equipments_saturate_adu_column()
         self._ensure_equipments_cosmic_columns()
         self._ensure_equipments_bayermask_column()
-        self._ensure_obs_files_draft_column()
-        self._ensure_obs_files_qc_columns()
-        self._ensure_obs_files_quality_inspection_columns()
-        self._ensure_obs_files_observation_group_key()
-        self._ensure_obs_files_scanning_and_calibration_columns()
         self._ensure_calibration_library_table()
         self._ensure_fits_header_cache_table()
         self._ensure_qc_processing_tables()
@@ -1949,7 +1934,7 @@ class VyvarDatabase:
         }
 
     def _ensure_qc_processing_tables(self) -> None:
-        """Append-only QC Apply snapshots: hashtag + accepted ``OBS_FILES`` rows (IS_REJECTED=0)."""
+        """Append-only QC Apply snapshots: hashtag + accepted manifest light rows (IS_REJECTED=0)."""
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS OBS_QC_PROCESSING_RUN (
@@ -2249,39 +2234,25 @@ class VyvarDatabase:
         patch_draft_manifest(root, int(draft_id), status=str(status))
 
     def count_obs_files(self) -> int:
-        cur = self.conn.execute("SELECT COUNT(*) FROM OBS_FILES;")
-        row = cur.fetchone()
-        return int(row[0]) if row is not None else 0
+        from draft_provenance import count_all_manifest_files
+
+        return int(count_all_manifest_files(self.resolve_archive_root()))
 
     def maintenance_delete_obs_files_for_processed_drafts(self) -> int:
-        """Delete ``OBS_FILES`` rows whose ``DRAFT_ID`` refers to ``OBS_DRAFT`` with ``STATUS = 'PROCESSED'``.
+        """Clear manifest ``files[]`` for drafts with status PROCESSED."""
+        from draft_provenance import clear_manifest_files_for_processed_drafts
 
-        Touches **only** ``OBS_FILES`` (not ``OBS_DRAFT``, not hashtag / equipment tables).
-        """
-        cur = self.conn.execute(
-            """
-            DELETE FROM OBS_FILES
-            WHERE DRAFT_ID IN (
-                SELECT ID FROM OBS_DRAFT
-                WHERE UPPER(TRIM(COALESCE(STATUS, ''))) = 'PROCESSED'
-            );
-            """
-        )
-        n = int(cur.rowcount) if cur.rowcount is not None and cur.rowcount >= 0 else 0
-        self.conn.commit()
-        return n
+        return int(clear_manifest_files_for_processed_drafts(self))
 
     def maintenance_nuke_obs_files_and_drafts_preserve_qc_snapshots(self) -> tuple[int, int]:
-        """Remove all rows from ``OBS_FILES`` and ``OBS_DRAFT`` (staging / draft workspace).
+        """Clear manifest ``files[]`` and remove ``OBS_DRAFT`` SQL rows (staging reset).
 
         Temporarily disables foreign-key enforcement only for the ``OBS_DRAFT`` delete so that
         ``OBS_QC_PROCESSING_RUN`` / ``OBS_QC_PROCESSING_FILE`` are **not** CASCADE-deleted.
-        Leaves orphan ``DRAFT_ID`` values in QC runs (danger-zone tradeoff).
-
-        Never executes SQL against ``EQUIPMENTS``, ``TELESCOPE``, or ``OBS_QC_PROCESSING_*``.
         """
-        cur_f = self.conn.execute("DELETE FROM OBS_FILES;")
-        n_files = int(cur_f.rowcount) if cur_f.rowcount is not None and cur_f.rowcount >= 0 else 0
+        from draft_provenance import clear_all_manifest_files
+
+        n_files = int(clear_all_manifest_files(self))
         self.conn.execute("PRAGMA foreign_keys = OFF;")
         try:
             cur_d = self.conn.execute("DELETE FROM OBS_DRAFT;")
@@ -2848,97 +2819,6 @@ class VyvarDatabase:
         ).fetchone()
         return row is not None
 
-    def _ensure_obs_files_draft_column(self) -> None:
-        """Migration: ensure OBS_FILES has DRAFT_ID column (older DBs)."""
-        cursor = self.conn.execute("PRAGMA table_info('OBS_FILES');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        if "DRAFT_ID" in cols:
-            return
-
-        # Rebuild table to add DRAFT_ID + FK (SQLite limitations)
-        self._rebuild_table_safely(
-            "OBS_FILES",
-            """
-            CREATE TABLE OBS_FILES (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                OBSERVATION_ID TEXT,
-                DRAFT_ID INTEGER,
-                FILE_PATH TEXT,
-                IMAGETYP TEXT,
-                FILTER TEXT,
-                FOREIGN KEY (DRAFT_ID) REFERENCES OBS_DRAFT (ID) ON DELETE CASCADE
-            );
-            """,
-            """
-            INSERT INTO OBS_FILES (ID, OBSERVATION_ID, DRAFT_ID, FILE_PATH, IMAGETYP, FILTER)
-            SELECT ID, OBSERVATION_ID, NULL, FILE_PATH, IMAGETYP, FILTER FROM OBS_FILES_OLD;
-            """,
-        )
-
-    def _ensure_obs_files_qc_columns(self) -> None:
-        """Post-calibration QC metrics per light file (matched by archived raw ``FILE_PATH``)."""
-        cursor = self.conn.execute("PRAGMA table_info('OBS_FILES');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        specs = (
-            ("QC_HFR", "REAL"),
-            ("QC_STARS", "INTEGER"),
-            ("QC_BACKGROUND", "REAL"),
-            ("QC_BG_RMS", "REAL"),
-            ("QC_PASSED", "INTEGER"),
-        )
-        for name, sql_type in specs:
-            if name not in cols:
-                self.conn.execute(f"ALTER TABLE OBS_FILES ADD COLUMN {name} {sql_type};")
-        self.conn.commit()
-
-    def _ensure_obs_files_quality_inspection_columns(self) -> None:
-        """Quality inspection (DAO metrics, auto-reject, manual IS_REJECTED)."""
-        cursor = self.conn.execute("PRAGMA table_info('OBS_FILES');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        specs = (
-            ("FWHM", "REAL"),
-            ("SKY_LEVEL", "REAL"),
-            ("STAR_COUNT", "INTEGER"),
-            ("REJECTED_AUTO", "INTEGER"),
-            ("IS_REJECTED", "INTEGER"),
-            ("INSPECTION_JD", "REAL"),
-            ("RA", "REAL"),
-            ("DE", "REAL"),
-            ("EXPTIME", "REAL"),
-            ("DRIFT", "REAL"),
-            ("DRIFT_DRA", "REAL"),
-            ("DRIFT_DDE", "REAL"),
-            ("ROUNDNESS_MEAN", "REAL"),
-            ("ELONGATION_MEAN", "REAL"),
-        )
-        for name, sql_type in specs:
-            if name not in cols:
-                self.conn.execute(f"ALTER TABLE OBS_FILES ADD COLUMN {name} {sql_type};")
-        self.conn.commit()
-
-    def _ensure_obs_files_observation_group_key(self) -> None:
-        """``(FILTER|EXPTIME|BINNING)`` subgroup for multi-observation imports."""
-        cursor = self.conn.execute("PRAGMA table_info('OBS_FILES');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        if "OBSERVATION_GROUP_KEY" not in cols:
-            self.conn.execute("ALTER TABLE OBS_FILES ADD COLUMN OBSERVATION_GROUP_KEY TEXT;")
-        self.conn.commit()
-
-    def _ensure_obs_files_scanning_and_calibration_columns(self) -> None:
-        """Per-file scanning key + calibration mode metadata in OBS_FILES."""
-        cursor = self.conn.execute("PRAGMA table_info('OBS_FILES');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        specs = (
-            ("ID_SCANNING", "INTEGER"),
-            ("IS_CALIBRATED", "INTEGER"),
-            ("CALIB_TYPE", "TEXT"),
-            ("CALIB_FLAGS", "TEXT"),
-        )
-        for name, sql_type in specs:
-            if name not in cols:
-                self.conn.execute(f"ALTER TABLE OBS_FILES ADD COLUMN {name} {sql_type};")
-        self.conn.commit()
-
     def _ensure_obs_draft_masterstar_path_column(self) -> None:
         """Schema migration: persist resolved MASTERSTAR path per draft."""
         cursor = self.conn.execute("PRAGMA table_info('OBS_DRAFT');")
@@ -3154,6 +3034,7 @@ class VyvarDatabase:
         try:
             self.conn.execute("DROP TABLE IF EXISTS SCANNING;")
             self.conn.execute("DROP TABLE IF EXISTS OBSERVATION;")
+            self.conn.execute("DROP TABLE IF EXISTS OBS_FILES;")
             self._rebuild_final_data_view()
             self.conn.execute("DROP TABLE IF EXISTS SETTINGS;")
             self.conn.execute("DROP TABLE IF EXISTS PHOTOMETRY_LIGHT_CURVE;")
@@ -3215,16 +3096,6 @@ class VyvarDatabase:
         """
         # Intentionally no rows: fresh reference tables stay empty.
         return
-
-    def _ensure_obs_files_indexes(self) -> None:
-        """Performance indexes for staging tables used heavily in the pipeline."""
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS IDX_OBS_FILES_DRAFT_ID ON OBS_FILES (DRAFT_ID);"
-        )
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS IDX_OBS_FILES_OBS_ID ON OBS_FILES (OBSERVATION_ID);"
-        )
-        self.conn.commit()
 
     @staticmethod
     def _jd_to_yyyymmdd(jd: float) -> str:
@@ -3630,18 +3501,14 @@ class VyvarDatabase:
         return [dict(row) for row in cursor.fetchall()]
 
     def count_obs_files_for_observation(self, observation_id: str) -> int:
-        row = self.conn.execute(
-            "SELECT COUNT(*) AS n FROM OBS_FILES WHERE OBSERVATION_ID = ?;",
-            (observation_id,),
-        ).fetchone()
-        return int(row["n"] if row is not None and row["n"] is not None else 0)
+        from draft_provenance import count_manifest_files_for_observation
+
+        return int(count_manifest_files_for_observation(self.resolve_archive_root(), str(observation_id)))
 
     def count_obs_files_for_draft(self, draft_id: int) -> int:
-        row = self.conn.execute(
-            "SELECT COUNT(*) AS n FROM OBS_FILES WHERE DRAFT_ID = ?;",
-            (int(draft_id),),
-        ).fetchone()
-        return int(row["n"] if row is not None and row["n"] is not None else 0)
+        from draft_provenance import count_manifest_files_for_draft
+
+        return int(count_manifest_files_for_draft(self, int(draft_id)))
 
     def insert_draft_files(self, draft_id: int, files: list[dict[str, Any]]) -> None:
         """Insert per-file evidence into manifest ``files[]``."""
@@ -3683,22 +3550,6 @@ class VyvarDatabase:
         _ = observation_id
         ok = update_manifest_file_entry(self, int(draft_id), file_path=p, qc=qc)
         return 1 if ok else 0
-
-    def _fetch_draft_light_rows_raw(self, draft_id: int) -> list[dict[str, Any]]:
-        """Raw OBS_FILES light rows (manifest writer / DB fallback only)."""
-        cur = self.conn.execute(
-            """
-            SELECT ID, FILE_PATH, IMAGETYP, FILTER, OBSERVATION_GROUP_KEY, ID_SCANNING, IS_CALIBRATED, CALIB_TYPE,
-                   CALIB_FLAGS,
-                   FWHM, SKY_LEVEL, STAR_COUNT, REJECTED_AUTO, IS_REJECTED, INSPECTION_JD, RA, DE, EXPTIME, DRIFT,
-                   DRIFT_DRA, DRIFT_DDE, ROUNDNESS_MEAN, ELONGATION_MEAN
-            FROM OBS_FILES
-            WHERE DRAFT_ID = ? AND LOWER(COALESCE(IMAGETYP, '')) = 'light'
-            ORDER BY FILE_PATH;
-            """,
-            (int(draft_id),),
-        )
-        return [dict(r) for r in cur.fetchall()]
 
     def fetch_draft_light_rows_for_quality(self, draft_id: int) -> list[dict[str, Any]]:
         """Light frames for a draft (manifest-only)."""

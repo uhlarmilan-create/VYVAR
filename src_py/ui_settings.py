@@ -430,7 +430,7 @@ def render_settings_dashboard(
         _detail_help(
             "qc_after_calibrate_enabled",
             phase="Right after calibration (flattened lights).",
-            used_in="Compute HFR, star count, background - write to DB (`OBS_FILES`) and limits in later steps (analyze, preprocess, MASTERSTAR pipeline selection).",
+            used_in="Compute HFR, star count, background - write to DB (`manifest files[]`) and limits in later steps (analyze, preprocess, MASTERSTAR pipeline selection).",
             compute="HFR/DAO metrics from `photutils`/pipeline QC modules (not a simple JSON formula).",
         )
         st.caption(

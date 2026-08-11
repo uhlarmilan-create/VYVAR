@@ -468,23 +468,6 @@ def _obs_file_row_to_manifest_entry(row: dict[str, Any]) -> dict[str, Any]:
     return entry
 
 
-def _fetch_manifest_files_from_db(db: Any, draft_id: int) -> list[dict[str, Any]]:
-    cur = db.conn.execute(
-        """
-        SELECT FILE_PATH, IMAGETYP, FILTER,
-               QC_HFR, QC_STARS, QC_BACKGROUND, QC_BG_RMS, QC_PASSED,
-               FWHM, SKY_LEVEL, STAR_COUNT, REJECTED_AUTO, IS_REJECTED, INSPECTION_JD,
-               RA, DE, EXPTIME, DRIFT, DRIFT_DRA, DRIFT_DDE, ROUNDNESS_MEAN, ELONGATION_MEAN,
-               OBSERVATION_GROUP_KEY, ID_SCANNING, IS_CALIBRATED, CALIB_TYPE, CALIB_FLAGS
-        FROM OBS_FILES
-        WHERE DRAFT_ID = ?
-        ORDER BY FILE_PATH, ID;
-        """,
-        (int(draft_id),),
-    )
-    return [_obs_file_row_to_manifest_entry(dict(r)) for r in cur.fetchall()]
-
-
 def _manifest_entry_to_obs_file_row(
     entry: dict[str, Any],
     *,
@@ -524,29 +507,13 @@ def _manifest_entry_to_obs_file_row(
     }
 
 
-def _obs_file_id_map_for_draft(db: Any, draft_id: int) -> dict[str, int]:
-    """Writer/parity helper: map normalized FILE_PATH -> OBS_FILES.ID."""
-    cur = db.conn.execute(
-        "SELECT ID, FILE_PATH FROM OBS_FILES WHERE DRAFT_ID = ?;",
-        (int(draft_id),),
-    )
-    out: dict[str, int] = {}
-    for r in cur.fetchall():
-        fp = _optional_str(r["FILE_PATH"]) if hasattr(r, "keys") else _optional_str(r[1])
-        rid = _optional_int(r["ID"]) if hasattr(r, "keys") else _optional_int(r[0])
-        if fp and rid is not None:
-            out[str(Path(fp).resolve())] = int(rid)
-            out[fp] = int(rid)
-    return out
-
-
 def light_rows_from_manifest(
     db: Any,
     draft_id: int,
     *,
     imagetyp: str = "light",
 ) -> list[dict[str, Any]] | None:
-    """Return OBS_FILES-shaped light rows from manifest files[] when present."""
+    """Return manifest file-row-shaped light rows from manifest files[] when present."""
     did = int(draft_id)
     root = resolve_draft_dir_for_id(db, did)
     if root is None:
@@ -573,6 +540,71 @@ def light_rows_from_manifest(
         rows.append(_manifest_entry_to_obs_file_row(entry, draft_id=did, obs_file_id=obs_id))
     rows.sort(key=lambda r: str(r.get("FILE_PATH") or ""))
     return rows
+
+
+def _manifest_file_count(manifest: dict[str, Any]) -> int:
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        return 0
+    return sum(1 for e in files if isinstance(e, dict))
+
+
+def count_all_manifest_files(archive_root: Path | str) -> int:
+    """Total ``files[]`` entries across all draft manifests."""
+    total = 0
+    for _did, apath in iter_draft_archive_dirs(archive_root):
+        manifest = load_draft_manifest(apath)
+        if manifest:
+            total += _manifest_file_count(manifest)
+    return int(total)
+
+
+def count_manifest_files_for_draft(db: Any, draft_id: int) -> int:
+    root = resolve_draft_dir_for_id(db, int(draft_id))
+    if root is None:
+        return 0
+    return _manifest_file_count(load_draft_manifest(root))
+
+
+def count_manifest_files_for_observation(archive_root: Path | str, observation_id: str) -> int:
+    return len(collect_manifest_obs_file_rows(archive_root, observation_id=str(observation_id)))
+
+
+def clear_manifest_files_for_processed_drafts(db: Any) -> int:
+    """Clear ``files[]`` for manifests with status PROCESSED."""
+    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
+    if archive_root is None:
+        return 0
+    cleared = 0
+    for did, apath in iter_draft_archive_dirs(archive_root):
+        manifest = load_draft_manifest(apath)
+        if not manifest:
+            continue
+        st = str(manifest.get("status") or "").strip().upper()
+        if st != "PROCESSED":
+            continue
+        n = _manifest_file_count(manifest)
+        if n:
+            patch_draft_manifest(apath, int(did), files=[])
+            cleared += n
+    return int(cleared)
+
+
+def clear_all_manifest_files(db: Any) -> int:
+    """Clear ``files[]`` on every draft manifest (staging reset helper)."""
+    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
+    if archive_root is None:
+        return 0
+    cleared = 0
+    for did, apath in iter_draft_archive_dirs(archive_root):
+        manifest = load_draft_manifest(apath)
+        if not manifest:
+            continue
+        n = _manifest_file_count(manifest)
+        if n:
+            patch_draft_manifest(apath, int(did), files=[])
+            cleared += n
+    return int(cleared)
 
 
 def _manifest_file_entry_mismatch(label: str, db_val: Any, man_val: Any) -> str | None:
@@ -1094,7 +1126,7 @@ def resolve_calibration_mode(
 
 
 def backfill_draft_manifest_from_db(db: Any, draft_id: int) -> Path | None:
-    """One-time migration: copy legacy OBS_DRAFT/OBS_FILES SQL into manifest."""
+    """One-time migration: ensure manifest exists (legacy SQL core fields only)."""
     if not hasattr(db, "conn"):
         return None
     row = db.conn.execute("SELECT * FROM OBS_DRAFT WHERE ID = ?;", (int(draft_id),)).fetchone()
@@ -1105,9 +1137,10 @@ def backfill_draft_manifest_from_db(db: Any, draft_id: int) -> Path | None:
     if root is None:
         return None
     existing = load_draft_manifest(root)
+    manifest_path = root / _MANIFEST_NAME
+    if manifest_path.is_file():
+        return manifest_path
     extra: dict[str, Any] = {}
-    if isinstance(existing.get("observer_location"), dict):
-        extra["observer_location"] = existing["observer_location"]
     mode = resolve_calibration_mode(draft_id=int(draft_id), archive_path=root)
     jd_val = _optional_float(row_dict.get("OBSERVATIONSTARTJD"))
     if jd_val is not None and jd_val == 0.0:
@@ -1118,18 +1151,7 @@ def backfill_draft_manifest_from_db(db: Any, draft_id: int) -> Path | None:
         is_cal = 0
     final_obs = row_dict.get("FINAL_OBSERVATION_ID")
     final_obs_s = str(final_obs).strip() if final_obs is not None and str(final_obs).strip() else None
-    cur = db.conn.execute(
-        """
-        SELECT FILE_PATH, IMAGETYP, FILTER,
-               QC_HFR, QC_STARS, QC_BACKGROUND, QC_BG_RMS, QC_PASSED,
-               FWHM, SKY_LEVEL, STAR_COUNT, REJECTED_AUTO, IS_REJECTED, INSPECTION_JD,
-               RA, DE, EXPTIME, DRIFT, DRIFT_DRA, DRIFT_DDE, ROUNDNESS_MEAN, ELONGATION_MEAN,
-               OBSERVATION_GROUP_KEY, ID_SCANNING, IS_CALIBRATED, CALIB_TYPE, CALIB_FLAGS, ID
-        FROM OBS_FILES WHERE DRAFT_ID = ? ORDER BY FILE_PATH, ID;
-        """,
-        (int(draft_id),),
-    )
-    files = [_obs_file_row_to_manifest_entry(dict(r)) for r in cur.fetchall()]
+    files = existing.get("files") if isinstance(existing.get("files"), list) else []
     return write_draft_manifest(
         root,
         draft_id=int(draft_id),
@@ -1142,7 +1164,7 @@ def backfill_draft_manifest_from_db(db: Any, draft_id: int) -> Path | None:
         is_calibrated=is_cal,
         center=_center_from_draft_row(row_dict),
         observation_start_jd=jd_val,
-        files=files,
+        files=list(files),
     )
 
 
@@ -1297,7 +1319,7 @@ def collect_manifest_obs_file_rows(
     draft_id: int | None = None,
     observation_id: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Flatten manifest ``files[]`` into OBS_FILES-shaped rows (UI display)."""
+    """Flatten manifest ``files[]`` into manifest file-row-shaped rows (UI display)."""
     want_draft = int(draft_id) if draft_id is not None else None
     want_obs = str(observation_id).strip() if observation_id is not None else None
     rows: list[dict[str, Any]] = []

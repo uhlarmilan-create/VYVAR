@@ -1,4 +1,4 @@
-"""Database Explorer tab: table browser + staging maintenance (OBS_FILES / OBS_DRAFT only)."""
+"""Database Explorer tab: table browser + draft manifest maintenance (OBS_DRAFT only)."""
 
 from __future__ import annotations
 
@@ -9,10 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from database import VyvarDatabase
-from draft_provenance import (
-    collect_manifest_draft_rows,
-    collect_manifest_obs_file_rows,
-)
+from draft_provenance import collect_manifest_draft_rows
 from pipeline import AstroPipeline
 
 
@@ -212,7 +209,7 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
 
     table = st.selectbox(
         "Table",
-        options=["TELESCOPES", "EQUIPMENTS", "LOCATION", "OBS_DRAFT", "OBS_FILES"],
+        options=["TELESCOPES", "EQUIPMENTS", "LOCATION", "OBS_DRAFT"],
         index=0,
     )
 
@@ -262,52 +259,23 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
         _render_obs_draft_manifest_editor(pipeline, archive_root)
         st.info("OBS_DRAFT rows represent ingestion before astrometry finalization.")
 
-    elif table == "OBS_FILES":
-        st.caption("Per-file index from ``draft_manifest.json`` ``files[]`` (ingestion evidence).")
-        archive_root = Path(pipeline.config.archive_root)
-        obs_rows = collect_manifest_obs_file_rows(archive_root)
-        obs_ids = sorted(
-            {
-                str(r["OBSERVATION_ID"])
-                for r in obs_rows
-                if r.get("OBSERVATION_ID") not in (None, "")
-            }
-        )[:200]
-        draft_ids = [str(r["ID"]) for r in collect_manifest_draft_rows(archive_root)[:200]]
-        selected_obs = st.selectbox(
-            "Filter by key",
-            options=["(all)"] + [f"OBS:{x}" for x in obs_ids] + [f"DRAFT:{x}" for x in draft_ids],
-            index=0,
-        )
-        if selected_obs == "(all)":
-            file_rows = collect_manifest_obs_file_rows(archive_root)[:2000]
-        elif selected_obs.startswith("DRAFT:"):
-            did = int(selected_obs.split(":", 1)[1])
-            file_rows = collect_manifest_obs_file_rows(archive_root, draft_id=did)
-        else:
-            oid = selected_obs.split(":", 1)[1] if selected_obs.startswith("OBS:") else selected_obs
-            file_rows = collect_manifest_obs_file_rows(archive_root, observation_id=oid)
-        files_df = pd.DataFrame.from_records(file_rows) if file_rows else pd.DataFrame()
-        st.dataframe(files_df, width="stretch")
-        st.info("OBS_FILES edit is disabled (generated automatically during import).")
-
     st.divider()
-    st.subheader("Database Maintenance (Temporary Tables Only)")
+    st.subheader("Draft Manifest Maintenance")
     st.caption(
-        "This section works **only** with **OBS_FILES** and **OBS_DRAFT**. "
-        "It does not run SQL against **EQUIPMENTS**, **TELESCOPE**, or **OBS_QC_PROCESSING_*** (final hashes)."
+        "Clears ``draft_manifest.json`` ``files[]`` entries and **OBS_DRAFT** SQL rows. "
+        "Does not touch **EQUIPMENTS**, **TELESCOPE**, or **OBS_QC_PROCESSING_*** (final hashes)."
     )
     _n_obs = pipeline.db.count_obs_files()
-    st.metric("Row count in OBS_FILES", int(_n_obs))
+    st.metric("Manifest file rows (all drafts)", int(_n_obs))
 
     st.warning(
         "Really delete temporary data for processed observations? "
-        "Rows in `OBS_FILES` belonging to drafts with status **PROCESSED** will be removed."
+        "``files[]`` entries for drafts with status **PROCESSED** will be cleared."
     )
     if st.button("Cleanup Processed Data", key="vyvar_dbx_maint_cleanup_processed"):
         try:
             _del = pipeline.db.maintenance_delete_obs_files_for_processed_drafts()
-            st.success(f"Deleted rows in OBS_FILES: {_del}.")
+            st.success(f"Cleared manifest file rows: {_del}.")
         except Exception as exc:  # noqa: BLE001
             st.error(str(exc))
         st.rerun()
@@ -317,14 +285,14 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
         unsafe_allow_html=True,
     )
     st.error(
-        "Full staging reset: **DELETE FROM OBS_FILES** and **DELETE FROM OBS_DRAFT**. "
+        "Full staging reset: clear all draft manifest ``files[]`` and **DELETE FROM OBS_DRAFT**. "
         "Hashtag tables **OBS_QC_PROCESSING_*** are left intact (may still reference missing draft IDs)."
     )
     if "vyvar_maint_nuke_gen" not in st.session_state:
         st.session_state["vyvar_maint_nuke_gen"] = 0
     _nuke_gen = int(st.session_state["vyvar_maint_nuke_gen"])
     _nuke_ok = st.checkbox(
-        "I understand the risks and want to delete all rows in OBS_FILES and OBS_DRAFT.",
+        "I understand the risks and want to clear all manifest files[] and OBS_DRAFT rows.",
         key=f"vyvar_dbx_maint_nuke_confirm_{_nuke_gen}",
     )
     _nuke_clicked = st.button(
@@ -332,12 +300,12 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
         key=f"vyvar_dbx_maint_nuke_go_{_nuke_gen}",
         disabled=not _nuke_ok,
         type="primary",
-        help="Deletes all rows in OBS_FILES and OBS_DRAFT. EQUIPMENTS / TELESCOPE / OBS_QC_PROCESSING_* are unchanged.",
+        help="Clears all manifest files[] and OBS_DRAFT rows. EQUIPMENTS / TELESCOPE / OBS_QC_PROCESSING_* are unchanged.",
     )
     if _nuke_clicked:
         try:
             nf, nd = pipeline.db.maintenance_nuke_obs_files_and_drafts_preserve_qc_snapshots()
-            st.success(f"Deleted rows: OBS_FILES = {nf}, OBS_DRAFT = {nd}.")
+            st.success(f"Cleared manifest file rows = {nf}, OBS_DRAFT rows = {nd}.")
         except Exception as exc:  # noqa: BLE001
             st.error(str(exc))
         st.session_state["vyvar_maint_nuke_gen"] = _nuke_gen + 1

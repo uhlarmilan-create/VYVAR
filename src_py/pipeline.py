@@ -1098,7 +1098,7 @@ def _resolve_light_fits_for_quality_inspection(archive: Path, raw_fp: Path | str
 
 
 def _resolve_draft_light_raw_path(archive: Path, file_path: Path | str) -> Path | None:
-    """Resolve raw light FITS on disk for in-RAM calibration (``OBS_FILES.FILE_PATH``)."""
+    """Resolve raw light FITS on disk for in-RAM calibration (``manifest files[].FILE_PATH``)."""
     ap = Path(archive).expanduser()
     p = Path(str(file_path))
     if p.is_file():
@@ -1315,7 +1315,7 @@ def _inspection_jd_from_header(hdr: fits.Header) -> float | None:
             t = Time(iso, format="isot", scale="utc")
             return float(t.jd)
         except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0283] DATE-OBS/Time parse failure leaves inspection_jd NULL in OBS_FILES QC updates.: %s', exc)
+            logging.error('[EXC-0283] DATE-OBS/Time parse failure leaves inspection_jd NULL in manifest files[] QC updates.: %s', exc)
             try:
                 t = Time(d_s, scale="utc")
                 return float(t.jd)
@@ -1573,7 +1573,7 @@ def resolve_preprocess_target_coordinates(
                         )
                         return float(ra_f), float(de_f)
                     log_event(
-                        "DEBUG: OBS_DRAFT center is 0/0 - beriem ako nevyplnene; skusam UI, potom median z OBS_FILES."
+                        "DEBUG: OBS_DRAFT center is 0/0 - beriem ako nevyplnene; skusam UI, potom median z manifest files[]."
                     )
         except Exception:  # noqa: BLE001
             pass
@@ -1663,7 +1663,7 @@ def sync_obs_files_drift_arcmin_for_draft(
     ref_ra_deg: float | None,
     ref_de_deg: float | None,
 ) -> int:
-    """Fill ``OBS_FILES.DRIFT`` (arcmin), ``DRIFT_DRA`` / ``DRIFT_DDE`` (deg plane offsets vs median). Clears when ref missing."""
+    """Fill ``manifest files[].DRIFT`` (arcmin), ``DRIFT_DRA`` / ``DRIFT_DDE`` (deg plane offsets vs median). Clears when ref missing."""
     rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
     n = 0
     if ref_ra_deg is None or ref_de_deg is None:
@@ -1722,7 +1722,7 @@ def generate_observation_hash(db: VyvarDatabase, draft_id: int) -> str:
     """Deterministic processing hashtag: camera (equipment) + telescope + filter/exptime set + JD start.
 
     JD start is the minimum finite ``INSPECTION_JD`` among draft lights, else ``OBS_DRAFT.OBSERVATIONSTARTJD``.
-    Filter/exptime signature is sorted unique ``(FILTER, EXPTIME)`` pairs from ``OBS_FILES`` lights.
+    Filter/exptime signature is sorted unique ``(FILTER, EXPTIME)`` pairs from ``manifest files[]`` lights.
     """
     import hashlib
 
@@ -1773,7 +1773,7 @@ def run_quality_analysis(
     progress_cb: Callable[[int, int, str], None] | None = None,
     roundness_reject_above: float | None = None,
 ) -> dict[str, Any]:
-    """Per-draft light: DAO metrics -> ``OBS_FILES``; FWHM x1.5 and optional DAO roundness auto-reject.
+    """Per-draft light: DAO metrics -> ``manifest files[]``; FWHM x1.5 and optional DAO roundness auto-reject.
 
     When Streamlit is available, updates ``st.session_state`` keys ``fwhm_threshold``, ``center_ra``,
     ``center_de`` from computed medians (same as RAM QC path).
@@ -1927,7 +1927,7 @@ def apply_perf10_dao_qc_to_obs_files(
     perf10_qc_results: dict[str, dict[str, Any]],
     roundness_reject_above: float | None = 1.25,
 ) -> dict[str, Any]:
-    """Write calibration-time DAO QC to ``OBS_FILES`` (same columns as RAM QC step 5)."""
+    """Write calibration-time DAO QC to ``manifest files[]`` (same columns as RAM QC step 5)."""
     import numpy as np
 
     ap = Path(archive_path).expanduser()
@@ -1979,7 +1979,7 @@ def apply_perf10_dao_qc_to_obs_files(
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{row.get('FILE_PATH')}: {exc}")
 
-    logging.info("[PERF-10] Updated OBS_FILES QC for %d frames during calibration", n_updated)
+    logging.info("[PERF-10] Updated manifest files[] QC for %d frames during calibration", n_updated)
 
     vals = [v for v in fwhm_by_id.values() if math.isfinite(v) and v > 0]
     med: float | None
@@ -2039,7 +2039,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
     progress_cb: Callable[[int, int, str], None] | None = None,
     roundness_reject_above: float | None = None,
 ) -> dict[str, Any]:
-    """Calibrate each draft light **in RAM only**, DAO metrics -> ``OBS_FILES``; FWHM x1.5 and optional roundness reject.
+    """Calibrate each draft light **in RAM only**, DAO metrics -> ``manifest files[]``; FWHM x1.5 and optional roundness reject.
 
     No calibrated FITS are written. Uses the same master selection rules as :func:`calibrate_lights_to_calibrated`.
     After QC, :func:`sync_obs_files_drift_arcmin_for_draft` writes ``DRIFT`` / ``DRIFT_DRA`` / ``DRIFT_DDE``.
@@ -2696,7 +2696,7 @@ def _header_vy_fwhm_px(hdr: fits.Header | None) -> float | None:
 
 
 def _obs_fwhm_basename_map_from_db(db: VyvarDatabase, draft_id: int) -> dict[str, float]:
-    """Map ``basename.casefold()`` -> FWHM from ``OBS_FILES`` for draft lights (last row wins per name)."""
+    """Map ``basename.casefold()`` -> FWHM from ``manifest files[]`` for draft lights (last row wins per name)."""
     out: dict[str, float] = {}
     for row in db.fetch_draft_light_rows_for_quality(int(draft_id)):
         try:
@@ -3052,7 +3052,7 @@ def _resolve_best_effort_path_under(
     *,
     pre_calibrated: bool = False,
 ) -> Path | None:
-    """Map an OBS_FILES.FILE_PATH (often archived raw path) to an existing file under ``root``.
+    """Map an manifest files[].FILE_PATH (often archived raw path) to an existing file under ``root``.
 
     Strategy: exact relative join, else basename match (first hit). This is intentionally heuristic because
     imports may store different path bases (absolute vs relative, calibrated vs processed).
@@ -3125,7 +3125,7 @@ def resolve_obs_file_to_processed_fits(
     draft_id: int | None = None,
     db: VyvarDatabase | None = None,
 ) -> Path | None:
-    """Map ``OBS_FILES.FILE_PATH`` onto the draft lights FITS for MASTERSTAR / preprocess.
+    """Map ``manifest files[].FILE_PATH`` onto the draft lights FITS for MASTERSTAR / preprocess.
 
     VYVAR-calibrated: ``processed/lights/.../proc_*.fits`` (legacy alias kept for callers).
     Pre-calibrated: ``non_calibrated/lights/<setup>/`` - the import frame is the frame (no proc_ remap).
@@ -3276,7 +3276,7 @@ def get_masterstar_candidate_rows(
     sky = df["SKY_LEVEL"].astype(float)
     stars = df["STAR_COUNT"].astype(float)
 
-    # snr_estimate: more stars and lower sky -> better SNR (proxy; true SNR not stored in OBS_FILES).
+    # snr_estimate: more stars and lower sky -> better SNR (proxy; true SNR not stored in manifest files[]).
     snr_est = (stars + 1.0) / np.sqrt(np.maximum(sky, 0.0) + 1.0)
 
     f_norm_inv = f_med / (np.maximum(f, 0.0) + eps)
@@ -3297,7 +3297,7 @@ def get_masterstar_candidate_rows(
 
 
 def get_masterstar_candidates(draft_id: int, percentage: float, *, db: VyvarDatabase) -> list[str]:
-    """Return FILE_PATH list of top-ranked MASTERSTAR candidates (temporary list; OBS_FILES is not modified)."""
+    """Return FILE_PATH list of top-ranked MASTERSTAR candidates (temporary list; manifest files[] is not modified)."""
     df = get_masterstar_candidate_rows(int(draft_id), float(percentage), db=db)
     if df.empty:
         return []
@@ -11564,7 +11564,7 @@ def generate_masterstar_and_catalog(
                 try:
                     # FITS QA 'Potvrdit vyber MASTERSTAR' -> ``get_obs_draft_masterstar_source_path``
                     # (``OBS_DRAFT.MASTERSTAR_PATH`` = zdrojovy frame, nie hotovy ``MASTERSTAR.fits``).
-                    # Musi ist pred automatickym top-% z ``OBS_FILES``, inak sa pouzivatelsky vyber prepise.
+                    # Musi ist pred automatickym top-% z ``manifest files[]``, inak sa pouzivatelsky vyber prepise.
                     _src = _db_ms.get_obs_draft_masterstar_source_path(int(draft_id))
                     if _src and str(_src).strip():
                         mapped_src = _map_qc_paths_to_disk([str(_src).strip()])
@@ -11921,7 +11921,7 @@ def generate_masterstar_and_catalog(
                         if _mra is None or _mde is None:
                             _mra, _mde = med_ra, med_de
                             log_event(
-                                "MASTERSTAR solve: pouzivam median RA/Dec z OBS_FILES (hlavicka bez spolahliveho hintu)."
+                                "MASTERSTAR solve: pouzivam median RA/Dec z manifest files[] (hlavicka bez spolahliveho hintu)."
                             )
                         else:
                             sc_h = SkyCoord(ra=float(_mra) * u.deg, dec=float(_mde) * u.deg, frame="icrs")
@@ -11930,7 +11930,7 @@ def generate_masterstar_and_catalog(
                             if sep > float(_hint_sep_thr):
                                 log_event(
                                     f"MASTERSTAR solve: hint vs draft median = {sep:.3f} deg > {_hint_sep_thr} deg "
-                                    "- pouzivam draft median z OBS_FILES."
+                                    "- pouzivam draft median z manifest files[]."
                                 )
                                 _mra, _mde = med_ra, med_de
                             elif sep > 0.05:
@@ -15262,7 +15262,7 @@ def _qc_pack_from_config(
     draft_id: int | None,
     observation_id: str | None,
 ) -> dict[str, Any]:
-    """Post-calibration QC limits + DB linkage (``OBS_FILES`` update by raw light path)."""
+    """Post-calibration QC limits + DB linkage (``manifest files[]`` update by raw light path)."""
     en = bool(cfg.qc_after_calibrate_enabled)
     _dao = float(cfg.qc_dao_detection_sigma)
     if not math.isfinite(_dao) or _dao <= 0:
@@ -15767,7 +15767,7 @@ def _sync_obs_calibration_state_with_retry(
     calib_flags: str,
     stats: dict[str, Any] | None = None,
 ) -> bool:
-    """Sync OBS_FILES cal state after successful calibrate; retry once then ERROR + count."""
+    """Sync manifest files[] cal state after successful calibrate; retry once then ERROR + count."""
     if db is None:
         return True
     last_exc: Exception | None = None
@@ -15787,7 +15787,7 @@ def _sync_obs_calibration_state_with_retry(
             last_exc = exc
             if attempt == 0:
                 LOGGER.warning(
-                    "CAL-DIAG: OBS_FILES cal sync retry after failure (%s): %s",
+                    "CAL-DIAG: manifest files[] cal sync retry after failure (%s): %s",
                     raw_light_path.name,
                     exc,
                 )
@@ -15796,7 +15796,7 @@ def _sync_obs_calibration_state_with_retry(
 
         get_except_fix_counters().calibrate_db_sync_fail += 1
         LOGGER.error(
-            "CAL-DIAG: OBS_FILES cal sync failed after calibrate (%s): %s",
+            "CAL-DIAG: manifest files[] cal sync failed after calibrate (%s): %s",
             raw_light_path.name,
             last_exc,
         )
@@ -15901,7 +15901,7 @@ def _calibrate_one_light_disk(
                         qc_passed=bool(qc_summary["qc_passed"]),
                     )
             except Exception as exc:  # noqa: BLE001
-                LOGGER.debug("OBS_FILES QC update failed: %s", exc)
+                LOGGER.debug("manifest files[] QC update failed: %s", exc)
 
     perf10_qc: dict[str, Any] | None = None
     if (
@@ -16308,11 +16308,11 @@ def calibrate_lights_to_calibrated(
                 )
         except Exception as exc:  # noqa: BLE001
             logging.error('[EXC-0432] [CAL-DIAG] First-light metadata diagnostic (`extract_fits_metadata` for focal/pixel log...: %s', exc)
-            log_event(f"OBS_FILES IS_REJECTED filter skipped (error): {exc}")
+            log_event(f"manifest files[] IS_REJECTED filter skipped (error): {exc}")
     total = len(files)
     if total < _n_before_obs_filter:
         log_event(
-            f"Kalibracia - vylucene {_n_before_obs_filter - total} suborov podla OBS_FILES (IS_REJECTED=1 alebo mimo DB)"
+            f"Kalibracia - vylucene {_n_before_obs_filter - total} suborov podla manifest files[] (IS_REJECTED=1 alebo mimo DB)"
         )
 
     _suffix_note = ", ".join(sorted(FITS_SUFFIXES_LOWER))
@@ -16326,17 +16326,17 @@ def calibrate_lights_to_calibrated(
             if observation_id:
                 _n_o = _dbc.count_obs_files_for_observation(str(observation_id))
                 _log_bits.append(
-                    "OBS_FILES: SELECT COUNT(*) FROM OBS_FILES WHERE OBSERVATION_ID = ? "
+                    "manifest files[]: SELECT COUNT(*) FROM manifest files[] WHERE OBSERVATION_ID = ? "
                     f"(obs={observation_id!r}) -> {_n_o} rows"
                 )
             if draft_id is not None:
                 _n_d = _dbc.count_obs_files_for_draft(int(draft_id))
                 _log_bits.append(
-                    "OBS_FILES: SELECT COUNT(*) FROM OBS_FILES WHERE DRAFT_ID = ? "
+                    "manifest files[]: SELECT COUNT(*) FROM manifest files[] WHERE DRAFT_ID = ? "
                     f"(draft_id={int(draft_id)}) -> {_n_d} rows"
                 )
         except Exception as exc:  # noqa: BLE001
-            _log_bits.append(f"OBS_FILES count query failed: {exc}")
+            _log_bits.append(f"manifest files[] count query failed: {exc}")
     log_event("Kalibracia - vstupne subory: " + " | ".join(_log_bits))
 
     if total > 0:
@@ -16541,7 +16541,7 @@ def calibrate_lights_to_calibrated(
                         src_name = Path(items[idx][0]).name
                         progress_cb(done, total, f"Calibrating batch {done}/{total} ({src_name})")
         except Exception as exc:  # noqa: BLE001
-            # EXC-0434: T2 -- [CAL-DIAG] MP calibrate batch: same OBS_FILES calibration-state update `pass` after wor... (EXCEPT-BULK-2 2026-07-08)
+            # EXC-0434: T2 -- [CAL-DIAG] MP calibrate batch: same manifest files[] calibration-state update `pass` after wor... (EXCEPT-BULK-2 2026-07-08)
             _tb_pool = traceback.format_exc()
             LOGGER.error("Kalibracia (parallel): pool zlyhal, fallback na sekvencny rezim: %s\n%s", exc, _tb_pool)
             log_exception("CHYBA POOLU KALIBRACIE", exc)
@@ -19069,7 +19069,7 @@ def detect_field_jumps(
     """
     Detect sudden field position jumps from per-frame DRIFT values.
 
-    Uses DRIFT_DRA / DRIFT_DDE from OBS_FILES (already computed by
+    Uses DRIFT_DRA / DRIFT_DDE from manifest files[] (already computed by
     sync_obs_files_drift_arcmin_for_draft).
 
     Returns dict with keys:

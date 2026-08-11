@@ -166,7 +166,7 @@ def get_epsf_fwhm_from_context(
     draft_id: int,
 ) -> float:
     """Return FWHM in pixels for EPSFBuilder (VY_FWHM_GAUSS -> VY_FWHM_GAUSSIAN -> VY_FWHM header
-    -> OBS_FILES median -> 4.5), clamped to [2, 12]."""
+    -> manifest files[] median -> 4.5), clamped to [2, 12]."""
     fwhm: float | None = None
     p = Path(masterstar_fits_path)
     try:

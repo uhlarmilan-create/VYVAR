@@ -3121,7 +3121,7 @@ class _PhotometryReportBuilder:
             # EXC-0257: T2 -- report/export may omit or misstate (digits = ''.join(ch for ch in tail if ch.isdigit())... (EXCEPT-BULK 2026-07-08)
             return None
     def _load_obs_files_for_obs(self, ) -> pd.DataFrame:
-        """Load QA metrics from DB (OBS_FILES) for this draft + setup."""
+        """Load QA metrics from DB (manifest files[]) for this draft + setup."""
         draft_id = self._draft_id_from_dirname()
         if draft_id is None:
             return pd.DataFrame()
@@ -3463,7 +3463,7 @@ class _PhotometryReportBuilder:
             # EXC-0265: T2 -- report/export may omit or misstate (try: / import matplotlib.pyplot as plt / except Exc... (EXCEPT-BULK 2026-07-08)
             return
 
-        # Charts use per-frame QC from OBS_FILES (FWHM_PX vs frame_index), same source as FITS QA dashboard.
+        # Charts use per-frame QC from manifest files[] (FWHM_PX vs frame_index), same source as FITS QA dashboard.
         used = self._resolve_masterstar_used_frame(qc_df)
 
         # FWHM limit line: same default as FITS QA dashboard (auto MAD when enabled, else medianx1.05 for n>=5).

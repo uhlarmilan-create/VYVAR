@@ -624,10 +624,10 @@ def filter_light_paths_for_calibration_db(
     draft_id: int | None = None,
     observation_id: str | None = None,
 ) -> list[Path]:
-    """Restrict light paths to ``OBS_FILES`` rows with ``IS_REJECTED`` 0 or NULL.
+    """Restrict light paths to ``manifest files[]`` rows with ``IS_REJECTED`` 0 or NULL.
 
-    Runs the equivalent of filtering on ``SELECT * FROM OBS_FILES WHERE IS_REJECTED = 0``
-    (plus NULL) for the active draft or observation. If the database has **no** ``OBS_FILES``
+    Runs the equivalent of filtering on ``SELECT * FROM manifest files[] WHERE IS_REJECTED = 0``
+    (plus NULL) for the active draft or observation. If the database has **no** ``manifest files[]``
     rows for that scope, ``paths`` are returned unchanged (backward compatible).
     """
     from database import VyvarDatabase

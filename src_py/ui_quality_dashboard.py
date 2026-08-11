@@ -1,4 +1,4 @@
-"""Streamlit Quality Dashboard: OBS_FILES metrics, Plotly, FITS preview, data editor."""
+"""Streamlit Quality Dashboard: manifest files[] metrics, Plotly, FITS preview, data editor."""
 
 from __future__ import annotations
 
@@ -355,7 +355,7 @@ def render_quality_dashboard(
 ) -> None:
     st.subheader("Quality Dashboard")
     st.caption(
-        "Metrics from `OBS_FILES` (DAO analysis). Click a point in the chart -> FITS preview. "
+        "Metrics from `manifest files[]` (DAO analysis). Click a point in the chart -> FITS preview. "
         "Column **IS_REJECTED** is saved to the database immediately."
     )
 
@@ -400,7 +400,7 @@ def render_quality_dashboard(
             st.session_state["fwhm_threshold"] = 0.0
     rows = db.fetch_draft_light_rows_for_quality(did)
     if not rows:
-        st.warning("No light frames in `OBS_FILES` for this draft.")
+        st.warning("No light frames in `manifest files[]` for this draft.")
         return
 
     try:
@@ -685,7 +685,7 @@ def render_quality_dashboard(
     _add_fwhm_traces_with_limit(fig_f, df, fwhm_limit_px=float(fwhm_limit_plot or 0.0))
     if not fig_f.data:
         fig_f.add_annotation(
-            text="No points in FWHM chart (check FILTER / data in OBS_FILES).",
+            text="No points in FWHM chart (check FILTER / data in manifest files[]).",
             xref="paper",
             yref="paper",
             x=0.5,
@@ -749,7 +749,7 @@ def render_quality_dashboard(
     )
 
     # ------------------------------------------------------------------
-    # Field pointing stability (DRIFT from OBS_FILES)
+    # Field pointing stability (DRIFT from manifest files[])
     # ------------------------------------------------------------------
     if "DRIFT" not in df.columns:
         st.caption("Drift data not available.")
@@ -1043,7 +1043,7 @@ def render_quality_dashboard(
             ),
             "IS_REJECTED": st.column_config.CheckboxColumn(
                 "IS_REJECTED",
-                help="Rejected frames are excluded from calibration / preprocess (per OBS_FILES).",
+                help="Rejected frames are excluded from calibration / preprocess (per manifest files[]).",
             ),
         },
         hide_index=True,

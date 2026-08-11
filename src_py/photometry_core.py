@@ -12814,7 +12814,7 @@ def _enrich_active_targets_bp_rp(
             if con is not None:
                 con.close()
         except Exception:  # noqa: BLE001
-            # EXC-0195: T4 -- DB OBS_FILES NAXIS query fails - returns caller-supplied default frame width/height (EXCEPT-BULK-2 2026-07-08)
+            # EXC-0195: T4 -- DB manifest files[] NAXIS query fails - returns caller-supplied default frame width/height (EXCEPT-BULK-2 2026-07-08)
             pass
 
     return df

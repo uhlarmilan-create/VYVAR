@@ -748,7 +748,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             and int(qsum.get("n_successful_fwhm") or 0) > 0
         )
         if not _perf10_ok:
-            _p("Step 5: RAM QC -> OBS_FILES")
+            _p("Step 5: RAM QC -> manifest files[]")
             t0 = time.time()
             qsum = run_draft_ram_calibration_qc_to_obs_files(
                 db=pipeline.db,
@@ -838,7 +838,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         else:
             rows_ms = pipeline.db.fetch_draft_light_rows_for_quality(draft_id)
             if not rows_ms:
-                result.errors.append("Empty OBS_FILES for draft")
+                result.errors.append("Empty manifest files[] for draft")
                 result.phase_timings = timings
                 return result
             df_ms = pd.DataFrame(rows_ms)

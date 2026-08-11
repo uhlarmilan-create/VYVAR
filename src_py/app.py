@@ -380,7 +380,7 @@ def _run_vyvar_full_pipeline(
             last_job_snapshot(cal_out)
             log_event(f"[{_run_label}] Import hotovy - draft {_did}, archiv {result.archive_path}")
 
-        _update("Analyze QC (RAM -> OBS_FILES)")
+        _update("Analyze QC (RAM -> manifest files[])")
         lights_root = resolve_draft_lights_root(
             ap_root,
             draft_id=int(_did),
@@ -392,7 +392,7 @@ def _run_vyvar_full_pipeline(
                 if pre_calibrated_mode
                 else "Missing /calibrated/lights after calibration."
             )
-            return _fail("Analyze QC (RAM -> OBS_FILES)", FileNotFoundError(_missing))
+            return _fail("Analyze QC (RAM -> manifest files[])", FileNotFoundError(_missing))
 
         st.session_state["vyvar_memory_profile"] = estimate_archive_memory_profile(ap)
         _eq_a = int(import_equipment_id)
@@ -482,7 +482,7 @@ def _run_vyvar_full_pipeline(
         _update("Auto-select MASTERSTAR (TOP1)")
         rows_ms = pipeline.db.fetch_draft_light_rows_for_quality(int(_did))
         if not rows_ms:
-            return _fail("Auto-select MASTERSTAR (TOP1)", RuntimeError("Empty OBS_FILES for draft."))
+            return _fail("Auto-select MASTERSTAR (TOP1)", RuntimeError("Empty manifest files[] for draft."))
         df_ms = pd.DataFrame(rows_ms)
         for col in (
             "CALIB_FLAGS",
