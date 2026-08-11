@@ -1,15 +1,13 @@
-"""Database Explorer tab: reference tables + draft manifest maintenance."""
+"""Database Explorer tab: TELESCOPE / EQUIPMENTS / LOCATION reference-table editors."""
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import streamlit as st
 
 from database import VyvarDatabase
-from draft_provenance import collect_manifest_draft_rows
 from pipeline import AstroPipeline
 
 
@@ -28,82 +26,6 @@ def _read_df(conn, sql, params=()):
     return pd.DataFrame.from_records(rows, columns=cols)
 
 
-def _row_active_for_style(row: pd.Series, col: str = "ACTIVE") -> bool:
-    if col not in row.index:
-        return True
-    v = row.get(col)
-    if v is None or (isinstance(v, float) and pd.isna(v)):
-        return True
-    if isinstance(v, (int, float)) and not isinstance(v, bool):
-        try:
-            return int(v) != 0
-        except (TypeError, ValueError):
-            return True
-    s = str(v).strip().upper()
-    if s in ("NO", "N", "FALSE", "0", "0.0"):
-        return False
-    return True
-
-
-def _render_draft_manifest_editor(pipeline: AstroPipeline, archive_root: Path) -> None:
-    """Draft manifest editor: display and save via ``draft_manifest.json`` only."""
-    draft_rows = collect_manifest_draft_rows(archive_root)
-    draft_df = pd.DataFrame.from_records(draft_rows) if draft_rows else pd.DataFrame()
-    if draft_df.empty:
-        st.info("No draft folders found under Archive/Drafts.")
-        return
-    if "ID" in draft_df.columns:
-        draft_df = draft_df.sort_values("ID", ascending=False).reset_index(drop=True)
-    st.caption("Source: ``draft_manifest.json``. Save writes manifest fields directly.")
-    editable_cols = [
-        "ID_EQUIPMENTS",
-        "ID_TELESCOPE",
-        "ID_LOCATION",
-        "ID_SCANNING",
-        "LIGHTS_PATH",
-        "CALIB_PATH",
-        "ARCHIVE_PATH",
-        "MASTERSTAR_PATH",
-        "MASTERSTAR_FITS_PATH",
-        "STATUS",
-        "CENTEROFFIELDRA",
-        "CENTEROFFIELDDE",
-        "OBSERVATIONSTARTJD",
-        "IS_CALIBRATED",
-    ]
-    editable = [c for c in editable_cols if c in draft_df.columns]
-    disabled = [c for c in draft_df.columns if c == "ID" or c not in editable]
-    edited = st.data_editor(
-        draft_df,
-        width="stretch",
-        num_rows="dynamic",
-        disabled=disabled,
-        key="vyvar_universal_ed_DRAFT_MANIFEST",
-        hide_index=True,
-    )
-    if st.button("Save draft manifest changes", key="vyvar_universal_save_DRAFT_MANIFEST"):
-        try:
-            stats = pipeline.db.apply_main_table_editor_save(
-                "DRAFT_MANIFEST",
-                "ID",
-                draft_df,
-                edited,
-                editable_cols=editable,
-            )
-            sd = int(stats.get("soft_deactivated", 0))
-            parts = [
-                f"inserted {stats['inserted']}",
-                f"updated {stats['updated']}",
-                f"deleted {stats['deleted']}",
-            ]
-            if sd:
-                parts.append(f"soft-deactivated (ACTIVE='NO'): {sd}")
-            st.success("Done: " + ", ".join(parts) + ".")
-            st.rerun()
-        except Exception as exc:  # noqa: BLE001
-            st.error(str(exc))
-
-
 def _render_universal_main_table(
     pipeline: AstroPipeline,
     *,
@@ -113,7 +35,7 @@ def _render_universal_main_table(
     order_sql: str = "ORDER BY ID",
     extra_caption: str | None = None,
 ) -> None:
-    """``st.data_editor`` with dynamic rows + Save -> SQL (non-OBS reference tables)."""
+    """``st.data_editor`` with dynamic rows + Save -> SQL (reference tables only)."""
     conn = pipeline.db.conn
     df = _read_df(conn, f"SELECT * FROM {sql_name} {order_sql};")
     if "ACTIVE" in df.columns and not df.empty:
@@ -146,14 +68,6 @@ def _render_universal_main_table(
         )
     if extra_caption:
         st.caption(extra_caption)
-    if "ACTIVE" in df.columns and not df.empty:
-
-        def _grey_inactive(r: pd.Series) -> list[str]:
-            ok = _row_active_for_style(r, "ACTIVE")
-            return ["" if ok else "color: #6c757d; text-decoration: line-through" for _ in r.index]
-
-        with st.expander("Preview - inactive rows are gray", expanded=False):
-            st.dataframe(df.style.apply(_grey_inactive, axis=1), width="stretch")
 
     disabled = [c for c in df.columns if c == "ID" or c not in editable]
     column_config: dict[str, Any] = {}
@@ -251,8 +165,3 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
             ui_label="LOCATION",
             editable_cols=["PLACENAME", "LATITUDE", "LONGITUDE", "ALTITUDE", "ACTIVE", "IS_DEFAULT"],
         )
-
-    st.divider()
-    st.subheader("Draft manifests")
-    archive_root = Path(pipeline.config.archive_root)
-    _render_draft_manifest_editor(pipeline, archive_root)
