@@ -7185,6 +7185,40 @@ def _apply_dao_centroid_wcs_guard(
     return xo, yo, int(np.count_nonzero(use_wcs))
 
 
+def _proc_deduplicate_matched_catalog_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Keep one row per non-empty ``catalog_id`` (highest peak / flux wins).
+
+    Multiple DAO detections can match the same Gaia source in one frame; duplicates
+    inflate Phase-1 comp RMS and can select faint spurious matches.
+    """
+    if df is None or len(df) == 0 or "catalog_id" not in df.columns:
+        return df
+    out = df.copy()
+    cid = out["catalog_id"].fillna("").astype(str).str.strip()
+    matched = cid.ne("") & ~cid.str.lower().isin({"nan", "none"})
+    if not bool(matched.any()):
+        return out
+    if "peak_max_adu" in out.columns:
+        score = pd.to_numeric(out["peak_max_adu"], errors="coerce")
+    elif "dao_flux" in out.columns:
+        score = pd.to_numeric(out["dao_flux"], errors="coerce")
+    else:
+        score = pd.to_numeric(out.get("flux"), errors="coerce")
+    out["_dedupe_score"] = score.fillna(-1.0)
+    keep_idx = (
+        out.loc[matched]
+        .sort_values("_dedupe_score", ascending=False, kind="mergesort")
+        .drop_duplicates(subset=["catalog_id"], keep="first")
+        .index
+    )
+    keep_mask = out.index.isin(keep_idx) | ~matched
+    out = out.loc[keep_mask].drop(columns=["_dedupe_score"]).reset_index(drop=True)
+    n_dropped = int(matched.sum()) - int(len(keep_idx))
+    if n_dropped > 0:
+        LOGGER.debug("[PROC] deduplicated %d duplicate catalog_id rows in per-frame CSV", n_dropped)
+    return out
+
+
 def _remove_cosmics_lacosmic(
     data: "np.ndarray",
     hdr: fits.Header,
@@ -10719,6 +10753,15 @@ def export_per_frame_catalogs(
         df2 = df.copy()
         df2.insert(0, "source_file", fname)
 
+        _before_dedupe = len(df2)
+        df2 = _proc_deduplicate_matched_catalog_rows(df2)
+        if len(df2) != _before_dedupe:
+            LOGGER.debug(
+                "[PROC] per-frame catalog dedupe: %d -> %d rows (%s)",
+                _before_dedupe,
+                len(df2),
+                fname,
+            )
         _before_cat = len(df2)
         df2 = _proc_catalog_keep_matched_rows_only(df2)
         LOGGER.debug("[TODO-13] catalog-only filter: %d -> %d rows", _before_cat, len(df2))
