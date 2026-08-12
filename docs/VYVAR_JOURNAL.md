@@ -2,6 +2,28 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-12 -- ZP-CLIP-REMOVAL (ensemble_normalize; draft 509)
+
+**Symptom.** Draft 509 BO CVn: check-star scatter 0.025, TRUST YELLOW, parallel
+tracks on calibrated LC. Same raw as draft 435 (good, check 0.008).
+
+**Cause.** Per-frame 3xMAD ZP clip in `ensemble_normalize` when N_comps >= 4.
+Armed by mag-diff admission 1.5->2.0 (5 comps). Bright TIER1 rejected 37/134
+frames; MAD denominator collapse (estimator noise). Instrumental scatter fine.
+
+**Matrix (post-process):** B (5, clip OFF) ~ C (3, OFF) ~ 0.008; A (5, ON) ~ 0.019.
+Clip is the entire cause. Broeg kept. mag_diff not reverted.
+
+**Change.** Delete clip block; keep Broeg 1/sigma^2. INV-COMP-MEMBERSHIP added.
+Post-fix 509 photometry: check 0.00863, unimodal, n=134, TRUST GREEN.
+
+**Meta.** `c9e1f8f` did not remove this clip. Behaviour sweep required hereafter.
+
+Reports: `dev/results/CURSOR_RESULT_draft509_vs_435_bo_cvn.md`,
+`dev/results/CURSOR_RESULT_zp_clip_closeout.md`.
+
+---
+
 ## 2026-08-07 -- SESSION-CLOSE (DAO detection closure; doc sync)
 
 **Rozsah 2026-08-05 .. 2026-08-07.** Uzavreni DAO workstreamu a synchronizace stavovych dokumentu.

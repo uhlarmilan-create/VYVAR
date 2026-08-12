@@ -3456,27 +3456,10 @@ def ensemble_normalize(
                     # Optimal weights: w_i = 1 / sigma_i^2 (inverse variance weighting)
                     weights.append((1.0 / (rms_j**2)) * tw)
         if weights:
+            # Broeg 1/sigma^2 (+ tier) weights over ALL admitted comps — no per-frame
+            # rejection (INV-COMP-MEMBERSHIP; ZP MAD clip removed 2026-08-12).
             w = np.asarray(weights, dtype=np.float64)
             z = np.asarray(zp_vals, dtype=np.float64)
-            if len(z) >= 4:
-                # DAOPHOT/IRAF standard: iterative sigma-clip on ZP residuals
-                # Stetson (1987) PASP 99:191
-                _med = float(np.nanmedian(z))
-                _mad = float(np.nanmedian(np.abs(z - _med)))
-                _sigma = max(_mad / _MAD_CONSISTENCY, 1e-6)
-                _keep = np.abs(z - _med) <= 3.0 * _sigma
-                if _keep.sum() >= 2:
-                    if _keep.sum() < len(z):
-                        logging.debug(
-                            "[ZP] Frame sigma-clip: %d/%d comps kept "
-                            "(rejected %d outliers, sigma=%.4f)",
-                            int(_keep.sum()),
-                            len(z),
-                            int((~_keep).sum()),
-                            _sigma,
-                        )
-                    z = z[_keep]
-                    w = w[_keep]
             if len(z) >= 2 and float(np.sum(w)) > 0:
                 mag_calib[i] = target_mag_inst[i] + float(np.sum(w * z) / np.sum(w))
             elif zp_offs:

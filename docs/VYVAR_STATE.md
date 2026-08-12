@@ -1,10 +1,25 @@
 # VYVAR -- Development State
 
 **Status:** Science audit **closed** (2026-08-04). DAO detection workstream **closed** (2026-08-07).
+ZP per-frame MAD clip **removed** (2026-08-12).
 
-Last updated: **2026-08-07** (SESSION-CLOSE 2026-08-07: DAO doc amendments + GitHub sync).
+Last updated: **2026-08-12** (ZP-CLIP-REMOVAL; draft 509 BO CVn restored).
 
-**HEAD:** `6b53c6c` (session-close 2026-08-07 doc amendments pushed).
+**HEAD:** local (ZP-CLIP-REMOVAL pending push; do not push until Milan approves).
+
+## 2026-08-12 -- ZP-CLIP-REMOVAL (draft 509 BO CVn)
+
+Same raw as draft 435; HEAD run admitted 5 comps and armed a dormant per-frame
+3xMAD zeropoint clip in `ensemble_normalize` (`len(z) >= 4`). Intermittent rejection
+of a good TIER1 comp produced ~50 mmag two-state ZP (check scatter 0.025).
+
+**Fix:** remove the clip; keep Broeg weights. Post-fix 509: check `...4892800`
+scatter **0.00863**, target residuals unimodal, n_points 134, instrumental unchanged
+(~0.009). Trust GREEN. Decision: `docs/VYVAR_DECISIONS.md` ZP-CLIP-REMOVAL.
+Invariant: INV-COMP-MEMBERSHIP. `phase01_comparison_max_mag_diff` left at 2.0.
+
+Note: `c9e1f8f` claimed to remove all science-path sigma-clip but left this clip;
+token search failed. Sweeps must be by behaviour.
 
 ## Session close 2026-08-07 (DAO detection closure + doc sync)
 

@@ -8,6 +8,47 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## ZP-CLIP-REMOVAL - no per-frame MAD rejection in ensemble_normalize (2026-08-12)
+
+**Problem.** Draft 509 (same raw as draft 435, HEAD `682f40c`) produced check-star
+scatter 0.025 vs 0.008 on 435. Instrumental photometry was fine on both (~0.008-0.009).
+Cause: `ensemble_normalize` applied a 3x MAD clip to the per-frame zeropoint when
+`len(z) >= 4`. Draft 435 had 3 comps and never entered it; draft 509 had 5 (after
+`phase01_comparison_max_mag_diff` 1.5->2.0) and intermittently rejected bright TIER1
+`1497771992240531712` on 37/134 frames, creating a ~50 mmag two-state ZP.
+
+**Evidence (counterfactual matrix on 509 instrumental fluxes):**
+
+| variant | comps | ZP clip | check `...1001088` | check `...4892800` | target res | shape |
+|---------|-------|---------|--------------------|--------------------|------------|-------|
+| A | 5 | ON | 0.0190 | 0.0187 | 0.020 | ZP bimodal |
+| B | 5 | OFF | 0.0068 | 0.0085 | 0.012 | unimodal |
+| C | 3 | OFF | 0.0079 | 0.0092 | 0.013 | unimodal |
+| D | 3 | ON | =C | =C | =C | =C |
+| E | 5 | OFF Broeg | 0.0073 | 0.0086 | 0.013 | unimodal |
+
+Case: **B ~ C ~ 435 quality**. Clip is the entire cause. Broeg weights kept (not rejection).
+`phase01_comparison_max_mag_diff` deliberately **not** reverted in this commit.
+
+**Mechanism.** Rejections were scattered (30 blocks, max run 3). On reject frames the
+bright star's residual vs other comps was **quieter** (0.007) than on kept frames (0.010).
+MAD collapsed (0.018 vs 0.037), shrinking the boundary — estimator noise at N=5, not a
+physical event.
+
+**Rule.** Per-frame zeropoint uses all admitted comps with Broeg 1/sigma^2 (+ tier) weights.
+No rejection step. See INV-COMP-MEMBERSHIP.
+
+**History note.** Commit `c9e1f8f` ("remove all science-path sigma-clip") did **not** remove
+this clip. Token search missed it (no `sigma_clip` string). Future rejection sweeps must be
+by behaviour, not by name.
+
+**Open / not in this commit:** `detect_outliers` (4589-4602), plate-solver SIP pair clip
+(`vyvar_platesolver.py:685-693`), I-04 unmatched-epoch drop, `phase01_comparison_max_mag_diff`.
+
+Report: `dev/results/CURSOR_RESULT_zp_clip_closeout.md`.
+
+---
+
 ## INFOLOG-AUTHORITY - durable session log over ring buffer (2026-07-29)
 
 **Problem.** Two infolog files per run with the same nominal role: a durable session append log
