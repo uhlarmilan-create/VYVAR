@@ -13,17 +13,14 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from comp_frame_normalize import (
+    assign_relative_flux,
+    build_frame_bin_medians,
+    norm_med_for_bin,
+    robust_comp_rms,
+)
+
 LOGGER = logging.getLogger(__name__)
-
-
-def norm_med_for_bin(b: int, bin_meds: dict, bin_keys: np.ndarray) -> float:
-    bi = int(b)
-    if bi in bin_meds:
-        return float(bin_meds[bi])
-    if len(bin_keys) == 0:
-        return float("nan")
-    ck = int(bin_keys[int(np.argmin(np.abs(bin_keys - bi)))])
-    return float(bin_meds[ck])
 
 _POOL_USECOLS: list[str] = [
     "name",
@@ -189,40 +186,24 @@ def compute_global_pool_rms_map(
             if sub.empty:
                 continue
 
-            mag_col_frame = "mag" if "mag" in sub.columns else None
-            if mag_col_frame and mag_col_frame in sub.columns:
-                sub = sub.copy()
-                sub["_mag_num"] = pd.to_numeric(sub[mag_col_frame], errors="coerce")
-                sub["_mag_bin"] = (sub["_mag_num"] / 0.5).apply(
-                    lambda x: int(x) if math.isfinite(x) else -1
-                )
-                bin_meds: dict[int, float] = {}
-                for b, grp in sub.groupby("_mag_bin"):
-                    bmed = float(grp[actual_flux_col].median())
-                    if math.isfinite(bmed) and bmed > 0:
-                        bin_meds[int(b)] = bmed
+            bin_meds, frame_med, used_mag_bins = build_frame_bin_medians(
+                df, flux_col=actual_flux_col
+            )
+            if used_mag_bins:
                 if not bin_meds:
                     continue
-            else:
-                frame_med = float(sub[actual_flux_col].median())
-                if not math.isfinite(frame_med) or frame_med <= 0:
-                    continue
-                bin_meds = {}
+            elif not math.isfinite(frame_med) or frame_med <= 0:
+                continue
 
             n_frames_loaded += 1
-            sub_work = sub.copy()
-            raw_flux = pd.to_numeric(sub_work[actual_flux_col], errors="coerce")
-            sub_work["_raw_flux"] = raw_flux
-
-            if bin_meds:
-                _bin_keys = np.fromiter(bin_meds.keys(), dtype=np.int64)
-                sub_work["_norm_med"] = sub_work["_mag_bin"].map(
-                    lambda b: norm_med_for_bin(b, bin_meds, _bin_keys)
-                )
-            else:
-                sub_work["_norm_med"] = float(frame_med)
-
-            sub_work["_rel"] = sub_work["_raw_flux"] / pd.to_numeric(sub_work["_norm_med"], errors="coerce")
+            sub_work = assign_relative_flux(
+                sub,
+                flux_col=actual_flux_col,
+                bin_meds=bin_meds,
+                frame_med=frame_med,
+                id_col=name_col,
+            )
+            raw_flux = sub_work["_raw_flux"]
             # Safe: _norm_med == 0 rows filtered by _rel_ok mask before use.
             _rel_ok = sub_work["_rel"].notna() & np.isfinite(sub_work["_rel"].to_numpy(dtype=np.float64))
             _rel_ok = _rel_ok & sub_work["_rel"].gt(0)
@@ -376,7 +357,7 @@ def compute_global_pool_rms_map(
         if len(vals) < min_frames:
             continue
         arr = np.asarray(vals, dtype=np.float64)
-        rms = float(np.sqrt(np.mean((arr - 1.0) ** 2)))
+        rms = robust_comp_rms(arr)
         if math.isfinite(rms):
             rms_map[cid] = rms
 

@@ -14,7 +14,13 @@ from typing import AbstractSet, Any, Callable
 import numpy as np
 import pandas as pd
 
-from comp_pool_rms import norm_med_for_bin, sort_per_frame_csv_paths
+from comp_frame_normalize import (
+    assign_relative_flux,
+    build_frame_bin_medians,
+    norm_med_for_bin,
+    robust_comp_rms,
+)
+from comp_pool_rms import sort_per_frame_csv_paths
 from config import AppConfig
 from gaia_catalog_id import normalize_gaia_id_set, normalize_gaia_source_id
 from infolog import log_event
@@ -872,43 +878,25 @@ def _accumulate_per_frame_comp_metrics(
             if sub.empty:
                 continue
 
-            mag_col_frame = "mag" if "mag" in sub.columns else None
-            frame_med = float("nan")
-            if mag_col_frame and mag_col_frame in sub.columns:
-                sub = sub.copy()
-                sub["_mag_num"] = pd.to_numeric(sub[mag_col_frame], errors="coerce")
-                sub["_mag_bin"] = (sub["_mag_num"] / 0.5).apply(
-                    lambda x: int(x) if math.isfinite(x) else -1
-                )
-                bin_meds: dict[int, float] = {}
-                for b, grp in sub.groupby("_mag_bin"):
-                    bmed = float(grp[actual_flux_col].median())
-                    if math.isfinite(bmed) and bmed > 0:
-                        bin_meds[int(b)] = bmed
+            bin_meds, frame_med, used_mag_bins = build_frame_bin_medians(
+                df, flux_col=actual_flux_col
+            )
+            if used_mag_bins:
                 if not bin_meds:
                     continue
-            else:
-                frame_med = float(sub[actual_flux_col].median())
-                if not math.isfinite(frame_med) or frame_med <= 0:
-                    continue
-                bin_meds = {}
+            elif not math.isfinite(frame_med) or frame_med <= 0:
+                continue
 
             n_frames_loaded += 1
 
             if _use_vectorized:
-                sub_work = sub.copy()
-                raw_flux = pd.to_numeric(sub_work[actual_flux_col], errors="coerce")
-                sub_work["_raw_flux"] = raw_flux
-
-                if bin_meds:
-                    _bin_keys = np.fromiter(bin_meds.keys(), dtype=np.int64)
-                    sub_work["_norm_med"] = sub_work["_mag_bin"].map(
-                        lambda b: norm_med_for_bin(b, bin_meds, _bin_keys)
-                    )
-                else:
-                    sub_work["_norm_med"] = float(frame_med)
-
-                sub_work["_rel"] = sub_work["_raw_flux"] / pd.to_numeric(sub_work["_norm_med"], errors="coerce")
+                sub_work = assign_relative_flux(
+                    sub,
+                    flux_col=actual_flux_col,
+                    bin_meds=bin_meds,
+                    frame_med=frame_med,
+                    id_col=name_col,
+                )
                 _rel_ok = sub_work["_rel"].notna() & np.isfinite(sub_work["_rel"].to_numpy(dtype=np.float64))
                 _rel_ok = _rel_ok & sub_work["_rel"].gt(0)
 
@@ -987,26 +975,20 @@ def _accumulate_per_frame_comp_metrics(
                     if snr_vals.size > 0:
                         snr_map[cid_s].extend(snr_vals.astype(float).tolist())
             else:
+                sub_work = assign_relative_flux(
+                    sub,
+                    flux_col=actual_flux_col,
+                    bin_meds=bin_meds,
+                    frame_med=frame_med,
+                    id_col=name_col,
+                )
                 _bin_keys = np.fromiter(bin_meds.keys(), dtype=np.int64) if bin_meds else np.array([], dtype=np.int64)
 
-                def _norm_med_for_bin_row(
-                    mag_num: float, bin_meds=bin_meds, _bin_keys=_bin_keys, frame_med=frame_med
-                ) -> float:
-                    if bin_meds:
-                        b = int(mag_num / 0.5) if math.isfinite(mag_num) else -1
-                        if b in bin_meds:
-                            return float(bin_meds[b])
-                        if len(_bin_keys) == 0:
-                            return float("nan")
-                        ck = int(_bin_keys[int(np.argmin(np.abs(_bin_keys - int(b))))])
-                        return float(bin_meds[ck])
-                    return float(frame_med)
-
-                for _, row in sub.iterrows():
+                for _, row in sub_work.iterrows():
                     cid = str(row[name_col])
                     if cid not in cand_ids:
                         continue
-                    raw_flux = float(row[actual_flux_col])
+                    raw_flux = float(row.get("_raw_flux", row[actual_flux_col]))
                     if not math.isfinite(raw_flux) or raw_flux <= 0:
                         continue
 
@@ -1043,23 +1025,13 @@ def _accumulate_per_frame_comp_metrics(
                             if math.isfinite(snr):
                                 snr_map[cid].append(float(snr))
 
-                    if bin_meds:
-                        mag_num = (
-                            float(row.get("_mag_num", float("nan")))
-                            if "_mag_num" in row.index
-                            else float(pd.to_numeric(row.get("mag", float("nan")), errors="coerce"))
-                        )
-                    else:
-                        mag_num = float("nan")
-                    norm_med = _norm_med_for_bin_row(mag_num)
-                    if math.isfinite(norm_med) and norm_med > 0:
-                        rel = raw_flux / norm_med
-                        if math.isfinite(rel) and rel > 0:
-                            flux_map[cid].append(rel)
-                            if "bjd_tdb_mid" in row.index:
-                                _bjd_v = float(pd.to_numeric(row.get("bjd_tdb_mid"), errors="coerce"))
-                                if math.isfinite(_bjd_v):
-                                    bjd_map[cid].append(_bjd_v)
+                    rel = float(row.get("_rel", float("nan")))
+                    if math.isfinite(rel) and rel > 0:
+                        flux_map[cid].append(rel)
+                        if "bjd_tdb_mid" in row.index:
+                            _bjd_v = float(pd.to_numeric(row.get("bjd_tdb_mid"), errors="coerce"))
+                            if math.isfinite(_bjd_v):
+                                bjd_map[cid].append(_bjd_v)
 
         except (ValueError, TypeError, KeyError, IndexError) as exc:
             from except_fix_counters import get_except_fix_counters
@@ -1589,7 +1561,7 @@ def _detrend_and_compute_comp_rms_map(
         if len(vals) < min_frames:
             continue
         arr = np.asarray(vals, dtype=np.float64)
-        rms = float(np.sqrt(np.mean((arr - 1.0) ** 2)))
+        rms = robust_comp_rms(arr)
         if math.isfinite(rms):
             rms_map[cid] = rms
 
