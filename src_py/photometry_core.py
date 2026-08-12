@@ -3456,7 +3456,7 @@ def ensemble_normalize(
                     # Optimal weights: w_i = 1 / sigma_i^2 (inverse variance weighting)
                     weights.append((1.0 / (rms_j**2)) * tw)
         if weights:
-            # Broeg 1/sigma^2 (+ tier) weights over ALL admitted comps — no per-frame
+            # Broeg 1/sigma^2 (+ tier) weights over ALL admitted comps - no per-frame
             # rejection (INV-COMP-MEMBERSHIP; ZP MAD clip removed 2026-08-12).
             w = np.asarray(weights, dtype=np.float64)
             z = np.asarray(zp_vals, dtype=np.float64)
