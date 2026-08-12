@@ -751,39 +751,6 @@ def render_settings_dashboard(
 
         st.markdown("---")
         st.caption(
-            "Frame-quality gate (Round-2 B.2): rejects transparency/PSF-collapsed frames in "
-            "Phase 2A. Default OFF -> baseline byte-identical."
-        )
-        frame_quality_gate_enabled = st.toggle(
-            "frame_quality_gate_enabled",
-            value=bool(getattr(cfg, "frame_quality_gate_enabled", False)),
-            help="Drop whole frames whose PSF-concentration (flux_large/flux) is a robust outlier "
-            "and FWHM >= median. Targets cloud/dawn collapse; spares clear-but-faint frames.",
-        )
-        frame_quality_ratio_k = st.slider(
-            "frame_quality_ratio_k",
-            min_value=2.0,
-            max_value=20.0,
-            value=float(getattr(cfg, "frame_quality_ratio_k", 5.0) or 5.0),
-            step=0.5,
-            help="Robust z-score cut on per-frame flux_large/flux: reject if z=(ratio-median)/(1.4826*MAD) > k.",
-        )
-        frame_quality_fwhm_factor = st.slider(
-            "frame_quality_fwhm_factor",
-            min_value=0.8,
-            max_value=3.0,
-            value=float(getattr(cfg, "frame_quality_fwhm_factor", 1.0) or 1.0),
-            step=0.05,
-            help="Guard: reject a ratio-outlier only if its FWHM >= factor*median-FWHM (spares sharp frames).",
-        )
-        frame_quality_min_keep_frames = st.slider(
-            "frame_quality_min_keep_frames",
-            min_value=3,
-            max_value=200,
-            value=int(getattr(cfg, "frame_quality_min_keep_frames", 10) or 10),
-            help="Safety floor: skip the gate entirely if it would keep fewer than this many frames.",
-        )
-        st.caption(
             "Fix B: reject-on-alignment-residual gate. Per-frame alignment residual (median "
             "deviation of bright sources from their across-night median position) is always recorded "
             "in alignment_report.csv; the gate (default OFF -> byte-identical) drops frames whose "
@@ -965,7 +932,7 @@ def render_settings_dashboard(
             value=bool(getattr(cfg, "comp_sparse_fallback_enabled", True)),
             help=(
                 "Per-target sparse fallback only: when default comp selection is starved, "
-                "run generous pool + iterative CM-residual clip (default OFF)."
+                "run a generous comparison pool (no ensemble sigma-clip)."
             ),
         )
         p01_sparse_fb_min = st.number_input(
@@ -976,14 +943,6 @@ def render_settings_dashboard(
             step=1,
             disabled=not p01_sparse_fb,
             help="Trigger fallback when default yields fewer comps than this (0 in config -> n_comp_min).",
-        )
-        p01_clip_sigma = st.slider(
-            "comp_clip_sigma",
-            min_value=3.0,
-            max_value=10.0,
-            value=float(getattr(cfg, "comp_clip_sigma", 5.0) or 5.0),
-            step=0.5,
-            disabled=not p01_sparse_fb,
         )
         p01_mind = st.slider(
             "phase01_comparison_min_dist_arcsec",
@@ -1094,10 +1053,6 @@ def render_settings_dashboard(
         if cfg.comp_trust_min_comps > cfg.phase01_comparison_n_comp_max:
             cfg.comp_trust_min_comps = int(cfg.phase01_comparison_n_comp_max)
         cfg.check_star_min_epochs = int(max(3, min(50, chk_min_epochs)))
-        cfg.frame_quality_gate_enabled = bool(frame_quality_gate_enabled)
-        cfg.frame_quality_ratio_k = float(max(2.0, min(20.0, frame_quality_ratio_k)))
-        cfg.frame_quality_fwhm_factor = float(max(0.8, min(3.0, frame_quality_fwhm_factor)))
-        cfg.frame_quality_min_keep_frames = int(max(3, min(100000, frame_quality_min_keep_frames)))
         cfg.frame_align_residual_gate_enabled = bool(frame_align_residual_gate_enabled)
         cfg.frame_align_residual_max_frac = float(max(0.05, min(1.0, frame_align_residual_max_frac)))
         cfg.frame_align_residual_min_keep_frames = int(max(3, min(100000, frame_align_residual_min_keep_frames)))
@@ -1123,7 +1078,6 @@ def render_settings_dashboard(
         cfg.comp_iterative_clip_enabled = bool(p01_sparse_fb)
         _fb_min_raw = int(p01_sparse_fb_min)
         cfg.comp_sparse_fallback_min = 0 if _fb_min_raw == int(cfg.phase01_comparison_n_comp_min) else _fb_min_raw
-        cfg.comp_clip_sigma = float(max(3.0, min(10.0, p01_clip_sigma)))
         cfg.phase01_comparison_min_dist_arcsec = float(max(0.0, min(600.0, p01_mind)))
         cfg.phase01_comparison_min_frames_frac = float(max(0.05, min(0.95, p01_mff)))
         cfg.phase01_comparison_exclude_gaia_nss = bool(p01_ex_nss)

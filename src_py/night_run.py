@@ -232,9 +232,6 @@ def _night_run_preprocess(
     _pp_kw = dict(
         reject_fwhm_px=(float(_fwhm_lim) if float(_fwhm_lim) > 0.0 else None),
         reject_elongation=None,
-        temporal_sigma_clip=False,
-        temporal_sigma=6.0,
-        temporal_min_frames=5,
         use_gpu_if_available=False,
         inject_pointing_ra_deg=pending.get("inject_pointing_ra_deg"),
         inject_pointing_dec_deg=pending.get("inject_pointing_dec_deg"),

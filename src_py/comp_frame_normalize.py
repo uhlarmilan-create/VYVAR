@@ -157,38 +157,22 @@ def robust_comp_rms(
     min_keep: int = 3,
     min_flux_frac: float = 0.75,
 ) -> float:
-    """Intrinsic scatter of a comp star about its own mean (robust, MAD-based).
+    """Intrinsic scatter of a comp star about its own median (MAD; no frame rejection).
 
-    Definition (differential photometry):
-    1. Input: frame-to-frame relative flux ``f_i = raw_i / norm_ref_i`` where
-       ``norm_ref_i`` is the full-catalog (deduped) brightness-bin median in frame i.
-    2. Detrend vs frame index and re-scale to median 1.0 (caller; quadratic airmass proxy).
-    3. Drop physically degraded frames with ``f_i < min_flux_frac * median(f)`` (default 0.75).
-       A minority of smeared/mis-centred frames (Check 1: ~40% flux) must not dominate RMS.
-    4. Sigma-clip remaining frames at ``clip_sigma * 1.4826 * MAD`` about the median.
-    5. ``comp_rms = 1.4826 * median(|f_i - median(f)|)`` on the clipped series.
+    Definition (differential photometry, zero-clipping policy 2026-08-12):
+    1. Input: frame-to-frame relative flux ``f_i = raw_i / norm_ref_i``.
+    2. Keep every finite positive ``f_i`` (no flux-fraction drop, no sigma-clip).
+    3. ``comp_rms = 1.4826 * median(|f_i - median(f)|)``.
 
+    ``clip_sigma`` / ``min_flux_frac`` are accepted for call-site compatibility and ignored.
     Units match the historical gate (~0.01-0.05 = 1-5% fractional flux scatter).
     """
+    _ = (clip_sigma, min_flux_frac)
     arr = np.asarray(rel_flux, dtype=np.float64)
     arr = arr[np.isfinite(arr) & (arr > 0)]
     if int(arr.size) < min_keep:
         return float("nan")
     med = float(np.median(arr))
-    if med > 0 and math.isfinite(float(min_flux_frac)) and float(min_flux_frac) > 0:
-        phys_ok = arr >= (float(min_flux_frac) * med)
-        if int(phys_ok.sum()) >= min_keep:
-            arr = arr[phys_ok]
-            med = float(np.median(arr))
-    resid = arr - med
-    abs_dev = np.abs(resid)
-    nz = abs_dev[abs_dev > 1e-6]
-    scale = mad_sigma(nz) if int(nz.size) >= min_keep else mad_sigma(abs_dev)
-    if math.isfinite(scale) and scale > 0 and int(arr.size) >= max(min_keep, 6):
-        mask = abs_dev <= float(clip_sigma) * scale
-        if int(mask.sum()) >= min_keep:
-            arr = arr[mask]
-            med = float(np.median(arr))
     resid = arr - med
     if not np.any(np.abs(resid) > 1e-9):
         return 0.0

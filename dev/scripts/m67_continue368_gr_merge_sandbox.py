@@ -318,7 +318,7 @@ def _run_merged_photometry(
         max_comp_rms=float(cfg.phase01_comparison_max_comp_rms),
         min_dist_arcsec=float(cfg.phase01_comparison_min_dist_arcsec),
         min_frames_frac=float(cfg.phase01_comparison_min_frames_frac),
-        rms_outlier_sigma=float(cfg.phase01_comparison_rms_outlier_sigma),
+        rms_outlier_sigma=3.0,
         exclude_gaia_nss=bool(cfg.phase01_comparison_exclude_gaia_nss),
         exclude_gaia_extobj=bool(cfg.phase01_comparison_exclude_gaia_extobj),
         mag_bright_threshold=float(cfg.phase01_comparison_mag_bright_threshold),

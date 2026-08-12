@@ -14,6 +14,7 @@ from k2_cohort_core import (
     photon_weighted_airmass_slope,
     weighted_linear_regression,
 )
+from plain_stats import plain_mean_med_std
 
 
 def analytic_slope_se(
@@ -373,7 +374,6 @@ def centroid_cutout_detector(
     fwhm: float = 3.0,
 ) -> tuple[float, float]:
     """Refine star position in detector coordinates via local DAO cutout."""
-    from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
 
     data = np.asarray(image, dtype=np.float64)
@@ -385,7 +385,7 @@ def centroid_cutout_detector(
     y0 = max(0, iy - half)
     y1 = min(h, iy + half + 1)
     cut = data[y0:y1, x0:x1]
-    _, med, std = sigma_clipped_stats(cut, sigma=3.0)
+    _, med, std = plain_mean_med_std(cut, sigma=3.0)
     finder = DAOStarFinder(fwhm=fwhm, threshold=max(5.0 * float(std), 1e-6), min_separation=0)
     tbl = finder(cut - med)
     if tbl is None or len(tbl) == 0:

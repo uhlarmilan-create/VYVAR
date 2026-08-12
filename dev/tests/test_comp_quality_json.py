@@ -29,7 +29,7 @@ def test_parse_comp_quality_flat_and_structured():
 
 
 def test_stability_outlier_note_on_exclude():
-    """One noisy comp among stable comps -> excluded with outlier note."""
+    """One noisy comp above hard p2p ceiling -> excluded (no MAD sigma-clip)."""
     rng = np.random.default_rng(1)
     n = 40
     bjd = np.linspace(2459000.0, 2459000.4, n)
@@ -39,7 +39,7 @@ def test_stability_outlier_note_on_exclude():
         cid = f"c{i}"
         comp_lc[cid] = 12.0 + 0.002 * rng.standard_normal(n)
         comp_bjd[cid] = bjd.copy()
-    comp_lc["c4"] = 12.0 + 0.08 * rng.standard_normal(n)
+    comp_lc["c4"] = 12.0 + 0.15 * rng.standard_normal(n)
     comp_bjd["c4"] = bjd.copy()
     q = check_comparison_stability(
         comp_lc,
@@ -49,7 +49,7 @@ def test_stability_outlier_note_on_exclude():
         max_comp_slope_mmag_hr=99.0,
     )
     assert q["c4"]["quality"] == "excluded"
-    assert "outlier" in q["c4"].get("note", "")
+    assert "p2p_hard_ceiling" in q["c4"].get("note", "")
     assert "p2p=" in q["c4"]["note"]
 
 

@@ -37,6 +37,7 @@ from unit_resolver import (
     masterstar_sibling_rms_max_px as _resolve_sibling_rms_max_px,
     plate_scale_arcsec_per_px_from_wcs,
 )
+from plain_stats import plain_mean_med_std
 from utils import (
     MIN_GAIA_CONE_RADIUS_DEG,
     catalog_cone_radius_deg_from_optics,
@@ -4282,13 +4283,12 @@ def _try_blind_series_hint(
     app_config: Any,
 ) -> tuple[float, float, str] | None:
     """Run scale-constrained blind triangle solver; return (ra, dec, tier) or None."""
-    from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
 
     try:
         from vyvar_blind_series import solve_blind_with_series
 
-        _, med, std = sigma_clipped_stats(data, sigma=3.0)
+        _, med, std = plain_mean_med_std(data, sigma=3.0)
         finder = DAOStarFinder(fwhm=3.0, threshold=5.0 * float(std), min_separation=0)
         srcs = finder(data - float(med))
         if srcs is None or len(srcs) < 3:
@@ -4362,7 +4362,6 @@ def solve_wcs_with_local_gaia(
 
     ``fit_wcs_from_points(..., projection=\"TAN\")`` len zostavi **linearny** TAN; SIP sa dopocita po zhode hviezd.
     """
-    from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
 
 
@@ -4535,7 +4534,7 @@ def solve_wcs_with_local_gaia(
         try:
             from vyvar_blind_series import solve_blind_with_series
 
-            _, _bmed, _bstd = sigma_clipped_stats(data, sigma=3.0)
+            _, _bmed, _bstd = plain_mean_med_std(data, sigma=3.0)
             _bfinder = DAOStarFinder(fwhm=3.0, threshold=5.0 * _bstd, min_separation=0)
             _bsrcs = _bfinder(data - _bmed)
             if _bsrcs is not None and len(_bsrcs) >= 3:
@@ -4796,7 +4795,7 @@ def solve_wcs_with_local_gaia(
 
     # Dynamic normalization for per-frame noise adaptation before DAO.
     working_data = np.nan_to_num(data).astype("float32")
-    _, med_w, clipped_std = sigma_clipped_stats(working_data, sigma=3.0, maxiters=5)
+    _, med_w, clipped_std = plain_mean_med_std(working_data, sigma=3.0, maxiters=5)
     clipped_std = float(clipped_std) if np.isfinite(clipped_std) else 0.0
     if clipped_std <= 0:
         clipped_std = 1.0
@@ -6182,11 +6181,10 @@ def _sibling_detect_dao_on_image(
     *,
     dao_sigma: float,
 ) -> tuple[np.ndarray, np.ndarray]:
-    from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
 
     working = np.nan_to_num(np.asarray(data, dtype=np.float32))
-    _, med_w, clipped_std = sigma_clipped_stats(working, sigma=3.0, maxiters=5)
+    _, med_w, clipped_std = plain_mean_med_std(working, sigma=3.0, maxiters=5)
     std = float(clipped_std) if np.isfinite(clipped_std) and clipped_std > 0 else 1.0
     img2 = np.clip(working - float(med_w), 0.0, None).astype(np.float32, copy=False)
     dao_fw = float(dao_detection_fwhm_pixels(hdr, configured_fallback=3.0) or 3.5)

@@ -105,7 +105,6 @@ def main():
     from astropy.coordinates import SkyCoord
     import astropy.units as u
     from astropy.time import Time
-    from astropy.stats import SigmaClip
     from photutils.aperture import (CircularAperture, CircularAnnulus,
                                     aperture_photometry, ApertureStats)
     from photutils.centroids import centroid_sources, centroid_com
@@ -169,7 +168,7 @@ def main():
 
     # extraction
     x0, y0 = sel.x.values.astype(float), sel.y.values.astype(float)
-    sids = sel.source_id.values; sc = SigmaClip(sigma=3.0)
+    sids = sel.source_id.values
     rows_p, rows_s, times = [], [], []
     sig = fwhm/2.3548
     for k, fp in enumerate(lights):
@@ -178,7 +177,8 @@ def main():
         xc, yc = centroid_sources(d, x0, y0, box_size=9, centroid_func=centroid_com)
         bad = ~(np.isfinite(xc) & np.isfinite(yc)); xc[bad], yc[bad] = x0[bad], y0[bad]
         pos = np.column_stack([xc, yc])
-        sky = ApertureStats(d, CircularAnnulus(pos, r_in, r_out), sigma_clip=sc).median
+        # No SigmaClip on annulus (zero-clipping policy 2026-08-12).
+        sky = ApertureStats(d, CircularAnnulus(pos, r_in, r_out), sigma_clip=None).median
         fp_s = np.asarray(aperture_photometry(d, CircularAperture(pos, r_small))["aperture_sum"]) - sky*np.pi*r_small**2
         try: mjd = Time(hdr.get("DATE-OBS"), format="isot").mjd
         except Exception: mjd = np.nan  # noqa: BLE001

@@ -152,7 +152,6 @@ class RunCitationContext:
     use_common_mode_stability_detrend: bool = False
     use_iterative_comp_clip: bool = False
     use_catalog_recovery_verify: bool = False
-    use_frame_quality_gate: bool = False
     use_k2_literature: bool = False
     use_hrd_extreme: bool = True
     use_ensemble_flux_sum: bool = True
@@ -249,8 +248,6 @@ def build_run_citation_context(
     if not use_catalog_recovery:
         _ast = meta.get("astrometry") if isinstance(meta.get("astrometry"), dict) else {}
         use_catalog_recovery = bool(_ast.get("catalog_recovery_verified", False))
-    use_frame_quality_gate = bool(getattr(cfg, "frame_quality_gate_enabled", False)) if cfg else False
-    use_frame_quality_gate = use_frame_quality_gate or bool(meta.get("frame_quality_gate_used", False))
     _k2m = str(getattr(cfg, "k2_mode", "off") or "off").strip().lower() if cfg else "off"
     use_k2 = _k2m not in ("0", "false", "no", "off", "none")
     use_hrd = bool(getattr(cfg, "hrd_online_enrich_enabled", True)) if cfg else True
@@ -290,7 +287,6 @@ def build_run_citation_context(
         use_common_mode_stability_detrend=use_cm_detrend,
         use_iterative_comp_clip=use_iter_clip,
         use_catalog_recovery_verify=use_catalog_recovery,
-        use_frame_quality_gate=use_frame_quality_gate,
         use_k2_literature=use_k2,
         use_hrd_extreme=use_hrd,
         use_ensemble_flux_sum=True,
@@ -493,10 +489,6 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
                 citation_line("vonneumann1941", bib=bib),
             ]
         )
-    if ctx.use_frame_quality_gate:
-        # Frame-quality gate: per-frame PSF-concentration (flux_large/flux) outlier rejection,
-        # grounded in the curve-of-growth / SNR-optimal aperture framework.
-        dq.append(citation_line("howell1989", bib=bib))
     if dq:
         sections.append(("DATA-QUALITY GATE", dq))
 

@@ -43,16 +43,17 @@ def test_iterative_clip_keeps_stable_pool() -> None:
     assert len(active) >= 8
 
 
-def test_iterative_clip_excludes_divergent_comp() -> None:
+def test_iterative_clip_passthrough_keeps_divergent_comp() -> None:
+    # Zero-clipping policy: ensemble clip is a passthrough (no sigma rejection).
     flux_map, bjd_map, rms_map = _synthetic_pool(8, outlier_amp=0.15)
     out = _iterative_ensemble_clip_cm_residual(
         flux_map, bjd_map, rms_map, clip_sigma=5.0, n_comp_min=3
     )
     assert out is not None
     active, meta = out
-    assert "9999999999999999999" not in active
-    assert meta["comp_pool_n_clipped"] >= 1
-    assert meta["comp_pool_n_final"] >= 3
+    assert "9999999999999999999" in active
+    assert meta["comp_pool_n_clipped"] == 0
+    assert meta["comp_pool_n_final"] == meta["comp_pool_n_candidates"]
 
 
 def test_global_pool_rms_prefilter_bypass_flag() -> None:

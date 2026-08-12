@@ -63,7 +63,6 @@ EXPLICIT: dict[str, ScopeResult] = {
     "cog_isolation_fwhm": ScopeResult("universal", "none", "n/a", "high", "FWHM isolation radius."),
     "cog_ref_fwhm": ScopeResult("universal", "none", "n/a", "high", "FWHM reference."),
     "dao_centroid_max_shift_fwhm": ScopeResult("universal", "none", "n/a", "high", "FWHM fraction."),
-    "frame_quality_fwhm_factor": ScopeResult("universal", "none", "n/a", "high", "Dimensionless FWHM ratio."),
     "masterstar_use_best_frame_fwhm": ScopeResult("universal", "none", "n/a", "high", "Boolean policy."),
     "neighbor_sub_centroid_max_fwhm": ScopeResult("universal", "none", "n/a", "high", "FWHM units."),
     "neighbor_sub_refuse_sep_fwhm": ScopeResult("universal", "none", "n/a", "high", "FWHM separation."),

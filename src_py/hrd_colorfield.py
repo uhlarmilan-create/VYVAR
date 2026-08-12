@@ -86,7 +86,7 @@ def _repo_short_git_hash() -> str:
 
 
 def _sigma_clipped_median_sigma(patch: np.ndarray) -> tuple[float, float]:
-    """Robust median and MAD-based sigma for a 1-D patch."""
+    """Plain median and MAD-based sigma for a 1-D patch (no iterative clip)."""
     flat = np.asarray(patch, dtype=np.float64).ravel()
     flat = flat[np.isfinite(flat)]
     if flat.size == 0:
@@ -94,13 +94,6 @@ def _sigma_clipped_median_sigma(patch: np.ndarray) -> tuple[float, float]:
     med = float(np.median(flat))
     mad = float(np.median(np.abs(flat - med)))
     sigma = max(_MAD_TO_SIGMA * mad, 0.02 * max(med, 1e-3), 1e-4)
-    if flat.size >= 8:
-        keep = np.abs(flat - med) < 3.0 * sigma
-        if int(keep.sum()) >= 4:
-            flat = flat[keep]
-            med = float(np.median(flat))
-            mad = float(np.median(np.abs(flat - med)))
-            sigma = max(_MAD_TO_SIGMA * mad, 0.02 * max(med, 1e-3), 1e-4)
     return med, sigma
 
 
@@ -110,7 +103,7 @@ def build_local_background_maps(
     *,
     star_mask: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Coarse sigma-clipped median bg + MAD sigma, bilinear upsampled to full resolution.
+    """Coarse median bg + MAD sigma, bilinear upsampled to full resolution.
 
     When ``star_mask`` is provided (True = background pixel), stellar pixels are excluded
     from each box so dense clusters do not inflate the local sky estimate.

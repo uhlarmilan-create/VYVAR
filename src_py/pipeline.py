@@ -79,6 +79,7 @@ from proc_frame_store import proc_csv_path_for_aligned_fits
 
 from dao_reconcile import compute_gaia_dao_reconcile, reconcile_to_pipeline_meta, resolve_effective_match_depth
 from masterstar_context import header_core_fwhm_px
+from plain_stats import plain_mean_med_std
 
 from utils import (
     ASTROMETRY_SOLVE_FIELD_CPULIMIT_SEC,
@@ -1387,7 +1388,6 @@ def _quality_inspection_dao_metrics_array(
 ) -> dict[str, Any]:
     """Same as :func:`_quality_inspection_dao_metrics` but on an in-memory calibrated image."""
     import numpy as np
-    from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
 
     out: dict[str, Any] = {
@@ -1411,7 +1411,7 @@ def _quality_inspection_dao_metrics_array(
     finite = np.isfinite(crop)
     if not np.any(finite):
         return out
-    _, med, std = sigma_clipped_stats(crop[finite], sigma=3.0, maxiters=5)
+    _, med, std = plain_mean_med_std(crop[finite], sigma=3.0, maxiters=5)
     std = float(std)
     if not math.isfinite(std) or std <= 0:
         return out
@@ -4391,7 +4391,6 @@ def _bin2d_mean(arr: "np.ndarray", factor: int) -> "np.ndarray":
 def _dao_star_count_from_array(arr: "np.ndarray", *, fwhm_px: float = 3.0) -> int:
     """Count DAOStarFinder sources (same recipe as alignment star detection)."""
     import numpy as np
-    from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
 
     arr = np.asarray(arr, dtype=np.float32)
@@ -4400,7 +4399,7 @@ def _dao_star_count_from_array(arr: "np.ndarray", *, fwhm_px: float = 3.0) -> in
     finite = np.isfinite(arr)
     if not np.any(finite):
         return 0
-    _, med, std = sigma_clipped_stats(arr[finite], sigma=3.0, maxiters=5)
+    _, med, std = plain_mean_med_std(arr[finite], sigma=3.0, maxiters=5)
     std = float(std) if np.isfinite(std) else 0.0
     if std <= 0:
         return 0
@@ -7047,7 +7046,7 @@ def _pixel_noise_sigma_pp_adu(arr: Any) -> float:
 
     For smooth large-scale structure, ``I[i+1]-I[i]`` is nearly constant so MAD tracks
     pixel-to-pixel noise, not sky gradient. Validated on BO CVn MASTERSTAR (~46 ADU stable
-    across draft 435/450 while ``sigma_clipped_stats`` moved 26%; see SIGMA-ESTIMATOR-VERIFY).
+    across draft 435/450 while ``plain_mean_med_std`` moved 26%; see SIGMA-ESTIMATOR-VERIFY).
     """
     import numpy as np
 
@@ -7084,16 +7083,15 @@ def _dao_noise_sigma_adu(
     data_dao: Any | None = None,
 ) -> float:
     """Legacy per-pixel noise scale (diagnostic only; not used for DAO threshold under option B)."""
-    from astropy.stats import sigma_clipped_stats
 
     sigma_pp = _pixel_noise_sigma_pp_adu(arr)
     if math.isfinite(float(sigma_pp)) and float(sigma_pp) > 0:
         return float(sigma_pp) / math.sqrt(float(max(1, bfac)))
     if int(bfac) > 1 and data_dao is not None:
-        _, _, std_dao = sigma_clipped_stats(data_dao, sigma=3.0, maxiters=3)
-        logging.warning("[DAO] sigma_pp unavailable; falling back to sigma_clipped_stats on binned frame")
+        _, _, std_dao = plain_mean_med_std(data_dao, sigma=3.0, maxiters=3)
+        logging.warning("[DAO] sigma_pp unavailable; falling back to plain_mean_med_std on binned frame")
         return float(std_dao)
-    logging.warning("[DAO] sigma_pp unavailable; falling back to global sigma_clipped_stats")
+    logging.warning("[DAO] sigma_pp unavailable; falling back to global plain_mean_med_std")
     return float(fallback_std)
 
 
@@ -7110,7 +7108,6 @@ def _dao_convolved_background_rms_adu(
     ``threshold = N * rms_convolved`` so nominal N-sigma holds on correlated/resampled data.
     """
     import numpy as np
-    from astropy.stats import sigma_clipped_stats
     from photutils.detection.core import _StarFinderKernel
     from scipy.ndimage import convolve
 
@@ -7120,7 +7117,7 @@ def _dao_convolved_background_rms_adu(
     fwhm = max(1.2, float(fwhm_px))
     kernel = _StarFinderKernel(fwhm=fwhm, sigma_radius=float(sigma_radius))
     conv = convolve(arr, kernel.data, mode="nearest")
-    _, _, rms = sigma_clipped_stats(conv, sigma=3.0, maxiters=3)
+    _, _, rms = plain_mean_med_std(conv, sigma=3.0, maxiters=3)
     return float(rms), float(kernel.rel_err)
 
 
@@ -7347,7 +7344,6 @@ def _catalog_match_radius_px(
 def _dao_pass2_annulus_stats(data0: "np.ndarray", cx: float, cy: float) -> tuple[float, float]:
     """Local background median and std on annulus r=8-12 px (``data0`` = bgsub image)."""
     import numpy as np
-    from astropy.stats import sigma_clipped_stats
 
     h, w = data0.shape
     rmax = 13
@@ -7361,7 +7357,7 @@ def _dao_pass2_annulus_stats(data0: "np.ndarray", cx: float, cy: float) -> tuple
     ann = data0[y0:y1, x0:x1][(rr >= 8.0) & (rr <= 12.0)]
     if ann.size < 10:
         return float("nan"), float("nan")
-    _, md, sd = sigma_clipped_stats(ann, sigma=3.0, maxiters=2)
+    _, md, sd = plain_mean_med_std(ann, sigma=3.0, maxiters=2)
     return float(md), float(sd)
 
 
@@ -7673,7 +7669,6 @@ def detect_stars_match_master_reference(
     ``MASTERSTAR.fits`` astrometry.
     """
     import numpy as np
-    from astropy.stats import sigma_clipped_stats
 
     m = master_df
     # Primary mode: sky match using per-frame WCS (DAO x/y -> RA/Dec), then NN match against MASTERSTAR ra/dec.
@@ -7699,7 +7694,7 @@ def detect_stars_match_master_reference(
     plate_scale_arcsec_per_px = None
 
     arr = np.asarray(data, dtype=np.float32)
-    mean, med, std = sigma_clipped_stats(arr, sigma=3.0, maxiters=3)
+    mean, med, std = plain_mean_med_std(arr, sigma=3.0, maxiters=3)
     data0 = np.nan_to_num((arr - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     bfac = 1
     _cfg_dao = AppConfig()
@@ -8331,7 +8326,6 @@ def detect_stars_and_match_catalog(
     ``saturated_from_peak``, ``saturated_plateau``, ``likely_saturated`` (OR), ``photometry_ok`` (not OR).
     """
     import numpy as np
-    from astropy.stats import sigma_clipped_stats
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", FITSFixedWarning)
@@ -8454,7 +8448,7 @@ def detect_stars_and_match_catalog(
     if gaia_variable_df is None:
         gaia_variable_df = pd.DataFrame()
 
-    mean, med, std = sigma_clipped_stats(arr, sigma=3.0, maxiters=3)
+    mean, med, std = plain_mean_med_std(arr, sigma=3.0, maxiters=3)
     data0 = np.nan_to_num((arr - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     bfac = 1
     n_raw_dao = 0
@@ -15409,14 +15403,13 @@ def _mean_hfr_bright_stars_dao(
     Returns (HFR, n_detected, fwhm_guess_px).
     """
     import numpy as np
-    from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
 
     img = np.asarray(crop, dtype=np.float32)
     finite = np.isfinite(img)
     if not np.any(finite):
         return None, 0, None
-    _, med, std = sigma_clipped_stats(img[finite], sigma=3.0, maxiters=5)
+    _, med, std = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
     std = float(std)
     if not math.isfinite(std) or std <= 0:
         return None, 0, None
@@ -15472,7 +15465,6 @@ def _post_calibration_qc_eval(
 ) -> dict[str, Any]:
     """Sky stats on full frame; star HFR/count on central crop if frame is large."""
     import numpy as np
-    from astropy.stats import sigma_clipped_stats
 
     img = np.asarray(data, dtype=np.float32)
     finite = np.isfinite(img)
@@ -15490,7 +15482,7 @@ def _post_calibration_qc_eval(
             log_event(f"Frame {light_basename} REJECTED (no finite pixels)")
         return out
 
-    sky_mean, sky_med, sky_rms = sigma_clipped_stats(img[finite], sigma=3.0, maxiters=5)
+    sky_mean, sky_med, sky_rms = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
     sky_mean = float(sky_mean)
     sky_med = float(sky_med)
     sky_rms = float(sky_rms)
@@ -16682,14 +16674,13 @@ def _qc_fwhm_elongation(
         return sign_img
 
     try:
-        from astropy.stats import sigma_clipped_stats
         from photutils.segmentation import detect_sources, SourceCatalog
 
         finite = np.isfinite(img)
         if not np.any(finite):
             return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
 
-        mean, med, std = sigma_clipped_stats(img[finite], sigma=3.0, maxiters=5)
+        mean, med, std = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
         std = float(std)
         if not np.isfinite(std) or std <= 0:
             return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
@@ -16745,13 +16736,12 @@ def _qc_fwhm_elongation(
 
     # Fallback: DAOStarFinder + moments on small cutouts (requires photutils)
     try:
-        from astropy.stats import sigma_clipped_stats
         from photutils.detection import DAOStarFinder
 
         finite = np.isfinite(img)
         if not np.any(finite):
             return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-        mean, med, std = sigma_clipped_stats(img[finite], sigma=3.0, maxiters=5)
+        mean, med, std = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
         std = float(std)
         if not np.isfinite(std) or std <= 0:
             return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
@@ -16854,12 +16844,11 @@ def _qc_fwhm_elongation(
 
     # Last-resort fallback without photutils: naive local-max peak picking + moments
     try:
-        from astropy.stats import sigma_clipped_stats
 
         finite = np.isfinite(img)
         if not np.any(finite):
             return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-        mean, med, std = sigma_clipped_stats(img[finite], sigma=3.0, maxiters=5)
+        mean, med, std = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
         std = float(std)
         if not np.isfinite(std) or std <= 0:
             return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
@@ -17124,12 +17113,12 @@ def _fit_subtract_preprocess_sky_surface(
 ) -> tuple[Any, dict[str, Any]]:
     """Fit and subtract a 2D polynomial sky correction (shared calibrated->processed preprocess).
 
-  Star-masked + sigma-clipped fit on calm background pixels (|cal-median| < ``calm_adu``).
+  Star-masked fit on calm background pixels (|cal-median| < ``calm_adu``).
   Fits order-N to ``work - bg_median`` on the fit set, then subtracts the fitted surface from
   the frame (429-class gradient removal; full surface including constant term).
+  No sigma-clip on fit samples (zero-clipping policy 2026-08-12).
     """
     import numpy as np
-    from astropy.stats import sigma_clip, sigma_clipped_stats
     from photutils.detection import DAOStarFinder
 
     arr = np.asarray(data, dtype=np.float32)
@@ -17155,7 +17144,7 @@ def _fit_subtract_preprocess_sky_surface(
         1.2,
         float(fwhm_px) if fwhm_px is not None and math.isfinite(float(fwhm_px)) else 2.5,
     )
-    _, med, std = sigma_clipped_stats(work, sigma=3.0, maxiters=3)
+    _, med, std = plain_mean_med_std(work)
     data0 = np.nan_to_num((work - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     thr = max(3.0 * float(std), 1e-6)
     finder = DAOStarFinder(
@@ -17179,7 +17168,7 @@ def _fit_subtract_preprocess_sky_surface(
             local_excl = (yy_l - cy) ** 2 + (xx_l - cx) ** 2 <= r2
             mask[y0:y1, x0:x1] &= ~local_excl
 
-    bg_median, _, _ = sigma_clipped_stats(work, mask=mask, sigma=3.0, maxiters=5)
+    bg_median, _, _ = plain_mean_med_std(work, mask=~mask)
     calm_thr = max(5.0, float(calm_adu))
     fit_mask = mask & (np.abs(work - float(bg_median)) < calm_thr)
 
@@ -17197,16 +17186,14 @@ def _fit_subtract_preprocess_sky_surface(
         }
 
     z_samples = z_s[use_mask]
-    clipped = sigma_clip(z_samples, sigma=3.0, maxiters=5, masked=True)
-    good = ~clipped.mask
-    x_fit = xx_s[use_mask][good].astype(np.float64)
-    y_fit = yy_s[use_mask][good].astype(np.float64)
-    z_fit = z_samples[good]
+    x_fit = xx_s[use_mask].astype(np.float64)
+    y_fit = yy_s[use_mask].astype(np.float64)
+    z_fit = z_samples
     if z_fit.size < min_coef + 5:
         return arr.copy(), {
             "sky_surface_order": order_i,
             "sky_surface_applied": False,
-            "sky_surface_skip_reason": "clipped_insufficient",
+            "sky_surface_skip_reason": "insufficient_fit_pixels",
         }
 
     cols: list[np.ndarray] = []
@@ -17710,9 +17697,6 @@ def preprocess_calibrated_to_processed(
     processed_root: Path,
     reject_fwhm_px: float | None = None,
     reject_elongation: float | None = None,
-    temporal_sigma_clip: bool = False,
-    temporal_sigma: float = 6.0,
-    temporal_min_frames: int = 5,
     use_gpu_if_available: bool = False,
     progress_cb: Callable[..., None] | None = None,
     inject_pointing_ra_deg: float | None = None,
@@ -18799,9 +18783,6 @@ class AstroPipeline:
         run: bool = True,
         reject_fwhm_px: float | None = None,
         reject_elongation: float | None = None,
-        temporal_sigma_clip: bool = False,
-        temporal_sigma: float = 6.0,
-        temporal_min_frames: int = 5,
         use_gpu_if_available: bool = False,
     ) -> dict[str, Any]:
         ap = Path(archive_path)
@@ -18830,9 +18811,6 @@ class AstroPipeline:
                     processed_root=source_dir,
                     reject_fwhm_px=reject_fwhm_px,
                     reject_elongation=reject_elongation,
-                    temporal_sigma_clip=temporal_sigma_clip,
-                    temporal_sigma=temporal_sigma,
-                    temporal_min_frames=temporal_min_frames,
                     use_gpu_if_available=use_gpu_if_available,
                     progress_cb=None,
                     app_config=self.config,

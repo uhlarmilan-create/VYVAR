@@ -21,6 +21,7 @@ from astropy.wcs import WCS
 from astropy.wcs import FITSFixedWarning
 
 from infolog import log_event
+from plain_stats import plain_mean_med_std
 from utils import (
     DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
     circular_angle_diff_deg,
@@ -142,7 +143,6 @@ def _alignment_detect_xy(
     label: str = "",
     log_sink: list[str] | None = None,
 ) -> np.ndarray:
-    from astropy.stats import sigma_clipped_stats
     from photutils.detection import DAOStarFinder
 
     if int(want_max) <= 0:
@@ -184,7 +184,7 @@ def _alignment_detect_xy(
     _std_bg = float(np.nanstd(arr_bg))
     _floor_bg = _med_bg - 3.0 * _std_bg if np.isfinite(_std_bg) and _std_bg > 0 else _med_bg
     arr_bg = np.clip(arr_bg, _floor_bg, None).astype(np.float32, copy=False)
-    _, med, clipped_std = sigma_clipped_stats(arr_bg[np.isfinite(arr_bg)], sigma=3.0, maxiters=5)
+    _, med, clipped_std = plain_mean_med_std(arr_bg[np.isfinite(arr_bg)], sigma=3.0, maxiters=5)
     clipped_std = float(clipped_std) if np.isfinite(clipped_std) else 0.0
     if clipped_std <= 0:
         clipped_std = 1.0

@@ -1404,112 +1404,26 @@ def _iterative_ensemble_clip_cm_residual(
     max_iter: int = 5,
     min_final: int | None = None,
 ) -> tuple[dict[str, float], dict[str, int]] | None:
-    """Ensemble-relative 5sigma-MAD clip on CM-removed differential residuals."""
+    """Passthrough: no ensemble sigma-clip (zero-clipping policy 2026-08-12)."""
+    _ = (flux_map, bjd_map, clip_sigma, n_comp_min, max_iter)
     _min_final = max(1, int(min_final if min_final is not None else n_comp_min))
-    mag_lc, bjd_lc = _flux_series_to_mag_bjd(flux_map, bjd_map)
-    active = sorted(mag_lc.keys())
-    n_candidates = int(len(active))
-    if n_candidates < _min_final:
-        return None
-    cm_all = _common_mode_detrend_mag_lcs(mag_lc, bjd_lc)
-    sigma_k = float(clip_sigma) if math.isfinite(float(clip_sigma)) and float(clip_sigma) > 0 else 5.0
-
-    def _broeg_weights(cids: list[str]) -> dict[str, float]:
-        wts: dict[str, float] = {}
-        for cid in cids:
-            r = float(provisional_rms.get(cid, float("nan")))
-            wts[cid] = 1.0 / max(r * r, 1e-8) if math.isfinite(r) and r > 1e-6 else 1.0
-        return wts
-
-    def _ensemble_on_ref(ref_bjd: np.ndarray, cids: list[str]) -> np.ndarray:
-        wts = _broeg_weights(cids)
-        stack: list[np.ndarray] = []
-        weights: list[float] = []
-        for cid in cids:
-            b = bjd_lc[cid]
-            m = cm_all[cid]
-            interp = np.interp(ref_bjd, b, m, left=np.nan, right=np.nan)
-            stack.append(interp)
-            weights.append(float(wts.get(cid, 1.0)))
-        mat = np.vstack(stack)
-        w_arr = np.asarray(weights, dtype=np.float64)
-        with np.errstate(invalid="ignore"):
-            num = np.nansum(mat * w_arr[:, None], axis=0)
-            den = np.nansum(np.where(np.isfinite(mat), w_arr[:, None], 0.0), axis=0)
-            return num / np.where(den > 0, den, np.nan)
-
-    iterations = 0
-    for _ in range(int(max_iter)):
-        iterations += 1
-        if len(active) <= int(n_comp_min):
-            break
-        ref_cid = active[int(np.argmax([len(bjd_lc[c]) for c in active]))]
-        ref_bjd = bjd_lc[ref_cid]
-        ok_ref = np.isfinite(ref_bjd)
-        ref_bjd = ref_bjd[ok_ref]
-        if int(ref_bjd.size) < 10:
-            break
-        order = np.argsort(ref_bjd, kind="mergesort")
-        ref_bjd = ref_bjd[order]
-        ens = _ensemble_on_ref(ref_bjd, active)
-        scatters: dict[str, float] = {}
-        for cid in active:
-            b = bjd_lc[cid]
-            m = cm_all[cid]
-            interp = np.interp(ref_bjd, b, m, left=np.nan, right=np.nan)
-            resid = interp - ens
-            ok = np.isfinite(resid)
-            if int(ok.sum()) < 10:
-                scatters[cid] = float("inf")
-            else:
-                scatters[cid] = _mad_sigma(resid[ok])
-        outliers: list[str] = []
-        for cid in active:
-            others = np.asarray(
-                [scatters[c] for c in active if c != cid],
-                dtype=np.float64,
-            )
-            others = others[np.isfinite(others)]
-            if int(others.size) < 2:
-                continue
-            pop_med = float(np.median(others))
-            pop_sigma = _mad_sigma(others)
-            if not math.isfinite(pop_sigma) or pop_sigma <= 0:
-                pop_sigma = float(np.std(others))
-            if not math.isfinite(pop_sigma) or pop_sigma <= 0:
-                pop_sigma = max(abs(pop_med) * 0.01, 1e-6)
-            thr = pop_med + sigma_k * pop_sigma
-            if scatters[cid] > thr:
-                outliers.append(cid)
-        if not outliers:
-            break
-        worst = max(outliers, key=lambda c: scatters[c])
-        if len(active) - 1 < int(n_comp_min):
-            break
-        active = [c for c in active if c != worst]
-
-    if len(active) < _min_final:
-        return None
     active_rms = {
-        cid: float(provisional_rms.get(cid, float("nan")))
-        for cid in active
-        if cid in provisional_rms and math.isfinite(float(provisional_rms.get(cid, float("nan"))))
+        cid: float(rms)
+        for cid, rms in provisional_rms.items()
+        if math.isfinite(float(rms))
     }
     if len(active_rms) < _min_final:
-        active_rms = {cid: 0.05 for cid in active}
+        return None
+    n_candidates = int(len(active_rms))
     meta = {
         "comp_pool_n_candidates": n_candidates,
-        "comp_pool_n_clipped": int(n_candidates - len(active)),
-        "comp_pool_n_final": int(len(active)),
-        "comp_clip_iterations": int(iterations),
+        "comp_pool_n_clipped": 0,
+        "comp_pool_n_final": n_candidates,
+        "comp_clip_iterations": 0,
     }
     logging.info(
-        "[COMP] Iterative ensemble clip: %d -> %d comps (%d clipped, %d iter, sigma=%.1f)",
+        "[COMP] Ensemble clip disabled (zero-clipping): keeping %d comps",
         n_candidates,
-        meta["comp_pool_n_final"],
-        meta["comp_pool_n_clipped"],
-        meta["comp_clip_iterations"],
-        sigma_k,
     )
     return active_rms, meta
 
@@ -1661,12 +1575,8 @@ def _ensemble_mad_filter_rms(
     chip_fh: int | None,
     chip_interior_margin_px: int,
 ) -> dict[str, float] | None:
-    # -- Krok 4: Iterativny ensemble filter (robustny MAD) --
-    # Prah = median + k x (MAD / 0.6745)
-    # MAD / 0.6745 = konzistentny estimator sigma robustny voci outlierom
-    # k = rms_outlier_sigma (default 3.0)
-    _MAD_CONSISTENCY = 0.6745  # normalizacny faktor MAD -> sigma ekvivalent
-    # Restrict to candidate IDs before ensemble outlier filtering.
+    # -- Krok 4: no iterative MAD outlier rejection (zero-clipping policy 2026-08-12) --
+    _ = (rms_outlier_sigma, n_comp_min)
     id_col_cand = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
     cand_ids = set(candidates[id_col_cand].astype(str).str.strip())
     active = {
@@ -1687,27 +1597,6 @@ def _ensemble_mad_filter_rms(
             chip_interior_margin_px=int(chip_interior_margin_px),
         )
         return None
-    for _iter in range(10):
-        if len(active) <= n_comp_min:
-            break
-        vals_arr = np.asarray(list(active.values()), dtype=np.float64)
-        med = float(np.median(vals_arr))
-        mad_raw = float(np.median(np.abs(vals_arr - med)))
-        if not math.isfinite(mad_raw) or mad_raw <= 0:
-            # MAD = 0 znamena ze vsetky hodnoty su rovnake -> konvergencia
-            break
-        mad_sigma = mad_raw / _MAD_CONSISTENCY  # robustny sigma estimator
-        threshold = med + rms_outlier_sigma * mad_sigma
-        new_active = {
-            cid: rms
-            for cid, rms in sorted(active.items(), key=lambda kv: (float(kv[1]), str(kv[0])))
-            if rms <= threshold
-        }
-        if len(new_active) == len(active):
-            break  # Konvergencia - ziadne dalsie vyrazy
-        if len(new_active) < n_comp_min:
-            break  # Neprekroc minimum
-        active = new_active
     return {
         cid: rms
         for cid, rms in sorted(active.items(), key=lambda kv: (float(kv[1]), str(kv[0])))

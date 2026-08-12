@@ -401,10 +401,6 @@ def compute_rms_variability(
     except Exception:  # noqa: BLE001
         pass
     try:
-        sigma_clip = float(cfg.get("variability_sigma_clip", 5.0))
-    except Exception:  # noqa: BLE001
-        sigma_clip = 5.0
-    try:
         min_points_rms = int(cfg.get("variability_min_points_rms", 20))
     except Exception:  # noqa: BLE001
         min_points_rms = 20
@@ -445,7 +441,7 @@ def compute_rms_variability(
     except Exception:  # noqa: BLE001
         comp_floor_factor = 1.5
 
-    # Sigma clipping per star before RMS (MAD-based).
+    # No per-star sigma-clip before RMS (zero-clipping policy 2026-08-12).
     rms_map: dict[str, float] = {}
     n_used_map: dict[str, int] = {}
     mean_clean_map: dict[str, float] = {}
@@ -460,21 +456,7 @@ def compute_rms_variability(
             smooth_map[str(cid)] = float("nan")
             amplitude_map[str(cid)] = float("nan")
             continue
-        med = float(np.median(vals))
-        mad = float(np.median(np.abs(vals - med)))
-        sigma_mad = mad / _MAD_CONSISTENCY if mad > 0 and math.isfinite(mad) else float("nan")
-        if not (math.isfinite(sigma_mad) and sigma_mad > 0):
-            vals_clean = vals
-        else:
-            mask = np.abs(vals - med) < float(sigma_clip) * sigma_mad
-            vals_clean = vals[mask]
-        if vals_clean.size < int(min_points_rms):
-            rms_map[str(cid)] = float("nan")
-            n_used_map[str(cid)] = int(vals_clean.size)
-            mean_clean_map[str(cid)] = float("nan")
-            smooth_map[str(cid)] = float("nan")
-            amplitude_map[str(cid)] = float("nan")
-            continue
+        vals_clean = vals
         mu = float(np.mean(vals_clean))
         sig = float(np.std(vals_clean))
         if math.isfinite(mu) and abs(mu) > 1e-3:

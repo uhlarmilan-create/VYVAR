@@ -923,8 +923,6 @@ class AppConfig:
     comp_sparse_fallback_min: int = 0
     #: Deprecated alias for ``comp_sparse_fallback_enabled`` (config/UI backward compat).
     comp_iterative_clip_enabled: bool = False
-    #: Population outlier threshold (sigma-MAD) for sparse-fallback iterative clip.
-    comp_clip_sigma: float = 5.0
 
     # GS11 - Flux dilution correction
     gs11_dilution_enabled: bool = False
@@ -996,9 +994,6 @@ class AppConfig:
     phase01_comparison_isolation_radius_px: float = 25.0
     #: Isolation radius (arcsec). None -> fall back to ``phase01_comparison_isolation_radius_px``.
     phase01_comparison_isolation_radius_arcsec: float | None = None
-    #: Phase 1 comp stability: sigma for outlier rejection in RMS stability check.
-    phase01_comparison_rms_outlier_sigma: float = 3.0
-
     #: Sensor frame dimensions in pixels (used when FITS NAXIS1/2 unavailable).
     frame_width_px: int = 2082
     frame_height_px: int = 1397
@@ -1013,7 +1008,6 @@ class AppConfig:
     # Variability Detection
     variability_min_frames: int = 30
     variability_min_frames_frac: float = 0.50
-    variability_sigma_clip: float = 5.0
     variability_p85_filter: int = 85
     variability_slope_floor: float = 0.02
     variability_sigma_threshold: float = 2.3
@@ -1064,7 +1058,7 @@ class AppConfig:
     #: QC HFR limit as multiple of measured FWHM. None -> fall back to ``qc_max_hfr`` (legacy px).
     qc_max_hfr_fwhm_ratio: float | None = None
     qc_min_stars: int = 10
-    #: If set, fail when sigma-clipped sky RMS exceeds this (same units as calibrated image).
+    #: If set, fail when plain sky RMS exceeds this (same units as calibrated image).
     qc_max_background_rms: float | None = None
 
     #: FITS QA dashboard: odvodzovat predvoleny FWHM limit z MAD (median + kxsigma_MAD).
@@ -1072,15 +1066,6 @@ class AppConfig:
     auto_fwhm_k_factor: float = 1.5
     auto_fwhm_k_min: float = 1.0
     auto_fwhm_k_max: float = 4.0
-
-    #: Round-2 B.2: Phase-2A whole-frame transparency/PSF-collapse gate (default OFF -> byte-identical).
-    #: Rejects frames whose PSF-concentration (median flux_large/flux) is a robust outlier
-    #: (z = (ratio - med)/(1.4826*MAD) > k) AND whose per-frame FWHM exceeds factor*median-FWHM.
-    #: Targets transparency-collapsed / heavily-blurred frames; clear-but-faint frames are spared.
-    frame_quality_gate_enabled: bool = False
-    frame_quality_ratio_k: float = 5.0       # robust z-score cut on per-frame flux_large/flux ratio (primary)
-    frame_quality_fwhm_factor: float = 1.0   # guard: reject only if FWHM >= factor*median-FWHM (spares sharp frames)
-    frame_quality_min_keep_frames: int = 10  # safety floor: skip gate if it would drop below this
 
     #: Fix B: Phase-2A reject-on-alignment-residual gate (default OFF -> byte-identical).
     #: Rejects frames whose per-frame alignment residual (median deviation of bright matched
@@ -1490,28 +1475,6 @@ class AppConfig:
         self.auto_fwhm_k_factor = max(
             float(self.auto_fwhm_k_min), min(float(self.auto_fwhm_k_max), float(self.auto_fwhm_k_factor))
         )
-
-        self.frame_quality_gate_enabled = bool(
-            data.get("frame_quality_gate_enabled", self.frame_quality_gate_enabled)
-        )
-        try:
-            self.frame_quality_ratio_k = max(
-                2.0, min(20.0, float(data.get("frame_quality_ratio_k", self.frame_quality_ratio_k)))
-            )
-        except (TypeError, ValueError):
-            self.frame_quality_ratio_k = 5.0
-        try:
-            self.frame_quality_fwhm_factor = max(
-                0.8, min(3.0, float(data.get("frame_quality_fwhm_factor", self.frame_quality_fwhm_factor)))
-            )
-        except (TypeError, ValueError):
-            self.frame_quality_fwhm_factor = 1.0
-        try:
-            self.frame_quality_min_keep_frames = max(
-                3, min(100000, int(data.get("frame_quality_min_keep_frames", self.frame_quality_min_keep_frames)))
-            )
-        except (TypeError, ValueError):
-            self.frame_quality_min_keep_frames = 10
 
         self.frame_align_residual_gate_enabled = bool(
             data.get("frame_align_residual_gate_enabled", self.frame_align_residual_gate_enabled)
@@ -1979,13 +1942,6 @@ class AppConfig:
         except (TypeError, ValueError):
             self.comp_sparse_fallback_min = 0
         try:
-            self.comp_clip_sigma = max(
-                3.0,
-                min(10.0, float(data.get("comp_clip_sigma", self.comp_clip_sigma))),
-            )
-        except (TypeError, ValueError):
-            self.comp_clip_sigma = 5.0
-        try:
             self.annulus_inner_fwhm = float(data.get("annulus_inner_fwhm", self.annulus_inner_fwhm))
             self.annulus_outer_fwhm = float(data.get("annulus_outer_fwhm", self.annulus_outer_fwhm))
         except (TypeError, ValueError):
@@ -2331,7 +2287,6 @@ class AppConfig:
         _f01("phase01_comparison_max_psf_chi2", 50.0, 1.0, 500.0)
         _f01("phase01_comparison_max_fwhm_factor", 1.5, 0.5, 5.0)
         _f01("phase01_comparison_isolation_radius_px", 25.0, 1.0, 200.0)
-        _f01("phase01_comparison_rms_outlier_sigma", 3.0, 1.0, 10.0)
         # WAVE-B STEP 3: frame_width_px / frame_height_px are INTERNAL. Frame geometry
         # resolves from FITS NAXIS1/2 at run time; the dataclass default is the only
         # fallback. They are no longer loaded from or saved to config.json. Warn once if a
@@ -2382,7 +2337,6 @@ class AppConfig:
             except (TypeError, ValueError, AttributeError):
                 setattr(self, key, int(default))
 
-        _vfloat("variability_sigma_clip", 5.0, 1.0, 20.0)
         _vint("variability_p85_filter", 85, 50, 99)
         _vfloat("variability_slope_floor", 0.02, 0.0, 1.0)
         _vfloat("variability_sigma_threshold", 2.3, 0.5, 20.0)
@@ -2562,10 +2516,6 @@ class AppConfig:
             "auto_fwhm_k_factor": float(self.auto_fwhm_k_factor),
             "auto_fwhm_k_min": float(self.auto_fwhm_k_min),
             "auto_fwhm_k_max": float(self.auto_fwhm_k_max),
-            "frame_quality_gate_enabled": bool(self.frame_quality_gate_enabled),
-            "frame_quality_ratio_k": float(self.frame_quality_ratio_k),
-            "frame_quality_fwhm_factor": float(self.frame_quality_fwhm_factor),
-            "frame_quality_min_keep_frames": int(self.frame_quality_min_keep_frames),
             "frame_align_residual_gate_enabled": bool(self.frame_align_residual_gate_enabled),
             "frame_align_residual_max_frac": float(self.frame_align_residual_max_frac),
             "frame_align_residual_min_keep_frames": int(self.frame_align_residual_min_keep_frames),
@@ -2652,7 +2602,6 @@ class AppConfig:
             "phase01_comparison_max_fwhm_factor": float(self.phase01_comparison_max_fwhm_factor),
             "phase01_comparison_isolation_radius_px": float(self.phase01_comparison_isolation_radius_px),
             "phase01_comparison_isolation_radius_arcsec": self.phase01_comparison_isolation_radius_arcsec,
-            "phase01_comparison_rms_outlier_sigma": float(self.phase01_comparison_rms_outlier_sigma),
             "annulus_inner_fwhm": float(self.annulus_inner_fwhm),
             "annulus_outer_fwhm": float(self.annulus_outer_fwhm),
             "nonlinearity_peak_percentile": float(self.nonlinearity_peak_percentile),
@@ -2735,7 +2684,6 @@ class AppConfig:
             "comp_sparse_fallback_enabled": bool(self.comp_sparse_fallback_enabled),
             "comp_sparse_fallback_min": int(self.comp_sparse_fallback_min),
             "comp_iterative_clip_enabled": bool(self.comp_sparse_fallback_enabled),
-            "comp_clip_sigma": float(self.comp_clip_sigma),
             "gs11_dilution_enabled": bool(self.gs11_dilution_enabled),
             "gs11_dilution_aperture_arcsec": float(self.gs11_dilution_aperture_arcsec),
             "gs11_dilution_mag_limit_delta": float(self.gs11_dilution_mag_limit_delta),
@@ -2746,7 +2694,6 @@ class AppConfig:
             "phase01_chip_interior_margin_arcsec": self.phase01_chip_interior_margin_arcsec,
             "variability_min_frames": int(self.variability_min_frames),
             "variability_min_frames_frac": float(self.variability_min_frames_frac),
-            "variability_sigma_clip": float(self.variability_sigma_clip),
             "variability_p85_filter": int(self.variability_p85_filter),
             "variability_slope_floor": float(self.variability_slope_floor),
             "variability_sigma_threshold": float(self.variability_sigma_threshold),

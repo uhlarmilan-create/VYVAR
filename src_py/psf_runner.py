@@ -77,6 +77,7 @@ from psf_photometry import build_epsf_model  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
 from config import AppConfig  # noqa: E402
 import logging
+from plain_stats import plain_mean_med_std
 
 
 def _force_utf8_stdout() -> None:
@@ -129,9 +130,8 @@ def subtract_local_sky(cutout: np.ndarray, border_width: int = 3) -> tuple[np.nd
         return cut - sky, sky, rms
 
     try:
-        from astropy.stats import sigma_clipped_stats  # noqa: PLC0415
 
-        _, med, std = sigma_clipped_stats(vals, sigma=3.0, maxiters=5, cenfunc="median", stdfunc="std")
+        _, med, std = plain_mean_med_std(vals, sigma=3.0, maxiters=5, cenfunc="median", stdfunc="std")
         sky_val = float(med)
         sky_rms = float(std)
     except Exception:  # noqa: BLE001

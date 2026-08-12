@@ -28,7 +28,6 @@ import numpy as np
 import pandas as pd
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
-from astropy.stats import sigma_clipped_stats
 from astropy.wcs import WCS
 
 from database import get_gaia_db_max_g_mag, query_local_gaia, query_local_gaia_by_source_ids
@@ -40,6 +39,7 @@ from gaia_catalog_id import (
 )
 from infolog import log_event
 from utils import strip_celestial_wcs_keys
+from plain_stats import plain_mean_med_std
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1044,7 +1044,7 @@ def optimize_masterstar_matches(
     # Final diagnostics-only block: keep all rows; annotate SNR/saturation for QA.
     df["catalog_id"] = normalize_gaia_source_id_series(df.get("catalog_id", pd.Series([""] * len(df))))
     is_gaia = df["catalog_id"].astype(str).str.strip().ne("")
-    _, bg_med, bg_std = sigma_clipped_stats(data[np.isfinite(data)], sigma=3.0, maxiters=5)
+    _, bg_med, bg_std = plain_mean_med_std(data[np.isfinite(data)], sigma=3.0, maxiters=5)
     bg_std = float(bg_std) if np.isfinite(bg_std) and float(bg_std) > 0 else float(np.nanstd(data[np.isfinite(data)]))
     if not math.isfinite(bg_std) or bg_std <= 0:
         bg_std = 1.0

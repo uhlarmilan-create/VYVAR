@@ -27,8 +27,10 @@
   // Who observed and from where: AAVSO identity and observing-site
   // coordinates. Observatory facts; the database LOCATION table is the source
   // of truth.
-  // Your official AAVSO observer code (UMIA); stamped into every AAVSO
-  // submission so the observation is credited to you.
+  // Your official AAVSO observer code (e.g. UMIA). Stamped into every AAVSO
+  // export as #OBSCODE. A warning is emitted ONLY when this value is
+  // missing/empty; any explicitly configured code (including UMIA) is
+  // accepted with no placeholder warning.
   "aavso_observer_code": "UMIA",
   // Short observer identifier printed in reports and exports (separate from
   // the AAVSO code).
@@ -82,6 +84,10 @@
   "auto_fwhm_k_max": 4.0,
   // Lower clamp of the automatic FWHM limit multiplier.
   "auto_fwhm_k_min": 1.0,
+  // OSC only: NxN average binning applied to each extracted channel
+  // (R/G/B/oneRGGB) after Bayer plane split. Allowed 1-4 (default 2). Total
+  // linear scale vs raw mosaic = 2 (superpixel) x N.
+  "osc_channel_binning": 2,
   // Maximum half-flux radius per frame - an alternative sharpness measure
   // familiar from capture software.
   "qc_max_hfr": 5.0,
@@ -95,16 +101,10 @@
   "frame_align_residual_max_frac": 0.25,
   // Minimum number of frames that must survive the alignment-residual gate.
   "frame_align_residual_min_keep_frames": 10,
-  // Scaling of the FWHM threshold used by the frame-quality gate.
-  "frame_quality_fwhm_factor": 1.0,
-  // Optional gate excluding frames of clearly worse sharpness than the
-  // night's typical seeing.
-  "frame_quality_gate_enabled": false,
-  // Minimum number of frames that must survive the frame-quality gate.
-  "frame_quality_min_keep_frames": 10,
-  // How many times worse than the typical frame a frame must be before the
-  // quality gate drops it.
-  "frame_quality_ratio_k": 5.0,
+  // When true, bypass the sky-surface idempotency guard and re-subtract the
+  // model in-place (diagnostic / recovery only; default false preserves
+  // anchor byte-identity).
+  "preprocess_sky_surface_force_reapply": false,
   // Polynomial order of the flux-conserving sky-surface background model
   // subtracted before photometry (2 = gentle 2D gradient removal; part of the
   // draft_435 anchor).
@@ -120,6 +120,9 @@
   "qc_fwhm_limit": 8.0,
   // Optional cap on background noise RMS per frame; None disables the check.
   "qc_max_background_rms": null,
+  // QC HFR limit as multiple of measured FWHM. None uses legacy qc_max_hfr px
+  // cap.
+  "qc_max_hfr_fwhm_ratio": null,
 
   // === Alignment ===
   // Registering all frames of a series onto a common pixel grid so each star
@@ -137,14 +140,30 @@
   // Finding stars, solving sky coordinates (including the blind solver),
   // building the masterstar catalog, matching Gaia, and classifying field
   // density and variability.
+  // List of VSX variability types to leave unmeasured (default empty =
+  // feature inactive). Matching: a target's VSX type string is tokenized on
+  // the separators |, /, + and whitespace; each token is uppercased and a
+  // trailing : (VSX uncertain-classification mark) is stripped; config
+  // entries are normalized the same way; a target is OUT OF SCOPE when ANY of
+  // its tokens equals ANY configured entry. Substring matching is NEVER used
+  // (e.g. M does not exclude SRM). Applies ONLY to VSX auto-selected targets;
+  // manually added targets are never filtered. Matched targets stay in
+  // active_targets.csv with skip_photometry=True and
+  // skip_reason=vsx_type_out_of_scope (mask-first). Out-of-scope stars remain
+  // known variables and stay purged from the comparison pool. Example:
+  // ["ROT"] excludes ROT and ROT: but keeps DSCT|GDOR|SXPHE.
+  "vsx_out_of_scope_types": ["ROT"],
   // Minimum fraction of catalog stars the masterstar must recover for the
   // solution to be trusted.
   "masterstar_catalog_recovery_min": 0.65,
   // Maximum RMS (px) of star positions near the frame centre for an
   // acceptable astrometric solution.
   "masterstar_centre_rms_max_px": 1.2,
-  // Primary DAO detection threshold (sigma) on the masterstar; lower finds
-  // fainter stars but more noise.
+  // Primary DAO detection threshold (sigma) on the masterstar, multiplied by
+  // gradient-immune pixel noise sigma_pp (adjacent-difference MAD).
+  // Recalibrated 2026-07-30 (P-10 bundle): 3.8 reproduces ~175 ADU threshold
+  // and ~3.7% DAO_ONLY on anchor-class data where 2.1 against
+  // sigma_clipped_stats was an effective 3.8 sigma.
   "masterstar_dao_threshold_sigma": 3.8,
   // Limit on the edge-to-centre distortion ratio still considered benign for
   // the optics.
@@ -175,10 +194,6 @@
   "sips_dao_fwhm_px": 2.5,
   // Detection threshold (sigma) of the SIPS-style DAO preset.
   "sips_dao_threshold_sigma": 3.5,
-  // VSX types to leave unmeasured (token-match on |/+/whitespace; trailing ':'
-  // stripped; any-token equals any config entry; empty = inactive). Auto VSX
-  // only; manual targets immune. Example: ["ROT"].
-  "vsx_out_of_scope_types": [],
   // Strategy for picking which detected stars feed the blind solver
   // ('per_cell' spreads them evenly across the frame).
   "blind_img_select_mode": "per_cell",
@@ -201,6 +216,9 @@
   // Keeps the verification catalog in memory for speed instead of re-querying
   // the database.
   "blind_verify_inmemory_catalog": true,
+  // Blind verify match tolerance in arcsec. None uses legacy
+  // blind_verify_match_tol_px.
+  "blind_verify_match_tol_arcsec": null,
   // Pixel tolerance when matching image stars to catalog positions during
   // verification.
   "blind_verify_match_tol_px": 2.5,
@@ -226,6 +244,14 @@
   // Minimum FWHM (px) below which crowding-driven tightening is not applied
   // (undersampled images).
   "crowding_tighten_min_fwhm_px": 3.0,
+  // E.2. Maximum DAO-vs-WCS centroid shift, in units of FWHM, before a
+  // matched star falls back to its WCS pixel position.
+  "dao_centroid_max_shift_fwhm": 1.0,
+  // T4-1 Option B. Effective number of independent pixels per resolution
+  // element on the resampled detection image; DAO threshold is N_equiv *
+  // rms_conv. Measured from audit Part 2b (rel_err=1.09 -> 3.78; legacy 1.36
+  // -> 4.71).
+  "dao_detection_n_equiv": 3.78,
   // Verbose diagnostic logging of the plate solver; for troubleshooting only.
   "debug_platesolver": false,
   // Minimum suitable stars required to build an empirical PSF model (ePSF)
@@ -249,6 +275,9 @@
   // How many best frames are stacked/considered when building the masterstar
   // reference.
   "masterstar_best_of_n": 10,
+  // MASTERSTAR centre RMS gate in arcsec. None uses legacy
+  // masterstar_centre_rms_max_px.
+  "masterstar_centre_rms_max_arcsec": null,
   // Adapts the detection cap to field density instead of a fixed count.
   "masterstar_detection_cap_adaptive": true,
   // Scaling constant of the adaptive detection cap.
@@ -260,7 +289,12 @@
   // Catalog-star count above which the masterstar quality checks switch to
   // crowded-field mode.
   "masterstar_quality_crowded_n_cat_min": 800,
-  // Sky radius (arcsec) for matching detected stars to Gaia catalog entries.
+  // Sibling recovery RMS gate in arcsec. None uses legacy
+  // masterstar_sibling_rms_max_px.
+  "masterstar_sibling_rms_max_arcsec": null,
+  // Initial DAO FWHM as multiple of measured FWHM. None uses legacy
+  // sips_dao_fwhm_px.
+  "sips_dao_fwhm_fwhm_factor": null,
   // Minimum surviving-points ratio after sigma clipping for a star to stay in
   // variability analysis.
   "variability_clip_ratio_min": 0.8,
@@ -285,8 +319,6 @@
   // Percentile filter removing the noisiest tail before variability
   // statistics.
   "variability_p85_filter": 85,
-  // Sigma-clipping level applied to light curves before variability metrics.
-  "variability_sigma_clip": 5.0,
   // Significance (sigma) a star's scatter must exceed to be flagged as a
   // variability candidate.
   "variability_sigma_threshold": 2.3,
@@ -331,6 +363,12 @@
   // Peak-brightness percentile at which the nonlinearity diagnostic samples
   // star shapes.
   "nonlinearity_peak_percentile": 20.0,
+  // Minimum fraction of unsaturated frames required to measure a target when
+  // per-frame saturation is enabled (clamped 0.1..1.0).
+  "per_frame_sat_min_clean_frac": 0.5,
+  // When true, target saturation uses per-frame clean fraction instead of
+  // whole-star master zone skip (default false keeps legacy zone skip).
+  "per_frame_saturation_enabled": false,
   // Chi-square limit of an acceptable PSF fit.
   "psf_chi2_threshold": 50.0,
   // Master switch of PSF photometry (currently OFF; enablement gated on the
@@ -370,6 +408,9 @@
   // Isolation radius (FWHM) a star needs to serve as a curve-of-growth
   // reference.
   "cog_isolation_fwhm": 6.0,
+  // COG ladder step as multiple of measured FWHM. None uses legacy
+  // cog_ladder_step_px.
+  "cog_ladder_step_fwhm": null,
   // Radius step (px) of the curve-of-growth aperture ladder.
   "cog_ladder_step_px": 0.5,
   // Minimum stars needed to fit a curve of growth.
@@ -380,12 +421,6 @@
   "cog_sat_frac": 0.85,
   // Minimum SNR of a curve-of-growth reference star.
   "cog_snr_min": 50.0,
-  // When true, target saturation uses the fraction of clean frames instead of
-  // whole-star master-zone skip (default false = legacy).
-  "per_frame_saturation_enabled": false,
-  // Minimum fraction of unsaturated frames required to measure a target when
-  // per_frame_saturation_enabled is true (clamped 0.1..1.0).
-  "per_frame_sat_min_clean_frac": 0.5,
   // Window width (fraction of the night) of the democratic detrend smoother.
   "democratic_sg_window_frac": 0.5,
   // How the background-noise term of the error model is estimated
@@ -475,8 +510,10 @@
   "savgol_polyorder": 2,
   // Window width (fraction of the series) of the Savitzky-Golay filter.
   "savgol_window_frac": 0.5,
-  // Per-band systematic error floor (mag) added in quadrature to statistical
-  // errors (e.g. {'4': 0.018} for band 4).
+  // Per-equipment systematic error floor (mag) added in quadrature to
+  // statistical errors; dict keys are equipment_id strings (e.g. {'3':
+  // 0.018}), not filter band numbers. Lookup: resolve_sigma_sys_mag in
+  // sigma_floor_core.py.
   "sigma_sys_mag": {"4": 0.018},
   // Optional SysRem systematics removal (Tamuz+ 2005); OFF by default -
   // validated as risky for preserving real variability.
@@ -490,9 +527,6 @@
   // Choosing the ensemble of constant stars for differential photometry:
   // color, brightness, distance, stability, isolation and coverage. Several
   // limits adapt to field density.
-  // Sigma-clipping level applied to comparison-star series before ensemble
-  // statistics.
-  "comp_clip_sigma": 5.0,
   // Ordered color-match tiers for comparison weighting. Each entry is a BP-RP
   // color-match limit ('bprp', tighter = better color match) and the ensemble
   // weight ('w') for stars in that tier. WAVE-B merged the eight
@@ -546,6 +580,10 @@
   // Minimum comparisons the selector aims for; density adaptation may lower
   // it on sparse fields.
   "phase01_comparison_n_comp_min": 3,
+  // D5-2 / C-1 admission gate. Reject comparison stars whose peak exceeds
+  // this fraction of full well. Distinct from the 85 percent is_saturated
+  // flag; 0.70 was set by the batch E re-cut.
+  "admission_sat_peak_frac": 0.7,
   // Weight penalty strength for contaminated comparison stars in ensemble
   // weighting.
   "comp_contamination_penalty_k": 3.0,
@@ -558,17 +596,23 @@
   // Builds one field-wide comparison pool reused across targets instead of
   // fully per-target pools.
   "global_comp_pool_enabled": true,
+  // Chip interior margin in arcsec. None uses legacy
+  // phase01_chip_interior_margin_px.
+  "phase01_chip_interior_margin_arcsec": null,
+  // Comp isolation radius in arcsec. None uses legacy
+  // phase01_comparison_isolation_radius_px.
+  "phase01_comparison_isolation_radius_arcsec": null,
   // Isolation radius (px): a comparison must have no bright neighbour inside
   // it.
   "phase01_comparison_isolation_radius_px": 25.0,
+  // Max comp distance as fraction of half-diagonal FOV. None uses legacy
+  // max_dist_deg fallback.
+  "phase01_comparison_max_dist_fov_frac": null,
   // Maximum FWHM ratio vs the field median a comparison may have (rejects
   // defocused/blended shapes).
   "phase01_comparison_max_fwhm_factor": 1.5,
   // Maximum PSF-fit chi-square of a comparison star (shape sanity).
   "phase01_comparison_max_psf_chi2": 50.0,
-  // Sigma level for flagging a comparison as an RMS outlier vs its brightness
-  // bin.
-  "phase01_comparison_rms_outlier_sigma": 3.0,
   // Allowed color-range extrapolation of the color-term relation (0 = no
   // extrapolation).
   "phase01_ct_extrapolation_tol": 0.0,
@@ -577,6 +621,10 @@
   // Which flux column feeds Phase-1 comparison statistics (dao_flux =
   // detection-stage flux).
   "phase01_flux_col": "dao_flux",
+  // Brightness-difference bounds (mag) of the candidate magnitude tiers,
+  // ascending. WAVE-B merged the phase01_tier{1..4}_mag scalars into this
+  // list.
+  "phase01_tiers": [0.5, 1.0, 1.5, 2.0],
   // Uses Gaia BP-RP directly as the primary color criterion (instead of a
   // computed B-V) - the grounded design choice of VYVAR.
   "phase01_use_bprp_primary": true,
@@ -644,6 +692,9 @@
   // === Reports & HRD ===
   // What appears in the PDF summary report: the color HR diagram of the
   // field, optional online enrichment (SIMBAD, Gaia), and its visual tuning.
+  // HR diagram local background box in arcsec. None uses legacy
+  // hrd_color_bg_box_px.
+  "hrd_color_bg_box_arcsec": null,
   // Background sampling box (px) for star colors in the color HR diagram.
   "hrd_color_bg_box_px": 96,
   // Chroma amplification of the HRD star colors for visual clarity.
@@ -694,6 +745,7 @@
   // your hardware; override only when you must.
   // RAM (GB) kept free per worker when sizing per-frame parallelism.
   "per_frame_mp_reserve_ram_gb": 1.5,
+
   // === File & catalog paths ===
   // Where VYVAR finds its data on disk: star catalogs, plate-solve indexes,
   // the archive and the calibration library. Machine-specific plumbing - set
@@ -718,7 +770,7 @@
   "database_path": "C:\\ASTRO\\python\\VYVAR\\vyvar.sqlite3",
   // Path to the local NASA Exoplanet Archive database used to cross-match
   // detected stars with known exoplanet hosts.
-  "exoplanet_local_db_path": "exoplanets/vyvar_exoplanet_local.db",
+  "exoplanet_local_db_path": "C:\\ASTRO\\python\\VYVAR\\exoplanets\\vyvar_exoplanet_local.db",
   // Path to the local full-sky Gaia DR3 SQLite database (40M+ stars) used for
   // star identification and comparison selection.
   "gaia_db_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3.db",

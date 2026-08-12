@@ -186,27 +186,9 @@ def _iterative_sigma_clip_lc(
     min_points: int = 10,
     min_frac_keep: float = 0.25,
 ) -> Any:
-    """Iterativne 3sigma orezanie fluxu (Peranso-style) na odstranenie CR / dump artefaktov."""
-    work = lc
-    n0 = int(len(lc)) if hasattr(lc, "__len__") else 0
-    for _ in range(int(max_iter)):
-        f = np.asarray(work.flux.value if hasattr(work.flux, "value") else work.flux, dtype=float)
-        n = int(np.sum(np.isfinite(f)))
-        if n < int(min_points):
-            break
-        med = float(np.nanmedian(f))
-        mad = float(np.nanmedian(np.abs(f - med)))
-        scale = 1.4826 * mad if mad > 0 and np.isfinite(mad) else float(np.nanstd(f))
-        if not np.isfinite(scale) or scale <= 0:
-            break
-        lo, hi = med - float(sigma) * scale, med + float(sigma) * scale
-        keep = np.isfinite(f) & (f >= lo) & (f <= hi)
-        if int(np.sum(keep)) == len(f):
-            break
-        if int(np.sum(keep)) < max(int(min_points), int(min_frac_keep * max(n0, n))):
-            break
-        work = work[keep]
-    return work
+    """Passthrough: sigma-clip LC cleaning removed (zero-clipping policy 2026-08-12)."""
+    _ = (sigma, max_iter, min_points, min_frac_keep)
+    return lc
 
 
 def _find_period_anova(

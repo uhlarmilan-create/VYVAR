@@ -883,24 +883,6 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "comp_clip_sigma": {
-    "help": "Sigma-clipping level applied to comparison-star series before ensemble statistics.",
-    "kind": "static",
-    "label": "Comp Clip Sigma",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      3.0,
-      10.0
-    ],
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "comp_color_tiers": {
     "help": "Ordered color-match tiers for comparison weighting. Each entry is a BP-RP color-match limit ('bprp', tighter = better color match) and the ensemble weight ('w') for stars in that tier. WAVE-B merged the eight comp_tier{1..4}_bprp_limit / _weight scalars into this list of dicts.",
     "kind": "static",
@@ -1481,75 +1463,6 @@
     "scope": "session",
     "scope_confidence": "high",
     "scope_key": "frame",
-    "scope_group": "n/a"
-  },
-  "frame_quality_fwhm_factor": {
-    "help": "Scaling of the FWHM threshold used by the frame-quality gate.",
-    "kind": "static",
-    "label": "Frame Quality FWHM Factor",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": [
-      0.8,
-      3.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "frame_quality_gate_enabled": {
-    "help": "Optional gate excluding frames of clearly worse sharpness than the night's typical seeing.",
-    "kind": "static",
-    "label": "Frame Quality Gate Enabled",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "frame_quality_min_keep_frames": {
-    "help": "Minimum number of frames that must survive the frame-quality gate.",
-    "kind": "static",
-    "label": "Frame Quality Min Keep Frames",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": [
-      3.0,
-      100000.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "frame_quality_ratio_k": {
-    "help": "How many times worse than the typical frame a frame must be before the quality gate drops it.",
-    "kind": "static",
-    "label": "Frame Quality Ratio K",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": [
-      2.0,
-      20.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
     "scope_group": "n/a"
   },
   "frame_width_px": {
@@ -3169,24 +3082,6 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "phase01_comparison_rms_outlier_sigma": {
-    "help": "Sigma level for flagging a comparison as an RMS outlier vs its brightness bin.",
-    "kind": "static",
-    "label": "Phase01 Comparison RMS Outlier Sigma",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      1.0,
-      10.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "phase01_ct_extrapolation_tol": {
     "help": "Allowed color-range extrapolation of the color-term relation (0 = no extrapolation).",
     "kind": "static",
@@ -4181,21 +4076,6 @@
     "help": "Percentile filter removing the noisiest tail before variability statistics.",
     "kind": "static",
     "label": "Variability P85 Filter",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "variability_sigma_clip": {
-    "help": "Sigma-clipping level applied to light curves before variability metrics.",
-    "kind": "static",
-    "label": "Variability Sigma Clip",
     "owner": "config_runtime",
     "phase": "detection",
     "range": null,

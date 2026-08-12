@@ -44,6 +44,7 @@ from gaia_catalog_id import (
     read_vyvar_csv,
 )
 from infolog import log_event
+from plain_stats import plain_mean_med_std
 
 from catalog_match_trust import is_wcs_untrusted_catalog_match_mode, normalize_catalog_match_mode
 from jd_axis_format import jd_axis_title, jd_series_relative
@@ -1782,13 +1783,12 @@ def _noise_floor_adu_from_image_array(
     prematch_peak_sigma_floor: float = 10.0,
 ) -> float | None:
     """DAO-style noise floor (median + kxsigma) for SNR table sky estimate."""
-    from astropy.stats import sigma_clipped_stats
 
     arr = np.asarray(data, dtype=np.float64)
     finite = np.isfinite(arr)
     if not np.any(finite):
         return None
-    _, med, std = sigma_clipped_stats(arr[finite], sigma=3.0, maxiters=3)
+    _, med, std = plain_mean_med_std(arr[finite], sigma=3.0, maxiters=3)
     k = float(prematch_peak_sigma_floor)
     if not math.isfinite(k):
         k = 10.0
@@ -3009,40 +3009,28 @@ def check_comparison_stability(
                 result[cid]["quality"] = "suspect"
                 result[cid]["note"] = "isolated_bin"
 
-    # MAD filter na rms_p2p
-    valid_p2p = np.asarray(
-        [v["rms_p2p"] for v in result.values() if math.isfinite(v["rms_p2p"])],
-        dtype=np.float64,
+    # Hard p2p ceiling only (no MAD/sigma outlier rejection; zero-clipping 2026-08-12).
+    # ``outlier_sigma`` kept for call-site compatibility and ignored.
+    _ = outlier_sigma
+    _ABS_MAX_P2P = 0.10
+    threshold = float(_ABS_MAX_P2P)
+    n_good = sum(
+        1
+        for v in result.values()
+        if v["quality"] == "good" and math.isfinite(v["rms_p2p"]) and v["rms_p2p"] <= threshold
     )
-    threshold = float("nan")
-    if valid_p2p.size >= 2:
-        med = float(np.median(valid_p2p))
-        sigma = _mad_sigma(valid_p2p)
-        threshold = med + outlier_sigma * sigma
-        # Absolutny strop - comp hviezda s p2p RMS > 0.10 mag je vzdy zla
-        _ABS_MAX_P2P = 0.10
-        if math.isfinite(threshold):
-            threshold = min(float(threshold), _ABS_MAX_P2P)
-
-        n_good = sum(
-            1
-            for v in result.values()
-            if v["quality"] == "good" and math.isfinite(v["rms_p2p"]) and v["rms_p2p"] <= threshold
-        )
-
-        for cid, info in result.items():
-            if not math.isfinite(info["rms_p2p"]):
-                continue
-            if info["rms_p2p"] > threshold:
-                # Ak by sme mali menej ako n_comp_min good, oznac ako suspect nie excluded
-                if n_good < n_comp_min:
-                    result[cid]["quality"] = "suspect"
-                    result[cid]["note"] = "outlier (kept: n_good<min)"
-                else:
-                    result[cid]["quality"] = "excluded"
-                    result[cid]["note"] = (
-                        f"outlier (p2p={info['rms_p2p']:.4f} > thr={threshold:.4f})"
-                    )
+    for cid, info in result.items():
+        if not math.isfinite(info["rms_p2p"]):
+            continue
+        if info["rms_p2p"] > threshold:
+            if n_good < n_comp_min:
+                result[cid]["quality"] = "suspect"
+                result[cid]["note"] = "p2p_hard_ceiling (kept: n_good<min)"
+            else:
+                result[cid]["quality"] = "excluded"
+                result[cid]["note"] = (
+                    f"p2p_hard_ceiling (p2p={info['rms_p2p']:.4f} > thr={threshold:.4f})"
+                )
 
     # Slope filter: exclude comps with a night-long linear trend (slow drifts pass p2p RMS).
     if comp_bjd is not None and max_comp_slope_mmag_hr > 0:
@@ -3730,21 +3718,8 @@ def fit_color_term_c1(
         LOGGER.debug("[PHOT] color-term c1 fit failed; no correction: %s", exc)
         return 0.0, float("nan"), 0
 
-    resid = y - (c1_init * x + zp_init)
-    sig = _mad_sigma(resid)
-    if not math.isfinite(sig) or sig <= 0:
-        # No robust scatter estimate -> keep all
-        mask = np.ones_like(resid, dtype=bool)
-    else:
-        mask = np.abs(resid) <= float(sigma_clip_sigma) * float(sig)
-
-    n_removed = int((~mask).sum())
-    x_cl = x[mask]
-    y_cl = y[mask]
-    if x_cl.size < min_comp_i:
-        return 0.0, float("nan"), 0
-
-    fit_cl = _safe_polyfit(x_cl, y_cl, 1, cov=True)
+    _ = (sigma_clip_sigma, c1_init, zp_init)  # no residual sigma-clip (zero-clipping 2026-08-12)
+    fit_cl = _safe_polyfit(x, y, 1, cov=True)
     if fit_cl is None:
         return 0.0, float("nan"), 0
     try:
@@ -3758,15 +3733,14 @@ def fit_color_term_c1(
     bp_min = float(np.min(np.asarray(bp_vals, dtype=np.float64)))
     bp_max = float(np.max(np.asarray(bp_vals, dtype=np.float64)))
     logging.info(
-        "[COLOR TERM] c1=%.4f +- %.4f, bp_rp_range=[%.2f, %.2f], n_comp=%s, sigma_clip_removed=%s",
+        "[COLOR TERM] c1=%.4f +- %.4f, bp_rp_range=[%.2f, %.2f], n_comp=%s, sigma_clip_removed=0",
         c1,
         c1_stderr,
         bp_min,
         bp_max,
-        int(x_cl.size),
-        int(n_removed),
+        int(x.size),
     )
-    return c1, c1_stderr, int(x_cl.size)
+    return c1, c1_stderr, int(x.size)
 
 
 def apply_color_term(
@@ -4435,7 +4409,8 @@ def _color_term_cat_inst_scatter_pair(
     min_comp: int = 5,
     sigma_clip_sigma: float = 3.0,
 ) -> tuple[float, float]:
-    """Per-comp cat-inst scatter before/after removing the fitted c1.Delta(bp_rp) trend (sigma-clipped comps)."""
+    """Per-comp cat-inst scatter before/after removing the fitted c1.Delta(bp_rp) trend."""
+    _ = sigma_clip_sigma  # no residual clip (zero-clipping 2026-08-12)
     try:
         min_comp_i = int(min_comp)
     except Exception:  # noqa: BLE001
@@ -4473,32 +4448,13 @@ def _color_term_cat_inst_scatter_pair(
     x = np.asarray(xs, dtype=np.float64)
     y = np.asarray(ys, dtype=np.float64)
 
-    p0 = _safe_polyfit(x, y, 1)
-    if p0 is None:
-        return float("nan"), float("nan")
-    try:
-        c1_init = float(p0[0])
-        zp_init = float(p0[1])
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0140] Color-term fit coefficient unpack fails - returns NaN c1/zp and downstream CT fit abort...: %s', exc)
+    if x.size < 2:
         return float("nan"), float("nan")
 
-    resid = y - (c1_init * x + zp_init)
-    sig = _mad_sigma(resid)
-    if not math.isfinite(sig) or sig <= 0:
-        mask = np.ones_like(resid, dtype=bool)
-    else:
-        mask = np.abs(resid) <= float(sigma_clip_sigma) * float(sig)
-
-    x_cl = x[mask]
-    y_cl = y[mask]
-    if x_cl.size < 2:
-        return float("nan"), float("nan")
-
-    scatter = float(np.std(y_cl))
+    scatter = float(np.std(y))
     if not (math.isfinite(float(c1)) and float(c1) != 0.0):
         return scatter, float("nan")
-    resid_ct = y_cl - float(c1) * x_cl
+    resid_ct = y - float(c1) * x
     scatter_resid = float(np.std(resid_ct)) if resid_ct.size >= 2 else float("nan")
     return scatter, scatter_resid
 
@@ -7809,85 +7765,12 @@ def _frame_quality_gate_select(
     cfg: AppConfig | None,
     proc_frame_store: ProcFrameStore | None,
 ) -> tuple[list[Path], list[str]]:
-    """Round-2 B.2: whole-frame transparency / PSF-collapse gate.
+    """Passthrough: MAD/z-score whole-frame rejection removed (zero-clipping 2026-08-12).
 
-    Default OFF -> returns ``(list(csv_files), [])`` unchanged (byte-identical baseline).
-
-    When enabled, rejects frames whose PSF concentration -- the per-frame median of
-    ``flux_large / flux`` over bright, unsaturated sources -- is a robust outlier
-    ``z = (ratio - median) / (1.4826*MAD) > cfg.frame_quality_ratio_k`` (the decisive primary
-    signal) guarded by ``fwhm_estimate_px > cfg.frame_quality_fwhm_factor * median-FWHM`` so a
-    spurious ratio outlier on a better-than-median (sharp) frame is spared.
-    A collapsed/heavily-blurred frame pushes flux out of the fixed science aperture so the
-    large/small aperture ratio spikes; a clear-but-faint frame keeps a normal concentration
-    (flux falls equally in both apertures) and is spared. Frames with no usable photometry are
-    also dropped. Safety floor: if the gate would keep < ``cfg.frame_quality_min_keep_frames``
-    frames it is skipped (returns the input unchanged) to avoid nuking a marginal night.
-
-    Returns ``(kept_csv_files, rejected_basenames)``.
+    Returns ``(list(csv_files), [])`` always. Call signature kept for call-site compatibility.
     """
-    if cfg is None or not getattr(cfg, "frame_quality_gate_enabled", False):
-        return list(csv_files), []
-    cols = ["flux", "flux_large", "fwhm_estimate_px", "likely_saturated", "mag"]
-    ratios: list[float] = []
-    fwhms: list[float] = []
-    for p in csv_files:
-        df = proc_frame_store.get_frame(p, cols=cols) if proc_frame_store is not None else None
-        if df is None:
-            try:
-                _want = set(cols)
-                df = pd.read_csv(p, usecols=lambda c: c in _want, low_memory=False)
-            except Exception:  # noqa: BLE001
-                df = None
-        if df is None or "flux" not in df.columns or "flux_large" not in df.columns:
-            ratios.append(np.nan)
-            fwhms.append(np.nan)
-            continue
-        fs = pd.to_numeric(df["flux"], errors="coerce")
-        fl = pd.to_numeric(df["flux_large"], errors="coerce")
-        sat = (
-            pd.to_numeric(df["likely_saturated"], errors="coerce").fillna(0) > 0
-            if "likely_saturated" in df.columns
-            else pd.Series(False, index=fs.index)
-        )
-        m = (fs > 0) & (fl > 0) & ~sat
-        if "mag" in df.columns:
-            mg = pd.to_numeric(df["mag"], errors="coerce")
-            mm = m & np.isfinite(mg) & (mg >= 10.0) & (mg <= 14.5)
-            if int(mm.sum()) >= 5:
-                m = mm
-        ratios.append(
-            float(np.nanmedian((fl[m] / fs[m]).to_numpy())) if int(m.sum()) >= 3 else np.nan
-        )
-        fwhms.append(
-            float(np.nanmedian(pd.to_numeric(df["fwhm_estimate_px"], errors="coerce")))
-            if "fwhm_estimate_px" in df.columns
-            else np.nan
-        )
-    rr = np.asarray(ratios, dtype=float)
-    fw = np.asarray(fwhms, dtype=float)
-    good = np.isfinite(rr)
-    if int(good.sum()) < max(int(cfg.frame_quality_min_keep_frames), 5):
-        return list(csv_files), []
-    med = float(np.nanmedian(rr[good]))
-    mad = float(np.nanmedian(np.abs(rr[good] - med)))
-    scale = 1.4826 * mad if mad > 0 else (float(np.nanstd(rr[good])) or 1.0)
-    fwhm_med = float(np.nanmedian(fw[np.isfinite(fw)])) if np.isfinite(fw).any() else np.inf
-    z = (rr - med) / scale
-    reject = (z > float(cfg.frame_quality_ratio_k)) & (
-        (~np.isfinite(fw)) | (fw > float(cfg.frame_quality_fwhm_factor) * fwhm_med)
-    )
-    reject = reject | (~good)
-    if int((~reject).sum()) < int(cfg.frame_quality_min_keep_frames):
-        LOGGER.warning(
-            "[FRAME-QC] gate would keep only %d < floor %d frames -> SKIPPING gate",
-            int((~reject).sum()),
-            int(cfg.frame_quality_min_keep_frames),
-        )
-        return list(csv_files), []
-    kept = [p for p, rj in zip(csv_files, reject) if not rj]
-    rejected = [Path(p).name for p, rj in zip(csv_files, reject) if rj]
-    return kept, rejected
+    _ = (cfg, proc_frame_store)
+    return list(csv_files), []
 
 
 def _proc_stem(name: str) -> str:
@@ -8238,22 +8121,6 @@ def _phase2a_prepare_shared_state(
             ", ".join(p.name for p in _ms_epoch_drop[:3]),
         )
         csv_files = [p for p in csv_files if not is_masterstar_proc_name(p)]
-    # Round-2 B.2: optional whole-frame transparency/PSF-collapse gate (default OFF -> no-op).
-    if getattr(_cfg, "frame_quality_gate_enabled", False):
-        _kept_csv, _rejected_csv = _frame_quality_gate_select(csv_files, _cfg, proc_frame_store)
-        if _rejected_csv:
-            csv_files = _kept_csv
-            logging.info(
-                "[FRAME-QC] transparency/PSF-collapse gate: rejected %d/%d frames (%s%s)",
-                len(_rejected_csv),
-                len(_rejected_csv) + len(_kept_csv),
-                ", ".join(_rejected_csv[:5]),
-                " ..." if len(_rejected_csv) > 5 else "",
-            )
-            _p2(
-                f"Frame-QC gate: {len(_rejected_csv)} collapsed frames rejected, "
-                f"{len(_kept_csv)} kept"
-            )
     # Fix B: per-frame alignment residual (px). Always-on QC: compute on the full frame set and
     # record into alignment_report.csv (additive metadata -> photometry stays byte-identical).
     # Then, only if the gate is enabled, drop frames whose residual exceeds the rig-agnostic
@@ -14410,7 +14277,6 @@ def select_comparison_stars_per_target(
     )
 
     _use_iter_clip = bool(sparse_fallback)
-    _clip_sigma = float(getattr(_cfg_p1, "comp_clip_sigma", 5.0))
 
     rms_result = _detrend_and_compute_comp_rms_map(
         flux_map,
@@ -14480,7 +14346,7 @@ def select_comparison_stars_per_target(
             flux_map,
             bjd_map,
             sorted_rms_map,
-            clip_sigma=_clip_sigma,
+            clip_sigma=5.0,
             n_comp_min=n_comp_min,
             min_final=1 if sparse_fallback else None,
         )
@@ -15954,7 +15820,7 @@ def run_full_photometry_pipeline(
         max_comp_rms=float(_cfg.phase01_comparison_max_comp_rms),
         min_dist_arcsec=float(_cfg.phase01_comparison_min_dist_arcsec),
         min_frames_frac=float(_cfg.phase01_comparison_min_frames_frac),
-        rms_outlier_sigma=float(_cfg.phase01_comparison_rms_outlier_sigma),
+        rms_outlier_sigma=3.0,
         exclude_gaia_nss=bool(_cfg.phase01_comparison_exclude_gaia_nss),
         exclude_gaia_extobj=bool(_cfg.phase01_comparison_exclude_gaia_extobj),
         mag_bright_threshold=float(_cfg.phase01_comparison_mag_bright_threshold),

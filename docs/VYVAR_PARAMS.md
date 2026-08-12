@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-12T08:06:07Z at git HEAD 5b63e6c._
+_Generated 2026-08-12T08:27:47Z at git HEAD 0ab686f._
 
 ## Summary
 
-- Entries: 279
-- Tier: basic 13, advanced 69, expert 197
-- Kind: static 261, derived 0, resolved 18
-- Widget: auto 111, custom 143, hidden 25
-- Owner: db_static 9, config_runtime 251, fits_dynamic 6, internal 13
-- Scope: universal 230, rig 31, site 10, session 8
-- Scope key: none 230, rig 15, rig_band 2, rig_sampling 14, site 10, frame 8
+- Entries: 272
+- Tier: basic 13, advanced 68, expert 191
+- Kind: static 254, derived 0, resolved 18
+- Widget: auto 105, custom 142, hidden 25
+- Owner: db_static 9, config_runtime 244, fits_dynamic 6, internal 13
+- Scope: universal 223, rig 31, site 10, session 8
+- Scope key: none 223, rig 15, rig_band 2, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 18, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -73,10 +73,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `frame_align_residual_gate_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Frame Align Residual Gate Enabled |
 | `frame_align_residual_max_frac` | 0.25 | 0.05 .. 1 | expert | static | config_runtime | universal | none | n/a | auto | Frame Align Residual Max Frac |
 | `frame_align_residual_min_keep_frames` | 10 | 3 .. 100000 | expert | static | config_runtime | universal | none | n/a | auto | Frame Align Residual Min Keep Frames |
-| `frame_quality_fwhm_factor` | 1.0 | 0.8 .. 3 | expert | static | config_runtime | universal | none | n/a | auto | Frame Quality FWHM Factor |
-| `frame_quality_gate_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Frame Quality Gate Enabled |
-| `frame_quality_min_keep_frames` | 10 | 3 .. 100000 | expert | static | config_runtime | universal | none | n/a | auto | Frame Quality Min Keep Frames |
-| `frame_quality_ratio_k` | 5.0 | 2 .. 20 | expert | static | config_runtime | universal | none | n/a | auto | Frame Quality Ratio K |
 | `osc_channel_binning` | 2 | 1 .. 4 | advanced | static | config_runtime | rig | rig | a | auto | OSC Channel Binning |
 | `preprocess_sky_surface_force_reapply` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Preprocess Sky Surface Force Reapply |
 | `preprocess_sky_surface_order` | 2 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Preprocess Sky Surface Order |
@@ -170,7 +166,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `variability_min_points_rms` | 20 | - | expert | static | config_runtime | universal | none | n/a | auto | Variability Min Points RMS |
 | `variability_min_rms_pct` | 1.5 | - | expert | static | config_runtime | universal | none | n/a | auto | Variability Min RMS Pct |
 | `variability_p85_filter` | 85 | - | expert | static | config_runtime | universal | none | n/a | auto | Variability P85 Filter |
-| `variability_sigma_clip` | 5.0 | - | expert | static | config_runtime | universal | none | n/a | auto | Variability Sigma Clip |
 | `variability_sigma_threshold` | 2.3 | - | expert | static | config_runtime | universal | none | n/a | auto | Variability Sigma Threshold |
 | `variability_slope_floor` | 0.02 | - | expert | static | config_runtime | universal | none | n/a | auto | Variability Slope Floor |
 | `variability_smoothness_max` | 0.8 | - | expert | static | config_runtime | universal | none | n/a | auto | Variability Smoothness Max |
@@ -262,7 +257,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
 | `admission_sat_peak_frac` | 0.7 | 0.5 .. 0.95 | expert | static | config_runtime | rig | rig | a | auto | Admission Sat Peak Frac |
-| `comp_clip_sigma` | 5.0 | 3 .. 10 | advanced | static | config_runtime | universal | none | n/a | auto | Comp Clip Sigma |
 | `comp_color_tiers` | [{'bprp': 0.15, 'w': 1.0}, {'bprp': 0.3, 'w': 0.85}, {'bprp': 0.55, 'w': 0.5}, {'bprp': 1.1, 'w': 0.25}] | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Color Tiers |
 | `comp_contamination_penalty_k` | 3.0 | 0 .. 20 | expert | static | config_runtime | universal | none | n/a | auto | Comp Contamination Penalty K |
 | `comp_iterative_clip_enabled` | False | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Iterative Clip Enabled |
@@ -292,7 +286,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `phase01_comparison_min_frames_frac` | 0.2 | 0.05 .. 0.95 | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Min Frames Frac |
 | `phase01_comparison_n_comp_max` | 8 | - | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison N Comp Max |
 | `phase01_comparison_n_comp_min` | 3 | - | advanced | resolved | config_runtime | universal | none | n/a | custom | Phase01 Comparison N Comp Min |
-| `phase01_comparison_rms_outlier_sigma` | 3.0 | 1 .. 10 | expert | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison RMS Outlier Sigma |
 | `phase01_ct_extrapolation_tol` | 0.0 | - | expert | static | config_runtime | universal | none | n/a | auto | Phase01 CT Extrapolation Tol |
 | `phase01_ct_min_comp` | 7 | 2 .. 30 | expert | static | config_runtime | universal | none | n/a | auto | Phase01 CT Min Comp |
 | `phase01_flux_col` | dao_flux | - | expert | static | config_runtime | session | frame | n/a | auto | Phase01 Flux Col |

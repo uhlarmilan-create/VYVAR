@@ -137,12 +137,6 @@ D['osc_channel_binning'] = dict(
  proc="Pouze OSC: NxN prumer po extrakci kanalu (R/G/B/oneRGGB). Celkova linearni mira vuci raw mozaice = 2 (superpixel) x N. S n=2 je vysledne rozliseni 4x hrubsi nez raw pixel.",
  mensi="Jemnejsi vzorkovani (blize superpixelu 2x2); vice sumu, pomalejsi beh.",
  vetsi="Hrubsi kanaly; mensi soubory, ale ztrata detailu a horsi match na MASTERSTAR pri OSC-2.")
-D['frame_quality_gate_enabled'] = dict(
- proc="Relativni brana: vyrazuje snimky vyrazne horsi nez typicky snimek TE NOCI (pomer ratio_k). Doplnuje absolutni limity.")
-D['frame_quality_ratio_k'] = dict(
- mensi="Prisnejsi - i mirne horsi snimky leti.",
- vetsi="Jen katastrofy jsou vyrazeny.",
- proc="Pomer vuci medianu noci; typicky 1.5-2.5. Chranen min_keep_frames, aby brana nikdy nesnedla noc.")
 D['frame_align_residual_gate_enabled'] = dict(
  proc="Snimek se muze zdat ostry, a presto se spatne sesadit (oblacnost, carkovani v casti pole). Rezidua zarovnani jsou nezavisly signal kvality.")
 D['qc_max_background_rms'] = dict(
