@@ -7185,6 +7185,75 @@ def _apply_dao_centroid_wcs_guard(
     return xo, yo, int(np.count_nonzero(use_wcs))
 
 
+def _lock_matched_centroids_to_master_grid(
+    arr: "np.ndarray",
+    x: "np.ndarray",
+    y: "np.ndarray",
+    *,
+    matched: "np.ndarray",
+    safe: "np.ndarray",
+    master_df: pd.DataFrame,
+    fwhm_px: float,
+    search_fwhm: float = 2.5,
+) -> tuple["np.ndarray", "np.ndarray", int]:
+    """Lock matched catalog stars to MASTERSTAR grid with local peak refinement.
+
+    Master-reference per-frame catalogs must measure on the shared alignment grid,
+    not on arbitrary DAO detections that can land on faint neighbours after transform
+    smearing.  Each matched row is snapped to the master (x, y) then refined within
+    a small search window for the brightest pixel (sub-pixel centre not required).
+    """
+    import numpy as np
+
+    xo = np.asarray(x, dtype=np.float64).copy()
+    yo = np.asarray(y, dtype=np.float64).copy()
+    if master_df is None or master_df.empty or "x" not in master_df.columns or "y" not in master_df.columns:
+        return xo, yo, 0
+    img = np.asarray(arr, dtype=np.float64)
+    if img.ndim != 2 or img.size == 0:
+        return xo, yo, 0
+    h_img, w_img = int(img.shape[0]), int(img.shape[1])
+    mx = pd.to_numeric(master_df["x"], errors="coerce").to_numpy(dtype=np.float64)
+    my = pd.to_numeric(master_df["y"], errors="coerce").to_numpy(dtype=np.float64)
+    m = np.asarray(matched, dtype=bool)
+    if not m.any():
+        return xo, yo, 0
+    s = np.clip(np.asarray(safe, dtype=np.int64), 0, max(len(mx) - 1, 0))
+    radius = int(max(3, math.ceil(float(max(1.2, fwhm_px)) * float(max(1.0, search_fwhm)))))
+    n_locked = 0
+    for i in np.nonzero(m)[0]:
+        si = int(s[i])
+        if si < 0 or si >= len(mx):
+            continue
+        x_ref = float(mx[si])
+        y_ref = float(my[si])
+        if not (math.isfinite(x_ref) and math.isfinite(y_ref)):
+            continue
+        xi = int(round(x_ref))
+        yi = int(round(y_ref))
+        x_lo = max(0, xi - radius)
+        x_hi = min(w_img, xi + radius + 1)
+        y_lo = max(0, yi - radius)
+        y_hi = min(h_img, yi + radius + 1)
+        if x_lo >= x_hi or y_lo >= y_hi:
+            xo[i] = x_ref
+            yo[i] = y_ref
+            n_locked += 1
+            continue
+        patch = img[y_lo:y_hi, x_lo:x_hi]
+        if patch.size == 0 or not np.any(np.isfinite(patch)):
+            xo[i] = x_ref
+            yo[i] = y_ref
+            n_locked += 1
+            continue
+        flat_idx = int(np.nanargmax(patch))
+        py, px = np.unravel_index(flat_idx, patch.shape)
+        xo[i] = float(x_lo + int(px))
+        yo[i] = float(y_lo + int(py))
+        n_locked += 1
+    return xo, yo, n_locked
+
+
 def _proc_deduplicate_matched_catalog_rows(df: pd.DataFrame) -> pd.DataFrame:
     """Keep one row per non-empty ``catalog_id`` (highest peak / flux wins).
 
@@ -8037,15 +8106,27 @@ def detect_stars_match_master_reference(
     else:
         ck_m = vx_m | gv_m
 
-    x, y, _n_dao_wcs_fallback = _apply_dao_centroid_wcs_guard(
-        x,
-        y,
-        matched=matched,
-        safe=safe,
-        master_df=m_valid,
-        fwhm_px=float(max(1.2, _base_fw_m / float(bfac))),
-        max_shift_fwhm=float(getattr(_cfg_dao, "dao_centroid_max_shift_fwhm", 1.0)),
-    )
+    _fwhm_cent = float(max(1.2, _base_fw_m / float(bfac)))
+    if _frame_on_ref_grid:
+        x, y, _n_dao_wcs_fallback = _lock_matched_centroids_to_master_grid(
+            arr,
+            x,
+            y,
+            matched=matched,
+            safe=safe,
+            master_df=m_valid,
+            fwhm_px=_fwhm_cent,
+        )
+    else:
+        x, y, _n_dao_wcs_fallback = _apply_dao_centroid_wcs_guard(
+            x,
+            y,
+            matched=matched,
+            safe=safe,
+            master_df=m_valid,
+            fwhm_px=_fwhm_cent,
+            max_shift_fwhm=float(getattr(_cfg_dao, "dao_centroid_max_shift_fwhm", 1.0)),
+        )
 
     pmax_arr = _box_peaks_at_centroids(arr, x, y)
     _frame_max_adu = float(np.nanmax(arr))
