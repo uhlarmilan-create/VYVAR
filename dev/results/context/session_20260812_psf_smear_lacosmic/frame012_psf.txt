@@ -1,0 +1,10 @@
+frame_012 PSF comparison (comp star ~570,99 / native 571,101)
+draft_435 aligned peak@grid: 15698.8 ADU  FWHM_mom~5.15  VYALGM=astroalign  VY_COSM=False
+draft_506 aligned peak@grid: 2933.2 ADU   FWHM_mom~11.76 VYALGM=astroalign  VY_COSM on calibrated
+draft_435 calibrated peak: 17246 ADU (sharp)
+draft_506 calibrated peak: 3751 ADU (core eaten)
+Repro: lacosmic objlim=5.0 on 435-cal f012 -> peak 3727, n_cr=4945
+Fix:   lacosmic objlim=8.0 on 435-cal f012 -> peak 17270, n_cr=1556
+All 27 bad frames: objlim=8 preserves peak ratio 1.00
+Root cause code: src_py/pipeline.py::_remove_cosmics_lacosmic called from _qc_enrich_one_frame
+NOT alignment/RAM-handoff resampling.

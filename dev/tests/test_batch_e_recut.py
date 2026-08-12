@@ -87,6 +87,9 @@ def test_admission_sat_peak_frac_default_70pct() -> None:
     assert not (65.0 > threshold)
 
 
-def test_enable_lacosmic_default_on() -> None:
+def test_lacosmic_config_removed() -> None:
+    """L.A.Cosmic removed 2026-08-12 (ate undersampled star cores on wide-field rig)."""
     cfg = AppConfig()
-    assert cfg.enable_lacosmic is True
+    assert not hasattr(cfg, "enable_lacosmic")
+    assert not hasattr(cfg, "lacosmic_sigclip")
+    assert not hasattr(cfg, "lacosmic_objlim")

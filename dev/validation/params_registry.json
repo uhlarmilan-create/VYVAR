@@ -1261,21 +1261,6 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "enable_lacosmic": {
-    "help": "CR-1. Run L.A.Cosmic (astroscrappy) cosmic-ray rejection on the preprocess path. Stamps VY_COSM / VY_COSMNPX headers.",
-    "kind": "static",
-    "label": "Enable Lacosmic",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": null,
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "epsf_min_stars": {
     "help": "Minimum suitable stars required to build an empirical PSF model (ePSF) for PSF photometry.",
     "kind": "static",
@@ -1580,36 +1565,6 @@
     "scope": "session",
     "scope_confidence": "high",
     "scope_key": "frame",
-    "scope_group": "n/a"
-  },
-  "lacosmic_sigclip": {
-    "help": "L.A.Cosmic sigma clipping threshold for the Laplacian edge detection (astroscrappy sigclip).",
-    "kind": "static",
-    "label": "Lacosmic Sigclip",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "low",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "lacosmic_objlim": {
-    "help": "L.A.Cosmic contrast limit between the Laplacian image and the fine-structure image; higher values protect real point sources (astroscrappy objlim).",
-    "kind": "static",
-    "label": "Lacosmic Objlim",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "low",
-    "scope_key": "none",
     "scope_group": "n/a"
   },
   "gaia_db_path": {

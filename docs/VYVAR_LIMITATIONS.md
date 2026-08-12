@@ -28,9 +28,11 @@ D1-2 `fwhm_ratio` test). Use curve-of-growth r50 as scale proxy, not a fitted FW
 
 ## D1-1 -- Cosmic-ray rejection
 
-**FIXED (batch E, 2026-08-04).** L.A.Cosmic via astroscrappy in preprocessing (`enable_lacosmic`).
-Physical re-cut: 365810 pixels cleaned on 150 frames. Evidence:
-`dev/results/CURSOR_RESULT_batch_E_physical_recut.md`.
+**REMOVED (2026-08-12).** Batch-E L.A.Cosmic (`astroscrappy`) ate sharp star cores on the
+undersampled wide-field rig (~9.55 arcsec/px; ~27/139 BO CVn frames). Destructive per-frame
+CR cleaning is not used; occasional CR outliers are handled by robust `comp_rms` (MAD) /
+LC statistics. Master dark/flat stack clipping is unchanged. Evidence:
+`dev/results/CURSOR_RESULT_remove_lacosmic.md`.
 
 ## D1-2 -- Detector linearity correction
 

@@ -752,10 +752,6 @@ class AppConfig:
     dao_detection_n_equiv: float = 3.78
     #: E.2: max DAO-vs-WCS centroid shift (x FWHM) before WCS pixel fallback on matched stars.
     dao_centroid_max_shift_fwhm: float = 1.0
-    #: CR-1: L.A.Cosmic via astroscrappy on preprocess path (default ON).
-    enable_lacosmic: bool = True
-    lacosmic_sigclip: float = 4.5
-    lacosmic_objlim: float = 5.0
     #: D5-2 / C-1 admission gate: reject comps with peak above this fraction of full well (limit col is 85pct).
     admission_sat_peak_frac: float = 0.70
     #: Pred matchom s Gaia: ponechat detekcie s peakom aspon ``median + kxsigma`` (nizsie = viac slabych hviezd).
@@ -2053,15 +2049,6 @@ class AppConfig:
         except (TypeError, ValueError):
             self.dao_centroid_max_shift_fwhm = 1.0
         self.dao_centroid_max_shift_fwhm = max(0.1, min(5.0, float(self.dao_centroid_max_shift_fwhm)))
-        self.enable_lacosmic = bool(data.get("enable_lacosmic", self.enable_lacosmic))
-        try:
-            self.lacosmic_sigclip = float(data.get("lacosmic_sigclip", self.lacosmic_sigclip))
-        except (TypeError, ValueError):
-            self.lacosmic_sigclip = 4.5
-        try:
-            self.lacosmic_objlim = float(data.get("lacosmic_objlim", self.lacosmic_objlim))
-        except (TypeError, ValueError):
-            self.lacosmic_objlim = 5.0
         try:
             self.admission_sat_peak_frac = float(
                 data.get("admission_sat_peak_frac", self.admission_sat_peak_frac)
@@ -2676,9 +2663,6 @@ class AppConfig:
             "masterstar_dao_threshold_sigma": float(self.masterstar_dao_threshold_sigma),
             "dao_detection_n_equiv": float(self.dao_detection_n_equiv),
             "dao_centroid_max_shift_fwhm": float(self.dao_centroid_max_shift_fwhm),
-            "enable_lacosmic": bool(self.enable_lacosmic),
-            "lacosmic_sigclip": float(self.lacosmic_sigclip),
-            "lacosmic_objlim": float(self.lacosmic_objlim),
             "admission_sat_peak_frac": float(self.admission_sat_peak_frac),
             "masterstar_prematch_peak_sigma_floor": float(self.masterstar_prematch_peak_sigma_floor),
             "masterstar_catalog_recovery_min": float(self.masterstar_catalog_recovery_min),

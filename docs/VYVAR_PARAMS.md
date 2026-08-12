@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-11T14:33:39Z at git HEAD 90fdbfb._
+_Generated 2026-08-12T08:06:07Z at git HEAD 5b63e6c._
 
 ## Summary
 
-- Entries: 282
-- Tier: basic 13, advanced 70, expert 199
-- Kind: static 264, derived 0, resolved 18
-- Widget: auto 114, custom 143, hidden 25
-- Owner: db_static 9, config_runtime 254, fits_dynamic 6, internal 13
-- Scope: universal 233, rig 31, site 10, session 8
-- Scope key: none 233, rig 15, rig_band 2, rig_sampling 14, site 10, frame 8
+- Entries: 279
+- Tier: basic 13, advanced 69, expert 197
+- Kind: static 261, derived 0, resolved 18
+- Widget: auto 111, custom 143, hidden 25
+- Owner: db_static 9, config_runtime 251, fits_dynamic 6, internal 13
+- Scope: universal 230, rig 31, site 10, session 8
+- Scope key: none 230, rig 15, rig_band 2, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 18, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -70,7 +70,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `auto_fwhm_k_factor` | 1.5 | - | advanced | static | config_runtime | universal | none | n/a | custom | Auto FWHM K Factor |
 | `auto_fwhm_k_max` | 4.0 | - | advanced | static | config_runtime | universal | none | n/a | custom | Auto FWHM K Max |
 | `auto_fwhm_k_min` | 1.0 | - | advanced | static | config_runtime | universal | none | n/a | custom | Auto FWHM K Min |
-| `enable_lacosmic` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Enable Lacosmic |
 | `frame_align_residual_gate_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Frame Align Residual Gate Enabled |
 | `frame_align_residual_max_frac` | 0.25 | 0.05 .. 1 | expert | static | config_runtime | universal | none | n/a | auto | Frame Align Residual Max Frac |
 | `frame_align_residual_min_keep_frames` | 10 | 3 .. 100000 | expert | static | config_runtime | universal | none | n/a | auto | Frame Align Residual Min Keep Frames |
@@ -78,8 +77,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `frame_quality_gate_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Frame Quality Gate Enabled |
 | `frame_quality_min_keep_frames` | 10 | 3 .. 100000 | expert | static | config_runtime | universal | none | n/a | auto | Frame Quality Min Keep Frames |
 | `frame_quality_ratio_k` | 5.0 | 2 .. 20 | expert | static | config_runtime | universal | none | n/a | auto | Frame Quality Ratio K |
-| `lacosmic_objlim` | 5.0 | - | expert | static | config_runtime | universal | none | n/a | auto | Lacosmic Objlim |
-| `lacosmic_sigclip` | 4.5 | - | expert | static | config_runtime | universal | none | n/a | auto | Lacosmic Sigclip |
 | `osc_channel_binning` | 2 | 1 .. 4 | advanced | static | config_runtime | rig | rig | a | auto | OSC Channel Binning |
 | `preprocess_sky_surface_force_reapply` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Preprocess Sky Surface Force Reapply |
 | `preprocess_sky_surface_order` | 2 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Preprocess Sky Surface Order |

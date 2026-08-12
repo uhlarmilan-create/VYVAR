@@ -12,7 +12,6 @@ plotly
 lightkurve
 astroquery
 astroalign
-astroscrappy>=1.1,<2
 reproject
 pytest
 reportlab   # runtime: SUMMARY MEASURE REPORT PDFs (pdf_report.py, photometry_report.py); also used by dev/tools/docs_pdf/ builders

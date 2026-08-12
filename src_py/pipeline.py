@@ -7288,51 +7288,6 @@ def _proc_deduplicate_matched_catalog_rows(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def _remove_cosmics_lacosmic(
-    data: "np.ndarray",
-    hdr: fits.Header,
-    cfg: Any,
-) -> tuple["np.ndarray", int]:
-    """CR-1: L.A.Cosmic via astroscrappy (van Dokkum 2001). Returns cleaned data, n_cr_pixels."""
-    import numpy as np
-
-    if not bool(getattr(cfg, "enable_lacosmic", False)):
-        return data, 0
-    try:
-        import astroscrappy as ac  # type: ignore
-    except ImportError:
-        LOGGER.warning("[CR-1] astroscrappy not installed; cosmic-ray cleaning skipped")
-        return data, 0
-    arr = np.asarray(data, dtype=np.float32)
-    if arr.ndim != 2 or arr.size < 64:
-        return data, 0
-    sigclip = float(getattr(cfg, "lacosmic_sigclip", 4.5))
-    objlim = float(getattr(cfg, "lacosmic_objlim", 5.0))
-    try:
-        gain = float(hdr.get("GAIN") or hdr.get("EGAIN") or 1.0)
-    except (TypeError, ValueError):
-        gain = 1.0
-    if not math.isfinite(gain) or gain <= 0:
-        gain = 1.0
-    try:
-        readnoise = float(hdr.get("RDNOISE") or hdr.get("READNOIS") or 10.0)
-    except (TypeError, ValueError):
-        readnoise = 10.0
-    if not math.isfinite(readnoise) or readnoise <= 0:
-        readnoise = 10.0
-    mask, cleaned = ac.detect_cosmics(
-        arr,
-        sigclip=sigclip,
-        sigfrac=0.3,
-        objlim=objlim,
-        gain=gain,
-        readnoise=readnoise,
-        satlevel=65535.0,
-    )
-    n_cr = int(np.count_nonzero(mask))
-    return cleaned.astype(np.float32, copy=False), n_cr
-
-
 def _mean_bin2d_for_dao(data0: "np.ndarray", factor: int) -> tuple["np.ndarray", int]:
     import numpy as np
 
@@ -15739,8 +15694,6 @@ def _calibrate_one_light_apply_masters_in_ram(
             )
         md_data = pm.data
 
-    hdr["VY_COSM"] = (False, "Cosmic-ray cleaning applied in preprocessing")
-
     used_dark = False
     used_flat = False
 
@@ -17493,11 +17446,6 @@ def _qc_enrich_one_frame(
                     sky_order,
                 )
 
-        cfg_cr = AppConfig()
-        n_cr_pixels = 0
-        if bool(getattr(cfg_cr, "enable_lacosmic", False)):
-            data, n_cr_pixels = _remove_cosmics_lacosmic(data, hdr, cfg_cr)
-
         qc = _qc_fwhm_elongation(data)
         fwhm = float(qc.get("fwhm_px")) if qc.get("fwhm_px") is not None else float("nan")
         elong = float(qc.get("elongation")) if qc.get("elongation") is not None else float("nan")
@@ -17525,14 +17473,11 @@ def _qc_enrich_one_frame(
                 hdr["VY_ELONG"] = (round(elong, 4), "Estimated elongation (a/b)")
             hdr["VY_NSTAR"] = (n_stars, "Approx. star detections (QC)")
             hdr["VY_QC"] = (status, "QC status")
-            hdr["VY_COSM"] = (bool(n_cr_pixels > 0), "Cosmic-ray cleaning applied in preprocessing")
-            if n_cr_pixels > 0:
-                hdr["VY_COSMNPX"] = (int(n_cr_pixels), "Cosmic-ray pixels cleaned (L.A.Cosmic)")
-                LOGGER.info(
-                    "[BATCH-E E.3] astroscrappy removed %d pixels on frame %s",
-                    int(n_cr_pixels),
-                    fp.name,
-                )
+            # Drop legacy CR provenance if present (L.A.Cosmic removed 2026-08-12).
+            if "VY_COSM" in hdr:
+                del hdr["VY_COSM"]
+            if "VY_COSMNPX" in hdr:
+                del hdr["VY_COSMNPX"]
             hdr["VYVARPR"] = (True, "VYVAR pre-processed output")
             if target_ra is not None and target_dec is not None:
                 ira = float(target_ra)
@@ -17557,7 +17502,6 @@ def _qc_enrich_one_frame(
             "n_sources": qc.get("n_sources"),
             "n_stars_detected": n_stars,
             "bg_median": float(np.nanmedian(data)) if data.size else None,
-            "lacosmic_pixels_cleaned": int(n_cr_pixels),
             **sky_stats,
         }
     except SkySurfaceOrderConflictError:
