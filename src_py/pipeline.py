@@ -1386,9 +1386,13 @@ def _quality_inspection_dao_metrics_array(
     data: "np.ndarray",
     hdr: fits.Header,
 ) -> dict[str, Any]:
-    """Same as :func:`_quality_inspection_dao_metrics` but on an in-memory calibrated image."""
+    """Same as :func:`_quality_inspection_dao_metrics` but on an in-memory calibrated image.
+
+    FWHM is the median moment-FWHM over many star-like detections (see
+    :func:`_robust_frame_fwhm_median`); not a single detection and not
+    segmentation islands (which track cosmics/hot pixels after CR removal).
+    """
     import numpy as np
-    from photutils.detection import DAOStarFinder
 
     out: dict[str, Any] = {
         "fwhm_mean": None,
@@ -1417,80 +1421,45 @@ def _quality_inspection_dao_metrics_array(
         return out
     out["sky_background"] = float(med) if np.isfinite(med) else None
 
-    img2 = np.asarray(crop - float(med), dtype=np.float32)
-    img2 = np.nan_to_num(img2, nan=0.0, posinf=0.0, neginf=0.0)
-    if float(np.nanmedian(img2)) < 0:
-        img2 = -img2
-
-    fwhm_guess = _estimate_dao_fwhm_guess(img2, std)
-    daofind = DAOStarFinder(
-        fwhm=float(fwhm_guess),
-        threshold=5.0 * std,
-        **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
+    rob = _robust_frame_fwhm_median(
+        arr,
+        max_sources=120,
+        min_keep=12,
+        use_center_crop=True,
     )
-    tbl = daofind(img2)
-    if tbl is None or len(tbl) == 0:
+    if rob.get("fwhm_px") is None:
+        rob = _robust_frame_fwhm_median(
+            arr,
+            max_sources=120,
+            min_keep=5,
+            use_center_crop=True,
+        )
+    out["star_count"] = int(rob.get("n_stars_detected") or 0)
+    out["elongation_mean"] = rob.get("elongation")
+    if rob.get("fwhm_px") is not None:
+        out["fwhm_mean"] = float(rob["fwhm_px"])
+    # roundness_mean: keep best-effort from a quick DAO table when available
+    try:
+        from photutils.detection import DAOStarFinder
+
+        img2 = np.asarray(crop - float(med), dtype=np.float32)
+        img2 = np.nan_to_num(img2, nan=0.0, posinf=0.0, neginf=0.0)
+        if float(np.nanmedian(img2)) < 0:
+            # Only for roundness helper; prefer tail test when near zero.
+            pos = float(np.count_nonzero(img2 > (4.0 * std)))
+            neg = float(np.count_nonzero(img2 < (-4.0 * std)))
+            if neg > (pos * 2.0) and neg > 50:
+                img2 = -img2
+        fwhm_guess = float(max(3.0, min(12.0, _estimate_dao_fwhm_guess(img2, std))))
         daofind = DAOStarFinder(
-            fwhm=float(fwhm_guess),
-            threshold=3.0 * std,
+            fwhm=fwhm_guess,
+            threshold=5.0 * std,
             **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
         )
         tbl = daofind(img2)
-    if tbl is None or len(tbl) == 0:
-        return out
-
-    tbl.sort("flux")
-    tbl = tbl[::-1]
-    out["star_count"] = int(len(tbl))
-    out["roundness_mean"] = _dao_star_table_mean_roundness(tbl)
-    out["elongation_mean"] = _dao_star_table_mean_elongation(tbl)
-    max_sources = 50
-    n_use = int(min(len(tbl), max_sources))
-    fwhm_list: list[float] = []
-    half = 7
-    h, w = img2.shape
-
-    for i in range(n_use):
-        x0 = float(tbl["x_centroid"][i])
-        y0 = float(tbl["y_centroid"][i])
-        xi = int(round(x0))
-        yi = int(round(y0))
-        y1 = max(0, yi - half)
-        y2 = min(h, yi + half + 1)
-        x1 = max(0, xi - half)
-        x2 = min(w, xi + half + 1)
-        cut = img2[y1:y2, x1:x2]
-        if cut.size < 25:
-            continue
-        cut = np.where(cut > 0, cut, 0.0).astype(np.float32)
-        s = float(np.sum(cut))
-        if not math.isfinite(s) or s <= 0:
-            continue
-        yy, xx = np.mgrid[y1:y2, x1:x2].astype(np.float32)
-        cx = float(np.sum(xx * cut) / s)
-        cy = float(np.sum(yy * cut) / s)
-        dx = xx - cx
-        dy = yy - cy
-        mxx = float(np.sum((dx * dx) * cut) / s)
-        myy = float(np.sum((dy * dy) * cut) / s)
-        mxy = float(np.sum((dx * dy) * cut) / s)
-        tr = mxx + myy
-        det = mxx * myy - mxy * mxy
-        disc = tr * tr - 4.0 * det
-        if disc < 0:
-            continue
-        l1 = 0.5 * (tr + float(np.sqrt(disc)))
-        l2 = 0.5 * (tr - float(np.sqrt(disc)))
-        if l1 <= 0 or l2 <= 0:
-            continue
-        sig1 = float(np.sqrt(l1))
-        sig2 = float(np.sqrt(l2))
-        fwhm = 2.355 * 0.5 * (sig1 + sig2)
-        if np.isfinite(fwhm) and 0.2 < fwhm < 50:
-            fwhm_list.append(float(fwhm))
-
-    if fwhm_list:
-        out["fwhm_mean"] = float(np.nanmedian(np.asarray(fwhm_list, dtype=np.float64)))
+        out["roundness_mean"] = _dao_star_table_mean_roundness(tbl)
+    except Exception:  # noqa: BLE001
+        pass
     return out
 
 
@@ -16606,41 +16575,195 @@ def _safe_proc_name(original_name: str) -> str:
 
 
 def _estimate_dao_fwhm_guess(img2: "np.ndarray", std: float) -> float:
-    """Data-driven FWHM guess (pixels) for DAOStarFinder when segmentation path failed."""
+    """DAOStarFinder kernel FWHM hint (pixels).
+
+    Returns a star-scale default. Do not derive this from segmentation SourceCatalog
+    after CR cleaning was removed -- that path preferred hot pixels / cosmics (~1-2 px)
+    and pulled the kernel (and later FWHM) unphysically low.
+    """
+    _ = (img2, std)
+    return 4.5
+
+
+def _moment_fwhm_elong_peak_at(
+    img2: "np.ndarray",
+    x0: float,
+    y0: float,
+    *,
+    half: int = 7,
+) -> tuple[float | None, float | None, float, float, float]:
+    """Moment FWHM/elongation at ``(x0,y0)`` on a background-subtracted image.
+
+    Returns ``(fwhm_px, elongation, peak, flux_sum, concentration)`` where
+    ``concentration = peak / flux_sum`` (hot pixels / CRs are near 1).
+    """
     import numpy as np
 
-    try:
-        from photutils.segmentation import detect_sources, SourceCatalog
+    h, w = img2.shape
+    xi = int(round(float(x0)))
+    yi = int(round(float(y0)))
+    y1 = max(0, yi - half)
+    y2 = min(h, yi + half + 1)
+    x1 = max(0, xi - half)
+    x2 = min(w, xi + half + 1)
+    cut = np.asarray(img2[y1:y2, x1:x2], dtype=np.float32)
+    if cut.size < 25:
+        return None, None, 0.0, 0.0, 1.0
+    cut_pos = np.where(cut > 0, cut, 0.0).astype(np.float32)
+    flux_sum = float(np.sum(cut_pos))
+    peak = float(np.max(cut_pos)) if cut_pos.size else 0.0
+    if not math.isfinite(flux_sum) or flux_sum <= 0 or not math.isfinite(peak) or peak <= 0:
+        return None, None, peak, flux_sum, 1.0
+    conc = float(peak / flux_sum)
+    yy, xx = np.mgrid[y1:y2, x1:x2].astype(np.float32)
+    cx = float(np.sum(xx * cut_pos) / flux_sum)
+    cy = float(np.sum(yy * cut_pos) / flux_sum)
+    dx = xx - cx
+    dy = yy - cy
+    mxx = float(np.sum((dx * dx) * cut_pos) / flux_sum)
+    myy = float(np.sum((dy * dy) * cut_pos) / flux_sum)
+    mxy = float(np.sum((dx * dy) * cut_pos) / flux_sum)
+    tr = mxx + myy
+    det = mxx * myy - mxy * mxy
+    disc = tr * tr - 4.0 * det
+    if disc < 0:
+        return None, None, peak, flux_sum, conc
+    l1 = 0.5 * (tr + float(np.sqrt(disc)))
+    l2 = 0.5 * (tr - float(np.sqrt(disc)))
+    if l1 <= 0 or l2 <= 0:
+        return None, None, peak, flux_sum, conc
+    sig1 = float(np.sqrt(l1))
+    sig2 = float(np.sqrt(l2))
+    fwhm = 2.355 * 0.5 * (sig1 + sig2)
+    elong = (sig1 / sig2) if sig2 > 0 else float("nan")
+    if not (math.isfinite(fwhm) and 0.2 < fwhm < 50):
+        return None, None, peak, flux_sum, conc
+    if not (math.isfinite(elong) and 0.5 < elong < 20):
+        return float(fwhm), None, peak, flux_sum, conc
+    return float(fwhm), float(elong), peak, flux_sum, conc
 
-        std = float(std)
-        if not np.isfinite(std) or std <= 0:
-            return 3.0
-        segm = None
-        for k in (4.0, 3.0):
-            segm = detect_sources(img2, k * std, npixels=6)
-            if segm is not None and getattr(segm, "nlabels", 0) >= 5:
+
+def _robust_frame_fwhm_median(
+    data: "np.ndarray",
+    *,
+    max_sources: int = 120,
+    min_keep: int = 12,
+    use_center_crop: bool = True,
+    sat_adu: float | None = None,
+    isol_px: float = 10.0,
+    max_concentration: float = 0.22,
+    elong_lo: float = 0.75,
+    elong_hi: float = 1.55,
+) -> dict[str, Any]:
+    """Per-frame FWHM = median moment-FWHM over many star-like detections.
+
+    Membership selection only (no sigma-clip of the FWHM sample; Milan 2026-08-12):
+    - DAO detections on a background-subtracted (optional center-crop) image
+    - Unsaturated (peak < ``sat_adu``)
+    - Extended / anti-CR: ``peak/sum <= max_concentration`` (rejects hot pixels / cosmics)
+    - Roundish: moment elongation in ``[elong_lo, elong_hi]``
+    - Isolated: no brighter accepted neighbor within ``isol_px``
+    - Aggregate: median of remaining FWHMs (requires ``min_keep``)
+
+    This is measurement aggregation across stars; it does not alter science pixels.
+    """
+    import numpy as np
+    from photutils.detection import DAOStarFinder
+
+    out: dict[str, Any] = {
+        "fwhm_px": None,
+        "elongation": None,
+        "n_sources": 0,
+        "n_stars_detected": 0,
+        "n_fwhm_sample": 0,
+    }
+    img = np.asarray(data, dtype=np.float32)
+    if img.ndim != 2:
+        return out
+    work = _qc_center_crop_for_stars(img) if use_center_crop else img
+    finite = np.isfinite(work)
+    if not np.any(finite):
+        return out
+    _, med, std = plain_mean_med_std(work[finite])
+    std_f = float(std)
+    if not math.isfinite(std_f) or std_f <= 0:
+        return out
+    img2 = np.asarray(work - float(med), dtype=np.float32)
+    img2 = np.nan_to_num(img2, nan=0.0, posinf=0.0, neginf=0.0)
+    # Polarity: only flip when the negative tail clearly dominates (stars as dips).
+    # Do NOT flip on a near-zero median after background subtraction -- float noise
+    # around 0 would invert a normal star field and DAO finds almost nothing.
+    if math.isfinite(std_f) and std_f > 0:
+        pos = float(np.count_nonzero(img2 > (4.0 * std_f)))
+        neg = float(np.count_nonzero(img2 < (-4.0 * std_f)))
+        if neg > (pos * 2.0) and neg > 100:
+            img2 = -img2
+
+    # DAO kernel must not be tuned to CR-scale (~1-2 px) blobs.
+    fwhm_guess = float(max(3.0, min(12.0, _estimate_dao_fwhm_guess(img2, std_f))))
+    sat = float(sat_adu) if sat_adu is not None and math.isfinite(float(sat_adu)) else 50000.0
+    sat = max(1000.0, sat)
+
+    tbl = None
+    for thr_k in (5.0, 3.5, 2.5):
+        daofind = DAOStarFinder(
+            fwhm=float(fwhm_guess),
+            threshold=float(thr_k) * std_f,
+            **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
+        )
+        tbl = daofind(img2)
+        if tbl is not None and len(tbl) >= max(8, min_keep):
+            break
+    if tbl is None or len(tbl) == 0:
+        return out
+    out["n_stars_detected"] = int(len(tbl))
+    tbl.sort("flux")
+    tbl = tbl[::-1]
+
+    n_scan = int(min(len(tbl), max(max_sources * 3, max_sources)))
+    cand: list[tuple[float, float, float, float, float]] = []
+    for i in range(n_scan):
+        x0 = float(tbl["x_centroid"][i])
+        y0 = float(tbl["y_centroid"][i])
+        flux = float(tbl["flux"][i])
+        fwhm, elong, peak, _flux_sum, conc = _moment_fwhm_elong_peak_at(img2, x0, y0, half=7)
+        if fwhm is None or elong is None:
+            continue
+        if not math.isfinite(peak) or peak >= sat:
+            continue
+        if not math.isfinite(conc) or conc > float(max_concentration):
+            continue
+        if not (float(elong_lo) <= float(elong) <= float(elong_hi)):
+            continue
+        cand.append((flux, x0, y0, float(fwhm), float(elong)))
+
+    accepted_fwhm: list[float] = []
+    accepted_elong: list[float] = []
+    accepted_xy: list[tuple[float, float]] = []
+    isol2 = float(isol_px) * float(isol_px)
+    for _flux, x0, y0, fwhm, elong in cand:
+        if len(accepted_fwhm) >= int(max_sources):
+            break
+        ok_iso = True
+        for ax, ay in accepted_xy:
+            if (x0 - ax) * (x0 - ax) + (y0 - ay) * (y0 - ay) < isol2:
+                ok_iso = False
                 break
-        if segm is None or getattr(segm, "nlabels", 0) < 1:
-            return 3.0
-        cat = SourceCatalog(img2, segm)
-        flux = np.asarray(cat.segment_flux, dtype=np.float64)
-        if flux.size == 0:
-            return 3.0
-        idx = np.argsort(flux)[::-1][: min(50, flux.size)]
-        a = np.asarray(cat.semimajor_sigma, dtype=np.float64)[idx]
-        b = np.asarray(cat.semiminor_sigma, dtype=np.float64)[idx]
-        ok = np.isfinite(a) & np.isfinite(b) & (a > 0) & (b > 0)
-        a = a[ok]
-        b = b[ok]
-        if a.size < 3:
-            return 3.0
-        fwhm = 2.355 * 0.5 * (a + b)
-        mf = float(np.nanmedian(fwhm))
-        if not np.isfinite(mf):
-            return 3.0
-        return float(np.clip(mf, 1.0, 20.0))
-    except Exception:  # noqa: BLE001
-        return 3.0
+        if not ok_iso:
+            continue
+        accepted_fwhm.append(fwhm)
+        accepted_elong.append(elong)
+        accepted_xy.append((x0, y0))
+
+    out["n_fwhm_sample"] = int(len(accepted_fwhm))
+    out["n_sources"] = int(len(accepted_fwhm))
+    if len(accepted_fwhm) < int(min_keep):
+        return out
+    arr_f = np.asarray(accepted_fwhm, dtype=np.float64)
+    arr_e = np.asarray(accepted_elong, dtype=np.float64)
+    out["fwhm_px"] = float(np.median(arr_f))
+    out["elongation"] = float(np.median(arr_e))
+    return out
 
 
 def _qc_fwhm_elongation(
@@ -16650,329 +16773,40 @@ def _qc_fwhm_elongation(
 ) -> dict[str, Any]:
     """Estimate average FWHM and elongation (best-effort).
 
-    Primary method: photutils segmentation SourceCatalog.
-    Fallback: DAOStarFinder + moment-based shape on cutouts.
+    Robust path (2026-08-12): median moment-FWHM over many star-like DAO detections
+    (bright, unsaturated, isolated, extended). Segmentation SourceCatalog is NOT used
+    for FWHM -- after CR cleaning was removed it preferentially measured hot pixels /
+    cosmics (~1-2 px) and poisoned ``VY_FWHM`` / aperture sizing.
 
     Returns ``n_stars_detected``: approximate total star-like detections on the frame.
-    ``n_sources``: subset used for robust FWHM/elongation (capped by ``max_sources``).
+    ``n_sources``: subset used for the FWHM/elongation median.
     """
-    import numpy as np
-
-    img = np.asarray(data, dtype=np.float32)
-    # Detect polarity: some tools show/process images as negatives.
-    # If stars are negative (dips), detection on positive threshold will fail.
-    def _maybe_flip(sign_img: "np.ndarray", std_val: float) -> "np.ndarray":
-        import numpy as np
-
-        if not np.isfinite(std_val) or std_val <= 0:
-            return sign_img
-        # Compare tails at 4-sigma: if negative tail dominates, flip.
-        pos = float(np.count_nonzero(sign_img > (4.0 * std_val)))
-        neg = float(np.count_nonzero(sign_img < (-4.0 * std_val)))
-        if neg > (pos * 2.0) and neg > 100:
-            return -sign_img
-        return sign_img
-
-    try:
-        from photutils.segmentation import detect_sources, SourceCatalog
-
-        finite = np.isfinite(img)
-        if not np.any(finite):
-            return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-
-        mean, med, std = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
-        std = float(std)
-        if not np.isfinite(std) or std <= 0:
-            return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-
-        # Work on background-centered, finite image to avoid NaNs killing detection
-        img2 = np.asarray(img - float(med), dtype=np.float32)
-        img2 = np.nan_to_num(img2, nan=0.0, posinf=0.0, neginf=0.0)
-        img2 = _maybe_flip(img2, std)
-
-        # Try a few thresholds to be robust across backgrounds/exposures
-        segm = None
-        for k in (5.0, 4.0, 3.0):
-            thresh = k * std
-            segm = detect_sources(img2, thresh, npixels=8)
-            if segm is not None and getattr(segm, "nlabels", 0) > 0:
-                break
-        if segm is None:
-            return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-        n_seg = int(getattr(segm, "nlabels", 0))
-        cat = SourceCatalog(img2, segm)
-        # pick brightest-ish sources by flux
-        flux = np.asarray(cat.segment_flux, dtype=np.float64)
-        if flux.size == 0:
-            return {
-                "fwhm_px": None,
-                "elongation": None,
-                "n_sources": 0,
-                "n_stars_detected": n_seg,
-            }
-        idx = np.argsort(flux)[::-1][:max_sources]
-        a = np.asarray(cat.semimajor_sigma, dtype=np.float64)[idx]
-        b = np.asarray(cat.semiminor_sigma, dtype=np.float64)[idx]
-        ok = np.isfinite(a) & np.isfinite(b) & (a > 0) & (b > 0)
-        a = a[ok]
-        b = b[ok]
-        if a.size == 0:
-            return {
-                "fwhm_px": None,
-                "elongation": None,
-                "n_sources": 0,
-                "n_stars_detected": n_seg,
-            }
-        fwhm = 2.355 * 0.5 * (a + b)
-        elong = a / b
+    _ = max_sources
+    rob = _robust_frame_fwhm_median(
+        data,
+        max_sources=120,
+        min_keep=12,
+        use_center_crop=True,
+    )
+    if rob.get("fwhm_px") is not None:
         return {
-            "fwhm_px": float(np.nanmedian(fwhm)),
-            "elongation": float(np.nanmedian(elong)),
-            "n_sources": int(a.size),
-            "n_stars_detected": n_seg,
+            "fwhm_px": rob.get("fwhm_px"),
+            "elongation": rob.get("elongation"),
+            "n_sources": int(rob.get("n_sources") or 0),
+            "n_stars_detected": int(rob.get("n_stars_detected") or 0),
         }
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
-
-    # Fallback: DAOStarFinder + moments on small cutouts (requires photutils)
-    try:
-        from photutils.detection import DAOStarFinder
-
-        finite = np.isfinite(img)
-        if not np.any(finite):
-            return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-        mean, med, std = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
-        std = float(std)
-        if not np.isfinite(std) or std <= 0:
-            return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-
-        img2 = np.asarray(img - float(med), dtype=np.float32)
-        img2 = np.nan_to_num(img2, nan=0.0, posinf=0.0, neginf=0.0)
-        img2 = _maybe_flip(img2, std)
-
-        fwhm_guess = _estimate_dao_fwhm_guess(img2, std)
-        daofind = DAOStarFinder(
-            fwhm=float(fwhm_guess),
-            threshold=5.0 * std,
-            **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
-        )
-        tbl = daofind(img2)
-        if tbl is None or len(tbl) == 0:
-            # try lower threshold for very faint fields
-            daofind = DAOStarFinder(
-                fwhm=float(fwhm_guess),
-                threshold=3.0 * std,
-                **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
-            )
-            tbl = daofind(img2)
-        if tbl is None or len(tbl) == 0:
-            return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-
-        # Sort by flux descending
-        tbl.sort("flux")
-        tbl = tbl[::-1]
-        n_dao = int(len(tbl))
-        n_use = int(min(len(tbl), max_sources))
-
-        fwhm_list: list[float] = []
-        elong_list: list[float] = []
-        half = 7  # cutout half-size => 15x15
-        h, w = img2.shape
-
-        for i in range(n_use):
-            x0 = float(tbl["x_centroid"][i])
-            y0 = float(tbl["y_centroid"][i])
-            xi = int(round(x0))
-            yi = int(round(y0))
-            y1 = max(0, yi - half)
-            y2 = min(h, yi + half + 1)
-            x1 = max(0, xi - half)
-            x2 = min(w, xi + half + 1)
-            cut = img2[y1:y2, x1:x2]
-            if cut.size < 25:
-                continue
-            # Use only positive signal (after optional polarity flip)
-            cut = np.where(cut > 0, cut, 0.0).astype(np.float32)
-            s = float(np.sum(cut))
-            if not np.isfinite(s) or s <= 0:
-                continue
-            yy, xx = np.mgrid[y1:y2, x1:x2].astype(np.float32)
-            cx = float(np.sum(xx * cut) / s)
-            cy = float(np.sum(yy * cut) / s)
-            dx = xx - cx
-            dy = yy - cy
-            mxx = float(np.sum((dx * dx) * cut) / s)
-            myy = float(np.sum((dy * dy) * cut) / s)
-            mxy = float(np.sum((dx * dy) * cut) / s)
-
-            # Eigenvalues of covariance give principal sigmas^2
-            tr = mxx + myy
-            det = mxx * myy - mxy * mxy
-            disc = tr * tr - 4.0 * det
-            if disc < 0:
-                continue
-            l1 = 0.5 * (tr + float(np.sqrt(disc)))
-            l2 = 0.5 * (tr - float(np.sqrt(disc)))
-            if l1 <= 0 or l2 <= 0:
-                continue
-            sig1 = float(np.sqrt(l1))
-            sig2 = float(np.sqrt(l2))
-            fwhm = 2.355 * 0.5 * (sig1 + sig2)
-            elong = sig1 / sig2 if sig2 > 0 else np.nan
-            if np.isfinite(fwhm) and 0.2 < fwhm < 50:
-                fwhm_list.append(float(fwhm))
-            if np.isfinite(elong) and 0.8 < elong < 20:
-                elong_list.append(float(elong))
-
-        if not fwhm_list or not elong_list:
-            return {
-                "fwhm_px": None,
-                "elongation": None,
-                "n_sources": 0,
-                "n_stars_detected": n_dao,
-            }
-
-        return {
-            "fwhm_px": float(np.nanmedian(np.asarray(fwhm_list, dtype=np.float64))),
-            "elongation": float(np.nanmedian(np.asarray(elong_list, dtype=np.float64))),
-            "n_sources": int(min(len(fwhm_list), len(elong_list))),
-            "n_stars_detected": n_dao,
-        }
-    except Exception as exc:  # noqa: BLE001
-        # EXC-0436: T1 -- DAOStarFinder QC fallback outer `except` returns all-None FWHM/elongation; frame marked... (EXCEPT-BULK-2 2026-07-08)
-        LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
-
-    # Last-resort fallback without photutils: naive local-max peak picking + moments
-    try:
-
-        finite = np.isfinite(img)
-        if not np.any(finite):
-            return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-        mean, med, std = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
-        std = float(std)
-        if not np.isfinite(std) or std <= 0:
-            return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-
-        img2 = np.asarray(img - float(med), dtype=np.float32)
-        img2 = np.nan_to_num(img2, nan=0.0, posinf=0.0, neginf=0.0)
-        img2 = _maybe_flip(img2, std)
-
-        # Simple smoothing (3x3 mean) to reduce single-pixel noise
-        kern = np.array([[1, 1, 1], [1, 2, 1], [1, 1, 1]], dtype=np.float32)
-        kern /= float(kern.sum())
-        # Convolution via shifts (no scipy)
-        sm = (
-            img2
-            + np.roll(img2, 1, 0)
-            + np.roll(img2, -1, 0)
-            + np.roll(img2, 1, 1)
-            + np.roll(img2, -1, 1)
-            + np.roll(np.roll(img2, 1, 0), 1, 1)
-            + np.roll(np.roll(img2, 1, 0), -1, 1)
-            + np.roll(np.roll(img2, -1, 0), 1, 1)
-            + np.roll(np.roll(img2, -1, 0), -1, 1)
-        ) / 9.0
-
-        # Local maxima mask (exclude borders)
-        c = sm[1:-1, 1:-1]
-        nbrs = [
-            sm[0:-2, 0:-2],
-            sm[0:-2, 1:-1],
-            sm[0:-2, 2:],
-            sm[1:-1, 0:-2],
-            sm[1:-1, 2:],
-            sm[2:, 0:-2],
-            sm[2:, 1:-1],
-            sm[2:, 2:],
-        ]
-        is_peak = np.ones_like(c, dtype=bool)
-        for n in nbrs:
-            is_peak &= c > n
-
-        # Threshold
-        thr = 5.0 * std
-        is_peak &= c > thr
-        ys, xs = np.nonzero(is_peak)
-        if ys.size == 0:
-            # try lower threshold
-            thr = 3.0 * std
-            is_peak = np.ones_like(c, dtype=bool)
-            for n in nbrs:
-                is_peak &= c > n
-            is_peak &= c > thr
-            ys, xs = np.nonzero(is_peak)
-        if ys.size == 0:
-            return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-
-        n_peaks_total = int(ys.size)
-
-        # Convert to full-image coordinates (+1 offset)
-        ys = ys + 1
-        xs = xs + 1
-        vals = sm[ys, xs]
-        idx = np.argsort(vals)[::-1][:max_sources]
-        ys = ys[idx]
-        xs = xs[idx]
-
-        fwhm_list: list[float] = []
-        elong_list: list[float] = []
-        half = 7
-        h, w = img2.shape
-        for yi, xi in zip(ys.tolist(), xs.tolist(), strict=False):
-            y1 = max(0, yi - half)
-            y2 = min(h, yi + half + 1)
-            x1 = max(0, xi - half)
-            x2 = min(w, xi + half + 1)
-            cut = img2[y1:y2, x1:x2]
-            if cut.size < 25:
-                continue
-            cut = np.where(cut > 0, cut, 0.0).astype(np.float32)
-            s = float(np.sum(cut))
-            if not np.isfinite(s) or s <= 0:
-                continue
-            yy, xx = np.mgrid[y1:y2, x1:x2].astype(np.float32)
-            cx = float(np.sum(xx * cut) / s)
-            cy = float(np.sum(yy * cut) / s)
-            dx = xx - cx
-            dy = yy - cy
-            mxx = float(np.sum((dx * dx) * cut) / s)
-            myy = float(np.sum((dy * dy) * cut) / s)
-            mxy = float(np.sum((dx * dy) * cut) / s)
-            tr = mxx + myy
-            det = mxx * myy - mxy * mxy
-            disc = tr * tr - 4.0 * det
-            if disc < 0:
-                continue
-            l1 = 0.5 * (tr + float(np.sqrt(disc)))
-            l2 = 0.5 * (tr - float(np.sqrt(disc)))
-            if l1 <= 0 or l2 <= 0:
-                continue
-            sig1 = float(np.sqrt(l1))
-            sig2 = float(np.sqrt(l2))
-            fwhm = 2.355 * 0.5 * (sig1 + sig2)
-            elong = sig1 / sig2 if sig2 > 0 else np.nan
-            if np.isfinite(fwhm) and 0.2 < fwhm < 50:
-                fwhm_list.append(float(fwhm))
-            if np.isfinite(elong) and 0.8 < elong < 20:
-                elong_list.append(float(elong))
-
-        if not fwhm_list or not elong_list:
-            return {
-                "fwhm_px": None,
-                "elongation": None,
-                "n_sources": 0,
-                "n_stars_detected": n_peaks_total,
-            }
-        return {
-            "fwhm_px": float(np.nanmedian(np.asarray(fwhm_list, dtype=np.float64))),
-            "elongation": float(np.nanmedian(np.asarray(elong_list, dtype=np.float64))),
-            "n_sources": int(min(len(fwhm_list), len(elong_list))),
-            "n_stars_detected": n_peaks_total,
-        }
-    except Exception:  # noqa: BLE001
-        # EXC-0437: T2 -- `_estimate_catalog_frame_hw` `continue`s to next FITS on read error, eventually default... (EXCEPT-BULK-2 2026-07-08)
-        return {"fwhm_px": None, "elongation": None, "n_sources": 0, "n_stars_detected": 0}
-
+    rob2 = _robust_frame_fwhm_median(
+        data,
+        max_sources=120,
+        min_keep=5,
+        use_center_crop=True,
+    )
+    return {
+        "fwhm_px": rob2.get("fwhm_px"),
+        "elongation": rob2.get("elongation"),
+        "n_sources": int(rob2.get("n_sources") or 0),
+        "n_stars_detected": int(rob2.get("n_stars_detected") or 0),
+    }
 
 def _vyvar_parallel_worker_count(app_config: AppConfig | None = None) -> int:
     """Jednotny pocet workerov pre QC, preprocess, combined, alignment seed, per-frame CSV seed, calibrate MP.
