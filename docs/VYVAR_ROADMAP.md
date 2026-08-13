@@ -281,7 +281,42 @@ licensing decision.
 
 ---
 
-## IN-FLIGHT - CAL-DIAG (calibration-time radiometry gate) - **IMPLEMENTED (pending Milan review)**
+## OPEN - SAT-DIAG (saturation and linearity limit gate)
+
+**Priority:** **HIGH** (blocks confident production runs on BO CVn-class fields).
+**Status:** Spec drafted 2026-08-13; **awaiting Milan decisions** before implementation.
+
+Grounding: `dev/results/MEMO_saturation_limit_literature.md`,
+`dev/results/CURSOR_RESULT_saturation_peak_reconcile.md`.
+Spec: `dev/results/specs/VYVAR_SAT_DIAG_SPEC.md`. DECISIONS entry: **SAT-DIAG (OPEN)**.
+
+**Problem:** `EQUIPMENTS.SATURATE_ADU=16384` is in the wrong units for binned FITS
+data (ceiling **65535**); peaks are measured on aligned float frames (**~69000** max),
+not raw; limit crossings silently exclude comps from pool, PSF, and AC.
+
+**Measured consequence at active limit 16384:** **62 of 140** comparison stars fail
+static admission; **2 of 5** draft-509 BO CVn comps that produced the good light
+curve would be excluded. Authoritative BO CVn peaks (134 LC frames, WCS+drift):
+**94/134** frames >= 16384, **0/134** >= 65535.
+
+**Deliverables (after Milan settles DECISIONS):**
+
+1. Invariant-backed gate (`INV-SAT-01`) -- not config-parameter-only (see CAL-DIAG
+   removal `967f835`).
+2. Raw peak measurement + self-check; flags carried forward.
+3. Two levels keyed by `(equipment, readmode, binning)`.
+4. Provenance `VY_SATSRC` / `sat_diag.json`.
+
+---
+
+## SUPERSEDED - CAL-DIAG (calibration-time radiometry gate) - **REMOVED 2026-08-11**
+
+**Removed in commit `967f835`** ("Remove CAL-DIAG gate and its five config
+parameters"). Spec retained for reference: `dev/results/specs/VYVAR_CAL_DIAG_SPEC.md`.
+Historical validation: draft_424 150/150 `VY_DKRSMP=SUM`. Draft 435 carries legacy
+headers; drafts 509+ do not.
+
+## IN-FLIGHT - CAL-DIAG (calibration-time radiometry gate) - **IMPLEMENTED (pending Milan review)** [historical -- see SUPERSEDED above]
 
 **Agreed 2026-07-07; spec APPROVED 2026-07-14 (Milan).** Spec: `dev/results/specs/VYVAR_CAL_DIAG_SPEC.md` v1.1.
 Grounding: `CURSOR_RESULT_caldiag_flow.md`. Implementation: `CURSOR_RESULT_cal_diag_impl.md`.

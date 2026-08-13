@@ -30,10 +30,54 @@ Cause: `ensemble_normalize` applied a 3x MAD clip to the per-frame zeropoint whe
 Case: **B ~ C ~ 435 quality**. Clip is the entire cause. Broeg weights kept (not rejection).
 `phase01_comparison_max_mag_diff` deliberately **not** reverted in this commit.
 
-**Mechanism.** Rejections were scattered (30 blocks, max run 3). On reject frames the
-bright star's residual vs other comps was **quieter** (0.007) than on kept frames (0.010).
-MAD collapsed (0.018 vs 0.037), shrinking the boundary — estimator noise at N=5, not a
-physical event.
+**Mechanism (measured).** Rejections were scattered (30 blocks, max run 3). On reject
+frames the bright star's residual vs other comps was **quieter** (0.007) than on kept
+frames (0.010). Absolute |z-med| stayed ~100-110 mmag; MAD collapsed (0.018 vs 0.037),
+shrinking the 3-sigma boundary ~166 -> 80 mmag. 33/37 rejects had MAD below the overall
+p25. Estimator noise at N=5, not a physical event on that star.
+
+**Literature basis (methods-paper / decision rationale).**
+
+1. **Broeg et al. 2005** (AN 326, 134) -- the method VYVAR already cites -- builds an
+   artificial comparison as a weighted average. Variability weight and the decision to
+   drop a star are properties of the star **across the whole series**, not of a single
+   frame. Broeg-family pipelines (SPECULOOS-South / Murray et al. arXiv:2005.02423;
+   Jena `chphot` arXiv:0905.1833; Cep-Cas / REM Orion follow-ons) drop low-weight or
+   variable stars once; they do not eject a fixed member from the ZP on a subset of
+   frames. They also favour using as many comps as possible with weights, not a tiny
+   hand-picked set. The removed clip made a per-frame in/out decision on a star Broeg
+   treats as a fixed member with a fixed weight -- that is not the cited method.
+
+2. **Honeycutt 1992** (PASP 104, 435) is the place variable membership is legitimate:
+   stars are genuinely **absent** from some exposures (heterogeneous archives), handled
+   by a **global** least-squares solution over all stars and frames jointly. Varying
+   membership plus a simple per-frame weighted mean (as though membership were fixed)
+   appears nowhere in the literature and was the actual defect. A future Honeycutt-style
+   global ensemble (parked with WIDE-ERR) would make controlled membership variation
+   legitimate; that is a separate larger change, not this decision.
+
+3. **Comparable tools:** AstroImageJ (Collins et al. 2017), C-Munipack/Muniwin, and
+   Broeg-family pipelines use a fixed ensemble (or whole-series drop). VaST (Sokolovsky
+   & Lebedev 2018) does robust per-frame calibration, but against **hundreds to
+   thousands** of matched stars -- a different statistical regime. No tool in this set
+   automatically ejects a comparison star from a **small** ensemble ZP per frame.
+
+4. **Why N=5 decides it.** MAD asymptotic Gaussian efficiency ~37% (vs Sn ~58%, Qn
+   ~82%; Akinshin arXiv:2209.12268; Rousseeuw & Croux 1993). At n=5 finite-sample
+   efficiency is worse and MAD underestimates scale if the asymptotic 1.4826 factor is
+   used (consistency factor nearer ~1.72) -- the rejection boundary was systematically
+   **too tight** exactly where the clip activated. Literature does not ban robust
+   rejection in general (VaST is right at large N); it bans this combination: small N,
+   MAD scale, per-frame membership flip, then a fixed-membership weighted mean.
+
+**Decision 2 (admission) -- not coupled.** Broeg-family + Astrokit (Burdanov et al.
+arXiv:1408.0664) support using many comps with |dmag| within ~2 mag;
+`phase01_comparison_max_mag_diff = 2.0` sits at that stated limit and need not revert
+to 1.5 for scatter. Caveat: the matrix measured scatter only. Looser admission can
+admit colour systematics (smooth airmass-correlated drift) invisible to scatter;
+`comp_max_delta_bprp` 0.79->0.99 moved in the same generation. On BO CVn all five comps
+had dBP-RP <= 0.15, so colour did not bite here -- field-specific, not a parameter proof.
+Future colour-tolerance decisions need residual-vs-airmass / residual-vs-colour tests.
 
 **Rule.** Per-frame zeropoint uses all admitted comps with Broeg 1/sigma^2 (+ tier) weights.
 No rejection step. See INV-COMP-MEMBERSHIP.
@@ -45,7 +89,8 @@ by behaviour, not by name.
 **Open / not in this commit:** `detect_outliers` (4589-4602), plate-solver SIP pair clip
 (`vyvar_platesolver.py:685-693`), I-04 unmatched-epoch drop, `phase01_comparison_max_mag_diff`.
 
-Report: `dev/results/CURSOR_RESULT_zp_clip_closeout.md`.
+Reports: `dev/results/CURSOR_RESULT_zp_clip_closeout.md`,
+`dev/results/MEMO_ensemble_zp_clip_literature.md`.
 
 ---
 
@@ -1016,8 +1061,9 @@ radiometric validation. **F-BINGAIN-1 RN sub-question** (db 7.6 e- scaled x2 -> 
 already read-mode-0) resolves here, not via ad-hoc param_resolver exponent change.
 
 **Status:** **IMPLEMENTED (2026-07-07); re-validated 2026-07-14 on HEAD 13341b3.** Spec v1.1
-**APPROVED (Milan, 2026-07-14).** Grounding trace `CURSOR_RESULT_caldiag_flow.md`. Result:
-`CURSOR_RESULT_cal_diag_impl.md`. **NOT PUSHED** -- pending Milan review of 2026-07-14 closeout.
+**APPROVED (Milan, 2026-07-14).** **REMOVED 2026-08-11** in commit `967f835` (config
+parameter reduction). Spec retained: `dev/results/specs/VYVAR_CAL_DIAG_SPEC.md`. See
+ROADMAP **SUPERSEDED - CAL-DIAG**.
 
 ---
 
@@ -2468,3 +2514,55 @@ downstream photometry filters (`comp_selection_per_target.py:514-523`,
 not become runtime gates.
 
 **Reference:** `docs/VYVAR_DAO_DETECTION.md`, `src_py/dao_reconcile.py`, `dev/results/CURSOR_RESULT_dao_close.md`.
+
+## SAT-DIAG - saturation and linearity limit gate (OPEN - architect recommendations 2026-08-13)
+
+**Status:** **OPEN -- architect recommendations recorded; awaiting Milan authorization.**
+Not implemented. Spec: `dev/results/specs/VYVAR_SAT_DIAG_SPEC.md` section 3. Grounding:
+`dev/results/MEMO_saturation_limit_literature.md`,
+`dev/results/CURSOR_RESULT_saturation_peak_reconcile.md`.
+
+**Governing principle (architect):** the strength of the action must follow the
+provenance of the number. Measured limits may exclude; derived or defaulted limits
+warn only.
+
+**Four decisions -- architect recommendations (2026-08-13, not yet authorized):**
+
+1. **Interim limit source and CONFLICT policy** -- resolution order: header, then
+   equipment row, then derived pile-up, then BITPIX container bound. Stated ceiling
+   refuted when below max raw pixel (compatibility test). CONFLICT: adapt and
+   continue loudly (`CONFLICT_DERIVED`); fail closed only when nothing stated,
+   nothing derived, no BITPIX bound. No-pile-up: container bound only; never
+   brightest-star ceiling.
+2. **Target structure** -- two levels keyed by `(equipment, readmode, XBINNING,
+   YBINNING)`; DB row is hint not authority. Columns: `sat_adu`, `lin_adu`,
+   `lin_source`, `sat_source`, `measured_utc`, `tolerance_pct`. Migration: null out
+   `EQUIPMENTS.SATURATE_ADU=16384`; do not carry forward.
+3. **Exposure ramp** -- proceed with `DEFAULT_FRAC=0.85` + mandatory WARN; ramp
+   when convenient (AAVSO procedure, per rig config). `DEFAULT_FRAC` must not
+   exclude (Decision 4 Tier 3).
+4. **Consumer policies** -- three tiers keyed on provenance: (1) hard saturation
+   from MEASURED/HEADER/DERIVED may exclude pool/AC/PSF; (2) MEASURED linearity
+   may exclude pool/AC; (3) DEFAULT_FRAC or DERIVED linearity warn only. Exclusion
+   decided once per draft (`INV-COMP-MEMBERSHIP`); target epochs flagged not dropped.
+
+**Measured consequence (2026-08-13):** at the currently active limit of **16384**,
+**62 of 140** comparison stars fail static admission; **2 of 5** comps that
+produced the good draft-509 BO CVn light curve would be excluded. Raw ceiling
+measured **65535**; peaks currently taken from aligned frames reaching **~69000**.
+See memo authoritative-numbers table.
+
+## CAL-DIAG reinstatement (OPEN - separate from SAT-DIAG)
+
+**Status:** **OPEN -- awaiting Milan.** CAL-DIAG removed deliberately in `967f835`
+(config reduction; P1 core SHA byte-identical). No dark-resample radiometry check
+survives; `INV-FLUX-01` covers arithmetic only. Draft 435 has `VY_DKRSMP=SUM` /
+`cal_diag.json`; drafts 509/510 do not.
+
+**Recommended process invariant (`INV-GATE-REMOVAL`):** a verification gate may not
+be removed on byte-identity evidence alone; removal requires either proof the
+checked condition is now impossible, or an explicit recorded decision accepting the
+unverified condition with risk stated. See `docs/VYVAR_INVARIANTS.md`.
+
+**Decision for Milan:** whether to reinstate the CAL-DIAG dark-resample convention
+check. Not bundled with SAT-DIAG authorization.

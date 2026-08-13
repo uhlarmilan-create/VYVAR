@@ -21,6 +21,8 @@ Post-fix 509 photometry: check 0.00863, unimodal, n=134, TRUST GREEN.
 
 Reports: `dev/results/CURSOR_RESULT_draft509_vs_435_bo_cvn.md`,
 `dev/results/CURSOR_RESULT_zp_clip_closeout.md`.
+Literature memo (methods-paper): `dev/results/MEMO_ensemble_zp_clip_literature.md`
+(folded into DECISIONS ZP-CLIP-REMOVAL).
 
 ---
 

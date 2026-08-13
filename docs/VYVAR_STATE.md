@@ -3,9 +3,9 @@
 **Status:** Science audit **closed** (2026-08-04). DAO detection workstream **closed** (2026-08-07).
 ZP per-frame MAD clip **removed** (2026-08-12).
 
-Last updated: **2026-08-12** (ZP-CLIP-REMOVAL; draft 509 BO CVn restored).
+Last updated: **2026-08-13** (draft 435 restore; SAT-DIAG spec filed; push pending Milan).
 
-**HEAD:** local (ZP-CLIP-REMOVAL pending push; do not push until Milan approves).
+**HEAD:** `d758c83` + docs commit pending; 3 code commits ahead of origin (ZP clip + encoding + FWHM fixture).
 
 ## 2026-08-12 -- ZP-CLIP-REMOVAL (draft 509 BO CVn)
 
@@ -34,19 +34,31 @@ DAO-CLOSE.
 
 **Open (explicit carry-forward):**
 
-1. **P1-RECUT** -- golden ledger stale since `a9d7eb0` (2026-07-28); science commits
+0. **INV-DAG-01 re-stamp friction (2026-08-12).** Forward stage order in
+   `invariants_runtime.py:22-32` is real; `stamp_pipeline_stage` rejects
+   `idx < max_seq` at `invariants_runtime.py:494-507` when re-running photometry
+   on a draft that already has `postprocess` stamped (`photometry_core.py:10648`).
+   Supported re-entry path blocked; workaround was trimming `pipeline_meta.json`
+   stages. No fix yet.
+1. **SAT-DIAG (OPEN).** Architect recommendations recorded 2026-08-13; awaiting Milan
+   authorization. Spec: `dev/results/specs/VYVAR_SAT_DIAG_SPEC.md`.
+2. **A-1 FWHM estimator disagreement (carry-forward).** Moment FWHM on single
+   frames vs fitted Gaussian FWHM on MASTERSTAR stack differ by factor ~1.6-2.1;
+   aperture follows the smaller value. Characterised in ZP-clip close-out;
+   open finding, not a regression from ZP-CLIP-REMOVAL.
+3. **P1-RECUT** -- golden ledger stale since `a9d7eb0` (2026-07-28); science commits
    `9b74548`, `683fba1`, `f0b310e`, `5cd6ae9` moved outputs. Three P1 ledger tests fail.
    Interim standard: local A/B (two headless runs at one HEAD, no `VYVAR_P1_REUSE_FROZEN`).
-2. **Task A regression remediation** -- `test_masterstars_csv_write_survives_bp_rp_failure`
+4. **Task A regression remediation** -- `test_masterstars_csv_write_survives_bp_rp_failure`
    reimplements fixed control flow; does not call `generate_masterstar_and_catalog`.
-3. **D1b** -- conversion table exists; normalised companion defaults await Milan review (all
+5. **D1b** -- conversion table exists; normalised companion defaults await Milan review (all
    companions still `None`; behaviour unchanged).
-4. **D2** -- design complete; blocked on storage choice (nested `config.json` dict vs DB table
+6. **D2** -- design complete; blocked on storage choice (nested `config.json` dict vs DB table
    keyed on `(ID_EQUIPMENTS`, `ID_TELESCOPE)`; Cursor recommended DB table).
-5. **F-B01 / F-B02** -- PASSTHROUGH runs record `CALIBRATION_MODE=vyvar_calibrated`; fix order
+7. **F-B01 / F-B02** -- PASSTHROUGH runs record `CALIBRATION_MODE=vyvar_calibrated`; fix order
    in `dev/results/CURSOR_RESULT_calpath_audit.md` sections 13-14.
-6. **QHY294MM read-noise double-count** -- DB 7.6 e- may be bin2 value re-scaled to 15.2 e-.
-7. **BPM sidecars** -- no `*_dark_bpm.json` found for any draft; path status unresolved.
+8. **QHY294MM read-noise double-count** -- DB 7.6 e- may be bin2 value re-scaled to 15.2 e-.
+9. **BPM sidecars** -- no `*_dark_bpm.json` found for any draft; path status unresolved.
 
 Report: `dev/results/CURSOR_RESULT_session_close_20260807.md`.
 
