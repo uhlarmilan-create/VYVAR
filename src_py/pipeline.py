@@ -7691,6 +7691,7 @@ def detect_stars_match_master_reference(
     raw_hdr: fits.Header | None = None,
     ref_ra_deg: float | None = None,
     ref_dec_deg: float | None = None,
+    drift_ref_catalog_id: str | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """DAO on this frame + nearest-neighbor match to ``masterstars.csv`` (no Vizier / cone).
 
@@ -8257,6 +8258,7 @@ def detect_stars_match_master_reference(
                 sat_diag_ctx,
                 ref_ra=ref_ra_deg,
                 ref_dec=ref_dec_deg,
+                drift_ref_catalog_id=drift_ref_catalog_id,
                 aligned_hdr=hdr,
             )
             n_sat = (
@@ -8266,7 +8268,7 @@ def detect_stars_match_master_reference(
             )
             meta["sat_limit_source"] = str(getattr(sat_diag_ctx, "sat_source", sat_limit_src))
             meta["sat_peak_source"] = str(
-                getattr(sat_diag_ctx, "sat_peak_source", "ALIGNED_INTERIM")
+                getattr(sat_diag_ctx, "sat_peak_source", "PLACED_APERTURE")
             )
             meta["raw_peaks_used"] = True
         except Exception as _sat_exc:  # noqa: BLE001
@@ -9914,6 +9916,7 @@ def _export_per_frame_run_catalog_core(
                 raw_hdr=_load_raw_hdr_for_frame(st, fname),
                 ref_ra_deg=st.get("sat_diag_ref_ra"),
                 ref_dec_deg=st.get("sat_diag_ref_dec"),
+                drift_ref_catalog_id=st.get("sat_diag_ref_catalog_id"),
             )
         except Exception as exc:  # noqa: BLE001
             logging.error('[EXC-0373] detect_stars_and_match_catalog exception returns status error with empty csv for that f...: %s', exc)
@@ -10520,6 +10523,7 @@ def export_per_frame_catalogs(
     _sat_diag_archive: str = ""
     _ref_ra_deg: float | None = None
     _ref_dec_deg: float | None = None
+    _drift_ref_catalog_id: str | None = None
     try:
         from sat_diag import (  # noqa: PLC0415
             draft_archive_from_platesolve,
@@ -10541,7 +10545,13 @@ def export_per_frame_catalogs(
             if _sat_diag_ctx.sat_adu is not None:
                 equipment_saturate_adu = float(_sat_diag_ctx.sat_adu)
             write_sat_diag_json(_sat_diag_ctx, _arch / "sat_diag.json")
-            if master_tab is not None and not getattr(master_tab, "empty", True):
+            from sat_diag import resolve_drift_ref_sky_deg  # noqa: PLC0415
+
+            _frame_hint = Path(files[0]).name if files else None
+            _ref_ra_deg, _ref_dec_deg, _drift_ref_catalog_id = resolve_drift_ref_sky_deg(
+                ps, frame_name_hint=_frame_hint
+            )
+            if _ref_ra_deg is None and master_tab is not None and not getattr(master_tab, "empty", True):
                 if "ra_deg" in master_tab.columns and "dec_deg" in master_tab.columns:
                     _mra = pd.to_numeric(master_tab["ra_deg"], errors="coerce")
                     _mde = pd.to_numeric(master_tab["dec_deg"], errors="coerce")
@@ -10554,6 +10564,13 @@ def export_per_frame_catalogs(
                     if math.isfinite(float(_mra.iloc[_j])) and math.isfinite(float(_mde.iloc[_j])):
                         _ref_ra_deg = float(_mra.iloc[_j])
                         _ref_dec_deg = float(_mde.iloc[_j])
+            if _ref_ra_deg is not None:
+                LOGGER.info(
+                    "[SAT-DIAG] drift reference sky (%.5f, %.5f) from %s",
+                    _ref_ra_deg,
+                    _ref_dec_deg,
+                    _frame_hint or "platesolve",
+                )
             LOGGER.info(
                 "[SAT-DIAG] sat_adu=%s source=%s lin_adu=%s (archive %s)",
                 _sat_diag_ctx.sat_adu,
@@ -10792,6 +10809,7 @@ def export_per_frame_catalogs(
                     raw_hdr=_raw_hdr,
                     ref_ra_deg=_ref_ra_deg,
                     ref_dec_deg=_ref_dec_deg,
+                    drift_ref_catalog_id=_drift_ref_catalog_id,
                 )
             except Exception as exc:  # noqa: BLE001
                 return {"file": fname, "status": f"error: {exc}", "csv": ""}
@@ -11010,6 +11028,7 @@ def export_per_frame_catalogs(
             "sat_diag_archive": _sat_diag_archive,
             "sat_diag_ref_ra": _ref_ra_deg,
             "sat_diag_ref_dec": _ref_dec_deg,
+            "sat_diag_ref_catalog_id": _drift_ref_catalog_id,
             "export_cat_local": _export_cat_local,
             "master_only_mode": bool(master_only_mode),
             "plate_solve_fov_deg": _pfov_res,

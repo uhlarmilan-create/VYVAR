@@ -18,12 +18,13 @@ sys.path.insert(0, str(SRC))
 from sat_diag import (  # noqa: E402
     N_PILEUP_MIN,
     PILEUP_RATIO,
+    SAT_PEAK_SOURCE_PLACED,
+    apply_raw_peaks_to_proc_df,
     derive_ceiling_from_paths,
-    peak_raw_plausible,
-    peak_self_check,
-    peak_verify_near_expected,
+    measure_raw_peaks_frame,
     resolve_sat_limit,
     PileupResult,
+    SatDiagContext,
 )
 
 
@@ -83,40 +84,77 @@ def test_derived_no_pileup_bitpix(tmp_path: Path) -> None:
     assert ctx.sat_adu == 65535.0
 
 
-def test_peak_self_check_rejects_background() -> None:
-    arr = np.full((64, 64), 2500.0, dtype=np.float64)
-    arr[32, 32] = 2600.0
-    assert not peak_self_check(arr, 32, 32, 2600.0)
+def test_placed_aperture_faint_near_bright() -> None:
+    """Faint star at placed position must not hijack to bright neighbour."""
+    from astropy.wcs import WCS
 
-
-def test_peak_self_check_accepts_star() -> None:
-    arr = np.full((64, 64), 2500.0, dtype=np.float64)
-    yy, xx = np.ogrid[:64, :64]
-    dist2 = (xx - 32) ** 2 + (yy - 32) ** 2
-    arr[dist2 <= 9] = 20000.0
-    arr[32, 32] = 21000.0
-    assert peak_self_check(arr, 32, 32, 21000.0)
-
-
-def test_peak_raw_plausible_rejects_hijack() -> None:
-    assert not peak_raw_plausible(50000.0, 5200.0, sat_adu=65535.0)
-    assert peak_raw_plausible(6000.0, 5200.0, sat_adu=65535.0)
-
-
-def test_peak_raw_plausible_allows_bright_aligned() -> None:
-    assert peak_raw_plausible(60000.0, 69000.0, sat_adu=65535.0)
-
-
-def test_anchored_search_finds_faint_near_bright() -> None:
     arr = np.full((128, 128), 2000.0, dtype=np.float64)
     arr[64, 80] = 55000.0
     arr[64, 64] = 6000.0
     arr[63:66, 63:66] = 6200.0
-    hit = peak_verify_near_expected(arr, 64.0, 64.0, 6000.0, sat_adu=65535.0)
-    assert hit is not None
-    gx, gy, pk = hit
-    assert abs(gx - 64) <= 12 and abs(gy - 64) <= 12
-    assert pk < 10000.0
+    arr[32, 32] = 20000.0
+    arr[31:34, 31:34] = 21000.0
+    w = WCS(naxis=2)
+    w.wcs.crpix = [64.0, 64.0]
+    w.wcs.crval = [180.0, 45.0]
+    w.wcs.cd = [[1.0, 0.0], [0.0, 1.0]]
+    w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    hdr = w.to_header()
+    hdr["BITPIX"] = 16
+    drift_ra, drift_dec = w.all_pix2world(32, 32, 0)
+    ra = np.array([180.0, float(drift_ra)])
+    de = np.array([45.0, float(drift_dec)])
+    ax = np.array([64.0, 32.0])
+    ay = np.array([64.0, 32.0])
+    ap = np.array([6000.0, 20000.0])
+    peaks, px, py, _drift = measure_raw_peaks_frame(
+        arr,
+        hdr,
+        ra_deg=ra,
+        dec_deg=de,
+        aligned_x=ax,
+        aligned_y=ay,
+        aligned_hdr=hdr,
+        aligned_peak=ap,
+        drift_ref_ra=float(drift_ra),
+        drift_ref_dec=float(drift_dec),
+        drift_ref_catalog_id="drift_ref",
+        catalog_ids=["faint", "drift_ref"],
+    )
+    assert math.isfinite(float(peaks[0]))
+    assert float(peaks[0]) < 10000.0
+    assert abs(float(px[0]) - 64.0) <= 2.5
+    assert abs(float(py[0]) - 64.0) <= 1.5
+
+
+def test_apply_raw_peaks_uses_placed_source() -> None:
+    import pandas as pd
+    from astropy.wcs import WCS
+
+    arr = np.full((64, 64), 2500.0, dtype=np.float64)
+    arr[32, 32] = 12000.0
+    w = WCS(naxis=2)
+    w.wcs.crpix = [32.0, 32.0]
+    w.wcs.crval = [180.0, 45.0]
+    w.wcs.cd = [[1.0, 0.0], [0.0, 1.0]]
+    w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    hdr = w.to_header()
+    hdr["BITPIX"] = 16
+    df = pd.DataFrame(
+        {
+            "ra_deg": [180.0],
+            "dec_deg": [45.0],
+            "x": [32.0],
+            "y": [32.0],
+            "catalog_id": ["test"],
+            "peak_max_adu_aligned": [11000.0],
+        }
+    )
+    ctx = SatDiagContext(sat_adu=65535.0, lin_adu=55704.75, sat_source="DERIVED", lin_source="DEFAULT_FRAC")
+    apply_raw_peaks_to_proc_df(df, arr, hdr, ctx, aligned_hdr=hdr)
+    assert str(df["sat_peak_source"].iloc[0]) == SAT_PEAK_SOURCE_PLACED
+    assert "peak_loc_ok" not in df.columns
+    assert math.isfinite(float(df["peak_max_adu"].iloc[0]))
 
 
 def test_refuse_float_input(tmp_path: Path) -> None:
