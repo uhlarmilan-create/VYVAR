@@ -1,9 +1,9 @@
-# VYVAR audit 2026 ù Wave 4: scientific correctness
+# VYVAR audit 2026 - Wave 4: scientific correctness
 
 **Date:** 2026-08-13  
 **Priority order:** flux/aperture/background ? ensemble/ZP ? errors ? calibration ? astrometry ? time/extinction ? detection/exports.
 
-Literature citations are primary where stated; VYVAR implementation via `file:line`. Agreement classes: **Y** yes ù **D** deliberate ù **N** no ù **U** unmeasured.
+Literature citations are primary where stated; VYVAR implementation via `file:line`. Agreement classes: **Y** yes - **D** deliberate - **N** no - **U** unmeasured.
 
 ---
 
@@ -11,17 +11,17 @@ Literature citations are primary where stated; VYVAR implementation via `file:li
 
 | Topic | Literature | VYVAR | Agree? | Class |
 |-------|------------|-------|--------|-------|
-| Aperture flux | Howell (1989) eq. 1ù2; Mighell 1999 | Circular aperture sum ? annulus sky; `photometry_core.py` dao/aperture paths | Y | ù |
+| Aperture flux | Howell (1989) eq. 1-2; Mighell 1999 | Circular aperture sum ? annulus sky; `photometry_core.py` dao/aperture paths | Y | - |
 | Background annulus | Labbe et al. 2003 empty-aperture sigma | Median annulus sky (`_annulus_sky_subtracted_flux`); no sigma-clip on annulus pixels. Sigma-clipped MAD only for empty-aperture error term, not sky subtraction. sigma_pp dropped. | Y | - |
 | Ensemble ZP | Broeg et al. 2005 weights | Weighted median ZP; no MAD clip post-fix | Y | FIXED |
 | Differential LC | Honeycutt 1992 | LOO comp median | Y | U on wide-rig err |
 | Error budget | Howell 1989; Merline 1986 scintillation | Hybrid Poisson+RN+scint; I-11 path fixed | Y | WIDE-ERR open |
-| Dark scaling | Howell 2006 ù4.2 | SUM resample when binning; CAL-DIAG derives | Y | U ?_p=0 edge |
+| Dark scaling | Howell 2006 -4.2 | SUM resample when binning; CAL-DIAG derives | Y | U ?_p=0 edge |
 | Flat combine | Standard median stack | Raw flat median; dark not subtracted at stack | D | D1-3 documented |
 | Saturation | Full-well physics | SAT-DIAG placed aperture + 0.70 admission | Y | U linearity knee |
 | CR rejection | van Dokkum 2001 | ABSENT (removed 0ab686f 2026-08-12); iron rule 2 - no science-pixel CR clean | D deliberate | DECISIONS |
 | DAO detection | Stetson 1987 | DAOStarFinder; N_equiv on resampled | Y | T4-1 FIXED |
-| Astrometry | Lang et al. 2010; SIP Calabretta | TAN+SIP fit + Grip optimizer | Y | ù |
+| Astrometry | Lang et al. 2010; SIP Calabretta | TAN+SIP fit + Grip optimizer | Y | - |
 | Time | Eastman et al. 2010 | astropy LTT ? HJD/BJD_TDB | Y | measured xval |
 | Gaia transforms | Casagrande & VandenBerg 2018 | `gaia_johnson.py` | U | not re-run here |
 | Colour extinction K2 | Casati et al. 2021 | `k2_extinction.py` literature mode | D | config |
@@ -34,37 +34,37 @@ Full July domain synthesis remains authoritative for fixed items: `docs/VYVAR_AU
 
 ## 4.2 Priority findings (open carry-forward)
 
-### A-1 ù FWHM estimator disagreement (largest open science question)
+### A-1 - FWHM estimator disagreement (largest open science question)
 
 | Estimator | draft 435 | draft 510 | Used for aperture |
 |-----------|-----------|-----------|-------------------|
 | MASTERSTAR Gaussian fit | ~2.40 px | ~3.30 px | **Yes** (SNR table) |
 | Per-frame moment FWHM | ~5.14 px | ~5.31 px | No (QC only) |
-| xval aligned-frame (2026-08-13) | ù | **2.96 px** | harness only |
+| xval aligned-frame (2026-08-13) | - | **2.96 px** | harness only |
 
-**Factor:** 1.6ù2.1ù between moment and MASTERSTAR. If moment is correct, enclosed flux ~54% at current r (Step 1d fixture ~144 mmag G 8ù9).
+**Factor:** 1.6-2.1- between moment and MASTERSTAR. If moment is correct, enclosed flux ~54% at current r (Step 1d fixture ~144 mmag G 8-9).
 
-**Verdict:** **UNRESOLVED.** Third estimator (xval 2.96 px) sits between extremes ù suggests aligned-frame seeing ? MASTERSTAR stack PSF ? per-frame QC FWHM definitions differ, not merely a bug.
+**Verdict:** **UNRESOLVED.** Third estimator (xval 2.96 px) sits between extremes - suggests aligned-frame seeing ? MASTERSTAR stack PSF ? per-frame QC FWHM definitions differ, not merely a bug.
 
 **Disposition:** DOCUMENTED; COG/Stetson correction deferred.
 
-### INV-CAL-01 ù degenerate `sigma_p = 0`
+### INV-CAL-01 - degenerate `sigma_p = 0`
 
-draft 510 cal_diag: `pedestal_sigma_p: 0.0` while PASS. Gate passes but uncertainty on pedestal is zero ù **condition does not enforce measurement quality** when intercept fit collapses.
+draft 510 cal_diag: `pedestal_sigma_p: 0.0` while PASS. Gate passes but uncertainty on pedestal is zero - **condition does not enforce measurement quality** when intercept fit collapses.
 
-**Class:** C/U ù **Status:** OPEN
+**Class:** C/U - **Status:** OPEN
 
 ### SAT-DIAG linearity
 
-`lin_source=DEFAULT_FRAC` (85% of sat) ù spec-correct not to exclude on Tier-3 alone; warning recorded. **One-sided compatibility test** vs measured knee: U.
+`lin_source=DEFAULT_FRAC` (85% of sat) - spec-correct not to exclude on Tier-3 alone; warning recorded. **One-sided compatibility test** vs measured knee: U.
 
 ### WIDE-ERR
 
-Wide-rig check-star errors ~2ù underquoted (Honeycutt SEM path). Fluxes unaffected. **OPEN.**
+Wide-rig check-star errors ~2- underquoted (Honeycutt SEM path). Fluxes unaffected. **OPEN.**
 
 ### T4-1
 
-N_equiv=3.78 effective threshold on resampled frames ù **FIXED** batch E.
+N_equiv=3.78 effective threshold on resampled frames - **FIXED** batch E.
 
 ### P-02 / I-11 / I-04
 
@@ -84,13 +84,13 @@ N_equiv=3.78 effective threshold on resampled frames ù **FIXED** batch E.
 |--------|-------|-----------|-----|-----------|
 | BO CVn target RMS | 0.1454 | 0.1456 | 0.1448 | 0.1455 |
 | BO CVn comp RMS | 0.0105 | 0.0100 | 0.0100 | 0.0105 |
-| Median target \|?\| vs VYVAR | ù | **0.0030 mag** | ù | ù |
-| Median comp RMS (all targets) | dao 0.0102 | **0.0078** | **0.0076** | ù |
+| Median target \|?\| vs VYVAR | - | **0.0030 mag** | - | - |
+| Median comp RMS (all targets) | dao 0.0102 | **0.0078** | **0.0076** | - |
 
 **Interpretation:**
-- **Target differential LC:** photutils/sep/DAO agree with VYVAR at **? 3 mmag** median ù **PASS** tolerance.
-- **Comp ensemble scatter:** photutils/sep **slightly lower** (~2 mmag) than VYVAR dao path ù likely background/centroid definition, not flux formula error.
-- **FWHM estimate in harness:** 2.96 px vs SNR table 2.395 px ù **0.57 px offset** (19%) ù feeds A-1.
+- **Target differential LC:** photutils/sep/DAO agree with VYVAR at **? 3 mmag** median - **PASS** tolerance.
+- **Comp ensemble scatter:** photutils/sep **slightly lower** (~2 mmag) than VYVAR dao path - likely background/centroid definition, not flux formula error.
+- **FWHM estimate in harness:** 2.96 px vs SNR table 2.395 px - **0.57 px offset** (19%) - feeds A-1.
 
 ### Not run this session (Milan follow-up)
 
@@ -122,7 +122,7 @@ N_equiv=3.78 effective threshold on resampled frames ù **FIXED** batch E.
 
 ## Wave 4 closing
 
-**Surprised:** xval shows **BO CVn target RMS matches photutils to 0.0002 mag** ù differential path validated independent of A-1 absolute aperture sizing debate.
+**Surprised:** xval shows **BO CVn target RMS matches photutils to 0.0002 mag** - differential path validated independent of A-1 absolute aperture sizing debate.
 
 **Could not determine:** Which FWHM estimator is "correct" without COG ground truth on same stars same frames.
 

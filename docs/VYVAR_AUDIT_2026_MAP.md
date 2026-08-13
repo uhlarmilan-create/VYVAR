@@ -1,4 +1,4 @@
-# VYVAR audit 2026 ù Wave 1: capability map (A?Z)
+# VYVAR audit 2026 - Wave 1: capability map (A?Z)
 
 **Date:** 2026-08-13  
 **Scope:** Every user-invokable capability, full raw?export flow, reachability, parameters, duplication.  
@@ -49,7 +49,7 @@ Legend: **Reach** = production UI | headless (`night_run`) | CLI only | dev/tool
 | PERF-10 DAO QC in calibrate | `pipeline.py:1973` | QC columns during cal | pipeline default | draft_510 |
 | Preprocess / QC enrich in-place | `pipeline.py:18027` `qc_enrich_calibrated_lights_in_place` | Sky surface, FWHM, elongation on **calibrated/** | pipeline | draft_510 |
 | SAT-DIAG | `sat_diag.py:741` `run_sat_diag` | Raw placed-aperture saturation/linearity | pipeline | draft_510 sat_diag.json |
-| Cosmic-ray rejection | **ABSENT** (removed `0ab686f` 2026-08-12) | Deliberately no CR cleaning on science pixels (iron rule 2); departs from van Dokkum (2001) field standard | pipeline | N/A ù decision documented |
+| Cosmic-ray rejection | **ABSENT** (removed `0ab686f` 2026-08-12) | Deliberately no CR cleaning on science pixels (iron rule 2); departs from van Dokkum (2001) field standard | pipeline | N/A - decision documented |
 
 ### 1.4 QC, MASTERSTAR, alignment
 
@@ -171,7 +171,7 @@ USB FITS
   ? [Phase 0+1] comparison_stars_per_target.csv, active_targets (photometry_core.py:14545)
   ? [Phase 2A] photometry_summary.csv, lightcurve_*.csv (photometry_core.py:10771)
   ? [Trust/Comp QA] trust columns, comp QA sidecars (trust_flag_core, comp_qa_core)
-  ? [Export optional] AAVSO/VarAstro (export_reports.py) ù NOT in headless night_run
+  ? [Export optional] AAVSO/VarAstro (export_reports.py) - NOT in headless night_run
   ? [PDF] generate_all_method_photometry_reports (photometry_report.py:6383)
 ```
 
@@ -183,7 +183,7 @@ USB FITS
 | `preprocess_calibrated_to_processed` | Deprecated alias; name implies copy to processed/ | `pipeline.py:18101` |
 | `resolve_obs_file_to_processed_fits` | Name says processed; resolves calibrated path | `pipeline.py:3165` |
 | `SATURATE_ADU` in EQUIPMENTS | Was binned ADU stored as bin1 authority | `database.py:2854` migration |
-| `archive_path` vs draft root | Import may return `ù/non_calibrated` subpath | `night_run.py:646` normalizes |
+| `archive_path` vs draft root | Import may return `-/non_calibrated` subpath | `night_run.py:646` normalizes |
 | `detrended` vs `detrended_aligned` | Legacy docstring paths | `pipeline.py:15328` vs runtime |
 | `manifest files[]` vs "obs files" | Same DB rows, two names | UI vs pipeline logs |
 | Header `OFFSET=0` vs measured pedestal | CAL-DIAG derives ~24.5 ADU/bin1 | register U-PED-01 |
@@ -202,7 +202,7 @@ See **`docs/VYVAR_AUDIT_2026_REACHABILITY.md`** for per-module classification (1
 | not_statically_reachable | 15 |
 
 **Method:** AST import closure from entry modules + explicit lazy Streamlit tab set.  
-**Limit:** dynamic imports inside render callbacks ù 11 lazy UI modules listed in reachability doc.
+**Limit:** dynamic imports inside render callbacks - 11 lazy UI modules listed in reachability doc.
 
 **Config-gated untested (default off):** `frame_align_residual_gate_enabled`, `sysrem_enabled`, blind solve tiers, `cog_aperture_correction_enabled`, OSC subtree on mono rig.
 
@@ -215,14 +215,14 @@ Full trace: **`docs/VYVAR_AUDIT_2026_PARAMS.md`**.
 | Class | Count |
 |-------|------:|
 | OBSERVED (3+ non-config files) | 84 |
-| UI_OR_CONFIG (1ù2 non-config files) | 183 |
+| UI_OR_CONFIG (1-2 non-config files) | 183 |
 | CONFIG_ONLY | 6 |
 | UNREAD | 0 |
 
 **Flagged ignored/misread (fixed 2026-08-13):**
-- `alignment_detection_sigma` ù wired in pipeline align path (C-ALIGN-01 FIXED)
-- `apply_color_term` ù trust path uses `resolve_apply_color_term` (C-TRUST-01 FIXED)
-- `aavso_observer_code` ù mirror of `observer_code`, not independent
+- `alignment_detection_sigma` - wired in pipeline align path (C-ALIGN-01 FIXED)
+- `apply_color_term` - trust path uses `resolve_apply_color_term` (C-TRUST-01 FIXED)
+- `aavso_observer_code` - mirror of `observer_code`, not independent
 
 ---
 
@@ -251,7 +251,7 @@ Full trace: **`docs/VYVAR_AUDIT_2026_PARAMS.md`**.
 
 **Method:** For each section-1 capability row, verify cited `.py` exists under `src_py/` or `dev/` and key function names resolve; grep `src_py/` for `astroscrappy` (must be absent post-`0ab686f`).
 
-| Outcome | Count (section 1.1ñ1.10, 91 rows) |
+| Outcome | Count (section 1.1-1.10, 91 rows) |
 |---------|-------------------------------------|
 | Verified present | 88 |
 | Corrected path / entry | 2 (`session_baseline_check` ? `dev/scripts/`; OSC-03 ? `check_osc03_export_eligibility`) |
@@ -262,7 +262,7 @@ Full trace: **`docs/VYVAR_AUDIT_2026_PARAMS.md`**.
 
 ### SAT-DIAG `raw_peaks_used: false` (draft 510)
 
-`sat_diag.json` is written at **align start** by `run_sat_diag()` (pile-up + limit derivation only) ó `pipeline.py:10641`. **Placed-aperture raw peaks** run later per frame in `apply_raw_peaks_to_proc_df` (`sat_diag.py:939`, `pipeline.py:8348`) and set `meta["raw_peaks_used"]=True` on proc sidecars, but **`sat_diag.json` is not updated**. Yesterday's validation used per-frame proc columns, not the stale JSON flag. **C-class stale provenance** (same family as VY_QCBG vs pixels).
+`sat_diag.json` is written at **align start** by `run_sat_diag()` (pile-up + limit derivation only) - `pipeline.py:10641`. **Placed-aperture raw peaks** run later per frame in `apply_raw_peaks_to_proc_df` (`sat_diag.py:939`, `pipeline.py:8348`) and set `meta["raw_peaks_used"]=True` on proc sidecars, but **`sat_diag.json` is not updated**. Yesterday's validation used per-frame proc columns, not the stale JSON flag. **C-class stale provenance** (same family as VY_QCBG vs pixels).
 
 **Surprised:** Headless `night_run` does not call AAVSO/VarAstro exporters.
 

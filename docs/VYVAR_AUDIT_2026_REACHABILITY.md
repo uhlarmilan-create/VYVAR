@@ -1,4 +1,4 @@
-# VYVAR audit 2026 — module reachability (exact)
+# VYVAR audit 2026 - module reachability (exact)
 
 **Total `src_py` modules:** 119  
 **Method:** AST import closure from 10 entry modules (`app`, `night_run`, `simulate_night_run`, `xval_run`, `psf_runner`, `comp_qa`, `trust_flag`, `inspect_drafts`, `repair_catalog_ids`, `run_crowding_index`, `run_smoothness_report`) plus 11 lazy Streamlit tab modules added explicitly.

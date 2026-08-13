@@ -1,9 +1,9 @@
-# VYVAR audit 2026 — Wave 5: photometry landscape
+# VYVAR audit 2026 - Wave 5: photometry landscape
 
 **Date:** 2026-08-13  
-**Purpose:** Position VYVAR against the field for methods-paper justification — not a single-tool comparison.
+**Purpose:** Position VYVAR against the field for methods-paper justification - not a single-tool comparison.
 
-Survey sources: project docs, published tool manuals, ADS abstracts, and maintainer pages (2024–2026 status). **Maintained** = release/commit within ~24 months or active forum.
+Survey sources: project docs, published tool manuals, ADS abstracts, and maintainer pages (2024-2026 status). **Maintained** = release/commit within ~24 months or active forum.
 
 ---
 
@@ -21,12 +21,12 @@ Survey sources: project docs, published tool manuals, ADS abstracts, and maintai
 | **AstroArt** | Commercial | PSF + aperture | Manual | ZP | Basic | Warn | UTC | Photometry module | CSV |
 | **Siril** | Stacking + phot; active | Recent photometry module | Manual | Stack-based | Minimal | Clip | UTC | None | CSV |
 | **PixInsight** | Advanced; active | DynamicPSF + aperture | Manual | ImageIntegration ZP | NoiseGenerator | Linear fit | UTC | Spectrophotometry tools | Custom |
-| **ASTAP** | Plate solve + phot | Aperture | Manual | — | — | — | UTC | — | CSV |
+| **ASTAP** | Plate solve + phot | Aperture | Manual | - | - | - | UTC | - | CSV |
 | **AAVSO VPhot** | Web; AAVSO official | Web aperture | User comps | Web ensemble | Web | Flags | BJD required | Standard | AAVSO |
-| **LesvePhotometry** | Windows; exoplanet | AIJ-like | Auto comp search | Ensemble | Basic | — | HJD | — | AAVSO |
-| **AIP4Win** | Legacy Windows | Aperture | Manual | — | — | — | UTC | — | Text |
-| **Iris** | Legacy free | Aperture | Manual | — | — | — | UTC | — | CSV |
-| **Prism / FotoDif** | Commercial niche | Aperture | Manual | Diff | Basic | — | UTC | — | CSV |
+| **LesvePhotometry** | Windows; exoplanet | AIJ-like | Auto comp search | Ensemble | Basic | - | HJD | - | AAVSO |
+| **AIP4Win** | Legacy Windows | Aperture | Manual | - | - | - | UTC | - | Text |
+| **Iris** | Legacy free | Aperture | Manual | - | - | - | UTC | - | CSV |
+| **Prism / FotoDif** | Commercial niche | Aperture | Manual | Diff | Basic | - | UTC | - | CSV |
 
 ### Exoplanet-specific
 
@@ -110,11 +110,11 @@ Survey sources: project docs, published tool manuals, ADS abstracts, and maintai
 
 ## 5.3 End-to-end comparison (BO CVn, draft_510)
 
-**Setup:** Same 134 aligned frames, same Gaia comp ids, xval harness aperture r=5.93 px (2× FWHM_est), annulus 8.9–13.9 px.
+**Setup:** Same 134 aligned frames, same Gaia comp ids, xval harness aperture r=5.93 px (2x FWHM_est), annulus 8.9-13.9 px.
 
 | Stage | Agreement | Dominant difference if non-zero |
 |-------|-----------|--------------------------------|
-| WCS/positions | Shared WCS from VYVAR | — |
+| WCS/positions | Shared WCS from VYVAR | - |
 | Centroid | photutils refit in xval | Sub-pixel |
 | Background | Annulus vs mesh (sep) | ~2 mmag comp RMS |
 | Aperture flux | DAO vs circular | < 3 mmag target |
@@ -123,7 +123,7 @@ Survey sources: project docs, published tool manuals, ADS abstracts, and maintai
 
 **Acceptance criterion (pre-stated):** target RMS ? < 10 mmag; comp RMS ? < 5 mmag. **PASS.**
 
-**AstroImageJ:** Not run in this environment (Java desktop). Milan should replicate with same comp stars, r?6 px, annulus ~9–14 px on exported aligned FITS.
+**AstroImageJ:** Not run in this environment (Java desktop). Milan should replicate with same comp stars, r?6 px, annulus ~9-14 px on exported aligned FITS.
 
 **Stage attribution for residuals:** comp RMS photutils lower ? **background/centroid** stage; not ensemble or time.
 
@@ -131,7 +131,7 @@ Survey sources: project docs, published tool manuals, ADS abstracts, and maintai
 
 ## 5.4 Synthesis for referee
 
-VYVAR is **conventional in differential photometry math** where xval demonstrates agreement with photutils/sep at the mmag level on the anchor field. It is **unusual in calibration integrity gates and cross-binning contracts** — deliberately, because no surveyed tool validates those paths automatically. Primary **residual risks** are A-1 aperture sizing (documented), wide-rig error budget (WIDE-ERR), and unmeasured linearity knee — not disagreement with standard differential flux definitions.
+VYVAR is **conventional in differential photometry math** where xval demonstrates agreement with photutils/sep at the mmag level on the anchor field. It is **unusual in calibration integrity gates and cross-binning contracts** - deliberately, because no surveyed tool validates those paths automatically. Primary **residual risks** are A-1 aperture sizing (documented), wide-rig error budget (WIDE-ERR), and unmeasured linearity knee - not disagreement with standard differential flux definitions.
 
 ---
 
@@ -141,4 +141,4 @@ VYVAR is **conventional in differential photometry math** where xval demonstrate
 
 **Could not determine:** Live maintenance status of Iris/AIP4Win; exact AIJ default comp auto algorithms.
 
-**Next (Wave 6 — blocked):** Disposition of unwired UI, detect_outliers API cleanup, alignment_detection_sigma wire-or-remove.
+**Next (Wave 6 - blocked):** Disposition of unwired UI, detect_outliers API cleanup, alignment_detection_sigma wire-or-remove.
