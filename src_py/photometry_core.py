@@ -2945,6 +2945,7 @@ def check_comparison_stability(
     comp_bjd: dict[str, np.ndarray] | None = None,
     n_comp_min: int = 3,
     outlier_sigma: float = 3.0,
+    max_comp_p2p: float = 0.1,
     max_comp_slope_mmag_hr: float = 5.0,
     comp_slope_significance_k: float = 3.0,
     common_mode_detrend: bool = True,
@@ -2954,6 +2955,10 @@ def check_comparison_stability(
 
     Abbeho point-to-point scatter on **common-mode-detrended** comp residuals:
         rms_p2p = std(diff(mag_resid)) / sqrt(2)
+
+    ``max_comp_p2p`` (config ``phase01_comparison_max_comp_rms``) gates **p2p** scatter.
+    Phase-1 ``comp_rms`` uses the same config key but measures full LC RMS - different
+    metric, shared ceiling knob (see ``select_comparison_stars_per_target``).
 
     Shared atmospheric drift is removed before p2p/MAD (same differential logic as ensemble).
 
@@ -3012,8 +3017,7 @@ def check_comparison_stability(
     # Hard p2p ceiling only (no MAD/sigma outlier rejection; zero-clipping 2026-08-12).
     # ``outlier_sigma`` kept for call-site compatibility and ignored.
     _ = outlier_sigma
-    _ABS_MAX_P2P = 0.10
-    threshold = float(_ABS_MAX_P2P)
+    threshold = float(max_comp_p2p) if math.isfinite(float(max_comp_p2p)) and float(max_comp_p2p) > 0 else 0.1
     n_good = sum(
         1
         for v in result.values()
@@ -9357,6 +9361,7 @@ def _phase2a_process_one_target(
         comp_bjd=comp_bjd,
         n_comp_min=3,
         outlier_sigma=stability_sigma,
+        max_comp_p2p=float(_cfg.phase01_comparison_max_comp_rms),
         max_comp_slope_mmag_hr=float(_cfg.comp_max_slope_mmag_hr),
         comp_slope_significance_k=float(getattr(_cfg, "comp_slope_significance_k", 3.0)),
         common_mode_detrend=True,
@@ -13859,7 +13864,7 @@ def select_comparison_stars_per_target(
     max_mag_diff_t4: float = 2.00,
     n_comp_min: int = 3,
     n_comp_max: int = 7,
-    max_comp_rms: float = 0.05,
+    max_comp_rms: float = 0.1,
     min_dist_arcsec: float = 60.0,
     min_frames_frac: float = 0.3,
     rms_outlier_sigma: float = 3.0,
@@ -14561,7 +14566,7 @@ def run_phase0_and_phase1(
     max_mag_diff_t4: float = 2.00,
     n_comp_min: int = 3,
     n_comp_max: int = 7,
-    max_comp_rms: float = 0.05,
+    max_comp_rms: float = 0.1,
     min_dist_arcsec: float = 60.0,
     min_frames_frac: float = 0.3,
     rms_outlier_sigma: float = 3.0,

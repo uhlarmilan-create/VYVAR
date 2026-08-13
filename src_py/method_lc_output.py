@@ -113,6 +113,7 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
         comp_bjd=comp_bjd,
         n_comp_min=3,
         outlier_sigma=ctx.stability_sigma,
+        max_comp_p2p=float(_cfg.phase01_comparison_max_comp_rms),
         max_comp_slope_mmag_hr=float(_cfg.comp_max_slope_mmag_hr),
         comp_slope_significance_k=float(getattr(_cfg, "comp_slope_significance_k", 3.0)),
         common_mode_detrend=True,

@@ -85,7 +85,7 @@ def compute_global_pool_rms_map(
     fwhm_px: float = 3.7,
     chip_fw: int | None = None,
     chip_fh: int | None = None,
-    max_comp_rms: float = 0.05,
+    max_comp_rms: float = 0.1,
     apply_rms_prefilter: bool = True,
 ) -> dict[str, float]:
     """Vrati ``{star_id: comp_rms}`` po rovnakom flux->RMS retazci ako Faza 1 (bez per-target ensemble).
