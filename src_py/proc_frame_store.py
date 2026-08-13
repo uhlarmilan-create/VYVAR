@@ -325,11 +325,6 @@ class ProcFrameStore:
     def __len__(self) -> int:
         return len(self._store)
 
-    def frame_columns(self, path: str | Path) -> list[str]:
-        """Return columns available in the stored frame."""
-        df = self._store.get(str(path))
-        return list(df.columns) if df is not None else []
-
     def paths(self) -> list[str]:
         """All loaded frame paths (string keys)."""
         return list(self._store.keys())
