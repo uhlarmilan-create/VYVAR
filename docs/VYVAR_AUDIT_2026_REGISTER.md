@@ -92,4 +92,27 @@ No fourth instance of the exact sat_diag flag pattern found beyond the three abo
 
 ---
 
-*Append-only during audit run. Wave 6 disposition pending Milan review.*
+## Wave 6 dispositions (2026-08-13)
+
+Milan approved KEEP/PROPOSE as written. **W6-DEL-04 excluded** (library delete guards are unwired safeguards, not dead).
+
+| ID | disposition | outcome | commit |
+|----|-------------|---------|--------|
+| W6-DEL-01 | DELETE qc hash helpers | DONE | `181811b` |
+| W6-DEL-02 | DELETE legacy masterstar path setter | DONE (+ ASCII fix tracked docs in same commit) | `b82e976` |
+| W6-DEL-03 | DELETE fetch_draft_scanning_ids | DONE | `1a7320e` |
+| W6-DEL-04 | DELETE library delete guards | **SKIPPED** -> PROPOSE wire | - |
+| W6-DEL-05 | DELETE legacy import helpers | DONE | `599e58d` |
+| W6-DEL-06 | DELETE export helper stubs | DONE | `e98b354` |
+| W6-DEL-07 | DELETE PDF styling helpers | DONE | `09f2b79` |
+| W6-DEL-08 | DELETE ProcFrameStore.frame_columns | DONE | `ff6fba6` |
+| W6-DEL-09 | DELETE shadowed param resolvers | DONE | `c6dc90d` |
+| W6-KEEP-01 | KEEP ui_finalization | unchanged | - |
+| W6-PROP-01..04 | PROPOSE | reported, not implemented | - |
+| W6-PROP-05 | PROPOSE wire library delete guards (ex-DEL-04) | reported, not implemented | - |
+
+All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 510 anchor unchanged on disk.
+
+---
+
+*Append-only during audit run. Wave 6 deletions executed locally; not pushed pending Milan review.*
