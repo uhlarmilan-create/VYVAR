@@ -58,27 +58,31 @@ OVERALL: PASS (1301 passed, 27 skipped)
 
 | Metric | Value |
 |--------|------:|
-| check-star scatter (`ac_scatter`) | **0.009283** |
+| check-star scatter (`check_kmag` sidecar, `trust_flag_core.check_star_scatter`) | **0.008946** |
+| aperture-correction scatter (`ac_scatter`) | **0.009283** |
+| check star | **1497313255374892800** |
 | TRUST | **GREEN** |
 | n_points (LC) | **134** |
 | n_good_comp | **4** |
 | zone_flag | linear |
 | n_saturated | **0** |
-| Known comps admitted | **1497771992240531712**, **1499200223486564608** |
+| Known comps admitted | **1497771992240531712**, **1499200223486564608**, **1499053747922698240**, **1497368849430107904** |
 
-SAT-DIAG: sat_adu=**65535**, source=**DERIVED**, lin_adu=55704.75 (DEFAULT_FRAC).
+SAT-DIAG: sat_adu=**65535**, source=**DERIVED**, lin_adu=55704.75 stored ADU (DEFAULT_FRAC; native ~13926).
 
-### 3.3 vs draft 509 (post ZP-clip)
+### 3.3 vs draft 509 (post ZP-clip) - like-for-like metrics
 
-| Metric | 509 | 510 |
-|--------|-----|-----|
-| ac_scatter | 0.00863 | 0.009283 |
-| TRUST | GREEN | GREEN |
-| n_points | 134 | 134 |
+| Metric | 509 | 510 | Notes |
+|--------|-----|-----|-------|
+| **check-star scatter** (primary QC) | **0.008629** | **0.008946** | same check star `1497313255374892800`, n=134 |
+| **ac_scatter** (AC ref-star residuals) | **0.009283** | **0.009283** | identical; independent of comp count |
+| TRUST | GREEN | GREEN | |
+| n_points | 134 | 134 | |
+| n_good_comp | 5 | 4 | 510 drops `1497974027502858240` (sat gate, see pre-push report) |
 
-Scatter slightly higher on 510; pool widened (709 vs 624) but per-target ensemble still
-**4 comps** after RMS/MAD selection (`n_comp_max=8`, debug path 101 -> 4). Difference is
-expected from larger candidate pool and raw-peak admission thresholds, not saturation flags.
+**Do not compare** 509 check-star scatter to 510 `ac_scatter`; they are different quantities (see `dev/results/CURSOR_RESULT_prepush_7ec4b09.md` section 2).
+
+Pool widened globally (709 vs 624) but BO CVn per-target ensemble is **4 comps** because SAT-DIAG raw peaks triggered saturation exclusion on comp `1497974027502858240`.
 
 ### 3.4 Dry-run vs wired (435, 509, 510)
 

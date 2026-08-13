@@ -393,45 +393,51 @@ policy (section 9): warn only, exclude nothing.**
 Once per raw light frame, **before calibration**, at the same cadence as DAO
 detection inputs (per obs_group, per frame).
 
-### 8.2 How
+### 8.2 How (2026-08-13 anchored search)
 
-For each star with known `(ra, dec)` or master-grid position:
+For each star with known sky position and aligned-frame centroid `(x, y)`:
 
-1. WCS to pixel on raw frame.
-2. Per-frame drift correction from bright reference (same family as
-   `CURSOR_RESULT_saturation_peak_reconcile.md` pre-push v3).
-3. Mag-guided local peak in search window (`half=22`, tighter for faint stars).
-4. Report `peak_max_adu_raw` = max in 7x7 box (`pipeline._box_peak_max_adu`,
-   `half=3`).
+1. Map aligned pixel to raw pixel via shared sky position.
+2. Per-frame drift from bright reference only (`mag_guided`, `half=22` on ref).
+3. **WCS residual anchor:** expected raw = raw WCS(ra,dec) plus aligned DAO
+   offset (aligned xy minus aligned WCS xy). Search within 12 px disk for a
+   pixel passing self-check and brightness plausibility vs aligned peak.
+4. Report `peak_max_adu_raw` = max in 7x7 box at verified pixel (`half=3`).
 
-### 8.3 Self-check gate (memo recommendation 6)
+### 8.3 Verification gate (pass = right star)
 
-Per star per frame, before accepting `peak_max_adu_raw`:
+All must pass for `peak_loc_ok=true` and `sat_peak_source=RAW_VERIFIED`:
 
 | Test | Default threshold |
 |------|-------------------|
-| Local maximum | Centre equals 3x3 max |
-| Ring contrast | `peak / median(ring 11-15 px) >= 1.8` |
-| Minimum signal | `peak >= 4000` ADU |
+| Self-check (8.3 legacy) | Local max, ring contrast >= 1.8, peak >= 4000 ADU |
+| Anchor distance | Found pixel within **12 px** of aligned-mapped raw position |
+| Brightness plausibility | `raw/aligned` in **[1/3, 3]** when aligned < 85% sat |
 
-Outcomes:
+When aligned peak >= 85% sat (resampling can exceed raw ceiling), plausibility
+ratio is skipped; anchor distance still required.
 
-- **PASS** -- record peak and position.
-- **FAIL** -- `peak_max_adu_raw = NaN`; `peak_loc_fail=true`; increment failure count.
-  **Must not** return a background value silently.
+When verification fails: `peak_max_adu_raw` may be NaN; saturation uses
+**aligned** peak (`sat_peak_source=ALIGNED_INTERIM`).
 
-Report aggregate: `peak_loc_fail_count` per star in `sat_diag.json` and
-per-frame proc column `peak_loc_ok`.
+### 8.4 Peak source for saturation (provenance)
 
-### 8.4 Replaces aligned-frame peaks
+| `sat_peak_source` | Meaning |
+|-------------------|---------|
+| `RAW_VERIFIED` | Anchored raw search passed all gates |
+| `ALIGNED_INTERIM` | Raw not verified; **aligned** peak drives saturation |
+| `MIXED` | Draft uses both (aggregate in `sat_diag.json`) |
 
-Current behaviour (`pipeline.py:8050+`) computes `peak_max_adu` on the aligned
-float array. SAT-DIAG supersedes this for saturation/linearity decisions:
+Draft `sat_diag.json` records `sat_peak_source`. Proc CSV column `sat_peak_source`
+is per star per frame. FITS header `VY_SATPS` mirrors draft-level source.
 
-- New canonical columns: `peak_max_adu_raw`, `likely_nonlinear_raw`,
-  `likely_saturated_raw`.
-- Aligned-frame peaks may remain for DAO diagnostics but **must not** drive
-  saturation flags once SAT-DIAG is active.
+**ALIGNED_INTERIM caveat:** Aligned peaks pass through resampling and can exceed
+the raw container ceiling (draft 510 aligned ~69000 vs raw 65535). Interim mode
+is **conservative on admission** (may admit comps raw would reject) and **cannot**
+flag raw-only saturation. Document until raw search is fully trusted.
+
+Columns: `peak_max_adu` (authoritative for gates), `peak_max_adu_raw`,
+`peak_max_adu_aligned`, `likely_saturated_raw`, etc.
 
 ### 8.5 Existing drafts
 

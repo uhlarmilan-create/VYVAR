@@ -19,7 +19,9 @@ from sat_diag import (  # noqa: E402
     N_PILEUP_MIN,
     PILEUP_RATIO,
     derive_ceiling_from_paths,
+    peak_raw_plausible,
     peak_self_check,
+    peak_verify_near_expected,
     resolve_sat_limit,
     PileupResult,
 )
@@ -94,6 +96,27 @@ def test_peak_self_check_accepts_star() -> None:
     arr[dist2 <= 9] = 20000.0
     arr[32, 32] = 21000.0
     assert peak_self_check(arr, 32, 32, 21000.0)
+
+
+def test_peak_raw_plausible_rejects_hijack() -> None:
+    assert not peak_raw_plausible(50000.0, 5200.0, sat_adu=65535.0)
+    assert peak_raw_plausible(6000.0, 5200.0, sat_adu=65535.0)
+
+
+def test_peak_raw_plausible_allows_bright_aligned() -> None:
+    assert peak_raw_plausible(60000.0, 69000.0, sat_adu=65535.0)
+
+
+def test_anchored_search_finds_faint_near_bright() -> None:
+    arr = np.full((128, 128), 2000.0, dtype=np.float64)
+    arr[64, 80] = 55000.0
+    arr[64, 64] = 6000.0
+    arr[63:66, 63:66] = 6200.0
+    hit = peak_verify_near_expected(arr, 64.0, 64.0, 6000.0, sat_adu=65535.0)
+    assert hit is not None
+    gx, gy, pk = hit
+    assert abs(gx - 64) <= 12 and abs(gy - 64) <= 12
+    assert pk < 10000.0
 
 
 def test_refuse_float_input(tmp_path: Path) -> None:
