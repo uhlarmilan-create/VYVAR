@@ -401,7 +401,10 @@ def compute_trust_for_photometry_dir(
     _color_term_off = True
     if cfg is not None:
         try:
-            _color_term_off = not bool(getattr(cfg, "apply_color_term", True))
+            from photometry_core import resolve_apply_color_term  # noqa: PLC0415
+
+            _obs_group = phot.parent.name if phot.parent else ""
+            _color_term_off = not resolve_apply_color_term(cfg, _obs_group)
         except Exception:  # noqa: BLE001
             _color_term_off = True
     comp_meta: dict[str, dict[str, int]] = {}
