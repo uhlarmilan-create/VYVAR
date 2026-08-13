@@ -571,25 +571,6 @@ def _focal_header_in_mm(header: Any) -> Any:
     return header
 
 
-def resolve_saturation(
-    header: Any = None,
-    *,
-    db: Any = None,
-    equipment_id: int | None = None,
-    cfg: Any = None,
-    db_value: float | None = None,
-) -> Resolved:
-    if db_value is None and db is not None and equipment_id is not None:
-        try:
-            db_value = db.get_equipment_saturation_adu(int(equipment_id))
-        except Exception:  # noqa: BLE001
-            db_value = None
-    cfg_v = getattr(cfg, "saturate_limit_adu", None) if cfg is not None else None
-    return _resolve_equipment_intrinsic(
-        "saturation", header=header, db_value=db_value, cfg_value=cfg_v, log_label="saturation"
-    )
-
-
 # --------------------------------------------------------------------------- #
 # OBSERVATION-SPECIFIC: header (valid) -> DB -> config
 # --------------------------------------------------------------------------- #
@@ -618,12 +599,6 @@ def _resolve_observation_specific(
 def resolve_binning(header: Any = None, *, db_value: float | None = None, cfg: Any = None) -> Resolved:
     return _resolve_observation_specific(
         "binning", header=header, db_value=db_value, cfg_value=None, log_label="binning"
-    )
-
-
-def resolve_exptime(header: Any = None, *, db_value: float | None = None, cfg: Any = None) -> Resolved:
-    return _resolve_observation_specific(
-        "exptime", header=header, db_value=db_value, cfg_value=None, log_label="exptime"
     )
 
 
