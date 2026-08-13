@@ -3523,24 +3523,6 @@ class VyvarDatabase:
         rows = light_rows_from_manifest(self, int(draft_id), imagetyp="light")
         return rows if rows is not None else []
 
-    def fetch_draft_scanning_ids(self, draft_id: int) -> list[int]:
-        """Unique per-file scanning IDs for light rows (manifest-first)."""
-        rows = self.fetch_draft_light_rows_for_quality(int(draft_id))
-        out: list[int] = []
-        seen: set[int] = set()
-        for row in rows:
-            sid = row.get("ID_SCANNING")
-            if sid is None:
-                continue
-            try:
-                iv = int(sid)
-            except (TypeError, ValueError):
-                continue
-            if iv not in seen:
-                seen.add(iv)
-                out.append(iv)
-        return sorted(out)
-
     def update_obs_file_calibration_state_by_raw_light_path(
         self,
         raw_light_path: str | Path,
