@@ -217,10 +217,6 @@ def _list_fits_files(folder: Path) -> list[Path]:
     return sorted(out)
 
 
-def _is_empty_or_missing(folder: Path) -> bool:
-    return (not folder.exists()) or (not folder.is_dir()) or (len(_list_fits_files(folder)) == 0)
-
-
 def _mtime_utc(path: Path) -> datetime:
     ts = os.path.getmtime(path)
     return datetime.fromtimestamp(ts, tz=timezone.utc)
@@ -436,11 +432,6 @@ def _looks_like_master(fp: Path) -> bool:
     return False
 
 
-def _first_fits_in_dir(folder: Path) -> Path | None:
-    files = _list_fits_files(folder)
-    return files[0] if files else None
-
-
 _LIGHT_IMAGETYP = frozenset(
     {
         "light",
@@ -511,33 +502,6 @@ def _list_top_level_light_fits(source_dir: Path, db: VyvarDatabase | None = None
         if _imaging_kind_for_file(fp, db) == "light":
             out.append(fp)
     return out
-
-
-def _resolve_session_lights(
-    root: Path, *, db: VyvarDatabase | None = None
-) -> tuple[Path, list[Path]]:
-    """Resolve light FITS: prefer case-insensitive ``lights`` subfolder, else top-level light frames in ``root``.
-
-    Returns:
-        (container_dir, fits_paths) - ``container_dir`` is the ``lights`` folder or ``root`` for flat layout.
-
-    Raises:
-        FileNotFoundError: if neither yields light FITS.
-    """
-    if not root.exists() or not root.is_dir():
-        raise FileNotFoundError(f"Session root missing or not a directory: {root}")
-    lights_sub = _find_lights_subdirectory(root)
-    if lights_sub is not None:
-        files = _list_fits_files(lights_sub)
-        if files:
-            return lights_sub, files
-    files = _list_top_level_light_fits(root, db=db)
-    if files:
-        return root, files
-    raise FileNotFoundError(
-        "No light frames: add a 'lights' folder with FITS, or place OBJECT/science/light "
-        f"IMAGETYP FITS directly under: {root}"
-    )
 
 
 def _collect_fits_by_type(
@@ -1698,15 +1662,6 @@ def generate_master_flat_from_source_dir(
     )
     messages.append(f"[OK] Master Flat vytvoreny: {out.name} ({len(flat_raw)} snimok)")
     return out, messages
-
-
-def _copy_fits_folder(src: Path, dst: Path) -> int:
-    dst.mkdir(parents=True, exist_ok=True)
-    count = 0
-    for fp in _list_fits_files(src):
-        shutil.copy2(fp, dst / fp.name)
-        count += 1
-    return count
 
 
 def smart_import_session(
