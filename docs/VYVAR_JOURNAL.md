@@ -2,7 +2,22 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
-## 2026-08-12 -- ZP-CLIP-REMOVAL (ensemble_normalize; draft 509)
+## 2026-08-13 -- EQUIPMENTS.SATURATE_ADU cleared (QHY294MM, id=1)
+
+**Change.** `EQUIPMENTS.SATURATE_ADU` for equipment ID 1 (QHY294MM) set from
+**16384** to **NULL** in `vyvar.sqlite3`. The value was wrong for binned data
+(measured raw ceiling 65535); NULL lets `_effective_saturation_limit` fall through
+to BITPIX (65535 for unsigned 16-bit) instead of asserting an unverified number.
+
+**Not changed:** any other equipment row. SAT-DIAG not implemented yet; this is
+interim relief only. Existing masterstars/photometry CSVs retain limits from prior
+runs until re-processed.
+
+Dry-run: `dev/tools/sat_diag_dry_run.py`. Report:
+`dev/results/CURSOR_RESULT_sat_diag_dry_run.md`.
+
+---
+
 
 **Symptom.** Draft 509 BO CVn: check-star scatter 0.025, TRUST YELLOW, parallel
 tracks on calibrated LC. Same raw as draft 435 (good, check 0.008).

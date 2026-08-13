@@ -135,7 +135,7 @@ mode used).
 
 | Tier | Condition | May exclude? |
 |------|-----------|--------------|
-| **1 -- Hard saturation** | Pixel at container ceiling; `sat_source` in {MEASURED, HEADER, DERIVED} | **Yes** -- comp pool, AC ref set, PSF ref set. Target: flag epoch, keep export row. |
+| **1 -- Hard saturation** | Pixel at container ceiling; `sat_source` in {MEASURED, HEADER, DERIVED, **CONFLICT_DERIVED**} | **Yes** -- comp pool, AC ref set, PSF ref set. Target: flag epoch, keep export row. |
 | **2 -- Linearity, MEASURED** | `lin_source=MEASURED`; star crosses `lin_adu` | **Yes** -- comp pool, AC ref set. |
 | **3 -- Linearity, DEFAULT_FRAC or DERIVED** | Unmeasured linearity knee | **Warn only** -- flag + trust panel; exclude nothing. |
 
@@ -156,20 +156,81 @@ The gate MUST remain correct when:
 | User fills equipment incorrectly | Compatibility test refutes; adapt loudly |
 | No pile-up in field | Container bound only; never brightest-star ceiling |
 
+## 4.1 Image ADU convention (single authority)
+
+**Image ADU** everywhere in this spec means the per-pixel value used for
+saturation histograms, limit comparison, and peak measurement on the **primary
+HDU array** as loaded for science:
+
+| FITS layout | Image ADU |
+|-------------|-----------|
+| `BITPIX=16`, `BZERO=32768`, `BSCALE=1` (unsigned 16-bit, QHY/C3 class) | Stored array value in **0..65535** (do **not** add `BZERO` again) |
+| `BITPIX=16`, `BZERO=0`, `BSCALE=1` (native signed/unsigned 16-bit) | Stored array value |
+| `BITPIX < 0` (float) | **Not valid input** for Check A or raw peak (see section 5.5) |
+
+All consumers (Check A, compatibility test, peak self-check, equipment table
+`sat_adu` / `lin_adu`) use **image ADU** in this sense. Converting to
+"electrons" or pre-scaling by binning is out of scope unless a future equipment
+column defines it explicitly.
+
+### 4.2 QHY294MM quantisation note (draft 510, measured 2026-08-13)
+
+On raw BO CVn frames (150 frames, 436.3 Mpx):
+
+| Measurement | Result |
+|-------------|--------|
+| Pixels with `value mod 4 != 0` | **13 024** (**0.0030%** of total) |
+| Unique off-grid values | **1** -- value **65535** only |
+| Off-grid excluding 65535 | **0** / 436 270 076 (**0%**) |
+| Near-ceiling values 65532..65496 | All **mod 4 = 0** (1--3 px each) |
+
+**Reading:** Stored ADU below the digital clip lie on a **step-4 grid**, consistent
+with 14-bit native samples left-shifted by 2 into a 16-bit container (2x2 binning).
+**65535 is a clip**, not a native quantised level (`65535 mod 4 = 3`). Linearity
+and ramp measurements should record whether they use **stored image ADU** or
+**native ADU (= stored / 4)**; defaults in this spec remain in **stored image
+ADU** unless a measured ramp row states otherwise.
+
+**GAIN:** QHY headers record `GAIN=0.0`; equipment DB holds `GAIN_ADU=3.17` e-/ADU
+(stored). SAT-DIAG does not resolve gain; noise-model work must not assume header
+`GAIN` is usable.
+
+### 4.3 C3-26000 control (TOI-1131.01.b, measured 2026-08-13)
+
+78 frames, `BITPIX=16`, `BZERO=32768`, 2x2 binning, **calibrated** integer (Milan:
+master dark + flat applied). Grid test on stored values:
+
+| Measurement | Result |
+|-------------|--------|
+| Pixels with `value mod 4 != 0` | **381 830 229** (**75.0%**) |
+| Pixels at 65535 | **51** total (26/78 frames touch max) |
+| Off-grid excluding 65535 | **75.0%** (same -- grid does **not** hold) |
+
+C3 data do **not** show the QHY step-4 grid; sky levels (~700 ADU) occupy all
+residue classes. Quantisation structure is camera/path-specific, not universal.
+SAT-DIAG on this set: **no pile-up** (below `N_pileup_min`); `DATAMAX=65535`
+header wins; field essentially **does not saturate** (129 pixels >= 60000).
+
 ## 5. Check A -- ceiling derivation from raw frames
 
 ### 5.1 Inputs
 
 - All **raw light** FITS in the draft obs_group (or a deterministic subsample if
   N > `sat_diag_max_frames`, default 30, evenly spaced in sorted filename order).
-- Primary HDU data, linear ADU (respect `BZERO`/`BSCALE` if present).
+- Primary HDU data in **image ADU** (section 4.1).
 
 ### 5.2 Histogram property
 
 Identify a **hard ceiling** value `V_ceiling` when:
 
 1. Value `V_max` has pixel count `N(V_max) >= N_pileup_min`, AND
-2. `N(V_max) >= k * N(V_max - 1)` where `k >= pileup_ratio` (default **10**), AND
+2. **Shoulder test:** let `V_lo` be the **highest occupied bin strictly below
+   `V_max`**. Require `N(V_max) >= k * N(V_lo)` where `k >= pileup_ratio`
+   (default **10**). **Special case:** if no bin is occupied at `V_max - 1`
+   (common at digital clip -- e.g. QHY has **0** pixels at 65534), use `V_lo`
+   as the nearest lower occupied bin. If **no** lower occupied bin exists but
+   `V_max` equals the BITPIX container ceiling and `N(V_max) >= N_pileup_min`,
+   treat as pile-up (digital clip at container). AND
 3. `V_max` is within `BITPIX` range (16-bit unsigned: 65535).
 
 Default thresholds (implementation constants, not user config):
@@ -206,6 +267,18 @@ When no value satisfies section 5.2 across the sample:
 This case is valid and must not fabricate a knee. **Must not** set ceiling from
 the brightest unsaturated star.
 
+### 5.5 Input refusal (non-raw frames)
+
+Check A and raw peak measurement **must not run** on:
+
+| Input | Action |
+|-------|--------|
+| `BITPIX < 0` (float / calibrated science array) | **Refuse** -- no derived ceiling; `sat_limit_source=REFUSE_NON_RAW`; WARN |
+| Master dark, flat, aligned, detrended products | **Refuse** (same) |
+| Integer (`BITPIX > 0`) files that are not raw lights from the draft ingest path | **WARN `UNVERIFIED_INPUT`** -- derivation may be meaningless (see TOI control, section 14 validation notes) |
+
+A wrong derived ceiling from flat-divided or float data is worse than no ceiling.
+
 ## 6. Check B -- limit resolution and precedence
 
 Resolution order (section 3 Decision 1):
@@ -225,9 +298,33 @@ raw frames. Otherwise refuted -- do not use.
 
 ### 6.2 CONFLICT handling
 
-Refuted stated value replaced by derived; `CONFLICT_DERIVED`; ERROR infolog;
+Refuted stated value replaced by derived; provenance **`CONFLICT_DERIVED`** (never
+plain `DERIVED` when a header or equipment value was refuted); ERROR infolog;
 **continue run**. Fail closed only when nothing stated, nothing derived, no
 BITPIX bound.
+
+### 6.3 Rescaled or stacked-frame warning (`POSSIBLE_RESCALED_STACK`)
+
+Following STDWeb's practice of comparing header saturation to the observed data
+range ([arxiv:2411.16470](https://arxiv.org/abs/2411.16470)):
+
+Emit **WARN `POSSIBLE_RESCALED_STACK`** when **all** of:
+
+1. `bitpix_ceiling` is known;
+2. `max_pixel` across the sample `< bitpix_ceiling * rescaled_max_frac` (default **0.85**);
+3. A stated ceiling `S` (header or equipment, before refutation) exists with
+   `S >= max_pixel` (passes compatibility) **and** `S < bitpix_ceiling * 0.95`;
+4. Check A finds **no** pile-up shoulder at `bitpix_ceiling`.
+
+**Action:** do **not** use `S` for science exclusion; fall through to DERIVED
+(if pile-up exists elsewhere) or `DERIVED_NO_PILEUP` / BITPIX bound. Record
+`POSSIBLE_RESCALED_STACK` in `sat_diag.json`.
+
+**Catches:** master-flat division, re-scaling, or stacked products where the
+header still advertises a low linearity limit but pixels no longer reach the
+container. **Does not catch:** genuine low-well cameras that never hit the
+container; fields with no bright stars (max naturally low) -- pair with pile-up
+test and provenance.
 
 ## 7. Two levels -- saturation and linearity
 
@@ -334,9 +431,15 @@ Decision 4).
 
 | Tier | Source | May exclude pool/AC/PSF? |
 |------|--------|--------------------------|
-| **1** | Hard saturation; sat from MEASURED/HEADER/DERIVED | **Yes** (draft-level rule) |
+| **1** | Hard saturation; sat from MEASURED/HEADER/DERIVED/**CONFLICT_DERIVED** | **Yes** (draft-level rule) |
 | **2** | `lin_source=MEASURED` | **Yes** pool + AC |
-| **3** | `lin_source=DEFAULT_FRAC` or DERIVED linearity | **Warn only** |
+| **3** | `lin_source=DEFAULT_FRAC` or DERIVED **linearity** | **Warn only** |
+
+**Tier 1 rationale:** A derived pile-up ceiling is a **physical measurement** of
+the data (stars hitting the container), not an unverified scalar. When equipment
+or header is refuted (`CONFLICT_DERIVED`), the adopted limit is still that
+measurement -- exclusion is permitted. **Warn-only (Tier 3) applies to unmeasured
+linearity knees only**, not to container saturation.
 
 Target: always flag epoch; keep LC export row.
 
@@ -451,6 +554,9 @@ the CAL-DIAG dark-resample convention check. Open hole; must not stay unrecorded
 2. draft-510 raw: `VY_SATSRC=DERIVED`, ceiling 65535, BO CVn 0/134 saturated.
 3. Peak self-check failure count reported; no silent background peaks.
 4. `pytest` green; invariant INV-SAT-01 wired.
+5. **Controls:** QHY mod-4 grid (section 4.2); C3 TOI no-pile-up + header DATAMAX
+   (section 4.3); float input refusal (section 5.5); `POSSIBLE_RESCALED_STACK`
+   synthetic case.
 
 ---
 
