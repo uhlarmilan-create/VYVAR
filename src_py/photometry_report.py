@@ -1026,16 +1026,6 @@ class _PhotometryReportBuilder:
             return f"{n:d} total  ({', '.join(parts)})"
         return f"{n:d}"
 
-    def _lunar_risk_fill_color(self, risk: str) -> Any:
-        r = str(risk or "").strip().upper()
-        if r == "LOW":
-            return self.C_GOOD
-        if r == "MEDIUM":
-            return self.C_MID
-        if r == "HIGH":
-            return self.C_BAD
-        return self.colors.black
-
     def _draw_observing_conditions_section(self, c: "canvas.Canvas", y: float) -> float:
         """Observer site (config) + lunar context (pipeline_meta); skip if meta file missing."""
         if self._pipeline_meta is None:
@@ -2420,17 +2410,6 @@ class _PhotometryReportBuilder:
                 continue
             out.append(line)
         return out
-    def _katalogy_cell_for_pdf(self, text: Any) -> str:
-        pos = [self._sanitize_katalogy_pdf_line(x) for x in self._katalogy_positive_lines(text)]
-        pos = [x for x in pos if x and x != "-"]
-        if not pos:
-            return "-"
-        head = pos[:3]
-        extra = len(pos) - 3
-        body = "\n".join(head)
-        if extra > 0:
-            return body + f"\n(+{extra} more)"
-        return body
     def _katalogy_row_has_positive(self, text: Any) -> bool:
         return bool(self._katalogy_positive_lines(text))
     def _draw_hockey_stick_png(self, 
