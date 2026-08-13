@@ -255,17 +255,6 @@ def _site_coords(
     return lat, lon, alt, name
 
 
-def _observer_location_configured(cfg: AppConfig | None) -> bool:
-    if cfg is None:
-        return False
-    try:
-        lat = float(getattr(cfg, "observer_lat", 0.0) or 0.0)
-        lon = float(getattr(cfg, "observer_lon", 0.0) or 0.0)
-        return math.isfinite(lat) and math.isfinite(lon) and (lat != 0.0 or lon != 0.0)
-    except (TypeError, ValueError):
-        return False
-
-
 def _append_aavso_observer_location_lines(
     lines: list[str], cfg: AppConfig | None, site: dict[str, Any] | None = None
 ) -> None:
@@ -631,69 +620,6 @@ def _is_eclipsing(vsx_type: str) -> bool:
     return False
 
 
-def _test_is_eclipsing() -> None:
-    cases = [
-        ("EW", True, "W UMa - zakladny typ"),
-        ("EA", True, "Algol - zakladny typ"),
-        ("EB", True, "Beta Lyrae - zakladny typ"),
-        ("E", True, "Generic eclipsing"),
-        ("EP", True, "Planetary transit"),
-        ("ELL", True, "Ellipsoidal"),
-        ("EC", True, "ASAS contact binary"),
-        ("ED", True, "ASAS detached"),
-        ("ESD", True, "ASAS semi-detached"),
-        ("E:", True, "Uncertain eclipsing - colon"),
-        ("EW:", True, "Uncertain EW - colon"),
-        ("EA/SD", True, "EA s subTypom SD"),
-        ("EA/DM", True, "EA s subTypom DM"),
-        ("EA/RS", True, "EA s RS aktivitou"),
-        ("EW+DSCT", True, "EW + delta Scuti pulsacia"),
-        ("EA+EA", True, "Dvojity EA system"),
-        ("EB+ROT", True, "EB + rotacna variabilita"),
-        ("EA|EB", True, "Neistota medzi EA a EB - oba zakrytove"),
-        ("ELL|DSCT", False, "Neistota ELL alebo DSCT - DSCT nie je zakrytova"),
-        ("EA|RRAB", False, "Neistota EA alebo RRAB - RRAB nie zakrytova"),
-        ("RRAB", False, "RR Lyrae - pulsujuca"),
-        ("ROT", False, "Rotujuca"),
-        ("SR", False, "Semi-regular"),
-        ("DSCT|GDOR|SXPHE", False, "Pulsujuce typy"),
-        ("TTS/ROT", False, "T Tauri s rotaciou - nie zakrytova"),
-        ("DPV/ELL", False, "DPV hlavny typ - nie zakrytovy"),
-        ("L", False, "Slow irregular"),
-        ("M", False, "Mira"),
-        ("", False, "Prazdny typ"),
-        ("VAR", False, "Unspecified variable"),
-        ("RRAB/BL", False, "RR Lyrae Blazhko - nie zakrytova"),
-        ("E-DO", True, "Disk occultation"),
-        ("LB:", False, "Uncertain slow irregular"),
-    ]
-
-    errors = []
-    for vsx_type, expected, desc in cases:
-        result = _is_eclipsing(vsx_type)
-        status = "OK" if result == expected else "FAIL"
-        if result != expected:
-            errors.append(f"  FAIL: '{vsx_type}' -> {result} (expected {expected}) | {desc}")
-        msg = f"  [{status}] '{vsx_type}' -> {result} | {desc}"
-        try:
-            print(msg)
-        except UnicodeEncodeError:
-            print(msg.encode("ascii", "backslashreplace").decode("ascii"))
-
-    if errors:
-        try:
-            print(f"\n{len(errors)} FAILED:")
-        except UnicodeEncodeError:
-            print(f"\n{len(errors)} FAILED:".encode("ascii", "backslashreplace").decode("ascii"))
-        for e in errors:
-            try:
-                print(e)
-            except UnicodeEncodeError:
-                print(e.encode("ascii", "backslashreplace").decode("ascii"))
-    else:
-        print(f"\nAll {len(cases)} tests passed!")
-
-
 def _select_check_star(
     comp_df: pd.DataFrame,
     *,
@@ -738,21 +664,6 @@ def _copy_field_image(
             # EXC-0085: T2 -- report/export may omit or misstate (logging.warning('[EXPORT] Field image copy failed: ... (EXCEPT-BULK-2 2026-07-08)
             continue
     return None
-
-
-def _comp_quality_map_for_export(raw: dict[str, Any]) -> dict[str, str]:
-    """``catalog_id`` -> ``good`` / ``suspect`` (excluded comps omitted)."""
-    out: dict[str, str] = {}
-    for k, v in parse_comp_quality_json_map(raw).items():
-        nk = str(normalize_gaia_source_id(k) or "").strip()
-        if not nk:
-            continue
-        q = str(v.get("quality", "")).strip().lower()
-        if q == "excluded":
-            continue
-        if q in ("good", "suspect"):
-            out[nk] = q
-    return out
 
 
 def _normalize_comp_df_export_columns(
