@@ -14270,14 +14270,20 @@ def _astrometry_align_impl_body(
     _sips_sig = float(_cfg_align.sips_dao_threshold_sigma)
     if not math.isfinite(_sips_sig) or _sips_sig <= 0:
         _sips_sig = 3.5
+    _cfg_align_sig = float(_cfg_align.alignment_detection_sigma)
+    if not math.isfinite(_cfg_align_sig) or _cfg_align_sig <= 0:
+        _cfg_align_sig = _sips_sig
     try:
         _ui_sig = float(dao_threshold_sigma)
     except (TypeError, ValueError):
-        _ui_sig = 3.5
+        _ui_sig = 0.0
     if not math.isfinite(_ui_sig) or _ui_sig <= 0:
-        _ui_sig = 3.5
-    # Keep alignment DAO sensitive enough for weak/star-poor frames.
-    _align_det_sigma = max(0.8, min(20.0, _ui_sig if _ui_sig > 0 else _sips_sig))
+        _ui_sig = 0.0
+    # Session override > Settings alignment_detection_sigma > sips_dao_threshold_sigma.
+    _align_det_sigma = max(
+        0.8,
+        min(20.0, _ui_sig if _ui_sig > 0 else _cfg_align_sig),
+    )
     _fb_align = float(_cfg_align.sips_dao_fwhm_px)
     if not math.isfinite(_fb_align) or _fb_align <= 0:
         _fb_align = 2.5
