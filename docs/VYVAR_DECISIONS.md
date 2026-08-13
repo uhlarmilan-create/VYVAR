@@ -2554,6 +2554,19 @@ produced the good draft-509 BO CVn light curve would be excluded. Raw ceiling
 measured **65535**; peaks currently taken from aligned frames reaching **~69000**.
 See memo authoritative-numbers table.
 
+## SAT-DIAG placed aperture (2026-08-13)
+
+**Decision:** Raw saturation peaks use **determined** positions (aligned DAO `(x,y)`
+on raw grid + optional 11 px COM centroid), not brightest-pixel search on comps.
+Removed anchor disk, plausibility ratio, ring self-check, `RAW_VERIFIED` /
+`ALIGNED_INTERIM`, per-frame `peak_loc_ok` accounting. Variable-target mag-guided
+centroid retained for **frame drift diagnostic only**. Literature:
+`dev/results/MEMO_peak_location_literature.md`; spec section 8.2.
+
+**Measured:** draft 510 BO CVn drop comp median raw peak **5436 ADU** (not
+**49000** hijack); bright ref saturated **132/134**; ensemble restored to **5**
+comps matching 509.
+
 ## CAL-DIAG reinstatement (OPEN - separate from SAT-DIAG)
 
 **Status:** **OPEN -- awaiting Milan.** CAL-DIAG removed deliberately in `967f835`

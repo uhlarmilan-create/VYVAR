@@ -283,13 +283,15 @@ licensing decision.
 
 ## DONE - SAT-DIAG (saturation and linearity limit gate)
 
-**Status:** **IMPLEMENTED** 2026-08-13 (Milan authorized). `src_py/sat_diag.py`,
-INV-SAT-01 wired. Report: `dev/results/CURSOR_RESULT_sat_diag_implement.md`.
+**Status:** **IMPLEMENTED** 2026-08-13 (Milan authorized). Placed-aperture raw
+peaks committed 2026-08-13 (replaces mag-guided search). `src_py/sat_diag.py`,
+INV-SAT-01 wired. Reports: `dev/results/CURSOR_RESULT_sat_diag_implement.md`,
+`dev/results/CURSOR_RESULT_placed_aperture.md`.
 
-Remaining (not blocking): exposure-ramp measured linearity; aggregate
-`peak_loc_fail_count` into `sat_diag.json` after catalog pass.
-3. Two levels keyed by `(equipment, readmode, binning)`.
-4. Provenance `VY_SATSRC` / `sat_diag.json`.
+Draft 510 checksum: `dev/validation/anchor_510_checksums_placed_aperture_20260813.json`.
+
+Remaining (not blocking): exposure-ramp measured linearity; placement-residual
+WARN flag (spec 8.6 proposal); generic `anchor_integrity_check.py` tool.
 
 ---
 

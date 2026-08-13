@@ -3,7 +3,15 @@
 **Status:** Science audit **closed** (2026-08-04). DAO detection workstream **closed** (2026-08-07).
 ZP per-frame MAD clip **removed** (2026-08-12).
 
-Last updated: **2026-08-13** (draft 435 restore; SAT-DIAG spec filed; push pending Milan).
+Last updated: **2026-08-13** (placed-aperture SAT-DIAG; draft 510 BO CVn 5 comps; push pending Milan).
+
+## 2026-08-13 -- SAT-DIAG placed aperture (draft 510 BO CVn)
+
+Peak search removed; raw saturation uses aligned DAO grid lock + 11 px COM
+refinement on raw frames (`PLACED_APERTURE`). Mag-guided retained on variable
+target for drift diagnostic only. Draft 510 BO CVn: **5 comps** (incl.
+`1497974027502858240`), check scatter **0.008629** (=509), GREEN trust, 134 pts.
+See `dev/results/CURSOR_RESULT_placed_aperture.md`.
 
 **HEAD:** `d758c83` + docs commit pending; 3 code commits ahead of origin (ZP clip + encoding + FWHM fixture).
 

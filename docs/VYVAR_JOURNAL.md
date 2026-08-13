@@ -6006,7 +6006,18 @@ asset is empirical SIPS/AIJ cross-validation. Optional fresh anchor cut -- Milan
 
 ---
 
-## 2026-07-10 - F-BINGAIN-1 FIX (empirical background-noise term)
+## 2026-08-13 - SAT-DIAG placed aperture (BO CVn draft 510)
+
+Replaced mag-guided peak search with `PLACED_APERTURE`: per-frame aligned DAO
+coordinates on the raw pixel grid, 11 px COM refinement, 7x7 peak footprint.
+Target-primary mag-guided drift for diagnostics only. Removed anchor search and
+verify stack per photutils 3.0 / AstroImageJ precedent.
+
+**Validation:** P1-P7 PASS; check scatter **0.008629** (=509); **5** comps; hijack
+pattern stars **19 -> 2**; `--fast` PASS (1301 tests). Result:
+`dev/results/CURSOR_RESULT_placed_aperture.md`. Not pushed -- Milan review.
+
+---
 
 **Scope:** Milan-approved option (a) from Stage C - production change to `err` column.
 
