@@ -767,6 +767,7 @@ def _vyvar_execute_preprocess_pending(
         calibrated_paths_for_draft_apply_filters,
         estimate_archive_memory_profile,
         preprocess_calibrated_to_processed,
+        qc_enrich_calibrated_lights_in_place,
         preprocess_sky_summary_from_df,
         _iter_light_fits,
     )
@@ -834,9 +835,8 @@ def _vyvar_execute_preprocess_pending(
             if not source_dir.exists():
                 raise FileNotFoundError("Missing source lights directory for preprocess filter.")
             dfs_pp.append(
-                preprocess_calibrated_to_processed(
+                qc_enrich_calibrated_lights_in_place(
                     calibrated_root=source_dir,
-                    processed_root=proc_root,
                     only_paths=None,
                     prefilter_rejected=_prefilter_map,
                     progress_cb=_pcb_pp(off_pp),
@@ -862,9 +862,8 @@ def _vyvar_execute_preprocess_pending(
             log_event(
                 f"Detrend: draft_id chyba - FWHM limit sa neaplikuje z DB; spracuvam vsetky FITS v {source_dir}."
             )
-        df = preprocess_calibrated_to_processed(
+        df = qc_enrich_calibrated_lights_in_place(
             calibrated_root=source_dir,
-            processed_root=proc_root,
             progress_cb=progress_cb,
             db=pipeline.db,
             draft_id=None,

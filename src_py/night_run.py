@@ -211,6 +211,7 @@ def _night_run_preprocess(
         build_prefilter_rejected_map,
         calibrated_paths_for_draft_apply_filters,
         preprocess_calibrated_to_processed,
+        qc_enrich_calibrated_lights_in_place,
         _iter_light_fits,
     )
 
@@ -267,9 +268,8 @@ def _night_run_preprocess(
         if not source_dir.exists():
             raise FileNotFoundError("Missing source lights directory for preprocess filter.")
         dfs_pp.append(
-            preprocess_calibrated_to_processed(
+            qc_enrich_calibrated_lights_in_place(
                 calibrated_root=source_dir,
-                processed_root=proc_root,
                 only_paths=None,
                 prefilter_rejected=_prefilter_map,
                 progress_cb=_pcb_pp(off_pp),
@@ -282,9 +282,8 @@ def _night_run_preprocess(
     else:
         if not source_dir.exists():
             raise FileNotFoundError("Missing source lights directory. Run calibration/import first.")
-        df = preprocess_calibrated_to_processed(
+        df = qc_enrich_calibrated_lights_in_place(
             calibrated_root=source_dir,
-            processed_root=proc_root,
             progress_cb=progress_cb,
             db=pipeline.db,
             draft_id=None,
