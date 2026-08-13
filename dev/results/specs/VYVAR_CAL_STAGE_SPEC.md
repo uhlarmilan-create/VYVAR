@@ -1,11 +1,11 @@
-# VYVAR ù CAL-STAGE / INV-CAL-02: Calibrated product stage integrity (spec)
+# VYVAR - CAL-STAGE / INV-CAL-02: Calibrated product stage integrity (spec)
 
-Status: **DESIGN ù investigation complete 2026-08-13; awaiting Milan authorization.**
+Status: **DESIGN - investigation complete 2026-08-13; awaiting Milan authorization.**
 Date: 2026-08-13.
 Grounding: INV-CAL-01 P2 investigation (`dev/results/CURSOR_RESULT_cal_mismatch_509_510.md`),
-`dev/results/specs/VYVAR_CAL_DIAG_V2_SPEC.md` ù12.2,
+`dev/results/specs/VYVAR_CAL_DIAG_V2_SPEC.md` -12.2,
 `dev/results/CURSOR_RESULT_skysf_double.md`,
-P-10 sky-surface sign fix (`docs/VYVAR_DECISIONS.md` ùP-10-SKYSURF-SIGN).
+P-10 sky-surface sign fix (`docs/VYVAR_DECISIONS.md` -P-10-SKYSURF-SIGN).
 
 **Governing principle:** a directory name must not be the only record of what pixels
 mean. Any gate, harness, or investigator that compares or re-derives calibrated frames
@@ -16,7 +16,7 @@ must know the **processing stage** before interpreting pixels or QC headers.
 - **P-10 (2026-07):** in-place sky-surface sign error on data presenting as calibrated;
   reader could not tell stage from path alone.
 - **P2 / INV-CAL-01 (2026-08):** fresh pure `(L?D)/F` compared to sky-subtracted archive;
-  150/150 ùmismatchù was apples-to-oranges, not a calibration regression.
+  150/150 -mismatch- was apples-to-oranges, not a calibration regression.
 
 INV-CAL-01 stage-aware P2 (`cal_diag.apply_calibrated_stage_for_compare`) is a **compare
 helper**, not a product-integrity invariant. INV-CAL-02 closes the provenance gap at write
@@ -37,7 +37,7 @@ product:
 `VY_QCBG` and manifest `qc.background` describe **calibrate-time** edge-sampled sky QC.
 After in-place preprocess they can disagree with the frame median by ~1.2 ADU (509/510) or
 more when calibrate QC used a different estimator domain (435: 148/150 frames >1 ADU delta,
-**without** sky subtract ù not a stage bug, but confounds naive header-vs-median checks).
+**without** sky subtract - not a stage bug, but confounds naive header-vs-median checks).
 
 INV-CAL-02 registers:
 
@@ -66,7 +66,7 @@ Registered as **`INV-CAL-02`** (invariant, not config). Zero new configuration k
 - Changing alignment, photometry, or MASTERSTAR algorithms.
 - Replacing `VY_SKYSF` / `VYSKYORD` (retained; `VY_CALSTAGE` supersedes them as authoritative).
 - Implementation code, UI, PARAMS registry (follow-on task after Milan authorization).
-- Immutable `calibrated/` directory layout (Option B) ù documented as alternative in ù8.
+- Immutable `calibrated/` directory layout (Option B) - documented as alternative in -8.
 
 ---
 
@@ -79,8 +79,8 @@ Registered as **`INV-CAL-02`** (invariant, not config). Zero new configuration k
 | Value | Meaning |
 |-------|---------|
 | `PURE` | Calibrate (or passthrough) complete; no preprocess sky surface on these pixels |
-| `SKYSF_0` | Reserved ù treat as `PURE` (order 0 = no subtract) |
-| `SKYSF_1` ù `SKYSF_9` | Calibrate + in-place order-N sky surface subtract |
+| `SKYSF_0` | Reserved - treat as `PURE` (order 0 = no subtract) |
+| `SKYSF_1` - `SKYSF_9` | Calibrate + in-place order-N sky surface subtract |
 | `PASSTHROUGH` | Copied from import without `(L?D)/F`; mutually exclusive with `SKYSF_*` |
 
 Stages compose in fixed order only: **`PURE|PASSTHROUGH ? SKYSF_N`**. No second mutable
@@ -114,7 +114,7 @@ Rationale: registered FITS practice for detecting silent pixel mutation; no cust
 When preprocess applies sky surface, write **`VY_PSTBG`** = full-frame sigma-clipped median
 after subtract (same estimator family as `VY_QCBG` at calibrate time).
 
-- **`VY_QCBG`** remains the calibrate-time QC value (do not rewrite ù preserves audit trail).
+- **`VY_QCBG`** remains the calibrate-time QC value (do not rewrite - preserves audit trail).
 - Coherence check compares `VY_PSTBG` to live median, not `VY_QCBG` to live median.
 
 ---
@@ -162,7 +162,7 @@ Resolution order:
    - `VY_SKYSF=True` + `VYSKYORD=N` ? `SKYSF_N`, confidence `LEGACY_INFERRED`.
    - `VY_SKYSF` absent + `VY_CALIB=PASSTHROUGH` ? `PASSTHROUGH`, `LEGACY_INFERRED`.
    - `VY_SKYSF` absent + no passthrough ? `PURE`, `LEGACY_INFERRED`.
-   - `VYSKYP2P` without `VY_SKYSF` (435 `processed/` era) ? `INDETERMINATE_LEGACY` ù do not assume pure.
+   - `VYSKYP2P` without `VY_SKYSF` (435 `processed/` era) ? `INDETERMINATE_LEGACY` - do not assume pure.
    - Otherwise ? `INDETERMINATE_UNKNOWN`.
 
 **Never assume `PURE` when confidence is not `AUTHORITATIVE` or `LEGACY_INFERRED` with verified hash.**
@@ -177,7 +177,7 @@ hash + indeterminate classes.
 ### 6.1 When it runs
 
 - **On write:** self-check after flush (stage + DATASUM re-read; hard error in worker if mismatch).
-- **On demand:** `verify_calibrated_stage(draft_id)` ù used by session baseline / pre-push harness.
+- **On demand:** `verify_calibrated_stage(draft_id)` - used by session baseline / pre-push harness.
 - **Before pixel compare gates:** P2 and any future calibrated A/B must call resolver first.
 
 ### 6.2 Per-frame outcomes
@@ -195,7 +195,7 @@ Constants (spec-only, not config): coherence tolerance **2.0 ADU** (matches P2 s
 
 ### 6.3 What the gate does **not** cover
 
-- Correctness of sky-surface **sign** or polynomial fit (P-10 class ù separate algorithm tests).
+- Correctness of sky-surface **sign** or polynomial fit (P-10 class - separate algorithm tests).
 - Whether alignment or photometry should consume `PURE` vs `SKYSF_*` (downstream policy).
 - Legacy `processed/lights/proc_*.fits` trees (outside `calibrated/` contract).
 - Re-derivation of `(L?D)/F` (INV-CAL-01).
@@ -206,18 +206,38 @@ Constants (spec-only, not config): coherence tolerance **2.0 ADU** (matches P2 s
 
 | Draft | On-disk today | INV-CAL-02 read behavior | Migration |
 |-------|---------------|--------------------------|-----------|
-| **435** | `calibrated/` pure (150/150 no `VY_SKYSF`); separate `processed/` copy-tree with sky | `PURE` via `LEGACY_INFERRED`; `processed/` out of scope | **None** ù no overwrite |
+| **435** | `calibrated/` pure (150/150 no `VY_SKYSF`); separate `processed/` copy-tree with sky | `PURE` via `LEGACY_INFERRED`; `processed/` out of scope | **None** - no overwrite |
 | **509** | `calibrated/` in-place `SKYSF_2` (150/150) | `SKYSF_2` via `LEGACY_INFERRED` from `VY_SKYSF` | **None** |
 | **510** | same as 509 | same | **None** |
 
 Optional **read-only backfill** (separate authorized task): add `cal_stage.json` summarizing
-inferred stages without rewriting FITS. Not required for validated science to remain usable.
+inferred stages without rewriting FITS. **Convenience only** -- not required for validated
+science; not unfinished INV-CAL-02 work.
+
+### 7.1 Legacy stage census (baseline 2026-08-13)
+
+Measured over all `calibrated/lights/` and `processed/` FITS under `Archive/Drafts/`:
+
+| Resolution | Frames |
+|------------|--------|
+| `PURE` (LEGACY_INFERRED) | **316** |
+| `SKYSF_2` (LEGACY_INFERRED) | **300** |
+| INDETERMINATE_LEGACY | **278** |
+| INDETERMINATE_UNKNOWN | **0** |
+
+**Designed behaviour on pre-stamping data.** The **278** INDETERMINATE_LEGACY frames
+(mainly 435-era `processed/proc_*.fits` with `VYSKYP2P` but no `VY_SKYSF`) **must not**
+be compared as if `PURE`. Gate refusal is correct; this is not a defect to fix by
+assuming stage. New calibrations/preprocess runs stamp `VY_CALSTAGE` authoritatively and
+leave this bucket unchanged until those files are re-reduced.
+
+Re-run resolver census after major archive changes to detect drift from this baseline.
 
 ---
 
 ## 8. Design options (for Milan)
 
-### Option A ù Stamp and verify, keep in-place mutation **(recommended)**
+### Option A - Stamp and verify, keep in-place mutation **(recommended)**
 
 - Add `VY_CALSTAGE`, `VY_CALDATASUM`, `VY_PSTBG`; manifest sync; verify gate.
 - **Storage:** ~0 extra (one DATASUM string + stage keyword per file).
@@ -226,16 +246,16 @@ inferred stages without rewriting FITS. Not required for validated science to re
 - **Would have caught:** P2 immediately (stage mismatch before pixel loop); P-10 investigation faster (explicit stage + hash proves what changed).
 - **Would not catch:** wrong sky **formula** if stage stamp still says `SKYSF_2` and hash matches wrong pixels.
 
-### Option B ù Separate products; immutable `calibrated/`
+### Option B - Separate products; immutable `calibrated/`
 
 - `calibrated/lights/` = pure only; new `preprocessed/lights/` or restore `processed/lights/` copy tree.
-- **Storage:** +**~1.75 GB** per 150-frame draft (11.6 MB/frame ù 150, measured draft 510).
+- **Storage:** +**~1.75 GB** per 150-frame draft (11.6 MB/frame - 150, measured draft 510).
 - **I/O:** full extra write at preprocess (+1.75 GB write); alignment reads second tree.
 - **Migration:** split 509/510 in place or re-preprocess; high touch on paths, manifest, UI.
 - **Would have caught:** P2 structurally (compare like stages by path).
 - **Would not catch:** accidental overwrite within a tree; still needs stamps.
 
-### Option C ù Resolver + manifest sidecar only (no new FITS keywords)
+### Option C - Resolver + manifest sidecar only (no new FITS keywords)
 
 - Like LSST JSON sidecar pattern ([DMTN-229](https://github.com/lsst-dm/dmtn-229)): stage/hash only in manifest/`cal_stage.json`.
 - **Risk:** violates constraint 4.5 if manifest drifts from FITS; sidecar can desync on manual copy.
@@ -269,33 +289,33 @@ Add to `docs/VYVAR_INVARIANTS.md`:
 
 ---
 
-## 11. Plain language ù what changes for Milan
+## 11. Plain language - what changes for Milan
 
 **What you gain**
 
 - Opening a calibrated frame or running a validation harness tells you **immediately** whether
-  pixels are pure calibration or sky-subtracted ù not by guessing from the folder name.
-- A repeat of the July ù150/150 mismatchù investigation stops at **stage mismatch**, not
+  pixels are pure calibration or sky-subtracted - not by guessing from the folder name.
+- A repeat of the July -150/150 mismatch- investigation stops at **stage mismatch**, not
   hours of dark-binning forensics.
 - If something mutates pixels without updating the stamp, the verify step fails loudly.
 
 **What it costs you**
 
-- **Option A (recommended):** essentially nothing day-to-day ù a few new FITS keywords and
+- **Option A (recommended):** essentially nothing day-to-day - a few new FITS keywords and
   a verify line in the pre-push harness. No re-run of drafts 435/509/510; no extra disk.
 - **Option B:** ~**1.7 GB per draft** duplicate and a migration project; only worth it if
   you want folder names to be physically truthful, not just stamped.
 
 **What it would have caught**
 
-- **P2 (2026-08):** yes ù before comparing pixels.
-- **P-10 (2026-07):** partially ù would not fix the sign bug, but would show *which* stage
+- **P2 (2026-08):** yes - before comparing pixels.
+- **P-10 (2026-07):** partially - would not fix the sign bug, but would show *which* stage
   was applied and a hash delta proving pixels changed in preprocess.
 
 **What it would not catch**
 
 - A wrong formula that still runs to completion and stamps the expected stage name.
-- QC header staleness on **pure** frames where edge QC ? full-frame median (435) ù that is
+- QC header staleness on **pure** frames where edge QC ? full-frame median (435) - that is
   why SKYSF coherence uses `VY_PSTBG`, not `VY_QCBG`.
 
 ---
@@ -303,9 +323,9 @@ Add to `docs/VYVAR_INVARIANTS.md`:
 ## 12. References
 
 - FITS DATASUM: [FITS Checksum Keyword Convention](https://fits.gsfc.nasa.gov/registry/checksum.html)
-- DRAGONS staged filenames (`_flatCorrected`, `_skyCorrected`): [GSAOI tutorial ù2](https://dragons.readthedocs.io/projects/gsaoiimg-drtutorial/en/v3.0.4/02_data_reduction.html)
+- DRAGONS staged filenames (`_flatCorrected`, `_skyCorrected`): [GSAOI tutorial -2](https://dragons.readthedocs.io/projects/gsaoiimg-drtutorial/en/v3.0.4/02_data_reduction.html)
 - LSST Butler / provenance sidecars: [DMTN-229](https://github.com/lsst-dm/dmtn-229), [Recording Provenance](https://pipelines.lsst.io/v/weekly/modules/lsst.pipe.base/recording-provenance.html)
-- IVOA ObsCore `calib_level`: [ObsCore v1.1 WD ù3.3.2](http://www.ivoa.net/documents/ObsCore/20150609/WD-ObsCore-v1.1-20150605.pdf)
+- IVOA ObsCore `calib_level`: [ObsCore v1.1 WD -3.3.2](http://www.ivoa.net/documents/ObsCore/20150609/WD-ObsCore-v1.1-20150605.pdf)
 - ccdproc: new output file per step + `HISTORY` cards ([Ohio State ccdproc test notes](https://www.astronomy.ohio-state.edu/pogge.1/Software/CCDProc/testccd.html))
 - BANZAI: separate extensions/products per reduction stage ([LCO BANZAI docs](https://lco.global/documentation/data/BANZAIpipeline/))
-- VYVAR prior art: `dev/results/CURSOR_RESULT_skysf_double.md`, CAL-DIAG v2 ù12.2
+- VYVAR prior art: `dev/results/CURSOR_RESULT_skysf_double.md`, CAL-DIAG v2 -12.2

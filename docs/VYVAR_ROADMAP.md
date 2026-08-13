@@ -319,6 +319,25 @@ rename (replaces misnamed `preprocess_calibrated_to_processed`).
 in-place mutation at ~0 extra storage vs ~1.75 GB/draft duplicate tree (Option B), because
 stamps close the reader-ambiguity gap (see DECISIONS INV-CAL-02-OPTION-A).
 
+### Legacy stage census (measured 2026-08-13, pre-stamping archive)
+
+Resolver run over all `calibrated/lights/` and `processed/` FITS under `Archive/Drafts/`:
+
+| Resolution | Frames | Meaning |
+|------------|--------|---------|
+| `PURE` + LEGACY_INFERRED | **316** | Positive calibrate-only markers; no preprocess sky markers |
+| `SKYSF_2` + LEGACY_INFERRED | **300** | `VY_SKYSF` + `VYSKYORD=2` present (509/510 era) |
+| INDETERMINATE_LEGACY | **278** | e.g. `VYSKYP2P` without `VY_SKYSF` (435 `processed/` copy-tree era) |
+| INDETERMINATE_UNKNOWN | **0** | No stage evidence at all |
+
+**This is designed behaviour, not unfinished work.** Frames in the **278** bucket predate
+`VY_CALSTAGE` stamping. Compare gates **correctly refuse** rather than assume `PURE` on
+those frames. Validated science on drafts 435/509/510 does not require backfill.
+
+Optional **read-only** `cal_stage.json` backfill (separate task) is a **convenience**
+for investigators summarizing inferred stages -- not a migration requirement and not a
+gate to closing INV-CAL-02. Re-run census after backfill or new reductions to detect drift.
+
 ## OPEN - INV-CAL-02 / calibrated product stage integrity (2026-08-13) [SUPERSEDED - see DONE above]
 
 **Priority:** HIGH (provenance; prevents repeat of P2/P-10 investigation cost).
