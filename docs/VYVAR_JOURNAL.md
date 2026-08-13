@@ -2,6 +2,29 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-13 -- INV-CAL-01 P2 corrected and pushed
+
+**Finding.** Original P2 compared pure `(L-D)/F` recal to archives that had in-place
+order-2 sky subtract (`VY_SKYSF`). Not a calibration regression.
+
+**Fix.** Stage-aware compare via `apply_calibrated_stage_for_compare`; harness
+`dev/tools/inv_cal01_validate.py`. P2 PASS 509/510 150/150 max diff 0.0. Recorded
+mutable `calibrated/` hazard (DECISIONS 11.3); opened roadmap **INV-CAL-02**.
+Report: `dev/results/CURSOR_RESULT_inv_cal_01_p2_push.md`.
+
+---
+
+## 2026-08-13 -- INV-CAL-01 / CAL-DIAG v2 implemented
+
+**Change.** Restored calibration convention gate as `src_py/cal_diag.py` v2 + pipeline
+pregate/headers/`cal_diag.json`. Registered **INV-CAL-01** (zero config keys; no auto-MEAN).
+Split Decision 2: `INDETERMINATE_NEGLIGIBLE` vs `INDETERMINATE_UNMEASURED`.
+
+**Validated:** draft 435 recalibrate 150/150 pixel-identical; gate `SUM`/`DERIVED`/`PASS`;
+`--fast` 1312 passed. Report: `dev/results/CURSOR_RESULT_inv_cal_01_impl.md`. Not pushed.
+
+---
+
 ## 2026-08-13 -- SAT-DIAG implemented (Milan authorized)
 
 **Change.** `src_py/sat_diag.py` wired into per-frame catalog export and comp

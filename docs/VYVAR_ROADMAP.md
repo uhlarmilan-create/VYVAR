@@ -295,6 +295,30 @@ WARN flag (spec 8.6 proposal); generic `anchor_integrity_check.py` tool.
 
 ---
 
+## CLOSED - INV-CAL-01 / CAL-DIAG v2 (2026-08-13)
+
+**Implemented and pushed** per `dev/results/specs/VYVAR_CAL_DIAG_V2_SPEC.md` (Milan authorized).
+Replaces v1 and restores verification removed in `967f835`. Zero config keys;
+`INDETERMINATE_NEGLIGIBLE` / `INDETERMINATE_UNMEASURED` split. P2 corrected for stage-aware
+`calibrated/` compare (2026-08-13). Reports: `dev/results/CURSOR_RESULT_inv_cal_01_impl.md`,
+`dev/results/CURSOR_RESULT_cal_mismatch_509_510.md`,
+`dev/results/CURSOR_RESULT_inv_cal_01_p2_push.md`.
+
+## OPEN - INV-CAL-02 / calibrated product stage integrity (2026-08-13)
+
+**Priority:** HIGH (provenance; prevents repeat of P2/P-10 investigation cost).
+
+**Proposal (design only; not implemented):**
+
+1. **`VY_CALSTAGE`** header + manifest field: `PURE` vs `SKYSF_N`.
+2. **Pixel-array SHA-256** in manifest sidecar at each stage transition.
+3. **Alert** when `VY_QCBG` disagrees with frame `nanmedian` beyond stated tolerance (e.g. 2 ADU).
+4. **Architecture question:** keep mutating `calibrated/`, or write sky-subtracted product to a
+   separate tree (e.g. `preprocessed/lights/`)?
+
+**Related open items (relative priority in push report):** exposure-ramp linearity (SAT-DIAG Tier
+2/3); generic checksum tool; INV-DAG-01 re-stamp friction.
+
 ## SUPERSEDED - CAL-DIAG (calibration-time radiometry gate) - **REMOVED 2026-08-11**
 
 **Removed in commit `967f835`** ("Remove CAL-DIAG gate and its five config

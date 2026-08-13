@@ -2569,7 +2569,51 @@ comps matching 509.
 
 ## CAL-DIAG reinstatement (OPEN - separate from SAT-DIAG)
 
-**Status:** **OPEN -- awaiting Milan.** CAL-DIAG removed deliberately in `967f835`
+**Status:** **SUPERSEDED -- implemented as INV-CAL-01 / CAL-DIAG v2 (2026-08-13).** See
+`dev/results/specs/VYVAR_CAL_DIAG_V2_SPEC.md` and `dev/results/CURSOR_RESULT_inv_cal_01_impl.md`.
+
+## INV-CAL-01 / CAL-DIAG v2 (authorized 2026-08-13)
+
+**Status:** **IMPLEMENTED (not pushed).** Milan authorized 2026-08-13 with Decision 2 amendment.
+
+### Why v2 is not a revert of `967f835`
+
+Commit `967f835` removed CAL-DIAG during config reduction (five keys, auto-MEAN, 2% median test).
+v2 **derives** SUM vs MEAN from measured pedestal `P`, `Delta_meas`, `R`, and Check B -- not a
+stated convention with tolerance. It drops all five config keys (gate always on when dark applied),
+removes silent auto-MEAN, and registers **INV-CAL-01** so a future parameter audit cannot delete
+the gate as "configuration." Byte-identical anchor output when convention is SUM is the acceptance
+criterion (check-only, not arithmetic change).
+
+### Five decisions (+ section 0 amendment)
+
+| # | Decision | Outcome |
+|---|----------|---------|
+| **D1** | Derive convention from physics (Check P/C/B), not 2% median tolerance | Implemented in `cal_diag.py`; zero config keys |
+| **D2** | INDETERMINATE split by cause | `INDETERMINATE_NEGLIGIBLE` when `Delta_dark < resolv_limit`; `INDETERMINATE_UNMEASURED` when pedestal not measurable or Check P fails on intercept. **Case B behaviour:** implementation proceeds with SUM + `WARN` + loud log (`ui_error`); Milan to confirm vs fail-closed (recommendation in impl report) |
+| **D3** | No auto-MEAN correction | ABORT names `P`, `Delta_pred`, `Delta_meas`, `R`, `s_SUM`, `s_MEAN`; no silent resample flip |
+| **D4** | Check B standalone | Post-dark sky sanity runs even when `bf=1` (no Check C) |
+| **D5** | Provenance | `VY_DKRSMP`, `VY_DKRSMP_SRC`, `VY_CPED`, `VY_CDSKY`, `VY_CDSTAT`; `cal_diag.json`; merged into `pipeline_meta` |
+
+### Pedestal / dark-library findings (from spec section 11)
+
+**11.1 Pedestal not in headers (QHY294MM):** FITS `OFFSET=0.0` while data carry ~24.5 ADU/bin1
+pedestal. SAT-DIAG, noise model, and RN/sky algebra must **measure P from dark/bias data**, not
+read `OFFSET`. Recorded in `dev/results/specs/VYVAR_SAT_DIAG_SPEC.md` section 4 (pedestal note).
+
+**11.2 Pedestal-dominated dark at -10 C:** 60 s and 120 s masters share median **24.4706 ADU**;
+**k ~ 0.001 ADU/s**. Exposure-time matching buys ~0.06 ADU over 60 s -- negligible vs sky.
+CalibrationLibrary dark matching need not require multi-exptime libraries at this temperature for
+QHY294MM wide rig.
+
+**11.3 Mutable `calibrated/` two-stage product (known hazard, 2026-08-13):** Not fixed by
+INV-CAL-01. `calibrated/lights/` may be pure `(L-D)/F` or carry in-place sky subtract
+(`VY_SKYSF`, `VYSKYORD`, `VYVARPR`). `VY_QCBG` / manifest QC can describe pre-sky state while
+pixels are sky-subtracted. Gates and investigations must check stage first. This cost time twice
+(P-10 sky-surface sign; INV-CAL-01 P2 predicate). Roadmap **INV-CAL-02** (stage stamp, pixel hash,
+QC alert; possibly separate directory for sky-subtracted product).
+
+**Previous text (historical):**
 (config reduction; P1 core SHA byte-identical). No dark-resample radiometry check
 survives; `INV-FLUX-01` covers arithmetic only. Draft 435 has `VY_DKRSMP=SUM` /
 `cal_diag.json`; drafts 509/510 do not.

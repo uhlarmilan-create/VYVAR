@@ -68,6 +68,18 @@ from calibration import (
     filter_light_paths_for_calibration_db,
     get_processed_master,
 )
+from cal_diag import (
+    CalDiagGateResult,
+    CalDiagSession,
+    apply_cal_diag_headers,
+    convention_to_dark_mode,
+    dark_np_for_cal_diag,
+    gate_result_for_frame,
+    is_obs_group_aborted,
+    passthrough_cal_diag_headers,
+    run_cal_diag_pregate,
+    write_cal_diag_json,
+)
 from photometry_core import (
     _fwhm_moment_at,
     load_snr_aperture_table_from_draft_dir,
@@ -781,6 +793,45 @@ def _resolve_dark_path_for_light(
     if md_use is not None and Path(md_use).is_file():
         return Path(md_use)
     return None
+
+
+def _saturation_adu_for_cal_diag(
+    hdr: fits.Header,
+    *,
+    db: VyvarDatabase | None,
+    equipment_id: int | None,
+) -> float | None:
+    eq_sat: float | None = None
+    if db is not None and equipment_id is not None:
+        try:
+            eq_sat = db.get_equipment_saturation_adu(int(equipment_id))
+        except Exception:  # noqa: BLE001
+            eq_sat = None
+    lim, _src = _effective_saturation_limit(
+        hdr,
+        fallback_adu=None,
+        equipment_saturate_adu=eq_sat,
+    )
+    return lim
+
+
+def _cal_diag_session_from_export(blob: dict[str, Any] | None) -> CalDiagSession:
+    session = CalDiagSession()
+    if not blob:
+        return session
+    for k, raw in (blob.get("keys") or {}).items():
+        try:
+            session.gate_results[str(k)] = CalDiagGateResult(**raw)
+        except TypeError:
+            continue
+    session.aborted_groups = set(str(x) for x in (blob.get("aborted_groups") or []))
+    return session
+
+
+def _cal_diag_export_for_workers(session: CalDiagSession) -> dict[str, Any] | None:
+    if not session.gate_results and not session.aborted_groups:
+        return None
+    return session.json_export()
 
 
 # ``_calibrate_one_light_*``: explicit ``None`` = read master FITS; omit param = library default (1x1).
@@ -2078,6 +2129,34 @@ def run_draft_ram_calibration_qc_to_obs_files(
     errors: list[str] = []
     fov_sample_deg: float | None = None
 
+    cal_diag_session = CalDiagSession()
+    _pregate_paths: list[Path] = []
+    for row in rows:
+        _rf = _resolve_draft_light_raw_path(ap, str(row.get("FILE_PATH") or ""))
+        if _rf is not None:
+            _pregate_paths.append(_rf)
+    if _pregate_paths:
+        cal_diag_session = run_cal_diag_pregate(
+            _pregate_paths,
+            obs_group_key_from_path=_obs_group_key_from_light_path,
+            resolve_dark_path=lambda fp, og, lb: _resolve_dark_path_for_light(
+                src=fp,
+                obs_group_key=og,
+                master_dark_path=md_path_ok,
+                master_dark_by_obs_key=master_dark_by_obs_key,
+            ),
+            light_binning_from_path=_light_binning_from_path,
+            master_binning=_native_b,
+            match_and_crop_pair=_match_and_crop_pair,
+            saturation_for_light=lambda fp: _saturation_adu_for_cal_diag(
+                fits.getheader(fp, 0),
+                db=db_cal,
+                equipment_id=equipment_id,
+            ),
+            ui_error=_pipeline_ui_error,
+        )
+    write_cal_diag_json(ap, cal_diag_session)
+
     for i, row in enumerate(rows, start=1):
         rid = int(row["ID"])
         raw_fp = _resolve_draft_light_raw_path(ap, str(row.get("FILE_PATH") or ""))
@@ -2100,6 +2179,12 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 progress_cb(i, n, f"Header fail {raw_fp.name}")
             continue
 
+        if is_obs_group_aborted(cal_diag_session, _ok):
+            db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=0)
+            if progress_cb is not None:
+                progress_cb(i, n, f"CAL-DIAG skip {raw_fp.name}")
+            continue
+
         md_use = md_path_ok
         md_np_use = None
         light_bx, _ = fits_binning_xy_from_header(hdr0)
@@ -2109,6 +2194,12 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 _pa = Path(_alt)
                 if _pa.is_file():
                     md_use = _pa
+        gr = gate_result_for_frame(
+            cal_diag_session,
+            obs_group_key=_ok,
+            dark_path=md_use,
+            light_binning=light_bx,
+        )
         if md_use is not None and md_use.is_file():
             if (
                 md_pre is not None
@@ -2116,16 +2207,18 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 and md_use.resolve() == md_path_ok.resolve()
                 and _native_b is not None
                 and _native_b == light_bx
+                and (gr is None or convention_to_dark_mode(gr.convention) == "sum")
             ):
                 md_np_use = md_pre
             else:
-                md_np_use = _dark_array_for_calibration(
+                md_np_use = dark_np_for_cal_diag(
+                    cal_diag_session,
+                    master_binning=_native_b,
                     dark_path=md_use,
                     light_binning=light_bx,
-                    master_binning=_native_b,
                     light_shape=_light_shape,
                     light_filename=raw_fp.name,
-                    cache=dark_cache,
+                    gate_result=gr,
                 )
 
         try:
@@ -2139,6 +2232,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 db=db_cal,
                 id_equipments=equipment_id,
                 calibration_master_native_binning=_native_b,
+                cal_diag_gate_result=gr,
             )
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{raw_fp.name}: {exc}")
@@ -15787,6 +15881,7 @@ def _calibrate_one_light_apply_masters_in_ram(
     db: VyvarDatabase | None = None,
     id_equipments: int | None = None,
     calibration_master_native_binning: int | None | object = _CALIB_MASTER_NB_UNSET,
+    cal_diag_gate_result: CalDiagGateResult | None = None,
 ) -> tuple[Any, fits.Header, bool, bool]:
     """Apply dark/flat in RAM; return ``(data_float32, header, used_dark, used_flat)`` (no disk write).
 
@@ -15832,6 +15927,9 @@ def _calibrate_one_light_apply_masters_in_ram(
             md_data = None
 
     if md_data is None and master_dark_path is not None and master_dark_path.exists():
+        _drm = "sum"
+        if cal_diag_gate_result is not None:
+            _drm = convention_to_dark_mode(cal_diag_gate_result.convention)
         pm = get_processed_master(
             master_dark_path,
             light_bx,
@@ -15839,7 +15937,7 @@ def _calibrate_one_light_apply_masters_in_ram(
             master_binning=_mb_lib,
             light_shape=data.shape,
             light_filename=src.name,
-            dark_resample_mode="sum",
+            dark_resample_mode=_drm,
         )
         if pm.resampled:
             log_event(
@@ -15966,6 +16064,8 @@ def _calibrate_one_light_apply_masters_in_ram(
             "(pixels = (light-dark)/median-norm flat; not raw ADU)."
         )
 
+    apply_cal_diag_headers(hdr, cal_diag_gate_result)
+
     return data, hdr, used_dark, used_flat
 
 
@@ -16034,6 +16134,7 @@ def _calibrate_one_light_disk(
     db: VyvarDatabase | None = None,
     qc_pack: dict[str, Any] | None = None,
     calibration_master_native_binning: int | None | object = _CALIB_MASTER_NB_UNSET,
+    cal_diag_gate_result: CalDiagGateResult | None = None,
 ) -> tuple[bool, bool, dict[str, Any] | None, str, dict[str, Any] | None]:
     """Apply master dark / flat to one light FITS and write ``dst``.
 
@@ -16066,6 +16167,7 @@ def _calibrate_one_light_disk(
         db=db,
         id_equipments=_id_eq,
         calibration_master_native_binning=calibration_master_native_binning,
+        cal_diag_gate_result=cal_diag_gate_result,
     )
 
     qc_summary: dict[str, Any] | None = None
@@ -16134,19 +16236,21 @@ _cal_batch_flat_cache: dict[str, Any] | None = None
 _cal_batch_flat_median: dict[str, float] | None = None
 _cal_batch_md_preload: Any = None
 _cal_batch_native_binning: int | None = 1
+_cal_batch_cal_diag: CalDiagSession | None = None
 
 
 def _init_calibrate_batch_worker(
-    initargs: tuple[str | None, int | None],
+    initargs: tuple[str | None, int | None, dict[str, Any] | None],
 ) -> None:
     """Per-subprocess caches; ``native_binning`` = CalibrationLibrary master convention (``None`` = read FITS)."""
     global _cal_batch_flat_cache, _cal_batch_flat_median, _cal_batch_md_preload
-    global _cal_batch_native_binning
-    _md_s, native_b = initargs
+    global _cal_batch_native_binning, _cal_batch_cal_diag
+    _md_s, native_b, cal_diag_blob = initargs
     _ = _md_s  # path reserved for future worker-side dark preload
     _cal_batch_flat_cache = {}
     _cal_batch_flat_median = {}
     _cal_batch_md_preload = None
+    _cal_batch_cal_diag = _cal_diag_session_from_export(cal_diag_blob)
     if native_b is None:
         _cal_batch_native_binning = None
     else:
@@ -16170,7 +16274,7 @@ def _calibrate_batch_process_one(
 ) -> dict[str, Any]:
     """Picklable worker: calibrate one light; returns ``dst`` path on success."""
     global _cal_batch_flat_cache, _cal_batch_flat_median, _cal_batch_md_preload
-    global _cal_batch_native_binning
+    global _cal_batch_native_binning, _cal_batch_cal_diag
     qc_opt: dict[str, Any] | None = None
     if len(item) == 4:
         src_s, dst_s, md_s, mf_map = item  # type: ignore[misc]
@@ -16184,6 +16288,23 @@ def _calibrate_batch_process_one(
     dst_p = Path(dst_s)
     try:
         _ok = _obs_group_key_from_light_path(src_p)
+        if _cal_batch_cal_diag is not None and is_obs_group_aborted(_cal_batch_cal_diag, _ok):
+            if dst_p.exists():
+                try:
+                    dst_p.unlink()
+                except OSError:
+                    pass
+            return {
+                "src": src_s,
+                "dst": dst_s,
+                "ok": True,
+                "error": None,
+                "qc_summary": None,
+                "perf10_qc": None,
+                "traceback": None,
+                "vy_cflag": "P",
+                "skipped": True,
+            }
         md_use: Path | None = Path(md_s) if md_s else None
         _md_obs = (qc_opt or {}).get("master_dark_by_obs_key") or {}
         if _md_obs:
@@ -16192,7 +16313,28 @@ def _calibrate_batch_process_one(
                 _pa = Path(str(_alt))
                 if _pa.is_file():
                     md_use = _pa
+        light_bx = _light_binning_from_path(src_p)
+        gr = None
+        if _cal_batch_cal_diag is not None:
+            gr = gate_result_for_frame(
+                _cal_batch_cal_diag,
+                obs_group_key=_ok,
+                dark_path=md_use,
+                light_binning=light_bx,
+            )
         md_np = _cal_batch_md_preload
+        if md_use is not None and md_use.is_file():
+            with fits.open(src_p, memmap=False) as hdul:
+                lshape = (int(hdul[0].data.shape[0]), int(hdul[0].data.shape[1]))
+            md_np = dark_np_for_cal_diag(
+                _cal_batch_cal_diag or CalDiagSession(),
+                master_binning=_cal_batch_native_binning,
+                dark_path=md_use,
+                light_binning=light_bx,
+                light_shape=lshape,
+                light_filename=src_p.name,
+                gate_result=gr,
+            )
         mf: dict[str, Path | None] = {str(k): Path(v) if v else None for k, v in mf_map.items()}
         db_w = _db_for_calibration_tasks(qc_opt)
         _ud, _uf, qc_sum, _cf, perf10_qc = _calibrate_one_light_disk(
@@ -16206,6 +16348,7 @@ def _calibrate_batch_process_one(
             db=db_w,
             qc_pack=qc_opt,
             calibration_master_native_binning=_cal_batch_native_binning,
+            cal_diag_gate_result=gr,
         )
         return {
             "src": src_s,
@@ -16314,6 +16457,7 @@ def _passthrough_lights_to_calibrated(
             hdr["VY_CALIB"] = ("PASSTHROUGH", "Calibration mode")
             hdr["VY_CALST"] = (0, "VYVAR CALIB_STATUS: 2=full DF, 1=partial D, 0=raw (passthrough)")
             hdr.add_history("No calibration frames applied.")
+            passthrough_cal_diag_headers(hdr)
             fits.writeto(dst, _as_fits_float32_image(data), header=hdr, overwrite=True)
             stats["processed"] += 1
             stats["copied_only"] += 1
@@ -16530,6 +16674,35 @@ def calibrate_lights_to_calibrated(
             except Exception as exc:  # noqa: BLE001
                 LOGGER.debug("draft_manifest refresh after calibrate QC: %s", exc)
 
+    cal_diag_session = CalDiagSession()
+
+    def _resolve_dark_for_pregate(fp: Path, og: str, lb: int) -> Path | None:
+        return _resolve_dark_path_for_light(
+            src=fp,
+            obs_group_key=og,
+            master_dark_path=md_path_ok,
+            master_dark_by_obs_key=master_dark_by_obs_key,
+        )
+
+    def _sat_for_pregate(fp: Path) -> float | None:
+        with fits.open(fp, memmap=False) as hdul:
+            hdr = hdul[0].header
+        return _saturation_adu_for_cal_diag(hdr, db=db_main, equipment_id=equipment_id)
+
+    if total > 0:
+        cal_diag_session = run_cal_diag_pregate(
+            files,
+            obs_group_key_from_path=_obs_group_key_from_light_path,
+            resolve_dark_path=_resolve_dark_for_pregate,
+            light_binning_from_path=_light_binning_from_path,
+            master_binning=_native_b,
+            match_and_crop_pair=_match_and_crop_pair,
+            saturation_for_light=_sat_for_pregate,
+            ui_error=_pipeline_ui_error,
+        )
+    stats["cal_diag_aborted_groups"] = len(cal_diag_session.aborted_groups)
+    cal_diag_worker_blob = _cal_diag_export_for_workers(cal_diag_session)
+
     dark_cache: dict[str, Any] = {}
 
     def _one_sequential(i: int, src: Path, dst: Path) -> None:
@@ -16544,12 +16717,25 @@ def calibrate_lights_to_calibrated(
             _ok = observation_group_key_from_metadata(fits_metadata_from_primary_header(hdr_l))
             light_bx, _ = fits_binning_xy_from_header(hdr_l)
             _light_shape = (int(hdul[0].data.shape[0]), int(hdul[0].data.shape[1]))
+        if is_obs_group_aborted(cal_diag_session, _ok):
+            if dst.exists():
+                try:
+                    dst.unlink()
+                except OSError:
+                    pass
+            return
         if master_dark_by_obs_key:
             _alt = master_dark_by_obs_key.get(_ok)
             if _alt is not None and str(_alt).strip() != "":
                 _pa = Path(_alt)
                 if _pa.is_file():
                     md_use = _pa
+        gr = gate_result_for_frame(
+            cal_diag_session,
+            obs_group_key=_ok,
+            dark_path=md_use,
+            light_binning=light_bx,
+        )
         if md_use is not None and md_use.is_file():
             if (
                 md_pre is not None
@@ -16557,16 +16743,18 @@ def calibrate_lights_to_calibrated(
                 and md_use.resolve() == md_path_ok.resolve()
                 and _native_b is not None
                 and _native_b == light_bx
+                and (gr is None or convention_to_dark_mode(gr.convention) == "sum")
             ):
                 md_np_use = md_pre
             else:
-                md_np_use = _dark_array_for_calibration(
+                md_np_use = dark_np_for_cal_diag(
+                    cal_diag_session,
+                    master_binning=_native_b,
                     dark_path=md_use,
                     light_binning=light_bx,
-                    master_binning=_native_b,
                     light_shape=_light_shape,
                     light_filename=src.name,
-                    cache=dark_cache,
+                    gate_result=gr,
                 )
         used_dark, used_flat, qc_sum, _flags, perf10_qc = _calibrate_one_light_disk(
             src=src,
@@ -16579,6 +16767,7 @@ def calibrate_lights_to_calibrated(
             db=db_main,
             qc_pack=qc_pack,
             calibration_master_native_binning=_native_b,
+            cal_diag_gate_result=gr,
         )
         if isinstance(perf10_qc, dict) and perf10_qc and not perf10_qc.get("error"):
             perf10_qc_results[str(src.resolve())] = perf10_qc
@@ -16640,7 +16829,7 @@ def calibrate_lights_to_calibrated(
                 max_workers=stats["calibrate_workers"],
                 mp_context=ctx,
                 initializer=_init_calibrate_batch_worker,
-                initargs=(md_init_str, _native_b),
+                initargs=(md_init_str, _native_b, cal_diag_worker_blob),
             ) as ex:
                 future_map = {
                     ex.submit(_calibrate_batch_process_one, it): idx for idx, it in enumerate(items)
@@ -16676,6 +16865,9 @@ def calibrate_lights_to_calibrated(
                     LOGGER.error("Kalibracia: subor %s: %s\n%s", src, exc2, _tb2)
                     log_exception(f"CHYBA KALIBRACIE: {src.name}", exc2)
                     stats["errors"] += 1
+            _arch = _archive_root_from_lights_root(lights_root)
+            if _arch is not None:
+                write_cal_diag_json(_arch, cal_diag_session)
             _refresh_manifest_after_cal_qc()
             return stats
 
@@ -16733,6 +16925,9 @@ def calibrate_lights_to_calibrated(
             p10 = r.get("perf10_qc") if isinstance(r, dict) else None
             if isinstance(p10, dict) and p10 and not p10.get("error"):
                 perf10_qc_results[str(Path(items[idx][0]).resolve())] = p10
+        _arch = _archive_root_from_lights_root(lights_root)
+        if _arch is not None:
+            write_cal_diag_json(_arch, cal_diag_session)
         _refresh_manifest_after_cal_qc()
         return stats
 
@@ -16752,6 +16947,10 @@ def calibrate_lights_to_calibrated(
                 log_event(f"CHYBA KALIBRACIE: {src.name}: {exc!s}")
             stats["errors"] += 1
             continue
+
+    _arch = _archive_root_from_lights_root(lights_root)
+    if _arch is not None:
+        write_cal_diag_json(_arch, cal_diag_session)
 
     _refresh_manifest_after_cal_qc()
     return stats
@@ -18694,6 +18893,26 @@ class AstroPipeline:
 
         _native_b = _cfg_calibration_library_native_binning(self.config)
 
+        cal_diag_session = CalDiagSession()
+        db_cal = _db_for_calibration_tasks(qc_pack)
+        _lpaths = [Path(it[0]) for it in items]
+        if _lpaths and md_init:
+            cal_diag_session = run_cal_diag_pregate(
+                _lpaths,
+                obs_group_key_from_path=_obs_group_key_from_light_path,
+                resolve_dark_path=lambda fp, og, lb: Path(md_init) if md_init else None,
+                light_binning_from_path=_light_binning_from_path,
+                master_binning=_native_b,
+                match_and_crop_pair=_match_and_crop_pair,
+                saturation_for_light=lambda fp: _saturation_adu_for_cal_diag(
+                    fits.getheader(fp, 0),
+                    db=db_cal,
+                    equipment_id=equipment_id,
+                ),
+                ui_error=_pipeline_ui_error,
+            )
+        cal_diag_worker_blob = _cal_diag_export_for_workers(cal_diag_session)
+
         rows: list[dict[str, Any]]
         if nw <= 1:
             md_pre: Any = None
@@ -18709,21 +18928,43 @@ class AstroPipeline:
                 src_p = Path(src_s)
                 dst_p = Path(dst_s)
                 try:
+                    _ok = _obs_group_key_from_light_path(src_p)
+                    if is_obs_group_aborted(cal_diag_session, _ok):
+                        if dst_p.exists():
+                            dst_p.unlink(missing_ok=True)
+                        rows.append(
+                            {
+                                "src": src_s,
+                                "dst": dst_s,
+                                "ok": True,
+                                "skipped": True,
+                                "error": None,
+                                "qc_summary": None,
+                                "traceback": None,
+                            }
+                        )
+                        if progress_cb is not None:
+                            progress_cb(i + 1, n, f"CAL-DIAG skip {src_p.name}")
+                        continue
                     light_bx = _light_binning_from_path(src_p)
+                    gr = gate_result_for_frame(
+                        cal_diag_session,
+                        obs_group_key=_ok,
+                        dark_path=Path(md_s) if md_s else None,
+                        light_binning=light_bx,
+                    )
                     md_np = md_pre
-                    if md_s and (
-                        md_pre is None
-                        or _native_b is None
-                        or _native_b != light_bx
-                    ):
+                    if md_s:
                         with fits.open(src_p, memmap=False) as hdul:
                             lshape = (int(hdul[0].data.shape[0]), int(hdul[0].data.shape[1]))
-                        md_np = _dark_array_for_calibration(
+                        md_np = dark_np_for_cal_diag(
+                            cal_diag_session,
+                            master_binning=_native_b,
                             dark_path=Path(md_s),
                             light_binning=light_bx,
-                            master_binning=_native_b,
                             light_shape=lshape,
                             light_filename=src_p.name,
+                            gate_result=gr,
                         )
                     mf = {str(k): Path(v) if v else None for k, v in mf_map.items()}
                     _ud, _uf, qc_sum, _cf, _p10 = _calibrate_one_light_disk(
@@ -18737,6 +18978,7 @@ class AstroPipeline:
                         db=db_main,
                         qc_pack=_qopt,
                         calibration_master_native_binning=_native_b,
+                        cal_diag_gate_result=gr,
                     )
                     rows.append(
                         {
@@ -18770,7 +19012,7 @@ class AstroPipeline:
                 max_workers=nw,
                 mp_context=ctx,
                 initializer=_init_calibrate_batch_worker,
-                initargs=(md_init, _native_b),
+                initargs=(md_init, _native_b, cal_diag_worker_blob),
             ) as ex:
                 future_map = {ex.submit(_calibrate_batch_process_one, it): idx for idx, it in enumerate(items)}
                 done = 0

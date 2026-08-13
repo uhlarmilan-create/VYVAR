@@ -3,7 +3,15 @@
 **Status:** Science audit **closed** (2026-08-04). DAO detection workstream **closed** (2026-08-07).
 ZP per-frame MAD clip **removed** (2026-08-12).
 
-Last updated: **2026-08-13** (placed-aperture SAT-DIAG; draft 510 BO CVn 5 comps; push pending Milan).
+Last updated: **2026-08-13** (INV-CAL-01 pushed; P2 stage-aware; SAT-DIAG placed aperture).
+
+## 2026-08-13 -- INV-CAL-01 / CAL-DIAG v2 (pushed)
+
+CAL-DIAG v2 as **INV-CAL-01** (zero config keys). P1: draft 435 **150/150 pixel-identical**.
+P2 (corrected): apply archived `VY_SKYSF` sky order before compare -- 509/510 **150/150
+identical, max diff 0.0**. Known hazard: mutable two-stage `calibrated/` (see DECISIONS 11.3,
+roadmap INV-CAL-02). Reports: `CURSOR_RESULT_inv_cal_01_impl.md`, `CURSOR_RESULT_cal_mismatch_509_510.md`,
+`CURSOR_RESULT_inv_cal_01_p2_push.md`.
 
 ## 2026-08-13 -- SAT-DIAG placed aperture (draft 510 BO CVn)
 

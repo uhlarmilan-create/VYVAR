@@ -46,6 +46,7 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-PHASE0-ID",
         "INV-PREP-01",
         "INV-SAT-01",
+        "INV-CAL-01",
         "QC-01",
         "OSC-01",
         "OSC-02",
@@ -848,6 +849,51 @@ def validate_provenance_schema(
     )
     validate_config_behavior(meta, photometry_dir)
     check_sat_diag(meta, photometry_dir=photometry_dir)
+    check_cal_diag(meta, photometry_dir=photometry_dir)
+
+
+def check_cal_diag(meta: dict[str, Any], *, photometry_dir: Path | str | None = None) -> None:
+    """INV-CAL-01: CAL-DIAG v2 provenance when dark calibration ran."""
+    block = meta.get("cal_diag")
+    cd_path_ok = False
+    if photometry_dir is not None:
+        for candidate in (
+            Path(photometry_dir).resolve().parent.parent / "cal_diag.json",
+            Path(photometry_dir).resolve().parent / "cal_diag.json",
+        ):
+            if candidate.is_file():
+                cd_path_ok = True
+                break
+    cal_mode = str(meta.get("calibration_mode") or "")
+    dark_applied = cal_mode not in ("", "PASSTHROUGH", "RAW")
+    if not dark_applied and not isinstance(block, dict) and not cd_path_ok:
+        inv_check(
+            meta,
+            "INV-CAL-01",
+            True,
+            policy="WARN",
+            detail="cal_diag not stamped (no dark calibration or pre-CAL-DIAG draft)",
+        )
+        return
+    if not isinstance(block, dict) and not cd_path_ok:
+        inv_check(
+            meta,
+            "INV-CAL-01",
+            False,
+            policy="FAIL",
+            detail="cal_diag block missing after dark calibration",
+        )
+        return
+    keys = (block or {}).get("keys") if isinstance(block, dict) else None
+    ok = bool(keys) or cd_path_ok
+    spec_v = str((block or {}).get("spec_version") or "")
+    inv_check(
+        meta,
+        "INV-CAL-01",
+        ok,
+        policy="FAIL",
+        detail=f"cal_diag keys={len(keys or {})} spec_version={spec_v!r}",
+    )
 
 
 def run_end_of_run_invariants(
